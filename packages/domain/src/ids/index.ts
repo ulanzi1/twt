@@ -648,6 +648,25 @@ export type ModerationGroundId = Brand<'ModerationGroundId'>;
 /** Smart constructor: validates UUID shape, returns a branded `ModerationGroundId`. */
 export const moderationGroundId = uuidBrand('ModerationGroundId');
 
+// ── Story 10.22 — Moderation-appeal id (§Naming "branding mandatory on a new ID's first PR") ──
+// `MemberModerationAppealId` is the per-row address of a `member_moderation_appeals` row — the record
+// of an appeal under Niyamavali §8.8 (ratified by Decision `2026-08-15-121`). It is the
+// `ModerationActionId` / `ModerationGroundId` twin and inherits their posture for the same reasons: it
+// addresses a RECORD, not a state object, and it is NOT any event stream's stream_id — the two
+// `member.moderation.appeal-*` events ride the MEMBER's stream, keyed by `member_id`. Plain
+// DB-defaulted `gen_random_uuid()`; there is no derive function.
+//
+// ⛔ NOT Epic 6's `AppealId`, whose doc-comment binds it to `claim_appeals.appeal_id`. The moderation
+// appeal is a DISTINCT journey: Part 9 is claim-scoped, Part 8 does not reference it, and §8.8 states
+// expressly that it does not incorporate Part 9. Reusing `AppealId` would let a claim appeal id and a
+// moderation appeal id be passed to each other's functions with no type error — which is precisely
+// the confusion the two-journey separation exists to prevent.
+
+/** Per-row address of a moderation appeal (`member_moderation_appeals.appeal_id`). */
+export type MemberModerationAppealId = Brand<'MemberModerationAppealId'>;
+/** Smart constructor: validates UUID shape, returns a branded `MemberModerationAppealId`. */
+export const memberModerationAppealId = uuidBrand('MemberModerationAppealId');
+
 // ── Story 10.12 — Per-Pariwar custom-field definition id (§Naming "branding mandatory on a new ID's
 // first PR") ──
 // `PariwarCustomFieldDefinitionId` is the per-row address of a `pariwar_custom_field_definitions`

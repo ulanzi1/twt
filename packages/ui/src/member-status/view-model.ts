@@ -121,6 +121,21 @@ export interface MemberStatusViewModel {
   validityWindow: ValidityWindow;
   /** Appeal CTA reachable from EVERY failure state (UX + a11y). */
   showAppealCta: boolean;
+  /**
+   * ⭐ Story 10.22 — TRUE only where a **moderation act exists to appeal against** (Niyamavali §8.8).
+   *
+   * ⚠ THIS IS A NARROWER SET THAN `showAppealCta`, and the difference is load-bearing.
+   * `showAppealCta` is true for the two EXPIRED states as well, which is correct for what it means
+   * ("a failure state — offer a way to ask someone to look again"). But an expired member is under no
+   * moderation: they have no `member_moderation_actions` row and §8.8 gives them nothing to appeal.
+   * Wiring the §8.8 destination to `showAppealCta` would send them to a form whose server answers
+   * 422 `member_moderation.appeal_not_appealable` — a dead end that reads as a broken product.
+   *
+   * ⛔ Do NOT "simplify" by deleting this field and reusing `showAppealCta`, and ⛔ do NOT narrow
+   * `showAppealCta` itself: the expired states are in it deliberately, and the panel has an ADMIN
+   * variant that relies on it.
+   */
+  showModerationAppealCta: boolean;
   /** True for the member-facing (redacted/simplified) view — identity suppressed, provenance simplified. */
   redactionApplied: boolean;
   /** True when the render layer must NOT display member identity / Aadhaar / KYC (AC2a; member variant). */

@@ -343,16 +343,44 @@ function buildRuleExplanations(payload: MemberValidityPayloadDto): RuleExplanati
  * RECORDED here rather than papered over by deleting a set entry: the view-model is not the thing
  * that is broken.
  *
- * ⚠ And the CTA still has no moderation destination — that is **Story 10.22's** to build, and
- * Decision `2026-08-10-097` clause 13 states in terms that this story removes Decision 6's
- * JUSTIFICATION, not the NEED for a real appeal route. Decision 6 itself is superseded, not
- * reinterpreted ([[feedback_supersede_never_reinterpret]]).
+ * ⭐ **Story 10.22 gave the CTA its destination.** Niyamavali **§8.8** (ratified by Decision
+ * `2026-08-15-121`) establishes the moderation appeal, and `showModerationAppealCta` below routes to
+ * it: in-portal at `POST /api/v1/p/:pariwarId/member/moderation/appeals`, and — for a member whose
+ * access termination has already removed — off-portal through the helpline arm, because §8.8 states
+ * that "the right to appeal does not depend on the access that termination removes."
+ *
+ * ⛔ **Decision 6 remains SUPERSEDED, and this does not revive it.** Decision `2026-08-10-097` clause
+ * 13 removed Decision 6's JUSTIFICATION, not the NEED for a real appeal route; 10.22 supplied the
+ * route. It did NOT restore the argument for keeping login open after termination — that is what the
+ * off-portal arm exists to make unnecessary ([[feedback_supersede_never_reinterpret]]).
+ *
+ * ⚠ The REACHABILITY point above still stands unchanged: with `termination_access_block` enabled a
+ * terminated member cannot open a session and cannot see this panel at all. The appeal is reachable
+ * to them anyway — through the off-portal arm, not through this CTA.
  */
 const FAILURE_STATES: ReadonlySet<HeadlineState> = new Set<HeadlineState>([
   'suspended-with-reason',
   'terminated-with-reason',
   'expired-renewable',
   'expired-not-renewable',
+]);
+
+/**
+ * ⭐ Story 10.22 — the states from which Niyamavali §8.8 gives a member something to appeal.
+ *
+ * A STRICT SUBSET of `FAILURE_STATES`, and the two it drops are dropped on purpose: an EXPIRED
+ * member is under no moderation. They have no `member_moderation_actions` row, so there is no act
+ * "identified by its record under §8.6" for an appeal to lie against, and the filing route answers
+ * 422 `member_moderation.appeal_not_appealable`.
+ *
+ * ⚠ This set exists because the obvious wiring is wrong. `showAppealCta` is the right predicate for
+ * "this member is in a failure state, offer them a way to ask someone to look again"; it is the wrong
+ * predicate for "route this member to the §8.8 appeal form". Using it for both would send every
+ * expired member to a dead end.
+ */
+const MODERATION_APPEALABLE_STATES: ReadonlySet<HeadlineState> = new Set<HeadlineState>([
+  'suspended-with-reason',
+  'terminated-with-reason',
 ]);
 
 /**
@@ -429,6 +457,8 @@ export function buildMemberStatusViewModel(
       validThrough: payload.vyawasthaShulkStatus.paidThrough,
     },
     showAppealCta: FAILURE_STATES.has(headlineState),
+    // ⭐ Story 10.22 — narrower than the line above, deliberately. See MODERATION_APPEALABLE_STATES.
+    showModerationAppealCta: MODERATION_APPEALABLE_STATES.has(headlineState),
     redactionApplied: isMember,
     identitySuppressed: isMember,
   };

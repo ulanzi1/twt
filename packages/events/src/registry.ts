@@ -157,6 +157,18 @@ export const EVENT_TYPE_REGISTRY = {
       'A SUPPORTING ground appended to an existing moderation action (Story 10.20, WS-E) — a later finding ATTACHES to the decision, it never rewrites it. ACTION-LESS: no moderation status moves, so the payload carries NO overlay from/to pair (claiming one would be a false statement about the member\'s standing) and it is deliberately absent from MODERATION_ACTION_EVENT_TYPES. Lifecycle-identity. Carries the bounded registry code + the superseded ground id ONLY — the optional Tier-1 note and the evidence references live on member_moderation_grounds and MUST NEVER reach this plaintext-JSONB payload (R1). `is_primary` is absent because appends are supporting-only by construction: the primary ground is written in the action\'s own transaction and already rides that action\'s own event.',
     schema: member.moderation.ModerationGroundAppendedPayloadSchema,
   },
+  'member.moderation.appeal-filed': {
+    type: 'member.moderation.appeal-filed',
+    description:
+      "An appeal FILED against a moderation act (Story 10.22) under Niyamavali §8.8, ratified by Decision `2026-08-15-121`. ACTION-LESS: no moderation status moves on a filing — §8.8 states expressly that \"the filing of an appeal does not suspend the act appealed against\", so a suspended member remains suspended and a terminated member's access does not return. The payload therefore carries NO overlay from/to pair and the type is deliberately absent from MODERATION_ACTION_EVENT_TYPES. Lifecycle-identity. Carries the bounded `filed_via` token (portal | helpline — the two ruled intake surfaces feeding ONE record) plus the appeal and moderation-action ids ONLY. ⛔ The member's GROUNDS OF APPEAL are member-authored free text, live Tier-1 encrypted in member_moderation_appeals.grounds_ciphertext, and MUST NEVER reach this plaintext-JSONB payload (R1).",
+    schema: member.moderation.ModerationAppealFiledPayloadSchema,
+  },
+  'member.moderation.appeal-decided': {
+    type: 'member.moderation.appeal-decided',
+    description:
+      "An appeal DETERMINED (Story 10.22) under Niyamavali §8.8. ⛔ ACTION-LESS EVEN WHEN `allowed`, and this is the load-bearing omission: §8.8 makes an allowed appeal DIRECT that the act be undone, not undo it. The restore is a subsequent, separately-attributed act through the existing moderation write path, carrying its own reason code, its own Decision Note and — from terminated — the Panel-exclusive member.restore_terminated check. An overlay from/to pair here would create a SECOND moderation write path bypassing §8.6's record entirely. Lifecycle-identity. Carries the bounded `outcome` token (upheld | allowed — there is no third `varied` outcome; a lesser sanction is a FRESH moderation act with its own record) plus the appeal and moderation-action ids ONLY. ⛔ The adjudicator's REASONED OUTCOME is free text, lives Tier-1 encrypted in member_moderation_appeals.reasoned_outcome_ciphertext, and MUST NEVER reach this payload; nor may the adjudicator's display-name snapshot, which lives on the record.",
+    schema: member.moderation.ModerationAppealDecidedPayloadSchema,
+  },
   // ── Story 10.23 — member.restoration_discipline.* (the SECOND governance overlay) ──
   // Lives on the MEMBER's own stream (stream_id = member_id) and moves an independent, event-derived
   // status machine (restoration-discipline/status.ts) — `members.state` is NEVER touched and it folds

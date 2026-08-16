@@ -77,6 +77,7 @@ const MEMBER_SUSPEND = permissionKey('member.suspend');
 const MEMBER_MODERATE = permissionKey('member.moderate');
 /** Story 10.19 — restore-from-TERMINATED, held by `trustee_panel` ALONE (Niyamavali §8.4). */
 const MEMBER_RESTORE_TERMINATED = permissionKey('member.restore_terminated');
+const MEMBER_MODERATION_APPEAL_DECIDE = permissionKey('member.decide_moderation_appeal');
 // Story 10.21 — the off-portal DPDPA data-rights FULFILMENT key (pariwar-dimension). Filing a request
 // (`helpdesk.create`) and EXECUTING it on a member with no session are different authorities, so this is
 // a distinct key held by `pariwar_admin` ONLY. ⛔ NOT `helpline_operator` (files, does not execute),
@@ -633,7 +634,21 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
     // instrument would then say something the system does not do.
     // ⚠ It does NOT make Panel authority exclusive anywhere else — `member.moderate` stays shared
     // and §8.2/§8.3 are untouched (Decision `2026-08-10-096` clause 3's concurrency ruling stands).
-    permissions: [MEMBER_MODERATE, MEMBER_RESTORE_TERMINATED],
+    // ⭐ Story 10.22 adds `member.decide_moderation_appeal`, and this bundle is its ONLY holder.
+    // Niyamavali §8.8 (Decision `2026-08-15-121` clauses 2 and 14): the appeal is heard by the
+    // Trustee Panel, and a SEPARATE key expresses that authority because `member.moderate` is shared
+    // with `pariwar_admin` and so cannot distinguish the appellate authority from the deciding one.
+    // ⛔ Do NOT grant this key to any other role without a Panel decision — doing so would return the
+    // moderation appeal to the indistinguishability Story 10.18 existed to end, at the one call site
+    // where the separation IS the mechanism.
+    // ⛔ And do NOT grant it to `state_trustee` or `district_admin`: by the rank ordering documented
+    // above, a `state`/`district`-ceiling grant can never satisfy the `pariwar`-dimension check, so
+    // the grant would be INERT ON ARRIVAL rather than merely unwise.
+    // ⚠ Holding the key is NOT sufficient to decide any given appeal. §8.8's different-individual
+    // requirement is enforced separately, server-side, inside the scope transaction, as a typed 409 —
+    // a Panel member who imposed the act (or contributed a ground it rests on) holds this key and is
+    // still refused THAT case.
+    permissions: [MEMBER_MODERATE, MEMBER_RESTORE_TERMINATED, MEMBER_MODERATION_APPEAL_DECIDE],
     scopeCeiling: 'pariwar',
   },
 ];

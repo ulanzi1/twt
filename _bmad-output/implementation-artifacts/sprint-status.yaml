@@ -1,4 +1,247 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-16c (10-22-moderation-appeal-mechanism: done, follow-up governance/docs pass
+#   via bmad-code-review -- the chunk deferred by 2026-08-16b's checkpoint. 7 files (.decision-log.md,
+#   this story file, deferred-work.md, sprint-status.yaml, the routing note, friction-budget.md,
+#   docs/appeal-procedural-fairness/moderation-appeal.md), +2539/-1, 2611 diff lines. Same 3-layer
+#   review; 14+0+7 = 21 raw findings (Edge Case Hunter: 0 -- everything it checked verified true),
+#   deduped/triaged to 5 real + 1 decision-needed + 8 verified false positives.
+#   ⭐ THE REAL FIND: "Clause 27(b)" is cited 6x across 4 files as the Trust Deed provision requiring a
+#   two-thirds-Trustee resolution + supplementary registered deed. Verified live against
+#   docs/legal/trust-deed.md: Clause 27 is "Severability", no lettered subdivisions at all -- the
+#   quoted mechanism is Clause 22(b), "Amendment of this Deed", verbatim. The RULING is unchanged
+#   (disapplying Deed Clause 19(c) genuinely does need a Clause-22(b) Deed amendment); only which
+#   clause states that mechanism was wrong. Per user decision: .decision-log.md and the routing note
+#   (Trustee-Panel governance-of-record, self-declared durable/unedited) got an APPENDED correction
+#   -- Decision `2026-08-16-122`, modeled on the `2026-08-12-101` precedent (same mechanism, same
+#   review skill, caught the same class of error before) -- never edited in place, per
+#   [[feedback_supersede_never_reinterpret]]. The story file and deferred-work.md (documentation
+#   ABOUT the decision, not the ratified record) were corrected directly.
+#   Also fixed: the RTBF completeness-count baseline was wrong in two files (11 tables/12 statements
+#   -> 13/16; verified against the actual passing test's comment history that the true baseline was
+#   12/14, so 12+1=13 and 14+2=16 reconcile -- 11+1=12 does not); a sentence readable as "erasing a
+#   member with a pending appeal fails in production" reworded -- verified via anonymize.ts:375-394
+#   that the WHERE-NOT-NULL guard prevents this by design, it was describing an avoided near-miss;
+#   the story's own File List was missing apps/jobs (new to this story) and the queue.ts touched by
+#   2026-08-16b's patch round; and this ledger's own "22 raw -> 12" arithmetic (previous entry) was
+#   ambiguous, reworded for self-consistency.
+#   VERIFIED, NOT ACTED ON (8 false positives caught before touching anything): the "uncorrected"
+#   permission-key name (deferred-work.md already explains it -- the name was [Author-committed],
+#   never ratified, so there was nothing to correct); a Deed Clause 26 quotation flagged as a
+#   misleading splice (verified an accurate ellipsis within ONE clause); a decision-date
+#   "inconsistency" (checked real commit timestamps -- 5bb34d6 landed 2026-08-15T23:44 IST, the
+#   2026-08-15-121 label is correct); "Part 8 does not reference Part 9" flagged as self-contradicting
+#   (verified as the standard legal-drafting distinction between operative incorporation and
+#   [warn]-marked explanatory commentary); the English/Hindi upheld/allowed gloss (a legitimate
+#   bilingual translation aid, not a substance gap); the "untraceable" 0107 coherence CHECK (it's
+#   real, in the migration, a normal elaboration of AC4's prose); the grounds min-length claim
+#   (properly defined in packages/contracts, just outside this diff chunk); and the Panel-obligation
+#   queue count (deliberately left unstated -- "NINE is the last recorded figure, not a verified
+#   current one" is an intentional epistemic hedge per [[feedback_record_unattested_no_backfill]],
+#   not an omission -- writing "TEN" would have been the actual regression).
+# last_updated: 2026-08-16b (10-22-moderation-appeal-mechanism: review -> done via bmad-code-review.
+#   Diff chunked (10,031 lines): code (58 files, +5925/-137) reviewed now; governance/docs deferred to
+#   a follow-up pass. Three parallel layers (Blind Hunter diff-only: 12 raw; Edge Case Hunter: 8 raw;
+#   Acceptance Auditor: 2 raw -- 22 raw total) deduped to 12 UNIQUE findings, which triaged to: 10
+#   patch (all applied -- one of the 10 started as decision-needed, resolved to patch after verifying
+#   listAppealableActionIds genuinely returns a LIST capped 200, not a false alarm), 1 defer
+#   (migration-GRANT gate gap, recorded in deferred-work.md), 1 dismiss (actorRole:null is the
+#   codebase-wide admin-audit convention, not a gap -- confirmed by grepping every other admin-action
+#   audit call site). 10 + 1 + 1 = 12.
+#   ⭐ THE ONE THAT MATTERED MOST: the mobile in-portal appeal screen never sent the required
+#   `x-turnstile-token` header -- `requireTurnstile` unconditionally requires it server-side, but
+#   neither the api-client method nor `appeal.tsx` ever supplied one. Every real member submission
+#   through the app would have 400'd; AC7's in-portal reachability arm was silently broken. Fixed by
+#   threading `turnstileToken` through, matching the `(helpdesk)/new.tsx` sibling pattern.
+#   Also fixed: the appeal-outcome member notification was entirely unwired (dead i18n keys, no
+#   enqueue) -- widened `MEMBER_MODERATION_NOTIFY` to `appeal_upheld`/`appeal_allowed`, keyed on the
+#   APPEAL id (never the action id, since re-filing means one action can carry >1 decided appeal);
+#   `Idempotency-Key` was validated-then-discarded server-side AND regenerated per-attempt client-side
+#   (the `usePersonalEventAssertion` lesson, repeated) -- now claimed via the shared keyed store and
+#   minted once per act; the documented 23505 guard-bypass race was never actually caught (would have
+#   leaked a 500); `moderationActionId` and the off-portal `helpdesk_ticket_id` were never verified to
+#   belong to the caller; the mobile screen dropped every appealable act but the newest (the domain's
+#   own `listAppealableActionIds` is explicitly list-shaped, capped at 200 -- now a picker).
+#   Verified (not assumed) false positives before touching anything: `actorRole: null` matches every
+#   sibling admin-audit call site; the admin page's `{code,status}` error cast is correct because
+#   `apiFetch` already unwraps the server envelope. Full typecheck + lint clean across all 8 touched
+#   packages/apps; unit + live-DB integration suites green (moderation-appeal.spec.ts,
+#   rtbf-anonymize.spec.ts, moderation-notify.test.ts, and every directly-touched component/unit test).
+# last_updated: 2026-08-16 (10-22-moderation-appeal-mechanism: in-progress -> review via bmad-dev-story,
+#   off main @ b3e12e1. Niyamavali §8.8 -- THE MODERATION APPEAL -- is AUTHORED AND PANEL-RATIFIED
+#   (Decision 2026-08-15-121), and the appeal the system has claimed for four stories is now real.
+#   GOVERNANCE FIRST, structurally: routing note committed ALONE (56663ac, zero packages/apps paths)
+#   -> the ratification (5bb34d6) -> the implementation branch CUT FROM IT. git log reads
+#   governance -> governance -> implementation ([[feedback_governance_commits_precede_implementation]]).
+#   ⛔ docs/legal/ IS GITIGNORED, so Decision 2026-08-15-121 is the ONLY durable copy of §8.8 -- both
+#   locales verbatim, plus all three consequential edits.
+#   THE PANEL RULED all ten questions option (a), then MATERIALLY AMENDED Q3D into a three-tier ladder
+#   (1 Trustee -> 2 -> all 3, majority vote, tie auto-escalation with NO casting vote, NO recusal,
+#   finality at the third). I STOPPED and surfaced SEVEN CONFLICTS rather than inventing a rule; the
+#   Panel then ruled the amendment NOT RATIFIED, which resolved C-1..C-7 at a stroke. ⛔ The record of
+#   the amendment is RETAINED -- what was proposed and why it did not stand IS the governance.
+#   ⭐ TWO OF THE CONFLICTS WERE WITH THE TRUST DEED, recorded as durable facts for any future tiered
+#   appeal: Clause 18(a) puts the Board at THREE-TO-NINE Trustees (the amendment presumed three), and
+#   Clause 19(c) MANDATES the Chairperson's casting vote -- which a Part 8 amendment CANNOT disapply;
+#   that needs a Clause 27(b) supplementary REGISTERED deed.
+#   ⭐ FIVE FINDINGS, every one raised, none absorbed:
+#   (1) ⛔ MIGRATION 0107 OMITTED `decided_at` FROM ITS COLUMN-LEVEL UPDATE GRANTS. The decide path
+#       sets all six decision columns in ONE statement, so Postgres refused the whole statement with
+#       42501 -- EVERY determination, every time. §8.8's appeal could be FILED AND NEVER DECIDED.
+#       ⚠ Nothing in the pure suite could catch it: a column GRANT has no representation in TypeScript.
+#       Caught by the live-DB spec; fixed by FORWARD migration 0108, never by re-authoring an applied
+#       migration. That is the argument for the live spec existing.
+#   (2) THE OBVIOUS CTA WIRING WAS WRONG. showAppealCta covers the two EXPIRED states, which have no
+#       moderation act -- routing them to the §8.8 form would 422 every expired member. Added a
+#       narrower showModerationAppealCta; ⛔ left showAppealCta untouched. Polarity-pair test.
+#   (3) The validity payload carries NO moderation_action_id (it derives standing from specialFlags).
+#       ⛔ REJECTED the obvious fix of inferring the act server-side -- an inferred subject on a
+#       governance write lets a member appeal something other than what they were shown. Added a
+#       member-facing context read instead.
+#   (4) The routing note's proposed key name is INVALID under the catalog's own PERMISSION_KEY_REGEX
+#       (exactly one dot). Corrected to member.decide_moderation_appeal and RECORDED at the key.
+#   (5) A FIFTH untrue copy site the story's four-site inventory missed
+#       (moderation.notice.terminated.body_access_retained, en+hi). Un-ruled => [Author-committed].
+#   SHIPPED: 0107+0108; member_moderation_appeals keyed to the ACT with a PARTIAL unique index (§8.8
+#   permits re-filing after a determination -- ⛔ NOT Part 9's exhausted-forever); the FILING immutable
+#   by ATTRIBUTE PRIVILEGE (verified live: 42501 on a filing-column update); two events that OMIT
+#   overlayShape so NOTHING moves the overlay -- including on `allowed`, because §8.8 makes an allowed
+#   appeal DIRECT a restore; the different-individual exclusion (actors UNION ground authors) enforced
+#   in-tx pre-write as a typed 409 and ⛔ NEVER a 403; member.decide_moderation_appeal minted (v33->34,
+#   42->43) held by trustee_panel ALONE; TWO intake surfaces / ONE record; and ⭐ the adjudication
+#   QUEUE, without which a filed appeal is reachable only by direct link -- trustee_panel holds NO
+#   helpdesk capability and routed_to_role is inert, so no operator queue can ever surface one (D6).
+#   AC10: all six gates green, and the coverage is DEMONSTRATED -- domain-accessor-invariants FIRED on
+#   the new module (I had hoisted clampLimit into a local; the gate is syntactic and correctly refused
+#   it). TWO revert-sanity proofs, both restored byte-identical.
+#   AC9: both Tier-1 columns scrubbed, the ROW SURVIVES (a governance act survives RTBF; its
+#   member-authored CONTENT does not), plus the arm proving the where-non-null guard.
+#   ⚠ OBSERVED NOT CLOSED: a terminated member with an OPEN appeal is still erasable, after which the
+#   Panel would determine an appeal whose grounds read as the sentinel. Arguably correct -- but never
+#   ruled. Carried with a named trigger; ⛔ do not close it by letting a disciplinary matter defeat a
+#   statutory right.
+#   ⚠ epics.md:4066's handlers.ts:228 citation confirmed STALE; recorded, ⛔ the epic NOT edited.
+#   ⚠ The Panel queue is reported as LAST ENUMERATED (NINE) and expressly NOT re-enumerated; this
+#   story discharges none and ADDS one (counsel review of §8.8). Item (ii), the copy-truth defect,
+#   becomes DISCHARGEABLE -- ⛔ not discharged.
+#   ⛔ NOT DONE, deliberately: the termination_access_block flip (Panel-exclusive, still only
+#   DISCHARGEABLE); any change to Epic 6's claim appeal; any new ModerationStatus/Action; publication
+#   of an outcome (a DECIDED absence); and NO fail-closed legal gate -- the 6.16 asymmetry is RULED,
+#   with the reasoning recorded in docs/appeal-procedural-fairness/moderation-appeal.md §3.
+#   ⛔ ci:local REPORTED AS OBSERVED AND IT IS NOT GREEN: 29 jobs pass, 2 fail (test-unit,
+#   integration-tests). ⚠ The FIRST run returned exit 0 from the BACKGROUND WRAPPER while ci:local
+#   itself failed 3 jobs -- the "partial run reported as green" failure this project has named
+#   repeatedly, caught before it propagated. THREE failures were MINE and are FIXED, all found by
+#   running to completion rather than named by the spec: the lint error (an unused helper in my new
+#   route test), the RTBF completeness count (12 tables/14 statements -> 13/16 --
+#   member_moderation_appeals takes TWO statements because reasoned_outcome scrubs only WHERE
+#   NON-NULL -- an open appeal's reasoned_outcome_ciphertext is NULL by design, so the guard is a
+#   no-op for it; UNGUARDED, an open appeal would trip 0107's coherence CHECK and the erasure would
+#   fail, which is exactly the failure mode the WHERE-NON-NULL guard exists to prevent), and BOTH
+#   member.* vocabulary count fixtures 22 -> 24, moved together as
+#   their own comments require. ⭐ The RTBF fixture failed BECAUSE IT WORKS -- it is the check that
+#   catches a Tier-1 column landing outside anonymizeMember, which is how the 10.10 rationale once
+#   survived an erasure.
+#   THE TWO REMAINING REDS ARE NOT THIS STORY'S, established not assumed: (a) a DIFFERENT set each
+#   run with NO overlap (run 2: niyamavali-engine/admin/channels/multi-tenant; run 3:
+#   measured-validation/banners/concealment/feature-flags/projection-equivalence); (b) durations of
+#   972,000ms -- a hang under contention, not an assertion; (c) every one GREEN IN ISOLATION (the
+#   four domain specs 88/88, measured-validation 28/28); and ⭐ (d) THE DECISIVE CHECK -- because my
+#   live-DB spec adds 14 tests, "pre-existing flake" and "my load tipped it" look identical from the
+#   summary, so the FULL @twt/domain suite was run ALONE with my spec included: 244/244 files, 2845
+#   passed, 1 skipped. ⇒ the load hypothesis is dead; the contention is CROSS-PACKAGE under
+#   turbo --concurrency=4. ⚠ That is a NARROWER claim than "green" and is deliberately not written
+#   as one.)
+# last_updated: 2026-08-15n (10-22-moderation-appeal-mechanism: ready-for-dev -> in-progress via
+#   bmad-dev-story, off main @ b3e12e1 (clean, fetched, == origin/main). GOVERNANCE HALF ONLY --
+#   the implementation half has NOT begun and §8.8 is NOT authored.
+#   Task 0: all TWELVE premises re-verified live, ALL PASS. Two PATH citations in the story
+#   corrected: migrations live in packages/domain/migrations/ (NOT drizzle/), and the key-count
+#   assertion is packages/domain/tests/rbac/permissions.test.ts:56. Neither changes a premise.
+#   ⭐ Task 0 FINDING -- a FIFTH untrue copy site, absent from the story's four-site inventory:
+#   moderation.notice.terminated.body_access_retained (en+hi :342) makes the same unkeepable
+#   "request a review from your membership status page" promise to a TERMINATED member. Raised as
+#   routing-note F-4; the Panel did NOT rule on it, so the proposed disposition (fold into AC3)
+#   stands as a RECOMMENDATION ONLY.
+#   Task 1 (AC1): trustee-panel-routing-note-2026-08-15-story-10-22.md authored with Q1-Q10 and
+#   committed ALONE (56663ac) -- zero packages/ and zero apps/ paths, verified by git show
+#   --name-only. Story spec + this ledger flip committed AHEAD of it (c0cb7eb) so the governance
+#   commit carries one file.
+#   Task 2: THE PANEL RULED all ten questions -- every one option (a), matching the ⭐ -- and then
+#   MATERIALLY AMENDED Q3D beyond the options offered into a THREE-TIER APPEAL LADDER: 1 Trustee ->
+#   2 Trustees -> all 3 (final), majority vote, automatic escalation on a 1-1 split with NO casting
+#   vote, NO recusal for prior participation, and finality after the third. Recorded VERBATIM at
+#   the foot of the note (41dea31) as an ADDITION, never read back into option (a).
+#   ⛔ STOPPED THERE, at the Panel's OWN standing direction: "if any AC cannot be implemented
+#   exactly from these rulings, stop and surface the conflict rather than inventing a rule."
+#   §8.8 is NOT authored in either locale, NO .decision-log.md entry exists (head is still
+#   2026-08-15-120), and the implementation branch is NOT cut.
+#   SEVEN CONFLICTS (C-1..C-7), each against the instrument or file that establishes it:
+#   C-1 Q1(a) "single internal appeal" vs the three-appeal ladder -- §8.8 must say one thing.
+#   C-2 Q2B ("a DIFFERENT Panel member MUST hear it") vs Q3D ("prior participation does NOT create
+#       a recusal requirement"). HEAD-ON. Breaks AC5 ENTIRELY -- the exclusion set, the typed 409
+#       and the mandatory polarity-pair test have NO SUBJECT until it resolves.
+#   ⛔ C-3 and C-4 are conflicts with the TRUST DEED, the SUPERIOR instrument:
+#   C-3 Deed Clause 18(a) (trust-deed.md:211) puts the Board at THREE-TO-NINE Trustees. Q3D
+#       presumes exactly three. trustee_panel is a role with NO cardinality -- nothing counts
+#       holders and nothing could enforce "all three" against five.
+#   C-4 Deed Clause 19(c) (trust-deed.md:229) MANDATES the Chairperson's casting vote on equality,
+#       and §8.7 binds the Panel to Clause 19 expressly. Q3D disapplies it. A Niyamavali Part 8
+#       amendment CANNOT disapply a Deed clause -- that is a Clause 27(b) Deed amendment
+#       (two-thirds + a supplementary REGISTERED deed), out of this story's scope entirely. There
+#       is also NO Chairperson concept anywhere in the codebase.
+#   C-5 AC4's record is SINGULAR (decided_by_actor_id/_display/_at). A majority vote needs a votes
+#       CHILD TABLE (the claim_r9_votes shape), a tier column, a vote->outcome derivation and an
+#       auto-escalation transition -- none scoped by AC4/Task 4/Task 5. Un-asked: does each voting
+#       Trustee author their OWN reasoned outcome (N Tier-1 ciphertexts)? AC9 depends on it.
+#   C-6 AC4/D4's partial-UNIQUE rule is superseded by a THIRD constraint (<=3 per action,
+#       tier-ordered, terminal exhaustion) -- neither the shipped rule nor the naive tightening D4
+#       EXPRESSLY FORBIDS.
+#   C-7 The ladder resembles Part 9's three stages (§1.3 glosses them as "the three escalation
+#       tiers"), so AC2's not-Part-9 sentence must now DISTINGUISH, not merely assert.
+#   CLEAN and ready the moment C-1..C-6 resolve: Q2A, Q3A, Q3B, Q3C, Q4A, Q4B (AC6 entire), Q5, Q6,
+#   Q7 (AC7 entire), Q8's RBAC half, Q9, Q10 (AC8's deferral register).
+#   UN-RULED, preserved as RECOMMENDATIONS ONLY: F-4; Q2.2's exhausted-Panel sub-point; and the Q8
+#   key NAME -- Q8(a) ruled THAT a key be created, not WHICH.
+#   Standing Panel obligation queue reported as LAST ENUMERATED (NINE, deferred-work.md:283,
+#   2026-08-12) and expressly NOT re-enumerated -- a last-recorded figure, not a verified one.)
+# last_updated: 2026-08-15m (10-22-moderation-appeal-mechanism: backlog -> ready-for-dev via
+#   bmad-create-story, off main @ b3e12e1 (clean, fetched, == origin/main). Saved
+#   10-22-moderation-appeal-mechanism.md.
+#   ⭐ THE GOVERNANCE HALF LANDS FIRST, and it is not optional. Niyamavali §8.8 is a RESERVED number
+#   (niyamavali.md:274, hi :272) held expressly for the moderation appeal, and §8.6's *Recorded gap*
+#   clause (:260, hi :258) states that its closure "requires its own amendment (§8.8, reserved)".
+#   AC1 routes TEN questions to the Trustee Panel on a governance/ branch committed ALONE (zero
+#   packages/apps files), AC2 authors §8.8 between §8.7 and §8.9 in BOTH locales -- the 10.18/10.20
+#   precedent ([[feedback_governance_commits_precede_implementation]]).
+#   ⛔ docs/legal/ IS GITIGNORED (.gitignore:68, verified live) => the .decision-log.md entry is the
+#   ONLY durable copy of the §8.8 text, both locales verbatim.
+#   THE GAP, VERIFIED LIVE AT b3e12e1: four sites claim appealability and none is true --
+#   status.ts:17 ("notified, audited and appealable"); handlers.ts:414-419 + presenter.ts:348 +
+#   view-model.ts:86 (all three honestly name 10.22); and moderation.notice.suspended.body
+#   (i18n :339, BOTH locales) promises a suspended member "request a review from your membership
+#   status page". The CTA is a DEAD BUTTON in both apps -- mobile (membership)/index.tsx:124-131 and
+#   admin MemberStatusPanel.tsx:140-150 each render it with NO handler at all.
+#   ⚠ epics.md:4066 cites handlers.ts:228 -- STALE. 10.20 inserted the escalation block; :228 is now
+#   the early-legality fast-fail. The appeal-CTA claim lives at :414-419. Recorded, not "fixed".
+#   ⭐ THE FINDING THAT KILLS THE OBVIOUS DESIGN: trustee_panel holds EXACTLY
+#   [member.moderate, member.restore_terminated] and NO helpdesk capability at all (roles.ts:594-637,
+#   stated as settled at permissions.ts:541), and routed_to_role is advisory + inert
+#   ([[project_helpdesk_routing_is_advisory]]). An appeal filed as a helpdesk ticket routed to the
+#   Panel is INVISIBLE TO IT. The helpdesk is INTAKE; the adjudication surface is this story's.
+#   Second trap: a NEW helpdesk category is guaranteed-unrouted under every per-Pariwar override
+#   ([[project_helpdesk_default_policy_version_trap]]) => existing category + sub_category token.
+#   Third: state_trustee/district_admin can NEVER hold a pariwar-dimension key (rank ordering, not a
+#   missing resolver -- [[project_rbac_geo_scope_containment]]).
+#   THE SHAPE ROUTED (recommendations, not rulings): a RECORD not a state machine -- one
+#   member_moderation_appeals table (migration 0107; the member_data_rights_corrections precedent, NOT
+#   Epic 6's claim appeal), two events on the member's stream spreading auditShape and DELIBERATELY
+#   OMITTING overlayShape (the ground-appended template), keyed to the moderation ACTION not the
+#   member, two intake surfaces / one record (the 10.29 both-routes precedent), a MINTED adjudication
+#   key (catalog 33->34, keys 42->43) because member.moderate cannot distinguish the appellate
+#   authority from the deciding one, and `allowed` DIRECTS a restore -- it never writes the overlay
+#   (member.restore_terminated is already Panel-exclusive).
+#   ⛔ NO CODE CHANGES IN THIS COMMIT and none owed until the Panel rules. This story does NOT flip
+#   termination_access_block -- that remains a separate Panel-exclusive act.)
 # last_updated: 2026-08-15l (10-29-member-authored-staff-mediation-request: review -> done, via
 #   bmad-code-review. 3-layer review (Blind Hunter / Edge Case Hunter / Acceptance Auditor, plus the
 #   load-bearing-invariant checklist as an Acceptance Auditor lens) found 0 decision-needed, 5 patch,
@@ -6756,7 +6999,7 @@ development_status:
   10-19-termination-ends-membership-privileges: done
   10-20-moderation-record-model: done
   10-21-off-portal-dpdpa-access: done
-  10-22-moderation-appeal-mechanism: backlog
+  10-22-moderation-appeal-mechanism: done
   10-23-restoration-discipline-lock-in: done
   10-24-contribution-fact-producer-projection-r7-cf-activation: done
   10-25-r7a-restoration-accounting: done

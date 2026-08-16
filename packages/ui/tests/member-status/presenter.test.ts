@@ -204,6 +204,27 @@ describe('buildMemberStatusViewModel', () => {
     expect(failing.showAppealCta).toBe(true);
   });
 
+  // ⭐ Story 10.22 (AC7) — THE POLARITY PAIR THAT KEEPS THE TWO PREDICATES APART.
+  // `showAppealCta` is TRUE on the expired states, which is correct for "offer a way to ask someone
+  // to look again". `showModerationAppealCta` must be FALSE there: an expired member is under no
+  // moderation, has no `member_moderation_actions` row, and §8.8 gives them nothing to appeal.
+  // Routing them to the §8.8 form would earn a 422 `member_moderation.appeal_not_appealable` — a dead
+  // end that reads as a broken product. ⛔ If this ever goes red because the two were collapsed, that
+  // is the regression.
+  it('an EXPIRED (unmoderated) member gets the generic CTA but NOT the §8.8 appeal CTA', () => {
+    const failing = buildMemberStatusViewModel(
+      basePayload({
+        isValid: false,
+        isActive: false,
+        isAssignable: false,
+        lockInStatus: { daysAtJoin: 90, unlockDate: '2027-01-01T00:00:00.000Z', state: 'in-lock-in' },
+      }),
+      { variant: 'member' },
+    );
+    expect(failing.showAppealCta).toBe(true);
+    expect(failing.showModerationAppealCta).toBe(false);
+  });
+
   it('orders rule explanations by the payload precedence and emits i18n keys (not raw codes)', () => {
     const vm = buildMemberStatusViewModel(
       basePayload({

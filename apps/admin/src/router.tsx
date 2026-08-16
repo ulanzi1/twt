@@ -31,6 +31,7 @@ import { R9VotingRoute } from './routes/R9VotingRoute.js';
 import { FixedAmountRoute } from './routes/FixedAmountRoute.js';
 import { ReconciliationReviewRoute } from './routes/ReconciliationReviewRoute.js';
 import { TrusteeLiteRoute } from './routes/TrusteeLiteRoute.js';
+import { ModerationAppealsRoute } from './routes/ModerationAppealsRoute.js';
 import { VerifierConsoleRoute } from './routes/VerifierConsoleRoute.js';
 import { IntegrityRoute } from './routes/IntegrityRoute.js';
 import { LoginPage } from './routes/LoginPage.js';
@@ -217,6 +218,15 @@ const trusteeLiteRoute = createRoute({
   component: TrusteeLiteRoute,
 });
 
+// Story 10.22 — the Trustee Panel's §8.8 moderation-appeal console. ⚠ NOT reachable from the
+// helpdesk: `trustee_panel` holds no helpdesk capability at all, so a filed appeal has no operator
+// queue to surface on and this route IS its discoverability (D6).
+const moderationAppealsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/moderation/appeals',
+  component: ModerationAppealsRoute,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
@@ -242,6 +252,7 @@ const routeTree = rootRoute.addChildren([
   fixedAmountRoute,
   reconciliationReviewRoute,
   trusteeLiteRoute,
+  moderationAppealsRoute,
 ]);
 
 export const router = createRouter({ routeTree });

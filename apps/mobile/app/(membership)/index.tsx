@@ -120,12 +120,38 @@ export default function MembershipStatusScreen() {
           onOpenHelpdesk={() => router.push('/(helpdesk)')}
         />
 
-        {/* Appeal CTA — reachable from every failure state (AC3 + UX). */}
-        {vm.showAppealCta ? (
+        {/*
+          Appeal CTA — reachable from every failure state (AC3 + UX).
+
+          ⭐ Story 10.22 gave this button a destination. It rendered with NO `onPress` at all from
+          Story 4.7 until now, while the shipped notice copy promised a suspended member they could
+          "request a review from your membership status page" in both locales. Niyamavali §8.8
+          (Decision `2026-08-15-121`) is what makes that sentence true.
+
+          ⚠ TWO predicates, deliberately. `showAppealCta` covers every failure state INCLUDING the
+          two EXPIRED ones — correct for "offer a way to ask someone to look again". But an expired
+          member is under no moderation and has no act to appeal, so routing them to the §8.8 form
+          would earn a 422 `member_moderation.appeal_not_appealable`: a dead end that reads as a
+          broken product. `showModerationAppealCta` is the narrower set that actually has an act.
+          ⛔ Do not collapse the two.
+        */}
+        {vm.showModerationAppealCta ? (
+          <Button
+            accessibilityRole="button"
+            accessibilityLabel={t('moderation.appeal.title')}
+            theme="red"
+            onPress={() => router.push('/(membership)/appeal')}
+          >
+            {t('memberStatus.appealCta')}
+          </Button>
+        ) : vm.showAppealCta ? (
+          // An expired member: the same affordance, routed to the helpdesk, which is where a renewal
+          // or eligibility question is actually answered. ⛔ NOT the §8.8 appeal form.
           <Button
             accessibilityRole="button"
             accessibilityLabel={t('memberStatus.appealCta')}
             theme="red"
+            onPress={() => router.push('/(helpdesk)')}
           >
             {t('memberStatus.appealCta')}
           </Button>

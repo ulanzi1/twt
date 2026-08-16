@@ -28,6 +28,7 @@ import {
   memberMedicalDisclosures,
   memberModerationActions,
   memberModerationGrounds,
+  memberModerationAppeals,
   memberNominees,
   memberWithdrawals,
 } from '../../src/schema/index.js';
@@ -90,7 +91,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     return found.set;
   }
 
-  it('updates exactly the eleven member-PII tables (twelve statements), once each except data_exports', async () => {
+  it('updates exactly the THIRTEEN member-PII tables (sixteen statements), once each except the three documented doubles', async () => {
     // Seven since Story 10.10's review pass added `member_moderation_actions`; EIGHT since Story
     // 10.20 added `member_moderation_grounds`. This count is the completeness check for the RTBF
     // surface — a new Tier-1 column landing in a table absent from this list is exactly how the
@@ -121,8 +122,21 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     // scrub failed HERE, which is precisely what it exists to do. ⛔ Whoever adds the next Tier-1
     // column raises this number in the same commit — a Tier-1 column outside `anonymizeMember` is how
     // the 10.10 moderation rationale survived an erasure request.
+    //
+    // ⭐ MOVED AGAIN by Story 10.22 (AC9): THIRTEEN tables, SIXTEEN statements.
+    // `member_moderation_appeals` (Niyamavali §8.8) carries TWO Tier-1 columns — the member's own
+    // GROUNDS of appeal and the adjudicator's REASONED OUTCOME — and it takes TWO statements, for a
+    // reason that is not cosmetic:
+    //   1. `grounds_ciphertext` is NOT NULL, so it is scrubbed unconditionally; and
+    //   2. `reasoned_outcome_ciphertext` is NULLABLE and is scrubbed ONLY WHERE NON-NULL, because
+    //      migration 0107's `member_moderation_appeals_decision_coherence_check` requires every
+    //      decision field to be NULL while `status = 'open'`. An unconditional scrub would write a
+    //      sentinel into an OPEN appeal and make every erasure of a member with a pending appeal FAIL.
+    // ⛔ The two are therefore NOT collapsible into one statement.
+    // ⚠ This assertion did its job again: the appeal columns were added, this count failed, and the
+    // scrub followed. That is what it is for.
     const { captured } = await run();
-    expect(captured).toHaveLength(14);
+    expect(captured).toHaveLength(16);
     const tables = captured.map((c) => c.table);
     for (const t of [
       memberIdentities,
@@ -136,16 +150,21 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
       dataExports,
       dataExportDeliveryGrants,
       memberDataRightsCorrections,
+      memberModerationAppeals,
       memberAuthOtps,
     ]) {
       expect(tables).toContain(t);
     }
-    // Exactly one statement per table, EXCEPT the two that take a documented second:
+    // Exactly one statement per table, EXCEPT the THREE that take a documented second:
     //   · `data_exports`     — zero the artifact, then flip `pending` → `expired` (the build guard);
-    //   · `…delivery_grants` — scrub the attestation, then revoke the live grant.
+    //   · `…delivery_grants` — scrub the attestation, then revoke the live grant;
+    //   · `…moderation_appeals` — scrub the NOT NULL grounds, then the NULLABLE reasoned outcome
+    //     WHERE NON-NULL (an unconditional scrub trips 0107's decision-coherence CHECK on an open
+    //     appeal, failing the erasure of any member with a pending §8.8 appeal).
     expect(tables.filter((t) => t === dataExports)).toHaveLength(2);
     expect(tables.filter((t) => t === dataExportDeliveryGrants)).toHaveLength(2);
-    expect(new Set(tables).size).toBe(12);
+    expect(tables.filter((t) => t === memberModerationAppeals)).toHaveLength(2);
+    expect(new Set(tables).size).toBe(13);
   });
 
   it('⭐ Story 10.21 (AC-R1/AC-R2): the staff attestation and the correction record are SCRUBBED but RETAINED', async () => {

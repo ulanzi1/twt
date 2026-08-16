@@ -4884,6 +4884,186 @@ this story's gate re-run and will keep costing runs until someone owns it
   `termination_access_block` flip**, ⛔ never at a later epic ([[project_r7_fact_producer_unbuilt]]).
   [`apps/api/src/modules/member-data-rights/handlers.ts` — `grantMemberDirectDelivery`]
 
+## Deferred / recorded from: 10-22-moderation-appeal-mechanism (2026-08-16)
+
+Niyamavali **§8.8** — the moderation appeal — is **authored and Panel-ratified** (Decision
+`2026-08-15-121`). Recorded in the three registers, kept apart
+([[feedback_closure_language_precision]]).
+
+### 1. CLOSED BY EDIT
+
+- **§8.8 itself**, authored in its **reserved slot** between §8.7 and §8.9 in **both locales** (en
+  `:276`, hi `:274`). The reserved-numbers note **retires** — its *"deliberately numbered ahead"*
+  sentence preserved as the historical record of the ordering — and ⛔ §8.7 and §8.9 are **not**
+  renumbered.
+- **§8.6's *Recorded gap* clause** is recorded as **closed by §8.8**, with its original wording
+  preserved verbatim as superseded. ⛔ Never edited in place
+  ([[feedback_supersede_never_reinterpret]]).
+- **The appeal RECORD** — migration `0107` (`member_moderation_appeals`), two Tier-1 columns, a
+  PARTIAL unique index keyed to the moderation **act**, two CHECKs, RLS, and a column-by-column
+  UPDATE grant that leaves the FILING immutable by attribute privilege.
+- **Two events**, `member.moderation.appeal-filed` / `…appeal-decided`, both spreading `auditShape`
+  and both **omitting `overlayShape`** — neither moves the overlay, including on `allowed`.
+- **The different-individual exclusion**, enforced server-side inside the scope transaction as a
+  typed **409**, with a polarity-pair test against real rows.
+- **The adjudication QUEUE** — without it a filed appeal is reachable only by direct link.
+- **Both intake surfaces**: in-portal (the CTA acquires a destination) and off-portal (10.21's route).
+- **The FIVE untrue claim sites.** ⚠ The story's inventory named **four**; there were five — see §4.
+- **The permission key** `member.decide_moderation_appeal` (catalog 33 → 34, keys 42 → 43), held by
+  `trustee_panel` alone.
+
+### 2. RESOLVED VIA EXPLICIT DEFERRAL
+
+- **Counsel review of §8.8** — `docs/appeal-procedural-fairness/moderation-appeal.md`, carrying the
+  structurally-visible **PENDING-LEGAL-REVIEW** marker and five routed items, into the **Story 0.13**
+  engagement roster.
+  ⛔ **It gates NOTHING**, and the asymmetry with Story 6.16 is **ruled, not accidental**
+  (`2026-08-15-121` clause 16): 6.16's fail-closed gate protects a ₹50L adjudication by refusing to
+  *adjudicate*; the same gate here would refuse to **hear a member at all** on a sanction already
+  running against them. The reason is recorded in that doc's §3 rather than left to inference.
+  ⛔ Do not "harmonise" the two by adding a gate — that needs a superseding decision.
+
+- **⚠ §8.4a's *Notice + opportunity to respond* row STAYS in the stated-but-unmechanized list.**
+  Re-dispositioned in both locales per `2026-08-15-121` clause 12. **A route existing is not the row
+  becoming mechanized**, and two distinct reasons are recorded:
+  (i) §8.8 is a route to respond **AFTER** the act, while the row requires notice and the opportunity
+  to **PRECEDE** it — so §8.8 does not reach the row even in principle; and
+  (ii) per §8.4a's own standing rule, *"a row leaves this list when the Trust has seen its mechanism
+  work, not merely when the code exists."*
+  ⛔ The **Statutory rights (DPDPA)** row is **not touched** — it is 10.21's, last updated by
+  `2026-08-14-114`.
+
+### 3. NOT ADDRESSED — a DECIDED absence
+
+- **Publication of a moderation-appeal outcome.** There is none, and that is **ruled**
+  (`2026-08-15-121` clause 15), not omitted. Part 9's reversed denial publishes to *Sahyog Vivran*;
+  that publication is **claim/memorial-scoped**. Publishing an allowed moderation appeal would publish
+  the fact of the original sanction to an audience that never saw it, harming the member the appeal
+  exists to protect. ⛔ Recorded so a later reader does not read the absence as a gap.
+
+### 4. ⭐ FINDINGS — five, all raised rather than absorbed
+
+1. **A FIFTH untrue copy site the story's inventory missed.**
+   `moderation.notice.terminated.body_access_retained` (en + hi `:342`) makes the same unkeepable
+   *"request a review from your membership status page"* promise as the suspended-notice — to a
+   **terminated** member. Raised as routing-note **F-4**; the Panel did **not** rule on it, so the
+   disposition (folded into AC3 as the same defect under the same AC) is `[Author-committed]`.
+
+2. **⛔ MIGRATION 0107 OMITTED A GRANT, AND EVERY DETERMINATION WOULD HAVE FAILED.** The six decision
+   columns are `status`, `outcome`, `reasoned_outcome_ciphertext`, `decided_by_actor_id`,
+   `decided_by_display` **and `decided_at`** — 0107 granted five. `decideMemberModerationAppeal` sets
+   all six in one statement, so Postgres refused the whole statement with **42501 permission denied**.
+   §8.8's appeal could be **filed and never decided**.
+   ⚠ **Nothing in the pure suite could have caught it** — a column-level GRANT has no representation
+   in TypeScript; domain, handler and contracts all typechecked and every unit test passed. It was
+   caught by the live-DB spec, which is the argument for that spec existing.
+   Fixed by **forward migration `0108`**, ⛔ not by re-authoring an applied migration (the 42P07
+   footgun). The 0108 header records the mistake rather than quietly patching it.
+
+3. **The obvious CTA wiring was wrong.** `showAppealCta` derives from `FAILURE_STATES`, which includes
+   the two **EXPIRED** states. An expired member is under no moderation and has no act to appeal, so
+   routing that CTA to the §8.8 form would have earned every expired member a 422
+   `appeal_not_appealable` — a dead end that reads as a broken product. Added a narrower
+   `showModerationAppealCta`; ⛔ left `showAppealCta` itself untouched (the expired states are in it
+   deliberately, and the admin variant relies on it). A polarity-pair test pins the two apart.
+
+4. **The validity payload carries no moderation-action id.** It derives moderation standing from
+   `specialFlags`, so the member surface could not name the act it was appealing — and §8.8 identifies
+   an appeal BY the act's §8.6 record. ⛔ Rejected the obvious fix of letting the server INFER the act:
+   an inferred subject on a governance write is the shape that lets a member appeal something other
+   than what they were shown. Added a member-facing context read instead.
+
+5. **The routing note's proposed key name was invalid.** `member.moderation_appeal.decide` fails the
+   catalog's own `PERMISSION_KEY_REGEX`, which admits exactly ONE dot — `permissionKey()` throws on it.
+   Corrected to `member.decide_moderation_appeal` and **recorded at the key**, because the note's name
+   is quoted in a committed governance artifact. The name was `[Author-committed]` throughout: the
+   ruling minted a key without naming it.
+
+### 5. ⚠ THE STALE EPIC CITATION, recorded and NOT silently fixed
+
+`epics.md:4066` cites `handlers.ts:228` for the appeal-CTA claim. **That citation is STALE** —
+confirmed live: Story 10.20 inserted the escalation-test block ahead of it, `:228` is now the
+early-legality fast-fail, and the claim lives at `:414-419`. ⛔ The epic is **not** edited; the
+staleness is recorded here and in the story's Completion Notes.
+
+### 6. ⚠ THE THREE-TIER AMENDMENT — raised, NOT RATIFIED, and retained
+
+A three-tier appeal ladder (1 Trustee → 2 → all 3, majority vote, tie auto-escalation with **no
+casting vote**, **no recusal** for prior participation, finality at the third) was raised against Q3D
+after the initial ruling and is **NOT a ratified decision** (`2026-08-15-121` clause 8).
+
+⛔ **The record of it is retained**, in the routing note and in the decision entry, because the record
+of what was proposed and why it did not stand **is** the governance. Two of the seven conflicts it
+produced are **durable governance facts about the Trust Deed** and are recorded for any future
+attempt at a tiered moderation appeal:
+
+- **Deed Clause 18(a)** (`trust-deed.md:211`): the Board is *"not fewer than three (3) and not more
+  than nine (9) Trustees."* ⇒ any Part 8 amendment stating a bench size or vote arithmetic must be
+  reconciled with Clause 18(a) first. `trustee_panel` is a role with **no cardinality** in code.
+- **Deed Clause 19(c)** (`trust-deed.md:229`): *"in case of equality, the Chairperson shall have a
+  second or casting vote."* §8.7 binds the Panel to Clause 19 expressly, and §8.7 further records that
+  *"where this document and the Deed differ, the Deed prevails (§1.2)."* ⇒ **a Niyamavali Part 8
+  amendment cannot disapply a Deed clause.** Doing so needs a **Clause 22(b)** Deed amendment — a
+  two-thirds resolution **and a supplementary registered deed** (corrected from a mis-citation of
+  "Clause 27(b)" by Decision `2026-08-16-122`). ⚠ There is also **no Chairperson
+  concept anywhere in the codebase**.
+
+### 6b. ⚠ OBSERVED, NOT CLOSED — an erased member with an OPEN appeal
+
+AC9 required `rtbf-legality.ts` be checked for whether a pending appeal is a lawful-retention
+consideration, **and the answer recorded either way**. It was read, and **not modified**. The answer,
+both halves:
+
+- **No change is owed to the predicate.** `resolveRtbfLegality` decides whether erasure is *legal at
+  all* (lifecycle `withdrawn`, or the overlay reads `terminated`). It is a **permission** predicate,
+  not a **retention hold**, and there is no hold mechanism in it to which a pending appeal could be
+  added. Nor is one needed for the RECORD: `member_moderation_appeals` rows survive RTBF by design,
+  so the governance act stays readable.
+
+- **⚠ But there is a consequence, and it is named rather than glossed.** A **terminated** member is
+  erasable, and termination is exactly the state from which §8.8 appeals are most likely open. After
+  erasure the member's `grounds_ciphertext` reads as the sentinel — so **the Trustee Panel would
+  determine an appeal whose stated grounds are gone.**
+
+  It is arguable this is *correct*: erasure is the member's own act, §8.8's appeal is theirs to
+  abandon, and the alternative (blocking a DPDPA erasure because the Trust has an open disciplinary
+  matter) is a worse posture. ⛔ **But it was never ruled**, and the Panel has not been asked whether
+  an erasure should CLOSE an open appeal, WARN the member, or do neither.
+
+**Re-trigger:** the next story touching either RTBF or the moderation appeal. ⛔ Do not close this by
+adding an erasure-blocks-appeal rule without a ruling — that would let a disciplinary matter defeat a
+statutory right.
+
+### 7. What this story did NOT touch, stated so it is not inferred
+
+⛔ **No `termination_access_block` flag change.** It remains DEFAULT OFF and **dischargeable, not
+discharged**. §8.8 is required to work on **both** sides of it, and the off-portal arm is what makes
+that true.
+⛔ **No change to Epic 6's claim appeal.** No shared table, id, route or import; a source-level test
+asserts the absence.
+⛔ **No new `ModerationStatus`, `ModerationAction` or `member_lifecycle_state` label**, and no change
+to any `TERMINAL_STATES` set.
+⛔ **No claim that Part 8 is legally settled.** The Niyamavali remains an **unadopted draft**
+(`[[v1.0]]`, `[[date]]` unfilled) and **counsel is not engaged** — every return field in
+`docs/legal-counsel-engagement/` is still `<PENDING>`.
+
+### 8. The standing Trustee Panel obligation queue
+
+⚠ **Reported as LAST ENUMERATED, not re-enumerated.** `deferred-work.md` §7 above records **NINE**,
+verified by enumeration on 2026-08-12 (Story 10.20). ⛔ This story did **not** re-enumerate items
+(i)–(ix) against the live tree, and no entry between `2026-08-12-099` and `2026-08-15-121` restates
+the count. **NINE is the last recorded figure, not a verified current one.**
+
+⚠ Two observations, offered as observations only:
+- Queue item **(ii)**, *the copy-truth defect, still unassigned*, is what this story's AC3 closes (now
+  five sites). A ruling here made it **dischargeable**; ⛔ it is **not discharged** by this entry.
+- Item **(vii)**, the portal-access flip authorisation, remains open.
+
+⛔ **No ruling in Decision `2026-08-15-121` discharged a queue item.** ⚠ And it **adds one**: counsel
+review of **§8.8** (§2 above). Stated as a fact, not as a new count — the count is not re-verified here.
+
+---
+
 ## Deferred from: code review of story-10.29 (2026-08-15)
 
 - **Operator create-ticket route has no Idempotency-Key protection.** Unlike the member-app create route
@@ -4900,3 +5080,17 @@ this story's gate re-run and will keep costing runs until someone owns it
   matter the moment a "tickets with an outstanding staff-mediation request" view is built.
   [`packages/domain/migrations/0106_helpdesk-member-staff-mediation-request.sql`] *Owner:* none yet.
   *Re-trigger:* if such a list view is ever built.
+
+---
+
+## Deferred from: code review of 10-22-moderation-appeal-mechanism (2026-08-16)
+
+- **Migration 0107 shipped without `GRANT UPDATE (decided_at)`.** Self-caught and fixed in-diff by
+  migration 0108 (its own commentary: *"NOTHING IN THE PURE SUITE COULD HAVE CAUGHT THIS"* — only a
+  live-DB test surfaced the `42501 permission denied`). Deferred item is the systemic gap, not the
+  instance: no automated gate diffs a domain writer's `.set()` keys against the table's actually-granted
+  columns, so the identical hand-enumeration mistake can recur on the next new table.
+  [`packages/domain/migrations/0107_moderation-appeals.sql`,
+  `packages/domain/migrations/0108_moderation-appeal-decided-at-grant.sql`] *Owner:* none yet.
+  *Re-trigger:* if a future migration's GRANT set is hand-enumerated again and a column write silently
+  fails until a live-DB test happens to exercise it.

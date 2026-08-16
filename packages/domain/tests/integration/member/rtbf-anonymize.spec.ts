@@ -621,6 +621,126 @@ describe.skipIf(!hasDatabase)('RTBF anonymization — soft-delete + retain + RLS
       expect(row!.recordedByDisplay).toBe('Test Operator');
     });
 
+    it('⭐ Story 10.22 (AC9) — BOTH moderation-appeal Tier-1 columns take the sentinel; the ROW SURVIVES', async () => {
+      // ⛔ NOT "the row is deleted". The record of a governance act under Niyamavali §8.8 — that an
+      // appeal was filed, against which act, through which intake surface, and how it was determined —
+      // is the Trust's audit history of its OWN conduct. Erasing it would erase the record of how the
+      // Trust treated a member, not the member's personal data. Only the member-authored GROUNDS and
+      // the adjudicator's REASONED OUTCOME are erased.
+      const { tx, client } = getTx();
+      const mid = toMemberId(randomUUID());
+      await enterAppScope(client, PARIWAR_A);
+      await seedMember(tx, PARIWAR_A, { memberId: mid });
+
+      const [action] = await tx
+        .insert(schema.memberModerationActions)
+        .values({
+          memberId: mid as never,
+          pariwarId: PARIWAR_A,
+          action: 'suspend',
+          reasonCode: 'r7-contribution-discipline',
+          decisionNoteCiphertext: await enc(PARIWAR_A, 'member_moderation', 'seed decision note'),
+          actorId: randomUUID(),
+          actorDisplay: 'Seed Trustee',
+          actedAt: new Date('2026-06-01T00:00:00.000Z'),
+        })
+        .returning();
+
+      const [appeal] = await tx
+        .insert(schema.memberModerationAppeals)
+        .values({
+          memberId: mid as never,
+          pariwarId: PARIWAR_A,
+          moderationActionId: action!.moderationActionId,
+          groundsCiphertext: await enc(PARIWAR_A, 'moderation_appeal', 'I was never told why'),
+          filedVia: 'portal',
+          filedAt: new Date('2026-07-01T00:00:00.000Z'),
+          status: 'decided',
+          outcome: 'upheld',
+          reasonedOutcomeCiphertext: await enc(
+            PARIWAR_A,
+            'moderation_appeal',
+            'the dwell had elapsed and the ground is made out',
+          ),
+          decidedByActorId: randomUUID(),
+          decidedByDisplay: 'Second Panel Member',
+          decidedAt: new Date('2026-07-10T00:00:00.000Z'),
+        })
+        .returning();
+
+      await anonymizeMember(tx, { kms, kekRef }, { memberId: mid, pariwarId: PARIWAR_A });
+
+      const [row] = await tx
+        .select()
+        .from(schema.memberModerationAppeals)
+        .where(eq(schema.memberModerationAppeals.appealId, appeal!.appealId));
+      expect(row, 'the appeal row is RETAINED — a governance act survives RTBF').toBeDefined();
+      expect(await dec(row!.groundsCiphertext as string, PARIWAR_A, 'moderation_appeal')).toBe(
+        ANONYMIZED_SENTINEL,
+      );
+      expect(
+        await dec(row!.reasonedOutcomeCiphertext as string, PARIWAR_A, 'moderation_appeal'),
+      ).toBe(ANONYMIZED_SENTINEL);
+      // Non-PII governance provenance survives untouched.
+      expect(row!.status).toBe('decided');
+      expect(row!.outcome).toBe('upheld');
+      expect(row!.filedVia).toBe('portal');
+      expect(row!.decidedByDisplay).toBe('Second Panel Member');
+    });
+
+    it('⭐ Story 10.22 (AC9) — an OPEN appeal is scrubbed WITHOUT tripping the coherence CHECK', async () => {
+      // ⚠ The reason `reasoned_outcome_ciphertext` is scrubbed only WHERE NON-NULL. An open appeal has
+      // no determination, and migration 0107's `…_decision_coherence_check` requires every decision
+      // field to be NULL while `status = 'open'` — so an unconditional scrub would write a sentinel
+      // into an open appeal and make every erasure of a member with a pending appeal FAIL.
+      const { tx, client } = getTx();
+      const mid = toMemberId(randomUUID());
+      await enterAppScope(client, PARIWAR_A);
+      await seedMember(tx, PARIWAR_A, { memberId: mid });
+
+      const [action] = await tx
+        .insert(schema.memberModerationActions)
+        .values({
+          memberId: mid as never,
+          pariwarId: PARIWAR_A,
+          action: 'suspend',
+          reasonCode: 'r7-contribution-discipline',
+          decisionNoteCiphertext: await enc(PARIWAR_A, 'member_moderation', 'seed'),
+          actorId: randomUUID(),
+          actorDisplay: 'Seed Trustee',
+          actedAt: new Date('2026-06-01T00:00:00.000Z'),
+        })
+        .returning();
+
+      const [appeal] = await tx
+        .insert(schema.memberModerationAppeals)
+        .values({
+          memberId: mid as never,
+          pariwarId: PARIWAR_A,
+          moderationActionId: action!.moderationActionId,
+          groundsCiphertext: await enc(PARIWAR_A, 'moderation_appeal', 'still waiting to be heard'),
+          // The PORTAL arm: `helpline` would require a ticket (the 0107 CHECK), and this fixture is
+          // about the OPEN status, not the intake surface.
+          filedVia: 'portal',
+          filedAt: new Date('2026-07-01T00:00:00.000Z'),
+          status: 'open',
+        })
+        .returning();
+
+      // ⛔ The assertion is that this does not THROW. Before the where-non-null guard it did.
+      await anonymizeMember(tx, { kms, kekRef }, { memberId: mid, pariwarId: PARIWAR_A });
+
+      const [row] = await tx
+        .select()
+        .from(schema.memberModerationAppeals)
+        .where(eq(schema.memberModerationAppeals.appealId, appeal!.appealId));
+      expect(row!.status).toBe('open');
+      expect(row!.reasonedOutcomeCiphertext).toBeNull();
+      expect(await dec(row!.groundsCiphertext as string, PARIWAR_A, 'moderation_appeal')).toBe(
+        ANONYMIZED_SENTINEL,
+      );
+    });
+
     it('⭐ REVOCATION — a live grant is expired and its delivery OTP burned, in the SAME transaction', async () => {
       // ⛔ Scrubbing the attestation is not revoking the grant. Before the round-2 fix an erasure left a
       // `pending` grant `pending` with a live OTP in the member's hands, safe only by the INCIDENTAL

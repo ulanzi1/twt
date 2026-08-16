@@ -136,18 +136,48 @@ export function MemberStatusPanel({ payload, identity }: MemberStatusPanelProps)
         </section>
       )}
 
-      {/* Appeal CTA — reachable from every failure state (UX + a11y). */}
-      {vm.showAppealCta && (
+      {/*
+        Appeal CTA — reachable from every failure state (UX + a11y).
+
+        ⭐ Story 10.22 gave this button a destination. It rendered with NO `onClick` at all from Story
+        4.7 until now. Niyamavali §8.8 (Decision `2026-08-15-121`) is the mechanism.
+
+        ⛔ THE ADMIN CTA DOES NOT FILE AN APPEAL ON THE MEMBER'S BEHALF. An appeal is the MEMBER'S
+        act — §8.8 opens it to "a member under suspension or termination", and the event attributes it
+        to the member on both intake arms. This control LINKS TO THE RECORD. An operator taking the
+        appeal by phone files it through the off-portal helpline route, which is gated on
+        `helpdesk.create` and requires the originating ticket.
+
+        ⚠ TWO predicates, deliberately: `showAppealCta` includes the two EXPIRED states, which have no
+        moderation act to appeal. Only `showModerationAppealCta` has one.
+      */}
+      {vm.showModerationAppealCta ? (
+        <div>
+          <a
+            href={`/moderation/appeals?member=${encodeURIComponent(payload.memberId)}`}
+            data-testid="appeal-cta"
+            className="inline-block rounded border border-status-fail-border px-4 py-2 text-sm font-medium text-status-fail-fg"
+          >
+            View appeals for this member
+          </a>
+          <p className="mt-1 text-xs opacity-60">
+            An appeal is the member&rsquo;s own act (Niyamavali §8.8). To record one taken by phone,
+            use the helpline appeal route on the member&rsquo;s helpdesk ticket.
+          </p>
+        </div>
+      ) : vm.showAppealCta ? (
         <div>
           <button
             type="button"
             data-testid="appeal-cta"
-            className="rounded border border-status-fail-border px-4 py-2 text-sm font-medium text-status-fail-fg"
+            disabled
+            title="This member is not under moderation, so there is no decision to appeal under §8.8."
+            className="rounded border border-status-fail-border px-4 py-2 text-sm font-medium text-status-fail-fg opacity-50"
           >
             Raise an appeal / review
           </button>
         </div>
-      )}
+      ) : null}
     </section>
   );
 }

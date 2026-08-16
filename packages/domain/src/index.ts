@@ -377,6 +377,28 @@ export {
   MODERATION_PRIMARY_GROUND_IMMUTABLE_CODE,
   ModerationGroundAlreadySupersededError,
   MODERATION_GROUND_ALREADY_SUPERSEDED_CODE,
+  // Story 10.22 (Niyamavali §8.8, Decision `2026-08-15-121`) — the moderation appeal's five typed
+  // refusals. ⚠ Note the DELIBERATE status split, which a reader must not flatten:
+  //   · `appeal_not_appealable`      422 — the request is not coherent (no act to appeal against);
+  //   · `appeal_already_open`        409 — a state objection, and ⛔ NOT an exhaustion: §8.8 permits
+  //                                        a further appeal once the open one is determined;
+  //   · `appeal_already_decided`     409 — §8.8 gives one review; a determination is immutable;
+  //   · `appeal_adjudicator_excluded`409 — ⛔ NEVER 403. The actor HOLDS the key and may decide other
+  //                                        appeals; what is refused is their relationship to THIS
+  //                                        case. A 403 would tell an operator they lack a capability
+  //                                        they in fact hold, with nothing naming the real cause;
+  //   · `appeal_not_found`           404 — ⛔ not 403, so an ownership read cannot reveal that a
+  //                                        record exists in another tenant.
+  ModerationAppealNotAppealableError,
+  MODERATION_APPEAL_NOT_APPEALABLE_CODE,
+  ModerationAppealAlreadyOpenError,
+  MODERATION_APPEAL_ALREADY_OPEN_CODE,
+  ModerationAppealAlreadyDecidedError,
+  MODERATION_APPEAL_ALREADY_DECIDED_CODE,
+  ModerationAppealAdjudicatorExcludedError,
+  MODERATION_APPEAL_ADJUDICATOR_EXCLUDED_CODE,
+  ModerationAppealNotFoundError,
+  MODERATION_APPEAL_NOT_FOUND_CODE,
 } from './member/moderation/errors.js';
 // Story 10.6 — the bulk operations `[PRIMITIVE]`: a single `bulkExecute` harness (dry-run flag),
 // the `BulkOperation` contract, an empty registry (operations are surface-owned — 10.10/10.12/the

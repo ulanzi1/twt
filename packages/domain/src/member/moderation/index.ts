@@ -61,8 +61,22 @@ export {
   ModerationTerminatedPayloadSchema,
   ModerationRestoredPayloadSchema,
   ModerationGroundAppendedPayloadSchema,
+  // Story 10.22 — Niyamavali §8.8. Both OMIT the overlay shape; neither moves the overlay.
+  ModerationAppealFiledPayloadSchema,
+  ModerationAppealDecidedPayloadSchema,
   MODERATION_EVENT_PAYLOAD_SCHEMAS,
 } from './events.js';
+
+// Story 10.22 — the appeal's bounded vocabulary, declared in a LEAF module so both the pg-touching
+// schema and the pg-free event payloads can share it without a module-init cycle.
+export {
+  APPEAL_FILED_VIA,
+  type AppealFiledVia,
+  APPEAL_STATUSES,
+  type AppealStatus,
+  APPEAL_OUTCOMES,
+  type AppealOutcome,
+} from './appeal-vocabulary.js';
 
 export {
   type ModerationOverlayEventInput,
@@ -169,3 +183,37 @@ export {
   ModerationGroundNotFoundError,
   ModerationPrimaryGroundImmutableError,
 } from './errors.js';
+
+// ── Story 10.22 — the moderation APPEAL (Niyamavali §8.8, Decision `2026-08-15-121`) ─────────────
+// ⛔ A RECORD, not a fourth ModerationAction and not a fourth ModerationStatus. Nothing below moves
+// the overlay: §8.8 makes an allowed appeal DIRECT a restore rather than perform one.
+export {
+  APPEALABLE_MODERATION_STATUSES,
+  isAppealableStatus,
+  isAdjudicatorExcluded,
+  initialAppealStatus,
+  directsRestore,
+  type AppealFilingRefusal,
+  type AppealDecisionRefusal,
+} from './appeal.js';
+
+export {
+  type MemberModerationAppealRecord,
+  getMemberModerationAppeal,
+  getOpenAppealForAction,
+  listOpenAppealsForPariwar,
+  listAppealsForMember,
+  listAppealsForAction,
+  getAppealExclusionActorIds,
+  listAppealableActionIds,
+} from './appeal-read.js';
+
+export {
+  moderationAppealResourceLocator,
+  fileMemberModerationAppeal,
+  decideMemberModerationAppeal,
+  type FileModerationAppealInput,
+  type FiledModerationAppeal,
+  type DecideModerationAppealInput,
+  type DecidedModerationAppeal,
+} from './appeal-persist.js';

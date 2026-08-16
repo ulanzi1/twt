@@ -8,6 +8,7 @@
 
 import { QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
+  DecideModerationAppealRequest,
   AddPariwarRequest,
   ConvergenceMergeRequest,
   ConvergenceOverrideRequest,
@@ -1179,4 +1180,47 @@ export function useTrusteeLite(pariwarId: string) {
     queryKey: ['trustee-lite', pariwarId] as const,
     queryFn: () => api.getTrusteeLite(pariwarId),
   });
+}
+
+
+// ── Story 10.22 — the Niyamavali §8.8 moderation appeal (Decision `2026-08-15-121`) ────────────
+
+/** The OPEN appeal queue. ⚠ The surface on which the Panel can find a filed appeal at all (D6). */
+export function useModerationAppeals(pariwarId: string) {
+  return useQuery({
+    queryKey: ['moderation-appeals', pariwarId],
+    queryFn: () => api.listModerationAppeals(pariwarId),
+  });
+}
+
+/** ONE appeal, with both Tier-1 fields decrypted. The only read that carries either. */
+export function useModerationAppeal(pariwarId: string, appealId: string | null) {
+  return useQuery({
+    queryKey: ['moderation-appeal', pariwarId, appealId],
+    queryFn: () => api.getModerationAppeal(pariwarId, appealId as string),
+    enabled: appealId !== null,
+  });
+}
+
+/**
+ * DETERMINE an appeal. Three refusals the caller must tell apart:
+ *   · 403 `auth.step_up_required`                        → the elevation SIGNAL;
+ *   · 409 `member_moderation.appeal_adjudicator_excluded` → ⛔ NOT a permissions error. The actor
+ *     holds the key and may determine other appeals; they took part in THIS decision (§8.8);
+ *   · 409 `member_moderation.appeal_already_decided`      → §8.8 gives one review.
+ */
+export function useDecideModerationAppeal(pariwarId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { appealId: string; body: DecideModerationAppealRequest }) =>
+      api.decideModerationAppeal(pariwarId, input.appealId, input.body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['moderation-appeals', pariwarId] });
+    },
+  });
+}
+
+/** Request the step-up OTP for the appeal context. ⛔ Always via the client helper, never a literal. */
+export function useRequestModerationAppealStepUp() {
+  return useMutation({ mutationFn: () => api.requestModerationAppealStepUp() });
 }

@@ -1,4 +1,94 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-16j (7-11-fixed-amount-notice-period-and-fixed-period-reconciliation:
+#   backlog -> ready-for-dev via bmad-create-story, off main @ d6de145 (clean, fetched,
+#   == origin/main). Saved 7-11-fixed-amount-notice-period-and-fixed-period-reconciliation.md.
+#   NO code written, NO gate run, nothing here attested by a test run -- authoring pass only.
+#   ⛔ THE STORY HAS NO epics.md ENTRY. It was minted by Decision 2026-08-16-123 clause 9 into
+#   sprint-status.yaml:7178 and NOWHERE ELSE -- the ACs are sourced from the RULING plus
+#   deferred-work.md:4495-4562, not from an epic. AC8 creates the missing `### Story 7.11:` entry after
+#   epics.md:2985 and corrects Epic 7's "10 stories" count at :614. The mint was designed to stop a
+#   deferral expiring un-owned ([[project_r7_fact_producer_unbuilt]]); it stopped it one register short.
+#   ⛔ THE PANEL RULED THE POLICY AND NOT THE TEXT, SO THE STORY OPENS WITH A ROUTING NOTE. Settled
+#   (clauses 6-9, [Trustee-ratified]): notice = 60 days not 365; twelve months is normal/planned and NOT
+#   an absolute lock; the emergency mechanism REMAINS and bypasses the 60-day notice. NOT settled: the
+#   amended §4.2 wording in both locales, whether Deed Cl. 10(b) needs amending at all, and Q5.1's
+#   emergency-BACKDATING lower bound -- routed here by clause 11 as [Author-committed] and expressly not
+#   ruled. AC1 = SIX questions, Q1/Q2/Q3/Q6 BLOCKING, with an explicit ⏸ STOP after Task 1.
+#   ⭐ THE AUTHORING FINDING THAT DE-RISKS THE WHOLE INSTRUMENT HALF: trust-deed.md:7 reads "⚠️ DRAFT --
+#   NOT YET EXECUTED." Cl. 22(b)'s two-thirds-plus-supplementary-REGISTERED-deed mechanism (:273) governs
+#   amending an EXECUTED deed; Cl. 22(c) (:275) confirms the Niyamavali is Board-amendable under Cl. 20(a)
+#   without touching the Deed at all. ⇒ element (ii) is a markdown edit plus a ratified record, NOT an
+#   external legal act, and the story is NOT parked _AWAITING EXTERNAL ACTION_.
+#   ⭐ AND A SECOND, SHARPER ONE PUT AS A BLOCKING QUESTION RATHER THAN RESOLVED: Deed Cl. 10(b) (:147)
+#   reads "which the Board MAY fix for stated periods of not less than twelve months" -- the operative
+#   verb is PERMISSIVE. On its face it already agrees with the ruling, while §4.2 (niyamavali.md:102, hi
+#   :100) and T&C §4.2 state the same period as a CONSTRAINT. The three texts differ in FORCE, not only
+#   in wording. ⛔ Recorded as Q3 for the Panel, NOT author-defaulted -- deciding it here would be
+#   re-reading a ratified instrument ([[feedback_supersede_never_reinterpret]]).
+#   ⚠ THE RULING NAMED FOUR REGISTERS; THE CLAIM LIVES IN SIX. Named: legal text, PRD, architecture,
+#   implementation. NOT named and verified live at d6de145: (5) the MEMBER-FACING Terms & Conditions
+#   §4.2 -- "(set by the Trustees for periods of at least 12 months)", terms-and-conditions.md:49 / hi
+#   :52, the only one of the six a member actually accepts -- raised as Q4, with the verified mitigation
+#   that the T&C body seeded into terms_and_conditions_versions today is the PLACEHOLDER from
+#   scripts/seed-placeholder-tc.ts, so no version bump or re-acceptance is triggered NOW (but will be
+#   once Story 0.13's counsel-reviewed body is seeded); and (6) epics.md in seven places. AC8 splits
+#   epics.md deliberately: the LIVE FR-summary lines (:56, :109, :2774) follow the PRD, while the
+#   HISTORICAL story-AC bodies (:2884/:2891 Story 7.5, :3806/:3813 Story 10.13, :3058, :404) get an
+#   APPENDED DATED NOTE and are ⛔ never rewritten in place -- the same split 10.13 used when it left the
+#   1-18 / 10-18 / 7-5 story files alone.
+#   ⭐ FOUR MORE FINDINGS THE NOTE CARRIES, each verified live rather than inferred: §4.2 is NOT in the
+#   clause registry (packages/domain/seed/niyamavali-v1-clauses.sql seeds 23 niy.* ids, none of them
+#   §4.2) ⇒ NO migration, NO niyamavali_amendments edge, NO public-render change, and the dev agent
+#   cannot invent a clause_versions row; there is NO DB constraint on effective_from at all (0075/0077
+#   CHECK only version>=1, amount>0, amount<=1e7) ⇒ the 60-day change is ONE app-level constant and
+#   pnpm schema:check has nothing to see; and this story IS the scheduled re-trigger for the
+#   submitter-distinctness observation (deferred-work.md:4501-4503 names it in terms), so it is raised to
+#   the Panel as scheduled rather than silently carried a second time.
+#   ⭐ F-4 PROMOTED TO A SIXTH QUESTION (Q6) AT BigDev's DIRECTION, mid-authoring -- the note now carries
+#   SIX questions, still three blocking. UX-DR25 (ux-design-specification.md:987-993) commits a
+#   FOUR-STAGE My Pool card transition (Month-3 / Month-1 / first cycle / normal) premised IN TERMS on
+#   "per FR-15, 12+ month notice". ⚠ THE FLOOR MOVED, NOT THE PRACTICE: at 60 days a minimum-notice
+#   change has no Month-3 (Month-1 and Month 0 still fire), so stage 1 stops being GUARANTEED BY POLICY
+#   and becomes A MATTER OF TRUSTEE PRACTICE. The Panel ruled the notice period WITHOUT that consequence
+#   in front of it, so it is put back to them: (a) accept the three-stage degradation, (b) record that
+#   ordinary/planned changes still carry longer notice -- a PRACTICE EXPECTATION, ⛔ explicitly NOT a
+#   code invariant and nothing enforces it -- (c) a SECOND, longer floor for planned changes (⛔ real
+#   code, two numbers where the system has always had one), or ⭐ (d) MOVE THE FLOOR ITSELF FROM 60 TO
+#   90 DAYS, added at BigDev's direction. F-4 is RETAINED as a finding as well as asked as Q6 -- the
+#   10.13 F-2 → Q2.2 precedent: the finding states the fact, the question asks the decision.
+#   ⭐ WHY (d) IS RECOMMENDED, WITH THE ARITHMETIC GIVEN RATHER THAN ASSERTED: stage 1 is anchored at
+#   THREE MONTHS and three calendar months is 90-92 days. At a 90-day floor a minimum-notice change
+#   fires stage 1 ON THE DAY IT IS ANNOUNCED and dwells there ~60 days before Month-1 -- the four-stage
+#   pattern works BY POLICY, at its natural size, for every conforming change. At 60 it cannot fire at
+#   all. ⇒ 90 is the SMALLEST floor that restores the guarantee, and it costs exactly one constant.
+#   ⚠ THE PRICE, RECORDED RATHER THAN SOFTENED: (d) SUPERSEDES Decision 2026-08-16-123 clause 6, which
+#   is [Trustee-ratified] and was ratified the SAME DAY. That is legitimate -- ratified policy is
+#   SUPERSEDED, never re-read ([[feedback_supersede_never_reinterpret]]) -- but the entry must SAY SO IN
+#   TERMS, and ⛔ clause 6 is never edited in place. (b) is the alternative that supersedes nothing, at
+#   the cost that its guarantee is a practice promise ⛔ NOTHING ENFORCES.
+#   ⛔ TWO CONSEQUENCES OF ADDING (d), BOTH PROPAGATED RATHER THAN LEFT TO THE DEV AGENT: (1) Q6 WAS
+#   NON-BLOCKING AND NOW BLOCKS -- (a)/(b) touch no code and (c) sits above an unchanged 60, but (d)
+#   moves FIXED_AMOUNT_NOTICE_DAYS itself, so AC2's constant, AC6's PRD sentences, AC7's threat row,
+#   AC10's boundary tests and Q2's §4.2 wording all resolve to a DIFFERENT NUMBER under it; AC2/AC6/AC7/
+#   AC10 are re-worded to name "the ruled notice period" instead of hardcoding 60. (2) ⛔ Q2 MUST NOT BE
+#   RATIFIED BEFORE Q6 -- the §4.2 draft names the notice period IN THE INSTRUMENT, so ratifying "60
+#   days" and then ruling (d) would put a freshly ratified instrument out of date on the day it was
+#   written, costing a second both-locales amendment.
+#   ⛔ The BUILD stays Story 8.2's under every option; 7.11 records the ruling and, under (b), annotates
+#   ux-design-specification.md:987 -- a SEVENTH register, named nowhere in Decision 2026-08-16-123.
+#   ⛔ WHAT THE STORY DELIBERATELY DOES NOT BUILD, each with the reason recorded at the boundary: a
+#   minimum-DURATION predicate (clause 7 ruled the opposite in terms -- building one would contradict the
+#   ruling that minted the story; AC1/Q5 turns the absence into a RECORDED CLOSURE so the next reader
+#   does not re-raise it); any weakening of the emergency path (clause 8, express); any move of
+#   POOL_FIXED_AMOUNT_MIN_PANEL_SIZE (clause 5 + epics.md:3830 + deferred-work.md:4468); any re-opening
+#   of 10.13's eligibility enforcement; and ⛔ the wire code pool.fixed_amount_notice_too_short is NOT
+#   renamed -- it names the CONDITION, not the number, and it is client-observable.
+#   ⭐ AC10 MAKES REVERT-SANITY THE EVIDENCE, RUN AND NOT ASSERTED ([[feedback_gate_scope_semantic_coverage]]):
+#   with FIXED_AMOUNT_NOTICE_DAYS restored to 365, at least one UNIT and one LIVE-DB test must fail. The
+#   named trap is that pool-fixed-amount.spec.ts's accepted case is 400 days out and would pass at BOTH
+#   floors -- so it must be inverted to a date the OLD floor rejected, or the suite proves nothing.
+#   Only development_status[7-11-fixed-amount-notice-period-and-fixed-period-reconciliation] flips.
+#   NO other story status changed; epic-7 stays in-progress (unchanged).)
 # last_updated: 2026-08-16i (10-13-fixed-amount-setter-admin-ui: stays DONE. Re-run of
 #   /bmad-code-review at user request, widened to the FULL 27-file diff (code + governance/planning
 #   docs, ~4432 lines) rather than just the 5 patched files. 1 new finding: the AC4 Scheduled
@@ -7175,7 +7265,7 @@ development_status:
   7-8-under-funded-cycle-close-of-cycle-template-driven-framing: done
   7-9-pool-engine-pre-launch-measured-validation-gate: done
   7-10-pool-engine-onboarding-tutorial: done
-  7-11-fixed-amount-notice-period-and-fixed-period-reconciliation: backlog
+  7-11-fixed-amount-notice-period-and-fixed-period-reconciliation: in-progress
   epic-7-retrospective: done
 
   # ==========================================================================

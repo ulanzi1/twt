@@ -43,8 +43,11 @@ import { fanOutAlertToMembers, type ContributionNotifyDeps } from './contributio
 export interface ModerationNotifyPayload {
   moderationActionId: string;
   memberId: string;
-  action: 'suspend' | 'terminate' | 'restore';
+  action: 'suspend' | 'terminate' | 'restore' | 'appeal_upheld' | 'appeal_allowed';
   reasonCode: string;
+  /** Present iff `action` is `appeal_upheld`/`appeal_allowed` — Story 10.22 §8.8. The alert id
+   *  derives from THIS, never from `moderationActionId` (see `deriveAppealAlertId`). */
+  appealId?: string;
 }
 
 export interface ModerationNotifyWorkerDeps {
@@ -71,6 +74,17 @@ const NOTICE_KEYS = {
   restore: {
     titleKey: 'moderation.notice.restored.title',
     bodyKey: 'moderation.notice.restored.body',
+  },
+  // ── Story 10.22 §8.8 — the appeal DETERMINATION notice ────────────────────────────────────────
+  // Neither body takes a `{reason}` — the appeal outcome carries no rationale (the adjudicator's
+  // reasoned outcome is Tier-1 and never leaves the database, matching every other notice here).
+  appeal_upheld: {
+    titleKey: 'moderation.appeal.outcome.title',
+    bodyKey: 'moderation.appeal.outcome.upheld',
+  },
+  appeal_allowed: {
+    titleKey: 'moderation.appeal.outcome.title',
+    bodyKey: 'moderation.appeal.outcome.allowed',
   },
 } as const satisfies Record<ModerationNotifyPayload['action'], { titleKey: string; bodyKey: string }>;
 
@@ -134,6 +148,19 @@ export function deriveModerationAlertId(moderationActionId: string): string {
   return uuidV5(MODERATION_ALERT_ID_NAMESPACE_UUID, moderationActionId);
 }
 
+/**
+ * Derive a deterministic UUIDv5 alert id from the APPEAL id — the `appeal_upheld`/`appeal_allowed`
+ * counterpart to `deriveModerationAlertId`. Keyed on the APPEAL, not the moderation action: §8.8
+ * permits re-filing after a determination, so one action can carry more than one decided appeal,
+ * each earning its own distinct notice. Keying on the action would collide with the original
+ * suspend/terminate notice (which already owns that derivation) and with a second appeal's notice
+ * on the same action. Same namespace as `deriveModerationAlertId` — the `name` input is what keeps
+ * the two derivations from ever colliding.
+ */
+export function deriveAppealAlertId(appealId: string): string {
+  return uuidV5(MODERATION_ALERT_ID_NAMESPACE_UUID, `appeal:${appealId}`);
+}
+
 function uuidV5(namespaceUuid: string, name: string): string {
   const nsBytes = Buffer.from(namespaceUuid.replace(/-/g, ''), 'hex');
   const hash = createHash('sha1')
@@ -162,6 +189,8 @@ export function buildModerationAlert(input: {
   readonly reasonCode: string;
   readonly locale: Locale;
   readonly now: Date;
+  /** Present iff `action` is `appeal_upheld`/`appeal_allowed` — see `deriveAppealAlertId`. */
+  readonly appealId?: string;
   /**
    * Whether authenticated access has ACTUALLY ended for this member — i.e. whether the
    * `termination_access_block` flag is enabled for their Pariwar. INJECTED, never read here: this
@@ -193,8 +222,13 @@ export function buildModerationAlert(input: {
   // the envelope guard in `registerModerationNotifyWorker` was added to prevent.
   const reason = resolveReasonLabel(input.reasonCode, locale);
 
+  const alertId =
+    input.action === 'appeal_upheld' || input.action === 'appeal_allowed'
+      ? deriveAppealAlertId(input.appealId ?? input.moderationActionId)
+      : deriveModerationAlertId(input.moderationActionId);
+
   return Alert.parse({
-    alert_id: deriveModerationAlertId(input.moderationActionId),
+    alert_id: alertId,
     pariwar_id: input.pariwarId,
     member_id: input.memberId,
     // A moderation notice is NOT AR-18 time-critical: there is no deadline the member must beat.
@@ -255,7 +289,10 @@ export async function runModerationNotify(
 ): Promise<ModerationNotifyResult> {
   const now = (deps.now ?? (() => new Date()))();
   const alarm = deps.onAlarm ?? ((m: string): void => console.warn(m));
-  const alertId = deriveModerationAlertId(payload.moderationActionId);
+  const alertId =
+    payload.action === 'appeal_upheld' || payload.action === 'appeal_allowed'
+      ? deriveAppealAlertId(payload.appealId ?? payload.moderationActionId)
+      : deriveModerationAlertId(payload.moderationActionId);
 
   const exists = await withPariwarScope(deps.notify.pool, pariwarId, (db) =>
     memberDomain.memberExists(db, ids.pariwarId(pariwarId), ids.memberId(payload.memberId)),
@@ -311,6 +348,7 @@ export async function runModerationNotify(
     locale,
     now,
     accessEnded,
+    appealId: payload.appealId,
   });
 
   const { undelivered } = await fanOutAlertToMembers(

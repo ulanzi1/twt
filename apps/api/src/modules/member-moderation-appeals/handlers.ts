@@ -41,19 +41,22 @@ import {
   type MemberAppealContextResponse,
   FileModerationAppealOffPortalRequest,
   FileModerationAppealRequest,
+  MODERATION_APPEAL_HELPDESK_CATEGORY,
+  MODERATION_APPEAL_SUBCATEGORY,
   type ModerationAppealDecidedResponse,
   type ModerationAppealDetailResponse,
   type ModerationAppealDto,
-  type ModerationAppealFiledResponse,
+  ModerationAppealFiledResponse,
   type ModerationAppealsListResponse,
 } from '@twt/contracts';
-import { audit, ids, member as memberDomain } from '@twt/domain';
+import { audit, helpdesk, idempotency, ids, member as memberDomain } from '@twt/domain';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
 import {
   AdminDisplayNameMissingError,
   BadRequestError,
+  ConflictError,
   ForbiddenError,
   NotFoundError,
   ServiceUnavailableError,
@@ -66,6 +69,16 @@ import { decryptAppealTextSafe, encryptAppealText } from './appeal-crypto.js';
 /** The Story 1.10 audit actions. Bounded, non-PII. */
 const APPEAL_FILED_ACTION = 'member_moderation.appeal_filed';
 const APPEAL_DECIDED_ACTION = 'member_moderation.appeal_decided';
+
+/**
+ * [Review 2026-08-16] The claimed `Idempotency-Key` header was read for PRESENCE only and then
+ * discarded — never claimed against a store — so a genuine retry (a lost response, a double tap)
+ * inserted a SECOND appeal row rather than replaying the first. Fixed via the shared keyed
+ * idempotency store (`@twt/domain` `idempotency.createKeyedStore`), the `helpdesk/member-handlers.ts`
+ * precedent. TTL headroom over `fileCore`'s worst-case runtime (KMS encrypt + one scope tx + a
+ * fire-and-forget audit enqueue) — the same 300s the helpdesk create route uses.
+ */
+const APPEAL_FILE_IDEMPOTENCY_TTL_SECONDS = 300;
 
 /**
  * Non-PII request-payload digest — the `member-moderation/handlers.ts:827` pattern verbatim.
@@ -111,6 +124,57 @@ function emitAuditWith(
   });
 }
 
+/**
+ * Best-effort post-commit member notice for a §8.8 determination — step (4) of the 6.11
+ * attributed-decision template this module's header claims to follow. Reuses the SHIPPED
+ * `member-moderation/handlers.ts:enqueueNotice` pattern verbatim: apps/api ENQUEUES, the apps/jobs
+ * `moderation-notify` worker DISPATCHES (the 10.4 crypto boundary — this request path carries
+ * ADMIN-identity keys, the fan-out needs MEMBER Tier-1 crypto). A failed enqueue LOGS and heals; it
+ * never fails the already-committed determination.
+ *
+ * ⚠ `appealId` — never `moderationActionId` — is the notice's dedup/alert-id key: §8.8 permits
+ * re-filing after a determination, so the same act can carry more than one decided appeal.
+ */
+function emitAppealDecisionNotice(
+  deps: AppDeps,
+  request: FastifyRequest,
+  args: {
+    readonly appealId: string;
+    readonly moderationActionId: string;
+    readonly memberId: string;
+    readonly pariwarId: string;
+    readonly outcome: memberDomain.moderation.AppealOutcome;
+    readonly actorId: string;
+    readonly traceId: string;
+  },
+): void {
+  const queue = deps.moderationNotifyQueue;
+  if (!queue) {
+    request.log.info(
+      { appeal_id: args.appealId, outcome: args.outcome },
+      'member-moderation-appeal: notify queue not wired; notice skipped',
+    );
+    return;
+  }
+  void queue
+    .enqueueModerationNotice({
+      moderationActionId: args.moderationActionId,
+      memberId: args.memberId,
+      pariwarId: args.pariwarId,
+      action: args.outcome === 'upheld' ? 'appeal_upheld' : 'appeal_allowed',
+      // No rationale ever leaves the database (R1) — the reasoned outcome is Tier-1. `unspecified`
+      // resolves cleanly through the catalog and is simply unused by either outcome template.
+      reasonCode: 'unspecified',
+      requestId: args.traceId,
+      actorId: args.actorId,
+      traceId: args.traceId,
+      appealId: args.appealId,
+    })
+    .catch((err: unknown) => {
+      request.log.warn({ err }, 'member-moderation-appeal: notice enqueue failed (decision stands)');
+    });
+}
+
 function toDto(r: memberDomain.moderation.MemberModerationAppealRecord): ModerationAppealDto {
   return {
     appeal_id: r.appealId,
@@ -128,6 +192,7 @@ function toDto(r: memberDomain.moderation.MemberModerationAppealRecord): Moderat
 
 export function createModerationAppealHandlers(deps: AppDeps) {
   const emitAudit = (args: Parameters<typeof emitAuditWith>[1]): void => emitAuditWith(deps, args);
+  const idempotencyStore = idempotency.createKeyedStore(deps.pool);
 
   /**
    * The member's own identity + tenancy, from the SESSION. ⛔ Never from the body — a member-supplied
@@ -166,7 +231,11 @@ export function createModerationAppealHandlers(deps: AppDeps) {
     }
   }
 
-  /** The caller-supplied `Idempotency-Key` HEADER. Required on the member filing route. */
+  /**
+   * The caller-supplied `Idempotency-Key` HEADER. Required on the member filing route, and CLAIMED
+   * against `idempotencyStore` by the caller — see `fileFromPortal`. [Review 2026-08-16] Used to be
+   * read for presence only and the key discarded; a retry then filed a second appeal.
+   */
   function requireIdempotencyKey(request: FastifyRequest): string {
     const raw = request.headers['idempotency-key'];
     const key = Array.isArray(raw) ? raw[0] : raw;
@@ -270,25 +339,52 @@ export function createModerationAppealHandlers(deps: AppDeps) {
 
       // (1) Bot-gate FIRST, before any DB work (FR-88; the Story 10.2 discipline).
       await requireTurnstile(request);
-      // Claimed but not yet consumed — a replay protection hook the route contract requires. Read
-      // before the body so a caller missing it never reaches the write path.
-      requireIdempotencyKey(request);
+      const idempotencyKey = requireIdempotencyKey(request);
 
-      const body = FileModerationAppealRequest.parse(request.body);
+      // (2) Idempotency claim — the SAME `helpdesk/member-handlers.ts` create-route shape. A retry
+      // with the SAME key replays the original 201 instead of filing a second appeal.
+      const idemKey = `member_moderation_appeal.file:${pariwarIdStr}:${memberIdStr}:${idempotencyKey}`;
+      const claimOutcome = await idempotencyStore.claim(idemKey, APPEAL_FILE_IDEMPOTENCY_TTL_SECONDS);
+      if (claimOutcome === 'already_claimed') {
+        const stored = await idempotencyStore.getResult(idemKey);
+        const replay = stored === null ? null : ModerationAppealFiledResponse.safeParse(stored);
+        if (replay?.success) {
+          void reply.status(200);
+          return replay.data;
+        }
+        throw new ConflictError(
+          'A request with this Idempotency-Key is already in progress — please wait and retry',
+          'member_moderation.idempotency_in_progress',
+        );
+      }
 
-      const out = await fileCore({
-        pariwarIdStr,
-        memberIdStr,
-        moderationActionIdStr: body.moderation_action_id,
-        grounds: body.grounds,
-        filedVia: 'portal',
-        helpdeskTicketIdStr: null,
-        // ⭐ The MEMBER is the actor. An appeal is the member's own act.
-        actorId: memberIdStr,
-        request,
-      });
-      void reply.status(201);
-      return out;
+      let claimSettled = false;
+      try {
+        const body = FileModerationAppealRequest.parse(request.body);
+
+        const out = await fileCore({
+          pariwarIdStr,
+          memberIdStr,
+          moderationActionIdStr: body.moderation_action_id,
+          grounds: body.grounds,
+          filedVia: 'portal',
+          helpdeskTicketIdStr: null,
+          // ⭐ The MEMBER is the actor. An appeal is the member's own act.
+          actorId: memberIdStr,
+          request,
+        });
+
+        // (3) Record the result under the claimed key BEFORE returning — a retry with the SAME key
+        // now replays this exact response instead of filing a second appeal.
+        await idempotencyStore.recordResult(idemKey, out);
+        claimSettled = true;
+        void reply.status(201);
+        return out;
+      } finally {
+        // Any failure after the claim (validation, the domain's own refusals, …) releases the claim
+        // so the SAME key can be retried immediately rather than waiting out the TTL.
+        if (!claimSettled) await idempotencyStore.release(idemKey).catch(() => undefined);
+      }
     },
 
     /**
@@ -347,6 +443,26 @@ export function createModerationAppealHandlers(deps: AppDeps) {
         throw new UnauthorizedError('Authentication required', 'auth.session_required');
       }
       const body = FileModerationAppealOffPortalRequest.parse(request.body);
+
+      // [Review 2026-08-16] The DB CHECK only proves the ticket EXISTS — nothing previously confirmed
+      // it belongs to the named member, or that it actually rides the ruled `complaint` /
+      // `moderation-appeal` category the module header describes. Without this, an operator could
+      // attach any pre-existing ticket id (wrong member, wrong subject) to an off-portal filing.
+      const ticket = await helpdesk.getTicketById(
+        request.scopeTx!.tx,
+        ids.pariwarId(pariwarIdStr),
+        ids.helpdeskTicketId(body.helpdesk_ticket_id),
+      );
+      if (!ticket || ticket.subjectMemberId !== ids.memberId(body.member_id)) {
+        // 404-not-403 — the D6/D7 ownership discipline this module follows everywhere else.
+        throw new NotFoundError('Not found', 'member_moderation.appeal_ticket_not_found');
+      }
+      if (ticket.category !== MODERATION_APPEAL_HELPDESK_CATEGORY || ticket.subcategory !== MODERATION_APPEAL_SUBCATEGORY) {
+        throw new BadRequestError(
+          'The referenced ticket is not a moderation-appeal intake ticket',
+          'member_moderation.appeal_ticket_wrong_category',
+        );
+      }
 
       const out = await fileCore({
         pariwarIdStr,
@@ -499,6 +615,17 @@ export function createModerationAppealHandlers(deps: AppDeps) {
         action: APPEAL_DECIDED_ACTION,
         appealId: decided.appealId,
         status: 200,
+        traceId: request.requestContext.traceId,
+      });
+
+      // (4) POST-COMMIT member notice — best-effort; see `emitAppealDecisionNotice`.
+      emitAppealDecisionNotice(deps, request, {
+        appealId: decided.appealId,
+        moderationActionId: decided.moderationActionId,
+        memberId: decided.memberId,
+        pariwarId: pariwarIdStr,
+        outcome: decided.outcome,
+        actorId,
         traceId: request.requestContext.traceId,
       });
 

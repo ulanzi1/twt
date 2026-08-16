@@ -69,7 +69,10 @@ export const memberModerationAppeals = pgTable(
       .primaryKey()
       .defaultRandom(),
 
-    // The appellant. FK → members; RTBF (Story 3.12) cascades.
+    // The appellant. FK → members, `onDelete: 'cascade'` for referential-integrity hygiene only.
+    // Members are never row-deleted, so this cascade is moot in practice: RTBF (Story 3.12) is a
+    // field-level soft-delete (see `member/anonymize.ts`) that overwrites this table's Tier-1
+    // ciphertext columns while RETAINING the row — the appeal record survives an RTBF request.
     memberId: uuid('member_id')
       .$type<MemberId>()
       .notNull()

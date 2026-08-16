@@ -367,11 +367,20 @@ export interface ModerationNotifyEnqueuer {
     readonly moderationActionId: string;
     readonly memberId: string;
     readonly pariwarId: string;
-    readonly action: 'suspend' | 'terminate' | 'restore';
+    readonly action: 'suspend' | 'terminate' | 'restore' | 'appeal_upheld' | 'appeal_allowed';
     readonly reasonCode: string;
     readonly requestId: string;
     readonly actorId: string | null;
     readonly traceId: string;
+    /**
+     * The appeal id (Story 10.22 §8.8) — REQUIRED for `appeal_upheld`/`appeal_allowed`, absent
+     * otherwise. The alert-id derivation and the queue's dedup key must key on THIS, never on
+     * `moderationActionId`: §8.8 permits re-filing after a determination, so the same action can
+     * carry more than one decided appeal, each needing its own distinct notice — keying on the
+     * action would collide with the original suspend/terminate notice's `singletonKey` AND with
+     * a second appeal's notice on the same action.
+     */
+    readonly appealId?: string;
   }): Promise<void>;
   close?(): Promise<void>;
 }

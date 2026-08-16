@@ -27,8 +27,10 @@ import type { ModerationNotifyEnqueuer } from '../../context.js';
 export interface ModerationNotifyJobPayload {
   moderationActionId: string;
   memberId: string;
-  action: 'suspend' | 'terminate' | 'restore';
+  action: 'suspend' | 'terminate' | 'restore' | 'appeal_upheld' | 'appeal_allowed';
   reasonCode: string;
+  /** Present iff `action` is an appeal-outcome kind — see `ModerationNotifyEnqueuer` (context.ts). */
+  appealId?: string;
 }
 
 export async function createPgBossModerationNotifyEnqueuer(
@@ -52,9 +54,12 @@ export async function createPgBossModerationNotifyEnqueuer(
             memberId: input.memberId,
             action: input.action,
             reasonCode: input.reasonCode,
+            ...(input.appealId === undefined ? {} : { appealId: input.appealId }),
           },
         } satisfies JobEnvelope<ModerationNotifyJobPayload>,
-        { singletonKey: input.moderationActionId },
+        // ⚠ `appealId` when present — NEVER `moderationActionId` — see the doc-comment on
+        // `ModerationNotifyEnqueuer.enqueueModerationNotice` (context.ts) for why.
+        { singletonKey: input.appealId ?? input.moderationActionId },
       );
     },
     async close(): Promise<void> {

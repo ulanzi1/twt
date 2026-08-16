@@ -36,13 +36,18 @@ import type {
   ModerationActionId,
   PariwarId,
 } from '../../ids/index.js';
-import { memberModerationAppeals } from '../../schema/member_moderation_appeals.js';
+import { memberModerationActions } from '../../schema/member_moderation_actions.js';
+import {
+  memberModerationAppeals,
+  type MemberModerationAppealRow,
+} from '../../schema/member_moderation_appeals.js';
 import { projectMemberState } from '../project.js';
 import { getMemberStateAt } from '../read.js';
 import { isAppealableStatus } from './appeal.js';
 import { getAppealExclusionActorIds, getOpenAppealForAction } from './appeal-read.js';
 import type { AppealFiledVia, AppealOutcome } from './appeal-vocabulary.js';
 import {
+  ModerationActionNotFoundError,
   ModerationAppealAdjudicatorExcludedError,
   ModerationAppealAlreadyDecidedError,
   ModerationAppealAlreadyOpenError,
@@ -50,6 +55,14 @@ import {
   ModerationAppealNotFoundError,
 } from './errors.js';
 import { getCurrentMemberModerationOverlay } from './overlay.js';
+
+/** True iff `err` (or its wrapped cause) is a Postgres unique-violation (23505) — the
+ *  `niyamavali/write.ts` idiom. [[project_domain_limit_clamp_and_savepoint_retry]]. */
+function isUniqueViolation(err: unknown): boolean {
+  const direct = (err as { code?: string }).code;
+  const cause = (err as { cause?: { code?: string } }).cause?.code;
+  return direct === '23505' || cause === '23505';
+}
 
 /** The Story 1.10 audit `resource_locator` for a moderation appeal. */
 export function moderationAppealResourceLocator(appealId: string): string {
@@ -84,6 +97,9 @@ export interface FiledModerationAppeal {
  * File an appeal against a moderation act (§8.8).
  *
  * Order matters: **every refusal happens before any write.**
+ *   (0) the act under appeal must actually belong to this member, in this Pariwar — a 404, never a
+ *       403 (the D6/D7 ownership discipline; a mismatched combination simply has no row, and 403
+ *       would make this route an existence oracle for another member's — or tenant's — action);
  *   (1) the member's current moderation standing must be appealable (§8.8: suspension or
  *       termination) — a 422, because an unmoderated member has no act to appeal;
  *   (2) no appeal against this same act may already be open — a 409, and ⚠ *not* an exhaustion:
@@ -97,6 +113,25 @@ export async function fileMemberModerationAppeal(
   input: FileModerationAppealInput,
 ): Promise<FiledModerationAppeal> {
   const db = bindScopedDb(client);
+
+  // (0) The act must belong to THIS member, in THIS Pariwar — the `grounds.ts:appendModerationGround`
+  //     ownership-check precedent, verbatim. Without this, a caller-supplied `moderationActionId` for
+  //     an unrelated member (or tenant) would file — and consume the one-open-appeal slot of — an act
+  //     that was never theirs.
+  const actionRow = await db
+    .select({ memberId: memberModerationActions.memberId })
+    .from(memberModerationActions)
+    .where(
+      and(
+        eq(memberModerationActions.pariwarId, input.pariwarId),
+        eq(memberModerationActions.memberId, input.memberId),
+        eq(memberModerationActions.moderationActionId, input.moderationActionId),
+      ),
+    )
+    .limit(1);
+  if (!actionRow[0]) {
+    throw new ModerationActionNotFoundError(input.moderationActionId);
+  }
 
   // (1) Appealable standing. Read the derived overlay — never a status column, which does not exist.
   const overlay = await getCurrentMemberModerationOverlay(db, input.memberId);
@@ -113,19 +148,32 @@ export async function fileMemberModerationAppeal(
   }
 
   // (3) The record. Inserted BEFORE the event so the event can carry the appeal's id.
-  const inserted = await db
-    .insert(memberModerationAppeals)
-    .values({
-      memberId: input.memberId,
-      pariwarId: input.pariwarId,
-      moderationActionId: input.moderationActionId,
-      groundsCiphertext: input.groundsCiphertext,
-      filedVia: input.filedVia,
-      helpdeskTicketId: input.helpdeskTicketId ?? null,
-      filedAt: input.now,
-      status: 'open',
-    })
-    .returning();
+  //     ⚠ The (2) READ is racy on its own — two concurrent filings can both pass it before either
+  //     commits, and only one INSERT wins the partial UNIQUE index. Catching the 23505 here (rather
+  //     than letting it propagate as an unmapped 500) is the BACKSTOP the guard's own doc-comment
+  //     promises. A best-effort re-read supplies `openAppealId` for the error's `details`; if that
+  //     race is ALSO lost (vanishingly unlikely — the row that just won is now visible) the field
+  //     falls back to empty rather than the write failing a second time over cosmetics.
+  let inserted: MemberModerationAppealRow[];
+  try {
+    inserted = await db
+      .insert(memberModerationAppeals)
+      .values({
+        memberId: input.memberId,
+        pariwarId: input.pariwarId,
+        moderationActionId: input.moderationActionId,
+        groundsCiphertext: input.groundsCiphertext,
+        filedVia: input.filedVia,
+        helpdeskTicketId: input.helpdeskTicketId ?? null,
+        filedAt: input.now,
+        status: 'open',
+      })
+      .returning();
+  } catch (err) {
+    if (!isUniqueViolation(err)) throw err;
+    const stillOpen = await getOpenAppealForAction(db, input.pariwarId, input.moderationActionId);
+    throw new ModerationAppealAlreadyOpenError(input.moderationActionId, stillOpen?.appealId ?? '');
+  }
   const row = inserted[0];
   if (!row) {
     throw new Error('[fileMemberModerationAppeal] insert returned no row — check session scope');

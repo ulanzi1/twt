@@ -1185,16 +1185,6 @@ export function createMemberModerationAppealClient(opts: MemberAuthClientOptions
 
   return {
     /**
-     * FILE an appeal against a moderation act (201).
-     *
-     * `idempotencyKey` rides the `Idempotency-Key` HEADER, not the body, so a retried submit from a
-     * flaky connection files once rather than twice.
-     *
-     * ⛔ There is no `member_id` parameter, and the omission is deliberate: the member is the
-     * SESSION. A member-supplied member id on a member route is a cross-member write waiting to
-     * happen.
-     */
-    /**
      * READ the member's own appeal context: which moderation acts they may appeal right now (already
      * filtered to those with no open appeal), plus their own appeals newest-first.
      *
@@ -1211,10 +1201,21 @@ export function createMemberModerationAppealClient(opts: MemberAuthClientOptions
       );
     },
 
+    /**
+     * FILE an appeal against a moderation act (201).
+     *
+     * `idempotencyKey` rides the `Idempotency-Key` HEADER, not the body, so a retried submit from a
+     * flaky connection files once rather than twice. `turnstileToken` rides the `x-turnstile-token`
+     * HEADER — the server unconditionally requires it on this route.
+     *
+     * ⛔ There is no `member_id` parameter, and the omission is deliberate: the member is the
+     * SESSION. A member-supplied member id on a member route is a cross-member write waiting to
+     * happen.
+     */
     fileModerationAppeal(
       pariwarId: string,
       input: FileModerationAppealRequest,
-      opts2: { idempotencyKey: string },
+      opts2: { idempotencyKey: string; turnstileToken: string },
     ): Promise<ModerationAppealFiledResponse> {
       return call(
         `/api/v1/p/${encodeURIComponent(pariwarId)}/member/moderation/appeals`,
@@ -1223,7 +1224,7 @@ export function createMemberModerationAppealClient(opts: MemberAuthClientOptions
         true,
         'POST',
         undefined,
-        { 'idempotency-key': opts2.idempotencyKey },
+        { 'idempotency-key': opts2.idempotencyKey, 'x-turnstile-token': opts2.turnstileToken },
       );
     },
   };

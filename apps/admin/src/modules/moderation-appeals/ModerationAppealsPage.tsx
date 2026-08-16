@@ -49,6 +49,9 @@ export function ModerationAppealsPage({ pariwarId }: ModerationAppealsPageProps)
   const needsStepUp = err?.code === 'auth.step_up_required';
   const excluded = err?.code === 'member_moderation.appeal_adjudicator_excluded';
   const alreadyDecided = err?.code === 'member_moderation.appeal_already_decided';
+  // [Review 2026-08-16] Any OTHER failure (400 validation, 404, 500, network) previously rendered
+  // NONE of the three alerts above and left the trustee with no feedback at all.
+  const unrecognizedError = decide.isError && !needsStepUp && !excluded && !alreadyDecided;
 
   return (
     <section aria-label="Moderation appeals" data-testid="moderation-appeals" className="flex flex-col gap-5">
@@ -171,6 +174,11 @@ export function ModerationAppealsPage({ pariwarId }: ModerationAppealsPageProps)
               {alreadyDecided && (
                 <p role="alert" data-testid="appeal-already-decided">
                   This appeal has already been determined. A recorded determination cannot be changed.
+                </p>
+              )}
+              {unrecognizedError && (
+                <p role="alert" data-testid="appeal-decide-error">
+                  Could not record this determination. Please try again.
                 </p>
               )}
 

@@ -16,19 +16,39 @@
 // FlatList red-boxes when it crosses empty→populated in place
 // ([[project_fabric_flatlist_empty_populated_crash]]). This screen uses a ScrollView and renders the
 // three states as sibling branches, so the hazard cannot arise here at all.
+//
+// ── [Review 2026-08-16] More than one appealable act at once ───────────────────────────────────
+// `listAppealableActionIds` (domain) deliberately returns every act with no open appeal, ordered by
+// recency, capped at 200 — a LIST by design (e.g. an older still-appealable suspension plus a newer
+// termination). Reading only `[0]` silently stranded every other act. A member with more than one
+// appealable act now picks which one before the filing form renders.
+//
+// ── [Review 2026-08-16] The idempotency key must survive a retry ───────────────────────────────
+// Minting the key inline inside `submit()` (the `usePersonalEventAssertion` lesson, repeated here)
+// meant a second tap after a lost response used a FRESH key, defeating the dedup the comment claimed.
+// Keys are now cached per act in a ref, generated once, reused across retries.
 
 import { useT } from '@twt/i18n/react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ScrollView } from 'react-native'
 import { Button, H2, Paragraph, Text, TextArea, YStack } from 'tamagui'
 
 import { useSession } from '../../lib/session-context'
 import { moderationAppealApi } from '../../lib/moderation-appeal-api'
+import { getTurnstileToken } from '../../lib/turnstile'
 
 /** Mirrors `APPEAL_GROUNDS_MIN_CHARS` / `…MAX_CHARS` in `@twt/contracts`. The server is the
  *  authority; these bounds exist so the member is told before they submit, not after. */
 const GROUNDS_MIN = 20
 const GROUNDS_MAX = 5000
+
+type AppealContext = Awaited<ReturnType<typeof moderationAppealApi.getAppealContext>>
+
+/** A UUID for the idempotency key. `crypto.randomUUID` is available in Hermes via expo-crypto's
+ *  polyfill — the `usePersonalEventAssertion` precedent. */
+function newIdempotencyKey(): string {
+  return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
 
 export default function ModerationAppealScreen() {
   const t = useT()
@@ -37,27 +57,43 @@ export default function ModerationAppealScreen() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [filed, setFiled] = useState(false)
+  const [ctx, setCtx] = useState<AppealContext | null>(null)
   // The act under appeal. ⚠ READ from the server, never inferred: the validity payload derives the
   // member's moderation standing from `specialFlags` and carries no moderation-action id, and §8.8
-  // identifies an appeal BY the act's §8.6 record.
-  const [actionId, setActionId] = useState<string | null>(null)
+  // identifies an appeal BY the act's §8.6 record. `null` before the member has picked one (or before
+  // there is exactly one to auto-pick).
+  const [selectedActionId, setSelectedActionId] = useState<string | null>(null)
   const [hasOpenAppeal, setHasOpenAppeal] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isError, setIsError] = useState(false)
   const pariwarId = session?.pariwarId
+
+  // Cached for the lifetime of this screen instance, one key per act — every retry against the SAME
+  // act reuses the same key so the server's idempotency store dedupes it; a different act (picked via
+  // the selector) gets its own key rather than colliding with the first.
+  const idempotencyKeysRef = useRef<Map<string, string>>(new Map())
+  function idempotencyKeyFor(actionId: string): string {
+    const cached = idempotencyKeysRef.current.get(actionId)
+    if (cached) return cached
+    const key = newIdempotencyKey()
+    idempotencyKeysRef.current.set(actionId, key)
+    return key
+  }
 
   useEffect(() => {
     let cancelled = false
     if (!pariwarId) return
     void moderationAppealApi
       .getAppealContext(pariwarId)
-      .then((ctx) => {
+      .then((c) => {
         if (cancelled) return
-        setActionId(ctx.appealable_action_ids[0] ?? null)
+        setCtx(c)
+        // Auto-pick when there's exactly one act to appeal — the common case stays a single screen.
+        setSelectedActionId(c.appealable_action_ids.length === 1 ? (c.appealable_action_ids[0] ?? null) : null)
         // §8.8 permits ONE open appeal per act at a time. If none is appealable but an open one
         // exists, that is the reason — ⛔ not an exhaustion of the right.
         setHasOpenAppeal(
-          ctx.appealable_action_ids.length === 0 && ctx.appeals.some((a) => a.status === 'open'),
+          c.appealable_action_ids.length === 0 && c.appeals.some((a) => a.status === 'open'),
         )
       })
       .catch(() => {
@@ -116,7 +152,38 @@ export default function ModerationAppealScreen() {
     )
   }
 
-  const moderationActionId = actionId
+  // More than one act is appealable and the member hasn't picked yet — pick before filing.
+  if (ctx && ctx.appealable_action_ids.length > 1 && selectedActionId === null) {
+    return (
+      <ScrollView>
+        <YStack flex={1} px="$6" py="$6" bg="$background" gap="$3">
+          <H2 accessibilityRole="header">{t('moderation.appeal.selectDecision.title')}</H2>
+          {ctx.appealable_action_ids.map((id, i) => (
+            <Button
+              key={id}
+              accessibilityRole="button"
+              onPress={() => setSelectedActionId(id)}
+            >
+              {i === 0
+                ? t('moderation.appeal.selectDecision.mostRecent')
+                : t('moderation.appeal.selectDecision.earlier', { n: i })}
+            </Button>
+          ))}
+        </YStack>
+      </ScrollView>
+    )
+  }
+
+  const moderationActionId = selectedActionId
+  const showChangeDecision = (ctx?.appealable_action_ids.length ?? 0) > 1
+
+  // A previous determination against THIS act, if any — §8.8 permits re-filing after a decision, so
+  // the act stays appealable, but the member should see what happened last time rather than land
+  // straight back on a blank form as if nothing had been decided.
+  const previousDetermination =
+    ctx && moderationActionId
+      ? (ctx.appeals.find((a) => a.moderation_action_id === moderationActionId && a.status === 'decided') ?? null)
+      : null
 
   const tooShort = grounds.trim().length < GROUNDS_MIN
 
@@ -126,12 +193,13 @@ export default function ModerationAppealScreen() {
     setError(null)
     try {
       // ⚠ The Idempotency-Key rides a HEADER, never the body — the Story 10.2 member-surface
-      // discipline. Keyed on the ACT plus this attempt, so a retry after a network error cannot
-      // double-file while two genuinely separate attempts stay distinct.
+      // discipline. Minted ONCE per act (cached in `idempotencyKeysRef`), so a retry after a network
+      // error replays the SAME key while two genuinely separate attempts against different acts stay
+      // distinct. `x-turnstile-token` also rides a HEADER — the server unconditionally requires it.
       await moderationAppealApi.fileModerationAppeal(
         pariwarId,
         { moderation_action_id: moderationActionId, grounds: grounds.trim() },
-        { idempotencyKey: `${moderationActionId}:${Date.now()}` },
+        { idempotencyKey: idempotencyKeyFor(moderationActionId), turnstileToken: await getTurnstileToken() },
       )
       setFiled(true)
     } catch (err) {
@@ -149,6 +217,30 @@ export default function ModerationAppealScreen() {
       <YStack flex={1} px="$6" py="$6" bg="$background" gap="$3">
         <H2 accessibilityRole="header">{t('moderation.appeal.title')}</H2>
         <Paragraph>{t('moderation.appeal.intro')}</Paragraph>
+
+        {showChangeDecision ? (
+          <Button
+            chromeless
+            size="$2"
+            accessibilityRole="button"
+            onPress={() => setSelectedActionId(null)}
+          >
+            {t('moderation.appeal.changeDecision')}
+          </Button>
+        ) : null}
+
+        {previousDetermination ? (
+          <YStack gap="$2" borderWidth={1} borderColor="$borderColor" rounded="$4" p="$3">
+            <Text fontWeight="600" accessibilityRole="header">
+              {t('moderation.appeal.previousDetermination.title')}
+            </Text>
+            <Paragraph fontSize="$2">
+              {previousDetermination.outcome
+                ? t(`moderation.appeal.outcome.${previousDetermination.outcome}`)
+                : null}
+            </Paragraph>
+          </YStack>
+        ) : null}
 
         {/* §8.8 has no suspensive effect. Told BEFORE the member commits, not after. */}
         <Paragraph color="$colorPress">{t('moderation.appeal.noSuspensiveEffect')}</Paragraph>

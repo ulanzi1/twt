@@ -648,7 +648,43 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
     // requirement is enforced separately, server-side, inside the scope transaction, as a typed 409 —
     // a Panel member who imposed the act (or contributed a ground it rests on) holds this key and is
     // still refused THAT case.
-    permissions: [MEMBER_MODERATE, MEMBER_RESTORE_TERMINATED, MEMBER_MODERATION_APPEAL_DECIDE],
+    // ⭐ Story 10.13 adds `pool.fixed_amount_set` + `pool.fixed_amount_emergency`, and this bundle is
+    // NOT their only holder — `pariwar_admin` retains both, above. Decision `2026-08-16-123` clause 1.
+    // The Trust Deed vests the power to fix the per-Pool amount in the BOARD — Clause 10(b) ("a fixed
+    // per-Pool amount determined by the Board") and Clause 20(c) ("open Pools, fix per-Pool amounts") —
+    // and Niyamavali §4.2 repeats it ("set by the Board for stated periods of not less than 12
+    // months"). Story 7.5 shipped both keys on `pariwar_admin` ALONE, and a `pariwar_admin` is not the
+    // Board: the same indistinguishability Story 10.18 existed to end, one epic later, at a different
+    // surface.
+    // ⚠ THIS GRANT IS NOT IMPLIED BY 10.18 AND WAS NOT AUTHOR-DEFAULTED. §8.7 constitutes the Panel as
+    // "the Board of Trustees acting in a MODERATION capacity"; amount-fixing is a DIFFERENT capacity,
+    // so it was ruled on its own facts.
+    // ⚠ CONCURRENT, NOT EXCLUSIVE — the §8.7 posture (Decision `2026-08-10-096` clause 3), and the
+    // FIRST grant to this bundle that is not exclusive to it. ⛔ Do NOT read the `member.restore_terminated`
+    // / `member.decide_moderation_appeal` "do not grant this key elsewhere" notes above as covering
+    // these two: for THOSE keys exclusivity IS the ratified mechanism, and for THESE it is expressly not.
+    // ⚠ `pool.fixed_amount_emergency` is ALSO the emergency attesting-panel MEMBERSHIP eligibility
+    // credential (Decision `2026-08-16-123` clause 2, Q2.1 option (a)) — the `claim.r9_vote` /
+    // `claim.appeal_vote` precedent (see the key declarations above). `assertFixedAmountPanelAuthorized`
+    // requires every attesting panel actor to hold it at this Pariwar. ⛔ Removing this key from a role
+    // therefore shrinks the ELIGIBLE-ATTESTOR DIRECTORY as well as the write gate — two consequences,
+    // one edit.
+    // ⛔ And do NOT grant either key to `state_trustee` or `district_admin`: by the rank ordering
+    // documented above, a `state`/`district`-ceiling grant can never satisfy the `pariwar`-dimension
+    // check, so the grant would be INERT ON ARRIVAL rather than merely unwise. ⚠ Note this bites twice
+    // here — an inert grant would also make the holder appear in no eligible-attestor directory, so the
+    // surface would offer a trustee the system can never accept.
+    // ⚠ Holding the key is NOT sufficient to attest any given override: it proves CAPABILITY, never
+    // ASSENT. Only the SUBMITTING actor is authenticated and step-up gated; nothing proves a listed
+    // attestor consented. FR-15's "multi-trustee approval" therefore remains PARTIALLY implemented
+    // (Decision `2026-08-16-123` clause 14) — do not read this grant as closing it.
+    permissions: [
+      MEMBER_MODERATE,
+      MEMBER_RESTORE_TERMINATED,
+      MEMBER_MODERATION_APPEAL_DECIDE,
+      POOL_FIXED_AMOUNT_SET,
+      POOL_FIXED_AMOUNT_EMERGENCY,
+    ],
     scopeCeiling: 'pariwar',
   },
 ];

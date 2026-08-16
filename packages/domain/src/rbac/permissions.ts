@@ -459,7 +459,20 @@ export function permissionKey(value: string): PermissionKey {
 // `permissions.test.ts`'s length assertion moves with it.
 // ⚠ Catalog version is NOT a proxy for key count — 10.18 and 6.17 both bumped while minting zero keys.
 // Move the length assertion only when a key is actually minted, as it is here.
-export const PERMISSION_CATALOG_VERSION = 34 as const;
+// ── Bumped 34 → 35 at Story 10.13 (added ZERO keys) ─────────────────────────────────────────────
+// `trustee_panel`, an EXISTING role, gains the EXISTING `pool.fixed_amount_set` +
+// `pool.fixed_amount_emergency` keys (Decision `2026-08-16-123` clause 1 — the Deed vests amount-fixing
+// in the BOARD, Cl. 10(b)/20(c) + Niyamavali §4.2, and Story 7.5 shipped it on `pariwar_admin` alone).
+// So the CAPABILITY MODEL moves and the key set does not: `PERMISSION_CATALOG.keys` stays at 43 and
+// `permissions.test.ts`'s `toHaveLength(43)` is UNCHANGED. This is the THIRD application of that rule
+// (10.18 minted a role and no key; 6.17 gave an existing role an existing key) — and the third proof
+// that catalog version is not a proxy for key count.
+// ⚠ `pariwar_admin` RETAINS both keys — concurrent, not exclusive (§8.7). This is the first
+// `trustee_panel` grant that is NOT exclusive to that bundle; see roles.ts for why that distinction
+// is load-bearing against the 10.19/10.22 notes.
+// ⛔ NO new key, NO new role, NO migration. `pool.fixed_amount_emergency` additionally becomes the
+// emergency attesting-panel eligibility credential (clause 2) — a consumer of the key, not a change to it.
+export const PERMISSION_CATALOG_VERSION = 35 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file

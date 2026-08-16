@@ -366,7 +366,11 @@ export interface ApplyEmergencyOverrideInput {
   readonly effectiveFrom: Date;
   /** Policy/operational justification ONLY — never member-specific (D3). Non-empty. */
   readonly documentedReason: string;
-  /** The attesting State-Trustee panel COMPOSITION — non-empty roster of {actor_id, actor_display}. */
+  /** The attesting trustee panel COMPOSITION — non-empty roster of {actor_id, actor_display}.
+   *  ⚠ Story 10.13: every member's ELIGIBILITY is asserted by the CALLER before this point
+   *  (`assertFixedAmountPanelAuthorized`), because the check needs the scope tx's raw client and this
+   *  accessor takes a Drizzle `Db`. The guards below stay ARITHMETIC by design — eligibility is an
+   *  additional predicate at the caller, never a replacement for these. */
   readonly panel: readonly PoolFixedAmountPanelMember[];
   /** The attesting actor + resolved R5 display snapshot (fail-closed on a missing display upstream). */
   readonly attestedByActor: string;

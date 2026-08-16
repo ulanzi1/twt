@@ -245,12 +245,16 @@ export class PoolFixedAmountReasonRequiredError extends PoolFixedAmountError {
 
 export const POOL_FIXED_AMOUNT_ATTESTATION_REQUIRED_CODE = 'pool.fixed_amount_attestation_required';
 
-/** An emergency override with an empty panel roster — a State-Trustee panel attestation is MANDATORY (AC3a). */
+/** An emergency override with an empty panel roster — an attesting trustee panel is MANDATORY (AC3a).
+ *  ⚠ Story 10.13 re-labelled the COPY from "State-Trustee" (Decision `2026-08-16-123` clause 10): a
+ *  literal `state_trustee` is ineligible BY ARITHMETIC — a `state`-ceiling grant can never satisfy the
+ *  `pariwar`-dimension check this panel is gated at — so the old wording named a body that could never
+ *  sit on it. ⛔ The stored `panel` column and the `panel_actor_ids` wire field are NOT renamed. */
 export class PoolFixedAmountAttestationRequiredError extends PoolFixedAmountError {
   public readonly name = 'PoolFixedAmountAttestationRequiredError';
   public readonly code = POOL_FIXED_AMOUNT_ATTESTATION_REQUIRED_CODE;
   public constructor() {
-    super(`emergency fixed_amount override requires a non-empty State-Trustee panel attestation`);
+    super(`emergency fixed_amount override requires a non-empty attesting trustee panel`);
   }
 }
 
@@ -271,7 +275,7 @@ export class PoolFixedAmountPanelTooSmallError extends PoolFixedAmountError {
   ) {
     super(
       `emergency fixed_amount override requires an attesting panel of at least ${minimum} distinct ` +
-        `State-Trustees; got ${received}`,
+        `trustees; got ${received}`,
     );
   }
 }

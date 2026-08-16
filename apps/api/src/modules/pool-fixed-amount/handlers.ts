@@ -67,13 +67,13 @@ function translateFixedAmountError(err: unknown): never {
   }
   if (err instanceof poolDomain.PoolFixedAmountAttestationRequiredError) {
     throw new BadRequestError(
-      'An emergency override requires a non-empty State-Trustee panel attestation',
+      'An emergency override requires a non-empty attesting trustee panel',
       'pool.fixed_amount_attestation_required',
     );
   }
   if (err instanceof poolDomain.PoolFixedAmountPanelTooSmallError) {
     throw new BadRequestError(
-      `An emergency override requires an attesting panel of at least ${String(err.minimum)} distinct State-Trustees`,
+      `An emergency override requires an attesting panel of at least ${String(err.minimum)} distinct trustees`,
       'pool.fixed_amount_panel_too_small',
     );
   }

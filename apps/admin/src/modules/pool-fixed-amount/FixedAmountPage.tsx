@@ -14,11 +14,13 @@ import { useState } from 'react';
 import { ApiError } from '../../api/client.js';
 import {
   useApplyFixedAmountEmergency,
+  useFixedAmountEligibleAttestors,
   useFixedAmountView,
   useRequestStepUp,
   useScheduleFixedAmountChange,
   useVerifyStepUp,
 } from '../../api/hooks.js';
+import { resolveEn as t } from './i18n-en.js';
 
 export interface FixedAmountPageProps {
   pariwarId: string;
@@ -51,6 +53,10 @@ const STANDARD_EFFECTIVE_FROM_MIN = localDatetimeInDays(365);
 
 export function FixedAmountPage({ pariwarId }: FixedAmountPageProps): ReactElement {
   const view = useFixedAmountView(pariwarId);
+  // ⚠ CONVENIENCE, NEVER THE BOUNDARY (the file-header posture, restated). The server re-checks every
+  // submitted actor on the emergency POST whether or not this list loaded, so a 403/failure here
+  // degrades the picker, never the guarantee.
+  const attestors = useFixedAmountEligibleAttestors(pariwarId);
   const standard = useScheduleFixedAmountChange(pariwarId);
   const emergency = useApplyFixedAmountEmergency(pariwarId);
   const requestStepUp = useRequestStepUp();
@@ -64,7 +70,10 @@ export function FixedAmountPage({ pariwarId }: FixedAmountPageProps): ReactEleme
   const [emgAmount, setEmgAmount] = useState('');
   const [emgEffectiveFrom, setEmgEffectiveFrom] = useState(() => new Date().toISOString().slice(0, 16));
   const [emgReason, setEmgReason] = useState('');
-  const [emgPanel, setEmgPanel] = useState(''); // newline/comma-separated actor UUIDs
+  // ⭐ Story 10.13 (AC2) — the panel is now a SELECTION over the eligible-attestor directory, not free
+  // text. A Set (not an array) so toggling is O(1) and a double-click cannot produce a duplicate at all
+  // — the client-side de-dupe the textarea needed is now structural.
+  const [emgPanel, setEmgPanel] = useState<ReadonlySet<string>>(() => new Set());
 
   const [stepUpRequired, setStepUpRequired] = useState(false);
   const [otp, setOtp] = useState('');
@@ -76,12 +85,16 @@ export function FixedAmountPage({ pariwarId }: FixedAmountPageProps): ReactEleme
     standard.mutate({ fixed_amount: amount, effective_from: new Date(stdEffectiveFrom).toISOString() });
   };
 
-  const panelActorIds = (): string[] => {
-    const ids = emgPanel
-      .split(/[\s,]+/)
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
-    return [...new Set(ids)]; // de-dupe client-side (the server rejects duplicates outright)
+  /** The selected roster, ordered deterministically so two identical selections submit identically. */
+  const panelActorIds = (): string[] => [...emgPanel].sort();
+
+  const togglePanelMember = (actorId: string): void => {
+    setEmgPanel((prev) => {
+      const next = new Set(prev);
+      if (next.has(actorId)) next.delete(actorId);
+      else next.add(actorId);
+      return next;
+    });
   };
 
   const runEmergency = (): void => {
@@ -126,6 +139,7 @@ export function FixedAmountPage({ pariwarId }: FixedAmountPageProps): ReactEleme
   };
 
   const data = view.data;
+  const eligible = attestors.data?.attestors ?? [];
 
   return (
     <div className="flex flex-col gap-6">
@@ -134,7 +148,7 @@ export function FixedAmountPage({ pariwarId }: FixedAmountPageProps): ReactEleme
         <p className="text-sm opacity-70">
           The per-pool contribution amount snapshotted at spawn. Standard changes must be announced at least
           12 months in advance (FR-15); the emergency override bypasses that notice and requires a
-          step-up-attested State-Trustee panel sign-off.
+          step-up-attested trustee panel sign-off.
         </p>
       </header>
 
@@ -156,6 +170,29 @@ export function FixedAmountPage({ pariwarId }: FixedAmountPageProps): ReactEleme
               <p className="text-sm text-status-warn-fg">
                 No effective amount configured — pool spawn will fail until a change is scheduled.
               </p>
+            )}
+          </section>
+
+          {/* ⭐ Story 10.13 (AC4) — the SCHEDULED value, in its OWN labelled region between "Effective
+              now" and the change forms. ⛔ Deliberately NOT another row in the undifferentiated history
+              list below: that list is where this value hid, because a future-dated entry looks exactly
+              like a past one there. A trustee about to schedule a change needs to see what is ALREADY
+              coming before they add to it. */}
+          <section aria-label="Scheduled change" className="rounded border p-4">
+            <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide opacity-70">
+              {t('fixedAmount.scheduled.heading')}
+            </h2>
+            {data && data.upcoming ? (
+              <>
+                <p className="text-sm">
+                  ₹{data.upcoming.fixed_amount} from{' '}
+                  {new Date(data.upcoming.effective_from).toLocaleDateString()} (schedule version{' '}
+                  {data.upcoming.version}, {data.upcoming.change_type})
+                </p>
+                <p className="mt-1 text-xs opacity-70">{t('fixedAmount.scheduled.hint')}</p>
+              </>
+            ) : (
+              <p className="text-sm opacity-70">{t('fixedAmount.scheduled.none')}</p>
             )}
           </section>
 
@@ -244,17 +281,57 @@ export function FixedAmountPage({ pariwarId }: FixedAmountPageProps): ReactEleme
                   onChange={(e) => setEmgReason(e.target.value)}
                 />
               </label>
-              <label className="flex flex-col text-xs">
-                <span className="opacity-70">
-                  Attesting panel — State-Trustee actor IDs, at least 2 distinct (comma/newline-separated)
-                </span>
-                <textarea
-                  className="rounded border px-2 py-1 font-mono text-xs"
-                  rows={2}
-                  value={emgPanel}
-                  onChange={(e) => setEmgPanel(e.target.value)}
-                />
-              </label>
+              {/* ⭐ Story 10.13 (AC2) — the eligible-attestor PICKER, replacing the raw-UUID textarea.
+                  ⚠ Loading / error / empty render OUTSIDE the list, never as rows inside it: a list that
+                  crosses empty→populated in place is a known hazard, and keeping the states separate is
+                  the discipline regardless of renderer ([[project_fabric_flatlist_empty_populated_crash]]).
+                  ⚠ A 403 here is a settled authorization fact (you hold the set key, not the emergency
+                  key) and gets its OWN message — never a generic failure that reads as an outage. */}
+              <fieldset className="flex flex-col gap-1 text-xs">
+                <legend className="opacity-70">{t('fixedAmount.panel.heading')}</legend>
+                <p className="opacity-70">{t('fixedAmount.panel.hint')}</p>
+                {attestors.isLoading ? (
+                  <p role="status">{t('fixedAmount.panel.loading')}</p>
+                ) : attestors.isError ? (
+                  <p role="alert" className="text-status-fail-fg">
+                    {attestors.error instanceof ApiError && attestors.error.status === 403
+                      ? t('fixedAmount.panel.forbidden')
+                      : t('fixedAmount.panel.error')}
+                  </p>
+                ) : eligible.length === 0 ? (
+                  <p role="status" className="text-status-warn-fg">
+                    {t('fixedAmount.panel.empty')}
+                  </p>
+                ) : (
+                  <>
+                    {eligible.length < 2 && (
+                      <p role="status" className="text-status-warn-fg">
+                        {t('fixedAmount.panel.insufficient')}
+                      </p>
+                    )}
+                    <ul className="flex flex-col gap-1">
+                      {eligible.map((a) => (
+                        <li key={a.actor_id}>
+                          <label className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={emgPanel.has(a.actor_id)}
+                              onChange={() => togglePanelMember(a.actor_id)}
+                            />
+                            {/* Display NAME is what a trustee recognises; the actor id is what is
+                                submitted. Showing the raw UUID as the label was the old surface's
+                                real defect — it made the roster unreviewable by the person signing it. */}
+                            <span>{a.display_name}</span>
+                          </label>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="opacity-70">
+                      {emgPanel.size} {t('fixedAmount.panel.selectedCount')} · {t('fixedAmount.panel.recordNote')}
+                    </p>
+                  </>
+                )}
+              </fieldset>
               <button
                 type="button"
                 className="w-fit rounded bg-status-fail-fg px-4 py-2 text-sm text-white disabled:opacity-50"

@@ -150,7 +150,8 @@ describe('PoolFixedAmountView.upcoming — Story 10.13 AC4', () => {
     // upcoming change ship a view that silently omits it, which is exactly how the value hid before
     // Story 10.13 (the resolver existed; nothing on this surface called it). Nullable-and-required
     // forces every producer to answer the question.
-    const { upcoming: _omitted, ...withoutUpcoming } = baseView;
+    const withoutUpcoming: Record<string, unknown> = { ...baseView };
+    delete withoutUpcoming.upcoming;
     expect(PoolFixedAmountView.safeParse(withoutUpcoming).success).toBe(false);
   });
 

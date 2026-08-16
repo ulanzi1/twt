@@ -28,7 +28,7 @@ export const POOL_FIXED_AMOUNT_REASON_MAX_CHARS = 1000;
  *  admin be their own sole attester. Value-aligned with @twt/domain's POOL_FIXED_AMOUNT_MIN_PANEL_SIZE. */
 export const POOL_FIXED_AMOUNT_PANEL_MIN = 2;
 
-/** Max attesting-panel size (a State-Trustee panel roster; the R9 panel-cap posture). */
+/** Max attesting-panel size (an attesting trustee-panel roster; the R9 panel-cap posture). */
 export const POOL_FIXED_AMOUNT_PANEL_MAX = 20;
 
 /** Guard-rail ceiling on `fixed_amount` (1 crore INR) — value-aligned with @twt/domain's
@@ -183,7 +183,7 @@ export const PoolFixedAmountEmergencyRequest = z
     effective_from: z.string().datetime(),
     /** Policy/operational justification ONLY — NEVER member-specific information (D3). */
     documented_reason: z.string().trim().min(1).max(POOL_FIXED_AMOUNT_REASON_MAX_CHARS),
-    /** The attesting State-Trustee panel roster — actor IDs only, no duplicates; the server resolves
+    /** The attesting trustee panel roster — actor IDs only, no duplicates; the server resolves
      *  each R5 display. `.min(POOL_FIXED_AMOUNT_PANEL_MIN)` — a lone actor is not a "panel". */
     panel_actor_ids: z
       .array(z.string().uuid())

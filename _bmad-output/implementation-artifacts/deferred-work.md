@@ -4467,6 +4467,126 @@ this whole correct-course exists to abolish, in story clothing.
   marker pointing at a story whose text never mentions the obligation is how an inherited deferral goes
   unnoticed. ⛔ `POOL_FIXED_AMOUNT_MIN_PANEL_SIZE = 2` stays as the mechanical floor; Story 1.18 changes
   no value.
+  ✅ **DISCHARGED 2026-08-16 — "Closed by [edit]", by Story 10.13 + Decision `2026-08-16-123`.** Not
+  re-deferred and not re-pointed ([[feedback_closure_language_precision]]). Q2.1 ruled option (a),
+  *key-as-credential*: an eligible emergency attestor IS an actor holding `pool.fixed_amount_emergency`
+  at this Pariwar. `assertFixedAmountPanelAuthorized` (`packages/domain/src/pool/fixed-amount-panel.ts`)
+  enforces it inside the scope tx with a typed, audited `403
+  pool.fixed_amount_panel_member_unauthorized`; `resolveEligibleFixedAmountAttestors` backs the admin
+  picker. ⛔ **No `trustee_directory` table was built** — the `claim.r9_vote` / `claim.appeal_vote`
+  eligibility pattern made a third instance. ⛔ **The constant did not move**, and Q3 additionally
+  recorded at the constant itself *why* it is a floor and NOT the Deed Cl. 19(b) quorum.
+  ⚠ **Partial, and named as such:** eligibility proves an attestor COULD attest, never that they DID —
+  see the FR-15 assent entry below.
+
+- **⚠ Story 10.13 — an ATTESTOR IS NOT AN APPROVER, and FR-15's "multi-trustee approval" is only
+  PARTIALLY implemented.** Recorded by Decision `2026-08-16-123` clause 14 as an accepted author
+  finding, deliberately **not** routed as a sixth question and deliberately **not** built.
+  `prd.md:469` requires emergency adjustments to *"require multi-trustee approval"*. After Story 10.13
+  the attesting roster is provably composed of actors **capable** of attesting at this Pariwar. Nothing
+  anywhere proves any of them **consented**: only the SUBMITTING actor is authenticated, step-up gated
+  and display-resolved (`handlers.ts:115-137`, `index.ts:99`). Real multi-party approval is the R9
+  voting lifecycle, which `fixed-amount.ts:15-19` forbids **by name** as settled posture D3 — so closing
+  this is a governance choice about the emergency path's shape, not a bug fix.
+  ⛔ Do NOT read the 10.13 marker closure, or a green eligibility test, as closing this.
+  **Re-trigger, concrete:** *the first time an emergency fixed-amount override is disputed by a named
+  attestor*, or any decision to give the emergency path a real multi-actor sign-off.
+
+- **⚠ Story 10.13 — a submitting trustee may list THEMSELVES among the attestors, and it counts toward
+  the ≥ 2 floor. A RULED ABSENCE, not an oversight.** Q2.1 option (c) — *attestors must be distinct
+  from the submitting actor* — was put to the Panel and **not taken** (Decision `2026-08-16-123`
+  clause 3). Verified live as reachable: `attested_by_actor` is recorded separately and nothing
+  compares it against the roster. ⛔ Do **not** "fix" this without a Panel ruling; a later reader
+  finding it must know it was seen and left.
+  **Re-trigger, concrete:** *the next Panel ruling that touches the emergency attesting panel's
+  composition* — Story 7.11 is the first scheduled occasion, since it re-opens the emergency path's
+  notice semantics.
+
+- **⚠ Story 7.5 — the emergency-BACKDATING lower bound. WRITTEN BY STORY 10.13, NOT BY 7.5.**
+  ⛔ **This entry exists because the one Story 7.5's review said it wrote does not.**
+  `7-5-fixed-amount-snapshot-at-spawn-12-month-notice-workflow-emergency-adjustment-override.md:229`
+  states, verbatim: *"Residual scope, **logged to deferred-work.md**: the deeper replay-non-determinism
+  question (a backdated emergency landing between an already-committed cycle-freeze and its retried
+  spawn resolution) is a genuine policy question — how far back 'may be <= now()' is meant to allow —
+  not a mechanical fix; flagged for a future decision rather than silently resolved here."* Verified
+  2026-08-16: **it is not in this file.** The only Story 7.5 entry here is the `documented_reason` PII
+  one above. The un-mechanized half decayed exactly as [[feedback_mechanization_split_commitment]]
+  predicts — the code change shipped, the record did not, and nothing caught it for a month.
+  **The gap itself:** the emergency path's `effective_from` *"MAY be <= now()"* (`fixed-amount.ts:351`)
+  with **no lower bound of any kind**. Non-retroactivity for already-spawned pools is architectural
+  (pools snapshot at cycle-freeze `committed_at`, 7.5's D5) — but a backdated emergency landing
+  **between** a committed freeze and its **retried** spawn resolution changes what that retry resolves.
+  **Owner:** `7-11-fixed-amount-notice-period-and-fixed-period-reconciliation` (Decision
+  `2026-08-16-123` clause 11) — it is a write-path notice-policy question in the same family as the
+  60-day rule, and settling it apart from the notice period it backdates against would be incoherent.
+  ⚠ Scoped to *write the missing entry*; the option to **audit Story 7.5's other logging claims** was
+  offered to the Panel and **not taken**.
+  **Re-trigger, concrete:** *Story 7.11 opening the notice-period change*.
+
+- **⚠ Story 10.13 — `assertPanelAuthorized` now exists THREE times, near-identically. Extraction is
+  ARGUABLE and deliberately NOT done.** `r9-voting-persist.ts:314-350`,
+  `appeal-panel-persist.ts:247-274` and now `pool/fixed-amount-panel.ts`. Per
+  [[feedback_no_premature_package]] the third instance is where extraction becomes arguable — and
+  *arguable* is not *now*: the three differ in permission key, error type and module boundary
+  (`claim/` vs `pool/`), and 10.13 refactoring two shipped, tested call sites it does not own would
+  have widened its blast radius for no delivered behaviour.
+  **Re-trigger, concrete:** *a FOURTH panel-eligibility call site*, or the first change that must be
+  applied identically to all three.
+
+- **⭐ Story 10.13 AC7(b) — minimum NOTICE is enforced, minimum DURATION never was. OWNED BY STORY
+  7.11.** Deed Cl. 10(b) (`trust-deed.md:147`) and Niyamavali §4.2 (`niyamavali.md:102`) fix the amount
+  *"for stated periods of **not less than twelve months**"*. The code enforces minimum **notice**
+  (`effective_from >= dbNow + 365d`) and **never** minimum **duration**: `closeOpenHead`
+  (`fixed-amount.ts:261-287`) closes the prior head at `max(newEffectiveFrom, openHead.effectiveFrom)`,
+  so two *conforming* standard writes a day apart leave an entry in force for **one day** — both passed
+  the notice floor; neither stood for twelve months.
+  **Ruled** (Decision `2026-08-16-123` clauses 6-9, an amendment beyond the options offered): the
+  normal notice period is **60 days, not 365**; twelve months is the **normal/planned** period and
+  **not an absolute lock**; the **emergency mechanism REMAINS** and bypasses the 60-day notice; and
+  ⛔ **none of it is implemented inside Story 10.13**.
+  **Owner:** `7-11-fixed-amount-notice-period-and-fixed-period-reconciliation` (`backlog`) — minted
+  against **Epic 7**, whose Story 7.5 owns the write path, not Epic 10, whose 10.13 owns only the
+  setter surface. It owns all four registers so *"the legal text, PRD, architecture, and implementation
+  all agree"*: (i) `FIXED_AMOUNT_NOTICE_DAYS` / `meetsNoticeFloor` /
+  `PoolFixedAmountNoticeTooShortError` and the shipped `pool.fixed_amount_notice_too_short` wire code;
+  (ii) Niyamavali §4.2 **both locales** + Deed Cl. 10(b), with whatever amendment mechanism those
+  require; (iii) **FR-15** (`prd.md:465`, `:469`); (iv) `architecture.md:1324`'s hostile-trustee
+  mitigation row, whose named control is the *"cooling-off period via 12-month notice"* — ⚠ that
+  control is **shortened, not removed**: 60 days of cooling-off, not zero.
+  ⚠ Recorded so 7.11 inherits no false premise: the Deed's *"not less than twelve months"* constrains
+  the **period an amount stands**, and says **nothing about notice**. The 365-day floor is a **product**
+  control originating in FR-15's prose, **not** a Deed requirement — so shortening notice conflicts
+  with the PRD and architecture, not with the instrument. The twelve-month-**lock** half **does** touch
+  the instrument, which is why the wording change is routed rather than left to code.
+  **Re-trigger, concrete:** *Story 7.11 entering `ready-for-dev`*. ⛔ It names a STORY KEY that exists
+  in `sprint-status.yaml`, not an epic — a deferral naming an epic expires unowned
+  ([[project_r7_fact_producer_unbuilt]]).
+
+- **⭐ Story 10.13 AC7(a) — FR-55's ANNOUNCEMENT half. "Closed by [edit]": Story 10.5's News/Blog
+  console IS that workflow.** `prd.md:849` commits that the fixed-amount setter *"drafts the
+  announcement copy; selects channels; schedules publish"*. Story 7.5 shipped a console-log
+  notification seam and its D4 decided that deliberately.
+  **Disposition, recorded rather than left silent:** the machinery FR-55 describes already exists, in
+  full, as **Story 10.5's News/Blog console** — posts carry `channels[]`, `scheduled_publish_at`, an
+  author≠reviewer identity rule and a tone review. A fixed-amount change announcement **is** a news
+  post. ⛔ Building a second composer inside the setter module would be textbook wheel-reinvention, and
+  ⛔ live channel fan-out on a fixed-amount change stays out of scope on 7.5's D4 reasoning
+  ([[project_channels_no_live_dispatch_yet]] — `packages/channels`'s `dispatch()` has exactly one live
+  call site and it is not this one).
+  ⚠ **This is a closure, not a build**: no announcement is composed automatically, and a trustee who
+  changes the amount must still write the post in News/Blog. Stated so the closure is not read as
+  automation that does not exist.
+
+- **⚠ Story 10.13 AC7(c) — OBSERVED, not deferred by 10.13: the UX three-stage member-card transition
+  is a single always-on line.** `ux-design-specification.md:987-993` commits a staged member-card
+  progression for an upcoming amount change (Month −3 / −1 / 0). `ActiveContributionCard.tsx:212-218`
+  renders `upcomingAmountChange` as **one always-on line** instead.
+  ⛔ **Story 10.13 never owned this surface** and is not deferring it — it is recorded here as an
+  **observation with a named owner** ([[feedback_gap_analysis_observational]]): the member card is
+  **Story 8.2's**. Noted while tracing `resolveUpcomingFixedAmountChange`'s consumers for AC4, which is
+  the only reason 10.13 saw it at all.
+  **Re-trigger, concrete:** *the next story that changes `ActiveContributionCard`'s upcoming-change
+  presentation.*
 
 ### ⭐ Story 10.28's existence is UNCONDITIONAL
 

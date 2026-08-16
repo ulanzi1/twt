@@ -74,17 +74,32 @@ export const MAX_POOL_FIXED_AMOUNT_INR = 10_000_000;
 
 /** Minimum distinct-actor size of an emergency attesting panel (review hardening) — a lone actor is
  *  not a "panel"; it lets a single admin be their own sole attester, undercutting the R9-equivalent
- *  governance posture (D3). Full trustee-grant verification of panel membership is a COMPOUND
- *  deferral, and its two halves now have different statuses:
- *    · ✅ THE RBAC GEO-SCOPE RESOLVER HALF IS DELIVERED — Story 1.18 (ADR-0038). A grant held at a
- *      broader geographic node can now authorize a narrower target wherever a tree is published.
- *    · ⚠ THE TRUSTEE-DIRECTORY HALF — enumerating WHO IS ELIGIBLE to sit on an emergency attesting
- *      panel — is owned by **Story 10.13: Fixed-Amount Setter Admin UI**, the surface that consumes
- *      Story 7.5's workflow INCLUDING the emergency attesting panel, i.e. the exact place "who may
- *      attest" has to be answered. The obligation is recorded in Story 10.13's own `epics.md`
- *      section as well as here, because a marker pointing at a story whose text never mentions the
- *      obligation is how an inherited deferral goes unnoticed.
- *  ⛔ This constant is the MECHANICAL FLOOR and Story 1.18 changed no value here. */
+ *  governance posture (D3).
+ *
+ *  ── ✅ THE COMPOUND DEFERRAL IS CLOSED. Both halves. ─────────────────────────────────────────────
+ *    · ✅ THE RBAC GEO-SCOPE RESOLVER HALF — delivered by Story 1.18 (ADR-0038). A grant held at a
+ *      broader geographic node can authorize a narrower target wherever a tree is published.
+ *    · ✅ THE TRUSTEE-DIRECTORY HALF — **CLOSED BY EDIT** at Story 10.13
+ *      ([[feedback_closure_language_precision]]): not deferred again, not re-pointed. Decision
+ *      `2026-08-16-123` clause 2 (Q2.1 option (a)) rules that an eligible emergency attestor IS
+ *      "an actor holding `pool.fixed_amount_emergency` at this Pariwar", and
+ *      `assertFixedAmountPanelAuthorized` (pool/fixed-amount-panel.ts) enforces it server-side inside
+ *      the scope transaction with a typed, audited refusal. ⛔ NO trustee_directory table was built,
+ *      and none is needed: the key IS the credential, the `claim.r9_vote` / `claim.appeal_vote`
+ *      precedent made a third instance.
+ *
+ *  ── ⛔ THIS CONSTANT IS A FLOOR AND IT IS **NOT** THE DEED QUORUM ────────────────────────────────
+ *  Decision `2026-08-16-123` clauses 4-5 (Q3, ruled expressly). Trust Deed **Clause 19(b)** sets Board
+ *  quorum at *"one-half of the Trustees then in office, or two, whichever is HIGHER"*. This value is
+ *  that formula's LOWER bound — it is the `two`, never the `one-half`.
+ *  The Panel ruled the emergency path does NOT additionally check the Deed quorum, and recorded WHY:
+ *  the system holds no roster of "the Trustees then in office" distinct from grant-holders, so
+ *  "one-half" is UNCOMPUTABLE without inventing the very trustee directory the epic forbids.
+ *  ⛔ Approximating it as ⌈half of current key-holders⌉ was put to the Panel and EXPRESSLY REJECTED:
+ *  it would make a governance quorum a function of GRANT ISSUANCE, so revoking a grant would LOWER the
+ *  quorum, and it would redefine "Trustees then in office" as "current key holders", which the Deed
+ *  does not say. ⛔ Do not re-raise Clause 19(b) here as an unnoticed gap; it was noticed and ruled.
+ *  ⛔ Story 1.18 changed no value here, and neither did Story 10.13. */
 export const POOL_FIXED_AMOUNT_MIN_PANEL_SIZE = 2;
 
 /** The minimal window fields the pure selector reasons over (a schedule row provides them all). */

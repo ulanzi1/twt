@@ -31,6 +31,13 @@ entry**, because `docs/legal/` is gitignored (`.gitignore:68`, verified live:
 > not a default the Panel is assumed to accept by silence. Where silence *does* carry a consequence,
 > that consequence is stated per question and again in *"What non-answer would mean"*.
 
+> ⛔ **RECORD CORRECTION (Decision `2026-08-16-122`), this note is NOT edited in place.** Every citation
+> below of **"Clause 27(b)"** as the Trust Deed provision requiring a two-thirds-Trustee resolution plus
+> a supplementary registered deed is a mis-citation. Verified live against `docs/legal/trust-deed.md`:
+> **Clause 27 is "Severability"** and has no lettered subdivisions; the quoted mechanism is
+> **Clause 22(b), "Amendment of this Deed"**, verbatim. The C-4 conflict analysis and its resolution are
+> otherwise unchanged — see Decision `2026-08-16-122` for the full correction.
+
 ---
 
 ## Why this note exists

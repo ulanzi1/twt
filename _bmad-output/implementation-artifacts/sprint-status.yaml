@@ -1,4 +1,105 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-16l (7-11-fixed-amount-notice-period-and-fixed-period-reconciliation:
+#   review -> done. Code review (Blind Hunter + Edge Case Hunter + Acceptance Auditor) ran against the
+#   full branch diff. 5 decision-needed findings resolved: D1 -- Decision 2026-08-16-125's
+#   .decision-log.md entry had landed BUNDLED with the Task 2-8 implementation commit rather than as
+#   its own prior governance(7.11) commit, and the commit message's claim that both decisions "landed
+#   before this commit" was false for 125 -- FIXED by splitting the history (governance commit
+#   aaa6127 now precedes the story commit), correcting the claim. D2 -- the FR-15 heading rename at
+#   prd.md:463 had been enacted against the story's own UNANSWERED "Open questions for BigDev" §3 --
+#   CONFIRMED by BigDev and recorded in that section, not left a silent default. D3 -- a backdated
+#   emergency landing between the amount IN FORCE and a pending FUTURE standard change left the
+#   superseded in-force row's effective_until pointing past the new row's effective_from, an
+#   overlapping/stale window on the schedule record even though point-in-time resolution self-healed
+#   -- FIXED: closeOpenHead now clamps whichever row is actually EFFECTIVE AT the new head's
+#   effective_from, not merely the literal open head; regression coverage added to test (g). D4 --
+#   TOCTOU: the backdating-bound check and closeOpenHead's own read were two independent, unlocked
+#   reads in the same transaction, letting concurrent emergency overrides race past the bound -- FIXED
+#   via a `pg_advisory_xact_lock(hashtext(pariwarId))` acquired before both reads, mirroring the
+#   degraded-mode/declarations.ts convention. D5 (minor) -- the "three calendar months is 90-92 days"
+#   arithmetic in ratified decision text is not accurate for every calendar alignment (a Feb-spanning
+#   window can be 89) -- DEFERRED, no code impact, ratified text is never edited in place.
+#   ⭐ 11 PATCH FINDINGS APPLIED: the new backdating-bound error's docs/message/field name (renamed
+#   inForceEffectiveFrom) and the contracts DTO comment corrected from "open head" to "amount in
+#   force" language, matching Decision 2026-08-16-125 and the already-correct runtime call; an
+#   unchecked type assertion on `inForce` replaced with a real null check; the routing note's stale
+#   pre-ruling boilerplate marked superseded-and-retained (matching its own convention); the
+#   register-count narrative (four/six/seven/nine) reconciled with an explicit note on what each count
+#   is counting; the 8-15 mint's citation of clause 9 as "precedent" corrected to "reusing the shape
+#   of" (clause 9's actual precedent was Panel-ratified; this mint is not); AC10's revert-sanity
+#   narrative now distinguishes the behavioral "accepts 120 days out" test from the mechanical
+#   `toBe(90)` value pin; and the missing E2E test for
+#   pool.fixed_amount_emergency_backdated_before_head was added -- every sibling error branch already
+#   had one.
+#   ⚠ RE-VERIFIED LIVE AFTER EVERY FIX: typecheck + lint green across @twt/domain, @twt/contracts,
+#   @twt/api; domain unit suite (29/29 fixed-amount.test.ts); domain live-DB integration
+#   (18/18 pool-fixed-amount.spec.ts, incl. the new D3 regression assertions in test (g)); API live-DB
+#   E2E (15/15 fixed-amount.spec.ts, incl. the new P7 test); schema:check and domain-invariants:check
+#   both pass with no delta.
+#   Only development_status[7-11-...] flips to done. NO other story status changes.
+# last_updated: 2026-08-16k (7-11-fixed-amount-notice-period-and-fixed-period-reconciliation:
+#   in-progress -> review. THE NUMBER IS 90, NOT 60. Q6 ruled option (d), which ⛔ SUPERSEDES clause 6 of
+#   Decision 2026-08-16-123 -- ratified the SAME DAY -- recorded in terms as Decision 2026-08-16-124
+#   clause 1, with ⛔ clause 6 NEVER edited in place ([[feedback_supersede_never_reinterpret]]). The
+#   ground is arithmetic and was given rather than asserted: UX-DR25's stage 1 is anchored at three
+#   months = 90-92 days, so at 60 a minimum-notice change could NEVER fire it, and 90 is the SMALLEST
+#   floor that restores the guarantee -- at the cost of one constant. ⚠ Nothing was ever written under
+#   clause 6: it was superseded before a line of implementation landed, so the supersession cost one
+#   constant instead of a migration.
+#   ⭐ ALL SIX ROUTED QUESTIONS RULED, and the note's status line updated to ✅ RULED with the superseded
+#   ⏳ Open line RETAINED: Q6 (d); Q1 (b); Q2 ratified with the drafted "normally for periods of about
+#   12 months" STRUCK by the Panel, so §4.2 now names the NOTICE and the emergency carve-out and says
+#   NOTHING about the period at all; Q3 (a) -- Deed Cl. 10(b) recorded as ALREADY CONSISTENT and NOT
+#   amended, its verb being permissive ("which the Board MAY fix"); Q4 include; Q5 confirmed.
+#   ⛔ INSTRUMENTS AMENDED IN BOTH LOCALES -- Niyamavali §4.2 AND the member-facing T&C §4.2 -- and
+#   reproduced VERBATIM inside the decision entry, because docs/legal/ is gitignored and the entry is
+#   the ONLY durable copy. Verified character-for-character against that copy after editing.
+#   ⚠ A SECOND RULING WAS NEEDED MID-IMPLEMENTATION, AND THIS IS THE FINDING WORTH CARRYING FORWARD:
+#   clause 6's bound ("not earlier than the CURRENT OPEN HEAD's effective_from") has TWO readings, and
+#   implementing the literal one turned Story 7.5's live-DB test (g) RED. A scheduled future standard
+#   change IS the open head while the PRIOR row is still in force ⇒ binding there would make the
+#   emergency path UNAVAILABLE WHENEVER A PLANNED CHANGE PENDS, gutting the mechanism clause 8 expressly
+#   preserves and refusing exactly the write closeOpenHead's max(...) clamp was hardened for. ⛔ Put back
+#   to the Panel rather than resolved by the implementer -- choosing between two readings of ratified
+#   words is not a developer's call. Ruled: bind to the amount IN FORCE at DB now(). Recorded APPEND-ONLY
+#   as Decision 2026-08-16-125 (the 2026-08-16-122 precedent); ⛔ 2026-08-16-124 is NOT edited. A unit
+#   case now goes red if a later reader re-binds the predicate to the open head.
+#   ⭐ AC10 REVERT-SANITY WAS RUN, BOTH WAYS, WITH OBSERVED COUNTS -- and it required WRITING the
+#   distinguishing cases, not merely running the suites. Every pre-existing case was FLOOR-AGNOSTIC (the
+#   unit cases are written against the constant; the integration cases used 10 days, rejected at any
+#   floor, and 400 days, accepted at any floor), so a revert would have produced NO red. Accepted cases
+#   inverted to 120 days + an explicit value pin. At 90: 29 / 18 / 14 pass. At 365: 2 unit + 1 domain
+#   live-DB + 1 API live-DB FAIL. At 60 (the superseded value): 1 unit FAILS. Restored and re-verified.
+#   ⚠ NINE REGISTERS RECONCILED, NOT THE FOUR THE RULING NAMED. Named: legal text, PRD, architecture,
+#   implementation. NOT named and found live: the member-facing T&C; epics.md; ux-design-specification.md
+#   (the SEVENTH register); and -- INSIDE a register the ruling DID name -- FIVE further live PRD lines
+#   beyond FR-15/FR-55, including :144, the GLOSSARY DEFINITION of "Fixed amount", and :1372, the SM-C4
+#   COUNTER-METRIC guard-rail. Recorded as Decision 2026-08-16-124 clause 10.
+#   ⛔ AND THE TRAP NEXT TO IT: epics.md uses "12 months" for the FR-6/FR-96 REJOIN LOCK in 11 lines that
+#   this story must NOT touch. A blind search-and-replace would have rewritten the withdrawal lock.
+#   ⛔ epics.md HISTORICAL story-AC bodies got APPENDED DATED NOTES and were NEVER rewritten in place;
+#   only the LIVE FR-summary lines were edited -- plus :3526, an Epic-10 narrative line the story had
+#   mis-filed as historical. The missing `### Story 7.11:` entry was created (it existed ONLY in
+#   sprint-status.yaml), and Epic 7's count corrected to eleven at BOTH :614 and :5200.
+#   ⭐ A SECOND OWNERSHIP TRAP CAUGHT, THIS ONE NOT ANTICIPATED BY THE STORY: AC9 directs the new UX-DR25
+#   entry to be owned by STORY 8.2 -- which is `done`, as is EVERY story in Epic 8. A re-trigger of
+#   "Story 8.2 entering ready-for-dev" COULD NEVER FIRE: the exact un-owned-decay shape
+#   [[project_r7_fact_producer_unbuilt]] describes, one register further along. Successor
+#   development_status[8-15-fixed-amount-transition-staged-card] MINTED to backlog so the observation has
+#   a live owner (the 2026-08-16-123 clause-9 precedent). ⚠ An UN-RATIFIED author mint, recorded as such.
+#   ⛔ FOUR MARKERS CLOSED IN THEIR OWN VOCABULARY, never "addressed": duration = "Closed by [edit]" AND
+#   stating duration is DELIBERATELY NOT enforced (⛔ do not read it as "a duration predicate shipped");
+#   backdating = "Closed by [edit]" (a bound WAS built); submitter-distinctness = "RAISED AND LEFT, a
+#   SECOND time", still open, [Author-committed], with the record saying it has now been carried twice;
+#   assertPanelAuthorized ⛔ UNTOUCHED (this story adds no fourth call site).
+#   ⚠ ci:local RECORDED AS OBSERVED, NOT AS GREEN: 29/30 jobs ✓, `test (unit)` ✗, and ⛔ the failing spec
+#   CANNOT BE NAMED because the captured log was TRUNCATED to its tail. ⛔ Not reconstructed. Two
+#   standalone re-runs of the identical command passed 37/37, the second with --force to bypass the turbo
+#   cache. Every suite this story touches proven green in isolation. Recorded as an UNEXPLAINED SINGLE
+#   RED, not as a proven flake. All other gates ✓, incl. schema:check with NO delta exactly as F-7
+#   predicted, and openapi/v1.yaml BYTE-IDENTICAL, confirming the contracts edits were comment-only.
+#   Only development_status[7-11-...] flips to review; [8-15-...] is MINTED to backlog. NO other story
+#   status changes.
 # last_updated: 2026-08-16j (7-11-fixed-amount-notice-period-and-fixed-period-reconciliation:
 #   backlog -> ready-for-dev via bmad-create-story, off main @ d6de145 (clean, fetched,
 #   == origin/main). Saved 7-11-fixed-amount-notice-period-and-fixed-period-reconciliation.md.
@@ -7265,7 +7366,7 @@ development_status:
   7-8-under-funded-cycle-close-of-cycle-template-driven-framing: done
   7-9-pool-engine-pre-launch-measured-validation-gate: done
   7-10-pool-engine-onboarding-tutorial: done
-  7-11-fixed-amount-notice-period-and-fixed-period-reconciliation: in-progress
+  7-11-fixed-amount-notice-period-and-fixed-period-reconciliation: done
   epic-7-retrospective: done
 
   # ==========================================================================
@@ -7286,6 +7387,7 @@ development_status:
   8-12-90-second-twt-portion-loop-measurement-instrumentation: done
   8-13-nominee-vpa-claim-time-collection-resolver-wiring-upi-intent-re-enable: done
   8-14-close-of-cycle-emitter: done
+  8-15-fixed-amount-transition-staged-card: backlog
   epic-8-retrospective: done
 
   # ==========================================================================

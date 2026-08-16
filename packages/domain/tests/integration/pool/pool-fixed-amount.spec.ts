@@ -9,7 +9,11 @@
 //   · (c) emergency atomicity — applyEmergencyOverride writes the schedule row AND its immutable
 //        Emergency Adjustment Record together; the record references the schedule version; a
 //        change_type='emergency' row without its attestation is impossible (AC3).
-//   · (d) the 365-day floor — rejected for a short-notice standard change, bypassed for emergency (AC4).
+//   · (d) the 90-day notice floor — rejected for a short-notice standard change, bypassed for emergency
+//        (AC4). ⚠ Its accepted case is deliberately one the SUPERSEDED 365-day floor would have
+//        REJECTED, so the suite proves the floor MOVED, not merely that a floor exists (Story 7.11 AC10).
+//   · (h) the emergency BACKDATING bound — measured against the amount IN FORCE, never the open head
+//        (Decisions `2026-08-16-124` clause 6 / `2026-08-16-125`).
 //   · (f) fail-loud — getEffectiveFixedAmount throws when no entry is effective (never a silent default).
 //
 // Heeds [[project_live_db_test_gotchas]]: asserts MEMBERSHIP / explicit values, never regenerates an
@@ -28,6 +32,7 @@ import {
   getEffectiveFixedAmount,
   getEmergencyAttestation,
   planCycleSpawn,
+  PoolFixedAmountEmergencyBackdatedBeforeHeadError,
   PoolFixedAmountNoticeTooShortError,
   PoolFixedAmountNotConfiguredError,
   PoolFixedAmountPanelMemberUnauthorizedError,
@@ -109,7 +114,7 @@ describe.skipIf(!hasDatabase)('fixed-amount schedule (PARIWAR_A scope)', () => {
     const spec = plan.children[0]!;
     await spawnChildPool(client, spec);
 
-    // Schedule a FUTURE change to 900 (>= 365 days out → passes the standard floor).
+    // Schedule a FUTURE change to 900 (well beyond the notice floor → passes).
     const now = new Date();
     await scheduleStandardChange(tx, {
       pariwarId: PARIWAR_A,
@@ -172,13 +177,13 @@ describe.skipIf(!hasDatabase)('fixed-amount schedule (PARIWAR_A scope)', () => {
     expect(fetched!.fixedAmount).toBe(650);
   });
 
-  it('(d) the 365-day floor rejects a short-notice standard change but an emergency bypasses it', async () => {
+  it('(d) the 90-day floor rejects a short-notice standard change but an emergency bypasses it', async () => {
     const { client, tx } = getTx();
     await seedSchedule(tx, 500, new Date('2026-01-01T00:00:00Z'));
     await enterAppScope(client, PARIWAR_A);
     const now = new Date();
 
-    // Standard change only 10 days out → rejected (the 12-month notice floor, DB-authoritative).
+    // Standard change only 10 days out → rejected (the 90-day notice floor, DB-authoritative).
     await expect(
       scheduleStandardChange(tx, {
         pariwarId: PARIWAR_A,
@@ -188,11 +193,14 @@ describe.skipIf(!hasDatabase)('fixed-amount schedule (PARIWAR_A scope)', () => {
       }),
     ).rejects.toBeInstanceOf(PoolFixedAmountNoticeTooShortError);
 
-    // Standard change 400 days out → accepted.
+    // Standard change 120 days out → accepted.
+    // ⛔ AC10 REVERT-SANITY: 120 days is deliberately INSIDE the superseded 365-day floor. Restore
+    // FIXED_AMOUNT_NOTICE_DAYS to 365 and this write is REJECTED, so this case goes red. A case at
+    // 400 days would have passed at BOTH floors and proved nothing about the change.
     const ok = await scheduleStandardChange(tx, {
       pariwarId: PARIWAR_A,
       fixedAmount: 600,
-      effectiveFrom: new Date(now.getTime() + 400 * DAY_MS),
+      effectiveFrom: new Date(now.getTime() + 120 * DAY_MS),
       actorId: 'trustee-actor-1',
     });
     expect(ok.changeType).toBe('standard');
@@ -213,6 +221,45 @@ describe.skipIf(!hasDatabase)('fixed-amount schedule (PARIWAR_A scope)', () => {
     expect(emg.schedule.changeType).toBe('emergency');
   });
 
+  it('(h) the emergency BACKDATING bound rejects an effective_from behind the amount IN FORCE', async () => {
+    // Decision `2026-08-16-124` clause 6, as clarified by `2026-08-16-125`. ⚠ A backdating bound, NOT
+    // a notice floor — an emergency taking effect NOW is still accepted (proved by (d) above).
+    const { client, tx } = getTx();
+    const inForceFrom = new Date('2026-01-01T00:00:00Z');
+    await seedSchedule(tx, 500, inForceFrom);
+    await enterAppScope(client, PARIWAR_A);
+
+    const panel = [
+      { actor_id: 'trustee-a', actor_display: 'Trustee A' },
+      { actor_id: 'trustee-b', actor_display: 'Trustee B' },
+    ];
+
+    // A day BEHIND the in-force amount → rejected.
+    await expect(
+      applyEmergencyOverride(tx, {
+        pariwarId: PARIWAR_A,
+        fixedAmount: 700,
+        effectiveFrom: new Date(inForceFrom.getTime() - DAY_MS),
+        documentedReason: 'reserve adequacy',
+        panel,
+        attestedByActor: 'trustee-a',
+        attestedDisplay: 'Trustee A',
+      }),
+    ).rejects.toBeInstanceOf(PoolFixedAmountEmergencyBackdatedBeforeHeadError);
+
+    // EXACTLY at the in-force effective_from → accepted (the bound is inclusive).
+    const ok = await applyEmergencyOverride(tx, {
+      pariwarId: PARIWAR_A,
+      fixedAmount: 700,
+      effectiveFrom: inForceFrom,
+      documentedReason: 'reserve adequacy',
+      panel,
+      attestedByActor: 'trustee-a',
+      attestedDisplay: 'Trustee A',
+    });
+    expect(ok.schedule.changeType).toBe('emergency');
+  });
+
   it('(g) an emergency effective_from preceding a pending FUTURE standard change closes that change at its OWN effective_from — never inverted', async () => {
     // Review-hardening regression: closeOpenHead used to set the row it was closing's
     // effective_until to the NEW row's effective_from unconditionally. When the new write's
@@ -227,6 +274,8 @@ describe.skipIf(!hasDatabase)('fixed-amount schedule (PARIWAR_A scope)', () => {
     const now = new Date();
 
     // Schedule a FUTURE standard change (400 days out) — becomes the open head (v2).
+    // ⚠ Story 7.11: this is ALSO the case Decision `2026-08-16-125` settles — the emergency below
+    // precedes the OPEN HEAD but not the amount IN FORCE, so the backdating bound must ACCEPT it.
     const future = await scheduleStandardChange(tx, {
       pariwarId: PARIWAR_A,
       fixedAmount: 900,
@@ -268,9 +317,29 @@ describe.skipIf(!hasDatabase)('fixed-amount schedule (PARIWAR_A scope)', () => {
     expect(supersededRow!.effectiveUntil).not.toBeNull();
     expect(supersededRow!.effectiveUntil!.getTime()).toBe(supersededRow!.effectiveFrom.getTime());
 
+    // Story 7.11 review D3: v1 (genesis — the amount actually IN FORCE at `now`, distinct from v2 the
+    // open head) must ALSO be re-clamped, to the EMERGENCY's effective_from, not left pointing at v2's
+    // now-moot effective_from. Before the fix, v1.effective_until stayed at v2.effectiveFrom (400 days
+    // out), overlapping the new emergency row's [now, ∞) window for the entire gap.
+    const [genesisRow] = await tx
+      .select({
+        effectiveFrom: schema.poolFixedAmountSchedule.effectiveFrom,
+        effectiveUntil: schema.poolFixedAmountSchedule.effectiveUntil,
+      })
+      .from(schema.poolFixedAmountSchedule)
+      .where(and(eq(schema.poolFixedAmountSchedule.pariwarId, PARIWAR_A), eq(schema.poolFixedAmountSchedule.version, 1)));
+    expect(genesisRow!.effectiveUntil).not.toBeNull();
+    expect(genesisRow!.effectiveUntil!.getTime()).toBe(now.getTime());
+    expect(genesisRow!.effectiveUntil!.getTime()).not.toBe(future.effectiveFrom.getTime());
+
     // The now-moot v2 window can never resolve — asOf === its effective_from does NOT match it
     // (the window predicate is `from <= asOf < until`, and here `until === from`).
     expect(await getEffectiveFixedAmount(tx, PARIWAR_A, future.effectiveFrom)).toBe(750); // the emergency wins
+
+    // No overlap: at any instant strictly between `now` and v2's (moot) effective_from, ONLY the
+    // emergency resolves — v1's window no longer reaches that far. Point-in-time resolution was
+    // already correct via the effective_from DESC tie-break; this proves the STORED windows agree.
+    expect(await getEffectiveFixedAmount(tx, PARIWAR_A, new Date(now.getTime() + DAY_MS))).toBe(750);
   });
 
   it('(f) getEffectiveFixedAmount throws when no entry is effective (fail loud, never a silent default)', async () => {

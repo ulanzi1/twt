@@ -2,7 +2,7 @@
 //
 // The PURE core of the effective-dated fixed-amount schedule: the window-resolution boundary
 // semantics (`effective_from` INCLUSIVE, `effective_until` EXCLUSIVE — pinned, the getEffectiveTc
-// contract), the 12-month notice-floor accept/reject + emergency bypass, and the emergency-write
+// contract), the 90-day notice-floor accept/reject + emergency bypass, and the emergency-write
 // validation guards (reason/panel/amount required) that throw BEFORE any DB call. The DB shell
 // (resolveEffectiveFixedAmountRow / the head-supersede mechanics / non-retroactivity) is exercised
 // by the live-DB integration spec.
@@ -14,6 +14,7 @@ import {
   MAX_POOL_FIXED_AMOUNT_INR,
   POOL_FIXED_AMOUNT_MIN_PANEL_SIZE,
   applyEmergencyOverride,
+  meetsEmergencyBackdatingFloor,
   meetsNoticeFloor,
   PoolFixedAmountAttestationRequiredError,
   PoolFixedAmountInvalidError,
@@ -87,20 +88,20 @@ describe('selectEffectiveFixedAmountRow — window boundary semantics (the contr
   });
 });
 
-describe('meetsNoticeFloor — the 12-month (365-day) DB-authoritative floor (D6)', () => {
+describe('meetsNoticeFloor — the 90-day DB-authoritative floor (D6)', () => {
   const now = new Date('2026-01-01T00:00:00Z');
 
-  it('rejects exactly one day short of 365 days', () => {
+  it('rejects exactly one day short of the floor', () => {
     const effectiveFrom = new Date(now.getTime() + (FIXED_AMOUNT_NOTICE_DAYS - 1) * DAY_MS);
     expect(meetsNoticeFloor(effectiveFrom, now)).toBe(false);
   });
 
-  it('accepts exactly 365 days out (inclusive floor)', () => {
+  it('accepts exactly at the floor (inclusive)', () => {
     const effectiveFrom = new Date(now.getTime() + FIXED_AMOUNT_NOTICE_DAYS * DAY_MS);
     expect(meetsNoticeFloor(effectiveFrom, now)).toBe(true);
   });
 
-  it('accepts well beyond 365 days', () => {
+  it('accepts well beyond the floor', () => {
     const effectiveFrom = new Date(now.getTime() + 400 * DAY_MS);
     expect(meetsNoticeFloor(effectiveFrom, now)).toBe(true);
   });
@@ -108,6 +109,61 @@ describe('meetsNoticeFloor — the 12-month (365-day) DB-authoritative floor (D6
   it('rejects a past / immediate effective_from (the emergency-only case)', () => {
     expect(meetsNoticeFloor(new Date(now.getTime() - DAY_MS), now)).toBe(false);
     expect(meetsNoticeFloor(now, now)).toBe(false);
+  });
+
+  // ⛔ AC10 REVERT-SANITY ANCHOR (Story 7.11, Decision `2026-08-16-124` clause 1).
+  // Every case above is written against FIXED_AMOUNT_NOTICE_DAYS, so it passes at ANY floor value —
+  // which is correct for boundary semantics and USELESS as evidence that the number moved. These two
+  // pin the RULED VALUE itself: restore the constant to 365 (or 60) and they go red.
+  it('pins the RULED floor at 90 days — the value, not just the boundary', () => {
+    expect(FIXED_AMOUNT_NOTICE_DAYS).toBe(90);
+  });
+
+  it('accepts 120 days out — a change the superseded 365-day floor would have REJECTED', () => {
+    expect(meetsNoticeFloor(new Date(now.getTime() + 120 * DAY_MS), now)).toBe(true);
+  });
+});
+
+describe('meetsEmergencyBackdatingFloor — the in-force bound (Decisions 2026-08-16-124 cl.6 / -125)', () => {
+  const inForce = new Date('2026-01-01T00:00:00Z');
+
+  it('accepts exactly at the in-force effective_from (inclusive)', () => {
+    expect(meetsEmergencyBackdatingFloor(inForce, inForce)).toBe(true);
+  });
+
+  it('rejects one millisecond before the in-force effective_from', () => {
+    expect(meetsEmergencyBackdatingFloor(new Date(inForce.getTime() - 1), inForce)).toBe(false);
+  });
+
+  it('rejects a day before the in-force effective_from', () => {
+    expect(meetsEmergencyBackdatingFloor(new Date(inForce.getTime() - DAY_MS), inForce)).toBe(false);
+  });
+
+  it('accepts after the in-force effective_from, including far in the future', () => {
+    expect(meetsEmergencyBackdatingFloor(new Date(inForce.getTime() + DAY_MS), inForce)).toBe(true);
+    expect(meetsEmergencyBackdatingFloor(new Date(inForce.getTime() + 400 * DAY_MS), inForce)).toBe(true);
+  });
+
+  // ⛔ Vacuous at genesis — nothing is in force, so ANY instant is accepted.
+  it('accepts anything when no amount is in force (genesis)', () => {
+    expect(meetsEmergencyBackdatingFloor(new Date('1999-01-01T00:00:00Z'), null)).toBe(true);
+  });
+
+  // ⚠ NOT a notice floor: an emergency taking effect NOW, over an older in-force amount, passes.
+  it('does not impose a notice period — an immediate emergency over an older amount is accepted', () => {
+    const now = new Date(inForce.getTime() + 200 * DAY_MS);
+    expect(meetsEmergencyBackdatingFloor(now, inForce)).toBe(true);
+  });
+
+  // ⛔ THE DISTINCTION Decision `2026-08-16-125` settles, pinned as a unit case so a later reader
+  // cannot re-bind the predicate to the OPEN HEAD without going red. A pending future standard change
+  // is the open head; the amount IN FORCE is still the older row. An emergency firing NOW must pass.
+  it('accepts an emergency that precedes a PENDING future change — the bound is in-force, not open-head', () => {
+    const pendingFutureHead = new Date(inForce.getTime() + 120 * DAY_MS);
+    const emergencyNow = new Date(inForce.getTime() + 10 * DAY_MS);
+    expect(meetsEmergencyBackdatingFloor(emergencyNow, inForce)).toBe(true);
+    // …and had the bound been the open head, this is the comparison that would have rejected it:
+    expect(meetsEmergencyBackdatingFloor(emergencyNow, pendingFutureHead)).toBe(false);
   });
 });
 

@@ -1,7 +1,7 @@
 // Fixed-amount schedule admin handlers — Story 7.5 (Task 4; AC1/AC3/AC4/AC5).
 //
 // The three trustee surfaces that fill + read the per-Pariwar effective-dated fixed-amount schedule
-// (FR-15): the current schedule/effective-amount view, the STANDARD (12-month-notice) change, and
+// (FR-15): the current schedule/effective-amount view, the STANDARD (90-day-notice) change, and
 // the EMERGENCY adjustment override. v1 actor = pariwar_admin-as-Trustee-Lite; the route chain
 // proves an authenticated HUMAN admin + the pariwar-wide key + tenant, and the emergency route ADDS
 // a step-up gate.
@@ -55,8 +55,17 @@ type AttestationRow = typeof schema.poolFixedAmountEmergencyAttestations.$inferS
 function translateFixedAmountError(err: unknown): never {
   if (err instanceof poolDomain.PoolFixedAmountNoticeTooShortError) {
     throw new BadRequestError(
-      'A standard change must take effect at least 12 months (365 days) in the future',
+      'A standard change must take effect at least 90 days in the future',
       'pool.fixed_amount_notice_too_short',
+    );
+  }
+  // Decision `2026-08-16-124` clause 6 — the emergency BACKDATING bound. 400, not 403: the request is
+  // shape-invalid against the schedule's own history, exactly like the notice floor above. ⚠ The
+  // message names the bound, never calls it a notice floor — the emergency path still has none.
+  if (err instanceof poolDomain.PoolFixedAmountEmergencyBackdatedBeforeHeadError) {
+    throw new BadRequestError(
+      'An emergency override may not take effect before the current amount did',
+      'pool.fixed_amount_emergency_backdated_before_head',
     );
   }
   if (err instanceof poolDomain.PoolFixedAmountReasonRequiredError) {
@@ -261,7 +270,7 @@ export function createPoolFixedAmountHandlers(deps: AppDeps) {
       }
     },
 
-    /** POST …/admin/pool-fixed-amount/schedule — a STANDARD (12-month-notice) change (AC1). */
+    /** POST …/admin/pool-fixed-amount/schedule — a STANDARD (90-day-notice) change (AC1). */
     async postSchedule(request: FastifyRequest, reply: FastifyReply): Promise<PoolFixedAmountScheduleResponse> {
       const ctx = await contextOf(request);
       const body = request.body as PoolFixedAmountScheduleRequest;

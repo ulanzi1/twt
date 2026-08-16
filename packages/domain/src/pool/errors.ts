@@ -214,7 +214,7 @@ export class PoolFixedAmountNotConfiguredError extends PoolFixedAmountError {
 export const POOL_FIXED_AMOUNT_NOTICE_TOO_SHORT_CODE = 'pool.fixed_amount_notice_too_short';
 
 /**
- * A STANDARD change whose `effective_from` violates the 12-month (365-day) notice floor,
+ * A STANDARD change whose `effective_from` violates the 90-day notice floor,
  * evaluated against DB-authoritative `now()` (D6 — the hostile-trustee cooling-off control).
  * An emergency override bypasses this floor (its own path, no floor check).
  */
@@ -223,8 +223,44 @@ export class PoolFixedAmountNoticeTooShortError extends PoolFixedAmountError {
   public readonly code = POOL_FIXED_AMOUNT_NOTICE_TOO_SHORT_CODE;
   public constructor(public readonly effectiveFrom: string) {
     super(
-      `standard fixed_amount change requires effective_from >= now() + 365 days ` +
-        `(the 12-month notice); got ${effectiveFrom}. Use the emergency override to bypass the notice.`,
+      `standard fixed_amount change requires effective_from >= now() + 90 days ` +
+        `(the 90-day notice); got ${effectiveFrom}. Use the emergency override to bypass the notice.`,
+    );
+  }
+}
+
+export const POOL_FIXED_AMOUNT_EMERGENCY_BACKDATED_BEFORE_HEAD_CODE =
+  'pool.fixed_amount_emergency_backdated_before_head';
+
+/**
+ * An EMERGENCY override whose `effective_from` precedes the effective_from of the amount currently
+ * IN FORCE.
+ *
+ * Decision `2026-08-16-124` clause 6 (Story 7.11, Q1 option (b)), as clarified by Decision
+ * `2026-08-16-125`: the bound is measured against the amount IN FORCE at DB `now()`, NOT against the
+ * open-ended head row — those two diverge exactly when a standard change is already scheduled ahead
+ * (the open head is future-dated; the row actually in force is the prior one). The emergency path
+ * deliberately has NO notice floor — it may take effect immediately or in the past — but it may not
+ * reach BEHIND the amount it is superseding. Without this bound a backdated emergency could land
+ * between an already-committed cycle-freeze and its RETRIED spawn resolution, changing what that
+ * retry resolves (Story 7.5's replay concern). An emergency superseding a PENDING future standard
+ * change remains legal — see Decision `2026-08-16-125` clause 2.
+ *
+ * ⚠ This is a BACKDATING bound, not a notice floor. Do not describe it as one: the emergency path
+ * still bypasses the 90-day notice entirely (clause 8).
+ *
+ * ⛔ Vacuous at genesis — a Pariwar with no amount in force has nothing to reach behind.
+ */
+export class PoolFixedAmountEmergencyBackdatedBeforeHeadError extends PoolFixedAmountError {
+  public readonly name = 'PoolFixedAmountEmergencyBackdatedBeforeHeadError';
+  public readonly code = POOL_FIXED_AMOUNT_EMERGENCY_BACKDATED_BEFORE_HEAD_CODE;
+  public constructor(
+    public readonly effectiveFrom: string,
+    public readonly inForceEffectiveFrom: string,
+  ) {
+    super(
+      `emergency fixed_amount override requires effective_from >= the effective_from of the amount ` +
+        `currently in force (${inForceEffectiveFrom}); got ${effectiveFrom}.`,
     );
   }
 }

@@ -729,7 +729,7 @@ export function usePutTelegramConfig(pariwarId: string) {
 }
 
 // ── Story 7.5 — the fixed-amount schedule surface (FR-15) ──
-// The standard (12-month-notice) + emergency (step-up-gated) fixed-amount write paths + the schedule/
+// The standard (90-day-notice) + emergency (step-up-gated) fixed-amount write paths + the schedule/
 // effective-amount read view. Both keys are per-Pariwar grants (server permission hook is the real gate).
 
 export const fixedAmountViewKey = (pariwarId: string) => ['pool-fixed-amount', pariwarId] as const;
@@ -762,7 +762,7 @@ export function useFixedAmountEligibleAttestors(pariwarId: string) {
   });
 }
 
-/** POST a STANDARD (12-month-notice) change; refetches the schedule on success. */
+/** POST a STANDARD (90-day-notice) change; refetches the schedule on success. */
 export function useScheduleFixedAmountChange(pariwarId: string) {
   const qc = useQueryClient();
   return useMutation({

@@ -35,7 +35,7 @@ export * from './spawn.js';
 export * from './assign.js';
 // Story 7.5 (Task 2) — the effective-dated fixed-amount schedule: the change_type-blind window
 // resolver (getEffectiveFixedAmount — the spawn saga's amount source, retiring the env constant) +
-// the standard (12-month-notice) + emergency-override write paths + the immutable Emergency
+// the standard (90-day-notice) + emergency-override write paths + the immutable Emergency
 // Adjustment Record + the genesis seed. The typed errors ride pool/errors.ts (already exported).
 export * from './fixed-amount.js';
 // Story 10.13 (Tasks 4/5) — the emergency attesting panel's ELIGIBILITY predicate

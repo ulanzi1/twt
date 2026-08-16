@@ -19,7 +19,7 @@ const EN: Record<string, string> = {
   // Changed from "...State-Trustee panel sign-off" — F-2 established a literal `state_trustee` is
   // ineligible by arithmetic, so the old wording named a body that could never sit on this panel.
   'fixedAmount.header.subtitle':
-    'The per-pool contribution amount snapshotted at spawn. Standard changes must be announced at least 12 months in advance (FR-15); the emergency override bypasses that notice and requires a step-up-attested trustee panel sign-off.',
+    'The per-pool contribution amount snapshotted at spawn. Standard changes must be announced at least 90 days in advance (FR-15); the emergency override bypasses that notice and requires a step-up-attested trustee panel sign-off.',
 
   // ── The Scheduled region (AC4) ──────────────────────────────────────────────
   'fixedAmount.scheduled.heading': 'Scheduled',

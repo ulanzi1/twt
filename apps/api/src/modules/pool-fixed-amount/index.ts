@@ -3,7 +3,7 @@
 // FOUR scope-gated admin routes — the FR-15 fixed-amount schedule surface:
 //   · GET  …/admin/pool-fixed-amount                     → the current + SCHEDULED amount (AC1; 10.13 AC4)
 //   · GET  …/admin/pool-fixed-amount/eligible-attestors  → the eligible-attestor directory (10.13 AC2)
-//   · POST …/admin/pool-fixed-amount/schedule            → a STANDARD (12-month-notice) change (AC1)
+//   · POST …/admin/pool-fixed-amount/schedule            → a STANDARD (90-day-notice) change (AC1)
 //   · POST …/admin/pool-fixed-amount/emergency           → an EMERGENCY adjustment override (AC3/AC4)
 //
 // The route IS the security control: an authenticated HUMAN admin session + the fixed-amount WRITE
@@ -95,7 +95,7 @@ export function registerPoolFixedAmountModule(app: FastifyInstance, deps: AppDep
     h.getEligibleAttestors,
   );
 
-  // AC1 — a STANDARD (12-month-notice) change. The server re-checks the +365d floor (DB-authoritative).
+  // AC1 — a STANDARD (90-day-notice) change. The server re-checks the +90d floor (DB-authoritative).
   r.post(
     '/api/v1/p/:pariwarId/admin/pool-fixed-amount/schedule',
     {

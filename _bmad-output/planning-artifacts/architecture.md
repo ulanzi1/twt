@@ -70,8 +70,8 @@ two adjacent primitives whose failure modes are equally catastrophic. Bugs in an
 these are P0 incidents.
 
 **Trust Core** — the math heart of the product:
-- **Pool Engine** — auto-spawn, deterministic balanced assignment, fixed-amount-over-
-  12-months, audit-reproducible from snapshotted membership-at-freeze.
+- **Pool Engine** — auto-spawn, deterministic balanced assignment, fixed-amount-on-
+  90-day-notice, audit-reproducible from snapshotted membership-at-freeze.
 - **Reconciliation pipeline** — UTR self-attestation + nominee daily bank-statement
   intake + cron matcher; idempotent, replayable.
 
@@ -1321,7 +1321,7 @@ Controls are mapped to actors, not enumerated in isolation.
 | Field-worker fraud rings | Authenticated member accounts under sock-puppet identities | Commission inflation via fake signups | Qualified-acquisition gating (FR-84); attribution throttling (FR-86); device/IP/UPI deduplication (Category 5) |
 | External scrapers | Unauthenticated; web crawler scale | PII harvesting from public surfaces | Cloudflare + Bot Management + Turnstile (FR-88); forced pagination (FR-91); PII shielding matrix (FR-74); scrape-test in CI (Step 2 #7) |
 | FR-43A Stage-1 reviewer collusion | District Admin scope | Pre-decision claim manipulation | Separation-of-duties enforcement (Stage 1 reviewer ≠ original decision-maker per FR-43A); audit log of every reviewer action |
-| Hostile trustee | Pariwar Admin / State Trustee | Niyamavali manipulation; fixed-amount change; rule registry tampering | Versioned amendments with public diff (FR-79); audit log of every rule change; cooling-off period via 12-month notice (FR-15) |
+| Hostile trustee | Pariwar Admin / State Trustee | Niyamavali manipulation; fixed-amount change; rule registry tampering | Versioned amendments with public diff (FR-79); audit log of every rule change; cooling-off period via 90-day notice (FR-15) — shortened, not removed |
 | Compromised member account | Member-class session | Session hijack via stolen device; OTP interception | Short JWT lifetime; refresh-token rotation; device-binding (§2.4); per-phone OTP throttling (§2.11) |
 | Compromised admin account | Admin scope per role | Account takeover → RBAC scope abuse | WebAuthn 2nd factor (phishing-resistant); audit log per privileged action; lockout policy |
 | Compromised partner module | Module Marketplace SDK | Supply-chain attack via 3rd-party dependency | Crowdfunding boundary (Step 3); module SDK sandboxing in admin UI |

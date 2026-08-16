@@ -3,7 +3,7 @@
 // Fixed-amount schedule transport DTOs — Story 7.5 (FR-15). The request/response wire shapes for
 // the three admin surfaces that fill + read the per-Pariwar effective-dated fixed-amount schedule:
 //   · GET  …/admin/pool-fixed-amount            → the current schedule + effective amount (+ emergency records)
-//   · POST …/admin/pool-fixed-amount/schedule   → a STANDARD (12-month-notice) change
+//   · POST …/admin/pool-fixed-amount/schedule   → a STANDARD (90-day-notice) change
 //   · POST …/admin/pool-fixed-amount/emergency  → an EMERGENCY adjustment override (step-up-gated)
 //
 // ── Contracts discipline (the r9-voting.ts / cycle-freeze.ts precedent) ──────────────────────
@@ -165,11 +165,11 @@ export type PoolFixedAmountEligibleAttestorsResponse = z.output<
 
 // ── write requests ────────────────────────────────────────────────────────────────────────────
 
-/** POST …/admin/pool-fixed-amount/schedule — a STANDARD change (server enforces the +365d floor). */
+/** POST …/admin/pool-fixed-amount/schedule — a STANDARD change (server enforces the +90d floor). */
 export const PoolFixedAmountScheduleRequest = z
   .object({
     fixed_amount: z.number().int().positive().max(POOL_FIXED_AMOUNT_MAX_INR),
-    /** ISO-8601 datetime the change comes into force. The SERVER re-checks >= now()+365d (DB-authoritative). */
+    /** ISO-8601 datetime the change comes into force. The SERVER re-checks >= now()+90d (DB-authoritative). */
     effective_from: z.string().datetime(),
   })
   .strict();
@@ -179,7 +179,12 @@ export type PoolFixedAmountScheduleRequest = z.output<typeof PoolFixedAmountSche
 export const PoolFixedAmountEmergencyRequest = z
   .object({
     fixed_amount: z.number().int().positive().max(POOL_FIXED_AMOUNT_MAX_INR),
-    /** ISO-8601; MAY be <= now() (the 365-day floor does NOT apply to emergency). */
+    /** ISO-8601; MAY be <= now() (the 90-day notice floor does NOT apply to emergency).
+     *  ⛔ BOUNDED BELOW by the effective_from of the amount currently IN FORCE (NOT the open-ended
+     *  head — those diverge when a standard change is already scheduled ahead) — the server rejects
+     *  an earlier instant with `pool.fixed_amount_emergency_backdated_before_head` (Decision
+     *  `2026-08-16-124` clause 6, as clarified by `2026-08-16-125`). A backdating bound, not a notice
+     *  floor. */
     effective_from: z.string().datetime(),
     /** Policy/operational justification ONLY — NEVER member-specific information (D3). */
     documented_reason: z.string().trim().min(1).max(POOL_FIXED_AMOUNT_REASON_MAX_CHARS),

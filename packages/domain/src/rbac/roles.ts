@@ -122,7 +122,7 @@ const CLAIM_APPEAL_REVIEW = permissionKey('claim.appeal_review');
 const CLAIM_APPEAL_VOTE = permissionKey('claim.appeal_vote');
 const CLAIM_APPEAL_FINAL = permissionKey('claim.appeal_final');
 // Story 7.5 (FR-15) — the fixed-amount schedule keys (both pariwar-dimension; the cycle.freeze / claim.r9_vote
-// pariwar-wide precedent). `pool.fixed_amount_set` = the standard (12-month-notice) change; `…_emergency` =
+// pariwar-wide precedent). `pool.fixed_amount_set` = the standard (90-day-notice) change; `…_emergency` =
 // the emergency override (ALSO step-up-gated at the route). Same Trustee-Lite posture — direct state_trustee
 // gating is RANK-ORDER BLOCKED (scope.ts §RANK-ORDER — no resolver can lift it).
 const POOL_FIXED_AMOUNT_SET = permissionKey('pool.fixed_amount_set');

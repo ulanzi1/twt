@@ -1345,7 +1345,7 @@ export function getFixedAmountEligibleAttestors(
   );
 }
 
-/** POST a STANDARD (12-month-notice) fixed-amount change (server enforces the +365d floor). */
+/** POST a STANDARD (90-day-notice) fixed-amount change (server enforces the +90d floor). */
 export function scheduleFixedAmountChange(
   pariwarId: string,
   body: FixedAmountSchedulePayload,

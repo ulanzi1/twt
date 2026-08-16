@@ -51,7 +51,7 @@ const PROVISION_KEY = 'pariwar.provision';
 // its effective-dated schedule always has a version-1 open head (effective_from = now()) and the
 // spawn saga's getEffectiveFixedAmount never throws PoolFixedAmountNotConfiguredError in practice.
 // Mirrors the retired POOL_SPAWN_FIXED_AMOUNT_INR default (500). Overridable via env; the trustee
-// re-sets it thereafter via the standard-change (12-month notice) / emergency-override workflow.
+// re-sets it thereafter via the standard-change (90-day notice) / emergency-override workflow.
 const GENESIS_FIXED_AMOUNT_INR = Number(process.env['POOL_GENESIS_FIXED_AMOUNT_INR'] ?? 500);
 
 // Module-load-time range validation (review hardening — the retired POOL_SPAWN_FIXED_AMOUNT_INR had

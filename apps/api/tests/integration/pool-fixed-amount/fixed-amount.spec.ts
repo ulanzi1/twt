@@ -1,7 +1,7 @@
 // Fixed-amount schedule admin surface — E2E (Story 7.5, Task 7; AC1/AC3/AC4). (:5433)
 //
 // The three trustee routes end-to-end against real Postgres: an authenticated pariwar_admin (as
-// Trustee-Lite) with the pariwar-dimension keys drives the GET view, a STANDARD (12-month-notice)
+// Trustee-Lite) with the pariwar-dimension keys drives the GET view, a STANDARD (90-day-notice)
 // change, and an EMERGENCY override (step-up-gated + fail-closed R5 display + immutable attestation).
 // Proves the security boundary (no session → 401; missing grant → 403; emergency without step-up →
 // 403 step_up_required), the notification seam fires with the right cadence, and the audit sink records
@@ -161,10 +161,12 @@ describe.skipIf(!hasDatabase)('fixed-amount schedule surface — E2E (:5433)', (
     expect(res.statusCode).toBe(403);
   });
 
-  it('standard change: schedules a +365d change, fires the seam (queued), audits, and shows in the view', async () => {
+  it('standard change: schedules a +120d change, fires the seam (queued), audits, and shows in the view', async () => {
     const p = freshPariwar();
     const a = await pariwarAdmin(p);
-    const effectiveFrom = new Date(Date.now() + 400 * DAY_MS).toISOString();
+    // ⛔ AC10 REVERT-SANITY (Story 7.11): 120 days is INSIDE the superseded 365-day floor, so restoring
+    // FIXED_AMOUNT_NOTICE_DAYS to 365 turns this 201 into a 400. A +400d date would have passed at both.
+    const effectiveFrom = new Date(Date.now() + 120 * DAY_MS).toISOString();
 
     const before = hook.events.length;
     const res = await a.client.inject({
@@ -193,7 +195,7 @@ describe.skipIf(!hasDatabase)('fixed-amount schedule surface — E2E (:5433)', (
     expect(vbody.schedule.some((s) => s.fixed_amount === 600)).toBe(true);
   });
 
-  it('standard change: rejects a short-notice (<365d) effective_from with 400', async () => {
+  it('standard change: rejects a short-notice (<90d) effective_from with 400', async () => {
     const p = freshPariwar();
     const a = await pariwarAdmin(p);
     const res = await a.client.inject({
@@ -253,6 +255,49 @@ describe.skipIf(!hasDatabase)('fixed-amount schedule surface — E2E (:5433)', (
     expect(fired[0]).toMatchObject({ fixedAmount: 750, changeType: 'emergency', cadence: 'immediate' });
     const audit = auditSink.events.filter((e) => e.type === 'admin_pool_fixed_amount.emergency').at(-1);
     expect((audit?.context as { documented_reason?: string }).documented_reason).toContain('reserve adequacy');
+  });
+
+  it('emergency override: 400 pool.fixed_amount_emergency_backdated_before_head when effective_from precedes the amount in force', async () => {
+    // Story 7.11 review P7 — every sibling error branch in translateFixedAmountError had an E2E test
+    // except this one (Decision `2026-08-16-124` clause 6, as clarified by `2026-08-16-125`).
+    const p = freshPariwar();
+    const a = await pariwarAdmin(p, 'Trustee One');
+    const panelMember = await authenticate({ displayName: 'Panel Member' });
+    const panelMember2 = await authenticate({ displayName: 'Panel Member Two' });
+    await grant(panelMember.userId, p, 'trustee_panel');
+    await grant(panelMember2.userId, p, 'pariwar_admin');
+    await elevate(a.client);
+
+    const panel_actor_ids = [panelMember.userId, panelMember2.userId];
+
+    // First emergency override — puts an amount in force NOW.
+    const first = await a.client.inject({
+      method: 'POST',
+      url: emergencyUrl(p),
+      payload: {
+        fixed_amount: 750,
+        effective_from: new Date().toISOString(),
+        documented_reason: 'reserve adequacy — actuarial review',
+        panel_actor_ids,
+      },
+    });
+    expect(first.statusCode).toBe(201);
+
+    // A second emergency override, backdated to BEFORE the amount now in force → rejected.
+    const backdated = await a.client.inject({
+      method: 'POST',
+      url: emergencyUrl(p),
+      payload: {
+        fixed_amount: 800,
+        effective_from: new Date(Date.now() - DAY_MS).toISOString(),
+        documented_reason: 'reserve adequacy — actuarial review',
+        panel_actor_ids,
+      },
+    });
+    expect(backdated.statusCode).toBe(400);
+    expect((backdated.json() as { error: { code: string } }).error.code).toBe(
+      'pool.fixed_amount_emergency_backdated_before_head',
+    );
   });
 
   it('emergency override: fail-closed 409 when the acting trustee has no R5 display', async () => {

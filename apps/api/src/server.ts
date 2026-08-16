@@ -263,7 +263,7 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // audit-or-throw create + approve, gated on tc.publish / tc.approve).
   registerTermsModule(app, deps);
   // Story 7.5 — trustee fixed-amount schedule surface (FR-15): GET the schedule + effective amount,
-  // POST a standard (12-month-notice) change (pool.fixed_amount_set), POST an emergency adjustment
+  // POST a standard (90-day-notice) change (pool.fixed_amount_set), POST an emergency adjustment
   // override (pool.fixed_amount_emergency, step-up-gated). Fires the member-notification scaffolding seam.
   registerPoolFixedAmountModule(app, deps);
   // Story 10.1 — the Helpdesk create-ticket primitive (the FIRST Epic-10 surface): POST

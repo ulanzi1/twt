@@ -4501,6 +4501,18 @@ this whole correct-course exists to abolish, in story clothing.
   **Re-trigger, concrete:** *the next Panel ruling that touches the emergency attesting panel's
   composition* — Story 7.11 is the first scheduled occasion, since it re-opens the emergency path's
   notice semantics.
+  ⏸ **RAISED AND LEFT — 2026-08-16, a SECOND time. Still open, still un-owned.** ⛔ Not discharged;
+  ⛔ not silently carried. Story 7.11 **was** the scheduled occasion named above, and it did what the
+  re-trigger asked: the observation went to the Panel as finding **F-5** of the Story 7.11 routing
+  note, re-verified live at `d6de145` as still reachable — `attestedByActor` is recorded as its own
+  field (`fixed-amount.ts:391`, written at `:442`/`:456`) and **nothing compares it against
+  `input.panel`**; the panel guards remain arithmetic only (non-empty, ≥ 2, no duplicates).
+  **It was not ruled.** Decision `2026-08-16-124` clause 9 records it as `[Author-committed]` — the
+  note's stated non-answer consequence taken as the default, ⛔ **not** as a ratified decision.
+  ⚠ **A second un-ruled pass is how an observation decays** ([[feedback_record_unattested_no_backfill]]).
+  The next occasion must **rule** it, in either direction, rather than carry it a third time.
+  **Re-trigger, unchanged:** *the next Panel ruling that touches the emergency attesting panel's
+  composition*. ⚠ Story 7.11 is now spent as an occasion — it will not come round again.
 
 - **⚠ Story 7.5 — the emergency-BACKDATING lower bound. WRITTEN BY STORY 10.13, NOT BY 7.5.**
   ⛔ **This entry exists because the one Story 7.5's review said it wrote does not.**
@@ -4522,6 +4534,26 @@ this whole correct-course exists to abolish, in story clothing.
   ⚠ Scoped to *write the missing entry*; the option to **audit Story 7.5's other logging claims** was
   offered to the Panel and **not taken**.
   **Re-trigger, concrete:** *Story 7.11 opening the notice-period change*.
+  ✅ **DISCHARGED 2026-08-16 — "Closed by [edit]", by Story 7.11.** A bound was **built**, not
+  deferred. `2026-08-16-124` clause 6 ruled Q1 option **(b)**, and `2026-08-16-125` clarified **which
+  row it measures against**: an emergency `effective_from` may not precede the `effective_from` of the
+  amount **currently IN FORCE at DB `now()`** — ⚠ **not** the open-ended head row. Shipped as the pure
+  `meetsEmergencyBackdatingFloor` beside `meetsNoticeFloor`, the typed
+  `PoolFixedAmountEmergencyBackdatedBeforeHeadError` with wire code
+  `pool.fixed_amount_emergency_backdated_before_head`, a translated 400, boundary unit cases and a
+  live-DB case `(h)`.
+  ⚠ **The clarification is worth reading before touching this code.** Implementing clause 6 *literally*
+  — binding to the open-ended row — turned Story 7.5's live-DB test `(g)` red, because a scheduled
+  future standard change IS the open head while the prior row is still in force. That reading would
+  have made the emergency path **unavailable whenever a planned change pends**, gutting the mechanism
+  clause 8 preserves. It was put back to the Panel rather than resolved by the implementer.
+  ⛔ **It is a BACKDATING bound, not a notice floor** — the emergency path still bypasses the 90-day
+  notice entirely, and an emergency **superseding a pending future change remains legal**.
+  ⚠ Option **(d)** — a bound at the latest `cycle_freeze_commits.committed_at` — is **tighter in intent
+  and deliberately NOT taken** (it would couple the schedule write path to cycle-freeze state).
+  Recorded so it is a known unchosen option, never an unnoticed one.
+  ⚠ Citation drift fixed on the way past: this entry cited the comment at `fixed-amount.ts:351`; it was
+  live at `:380` at `d6de145`.
 
 - **⚠ Story 10.13 — `assertPanelAuthorized` now exists THREE times, near-identically. Extraction is
   ARGUABLE and deliberately NOT done.** `r9-voting-persist.ts:314-350`,
@@ -4561,6 +4593,60 @@ this whole correct-course exists to abolish, in story clothing.
   **Re-trigger, concrete:** *Story 7.11 entering `ready-for-dev`*. ⛔ It names a STORY KEY that exists
   in `sprint-status.yaml`, not an epic — a deferral naming an epic expires unowned
   ([[project_r7_fact_producer_unbuilt]]).
+  ✅ **DISCHARGED 2026-08-16 — "Closed by [edit]", by Story 7.11 + Decisions `2026-08-16-124` /
+  `2026-08-16-125`.** All the named registers now agree: `FIXED_AMOUNT_NOTICE_DAYS = 90`
+  (clause 1 — ⛔ 90, **superseding** the 60 of `2026-08-16-123` clause 6, so UX-DR25's Month−3 stage
+  stays reachable); Niyamavali §4.2 **and** the member-facing T&C §4.2 amended **in both locales**
+  (clauses 3/5, verbatim in the entry — `docs/legal/` is gitignored); Deed Cl. 10(b) recorded as
+  **already consistent and NOT amended** (clause 4 — its verb is permissive); PRD FR-15/FR-55 **plus
+  five further live PRD lines the ruling never named** (clause 10); `architecture.md:1324` **shortened,
+  not removed**; and `epics.md`'s live lines, with historical AC bodies **annotated, never rewritten**.
+  ⛔ **AND THE HALF THAT IS DELIBERATELY NOT BUILT, SAID PLAINLY: minimum DURATION IS STILL NOT
+  ENFORCED, AND THAT IS NOW CORRECT.** `2026-08-16-124` clause 7 confirms the absence is the ruled
+  policy, not a gap — twelve months was struck from §4.2 entirely, so there is **no** minimum period
+  for which an amount must stand. ⛔ Do **not** read this closure as "a duration predicate shipped";
+  none did, and building one would contradict the ruling. `closeOpenHead` still closes at
+  `max(newEffectiveFrom, openHead.effectiveFrom)` and two conforming writes a day apart still leave an
+  amount in force for one day — **by design**.
+
+- **⭐ Story 7.11 — UX-DR25's four-stage My Pool card transition is now GUARANTEED BY POLICY, and it is
+  still UNBUILT. OWNED BY STORY 8.2.** `ux-design-specification.md:987-993` commits a four-stage
+  transition — *"Month -3 onwards"* / *"Month -1"* / *"Month 0"* / *"Subsequent cycles"* — premised in
+  terms on *"per FR-15, 12+ month notice"*. That premise moved twice on 2026-08-16 and ⚠ **the second
+  move is the one that matters**: Decision `2026-08-16-123` clause 6 shortened the notice to **60
+  days**, at which a minimum-notice change **could never fire stage 1 at all** (60 days ≈ 2 months);
+  Decision `2026-08-16-124` clause 1 then superseded that to **90 days** *for this exact reason* —
+  three calendar months is 90–92 days, so at a 90-day floor a minimum-notice change fires stage 1 **on
+  the day it is announced** and dwells there ~60 days before Month−1.
+  ⇒ **The four-stage pattern works BY POLICY again, at its natural size, for every conforming change.**
+  It is **not** a practice expectation, and it is **not** enforced-by-nothing — option (b) was on the
+  table and was **not** taken (`2026-08-16-124` clause 2).
+  **The gap itself:** the surface is **unbuilt**. Verified live at `d6de145`,
+  `apps/mobile/components/active-contribution/ActiveContributionCard.tsx:211-222` renders a **single
+  un-staged line** whenever `data.upcomingAmountChange` is present — no Month−3 stage, no Month−1
+  stage, no first-cycle inline note, no staged copy of any kind.
+  ⛔ **An EMERGENCY adjustment still has no stages, because it has no notice.** Story 8.2 must build
+  the staged pattern for **standard** changes only and must not imply a warning the emergency path
+  cannot give.
+  ⚠ The spec's own sentence still says *"12+ month notice"* and is annotated rather than rewritten —
+  `ux-design-specification.md` is a **seventh** register, surfaced by Q6 and named in **no** ruling.
+  ⛔ **AND THE OWNERSHIP TRAP, CAUGHT BEFORE IT WAS WRITTEN IN: STORY 8.2 CANNOT OWN THIS.**
+  `8-2-active-contribution-card-my-pool-card-progress-meter-15-day-tone-gradient` is **`done`**, and so
+  is **every other story in Epic 8** (verified live 2026-08-16 against `sprint-status.yaml`). Story 8.2
+  shipped `epics.md`'s *"the fixed-amount transition pattern is shown"* AC as the single un-staged line
+  above — **partially**. ⚠ Naming a `done` story as owner, with a re-trigger of *"Story 8.2 entering
+  `ready-for-dev`"*, would have produced a re-trigger that **can never fire** — precisely the shape of
+  un-owned decay [[project_r7_fact_producer_unbuilt]] records, one register further along than the
+  epic-naming case it describes.
+  **Owner:** `8-15-fixed-amount-transition-staged-card` — ⭐ **MINTED HERE, `backlog`, so this is not
+  left un-owned**, following Decision `2026-08-16-123` clause 9's precedent (which minted Story 7.11
+  the same way, for the same reason). ⛔ A story key that now exists in `sprint-status.yaml`, never an
+  epic and never a closed story.
+  ⚠ **Un-ratified mint, recorded as such:** it was created by Story 7.11's author to give this
+  observation a live owner, **not** by a Panel ruling. The Panel may rename it, fold it into another
+  story, or decline it — but the observation is owned by a key that exists in the meantime.
+  **Re-trigger, concrete:** *Story 8.15 entering `ready-for-dev`*, or *the first standard fixed-amount
+  change actually scheduled in production* — whichever comes first.
 
 - **⭐ Story 10.13 AC7(a) — FR-55's ANNOUNCEMENT half. "Closed by [edit]": Story 10.5's News/Blog
   console IS that workflow.** `prd.md:849` commits that the fixed-amount setter *"drafts the
@@ -5251,3 +5337,23 @@ review of **§8.8** (§2 above). Stated as a fact, not as a new count — the co
   closed behavior is structurally guaranteed by the bundle lookup returning no match, but unverified by an
   explicit assertion. *Owner:* none yet. *Re-trigger:* if a role is ever renamed/removed from
   `defaultRoleBundles` while grants issued under the old name still exist.
+
+## Deferred from: code review of 7-11-fixed-amount-notice-period-and-fixed-period-reconciliation (2026-08-16)
+
+- **Every decision-log ruling is authored, argued for, and "Ruled" by the same named party, with no
+  distinct Panel member, vote, or quorum recorded.** Decisions `2026-08-16-124` and `2026-08-16-125`
+  (this diff) both read "Author: BigDev, Solo Builder" / "Status: Ruled (BigDev, Solo Builder,
+  2026-08-16)" — the same pattern holds across the whole `.decision-log.md`, not introduced by this
+  story. *Owner:* none yet. *Re-trigger:* if a second Panel member or a distinct
+  ratification/attestation step is ever introduced to the decision-log process.
+
+- **"Three calendar months is 90–92 days" is asserted as settled arithmetic in ratified decision text,
+  but is not accurate for every calendar alignment.** Decision `2026-08-16-124` clause 1 (and the story
+  file, sprint-status ledger, routing note, and UX-spec annotation) use this claim to justify 90 as "the
+  smallest floor that restores the [UX-DR25 four-stage] guarantee... for every conforming change" — but
+  a three-calendar-month span spanning February in a non-leap year can be as short as 89 days (e.g.
+  Feb 1 → Apr 30). Low real-world impact (off by one day at a rare calendar alignment), and per
+  [[feedback_supersede_never_reinterpret]] a correction to ratified text needs its own append-only
+  clarifying entry — not warranted for a nit with no code impact. *Owner:* none yet. *Re-trigger:* if
+  the exact boundary of UX-DR25's stage-1 guarantee is ever load-bearing for a real dispute (e.g. a
+  standard change scheduled to land in a short-February window contests whether stage 1 fired).

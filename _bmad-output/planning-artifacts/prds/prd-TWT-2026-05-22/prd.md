@@ -64,7 +64,7 @@ Often Sushil's wife, mother, or adult son. May not be a TWT member. May not be s
 
 ### 2.6 Quinary Persona — *Trustee Panel + Trust Staff*
 
-TWT is a legal trust with the **statutorily required minimum of 3 trustees** plus a small staff. Trustees: lower-volume, higher-authority actions — set the per-pool fixed amount (₹310–400) for 12+ month periods, approve claims at cycle freeze, amend Niyamavali, govern. Staff: higher-volume, lower-authority — claim shepherding, nominee statement intake, helpdesk routing, field-worker dispatch, reconciliation triage. Admin UI serves both layers. "Solo" refers to **build capacity** (BigDev engineering + product), not trust operations.
+TWT is a legal trust with the **statutorily required minimum of 3 trustees** plus a small staff. Trustees: lower-volume, higher-authority actions — set the per-pool fixed amount (₹310–400) on 90-day notice, approve claims at cycle freeze, amend Niyamavali, govern. Staff: higher-volume, lower-authority — claim shepherding, nominee statement intake, helpdesk routing, field-worker dispatch, reconciliation triage. Admin UI serves both layers. "Solo" refers to **build capacity** (BigDev engineering + product), not trust operations.
 
 ### 2.7 Jobs To Be Done
 
@@ -141,7 +141,7 @@ TWT is a legal trust with the **statutorily required minimum of 3 trustees** plu
 - **Under-funded cycle** — a cycle where actual collection is less than the target. Trust does **not** top up from reserves; nominee receives actual collection. Codified as "Pool-Reality #1."
 
 **Money & reconciliation**
-- **Fixed amount** — the per-pool per-member contribution amount set by trustees for 12+ month periods (current range ₹310–400). Announced 12+ months in advance of any change.
+- **Fixed amount** — the per-pool per-member contribution amount set by trustees (current range ₹310–400). Announced at least 90 days in advance of any change; no minimum period for which an amount must stand.
 - **UPI Intent / UPI Deep Link** — the only payment rail for member → nominee in v1. No payment gateway for trust money in the support-pool flow.
 - **UTR** (Unique Transaction Reference) — bank/UPI payment identifier. Member self-attests UTR post-payment.
 - **Reconciliation engine** — cron-based subsystem matching member-attested UTRs against nominee-pushed daily bank statements.
@@ -439,7 +439,7 @@ A deterministic, real-time validity service over the rule registry (FR-7): given
 
 ### 4.3 Pool Engine (the math core)
 
-The math heart of the product. On trustee approval of N claims for a cycle, the engine **auto-spawns N pools**, names them from a curated culture-rooted list (Mahabharata seed + extensions), and **deterministically assigns** every active member to exactly one pool via `hash(member_id + cycle_id) mod N`. Fixed per-pool amount (₹310–400) is trustee-set for 12+ months, loaded from config. Wrong-pool contributions: rejected, never refunded. Under-funded cycles deliver actual collection — no top-up. Engine is parameterized so future *daan* categories (Kanyadan, Jivandan, Retirementdaan) reuse it without modification. Realizes UJ-2.
+The math heart of the product. On trustee approval of N claims for a cycle, the engine **auto-spawns N pools**, names them from a curated culture-rooted list (Mahabharata seed + extensions), and **deterministically assigns** every active member to exactly one pool via `hash(member_id + cycle_id) mod N`. Fixed per-pool amount (₹310–400) is trustee-set on 90-day notice, loaded from config. Wrong-pool contributions: rejected, never refunded. Under-funded cycles deliver actual collection — no top-up. Engine is parameterized so future *daan* categories (Kanyadan, Jivandan, Retirementdaan) reuse it without modification. Realizes UJ-2.
 
 #### FR-13: Auto-spawn N pools per cycle (SC-18)
 
@@ -460,13 +460,13 @@ At cycle freeze (trustee bulk-approval action — see FR-49), the engine creates
 - Across a large active membership, pool sizes differ by no more than `ceil(M/N) − floor(M/N)`.
 - Visible to the member as their **My Pool** card (FR-21).
 
-#### FR-15: Fixed-amount per pool over 12+ month periods (SC-17, §23.3)
+#### FR-15: Fixed-amount per pool on 90-day notice (SC-17, §23.3)
 
-Trustee sets the per-pool fixed amount; effective for 12+ months; changes announced 12+ months in advance.
+Trustee sets the per-pool fixed amount; changes announced at least 90 days in advance. There is no mandatory minimum period for which an amount must stand (Decision `2026-08-16-124` clause 7).
 
 **Consequences (testable):**
 - Amount is a Pariwar-scoped configuration with `effective_from` / `effective_to`.
-- A change action requires a future `effective_from` ≥ now + 12 months, except for explicitly-flagged emergency adjustments which require multi-trustee approval and are audit-logged with the override reason.
+- A change action requires a future `effective_from` ≥ now + 90 days, except for explicitly-flagged emergency adjustments which require multi-trustee approval and are audit-logged with the override reason. An emergency adjustment's `effective_from` may not precede the amount currently in force.
 - Each pool's `fixed_amount` is snapshotted at spawn time.
 
 #### FR-16: Pool-bound payment enforcement (Pool-Sys #2)
@@ -846,7 +846,7 @@ Per-Pariwar custom fields on member, claim, pool — stored in JSON columns. Var
 
 #### FR-55: Trustee fixed-amount setter + announcement workflow
 
-The ₹400 → ₹430 mechanism (UJ-6). Effective date ≥ now + 12 months (FR-15). Drafts the announcement copy; selects channels; schedules publish.
+The ₹400 → ₹430 mechanism (UJ-6). Effective date ≥ now + 90 days (FR-15). Drafts the announcement copy; selects channels; schedules publish.
 
 #### FR-56: Member moderation — suspend, terminate, restore
 
@@ -1318,7 +1318,7 @@ TWT v1 is **not**:
 
 - **Identity & Membership Lifecycle:** Signup, ₹110 Vyawastha Shulk, annual renewal with 3-month grace (FR-1A), manual eHRMS, DigiLocker KYC + manual fallback, lock-in clock, multi-nominee 75/25, medical disclosure (IMA-listed) with concealment-denial, voluntary withdrawal. (§4.1, FRs 1, 1A, 2–6)
 - **Niyamavali (Rules Engine):** Versioned per-Pariwar registry, lock-in trustee-adjustable/member-count-driven ramp, R7/R8/R5/R9 carry-over with R14 concealment-denial extension, retirement coverage, Member Validity Service (FR-12A). (§4.2, FRs 7–12, 12A)
-- **Pool Engine:** Auto-spawn, Mahabharata naming, deterministic balanced assignment, fixed-amount over 12+ months, pool-bound payment enforcement, under-funded cycle policy, _daan parameterization. (§4.3, FRs 13–20)
+- **Pool Engine:** Auto-spawn, Mahabharata naming, deterministic balanced assignment, fixed-amount on 90-day notice, pool-bound payment enforcement, under-funded cycle policy, _daan parameterization. (§4.3, FRs 13–20)
 - **Alert Lifecycle:** State machine, My Pool card, structured `alert` → multi-channel render, real-time contributor list, 15-day window. (§4.4, FRs 21–24)
 - **Payment & Reconciliation:** UPI Intent, UTR self-attestation, nominee daily statement intake, UTR matching engine, dual nominee accounts, screenshot-on-mismatch, Contribution Note PDF. (§4.5, FRs 27–33)
 - **Claim Flow:** Claim filing with claim-time nominee bank, death-cert OCR parity, peer mesh + ground inspection, human shepherd per claim (FR-41 v1-M), signals panel, special-case routing, internal appeal (FR-43A). (§4.6, FRs 37–43A)
@@ -1369,7 +1369,7 @@ TWT v1 is **not**:
 - **SM-C1: Signup velocity in absence of contribution.** Do not chase a high signup number that doesn't convert to active contributors. Counterbalances SM-3 / SM-4.
 - **SM-C2: Active Telegram members.** Telegram mirror is a courtesy to the migrating cohort, not the strategic surface. Counterbalances any drift back to Telegram-as-primary.
 - **SM-C3: Module-shelf CTR.** Modules should help teachers, not annoy them. A high CTR on inappropriate-fit modules is worse than a low CTR on well-targeted ones. Counterbalances SM-6.
-- **SM-C4: Average per-pool contribution amount.** Do not raise the per-pool amount reactively when collection is below target. Counterbalances SM-4. (Adjustments must be on the 12+ month cycle per FR-15.)
+- **SM-C4: Average per-pool contribution amount.** Do not raise the per-pool amount reactively when collection is below target. Counterbalances SM-4. (Adjustments carry at least 90 days' notice per FR-15.)
 - **SM-C5: Public PII exposure incidents.** One = critical incident; this is a *hard zero* counter-metric. Counterbalances any "growth at all costs" pressure on FR-74.
 
 ## 8. Cross-Cutting NFRs

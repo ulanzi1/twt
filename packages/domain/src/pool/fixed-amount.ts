@@ -6,7 +6,7 @@
 //   · getEffectiveFixedAmount — the change_type-BLIND window resolver (mirrors getEffectiveTc). The
 //     spawn saga reads it at the cycle-freeze committed_at, so each pool snapshots the amount in
 //     force at the moment the cycle froze — deterministic + replay-safe.
-//   · scheduleStandardChange — the 12-month-notice write (effective_from >= now()+365d, evaluated
+//   · scheduleStandardChange — the 90-day-notice write (effective_from >= now()+90d, evaluated
 //     against DB-authoritative now() — D6; no attestation; change_type='standard').
 //   · applyEmergencyOverride — the emergency write (NO notice floor; change_type='emergency') that
 //     ALSO writes an immutable Emergency Adjustment Record atomically (D3) — the schedule row and
@@ -47,6 +47,7 @@ import {
 } from '../schema/pool_fixed_amount_schedule.js';
 import {
   PoolFixedAmountAttestationRequiredError,
+  PoolFixedAmountEmergencyBackdatedBeforeHeadError,
   PoolFixedAmountInvalidError,
   PoolFixedAmountNoticeTooShortError,
   PoolFixedAmountNotConfiguredError,
@@ -59,15 +60,20 @@ import {
 
 // ── The window resolver — PURE core + DB shell (the getEffectiveTc precedent) ──
 
-/** The 12-month notice floor, in days (D6). 365 calendar days = the standard-change cooling-off. */
-export const FIXED_AMOUNT_NOTICE_DAYS = 365;
+/** The notice floor, in days (D6). 90 calendar days = the standard-change cooling-off.
+ *  ⛔ Decision `2026-08-16-124` clause 1 (Story 7.11) — 90, SUPERSEDING the 60 days of Decision
+ *  `2026-08-16-123` clause 6, which itself replaced the original 365. 90 is the smallest floor at
+ *  which UX-DR25's Month-3 member-card stage can fire for a minimum-notice change (three calendar
+ *  months = 90-92 days), so the four-stage transition is a POLICY guarantee, not trustee practice.
+ *  ⛔ This is the SINGLE source of the floor — no second literal, no per-caller override. */
+export const FIXED_AMOUNT_NOTICE_DAYS = 90;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Guard-rail ceiling on `fixed_amount` (1 crore INR) — review hardening. Mirrors the retired
  * `MAX_POOL_SPAWN_FIXED_AMOUNT_INR` boot-time guard: a misconfigured/fat-fingered trustee input (an
  * extra zero) must not silently snapshot an absurd per-pool contribution. Applies to BOTH write
- * paths (standard and emergency) — the emergency path bypasses the 365-day notice floor, never the
+ * paths (standard and emergency) — the emergency path bypasses the 90-day notice floor, never the
  * amount sanity bound.
  */
 export const MAX_POOL_FIXED_AMOUNT_INR = 10_000_000;
@@ -139,11 +145,41 @@ export function selectEffectiveFixedAmountRow<T extends FixedAmountWindow>(
   return best;
 }
 
-/** PURE 12-month-notice check (DB-free, unit-testable): `effectiveFrom >= dbNow + 365 days`. `dbNow`
+/** PURE 90-day-notice check (DB-free, unit-testable): `effectiveFrom >= dbNow + 90 days`. `dbNow`
  *  MUST be the DB-authoritative instant (§1.11/D6 — the write path sources it from `SELECT now()`),
  *  never a JS clock, so a hostile trustee cannot shrink the cooling-off window via an app-server clock. */
 export function meetsNoticeFloor(effectiveFrom: Date, dbNow: Date): boolean {
   return effectiveFrom.getTime() >= dbNow.getTime() + FIXED_AMOUNT_NOTICE_DAYS * DAY_MS;
+}
+
+/** PURE emergency-backdating check (DB-free, unit-testable): an emergency `effectiveFrom` may not
+ *  precede the `effectiveFrom` of the amount **currently IN FORCE**.
+ *
+ *  Decision `2026-08-16-124` clause 6 (Q1 option (b)), as clarified by Decision `2026-08-16-125`.
+ *
+ *  ⚠ **"In force", NOT "the open head".** Those differ whenever a standard change is scheduled ahead:
+ *  the future-dated row becomes the open-ended head while the PRIOR row is still the amount in force.
+ *  Binding to the open-ended row would forbid an emergency from firing at all while a planned change
+ *  pends — which would gut the emergency mechanism that clause 8 preserves, and would reject the write
+ *  `closeOpenHead`'s `max(...)` clamp exists to handle. Binding to the amount IN FORCE gives clause 6
+ *  the effect its own stated reason asks for: an emergency cannot reach BEHIND an amount a committed
+ *  cycle-freeze may already have resolved against (7.5's replay concern), while an emergency
+ *  SUPERSEDING a pending future change stays legal.
+ *
+ *  ⚠ A BACKDATING bound, NOT a notice floor — the emergency path still bypasses the 90-day notice
+ *  entirely (clause 8). Do not describe it as a notice floor.
+ *
+ *  ⛔ VACUOUS AT GENESIS: `inForceEffectiveFrom === null` (no amount in force at `dbNow`) accepts,
+ *  because there is nothing to reach behind.
+ *
+ *  ⛔ Option (d) — a bound at the latest `cycle_freeze_commits.committed_at` — is tighter in intent
+ *  and was deliberately NOT taken: it would couple this write path to cycle-freeze state. */
+export function meetsEmergencyBackdatingFloor(
+  effectiveFrom: Date,
+  inForceEffectiveFrom: Date | null,
+): boolean {
+  if (inForceEffectiveFrom === null) return true;
+  return effectiveFrom.getTime() >= inForceEffectiveFrom.getTime();
 }
 
 /** Read the DB-authoritative `now()` (§1.11) — the single sanctioned "now" for the write floor + the
@@ -272,24 +308,75 @@ async function latestScheduleVersion(db: Db, pariwarId: PariwarId): Promise<numb
 }
 
 /**
- * Close the current open-ended head (`effective_until IS NULL`), if any. At-most-one open head
- * (partial-unique index), so this touches 0 or 1 rows; a genesis write touches 0. MUST run BEFORE
- * inserting the new open head so the partial-unique constraint is never transiently violated.
+ * Close whichever row(s) would otherwise OVERLAP the new open-ended head starting at
+ * `newEffectiveFrom`. At-most-one open head (partial-unique index) going in, and at-most-one row is
+ * ever effective at a single instant coming in (the schedule's non-overlapping-windows invariant), so
+ * this touches 0, 1, or 2 rows; a genesis write touches 0. MUST run BEFORE inserting the new open head
+ * so the partial-unique constraint is never transiently violated.
  *
- * The closing instant is `max(newEffectiveFrom, openHead.effectiveFrom)` — NOT unconditionally
- * `newEffectiveFrom` (review hardening). The emergency path is explicitly allowed an `effectiveFrom`
- * that precedes "now" (AC4), and the open head being closed may itself carry a FUTURE `effectiveFrom`
- * (a standard change already scheduled ahead under the 365-day notice). Blindly closing at
- * `newEffectiveFrom` in that case would set `effective_until < effective_from` on the row being
- * closed — an INVERTED, corrupted window. Closing at `max(...)` instead means: a head super­seded
- * before it ever took effect is closed at its OWN `effective_from` — a zero-width, permanently-
- * unreachable window (`effective_from === effective_until` can never satisfy `from <= asOf < until`)
- * — moot but well-formed, never inverted. The ordinary case (`newEffectiveFrom` after the open head's
- * `effectiveFrom`) is unaffected: `max(...)` degrades to the prior unconditional assignment.
+ * Two DISTINCT rows can need closing, and they are the SAME row only in the ordinary case:
+ *
+ * 1. **The row actually EFFECTIVE AT `newEffectiveFrom`** (found the same way
+ *    {@link resolveEffectiveFixedAmountRow} would, as-of `newEffectiveFrom`) — clamped to
+ *    `effective_until = newEffectiveFrom`. This is the row the new head actually abuts. In the
+ *    ordinary case (no pending future change) this IS the current open head, and clamping it to
+ *    `newEffectiveFrom` is safe because both write paths guarantee `newEffectiveFrom >=` this row's
+ *    own `effective_from` (the 90-day notice floor / the emergency backdating bound) — never inverted.
+ * 2. **The literal CURRENT OPEN HEAD** (`effective_until IS NULL`), if it is a DIFFERENT row — only
+ *    possible when a standard change is already scheduled ahead (the open head is FUTURE-dated) and
+ *    this write reaches behind it. Closed at its OWN `effective_from` — a zero-width,
+ *    permanently-unreachable window (`effective_from === effective_until` can never satisfy
+ *    `from <= asOf < until`) — moot but well-formed, never inverted (review hardening, carried
+ *    forward). This is `max(newEffectiveFrom, openHead.effectiveFrom)`'s original purpose, restated
+ *    as a distinct case rather than folded into (1)'s clamp.
+ *
+ * Before this split (Story 7.11 review D3), only (2) was closed: a backdated emergency reaching
+ * BEHIND a pending future change left row (1)'s `effective_until` pointing at the now-mooted future
+ * head — an overlapping, stale window on the audit trail (`listFixedAmountSchedule`) even though
+ * point-in-time resolution self-healed via the `effective_from DESC` tie-break. Doing both restores
+ * the non-overlapping-windows invariant {@link resolveEffectiveFixedAmountRow}'s own doc comment
+ * already claims. Applies equally to `scheduleStandardChange` (a second standard change can also be
+ * scheduled to land before an already-scheduled further-out one) — this is the shared mechanic.
  */
 async function closeOpenHead(db: Db, pariwarId: PariwarId, newEffectiveFrom: Date): Promise<void> {
+  // (1) the row effective AT newEffectiveFrom — same predicate as resolveEffectiveFixedAmountRow.
+  const inForceRows = await db
+    .select({
+      version: poolFixedAmountSchedule.version,
+      effectiveUntil: poolFixedAmountSchedule.effectiveUntil,
+    })
+    .from(poolFixedAmountSchedule)
+    .where(
+      and(
+        eq(poolFixedAmountSchedule.pariwarId, pariwarId),
+        lte(poolFixedAmountSchedule.effectiveFrom, newEffectiveFrom),
+        or(
+          isNull(poolFixedAmountSchedule.effectiveUntil),
+          gt(poolFixedAmountSchedule.effectiveUntil, newEffectiveFrom),
+        ),
+      ),
+    )
+    .orderBy(desc(poolFixedAmountSchedule.effectiveFrom), desc(poolFixedAmountSchedule.version))
+    .limit(1);
+  const inForceRow = inForceRows[0] ?? null;
+  if (inForceRow) {
+    await db
+      .update(poolFixedAmountSchedule)
+      .set({ effectiveUntil: newEffectiveFrom })
+      .where(
+        and(
+          eq(poolFixedAmountSchedule.pariwarId, pariwarId),
+          eq(poolFixedAmountSchedule.version, inForceRow.version),
+        ),
+      );
+  }
+
+  // (2) the literal current open head, only if it's a DIFFERENT row from (1).
   const openRows = await db
-    .select({ effectiveFrom: poolFixedAmountSchedule.effectiveFrom })
+    .select({
+      version: poolFixedAmountSchedule.version,
+      effectiveFrom: poolFixedAmountSchedule.effectiveFrom,
+    })
     .from(poolFixedAmountSchedule)
     .where(
       and(
@@ -298,21 +385,18 @@ async function closeOpenHead(db: Db, pariwarId: PariwarId, newEffectiveFrom: Dat
       ),
     )
     .limit(1);
-  const open = openRows[0];
-  if (!open) return;
-
-  const closesAt =
-    newEffectiveFrom.getTime() > open.effectiveFrom.getTime() ? newEffectiveFrom : open.effectiveFrom;
-
-  await db
-    .update(poolFixedAmountSchedule)
-    .set({ effectiveUntil: closesAt })
-    .where(
-      and(
-        eq(poolFixedAmountSchedule.pariwarId, pariwarId),
-        isNull(poolFixedAmountSchedule.effectiveUntil),
-      ),
-    );
+  const openRow = openRows[0] ?? null;
+  if (openRow && openRow.version !== inForceRow?.version) {
+    await db
+      .update(poolFixedAmountSchedule)
+      .set({ effectiveUntil: openRow.effectiveFrom })
+      .where(
+        and(
+          eq(poolFixedAmountSchedule.pariwarId, pariwarId),
+          eq(poolFixedAmountSchedule.version, openRow.version),
+        ),
+      );
+  }
 }
 
 /** Validate a `fixed_amount`: a strictly-positive integer within the guard-rail ceiling
@@ -329,7 +413,7 @@ export interface ScheduleStandardChangeInput {
   readonly pariwarId: PariwarId;
   /** New amount (whole INR, strictly positive). */
   readonly fixedAmount: number;
-  /** When the change comes into force — MUST be >= DB now() + 365 days (the 12-month notice). */
+  /** When the change comes into force — MUST be >= DB now() + 90 days (the 90-day notice). */
   readonly effectiveFrom: Date;
   /** The trustee/actor writing the change (snapshotted in created_by_actor). */
   readonly actorId: string;
@@ -338,7 +422,7 @@ export interface ScheduleStandardChangeInput {
 }
 
 /**
- * Append a STANDARD (12-month-notice) fixed-amount change. Validates the +365-day floor against
+ * Append a STANDARD (90-day-notice) fixed-amount change. Validates the +90-day floor against
  * DB-authoritative `now()` (D6 — SQL-side comparison, NEVER a JS `Date`), and a positive integer
  * amount; allocates the next monotonic `version`; closes the prior open-ended head then inserts the
  * new open head; `change_type='standard'`.
@@ -353,7 +437,7 @@ export async function scheduleStandardChange(
 ): Promise<PoolFixedAmountScheduleRow> {
   assertPositiveAmount(input.fixedAmount);
 
-  // DB-authoritative 365-day floor (D6). A trustee-controllable app-server clock would let a hostile
+  // DB-authoritative 90-day floor (D6). A trustee-controllable app-server clock would let a hostile
   // trustee shrink the cooling-off window (architecture L1311), so the floor is evaluated against the
   // DB's `now()` (sourced here), never a JS `new Date()`. The comparison itself is the pure helper.
   const now = await dbNow(db);
@@ -377,7 +461,11 @@ export interface ApplyEmergencyOverrideInput {
   readonly pariwarId: PariwarId;
   /** New amount (whole INR, strictly positive). */
   readonly fixedAmount: number;
-  /** When the change comes into force — MAY be <= now() (the 365-day floor does NOT apply). */
+  /** When the change comes into force — MAY be <= now() (the 90-day notice floor does NOT apply).
+   *  ⛔ BOUNDED BELOW since Decision `2026-08-16-124` clause 6 (Q1 option (b)), as clarified by
+   *  `2026-08-16-125`: it may NOT precede the `effective_from` of the amount currently IN FORCE.
+   *  ⚠ Not the open-ended head — an emergency superseding a PENDING future change is still legal.
+   *  That is a backdating bound, not a notice floor. */
   readonly effectiveFrom: Date;
   /** Policy/operational justification ONLY — never member-specific (D3). Non-empty. */
   readonly documentedReason: string;
@@ -401,7 +489,7 @@ export interface ApplyEmergencyOverrideResult {
 
 /**
  * Apply an EMERGENCY fixed-amount override in ONE (caller's) transaction: (a) the same
- * close-head + insert-new-head mechanics as the standard path but with NO 365-day floor and
+ * close-head + insert-new-head mechanics as the standard path but with NO notice floor and
  * `change_type='emergency'`; (b) the immutable Emergency Adjustment Record referencing the
  * just-written schedule `version`, denormalizing the amount, and recording the panel composition +
  * attestation metadata + documented reason. The schedule entry and its attestation are written
@@ -413,6 +501,8 @@ export interface ApplyEmergencyOverrideResult {
  * @throws PoolFixedAmountPanelTooSmallError on a non-empty panel below {@link POOL_FIXED_AMOUNT_MIN_PANEL_SIZE}.
  * @throws PoolFixedAmountPanelDuplicateActorError when the same actor id appears more than once in the panel.
  * @throws PoolFixedAmountInvalidError on a non-positive/non-integer/over-ceiling amount.
+ * @throws PoolFixedAmountEmergencyBackdatedBeforeHeadError when `effective_from` precedes the amount
+ *         currently in force's.
  * @throws PoolFixedAmountVersionConflictError on a concurrent-write 23505 race.
  */
 export async function applyEmergencyOverride(
@@ -433,7 +523,42 @@ export async function applyEmergencyOverride(
     throw new PoolFixedAmountPanelDuplicateActorError();
   }
 
-  // (a) the emergency schedule entry — no floor check (AC4: effective_from may be <= now()).
+  // Serialize concurrent writers to THIS Pariwar's schedule BEFORE reading "the amount in force" for
+  // the backdating-bound check below (Story 7.11 review D4). Without this, two concurrent emergency
+  // overrides can each read a since-stale "in force" snapshot, both pass the bound check against it,
+  // and the second commits behind an amount the first (already-committed) emergency put in force —
+  // exactly what the bound exists to prevent. Transaction-scoped, auto-released at COMMIT/ROLLBACK;
+  // mirrors the `pg_advisory_xact_lock(hashtext(...))` convention in degraded-mode/declarations.ts +
+  // device-token/registration.ts (do NOT introduce a different hash function). `insertNewHead` below
+  // re-acquires the same key, which is a harmless no-op re-lock within the same transaction.
+  await db.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${input.pariwarId}))`);
+
+  // The BACKDATING bound (Decision `2026-08-16-124` clause 6, as clarified by `2026-08-16-125`). NOT a
+  // notice floor — the emergency path still bypasses the 90-day notice entirely — but it may not reach
+  // behind the amount currently IN FORCE. ⚠ Deliberately NOT the open-ended head: a scheduled future
+  // change is the open head while the PRIOR row is still in force, and binding there would block the
+  // emergency path outright whenever a planned change pends. §1.11 — the instant is DB-authoritative,
+  // never a JS clock, so a trustee-controllable app-server clock cannot shift the bound. Read AFTER the
+  // lock above, so this is the freshest committed state any concurrent writer could have left behind.
+  const emergencyNow = await dbNow(db);
+  const inForce = await resolveEffectiveFixedAmountRow(db, input.pariwarId, emergencyNow);
+  if (!meetsEmergencyBackdatingFloor(input.effectiveFrom, inForce?.effectiveFrom ?? null)) {
+    // inForce is guaranteed non-null here: meetsEmergencyBackdatingFloor only rejects when
+    // `inForceEffectiveFrom !== null` (its vacuous-at-genesis branch always accepts). Narrowed by a
+    // real check, not an assertion, so a future edit to the predicate's contract fails loudly here
+    // instead of resurfacing as an `undefined.toISOString()` crash (Story 7.11 review P2).
+    if (!inForce) {
+      throw new Error(
+        '[applyEmergencyOverride] unreachable: meetsEmergencyBackdatingFloor rejected with no amount in force',
+      );
+    }
+    throw new PoolFixedAmountEmergencyBackdatedBeforeHeadError(
+      input.effectiveFrom.toISOString(),
+      inForce.effectiveFrom.toISOString(),
+    );
+  }
+
+  // (a) the emergency schedule entry — no NOTICE floor (AC4: effective_from may be <= now()).
   const schedule = await insertNewHead(db, {
     pariwarId: input.pariwarId,
     fixedAmount: input.fixedAmount,
@@ -488,10 +613,16 @@ async function insertNewHead(
   db: Db,
   input: InsertNewHeadInput,
 ): Promise<PoolFixedAmountScheduleRow> {
+  // Serialize concurrent writers to THIS Pariwar's schedule (Story 7.11 review D4) — a harmless
+  // no-op re-lock when `applyEmergencyOverride` already acquired the same key above; the SOLE guard
+  // for `scheduleStandardChange`, which has no earlier lock of its own. Transaction-scoped, mirrors
+  // the `pg_advisory_xact_lock(hashtext(...))` convention in degraded-mode/declarations.ts.
+  await db.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${input.pariwarId}))`);
+
   const nextVersion = (await latestScheduleVersion(db, input.pariwarId)) + 1;
 
-  // Close the prior open head FIRST (0 or 1 rows) so the partial-unique open-head index is never
-  // transiently violated when the new open head is inserted.
+  // Close/clamp whatever row(s) would otherwise overlap the new head FIRST (0-2 rows) so the
+  // partial-unique open-head index is never transiently violated when the new open head is inserted.
   await closeOpenHead(db, input.pariwarId, input.effectiveFrom);
 
   let rows: PoolFixedAmountScheduleRow[];

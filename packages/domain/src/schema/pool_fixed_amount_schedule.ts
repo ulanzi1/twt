@@ -11,7 +11,7 @@
 //
 // ── Standard vs. emergency are the SAME store, gated differently (AC5) ────────
 // Both write-paths append here; they differ only in the `effective_from` constraint
-// (standard >= now()+365d — the 12-month notice; emergency none), the required
+// (standard >= now()+90d — the 90-day notice; emergency none), the required
 // attestation (emergency writes an immutable record in the sibling table), the
 // `change_type` discriminator, and the notification cadence. The effective-amount
 // resolver (`getEffectiveFixedAmount`) is change_type-BLIND — it returns the entry
@@ -37,8 +37,8 @@ import { check, index, integer, pgEnum, pgTable, text, timestamp, uniqueIndex, u
 import type { PariwarId } from '../ids/index.js';
 
 /**
- * The write-path discriminator (AC4/AC5). `standard` = the 12-month-notice change
- * (effective_from >= now()+365d, no attestation); `emergency` = the override that
+ * The write-path discriminator (AC4/AC5). `standard` = the 90-day-notice change
+ * (effective_from >= now()+90d, no attestation); `emergency` = the override that
  * bypasses the notice floor and REQUIRES an immutable Emergency Adjustment Record.
  * The discriminator makes an emergency change unmistakable to regulators / members /
  * future trustees. `pgEnum` (not a raw CHECK) yields a `CREATE TYPE` in the migration.

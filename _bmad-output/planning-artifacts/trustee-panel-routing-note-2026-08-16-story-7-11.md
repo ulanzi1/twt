@@ -12,10 +12,15 @@ BLOCKING**; Q4 and Q5 are answerable but each carries a stated non-answer conseq
 **Author:** BigDev (Solo Builder)
 **Raised:** 2026-08-16, against
 `_bmad-output/implementation-artifacts/7-11-fixed-amount-notice-period-and-fixed-period-reconciliation.md`
-at its baseline `main` @ `d6de145` (clean, fetched, `== origin/main`). **No code has been written.**
-The story is `in-progress` at its governance half and stops at **Task 2** until this note is ruled.
-**Story state:** 7.11 is `in-progress` (governance half only). Its dependencies Story 7.5 and Story
-10.13 are both `done`. ⛔ **This story has no `epics.md` entry** — it was minted by Decision
+at its baseline `main` @ `d6de145` (clean, fetched, `== origin/main`). *(Superseded status, retained:
+**no code has been written**; the story is `in-progress` at its governance half and stops at Task 2
+until this note is ruled — true AT AUTHORING, before Q1/Q2/Q3/Q6 were ruled. Story 7.11 review P3:
+this line was left unrevised after ruling landed, contradicting the `✅ RULED` status above; corrected
+here the same way line 10's superseded status was already marked, not silently rewritten.)* As of the
+ruling recorded above, the story has proceeded past Task 2 and code has landed.
+**Story state:** *(superseded, retained: `in-progress`, governance half only, true AT AUTHORING)* — as
+of the ruling, 7.11 has proceeded past Task 2. Its dependencies Story 7.5 and Story 10.13 are both
+`done`. ⛔ **This story has no `epics.md` entry** — it was minted by Decision
 `2026-08-16-123` clause 9 into `sprint-status.yaml:7268` and nowhere else; its AC8 creates the missing
 entry.
 **Decision-log head, verified live at authoring:** `2026-08-16-123` (`.decision-log.md:37`).

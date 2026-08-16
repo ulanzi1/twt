@@ -2,7 +2,7 @@
 //
 // Shows the current effective amount + the full schedule history (standard + emergency, with the
 // immutable Emergency Adjustment Records read-only), a standard-change form (a date picker enforcing
-// the +365d floor client-side — the server is the REAL gate), and an emergency-override form
+// the +90d floor client-side — the server is the REAL gate), and an emergency-override form
 // (documented-reason + panel roster + step-up prompt). `pariwarId` is a prop (from the route) so the
 // page is testable without a router (the CycleFreezePage precedent). NO client-side grant gate —
 // both keys are per-Pariwar grants, so the REAL boundary is the server's requirePermissionHook (+
@@ -42,14 +42,16 @@ function localDatetimeInDays(days: number): string {
   return d.toISOString().slice(0, 16);
 }
 
-/** A local ISO string ~366 days out — the default the standard-change date picker suggests (server re-checks). */
+/** A local ISO string ~91 days out — the default the standard-change date picker suggests (server re-checks). */
 function defaultStandardEffectiveFrom(): string {
-  return localDatetimeInDays(366);
+  return localDatetimeInDays(91);
 }
 
-/** The `min` attribute for the standard-change picker — 365 days out (the server's real floor; the
- *  picker rejects an earlier pick client-side instead of only discovering it after a round-trip 400). */
-const STANDARD_EFFECTIVE_FROM_MIN = localDatetimeInDays(365);
+/** The `min` attribute for the standard-change picker — 90 days out (the server's real floor; the
+ *  picker rejects an earlier pick client-side instead of only discovering it after a round-trip 400).
+ *  ⛔ The SERVER is the real gate: this literal duplicates `FIXED_AMOUNT_NOTICE_DAYS` because the admin
+ *  app does not import @twt/domain. Convenience only — never the boundary. */
+const STANDARD_EFFECTIVE_FROM_MIN = localDatetimeInDays(90);
 
 export function FixedAmountPage({ pariwarId }: FixedAmountPageProps): ReactElement {
   const view = useFixedAmountView(pariwarId);
@@ -207,7 +209,7 @@ export function FixedAmountPage({ pariwarId }: FixedAmountPageProps): ReactEleme
 
           <section aria-label="Standard change" className="rounded border p-4">
             <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide opacity-70">
-              Schedule a standard change (12-month notice)
+              Schedule a standard change (90-day notice)
             </h2>
             <div className="flex flex-wrap items-end gap-3">
               <label className="flex flex-col text-xs">
@@ -220,7 +222,7 @@ export function FixedAmountPage({ pariwarId }: FixedAmountPageProps): ReactEleme
                 />
               </label>
               <label className="flex flex-col text-xs">
-                <span className="opacity-70">Effective from (≥ 365 days out)</span>
+                <span className="opacity-70">Effective from (≥ 90 days out)</span>
                 <input
                   type="datetime-local"
                   className="rounded border px-2 py-1 text-sm"

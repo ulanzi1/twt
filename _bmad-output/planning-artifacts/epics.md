@@ -53,7 +53,7 @@ Inputs reconciled per the 2026-05-27 Sprint Change Proposal: the Sprint Change P
 
 - **FR-13: Auto-spawn N pools per cycle (SC-18).** At cycle freeze, engine creates one pool per approved claim; N immutable thereafter. Pool `display_name` from a trustee-curated culture-rooted ordered list (Mahabharata seed + extensions); letter codes (A, B, C…) retained for backward compat. Curated list ≥ 30 names pre-launch.
 - **FR-14: Deterministic balanced member-to-pool assignment.** `pool_index = hash(member_id + cycle_id) % N`. Audit-reproducible from `(member_id, cycle_id)` alone. Pool sizes differ by ≤ 1.
-- **FR-15: Fixed-amount per pool over 12+ month periods (SC-17).** Trustee-set amount; changes announced ≥ 12 months in advance; each pool's `fixed_amount` snapshotted at spawn.
+- **FR-15: Fixed-amount per pool on 90-day notice (SC-17).** Trustee-set amount; changes announced ≥ 90 days in advance; no minimum period for which an amount must stand; each pool's `fixed_amount` snapshotted at spawn.
 - **FR-16: Pool-bound payment enforcement (Pool-Sys #2).** UPI Intent pre-fills assigned pool's VPA. Non-assigned-pool deposits are reconciled as wrong-pool/invalid; no refund; facilitated (not enforced) helpdesk recovery.
 - **FR-17: Idempotent payment reference (UPI-Track #4).** `tr=` unique to `(member_id, alert_id)`; repeated payments idempotent (one valid contribution).
 - **FR-18: Amount-lock at UPI Intent (OverPay #5).** Amount pre-filled; reconciliation rejects amount ≠ fixed_amount.
@@ -106,7 +106,7 @@ Inputs reconciled per the 2026-05-27 Sprint Change Proposal: the Sprint Change P
 - **FR-52: Helpdesk / ticket system (ADM-15).** Categories: KYC trouble, payment-failed, UTR-mismatch, claim-status, profile-update, Niyamavali-question, partner-module-issue, complaint, other. Auto-routing category × scope → primary assignee role. SLA: first-response 24h; resolution 5 biz days (10 for Niyamavali). States: `open | in_progress | awaiting_member | resolved | reopened`. Auto-close on resolved after 7 days no member reply; reopen within 30 days post-close. **Helpdesk is a first-class architectural subsystem** distinct from telephony per architecture §3.5a; backend `apps/api/modules/helpdesk/`, admin UI `apps/admin/modules/helpdesk/`, contracts `packages/contracts/helpdesk/`.
 - **FR-53: Field-worker dispatch (mobile-first) (ADM-16).** Mobile-first UI on mid-range Android (Snapdragon 4-series, 3GB RAM); offline view, online writes. Surfaces own attribution code, attributed members + qualification states, commission pipeline. RBAC scope = `field_worker_self`. Push on member crossing qualification step. Flag "unreachable" action. Audit-logged per session.
 - **FR-54: Custom fields per Pariwar via JSON columns (ADM-17).** Per-Pariwar JSON-column-based custom fields on member, claim, pool.
-- **FR-55: Trustee fixed-amount setter + announcement workflow.** Effective date ≥ now + 12 months per FR-15. Drafts copy; selects channels; schedules publish.
+- **FR-55: Trustee fixed-amount setter + announcement workflow.** Effective date ≥ now + 90 days per FR-15. Drafts copy; selects channels; schedules publish.
 - **FR-56: Member moderation — suspend, terminate, restore.** Transitions: `active ↔ suspended → terminated`. Reasons audit-logged: R7-sub-clause, R14 forgery, R10(A) office-bearing, concealment-flag confirmed, helpdesk abuse. Termination recoverable only via trustee-explicit reinstatement; 12-month rejoin lock per FR-6.
 - **FR-57: Trustee-Lite list + signals (v1 alternative to full Kanban).** List sorted by stage + deadline; FR-42 signals on hover/tap. Full Kanban v2.
 - **FR-58: Survey/poll authoring + results dashboard `[v1-S]`.** Optional quorum threshold; render in member feed; aggregate results.
@@ -402,6 +402,13 @@ Inputs reconciled per the 2026-05-27 Sprint Change Proposal: the Sprint Change P
 
 - **UX-DR24: `<MemberStatusPanel>` (public label: Membership Status).** FR-12A eligibility surface; admin-facing variant Phase 1; member-facing variant Phase 3.
 - **UX-DR25: `<ActiveContributionCard>` (public label: My Pool Card).** Sushil's home pool detail; tone gradient across 15-day window (Day 0-10 calm/factual, Day 11-13 factual-precise, Day 14-15 gently urgent never panicked); fixed-amount transition pattern (-3mo → -1mo → first cycle → normal).
+
+> ⚠ **Note appended 2026-08-16 (Story 7.11, Decision `2026-08-16-124`).** The twelve-month figure above
+> is a **historical record of what was true when written** and is deliberately **not rewritten**. The
+> normal notice period is now **90 days** — Decision `2026-08-16-123` clause 6 shortened it to 60, and
+> `2026-08-16-124` clause 1 superseded that to 90 so UX-DR25's Month−3 stage stays reachable. Twelve
+> months is **not** a minimum period at all (`2026-08-16-124` clause 3 struck it from Niyamavali §4.2).
+> `7-11-fixed-amount-notice-period-and-fixed-period-reconciliation` owns the reconciliation.
 - **UX-DR26: `<UPIIntentButton>`.** Single-tap UPI Intent launch; critical-category touch target (≥56pt).
 - **UX-DR27: `<ContributionTimeline>`.** Member-side status visualization.
 - **UX-DR28: `<SelfVerifySurface>`.** Yellow-stuck recovery surface.
@@ -611,7 +618,7 @@ Channel primitive only — structured `alert` payload + dispatcher + per-Pariwar
 
 ### Epic 7: Pool Engine & Cycle Spawn
 
-**Math heart of PRD §9.1.** Correctness is non-negotiable. Atomic cycle-freeze with saga decomposition, deterministic `hash(member_id + cycle_id) % N` assignment, property-based + replay tests, fixed-amount snapshot, pool-bound payment enforcement (wrong-pool invalid; facilitated recovery), under-funded cycle Pool-Reality framing, pre-launch measured-validation gate (N=50/M=4L<60s p95), onboarding tutorial. **10 stories** spanning `[PRIMITIVE]` (pool object + snapshot, naming, spawn saga, deterministic assignment, pool-bound enforcement, idempotency), `[CONSUMER]` (fixed-amount workflow), `[GOVERNANCE]` (Pool-Reality framing, validation gate), `[SURFACE]` (onboarding tutorial). Full body and stories in §Epic 7 below.
+**Math heart of PRD §9.1.** Correctness is non-negotiable. Atomic cycle-freeze with saga decomposition, deterministic `hash(member_id + cycle_id) % N` assignment, property-based + replay tests, fixed-amount snapshot, pool-bound payment enforcement (wrong-pool invalid; facilitated recovery), under-funded cycle Pool-Reality framing, pre-launch measured-validation gate (N=50/M=4L<60s p95), onboarding tutorial. **11 stories** spanning `[PRIMITIVE]` (pool object + snapshot, naming, spawn saga, deterministic assignment, pool-bound enforcement, idempotency), `[CONSUMER]` (fixed-amount workflow), `[GOVERNANCE]` (Pool-Reality framing, validation gate, notice-period reconciliation), `[SURFACE]` (onboarding tutorial). Full body and stories in §Epic 7 below.
 
 ---
 
@@ -2771,7 +2778,7 @@ At trustee bulk-approval (cycle freeze), the engine atomically spawns N pools pe
 
 **User Outcome:** At trustee-bulk-approval action, the engine atomically spawns N pools (one per approved claim), assigns every active member to exactly one pool, snapshots `fixed_amount` per pool. Pool sizes differ by ≤ 1. Replay: given the same `(cycle_id, members-at-freeze snapshot, N)`, the assignment reproduces exactly. Wrong-pool deposits (Epic 9) detected and treated as invalid; facilitated recovery via helpdesk only — no silent remap. Future `_daan` reuse: `support_category` discriminator on every pool; engine has no death-specific branches.
 
-**FRs:** FR-13 (auto-spawn N pools + culture-rooted naming + letter codes), FR-14 (deterministic balanced assignment), FR-15 (fixed-amount per pool + 12-month notice + emergency adjustment), FR-16 (pool-bound payment enforcement — wrong-pool invalid, no refund, facilitated recovery), FR-17 (idempotent payment reference `tr=` per `(member_id, alert_id)`), FR-18 (amount-lock at UPI Intent), FR-19 (under-funded cycle Pool-Reality #1 + #2), FR-20 (engine parameterized for future `_daan` reuse + spawn capacity envelope).
+**FRs:** FR-13 (auto-spawn N pools + culture-rooted naming + letter codes), FR-14 (deterministic balanced assignment), FR-15 (fixed-amount per pool + 90-day notice + emergency adjustment), FR-16 (pool-bound payment enforcement — wrong-pool invalid, no refund, facilitated recovery), FR-17 (idempotent payment reference `tr=` per `(member_id, alert_id)`), FR-18 (amount-lock at UPI Intent), FR-19 (under-funded cycle Pool-Reality #1 + #2), FR-20 (engine parameterized for future `_daan` reuse + spawn capacity envelope).
 
 **Anchoring ARs:** AR-11 (snapshot storage hot + Cloud Storage cold with Object Retention Lock), AR-57 (determinism & replay), AR-58 (idempotency keyed store), AR-68 (saga decomposition + measured-validation gate per Sprint Change Proposal Item 15).
 
@@ -2896,6 +2903,13 @@ So that members can plan contributions reliably while the trust retains capacity
 **Then** the override requires: (a) State Trustee panel attestation (similar to Story 6.14 R9 voting); (b) documented reason; (c) audit log line with full panel attestation; (d) member notification immediately via Story 5.1
 **And** emergency overrides bypass the 12-month notice; the trail makes them unmistakable to regulators / members / future trustees; the override does NOT retroactively modify already-spawned pools — only future spawns
 
+> ⚠ **Note appended 2026-08-16 (Story 7.11, Decision `2026-08-16-124`).** The twelve-month figure above
+> is a **historical record of what was true when written** and is deliberately **not rewritten**. The
+> normal notice period is now **90 days** — Decision `2026-08-16-123` clause 6 shortened it to 60, and
+> `2026-08-16-124` clause 1 superseded that to 90 so UX-DR25's Month−3 stage stays reachable. Twelve
+> months is **not** a minimum period at all (`2026-08-16-124` clause 3 struck it from Niyamavali §4.2).
+> `7-11-fixed-amount-notice-period-and-fixed-period-reconciliation` owns the reconciliation.
+
 ### Story 7.6: Pool-Bound Payment Enforcement (Wrong-Pool Rejected, No Refund, Facilitated Recovery) `[PRIMITIVE]`
 
 As the contribution-receiving pipeline (consumer in Epic 9 reconciliation),
@@ -3005,6 +3019,50 @@ So that wrong-pool errors and confusion are minimized at first contribution.
 
 ---
 
+### Story 7.11: Fixed-Amount Notice Period + Fixed-Period Reconciliation `[GOVERNANCE]`
+
+As the Trustee Panel that ruled the normal fixed-amount notice period down from twelve months,
+I want the code, the governing instruments, the PRD and the architecture to say the same thing,
+So that a member reading the rules, a trustee operating the setter, and a regulator reading the record all find one answer instead of six.
+
+**Depends on:** Story 7.5 (owns the write path this story edits), Story 10.13 (the ruling that minted this story).
+**Minted by:** Decision `2026-08-16-123` clause 9 — ⚠ this story had **no `epics.md` entry** until it created its own; it existed only in `sprint-status.yaml`. Its ACs are sourced from the ruling and `deferred-work.md`, not from this epic.
+
+**Acceptance Criteria:**
+
+**Given** Decision `2026-08-16-123` ruled the **policy** (notice shortened; twelve months is the normal/planned period and **not** an absolute lock; the emergency mechanism **remains**) but ruled neither the amended instrument text nor the emergency-backdating bound
+**When** the story begins
+**Then** a Trustee Panel routing note is authored and committed under a `governance:` prefix **before any code**, carrying six questions (four blocking) and nine findings, and is **ruled** before an implementation commit lands
+**And** the ruling is recorded as `.decision-log.md` entries with per-clause provenance, reproducing every amended instrument sentence **verbatim in both locales** — `docs/legal/` is gitignored, so the entry is the only durable copy
+
+**Given** the ruled notice period
+**When** the code is changed
+**Then** `FIXED_AMOUNT_NOTICE_DAYS` is **90** and remains the **single** source of the floor — no second literal, no per-caller override
+**And** every doc comment, error message, DTO comment, route comment, admin label and admin `min` that named the old period names the new one
+**And** ⛔ the shipped wire code `pool.fixed_amount_notice_too_short` is **NOT renamed** — it names the condition, not the number
+**And** ⛔ the emergency path keeps **no notice floor at all**, and `POOL_FIXED_AMOUNT_MIN_PANEL_SIZE` is untouched
+
+**Given** the emergency path's `effective_from` had no lower bound of any kind
+**When** the bound is built
+**Then** an emergency `effective_from` may not precede the `effective_from` of the amount **currently in force** — a pure predicate beside `meetsNoticeFloor`, a typed error with its own stable wire code, and a translated 400
+**And** ⚠ it is a **backdating** bound, never described as a notice floor; an emergency superseding a **pending future** change stays legal
+
+**Given** the twelve-month claim lives in six registers, three of which the ruling did not name
+**When** the reconciliation lands
+**Then** Niyamavali §4.2 and the member-facing T&C §4.2 are amended **in both locales**; Trust Deed Cl. 10(b) is recorded as **already consistent** and left unamended (its verb is permissive)
+**And** the PRD, `architecture.md`'s hostile-trustee threat row (**shortened, not removed**) and this file's live FR-summary lines follow
+**And** ⛔ **historical story-AC bodies are NOT rewritten in place** — each gets an appended dated note, because rewriting a shipped story's ACs would make the record claim it built something it did not
+
+**Given** four `deferred-work.md` entries name this story or fall due at it
+**When** the work lands
+**Then** each is closed against the **actual** outcome in the precise vocabulary — *"Closed by [edit]"* vs *"Resolved via explicit deferral"* vs *"raised and left"* — never *"addressed"*
+
+**Given** the whole story is one number
+**When** the tests are updated
+**Then** the boundary cases stay written against the constant, **and** at least one unit case and one live-DB case are written that the **superseded** floor would have failed — a suite that passes at both the old and the new value proves nothing
+
+---
+
 ## Epic 8: Sushil's Contribution Loop (Yogdaan Bahi + My Pool + UPI Intent + Contribution Note)
 
 **The defining experience SM-1 measures.** This epic is *Sushil's surface* (per Sally). Yogdaan Bahi is the passbook he opens at a chai stall to feel proud. The My Pool card is the home-screen anchor for the 15-day cycle. The UPI Intent flow is the 90-second loop the brief commits to. The Contribution Note PDF is the artifact, never "receipt" or "invoice." Design budget is explicitly NOT shared with Epic 9's reconciliation engine.
@@ -3056,6 +3114,13 @@ So that I receive contextual nudges without panic-framing or scarcity language.
 **Then** the card appears as the topmost home-screen element ONLY for members in `active` state with an assigned pool in `live` alert state; shows: pool letter code (e.g., "Pool A") + Mahabharata-rooted pool name + nominee first-name + last-initial + fixed amount + days remaining + progress meter
 **And** the **15-day tone gradient** is enforced by per-day-range copy templates: Day 0-10 calm ("Your pool is open — contribute when you can"), Day 11-13 factual-precise ("4 days remaining; pool has X contributions so far"), Day 14-15 gently urgent never panicked ("Last day — please contribute to support [nominee family]"); explicit prohibition of scarcity ("only 2 days left!") or panic ("URGENT") language enforced via Story 1.17 FM-1..FM-14 lint + Story 2.2 tone-review
 **And** the fixed-amount transition pattern is shown: when the trustee schedules a fixed-amount change ≥ 12 months in advance (Story 7.5), the card displays the upcoming transition gently
+
+> ⚠ **Note appended 2026-08-16 (Story 7.11, Decision `2026-08-16-124`).** The twelve-month figure above
+> is a **historical record of what was true when written** and is deliberately **not rewritten**. The
+> normal notice period is now **90 days** — Decision `2026-08-16-123` clause 6 shortened it to 60, and
+> `2026-08-16-124` clause 1 superseded that to 90 so UX-DR25's Month−3 stage stays reachable. Twelve
+> months is **not** a minimum period at all (`2026-08-16-124` clause 3 struck it from Niyamavali §4.2).
+> `7-11-fixed-amount-notice-period-and-fixed-period-reconciliation` owns the reconciliation.
 
 **Given** the inherited accessibility gate (Story 0.10 P0-2c)
 **When** the card renders for assistive-tech users
@@ -3523,7 +3588,7 @@ So that the surface reflects financial truth per Story 9.5 canonical authority.
 
 ## Epic 10: Admin Operations Console — News/Blog, Helpdesk (first-class sub-epic), Bulk Ops, Reports, Feature Flags, Moderation
 
-Trust staff and trustees do their daily ops work without WhatsApp chaos: publish news, run bulk operations, manage helpdesk tickets, pull reports, publish banners/popups, gate features per cohort, moderate members, set the fixed-amount with 12-month notice.
+Trust staff and trustees do their daily ops work without WhatsApp chaos: publish news, run bulk operations, manage helpdesk tickets, pull reports, publish banners/popups, gate features per cohort, moderate members, set the fixed-amount with 90-day notice.
 
 **Helpdesk first-class sub-epic (per Winston + Sprint Change Proposal Item 11):** FR-52 is architecturally distinct from telephony per §3.5a — own backend module, admin UI module, shared contracts, member-facing UI, routing-policy registry (rule-registry-driven), integration points (helpline call-to-ticket, claim cross-link, reconciliation cross-link, partner-module cross-link, validity-service read). Base ticketing substrate, SLA tracking, routing-policy registry, and member/admin surfaces must be independently demoable before downstream integrations are layered in.
 
@@ -3811,6 +3876,13 @@ So that the operation is admin-friendly and emits the right audit + notification
 **Given** FR-55 + Story 7.5 (the workflow itself lives there)
 **When** the setter admin UI is implemented
 **Then** the UI lets trustees: (a) propose a fixed-amount change with `effective_from` (validated ≥ today + 365 days for standard changes); (b) trigger emergency override path with required attestations
+
+> ⚠ **Note appended 2026-08-16 (Story 7.11, Decision `2026-08-16-124`).** The twelve-month figure above
+> is a **historical record of what was true when written** and is deliberately **not rewritten**. The
+> normal notice period is now **90 days** — Decision `2026-08-16-123` clause 6 shortened it to 60, and
+> `2026-08-16-124` clause 1 superseded that to 90 so UX-DR25's Month−3 stage stays reachable. Twelve
+> months is **not** a minimum period at all (`2026-08-16-124` clause 3 struck it from Niyamavali §4.2).
+> `7-11-fixed-amount-notice-period-and-fixed-period-reconciliation` owns the reconciliation.
 **And** the UI shows current + scheduled values; audit trail of past changes; submitting fires Story 7.5's workflow
 **And** scope-respecting via Story 1.8
 
@@ -5197,7 +5269,7 @@ Progress summary:
 - ✅ Epic 4 — 8 stories (rule-order-determinism + conservative-recompute fallback)
 - ✅ Epic 5 — 9 stories (payload-immutability-after-dispatch + opt-in reversibility-and-independent-audit)
 - ✅ Epic 6 — 16 stories (canonical-case-identity + signals-advisory-not-adjudicating)
-- ✅ Epic 7 — 10 stories (atomic cycle-freeze + facilitated-recovery)
+- ✅ Epic 7 — 11 stories (atomic cycle-freeze + facilitated-recovery)
 - ✅ Epic 8 — 12 stories (reconciliation-confirmed-only-visibility + UTR-attestation-as-member-claim)
 - ✅ Epic 9 — 12 stories (fursat-cadence operational-posture + monotonic-confirmation + canonical-financial-truth)
 - ✅ Epic 10 — 15 stories (deterministic-audit-replayable-routing-policy + dry-run-parity + governance-boundary)

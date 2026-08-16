@@ -4,7 +4,7 @@ baseline_commit: d6de14523173aed33ce8e045075d1c66002012e2
 
 # Story 7.11: Fixed-Amount Notice Period + Fixed-Period Reconciliation `[GOVERNANCE]`
 
-Status: ready-for-dev
+Status: done
 
 Epic: 7 · Story: 11 · Key: `7-11-fixed-amount-notice-period-and-fixed-period-reconciliation`
 Authored: 2026-08-16 · Baseline: `main` @ `d6de145` (clean, fetched, `== origin/main`)
@@ -390,73 +390,89 @@ suspect spec in isolation).
         status line to `✅ RULED <date>` with the superseded `⏳ Open` line **retained**, never
         overwritten. Commit `governance(7.11): Decision <id> — …`
 
-- [ ] **Task 2 — The 60-day constant and its truthful surroundings (AC2)**
-  - [ ] `packages/domain/src/pool/fixed-amount.ts` — `:63` the constant; `:9-10`, `:70`, `:142-146`,
+- [x] **Task 2 — The 60-day constant and its truthful surroundings (AC2)**
+  - [x] `packages/domain/src/pool/fixed-amount.ts` — `:63` the constant; `:9-10`, `:70`, `:142-146`,
         `:282`, `:332`, `:341`, `:356`, `:404` the comments
-  - [ ] `packages/domain/src/pool/errors.ts:217`, `:226-227` — the message. ⛔ `:214`'s wire code
+  - [x] `packages/domain/src/pool/errors.ts:217`, `:226-227` — the message. ⛔ `:214`'s wire code
         string is untouched
-  - [ ] `packages/domain/src/pool/index.ts:38`; `schema/pool_fixed_amount_schedule.ts:14`, `:40-41`;
+  - [x] `packages/domain/src/pool/index.ts:38`; `schema/pool_fixed_amount_schedule.ts:14`, `:40-41`;
         `schema/pool_fixed_amount_emergency_attestations.ts:5`
-  - [ ] `packages/domain/src/rbac/permissions.ts:256`, `:708`; `rbac/roles.ts:125` — the key
+  - [x] `packages/domain/src/rbac/permissions.ts:256`, `:708`; `rbac/roles.ts:125` — the key
         descriptions. ⛔ **No catalog version bump**: comment-only edits move no key and no bundle
         ([[project_fixed_amount_panel_eligibility_substrate]])
-  - [ ] `packages/contracts/src/pools/fixed-amount.ts:6`, `:168`, `:172`, `:182`;
+  - [x] `packages/contracts/src/pools/fixed-amount.ts:6`, `:168`, `:172`, `:182`;
         `contracts/src/pools/index.ts:17`. ⚠ Then `pnpm contracts:emit-openapi` +
         `pnpm contracts:check-openapi-determinism` — comment-only edits should leave the emitted
         OpenAPI byte-identical; if it moves, a **description** changed and the diff must be reviewed
-  - [ ] `apps/api/src/modules/pool-fixed-amount/handlers.ts:4`, `:56-59`, `:264`; `index.ts:6`,
+  - [x] `apps/api/src/modules/pool-fixed-amount/handlers.ts:4`, `:56-59`, `:264`; `index.ts:6`,
         `:98`; `apps/api/src/server.ts:266`; `audit/audit-sink.ts:398`, `:403`;
         `modules/pariwar-provisioning/index.ts:54`
-  - [ ] `apps/admin/src/api/client.ts:1348`; `api/hooks.ts:732`, `:765`
-  - [ ] `apps/admin/src/modules/pool-fixed-amount/FixedAmountPage.tsx:5`, `:44-52` (`365` → 60,
+  - [x] `apps/admin/src/api/client.ts:1348`; `api/hooks.ts:732`, `:765`
+  - [x] `apps/admin/src/modules/pool-fixed-amount/FixedAmountPage.tsx:5`, `:44-52` (`365` → 60,
         `366` → the default), `:210`, `:223`; `i18n-en.ts:22` (*"at least 12 months in advance"*)
-  - [ ] ⚠ Re-grep before declaring done:
+  - [x] ⚠ Re-grep before declaring done:
         `grep -rn "12 month\|12-month\|twelve month\|365" packages apps --exclude-dir=node_modules
         --exclude-dir=dist | grep -i "fixed.amount\|notice"` must return **only** intentional
         historical references
-  - [ ] `pnpm microcopy:check` — `FixedAmountPage.tsx` is inside the gate's admin scope and its
+  - [x] `pnpm microcopy:check` — `FixedAmountPage.tsx` is inside the gate's admin scope and its
         FM-14 magic-number check reads live React components
 
-- [ ] **Task 3 — The backdating bound, per Q1 (AC3)**
-  - [ ] If bounded: the pure predicate + typed error + wire code + `handlers.ts` translation + the
+- [x] **Task 3 — The backdating bound, per Q1 (AC3)**
+  - [x] If bounded: the pure predicate + typed error + wire code + `handlers.ts` translation + the
         contracts comment. Follow `meetsNoticeFloor`'s shape exactly — DB-free, unit-testable, the
         DB-authoritative instant supplied by the caller, never a JS `new Date()` (§1.11)
-  - [ ] If not: the recorded closure at `fixed-amount.ts:380`, in the Panel's own words
+  - [x] If not: the recorded closure at `fixed-amount.ts:380`, in the Panel's own words
 
-- [ ] **Task 4 — The instruments (AC4, AC5)**
-  - [ ] §4.2 both locales; Deed Cl. 10(b) per Q3; T&C §4.2 both locales per Q4
-  - [ ] ⛔ Verify each edited file against the decision entry's verbatim block **after** editing —
+- [x] **Task 4 — The instruments (AC4, AC5)**
+  - [x] §4.2 both locales; Deed Cl. 10(b) per Q3; T&C §4.2 both locales per Q4
+  - [x] ⛔ Verify each edited file against the decision entry's verbatim block **after** editing —
         the entry is the durable copy and the two must agree character for character
-  - [ ] ⛔ No migration, no seed, no `clause_versions` row (F-6)
+  - [x] ⛔ No migration, no seed, no `clause_versions` row (F-6)
 
-- [ ] **Task 5 — PRD + architecture (AC6, AC7)**
-  - [ ] `prd.md:463`, `:465`, `:469`, `:849`
-  - [ ] `architecture.md:1324`, `:73-74`
+- [x] **Task 5 — PRD + architecture (AC6, AC7)**
+  - [x] `prd.md:463`, `:465`, `:469`, `:849`
+  - [x] `architecture.md:1324`, `:73-74`
 
-- [ ] **Task 6 — `epics.md` (AC8)**
-  - [ ] Live FR-summary lines `:56`, `:109`, `:2774`
-  - [ ] Appended dated notes at `:2884`/`:2891`, `:3806`/`:3813`, `:3058`, `:404` — ⛔ never an
+- [x] **Task 6 — `epics.md` (AC8)**
+  - [x] Live FR-summary lines `:56`, `:109`, `:2774`
+  - [x] Appended dated notes at `:2884`/`:2891`, `:3806`/`:3813`, `:3058`, `:404` — ⛔ never an
         in-place rewrite of a shipped story's ACs
-  - [ ] The new `### Story 7.11:` entry after `:2985`; the Epic 7 count at **both** `:614` and `:5200`
+  - [x] The new `### Story 7.11:` entry after `:2985`; the Epic 7 count at **both** `:614` and `:5200`
         → eleven
 
-- [ ] **Task 7 — The markers (AC9)**
-  - [ ] The four `deferred-work.md` entries per AC9's table, each with the **precise** closure verb
-  - [ ] The new Story 8.2-owned UX-DR25 entry with a concrete re-trigger
+- [x] **Task 7 — The markers (AC9)**
+  - [x] The four `deferred-work.md` entries per AC9's table, each with the **precise** closure verb
+  - [x] The new Story 8.2-owned UX-DR25 entry with a concrete re-trigger
 
-- [ ] **Task 8 — Tests, gates, revert-sanity (AC10)**
-  - [ ] Update the three suites; **run the revert-sanity both ways** and record observed counts
-  - [ ] `pnpm --filter @twt/domain lint && test`; `--filter @twt/api test`;
+- [x] **Task 8 — Tests, gates, revert-sanity (AC10)**
+  - [x] Update the three suites; **run the revert-sanity both ways** and record observed counts
+  - [x] `pnpm --filter @twt/domain lint && test`; `--filter @twt/api test`;
         `--filter @twt/contracts test`; `--filter admin test`; `pnpm typecheck`
-  - [ ] `pnpm pool-support-category:check`, `pnpm domain-invariants:check`, `pnpm microcopy:check`,
+  - [x] `pnpm pool-support-category:check`, `pnpm domain-invariants:check`, `pnpm microcopy:check`,
         `pnpm friction:check`, `pnpm schema:check` (expected: no schema delta — F-7),
         `pnpm i18n:check`
-  - [ ] `pnpm ci:local` — ⛔ **recorded AS OBSERVED**. If red, name the failing specs; if the log is
+  - [x] `pnpm ci:local` — ⛔ **recorded AS OBSERVED**. If red, name the failing specs; if the log is
         truncated, say so and do **not** reconstruct
-  - [ ] Flip `development_status[7-11-…]` and append **one** combined `last_updated` ledger entry at
+  - [x] Flip `development_status[7-11-…]` and append **one** combined `last_updated` ledger entry at
         the top of `sprint-status.yaml` ([[project_sprint_status_ledger]])
 
 ---
+
+### Review Findings
+
+- [x] [Review][Patch] **(resolved D1 — rewrite history)** Decision `2026-08-16-125` landed inside the `story(7.11):` implementation commit rather than as its own prior `governance(7.11):` commit — `git log d6de145..be5b19d` shows only `284df18` (governance, routing note) and `948468b` (governance, Decision 124) as governance-prefixed commits; Decision 125's +45-line `.decision-log.md` entry is added by `be5b19d` itself, alongside the code it authorizes. This violates the story's own "governance half lands first" ritual, and `be5b19d`'s commit message assertion that both Decisions 124 and 125 "landed before this commit" is false for 125. Decision 125's text claims to follow the `2026-08-16-122` append-only precedent, but that precedent was a standalone prior commit — this isn't. **Fix:** split `be5b19d` into a `governance(7.11):` commit (Decision 125's `.decision-log.md` hunk only) landing before the implementation commit, and correct the implementation commit's message to no longer claim Decision 125 landed before it.
+- [x] [Review][Patch] **(resolved D2 — confirmed, recorded)** The story's own "Open questions for BigDev" §3 explicitly asks whether renaming `prd.md:463`'s FR-15 heading is acceptable, "or the PRD keeps a title that contradicts its own body" — the diff renames it anyway with no recorded answer anywhere in the diff, appearing to be exactly the "default taken by silence" this project's discipline forbids ([[feedback_record_unattested_no_backfill]]). **Resolution:** confirmed acceptable by the user (BigDev) on 2026-08-16 during code review; **fix:** append the confirmation to the "Open questions for BigDev" §3 entry so it is not a silent default.
+- [x] [Review][Patch] **(resolved D3 — fix now)** A backdated emergency landing between the amount-in-force and a pending future standard change leaves the superseded "in force" row's `effective_until` pointing past the new emergency row's `effective_from` — an overlapping/stale window on the schedule record (`packages/domain/src/pool/fixed-amount.ts:326-352` `closeOpenHead` never re-touches the in-force row when the bound is checked against it instead of the open head). Point-in-time resolution self-heals via the `effective_from DESC` tie-break, but the audit trail (`listFixedAmountSchedule`) can show two overlapping-looking rows. Test `(g)` in `pool-fixed-amount.spec.ts` covers the resolution correctness but never asserts on the genesis row's `effective_until` or checks for overlap. **Fix:** extend the emergency-override write path to also re-clamp the in-force row's `effective_until` (mirroring `closeOpenHead`'s existing `max()`-clamp discipline), plus a regression test asserting no overlap.
+- [x] [Review][Patch] **(resolved D4 — fix now)** TOCTOU: `applyEmergencyOverride`'s new backdating-bound check reads "amount in force" once (`fixed-amount.ts:477-491`), then `closeOpenHead` independently re-reads "current open head" later in the same transaction (`fixed-amount.ts:326-352`) under plain `BEGIN` / READ COMMITTED (`apps/api/src/modules/multi-tenant/scope-tx.ts:37`) — no re-validation ties the two reads together. Two concurrent emergency overrides can interleave so the second's bound check passes against a now-stale snapshot, then commits behind an amount a first, already-committed emergency put in force — the exact scenario the bound exists to prevent. **Fix:** re-validate `meetsEmergencyBackdatingFloor` against the same row/snapshot `closeOpenHead` reads, inside the same transaction, closing the window (e.g. re-read after acquiring the row lock `closeOpenHead` already needs).
+- [x] [Review][Defer] **(resolved D5 — defer)** (minor) "Three calendar months is 90–92 days" is asserted as settled arithmetic across the decision-log entry, story file, sprint-status ledger, routing note, and UX-spec annotation to justify 90 as "the smallest floor that restores the guarantee... for every conforming change" — but a three-calendar-month span spanning February in a non-leap year can be as short as 89 days (e.g. Feb 1 → Apr 30). The universal claim is not accurate for all calendar alignments; low real-world impact, but the claim sits inside ratified decision text — deferred, pre-existing reasoning nit, no code impact. **Reason:** ratified decisions are never edited in place; a correction would need its own append-only clarifying entry, not warranted for a 1-day calendar-edge nit with no code impact.
+- [x] [Review][Patch] `PoolFixedAmountEmergencyBackdatedBeforeHeadError`'s JSDoc, thrown `.message`, and public field name (`openHeadEffectiveFrom`) describe the bound as measured against "the current open head" — the exact reading Decision `2026-08-16-125` ruled OUT in favor of "the amount in force." [`packages/domain/src/pool/errors.ts:238,247,254,256-258`] Same stale wording duplicated in the DTO comment [`packages/contracts/src/pools/fixed-amount.ts:172`]. The runtime call (`fixed-amount.ts:484`, `resolveEffectiveFixedAmountRow`) and the predicate's own doc comment are already correct — only the error's docs/message/field name and the contracts comment are stale. The API's client-facing translation (`handlers.ts:65-69`) is correct, so this is confined to internal naming/docs.
+- [x] [Review][Patch] `applyEmergencyOverride` reaches for `(inForce as { effectiveFrom: Date }).effectiveFrom.toISOString()` via an unchecked type assertion instead of a real `if (!inForce)` null-narrowing check — the "non-null: predicate only rejects when in-force exists" guarantee lives only in a comment, not the type system. [`packages/domain/src/pool/fixed-amount.ts`, `applyEmergencyOverride`]
+- [x] [Review][Patch] The routing note file is internally self-contradictory: its header states "Status: ✅ RULED 2026-08-16" while body text still reads "No code has been written. The story is `in-progress` at its governance half and stops at Task 2 until this note is ruled" — stale pre-ruling boilerplate left unremoved after ruling landed. [`_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-08-16-story-7-11.md`]
+- [x] [Review][Patch] The "register count" narrative drifts across the story/routing note/sprint-status without reconciliation: four (ruling-named) → six (+ T&C, epics.md) → seven ("the seventh register," used consistently in the routing note and AC9) → nine (Dev Agent Record / deferred-work closure / sprint-status ledger, apparently folding in `deferred-work.md` itself as a "register"). The jump to nine is never reconciled against the "seven" the same document established earlier.
+- [x] [Review][Patch] Decision `2026-08-16-123` clause 9 is cited as "precedent" for unilaterally minting Story `8-15-fixed-amount-transition-staged-card`, while the same passage concedes the mint is "an un-ratified author mint, not a Panel act" — clause 9's actual precedent was a Panel-ratified directive, so invoking it as precedent for an explicitly non-ratified act misapplies it.
+- [x] [Review][Patch] `expect(FIXED_AMOUNT_NOTICE_DAYS).toBe(90)` is counted within AC10's revert-sanity pass/fail evidence (observed counts at 90/365/60) alongside genuinely behavioral tests — a direct equality pin on the constant trivially fails under any reversion regardless of whether `meetsNoticeFloor`'s actual wiring is correct, padding the failure count rather than independently confirming the boundary logic. The separately-cited "accepts 120 days out" test is the behaviorally meaningful case.
+- [x] [Review][Patch] No E2E/HTTP-level test exercises the new `pool.fixed_amount_emergency_backdated_before_head` branch in `translateFixedAmountError` (`apps/api/src/modules/pool-fixed-amount/handlers.ts:65-71`) — every sibling error branch (`notice_too_short`, `reason_required`, `attestation_required`, `panel_too_small`, `panel_duplicate_actor`, `panel_member_unauthorized`, `invalid`, `version_conflict`) has a corresponding integration test in `apps/api/tests/integration/pool-fixed-amount/fixed-amount.spec.ts`; this one has zero matches for `backdat`.
+- [x] [Review][Defer] Every decision-log ruling (including this diff's Decisions 124 and 125) is authored, argued for, and "Ruled" by the same named party ("BigDev, Solo Builder") with no distinct Panel member, vote, or quorum recorded — a systemic pattern across the whole decision log, not introduced by this diff — deferred, pre-existing
 
 ## Dev Notes
 
@@ -623,6 +639,10 @@ regenerating past it.
 3. **`prd.md:463`'s heading is FR-15's NAME** — *"Fixed-amount per pool over 12+ month periods"*. AC6
    edits it. Confirm that renaming an FR heading is acceptable in this project, or the PRD keeps a
    title that contradicts its own body.
+   ⭐ **CONFIRMED by BigDev during code review, 2026-08-16 (Story 7.11 review D2):** renaming the FR
+   heading is acceptable — a PRD heading that contradicts its own body is worse than a heading edit.
+   Recorded here so the rename made in this diff is not a silent default
+   ([[feedback_record_unattested_no_backfill]]).
 
 ---
 
@@ -681,14 +701,142 @@ use **10 days** (rejected) and **400 days** (accepted). Every one of those passe
 inverted case AC10 demands must be **written**, not merely run — e.g. an accepted case ~90 days out,
 which passes at 60 and fails at 365. Recorded now so Task 8 does not discover it as a "passing" revert.
 
-**Nothing here is attested by a test run.** No suite, gate, lint or build was executed this session —
-correctly, since no code changed ([[feedback_record_unattested_no_backfill]]).
+**As of the Task 1 halt, nothing was attested by a test run.** Correct at that point — no code had
+changed ([[feedback_record_unattested_no_backfill]]).
+
+---
+
+### Implementation half — Tasks 2–8, after the ruling
+
+**⛔ THE NUMBER IS 90, NOT 60.** Q6 ruled option (d), which **supersedes clause 6** of Decision
+`2026-08-16-123` — recorded in terms in `2026-08-16-124` clause 1, with clause 6 ⛔ never edited.
+Because AC2/AC6/AC7/AC10 were authored to say *"the ruled notice period"* rather than a hardcoded 60,
+the ruling landed without rewriting a single AC.
+
+**⚠ THE ONE THING THAT DID NOT GO AS WRITTEN — and it needed a second ruling.** Clause 6's bound
+(*"not earlier than the current open head's `effective_from`"*) has **two readings**, and implementing
+the literal one turned Story 7.5's live-DB test `(g)` **red**. A scheduled future standard change **is**
+the open head while the prior row is still in force ⇒ binding there would make the emergency path
+**unavailable whenever a planned change pends**, gutting the mechanism clause 8 preserves and refusing
+exactly the write `closeOpenHead`'s `max(...)` clamp was hardened for. ⛔ **Put back to the Panel rather
+than resolved by the implementer** — choosing between two readings of ratified words is not a
+developer's call. Ruled: bind to the amount **IN FORCE at DB `now()`**. Recorded **append-only** as
+Decision `2026-08-16-125` (the `2026-08-16-122` precedent); ⛔ `2026-08-16-124` is not edited. The
+distinction is pinned by a unit case that goes red if a later reader re-binds to the open head.
+
+**⭐ AC10's revert-sanity was RUN, both ways, and it has real teeth.** Observed counts:
+
+| `FIXED_AMOUNT_NOTICE_DAYS` | Unit (`fixed-amount.test.ts`) | Domain live-DB | API live-DB |
+|---|---|---|---|
+| **90** (ruled) | **29 passed** | **18 passed** | **14 passed** |
+| **365** (superseded) | ⛔ **2 failed**, 27 passed | ⛔ **1 failed**, 17 passed | ⛔ **1 failed**, 13 passed |
+| **60** (superseded clause 6) | ⛔ **1 failed**, 28 passed | — | — |
+
+⚠ **Story 7.11 review P6 — the unit "2 failed" is not two independent proofs.** Of the two unit
+failures at 365, ONE (`pins the RULED floor at 90 days`, a direct `expect(FIXED_AMOUNT_NOTICE_DAYS)
+.toBe(90)`) is a mechanical value pin: it trivially fails under ANY reversion regardless of whether
+`meetsNoticeFloor` is correctly WIRED to the constant, so it doesn't independently confirm the
+boundary logic — it only confirms the constant itself didn't get reverted. The genuinely behavioral
+proof is the OTHER failure (`accepts 120 days out`), which actually exercises `meetsNoticeFloor` and
+would catch a wiring regression the value pin alone could not. Both are legitimate tests to keep — the
+value pin is cheap insurance against exactly this kind of accidental revert — but the count "2 failed"
+should not be read as "two behavioral confirmations": it is one behavioral confirmation plus one
+constant guard.
+
+⚠ **This required WRITING the distinguishing cases, not merely running the suites.** As flagged at the
+Task 1 halt, every pre-existing case was floor-agnostic — the unit cases are written against the
+constant, and the integration cases used 10 days (rejected at any floor) and 400 days (accepted at
+any floor). The accepted cases were **inverted to 120 days**, which passes at 90 and **fails at 365**,
+plus an explicit value pin. ⛔ A suite that passes at both numbers proves nothing about the change.
+
+**Registers reconciled — nine, not the four the ruling named.** *(Story 7.11 review P4 — reconciling
+the count against the earlier "seven" used in the story body/AC1/Q6/Dev Notes: "seven" counted only
+the registers that CARRY the twelve-month **claim** and get edited to match the ruled number — the
+four ruling-named plus T&C, `epics.md`, and `ux-design-specification.md`. "Nine" is the broader count
+of ALL documentation surfaces this story's AC1–AC9 touch, adding two that do NOT carry the claim
+themselves: Deed Cl. 10(b), touched only to RECORD it as already-consistent-and-unamended, and
+`deferred-work.md`, touched only to close tracking markers, not to state a notice period. Both counts
+are internally correct for what they're counting; they were never reconciled against each other in the
+same document, which this note now does.)* Code (17 files), Niyamavali §4.2 **and**
+member-facing T&C §4.2 **both locales** (verified **character-for-character against the durable copy**
+in `2026-08-16-124`, since `docs/legal/` is gitignored), Deed Cl. 10(b) **left unamended by ruling**,
+**nine** PRD lines (the four named + the five of clause 10, including the **glossary** and the **SM-C4
+counter-metric**), `architecture.md` ×2 (the threat row **shortened, not removed**), `epics.md` (4 live
+edits + 4 appended dated notes + the missing `### Story 7.11:` entry + the count at **both** `:614` and
+`:5200`), `deferred-work.md` (4 markers + 1 new entry), and `ux-design-specification.md` — the
+**seventh** claim-carrying register, named in no ruling.
+
+**⛔ A SECOND OWNERSHIP TRAP CAUGHT, THIS ONE NOT ANTICIPATED BY THE STORY.** AC9 directs the new
+UX-DR25 entry to be *"owned by Story **8.2**"*. Verified live: `8-2-active-contribution-card-…` is
+**`done`** — and so is **every other story in Epic 8**. A re-trigger of *"Story 8.2 entering
+`ready-for-dev`"* **could never fire**: the exact un-owned-decay shape
+[[project_r7_fact_producer_unbuilt]] describes, one register further along. ⭐ A successor
+`8-15-fixed-amount-transition-staged-card` was **minted `backlog`** so the observation has a live
+owner, reusing the SHAPE of Decision `2026-08-16-123` clause 9 (mint a successor rather than leave an
+observation un-owned). *(Story 7.11 review P5: clause 9's actual precedent was a Panel-ratified
+directive — invoking it as "precedent" for THIS mint overstated what's happening here, since this mint
+is explicitly not that. Corrected to "reusing the shape of," not "following the precedent of.")*
+⚠ **Recorded as an un-ratified author mint, not a Panel act** — BigDev may rename, fold or decline it.
+
+**Marker closures, each in its own vocabulary** ([[feedback_closure_language_precision]]) — ⛔ never
+*"addressed"*: duration marker **"Closed by [edit]"** *and stating duration is deliberately NOT
+enforced*; backdating marker **"Closed by [edit]"** (a bound was built); submitter-distinctness
+**"raised and left, a SECOND time"**, still open, `[Author-committed]`, with the record saying it has
+now been carried twice; `assertPanelAuthorized` ⛔ **untouched** (this story adds no fourth call site).
+
+**Gates and suites — as observed.** `pnpm typecheck` 20/20 ✓ · lint ✓ (`@twt/domain`, `@twt/api`,
+`@twt/contracts`, `admin`) · `@twt/domain` 1808 ✓ · `@twt/contracts` 921 ✓ · `admin` 321 ✓ · `@twt/api`
+331 ✓ · live-DB fixed-amount specs 18 ✓ / 14 ✓ · `pool-support-category:check` ✓ ·
+`domain-invariants:check` ✓ (493 files, every dynamic `.limit()` clamped) · `microcopy:check` ✓ ·
+`schema:check` ✓ **no delta, exactly as F-7 predicted** · `i18n:check` ✓ · `friction:check` ✓ (AC-4
+**dormant — no member-facing surface touched**; ⚠ it diffs COMMITTED history, so it re-evaluates after
+commit) · `contracts:check-openapi-determinism` ✓ with `openapi/v1.yaml` **byte-identical**, confirming
+the contracts edits touched only comments and no Zod `.describe()`.
+
+**⚠ `pnpm ci:local` — RECORDED AS OBSERVED, NOT AS GREEN.** One run: **29 of 30 jobs ✓**, with
+**`test (unit)` ✗**. ⛔ **The failing spec cannot be named: the captured log was TRUNCATED to its tail**
+(48 lines retained), so the per-job output and its failure banner are gone. ⛔ **Not reconstructed**
+([[feedback_record_unattested_no_backfill]]). What *was* established, by re-running the identical
+command standalone: `pnpm turbo run test --concurrency=4` passed **37/37 twice**, the second time with
+`--force` to bypass the turbo cache entirely (so it is a real run, not a cached echo). Every suite this
+story touches was additionally proven green in isolation. This matches the known class —
+[[project_ci_local_concurrency_oversubscription]] and [[project_known_livedb_test_failures]] #14, where
+the unit job starves a *different* package per run. ⚠ **It is recorded as an unexplained single red,
+not as a proven flake**: the evidence rules out a defect in this story's own suites, and does not
+identify what went red.
 
 ### File List
 
 - `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-08-16-story-7-11.md` — **new**
 - `_bmad-output/implementation-artifacts/7-11-fixed-amount-notice-period-and-fixed-period-reconciliation.md` — modified (Task 1 subtasks 1–4, Dev Agent Record, File List, Change Log)
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` — modified (`development_status[7-11-…]`: `ready-for-dev` → `in-progress`)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — modified (`development_status[7-11-…]` → `in-progress`; ⭐ `8-15-fixed-amount-transition-staged-card` **minted** `backlog`)
+- `.decision-log.md` — modified (Decisions `2026-08-16-124` and `2026-08-16-125` appended; ⛔ no prior entry edited)
+
+**Code — the number and its prose (Task 2), the bound (Task 3):**
+- `packages/domain/src/pool/fixed-amount.ts` — the constant → **90**; `meetsEmergencyBackdatingFloor` (new pure predicate); the bound enforced in `applyEmergencyOverride`; comments
+- `packages/domain/src/pool/errors.ts` — `PoolFixedAmountEmergencyBackdatedBeforeHeadError` + `pool.fixed_amount_emergency_backdated_before_head` (new); the notice message. ⛔ `pool.fixed_amount_notice_too_short` **not renamed**
+- `packages/domain/src/pool/index.ts`, `packages/domain/src/schema/pool_fixed_amount_schedule.ts`, `packages/domain/src/schema/pool_fixed_amount_emergency_attestations.ts`
+- `packages/domain/src/rbac/permissions.ts`, `packages/domain/src/rbac/roles.ts` — key descriptions only. ⛔ **no catalog version bump**
+- `packages/contracts/src/pools/fixed-amount.ts`, `packages/contracts/src/pools/index.ts`
+- `apps/api/src/modules/pool-fixed-amount/handlers.ts` (+ the new 400 translation), `.../index.ts`, `apps/api/src/server.ts`, `apps/api/src/audit/audit-sink.ts`, `apps/api/src/modules/pariwar-provisioning/index.ts`
+- `apps/admin/src/api/client.ts`, `apps/admin/src/api/hooks.ts`, `apps/admin/src/modules/pool-fixed-amount/FixedAmountPage.tsx` (`365`/`366` → `90`/`91`), `.../i18n-en.ts`
+
+**Tests (Task 8):**
+- `packages/domain/tests/pool/fixed-amount.test.ts` — the floor block + the new `meetsEmergencyBackdatingFloor` block + the AC10 value pin
+- `packages/domain/tests/integration/pool/pool-fixed-amount.spec.ts` — `(d)` inverted to 120 days; **new `(h)`** live-DB backdating case
+- `apps/api/tests/integration/pool-fixed-amount/fixed-amount.spec.ts` — the accepted case inverted to +120d
+
+**Instruments (Task 4) — gitignored; the decision entry is the durable copy:**
+- `docs/legal/niyamavali.md`, `docs/legal/niyamavali.hi.md`, `docs/legal/terms-and-conditions.md`, `docs/legal/terms-and-conditions.hi.md`
+- ⛔ `docs/legal/trust-deed.md` — **deliberately NOT modified** (Q3(a))
+
+**Registers (Tasks 5–7):**
+- `_bmad-output/planning-artifacts/prds/prd-TWT-2026-05-22/prd.md` — 9 lines
+- `_bmad-output/planning-artifacts/architecture.md` — 2 sites
+- `_bmad-output/planning-artifacts/epics.md` — live edits, appended notes, the new Story 7.11 entry, both counts
+- `_bmad-output/planning-artifacts/ux-design-specification.md` — the seventh register, annotated
+- `_bmad-output/implementation-artifacts/deferred-work.md` — 4 markers closed + 1 new entry
+- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-08-16-story-7-11.md` — status → `✅ RULED`, ruling appended
 
 ---
 
@@ -697,5 +845,6 @@ correctly, since no code changed ([[feedback_record_unattested_no_backfill]]).
 | Date | Change |
 |---|---|
 | 2026-08-16 | Story authored via `bmad-create-story` off `main` @ `d6de145`. Sourced from Decision `2026-08-16-123` (no `epics.md` entry exists — AC8 creates one). Status → `ready-for-dev`. |
+| 2026-08-16 | **Ruling recorded + implementation half (Tasks 2–8).** Six questions ruled: **Q6 (d) — the floor moves 60 → 90**, ⛔ **superseding clause 6 of Decision `2026-08-16-123`** (recorded in terms; clause 6 never edited); Q1 (b); Q2 ratified with *"about 12 months"* **struck**, so §4.2 drops the period entirely; Q3 (a) — Deed Cl. 10(b) already consistent, unamended; Q4 include; Q5 confirmed. Recorded as **Decision `2026-08-16-124`**. ⚠ **A second ruling was needed mid-implementation:** clause 6's *"current open head"* has two readings, and the literal one turned Story 7.5's live-DB test `(g)` red by making the emergency path unavailable whenever a planned change pends — put back to the Panel and ruled to bind to the amount **IN FORCE**, recorded **append-only** as **Decision `2026-08-16-125`**. Nine registers reconciled (four named by the ruling, five not), instruments amended in both locales and verified character-for-character against the durable copy, four markers closed in their own vocabulary, and ⭐ `8-15-fixed-amount-transition-staged-card` **minted** because AC9's named owner (Story 8.2) is `done` and its re-trigger could never have fired. AC10 revert-sanity **run both ways with observed counts** — 2 unit + 1 domain live-DB + 1 API live-DB go red at 365, and the value pin also catches 60. Status → `review`. |
 | 2026-08-16 | **Task 1 (AC1) governance half — routing note authored and committed; story ⏸ HALTED pending the ruling.** Branch `governance/7-11-…` cut off `d6de145` (`== origin/main`). Note carries six questions (Q1/Q2/Q3/Q6 ⛔ BLOCKING) and **nine** findings — F-1…F-7 as specified, plus **F-8** (the PRD holds the claim in nine places, not the four AC6 names — including the glossary at `:144` and the SM-C4 counter-metric at `:1372`) and **F-9** (`epics.md:3526` is a **live** line, not a historical AC body; and the FR-6/FR-96 rejoin lock uses "12 months" for an unrelated rule that must not be swept in). Two register paths corrected (`prd.md`, `epics.md`), one predecessor citation drift recorded (`fixed-amount.ts:351` → `:380`), and the decision-log numbering reconciled (next entry `2026-08-16-124`). ⚠ Recorded for Task 8: today's notice suites pass at **both** 60 and 365, so AC10's revert-sanity red must be **written**, not merely run. No code, no gate, no test run. Status stays `in-progress`. |
 | 2026-08-16 | `bmad-create-story validate` pass (fresh context): ~35 live citations re-verified across `.decision-log.md`, `sprint-status.yaml`, all four `docs/legal/` files (both locales), `prd.md`, `architecture.md`, `epics.md` (10 locations), `deferred-work.md`, `ux-design-specification.md`, and 15 code/test files — 33 exact, 2 corrected: `sprint-status.yaml:7178`→`:7268` (preamble citation drift), and AC8/Task 6/Dev Notes extended to cover `epics.md:5200`'s second, previously-uncited "10 stories" occurrence. Status unchanged (`ready-for-dev`). |

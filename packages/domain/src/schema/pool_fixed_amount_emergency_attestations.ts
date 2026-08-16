@@ -2,7 +2,7 @@
 //
 // The immutable Emergency Adjustment Record. A first-class, APPEND-ONLY historical
 // attestation — one row per emergency `fixed_amount` change — capturing the
-// State-Trustee panel sign-off that justifies bypassing the 12-month notice (D3).
+// State-Trustee panel sign-off that justifies bypassing the 90-day notice (D3).
 //
 // ── Governance posture — equivalent to R9, WITHOUT the R9 voting lifecycle ────
 // The write is step-up-gated, records a trustee attestation, and is auditable — the

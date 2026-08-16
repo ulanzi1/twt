@@ -253,7 +253,7 @@ export function permissionKey(value: string): PermissionKey {
 // needs NO admin key — it is a claimant-or-operator action (member session, or an operator with the helpline
 // capability under AR-61).
 // Bumped 19 → 21 at Story 7.5 (added TWO keys for the FR-15 fixed-amount schedule surface):
-// `pool.fixed_amount_set` — the STANDARD (12-month-notice) fixed-amount change WRITE key. Gates
+// `pool.fixed_amount_set` — the STANDARD (90-day-notice) fixed-amount change WRITE key. Gates
 // `GET/POST …/admin/pool-fixed-amount` + `POST …/admin/pool-fixed-amount/schedule`. Checked at
 // `dimension: 'pariwar'` (value = scopeTx.pariwarId — the cycle.freeze / claim.r9_vote pariwar-wide-key
 // precedent; the fixed amount is a PARIWAR-WIDE policy). Granted to `pariwar_admin` (+ super_admin).
@@ -705,7 +705,7 @@ export const SEED_PERMISSION_KEYS = [
   // global-scope escalation is a future extension). Granted to `pariwar_admin` (+ super_admin). The route is
   // step-up-gated (`appeal_stage3_decide`). Direct state_trustee gating RANK-ORDER BLOCKED (§RANK-ORDER).
   'claim.appeal_final',
-  // Story 7.5 (FR-15) — the STANDARD (12-month-notice) fixed-amount change WRITE key. Gates
+  // Story 7.5 (FR-15) — the STANDARD (90-day-notice) fixed-amount change WRITE key. Gates
   // GET/POST …/admin/pool-fixed-amount + POST …/admin/pool-fixed-amount/schedule. Checked at
   // `dimension: 'pariwar'` (value = scopeTx.pariwarId — the cycle.freeze / claim.r9_vote pariwar-wide-key
   // precedent; the fixed amount is a Pariwar-wide policy). Granted to `pariwar_admin` (+ super_admin).

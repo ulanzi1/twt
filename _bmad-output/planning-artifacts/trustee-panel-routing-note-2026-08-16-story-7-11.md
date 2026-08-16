@@ -1,7 +1,14 @@
 # Trustee Panel Routing Note — Story 7.11, Fixed-Amount Notice Period + Fixed-Period Reconciliation
 
-**Status:** ⏳ **Open — six questions, awaiting ruling. Q1, Q2, Q3 and Q6 are ⛔ BLOCKING**; Q4 and Q5
-are answerable but each carries a stated non-answer consequence.
+**Status:** ✅ **RULED 2026-08-16.** Q6 **(d)** — ⛔ **the floor moves 60 → 90, superseding clause 6 of
+Decision `2026-08-16-123`**; Q1 **(b)**; Q2 **ratified with the drafted *"normally for periods of about
+12 months"* clause STRUCK**, so §4.2 drops the twelve-month period entirely; Q3 **(a)** — Deed Cl. 10(b)
+recorded as already consistent, unamended; Q4 **include**; Q5 **confirmed**. ⚠ **F-5 was NOT ruled** and
+is carried as `[Author-committed]` — *raised and left, a second time*. Recorded as **Decision
+`2026-08-16-124`** (`.decision-log.md:37`). See *"The ruling as given"* at the foot of this note; it is
+authoritative where it differs from the option and draft text above, which is **retained, not edited**.
+*(Superseded status line, retained: ⏳ Open — six questions, awaiting ruling. **Q1, Q2, Q3 and Q6 are ⛔
+BLOCKING**; Q4 and Q5 are answerable but each carries a stated non-answer consequence.)*
 **Author:** BigDev (Solo Builder)
 **Raised:** 2026-08-16, against
 `_bmad-output/implementation-artifacts/7-11-fixed-amount-notice-period-and-fixed-period-reconciliation.md`
@@ -499,3 +506,75 @@ This note's status line is then updated to `✅ RULED <date>` with the supersede
 
 ⛔ Decision `2026-08-16-123` is **not edited** by any of this. It stands as recorded; this entry is the
 **next** one, not a correction of it.
+
+
+---
+
+# The ruling as given — 2026-08-16
+
+Recorded as **Decision `2026-08-16-124`**, `.decision-log.md:37`, numbered from the then-live head
+`2026-08-16-123` exactly as this note's Disposition anticipated. Per-clause provenance labelled per
+Decision `2026-08-09-095`. ⛔ Decision `2026-08-16-123` was **not** edited.
+
+## The ruling, question by question
+
+| Q | Ruled | Provenance |
+|---|---|---|
+| **Q6** ⛔ | **(d) — the floor moves 60 → 90 days** | `[Trustee-ratified]` — ⛔ **a SUPERSESSION of clause 6 of `2026-08-16-123`**, given as such |
+| **Q1** ⛔ | **(b)** — an emergency `effective_from` may not precede the **current open head's `effective_from`** | `[Trustee-ratified]` |
+| **Q2** ⛔ | **Ratified, and AMENDED by the Panel** — the offered draft's *"normally for periods of about 12 months"* was **struck** | `[Trustee-ratified]` |
+| **Q3** ⛔ | **(a)** — Cl. 10(b) is already consistent; **not amended** | `[Trustee-ratified]` |
+| **Q4** | **Include** — T&C §4.2 amended in both locales | `[Trustee-ratified]` |
+| **Q5** | **Confirmed** — minimum duration deliberately not enforced; build nothing | `[Trustee-ratified]` |
+| **F-5** | ⚠ **NOT RULED** | `[Author-committed]` — *raised and left*, per this note's stated non-answer consequence |
+| **F-8 / F-9** | Noted | Author findings, recorded and accepted |
+
+## Q6 — the supersession, recorded rather than softened
+
+Option (d) was taken on the arithmetic this note gave: stage 1 of the UX-DR25 pattern is anchored at
+three months, three calendar months is 90–92 days, and **90 is the smallest floor at which a
+minimum-notice change can fire stage 1 at all**. At 60 it cannot.
+
+⛔ **The price was paid explicitly.** Clause 6 of Decision `2026-08-16-123` was `[Trustee-ratified]` on
+**2026-08-16** and is superseded **the same day**. Decision `2026-08-16-124` says so in terms and ⛔
+**does not edit clause 6** ([[feedback_supersede_never_reinterpret]]). ⚠ Nothing was ever written under
+clause 6 — it was superseded before a single line of implementation landed — which is why the
+supersession costs one constant rather than a migration.
+
+## Q2 — the Panel amended the draft, and the amendment matters
+
+The draft offered here retained a normal period (*"normally for periods of about 12 months"*). The
+Panel **struck it**. §4.2 now states the **notice** and the **emergency carve-out** and says **nothing
+at all** about the period for which an amount is fixed.
+
+⚠ **A consequence this note did not anticipate, recorded as clause 12 of the entry:** the Deed
+(Cl. 10(b), unamended under Q3) still *permits* fixing *"for stated periods of not less than twelve
+months"*, while the Niyamavali is now **silent** on periods. **Silence is not inconsistency** —
+Cl. 20(a) expressly vests the power to amend *"the periods for which it is fixed"*, and a permissive
+Deed clause is not contradicted by an instrument that declines to exercise it. Recorded so a future
+reader does not re-raise it as a defect. It is the same **force** asymmetry finding F-2 identified: the
+Deed permits; the instruments no longer constrain.
+
+The amended text, both locales for §4.2 and both locales for T&C §4.2, is reproduced **verbatim** in
+clauses 3 and 5 of the entry — ⛔ the only durable copy, since `docs/legal/` is gitignored.
+
+## F-5 — raised as scheduled, left a second time
+
+This note surfaced submitter-distinctness **as `deferred-work.md:4495-4503` scheduled it**, having
+re-verified live that it remains reachable. It was **not ruled**. ⇒ It is carried as
+`[Author-committed]` under this note's stated non-answer consequence, and the marker must record **that
+it has now been carried twice** — ⛔ not silently re-deferred a third time.
+
+## What the ruling does NOT do
+
+Unchanged from *"What this note does NOT ask"* above, and re-stated as clause 13 of the entry: F-1 of
+`2026-08-16-123` stays open (the attesting population and the hostile population still coincide, so a
+shortened threat-model row ⛔ must not imply a stronger control); FR-15's *"multi-trustee approval"*
+stays partially implemented; `POOL_FIXED_AMOUNT_MIN_PANEL_SIZE` does not move; the wire code
+`pool.fixed_amount_notice_too_short` is not renamed; no DB migration arises; and the UX-DR25 staged card
+remains **Story 8.2's** to build.
+
+## Disposition
+
+Story 7.11 proceeds **from Task 2**, with the notice period at **90 days** across every register.
+AC6 is extended to the **nine** PRD lines of clause 10; AC8 to `epics.md:3526` per clause 11.

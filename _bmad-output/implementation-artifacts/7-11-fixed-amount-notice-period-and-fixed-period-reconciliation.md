@@ -373,7 +373,7 @@ suspect spec in isolation).
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — The routing note (AC1)** ⏸ **STOP AFTER THIS TASK UNTIL RULED**
+- [x] **Task 1 — The routing note (AC1)** ⏸ **STOP AFTER THIS TASK UNTIL RULED** — ✅ **RULED, Decision `2026-08-16-124`**
   - [x] `git fetch origin`; confirm `main == origin/main`; cut
         `governance/7-11-fixed-amount-notice-period-and-fixed-period-reconciliation`
         ([[feedback_git_fetch_before_remote_reasoning]])
@@ -385,7 +385,7 @@ suspect spec in isolation).
         ⛔ BLOCKING), the seven findings F-1…F-7, a *"What non-answer would mean"* table, a *"What
         this note does NOT ask"* section, and a completable **Ruling template**
   - [x] Commit `governance(7.11): …`. ⏸ **HALT.** No code, no `.decision-log.md` entry, no test run
-  - [ ] On ruling: **one** `.decision-log.md` entry numbered from the live head, per-clause
+  - [x] On ruling: **one** `.decision-log.md` entry numbered from the live head, per-clause
         provenance labelled, amended instrument text verbatim in **both locales**; update the note's
         status line to `✅ RULED <date>` with the superseded `⏳ Open` line **retained**, never
         overwritten. Commit `governance(7.11): Decision <id> — …`

@@ -143,6 +143,20 @@ async function dbNow(db: Db): Promise<Date> {
 }
 
 /**
+ * ⭐ Story 10.13 (AC4) — the DB-authoritative `now()` (§1.11), exported so a READ surface can pin ONE
+ * instant across several schedule reads.
+ *
+ * The admin view resolves "effective now" AND "next not yet in force" from the same table; those two
+ * predicates partition the schedule at `asOf`, so reading them at two different instants could show
+ * the same entry as BOTH or as NEITHER. Sourcing the instant once and passing it to both closes that.
+ * ⛔ Never a JS `new Date()` — the same §1.11 rule that governs the write floor governs this read,
+ * because a trustee-controllable app clock must not decide what counts as "already in force".
+ */
+export async function readDbNow(db: Db): Promise<Date> {
+  return dbNow(db);
+}
+
+/**
  * The single schedule row effective at `asOf`. `asOf` defaults to DB `now()` (DB-authoritative,
  * §1.11), but the SPAWN path MUST pass `committed_at` explicitly so the snapshot is the amount
  * effective at the cycle-freeze instant, never a clock read. Returns `null` when no row is effective

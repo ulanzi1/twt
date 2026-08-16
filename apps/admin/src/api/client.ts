@@ -92,6 +92,9 @@ import {
   type PoolFixedAmountEmergencyResponse as FixedAmountEmergencyResult,
   type PoolFixedAmountScheduleRequest as FixedAmountSchedulePayload,
   type PoolFixedAmountEmergencyRequest as FixedAmountEmergencyPayload,
+  // Story 10.13 — the eligible-attestor directory the emergency picker consumes.
+  PoolFixedAmountEligibleAttestorsResponse,
+  type PoolFixedAmountEligibleAttestorsResponse as FixedAmountEligibleAttestors,
   StepUpRequestResponse,
   StepUpVerifyResponse,
   ProvisionedPariwar,
@@ -1321,6 +1324,25 @@ const fixedAmountBase = (pariwarId: string): string =>
 /** GET the current fixed-amount schedule + the amount effective now (+ embedded emergency records). */
 export function getFixedAmountView(pariwarId: string): Promise<FixedAmountView> {
   return apiFetch(fixedAmountBase(pariwarId), PoolFixedAmountView);
+}
+
+/**
+ * ⭐ Story 10.13 (AC2) — GET the eligible emergency attestors for this Pariwar.
+ *
+ * A SIBLING route, gated server-side on `pool.fixed_amount_emergency` (NOT the set key the view uses),
+ * so an admin who may schedule a standard change but not an emergency one gets a 403 here — that is
+ * correct, and the page must render it as "you cannot enumerate emergency attestors", never as a
+ * broken picker.
+ * ⚠ Convenience, never the boundary: the server re-checks every submitted actor on the emergency POST
+ * regardless of what this returned.
+ */
+export function getFixedAmountEligibleAttestors(
+  pariwarId: string,
+): Promise<FixedAmountEligibleAttestors> {
+  return apiFetch(
+    `${fixedAmountBase(pariwarId)}/eligible-attestors`,
+    PoolFixedAmountEligibleAttestorsResponse,
+  );
 }
 
 /** POST a STANDARD (12-month-notice) fixed-amount change (server enforces the +365d floor). */

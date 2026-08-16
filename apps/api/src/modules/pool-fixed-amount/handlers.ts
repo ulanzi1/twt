@@ -23,6 +23,7 @@
 //     placeholder in v1 (Story 5.1 dispatcher precedent), NOT live fan-out.
 
 import {
+  type PoolFixedAmountEligibleAttestorsResponse,
   type PoolFixedAmountEmergencyRecord,
   type PoolFixedAmountEmergencyRequest,
   type PoolFixedAmountEmergencyResponse,
@@ -195,8 +196,18 @@ export function createPoolFixedAmountHandlers(deps: AppDeps) {
       const tx = await openScopeTx(deps, ctx.pariwarIdStr);
       let ok = false;
       try {
-        // Amount effective NOW (DB now() default — this read is a display, not the spawn path).
-        const effective = await poolDomain.resolveEffectiveFixedAmountRow(tx.tx, ctx.pariwarId);
+        // ⭐ Story 10.13 (AC4) — ONE DB-authoritative instant (§1.11) shared by BOTH reads, sourced
+        // here rather than defaulted twice. `resolveEffectiveFixedAmountRow` and
+        // `resolveUpcomingFixedAmountChange` partition the schedule at `asOf` (in force at / strictly
+        // after), so reading them at two different clock instants could show the SAME entry as both
+        // "effective now" and "scheduled", or as neither. ⛔ Never a JS `new Date()`.
+        const asOf = await poolDomain.readDbNow(tx.tx);
+        // Amount effective NOW (a display read, not the spawn path).
+        const effective = await poolDomain.resolveEffectiveFixedAmountRow(tx.tx, ctx.pariwarId, asOf);
+        // The next change NOT YET in force. The resolver has existed since Story 7.5 and its only
+        // consumer was the MEMBER card — the trustee's own setter never showed it, which is the one
+        // literal epic clause ("current + scheduled values") 7.5 left unsatisfied.
+        const upcoming = await poolDomain.resolveUpcomingFixedAmountChange(tx.tx, ctx.pariwarId, asOf);
         const schedule = await poolDomain.listFixedAmountSchedule(tx.tx, ctx.pariwarId);
         const attestations = await poolDomain.listEmergencyAttestations(tx.tx, ctx.pariwarId);
         const emergencyByVersion = new Map(attestations.rows.map((a) => [a.scheduleVersion, a]));
@@ -206,8 +217,44 @@ export function createPoolFixedAmountHandlers(deps: AppDeps) {
           pariwar_id: ctx.pariwarIdStr,
           effective_amount: effective ? effective.fixedAmount : null,
           effective_version: effective ? effective.version : null,
+          upcoming: upcoming
+            ? {
+                version: upcoming.version,
+                fixed_amount: upcoming.fixedAmount,
+                effective_from: upcoming.effectiveFrom.toISOString(),
+                change_type: upcoming.changeType,
+              }
+            : null,
           schedule: schedule.rows.map((r) => toEntry(r, emergencyByVersion)),
           schedule_has_more: schedule.hasMore,
+        };
+      } finally {
+        await closeScopeTx(tx, ok);
+      }
+    },
+
+    /**
+     * ⭐ GET …/admin/pool-fixed-amount/eligible-attestors — the eligible-attestor directory (10.13 AC2).
+     *
+     * Gated on the EMERGENCY key at the route. Reads inside a scope tx because the accessor joins the
+     * RLS-scoped `role_grants` — a GET opening a transaction is architecturally MANDATORY here, not an
+     * inefficiency (RLS is transaction-scoped).
+     * ⚠ Convenience, never the boundary: `postEmergency` re-checks every submitted actor regardless.
+     */
+    async getEligibleAttestors(
+      request: FastifyRequest,
+      reply: FastifyReply,
+    ): Promise<PoolFixedAmountEligibleAttestorsResponse> {
+      const ctx = await contextOf(request);
+      const tx = await openScopeTx(deps, ctx.pariwarIdStr);
+      let ok = false;
+      try {
+        const attestors = await poolDomain.resolveEligibleFixedAmountAttestors(tx.tx, ctx.pariwarId);
+        ok = true;
+        void reply.status(200);
+        return {
+          pariwar_id: ctx.pariwarIdStr,
+          attestors: attestors.map((a) => ({ actor_id: a.actorId, display_name: a.displayName })),
         };
       } finally {
         await closeScopeTx(tx, ok);

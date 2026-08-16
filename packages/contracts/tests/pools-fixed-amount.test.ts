@@ -11,8 +11,12 @@ import { describe, expect, it } from 'vitest';
 import {
   POOL_FIXED_AMOUNT_MAX_INR,
   PoolFixedAmountChangeType,
+  PoolFixedAmountEligibleAttestor,
+  PoolFixedAmountEligibleAttestorsResponse,
   PoolFixedAmountEmergencyRequest,
   PoolFixedAmountScheduleRequest,
+  PoolFixedAmountUpcomingChange,
+  PoolFixedAmountView,
 } from '../src/pools/fixed-amount.js';
 
 describe('pool fixed-amount change_type — domain ↔ contracts lockstep', () => {
@@ -109,5 +113,102 @@ describe('PoolFixedAmountEmergencyRequest — strict validation', () => {
         panel: [{ actor_id: 'x', actor_display: 'X' }], // the server resolves displays, never the client
       }).success,
     ).toBe(false);
+  });
+});
+
+// ── Story 10.13 — the additive read shapes (AC2/AC4) ────────────────────────────────────────────
+
+describe('PoolFixedAmountView.upcoming — Story 10.13 AC4', () => {
+  const baseView = {
+    pariwar_id: '11111111-1111-4111-8111-111111111111',
+    effective_amount: 310,
+    effective_version: 3,
+    upcoming: null,
+    schedule: [],
+    schedule_has_more: false,
+  };
+
+  it('accepts a null upcoming (no future change scheduled)', () => {
+    expect(PoolFixedAmountView.safeParse(baseView).success).toBe(true);
+  });
+
+  it('accepts a populated upcoming', () => {
+    const parsed = PoolFixedAmountView.safeParse({
+      ...baseView,
+      upcoming: {
+        version: 4,
+        fixed_amount: 400,
+        effective_from: '2027-08-16T00:00:00.000Z',
+        change_type: 'standard',
+      },
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it('REQUIRES the field to be present — it is nullable, not optional', () => {
+    // The distinction is load-bearing: an OPTIONAL field lets a handler that forgot to resolve the
+    // upcoming change ship a view that silently omits it, which is exactly how the value hid before
+    // Story 10.13 (the resolver existed; nothing on this surface called it). Nullable-and-required
+    // forces every producer to answer the question.
+    const { upcoming: _omitted, ...withoutUpcoming } = baseView;
+    expect(PoolFixedAmountView.safeParse(withoutUpcoming).success).toBe(false);
+  });
+
+  it('rejects a smuggled effective_until on upcoming (.strict())', () => {
+    // An entry not yet in force has no meaningful close, and history's shape must not leak in here.
+    expect(
+      PoolFixedAmountUpcomingChange.safeParse({
+        version: 4,
+        fixed_amount: 400,
+        effective_from: '2027-08-16T00:00:00.000Z',
+        change_type: 'standard',
+        effective_until: null,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('accepts change_type emergency — a future-dated emergency is still an upcoming change', () => {
+    expect(
+      PoolFixedAmountUpcomingChange.safeParse({
+        version: 9,
+        fixed_amount: 350,
+        effective_from: '2027-01-01T00:00:00.000Z',
+        change_type: 'emergency',
+      }).success,
+    ).toBe(true);
+  });
+});
+
+describe('PoolFixedAmountEligibleAttestor — Story 10.13 AC2', () => {
+  const attestor = {
+    actor_id: '22222222-2222-4222-8222-222222222222',
+    display_name: 'A. Trustee',
+  };
+
+  it('accepts an actor id + display name', () => {
+    expect(PoolFixedAmountEligibleAttestor.safeParse(attestor).success).toBe(true);
+  });
+
+  it('rejects a blank display name', () => {
+    // The directory excludes display-less key-holders at the source; this pins that a blank can never
+    // reach the wire even if a producer regressed, because offering one guarantees a 409 on submit.
+    expect(PoolFixedAmountEligibleAttestor.safeParse({ ...attestor, display_name: '' }).success).toBe(false);
+  });
+
+  it('rejects a smuggled role or grant field (.strict())', () => {
+    // The picker needs a name and an id. Leaking WHICH role confers eligibility would turn a
+    // convenience list into a grant-structure disclosure.
+    expect(PoolFixedAmountEligibleAttestor.safeParse({ ...attestor, role: 'trustee_panel' }).success).toBe(false);
+  });
+
+  it('accepts an EMPTY attestor list — a real, renderable state', () => {
+    // A Pariwar with fewer than two eligible attestors cannot form a panel at all. That must arrive as
+    // a well-formed empty list the UI can explain, never as an error the trustee has to decode.
+    expect(
+      PoolFixedAmountEligibleAttestorsResponse.safeParse({
+        pariwar_id: '11111111-1111-4111-8111-111111111111',
+        attestors: [],
+      }).success,
+    ).toBe(true);
   });
 });

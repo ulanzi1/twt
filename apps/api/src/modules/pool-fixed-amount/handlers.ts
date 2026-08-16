@@ -40,6 +40,7 @@ import {
   AdminDisplayNameMissingError,
   BadRequestError,
   ConflictError,
+  ForbiddenError,
   UnauthorizedError,
 } from '../../http-errors.js';
 import { emitAuthAudit } from '../auth/shared/audit.js';
@@ -79,6 +80,17 @@ function translateFixedAmountError(err: unknown): never {
     throw new BadRequestError(
       'The attesting panel roster must not list the same actor more than once',
       'pool.fixed_amount_panel_duplicate_actor',
+    );
+  }
+  // Story 10.13 (AC3) — the ELIGIBILITY refusal. 403, not 400: the roster is well-formed and the
+  // request is well-shaped; what fails is AUTHORIZATION of a named actor, and conflating that with a
+  // shape error would tell the trustee to fix their input when the answer is "that person may not
+  // attest". Deliberately does NOT name the actor in the message — the id is in the audit line, and a
+  // 403 body is the wrong place to enumerate who does or does not hold a key.
+  if (err instanceof poolDomain.PoolFixedAmountPanelMemberUnauthorizedError) {
+    throw new ForbiddenError(
+      'Every attesting panel member must hold the emergency fixed-amount permission in this Pariwar',
+      'pool.fixed_amount_panel_member_unauthorized',
     );
   }
   if (err instanceof poolDomain.PoolFixedAmountInvalidError) {
@@ -247,31 +259,43 @@ export function createPoolFixedAmountHandlers(deps: AppDeps) {
       const body = request.body as PoolFixedAmountEmergencyRequest;
       const effectiveFrom = new Date(body.effective_from);
 
-      // Resolve the attesting PANEL member displays FAIL-CLOSED — they are the immutable attestation
-      // record's attribution (the 6.11 admin-display discipline), never id-fallback. A missing display
-      // blocks the whole override (no row, no attestation) — the same posture as ctx display. Audited
-      // as a rejection too (this file's own posture, item 2) — a panel-member display gap is a real
-      // rejected attempt, not a silent no-audit-trail 409.
-      const panel: schema.PoolFixedAmountPanelMember[] = [];
-      for (const actorId of body.panel_actor_ids) {
-        const display = await getDisplayName(deps.pool, actorId);
-        if (display === null) {
-          audit(request, 'admin_pool_fixed_amount.rejected', ctx, {
-            action: 'emergency',
-            fixed_amount: body.fixed_amount,
-            effective_from: body.effective_from,
-            panel_actor_ids: body.panel_actor_ids,
-            reason: 'AdminDisplayNameMissingError',
-          });
-          throw new AdminDisplayNameMissingError(actorId);
-        }
-        panel.push({ actor_id: actorId, actor_display: display });
-      }
-
+      // ⭐ Story 10.13 (AC3) — the scope tx is opened FIRST, because the eligibility check reads
+      // `role_grants` and RLS is TRANSACTION-scoped. Everything that can refuse this override now runs
+      // inside one tx, so a refusal at any stage leaves NO schedule row and NO attestation row.
       const scopeTx = await openScopeTx(deps, ctx.pariwarIdStr);
       let ok = false;
       let result: poolDomain.ApplyEmergencyOverrideResult;
       try {
+        // ⛔ ELIGIBILITY RUNS BEFORE THE DISPLAY RESOLUTION, AND THE ORDER IS LOAD-BEARING (AC3).
+        // An ineligible actor who ALSO has no display name would otherwise report the WRONG error —
+        // a 409 AdminDisplayNameMissing instead of the 403 eligibility refusal — and the audit line
+        // would record the wrong reason, which is the one artefact anyone reviewing a refused
+        // emergency override actually reads.
+        //
+        // Decision `2026-08-16-123` clause 2 (Q2.1 option (a), key-as-credential): every submitted
+        // panel member must hold `pool.fixed_amount_emergency` @ this Pariwar. Evaluated on the SCOPED
+        // client, so a cross-tenant holder's grants are invisible and fold to "no grants" ⇒ refused.
+        // ⚠ This is the BOUNDARY. The admin picker that offers the eligible attestors is CONVENIENCE
+        // and this check stands whether or not the client used it.
+        await poolDomain.assertFixedAmountPanelAuthorized(
+          scopeTx.client,
+          ctx.pariwarId,
+          body.panel_actor_ids,
+        );
+
+        // Resolve the attesting PANEL member displays FAIL-CLOSED — they are the immutable attestation
+        // record's attribution (the 6.11 admin-display discipline), never id-fallback. A missing display
+        // blocks the whole override (no row, no attestation) — the same posture as ctx display.
+        // ⚠ Reads `deps.pool` (the GLOBAL `users` table) deliberately: display attribution is global
+        // identity, and it is the ELIGIBILITY check above — not this one — that supplies the tenant and
+        // role predicates this path was missing before Story 10.13.
+        const panel: schema.PoolFixedAmountPanelMember[] = [];
+        for (const actorId of body.panel_actor_ids) {
+          const display = await getDisplayName(deps.pool, actorId);
+          if (display === null) throw new AdminDisplayNameMissingError(actorId);
+          panel.push({ actor_id: actorId, actor_display: display });
+        }
+
         result = await poolDomain.applyEmergencyOverride(scopeTx.tx, {
           pariwarId: ctx.pariwarId,
           fixedAmount: body.fixed_amount,
@@ -283,6 +307,10 @@ export function createPoolFixedAmountHandlers(deps: AppDeps) {
         });
         ok = true;
       } catch (err) {
+        // Rejected attempts are audited too (this file's own posture, item 2). ONE rejection line now
+        // covers eligibility, display gaps and domain-validation failures alike — `rejectionReason`
+        // carries which, so the audit trail distinguishes "that person may not attest" from "that
+        // person has no display name" without a second call site to keep in sync.
         audit(request, 'admin_pool_fixed_amount.rejected', ctx, {
           action: 'emergency',
           fixed_amount: body.fixed_amount,
@@ -301,7 +329,9 @@ export function createPoolFixedAmountHandlers(deps: AppDeps) {
         version: entry.version,
         fixed_amount: entry.fixedAmount,
         effective_from: entry.effectiveFrom.toISOString(),
-        panel_actor_ids: panel.map((m) => m.actor_id),
+        // Sourced from the WRITTEN attestation row, not from the request body or a local: the audit
+        // line should record the roster that was actually persisted to the immutable record.
+        panel_actor_ids: attestation.panel.map((m) => m.actor_id),
         documented_reason: attestation.documentedReason,
       });
       // Notification seam (post-commit) — IMMEDIATE cadence for an emergency override (v1 inert).

@@ -128,6 +128,8 @@ describe.skipIf(!hasDatabase)('fixed-amount schedule surface — E2E (:5433)', (
   const viewUrl = (p: string) => `/api/v1/p/${p}/admin/pool-fixed-amount`;
   const scheduleUrl = (p: string) => `/api/v1/p/${p}/admin/pool-fixed-amount/schedule`;
   const emergencyUrl = (p: string) => `/api/v1/p/${p}/admin/pool-fixed-amount/emergency`;
+  /** Story 10.13 — the eligible-attestor directory (gated on the EMERGENCY key). */
+  const attestorsUrl = (p: string) => `/api/v1/p/${p}/admin/pool-fixed-amount/eligible-attestors`;
 
   function freshPariwar(): string {
     const p = randomUUID();
@@ -207,10 +209,18 @@ describe.skipIf(!hasDatabase)('fixed-amount schedule surface — E2E (:5433)', (
     const p = freshPariwar();
     const a = await pariwarAdmin(p, 'Trustee One');
     // The panel needs at least 2 DISTINCT actors, each with a resolvable R5 display (fail-closed
-    // attestation attribution); no grant is required (7.5 records the panel composition, it does NOT
-    // check panel-member permissions — that is the deliberate boundary vs the R9 voting lifecycle).
+    // attestation attribution) AND — since Story 10.13 — each holding `pool.fixed_amount_emergency`
+    // AT THIS PARIWAR.
+    // ⚠ THIS COMMENT PREVIOUSLY SAID "no grant is required … 7.5 records the panel composition, it does
+    // NOT check panel-member permissions". That was true, and it was the defect: any global user id
+    // with a display name could be written onto the immutable Emergency Adjustment Record. Decision
+    // `2026-08-16-123` clause 2 ends it. ⛔ Do not re-read the old sentence as a boundary that was
+    // deliberately chosen — the R9-lifecycle boundary (no session, no votes, no quorum) still stands and
+    // is untouched; what changed is that the roster must now name actors who COULD attest.
     const panelMember = await authenticate({ displayName: 'Panel Member' });
     const panelMember2 = await authenticate({ displayName: 'Panel Member Two' });
+    await grant(panelMember.userId, p, 'trustee_panel');
+    await grant(panelMember2.userId, p, 'pariwar_admin');
 
     const payload = {
       fixed_amount: 750,
@@ -260,6 +270,179 @@ describe.skipIf(!hasDatabase)('fixed-amount schedule surface — E2E (:5433)', (
         panel_actor_ids: [randomUUID(), randomUUID()],
       },
     });
+    // Still 409, and the ORDER is why: the ACTING trustee's display is resolved in `contextOf`, before
+    // the scope tx and therefore before the panel-eligibility check. An unauthenticated-display actor
+    // never reaches the panel at all.
     expect(res.statusCode).toBe(409);
+  });
+
+  // ── Story 10.13 — panel eligibility, the directory route, and the scheduled value ──────────────
+
+  it('⭐ emergency override: 403 pool.fixed_amount_panel_member_unauthorized when a panel member holds no grant', async () => {
+    const p = freshPariwar();
+    const a = await pariwarAdmin(p, 'Trustee One');
+    const eligible = await authenticate({ displayName: 'Eligible Trustee' });
+    await grant(eligible.userId, p, 'trustee_panel');
+    // A perfectly real admin with a perfectly good display name — and NO grant in this Pariwar. Before
+    // Story 10.13 this was written onto the immutable record without complaint.
+    const stranger = await authenticate({ displayName: 'Unaffiliated Admin' });
+    await elevate(a.client);
+
+    const before = auditSink.events.length;
+    const res = await a.client.inject({
+      method: 'POST',
+      url: emergencyUrl(p),
+      payload: {
+        fixed_amount: 810,
+        effective_from: new Date().toISOString(),
+        documented_reason: 'reserve adequacy review',
+        panel_actor_ids: [eligible.userId, stranger.userId],
+      },
+    });
+    expect(res.statusCode).toBe(403);
+    expect((res.json() as { error: { code: string } }).error.code).toBe(
+      'pool.fixed_amount_panel_member_unauthorized',
+    );
+
+    // The rejection is AUDITED, with the reason naming the eligibility failure — not a display gap.
+    const rejected = auditSink.events
+      .slice(before)
+      .filter((e) => e.type === 'admin_pool_fixed_amount.rejected')
+      .at(-1);
+    expect(rejected).toBeDefined();
+    expect(rejected!.context).toMatchObject({
+      action: 'emergency',
+      reason: 'PoolFixedAmountPanelMemberUnauthorizedError',
+    });
+
+    // ⛔ AND NOTHING WAS WRITTEN — the caller's tx rolled back.
+    const view = await a.client.inject({ method: 'GET', url: viewUrl(p) });
+    expect((view.json() as { schedule: unknown[] }).schedule).toEqual([]);
+    expect((view.json() as { effective_amount: number | null }).effective_amount).toBeNull();
+  });
+
+  it('⭐ emergency override: a CROSS-TENANT key holder is refused', async () => {
+    // The case a same-tenant-only test could never see: `outsider` holds a FULL trustee_panel grant —
+    // in a DIFFERENT Pariwar. `role_grants` is RLS-scoped, so under this Pariwar's scope the grant is
+    // invisible and folds to "no grants".
+    const p = freshPariwar();
+    const other = freshPariwar();
+    const a = await pariwarAdmin(p, 'Trustee One');
+    const eligible = await authenticate({ displayName: 'Eligible Trustee' });
+    await grant(eligible.userId, p, 'trustee_panel');
+    const outsider = await authenticate({ displayName: 'Other Pariwar Trustee' });
+    await grant(outsider.userId, other, 'trustee_panel');
+    await elevate(a.client);
+
+    const res = await a.client.inject({
+      method: 'POST',
+      url: emergencyUrl(p),
+      payload: {
+        fixed_amount: 820,
+        effective_from: new Date().toISOString(),
+        documented_reason: 'reserve adequacy review',
+        panel_actor_ids: [eligible.userId, outsider.userId],
+      },
+    });
+    expect(res.statusCode).toBe(403);
+    expect((res.json() as { error: { code: string } }).error.code).toBe(
+      'pool.fixed_amount_panel_member_unauthorized',
+    );
+  });
+
+  it('⚠ eligibility is checked BEFORE display resolution — an ineligible AND display-less actor reports 403, not 409', async () => {
+    // The ordering AC, with teeth. If the loops were the other way round this actor would report a 409
+    // AdminDisplayNameMissing and the audit line would record the wrong reason — telling whoever
+    // reviews the refused override to go fix a display name, when the real answer is "that person may
+    // not attest".
+    const p = freshPariwar();
+    const a = await pariwarAdmin(p, 'Trustee One');
+    const eligible = await authenticate({ displayName: 'Eligible Trustee' });
+    await grant(eligible.userId, p, 'trustee_panel');
+    const nameless = await authenticate({ displayName: null }); // no grant AND no display
+    await elevate(a.client);
+
+    const res = await a.client.inject({
+      method: 'POST',
+      url: emergencyUrl(p),
+      payload: {
+        fixed_amount: 830,
+        effective_from: new Date().toISOString(),
+        documented_reason: 'reserve adequacy review',
+        panel_actor_ids: [eligible.userId, nameless.userId],
+      },
+    });
+    expect(res.statusCode).toBe(403);
+    expect((res.json() as { error: { code: string } }).error.code).toBe(
+      'pool.fixed_amount_panel_member_unauthorized',
+    );
+  });
+
+  it('the eligible-attestor directory lists this Pariwar’s key holders by display name', async () => {
+    const p = freshPariwar();
+    const other = freshPariwar();
+    const a = await pariwarAdmin(p, 'Trustee One');
+    const panelist = await authenticate({ displayName: 'Alice Trustee' });
+    await grant(panelist.userId, p, 'trustee_panel');
+    const nameless = await authenticate({ displayName: null });
+    await grant(nameless.userId, p, 'trustee_panel');
+    const outsider = await authenticate({ displayName: 'Other Pariwar Trustee' });
+    await grant(outsider.userId, other, 'trustee_panel');
+
+    const res = await a.client.inject({ method: 'GET', url: attestorsUrl(p) });
+    expect(res.statusCode).toBe(200);
+    const body = res.json() as { attestors: Array<{ actor_id: string; display_name: string }> };
+    const ids = body.attestors.map((x) => x.actor_id);
+    // Membership, never counts — other suites commit their own grants.
+    expect(ids).toContain(panelist.userId);
+    expect(ids).toContain(a.userId); // the acting pariwar_admin holds the key too (concurrent grant)
+    expect(ids).not.toContain(nameless.userId); // display-less: would be guaranteed to 409 on submit
+    expect(ids).not.toContain(outsider.userId); // cross-tenant: never leaked
+    expect(body.attestors.find((x) => x.actor_id === panelist.userId)?.display_name).toBe('Alice Trustee');
+  });
+
+  it('the eligible-attestor directory is gated on the EMERGENCY key, not the set key', async () => {
+    // The reason it is a sibling route rather than a field on the view. There is no seeded role holding
+    // `pool.fixed_amount_set` WITHOUT `…_emergency`, so the reachable proof is the negative one: a
+    // tenant-resolving role that holds neither key is refused here exactly as it is on the write paths.
+    const p = freshPariwar();
+    const a = await authenticate({ displayName: 'Helpline Op' });
+    await grant(a.userId, p, 'helpline_operator');
+    const res = await a.client.inject({ method: 'GET', url: attestorsUrl(p) });
+    expect(res.statusCode).toBe(403);
+  });
+
+  it('the directory requires a session (401) — it enumerates trustees and is not public', async () => {
+    const p = freshPariwar();
+    const anon = makeClient(app);
+    expect((await anon.inject({ method: 'GET', url: attestorsUrl(p) })).statusCode).toBe(401);
+  });
+
+  it('⭐ the view carries `upcoming` when a future-dated change exists, and null when it does not', async () => {
+    const p = freshPariwar();
+    const a = await pariwarAdmin(p);
+
+    // Nothing scheduled yet.
+    const empty = await a.client.inject({ method: 'GET', url: viewUrl(p) });
+    expect((empty.json() as { upcoming: unknown }).upcoming).toBeNull();
+
+    // A standard change 400 days out — in the FUTURE, so it is "scheduled", never "effective now".
+    const effectiveFrom = new Date(Date.now() + 400 * DAY_MS).toISOString();
+    const created = await a.client.inject({
+      method: 'POST',
+      url: scheduleUrl(p),
+      payload: { fixed_amount: 640, effective_from: effectiveFrom },
+    });
+    expect(created.statusCode).toBe(201);
+
+    const withUpcoming = await a.client.inject({ method: 'GET', url: viewUrl(p) });
+    const body = withUpcoming.json() as {
+      effective_amount: number | null;
+      upcoming: { version: number; fixed_amount: number; change_type: string } | null;
+    };
+    expect(body.upcoming).toMatchObject({ fixed_amount: 640, change_type: 'standard' });
+    // ⚠ AND it is NOT the effective amount — the whole point of a separate field. A future entry must
+    // never read as the amount in force, which is how it hid inside the undifferentiated history list.
+    expect(body.effective_amount).toBeNull();
   });
 });

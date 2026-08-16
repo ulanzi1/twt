@@ -3832,6 +3832,32 @@ So that the operation is admin-friendly and emits the right audit + notification
 >
 > This obligation is recorded in **this story's own section** deliberately: a marker pointing at a story
 > whose text never mentions the obligation is exactly how an inherited deferral goes unnoticed.
+>
+> ✅ **DISCHARGED 2026-08-16 — "Closed by [edit]"** ([[feedback_closure_language_precision]]), by
+> Decision `2026-08-16-123` and Story 10.13. Not deferred again, not re-pointed.
+> · **The directory is a real read.** Q2.1 ruled option (a), *key-as-credential*: an eligible emergency
+>   attestor IS "an actor holding `pool.fixed_amount_emergency` at this Pariwar". Enforced server-side
+>   inside the scope transaction (`assertFixedAmountPanelAuthorized`) with a typed, audited 403, and
+>   surfaced to the trustee as a picker over `resolveEligibleFixedAmountAttestors`. ⛔ **No
+>   `trustee_directory` table, registry or new primitive was built** — the `claim.r9_vote` /
+>   `claim.appeal_vote` eligibility pattern made a third instance, as this section required.
+> · **`POOL_FIXED_AMOUNT_MIN_PANEL_SIZE` did not change**, as this section required — and Q3 additionally
+>   ruled *why* it is a floor and **not** the Deed Clause 19(b) quorum, recorded at the constant itself.
+> · **And the authority question this section did not ask was answered too.** Q1 ruled that
+>   `trustee_panel` gains both fixed-amount keys **concurrently** with `pariwar_admin` (catalog 34→35,
+>   key count unchanged at 43): the Deed vests amount-fixing in the **Board** (Cl. 10(b)/20(c), §4.2),
+>   and the code had vested it in `pariwar_admin` alone.
+>
+> ⚠ **What the discharge does NOT claim.** Eligibility proves an attestor **could** have attested; it
+> does not prove they **did**. Only the submitting actor is authenticated and step-up gated, so FR-15's
+> *"multi-trustee approval"* remains **partially** implemented (Decision `2026-08-16-123` clause 14).
+> Recorded here rather than left for a reader to discover.
+>
+> ⭐ **A separate divergence surfaced during 10.13 and is owned by Story 7.11**, not by this section: the
+> code enforced minimum **notice** and never minimum **duration**. The Panel ruled the normal notice
+> period is **60 days, not 365**, and that twelve months is the normal/planned period rather than an
+> absolute lock — with `7-11-fixed-amount-notice-period-and-fixed-period-reconciliation` owning the code,
+> the Niyamavali §4.2 / Deed Cl. 10(b) wording, FR-15 in the PRD, and `architecture.md:1324`.
 
 ### Story 10.14: Permission Delegation `[SURFACE]`
 

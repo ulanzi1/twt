@@ -742,6 +742,26 @@ export function useFixedAmountView(pariwarId: string) {
   });
 }
 
+/**
+ * ⭐ Story 10.13 (AC2) — the eligible-attestor directory backing the emergency panel picker.
+ *
+ * Its own query key, deliberately NOT folded into `fixedAmountViewKey`: it is a different route with a
+ * different permission gate, and sharing a key would let a 403 on the directory invalidate (or mask) a
+ * perfectly good schedule view.
+ */
+export const fixedAmountEligibleAttestorsKey = (pariwarId: string) =>
+  ['pool-fixed-amount-eligible-attestors', pariwarId] as const;
+
+export function useFixedAmountEligibleAttestors(pariwarId: string) {
+  return useQuery({
+    queryKey: fixedAmountEligibleAttestorsKey(pariwarId),
+    queryFn: () => api.getFixedAmountEligibleAttestors(pariwarId),
+    // A 403 here means "you hold the set key but not the emergency key" — a settled authorization
+    // fact, not a transient failure. Retrying it just delays showing the trustee an accurate message.
+    retry: false,
+  });
+}
+
 /** POST a STANDARD (12-month-notice) change; refetches the schedule on success. */
 export function useScheduleFixedAmountChange(pariwarId: string) {
   const qc = useQueryClient();

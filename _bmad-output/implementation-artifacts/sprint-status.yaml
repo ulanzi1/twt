@@ -1,4 +1,245 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-16i (10-13-fixed-amount-setter-admin-ui: stays DONE. Re-run of
+#   /bmad-code-review at user request, widened to the FULL 27-file diff (code + governance/planning
+#   docs, ~4432 lines) rather than just the 5 patched files. 1 new finding: the AC4 Scheduled
+#   region's summary line mixed bare English JSX literals ("from", "schedule version") with
+#   interpolated values -- same defect shape as the already-fixed header string, missed by the
+#   first pass because it wasn't isolated as its own string. Fixed: two new i18n-en.ts keys
+#   (`fixedAmount.scheduled.from` / `...versionLabel`), rendered output unchanged, 11 admin tests +
+#   typecheck still green. The 5 prior patches re-verified sound, patch 2's new SQL predicate
+#   additionally proven against LIVE Postgres this time (17/17 + 14/14 integration/E2E tests,
+#   including cross-tenant), not just the mocked unit test. Governance/planning docs read in full
+#   and cross-checked for self-consistency -- none found. Status stays done; only the story's own
+#   Review Findings section grows. Only development_status[10-13-fixed-amount-setter-admin-ui]
+#   touched (value unchanged, already done).)
+# last_updated: 2026-08-16h (10-13-fixed-amount-setter-admin-ui: REVIEW -> DONE via
+#   /bmad-code-review. Three parallel layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor)
+#   against main..HEAD, 21 code files. 12 unique findings after dedup: 0 decision-needed, 5 patch
+#   (all applied — misattached JSDoc in contracts/fixed-amount.ts; missing belt-and-braces
+#   `pariwar_id` predicate in assertFixedAmountPanelAuthorized's SQL; a missing self-attestation
+#   regression test; a stale-panel-selection reconciliation gap in FixedAmountPage.tsx; one AC5
+#   header string that bypassed the module's i18n resolver), 4 deferred to deferred-work.md
+#   (directory truncation at .limit(500) with no has_more signal; no-retry-affordance on a
+#   non-403 picker load failure; silent no-op on an under-filled emergency form submit, matching
+#   pre-existing 7.5 house style; no test for a stale/renamed role_grants.role string), 3
+#   dismissed as noise (all matched the codebase's own established conventions on inspection, not
+#   deviations). Post-fix: 12 domain + 21 contracts + 11 admin tests green, 3 packages typecheck
+#   clean. Findings + fixes recorded in the story's own Review Findings section. Only
+#   development_status[10-13-fixed-amount-setter-admin-ui] flips.)
+# last_updated: 2026-08-16g (10-13-fixed-amount-setter-admin-ui: IN-PROGRESS -> REVIEW via
+#   bmad-dev-story. All 9 tasks + all subtasks complete; ACs 1-7 satisfied. Branch
+#   governance/10-13-fixed-amount-setter-admin-ui, 9 commits: 3 governance: then 6 story:, so git log
+#   reads governance -> implementation ([[feedback_governance_commits_precede_implementation]]).
+#   BUILT: assertFixedAmountPanelAuthorized (the AC3 teeth, third instance of the assertPanelAuthorized
+#   shape) + PoolFixedAmountPanelMemberUnauthorizedError -> a stable 403; the eligible-attestor
+#   directory read + a SIBLING GET route gated on the EMERGENCY key (a response FIELD cannot carry a
+#   different permission gate from the response it rides on, so folding it into the view would have
+#   silently widened who can enumerate a Pariwar's emergency trustees); the picker replacing the
+#   raw-UUID textarea; the Scheduled region; the `upcoming` field; the module's FIRST UI tests; and the
+#   trustee_panel grant (catalog 34 -> 35, KEY COUNT STAYS 43).
+#   ⛔ THE ORDERING IS LOAD-BEARING AND THE ROUTE WAS RESTRUCTURED FOR IT: postEmergency now opens the
+#   scope tx FIRST (the check reads role_grants and RLS is transaction-scoped), asserts eligibility,
+#   and only THEN resolves per-member displays. Reversed, an ineligible AND display-less actor reports
+#   409 AdminDisplayNameMissing instead of the 403, and the audit line records the WRONG REASON -- the
+#   one artefact anyone reviewing a refused emergency override actually reads.
+#   ⛔ STORY 7.5's OWN E2E ASSERTED THE DEFECT AS CORRECT. Its emergency test seeded panel members with
+#   NO grants and its comment said so deliberately: "no grant is required ... 7.5 records the panel
+#   composition, it does NOT check panel-member permissions". That was TRUE, and it was the DEFECT --
+#   the test encoded the hole. Corrected, with the comment now saying what changed and what did NOT
+#   (the R9-lifecycle boundary still stands).
+#   ⭐ REVERT-SANITY CONFIRMED AT BOTH LAYERS, run rather than asserted: with the refusal neutered, 6
+#   unit tests fail AND 3 live-DB tests fail, including the CROSS-TENANT one in each. Restored and
+#   re-verified green. A same-tenant-only test would have passed against the broken behaviour too.
+#   ⛔ ci:local FAILED AND IS RECORDED AS OBSERVED, NEVER AS GREEN. Run 1: 29 green / 2 red (test
+#   (unit) + integration-tests, both from the SAME @twt/api#test task; 2 files failed / 115 passed,
+#   998 tests passed). ⚠ THE CAPTURED LOG WAS TRUNCATED TO ITS TAIL, so Run 1's two failing spec names
+#   were NEVER OBSERVED and are NOT reconstructed. Run 2 (integration job re-run with full capture):
+#   red again but a DIFFERENT, LARGER set -- 3 files, all member-moderation (grounds / dwell /
+#   escalation); every other package green under the same concurrency (@twt/domain 245 files,
+#   @twt/channels 17, @twt/validity-service 21, @twt/niyamavali-engine 13, @twt/events 6, @twt/queue 1).
+#   INNOCENCE CHECKS RUN: @twt/api standalone = 117 files / 1000 tests PASS; member-moderation/ in
+#   isolation = 6 files / 81 tests PASS. ⇒ the red set CHANGES BETWEEN RUNS of the same commit and
+#   every NAMED spec passes alone -- the #14 signature compounded by ci:local concurrency
+#   oversubscription; and member-moderation is 10.19/10.20/10.22 territory, not code 10.13 touched
+#   (pool/, rbac/, contracts/pools/, pool-fixed-amount/, admin console). ⚠ Run 1's inference is
+#   recorded as UN-ATTESTED, not reconstructed ([[feedback_record_unattested_no_backfill]]).
+#   SUITES THIS STORY OWNS, ALL RUN DIRECTLY AND GREEN: domain rbac 153, domain pool 202 (11 new
+#   fixed-amount-panel unit tests), pool-fixed-amount.spec 17 (11 new), contracts 21 (9 new), api
+#   fixed-amount.spec 14 (5 new + 1 CORRECTED), admin 321 (11 new). Gates green incl. domain-invariants
+#   (which CAUGHT a named-const .limit() and was fixed, not worked around), pool-support-category,
+#   human-actor, microcopy, friction-budget (16 rows -- one new FORCED row: the trustee must now choose
+#   the panel from the eligible directory, paid to protect the immutable record's authority).
+#   ⚠ WHAT THIS STORY DOES NOT CLAIM, recorded in the ruling entry AND at every marker: F-1 IS NOT
+#   CLOSED -- Q1(a) keeps both keys on pariwar_admin CONCURRENTLY, so the eligible attestor set still
+#   includes the population architecture.md:1324 names as the hostile trustee; clause 1 buys
+#   DISTINGUISHABILITY, not SEPARATION. F-3 IS NOT CLOSED -- an attestor is not an approver;
+#   eligibility proves CAPABILITY, never ASSENT, so FR-15's "multi-trustee approval" stays PARTIAL.
+#   MARKERS CLOSED IN THREE LIVE REGISTERS as "Closed by [edit]" (fixed-amount.ts:75-88 + the constant's
+#   own doc comment carrying Q3's answer; deferred-work.md in place; epics.md's inherited-obligation
+#   block). ⚠ The 1-18 / 10-18 / 7-5 STORY FILES are deliberately left alone -- historical records of
+#   what was true when written, not live trackers.
+#   Only development_status[10-13-fixed-amount-setter-admin-ui] flips. [7-11-...] stays backlog as
+#   minted at 2026-08-16f. NO other story status changed.)
+# last_updated: 2026-08-16f (10-13-fixed-amount-setter-admin-ui: stays IN-PROGRESS. TRUSTEE PANEL
+#   RULED all three BLOCKING questions option (a); Decision `2026-08-16-123` recorded BEFORE any
+#   implementation ([[feedback_governance_commits_precede_implementation]]). Q1(a): trustee_panel gains
+#   BOTH pool.fixed_amount_set + ..._emergency and pariwar_admin RETAINS both -- the §8.7 "concurrent,
+#   not exclusive" posture, the THIRD grant to the trustee_panel bundle and the FIRST that is NOT
+#   exclusive to it. Catalog 34 -> 35, ⛔ KEY COUNT STAYS 43 (an existing role gaining existing keys
+#   moves the CAPABILITY MODEL, not the key set -- the third application of the 10.18 / 6.17 rule).
+#   Q2.1(a): key-as-credential -- an eligible attestor is an actor holding pool.fixed_amount_emergency
+#   at THIS Pariwar, the claim.r9_vote / claim.appeal_vote precedent made a THIRD instance, not a new
+#   pattern. ⚠ Q2.1(c) submitter-distinctness was OFFERED AND NOT TAKEN ⇒ a submitter may still list
+#   THEMSELVES and count toward the >=2 floor; recorded as an OPEN, UN-OWNED observation with a
+#   re-trigger, not silently absorbed. Q3(a): the Deed Cl. 19(b) quorum is NOT checked and the reason
+#   is recorded at the constant -- "one-half of the Trustees then in office" is UNCOMPUTABLE without
+#   the very directory the epic forbids. The ⌈half-of-key-holders⌉ approximation was put and EXPRESSLY
+#   REJECTED (it would make a governance quorum a function of GRANT ISSUANCE, so revoking a grant would
+#   LOWER the quorum). ⛔ POOL_FIXED_AMOUNT_MIN_PANEL_SIZE DOES NOT MOVE.
+#   ⚠ Q4 WAS RULED MATERIALLY BEYOND THE OPTIONS OFFERED and is recorded as an ADDITION, never read
+#   back into the options as though it had been one (the 2026-08-12-099 / 2026-08-15-121 precedent):
+#   the NORMAL NOTICE PERIOD BECOMES 60 DAYS, NOT 365; twelve months is the normal/planned period and
+#   NOT an absolute lock; the EMERGENCY MECHANISM REMAINS and may bypass the 60-day notice; and ⛔ NONE
+#   of it is implemented inside 10.13.
+#   ⛔ FOUR CONFLICTS WERE PUT TO THE PANEL BEFORE ANYTHING WAS RECORDED, against a first reading of
+#   "code should not enforce minimum Notice period or minimum Duration". C-1 WAS DECISIVE AND IS
+#   RESOLVED: the notice floor is the ONLY thing the emergency path bypasses, so removing it entirely
+#   would leave applyEmergencyOverride differing from scheduleStandardChange in exactly change_type +
+#   the attestation, and 10.13's whole attesting-panel control would have NOTHING LEFT TO JUSTIFY. The
+#   ruling keeps the emergency mechanism EXPRESSLY and keeps a floor -- 60 days is still a floor ⇒
+#   10.13's build stands UNCHANGED. C-2 (prd.md:469, FR-15's testable consequence) and C-3
+#   (architecture.md:1324, "cooling-off period via 12-month notice" as THE hostile-trustee mitigation)
+#   are ROUTED, not ignored -- the successor must reconcile legal text, PRD, architecture AND
+#   implementation. C-4 (scope) resolved in terms.
+#   ⚠ RECORDED SO THE SUCCESSOR DOES NOT INHERIT A FALSE PREMISE: Deed Cl. 10(b) + §4.2's "for stated
+#   periods of not less than twelve months" constrains the PERIOD AN AMOUNT STANDS and says NOTHING
+#   ABOUT NOTICE. The 365-day floor is a PRODUCT control from FR-15's prose (prd.md:465), NOT a Deed
+#   requirement ⇒ shortening NOTICE conflicts with the PRD and architecture, NOT with the instrument.
+#   The twelve-month-LOCK half DOES touch the instrument, which is why the wording change is routed.
+#   ⭐ SUCCESSOR MINTED, NOT LEFT UN-OWNED: development_status[7-11-fixed-amount-notice-period-and-
+#   fixed-period-reconciliation]: backlog. Minted against EPIC 7 (whose Story 7.5 owns the write path),
+#   NOT Epic 10 (whose 10.13 owns only the setter surface). It owns all five: the 60-day rule in code,
+#   the §4.2 both-locales + Deed Cl. 10(b) wording, FR-15 in the PRD, architecture.md:1324's mitigation
+#   row, and Q5.1's emergency-backdating lower bound. A deferral naming an EPIC expires unowned; this
+#   one names a story key that EXISTS in this file.
+#   ⚠ Q5 NOT RULED -- discharged [Author-committed] per the note's own stated non-answer consequence.
+#   Q5.1 routed to 7-11; Q5.2 WRITES the deferred-work.md entry Story 7.5's review CLAIMS IT WROTE AND
+#   DID NOT (verified: 7-5-...-override.md:229 says "logged to deferred-work.md"; the only 7.5 entry
+#   there is the documented_reason PII one at :1150-1152). Scoped to WRITE THE MISSING ENTRY -- the
+#   option to audit 7.5's other logging claims was offered and NOT taken.
+#   ⛔ WHAT THE RULING DOES NOT DO, recorded so the marker closure cannot imply more than was built:
+#   F-1 IS NOT CLOSED -- because Q1(a) keeps both keys on pariwar_admin CONCURRENTLY, the eligible
+#   attestor set still includes the population architecture.md:1324 names as the hostile trustee, so
+#   two pariwar_admins can still attest each other. Clause 1 buys DISTINGUISHABILITY, NOT SEPARATION.
+#   F-3 IS NOT CLOSED -- an attestor is not an approver; only the SUBMITTING actor is authenticated +
+#   step-up gated, so eligibility makes the roster truthful about CAPABILITY, never about ASSENT ⇒
+#   FR-15's "multi-trustee approval" stays PARTIALLY implemented after 10.13.
+#   ⛔ NO INSTRUMENT AMENDED by this entry -- docs/legal/ is untouched; §4.2 stays as ratified and the
+#   wording change belongs to 7-11 with its both-locales reproduction.
+#   development_status[10-13-...] unchanged (in-progress) + [7-11-...] MINTED to backlog. NO other
+#   story status changed.)
+# last_updated: 2026-08-16e (10-13-fixed-amount-setter-admin-ui: ready-for-dev -> IN-PROGRESS via
+#   bmad-dev-story, branch governance/10-13-fixed-amount-setter-admin-ui cut from main @ 9fb88c3
+#   (fetched, == origin/main). Story baseline_commit already pinned at authoring; preserved, not
+#   rewritten. NOTHING BUILT YET -- Task 1 is the routing note and the story's own Task 1 carries an
+#   explicit ⏸ STOP: no implementation commit lands before Q1/Q2/Q3 are RULED by the Trustee Panel.
+#   ✅ TASK 1 (AC1) COMPLETE, commit 6399235 `governance(10.13):` -- the routing note is authored (417
+#   lines), five questions, Q1/Q2/Q3 BLOCKING, every ⭐ marked NON-BINDING, with a Ruling template the
+#   Panel can complete. ⏸ NOW HALTED AT THE STORY'S OWN STOP. Tasks 2-9 NOT started: no code, no
+#   .decision-log.md entry, no RBAC change, no test, no gate run.
+#   ⭐ TWO AUTHOR FINDINGS THE AUTHORING PASS DID NOT HAVE, both recorded in the note, neither routed
+#   as a sixth question (AC1 fixes the count at five). F-1: architecture.md:1324 names the hostile
+#   trustee as "Pariwar Admin / State Trustee" attacking via "fixed-amount change", mitigated by the
+#   FR-15 cooling-off -- which the emergency path exists to BYPASS. Under Q2(a) the eligible attestor
+#   set TODAY is exactly {pariwar_admin holders} u {super_admin holders}, so TWO pariwar_admins CAN
+#   ATTEST EACH OTHER: the checking population and the threat population are the SAME population. Q1
+#   buys DISTINGUISHABILITY, not SEPARATION, and the note says so rather than implying otherwise.
+#   F-3: an attestor is NOT an approver -- only the SUBMITTING actor is authenticated + step-up gated
+#   (handlers.ts:115-137, index.ts:99); nothing proves a listed attestor consented. Eligibility makes
+#   the roster truthful about CAPABILITY, never about ASSENT. Real multi-party approval is the R9
+#   voting lifecycle, which fixed-amount.ts:15-19 forbids BY NAME (D3) ⇒ FR-15's "multi-trustee
+#   approval" stays PARTIALLY implemented after this story, and the ruling entry must say so.
+#   F-2 folded into Q2 as sub-point Q2.2: "State-Trustee panel" is a MISNOMER at every layer (domain
+#   comment, contracts DTO, two HTTP error strings, the page label). A literal state_trustee is
+#   INELIGIBLE BY ARITHMETIC -- scopeCeiling 'state' can never satisfy a pariwar-dimension check (rank
+#   order, NOT a missing resolver) -- holds NEITHER key (roles.ts:374-381), and §8.7 (niyamavali.md:270)
+#   says the Part 9 "State Trustee panel" is a GEOGRAPHIC body the Trustee Panel expressly is not.
+#   F-4: the fix is SMALL though the gap is serious -- role_grants is RLS-scoped, so moving the check
+#   onto the scope tx closes the cross-tenant case BY CONSTRUCTION, which is what assertPanelAuthorized
+#   already does at its two shipped call sites.
+#   ⚠ CITATION DISCIPLINE, RECORDED AS OBSERVED: every clause, line number and count re-read from
+#   SOURCE at 9fb88c3, none carried from the story file. FOUR line-number drifts + ONE QUOTE
+#   MIS-ATTRIBUTION were found in my own draft and corrected PRE-COMMIT (the draft attributed "it is
+#   the floor, not the directory" to deferred-work.md as well as epics.md; deferred-work.md:4468-4469
+#   says it in DIFFERENT words). Same failure mode as the 10.22 note's "Clause 27(b)", caught earlier.
+#   ⛔ CORRECTION TO 2026-08-16d's OWN COUNT: .decision-log.md carries 123 NUMBERED entries, not 124 --
+#   `grep -c '^### Decision '` returns 124 because :7102 is the YYYY-MM-DD-NNN TEMPLATE heading. The
+#   story file's validation pass already corrected this; recording it here so the ledger agrees.
+#   Only development_status[10-13-fixed-amount-setter-admin-ui] flips. NO other story status changed.)
+# last_updated: 2026-08-16d (10-13-fixed-amount-setter-admin-ui: backlog -> ready-for-dev via
+#   bmad-create-story, off main @ 9fb88c3 (clean, fetched, == origin/main). Saved
+#   10-13-fixed-amount-setter-admin-ui.md. NO code written, NO gate run, nothing here attested by a
+#   test run -- authoring pass only.
+#   ⛔ THE LOAD-BEARING FINDING: THE SURFACE 10.13 IS NAMED AFTER ALREADY SHIPPED. Story 7.5 built the
+#   whole stack INCLUDING the admin page (apps/admin/src/modules/pool-fixed-amount/FixedAmountPage.tsx,
+#   372 lines, routed at router.tsx:199-203). Every literal clause of epics.md:3813-3815 is already
+#   satisfied EXCEPT "shows current + SCHEDULED values" -- resolveUpcomingFixedAmountChange
+#   (fixed-amount.ts:212-229) exists and its ONLY consumer is the MEMBER card, not the trustee's own
+#   setter. The story is therefore scoped as the inherited obligation + one AC gap, NOT a re-build.
+#   ⛔ THE HOLE, TRACED END TO END: the emergency attesting panel has NO authorization in it. The
+#   textarea takes raw UUIDs (FixedAmountPage.tsx:247-257); contracts check SHAPE only (:107-125);
+#   the domain checks ARITHMETIC only -- non-empty / >=2 / no-duplicates (fixed-amount.ts:393-401);
+#   and the one identity check is getDisplayName(deps.pool, actorId) -> `SELECT display_name FROM
+#   users WHERE id = $1` (admin-auth.repo.ts:186-193) with NO tenant and NO role predicate, against a
+#   table documented GLOBAL, not pariwar-scoped (schema/users.ts:1-15). ⇒ ANY admin in ANY Pariwar can
+#   today be written onto this Pariwar's IMMUTABLE Emergency Adjustment Record. Every box is correct
+#   in isolation; the composition has none.
+#   ⭐ THE GOVERNING INSTRUMENTS ALREADY ANSWER "WHO", AND THE CODE DOES NOT MATCH THEM. Trust Deed
+#   Clause 10(b) (trust-deed.md:147) + Clause 20(c) (:241) and Niyamavali §4.2 (niyamavali.md:102, hi
+#   :100) all vest the per-Pool amount in the BOARD. The shipped route gates on pool.fixed_amount_set /
+#   ..._emergency, held by pariwar_admin ALONE (roles.ts:317-325). A pariwar_admin is not the Board --
+#   the SAME defect shape Story 10.18 existed to end ("no way to distinguish a Panel act from a
+#   pariwar_admin act", roles.ts:601-605). ⇒ TASK 1 IS A TRUSTEE PANEL ROUTING NOTE AND NO CODE LANDS
+#   BEFORE IT IS RULED.
+#   ⚠ AND 10.18 DOES NOT CARRY OVER BY ITSELF: §8.7 (niyamavali.md:266) constitutes the Panel as "the
+#   Board of Trustees acting in a MODERATION capacity". Amount-fixing is a DIFFERENT capacity, so a
+#   trustee_panel grant is a Panel decision, never an author default.
+#   FIVE QUESTIONS ROUTED, Q1/Q2/Q3 BLOCKING. Q1 the grant (⭐ grant + retain, the §8.7 concurrency
+#   posture; catalog 34 -> 35 with key count UNCHANGED at 43 -- the THIRD application of the 10.18 /
+#   6.17 rule that catalog version is not a proxy for key count). Q2 the directory (⭐ key-as-credential,
+#   the claim.r9_vote / claim.appeal_vote precedent at roles.ts:113-114/:315-316; option (b),
+#   asserted-at-attestation-time, is a legitimate CLOSURE and epics.md:3827-3829 admits it -- but it
+#   must be RECORDED, not defaulted into). Q3 Deed Clause 19(b) quorum is "one-half of the Trustees
+#   then in office, or two, whichever is HIGHER" (trust-deed.md:227) and POOL_FIXED_AMOUNT_MIN_PANEL_SIZE
+#   = 2 is that formula's LOWER bound (⭐ record it as a floor that is NOT the quorum; "one-half" is
+#   uncomputable without the very directory the epic forbids). ⛔ THE CONSTANT DOES NOT MOVE EITHER WAY
+#   (epics.md:3830, deferred-work.md:4469).
+#   ⚠ TWO FURTHER DIVERGENCES SURFACED AND ROUTED, NOT ABSORBED. Q4: Deed 10(b) / §4.2 fix the amount
+#   "for stated periods of NOT LESS THAN twelve months"; the code enforces minimum NOTICE only, never
+#   minimum DURATION, and closeOpenHead (fixed-amount.ts:261-287) makes a ONE-DAY window reachable from
+#   two conforming standard writes a day apart. ⭐ named successor, not absorbed -- it changes the WRITE
+#   path 7.5 owns, not the setter 10.13 owns. Q5: Story 7.5's file says the emergency-backdating replay
+#   question was "logged to deferred-work.md" -- ⛔ VERIFIED 2026-08-16, IT IS NOT THERE (the only 7.5
+#   entry is the documented_reason PII one at :1150-1152). The un-mechanized half decaying exactly as
+#   [[feedback_mechanization_split_commitment]] predicts.
+#   ⛔ NO NEW PRIMITIVE. assertPanelAuthorized exists TWICE (r9-voting-persist.ts:320-348,
+#   appeal-panel-persist.ts:249-274) and the directory-read shape once (resolveShepherdCandidates,
+#   shepherd-assign-persist.ts:190-247). Compose those; do NOT invent a trustee_directory table, and do
+#   NOT pull in the R9 voting lifecycle (fixed-amount.ts:15-19 forbids it in terms).
+#   FR-55's ANNOUNCEMENT half (prd.md:849 "drafts the copy; selects channels; schedules publish") is
+#   UNBUILT -- 7.5's D4 shipped a console seam deliberately. ⭐ Recommended CLOSED BY EDIT: Story 10.5's
+#   News/Blog console IS that machinery (channels[] per post + scheduled_publish_at + author≠reviewer +
+#   tone review); a second composer inside the setter is textbook reinvention. Disposition REQUIRED
+#   either way -- silence is what expires.
+#   Also recorded as OBSERVATIONS with named owners, no work here: the module has ZERO admin UI tests
+#   (uniquely among its siblings); the page predates the per-module i18n-en.ts chrome convention; and
+#   the UX §987-993 three-stage member-card transition (Month -3 / -1 / 0) is a SINGLE always-on line
+#   today (ActiveContributionCard.tsx:212-218) -- that is Story 8.2's surface, never 10.13's.
+#   PROVENANCE: every line number, clause number and count COMMIT-PINNED at 9fb88c3 and read from
+#   source; .decision-log.md head verified as 2026-08-16-122 (:37), 124 entries; docs/legal/ confirmed
+#   gitignored live (.gitignore:68) so any §4.2 amendment must be reproduced VERBATIM IN BOTH LOCALES
+#   in the ruling entry. Only development_status[10-13-fixed-amount-setter-admin-ui] flips. Do NOT flip
+#   epic-10-retrospective. NO other story status changed.)
 # last_updated: 2026-08-16c (10-22-moderation-appeal-mechanism: done, follow-up governance/docs pass
 #   via bmad-code-review -- the chunk deferred by 2026-08-16b's checkpoint. 7 files (.decision-log.md,
 #   this story file, deferred-work.md, sprint-status.yaml, the routing note, friction-budget.md,
@@ -6934,6 +7175,7 @@ development_status:
   7-8-under-funded-cycle-close-of-cycle-template-driven-framing: done
   7-9-pool-engine-pre-launch-measured-validation-gate: done
   7-10-pool-engine-onboarding-tutorial: done
+  7-11-fixed-amount-notice-period-and-fixed-period-reconciliation: backlog
   epic-7-retrospective: done
 
   # ==========================================================================
@@ -6990,7 +7232,7 @@ development_status:
   10-10-member-moderation-suspend-terminate-restore-reason-codes: done
   10-11-trustee-lite-list-signals: done
   10-12-per-pariwar-custom-fields-jsonb: done
-  10-13-fixed-amount-setter-admin-ui: backlog
+  10-13-fixed-amount-setter-admin-ui: done
   10-14-permission-delegation: backlog
   10-15-survey-poll: backlog
   10-16-contribution-during-suspension-disclosure: done

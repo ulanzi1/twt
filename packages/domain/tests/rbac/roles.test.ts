@@ -559,6 +559,54 @@ describe('defaultRoleBundles — the seeded roles (FR-46)', () => {
     // a moderation target gains a server-derived district AND the gate moves to `dimension: 'district'`
     // — never by widening the pariwar gate to a role whose ceiling cannot satisfy it.
   });
+
+  it('Story 10.13 — the fixed-amount keys are held CONCURRENTLY by trustee_panel AND pariwar_admin', () => {
+    // Decision `2026-08-16-123` clause 1. The Trust Deed vests the power to fix the per-Pool amount in
+    // the BOARD — Clause 10(b) ("a fixed per-Pool amount determined by the Board") and Clause 20(c)
+    // ("open Pools, fix per-Pool amounts") — and Niyamavali §4.2 repeats it. Story 7.5 shipped both
+    // keys on `pariwar_admin` ALONE, and a `pariwar_admin` is not the Board.
+    //
+    // ⚠ THIS IS THE FIRST trustee_panel GRANT THAT IS NOT EXCLUSIVE TO THE BUNDLE. `member.restore_terminated`
+    // (10.19) and `member.decide_moderation_appeal` (10.22) are Panel-ONLY, and that exclusivity IS the
+    // mechanism behind the ratified §8.4/§8.8 text. These two are deliberately CONCURRENT — the §8.7
+    // "concurrent, not exclusive" posture — so do NOT read the 10.19/10.22 "⛔ do not grant elsewhere"
+    // notes as covering these keys.
+    for (const KEY of ['pool.fixed_amount_set', 'pool.fixed_amount_emergency'] as const) {
+      const holders = defaultRoleBundles
+        .filter((b) => (b.permissions as readonly string[]).includes(KEY))
+        .map((b) => b.role)
+        .sort();
+      expect(holders).toEqual(['pariwar_admin', 'super_admin', 'trustee_panel']);
+      // The ceiling is the other half: granting the keys must not have widened the Panel's scope.
+      expect(bundleForRole('trustee_panel')?.scopeCeiling).toBe('pariwar');
+      // ⛔ NOT state_trustee / district_admin — a state/district-ceiling grant can NEVER satisfy the
+      // `pariwar`-dimension check these keys are gated at (rank order, not a missing resolver), so the
+      // grant would be INERT ON ARRIVAL. Not a deferral: an arithmetic impossibility.
+      for (const role of ['state_trustee', 'district_admin', 'block_admin', 'verifier', 'auditor'] as const) {
+        expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
+      }
+    }
+  });
+
+  it('Story 10.13 — `pool.fixed_amount_emergency` IS the panel-membership eligibility credential', () => {
+    // Decision `2026-08-16-123` clause 2 (Q2.1, option (a) — key-as-credential). The emergency
+    // attesting panel's eligibility predicate IS this key, checked at `dimension: 'pariwar'`, exactly
+    // as `claim.r9_vote` and `claim.appeal_vote` already are for their panels. This assertion is what
+    // makes that ruling observable in the capability model rather than only in a comment:
+    // assertFixedAmountPanelAuthorized resolves the holder set THROUGH the seeded bundles, so if this
+    // key ever left `trustee_panel`/`pariwar_admin`, the eligible-attestor directory would silently
+    // shrink and the emergency path would start refusing legitimate panels.
+    const KEY = 'pool.fixed_amount_emergency';
+    expect(isCatalogKey(KEY)).toBe(true);
+    const eligible = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(KEY))
+      .filter((b) => b.scopeCeiling === 'pariwar' || b.scopeCeiling === 'global')
+      .map((b) => b.role)
+      .sort();
+    // Every holder must ALSO have a ceiling that can satisfy a `pariwar`-dimension check — a holder
+    // that cannot is an inert grant, and would appear in `holders` above while never being eligible.
+    expect(eligible).toEqual(['pariwar_admin', 'super_admin', 'trustee_panel']);
+  });
 });
 
 describe('seedRoles — idempotent + deterministic (AC-3)', () => {

@@ -1,9 +1,10 @@
 // Fixed-amount schedule admin routes — Story 7.5 (Task 4; AC1/AC3/AC4).
 //
-// THREE scope-gated admin routes — the FR-15 fixed-amount schedule surface:
-//   · GET  …/admin/pool-fixed-amount           → the current schedule + effective amount (AC1)
-//   · POST …/admin/pool-fixed-amount/schedule  → a STANDARD (12-month-notice) change (AC1)
-//   · POST …/admin/pool-fixed-amount/emergency → an EMERGENCY adjustment override (AC3/AC4)
+// FOUR scope-gated admin routes — the FR-15 fixed-amount schedule surface:
+//   · GET  …/admin/pool-fixed-amount                     → the current + SCHEDULED amount (AC1; 10.13 AC4)
+//   · GET  …/admin/pool-fixed-amount/eligible-attestors  → the eligible-attestor directory (10.13 AC2)
+//   · POST …/admin/pool-fixed-amount/schedule            → a STANDARD (12-month-notice) change (AC1)
+//   · POST …/admin/pool-fixed-amount/emergency           → an EMERGENCY adjustment override (AC3/AC4)
 //
 // The route IS the security control: an authenticated HUMAN admin session + the fixed-amount WRITE
 // key at `dimension: 'pariwar'` (value = scopeTx.pariwarId — the cycle.freeze / claim.r9_vote
@@ -23,6 +24,7 @@ import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 
 import {
+  PoolFixedAmountEligibleAttestorsResponse,
   PoolFixedAmountEmergencyRequest,
   PoolFixedAmountEmergencyResponse,
   PoolFixedAmountScheduleRequest,
@@ -68,6 +70,29 @@ export function registerPoolFixedAmountModule(app: FastifyInstance, deps: AppDep
       preHandler: [adminSession, scope, requireSet],
     },
     h.getView,
+  );
+
+  // ⭐ Story 10.13 (AC2) — the eligible-attestor directory the emergency picker consumes.
+  // ⛔ GATED ON THE **EMERGENCY** KEY, NOT THE SET KEY, and that is the entire reason this is a
+  // sibling route rather than a field on the view above: enumerating who may attest an emergency
+  // override is itself emergency-surface information, and a response field cannot carry a different
+  // permission gate from the response it rides on.
+  // ⚠ NOT step-up gated — reading the directory is not the privileged ACT; submitting the override is,
+  // and that route keeps its step-up. Requiring elevation merely to populate a picker would push
+  // trustees to elevate before they have decided to act, which weakens what elevation means.
+  // ⚠ The human-actor CI gate scans this preHandler array STATICALLY — the chain is inlined literally
+  // here (a shared/spread variable is opaque to it), matching the three routes around it.
+  r.get(
+    '/api/v1/p/:pariwarId/admin/pool-fixed-amount/eligible-attestors',
+    {
+      schema: {
+        params: PariwarParam,
+        response: { 200: PoolFixedAmountEligibleAttestorsResponse },
+        tags: [TAG],
+      },
+      preHandler: [adminSession, scope, requireEmergency],
+    },
+    h.getEligibleAttestors,
   );
 
   // AC1 — a STANDARD (12-month-notice) change. The server re-checks the +365d floor (DB-authoritative).

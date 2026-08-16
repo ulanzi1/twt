@@ -38,6 +38,10 @@ export * from './assign.js';
 // the standard (12-month-notice) + emergency-override write paths + the immutable Emergency
 // Adjustment Record + the genesis seed. The typed errors ride pool/errors.ts (already exported).
 export * from './fixed-amount.js';
+// Story 10.13 (Tasks 4/5) — the emergency attesting panel's ELIGIBILITY predicate
+// (assertFixedAmountPanelAuthorized, the AC3 teeth) + the eligible-attestor DIRECTORY read the
+// picker consumes. Decision `2026-08-16-123` clauses 2-3. The typed error rides pool/errors.ts.
+export * from './fixed-amount-panel.js';
 // Story 7.6 (Tasks 1/2) — pool-bound payment enforcement: the member-cycle → assigned-pool +
 // collection-binding resolver (read from the PERSISTED snapshot, never a recompute — D1), the pure
 // wrong-pool classifier + its verdict/reason-code tuples (the contracts .strict() union is lockstep-

@@ -245,12 +245,16 @@ export class PoolFixedAmountReasonRequiredError extends PoolFixedAmountError {
 
 export const POOL_FIXED_AMOUNT_ATTESTATION_REQUIRED_CODE = 'pool.fixed_amount_attestation_required';
 
-/** An emergency override with an empty panel roster — a State-Trustee panel attestation is MANDATORY (AC3a). */
+/** An emergency override with an empty panel roster — an attesting trustee panel is MANDATORY (AC3a).
+ *  ⚠ Story 10.13 re-labelled the COPY from "State-Trustee" (Decision `2026-08-16-123` clause 10): a
+ *  literal `state_trustee` is ineligible BY ARITHMETIC — a `state`-ceiling grant can never satisfy the
+ *  `pariwar`-dimension check this panel is gated at — so the old wording named a body that could never
+ *  sit on it. ⛔ The stored `panel` column and the `panel_actor_ids` wire field are NOT renamed. */
 export class PoolFixedAmountAttestationRequiredError extends PoolFixedAmountError {
   public readonly name = 'PoolFixedAmountAttestationRequiredError';
   public readonly code = POOL_FIXED_AMOUNT_ATTESTATION_REQUIRED_CODE;
   public constructor() {
-    super(`emergency fixed_amount override requires a non-empty State-Trustee panel attestation`);
+    super(`emergency fixed_amount override requires a non-empty attesting trustee panel`);
   }
 }
 
@@ -271,7 +275,39 @@ export class PoolFixedAmountPanelTooSmallError extends PoolFixedAmountError {
   ) {
     super(
       `emergency fixed_amount override requires an attesting panel of at least ${minimum} distinct ` +
-        `State-Trustees; got ${received}`,
+        `trustees; got ${received}`,
+    );
+  }
+}
+
+export const POOL_FIXED_AMOUNT_PANEL_MEMBER_UNAUTHORIZED_CODE =
+  'pool.fixed_amount_panel_member_unauthorized';
+
+/**
+ * ⭐ Story 10.13 (AC3) — a submitted attesting-panel member who does NOT hold
+ * `pool.fixed_amount_emergency` at this Pariwar. Decision `2026-08-16-123` clause 2 (Q2.1 option (a),
+ * key-as-credential). Thrown by `assertFixedAmountPanelAuthorized`, fail-closed on the FIRST
+ * ineligible member.
+ *
+ * ⚠ SEPARATE from the three arithmetic guards it sits beside: {@link PoolFixedAmountAttestationRequiredError}
+ * (empty roster), {@link PoolFixedAmountPanelTooSmallError} (below the floor) and
+ * {@link PoolFixedAmountPanelDuplicateActorError} (same actor twice) all count attestors; this one is
+ * the only guard that asks WHO they are. Eligibility is an ADDITIONAL predicate, never a replacement —
+ * the arithmetic guards stay exactly where they are.
+ *
+ * ⚠ A cross-tenant holder — an actor holding the key in a DIFFERENT Pariwar — lands here too, because
+ * `role_grants` is RLS-scoped and their grants are invisible to the scoped query, folding to "no
+ * grants". That is the case the pre-10.13 code let through, and it is the case the test suite pins.
+ *
+ * ⚠ `actorId` is a system identifier, not member PII, and is safe in the rejection audit line.
+ */
+export class PoolFixedAmountPanelMemberUnauthorizedError extends PoolFixedAmountError {
+  public readonly name = 'PoolFixedAmountPanelMemberUnauthorizedError';
+  public readonly code = POOL_FIXED_AMOUNT_PANEL_MEMBER_UNAUTHORIZED_CODE;
+  public constructor(public readonly actorId: string) {
+    super(
+      `attesting panel member ${actorId} does not hold pool.fixed_amount_emergency in this Pariwar — ` +
+        `an emergency adjustment record may only name actors eligible to attest it`,
     );
   }
 }

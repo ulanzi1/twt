@@ -21,20 +21,23 @@ import { and, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
 import type { Db } from '../../../src/db.js';
-import { cycleFreezeCommitId as toCycleId, poolId as toPoolId } from '../../../src/ids/index.js';
+import { cycleFreezeCommitId as toCycleId, poolId as toPoolId, userId as toUserId } from '../../../src/ids/index.js';
 import {
   applyEmergencyOverride,
+  assertFixedAmountPanelAuthorized,
   getEffectiveFixedAmount,
   getEmergencyAttestation,
   planCycleSpawn,
   PoolFixedAmountNoticeTooShortError,
   PoolFixedAmountNotConfiguredError,
+  PoolFixedAmountPanelMemberUnauthorizedError,
+  resolveEligibleFixedAmountAttestors,
   scheduleStandardChange,
   spawnChildPool,
 } from '../../../src/pool/index.js';
 import * as schema from '../../../src/schema/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
-import { PARIWAR_A, enterAppScope } from '../_helpers.js';
+import { PARIWAR_A, PARIWAR_B, enterAppScope, seedRoleGrant } from '../_helpers.js';
 
 const COMMITTED_AT = new Date('2026-07-15T06:00:00Z');
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -276,5 +279,202 @@ describe.skipIf(!hasDatabase)('fixed-amount schedule (PARIWAR_A scope)', () => {
     await expect(getEffectiveFixedAmount(tx, PARIWAR_A, COMMITTED_AT)).rejects.toBeInstanceOf(
       PoolFixedAmountNotConfiguredError,
     );
+  });
+});
+
+// ── Story 10.13 — the emergency attesting panel's ELIGIBILITY (AC2/AC3) ─────────────────────────
+//
+// ⚠ THE LOAD-BEARING PROOF IS THE CROSS-TENANT ONE. Before this story the emergency path's only
+// identity check was `SELECT display_name FROM users WHERE id = $1` on the UNSCOPED pool against a
+// GLOBAL table, so an admin of ANOTHER Pariwar sailed onto this Pariwar's IMMUTABLE attestation
+// record. A same-tenant-only test would have passed against that broken behaviour too
+// ([[feedback_gate_scope_semantic_coverage]] — a green scan proves nothing).
+//
+// Seeds run BEFORE `enterAppScope` (as the Docker superuser, RLS bypassed) so BOTH tenants' grants
+// land; the reads then happen under app scope so RLS is genuinely exercised. Membership is asserted,
+// never counts ([[project_live_db_test_gotchas]]).
+
+/** Seed a users row WITH a display name (the base helper leaves it null). */
+async function seedNamedUser(tx: Db, id: string, displayName: string | null): Promise<string> {
+  await tx
+    .insert(schema.users)
+    .values({ id: toUserId(id), identityType: 'admin', status: 'active', displayName })
+    .onConflictDoNothing();
+  return id;
+}
+
+/** Seed an eligible attestor at `pariwarId`: a users row with a display name + a key-carrying grant. */
+async function seedAttestor(
+  tx: Db,
+  pariwarId: string,
+  opts: { displayName?: string | null; role?: string; scopeDimension?: 'pariwar' | 'state'; scopeValue?: string } = {},
+): Promise<string> {
+  const uid = randomUUID();
+  await seedNamedUser(tx, uid, opts.displayName === undefined ? `Trustee ${uid.slice(0, 4)}` : opts.displayName);
+  await seedRoleGrant(tx, pariwarId, {
+    userId: uid,
+    role: opts.role ?? 'trustee_panel',
+    scopeDimension: opts.scopeDimension ?? 'pariwar',
+    scopeValue: opts.scopeValue ?? pariwarId,
+  });
+  return uid;
+}
+
+describe.skipIf(!hasDatabase)('Story 10.13 — emergency attesting-panel eligibility (PARIWAR_A scope)', () => {
+  setupLiveDb();
+
+  it('ACCEPTS a panel whose every member holds the emergency key at this Pariwar', async () => {
+    const { client, tx } = getTx();
+    const a = await seedAttestor(tx, PARIWAR_A);
+    const b = await seedAttestor(tx, PARIWAR_A, { role: 'pariwar_admin' });
+    await enterAppScope(client, PARIWAR_A);
+
+    await expect(assertFixedAmountPanelAuthorized(client, PARIWAR_A, [a, b])).resolves.toBeUndefined();
+  });
+
+  it('REFUSES a member whose grant does not carry the emergency key', async () => {
+    const { client, tx } = getTx();
+    const a = await seedAttestor(tx, PARIWAR_A);
+    // `verifier` is a real seeded role and deliberately holds neither fixed-amount key.
+    const b = await seedAttestor(tx, PARIWAR_A, { role: 'verifier' });
+    await enterAppScope(client, PARIWAR_A);
+
+    await expect(assertFixedAmountPanelAuthorized(client, PARIWAR_A, [a, b])).rejects.toMatchObject({
+      name: 'PoolFixedAmountPanelMemberUnauthorizedError',
+      actorId: b,
+    });
+  });
+
+  it('⭐ REFUSES a CROSS-TENANT holder — the exact case the pre-10.13 code let through', async () => {
+    const { client, tx } = getTx();
+    const a = await seedAttestor(tx, PARIWAR_A);
+    // A FULL, valid trustee_panel grant — but in PARIWAR_B. Under PARIWAR_A's scope, RLS makes it
+    // invisible, so it folds to "no grants" and the pure predicate refuses.
+    const outsider = await seedAttestor(tx, PARIWAR_B);
+    await enterAppScope(client, PARIWAR_A);
+
+    await expect(
+      assertFixedAmountPanelAuthorized(client, PARIWAR_A, [a, outsider]),
+    ).rejects.toBeInstanceOf(PoolFixedAmountPanelMemberUnauthorizedError);
+  });
+
+  it('⛔ a refused override writes NO schedule row and NO attestation row', async () => {
+    const { client, tx } = getTx();
+    const a = await seedAttestor(tx, PARIWAR_A);
+    const outsider = await seedAttestor(tx, PARIWAR_B);
+    await enterAppScope(client, PARIWAR_A);
+
+    // The route asserts eligibility BEFORE calling applyEmergencyOverride, so the write never starts.
+    await expect(
+      assertFixedAmountPanelAuthorized(client, PARIWAR_A, [a, outsider]),
+    ).rejects.toBeInstanceOf(PoolFixedAmountPanelMemberUnauthorizedError);
+
+    const schedules = await tx
+      .select({ version: schema.poolFixedAmountSchedule.version })
+      .from(schema.poolFixedAmountSchedule)
+      .where(eq(schema.poolFixedAmountSchedule.pariwarId, PARIWAR_A));
+    const attestations = await tx
+      .select({ version: schema.poolFixedAmountEmergencyAttestations.scheduleVersion })
+      .from(schema.poolFixedAmountEmergencyAttestations)
+      .where(eq(schema.poolFixedAmountEmergencyAttestations.pariwarId, PARIWAR_A));
+    expect(schedules).toEqual([]);
+    expect(attestations).toEqual([]);
+  });
+
+  it('an eligible panel still writes the schedule row AND its immutable record together', async () => {
+    // The eligibility guard must not have broken the happy path it now fronts.
+    const { client, tx } = getTx();
+    const a = await seedAttestor(tx, PARIWAR_A);
+    const b = await seedAttestor(tx, PARIWAR_A, { role: 'pariwar_admin' });
+    await enterAppScope(client, PARIWAR_A);
+
+    await assertFixedAmountPanelAuthorized(client, PARIWAR_A, [a, b]);
+    const { schedule, attestation } = await applyEmergencyOverride(tx, {
+      pariwarId: PARIWAR_A,
+      fixedAmount: 720,
+      effectiveFrom: COMMITTED_AT,
+      documentedReason: 'Reserve adequacy review',
+      panel: [
+        { actor_id: a, actor_display: 'Trustee A' },
+        { actor_id: b, actor_display: 'Trustee B' },
+      ],
+      attestedByActor: 'trustee-actor-1',
+      attestedDisplay: 'Trustee One',
+    });
+    expect(schedule.changeType).toBe('emergency');
+    expect(attestation.scheduleVersion).toBe(schedule.version);
+    expect(attestation.panel.map((m) => m.actor_id).sort()).toEqual([a, b].sort());
+  });
+});
+
+describe.skipIf(!hasDatabase)('Story 10.13 — the eligible-attestor directory (PARIWAR_A scope)', () => {
+  setupLiveDb();
+
+  it('returns key-holding actors with their display names, ordered deterministically', async () => {
+    const { client, tx } = getTx();
+    const a = await seedAttestor(tx, PARIWAR_A, { displayName: 'Alice Trustee' });
+    const b = await seedAttestor(tx, PARIWAR_A, { displayName: 'Bharat Admin', role: 'pariwar_admin' });
+    await enterAppScope(client, PARIWAR_A);
+
+    const eligible = await resolveEligibleFixedAmountAttestors(tx, PARIWAR_A);
+    // Membership, not counts — other suites may seed grants of their own.
+    const ids = eligible.map((e) => e.actorId);
+    expect(ids).toContain(a);
+    expect(ids).toContain(b);
+    expect(eligible.find((e) => e.actorId === a)?.displayName).toBe('Alice Trustee');
+    // Deterministic, replayable order.
+    expect([...ids]).toEqual([...ids].sort());
+  });
+
+  it('EXCLUDES an actor with no display name, even though they hold the key', async () => {
+    // Not cosmetic: the write path resolves displays fail-closed, so offering such an actor in the
+    // picker would offer a choice guaranteed to 409.
+    const { client, tx } = getTx();
+    const nameless = await seedAttestor(tx, PARIWAR_A, { displayName: null });
+    await enterAppScope(client, PARIWAR_A);
+
+    const eligible = await resolveEligibleFixedAmountAttestors(tx, PARIWAR_A);
+    expect(eligible.map((e) => e.actorId)).not.toContain(nameless);
+  });
+
+  it('EXCLUDES an actor whose display name is whitespace-only', async () => {
+    const { client, tx } = getTx();
+    const blank = await seedAttestor(tx, PARIWAR_A, { displayName: '   ' });
+    await enterAppScope(client, PARIWAR_A);
+
+    const eligible = await resolveEligibleFixedAmountAttestors(tx, PARIWAR_A);
+    expect(eligible.map((e) => e.actorId)).not.toContain(blank);
+  });
+
+  it('EXCLUDES a holder whose role does not carry the emergency key', async () => {
+    const { client, tx } = getTx();
+    const verifier = await seedAttestor(tx, PARIWAR_A, { role: 'verifier', displayName: 'V Erifier' });
+    await enterAppScope(client, PARIWAR_A);
+
+    const eligible = await resolveEligibleFixedAmountAttestors(tx, PARIWAR_A);
+    expect(eligible.map((e) => e.actorId)).not.toContain(verifier);
+  });
+
+  it('⭐ EXCLUDES a CROSS-TENANT holder — the directory never leaks another Pariwar’s trustees', async () => {
+    const { client, tx } = getTx();
+    const outsider = await seedAttestor(tx, PARIWAR_B, { displayName: 'Other Pariwar Trustee' });
+    await enterAppScope(client, PARIWAR_A);
+
+    const eligible = await resolveEligibleFixedAmountAttestors(tx, PARIWAR_A);
+    expect(eligible.map((e) => e.actorId)).not.toContain(outsider);
+  });
+
+  it('the directory and the assertion AGREE on a seeded eligible actor', async () => {
+    // The picker is convenience and the assertion is the boundary, but a name the picker offers must
+    // never be one the boundary refuses — that would be a surface that lies to the trustee.
+    const { client, tx } = getTx();
+    const a = await seedAttestor(tx, PARIWAR_A, { displayName: 'Alice Trustee' });
+    const b = await seedAttestor(tx, PARIWAR_A, { displayName: 'Bharat Trustee' });
+    await enterAppScope(client, PARIWAR_A);
+
+    const eligible = await resolveEligibleFixedAmountAttestors(tx, PARIWAR_A);
+    const offered = eligible.map((e) => e.actorId).filter((id) => id === a || id === b);
+    expect(offered.sort()).toEqual([a, b].sort());
+    await expect(assertFixedAmountPanelAuthorized(client, PARIWAR_A, offered)).resolves.toBeUndefined();
   });
 });

@@ -59,7 +59,29 @@
 #   ⛔ NOT DONE, deliberately: the termination_access_block flip (Panel-exclusive, still only
 #   DISCHARGEABLE); any change to Epic 6's claim appeal; any new ModerationStatus/Action; publication
 #   of an outcome (a DECIDED absence); and NO fail-closed legal gate -- the 6.16 asymmetry is RULED,
-#   with the reasoning recorded in docs/appeal-procedural-fairness/moderation-appeal.md §3.)
+#   with the reasoning recorded in docs/appeal-procedural-fairness/moderation-appeal.md §3.
+#   ⛔ ci:local REPORTED AS OBSERVED AND IT IS NOT GREEN: 29 jobs pass, 2 fail (test-unit,
+#   integration-tests). ⚠ The FIRST run returned exit 0 from the BACKGROUND WRAPPER while ci:local
+#   itself failed 3 jobs -- the "partial run reported as green" failure this project has named
+#   repeatedly, caught before it propagated. THREE failures were MINE and are FIXED, all found by
+#   running to completion rather than named by the spec: the lint error (an unused helper in my new
+#   route test), the RTBF completeness count (11 tables/12 statements -> 13/16 --
+#   member_moderation_appeals takes TWO statements because reasoned_outcome scrubs only WHERE
+#   NON-NULL, or an open appeal trips 0107's coherence CHECK and every erasure of a member with a
+#   pending appeal FAILS), and BOTH member.* vocabulary count fixtures 22 -> 24, moved together as
+#   their own comments require. ⭐ The RTBF fixture failed BECAUSE IT WORKS -- it is the check that
+#   catches a Tier-1 column landing outside anonymizeMember, which is how the 10.10 rationale once
+#   survived an erasure.
+#   THE TWO REMAINING REDS ARE NOT THIS STORY'S, established not assumed: (a) a DIFFERENT set each
+#   run with NO overlap (run 2: niyamavali-engine/admin/channels/multi-tenant; run 3:
+#   measured-validation/banners/concealment/feature-flags/projection-equivalence); (b) durations of
+#   972,000ms -- a hang under contention, not an assertion; (c) every one GREEN IN ISOLATION (the
+#   four domain specs 88/88, measured-validation 28/28); and ⭐ (d) THE DECISIVE CHECK -- because my
+#   live-DB spec adds 14 tests, "pre-existing flake" and "my load tipped it" look identical from the
+#   summary, so the FULL @twt/domain suite was run ALONE with my spec included: 244/244 files, 2845
+#   passed, 1 skipped. ⇒ the load hypothesis is dead; the contention is CROSS-PACKAGE under
+#   turbo --concurrency=4. ⚠ That is a NARROWER claim than "green" and is deliberately not written
+#   as one.)
 # last_updated: 2026-08-15n (10-22-moderation-appeal-mechanism: ready-for-dev -> in-progress via
 #   bmad-dev-story, off main @ b3e12e1 (clean, fetched, == origin/main). GOVERNANCE HALF ONLY --
 #   the implementation half has NOT begun and §8.8 is NOT authored.

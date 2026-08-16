@@ -4,7 +4,7 @@ baseline_commit: b3e12e1000f1ad0fc6d0d4e18b093eae7c120df1
 
 # Story 10.22: Moderation Appeal Mechanism `[SURFACE]`
 
-Status: ready-for-dev
+Status: review
 
 > ⛔ **THIS STORY IS HALF GOVERNANCE, AND THE GOVERNANCE HALF LANDS FIRST.** Niyamavali **§8.8 is a
 > RESERVED NUMBER** (`niyamavali.md:274`, hi `:272`) held expressly for this amendment, and §8.6's
@@ -846,6 +846,63 @@ claim lives at **`:414-419`**. ⛔ The epic is not edited.
 | `@twt/ui` (3 added) | **108 passed** |
 | `@twt/admin` | **310 passed** |
 
+### ⛔ `pnpm ci:local` — REPORTED AS OBSERVED. It does NOT pass.
+
+**Final clean run: 29 jobs green, 2 red.**
+
+```
+✓ lint · typecheck · build · db-check · contracts-determinism · crypto-check
+✓ tokens-theme-check · i18n-parity · pii-scrape · friction-budget · schema-diff
+✓ benefit-mechanism · microcopy · domain-invariants · member-state-invariant
+✓ claim-state-invariant · claim-canonical-id-invariant
+✓ claim-adjudication-human-actor-invariant · kyc-provider-boundary
+✓ access-wrapper-invariants · pool-state-invariant · pool-support-category-invariant
+✓ pool-bound-payment-invariant · alert-state-invariant · helpdesk-state-invariant
+✓ governance-boundary · custom-field-governance · determinism-replay
+✓ channels-determinism
+✗ test (unit)
+✗ integration-tests
+ci:local FAILED — 2 job(s)
+```
+
+⛔ **The first run reported `exit code 0` from the BACKGROUND WRAPPER while `ci:local` itself failed
+3 jobs.** Reporting that as green would have been precisely the "partial run reported as green"
+failure this project has named repeatedly. Recorded here so the near-miss is on the record.
+
+**THREE failures were MINE and are FIXED** — found by running to completion, not named by the spec:
+
+| Failure | Cause | Fix |
+|---|---|---|
+| `lint` | An unused `named` helper left in the route test I added; my earlier per-package lint predated the file | removed |
+| RTBF completeness count | `member_moderation_appeals` is a 13th table taking TWO statements | 11/12 → **13/16**, rewritten to the new truth |
+| **BOTH** `member.*` vocabulary counts | the two appeal events take the tuple 22 → 24 | both moved together, as their own comments require |
+
+⭐ The RTBF fixture failed **because it works**: it is the completeness check that exists to catch a
+Tier-1 column landing outside `anonymizeMember` — which is how the 10.10 moderation rationale once
+survived an erasure request. It did its job again here.
+
+**THE TWO REMAINING REDS ARE NOT THIS STORY'S**, and that is established rather than assumed:
+
+1. **They are a DIFFERENT set each run.** Run 2 hit `niyamavali-engine`, admin `banners-page`,
+   `login-turnstile`, channels `dispatch-audit`, domain `multi-tenant`. Run 3 hit
+   `measured-validation`, `banners`, `concealment`, `feature-flags`, `projection-equivalence` —
+   **no overlap**. That is the documented different-red-spec-each-run class.
+2. **The durations are 972,000 ms** — ~16 minutes for a single test. That is a hang under connection
+   contention, not an assertion failing.
+3. **Every one passes IN ISOLATION** — the standing rule that a red spec in a full run is not evidence
+   of a regression until it fails alone: the four domain specs **88/88**; `measured-validation`
+   **28/28**; and run 2's set likewise all green.
+4. ⭐ **THE DECISIVE CHECK.** My live-DB spec adds 14 tests to the domain integration suite, so
+   "pre-existing flake" and "my story added enough load to tip it over" look IDENTICAL from the
+   summary. So the full `@twt/domain` suite was run ALONE, with my spec included:
+   **244/244 test files · 2845 passed · 1 skipped.** ⇒ the load hypothesis is dead; the contention is
+   **cross-package** under `turbo run test --concurrency=4`, not anything this story added.
+
+⚠ **Stated plainly: `ci:local` is not green, and this story does not make it green.** What is
+established is that its two reds are (a) not reproducible in isolation, (b) not stable across runs,
+and (c) not caused by this story's added load. ⛔ That is a narrower claim than "green", and it is
+deliberately not written as one.
+
 ### Revert-sanity — TWO, both restored byte-identical
 
 1. Mapping `member.moderation.appeal-decided` to `'restore'` in `MODERATION_EVENT_TYPE_ACTIONS` turned
@@ -923,6 +980,7 @@ claim lives at **`:414-419`**. ⛔ The epic is not edited.
 
 | Date | Change |
 |---|---|
+| 2026-08-16 | **Tasks 3–10 — the implementation half.** The three-tier amendment was ruled NOT RATIFIED, resolving C-1…C-7; §8.8 authored in both locales and ratified as Decision `2026-08-15-121`; migrations `0107`+`0108`; the record, two overlay-inert events, the exclusion 409, the minted key (v33→34, 42→43), both intake surfaces, the adjudication queue, the CTA's destination, all five untrue copy sites, the counsel sibling and `deferred-work.md` in three registers. **Five findings raised** — ⭐ chief among them that `0107` omitted `decided_at` from its column-level UPDATE grants, so **every determination would have failed with 42501**; caught only by the live-DB spec and fixed by forward migration `0108`. Six AC10 gates green with the limit-clamp gate genuinely FIRING on the new module; two revert-sanity proofs. ⛔ **`ci:local` reported AS OBSERVED: 29 green, 2 red** — three failures were mine and are fixed; the remaining two are the different-red-spec-each-run class, each green in isolation, with the full domain suite passing 244/244 ALONE to rule out this story's added load. |
 | 2026-08-15 | **Task 2, partial — the ruling is RECORDED, not actionable.** All ten questions ruled (every one option (a)), and **Q3D materially amended beyond the options offered** into a three-tier appeal ladder with majority voting, tie auto-escalation, no casting vote, no recusal, and finality at the third. Recorded verbatim at the foot of the routing note (`41dea31`) with a numbering map and an addition-not-option flag. ⛔ **SEVEN CONFLICTS SURFACED (C-1…C-7)** — including two against the **Trust Deed** itself (Clause 18(a): the Board is 3–9 Trustees, not 3; Clause 19(c): the Chairperson's casting vote is **mandated** and cannot be disapplied by a Part 8 amendment). **§8.8 NOT authored, no `.decision-log.md` entry, implementation branch NOT cut** — per the Panel's own direction to surface rather than invent. |
 | 2026-08-15 | **Task 0 + Task 1 (AC1).** Twelve premises re-verified live at `b3e12e1` — all PASS; two path citations in the story corrected (`packages/domain/migrations/`, `packages/domain/tests/rbac/permissions.test.ts`). ⭐ Task 0 finding: a **fifth** untrue copy site (`moderation.notice.terminated.body_access_retained`, en+hi) absent from the story's inventory — raised as routing-note **F-4**. Routing note authored with Q1–Q10 and committed **ALONE** (`56663ac`, zero `packages/`/`apps/` paths) on `governance/10-22-moderation-appeal-mechanism`. ⛔ **Story HALTED at Task 2 awaiting the Trustee Panel ruling.** |
 | 2026-08-15 | Story created — status `ready-for-dev`. Baseline `b3e12e1`. |

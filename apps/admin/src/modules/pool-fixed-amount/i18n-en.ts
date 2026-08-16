@@ -15,11 +15,22 @@
 // around them are not.
 
 const EN: Record<string, string> = {
+  // ── The page header (Q2.2 re-label; Review Findings, patch 5) ────────────────
+  // Changed from "...State-Trustee panel sign-off" — F-2 established a literal `state_trustee` is
+  // ineligible by arithmetic, so the old wording named a body that could never sit on this panel.
+  'fixedAmount.header.subtitle':
+    'The per-pool contribution amount snapshotted at spawn. Standard changes must be announced at least 12 months in advance (FR-15); the emergency override bypasses that notice and requires a step-up-attested trustee panel sign-off.',
+
   // ── The Scheduled region (AC4) ──────────────────────────────────────────────
   'fixedAmount.scheduled.heading': 'Scheduled',
   'fixedAmount.scheduled.none': 'No change is scheduled. The amount above stays in force until one is.',
   'fixedAmount.scheduled.hint':
     'This amount is not in force yet. Pools that spawn before the date below still snapshot the current amount.',
+  // Review Findings, re-run patch 6 — the summary line's fixed English words ("from", "schedule
+  // version") were still bare JSX literals interleaved with interpolated values; only the values
+  // stay raw now (the `banners/BannersPage.tsx` interpolation precedent).
+  'fixedAmount.scheduled.from': 'from',
+  'fixedAmount.scheduled.versionLabel': 'schedule version',
 
   // ── The attesting-panel picker (AC2) ────────────────────────────────────────
   'fixedAmount.panel.heading': 'Attesting panel',

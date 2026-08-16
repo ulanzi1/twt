@@ -5214,3 +5214,40 @@ review of **§8.8** (§2 above). Stated as a fact, not as a new count — the co
   `packages/domain/migrations/0108_moderation-appeal-decided-at-grant.sql`] *Owner:* none yet.
   *Re-trigger:* if a future migration's GRANT set is hand-enumerated again and a column write silently
   fails until a live-DB test happens to exercise it.
+
+---
+
+## Deferred from: code review of 10-13-fixed-amount-setter-admin-ui (2026-08-16)
+
+- **Eligible-attestor directory is unbounded on the wire while capped at 500 grant rows internally, with
+  no truncation signal.** `PoolFixedAmountEligibleAttestorsResponse.attestors` (`packages/contracts/src/
+  pools/fixed-amount.ts`) carries no `has_more`-style flag the way `PoolFixedAmountView.schedule_has_more`
+  does in the same file, but `resolveEligibleFixedAmountAttestors` (`packages/domain/src/pool/
+  fixed-amount-panel.ts:229`) caps its query at a literal `.limit(500)` GRANT rows (not distinct actors —
+  one actor may hold several key-carrying grants). A Pariwar whose qualifying grant rows exceed 500 would
+  silently lose eligible attestors from the picker with zero indication. *Owner:* none yet. *Re-trigger:*
+  if a Pariwar is ever observed nearing that row count, or if a pagination/flag convention is adopted
+  elsewhere on this surface.
+
+- **The eligible-attestor picker's non-403 failure handling has no retry affordance.**
+  `useFixedAmountEligibleAttestors` (`apps/admin/src/api/hooks.ts:59-67`) sets `retry: false`, and the
+  picker (`FixedAmountPage.tsx:293-300`) collapses every non-403 failure — including a genuine 401 — into
+  one generic "Could not load the eligible attestors. Try refreshing the page." message, with no in-page
+  refetch button. *Owner:* none yet. *Re-trigger:* if a transient-failure UX pass is ever done on this
+  module, or if trustees report the message during a real outage.
+
+- **Silent no-op on "Apply emergency override" when the panel selection is under 2 or the reason is
+  blank.** `runEmergency` (`apps/admin/src/modules/pool-fixed-amount/FixedAmountPage.tsx:100-106`) returns
+  early with no visible feedback — matches the pre-existing house-style guard already shipped for the
+  amount field in Story 7.5, so this is not a regression introduced by 10.13, but it remains a real gap
+  for the NEW panel-selection guard specifically. *Owner:* none yet. *Re-trigger:* if a broader
+  form-validation-feedback pass is ever done across `pool-fixed-amount` or its siblings.
+
+- **No test pins fail-closed behavior for a stale/renamed role on an existing grant.** Both
+  `assertFixedAmountPanelAuthorized` and `resolveEligibleFixedAmountAttestors`
+  (`packages/domain/src/pool/fixed-amount-panel.ts:159-167`) resolve eligibility through
+  `defaultRoleBundles`; `role_grants.role` is plain `text`, not FK'd to an enum, so a grant issued under a
+  role name later renamed or removed from the bundle is a reachable state with no dedicated test. Fail-
+  closed behavior is structurally guaranteed by the bundle lookup returning no match, but unverified by an
+  explicit assertion. *Owner:* none yet. *Re-trigger:* if a role is ever renamed/removed from
+  `defaultRoleBundles` while grants issued under the old name still exist.

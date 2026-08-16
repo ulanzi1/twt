@@ -75,7 +75,6 @@ export const PoolFixedAmountScheduleEntry = z
   .strict();
 export type PoolFixedAmountScheduleEntry = z.output<typeof PoolFixedAmountScheduleEntry>;
 
-/** GET …/admin/pool-fixed-amount — the current schedule + the amount effective NOW. */
 /**
  * ⭐ Story 10.13 (AC4) — the NEXT scheduled change that has NOT YET taken effect.
  *
@@ -99,6 +98,7 @@ export const PoolFixedAmountUpcomingChange = z
   .strict();
 export type PoolFixedAmountUpcomingChange = z.output<typeof PoolFixedAmountUpcomingChange>;
 
+/** GET …/admin/pool-fixed-amount — the current schedule + the amount effective NOW. */
 export const PoolFixedAmountView = z
   .object({
     pariwar_id: z.string().uuid(),

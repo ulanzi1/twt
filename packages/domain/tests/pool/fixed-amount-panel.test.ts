@@ -86,6 +86,17 @@ describe('assertFixedAmountPanelAuthorized — the AC3 eligibility predicate', (
     }
   });
 
+  it('accepts a panel that includes the SUBMITTING actor themselves (Q2.1(c) offered, not taken)', async () => {
+    // Review Findings, patch 3 — the module's own comments state this is deliberately allowed
+    // (Decision `2026-08-16-123` clause 3: no submitter-distinctness check was ruled in), but nothing
+    // pinned it against a future "fix". The submitting actor is just another eligible attestor to this
+    // predicate — it has no notion of "who submitted", only "who is in the roster".
+    const { client } = fakeClient([panelAdmin('submitter'), pariwarAdmin('b')], PARIWAR);
+    await expect(
+      assertFixedAmountPanelAuthorized(client, PARIWAR, ['submitter', 'b']),
+    ).resolves.toBeUndefined();
+  });
+
   it('REFUSES a member holding no grant at all', async () => {
     const { client } = fakeClient([panelAdmin('a')], PARIWAR);
     await expect(assertFixedAmountPanelAuthorized(client, PARIWAR, ['a', 'nobody'])).rejects.toBeInstanceOf(
@@ -156,7 +167,10 @@ describe('assertFixedAmountPanelAuthorized — the AC3 eligibility predicate', (
     await assertFixedAmountPanelAuthorized(client, PARIWAR, ['a', 'b']);
     expect(calls).toHaveLength(1);
     expect(calls[0]!.text).toContain('FROM role_grants');
-    expect(calls[0]!.values).toEqual([['a', 'b']]);
+    // Review Findings, patch 2 — an explicit `pariwar_id` predicate now rides alongside the actor-id
+    // array (belt-and-braces on top of RLS, matching `resolveEligibleFixedAmountAttestors`'s posture).
+    expect(calls[0]!.text).toContain('pariwar_id = $2');
+    expect(calls[0]!.values).toEqual([['a', 'b'], PARIWAR]);
   });
 
   it('an EMPTY roster is not this guard’s refusal — the arithmetic guards own it', async () => {

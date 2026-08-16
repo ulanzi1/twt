@@ -4,7 +4,7 @@ baseline_commit: 9fb88c318eed9e22614f16ffd86aa964d65f3ebd
 
 # Story 10.13: Fixed-Amount Setter Admin UI `[SURFACE]`
 
-Status: review
+Status: done
 
 Epic: 10 · Story: 13 · Key: `10-13-fixed-amount-setter-admin-ui`
 Authored: 2026-08-16 · Baseline: `main` @ `9fb88c3` (clean, fetched, `== origin/main`)
@@ -392,6 +392,96 @@ this story. ⚠ Record it as *observed*, not as *deferred by 10.13* — 10.13 ne
         ([[project_known_livedb_test_failures]], [[project_ci_local_concurrency_oversubscription]],
         [[project_ci_local_double_run_pollution]]). `git push` runs the full `ci:local` via a pre-push
         hook — that is the "hang", not a failure.
+
+---
+
+### Review Findings
+
+Adversarial review (`/bmad-code-review 10.13`, 2026-08-16), three parallel layers (Blind Hunter,
+Edge Case Hunter, Acceptance Auditor) against `main..HEAD` (code-only diff, 21 files). 12 unique
+findings after dedup; 0 decision-needed, 5 patch, 4 deferred, 3 dismissed as noise (matched the
+codebase's own established conventions on inspection — see dismiss notes below).
+
+**Patch (all applied 2026-08-16 — 12 domain + 21 contracts + 11 admin tests green, 3 packages typecheck clean):**
+
+- [x] [Review][Patch] Misattached JSDoc: the pre-existing "GET …/admin/pool-fixed-amount — the
+      current schedule + the amount effective NOW" comment now sits directly above the NEW
+      `PoolFixedAmountUpcomingChange` block instead of `PoolFixedAmountView`, so it reads as
+      documentation for the wrong export [packages/contracts/src/pools/fixed-amount.ts:~79] —
+      **fixed**: comment moved back above `PoolFixedAmountView`.
+- [x] [Review][Patch] `assertFixedAmountPanelAuthorized`'s raw SQL has no explicit `pariwar_id`
+      predicate, unlike `resolveEligibleFixedAmountAttestors`'s "belt-and-braces on top of RLS"
+      predicate in the same file — asymmetric application of the same file's own stated defense-in-depth
+      posture (functionally safe today; `hasPermission`'s own scope check independently refuses a
+      cross-tenant grant, proven by a dedicated test) [packages/domain/src/pool/fixed-amount-panel.ts:154]
+      — **fixed**: added `AND pariwar_id = $2`; the "defence in depth" unit test still exercises the
+      unfiltered path via its own mock and still passes, confirming the fix is additive, not a substitute.
+- [x] [Review][Patch] No test pins the deliberately-allowed self-attestation case — the module's own
+      comments state a submitting trustee may list themselves among the attestors and count toward the
+      ≥2 floor (Q2.1(c) offered, not taken), but no test in either new suite submits a panel containing
+      the acting actor's own id to guard that ruled behavior against a future "fix"
+      [packages/domain/tests/pool/fixed-amount-panel.test.ts] — **fixed**: added
+      `'accepts a panel that includes the SUBMITTING actor themselves'`.
+- [x] [Review][Patch] Stale checked panel members are not reconciled when the eligible-attestor list
+      changes shape (e.g. a background TanStack Query refetch shrinks it) — a previously-checked actor id
+      no longer present in `eligible` stays in `emgPanel` and is still submitted, with no visible
+      checkbox for it [apps/admin/src/modules/pool-fixed-amount/FixedAmountPage.tsx:88-98] — **fixed**:
+      added a `useEffect` pruning `emgPanel` to the intersection with `attestors.data` on change.
+- [x] [Review][Patch] AC5 violation (Acceptance Auditor): the header copy changed from
+      "…State-Trustee panel sign-off" to "…trustee panel sign-off" is a bare JSX text literal, never
+      routed through the module's own `t()` resolver — every sibling Q2.2 re-label (picker legend, HTTP/
+      domain error strings) was correctly moved, this one page-copy string was missed
+      [apps/admin/src/modules/pool-fixed-amount/FixedAmountPage.tsx:151] — **fixed**: moved to
+      `i18n-en.ts` as `fixedAmount.header.subtitle`, page now calls `t(...)`.
+
+**Deferred:**
+
+- [x] [Review][Defer] `PoolFixedAmountEligibleAttestorsResponse.attestors` is unbounded on the wire
+      while the domain accessor caps at a literal `.limit(500)` GRANT rows (not distinct actors) with no
+      `has_more`-style signal — a Pariwar with unusually many key-carrying grant rows could silently lose
+      eligible attestors off the picker [packages/contracts/src/pools/fixed-amount.ts;
+      packages/domain/src/pool/fixed-amount-panel.ts:229] — deferred, needs a pagination/flag design
+      decision rather than a mechanical fix; far outside any realistic trustee-body size today
+- [x] [Review][Defer] The eligible-attestor picker collapses every non-403 load failure (including a
+      genuine 401) into one generic "could not load" message, and `useFixedAmountEligibleAttestors` sets
+      `retry: false` with no refetch affordance in the UI short of a full page reload
+      [apps/admin/src/api/hooks.ts:59-67; FixedAmountPage.tsx:293-300] — deferred, low-severity UX polish
+- [x] [Review][Defer] Clicking "Apply emergency override" with fewer than 2 selected attestors or a
+      blank reason silently no-ops with zero user feedback (a bare early `return;`)
+      [apps/admin/src/modules/pool-fixed-amount/FixedAmountPage.tsx:100-106] — deferred, matches the
+      pre-existing house-style guard already shipped for the amount field in Story 7.5; not a regression
+      introduced by 10.13
+- [x] [Review][Defer] No test pins fail-closed behavior when a `role_grants.role` value on an existing
+      grant no longer matches any bundle in `defaultRoleBundles` (a stale/renamed role, reachable since
+      `role_grants.role` is plain `text`, not FK'd to an enum) [packages/domain/src/pool/fixed-amount-panel.ts:159-167]
+      — deferred, marginal value; fail-closed is structurally guaranteed by `hasPermission`'s own bundle
+      lookup returning no match
+
+**Dismissed as noise (3):** `resolveEn`'s `EN[key] ?? key` fallback-on-miss — verified live against
+`apps/admin/src/modules/banners/i18n-en.ts`, byte-for-byte the same established convention, not a
+deviation; the double value+type import of `PoolFixedAmountEligibleAttestorsResponse` in
+`apps/admin/src/api/client.ts` — matches every other DTO import in the same file; `emgPanel` not reset
+after a successful emergency submit — matches the pre-existing (7.5) behavior of `emgAmount`/`emgReason`
+also not resetting, not a regression.
+
+### Review Findings — re-run (2026-08-16, post-patch)
+
+Re-ran all three layers against the full 27-file diff (widened scope, per request, to include the
+governance/planning docs). Patches 1–5 above re-verified sound: unit + typecheck as before, **plus** the
+riskiest one (patch 2's new SQL predicate) re-proven against a **live** Postgres (`twt-test-pg:5433`) —
+`packages/domain/tests/integration/pool/pool-fixed-amount.spec.ts` 17/17 green including cross-tenant,
+`apps/api/tests/integration/pool-fixed-amount/fixed-amount.spec.ts` 14/14 green. Governance/planning docs
+(`.decision-log.md`, `deferred-work.md`, `epics.md`, `sprint-status.yaml`, the routing note) read in full
+and cross-checked for self-consistency — none found. 1 new finding surfaced, 0 decision-needed.
+
+- [x] [Review][Patch] AC5 violation (Acceptance Auditor, re-run): the Scheduled region's summary line —
+      "₹{amount} from {date} (schedule version {version}, {change_type})" — mixed bare English JSX
+      literals ("from", "schedule version") with interpolated values, the same defect shape as the
+      already-fixed header string; the codebase's own precedent (`banners/BannersPage.tsx`) keeps fixed
+      wording in `t()` and interpolates only the values
+      [apps/admin/src/modules/pool-fixed-amount/FixedAmountPage.tsx:196-199] — **fixed**: added
+      `fixedAmount.scheduled.from` / `fixedAmount.scheduled.versionLabel` to `i18n-en.ts`, page now calls
+      `t(...)` for both; rendered output unchanged (11 admin tests still green, typecheck clean).
 
 ---
 

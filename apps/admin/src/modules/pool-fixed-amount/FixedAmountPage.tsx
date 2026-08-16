@@ -9,7 +9,7 @@
 // requireStepUp on the emergency route); a non-holder / un-elevated actor sees the API 403 here.
 
 import type { ReactElement } from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { ApiError } from '../../api/client.js';
 import {
@@ -74,6 +74,19 @@ export function FixedAmountPage({ pariwarId }: FixedAmountPageProps): ReactEleme
   // text. A Set (not an array) so toggling is O(1) and a double-click cannot produce a duplicate at all
   // — the client-side de-dupe the textarea needed is now structural.
   const [emgPanel, setEmgPanel] = useState<ReadonlySet<string>>(() => new Set());
+
+  // Review Findings, patch 4 — prune a checked selection the moment the eligible-attestor list no
+  // longer contains it (e.g. a background refetch shrinks it because a grant was revoked). Without
+  // this, a hidden actor id could stay in `emgPanel` — no visible checkbox for it, but still submitted.
+  useEffect(() => {
+    const eligibleIds = attestors.data?.attestors;
+    if (!eligibleIds) return; // still loading / errored — nothing to reconcile against yet.
+    const validIds = new Set(eligibleIds.map((a) => a.actor_id));
+    setEmgPanel((prev) => {
+      const pruned = new Set([...prev].filter((id) => validIds.has(id)));
+      return pruned.size === prev.size ? prev : pruned;
+    });
+  }, [attestors.data]);
 
   const [stepUpRequired, setStepUpRequired] = useState(false);
   const [otp, setOtp] = useState('');
@@ -145,11 +158,7 @@ export function FixedAmountPage({ pariwarId }: FixedAmountPageProps): ReactEleme
     <div className="flex flex-col gap-6">
       <header>
         <h1 className="text-lg font-semibold">Fixed contribution amount — schedule &amp; changes</h1>
-        <p className="text-sm opacity-70">
-          The per-pool contribution amount snapshotted at spawn. Standard changes must be announced at least
-          12 months in advance (FR-15); the emergency override bypasses that notice and requires a
-          step-up-attested trustee panel sign-off.
-        </p>
+        <p className="text-sm opacity-70">{t('fixedAmount.header.subtitle')}</p>
       </header>
 
       {view.isLoading ? (
@@ -185,9 +194,9 @@ export function FixedAmountPage({ pariwarId }: FixedAmountPageProps): ReactEleme
             {data && data.upcoming ? (
               <>
                 <p className="text-sm">
-                  ₹{data.upcoming.fixed_amount} from{' '}
-                  {new Date(data.upcoming.effective_from).toLocaleDateString()} (schedule version{' '}
-                  {data.upcoming.version}, {data.upcoming.change_type})
+                  ₹{data.upcoming.fixed_amount} {t('fixedAmount.scheduled.from')}{' '}
+                  {new Date(data.upcoming.effective_from).toLocaleDateString()} (
+                  {t('fixedAmount.scheduled.versionLabel')} {data.upcoming.version}, {data.upcoming.change_type})
                 </p>
                 <p className="mt-1 text-xs opacity-70">{t('fixedAmount.scheduled.hint')}</p>
               </>

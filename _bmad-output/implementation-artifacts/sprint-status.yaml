@@ -1,4 +1,31 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-16i (10-13-fixed-amount-setter-admin-ui: stays DONE. Re-run of
+#   /bmad-code-review at user request, widened to the FULL 27-file diff (code + governance/planning
+#   docs, ~4432 lines) rather than just the 5 patched files. 1 new finding: the AC4 Scheduled
+#   region's summary line mixed bare English JSX literals ("from", "schedule version") with
+#   interpolated values -- same defect shape as the already-fixed header string, missed by the
+#   first pass because it wasn't isolated as its own string. Fixed: two new i18n-en.ts keys
+#   (`fixedAmount.scheduled.from` / `...versionLabel`), rendered output unchanged, 11 admin tests +
+#   typecheck still green. The 5 prior patches re-verified sound, patch 2's new SQL predicate
+#   additionally proven against LIVE Postgres this time (17/17 + 14/14 integration/E2E tests,
+#   including cross-tenant), not just the mocked unit test. Governance/planning docs read in full
+#   and cross-checked for self-consistency -- none found. Status stays done; only the story's own
+#   Review Findings section grows. Only development_status[10-13-fixed-amount-setter-admin-ui]
+#   touched (value unchanged, already done).)
+# last_updated: 2026-08-16h (10-13-fixed-amount-setter-admin-ui: REVIEW -> DONE via
+#   /bmad-code-review. Three parallel layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor)
+#   against main..HEAD, 21 code files. 12 unique findings after dedup: 0 decision-needed, 5 patch
+#   (all applied — misattached JSDoc in contracts/fixed-amount.ts; missing belt-and-braces
+#   `pariwar_id` predicate in assertFixedAmountPanelAuthorized's SQL; a missing self-attestation
+#   regression test; a stale-panel-selection reconciliation gap in FixedAmountPage.tsx; one AC5
+#   header string that bypassed the module's i18n resolver), 4 deferred to deferred-work.md
+#   (directory truncation at .limit(500) with no has_more signal; no-retry-affordance on a
+#   non-403 picker load failure; silent no-op on an under-filled emergency form submit, matching
+#   pre-existing 7.5 house style; no test for a stale/renamed role_grants.role string), 3
+#   dismissed as noise (all matched the codebase's own established conventions on inspection, not
+#   deviations). Post-fix: 12 domain + 21 contracts + 11 admin tests green, 3 packages typecheck
+#   clean. Findings + fixes recorded in the story's own Review Findings section. Only
+#   development_status[10-13-fixed-amount-setter-admin-ui] flips.)
 # last_updated: 2026-08-16g (10-13-fixed-amount-setter-admin-ui: IN-PROGRESS -> REVIEW via
 #   bmad-dev-story. All 9 tasks + all subtasks complete; ACs 1-7 satisfied. Branch
 #   governance/10-13-fixed-amount-setter-admin-ui, 9 commits: 3 governance: then 6 story:, so git log
@@ -7205,7 +7232,7 @@ development_status:
   10-10-member-moderation-suspend-terminate-restore-reason-codes: done
   10-11-trustee-lite-list-signals: done
   10-12-per-pariwar-custom-fields-jsonb: done
-  10-13-fixed-amount-setter-admin-ui: review
+  10-13-fixed-amount-setter-admin-ui: done
   10-14-permission-delegation: backlog
   10-15-survey-poll: backlog
   10-16-contribution-during-suspension-disclosure: done

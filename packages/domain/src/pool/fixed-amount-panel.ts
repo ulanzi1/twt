@@ -144,6 +144,11 @@ export async function assertFixedAmountPanelAuthorized(
 ): Promise<void> {
   if (panelActorIds.length === 0) return; // the empty-panel case is the caller's own typed guard.
 
+  // ⚠ Belt-and-braces (Review Findings, patch 2): an EXPLICIT `pariwar_id` predicate on top of RLS,
+  // matching `resolveEligibleFixedAmountAttestors`'s posture in this same file. RLS already makes a
+  // cross-tenant grant invisible, and `hasPermission`'s own scope check below refuses one even if it
+  // weren't (proven by the "even if RLS did NOT hide the row" unit test) — this predicate is a second,
+  // independent guard, not the only one.
   const res = await client.query<{
     user_id: string;
     pariwar_id: string;
@@ -151,8 +156,9 @@ export async function assertFixedAmountPanelAuthorized(
     scope_dimension: EffectiveGrant['scopeDimension'];
     scope_value: string | null;
   }>(
-    `SELECT user_id, pariwar_id, role, scope_dimension, scope_value FROM role_grants WHERE user_id = ANY($1)`,
-    [[...panelActorIds]],
+    `SELECT user_id, pariwar_id, role, scope_dimension, scope_value FROM role_grants
+     WHERE user_id = ANY($1) AND pariwar_id = $2`,
+    [[...panelActorIds], pariwarId],
   );
   const grantsByActor = groupGrantsByActor(res.rows);
 

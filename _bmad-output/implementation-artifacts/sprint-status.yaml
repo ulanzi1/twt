@@ -1,4 +1,74 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-16e (10-13-fixed-amount-setter-admin-ui: ready-for-dev -> IN-PROGRESS via
+#   bmad-dev-story, branch governance/10-13-fixed-amount-setter-admin-ui cut from main @ 9fb88c3
+#   (fetched, == origin/main). Story baseline_commit already pinned at authoring; preserved, not
+#   rewritten. NOTHING BUILT YET -- Task 1 is the routing note and the story's own Task 1 carries an
+#   explicit ⏸ STOP: no implementation commit lands before Q1/Q2/Q3 are RULED by the Trustee Panel.
+#   Only development_status[10-13-fixed-amount-setter-admin-ui] flips. NO other story status changed.)
+# last_updated: 2026-08-16d (10-13-fixed-amount-setter-admin-ui: backlog -> ready-for-dev via
+#   bmad-create-story, off main @ 9fb88c3 (clean, fetched, == origin/main). Saved
+#   10-13-fixed-amount-setter-admin-ui.md. NO code written, NO gate run, nothing here attested by a
+#   test run -- authoring pass only.
+#   ⛔ THE LOAD-BEARING FINDING: THE SURFACE 10.13 IS NAMED AFTER ALREADY SHIPPED. Story 7.5 built the
+#   whole stack INCLUDING the admin page (apps/admin/src/modules/pool-fixed-amount/FixedAmountPage.tsx,
+#   372 lines, routed at router.tsx:199-203). Every literal clause of epics.md:3813-3815 is already
+#   satisfied EXCEPT "shows current + SCHEDULED values" -- resolveUpcomingFixedAmountChange
+#   (fixed-amount.ts:212-229) exists and its ONLY consumer is the MEMBER card, not the trustee's own
+#   setter. The story is therefore scoped as the inherited obligation + one AC gap, NOT a re-build.
+#   ⛔ THE HOLE, TRACED END TO END: the emergency attesting panel has NO authorization in it. The
+#   textarea takes raw UUIDs (FixedAmountPage.tsx:247-257); contracts check SHAPE only (:107-125);
+#   the domain checks ARITHMETIC only -- non-empty / >=2 / no-duplicates (fixed-amount.ts:393-401);
+#   and the one identity check is getDisplayName(deps.pool, actorId) -> `SELECT display_name FROM
+#   users WHERE id = $1` (admin-auth.repo.ts:186-193) with NO tenant and NO role predicate, against a
+#   table documented GLOBAL, not pariwar-scoped (schema/users.ts:1-15). ⇒ ANY admin in ANY Pariwar can
+#   today be written onto this Pariwar's IMMUTABLE Emergency Adjustment Record. Every box is correct
+#   in isolation; the composition has none.
+#   ⭐ THE GOVERNING INSTRUMENTS ALREADY ANSWER "WHO", AND THE CODE DOES NOT MATCH THEM. Trust Deed
+#   Clause 10(b) (trust-deed.md:147) + Clause 20(c) (:241) and Niyamavali §4.2 (niyamavali.md:102, hi
+#   :100) all vest the per-Pool amount in the BOARD. The shipped route gates on pool.fixed_amount_set /
+#   ..._emergency, held by pariwar_admin ALONE (roles.ts:317-325). A pariwar_admin is not the Board --
+#   the SAME defect shape Story 10.18 existed to end ("no way to distinguish a Panel act from a
+#   pariwar_admin act", roles.ts:601-605). ⇒ TASK 1 IS A TRUSTEE PANEL ROUTING NOTE AND NO CODE LANDS
+#   BEFORE IT IS RULED.
+#   ⚠ AND 10.18 DOES NOT CARRY OVER BY ITSELF: §8.7 (niyamavali.md:266) constitutes the Panel as "the
+#   Board of Trustees acting in a MODERATION capacity". Amount-fixing is a DIFFERENT capacity, so a
+#   trustee_panel grant is a Panel decision, never an author default.
+#   FIVE QUESTIONS ROUTED, Q1/Q2/Q3 BLOCKING. Q1 the grant (⭐ grant + retain, the §8.7 concurrency
+#   posture; catalog 34 -> 35 with key count UNCHANGED at 43 -- the THIRD application of the 10.18 /
+#   6.17 rule that catalog version is not a proxy for key count). Q2 the directory (⭐ key-as-credential,
+#   the claim.r9_vote / claim.appeal_vote precedent at roles.ts:113-114/:315-316; option (b),
+#   asserted-at-attestation-time, is a legitimate CLOSURE and epics.md:3827-3829 admits it -- but it
+#   must be RECORDED, not defaulted into). Q3 Deed Clause 19(b) quorum is "one-half of the Trustees
+#   then in office, or two, whichever is HIGHER" (trust-deed.md:227) and POOL_FIXED_AMOUNT_MIN_PANEL_SIZE
+#   = 2 is that formula's LOWER bound (⭐ record it as a floor that is NOT the quorum; "one-half" is
+#   uncomputable without the very directory the epic forbids). ⛔ THE CONSTANT DOES NOT MOVE EITHER WAY
+#   (epics.md:3830, deferred-work.md:4469).
+#   ⚠ TWO FURTHER DIVERGENCES SURFACED AND ROUTED, NOT ABSORBED. Q4: Deed 10(b) / §4.2 fix the amount
+#   "for stated periods of NOT LESS THAN twelve months"; the code enforces minimum NOTICE only, never
+#   minimum DURATION, and closeOpenHead (fixed-amount.ts:261-287) makes a ONE-DAY window reachable from
+#   two conforming standard writes a day apart. ⭐ named successor, not absorbed -- it changes the WRITE
+#   path 7.5 owns, not the setter 10.13 owns. Q5: Story 7.5's file says the emergency-backdating replay
+#   question was "logged to deferred-work.md" -- ⛔ VERIFIED 2026-08-16, IT IS NOT THERE (the only 7.5
+#   entry is the documented_reason PII one at :1150-1152). The un-mechanized half decaying exactly as
+#   [[feedback_mechanization_split_commitment]] predicts.
+#   ⛔ NO NEW PRIMITIVE. assertPanelAuthorized exists TWICE (r9-voting-persist.ts:320-348,
+#   appeal-panel-persist.ts:249-274) and the directory-read shape once (resolveShepherdCandidates,
+#   shepherd-assign-persist.ts:190-247). Compose those; do NOT invent a trustee_directory table, and do
+#   NOT pull in the R9 voting lifecycle (fixed-amount.ts:15-19 forbids it in terms).
+#   FR-55's ANNOUNCEMENT half (prd.md:849 "drafts the copy; selects channels; schedules publish") is
+#   UNBUILT -- 7.5's D4 shipped a console seam deliberately. ⭐ Recommended CLOSED BY EDIT: Story 10.5's
+#   News/Blog console IS that machinery (channels[] per post + scheduled_publish_at + author≠reviewer +
+#   tone review); a second composer inside the setter is textbook reinvention. Disposition REQUIRED
+#   either way -- silence is what expires.
+#   Also recorded as OBSERVATIONS with named owners, no work here: the module has ZERO admin UI tests
+#   (uniquely among its siblings); the page predates the per-module i18n-en.ts chrome convention; and
+#   the UX §987-993 three-stage member-card transition (Month -3 / -1 / 0) is a SINGLE always-on line
+#   today (ActiveContributionCard.tsx:212-218) -- that is Story 8.2's surface, never 10.13's.
+#   PROVENANCE: every line number, clause number and count COMMIT-PINNED at 9fb88c3 and read from
+#   source; .decision-log.md head verified as 2026-08-16-122 (:37), 124 entries; docs/legal/ confirmed
+#   gitignored live (.gitignore:68) so any §4.2 amendment must be reproduced VERBATIM IN BOTH LOCALES
+#   in the ruling entry. Only development_status[10-13-fixed-amount-setter-admin-ui] flips. Do NOT flip
+#   epic-10-retrospective. NO other story status changed.)
 # last_updated: 2026-08-16c (10-22-moderation-appeal-mechanism: done, follow-up governance/docs pass
 #   via bmad-code-review -- the chunk deferred by 2026-08-16b's checkpoint. 7 files (.decision-log.md,
 #   this story file, deferred-work.md, sprint-status.yaml, the routing note, friction-budget.md,
@@ -6990,7 +7060,7 @@ development_status:
   10-10-member-moderation-suspend-terminate-restore-reason-codes: done
   10-11-trustee-lite-list-signals: done
   10-12-per-pariwar-custom-fields-jsonb: done
-  10-13-fixed-amount-setter-admin-ui: backlog
+  10-13-fixed-amount-setter-admin-ui: in-progress
   10-14-permission-delegation: backlog
   10-15-survey-poll: backlog
   10-16-contribution-during-suspension-disclosure: done

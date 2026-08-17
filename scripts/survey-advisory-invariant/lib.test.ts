@@ -52,9 +52,11 @@ describe('scanAdvisoryInvariant', () => {
   });
 
   it('FAILS a banned word in a STRING LITERAL — copy is exactly what this protects', () => {
+    // [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): corrected — the key AND the
+    // label both contain "quorum" on this one line, but the scanner records ONE finding per (line,
+    // banned word) pair, not one per occurrence, so this is exactly 1, not "at least 1".
     const findings = scanAdvisoryInvariant('i18n.ts', "  'survey.quorum': 'Quorum reached',");
-    // Both the key and the label hit — it is one line, so one finding per banned word.
-    expect(findings.length).toBeGreaterThanOrEqual(1);
+    expect(findings).toHaveLength(1);
   });
 
   it('FAILS a JSON copy key or value', () => {

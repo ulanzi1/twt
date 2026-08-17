@@ -46,12 +46,19 @@ export interface AdvisoryFinding {
 export const BANNED_WORDS: readonly string[] = ['quorum'];
 
 /**
- * Governance verbs banned in MEMBER- and ADMIN-FACING COPY specifically (the i18n/label files), where
- * they would tell a reader the survey decided something. Deliberately NOT applied to all code: a
- * variable named `approved` elsewhere in a survey file is unrelated to what a survey means.
+ * Governance-verb PHRASES that would tell a reader a survey decided something, layered on top of the
+ * bare-word check above. ⚠ [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): corrected
+ * — this used to claim these were scoped to "the i18n/label files" specifically, but
+ * `scanAdvisoryInvariant` applies both lists identically to every SCAN_PATHS file regardless of
+ * type (domain/SQL included), not just copy files. The actual scoping mechanism is SCAN_PATHS itself
+ * (only survey-owned paths are scanned at all) — there is no per-file-type branch inside the scanner.
+ * A variable named `approved` OUTSIDE a survey path is unrelated and correctly untouched, for that
+ * reason, not because this list special-cases which survey file it's reading.
+ *
+ * ⛔ `'reached quorum'` removed (was here): it contains `quorum`, so `BANNED_WORDS` above already
+ * catches every line it would — a redundant, untested entry that added nothing.
  */
 export const BANNED_COPY_PHRASES: readonly string[] = [
-  'reached quorum',
   'the survey passed',
   'the poll passed',
   'the survey carried',

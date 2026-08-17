@@ -15,8 +15,9 @@
 // a code change and a review.
 
 import { SURVEY_AUDIENCE_SCOPES, SURVEY_QUESTION_TYPES, type SurveyAudienceScope, type SurveyQuestion, type SurveyQuestionType } from '@twt/contracts';
-import { MAX_OPTIONS_PER_QUESTION, MAX_QUESTIONS_PER_SURVEY } from '@twt/contracts';
+import { MAX_OPTIONS_PER_QUESTION, MAX_QUESTIONS_PER_SURVEY, MIN_OPTIONS_PER_CHOICE_QUESTION } from '@twt/contracts';
 import type { ReactElement } from 'react';
+import { useRef } from 'react';
 
 import { editableFields, isTargetableAudience, type SurveyStatus } from './derive.js';
 import { resolveEn as t } from './i18n-en.js';
@@ -84,6 +85,13 @@ export function SurveyEditor({ editor, onChange, status }: SurveyEditorProps): R
 
   const set = (patch: Partial<EditorState>): void => onChange({ ...editor, ...patch });
 
+  // [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): switching a question's type
+  // AWAY from a choice type used to DISCARD its options (`options: undefined`), and switching back
+  // regenerated two blanks (`q.options ?? blankQuestion().options`, with `q.options` now undefined) —
+  // silently destroying authored option text on a round trip. Preserved per `question_id` here so a
+  // free_text detour restores what was there, instead of a blank pair.
+  const preservedOptionsRef = useRef<Record<string, SurveyQuestion['options']>>({});
+
   const setQuestion = (index: number, next: SurveyQuestion): void => {
     const questions = [...editor.questions];
     questions[index] = next;
@@ -147,7 +155,16 @@ export function SurveyEditor({ editor, onChange, status }: SurveyEditorProps): R
         <select
           value={editor.audienceScope}
           disabled={contentDisabled}
-          onChange={(e) => set({ audienceScope: e.target.value as SurveyAudienceScope })}
+          onChange={(e) => {
+            const audienceScope = e.target.value as SurveyAudienceScope;
+            // [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): a scope switched AWAY
+            // from `state` must CLEAR `audienceScopeValue`, not leave it in local state — the save
+            // path previously omitted the field entirely for a non-`state` scope rather than sending
+            // `null`, which left a stale value on the stored row that the server's own merged-state
+            // guard (added in the prior review pass) now correctly rejects, making the edit
+            // unreachable. Clearing it here keeps the UI's own state honest independent of that fix.
+            set(audienceScope === 'state' ? { audienceScope } : { audienceScope, audienceScopeValue: '' });
+          }}
           data-testid="survey-field-audience"
         >
           {SURVEY_AUDIENCE_SCOPES.map((scope) => (
@@ -250,7 +267,15 @@ export function SurveyEditor({ editor, onChange, status }: SurveyEditorProps): R
                   // ⛔ Switching TO free_text DROPS the options rather than hiding them: a free_text
                   // question carrying options is a typed 422, and carrying them invisibly in state
                   // until save would turn a UI choice into a server error the author cannot see.
-                  setQuestion(i, type === 'free_text' ? { ...q, type, options: undefined } : { ...q, type, options: q.options ?? blankQuestion().options });
+                  // ⚠ Dropped, not discarded — stashed in `preservedOptionsRef` first, so switching
+                  // BACK restores the authored text instead of two fresh blanks (see the ref's doc).
+                  if (type === 'free_text') {
+                    if (q.options) preservedOptionsRef.current[q.question_id] = q.options;
+                    setQuestion(i, { ...q, type, options: undefined });
+                  } else {
+                    const restored = q.options ?? preservedOptionsRef.current[q.question_id] ?? blankQuestion().options;
+                    setQuestion(i, { ...q, type, options: restored });
+                  }
                 }}
                 data-testid={`survey-question-${i}-type`}
               >
@@ -293,7 +318,11 @@ export function SurveyEditor({ editor, onChange, status }: SurveyEditorProps): R
                   </label>
                   <button
                     type="button"
-                    disabled={contentDisabled}
+                    // [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): un-guarded, an
+                    // admin could remove down to 0/1 options — a choice question the server's own
+                    // `MIN_OPTIONS_PER_CHOICE_QUESTION` guard would reject only at Save, with no
+                    // earlier signal. Disabled at the floor instead.
+                    disabled={contentDisabled || (q.options ?? []).length <= MIN_OPTIONS_PER_CHOICE_QUESTION}
                     onClick={() => setQuestion(i, { ...q, options: (q.options ?? []).filter((_, x) => x !== oi) })}
                   >
                     {t('survey.option.remove')}

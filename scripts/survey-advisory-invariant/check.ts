@@ -52,6 +52,26 @@ const SCAN_PATHS: readonly string[] = [
   // The member-facing chrome catalogs — where a governance verb would reach a member directly.
   'packages/i18n/locales/en/polls.json',
   'packages/i18n/locales/hi/polls.json',
+  // [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): this list was asserted as
+  // "every path Story 10.15 adds" but wasn't — these are files the story MODIFIES rather than adds
+  // (a shared file, a few lines touched), which is exactly the same silent-uncoverage failure mode
+  // the "missing path fails the build" safeguard above exists to catch, just for an omission instead
+  // of a deletion. Each was verified `grep`-clean of "quorum" at the time of this fix — scanning the
+  // WHOLE file (not just the survey-added lines) trades a theoretical future false-positive, if an
+  // unrelated later change to one of these SHARED files legitimately needs the word (e.g. a genuine
+  // trustee-quorum feature), against the certain, present gap of zero coverage on their actual
+  // survey-owned content today. If that trade ever fires, split the offending file's survey-owned
+  // portion out rather than removing it from this list wholesale.
+  'packages/api-client/src/index.ts',
+  'packages/queue/src/index.ts',
+  'packages/domain/src/rbac/permissions.ts',
+  'packages/domain/src/rbac/roles.ts',
+  'packages/domain/tests/rbac/permissions.test.ts',
+  'apps/mobile/components/panchayat/PanchayatNoticeboard.tsx',
+  'apps/api/src/context.ts',
+  'apps/api/src/server.ts',
+  'apps/jobs/src/boot.ts',
+  'apps/admin/src/router.tsx',
 ];
 
 const SCANNABLE = /\.(ts|tsx|sql|json)$/;

@@ -8,15 +8,19 @@
 // noise on a screen whose whole design is a quiet noticeboard, and it would train members to ignore
 // the one place a real question appears.
 //
-// The count is of OPEN, IN-AUDIENCE polls — including ones the member has already answered, which is
-// consistent with the list itself (a member who answered must still see that the question was asked).
+// [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): corrected — this used to describe
+// the count as "including answered" unconditionally, which the code never did.
+// The count shown is the UNANSWERED count when any remain (what the member still owes an answer to);
+// once nothing is left unanswered it falls back to the total OPEN, IN-AUDIENCE count instead of
+// vanishing to zero — consistent with the list itself never hiding an answered poll (a member who
+// answered must still see that the question was asked, not a badge that reads as "nothing happened").
 
 import { useRouter } from 'expo-router'
 import { Button, Text, XStack, YStack } from 'tamagui'
 
 import { useSession } from '../../lib/session-context'
 import { usePollT } from '../../lib/poll-i18n'
-import { usePollsQuery } from './usePollQueries'
+import { flattenPolls, usePollsQuery } from './usePollQueries'
 
 export function PollsEntry(): React.ReactElement | null {
   const t = usePollT()
@@ -24,8 +28,13 @@ export function PollsEntry(): React.ReactElement | null {
   const { session } = useSession()
   const { data } = usePollsQuery(session?.pariwarId)
 
-  const polls = data?.items ?? []
-  // Nothing to answer and nothing answered → render nothing at all (see the header).
+  const polls = flattenPolls(data)
+  // Nothing to answer and nothing answered → render nothing at all (see the header). ⚠ A fetch
+  // ERROR also lands here (this hook's `isError`/`isLoading` are intentionally not read) — see the
+  // Review Findings deferral: a teaser widget staying quiet on a TRANSIENT failure (which
+  // React Query's default retry self-heals) is the lesser evil against cluttering a "quiet
+  // noticeboard" with a retry affordance; a genuinely PERSISTENT failure hiding the entry point
+  // indefinitely is a real but separately-scoped product question, not patched here.
   if (polls.length === 0) return null
 
   const unanswered = polls.filter((p) => !p.answered).length

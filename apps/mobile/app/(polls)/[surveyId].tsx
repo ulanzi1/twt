@@ -14,7 +14,7 @@
 // half-finished draft resumed days later would submit against a poll that has since closed, and
 // free-text answers are PII tier 3 with no reason to sit in device storage.
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ScrollView } from 'react-native'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { Button, Text, TextArea, XStack, YStack } from 'tamagui'
@@ -40,7 +40,7 @@ import {
   unansweredQuestionIds,
   type AnswerDraft,
 } from '../../components/polls/copy'
-import { usePollsQuery, useSubmitPollResponse } from '../../components/polls/usePollQueries'
+import { flattenPolls, usePollsQuery, useSubmitPollResponse } from '../../components/polls/usePollQueries'
 
 export default function PollAnswerScreen(): React.ReactElement {
   const t = usePollT()
@@ -50,20 +50,50 @@ export default function PollAnswerScreen(): React.ReactElement {
   const pariwarId = session?.pariwarId
   const { surveyId } = useLocalSearchParams<{ surveyId: string }>()
 
-  const { data, isLoading, isError } = usePollsQuery(pariwarId)
+  const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = usePollsQuery(pariwarId)
   const submit = useSubmitPollResponse(pariwarId)
 
   const [draft, setDraft] = useState<AnswerDraft>({})
   const [notice, setNotice] = useState<string | null>(null)
   const [showMissing, setShowMissing] = useState(false)
+  // [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): `setNotice(t('submitted'));
+  // router.back()` used to fire back-to-back on success — `router.back()` unmounts this screen
+  // before the member has any chance to see the notice render, so the one confirmation that matters
+  // most (a FINAL, un-undoable submission — LBD-6) was never actually visible. `submitted` now gates
+  // a static confirmation view (mirroring the `alreadyAnswered` branch below) with its own explicit
+  // Back button, instead of auto-navigating away.
+  const [submitted, setSubmitted] = useState(false)
 
   // ⭐ ONCE per mount, never per tap. A key regenerated on each attempt would turn a network retry
   // into a second submission the server 409s; a stable key replays the original 201.
   const idempotencyKey = useMemo(() => newIdempotencyKey(), [])
 
-  const survey = data?.items.find((s) => s.survey_id === surveyId) ?? null
+  const polls = flattenPolls(data)
+  const survey = polls.find((s) => s.survey_id === surveyId) ?? null
+  // [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): the member surface is now
+  // paginated (see `usePollsQuery`) — a poll opened via a deep link/notification rather than a tap
+  // on an already-loaded list row could be sitting past the first page. Keep fetching while the
+  // target isn't found and more pages remain, rather than reporting "not found" for a poll that
+  // genuinely exists just past page 1.
+  useEffect(() => {
+    if (!survey && hasNextPage && !isFetchingNextPage && !isLoading) void fetchNextPage()
+  }, [survey, hasNextPage, isFetchingNextPage, isLoading, fetchNextPage])
+
   const questions: SurveyQuestion[] = survey?.questions ?? []
   const missing = useMemo(() => new Set(unansweredQuestionIds(questions, draft)), [questions, draft])
+
+  // [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): a member could tap Back while
+  // `onSubmit`'s async flow was still in flight (only Submit was disabled during `isPending`,
+  // Back never was), unmounting the screen before `mutateAsync` settled — its `then`/`catch`
+  // continuation then calls `setNotice`/`setSubmitted` against an unmounted component. Guarded via a
+  // mounted ref rather than disabling Back outright, so backing out mid-submit still works instantly.
+  const mountedRef = useRef(true)
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
 
   const onSubmit = useCallback(async () => {
     if (!survey) return
@@ -81,9 +111,11 @@ export default function PollAnswerScreen(): React.ReactElement {
         turnstileToken: await getTurnstileToken(),
         idempotencyKey,
       })
+      if (!mountedRef.current) return
       setNotice(t('submitted'))
-      router.back()
+      setSubmitted(true)
     } catch (err) {
+      if (!mountedRef.current) return
       if (err instanceof ApiError) {
         // The two 409s mean different things to the member and must read differently.
         if (err.code === 'survey.already_responded') setNotice(t('already_answered'))
@@ -93,16 +125,51 @@ export default function PollAnswerScreen(): React.ReactElement {
       }
       setNotice(t('submit_error'))
     }
-  }, [survey, questions, draft, submit, idempotencyKey, t, router])
+  }, [survey, questions, draft, submit, idempotencyKey, t])
+
+  // [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): `enabled: !!pariwarId` (see
+  // `usePollsQuery`) means `isLoading` is FALSE while the session is still resolving `pariwarId` —
+  // this used to fall straight to `list_error`, a false "couldn't load" for a poll that hasn't been
+  // asked for yet. `pending` distinguishes the two.
+  const pending = isLoading || !pariwarId
 
   // Loading / error / not-found — plain branches; there is no FlatList on this screen, but the same
   // "render the empty state as its own branch" discipline keeps the populated tree simple.
-  if (isLoading || isError || !survey) {
+  // ⚠ Still fetching further pages looking for `survey` (see the effect above) counts as pending too.
+  if (pending || isError || (!survey && (hasNextPage || isFetchingNextPage))) {
     return (
       <YStack flex={1} bg="$background" items="center" justify="center" px="$6" gap="$3">
         <Stack.Screen options={{ headerShown: false }} />
         <Text fontSize="$4" color="$colorPress" text="center" accessibilityRole="text">
-          {isLoading ? t('loading') : t('list_error')}
+          {pending || isFetchingNextPage ? t('loading') : t('list_error')}
+        </Text>
+        <Button size="$3" onPress={() => router.back()} accessibilityRole="button">
+          {t('back')}
+        </Button>
+      </YStack>
+    )
+  }
+
+  if (!survey) {
+    return (
+      <YStack flex={1} bg="$background" items="center" justify="center" px="$6" gap="$3">
+        <Stack.Screen options={{ headerShown: false }} />
+        <Text fontSize="$4" color="$colorPress" text="center" accessibilityRole="text">
+          {t('list_error')}
+        </Text>
+        <Button size="$3" onPress={() => router.back()} accessibilityRole="button">
+          {t('back')}
+        </Button>
+      </YStack>
+    )
+  }
+
+  if (submitted) {
+    return (
+      <YStack flex={1} bg="$background" items="center" justify="center" px="$6" gap="$3">
+        <Stack.Screen options={{ headerShown: false }} />
+        <Text fontSize="$4" color="$color" text="center" accessibilityRole="alert">
+          {notice}
         </Text>
         <Button size="$3" onPress={() => router.back()} accessibilityRole="button">
           {t('back')}

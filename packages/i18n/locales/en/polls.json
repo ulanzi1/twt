@@ -19,5 +19,7 @@
   "choose_one": "Choose one",
   "choose_any": "Choose any number",
   "write_answer": "Write your answer",
-  "back": "Back"
+  "back": "Back",
+  "retry": "Try again",
+  "refresh_error": "Could not refresh. Showing what was last loaded."
 }

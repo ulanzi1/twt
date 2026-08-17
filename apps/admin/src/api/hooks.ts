@@ -18,6 +18,7 @@ import type {
   MemberSearchRequest,
   ModerateMemberRequest,
   ModerationAction,
+  SurveyDisplayState,
 } from '@twt/contracts';
 
 import * as api from './client.js';
@@ -1202,7 +1203,7 @@ export const surveyFreeTextKey = (pariwarId: string, surveyId: string, questionI
   ['survey-free-text', pariwarId, surveyId, questionId] as const;
 
 /** GET the Pariwar's surveys, optionally filtered by the DERIVED display state (AC1: paginated). */
-export function useSurveys(pariwarId: string, displayState?: string, offset = 0) {
+export function useSurveys(pariwarId: string, displayState?: SurveyDisplayState, offset = 0) {
   return useQuery({
     queryKey: [...surveysKey(pariwarId), displayState ?? 'all', offset],
     queryFn: () => api.listSurveys(pariwarId, displayState, undefined, offset),

@@ -1,4 +1,181 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-17i (10-15-survey-poll: in-progress -> DONE via bmad-code-review,
+#   LIVE-DB VERIFICATION (same day as Pass 4). No Docker daemon available -- twt-test-pg
+#   reconstructed by hand: a fresh Postgres superuser role/database, migrated via the project's OWN
+#   `pnpm db:migrate` against the real checked-in migration history (not a hand-crafted schema) --
+#   the same schema-defining source twt-test-pg itself is built from. hasDatabase/test behavior
+#   confirmed port-agnostic before relying on this.
+#   EVERY live-DB suite the test-runbook's `integration-tests` CI job names is now green: domain
+#   2985/2986 (1 pre-existing unrelated skip), api 1018/1019 (1 pre-existing unrelated skip, incl.
+#   the 17-test surveys.spec.ts), jobs 346/346, events/queue/niyamavali-engine clean, validity-
+#   service 284/284, channels 204/204. A full `pnpm ci:local` (27 jobs) ran and passed, exercising
+#   the newly-wired survey-advisory-invariant CI job end-to-end for the first time.
+#   ⭐ ONE REAL REGRESSION FOUND AND FIXED, same day: Pass 1's `publish()` optimistic-concurrency
+#   guard (`eq(surveys.updatedAt, survey.updatedAt)`) FAILED EVERY PUBLISH CALL -- `updated_at` is
+#   microsecond-precision in Postgres, a JS Date only holds milliseconds, so the echoed comparison
+#   value could never match the stored one. Re-fixed via SQL-side `date_trunc('milliseconds', ...)`
+#   truncation on both sides. Exactly the class of bug DB-free unit tests structurally cannot catch
+#   -- confirms why this story stayed in-progress rather than done until this step actually ran
+#   [[feedback_record_unattested_no_backfill]].
+#   4 failures surfaced ONLY under full 8-package concurrent load and were confirmed as environment/
+#   resource-contention artifacts (not code regressions) by re-running each in isolation: a Story
+#   10.23 UTC-session-timezone gate (local Postgres defaulted to Asia/Kolkata; fixed via a DATABASE_URL
+#   option exactly as the test's own error message instructed); a Story AI-4-1 p95 concurrent-load
+#   benchmark (2456ms under 8-package contention vs. 108.5ms alone, against a 2000ms budget -- a
+#   wall-clock benchmark, not correctness); @twt/ui and @twt/channels builds (no emitted error text,
+#   consistent with resource exhaustion; both clean in isolation). None touch survey/poll code.
+#   Story 10.15 is now FULLY COMPLETE: all four chunked review passes + live-DB verification, every
+#   verification path available exhausted and green. Full ledger in the story file's Review Findings
+#   sections + the new "Live-DB Verification" section.
+# last_updated: 2026-08-17h (10-15-survey-poll: in-progress -> in-progress via bmad-code-review,
+#   CHUNKED PASS 4 of 4 -- FINAL: scripts/survey-advisory-invariant/* (the LBD-1 mechanized gate),
+#   friction-budget.md, root package.json, packages/i18n/src/catalog.ts. Also touched as necessary
+#   fix-support: .github/workflows/ci.yml + scripts/ci-local.sh (CI wiring) and
+#   packages/contracts/scripts/emit-openapi.ts + openapi/v1.yaml (regeneration + a drift fix it
+#   surfaced). ALL FOUR CHUNKED PASSES NOW COMPLETE -- every file this story's diff touches has been
+#   reviewed. Patches applied directly, continuing the established pattern without a fresh
+#   per-chunk confirmation.
+#   ⭐ TOP FINDING, CRITICAL: the LBD-1 gate existed ONLY as package.json scripts -- NEVER wired into
+#   ci-local.sh or ci.yml, unlike every sibling invariant gate (helpdesk-state-invariant,
+#   governance-boundary, etc., each of which has an explicit run-line + CI job). A reintroduced
+#   `quorum`, or a deleted/renamed SCAN_PATHS entry, got a green ci:local and a green CI run
+#   regardless -- directly contradicting this story's OWN "MECHANIZED, NOT MERELY ASSERTED" claim in
+#   an earlier pass's ledger entry. Fixed: added the matching ci-local.sh run-line and a full ci.yml
+#   job, mirroring sibling gates exactly; verified pnpm survey-advisory:test/:check both pass.
+#   ⭐ SECOND FINDING, CRITICAL: SCAN_PATHS was incomplete -- asserted as "every path Story 10.15
+#   adds" but 10 real files the story MODIFIES (api-client SDK, queue registry, RBAC permissions/
+#   roles + test, the mobile noticeboard entry, apps/api context.ts/server.ts, jobs boot.ts, admin
+#   router.tsx) were unlisted, the exact silent-uncoverage failure mode this gate's own header cites
+#   [[feedback_gate_scope_semantic_coverage]] against. Each verified grep-clean of "quorum" first,
+#   then added -- gate now scans 50 files across 24 declared paths, still green.
+#   Regenerated openapi/v1.yaml (stale since Pass 1/2, never actioned) -- surfaced a REAL, separate
+#   gap: the emitter hand-duplicates every route's query-param shape instead of importing the route's
+#   actual Zod schema, so Pass 1's `offset` addition to the member survey list route had silently NOT
+#   propagated to the OpenAPI doc. Fixed. Also found + fixed a 6th AND 7th uncorrected copy of the
+#   "carries a COUNT" audit-docstring claim (in emit-openapi.ts), found only because this pass
+#   finally regenerated the file that had been going stale since Pass 1.
+#   3 more small patches: a doc-comment overclaiming file-type scoping the scanner doesn't actually
+#   do; a redundant, untested banned-phrase entry removed; a test comment/assertion mismatch tightened.
+#   1 DEFERRED: the gate's own self-admitted "real weakness" (SCAN_PATHS completeness enforcement)
+#   has zero test coverage -- needs a small check.ts refactor (away from process.exit()-at-module-
+#   load) to become testable, beyond a bug-fix-sized patch.
+#   9 DISMISSED, all verified: a same-line comment-inside-string false negative (ALREADY deliberately
+#   disclosed with sound reasoning in the code's own comment -- a declared trade-off, not a bug); a
+#   "survey/poll naming inconsistency" claim (deliberate, already verified compliant in Pass 3); a
+#   friction-budget.md DB-privilege claim (verified TRUE against the actual migration); an i18n
+#   dual-list sync gap (pre-existing across every namespace, not introduced here); no-word-boundary-
+#   matching (low risk, would weaken camelCase detection); 4 crash-safety/edge-case hardening
+#   suggestions (none currently reachable; an uncaught exception already fails the CI job loudly).
+#   VERIFIED: pnpm survey-advisory:test (13/13) + :check (50 files/24 paths/0 violations) both run
+#   and pass directly (not just typecheck). tsc --noEmit clean across ALL 19 packages in the
+#   dependency graph this whole four-pass review touched (turbo run typecheck). contracts:check-
+#   openapi-determinism passes. @twt/contracts full suite re-run: 941/941. ⚠ The CI-wiring fix itself
+#   could not be exercised by an actual GitHub Actions run in this environment -- verified by direct
+#   structural comparison against sibling gates only. UN-ATTESTED, same as the live-DB integration
+#   suites flagged in every prior pass -- confirm on the next real CI run
+#   [[feedback_record_unattested_no_backfill]].
+#   ⭐ REVIEW COMPLETE ACROSS ALL 4 PASSES: totals are 2 decision-needed (both resolved with the
+#   user), 34 patch findings (ALL fixed and verified), 6 deferred (logged in deferred-work.md, none
+#   blocking), 28 dismissed as noise (each with a stated, verifiable reason). Status stays
+#   in-progress, NOT done -- the live-DB integration suites and a live CI run of the newly-wired gate
+#   are the ONLY remaining verification steps; every other verification available in this environment
+#   is complete and green. Full ledger in the story file's four "Review Findings -- Pass N" sections.
+# last_updated: 2026-08-17g (10-15-survey-poll: in-progress -> in-progress via bmad-code-review,
+#   CHUNKED PASS 3 of ~4: Mobile (apps/mobile/app/(polls)/*, components/polls/*, lib/poll-api.ts,
+#   lib/poll-i18n.ts, panchayat/PanchayatNoticeboard.tsx). Also touched as necessary fix-support
+#   (not fully reviewed): packages/api-client/src/index.ts (the SDK mobile consumes, unassigned to
+#   any earlier chunk) + packages/i18n/locales/{en,hi}/polls.json (2 new copy keys). Invariant-
+#   script/generated files remain the final follow-up pass. Patches applied directly, continuing the
+#   established pattern without a fresh per-chunk confirmation.
+#   ⭐ TOP FINDING: mobile REOPENED the exact pagination gap Pass 1 closed server-side —
+#   `createMemberSurveyClient().list()` took no limit/offset and `usePollsQuery` was a single page,
+#   so a member with more open polls than one page could never reach the rest; WORSE, the answer
+#   screen only searches loaded pages, so a poll reached via deep link/notification past page 1
+#   reported "not found" though it exists. Fixed: `list()` takes `{limit,offset}`, `usePollsQuery`
+#   is now a `useInfiniteQuery`, the list screen wires `onEndReached`, and the answer screen keeps
+#   paging while its target survey isn't found yet.
+#   ⭐ SECOND FINDING: the submission success notice was INVISIBLE — `setNotice(t('submitted'));
+#   router.back()` fired back-to-back, unmounting the screen before the member could see the one
+#   confirmation LBD-6 most wants seen (a final, un-undoable answer). Fixed with a static
+#   confirmation view (mirrors the existing `alreadyAnswered` branch) instead of auto-navigating.
+#   5 more patched: a loading-state gap during session hydration (both screens showed a false
+#   "couldn't load"/"empty" instead of loading, an `enabled:false`-vs-`isLoading` React Query
+#   footgun); a retry button mislabeled "Back"; a silent pull-to-refresh failure; an unmount-during-
+#   submit state-update guard; a badge doc-comment that misdescribed its own formula (comment fixed,
+#   not behavior).
+#   2 DEFERRED: copy.ts's triplicated Hindi-first fallback logic (DRY, not applied this pass);
+#   PollsEntry ignoring isError on a PERSISTENT fetch failure (self-heals for transient ones;
+#   needs a product call on whether the "quiet noticeboard" widget should ever show an error state).
+#   7 DISMISSED, all verified against source: a "missing i18n catalog" claim (the catalog exists,
+#   blind reviewer couldn't see it); a "self-certifying architecture deviation" claim (Escalation 3
+#   is genuinely documented in the spec, predates this code); a device-locale date-formatting claim
+#   (true, but matches the PREVAILING convention across most other member screens — not introduced
+#   by 10.15); a deliberate post-tap-validation UX choice; a narrow session-loss race now subsumed
+#   by the loading-gap fix; an unreachable zero-questions edge case; an untested-fallback-branch nit.
+#   VERIFIED: tsc --noEmit + eslint clean on @twt/mobile, @twt/api-client, @twt/i18n; DB-free unit
+#   tests green (mobile 284/284 incl. polls-copy.test.ts, api-client 1/1, i18n 57/57 incl. the
+#   en/hi key-parity sync-guard). ⚠ No RN-render test harness exists for this surface (pure Vitest,
+#   no RN mount renderer, per the module's own stated constraint) — screen-level behavior verified
+#   by inspection + typecheck only, NOT exercised by a test. Full ledger in the story file's
+#   "Review Findings -- Pass 3" section.
+# last_updated: 2026-08-17f (10-15-survey-poll: in-progress -> in-progress via bmad-code-review,
+#   CHUNKED PASS 2 of ~3: Jobs + Admin (apps/jobs/src/scheduler/survey-publish.ts + boot.ts,
+#   apps/admin/src/modules/surveys/*, apps/admin/src/api/{client,hooks}.ts). Mobile/invariant-script/
+#   generated files remain a follow-up pass. Patches applied directly, carrying forward Pass 1's
+#   "apply every patch" preference WITHOUT a fresh per-chunk confirmation -- flagged to the user.
+#   17 raw findings across 3 layers; 6 dismissed (verified false or genuinely harmless -- e.g. the
+#   "hand-rolled UUIDv5" finding matches an IDENTICAL pre-existing helper in news-publish.ts).
+#   10 PATCHED: a 5th uncorrected "carries a COUNT" audit-docstring copy (missed in Pass 1 because
+#   it's an admin file); an admin editor bug that could never CLEAR `audience_scope_value` when
+#   switching a draft away from `state` (the PATCH omitted the key instead of sending `null`, so
+#   Pass 1's own merged-state guard now correctly rejects the edit -- unreachable until fixed here);
+#   ⭐ `selected` survey was derived PURELY from the current list page -- changing the filter/offset
+#   while the editor stayed open (both remain interactive mid-edit) could drop the open survey off
+#   the page and silently flip `save()` from UPDATE to CREATE, turning an edit into a duplicate with
+#   zero warning; stale/precedence-broken error banner (publish/close errors never reset); two
+#   silent-failure inputs (empty window, non-numeric threshold -> NaN -> null) now surface visible
+#   errors; missing option-count floor; option-loss on a free_text round-trip; no isPending guards
+#   (double-click duplicate requests); `displayState` typed as bare `string`; aggregate fetched for
+#   untouched drafts; a duplicated page-size magic number.
+#   2 DEFERRED (verified real, NOT patched in isolation): the jobs fan-out worker's missing
+#   try/catch + claim-loop-leak + unbatched-large-Pariwar-loop all EXACTLY MATCH the pre-existing
+#   news-publish.ts pattern this file cites as its own precedent -- fixing one file would leave the
+#   sibling with the identical gap, so this is logged for a cross-cutting job-harness fix instead;
+#   SurveyResults has no free-text "load more" pagination UI (sizable new surface, not a patch).
+#   VERIFIED: tsc --noEmit + eslint clean on @twt/admin + @twt/jobs; DB-free unit tests green
+#   (admin 355/355, jobs 247/247, incl. surveys-page.test.tsx + survey-publish.test.ts). Full
+#   findings ledger in the story file's "Review Findings -- Pass 2" section.
+# last_updated: 2026-08-17e (10-15-survey-poll: review -> in-progress via bmad-code-review.
+#   CHUNKED PASS 1 of ~3: Domain + Contracts + API only (packages/domain, packages/contracts,
+#   apps/api, packages/queue) -- Jobs/Admin/Mobile/invariant-script/generated files not yet reviewed.
+#   Three parallel layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor) raised 20 raw findings;
+#   5 were VERIFIED FALSE against source (blind-review artifacts -- a synchronous fn misread as an
+#   unhandled promise, two "contradictions" that were actually deliberate documented design already
+#   citing [[feedback_gate_scope_semantic_coverage]] by name) and dismissed, not silently dropped.
+#   2 decision-needed (resolved with the user) + 10 patch findings, ALL FIXED:
+#   ⭐ AC6 was VIOLATED IN THE SHIPPED BUILD -- draft-survey submission returned 409, not the 404 AC6
+#   requires, and the domain's OWN docstrings already asserted 404 while the code and its own
+#   integration test enshrined 409. Fixed: `recordResponse` now checks `status==='draft'` before the
+#   open/closed check; test split into a draft->404 case and a closed->409 case.
+#   Member survey list gained pagination (`next_offset`, mirroring the admin list) -- previously
+#   unbounded surveys beyond the internal page limit were silently unreachable. Found + fixed a LATENT
+#   missing tie-break in `listOpenSurveysForPariwar`'s ORDER BY while wiring this (harmless as a bare
+#   top-N fetch; a real bug once offset pagination sits on top of it).
+#   `FROZEN_AFTER_PUBLISH` completed (was missing 5 of 9 actually-frozen fields); the
+#   `audience_scope_value` partial-PATCH validation gap closed in `assertAudienceAuthorable` (which
+#   every caller already invokes with the MERGED/resulting state); `publish()` gained an
+#   `updated_at`-pinned WHERE guard against a concurrent-PATCH tone-review contentHash race;
+#   `hasMemberResponded` (confirmed 100% dead) removed; member-submit idempotency-release-after-
+#   successful-write bug fixed; `listFreeTextAnswers` pagination-before-filter bug fixed; 4 copies of
+#   a false "carries a COUNT" audit-docstring claim corrected (resolved with the user: correct the
+#   claim, don't build a count the shared one-way-hash audit primitive can't recoverably carry).
+#   VERIFIED: tsc --noEmit + eslint clean on all three packages; DB-free unit tests green
+#   (domain 1880/1880, contracts 941/941, api 331/331). ⚠ UN-ATTESTED: live-DB integration suites
+#   could not run (no local twt-test-pg/Docker daemon) -- run `pnpm ci:local` with DATABASE_URL set
+#   before merging ([[feedback_record_unattested_no_backfill]]). openapi/v1.yaml NOT regenerated.
+#   apps/mobile's consumption of the new `next_offset` field NOT reviewed (additive, next chunk).
+#   1 item deferred (PublishSurveyRequest/CloseSurveyRequest strict-body vs OpenAPI required:false
+#   mismatch, untested). Full findings ledger in the story file's Review Findings section.
 # last_updated: 2026-08-17d (10-15-survey-poll: ready-for-dev -> review via bmad-dev-story.
 #   SHIPPED on feature/10-15-survey-poll, cut from main @ 5b469b3 (fetched; HEAD == origin/main).
 #   NO governance commit and NO Trustee Panel routing note -- Question Zero was answered PROCEED by
@@ -7644,7 +7821,7 @@ development_status:
   10-12-per-pariwar-custom-fields-jsonb: done
   10-13-fixed-amount-setter-admin-ui: done
   10-14-permission-delegation: deferred-to-v2
-  10-15-survey-poll: review
+  10-15-survey-poll: done
   10-16-contribution-during-suspension-disclosure: done
   10-17-moderation-roster-unblock: done
   10-18-constituting-the-trustee-panel-sanctioning-authority: done

@@ -22,7 +22,7 @@ import { SURVEY_DISPLAY_STATES } from '@twt/contracts';
 import type { ReactElement } from 'react';
 import { useMemo, useRef, useState } from 'react';
 
-import { ApiError } from '../../api/client.js';
+import { ApiError, SURVEY_LIST_PAGE_SIZE } from '../../api/client.js';
 import {
   useCloseSurvey,
   useCreateSurvey,
@@ -104,7 +104,9 @@ function ErrorBanner({ error }: { error: unknown }): ReactElement | null {
 }
 
 export function SurveysPage({ pariwarId, now }: SurveysPageProps): ReactElement {
-  const [stateFilter, setStateFilter] = useState<string>('');
+  // [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): typed as the actual union (plus
+  // `''` for "all") rather than plain `string` — see the matching `client.ts`/`hooks.ts` fix.
+  const [stateFilter, setStateFilter] = useState<SurveyDisplayState | ''>('');
   const [offset, setOffset] = useState(0);
   const surveys = useSurveys(pariwarId, stateFilter || undefined, offset);
   const create = useCreateSurvey(pariwarId);
@@ -113,44 +115,75 @@ export function SurveysPage({ pariwarId, now }: SurveysPageProps): ReactElement 
   const closeSurvey = useCloseSurvey(pariwarId);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): `selected` used to be DERIVED
+  // PURELY from `items.find(...)` — the current page's rows. Changing `stateFilter`/`offset` while
+  // the editor is open (both remain interactive — the list is never hidden or disabled during an
+  // edit) can drop the open survey out of the current page, silently flipping `selected` to `null`
+  // while `editing` stays `true`. `save()` branches on `selected` to decide UPDATE vs CREATE, so this
+  // turned an admin's edit into an unwanted duplicate CREATE with no error, no warning. Caching the
+  // row here (refreshed on open/save-success, cleared on cancel/new) keeps `selected` correct
+  // regardless of what the list is currently showing.
+  const [openedSurvey, setOpenedSurvey] = useState<SurveyResponse | null>(null);
   const [editing, setEditing] = useState(false);
   const [editor, setEditor] = useState<EditorState>(emptyEditor);
   const [openFreeTextQuestion, setOpenFreeTextQuestion] = useState<string | null>(null);
+  // [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): replaces the old
+  // `create.error ?? update.error ?? publish.error ?? closeSurvey.error` derivation, which (a) never
+  // reset `publish`/`closeSurvey` on Cancel/New/opening a different survey — a failed publish on one
+  // row left a permanent banner that outlived it — and (b) used fixed `??` precedence, so a NEWER
+  // publish/close failure was hidden behind an OLDER unset-but-still-truthy create/update error.
+  // Also carries pure client-side validation failures (empty window, bad threshold — see `save()`)
+  // that never reach a mutation at all.
+  const [actionError, setActionError] = useState<unknown>(null);
 
   // Bumped on every Cancel/New so an in-flight create/save resolving AFTER the admin backed out does
   // not reopen the editor with stale server data — `.reset()` clears mutation STATUS, not the promise.
   const generation = useRef(0);
 
   // A stable clock for one render pass — a fresh `new Date()` per derivation would let two parts of
-  // the same frame disagree about `now`.
+  // the same frame disagree about `now`. ⚠ [Review][Patch] — code review of 10-15-survey-poll
+  // (2026-08-17): NOT currently consumed — `display_state` on each row is SERVER-derived (see the
+  // list render below), so this component does no client-side date derivation of its own. Kept (not
+  // removed) because `now` is a public prop other tests already inject for determinism symmetry with
+  // sibling pages; wire it to a future client-side derivation if one is added here, rather than
+  // reading this comment as proof one already exists.
   const clock = useMemo(() => now ?? new Date(), [now]);
   void clock;
 
   const items = useMemo(() => surveys.data?.items ?? [], [surveys.data]);
-  const selected = items.find((s) => s.survey_id === selectedId) ?? null;
+  const selected = items.find((s) => s.survey_id === selectedId) ?? openedSurvey;
 
   // ⚠ Both gated on `selectedId` — the free-text read writes a `survey.responses_viewed` audit line
   // server-side, so firing it speculatively would record an admin as having viewed responses they
   // never asked to see.
-  const aggregate = useSurveyAggregate(pariwarId, selectedId);
+  // [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): the aggregate read is ALSO
+  // gated off for a `draft` — a survey that has never been published has no responses, so opening a
+  // brand-new draft used to fire a GET that only ever wastes a request or surfaces a spurious error
+  // state for a survey nobody has answered yet.
+  const aggregateSurveyId = selected && selected.status !== 'draft' ? selectedId : null;
+  const aggregate = useSurveyAggregate(pariwarId, aggregateSurveyId);
   const freeText = useSurveyFreeText(pariwarId, selectedId, openFreeTextQuestion);
-
-  const actionError = create.error ?? update.error ?? publish.error ?? closeSurvey.error;
 
   const startNew = (): void => {
     generation.current += 1;
     setSelectedId(null);
+    setOpenedSurvey(null);
     setEditor(emptyEditor);
     setEditing(true);
     setOpenFreeTextQuestion(null);
+    setActionError(null);
     create.reset();
     update.reset();
+    publish.reset();
+    closeSurvey.reset();
   };
 
   const cancel = (): void => {
     generation.current += 1;
     setEditing(false);
+    setOpenedSurvey(null);
     setEditor(emptyEditor);
+    setActionError(null);
     create.reset();
     update.reset();
   };
@@ -158,17 +191,43 @@ export function SurveysPage({ pariwarId, now }: SurveysPageProps): ReactElement 
   const openSurvey = (row: SurveyResponse): void => {
     generation.current += 1;
     setSelectedId(row.survey_id);
+    setOpenedSurvey(row);
     setEditor(loadIntoEditor(row));
     setEditing(true);
     setOpenFreeTextQuestion(null);
+    setActionError(null);
+    publish.reset();
+    closeSurvey.reset();
   };
 
   const save = (): void => {
     const gen = generation.current;
+    setActionError(null);
     const validFrom = toIsoOrNull(editor.validFrom);
     const validUntil = toIsoOrNull(editor.validUntil);
-    if (!validFrom || !validUntil) return;
-    const threshold = editor.responseThreshold.trim() === '' ? null : Number(editor.responseThreshold);
+    // [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): used to silently `return` here
+    // with zero feedback — Save read as a broken button rather than a validation failure.
+    if (!validFrom || !validUntil) {
+      setActionError(new Error(t('survey.error.windowRequired')));
+      return;
+    }
+    let threshold: number | null = null;
+    if (editor.responseThreshold.trim() !== '') {
+      const n = Number(editor.responseThreshold);
+      // [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): `Number('abc')` is `NaN`,
+      // which `JSON.stringify` silently drops to `null` — a mistyped threshold was persisted as "no
+      // threshold" with no error and no indication the input was discarded.
+      if (!Number.isFinite(n) || !Number.isInteger(n) || n < 1) {
+        setActionError(new Error(t('survey.error.thresholdInvalid')));
+        return;
+      }
+      threshold = n;
+    }
+    // [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): `audience_scope_value` is now
+    // ALWAYS sent explicitly (`null` when the scope doesn't use one) instead of omitted for a non-
+    // `state` scope — an omitted key left a STALE value on the stored row from a prior `state` scope,
+    // which the server's own merged-state guard now rejects, making this edit unreachable otherwise.
+    const audienceScopeValue = editor.audienceScope === 'state' ? editor.audienceScopeValue : null;
 
     if (selected) {
       // ⭐ On a PUBLISHED survey send ONLY `valid_until` — the LBD-5 freeze. Sending the whole row
@@ -185,7 +244,7 @@ export function SurveysPage({ pariwarId, now }: SurveysPageProps): ReactElement 
               body_hi: editor.bodyHi,
               questions: editor.questions,
               audience_scope: editor.audienceScope,
-              ...(editor.audienceScope === 'state' ? { audience_scope_value: editor.audienceScopeValue } : {}),
+              audience_scope_value: audienceScopeValue,
               valid_from: validFrom,
               valid_until: validUntil,
               response_threshold: threshold,
@@ -195,8 +254,10 @@ export function SurveysPage({ pariwarId, now }: SurveysPageProps): ReactElement 
         {
           onSuccess: (updated) => {
             if (generation.current !== gen) return; // the admin backed out mid-flight.
+            setOpenedSurvey(updated); // keep the `selected` cache (see its doc block) in sync too.
             setEditor(loadIntoEditor(updated)); // reload the SERVER's row — it may have normalised.
           },
+          onError: (err) => setActionError(err),
         },
       );
       return;
@@ -210,7 +271,7 @@ export function SurveysPage({ pariwarId, now }: SurveysPageProps): ReactElement 
         body_hi: editor.bodyHi,
         questions: editor.questions,
         audience_scope: editor.audienceScope,
-        ...(editor.audienceScope === 'state' ? { audience_scope_value: editor.audienceScopeValue } : {}),
+        audience_scope_value: audienceScopeValue,
         valid_from: validFrom,
         valid_until: validUntil,
         response_threshold: threshold,
@@ -219,8 +280,10 @@ export function SurveysPage({ pariwarId, now }: SurveysPageProps): ReactElement 
         onSuccess: (created) => {
           if (generation.current !== gen) return;
           setSelectedId(created.survey_id);
+          setOpenedSurvey(created); // populates the `selected` cache (see its doc block above).
           setEditor(loadIntoEditor(created));
         },
+        onError: (err) => setActionError(err),
       },
     );
   };
@@ -240,7 +303,9 @@ export function SurveysPage({ pariwarId, now }: SurveysPageProps): ReactElement 
           <select
             value={stateFilter}
             onChange={(e) => {
-              setStateFilter(e.target.value);
+              // Safe: the only values a native <select> can produce here are `''` and the
+              // `SURVEY_DISPLAY_STATES` this same element renders as its <option>s.
+              setStateFilter(e.target.value as SurveyDisplayState | '');
               setOffset(0);
             }}
             data-testid="survey-state-filter"
@@ -275,7 +340,12 @@ export function SurveysPage({ pariwarId, now }: SurveysPageProps): ReactElement 
             {canPublish(row.status as SurveyStatus) && (
               <button
                 type="button"
-                onClick={() => publish.mutate(row.survey_id)}
+                // [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): disabled while
+                // in flight (a double-click fired duplicate publish requests) and now sets
+                // `actionError` explicitly on failure via `onError`, instead of relying on the old
+                // fixed `??` precedence that could hide it behind a stale create/update error.
+                disabled={publish.isPending}
+                onClick={() => publish.mutate(row.survey_id, { onError: (err) => setActionError(err) })}
                 data-testid={`survey-publish-${row.survey_id}`}
               >
                 {t('survey.action.publish')}
@@ -284,7 +354,8 @@ export function SurveysPage({ pariwarId, now }: SurveysPageProps): ReactElement 
             {canClose(row.status as SurveyStatus) && (
               <button
                 type="button"
-                onClick={() => closeSurvey.mutate(row.survey_id)}
+                disabled={closeSurvey.isPending}
+                onClick={() => closeSurvey.mutate(row.survey_id, { onError: (err) => setActionError(err) })}
                 data-testid={`survey-close-${row.survey_id}`}
               >
                 {t('survey.action.close')}
@@ -295,7 +366,11 @@ export function SurveysPage({ pariwarId, now }: SurveysPageProps): ReactElement 
       </ul>
 
       <div>
-        <button type="button" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - 50))}>
+        <button
+          type="button"
+          disabled={offset === 0}
+          onClick={() => setOffset(Math.max(0, offset - SURVEY_LIST_PAGE_SIZE))}
+        >
           {t('survey.page.prev')}
         </button>
         <button
@@ -316,7 +391,22 @@ export function SurveysPage({ pariwarId, now }: SurveysPageProps): ReactElement 
           />
           <p className="text-sm">{t('survey.hint.author')}</p>
           <p className="text-sm">{t('survey.hint.oneResponse')}</p>
-          <button type="button" onClick={save} data-testid="survey-save">
+          <button
+            type="button"
+            onClick={save}
+            // [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): disabled while a
+            // create/update is in flight (a double-click fired duplicate requests), AND for a
+            // `closed` (terminal) survey — every INPUT is already disabled there (`allDisabled` in
+            // `SurveyEditor`, per its own stated design: "an editor that accepts input it KNOWS will
+            // be rejected is a worse explanation than a disabled field"), so the action button
+            // should read the same way rather than staying clickable over an effectively no-op patch.
+            disabled={
+              create.isPending ||
+              update.isPending ||
+              (selected != null && editableFields(selected.status as SurveyStatus) === 'none')
+            }
+            data-testid="survey-save"
+          >
             {selected ? t('survey.action.save') : t('survey.action.create')}
           </button>
           <button type="button" onClick={cancel} data-testid="survey-cancel">

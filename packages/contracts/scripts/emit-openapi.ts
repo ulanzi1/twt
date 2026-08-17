@@ -3027,7 +3027,15 @@ const surveyForbidden = errorResponse('Not authorized (survey.manage) for this P
 // The member survey list is a collection GET, so it declares a BOUNDED `limit` — the Story 1.14 AC-3
 // forced-pagination invariant (FR-91). `surveys` grows with tenant data, which is exactly the
 // unbounded-read hazard that invariant exists to prevent.
-const memberSurveyListQuery = z.object({ limit: z.number().int().min(1).max(200).optional() });
+// [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): `offset` added — this emitter
+// hand-declares its own copy of every route's query shape rather than importing the route's actual
+// Zod schema (`apps/api/.../member-routes.ts`'s `MemberListQuery`), so a review-pass fix that added
+// `offset` support there (closing the "member list was unpaginated past 50 items" gap) did NOT
+// automatically reach this file — the two can silently drift, and just did. Kept in sync by hand.
+const memberSurveyListQuery = z.object({
+  limit: z.number().int().min(1).max(200).optional(),
+  offset: z.number().int().min(0).optional(),
+});
 const surveyTags = ['surveys'];
 
 registry.registerPath({
@@ -3195,7 +3203,8 @@ registry.registerPath({
     'questions be aligned row-for-row, reconstructing one member\'s whole submission. Ordered by ' +
     'submitted_at with no identifying tie-break, so answers submitted in the same instant have an ' +
     'unstable relative order across reads; that is the correct trade. Reading this writes an audit ' +
-    'line carrying the survey id and a COUNT, never the answer content. Free-text answers are ' +
+    'line carrying the survey id and the audited question, never the answer content and never a ' +
+    'count either (the audit payload field is a one-way hash). Free-text answers are ' +
     'member-authored personal data and have no export path in v1.',
   tags: surveyTags,
   request: {

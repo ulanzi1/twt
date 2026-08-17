@@ -114,7 +114,7 @@ export async function listOpenSurveysForPariwar(
   db: Db,
   pariwarId: PariwarId,
   now: Date,
-  opts: { limit?: number } = {},
+  opts: { limit?: number; offset?: number } = {},
 ): Promise<SurveyRow[]> {
   return db
     .select()
@@ -127,14 +127,32 @@ export async function listOpenSurveysForPariwar(
         gt(surveys.validUntil, now),
       ),
     )
-    .orderBy(desc(surveys.validFrom))
-    .limit(clampLimit(opts.limit, { default: 50, cap: 200 }));
+    // ⚠ [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): tie-broken by `createdAt`
+    // then `surveyId` — `validFrom` alone (and `createdAt` alone: `now()` is stable for an entire
+    // transaction, so rows inserted in the same tx tie there too) is not a total order. This used to
+    // be a bare top-N fetch, where a tied row changing which one appeared was harmless; now that the
+    // member list (below) applies `offset` on top of this ordering, an unbroken tie is a real
+    // pagination bug — two tied rows could each land on EITHER page depending on the planner's
+    // arbitrary tie resolution, duplicating or skipping a row across pages. `surveyId` (always unique)
+    // is the final, guaranteed tie-break.
+    .orderBy(desc(surveys.validFrom), desc(surveys.createdAt), desc(surveys.surveyId))
+    .limit(clampLimit(opts.limit, { default: 50, cap: 200 }))
+    .offset(opts.offset ?? 0);
 }
 
 /** One open survey plus whether THIS member has already answered it (AC6). */
 export interface MemberSurveyCandidate {
   survey: SurveyRow;
   answered: boolean;
+}
+
+/** The member-surface read's page: the candidates, whether another page exists, and how far the
+ *  SQL window actually advanced (for the caller's `next_offset` — see `hasMore`'s doc block: the
+ *  RAW row count consumed is NOT `candidates.length`, because the audience filter can shrink it). */
+export interface MemberSurveyPage {
+  candidates: MemberSurveyCandidate[];
+  hasMore: boolean;
+  consumed: number;
 }
 
 /**
@@ -148,6 +166,13 @@ export interface MemberSurveyCandidate {
  * `answered` flag for open surveys they have already completed" — a member who answered yesterday and
  * opens the tab today must see that they did, not an empty list that reads as "nothing was ever
  * asked". Dropping them would also make the surface indistinguishable from a bug.
+ *
+ * ⚠ [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): `hasMore` is computed from the
+ * RAW candidate set (before the audience filter), the same "fetch one extra" trick the admin list and
+ * free-text list use — so a member CAN see fewer than `limit` items on a page that still reports
+ * `hasMore: true`. That is the same honest, accepted trade-off the bound below already documents (the
+ * alternative is an unbounded fetch-and-trim), not a new imprecision: it means "at least one more
+ * candidate row exists past this window", not "at least one more IN-AUDIENCE survey exists".
  */
 export async function listOpenSurveysForMember(
   db: Db,
@@ -156,15 +181,26 @@ export async function listOpenSurveysForMember(
   now: Date,
   logger?: SurveyAudienceLogger,
   tree?: LoadedGeoTree | null,
-  opts: { limit?: number } = {},
-): Promise<MemberSurveyCandidate[]> {
+  opts: { limit?: number; offset?: number } = {},
+): Promise<MemberSurveyPage> {
   // ⚠ The bound is applied to the CANDIDATE set (before the audience filter), so a member may see
   // fewer than `limit` surveys. That is the honest shape: the alternative — fetching unbounded and
   // trimming after filtering — is exactly the unbounded read the forced-pagination invariant exists
   // to prevent, and `surveys` grows with tenant data. The route declares the same bound in its
   // querystring so it is visible in the OpenAPI surface rather than hidden in this accessor.
-  const candidates = await listOpenSurveysForPariwar(db, pariwarId, now, opts);
-  if (candidates.length === 0) return [];
+  //
+  // Capped at 199, one below `listOpenSurveysForPariwar`'s own hard `clampLimit` ceiling (200) — the
+  // "fetch limit + 1 to detect hasMore" trick below requests `limit + 1`, and if that itself hit 201
+  // it would be silently re-clamped back to 200 by the callee, making `hasMore` always false at the
+  // boundary (the same 10.5 news-list finding the admin list's handler guards against).
+  const limit = clampLimit(opts.limit, { default: 50, cap: 199 });
+  const offset = Math.max(0, opts.offset ?? 0);
+  const candidates = await listOpenSurveysForPariwar(db, pariwarId, now, { limit: limit + 1, offset });
+  if (candidates.length === 0) return { candidates: [], hasMore: false, consumed: 0 };
+
+  // hasMore is read off the RAW (pre-audience-filter) candidate count — see the doc block above.
+  const hasMore = candidates.length > limit;
+  const page = hasMore ? candidates.slice(0, limit) : candidates;
 
   // ⭐ RESOLVE THE MEMBER'S GEO **ONCE**, BEFORE FILTERING (Story 1.19 / the 10.9 D4 shape).
   // ⛔ Never inside the `.filter()` below: `isMemberInSurveyAudience` is pure + synchronous, and
@@ -173,14 +209,13 @@ export async function listOpenSurveysForMember(
   //
   // Skipped entirely when no candidate is `state`-scoped, so the common request path pays NOTHING.
   // ⚠ `tree` is OPTIONAL: a caller that passes none resolves geo against a `null` tree, whose `state`
-  // is typed-absent, so `state`-scoped surveys deny — fail-closed, per AC5.
-  const needsGeo = candidates.some((s) => s.audienceScope === 'state');
+  // is typed-absent, so `state`-scoped surveys deny — fail-closed, per AC5. Checked against `page`
+  // (the actual returned window), not the discarded "+1" overfetch row.
+  const needsGeo = page.some((s) => s.audienceScope === 'state');
   const memberGeo = needsGeo ? await resolveMemberGeoNode(db, pariwarId, memberId, tree ?? null, now) : null;
 
-  const inAudience = candidates.filter((s) =>
-    isMemberInSurveyAudience(s.audienceScope, s.audienceScopeValue, memberGeo, logger),
-  );
-  if (inAudience.length === 0) return [];
+  const inAudience = page.filter((s) => isMemberInSurveyAudience(s.audienceScope, s.audienceScopeValue, memberGeo, logger));
+  if (inAudience.length === 0) return { candidates: [], hasMore, consumed: page.length };
 
   // ONE batched lookup for the `answered` flags rather than one per survey — the same N+1 discipline
   // as the geo resolution above. `member_id` is used here as a PREDICATE and never projected out
@@ -198,7 +233,11 @@ export async function listOpenSurveysForMember(
     );
   const answered = new Set<string>(answeredRows.map((r) => r.surveyId));
 
-  return inAudience.map((survey) => ({ survey, answered: answered.has(survey.surveyId) }));
+  return {
+    candidates: inAudience.map((survey) => ({ survey, answered: answered.has(survey.surveyId) })),
+    hasMore,
+    consumed: page.length,
+  };
 }
 
 /**
@@ -289,26 +328,13 @@ export async function resolveSurveyAudienceMemberIds(
     .map((r) => r.memberId);
 }
 
-/** Has this member already answered this survey? The member route's idempotency/replay precondition. */
-export async function hasMemberResponded(
-  db: Db,
-  pariwarId: PariwarId,
-  surveyId: SurveyId,
-  memberId: MemberId,
-): Promise<boolean> {
-  const rows = await db
-    .select({ surveyId: surveyResponses.surveyId })
-    .from(surveyResponses)
-    .where(
-      and(
-        eq(surveyResponses.pariwarId, pariwarId),
-        eq(surveyResponses.surveyId, surveyId),
-        eq(surveyResponses.memberId, memberId),
-      ),
-    )
-    .limit(1);
-  return rows.length > 0;
-}
+// ⛔ [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): a `hasMemberResponded` accessor
+// used to live here, documented as "the member route's idempotency/replay precondition" — but no
+// route ever called it. The actual precondition is the `survey_responses` composite PK (LBD-6: "the
+// composite PK IS the invariant") plus the member route's Idempotency-Key claim; duplicating that
+// check app-side would only add a second, driftable authority on the same fact. Removed rather than
+// wired in, to match how `listOpenSurveysForMember` above already computes `answered` — its own
+// batched query, not this one.
 
 /**
  * The aggregate results read (AC7).
@@ -362,8 +388,10 @@ export interface ListFreeTextAnswersOptions {
  *
  * ⚠ Free text is PII tier 3 at best: never logged, never in an audit payload, and never exported in
  * v1 (Escalation 4 names Story 10.7's reports library as the owning seam if an export is ever wanted).
- * The CALLER writes a `survey.responses_viewed` audit line carrying the survey id and a COUNT —
- * ⛔ never the answer content.
+ * The CALLER writes a `survey.responses_viewed` audit line carrying the survey id and the audited
+ * question — ⛔ never the answer content, and never a count either (code review of 10-15-survey-poll,
+ * 2026-08-17): the audit payload field is a one-way hash, so a count folded into it would not be
+ * later recoverable — the line's load-bearing fact is WHO viewed WHICH question, not how many rows.
  */
 export async function listFreeTextAnswers(
   db: Db,
@@ -385,16 +413,25 @@ export async function listFreeTextAnswers(
   const rows = await db
     .select({ answerText, submittedAt: surveyResponses.submittedAt })
     .from(surveyResponses)
-    .where(and(eq(surveyResponses.pariwarId, pariwarId), eq(surveyResponses.surveyId, surveyId)))
+    .where(
+      and(
+        eq(surveyResponses.pariwarId, pariwarId),
+        eq(surveyResponses.surveyId, surveyId),
+        // ⚠ [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): a member who skipped
+        // this question (or whose entry for it isn't a free-text answer) must be excluded BEFORE
+        // LIMIT/OFFSET, not after — filtering post-fetch (as this used to) applies the page window to
+        // the wrong row set, so `hasMore`/`next_offset` (computed by the caller from the raw row
+        // count) under- or over-report, and a caller paging through offset windows can skip real
+        // answers. Reusing the SAME extraction expression as the projected column keeps the filter and
+        // the value it filters on from ever disagreeing.
+        sql`(${answerText}) IS NOT NULL`,
+      ),
+    )
     // ⛔ NO tie-break column — see the doc block above. This is the one place in the codebase where a
     // non-deterministic sort is the CORRECT choice.
     .orderBy(asc(surveyResponses.submittedAt))
     .limit(clampLimit(opts.limit, { default: 50, cap: 200 }))
     .offset(opts.offset ?? 0);
 
-  // A member who skipped this question (or answered a choice question) yields null — dropped here
-  // rather than in SQL so the page size stays predictable for the caller.
-  return rows
-    .filter((r): r is { answerText: string; submittedAt: Date } => typeof r.answerText === 'string')
-    .map((r) => ({ answer_text: r.answerText, submitted_at: r.submittedAt }));
+  return rows.map((r) => ({ answer_text: r.answerText as string, submitted_at: r.submittedAt }));
 }

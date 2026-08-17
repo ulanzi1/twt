@@ -23,7 +23,7 @@ import { useSession } from '../../lib/session-context'
 import { usePollT } from '../../lib/poll-i18n'
 import { useLocale } from '@twt/i18n/react'
 import { selectSurveyCopy } from '../../components/polls/copy'
-import { usePollsQuery } from '../../components/polls/usePollQueries'
+import { flattenPolls, usePollsQuery } from '../../components/polls/usePollQueries'
 
 function PollRow({
   survey,
@@ -85,9 +85,16 @@ export default function PollsListScreen(): React.ReactElement {
   const { locale } = useLocale()
   const { session } = useSession()
   const pariwarId = session?.pariwarId
-  const { data, isLoading, isError, isFetching, refetch } = usePollsQuery(pariwarId)
+  const { data, isLoading, isError, isFetching, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    usePollsQuery(pariwarId)
 
-  const polls = data?.items ?? []
+  const polls = flattenPolls(data)
+  // [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): `usePollsQuery` is `enabled:
+  // !!pariwarId` — while `pariwarId` is still resolving (session hydration), `isLoading` is FALSE
+  // (the query never started fetching) even though there is no data yet, which previously fell
+  // through to `list_empty`/`list_error` — a false "nothing here"/"couldn't load" flash before the
+  // session settles. `pending` distinguishes "still waiting on the session" from "fetched and empty".
+  const pending = isLoading || !pariwarId
 
   const renderItem = useCallback(
     ({ item }: { item: MemberSurveyResponse }) => (
@@ -124,13 +131,16 @@ export default function PollsListScreen(): React.ReactElement {
             color="$colorPress"
             text="center"
             accessibilityRole="text"
-            accessibilityLabel={isLoading ? t('loading') : isError ? t('list_error') : t('list_empty')}
+            accessibilityLabel={pending ? t('loading') : isError ? t('list_error') : t('list_empty')}
           >
-            {isLoading ? t('loading') : isError ? t('list_error') : t('list_empty')}
+            {pending ? t('loading') : isError ? t('list_error') : t('list_empty')}
           </Text>
           {isError && (
+            // [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): this button called
+            // `refetch()` but displayed the `back` copy key — a "Back" label on a button that
+            // actually retries the network call.
             <Button size="$3" onPress={() => void refetch()} accessibilityRole="button">
-              {t('back')}
+              {t('retry')}
             </Button>
           )}
         </YStack>
@@ -141,12 +151,28 @@ export default function PollsListScreen(): React.ReactElement {
   return (
     <YStack flex={1} bg="$background">
       <Stack.Screen options={{ headerShown: false }} />
+      {/* [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): a pull-to-refresh failure
+          while the list ALREADY has items used to be completely silent — RefreshControl just stops
+          spinning with no indication anything went wrong. */}
+      {isError && (
+        <Text fontSize="$1" color="$red10" text="center" py="$2" accessibilityRole="alert">
+          {t('refresh_error')}
+        </Text>
+      )}
       <FlatListAny
         data={polls}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         ListHeaderComponent={header}
-        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={() => void refetch()} />}
+        refreshControl={<RefreshControl refreshing={isFetching && !isFetchingNextPage} onRefresh={() => void refetch()} />}
+        // [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): `usePollsQuery` was a
+        // single unpaginated page — a member with more open, in-audience polls than the server's
+        // page size could never reach the rest. `onEndReached` + `next_offset` (added server-side in
+        // the API/contracts pass) closes that.
+        onEndReached={() => {
+          if (hasNextPage && !isFetchingNextPage) void fetchNextPage()
+        }}
+        onEndReachedThreshold={0.5}
       />
     </YStack>
   )

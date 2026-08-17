@@ -43,7 +43,12 @@ import { recordToneReviewSignoff } from '../tone-review/index.js';
  * ⚠ `survey.responses_viewed` is the odd one out: it audits a READ, not a write. It is here because
  * the free-text read is the one place an admin sees member-authored personal data (LBD-3), and an
  * unaudited read of PII is exactly the access nobody can later account for. It carries the survey id
- * and a COUNT — ⛔ never the answer content.
+ * and the audited question — ⛔ never the answer content, and — [Review][Patch] — code review of
+ * 10-15-survey-poll (2026-08-17), resolved: NOT a count either. `requestPayloadHash` is a one-way
+ * digest, so nothing hashed into it is later recoverable; the load-bearing fact this line proves is
+ * WHO viewed WHICH question's answers, not how many. (Three prior copies of this "carries a count"
+ * claim — here and at `handlers.ts`'s `freeText` docstring and `read.ts`'s equivalent — were never
+ * implemented and have been corrected rather than built, per that decision.)
  *
  * ⚠ There is deliberately no `survey.revised` sibling to 10.9's `banner.revised`: a published
  * survey's copy and questionnaire cannot change at all (LBD-5), so there is no revision to
@@ -312,9 +317,11 @@ export function createSurveyHandlers(deps: AppDeps) {
      * GET the UNATTRIBUTED free-text answers to one question (AC7, LBD-3).
      *
      * ⭐ THIS IS THE ONE READ THAT SEES MEMBER-AUTHORED PERSONAL DATA, so it is the one read that
-     * writes an audit line — carrying the survey id and a COUNT, ⛔ never the answer content. Free
-     * text is PII tier 3 at best: never logged, never in an audit payload, and with no export path in
-     * v1 (Story 10.7's reports library is the seam if one is ever wanted).
+     * writes an audit line — carrying the survey id and the audited question, ⛔ never the answer
+     * content and (code review of 10-15-survey-poll, 2026-08-17) never a count either, since the
+     * payload field is a one-way hash. Free text is PII tier 3 at best: never logged, never in an
+     * audit payload, and with no export path in v1 (Story 10.7's reports library is the seam if one is
+     * ever wanted).
      */
     async freeText(request: FastifyRequest): Promise<SurveyFreeTextListResponse> {
       const ctx = ctxOf(request);

@@ -29,6 +29,12 @@ const EN: Record<string, string> = {
   'survey.page.prev': 'Previous',
   'survey.page.next': 'Next',
 
+  // [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): client-side validation messages
+  // for `save()` — both used to fail silently (an empty window no-opped the button; a bad threshold
+  // was silently coerced to `null`) with no feedback at all.
+  'survey.error.windowRequired': 'Enter both an open-from and an open-until date before saving.',
+  'survey.error.thresholdInvalid': 'Responses hoped for must be a whole number of 1 or more, or left blank.',
+
   'survey.field.title': 'Title (English)',
   'survey.field.body': 'Description (English)',
   'survey.field.titleHi': 'Title (Hindi)',

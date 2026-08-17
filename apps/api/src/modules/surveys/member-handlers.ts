@@ -147,20 +147,30 @@ export function createMemberSurveyHandlers(deps: AppDeps) {
         // fail-closed — there is no code default geography (ADR-0038).
         const geoTree = await geoTreeDomain.loadGeoTree(scopeTx.tx, pariwarId, now);
 
-        const q = request.query as { limit?: number };
-        const candidates = await surveysDomain.listOpenSurveysForMember(
+        const q = request.query as { limit?: number; offset?: number };
+        // [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): previously unpaginated —
+        // a member with more in-audience open surveys than the internal page limit (50, cap 200)
+        // could never reach the rest, with no `next_offset` to signal more existed. Mirrors the admin
+        // list's `{items, next_offset}` shape.
+        const { candidates, hasMore, consumed } = await surveysDomain.listOpenSurveysForMember(
           scopeTx.tx,
           pariwarId,
           memberId,
           now,
           { info: (message, context) => request.log.info({ ...context }, message) },
           geoTree,
-          // The domain re-clamps (default 50, cap 200); declaring it here too is what makes the
+          // The domain re-clamps (default 50, cap 199); declaring it here too is what makes the
           // bound visible in the OpenAPI surface (the forced-pagination invariant).
-          { ...(q.limit !== undefined ? { limit: q.limit } : {}) },
+          { ...(q.limit !== undefined ? { limit: q.limit } : {}), ...(q.offset !== undefined ? { offset: q.offset } : {}) },
         );
         ok = true;
-        return { items: candidates.map((c) => toMemberSurvey(c.survey, c.answered)) };
+        // ⚠ Advances by `consumed` (the RAW rows the SQL window moved past), not `candidates.length`
+        // (the post-audience-filter DTO count) — the audience filter can shrink a page far below
+        // `consumed`, and advancing by the smaller number would re-fetch overlapping raw rows.
+        return {
+          items: candidates.map((c) => toMemberSurvey(c.survey, c.answered)),
+          next_offset: hasMore ? (q.offset ?? 0) + consumed : null,
+        };
       } finally {
         await closeScopeTx(scopeTx, ok);
       }
@@ -195,6 +205,17 @@ export function createMemberSurveyHandlers(deps: AppDeps) {
           void reply.status(201);
           return replay.data;
         }
+        // [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): a live claim whose stored
+        // payload exists but fails `safeParse` (corrupt row, or a future schema change mid-deploy) was
+        // previously indistinguishable from a genuinely in-flight attempt — both fell through to the
+        // same "please wait and retry" 409. Logged separately so a real storage/shape problem doesn't
+        // read as ordinary contention.
+        if (stored !== null && !replay?.success) {
+          request.log.error(
+            { idemKey, issues: replay?.error?.issues },
+            '[survey-idempotency] stored result failed to parse — treating as in-progress, but this is not ordinary contention',
+          );
+        }
         // A live claim with no recorded result yet — the original attempt is still in flight.
         throw new ConflictError(
           'A request with this Idempotency-Key is already in progress — please wait and retry',
@@ -203,6 +224,10 @@ export function createMemberSurveyHandlers(deps: AppDeps) {
       }
 
       let claimSettled = false;
+      // [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): tracks whether the DOMAIN
+      // write itself succeeded, independent of whether the idempotency result was recorded — see the
+      // `finally` block below.
+      let responseRecorded = false;
       const scopeTx = await openScopeTx(deps, pariwarIdStr);
       let ok = false;
       try {
@@ -214,6 +239,7 @@ export function createMemberSurveyHandlers(deps: AppDeps) {
           now: deps.clock(),
         });
         ok = true;
+        responseRecorded = true;
         const result: SubmitSurveyResponseResult = {
           survey_id: row.surveyId,
           submitted_at: row.submittedAt.toISOString(),
@@ -235,7 +261,14 @@ export function createMemberSurveyHandlers(deps: AppDeps) {
         // A genuinely failed attempt releases the claim so the member can retry. ⚠ This includes the
         // 409 duplicate: releasing lets a retry reach the domain and get the same honest 409, rather
         // than a confusing "already in progress".
-        if (!claimSettled) await idempotencyStore.release(idemKey).catch(() => undefined);
+        //
+        // ⚠ [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): but a write that DID
+        // succeed must never be released just because recording the replay result afterward failed
+        // (store outage, etc.) — the response is already committed, so releasing here would let a
+        // retry reach the domain again and hit the composite-PK 409 instead of eventually replaying.
+        // Leaving the claim held means a retry gets the honest "in progress" 409 above until the TTL
+        // expires, rather than a confusing duplicate-submission error immediately after a failure.
+        if (!claimSettled && !responseRecorded) await idempotencyStore.release(idemKey).catch(() => undefined);
       }
     },
   };

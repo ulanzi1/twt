@@ -72,6 +72,7 @@ export {
   type ListSurveysOptions,
   type ListFreeTextAnswersOptions,
   type MemberSurveyCandidate,
+  type MemberSurveyPage,
   SURVEY_DISPATCH_MEMBER_STATES,
   resolveSurveyAudienceMemberIds,
   getSurvey,
@@ -79,7 +80,6 @@ export {
   listSurveysForPariwar,
   listOpenSurveysForPariwar,
   listOpenSurveysForMember,
-  hasMemberResponded,
   getSurveyAggregate,
   listFreeTextAnswers,
 } from './read.js';

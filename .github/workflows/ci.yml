@@ -653,6 +653,38 @@ jobs:
       - run: pnpm custom-field:test
       - run: pnpm custom-field:check
 
+  survey-advisory-invariant:
+    name: survey-advisory-invariant (a survey is ADVISORY and has no governance effect)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: install
+    # Story 10.15 LBD-1. The word `quorum` — and the governance verbs that would make a survey read
+    # as a vote — must never reach a column, a DTO field, a TS identifier, an i18n key, an admin
+    # label or member copy. `quorum` already names the TRUSTEE quorum elsewhere in this project
+    # (trust-deed.md:227, Deed Cl. 19); a survey that "reached quorum" would be an unintended member
+    # vote arriving by naming alone.
+    #
+    # ⚠ DECLARED DEVIATION from a literal `grep -rni "quorum"` (which can never return zero — every
+    # survey file's header explains the ban, citing the Deed clause by name): comments are stripped
+    # before scanning, string literals and identifiers are not. Enforces the INVARIANT the story
+    # states, not the raw-text proxy for it. See scripts/survey-advisory-invariant/README.md.
+    #
+    # [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): this job was ADDED here — the
+    # gate previously existed only as package.json scripts, run by nobody. No DB / network.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm survey-advisory:test
+      - run: pnpm survey-advisory:check
+
   pool-support-category-invariant:
     name: pool-support-category-invariant (pool engine has no death branches)
     runs-on: ubuntu-latest

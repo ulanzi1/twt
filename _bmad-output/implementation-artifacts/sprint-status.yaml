@@ -1,4 +1,80 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-17 (10-14-permission-delegation: ready-for-dev -> IN-PROGRESS via
+#   bmad-dev-story, branch governance/10-14-permission-delegation cut from main @ f225a76 (clean,
+#   fetched, == origin/main). ⛔ THE STORY IS HALTED AT ITS GOVERNANCE HALF, BY DESIGN, PENDING A
+#   TRUSTEE PANEL RULING. Tasks 0 and 1 are COMPLETE; Task 2 (the decision-log entry) cannot be
+#   written until Q1-Q6 are ruled, and Tasks 3-12 are gated on Task 2. NO packages/ or apps/ file is
+#   touched by this commit -- the governance half lands first
+#   [[feedback_governance_commits_precede_implementation]].
+#   TASK 0 BASELINES, every number a REAL local run before any edit: @twt/domain tests/rbac/ =
+#   4 files / 153 tests PASS; @twt/contracts = 56 files / 921 PASS; @twt/api tests/unit/ = 40 files /
+#   305 pass + 1 skipped (306); live-DB (twt-test-pg:5433) role-grants-policy-regression.spec.ts +
+#   multi-tenant/cross-pariwar-leak.spec.ts = 2 files / 26 PASS. Decision-log head RE-VERIFIED as
+#   2026-08-16-125 (.decision-log.md:37; 127 '### Decision ' headings, one of which is the template,
+#   no gaps in 001..125) so the ruling entry takes 2026-08-16-126, renumbered if it lands later.
+#   Next free migration RE-VERIFIED as 0109 (journal head idx 108). PERMISSION_CATALOG_VERSION = 35,
+#   key count 43 -- both confirmed, neither moved.
+#   ANCHOR RE-DERIVATION: ZERO DRIFT on every load-bearing citation -- both trigger texts
+#   (rbac/index.ts:273-283 and roles.test.ts:532-536, verbatim), all ELEVEN role_grants readers, the
+#   four ratified non-delegability sources (niyamavali.md:266, .decision-log.md:2609 + :2982,
+#   trust-deed.md:251), SA-1..SA-5, freeze row 9 (epics.md:533), and Decision 2026-08-16-123 clause 2
+#   (.decision-log.md:270). THREE citation drifts found and recorded as routing-note finding F-9,
+#   NOT silently corrected: epics.md:538 -> :533 for freeze row 9 (the story's References contradict
+#   its own Dev Notes), epics.md:520 -> :519 for the freeze preamble, and shepherd-assign-persist.ts
+#   :290 -> :289 for reader #11. TWO sweeps found imprecise-but-substantively-true: the '10.14|10-14|
+#   FR-48 -> ZERO hits' sweep is zero in apps/ and packages/ but FIVE unrelated hits in docs/
+#   ('Days 10-14', an epic-breakdown row, an ADR index row); and the delegation sweep's 'two unrelated
+#   test files' are actually two apps/admin/dist/*.js.map BUILD ARTIFACTS with ZERO source hits --
+#   stronger than claimed. F-3 STRENGTHENED ON VERIFICATION: every role_grants INSERT/DELETE/UPDATE in
+#   the tree is 43 sites across 43 files, ALL under tests/ -- not one production write, confirmed
+#   exhaustively rather than sampled.
+#   TASK 1 DELIVERABLE: planning-artifacts/trustee-panel-routing-note-2026-08-16-story-10-14.md --
+#   NINE findings and SIX questions, ALL SIX BLOCKING, each with per-option costs, a non-binding
+#   recommendation, and an explicit 'what a non-answer would mean' [[feedback_record_unattested_no_backfill]].
+#   FIVE of the six STOP the story; only Q2 lets it continue, and only degraded. Q1 is QUESTION ZERO
+#   (is FR-48 in v1 at all) and the recommendation is (b) defer or (c) narrow -- a ruled deferral is a
+#   COMPLETE, SUCCESSFUL outcome, recorded as 'Resolved via explicit deferral' and never reworded into
+#   a partial build [[feedback_closure_language_precision]]. Q6's denylist is the one the note refuses
+#   to let an author invent. Only development_status[10-14-permission-delegation] flips. NO other
+#   story status changed.)
+# last_updated: 2026-08-16m (10-14-permission-delegation: backlog -> ready-for-dev via
+#   bmad-create-story, off main @ f225a76 (clean, fetched, == origin/main). Saved
+#   10-14-permission-delegation.md. NO code written, NO gate run, nothing here attested by a real run.
+#   Epic 10's THIRTIETH authored story. FOUR parallel research agents (PRD/FR-48, architecture RBAC,
+#   RBAC codebase substrate, UX/admin surface); every load-bearing claim re-verified against the
+#   working tree before being recorded -- none taken on a subagent's word alone
+#   [[feedback_verify_before_committing_governance_claims]].
+#   ⛔ THE STORY IS GOVERNANCE-FIRST AND MAY CORRECTLY TERMINATE IN A DEFERRAL. Six BLOCKING routing
+#   questions (Q1-Q6), six decisions (D1-D6), four escalations. Q1 is QUESTION ZERO: prd.md:1325
+#   enumerates the SS4.7 v1 scope as "FRs 44-47, 49-57, 58A, 58B, 58C" -- FR-48 is the ONE SS4.7 FR
+#   omitted -- and prd.md:1350 lists it under "Out of scope / may slip". A ruled deferral is a
+#   COMPLETE, SUCCESSFUL outcome of this story and AC2 says so in terms.
+#   FINDINGS THAT SHAPED IT, all verified live: (1) freeze row 9 (epics.md:533) covers the RBAC
+#   permission-key + scope-dimension model, so the design must COMPOSE (the
+#   apps/api/src/modules/rbac/index.ts:253-259 precedent), never amend; (2) role_grants has ZERO
+#   production write paths -- every INSERT/DELETE in the tree is a test fixture, apps/api/src/modules/
+#   rbac/ is ONE file with ZERO routes, and AuthzContext.bundles is never passed anything but
+#   defaultRoleBundles, so FR-44's "editable by Super Admin" is also unbuilt; (3) role_grants is read
+#   directly at ELEVEN production sites and the epic's "permission checks read both" reaches ONE --
+#   five of the other ten are the key-as-credential PANEL-MEMBERSHIP reads, so a delegated
+#   pool.fixed_amount_emergency would manufacture a quorum-eligible attestor and RE-READ ratified
+#   Decision 2026-08-16-123 clause 2 (.decision-log.md:270) rather than supersede it
+#   [[feedback_supersede_never_reinterpret]]; (4) EffectiveGrant (check.ts:59-64) has NO key field, so
+#   permission_keys[] is inexpressible -- the legal seam is AuthzContext.bundles (check.ts:84-89);
+#   (5) TWO pre-existing re-examination triggers name a role_grants write path as their firing
+#   condition and BOTH fire on this story -- rbac/index.ts:274-283 ("NO role_grants revocation path at
+#   all ... RE-EXAMINE THIS GATE BEFORE SHIPPING") and roles.test.ts:533-537 ("Re-trigger: the first
+#   story that builds a role_grants write path must extend this assertion"); AC7/AC8 discharge them.
+#   (6) architecture.md:1510-1511 says "role modification requires Super Admin scope" while FR-48 says
+#   trustee and the epic says Pariwar admin -- three sources, three authorities, Q4 routes it.
+#   (7) Ratified non-delegability already exists in four places (niyamavali.md:266, .decision-log.md
+#   :2609 + :2982, trust-deed.md:251) and the AC has NO denylist -- Q6 must produce a ratified one;
+#   an author-invented denylist is refused. (8) SA-1..SA-5 (trustee-credential-loss-succession.md
+#   :14-20) already govern role transition/handoff with 3-person separation of duties, so 10.14 as
+#   written is a self-service bypass of that runbook.
+#   ⚠ The [SURFACE] label is recorded as WRONG (Q2): no prior Epic 10 [SURFACE] story created an
+#   authority-bearing table. Only development_status[10-14-permission-delegation] flips. NO other
+#   story status changed; [10-15-survey-poll] stays backlog.)
 # last_updated: 2026-08-16l (7-11-fixed-amount-notice-period-and-fixed-period-reconciliation:
 #   review -> done. Code review (Blind Hunter + Edge Case Hunter + Acceptance Auditor) ran against the
 #   full branch diff. 5 decision-needed findings resolved: D1 -- Decision 2026-08-16-125's
@@ -7425,7 +7501,7 @@ development_status:
   10-11-trustee-lite-list-signals: done
   10-12-per-pariwar-custom-fields-jsonb: done
   10-13-fixed-amount-setter-admin-ui: done
-  10-14-permission-delegation: backlog
+  10-14-permission-delegation: in-progress
   10-15-survey-poll: backlog
   10-16-contribution-during-suspension-disclosure: done
   10-17-moderation-roster-unblock: done

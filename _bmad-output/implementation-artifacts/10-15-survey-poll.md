@@ -625,6 +625,14 @@ No Docker daemon was available in the review environment, so `twt-test-pg` was r
 
 No other packages, and no other live-DB suite, showed any failure at any point.
 
+### Addendum: re-confirmed against the REAL `twt-test-pg` Docker container (2026-08-17, later same day)
+
+Docker became available after the above. The existing `twt-test-pg` container (`postgres:16`, port **5433**, UTC by default — no timezone workaround needed here) was started and migrated current via `pnpm db:migrate`. Every package in the `integration-tests` filter set was re-run **in isolation against the real container** and is green: `domain` 2985/2986, `apps/api` **1018/1019 (confirmed 3× in a row, including via a fresh isolated re-run)**, `jobs` 346/346, `events` 33/33, `queue` 3/3, `niyamavali-engine` 144/144, `validity-service` 284/284, `channels` 204/204.
+
+A full `pnpm ci:local` against the real container reproduced the **same class** of contention failure the hand-built-environment run saw — this time in `apps/api`'s survey/moderation specs, as generic `500`s (not content-mismatches) during the `test (unit)` phase, which runs **all ~20 workspace packages concurrently** against a single Postgres instance capped at `max_connections=100`. Confirmed as connection-pool exhaustion, not a code defect, by the isolated re-run above landing clean immediately after. **`survey-advisory-invariant` passed cleanly** in this same real `ci:local` run, end to end, against real CI-equivalent infrastructure.
+
+Net: the hand-built-environment verification above is now independently corroborated on the actual `twt-test-pg` image itself. No new findings; no code changed as a result of this addendum.
+
 ## Dev Notes
 
 ### The single most important fact: this is 10.9's shape plus 10.5's fan-out

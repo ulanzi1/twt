@@ -1,8 +1,14 @@
 # Trustee Panel Routing Note — The Standing Obligation Queue
 
-**Status:** ⏳ **Open — six questions, awaiting ruling.** Q1 and Q2 are ⛔ BLOCKING. Q3–Q6 are
-⚠ DIRECTIVE — each asks the Panel to assign or authorise, and a non-answer leaves a named obligation
-where it already is rather than stopping any story.
+**Status:** ✅ **RULED 2026-08-17.** **All six questions ruled: Q1(a), Q2(a), Q3(a), Q4(b), Q5(a),
+Q6(a).** This note is **ADOPTED as the queue's register** and the count is **TEN**, carried with its
+stated evidence limitation — ⛔ six rows remain un-re-verified and the ratification does **not** upgrade
+them. ⛔ **No register row is discharged.** Recorded as Decision `2026-08-17-127` (`.decision-log.md:37`).
+See *"The ruling as given"* at the foot of this note; it is authoritative where it differs from the
+option and recommendation text above, which is **retained, not edited**.
+*(Superseded status line, retained: ⏳ Open — six questions, awaiting ruling. Q1 and Q2 are ⛔ BLOCKING.
+Q3–Q6 are ⚠ DIRECTIVE — each asks the Panel to assign or authorise, and a non-answer leaves a named
+obligation where it already is rather than stopping any story.)*
 **Author:** BigDev (Solo Builder)
 **Raised:** 2026-08-17, against `main` @ `ef9d85c` (clean, fetched, `== origin/main`).
 **Scope:** ⛔ **This note is attached to no story.** It is the first note in this lineage raised
@@ -374,3 +380,59 @@ record of how the count was carried before the register existed.
 ⛔ Decisions `2026-08-06-077`, `2026-08-07-088`, `2026-08-07-089`, `2026-08-10-096`, `2026-08-10-097`,
 `2026-08-12-099`, `2026-08-14-114` and `2026-08-15-121` are **not edited** by any of this. They stand
 as recorded; this entry is the **next** one, not a correction of any of them.
+
+# The ruling as given — 2026-08-17
+
+**Ratifying trustees:** Dhiraj Rahul, Kalpana Bharti. **Recorded as Decision `2026-08-17-127`.**
+
+This section is authoritative where it differs from the option and recommendation text above. ⛔ The
+text above is **retained, never overwritten** — including recommendations the Panel did not follow.
+
+## The ruling, question by question
+
+| Q | Ruled | Effect on the register |
+|---|---|---|
+| **Q1** | **(a)** — adopt this note as the register; the count is **TEN** | The register exists. ⚠ Adopted **with** its evidence limitation: four rows `VERIFIED LIVE`, six carried at the strength of the entry that last stated them |
+| **Q2** | **(a)** — authorise Story 0.13 Task 8 under the `2026-06-05-029` envelope, unamended | Rows **(v)**, **(vi)**, **(viii)**, **(x)** move `blocked` → `in progress`. ⛔ Not discharged |
+| **Q3** | **(a)** — the **Panel itself** carries the rejoin-model reconciliation; no story minted | Row **(ix)** gains an owner. ⛔ An ownership assignment, not a discharge |
+| **Q4** | **(b)** — **ruled hold** on Escalation 6 | Row **(i)** unchanged and undischarged; the flag stays default-OFF; the re-trigger is unchanged |
+| **Q5** | **(a)** — bundle rows **(iii)** + **(iv)** into one Part 11 sitting | Both scheduled together. ⚠ A bundled sitting is **not** a bundled ruling — rule each by clause |
+| **Q6** | **(a)** — authorise the `termination_access_block` control, cohort **all Pariwars** (the `full` state) | Row **(vii)** authorised for execution. ⛔ Not discharged until the flip lands |
+
+## ⛔ The canonical wording of the Q6 authorisation
+
+The Panel ratified this description and **expressly rejected** the shorthand *"DPDPA access is
+enabled"* as ambiguous:
+
+> **The `termination_access_block` control is authorized for all terminated members across all
+> Pariwars. This removes normal member-portal session access; it does not remove or suspend any DPDPA
+> right. Terminated members continue to use the dedicated off-portal DPDPA mechanism established by
+> Story 10.21.**
+
+⚠ The shorthand reads as **granting** a data right. The control ends a **session**, and leaves every
+statutory right exactly where §8.4 already places it.
+
+## What the ruling deliberately did NOT do
+
+- ⛔ **It discharged no register row.** All **TEN** remain open. Four moved to *in progress*, one gained
+  an owner, one is held, two are scheduled, one is authorised. ⚠ **None of those is a discharge.**
+- ⛔ **It did not upgrade the six un-re-verified rows.** A directed re-enumeration was **not** ordered
+  and remains available at any sitting.
+- ⛔ **It flipped no flag.** Q6 **authorises**; the enabling change to
+  `packages/domain/src/feature-flags/registry.ts` is a separate implementation commit, after this one.
+- ⛔ **It did not update §8.4a.** Per clause 7, the disclosure follows the mechanism — the *"built but
+  not enabled"* disposition on the **Portal access** row is **still true as written** until the flip
+  lands. The third update to the **Statutory rights (DPDPA)** row gets its own entry, both locales
+  verbatim, the `2026-08-14-108` ordering.
+- ⛔ **It did not change the signup guard**, and did not adopt any `restored_at + 12 months` model.
+  §2.5 governs as written until the Part 11 amendment lands.
+- ⛔ **It did not adopt the Niyamavali.** The instrument remains an unadopted draft.
+
+## Disposition, as executed
+
+Decision `2026-08-17-127` recorded at `.decision-log.md:37`, per-clause provenance labelled
+(`[Trustee-ratified]` clauses 1–6, `[Author-committed]` clauses 7–8), committed under a
+`governance(queue):` prefix **before** any implementation commit.
+
+`deferred-work.md:5256` is annotated to point here rather than restate a count. ⛔ That section is
+**not deleted** — it is the record of how the count was carried before this register existed.

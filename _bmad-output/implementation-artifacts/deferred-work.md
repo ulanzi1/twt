@@ -5255,6 +5255,19 @@ to any `TERMINAL_STATES` set.
 
 ### 8. The standing Trustee Panel obligation queue
 
+> ⭐ **SUPERSEDED AS THE QUEUE'S RECORD — 2026-08-17, Decision `2026-08-17-127` clause 1.** The queue
+> now lives in a **register**:
+> `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-08-17-standing-obligation-queue.md`.
+> That is where an obligation is **added, assigned and discharged**; cite a register row rather than
+> re-deriving a count. **The count is TEN** — the ninth-to-tenth step is counsel review of §8.8, added
+> by `2026-08-15-121` in prose and never counted until the register re-derived it.
+> ⛔ **This section is NOT deleted and NOT corrected in place.** It is the record of how the count was
+> carried *before* a register existed, and the paragraph below remains true of the story that wrote it
+> ([[feedback_supersede_never_reinterpret]]).
+> ⚠ The register was adopted **with its evidence limitation**: four rows carry `VERIFIED LIVE
+> 2026-08-17`, six are carried at the strength of the entry that last stated them. `127` cl. 1
+> ⛔ does **not** upgrade those six.
+
 ⚠ **Reported as LAST ENUMERATED, not re-enumerated.** `deferred-work.md` §7 above records **NINE**,
 verified by enumeration on 2026-08-12 (Story 10.20). ⛔ This story did **not** re-enumerate items
 (i)–(ix) against the live tree, and no entry between `2026-08-12-099` and `2026-08-15-121` restates

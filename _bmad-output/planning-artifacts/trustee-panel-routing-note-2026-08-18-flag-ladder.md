@@ -3,8 +3,9 @@
 **Status:** ✅ **RULED 2026-08-18.** **Q1(a), Q2 (three named rungs), Q3(a), Q4(a).** The ladder is
 ruled **generally** across both Panel-owned flags; one Decision authorises the whole walk; the AC7
 ladder is **not amended**. ⛔ **Q3's sub-question is NOT ANSWERED** (distinct from *not reached*) — the
-F-5 reading stands as a **reading, not a ruling**. ⚠ **The attestation is UN-ATTESTED** — trustee
-identities and ruling date were not supplied and are ⛔ not reconstructed. Recorded as Decision
+F-5 reading stands as a **reading, not a ruling**. ✅ **ATTESTED** by Decision `2026-08-18-129`:
+**Dhiraj Rahul and Kalpana Bharti, 2026-08-18**. *(Superseded, retained: ⚠ the attestation is
+UN-ATTESTED — trustee identities and ruling date were not supplied and are ⛔ not reconstructed.)* Recorded as Decision
 `2026-08-18-128` (`.decision-log.md:37`). See *"The ruling as given"* at the foot; it is authoritative
 where it differs from the option and recommendation text above, which is **retained, not edited**.
 *(Superseded status line, retained: ⏳ Open — four questions, awaiting ruling. Q1, Q2 and Q3 are
@@ -275,9 +276,13 @@ follows the flip, per `2026-08-17-127` clause 7 — both rows, both locales, ver
 
 # The ruling as given — 2026-08-18
 
-**Ratifying trustees:** ⚠ **un-attested-pending** — ⛔ not supplied and ⛔ not reconstructed
-([[feedback_record_unattested_no_backfill]]). ⛔ **Not carried over** from `2026-08-17-127`; a
-same-Panel continuation is likely and is **not evidence**. **Recorded as Decision `2026-08-18-128`.**
+**Ratifying trustees:** ✅ **Dhiraj Rahul and Kalpana Bharti**, ruling date **2026-08-18** —
+attested by Decision `2026-08-18-129`. **Recorded as Decision `2026-08-18-128`.**
+⚠ **The superseded line is retained, never overwritten:** *"un-attested-pending — not supplied and not
+reconstructed ([[feedback_record_unattested_no_backfill]]); not carried over from `2026-08-17-127`, a
+same-Panel continuation being likely and not evidence."* ⭐ **The caution was cheap rather than wasted:**
+the Panel proved to be the same, but the **date differs** — 2026-08-18, not 2026-08-17. Carrying the
+earlier attestation across would have been right about the trustees and **wrong about the date**.
 
 This section is authoritative where it differs from the option and recommendation text above. ⛔ The
 text above is **retained, never overwritten**.
@@ -327,5 +332,9 @@ Decision `2026-08-18-128` recorded at `.decision-log.md:37`, per-clause provenan
 (`[Trustee-ratified]` clauses 1–4, `[Author-committed]` clauses 5–8), committed under a
 `governance(flags):` prefix **before** any publish.
 
-⚠ **One field remains open** — the attestation (entry clause 7). Its closure path is a **successor
-entry** recording trustees and date; ⛔ never an edit to `128`'s fields.
+✅ **The attestation field is CLOSED** — by Decision `2026-08-18-129`, the successor-entry path
+`128` clause 7 mandated. ⛔ `128`'s fields were **not** edited: its header still reads
+*un-attested-pending* and clause 7 carries an appended **attestation marker**, which is the operation
+that clause authorised.
+*(Superseded, retained: ⚠ one field remains open — the attestation (entry clause 7). Its closure path is
+a successor entry recording trustees and date; ⛔ never an edit to `128`'s fields.)*

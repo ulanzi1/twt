@@ -1,4 +1,15 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-17j (10-15-survey-poll: done -> done, addendum only -- Docker became
+#   available after the 17i live-DB verification below. Re-confirmed EVERY integration-tests package
+#   against the REAL twt-test-pg container (postgres:16 @ :5433, UTC by default): domain 2985/2986,
+#   api 1018/1019 (3x in a row incl. a fresh isolated re-run), jobs 346/346, events 33/33, queue 3/3,
+#   niyamavali-engine 144/144, validity-service 284/284, channels 204/204. A full pnpm ci:local
+#   against the real container reproduced the SAME connection-pool-exhaustion pattern (max_connections
+#   =100, ~20 packages concurrent in the test-unit phase) as generic 500s in api's survey/moderation
+#   specs -- confirmed contention, not a defect, by the immediate clean isolated re-run.
+#   survey-advisory-invariant passed cleanly end-to-end against real CI-equivalent infrastructure.
+#   No new findings; no code changed. Independently corroborates the 17i verification on the actual
+#   twt-test-pg image itself, not just an equivalent hand-built one.
 # last_updated: 2026-08-17i (10-15-survey-poll: in-progress -> DONE via bmad-code-review,
 #   LIVE-DB VERIFICATION (same day as Pass 4). No Docker daemon available -- twt-test-pg
 #   reconstructed by hand: a fresh Postgres superuser role/database, migrated via the project's OWN

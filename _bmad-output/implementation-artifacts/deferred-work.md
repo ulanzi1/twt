@@ -5357,3 +5357,125 @@ review of **§8.8** (§2 above). Stated as a fact, not as a new count — the co
   clarifying entry — not warranted for a nit with no code impact. *Owner:* none yet. *Re-trigger:* if
   the exact boundary of UX-DR25's stage-1 guarantee is ever load-bearing for a real dispute (e.g. a
   standard change scheduled to land in a short-February window contests whether stage 1 fired).
+
+---
+
+## Deferred / recorded from: 10-14-permission-delegation — the RULED DEFERRAL of FR-48 (2026-08-17)
+
+Recorded under Decision `2026-08-17-126`, which ruled **FR-48 (permission delegation) out of v1**.
+Story 10.14 ran Tasks 0–2 and closed at its governance half; Tasks 3–12 did not run.
+
+⛔ **Every disposition below uses the exact vocabulary of [[feedback_closure_language_precision]]** —
+*"Closed by [implementation]"*, *"Resolved via explicit deferral"*, and *"Not addressed"* are three
+different statements and are ⛔ **never collapsed**. Two of the entries below are deliberately **"Not
+addressed"** rather than "deferred", because nothing was decided about them.
+
+⛔ **No re-trigger below names an EPIC.** A deferral naming an epic expires unowned
+([[project_r7_fact_producer_unbuilt]]).
+
+### FR-48 itself — **Resolved via explicit deferral**
+
+- **Disposition:** **Resolved via explicit deferral.** Decision `2026-08-17-126` cl. 1 rules FR-48 to
+  v2. ⛔ This is a **complete and successful outcome**, not an abandonment and not a partial build.
+- **Scope on return:** the whole of FR-48 — a time-bounded, revocable, audit-evidenced delegation.
+- **Owner:** a **named v2 story**, to be minted when v2 scope is set. ⛔ Not "Epic 10", and ⛔ not
+  "the next story that touches RBAC".
+- **Re-trigger:** **v2 scope-setting.** ⚠ The successor inherits
+  `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-08-16-story-10-14.md` **whole** —
+  its nine findings and its six questions.
+
+### Q2–Q6 — **Not addressed** (⛔ NOT "deferred", and ⛔ NOT "answered")
+
+- **Disposition:** **Not addressed.** Decision `2026-08-17-126` cl. 3 records them as **"not
+  reached"**, which is distinct from *"not answered"*: the Panel did not decline to rule them, it was
+  never required to, because Q1 made all five moot in v1.
+- **What is unresolved, verbatim from the note:** **Q2** the `[SURFACE]` label over an
+  authority-bearing table · **Q3** whether a way to *lend* authority may ship before a way to *confer*
+  one exists · **Q4** who may delegate, given `prd.md:783` says trustee, `epics.md:3936` says Pariwar
+  admin, `architecture.md:1510-1511` says Super Admin, and `.decision-log.md:260` says a
+  `pariwar_admin` is not the Board · **Q5** which of the eleven `role_grants` readers must see
+  delegations · **Q6** the ratified non-delegable denylist.
+- **Owner:** the same v2 FR-48 successor.
+- **Re-trigger:** **any story that reopens FR-48.** ⛔ It may **not** treat Decision `2026-08-17-126`
+  as having settled any of the five.
+
+### ⛔ Trigger A — the `requireGlobalOrAnyPariwarPermission` liveness predicate — **Not addressed, ARMED**
+
+`apps/api/src/modules/rbac/index.ts:273-283`, verbatim: *"⚠ RE-EXAMINE THIS GATE BEFORE SHIPPING
+EITHER OF THESE: … 2. A `role_grants` revocation path, or any flow that leaves grants behind on
+offboarding. In either case this gate needs a liveness/membership predicate **before** the feature
+ships, not after."*
+
+- **Disposition:** **Not addressed.** ⛔ **NOT discharged and NOT deferred** — Story 10.14's AC7 would
+  have discharged it, and Story 10.14 did not build the write path that fires it. The trigger is
+  **unchanged and still armed**.
+- **Why the comment text is left exactly as it stands:** it is **currently true**. `loadGlobalActorGrants`
+  (`:185`) is still a bare `SELECT … FROM role_grants WHERE user_id = $1` on the BYPASSRLS service
+  pool, and there is still no `role_grants` revocation path. ⛔ Rewriting it would be the "stale
+  reason left behind" defect **in reverse** — replacing a true comment with a false one.
+- **Owner:** **whichever story first builds a `role_grants` write path**, or first introduces Pariwar
+  deactivation/suspension. ⛔ Deliberately structural rather than a named story: the condition cannot
+  be missed by a story that does not exist, and cannot be discharged by one that does not write the
+  table.
+- **Re-trigger:** the trigger comment **is** the mechanism, and it sits in the file the successor must
+  edit.
+
+### ⛔ Trigger B — the frozen-holder-set gate's write-path reach — **Not addressed, ARMED**
+
+`packages/domain/tests/rbac/roles.test.ts:532-536`, verbatim: *"⚠ THIS GATE'S REACH IS THE DECLARATIVE
+BUNDLES ONLY… A grant written directly to the `role_grants` TABLE would NOT be caught here.
+**Re-trigger: the first story that builds a `role_grants` write path must extend this assertion.**"*
+
+- **Disposition:** **Not addressed.** ⛔ **NOT discharged.** Story 10.14's AC8 would have extended it;
+  no write path was built, so the assertion's reach is unchanged and its stated blind spot is still
+  real.
+- **Owner + re-trigger:** identical to Trigger A, and by the gate's own words.
+
+### The FR-44 grant-administration gap — **Not addressed** (⚠ unchanged by this ruling)
+
+Verified exhaustively at `f225a76` as routing-note finding F-3: **every** `INSERT`/`DELETE`/`UPDATE`
+against `role_grants` in the tree is a test fixture — **43 sites across 43 files, all under `tests/`**.
+`apps/api/src/modules/rbac/` is one 318-line file with **zero** routes; `openapi/v1.yaml` has **zero**
+rbac paths; there is **no** production caller of `seedRoles()`; and `AuthzContext.bundles`
+(`check.ts:84-89`) — FR-44's *"bundles editable by Super Admin"* seam — is never passed anything but
+`defaultRoleBundles`.
+
+- **Disposition:** **Not addressed.** This ruling **neither creates nor closes** the gap; it is
+  recorded because Story 10.14's Task 0 established its exact extent, and that measurement should not
+  be lost with the story.
+- ⚠ **Author finding, recorded without a minted story** (Decision `2026-08-17-126` cl. 9): the
+  operational need behind FR-48 may be misattributed — *"we cannot administer grants"* is at least as
+  plausible as *"we cannot lend one"*. ⛔ No story is minted here, deliberately; the observation is
+  recorded so a future scope pass acts on it rather than rediscovers it.
+- **Owner:** ⛔ **none, and stated as none.** ⚠ This entry is an **observation carried without an
+  owner** — recorded openly as such rather than given a false one
+  ([[feedback_record_unattested_no_backfill]]).
+- **Re-trigger:** **v1 scope review, or the first story that needs to grant a role in production.**
+
+### `epics.md:3934-3946` — the `[SURFACE]` label and the bare `scope` field — **Not addressed, flagged in place**
+
+- **Disposition:** **Not addressed.** Decision `2026-08-17-126` cl. 7 annotates the epic entry with a
+  deferral banner and ⛔ **leaves the acceptance-criteria body verbatim** — including the `[SURFACE]`
+  label (Q2's business, and Q2 was not reached) and the bare `scope` field (unimplementable as
+  written: ADR-0008 Decision 5 makes a grant a `(dimension, value)` tuple, never a bare enum).
+- **Owner + re-trigger:** the v2 FR-48 successor, which must rule Q2 before editing the label.
+
+### `prd.md` FR-48 §6.1/§6.2 inconsistency — **Resolved via explicit deferral, surfaced not edited**
+
+`prd.md:781` carries `[v1-S]`; `:1325` omits FR-48 from the §4.7 v1 roll-up; `:1350` lists it under
+§6.2 as may-slip.
+
+- **Disposition:** **Resolved via explicit deferral.** Decision `2026-08-17-126` cl. 1 rules which
+  reading governs; cl. 8 records that ⛔ **no PRD line is rewritten** on the strength of it
+  ([[feedback_architecture_vs_prd_boundary]]).
+- **Owner + re-trigger:** the next PRD reconciliation pass, or the v2 FR-48 successor.
+
+### ⚠ Story 0.12 W-01 (`deferred-work.md:2185`) — **still open**, only narrowly touched
+
+Decision `2026-08-17-126` cl. 6 mints the **narrow** `deferred-to-v2` value into
+`sprint-status.yaml`'s `development_status` enum and documents it in the STATUS DEFINITIONS block.
+
+- **Disposition:** **Not addressed** as to W-01 itself. ⛔ W-01's scope is the *reconciliation* enum
+  with a per-decision suffix (`deferred-to-v2-per-decision-YYYY-MM-DD-012`), owned by Story 0.12's
+  Task 10, which remains `_AWAITING EXTERNAL ACTION_`. The two overlap; ⛔ this story does **not**
+  discharge it.

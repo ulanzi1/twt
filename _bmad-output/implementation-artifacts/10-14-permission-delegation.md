@@ -4,7 +4,7 @@ baseline_commit: f225a76bf9514486c0ad58b6e62dfdd91f67b610
 
 # Story 10.14: Permission Delegation `[SURFACE]`
 
-Status: ready-for-dev
+Status: deferred-to-v2 (⛔ terminal, and a SUCCESSFUL outcome — see Decision `2026-08-17-126`)
 
 Epic: 10 · Story: 14 · Key: `10-14-permission-delegation`
 Authored: 2026-08-16 · Baseline: `main` @ `f225a76` (clean, fetched, `== origin/main`)
@@ -556,9 +556,21 @@ PRD marked may-slip. Feeds Q1(c).
 - [x] ⛔ **Zero `packages/` and `apps/` files in this commit.** ⛔ **STOP HERE until ruled.**
 
 ### Task 2 — `governance:` — the decision-log entry (AC: 2) — **COMMITS SECOND**
-- [ ] Append the entry (number from the **live** head), per-clause provenance per `2026-08-09-095`.
-- [ ] ⛔ If Q1 rules **defer**: record it, flip sprint status, update `deferred-work.md`, and **STOP**.
+- [x] Append the entry (number from the **live** head), per-clause provenance per `2026-08-09-095`.
+- [x] ⛔ If Q1 rules **defer**: record it, flip sprint status, update `deferred-work.md`, and **STOP**.
       Tasks 3–12 do not run. That is a complete, successful outcome.
+
+> ⛔ **TASKS 3–12 DID NOT RUN, AND THEIR BOXES STAY UNCHECKED — DELIBERATELY.**
+> Decision `2026-08-17-126` cl. 1–2 ruled **Q1 = (b), FR-48 deferred to v2**, and Task 2's own terms
+> say so: *"If Q1 rules **defer**: record it, flip sprint status, update `deferred-work.md`, and
+> **STOP**. Tasks 3–12 do not run. That is a complete, successful outcome."*
+> ⛔ **An unchecked box here means "correctly not done", not "left undone"** — the two are different
+> and are never collapsed ([[feedback_closure_language_precision]]). Nothing below was built: no ADR,
+> no `permission_delegations` table, no migration `0109`, no contracts, no catalog key
+> (`PERMISSION_CATALOG_VERSION` stays **35**, key count stays **43**), no write-time guard, no
+> request-path load, no admin surface, no tests, no `governance_boundary.yaml` admission.
+> ⚠ **AC7 and AC8 are therefore NOT satisfied, and are not claimed to be.** Both triggers are recorded
+> as **"Not addressed" and ARMED** in `deferred-work.md`, ⛔ never as discharged.
 
 ### Task 3 — The ADR (AC: 9)
 - [ ] `docs/adr/ADR-00NN-permission-delegation.md` — the compose-don't-amend design against freeze row 9;
@@ -911,6 +923,50 @@ Claude Opus 5 (`claude-opus-5`) via `bmad-dev-story`, 2026-08-17.
 
 **Task 1 — COMPLETE.** `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-08-16-story-10-14.md` authored in the structure of `trustee-panel-routing-note-2026-08-16-story-7-11.md`: **nine findings** (F-1…F-9), **six questions** (Q1–Q6, **all six BLOCKING**), each carrying per-option costs, a **non-binding ⭐ recommendation**, and an explicit *"what a non-answer would mean"*; plus a *"What non-answer would mean"* roll-up, a *"What this note does NOT ask"* section, a ruling template, and a disposition. The four ratified non-delegability rulings are reproduced **verbatim with citations** (`niyamavali.md:266`, `.decision-log.md:2609`, `.decision-log.md:2982`, `trust-deed.md:251`). ⛔ **Zero `packages/` and `apps/` files touched.**
 
+**Task 2 — COMPLETE. ⛔ Q1 RULED (b): FR-48 IS DEFERRED TO v2.** Recorded as **Decision
+`2026-08-17-126`** (`.decision-log.md:37`), numbered from the re-verified head `2026-08-16-125` and
+taking **2026-08-17** because the ruling landed the day after the note was raised — as the note's
+Disposition provided for. Per-clause provenance per Decision `2026-08-09-095`: **clauses 1–5
+`[Trustee-ratified]`**, **clauses 6–8 `[Author-committed]`**, **clause 9 an author finding**.
+
+**⛔ THE STORY IS COMPLETE. Tasks 3–12 did not run, and that is the successful outcome AC2 describes
+in terms.** Nothing was built. `PERMISSION_CATALOG_VERSION` stays **35**, key count stays **43**, the
+next free migration is still **`0109`**, and ⛔ **zero `packages/` and `apps/` files were touched by
+either commit** — verified on both.
+
+**What the ruling deliberately did NOT do** — each recorded rather than implied:
+- ⛔ **Trigger A and Trigger B are NOT discharged.** They are recorded as **"Not addressed"** and
+  remain **ARMED**. AC7/AC8 are therefore **not satisfied and are not claimed to be**. Their firing
+  condition — *"the first story that builds a `role_grants` write path"* — is simply not met, because
+  10.14 built none. ⚠ `rbac/index.ts:273-283`'s comment is left **exactly as it stands**: it is
+  **currently true**, and rewriting it would be the "stale reason left behind" defect *in reverse*.
+- ⛔ **Decision `2026-08-16-123` clause 2 is untouched and unsuperseded.** The ruling records only that
+  no v1 delegation mechanism exists to test it against ([[feedback_supersede_never_reinterpret]]).
+- ⛔ **`prd.md` is not edited.** `:781`, `:1325`, `:1350` stand; clause 8 records that clause 1
+  resolves which reading governs and that no line is rewritten on that strength.
+- ⛔ **`epics.md:3934`'s AC body is left VERBATIM.** It gains a deferral banner only. The `[SURFACE]`
+  label and the bare `scope` field are **flagged in place, not fixed** — Q2's and AC3's business, and
+  **Q2 was not reached**.
+- ⛔ **No successor story was minted.** Clause 9 records F-3's observation — that the real need may be
+  *"we cannot administer grants"* rather than *"we cannot lend one"* — **without an owner, and says
+  so**, rather than naming a false one ([[feedback_record_unattested_no_backfill]]).
+
+**⚠ "Not reached" ≠ "not answered".** Q2–Q6 were not declined and were not left open by silence;
+ruling Q1 made all five **moot in v1**. Each returns **unruled** with FR-48, together with the routing
+note that frames them, and ⛔ a v2 successor may not treat `2026-08-17-126` as having settled any.
+
+**⚠ No gate was run, and none is owed.** Zero source files changed across both commits, so `ci:local`
+would be **vacuous over this story's diff**; that is recorded rather than run and reported as
+meaningful ([[feedback_record_unattested_no_backfill]]). The Task 0 baselines stand as the last real
+numbers for this branch. `yaml.safe_load` was run against `sprint-status.yaml` after each edit.
+
+**⚠ One enum value was minted, narrowly.** `deferred-to-v2` did not exist in `development_status`;
+clause 6 adds it **and documents it in the STATUS DEFINITIONS block**. ⛔ It does **not** discharge
+Story 0.12's open warning **W-01** (`deferred-work.md:2185`), whose scope is the *reconciliation* enum
+with a per-decision suffix and whose owner is that story's Task 10, still `_AWAITING EXTERNAL ACTION_`.
+
+*(Superseded, retained: the note below was written at the Task 1 halt, before Q1 was ruled.)*
+
 **⛔ HALTED AT TASK 2, BY DESIGN.** Task 2 records a ruling that does not yet exist; Tasks 3–12 are gated on Task 2. This is the story's own stated stopping point (*"⛔ STOP HERE until ruled"*), not an incomplete implementation. **Five of the six questions stop the story if unanswered**; only Q2 permits continuation, and only in a degraded state.
 
 **What the note asks, in one line each.** **Q1** — is FR-48 in v1 at all, given `prd.md:1325` omits it from the §4.7 roll-up and `:1350` lists it as may-slip (⭐ defer, or narrow). **Q2** — is `[SURFACE]` the right label over an authority-bearing table (⭐ correct to `[PRIMITIVE]`). **Q3** — may a way to *lend* authority ship before a way to *confer* it exists (⭐ no, in principle). **Q4** — who may delegate, given FR-48 says trustee, the epic says Pariwar admin, `architecture.md:1510` says Super Admin, and `2026-08-16-123` cl. 1 says a `pariwar_admin` is not the Board (⭐ name it explicitly **and** reconcile `:1510`). **Q5** — which of the eleven readers must see delegations, given clause 2 of `2026-08-16-123` defined panel eligibility against `role_grants` nine days ago (⭐ request path yes, the five key-as-credential readers no — and if otherwise, **supersede clause 2 in terms, never re-read it**). **Q6** — the ratified non-delegable denylist, which ⛔ an author may not invent.
@@ -923,9 +979,14 @@ Claude Opus 5 (`claude-opus-5`) via `bmad-dev-story`, 2026-08-17.
 |---|---|
 | `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-08-16-story-10-14.md` | **new** — the Task 1 routing note (AC1) |
 | `_bmad-output/implementation-artifacts/10-14-permission-delegation.md` | modified — Task 0/1 checkboxes, Dev Agent Record, File List, Change Log |
-| `_bmad-output/implementation-artifacts/sprint-status.yaml` | modified — `10-14-permission-delegation: ready-for-dev → in-progress`; one `2026-08-17` reverse-chron ledger entry |
+| `_bmad-output/implementation-artifacts/sprint-status.yaml` | modified — `ready-for-dev → in-progress → deferred-to-v2`; the `deferred-to-v2` value **minted and documented** in STATUS DEFINITIONS; two reverse-chron ledger entries (`2026-08-17`, `2026-08-17b`) |
+| `.decision-log.md` | modified — **Decision `2026-08-17-126`** prepended at the head (AC2) |
+| `_bmad-output/implementation-artifacts/deferred-work.md` | modified — eight dispositions in the exact three-way vocabulary of [[feedback_closure_language_precision]] |
+| `_bmad-output/planning-artifacts/epics.md` | modified — **deferral banner only** on `:3934`; ⛔ the AC body left **verbatim** |
 
-⛔ **Zero `packages/` and `apps/` files** — the governance half lands alone.
+⛔ **Zero `packages/` and `apps/` files, across BOTH commits.** The story never left its governance
+half. ⛔ `prd.md` is **not** in this list, deliberately — clause 8 surfaces its FR-48 inconsistency
+rather than editing it.
 
 ---
 
@@ -934,5 +995,6 @@ Claude Opus 5 (`claude-opus-5`) via `bmad-dev-story`, 2026-08-17.
 | Date | Change |
 |---|---|
 | 2026-08-16 | Authored via `bmad-create-story` off `main` @ `f225a76`. Status → `ready-for-dev`. Six blocking routing questions, six decisions, four escalations, two standing re-examination triggers identified as firing on this story. |
+| 2026-08-17 | Task 2 via `bmad-dev-story`. **Q1 ruled (b): FR-48 DEFERRED TO v2** — recorded as **Decision `2026-08-17-126`**, clauses 1–5 `[Trustee-ratified]`, 6–8 `[Author-committed]`, 9 an author finding. **Q2–Q6 recorded as "not reached"**, which is distinct from "not answered". **Both standing triggers recorded as "Not addressed" and ARMED — ⛔ NOT discharged**; AC7/AC8 are not satisfied and are not claimed to be. Decision `2026-08-16-123` cl. 2 **untouched and unsuperseded**. `deferred-work.md` gains eight dispositions; `epics.md:3934` gains a deferral **banner** with its AC body left **verbatim**; `prd.md` **not edited**. `deferred-to-v2` minted into `development_status` and documented in STATUS DEFINITIONS (narrowly — ⛔ does not discharge Story 0.12 W-01). **Tasks 3–12 did not run; their boxes stay unchecked deliberately.** ⛔ Zero `packages/`/`apps/` files across both commits. Status → `deferred-to-v2`. ⛔ **Terminal, and a successful outcome.** |
 | 2026-08-17 | Task 0 + Task 1 via `bmad-dev-story`. Branch `governance/10-14-permission-delegation` off `f225a76`. Four suites baselined before any edit (153 / 921 / 306 / 26, all green). Decision-log head, next migration, and catalog version/key count all re-verified unchanged. Anchors re-derived: **ZERO DRIFT** on every load-bearing citation; three citation drifts and two imprecise sweeps recorded as routing-note **F-9** rather than silently corrected. Routing note authored — nine findings, six questions, all six BLOCKING. ⛔ **Story HALTED at Task 2 pending a Trustee Panel ruling**, as AC1 requires. Zero `packages/`/`apps/` files touched. |
 | 2026-08-17 | Validated via `bmad-create-story validate`. ~45 citations spot-checked; all quoted text confirmed verbatim. Two line-precision defects fixed: Trigger A/B line ranges corrected (`index.ts:275-276`→`273-274`, `:274-283`→`273-283`; `roles.test.ts:533-536`/`:533-537`→`532-536` in both places, resolving a self-inconsistent citation) and the 10.13 "discharge banner" quote re-attributed to `epics.md:3923` (it was never in the 10-13 story file). No ruling, requirement, or AC changed. Status remains `ready-for-dev`. |

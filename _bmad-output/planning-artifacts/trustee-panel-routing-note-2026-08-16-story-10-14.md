@@ -1,15 +1,24 @@
 # Trustee Panel Routing Note — Story 10.14, Permission Delegation (FR-48)
 
-**Status:** ⏳ **Open — six questions, awaiting ruling. All six are ⛔ BLOCKING.**
+**Status:** ✅ **RULED 2026-08-17.** **Q1 = (b): FR-48 is DEFERRED TO v2.** Story 10.14 closes at its
+governance half as *"Resolved via explicit deferral"*. **Q2, Q3, Q4, Q5 and Q6 are NOT REACHED** — a
+statement distinct from *"not answered"*, recorded as such. Both standing re-examination triggers
+remain **ARMED**, recorded as *"Not addressed"*, ⛔ **not discharged**. Decision `2026-08-16-123`
+clause 2 is **untouched and unsuperseded**. Recorded as **Decision `2026-08-17-126`**
+(`.decision-log.md:37`). See *"The ruling as given"* at the foot of this note; it is authoritative
+where it differs from the option and recommendation text above, which is **retained, not edited**.
+*(Superseded status line, retained: ⏳ Open — six questions, awaiting ruling. All six are ⛔ BLOCKING.
 Q1 is blocking in a way the others are not: **it asks whether the feature belongs in v1 at all**, and
-every remaining question is moot if it rules otherwise.
+every remaining question is moot if it rules otherwise.)*
 **Author:** BigDev (Solo Builder)
 **Raised:** 2026-08-17, against
 `_bmad-output/implementation-artifacts/10-14-permission-delegation.md` at its baseline `main` @
-`f225a76` (clean, fetched, `== origin/main`). **No code has been written.** The story is `in-progress`
-at its governance half and stops at Task 2 until this note is ruled.
-**Story state:** `in-progress`, governance half only. ⛔ **Zero `packages/` and `apps/` files are
-touched by the commit carrying this note.**
+`f225a76` (clean, fetched, `== origin/main`). **No code was ever written** — true at authoring and
+**still true at closure**: the ruling below deferred the feature, so Tasks 3–12 never ran.
+*(Superseded, retained: the story is `in-progress` at its governance half and stops at Task 2 until
+this note is ruled — true AT AUTHORING, before Q1 was ruled.)*
+**Story state:** **`deferred-to-v2`** as of 2026-08-17. ⛔ **Zero `packages/` and `apps/` files were
+touched by either commit.** *(Superseded, retained: `in-progress`, governance half only.)*
 **Decision-log head, verified live at authoring:** `2026-08-16-125` (`.decision-log.md:37`).
 `grep -c '^### Decision '` → **127** headings, of which one is the `YYYY-MM-DD-NNN` **template**,
 leaving **126** numbered headings over **125 distinct numbers** — the `+1` is the legitimate amendment
@@ -557,3 +566,71 @@ They stand as recorded; this entry is the **next** one, not a correction of any 
 flips to a deferred state, `deferred-work.md` records the disposition in the exact vocabulary of
 [[feedback_closure_language_precision]], and **Tasks 3–12 do not run.** That is a complete and
 successful outcome for this story, and ⛔ must not be reworded into a partial build.
+
+
+---
+
+# The ruling as given — 2026-08-17
+
+Recorded as **Decision `2026-08-17-126`**, `.decision-log.md:37`, numbered from the then-live head
+`2026-08-16-125` and taking **2026-08-17** because the ruling landed the day after this note was
+raised — exactly as the Disposition above provided for.
+
+⛔ **This section is authoritative where it differs from the questions and recommendations above.**
+Those are **retained, not edited** — the 10.13 and 7.11 shape.
+
+## The ruling, question by question
+
+| Q | Ruling |
+|---|---|
+| **Q1** | **(b) — DEFER TO v2.** FR-48 is **not in v1**. `prd.md:1350`'s *"may slip to v2 depending on cadence"* governs; the omission from `prd.md:1325`'s §4.7 roll-up is confirmed **deliberate in effect**. |
+| **Q2** | ⛔ **NOT REACHED.** |
+| **Q3** | ⛔ **NOT REACHED.** |
+| **Q4** | ⛔ **NOT REACHED.** |
+| **Q5** | ⛔ **NOT REACHED.** |
+| **Q6** | ⛔ **NOT REACHED.** |
+| **F-9** | **Noted.** Three citation drifts and two imprecise sweeps; none changed a requirement. |
+
+## "Not reached" is not "not answered"
+
+⛔ **The distinction is load-bearing and the decision entry records it in terms.** The Panel did **not**
+decline to rule Q2–Q6, and did not leave them open by silence. Ruling Q1 as it did made all five
+**moot in v1** — there is no v1 delegation surface for a label to describe, an ordering to constrain, an
+authority to hold, a reader to teach, or a denylist to bound.
+
+⇒ Each of the five returns **unruled** with FR-48. A v2 successor inherits this note **whole** and
+⛔ **may not treat Decision `2026-08-17-126` as having settled any of them.**
+
+## What the ruling deliberately did NOT do
+
+- ⛔ **It did not discharge Trigger A or Trigger B.** Both are recorded as **"Not addressed"** and
+  remain **ARMED**. Their firing condition is *"the first story that builds a `role_grants` write
+  path"*, and 10.14 is no longer that story. ⚠ `rbac/index.ts:273-283`'s comment is left **exactly as
+  it stands** because it is **currently true** — rewriting it would be the "stale reason left behind"
+  defect in reverse.
+- ⛔ **It did not touch Decision `2026-08-16-123` clause 2.** The key-as-credential definition of an
+  eligible emergency attestor stands exactly as ratified. The ruling records only that **no delegation
+  mechanism exists in v1 to test it against** ([[feedback_supersede_never_reinterpret]]).
+- ⛔ **It did not edit the PRD.** `prd.md:781`, `:1325` and `:1350` stand as written; clause 8 records
+  that clause 1 resolves which reading governs, and that no line is rewritten on that strength.
+- ⛔ **It did not correct the epic's AC body.** `epics.md:3934` gains a **deferral banner**; the
+  `[SURFACE]` label and the bare `scope` field are **flagged in place, not fixed** — they were Q2's and
+  AC3's business, and Q2 was not reached.
+- ⛔ **It did not close the FR-44 grant-administration gap** (F-3). `role_grants` still has zero
+  production write paths. The ruling neither creates nor closes that gap; F-3's measurement is
+  preserved in `deferred-work.md` so it is not lost with the story.
+- ⛔ **It minted no successor story.** Clause 9 records F-3's observation — that the real need may be
+  *"we cannot administer grants"* rather than *"we cannot lend one"* — **without** an owner, and says
+  so, rather than naming a false one ([[feedback_record_unattested_no_backfill]]).
+
+## Disposition, as executed
+
+One `.decision-log.md` entry (**`2026-08-17-126`**), per-clause provenance labelled — clauses 1–5
+`[Trustee-ratified]`, clauses 6–8 `[Author-committed]`, clause 9 an author finding — committed under a
+`governance(10.14):` prefix. `development_status[10-14-permission-delegation]` → **`deferred-to-v2`**,
+a value **minted and documented** in the same change (clause 6, narrowly — ⚠ it does **not** discharge
+Story 0.12's W-01). `deferred-work.md` carries **eight** dispositions in the exact three-way vocabulary
+of [[feedback_closure_language_precision]]. `epics.md:3934` annotated. **Tasks 3–12 did not run.**
+
+⛔ **This is a complete and successful outcome of Story 10.14**, and is recorded in those words
+everywhere it appears.

@@ -1,4 +1,45 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-17b (10-14-permission-delegation: in-progress -> DEFERRED-TO-V2, a TERMINAL
+#   and SUCCESSFUL outcome, via bmad-dev-story Task 2. ⛔ NOT abandoned, NOT partially built, and NOT
+#   to be reworded into either [[feedback_closure_language_precision]].
+#   Decision 2026-08-17-126 (.decision-log.md:37, numbered from the re-verified head 2026-08-16-125
+#   and taking TODAY's date because the ruling landed 2026-08-17) rules Q1 = (b): FR-48 (permission
+#   delegation) IS DEFERRED TO v2. prd.md:1350's "may slip to v2 depending on cadence" is the reading
+#   that governs, and FR-48's omission from the prd.md:1325 §4.7 v1 roll-up ("FRs 44-47, 49-57, 58A,
+#   58B, 58C" -- the sequence steps 47 -> 49 over it) is confirmed deliberate in effect.
+#   ⛔ Q2-Q6 are NOT REACHED -- recorded in those words, which is DISTINCT from "not answered". The
+#   Panel did not decline to rule them; ruling Q1 made all five moot in v1. Each returns UNRULED with
+#   FR-48, together with the routing note that frames them. A v2 successor may NOT treat this entry
+#   as having settled any of them.
+#   ⛔ BOTH standing re-examination triggers remain ARMED, recorded as "Not addressed" -- NOT
+#   discharged and NOT deferred. AC7/AC8 would have discharged them; no role_grants write path was
+#   built, so their firing condition ("the first story that builds a role_grants write path") is
+#   simply not met by 10.14. rbac/index.ts:273-283's comment is left EXACTLY as it stands because it
+#   is CURRENTLY TRUE -- rewriting it would be the "stale reason left behind" defect in reverse.
+#   ⛔ Decision 2026-08-16-123 clause 2 (the key-as-credential attestor definition, ratified nine days
+#   earlier) is UNTOUCHED and UNSUPERSEDED. This ruling does not re-read, narrow or gloss it; it
+#   records only that no delegation mechanism exists in v1 to test it against
+#   [[feedback_supersede_never_reinterpret]].
+#   TASKS 3-12 DID NOT RUN, by AC2's own terms: no permission_delegations table, no migration 0109,
+#   no catalog key (PERMISSION_CATALOG_VERSION stays 35, key count stays 43), no write-time guard, no
+#   request-path load, no admin surface, no ADR. ⛔ ZERO packages/ and apps/ files were touched by
+#   this story at any point -- verified on both commits.
+#   ENUM MINT: `deferred-to-v2` added to development_status and DOCUMENTED in the STATUS DEFINITIONS
+#   block (Decision 2026-08-17-126 cl.6). ⚠ NARROW mint only -- it does NOT discharge Story 0.12's
+#   open W-01 (deferred-work.md:2185), whose scope is the reconciliation enum with a per-decision
+#   suffix and whose owner is 0.12 Task 10, still _AWAITING EXTERNAL ACTION_.
+#   ALSO LANDED: deferred-work.md gains eight dispositions, each in the exact three-way vocabulary
+#   (FR-48 itself and the prd.md §6.1/§6.2 inconsistency = "Resolved via explicit deferral"; Q2-Q6,
+#   both triggers, the FR-44 grant-administration gap, the epics.md label/scope defects, and Story
+#   0.12 W-01 = "Not addressed"). epics.md:3934 gains a deferral BANNER while its AC body is left
+#   VERBATIM -- the [SURFACE] label and the bare `scope` field are Q2/AC3 business and Q2 was not
+#   reached, so they are flagged in place, never silently edited. prd.md is NOT edited.
+#   NO GATE RUN AND NONE OWED: zero source files changed, so ci:local would be vacuous over this
+#   story's diff; recorded as such rather than run and reported as meaningful
+#   [[feedback_record_unattested_no_backfill]]. The Task 0 baselines stand as the last real numbers:
+#   domain tests/rbac 153 PASS, contracts 921 PASS, api unit 305 pass + 1 skipped, live-DB RLS +
+#   cross-tenant 26 PASS.
+#   Only development_status[10-14-permission-delegation] flips. NO other story status changed.)
 # last_updated: 2026-08-17 (10-14-permission-delegation: ready-for-dev -> IN-PROGRESS via
 #   bmad-dev-story, branch governance/10-14-permission-delegation cut from main @ f225a76 (clean,
 #   fetched, == origin/main). ⛔ THE STORY IS HALTED AT ITS GOVERNANCE HALF, BY DESIGN, PENDING A
@@ -7244,6 +7285,16 @@
 #   - in-progress: Developer actively working on implementation
 #   - review: Ready for code review (via Dev's code-review workflow)
 #   - done: Story completed
+#   - deferred-to-v2: Story ruled OUT of v1 scope by a trustee-ratified decision, and closed
+#       WITHOUT implementation. ⛔ This is a TERMINAL, SUCCESSFUL state -- distinct from `backlog`
+#       (not yet started, still in v1) and from `done` (built). It means "Resolved via explicit
+#       deferral" in the sense of [[feedback_closure_language_precision]], and the ratifying
+#       decision MUST be named in the `last_updated` ledger entry that sets it.
+#       Minted 2026-08-17 by Decision 2026-08-17-126 clause 6 for 10-14-permission-delegation
+#       (FR-48 deferred to v2). ⚠ This is the NARROW value only; it does NOT discharge Story 0.12's
+#       open warning W-01 (deferred-work.md:2185), whose scope is the reconciliation enum with a
+#       per-decision suffix (`deferred-to-v2-per-decision-YYYY-MM-DD-012`) and whose owner is that
+#       story's Task 10, still _AWAITING EXTERNAL ACTION_.
 #
 # Retrospective Status:
 #   - optional: Can be completed but not required
@@ -7501,7 +7552,7 @@ development_status:
   10-11-trustee-lite-list-signals: done
   10-12-per-pariwar-custom-fields-jsonb: done
   10-13-fixed-amount-setter-admin-ui: done
-  10-14-permission-delegation: in-progress
+  10-14-permission-delegation: deferred-to-v2
   10-15-survey-poll: backlog
   10-16-contribution-during-suspension-disclosure: done
   10-17-moderation-roster-unblock: done

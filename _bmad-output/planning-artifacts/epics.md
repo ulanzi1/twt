@@ -3933,6 +3933,37 @@ So that the operation is admin-friendly and emits the right audit + notification
 
 ### Story 10.14: Permission Delegation `[SURFACE]`
 
+> ⛔ **DEFERRED TO v2 — Decision `2026-08-17-126` (2026-08-17), `[Trustee-ratified]`.** FR-48 is **not
+> in v1 scope**. `prd.md:1350`'s *"may slip to v2 depending on cadence"* is the reading that governs,
+> and FR-48's omission from the `prd.md:1325` §4.7 v1 roll-up (*"FRs 44–47, **49**–57, 58A, 58B,
+> 58C"*) is confirmed **deliberate in effect**. Story 10.14 ran its governance half — a routing note
+> with nine findings and six blocking questions — and closed at Task 2 as **"Resolved via explicit
+> deferral"**. ⛔ Nothing was built: no table, no migration, no catalog key, no guard, no surface.
+>
+> ⚠ **The AC body below is left VERBATIM and is NOT corrected**, deliberately. Two defects in it are
+> recorded rather than fixed, because fixing them was **Q2's and AC3's business and Q2 was not
+> reached** ([[feedback_supersede_never_reinterpret]]):
+> 1. **The `[SURFACE]` label is wrong.** No prior Epic 10 `[SURFACE]` story ever created an
+>    authority-bearing table; 10.5/10.9/10.11/10.13 wrote *content* or *config*, this writes
+>    *authorization*. Q2 would have corrected it to `[PRIMITIVE]`.
+> 2. **The bare `scope` field is unimplementable as written.** ADR-0008 Decision 5 makes a grant a
+>    `(dimension, value)` tuple, never a bare enum.
+>
+> ⚠ Also unruled and returning with FR-48: **who may delegate** (this entry says *Pariwar admin*;
+> `prd.md:783` says *trustee*; `architecture.md:1510-1511` says *role modification requires Super
+> Admin scope*; and `.decision-log.md:260` says *"a `pariwar_admin` is not the Board"*), **whether a
+> delegation surface may ship before a role-grant surface exists** (`role_grants` has **zero**
+> production write paths), **which of the eleven `role_grants` readers must see delegations**, and
+> **the ratified non-delegable denylist** — which this AC does not contain.
+>
+> ⚠ *"Effective permissions = own + active delegations; permission checks (Story 1.8) read both"*
+> reaches **one of eleven** readers as written. Five of the other ten decide **governance-panel
+> membership**.
+>
+> **A v2 successor inherits `trustee-panel-routing-note-2026-08-16-story-10-14.md` whole** and ⛔ may
+> **not** treat Decision `2026-08-17-126` as having settled Q2–Q6. See also
+> `deferred-work.md` §*"the RULED DEFERRAL of FR-48 (2026-08-17)"*.
+
 As a Pariwar admin delegating limited authority,
 I want a permission-delegation surface to grant time-bounded permissions to another actor,
 So that vacation coverage / role transitions / emergency handoffs work without permanent role changes.

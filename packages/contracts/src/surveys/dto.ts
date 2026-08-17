@@ -271,8 +271,17 @@ export const MemberSurveyResponse = z
   .strict();
 export type MemberSurveyResponse = z.output<typeof MemberSurveyResponse>;
 
-/** THE member surface read (AC6): the member's open, in-audience surveys, each with its own flag. */
-export const MemberSurveyListResponse = z.object({ items: z.array(MemberSurveyResponse) }).strict();
+/**
+ * THE member surface read (AC6): the member's open, in-audience surveys, each with its own flag.
+ * `next_offset` is null when the page is the last (code review of 10-15-survey-poll, 2026-08-17:
+ * this was previously unpaginated, mirroring the admin list's `{items, next_offset}` shape now).
+ */
+export const MemberSurveyListResponse = z
+  .object({
+    items: z.array(MemberSurveyResponse),
+    next_offset: z.number().int().nonnegative().nullable(),
+  })
+  .strict();
 export type MemberSurveyListResponse = z.output<typeof MemberSurveyListResponse>;
 
 /** The submit acknowledgement. Echoes no answer content — the member's client already has it. */

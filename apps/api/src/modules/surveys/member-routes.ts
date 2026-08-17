@@ -41,8 +41,13 @@ const SurveyParam = z.object({ pariwarId: z.string().uuid(), surveyId: z.string(
 // declare a BOUNDED `limit` in the OpenAPI surface. The domain accessor already clamps internally,
 // but a bound hidden in an accessor is invisible to the contract — and `surveys` grows with tenant
 // data, which is exactly the unbounded-read hazard that invariant exists to prevent.
+// `offset` added (code review of 10-15-survey-poll, 2026-08-17): the list was previously unpaginated
+// past its internal page bound, with no way for a client to reach a member's later surveys.
 const MemberListQuery = z
-  .object({ limit: z.coerce.number().int().positive().max(200).optional() })
+  .object({
+    limit: z.coerce.number().int().positive().max(200).optional(),
+    offset: z.coerce.number().int().nonnegative().optional(),
+  })
   .strict();
 
 export function registerMemberSurveyRoutes(app: FastifyInstance, deps: AppDeps): void {

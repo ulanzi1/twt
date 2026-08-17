@@ -6809,8 +6809,14 @@ components:
               - valid_until
               - answered
             additionalProperties: false
+        next_offset:
+          type:
+            - integer
+            - "null"
+          minimum: 0
       required:
         - items
+        - next_offset
       additionalProperties: false
     SubmitSurveyResponseResult:
       type: object
@@ -13195,7 +13201,7 @@ paths:
   /api/v1/p/{pariwarId}/surveys/{surveyId}/questions/{questionId}/free-text:
     get:
       summary: The free-text answers to one question, UNATTRIBUTED
-      description: "Returns `{answer_text, submitted_at}` and nothing else: no member id, no row id, no question echo and no ordinal — a stable per-respondent ordinal would let two reads of two different questions be aligned row-for-row, reconstructing one member's whole submission. Ordered by submitted_at with no identifying tie-break, so answers submitted in the same instant have an unstable relative order across reads; that is the correct trade. Reading this writes an audit line carrying the survey id and a COUNT, never the answer content. Free-text answers are member-authored personal data and have no export path in v1."
+      description: "Returns `{answer_text, submitted_at}` and nothing else: no member id, no row id, no question echo and no ordinal — a stable per-respondent ordinal would let two reads of two different questions be aligned row-for-row, reconstructing one member's whole submission. Ordered by submitted_at with no identifying tie-break, so answers submitted in the same instant have an unstable relative order across reads; that is the correct trade. Reading this writes an audit line carrying the survey id and the audited question, never the answer content and never a count either (the audit payload field is a one-way hash). Free-text answers are member-authored personal data and have no export path in v1."
       tags: *a72
       parameters:
         - schema:
@@ -13259,6 +13265,12 @@ paths:
             maximum: 200
           required: false
           name: limit
+          in: query
+        - schema:
+            type: integer
+            minimum: 0
+          required: false
+          name: offset
           in: query
       responses:
         "200":

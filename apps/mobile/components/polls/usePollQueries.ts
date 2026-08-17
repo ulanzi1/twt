@@ -5,18 +5,35 @@
 // context). Keys are namespaced under ['polls', …] so a successful submit can invalidate the list —
 // which is what flips the member's `answered` flag without a manual refetch.
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
-import type { SurveyAnswer } from '@twt/contracts'
+import type { MemberSurveyListResponse, MemberSurveyResponse, SurveyAnswer } from '@twt/contracts'
 
 import { pollApi } from '../../lib/poll-api'
 
+/**
+ * [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): `usePollsQuery` was a single
+ * `useQuery` with no way to reach a page past the server's default (`pollApi.list` took no
+ * `limit`/`offset` at all) — a member with more open, in-audience polls than one page could never
+ * see the rest, AND the answer screen (which searches every loaded page for one `surveyId`) would
+ * report "not found" for a poll that genuinely exists just past page 1. `useInfiniteQuery` + the
+ * server's `next_offset` (added in the API/contracts pass) fixes both: `flattenPolls` below gives
+ * callers the same flat `MemberSurveyResponse[]` shape as before, while `index.tsx` wires
+ * `fetchNextPage`/`hasNextPage` to the list's `onEndReached`.
+ */
 export function usePollsQuery(pariwarId: string | undefined) {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['polls', 'list', pariwarId],
-    queryFn: () => pollApi.list(pariwarId as string),
+    queryFn: ({ pageParam }) => pollApi.list(pariwarId as string, { offset: pageParam }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => lastPage.next_offset ?? undefined,
     enabled: !!pariwarId,
   })
+}
+
+/** Flattens every loaded page into one list, in fetch order — the shape every screen consumes. */
+export function flattenPolls(data: { pages: MemberSurveyListResponse[] } | undefined): MemberSurveyResponse[] {
+  return data?.pages.flatMap((page) => page.items) ?? []
 }
 
 /**

@@ -197,6 +197,7 @@ import {
   type SurveyFreeTextListResponse as SurveyFreeTextList,
   type CreateSurveyRequest as CreateSurveyBody,
   type UpdateSurveyRequest as UpdateSurveyBody,
+  type SurveyDisplayState,
   // Story 10.7 — the reports-&-exports library DTOs.
   ReportExportListResponse,
   ReportRequestResponse,
@@ -1979,14 +1980,23 @@ export function decideModerationAppeal(
 const surveysBase = (pariwarId: string): string => `/api/v1/p/${encodeURIComponent(pariwarId)}/surveys`;
 
 /**
+ * The default/shared survey list page size — also what `SurveysPage`'s Previous button steps by,
+ * so the two can never silently drift apart (code review of 10-15-survey-poll, 2026-08-17: they
+ * were previously two independent magic-number `50`s with nothing tying them together).
+ */
+export const SURVEY_LIST_PAGE_SIZE = 50;
+
+/**
  * GET the Pariwar's surveys (newest-first, paginated, filterable by the DERIVED display state).
  * `displayState` is one of `draft | scheduled | open | expired | closed` — a derivation over the
  * stored status plus the window against the SERVER's clock, never a stored column.
  */
 export function listSurveys(
   pariwarId: string,
-  displayState?: string,
-  limit = 50,
+  // [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): was plain `string`, so a typo'd
+  // filter value would compile and silently produce an empty/wrong-filtered result.
+  displayState?: SurveyDisplayState,
+  limit = SURVEY_LIST_PAGE_SIZE,
   offset = 0,
 ): Promise<SurveyList> {
   const q = new URLSearchParams({ limit: String(limit), offset: String(offset) });
@@ -2041,14 +2051,17 @@ export function getSurveyAggregate(pariwarId: string, surveyId: string): Promise
 
 /**
  * GET one question's free-text answers, UNATTRIBUTED — `{answer_text, submitted_at}` and nothing
- * else. Reading this writes a `survey.responses_viewed` audit line server-side (carrying a COUNT,
- * never the content), because it is the one admin read that sees member-authored personal data.
+ * else. Reading this writes a `survey.responses_viewed` audit line server-side (carrying the
+ * survey id and the audited question, ⛔ never the content and — code review of 10-15-survey-poll,
+ * 2026-08-17 — never a count either: the audit payload field is a one-way hash, so a count folded
+ * into it would not be later recoverable), because it is the one admin read that sees
+ * member-authored personal data.
  */
 export function listSurveyFreeText(
   pariwarId: string,
   surveyId: string,
   questionId: string,
-  limit = 50,
+  limit = SURVEY_LIST_PAGE_SIZE,
   offset = 0,
 ): Promise<SurveyFreeTextList> {
   const q = new URLSearchParams({ limit: String(limit), offset: String(offset) });

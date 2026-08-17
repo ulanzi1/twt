@@ -67,6 +67,11 @@ run "alert-state-invariant"  "pnpm alert-state:test && pnpm alert-state:check"
 run "helpdesk-state-invariant"  "pnpm helpdesk-state:test && pnpm helpdesk-state:check"
 run "governance-boundary"  "pnpm governance-boundary:test && pnpm governance-boundary:check"
 run "custom-field-governance" "pnpm custom-field:test && pnpm custom-field:check"
+# [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): CRITICAL — the gate existed as
+# package.json scripts and passed by hand, but was never wired into ci-local.sh or ci.yml, so a
+# reintroduced `quorum` (or a deleted/renamed SCAN_PATHS entry) got a green run regardless. That is
+# exactly the "by eye" enforcement Task 11 explicitly rejected.
+run "survey-advisory-invariant" "pnpm survey-advisory:test && pnpm survey-advisory:check"
 run "determinism-replay"    "pnpm --filter @twt/validity-service test:determinism"
 run "channels-determinism"  "pnpm --filter @twt/channels test:determinism"
 

@@ -370,7 +370,10 @@ describe.skipIf(!hasDatabase)('surveys — the read-time window (AC2)', () => {
     expect(ok.surveyId).toBe(row.surveyId);
   });
 
-  it('REFUSES a response to a survey that is still a draft, or already closed', async () => {
+  // [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): a draft is not yet visible to a
+  // member (AC6) — it must read as 404, identically to a cross-tenant survey, never as a state-
+  // revealing 409 that confirms the row exists. `closed` WAS published and visible, so it stays a 409.
+  it('REFUSES a response to a survey that is still a draft — 404, not a state conflict (AC6)', async () => {
     const { tx, client } = getTx();
     await enterAppScope(client, PARIWAR_A);
     const memberId = await toMemberId(await seedMember(tx, PARIWAR_A, { state: 'active' }));
@@ -378,7 +381,13 @@ describe.skipIf(!hasDatabase)('surveys — the read-time window (AC2)', () => {
     const draft = await createDraft(tx, draftInput(PARIWAR_A));
     await expect(
       recordResponse(tx, { pariwarId: PARIWAR_A, surveyId: draft.surveyId, memberId, answers: fullAnswers(), now: MID }),
-    ).rejects.toBeInstanceOf(SurveyStateError);
+    ).rejects.toBeInstanceOf(SurveyNotFoundError);
+  });
+
+  it('REFUSES a response to an already-closed survey — a state conflict, not a 404', async () => {
+    const { tx, client } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const memberId = await toMemberId(await seedMember(tx, PARIWAR_A, { state: 'active' }));
 
     const published = await publishedSurvey(tx, PARIWAR_A);
     await close(tx, PARIWAR_A, published.surveyId, MID);
@@ -543,15 +552,17 @@ describe.skipIf(!hasDatabase)('surveys — the admin list + the member read', ()
     const row = await publishedSurvey(tx, PARIWAR_A);
     const memberId = await toMemberId(await seedMember(tx, PARIWAR_A, { state: 'active' }));
 
+    // [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): `listOpenSurveysForMember` now
+    // returns `{ candidates, hasMore, consumed }` (member-list pagination), not a bare array.
     const before = await listOpenSurveysForMember(tx, PARIWAR_A, memberId, MID, { info: () => {} });
-    expect(before.find((c) => c.survey.surveyId === row.surveyId)?.answered).toBe(false);
+    expect(before.candidates.find((c) => c.survey.surveyId === row.surveyId)?.answered).toBe(false);
 
     await recordResponse(tx, { pariwarId: PARIWAR_A, surveyId: row.surveyId, memberId, answers: fullAnswers(), now: MID });
 
     // ⭐ STILL RETURNED, flagged answered — not filtered out (AC6). A member who answered yesterday
     // must see that they did, not an empty list that reads as "nothing was ever asked".
     const after = await listOpenSurveysForMember(tx, PARIWAR_A, memberId, MID, { info: () => {} });
-    expect(after.find((c) => c.survey.surveyId === row.surveyId)?.answered).toBe(true);
+    expect(after.candidates.find((c) => c.survey.surveyId === row.surveyId)?.answered).toBe(true);
   });
 
   it('a survey outside its window is not in the member read', async () => {
@@ -560,9 +571,34 @@ describe.skipIf(!hasDatabase)('surveys — the admin list + the member read', ()
     const row = await publishedSurvey(tx, PARIWAR_A);
     const memberId = await toMemberId(await seedMember(tx, PARIWAR_A, { state: 'active' }));
     const scheduled = await listOpenSurveysForMember(tx, PARIWAR_A, memberId, BEFORE, { info: () => {} });
-    expect(scheduled.map((c) => c.survey.surveyId)).not.toContain(row.surveyId);
+    expect(scheduled.candidates.map((c) => c.survey.surveyId)).not.toContain(row.surveyId);
     const expired = await listOpenSurveysForMember(tx, PARIWAR_A, memberId, UNTIL, { info: () => {} });
-    expect(expired.map((c) => c.survey.surveyId)).not.toContain(row.surveyId);
+    expect(expired.candidates.map((c) => c.survey.surveyId)).not.toContain(row.surveyId);
+  });
+
+  it('the member read reports next_offset — pagination added (code review of 10-15-survey-poll, 2026-08-17)', async () => {
+    const { tx, client } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const memberId = await toMemberId(await seedMember(tx, PARIWAR_A, { state: 'active' }));
+    await publishedSurvey(tx, PARIWAR_A);
+    await publishedSurvey(tx, PARIWAR_A);
+    await publishedSurvey(tx, PARIWAR_A);
+
+    const firstPage = await listOpenSurveysForMember(tx, PARIWAR_A, memberId, MID, { info: () => {} }, null, { limit: 2 });
+    expect(firstPage.candidates).toHaveLength(2);
+    expect(firstPage.hasMore).toBe(true);
+    expect(firstPage.consumed).toBe(2);
+
+    const secondPage = await listOpenSurveysForMember(tx, PARIWAR_A, memberId, MID, { info: () => {} }, null, {
+      limit: 2,
+      offset: firstPage.consumed,
+    });
+    expect(secondPage.candidates).toHaveLength(1);
+    expect(secondPage.hasMore).toBe(false);
+
+    const firstIds = firstPage.candidates.map((c) => c.survey.surveyId);
+    const secondIds = secondPage.candidates.map((c) => c.survey.surveyId);
+    expect(firstIds.filter((id) => secondIds.includes(id))).toHaveLength(0); // no overlap across pages
   });
 });
 

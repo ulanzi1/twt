@@ -150,7 +150,8 @@ export function registerSurveyRoutes(app: FastifyInstance, deps: AppDeps): void 
   );
 
   // ⭐ The one admin read that sees member-authored personal data — and the one that writes a
-  // `survey.responses_viewed` audit line (carrying a COUNT, never the content).
+  // `survey.responses_viewed` audit line (carrying the survey id and question, never the content or
+  // a count — code review of 10-15-survey-poll, 2026-08-17).
   r.get(
     '/api/v1/p/:pariwarId/surveys/:surveyId/questions/:questionId/free-text',
     {

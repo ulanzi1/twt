@@ -40,7 +40,7 @@
 // `tone_review.signoff` audit-sink emission — this module owns only the durable row state (the
 // banners / news-blog / niyamavali domain/api split).
 
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import type { MemberId, PariwarId, SurveyId, UserId } from '../ids/index.js';
@@ -61,6 +61,7 @@ import {
   SurveyAudienceValueRequiredError,
   SurveyBilingualRequiredError,
   SurveyFrozenFieldError,
+  SurveyNotFoundError,
   SurveyStateError,
   SurveyWindowInvalidError,
 } from './errors.js';
@@ -112,6 +113,17 @@ export function assertAudienceAuthorable(audienceScope: SurveyAudienceScope, sco
   }
   if (audienceScope === 'state' && (scopeValue === null || scopeValue.trim() === '')) {
     throw new SurveyAudienceValueRequiredError(audienceScope);
+  }
+  // The mirror of the check above: `members-all` takes no value, so a stray one left over from a
+  // prior `state` scope (or supplied by a client that omitted `audience_scope` on a PATCH, which the
+  // wire-level refinement cannot see because it only validates the fields present IN the patch) must
+  // be rejected here too — this function sees the MERGED, resulting state, which is the only place
+  // that gap can be closed. [Review][Patch] — code review of 10-15-survey-poll (2026-08-17).
+  if (audienceScope === 'members-all' && scopeValue !== null) {
+    throw new SurveyAudienceUnsupportedError(
+      audienceScope,
+      'members-all takes no audience_scope_value; clear it or choose the state scope instead',
+    );
   }
 }
 
@@ -185,8 +197,26 @@ export interface UpdateSurveyPatch {
   responseThreshold?: number | null;
 }
 
-/** The fields LBD-5 freezes at publish, in the order they are reported to the admin. */
-const FROZEN_AFTER_PUBLISH = ['questions', 'response_threshold', 'audience_scope', 'audience_scope_value'] as const;
+/**
+ * The fields LBD-5 freezes at publish, in the order they are reported to the admin.
+ *
+ * ⚠ [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): this list previously named only
+ * four of the nine fields `updateSurvey`'s published-survey guard actually rejects (it also freezes
+ * the copy fields and `valid_from` — see the guard below). This is the single source of truth other
+ * code points to instead of re-deriving the freeze set, so it MUST list every field the guard checks,
+ * in the same order the guard checks them — keep the two in lockstep.
+ */
+const FROZEN_AFTER_PUBLISH = [
+  'questions',
+  'response_threshold',
+  'audience_scope',
+  'audience_scope_value',
+  'title',
+  'body',
+  'title_hi',
+  'body_hi',
+  'valid_from',
+] as const;
 
 /**
  * Edit a survey.
@@ -347,7 +377,31 @@ export async function publish(
       toneSignoffReviewedBy: actorId,
       updatedAt: now,
     })
-    .where(and(eq(surveys.pariwarId, pariwarId), eq(surveys.surveyId, surveyId), eq(surveys.status, 'draft')))
+    .where(
+      and(
+        eq(surveys.pariwarId, pariwarId),
+        eq(surveys.surveyId, surveyId),
+        eq(surveys.status, 'draft'),
+        // ⚠ [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): `status='draft'` alone
+        // does not guard against a concurrent `updateSurvey` PATCH landing between the read above and
+        // this UPDATE — an ordinary edit (title/questions/etc.) never changes `status`, so it would
+        // commit invisibly to this guard while `contentHash` above was computed from the STALE
+        // pre-PATCH `survey` object, publishing a signoff that no longer matches the row's actual
+        // content. Pinning to the `updatedAt` this function read makes any such interleaving lose the
+        // race honestly (falls into the `!row` branch below) instead of silently publishing stale copy.
+        //
+        // ⛔ LIVE-DB REGRESSION FOUND AND FIXED (code review of 10-15-survey-poll, 2026-08-17): a bare
+        // `eq(surveys.updatedAt, survey.updatedAt)` FAILED EVERY publish — `updated_at` is stored at
+        // microsecond precision (Postgres `timestamptz` default), but `survey.updatedAt` is a JS
+        // `Date`, which only holds millisecond precision. Reading the row truncates the sub-millisecond
+        // remainder; echoing that truncated value back into the WHERE clause then compares it against
+        // the STILL-microsecond-precision stored value, which can never match. Millisecond-truncating
+        // BOTH sides in SQL closes the gap without touching the column's stored precision (a schema
+        // migration was the other option; this is the smaller, non-invasive fix). Unit tests — no real
+        // DB — could not have caught this; only live-DB verification surfaced it.
+        sql`date_trunc('milliseconds', ${surveys.updatedAt}) = date_trunc('milliseconds', ${survey.updatedAt}::timestamptz)`,
+      ),
+    )
     .returning();
   const row = updated[0];
   if (!row) {
@@ -423,6 +477,16 @@ export interface RecordResponseInput {
  */
 export async function recordResponse(db: Db, input: RecordResponseInput): Promise<SurveyResponseRow> {
   const survey = await getSurveyOrThrow(db, input.pariwarId, input.surveyId);
+
+  // AC6: a draft is not yet visible to a member — an unpublished survey's existence must read
+  // identically to a cross-tenant one (404, never 403 or a state-revealing 409), otherwise the status
+  // code itself leaks that the survey/audience exists before it was ever published. `closed` is not
+  // this case: it WAS published and visible, so its state conflict is honestly reported as 409.
+  // [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): this branch previously fell
+  // through to the generic `isSurveyOpen` check below and 409'd a draft the same as a closed survey.
+  if (survey.status === 'draft') {
+    throw new SurveyNotFoundError(input.pariwarId, input.surveyId);
+  }
 
   if (!isSurveyOpen(survey, input.now)) {
     throw new SurveyStateError(

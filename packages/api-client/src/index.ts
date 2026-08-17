@@ -1315,9 +1315,17 @@ export function createMemberSurveyClient(opts: MemberAuthClientOptions) {
      * The member's open, in-audience surveys (session; auth). Surveys they have ALREADY answered are
      * returned with `answered: true` rather than omitted — a member who answered yesterday must see
      * that they did, not an empty list that reads as "nothing was ever asked".
+     *
+     * [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): `limit`/`offset` added — this
+     * previously took no paging args at all, silently capping every caller at the server's first
+     * page (the exact gap the API/contracts pass fixed at the server, one layer down).
      */
-    list(pariwarId: string): Promise<MemberSurveyListResponse> {
-      return call(base(pariwarId), MemberSurveyListResponse, undefined, true, 'GET');
+    list(pariwarId: string, opts: { limit?: number; offset?: number } = {}): Promise<MemberSurveyListResponse> {
+      const q = new URLSearchParams();
+      if (opts.limit !== undefined) q.set('limit', String(opts.limit));
+      if (opts.offset !== undefined) q.set('offset', String(opts.offset));
+      const qs = q.toString();
+      return call(`${base(pariwarId)}${qs ? `?${qs}` : ''}`, MemberSurveyListResponse, undefined, true, 'GET');
     },
 
     /**

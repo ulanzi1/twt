@@ -1192,6 +1192,99 @@ export function useRetractBanner(pariwarId: string) {
   });
 }
 
+// ── Survey/Poll authoring + results (Story 10.15) ──────────────────────────────────────────────────
+
+export const surveysKey = (pariwarId: string) => ['surveys', pariwarId] as const;
+export const surveyKey = (pariwarId: string, surveyId: string) => ['survey', pariwarId, surveyId] as const;
+export const surveyAggregateKey = (pariwarId: string, surveyId: string) =>
+  ['survey-aggregate', pariwarId, surveyId] as const;
+export const surveyFreeTextKey = (pariwarId: string, surveyId: string, questionId: string) =>
+  ['survey-free-text', pariwarId, surveyId, questionId] as const;
+
+/** GET the Pariwar's surveys, optionally filtered by the DERIVED display state (AC1: paginated). */
+export function useSurveys(pariwarId: string, displayState?: string, offset = 0) {
+  return useQuery({
+    queryKey: [...surveysKey(pariwarId), displayState ?? 'all', offset],
+    queryFn: () => api.listSurveys(pariwarId, displayState, undefined, offset),
+  });
+}
+
+/** GET a single survey (the editor loads the exact stored row). */
+export function useSurvey(pariwarId: string, surveyId: string | null) {
+  return useQuery({
+    queryKey: surveyKey(pariwarId, surveyId ?? 'none'),
+    queryFn: () => api.getSurvey(pariwarId, surveyId!),
+    enabled: surveyId != null,
+  });
+}
+
+/** GET the aggregate results — counts only (AC7). ⛔ Never who answered. */
+export function useSurveyAggregate(pariwarId: string, surveyId: string | null) {
+  return useQuery({
+    queryKey: surveyAggregateKey(pariwarId, surveyId ?? 'none'),
+    queryFn: () => api.getSurveyAggregate(pariwarId, surveyId!),
+    enabled: surveyId != null,
+  });
+}
+
+/**
+ * GET one question's UNATTRIBUTED free-text answers (AC7).
+ *
+ * ⚠ `enabled` is gated on BOTH ids because this read writes an audit line server-side — firing it
+ * speculatively would record an admin as having viewed responses they never asked to see.
+ */
+export function useSurveyFreeText(pariwarId: string, surveyId: string | null, questionId: string | null) {
+  return useQuery({
+    queryKey: surveyFreeTextKey(pariwarId, surveyId ?? 'none', questionId ?? 'none'),
+    queryFn: () => api.listSurveyFreeText(pariwarId, surveyId!, questionId!),
+    enabled: surveyId != null && questionId != null,
+  });
+}
+
+function useInvalidateSurveys(pariwarId: string) {
+  const qc = useQueryClient();
+  return () => {
+    void qc.invalidateQueries({ queryKey: surveysKey(pariwarId) });
+  };
+}
+
+/** POST create a draft. */
+export function useCreateSurvey(pariwarId: string) {
+  const invalidate = useInvalidateSurveys(pariwarId);
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.createSurvey>[1]) => api.createSurvey(pariwarId, body),
+    onSuccess: invalidate,
+  });
+}
+
+/** PATCH edit. ⚠ On a published survey only an EXTENSION of `valid_until` survives the freeze. */
+export function useUpdateSurvey(pariwarId: string) {
+  const invalidate = useInvalidateSurveys(pariwarId);
+  return useMutation({
+    mutationFn: (args: { surveyId: string; patch: Parameters<typeof api.updateSurvey>[2] }) =>
+      api.updateSurvey(pariwarId, args.surveyId, args.patch),
+    onSuccess: invalidate,
+  });
+}
+
+/** Publish (tone-gated — the survey's own author cannot publish it; the fan-out follows server-side). */
+export function usePublishSurvey(pariwarId: string) {
+  const invalidate = useInvalidateSurveys(pariwarId);
+  return useMutation({
+    mutationFn: (surveyId: string) => api.publishSurvey(pariwarId, surveyId),
+    onSuccess: invalidate,
+  });
+}
+
+/** Close (terminal — no reopen). */
+export function useCloseSurvey(pariwarId: string) {
+  const invalidate = useInvalidateSurveys(pariwarId);
+  return useMutation({
+    mutationFn: (surveyId: string) => api.closeSurvey(pariwarId, surveyId),
+    onSuccess: invalidate,
+  });
+}
+
 // ── Trustee-Lite list + signals (Story 10.11) ──────────────────────────────────────────────────────
 
 /** The aggregated trustee worklist. Read-only; no filters and no pagination — it is an index. */

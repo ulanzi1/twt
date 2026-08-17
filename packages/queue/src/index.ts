@@ -304,6 +304,27 @@ export const QUEUE_NAMES = {
    */
   NEWS_PUBLISH: 'news.publish',
   /**
+   * Survey/Poll publish fan-out (Story 10.15, Task 6/10; AC8). The apps/api `publish` route enqueues
+   * this zero-delay AFTER it has transitioned the survey to `published` and the tx has committed;
+   * the apps/jobs worker resolves the audience through the SAME `isMemberInSurveyAudience` predicate
+   * the member read uses (one authority, not two), builds one `alert_published` Alert (⛔ NO new
+   * alert variant and no new event vocabulary — Decision LBD-8) and fans it out per member.
+   *
+   * ⭐ There is deliberately NO `mode` discriminator and no DELAYED form, unlike NEWS_PUBLISH: a
+   * survey has no scheduled-publish transition. A survey published with a future `valid_from` is
+   * ALREADY `published` and simply reads as `scheduled` until the clock passes — the window is a pure
+   * read-time derivation with no sweep — so there is only ever one trigger and one job shape.
+   *
+   * singletonKey = survey_id (dedups a re-enqueue from a double-clicked Publish). The fan-out lives
+   * in apps/jobs, NEVER in the admin-identity apps/api path: `resolveMemberDeliveryContext` /
+   * `fanOutAlert` resolve MEMBER Tier-1 field crypto (the 10.4 crypto-boundary lesson). Each send is
+   * claimed under `survey.publish:<alertId>:<memberId>`, so a pg-boss redelivery re-attempts the
+   * fan-out without duplicating a member's notification — a per-member claim, NOT a status re-check,
+   * is what makes redelivery safe. ⚠ A fan-out failure NEVER rolls back the publish: the survey is
+   * published and the notification is retried. Job class B (request/event).
+   */
+  SURVEY_PUBLISH: 'survey.publish',
+  /**
    * Reports-&-exports library — the report BUILD job (Story 10.7, Task 5). The admin analog of
    * DATA_EXPORT_BUILD: the apps/api `POST …/admin/reports` route enqueues this on an admin's report
    * request; the apps/jobs worker assembles the report OFF the request path — SCOPE-RESPECTING (the

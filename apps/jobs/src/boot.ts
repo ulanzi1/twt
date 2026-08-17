@@ -101,6 +101,7 @@ import {
   registerContributionNotifyWorkers,
 } from './scheduler/contribution-notify-triggers.js';
 import { registerNewsPublishWorker } from './scheduler/news-publish.js';
+import { registerSurveyPublishWorker } from './scheduler/survey-publish.js';
 import { registerModerationNotifyWorker } from './scheduler/moderation-notify.js';
 import {
   DEFAULT_MATCHER_CRON,
@@ -582,6 +583,15 @@ async function main(): Promise<void> {
     // `fanOutAlertToMembers` dispatch — the fan-out lives HERE, never in the admin-identity apps/api
     // path (the 10.4 crypto-boundary lesson). Delayed jobs (scheduled) fire via pg-boss `startAfter`.
     await registerNewsPublishWorker(boss, { notify: contributionNotifyDeps });
+
+    // Story 10.15 (Task 10) — the Survey/Poll publish fan-out worker. Same reuse as the News/Blog
+    // worker above: the contribution-notify deps carry the BYPASSRLS pool + MEMBER Tier-1 crypto the
+    // per-member `fanOutAlert` needs, which is exactly why the fan-out lives here and never in the
+    // admin-identity apps/api request path (the 10.4 crypto-boundary lesson). apps/api enqueues
+    // POST-TRANSITION and best-effort — a delivery failure never rolls back the committed publish.
+    // ⛔ This worker NEVER writes to `surveys`: unlike news there is no scheduled-publish transition
+    // to perform at fire time, because a survey's window is a pure read-time derivation with no sweep.
+    await registerSurveyPublishWorker(boss, { notify: contributionNotifyDeps });
 
     // Story 10.10 (Task 6) — the member-moderation notice worker. Same reuse as the News/Blog worker
     // above: the contribution-notify deps carry the BYPASSRLS pool + MEMBER Tier-1 crypto the shipped

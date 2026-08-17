@@ -4,6 +4,7 @@ import { StatLine } from './StatLine'
 import { PinnedItem } from './PinnedItem'
 import { RecentClosingRow } from './RecentClosingRow'
 import { P3DiagnosticPanel } from './P3DiagnosticPanel'
+import { PollsEntry } from '../polls/PollsEntry'
 import {
   SAMPLE_NEXT_MEETING,
   SAMPLE_PINNED,
@@ -81,6 +82,11 @@ export function PanchayatNoticeboard() {
         ))}
 
         <Hairline />
+
+        {/* Story 10.15 — the polls entry point. An ADDITION to the noticeboard, not a restructuring:
+            the tab bar stays at three and the UX spec adds no fourth tab. Renders NOTHING when there
+            is no poll to answer, so a quiet noticeboard stays quiet. */}
+        <PollsEntry />
 
         {/* हाल की आहुति per UX spec line 493 */}
         <SectionHeader title="हाल की आहुति" />

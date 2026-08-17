@@ -472,7 +472,43 @@ export function permissionKey(value: string): PermissionKey {
 // is load-bearing against the 10.19/10.22 notes.
 // ⛔ NO new key, NO new role, NO migration. `pool.fixed_amount_emergency` additionally becomes the
 // emergency attesting-panel eligibility credential (clause 2) — a consumer of the key, not a change to it.
-export const PERMISSION_CATALOG_VERSION = 35 as const;
+// ── Bumped 35 → 36 at Story 10.15 (added ONE key: 43 → 44) ─────────────────────────────────────
+// `survey.manage` — the FR-58 Survey/Poll admin WRITE + READ gate. Gates every admin survey route
+// (GET/POST/PATCH …/p/:pariwarId/surveys[/…] — list/create/update/publish/close + detail + the
+// aggregate + the free-text read). Checked at `dimension: 'pariwar'` (value = scopeTx.pariwarId — the
+// helpdesk.create / news.manage / feature_flag.* / banner.manage pariwar-wide-key precedent; a survey
+// is Pariwar-scoped, the tenant IS the target, and it is resolvable TODAY with no geo-tree).
+// ⭐ BOTH NUMBERS SAID EXPLICITLY, because catalog version is NOT a proxy for key count (10.18, 6.17
+// and 10.13 each bumped the version while minting ZERO keys): the version moves 35 → 36 AND
+// `PERMISSION_CATALOG.keys` moves 43 → 44, so `permissions.test.ts`'s length assertion moves too.
+// ONE key, not a `survey.view`/`survey.manage` split: UNLIKE 10.8's flags there is no transparency
+// property forcing the read broader than the write — nothing in FR-58 says a survey inventory or its
+// results must be visible to a role that may not author one. A split would be capability surface with
+// no requirement behind it (the 10.5/10.9 one-key posture, not the 10.8 two-key one).
+// ⚠ The read this key gates includes the AGGREGATE and the UNATTRIBUTED FREE TEXT. That is not a
+// widening: the free-text projection carries no member id, no row id and no ordinal (Story 10.15
+// LBD-3), so holding this key confers no ability to learn who said what. If a "who answered" view is
+// ever wanted it is a NEW key on a NEW story with a DPDPA consent question attached — ⛔ never a
+// widening of this one.
+// Granted to `pariwar_admin` (the tenant's content-authoring authority, the same holder as
+// `news.manage` and `banner.manage`) + `super_admin` (auto-derived). `state_trustee` is excluded for
+// the containment asymmetry in the other direction. `district_admin` is DEFERRED — a
+// `district`-ceiling grant can NEVER satisfy a pariwar-dimension check (scopeContains denies a target
+// broader than the grant; the ceiling check also forbids a district_admin from holding a
+// pariwar-scoped grant), so granting it would seed an INERT/false capability — the EXACT
+// [[project_rbac_geo_scope_containment]] asymmetry 10.3 / 10.4 / 10.5 / 10.8 / 10.9's
+// pariwar-dimension keys already encode. NO inert district_admin grant is seeded.
+// NOT step-up-gated (publishing a survey is NOT freeze-firing and is NOT in the AR-24 step-up list;
+// its accountability is the mandatory non-author tone-review sign-off + the §1.5 hash-chain audit line
+// on every create/edit/publish/close, plus a `survey.responses_viewed` line on every free-text read).
+// The MEMBER routes (`GET/POST …/p/:pariwarId/member/surveys[…]`) deliberately touch NO key at all —
+// they are `requireMemberSession`-gated with the member JWT as the tenancy authority (the 10.2
+// member-helpdesk / 10.9 member-banner precedent), so a member never needs, and can never hold, an
+// RBAC grant to answer a survey.
+// ACCEPTANCE CONDITION: district_admin survey-manage may be enabled only if a survey gains a
+// server-derived district AND the gate moves to `dimension: 'district'` — never by widening a pariwar
+// gate to a role that cannot satisfy it.
+export const PERMISSION_CATALOG_VERSION = 36 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -784,6 +820,22 @@ export const SEED_PERMISSION_KEYS = [
   // step-up-gated; accountability is the non-author tone-review sign-off + the §1.5 audit line. The MEMBER
   // banner routes touch NO key — they are member-session-gated (the 10.2 precedent).
   'banner.manage',
+  // Story 10.15 (FR-58) — the Survey/Poll admin WRITE + READ key. Gates every admin survey route
+  // (GET/POST/PATCH …/p/:pariwarId/surveys[/…] — list/create/update/publish/close + detail, plus the
+  // aggregate and the unattributed free-text read). Checked at `dimension: 'pariwar'` (value =
+  // scopeTx.pariwarId — the helpdesk.create / news.manage / feature_flag.* / banner.manage precedent).
+  // ONE key, not a view/manage split: unlike 10.8's flags there is no transparency property forcing the
+  // read broader than the write (the 10.5/10.9 one-key posture). ⚠ The gated read includes the results,
+  // but that is NOT a widening — the free-text projection carries no member id, no row id and no
+  // ordinal, so this key confers no ability to learn who said what. Granted to `pariwar_admin` (the same
+  // content-authoring authority that holds news.manage + banner.manage); super_admin auto-derives.
+  // district_admin DEFERRED and state_trustee excluded (a district-ceiling grant can't satisfy a pariwar
+  // check, and a pariwar target can't be reached from a broader ceiling — inert either way; see the
+  // version-bump note + roles.ts). NOT step-up-gated; accountability is the non-author tone-review
+  // sign-off + the §1.5 audit line. ⚠ A survey is ADVISORY and has no governance effect — this key
+  // authorises ASKING a question, never deciding anything by the answers. The MEMBER survey routes touch
+  // NO key at all — they are member-session-gated (the 10.2 / 10.9 precedent).
+  'survey.manage',
   // Story 10.12 (FR-54) — the per-Pariwar custom-field DEFINITION READ key. Gates
   // GET …/p/:pariwarId/custom-fields/definitions (in-force + history) and
   // GET …/p/:pariwarId/custom-fields/members/:memberId/values. Checked at `dimension: 'pariwar'` (value

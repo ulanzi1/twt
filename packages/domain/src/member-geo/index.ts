@@ -35,8 +35,25 @@
 //     bind, and this root stays off the prohibited list. ⛔ Note what a green `governance-boundary`
 //     run proved about that: nothing. The root is unlisted, so the scan was always going to pass —
 //     which is exactly why the non-firing is written HERE and in the decision log instead.
+//   · ✅ **Story 10.15 — EVALUATED 2026-08-17; DID NOT FIRE. Discharged, not pending.** ⛔ The
+//     bullet is kept rather than deleted, for the same reason 6.17's is: a deleted trigger is
+//     indistinguishable from a forgotten one. 10.15 consumes `resolveMemberGeoNode` twice — the
+//     member survey READ (`surveys/read.ts` `listOpenSurveysForMember`) and the publish FAN-OUT
+//     (`surveys/read.ts` `resolveSurveyAudienceMemberIds`, via the pure `liftDistrictThroughTree`) —
+//     so the trigger genuinely had to be evaluated rather than assumed inapplicable.
+//     It does not fire, and the reason is the one this file's own header states (`:10-14`): a
+//     member-attribution read is **not an authorization decision**. It answers *"which audience is
+//     this member in"*, which no permission check consults. A survey audience is the SAME CLASS OF
+//     CONSUMER as the 10.9 banner audience: it selects who is SHOWN something and who is NOTIFIED;
+//     it grants nothing, gates no permission check, and cannot widen anyone's authority. The survey
+//     admin gate is `survey.manage` at `dimension: 'pariwar'`, checked against `scopeTx.pariwarId`
+//     with no geo involved at all — the geo read and the authorization decision never meet.
+//     ⇒ the story creates NO authorization consumer, the obligation does not bind, and this root
+//     stays off the prohibited list. ⛔ Note what a green `governance-boundary` run proved about
+//     that: nothing. The root is unlisted, so the scan was always going to pass — which is exactly
+//     why the non-firing is written HERE rather than inferred from a passing gate.
 //   · ⭐ **Story 10.4** — `helpdesk_tickets.member_scope_context` geo enrichment. **THE SOLE
-//     STANDING TRIGGER.** ⛔ Do not read the discharge above as discharging this one.
+//     STANDING TRIGGER.** ⛔ Do not read either discharge above as discharging this one.
 
 // The primitive, its pure half, and the audience-selection district-set read.
 export * from './resolve.js';

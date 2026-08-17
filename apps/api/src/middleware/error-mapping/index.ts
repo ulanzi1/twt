@@ -22,6 +22,16 @@ import {
   BannerPopupMustBeDismissibleError,
   BannerStateError,
   BannerWindowInvalidError,
+  SurveyAlreadyRespondedError,
+  SurveyAnswerInvalidError,
+  SurveyAudienceUnsupportedError,
+  SurveyAudienceValueRequiredError,
+  SurveyBilingualRequiredError,
+  SurveyFrozenFieldError,
+  SurveyNotFoundError,
+  SurveyQuestionnaireInvalidError,
+  SurveyStateError,
+  SurveyWindowInvalidError,
   ClaimStateDirectWriteError,
   ClauseIdConflictError,
   ClauseNotFoundError,
@@ -264,6 +274,78 @@ export function errorMappingHandler(
     return;
   }
   if (error instanceof BannerWindowInvalidError) {
+    void reply.status(422).send(error.toErrorResponse(requestId));
+    return;
+  }
+
+  // (3b‴′) Survey/Poll typed errors (Story 10.15). Each owns its code + projector.
+  //   SurveyNotFoundError               → 404 survey.not_found (absent, cross-tenant, an unpublished
+  //                                       draft on the member path, or a member `:pariwarId` mismatch
+  //                                       — ONE shape, so there is no existence oracle)
+  //   SurveyStateError                  → 409 survey.invalid_state (illegal transition, an edit on a
+  //                                       closed survey, a concurrent state change, OR a response
+  //                                       against a survey that is not open at `now` — expiry is
+  //                                       enforced on the WRITE path, not merely hidden from the read)
+  //   SurveyFrozenFieldError            → 409 survey.frozen_field (an edit touching a field frozen by
+  //                                       publish — LBD-5. A 409 not a 422: the payload is not
+  //                                       malformed, it conflicts with the resource's CURRENT STATE)
+  //   SurveyAlreadyRespondedError       → 409 survey.already_responded (LBD-6 — one response per
+  //                                       member, and submission is final). ⚠ DISTINCT from an
+  //                                       `Idempotency-Key` replay, which is not an error at all and
+  //                                       returns the original 201.
+  //   SurveyWindowInvalidError          → 422 survey.window_invalid (valid_until <= valid_from, OR a
+  //                                       SHORTENED valid_until on a published survey — the message
+  //                                       points at `close`, the transition that exists for it)
+  //   SurveyBilingualRequiredError      → 422 survey.bilingual_required (all four copy fields are
+  //                                       required at publish, FR-68)
+  //   SurveyQuestionnaireInvalidError   → 422 survey.questionnaire_invalid (a closed-vocabulary
+  //                                       violation NAMING the offending question_id and the bound)
+  //   SurveyAnswerInvalidError          → 422 survey.answer_invalid (likewise for one member's
+  //                                       answers). ⛔ Never echoes `answer_text` — a free-text
+  //                                       failure reports the LENGTH and the BOUND (LBD-3).
+  //   SurveyAudienceUnsupportedError    → 422 survey.audience_unsupported (`public`/`role`/`cohort`
+  //                                       can never resolve to a survey audience — ⚠ `public` is
+  //                                       rejected here and ALLOWED for banners, deliberately: LBD-7)
+  //   SurveyAudienceValueRequiredError  → 422 survey.audience_value_required (`state` with no value)
+  // ⚠ The tone-review DENY path (publish by the author, or publish without a sign-off) is NOT here:
+  // it reuses the shipped ToneReviewRequiredError → 409, mapped below.
+  if (error instanceof SurveyNotFoundError) {
+    void reply.status(404).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof SurveyStateError) {
+    void reply.status(409).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof SurveyFrozenFieldError) {
+    void reply.status(409).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof SurveyAlreadyRespondedError) {
+    void reply.status(409).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof SurveyWindowInvalidError) {
+    void reply.status(422).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof SurveyBilingualRequiredError) {
+    void reply.status(422).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof SurveyQuestionnaireInvalidError) {
+    void reply.status(422).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof SurveyAnswerInvalidError) {
+    void reply.status(422).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof SurveyAudienceUnsupportedError) {
+    void reply.status(422).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof SurveyAudienceValueRequiredError) {
     void reply.status(422).send(error.toErrorResponse(requestId));
     return;
   }

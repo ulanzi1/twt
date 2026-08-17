@@ -1,0 +1,23 @@
+{
+  "title": "Polls",
+  "list_empty": "There are no questions for you right now.",
+  "list_error": "Could not load the questions. Pull down to try again.",
+  "loading": "Loading…",
+  "answered_badge": "You have answered",
+  "closes_on": "Open until",
+  "open_survey": "Answer",
+  "view_answered": "You answered this",
+  "advisory_notice": "Your answers help the Pariwar understand what members think. A poll does not decide anything on its own.",
+  "one_answer_notice": "You can answer once. Your answer cannot be changed afterwards.",
+  "submit": "Send my answer",
+  "submitting": "Sending…",
+  "submit_error": "Could not send your answer. Please try again.",
+  "submitted": "Thank you — your answer has been recorded.",
+  "already_answered": "You have already answered this poll.",
+  "closed_now": "This poll is no longer accepting answers.",
+  "unanswered_question": "Please answer this question.",
+  "choose_one": "Choose one",
+  "choose_any": "Choose any number",
+  "write_answer": "Write your answer",
+  "back": "Back"
+}

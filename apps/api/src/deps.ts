@@ -40,6 +40,7 @@ import { createPgBossDataExportEnqueuer } from './modules/data-export/index.js';
 import { createPgBossReportExportEnqueuer } from './modules/reports/index.js';
 import { createPgBossReconciliationMatchEnqueuer } from './modules/reconciliation/index.js';
 import { createPgBossNewsPublishEnqueuer } from './modules/news-blog/queue.js';
+import { createPgBossSurveyPublishEnqueuer } from './modules/surveys/queue.js';
 import { createPgBossModerationNotifyEnqueuer } from './modules/member-moderation/queue.js';
 import { createPgBossClaimOcrParityEnqueuer } from './modules/claims/ocr-parity-queue.js';
 import { createPgBossCycleSpawnEnqueuer } from './modules/claims/cycle-spawn-queue.js';
@@ -349,6 +350,12 @@ export async function createDeps(config: ApiConfig): Promise<AppDeps> {
     // DELAYED NEWS_PUBLISH job; the immediate publish route enqueues a zero-delay one. The apps/jobs
     // worker owns the audience fan-out (crypto boundary). Same connection string as the app pool.
     newsPublishQueue: await createPgBossNewsPublishEnqueuer(connectionString),
+    // Survey publish fan-out producer (Story 10.15, Task 6 / AC8) — send-only. The publish route
+    // enqueues a zero-delay SURVEY_PUBLISH job AFTER the transition; the apps/jobs worker owns the
+    // member fan-out (crypto boundary). ⚠ No delayed form and no `mode`, unlike news: a survey has no
+    // scheduled-publish TRANSITION — a future `valid_from` just reads as `scheduled` off a published
+    // row, because the window is a pure read-time derivation with no sweep.
+    surveyPublishQueue: await createPgBossSurveyPublishEnqueuer(connectionString),
     // Story 10.10 (AC8) — the moderation-notice producer. Send-only; apps/jobs owns the fan-out.
     moderationNotifyQueue: await createPgBossModerationNotifyEnqueuer(connectionString),
     // Claim-document object store (Story 6.5, Decision D1) — the live GCS adapter when

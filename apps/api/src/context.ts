@@ -359,6 +359,33 @@ export interface NewsPublishEnqueuer {
 }
 
 /**
+ * Survey publish job producer (Story 10.15, Task 6 / AC8) — SEND-ONLY. The `publish` route enqueues
+ * a zero-delay `SURVEY_PUBLISH` job AFTER transitioning the survey to `published`; the apps/jobs
+ * worker owns the audience fan-out, because `resolveMemberDeliveryContext` / `fanOutAlert` need
+ * MEMBER Tier-1 field crypto and apps/api's request path carries ADMIN-identity keys (the 10.4
+ * crypto boundary).
+ *
+ * ⭐ NO `mode` and no delayed form, UNLIKE `NewsPublishEnqueuer`: a survey has no scheduled-publish
+ * TRANSITION. Publishing with a future `valid_from` leaves the row `published` and merely reading as
+ * `scheduled` until the clock passes — the window is a pure read-time derivation with no sweep.
+ *
+ * `singletonKey = survey_id` dedups re-enqueues. Best-effort at the call site: a failed enqueue must
+ * NEVER fail or roll back a committed publish (AC8 — the survey is published, the notification is
+ * retried). A pg-boss-backed enqueuer in prod/dev, an OPTIONAL capturing fake in tests. `close`
+ * drains the send-only client on shutdown.
+ */
+export interface SurveyPublishEnqueuer {
+  enqueuePublish(input: {
+    readonly surveyId: string;
+    readonly pariwarId: string;
+    readonly requestId: string;
+    readonly actorId: string | null;
+    readonly traceId: string;
+  }): Promise<void>;
+  close?(): Promise<void>;
+}
+
+/**
  * The Story 10.10 moderation-notice producer contract (AC8). Send-only — apps/api produces, apps/jobs
  * consumes; NEVER `boss.work()` here.
  */
@@ -570,6 +597,15 @@ export interface AppDeps {
    * OPTIONAL — omitted in tests + wherever the pg-boss client is not wired.
    */
   readonly newsPublishQueue?: NewsPublishEnqueuer;
+  /**
+   * Survey publish job producer (Story 10.15, Task 6 / AC8) — send-only. After a publish commits, the
+   * route enqueues a `SURVEY_PUBLISH` job and the apps/jobs worker owns the member fan-out. apps/api
+   * NEVER fans out itself: it needs MEMBER Tier-1 crypto and apps/api's request path carries
+   * ADMIN-identity keys (the 10.4 crypto boundary). Best-effort — a failed enqueue NEVER fails or
+   * rolls back the committed publish. OPTIONAL — omitted in tests + wherever pg-boss is not wired, so
+   * the API boots without a queue exactly as news does.
+   */
+  readonly surveyPublishQueue?: SurveyPublishEnqueuer;
   /**
    * Member-moderation notice job producer (Story 10.10, Task 5 / AC8) — send-only. After a
    * suspend/terminate/restore commits, the route enqueues a `MEMBER_MODERATION_NOTIFY` job and the

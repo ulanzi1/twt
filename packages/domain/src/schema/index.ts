@@ -300,6 +300,14 @@ export * from './news_posts.js';
 // ⚠ `valid_from`/`valid_until` are a pure READ-TIME window (Decision 2): nothing flips a status at
 // activation or expiry, and `scheduled`/`live`/`expired` are DERIVED, never stored.
 export * from './banners.js';
+// Story 10.15 — the Survey/Poll `[SURFACE]` data model: `surveys` (MUTABLE `status` column, the same
+// 10.5 D1 / 10.9 D1 inheritance — NO projector, NO state-writer trigger, NO CI state-invariant gate,
+// NO events_log stream; three pgEnums: survey_status / survey_audience_scope / survey_question_type)
+// + `survey_responses` (attributed at rest by PK necessity, identity-stripped at the READ boundary).
+// ⚠ `valid_from`/`valid_until` are a pure READ-TIME window: nothing flips a status at open or expiry.
+// ⚠ `response_threshold` is FR-58's "quorum threshold" RENAMED and it GATES NOTHING — a survey is
+// ADVISORY and has no governance effect (LBD-1); read the schema file header before touching it.
+export * from './surveys.js';
 // Story 10.8 — the feature-flag `[PRIMITIVE]`: `feature_flag_versions` (immutable, versioned,
 // tenant-scoped, audit-anchored rows + the feature_flag_state pgEnum). Like the routing-policy
 // registry above and UNLIKE the five event-derived-state primitives, `state` is an AUTHORED column

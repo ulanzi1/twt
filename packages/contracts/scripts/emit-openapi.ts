@@ -2983,6 +2983,283 @@ registry.registerPath({
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 
+// ── Story 10.15 — surveys/polls (FR-58; the admin authoring + results surface + the MEMBER surface) ─
+// Six admin routes are `survey.manage`-gated at `dimension: 'pariwar'` (403 on a missing/inert
+// grant). The two MEMBER routes carry NO RBAC key at all — they are member-session-gated, the member
+// JWT is the tenancy authority, and a `:pariwarId` mismatch is a 404 (never a 403, which would leak
+// that the resource exists). The response window is a pure READ-TIME window: there is no scheduler
+// and no open/expiry transition, so no route "opens" or "expires" a survey.
+//
+// ⚠ A SURVEY IS ADVISORY AND HAS NO GOVERNANCE EFFECT. `response_threshold` is FR-58's "optional
+// quorum threshold" RENAMED, and it gates NOTHING — it feeds one informational boolean on the
+// aggregate. It is deliberately absent from the member DTO entirely.
+// ⛔ No route here joins a response to a member: the aggregate returns counts, and the free-text read
+// returns `{answer_text, submitted_at}` with no id and no ordinal.
+const {
+  CreateSurveyRequest,
+  UpdateSurveyRequest,
+  PublishSurveyRequest,
+  CloseSurveyRequest,
+  SubmitSurveyResponseRequest,
+  SurveyResponse: SurveyResponseDto,
+  SurveyListResponse,
+  MemberSurveyListResponse,
+  SubmitSurveyResponseResult,
+  SurveyAggregateResponse,
+  SurveyFreeTextListResponse,
+} = await import('../src/surveys/index.js');
+
+const CreateSurveyRequestComponent = CreateSurveyRequest.openapi('CreateSurveyRequest');
+const UpdateSurveyRequestComponent = UpdateSurveyRequest.openapi('UpdateSurveyRequest');
+const PublishSurveyRequestComponent = PublishSurveyRequest.openapi('PublishSurveyRequest');
+const CloseSurveyRequestComponent = CloseSurveyRequest.openapi('CloseSurveyRequest');
+const SubmitSurveyResponseRequestComponent = SubmitSurveyResponseRequest.openapi('SubmitSurveyResponseRequest');
+const SurveyComponent = SurveyResponseDto.openapi('Survey');
+const SurveyListComponent = SurveyListResponse.openapi('SurveyList');
+const MemberSurveyListComponent = MemberSurveyListResponse.openapi('MemberSurveyList');
+const SubmitSurveyResponseResultComponent = SubmitSurveyResponseResult.openapi('SubmitSurveyResponseResult');
+const SurveyAggregateComponent = SurveyAggregateResponse.openapi('SurveyAggregate');
+const SurveyFreeTextListComponent = SurveyFreeTextListResponse.openapi('SurveyFreeTextList');
+
+const surveyPariwarParams = z.object({ pariwarId: z.string().uuid() });
+const surveyIdParams = z.object({ pariwarId: z.string().uuid(), surveyId: z.string().uuid() });
+const surveyForbidden = errorResponse('Not authorized (survey.manage) for this Pariwar');
+// The member survey list is a collection GET, so it declares a BOUNDED `limit` — the Story 1.14 AC-3
+// forced-pagination invariant (FR-91). `surveys` grows with tenant data, which is exactly the
+// unbounded-read hazard that invariant exists to prevent.
+const memberSurveyListQuery = z.object({ limit: z.number().int().min(1).max(200).optional() });
+const surveyTags = ['surveys'];
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/surveys',
+  summary: 'List the Pariwar\'s surveys (newest-first, paginated, derived-display-state filterable)',
+  description:
+    'The `display_state` filter is a DERIVED state (draft | scheduled | open | expired | closed) ' +
+    'computed from the stored status plus the valid_from/valid_until window against the server\'s ' +
+    'clock — it is never a stored column. `valid_from` is inclusive and `valid_until` exclusive.',
+  tags: surveyTags,
+  request: { params: surveyPariwarParams },
+  responses: {
+    200: { description: 'The paginated survey list', content: jsonOf(SurveyListComponent) },
+    401: errorResponse('Authentication required'),
+    403: surveyForbidden,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/surveys',
+  summary: 'Create a survey draft',
+  description:
+    'Copy and questions may be incomplete on a draft; all four copy fields and at least one question ' +
+    'become mandatory at publish. The window must be non-empty (422 otherwise — enforced again by a ' +
+    'DB CHECK). The audience scope must be one that can resolve: `public` is REJECTED (422) because ' +
+    'a survey has no unauthenticated respondent, and `role`/`cohort` are rejected because no member ' +
+    'attribute exists to resolve them against.',
+  tags: surveyTags,
+  request: {
+    params: surveyPariwarParams,
+    body: { content: jsonOf(CreateSurveyRequestComponent), required: true },
+  },
+  responses: {
+    201: { description: 'The created draft', content: jsonOf(SurveyComponent) },
+    400: errorResponse('Request validation failed'),
+    401: errorResponse('Authentication required'),
+    403: surveyForbidden,
+    422: errorResponse('An empty/inverted window, an unusable audience scope, or a questionnaire violating a declared bound (the error names the violated bound and the offending question_id)'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/surveys/{surveyId}',
+  summary: 'Read a single survey (admin)',
+  tags: surveyTags,
+  request: { params: surveyIdParams },
+  responses: {
+    200: { description: 'The survey', content: jsonOf(SurveyComponent) },
+    401: errorResponse('Authentication required'),
+    403: surveyForbidden,
+    404: errorResponse('Survey not found'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/p/{pariwarId}/surveys/{surveyId}',
+  summary: 'Edit a survey (a published survey may only have its valid_until EXTENDED)',
+  description:
+    'On a DRAFT every field applies, re-validated. On a PUBLISHED survey the questionnaire, the ' +
+    'response_threshold, the audience and the copy are FROZEN — a request touching any of them is a ' +
+    '409 naming the frozen field. The reason is that a response is an answer TO A QUESTION: change ' +
+    'the question and every stored answer silently becomes an answer to something nobody asked. To ' +
+    'ask something different, close this survey and publish a new one. The ONLY permitted ' +
+    'post-publish mutation is EXTENDING valid_until; a shortening is a 422 pointing at `close`, ' +
+    'which is the transition that exists for stopping collection. A closed survey is terminal and ' +
+    'rejects every edit (409).',
+  tags: surveyTags,
+  request: {
+    params: surveyIdParams,
+    body: { content: jsonOf(UpdateSurveyRequestComponent), required: true },
+  },
+  responses: {
+    200: { description: 'The updated survey', content: jsonOf(SurveyComponent) },
+    400: errorResponse('Request validation failed'),
+    401: errorResponse('Authentication required'),
+    403: surveyForbidden,
+    404: errorResponse('Survey not found'),
+    409: errorResponse('The survey is closed (terminal); OR the edit touches a field frozen by publish (the error names it); OR the survey\'s status changed concurrently before this edit could be applied'),
+    422: errorResponse('An empty/inverted window, a SHORTENED valid_until on a published survey, an unusable audience scope, or a questionnaire violating a declared bound'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/surveys/{surveyId}/publish',
+  summary: 'Publish a survey draft (draft → published)',
+  description:
+    'Publishing does NOT open the survey by itself — openness is the read-time window. A published ' +
+    'survey whose valid_from is in the future reads as `scheduled` and opens when the clock passes ' +
+    'it, with nothing running. Requires all four copy fields and at least one question (422 ' +
+    'otherwise) and a NON-AUTHOR tone-review sign-off: the publishing actor becomes the reviewer, so ' +
+    'the survey\'s own author cannot publish it (409). The sign-off\'s content hash covers the copy ' +
+    'AND the questionnaire, and since both are frozen from this moment it is a ONE-SHOT binding. ' +
+    'Publishing also enqueues a member notification fan-out; a fan-out failure never rolls back the ' +
+    'publish — the survey is published and the notification is retried.',
+  tags: surveyTags,
+  request: {
+    params: surveyIdParams,
+    body: { content: jsonOf(PublishSurveyRequestComponent), required: false },
+  },
+  responses: {
+    200: { description: 'The published survey', content: jsonOf(SurveyComponent) },
+    401: errorResponse('Authentication required'),
+    403: surveyForbidden,
+    404: errorResponse('Survey not found'),
+    409: errorResponse('Illegal transition for the survey\'s current status; OR the tone-review gate denied (author is the publisher / no sign-off); OR the survey\'s status changed concurrently before publish could be applied'),
+    422: errorResponse('A copy field (title, body, title_hi, body_hi) is missing — Hindi and English are both required; OR the survey has no questions'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/surveys/{surveyId}/close',
+  summary: 'Close a survey (draft → closed as a discard, or published → closed to stop collecting)',
+  description:
+    'TERMINAL — there is no reopen, deliberately: reopening would resume collecting answers into an ' +
+    'aggregate an admin has already read and may have already quoted. To ask again, publish a new ' +
+    'survey. Closing does not delete responses; a closed survey\'s aggregate stays readable.',
+  tags: surveyTags,
+  request: {
+    params: surveyIdParams,
+    body: { content: jsonOf(CloseSurveyRequestComponent), required: false },
+  },
+  responses: {
+    200: { description: 'The closed survey', content: jsonOf(SurveyComponent) },
+    401: errorResponse('Authentication required'),
+    403: surveyForbidden,
+    404: errorResponse('Survey not found'),
+    409: errorResponse('Illegal transition for the survey\'s current status; OR the survey\'s status changed concurrently before close could be applied'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/surveys/{surveyId}/aggregate',
+  summary: 'The survey\'s aggregate results (counts only — never who answered)',
+  description:
+    'Returns per-option selection counts for every choice question (every declared option appears, ' +
+    'including at zero, so "nobody chose this" is distinguishable from "this option does not ' +
+    'exist"), the total response count, and `threshold_met`. NO field in this response can carry a ' +
+    'member identifier. `threshold_met` is INFORMATIONAL and tri-state: null when no threshold was ' +
+    'authored (which must not render as "not met"), and even when set it gates nothing — a survey ' +
+    'informs a decision and never makes one.',
+  tags: surveyTags,
+  request: { params: surveyIdParams },
+  responses: {
+    200: { description: 'The aggregate', content: jsonOf(SurveyAggregateComponent) },
+    401: errorResponse('Authentication required'),
+    403: surveyForbidden,
+    404: errorResponse('Survey not found'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/surveys/{surveyId}/questions/{questionId}/free-text',
+  summary: 'The free-text answers to one question, UNATTRIBUTED',
+  description:
+    'Returns `{answer_text, submitted_at}` and nothing else: no member id, no row id, no question ' +
+    'echo and no ordinal — a stable per-respondent ordinal would let two reads of two different ' +
+    'questions be aligned row-for-row, reconstructing one member\'s whole submission. Ordered by ' +
+    'submitted_at with no identifying tie-break, so answers submitted in the same instant have an ' +
+    'unstable relative order across reads; that is the correct trade. Reading this writes an audit ' +
+    'line carrying the survey id and a COUNT, never the answer content. Free-text answers are ' +
+    'member-authored personal data and have no export path in v1.',
+  tags: surveyTags,
+  request: {
+    params: z.object({
+      pariwarId: z.string().uuid(),
+      surveyId: z.string().uuid(),
+      questionId: z.string().uuid(),
+    }),
+  },
+  responses: {
+    200: { description: 'The paginated unattributed answers', content: jsonOf(SurveyFreeTextListComponent) },
+    401: errorResponse('Authentication required'),
+    403: surveyForbidden,
+    404: errorResponse('Survey not found'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/member/surveys',
+  summary: 'The member\'s open, in-audience surveys',
+  description:
+    'Returns every survey that is open at the server\'s clock and whose audience contains this ' +
+    'member, each carrying an `answered` flag. Surveys the member has ALREADY answered are returned ' +
+    'with `answered: true` rather than filtered out — a member who answered yesterday must see that ' +
+    'they did, not an empty list. Member-session-gated (no RBAC key); a `pariwarId` that does not ' +
+    'match the member\'s own JWT is a 404, not a 403.',
+  tags: surveyTags,
+  request: { params: surveyPariwarParams, query: memberSurveyListQuery },
+  responses: {
+    200: { description: 'The member\'s open surveys', content: jsonOf(MemberSurveyListComponent) },
+    401: errorResponse('Authentication required (member session)'),
+    404: errorResponse('The pariwarId does not match the member session'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/member/surveys/{surveyId}/responses',
+  summary: 'Submit the member\'s response (ONE per member, final)',
+  description:
+    'An idempotent INSERT, not an upsert: a second submission by the same member is a 409, and ' +
+    'submission is FINAL. A member who submitted by mistake raises a helpdesk ticket — a human path ' +
+    'that already exists and leaves a record. A replay carrying the SAME Idempotency-Key returns the ' +
+    'original 201. Requires a Turnstile token and is rate-limited per member. Answering a survey ' +
+    'that is not open at the server\'s clock is a 409: expiry is enforced on the write path, not ' +
+    'merely hidden from the read. Every answer is validated against the survey\'s own questions, and ' +
+    'a rejection names the offending question_id.',
+  tags: surveyTags,
+  request: {
+    params: surveyIdParams,
+    body: { content: jsonOf(SubmitSurveyResponseRequestComponent), required: true },
+  },
+  responses: {
+    201: { description: 'The recorded response', content: jsonOf(SubmitSurveyResponseResultComponent) },
+    400: errorResponse('Request validation failed'),
+    401: errorResponse('Authentication required (member session)'),
+    404: errorResponse('The pariwarId does not match the member session, or no such survey in this Pariwar'),
+    409: errorResponse('This member has already responded; OR the survey is not open for responses at this time'),
+    422: errorResponse('An answer is missing, unknown, or violates a declared bound (the error names the offending question_id)'),
+    429: errorResponse('Rate limit exceeded for this member'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
 // ── Story 10.10 — member moderation (FR-56; suspend / terminate / restore) ──────────────────────
 //
 // The FIRST Epic-10 surface that is STEP-UP gated, on THREE distinct action contexts

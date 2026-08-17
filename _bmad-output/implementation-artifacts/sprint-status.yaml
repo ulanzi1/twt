@@ -1,4 +1,95 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-17d (10-15-survey-poll: ready-for-dev -> review via bmad-dev-story.
+#   SHIPPED on feature/10-15-survey-poll, cut from main @ 5b469b3 (fetched; HEAD == origin/main).
+#   NO governance commit and NO Trustee Panel routing note -- Question Zero was answered PROCEED by
+#   the story and nothing in the build changed that: LBD-1 DECLINES an authority rather than claiming
+#   one, so there was no ruling to route.
+#   SUBSTRATE: migration 0109 (surveys + survey_responses) + packages/domain/src/surveys/ (11 files)
+#   + packages/contracts/src/surveys/ + apps/api/src/modules/surveys/ (6 files) +
+#   apps/admin/src/modules/surveys/ (5 files) + apps/mobile/app/(polls)/ + components/polls/ +
+#   apps/jobs/src/scheduler/survey-publish.ts. RBAC survey.manage minted:
+#   PERMISSION_CATALOG_VERSION 35 -> 36 AND the key count 43 -> 44 (both stated -- version is NOT a
+#   proxy for key count). pariwar_admin only (+ super_admin auto); district_admin DEFERRED and
+#   state_trustee excluded, both INERT-ON-ARRIVAL under [[project_rbac_geo_scope_containment]];
+#   NO inert grant seeded.
+#   ⛔ LBD-1 MECHANIZED, NOT MERELY ASSERTED: new scripts/survey-advisory-invariant/ gate
+#   (`pnpm survey-advisory:check`) fails the build on `quorum` -- or a phrase claiming a survey
+#   decided anything -- reaching ANY code position across 14 declared paths / 40 files. ⚠ DECLARED
+#   DEVIATION from Task 11's literal `grep -rni quorum` returning ZERO: a raw grep can never return
+#   zero, because every survey file's header EXPLAINS why the word is banned (citing trust-deed.md:227
+#   Cl. 19 + niyamavali.md:266,270). Passing the literal grep would mean DELETING the reasoning and
+#   leaving a renamed column nobody could account for ([[feedback_record_unattested_no_backfill]]).
+#   So the gate strips COMMENTS and scans identifiers + string literals + JSON keys instead -- the
+#   invariant the story states, not its raw-text proxy. Proven to FAIL on a planted violation and pass
+#   when reverted. Deviation recorded in the gate README, lib.ts, and the story Completion Notes.
+#   ⭐ ONE REAL REGRESSION FOUND AND FIXED, not worked around: the Story 1.14 AC-3 forced-pagination
+#   guard failed on GET /member/surveys -- a collection GET with no declared `limit`. The domain
+#   accessor already clamped internally, but a bound hidden in an accessor is invisible to the
+#   contract, and `surveys` grows with tenant data (exactly the hazard). Fixed by declaring a bounded
+#   limit on the route AND in emit-openapi.ts. ⛔ NOT added to NON_LIST_GET_ALLOWLIST.
+#   ⭐ resolveMemberGeoNode RE-TRIGGER EVALUATED -- DID NOT FIRE, and the non-firing is WRITTEN DOWN
+#   in member-geo/index.ts's trigger list (10.15 consumes it twice: the member read + the fan-out
+#   audience). A survey audience selects who is SHOWN/NOTIFIED; it grants nothing and gates no
+#   permission check. Story 10.4 remains THE SOLE STANDING TRIGGER.
+#   ⛔ LBD-2 NEGATIVE CLAIMS VERIFIED, not assumed: NO state-invariant gate, NO projector, NO
+#   state-writer trigger, NO packages/events registration, NO events_log stream. The surface is
+#   DELIBERATELY UNCOVERED by any state invariant and that is STATED, not silently true
+#   ([[feedback_gate_scope_semantic_coverage]]). apps/public + packages/events + packages/channels
+#   untouched (git-verified).
+#   TESTS AS OBSERVED: 72 domain unit + 31 domain live-DB (:5433) + 20 contracts sync-guard + 34
+#   admin (21 view-model + 13 RENDER -- the 10.10 AC9 lesson) + 22 mobile pure + 12 jobs worker
+#   (incl. the per-member idempotency across a SIMULATED REDELIVERY, the claim a status re-check
+#   could not make) + 13 gate-scanner. Full `turbo run test --concurrency=4`: 37/37 packages green.
+#   ⚠ Escalation 1 (prd.md:1325 omits FR-58 from the §4.7 v1 enumeration) is UNCHANGED and still
+#   NON-BLOCKING -- the story did NOT edit prd.md ([[feedback_architecture_vs_prd_boundary]]).
+#   Escalation 3's app/(polls) route-group substitution is DECLARED in the layout file header.)
+# last_updated: 2026-08-17c (10-15-survey-poll: backlog -> ready-for-dev via bmad-create-story.
+#   DELIVERABLE: implementation-artifacts/10-15-survey-poll.md, authored against baseline
+#   main @ 5b469b3 (clean tree, fetched, HEAD == origin/main). NO code written, NO gate run,
+#   nothing here attested by a real run -- this is a story-context artifact only.
+#   ⛔ QUESTION ZERO WAS ASKED AND ANSWERED = PROCEED, and the reasoning is recorded in the story
+#   because the 10-14 entry directly above makes it live: prd.md:1325's §4.7 v1 roll-up
+#   ("FRs 44-47, 49-57, 58A, 58B, 58C") omits FR-58 exactly as it omits FR-48. The dispositions
+#   DIVERGE on one verified fact -- §6.2 Out of Scope NAMES FR-48 (prd.md:1350) and does NOT name
+#   FR-58. An FR absent from the in-scope enumeration AND absent from the cut register is an
+#   enumeration gap, not a deferral. Escalation 1 in the story raises the register correction for
+#   the PM; it is explicitly NON-BLOCKING and the story does NOT edit prd.md
+#   ([[feedback_architecture_vs_prd_boundary]] -- a story does not amend a planning artifact).
+#   ⛔ NO TRUSTEE PANEL ROUTING NOTE IS AUTHORED, and that is a ruling on the facts, not an omission.
+#   10.13 and 10.14 each needed one because the real question sat upstream of the surface. Here the
+#   story's Load-Bearing Decision 1 DECLINES an authority rather than claiming one: a survey is
+#   ADVISORY, has no governance effect, and the word "quorum" is banned from the code, the columns,
+#   the DTOs and every line of admin/member copy -- because trust-deed.md:227 and niyamavali.md:266
+#   already spend that word on the TRUSTEE quorum (Deed Cl. 19), and the project has had to
+#   disambiguate it once already (niyamavali.md:270). FR-58's "optional quorum threshold" ships as
+#   `response_threshold`, gating NOTHING. A routing note asking permission to build something
+#   advisory would manufacture a governance question where none exists.
+#   ⭐ Escalation 2 RECORDS the re-trigger rather than pre-emptively minting an owner: the first
+#   request for a survey result that gates, binds or self-executes anything is a Deed question and
+#   arrives WITH ITS LIVE REQUIREMENT ATTACHED ([[feedback_record_unattested_no_backfill]] -- an
+#   un-gated re-commitment decays).
+#   PINNED AT BASELINE, verified live and cited in the story: next migration 0109 (0108 is the
+#   highest on disk; 10.14 planned 0109 and never wrote it); PERMISSION_CATALOG_VERSION 35 -> 36
+#   with the key count 43 -> 44 (survey.manage, dimension pariwar, pariwar_admin + super_admin auto,
+#   district_admin DEFERRED as an inert-on-arrival grant per [[project_rbac_geo_scope_containment]]).
+#   ⛔ THREE FURTHER DEVIATIONS ARE DECLARED IN THE STORY RATHER THAN SMUGGLED: (a) audience scope
+#   `public` resolves FALSE here, the OPPOSITE polarity to Story 10.9's banner predicate, because
+#   there is no unauthenticated respondent -- asserted by a test named for the inversion so a reader
+#   who knows 10.9 cannot assume it carried over; (b) the member route ships as app/(polls)/, a
+#   route group, NOT architecture.md:4234's app/p/[pariwarId]/polls/ -- the repo's member app has
+#   used route groups since (helpdesk) ([[project_mmkv_asyncstorage_equivalent]] note-the-
+#   substitution discipline); (c) ux-design-specification.md contains ZERO survey/poll content, and
+#   the story says so, so the dev agent follows the banners/helpdesk precedents instead of inventing
+#   a visual language or hunting for a pattern that was never written.
+#   ⭐ The standing member-geo re-trigger (member-geo/index.ts:21 -- "the first authorization or
+#   routing consumer of resolveMemberGeoNode requires reassessment") is EVALUATED IN THE STORY and
+#   does NOT fire: a survey audience selects who is SHOWN something, the same class of consumer as
+#   the 10.9 banner audience, and that file's own :10-14 says a member-attribution read is not an
+#   authorization decision. Task 11 requires the non-firing be WRITTEN DOWN -- a green
+#   governance-boundary scan over an unlisted root proves nothing. ⛔ Story 10.4's bullet remains
+#   THE SOLE STANDING TRIGGER and is NOT discharged by this story.
+#   Only development_status[10-15-survey-poll] flips. NO other story status changed;
+#   [10-14-permission-delegation] stays DEFERRED-TO-V2 and epic-10 stays in-progress.)
 # last_updated: 2026-08-17b (10-14-permission-delegation: in-progress -> DEFERRED-TO-V2, a TERMINAL
 #   and SUCCESSFUL outcome, via bmad-dev-story Task 2. ⛔ NOT abandoned, NOT partially built, and NOT
 #   to be reworded into either [[feedback_closure_language_precision]].
@@ -7553,7 +7644,7 @@ development_status:
   10-12-per-pariwar-custom-fields-jsonb: done
   10-13-fixed-amount-setter-admin-ui: done
   10-14-permission-delegation: deferred-to-v2
-  10-15-survey-poll: backlog
+  10-15-survey-poll: review
   10-16-contribution-during-suspension-disclosure: done
   10-17-moderation-roster-unblock: done
   10-18-constituting-the-trustee-panel-sanctioning-authority: done

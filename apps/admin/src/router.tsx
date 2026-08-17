@@ -22,6 +22,7 @@ import { HelpdeskOperatorRoute } from './routes/HelpdeskOperatorRoute.js';
 import { HelpdeskQueueRoute } from './routes/HelpdeskQueueRoute.js';
 import { NewsRoute } from './routes/NewsRoute.js';
 import { BannersRoute } from './routes/BannersRoute.js';
+import { SurveysRoute } from './routes/SurveysRoute.js';
 import { FeatureFlagsRoute } from './routes/FeatureFlagsRoute.js';
 import { CustomFieldsRoute } from './routes/CustomFieldsRoute.js';
 import { ReportsRoute } from './routes/ReportsRoute.js';
@@ -143,6 +144,16 @@ const bannersRoute = createRoute({
   component: BannersRoute,
 });
 
+// Story 10.15 — the tenant-scoped survey/poll console (list + authoring editor + the aggregate
+// results dashboard + publish/close). ⚠ A SURVEY IS ADVISORY: it gathers member views and decides
+// nothing. Distinct from the banners console above (time-bounded in-app chrome) and from News/Blog
+// (dispatched announcements) — the three share no component.
+const surveysRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/surveys',
+  component: SurveysRoute,
+});
+
 // Story 10.7 — the tenant-scoped reports-&-exports console (request/poll/one-time-download).
 const reportsRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -242,6 +253,7 @@ const routeTree = rootRoute.addChildren([
   helpdeskTicketRoute,
   newsRoute,
   bannersRoute,
+  surveysRoute,
   reportsRoute,
   featureFlagsRoute,
   customFieldsRoute,

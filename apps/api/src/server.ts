@@ -61,6 +61,7 @@ import { registerHelpdeskModule } from './modules/helpdesk/index.js';
 import { registerMemberDataRightsModule } from './modules/member-data-rights/index.js';
 import { registerNewsBlogModule } from './modules/news-blog/index.js';
 import { registerBannerModule } from './modules/banners/index.js';
+import { registerSurveyModule } from './modules/surveys/index.js';
 import { registerMemberModerationRoutes } from './modules/member-moderation/routes.js';
 import { registerModerationAppealRoutes } from './modules/member-moderation-appeals/routes.js';
 import { registerFeatureFlagsModule } from './modules/feature-flags/index.js';
@@ -317,6 +318,7 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // window — nothing is enqueued, no worker activates or archives a banner, and nothing fans out
   // (banners are in-app, NOT channel-dispatched).
   registerBannerModule(app, deps);
+  registerSurveyModule(app, deps);
   // Story 10.10 — the FR-56 member-moderation surface: suspend / terminate / restore with
   // registry-driven reason codes, a MANDATORY Tier-1-encrypted rationale, full attribution and —
   // uniquely in Epic 10 — STEP-UP gating on three distinct action contexts. It gates on the EXISTING

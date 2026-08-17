@@ -166,6 +166,19 @@ export * from './news-blog/index.js';
 // drift-guarded by a test-only sync-guard (tests/banners.test.ts).
 export * from './banners/index.js';
 
+// Story 10.15 — the Survey/Poll `[SURFACE]` transport contracts (FR-58): the status /
+// DERIVED-display-state / audience-scope / question-type enums + the five questionnaire caps
+// (sync-guarded against the @twt/domain tuples and constants), the create/update/publish/close and
+// member submit-response requests, and the admin / member / AGGREGATE / free-text response DTOs.
+// ⚠ The member shape carries no actor ids, no tone-signoff fields, no audience selector, no status —
+// and no `response_threshold`: a survey is ADVISORY (LBD-1) and showing a member a target count
+// invites them to read it as a vote. ⚠ The audience `public` arm DENIES here, the OPPOSITE polarity
+// to `banners` above (LBD-7). ⛔ The aggregate + free-text shapes have no field that could carry a
+// member identifier, and `.strict()` makes that structural rather than aspirational (LBD-3).
+// Pure Zod (no @twt/domain import in shipped files — the RN bundle boundary); tuples + limits are
+// drift-guarded by a test-only sync-guard (tests/surveys.test.ts).
+export * from './surveys/index.js';
+
 // Story 10.10 — the member-moderation `[SURFACE]` transport contracts (FR-56): the action /
 // DERIVED-status / two-family reason-code enums (sync-guarded against the @twt/domain tuples), the
 // suspend/terminate/restore request, and the action / history / moderated-members-list response

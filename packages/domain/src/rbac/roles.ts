@@ -204,6 +204,31 @@ const FEATURE_FLAG_FLIP = permissionKey('feature_flag.flip');
 // ACCEPTANCE CONDITION for district_admin: a banner gains a server-derived district AND the gate moves to
 // `dimension: 'district'` — never by widening a pariwar gate to a role that cannot satisfy it.
 const BANNER_MANAGE = permissionKey('banner.manage');
+// Story 10.15 (FR-58) — the Survey/Poll admin key (pariwar-dimension; the helpdesk.create /
+// news.manage / feature_flag.* / banner.manage pariwar-wide precedent — a survey is a per-TENANT
+// record, the tenant IS the target, resolvable TODAY with no geo-tree). Granted to pariwar_admin ONLY
+// (+ super_admin auto).
+//
+// ONE key, the NEWS_MANAGE/BANNER_MANAGE shape rather than the FEATURE_FLAG_VIEW/FLIP one: nothing in
+// FR-58 makes a survey inventory or its results something a role must be able to READ without being
+// able to author one, so there is no transparency property to split on.
+//
+// ⚠ district_admin is DEFERRED and state_trustee excluded, both for containment asymmetry rather than
+// judgement: a `district` ceiling can never satisfy a pariwar-dimension check (scopeContains denies a
+// target broader than the grant, and the ceiling check forbids a district_admin holding a
+// pariwar-scoped grant), and a `state` ceiling fails the same check from the other side. Either grant
+// would be INERT — present in the catalog and silently denied at every call site
+// ([[project_rbac_geo_scope_containment]]). ⛔ No inert grant is seeded.
+// NOT step-up-gated (a survey publish is not freeze-firing / not in AR-24).
+//
+// ⚠ KNOWN, PO-RATIFIED CONSEQUENCE of the single grant, inherited unchanged from 10.5/10.9: publishing
+// is tone-review-gated and the gate is default-deny on reviewedBy === authoredBy, so a SINGLE-ADMIN
+// Pariwar cannot publish a survey (nobody else can be the non-author reviewer). A deferral with
+// precedent (PO, 2026-07-30), not a bug — ⛔ do NOT "fix" it by weakening the gate or minting a second
+// role grant.
+// ACCEPTANCE CONDITION for district_admin: a survey gains a server-derived district AND the gate moves
+// to `dimension: 'district'` — never by widening a pariwar gate to a role that cannot satisfy it.
+const SURVEY_MANAGE = permissionKey('survey.manage');
 // Story 10.12 (FR-54) — the per-Pariwar custom-field DEFINITION READ key (pariwar-dimension; the
 // helpdesk.create / news.manage / feature_flag.* / banner.manage pariwar-wide precedent — a custom-field
 // definition is a per-TENANT record, the tenant IS the target, resolvable TODAY with no geo-tree).
@@ -361,6 +386,11 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // holder: the tenant's content-authoring authority, exactly as for NEWS_MANAGE. A `pariwar`
       // scopeCeiling satisfies the pariwar-dimension check; district_admin/state_trustee cannot (inert).
       BANNER_MANAGE,
+      // Story 10.15 (FR-58) — the Survey/Poll admin key (pariwar-dimension). The SOLE non-super_admin
+      // holder: the tenant's content-authoring authority, exactly as for NEWS_MANAGE and BANNER_MANAGE.
+      // A `pariwar` scopeCeiling satisfies the pariwar-dimension check; district_admin/state_trustee
+      // cannot (inert in either direction — see the SURVEY_MANAGE note above).
+      SURVEY_MANAGE,
       // Story 10.12 (FR-54) — the per-Pariwar custom-field READ + WRITE keys (pariwar-dimension).
       // pariwar_admin is the SOLE non-super_admin holder of the write: authoring the tenant's own data
       // shape is the tenant administrator's authority by definition. Holding BOTH here is correct; the

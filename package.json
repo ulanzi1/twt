@@ -57,6 +57,8 @@
     "alert-state:test": "vitest run scripts/alert-state-invariant",
     "helpdesk-state:check": "tsx scripts/helpdesk-state-invariant/check.ts",
     "helpdesk-state:test": "vitest run scripts/helpdesk-state-invariant",
+    "survey-advisory:check": "tsx scripts/survey-advisory-invariant/check.ts",
+    "survey-advisory:test": "vitest run scripts/survey-advisory-invariant",
     "governance-boundary:check": "tsx scripts/governance-boundary/check.ts",
     "governance-boundary:test": "vitest run scripts/governance-boundary",
     "custom-field:check": "tsx scripts/custom-field-governance/check.ts",

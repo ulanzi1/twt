@@ -38,6 +38,7 @@ deliberately accepted.
 | member (asserting a personal event affected a contribution — a bounded 6-value picker, no free text) | Honest expectation-setting for the ratified Niyamavali §3.1 "carries no consequence of its own" invariant — the member cannot record without first being shown, before they act, that asserting changes nothing (AC1/AC7, Story 10.26) | optional |
 | terminated member (obtaining their own records and exercising data rights by PHONING THE HELPLINE, because authenticated self-serve export has ended) | The Niyamavali §8.4 boundary — termination ends authenticated access while statutory rights survive, exercised through an identity-verified administrative process. ⚠ INERT AS SHIPPED: payable only once `termination_access_block` is enabled, which is gated on Story 10.21 + a Trustee Panel decision (Story 10.19) | forced |
 | member (filing a DPDPA data-rights ticket — an EXTRA checkbox, shown only under that subcategory, asking whether they want staff to hand over their off-portal export because they cannot receive the delivery code themselves) | Genuine member authorship of element 1 of the ratified three-part gate on staff-mediated Tier-1 export delivery (Decision `2026-08-14-113` cl.1 / `2026-08-15-116` cl.3 / `2026-08-15-120` D1 — replaces a caller-hardcoded `z.literal(true)` that made a staff assertion wear the member's name, Story 10.29) | optional |
+| member (answering a poll — a whole questionnaire in one pass, with NO save-and-resume and NO way to change an answer once sent) | The MEANING of the aggregate an admin reads (Story 10.15 LBD-6): one response per member, enforced by the composite PK, is what makes a count a count. An editable answer would make the aggregate a moving target, and a resumable draft would let a member submit against a poll that has since closed. ⚠ The finality is stated BEFORE the member commits, not after — a member who answers by mistake raises a helpdesk ticket (Story 10.2), a human path that already exists and leaves a record | optional |
 | trustee (emergency fixed-amount override — the attesting panel must now be CHOSEN from the eligible-attestor directory, and a named actor who does not hold `pool.fixed_amount_emergency` at this Pariwar is refused server-side) | The immutable Emergency Adjustment Record's authority — before Story 10.13 any global user id with a display name could be written onto it, including an admin of a different Pariwar, so the record named an authority the governing instruments do not confer (Deed Cl. 10(b) / Niyamavali §4.2 vest amount-fixing in the Board; Decision `2026-08-16-123` cl.2) | forced |
 | member under suspension or termination (stating, in their own words, WHY the moderation decision against them is wrong — a free-text grounds field, minimum length enforced, before the appeal can be sent) | The Niyamavali §8.8 right to be heard. ⭐ The friction IS the mechanism: §8.8 promises "notice, a fair hearing and a reasoned outcome", and an appeal with no stated grounds gives the Trustee Panel nothing to hear — the member would have exercised the right and gained nothing. ⚠ The screen deliberately pays MORE friction than the write requires: before the field it states that the review is by a trustee who took no part in the decision, that filing does NOT pause the sanction (§8.8 has no suspensive effect), and that using the appeal waives no external recourse (Deed Clause 26 / R10(E)) — so a member commits knowing what they get. ⛔ NOT payable off-portal: a terminated member states the same grounds to a helpline operator, who records them, so the friction does not depend on the access termination removes (Story 10.22) | forced |
 
@@ -1261,3 +1262,31 @@ governance boundary as a UX cost.
 `apps/jobs`, `packages/{domain,i18n,ui}`; `apps/public` is **not** touched
 ([[project_friction_budget_baseline_ratchet]] — the baseline is a best-ever
 ratchet and this story measured nothing new).
+
+## Story 10.15 — the poll-answering row
+
+**`optional`, and the classification is the honest one.** Nothing in the member loop
+requires answering a poll: a member who never opens the polls surface loses no
+coverage, pays no penalty, and misses no obligation. A survey **gathers views and
+decides nothing** (LBD-1), so the friction cannot be `forced` — there is no flow it
+is unavoidable for.
+
+**What the member actually pays** is completeness plus finality: the whole
+questionnaire in one pass, and no edit afterwards. Both are deliberate, and both
+protect the same thing — *what the aggregate means*. One response per member is
+enforced structurally by `PRIMARY KEY (pariwar_id, survey_id, member_id)`, and the
+migration additionally withholds `UPDATE` on `survey_responses` from `twt_app`, so
+the "convenience upsert" that would quietly dissolve this invariant is not merely
+discouraged but unavailable.
+
+**No row for the Turnstile check or the rate limit.** Those are bot/abuse controls a
+member does not perceive and does not pay — the same reason the login-wall itself
+has no row.
+
+**No row for the notification.** Being told a poll opened is not friction; it is the
+notification the epic AC asks for, and it costs the member nothing to ignore.
+
+**The page-weight baseline is UNCHANGED — do NOT ratchet.** `apps/mobile` measures as
+a no-op (EAS build), and `apps/public` is **not touched** by this story
+([[project_friction_budget_baseline_ratchet]] — the baseline is a best-ever ratchet
+and this story measured nothing new).

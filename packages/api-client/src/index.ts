@@ -20,6 +20,9 @@ import {
   type PersonalEventAssertionRequest,
   MemberBannerListResponse,
   DismissBannerResponse,
+  MemberSurveyListResponse,
+  SubmitSurveyResponseResult,
+  type SurveyAnswer,
   KycInitiateResponse,
   KycProfileSummaryResponse,
   ImaListResponse,
@@ -1286,3 +1289,64 @@ export function createMemberBannerClient(opts: MemberAuthClientOptions) {
 }
 
 export type MemberBannerClient = ReturnType<typeof createMemberBannerClient>;
+
+// ── Member survey/poll client (Story 10.15) ────────────────────────────────────
+
+/**
+ * The member-facing polls surface: the open-and-in-audience survey read, and the ONE-per-member
+ * response write.
+ *
+ * Both routes are member-session-gated with NO RBAC key and NO scope-resolution hook — the member
+ * JWT is the tenancy authority, and a `pariwarId` that is not the member's own answers 404 (never
+ * 403, which would leak that the tenant exists).
+ *
+ * ⚠ A SURVEY IS ADVISORY. Nothing on this surface reports a threshold, a tally, or how anyone else
+ * answered: the member DTO carries no `response_threshold` and no aggregate, because a target count
+ * invites the member to read a survey as a vote that passes or fails — which is precisely what a
+ * survey is not.
+ */
+export function createMemberSurveyClient(opts: MemberAuthClientOptions) {
+  const { call } = createApiCallers(opts);
+
+  const base = (pariwarId: string): string => `/api/v1/p/${encodeURIComponent(pariwarId)}/member/surveys`;
+
+  return {
+    /**
+     * The member's open, in-audience surveys (session; auth). Surveys they have ALREADY answered are
+     * returned with `answered: true` rather than omitted — a member who answered yesterday must see
+     * that they did, not an empty list that reads as "nothing was ever asked".
+     */
+    list(pariwarId: string): Promise<MemberSurveyListResponse> {
+      return call(base(pariwarId), MemberSurveyListResponse, undefined, true, 'GET');
+    },
+
+    /**
+     * Submit the member's response (session; auth). ONE per member and FINAL (a genuine second
+     * submission is a typed 409); a member who submitted by mistake raises a helpdesk ticket.
+     *
+     * `turnstileToken` and `idempotencyKey` both ride HEADERS, never the body — the bot-gate is
+     * verified and the claim taken before any DB work. ⚠ Reusing the SAME `idempotencyKey` REPLAYS
+     * the original 201 rather than 409-ing, so a retry over a flaky network is safe; a NEW key on a
+     * second genuine submission correctly conflicts.
+     */
+    submitResponse(
+      pariwarId: string,
+      surveyId: string,
+      answers: SurveyAnswer[],
+      turnstileToken: string,
+      idempotencyKey: string,
+    ): Promise<SubmitSurveyResponseResult> {
+      return call(
+        `${base(pariwarId)}/${encodeURIComponent(surveyId)}/responses`,
+        SubmitSurveyResponseResult,
+        { answers },
+        true,
+        'POST',
+        undefined,
+        { 'x-turnstile-token': turnstileToken, 'idempotency-key': idempotencyKey },
+      );
+    },
+  };
+}
+
+export type MemberSurveyClient = ReturnType<typeof createMemberSurveyClient>;

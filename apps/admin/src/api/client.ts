@@ -186,6 +186,17 @@ import {
   type BannerListResponse as BannerList,
   type CreateBannerRequest as CreateBannerBody,
   type UpdateBannerRequest as UpdateBannerBody,
+  // Story 10.15 — the Survey/Poll admin authoring + RESULTS surface DTOs.
+  SurveyResponse,
+  SurveyListResponse,
+  SurveyAggregateResponse,
+  SurveyFreeTextListResponse,
+  type SurveyResponse as Survey,
+  type SurveyListResponse as SurveyList,
+  type SurveyAggregateResponse as SurveyAggregate,
+  type SurveyFreeTextListResponse as SurveyFreeTextList,
+  type CreateSurveyRequest as CreateSurveyBody,
+  type UpdateSurveyRequest as UpdateSurveyBody,
   // Story 10.7 — the reports-&-exports library DTOs.
   ReportExportListResponse,
   ReportRequestResponse,
@@ -1961,5 +1972,88 @@ export function decideModerationAppeal(
     `${moderationAppealBase(pariwarId)}/${encodeURIComponent(appealId)}/decide`,
     ModerationAppealDecidedResponse,
     { method: 'POST', body: JSON.stringify(body) },
+  );
+}
+
+// ── Survey/Poll admin authoring + results surface (Story 10.15) ───────────────
+const surveysBase = (pariwarId: string): string => `/api/v1/p/${encodeURIComponent(pariwarId)}/surveys`;
+
+/**
+ * GET the Pariwar's surveys (newest-first, paginated, filterable by the DERIVED display state).
+ * `displayState` is one of `draft | scheduled | open | expired | closed` — a derivation over the
+ * stored status plus the window against the SERVER's clock, never a stored column.
+ */
+export function listSurveys(
+  pariwarId: string,
+  displayState?: string,
+  limit = 50,
+  offset = 0,
+): Promise<SurveyList> {
+  const q = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+  if (displayState) q.set('display_state', displayState);
+  return apiFetch(`${surveysBase(pariwarId)}?${q.toString()}`, SurveyListResponse);
+}
+
+/** GET a single survey. */
+export function getSurvey(pariwarId: string, surveyId: string): Promise<Survey> {
+  return apiFetch(`${surveysBase(pariwarId)}/${encodeURIComponent(surveyId)}`, SurveyResponse);
+}
+
+/** POST create a draft. */
+export function createSurvey(pariwarId: string, body: CreateSurveyBody): Promise<Survey> {
+  return apiFetch(surveysBase(pariwarId), SurveyResponse, { method: 'POST', body: JSON.stringify(body) });
+}
+
+/**
+ * PATCH edit a survey. ⚠ On a PUBLISHED survey the ONLY field that may move is `valid_until`, and
+ * only upwards — everything else is a 409 naming the frozen field. Send only what you mean to change.
+ */
+export function updateSurvey(pariwarId: string, surveyId: string, patch: UpdateSurveyBody): Promise<Survey> {
+  return apiFetch(`${surveysBase(pariwarId)}/${encodeURIComponent(surveyId)}`, SurveyResponse, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+}
+
+/** POST publish (tone-gated — the survey's own author cannot publish it). */
+export function publishSurvey(pariwarId: string, surveyId: string): Promise<Survey> {
+  return apiFetch(`${surveysBase(pariwarId)}/${encodeURIComponent(surveyId)}/publish`, SurveyResponse, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
+/** POST close. Terminal — there is no reopen. */
+export function closeSurvey(pariwarId: string, surveyId: string): Promise<Survey> {
+  return apiFetch(`${surveysBase(pariwarId)}/${encodeURIComponent(surveyId)}/close`, SurveyResponse, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
+/**
+ * GET the aggregate results — COUNTS ONLY. ⛔ No field in this response can carry a member
+ * identifier; there is no "who answered" endpoint anywhere in this surface.
+ */
+export function getSurveyAggregate(pariwarId: string, surveyId: string): Promise<SurveyAggregate> {
+  return apiFetch(`${surveysBase(pariwarId)}/${encodeURIComponent(surveyId)}/aggregate`, SurveyAggregateResponse);
+}
+
+/**
+ * GET one question's free-text answers, UNATTRIBUTED — `{answer_text, submitted_at}` and nothing
+ * else. Reading this writes a `survey.responses_viewed` audit line server-side (carrying a COUNT,
+ * never the content), because it is the one admin read that sees member-authored personal data.
+ */
+export function listSurveyFreeText(
+  pariwarId: string,
+  surveyId: string,
+  questionId: string,
+  limit = 50,
+  offset = 0,
+): Promise<SurveyFreeTextList> {
+  const q = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+  return apiFetch(
+    `${surveysBase(pariwarId)}/${encodeURIComponent(surveyId)}/questions/${encodeURIComponent(questionId)}/free-text?${q.toString()}`,
+    SurveyFreeTextListResponse,
   );
 }

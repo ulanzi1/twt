@@ -335,6 +335,39 @@ export {
   BannerWindowInvalidError,
   BANNER_WINDOW_INVALID_CODE,
 } from './banners/errors.js';
+// Story 10.15 — the Survey/Poll `[SURFACE]` module: a mutable-`status` survey lifecycle (LBD-2 — NOT
+// event-derived-state) with a pure read-time response window (AC2 — no scheduler, no sweep), a
+// bounded three-type question vocabulary (LBD-4), a questionnaire FROZEN at publish (LBD-5),
+// one-response-per-member on a composite PK (LBD-6), and an aggregate projection structurally
+// incapable of carrying a member id (LBD-3). Full module under the `surveys` namespace.
+// ⚠ A survey is ADVISORY and has no governance effect (LBD-1) — `response_threshold` gates nothing.
+// ⚠ Its audience predicate's `public` arm DENIES — the OPPOSITE polarity to `banners` above (LBD-7).
+export * as surveys from './surveys/index.js';
+// Survey typed errors surfaced at the top level — mirroring the banners/news-blog errors — so the
+// apps/api error-mapping middleware imports the class + code constant from `@twt/domain` directly.
+// ⚠ Every one of these MUST have an arm in the middleware; an unmapped domain error becomes a 500.
+export {
+  SurveyNotFoundError,
+  SURVEY_NOT_FOUND_CODE,
+  SurveyStateError,
+  SURVEY_INVALID_STATE_CODE,
+  SurveyFrozenFieldError,
+  SURVEY_FROZEN_FIELD_CODE,
+  SurveyWindowInvalidError,
+  SURVEY_WINDOW_INVALID_CODE,
+  SurveyBilingualRequiredError,
+  SURVEY_BILINGUAL_REQUIRED_CODE,
+  SurveyQuestionnaireInvalidError,
+  SURVEY_QUESTIONNAIRE_INVALID_CODE,
+  SurveyAnswerInvalidError,
+  SURVEY_ANSWER_INVALID_CODE,
+  SurveyAlreadyRespondedError,
+  SURVEY_ALREADY_RESPONDED_CODE,
+  SurveyAudienceUnsupportedError,
+  SURVEY_AUDIENCE_UNSUPPORTED_CODE,
+  SurveyAudienceValueRequiredError,
+  SURVEY_AUDIENCE_VALUE_REQUIRED_CODE,
+} from './surveys/errors.js';
 // Story 10.10 — member-moderation typed errors surfaced at the top level (the banners/news-blog
 // pattern) so the apps/api error-mapping middleware imports the class + code constant from
 // `@twt/domain` directly. The MODULE itself is namespaced under `member.moderation` (not a top-level

@@ -618,6 +618,24 @@ export type BannerId = Brand<'BannerId'>;
 /** Smart constructor: validates UUID shape, returns a branded `BannerId`. */
 export const bannerId = uuidBrand('BannerId');
 
+// ── Story 10.15 — Survey id (§Naming "branding mandatory on a new ID's first PR") ──
+// `SurveyId` is the per-row address of a `surveys` row (`surveys.survey_id`). Like `NewsPostId` and
+// `BannerId` and UNLIKE the five event-derived-state primitives (member/claim/pool/alert/
+// helpdesk_ticket), a survey is MUTABLE authored content with a plain `status` column — NOT
+// event-sourced (Story 10.15 LBD-2), so `survey_id` is a plain DB-defaulted `gen_random_uuid()`, has
+// no natural key, and is NOT any event stream's stream_id.
+//
+// ⚠ There is deliberately NO `SurveyResponseId`. A response's identity IS the composite PK
+// `(pariwar_id, survey_id, member_id)` (LBD-6, "one response per member, structurally"), and a
+// surrogate key would be worse than redundant: it would hand the PII-shielded free-text projection
+// (LBD-3) a stable per-respondent ordinal that could be joined back to a member. The absence is the
+// invariant, not an omission — see `surveys/read.ts` `listFreeTextAnswers`.
+
+/** Per-row address of a survey (`surveys.survey_id`). Plain random UUID (not a stream id). */
+export type SurveyId = Brand<'SurveyId'>;
+/** Smart constructor: validates UUID shape, returns a branded `SurveyId`. */
+export const surveyId = uuidBrand('SurveyId');
+
 // ── Story 10.10 — Moderation-action id (§Naming "branding mandatory on a new ID's first PR") ──
 // `ModerationActionId` is the per-row address of a `member_moderation_actions` row. It addresses an
 // APPEND-ONLY DECISION RECORD, not a state object: the member's moderation STATUS is derived by

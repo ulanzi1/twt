@@ -3,8 +3,9 @@
 **Status:** ✅ **RULED 2026-08-18.** **Q1(a) production only · Q2(a) global route, cohort-narrowed ·
 Q3(a) `super_admin`-only is sufficient · Q4(b) staging rehearsal required.** ⛔ A rehearsal is **never a
 rung**. ⚠ The rehearsal's **cohort is NOT named** and cannot be named from source — carried as an open
-operational item bounded by three rules (entry clause 5). ⚠ **The attestation is UN-ATTESTED** — not
-supplied, ⛔ not reconstructed. Recorded as Decision `2026-08-18-130` (`.decision-log.md:37`). See
+operational item bounded by three rules (entry clause 5). ✅ **ATTESTED** by Decision `2026-08-18-131`:
+**Dhiraj Rahul and Kalpana Bharti, 2026-08-18**. *(Superseded, retained: ⚠ the attestation is
+UN-ATTESTED — not supplied, ⛔ not reconstructed.)* Recorded as Decision `2026-08-18-130` (`.decision-log.md:37`). See
 *"The ruling as given"* at the foot; it is authoritative where it differs from the option and
 recommendation text above, which is **retained, not edited**.
 *(Superseded status line, retained: ⏳ Open — four questions, awaiting ruling. Q1 and Q2 are ⛔ BLOCKING
@@ -219,10 +220,12 @@ reaches `full` in that environment.
 
 # The ruling as given — 2026-08-18
 
-**Ratifying trustees:** ⚠ **un-attested-pending** — ⛔ not supplied and ⛔ not reconstructed
-([[feedback_record_unattested_no_backfill]]). ⛔ **Not carried over** from `2026-08-18-129`. ⭐ The value
-of that refusal is already on the record: at `129` the Panel proved to be the same as `127` **but the
-date differed**. **Recorded as Decision `2026-08-18-130`.**
+**Ratifying trustees:** ✅ **Dhiraj Rahul and Kalpana Bharti**, ruling date **2026-08-18** — attested
+by Decision `2026-08-18-131`. **Recorded as Decision `2026-08-18-130`.**
+⚠ **Superseded line retained, never overwritten:** *"un-attested-pending — not supplied, not
+reconstructed, and not carried over from `2026-08-18-129`."* ⚠ **This time the check CONFIRMED rather
+than corrected** — the attestation matched. ⛔ Not evidence that carrying over is safe: at `129` the
+same check caught a **date** divergence from `127`.
 
 This section is authoritative where it differs from the text above. ⛔ That text is **retained, never
 overwritten** — including recommendations the Panel did not follow.
@@ -270,5 +273,9 @@ Decision `2026-08-18-130` recorded at `.decision-log.md:37`, per-clause provenan
 (`[Trustee-ratified]` 1–4, `[Author-committed]` 5–8), committed under `governance(flags):` **before**
 any publish.
 
-⚠ **One field open** — the attestation (entry clause 7), closed by a **successor entry**, ⛔ never by an
-edit to `130`'s fields.
+✅ **The attestation field is CLOSED** — by Decision `2026-08-18-131`, the successor-entry path `130`
+clause 7 mandated. ⛔ `130`'s fields were **not** edited; clause 7 carries an appended attestation marker.
+⚠ **Still open, and deliberately:** the **rehearsal cohort** (`130` cl. 5), which cannot be named from
+source and resolves against staging's actual Pariwars at rehearsal time.
+*(Superseded, retained: ⚠ one field open — the attestation (entry clause 7), closed by a successor entry,
+⛔ never by an edit to `130`'s fields.)*

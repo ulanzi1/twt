@@ -51,6 +51,24 @@ import type { Browser, LaunchOptions } from 'puppeteer-core';
 const DEFAULT_TIMEOUT_MS = 15_000;
 
 /**
+ * Default ceiling for the ONE cold browser LAUNCH — deliberately separate from, and far larger than,
+ * the per-render ceiling above.
+ *
+ * ⚠ These two bounds protect different things and must not be collapsed. `DEFAULT_TIMEOUT_MS` bounds
+ * a MEMBER'S REQUEST: a hung render has to fail fast so the caller is not left waiting. This bound
+ * covers process STARTUP: the browser is created lazily ONCE and reused for every later render
+ * (`getBrowser` above returns the live instance), so this cost is paid per PROCESS, not per request.
+ * A generous value here therefore costs nothing in steady state and cannot mask a slow render.
+ *
+ * Was previously unset, which silently handed the decision to puppeteer's 30s default — the only
+ * timing bound in this adapter that was never a deliberate choice. Observed insufficient: a cold
+ * Chromium start on a CI box concurrently running the whole workspace's test suites exceeded 30s and
+ * failed with `Timed out after 30000 ms while waiting for the WS endpoint URL to appear in stdout`.
+ * The launch is CPU-starved at that moment, not broken; it needs headroom, not a smaller bound.
+ */
+const DEFAULT_LAUNCH_TIMEOUT_MS = 90_000;
+
+/**
  * Default output ceiling (8 MiB). A one-page certificate with an inlined ~220 KB font subset lands
  * around a few hundred KB; this bounds a pathological render without constraining a legitimate one.
  */
@@ -91,6 +109,12 @@ export interface ChromiumContributionNotePdfRendererOpts {
   readonly executablePath?: string;
   /** Per-render wall-clock ceiling (ms). Overridable per render via the port options. */
   readonly timeoutMs?: number;
+  /**
+   * Cold browser-LAUNCH ceiling (ms). ⛔ Not the per-render bound — see `DEFAULT_LAUNCH_TIMEOUT_MS`.
+   * Paid once per process, so it is deliberately generous; lower it only where a fast fail on a
+   * missing/broken binary matters more than surviving a CPU-starved start.
+   */
+  readonly launchTimeoutMs?: number;
   /** Output byte ceiling. Overridable per render via the port options. */
   readonly maxBytes?: number;
   /** Simultaneous renders before queueing. */
@@ -115,6 +139,7 @@ export function createChromiumContributionNotePdfRenderer(
 ): ChromiumContributionNotePdfRenderer {
   const executablePath = opts.executablePath ?? DEFAULT_EXECUTABLE_PATH;
   const defaultTimeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const launchTimeoutMs = opts.launchTimeoutMs ?? DEFAULT_LAUNCH_TIMEOUT_MS;
   const defaultMaxBytes = opts.maxBytes ?? DEFAULT_MAX_BYTES;
   const maxConcurrent = Math.max(1, opts.maxConcurrentRenders ?? DEFAULT_MAX_CONCURRENT_RENDERS);
 
@@ -162,6 +187,9 @@ export function createChromiumContributionNotePdfRenderer(
       const launchOptions: LaunchOptions = {
         executablePath,
         headless: true,
+        // ⛔ The LAUNCH bound, never the render bound (`defaultTimeoutMs`). Explicit so puppeteer's
+        // 30s default no longer silently governs the one timing decision nobody made.
+        timeout: launchTimeoutMs,
         args: [
           // Container-standard hardening/compat flags. `--no-sandbox` is required in the unprivileged
           // container; the page only ever loads our OWN fully-inlined HTML (no network, no remote

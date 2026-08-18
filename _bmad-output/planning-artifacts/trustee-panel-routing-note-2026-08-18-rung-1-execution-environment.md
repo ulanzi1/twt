@@ -1,7 +1,14 @@
 # Trustee Panel Routing Note — WHERE the ruled walk executes, and what actually gates it
 
-**Status:** ⏳ **Open — four questions, awaiting ruling.** Q1 and Q2 are ⛔ BLOCKING — **rung 1 cannot
-be published until both are ruled.** Q3 and Q4 are ⚠ DIRECTIVE.
+**Status:** ✅ **RULED 2026-08-18.** **Q1(a) production only · Q2(a) global route, cohort-narrowed ·
+Q3(a) `super_admin`-only is sufficient · Q4(b) staging rehearsal required.** ⛔ A rehearsal is **never a
+rung**. ⚠ The rehearsal's **cohort is NOT named** and cannot be named from source — carried as an open
+operational item bounded by three rules (entry clause 5). ⚠ **The attestation is UN-ATTESTED** — not
+supplied, ⛔ not reconstructed. Recorded as Decision `2026-08-18-130` (`.decision-log.md:37`). See
+*"The ruling as given"* at the foot; it is authoritative where it differs from the option and
+recommendation text above, which is **retained, not edited**.
+*(Superseded status line, retained: ⏳ Open — four questions, awaiting ruling. Q1 and Q2 are ⛔ BLOCKING
+— rung 1 cannot be published until both are ruled. Q3 and Q4 are ⚠ DIRECTIVE.)*
 **Author:** BigDev (Solo Builder)
 **Raised:** 2026-08-18, against `main` @ `7fd5496` (clean, fetched, `== origin/main`).
 **Scope:** ⛔ **Attached to no story.** It supplies what Decision `2026-08-18-128` did not reach.
@@ -208,3 +215,60 @@ reaches `full` in that environment.
 
 ⛔ Decisions `2026-08-09-093`, `2026-08-09-094`, `2026-08-17-127`, `2026-08-18-128` and
 `2026-08-18-129` are **not edited** by any of this.
+
+
+# The ruling as given — 2026-08-18
+
+**Ratifying trustees:** ⚠ **un-attested-pending** — ⛔ not supplied and ⛔ not reconstructed
+([[feedback_record_unattested_no_backfill]]). ⛔ **Not carried over** from `2026-08-18-129`. ⭐ The value
+of that refusal is already on the record: at `129` the Panel proved to be the same as `127` **but the
+date differed**. **Recorded as Decision `2026-08-18-130`.**
+
+This section is authoritative where it differs from the text above. ⛔ That text is **retained, never
+overwritten** — including recommendations the Panel did not follow.
+
+## The ruling, question by question
+
+| Q | Ruled | Effect |
+|---|---|---|
+| **Q1** | **(a)** production, and production only | Staging is ⛔ not a rung of the ruled walk |
+| **Q2** | **(a)** global route, narrowed by the ruled cohort | ⭐ Load-bearing at rung 3: `full` on a global version governs Pariwars created **after** the walk; overrides would silently under-apply |
+| **Q3** | **(a)** `super_admin`-only is sufficient | ⛔ **A ruling, not an omission.** No code change follows |
+| **Q4** | **(b)** staging rehearsal required first | ⛔ **Never a rung.** Discharges nothing |
+
+## ⚠ What the Panel ruled on Q3 while knowing
+
+The flip is a **runtime API call** and never passes through the deploy workflow, so the **≥2-reviewer
+protection on the `production` environment does not cover it**. The route chain is `[adminSession,
+requireGlobalPermission(FEATURE_FLAG_FLIP_KEY)]` — **no step-up, no dual control** — while every
+`member-data-rights` route requires a step-up. ⇒ **Reading one member's export is gated harder than
+ending portal access for every terminated member across all Pariwars.** Accepted **with that comparison
+in view**; the governance gate is the Panel's own authorisation at `2026-08-17-127` cl. 6.
+
+## ⚠ The rehearsal cohort is open, and bounded
+
+The ruling supplied *"(b) yes"* without a staging cohort. It is ⛔ **not** defaulted to `128` cl. 2's
+names — Pariwars are per-environment rows, the repo seeds none, and Shikshak / Rail / Banker may not
+exist in staging at all. It is resolved against staging's **actual** Pariwars at rehearsal time and
+recorded then, and `128` cl. 6's **stop-condition governs the rehearsal too**.
+
+⚠ Because a rehearsal is not an enabling act, `2026-08-09-093` cl. 6's cohort-verbatim requirement is
+**not engaged** by it — stated so this absence is never read as the vacuous authorisation cl. 6 forbids.
+
+## What the ruling deliberately did NOT do
+
+- ⛔ **Published nothing.** Both Panel-owned flags remain `off`; `termination_access_block` **fails
+  open**, so terminated members retain portal access exactly as §8.4a discloses.
+- ⛔ **Discharged no register row.** Row **(vii)** discharges when the flag reaches `full` **in
+  production** — ⛔ never by a rehearsal, ⛔ never by naming a target.
+- ⛔ **Changed no code and no route gate** (Q3(a)).
+- ⛔ **Re-opened nothing** in `2026-08-17-127` or `2026-08-18-128`.
+
+## Disposition, as executed
+
+Decision `2026-08-18-130` recorded at `.decision-log.md:37`, per-clause provenance labelled
+(`[Trustee-ratified]` 1–4, `[Author-committed]` 5–8), committed under `governance(flags):` **before**
+any publish.
+
+⚠ **One field open** — the attestation (entry clause 7), closed by a **successor entry**, ⛔ never by an
+edit to `130`'s fields.

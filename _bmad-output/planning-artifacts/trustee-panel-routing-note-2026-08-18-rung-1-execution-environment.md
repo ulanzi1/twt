@@ -211,7 +211,16 @@ provenance labelled, committed under a `governance(flags):` prefix **before** an
 ([[feedback_governance_commits_precede_implementation]]).
 
 **On execution:** each publish is a separate logged act recording the resolved `pariwar_id` per `128`
-cl. 6 **and** the environment per Q1. Register row **(vii)** is marked discharged only when the flag
+cl. 6 **and** the environment per Q1.
+⭐ **The record has a home: `docs/feature-flags/panel-flag-flip-ledger.md`** — created 2026-08-18 as the
+mechanism for `130` clause 4's *"recorded as a rehearsal"*, which until then had no artifact, no shape
+and no location. A **production** rung is self-recording (immutable version + §1.5 audit line in the
+production DB); a **staging rehearsal is not** — its audit line lands in a disposable environment that is
+nobody's governance record. The ledger closes that asymmetry, and makes *"never a rung"* structural: a
+`rehearsal` row cannot carry a rung number, cannot carry `production`, and cannot carry a `discharges`
+value other than `nothing`. ⇒ Register row **(vii)** discharges **iff** the ledger holds a row with
+`kind = rung ∧ rung = 3 ∧ state = full ∧ environment = production` — a checkable predicate rather than a
+remembered one. Register row **(vii)** is marked discharged only when the flag
 reaches `full` in that environment.
 
 ⛔ Decisions `2026-08-09-093`, `2026-08-09-094`, `2026-08-17-127`, `2026-08-18-128` and

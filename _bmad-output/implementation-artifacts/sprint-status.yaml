@@ -1,4 +1,69 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-18 (epic-10-retrospective: optional -> DONE via bmad-retrospective. Epic 10
+#   (Admin Operations Console) retrospected; document saved to
+#   _bmad-output/implementation-artifacts/epic-10-retro-2026-08-18.md. NO story status flipped, NO code
+#   changed, NO story minted.
+#   DELIVERY: 28 done / 1 deferred-to-v2 (10.14). PLANNED 15 (10.1-10.15) -> SHIPPED 29 -- all 14
+#   additions trace to a ruled finding (8 from the 2026-08-04 moderation correct-course, 4 from the R7
+#   fact-producer chain, 2 owed mints). 235 commits / 823 files / +192,831 -2,354 (949ac56..HEAD).
+#   Migrations 0084 -> 0109 (10th epic on the frozen 0020 snapshot). RBAC catalog v22 -> v36, keys
+#   43 -> 44. FOUR new Category-A gates (helpdesk-state-invariant, governance-boundary,
+#   custom-field-governance, survey-advisory-invariant). 63 of the project's 133 decision-log entries
+#   (~47%) and 10 Trustee Panel routing notes landed in this one epic. 0 production incidents.
+#   THESIS: E10 = the GOVERNANCE epic -- a one-line predicate turned out to be constitutional law, and
+#   the fix was an instrument amendment, not a patch. Corollary: A COUNT IS NOT A REGISTER.
+#   ⭐ SIGNIFICANT DISCOVERY, ONE, AND IT IS BLOCKING (SD-1 -> AI-10-4): Epic 11a's Story 11a.3 tiered
+#   Member Directory matrix is specified against member attributes that DO NOT EXIST. Verified live at
+#   this HEAD, not read off story prose: (a) `Block` is RULED PERMANENTLY UNDERIVABLE -- Story 1.19
+#   Decision 2026-08-13-103 D5, a posting supplies a DISTRICT and ancestry walks UP while block sits
+#   BELOW; member_postings carries `district text NOT NULL` and nothing else geographic; only a NEW
+#   member attribute lights it up and NO story owns one (6.17's block is the SITE's jurisdiction, not
+#   the member's). (b) `School / Office` has NO column on members or member_postings; the only
+#   candidate vehicle is 10.12's per-Pariwar custom_fields JSONB, which is per-TENANT (cannot back a
+#   canonical cross-Pariwar field) AND governance-fenced by frozen-governance.ts + 0095's naked-PII
+#   CHECK. (c) there is NO plaintext member-name column anywhere -- the sole member name is
+#   member_kyc_profiles.name_ciphertext, a Tier-1 KMS envelope and KYC-DERIVED, so the matrix's PUBLIC
+#   tier ("first-name + last-initial") means Tier-1 decryption inside apps/public's Astro SSR process
+#   for every listed member on every page, contradicting 10.7's "Tier-1 NEVER decrypted" posture and
+#   the 10.4 crypto-boundary decision that kept member Tier-1 crypto OUT of the request path.
+#   ⛔ BigDev ruled: HOLD AN EPIC-UPDATE SESSION BEFORE AUTHORING 11a.1. Each row gets a disposition --
+#   build the attribute, narrow the matrix, or defer the tier -- and the public-tier name question
+#   needs its OWN routing note (a PII-posture change, not a rendering decision).
+#   PREVIOUS-RETRO FOLLOW-THROUGH (Epic 9 -> 10) -- ⚠ THE THREE-EPIC STREAK BREAKS. AI-9-2 (the
+#   epics.md reconciliation pass before Epic-10 authoring) was ❌ NOT ADDRESSED: verified, NO epics.md
+#   commit exists between 949ac56 and Story 10.1; 10.1 recorded the drift in-story as an "AI-9-2 class"
+#   note and every later story paid the tax individually. AI-9-1 ⏳ PRACTISED BUT NEVER EXTRACTED --
+#   no shared ownership helper exists in the tree and the class RECURRED at 10.29
+#   (grantStaffMediatedDelivery read element 1 off ANY ticket in the pariwar). AI-9-3 ⏳ HALF-CLOSED --
+#   the actor_display snapshot convention generalized (0089 + moderation + custom-fields) but
+#   apps/api/src/modules/reconciliation-review/handlers.ts still returns it RESPONSE-ONLY, verified
+#   live; the 9.8 gap it was raised FOR is untouched. AI-5-5 ✅ applied. AI-8-2/6-4/7-3/7-5/4-4 carried.
+#   TEN ACTION ITEMS, all four read-selections CONFIRMED BY BigDev 2026-08-18: AI-10-4 (Epic-11a update
+#   session, BLOCKING pre-authoring) · AI-10-1 (the policy-meaning check for member-gating predicates,
+#   ruled into BOTH the story template AND the review layer -- redundant by design, matching the
+#   revert-sanity posture) · AI-10-2 (AI-9-2 re-issued, narrowed to the 11a/11b sections and GATED
+#   inside AI-10-4's session so it cannot decay the same way) · AI-10-3 (AI-9-1 re-issued as a NAMED
+#   CHECKLIST in the review skill -- ⛔ NOT a package [[feedback_no_premature_package]] and ⛔ NOT a new
+#   CI gate) · AI-10-5 (⚠ SPLIT DISPOSITION: the ci:local DOUBLE-RUN is elevated as a real correctness
+#   defect in the merge gate -- 10.9 recorded that it "cannot report green on an unmodified tree" --
+#   while the --concurrency=4 OVERSUBSCRIPTION is ruled a RECORDED TAX, no false-negative risk
+#   demonstrated in ten epics) · plus AI-9-3 / AI-8-2 / AI-6-4 / AI-7-3 / AI-7-5 carries and
+#   AI-4-4 / AI-5-5 unchanged.
+#   RECORDED, NOT ELEVATED: the standing Trustee Panel obligation register is TEN, none discharged, six
+#   rows carried un-re-verified; ⭐ FOUR OF THE TEN ARE ONE UPSTREAM ACT -- authorising Story 0.13
+#   Task 8 (counsel selection) under the already-ratified 2026-06 envelope moves 40% of the queue.
+#   Also: Escalation 6 undischarged (restoration_discipline_imposition stays default-OFF); the
+#   copy-truth defect dischargeable but NOT discharged; the rejoin-model drift with ⛔ NO OWNER (today
+#   time alone cures an uncleared termination, signup.handlers.ts:118-123); 0099's escalation CHECK
+#   ships NOT VALID; the instrument itself is still an unadopted draft in both locales.
+#   ⚠ RECONCILIATION RECORDED, NOT A SILENT OVERRIDE: the 10-28 and 10-29 comments below read "Do NOT
+#   'correct' it and do NOT flip epic-10-retrospective." Those bar a SIDE-EFFECT flip caused by minting
+#   a late story into a retrospected epic; they are not a bar on a retrospective the project lead
+#   explicitly invokes. ⛔ Both comments are left BYTE-UNCHANGED
+#   ([[feedback_supersede_never_reinterpret]]); this reconciliation lives here and in the retro
+#   document's §11, never by editing them.
+#   Only development_status[epic-10-retrospective] flips. NO other key changed. Action items live in
+#   the retro document + this comment -- no YAML action_items block, consistent with Epic 0-9.)
 # last_updated: 2026-08-17j (10-15-survey-poll: done -> done, addendum only -- Docker became
 #   available after the 17i live-DB verification below. Re-confirmed EVERY integration-tests package
 #   against the REAL twt-test-pg container (postgres:16 @ :5433, UTC by default): domain 2985/2986,
@@ -7865,7 +7930,7 @@ development_status:
   # production unchanged until this lands. The ruling found element 1's EVIDENTIARY STRENGTH weak, not
   # the fallback unsafe to operate -- nothing about this story pauses staff-mediated delivery.
   10-29-member-authored-staff-mediation-request: done
-  epic-10-retrospective: optional
+  epic-10-retrospective: done
 
   # ==========================================================================
   # Epic 11a: Public Trust Identity Shell

@@ -1,9 +1,9 @@
 # ADR-0037: Per-tenant custom fields are an append-only registry TABLE with a code-resident vocabulary and a three-layer governance fence
 
-> **Status:** drafted
+> **Status:** ratified
 > **Date:** 2026-08-06
 > **Author:** Solo Builder (authored at Story 10.12 closure)
-> **Ratifying trustees:** _(not yet ratified — see the Changelog; trustee ratification is a named forward obligation, not something Story 10.12 may assert)_
+> **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2) — 2026-08-19; logged in `.decision-log.md` Decision `2026-08-19-139`; consent sheet `docs/knowledge-transfer/adr-ratification-consent-sheet-2026-08-19.md`
 
 ## Context
 
@@ -202,6 +202,7 @@ FR-54, `epics.md:108` and §1.7 all name **member, claim, pool**. v1 hosts on me
 
 | Date | Status flip | Author | Notes |
 |---|---|---|---|
+| 2026-08-19 | drafted → **ratified** | Dhiraj Rahul, Kalpana Bharti | Ratified 2026-08-19; logged in `.decision-log.md` Decision `2026-08-19-139`. ⚠ **No conditions or amendments were REPORTED to the author** — ⛔ recorded as *not reported*, not as *none applied*; the author did not witness the session. ⚠ The consent sheet's mark boxes remain **unmarked**; signature capture is a named forward obligation. |
 | 2026-08-19 | `drafted` (unchanged — pre-presentation revision) | BigDev | ⛔ **No decision amended.** Added the two-authorship-regime note at the head of §Decision, and marked the *Alternatives* re-consider trigger **PARTIALLY FIRED**: Decision `2026-08-19-133` clause 2 reserves creation/material redefinition of **directory attributes** to Super Admin / Trustee Panel, while tenant self-service authoring **stands** for ordinary custom fields. ⚠ **Raised by a trustee**, who observed that the ADR text still carried only the earlier model while the consent sheet carried the finding. |
 | 2026-08-07 (c) | `drafted` (unchanged — ESCALATION 5's grammar gap only) | BigDev, via `bmad-ux` | **ESCALATION 5's grammar gap CLOSED**: `ux-design-specification.md` §12 gained Group E, Pattern 12 (Dynamic Field Rendering) — the type→primitive mapping, validation/save/bilingual delegation to Patterns 4/5/6, and retired-vs-unknown-field handling. This was listed separately from "the three" escalations that gated ratification (row below); it is a fourth, independently-tracked item in this ADR's own failure-modes list. No renderer is built; values remain API-only. |
 | 2026-08-07 (b) | `drafted` (unchanged — ESCALATIONS 2 & 3) | BigDev, via `bmad-correct-course` | **ESCALATIONS 2 & 3 CLOSED**: two Trustee-Panel scope rulings (Decision `2026-08-07-084`, `sprint-change-proposal-2026-08-07-R2.md`), touching no architecture text. ESCALATION 2: epic's example rewritten to "cadre grade" (Tier-3); guard NOT relaxed; a Tier-2 host story drafted as a stub and NOT commissioned. ESCALATION 3: repo-wide JSONB-limit coverage gap accepted as a named, gated deferral with a concrete (non-circular) re-trigger; a gate-story stub sketched (Epic 14 `[GOVERNANCE]` pattern) and NOT commissioned. **All three of this ADR's original escalations are now closed** — full ADR ratification remains a separate, un-asserted step. |

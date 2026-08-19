@@ -1,9 +1,9 @@
 # ADR-0038: The geo-tree scope resolver's source of truth is a versioned per-Pariwar registry table holding a JSONB tree document, with NO code-resident default
 
-> **Status:** drafted
-> **Date:** 2026-08-12 (date entered current status)
+> **Status:** ratified
+> **Date:** 2026-08-19 (date entered current status)
 > **Author:** Solo Builder (BigDev), at Story 1.18 closure
-> **Ratifying trustees:** — (populated at `ratified` status)
+> **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2) — 2026-08-19; logged in `.decision-log.md` Decision `2026-08-19-139`; consent sheet `docs/knowledge-transfer/adr-ratification-consent-sheet-2026-08-19.md`
 > **Supersedes:** —
 > **Superseded by:** —
 
@@ -227,4 +227,5 @@ Load-bearing details:
 
 | Date | Status flip | Author | Notes |
 |---|---|---|---|
+| 2026-08-19 | drafted → **ratified** | Dhiraj Rahul, Kalpana Bharti | Ratified 2026-08-19; logged in `.decision-log.md` Decision `2026-08-19-139`. ⚠ **No conditions or amendments were REPORTED to the author** — ⛔ recorded as *not reported*, not as *none applied*; the author did not witness the session. ⚠ The consent sheet's mark boxes remain **unmarked**; signature capture is a named forward obligation. |
 | 2026-08-12 | (initial draft) | BigDev (Solo Builder) | Authored under Story 1.18 (Geo-Tree Scope Resolver), Task 2. `drafted` — trustee ratification is a named forward obligation this story may not assert ([[feedback_verify_before_committing_governance_claims]]). |

@@ -1,4 +1,49 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-19l (⭐ ADR-0037 + ADR-0038 RATIFIED -- Decision 2026-08-19-139, Dhiraj Rahul and
+#   Kalpana Bharti, 2026-08-19. ⛔ NO story status flipped, NO story minted, NO code changed, NO
+#   development_status key touched.
+#   ⭐ `drafted` REACHES ZERO -- first time since 2026-08-06, when ADR-0037 opened the count. Breakdown
+#   `drafted` 2->0, `ratified` 35->37, Total unchanged at 150 (112+0+0+37+1). Rows AND reconciliation in
+#   the SAME commit per README §7.
+#   ⭐ THE 138 CLAUSE 3 INVERSION IS RESOLVED -- ADR-0039 no longer rests on an unratified ADR-0038.
+#   BOTH RATIFIED CARRYING PRE-PRESENTATION REVISIONS, and the Panel is recorded as ratifying the REVISED
+#   text. ⛔ NEITHER amended a Decision. (a) ADR-0037 gained the TWO-AUTHORSHIP-REGIME note: 133 cl.2
+#   reserves creation/material redefinition of DIRECTORY ATTRIBUTES to Super Admin/Trustee Panel while
+#   tenant self-service STANDS for ordinary custom fields -- two regimes in ONE registry table; its
+#   re-consider trigger marked PARTIALLY FIRED. ⭐ RAISED BY A TRUSTEE, who observed the ADR's own text
+#   carried only the earlier model while the finding sat in the CONSENT SHEET. ⚠ THE ADR IS THE ARTIFACT
+#   THAT RATIFIES; THE SHEET IS NOT -- and the author had already given ADR-0038 that treatment and not
+#   ADR-0037. (b) ADR-0038 gained the freeze-row-9 cross-reference to ADR-0039 (its non-scope bullet is
+#   TRUE OF ITSELF and was ⛔ NOT corrected -- the surrounding FREEZE is what moved) and a VERIFICATION
+#   REFRESH at migration 0109: its "no `block` column anywhere" claim was CORRECTLY BOUNDED at 0100 and
+#   its bound has since been passed by 0102, ⛔ WITHOUT firing its revisit trigger (0102's block is the
+#   inspection SITE's jurisdiction, not a member attribute). D1-D7 and the rejection reasoning stand.
+#   ⚠ THREE THINGS RECORDED AS *NOT REPORTED*, ⛔ NOT AS SETTLED -- the author did not witness the session:
+#     (a) CONDITIONS AND AMENDMENTS -- ⛔ recorded as NOT REPORTED, ⛔ NOT as "none applied". The
+#         distinction is load-bearing: ADR-0036 ratified with TWO in-session amendments, ADR-0033 with a
+#         risk "explicitly recorded, not resolved", ADR-0034 FOR ONE PORTION ONLY.
+#     (b) CONSENT-SHEET §3 -- the belated consent record for ADR-0039's sheet-less ratification. Carried.
+#     (c) THE SYSTEMIC CITATION FINDING -- 31 of 39 Section A rows carry stale line-range citations,
+#         INCLUDING rows describing RATIFIED ADRs. Only the two rows on this sheet were corrected; a
+#         sweep was offered as its own agenda item and is ⛔ NOT reported as ruled.
+#   ⚠ THE CONSENT SHEET'S MARK BOXES REMAIN UNMARKED -- signature capture is a NAMED FORWARD OBLIGATION,
+#   ⛔ not back-filled ([[feedback_record_unattested_no_backfill]]).
+#   ⚠ PRECISION CORRECTION TO 138 CLAUSE 2, recorded in 139 cl.6 and ⛔ NOT edited into 138 (which is
+#   ratified): 138 said "NO AMENDMENTS AND NO CONDITIONS WERE APPLIED" for ADR-0039. That was STRONGER
+#   THAN THE INPUT WARRANTED -- the author was told only that it was ratified, so "not reported" was
+#   accurate and "none applied" was an INFERENCE. The stricter framing is adopted from 139 forward, and
+#   139 records WHY the two entries read differently.
+#   ⛔ AUTHORISES NO CODE, NO MIGRATION, NO STORY STATUS. ⚠ In particular, ratifying ADR-0037 does NOT
+#   authorise the directory-attribute registry extension -- that is Epic 11a BUILD work, gated separately.
+#   ⛔ Does NOT rule the VEHICLE question: extending ADR-0037's registry rather than a separate
+#   directory-attribute table was BigDev's choice (proposal §3.4), ⛔ never among R1-R7 and never put to
+#   the Panel; ratifying ADR-0037 with the two-regime note present does NOT convert that into a ruling.
+#   ⛔ STILL OWED: consent-sheet SIGNATURE CAPTURE - sheet §3 - the 29 uncorrected index rows (⭐ the
+#   AI-10-2 drift class, for which NOTHING performs that job for ADRs) - the vehicle question if the Panel
+#   wants it - and the BUILD work, unchanged: the launch-blocking PII-scrape tier-leak leg (136 cl.4),
+#   137 cl.7(a) member-aware publish, 137 cl.7(b) member choice surface.
+#   ⭐ ALL NINE ADR/GOVERNANCE ARTIFACTS OF THIS CORRECT-COURSE ARE NOW RATIFIED OR DISCHARGED. What
+#   remains is BUILD. O1/O5/O6/O7/O8 carried.)
 # last_updated: 2026-08-19k (⭐ ADR-0039 RATIFIED -- Decision 2026-08-19-138, Dhiraj Rahul and Kalpana
 #   Bharti, 2026-08-19. ⛔ NO story status flipped, NO story minted, NO code changed, NO
 #   development_status key touched.

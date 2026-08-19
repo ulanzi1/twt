@@ -1,4 +1,40 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-19k (⭐ ADR-0039 RATIFIED -- Decision 2026-08-19-138, Dhiraj Rahul and Kalpana
+#   Bharti, 2026-08-19. ⛔ NO story status flipped, NO story minted, NO code changed, NO
+#   development_status key touched.
+#   ADR-0039 flips `drafted` -> `ratified`; the adr-index.md Section A row flips WITH IT and the
+#   breakdown updates (`drafted` 3->2, `ratified` 34->35; Total unchanged at 150; arithmetic re-checked
+#   112+2+0+35+1=150). ⭐ Row AND reconciliation in the SAME COMMIT, per README §7 -- the discipline the
+#   ADR-0036 note records being BROKEN once and the ADR-0037/0038 notes record being kept since.
+#   ⚠ NO AMENDMENTS AND NO CONDITIONS -- RECORDED EXPLICITLY, because the precedents cut the other way:
+#   ADR-0036 was ratified with TWO in-session amendments; ADR-0033 with a risk "explicitly recorded, not
+#   resolved"; ADR-0034 FOR ONE PORTION ONLY. Against that pattern the ABSENCE of conditions here is a
+#   FACT ABOUT THIS SESSION, ⛔ not an omission from the record.
+#   ⚠ NO CONSENT SHEET EXISTS FOR 2026-08-19. Every prior ratification session cited in the index produced
+#   one (adr-ratification-consent-sheet-<date>.md; five exist, 2026-06-21 through 2026-08-01). ⛔ NAMED
+#   FORWARD OBLIGATION -- ⛔ NOT back-filled and ⛔ NOT quietly dropped from the row
+#   ([[feedback_record_unattested_no_backfill]]).
+#   ⭐⚠ THE INVERSION THIS CREATES, recorded rather than left to be noticed (138 clause 3): ADR-0039 is now
+#   RATIFIED and its "Relationship to prior ADRs" section states it EXTENDS ADR-0038, WHICH IS `drafted`.
+#   ⇒ A RATIFIED ADR NOW RESTS ON AN UNRATIFIED ONE. ⛔ This does NOT weaken ADR-0039 -- its substance was
+#   ruled independently at 134 and the properties it commits do not depend on 0038 having been ratified --
+#   ⚠ BUT IT MAKES ADR-0038's RATIFICATION MORE PRESSING, NOT LESS, and that ratification must still
+#   account for ADR-0039 because 0038's "What this ADR does NOT decide" list will by then be PARTLY
+#   SUPERSEDED by the ADR that just ratified above it. `drafted` now stands at ADR-0037 and ADR-0038.
+#   ⭐ SUBSTANCE AND DOCUMENT WERE RATIFIED AS SEPARATE ACTS, AND THE SEPARATION IS THE POINT (138 cl.4):
+#   134 ruled the MECHANISM, 138 ratified the FILE. ⛔ Neither entry edits the other; a reader of either
+#   alone correctly sees only its own half. ⚠ ⛔ DO NOT COLLAPSE THEM IN FUTURE CITATION -- "ADR-0039 was
+#   ratified" and "the scope-dimension amendment was ruled" are DIFFERENT STATEMENTS WITH DIFFERENT DATES
+#   OF EFFECT, and the ADR would have been safe to rely on for its substance even had 138 never landed.
+#   ⛔ ADR-0008 stays `ratified` and UNEDITED -- amended BY REFERENCE only. ⛔ 138 ratifies NO other ADR and
+#   presumes upon neither 0037 nor 0038; re-opens NOTHING in 134; authorises NO migration and NO code
+#   (ADR-0039 item 5 still defers the zone/division enum addition to RAIL ONBOARDING).
+#   ⛔ STILL OWED: the 2026-08-19 CONSENT SHEET - ADR-0038 ratification (now carrying the inversion) -
+#   ADR-0037 ratification - the LAUNCH-BLOCKING PII-scrape tier-leak leg (136 cl.4) - 137 cl.7(a)
+#   member-aware publish path - 137 cl.7(b) the member choice surface - O7 housekeeping.
+#   ⚠ ROWS 2 AND 5 REMAIN UNBLOCKED BY RULING, ⛔ NOT BY MECHANISM. ⭐ Story 11a.1 remains UNBLOCKED --
+#   the governance track for this correct-course is now COMPLETE; what remains is BUILD work.
+#   O1/O5/O6/O8 carried.)
 # last_updated: 2026-08-19j (⭐ ADR-0039 AUTHORED -- the scope-dimension mechanism Decision 2026-08-19-134
 #   Q4 authorised. ⛔ NO story status flipped, NO story minted, NO code changed, NO development_status key
 #   touched. 231-line ADR + a NEW Section A row and its reconciliation in adr-index.md (breakdown

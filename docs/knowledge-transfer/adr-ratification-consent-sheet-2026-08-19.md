@@ -42,9 +42,31 @@ custom fields (the *"cadre grade"* case ADR-0037 was written around). It is **wi
 **directory attributes** (`Block`, `School`, `Designation`, and any future hierarchy attribute).
 
 ⭐ **The consequence the panel is being asked to accept:** `pariwar_custom_field_definitions` — the one
-table ADR-0037 commits — now hosts **two authorship regimes** in the same registry. ⛔ Neither ADR-0037
-nor Decisions `132`–`138` state that consequence in one place; **this sheet is the first place it is
-written down.**
+table ADR-0037 commits — now hosts **two authorship regimes** in the same registry.
+
+> ✅ **CORRECTED 2026-08-19, on a trustee's challenge.** This sheet originally said *"this sheet is the
+> first place it is written down"* — and that was the defect, not the disclosure. ⚠ **A trustee observed
+> that ADR-0037's own text still carried only the earlier tenant-self-service model**, with no reference
+> to Decision `2026-08-19-133`. Verified: **zero** occurrences of `2026-08-19` and **zero** of
+> *"directory attribute"* in the ADR. ⛔ **The finding was in the session document, not in the artifact
+> being ratified** — so ratifying ADR-0037 as it then stood would have ratified the superseded model.
+> ⚠ **The author had already given ADR-0038 exactly this treatment and did not do the same here.**
+>
+> ⇒ **ADR-0037 now carries it directly:** a two-regime table at the head of §Decision, the *Alternatives*
+> re-consider trigger marked **partially fired**, four new References, and a changelog row. ⛔ **No
+> decision was amended** — D1–D7 stand unchanged.
+
+⛔ **What the two regimes are** — now stated in the ADR itself, repeated here for the signing read:
+
+| Field class | Who may CREATE / materially redefine | Who may configure usage |
+|---|---|---|
+| **Ordinary tenant custom field** (`cadre grade`) | ⭐ **Pariwar Admin** — ADR-0037's model, **unchanged** | Pariwar Admin |
+| **Directory attribute** (`Block`, `School`, `Designation`, hierarchy attributes) | ⛔ **Super Admin / Trustee Panel ONLY** | Pariwar Admin (enablement + tier) |
+
+⚠ **Why it is not merely additive:** an implementer reading ADR-0037 alone would build **one** authoring
+surface and grant it to Pariwar Admins — letting a tenant admin create an attribute the Panel reserved to
+itself. ⛔ **D1's three-layer fence does not catch this**: it refuses *frozen governance keys*, not
+*unauthorised authors*.
 
 ⚠ **Precision, because it changes who decided what:** the choice to *extend* ADR-0037's registry (rather
 than build a separate directory-attribute table) was **BigDev's**, recorded in the approved Sprint Change

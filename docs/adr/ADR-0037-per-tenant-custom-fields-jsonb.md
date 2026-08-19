@@ -38,6 +38,44 @@ The `docs/knowledge-transfer/adr-index.md` slot reserved for this decision names
 
 **Per-Pariwar custom fields ship as an append-only, RLS-scoped, trigger-protected registry TABLE for the definitions; a CODE-resident vocabulary and fence; drizzle-kit migrations for any DDL; and a three-layer runtime/DB/CI control that refuses any field naming a frozen governance concern.**
 
+> ⭐ **PRE-PRESENTATION NOTE, added 2026-08-19 — THE REGISTRY THIS ADR COMMITS NOW HOSTS TWO AUTHORSHIP
+> REGIMES, AND THIS ADR AS DRAFTED DESCRIBES ONLY ONE OF THEM.**
+>
+> ⛔ **Nothing in the Decision above is withdrawn.** The medium, the code-resident vocabulary, the fence,
+> the DDL posture and D1–D7 all stand exactly as written.
+>
+> ⚠ **What is incomplete is WHO MAY AUTHOR A DEFINITION.** This ADR was written around a single model —
+> tenant self-service authoring through an admin UI, the *"cadre grade"* case. **Decision
+> `2026-08-19-133` clause 2** subsequently ruled, for one class of field:
+>
+> > *"Only Super Admin / Trustee Panel may create or materially redefine **directory attributes**.
+> > Pariwar Admins may configure **permitted usage** of already-governed attributes, but cannot create a
+> > new attribute or elevate an attribute into an RBAC-capable class."*
+>
+> ⇒ **Two regimes, in one registry table:**
+>
+> | Field class | Who may CREATE / materially redefine | Who may configure usage |
+> |---|---|---|
+> | **Ordinary tenant custom field** (`cadre grade`) | ⭐ **Pariwar Admin** — this ADR's model, **unchanged** | Pariwar Admin |
+> | **Directory attribute** (`Block`, `School`, `Designation`, hierarchy attributes) | ⛔ **Super Admin / Trustee Panel ONLY** | Pariwar Admin (enablement + tier) |
+>
+> ⚠ **Why this is not merely additive:** an implementer reading this ADR alone would build a single
+> authoring surface and grant it to Pariwar Admins — which for a directory attribute would let a tenant
+> admin create an attribute the Panel reserved to itself, and (for a hierarchical one) reach an
+> RBAC-capable class. ⛔ **The fence in D1's three layers does not catch this** — it refuses *frozen
+> governance keys*, not *unauthorised authors*.
+>
+> ⚠ **Two facts the Panel should have when ratifying:** the choice to **extend this registry** for
+> directory attributes rather than build a separate table was **BigDev's**, recorded in the approved
+> Sprint Change Proposal `2026-08-19` §3.4 — ⛔ it was **not** among R1–R7 and was **never put to the
+> Panel**. And architecture **§2.13.2** now commits the three-layer authority model (CREATE → ENABLE →
+> GRANT) that this note points at.
+>
+> ⛔ **This note does not amend the Decision; it records a boundary the Decision predates.** Whether the
+> split should instead be expressed as a **revision** to D1, or as a **separate directory-attribute
+> registry**, is a question the Panel may rule on — see also the fired re-consider trigger under
+> *Alternatives considered*.
+
 The load-bearing details:
 
 ### D1 — Split by what actually needs a migration (the §1.7 deviation)
@@ -98,7 +136,7 @@ FR-54, `epics.md:108` and §1.7 all name **member, claim, pool**. v1 hosts on me
 
 ## Alternatives considered
 
-- **Definitions as versioned TS files (`per-pariwar/<id>/schema-v<n>.ts`), i.e. §1.7 as literally written.** Rejected because it makes every field a release, defeating FR-54's stated purpose (*"variation without schema migrations"*), and because the epic's admin-authoring AC cannot be built on it at all. ⚠ **ESCALATION 1 CLOSED 2026-08-07** — the Trustee Panel ratified the §1.7 amendment (Decision `2026-08-07-083`); architecture §1.7 now names the registry-table medium this ADR ships. **Re-consider if** trustees later rule that tenant self-service authoring is undesirable — in which case the registry table becomes a build-time seed source and the admin surface is withdrawn.
+- **Definitions as versioned TS files (`per-pariwar/<id>/schema-v<n>.ts`), i.e. §1.7 as literally written.** Rejected because it makes every field a release, defeating FR-54's stated purpose (*"variation without schema migrations"*), and because the epic's admin-authoring AC cannot be built on it at all. ⚠ **ESCALATION 1 CLOSED 2026-08-07** — the Trustee Panel ratified the §1.7 amendment (Decision `2026-08-07-083`); architecture §1.7 now names the registry-table medium this ADR ships. **Re-consider if** trustees later rule that tenant self-service authoring is undesirable — in which case the registry table becomes a build-time seed source and the admin surface is withdrawn. ⭐ **THIS TRIGGER HAS PARTIALLY FIRED — 2026-08-19, Decision `2026-08-19-133` clause 2.** ⛔ **Not wholly:** tenant self-service authoring **stands** for ordinary custom fields; it is **withdrawn for directory attributes**, which only Super Admin / Trustee Panel may create or materially redefine. ⚠ The consequence the trigger anticipated — *"the registry table becomes a build-time seed source and the admin surface is withdrawn"* — therefore applies **to one class of field, not to the registry as a whole**. See the pre-presentation note at the head of §Decision.
 
 - **Compile a Zod schema from each definition row at request time.** Rejected for three independent reasons: there is **no precedent in this repo** for building a Zod schema from data (the closest, `requireIdentityTransition`, is a compile-time factory over a `ZodRawShape`); **no JSON-Schema library is a dependency of any package** (`zod-to-json-schema` / `ajv` would each need their own ADR); and the two nearest analogues in the codebase — `validateRoutingPolicyRules` and `validateFlagVersionInput` — are both hand-written imperative validators accumulating a `reasons: string[]`. With seven types and four bounds the hand-written version is short, gives better error messages, and puts no interpreter over tenant-authored input on the request path. **Re-consider if** the vocabulary grows past roughly a dozen types, at which point the hand-written validator stops being obviously simpler.
 
@@ -152,6 +190,11 @@ FR-54, `epics.md:108` and §1.7 all name **member, claim, pool**. v1 hosts on me
 - Memory: [[feedback_supersede_never_reinterpret]] — why the §1.7 deviation is escalated rather than read into the existing text
 - Memory: [[feedback_gate_scope_semantic_coverage]] — why every fence layer carries a revert-sanity test
 - Memory: [[feedback_verify_before_committing_governance_claims]] — why this ships `drafted`, not `ratified`
+- [Source: `.decision-log.md`, Decision `2026-08-19-133` clause 2] — ⭐ the **directory-attribute** authorship carve-out; the re-consider trigger under *Alternatives considered* has **partially fired**
+- [Source: `.decision-log.md`, Decision `2026-08-19-132`] — the attribute model (R1–R7) whose Pariwar-specific category this registry hosts
+- [Source: `architecture.md` **§2.13.2**] — the CREATE → ENABLE → GRANT authority layering
+- [Source: `_bmad-output/planning-artifacts/sprint-change-proposal-2026-08-19.md` §3.4] — ⚠ the choice to EXTEND this registry was **BigDev's**, ⛔ not among R1–R7 and never put to the Panel
+
 
 ---
 
@@ -159,6 +202,7 @@ FR-54, `epics.md:108` and §1.7 all name **member, claim, pool**. v1 hosts on me
 
 | Date | Status flip | Author | Notes |
 |---|---|---|---|
+| 2026-08-19 | `drafted` (unchanged — pre-presentation revision) | BigDev | ⛔ **No decision amended.** Added the two-authorship-regime note at the head of §Decision, and marked the *Alternatives* re-consider trigger **PARTIALLY FIRED**: Decision `2026-08-19-133` clause 2 reserves creation/material redefinition of **directory attributes** to Super Admin / Trustee Panel, while tenant self-service authoring **stands** for ordinary custom fields. ⚠ **Raised by a trustee**, who observed that the ADR text still carried only the earlier model while the consent sheet carried the finding. |
 | 2026-08-07 (c) | `drafted` (unchanged — ESCALATION 5's grammar gap only) | BigDev, via `bmad-ux` | **ESCALATION 5's grammar gap CLOSED**: `ux-design-specification.md` §12 gained Group E, Pattern 12 (Dynamic Field Rendering) — the type→primitive mapping, validation/save/bilingual delegation to Patterns 4/5/6, and retired-vs-unknown-field handling. This was listed separately from "the three" escalations that gated ratification (row below); it is a fourth, independently-tracked item in this ADR's own failure-modes list. No renderer is built; values remain API-only. |
 | 2026-08-07 (b) | `drafted` (unchanged — ESCALATIONS 2 & 3) | BigDev, via `bmad-correct-course` | **ESCALATIONS 2 & 3 CLOSED**: two Trustee-Panel scope rulings (Decision `2026-08-07-084`, `sprint-change-proposal-2026-08-07-R2.md`), touching no architecture text. ESCALATION 2: epic's example rewritten to "cadre grade" (Tier-3); guard NOT relaxed; a Tier-2 host story drafted as a stub and NOT commissioned. ESCALATION 3: repo-wide JSONB-limit coverage gap accepted as a named, gated deferral with a concrete (non-circular) re-trigger; a gate-story stub sketched (Epic 14 `[GOVERNANCE]` pattern) and NOT commissioned. **All three of this ADR's original escalations are now closed** — full ADR ratification remains a separate, un-asserted step. |
 | 2026-08-07 (a) | `drafted` (unchanged — ESCALATION 1 only) | BigDev, via `bmad-correct-course` | **ESCALATION 1 CLOSED**: Trustee Panel ratified the §1.7 amendment (Decision `2026-08-07-083`, `sprint-change-proposal-2026-08-07.md`). Architecture §1.7 now names the registry-table medium this ADR ships; the deviation this ADR declared is no longer a disagreement between text and code. ADR **status stays `drafted`** — ESCALATION 2 (Tier-2 worked example) and ESCALATION 3 (repo-wide JSONB limit gap) remain open, and full ADR ratification is gated on those, not asserted here. |

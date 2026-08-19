@@ -1,7 +1,34 @@
 # Trustee Panel Routing Note — the Member Directory cannot show a member's name without decrypting Tier-1, at **either** tier
 
-**Status:** ⏳ **Open — five questions, awaiting ruling.** Q1 and Q2 are ⛔ BLOCKING. Q3, Q4 and Q5 are
-⚠ DIRECTIVE.
+**Status:** ✅ **RULED 2026-08-19 — Dhiraj Rahul and Kalpana Bharti.** Recorded as **Decision
+`2026-08-19-135`**. ⚠ **All five answered, and Q1 went WIDER than the question put.**
+⛔ **The questions below are left as put. They are annotated, never edited.**
+
+> ### ⭐ ANNOTATION — the ruling, 2026-08-19
+>
+> | Q | Ruling |
+> |---|---|
+> | **Q1** | ⚠ **YES — and FULL NAME**, not the first-name + last-initial the question asked about |
+> | **Q2** | ✅ **YES — full name** at the authenticated tier |
+> | **Q3** | ⛔ **BUILD IT NAMELESS** |
+> | **Q4** | ✅ **Use the existing KYC / legal name**; ⛔ no Tier-3 display-name attribute minted |
+> | **Q5** | ✅ Keep rendering and decryption paths **SEPARABLE**, so a future Trustee decision toggles public full-name display **without redesign** |
+>
+> ⛔ **Both non-binding recommendations on Q1 and Q2 were NOT followed.** The note recommended NO for the
+> public tier and *shielded* for the authenticated tier. The Panel authorised **full name at both**.
+>
+> ⚠ **Q3's antecedent does not obtain** — it was put as *"if Q1 and Q2 are both NO"*, and both are YES.
+> Decision `2026-08-19-135` **clause 6** records the reading and ⛔ **flags it for confirmation**: the
+> operative build instruction is **NAMELESS**, with full-name display **authorised but not enabled**
+> behind Q5's toggle — the project's *built but not enabled* pattern. ⛔ **Until confirmed, no public name
+> renders, and an implementer must not resolve this.**
+>
+> ⛔ **Supersedes** (clause 7): **FR-75**'s *"first-name + last-initial only"* · **FR-74**'s public-tier
+> name form · **`architecture.md:1538`** *"CI guards that no Tier 1 field is rendered to a public
+> surface"* — the last requires an **explicit** amendment in G5.
+> ⚠ **F-5 is now load-bearing:** the tier-leak guard is **inert**, and under this ruling it must be made
+> operative **before** any public name renders.
+
 **Author:** BigDev (Solo Builder)
 **Raised:** 2026-08-19, against `governance/epic-11a-directory-attribute-model` @ `b94ea97` (clean),
 branched from `main` @ `adf3c52`.
@@ -281,4 +308,5 @@ Provenance label per clause (Decision 2026-08-09-095):
 
 ---
 
-*Routed 2026-08-19. Verified live at `b94ea97`. Awaiting Trustee Panel ruling.*
+*Routed 2026-08-19. Verified live at `b94ea97`. ✅ **RULED 2026-08-19** — Dhiraj Rahul, Kalpana Bharti —
+recorded as Decision `2026-08-19-135`. ⛔ Clause 6 (the Q3 reading) awaits confirmation.*

@@ -1,4 +1,55 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-19e (⭐ G3 RATIFIED -- Dhiraj Rahul and Kalpana Bharti, 2026-08-19. Decision
+#   2026-08-19-135 recorded. ⛔ NO story status flipped, NO story minted, NO code changed, NO
+#   development_status key touched. Prior ledger entries left BYTE-UNCHANGED.
+#   ⚠ THE MOST CONSEQUENTIAL RULING OF THE SESSION, AND BOTH NON-BINDING RECOMMENDATIONS WERE NOT
+#   FOLLOWED. The note recommended NO for the public tier and SHIELDED for the authenticated tier. The
+#   Panel authorised FULL NAME AT BOTH.
+#   Q1 ⚠ YES -- AND WIDER THAN THE QUESTION PUT. Q1 asked whether apps/public may decrypt Tier-1 to render
+#   FIRST-NAME + LAST-INITIAL; the Panel answered yes AND replaced the shielded form with the FULL NAME.
+#   Q2 YES, full name at the authenticated tier - Q4 use the EXISTING KYC/LEGAL NAME; ⛔ no Tier-3
+#   member-authored display-name attribute is minted, so the divergence question never arises and no
+#   second name field enters the member model - Q3 ⛔ BUILD IT NAMELESS (closes O4: yes, worth building) -
+#   Q5 keep the RENDERING and DECRYPTION paths SEPARABLE so a future Trustee decision can toggle public
+#   full-name display on/off WITHOUT redesigning member-name handling (an ARCHITECTURAL requirement, not a
+#   UI note).
+#   ⛔ CLAUSE 6 -- THE ONE THING THAT MUST BE CONFIRMED BEFORE ANYTHING IS BUILT. Q3 was put
+#   CONDITIONALLY ("if Q1 and Q2 are both NO"), and both are YES, so its antecedent does not obtain. Two
+#   readings: (A) moot, the directory ships WITH full names; (B) operative, the directory SHIPS NAMELESS
+#   and full-name display is authorised-but-not-enabled behind Q5's toggle. ⭐ The author reads (B) and
+#   treats it as OPERATIVE pending confirmation, on three grounds: (i) Q5 says a FUTURE decision turns
+#   display ON, which presupposes it is OFF at build time and is redundant under (A); (ii) (B) is this
+#   project's own shipped pattern -- "built but not enabled", as with termination_access_block and the
+#   ruled flag ladder (128-131); (iii) under (A) a misreading ships PUBLIC LEGAL NAMES irreversibly, under
+#   (B) a misreading ships NOTHING, and that asymmetry decides which reading is safe absent confirmation.
+#   ⛔ UNTIL CONFIRMED THE BUILD IS NAMELESS AND NO PUBLIC NAME RENDERS. ⛔ An implementer must NOT
+#   resolve this.
+#   ⛔ THREE RATIFIED STATEMENTS ARE SUPERSEDED (clause 7), each owed an explicit reconciliation:
+#   (a) FR-75 "First-name + last-initial only" (epics.md:144; PRD:1069) -- the NAME-SHIELDING clause only;
+#   its forced pagination, noindex on member detail pages, and no-mobile/email/address/DOB consequences
+#   ⛔ STAND UNCHANGED. (b) FR-74's public-tier name form (epics.md:143). (c) ⭐ architecture.md:1538 "CI
+#   guards that no Tier 1 field is rendered to a public surface" -- ⛔ NOW DIRECTLY CONTRADICTED for one
+#   field; G5 must amend it EXPLICITLY, stating member name as a ruled exception with its authority, ⛔ not
+#   leave it inferred.
+#   ⛔ NOT AMENDED (clause 8): Story 10.7 stands -- its ruling was scoped to ADMIN BULK EXPORTS and its
+#   member-reads-own vs admin-exports-others distinction is untouched; ⚠ what is no longer true is the
+#   PROJECT-WIDE reading that Tier-1 is never decrypted outside self-access, which was never ratified and
+#   ⛔ must not be cited as though it were. splitFirstNameLastInitial() is NOT removed -- the directory
+#   will not use it, but it remains the shield for its two live consumers (member-pool, jobs cycle-open
+#   notification); ⛔ do not delete it and ⛔ do not assume the directory reuses it. No PII TIER changes.
+#   ⚠ THREE MATERIAL FACTORS RECORDED, ⛔ NOT a re-litigation (clause 9): (a) ANTI-ENUMERATION BECOMES
+#   CRITICAL, not defensive -- a paginated public directory of full legal names is a harvestable member
+#   registry, and FR-75's surviving pagination/noindex become the FLOOR not the ceiling; (b) ⭐ THE CI
+#   GUARD THAT WOULD CATCH A MISTAKE IS INERT -- loadSnapshots() returns [] and the matrix declares zero
+#   surfaces, so the TIER-LEAK leg is a no-op while seven public pages have shipped (the naked-PII leg
+#   does work and has a negative control). ⛔ It must be made OPERATIVE BEFORE any name renders publicly,
+#   or the only control over a Tier-1 public surface is code review -- ⚠ and it is populated by Story
+#   11a.1, the story this ruling unblocks; (c) DPDPA exposure is materially changed by publishing members'
+#   full legal names on an unauthenticated surface, while the standing register still records LEGAL
+#   COUNSEL AS NOT ENGAGED. ⛔ Recorded for awareness; this entry does NOT make counsel a precondition.
+#   ⛔ STILL OPEN: G4a (hierarchy-version drift, 4 questions, gating rows 2 AND 5, prohibition in force,
+#   UNCOMMITTED). OWED: clause-6 confirmation (highest priority) - ADR-0039 - G5 - G6.
+#   O4 CLOSED by Q3. O1/O5/O6/O7/O8 carried.)
 # last_updated: 2026-08-19d (⭐ G2 RATIFIED -- Dhiraj Rahul and Kalpana Bharti, 2026-08-19. Decision
 #   2026-08-19-134 recorded. ⛔ NO story status flipped, NO story minted, NO code changed, NO
 #   development_status key touched. Prior ledger entries left BYTE-UNCHANGED.

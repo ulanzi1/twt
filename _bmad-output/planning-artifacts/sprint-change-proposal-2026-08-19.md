@@ -7,6 +7,16 @@
 **Trigger:** Epic 10 Retrospective (2026-08-18), Significant Discovery **SD-1**; action item **AI-10-4** (blocking, pre-authoring). **AI-10-2** (the `epics.md` 11a/11b reconciliation) runs gated inside this session per its ruling.
 **Session mode:** Incremental. Row scope widened to **six** by BigDev at session open; the model was then reframed mid-session (see §1) and **R3(a)** + **R7** were ruled during revision.
 **Prior art superseded:** none. Prior art **amended**: see §4.
+**⛔ POST-APPROVAL AMENDMENT — 2026-08-19, directed by BigDev, recorded not silent.** While preparing
+**G4a**, the drift question was found to be **wider than this proposal recorded**. §4.1 row 2 and §4.3
+originally gated G4a on `Zone`/`Division` alone. `Block` is **tree-validated** under R3(a), so a *Shikshak*
+hierarchy restructure orphans a stored value exactly as a Rail one would — meaning §5.4's prohibition
+already reaches Block, and row 2 is gated on G4a too. Amended in six places, each marked **AMENDED**:
+§3.1 · §4.1 row 2 · §4.3 G4a · §5 handoff (BigDev/Panel, Amelia) · §5.2 · §5.3 O2 · §5.4.
+⚠ The **final scope is the Panel's**, not this amendment's: G4a **Q4** asks whether the ruling covers all
+collected hierarchy attributes or Zone/Division only. Until it rules, treat the wider gate as in force.
+⛔ This narrows what may be built; it changes **no ruling** (R1–R7 are untouched) and does not re-open
+approval.
 **Verification posture:** every claim below was checked against the live tree at `adf3c52` (`main`, clean, synced). Story prose was not treated as evidence. Where a claim is carried un-verified it is marked ⚠ **UNVERIFIED**.
 
 ---
@@ -168,7 +178,7 @@ A Pariwar Admin **selects** which governed directory attributes apply to their P
 
 | Epic | Impact |
 |---|---|
-| **11a** | 🚨 **Cannot proceed as written.** 11a.1 and 11a.3 both change materially. 11a.1's matrix becomes *tiers + rules*, not *a fixed column list*. 11a.2, 11a.4, 11a.5, 11a.6 unaffected. ⭐ **Under R3(a) the Shikshak-facing rows (1–4) need no new substrate**, so 11a is gated on governance and re-authoring, not on the G4 ADR |
+| **11a** | 🚨 **Cannot proceed as written.** 11a.1 and 11a.3 both change materially. 11a.1's matrix becomes *tiers + rules*, not *a fixed column list*. 11a.2, 11a.4, 11a.5, 11a.6 unaffected. ⭐ **Under R3(a) the Shikshak-facing rows (1–4) need no new substrate**, so 11a is gated on governance and re-authoring, not on the G4 ADR. ⛔ **AMENDED:** row 2 (`Block`) is nonetheless gated on **G4a** pending its Q4 — see §4.1 |
 | **11b** | ⚠ **Affected, previously uncounted.** 11b.1 (Sahyog List — schools/districts/blocks, UX `:1124`) and 11b.6 (In Memoriam — FR-78 school + designation) consume the same attribute model |
 | **1 (Story 1.16b)** | ⚠ The PII-scrape CI gate consumes the 11a.1 matrix. The per-Pariwar attribute set is **runtime DB rows**, so the gate cannot scan it. See §3.4 |
 | **6 (Story 6.6)** | Recorded, not changed. FR-39's *"district > block > school proximity"* shipped narrowed to `district_cohort_v1`. See §3.5 |
@@ -241,7 +251,7 @@ FR-39 specifies peer first-witness selection as *"district > block > school prox
 | # | Row | Category (R1) | Disposition |
 |---|---|---|---|
 | 1 | **District** | Platform-common | ✅ **Exists.** Derived from `member_postings`. Needs the opt-in layer only |
-| 2 | **Block** (any Pariwar that selects it) | Pariwar-specific *enablement* of a **platform-governed relation** (R3(a)) | ✅ **Enable as a collected attribute, governed under `District`**, validated against the in-force geo tree. ⭐ **Uses shipped substrate — does NOT wait on G4.** ⛔ **Decision `2026-08-13-103` D5 is NOT superseded** — see 4.1.1. ⚠ Enforcement gap **O8** |
+| 2 | **Block** (any Pariwar that selects it) | Pariwar-specific *enablement* of a **platform-governed relation** (R3(a)) | ✅ **Enable as a collected attribute, governed under `District`**, validated against the in-force geo tree. ⭐ **Uses shipped substrate — does NOT wait on G4.** ⛔ **AMENDED 2026-08-19 — ALSO GATED ON G4a**, pending its **Q4**: Block is tree-validated, so a *Shikshak* restructure orphans a stored value exactly as a Rail one would. §5.4's prohibition therefore already reaches Block. ⛔ **Decision `2026-08-13-103` D5 is NOT superseded** — see 4.1.1. ⚠ Enforcement gap **O8** |
 | 3 | **School / Office** | Pariwar-specific | ✅ **Enable as a flat collected attribute**, Tier-3. Controlled-vocabulary question deferred to the story (§3.4 limit 3) |
 | 4 | **Designation** | Pariwar-specific | ✅ **Enable as a flat collected attribute**, Tier-3. Added to scope by BigDev at session open |
 | 5 | **Zone → Division** (Rail) | **Requires new governed substrate** | ⛔ **BLOCKED** on the R6 ADR (G4) **and** on **O2** being Trustee/architecture-routed. Cannot become an operational member attribute before both land |
@@ -296,7 +306,7 @@ Per `[[feedback_governance_commits_precede_implementation]]`, these commit **fir
 | G2 | **Trustee Panel routing note** — scope-dimension model | The R5/R6 brief: freeze row 9, the `scope_dimension` enum, ADR-0008 + ADR-0038 amendment, §3.3 |
 | G3 | **Trustee Panel routing note** — member-name PII posture | §4.1.2. **Both** tiers. A PII-posture change, not a rendering decision |
 | G4 | **ADR** — Pariwar-specific hierarchical scope dimensions | The R5 amendment proper. ⛔ Blocking prerequisite for row 5. ⭐ **Not** a prerequisite for row 2 — R3(a) uses shipped substrate |
-| G4a | **Trustee / architecture routing** — hierarchy-version drift (**O2**) | ⛔ **Required before `Zone`/`Division` becomes an operational member attribute.** Rules what happens to a stored combination when a published hierarchy version orphans it. ⛔ **The implementation MUST NOT invent this policy** — see §5.4 |
+| G4a | **Trustee / architecture routing** — hierarchy-version drift (**O2**) | ⛔ **Required before ANY collected hierarchy attribute becomes operational** — ⛔ **AMENDED 2026-08-19**, was *"before `Zone`/`Division`"*, which was **too narrow**. Rules what happens to a stored combination when a published hierarchy version orphans it. Its **Q4** asks the Panel to set the scope: all collected hierarchy attributes, or Zone/Division only. ⛔ **The implementation MUST NOT invent this policy** — see §5.4 |
 | G5 | `architecture.md` | §2.7 Tier-3 line — storage model reconciled (ruling stands, mechanism changes); §2.6 cross-referenced to G4 |
 | G6 | `epics.md` | C1–C9 |
 
@@ -308,10 +318,10 @@ Per `[[feedback_governance_commits_precede_implementation]]`, these commit **fir
 
 | Recipient | Responsibility |
 |---|---|
-| **BigDev / Trustee Panel** | G1–G3 **+ G4a**. Ratify R1–R7. ⛔ Nothing downstream starts before G1; ⛔ row 5 stalls until G4a |
+| **BigDev / Trustee Panel** | G1–G3 **+ G4a**. Ratify R1–R7. ⛔ Nothing downstream starts before G1; ⛔ **rows 2 AND 5 stall until G4a** (amended) |
 | **Winston (Architect)** | G4, G5. The R5 amendment brief is §3.3 |
 | **John (PM) / BigDev** | G6. Re-author 11a.1 + 11a.3; assess whether the registry extension belongs **in** Epic 11a at all — it is member-attribute substrate, not a public-surface concern, and may deserve its own story or an amendment to the 10.12 line |
-| **Amelia (Dev)** | Blocked until G1. Rows 2–4 unblock at G1 + G5 + G6; row 5 additionally requires **G4 + G4a**. ⛔ See §5.4 |
+| **Amelia (Dev)** | Blocked until G1. Rows 1, 3, 4 unblock at G1 + G5 + G6. ⛔ **AMENDED:** **row 2 (`Block`) additionally requires G4a**; row 5 requires **G4 + G4a**. ⛔ See §5.4 |
 | **Murat (TEA)** | Story 1.16b honest re-scoping (§3.4); adversarial cases for R5 cross-hierarchy fail-closed |
 
 ### 5.1 Success criteria
@@ -328,15 +338,21 @@ Per `[[feedback_governance_commits_precede_implementation]]`, these commit **fir
 ### 5.2 Sequencing
 
 ```
-G1 ──┬── G2 ── G4 ──┬── G4a ── [row 5 operational: Zone/Division]
-     │              └─ (G4 alone unblocks the DIMENSION, not the member attribute)
-     ├── G3 ────────────────── [name rows ruled: rows 6, 7]
-     └── G5 ── G6 ─────────────[11a.1 / 11a.3 re-authored] ── [11a.1 authoring starts]
-                               └─ rows 1-4 buildable here (R3(a) needs no new substrate)
+G1 ──┬── G2 ── G4 ───────────────┐
+     │        (G4 unblocks the    ├──> [row 5 operational: Zone/Division]
+     │         DIMENSION, not     │
+     │         the attribute)     │
+     ├── G4a ────────────────────┴┬─> [row 2 operational: Block]  ⛔ AMENDED
+     │                            │   needs G4a, NOT G4
+     ├── G3 ──────────────────────┴─> [name rows ruled: rows 6, 7]
+     │
+     └── G5 ── G6 ── [11a.1 / 11a.3 re-authored] ── [11a.1 authoring starts]
+                     └─> rows 1, 3, 4 operational
 ```
 
 ⛔ **Story 11a.1 does not start until G1, G5 and G6 land.**
-⭐ **Rows 1–4 — including `Block` under R3(a) — need nothing beyond that.** Shikshak is off the G4 critical path.
+⭐ **Rows 1, 3 and 4 need nothing beyond that.** Shikshak is off the **G4** critical path.
+⛔ **AMENDED 2026-08-19 — row 2 (`Block`) waits on G4a**, though not on G4. R3(a) freed it from the *dimension* amendment, not from the *drift* ruling.
 ⛔ **Row 5 waits on G4 *and* G4a.**
 
 ### 5.3 Open items carried, not closed
@@ -344,7 +360,7 @@ G1 ──┬── G2 ── G4 ──┬── G4a ── [row 5 operational: Z
 | # | Item | State |
 |---|---|---|
 | O1 | Shikshak block count vs `CUSTOM_FIELD_MAX_ENUM_VALUES = 64` | ⚠ **UNVERIFIED** |
-| O2 | Hierarchy-version drift — a published version orphans a stored combination | ⛔ **NOT RULED — and ROUTED, not left open.** Becomes **G4a**: Trustee/architecture-routed, required before `Zone`/`Division` becomes an operational member attribute. ⛔ **Implementation must not invent the policy.** See §5.4 |
+| O2 | Hierarchy-version drift — a published version orphans a stored combination | ⛔ **NOT RULED — and ROUTED, not left open.** Becomes **G4a**: Trustee/architecture-routed, required before **any collected hierarchy attribute** becomes operational (⛔ **amended** from `Zone`/`Division` only — G4a Q4 sets the final scope). ⛔ **Implementation must not invent the policy.** See §5.4 |
 | O3 | Whether Shikshak's own Block is flat or governed parent-child under District | ✅ **RULED 2026-08-19 → R3(a).** Governed under `District`, for **every** Pariwar. ⭐ Needs no new substrate (`district→block` is a shipped edge kind); ⚠ opens **O8** |
 | O4 | Is a nameless directory worth building, if §4.1.2 rules against decryption? | Open — belongs to G3 |
 | O5 | `'no-member-attribute'` reason-string imprecision | Recorded; D6 ruling required to change (§4.1.1) |
@@ -356,7 +372,9 @@ G1 ──┬── G2 ── G4 ──┬── G4a ── [row 5 operational: Z
 
 **Ruled by BigDev, 2026-08-19.**
 
-Hierarchy-version drift (**O2**) — what becomes of a member's stored `Zone`/`Division` combination when a newly published hierarchy version orphans it — is a **governance question routed to the Trustee Panel and architecture (G4a)**. It is **not** an implementation detail.
+Hierarchy-version drift (**O2**) — what becomes of a member's stored hierarchy combination when a newly published version orphans it — is a **governance question routed to the Trustee Panel and architecture (G4a)**. It is **not** an implementation detail.
+
+⛔ **AMENDED 2026-08-19: this prohibition is NOT limited to `Zone`/`Division`.** It reaches **every collected hierarchy attribute**, `Block` included — Block is tree-validated under R3(a), so a Shikshak restructure produces the identical orphan. G4a's **Q4** asks the Panel to confirm the scope; until it rules, treat the prohibition as covering all of them.
 
 ⛔ **A story author, dev agent or reviewer must NOT choose an orphan policy by writing code.** Specifically, none of the following may appear in the tree before G4a lands:
 

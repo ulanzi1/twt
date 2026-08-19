@@ -1,4 +1,37 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-19b (CORRECTION to the 2026-08-19 entry below -- the G4a gate is WIDER than
+#   that entry recorded. ⛔ NO story status flipped, NO story minted, NO code changed, NO
+#   development_status key touched. ⛔ The 2026-08-19 entry below is left BYTE-UNCHANGED; this is an
+#   append-only correction, never an edit ([[feedback_supersede_never_reinterpret]]).
+#   ⛔ WHAT WAS WRONG: the entry below states "Rows 1-4 (District, Block, School, Designation) need
+#   nothing beyond G1/G5/G6." That is TOO PERMISSIVE for row 2. Sprint Change Proposal 2026-08-19 §4.3
+#   scoped G4a (hierarchy-version drift) to Zone/Division alone, and this entry inherited that scope.
+#   ⭐ WHY IT WAS WRONG, found while PREPARING G4a rather than by review: Block is TREE-VALIDATED under
+#   R3(a) -- it validates against the Pariwar's in-force geo tree. So a SHIKSHAK hierarchy restructure
+#   orphans a stored Block value EXACTLY as a Rail restructure would orphan a Zone/Division pair. The
+#   two are the same condition. §5.4's prohibition ("the implementation MUST NOT invent the
+#   orphan/version-drift policy") therefore ALREADY REACHES BLOCK, and row 2 is gated on G4a too.
+#   ⇒ CORRECTED GATING: rows 1, 3, 4 (District, School, Designation) need nothing beyond G1 + G5 + G6.
+#   ⛔ Row 2 (Block) additionally requires G4a -- but NOT G4: R3(a) freed Block from the DIMENSION
+#   amendment, not from the DRIFT ruling. Row 5 (Zone/Division) still requires G4 AND G4a.
+#   ⚠ THE FINAL SCOPE IS THE PANEL'S, NOT THIS CORRECTION'S. G4a's Q4 asks whether the ruling covers
+#   ALL collected hierarchy attributes or Zone/Division only. Until it rules, the WIDER gate is treated
+#   as in force -- the conservative reading, and the one §5.4 already compels.
+#   ⛔ NOTHING RULED CHANGES. R1-R7 are untouched; this NARROWS what may be built and does not re-open
+#   BigDev's approval of the proposal.
+#   PROPOSAL AMENDED POST-APPROVAL, RECORDED NOT SILENT: sprint-change-proposal-2026-08-19.md carries a
+#   POST-APPROVAL AMENDMENT block in its header naming all seven amended sites (§3.1 · §4.1 row 2 ·
+#   §4.3 G4a · §5 handoff ×2 · §5.2 sequencing · §5.3 O2 · §5.4), each marked AMENDED in place. The
+#   §5.2 diagram was redrawn: G4a now branches from G1 directly, because row 2 needs G4a WITHOUT G4.
+#   ROUTING NOTES WRITTEN THIS SESSION: G1 (directory-attribute-model-r1-r7, 5 questions, R1-R7 put for
+#   ratification -- Q1/Q2/Q3 BLOCKING) · G3 (member-name-pii-posture, 5 questions, COMMITTED 8b09b1e and
+#   accepted by BigDev) · G2 (scope-dimension-model, 5 questions, ⛔ DOWNSTREAM of G1 -- do not rule
+#   before it) · G4a (hierarchy-version-drift, 4 questions, carries the §5.4 prohibition as IN FORCE).
+#   ⛔ G1, G2 and G4a are UNCOMMITTED by BigDev's direction: no decision-log entry and no further
+#   governance commit until the Panel actually rules. G3's F-5 (the PII-scrape tier-leak leg is inert --
+#   loadSnapshots() returns []) is kept as an ENGINEERING finding, ⛔ deliberately NOT put to the Panel.
+#   ⚠ STILL TRUE AND UNCHANGED BY THIS CORRECTION: Story 11a.1 does not start until G1 + G5 + G6 land;
+#   AI-10-4 does not close until G1 is recorded AND ratified; approval is not ratification.)
 # last_updated: 2026-08-19 (bmad-correct-course: the AI-10-4 Epic-11a update session. Proposal at
 #   _bmad-output/planning-artifacts/sprint-change-proposal-2026-08-19.md, APPROVED by BigDev 2026-08-19.
 #   ⛔ NO story status flipped, NO story minted, NO code changed, NO development_status key touched --

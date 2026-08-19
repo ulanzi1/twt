@@ -1,4 +1,58 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-19g (⭐ G4a RATIFIED -- Decision 2026-08-19-137, Dhiraj Rahul and Kalpana
+#   Bharti, 2026-08-19. ⭐ THE LAST OPEN ROUTING NOTE OF THE SESSION. ⛔ NO story status flipped, NO story
+#   minted, NO code changed, NO development_status key touched. Prior ledger entries BYTE-UNCHANGED.
+#   ⚠ Q1 WAS ANSWERED WITH A FOURTH OPTION, not among the three the note put (typed staleness / reject the
+#   publish / version pin). ⛔ NONE was adopted. The ruling is MIGRATION.
+#   Q1 MIGRATION -- a collected hierarchy assignment is MIGRATED when the structure changes. A simple
+#   RENAME preserves the logical node (⛔ not a migration at all -- identity is preserved, no successor
+#   required). Where a node is replaced, merged, split or restructured: the successor node(s) MUST EXIST
+#   IN THE NEW HIERARCHY BEFORE the old assignment is retired, and affected assignments MUST BE EXPLICITLY
+#   MAPPED. ⛔ THE SYSTEM MUST NEVER SILENTLY GUESS A MAPPING. No successor ⇒ explicit governed
+#   disposition.
+#   THE RULED MATRIX: rename -> automatic - one-to-one -> automatic IF EXPLICITLY MAPPED - ⭐ SPLIT ->
+#   MEMBER CHOOSES - merge -> automatic IF UNAMBIGUOUS - ⛔ DELETE/ORPHAN A NODE WITH MEMBERS -> FORBIDDEN
+#   - no successor yet -> THE OLD NODE REMAINS. ⭐ GOVERNING RULE: deterministic migration may be
+#   automatic; ambiguous migration requires member choice.
+#   Q2 PARIWAR ADMIN initiates and manages, NO DEADLINE -- ⛔ but "cannot silently assign a member to a
+#   successor when the mapping is ambiguous." ⭐ TWO ACTORS, TWO ROLES, ⛔ never conflated: the ADMIN
+#   DRIVES, the MEMBER DECIDES the ambiguous case. Q3 ACCEPT, RECORDED -- the weaker DB control is
+#   accepted and ⛔ THE RECORDING IS THE OBLIGATION (no CHECK constraint can express hierarchy-membership
+#   integrity; ⛔ do not assume parity with the 0095 fence). Q4 ⛔ BOTH -- EVERY collected hierarchy
+#   attribute, ⭐ Block included, therefore Shikshak. ⚠ This CONFIRMS the post-approval amendment made to
+#   proposal §4.1 row 2 earlier today; the widening was CORRECT.
+#   ⭐ THE DERIVED INVARIANT (137 clause 6) -- THE ORPHAN IS DESIGNED OUT, NOT REPRESENTED:
+#   EVERY NODE REFERENCED BY A LIVE MEMBER ASSIGNMENT MUST EXIST IN THE IN-FORCE HIERARCHY. Because a
+#   successor must exist BEFORE retirement, deleting a node with members is FORBIDDEN, and "no successor
+#   yet" means the old node REMAINS, the dangling-reference state CANNOT ARISE through the sanctioned
+#   path. ⭐ Materially STRONGER than the typed staleness the note recommended, which would have
+#   REPRESENTED the broken state rather than PREVENTING it. ⛔ The recommendation was not followed and the
+#   ruled posture is the better one.
+#   ⚠ THREE THINGS MUST NOW BE BUILT THAT DO NOT EXIST (137 clause 7):
+#     (a) ⭐ THE GEO-TREE PUBLISH PATH BECOMES MEMBER-AWARE. Verified live: packages/domain/src/geo-tree/
+#         has ZERO member-assignment awareness -- validateGeoTreeDocument validates DOCUMENT STRUCTURE
+#         ONLY (cycles, rank, parent-strictly-broader). Enforcing "delete/orphan with members = FORBIDDEN"
+#         requires the publish path to CONSULT MEMBER ASSIGNMENTS -- crossing from document validation
+#         into member-data validation. ⛔ A NEW CAPABILITY, not a new rule on an existing one.
+#     (b) ⭐ A MEMBER-FACING CHOICE SURFACE IS MINTED for splits. ⚠ Does NOT breach R2 (display-only): the
+#         member chooses their OWN assignment, not authority. Story 3.9 Life Events is the precedent.
+#     (c) ⛔ §5.4's PROHIBITION LIFTS for the FULL ruled scope -- and is REPLACED BY A POSITIVE
+#         SPECIFICATION. Implementation must now implement THIS policy; ⛔ latitude NARROWED, not restored.
+#   ⚠ ONE OPERATIONAL CONSEQUENCE RECORDED, ⛔ NOT a challenge to the ruling (137 clause 8): a SPLIT needs
+#   member choice, members have NO DEADLINE, and the system may NEVER guess ⇒ A SPLIT MIGRATION CAN REMAIN
+#   PENDING INDEFINITELY ON ONE NON-RESPONDING MEMBER, during which the old node cannot be retired. ⛔ A
+#   direct and INTENDED consequence of refusing to guess. Recorded so it is DESIGNED FOR -- a
+#   pending-choice state needs representation, and the Admin needs visibility into who has not chosen --
+#   ⛔ rather than discovered when a Pariwar's restructure stalls.
+#   ⭐ ROWS 2 AND 5 ARE UNBLOCKED BY THIS RULING -- ⚠ but only once 7(a) and 7(b) EXIST. ⛔ THE POLICY
+#   BEING RULED IS NOT THE SAME AS THE POLICY BEING MECHANIZED.
+#   O2 CLOSED. O1/O5/O6/O7/O8 carried.
+#   ⭐ ALL FOUR ROUTING NOTES OF THIS SESSION ARE NOW RULED: G1 (132+133) - G2 (134) - G3 (135+136) -
+#   G4a (137). SIX decision-log entries, 132-137. OWED NEXT, none of it ruled by anything above:
+#   ADR-0039 - G5 (architecture.md; must carry 133 cl.4 three layers, 134 cl.2 tree-declared ordering,
+#   135 cl.7(c) the explicit :1538 amendment, 136 cl.2-3 name-vs-presentation + scope-vs-authority, and
+#   137 cl.6 the in-force-node invariant + cl.7(a) member-aware publish) - G6 (epics.md C1-C9,
+#   discharging AI-10-2) - the LAUNCH-BLOCKING PII-scrape tier-leak leg (136 cl.4).)
 # last_updated: 2026-08-19f (⭐ G3 CLARIFIED -- Decision 2026-08-19-136, Dhiraj Rahul and Kalpana
 #   Bharti, 2026-08-19. Successor resolving 135 clause 6. ⛔ NO story status flipped, NO story minted, NO
 #   code changed, NO development_status key touched. 135 is ANNOTATED (clauses 6 and 8), NEVER EDITED.

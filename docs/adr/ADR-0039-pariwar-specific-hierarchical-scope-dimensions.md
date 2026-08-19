@@ -1,18 +1,26 @@
 # ADR-0039: Scope dimensions belong to a **named hierarchy**, and the published hierarchy document declares its **own dimension ordering** — the global rank table ceases to be the authority on ordering
 
-> **Status:** drafted
+> **Status:** ratified
 > **Date:** 2026-08-19 (date entered current status)
 > **Author:** Solo Builder (BigDev), authored under Trustee Panel routing note G2
-> **Ratifying trustees:** — (populated at `ratified` status)
+> **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2) — 2026-08-19; logged in `.decision-log.md` Decision `2026-08-19-138`
 > **Supersedes:** —
 > **Superseded by:** —
 
-> ⚠ **The SUBSTANCE of this ADR is already trustee-ratified; the DOCUMENT is not.** Decision
-> `2026-08-19-134` (Dhiraj Rahul, Kalpana Bharti, 2026-08-19) ruled Q1–Q5 of routing note G2, including
-> Q4 — *a new ADR*. This file is that ADR. ⛔ Its `drafted` status reflects that the Panel has **not yet
-> reviewed this document**; it does **not** mean the decision is open.
+> ✅ **RATIFIED 2026-08-19. Both the substance and the document now carry trustee ratification, and they
+> arrived separately — recorded so the sequence is legible.** Decision `2026-08-19-134` ruled the
+> **substance** (G2 Q1–Q5, including Q4 — *a new ADR*); this file was authored as that ADR and held
+> `drafted` because the Panel had not seen the **document**. Decision `2026-08-19-138` ratifies the
+> document. ⛔ Neither entry is edited by the other.
+> ⚠ **No amendments or conditions were applied at ratification** — recorded explicitly, because prior
+> ADR ratifications in this project (ADR-0036, ADR-0033/0034) carried both, and the absence of them here
+> is a fact about this ratification rather than an omission from this note.
+> ⚠ **No ratification consent sheet is recorded for 2026-08-19.** Prior sessions produced one
+> (`docs/knowledge-transfer/adr-ratification-consent-sheet-<date>.md`); this one has not, and that is a
+> named forward obligation — ⛔ not back-filled here ([[feedback_record_unattested_no_backfill]]).
 > ⛔ Per Decision `2026-08-19-134` clause 6, do **not** read this as *"both ADRs are ratified"* — see
-> **Relationship to prior ADRs** below.
+> **Relationship to prior ADRs** below. ⭐ **ADR-0038 remains `drafted`**, so this ratified ADR now
+> extends an unratified one; that inversion is recorded in Decision `2026-08-19-138` clause 3.
 
 ## Context
 
@@ -229,3 +237,4 @@ claim that "both ADRs are ratified."**
 | Date | Status flip | Author | Notes |
 |---|---|---|---|
 | 2026-08-19 | (initial draft) | BigDev | Authored under Trustee Panel routing note **G2**, following Decision `2026-08-19-134` Q4 (*a new ADR*). ⚠ The **substance** is trustee-ratified; the **document** has not been reviewed — hence `drafted`. |
+| 2026-08-19 | drafted → ratified | Dhiraj Rahul, Kalpana Bharti | Ratified 2026-08-19; logged in `.decision-log.md` Decision `2026-08-19-138`. ⚠ **No amendments, no conditions.** ⚠ No consent sheet recorded for this session — named forward obligation. ⛔ ADR-0008 remains amended **by reference** and unedited; ⛔ **ADR-0038 remains `drafted`** and is extended, not superseded. |

@@ -87,6 +87,9 @@ Inputs reconciled per the 2026-05-27 Sprint Change Proposal: the Sprint Change P
 - **FR-37: Claim filing with nominee bank entered at claim-time.** Open to nominee regardless of TWT membership. Bank #1 + IFSC #1 + account-holder name #1; same for account #2. Account-holder validated against bank IFSC lookup (penny-drop deferred `[v1-S]`). Claim enters `under_verification`.
 - **FR-38: Death certificate upload + OCR parity check (Verify-Mesh #2).** OCR compares deceased name + DoB to TWT profile; mismatch → trustee manual review, never auto-reject.
 - **FR-39: Peer first-witness verification — 5 nearest members (Verify-Mesh #1).** Deterministic selection: district > block > school proximity; ties by `member_id`. Each ping + response logged. Verifier names published with profile-links on Sahyog Vivran. Non-response 72h → escalate.
+  - ⚠ **RECONCILED 2026-08-19 (C8, AI-10-2) — `district_cohort_v1` is the CURRENTLY SUPPORTED posture, and that is a ratified position, ⛔ not debt.** Story 6.6 shipped selection narrowed to a single metric and recorded why: `members` has no district/block/geo columns, and the only usable signal is the plaintext posting district.
+  - **Expansion to `block` or `school` proximity requires TWO things:** the governed substrate to exist, **and** an **R4 promotion decision** (`2026-08-19-132`). ⛔ A *collected* directory attribute is **display-only by default** — letting one steer claim verification would make a Pariwar Admin's data entry influence who verifies a death.
+  - ⭐ **The extension path is already built:** the metric registry takes richer metrics as **new entries plus their substrate**, without touching the pure engine. A future `district_block_cohort_v2` is a registry entry and a ruling — ⛔ not a re-architecture.
 - **FR-40: Ground inspection retained alongside peer mesh.** BOTH peer mesh AND ground inspection must pass to advance to State Trustee approval. Not either/or.
 - **FR-41: Human shepherd assigned per claim (WI-26) `[v1-M]`.** District Admin scope assigned to every claim entering `under_verification`. Shepherd contact (name + phone + WhatsApp) on claim status page and confirmation. Self-assignment prohibited. Reassignment audit-logged. Shepherd inbox/dashboard/load-balancing/handoff UI is `[v1-S]`.
 - **FR-42: Member status banner on claim review (WI-39).** Trustee-Lite signals panel loads in ~5s: KYC validity, Vyawastha Shulk status, contribution history + 90% rule, last login, attribution chain, claim history, lock-in status, special-rule flags. One indexed query; no N+1. Approve/Reject/Escalate actions require brief rationale text (audit-logged).
@@ -141,10 +144,21 @@ Inputs reconciled per the 2026-05-27 Sprint Change Proposal: the Sprint Change P
 **Public Pages, Transparency & PII Shielding (§4.11)**
 
 - **FR-74: Public-vs-Private matrix codified (§35.1).** Public (no auth): Member Directory (first-name + last-initial + school + district + designation), Sahyog Drive listings, Sahyog Vivran (per-claim story + verifier names hyperlinked + contributor count + first-name + last-initial contributors), In Memoriam, Niyamavali w/ version diff, public Blog, About/Founders/Team, Contact. Members-only: full member lookup, nominee bank/IFSC during active alert window only, contribution history. Never public: trust account ledger, partner commissions, internal expenses, full mobile/email/address/DOB, raw photo. CI scrape-test asserts no PII leak.
+  - ⛔ **RECONCILED 2026-08-19 (C4 + C9, AI-10-2) — TWO corrections to the Member Directory entry above.**
+  - **(1) The name form is SUPERSEDED** (`2026-08-19-135` / `-136`): the public Member Directory shows the member's **FULL legal/KYC name**, not *"first-name + last-initial"*. ⛔ **Scoped to the Member Directory ONLY.** ⚠ The *"first-name + last-initial contributors"* on **Sahyog Vivran** in this same clause is **NOT ruled and NOT changed** — a separate surface with its own consent posture.
+  - **(2) `school` and `designation` are NOT a fixed public column set** (`2026-08-19-132` R1/R7, `-133`): they are **Pariwar-selected directory attributes** with **per-Pariwar tier declarations**. ⛔ There is **no canonical directory schema**, and this clause's field list must not be read as one. A Pariwar that selects neither shows neither.
+  - ⚠ **CI scrape-test:** the tier-leak leg is **currently inert** and is **launch-blocking** under `2026-08-19-136` clause 4 — see Story 11a.1.
 - **FR-75: Member Directory with PII shielding.** First-name + last-initial only. Forced pagination. `noindex` on member detail pages.
+  - ⛔ **RECONCILED 2026-08-19 (C-list item, AI-10-2) — the NAME FORM is SUPERSEDED by Decisions `2026-08-19-135` / `-136`.** The Member Directory renders the member's **FULL legal/KYC name** at both the public and authenticated tiers. ⛔ *"First-name + last-initial only"* no longer describes the ruled posture **for this surface**.
+  - ⭐ **The rest of FR-75 STANDS UNCHANGED and is now the FLOOR, not the ceiling:** forced pagination, `noindex` on member detail pages, and no mobile/email/address/DOB. ⚠ With full legal names public, **anti-enumeration becomes the load-bearing control**, not a hardening measure.
+  - ⚠ **Full-name display is the LAUNCH posture, not a permanent commitment.** The public name form is a **per-Pariwar, governed, configurable presentation policy** (`full_name` → `shielded_name` → future modes); ⛔ the implementation **must not hard-code full-name publication as permanent** (architecture §2.13.3).
 - **FR-76: Sahyog Drive — Active + Archive.** Active page near-real-time during live alert. Archive paginated; searchable by month/pool name/nominee state; no bulk export.
 - **FR-77: Sahyog Vivran (per-claim story).** Family story (human-written; no AI v1); verifier names with profile hyperlinks (public scope); contributor count; total raised; close-of-cycle celebration framing (FR-19). Trust-reviewed before publish. **Composition contract** (per architecture §Member-Responsive Web Deferral + Sprint Change Proposal Item 12): cache-safe public SSR shell + registry-declared authenticated fragments (nominee bank account + IFSC + payment status + UPI Intent CTA deep-link to `apps/mobile/`); auth boundary at API (`apps/api/modules/public-pages/`), not edge.
 - **FR-78: In Memoriam.** Roll of deceased members; first-name + last-initial + school + district + designation. Respectful framing.
+  - ⛔ **RECONCILED 2026-08-19 (C5 + C9, AI-10-2) — ONE change, and one deliberate NON-change.**
+  - **CHANGED:** `school` and `designation` are **Pariwar-selected directory attributes**, not a fixed field set (`2026-08-19-132` R1/R7, `-133`). A Pariwar that selects neither shows neither.
+  - ⛔ **NOT CHANGED — and this is deliberate. The full-name ruling does NOT reach In Memoriam.** Decisions `2026-08-19-135` / `-136` were scoped to **Story 11a.3, the Member Directory**. The G3 routing note stated in terms that it did *"not ask about nominee names, deceased-member names on Sahyog Vivran, or verifier names on public verifier profiles — separate surfaces with separate consent postures."*
+    ⇒ **In Memoriam keeps `first-name + last-initial`.** ⚠ A reconciliation that harmonised FR-78 with FR-74 would have **silently extended a PII ruling to an unruled surface**, and the deceased's roll is **consent-governed** (Story 11b.6) in a way the directory is not. ⛔ Changing it requires its own Panel ruling.
 - **FR-79: Niyamavali public page with version diff.** Public render; amendment produces public diff.
 - **FR-80: English-first labels with Hindi parity (renaming TSCT terms).** Page titles, navigation, UI labels in English w/ Hindi parity. Hindi proper nouns retained (Sahyog, Niyamavali, Vyawastha Shulk).
 
@@ -3862,6 +3876,12 @@ So that Pariwars can collect Pariwar-specific data without engine changes.
 **Given** FR-54 + AR-46 per-Pariwar configurability registry + AR-7 per-tenant JSONB
 **When** the custom-fields pattern is authored
 **Then** the `pariwar_custom_field_definitions` registry stores per-Pariwar JSONB schemas (e.g., a Pariwar can add a "cadre grade" field to members — Tier-3 by direct analogy to the existing `designation` field, §2.7); admin UI authors these per Pariwar
+
+> ⚠ **ANNOTATED 2026-08-19 (C7, AI-10-2) — ⛔ THE SHIPPED STORY IS NOT EDITED; this note records a factual error in it.** The clause above cites *"the **existing** `designation` field"*. **`designation` does not exist** — it has no column on `members` or `member_postings`, and never has. Story 10.5 Decision 4 had already recorded the same absence.
+>
+> ⛔ **The story's RULING is unaffected** — the Tier-3 analogy is sound and 10.12 shipped correctly; only the word *"existing"* is false. ⚠ Recorded because this is the drift class AI-10-2 exists to catch, and it **passed review and merge inside a shipped story** — evidence that `epics.md` prose is not load-bearing enough to be trusted as a source of fact.
+>
+> ⇒ `designation` is now a **Pariwar-selected directory attribute** classified as an **individual attribute**, and is therefore ⛔ **permanently RBAC-ineligible** (`2026-08-19-133` clause 3).
 **And** member records carry a `custom_fields` JSONB column whose shape is validated against the Pariwar's registry at write time
 **And** custom fields are NOT permitted to violate frozen governance (e.g., adding a `payout_destinations` field is rejected by Story 1.16c CI gate)
 
@@ -4476,6 +4496,12 @@ So that the exceptional route rests on my own request rather than on an operator
 
 **Dependencies:** Epic 1 (substrate + Story 1.8 RBAC + Story 1.10 audit + Story 1.14 rate-limit + Story 1.16b PII scrape CI + Story 1.17 design system) · Epic 2 (Story 2.5 Astro shell foundation + Niyamavali + T&C) · Epic 3 (Member Directory data — name + district + block + school).
 
+> ⛔ **RECONCILED 2026-08-19 (C3, AI-10-2) — the Epic-3 dependency above is FALSE, and was false when written.** Epic 3's thirteen stories (3.1–3.12) contain **no story owning `block`, `school` or `designation`**. 3.3b is DigiLocker KYC (name/DoB/photo); 3.9 Life Events owns the posting **district**. ⭐ The attribute set fell between two stories and went unnoticed for **seven epics** — this is Significant Discovery **SD-1**.
+>
+> **The corrected dependency:** the supplier is the **directory-attribute registry extension** (the 10.12 `pariwar_custom_field_definitions` line), governed by Decisions `2026-08-19-132`…`-137` and architecture **§2.13**. ⛔ Not Epic 3, and ⛔ not a fixed column set.
+>
+> ⚠ **Gating, per those decisions:** `district` (platform-common) · `school` · `designation` need nothing further. ⛔ **`block` additionally requires `2026-08-19-137`'s migration mechanism** — a **member-aware publish path** and a **member choice surface**, neither of which exists. ⛔ `zone`/`division` additionally require **ADR-0039**.
+
 **Story label legend:** `[PRIMITIVE]` · `[SURFACE]` · `[GOVERNANCE]` · `[CONSUMER]`.
 
 ### Story 11a.1: 4-Tier Visibility Matrix Codified per Surface — Public-vs-Private Replacement `[GOVERNANCE]`
@@ -4513,6 +4539,18 @@ So that every visibility decision in every Epic 11 surface (and downstream) read
 **Given** any surface render under any viewer context
 **When** Story 1.16b CI scrape-test runs
 **Then** it consumes the matrix and verifies: (a) `never_exposed` fields appear on NO surface; (b) `operator_restricted` fields don't appear on member-authenticated or public renders; (c) `authenticated_member` fields don't appear on public renders; (d) `public` fields are renderable everywhere
+
+> ⛔ **RECONCILED 2026-08-19 (C2 + C9, AI-10-2) — FOUR corrections. This story's premise changed; its ACs above are otherwise sound.**
+>
+> **(1) ⭐ The matrix codifies TIERS AND RULES — ⛔ not a fixed field list.** Per Decision `2026-08-19-132` (R1/R7) there is **no canonical directory schema**: which attributes a Pariwar carries is **registry data**, selected per Pariwar. The matrix declares what a **tier means** and what a **visibility escalation requires**; it ⛔ **must not** enumerate a global attribute set. The AC's *"per-surface, per-field entries"* holds for platform-common fields and for the **tier declaration of each selected attribute**.
+>
+> **(2) ⚠ The CI gate must be HONESTLY SCOPED — and say so in plain words.** Per-Pariwar attribute definitions are **database rows**, so ⛔ **CI cannot scan them**. This is the exact problem the 10.12 custom-field fence already solved and documented: *"Definitions are DATABASE ROWS, so the gate cannot scan them"* — it asserts what CI **can** prove and states the limit in its README. ⛔ **Do not widen the gate to read a tenant database:** a CI gate that needs a live tenant DB is not a CI gate.
+>
+> **(3) ⛔ LAUNCH-BLOCKING — the tier-leak leg is currently INERT, and this story is what makes it work.** Verified by running it: the scrape gate's snapshot loader is a **stub** and the matrix declares **zero surfaces**, so the tier-leak checks (b)/(c) above are **no-ops** — while seven public pages have shipped and the gate reports green. ⚠ The **naked-PII** leg genuinely works and carries a negative control; it is the **tier-leak** leg specifically that is vacuous. Under `2026-08-19-136` clause 4 it **must be operative before the Member Directory ships**. ⭐ **This is circular and must be sequenced deliberately:** the matrix that arms the guard is populated by *this* story, and the guard exists to police *this epic's* surface.
+>
+> **(4) ⚠ The `public` tier now carries a RULED Tier-1 EXCEPTION.** Member name is decrypted from Tier-1 and rendered publicly on the Member Directory (`2026-08-19-135` / `-136`, architecture §2.7). ⛔ Exactly **one field on one surface class**. The matrix must represent this as an **explicit, attributed exception** — ⛔ never as a general relaxation of tier (c), and ⛔ never by reclassifying the field.
+>
+> ⭐ **Additionally in scope:** the **per-Pariwar public-name presentation policy** (`full_name` → `shielded_name` → future modes). ⚠ It is a **policy control, not a directory attribute** — ⛔ not subject to the `2026-08-19-133` classification — but it governs what the `public` tier renders, so the matrix must reference it rather than duplicate it (architecture §2.13.3).
 
 ### Story 11a.2: Public Astro SSR Shell Extension for Member Directory + Tiered Visibility Renderers `[PRIMITIVE]`
 
@@ -4556,6 +4594,27 @@ So that the directory supports institutional legitimacy and trust verification w
 | Aadhaar | Never | Never | Never |
 | Bank details | Never | Never | Never |
 | Nominee details | Never | Never | Operator-restricted only |
+
+> ⛔ **RECONCILED 2026-08-19 (C1 + C9, AI-10-2) — ⭐ THIS MATRIX IS THE ORIGIN OF SIGNIFICANT DISCOVERY SD-1. Read this before implementing any row above.**
+>
+> ⛔ **THE TABLE ABOVE IS NOT A SCHEMA.** It was written as a **fixed cross-Pariwar column set** for a system that is per-Pariwar multi-tenant by construction. Three of its member-attribute rows had **no substrate at all**, and no story had ever owned them. Decision `2026-08-19-132` **R7** rules the attribute set **extensible and Pariwar-selected**; ⛔ the rows below carry **no privileged status** and must never be re-read as a global default. A Pariwar selects its own.
+>
+> **Row-by-row disposition, as ruled:**
+>
+> | Row | Disposition |
+> |---|---|
+> | **First-name + last-initial** | ⛔ **Superseded.** The directory renders the **FULL legal/KYC name** at public and authenticated tiers (`-135`/`-136`) — but through a **per-Pariwar presentation policy** (`full_name` → `shielded_name`), ⛔ not hard-coded. `splitFirstNameLastInitial()` becomes the `shielded_name` mode |
+> | **Full name** | Same ruling; ⚠ **also a Tier-1 decrypt** — the retrospective flagged only the public row |
+> | **District** | ✅ **Platform-common**, derived from `member_postings`. Unchanged |
+> | **Block** | ✅ **Pariwar-selected**, governed under `District` for **every** Pariwar. ⛔ **Decision `2026-08-13-103` D5 is NOT superseded** — D5 rules Block **not derivable**; a Pariwar **collects** it, and derivation and collection are different acts. `resolveMemberGeoNode().block` stays permanently absent. ⛔ **Additionally gated on `-137`'s migration mechanism**, which does not exist |
+> | **School / Office** | ✅ **Pariwar-selected**, flat, Tier-3. ⛔ **Permanently RBAC-ineligible** — organizational but **not hierarchical** (`-133` clause 1) |
+> | **Designation** | ✅ **Pariwar-selected**, flat, Tier-3. ⛔ **Permanently RBAC-ineligible** — an **individual** attribute. ⚠ Not in the table above at all; added by the correct-course session |
+> | *(Zone → Division, future)* | ⛔ **Requires new governed substrate** — **ADR-0039**. Not enableable today |
+> | **All other rows** | Unchanged |
+>
+> ⚠ **Anti-enumeration is now LOAD-BEARING, not defensive.** A paginated public directory of **full legal names** is a harvestable member registry. The safeguards below and FR-75's surviving pagination + `noindex` are the **floor**, not the ceiling.
+>
+> ⛔ **The tier declaration for each selected attribute is per-Pariwar** (Story 11a.1). ⛔ Enabling an attribute is **not** the same act as creating it: **CREATE** is Super Admin / Trustee only, **ENABLE** is per-Pariwar under governed authority, **GRANT** is Trustee over a named node — ⛔ and no layer implies the next (architecture §2.13.2).
 
 **And** pagination is mandatory (Story 1.14 forced pagination); per-page cap; deep-pagination prohibited beyond a reasonable horizon
 
@@ -4681,6 +4740,13 @@ So that the surface supports trust transparency and claim discoverability withou
 **And** new feature proposals for Sahyog Drive must explicitly answer: "does this serve remembrance / transparency / claim discoverability?" — if the answer is "engagement", "ranking", or "social performance", the proposal is rejected at design time
 **And** the Archive's framing is consistent with Story 7.8 Pool-Reality #2: surfaces celebrate solidarity, not shortfall; no comparison-to-target framing in any aggregate
 
+
+> ⛔ **RECONCILED 2026-08-19 (C6, AI-10-2) — this surface consumes the SAME attribute model, and nobody had counted it.** The UX spec specifies the Sahyog List table as carrying *"donor names, **schools**, districts, **blocks**"*. Those are **Pariwar-selected directory attributes** (`2026-08-19-132` R1/R7), ⛔ not a fixed column set — a Pariwar that selects neither `school` nor `block` renders neither, and the table must degrade without them.
+>
+> ⚠ **`block` is additionally gated** on `2026-08-19-137`'s migration mechanism (member-aware publish + member choice surface), neither of which exists.
+>
+> ⛔ **The full-name ruling does NOT reach this surface.** `-135`/`-136` were scoped to **Story 11a.3, the Member Directory**. Contributor and donor name forms here are **unruled** and unchanged. ⚠ Changing them requires its own Panel ruling.
+
 ### Story 11b.2: ContributionList Components — Table (50k-row Desktop) + Mobile Row (10k Contract) `[PRIMITIVE]`
 
 As any Sahyog Drive / Sahyog Vivran / member-facing surface displaying lists of confirmed contributors,
@@ -4781,6 +4847,12 @@ So that the trust's institutional memorial honors deceased members while respect
 **When** In Memoriam is implemented
 **Then** the surface lists deceased members for whom `in_memoriam_listing` consent is active (Story 2.7 `consentExists` check at render time); each entry uses `<MemorialRecord>` (Story 11b.5)
 **And** entries display per the 4-tier matrix: public-tier visitors see deceased's first-name + last-initial + dates + district; authenticated members see fuller per Story 11a.3 directory pattern
+
+> ⛔ **RECONCILED 2026-08-19 (C5 + C9, AI-10-2) — ⚠ THE AC ABOVE IS CORRECT AND MUST NOT BE "HARMONISED" WITH THE MEMBER DIRECTORY.** The phrase *"fuller per Story 11a.3 directory pattern"* now points at a surface ruled to show **full legal names**. ⛔ **That ruling (`-135`/`-136`) was scoped to Story 11a.3 and does NOT reach In Memoriam.** In Memoriam keeps **first-name + last-initial** at the public tier.
+>
+> ⭐ **Why the distinction is load-bearing here:** this roll is **consent-governed and revocable** (this story's own invariant), and the subject is **deceased** and cannot re-consent. ⚠ Extending a directory PII ruling to it by analogy would change a consent-governed surface **without a consent-aware ruling**.
+>
+> ⇒ Read *"fuller"* as **more Pariwar-selected attributes** (`school`, `district`, `block` where selected) — ⛔ **not** a fuller name form. ⛔ `school` and `designation` in FR-78 are **Pariwar-selected**, not a fixed set.
 **And** the surface is paginated + searchable (consistent with Story 11b.1 remembrance-not-analytics invariant — no leaderboards, no "most viewed", no engagement metrics)
 **And** Pattern 4 dignified-validation copy applies; Hindi-first per Story 2.1; accessibility per Story 0.10
 

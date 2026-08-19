@@ -1,4 +1,56 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-19i (⭐ G6 LANDED -- epics.md reconciled, C1-C9. ⭐ AI-10-2 IS DISCHARGED -- the
+#   action item that was re-issued from AI-9-2 after failing to run last epic, and that cost every Epic-10
+#   story an individual tax. ⛔ NO story status flipped, NO story minted, NO code changed, NO
+#   development_status key touched. 72 lines ADDED, 0 REMOVED -- ⛔ recorded as RECONCILIATIONS, never
+#   silent rewrites ([[feedback_closure_language_precision]]); every original line stands and carries an
+#   annotation beside it.
+#   C1+C9 (11a.3 matrix) ⭐ THE ORIGIN OF SD-1 -- the matrix is marked ⛔ NOT A SCHEMA, with a row-by-row
+#   disposition table: name rows SUPERSEDED to full legal name via a per-Pariwar PRESENTATION POLICY (not
+#   hard-coded); District platform-common; Block Pariwar-selected and governed under District with
+#   ⛔ D5 NOT SUPERSEDED (derivation != collection) and ⛔ additionally gated on 137's migration mechanism;
+#   School and Designation Pariwar-selected and ⛔ PERMANENTLY RBAC-INELIGIBLE; Zone/Division ⛔ requires
+#   ADR-0039. Anti-enumeration recorded as LOAD-BEARING, not defensive.
+#   C2 (11a.1) FOUR corrections: the matrix codifies TIERS AND RULES ⛔ not a fixed field list - the CI
+#   gate must be HONESTLY SCOPED because per-Pariwar definitions are DB ROWS (the 10.12 fence's own
+#   precedent; ⛔ do not widen a CI gate to read a tenant database) - ⛔ LAUNCH-BLOCKING: the tier-leak leg
+#   is INERT and THIS story arms it, which is CIRCULAR and must be sequenced deliberately - the `public`
+#   tier now carries a RULED Tier-1 EXCEPTION that must be represented as an explicit attributed
+#   exception, ⛔ never a general relaxation. Plus the presentation-policy control is in scope as a POLICY
+#   CONTROL, ⛔ not a directory attribute.
+#   C3 (11a dependencies) ⛔ "Epic 3 (Member Directory data -- name + district + block + school)" IS FALSE
+#   AND WAS FALSE WHEN WRITTEN. Epic 3's thirteen stories own none of it. Corrected supplier: the
+#   directory-attribute registry extension + architecture §2.13. Per-attribute gating recorded.
+#   C4 (FR-74) name form superseded ⛔ SCOPED TO THE MEMBER DIRECTORY ONLY -- ⚠ the "first-name +
+#   last-initial contributors" on SAHYOG VIVRAN in the same clause is ⛔ NOT ruled and NOT changed.
+#   school/designation are ⛔ not a fixed public column set.
+#   FR-75 the NAME FORM is superseded; ⭐ the REST STANDS AND IS NOW THE FLOOR, NOT THE CEILING (forced
+#   pagination, noindex, no mobile/email/address/DOB). Full-name display is the LAUNCH posture, ⛔ not
+#   permanent, and ⛔ must not be hard-coded as permanent.
+#   ⭐ C5 (FR-78 + 11b.6) -- THE MOST IMPORTANT NON-CHANGE OF THIS PASS. school/designation become
+#   Pariwar-selected, ⛔ BUT THE FULL-NAME RULING DOES NOT REACH IN MEMORIAM. 135/136 were scoped to Story
+#   11a.3; the G3 note said in terms it did NOT ask about deceased-member or verifier names. In Memoriam
+#   KEEPS first-name + last-initial. ⚠ A reconciliation that HARMONISED FR-78 with FR-74 would have
+#   SILENTLY EXTENDED A PII RULING TO AN UNRULED, CONSENT-GOVERNED SURFACE whose subject is deceased and
+#   cannot re-consent. 11b.6's "fuller per Story 11a.3 directory pattern" is annotated to read as MORE
+#   PARIWAR-SELECTED ATTRIBUTES, ⛔ NOT a fuller name form.
+#   C6 (11b.1) the Sahyog List consumes the SAME attribute model (UX spec: "donor names, schools,
+#   districts, blocks") -- an uncounted consumer; must degrade when a Pariwar selects neither; block
+#   additionally gated on 137; ⛔ the full-name ruling does not reach this surface either.
+#   C7 (10.12, SHIPPED) ⛔ THE SHIPPED STORY IS NOT EDITED -- annotated only. "the EXISTING `designation`
+#   field" is FALSE and always was; ⛔ the story's RULING is unaffected (the Tier-3 analogy is sound), only
+#   the word "existing". ⚠ It passed REVIEW AND MERGE inside a shipped story -- evidence that epics.md
+#   prose is not load-bearing enough to be trusted as a source of fact.
+#   C8 (FR-39) district_cohort_v1 is the CURRENTLY SUPPORTED posture and a ratified position, ⛔ NOT debt.
+#   Expansion needs BOTH substrate AND an R4 promotion -- ⛔ a collected attribute steering claim
+#   verification would let a Pariwar Admin's data entry influence who verifies a death. The metric
+#   registry already takes new entries without touching the engine.
+#   C9 applied throughout: every implication of a FIXED GLOBAL ATTRIBUTE LIST removed (R7).
+#   ⛔ STILL OWED, and none of it is ruled by anything above: ADR-0039 (the scope-dimension mechanism 134
+#   Q4 authorised) - the LAUNCH-BLOCKING PII-scrape tier-leak leg (136 cl.4) - 137 cl.7(a) member-aware
+#   publish path and cl.7(b) the member choice surface. ⭐ STORY 11a.1 IS NOW UNBLOCKED (G1+G5+G6 have all
+#   landed). ⚠ Rows 2 and 5 remain unblocked BY RULING but ⛔ NOT BY MECHANISM.
+#   O1/O5/O6/O7/O8 carried.)
 # last_updated: 2026-08-19h (G5 LANDED -- architecture.md amended to carry all six ratified decisions
 #   (2026-08-19-132..137). ⛔ NO story status flipped, NO story minted, NO code changed, NO
 #   development_status key touched. 144 lines ADDED, 0 REMOVED -- every amendment is additive and marked

@@ -1,4 +1,61 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-19c (⭐ TRUSTEE RATIFICATION -- Dhiraj Rahul and Kalpana Bharti, 2026-08-19.
+#   TWO decision-log entries recorded: 2026-08-19-132 and 2026-08-19-133. ⛔ NO story status flipped, NO
+#   story minted, NO code changed, NO development_status key touched. Prior ledger entries left
+#   BYTE-UNCHANGED.
+#   ⭐ AI-10-4 IS CLOSED. The Epic-11a blocking, pre-authoring action item is discharged by 132.
+#   DECISION 2026-08-19-132 -- the attribute model R1-R7 is RATIFIED. Q1 ratify (R1 taxonomy, R2
+#   display-only default, R7 extensible/Pariwar-selected) - Q2 ratify (R3, R3(a), (i), (ii)); ⛔ Decision
+#   2026-08-13-103 D5 STANDS UNTOUCHED, because D5 rules Block not DERIVABLE while a Pariwar COLLECTS it,
+#   and derivation and collection are different acts - Q3 ratify WITH CLARIFICATION - Q4 ratify PRINCIPLE
+#   ONLY (⛔ no amendment to SCOPE_DIMENSIONS, the pgEnum, freeze row 9, ADR-0008 or ADR-0038 authorised)
+#   - Q5 STANDING ("the rules of the model are standing; the attributes and hierarchies adopted are
+#   Pariwar-specific").
+#   ⭐ Q3 ADDED AN ORTHOGONAL SECOND AXIS THE MODEL DID NOT HAVE -- ATTRIBUTE ELIGIBILITY CLASS. Every
+#   attribute now carries BOTH an R1 category (how it is provisioned) AND an eligibility class (whether it
+#   may ever bear authority). ⛔ "Permanently excluded" is STRONGER than "not promoted": for the excluded
+#   class the question "should we promote it?" is NOT AVAILABLE. The Panel's position: display-only BY
+#   DEFAULT, with explicit RBAC participation for eligible organizational attributes; individual
+#   attributes excluded. ⇒ the RBAC question was never "are directory attributes display-only forever?"
+#   132 clause 7 recorded TWO precision questions OPEN rather than guessing them -- School's eligibility,
+#   and whether "explicit, governed configuration choice" meant R4's trustee ruling or something weaker.
+#   DECISION 2026-08-19-133 -- the SUCCESSOR entry closing both. ⛔ 132 is ANNOTATED, NEVER EDITED (the
+#   2026-08-18-131 precedent); a reader of 132 alone still correctly sees two open questions.
+#     (1) ⛔ SCHOOL IS INELIGIBLE. The criterion is HIERARCHICAL, not organizational -- "hierarchy alone
+#         does not automatically make it an RBAC scope. Since school is not hierarchical, it is not
+#         eligible." The conservative reading 132 clause 7(a) adopted is CONFIRMED.
+#     (2) ⛔ CREATION IS SUPER ADMIN / TRUSTEE PANEL ONLY. Pariwar Admins configure PERMITTED USAGE of
+#         already-governed attributes; they may NOT create an attribute nor elevate one into an
+#         RBAC-capable class. ⚠ This CORRECTS the approved proposal's §2 R1 description ("authored and
+#         enabled per Pariwar by the Pariwar Admin") -- the category name stands (it describes SCOPE OF
+#         APPLICABILITY, not authorship), the authorship clause does not.
+#     (3) ⭐ THE CLASSIFICATION IS A CLOSED THREE-WAY SET AND ELIGIBILITY IS DERIVED FROM IT, NEVER CHOSEN:
+#         hierarchical organizational unit (Block/Zone/Division) = ELIGIBLE - ordinary organizational or
+#         member attribute (School) = PERMANENTLY INELIGIBLE - individual attribute (Designation) =
+#         PERMANENTLY INELIGIBLE. ⛔ There is no switch that makes an ineligible attribute eligible; the
+#         only route is changing the CLASSIFICATION, which is a material redefinition and Trustee-only.
+#         A hierarchical attribute must declare its hierarchy (District->Block, Zone->Division).
+#     (4) ⭐ THREE DISTINCT GOVERNANCE LAYERS -- CREATE (Trustee: attribute + classification + parent;
+#         eligibility derived) -> ENABLE (Pariwar: use it in the directory, and if eligible whether THIS
+#         Pariwar uses it for RBAC -- a deliberate governance decision, not a casual Pariwar-Admin
+#         change) -> GRANT (Trustee: Dhiraj -> Block Admin -> Block 17). ⛔ NO LAYER IMPLIES THE NEXT.
+#         Creating Block grants nobody anything; enabling it grants nobody anything; only GRANT confers
+#         authority, over a NAMED NODE. This is what makes 132's "creating an attribute does not
+#         automatically grant it authority" operational rather than aspirational.
+#   PROPOSAL ANNOTATED, NOT REWRITTEN: §2 R1 authorship corrected; §D-1's FOUR-LEVER model marked
+#   INCOMPLETE and superseded as the canonical frame by 133 clause 4's three layers (⛔ not deleted -- the
+#   levers remain correct that Block's RELATION is universal); §4.1 row 3 (School) and row 4 (Designation)
+#   both marked PERMANENTLY RBAC-INELIGIBLE, a property neither row previously carried.
+#   ⛔ STILL OPEN, RULED BY NOTHING ABOVE: G3 (member-name PII posture, both tiers, 5 questions) - G2
+#   (scope-dimension amendment, 5 questions, ⛔ downstream of 132 clause 4; ⭐ 133 clause 3's "which
+#   hierarchy does it belong to" is the same question G2's Q2 puts) - G4a (hierarchy-version drift, 4
+#   questions; ⛔ its §5.4 prohibition REMAINS IN FORCE for every collected hierarchy attribute, Block
+#   included). G2 and G4a remain UNCOMMITTED pending their rulings.
+#   ⭐ G5 (architecture.md) and G6 (epics.md C1-C9, discharging AI-10-2) are now UNBLOCKED. ⚠ G5 must
+#   carry 133 clause 4's three layers -- they are an ARCHITECTURAL property, not a UI note.
+#   ⚠ Story 11a.1 still does NOT start until G5 + G6 land. O8 (R3(a) unenforced: state->block is still a
+#   legal edge that validateGeoTreeDocument would accept) must be CLOSED, not assumed. O1/O4/O5/O6/O7
+#   carried.)
 # last_updated: 2026-08-19b (CORRECTION to the 2026-08-19 entry below -- the G4a gate is WIDER than
 #   that entry recorded. ⛔ NO story status flipped, NO story minted, NO code changed, NO
 #   development_status key touched. ⛔ The 2026-08-19 entry below is left BYTE-UNCHANGED; this is an

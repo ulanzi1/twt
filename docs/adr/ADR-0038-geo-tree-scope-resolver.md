@@ -91,6 +91,14 @@ Load-bearing details:
 
 - ⛔ It does **not** change `GEO_RANK`, `CEILING_RANK`, `scopeContains`'s ordering, the `GeoTreeResolver`
   interface, or the permission-key / scope-dimension model — **architectural freeze row 9**.
+  - ⭐ **PRE-PRESENTATION CROSS-REFERENCE, added 2026-08-19.** ⛔ **This bullet remains TRUE of ADR-0038** —
+    this ADR changed none of those things, and Story 1.18 landed without touching `rbac/scope.ts`.
+    ⚠ What has changed is the **surrounding freeze**: **`ADR-0039`** (`ratified` 2026-08-19, Decision
+    `2026-08-19-138`; substance ruled at `2026-08-19-134`) **amends architectural freeze row 9 narrowly**,
+    moving dimension ordering out of the global rank table and into the published hierarchy document.
+    ⭐ `ADR-0039` is, in its own words, *"precisely the ADR that ADR-0038 declined to be."*
+    ⛔ A reader must therefore **not** infer from this bullet that freeze row 9 stands untouched. ⛔ The
+    bullet is **not** edited; this note is the cross-reference ([[feedback_supersede_never_reinterpret]]).
 - ⛔ It does **not** re-rank `pariwar` vs `state`. That would silently re-authorize every grant in the
   system and is its own ADR and its own story, if it is ever right.
 - ⛔ It does **not** discharge the **rank-order** (Family A) denials. A resolver answers *"is X beneath

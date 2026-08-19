@@ -71,7 +71,7 @@ Every directory attribute is exactly one of:
 | Category | Definition | Storage today |
 |---|---|---|
 | **Platform-supported / common** | Canonical, defined once by the platform, cross-Pariwar. A Pariwar **opts in**; it does not author it | Real columns (`member_postings.district`) |
-| **Pariwar-specific** | Governed, authored and enabled per Pariwar by the Pariwar Admin | `pariwar_custom_field_definitions` + `members.custom_fields` |
+| **Pariwar-specific** | Governed, authored and enabled per Pariwar by the Pariwar Admin — ⛔ **CORRECTED by Decision `2026-08-19-133` clause 2: authoring is SUPER ADMIN / TRUSTEE PANEL only.** A Pariwar Admin configures *permitted usage* of an already-governed attribute; ⛔ they may not create one, nor elevate one into an RBAC-capable class. The category name stands — it describes **scope of applicability**, not authorship | `pariwar_custom_field_definitions` + `members.custom_fields` |
 | **Requires new governed substrate** | Cannot be enabled until substrate is built and ruled | — |
 
 ⛔ A fixed cross-Pariwar directory schema is **rejected**. ⛔ Globally removing `Block` is **rejected**. Both were the framings AI-10-4 offered; both are wrong.
@@ -106,6 +106,19 @@ Zone → Division requires **cascading selection**: selecting a Zone constrains 
 | 4 | Which **visibility tier** it renders at | Pariwar | Per-attribute tier declaration (§3.4) |
 
 ⇒ Rail simply never enables Block, and R3(a) costs it nothing. Shikshak enables it and inherits the governed parent. ⛔ R3(a) constrains **shape**; it is **not** a mandate to adopt.
+
+> ⭐ **ANNOTATED 2026-08-19 — the four levers are INCOMPLETE, and Decision `2026-08-19-133` clause 4
+> supersedes them as the canonical frame.** ⛔ Not deleted: they remain correct that Block's **relation**
+> is universal. What they lack is a lever for **CREATION**, and they assigned enablement to the Pariwar
+> without separating *directory use* from *RBAC use*. The ruled frame is **three layers**:
+>
+> | # | Layer | Who |
+> |---|---|---|
+> | 1 | **CREATE the capability** — attribute + classification + hierarchy parent; eligibility **derived** | ⛔ Super Admin / Trustee Panel only |
+> | 2 | **ENABLE the capability** — this Pariwar's directory; and, if eligible, whether it uses it for RBAC | Pariwar, as a **deliberate governance decision** |
+> | 3 | **GRANT authority** — a person, a role, a **named node** (Dhiraj → Block Admin → Block 17) | ⛔ Trustee |
+>
+> ⛔ **No layer implies the next.**
 
 ##### R3(a)(i) — Enablement fails closed without the substrate
 
@@ -252,8 +265,8 @@ FR-39 specifies peer first-witness selection as *"district > block > school prox
 |---|---|---|---|
 | 1 | **District** | Platform-common | ✅ **Exists.** Derived from `member_postings`. Needs the opt-in layer only |
 | 2 | **Block** (any Pariwar that selects it) | Pariwar-specific *enablement* of a **platform-governed relation** (R3(a)) | ✅ **Enable as a collected attribute, governed under `District`**, validated against the in-force geo tree. ⭐ **Uses shipped substrate — does NOT wait on G4.** ⛔ **AMENDED 2026-08-19 — ALSO GATED ON G4a**, pending its **Q4**: Block is tree-validated, so a *Shikshak* restructure orphans a stored value exactly as a Rail one would. §5.4's prohibition therefore already reaches Block. ⛔ **Decision `2026-08-13-103` D5 is NOT superseded** — see 4.1.1. ⚠ Enforcement gap **O8** |
-| 3 | **School / Office** | Pariwar-specific | ✅ **Enable as a flat collected attribute**, Tier-3. Controlled-vocabulary question deferred to the story (§3.4 limit 3) |
-| 4 | **Designation** | Pariwar-specific | ✅ **Enable as a flat collected attribute**, Tier-3. Added to scope by BigDev at session open |
+| 3 | **School / Office** | Pariwar-specific · ⛔ **ordinary organizational attribute** | ✅ **Enable as a flat collected attribute**, Tier-3. ⛔ **RULED PERMANENTLY RBAC-INELIGIBLE** — Decision `2026-08-19-133` clause 1: the criterion is **hierarchical**, and School is organizational but not hierarchical. Controlled-vocabulary question deferred to the story (§3.4 limit 3) |
+| 4 | **Designation** | Pariwar-specific · ⛔ **individual attribute** | ✅ **Enable as a flat collected attribute**, Tier-3. ⛔ **RULED PERMANENTLY RBAC-INELIGIBLE** — Decision `2026-08-19-132` clause 3, confirmed by `133` clause 3. Added to scope by BigDev at session open |
 | 5 | **Zone → Division** (Rail) | **Requires new governed substrate** | ⛔ **BLOCKED** on the R6 ADR (G4) **and** on **O2** being Trustee/architecture-routed. Cannot become an operational member attribute before both land |
 | 6 | **Full name** (authenticated) | ⛔ Not a directory-attribute question | **PII posture.** Own routing note — see 4.1.2 |
 | 7 | **Public-tier name** | ⛔ Not a directory-attribute question | **PII posture.** Own routing note — see 4.1.2 |

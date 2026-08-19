@@ -1,4 +1,59 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-19h (G5 LANDED -- architecture.md amended to carry all six ratified decisions
+#   (2026-08-19-132..137). ⛔ NO story status flipped, NO story minted, NO code changed, NO
+#   development_status key touched. 144 lines ADDED, 0 REMOVED -- every amendment is additive and marked
+#   in place; ⛔ no ratified architecture text was rewritten.
+#   BOUNDARY DISCIPLINE APPLIED ([[feedback_architecture_vs_adr_boundary]]): architecture commits
+#   PROPERTIES; ADR-0039 commits the scope-dimension MECHANISM (the dimension tuple, the scope_dimension
+#   enum, its migration) and is explicitly deferred to from §2.6. Per-transition migration POLICY (the
+#   six-case matrix) stays in Decision 137 and is REFERENCED, not restated, since architecture commits
+#   the INVARIANT and the never-guess property, not the policy table.
+#   §2.6 RBAC enforcement AMENDED (134 cl.2): dimensions BELONG TO A NAMED HIERARCHY; global/pariwar/self
+#   stay UNIVERSAL while state->district->block becomes ONE named hierarchy rather than the only one; the
+#   PUBLISHED HIERARCHY DOCUMENT DECLARES ITS OWN ORDERING; ⛔ cross-hierarchy comparison must be
+#   STRUCTURALLY IMPOSSIBLE -- fail-closed, never a numeric compare answering "is Zone broader than
+#   District?" (the ADR-0038 failure mode by name).
+#   §2.7 Tier-3 line AMENDED (132/133): the TIER CLASSIFICATION STANDS, the STORAGE MODEL DOES NOT --
+#   School and Designation are ⛔ NOT fixed member columns but Pariwar-selected directory attributes;
+#   District remains platform-common, derived from member_postings.
+#   §2.7 "CI guards that no Tier 1 field is rendered to a public surface" AMENDED EXPLICITLY (135 cl.7(c)
+#   + 136) -- ⭐ THE AMENDMENT 135 REQUIRED BE STATED, NOT INFERRED. ONE RULED EXCEPTION: member name may
+#   be decrypted from Tier-1 and rendered on the PUBLIC directory. ⛔ Supersedes FR-75's "first-name +
+#   last-initial only" and FR-74's public-tier name form -- ⛔ THE NAME FORM ONLY; FR-75's forced
+#   pagination, noindex, and no-mobile/email/address/DOB ⛔ STAND. ⛔ Exactly one field on exactly one
+#   surface class; NO PII tier changes. ⚠ Story 10.7 NOT amended (scoped to admin bulk exports); what is
+#   no longer true is the PROJECT-WIDE reading that Tier-1 is never decrypted outside self-access, which
+#   ⛔ was never ratified. ⛔ Records that the guard MUST BE OPERATIVE BEFORE THE DIRECTORY SHIPS and that
+#   it is CURRENTLY INERT for tier leaks -- so the sentence presently describes a control that cannot
+#   catch its own exception being violated.
+#   ⭐ NEW §2.13 "Member directory attributes -- classification, authority layering, presentation, and
+#   hierarchy integrity", four subsections, each citing its ruling:
+#     2.13.1 (132 R1/R7 + 133 cl.1,3) -- ⛔ NO canonical directory schema; TWO ORTHOGONAL AXES
+#            (provisioning category x eligibility class); ⭐ RBAC ELIGIBILITY IS DERIVED FROM THE CLASS,
+#            NEVER CHOSEN; School and Designation ⛔ PERMANENTLY ineligible; the only route to change
+#            eligibility is to change the CLASSIFICATION.
+#     2.13.2 (133 cl.2,4 + 132 R2/R4) -- ⭐ THREE LAYERS, ⛔ NO LAYER IMPLIES THE NEXT: CREATE (Super
+#            Admin/Trustee ONLY) -> ENABLE (per-Pariwar scope, governed authority) -> GRANT (Trustee, a
+#            NAMED NODE). Display-only BY DEFAULT, enforced BY SIGNATURE. Publishing a hierarchy may
+#            support hierarchy-scoped RBAC INDEPENDENTLY of directory adoption.
+#     2.13.3 (136 cl.1-3 + 135) -- ⭐ MEMBER'S LEGAL/KYC NAME != ITS PUBLIC PRESENTATION. ONE STORED
+#            NAME, N PRESENTATION MODES (full_name -> shielded_name -> future), ⛔ without touching the
+#            stored KYC name and ⛔ without a second identity system. splitFirstNameLastInitial() IS the
+#            shielded_name mode. Scope per-Pariwar, authority GOVERNED; ⛔ moves in EITHER direction, not
+#            a one-way ratchet. ⛔ "A build in which the public name form cannot change without a code
+#            change VIOLATES this section" -- stated as a testable property.
+#     2.13.4 (137 cl.1-3,6-8) -- ⭐ INVARIANT: EVERY NODE REFERENCED BY A LIVE MEMBER ASSIGNMENT MUST
+#            EXIST IN THE IN-FORCE HIERARCHY. Rename preserves identity; successors exist BEFORE
+#            retirement; ⛔ never guess; ambiguous transitions require MEMBER CHOICE; ⛔ delete/orphan a
+#            node with members FORBIDDEN. Admin drives, member decides. ⚠ TWO CONSEQUENCES THAT DO NOT
+#            EXIST TODAY: the publish path becomes MEMBER-AWARE, and a PENDING-CHOICE state is
+#            first-class (a split may remain pending INDEFINITELY -- intended). ⚠ Records the WEAKER DB
+#            control (no CHECK constraint can express hierarchy membership; ⛔ do not assume parity with
+#            the 0095 fence).
+#   ⛔ STILL OWED: ADR-0039 (the scope-dimension mechanism 134 Q4 authorised) - G6 (epics.md C1-C9,
+#   discharging AI-10-2) - the LAUNCH-BLOCKING PII-scrape tier-leak leg (136 cl.4). ⚠ Rows 2 and 5 are
+#   unblocked BY RULING but ⛔ NOT BY MECHANISM: 137 cl.7(a) member-aware publish and 7(b) the member
+#   choice surface do not exist. Story 11a.1 still awaits G6. O1/O5/O6/O7/O8 carried.)
 # last_updated: 2026-08-19g (⭐ G4a RATIFIED -- Decision 2026-08-19-137, Dhiraj Rahul and Kalpana
 #   Bharti, 2026-08-19. ⭐ THE LAST OPEN ROUTING NOTE OF THE SESSION. ⛔ NO story status flipped, NO story
 #   minted, NO code changed, NO development_status key touched. Prior ledger entries BYTE-UNCHANGED.

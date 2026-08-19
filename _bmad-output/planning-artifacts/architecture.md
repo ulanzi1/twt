@@ -1499,6 +1499,20 @@ activity sees the navigation pattern, not only the actions within a scope.
 - **Scope dimensions** per FR-45: `block | district | state | pariwar | global`. Each
   grant carries a target scope; queries against `target` are matched against the
   authenticated user's scope.
+  - ⭐ **AMENDED — Decision `2026-08-19-134` (routing note G2, ratified 2026-08-19).**
+    **Dimensions belong to a named hierarchy.** `global`, `pariwar` and `self` remain
+    **universal**; `state → district → block` becomes **one named hierarchy rather than
+    the only one**, so a Pariwar with a different organizational shape (Rail's
+    `Zone → Division`; a future `Region → Area → Branch`) carries its own.
+  - ⭐ **The published hierarchy document declares its own dimension ordering.** A single
+    global rank table is **no longer the authority on ordering**.
+  - ⛔ **Comparison is meaningful only WITHIN a hierarchy.** Across hierarchies it must be
+    **structurally impossible — fail-closed — not merely wrong**: an unknown or
+    cross-hierarchy dimension **denies, never compares**. A numeric compare that answers
+    *"is Zone broader than District?"* is the ADR-0038 failure mode by name.
+  - **Mechanism is committed in `ADR-0039`, not here** — the dimension tuple, the
+    `scope_dimension` enum and their migration are ADR-level concerns. This section
+    commits the **property**.
 
 **Enforcement pattern:**
 - Authorization helper `requires(user, permission_key, target)` called at the entry of
@@ -1529,6 +1543,11 @@ endpoint; role modification requires Super Admin scope; trustee discretion logge
   - Equality search only — no range, no partial match.
 - **Tier 3 — Plaintext.** School, district, designation, joining date, contribution
   count, public-facing fields per FR-74 Public-vs-Private matrix.
+  - ⚠ **AMENDED — Decisions `2026-08-19-132` / `-133`.** The **tier classification stands**;
+    the **storage model does not**. `School` and `Designation` are **not fixed member
+    columns** — they are **Pariwar-selected directory attributes** (§2.13). ⛔ There is no
+    canonical directory schema. `District` remains platform-common, derived from
+    `member_postings`.
 
 **Baseline:** Managed Postgres TDE (DB-level encryption with KMS-managed keys) underlies
 all tiers — protects against disk theft. Application-layer encryption on Tier 1 + 2 is
@@ -1537,6 +1556,35 @@ defense-in-depth.
 **Tier classification authority:** the Public-vs-Private matrix (FR-74) is canonical;
 new PII fields declare their tier at schema definition; CI guards that no Tier 1 field
 is rendered to a public surface.
+
+> ⛔ **AMENDED — Decision `2026-08-19-135` clause 7(c) + `2026-08-19-136` (routing note G3,
+> ratified 2026-08-19). ONE RULED EXCEPTION, stated explicitly rather than left to be
+> inferred.**
+>
+> **Member name may be decrypted from Tier-1 and rendered on the PUBLIC directory
+> surface.** The Trustee Panel authorised full-name display at both the public and
+> authenticated tiers, using the existing KYC/legal name
+> (`member_kyc_profiles.name_ciphertext`). ⛔ This **supersedes** FR-75's *"first-name +
+> last-initial only"* and FR-74's public-tier name form — ⛔ **the name form only**;
+> FR-75's forced pagination, `noindex` on member detail pages, and
+> no-mobile/email/address/DOB consequences **stand unchanged**.
+>
+> ⛔ **The exception is exactly one field on exactly one surface class.** No other Tier-1
+> field may be rendered publicly, and **no PII tier changes** — member name remains
+> Tier-1 ciphertext + Tier-2 blind index. This authorises a **decrypt at a named
+> surface**, not a reclassification.
+>
+> ⚠ **Story 10.7 is NOT amended.** Its *"Tier-1 not decrypted into a report in v1"* ruling
+> was scoped to **admin bulk exports**. ⛔ What is no longer true is the project-wide
+> reading that Tier-1 is never decrypted outside self-access — that reading was never
+> ratified and must not be cited as though it were.
+>
+> ⛔ **The CI guard named in this clause must be OPERATIVE before the directory ships**
+> (`2026-08-19-136` clause 4). It is currently **inert for tier leaks** — the scrape
+> gate's snapshot loader is a stub and the matrix declares no surfaces — so at present
+> the sentence above describes a control that cannot catch this exception being violated.
+> ⚠ The matrix is populated by the same story that ships the directory; **sequence it
+> deliberately.**
 
 **HMAC input namespacing.** Blind index inputs are namespaced by field class:
 `HMAC(key, "<field_class>:" || value)` where `<field_class>` is the named field name
@@ -1791,6 +1839,106 @@ minor, the claim flow:
 - Suppresses minor identity from public surfaces (Sahyog Vivran shows family without
   minor's name; In Memoriam unaffected since the deceased is the member, not the minor).
 - DPDPA §9 compliance carries to all minor-data handling.
+
+#### 2.13 Member directory attributes — classification, authority layering, presentation, and hierarchy integrity
+
+**Decision:** Ratified by the Trustee Panel 2026-08-19 across Decisions `2026-08-19-132`
+through `-137` (routing notes G1–G4a). This section commits the **properties**; policy
+detail lives in those entries, and scope-dimension mechanism in `ADR-0039`.
+
+**⭐ 2.13.1 The attribute set is extensible and Pariwar-selected — never a fixed global schema.**
+*(Decision `2026-08-19-132` R1/R7; eligibility class `2026-08-19-132` clause 3 as resolved by `2026-08-19-133` clauses 1 and 3.)*
+
+⛔ There is **no canonical directory schema**. A Pariwar selects which governed attributes
+apply to it: `Block` may be enabled for Shikshak and disabled for Rail, which instead uses
+`Zone → Division`. A future Pariwar may need attributes that do not exist today. ⛔ Adding a
+Pariwar must not require a new fixed schema column.
+
+Every attribute carries **two orthogonal axes**:
+
+| Axis | Values |
+|---|---|
+| **Provisioning category** | platform-common · Pariwar-specific · requires-new-governed-substrate |
+| **Eligibility class** | hierarchical organizational unit · ordinary organizational/member attribute · individual attribute |
+
+⭐ **RBAC eligibility is DERIVED from the eligibility class, never chosen.** A *hierarchical
+organizational unit* (`Block`, `Zone`, `Division`) is **eligible**. An *ordinary
+organizational* attribute (`School`) and an *individual* attribute (`Designation`) are
+⛔ **permanently ineligible** — ineligible, not merely un-promoted. ⛔ The only way to change
+eligibility is to change the **classification**, which is a material redefinition.
+
+**⭐ 2.13.2 Authority is layered in three separate acts. No layer implies the next.**
+*(Decision `2026-08-19-133` clauses 2 and 4; display-only default `2026-08-19-132` R2/R4.)*
+
+| # | Layer | Authority |
+|---|---|---|
+| 1 | **CREATE the capability** — attribute + classification + hierarchy parent; eligibility derived | ⛔ Super Admin / Trustee Panel **only** |
+| 2 | **ENABLE the capability** — this Pariwar's directory use; and, if eligible, whether this Pariwar uses it for RBAC | Per-Pariwar **scope**, governed **authority** |
+| 3 | **GRANT authority** — a person, a role, a **named node** | ⛔ Trustee |
+
+⛔ **Creating an attribute grants nobody anything. Enabling it grants nobody anything.** Only
+layer 3 confers authority, and only over a named node. ⛔ A Pariwar Admin **cannot** create an
+attribute or elevate one into an RBAC-capable class; they configure **permitted usage** of
+already-governed attributes.
+
+⭐ **Directory attributes are display-only BY DEFAULT** — they may not feed RBAC scope
+containment, pool assignment, `is_valid`/`is_assignable`, or peer-mesh selection by virtue of
+being defined or populated. Enforced **by signature**, following the advisory-`routed_to_role`
+precedent. ⚠ Publishing a hierarchy may support hierarchy-scoped RBAC **independently of
+directory adoption**; the two are separate questions.
+
+**⭐ 2.13.3 A member's stored identity is separate from its public presentation.**
+*(Decision `2026-08-19-136` clauses 1–3; source name and tier posture `2026-08-19-135`.)*
+
+> **Member's legal/KYC name ≠ public-directory presentation of that name.**
+
+One stored name; **N presentation modes**, selected by a per-Pariwar policy control
+(`full_name` at launch → `shielded_name` → future modes). ⛔ Changing the mode must **not**
+touch the stored KYC/legal name and must **not** require a second identity system. The
+shipped `splitFirstNameLastInitial()` shield is the **implementation of `shielded_name`**.
+
+⚠ **Scope and authority are different axes here too:** the control is **per-Pariwar** in
+scope, and changing it is a **governed act** — ⛔ not a casual Pariwar-Admin toggle. The
+policy may move in **either direction**; ⛔ it is not a one-way ratchet toward privacy.
+
+⛔ **Full-name publication must not be hard-coded as permanent.** A build in which the public
+name form cannot change without a code change **violates this section**.
+
+**⭐ 2.13.4 Hierarchy integrity — the orphan state is designed out, not represented.**
+*(Decision `2026-08-19-137` clauses 1–3 and 6–8.)*
+
+> **INVARIANT: every node referenced by a live member assignment must exist in the in-force
+> hierarchy.**
+
+When a Pariwar restructures, collected assignments are **migrated**, not stranded:
+
+- A **rename preserves the logical node** — identity is retained; it is not a migration.
+- Successor node(s) must **exist before** the old assignment is retired.
+- ⛔ **The system must never silently guess a mapping.** Deterministic transitions may be
+  automatic; **ambiguous transitions require the member's own choice**.
+- ⛔ **Deleting or orphaning a node that has members is FORBIDDEN.** With no successor, the
+  old node **remains**.
+- The Pariwar Admin **initiates and manages** migration; ⛔ the **member decides** the
+  ambiguous case. Neither substitutes for the other.
+
+*(Per-transition policy — the full six-case matrix — is ruled in Decision `2026-08-19-137`;
+this section commits the invariant and the never-guess property.)*
+
+⚠ **Two consequences this invariant creates, neither of which exists today:**
+
+1. **The hierarchy publish path becomes member-aware.** Document validation today checks
+   structure only (cycles, rank, parent-strictly-broader). Enforcing *forbidden* requires
+   consulting **member assignments** at publish time — a new capability, not a new rule on an
+   existing one.
+2. **A pending-choice state is first-class.** A member choosing their own successor is not an
+   authority act (2.13.2 still holds), but the state **must be representable**, and the
+   Pariwar Admin must have visibility into who has not yet chosen. ⚠ With no deadline and no
+   guessing, a split can remain **pending indefinitely** on one member — a direct and
+   intended consequence of refusing to guess.
+
+⚠ **Recorded control limit:** hierarchy-membership integrity **cannot** be expressed as a DB
+`CHECK` constraint. It is app-layer, optionally trigger-backed — ⛔ **weaker than the
+custom-field fence beside it**, and the next reader must not assume parity.
 
 #### Decisions deferred to subsequent categories
 

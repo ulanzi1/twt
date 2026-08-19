@@ -18,10 +18,20 @@
 > public tier and *shielded* for the authenticated tier. The Panel authorised **full name at both**.
 >
 > ⚠ **Q3's antecedent does not obtain** — it was put as *"if Q1 and Q2 are both NO"*, and both are YES.
-> Decision `2026-08-19-135` **clause 6** records the reading and ⛔ **flags it for confirmation**: the
-> operative build instruction is **NAMELESS**, with full-name display **authorised but not enabled**
-> behind Q5's toggle — the project's *built but not enabled* pattern. ⛔ **Until confirmed, no public name
-> renders, and an implementer must not resolve this.**
+> Decision `2026-08-19-135` **clause 6** recorded two readings and ⛔ flagged it rather than assuming.
+>
+> ✅ **RESOLVED 2026-08-19 by Decision `2026-08-19-136`: reading (A).** ⛔ The author's reading **(B) was
+> WRONG.** The directory is built with **full legal names publicly visible NOW**, as the **initial**
+> posture — ⛔ explicitly **not permanent**, and the implementation *"must not hard-code full-name
+> publication as permanent."*
+> ⭐ **Q5 resolves into a design requirement:** a **Pariwar-level, governed, configurable
+> presentation-policy control** — `public_member_name = full_name` (launch) → `shielded_name`
+> (*"Ramesh Kumar"* → *"Ramesh K."*) → future modes — ⛔ **without** changing the stored KYC name and
+> ⛔ **without** a second identity system. ⭐ **Member's legal/KYC name ≠ its public-directory
+> presentation.** `splitFirstNameLastInitial()` becomes the `shielded_name` **mode**, not a discarded
+> helper.
+> ⛔ **F-5 is now LAUNCH-BLOCKING** (`136` clause 4): under (A) public legal names render at launch, so
+> the inert tier-leak leg must be operative **before the directory ships**.
 >
 > ⛔ **Supersedes** (clause 7): **FR-75**'s *"first-name + last-initial only"* · **FR-74**'s public-tier
 > name form · **`architecture.md:1538`** *"CI guards that no Tier 1 field is rendered to a public

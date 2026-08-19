@@ -1,4 +1,46 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-19f (⭐ G3 CLARIFIED -- Decision 2026-08-19-136, Dhiraj Rahul and Kalpana
+#   Bharti, 2026-08-19. Successor resolving 135 clause 6. ⛔ NO story status flipped, NO story minted, NO
+#   code changed, NO development_status key touched. 135 is ANNOTATED (clauses 6 and 8), NEVER EDITED.
+#   ⛔ READING (A). THE AUTHOR'S READING (B) WAS WRONG -- and 135 clause 6 is exactly where it was FLAGGED
+#   rather than assumed, which is what kept it from becoming a silent build decision.
+#   ⭐ THE DIRECTORY IS BUILT WITH FULL LEGAL NAMES PUBLICLY VISIBLE, NOW. This is the INITIAL public
+#   posture, intentional and Panel-approved. ⛔ NOT a permanent commitment: no fixed duration, may run a
+#   short period or many years depending on member sentiment, public trust and the Trust's privacy-risk
+#   assessment. ⭐ "The implementation must not hard-code full-name publication as permanent" is a
+#   TESTABLE REQUIREMENT -- a build whose public name form cannot change without a code change FAILS it.
+#   ⭐ THE LOAD-BEARING SEPARATION: MEMBER'S LEGAL/KYC NAME != ITS PUBLIC-DIRECTORY PRESENTATION. The
+#   directory carries a separate, easily changeable public-name visibility control at the PARIWAR level:
+#   public_member_name = full_name (launch posture) -> shielded_name ("Ramesh Kumar" -> "Ramesh K.") ->
+#   future modes, ⛔ addable WITHOUT redesigning the member identity model. ⛔ Changing the setting must
+#   NOT require changing the stored KYC/legal name and must NOT require a second identity system. ONE
+#   STORED NAME, N PRESENTATION MODES.
+#   ⭐ CONSEQUENCE FOR THE SHIPPED HELPER: splitFirstNameLastInitial() becomes the IMPLEMENTATION OF THE
+#   shielded_name MODE -- ⛔ not a helper the directory declines to use, as 135 clause 8 assumed. That
+#   statement is annotated there; "do not delete it" is REINFORCED, "do not assume the directory reuses
+#   it" is SUPERSEDED.
+#   PRESENTATION POLICY IS CONFIGURABLE; THE AUTHORITY TO CHANGE IT STAYS GOVERNED. ⚠ Two axes, ⛔ never
+#   collapsed -- SCOPE is per-Pariwar; AUTHORITY is a governed act, NOT a casual Pariwar-Admin toggle.
+#   ⭐ This mirrors 133 clause 4 layer 2 exactly ("a deliberate governance decision, not something a normal
+#   Pariwar Admin can casually change") -- the SECOND time this shape appears, and it should be
+#   recognised as one pattern. ⭐ The policy may move in EITHER DIRECTION: "there is value in being able to
+#   change the presentation policy again if circumstances change." ⛔ NOT a one-way ratchet toward privacy.
+#   ⚠ CLAUSE 1 MOVES A RECORDED RISK ONTO THE LAUNCH CRITICAL PATH (136 clause 4). 135 clause 9(b)
+#   recorded the PII-scrape TIER-LEAK leg as INERT (loadSnapshots() returns []; matrix declares zero
+#   surfaces; verified by RUNNING the gate). Under reading (B) nothing would have rendered and this was a
+#   PRE-ENABLEMENT condition. ⛔ UNDER (A) PUBLIC LEGAL NAMES RENDER AT LAUNCH, so it becomes
+#   LAUNCH-BLOCKING: the tier-leak leg must be OPERATIVE BEFORE THE DIRECTORY SHIPS, or code review is the
+#   only control over a Tier-1 public surface. ⚠ And the matrix is populated by Story 11a.1 -- the story
+#   this ruling unblocks. ⛔ SEQUENCE IT DELIBERATELY; DO NOT DISCOVER IT.
+#   ⚠ DPDPA EXPOSURE IS NOW IMMEDIATE, not authorised-and-deferred -- it begins AT LAUNCH, while the
+#   standing register still records legal counsel as NOT ENGAGED. ⛔ Recorded for awareness; does NOT make
+#   counsel a precondition and ⛔ does NOT re-open clause 1.
+#   ⛔ NOT A DIRECTORY ATTRIBUTE: the presentation control is a POLICY SETTING, not a member attribute,
+#   and ⛔ is not subject to the 133 clause 3 classification. No PII tier changes.
+#   ⛔ STILL OPEN: G4a (hierarchy-version drift, 4 questions, gating rows 2 AND 5, prohibition in force,
+#   UNCOMMITTED). OWED: the launch-blocking tier-leak leg - ADR-0039 - G5 (must carry 136 clauses 2+3,
+#   135 clause 7(c), 133 clause 4, 134 clause 2) - G6 - a test PROVING the public name form is
+#   configurable. O4 closed. O1/O5/O6/O7/O8 carried.)
 # last_updated: 2026-08-19e (⭐ G3 RATIFIED -- Dhiraj Rahul and Kalpana Bharti, 2026-08-19. Decision
 #   2026-08-19-135 recorded. ⛔ NO story status flipped, NO story minted, NO code changed, NO
 #   development_status key touched. Prior ledger entries left BYTE-UNCHANGED.

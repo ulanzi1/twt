@@ -76,6 +76,52 @@ Every prior ratification session cited in `adr-index.md` produced a consent shee
 obligation** rather than back-filling it. ⛔ §3 below is that record — it does **not** re-open ADR-0039,
 and it is **not** presented as though the sheet existed at the time.
 
+### 5. ⚠ **THE PANEL ASKED: "are these ADRs up to date?"** — answered by verification, 2026-08-19
+
+⛔ **The honest answer was NO.** ADR-0037 is dated **2026-08-06**, ADR-0038 **2026-08-12**. Three kinds of
+staleness were found; **only the third touches a decision**, and all three are now addressed.
+
+**(a) Line-citation drift — pervasive, pre-existing, and partly caused by this very session.**
+
+| Citation | Claimed | Actually at | Cause |
+|---|---|---|---|
+| ADR-0038 → architecture `§2.6` | L1476-1496 | **1491** | pre-existing |
+| ADR-0038 → architecture `§3.13` | L2406-2421 | **2589** | pre-existing, **+148 by G5 today** |
+| ADR-0038 → epics freeze row 9 | L510-527 | **547** | pre-existing, **+14 by G6 today** |
+| ADR-0037 index → architecture `§1.7` | L943-991 | **943** | ✅ correct |
+| ADR-0037 index → architecture `§2.7` | L1507-1531 | **1527** | pre-existing, **+15 by G5 today** |
+| ADR-0037 index → epics Story 10.12 | L3593-3605 | **3868** | pre-existing, ~260 off |
+
+⛔ **No decision changed** — every target resolved correctly **by section**; only coordinates were stale.
+⚠ **This session caused part of it.** The G5 and G6 amendments moved three of these and did not check the
+ADRs citing into them — recorded rather than quietly corrected.
+⇒ **FIXED by citing SECTION ANCHORS instead of line ranges**, in ADR-0038's References and in both index
+rows. ⭐ Line numbers into a living document drifted **three times in one day**; re-patching the numbers
+would have rebuilt the same fragility.
+
+**(b) ⭐ A bounded claim whose bound has been passed — ADR-0038, and the bound did its job.**
+ADR-0038 states *"There is no `state` column and no `block` column anywhere in the schema — verified
+across all applied migrations at `0100`."* Migration **`0102_ground-inspection-block.sql`** adds `block
+text` to **`claim_ground_inspections`**; migrations now run to **`0109`**.
+⛔ The sentence was **never false** — it was **correctly bounded**, and its bound has simply been passed.
+⭐ **The revisit trigger has NOT fired, and that is the trigger working.** It is scoped to
+**`member_postings`** gaining `state`/`block` **with a recorded parent relationship**. `0102`'s block is
+the inspection **SITE's** jurisdiction (Story 6.17), ⛔ **not a member attribute** — the exact distinction
+Decision `2026-08-19-132` clause 2 later turned on. ⇒ **The rejection stands unchanged.**
+⇒ **FIXED by a verification-refresh note**, re-verified at `0109`. ⛔ The original text is unedited.
+
+**(c) Substantive supersession** — items 1 and 2 of this sheet. Both already addressed.
+
+⛔ **THE SYSTEMIC FINDING, recorded and NOT unilaterally fixed.** **31 of 39** Section A index rows carry
+line-range citations, and spot-checks show them stale **across the board — including rows describing
+`ratified` ADRs** (ADR-0008's row cites the same wrong `§2.6 L1476-1496` / `§3.13 L2406-2421`).
+⭐ This is the **AI-10-2 drift class** this session just discharged for `epics.md` — and **nothing performs
+that job for ADRs**. ⛔ Only the two rows on this sheet were corrected; **29 others were left untouched**,
+because several describe ratified decisions and a sweep is the Panel's call, not the author's.
+⚠ **A trustee may treat this as its own agenda item.** It does **not** block items 1 or 2.
+
+---
+
 ### 4. ⭐ An inversion currently stands in the record, and ratifying ADR-0038 REMOVES it
 
 **ADR-0039 is `ratified` and explicitly extends ADR-0038, which is `drafted`** — a ratified ADR resting

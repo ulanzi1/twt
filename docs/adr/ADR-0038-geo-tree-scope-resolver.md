@@ -125,6 +125,19 @@ Load-bearing details:
   would still be a *derived* geography competing with a *declared* one, which is its own governance
   question.
 
+  > ⭐ **VERIFICATION REFRESHED 2026-08-19, pre-presentation — re-verified at migration `0109`, and one
+  > sentence above is now OUT OF DATE while the reasoning is UNAFFECTED.**
+  > ⛔ *"There is no `state` column and no `block` column anywhere in the schema"* **no longer holds
+  > schema-wide**: migration **`0102_ground-inspection-block.sql`** adds `block text` to
+  > **`claim_ground_inspections`**. ⚠ The claim was **correctly bounded** — *"verified across all applied
+  > migrations at `0100`"* — so it was never false; its **bound has simply been passed**.
+  > ⭐ **The revisit trigger has NOT fired, and it did its job.** The trigger is scoped to
+  > **`member_postings`** gaining `state`/`block` **with a recorded parent relationship**. `0102`'s block
+  > is the **inspection SITE's** jurisdiction (Story 6.17), ⛔ **not a member attribute** — the exact
+  > distinction Decision `2026-08-19-132` clause 2 later turned on. `member_postings` still carries
+  > `district text NOT NULL` and nothing else geographic.
+  > ⇒ ⛔ **The rejection stands unchanged: a projection remains IMPOSSIBLE, not merely undesirable.**
+
 - **A code-resident constant (a seeded geography) — REJECTED.** There is no universally-correct Indian
   state→district→block tree; administrative boundaries are revised, and each Pariwar's operational
   geography need not match the official one. Per constraint (4) the failure modes are asymmetric: a wrong
@@ -183,9 +196,18 @@ Load-bearing details:
 
 ## References
 
-- [Source: architecture.md §2.6 L1476-1496] — the RBAC containment property this ADR controls
-- [Source: architecture.md §3.13 L2406-2421] — cross-Pariwar grant composition
-- [Source: epics.md L510-527] — Architectural Freeze Boundaries, **row 9** (the seam, GEO_RANK, CEILING_RANK)
+- [Source: architecture.md **§2.6** — RBAC enforcement, permission keys + scope dimensions] — the RBAC containment property this ADR controls
+- [Source: architecture.md **§3.13** — Per-Pariwar configurability and extensibility] — cross-Pariwar grant composition
+- [Source: epics.md — **Architectural Freeze Boundaries, row 9**] — the seam, `GEO_RANK`, `CEILING_RANK`
+
+> ⚠ **CITATION FORM CHANGED 2026-08-19, pre-presentation — these three cited LINE RANGES and all three
+> were WRONG.** Verified live: `§2.6` was cited at L1476-1496 and sits at **1491**; `§3.13` at L2406-2421
+> and sits at **2589**; freeze row 9 at L510-527 and sits at **547**. ⛔ **No decision changes** — every
+> target resolved correctly by section, and only the coordinates were stale.
+> ⚠ **Part of that drift was introduced on 2026-08-19 by this project's own G5/G6 amendments** (+148 and
+> +14 lines respectively), which did not check the ADRs that cited into them.
+> ⇒ ⭐ **Citations are now by SECTION ANCHOR, which survives edits.** Line numbers into a living document
+> have drifted three times in one day; ⛔ re-patching the numbers would rebuild the same fragility.
 - [Source: epics.md, Story 1.18] — owning Story
 - [Source: `docs/adr/ADR-0008-rbac-permission-model.md` Decision 4 + Decision 8 + §Consequences "Deferred seams"] — the deferred seam this ADR discharges. ⛔ **ADR-0008 is `ratified` and is NOT edited, re-read, or superseded by this ADR** ([[feedback_supersede_never_reinterpret]]); ADR-0038 **discharges** its Decision-4 seam and cross-references it.
 - [Source: `.decision-log.md`, Decision 2026-08-12-102] — the authoring entry

@@ -1,4 +1,72 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-19 (bmad-correct-course: the AI-10-4 Epic-11a update session. Proposal at
+#   _bmad-output/planning-artifacts/sprint-change-proposal-2026-08-19.md, APPROVED by BigDev 2026-08-19.
+#   ⛔ NO story status flipped, NO story minted, NO code changed, NO development_status key touched --
+#   this comment IS the only change to this file. AI-10-2 ran gated inside the session, as ruled.
+#   ⭐ THE REFRAME, AND IT IS THE WHOLE SESSION. SD-1 was framed as four unbuildable matrix rows with
+#   three dispositions (build the attribute / narrow the matrix / defer the tier). ALL THREE PRESUPPOSE A
+#   FIXED SCHEMA. BigDev ruled the directory must support PARIWAR-SPECIFIC ATTRIBUTE SELECTION -- Block
+#   enabled for Shikshak, disabled for Rail; Rail uses Zone/Division instead; future Pariwars select
+#   attributes that do not exist today. A fixed six-column directory and a global removal of Block are
+#   BOTH ruled incorrect. AI-10-4's original framing is therefore OBSOLETE, not answered.
+#   SEVEN RULINGS (R1-R7 + clause R3(a)), all confirmed by BigDev in session:
+#     R1  three-category taxonomy -- platform-common | Pariwar-specific | requires-new-governed-substrate.
+#     R2  directory attributes are DISPLAY-ONLY BY DEFAULT, never authority-bearing by Pariwar-Admin
+#         action, enforced BY SIGNATURE (the routed_to_role advisory precedent).
+#     R3  an organizational hierarchy MAY bear RBAC authority. ⭐ 6.17 is the live proof: `block` is a
+#         real scope dimension TODAY while members have no block attribute at all.
+#     R3(a) Block is governed under District FOR EVERY PARIWAR -- relation universal, adoption
+#         Pariwar-selected. (i) enablement FAILS CLOSED absent the required Block nodes; ⛔ never a
+#         free-text or unvalidated fallback. (ii) publishing a Block hierarchy may support Block-scoped
+#         RBAC INDEPENDENTLY of directory adoption, and enabling the attribute does NOT extend RBAC to
+#         members -- R2 and R4 continue to govern member-authority use.
+#     R4  promotion to authority-bearing is a GOVERNED ACT (trustee ruling, tree-validated only).
+#         ⛔ Defining or populating an attribute is never a promotion; a Pariwar Admin can never promote.
+#     R5  the RBAC scope model must support Pariwar-specific hierarchical dimensions WITHOUT imposing
+#         meaningless comparisons between unrelated hierarchies (Shikshak State>District>Block; Rail
+#         Zone>Division; future Region>Area>Branch). Cross-hierarchy compare must be STRUCTURALLY
+#         IMPOSSIBLE, not merely wrong.
+#     R6  that amendment carries in its OWN ADR + routing note; ⛔ it does not ride in on a directory ruling.
+#     R7  (GOVERNING) the attribute set is EXTENSIBLE AND PARIWAR-SELECTED, not a fixed global list.
+#         Where R1-R6 could be read to imply a fixed set, R7 CONTROLS.
+#   ⭐ R3(a) MOVED SHIKSHAK OFF THE CRITICAL PATH: district->block is one of exactly three edge kinds the
+#   shipped resolver supports (geo_tree_versions.ts:56-57) and validateGeoTreeDocument already enforces
+#   parent-strictly-broader (document.ts:148). Shikshak's Block validates against the in-force geo tree on
+#   SHIPPED substrate and does NOT wait on the G4 ADR. Only Rail's Zone/Division needs new dimensions.
+#   FINDINGS THE RETRO DID NOT HAVE -- verified live at adf3c52, story prose not treated as evidence:
+#   (a) architecture.md:1530 ALREADY RATIFIED "Tier 3 -- Plaintext. School, district, designation", and
+#   prd.md:90 puts all three in Sushil's signup flow. They were designed, then dropped;
+#   apps/api/src/modules/signup/ has neither. (b) NO STORY EVER OWNED THEM -- epics.md:4477 names Epic 3
+#   as the supplier and Epic 3's thirteen stories contain no such story. (c) ⭐ THE RETRO UNDER-COUNTED
+#   THE NAME ROWS BY ONE: architecture.md:1526 puts member name at Tier-1 ciphertext + Tier-2 blind index,
+#   so the AUTHENTICATED full-name row is a Tier-1 decrypt too -- not just the public tier. (d) the drift
+#   is already INSIDE SHIPPED WORK -- epics.md:3864 (Story 10.12) cites "the existing `designation` field",
+#   which does not exist. (e) FR-74/FR-78 prose is consistently MORE PERMISSIVE than the story ACs; two
+#   independent authors years apart both narrowed to district and NEITHER RECORDED WHY.
+#   ⛔ DECISION 2026-08-13-103 D5 IS NOT SUPERSEDED. D5 rules Block NOT DERIVABLE; Shikshak COLLECTS it.
+#   resolveMemberGeoNode().block stays permanently {available:false,'no-member-attribute'}; the closed
+#   five-value union is untouched; no mechanized contract moves.
+#   SEVEN GOVERNANCE COMMITS OWED, NONE MADE: G1 Decision 2026-08-19-132 (R1-R7; number confirmed --
+#   .decision-log.md:37 holds 2026-08-18-131) - G2 routing note, scope-dimension model - G3 routing note,
+#   member-name PII posture (BOTH tiers) - G4 ADR, Pariwar-specific hierarchical scope dimensions -
+#   G4a Trustee/architecture routing of hierarchy-version drift - G5 architecture.md - G6 epics.md C1-C9.
+#   ⛔ EPIC 11a IS GATED: Story 11a.1 does not start until G1 + G5 + G6 land. Zone/Division additionally
+#   waits on G4 AND G4a. Rows 1-4 (District, Block, School, Designation) need nothing beyond G1/G5/G6.
+#   ⛔ §5.4 IS A PROHIBITION, ruled by BigDev: the implementation MUST NOT invent the orphan/version-drift
+#   policy -- no silent nulling, no auto-migration to a "nearest" node, no blocking of unrelated member
+#   writes, no "for now" fallback pending the ruling. Stop and route instead.
+#   ⚠ APPROVAL IS NOT RATIFICATION. BigDev approved the proposal; R1-R7 bind only once G1 is recorded and
+#   ratified. Nothing from this session is authority yet.
+#   OPEN, carried: O1 (block count vs CUSTOM_FIELD_MAX_ENUM_VALUES=64 -- moot for Block under R3(a), live
+#   for School/Designation) - O2 (version drift; now ROUTED as G4a) - O4 (is a nameless directory worth
+#   building at all -- belongs to G3) - O5 (the 'no-member-attribute' reason string becomes imprecise once
+#   Block is collected; precise meaning is not-derivable-from-tree; a D6 change needing its own ruling) -
+#   O6 (does the registry extension belong inside Epic 11a at all) - O7 (geo-tree/resolver.ts's header
+#   cites rbac/scope.ts:236; the line is now 288 -- same drift class, in the file G4 amends) -
+#   ⭐ O8 (R3(a) IS UNENFORCED: state->block is a legal edge today and validateGeoTreeDocument would accept
+#   a block parented to a state, which R3(a) forbids -- an app-layer rule with no mirror; must be CLOSED,
+#   not assumed).
+#   CLOSED this session: O3 -- Shikshak's Block is a governed parent-child under District, ruled R3(a).)
 # last_updated: 2026-08-18 (epic-10-retrospective: optional -> DONE via bmad-retrospective. Epic 10
 #   (Admin Operations Console) retrospected; document saved to
 #   _bmad-output/implementation-artifacts/epic-10-retro-2026-08-18.md. NO story status flipped, NO code

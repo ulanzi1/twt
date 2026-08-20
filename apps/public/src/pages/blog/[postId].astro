@@ -50,6 +50,14 @@ if (!post) {
 }
 
 const model = buildBlogPostModel(post);
+// ── Cache headers — ⚠ ADDED BY STORY 11a.2 (AC5), and they should always have been
+// here. This page shipped with NO Cache-Control at all for a whole epic, and
+// ⛔ nothing checked: absence read as "the default is fine". It is not — with no
+// header, every proxy and CDN decides independently. Matching the `public`-tier
+// siblings (/terms, /niyamavali). The matrix declares `cache_policy: edge_cacheable`
+// and the gate now FAILS if these two disagree.
+Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
+Astro.response.headers.set('Vary', 'Accept-Language');
 ---
 
 <PublicShell title={model.title} trustName={trustName} branding={branding} locale={locale}>

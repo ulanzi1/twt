@@ -49,7 +49,7 @@ asserts only what is provable from committed source, and the matrix carries a
 ceiling, and a pointer to where the real declaration lives. ⛔ Do not widen any leg
 here to reach a tenant database.
 
-**Three more things it does not prove**, each worth naming because each is a real
+**Five more things it does not prove**, each worth naming because each is a real
 gap and not a technicality:
 
 1. **A field rendered from a variable that never enters the render model is not
@@ -70,6 +70,26 @@ gap and not a technicality:
    enumerate their keys. What protects the contents is the renderer's opaqueness
    (freeze row 14 — display rendering, never rule interpretation) plus the
    naked-PII leg.
+4. **⛔ IT PROVES NOTHING ABOUT CLOUDFLARE, OR ANY EDGE.** (Story 11a.2.) The
+   cache-policy leg reconciles a surface's declared `cache_policy` against the
+   `Cache-Control` its page source actually sets — that is, **what the origin
+   emits**. The edge is not in this repo, and edge/WAF selection is contingent on
+   DPDPA legal review (architecture §5.8a). A green cache leg means the origin's
+   instructions are correct and declared; it does **not** mean any CDN honoured
+   them, and ⛔ it must never be cited as if it did.
+5. **The pagination leg proves BINDING, not BEHAVIOUR.** (Story 11a.2.) It asserts
+   that a surface declaring `paginated: true` has a page which calls
+   `parsePageParams()`. ⛔ It does not prove the page honours the rejection — a page
+   could call the parser and ignore the result. That residual is covered by the
+   page's own tests, and it is named here because a leg whose limit goes unstated
+   is a leg that gets over-cited.
+
+   ⚠ **And the reason this leg exists at all is worth stating plainly: FR-91 was
+   NOT enforced on `apps/public` before Story 11a.2.** The Story 1.14
+   forced-pagination guard has two halves and both are scoped to `apps/api` — the
+   structural half *"walk[s] the committed OpenAPI surface"*, which Astro routes do
+   not emit. ⛔ **Do not cite Story 1.14 as coverage for this surface.** It is not.
+   Verified at `66ae30d`, not inherited.
 
 ## The layers — where the runtime prohibition actually lives
 
@@ -178,6 +198,8 @@ misleading README this replaces.
 |---|---|---|
 | Matrix structure, the Tier-1 exception bound, escalation count ⇄ entries, orphan + direction checks | `matrix.ts` (parse time) | Pure and structural — decidable from the file alone, so it belongs at admission. |
 | Route coverage (both directions), indexing reconciliation, escalation **attestation** | `scripts/check-pii-scrape.ts` + `gate.ts` | Provable from committed source. Attestation is the one leg that must LEAVE the file — a `decision:` string is well-formed whether or not the ruling exists. |
+| **Cache-policy reconciliation** (Story 11a.2, ruling D3(a)) | `scripts/check-pii-scrape.ts` + `gate.ts` | Provable from committed source, reading the **same** `.astro` files the indexing leg already reads. ⚠ Opposite scope though: `noindex` is a TEMPLATE prop, `Cache-Control` is set in the FRONTMATTER — so this leg must not strip it, and matches the CALL rather than the words so prose cannot fool it. **Fail-closed on absence**: a rendering surface that sets no header FAILS, because absence reading as "the default is fine" is exactly how `/blog` shipped uncached for a whole epic. |
+| **Pagination binding, FR-91** (Story 11a.2) | `scripts/check-pii-scrape.ts` + `gate.ts` | Same source scan. It is a leg and not a convention because FR-91 is genuinely unenforced here otherwise — see gap 5 above. |
 | **Tier leak, live render** | `apps/public/tests/integration/public-pages/scrape-test.spec.ts` | The architecture-committed D13-1.2 slot. It already holds real render HTML, already runs on every PR via `pnpm turbo run test`, and needs no new CI wiring. |
 | **Naked PII, live render** | same spec | Same reason; this leg was already active before Story 11a.1 and was left untouched. |
 
@@ -223,7 +245,7 @@ check would actively certify an invariant nobody is enforcing.
 ## Running locally
 
 ```sh
-pnpm pii:check                     # the gate: matrix + route coverage + indexing + attestation
+pnpm pii:check                     # the gate: matrix + route coverage + indexing + cache + pagination + attestation
 pnpm --filter @twt/contracts test  # the engine, schema, gate legs + their negative controls
 pnpm --filter @twt/public test     # the LIVE-RENDER tier-leak + naked-PII legs (ruling D2)
 ```

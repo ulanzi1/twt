@@ -6,27 +6,77 @@ architecture commits (architecture §"Cross-surface rendering policy"): it names
 fragments are **public-shell-rendered** vs **authenticated-fragment**, and records the
 cache-safety guarantee every public route must hold.
 
-## Fragment registry — **EMPTY at Story 2.5**
+## Fragment registry — **STILL EMPTY at Story 11a.2** ⛔ zero live fragments
 
 | Fragment | Kind | Owner | Status |
 | --- | --- | --- | --- |
-| _(none — authenticated fragments)_ | authenticated-fragment | `apps/api/src/modules/public-pages/` | **empty until Epic 11b** |
+| _(none)_ | authenticated-fragment | `apps/api/src/modules/public-pages/` (⛔ does not exist) | **empty — Epic 11b (FR-77) is the v1 entry** |
 
-Story 2.5 ships **zero authenticated fragments**. The fragment registry above is
-**initialised empty**; Epic 11a (Member Directory) and Epic 11b (per-claim surfaces,
-In Memoriam) populate it. Because there are zero authenticated fragments, **no auth
-boundary is introduced at the public page layer** — the auth boundary stays at the API
-(`apps/api/src/modules/public-pages/`, which does not exist yet).
+Story 2.5 shipped **zero** authenticated fragments. **Story 11a.2 also ships zero live
+fragments** — it establishes the *pattern and its boundary*, ⛔ not a working
+authenticated render. Saying so plainly is the point: a fragment whose authenticated
+half is unreachable and untested must not be shipped and then called "established".
 
-## Public-shell-rendered surfaces (Story 2.5; `/terms` added Story 2.6)
+`<AuthenticatedFragment>` (`src/components/AuthenticatedFragment.astro`) is the slot
+primitive. Its SSR output is the **public-fallback state and nothing else**: it reads no
+session, no cookie, no auth header, and emits no auth-derived branch. It takes no
+`isAuthenticated` prop either — a prop would only move the read to the caller and put
+auth-derived branching back into cache-safe SSR output.
 
-| Route | Content | Tier | Indexing |
-| --- | --- | --- | --- |
-| `/niyamavali` | Effective Niyamavali clauses + version/diff selectors | `public` | `index,follow` |
-| `/terms` | Effective T&C version (sanitized `body_html_rendered`) + provisional banner when pending | `public` | `index,follow` |
-| `/` | Server redirect → `/niyamavali` | — | — |
-| `/404` | Not-found state (DB-independent) | `public` | `noindex` |
-| `/500` | Error state (DB-independent) | `public` | `noindex` |
+The **v1 registry entry the architecture already names** is **FR-77** (Epic 11b —
+nominee bank details + IFSC + a UPI CTA, shown to logged-in members during a live pool).
+
+### ⭐ The epic AC and the architecture DISAGREE here, and the AC is unbuildable
+
+`epics.md` §Story 11a.2 asks for fragments that *"render **server-side** when the viewer
+is authenticated"*. `architecture.md:504-517` commits the opposite: fragments *"hydrate
+client-side"*, the SSR output carries *"no PII, no member-state, and no auth-derived
+branching"*, and *"the auth boundary lives at the API … **not at the page or the
+edge**"*. The architecture commits the property; the epic does not get to relax it by
+prose.
+
+⛔ **And the AC's version cannot be built today.** Members are **token-bearer**:
+`apps/api/src/modules/auth/shared/member-session-guard.ts` verifies an access-token JWT
+from the **Authorization header** (`exp ≤ 15 min`). A browser navigating to
+`twt.org/members` sends **cookies**, never an Authorization header. There is no
+`apps/member-web/`, and `apps/` holds `admin · api · jobs · mobile · public` — so **no
+browser surface holds a member token**, and there is **no `authenticated_member` viewer
+on this app by any mechanism**. Minting one means a browser member session: a new auth
+surface at the page layer, which `architecture.md:515-517` forbids, and which is ⛔ not
+this story. Ruled as **D2(a)**, Decision `2026-08-20-141`.
+
+### The hydration mechanism is DEFERRED — ⛔ not guessed
+
+| Option | What it is | Why not now |
+| --- | --- | --- |
+| (a) Client island → API | A client island fetches `apps/api/src/modules/public-pages/` with a bearer token | Needs a token-holding browser. Would also create an **empty API module claiming a boundary with no consumer**. |
+| (b) **Astro 6 server island** (`server:defer`) | The island is fetched in a **separate GET** with **encrypted props**, so the shell stays edge-cacheable while the fragment renders **server-side** | ⭐ **The leading candidate** — the one reading under which the epic AC and the architecture agree. Still needs a viewer the browser cannot identify, and moves the auth read to the page layer. |
+
+**Re-trigger:** the first real fragment (Epic 11b, FR-77) **or** an `apps/member-web/`
+split trigger firing. Recorded in `deferred-work.md` with this trigger.
+
+⛔ **`apps/api/src/modules/public-pages/` is deliberately NOT created.** A module with no
+route is a claim that a boundary exists. It lands with its first consumer.
+
+## Public-shell-rendered surfaces (2.5; `/terms` 2.6; `/blog` 10.5; `/members` 11a.2)
+
+| Route | Content | Tier | Indexing | Cache policy |
+| --- | --- | --- | --- | --- |
+| `/niyamavali` | Effective Niyamavali clauses + version/diff selectors | `public` | `index,follow` | `edge_cacheable` |
+| `/terms` | Effective T&C version (sanitized `body_html_rendered`) + provisional banner when pending | `public` | `index,follow` | `edge_cacheable` |
+| `/blog` | Published `public`-audience post cards | `public` | `index,follow` | `edge_cacheable` ⚠ header added by 11a.2 |
+| `/blog/[postId]` | One published `public`-audience post | `public` | `index,follow` | `edge_cacheable` ⚠ header added by 11a.2 |
+| `/members` | ⚠ Shell + FR-91 pagination controls + an explicit **not-yet-published** empty state. ⛔ **NO member data is read or rendered** — Story 11a.3 fills it behind its own anti-enumeration safeguards | `public` | `noindex` (FR-75) | `edge_cacheable` ⭐ 11a.3 must re-decide |
+| `/` | Server redirect → `/niyamavali` | — | — | `redirect` |
+| `/404` | Not-found state (DB-independent) | `public` | `noindex` | `edge_cacheable` |
+| `/500` | Error state (DB-independent) | `public` | `noindex` | `private_no_store` |
+
+⚠ **The `cache_policy` column is not documentation — it is DECLARED in
+`public-vs-private-matrix.yaml` and RECONCILED against the `Cache-Control` each page
+actually sets** (Story 11a.2 gate leg, ruling D3(a)/D4). A conflict fails CI, and a
+rendering surface that sets **no** header fails too. ⛔ The leg proves what the **origin
+emits** — nothing about Cloudflare or any edge, which is not in this repo and whose
+selection is contingent on DPDPA legal review (architecture §5.8a).
 
 ## Cache-safe guarantee (architecture-committed, structural)
 
@@ -46,9 +96,16 @@ is **structural, not documented discipline**:
 
 ### Cache TTL
 
-`/niyamavali` sets `Cache-Control: public, max-age=60, s-maxage=300` and
-`Vary: Accept-Language` (the default render negotiates language; the `?lang=` toggle
-produces distinct cache keys). `/404` → `public, max-age=60`; `/500` → `no-store`.
+`/niyamavali`, `/terms`, `/blog`, `/blog/[postId]` and `/members` set
+`Cache-Control: public, max-age=60, s-maxage=300` and `Vary: Accept-Language` (the
+default render negotiates language; the `?lang=` toggle produces distinct cache keys).
+`/404` → `public, max-age=60`; `/500` → `no-store`; `/` redirects and sets none.
+
+⚠ **`/blog` and `/blog/[postId]` set NO `Cache-Control` at all until Story 11a.2**, and
+⛔ nothing checked — they shipped uncached-and-unnoticed for a whole epic because
+**absence read as "the default is fine"**. It is not: with no header, every proxy and
+CDN decides independently. The reconciliation leg is **fail-closed** precisely so this
+cannot recur.
 
 ## Data path (Story 2.5)
 

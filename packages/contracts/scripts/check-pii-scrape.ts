@@ -17,7 +17,16 @@
 //   (3) escalation attestation — every escalation's cited decision EXISTS in
 //       `.decision-log.md`, and the ledger count agrees with the entries;
 //   (4) matrix structure — via `parsePublicVsPrivateMatrix`, which throws LOUDLY
-//       (a malformed matrix must never degrade to "no entries").
+//       (a malformed matrix must never degrade to "no entries");
+//   (5) cache-policy reconciliation (Story 11a.2, D3(a)) — each surface's declared
+//       `cache_policy` matches the `Cache-Control` its page actually sets, and a
+//       rendering surface that sets NONE fails. ⛔ It proves what the ORIGIN EMITS
+//       and nothing about Cloudflare or any edge: that is not in this repo and its
+//       selection is contingent on DPDPA legal review (architecture §5.8a);
+//   (6) pagination binding (Story 11a.2) — a surface declaring `paginated: true`
+//       has a page that actually calls `parsePageParams()`. ⚠ FR-91 is NOT enforced
+//       on apps/public by anything else: the Story 1.14 guard walks the committed
+//       OpenAPI surface, which Astro routes do not emit. ⛔ Do not cite 1.14 here.
 //
 // ⛔ IT DOES NOT CHECK TIER LEAKS. That check needs a RENDER, and this script has
 // none. Per ruling D2 the live-render tier-leak leg lives in
@@ -41,8 +50,10 @@ import { fileURLToPath } from 'node:url';
 
 import {
   type GateFinding,
+  checkCachePolicyReconciliation,
   checkEscalationAttestation,
   checkIndexingReconciliation,
+  checkPaginationBinding,
   checkRouteCoverage,
   pageRouteFromPath,
   parsePublicVsPrivateMatrix,
@@ -134,7 +145,41 @@ function main(): void {
       : `  ✗ ${indexingFindings.length} indexing conflict(s)`,
   );
 
-  // ── Leg 3: escalation attestation (AC8) ───────────────────────────────────
+  // ── Leg 3: cache-policy reconciliation (Story 11a.2, AC5) ─────────────────
+  const cacheFindings = checkCachePolicyReconciliation(matrix, pages);
+  findings.push(...cacheFindings);
+  console.log('\n▸ Cache-policy reconciliation (declared policy ⇄ the Cache-Control the page SETS)');
+  for (const s of matrix.surfaces) {
+    if (pages.has(s.route)) console.log(`  · ${s.route.padEnd(16)} ${s.cache_policy}`);
+  }
+  console.log(
+    cacheFindings.length === 0
+      ? '  ✓ every declared cache policy matches the header the origin emits'
+      : `  ✗ ${cacheFindings.length} cache-policy finding(s)`,
+  );
+  console.log(
+    '  ⛔ proves what the ORIGIN emits. NOTHING about Cloudflare or any edge — not in this repo.',
+  );
+
+  // ── Leg 4: pagination binding, FR-91 (Story 11a.2, AC2) ───────────────────
+  const paginationFindings = checkPaginationBinding(matrix, pages);
+  findings.push(...paginationFindings);
+  const paginatedSurfaces = matrix.surfaces.filter((s) => s.paginated);
+  console.log(
+    `\n▸ Pagination binding (FR-91): ${paginatedSurfaces.length} surface(s) declared paginated`,
+  );
+  for (const s of paginatedSurfaces) console.log(`  · ${s.route.padEnd(16)} must call parsePageParams()`);
+  console.log(
+    paginationFindings.length === 0
+      ? '  ✓ every paginated surface binds the FR-91 guard'
+      : `  ✗ ${paginationFindings.length} unbound pagination surface(s)`,
+  );
+  console.log(
+    '  ⚠ Story 1.14 does NOT cover apps/public — its guard walks openapi/v1.yaml, which',
+  );
+  console.log('    Astro routes do not emit. ⛔ Do not cite it as coverage for this surface.');
+
+  // ── Leg 5: escalation attestation (AC8) ───────────────────────────────────
   const decisionLog = fs.existsSync(decisionLogPath)
     ? fs.readFileSync(decisionLogPath, 'utf8')
     : '';

@@ -26,6 +26,7 @@ import { eq } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import type { PariwarId, UserId } from '../ids/index.js';
+import { hasPermission, type EffectiveGrant } from '../rbac/index.js';
 import {
   pariwarPublicNamePresentation,
   type PariwarPublicNamePresentationRow,
@@ -94,6 +95,14 @@ export interface SetPublicNamePresentationInput {
   rationale: string;
   /** The pre-generated §1.5 audit anchor. ⛔ The audit LINE is the caller's obligation. */
   auditId: string | null;
+  /**
+   * The acting user's effective grants — REQUIRED (a non-empty grant carrying the key) whenever
+   * `changedByActor` is non-null. Checked against `PUBLIC_NAME_PRESENTATION_PERMISSION_KEY` at
+   * `dimension: 'pariwar'` before the write proceeds (code review 2026-08-20: the permission key
+   * was in the catalog with the correct `pariwar_admin` exclusion, but nothing checked it). A
+   * system/seed write (`changedByActor: null`) has no actor to authorize — omit or pass `[]`.
+   */
+  actorGrants?: readonly EffectiveGrant[];
 }
 
 /**
@@ -121,6 +130,28 @@ export async function setPublicNamePresentationMode(
     // Attribution without a name is attribution nobody can read. The display name is controlled
     // staff data snapshotted at action time, never email-derived.
     throw new UngovernedPresentationChangeError("the actor's display name");
+  }
+  if (input.changedByActor === null && input.changedByDisplay !== null) {
+    // A system/seed write attributed to no actor must not also carry a human display name — that
+    // combination reads as an attributed change from someone who did not make it (code review
+    // 2026-08-20).
+    throw new UngovernedPresentationChangeError(
+      'a null changedByDisplay for a null changedByActor (a system/seed write must not carry a human display name)',
+    );
+  }
+  if (
+    input.changedByActor !== null &&
+    !hasPermission(input.actorGrants ?? [], PUBLIC_NAME_PRESENTATION_PERMISSION_KEY, {
+      dimension: 'pariwar',
+      value: input.pariwarId,
+      pariwarId: input.pariwarId,
+    })
+  ) {
+    // `2026-08-19-136` cl.3: super_admin ONLY — ⛔ pariwar_admin does not hold this key. A null
+    // actor (system/seed write) skips this check; there is no actor to authorize.
+    throw new UngovernedPresentationChangeError(
+      `the ${PUBLIC_NAME_PRESENTATION_PERMISSION_KEY} permission (the actor's grants do not carry it)`,
+    );
   }
 
   const now = new Date();

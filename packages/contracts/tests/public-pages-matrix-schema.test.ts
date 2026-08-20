@@ -76,6 +76,25 @@ describe('surface `route` + `renders` (AC1, D5)', () => {
       ),
     ).toThrow(/route/);
   });
+
+  it('NEGATIVE CONTROL — REJECTS two surfaces declaring the SAME route (code review 2026-08-20)', () => {
+    // Without this, `gate.ts:checkRouteCoverage`'s `Map` would silently collapse the collision to
+    // "last one wins", defeating the AC1 "fail-closed, both directions" guarantee for this case.
+    expect(() =>
+      parsePublicVsPrivateMatrix(
+        doc(`surfaces:
+  - id: terms
+    route: /terms
+    search_indexing_policy: index
+    fields: []
+  - id: terms-duplicate
+    route: /terms
+    search_indexing_policy: index
+    fields: []
+`),
+      ),
+    ).toThrow(/duplicate route/);
+  });
 });
 
 describe('the ruled Tier-1 public exception (AC4)', () => {
@@ -255,6 +274,26 @@ escalations: "not a list"
 `),
       ),
     ).toThrow();
+  });
+
+  it('NEGATIVE CONTROL — REJECTS an entry whose `to` disagrees with the field\'s CURRENT declared tier (code review 2026-08-20)', () => {
+    // MINIMAL_SURFACE declares `tc_body_html` at tier `public`. This entry is a well-formed
+    // escalation shape (from a MORE sensitive tier to a LESS sensitive one) but claims the field
+    // landed at `authenticated_member` — which disagrees with what the matrix actually declares.
+    expect(() =>
+      parsePublicVsPrivateMatrix(
+        ledger(
+          1,
+          `  - surface: terms
+    field: tc_body_html
+    from: operator_restricted
+    to: authenticated_member
+    decision: '2026-08-20-140'
+    rationale: The ledger claims a tier the field does not actually carry.
+`,
+        ),
+      ),
+    ).toThrow(/currently declared at tier "public"/);
   });
 });
 

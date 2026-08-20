@@ -198,6 +198,16 @@ describe('indexing reconciliation (AC7)', () => {
     const md = { ...TERMS, id: 'member-directory', route: '/members', renders: false, search_indexing_policy: 'noindex' as const };
     expect(checkIndexingReconciliation(matrix([md]), new Map())).toEqual([]);
   });
+
+  it('NEGATIVE CONTROL — still reconciles a STALE renders:false surface whose page now exists (code review 2026-08-20)', () => {
+    // Before this fix, `!surface.renders` short-circuited the whole leg, so a real indexing
+    // conflict on a newly-shipped-but-not-yet-flipped surface went unchecked here — only the
+    // separate route-coverage STALE finding fired, and that says nothing about indexing.
+    const md = { ...TERMS, id: 'member-directory', route: '/members', renders: false, search_indexing_policy: 'noindex' as const };
+    const findings = checkIndexingReconciliation(matrix([md]), pages('/members', '---\n---\n<PublicShell />'));
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.message).toMatch(/INDEXING CONFLICT.*does NOT pass the noindex prop/s);
+  });
 });
 
 describe('escalation attestation (AC8)', () => {

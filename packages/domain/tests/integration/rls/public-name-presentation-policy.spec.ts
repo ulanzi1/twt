@@ -31,7 +31,12 @@ function pgCode(err: unknown): string | undefined {
   return (err as { code?: string }).code ?? (err as { cause?: { code?: string } }).cause?.code;
 }
 
-/** A well-formed governed write (the write path refuses anything less). */
+/**
+ * A well-formed governed write (the write path refuses anything less) — including, per the
+ * 2026-08-20 code review, an actual `super_admin` grant carrying the permission key. `scopeDimension:
+ * 'global'` means the grant's own `pariwarId` is irrelevant to the check (super_admin auto-derives
+ * and applies cross-Pariwar), so it is set to the target Pariwar here only for readability.
+ */
 function governed(pariwarId: string, mode: 'full_name' | 'shielded_name') {
   return {
     pariwarId: pariwarId as never,
@@ -40,6 +45,9 @@ function governed(pariwarId: string, mode: 'full_name' | 'shielded_name') {
     changedByDisplay: 'Kalpana Bharti',
     rationale: 'Trustee Panel direction recorded under 2026-08-19-136.',
     auditId: randomUUID(),
+    actorGrants: [
+      { pariwarId, role: 'super_admin', scopeDimension: 'global' as const, scopeValue: null },
+    ],
   };
 }
 
@@ -172,5 +180,71 @@ describe.skipIf(!hasDatabase)('pariwar_public_name_presentation — RLS + govern
         changedByDisplay: null,
       }),
     ).rejects.toBeInstanceOf(UngovernedPresentationChangeError);
+  });
+
+  it('NEGATIVE CONTROL — ⛔ refuses an attributed change with NO actor grants (code review 2026-08-20)', async () => {
+    // Planted against the REAL write path: the permission key exists in the catalog but was never
+    // checked until this review pass. An attributed change with an empty grant set must be refused.
+    const { tx, client } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    await expect(
+      setPublicNamePresentationMode(tx, { ...governed(PARIWAR_A, 'shielded_name'), actorGrants: [] }),
+    ).rejects.toBeInstanceOf(UngovernedPresentationChangeError);
+  });
+
+  it('NEGATIVE CONTROL — ⛔ refuses an actor holding EVERY other pariwar-dimension key but not this one (pariwar_admin)', async () => {
+    // `-136` cl.3: this is deliberately NOT `pariwar_admin`'s to grant, unlike its neighbouring
+    // content keys (news.manage, banner.manage, survey.manage). Proves the exclusion is LIVE, not
+    // merely documented in the permission-catalog comment.
+    const { tx, client } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    await expect(
+      setPublicNamePresentationMode(tx, {
+        ...governed(PARIWAR_A, 'shielded_name'),
+        actorGrants: [
+          { pariwarId: PARIWAR_A, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: PARIWAR_A },
+        ],
+      }),
+    ).rejects.toBeInstanceOf(UngovernedPresentationChangeError);
+  });
+
+  it('NEGATIVE CONTROL — ⛔ refuses a null-actor write that carries a non-null display name (code review 2026-08-20)', async () => {
+    // A system/seed write attributed to no actor must not also carry a human display name — that
+    // combination would misrepresent the change as attributed to someone who did not make it.
+    const { tx, client } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    await expect(
+      setPublicNamePresentationMode(tx, {
+        pariwarId: PARIWAR_A as never,
+        mode: 'shielded_name',
+        changedByActor: null,
+        changedByDisplay: 'Kalpana Bharti',
+        rationale: 'Seed data for a fresh Pariwar.',
+        auditId: randomUUID(),
+      }),
+    ).rejects.toBeInstanceOf(UngovernedPresentationChangeError);
+  });
+
+  it('a `super_admin` grant authorises the change (the positive case the negative controls contrast against)', async () => {
+    const { tx, client } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    await expect(
+      setPublicNamePresentationMode(tx, governed(PARIWAR_A, 'shielded_name')),
+    ).resolves.toBeDefined();
+  });
+
+  it('a system/seed write (changedByActor: null) skips the permission check — no actor to authorize', async () => {
+    const { tx, client } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    await expect(
+      setPublicNamePresentationMode(tx, {
+        pariwarId: PARIWAR_A as never,
+        mode: 'shielded_name',
+        changedByActor: null,
+        changedByDisplay: null,
+        rationale: 'Seed data for a fresh Pariwar.',
+        auditId: randomUUID(),
+      }),
+    ).resolves.toBeDefined();
   });
 });

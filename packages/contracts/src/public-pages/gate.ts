@@ -186,9 +186,13 @@ export function checkIndexingReconciliation(
 ): GateFinding[] {
   const findings: GateFinding[] = [];
   for (const surface of matrix.surfaces) {
-    if (!surface.renders) continue; // nothing to reconcile against; route coverage owns this
     const source = pageSources.get(surface.route);
-    if (source === undefined) continue; // an orphan — route coverage reports it, not this leg
+    // No page to reconcile against — legitimate for a `renders:false` surface whose route has not
+    // shipped yet; route coverage owns reporting an orphaned `renders:true` surface. ⛔ Do NOT also
+    // skip when `!surface.renders` but a page DOES exist (code review 2026-08-20): that STALE case
+    // used to skip indexing reconciliation entirely, so a real conflict on a newly-shipped-but-not-
+    // yet-flipped surface went unchecked by this leg until someone remembered to flip `renders`.
+    if (source === undefined) continue;
     const signal = detectIndexingSignal(source);
 
     if (!signal.shellPresent) {

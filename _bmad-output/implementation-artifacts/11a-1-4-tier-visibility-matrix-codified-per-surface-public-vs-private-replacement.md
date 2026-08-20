@@ -4,7 +4,7 @@ baseline_commit: bf802b709d8e54c40572950cef0d5db02f7cc19c
 
 # Story 11a.1: 4-Tier Visibility Matrix Codified per Surface — Public-vs-Private Replacement `[GOVERNANCE]`
 
-Status: review
+Status: done
 
 > ✅ **ALL SIX DECISIONS (D1–D6) RULED BY BIGDEV, 2026-08-20 — each as recommended. Nothing here is
 > open.** They are recorded in §Decisions. ⛔ The dev agent must **not** re-open or re-interpret a
@@ -564,6 +564,21 @@ option. ⛔ The rejected options are retained deliberately — a reader must be 
 - [x] Flip `development_status[11a-1-…]` → `review`; add the combined `last_updated` ledger entry
       ([[project_sprint_status_ledger]]). ⭐ **REBASE-merge** this multi-commit governance story,
       ⛔ never squash ([[project_story_automator_ops]]).
+
+### Review Findings
+
+Code review run 2026-08-20 (three parallel layers: Blind Hunter — diff only, no project context;
+Edge Case Hunter — diff + project read access; Acceptance Auditor — diff + this story file). 18 raw
+findings, merged to 11 unique after dedup; 3 dismissed as noise.
+
+- [x] [Review][Patch] AC5's "governed write path... requires an explicit permission key" was not enforced anywhere — `PUBLIC_NAME_PRESENTATION_PERMISSION_KEY` was defined and exported but never checked. **Resolved (decision-needed → patch):** the user chose to add in-process enforcement now rather than defer to a future caller's story. **Applied:** `setPublicNamePresentationMode` now takes an optional `actorGrants` and calls the pure `hasPermission` (`packages/domain/src/rbac/index.ts`) against `PUBLIC_NAME_PRESENTATION_PERMISSION_KEY` at `dimension: 'pariwar'` before writing, for any actor-attributed change — refusing via the existing `UngovernedPresentationChangeError` (not a second error type) when the grants don't carry the key; a system/seed write (`changedByActor: null`) skips the check. Negative controls added proving both `pariwar_admin` (excluded per `-136` cl.3) and an empty grant set are refused, and that `super_admin` / a null-actor write both succeed. [packages/domain/src/kyc/presentation-policy.ts]
+- [x] [Review][Patch] No uniqueness check on matrix surface `route` — two surfaces could declare the same route with nothing rejecting it; `checkRouteCoverage`'s `new Map(matrix.surfaces.map((s) => [s.route, s]))` (`packages/contracts/src/public-pages/gate.ts`) and `loadPages()` (`packages/contracts/scripts/check-pii-scrape.ts`) both silently collapse a collision to "last one wins" rather than failing loudly, contradicting the story's own "fail-closed, both directions" framing for AC1. Confirmed independently by all three review layers. **Applied:** `PublicVsPrivateMatrixSchema`'s root `superRefine` now rejects a duplicate `route` across surfaces, alongside the existing duplicate-`id` check; negative-control test added. [packages/contracts/src/public-pages/matrix.ts]
+- [x] [Review][Patch] Escalation ledger entries are never cross-checked against the field's actual current `tier` — `PublicVsPrivateMatrixSchema`'s root `superRefine` (`packages/contracts/src/public-pages/matrix.ts`) validates `escalation_count` vs `escalations.length` and that each entry's `surface`/`field` exist, but never asserts `escalations[i].to === surfaces[j].fields[k].tier`. A ledger entry could claim a field was escalated to `public` while the field is declared at a different tier, undetected. **Applied:** the same `superRefine` now rejects an entry whose `to` disagrees with the field's current declared tier; negative-control test added. [packages/contracts/src/public-pages/matrix.ts]
+- [x] [Review][Patch] `checkIndexingReconciliation` (`packages/contracts/src/public-pages/gate.ts`) skips indexing checks entirely for a `renders:false` surface even once its page has actually shipped — only the separate `STALE renders:false` route-coverage finding fires, which says nothing about indexing. A real indexing misconfiguration on a newly-shipped-but-not-yet-flipped surface goes unchecked by this leg. **Applied:** the leg now reconciles against any page that exists regardless of `renders`, skipping only when no page exists at all; negative-control test added proving a STALE-but-shipped surface's indexing conflict now fires.
+- [x] [Review][Patch] `setPublicNamePresentationMode` (`packages/domain/src/kyc/presentation-policy.ts`) allows a null `changedByActor` (system/seed write) to carry a non-null, non-empty `changedByDisplay`, with no guard against the contradiction — a system write could carry a misleading human attribution. **Applied:** the function now refuses a null-actor write carrying a non-null display name; negative-control test added.
+- [x] [Review][Defer] `astroTemplate()`'s frontmatter-stripping regex truncates early on any embedded line-starting `---` [packages/contracts/src/public-pages/gate.ts] — deferred, not exercised by any of the 7 shipped pages today
+- [x] [Review][Defer] `PiiTierSchema` locally re-declares the PII-tier union with no drift-guard against `@twt/domain`'s own PII-tier concept [packages/contracts/src/public-pages/matrix.ts] — deferred, boundary is documented and deliberate, drift-guard is a small separate design decision
+- [x] [Review][Defer] `checkEscalationAttestation`'s decision-heading regex is brittle to future `.decision-log.md` heading-format drift [packages/contracts/src/public-pages/gate.ts] — deferred, repo-convention risk not introduced by this story
 
 ---
 

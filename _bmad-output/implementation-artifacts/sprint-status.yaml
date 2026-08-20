@@ -1,4 +1,35 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-20c (bmad-code-review 11a.1: REVIEWED AND PATCHED. ONE row flips:
+#   development_status[11a-1-...] review -> done. ⛔ epic-11a stays in-progress (5 stories remain:
+#   11a.2-11a.6). ⛔ No other story status changes.
+#   Three parallel layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor) found 18 raw findings,
+#   11 unique after dedup: 1 decision-needed, 4 patch, 3 defer, 3 dismissed as noise.
+#   ⭐ THE DECISION: AC5 claimed the presentation-policy write path "requires an explicit permission
+#   key", but PUBLIC_NAME_PRESENTATION_PERMISSION_KEY was defined and never checked anywhere (no
+#   apps/api caller exists yet to wire it into). User chose in-process enforcement now over deferring
+#   to a future caller's story. `setPublicNamePresentationMode` now takes the actor's grants and
+#   refuses via the existing UngovernedPresentationChangeError when they lack the key -- proven by a
+#   live negative control that `pariwar_admin` (excluded per -136 cl.3) is refused and `super_admin`
+#   succeeds. A system/seed write (changedByActor: null) skips the check.
+#   ⭐ THREE MORE PATCHES, all independently corroborated across review layers: (a) two matrix surfaces
+#   sharing a `route` collapsed silently ("last one wins") in checkRouteCoverage's Map instead of
+#   failing the AC1 "fail-closed, both directions" guarantee -- now REJECTED at parse time; (b) an
+#   escalation ledger entry's `to` was never cross-checked against the field's actual declared `tier`
+#   -- a ledger could claim a tier the matrix didn't carry, undetected -- now REJECTED at parse time;
+#   (c) checkIndexingReconciliation skipped EVERY renders:false surface, even a STALE one whose page
+#   had actually shipped, so a real indexing conflict on it went unchecked until someone remembered to
+#   flip `renders` -- now reconciles whenever a page exists, regardless of `renders`.
+#   ⚠ A fifth, smaller patch: a null-actor (system/seed) write could carry a non-null human display
+#   name with nothing catching the contradiction -- now refused.
+#   All 5 patches ship with independently-planted negative-control tests, matching this story's own
+#   house doctrine. Typecheck + lint clean on contracts + domain; contracts 1012/1012 and domain
+#   1895/1895 unit tests (no DATABASE_URL) green, including all new tests.
+#   ⚠ 3 findings DEFERRED, none blocking: astroTemplate()'s frontmatter-stripping regex can truncate
+#   early on an embedded line-starting `---` (unexercised by any of the 7 shipped pages today);
+#   PiiTierSchema's local PII-tier union has no cross-package drift guard against @twt/domain's own
+#   concept (the pg-free bundle-boundary split is deliberate); checkEscalationAttestation's decision-
+#   heading regex is brittle to future `.decision-log.md` heading-format drift (a repo-convention risk,
+#   not introduced by this story). All three recorded in deferred-work.md.
 # last_updated: 2026-08-20b (bmad-dev-story 11a.1: IMPLEMENTED. ONE row flips:
 #   development_status[11a-1-...] ready-for-dev -> review. ⛔ epic-11a stays in-progress (5 stories
 #   remain: 11a.2-11a.6). ⛔ No other story status changes.
@@ -8628,7 +8659,7 @@ development_status:
   # Epic 11a: Public Trust Identity Shell
   # ==========================================================================
   epic-11a: in-progress
-  11a-1-4-tier-visibility-matrix-codified-per-surface-public-vs-private-replacement: review
+  11a-1-4-tier-visibility-matrix-codified-per-surface-public-vs-private-replacement: done
   11a-2-public-astro-ssr-shell-extension-for-member-directory-tiered-visibility-renderers: backlog
   11a-3-member-directory-pii-shielded-tiered-render-scope-anti-enumeration-safeguards: backlog
   11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only: backlog

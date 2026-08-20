@@ -13,6 +13,10 @@
 // yet; mirrors the rbac / pariwar-passport convention) — adding an `exports` map
 // entry then is trivial.
 
+// Story 11a.3 — the public Member Directory transport DTO + the deep-pagination horizon. This IS
+// an apps/api consumer, unlike the matrix/gate/scrape trio above.
+export * from './abuse-rules.js';
+export * from './directory.js';
 export * from './gate.js';
 export * from './matrix.js';
 export * from './scrape.js';

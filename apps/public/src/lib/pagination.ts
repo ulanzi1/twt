@@ -20,7 +20,7 @@
 // rejection is the signal.
 //
 // PURE: no fs, no db, no env, no clock.
-import { PUBLIC_SURFACE_PAGE_SIZE_CAP } from '@twt/contracts';
+import { PUBLIC_DIRECTORY_PAGE_HORIZON, PUBLIC_SURFACE_PAGE_SIZE_CAP } from '@twt/contracts';
 
 /**
  * Maximum rows a public list surface will serve in one response.
@@ -37,10 +37,34 @@ export const PUBLIC_PAGE_SIZE_MAX = PUBLIC_SURFACE_PAGE_SIZE_CAP;
 /** Rows served when the caller does not ask for a specific page size. */
 export const PUBLIC_PAGE_SIZE_DEFAULT = 25;
 
+/**
+ * ⭐ THE DEEP-PAGINATION HORIZON — Story 11a.3 (Task 8; AC6.2), Decision `2026-08-20-143` cl.2.
+ *
+ * ⚠ Until this story `page` had NO UPPER BOUND: only `limit` was capped, so `?page=999999999` was
+ * accepted with a 200 and rendered a plausible previous-page chain. That gap, and the companion
+ * offset-precision one (`offset = (page-1)*limit` could leave the safe-integer range), were both
+ * DEFERRED AT 11a.2 NAMING THIS STORY AS THEIR TRIGGER. The trigger has fired; both are closed here.
+ *
+ * ⭐ WHY A HORIZON IS THE CONTROL THAT MATTERS. D2(a) KEPT offset paging, on the substantive ground
+ * that a cursor over a deterministic `member_id` ordering is an offset in disguise — it does not
+ * remove the walk-every-page primitive, so adopting it would LOOK like an anti-enumeration control
+ * while changing nothing. What actually bounds enumeration is this ceiling, the page-size cap, the
+ * rate limit and `noindex`. At the 50-row cap, page 200 is row 10,000.
+ *
+ * ⛔ 200 IS NOT RE-DECLARED HERE. It IS `PUBLIC_DIRECTORY_PAGE_HORIZON`, imported from
+ * `@twt/contracts`, so the page and the API route cannot drift into two different horizons — the
+ * exact defect the 11a.2 review found in the "shared cap" claim, where the comment named a constant
+ * that did not exist and the guarding test compared against a second hardcoded literal.
+ * ⛔ Raising it is an anti-enumeration change and needs its own ruling.
+ */
+export const PUBLIC_PAGE_HORIZON = PUBLIC_DIRECTORY_PAGE_HORIZON;
+
 /** Why a page request was refused. Machine-decidable; the copy lives in i18n. */
 export type PaginationRejectionReason =
   | 'unbounded_requested'
   | 'limit_above_cap'
+  /** ⭐ Story 11a.3 — `?page=` beyond {@link PUBLIC_PAGE_HORIZON}. Mirrors `limit_above_cap`. */
+  | 'page_above_horizon'
   | 'page_not_a_positive_integer'
   | 'limit_not_a_positive_integer';
 
@@ -123,6 +147,19 @@ export function parsePageParams(params: {
         message:
           `"?page=${rawPage}" is not a positive integer. Pages are 1-based whole numbers; ` +
           `⛔ a malformed page is refused rather than coerced to page 1.`,
+      };
+    }
+    if (parsed > PUBLIC_PAGE_HORIZON) {
+      return {
+        ok: false,
+        param: 'page',
+        reason: 'page_above_horizon',
+        message:
+          `"?page=${parsed}" is beyond the public deep-pagination horizon of ` +
+          `${PUBLIC_PAGE_HORIZON}. ⛔ Refused, not clamped: answering a deep-crawl probe with a ` +
+          `valid-looking page is precisely how a walk of the whole directory stays invisible. ` +
+          `⚠ This ALSO bounds \`offset\` — (page-1)*limit can no longer leave the safe-integer ` +
+          `range, which is the second deferred item this ceiling closes.`,
       };
     }
     page = parsed;

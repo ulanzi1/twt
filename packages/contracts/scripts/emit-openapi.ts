@@ -3954,6 +3954,40 @@ registry.registerPath({
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 
+// ── Story 11a.3 — the PUBLIC Member Directory read ────────────────────────────
+// ⛔ THE ONE DELIBERATELY-UNAUTHENTICATED, PII-BEARING GET on the committed surface. It exists here
+// (rather than on `apps/public`) because the Tier-1 KYC-name decrypt needs KMS deps, the abuse
+// signal needs the BYPASSRLS audit writer, and the anti-enumeration ceiling needs a rate-limit
+// store — `apps/public` verifiably has none of the three (`2026-08-20-143` cl.1).
+// ⭐ REGISTERING IT HERE IS LOAD-BEARING, not bookkeeping: Story 1.14's forced-pagination guard
+// walks THIS document, so declaring the route is what gives FR-91 its second, independent
+// enforcement on this data path — the one `apps/public` Astro routes are structurally outside of.
+const { PublicDirectoryResponse, PublicDirectoryQuery } = await import(
+  '../src/public-pages/directory.js'
+);
+const PublicDirectoryResponseComponent = PublicDirectoryResponse.openapi('PublicDirectoryResponse');
+registry.register('PublicDirectoryResponse', PublicDirectoryResponseComponent);
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/:pariwarId/public-pages/member-directory',
+  summary: 'Public Member Directory page (UNAUTHENTICATED by Panel ruling)',
+  description:
+    'One page of the public Member Directory: presentation-resolved member name, raw latest-posting ' +
+    'district, and the two-label status pill. Deliberately requires NO session — the surface is ' +
+    'public tier by ruling 2026-08-19-135/-136 and is consumed server-side by the apps/public SSR ' +
+    'shell. Bounded by the named SEARCH rate ceiling keyed on the forwarded visitor address, a ' +
+    'page-size cap (50), a deep-pagination horizon (page 200), noindex, and the absence of any ' +
+    'member-detail route or export affordance. Its defence is written in login-wall.spec.ts.',
+  tags: ['public-pages'],
+  request: { query: PublicDirectoryQuery },
+  responses: {
+    200: {
+      description: 'One page of the public Member Directory',
+      content: { 'application/json': { schema: PublicDirectoryResponseComponent } },
+    },
+  },
+});
+
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
 const doc = generator.generateDocument({

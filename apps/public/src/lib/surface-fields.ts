@@ -100,52 +100,114 @@ export function deriveFieldIds<T extends object>(
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * The `/members` render model AS IT SHIPS AT STORY 11a.2.
+ * One rendered directory row — the display shape, ⛔ not the wire shape and ⛔ not a domain row.
  *
- * ⭐ READ THE FIELD SET BEFORE THE TYPES: it carries ⛔ **NO MEMBER DATA AT ALL**.
- * The page renders the shell, the FR-91 pagination controls, and an explicit
- * not-yet-published empty state. Story 11a.3 fills it with real rows behind its own
- * anti-enumeration safeguards, and ⛔ `member_name` is NOT rendered here — the
- * Tier-1 decrypt stays behind those safeguards (`epics.md` C1 rules them
- * *"load-bearing, not defensive"*).
+ * ⚠ Its keys are camelCase and its matrix ids are snake_case, mapped BY HAND in
+ * {@link MEMBERS_FIELD_IDS} (see the camelCase↔snake_case note at the top of this file).
+ */
+export interface MemberDirectoryRow {
+  /** The presentation-resolved name — `full_name` or `shielded_name`, decided server-side. */
+  readonly memberName: string;
+  /** Latest posting district, RAW. `null` when the member has no posting row. */
+  readonly district: string | null;
+  /** The two-label public pill: `active` | `lock-in`. */
+  readonly memberStatus: string;
+}
+
+/**
+ * The `/members` render model AS IT SHIPS AT STORY 11a.3.
  *
- * ⚠ ⛔ AND THAT MAKES THE TIER-LEAK LEG ON THIS SURFACE **ARMED BUT EMPTY**, which
- * is declared LOUDLY here rather than left to be inferred from a green check. A
- * green `member-directory` check today proves the surface renders no classified
- * field — it ⛔ does NOT prove the flagship directory is being policed. Letting a
- * vacuous green imply otherwise is the exact defect Story 11a.1 existed to remove,
- * and re-introducing it *on the Member Directory* would be worse than the original.
+ * ⭐ IT NOW CARRIES REAL MEMBER DATA, AND THAT IS THE WHOLE POINT OF THIS STORY. ⚠ This supersedes
+ * the 11a.2 doc-block here, which declared the surface's tier-leak leg **ARMED BUT EMPTY** — TRUE
+ * THEN, ⛔ FALSE NOW. `membersSurfaceFieldIds(model)` returns a NON-EMPTY set, so `evaluateSnapshot`
+ * actually evaluates the leak rules on the flagship public surface, and a planted
+ * `authenticated_member`-tier or UNDECLARED field at `public` FAILS a run that previously passed.
+ * ⭐ That is the discharge of `2026-08-19-136` cl.4, which made an operative leg LAUNCH-BLOCKING
+ * for the Member Directory.
+ *
+ * ⛔ THE `authenticated_member` TIER IS NOT RENDERED HERE, and it is not an oversight: it has NO
+ * VIEWER (`2026-08-20-143` cl.7). Members are token-bearer, a browser sends no `Authorization`
+ * header, there is no `apps/member-web/`, and `apps/mobile` has no directory screen — so the
+ * authenticated column of the epic's own table is structurally unbuildable at this story and is
+ * routed onto 11a.2's fragment-mechanism deferral. ⛔ Do not add fields "ready for" it.
+ *
+ * ⚠ ADDING A MEMBER ATTRIBUTE TO THIS INTERFACE IS A MATRIX ACT. `deriveFieldIds` throws in BOTH
+ * directions, so a new key with no mapping entry — or a mapping entry with no key — fails the
+ * build. ⭐ That is the mechanism WORKING, ⛔ not an obstacle to route around, and ⛔ never a reason
+ * to add a mechanical camelCase→snake_case converter (which would invent an id nobody classified).
  */
 export interface MembersRenderModel {
-  /** True when the directory has rows to show. ⚠ Always false at Story 11a.2. */
+  /** True when the directory has rows to show on THIS page. */
   readonly hasMembers: boolean;
   /** 1-based current page, echoed into the pagination controls. */
   readonly page: number;
   /** Rows per page, already validated against the FR-91 cap. */
   readonly limit: number;
+  /**
+   * ⚠ TRUE WHEN THE API COULD NOT BE REACHED — an OUTAGE, ⛔ never "no members".
+   * The two states must never render as one another: an outage that looks like an empty membership
+   * is a false statement about the trust.
+   */
+  readonly apiUnavailable: boolean;
+  /** The rows on this page. ⭐ The member attributes below are what the tier-leak leg now sees. */
+  readonly rows: readonly MemberDirectoryRow[];
 }
 
 /**
- * ⛔ EVERY KEY MAPS TO `null` — deliberately, and this is the honest statement of
- * what the surface renders.
+ * ⭐ NO LONGER ALL-`null` — THREE KEYS NOW CARRY REAL MATRIX FIELD IDS.
  *
- * `null` declares "carried in the model but NOT rendered as a classified field".
- * `hasMembers` selects between two blocks of fixed i18n copy; `page`/`limit` drive
- * the pagination controls. None of them is a MEMBER ATTRIBUTE, so none of them is a
- * matrix field — and inventing an id for one would be exactly the SD-1 failure mode
- * of putting a row in the matrix that no substrate backs.
+ * `null` still declares "carried in the model but NOT rendered as a classified field", and it is
+ * correct for exactly the non-attribute keys: `hasMembers` / `apiUnavailable` select between blocks
+ * of fixed i18n copy, `page`/`limit` drive the pagination controls, and `rows` is the CONTAINER —
+ * its per-row attributes are what carry ids, not the array itself.
  *
- * ⇒ `deriveFieldIds` returns `[]` here. ⚠ That empty set is REAL and is the reason
- * the surface's tier-leak leg is vacuous today. ⛔ Do not "fix" it by adding a
- * speculative id; Story 11a.3 adds ids when it adds the render that needs them.
+ * ⛔ Every id below is declared in `public-vs-private-matrix.yaml` for the `member-directory`
+ * surface. ⛔ Do not add an entry here without adding the row there — `deriveFieldIds` fails the
+ * build in both directions precisely so the two cannot drift.
  */
 export const MEMBERS_FIELD_IDS: FieldIdMapping<MembersRenderModel> = {
   hasMembers: null,
   page: null,
   limit: null,
+  apiUnavailable: null,
+  rows: null,
 };
 
-/** Derive the `/members` snapshot field set. ⚠ Empty at 11a.2 — see above. */
+/**
+ * The per-ROW mapping. ⚠ Split from {@link MEMBERS_FIELD_IDS} because the model nests: `rows` is a
+ * container key with no tier of its own, and its element attributes are the classified fields.
+ * ⛔ Folding the two together would either classify the array (meaningless) or leave the attributes
+ * outside the derivation (the vacuous set this story exists to eliminate).
+ */
+export const MEMBER_DIRECTORY_ROW_FIELD_IDS: FieldIdMapping<MemberDirectoryRow> = {
+  memberName: 'member_name',
+  district: 'district',
+  memberStatus: 'member_status',
+};
+
+/**
+ * Derive the `/members` snapshot field set.
+ *
+ * ⭐ NON-EMPTY AS OF STORY 11a.3 — `district`, `member_name`, `member_status`. ⚠ The row attributes
+ * are derived from a REPRESENTATIVE row shape, not from `rows[0]`: a page that happens to be empty
+ * must still declare the fields the surface RENDERS, or the leg would go vacuous again on exactly
+ * the pages where nobody would notice.
+ */
 export function membersSurfaceFieldIds(model: MembersRenderModel): string[] {
-  return deriveFieldIds(model, MEMBERS_FIELD_IDS);
+  const shell = deriveFieldIds(model, MEMBERS_FIELD_IDS);
+  const rowIds = deriveFieldIds(MEMBER_DIRECTORY_ROW_SHAPE, MEMBER_DIRECTORY_ROW_FIELD_IDS);
+  return [...new Set([...shell, ...rowIds])].sort();
 }
+
+/**
+ * The representative row shape the derivation runs against.
+ *
+ * ⛔ NOT a fixture and ⛔ not test data — it is the structural declaration of which attributes a
+ * directory row renders, and it is what keeps the field set independent of whether a given page
+ * happens to have rows on it. Its VALUES are never rendered; only its KEYS are read.
+ */
+const MEMBER_DIRECTORY_ROW_SHAPE: MemberDirectoryRow = {
+  memberName: '',
+  district: null,
+  memberStatus: '',
+};

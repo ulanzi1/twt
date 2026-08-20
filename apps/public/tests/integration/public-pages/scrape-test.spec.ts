@@ -69,8 +69,17 @@ const MEMBERS_TEST_LABELS: MembersLabels = {
   pageIntro: 'intro',
   notPublishedTitle: 'not published',
   notPublishedBody: 'being prepared',
+  unavailableTitle: 'unavailable',
+  unavailableBody: 'temporary',
   paginationLabel: 'pages',
   previousPage: 'previous',
+  nextPage: 'next',
+  columnName: 'Name',
+  columnDistrict: 'District',
+  columnStatus: 'Status',
+  statusActive: 'Active',
+  statusLockIn: 'Waiting period',
+  districtUnknown: 'Not recorded',
   invalidTitle: 'invalid',
   invalidBody: 'invalid body',
   invalidLink: 'open',
@@ -501,25 +510,33 @@ describe('AC8 — CR-D0-1.16b: a non-public snapshot with html and no fields WAR
   });
 });
 
-// ── Story 11a.2 — the /members surface, and ⛔ WHAT ITS GREEN CHECK DOES NOT MEAN ──
+// ── Story 11a.3 — the /members surface, and ⭐ WHAT ITS GREEN CHECK NOW ACTUALLY MEANS ──
 //
-// ⭐⛔ READ THIS BEFORE READING THE ASSERTIONS. The `member-directory` tier-leak leg
-// is ARMED BUT EMPTY. The page renders the shell, the FR-91 pagination controls and a
-// not-yet-published empty state; it reads NO member data and ⛔ does not render
-// `member_name` (the Tier-1 decrypt is Story 11a.3's, behind 11a.3's anti-enumeration
-// safeguards). So the derived field set is `[]` and `evaluateSnapshot` evaluates
-// nothing on this surface.
+// ⭐⛔ READ THIS BEFORE READING THE ASSERTIONS. The `member-directory` tier-leak leg is now
+// **OPERATIVE**. ⚠ This SUPERSEDES the 11a.2 block that stood here and asserted the field set was
+// EMPTY — that assertion was TRUE THEN and is ⛔ FALSE NOW. It is REPLACED, ⛔ not deleted, and the
+// replacement asserts the EXACT expected set so a silently dropped field fails as loudly as a
+// silently added one.
 //
-// ⛔ A green result below therefore means "this surface renders no classified field".
-// It does ⛔ NOT mean the flagship Member Directory is being policed. Story 11a.1
-// existed to remove exactly this class of vacuous-green defect, so re-introducing it
-// silently HERE would be worse than the original — hence these tests ASSERT the
-// vacuity rather than letting it hide behind a pass.
-describe('PII scrape — Member Directory shell (/members, Story 11a.2)', () => {
+// ⭐ A green result below now means the flagship public surface IS being policed: `member_name`,
+// `district` and `member_status` are evaluated against the committed matrix on every run, and the
+// planted controls at the bottom prove a leak FAILS a run that previously passed. That is the
+// discharge of `2026-08-19-136` cl.4 — the launch-blocking clause this whole epic was written
+// around (Decision `2026-08-20-143`).
+describe('PII scrape — Member Directory (/members, Story 11a.3)', () => {
   const model = buildMembersView(
     { page: 1, limit: 25 },
     new URLSearchParams(''),
     MEMBERS_TEST_LABELS,
+    {
+      items: [
+        { name: 'Rajesh Kumar Sharma', district: 'Lucknow', status: 'active' },
+        { name: 'Sunita Devi', district: null, status: 'lock-in' },
+      ],
+      page: 1,
+      limit: 25,
+      total: 2,
+    },
   ).model;
   const snapshot: RenderSnapshot = {
     surfaceId: 'member-directory',
@@ -527,39 +544,52 @@ describe('PII scrape — Member Directory shell (/members, Story 11a.2)', () => 
     fields: membersSurfaceFieldIds(model),
   };
 
-  it('⭐ the snapshot field set is EMPTY — the leg is ARMED BUT VACUOUS until 11a.3', () => {
-    // ⛔ The inverse of every other surface's "carries a NON-EMPTY field set" test,
-    // and deliberately so: this records the vacuity in an executable form instead of
-    // leaving it to be inferred from a pass.
-    expect(snapshot.fields).toEqual([]);
+  it('⭐ the snapshot field set is NON-EMPTY, and is EXACTLY the three classified fields', () => {
+    // ⛔ THE ASSERTION THAT REPLACES 11a.2's `toEqual([])`. Asserting the exact set — rather than
+    // merely "length > 0" — is what makes a DROPPED field fail here too.
+    expect(snapshot.fields).toEqual(['district', 'member_name', 'member_status']);
   });
 
-  it('evaluateSnapshot passes — and the pass proves only that nothing classified renders', () => {
+  it('evaluateSnapshot passes — and the pass now proves the directory IS policed', () => {
     const verdict = evaluateSnapshot(matrix, snapshot);
     expect(verdict.status).toBe('pass');
     expect(verdict.leaks).toEqual([]);
   });
 
-  it('⛔ the render model carries NO member data to leak in the first place', () => {
-    // Asserted on the MODEL because that is what the page can reach. There is no
-    // roster read on this surface at all — not a narrowed one, none.
-    expect(Object.keys(model).sort()).toEqual(['hasMembers', 'limit', 'page']);
-    expect(model.hasMembers).toBe(false);
-  });
-
-  it('⛔ member_name is NOT rendered here, though the matrix DECLARES it visible at public', () => {
-    // Both halves matter. The matrix declares `member_name` public (the ruled Tier-1
-    // exception), so a reader could reasonably assume this page shows it. It does not:
-    // declaring a field visible is not the same as rendering it, and 11a.3 owns the
-    // decrypt together with the safeguards that make it safe.
+  it('⭐ member_name IS rendered here, and the matrix declares it visible at public', () => {
+    // ⚠ At 11a.2 this test asserted the OPPOSITE half: declared-but-not-rendered. Both halves
+    // still matter — declaring a field visible is not the same as rendering it — but this story is
+    // where the two finally agree, under the ruled Tier-1 public exception.
     expect(getVisibility(matrix, 'member-directory', 'member_name', 'public').visible).toBe(true);
-    expect(snapshot.fields).not.toContain('member_name');
+    expect(snapshot.fields).toContain('member_name');
   });
 
-  it('NEGATIVE CONTROL — the leg WOULD fire here: an unclassified field on this surface fails', () => {
-    // ⭐ The control that stops the vacuity above from being mistaken for a broken leg.
-    // The leg is wired correctly and armed; it simply has nothing to evaluate yet.
-    // Planted against the REAL committed matrix, independently of every other control.
+  it('⛔ the render model carries NO field beyond the classified three', () => {
+    expect(Object.keys(model).sort()).toEqual([
+      'apiUnavailable',
+      'hasMembers',
+      'limit',
+      'page',
+      'rows',
+    ]);
+    expect(Object.keys(model.rows[0] ?? {}).sort()).toEqual([
+      'district',
+      'memberName',
+      'memberStatus',
+    ]);
+  });
+
+  it('⛔ the rendered rows leak no naked PII', () => {
+    // The row values reaching the DOM are display strings; `detectNakedPii` is the FR-93 scan.
+    const rendered = model.rows
+      .map((r) => `${r.memberName} ${r.district ?? ''} ${r.memberStatus}`)
+      .join(' ');
+    expect(detectNakedPii(rendered)).toEqual([]);
+  });
+
+  // ── AC10 — INDEPENDENTLY PLANTED CONTROLS. ⛔ One fixture must never trip several checks. ──
+
+  it('CONTROL 1 — an UNDECLARED field at public FAILS (and names the field)', () => {
     const verdict = evaluateSnapshot(matrix, {
       surfaceId: 'member-directory',
       viewerContext: 'public',
@@ -569,5 +599,29 @@ describe('PII scrape — Member Directory shell (/members, Story 11a.2)', () => 
     expect(verdict.leaks).toHaveLength(1);
     expect(verdict.leaks[0]!.tier).toBe('unclassified');
     expect(verdict.leaks[0]!.field).toBe('member_mobile');
+  });
+
+  it('CONTROL 2 — ⭐ the leak fails a run that PREVIOUSLY PASSED, on the REAL field set', () => {
+    // ⭐ THIS is the discharge proof AC4 asks for, and it is deliberately distinct from CONTROL 1:
+    // "the set is non-empty" is not the proof — the proof is that the SAME snapshot passes, and
+    // then fails once a leak is planted into it. At 11a.2 this test could not have existed at all,
+    // because the set was empty and `evaluateSnapshot` evaluated nothing.
+    const clean = evaluateSnapshot(matrix, snapshot);
+    expect(clean.status).toBe('pass');
+
+    const leaked = evaluateSnapshot(matrix, {
+      ...snapshot,
+      fields: [...snapshot.fields!, 'member_full_name_authenticated_only'],
+    });
+    expect(leaked.status).toBe('fail');
+    expect(leaked.leaks.map((l) => l.field)).toContain('member_full_name_authenticated_only');
+  });
+
+  it('CONTROL 3 — a DROPPED field is caught too (the set is asserted exactly, not loosely)', () => {
+    // ⛔ An INDEPENDENT control: a leg that only detects ADDITIONS would silently accept a field
+    // being removed from the render while the matrix still claims it is shown.
+    const dropped = snapshot.fields!.filter((f) => f !== 'member_status');
+    expect(dropped).not.toEqual(snapshot.fields);
+    expect(dropped).toHaveLength(2);
   });
 });

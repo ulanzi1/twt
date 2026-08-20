@@ -4,7 +4,7 @@ baseline_commit: bf802b709d8e54c40572950cef0d5db02f7cc19c
 
 # Story 11a.1: 4-Tier Visibility Matrix Codified per Surface — Public-vs-Private Replacement `[GOVERNANCE]`
 
-Status: ready-for-dev
+Status: review
 
 > ✅ **ALL SIX DECISIONS (D1–D6) RULED BY BIGDEV, 2026-08-20 — each as recommended. Nothing here is
 > open.** They are recorded in §Decisions. ⛔ The dev agent must **not** re-open or re-interpret a
@@ -467,101 +467,101 @@ option. ⛔ The rejected options are retained deliberately — a reader must be 
       implementation).
 
 ### Task 2 — Matrix schema extension (AC: 4, 6, 8) — `packages/contracts/src/public-pages/matrix.ts`
-- [ ] Add to `MatrixSurfaceSchema`: `route` (string), `renders` (boolean, default `true` — **D5**).
-- [ ] Add to `MatrixFieldSchema`: optional `pii_tier`, optional `tier1_public_exception`
+- [x] Add to `MatrixSurfaceSchema`: `route` (string), `renders` (boolean, default `true` — **D5**).
+- [x] Add to `MatrixFieldSchema`: optional `pii_tier`, optional `tier1_public_exception`
       (`{ decision, rationale, scope }`), optional `presentation_policy_ref`.
-- [ ] `superRefine`: a field with `pii_tier: 1` and `tier: 'public'` **without**
+- [x] `superRefine`: a field with `pii_tier: 1` and `tier: 'public'` **without**
       `tier1_public_exception` → reject; **more than one** such exception across the whole matrix →
       reject (AC4).
-- [ ] Add `escalations` + `escalation_count` to the root schema (**D6**); count mismatch → reject.
-- [ ] Add the per-Pariwar attribute **rule** block (AC6) — ⛔ a rule, not a field list.
-- [ ] ⛔ Keep `.strict()` everywhere and the loud-throw posture — a malformed matrix must **never**
+- [x] Add `escalations` + `escalation_count` to the root schema (**D6**); count mismatch → reject.
+- [x] Add the per-Pariwar attribute **rule** block (AC6) — ⛔ a rule, not a field list.
+- [x] ⛔ Keep `.strict()` everywhere and the loud-throw posture — a malformed matrix must **never**
       degrade to "no entries".
 
 ### Task 2b — `getVisibility()` (AC: 11) — `packages/contracts/src/public-pages/scrape.ts`
-- [ ] Add the lookup beside `evaluateSurfaceRender`, **reusing** `TIER_RANK` + `VIEWER_CEILING`.
+- [x] Add the lookup beside `evaluateSurfaceRender`, **reusing** `TIER_RANK` + `VIEWER_CEILING`.
       ⛔ Do not duplicate the tier ordering — two copies drift and one of them stops being the truth.
-- [ ] Fail-closed on unknown surface / undeclared field.
-- [ ] ⛔ Keep the module **pure** — no fs, no db, no env.
+- [x] Fail-closed on unknown surface / undeclared field.
+- [x] ⛔ Keep the module **pure** — no fs, no db, no env.
 
 ### Task 3 — Populate the matrix (AC: 1, 4, 6) — `packages/contracts/public-pages/public-vs-private-matrix.yaml`
-- [ ] Bump `version`. Declare the 7 shipped routes + `member-directory` (`renders: false`, **D5**).
-- [ ] Per-field tiers from the **actual** render models (T4/T6 supply the field ids).
-- [ ] `member-directory`: `district` (platform-common, `public`), the name field carrying
+- [x] Bump `version`. Declare the 7 shipped routes + `member-directory` (`renders: false`, **D5**).
+- [x] Per-field tiers from the **actual** render models (T4/T6 supply the field ids).
+- [x] `member-directory`: `district` (platform-common, `public`), the name field carrying
       `tier1_public_exception` + `presentation_policy_ref`. ⛔ **No** `school` / `designation` /
       `block` rows (**Trap 1**, scope boundary).
-- [ ] Rewrite the file header: it currently says *"Do NOT pre-populate real surfaces here — that is
+- [x] Rewrite the file header: it currently says *"Do NOT pre-populate real surfaces here — that is
       Epic 11a's job."* ⇒ that job is **this story**.
 
 ### Task 4 — Blog render model (AC: 3) — `apps/public/src/lib/`
-- [ ] Extract `blog-render.ts` mirroring `tc-render.ts`: a pure `buildBlogListModel` /
+- [x] Extract `blog-render.ts` mirroring `tc-render.ts`: a pure `buildBlogListModel` /
       `buildBlogPostModel` exposing **only** rendered fields.
-- [ ] Rewire `blog.astro` + `blog/[postId].astro` frontmatter through it. ⛔ No render-output change.
-- [ ] Correct the false comment at `blog.astro:6`.
-- [ ] ⚠ Consider narrowing `read.ts`'s `db.select()` to an explicit column list — **only if** it does
+- [x] Rewire `blog.astro` + `blog/[postId].astro` frontmatter through it. ⛔ No render-output change.
+- [x] Correct the false comment at `blog.astro:6`.
+- [x] ⚠ Consider narrowing `read.ts`'s `db.select()` to an explicit column list — **only if** it does
       not disturb other consumers (`getPublishedPublicPost` is also used by the admin preview path;
       check before narrowing).
 
 ### Task 5 — Gate script legs (AC: 1, 7, 8) — `packages/contracts/scripts/check-pii-scrape.ts`
-- [ ] **Leg — route coverage.** Enumerate `apps/public/src/pages/**/*.astro` → compare to matrix
+- [x] **Leg — route coverage.** Enumerate `apps/public/src/pages/**/*.astro` → compare to matrix
       surfaces **bidirectionally** (fail-closed; `renders: false` exempts a surface from needing a route).
-- [ ] **Leg — indexing reconciliation.** Parse each page's `noindex` prop → compare with
+- [x] **Leg — indexing reconciliation.** Parse each page's `noindex` prop → compare with
       `search_indexing_policy`; conflict fails.
-- [ ] **Leg — escalation ledger.** Entry ⇄ count cross-check both directions; each entry's
+- [x] **Leg — escalation ledger.** Entry ⇄ count cross-check both directions; each entry's
       `decision` must be a non-empty ref.
-- [ ] ⛔ **Add the scanned globs to `turbo.json:48-56` `inputs` in this same commit** (**Trap 6**).
-- [ ] Keep the pure-core / impure-entry split — logic in `src/`, orchestration in `scripts/`.
+- [x] ⛔ **Add the scanned globs to `turbo.json:48-56` `inputs` in this same commit** (**Trap 6**).
+- [x] Keep the pure-core / impure-entry split — logic in `src/`, orchestration in `scripts/`.
 
 ### Task 6 — Field-id derivation (AC: 2) — **D3**
-- [ ] Per D3(a): expose the field-id set from each render model. Ids must match the matrix field ids
+- [x] Per D3(a): expose the field-id set from each render model. Ids must match the matrix field ids
       exactly (snake_case; see [[feedback_story_validate_footguns]] on camelCase↔snake_case drift —
       ⚠ the render models are camelCase and the matrix is snake_case; the mapping must be **explicit
       and tested**, never implicit).
 
 ### Task 7 — Arm the tier-leak leg + revert-sanity (AC: 2, 4, 10) — `apps/public/tests/integration/public-pages/scrape-test.spec.ts`
-- [ ] Extend the existing snapshots to pass **`fields` as well as `html`** — this is the single
+- [x] Extend the existing snapshots to pass **`fields` as well as `html`** — this is the single
       change that takes the leg from vacuous to live.
-- [ ] Add `blog` + `blog-post` snapshots from T4's models.
-- [ ] ⛔ **Do not touch** the existing naked-PII negative control — it works.
-- [ ] Add the AC10 negative controls, **one per detection route, independently planted**.
+- [x] Add `blog` + `blog-post` snapshots from T4's models.
+- [x] ⛔ **Do not touch** the existing naked-PII negative control — it works.
+- [x] Add the AC10 negative controls, **one per detection route, independently planted**.
 
 ### Task 8 — Presentation policy (AC: 5) — **D1**
-- [ ] Per **D1(a)**: migration **`0110_*`** (latest applied is `0109_survey-poll.sql` — ⛔ never
+- [x] Per **D1(a)**: migration **`0110_*`** (latest applied is `0109_survey-poll.sql` — ⛔ never
       regenerate an applied migration, 42P07, [[project_live_db_test_gotchas]]) + a per-Pariwar row on
       the `pariwar_appeal_config` shape (one row per Pariwar, `UNIQUE (pariwar_id)`, RLS policy in
       `packages/domain/src/policies/`), default **`full_name`** (⭐ the launch posture, `-136` cl.1).
-- [ ] Pure resolver in `packages/domain/src/kyc/` next to `name.ts`; `shielded_name` delegates to
+- [x] Pure resolver in `packages/domain/src/kyc/` next to `name.ts`; `shielded_name` delegates to
       `splitFirstNameLastInitial()` (⛔ do not reimplement).
-- [ ] Governed write path: permission key + audit line. ⛔ No admin UI.
-- [ ] ⭐ The **configurability test**: flip the stored mode, assert the rendered form changes, assert
+- [x] Governed write path: permission key + audit line. ⛔ No admin UI.
+- [x] ⭐ The **configurability test**: flip the stored mode, assert the rendered form changes, assert
       it flips **back**, assert the stored KYC name is **byte-identical** throughout.
 
 ### Task 9 — README + honest scoping (AC: 6, 9) — `packages/contracts/src/public-pages/README.md`
-- [ ] Add *"⚠ What this gate does NOT prove — read this first"* (**Trap 2**), naming the DB-rows
+- [x] Add *"⚠ What this gate does NOT prove — read this first"* (**Trap 2**), naming the DB-rows
       limit and D3(a)'s render-model soft spot.
-- [ ] Add the three-layer CREATE / ENABLE / GRANT statement (AC6).
-- [ ] Fix the false *"without a code change to the gate"* claim and the stale *"apps/public is a tsc
+- [x] Add the three-layer CREATE / ENABLE / GRANT statement (AC6).
+- [x] Fix the false *"without a code change to the gate"* claim and the stale *"apps/public is a tsc
       stub"* strings (in **both** the README and `check-pii-scrape.ts`'s console output).
-- [ ] Document which leg lives where (**D2**).
+- [x] Document which leg lives where (**D2**).
 
 ### Task 10 — PR template (AC: 8) — `.github/pull_request_template.md`
-- [ ] **Merge** the visibility-escalation prompt into the existing **Security-impact note**.
+- [x] **Merge** the visibility-escalation prompt into the existing **Security-impact note**.
       ⛔ Do **not** add a seventh checklist item (**Trap 7**).
 
 ### Task 11 — Retire the scaffold assertion (AC: 1) — `packages/contracts/tests/public-pages.test.ts`
-- [ ] Rewrite `describe('committed scaffold matrix (AC-3/AC-6 self-green)')` (line 323) to assert the
+- [x] Rewrite `describe('committed scaffold matrix (AC-3/AC-6 self-green)')` (line 323) to assert the
       **populated** invariants. ⛔ Do not revert the matrix to keep it green (**Trap 5**).
 
 ### Task 12 — Verification (AC: all)
-- [ ] `pnpm pii:check` — ⭐ paste the **real** output into Completion Notes. It must now report
+- [x] `pnpm pii:check` — ⭐ paste the **real** output into Completion Notes. It must now report
       non-zero surfaces and non-zero evaluated snapshots.
-- [ ] Prove the gate **live**: plant a real violation, capture the exit-1 output, revert (AC10).
-- [ ] `pnpm turbo run lint typecheck test build`; then `pnpm ci:local`
+- [x] Prove the gate **live**: plant a real violation, capture the exit-1 output, revert (AC10).
+- [x] `pnpm turbo run lint typecheck test build`; then `pnpm ci:local`
       (⚠ `--concurrency=4`; [[project_ci_local_concurrency_oversubscription]],
       [[project_ci_local_double_run_pollution]]).
-- [ ] ⚠ `git push` triggers full `ci:local` via the pre-push hook — that is the "hang", not a failure
+- [x] ⚠ `git push` triggers full `ci:local` via the pre-push hook — that is the "hang", not a failure
       ([[project_friction_budget_baseline_ratchet]]).
-- [ ] Flip `development_status[11a-1-…]` → `review`; add the combined `last_updated` ledger entry
+- [x] Flip `development_status[11a-1-…]` → `review`; add the combined `last_updated` ledger entry
       ([[project_sprint_status_ledger]]). ⭐ **REBASE-merge** this multi-commit governance story,
       ⛔ never squash ([[project_story_automator_ops]]).
 
@@ -676,8 +676,199 @@ are **verified live, not inherited** ([[feedback_verify_before_committing_govern
 
 ### Agent Model Used
 
+claude-opus-5 (Claude Code, `bmad-dev-story` workflow)
+
 ### Debug Log References
+
+- **`pnpm pii:check` baseline (before any change) — all three §The-gap defects reproduced live,
+  ⛔ not inherited from the story text:** `▸ Matrix: version 1, 0 surface(s)` ·
+  `▸ Render snapshots: 0` · the stale `(apps/public is a tsc stub until Story 2.5)` line ·
+  `Time: 128ms >>> FULL TURBO` — the cache replay that IS Trap 6.
+- **Trap 6 closed, verified both ways.** After adding `apps/public/src/pages/**/*.astro` +
+  `.decision-log.md` to `turbo.json` inputs: a warm run replays `FULL TURBO` (75ms), and a
+  **page-only** edit busts it (`0 cached, 514ms`). Before the change that same edit replayed cache.
+- **Three legs proven LIVE with real planted violations, each exiting 1, each reverted:**
+  (a) a real `apps/public/src/pages/members.astro` → `UNDECLARED ROUTE`;
+  (b) a real `noindex` prop added to `terms.astro` → `INDEXING CONFLICT … PASSES the noindex prop`;
+  (c) a real bogus `decision: '2099-01-01-999'` in the matrix → `UNATTESTED ESCALATION`.
+- **Migration 0110 applied LIVE against `twt-test-pg:5433`**, first inside a rolled-back
+  transaction (table + 2 policies + both enum labels + `relrowsecurity`/`relforcerowsecurity` both
+  `t`), then for real: `drizzle.__drizzle_migrations` 110 → 111. Journal diff is purely additive —
+  ⛔ 0109 never regenerated ([[project_live_db_test_gotchas]], 42P07).
+- **One live-DB spec failed first and the TEST was wrong, not the code.** `enterAppRoleNoScope`
+  sheds superuser but NOT `app.pariwar_id`, so the unset-scope probe must clear the setting
+  explicitly (the 6.16 spec carries the same note). Fixed; ⛔ the RLS policy was not touched.
+- **8 failures in `@twt/api` / `@twt/jobs` during the first full `turbo run test` were CONTENTION,
+  not regressions — established, not assumed:** both packages pass in isolation (`api` 1018/1019,
+  `jobs` 346/346) and serially under the live-DB leg. This is
+  [[project_ci_local_double_run_pollution]] / [[project_ci_local_concurrency_oversubscription]]:
+  a DATABASE_URL-global concurrent run puts several packages' integration specs on one test
+  database. Re-run as two legs (unit without `DATABASE_URL`, live-DB separately) → all green.
 
 ### Completion Notes List
 
+#### ⭐ What actually changed, in one line
+
+The FR-74 gate stopped certifying an invariant nobody was enforcing.
+
+#### The real `pnpm pii:check` output after this story (AC-Task-12)
+
+```
+pii-scrape gate — FR-74 Public-vs-Private matrix (Story 1.16b, armed by 11a.1)
+
+▸ Matrix: version 2, 8 surface(s) (7 rendering, 1 declared-not-yet-built)
+  · 23 tier-classified field(s); 1 escalation(s) on the ledger
+
+▸ Route coverage: 7 shipped page(s) under apps/public/src/pages/
+  ✓ every shipped route is declared, and every rendering surface names a real page
+
+▸ Search-indexing reconciliation (declared policy ⇄ the page's noindex prop)
+  · /                index
+  · /niyamavali      index
+  · /terms           index
+  · /blog            index
+  · /blog/[postId]   index
+  · /404             noindex
+  · /500             noindex
+  ✓ every declared policy matches the render
+
+▸ Escalation ledger: 1 entr(y/ies), attestation cross-checked
+  · member-directory.member_name: authenticated_member → public  [2026-08-19-136]
+  ✓ every escalation cites a decision that exists, and the count agrees
+
+▸ Tier-leak (live render): NOT checked here, BY DESIGN (ruling D2).
+  · it runs in apps/public/tests/integration/public-pages/scrape-test.spec.ts, against real
+    render HTML, on every PR via `pnpm turbo run test`. Run the suite to exercise it.
+
+✓ pii-scrape gate passed
+```
+
+⭐ `0 surface(s)` → **8**. `Render snapshots: 0` → the leg moved to where renders actually exist.
+
+#### AC-by-AC
+
+| AC | Where it landed | Note |
+|---|---|---|
+| AC1 route coverage | `gate.ts:checkRouteCoverage`, matrix v2 | Bidirectional **+ a third check the AC did not ask for**: a `renders:false` surface whose route later ships fails as STALE, so 11a.3 cannot ship the directory and forget to flip it. |
+| AC2 tier-leak armed | `scrape-test.spec.ts`, `surface-fields.ts` | Every snapshot carries `html` **and** `fields`; each surface asserts its field set is NON-EMPTY, guarding the exact regression being fixed. |
+| AC3 blog render model | `blog-render.ts`, `read.ts:PublicPostRow` | ⭐ Closed at BOTH layers — narrowed at the source **and** modelled at the page. ⛔ Render byte-identical. |
+| AC4 Tier-1 exception | `matrix.ts` field + root `superRefine` | The exactly-one check is at the **root**, not per-surface: per-surface would permit one exception on every surface. |
+| AC5 presentation policy | `kyc/public-name.ts`, `presentation-policy.ts`, migration 0110 | Flip proven **twice** — pure, and against a live DB row. |
+| AC6 per-Pariwar rule | matrix `per_pariwar_attribute_rule`, README | A rule with a fail-closed default; a test asserts `school`/`designation`/`block`/`zone`/`division` appear as NO field row. |
+| AC7 indexing reconciliation | `gate.ts:checkIndexingReconciliation` | ⚠ Frontmatter is STRIPPED before scanning — load-bearing, see below. |
+| AC8 escalation ledger | matrix `escalations`, `checkEscalationAttestation`, PR template | ⭐ The gate leaves the file to verify the ruling EXISTS. Six prompts before, six after. |
+| AC9 stale/false statements | README, `check-pii-scrape.ts`, `matrix.ts` docstring | Both false claims quoted IN the correction, ⛔ not quietly deleted. |
+| AC10 revert-sanity | 3 test files + 3 live plants | One control **per route**, independently planted. |
+| AC11 `getVisibility` + framing | `scrape.ts`, README | `TIER_RANK` MOVED to `matrix.ts` — one copy, and a test asserts the two engine halves agree field-for-field. |
+
+#### ⭐ Five things worth a reviewer's attention
+
+1. **`loadSnapshots()` was DELETED, not repaired.** Per ruling D2 a snapshot loader in the gate
+   script could only ever read committed fixtures, and a fixture is a restatement of the render
+   that drifts silently — the defect class this story exists to close. The script now states, in
+   its header AND its output, which legs it owns and which it does not.
+2. **Stripping `.astro` frontmatter before the indexing scan is load-bearing, not tidiness.**
+   `404.astro` and `500.astro` both *discuss* noindex in frontmatter prose. A whole-file scan would
+   have matched those comments and "confirmed" a directive that prose merely described — a gate
+   agreeing with a comment instead of with the code. There is a test for exactly this.
+3. **`pariwar_admin` deliberately does NOT hold the new permission key**, though it holds every
+   other pariwar-dimension content key. `-136` cl.3 makes the flip a governed act, "not a casual
+   Pariwar-Admin toggle". ⛔ Granting it later "for symmetry" would reverse a ratified ruling by
+   catalog edit. The exclusion is documented in three places so it survives a tidy-up.
+4. **The presentation default is `full_name` and is deliberately NOT fail-closed** — the one place
+   in this story where the safe default is the RULED one rather than the closed one, because
+   fail-closed here means SHIELDING, which would silently contradict a ratified ruling whenever a
+   config row went missing. Argued in the resolver, the schema and the migration header.
+   ⚠ Contrast `per_pariwar_attribute_rule`, which DOES default closed — precisely because no ruling
+   covers those attributes.
+5. **The story's caution about `getPublishedPublicPost` being "also used by the admin preview path"
+   does not hold in this repo.** Verified before narrowing: both public reads have exactly ONE
+   production consumer each — the two `apps/public` blog pages; the admin surface uses
+   `listPostsForPariwar`. Narrowing was therefore safe, and the AC3 "only if it does not disturb
+   other consumers" condition is satisfied by checking, not by declining.
+
+#### ⚠ Carried forward — ⛔ NOT closed by this story
+
+- **The Niyamavali does not record that members' full legal names are published on an
+  unauthenticated page.** Verified by reading all 23 v1 clause ids in
+  `niyamavali-v1-clauses.sql` — ⛔ not one clause governs directory publication or name visibility.
+  Raised as an OPEN FINDING for the Panel in Decision `2026-08-20-140` cl.7 and carried in the
+  matrix's own escalation rationale and the README. ⛔ Amending the Niyamavali is Story 2.4's
+  workflow and needs its own ruling.
+- **`2026-08-19-136` cl.5's DPDPA exposure (legal counsel not engaged)** stays open and is
+  COMPOUNDED by the finding above.
+- **`2026-08-19-136` cl.4 is discharged ONLY WHILE the tier-leak leg stays armed.** A future change
+  that empties it re-opens the launch-blocking condition.
+- **Epic 11b surfaces are deliberately undeclared.** Enforced, ⛔ not remembered: the
+  route-coverage leg fails when an 11b route ships undeclared.
+- **`member-directory` is `renders: false`.** Story 11a.3 fills it and flips the flag; the STALE
+  `renders:false` check fails until it does.
+
+#### Verification
+
+- `pnpm ci:local` (without `DATABASE_URL`) — **31/31 jobs green**, integration leg skipped.
+- Live-DB leg run separately (the two-leg split avoids the known double-run pollution):
+  **domain 3011 passed / 1 skipped** (vs 1895/1106-skipped without a DB), events 33, queue 3,
+  niyamavali-engine 144, validity-service 284, channels 204, **api 1018 / 1 skipped**, **jobs 346**.
+- New tests added by this story: contracts **+60** (18 schema, 8 `getVisibility`, 34 gate legs) and
+  the populated-invariant rewrite of the retired scaffold assertion (`public-pages.test.ts` 38 → 46);
+  apps/public **+27** (6 derivation, 12 blog model, 9 spec additions incl. 3 negative controls);
+  domain **+26** (15 pure resolver, 11 live-DB RLS/governed-write).
+- ⚠ `git push` runs the full `ci:local` via the pre-push hook — expect the pause; that is the hook,
+  not a hang ([[project_friction_budget_baseline_ratchet]]).
+- ⭐ **REBASE-merge this story, ⛔ never squash** — it is multi-commit and the `governance:` commit
+  must stay first and separate ([[project_story_automator_ops]]).
+
 ### File List
+
+**Governance (committed FIRST, alone)**
+- `.decision-log.md` (M) — Decision `2026-08-20-140`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (M)
+- `_bmad-output/implementation-artifacts/11a-1-4-tier-visibility-matrix-codified-per-surface-public-vs-private-replacement.md` (A)
+- `_bmad/custom/bmad-create-story.toml` (A) · `_bmad/custom/load-bearing-invariant-checklist.md` (M)
+
+**`packages/contracts` — schema, engine, gate**
+- `src/public-pages/matrix.ts` (M) — `TIER_RANK` moved here; Tier-1 exception, escalation ledger, per-Pariwar rule
+- `src/public-pages/scrape.ts` (M) — `getVisibility()`; `TIER_RANK` de-duplicated
+- `src/public-pages/gate.ts` (A) — the three source-provable legs
+- `src/public-pages/index.ts` (M) · `src/public-pages/README.md` (M)
+- `scripts/check-pii-scrape.ts` (M) — `loadSnapshots()` deleted; three legs wired
+- `public-pages/public-vs-private-matrix.yaml` (M) — POPULATED (v2)
+- `tests/public-pages.test.ts` (M) — scaffold assertion retired → populated invariants
+- `tests/public-pages-matrix-schema.test.ts` (A) · `tests/public-pages-gate.test.ts` (A) · `tests/public-pages-get-visibility.test.ts` (A)
+
+**`apps/public` — render models + the armed leg**
+- `src/lib/surface-fields.ts` (A) · `src/lib/blog-render.ts` (A)
+- `src/lib/niyamavali-render.ts` (M) · `src/lib/tc-render.ts` (M) — field-id mappings
+- `src/pages/blog.astro` (M) · `src/pages/blog/[postId].astro` (M) — routed through the model; false comment corrected
+- `tests/surface-fields.test.ts` (A) · `tests/blog-render.test.ts` (A)
+- `tests/integration/public-pages/scrape-test.spec.ts` (M) — `fields` added; blog snapshots; negative controls
+
+**`packages/domain` — presentation policy**
+- `migrations/0110_public-name-presentation.sql` (A) · `migrations/meta/_journal.json` (M, additive)
+- `src/schema/pariwar_public_name_presentation.ts` (A) · `src/schema/index.ts` (M)
+- `src/policies/pariwar-public-name-presentation-rls.ts` (A) · `src/policies/index.ts` (M)
+- `src/kyc/public-name.ts` (A) · `src/kyc/presentation-policy.ts` (A) · `src/kyc/index.ts` (M)
+- `src/news-blog/read.ts` (M) — `PublicPostRow`, narrowed selects · `src/news-blog/index.ts` (M)
+- `src/rbac/permissions.ts` (M) — catalog 36 → 37, keys 44 → 45
+- `tests/kyc/public-name.test.ts` (A) · `tests/integration/rls/public-name-presentation-policy.spec.ts` (A)
+- `tests/rbac/permissions.test.ts` (M)
+
+**Repo-root**
+- `turbo.json` (M) — Trap 6 inputs
+- `.github/pull_request_template.md` (M) — merged into Security-impact (still six prompts)
+- `friction-budget.md` (M) — Story 11a.1 disposition, no new row
+
+## Change Log
+
+| Date | Change |
+|---|---|
+| 2026-08-20 | Decision `2026-08-20-140` recorded (D1–D6 ruled; the Niyamavali finding raised OPEN; the three gate defects verified). Governance commit landed first, alone. |
+| 2026-08-20 | Matrix schema extended (route/renders, attributed Tier-1 exception, escalation ledger, per-Pariwar rule); `getVisibility()` added; `TIER_RANK` de-duplicated into `matrix.ts`. |
+| 2026-08-20 | Blog render model extracted and the two public blog reads narrowed to six explicit columns; the false `blog.astro:6` comment made true by construction. |
+| 2026-08-20 | Matrix POPULATED (8 surfaces, 23 fields, 1 attested escalation); three source-provable gate legs added; `loadSnapshots()` deleted; Trap 6 turbo inputs closed. |
+| 2026-08-20 | Tier-leak leg ARMED — every snapshot now carries derived `fields`; blog snapshots added; one negative control per detection route; three legs proven live. |
+| 2026-08-20 | Scaffold assertion retired and replaced by nine populated invariants. |
+| 2026-08-20 | Per-Pariwar public-name presentation policy: migration 0110, RLS, pure resolver, governed write path, permission catalog 36 → 37. Configurability proven pure + live. |
+| 2026-08-20 | README honest-scoping + layer table + transparency framing; two false claims corrected; PR-template prompt merged within the six-prompt budget. |
+| 2026-08-20 | Friction-budget disposition — declaration affirmed, no new row; baseline NOT ratcheted. |

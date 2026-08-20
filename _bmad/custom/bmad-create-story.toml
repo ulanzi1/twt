@@ -1,0 +1,18 @@
+# Team override for bmad-create-story.
+#
+# AI-10-1 (Epic 10 retrospective, CONFIRMED BigDev 2026-08-18) — the STORY-TEMPLATE
+# half of the policy-meaning check. The review-layer half lives in
+# `load-bearing-invariant-checklist.md` family 11, loaded by bmad-code-review.toml.
+# Redundant by design, matching the revert-sanity posture: the story must STATE the
+# sentence, and the Acceptance Auditor separately verifies it was written AND checked.
+#
+# Merge rules (per _bmad/scripts/resolve_customization.py): arrays append, so the
+# skill's own `file:{project-root}/**/project-context.md` default is preserved.
+
+[workflow]
+
+persistent_facts = [
+  "AI-10-1 policy-meaning check (CONFIRMED BigDev 2026-08-18, Epic 10 retrospective): if this story introduces OR CHANGES a predicate that gates a member's access to a benefit — including adding a conjunct to an existing predicate — the story file must carry a short 'Policy meaning' note stating, in ONE sentence, what that predicate means to the MEMBER, and stating whether that sentence was checked against the Niyamavali and with what result. Write the sentence in the member's terms, never the code's: 'a suspended member can never be assigned to a pool again', not 'is_valid is false'. If the story introduces no such predicate, say so explicitly in one line — an absent note is indistinguishable from an unasked question.",
+  "AI-10-1 rationale (do not drop this check as boilerplate): Story 10.10 shipped an `is_valid: false` conjunction that silently made every suspension a de-facto PERMANENT BAN. Every CI gate was green through it; it took a correct-course and an instrument amendment to find and fix, and it reshaped Epic 10 from 15 stories to 29. The same shape recurred at 10.23's `episode_key`. A one-line predicate can carry constitutional meaning that no gate can see — this note is the only mechanism that looks for it BEFORE the code is written.",
+  "The 'Policy meaning' note belongs in the story file itself (alongside the acceptance criteria, where the dev agent will actually read it), not only in the sprint-status ledger. Per [[feedback_spec_edits_must_propagate_to_tasks]]: the dev agent works from the Tasks list — a constraint recorded only in a ledger comment does not reach the implementation.",
+]

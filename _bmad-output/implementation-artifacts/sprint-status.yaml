@@ -1,4 +1,141 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-20e (bmad-dev-story 11a.2: IMPLEMENTED. ONE row flips:
+#   development_status[11a-2-...] ready-for-dev -> review. ⛔ epic-11a stays in-progress (4 stories
+#   remain: 11a.3-11a.6). ⛔ No other story status changes. ⛔ No migration, no ADR.
+#   ⭐ TRAP 1 RESOLVED AS RULED -- THE ARCHITECTURE WAS BUILT, THE EPIC AC WAS NOT, and the AC is
+#     not merely conflicting but UNBUILDABLE: verified live at 66ae30d that members are TOKEN-BEARER
+#     (Authorization header, exp<=15min) and apps/ holds admin|api|jobs|mobile|public with ⛔ NO
+#     apps/member-web ⇒ ⛔ no browser surface holds a member token ⇒ no authenticated_member viewer
+#     on apps/public by ANY mechanism. <AuthenticatedFragment> ships public-fallback-only; the
+#     hydration fork is DEFERRED with a STORY-shaped trigger (11b FR-77), Astro 6 server:defer
+#     recorded as the leading candidate. ⛔ apps/api/src/modules/public-pages/ NOT created.
+#   ⚠⛔ THE HEADLINE CAVEAT, DECLARED LOUDLY BECAUSE AC4 REQUIRED IT: the member-directory
+#     TIER-LEAK LEG IS ARMED BUT EMPTY. /members renders shell + pagination + a not-yet-published
+#     empty state and reads ⛔ NO member data; ⛔ member_name is NOT rendered (11a.3 owns the Tier-1
+#     decrypt, behind 11a.3's anti-enumeration safeguards). Field set is []. ⛔ A green
+#     member-directory check means "renders no classified field", NOT "the directory is policed".
+#     Stated in the matrix, the page, the render model, the spec, deferred-work AND gate-inventory,
+#     and ASSERTED executably -- letting a vacuous green imply otherwise is the exact defect 11a.1
+#     existed to remove.
+#   ⭐ D1(a) DISCHARGED THE 11a.1 SELF-CONTRADICTION: its scope table said 11a.2 owned /members, its
+#     ledger said 11a.3. The route ships here and `renders` flips true IN THE SAME COMMIT (the leg
+#     is armed in BOTH directions), and the surface's rationale is REWRITTEN -- a boolean flip
+#     leaving the prose asserting the opposite is a record contradicting itself.
+#   ⛔ TWO VERIFIED PRE-EXISTING HOLES CLOSED, ⛔ neither previously recorded anywhere:
+#     (a) FR-91 was UNENFORCED on apps/public -- the 1.14 guard walks the committed OpenAPI surface
+#         and Astro routes emit none, so /members?page=all would have been unpoliced. ⛔ Do not cite
+#         1.14 as coverage for this surface. Closed by a pure helper + a `pagination_binding` leg.
+#     (b) /blog + /blog/[postId] set NO Cache-Control for a WHOLE EPIC and ⛔ nothing checked,
+#         because absence read as "the default is fine". Closed by the headers + a FAIL-CLOSED
+#         `cache_policy_reconciliation` leg. ⛔ The leg proves what the ORIGIN emits -- NOTHING
+#         about Cloudflare (not in this repo; contingent on DPDPA legal review).
+#   ✅ AC8 CR-D0-1.16b DISCHARGED BY PROOF, not assertion: disabling the new warning turns two
+#     tests RED. ⛔ A warning nobody reads is not a discharge.
+#   ✅ AC6 BOTH TRIGGERS ANSWERED IN WRITING: per-route page-weight DISCHARGED (⚠ its trigger had
+#     fired TWICE -- /terms, /blog -- and been MISSED both times); critical_render_path_ms
+#     RE-DEFERRED with a reason + a NEW trigger (11a.3 or the first client island). ⛔ Neither
+#     silently skipped. ⚠ The per-route numbers are an ATTRIBUTION of static client assets, ⛔ NOT
+#     a measurement of dynamic HTML, and the block is EMITTED, ⛔ NOT ENFORCED.
+#   ✅ AC9 REVERT-SANITY RUN LIVE, ⛔ not reasoned about: 7 independently planted violations, each
+#     producing EXACTLY ONE finding (⛔ no fixture tripping several checks), all reverted, tree
+#     confirmed clean. Trap 3 ALSO proven live -- a temporary import confirmed the ?raw matrix bytes
+#     DO inline into dist/server/chunks/, then reverted.
+#   ⚠ RAISED, ⛔ NOT SILENTLY ABSORBED: <MatrixField> has NO call site on the shipped page and
+#     CANNOT have one -- D1(a)'s rationale ("gives <MatrixField> a real call site") and AC4 ("no
+#     member row data is read or rendered here") are JOINTLY UNSATISFIABLE, since the surface's only
+#     declared fields are member_name (forbidden here) and district (the D1(b) render NOT chosen).
+#     ⛔ No decorative call site was fabricated. The component ships fully built + fully tested and
+#     11a.3 is its first consumer. FOR REVIEW -- nothing was built differently from the ruling.
+#   ⚠ CARRIED OPEN, ⛔ NOT CLOSED: Decision 2026-08-20-140 cl.7 -- the Niyamavali still records no
+#     directory publication, and D1(a) ships the page anyway. Ruled KNOWINGLY (2026-08-20-141 cl.8),
+#     ⛔ not discovered afterwards; now SHARPER because the page it describes exists.
+#   ⚠ RECORDED GAP: the empty-state inventory does NOT cover /blog or /blog/[postId] (10.5) --
+#     routed with a written trigger; ⛔ Row 6 closure criteria NOT relaxed, Row 6 stays in-progress.
+#   Gates: ci:local 31/31 green; contracts 1012->1030; apps/public 55->119; astro check 0/0/0.
+#   ⚠ 4 @twt/api E2E flakes under the oversubscribed live-DB run were confirmed NOT this story's --
+#     all pass in isolation (<1s vs ~33s) and the full @twt/api suite alone is 1018 green.
+#   ⛔ REBASE-merge this multi-commit story, NEVER squash -- the governance: commit must stay first.
+#   NEXT: bmad-code-review, recommended on a DIFFERENT LLM than the one that implemented it.)
+# last_updated: 2026-08-20d (bmad-create-story 11a.2: authored
+#   11a-2-public-astro-ssr-shell-extension-for-member-directory-tiered-visibility-renderers.md.
+#   ONE row flips: development_status[11a-2-...] backlog -> ready-for-dev. ⛔ epic-11a stays
+#   in-progress (4 stories remain: 11a.3-11a.6). ⛔ No other story status changes. ⛔ No code, no
+#   migration, no ADR and no matrix edit IN THIS AUTHORING PASS -- ⚠ the STORY itself does edit the
+#   matrix (the D1 `renders` flip + the D4 cache_policy field), which is why Trap 2 exists.
+#   ✅ FIVE DECISIONS (D1-D5) RAISED AND ALL FIVE RULED BY BIGDEV, 2026-08-20, EACH AS RECOMMENDED --
+#   ⛔ nothing left open, and the Tasks are written against the ruled option. They were RAISED rather
+#   than assumed because TWO of them decided whether this story ships a member-facing page at all,
+#   and guessing a directory question is the exact SD-1 failure (132 cl.7). Ruled:
+#     (a) D1 -- /members SHIPS HERE (shell + pagination + explicit not-yet-published empty state);
+#         `renders` flips false->true IN THE SAME COMMIT. ⛔ NO member row data is read or rendered
+#         and ⛔ member_name is NOT rendered -- the Tier-1 decrypt stays behind 11a.3's safeguards.
+#         ⚠ Its cost, ruled knowingly: the tier-leak leg on member-directory is ARMED BUT EMPTY until
+#         11a.3, which AC4 requires be declared LOUDLY -- ⛔ never left to be inferred from a green
+#         check, which is the exact defect 11a.1 existed to remove;
+#     (b) D2 -- public-fallback-only slot + honest registry naming ZERO live fragments + the
+#         hydration-mechanism fork recorded as an explicit deferral (server islands the leading 11b
+#         candidate). ⛔ apps/api/src/modules/public-pages/ is NOT created empty;
+#     (c) D3 -- the cache-policy leg is a FOURTH leg in the existing pii-scrape gate, reading the
+#         same .astro sources checkIndexingReconciliation already reads (11a.1's D2 posture: committed
+#         source is the gate's job);
+#     (d) D4 -- an EXPLICIT per-surface `cache_policy`. ⛔ Inference is already wrong on 2 of the 8
+#         shipped surfaces (/500 is all-public fields but no-store; / is a redirect);
+#     (e) D5 -- DISCHARGE the per-route page-weight restructure here; RE-DEFER critical_render_path_ms
+#         with a NEW written trigger.
+#   ⚠ THE RULING HAS NO INDEPENDENT RECORD YET -- no .decision-log.md entry exists for it; this story
+#   file and this ledger comment are the only trace, both written in the same authoring pass. Task 1's
+#   decision-log commit is a NON-OPTIONAL PRECONDITION, ⛔ not a formality.
+#   ⭐ THE FINDING, AND IT IS LOAD-BEARING: the epic AC asks for `<AuthenticatedFragment>` slots that
+#   "render SERVER-SIDE when the viewer is authenticated". ⛔ architecture.md:504-517 commits the
+#   OPPOSITE property -- fragments "hydrate CLIENT-SIDE", SSR output carries "no auth-derived
+#   branching", and "the auth boundary lives at the API, NOT at the page or the edge".
+#   ⚠ AND THE AC'S VERSION IS UNBUILDABLE, not merely non-compliant: members are TOKEN-BEARER
+#   (member-session-guard.ts:1-8 -- an Authorization-header JWT, exp <= 15 min). A browser navigating
+#   to twt.org sends COOKIES, never that header; there is no apps/member-web/ and apps/ holds only
+#   admin/api/jobs/mobile/public. ⇒ ⛔ THERE IS NO `authenticated_member` VIEWER ON apps/public TODAY,
+#   BY ANY MECHANISM. Recommended D2(a): ship the composition CONTRACT (public-fallback-only slot +
+#   an honest registry naming ZERO live fragments) and record the hydration-mechanism fork as an
+#   explicit deferral. ⛔ apps/api/src/modules/public-pages/ is NOT created empty -- a module with no
+#   route is a claim that a boundary exists.
+#   ⭐ ASTRO 6 SERVER ISLANDS (`server:defer`) ARE THE ONE READING UNDER WHICH THE AC AND THE
+#   ARCHITECTURE AGREE -- separate GET, encrypted props, shell stays edge-cacheable, fragment renders
+#   server-side. ⛔ Still needs a viewer the browser cannot identify, so it is recorded as the leading
+#   CANDIDATE for Epic 11b, ⛔ not adopted here.
+#   ⭐ D1 IS BLOCKING BECAUSE 11a.1'S OWN RECORD CONTRADICTS ITSELF: its scope table assigns "the
+#   /members route, pagination" to 11a.2; its ledger says "a STALE-renders:false check fails until
+#   11a.3 flips it". ⛔ Both are committed and one is wrong. checkRouteCoverage is armed in BOTH
+#   directions (STALE renders:false when the route ships; ORPHANED SURFACE when the flip ships
+#   alone), so the matrix moves with whichever answer is right, in the same commit.
+#   ⚠ THREE PRE-EXISTING DEFECTS VERIFIED LIVE AT AUTHORING TIME, ⛔ NOT INHERITED FROM THE RECORD:
+#     (a) FR-91 forced pagination is ⛔ NOT ENFORCED on apps/public -- the 1.14 guard walks
+#         openapi/v1.yaml and Astro routes emit none. A /members?page=all would be entirely unpoliced;
+#     (b) /blog and /blog/[postId] set ⛔ NO Cache-Control AT ALL (their public-tier siblings set
+#         `public, max-age=60, s-maxage=300`), and nothing checks any of them -- AC5 closes it with a
+#         FOURTH gate leg reconciling a declared per-surface cache_policy against committed source,
+#         fail-closed on absence (absence must never read as "the default is fine");
+#     (c) the per-route page-weight deferral names "Epic 11a (second public route)" as its trigger --
+#         ⚠ /terms (2.6) and /blog (10.5) BOTH shipped and the manifest is still an aggregate. The
+#         trigger did not fail, IT WAS NOT NOTICED. Recommended D5(a): discharge it here, re-defer
+#         critical_render_path_ms with a NEW written trigger.
+#   ⚠ getVisibility() has ZERO call sites -- 11a.1 shipped the function, this story is its first
+#   consumer. ⛔ MatrixField must DELEGATE to it (no local tier compare, no second TIER_RANK copy) and
+#   a not-visible verdict must render NOTHING -- ⛔ no placeholder, no empty span, no HTML comment: an
+#   omission that announces itself is an enumeration signal.
+#   ⚠ TRAP 3: the gate and the live-render spec read the matrix by relative fs path, which ⛔ CANNOT
+#   work in the standalone image (dist/ has no .yaml). The renderer loads it as a Vite `?raw` import,
+#   with a test asserting BYTE-IDENTITY to the committed file -- a renderer enforcing a stale copy
+#   while the gate checks the real one is invisible to both.
+#   ⚠ POLICY-MEANING NOTE (AI-10-1) CARRIED IN THE STORY FILE: ⛔ no benefit-gating predicate is
+#   introduced -- every predicate here is a RENDERING predicate, and architecture §2.13.2 makes
+#   display-only structural ("enforced by signature"). ⚠ Decision 2026-08-20-140 cl.7 REMAINS OPEN and
+#   this story ⛔ does not close it: the Niyamavali still does not record directory publication. ⭐ With
+#   D1(a) ruled, this story SHIPS A MEMBERS PAGE WHILE THE RULEBOOK DOES NOT MENTION ONE -- BigDev's
+#   call, made KNOWINGLY with the finding in front of them at authoring time, ⛔ not discovered after.
+#   AC8 discharges CR-D0-1.16b, whose trigger IS this story. AC9 requires an INDEPENDENTLY planted
+#   negative control per detection route -- ⛔ never one fixture tripping several checks.
+#   ⛔ REBASE-merge this multi-commit story, NEVER squash -- the governance: commit stays first.
+#   Story 11a.2 file Status: ready-for-dev. NEXT: bmad-dev-story; recommended code-review by a
+#   DIFFERENT LLM.)
 # last_updated: 2026-08-20c (bmad-code-review 11a.1: REVIEWED AND PATCHED. ONE row flips:
 #   development_status[11a-1-...] review -> done. ⛔ epic-11a stays in-progress (5 stories remain:
 #   11a.2-11a.6). ⛔ No other story status changes.
@@ -8660,7 +8797,7 @@ development_status:
   # ==========================================================================
   epic-11a: in-progress
   11a-1-4-tier-visibility-matrix-codified-per-surface-public-vs-private-replacement: done
-  11a-2-public-astro-ssr-shell-extension-for-member-directory-tiered-visibility-renderers: backlog
+  11a-2-public-astro-ssr-shell-extension-for-member-directory-tiered-visibility-renderers: review
   11a-3-member-directory-pii-shielded-tiered-render-scope-anti-enumeration-safeguards: backlog
   11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only: backlog
   11a-5-noticeboard-strip-foundational-layout-component: backlog

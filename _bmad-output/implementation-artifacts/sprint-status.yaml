@@ -1,4 +1,55 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-20b (bmad-dev-story 11a.1: IMPLEMENTED. ONE row flips:
+#   development_status[11a-1-...] ready-for-dev -> review. ⛔ epic-11a stays in-progress (5 stories
+#   remain: 11a.2-11a.6). ⛔ No other story status changes.
+#   ⭐ THE FR-74 GATE STOPPED CERTIFYING AN INVARIANT NOBODY WAS ENFORCING. Before: `0 surface(s)`,
+#   `Render snapshots: 0`, and `loadSnapshots()` was literally `return []` while SEVEN public routes
+#   shipped -- a green check over a vacuous leg. After: 8 surfaces, 23 tier-classified fields, 1
+#   attested escalation, three source-provable legs, and the tier-leak leg armed against real renders.
+#   ⛔ `loadSnapshots()` was DELETED, not repaired (ruling D2 -- a loader there could only read
+#   fixtures, and a fixture is a restatement of the render that drifts silently).
+#   ⚠ TWO SHIPPED CLAIMS WERE FALSE and are corrected WITH THE FALSEHOOD QUOTED, ⛔ not quietly
+#   deleted: the README's "teeth without a code change to the gate" and the gate's "apps/public is a
+#   tsc stub until Story 2.5" (it has 7 pages). ⚠ Same staleness-by-assertion class 8bcc924 found in
+#   31 of 39 ADR index rows -- found here in this story's own gate.
+#   ⭐ `2026-08-19-136` cl.1 DISCHARGED BY PROOF: migration 0110 + a per-Pariwar mode row + a pure
+#   resolver, with two tests that FLIP the stored mode and watch the render follow (one pure, one
+#   against a live DB row) and flip BACK (cl.3, ⛔ not a one-way ratchet), asserting the stored KYC
+#   name is byte-identical throughout (cl.2). Permission catalog 36 -> 37, keys 44 -> 45.
+#   ⛔ pariwar_admin does NOT hold the new key though it holds every other pariwar-dimension content
+#   key -- `-136` cl.3 makes the flip a governed act; re-granting it "for symmetry" would reverse a
+#   ratified ruling by catalog edit.
+#   ⚠ THE DEFAULT IS `full_name` AND DELIBERATELY NOT FAIL-CLOSED -- the one place in this story where
+#   the safe default is the RULED one, because fail-closed here means SHIELDING, which would silently
+#   contradict a ratified ruling on a missing row. Contrast per_pariwar_attribute_rule, which DOES
+#   default closed (operator_restricted) precisely because no ruling covers those attributes.
+#   ⭐ TRAP 6 CLOSED AND VERIFIED BOTH WAYS: apps/public pages + .decision-log.md added to turbo
+#   inputs; a page-only edit now busts the cache (0 cached, 514ms) where it previously replayed
+#   FULL TURBO over unscanned content.
+#   ⭐ PROVEN LIVE, ⛔ not merely unit-tested: three planted violations against REAL files, each
+#   exiting 1, each reverted -- an undeclared members.astro, a noindex prop on terms.astro, a bogus
+#   decision ref. Migration 0110 applied live against twt-test-pg:5433 (rolled-back dry run first),
+#   110 -> 111; journal diff purely additive, ⛔ 0109 never regenerated.
+#   ⚠ CARRIED FORWARD, ⛔ NOT CLOSED: (a) Decision 2026-08-20-140 cl.7 -- verified by reading all 23
+#   v1 clause ids that the NIYAMAVALI DOES NOT RECORD that members' full legal names are published on
+#   an unauthenticated page; raised as an OPEN FINDING for the Panel, ⛔ not fixed (Story 2.4's
+#   workflow, its own ruling); (b) `-136` cl.5's DPDPA exposure, COMPOUNDED by (a); (c) `-136` cl.4 is
+#   discharged ONLY WHILE the leg stays armed; (d) Epic 11b surfaces deliberately undeclared --
+#   enforced, ⛔ not remembered: route coverage FAILS when an 11b route ships undeclared;
+#   (e) member-directory is renders:false and a STALE-renders:false check fails until 11a.3 flips it.
+#   TESTS AS OBSERVED: ci:local 31/31 green (unit leg, no DATABASE_URL). Live-DB leg run SEPARATELY
+#   (the two-leg split avoids the known double-run pollution): domain 3011 passed/1 skipped, api
+#   1018/1 skipped, jobs 346, channels 204, validity-service 284, niyamavali-engine 144, events 33,
+#   queue 3. ⚠ 8 api/jobs failures in a first combined concurrent run were CONTENTION, ⛔ not
+#   regressions -- established by both passing in isolation AND serially, not assumed.
+#   NEW TESTS: contracts +60 and public-pages.test.ts 38 -> 46 (scaffold assertion RETIRED, Trap 5);
+#   apps/public +27; domain +26. Every detection route carries an INDEPENDENTLY planted negative
+#   control -- ⛔ never one fixture tripping several checks.
+#   PR template: six prompts before, SIX AFTER -- the visibility-escalation prompt MERGED into the
+#   existing Security-impact item, ⛔ not added as a seventh (Trap 7).
+#   Friction-budget: declaration affirmed, ⛔ NO new row; baseline NOT ratcheted -- the measured 5219
+#   is the number friction-budget.yaml:55 already records from Story 2.6, VERIFIED not assumed.
+#   ⛔ REBASE-merge this multi-commit story, NEVER squash -- the governance: commit stays first.)
 # last_updated: 2026-08-20a (bmad-create-story 11a.1: authored
 #   11a-1-4-tier-visibility-matrix-codified-per-surface-public-vs-private-replacement.md, D1-D6 raised
 #   and ALL RULED SAME DAY. TWO rows flip:
@@ -8577,7 +8628,7 @@ development_status:
   # Epic 11a: Public Trust Identity Shell
   # ==========================================================================
   epic-11a: in-progress
-  11a-1-4-tier-visibility-matrix-codified-per-surface-public-vs-private-replacement: ready-for-dev
+  11a-1-4-tier-visibility-matrix-codified-per-surface-public-vs-private-replacement: review
   11a-2-public-astro-ssr-shell-extension-for-member-directory-tiered-visibility-renderers: backlog
   11a-3-member-directory-pii-shielded-tiered-render-scope-anti-enumeration-safeguards: backlog
   11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only: backlog

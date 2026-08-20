@@ -34,6 +34,8 @@ const FIXTURE: PublicVsPrivateMatrix = {
   surfaces: [
     {
       id: 'member-directory',
+      route: '/members',
+      renders: false,
       search_indexing_policy: 'noindex',
       fields: [
         { id: 'full_name', tier: 'public' },
@@ -43,12 +45,14 @@ const FIXTURE: PublicVsPrivateMatrix = {
       ],
     },
   ],
+  escalations: [],
+  escalation_count: 0,
 };
 
 describe('matrix schema parse (AC-1)', () => {
   it('parses a structurally valid matrix to a typed object', () => {
     const raw =
-      'version: 1\nsurfaces:\n  - id: s\n    search_indexing_policy: index\n    fields:\n      - id: f\n        tier: public\n';
+      'version: 1\nsurfaces:\n  - id: s\n    route: /s\n    search_indexing_policy: index\n    fields:\n      - id: f\n        tier: public\n';
     const matrix = parsePublicVsPrivateMatrix(raw);
     expect(matrix).not.toBeNull();
     expect(matrix?.version).toBe(1);
@@ -62,13 +66,13 @@ describe('matrix schema parse (AC-1)', () => {
 
   it('throws loudly on an unknown tier', () => {
     const raw =
-      'version: 1\nsurfaces:\n  - id: s\n    search_indexing_policy: index\n    fields:\n      - id: f\n        tier: semi_public\n';
+      'version: 1\nsurfaces:\n  - id: s\n    route: /s\n    search_indexing_policy: index\n    fields:\n      - id: f\n        tier: semi_public\n';
     expect(() => parsePublicVsPrivateMatrix(raw)).toThrow(/malformed matrix/);
   });
 
   it('throws on an unknown search_indexing_policy', () => {
     const raw =
-      'version: 1\nsurfaces:\n  - id: s\n    search_indexing_policy: maybe\n    fields: []\n';
+      'version: 1\nsurfaces:\n  - id: s\n    route: /s\n    search_indexing_policy: maybe\n    fields: []\n';
     expect(() => parsePublicVsPrivateMatrix(raw)).toThrow(/malformed matrix/);
   });
 
@@ -272,13 +276,13 @@ describe('matrix uniqueness constraints', () => {
   it('throws on duplicate surface ids in the matrix', () => {
     const raw =
       'version: 1\nsurfaces:\n' +
-      '  - id: dup\n    search_indexing_policy: index\n    fields: []\n' +
-      '  - id: dup\n    search_indexing_policy: noindex\n    fields: []\n';
+      '  - id: dup\n    route: /dup\n    search_indexing_policy: index\n    fields: []\n' +
+      '  - id: dup\n    route: /dup2\n    search_indexing_policy: noindex\n    fields: []\n';
     expect(() => parsePublicVsPrivateMatrix(raw)).toThrow(/duplicate surface id "dup"/);
   });
   it('throws on duplicate field ids within a surface', () => {
     const raw =
-      'version: 1\nsurfaces:\n  - id: s\n    search_indexing_policy: index\n    fields:\n' +
+      'version: 1\nsurfaces:\n  - id: s\n    route: /s\n    search_indexing_policy: index\n    fields:\n' +
       '      - id: mobile\n        tier: public\n' +
       '      - id: mobile\n        tier: never_exposed\n';
     expect(() => parsePublicVsPrivateMatrix(raw)).toThrow(/duplicate field id "mobile"/);
@@ -288,7 +292,11 @@ describe('matrix uniqueness constraints', () => {
 describe('evaluateSnapshot — edge cases', () => {
   const EMPTY_SURFACE_FIXTURE: PublicVsPrivateMatrix = {
     version: 1,
-    surfaces: [{ id: 'stub-surface', search_indexing_policy: 'noindex', fields: [] }],
+    surfaces: [
+      { id: 'stub-surface', route: '/stub', renders: false, search_indexing_policy: 'noindex', fields: [] },
+    ],
+    escalations: [],
+    escalation_count: 0,
   };
 
   it('emits a warning when the matched surface has no declared fields', () => {

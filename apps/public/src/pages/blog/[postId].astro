@@ -5,16 +5,20 @@
 // is rendered as ESCAPED pre-wrapped text (Astro auto-escapes `{...}` expressions) — no raw HTML from
 // the markdown reaches the page, so an authored post can never inject markup (a full markdown→HTML
 // renderer with sanitisation is a documented follow-on).
+//
+// ⚠ STORY 11a.1 (AC3): the read now selects an explicit six-column list (`PublicPostRow`) instead of
+// a bare `db.select()` that returned every `news_posts` column — authoring actor ids, the tone
+// sign-off hash, channels, workflow status. This page renders through the pure `blog-render.ts`
+// model, which is also the field-id source for the FR-74 tier-leak snapshot. ⛔ All display logic
+// lives in that module (the Astro component-test carve-out).
 import { getLocale, isLocale } from '@twt/i18n';
 import type { Locale } from '@twt/i18n';
 import { ids, newsBlog, passport } from '@twt/domain';
-import type { schema } from '@twt/domain';
 
 import PublicShell from '../../layouts/PublicShell.astro';
+import { buildBlogPostModel } from '../../lib/blog-render.js';
 import { getDb, withPublicScope } from '../../lib/db.server.js';
 import { ACTIVE_PARIWAR_ID } from '../../lib/pariwar.server.js';
-
-type PostRow = schema.NewsPostRow;
 
 const { postId: postIdParam } = Astro.params;
 
@@ -31,7 +35,7 @@ const trustName =
     ? (passportRow?.displayNameHi ?? passportRow?.displayNameEn)
     : (passportRow?.displayNameEn ?? passportRow?.displayNameHi)) ?? 'News';
 
-let post: PostRow | null = null;
+let post: newsBlog.PublicPostRow | null = null;
 try {
   const postId = ids.newsPostId(postIdParam ?? '');
   post = await withPublicScope((scoped) => newsBlog.getPublishedPublicPost(scoped, ACTIVE_PARIWAR_ID, postId));
@@ -45,23 +49,21 @@ if (!post) {
   return new Response(null, { status: 404 });
 }
 
-function fmtDate(d: Date | null): string {
-  return d ? d.toISOString().slice(0, 10) : '';
-}
+const model = buildBlogPostModel(post);
 ---
 
-<PublicShell title={post.title} trustName={trustName} branding={branding} locale={locale}>
+<PublicShell title={model.title} trustName={trustName} branding={branding} locale={locale}>
   <main class="mx-auto max-w-2xl px-4 py-8">
     <p class="mb-4"><a href="/blog" class="text-sm text-blue-600 hover:underline">← News</a></p>
     <article class="space-y-6">
       <header>
-        <h1 class="text-2xl font-semibold">{post.title}</h1>
-        {post.titleHi && <p class="mt-1 text-xl text-gray-700">{post.titleHi}</p>}
-        <p class="mt-1 text-xs text-gray-500">{fmtDate(post.publishedAt)}</p>
+        <h1 class="text-2xl font-semibold">{model.title}</h1>
+        {model.titleHi && <p class="mt-1 text-xl text-gray-700">{model.titleHi}</p>}
+        <p class="mt-1 text-xs text-gray-500">{model.publishedAt}</p>
       </header>
-      <section class="whitespace-pre-wrap leading-relaxed">{post.bodyMarkdown}</section>
-      {post.bodyMarkdownHi && (
-        <section class="whitespace-pre-wrap border-t pt-4 leading-relaxed text-gray-800">{post.bodyMarkdownHi}</section>
+      <section class="whitespace-pre-wrap leading-relaxed">{model.bodyMarkdown}</section>
+      {model.bodyMarkdownHi && (
+        <section class="whitespace-pre-wrap border-t pt-4 leading-relaxed text-gray-800">{model.bodyMarkdownHi}</section>
       )}
     </article>
   </main>

@@ -452,17 +452,17 @@ option. ⛔ The rejected options are retained deliberately — a reader must be 
 | AC11 `getVisibility` + framing | T2b, T9 |
 
 ### Task 0 — Branch, baseline, rulings (AC: all)
-- [ ] `git fetch origin`; confirm `origin/main` is still `bf802b7`. Branch off `main`.
-- [ ] ✅ D1–D6 are **already ruled** (BigDev, 2026-08-20, all as recommended) and §Decisions records
+- [x] `git fetch origin`; confirm `origin/main` is still `bf802b7`. Branch off `main`.
+- [x] ✅ D1–D6 are **already ruled** (BigDev, 2026-08-20, all as recommended) and §Decisions records
       them. ⛔ No halt. ⛔ Do not re-open a ruling mid-implementation — if one looks wrong once the
       code is in front of you, **stop and raise it**, never silently deviate
       ([[feedback_supersede_never_reinterpret]]).
 
 ### Task 1 — `governance:` — the decision-log entry (AC: all) — ⭐ **COMMITS FIRST, ALONE**
-- [ ] Write the `.decision-log.md` entry recording D1–D6 as ruled, the Niyamavali finding from
+- [x] Write the `.decision-log.md` entry recording D1–D6 as ruled, the Niyamavali finding from
       §Policy meaning (⛔ record it as an **open finding for the Panel**, not as closed), and the
       three verified defects from §The gap.
-- [ ] Commit `governance(11a.1): …` **before any code**
+- [x] Commit `governance(11a.1): …` **before any code**
       ([[feedback_governance_commits_precede_implementation]] — history must read governance →
       implementation).
 

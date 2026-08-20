@@ -18,6 +18,8 @@ import { niyamavali } from '@twt/domain';
 import type { schema } from '@twt/domain';
 import type { Locale } from '@twt/i18n';
 
+import { deriveFieldIds, type FieldIdMapping } from './surface-fields.js';
+
 type ClauseRow = schema.ClauseVersionRow;
 type ClausePayload = schema.ClausePayload;
 
@@ -204,4 +206,49 @@ export function renderDiff(versionA: ClauseRow, versionB: ClauseRow): DiffDispla
         return { key, from: renderValue(change?.from), to: renderValue(change?.to) };
       }),
   };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Matrix field ids (Story 11a.1, Task 6; AC2 + ruling D3(a))
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * The `/niyamavali` surface's matrix field ids, derived from THIS module's own
+ * render model — the coupling D3(a) ruled: to render a field you must first put
+ * it in the model, so a newly-added field reaches the tier-leak snapshot by
+ * itself and fails closed as `unclassified` until it is classified.
+ *
+ * ⚠ `fields` (the generic payload key→value list) maps to ONE field id. That is
+ * a deliberate and stated limit: the payload key set is DATA — clause payloads
+ * differ per clause and per Pariwar — so no committed file can enumerate it. The
+ * matrix classifies the payload DISPLAY BLOCK as a whole; what protects its
+ * CONTENTS is `renderValue`'s opaqueness (freeze row 14: display rendering, never
+ * rule interpretation) plus the naked-PII leg, which scans the real rendered HTML
+ * and does not care where a phone number came from.
+ */
+const NIYAMAVALI_CLAUSE_FIELD_IDS: FieldIdMapping<ClauseDisplay> = {
+  clauseId: 'clause_id',
+  title: 'clause_title',
+  ruleCode: 'rule_code',
+  version: 'clause_version',
+  effectiveDate: 'effective_date',
+  benefitMechanism: 'benefit_mechanism',
+  fields: 'clause_payload_display_fields',
+};
+
+/** Model-level keys: render settings, not rendered record data. */
+const NIYAMAVALI_MODEL_FIELD_IDS: FieldIdMapping<NiyamavaliRenderModel> = {
+  locale: null, // which language to render in — a request parameter, not clause data
+  clauses: null, // the clauses themselves — classified per-clause above
+};
+
+/**
+ * The `/niyamavali` field-id set: the union over the rendered clauses. An empty
+ * clause list yields an empty set, which is correct — a page rendering no clauses
+ * renders no clause fields.
+ */
+export function niyamavaliSurfaceFieldIds(model: NiyamavaliRenderModel): string[] {
+  deriveFieldIds(model, NIYAMAVALI_MODEL_FIELD_IDS); // validates the model shape itself
+  const ids = model.clauses.flatMap((c) => deriveFieldIds(c, NIYAMAVALI_CLAUSE_FIELD_IDS));
+  return [...new Set(ids)].sort();
 }

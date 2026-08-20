@@ -68,6 +68,31 @@ export async function listPostsForPariwar(
     .offset(Math.max(0, opts.offset ?? 0));
 }
 
+/**
+ * The columns the two UNAUTHENTICATED `apps/public` blog surfaces render — and the
+ * ONLY columns their reads select (Story 11a.1, AC3).
+ *
+ * Both public reads previously issued a bare `db.select()`, returning every column
+ * including `author_actor_id`, `reviewer_actor_id`, `tone_signoff_content_hash`,
+ * `tone_signoff_reviewed_at`, `channels`, `audience_scope_value` and `status` —
+ * while `blog.astro` carried a comment asserting the read "returns only the
+ * member-facing fields". It did not. The over-fetch never reached the rendered
+ * HTML, but it reached the process, and the comment made the gap invisible.
+ *
+ * ⛔ Do NOT widen this back to `select()`. Adding a column here is a decision about
+ * what an unauthenticated visitor's request is allowed to load, and it must be
+ * classified in `public-vs-private-matrix.yaml` before it is selected here.
+ *
+ * ⚠ Verified before narrowing: these two functions have exactly ONE production
+ * consumer each — `apps/public/src/pages/blog.astro` and `blog/[postId].astro`.
+ * The admin surfaces use `listPostsForPariwar` and the workflow reads, which are
+ * untouched and still select the full row.
+ */
+export type PublicPostRow = Pick<
+  NewsPostRow,
+  'postId' | 'title' | 'titleHi' | 'bodyMarkdown' | 'bodyMarkdownHi' | 'publishedAt'
+>;
+
 export interface ListPublicPostsOptions {
   limit?: number;
   offset?: number;
@@ -83,9 +108,16 @@ export async function listPublishedPublicPosts(
   db: Db,
   pariwarId: PariwarId,
   opts: ListPublicPostsOptions = {},
-): Promise<NewsPostRow[]> {
+): Promise<PublicPostRow[]> {
   return db
-    .select()
+  .select({
+    postId: newsPosts.postId,
+    title: newsPosts.title,
+    titleHi: newsPosts.titleHi,
+    bodyMarkdown: newsPosts.bodyMarkdown,
+    bodyMarkdownHi: newsPosts.bodyMarkdownHi,
+    publishedAt: newsPosts.publishedAt,
+  })
     .from(newsPosts)
     .where(
       and(
@@ -104,9 +136,16 @@ export async function getPublishedPublicPost(
   db: Db,
   pariwarId: PariwarId,
   postId: NewsPostId,
-): Promise<NewsPostRow | null> {
+): Promise<PublicPostRow | null> {
   const rows = await db
-    .select()
+  .select({
+    postId: newsPosts.postId,
+    title: newsPosts.title,
+    titleHi: newsPosts.titleHi,
+    bodyMarkdown: newsPosts.bodyMarkdown,
+    bodyMarkdownHi: newsPosts.bodyMarkdownHi,
+    publishedAt: newsPosts.publishedAt,
+  })
     .from(newsPosts)
     .where(
       and(

@@ -17,6 +17,7 @@
 // list is exposed" (PRD L1039) + Story 11a.4 / FR-93 (naked phone/email/Aadhaar
 // in public HTML, epics L3698-3701).
 
+import { TIER_RANK } from './matrix.js';
 import type { MatrixSurface, PublicVsPrivateMatrix, VisibilityTier } from './matrix.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -30,17 +31,11 @@ import type { MatrixSurface, PublicVsPrivateMatrix, VisibilityTier } from './mat
  */
 export type ViewerContext = 'public' | 'authenticated_member' | 'operator_restricted';
 
-/**
- * Tier rank (low → high sensitivity). A field leaks when its rank exceeds the
- * ceiling its render's viewer context permits. `never_exposed` (rank 3) exceeds
- * every viewer ceiling (max 2) → it can never be rendered.
- */
-const TIER_RANK: Record<VisibilityTier, number> = {
-  public: 0,
-  authenticated_member: 1,
-  operator_restricted: 2,
-  never_exposed: 3,
-};
+// `TIER_RANK` (low → high sensitivity) is imported from `matrix.js` — Story 11a.1
+// moved it there so there is exactly ONE copy of the tier ordering in the repo.
+// Both halves of the engine (the leak rules + `getVisibility`) AND the matrix's own
+// escalation-direction check read the same table; ⛔ a second copy drifts and one of
+// them silently stops being the truth.
 
 /** The highest tier rank a viewer context may see (the 4 leak rules, epics L3618-3620). */
 const VIEWER_CEILING: Record<ViewerContext, number> = {
@@ -137,6 +132,101 @@ export function evaluateSurfaceRender(
     }
   }
   return leaks;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// getVisibility — the single canonical lookup (Story 11a.1, AC11)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Why a field is not visible. Absent on a visible verdict. */
+export type NotVisibleReason = 'unknown_surface' | 'undeclared_field' | 'above_viewer_ceiling';
+
+/**
+ * A decidable visibility verdict: visible, or not-visible WITH A REASON. The
+ * reason is not decoration — a renderer that must omit a field usually needs to
+ * know whether it is omitting something classified (render a shield/placeholder)
+ * or something nobody has classified yet (a bug to fix).
+ */
+export interface VisibilityVerdict {
+  surfaceId: string;
+  fieldId: string;
+  viewerContext: ViewerContext;
+  visible: boolean;
+  /** The declared tier, or `unclassified` when the matrix does not declare the field. */
+  tier: VisibilityTier | 'unclassified';
+  reason?: NotVisibleReason;
+  message: string;
+}
+
+/**
+ * THE single canonical visibility lookup (Story 11a.1 AC11): *may this viewer see
+ * this field on this surface?* — the query half of the same engine whose detection
+ * half is `evaluateSurfaceRender`. Both read the same matrix and the same
+ * `TIER_RANK`/`VIEWER_CEILING`, so the two can never disagree (asserted by test).
+ *
+ * ⭐ FAIL-CLOSED, without exception. An unknown surface or an undeclared field
+ * resolves to NOT visible, matching `evaluateSurfaceRender`'s `unclassified`
+ * posture: the matrix is the canonical authority, so what it has never heard of
+ * cannot be proven safe. ⛔ An unknown field must never resolve to *visible* —
+ * that would turn every forgotten declaration into a silent publication.
+ *
+ * Story 11a.2's `<MatrixField>` renderer is the intended consumer; ⛔ this story
+ * ships the function, not the component.
+ *
+ * PURE: no fs, no db, no env, no clock.
+ */
+export function getVisibility(
+  matrix: PublicVsPrivateMatrix,
+  surfaceId: string,
+  fieldId: string,
+  viewerContext: ViewerContext,
+): VisibilityVerdict {
+  const base = { surfaceId, fieldId, viewerContext };
+  const surface = findSurface(matrix, surfaceId);
+
+  if (surface === undefined) {
+    return {
+      ...base,
+      visible: false,
+      tier: 'unclassified',
+      reason: 'unknown_surface',
+      message:
+        `NOT VISIBLE — surface "${surfaceId}" is not declared in the matrix (fail-closed). ` +
+        `Declare the surface before rendering from it.`,
+    };
+  }
+
+  const field = surface.fields.find((f) => f.id === fieldId);
+  if (field === undefined) {
+    return {
+      ...base,
+      visible: false,
+      tier: 'unclassified',
+      reason: 'undeclared_field',
+      message:
+        `NOT VISIBLE — surface "${surfaceId}" does not declare field "${fieldId}" ` +
+        `(fail-closed: every renderable field declares a tier).`,
+    };
+  }
+
+  if (TIER_RANK[field.tier] > VIEWER_CEILING[viewerContext]) {
+    return {
+      ...base,
+      visible: false,
+      tier: field.tier,
+      reason: 'above_viewer_ceiling',
+      message:
+        `NOT VISIBLE — "${surfaceId}"."${fieldId}" is tier ${field.tier}, above what a ` +
+        `${viewerContext} viewer may see (≤ ${ceilingTierName(VIEWER_CEILING[viewerContext])}).`,
+    };
+  }
+
+  return {
+    ...base,
+    visible: true,
+    tier: field.tier,
+    message: `visible — "${surfaceId}"."${fieldId}" (tier ${field.tier}) to a ${viewerContext} viewer`,
+  };
 }
 
 function ceilingTierName(ceiling: number): string {

@@ -8,5 +8,14 @@
   "invalid_request_title": "That page could not be shown",
   "invalid_request_body": "The address asked for a page this directory does not serve. Directory pages are numbered, and at most {max} entries are shown at a time. Please open the directory from the start.",
   "invalid_request_link": "Open the directory",
-  "back_to_start": "Back to the first page"
+  "back_to_start": "Back to the first page",
+  "next_page": "Next page",
+  "column_name": "Name",
+  "column_district": "District",
+  "column_status": "Status",
+  "status_active": "Active",
+  "status_lock_in": "Waiting period",
+  "district_unknown": "Not recorded",
+  "unavailable_title": "The directory could not be loaded",
+  "unavailable_body": "The directory is temporarily unavailable. This is a problem on our side — it does not mean the directory is empty, and nothing about anyone's membership has changed. Please try again in a few minutes."
 }

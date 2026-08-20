@@ -36,6 +36,15 @@ export type AuthAuditEventType =
   // scope (noted, not done — Story 1.14 Project Structure Notes).
   | 'rate_limit.exceeded'
   | 'abuse.honeypot'
+  // ── Public Member Directory anti-enumeration (Story 11a.3, `2026-08-20-143` cl.4/cl.10) ──────
+  // ⛔ MINTED, NOT BORROWED. Reusing `abuse.honeypot` above would corrupt the honeypot signal AND
+  // break `security-headers.spec.ts`'s exact-hit-count assertion — this union is documented as
+  // CLOSED precisely so a new signal has to be added here rather than smuggled into an old one.
+  // ⚠ THE LINE IS A COUNTER, NOT A FORENSIC RECORD: `audit_log_entries` has no context column and
+  // `authEventToAuditInput` HASHES `event.context` into `request_payload_hash`, so the triage
+  // signal (the rule id + a coarse, non-PII query shape) is pushed into `action` and
+  // `resource_locator` instead. ⛔ Never describe this event as carrying the query context.
+  | 'directory.abuse_suspected'
   // ── Provisioning surface (Story 1.15, FR-61/FR-62) ───────────────────────────
   // The first global-scoped write surface. `pariwar.provisioned` records a new
   // Pariwar mint+passport-persist; `pariwar.deploy_triggered` records a Dokploy
@@ -442,6 +451,23 @@ export interface AuthAuditEvent {
   readonly traceId?: string;
   /** Non-sensitive structured context (otp_hash, action_context, prev/new scope…). */
   readonly context?: Readonly<Record<string, unknown>>;
+  /**
+   * OPTIONAL override for the audit row's `resource_locator` — Story 11a.3.
+   *
+   * ⚠ WHY THIS EXISTS, stated so it is not mistaken for a general-purpose field. `context` is
+   * HASHED into `request_payload_hash` and the default locator is the constant
+   * `user:<actorId|anonymous>`; both are DELIBERATE PII-poisoning defenses (W6-CR1.6) and ⛔ neither
+   * is weakened here. For an UNAUTHENTICATED emitter, though, that leaves the row with literally no
+   * distinguishing field — every line reads `user:anonymous` — so a signal like
+   * `directory.abuse_suspected` could record THAT something fired but never WHICH RULE.
+   *
+   * ⛔ THIS IS NOT A CHANNEL FOR QUERY CONTEXT, AND ⛔ NOT A CHANNEL FOR PII. It carries a short,
+   * caller-authored, NON-PII locator only — a rule id plus a coarse shape. Every existing emitter
+   * omits it and is unaffected: the default below is byte-identical to the previous behaviour.
+   * ⚠ If you are reaching for this to smuggle in something a member typed, stop — that is exactly
+   * what the hashing above is defending, and `2026-08-20-143` cl.10 says so in terms.
+   */
+  readonly resourceLocator?: string;
   /** Emission time; injectable clock keeps tests deterministic. */
   readonly at: Date;
 }

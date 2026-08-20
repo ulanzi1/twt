@@ -67,6 +67,7 @@ import { registerModerationAppealRoutes } from './modules/member-moderation-appe
 import { registerFeatureFlagsModule } from './modules/feature-flags/index.js';
 import { registerCustomFieldsModule } from './modules/custom-fields/index.js';
 import { registerTrusteeLiteModule } from './modules/trustee-lite/index.js';
+import { registerPublicPagesModule } from './modules/public-pages/index.js';
 import { registerReportsModule } from './modules/reports/index.js';
 import { registerCookie } from './plugins/cookie/index.js';
 import { registerCsrf, originCheckHook } from './plugins/csrf-protection/index.js';
@@ -343,6 +344,13 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // act on is ABSENT, never present-and-empty. NOT step-up-gated — it writes nothing and decrypts
   // nothing (back to the 10.3/10.4/10.5/10.8/10.9 chain).
   registerTrusteeLiteModule(app, deps);
+  // Story 11a.3 — the PUBLIC Member Directory read. ⛔ The ONE deliberately-unauthenticated module
+  // on this server that serves member PII, and the reason it is here rather than on `apps/public`
+  // is capability, not taste (`2026-08-20-143` cl.1): the Tier-1 KYC-name decrypt needs KMS deps,
+  // the abuse signal needs the BYPASSRLS audit writer, and the anti-enumeration ceiling needs a
+  // rate-limit store — `apps/public` verifiably has none of the three. Its defence is written in
+  // `modules/public-pages/routes.ts` and in `login-wall.spec.ts`'s allowlist entry.
+  registerPublicPagesModule(app, deps);
   // Story 1.14 — honeypot trap routes (emit abuse.honeypot on a hit; hidden).
   registerHoneypot(app, deps);
 

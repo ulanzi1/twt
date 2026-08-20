@@ -10,7 +10,9 @@
     "start": "node ./dist/server/entry.mjs",
     "lint": "eslint .",
     "typecheck": "astro check",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "weight:dynamic": "node scripts/dynamic-html-weight.mjs",
+    "verify:matrix-inline": "node scripts/verify-matrix-inline.mjs"
   },
   "dependencies": {
     "@astrojs/node": "^10.1.4",

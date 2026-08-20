@@ -113,8 +113,36 @@ The Niyamavali content is read **directly from `@twt/domain`** in Astro SSR via 
 **unauthenticated `withPublicScope`** (`src/lib/db.server.ts`): `BEGIN` → `SET LOCAL ROLE
 twt_app` (shed any superuser login so RLS is genuinely enforced — **not** a superuser
 bypass) → `SET LOCAL app.pariwar_id` → read → `ROLLBACK`. `apps/public` owns its own pool
-(`DATABASE_URL`). Branding is read via the cross-readable passport cache (no scope). The
-`apps/api/src/modules/public-pages/` HTTP module is **not** used (empty until Epic 11b).
+(`DATABASE_URL`). Branding is read via the cross-readable passport cache (no scope).
+
+⭐ **AS OF STORY 11a.3 THE `apps/api/src/modules/public-pages/` HTTP MODULE *IS* USED.** ⚠ This
+supersedes the previous sentence here, which said it was *"not used (empty until Epic 11b)"* — the
+module now exists **with a real route** and `/members` calls it server-side via
+`src/lib/directory.server.ts`. ⛔ The reason it is an HTTP hop rather than another
+`withPublicScope` read is **capability, not taste** (Decision `2026-08-20-143` cl.1): rendering a
+member row needs a **Tier-1 KYC decrypt** (KMS deps), an **anti-enumeration ceiling** (a rate-limit
+store) and an **abuse audit line** (the BYPASSRLS service pool) — and `apps/public` verifiably has
+**none of the three**. ⛔ **It must not gain the first**: the KEK is shared across *every* Tier-1
+field class (mobile, device tokens, KYC), so a decrypt capability here has a blast radius that is
+⛔ not "names". `tests/no-kms-in-public.test.ts` asserts that absence across the whole app.
+
+## ⭐ The Member Directory is a LEGITIMACY surface, not a social graph
+
+`/members` renders real member data, so the invariant governing what may be built on it is
+recorded where a future author will actually open it — **`src/lib/members-render.ts`**, the page
+header of **`src/pages/members.astro`**, and **`packages/contracts/public-pages/directory-abuse-rules.yaml`**.
+⛔ It is not repeated in full here; this section exists so the public-surface contract *points at
+it*.
+
+In short: the directory exists to support **institutional legitimacy** and **trust verification**.
+⛔ **PROHIBITED** — friend-finder / connection suggestions · social graphing or relationship
+visualisation · engagement gamification (badges, streaks, leaderboards) · "members you might know"
+recommendations · anything incentivising repeated member-discovery sessions. ✅ **ACCEPTABLE** —
+tier-respecting search/filter for trust verification · accessibility · performance · additional
+fields **only** with a trustee-attested matrix update.
+⭐ **The test a proposal must pass:** *"Does this serve institutional legitimacy or trust
+verification?"* If the honest answer is **engagement** or **social discovery**, the proposal is
+**rejected at design time**.
 
 ## Documented variances
 

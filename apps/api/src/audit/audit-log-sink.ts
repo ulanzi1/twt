@@ -68,6 +68,11 @@ function statusForAuthEvent(type: AuthAuditEvent['type']): number {
   // response so it does not tip off the scanner); the `abuse.honeypot` action is
   // what flags it as an abuse signal, not the status (Story 1.14, AC-4 — documented).
   if (type === 'abuse.honeypot') return 200;
+  // A suspected-enumeration signal is a DETECTION, not a refusal: the request itself was served
+  // normally (the rate limit is the enforcement, this is the signal — `2026-08-20-143` cl.4), so
+  // the honest HTTP-equivalent is the 200 the visitor actually received. ⛔ Mapping it to 429 would
+  // make the audit trail claim a throttle that did not happen.
+  if (type === 'directory.abuse_suspected') return 200;
   if (type.endsWith('.failure')) return 401;
   return 200;
 }
@@ -86,7 +91,10 @@ export function authEventToAuditInput(event: AuthAuditEvent): AuditEntryInput {
       return v;
     })(),
     action: event.type, // already a dotted lowercase resource.action
-    resourceLocator: `user:${event.actorId ?? 'anonymous'}`,
+    // ⛔ The DEFAULT is unchanged and remains the rule: `user:<actorId|anonymous>`. The override is
+    // opt-in, used today by exactly one emitter (the Story 11a.3 directory-abuse signal, which has
+    // no actor to name), and is documented at `AuthAuditEvent.resourceLocator` as non-PII-only.
+    resourceLocator: event.resourceLocator ?? `user:${event.actorId ?? 'anonymous'}`,
     requestPayloadHash: hashContext(event.context),
     responseStatus: statusForAuthEvent(event.type),
     traceId: event.traceId ?? null,

@@ -1,39 +1,60 @@
 ---
-// The public Member Directory shell — Story 11a.2 (Task 6; AC4, AC7, AC10).
+// The public Member Directory — Story 11a.3 (Task 7; AC1, AC3, AC4, AC5, AC6, AC7, AC9, AC11).
 //
-// ⭐⛔ READ THIS BEFORE ANYTHING ELSE — THE TIER-LEAK LEG ON THIS SURFACE IS
-// **ARMED BUT EMPTY**, AND A GREEN CHECK HERE PROVES ALMOST NOTHING.
+// ⭐⛔ READ THIS FIRST — THE TIER-LEAK LEG ON THIS SURFACE IS NOW **OPERATIVE**.
+// ⚠ This SUPERSEDES the 11a.2 header, which declared it "ARMED BUT EMPTY". That was true then and
+// is ⛔ FALSE NOW: `membersSurfaceFieldIds(model)` returns a NON-EMPTY set (`district`,
+// `member_name`, `member_status`), so `evaluateSnapshot` actually evaluates the leak rules here and
+// a planted `authenticated_member`-tier or UNDECLARED field at `public` FAILS a run that previously
+// passed. ⭐ That discharges `2026-08-19-136` cl.4, which made an operative leg LAUNCH-BLOCKING for
+// the Member Directory (Decision `2026-08-20-143`).
 //
-// This page renders the shell, the FR-91 pagination controls, and an explicit
-// not-yet-published empty state. It reads ⛔ NO member data — no rows, no counts, no
-// districts — and it ⛔ does NOT render `member_name`: the Tier-1 decrypt stays behind
-// Story 11a.3's anti-enumeration safeguards, which `epics.md` C1 rules "load-bearing,
-// not defensive". So `membersSurfaceFieldIds()` returns an EMPTY set, and the
-// `member-directory` tier-leak check currently evaluates nothing.
+// ⭐ WHAT THIS PAGE RENDERS: real member rows — the presentation-resolved name, the raw
+// latest-posting district, and a two-label status pill — one bounded page at a time. ⛔ EVERY member
+// value goes through `<MatrixField>`, so `getVisibility()` is the ONLY thing deciding what appears.
 //
-// ⛔ That is declared here, loudly, rather than left to be inferred. Story 11a.1
-// existed to remove exactly this defect — a vacuous leg wearing a green check — and
-// re-introducing it silently ON THE MEMBER DIRECTORY would be worse than the original.
-// The leg becomes real when 11a.3 renders classified fields. Until then: green here
-// means "this surface renders no classified field", ⛔ NOT "the directory is policed".
+// ⚠⛔ HALF THE EPIC'S TABLE IS NOT BUILT, AND IT IS SAID HERE LOUDLY RATHER THAN LEFT TO BE
+// INFERRED. The `authenticated_member` column has ⛔ NO VIEWER (`2026-08-20-143` cl.7): members are
+// TOKEN-BEARER so a browser navigating here sends cookies and never an `Authorization` header,
+// there is ⛔ no `apps/member-web/`, and `apps/mobile` has ⛔ no directory screen. Minting one means
+// a browser member session at the page layer, which `architecture.md:515-517` forbids. It is routed
+// onto 11a.2's fragment-mechanism deferral (trigger: Epic 11b FR-77, or an `apps/member-web` split).
+// ⇒ this page implements the `public` tier, FOR REAL. ⛔ Half a table shipping is fine; half a table
+// shipping SILENTLY is the defect.
 //
-// ── Why the route ships here at all (ruling D1(a), Decision 2026-08-20-141) ──
-// Story 11a.1's own record contradicted itself — its scope table assigned "/members,
-// pagination" to 11a.2; its ledger said the renders:false check "fails until 11a.3".
-// Both were committed; one was wrong. The route ships here so `<MatrixField>` and the
-// pagination helper have a REAL call site instead of being primitives nobody consumes,
-// and `renders` flips to true in the same commit (the route-coverage leg is armed in
-// BOTH directions — the halves cannot move apart).
+// ═════════════════════════════════════════════════════════════════════════════════════════════
+// ⭐ A LEGITIMACY SURFACE, NOT A SOCIAL GRAPH (AC11)
+// ═════════════════════════════════════════════════════════════════════════════════════════════
+// This directory exists to support INSTITUTIONAL LEGITIMACY and TRUST VERIFICATION. ⛔ It is NOT a
+// social network, NOT a discovery tool, and NOT a growth surface.
+// ⛔ PROHIBITED: friend-finder / connection suggestions · social graphing or relationship
+// visualisation · engagement gamification (badges, streaks, leaderboards) · "members you might
+// know" recommendations · anything incentivising repeated member-discovery sessions.
+// ✅ ACCEPTABLE: tier-respecting search/filter for trust verification · accessibility · performance
+// · additional fields ONLY with a trustee-attested matrix update.
+// ⭐ THE TEST: *"Does this serve institutional legitimacy or trust verification?"* If the honest
+// answer is ENGAGEMENT or SOCIAL DISCOVERY, the proposal is REJECTED at design time.
+// (Also recorded in `lib/members-render.ts` and `directory-abuse-rules.yaml`.)
+// ═════════════════════════════════════════════════════════════════════════════════════════════
 //
-// House shape, mirroring `terms.astro`: thin frontmatter, all display logic in the
-// pure `lib/members-render.ts`, explicit `namespace` on every `t()` call (⚠ `t()`
-// defaults to `common` and THROWS on a miss).
+// ── ⛔ WHY THE DATA COMES OVER HTTP AND NOT FROM A LOCAL READ ────────────────────────────────
+// `2026-08-20-143` cl.1 (D1(a)). Rendering a member row needs a Tier-1 KYC decrypt (KMS deps), an
+// anti-enumeration ceiling (a rate-limit store) and an abuse audit line (the BYPASSRLS service
+// pool). `apps/public` has NONE of the three, and ⛔ must not gain the first: the KEK is shared
+// across EVERY Tier-1 field class. ⛔ Do not add a `withPublicScope` member read here.
+//
+// House shape, mirroring `terms.astro`: thin frontmatter, ALL display logic in the pure
+// `lib/members-render.ts`, explicit `namespace` on every `t()` call (⚠ `t()` defaults to `common`
+// and THROWS on a miss — the `{{max}}` vs `{max}` defect that made this page throw on EVERY request
+// at 11a.2 was exactly this shape, and no test caught it because every test bypassed `t()`).
 import { getLocale, isLocale, t } from '@twt/i18n';
 import type { Locale } from '@twt/i18n';
 import { passport } from '@twt/domain';
 
+import MatrixField from '../components/MatrixField.astro';
 import PublicShell from '../layouts/PublicShell.astro';
 import { getDb } from '../lib/db.server.js';
+import { buildForwardedFor, fetchMemberDirectory } from '../lib/directory.server.js';
 import {
   buildMembersRejectionView,
   buildMembersView,
@@ -56,10 +77,9 @@ const trustName =
     : (passportRow?.displayNameEn ?? passportRow?.displayNameHi)) ?? 'Member Directory';
 const branding = passportRow?.brandingBundle ?? null;
 
-// ⛔ NOTE THE ABSENCE: there is no `withPublicScope` read here. `terms.astro` and
-// `blog.astro` open one because they render tenant content; this page renders none.
-// ⛔ Do not add one "ready for 11a.3" — an unused scoped read is a claim that member
-// rows are being fetched safely, which is a claim nothing here supports.
+// ⛔ NOTE THE ABSENCE, STILL: there is no `withPublicScope` MEMBER read here, and there must not
+// be one. The passport read above is branding, not member data. Member rows arrive over the API
+// hop below, for the capability reasons in the header.
 
 const tr = (key: string, params?: Record<string, string | number>) =>
   t(key, params, { locale, namespace: 'members' });
@@ -69,6 +89,15 @@ const labels: MembersLabels = {
   pageIntro: tr('page_intro'),
   notPublishedTitle: tr('not_published_title'),
   notPublishedBody: tr('not_published_body'),
+  unavailableTitle: tr('unavailable_title'),
+  unavailableBody: tr('unavailable_body'),
+  nextPage: tr('next_page'),
+  columnName: tr('column_name'),
+  columnDistrict: tr('column_district'),
+  columnStatus: tr('column_status'),
+  statusActive: tr('status_active'),
+  statusLockIn: tr('status_lock_in'),
+  districtUnknown: tr('district_unknown'),
   paginationLabel: tr('pagination_label'),
   previousPage: tr('previous_page'),
   invalidTitle: tr('invalid_request_title'),
@@ -82,17 +111,42 @@ const labels: MembersLabels = {
 // committed OpenAPI surface and Astro routes emit none — ⛔ do not cite it as coverage.
 const paging = parsePageParams(Astro.url.searchParams);
 const rejection = paging.ok ? null : buildMembersRejectionView(labels);
-const view = paging.ok ? buildMembersView(paging, Astro.url.searchParams, labels) : null;
+
+// ── The roster read (AC1) ───────────────────────────────────────────────────
+// ⭐ TRAP 2 — the visitor's address is FORWARDED, appended to any inbound chain. ⛔ Without this
+// every internet visitor reaches `apps/api` as the SSR process, so the named `search` rate limit
+// and every abuse signal collapse into ONE global bucket: a ceiling that blocks everyone at once or
+// protects nobody. Removing this line breaks no render — it silently deletes the safeguard.
+const directory = paging.ok
+  ? await fetchMemberDirectory({
+      page: paging.page,
+      limit: paging.limit,
+      forwardedFor: buildForwardedFor(
+        Astro.request.headers.get('x-forwarded-for'),
+        Astro.clientAddress,
+      ),
+    })
+  : null;
+
+const view = paging.ok
+  ? buildMembersView(paging, Astro.url.searchParams, labels, directory?.ok ? directory.data : null)
+  : null;
 
 // ⛔ A rejected request renders a 400-shaped state — NOT a redirect to page 1, and
 // NOT a successful render of a different page than was asked for.
 if (rejection !== null) Astro.response.status = rejection.status;
 
-// ── Cache headers (AC5) ─────────────────────────────────────────────────────
+// ── Cache headers (AC7) ─────────────────────────────────────────────────────
 // Declared as `edge_cacheable` in public-vs-private-matrix.yaml, and the gate's
 // cache-policy leg FAILS if this line and that declaration disagree.
-// ⭐ STORY 11a.3 MUST RE-DECIDE THIS when real member rows render — a directory of
-// named members behind anti-enumeration safeguards is a different caching question.
+// ⭐ RE-DECIDED AT STORY 11a.3 AND KEPT — Decision `2026-08-20-143` cl.5 (D5(a)). ⚠ This replaces
+// the standing "11a.3 MUST RE-DECIDE THIS" instruction: the content is `public` tier by Panel
+// ruling, so it is cacheable by construction and the cache absorbs scraper load.
+// ⛔ AND THE COST, RECORDED RATHER THAN DISCOVERED: a cached hit NEVER REACHES THE ORIGIN, so the
+// origin-side rate limit and every abuse signal see only cache MISSES — a scraper walking pages
+// 1..N through a warm edge is invisible to the detection this story ships. ⚠ Inert today (no edge
+// in this repo; §5.8a) but a NAMED DEPENDENCY, written into the abuse-rules README and
+// `deferred-work.md` with an edge-configuration re-trigger.
 // ⛔ A 400 rejection is NOT cached the same way: caching a malformed-`?page=`/`?limit=`
 // probe at a shared edge for 5 minutes would let a repeat of that exact probe be
 // answered from the cache without ever reaching the origin — weakening the very
@@ -130,11 +184,73 @@ const firstPageHref = pageHref('/members', Astro.url.searchParams, 1);
       <>
         <p class="members__intro">{labels.pageIntro}</p>
 
-        {!view.model.hasMembers && (
+        {/* ⛔ AN OUTAGE IS NOT AN EMPTY DIRECTORY. Two distinct states, deliberately: rendering an
+            unreachable API as "no members" would be a false statement about the trust. */}
+        {view.model.apiUnavailable && (
+          <section class="members__notice" role="alert" aria-labelledby="members-unavailable-title">
+            <h2 id="members-unavailable-title" class="members__notice-title">{labels.unavailableTitle}</h2>
+            <p class="members__notice-body">{labels.unavailableBody}</p>
+          </section>
+        )}
+
+        {!view.model.apiUnavailable && !view.model.hasMembers && (
           <section class="members__notice" aria-labelledby="members-empty-title">
             <h2 id="members-empty-title" class="members__notice-title">{labels.notPublishedTitle}</h2>
             <p class="members__notice-body">{labels.notPublishedBody}</p>
           </section>
+        )}
+
+        {/* Semantic table + scoped headers (Story 0.10 P0-2c): a directory IS tabular data, and a
+            screen-reader user needs the column each cell belongs to announced. */}
+        {view.model.hasMembers && (
+          <table class="members__table">
+            <caption class="members__caption">{labels.pageIntro}</caption>
+            <thead>
+              <tr>
+                <th scope="col">{labels.columnName}</th>
+                <th scope="col">{labels.columnDistrict}</th>
+                <th scope="col">{labels.columnStatus}</th>
+              </tr>
+            </thead>
+            {/* ⭐ <MatrixField>'S FIRST REAL CALL SITES — the named follow-up of Decision
+                `2026-08-20-142`, which recorded that it shipped with ZERO. EVERY member value goes
+                through it, so `getVisibility()` is the ONLY thing deciding what appears.
+                ⛔ Never interpolate a member value directly, and ⛔ never modify the component to fit
+                a call site: if it does not fit, STOP AND RAISE IT.
+                ⛔ A not-visible verdict renders NOTHING — no placeholder, no empty span, no comment
+                naming the omitted field. An omission that announces itself is an ENUMERATION
+                SIGNAL: a scraper diffing renders learns exactly which fields exist. */}
+            <tbody>
+              {view.model.rows.map((row) => (
+                <tr>
+                  <td>
+                    <MatrixField
+                      surface="member-directory"
+                      field="member_name"
+                      viewerContext="public"
+                      value={row.memberName}
+                    />
+                  </td>
+                  <td>
+                    <MatrixField
+                      surface="member-directory"
+                      field="district"
+                      viewerContext="public"
+                      value={row.district ?? labels.districtUnknown}
+                    />
+                  </td>
+                  <td>
+                    <MatrixField
+                      surface="member-directory"
+                      field="member_status"
+                      viewerContext="public"
+                      value={row.memberStatus}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
 
         {view.links.length > 0 && (
@@ -176,6 +292,15 @@ const firstPageHref = pageHref('/members', Astro.url.searchParams, 1);
   }
   .members__notice-title { margin-top: 0; font-family: var(--font-display-parichay); }
   .members__notice-body { margin-bottom: 0; line-height: 1.6; }
+  .members__table { border-collapse: collapse; margin: var(--space-block) 0; width: 100%; }
+  .members__caption { text-align: left; color: var(--color-rule-heavy); padding-bottom: var(--space-row); }
+  .members__table th,
+  .members__table td {
+    border-bottom: var(--border-rule) solid var(--color-rule-hairline);
+    padding: var(--space-row);
+    text-align: left;
+  }
+  .members__table th { font-family: var(--font-display-parichay); color: var(--color-rule-heavy); }
   .members__pagination { margin: var(--space-block) 0; }
   .members__pagination-list {
     display: flex;

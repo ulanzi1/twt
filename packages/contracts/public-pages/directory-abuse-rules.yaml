@@ -1,0 +1,151 @@
+# ═══════════════════════════════════════════════════════════════════════════════════════════════
+# directory-abuse-rules.yaml — anti-enumeration rules for the public Member Directory
+# Story 11a.3 · Decision `2026-08-20-143` clause 4 (D4(a)) · FR-91 / FR-92 / epics.md C1
+# ═══════════════════════════════════════════════════════════════════════════════════════════════
+#
+# ⭐ THIS FILE IS READ BY THE ROUTE. It is not documentation. `apps/api/src/modules/public-pages/`
+# parses it at wiring time and evaluates every `active` rule on every directory request. A
+# committed governance artifact that nothing reads is the vacuous-green defect Story 11a.1 existed
+# to remove, and rejecting that shape is why D4(c) ("rules file only") was NOT chosen.
+#
+# ⛔ A MALFORMED FILE THROWS. It never degrades to "no rules" — the `parseCapabilityBar` doctrine.
+# Unknown keys are a parse error, not a warning. If you are here to add a rule, the schema in
+# `packages/contracts/src/public-pages/abuse-rules.ts` is the authority.
+#
+#
+# ═══════════════════════════════════════════════════════════════════════════════════════════════
+# ⚠ WHAT THESE RULES DO **NOT** PROVE — READ THIS FIRST
+# ═══════════════════════════════════════════════════════════════════════════════════════════════
+# (The `scripts/custom-field-governance/README.md` posture, copied deliberately: a detection
+# surface that overstates its own reach is worse than one that admits its gaps, because the
+# overstatement is what stops anyone from closing them.)
+#
+# 1. ⛔ THE AUDIT LINE IS A **COUNTER**, NOT A FORENSIC RECORD. `audit_log_entries` has NO context
+#    or payload column — `authEventToAuditInput` HASHES `event.context` into `request_payload_hash`
+#    (a SHA-256 digest) and hard-codes `resource_locator` to `user:<actorId|anonymous>`, which for
+#    an unauthenticated visitor is the CONSTANT `user:anonymous`. ⇒ a fired rule proves THAT a rule
+#    fired and WHEN. It does ⛔ NOT prove what was walked, by whom, or from where.
+#    That is why the rule id and a coarse, non-PII query shape are pushed into `action` and
+#    `resource_locator` — those two fields are the only triage signal that survives.
+#    ⚠ D4(a)'s "the signal is real and reachable today" is TRUE. "Triageable today" is ⛔ FALSE.
+#    (`2026-08-20-143` clause 10.)
+#
+# 2. ⛔ A WARM EDGE HIDES SCRAPER TRAFFIC FROM THIS ENTIRELY. `/members` is declared
+#    `cache_policy: edge_cacheable` and D5(a) KEPT that. A cached hit never reaches the origin, so
+#    both the rate limit and every rule below see only cache MISSES. A scraper walking pages 1..N
+#    through a warm edge is invisible to the detection on this page.
+#    ⚠ Inert TODAY — there is no Cloudflare in this repo and edge selection is contingent on DPDPA
+#    legal review (`architecture.md` §5.8a). ⛔ But it is a NAMED DEPENDENCY, not a footnote:
+#    re-examine this file the moment an edge/CDN is actually configured. (`-143` clause 11.)
+#
+# 3. ⚠ THE KEY IS CALLER-SUPPLIED. `apps/api` runs `trustProxy: true`, so `request.ip` reads the
+#    `X-Forwarded-For` chain — which is what makes per-visitor keying possible AT ALL through the
+#    SSR proxy, and simultaneously means a caller reaching `apps/api` directly can spoof it. The
+#    route is defended only behind the trusted hop. ⛔ `trustProxy` is NOT re-tuned here: it would
+#    alter `request.ip` and origin checks for every route in the app. (`-143` clause 9.)
+#
+# 4. ⚠ THE COUNTERS ARE IN-MEMORY AND PER-INSTANCE. §1.4 records no Redis, so the same is true of
+#    the rate-limit store: the EFFECTIVE ceiling is `max × instanceCount`, not a global limit.
+#    ⛔ Do not describe any threshold below as a global one.
+#
+# 5. ⛔ THERE IS NO CONSOLE VIEW YET. D4(a) shipped the rules AND the enforcement and DEFERRED the
+#    operator surface with a named trigger. Signals land as §1.5 audit lines and are reachable
+#    through the Story 1.10 audit surface — ⛔ there is no purpose-built place to triage them, and
+#    per (1) the line would not carry much to triage if there were.
+#
+# 6. ⛔ TWO CLAUSES OF THE EPIC AC HAVE NO SUBJECT ON THIS SURFACE, and neither is implemented
+#    because neither CAN be. *"An authenticated session does not bypass rate limits"* — there is no
+#    authenticated session on the Member Directory (`-143` clause 7: members are token-bearer, there
+#    is no `apps/member-web`, and `apps/mobile` has no directory screen). *"Abuse-detected accounts
+#    trigger temporary suspension + trustee review"* — there are no ACCOUNTS here; every visitor is
+#    unauthenticated, so there is no account to suspend and no actor to route. The enforceable
+#    residue is the **429** and the **audit line**. Both clauses become live at Epic 11b ONLY IF an
+#    authenticated directory tier is ever built. (`-143` clause 12.)
+#
+# 7. ⛔ `epics.md` CITES "Story 10.6 query throttling" AS A PROTECTION LAYER. Story 10.6 is the
+#    BULK OPERATIONS FRAMEWORK. That cross-reference is VERIFIED FALSE — ⛔ do not cite it as
+#    coverage for this surface. This file plus the route's `limits.search` ceiling IS the coverage.
+#
+#
+# ═══════════════════════════════════════════════════════════════════════════════════════════════
+# ⭐ THE INVARIANT THIS SURFACE EXISTS UNDER: A LEGITIMACY SURFACE, NOT A SOCIAL GRAPH
+# ═══════════════════════════════════════════════════════════════════════════════════════════════
+# The Member Directory exists to support INSTITUTIONAL LEGITIMACY and TRUST VERIFICATION — so a
+# prospective member can see the trust is real, and an existing member can verify a peer. ⛔ It is
+# NOT a social network, NOT a discovery tool, and NOT a growth surface.
+#
+# ⛔ EXPLICITLY PROHIBITED DIRECTIONS — reject these at DESIGN time, not at review time:
+#   (a) friend-finder or connection suggestions
+#   (b) social graphing or member-relationship visualisation
+#   (c) engagement gamification — badges, streaks, leaderboards, profile completeness scores
+#   (d) "members you might know" style recommendation engines
+#   (e) any feature that incentivises repeated member-discovery sessions
+#
+# ✅ ACCEPTABLE DIRECTIONS:
+#   · tier-respecting search / filter for legitimate trust verification
+#   · accessibility and performance improvements
+#   · additional fields — ONLY with a trustee-attested matrix update
+#
+# ⭐ THE TEST A PROPOSAL MUST PASS: *"Does this serve institutional legitimacy or trust
+# verification?"* If the honest answer is ENGAGEMENT or SOCIAL DISCOVERY, the proposal is
+# REJECTED — at design time, before it is built and argued about.
+# ═══════════════════════════════════════════════════════════════════════════════════════════════
+
+version: 1
+
+# The audit action every fired rule emits under. ⛔ Deliberately NOT `abuse.honeypot`: reusing that
+# type would corrupt the honeypot signal AND break `security-headers.spec.ts`'s exact-count
+# assertion. This is a NEWLY MINTED member of the closed `AuthAuditEventType` union.
+audit_action: directory.abuse_suspected
+
+rules:
+  - id: high_volume_lookups
+    status: active
+    description: >-
+      A single visitor key issuing an implausible number of directory requests in a short window —
+      the coarsest harvesting signal, and the one that fires when a scraper ignores pagination
+      entirely and simply hammers the route.
+    detects: request_volume
+    window_seconds: 60
+    threshold: 60
+
+  - id: deep_crawl
+    status: active
+    description: >-
+      A single visitor key touching many DISTINCT pages in one window — the signature of a
+      systematic walk of the directory rather than a person reading it. Distinct-page counting is
+      what separates this from high_volume_lookups: a reader refreshing page 1 forty times is noisy,
+      not enumerating.
+    detects: distinct_pages
+    window_seconds: 300
+    threshold: 25
+
+  - id: rapid_pagination
+    status: active
+    description: >-
+      A single visitor key advancing deep into the page range faster than a human reads — page
+      number over the threshold within the window. Catches the walker that paces itself under
+      high_volume_lookups but still intends to reach the end.
+    detects: page_depth
+    window_seconds: 300
+    threshold: 40
+
+  - id: repeated_district_queries
+    # ⛔ NO SUBJECT ON THIS SURFACE — declared, NOT silently omitted, and NOT faked into an
+    # always-false "active" rule that would report green forever.
+    status: no_subject_yet
+    description: >-
+      Repeated district-wide queries — a visitor enumerating the directory one district at a time
+      to reconstruct the full roster while staying under the volume thresholds.
+    detects: district_query_volume
+    no_subject_reason: >-
+      ⛔ THE DIRECTORY HAS NO DISTRICT FILTER TO QUERY BY. Search and filter are explicitly OUT OF
+      SCOPE at Story 11a.3 (the epic AC lists "better search/filter" under acceptable directions for
+      EVOLUTION, not as scope), so the route accepts only `page` and `limit` — there is no
+      district-scoped request for this rule to count. ⛔ Declaring it `active` with an unreachable
+      predicate would be a rule that reports green forever while detecting nothing, which is the
+      exact vacuous-green defect this epic exists to remove.
+    activation_trigger: >-
+      The first story that ships a district (or any other) FILTER parameter on the public Member
+      Directory. That story must flip this rule to `active`, choose a threshold against the real
+      filter shape, and add its own planted negative control.

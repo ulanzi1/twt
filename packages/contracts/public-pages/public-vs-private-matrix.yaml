@@ -241,28 +241,31 @@ surfaces:
     route: /members
     renders: true
     description: >-
-      ⭐ THE ROUTE SHIPPED IN STORY 11a.2 and `renders` flipped to true in the SAME
-      commit (ruling D1(a), Decision `2026-08-20-141`). ⚠ This supersedes the
-      previous text here, which said "Story 11a.3 builds it and flips `renders` to
-      true" — Story 11a.1's record contradicted itself about which story owned the
-      route (its scope table said 11a.2; its ledger said 11a.3), and D1(a) resolved
-      it. ⛔ Leaving the old rationale in place would have made this file assert that
-      the route both did and did not ship here.
-      ⭐⛔ WHAT 11a.2 ACTUALLY RENDERS: the shell, the FR-91 pagination controls, and
-      an explicit not-yet-published empty state. ⛔ NO member data — no rows, no
-      counts, no districts — and ⛔ `member_name` is NOT rendered: the Tier-1 decrypt
-      stays behind Story 11a.3's anti-enumeration safeguards, which `epics.md` C1
-      rules "load-bearing, not defensive".
-      ⚠⛔ ⇒ THE TIER-LEAK LEG ON THIS SURFACE IS **ARMED BUT EMPTY** until 11a.3.
-      `membersSurfaceFieldIds()` returns an EMPTY set because the render carries no
-      classified field. ⛔ A green check on `member-directory` today means "this
-      surface renders no classified field" — it does ⛔ NOT mean the flagship
-      directory is being policed. This is stated here, loudly, because letting a
-      vacuous green imply otherwise is the exact defect Story 11a.1 existed to
-      remove, and re-introducing it on THIS surface would be worse than the original.
-      The two fields below stay declared: the ruled Tier-1 public-name exception has
-      nowhere else to live, and 11a.3 then FILLS a declared surface instead of
-      INVENTING one (the SD-1 failure mode).
+      ⭐ THE TIER-LEAK LEG ON THIS SURFACE IS NOW **OPERATIVE**, AND THAT IS WHAT
+      STORY 11a.3 CHANGED. ⚠ This text SUPERSEDES the 11a.2 wording that declared the
+      leg "ARMED BUT EMPTY" — that statement was TRUE THEN and is ⛔ FALSE NOW, and
+      leaving it would have left this file certifying the opposite of the truth about
+      the flagship public surface.
+      `membersSurfaceFieldIds(model)` now returns a NON-EMPTY set — `district`,
+      `member_name`, `member_status` — so `evaluateSnapshot` actually evaluates the
+      leak rules here, and a planted `authenticated_member`-tier or UNDECLARED field
+      at `public` FAILS a run that previously passed. ⭐ That is the discharge of
+      `2026-08-19-136` cl.4, which made an operative leg LAUNCH-BLOCKING for the
+      Member Directory (Decision `2026-08-20-143`).
+      ⭐⛔ WHAT THE PAGE RENDERS: real member rows — the presentation-resolved name,
+      the raw latest-posting district, and a two-label status pill — one page at a
+      time, behind the anti-enumeration safeguards `epics.md` C1 rules "load-bearing,
+      not defensive". Every value goes through `<MatrixField>`, so `getVisibility()`
+      is the ONLY thing deciding what appears.
+      ⚠⛔ HALF THE AC'S TABLE IS NOT BUILT, AND IT IS SAID HERE RATHER THAN INFERRED:
+      the `authenticated_member` column has ⛔ **NO VIEWER** and is structurally
+      unbuildable (`2026-08-20-143` cl.7 — members are TOKEN-BEARER so a browser sends
+      no `Authorization` header, there is no `apps/member-web/`, and `apps/mobile` has
+      no directory screen). Minting one would mean a browser member session at the page
+      layer, which `architecture.md:515-517` forbids. It is routed onto 11a.2's
+      fragment-mechanism deferral (trigger: Epic 11b FR-77, or an `apps/member-web`
+      split). ⇒ this surface implements the `public` tier, FOR REAL, and ⛔ not the
+      authenticated one.
       `noindex` per FR-75 — ⛔ UNCHANGED by the full-name supersession:
       `2026-08-19-135` cl.7(c) supersedes THE NAME FORM ONLY. Forced pagination
       and noindex stand.
@@ -270,15 +273,27 @@ surfaces:
       are PERMANENTLY INELIGIBLE as RBAC dimensions (`-133` cl.1, `-132` cl.3 /
       `-133` cl.3) — not a deferral, the question is not available. `block` is
       gated on `2026-08-19-137` cl.7(a)+(b) (a member-aware publish path and a
-      member choice surface, ⛔ neither of which exists).
+      member choice surface, ⛔ neither of which exists). ⛔ And NO
+      `pool_participation` / `registration_date` rows: those would be rows no
+      substrate and no render backs, which is SD-1 by another route.
     search_indexing_policy: noindex
-    # ⚠ EDGE-CACHEABLE AS IT RENDERS TODAY — shell + pagination controls + an
-    # explicit not-yet-published empty state, carrying ⛔ NO member data at all.
-    # ⭐ STORY 11a.3 MUST RE-DECIDE THIS when it renders real member rows: a
-    # directory of named members behind anti-enumeration safeguards is a
-    # different caching question, and this declaration is ⛔ not an answer to it.
-    # The leg makes the re-decision unavoidable — change the header and this
-    # declaration must move with it, in the same commit.
+    # ⭐ RE-DECIDED AT STORY 11a.3 AND KEPT — Decision `2026-08-20-143` cl.5 (D5(a)).
+    # ⚠ This replaces the standing "STORY 11a.3 MUST RE-DECIDE THIS" instruction that
+    # stood here: the re-decision HAS been made, and leaving the instruction would be a
+    # record asking for the same work twice.
+    # THE REASON: the content is `public` tier by Panel ruling, so it is cacheable by
+    # construction, and the cache absorbs scraper load on the flagship public surface.
+    # ⛔ AND THE COST, RECORDED RATHER THAN DISCOVERED LATER: a cached hit NEVER REACHES
+    # THE ORIGIN, so the origin-side rate limit and every `directory-abuse-rules.yaml`
+    # signal see only cache MISSES. A scraper walking pages 1..N through a warm edge is
+    # invisible to the detection this story ships. ⚠ Inert TODAY (no Cloudflare in this
+    # repo; edge selection is contingent on DPDPA legal review, `architecture.md` §5.8a)
+    # — ⛔ but it is a NAMED DEPENDENCY, written into the abuse-rules README and
+    # `deferred-work.md` with an edge-configuration re-trigger. ⛔ Do not paper over it
+    # by claiming the origin sees everything.
+    # ⛔ REJECTED (b) `private_no_store` — discards the edge for the flagship public
+    # surface. ⛔ REJECTED (c) cache page 1 only — needs a per-branch header, which
+    # `detectCacheSignal`'s whole-file textual scan is structurally blind to.
     cache_policy: edge_cacheable   # public, max-age=60, s-maxage=300
     # FR-91: the page binds apps/public/src/lib/pagination.ts. The gate's
     # pagination-binding leg FAILS if this is true and the page does not call
@@ -321,6 +336,31 @@ surfaces:
           selected attribute and not a new column. Declared here because it is
           platform-common; every OTHER directory attribute is registry data and
           carries the rule below, not a row.
+      - id: member_status
+        tier: public
+        pii_tier: 3
+        description: >-
+          ⭐ FIRST CLASSIFIED AT STORY 11a.3, under Decision `2026-08-20-143` cl.3
+          (D3(a)) and cl.13. The two-label public status pill — EXACTLY `active` and
+          `lock-in`, and ⛔ nothing else. `active-in-grace` PRESENTS AS `active`: a
+          grace period is an internal billing state, and ⛔ publishing it would tell a
+          stranger that a member is late on a payment.
+          Derived, ⛔ never a column: it is a projection of `members.state` (already
+          filtered to the ruled roster) — no `member_status` column exists, and ⛔ do
+          not create one.
+          ⚠ THIS ROW IS ATTESTED BY `2026-08-20-143`, ⛔ NOT BY AN ESCALATION ENTRY —
+          and that is deliberate, not an omission. A FIRST-TIME classification is ⛔ NOT
+          an escalation: `MatrixEscalationSchema` requires a real `from` tier and
+          `superRefine` rejects one that does not outrank `to`, and there is no honest
+          `from` for a field that was never classified. Inventing one to make the ledger
+          accept it would be a fabrication. (The ledger's own header settles the
+          principle: "Declaring a surface for the first time is NOT an escalation".)
+          ⚠ AND ITS OPEN FINDING, RAISED ⛔ NOT ABSORBED: publishing `lock-in` tells the
+          internet that a member is in their waiting period, and D3(a) additionally makes
+          a SUSPENSION silently remove a member from this page. ⛔ NO Niyamavali clause
+          describes either consequence. Recorded as an OPEN finding for the Trustee Panel
+          at `2026-08-20-143` cl.8 — ⛔ not closed by this row, and ⛔ not a reason to
+          quietly drop the pill the epic's own disposition left unchanged.
 
 # ── The escalation ledger (AC8) ──────────────────────────────────────────────
 # One entry per visibility ESCALATION (a field moving toward `public`), each

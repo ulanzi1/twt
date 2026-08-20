@@ -76,6 +76,35 @@ const PUBLIC_ALLOWLIST = new Set<string>([
   // (resolves the kyc_transaction's member_id + pariwar_id), exactly like the OTP routes.
   // The other KYC routes (initiate/confirm/manual/status) ARE member-session-gated.
   'POST /api/v1/kyc/callback',
+  // ── Story 11a.3 — the PUBLIC Member Directory read ───────────────────────────
+  // ⛔ DELIBERATELY UNAUTHENTICATED, and this entry is where that decision is DEFENDED.
+  // WHY: the surface is `public` TIER BY PANEL RULING (`2026-08-19-135`, affirmed by
+  // `-136`) — the Member Directory is meant to be readable by anyone on the internet
+  // with no login, so there is no session to require. ⛔ There is also no member
+  // session available to add: members are TOKEN-BEARER (Authorization header, not
+  // cookies), there is no `apps/member-web`, and `apps/mobile` has no directory
+  // screen (`2026-08-20-143` cl.7). Adding a guard would delete the route's purpose
+  // AND could not be satisfied by any shipped client.
+  // ⚠ IT IS NOT AN OPEN SURFACE. FIVE controls bound it, each mechanized and tested:
+  //   · the named SEARCH rate limit, UNMODIFIED — ⛔ NOT `limits.read`, the looser tier,
+  //     which is backwards for an enumeration surface. Keyed (via `perSessionKey` →
+  //     `request.ip` → `trustProxy`) on the FORWARDED VISITOR ADDRESS, not the SSR
+  //     proxy; `rate-limit-key.spec.ts` asserts two addresses land in DIFFERENT buckets.
+  //   · a page-size CAP (`PUBLIC_SURFACE_PAGE_SIZE_CAP` = 50) in the `.strict()` query
+  //     schema, so Story 1.14's OpenAPI forced-pagination guard covers this route too.
+  //   · a deep-pagination HORIZON (`PUBLIC_DIRECTORY_PAGE_HORIZON` = 200) — the ceiling
+  //     that actually bounds a full walk, since offset paging was KEPT (D2(a)).
+  //   · `X-Robots-Tag: noindex, nofollow` from the existing global hook, plus `noindex`
+  //     on the page itself.
+  //   · ⛔ NO member-detail route and ⛔ NO export affordance of any kind (FR-91). The
+  //     `.strict()` schema makes `?format=csv` a 400 rather than an ignored parameter.
+  // ⚠ AND ITS HONEST LIMIT, recorded rather than glossed: `trustProxy: true` makes the
+  // forwarded address CALLER-SUPPLIED, so the per-visitor ceiling holds only for traffic
+  // arriving through the trusted hop (`2026-08-20-143` cl.9). ⛔ Do not "fix" that by
+  // re-tuning `trustProxy` globally — it would alter `request.ip` and origin checks for
+  // every route in the app.
+  // ⛔ Do not "fix" this entry by adding a session guard.
+  'GET /api/v1/p/:pariwarId/public-pages/member-directory',
   // Developer-convenience OpenAPI doc (read-only, no data).
   'GET /docs/json',
   // Story 5.4 — the WhatsApp inbound-webhook ingress (§3.11) is PUBLIC by design: Meta is unauthenticated,

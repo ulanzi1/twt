@@ -125,16 +125,23 @@ describe('AC3 — the fragment registry is HONESTLY empty', () => {
     expect(contract).toMatch(/FR-77/);
   });
 
-  it('⛔ apps/api/src/modules/public-pages/ is NOT created — a module with no route is a claim', () => {
-    // Asserted on the real tree: `feedback_no_premature_package` — a boundary lands
-    // with its first consumer, and the first consumer is Epic 11b.
-    const apiModules = join(here, '../../../apps/api/src/modules/public-pages');
-    let exists = true;
-    try {
-      readFileSync(join(apiModules, 'index.ts'), 'utf8');
-    } catch {
-      exists = false;
-    }
-    expect(exists).toBe(false);
+  it('⭐ apps/api/src/modules/public-pages/ EXISTS AND CARRIES A ROUTE — its first consumer arrived', () => {
+    // ⚠ THIS ASSERTION IS INVERTED FROM ITS 11a.2 FORM, deliberately. It used to read
+    // `expect(exists).toBe(false)` on the ground that `feedback_no_premature_package` says a
+    // boundary lands WITH its first consumer — and it predicted that consumer would be Epic 11b.
+    // ⛔ That prediction was wrong: the first consumer is Story 11a.3's public Member Directory
+    // read, which needs exactly the capabilities `apps/public` lacks (KMS decrypt, the BYPASSRLS
+    // audit writer, a rate-limit store) — `2026-08-20-143` cl.1.
+    //
+    // ⭐ THE INVARIANT IS UNCHANGED AND STILL ENFORCED: ⛔ never a module with no route. A module
+    // that existed with only an `index.ts` would be exactly the empty claim 11a.2 refused, so the
+    // route file is asserted alongside it — that, not the module's absence, was always the point.
+    const apiModule = join(here, '../../../apps/api/src/modules/public-pages');
+    const index = readFileSync(join(apiModule, 'index.ts'), 'utf8');
+    const routes = readFileSync(join(apiModule, 'routes.ts'), 'utf8');
+    expect(index).toContain('registerPublicPagesModule');
+    // ⛔ A REAL, registered route — not a placeholder export.
+    expect(routes).toMatch(/public-pages\/member-directory/);
+    expect(routes).toMatch(/r\.get\(/);
   });
 });

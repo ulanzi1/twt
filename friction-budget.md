@@ -1290,3 +1290,38 @@ notification the epic AC asks for, and it costs the member nothing to ignore.
 a no-op (EAS build), and `apps/public` is **not touched** by this story
 ([[project_friction_budget_baseline_ratchet]] — the baseline is a best-ever ratchet
 and this story measured nothing new).
+
+**Story 11a.1 disposition (declaration affirmed — ⛔ NO new row):** the FR-74
+4-tier visibility matrix populated per surface, the tier-leak CI leg armed, and
+the per-Pariwar public-name presentation policy. AC-4 fires on the `apps/public`
+path touch (conservative by design — it cannot tell a refactor from a form), and
+the ledger was reviewed. **No row is warranted, for three separate reasons:**
+
+1. **Nothing new renders, and nothing renders differently.** The blog pages were
+   rewired through a pure render model (`lib/blog-render.ts`) and the two public
+   blog reads were narrowed to an explicit six-column list. That is a **narrowing
+   of the model, not a change to the page** — every value the two pages rendered
+   before they render after, byte-identical, `fmtDate`'s `null → ''` included.
+   The render models for `/niyamavali` and `/terms` gained only a field-id
+   derivation used by CI; the pages themselves are untouched.
+2. **No form, no upload, no member-initiated action anywhere in this story.** All
+   seven declared surfaces are read-only, exactly as the Story 2.5 and 2.6
+   dispositions record for the same paths.
+3. **The presentation policy is not member-facing at all.** Flipping
+   `full_name` ⇄ `shielded_name` is a governed act carrying a permission key held
+   by Super Admin / the Trustee Panel, ⛔ with no admin UI and no member-visible
+   control. A member pays nothing — the mode changes how their name *appears*,
+   which is a governance decision made about them, not friction paid by them.
+   ⚠ That is a DPDPA and transparency question, and it is carried openly as one
+   (Decision `2026-08-20-140` cl.7 — the Niyamavali does not record this
+   publication; `2026-08-19-136` cl.5 — legal counsel not engaged). It is simply
+   not a *friction-budget* question, and recording it here would file a real
+   finding under the wrong heading.
+
+**The page-weight baseline is UNCHANGED — ⛔ do NOT ratchet.** Measured
+`member-public-web.page_weight_bytes: 5219` against baseline `3942`. ⚠ Verified,
+not assumed: `friction-budget.yaml:55` already records 5219 as the measurement
+`/terms` produced at Story 2.6, so the delta predates this story and is not its
+to claim. Well under the 512000 ceiling, and the baseline stays at its best-ever
+3942 ([[project_friction_budget_baseline_ratchet]] — the ratchet only ever
+DECREASES in-PR).

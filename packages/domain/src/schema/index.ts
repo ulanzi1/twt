@@ -233,6 +233,10 @@ export * from './claim_appeal_decisions.js';
 export * from './claim_appeal_panel_sessions.js';
 export * from './claim_appeal_panel_votes.js';
 export * from './pariwar_appeal_config.js';
+// Story 11a.1 (AC5) — `pariwar_public_name_presentation`: the per-Pariwar public-name presentation
+// MODE (full_name | shielded_name). One row per Pariwar; an absent row means the RULED default
+// (full_name), ⛔ not a fail-closed shield. ⛔ Holds a MODE, never a name.
+export * from './pariwar_public_name_presentation.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

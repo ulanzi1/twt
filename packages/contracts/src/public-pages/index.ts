@@ -13,5 +13,6 @@
 // yet; mirrors the rbac / pariwar-passport convention) — adding an `exports` map
 // entry then is trivial.
 
+export * from './gate.js';
 export * from './matrix.js';
 export * from './scrape.js';

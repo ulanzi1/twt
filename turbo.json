@@ -52,7 +52,9 @@
         "scripts/**/*.ts",
         "package.json",
         "../../pnpm-lock.yaml",
-        "public-pages/public-vs-private-matrix.yaml"
+        "public-pages/public-vs-private-matrix.yaml",
+        "../../apps/public/src/pages/**/*.astro",
+        "../../.decision-log.md"
       ],
       "outputs": []
     },

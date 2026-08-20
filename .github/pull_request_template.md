@@ -3,6 +3,11 @@ PR template — six committed initial-scope prompts per architecture
 §PR-template initial scope (architecture lines 4026-4029). Per architecture
 §PR-template review budget (architecture lines 4021-4024), adding past these
 six requires retiring one or merging categories.
+
+Story 11a.1 owed a "why is this visibility increase justified?" prompt. It was
+MERGED into the existing Security-impact item rather than added as a seventh —
+the budget is a real constraint, and visibility escalation is a security impact,
+not a new category. Do not split it back out without retiring something.
 -->
 
 ## Summary
@@ -20,7 +25,7 @@ six requires retiring one or merging categories.
 - [ ] **Friction-budget declaration** — change stays within its surface's friction budget; any member-facing form/interaction friction is declared in `friction-budget.md` (payer + protects + event_type) and metric ceilings in `friction-budget.yaml` hold (per UX Stance #2 + architecture §AR-60; enforced by the `friction-budget` CI gate, Story 1.16a).
 - [ ] **Accessibility-impact note** — change preserves or improves accessibility (RN Accessibility props for mobile; ARIA + semantic HTML for web).
 - [ ] **Performance-impact note** — change preserves or improves performance budgets (P5 measurement criteria for mobile; budget docs for web/api).
-- [ ] **Security-impact note** — change does not introduce DPDPA / FR-43A / RLS / audit-log regressions; no new secrets-handling paths uncovered by Cloud KMS envelope encryption; no PII renders above its tier in the FR-74 Public-vs-Private matrix on any public surface (enforced by the `pii-scrape` CI gate, Story 1.16b); no `payout_destinations` table/column/endpoint/Zod schema lands in v1 (FR-100 forward-compat non-add — the Durghatana Sahayata payout surface is a greenfield v2 addition, not a v1 column/index add; enforced by the `schema-diff` CI gate, Story 1.16c); every Niyamavali rule record carries a `benefit_mechanism ∈ {pool, reserve}` discriminator and v1 rules only ever use `pool` (FR-7 / FR-100 forward-compat enum-tag — `reserve` exists so v2 Durghatana Sahayata rules add without re-tagging; enforced by the `benefit-mechanism` CI gate, Story 1.16d).
+- [ ] **Security-impact note** — change does not introduce DPDPA / FR-43A / RLS / audit-log regressions; no new secrets-handling paths uncovered by Cloud KMS envelope encryption; no PII renders above its tier in the FR-74 Public-vs-Private matrix on any public surface, **every new public route is declared in that matrix**, and **any field whose visibility is ESCALATED toward `public` states why the increase is justified** — recorded as an `escalations:` entry carrying `{rationale, decision}` plus an `escalation_count` bump in the SAME commit, citing a `.decision-log.md` ruling that already exists (enforced by the `pii-scrape` CI gate, Stories 1.16b + 11a.1); no `payout_destinations` table/column/endpoint/Zod schema lands in v1 (FR-100 forward-compat non-add — the Durghatana Sahayata payout surface is a greenfield v2 addition, not a v1 column/index add; enforced by the `schema-diff` CI gate, Story 1.16c); every Niyamavali rule record carries a `benefit_mechanism ∈ {pool, reserve}` discriminator and v1 rules only ever use `pool` (FR-7 / FR-100 forward-compat enum-tag — `reserve` exists so v2 Durghatana Sahayata rules add without re-tagging; enforced by the `benefit-mechanism` CI gate, Story 1.16d).
 
 ## Test plan
 

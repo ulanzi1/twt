@@ -384,14 +384,22 @@ export type PublicVsPrivateMatrix = z.output<typeof PublicVsPrivateMatrixSchema>
  * Parse + structurally validate the matrix YAML.
  *
  *   - blank / whitespace / comments-only document (YAML → null/undefined) →
- *     returns `null`, the "empty matrix" sentinel the gate treats as a no-op
- *     (AC-3: empty/absent matrix → pass). The scaffold ships `version: 1` +
- *     `surfaces: []`, which is a non-empty *structure* with zero surfaces — that
- *     parses to a typed object and is ALSO a no-op (the engine evaluates nothing).
+ *     returns `null`, the empty-DOCUMENT sentinel.
  *   - structurally valid document → the typed matrix.
  *   - non-null but invalid document (unknown tier, missing key, extra key, wrong
- *     type) → THROWS with a precise message (AC-1: a malformed matrix fails the
- *     gate loudly, never silently skipped — mirrors `parseFrictionBudgetYaml`).
+ *     type, an unattributed Tier-1 `public` field, a second exception, a count
+ *     mismatch, an orphaned or non-escalating ledger entry) → THROWS with a
+ *     precise message. ⛔ A malformed matrix must fail LOUDLY, never degrade to
+ *     "no entries" (mirrors `parseFrictionBudgetYaml`; the `parseCapabilityBar`
+ *     doctrine).
+ *
+ * ⚠ THE `null` SENTINEL IS NO LONGER A PASS. Under Story 1.16b's scaffold posture
+ * an empty document — and a `surfaces: []` structure — meant the gate evaluated
+ * nothing and passed, which was correct while the matrix was deliberately empty.
+ * Story 11a.1 POPULATED it, so both now mean the matrix was emptied or corrupted:
+ * the gate and the live-render spec each FAIL on `null` rather than treating it as
+ * a graceful no-op. This function still merely REPORTS the condition — deciding
+ * what it means is the caller's job, and every caller now decides "fail".
  */
 export function parsePublicVsPrivateMatrix(raw: string): PublicVsPrivateMatrix | null {
   let doc: unknown;
@@ -403,8 +411,10 @@ export function parsePublicVsPrivateMatrix(raw: string): PublicVsPrivateMatrix |
     );
   }
 
-  // A blank / comments-only document is the empty-matrix no-op, not a malformed
-  // one. (`version: 1` + `surfaces: []` is non-null and parses below.)
+  // A blank / comments-only document is the empty-DOCUMENT sentinel, not a
+  // malformed one — the distinction is the caller's to act on, and every caller
+  // now treats it as a failure (see the doc comment above). A `surfaces: []`
+  // structure is non-null and parses below, as a matrix that declares nothing.
   if (doc === null || doc === undefined) return null;
 
   const result = PublicVsPrivateMatrixSchema.safeParse(doc);

@@ -1,4 +1,75 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-20a (bmad-create-story 11a.1: authored
+#   11a-1-4-tier-visibility-matrix-codified-per-surface-public-vs-private-replacement.md, D1-D6 raised
+#   and ALL RULED SAME DAY. TWO rows flip:
+#   development_status[11a-1-...] backlog -> ready-for-dev, and epic-11a backlog -> in-progress (first
+#   story of the epic). ⛔ NO other story status changes; ⛔ no code, no migration, no ADR.
+#   ⭐ THE FIRST BUILD STORY AFTER THE NINE-ARTIFACT CORRECT-COURSE. The 2026-08-18 "do NOT author 11a.1"
+#   ruling is DISCHARGED, ⛔ not overridden -- 132 closed AI-10-4, G1+G5+G6 landed, ADR-0037/0038/0039 all
+#   ratified (138, 139). The last twelve commits are ALL `governance:`; this story is the first BUILD.
+#   ✅ SIX DECISIONS (D1-D6) RAISED AND ALL SIX RULED BY BIGDEV, 2026-08-20, EACH AS RECOMMENDED --
+#   ⛔ nothing left open, and the Tasks are written against the ruled option. They were RAISED rather
+#   than assumed because guessing a directory question is the exact SD-1 failure (132 cl.7). Ruled:
+#   (a) the presentation-policy SUBSTRATE ships here (migration 0110, pariwar_appeal_config shape,
+#       default `full_name`) -- ⭐ without a stored setting there is nothing to flip and 136 cl.1's
+#       "must not hard-code" test would assert about a constant;
+#   (b) the legs SPLIT -- gate script proves what is provable from COMMITTED SOURCE (matrix structure,
+#       route coverage, indexing reconciliation, escalation ledger), the D13-1.2 integration spec owns
+#       LIVE-RENDER tier-leak; ⛔ snapshot FIXTURES rejected as a restatement that drifts;
+#   (c) snapshot `fields` derive FROM THE RENDER MODEL'S OWN KEYS -- real coupling, new fields fail
+#       closed as `unclassified`; ⚠ its soft spot (a field never entering the model is unseen) is
+#       CONFESSED IN THE README, the 10.12 fence's discipline;
+#   (d) /blog + /blog/[postId] declare `index` -- matches shipped behaviour; ⛔ this story does not
+#       change SEO posture;
+#   (e) member-directory IS declared now with `renders: false` -- 11a.3 then FILLS a declared surface
+#       instead of INVENTING one, and AC4's Tier-1 exception has somewhere to live;
+#   (f) the escalation ledger lives INSIDE the matrix yaml -- one file, one review surface, one turbo
+#       input, local count cross-check.
+#   ⭐ THREE DEFECTS VERIFIED LIVE, ⛔ NOT INHERITED FROM THE RECORD -- `pnpm pii:check` was RUN at
+#   authoring time ([[feedback_verify_before_committing_governance_claims]]):
+#     (a) the matrix declares 0 surfaces while SEVEN public routes have shipped (`/`, `/niyamavali`,
+#         `/terms`, `/blog`, `/blog/[postId]`, `/404`, `/500`) -- none declared;
+#     (b) `loadSnapshots()` is `return []` (check-pii-scrape.ts:39-41) ⇒ the TIER-LEAK leg is VACUOUS
+#         and the green check actively certifies an invariant nobody enforces. ⚠ The NAKED-PII leg is
+#         genuinely ALIVE with a working negative control -- ⛔ only the tier-leak leg is inert;
+#     (c) the gate's own output and its README carry FALSE statements -- "apps/public is a tsc stub until
+#         Story 2.5" (7 pages ship) and "the leak rules acquire teeth WITHOUT a code change to the gate"
+#         (`return []` is exactly that code change). Same staleness class 8bcc924 found in the ADR index.
+#   ⭐ A FOURTH DEFECT FOUND WHILE READING THE CODE, AND IT IS A REAL LEAK RISK: `listPublishedPublicPosts`
+#   / `getPublishedPublicPost` (news-blog/read.ts:82,101) issue a bare `db.select()` returning EVERY
+#   column -- author_actor_id, reviewer_actor_id, tone_signoff_*, channels, audience_scope_value -- into
+#   the UNAUTHENTICATED blog render scope, while blog.astro:4 claims it "returns only the member-facing
+#   fields". ⛔ THAT COMMENT IS FALSE. Nothing leaks TODAY (the template renders a subset), but the
+#   operator-restricted columns are one careless `{p.authorActorId}` away from a public render, on the
+#   exact surface class the tier-leak leg cannot currently see. Closed at the source by AC3.
+#   ⚠ POLICY-MEANING NOTE (AI-10-1) CARRIED IN THE STORY FILE, and it returned a FINDING, not a
+#   confirmation: no benefit-gating predicate is introduced (the matrix gates what a VIEWER SEES, never
+#   what a member RECEIVES). But the Niyamavali WAS read -- all 23 v1 clause ids in
+#   seed/niyamavali-v1-clauses.sql -- and ⛔ NOT ONE governs directory publication or name visibility.
+#   ⇒ The authority for publishing members' FULL LEGAL NAMES on an unauthenticated page is the Trustee
+#   Panel (135/136) and it has NEVER been reflected into the member-facing rulebook: a member reading the
+#   Niyamavali today cannot learn their full legal name will be published. ⛔ RECORDED AS AN OPEN FINDING
+#   FOR THE PANEL, ⛔ not fixed here (amending is Story 2.4's workflow and needs its own ruling,
+#   [[feedback_supersede_never_reinterpret]]). It compounds 136 cl.5's recorded DPDPA exposure.
+#   ⛔ LAUNCH-BLOCKING AND CIRCULAR, restated so it is not re-discovered: 136 cl.4 makes the tier-leak leg
+#   operative-before-the-directory-ships. The matrix that arms the guard is populated by THIS story and
+#   the guard polices THIS epic's surface. ⭐ "Sequence it deliberately; do not discover it."
+#   ⚠ SEVEN TRAPS written into the story, three of which no gate can catch: the matrix is ⛔ NOT A SCHEMA
+#   (populating a fixed field list re-commits SD-1); the CI gate must be HONESTLY SCOPED and ⛔ must never
+#   read a tenant DB (the 10.12 fence's own words); the `public` tier's Tier-1 name exception is ⛔ ONE
+#   FIELD ON ONE SURFACE, never a relaxation and never a reclassification. Plus: populating the matrix
+#   BREAKS public-pages.test.ts:324 (`toHaveLength(0)`) and ⛔ reverting to keep it green is the failure
+#   mode; turbo `inputs` (turbo.json:48-56) exclude apps/public so a new scan would read a STALE CACHE;
+#   and the PR template's SIX-PROMPT BUDGET means the new visibility prompt must be MERGED into the
+#   Security-impact note, ⛔ not added as a seventh -- with trustee sign-off mechanized the way this repo
+#   already does it (decision-log attestation + count bump, the governance-boundary precedent), because
+#   CODEOWNERS is one solo-builder handle and trustees are not GitHub users.
+#   ⛔ EPIC 11b SURFACES ARE DELIBERATELY NOT PRE-DECLARED -- declaring Sahyog Drive / Vivran / In Memoriam
+#   means INVENTING field sets, which is Trap 1 by another route. AC1's bidirectional route-coverage leg
+#   FAILS when 11b ships a route undeclared; that is a stronger guarantee than a guessed entry.
+#   ⛔ THE FULL-NAME RULING STILL DOES NOT REACH In Memoriam (11b.6) or Sahyog Vivran (11b.1) -- 99b4a46
+#   propagated it deliberately NOWHERE ELSE, and a "consistency" edit is the scope boundary's most likely
+#   violation.)
 # last_updated: 2026-08-19l (⭐ ADR-0037 + ADR-0038 RATIFIED -- Decision 2026-08-19-139, Dhiraj Rahul and
 #   Kalpana Bharti, 2026-08-19. ⛔ NO story status flipped, NO story minted, NO code changed, NO
 #   development_status key touched.
@@ -8505,8 +8576,8 @@ development_status:
   # ==========================================================================
   # Epic 11a: Public Trust Identity Shell
   # ==========================================================================
-  epic-11a: backlog
-  11a-1-4-tier-visibility-matrix-codified-per-surface-public-vs-private-replacement: backlog
+  epic-11a: in-progress
+  11a-1-4-tier-visibility-matrix-codified-per-surface-public-vs-private-replacement: ready-for-dev
   11a-2-public-astro-ssr-shell-extension-for-member-directory-tiered-visibility-renderers: backlog
   11a-3-member-directory-pii-shielded-tiered-render-scope-anti-enumeration-safeguards: backlog
   11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only: backlog

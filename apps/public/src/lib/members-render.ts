@@ -11,7 +11,7 @@
 // Tier-1 decrypt stays behind Story 11a.3's anti-enumeration safeguards).
 //
 // PURE: no fs, no db, no env, no clock.
-import { PUBLIC_PAGE_SIZE_MAX, pageHref, type PaginationResult } from './pagination.js';
+import { pageHref, type PaginationResult } from './pagination.js';
 import type { MembersRenderModel } from './surface-fields.js';
 
 export const MEMBERS_ROUTE = '/members';
@@ -24,10 +24,13 @@ export interface MembersLabels {
   readonly notPublishedBody: string;
   readonly paginationLabel: string;
   readonly previousPage: string;
-  readonly nextPage: string;
   readonly invalidTitle: string;
   readonly invalidBody: string;
   readonly invalidLink: string;
+  /** The valid, non-error "back to page 1" link shown on any accepted page > 1.
+   *  ⛔ Deliberately NOT `invalidLink` — that copy is written for the 400-rejection
+   *  state and reusing it here would silently break the moment that copy is tuned. */
+  readonly backToStart: string;
 }
 
 /** One pagination control — always a REAL link, never a JS-dependent button. */
@@ -106,8 +109,10 @@ export function buildMembersRejectionView(labels: MembersLabels): MembersRejecti
   return {
     title: labels.invalidTitle,
     // ⛔ The engine's `message` is developer/log copy and names the probe back to the
-    // prober. The member-facing body is i18n'd and says only what a person needs.
-    body: labels.invalidBody.replace('{{max}}', String(PUBLIC_PAGE_SIZE_MAX)),
+    // prober. The member-facing body is i18n'd and says only what a person needs. The
+    // cap is already interpolated by `t()` at the page (single-brace `{max}` token) —
+    // this function does no string surgery of its own.
+    body: labels.invalidBody,
     linkLabel: labels.invalidLink,
     linkHref: MEMBERS_ROUTE,
     status: 400,

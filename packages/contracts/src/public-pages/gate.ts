@@ -272,7 +272,12 @@ function cachePolicySatisfied(policy: CachePolicy, signal: PageCacheSignal): boo
   if (signal.cacheControl === null) return false; // fail-closed — see the leg below
   const value = signal.cacheControl.toLowerCase();
   const shared = /(^|[\s,])public([\s,]|$)/.test(value) && !/no-store/.test(value);
-  if (policy === 'edge_cacheable') return shared;
+  // ⛔ `public` alone is not "edge cache TTL" — the epic AC's stated intent. A page
+  // could set `Cache-Control: public` with no `max-age`/`s-maxage` at all and still
+  // match `shared` above; require an actual TTL token so the declaration means what
+  // it says.
+  const hasTtl = /(^|[\s,])(max-age|s-maxage)=\d+/.test(value);
+  if (policy === 'edge_cacheable') return shared && hasTtl;
   // `private_no_store`: the page must actively prevent storage.
   return /no-store/.test(value) || /(^|[\s,])private([\s,]|$)/.test(value);
 }
@@ -354,7 +359,19 @@ export function checkCachePolicyReconciliation(
  * ⛔ It does NOT prove the page honours the rejection — a page could call the parser
  * and ignore the result. That residual is covered by the page's own tests, and
  * saying so here is the point: a leg whose limit is unstated gets over-cited.
+ *
+ * ⛔ Comments are stripped before matching (see `stripCommentsForBindingCheck`) — a
+ * comment merely MENTIONING `parsePageParams(` (e.g. copied from another file's
+ * docstring) must not satisfy this leg. Matching prose instead of the call is exactly
+ * the failure mode `detectCacheSignal`'s own docstring warns against.
  */
+function stripCommentsForBindingCheck(source: string): string {
+  return source
+    .replace(/\{\/\*[\s\S]*?\*\/\}/g, '') // {/* astro template comments */}
+    .replace(/\/\*[\s\S]*?\*\//g, '') // /* block */
+    .replace(/(^|[^:])\/\/.*$/gm, '$1'); // // line (⛔ not inside a URL)
+}
+
 export function checkPaginationBinding(
   matrix: PublicVsPrivateMatrix,
   pageSources: ReadonlyMap<string, string>,
@@ -364,7 +381,7 @@ export function checkPaginationBinding(
     if (!surface.paginated) continue;
     const source = pageSources.get(surface.route);
     if (source === undefined) continue; // route coverage owns the missing-page case
-    if (!/parsePageParams\s*\(/.test(source)) {
+    if (!/parsePageParams\s*\(/.test(stripCommentsForBindingCheck(source))) {
       findings.push({
         leg: 'pagination_binding',
         message:

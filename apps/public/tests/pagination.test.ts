@@ -4,6 +4,7 @@
 // unbounded read. Story 1.14's guard walks the committed OpenAPI surface and
 // `apps/public` emits none — verified, ⛔ not assumed. So every control below is a
 // real control, not a restatement of protection that exists elsewhere.
+import { PUBLIC_SURFACE_PAGE_SIZE_CAP } from '@twt/contracts';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -16,9 +17,11 @@ import {
 const q = (search: string) => new URLSearchParams(search);
 
 describe('AC2 — the cap is a named constant cross-referenced to FR-91', () => {
-  it('matches the public-surface cap already committed in @twt/contracts', () => {
+  it('IS the public-surface cap imported from @twt/contracts — not a re-declared literal', () => {
     // ⛔ If this ever diverges, there are two "FR-91 caps" and the smaller one is a
-    // fiction. `_common/pagination.ts` documents 50 as the public-surface cap.
+    // fiction. A test against a hardcoded `50` on both sides would not catch that
+    // divergence — this asserts identity against the SAME imported binding instead.
+    expect(PUBLIC_PAGE_SIZE_MAX).toBe(PUBLIC_SURFACE_PAGE_SIZE_CAP);
     expect(PUBLIC_PAGE_SIZE_MAX).toBe(50);
     expect(PUBLIC_PAGE_SIZE_DEFAULT).toBeLessThanOrEqual(PUBLIC_PAGE_SIZE_MAX);
   });

@@ -508,7 +508,36 @@ export function permissionKey(value: string): PermissionKey {
 // ACCEPTANCE CONDITION: district_admin survey-manage may be enabled only if a survey gains a
 // server-derived district AND the gate moves to `dimension: 'district'` — never by widening a pariwar
 // gate to a role that cannot satisfy it.
-export const PERMISSION_CATALOG_VERSION = 36 as const;
+// ── Bumped 36 → 37 at Story 11a.1 (added ONE key: 44 → 45) ──────────────────────────────────────
+// `pariwar.manage_public_name_presentation` — the per-Pariwar PUBLIC-NAME PRESENTATION MODE write
+// key (`full_name` | `shielded_name`). Checked at `dimension: 'pariwar'` (value = scopeTx.pariwarId
+// — the helpdesk.create / news.manage / feature_flag.* / banner.manage / survey.manage precedent).
+//
+// ⭐ THE INTERESTING PART IS WHO DOES **NOT** HOLD IT: `pariwar_admin` is DELIBERATELY EXCLUDED,
+// and that exclusion is the ruling rather than an oversight. Every other pariwar-dimension content
+// key in this catalog (news.manage, banner.manage, survey.manage, pariwar.manage_custom_fields)
+// names `pariwar_admin` as its sole non-super_admin holder, because those are the tenant's own
+// content and its own data shape. This one is not: Decision `2026-08-19-136` cl.3 states that
+// changing the public name form is a GOVERNED ACT, ⛔ "not a casual Pariwar-Admin toggle" — the
+// authority that ruled full names would be published is the Trustee Panel, so the authority to
+// change that form is theirs too. `super_admin` (which carries the whole catalog) is therefore the
+// ONLY holder, mirroring `2026-08-19-133` cl.2's reservation of directory-attribute creation and
+// material redefinition to Super Admin / the Trustee Panel.
+// ⛔ Granting this to pariwar_admin "for symmetry" with the other content keys would reverse a
+// ratified ruling by way of a catalog edit. It requires its own Panel decision, not a tidy-up.
+//
+// `district_admin` DEFERRED and `state_trustee` excluded for the usual structural reason, in both
+// directions: a `district` ceiling can never satisfy a pariwar-dimension check, and a `state`
+// ceiling is broader than the gate's dimension — either grant would be INERT
+// ([[project_rbac_geo_scope_containment]]).
+// NOT step-up-gated. Accountability is the REQUIRED rationale + actor + display snapshot on the
+// config row and the §1.5 hash-chain audit line (kyc/presentation-policy.ts refuses a write
+// carrying neither). ⛔ No self-serve admin toggle UI ships in Story 11a.1.
+// The PUBLIC read (apps/public, unauthenticated) touches NO key — it reads the resolved mode to
+// render a name, exactly as it reads any other public config.
+// ACCEPTANCE CONDITION for pariwar_admin: a Panel ruling superseding `-136` cl.3. ⛔ Never a
+// consistency argument from the neighbouring keys.
+export const PERMISSION_CATALOG_VERSION = 37 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -855,6 +884,19 @@ export const SEED_PERMISSION_KEYS = [
   // by design. Every publish runs the frozen-governance fence + the PII-tier gate and carries a §1.5
   // hash-chain audit line. NOT step-up-gated. district_admin DEFERRED for the same inert-grant reason.
   'pariwar.manage_custom_fields',
+  // Story 11a.1 (FR-74 / FR-75) — the per-Pariwar PUBLIC-NAME PRESENTATION MODE write key. Gates the
+  // `full_name` ⇄ `shielded_name` flip that governs how every member's name renders on the
+  // unauthenticated public Member Directory. Checked at `dimension: 'pariwar'` (value =
+  // scopeTx.pariwarId — the news.manage / banner.manage / survey.manage precedent).
+  // ⭐ Granted to `super_admin` ONLY — ⛔ NOT `pariwar_admin`, which holds every other pariwar-
+  // dimension content key. Decision `2026-08-19-136` cl.3: this is a GOVERNED ACT, "not a casual
+  // Pariwar-Admin toggle"; the Trustee Panel ruled that full names are published, so the authority
+  // to change that form sits with them. See the version-bump note above — the exclusion IS the
+  // ruling, and re-granting it "for symmetry" would reverse a ratified decision by catalog edit.
+  // district_admin DEFERRED / state_trustee excluded (inert in both directions). NOT step-up-gated;
+  // accountability is the required rationale + actor + display snapshot + §1.5 audit line. The
+  // unauthenticated public read touches NO key.
+  'pariwar.manage_public_name_presentation',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

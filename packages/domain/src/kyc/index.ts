@@ -19,3 +19,9 @@ export * from './cert-refresh.js';
 // notification payload can shield the deceased family's name exactly as the apps/api surfaces do
 // (apps cannot import apps). apps/api's member-pool/name.ts re-exports it. Pure string work.
 export * from './name.js';
+// Story 11a.1 (AC5) — the per-Pariwar PUBLIC-NAME PRESENTATION policy. `public-name.ts` is the PURE
+// resolver (the discharge of `2026-08-19-136` cl.1's "must not hard-code" requirement, proven by
+// test); `presentation-policy.ts` is the substrate accessor + the GOVERNED write path. Split so a
+// surface that already holds the mode can render a name without pulling a database into its graph.
+export * from './public-name.js';
+export * from './presentation-policy.js';

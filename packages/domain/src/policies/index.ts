@@ -109,6 +109,8 @@ export * from './claim-appeal-decisions-rls.js';
 export * from './claim-appeal-panel-sessions-rls.js';
 export * from './claim-appeal-panel-votes-rls.js';
 export * from './pariwar-appeal-config-rls.js';
+// Story 11a.1 — tenant isolation for the public-name presentation config.
+export * from './pariwar-public-name-presentation-rls.js';
 // Story 7.1 — pools tenant-isolation policies (NOT cross-readable; mirror claims-rls). The
 // pools.current_state write-rejection trigger (migration 0071) is ORTHOGONAL — RLS isolates by
 // tenant, the trigger blocks non-projector state writes regardless of tenant; both apply.

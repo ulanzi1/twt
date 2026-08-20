@@ -37,9 +37,24 @@ const matrixPath = join(
   here,
   '../../../../../packages/contracts/public-pages/public-vs-private-matrix.yaml',
 );
-const matrix: PublicVsPrivateMatrix = parsePublicVsPrivateMatrix(
-  readFileSync(matrixPath, 'utf8'),
-) ?? { version: 1, surfaces: [] };
+// ⛔ NO EMPTY-MATRIX FALLBACK. This read used to be `?? { version: 1, surfaces: [] }`,
+// which was harmless while the matrix WAS empty and is a trap now that it is not:
+// an unreadable matrix would silently become a matrix with no surfaces, every
+// tier-leak check would evaluate nothing, and the suite would go green having
+// proven nothing. That is the exact defect Story 11a.1 exists to remove — so a
+// missing or empty matrix fails LOUDLY here, as it does in the gate.
+function loadMatrix(): PublicVsPrivateMatrix {
+  const parsed = parsePublicVsPrivateMatrix(readFileSync(matrixPath, 'utf8'));
+  if (parsed === null) {
+    throw new Error(
+      `public-vs-private-matrix.yaml parsed to the empty-document sentinel. The matrix is ` +
+        `POPULATED as of Story 11a.1 — an empty parse means it was emptied or corrupted, and ` +
+        `⛔ must never degrade to "no surfaces" (that would make every check below vacuous).`,
+    );
+  }
+  return parsed;
+}
+const matrix: PublicVsPrivateMatrix = loadMatrix();
 
 /** Minimal clause-version row fixture (the render reads only the display fields). */
 function clause(partial: {

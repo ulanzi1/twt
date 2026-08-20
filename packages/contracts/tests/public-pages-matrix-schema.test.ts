@@ -1,0 +1,304 @@
+// Matrix SCHEMA-EXTENSION tests — Story 11a.1 (AC4, AC6, AC8).
+//
+// Story 1.16b shipped the 4-tier schema; THIS story extends it with the four
+// constructs the populated matrix needs, each of which is fail-closed:
+//
+//   (1) `route` + `renders` per surface (AC1) — a surface names the route it
+//       renders at; `renders: false` is the ONLY way a declared surface may have
+//       no shipped route (D5 — `member-directory` is declared before 11a.3
+//       builds it, so 11a.3 FILLS a declared surface instead of INVENTING one).
+//   (2) `tier1_public_exception` (AC4) — the ONE ruled Tier-1-on-public
+//       exception (`2026-08-19-135` cl.7(c) + `-136`), carried as an ATTRIBUTED
+//       construct so it can never be confused with an ordinary `public` field.
+//       A Tier-1 field declared `public` WITHOUT one is rejected; a SECOND such
+//       exception anywhere in the matrix is rejected. ⛔ It is an exception, not
+//       a door.
+//   (3) `escalations` + `escalation_count` (AC8) — the trustee-attestation
+//       ledger, cross-checked in BOTH directions so neither half moves alone
+//       (the `governance_boundary.yaml` precedent).
+//   (4) `per_pariwar_attribute_rule` (AC6) — a RULE, ⛔ never a field list.
+//       Trap 1: enumerating member attributes here re-commits SD-1.
+//
+// ⛔ The loud-throw posture is preserved throughout: a malformed matrix must
+// NEVER degrade to "no entries" (the `parseCapabilityBar` doctrine) — a gate
+// that silently stopped detecting would certify an invariant nobody enforces.
+
+import { describe, expect, it } from 'vitest';
+
+import { parsePublicVsPrivateMatrix } from '../src/public-pages/index.js';
+
+/** Build a minimal valid matrix document, with `extra` spliced in at the root. */
+function doc(body: string): string {
+  return `version: 2\n${body}`;
+}
+
+const MINIMAL_SURFACE = `surfaces:
+  - id: terms
+    route: /terms
+    search_indexing_policy: index
+    fields:
+      - id: tc_body_html
+        tier: public
+`;
+
+describe('surface `route` + `renders` (AC1, D5)', () => {
+  it('parses a surface carrying a route', () => {
+    const m = parsePublicVsPrivateMatrix(doc(MINIMAL_SURFACE));
+    expect(m?.surfaces[0]?.route).toBe('/terms');
+  });
+
+  it('defaults `renders` to true when absent (a declared surface renders unless it says otherwise)', () => {
+    const m = parsePublicVsPrivateMatrix(doc(MINIMAL_SURFACE));
+    expect(m?.surfaces[0]?.renders).toBe(true);
+  });
+
+  it('accepts an explicit `renders: false` (the D5 declared-but-unrouted posture)', () => {
+    const m = parsePublicVsPrivateMatrix(
+      doc(`surfaces:
+  - id: member-directory
+    route: /members
+    renders: false
+    search_indexing_policy: noindex
+    fields: []
+`),
+    );
+    expect(m?.surfaces[0]?.renders).toBe(false);
+  });
+
+  it('REJECTS a surface with no route (fail-closed — every surface names where it renders)', () => {
+    expect(() =>
+      parsePublicVsPrivateMatrix(
+        doc(`surfaces:
+  - id: terms
+    search_indexing_policy: index
+    fields: []
+`),
+      ),
+    ).toThrow(/route/);
+  });
+});
+
+describe('the ruled Tier-1 public exception (AC4)', () => {
+  const withException = `surfaces:
+  - id: member-directory
+    route: /members
+    renders: false
+    search_indexing_policy: noindex
+    fields:
+      - id: member_name
+        tier: public
+        pii_tier: 1
+        tier1_public_exception:
+          decision: '2026-08-19-136'
+          rationale: Panel-ruled decrypt of member name for the public directory.
+          scope: this surface only
+        presentation_policy_ref: pariwar_public_name_presentation.mode
+`;
+
+  it('parses a Tier-1 `public` field that carries an attributed exception', () => {
+    const m = parsePublicVsPrivateMatrix(doc(withException));
+    const field = m?.surfaces[0]?.fields[0];
+    expect(field?.pii_tier).toBe(1);
+    expect(field?.tier1_public_exception?.decision).toBe('2026-08-19-136');
+    expect(field?.presentation_policy_ref).toBe('pariwar_public_name_presentation.mode');
+  });
+
+  it('REJECTS a Tier-1 field declared `public` WITHOUT an exception block (fail-closed)', () => {
+    expect(() =>
+      parsePublicVsPrivateMatrix(
+        doc(`surfaces:
+  - id: member-directory
+    route: /members
+    renders: false
+    search_indexing_policy: noindex
+    fields:
+      - id: member_name
+        tier: public
+        pii_tier: 1
+`),
+      ),
+    ).toThrow(/tier1_public_exception/);
+  });
+
+  it('REJECTS a SECOND Tier-1 `public` exception anywhere in the matrix (⛔ an exception, not a door)', () => {
+    expect(() =>
+      parsePublicVsPrivateMatrix(
+        doc(`${withException}  - id: in-memoriam
+    route: /in-memoriam
+    renders: false
+    search_indexing_policy: noindex
+    fields:
+      - id: deceased_name
+        tier: public
+        pii_tier: 1
+        tier1_public_exception:
+          decision: '2026-08-19-136'
+          rationale: A second one, which must not be allowed.
+          scope: this surface only
+`),
+      ),
+    ).toThrow(/exactly one|second|more than one/i);
+  });
+
+  it('REJECTS an exception block missing its decision ref (attribution is mandatory)', () => {
+    expect(() =>
+      parsePublicVsPrivateMatrix(
+        doc(`surfaces:
+  - id: member-directory
+    route: /members
+    renders: false
+    search_indexing_policy: noindex
+    fields:
+      - id: member_name
+        tier: public
+        pii_tier: 1
+        tier1_public_exception:
+          rationale: No decision reference.
+          scope: this surface only
+`),
+      ),
+    ).toThrow(/decision/);
+  });
+
+  it('REJECTS an exception on a field that is NOT Tier-1 `public` (the construct cannot be decorative)', () => {
+    expect(() =>
+      parsePublicVsPrivateMatrix(
+        doc(`surfaces:
+  - id: member-directory
+    route: /members
+    renders: false
+    search_indexing_policy: noindex
+    fields:
+      - id: district
+        tier: public
+        pii_tier: 3
+        tier1_public_exception:
+          decision: '2026-08-19-136'
+          rationale: Not a Tier-1 field at all.
+          scope: this surface only
+`),
+      ),
+    ).toThrow(/tier1_public_exception/);
+  });
+});
+
+describe('escalation ledger + count cross-check (AC8)', () => {
+  const ledger = (count: number, entries: string): string =>
+    doc(`${MINIMAL_SURFACE}escalation_count: ${count}
+escalations:
+${entries}`);
+
+  const ONE_ENTRY = `  - surface: terms
+    field: tc_body_html
+    from: authenticated_member
+    to: public
+    decision: '2026-08-20-140'
+    rationale: The T&C body is institutional content published to every visitor.
+`;
+
+  it('parses a ledger whose count agrees with its entries', () => {
+    const m = parsePublicVsPrivateMatrix(ledger(1, ONE_ENTRY));
+    expect(m?.escalation_count).toBe(1);
+    expect(m?.escalations).toHaveLength(1);
+    expect(m?.escalations[0]?.decision).toBe('2026-08-20-140');
+  });
+
+  it('defaults to an EMPTY ledger with count 0 when absent', () => {
+    const m = parsePublicVsPrivateMatrix(doc(MINIMAL_SURFACE));
+    expect(m?.escalations).toEqual([]);
+    expect(m?.escalation_count).toBe(0);
+  });
+
+  it('REJECTS a count that disagrees with the entry total (neither half moves alone)', () => {
+    expect(() => parsePublicVsPrivateMatrix(ledger(2, ONE_ENTRY))).toThrow(/escalation_count/);
+  });
+
+  it('REJECTS an entry with an empty decision ref (attestation is the point)', () => {
+    expect(() =>
+      parsePublicVsPrivateMatrix(
+        ledger(
+          1,
+          `  - surface: terms
+    field: tc_body_html
+    from: authenticated_member
+    to: public
+    decision: ''
+    rationale: No attestation.
+`,
+        ),
+      ),
+    ).toThrow(/decision/);
+  });
+
+  it('REJECTS a non-escalating entry (from must be MORE sensitive than to)', () => {
+    expect(() =>
+      parsePublicVsPrivateMatrix(
+        ledger(
+          1,
+          `  - surface: terms
+    field: tc_body_html
+    from: public
+    to: authenticated_member
+    decision: '2026-08-20-140'
+    rationale: This is a RESTRICTION, not an escalation.
+`,
+        ),
+      ),
+    ).toThrow(/escalat/i);
+  });
+
+  it('REJECTS a malformed ledger LOUDLY — ⛔ never degrading to "no entries"', () => {
+    expect(() =>
+      parsePublicVsPrivateMatrix(
+        doc(`${MINIMAL_SURFACE}escalation_count: 1
+escalations: "not a list"
+`),
+      ),
+    ).toThrow();
+  });
+});
+
+describe('per-Pariwar attribute RULE (AC6, Trap 1)', () => {
+  const rule = `per_pariwar_attribute_rule:
+  default_tier: operator_restricted
+  ceiling_tier: public
+  declaration_site: registry data (pariwar_custom_field_definitions rows)
+  note: >-
+    A Pariwar-selected directory attribute is NOT enumerated here. This block
+    declares the tier such an attribute defaults to and the ceiling it may never
+    exceed. ⛔ There is no canonical directory schema (2026-08-19-132 R7).
+`;
+
+  it('parses the rule block', () => {
+    const m = parsePublicVsPrivateMatrix(doc(`${MINIMAL_SURFACE}${rule}`));
+    expect(m?.per_pariwar_attribute_rule?.default_tier).toBe('operator_restricted');
+    expect(m?.per_pariwar_attribute_rule?.ceiling_tier).toBe('public');
+  });
+
+  it('REJECTS a rule whose default is MORE exposed than its ceiling', () => {
+    expect(() =>
+      parsePublicVsPrivateMatrix(
+        doc(`${MINIMAL_SURFACE}per_pariwar_attribute_rule:
+  default_tier: public
+  ceiling_tier: operator_restricted
+  declaration_site: registry data
+`),
+      ),
+    ).toThrow(/ceiling/i);
+  });
+
+  it('REJECTS an unknown key inside the rule block (⛔ no field list smuggled in as `fields:`)', () => {
+    expect(() =>
+      parsePublicVsPrivateMatrix(
+        doc(`${MINIMAL_SURFACE}per_pariwar_attribute_rule:
+  default_tier: operator_restricted
+  ceiling_tier: public
+  declaration_site: registry data
+  fields:
+    - school
+    - designation
+`),
+      ),
+    ).toThrow();
+  });
+});

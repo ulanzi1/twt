@@ -1,9 +1,34 @@
 // packages/contracts/src/public-pages/matrix.ts
 //
 // The FR-74 Public-vs-Private visibility matrix — Zod schema + a loud-throw
-// parser for the consumed contract the Story 1.16b PII scrape CI gate reads
-// (deferred-work D8-1.5). This story ships the SCHEMA (fixes the format); Epic
-// 11a (Story 11a.1) POPULATES content into it via a trustee-attested PR.
+// parser for the consumed contract the PII scrape CI gate reads (Story 1.16b,
+// deferred-work D8-1.5). Story 1.16b shipped the SCHEMA; STORY 11a.1 POPULATED
+// it against the public surfaces that actually ship, and extended the schema
+// with four fail-closed constructs:
+//
+//   · `route` + `renders` per surface — the handle the route-coverage leg
+//     compares against `apps/public/src/pages/**` in BOTH directions. `renders:
+//     false` is the ONLY way a declared surface may have no shipped route
+//     (D5: `member-directory` is declared BEFORE Story 11a.3 builds it, so 11a.3
+//     FILLS a declared surface instead of INVENTING one).
+//   · `tier1_public_exception` — the ONE ruled Tier-1-on-public exception
+//     (`2026-08-19-135` cl.7(c) + `-136`; architecture §2.7): member name may be
+//     decrypted from Tier-1 and rendered publicly on the Member Directory.
+//     ⛔ EXACTLY ONE FIELD ON EXACTLY ONE SURFACE. It is carried as an ATTRIBUTED
+//     construct so it can never read as an ordinary `public` field, and a second
+//     one anywhere in the matrix is REJECTED. ⛔ It is an exception, not a door,
+//     and ⛔ it does NOT reclassify the field: member name stays Tier-1
+//     ciphertext + Tier-2 blind index.
+//   · `escalations` + `escalation_count` — the trustee-attestation ledger,
+//     cross-checked in BOTH directions so neither half can move alone (the
+//     `scripts/governance-boundary/` precedent: attestation + entry + count bump
+//     in the SAME commit). CODEOWNERS cannot express trustee review in this repo
+//     (a single solo-builder handle), so attestation is a `.decision-log.md` ref.
+//   · `per_pariwar_attribute_rule` — a RULE, ⛔ NEVER a field list. `2026-08-19-132`
+//     R7 governs: the attribute set is extensible and Pariwar-selected, and
+//     ⛔ there is no canonical directory schema. Enumerating member attributes
+//     here would re-commit SD-1 (three attribute rows with no substrate at all,
+//     unnoticed for seven epics).
 //
 // Authority: architecture §2.7 lines 1522-1524 (the Public-vs-Private matrix
 // (FR-74) is canonical; new PII fields declare their tier at schema definition);
@@ -39,6 +64,26 @@ export const VISIBILITY_TIERS = [
 export const VisibilityTierSchema = z.enum(VISIBILITY_TIERS);
 export type VisibilityTier = z.output<typeof VisibilityTierSchema>;
 
+/**
+ * Tier rank (low → high sensitivity) — THE SINGLE COPY OF THE TIER ORDERING.
+ *
+ * It lives beside `VISIBILITY_TIERS` (which it must stay total over) rather than
+ * in the engine, because BOTH consume it: the engine's leak rules + `getVisibility`
+ * compare a field's rank against a viewer ceiling, and this module's escalation
+ * ledger uses it to prove an entry actually ESCALATES. ⛔ A second copy is a
+ * correctness hazard — two orderings drift and one of them silently stops being
+ * the truth (Story 11a.1 AC11 forbids it explicitly).
+ *
+ * `never_exposed` (rank 3) exceeds every viewer ceiling (max 2) → it can never
+ * be rendered on any surface, to any viewer.
+ */
+export const TIER_RANK: Record<VisibilityTier, number> = {
+  public: 0,
+  authenticated_member: 1,
+  operator_restricted: 2,
+  never_exposed: 3,
+};
+
 /** Per-surface search-indexing policy (epics L3614). */
 export const SEARCH_INDEXING_POLICIES = ['index', 'noindex', 'conditional'] as const;
 export const SearchIndexingPolicySchema = z.enum(SEARCH_INDEXING_POLICIES);
@@ -48,14 +93,88 @@ export type SearchIndexingPolicy = z.output<typeof SearchIndexingPolicySchema>;
 // Per-surface / per-field structure
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * The PII tiers of architecture §2.7 / Story 1.5 (1 = KMS-envelope-encrypted, the
+ * most sensitive). Declared as literals rather than imported from `@twt/domain`:
+ * `@twt/contracts` must never pull a pg-touching namespace into its graph (it is
+ * bundled by the RN Metro build — see the contracts↔domain bundle boundary).
+ *
+ * ⛔ A field's `pii_tier` is a FACT ABOUT THE DATA, never a visibility control.
+ * `2026-08-19-136` cl.6 forbids this story — or any surface declaration — from
+ * changing one. It is declared here only so the parser can REFUSE to let a
+ * Tier-1 field reach `public` unattended.
+ */
+export const PiiTierSchema = z.union([z.literal(1), z.literal(2), z.literal(3)]);
+export type MatrixPiiTier = z.output<typeof PiiTierSchema>;
+
+/**
+ * The ruled, ATTRIBUTED exception permitting ONE Tier-1 field to render at
+ * `public` on ONE surface class (`2026-08-19-135` cl.7(c) + `-136`, mirrored at
+ * architecture §2.7 — member name decrypted from
+ * `member_kyc_profiles.name_ciphertext` for the Member Directory).
+ *
+ * Every part is mandatory ON PURPOSE. The exception must be machine-readable AND
+ * self-explaining: a reader who finds a Tier-1 field at `public` must be able to
+ * see, in the same place, WHICH decision authorised it, WHY, and HOW FAR it
+ * reaches. ⛔ A matrix in which the exception is indistinguishable from an
+ * ordinary `public` field has failed the requirement it exists to satisfy.
+ */
+export const Tier1PublicExceptionSchema = z
+  .object({
+    /** The `.decision-log.md` entry that authorised it (e.g. `2026-08-19-136`). */
+    decision: z.string().min(1),
+    /** Why the Panel authorised it — in words, for the human reading the diff. */
+    rationale: z.string().min(1),
+    /** How far it reaches. ⛔ Never a general relaxation of the tier rule. */
+    scope: z.string().min(1),
+  })
+  .strict();
+export type Tier1PublicException = z.output<typeof Tier1PublicExceptionSchema>;
+
 /** One renderable field on a surface, declaring exactly one of the 4 tiers. */
 export const MatrixFieldSchema = z
   .object({
     id: z.string().min(1),
     tier: VisibilityTierSchema,
     description: z.string().optional(),
+    /** The field's PII tier (§2.7), when it carries one. ⛔ Never changed by a surface declaration. */
+    pii_tier: PiiTierSchema.optional(),
+    /** Present ⟺ this is the one ruled Tier-1-at-`public` field (enforced below). */
+    tier1_public_exception: Tier1PublicExceptionSchema.optional(),
+    /**
+     * A pointer to the policy that governs the field's rendered FORM (Story
+     * 11a.1 AC5 — the per-Pariwar public-name presentation mode). ⛔ The matrix
+     * REFERENCES the policy; it does not duplicate it (`epics.md` C2, §2.13.3).
+     */
+    presentation_policy_ref: z.string().min(1).optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((field, ctx) => {
+    const isTier1Public = field.pii_tier === 1 && field.tier === 'public';
+    if (isTier1Public && field.tier1_public_exception === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['tier1_public_exception'],
+        message:
+          `field "${field.id}" is Tier-1 PII declared at tier "public" without a ` +
+          `tier1_public_exception block — fail-closed. A Tier-1 field reaches a public ` +
+          `surface ONLY under an attributed Panel ruling (2026-08-19-135 cl.7(c) / -136); ` +
+          `⛔ declaring it public without one is not a shortcut, it is the leak this ` +
+          `matrix exists to prevent.`,
+      });
+    }
+    if (!isTier1Public && field.tier1_public_exception !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['tier1_public_exception'],
+        message:
+          `field "${field.id}" carries a tier1_public_exception but is not Tier-1 PII at ` +
+          `tier "public" (pii_tier=${String(field.pii_tier)}, tier=${field.tier}) — the ` +
+          `construct is not decorative. ⛔ An exception that does not except anything ` +
+          `dilutes the one that does.`,
+      });
+    }
+  });
 export type MatrixField = z.output<typeof MatrixFieldSchema>;
 
 /** One public-page surface: a render target with a tier-classified field set. */
@@ -63,6 +182,20 @@ export const MatrixSurfaceSchema = z
   .object({
     id: z.string().min(1),
     description: z.string().optional(),
+    /**
+     * The route this surface renders at, as an `apps/public` path (`/terms`,
+     * `/blog/[postId]`). REQUIRED — it is the handle the route-coverage leg
+     * joins on, and a surface that cannot say where it renders cannot be
+     * reconciled against anything.
+     */
+    route: z.string().min(1).startsWith('/'),
+    /**
+     * False ⟺ the surface is DECLARED but its route does not ship yet (D5). This
+     * is the only escape from the route-coverage leg's "every matrix surface
+     * names a real route" direction, and it is deliberately EXPLICIT: a missing
+     * route must fail, an intentionally-absent one must be stated.
+     */
+    renders: z.boolean().default(true),
     search_indexing_policy: SearchIndexingPolicySchema,
     fields: z.array(MatrixFieldSchema),
   })
@@ -82,11 +215,94 @@ export const MatrixSurfaceSchema = z
   });
 export type MatrixSurface = z.output<typeof MatrixSurfaceSchema>;
 
+/**
+ * One visibility ESCALATION — a field's tier moved toward `public`.
+ *
+ * The repo cannot mechanize "multiple trustee sign-offs" as a branch-protection
+ * rule: `.github/CODEOWNERS` is a single solo-builder handle and trustees ratify
+ * in `.decision-log.md`, not on GitHub. So attestation takes the shape this repo
+ * already uses for exactly this problem (`scripts/governance-boundary/`): an
+ * entry carrying `{rationale, decision}` + a `count` bump IN THE SAME COMMIT,
+ * cross-checked in both directions so neither half can move alone.
+ */
+export const MatrixEscalationSchema = z
+  .object({
+    surface: z.string().min(1),
+    field: z.string().min(1),
+    from: VisibilityTierSchema,
+    to: VisibilityTierSchema,
+    /** ⛔ A non-empty `.decision-log.md` ref. An unattested escalation is the thing being prevented. */
+    decision: z.string().min(1),
+    rationale: z.string().min(1),
+  })
+  .strict()
+  .superRefine((entry, ctx) => {
+    // An ESCALATION moves toward `public` — i.e. DOWN in rank. A restriction is a
+    // safe change that needs no attestation, and recording one here would inflate
+    // the ledger with entries that prove nothing.
+    if (TIER_RANK[entry.from] <= TIER_RANK[entry.to]) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['to'],
+        message:
+          `escalation "${entry.surface}.${entry.field}" declares ${entry.from} → ${entry.to}, ` +
+          `which is not an escalation (an escalation moves TOWARD public). A restriction ` +
+          `does not belong in the escalation ledger.`,
+      });
+    }
+  });
+export type MatrixEscalation = z.output<typeof MatrixEscalationSchema>;
+
+/**
+ * The RULE governing per-Pariwar directory attributes — ⛔ NOT a list of them.
+ *
+ * `2026-08-19-132` R7: *"the attribute set is extensible and Pariwar-selected,
+ * NOT a fixed global list. ⛔ There is no canonical directory schema."* A concrete
+ * attribute's tier is REGISTRY DATA (`pariwar_custom_field_definitions` rows).
+ * ⛔ CI cannot read those rows and must not be widened to — *"a CI gate that
+ * needed a live tenant database would not be a CI gate"* (the 10.12 fence).
+ *
+ * So the matrix declares what CI CAN check from committed source: the tier a
+ * Pariwar-selected attribute defaults to, and the ceiling it may never exceed.
+ */
+export const PerPariwarAttributeRuleSchema = z
+  .object({
+    /** The tier a newly-enabled Pariwar attribute takes absent an explicit declaration. */
+    default_tier: VisibilityTierSchema,
+    /** The most-exposed tier such an attribute may EVER reach. */
+    ceiling_tier: VisibilityTierSchema,
+    /** Where the concrete per-attribute declaration actually lives (⛔ not here). */
+    declaration_site: z.string().min(1),
+    note: z.string().optional(),
+  })
+  .strict()
+  .superRefine((rule, ctx) => {
+    // The default must be no more exposed than the ceiling, or the ceiling is a
+    // decoration that the default already breaches on day one.
+    if (TIER_RANK[rule.default_tier] < TIER_RANK[rule.ceiling_tier]) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['default_tier'],
+        message:
+          `per_pariwar_attribute_rule: default_tier "${rule.default_tier}" is MORE exposed ` +
+          `than ceiling_tier "${rule.ceiling_tier}" — the ceiling would be breached by the ` +
+          `default itself.`,
+      });
+    }
+  });
+export type PerPariwarAttributeRule = z.output<typeof PerPariwarAttributeRuleSchema>;
+
 /** The canonical Public-vs-Private matrix (FR-74). */
 export const PublicVsPrivateMatrixSchema = z
   .object({
     version: z.number().int().positive(),
     surfaces: z.array(MatrixSurfaceSchema),
+    /** The attestation ledger (AC8). Absent ⇒ empty, which the count must agree with. */
+    escalations: z.array(MatrixEscalationSchema).default([]),
+    /** The revert-sanity cross-check on `escalations` (AC8). */
+    escalation_count: z.number().int().nonnegative().default(0),
+    /** The per-Pariwar attribute RULE (AC6) — ⛔ never an attribute list. */
+    per_pariwar_attribute_rule: PerPariwarAttributeRuleSchema.optional(),
   })
   .strict()
   .superRefine((data, ctx) => {
@@ -100,6 +316,62 @@ export const PublicVsPrivateMatrixSchema = z
         });
       }
       seen.add(surface.id);
+    }
+
+    // ── The Tier-1 exception is EXACTLY ONE, matrix-wide (AC4) ────────────────
+    // Scoped at the ROOT rather than per-surface on purpose: a per-surface check
+    // would permit one exception on EVERY surface, which is a general door wearing
+    // the costume of an exception.
+    const exceptions = data.surfaces.flatMap((surface) =>
+      surface.fields
+        .filter((f) => f.tier1_public_exception !== undefined)
+        .map((f) => `${surface.id}.${f.id}`),
+    );
+    if (exceptions.length > 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['surfaces'],
+        message:
+          `EXACTLY ONE Tier-1 public exception is permitted matrix-wide, found ` +
+          `${exceptions.length}: ${exceptions.join(', ')}. The ruling (2026-08-19-135 ` +
+          `cl.7(c) / -136) authorises one field on one surface class — a second one is ` +
+          `not an exception, it is a relaxation of the rule, and it needs its own ruling.`,
+      });
+    }
+
+    // ── Escalation ledger ⇄ count, both directions (AC8) ──────────────────────
+    if (data.escalation_count !== data.escalations.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['escalation_count'],
+        message:
+          `escalation_count is ${data.escalation_count} but the ledger holds ` +
+          `${data.escalations.length} entr${data.escalations.length === 1 ? 'y' : 'ies'} — ` +
+          `entry and count bump in the SAME commit so neither half can move alone.`,
+      });
+    }
+
+    // An escalation must name a surface + field that actually exists, or the
+    // ledger drifts into a record of changes to things that are no longer there.
+    for (const [i, entry] of data.escalations.entries()) {
+      const surface = data.surfaces.find((s) => s.id === entry.surface);
+      if (surface === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['escalations', i, 'surface'],
+          message: `escalation names surface "${entry.surface}", which the matrix does not declare (orphaned entry).`,
+        });
+        continue;
+      }
+      if (!surface.fields.some((f) => f.id === entry.field)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['escalations', i, 'field'],
+          message:
+            `escalation names field "${entry.field}" on surface "${entry.surface}", which ` +
+            `that surface does not declare (orphaned entry).`,
+        });
+      }
     }
   });
 export type PublicVsPrivateMatrix = z.output<typeof PublicVsPrivateMatrixSchema>;

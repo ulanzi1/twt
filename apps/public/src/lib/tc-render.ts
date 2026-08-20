@@ -15,6 +15,8 @@
 
 import type { schema } from '@twt/domain';
 
+import { deriveFieldIds, type FieldIdMapping } from './surface-fields.js';
+
 type TcVersionRow = schema.TcVersionRow;
 
 /** The legal-review statuses that render the provisional banner (AC5). */
@@ -133,4 +135,40 @@ export function renderTcHtml(model: TcRenderModel): string {
     pinned +
     `</section>`
   );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Matrix field ids (Story 11a.1, Task 6; AC2 + ruling D3(a))
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * The `/terms` surface's matrix field ids, derived from this module's own model.
+ *
+ * ⚠ `pinnedClauseIds` maps to `tc_pinned_clause_count`, and the gap is worth
+ * stating plainly rather than papering over: the MODEL carries the clause-version
+ * UUIDs (they are the AC8 handle a later story consumes) while the public HTML
+ * renders only their COUNT — `renderTcHtml` emits `model.pinnedClauseIds.length`,
+ * deliberately, because a public reader gains nothing from internal UUIDs and a
+ * UUID's digit runs false-positive the PII scanner.
+ *
+ * So the id names what is RENDERED, not what the model holds. That is the right
+ * call for a visibility matrix — it classifies renders — but it means this one
+ * mapping is a claim about the template rather than about the model, and a change
+ * to `renderTcHtml` that started emitting the ids would not be caught HERE. It
+ * would be caught by the naked-PII leg, which scans the real HTML. ⛔ If you change
+ * that render, change this id and classify it.
+ */
+const TC_FIELD_IDS: FieldIdMapping<TcRenderModel> = {
+  html: 'tc_body_html',
+  version: 'tc_version',
+  effectiveFrom: 'tc_effective_from',
+  pinnedClauseIds: 'tc_pinned_clause_count',
+  showProvisionalBanner: 'tc_provisional_banner',
+  hasContent: null, // which branch renders (content vs the dignified empty state)
+  labels: null, // caller-supplied fixed UI copy (i18n strings), never record data
+};
+
+/** The `/terms` field-id set, derived from the model the page renders. */
+export function tcSurfaceFieldIds(model: TcRenderModel): string[] {
+  return deriveFieldIds(model, TC_FIELD_IDS);
 }

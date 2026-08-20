@@ -1,20 +1,24 @@
 ---
 // The public News/Blog list (Story 10.5, AC7). Fully server-rendered, works with JS disabled. Reads
 // only PUBLISHED, `public`-audience posts under an UNAUTHENTICATED `withPublicScope` (twt_app + RLS,
-// NOT a superuser bypass — the Story 2.5 pattern `terms.astro`/`niyamavali.astro` already use). No
-// authoring metadata (actor ids, channels, workflow) is ever read here — `listPublishedPublicPosts`
-// returns only the member-facing fields. Bilingual: the card shows the English title with the Hindi
-// title beneath when present.
+// NOT a superuser bypass — the Story 2.5 pattern `terms.astro`/`niyamavali.astro` already use).
+// Bilingual: the card shows the English title with the Hindi title beneath when present.
+//
+// ⚠ CORRECTED BY STORY 11a.1 (AC3). This comment previously claimed
+// "`listPublishedPublicPosts` returns only the member-facing fields" — which was FALSE: the read
+// issued a bare `db.select()` and returned every `news_posts` column, authoring metadata included.
+// It is TRUE NOW, and true by construction rather than by assertion: the read selects an explicit
+// six-column list (`PublicPostRow`) and this page renders through the pure `blog-render.ts` model,
+// which is also the field-id source for the FR-74 tier-leak snapshot. ⛔ All display logic lives in
+// that module (the Astro component-test carve-out) — do not compute rendered values here.
 import { getLocale, isLocale } from '@twt/i18n';
 import type { Locale } from '@twt/i18n';
 import { newsBlog, passport } from '@twt/domain';
-import type { schema } from '@twt/domain';
 
 import PublicShell from '../layouts/PublicShell.astro';
+import { buildBlogListModel } from '../lib/blog-render.js';
 import { getDb, withPublicScope } from '../lib/db.server.js';
 import { ACTIVE_PARIWAR_ID } from '../lib/pariwar.server.js';
-
-type PostRow = schema.NewsPostRow;
 
 const langParam = Astro.url.searchParams.get('lang');
 const acceptLanguage = Astro.request.headers.get('accept-language') ?? undefined;
@@ -29,27 +33,24 @@ const trustName =
     : (passportRow?.displayNameEn ?? passportRow?.displayNameHi)) ?? 'News';
 const branding = passportRow?.brandingBundle ?? null;
 
-const posts: PostRow[] = await withPublicScope((scoped) =>
+const rows = await withPublicScope((scoped) =>
   newsBlog.listPublishedPublicPosts(scoped, ACTIVE_PARIWAR_ID, { limit: 50 }),
 );
-
-function fmtDate(d: Date | null): string {
-  return d ? d.toISOString().slice(0, 10) : '';
-}
+const model = buildBlogListModel(rows);
 ---
 
 <PublicShell title={`News — ${trustName}`} trustName={trustName} branding={branding} locale={locale}>
   <main class="mx-auto max-w-2xl px-4 py-8">
     <h1 class="mb-6 text-2xl font-semibold">News</h1>
-    {posts.length === 0 && <p class="text-gray-500">No announcements yet.</p>}
+    {!model.hasPosts && <p class="text-gray-500">No announcements yet.</p>}
     <ul class="space-y-4">
-      {posts.map((p) => (
+      {model.posts.map((p) => (
         <li class="rounded border p-4">
           <a href={`/blog/${p.postId}`} class="block hover:underline">
             <h2 class="text-lg font-medium">{p.title}</h2>
             {p.titleHi && <p class="text-gray-700">{p.titleHi}</p>}
           </a>
-          <p class="mt-1 text-xs text-gray-500">{fmtDate(p.publishedAt)}</p>
+          <p class="mt-1 text-xs text-gray-500">{p.publishedAt}</p>
         </li>
       ))}
     </ul>

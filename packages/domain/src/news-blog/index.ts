@@ -31,6 +31,7 @@ export {
 export {
   type ListPostsOptions,
   type ListPublicPostsOptions,
+  type PublicPostRow,
   getPost,
   getPostOrThrow,
   listPostsForPariwar,

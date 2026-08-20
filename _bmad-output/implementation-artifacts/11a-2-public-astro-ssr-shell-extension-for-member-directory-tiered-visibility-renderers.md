@@ -458,6 +458,16 @@ answer is right.
   primitives with **zero consumers**, which is how a renderer drifts from the surface that will
   eventually use it.
 
+> ⚠ **VERIFIED FINDING, added by `bmad-code-review` (2026-08-20), recorded as `.decision-log.md#2026-08-20-142` — ⛔ this note does NOT edit or reopen the ruling above.** The "real call site" half of (a)'s
+> stated reason is **false as shipped**: `<MatrixField>` has zero call sites anywhere in the diff
+> (only a comment cites it; no page imports or renders it). The pagination helper's half of the same
+> claim IS true. This is not a dev-agent deviation — `<MatrixField>` renders individual member
+> **fields**, and this story's own (a)-cost ("armed but empty" until 11a.3) means zero fields render
+> here, making a real `<MatrixField>` call site structurally unbuildable at this story regardless of
+> which option had been chosen. 2026-08-20-142 records this as its own dated finding rather than
+> amending the ruling text. Follow-up: `<MatrixField>` gets its first real call site the same moment
+> Story 11a.3 arms the tier-leak leg for real.
+
 ### D2 — What exactly is `<AuthenticatedFragment>` at this story? — ✅ **RULED (a) (BigDev, 2026-08-20)** (see **Trap 1**)
 
 - **(a) ✅ RULED — a public-fallback-only slot + an honest registry + the mechanism recorded

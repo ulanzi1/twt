@@ -2,46 +2,321 @@
 # public-vs-private-matrix.yaml — the FR-74 Public-vs-Private visibility matrix
 # ─────────────────────────────────────────────────────────────────────────────
 #
-# THE CONSUMED CONTRACT for the PII scrape CI gate (Story 1.16b). This file is a
-# structurally-valid SCAFFOLD: it fixes the FORMAT so Epic 11a (Story 11a.1)
-# POPULATES content into it rather than inventing a format. It is intentionally
-# empty at v1 (`surfaces: []`) → the gate is a graceful no-op until populated.
+# THE CONSUMED CONTRACT for the PII scrape CI gate. Story 1.16b shipped the gate,
+# the engine, and an empty scaffold of this file; STORY 11a.1 POPULATED it.
 #
-# GOVERNANCE: Epic 11a (Story 11a.1) populates surfaces/fields; raising any
-# field's visibility (escalation toward `public`) requires a trustee-attested PR
-# (epics L3602). Do NOT pre-populate real surfaces here — that is Epic 11a's job.
+# ⚠ THE HEADER THIS REPLACES SAID: "Do NOT pre-populate real surfaces here — that
+# is Epic 11a's job." That job is this story. The scaffold's job is done.
 #
-# Authority: architecture §2.7 L1522-1524 (the Public-vs-Private matrix (FR-74)
-# is canonical) · Story 11a.1 AC (epics L3586-3620) · PRD FR-74 (L1030-1040).
+# ── ⛔ THIS IS NOT A SCHEMA. Read this before adding anything. ────────────────
+# It is tempting to read the `fields:` lists below as a data model and to "fill
+# in" the member attributes a directory might show. ⛔ DO NOT. Decision
+# `2026-08-19-132` R7 governs: *"the attribute set is extensible and
+# Pariwar-selected, NOT a fixed global list. There is no canonical directory
+# schema."* Enumerating member attributes here re-commits Significant Discovery
+# SD-1, where three attribute rows had no substrate at all and no story owned
+# them — unnoticed for seven epics.
+#
+# What this file classifies is RENDERS: each surface lists the fields it actually
+# puts on a page, and what tier each may be seen at. Per-Pariwar directory
+# attributes carry a RULE (`per_pariwar_attribute_rule` below), never a row.
+#
+# ── What populating it turned on ─────────────────────────────────────────────
+# Before Story 11a.1 the gate reported `0 surface(s)` and `Render snapshots: 0`
+# while SEVEN public routes shipped, and `loadSnapshots()` was literally
+# `return []` — so the tier-leak leg evaluated nothing and the green check
+# certified an invariant nobody was enforcing. Populating this file plus arming
+# the snapshots is what gives the leg teeth. `2026-08-19-136` clause 4 makes that
+# LAUNCH-BLOCKING: the leg must be operative before the Member Directory ships.
+#
+# ── GOVERNANCE: escalating a field's visibility ──────────────────────────────
+# Raising any field toward `public` requires trustee attestation. `.github/
+# CODEOWNERS` is a single solo-builder handle and trustees ratify in
+# `.decision-log.md`, not on GitHub — so "multiple trustee sign-offs" is not
+# mechanizable as a branch-protection rule here. The repo's own precedent
+# (`scripts/governance-boundary/`) is used instead: a `.decision-log.md` entry,
+# an `escalations:` entry carrying `{rationale, decision}`, and an
+# `escalation_count` bump — ALL IN THE SAME COMMIT. The gate cross-checks entries
+# ⇄ count in both directions, so neither half can move alone.
+#
+# Authority: architecture §2.7 (the matrix is the canonical tier-classification
+# authority; the ruled Tier-1 exception) · §2.13 (attribute model, authority
+# layering, presentation policy) · PRD FR-74 / FR-75 / FR-93 · Decisions
+# `2026-08-19-132` `-133` `-135` `-136` `-137`, `2026-08-20-140`.
 # Schema + parser: packages/contracts/src/public-pages/matrix.ts.
 #
 # ── Schema ───────────────────────────────────────────────────────────────────
 #   version: <positive integer>
 #   surfaces:
-#     - id: <surface-slug>                     # e.g. niyamavali, terms, member-directory
-#       description: <optional human note>
-#       search_indexing_policy: index | noindex | conditional   # per-surface (epics L3614)
+#     - id: <surface-slug>
+#       route: /<path>                         # where it renders; joined against apps/public/src/pages/**
+#       renders: true | false                  # false = declared but not yet built (exempt from route coverage)
+#       search_indexing_policy: index | noindex | conditional
 #       fields:
-#         - id: <field-slug>                   # e.g. full_name, district, mobile
+#         - id: <snake_case field id>          # must match the render model's derived id
 #           tier: public | authenticated_member | operator_restricted | never_exposed
-#           description: <optional human note>
+#           pii_tier: 1 | 2 | 3                # a FACT about the data; ⛔ never changed to permit a render
+#           tier1_public_exception: {...}      # required iff pii_tier 1 AND tier public
+#           presentation_policy_ref: <ref>     # the policy governing the rendered FORM
+#   escalations: [ { surface, field, from, to, decision, rationale } ]
+#   escalation_count: <int>                    # must equal len(escalations)
+#   per_pariwar_attribute_rule: { default_tier, ceiling_tier, declaration_site, note }
 #
-# ── The 4 visibility tiers (Story 11a.1 AC, epics L3596-3600) ─────────────────
+# ── The 4 visibility tiers ───────────────────────────────────────────────────
 #   public               — Internet-visible without auth.
 #   authenticated_member — logged-in members only (Story 1.9 admin / 3.2 member auth).
 #   operator_restricted  — staff/trustees/admins with RBAC scope (Story 1.8).
 #   never_exposed        — never rendered on any surface (Aadhaar, bank details;
 #                          Tier-1 PII per Story 1.5).
 #
-# ── The 4 tier-leak rules the gate enforces (epics L3618-3620) ────────────────
+# ── The 4 tier-leak rules the gate enforces ──────────────────────────────────
 #   never_exposed        → appears on NO surface.
 #   operator_restricted  → not on member-authenticated or public renders.
 #   authenticated_member → not on public renders.
 #   public               → renderable everywhere.
+#   (plus fail-closed: a rendered field this file does not declare is a leak.)
 #
-# ── Surfaces Epic 11a will populate (context only; do NOT add here) ───────────
-#   Niyamavali (Story 2.5) · T&C (Story 2.6) · Member Directory (Story 11a.3) ·
-#   Sahyog Drive / Vivran / In Memoriam (Epic 11b).
+# ── ⛔ Epic 11b surfaces are DELIBERATELY NOT DECLARED ───────────────────────
+# Sahyog Drive, Sahyog Vivran and In Memoriam do not render and their field sets
+# do not exist. Declaring them would mean INVENTING field lists — the same defect
+# as enumerating attributes, by another route. The bidirectional route-coverage
+# leg is what makes the omission safe: when 11b ships a route, the gate FAILS
+# until it is declared here. That is a stronger guarantee than a guessed entry.
 
-version: 1
-surfaces: []
+version: 2
+
+surfaces:
+  # ── Story 2.5 — the public root ────────────────────────────────────────────
+  - id: root-redirect
+    route: /
+    description: >-
+      A 302 to /niyamavali (preserving ?lang=). Renders NO body and NO fields, so
+      it has nothing to classify. ⚠ It emits no robots meta at all — it does not
+      use PublicShell — so `index` here records "indexing is NOT suppressed",
+      not "this page is indexed"; the redirect target's policy is what governs.
+    search_indexing_policy: index
+    fields: []
+
+  # ── Story 2.5 — the Niyamavali (the institutional rulebook) ───────────────
+  - id: niyamavali
+    route: /niyamavali
+    description: >-
+      The published rulebook. Institutional content by definition — this is the
+      transparency the tier model exists to SERVE: published rules, readable by
+      anyone, with no member identities on the page.
+    search_indexing_policy: index
+    fields:
+      - id: clause_id
+        tier: public
+        description: The stable human-readable clause handle (rendered visibly, AC2 of Story 2.5).
+      - id: clause_title
+        tier: public
+        description: Localised clause title (Hindi-primary on this member surface).
+      - id: rule_code
+        tier: public
+        description: The payload's rule_code display field (e.g. R7(A)).
+      - id: clause_version
+        tier: public
+      - id: effective_date
+        tier: public
+      - id: benefit_mechanism
+        tier: public
+        description: pool | reserve — the FR-7 / FR-100 discriminator.
+      - id: clause_payload_display_fields
+        tier: public
+        description: >-
+          The generic key→value payload display block. ⚠ ONE field id for a
+          DYNAMIC key set: clause payloads differ per clause and per Pariwar, so
+          no committed file can enumerate them. What protects the contents is the
+          renderer's opaqueness (freeze row 14 — display rendering, never rule
+          interpretation) plus the naked-PII leg, which scans the real HTML and
+          does not care where a phone number came from.
+
+  # ── Story 2.6 — Terms & Conditions ────────────────────────────────────────
+  - id: terms
+    route: /terms
+    description: The published T&C. Institutional content; no member data renders.
+    search_indexing_policy: index
+    fields:
+      - id: tc_body_html
+        tier: public
+        description: body_html_rendered — sanitized at WRITE time, emitted raw.
+      - id: tc_version
+        tier: public
+      - id: tc_effective_from
+        tier: public
+      - id: tc_pinned_clause_count
+        tier: public
+        description: >-
+          The COUNT of pinned clause versions, ⛔ not the ids. The render model
+          carries the UUIDs (a later story's handle); the public HTML emits only
+          the count — a public reader gains nothing from internal UUIDs, and a
+          UUID's digit runs false-positive the PII scanner.
+      - id: tc_provisional_banner
+        tier: public
+        description: Whether the legal-review-pending banner shows (a boolean, not content).
+
+  # ── Story 10.5 — News/Blog list ───────────────────────────────────────────
+  - id: blog
+    route: /blog
+    description: >-
+      Published, `public`-audience posts. ⛔ NO authoring metadata reaches this
+      surface — Story 11a.1 narrowed the read to six explicit columns, so author
+      and reviewer actor ids, the tone-signoff hash, channels and workflow status
+      are not merely unrendered, they are not fetched.
+    search_indexing_policy: index
+    fields:
+      - id: post_id
+        tier: public
+        description: Rendered as the card href (/blog/{postId}) — a rendered field, not an internal id.
+      - id: title
+        tier: public
+      - id: title_hi
+        tier: public
+      - id: published_at
+        tier: public
+
+  # ── Story 10.5 — News/Blog detail ─────────────────────────────────────────
+  - id: blog-post
+    route: /blog/[postId]
+    description: >-
+      One published public post. The body renders as ESCAPED pre-wrapped text
+      (Astro auto-escapes `{...}`), so authored copy can never inject markup.
+      A malformed / non-public / unpublished id → a plain 404, no enumeration oracle.
+    search_indexing_policy: index
+    fields:
+      - id: title
+        tier: public
+      - id: title_hi
+        tier: public
+      - id: published_at
+        tier: public
+      - id: body_markdown
+        tier: public
+      - id: body_markdown_hi
+        tier: public
+
+  # ── Story 2.5 — error surfaces (DB-independent by design, Story 0.4) ──────
+  - id: not-found
+    route: /404
+    description: >-
+      Renders NO passport and NO clauses (graceful degradation — it must render
+      even when the data layer is down). Only fixed i18n strings, so no data
+      fields exist to classify.
+    search_indexing_policy: noindex
+    fields: []
+
+  - id: server-error
+    route: /500
+    description: >-
+      The SSR error fallback. DB-independent (the data layer may be the very thing
+      that failed) and never cached. Only fixed i18n strings.
+    search_indexing_policy: noindex
+    fields: []
+
+  # ── Story 11a.3 — the Member Directory (DECLARED NOW, BUILT LATER) ────────
+  - id: member-directory
+    route: /members
+    renders: false
+    description: >-
+      ⭐ DECLARED WITH `renders: false` PER RULING D5 (Decision 2026-08-20-140).
+      The route does not ship yet — Story 11a.3 builds it and flips `renders` to
+      true. It is declared NOW for two reasons: the ruled Tier-1 public-name
+      exception has nowhere else to live, and 11a.3 then FILLS a declared surface
+      instead of INVENTING one (the SD-1 failure mode).
+      `noindex` per FR-75 — ⛔ UNCHANGED by the full-name supersession:
+      `2026-08-19-135` cl.7(c) supersedes THE NAME FORM ONLY. Forced pagination
+      and noindex stand.
+      ⛔ NO `school` / `designation` / `block` rows. `school` and `designation`
+      are PERMANENTLY INELIGIBLE as RBAC dimensions (`-133` cl.1, `-132` cl.3 /
+      `-133` cl.3) — not a deferral, the question is not available. `block` is
+      gated on `2026-08-19-137` cl.7(a)+(b) (a member-aware publish path and a
+      member choice surface, ⛔ neither of which exists).
+    search_indexing_policy: noindex
+    fields:
+      - id: member_name
+        tier: public
+        pii_tier: 1
+        tier1_public_exception:
+          decision: '2026-08-19-136'
+          rationale: >-
+            The Trustee Panel ruled (2026-08-19-135 cl.7(c), affirmed by -136;
+            mirrored at architecture §2.7) that a member's name may be DECRYPTED
+            from Tier-1 (`member_kyc_profiles.name_ciphertext`) and rendered on
+            the public Member Directory. ⛔ This is a decrypt at a named surface,
+            NOT a reclassification: the field remains Tier-1 ciphertext plus a
+            Tier-2 blind index everywhere, and no PII tier changes (-136 cl.6).
+            ⛔ It is not a general relaxation of the "authenticated_member never
+            renders on public" rule — that rule is untouched. The parser enforces
+            the boundary: a second Tier-1 `public` exception anywhere in this file
+            is REJECTED.
+          scope: >-
+            Exactly this field on exactly this surface class. ⛔ It does NOT reach
+            In Memoriam or Sahyog Vivran, which keep first-name + last-initial and
+            are consent-governed in a way the directory is not (epics.md C5);
+            changing those requires its own Panel ruling.
+        presentation_policy_ref: pariwar_public_name_presentation.mode
+        description: >-
+          The FORM this renders in is CONFIGURABLE per Pariwar (`full_name` |
+          `shielded_name`), resolved by `resolvePublicMemberName`. `full_name` is
+          the launch posture and the default — ⛔ but it is the DEFAULT, not a
+          constant: `-136` cl.1 states that a build in which the public name form
+          cannot be changed without a code change FAILS that clause.
+      - id: district
+        tier: public
+        pii_tier: 3
+        description: >-
+          Platform-common, derived from `member_postings` — ⛔ not a per-Pariwar
+          selected attribute and not a new column. Declared here because it is
+          platform-common; every OTHER directory attribute is registry data and
+          carries the rule below, not a row.
+
+# ── The escalation ledger (AC8) ──────────────────────────────────────────────
+# One entry per visibility ESCALATION (a field moving toward `public`), each
+# naming the `.decision-log.md` entry that authorised it. `escalation_count` must
+# equal the entry total — the gate checks both directions, and the parser also
+# rejects an entry naming a surface or field this file does not declare.
+#
+# ⚠ Declaring a surface for the first time is NOT an escalation — the seven
+# already-shipping routes above are classifications of what they already render,
+# and recording them here would inflate the ledger with entries that prove
+# nothing. The ONE entry below is a real escalation: the Panel moved the public
+# name form, and this is the record of it.
+escalations:
+  - surface: member-directory
+    field: member_name
+    from: authenticated_member
+    to: public
+    decision: '2026-08-19-136'
+    rationale: >-
+      The Trustee Panel ruled that members' full legal names are published on the
+      unauthenticated Member Directory, superseding the first-name + last-initial
+      form. ⚠ CARRIED WITH ITS OPEN FINDINGS, ⛔ not as a settled matter:
+      (a) `-136` cl.5 records DPDPA exposure with legal counsel NOT engaged, and
+      (b) Decision `2026-08-20-140` cl.7 found that the Niyamavali — the
+      member-facing rulebook — does not record this publication anywhere, so a
+      member reading it cannot learn that their full legal name will be public.
+      That finding is raised for the Panel and is NOT closed by this entry.
+escalation_count: 1
+
+# ── Per-Pariwar directory attributes: a RULE, ⛔ never a list (AC6) ──────────
+per_pariwar_attribute_rule:
+  default_tier: operator_restricted
+  ceiling_tier: public
+  declaration_site: >-
+    Registry DATA — `pariwar_custom_field_definitions` rows, per Pariwar. ⛔ NOT
+    this file, and ⛔ not any committed file. CI cannot read tenant database rows
+    and must not be widened to: "a CI gate that needed a live tenant database
+    would not be a CI gate" (scripts/custom-field-governance/README.md).
+  note: >-
+    A Pariwar-selected directory attribute defaults to `operator_restricted` —
+    fail-closed, so an attribute nobody has classified is not visible to members
+    or to the internet. `public` is the CEILING it may reach, never a default,
+    and reaching it is a governed act requiring an escalation entry above.
+    THE THREE-LAYER AUTHORITY MODEL (architecture §2.13.2), which the tier alone
+    does not express: CREATE (Super Admin / Trustee Panel only) → ENABLE
+    (per-Pariwar scope, governed authority) → GRANT (Trustee, over a named node).
+    ⛔ NO LAYER IMPLIES THE NEXT. An attribute that exists is not thereby enabled;
+    one that is enabled is not thereby granted over any node.
+    Directory attributes are DISPLAY-ONLY by default, enforced by signature
+    (§2.13.2) — ⛔ a matrix value must never reach an eligibility path.

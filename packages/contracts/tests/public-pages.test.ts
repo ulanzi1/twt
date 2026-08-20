@@ -20,6 +20,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   type PublicVsPrivateMatrix,
+  VISIBILITY_TIERS,
   detectNakedPii,
   evaluateSnapshot,
   evaluateSurfaceRender,
@@ -328,15 +329,96 @@ describe('evaluateSnapshot — edge cases', () => {
   });
 });
 
-describe('committed scaffold matrix (AC-3/AC-6 self-green)', () => {
-  it('the shipped scaffold parses to zero surfaces (a structural no-op)', () => {
+// ⭐ RETIRED BY STORY 11a.1 — this describe block used to assert
+// `expect(matrix?.surfaces).toHaveLength(0)`, encoding Story 1.16b's self-green
+// SCAFFOLD posture: the matrix was empty on purpose, so the gate was a no-op on
+// purpose. This story is the event that retires that posture, and the assertion
+// with it. ⛔ The failure mode the story named explicitly is reverting the matrix
+// to keep the old assertion green — the empty matrix WAS the defect.
+//
+// What replaces it asserts the POPULATED invariants: the matrix is non-empty,
+// every shipped route is declared, every field is tier-classified, and the ruled
+// Tier-1 exception is present exactly once.
+describe('committed matrix — the POPULATED invariants (Story 11a.1)', () => {
+  const committed = (): PublicVsPrivateMatrix => {
     const raw = readFileSync(
       path.resolve(here, '../public-pages/public-vs-private-matrix.yaml'),
       'utf8',
     );
     const matrix = parsePublicVsPrivateMatrix(raw);
-    expect(matrix).not.toBeNull();
-    expect(matrix?.version).toBe(1);
-    expect(matrix?.surfaces).toHaveLength(0);
+    if (matrix === null) throw new Error('the committed matrix parsed to the empty-document sentinel');
+    return matrix;
+  };
+
+  it('is POPULATED — ⛔ no longer the zero-surface scaffold', () => {
+    const matrix = committed();
+    expect(matrix.version).toBeGreaterThanOrEqual(2);
+    expect(matrix.surfaces.length).toBeGreaterThan(0);
+  });
+
+  it('declares every public route that ships today, plus the not-yet-built directory', () => {
+    // The gate checks this against the real filesystem in both directions; this
+    // asserts the committed CONTENT, so emptying the matrix fails here too — the
+    // gate and the suite would have to be defeated together.
+    const routes = committed().surfaces.map((s) => s.route).sort();
+    expect(routes).toEqual(
+      ['/', '/404', '/500', '/blog', '/blog/[postId]', '/members', '/niyamavali', '/terms'].sort(),
+    );
+  });
+
+  it('every declared field carries a tier (no unclassified declarations)', () => {
+    for (const surface of committed().surfaces) {
+      for (const field of surface.fields) {
+        expect(VISIBILITY_TIERS).toContain(field.tier);
+      }
+    }
+  });
+
+  it('classifies a real, non-trivial field set (a matrix of empty surfaces would prove nothing)', () => {
+    const total = committed().surfaces.reduce((n, s) => n + s.fields.length, 0);
+    expect(total).toBeGreaterThanOrEqual(20);
+  });
+
+  it('carries the ruled Tier-1 public exception EXACTLY ONCE, attributed to its decision', () => {
+    const exceptions = committed().surfaces.flatMap((s) =>
+      s.fields.filter((f) => f.tier1_public_exception !== undefined).map((f) => ({ s, f })),
+    );
+    expect(exceptions).toHaveLength(1);
+    expect(exceptions[0]!.s.id).toBe('member-directory');
+    expect(exceptions[0]!.f.id).toBe('member_name');
+    expect(exceptions[0]!.f.pii_tier).toBe(1);
+    expect(exceptions[0]!.f.tier1_public_exception?.decision).toBe('2026-08-19-136');
+  });
+
+  it('the escalation ledger count matches its entries, and each cites a decision', () => {
+    const matrix = committed();
+    expect(matrix.escalation_count).toBe(matrix.escalations.length);
+    for (const e of matrix.escalations) expect(e.decision).not.toBe('');
+  });
+
+  it('the member-directory is declared but NOT yet rendering (D5), and stays noindex (FR-75)', () => {
+    const directory = committed().surfaces.find((s) => s.id === 'member-directory');
+    expect(directory?.renders).toBe(false);
+    // ⛔ The full-name supersession moved the NAME FORM only — forced pagination
+    // and noindex stand (`2026-08-19-135` cl.7(c)).
+    expect(directory?.search_indexing_policy).toBe('noindex');
+  });
+
+  it('⛔ declares NO school / designation / block field on any surface (Trap 1, SD-1)', () => {
+    // `school` and `designation` are PERMANENTLY INELIGIBLE as RBAC dimensions;
+    // `block` is gated on `2026-08-19-137` cl.7(a)+(b). None may appear as a
+    // global field row — per-Pariwar attributes carry a RULE, never a row.
+    const ids = committed().surfaces.flatMap((s) => s.fields.map((f) => f.id));
+    for (const forbidden of ['school', 'designation', 'block', 'zone', 'division']) {
+      expect(ids).not.toContain(forbidden);
+    }
+  });
+
+  it('carries the per-Pariwar attribute RULE, fail-closed by default', () => {
+    const rule = committed().per_pariwar_attribute_rule;
+    expect(rule).toBeDefined();
+    // ⛔ An unclassified Pariwar attribute must not default to visible.
+    expect(rule?.default_tier).not.toBe('public');
+    expect(rule?.declaration_site).toMatch(/registry|pariwar_custom_field_definitions/i);
   });
 });

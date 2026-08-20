@@ -1,13 +1,26 @@
 // PII scrape — FR-74 public-shielding live render (D13-1.2 uncompromisable slot).
 //
-// Story 2.5 activates this architecture-committed integration spec (AC5/AC6a). It
-// feeds the PURE Story 1.16b engine (`@twt/contracts`) the REAL Niyamavali render
-// HTML, built from fixture clauses via the apps/public pure render module — so the
-// spec needs NO live Astro server and NO DB. The FR-74 matrix is empty at v1
-// (`surfaces: []` — Epic 11a populates it), so the tier-leak leg is a no-op for
-// `niyamavali`; the naked-PII leg (`detectNakedPii`) is ACTIVE regardless and is the
-// asserted gate here. A negative-control case proves the gate has teeth (it catches a
-// planted leak), so the green pass is not vacuous.
+// Story 2.5 activated this architecture-committed integration spec (AC5/AC6a). It
+// feeds the PURE Story 1.16b engine (`@twt/contracts`) REAL render HTML, built from
+// fixture rows via the apps/public pure render modules — so the spec needs NO live
+// Astro server and NO DB.
+//
+// ⭐ STORY 11a.1 ARMED THE TIER-LEAK LEG HERE. Until now every snapshot carried
+// `html` ONLY, and `evaluateSnapshot` runs the tier-leak rules only when `fields`
+// is present — so that leg evaluated NOTHING while the suite went green. Combined
+// with an empty matrix and a gate whose `loadSnapshots()` was `return []`, the
+// green check was certifying an invariant nobody enforced. Every snapshot below
+// now carries BOTH `html` and `fields`, and `fields` is DERIVED FROM THE RENDER
+// MODEL'S OWN KEYS (ruling D3(a)) — ⛔ never a hand-maintained list restating the
+// render, which would drift silently and reproduce the same defect.
+//
+// ⭐ THIS FILE IS WHERE THE TIER-LEAK LEG LIVES, by ruling D2. The gate script owns
+// what committed source can prove (route coverage, indexing reconciliation,
+// escalation attestation); the live-render check belongs where real render HTML
+// already exists and already runs on every PR via `pnpm turbo run test`.
+//
+// The naked-PII leg (`detectNakedPii`) was already ACTIVE and is ⛔ NOT touched —
+// its negative control works and is left exactly as it was.
 //
 // LOCATION NOTE: the architecture-committed slot is `tests/integration/public-pages/
 // scrape-test.spec.ts` (root). It is REALIZED here, inside the `@twt/public` workspace,
@@ -29,8 +42,23 @@ import {
 import type { schema } from '@twt/domain';
 import { describe, expect, it } from 'vitest';
 
-import { renderNiyamavaliClauses, renderNiyamavaliHtml } from '../../../src/lib/niyamavali-render.js';
-import { buildTcRenderModel, renderTcHtml, type TcRenderLabels } from '../../../src/lib/tc-render.js';
+import {
+  blogListSurfaceFieldIds,
+  blogPostSurfaceFieldIds,
+  buildBlogListModel,
+  buildBlogPostModel,
+} from '../../../src/lib/blog-render.js';
+import {
+  niyamavaliSurfaceFieldIds,
+  renderNiyamavaliClauses,
+  renderNiyamavaliHtml,
+} from '../../../src/lib/niyamavali-render.js';
+import {
+  buildTcRenderModel,
+  renderTcHtml,
+  tcSurfaceFieldIds,
+  type TcRenderLabels,
+} from '../../../src/lib/tc-render.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const matrixPath = join(
@@ -101,8 +129,28 @@ const FIXTURE_CLAUSES = [
 ];
 
 describe('PII scrape — Niyamavali public render (FR-74)', () => {
-  const html = renderNiyamavaliHtml(renderNiyamavaliClauses(FIXTURE_CLAUSES, { locale: 'hi' }));
-  const snapshot: RenderSnapshot = { surfaceId: 'niyamavali', viewerContext: 'public', html };
+  const model = renderNiyamavaliClauses(FIXTURE_CLAUSES, { locale: 'hi' });
+  const html = renderNiyamavaliHtml(model);
+  // ⭐ BOTH legs, not one: `html` feeds naked-PII detection, `fields` feeds the
+  // tier-leak rules. Passing `html` alone is what made this snapshot half-inert.
+  const snapshot: RenderSnapshot = {
+    surfaceId: 'niyamavali',
+    viewerContext: 'public',
+    html,
+    fields: niyamavaliSurfaceFieldIds(model),
+  };
+
+  it('the snapshot carries a NON-EMPTY field set (⛔ the leg must not be vacuous)', () => {
+    // Guards the regression this story exists to fix: if the derivation ever
+    // returned nothing, every tier assertion below would pass by evaluating zero
+    // fields, and the suite would stay green having checked nothing.
+    expect(snapshot.fields?.length).toBeGreaterThan(0);
+  });
+
+  it('every rendered field is DECLARED in the committed matrix (fail-closed)', () => {
+    const declared = matrix.surfaces.find((s) => s.id === 'niyamavali')?.fields.map((f) => f.id) ?? [];
+    for (const id of snapshot.fields ?? []) expect(declared).toContain(id);
+  });
 
   it('the rendered public HTML contains no naked PII (active leg, AC6a)', () => {
     expect(detectNakedPii(html)).toEqual([]);
@@ -167,10 +215,23 @@ function tcRow(): schema.TcVersionRow {
 }
 
 describe('PII scrape — T&C public render (/terms, FR-74)', () => {
-  const html = renderTcHtml(
-    buildTcRenderModel(tcRow(), ['0e1c0001-0000-4000-8000-000000000001'], TC_LABELS),
-  );
-  const snapshot: RenderSnapshot = { surfaceId: 'terms', viewerContext: 'public', html };
+  const model = buildTcRenderModel(tcRow(), ['0e1c0001-0000-4000-8000-000000000001'], TC_LABELS);
+  const html = renderTcHtml(model);
+  const snapshot: RenderSnapshot = {
+    surfaceId: 'terms',
+    viewerContext: 'public',
+    html,
+    fields: tcSurfaceFieldIds(model),
+  };
+
+  it('the snapshot carries a NON-EMPTY field set (⛔ the leg must not be vacuous)', () => {
+    expect(snapshot.fields?.length).toBeGreaterThan(0);
+  });
+
+  it('every rendered field is DECLARED in the committed matrix (fail-closed)', () => {
+    const declared = matrix.surfaces.find((s) => s.id === 'terms')?.fields.map((f) => f.id) ?? [];
+    for (const id of snapshot.fields ?? []) expect(declared).toContain(id);
+  });
 
   it('the rendered public HTML contains no naked PII (active leg, AC9)', () => {
     expect(detectNakedPii(html)).toEqual([]);
@@ -191,5 +252,162 @@ describe('PII scrape — T&C public render (/terms, FR-74)', () => {
   it('the empty-state render also leaks nothing', () => {
     const emptyHtml = renderTcHtml(buildTcRenderModel(null, [], TC_LABELS));
     expect(detectNakedPii(emptyHtml)).toEqual([]);
+  });
+});
+
+// ── Story 11a.1 — the /blog and /blog/[postId] public surfaces ───────────────
+//
+// Bringing these under the matrix is what AC3 required a render model FOR: the
+// pages used to render inline from a full `select()` row, so there was no model
+// to derive a field set from and no way to snapshot them honestly. Now there is.
+
+/** A published, public-audience post carrying sentinel authoring metadata. */
+const BLOG_AUTHOR_SENTINEL = '11111111-2222-4333-8444-555555555555';
+const BLOG_TONE_HASH_SENTINEL = 'b'.repeat(64);
+
+function blogRow(partial: Record<string, unknown> = {}): schema.NewsPostRow {
+  return {
+    postId: '0e1c0001-0000-4000-8000-000000000001',
+    pariwarId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    title: 'Annual general meeting notice',
+    // ⚠ No accidental 10-digit runs: the phone regex false-positives on those
+    // (engine caveat CR-D1-1.16b), same discipline as the clause fixtures above.
+    bodyMarkdown: 'The AGM will be held at the community hall on the first Sunday.',
+    titleHi: 'वार्षिक आम बैठक सूचना',
+    bodyMarkdownHi: 'एजीएम सामुदायिक हॉल में पहले रविवार को आयोजित की जाएगी।',
+    audienceScope: 'public',
+    audienceScopeValue: null,
+    channels: ['push'],
+    scheduledPublishAt: null,
+    status: 'published',
+    authorActorId: BLOG_AUTHOR_SENTINEL,
+    reviewerActorId: '99999999-8888-4777-8666-555555555555',
+    toneSignoffContentHash: BLOG_TONE_HASH_SENTINEL,
+    toneSignoffReviewedAt: new Date('2026-02-01T00:00:00Z'),
+    publishedAt: new Date('2026-02-02T00:00:00Z'),
+    createdAt: new Date('2026-01-01T00:00:00Z'),
+    updatedAt: new Date('2026-02-02T00:00:00Z'),
+    ...partial,
+  } as unknown as schema.NewsPostRow;
+}
+
+describe('PII scrape — News/Blog list render (/blog, FR-74)', () => {
+  const model = buildBlogListModel([blogRow()]);
+  const snapshot: RenderSnapshot = {
+    surfaceId: 'blog',
+    viewerContext: 'public',
+    fields: blogListSurfaceFieldIds(model),
+  };
+
+  it('the snapshot carries a NON-EMPTY field set', () => {
+    expect(snapshot.fields?.length).toBeGreaterThan(0);
+  });
+
+  it('evaluateSnapshot passes: every rendered card field is declared and public', () => {
+    const verdict = evaluateSnapshot(matrix, snapshot);
+    expect(verdict.status).toBe('pass');
+    expect(verdict.leaks).toEqual([]);
+  });
+
+  it('⛔ the model carries NO authoring metadata to leak in the first place (AC3)', () => {
+    // The narrowed read means these are not merely unrendered — they are not
+    // fetched. Asserted on the MODEL because that is what the page can reach.
+    const serialized = JSON.stringify(model);
+    expect(serialized).not.toContain(BLOG_AUTHOR_SENTINEL);
+    expect(serialized).not.toContain(BLOG_TONE_HASH_SENTINEL);
+  });
+});
+
+describe('PII scrape — News/Blog detail render (/blog/[postId], FR-74)', () => {
+  const model = buildBlogPostModel(blogRow());
+  const snapshot: RenderSnapshot = {
+    surfaceId: 'blog-post',
+    viewerContext: 'public',
+    fields: blogPostSurfaceFieldIds(model),
+  };
+
+  it('the snapshot carries a NON-EMPTY field set', () => {
+    expect(snapshot.fields?.length).toBeGreaterThan(0);
+  });
+
+  it('evaluateSnapshot passes: every rendered article field is declared and public', () => {
+    const verdict = evaluateSnapshot(matrix, snapshot);
+    expect(verdict.status).toBe('pass');
+    expect(verdict.leaks).toEqual([]);
+  });
+
+  it('the rendered body copy contains no naked PII', () => {
+    expect(detectNakedPii(`${model.title} ${model.bodyMarkdown} ${model.bodyMarkdownHi ?? ''}`)).toEqual([]);
+  });
+});
+
+// ── AC10 REVERT-SANITY: the render-time detection routes, independently planted ──
+//
+// ⭐ Each control plants ITS OWN violation. Not one fixture tripping several checks:
+// a shared fixture lets one route quietly stop firing while its neighbours keep the
+// suite green — which is the shape of the defect this story fixes. The house
+// doctrine is explicit that a gate which cannot be made to fail has no teeth.
+//
+// The source-provable routes (undeclared route, orphaned surface, indexing conflict,
+// escalation count mismatch, unattested escalation) are controlled in
+// `packages/contracts/tests/public-pages-gate.test.ts`; the parse-time routes
+// (Tier-1 public without an exception, a second exception, malformed ledger,
+// non-escalating entry) in `public-pages-matrix-schema.test.ts`. Together with the
+// two below, every detection route in this story carries a planted control.
+describe('AC10 revert-sanity — the tier-leak leg has TEETH', () => {
+  it('NEGATIVE CONTROL — an UNDECLARED field id in a real snapshot fails as `unclassified`', () => {
+    // Planted against the REAL committed matrix — no fixture matrix, no override.
+    // This is the exact scenario D3(a) exists to catch: a field reaches the render
+    // model, therefore the snapshot, and nobody classified it.
+    const model = buildTcRenderModel(tcRow(), [], TC_LABELS);
+    const verdict = evaluateSnapshot(matrix, {
+      surfaceId: 'terms',
+      viewerContext: 'public',
+      fields: [...tcSurfaceFieldIds(model), 'tc_legal_reviewer_actor_id'],
+    });
+    expect(verdict.status).toBe('fail');
+    expect(verdict.leaks).toHaveLength(1);
+    expect(verdict.leaks[0]!.tier).toBe('unclassified');
+    expect(verdict.leaks[0]!.field).toBe('tc_legal_reviewer_actor_id');
+    expect(verdict.leaks[0]!.message).toMatch(/terms/);
+  });
+
+  it('NEGATIVE CONTROL — a field classified ABOVE the viewer ceiling fails, naming surface + field', () => {
+    // Independently planted: this one reclassifies a REAL declared field to
+    // `operator_restricted` in a copy of the committed matrix, then feeds the real
+    // render's field set. It proves the TIER rule fires (not just the fail-closed
+    // undeclared rule) using the actual field ids the page renders.
+    const planted: PublicVsPrivateMatrix = {
+      ...matrix,
+      surfaces: matrix.surfaces.map((s) =>
+        s.id !== 'terms'
+          ? s
+          : { ...s, fields: s.fields.map((f) => (f.id === 'tc_version' ? { ...f, tier: 'operator_restricted' as const } : f)) },
+      ),
+    };
+    const model = buildTcRenderModel(tcRow(), [], TC_LABELS);
+    const verdict = evaluateSnapshot(planted, {
+      surfaceId: 'terms',
+      viewerContext: 'public',
+      fields: tcSurfaceFieldIds(model),
+    });
+    expect(verdict.status).toBe('fail');
+    expect(verdict.leaks).toHaveLength(1);
+    expect(verdict.leaks[0]!.tier).toBe('operator_restricted');
+    expect(verdict.leaks[0]!.field).toBe('tc_version');
+    expect(verdict.leaks[0]!.message).toMatch(/surface "terms" field "tc_version"/);
+  });
+
+  it('NEGATIVE CONTROL — a snapshot for a surface the matrix does not declare fails entirely', () => {
+    // The Epic 11b guarantee in miniature: an 11b surface rendering before it is
+    // declared does not pass quietly — every field it renders is unclassified.
+    const verdict = evaluateSnapshot(matrix, {
+      surfaceId: 'sahyog-vivran',
+      viewerContext: 'public',
+      fields: ['contributor_name', 'amount'],
+    });
+    expect(verdict.status).toBe('fail');
+    expect(verdict.leaks).toHaveLength(2);
+    expect(verdict.leaks.every((l) => l.tier === 'unclassified')).toBe(true);
   });
 });

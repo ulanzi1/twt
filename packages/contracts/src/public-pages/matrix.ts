@@ -89,6 +89,29 @@ export const SEARCH_INDEXING_POLICIES = ['index', 'noindex', 'conditional'] as c
 export const SearchIndexingPolicySchema = z.enum(SEARCH_INDEXING_POLICIES);
 export type SearchIndexingPolicy = z.output<typeof SearchIndexingPolicySchema>;
 
+/**
+ * Per-surface EDGE-CACHEABILITY declaration — Story 11a.2 (ruling D4).
+ *
+ * ⭐ EXPLICIT, ⛔ never inferred from field tiers. The inference *"all-public fields
+ * ⇒ cacheable"* is a rule the reader has to reconstruct, and it is immediately wrong
+ * on two of the eight shipped surfaces: `/500` carries only public strings but must
+ * be `no-store` (the data layer may be the very thing that failed, so a cached error
+ * page would outlive the failure), and `/` is a redirect with no body to cache. An
+ * explicit declaration is checkable; an inferred one is an argument.
+ *
+ *   · `edge_cacheable`   — the page sets a shared-cache `Cache-Control` (`public, …`).
+ *   · `private_no_store` — the page must NOT be stored (`no-store` / `private`).
+ *   · `redirect`         — no rendered body; the surface redirects. ⛔ Declaring this
+ *                          for a page that actually renders is a lie the leg catches.
+ *
+ * ⛔ WHAT THIS DOES NOT CLAIM: nothing about Cloudflare or any CDN. The edge is not
+ * in this repo and its selection is contingent on DPDPA legal review (architecture
+ * §5.8a). The gate proves what the ORIGIN EMITS, and that is the whole claim.
+ */
+export const CACHE_POLICIES = ['edge_cacheable', 'private_no_store', 'redirect'] as const;
+export const CachePolicySchema = z.enum(CACHE_POLICIES);
+export type CachePolicy = z.output<typeof CachePolicySchema>;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Per-surface / per-field structure
 // ─────────────────────────────────────────────────────────────────────────────
@@ -197,6 +220,23 @@ export const MatrixSurfaceSchema = z
      */
     renders: z.boolean().default(true),
     search_indexing_policy: SearchIndexingPolicySchema,
+    /**
+     * REQUIRED (D4). No default — a default would let a new surface inherit a cache
+     * posture nobody chose, which is exactly how `/blog` shipped with NO
+     * `Cache-Control` at all for a whole epic while every check stayed green.
+     */
+    cache_policy: CachePolicySchema,
+    /**
+     * True ⟺ this surface renders a PAGINATED LIST and must therefore bind the
+     * FR-91 page-param guard (`apps/public/src/lib/pagination.ts`).
+     *
+     * ⚠ Defaults to false because most surfaces are not lists — but the default is
+     * safe only in one direction: a paginated surface that forgets to declare this
+     * is not caught here, it is caught by the fact that an unbounded read has to
+     * come from somewhere. What this DOES make structural is the other direction —
+     * a surface that declares itself paginated and does not call the guard fails CI.
+     */
+    paginated: z.boolean().default(false),
     fields: z.array(MatrixFieldSchema),
   })
   .strict()

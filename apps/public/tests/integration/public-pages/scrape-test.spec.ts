@@ -35,6 +35,7 @@ import { fileURLToPath } from 'node:url';
 import {
   detectNakedPii,
   evaluateSnapshot,
+  getVisibility,
   parsePublicVsPrivateMatrix,
   type PublicVsPrivateMatrix,
   type RenderSnapshot,
@@ -53,12 +54,28 @@ import {
   renderNiyamavaliClauses,
   renderNiyamavaliHtml,
 } from '../../../src/lib/niyamavali-render.js';
+import { buildMembersView, type MembersLabels } from '../../../src/lib/members-render.js';
+import { membersSurfaceFieldIds } from '../../../src/lib/surface-fields.js';
 import {
   buildTcRenderModel,
   renderTcHtml,
   tcSurfaceFieldIds,
   type TcRenderLabels,
 } from '../../../src/lib/tc-render.js';
+
+/** Labels are irrelevant to the field-set derivation; only the model's KEYS matter. */
+const MEMBERS_TEST_LABELS: MembersLabels = {
+  pageTitle: 'Member Directory',
+  pageIntro: 'intro',
+  notPublishedTitle: 'not published',
+  notPublishedBody: 'being prepared',
+  paginationLabel: 'pages',
+  previousPage: 'previous',
+  nextPage: 'next',
+  invalidTitle: 'invalid',
+  invalidBody: 'invalid body',
+  invalidLink: 'open',
+};
 
 const here = dirname(fileURLToPath(import.meta.url));
 const matrixPath = join(
@@ -409,5 +426,148 @@ describe('AC10 revert-sanity — the tier-leak leg has TEETH', () => {
     expect(verdict.status).toBe('fail');
     expect(verdict.leaks).toHaveLength(2);
     expect(verdict.leaks.every((l) => l.tier === 'unclassified')).toBe(true);
+  });
+});
+
+// ── Story 11a.2 (AC8) — CR-D0-1.16b is DISCHARGED, and the discharge has teeth ──
+//
+// The deferred finding: a `RenderSnapshot` carrying `html` but no `fields` at
+// `authenticated_member` / `operator_restricted` runs NEITHER leg — the tier-leak
+// rules need a field set, and `detectNakedPii` is public-only by spec — and the
+// verdict was a bare `pass`, indistinguishable from a snapshot that was actually
+// checked. Its recorded trigger is THIS story.
+//
+// ⛔ A warning nobody reads is not a discharge. These assertions are what make the
+// closure real: break the engine's warning and this block goes red.
+describe('AC8 — CR-D0-1.16b: a non-public snapshot with html and no fields WARNS', () => {
+  const HTML = '<article><p>Member-only content.</p></article>';
+
+  it('authenticated_member + html + no fields → status pass, but CARRYING a warning', () => {
+    const verdict = evaluateSnapshot(matrix, {
+      surfaceId: 'terms',
+      viewerContext: 'authenticated_member',
+      html: HTML,
+    });
+    // Still `pass` — the behaviour is spec-correct (AC-2 limits PII detection to
+    // public renders) and failing would break callers doing nothing wrong. What was
+    // missing is that the verdict said nothing about having checked nothing.
+    expect(verdict.status).toBe('pass');
+    expect(verdict.warnings).toHaveLength(1);
+    expect(verdict.warnings[0]).toMatch(/UNVERIFIED SNAPSHOT/);
+    expect(verdict.warnings[0]).toMatch(/NEITHER leg ran/);
+  });
+
+  it('operator_restricted + html + no fields → the same warning (both non-public tiers)', () => {
+    const verdict = evaluateSnapshot(matrix, {
+      surfaceId: 'terms',
+      viewerContext: 'operator_restricted',
+      html: HTML,
+    });
+    expect(verdict.warnings.some((w) => w.startsWith('UNVERIFIED SNAPSHOT'))).toBe(true);
+  });
+
+  it('⛔ a PUBLIC snapshot with html and no fields does NOT warn — the PII leg really ran', () => {
+    // The boundary of the discharge: on `public`, `detectNakedPii` DID execute, so
+    // the verdict is a checked pass and a warning would be noise that trains readers
+    // to ignore the channel.
+    const verdict = evaluateSnapshot(matrix, {
+      surfaceId: 'terms',
+      viewerContext: 'public',
+      html: HTML,
+    });
+    expect(verdict.status).toBe('pass');
+    expect(verdict.warnings).toEqual([]);
+  });
+
+  it('⛔ a non-public snapshot that DOES carry fields does not warn — the leak leg ran', () => {
+    const model = buildTcRenderModel(tcRow(), [], TC_LABELS);
+    const verdict = evaluateSnapshot(matrix, {
+      surfaceId: 'terms',
+      viewerContext: 'authenticated_member',
+      html: HTML,
+      fields: tcSurfaceFieldIds(model),
+    });
+    expect(verdict.warnings.some((w) => w.startsWith('UNVERIFIED SNAPSHOT'))).toBe(false);
+  });
+
+  it('⛔ a snapshot with NEITHER html nor fields stays `no-op`, unwarned', () => {
+    // no-op is honest on its own terms — it says outright that there was no render.
+    const verdict = evaluateSnapshot(matrix, {
+      surfaceId: 'terms',
+      viewerContext: 'authenticated_member',
+    });
+    expect(verdict.status).toBe('no-op');
+    expect(verdict.warnings).toEqual([]);
+  });
+});
+
+// ── Story 11a.2 — the /members surface, and ⛔ WHAT ITS GREEN CHECK DOES NOT MEAN ──
+//
+// ⭐⛔ READ THIS BEFORE READING THE ASSERTIONS. The `member-directory` tier-leak leg
+// is ARMED BUT EMPTY. The page renders the shell, the FR-91 pagination controls and a
+// not-yet-published empty state; it reads NO member data and ⛔ does not render
+// `member_name` (the Tier-1 decrypt is Story 11a.3's, behind 11a.3's anti-enumeration
+// safeguards). So the derived field set is `[]` and `evaluateSnapshot` evaluates
+// nothing on this surface.
+//
+// ⛔ A green result below therefore means "this surface renders no classified field".
+// It does ⛔ NOT mean the flagship Member Directory is being policed. Story 11a.1
+// existed to remove exactly this class of vacuous-green defect, so re-introducing it
+// silently HERE would be worse than the original — hence these tests ASSERT the
+// vacuity rather than letting it hide behind a pass.
+describe('PII scrape — Member Directory shell (/members, Story 11a.2)', () => {
+  const model = buildMembersView(
+    { page: 1, limit: 25 },
+    new URLSearchParams(''),
+    MEMBERS_TEST_LABELS,
+  ).model;
+  const snapshot: RenderSnapshot = {
+    surfaceId: 'member-directory',
+    viewerContext: 'public',
+    fields: membersSurfaceFieldIds(model),
+  };
+
+  it('⭐ the snapshot field set is EMPTY — the leg is ARMED BUT VACUOUS until 11a.3', () => {
+    // ⛔ The inverse of every other surface's "carries a NON-EMPTY field set" test,
+    // and deliberately so: this records the vacuity in an executable form instead of
+    // leaving it to be inferred from a pass.
+    expect(snapshot.fields).toEqual([]);
+  });
+
+  it('evaluateSnapshot passes — and the pass proves only that nothing classified renders', () => {
+    const verdict = evaluateSnapshot(matrix, snapshot);
+    expect(verdict.status).toBe('pass');
+    expect(verdict.leaks).toEqual([]);
+  });
+
+  it('⛔ the render model carries NO member data to leak in the first place', () => {
+    // Asserted on the MODEL because that is what the page can reach. There is no
+    // roster read on this surface at all — not a narrowed one, none.
+    expect(Object.keys(model).sort()).toEqual(['hasMembers', 'limit', 'page']);
+    expect(model.hasMembers).toBe(false);
+  });
+
+  it('⛔ member_name is NOT rendered here, though the matrix DECLARES it visible at public', () => {
+    // Both halves matter. The matrix declares `member_name` public (the ruled Tier-1
+    // exception), so a reader could reasonably assume this page shows it. It does not:
+    // declaring a field visible is not the same as rendering it, and 11a.3 owns the
+    // decrypt together with the safeguards that make it safe.
+    expect(getVisibility(matrix, 'member-directory', 'member_name', 'public').visible).toBe(true);
+    expect(snapshot.fields).not.toContain('member_name');
+  });
+
+  it('NEGATIVE CONTROL — the leg WOULD fire here: an unclassified field on this surface fails', () => {
+    // ⭐ The control that stops the vacuity above from being mistaken for a broken leg.
+    // The leg is wired correctly and armed; it simply has nothing to evaluate yet.
+    // Planted against the REAL committed matrix, independently of every other control.
+    const verdict = evaluateSnapshot(matrix, {
+      surfaceId: 'member-directory',
+      viewerContext: 'public',
+      fields: [...snapshot.fields!, 'member_mobile'],
+    });
+    expect(verdict.status).toBe('fail');
+    expect(verdict.leaks).toHaveLength(1);
+    expect(verdict.leaks[0]!.tier).toBe('unclassified');
+    expect(verdict.leaks[0]!.field).toBe('member_mobile');
   });
 });

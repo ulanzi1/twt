@@ -1,0 +1,50 @@
+---
+// <MatrixField> — the FR-74 tiered-field renderer. Story 11a.2 (Task 2; AC1).
+//
+// ⭐ THE FIRST CONSUMER OF `getVisibility()`. Story 11a.1 shipped that function with
+// ZERO call sites; this component is what turns it from a tested pure function into
+// an enforced rendering rule.
+//
+// ── The contract ─────────────────────────────────────────────────────────────
+// EVERY decision is delegated to `getVisibility()` through `visibilityOf()`. ⛔ This
+// file must never compare tiers, never import `TIER_RANK`, and never carry its own
+// copy of the viewer ceiling. Story 11a.1 collapsed the repo to exactly ONE copy of
+// the tier ordering; a second one here would be a divergence that type-checks and
+// passes review.
+//
+// ── ⛔ A NOT-VISIBLE VERDICT RENDERS NOTHING. NOT A PLACEHOLDER. ─────────────
+// No empty `<span>`, no `{/* field omitted */}`, no dash, no "—". An omission that
+// announces itself is an ENUMERATION SIGNAL: a scraper diffing the public render
+// against a member render learns exactly which fields exist and where they sit, and
+// learns it from the very mechanism meant to withhold them. The verdict's `reason`
+// and `message` are for LOGS AND TESTS; ⛔ they never reach the DOM.
+//
+// Two omission cases collapse to the same output on purpose — "declared but above
+// your ceiling" and "never declared at all" are indistinguishable to a viewer. They
+// are fully distinguishable in the verdict (`above_viewer_ceiling` vs
+// `undeclared_field`), which is where the distinction belongs.
+import type { ViewerContext } from '@twt/contracts';
+
+import { matrixFieldOutput } from '../lib/matrix.server.js';
+
+interface Props {
+  /** Matrix surface id (e.g. `member-directory`) — ⛔ not the route. */
+  surface: string;
+  /** Matrix field id, snake_case, as declared in public-vs-private-matrix.yaml. */
+  field: string;
+  /** Who is looking. On apps/public this is `public` — see COMPOSITION-CONTRACT.md. */
+  viewerContext: ViewerContext;
+  /** The already-rendered display value. ⛔ Never a raw domain row. */
+  value: string | number | null | undefined;
+  /** Optional class for the wrapper emitted ONLY when the field is visible. */
+  class?: string;
+}
+
+const { surface, field, viewerContext, value, class: className } = Astro.props;
+
+// ⛔ The decision itself lives in the PURE module, not here — `.astro` components are
+// not unit-testable, and AC1's hardest assertion ("a not-visible verdict renders
+// NOTHING") has to be assertable rather than merely claimed.
+const { output } = matrixFieldOutput(surface, field, viewerContext, value);
+---
+{output !== null && <span class={className} data-field={field}>{output}</span>}

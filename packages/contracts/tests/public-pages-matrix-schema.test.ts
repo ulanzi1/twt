@@ -36,6 +36,7 @@ const MINIMAL_SURFACE = `surfaces:
   - id: terms
     route: /terms
     search_indexing_policy: index
+    cache_policy: edge_cacheable
     fields:
       - id: tc_body_html
         tier: public
@@ -59,6 +60,7 @@ describe('surface `route` + `renders` (AC1, D5)', () => {
     route: /members
     renders: false
     search_indexing_policy: noindex
+    cache_policy: edge_cacheable
     fields: []
 `),
     );
@@ -71,6 +73,7 @@ describe('surface `route` + `renders` (AC1, D5)', () => {
         doc(`surfaces:
   - id: terms
     search_indexing_policy: index
+    cache_policy: edge_cacheable
     fields: []
 `),
       ),
@@ -86,10 +89,12 @@ describe('surface `route` + `renders` (AC1, D5)', () => {
   - id: terms
     route: /terms
     search_indexing_policy: index
+    cache_policy: edge_cacheable
     fields: []
   - id: terms-duplicate
     route: /terms
     search_indexing_policy: index
+    cache_policy: edge_cacheable
     fields: []
 `),
       ),
@@ -103,6 +108,7 @@ describe('the ruled Tier-1 public exception (AC4)', () => {
     route: /members
     renders: false
     search_indexing_policy: noindex
+    cache_policy: edge_cacheable
     fields:
       - id: member_name
         tier: public
@@ -130,6 +136,7 @@ describe('the ruled Tier-1 public exception (AC4)', () => {
     route: /members
     renders: false
     search_indexing_policy: noindex
+    cache_policy: edge_cacheable
     fields:
       - id: member_name
         tier: public
@@ -146,6 +153,7 @@ describe('the ruled Tier-1 public exception (AC4)', () => {
     route: /in-memoriam
     renders: false
     search_indexing_policy: noindex
+    cache_policy: edge_cacheable
     fields:
       - id: deceased_name
         tier: public
@@ -167,6 +175,7 @@ describe('the ruled Tier-1 public exception (AC4)', () => {
     route: /members
     renders: false
     search_indexing_policy: noindex
+    cache_policy: edge_cacheable
     fields:
       - id: member_name
         tier: public
@@ -187,6 +196,7 @@ describe('the ruled Tier-1 public exception (AC4)', () => {
     route: /members
     renders: false
     search_indexing_policy: noindex
+    cache_policy: edge_cacheable
     fields:
       - id: district
         tier: public

@@ -94,3 +94,58 @@ export function deriveFieldIds<T extends object>(
     .filter((id): id is string => id !== null);
   return [...new Set(ids)].sort();
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// /members — the Member Directory surface. Story 11a.2 (Task 6; AC4).
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * The `/members` render model AS IT SHIPS AT STORY 11a.2.
+ *
+ * ⭐ READ THE FIELD SET BEFORE THE TYPES: it carries ⛔ **NO MEMBER DATA AT ALL**.
+ * The page renders the shell, the FR-91 pagination controls, and an explicit
+ * not-yet-published empty state. Story 11a.3 fills it with real rows behind its own
+ * anti-enumeration safeguards, and ⛔ `member_name` is NOT rendered here — the
+ * Tier-1 decrypt stays behind those safeguards (`epics.md` C1 rules them
+ * *"load-bearing, not defensive"*).
+ *
+ * ⚠ ⛔ AND THAT MAKES THE TIER-LEAK LEG ON THIS SURFACE **ARMED BUT EMPTY**, which
+ * is declared LOUDLY here rather than left to be inferred from a green check. A
+ * green `member-directory` check today proves the surface renders no classified
+ * field — it ⛔ does NOT prove the flagship directory is being policed. Letting a
+ * vacuous green imply otherwise is the exact defect Story 11a.1 existed to remove,
+ * and re-introducing it *on the Member Directory* would be worse than the original.
+ */
+export interface MembersRenderModel {
+  /** True when the directory has rows to show. ⚠ Always false at Story 11a.2. */
+  readonly hasMembers: boolean;
+  /** 1-based current page, echoed into the pagination controls. */
+  readonly page: number;
+  /** Rows per page, already validated against the FR-91 cap. */
+  readonly limit: number;
+}
+
+/**
+ * ⛔ EVERY KEY MAPS TO `null` — deliberately, and this is the honest statement of
+ * what the surface renders.
+ *
+ * `null` declares "carried in the model but NOT rendered as a classified field".
+ * `hasMembers` selects between two blocks of fixed i18n copy; `page`/`limit` drive
+ * the pagination controls. None of them is a MEMBER ATTRIBUTE, so none of them is a
+ * matrix field — and inventing an id for one would be exactly the SD-1 failure mode
+ * of putting a row in the matrix that no substrate backs.
+ *
+ * ⇒ `deriveFieldIds` returns `[]` here. ⚠ That empty set is REAL and is the reason
+ * the surface's tier-leak leg is vacuous today. ⛔ Do not "fix" it by adding a
+ * speculative id; Story 11a.3 adds ids when it adds the render that needs them.
+ */
+export const MEMBERS_FIELD_IDS: FieldIdMapping<MembersRenderModel> = {
+  hasMembers: null,
+  page: null,
+  limit: null,
+};
+
+/** Derive the `/members` snapshot field set. ⚠ Empty at 11a.2 — see above. */
+export function membersSurfaceFieldIds(model: MembersRenderModel): string[] {
+  return deriveFieldIds(model, MEMBERS_FIELD_IDS);
+}

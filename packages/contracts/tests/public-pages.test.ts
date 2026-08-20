@@ -37,7 +37,7 @@ const FIXTURE: PublicVsPrivateMatrix = {
       id: 'member-directory',
       route: '/members',
       renders: false,
-      search_indexing_policy: 'noindex',
+      search_indexing_policy: 'noindex', cache_policy: 'edge_cacheable', paginated: false,
       fields: [
         { id: 'full_name', tier: 'public' },
         { id: 'district', tier: 'authenticated_member' },
@@ -53,7 +53,7 @@ const FIXTURE: PublicVsPrivateMatrix = {
 describe('matrix schema parse (AC-1)', () => {
   it('parses a structurally valid matrix to a typed object', () => {
     const raw =
-      'version: 1\nsurfaces:\n  - id: s\n    route: /s\n    search_indexing_policy: index\n    fields:\n      - id: f\n        tier: public\n';
+      'version: 1\nsurfaces:\n  - id: s\n    route: /s\n    search_indexing_policy: index\n    cache_policy: edge_cacheable\n    fields:\n      - id: f\n        tier: public\n';
     const matrix = parsePublicVsPrivateMatrix(raw);
     expect(matrix).not.toBeNull();
     expect(matrix?.version).toBe(1);
@@ -67,13 +67,13 @@ describe('matrix schema parse (AC-1)', () => {
 
   it('throws loudly on an unknown tier', () => {
     const raw =
-      'version: 1\nsurfaces:\n  - id: s\n    route: /s\n    search_indexing_policy: index\n    fields:\n      - id: f\n        tier: semi_public\n';
+      'version: 1\nsurfaces:\n  - id: s\n    route: /s\n    search_indexing_policy: index\n    cache_policy: edge_cacheable\n    fields:\n      - id: f\n        tier: semi_public\n';
     expect(() => parsePublicVsPrivateMatrix(raw)).toThrow(/malformed matrix/);
   });
 
   it('throws on an unknown search_indexing_policy', () => {
     const raw =
-      'version: 1\nsurfaces:\n  - id: s\n    route: /s\n    search_indexing_policy: maybe\n    fields: []\n';
+      'version: 1\nsurfaces:\n  - id: s\n    route: /s\n    search_indexing_policy: maybe\n    cache_policy: edge_cacheable\n    fields: []\n';
     expect(() => parsePublicVsPrivateMatrix(raw)).toThrow(/malformed matrix/);
   });
 
@@ -277,13 +277,13 @@ describe('matrix uniqueness constraints', () => {
   it('throws on duplicate surface ids in the matrix', () => {
     const raw =
       'version: 1\nsurfaces:\n' +
-      '  - id: dup\n    route: /dup\n    search_indexing_policy: index\n    fields: []\n' +
-      '  - id: dup\n    route: /dup2\n    search_indexing_policy: noindex\n    fields: []\n';
+      '  - id: dup\n    route: /dup\n    search_indexing_policy: index\n    cache_policy: edge_cacheable\n    fields: []\n' +
+      '  - id: dup\n    route: /dup2\n    search_indexing_policy: noindex\n    cache_policy: edge_cacheable\n    fields: []\n';
     expect(() => parsePublicVsPrivateMatrix(raw)).toThrow(/duplicate surface id "dup"/);
   });
   it('throws on duplicate field ids within a surface', () => {
     const raw =
-      'version: 1\nsurfaces:\n  - id: s\n    route: /s\n    search_indexing_policy: index\n    fields:\n' +
+      'version: 1\nsurfaces:\n  - id: s\n    route: /s\n    search_indexing_policy: index\n    cache_policy: edge_cacheable\n    fields:\n' +
       '      - id: mobile\n        tier: public\n' +
       '      - id: mobile\n        tier: never_exposed\n';
     expect(() => parsePublicVsPrivateMatrix(raw)).toThrow(/duplicate field id "mobile"/);
@@ -294,7 +294,7 @@ describe('evaluateSnapshot — edge cases', () => {
   const EMPTY_SURFACE_FIXTURE: PublicVsPrivateMatrix = {
     version: 1,
     surfaces: [
-      { id: 'stub-surface', route: '/stub', renders: false, search_indexing_policy: 'noindex', fields: [] },
+      { id: 'stub-surface', route: '/stub', renders: false, search_indexing_policy: 'noindex', cache_policy: 'edge_cacheable', paginated: false, fields: [] },
     ],
     escalations: [],
     escalation_count: 0,
@@ -396,12 +396,31 @@ describe('committed matrix — the POPULATED invariants (Story 11a.1)', () => {
     for (const e of matrix.escalations) expect(e.decision).not.toBe('');
   });
 
-  it('the member-directory is declared but NOT yet rendering (D5), and stays noindex (FR-75)', () => {
+  it('the member-directory NOW RENDERS (11a.2 D1(a) supersedes 11a.1 D5), and stays noindex + paginated', () => {
+    // ⚠ SUPERSEDED, ⛔ NOT DELETED. Story 11a.1 asserted `renders === false` under its
+    // ruling D5. Story 11a.2 ruling D1(a) (Decision `2026-08-20-141`) ships the
+    // `/members` route, so the flag moved — and the route-coverage leg is armed in
+    // BOTH directions, so the flag and the page cannot move apart. Updating the
+    // assertion to the new truth is the honest edit; leaving it would have asserted
+    // that a shipped route does not ship.
     const directory = committed().surfaces.find((s) => s.id === 'member-directory');
-    expect(directory?.renders).toBe(false);
+    expect(directory?.renders).toBe(true);
     // ⛔ The full-name supersession moved the NAME FORM only — forced pagination
     // and noindex stand (`2026-08-19-135` cl.7(c)).
     expect(directory?.search_indexing_policy).toBe('noindex');
+    // FR-91 — and this flag is what ARMS the pagination-binding leg on the route.
+    expect(directory?.paginated).toBe(true);
+  });
+
+  it('⭐ every surface declares an explicit cache_policy (11a.2 D4 — ⛔ never inferred)', () => {
+    // Inference ("all-public ⇒ cacheable") is immediately wrong on two of the eight
+    // shipped surfaces: `/500` is all-public but must be no-store, and `/` is a
+    // redirect. The declaration is REQUIRED by the schema; this asserts the committed
+    // file actually carries it everywhere, and that both counter-examples are right.
+    const surfaces = committed().surfaces;
+    for (const s of surfaces) expect(s.cache_policy, s.id).toBeDefined();
+    expect(surfaces.find((s) => s.id === 'server-error')?.cache_policy).toBe('private_no_store');
+    expect(surfaces.find((s) => s.id === 'root-redirect')?.cache_policy).toBe('redirect');
   });
 
   it('⛔ declares NO school / designation / block field on any surface (Trap 1, SD-1)', () => {

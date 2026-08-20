@@ -27,9 +27,12 @@ import { describe, expect, it } from 'vitest';
 import {
   type PublicVsPrivateMatrix,
   astroTemplate,
+  checkCachePolicyReconciliation,
   checkEscalationAttestation,
   checkIndexingReconciliation,
+  checkPaginationBinding,
   checkRouteCoverage,
+  detectCacheSignal,
   detectIndexingSignal,
   pageRouteFromPath,
 } from '../src/public-pages/index.js';
@@ -43,8 +46,16 @@ const TERMS = {
   route: '/terms',
   renders: true,
   search_indexing_policy: 'index' as const,
+  cache_policy: 'edge_cacheable' as const,
+  paginated: false,
   fields: [{ id: 'tc_body_html', tier: 'public' as const }],
 };
+
+/** A page that sets a shared-cache header, as `/terms` and `/niyamavali` do. */
+const CACHED_PAGE = `---
+Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
+---
+<PublicShell><p>hi</p></PublicShell>`;
 
 describe('pageRouteFromPath — Astro file-based routing (AC1)', () => {
   it.each([
@@ -258,5 +269,148 @@ describe('escalation attestation (AC8)', () => {
 
   it('an empty ledger passes (nothing to attest)', () => {
     expect(checkEscalationAttestation(matrix([TERMS]), LOG)).toEqual([]);
+  });
+});
+
+// ── Story 11a.2 — cache-policy reconciliation (AC5) + its planted controls ────
+//
+// ⚠ This leg's SCOPE IS THE OPPOSITE of the indexing leg's, and getting that
+// backwards would silently disarm it: `noindex` is a TEMPLATE prop, so that leg
+// strips the frontmatter; `Cache-Control` is set IN the frontmatter, so this one
+// must read it. The tests below pin both halves of that distinction.
+
+describe('detectCacheSignal — reads the frontmatter, matches the CALL not the words (AC5)', () => {
+  it('reads the literal Cache-Control value a page sets', () => {
+    expect(detectCacheSignal(CACHED_PAGE).cacheControl).toBe('public, max-age=60, s-maxage=300');
+  });
+
+  it('reports null when the page sets none', () => {
+    expect(detectCacheSignal('---\nconst x = 1;\n---\n<p>hi</p>').cacheControl).toBeNull();
+  });
+
+  it('⛔ PROSE ABOUT Cache-Control IS NOT A HEADER — a comment must not satisfy the leg', () => {
+    // The mirror of the indexing leg's frontmatter-strip, and load-bearing for the
+    // same reason: a gate that agrees with a comment instead of with the code is
+    // worse than no gate. `/blog` had exactly such prose while setting nothing.
+    const prose = `---
+// TODO: we should set a Cache-Control header here (Cache-Control: public, max-age=60).
+const x = 1;
+---
+<PublicShell />`;
+    expect(detectCacheSignal(prose).cacheControl).toBeNull();
+  });
+
+  it('detects a redirect page (no body to cache)', () => {
+    const redirect = "---\nreturn Astro.redirect('/niyamavali', 302);\n---";
+    expect(detectCacheSignal(redirect)).toEqual({ cacheControl: null, redirects: true });
+  });
+
+  it('tolerates double quotes, backticks and whitespace in the call', () => {
+    expect(
+      detectCacheSignal('Astro.response.headers.set( "Cache-Control" ,  "no-store" )').cacheControl,
+    ).toBe('no-store');
+  });
+});
+
+describe('cache-policy reconciliation (AC5)', () => {
+  it('passes when the declared policy matches the header the page sets', () => {
+    expect(
+      checkCachePolicyReconciliation(matrix([TERMS]), new Map([['/terms', CACHED_PAGE]])),
+    ).toEqual([]);
+  });
+
+  it('passes for a `redirect` surface that redirects and sets no header', () => {
+    const root = { ...TERMS, id: 'root', route: '/', cache_policy: 'redirect' as const };
+    const page = "---\nreturn Astro.redirect('/niyamavali', 302);\n---";
+    expect(checkCachePolicyReconciliation(matrix([root]), new Map([['/', page]]))).toEqual([]);
+  });
+
+  it('passes for `private_no_store` when the page sets no-store', () => {
+    const err = { ...TERMS, id: 'err', route: '/500', cache_policy: 'private_no_store' as const };
+    const page = "---\nAstro.response.headers.set('Cache-Control', 'no-store');\n---\n<PublicShell />";
+    expect(checkCachePolicyReconciliation(matrix([err]), new Map([['/500', page]]))).toEqual([]);
+  });
+
+  it('NEGATIVE CONTROL — ⭐ a rendering surface with NO Cache-Control FAILS (fail-closed)', () => {
+    // ⭐ THE CONTROL THIS LEG EXISTS FOR. `/blog` shipped exactly this shape for a
+    // whole epic and nothing noticed, because absence read as "the default is fine".
+    const findings = checkCachePolicyReconciliation(
+      matrix([TERMS]),
+      new Map([['/terms', '---\nconst x = 1;\n---\n<PublicShell />']]),
+    );
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.leg).toBe('cache_policy_reconciliation');
+    expect(findings[0]!.message).toMatch(/NO CACHE-CONTROL/);
+    expect(findings[0]!.message).toMatch(/Absence is NOT/);
+  });
+
+  it('NEGATIVE CONTROL — a CONFLICTING header fails, independently of the absence control', () => {
+    // Independently planted: the header EXISTS here, so this can only pass by the
+    // value comparison actually running.
+    const err = { ...TERMS, id: 'err', route: '/500', cache_policy: 'private_no_store' as const };
+    const findings = checkCachePolicyReconciliation(
+      matrix([err]),
+      new Map([['/500', CACHED_PAGE]]),
+    );
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.message).toMatch(/CACHE POLICY CONFLICT/);
+    expect(findings[0]!.message).toMatch(/private_no_store/);
+  });
+
+  it('NEGATIVE CONTROL — `edge_cacheable` declared while the page sets no-store fails', () => {
+    // The third direction, planted separately again: declaration and header both
+    // present, both well-formed, and pointing opposite ways.
+    const page = "---\nAstro.response.headers.set('Cache-Control', 'no-store');\n---\n<PublicShell />";
+    const findings = checkCachePolicyReconciliation(matrix([TERMS]), new Map([['/terms', page]]));
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.message).toMatch(/CACHE POLICY CONFLICT/);
+  });
+
+  it('NEGATIVE CONTROL — a `redirect` declaration on a page that actually RENDERS fails', () => {
+    const root = { ...TERMS, id: 'root', route: '/', cache_policy: 'redirect' as const };
+    const findings = checkCachePolicyReconciliation(matrix([root]), new Map([['/', CACHED_PAGE]]));
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.message).toMatch(/CACHE POLICY CONFLICT/);
+  });
+
+  it('a declared surface whose route has not shipped is skipped (route coverage owns it)', () => {
+    expect(checkCachePolicyReconciliation(matrix([TERMS]), new Map())).toEqual([]);
+  });
+});
+
+// ── Story 11a.2 — pagination binding, FR-91 (AC2) + its planted control ───────
+describe('pagination binding — FR-91 on apps/public (AC2)', () => {
+  const PAGINATED = { ...TERMS, id: 'member-directory', route: '/members', paginated: true };
+
+  it('passes when a paginated surface\'s page calls parsePageParams()', () => {
+    const page = `---
+import { parsePageParams } from '../lib/pagination.js';
+const paging = parsePageParams(Astro.url.searchParams);
+---
+<PublicShell />`;
+    expect(checkPaginationBinding(matrix([PAGINATED]), new Map([['/members', page]]))).toEqual([]);
+  });
+
+  it('NEGATIVE CONTROL — a paginated surface whose page NEVER binds the guard fails', () => {
+    const page = '---\nconst rows = await listEveryMember();\n---\n<PublicShell />';
+    const findings = checkPaginationBinding(matrix([PAGINATED]), new Map([['/members', page]]));
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.leg).toBe('pagination_binding');
+    expect(findings[0]!.message).toMatch(/UNBOUND PAGINATION/);
+    // ⛔ The message must keep saying WHY this is not covered elsewhere; a future
+    // reader who assumes Story 1.14 covers it would delete this leg.
+    expect(findings[0]!.message).toMatch(/OpenAPI/);
+  });
+
+  it('⛔ an IMPORT without a CALL does not satisfy the leg', () => {
+    const page = `---
+import { parsePageParams } from '../lib/pagination.js';
+---
+<PublicShell />`;
+    expect(checkPaginationBinding(matrix([PAGINATED]), new Map([['/members', page]]))).toHaveLength(1);
+  });
+
+  it('a NON-paginated surface is not required to bind anything', () => {
+    expect(checkPaginationBinding(matrix([TERMS]), new Map([['/terms', CACHED_PAGE]]))).toEqual([]);
   });
 });

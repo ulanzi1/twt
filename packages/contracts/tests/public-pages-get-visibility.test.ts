@@ -27,6 +27,8 @@ const MATRIX: PublicVsPrivateMatrix = {
       route: '/members',
       renders: false,
       search_indexing_policy: 'noindex',
+      cache_policy: 'edge_cacheable',
+      paginated: false,
       fields: [
         { id: 'member_name', tier: 'public' },
         { id: 'district', tier: 'public' },

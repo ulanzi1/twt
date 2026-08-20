@@ -20,11 +20,16 @@
 // No fs, no process, no exit — the impure orchestration lives in `scripts/`,
 // mirroring `scripts/friction-budget/{lib.ts,check.ts}`.
 
-import type { PublicVsPrivateMatrix, SearchIndexingPolicy } from './matrix.js';
+import type { CachePolicy, PublicVsPrivateMatrix, SearchIndexingPolicy } from './matrix.js';
 
 /** One gate finding. `leg` survives a partial fix — one route closed, another still open. */
 export interface GateFinding {
-  leg: 'route_coverage' | 'indexing_reconciliation' | 'escalation_ledger';
+  leg:
+    | 'route_coverage'
+    | 'indexing_reconciliation'
+    | 'escalation_ledger'
+    | 'cache_policy_reconciliation'
+    | 'pagination_binding';
   message: string;
 }
 
@@ -221,6 +226,153 @@ export function checkIndexingReconciliation(
           `${signal.conditional ? ' (bound to an expression)' : ''}. The matrix and the ` +
           `render must agree — fix whichever one is wrong, ⛔ do not relax the declaration ` +
           `to match a mistake.`,
+      });
+    }
+  }
+  return findings;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Leg — cache-policy reconciliation (Story 11a.2, AC5; rulings D3(a) + D4)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** What a page's source says about its cache posture. */
+export interface PageCacheSignal {
+  /** The literal `Cache-Control` value the page sets, or null if it sets none. */
+  cacheControl: string | null;
+  /** True iff the page returns an `Astro.redirect(...)` — no body to cache. */
+  redirects: boolean;
+}
+
+/**
+ * Read a page's cache posture from its committed source.
+ *
+ * ⚠ THE OPPOSITE SCOPE FROM `detectIndexingSignal`, and the difference is
+ * load-bearing. The `noindex` prop is passed in the TEMPLATE, so that leg strips the
+ * frontmatter first. `Cache-Control` is set in the FRONTMATTER
+ * (`Astro.response.headers.set(...)`), so this one must read the frontmatter — and
+ * must therefore not be fooled by prose. It is not: the pattern matches the CALL,
+ * not the words. A comment saying "we should set Cache-Control here" contains no
+ * `Astro.response.headers.set('Cache-Control', …)` and is correctly ignored.
+ */
+export function detectCacheSignal(source: string): PageCacheSignal {
+  const call =
+    /Astro\.response\.headers\.set\(\s*['"`]Cache-Control['"`]\s*,\s*['"`]([^'"`]*)['"`]/i.exec(
+      source,
+    );
+  return {
+    cacheControl: call === null ? null : call[1]!.trim(),
+    redirects: /Astro\.redirect\s*\(/.test(source),
+  };
+}
+
+/** Does the emitted header satisfy the declared policy? */
+function cachePolicySatisfied(policy: CachePolicy, signal: PageCacheSignal): boolean {
+  if (policy === 'redirect') return signal.redirects && signal.cacheControl === null;
+  if (signal.cacheControl === null) return false; // fail-closed — see the leg below
+  const value = signal.cacheControl.toLowerCase();
+  const shared = /(^|[\s,])public([\s,]|$)/.test(value) && !/no-store/.test(value);
+  if (policy === 'edge_cacheable') return shared;
+  // `private_no_store`: the page must actively prevent storage.
+  return /no-store/.test(value) || /(^|[\s,])private([\s,]|$)/.test(value);
+}
+
+/**
+ * Reconcile each rendering surface's declared `cache_policy` against the
+ * `Cache-Control` its page ACTUALLY SETS. A conflict FAILS CI.
+ *
+ * ⭐ FAIL-CLOSED ON ABSENCE, and that is the entire reason this leg exists. Before
+ * Story 11a.2, `/blog` and `/blog/[postId]` set NO `Cache-Control` at all and
+ * nothing noticed for a whole epic — because ABSENCE READ AS "the default is fine".
+ * It is not fine: with no header the shared-cache behaviour is whatever the origin,
+ * proxy and CDN each decide independently, which is precisely the property a
+ * cache-safety architecture cannot leave undetermined. So a rendering surface that
+ * declares a policy and emits no header is a FINDING, ⛔ not a pass.
+ *
+ * ⛔ WHAT THIS DOES NOT PROVE — read this before citing it. It proves what the
+ * ORIGIN EMITS from committed source. It proves NOTHING about Cloudflare or any
+ * other edge: that is not in this repo, and its selection is contingent on DPDPA
+ * legal review (architecture §5.8a). A green leg here means the origin's
+ * instructions are correct and declared — ⛔ never that an edge honoured them.
+ */
+export function checkCachePolicyReconciliation(
+  matrix: PublicVsPrivateMatrix,
+  pageSources: ReadonlyMap<string, string>,
+): GateFinding[] {
+  const findings: GateFinding[] = [];
+  for (const surface of matrix.surfaces) {
+    const source = pageSources.get(surface.route);
+    // No page: legitimate for a `renders:false` surface whose route has not shipped.
+    // Route coverage owns reporting an orphaned `renders:true` surface.
+    if (source === undefined) continue;
+    const signal = detectCacheSignal(source);
+
+    if (signal.cacheControl === null && surface.cache_policy !== 'redirect') {
+      findings.push({
+        leg: 'cache_policy_reconciliation',
+        message:
+          `NO CACHE-CONTROL — surface "${surface.id}" (${surface.route}) declares ` +
+          `"${surface.cache_policy}" but its page sets no Cache-Control header at all. ` +
+          `⛔ Absence is NOT "the default is fine": with no header, every proxy and CDN ` +
+          `decides independently. Set the header the declaration promises.`,
+      });
+      continue;
+    }
+
+    if (!cachePolicySatisfied(surface.cache_policy, signal)) {
+      findings.push({
+        leg: 'cache_policy_reconciliation',
+        message:
+          `CACHE POLICY CONFLICT — surface "${surface.id}" (${surface.route}) declares ` +
+          `"${surface.cache_policy}", but its page ` +
+          (signal.cacheControl === null
+            ? `does not redirect and sets no Cache-Control`
+            : `sets "Cache-Control: ${signal.cacheControl}"`) +
+          `. The matrix and the render must agree — fix whichever one is wrong, ` +
+          `⛔ do not relax the declaration to match a mistake.`,
+      });
+    }
+  }
+  return findings;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Leg — pagination binding (Story 11a.2, AC2)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Assert every surface declaring `paginated: true` has a page that actually BINDS
+ * the FR-91 guard.
+ *
+ * ⭐ Why a leg and not a README note: FR-91 is genuinely unenforced on this surface.
+ * The Story 1.14 guard walks the committed OpenAPI surface and `apps/public` emits
+ * none — so on public Astro routes, forced pagination is only as real as the code
+ * that calls the helper. A convention would be forgotten exactly the way `/blog`
+ * forgot `Cache-Control`. This makes it structural instead.
+ *
+ * ⚠ WHAT IT PROVES, precisely: that the page IMPORTS AND CALLS `parsePageParams`.
+ * ⛔ It does NOT prove the page honours the rejection — a page could call the parser
+ * and ignore the result. That residual is covered by the page's own tests, and
+ * saying so here is the point: a leg whose limit is unstated gets over-cited.
+ */
+export function checkPaginationBinding(
+  matrix: PublicVsPrivateMatrix,
+  pageSources: ReadonlyMap<string, string>,
+): GateFinding[] {
+  const findings: GateFinding[] = [];
+  for (const surface of matrix.surfaces) {
+    if (!surface.paginated) continue;
+    const source = pageSources.get(surface.route);
+    if (source === undefined) continue; // route coverage owns the missing-page case
+    if (!/parsePageParams\s*\(/.test(source)) {
+      findings.push({
+        leg: 'pagination_binding',
+        message:
+          `UNBOUND PAGINATION — surface "${surface.id}" (${surface.route}) declares ` +
+          `paginated: true but its page never calls parsePageParams(). FR-91 is NOT ` +
+          `enforced on apps/public by any other mechanism (the Story 1.14 guard walks ` +
+          `the OpenAPI surface, which Astro routes do not emit), so an unbound list ` +
+          `route is genuinely unpoliced — "?page=all" would be served.`,
       });
     }
   }

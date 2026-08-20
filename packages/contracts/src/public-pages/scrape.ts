@@ -331,6 +331,30 @@ export function evaluateSnapshot(
   }
 
   const warnings: string[] = [];
+
+  // ── CR-D0-1.16b (Story 11a.2, AC8) — the shape that used to pass BARE ────────
+  // A non-public snapshot carrying `html` but no `fields` runs NEITHER leg: the
+  // tier-leak rules need `fields`, and `detectNakedPii` is public-only by spec
+  // (members and operators legitimately see PII). Before this warning the verdict
+  // was a clean `pass` — indistinguishable from a snapshot that was actually
+  // checked. ⛔ That is the house's worst failure mode: a green result certifying
+  // an invariant nobody evaluated.
+  //
+  // ⚠ It is a WARNING, not a `fail`, deliberately. The behaviour is SPEC-CORRECT
+  // (AC-2 limits PII detection to public renders) and failing here would break
+  // callers doing nothing wrong. What was missing is that the verdict said nothing
+  // about having checked nothing. ⛔ And a warning nobody reads is not a discharge —
+  // `apps/public/tests/integration/public-pages/scrape-test.spec.ts` asserts on this
+  // string, so the discharge can be made to FAIL.
+  if (fields === null && html !== null && viewerContext !== 'public') {
+    warnings.push(
+      `UNVERIFIED SNAPSHOT — surface "${surfaceId}" (${viewerContext}) carries html but no ` +
+        `fields, so NEITHER leg ran: the tier-leak rules need a field set, and naked-PII ` +
+        `detection is public-only by spec. This verdict is "pass" in the sense of "nothing ` +
+        `was checked" — ⛔ not "nothing was wrong". Supply a field set for non-public snapshots.`,
+    );
+  }
+
   if (fields !== null) {
     const surface = matrix.surfaces.find((s) => s.id === surfaceId);
     if (surface !== undefined && surface.fields.length === 0) {

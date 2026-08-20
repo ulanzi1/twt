@@ -1,0 +1,72 @@
+---
+// <AuthenticatedFragment> — the composition-contract slot. Story 11a.2 (Task 5; AC3).
+//
+// ⭐ READ THIS BEFORE CHANGING IT: THE EPIC AC AND THE ARCHITECTURE DISAGREE, AND
+// THE ARCHITECTURE WINS — because the AC's version cannot be built.
+//
+// `epics.md` §Story 11a.2 asks for slots that "render SERVER-SIDE when the viewer is
+// authenticated". `architecture.md:504-517` commits the opposite property:
+//   · fragments "hydrate client-side";
+//   · "the SSR output contains no PII, no member-state, and no auth-derived branching";
+//   · "the auth boundary lives at the API … NOT at the page or the edge — no
+//     special-case auth surface is introduced at the public page layer."
+// The AC's phrasing would put auth-derived branching into cache-safe SSR output,
+// which is the precise property Story 2.5 committed to enforce "structurally … not
+// through documented discipline". The architecture commits the property; the epic
+// does not get to relax it by prose.
+//
+// ⛔ AND IT IS WORSE THAN A CONFLICT — the AC's version is UNBUILDABLE TODAY.
+// Members are TOKEN-BEARER, not cookie-session: `member-session-guard.ts` verifies an
+// access-token JWT from the AUTHORIZATION HEADER (exp ≤ 15 min). A browser navigating
+// to twt.org/members sends COOKIES, never an Authorization header. There is no
+// `apps/member-web/`, and `apps/` holds admin · api · jobs · mobile · public — so ⛔ NO
+// BROWSER SURFACE HOLDS A MEMBER TOKEN. There is no `authenticated_member` viewer on
+// this app, by any mechanism. Inventing one means minting a browser member session:
+// a new auth surface at the page layer, which the architecture forbids, and which is
+// ⛔ not this story.
+//
+// ── ⇒ WHAT THIS COMPONENT THEREFORE IS ──────────────────────────────────────
+// The public-fallback state, and NOTHING else. It reads no session, no cookie, no
+// header, and emits no auth-derived branch. That is not a placeholder for a missing
+// feature — it is the whole cache-safety guarantee, expressed structurally: a
+// component that CANNOT read auth cannot leak it, and cannot be made to by a later
+// edit that "just adds a check".
+//
+// ⛔ DO NOT: read `Astro.request.headers`, `Astro.cookies`, or `Astro.session` here.
+// ⛔ DO NOT: add an `isAuthenticated` prop. A prop only moves the read to the caller
+//    and puts auth-derived branching back into cache-safe SSR output.
+// ⛔ DO NOT: ship a fragment whose authenticated half is unreachable and untested and
+//    then call the pattern "established".
+//
+// ── The hydration mechanism is DEFERRED, ⛔ not guessed ──────────────────────
+// The fork is (a) a client island fetching `apps/api/src/modules/public-pages/` with a
+// bearer token, vs (b) an Astro 6 SERVER ISLAND (`server:defer` — fetched in a separate
+// GET with encrypted props, so the shell stays edge-cacheable while the fragment
+// renders server-side; ⭐ the one reading under which the epic AC and the architecture
+// agree, and the recorded leading candidate). NEITHER is chosen here: both need a
+// token-holding browser, which does not exist. Re-trigger: the first real fragment
+// (Epic 11b FR-77 — nominee bank + IFSC + UPI CTA) or an `apps/member-web/` split.
+// See `COMPOSITION-CONTRACT.md` and `deferred-work.md`.
+
+interface Props {
+  /**
+   * Registry name of the fragment this slot stands for. Recorded for the registry
+   * and for tests. ⛔ It selects NOTHING at runtime — there is no branch to select.
+   */
+  name: string;
+  /** Optional class for the fallback wrapper. */
+  class?: string;
+}
+
+const { name, class: className } = Astro.props;
+---
+{/*
+  The public-fallback state, baked into the SSR output for EVERY visitor
+  (architecture: "Non-authenticated visitors see a public-fallback state baked into
+  the SSR output"). Since no viewer on this app can be authenticated, every visitor
+  sees exactly this — and the markup is byte-identical regardless of what cookies or
+  headers the request carried. That property is asserted, not asserted-about.
+*/}
+<div class={className} data-authenticated-fragment={name}>
+  <slot />
+</div>

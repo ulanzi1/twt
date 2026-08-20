@@ -52,6 +52,8 @@
 #       route: /<path>                         # where it renders; joined against apps/public/src/pages/**
 #       renders: true | false                  # false = declared but not yet built (exempt from route coverage)
 #       search_indexing_policy: index | noindex | conditional
+#       cache_policy: edge_cacheable | private_no_store | redirect   # REQUIRED (11a.2 D4)
+#       paginated: true | false                # true ⇒ the page MUST call parsePageParams() (FR-91)
 #       fields:
 #         - id: <snake_case field id>          # must match the render model's derived id
 #           tier: public | authenticated_member | operator_restricted | never_exposed
@@ -95,6 +97,11 @@ surfaces:
       use PublicShell — so `index` here records "indexing is NOT suppressed",
       not "this page is indexed"; the redirect target's policy is what governs.
     search_indexing_policy: index
+    # ⛔ NOT edge_cacheable: there is no body to cache. `/` issues a 302 to
+    # /niyamavali (preserving ?lang=) and sets no Cache-Control — which is why an
+    # INFERRED policy (D4(b)) would have been wrong here: every field it declares
+    # is public, yet nothing about it is cacheable content.
+    cache_policy: redirect
     fields: []
 
   # ── Story 2.5 — the Niyamavali (the institutional rulebook) ───────────────
@@ -105,6 +112,7 @@ surfaces:
       transparency the tier model exists to SERVE: published rules, readable by
       anyone, with no member identities on the page.
     search_indexing_policy: index
+    cache_policy: edge_cacheable   # public, max-age=60, s-maxage=300
     fields:
       - id: clause_id
         tier: public
@@ -137,6 +145,7 @@ surfaces:
     route: /terms
     description: The published T&C. Institutional content; no member data renders.
     search_indexing_policy: index
+    cache_policy: edge_cacheable   # public, max-age=60, s-maxage=300
     fields:
       - id: tc_body_html
         tier: public
@@ -165,6 +174,12 @@ surfaces:
       and reviewer actor ids, the tone-signoff hash, channels and workflow status
       are not merely unrendered, they are not fetched.
     search_indexing_policy: index
+    # ⚠ ADDED BY STORY 11a.2 TOGETHER WITH THE HEADER ITSELF. Until this story,
+    # /blog set NO Cache-Control at all and ⛔ nothing checked — it shipped
+    # uncached-and-unnoticed for a whole epic because absence read as "the default
+    # is fine". The new reconciliation leg is fail-closed precisely so that
+    # cannot recur.
+    cache_policy: edge_cacheable   # public, max-age=60, s-maxage=300
     fields:
       - id: post_id
         tier: public
@@ -184,6 +199,7 @@ surfaces:
       (Astro auto-escapes `{...}`), so authored copy can never inject markup.
       A malformed / non-public / unpublished id → a plain 404, no enumeration oracle.
     search_indexing_policy: index
+    cache_policy: edge_cacheable   # public, max-age=60, s-maxage=300 (added by 11a.2)
     fields:
       - id: title
         tier: public
@@ -204,6 +220,7 @@ surfaces:
       even when the data layer is down). Only fixed i18n strings, so no data
       fields exist to classify.
     search_indexing_policy: noindex
+    cache_policy: edge_cacheable   # public, max-age=60 — a static 404 body
     fields: []
 
   - id: server-error
@@ -212,18 +229,40 @@ surfaces:
       The SSR error fallback. DB-independent (the data layer may be the very thing
       that failed) and never cached. Only fixed i18n strings.
     search_indexing_policy: noindex
+    # ⛔ NEVER cached. The data layer may be the very thing that failed, so a
+    # stored error page would outlive the failure it describes. ⭐ This is the
+    # second surface an INFERRED policy would misclassify: all-public fields,
+    # and no-store is still correct.
+    cache_policy: private_no_store  # no-store
     fields: []
 
-  # ── Story 11a.3 — the Member Directory (DECLARED NOW, BUILT LATER) ────────
+  # ── The Member Directory — ⭐ ROUTE SHIPPED BY STORY 11a.2, FIELDS BY 11a.3 ──
   - id: member-directory
     route: /members
-    renders: false
+    renders: true
     description: >-
-      ⭐ DECLARED WITH `renders: false` PER RULING D5 (Decision 2026-08-20-140).
-      The route does not ship yet — Story 11a.3 builds it and flips `renders` to
-      true. It is declared NOW for two reasons: the ruled Tier-1 public-name
-      exception has nowhere else to live, and 11a.3 then FILLS a declared surface
-      instead of INVENTING one (the SD-1 failure mode).
+      ⭐ THE ROUTE SHIPPED IN STORY 11a.2 and `renders` flipped to true in the SAME
+      commit (ruling D1(a), Decision `2026-08-20-141`). ⚠ This supersedes the
+      previous text here, which said "Story 11a.3 builds it and flips `renders` to
+      true" — Story 11a.1's record contradicted itself about which story owned the
+      route (its scope table said 11a.2; its ledger said 11a.3), and D1(a) resolved
+      it. ⛔ Leaving the old rationale in place would have made this file assert that
+      the route both did and did not ship here.
+      ⭐⛔ WHAT 11a.2 ACTUALLY RENDERS: the shell, the FR-91 pagination controls, and
+      an explicit not-yet-published empty state. ⛔ NO member data — no rows, no
+      counts, no districts — and ⛔ `member_name` is NOT rendered: the Tier-1 decrypt
+      stays behind Story 11a.3's anti-enumeration safeguards, which `epics.md` C1
+      rules "load-bearing, not defensive".
+      ⚠⛔ ⇒ THE TIER-LEAK LEG ON THIS SURFACE IS **ARMED BUT EMPTY** until 11a.3.
+      `membersSurfaceFieldIds()` returns an EMPTY set because the render carries no
+      classified field. ⛔ A green check on `member-directory` today means "this
+      surface renders no classified field" — it does ⛔ NOT mean the flagship
+      directory is being policed. This is stated here, loudly, because letting a
+      vacuous green imply otherwise is the exact defect Story 11a.1 existed to
+      remove, and re-introducing it on THIS surface would be worse than the original.
+      The two fields below stay declared: the ruled Tier-1 public-name exception has
+      nowhere else to live, and 11a.3 then FILLS a declared surface instead of
+      INVENTING one (the SD-1 failure mode).
       `noindex` per FR-75 — ⛔ UNCHANGED by the full-name supersession:
       `2026-08-19-135` cl.7(c) supersedes THE NAME FORM ONLY. Forced pagination
       and noindex stand.
@@ -233,6 +272,18 @@ surfaces:
       gated on `2026-08-19-137` cl.7(a)+(b) (a member-aware publish path and a
       member choice surface, ⛔ neither of which exists).
     search_indexing_policy: noindex
+    # ⚠ EDGE-CACHEABLE AS IT RENDERS TODAY — shell + pagination controls + an
+    # explicit not-yet-published empty state, carrying ⛔ NO member data at all.
+    # ⭐ STORY 11a.3 MUST RE-DECIDE THIS when it renders real member rows: a
+    # directory of named members behind anti-enumeration safeguards is a
+    # different caching question, and this declaration is ⛔ not an answer to it.
+    # The leg makes the re-decision unavoidable — change the header and this
+    # declaration must move with it, in the same commit.
+    cache_policy: edge_cacheable   # public, max-age=60, s-maxage=300
+    # FR-91: the page binds apps/public/src/lib/pagination.ts. The gate's
+    # pagination-binding leg FAILS if this is true and the page does not call
+    # parsePageParams() — ⛔ the only mechanized FR-91 enforcement on apps/public.
+    paginated: true
     fields:
       - id: member_name
         tier: public

@@ -1,0 +1,185 @@
+---
+// The public Member Directory shell — Story 11a.2 (Task 6; AC4, AC7, AC10).
+//
+// ⭐⛔ READ THIS BEFORE ANYTHING ELSE — THE TIER-LEAK LEG ON THIS SURFACE IS
+// **ARMED BUT EMPTY**, AND A GREEN CHECK HERE PROVES ALMOST NOTHING.
+//
+// This page renders the shell, the FR-91 pagination controls, and an explicit
+// not-yet-published empty state. It reads ⛔ NO member data — no rows, no counts, no
+// districts — and it ⛔ does NOT render `member_name`: the Tier-1 decrypt stays behind
+// Story 11a.3's anti-enumeration safeguards, which `epics.md` C1 rules "load-bearing,
+// not defensive". So `membersSurfaceFieldIds()` returns an EMPTY set, and the
+// `member-directory` tier-leak check currently evaluates nothing.
+//
+// ⛔ That is declared here, loudly, rather than left to be inferred. Story 11a.1
+// existed to remove exactly this defect — a vacuous leg wearing a green check — and
+// re-introducing it silently ON THE MEMBER DIRECTORY would be worse than the original.
+// The leg becomes real when 11a.3 renders classified fields. Until then: green here
+// means "this surface renders no classified field", ⛔ NOT "the directory is policed".
+//
+// ── Why the route ships here at all (ruling D1(a), Decision 2026-08-20-141) ──
+// Story 11a.1's own record contradicted itself — its scope table assigned "/members,
+// pagination" to 11a.2; its ledger said the renders:false check "fails until 11a.3".
+// Both were committed; one was wrong. The route ships here so `<MatrixField>` and the
+// pagination helper have a REAL call site instead of being primitives nobody consumes,
+// and `renders` flips to true in the same commit (the route-coverage leg is armed in
+// BOTH directions — the halves cannot move apart).
+//
+// House shape, mirroring `terms.astro`: thin frontmatter, all display logic in the
+// pure `lib/members-render.ts`, explicit `namespace` on every `t()` call (⚠ `t()`
+// defaults to `common` and THROWS on a miss).
+import { getLocale, isLocale, t } from '@twt/i18n';
+import type { Locale } from '@twt/i18n';
+import { passport } from '@twt/domain';
+
+import PublicShell from '../layouts/PublicShell.astro';
+import { getDb } from '../lib/db.server.js';
+import {
+  buildMembersRejectionView,
+  buildMembersView,
+  type MembersLabels,
+} from '../lib/members-render.js';
+import { pageHref, parsePageParams } from '../lib/pagination.js';
+import { ACTIVE_PARIWAR_ID } from '../lib/pariwar.server.js';
+
+// ── Locale + branding (cache-safe: no session, no member state) ──────────────
+const langParam = Astro.url.searchParams.get('lang');
+const acceptLanguage = Astro.request.headers.get('accept-language') ?? undefined;
+const db = getDb().db;
+const passportRow = await passport.getPariwarPassportCached(db, ACTIVE_PARIWAR_ID);
+const locale: Locale = isLocale(langParam)
+  ? langParam
+  : getLocale({ pariwarPassportLocale: passportRow?.localeDefault, acceptLanguage });
+const trustName =
+  (locale === 'hi'
+    ? (passportRow?.displayNameHi ?? passportRow?.displayNameEn)
+    : (passportRow?.displayNameEn ?? passportRow?.displayNameHi)) ?? 'Member Directory';
+const branding = passportRow?.brandingBundle ?? null;
+
+// ⛔ NOTE THE ABSENCE: there is no `withPublicScope` read here. `terms.astro` and
+// `blog.astro` open one because they render tenant content; this page renders none.
+// ⛔ Do not add one "ready for 11a.3" — an unused scoped read is a claim that member
+// rows are being fetched safely, which is a claim nothing here supports.
+
+const tr = (key: string, params?: Record<string, string | number>) =>
+  t(key, params, { locale, namespace: 'members' });
+
+const labels: MembersLabels = {
+  pageTitle: tr('page_title'),
+  pageIntro: tr('page_intro'),
+  notPublishedTitle: tr('not_published_title'),
+  notPublishedBody: tr('not_published_body'),
+  paginationLabel: tr('pagination_label'),
+  previousPage: tr('previous_page'),
+  nextPage: tr('next_page'),
+  invalidTitle: tr('invalid_request_title'),
+  invalidBody: tr('invalid_request_body'),
+  invalidLink: tr('invalid_request_link'),
+};
+
+// ── FR-91 forced pagination (AC2) ───────────────────────────────────────────
+// ⚠ THE ONLY THING ENFORCING FR-91 ON THIS SURFACE. Story 1.14's guard walks the
+// committed OpenAPI surface and Astro routes emit none — ⛔ do not cite it as coverage.
+const paging = parsePageParams(Astro.url.searchParams);
+const rejection = paging.ok ? null : buildMembersRejectionView(labels);
+const view = paging.ok ? buildMembersView(paging, Astro.url.searchParams, labels) : null;
+
+// ⛔ A rejected request renders a 400-shaped state — NOT a redirect to page 1, and
+// NOT a successful render of a different page than was asked for.
+if (rejection !== null) Astro.response.status = rejection.status;
+
+// ── Cache headers (AC5) ─────────────────────────────────────────────────────
+// Declared as `edge_cacheable` in public-vs-private-matrix.yaml, and the gate's
+// cache-policy leg FAILS if this line and that declaration disagree.
+// ⭐ STORY 11a.3 MUST RE-DECIDE THIS when real member rows render — a directory of
+// named members behind anti-enumeration safeguards is a different caching question.
+Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
+Astro.response.headers.set('Vary', 'Accept-Language');
+
+const firstPageHref = pageHref('/members', Astro.url.searchParams, 1);
+---
+
+<PublicShell
+  locale={locale}
+  title={labels.pageTitle}
+  description={labels.pageIntro}
+  trustName={trustName}
+  branding={branding}
+  noindex
+>
+  <main class="members" aria-labelledby="members-title">
+    <h1 id="members-title" class="members__title">{labels.pageTitle}</h1>
+
+    {rejection !== null && (
+      <section class="members__notice" role="alert" aria-labelledby="members-invalid-title">
+        <h2 id="members-invalid-title" class="members__notice-title">{rejection.title}</h2>
+        <p class="members__notice-body">{rejection.body}</p>
+        <p><a class="members__link" href={rejection.linkHref}>{rejection.linkLabel}</a></p>
+      </section>
+    )}
+
+    {view !== null && (
+      <>
+        <p class="members__intro">{labels.pageIntro}</p>
+
+        {!view.model.hasMembers && (
+          <section class="members__notice" aria-labelledby="members-empty-title">
+            <h2 id="members-empty-title" class="members__notice-title">{labels.notPublishedTitle}</h2>
+            <p class="members__notice-body">{labels.notPublishedBody}</p>
+          </section>
+        )}
+
+        {view.links.length > 0 && (
+          <nav class="members__pagination" aria-label={labels.paginationLabel}>
+            <ul class="members__pagination-list">
+              {view.links.map((link) => (
+                <li>
+                  <a class="members__link" href={link.href} rel={link.rel}>{link.label}</a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )}
+
+        {view.model.page > 1 && (
+          <p><a class="members__link" href={firstPageHref}>{labels.invalidLink}</a></p>
+        )}
+      </>
+    )}
+  </main>
+</PublicShell>
+
+<style>
+  /* Story 1.17 design system via @twt/tokens (the documented Story 2.5 variance:
+     @twt/ui is still a stub and there is NO Tailwind pipeline on this surface —
+     ⛔ do not introduce one). */
+  .members { margin: 0 auto; max-width: 48rem; padding: var(--space-page-gutter); }
+  .members__title {
+    font-family: var(--font-display-name);
+    color: var(--color-rule-heavy);
+    margin: 0 0 var(--space-block);
+  }
+  .members__intro { color: var(--color-rule-heavy); margin-top: 0; }
+  .members__notice {
+    border: var(--border-rule) dashed var(--color-rule-hairline);
+    background: var(--color-surface);
+    padding: var(--space-page-gutter);
+    margin: var(--space-block) 0;
+  }
+  .members__notice-title { margin-top: 0; font-family: var(--font-display-parichay); }
+  .members__notice-body { margin-bottom: 0; line-height: 1.6; }
+  .members__pagination { margin: var(--space-block) 0; }
+  .members__pagination-list {
+    display: flex;
+    gap: var(--space-row);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  /* Visible focus (Story 0.10 P0-2c): keyboard users must always see where they are. */
+  .members__link { color: var(--color-accent); text-decoration: underline; }
+  .members__link:focus-visible {
+    outline: var(--border-rule) solid var(--color-accent);
+    outline-offset: 2px;
+  }
+</style>

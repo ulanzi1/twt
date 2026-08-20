@@ -1360,3 +1360,76 @@ chunk is 1108 bytes). That is a **RISE**, well under the 512000 ceiling, so it P
 with the delta reported — and the baseline stays at its best-ever **3942**. ⛔ A rise
 is NEVER ratcheted ([[project_friction_budget_baseline_ratchet]] — the ratchet only
 ever DECREASES in-PR, and `detectRaisedBaselines` forbids an in-PR raise).
+
+---
+
+**Story 11a.3 disposition (declaration affirmed — ⛔ NO new row; and ⭐ the DYNAMIC-HTML
+metric facet is PARTIALLY DISCHARGED, ⛔ not passed over a fourth time):** the public
+Member Directory now renders real member rows — the presentation-resolved name, the raw
+latest-posting district, and a two-label status pill — behind the anti-enumeration
+safeguards. AC-4 fires on the `apps/public` path touch, and the ledger was reviewed.
+**No row is warranted:**
+
+1. **`/members` is still read-only.** No form, no upload, no member-initiated action —
+   the same finding the 2.5 / 2.6 / 11a.1 / 11a.2 dispositions record for these paths.
+   Rendering member data does not make a page a friction surface; it makes it a
+   *content* surface.
+2. **The FR-91 refusal is unchanged as a candidate, and unchanged as a rejection.** The
+   11a.2 disposition weighed it and declined it, for a reason this story does not alter:
+   a member following the directory's own links never meets it, because every link the
+   page emits is in range. ⭐ Story 11a.3 ADDS a second refusal — the deep-pagination
+   horizon (`?page=` above 200) — and it is rejected as a row for the SAME reason and
+   ⛔ not re-argued from scratch.
+3. **⭐ THE ANTI-ENUMERATION RATE LIMIT WAS WEIGHED AS A NEW CANDIDATE ROW, AND REJECTED.**
+   A visitor throttled to `429` pays a real cost while doing something they came to do,
+   which is closer to a ledger row than the FR-91 refusal is. It is still **not** one:
+   the named `search` ceiling is sized for scraping, ⛔ not for reading — a person
+   browsing a directory does not approach it, and the ledger declares friction a member
+   **pays**, not friction an abuser meets. ⚠ Recorded here rather than silently omitted,
+   so a later reader can see the question was asked and how it was answered. ⚠ Re-examine
+   if the ceiling is ever tightened toward human-reading rates.
+
+⭐ **METRIC FACET — THE DYNAMIC SSR HTML IS NOW MEASURED (D6(a), `2026-08-20-143` cl.6).**
+⚠ **THIS IS A DIFFERENT QUANTITY FROM EVERY NUMBER ABOVE, AND THE TWO MUST NEVER BE
+SUMMED OR COMPARED.** `page_weight_bytes` and the per-route block in
+`dist/page-weight.json` attribute **STATIC CLIENT ASSETS** (CSS/JS a browser caches
+across navigations). `dist/dynamic-html-weight.json` measures the **PER-REQUEST HTML
+RESPONSE BODY** — re-sent every time, and the only figure that grows with the roster.
+Adding them would produce a number describing nothing.
+
+Measured against the REAL built standalone server (`pnpm --filter @twt/public weight:dynamic`),
+with the upstream stubbed at a full page at the FR-91 cap:
+
+| `/members` dynamic HTML | bytes |
+| --- | --- |
+| a full page at the cap (50 rows) | **19 234** |
+| a single-row page | **4 220** |
+| marginal cost per directory row | **306** |
+
+⚠ For scale: the STATIC attribution for the same route is **3 116** bytes. The dynamic
+HTML at the cap is roughly **six times** that — which is precisely the gap D6(a) existed
+to close, and precisely why `page-weight.mjs`'s own header says the dynamic part
+*"remains unmeasured here"*. ⛔ It is **emitted for review, NOT gated**: no ceiling is
+declared for it in `friction-budget.yaml`, and pretending otherwise would be the
+vacuous-green defect this epic keeps finding.
+
+⛔ **SAY WHICH ONE WAS BUILT** ([[feedback_closure_language_precision]]): the
+dynamic-HTML measurement is **CLOSED BY EDIT**. The **device-throttled Lighthouse-CI
+timing harness is RE-DEFERRED**, with a **genuinely new reason** — ⛔ not a restatement
+of 11a.2's "separate CI infrastructure on a surface story's critical path". The new
+reason: *this story has now established that the dominant, roster-scaling quantity on
+this surface is HTML BYTES, and it is measured. A timing harness would answer a
+different question — how long a 2G device takes to paint those bytes — which is a
+DEVICE-and-NETWORK question, not a code-shape one, and it cannot be answered
+meaningfully until there is a real deployed origin with a real edge decision behind it
+(that decision is itself blocked on DPDPA legal review, `architecture.md` §5.8a).*
+⭐ **New written trigger:** the first deployment to a real origin with a CDN/edge
+configured — the same event that re-triggers the abuse-rules edge dependency. ⛔ NOT
+"the next public surface story", which is the open-ended trigger shape that let this
+metric slip at 2.6, 10.5, 11a.2 and 11a.3.
+
+⚠ **Metric facet (static), for completeness:** `js_bundle_bytes` stays **0** — `/members`
+still ships ⛔ not one client island. `page_weight_bytes` measured **6938** (was 6327).
+That is a **RISE**, far under the 512000 ceiling, so it PASSES with the delta reported —
+and the baseline stays at its best-ever **3942**. ⛔ A rise is NEVER ratcheted
+([[project_friction_budget_baseline_ratchet]]).

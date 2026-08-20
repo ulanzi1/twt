@@ -79,20 +79,33 @@ architecture L4783) — re-homed to **Story 2.5** by Decision 2026-06-20-054 (AI
 | **Skeleton/loading** | **N/A — server-rendered, no client fetch.** Delivered as complete HTML; no loading phase (same rationale as `/niyamavali`). | — |
 | **Error** | Delegated to the `/500` route: any failure in the frontmatter read (or the `withPublicScope` read) surfaces as the SSR error fallback. | `500.astro` |
 
-### 7. `/members` — Member Directory shell (Story 11a.2)
+### 7. `/members` — Member Directory (Story 11a.3)
 
-⭐⛔ **What this surface renders today: the shell, the FR-91 pagination controls, and an
-explicit not-yet-published empty state. ⛔ NO member data at all** — no rows, no counts,
-no districts, and ⛔ **not `member_name`** (the Tier-1 decrypt stays behind Story 11a.3's
-anti-enumeration safeguards, which `epics.md` C1 rules *"load-bearing, not defensive"*).
-⇒ the surface's tier-leak field set is **EMPTY** and its check is **armed but vacuous**
-until 11a.3. ⛔ Stated here so a green check is never read as "the directory is policed".
+⭐ **What this surface renders today: REAL MEMBER ROWS** — the presentation-resolved name,
+the raw latest-posting district, and a two-label status pill — one bounded page at a time,
+behind the anti-enumeration safeguards. ⚠ This **supersedes** the 11a.2 text here, which
+said the page carried no member data and that its tier-leak check was **armed but vacuous**.
+That was true then; it is ⛔ **false now**: the field set is `district` / `member_name` /
+`member_status`, the check evaluates them on every run, and a planted leak fails a run that
+previously passed (`2026-08-19-136` cl.4, discharged by Decision `2026-08-20-143`).
+
+⚠⛔ **The `authenticated_member` tier is NOT rendered, and that is structural, ⛔ not an
+oversight.** It has **no viewer** (`-143` cl.7: members are token-bearer, there is no
+`apps/member-web/`, `apps/mobile` has no directory screen), so there is no second render
+tier to inventory here. It is routed onto 11a.2's fragment-mechanism deferral.
+
+⚠ **THERE ARE NOW TWO DISTINCT NON-POPULATED STATES, and ⛔ they must never render as one
+another**: *"no members to show"* (a real, dignified empty roster) and *"the directory is
+temporarily unavailable"* (the upstream read failed). ⛔ An outage that looks like an empty
+membership is a false statement about the trust.
 
 | State | Design | Source |
 | --- | --- | --- |
 | **Empty (the primary state today)** | Dignified not-yet-published card: `not_published_title` ("The member directory is not published yet") + `not_published_body`, which says plainly that **nothing about the reader's membership changes** and that **no member details are shown on this page today**. The branded shell (header + language toggle + footer) still renders. ⚠ This is not a placeholder standing in for a failed read — **there is no read**. | `members.astro`; `lib/members-render.ts` (`buildMembersView`, `hasMembers: false`); keys `not_published_title` / `not_published_body` |
 | **Invalid page request (FR-91 rejection)** | A **400-shaped in-page state**: `invalid_request_title` + `invalid_request_body` (naming the max page size) + a link back to the directory start. ⛔ **Not a redirect to page 1** and ⛔ not a successful render of a different page than was asked for — a silent clamp answers a probe with a normal-looking page. ⚠ The parser's developer message (which names the probe back at the prober) is **log copy only** and never reaches the DOM. | `members.astro` (`Astro.response.status = 400`); `lib/members-render.ts` (`buildMembersRejectionView`); `lib/pagination.ts`; keys `invalid_request_*` |
-| **Populated** | ⛔ **Does not exist at Story 11a.2.** Owned by **11a.3**, together with the roster read, the Tier-1 name decrypt, and the anti-enumeration safeguards — which ship in the same story by design, because a member-listing surface ahead of its safeguards is the sequencing hazard `2026-08-19-136` cl.4 exists to prevent. | **11a.3** |
+| **Populated (the primary state)** | A semantic `<table>` with three scoped column headers (`column_name` / `column_district` / `column_status`) and one row per member. ⭐ **Every member value renders through `<MatrixField>`**, so `getVisibility()` alone decides what appears — ⛔ a not-visible verdict renders **nothing at all**: no placeholder, no empty `<span>`, no comment naming the omitted field, because an omission that announces itself is an enumeration signal. A member with no posting row shows `district_unknown` ("Not recorded"); a member whose name cannot be resolved is **omitted from the page entirely**, ⛔ never shown as a blank name cell. Rows are ordered by `member_id` ascending so page N is the same page N on every request. | `members.astro`; `lib/members-render.ts` (`buildMembersView`); `components/MatrixField.astro`; keys `column_*` / `status_*` / `district_unknown` |
+| **Empty roster (no members to show)** | The dignified not-yet-published card above. ⚠ Distinguished from the outage row below **by construction**: `apiUnavailable` is false here, and the two states carry different copy in both locales (asserted by `tests/members-copy.test.ts`). | `lib/members-render.ts` (`hasMembers: false`, `apiUnavailable: false`) |
+| **⭐ API unavailable (the upstream read failed)** | A `role="alert"` card: `unavailable_title` ("The directory could not be loaded") + `unavailable_body`, which says plainly that this is **a problem on our side**, that it does **⛔ not** mean the directory is empty, and that **nothing about anyone's membership has changed**. ⚠ The page still returns **200 with the branded shell** — the directory is a content surface, and a transient upstream failure is not a page error. ⛔ One attempt, no retry: a retry storm on a public page turns a slow upstream into a self-inflicted outage. | `lib/directory.server.ts` (`fetchMemberDirectory` → `ok: false`); `lib/members-render.ts` (`apiUnavailable: true`); keys `unavailable_title` / `unavailable_body` |
 | **Skeleton/loading** | **N/A — server-rendered, no client fetch.** Delivered as complete HTML; no loading phase (same rationale as `/niyamavali` and `/terms`). ⚠ `js_bundle_bytes` stays **0** — there is not one client island on this surface. | — |
 | **Error** | Delegated to the `/500` route: any failure in the frontmatter (branding read / locale resolution) surfaces as the SSR error fallback. | `500.astro` |
 
@@ -100,9 +113,18 @@ until 11a.3. ⛔ Stated here so a green check is never read as "the directory is
 not JS-dependent buttons — the shell's works-with-JS-disabled posture (Story 2.5 AC3) is
 ⛔ not relaxed by this story. Visible `:focus-visible` outlines ship on every link (Story 0.10 P0-2c).
 
-⚠ **⛔ NO "next" affordance ships while the directory is unpublished.** A next-page link on
-an empty directory tells a prober that further pages are believed to exist. 11a.3 computes
-it from a real row count.
+⭐ **THE "NEXT" AFFORDANCE IS NOW REAL, AND HONEST.** ⚠ This **supersedes** the 11a.2 note
+that no next-link ships. It is derived from the **real roster total**, ⛔ never from *"this
+page came back full"* — a directory holding exactly one page's worth must not advertise a
+page 2, which would be both a lie and an enumeration invitation. ⛔ An **outage offers no
+next link at all**: it knows nothing about how many pages exist.
+
+⚠ **A SECOND FR-91 REFUSAL SHIPS AT THIS STORY** — the deep-pagination horizon (`?page=`
+above 200), closing the two items 11a.2 deferred (`page` had no upper bound; `offset` could
+leave safe-integer range). ⭐ It renders through the **same** rejection state, deliberately:
+the state is **rejection-invariant**, so an over-horizon probe, an over-cap probe, `?page=all`
+and a malformed page number all produce **byte-identical output** and a prober learns nothing
+about which bound it hit.
 
 ### ⚠ RECORDED GAP — `/blog` and `/blog/[postId]` are NOT covered by this inventory
 

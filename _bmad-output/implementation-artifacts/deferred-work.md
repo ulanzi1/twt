@@ -77,12 +77,15 @@ epic** (a deferral naming an epic expires unowned).
   ⛔ **Neither is chosen**: both need a token-holding browser.
   **Re-trigger:** **Story 11b's FR-77 fragment** (nominee bank + IFSC + UPI CTA — the v1 registry
   entry the architecture already names), **or** the story that creates `apps/member-web/`.
-- **`apps/api/src/modules/public-pages/` is NOT created** (NEW — Story 11a.2) — **Resolved via
-  explicit deferral.** ⛔ A module with no route is a claim that a boundary exists. Per
-  [[feedback_no_premature_package]] it lands with its first consumer. **Re-trigger:** the same
-  Story 11b FR-77 fragment above. (⚠ This supersedes the Story 2.5 "Authenticated-fragment registry"
-  deferral, which named *"Epic 11a … + Epic 11b"* — an epic-shaped trigger; it is re-pointed at a
-  story here.)
+- **`apps/api/src/modules/public-pages/` is NOT created** (Story 11a.2) — ⭐ **CLOSED BY EDIT at
+  Story 11a.3.** The module now ships **with a real route** (`GET /api/v1/p/:pariwarId/public-pages/
+  member-directory`), which is exactly the condition the deferral named: it lands with its FIRST
+  CONSUMER. ⚠ The deferral predicted that consumer would be Story 11b's FR-77 fragment; ⛔ that
+  prediction was **wrong** — the first consumer is the public Member Directory read, which needs the
+  three capabilities `apps/public` verifiably lacks (KMS decrypt, the BYPASSRLS audit writer, a
+  rate-limit store; `2026-08-20-143` cl.1). The INVARIANT the deferral protected is unchanged and
+  still enforced: ⛔ never a module with no route — `apps/public/tests/authenticated-fragment.test.ts`
+  now asserts the module AND its route file, having previously asserted the module's absence.
 - **`critical_render_path_ms` live-timing harness** — **Resolved via explicit deferral, RE-DEFERRED
   WITH A NEW WRITTEN TRIGGER** (ruling D5(a)). ⚠ Its previous trigger (*"Epic 11a, first additional
   public surface"*) **FIRED in this story** when `/members` shipped, and a fired trigger must be
@@ -109,16 +112,109 @@ epic** (a deferral naming an epic expires unowned).
 
 ### ⚠ Carried OPEN — ⛔ not closed by this story
 
-- **⛔ THE `member-directory` TIER-LEAK LEG IS ARMED BUT EMPTY.** `/members` renders the shell,
-  pagination controls and a not-yet-published empty state, and reads ⛔ **no member data**;
-  `member_name` is ⛔ **not rendered** (the Tier-1 decrypt stays behind Story 11a.3's
-  anti-enumeration safeguards, which `epics.md` C1 rules *"load-bearing, not defensive"*). So
-  `membersSurfaceFieldIds()` returns `[]` and the leg evaluates nothing on the flagship surface.
-  ⛔ **A green `member-directory` check today means "renders no classified field" — NOT "the
-  directory is policed".** This is asserted executably (a test asserts the field set IS empty) and
-  stated in the matrix, the page header, the render model and the spec, because letting a vacuous
-  green imply otherwise is the exact defect Story 11a.1 existed to remove.
-  **Re-trigger / owner:** **Story 11a.3**, which renders the classified fields.
+- **⛔ THE `member-directory` TIER-LEAK LEG IS ARMED BUT EMPTY** (Story 11a.2) — ⭐ **CLOSED BY EDIT
+  at Story 11a.3. THE LEG IS NOW OPERATIVE.** `membersSurfaceFieldIds(model)` returns
+  `['district', 'member_name', 'member_status']`, `evaluateSnapshot` evaluates the leak rules on the
+  flagship public surface on every run, and the committed *"the field set IS empty"* assertion has
+  been **REPLACED** (⛔ not deleted) with one asserting the **exact** expected set — so a silently
+  DROPPED field fails as loudly as a silently added one. ⭐ The discharge is proven by **planting a
+  real leak**: the same snapshot passes clean and then FAILS once an undeclared /
+  authenticated-tier field is planted into it — *"the set is non-empty"* was never the proof.
+  ⚠ **All six records that said "armed but empty" were rewritten in the same commit** — the matrix
+  surface description, the page header, the render-model doc-block, the live-render spec, this
+  entry, and `gate-inventory.md`. ⛔ A leg that became real while six committed records still called
+  it vacuous would be a governance record contradicting itself.
+  ⇒ **`2026-08-19-136` cl.4 — the LAUNCH-BLOCKING clause — is DISCHARGED** (Decision
+  `2026-08-20-143`).
+## Deferred from: 11a-3-member-directory-pii-shielded (2026-08-20)
+
+- **⛔ THE ABUSE-SIGNAL ADMIN CONSOLE VIEW IS NOT BUILT** (NEW — Story 11a.3) — **Resolved via
+  explicit deferral** (ruling D4(a), Decision `2026-08-20-143` cl.4). `directory-abuse-rules.yaml`
+  ships as a committed, versioned, strictly-parsed config **and** the route reads it and emits a
+  §1.5 audit line on a breach — so the signal is **real and reachable today**, through the existing
+  Story 1.10 audit surface. ⛔ What does NOT ship is a purpose-built place to triage it.
+  ⚠ **THIS DEFERRAL INHERITS A HARD LIMIT, AND NAMES IT RATHER THAN LETTING A READER ASSUME A
+  RICHER SIGNAL IS WAITING** (`-143` cl.10): the audit line is a **COUNTER, NOT A FORENSIC RECORD**.
+  `audit_log_entries` has ⛔ **no context or payload column** — `authEventToAuditInput` HASHES
+  `event.context` into `request_payload_hash` — and the unauthenticated locator would default to the
+  constant `user:anonymous`. The rule id and a coarse, non-PII query shape are pushed into `action`
+  and `resource_locator` because those are the only fields that survive. ⇒ D4(a)'s *"the signal is
+  real and reachable"* is **TRUE**; *"triageable"* is ⛔ **FALSE**
+  ([[feedback_closure_language_precision]]). ⛔ A console built on this data would render counts and
+  rule names, ⛔ not what was walked.
+  **Trigger:** the first operator story scoped to abuse triage, **or** an abuse rule firing in
+  production often enough to need one — whichever comes first. ⚠ That story must ALSO decide whether
+  to widen the audit substrate, because the view is only as good as the row.
+
+- **⚠ THE FORWARDED RATE-LIMIT KEY IS CALLER-SUPPLIED** (NEW — Story 11a.3) — **Recorded as a
+  network precondition, ⛔ NOT fixed** (`-143` cl.9). `apps/api` runs `trustProxy: true`, which is
+  what makes per-visitor keying possible at all through the SSR proxy — and simultaneously means a
+  caller reaching `apps/api` **directly** can spoof `X-Forwarded-For` and evade the per-IP ceiling.
+  ⚠ **Pre-existing** (the Cloudflare / Dokploy hop assumption) ⛔ but materially sharper here,
+  because this is the first *deliberately unauthenticated, PII-bearing* route whose anti-enumeration
+  mandate depends on that key. ⛔ `trustProxy` is deliberately **NOT** re-tuned: it would alter
+  `request.ip` and origin checks for **every** route in the app, on a surface story.
+  ⇒ **The route is defended only behind the trusted hop.** Written into the `login-wall.spec.ts`
+  allowlist entry and the abuse-rules README, ⛔ not only here.
+  **Trigger:** the deployment story that fixes the network topology (which app terminates public
+  traffic, and whether the origin is reachable except through the CDN). ⚠ Story 11a.4 records the
+  same open topology question independently — ⛔ the two must be answered together, not twice.
+
+- **⚠ A WARM EDGE HIDES SCRAPER TRAFFIC FROM ORIGIN-SIDE DETECTION** (NEW — Story 11a.3) —
+  **Recorded as a NAMED DEPENDENCY, ⛔ not a footnote, and ⛔ not omitted because it is inert**
+  (`-143` cl.11, ruling D5(a)). `/members` stays `cache_policy: edge_cacheable`, so a cached hit
+  **never reaches the origin** — the rate limit and every `directory-abuse-rules.yaml` signal see
+  only cache **MISSES**. A scraper walking pages 1..N through a warm edge is invisible to the very
+  detection this story ships. ⚠ **Inert today**: there is no Cloudflare in this repo and edge
+  selection is contingent on DPDPA legal review (`architecture.md` §5.8a). ⛔ Do not paper over it
+  by claiming the origin sees everything.
+  **Re-trigger:** an edge/CDN actually being configured. ⚠ The SAME event re-triggers the
+  `critical_render_path_ms` Lighthouse harness below — ⛔ answer both in that story, not one.
+
+- **⛔ THE `authenticated_member` RENDER TIER HAS NO VIEWER AND IS NOT BUILT** (NEW — Story 11a.3) —
+  **Resolved via explicit deferral, routed onto 11a.2's fragment-mechanism deferral** (`-143` cl.7).
+  The story AC's tiered-render table has three columns; only `public` is reachable. **Verified, ⛔
+  not assumed:** members are TOKEN-BEARER (the guard reads the access-token JWT from the
+  `Authorization` header, so a browser navigating to `twt.org/members` sends cookies and never
+  qualifies); there is ⛔ **no `apps/member-web/`** (`architecture.md:486-494` defers it behind named
+  triggers); and `apps/mobile` has ⛔ **no directory screen**. Minting a viewer means a browser
+  member session at the page layer, which `architecture.md:515-517` **forbids**.
+  ⇒ **This story shipped the `public` tier, for real.** ⛔ Half a table shipping is fine; half a
+  table shipping **silently** is the defect — hence this entry, the matrix description, the page
+  header and the decision-log clause all say so.
+  **Trigger:** Epic 11b's FR-77 fragment, **or** the story that creates `apps/member-web/`.
+
+- **⚠ THE EPIC AC'S "cursor-based … non-guessable cursors" CLAUSE IS DEVIATED FROM** (NEW — Story
+  11a.3) — **Recorded as an EXPLICIT WRITTEN DEVIATION, ⛔ never silently dropped** (ruling D2(a),
+  `-143` cl.2). Offset paging (`?page=N&limit=M`) is KEPT. ⭐ The reason is substantive, ⛔ not
+  conservative: **a cursor over a deterministic `member_id` ordering is an offset in disguise** — it
+  does not remove the walk-every-page primitive, so adopting it would *look* like an
+  anti-enumeration control while changing nothing. What actually bounds enumeration is the page
+  ceiling, the page-size cap, the rate limit and `noindex` — all four of which ship. Keeping the
+  form also preserves the `pagination_binding` gate leg (the ONLY mechanized FR-91 enforcement on
+  `apps/public`), the real-link pagination and `back_to_start`, and it **discharged the two deferred
+  pagination items** whose trigger was this story.
+  **Re-trigger:** a measured query-plan problem at real directory sizes, **or** a ruling that
+  reverses D2(a). ⛔ Not "when we have time".
+
+- **⚠ TWO EPIC-AC CLAUSES HAVE NO SUBJECT ON THIS SURFACE** (NEW — Story 11a.3) — **Recorded, ⛔ not
+  implemented and ⛔ not skipped in silence** (`-143` cl.12). *"An authenticated session does NOT
+  bypass rate limits"* and *"abuse-detected accounts trigger temporary suspension + trustee review"*
+  both presuppose an authenticated actor. ⛔ **There are no sessions and no accounts on the public
+  Member Directory** — every visitor is unauthenticated (see the `authenticated_member` entry
+  above). The enforceable residue is the **429** and the **audit line**, and that is what ships.
+  ⛔ A clause answered nowhere is indistinguishable from a clause quietly skipped.
+  **Trigger:** they become live at Epic 11b **only if** an authenticated directory tier is ever
+  built. ⚠ Until then there is nothing to implement, ⛔ and nothing to claim.
+
+- **⛔ `epics.md` CITES "Story 10.6 query throttling" AS A PROTECTION LAYER — VERIFIED FALSE** (NEW
+  — Story 11a.3) — **Recorded as a cross-reference error, ⛔ not treated as coverage.** Story 10.6
+  is the **Bulk Operations Framework** (`epics.md:3736`), the same C3-shaped defect this epic has
+  now found twice (Story 11a.4's authoring pass independently found the identical false citation at
+  `epics.md` L4660). The real coverage on this surface is this story's `limits.search` ceiling plus
+  `directory-abuse-rules.yaml`. **Trigger:** the next `epics.md` correct-course pass should strike
+  the citation at both sites. ⛔ Do not cite 10.6 as anti-enumeration coverage anywhere.
+
 - **⚠ Decision `2026-08-20-140` cl.7 — the Niyamavali records NO directory publication — remains
   OPEN.** ⛔ Not closed here, and **now sharper**: D1(a) ships a `/members` page while the
   member-facing rulebook still does not mention one. That was ruled **knowingly** (Decision
@@ -5657,10 +5753,10 @@ Decision `2026-08-17-126` cl. 6 mints the **narrow** `deferred-to-v2` value into
 
 ## Deferred from: code review of 11a-2-public-astro-ssr-shell-extension-for-member-directory-tiered-visibility-renderers.md (2026-08-20)
 
-- **`parsePageParams` places no upper bound on `page` itself — only `limit` is capped** (`apps/public/src/lib/pagination.ts:92-159`). `?page=999999999` is accepted (200) and renders a plausible "previous page" chain on a directory with zero rows. Not exploitable for real data extraction today — `hasMembers` is hard-coded `false`, no DB read consumes `page`/`offset` yet. (Re-scoped from an initial "suppress the previous-link" framing during patch implementation: backward navigation always pointing at a valid earlier page is defensible design and `members-render.test.ts` already has a deliberate, passing test asserting it — the actual gap is only the missing ceiling on `page`.) **Decision (BigDev, 2026-08-20): defer to 11a.3** — closing this needs a new decidable rejection reason (mirroring `limit_above_cap`) and a ceiling chosen against a real row count. Trigger: Story 11a.3 wiring the real roster query.
+- **`parsePageParams` places no upper bound on `page` itself — only `limit` is capped** (`apps/public/src/lib/pagination.ts`) — ⭐ **CLOSED BY EDIT at Story 11a.3.** Its trigger (*"Story 11a.3 wiring the real roster query"*) FIRED, and it is answered rather than carried. Closed by a new decidable rejection reason `page_above_horizon`, mirroring `limit_above_cap`, against a named exported constant `PUBLIC_PAGE_HORIZON` — which is **imported from** `@twt/contracts`' `PUBLIC_DIRECTORY_PAGE_HORIZON` (200), ⛔ NOT re-declared, so the page and the API route cannot drift into two horizons. ⚠ Rationale recorded at Decision `2026-08-20-143` cl.2: offset paging was KEPT because a cursor over a deterministic `member_id` ordering is an offset in disguise, so the ceiling — not the cursor — is what actually bounds a walk. ⛔ The new reason is **rejection-invariant**: it produces byte-identical output to every other refusal, asserted by test, so a prober cannot binary-search the bound.
 - **`detectCacheSignal`/`cachePolicySatisfied('redirect', …)` use first-match, non-comment-stripped regexes** (`packages/contracts/src/public-pages/gate.ts:258-278`). A page setting `Cache-Control` conditionally across branches, or mentioning `Astro.redirect(`/the exact `Astro.response.headers.set('Cache-Control', …)` call inside a comment or dead branch, would be read by whichever textual match the regex finds first — not by which branch actually executes for a given response. Unexploited by any page in this diff today. Trigger: the next public page that needs conditional cache headers (e.g. one Cache-Control value on success, another on an error branch).
 - **`page-weight.mjs` per-route attribution joins emitted chunks to routes by bare basename, not full route path** (`apps/public/scripts/page-weight.mjs`). Two routes sharing a filename in different directories (most obviously two `index.astro` files) would silently collapse into one attributed entry rather than splitting or flagging the collision. Already explicitly caveated in-diff as informational/non-enforcing (D5(a)); no collision exists in the current 8-route set. Trigger: a second route with a filename already in use elsewhere in `apps/public/src/pages/`.
-- **Offset precision loss for extreme `page` values** (`apps/public/src/lib/pagination.ts:92-159`). `parsePageParams` allows `page` up to `Number.MAX_SAFE_INTEGER`; `offset = (page-1)*limit` (limit up to 50) can then exceed the safe-integer range and lose precision. Inert today — no DB read consumes `offset` yet, since `/members`'s `hasMembers` is hard-coded `false`. Trigger: Story 11a.3 wiring the real roster query against `offset`.
+- **Offset precision loss for extreme `page` values** (`apps/public/src/lib/pagination.ts`) — ⭐ **CLOSED BY EDIT at Story 11a.3**, by the SAME ceiling that closed the item above. With `page` bounded at 200 and `limit` at 50, `offset = (page-1)*limit` maxes at 9 950 — ⛔ nowhere near `Number.MAX_SAFE_INTEGER`, so the precision loss is now unreachable rather than merely inert. ⚠ Asserted by test rather than argued: `members-render.test.ts` checks the arithmetic bound directly, so a future horizon raise that reintroduced the hazard would fail.
 - **`?raw` matrix-inlining (Trap 3) is proven only within the vitest/dev toolchain via a relative-fs re-read, not against a built `dist/` artifact** (`apps/public/tests/matrix.server.test.ts`). The Debug Log records the actual `dist/` build behavior as checked via a manually-run, reverted probe — no test in the diff exercises it in CI. Trigger: any change to the Vite/Astro build config touching `noExternal` or the `.yaml?raw` import path.
 - **`AuthenticatedFragment`'s cache-safety test is a comment-stripped literal-token scan**, defeatable by string concatenation, a wrapping helper function, or reading auth state via `Astro.locals.user`/`.viewer` (only `.session`/`.member` are on the fixed token list) (`apps/public/tests/authenticated-fragment.test.ts`). The surrounding prose's claim ("for *any* request") overstates what a textual scan establishes. Trigger: the first client island or server-rendered authenticated fragment built on this contract (11a.3 candidate per the fragment-mechanism deferral above).
 - **AC3's specified test method (SSR output identical with/without arbitrary cookies/headers) was replaced with the static scan above, without being logged in the story's own "raised, not absorbed" deviation section.** A defensible engineering call (`.astro` files aren't unit-render-testable in this repo) but not recorded where the story's own convention says a substituted-AC-method belongs.

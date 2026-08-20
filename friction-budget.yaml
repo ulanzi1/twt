@@ -43,6 +43,27 @@ surfaces:
   # TEETH (was a no-op while it was a tsc stub). Web budgets are tighter than native
   # per architecture §4.11.1. baselines-of-record committed at the first measurable
   # build: zero client JS (no hydrated islands) + the extracted CSS transfer.
+  #
+  # ⭐ PER-ROUTE ATTRIBUTION DISCHARGED AT STORY 11a.2 (ruling D5(a)). The deferral
+  # CR-D0-1.16a asked to "restructure to `routes: { '/niyamavali': <bytes> }`" and
+  # named "Epic 11a (second public route)" as its trigger. ⚠ THAT TRIGGER HAD ALREADY
+  # FIRED TWICE AND WAS MISSED — /terms (2.6) and /blog (10.5) both shipped while this
+  # manifest stayed an aggregate. It did not fail; it was NOT NOTICED. `page-weight.mjs`
+  # now emits a `routes: {…}` block covering every shipped route.
+  #
+  # ⛔ READ WHAT THE PER-ROUTE NUMBERS ARE, AND ARE NOT:
+  #   · ATTRIBUTION of STATIC CLIENT ASSETS per route — ⛔ NOT a measurement of each
+  #     route's DYNAMIC HTML response, which on an SSR surface is the larger part of
+  #     what a visitor downloads. That remains unmeasured; capturing it is the
+  #     separately-deferred `critical_render_path_ms` harness below.
+  #   · Shared chunks (PublicShell.css) are attributed to EVERY route, so ⛔ the
+  #     per-route figures DO NOT SUM to page_weight_bytes. `shared_bytes` is emitted
+  #     separately so the overlap is visible.
+  #   · ⛔ THE ROUTES BLOCK IS EMITTED, NOT ENFORCED. `evaluateMetric` reads flat
+  #     top-level `manifest[metric.id]`, so the two metrics below remain the gated
+  #     numbers and the per-route block is for REVIEW. ⚠ Stated because a per-route
+  #     block that merely looked enforced would be a vacuous green — the exact defect
+  #     class this epic keeps finding.
   - id: member-public-web
     description: Public member-facing web (apps/public Astro SSR — Story 2.5)
     manifest: apps/public/dist/page-weight.json
@@ -52,7 +73,14 @@ surfaces:
         baseline: 0 # no client islands ⇒ zero hydrated JS at Story 2.5
       - id: page_weight_bytes
         ceiling: 512000 # 500 KiB static client assets (CSS/JS under dist/client/ — excludes the dynamic SSR HTML response)
-        baseline: 3942 # best-ever extracted-CSS record (inlineStylesheets:'never') from Story 2.5. A baseline-of-record only DECREASES in-PR (the AC-1 ratchet); /terms raised the measured weight to 5219 (still far under the 512000 ceiling), so the baseline stays at its best-ever 3942 — NOT bumped (the gate's detectRaisedBaselines forbids an in-PR raise).
+        # ⛔ STAYS 3942 — the best-ever extracted-CSS record from Story 2.5. A
+        # baseline-of-record only DECREASES in-PR (the AC-1 ratchet), and
+        # `detectRaisedBaselines` forbids an in-PR raise. Measured history, for
+        # readers who would otherwise wonder why it drifts upward and the number
+        # does not: /terms (2.6) → 5219; Story 11a.2 (+/members CSS) → 6327. Both
+        # are far under the 512000 ceiling, so both PASS with the delta reported.
+        # ⚠ A RISE IS NEVER RATCHETED. Do not "update the baseline to match".
+        baseline: 3942
 
 # Live critical-render-path TIMING on the canonical device (3GB Android,
 # architecture line 34) is EXPLICITLY DEFERRED (AC-6): no device-farm /
@@ -70,4 +98,29 @@ deferred_metrics:
   - id: critical_render_path_ms
     canonical_device: 3GB Android
     status: deferred
-    trigger: throttled-Lighthouse-CI harness lands at Epic 11a (first additional public surface); Story 2.5 shipped the static byte proxies instead (Decision 2026-06-20-055(b))
+    # ⚠ RE-DEFERRED AT STORY 11a.2 WITH A NEW WRITTEN TRIGGER AND A REASON (ruling
+    # D5(a), Decision 2026-08-20-141). ⛔ NOT silently carried: the previous trigger
+    # ("Epic 11a, first additional public surface") FIRED when /members shipped in
+    # this story, and a trigger that fires must be answered in writing — discharged or
+    # re-deferred — never passed over. Per [[feedback_closure_language_precision]]
+    # this is "Resolved via explicit deferral", ⛔ not "closed".
+    #
+    # REASON FOR RE-DEFERRAL: a device-throttled Lighthouse-CI harness is a genuinely
+    # separate piece of INFRASTRUCTURE (a CI runner profile, a throttling config, a
+    # results store, a flake policy), not a change to a script this story already
+    # touches. ⛔ Smuggling it into a shell story would either rush the harness or
+    # stall the shell. The per-route restructure — which WAS a small change to a
+    # script this story touches — is discharged here instead.
+    #
+    # ⚠ WHAT REMAINS UNMEASURED IN THE MEANTIME, stated plainly: the dynamic SSR HTML
+    # weight and real render timing on the canonical device. The static byte proxies
+    # above measure client ASSETS only, and the new per-route block attributes those
+    # same assets — ⛔ neither is a critical-render-path measurement, and ⛔ neither may
+    # be cited as one.
+    previous_trigger: throttled-Lighthouse-CI harness lands at Epic 11a (first additional public surface) — FIRED at Story 11a.2 when /members shipped; answered here by re-deferral, not by silence
+    trigger: >-
+      Story 11a.3 (the Member Directory RENDER — the first public surface whose
+      response weight actually varies with data, and therefore the first one where a
+      throttled critical-render-path budget measures something a byte count cannot)
+      OR the first client island shipping on apps/public (js_bundle_bytes leaving 0),
+      whichever comes first.

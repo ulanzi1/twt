@@ -345,6 +345,15 @@ scope:
     # ([[feedback_gate_scope_semantic_coverage]]: a green scan over a newly-scanned file proves nothing).
     - packages/i18n/locales/hi/nominee-console.json
     - packages/i18n/locales/en/nominee-console.json
+    # Story 11a.2 — the `members` namespace strings (the public /members Member Directory
+    # shell: the not-yet-published empty state + the FR-91 pagination controls + the
+    # 400-shaped invalid-page state). ⛔ The register grows surface-by-surface BY BEING
+    # ADDED TO — a new namespace that is not globbed is UNSCANNED COPY wearing a green
+    # check, which is the same defect class as a vacuous gate leg.
+    # ⚠ This copy is member-facing and unauthenticated, so the member register + the
+    # blame/scarcity tone rules bite it.
+    - packages/i18n/locales/hi/members.json
+    - packages/i18n/locales/en/members.json
 
 # Allow-list — a finding is suppressed when an entry's `pattern` (regex, case-insensitive)
 # matches the finding's line AND (if `file` is set) the file path ends with it. GENUINE

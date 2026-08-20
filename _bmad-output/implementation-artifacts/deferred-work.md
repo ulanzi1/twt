@@ -4,6 +4,144 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred / recorded from: Story 11a.2 — public shell extension + tiered visibility renderers (2026-08-20)
+
+Closure-language posture per [[feedback_closure_language_precision]]: **Closed by [edit]** only where
+this story produced the artifact; everything else is **Resolved via explicit deferral / Carry
+forward**, each with a rationale and a **re-trigger naming a STORY or a concrete event — ⛔ never an
+epic** (a deferral naming an epic expires unowned).
+
+### Closed by [edit] (Story 11a.2)
+
+- **CR-D0-1.16b: `evaluateSnapshot` silently passes non-public HTML renders with no `fields`**
+  (deferred from the 1.16b code review; **its recorded trigger was this story**) — **Closed by
+  [edit].** `evaluateSnapshot` now pushes an `UNVERIFIED SNAPSHOT` warning onto the verdict when a
+  snapshot carries `html`, carries no `fields`, and the viewer is `authenticated_member` /
+  `operator_restricted` — the shape where NEITHER leg runs (tier-leak needs a field set; naked-PII
+  detection is public-only by spec) and the verdict was previously a bare `pass`, indistinguishable
+  from a snapshot that was actually checked.
+  ⚠ **It stays a WARNING, not a `fail`, deliberately:** the behaviour is spec-correct (AC-2 limits
+  PII detection to public renders) and failing would break callers doing nothing wrong. What was
+  missing is that the verdict said nothing about having checked nothing.
+  ⛔ **And "a warning nobody reads is not a discharge"** — so the closure is proven, not asserted:
+  `apps/public/tests/integration/public-pages/scrape-test.spec.ts` asserts on the warning across
+  five cases (both non-public tiers warn; `public` does not; a non-public snapshot WITH fields does
+  not; a no-render snapshot stays `no-op`). **Proven live:** disabling the engine condition turned
+  2 of those tests red; re-enabling turned them green. ⇒ discharged, ⛔ not deferred again.
+- **Per-route page-weight (CR-D0-1.16a / L1303)** — **Closed by [edit]** (ruling D5(a), Decision
+  `2026-08-20-141`). ⚠ **Its trigger — *"Epic 11a (second public route)"* — had already fired TWICE
+  and been missed**: `/terms` (2.6) and `/blog` (10.5) both shipped while the manifest stayed an
+  aggregate. ⛔ It did not fail; it was **not noticed**, and a third silent pass would be decay
+  rather than deferral ([[feedback_mechanization_split_commitment]]).
+  `apps/public/scripts/page-weight.mjs` now emits `routes: { '<route>': {…} }` for all 8 shipped
+  routes (verified: 8 attributed, `unattributed_bytes: 0`).
+  ⚠ **What the numbers ARE, stated because the deferral's own wording invites over-reading them:**
+  an **ATTRIBUTION of static client assets** per route. ⛔ **NOT** a measurement of each route's
+  dynamic SSR HTML, which is the larger part of the transfer. Shared chunks (`PublicShell.css`) are
+  attributed to **every** route, so ⛔ the per-route figures **do not sum** to `page_weight_bytes`;
+  `shared_bytes` is emitted separately so the overlap is visible. ⛔ **The block is EMITTED, NOT
+  ENFORCED** — `evaluateMetric` reads flat top-level `manifest[metric.id]`, so the two aggregate
+  metrics remain the gated numbers. Said plainly because a per-route block that merely *looked*
+  enforced would be the vacuous-green defect this epic keeps finding.
+- **FR-91 forced pagination on `apps/public`** (⚠ **a verified pre-existing HOLE, ⛔ not a prior
+  deferral** — nothing had recorded it) — **Closed by [edit].** Verified at `66ae30d`: the Story
+  1.14 guard has two halves and both are scoped to `apps/api` — the structural half *"walk[s] the
+  committed OpenAPI surface"*, which Astro routes do not emit. ⇒ `/members?page=all` would have been
+  entirely unpoliced. Now: a pure `apps/public/src/lib/pagination.ts` (exported cap constant
+  cross-referenced to FR-91, ⛔ no silent clamp, ⛔ no bulk-export affordance) **plus** a
+  `pagination_binding` gate leg that fails when a surface declaring `paginated: true` has a page
+  which never calls `parsePageParams()`. **Proven live** (exit 1, then reverted).
+  ⚠ **The leg proves BINDING, not BEHAVIOUR** — a page could call the parser and ignore the result;
+  that residual is covered by the page's own tests and is stated in the gate README.
+- **`/blog` + `/blog/[postId]` set NO `Cache-Control`** (⚠ another verified pre-existing hole, ⛔ not
+  a prior deferral) — **Closed by [edit].** Both now set `public, max-age=60, s-maxage=300` +
+  `Vary: Accept-Language`, matching their `public`-tier siblings. ⛔ The root cause — **absence
+  reading as "the default is fine"** — is closed structurally by the new **fail-closed**
+  `cache_policy_reconciliation` leg: a rendering surface that sets no header FAILS. **Proven live**
+  (exit 1 on both the conflict and the absence controls, then reverted).
+
+### Resolved via explicit deferral / Carry forward (Story 11a.2)
+
+- **⭐ The `<AuthenticatedFragment>` HYDRATION MECHANISM** (NEW — Story 11a.2, ruling D2(a)) —
+  **Resolved via explicit deferral.** ⛔ The epic AC (fragments that *"render server-side when the
+  viewer is authenticated"*) contradicts `architecture.md:504-517` (client-hydrated; no auth-derived
+  branching in SSR; auth boundary at the API) **and is unbuildable**: members are token-bearer
+  (Authorization header, `exp ≤ 15 min`), a browser navigation sends cookies, and there is no
+  `apps/member-web/` — so ⛔ **no browser surface holds a member token** and there is no
+  `authenticated_member` viewer on `apps/public` by any mechanism. This story ships the slot as
+  **public-fallback-only** (reads no session/cookie/header, takes no `isAuthenticated` prop) with an
+  **honestly empty registry**. The fork is **(a)** a client island → `apps/api/src/modules/public-pages/`
+  vs **(b)** an Astro 6 **server island** (`server:defer`: separate GET, encrypted props, so the
+  shell stays edge-cacheable while the fragment renders server-side) — ⭐ **(b) is the recorded
+  leading candidate**, the one reading under which the AC and the architecture agree.
+  ⛔ **Neither is chosen**: both need a token-holding browser.
+  **Re-trigger:** **Story 11b's FR-77 fragment** (nominee bank + IFSC + UPI CTA — the v1 registry
+  entry the architecture already names), **or** the story that creates `apps/member-web/`.
+- **`apps/api/src/modules/public-pages/` is NOT created** (NEW — Story 11a.2) — **Resolved via
+  explicit deferral.** ⛔ A module with no route is a claim that a boundary exists. Per
+  [[feedback_no_premature_package]] it lands with its first consumer. **Re-trigger:** the same
+  Story 11b FR-77 fragment above. (⚠ This supersedes the Story 2.5 "Authenticated-fragment registry"
+  deferral, which named *"Epic 11a … + Epic 11b"* — an epic-shaped trigger; it is re-pointed at a
+  story here.)
+- **`critical_render_path_ms` live-timing harness** — **Resolved via explicit deferral, RE-DEFERRED
+  WITH A NEW WRITTEN TRIGGER** (ruling D5(a)). ⚠ Its previous trigger (*"Epic 11a, first additional
+  public surface"*) **FIRED in this story** when `/members` shipped, and a fired trigger must be
+  answered in writing — ⛔ never passed over in silence. **Reason for re-deferral:** a
+  device-throttled Lighthouse-CI harness is separate INFRASTRUCTURE (runner profile, throttling
+  config, results store, flake policy), not a change to a script this story already touches;
+  smuggling it in would rush the harness or stall the shell.
+  **New trigger:** **Story 11a.3** (the Member Directory RENDER — the first public surface whose
+  response weight varies with data, and so the first where a throttled budget measures something a
+  byte count cannot) **OR** the first client island on `apps/public` (`js_bundle_bytes` leaving 0),
+  whichever comes first. Recorded in `friction-budget.yaml` alongside `previous_trigger`.
+- **⚠ `docs/ux/empty-skeleton-error-inventory.md` does NOT cover `/blog` or `/blog/[postId]`**
+  (NEW — Story 11a.2; a **recorded gap**, ⛔ not quietly fixed and ⛔ not quietly ignored) —
+  **Resolved via explicit deferral.** Story 10.5 shipped both routes and neither has an inventory
+  row. ⛔ Writing rows here would be Story 11a.2 authoring an inventory for surfaces it did not build
+  and whose states it has not reviewed with the copy author — which is how a `<TBD>`-free table ends
+  up asserting coverage nobody checked. **Re-trigger:** the full Phase-1 surface inventory that
+  closes launch-gate **Row 6** (Epic 11a completion). ⛔ Row 6's closure criteria are **not relaxed**
+  by this story and Row 6 stays `in-progress`.
+- **≥2-trustee ratification of the `/members` inventory row** (NEW — Story 11a.2) — **Resolved via
+  explicit deferral (un-attested).** Author-committed only; ⛔ **no Trustee-Panel session is
+  fabricated or back-dated** ([[feedback_record_unattested_no_backfill]]), exactly as the Story 2.6
+  `/terms` extension is carried. **Re-trigger:** the same Row 6 ratification above.
+
+### ⚠ Carried OPEN — ⛔ not closed by this story
+
+- **⛔ THE `member-directory` TIER-LEAK LEG IS ARMED BUT EMPTY.** `/members` renders the shell,
+  pagination controls and a not-yet-published empty state, and reads ⛔ **no member data**;
+  `member_name` is ⛔ **not rendered** (the Tier-1 decrypt stays behind Story 11a.3's
+  anti-enumeration safeguards, which `epics.md` C1 rules *"load-bearing, not defensive"*). So
+  `membersSurfaceFieldIds()` returns `[]` and the leg evaluates nothing on the flagship surface.
+  ⛔ **A green `member-directory` check today means "renders no classified field" — NOT "the
+  directory is policed".** This is asserted executably (a test asserts the field set IS empty) and
+  stated in the matrix, the page header, the render model and the spec, because letting a vacuous
+  green imply otherwise is the exact defect Story 11a.1 existed to remove.
+  **Re-trigger / owner:** **Story 11a.3**, which renders the classified fields.
+- **⚠ Decision `2026-08-20-140` cl.7 — the Niyamavali records NO directory publication — remains
+  OPEN.** ⛔ Not closed here, and **now sharper**: D1(a) ships a `/members` page while the
+  member-facing rulebook still does not mention one. That was ruled **knowingly** (Decision
+  `2026-08-20-141` cl.8), ⛔ not discovered afterwards. Amending the Niyamavali is Story 2.4's
+  workflow and needs its own ruling ([[feedback_supersede_never_reinterpret]]).
+  ⚠ It continues to compound `2026-08-19-136` cl.5's DPDPA exposure (legal counsel not engaged).
+- **⚠ `<MatrixField>` has NO call site on the shipped page.** ⭐ **Raised, ⛔ not silently
+  absorbed** — ruling D1(a)'s stated rationale was that shipping the route *"gives `<MatrixField>`
+  and the pagination helper a **real call site** instead of shipping primitives nobody consumes"*.
+  The pagination helper **does** get one. `<MatrixField>` **does not**, and cannot: AC4 forbids
+  rendering member data, and `member-directory`'s only two declared fields are `member_name`
+  (⛔ forbidden here) and `district` (the D1(b) render that was ⛔ **not** chosen, because it
+  publishes per-district membership counts ahead of 11a.3's safeguards). ⇒ **D1(a) ∧ AC4 are jointly
+  unsatisfiable on this point.** ⛔ No decorative call site was fabricated — a primitive "consumed"
+  for appearance's sake is worse than one honestly unconsumed.
+  ⚠ **What ships instead:** the component, fully built and fully tested (11 tests incl. planted
+  above-ceiling / undeclared / unknown-surface controls), plus **live verification of the Trap-3
+  runtime mechanism** — a temporary import proved the `?raw` matrix bytes DO inline into
+  `dist/server/chunks/`, then was reverted. So the risk Trap 3 names is retired for 11a.3.
+  **Re-trigger / owner:** **Story 11a.3**, the first story with a member field to render.
+
+---
+
 ## Deferred / recorded from: Story 10.21 — off-portal DPDPA access (2026-08-14)
 
 ⛔ **Every re-trigger below names a STORY or a concrete event — never an EPIC.** A deferral naming an
@@ -1365,12 +1503,12 @@ Closure-language posture per [[feedback_closure_language_precision]]: **Closed b
 **Resolved via explicit deferral / Carry forward (Story 2.5):**
 
 - **≥2-trustee ratification of the empty/skeleton/error inventory** (the Row 6 closure_criteria signature) — **Resolved via explicit deferral (un-attested).** Per [[feedback_record_unattested_no_backfill]], the dev workflow author-committed the artifact (Decision 2026-06-21-058) but did NOT reconstruct a Trustee-Panel ratification event. **Re-trigger:** convene the Trustee Panel to ratify the inventory; on ratification append a successor decision and (at Epic 11a full-surface completion) flip Row 6 → `closed`.
-- **`critical_render_path_ms` live-timing harness (friction-budget AC-6 / L218)** — **Resolved via explicit deferral** per Decision 2026-06-20-055(b) (deferral PERMITTED if written — now written in `friction-budget.yaml`). The Astro shell landed WITHOUT a throttled-Lighthouse harness; the static byte proxies acquired teeth instead. **Re-trigger:** re-targeted to **Epic 11a** (first additional public surface).
-- **Per-route page-weight (CR-D0-1.16a / L1303)** — **Resolved via explicit deferral.** The `member-public-web` manifest is an aggregate (js_bundle_bytes + page_weight_bytes), not per-route; AC-1's "per route" shape is kept aggregate at 2.5 (one public route renders). **Re-trigger:** Epic 11a (second public route) — restructure to `routes: { '/niyamavali': <bytes> }`.
+- **`critical_render_path_ms` live-timing harness (friction-budget AC-6 / L218)** — ⚠ **RE-DEFERRED AT STORY 11a.2 WITH A NEW WRITTEN TRIGGER (its Epic-11a trigger FIRED when /members shipped) — see the Story 11a.2 section at the top. ⛔ Still OPEN.** Original text follows, unchanged: **Resolved via explicit deferral** per Decision 2026-06-20-055(b) (deferral PERMITTED if written — now written in `friction-budget.yaml`). The Astro shell landed WITHOUT a throttled-Lighthouse harness; the static byte proxies acquired teeth instead. **Re-trigger:** re-targeted to **Epic 11a** (first additional public surface).
+- **Per-route page-weight (CR-D0-1.16a / L1303)** — ✅ **DISCHARGED BY STORY 11a.2 (ruling D5(a)) — see the Story 11a.2 section at the top. ⚠ This trigger FIRED TWICE (/terms 2.6, /blog 10.5) and was MISSED both times before it was answered.** Original text follows, unchanged: **Resolved via explicit deferral.** The `member-public-web` manifest is an aggregate (js_bundle_bytes + page_weight_bytes), not per-route; AC-1's "per route" shape is kept aggregate at 2.5 (one public route renders). **Re-trigger:** Epic 11a (second public route) — restructure to `routes: { '/niyamavali': <bytes> }`.
 - **FR-74 matrix tier-leak leg (pii-scrape) / `piiColumn`↔matrix cross-check** — **Resolved via explicit deferral.** The matrix is empty (`surfaces: []`), so the tier-leak leg is a no-op for `niyamavali`; the naked-PII leg is active (above). **Re-trigger:** **Epic 11a (Story 11a.1)** populates the matrix; then the tier-leak rules + the column cross-check acquire teeth against `niyamavali`.
 - **CR-D0-1.16b (non-public `RenderSnapshot` `fields` caveat / L1334)** — **Resolved via explicit deferral.** The 2.5 scrape spec constructs ONLY a `public` snapshot (where `detectNakedPii` is active), so the "non-public render with no `fields` silently passes" caveat is not exercised. **Re-trigger:** Epic 11a/11b authenticated-member/operator render snapshots — ensure they always carry `fields`.
 - **D8-1.4 Astro Actions runtime (cross-surface validation parity / L495)** — **Carry forward.** The Story 2.5 Niyamavali render is **read-only** (the version/diff selectors are GET query params, no form/Action), so no Astro Action runtime is added. **Re-trigger:** the first public surface that submits a form (e.g. a consent/contact form) adds the `@astrojs/actions` + Zod runtime then.
-- **Authenticated-fragment registry (NEW — Story 2.5)** — **Resolved via explicit deferral.** `apps/public/COMPOSITION-CONTRACT.md` initialises the fragment registry EMPTY; Story 2.5 ships zero authenticated fragments, so no `apps/api/src/modules/public-pages/` HTTP module is created. **Re-trigger:** Epic 11a (Member Directory) + Epic 11b (per-claim + In Memoriam) populate the registry + stand up the authenticated-fragment API.
+- **Authenticated-fragment registry (NEW — Story 2.5)** — ⚠ **PARTLY ANSWERED AND RE-POINTED AT STORY 11a.2** (the slot primitive + the honest registry ship; the HYDRATION MECHANISM and `apps/api/src/modules/public-pages/` stay deferred, now with STORY-shaped triggers rather than this entry's epic-shaped one) — see the Story 11a.2 section at the top. ⛔ Still OPEN. Original text follows, unchanged: **Resolved via explicit deferral.** `apps/public/COMPOSITION-CONTRACT.md` initialises the fragment registry EMPTY; Story 2.5 ships zero authenticated fragments, so no `apps/api/src/modules/public-pages/` HTTP module is created. **Re-trigger:** Epic 11a (Member Directory) + Epic 11b (per-claim + In Memoriam) populate the registry + stand up the authenticated-fragment API.
 - **Data-path alternative — thin public read endpoint in `apps/api`** (NEW — Story 2.5; the one open architectural question) — **Resolved via explicit deferral.** Story 2.5 reads public-tier Niyamavali directly from `@twt/domain` under `withPublicScope` (the public renderer holds DB creds; acceptable under `twt_app` + RLS + public-tier-only + the scrape gate). The defensible alternative (a thin `apps/api` public read endpoint keeping DB creds out of the renderer) is the recorded open question. **Re-trigger:** architect confirmation, or Epic 11b when `apps/api/src/modules/public-pages/` lands and a consolidation is natural.
 - **Standalone Docker image self-containment (NEW — Story 2.5)** — **Carry forward (not CI-gated).** The runtime stage carries `node_modules` for the server's external deps; image build/run is not part of `ci:local`. **Re-trigger:** the deploy story that builds + smoke-runs the public image (a `pnpm deploy --prod` slimming pass is the likely fix).
 
@@ -2726,7 +2864,7 @@ Review layers: Blind Hunter ✓ · Edge Case Hunter ✗ (server error — layer 
 
 ## Deferred from: code review of 1-16b-pii-scrape-ci-gate (2026-06-16)
 
-- **CR-D0-1.16b: `evaluateSnapshot` silently passes non-public HTML renders with no `fields`** — When a `RenderSnapshot` provides `html` but no `fields` for an `authenticated_member` or `operator_restricted` viewer context, neither the tier-leak check (requires `fields`) nor the PII detector (public-only by spec) runs, and the verdict is `pass`. Spec-consistent behaviour (AC-2 explicitly limits PII detection to public renders); risk materialises at Story 2.5/11a.2 when the live-render integration spec (`scrape-test.spec.ts`) constructs `RenderSnapshot` objects. **Trigger: Story 2.5 / Epic 11a.2 live-render integration; ensure `RenderSnapshot` always provides `fields` for non-public renders, or extend the engine to warn when `html` is present but `fields` is absent on non-public viewers.** (`packages/contracts/src/public-pages/scrape.ts`)
+- **CR-D0-1.16b: `evaluateSnapshot` silently passes non-public HTML renders with no `fields`** — ✅ **DISCHARGED BY STORY 11a.2 — see the Story 11a.2 section at the top of this file (Closed by [edit]).** ⛔ The original text is left BELOW, byte-unchanged, because a discharged deferral is annotated, never rewritten. — When a `RenderSnapshot` provides `html` but no `fields` for an `authenticated_member` or `operator_restricted` viewer context, neither the tier-leak check (requires `fields`) nor the PII detector (public-only by spec) runs, and the verdict is `pass`. Spec-consistent behaviour (AC-2 explicitly limits PII detection to public renders); risk materialises at Story 2.5/11a.2 when the live-render integration spec (`scrape-test.spec.ts`) constructs `RenderSnapshot` objects. **Trigger: Story 2.5 / Epic 11a.2 live-render integration; ensure `RenderSnapshot` always provides `fields` for non-public renders, or extend the engine to warn when `html` is present but `fields` is absent on non-public viewers.** (`packages/contracts/src/public-pages/scrape.ts`)
 
 - **CR-D1-1.16b: Phone regex false positives on non-phone 10-digit strings (URL paths, order IDs, `0`-prefix landlines)** — The phone pattern `(?<!\d)(?:\+?91[\s-]?|0)?[6-9]\d{9}(?!\d)` will match any 10-digit sequence starting with `[6-9]` in raw HTML (e.g., resource IDs in URL paths, numeric `data-id` attributes). The `0`-prefix variant also matches `0[6-9]\d{9}` formatted landlines. V1 limitation; spec documents patterns as "conservative". **Trigger: Story 2.5 / first real public HTML snapshot is wired into `loadSnapshots()`; refine regex and add context-aware exclusions (e.g., reject matches inside URL paths or quoted attributes) before live renders are scanned.** (`packages/contracts/src/public-pages/scrape.ts`) — See also Story 11a.4 obfuscation as defence-in-depth.
 

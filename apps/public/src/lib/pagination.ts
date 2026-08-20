@@ -20,19 +20,19 @@
 // rejection is the signal.
 //
 // PURE: no fs, no db, no env, no clock.
+import { PUBLIC_SURFACE_PAGE_SIZE_CAP } from '@twt/contracts';
 
 /**
  * Maximum rows a public list surface will serve in one response.
  *
- * ⭐ 50 is not a new number — it is the FR-91 public-surface cap already committed
- * in `packages/contracts/src/_common/pagination.ts` (*"Page-size cap per FR-91 = 50
- * for public surfaces"*). It is re-exported here rather than re-decided so the two
- * surfaces cannot drift into two different "the FR-91 cap".
+ * ⭐ 50 is not a new number — it IS `PUBLIC_SURFACE_PAGE_SIZE_CAP`, imported directly
+ * from `packages/contracts/src/_common/pagination.ts` rather than re-declared, so the
+ * two surfaces cannot drift into two different "the FR-91 cap".
  *
  * ⛔ Raising it is an FR-91 change and needs its own ruling: the cap is the whole
  * anti-bulk-extraction property, not a performance tuning knob.
  */
-export const PUBLIC_PAGE_SIZE_MAX = 50;
+export const PUBLIC_PAGE_SIZE_MAX = PUBLIC_SURFACE_PAGE_SIZE_CAP;
 
 /** Rows served when the caller does not ask for a specific page size. */
 export const PUBLIC_PAGE_SIZE_DEFAULT = 25;

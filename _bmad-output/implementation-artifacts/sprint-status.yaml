@@ -1,4 +1,25 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-20f (bmad-code-review 11a.2: REVIEWED AND PATCHED. ONE row flips:
+#   development_status[11a-2-...] review -> done. ⛔ epic-11a stays in-progress (4 stories remain:
+#   11a.3-11a.6). ⛔ No other story status changes.
+#   Three-layer adversarial review (Blind Hunter, Edge Case Hunter, Acceptance Auditor) against
+#   origin/main...HEAD, every finding verified against source before triage. ⭐ THE MOST SEVERE
+#   FINDING: `/members` threw on EVERY request (i18n `{{max}}` double-brace template vs the
+#   resolver's single-brace `{max}` TOKEN regex + `tr()` called with no params) -- unexercised by
+#   any test in the diff because every test bypassed `t()` with a hand-built label fixture. 8
+#   patch findings applied (i18n throw; 400-response over-caching; a NEW /blog/[postId] 404
+#   under-caching gap the story's own new gate leg is textually blind to; a rejection-copy label
+#   reused on a valid link; AC2's "reused, not re-decided" FR-91-cap claim proven FALSE and wired
+#   to a real shared `@twt/contracts` constant; two gate-hardening fixes -- comment-text
+#   gameability on the pagination-binding leg, missing max-age/s-maxage check on edge_cacheable;
+#   dead i18n scaffolding removed per BigDev ruling). 8 items deferred (gate textual-scan
+#   limitations, `page-weight.mjs` basename collision, offset precision loss, the `?raw`
+#   build-artifact proof gap, `AuthenticatedFragment` test textual-evasion surface, two Debug-Log
+#   recording-precision gaps, and `page`'s missing upper bound -- deferred to 11a.3 per BigDev
+#   ruling after a "suppress the previous-link" framing was corrected during implementation: that
+#   link's asymmetry with "next" is defensible design, not a bug). ⛔ All 8 applied patches
+#   verified: full `apps/public`/`packages/contracts`/`packages/i18n` test suite (1150 tests) +
+#   typecheck + `astro check` + lint + the live `pii-scrape` CI gate script all green post-patch.
 # last_updated: 2026-08-20e (bmad-dev-story 11a.2: IMPLEMENTED. ONE row flips:
 #   development_status[11a-2-...] ready-for-dev -> review. ⛔ epic-11a stays in-progress (4 stories
 #   remain: 11a.3-11a.6). ⛔ No other story status changes. ⛔ No migration, no ADR.
@@ -8797,7 +8818,7 @@ development_status:
   # ==========================================================================
   epic-11a: in-progress
   11a-1-4-tier-visibility-matrix-codified-per-surface-public-vs-private-replacement: done
-  11a-2-public-astro-ssr-shell-extension-for-member-directory-tiered-visibility-renderers: review
+  11a-2-public-astro-ssr-shell-extension-for-member-directory-tiered-visibility-renderers: done
   11a-3-member-directory-pii-shielded-tiered-render-scope-anti-enumeration-safeguards: backlog
   11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only: backlog
   11a-5-noticeboard-strip-foundational-layout-component: backlog

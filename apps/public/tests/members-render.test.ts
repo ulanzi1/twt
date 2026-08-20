@@ -23,10 +23,12 @@ const LABELS: MembersLabels = {
   notPublishedBody: 'being prepared',
   paginationLabel: 'Directory pages',
   previousPage: 'Previous page',
-  nextPage: 'Next page',
   invalidTitle: 'could not be shown',
-  invalidBody: 'at most {{max}} entries are shown at a time',
+  // Pre-interpolated, matching what `t()` produces at the real call site (single-brace
+  // `{max}` token, interpolated before it ever reaches this module).
+  invalidBody: `at most ${PUBLIC_PAGE_SIZE_MAX} entries are shown at a time`,
   invalidLink: 'Open the directory',
+  backToStart: 'Back to the first page',
 };
 
 const q = (search: string) => new URLSearchParams(search);

@@ -71,10 +71,10 @@ const MEMBERS_TEST_LABELS: MembersLabels = {
   notPublishedBody: 'being prepared',
   paginationLabel: 'pages',
   previousPage: 'previous',
-  nextPage: 'next',
   invalidTitle: 'invalid',
   invalidBody: 'invalid body',
   invalidLink: 'open',
+  backToStart: 'back to start',
 };
 
 const here = dirname(fileURLToPath(import.meta.url));

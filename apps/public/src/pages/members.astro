@@ -39,7 +39,7 @@ import {
   buildMembersView,
   type MembersLabels,
 } from '../lib/members-render.js';
-import { pageHref, parsePageParams } from '../lib/pagination.js';
+import { PUBLIC_PAGE_SIZE_MAX, pageHref, parsePageParams } from '../lib/pagination.js';
 import { ACTIVE_PARIWAR_ID } from '../lib/pariwar.server.js';
 
 // ── Locale + branding (cache-safe: no session, no member state) ──────────────
@@ -71,10 +71,10 @@ const labels: MembersLabels = {
   notPublishedBody: tr('not_published_body'),
   paginationLabel: tr('pagination_label'),
   previousPage: tr('previous_page'),
-  nextPage: tr('next_page'),
   invalidTitle: tr('invalid_request_title'),
-  invalidBody: tr('invalid_request_body'),
+  invalidBody: tr('invalid_request_body', { max: PUBLIC_PAGE_SIZE_MAX }),
   invalidLink: tr('invalid_request_link'),
+  backToStart: tr('back_to_start'),
 };
 
 // ── FR-91 forced pagination (AC2) ───────────────────────────────────────────
@@ -93,8 +93,16 @@ if (rejection !== null) Astro.response.status = rejection.status;
 // cache-policy leg FAILS if this line and that declaration disagree.
 // ⭐ STORY 11a.3 MUST RE-DECIDE THIS when real member rows render — a directory of
 // named members behind anti-enumeration safeguards is a different caching question.
-Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
-Astro.response.headers.set('Vary', 'Accept-Language');
+// ⛔ A 400 rejection is NOT cached the same way: caching a malformed-`?page=`/`?limit=`
+// probe at a shared edge for 5 minutes would let a repeat of that exact probe be
+// answered from the cache without ever reaching the origin — weakening the very
+// "the rejection is the signal" posture `pagination.ts` documents.
+if (rejection === null) {
+  Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
+  Astro.response.headers.set('Vary', 'Accept-Language');
+} else {
+  Astro.response.headers.set('Cache-Control', 'no-store');
+}
 
 const firstPageHref = pageHref('/members', Astro.url.searchParams, 1);
 ---
@@ -142,7 +150,7 @@ const firstPageHref = pageHref('/members', Astro.url.searchParams, 1);
         )}
 
         {view.model.page > 1 && (
-          <p><a class="members__link" href={firstPageHref}>{labels.invalidLink}</a></p>
+          <p><a class="members__link" href={firstPageHref}>{labels.backToStart}</a></p>
         )}
       </>
     )}

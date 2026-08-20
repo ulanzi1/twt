@@ -5,9 +5,8 @@
   "not_published_body": "The directory is being prepared and is not open to the public yet. Nothing about your membership changes in the meantime, and no member details are shown on this page today.",
   "pagination_label": "Directory pages",
   "previous_page": "Previous page",
-  "next_page": "Next page",
-  "page_position": "Page {{page}}",
   "invalid_request_title": "That page could not be shown",
-  "invalid_request_body": "The address asked for a page this directory does not serve. Directory pages are numbered, and at most {{max}} entries are shown at a time. Please open the directory from the start.",
-  "invalid_request_link": "Open the directory"
+  "invalid_request_body": "The address asked for a page this directory does not serve. Directory pages are numbered, and at most {max} entries are shown at a time. Please open the directory from the start.",
+  "invalid_request_link": "Open the directory",
+  "back_to_start": "Back to the first page"
 }

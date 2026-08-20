@@ -17,11 +17,19 @@ import { z } from 'zod';
 export const Cursor = z.string().min(1).regex(/\S/, 'cursor must not be blank');
 export type Cursor = z.output<typeof Cursor>;
 
+/**
+ * Page-size cap per FR-91 for public surfaces. The single source of truth — every
+ * public-surface pagination consumer (this schema, `apps/public`'s own forced-pagination
+ * module) imports THIS constant rather than re-declaring `50`, so the cap cannot drift
+ * into two different "the FR-91 cap".
+ */
+export const PUBLIC_SURFACE_PAGE_SIZE_CAP = 50;
+
 /** Default public-surface pagination query (FR-91 max 50). */
 export const PaginationQuery = z
   .object({
     cursor: Cursor.optional(),
-    limit: z.number().int().positive().max(50).optional(),
+    limit: z.number().int().positive().max(PUBLIC_SURFACE_PAGE_SIZE_CAP).optional(),
   })
   .strict();
 export type PaginationQuery = z.output<typeof PaginationQuery>;

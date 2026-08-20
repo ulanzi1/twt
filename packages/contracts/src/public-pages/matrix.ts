@@ -307,6 +307,10 @@ export const PublicVsPrivateMatrixSchema = z
   .strict()
   .superRefine((data, ctx) => {
     const seen = new Set<string>();
+    // Route uniqueness (code review 2026-08-20): without this, two surfaces sharing a `route`
+    // would collapse silently in `gate.ts:checkRouteCoverage`'s `Map` (last-one-wins), so the
+    // duplicate would never be caught by the "fail-closed, both directions" route-coverage leg.
+    const seenRoutes = new Set<string>();
     for (const surface of data.surfaces) {
       if (seen.has(surface.id)) {
         ctx.addIssue({
@@ -316,6 +320,17 @@ export const PublicVsPrivateMatrixSchema = z
         });
       }
       seen.add(surface.id);
+
+      if (seenRoutes.has(surface.route)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['surfaces'],
+          message:
+            `duplicate route "${surface.route}" declared by more than one surface — ` +
+            `route-coverage can only reconcile one surface per route.`,
+        });
+      }
+      seenRoutes.add(surface.route);
     }
 
     // ── The Tier-1 exception is EXACTLY ONE, matrix-wide (AC4) ────────────────
@@ -363,13 +378,29 @@ export const PublicVsPrivateMatrixSchema = z
         });
         continue;
       }
-      if (!surface.fields.some((f) => f.id === entry.field)) {
+      const field = surface.fields.find((f) => f.id === entry.field);
+      if (field === undefined) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['escalations', i, 'field'],
           message:
             `escalation names field "${entry.field}" on surface "${entry.surface}", which ` +
             `that surface does not declare (orphaned entry).`,
+        });
+        continue;
+      }
+      // ── The ledger must match REALITY, not just be internally well-formed (code review
+      // 2026-08-20). Without this, an entry could claim a field was escalated to `public` while
+      // the field's OWN declared tier says something else — the attestation and the matrix would
+      // silently disagree, and nothing would catch it.
+      if (field.tier !== entry.to) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['escalations', i, 'to'],
+          message:
+            `escalation "${entry.surface}.${entry.field}" claims the field was escalated TO ` +
+            `"${entry.to}", but the field is currently declared at tier "${field.tier}" — the ` +
+            `ledger and the matrix must agree. Fix whichever one is stale.`,
         });
       }
     }

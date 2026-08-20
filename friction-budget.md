@@ -1325,3 +1325,38 @@ not assumed: `friction-budget.yaml:55` already records 5219 as the measurement
 to claim. Well under the 512000 ceiling, and the baseline stays at its best-ever
 3942 ([[project_friction_budget_baseline_ratchet]] — the ratchet only ever
 DECREASES in-PR).
+
+**Story 11a.2 disposition (declaration affirmed — ⛔ NO new row, and the FR-91
+refusal was CONSIDERED for one):** the public shell extension — `<MatrixField>`,
+`<AuthenticatedFragment>`, the FR-91 pagination helper, the cache-policy gate leg,
+and the new `/members` route. AC-4 fires on the `apps/public` path touch
+(conservative by design), and the ledger was reviewed. **No row is warranted:**
+
+1. **`/members` is read-only, like every public surface before it.** No form, no
+   upload, no member-initiated action — the same finding the Story 2.5, 2.6 and
+   11a.1 dispositions record for these paths. It renders the shell, the pagination
+   controls and a not-yet-published empty state, and reads ⛔ no member data at all.
+2. **⭐ THE FR-91 REFUSAL WAS WEIGHED AS A CANDIDATE ROW AND REJECTED, deliberately.**
+   A rejected `?page=all` / over-cap `?limit` / malformed page number renders a
+   400-shaped state the visitor must recover from, which *looks* like forced friction
+   protecting a named subsystem (the directory, against bulk extraction). It is **not
+   a ledger row**, because the ledger declares **deliberately non-effortless
+   MEMBER-FACING SURFACES** — friction a member pays while doing something they came
+   to do. This is an **error state for a malformed request**: a member following the
+   directory's own links never encounters it, since every link the page emits is in
+   range. ⛔ Declaring it would inflate the ledger with a row nobody pays, and a
+   ledger that counts error states stops meaning what UX Stance #2 says it means.
+   ⚠ Recorded here rather than silently omitted, so a later reader can see the
+   question was asked and how it was answered.
+3. **The pagination controls themselves cost nothing beyond a page load.** They are
+   plain `<a>` server roundtrips (⛔ not JS-dependent buttons), keyboard-reachable,
+   with visible focus — the same posture as the lang-toggle, which prior dispositions
+   already record as not-a-friction-surface.
+
+⚠ **Metric facet, stated plainly:** `js_bundle_bytes` stays **0** — `/members` ships
+⛔ not one client island, so the first-island question in Trap 5 never arises.
+`page_weight_bytes` measured **6327** (was 5219 after `/terms`; the `/members` CSS
+chunk is 1108 bytes). That is a **RISE**, well under the 512000 ceiling, so it PASSES
+with the delta reported — and the baseline stays at its best-ever **3942**. ⛔ A rise
+is NEVER ratcheted ([[project_friction_budget_baseline_ratchet]] — the ratchet only
+ever DECREASES in-PR, and `detectRaisedBaselines` forbids an in-PR raise).

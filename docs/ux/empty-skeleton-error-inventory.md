@@ -79,19 +79,65 @@ architecture L4783) — re-homed to **Story 2.5** by Decision 2026-06-20-054 (AI
 | **Skeleton/loading** | **N/A — server-rendered, no client fetch.** Delivered as complete HTML; no loading phase (same rationale as `/niyamavali`). | — |
 | **Error** | Delegated to the `/500` route: any failure in the frontmatter read (or the `withPublicScope` read) surfaces as the SSR error fallback. | `500.astro` |
 
+### 7. `/members` — Member Directory shell (Story 11a.2)
+
+⭐⛔ **What this surface renders today: the shell, the FR-91 pagination controls, and an
+explicit not-yet-published empty state. ⛔ NO member data at all** — no rows, no counts,
+no districts, and ⛔ **not `member_name`** (the Tier-1 decrypt stays behind Story 11a.3's
+anti-enumeration safeguards, which `epics.md` C1 rules *"load-bearing, not defensive"*).
+⇒ the surface's tier-leak field set is **EMPTY** and its check is **armed but vacuous**
+until 11a.3. ⛔ Stated here so a green check is never read as "the directory is policed".
+
+| State | Design | Source |
+| --- | --- | --- |
+| **Empty (the primary state today)** | Dignified not-yet-published card: `not_published_title` ("The member directory is not published yet") + `not_published_body`, which says plainly that **nothing about the reader's membership changes** and that **no member details are shown on this page today**. The branded shell (header + language toggle + footer) still renders. ⚠ This is not a placeholder standing in for a failed read — **there is no read**. | `members.astro`; `lib/members-render.ts` (`buildMembersView`, `hasMembers: false`); keys `not_published_title` / `not_published_body` |
+| **Invalid page request (FR-91 rejection)** | A **400-shaped in-page state**: `invalid_request_title` + `invalid_request_body` (naming the max page size) + a link back to the directory start. ⛔ **Not a redirect to page 1** and ⛔ not a successful render of a different page than was asked for — a silent clamp answers a probe with a normal-looking page. ⚠ The parser's developer message (which names the probe back at the prober) is **log copy only** and never reaches the DOM. | `members.astro` (`Astro.response.status = 400`); `lib/members-render.ts` (`buildMembersRejectionView`); `lib/pagination.ts`; keys `invalid_request_*` |
+| **Populated** | ⛔ **Does not exist at Story 11a.2.** Owned by **11a.3**, together with the roster read, the Tier-1 name decrypt, and the anti-enumeration safeguards — which ship in the same story by design, because a member-listing surface ahead of its safeguards is the sequencing hazard `2026-08-19-136` cl.4 exists to prevent. | **11a.3** |
+| **Skeleton/loading** | **N/A — server-rendered, no client fetch.** Delivered as complete HTML; no loading phase (same rationale as `/niyamavali` and `/terms`). ⚠ `js_bundle_bytes` stays **0** — there is not one client island on this surface. | — |
+| **Error** | Delegated to the `/500` route: any failure in the frontmatter (branding read / locale resolution) surfaces as the SSR error fallback. | `500.astro` |
+
+⚠ **Pagination is keyboard-reachable REAL LINKS** (`<nav aria-label>` + `<ul>` of `<a rel="prev">`),
+not JS-dependent buttons — the shell's works-with-JS-disabled posture (Story 2.5 AC3) is
+⛔ not relaxed by this story. Visible `:focus-visible` outlines ship on every link (Story 0.10 P0-2c).
+
+⚠ **⛔ NO "next" affordance ships while the directory is unpublished.** A next-page link on
+an empty directory tells a prober that further pages are believed to exist. 11a.3 computes
+it from a real row count.
+
+### ⚠ RECORDED GAP — `/blog` and `/blog/[postId]` are NOT covered by this inventory
+
+Story 10.5 shipped both routes and **neither has a row here**. ⛔ Recorded rather than
+quietly fixed and rather than quietly ignored: writing rows for them now would be Story
+11a.2 authoring an inventory for a surface it did not build and whose states it has not
+reviewed with the copy author — which is how a `<TBD>`-free table ends up asserting
+coverage nobody checked.
+
+**Routed deliberately:** carried as an open item in `deferred-work.md` with the trigger
+**"Epic 11a completion — the full Phase-1 surface inventory that closes Row 6"**. ⛔ Row 6's
+closure criteria are **not relaxed** by this story, and Row 6 stays `in-progress`.
+
 ## Coverage attestation
 
-- **Surfaces covered:** 6 (the Niyamavali list + version + diff sub-views + 404 + 500 at
-  Story 2.5; the `/terms` render added at Story 2.6) — i.e. every screen surface `apps/public`
-  builds through Story 2.6.
-- **No `<TBD>` cells** for the 2.5/2.6 surfaces. Every `N/A` carries a recorded rationale.
-- **Extended at:** Epic 11a (Member Directory empty/skeleton/error), Epic 11b (per-claim +
-  In Memoriam). Row 6 `closed` only at Epic 11a full-Phase-1-surface completion.
+- **Surfaces covered:** 7 (the Niyamavali list + version + diff sub-views + 404 + 500 at
+  Story 2.5; `/terms` added at Story 2.6; **`/members` added at Story 11a.2**).
+- ⚠ **NOT covered: `/blog` and `/blog/[postId]`** (Story 10.5) — a real, **recorded** gap,
+  ⛔ not an oversight discovered later and ⛔ not quietly filled by this story. See the
+  section above; routed with a written trigger in `deferred-work.md`.
+  ⇒ this inventory is **not** "every screen surface `apps/public` builds", and ⛔ must not
+  be cited as if it were.
+- **No `<TBD>` cells** for the 2.5 / 2.6 / 11a.2 surfaces. Every `N/A` carries a rationale.
+- **Extended at:** Epic 11a (⚠ the `/members` **populated** state is still owed by Story
+  11a.3), Epic 11b (per-claim + In Memoriam). Row 6 `closed` only at Epic 11a
+  full-Phase-1-surface completion — ⛔ criteria NOT relaxed by Story 11a.2.
 
 ## Ratification
 
 - **Author-committed (Story 2.5):** BigDev (Solo Builder) — the original inventory artifact.
 - **Author-committed (Story 2.6):** BigDev (Solo Builder) — the `/terms` surface row above.
+- **Author-committed (Story 11a.2):** BigDev (Solo Builder) — the `/members` surface row and
+  the recorded `/blog` gap. ⛔ **No trustee ratification is fabricated or back-dated for it**
+  ([[feedback_record_unattested_no_backfill]]); it is carried **un-attested** exactly as the
+  2.6 extension is.
 - **≥2-trustee ratification:** RECORDED AS **un-attested / pending** per
   [[feedback_record_unattested_no_backfill]] — the Story 2.5 surface set was trustee-ratified
   2026-06-23 (Decision 2026-06-23-060); the Story 2.6 `/terms` extension is author-committed and

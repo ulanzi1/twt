@@ -1,4 +1,32 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-21c (SECOND code-review pass on 11a.3, three layers over the POST-PATCH
+#   tree. 38 raised -> 36 unique -> 4 decision-needed + 30 patch + 2 dismissed. ALL 34 APPLIED.
+#   ⭐ THE FINDING OF THE ROUND: a DECEASED member was published on the open internet with their
+#   Tier-1 name decrypted and a pill reading "Active". `MEMBER_LIFECYCLE_STATES` has no `deceased`
+#   label -- death lives in the `account-frozen` overlay, which the roster predicate never read, and
+#   `getMemberAccountOverlay` had ZERO production call sites. The comment that hid it (`overlay.ts`
+#   "Story 6.1 does NOT exist yet") had been STALE since Epic 6 shipped.
+#   ⭐ SECOND: the anti-enumeration key was ATTACKER-CHOSEN -- `apps/public` appended the visitor to
+#   the browser-supplied X-Forwarded-For and `trustProxy:true` reads the LEFTMOST entry, so one
+#   rotated header defeated the rate limit AND the abuse counters. AC10's guard could not see it: it
+#   sent a single-element chain, where leftmost and rightmost are identical.
+#   Rulings RD1-RD4 committed as Decision 2026-08-21-145 in a `governance:` commit landing BEFORE
+#   any code -- the discipline the kill-switch finding in this same round says was skipped last time.
+#   ⚠ cl.5 DISCLOSES rather than backfills: the kill switch shipped implementation-first inside a
+#   `fix:` commit with no decision-log entry; the history is NOT rewritten to look compliant.
+#   Live-DB regression GREEN: @twt/domain 3051/3052, @twt/api 1062/1063 (both skips pre-existing;
+#   counts ROSE because this round added tests -- none deleted). Gates green: i18n parity, pii,
+#   microcopy, schema-diff, benefit-mechanism, OpenAPI determinism, typecheck+lint x5 packages.
+#   Revert-sanity RUN, not reasoned: dropping NOT_DECEASED fails 5/6 new cases (the 6th is the
+#   settled-claim negative control, correctly still passing); pastEnd and hasNext each fail exactly
+#   one leg -- no fixture wearing several hats.
+#   ⛔ STILL OPEN, carried NOT closed: 2026-08-20-140 cl.7 (now WIDER -- the kill switch joins the
+#   set of directory mechanics no Niyamavali clause describes); 2026-08-19-136 cl.5 (DPDPA counsel,
+#   SHARPENED -- the surface was publishing the deceased); the resourceLocator widening still owes a
+#   re-examination trigger; dynamic-html-weight.mjs runs in no CI leg.
+#   ⚠ 2026-08-21-145 is Solo-builder-author-committed; cl.1 SUPERSEDES a prior ruling and cl.5
+#   discloses non-compliance -- both flagged for trustee attention at the next sitting.
+#   ONE row flips: development_status[11a-3-...] review -> done. ⛔ epic-11a stays in-progress.
 # last_updated: 2026-08-21b (live-DB verification 11a.3: `twt-test-pg` (:5433) became available.
 #   `pnpm db:migrate` applied 0111 cleanly (no 42P07); pg_class confirms relrowsecurity /
 #   relforcerowsecurity both true on pariwar_directory_publication. directory-publication-policy.
@@ -9021,7 +9049,7 @@ development_status:
   epic-11a: in-progress
   11a-1-4-tier-visibility-matrix-codified-per-surface-public-vs-private-replacement: done
   11a-2-public-astro-ssr-shell-extension-for-member-directory-tiered-visibility-renderers: done
-  11a-3-member-directory-pii-shielded-tiered-render-scope-anti-enumeration-safeguards: review
+  11a-3-member-directory-pii-shielded-tiered-render-scope-anti-enumeration-safeguards: done
   11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only: backlog
   11a-5-noticeboard-strip-foundational-layout-component: backlog
   11a-6-pinned-notice-component: backlog

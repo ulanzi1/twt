@@ -49,11 +49,21 @@
 // signature"*) recorded at `2026-08-20-143` cl.14. ⛔ Do not add a lift.
 //
 // ── ⛔ THIS MODULE DECIDES A RENDER, NEVER A BENEFIT ─────────────────────────────────
-// It reads `members.state` and the moderation overlay, both of which ALSO feed benefit
-// paths — but only to decide whether a row appears on a web page. ⛔ No `is_valid`, no
-// `is_assignable`, no eligibility, pool-assignment, validity or peer-mesh predicate is
-// written, conjoined or consulted here, and a diff in which a directory-listing predicate
-// reaches an eligibility path must be rejected in review (the Story 10.10 shape).
+// It reads `members.state`, the moderation overlay, and the `account-frozen` overlay — all
+// of which ALSO feed benefit paths — but only to decide whether a row appears on a web page.
+// ⛔ No `is_valid`, no `is_assignable`, no eligibility, pool-assignment, validity or peer-mesh
+// predicate is written, conjoined or consulted here, and a diff in which a directory-listing
+// predicate reaches an eligibility path must be rejected in review (the Story 10.10 shape).
+//
+// ── ⚠ THE ROSTER PREDICATE HAS THREE HALVES, AND THE THIRD WAS MISSING ──────────────
+// `2026-08-20-143` D3(a) ruled TWO conjuncts (lifecycle state + moderation standing).
+// `2026-08-21-145` cl.1 SUPERSEDES it with a THIRD: the `account-frozen` overlay. ⛔ It was
+// not an oversight of detail — it was structural: death NEVER touches `members.state` (there
+// is no `deceased` label in `MEMBER_LIFECYCLE_STATES`), so a two-conjunct predicate reading
+// only state + moderation published a DECEASED member to the open internet, name decrypted
+// from Tier-1, status pill reading "Active", for as long as their claim stayed open.
+// ⛔ Before adding a fourth read here, ask what a member's ABSENCE from this page would mean
+// to them — that question is what this conjunct cost us ([[feedback_niyamavali_rulebook_not_spec]]).
 
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 
@@ -63,6 +73,10 @@ import { clampLimit } from '../pagination.js';
 import { memberKycProfiles } from '../schema/member_kyc_profiles.js';
 import { memberPostings } from '../schema/member_postings.js';
 import { members } from '../schema/members.js';
+// ⚠ VALUE imports (event-type string constants), ⛔ not types — `overlay.ts` is the AUTHORITY on
+// which claim events freeze and unfreeze, and re-spelling them here is how the two drift apart.
+// ⛔ No cycle: `overlay.ts` does not import this module.
+import { ACCOUNT_FREEZE_EVENT_TYPE, ACCOUNT_UNFREEZE_EVENT_TYPES } from './overlay.js';
 import type { MemberLifecycleState } from './state.js';
 
 /**
@@ -94,6 +108,41 @@ export type DirectoryVisibleMemberState = (typeof DIRECTORY_VISIBLE_MEMBER_STATE
  * closes, and ⛔ not a reason to quietly change the predicate.
  */
 export const DIRECTORY_EXCLUDED_MODERATION_ACTIONS = ['suspend', 'terminate'] as const;
+
+/**
+ * ⭐ THE RULED ROSTER PREDICATE, HALF THREE — a member whose death has been reported is omitted.
+ *
+ * `2026-08-21-145` cl.1, which ⛔ **SUPERSEDES** `2026-08-20-143` D3(a)'s two-conjunct predicate.
+ *
+ * ⚠ WHY THIS CANNOT BE A `members.state` CHECK: `MEMBER_LIFECYCLE_STATES` has ⛔ no `deceased`
+ * label. Death is carried by the `account-frozen` overlay, which `member/overlay.ts` states is
+ * "NEVER written to `members.state`". A predicate reading only state + moderation is therefore
+ * BLIND to death BY CONSTRUCTION — it cannot be fixed by widening the state tuple.
+ *
+ * ⛔ THIS IS THE SET-BASED FORM OF `evaluateAccountOverlay`, ⛔ NOT A SECOND POLICY. It must stay
+ * observationally equivalent to that evaluator ([[project_contribution_fact_projection_substrate]]):
+ * fold each claim STREAM independently, last-wins, then freeze iff ANY stream is currently frozen
+ * (Story 6.4 aggregate — a single claim's settle/deny must ⛔ never clear a freeze another claim
+ * still needs). ⭐ "Change one, check the other" — `member/overlay.ts` is the other.
+ *
+ * ⚠ `DISTINCT ON` requires the `ORDER BY` to LEAD with the `DISTINCT ON` expression or Postgres
+ * raises 42P10 ([[project_contribution_fact_projection_substrate]]) — hence `ORDER BY e.stream_id`
+ * first, and the recency keys after it.
+ */
+const NOT_DECEASED = (now: Date) => sql`NOT EXISTS (
+    SELECT 1 FROM (
+      SELECT DISTINCT ON (e.stream_id) e.event_type AS latest_type
+        FROM events_log e
+       WHERE e.event_type IN (${sql.join(
+         [ACCOUNT_FREEZE_EVENT_TYPE, ...ACCOUNT_UNFREEZE_EVENT_TYPES].map((t) => sql`${t}`),
+         sql`, `,
+       )})
+         AND lower(e.payload ->> 'deceased_member_id') = lower("members"."member_id"::text)
+         AND e.occurred_at <= ${now}
+       ORDER BY e.stream_id, e.occurred_at DESC, e.event_version DESC
+    ) latest_per_claim
+    WHERE latest_per_claim.latest_type = ${ACCOUNT_FREEZE_EVENT_TYPE}
+  )`;
 
 /** One public-directory row, as the substrate holds it. ⛔ The name is CIPHERTEXT, not a name. */
 export interface DirectoryRosterEntry {
@@ -141,26 +190,46 @@ export const DIRECTORY_PAGE_SIZE_CAP = 50;
  *
  * ⭐ Literal outer qualifiers, for the reason argued in the module header.
  */
+/**
+ * ⚠ EXPRESSED AS A DENYLIST OVER {@link DIRECTORY_EXCLUDED_MODERATION_ACTIONS}, ⛔ NOT as an
+ * allowlist of one. The earlier form was `COALESCE(…, 'restore') = 'restore'`, which is equivalent
+ * ONLY while `MODERATION_ACTIONS` happens to be exactly `{suspend, terminate, restore}` — i.e.
+ * correct by ACCIDENT of the enum's current length. A fourth action (a warn, an expiry, a
+ * reinstate) would have SILENTLY de-listed every member whose latest action was that new value —
+ * a directory ban nobody wrote, invisible because `2026-08-21-144` cl.5 guarantees the directory
+ * discloses ⛔ no reason for an omission. ⭐ That is the Story 10.10 shape arriving by OMISSION
+ * rather than by conjunction ([[project_moderation_model_correct_course]]).
+ *
+ * ⭐ The exported constant is now LOAD-BEARING, ⛔ no longer a decorative doc-block that described
+ * a rule the query did not implement.
+ */
 const NOT_UNDER_SANCTION = sql`COALESCE((
     SELECT a.action
       FROM member_moderation_actions a
      WHERE a.member_id = "members"."member_id" AND a.pariwar_id = "members"."pariwar_id"
      ORDER BY a.acted_at DESC, a.created_at DESC, a.moderation_action_id DESC
      LIMIT 1
-  ), 'restore') = 'restore'`;
+  ), 'restore') NOT IN (${sql.join(
+    DIRECTORY_EXCLUDED_MODERATION_ACTIONS.map((a) => sql`${a}`),
+    sql`, `,
+  )})`;
 
 /**
- * The FULL ruled roster predicate, shared by the page read and the count so the two cannot
- * drift into two different rosters. ⛔ Never re-spell either half at a call site.
+ * The FULL ruled roster predicate — ⭐ all THREE halves — shared by the page read and the count so
+ * the two cannot drift into two different rosters. ⛔ Never re-spell any half at a call site.
+ *
+ * ⚠ `now` is REQUIRED, ⛔ not defaulted here: both callers must resolve the roster as of ONE
+ * instant, and a default would let the page read and the count silently take two.
  *
  * `pariwar_id` rides ALONGSIDE RLS as an explicit predicate — defense-in-depth, and what keeps
  * the read correct if a caller ever passes a BYPASSRLS pool (the member-nominees-read precedent).
  */
-function directoryRosterPredicate(pariwarId: PariwarId) {
+function directoryRosterPredicate(pariwarId: PariwarId, now: Date) {
   return and(
     eq(members.pariwarId, pariwarId),
     inArray(members.state, [...DIRECTORY_VISIBLE_MEMBER_STATES]),
     NOT_UNDER_SANCTION,
+    NOT_DECEASED(now),
   );
 }
 
@@ -208,7 +277,7 @@ export async function listPublicDirectoryMembers(
     })
     .from(members)
     .innerJoin(memberKycProfiles, eq(memberKycProfiles.memberId, members.memberId))
-    .where(directoryRosterPredicate(pariwarId))
+    .where(directoryRosterPredicate(pariwarId, now))
     .orderBy(asc(members.memberId))
     .limit(clampLimit(opts.limit, { default: DIRECTORY_PAGE_SIZE_DEFAULT, cap: DIRECTORY_PAGE_SIZE_CAP }))
     .offset(offset);
@@ -234,13 +303,23 @@ export async function listPublicDirectoryMembers(
  * the rendered page may be SHORTER than this number implies. That asymmetry is accepted — a
  * shorter page is strictly better than a blank name cell — ⛔ but it must not be described as an
  * exact rendered-row count.
+ *
+ * ⚠ `now` IS PART OF THE PREDICATE, ⛔ not a convenience. Half three (`account-frozen`) and the
+ * district read are both AS-OF reads; a count taken at a different instant than the page read
+ * describes a roster the page rows were not drawn from — `hasNext` then advertises a page that is
+ * empty, or the last page silently loses a row. ⭐ The caller passes ONE instant to BOTH.
  */
-export async function countPublicDirectoryMembers(db: Db, pariwarId: PariwarId): Promise<number> {
+export async function countPublicDirectoryMembers(
+  db: Db,
+  pariwarId: PariwarId,
+  opts: Pick<ListDirectoryMembersOptions, 'now'> = {},
+): Promise<number> {
+  const now = opts.now ?? new Date();
   const rows = await db
     .select({ total: sql<string>`count(*)` })
     .from(members)
     .innerJoin(memberKycProfiles, eq(memberKycProfiles.memberId, members.memberId))
-    .where(directoryRosterPredicate(pariwarId));
+    .where(directoryRosterPredicate(pariwarId, now));
 
   // ⚠ Postgres `count(*)` is `bigint`, which the driver hands back as a STRING (the same
   // representation hazard `moderation/read.ts` normalizes for `timestamptz`). Coercing is this

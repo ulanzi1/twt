@@ -11,15 +11,31 @@
 //     policy) → overlay removed.
 // Load-bearing for Module Shelf suppression (Epic 12 Story 12.4) + future consumers.
 //
-// ── This is the SEAM, not the wiring (the claim event source is Story 6.1) ────
+// ── ⭐ THE SEAM IS LIVE. ⛔ THIS COMMENT USED TO SAY IT WAS NOT. ───────────────
 // Claim events live on CLAIM streams (one stream per claim, Story 6.x) and reference
-// the deceased member via `payload.deceased_member_id`. Story 6.1 does NOT exist yet,
-// so today the query below matches zero rows and the overlay is always not-frozen.
-// The SEAM is fully built: `evaluateAccountOverlay` is the deterministic evaluator and
-// `getMemberAccountOverlay` is the single query surface — Epic 6 / Epic 12 wire the
-// claim source to THIS function and never re-implement claim-case-existence logic
-// (AC5). The Story 6.1 contract this seam pins: a claim intake event of type
-// `claim.intake_initiated` carrying `deceased_member_id` in its payload.
+// the deceased member via `payload.deceased_member_id`. `evaluateAccountOverlay` is
+// the deterministic evaluator; `getMemberAccountOverlay` is the single query surface.
+//
+// ⚠ CORRECTED 2026-08-21 (`2026-08-21-145` cl.1). This block previously read:
+//     "Story 6.1 does NOT exist yet, so today the query below matches zero rows and
+//      the overlay is always not-frozen."
+// ⛔ THAT IS NO LONGER TRUE, and it had not been true for some time. Epic 6 shipped:
+// `apps/api/src/server.ts` wires `POST /member/claims/intake` to project
+// `claim.intake_initiated`, and the helpline intake path emits it too. The overlay
+// matches real rows and real members are really frozen.
+//
+// ⭐ WHAT THE STALE COMMENT COST: Story 11a.3's public Member Directory built its
+// roster predicate by reading this module, believed "always not-frozen", and shipped a
+// two-conjunct predicate that published DECEASED members to the open internet — full
+// legal name decrypted from Tier-1, status pill reading "Active" — for as long as the
+// claim stayed open. ⛔ A seam comment that outlives its seam is a FALSE STATEMENT IN
+// THE TREE, and this one made a correct-looking predicate wrong. If you wire a new
+// consumer to this module, re-read this paragraph before you trust any "not yet" here.
+//
+// ⚠ CONSUMERS THAT MUST STAY OBSERVATIONALLY EQUIVALENT TO `evaluateAccountOverlay`:
+//   · `member/directory-read.ts` → `NOT_DECEASED` (the set-based form, for ONE query
+//     over a whole page — it cannot call this per-member evaluator without an N+1).
+// ⭐ "Change one, check the other."
 
 import { and, asc, inArray, lte, sql } from 'drizzle-orm';
 

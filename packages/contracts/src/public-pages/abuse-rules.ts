@@ -28,8 +28,19 @@ export const AbuseDetectorSchema = z.enum([
   'request_volume',
   /** DISTINCT page numbers touched by one visitor key within the window. */
   'distinct_pages',
-  /** The deepest page number one visitor key reached within the window. */
+  /**
+   * The deepest page number one visitor key reached within the window.
+   * ⚠ A POSITION, ⛔ NOT A RATE — a single request to a deep page satisfies it. ⛔ Never describe a
+   * `page_depth` rule as detecting speed; that mismatch is exactly what `2026-08-21-145` cl.4
+   * corrected, and it had `rapid_pagination` firing on a resumed bookmark with zero velocity seen.
+   */
   'page_depth',
+  /**
+   * Page-to-page TRANSITIONS by one visitor key within the window — the count of times the
+   * requested page CHANGED from the previous request. ⭐ This is the real rate signal: jumping
+   * straight to page 200 is ONE transition; walking 1→2→…→30 is twenty-nine.
+   */
+  'page_transitions',
   /** District-scoped queries from one visitor key within the window. ⚠ No subject on this surface. */
   'district_query_volume',
 ]);

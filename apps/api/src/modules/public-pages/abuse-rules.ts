@@ -73,8 +73,17 @@ export function loadDirectoryAbuseRules(path = resolveRulesPath()): DirectoryAbu
 
 /** One directory request, reduced to the non-PII facts the detectors count. */
 export interface DirectoryRequestSignal {
-  /** The visitor key — `request.ip` under `trustProxy`. ⚠ Caller-supplied; see the header. */
+  /** The visitor key — `request.ip` under `trustProxy`. ⚠ Trustworthy only behind the SSR hop. */
   key: string;
+  /**
+   * The Pariwar whose directory was requested.
+   * ⭐ REQUIRED. Omitting it wrote every abuse line under the nil GLOBAL pariwar
+   * (`00000000-…`), so a Pariwar-scoped audit reader (Story 1.10) never saw them and two Pariwars
+   * crawled at once were indistinguishable. ⛔ Never let this fall back to a sentinel.
+   */
+  pariwarId: string;
+  /** The request trace, so an abuse line joins the rest of that request's trail. `null` if absent. */
+  traceId: string | null;
   page: number;
   limit: number;
   at: Date;
@@ -88,6 +97,14 @@ interface KeyWindow {
   /** The deepest page reached, with the epoch-ms it was reached at. */
   deepestPage: number;
   deepestAt: number;
+  /**
+   * The page requested LAST, and epoch-ms of each page-to-page TRANSITION in the window.
+   * ⭐ A transition is recorded only when the requested page CHANGES — so refreshing one page N
+   * times contributes ⛔ nothing here (that is `high_volume_lookups`' job), and jumping directly to
+   * a deep page contributes exactly one. This is what makes `page_transitions` a RATE.
+   */
+  lastPage: number | null;
+  transitions: number[];
   /** ⛔ ruleId → epoch-ms of the last emission, so one crawler does not emit a line per request. */
   emitted: Map<string, number>;
 }
@@ -140,12 +157,23 @@ export function evaluateDirectoryAbuse(
     let win = windows.get(signal.key);
     if (win === undefined) {
       if (windows.size >= MAX_TRACKED_KEYS) evictColdest(now, horizon);
-      win = { hits: [], pages: new Map(), deepestPage: 0, deepestAt: 0, emitted: new Map() };
+      win = {
+        hits: [],
+        pages: new Map(),
+        deepestPage: 0,
+        deepestAt: 0,
+        lastPage: null,
+        transitions: [],
+        emitted: new Map(),
+      };
       windows.set(signal.key, win);
     }
 
     win.hits.push(now);
     win.pages.set(signal.page, now);
+    // ⚠ Recorded BEFORE `lastPage` is updated, and only on an actual change of page.
+    if (win.lastPage !== null && win.lastPage !== signal.page) win.transitions.push(now);
+    win.lastPage = signal.page;
     if (signal.page >= win.deepestPage || now - win.deepestAt > horizon) {
       win.deepestPage = signal.page;
       win.deepestAt = now;
@@ -173,7 +201,9 @@ export function evaluateDirectoryAbuse(
               ? now - win.deepestAt <= windowMs
                 ? win.deepestPage
                 : 0
-              : null;
+              : rule.detects === 'page_transitions'
+                ? win.transitions.filter((t) => now - t <= windowMs).length
+                : null;
 
       if (observed === null || observed < threshold) continue;
 
@@ -186,8 +216,14 @@ export function evaluateDirectoryAbuse(
         // ⛔ Always null here — every visitor to this surface is unauthenticated. There is no
         // account to name, and none to suspend (`2026-08-20-143` cl.12).
         actorId: null,
-        // ⭐ THE ONLY TRIAGE SIGNAL THAT SURVIVES THE ROW. The rule id + a coarse, NON-PII shape
-        // (page number and page size — nothing a member typed, nothing a member owns).
+        // ⭐ THE TENANT AND THE TRACE SURVIVE IN THEIR OWN COLUMNS — ⛔ they are NOT part of the
+        // hashed context. Omitting them wrote every line under the nil GLOBAL pariwar with a null
+        // trace, invisible to the Story 1.10 Pariwar-scoped audit reader (`2026-08-21-145`).
+        pariwarId: signal.pariwarId,
+        // ⚠ `?? undefined` — the sink's field is optional, and `null` is not assignable to it.
+        traceId: signal.traceId ?? undefined,
+        // ⭐ THE ONLY OTHER TRIAGE SIGNAL THAT SURVIVES THE ROW. The rule id + a coarse, NON-PII
+        // shape (page number and page size — nothing a member typed, nothing a member owns).
         // ⛔ `context` below is HASHED away; do not rely on it and do not put anything there that
         // matters. See `2026-08-20-143` cl.10.
         resourceLocator: `directory:${rule.id}:p${signal.page}:l${signal.limit}`,
@@ -217,6 +253,7 @@ export function evaluateDirectoryAbuse(
 
 function prune(win: KeyWindow, now: number, horizon: number): void {
   win.hits = win.hits.filter((t) => now - t <= horizon);
+  win.transitions = win.transitions.filter((t) => now - t <= horizon);
   for (const [page, t] of win.pages) if (now - t > horizon) win.pages.delete(page);
   for (const [id, t] of win.emitted) if (now - t > EMIT_DEDUPE_MS * 2) win.emitted.delete(id);
 }

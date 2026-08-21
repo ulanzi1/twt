@@ -77,7 +77,26 @@ export function resolvePublicMemberName(
   if (mode === 'shielded_name') {
     const { firstName, lastInitial } = splitFirstNameLastInitial(storedName);
     if (firstName === '') return '';
-    return lastInitial === '' ? firstName : `${firstName} ${lastInitial}.`;
+    // ⭐ A MONONYM CANNOT BE SHIELDED, SO IT IS OMITTED — `2026-08-21-145` cl.3. ⛔ NEVER fall
+    // through to `firstName` here.
+    //
+    // ⚠ THE BUG THIS REPLACES, stated so it is not re-introduced: for a single-token stored name
+    // (`'Sunita'`), `splitFirstNameLastInitial` returns `lastInitial: ''`, and the old
+    // `lastInitial === '' ? firstName : …` arm returned `firstName` — which for a mononym IS THE
+    // ENTIRE STORED LEGAL NAME, byte-identical to what `full_name` would publish. ⇒ a Pariwar
+    // performed the governed privacy act of `2026-08-19-136` cl.3 and, for every single-token KYC
+    // name, IT DID NOTHING — with no signal anywhere. ⚠ Mononyms are common in India; ⛔ this was
+    // not a corner case.
+    //
+    // ⚠ WHY THE SEMANTICS DID NOT CARRY OVER: this helper was authored for In Memoriam / Sahyog,
+    // where first-name-only IS the shield. The public Member Directory is its FIRST production
+    // call site, and there "first name only" is not a shield — it is the whole name.
+    //
+    // ⭐ FAILS CLOSED: `''` means "omit this row" to every caller (the `pool-identity.ts` fail-soft
+    // precedent), so a member whose name cannot be shielded is left OFF the directory rather than
+    // published in full. ⛔ A shorter page beats an unshielded name on a page that promises shielding.
+    if (lastInitial === '') return '';
+    return `${firstName} ${lastInitial}.`;
   }
   // `full_name`: the legal name as stored, with display whitespace collapsed. A
   // stored name is a record value, not a display string — collapsing here keeps a

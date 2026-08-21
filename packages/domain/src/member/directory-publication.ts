@@ -1,5 +1,8 @@
 // Per-Pariwar directory-publication kill switch — READ + GOVERNED WRITE.
-// Code review, Story 11a.3 (2026-08-21, D3).
+// Governance of record: Decision `2026-08-21-145` cl.5 (the substrate, disclosed as having
+// shipped implementation-first) + `2026-08-21-146` cl.5 (Trustee-ratified; the UI directive below).
+// ⛔ Never cite a bare "D3" for this module — Story 11a.3 has its OWN ruled D3 (the roster
+// predicate) and the two collide.
 //
 // Mirrors `kyc/presentation-policy.ts` (Story 11a.1) exactly in shape and governance posture: a
 // change to whether the public Member Directory serves a Pariwar's members AT ALL is at least as
@@ -11,10 +14,20 @@
 //   3. A §1.5 hash-chain audit line, anchored by a pre-generated `auditId`. Writing the LINE is
 //      the CALLER's obligation (the 10.12 narrow-write posture).
 //
-// ⛔ NO self-serve admin toggle UI ships with this patch — the mechanism ships ungated by UI, the
-// same posture `pariwar_public_name_presentation` shipped under at Story 11a.1. A console surface
-// is a future story if one is wanted; this closes the code-review finding (a kill switch exists
-// and is enforced), not a product requirement for a self-service toggle.
+// ⛔⛔ NOT AN OPERATIONAL CONTROL YET — Decision `2026-08-21-146` cl.5 (Trustee-ratified).
+// The Panel ruled that a DEDICATED ADMINISTRATIVE UI IS REQUIRED before this switch may be treated
+// as an operational control, and that ⛔ DIRECT DATABASE MANIPULATION MUST NOT BE DESCRIBED AS
+// NORMAL MANUAL OPERATION. Three commitments, ⛔ not one:
+//   (a) the mechanism STAYS — ⛔ not removed, ⛔ not re-landed;
+//   (b) ⛔ no description anywhere may present hand-run SQL as the way this is operated;
+//   (c) until the UI ships this is a MECHANISM PRESENT, ⛔ NOT a lever anyone can pull — so it
+//       ⛔ must not be relied on in any incident plan, degradation posture or DPDPA response.
+// ⚠ This SUPERSEDES the prose that stood here, which said a console surface was "a future story if
+// one is wanted". ⛔ It is not optional and it is not a preference: it is a directive.
+// ⚠ AND EVEN ONCE THE UI EXISTS the switch has a MULTI-MINUTE FLOOR — `/members` is
+// `edge_cacheable` with `s-maxage=300`, so a pulled Pariwar keeps being served real member names
+// from every warm PoP, PER PAGE NUMBER (`2026-08-21-145` cl.5(e)). ⛔ "Immediate" is not a word
+// that may be used about this control.
 
 import { eq } from 'drizzle-orm';
 

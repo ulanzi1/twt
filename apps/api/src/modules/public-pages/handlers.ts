@@ -120,9 +120,14 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
       const scopeTx = await openScopeTx(deps, pariwarIdStr);
       let ok = false;
       try {
-        // ⭐ THE PER-PARIWAR KILL SWITCH — `2026-08-21-145` cl.5. ⚠ Cite THAT entry, ⛔ not a bare
-        // "D3": this story has its OWN ruled D3 (the roster predicate) and the two collide.
-        // ⛔ Never resolve a bare `D<n>` by proximity. Checked FIRST, before any
+        // ⭐ THE PER-PARIWAR KILL SWITCH — `2026-08-21-145` cl.5, ratified at `2026-08-21-146` cl.5.
+        // ⚠ Cite THOSE entries, ⛔ not a bare "D3": this story has its OWN ruled D3 (the roster
+        // predicate) and the two collide. ⛔ Never resolve a bare `D<n>` by proximity.
+        // ⛔⛔ THE READ PATH BELOW IS LIVE AND ENFORCED, but the SWITCH IS NOT AN OPERATIONAL
+        // CONTROL: `2026-08-21-146` cl.5 requires a dedicated admin UI before it may be treated as
+        // one, and ⛔ hand-run SQL must not be described as the way it is operated. ⚠ So this gate
+        // is correct and load-bearing, and ⛔ nothing may be planned around someone flipping it
+        // today. Checked FIRST, before any
         // KYC decrypt: a Pariwar whose directory is disabled must cost nothing beyond this read.
         // ⚠ A disabled directory returns the IDENTICAL SHAPE as a genuinely empty roster
         // (`{items:[],total:0}`), ⛔ NOT a distinct error/404 — a differently-shaped response would

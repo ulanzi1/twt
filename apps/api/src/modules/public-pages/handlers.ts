@@ -41,6 +41,42 @@ import { evaluateDirectoryAbuse, loadDirectoryAbuseRules } from './abuse-rules.j
 /** Rows served when the caller asks for no page size. Mirrors `apps/public`'s own default. */
 export const PUBLIC_DIRECTORY_PAGE_SIZE_DEFAULT = 25;
 
+/**
+ * Max KMS `decryptDek` round-trips in flight for ONE directory page render.
+ *
+ * ⚠ A REAL bound, ⛔ not the page size wearing the word "bounded". At 8, a full 50-row page costs
+ * ceil(50/8) = 7 sequential waves instead of 50 round-trips, while capping what a single
+ * unauthenticated request can put in flight against a quota-limited external service.
+ * ⛔ Raising this trades KMS quota safety for page latency on an anonymous surface — it is a
+ * capacity decision, not a tuning knob.
+ */
+const DIRECTORY_DECRYPT_CONCURRENCY = 8;
+
+/**
+ * Map `items` through `fn` with at most `concurrency` promises in flight, preserving INPUT ORDER.
+ *
+ * ⭐ Results are written into a pre-sized array at the item's own index, ⛔ never pushed in
+ * completion order — the deterministic roster order is what makes "page N is the same page N on
+ * every request" true, and a completion-ordered result would silently shuffle a public page.
+ */
+async function mapWithConcurrency<T, R>(
+  items: readonly T[],
+  concurrency: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const out = new Array<R>(items.length);
+  let next = 0;
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+    for (;;) {
+      const i = next++;
+      if (i >= items.length) return;
+      out[i] = await fn(items[i]!);
+    }
+  });
+  await Promise.all(workers);
+  return out;
+}
+
 export interface PublicPagesHandlers {
   memberDirectory(request: FastifyRequest): Promise<PublicDirectoryResponse>;
 }
@@ -70,23 +106,21 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
       const offset = (page - 1) * limit;
       const pariwarId = ids.pariwarId(pariwarIdStr);
 
-      // ── Anti-enumeration detection, BEFORE the read ────────────────────────────────────────────
-      // ⚠ Runs first deliberately: a deep-crawl signal is worth recording even when the page below
-      // turns out empty. ⛔ It does NOT block — the rate limit is the enforcement, this is the
-      // signal (`2026-08-20-143` cl.10). And ⛔ the line it emits is a COUNTER, not a forensic
-      // record: no column stores query context, so the rule id and a coarse, non-PII query shape go
-      // in `action` + `resource_locator`. ⛔ Never describe it as carrying the query.
-      evaluateDirectoryAbuse(deps, abuseRules, {
-        key: request.ip,
-        page,
-        limit,
-        at: deps.clock(),
-      });
+      // ⭐ ONE INSTANT FOR THE WHOLE REQUEST, ⛔ never `new Date()` at each read. The roster
+      // predicate's `account-frozen` half and the district read are both AS-OF reads, and the count
+      // must describe the roster the page rows were drawn from. `openScopeTx` issues a bare `BEGIN`
+      // (READ COMMITTED), so each statement takes a FRESH snapshot — two `new Date()` calls would
+      // let a member joining or being suspended between the two statements make `hasNext` advertise
+      // an empty page, or silently drop a row from the last page. ⚠ It comes from `deps.clock()`,
+      // not `new Date()`, so tests can pin it.
+      const now = deps.clock();
 
       const scopeTx = await openScopeTx(deps, pariwarIdStr);
       let ok = false;
       try {
-        // ⭐ THE PER-PARIWAR KILL SWITCH — code review, 2026-08-21 (D3). Checked FIRST, before any
+        // ⭐ THE PER-PARIWAR KILL SWITCH — `2026-08-21-145` cl.5. ⚠ Cite THAT entry, ⛔ not a bare
+        // "D3": this story has its OWN ruled D3 (the roster predicate) and the two collide.
+        // ⛔ Never resolve a bare `D<n>` by proximity. Checked FIRST, before any
         // KYC decrypt: a Pariwar whose directory is disabled must cost nothing beyond this read.
         // ⚠ A disabled directory returns the IDENTICAL SHAPE as a genuinely empty roster
         // (`{items:[],total:0}`), ⛔ NOT a distinct error/404 — a differently-shaped response would
@@ -102,6 +136,32 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
           return { items: [], page, limit, total: 0 };
         }
 
+        // ── Anti-enumeration detection, BEFORE the roster read ─────────────────────────────────
+        // ⚠ Runs before the read deliberately: a deep-crawl signal is worth recording even when the
+        // page below turns out empty. ⛔ It does NOT block — the rate limit is the enforcement, this
+        // is the signal (`2026-08-20-143` cl.10). And ⛔ the line it emits is a COUNTER, not a
+        // forensic record: no column stores query context, so the rule id and a coarse, non-PII
+        // query shape go in `action` + `resource_locator`. ⛔ Never describe it as carrying the query.
+        //
+        // ⚠ IT RUNS AFTER THE KILL SWITCH, ⛔ NOT BEFORE IT. A Pariwar pulled under a DPDPA hold
+        // publishes nothing, so crawl signals about it describe enumeration of `{items:[],total:0}`
+        // — audit noise that would also evict genuine visitors' counters against `MAX_TRACKED_KEYS`.
+        // ⛔ The rate limit still applies to a disabled directory; it runs at `onRequest`, upstream
+        // of this handler entirely.
+        //
+        // ⭐ `pariwarId` AND `traceId` ARE PASSED. Omitting them wrote every abuse line under the nil
+        // GLOBAL pariwar (`00000000-…`) with a null trace, so a Pariwar-scoped audit reader (Story
+        // 1.10) never saw them and two Pariwars crawled at once were indistinguishable. Both values
+        // are in hand right here — ⛔ there was never a reason to discard them.
+        evaluateDirectoryAbuse(deps, abuseRules, {
+          key: request.ip,
+          pariwarId: pariwarIdStr,
+          traceId: request.requestContext.traceId ?? null,
+          page,
+          limit,
+          at: now,
+        });
+
         // ⭐ THE PRESENTATION MODE IS RESOLVED ONCE PER REQUEST, ⛔ NEVER PER ROW. It is a config
         // value that cannot vary within a page, so a per-row read would be an N+1 on a constant.
         const mode = await kyc.resolvePublicNamePresentationMode(scopeTx.tx, pariwarId);
@@ -109,6 +169,7 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
         const rows = await memberDomain.listPublicDirectoryMembers(scopeTx.tx, pariwarId, {
           limit,
           offset,
+          now,
         });
         // ⚠ `total` IS ROSTER SIZE, ⛔ NOT a count of rendered `items` — RESOLVED (BigDev,
         // 2026-08-21, code-review D1). An unresolvable name (decrypt failure, or the presentation
@@ -117,16 +178,27 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
         // by the ruled roster predicate, just not nameable on THIS request. Do not describe `total`
         // as "the number of rendered entries" anywhere it is surfaced, and do not add an omission
         // count unless a future story requires one.
-        const total = await memberDomain.countPublicDirectoryMembers(scopeTx.tx, pariwarId);
+        const total = await memberDomain.countPublicDirectoryMembers(scopeTx.tx, pariwarId, {
+          now,
+        });
 
         // ⭐ ONE KMS `decryptDek` ROUND-TRIP PER ROW — envelope encryption gives every stored name
-        // its own DEK, so there is no shared secret to decrypt once and reuse. Resolved with bounded
-        // concurrency, ⛔ not sequentially: `limit` is capped at `PUBLIC_SURFACE_PAGE_SIZE_CAP` (50),
-        // and a full page paid for 50 sequential network round-trips before this fix. `rows.map`
-        // keeps each promise's result index-aligned with `rows`, so the deterministic roster order
-        // survives concurrent resolution — nothing here re-sorts.
-        const resolved = await Promise.all(
-          rows.map(async (row): Promise<PublicDirectoryEntry | null> => {
+        // its own DEK, so there is no shared secret to decrypt once and reuse.
+        //
+        // ⚠ GENUINELY BOUNDED, ⛔ not "bounded" by the page size. The previous form was
+        // `Promise.all(rows.map(...))`, whose comment CLAIMED bounded concurrency while placing no
+        // bound at all: the only ceiling was `limit` (50), so N concurrent visitors put 50×N KMS
+        // calls in flight — a cheap amplification lever on an UNAUTHENTICATED route, against a
+        // quota-limited external service. ⛔ A comment asserting a bound that the code does not
+        // impose is worse than no comment: it stops the next reader from looking.
+        //
+        // ⭐ Order is preserved by writing into a pre-sized slot array indexed by the row's position,
+        // ⛔ never by relying on completion order — the deterministic roster order is what makes
+        // "page N is the same page N" true, and nothing here may re-sort.
+        const resolved = await mapWithConcurrency(
+          rows,
+          DIRECTORY_DECRYPT_CONCURRENCY,
+          async (row): Promise<PublicDirectoryEntry | null> => {
             // ⭐ THE TIER-1 DECRYPT — the existing helper, the existing field class, the member's
             // real pariwarId. The decrypted value NEVER leaves this closure except through
             // `resolvePublicMemberName`, and is never logged.
@@ -158,12 +230,16 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
             return {
               name,
               // ⚠ Normalized, not passed through raw: the response schema's `district` is
-              // `.min(1).nullable()` — `null` means "no posting row" and is valid, but an EMPTY
-              // STRING is not `null` and would fail that check, 500ing the page. The governed
-              // life-events write path already rejects an empty district at the contract boundary
-              // (`z.string().trim().min(1)`), but the domain accessor that appends a posting row
-              // does not re-enforce it, so this stays a defensive normalization, not dead code.
-              district: row.district === '' ? null : row.district,
+              // `.min(1).nullable()` — `null` means "no posting row" and is valid, but a blank
+              // string would fail that check, 500ing the page. The governed life-events write path
+              // already rejects an empty district at the contract boundary (`z.string().trim().min(1)`),
+              // but the domain accessor that appends a posting row does not re-enforce it, so this
+              // stays a defensive normalization, not dead code.
+              // ⚠ `.trim() || null`, ⛔ not `=== ''`. A whitespace-only district (`'  '`) is not the
+              // empty string: it passes the schema's `.min(1)`, arrives TRUTHY so the page's
+              // `?? districtUnknown` fallback never fires, and `outputForVerdict` only nulls the
+              // empty string — emitting a visually BLANK cell where the design says "Not recorded".
+              district: row.district?.trim() || null,
               // ⚠ `active-in-grace` PRESENTS AS `active`. A grace period is an internal billing
               // state; ⛔ publishing it would tell a stranger a member is late on a payment. The
               // ruled pill is two labels, and this is where the third state is folded away.
@@ -174,7 +250,7 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
               // of this expression.
               status: row.state === 'lock-in' ? 'waiting-period' : 'active',
             };
-          }),
+          },
         );
         const items: PublicDirectoryEntry[] = resolved.filter(
           (entry): entry is PublicDirectoryEntry => entry !== null,
@@ -189,5 +265,15 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
   };
 }
 
-/** Re-exported so the route schema and the tests share ONE horizon, never two literals. */
+/**
+ * Re-exported so the tests assert against the SAME horizon the contract enforces.
+ *
+ * ⚠ The previous comment here claimed this kept "the route schema and the tests" on one constant.
+ * ⛔ It did not: `routes.ts` gets the bound via `PublicDirectoryQuery` from `@twt/contracts` and
+ * never touches this symbol, and the specs compared against hardcoded `201` / `200` literals — so
+ * the re-export had NO importer and the comment described a coupling that did not exist. That is
+ * the exact defect 11a.2's review found ("the comment named a constant that did not exist and the
+ * guarding test compared against a second hardcoded literal"), reproduced one story later.
+ * ⭐ The specs now import THIS symbol, which is what makes the sentence above true.
+ */
 export { PUBLIC_DIRECTORY_PAGE_HORIZON };

@@ -22,6 +22,7 @@ import {
   __resetDirectoryAbuseCounters,
   evaluateDirectoryAbuse,
   loadDirectoryAbuseRules,
+  type DirectoryRequestSignal,
 } from '../../src/modules/public-pages/abuse-rules.js';
 
 const require = createRequire(import.meta.url);
@@ -59,9 +60,17 @@ describe('directory-abuse-rules — the PARSER fails LOUD', () => {
     expect(rules.version).toBeGreaterThan(0);
     expect(rules.audit_action).toBe('directory.abuse_suspected');
     expect(rules.rules.filter((r) => r.status === 'active').length).toBeGreaterThan(0);
-    // The four AC-named triggers are all DECLARED — three active, one honestly no-subject.
+    // The AC-named triggers are all DECLARED — four active, one honestly no-subject.
+    // ⚠ `deep_page_access` + `rapid_pagination` are the `2026-08-21-145` cl.4 SPLIT of the old
+    // single `rapid_pagination`, which promised a rate and measured a position.
     expect(rules.rules.map((r) => r.id).sort()).toEqual(
-      ['deep_crawl', 'high_volume_lookups', 'rapid_pagination', 'repeated_district_queries'].sort(),
+      [
+        'deep_crawl',
+        'deep_page_access',
+        'high_volume_lookups',
+        'rapid_pagination',
+        'repeated_district_queries',
+      ].sort(),
     );
   });
 
@@ -143,6 +152,26 @@ describe('directory-abuse-rules — the DETECTOR fires, and fires SPECIFICALLY',
 
   const at = (msOffset: number): Date => new Date(Date.parse('2026-06-15T12:00:00.000Z') + msOffset);
 
+  /** A Pariwar id for attribution assertions. ⚠ A real uuid shape — the audit row stores a uuid. */
+  const SIG_PARIWAR = '11111111-1111-4111-8111-111111111111';
+
+  /**
+   * Fill the attribution fields every signal must carry.
+   *
+   * ⚠ A HELPER, ⛔ not a default on `DirectoryRequestSignal` itself: `pariwarId` and `traceId` are
+   * REQUIRED on the interface precisely because omitting them silently wrote every abuse line under
+   * the nil GLOBAL pariwar. Making them optional again would restore that defect and this helper
+   * would hide it.
+   */
+  const sig = (
+    s: Omit<DirectoryRequestSignal, 'pariwarId' | 'traceId'> &
+      Partial<Pick<DirectoryRequestSignal, 'pariwarId' | 'traceId'>>,
+  ): DirectoryRequestSignal => ({
+    pariwarId: SIG_PARIWAR,
+    traceId: null,
+    ...s,
+  });
+
   it('high_volume_lookups fires on request VOLUME from one key', () => {
     const { deps, events } = fakeDeps();
     // ⚠ ACCUMULATED, ⛔ not overwritten: the rule fires on the request that CROSSES the threshold,
@@ -151,7 +180,7 @@ describe('directory-abuse-rules — the DETECTOR fires, and fires SPECIFICALLY',
     const fired: string[] = [];
     for (let i = 0; i < 61; i += 1) {
       fired.push(
-        ...evaluateDirectoryAbuse(deps, rules, { key: 'v1', page: 1, limit: 25, at: at(i * 100) }),
+        ...evaluateDirectoryAbuse(deps, rules, sig({ key: 'v1', page: 1, limit: 25, at: at(i * 100) })),
       );
     }
     expect(fired).toContain('high_volume_lookups');
@@ -169,7 +198,7 @@ describe('directory-abuse-rules — the DETECTOR fires, and fires SPECIFICALLY',
 
     // 24 hits on ONE page: below the volume threshold and only ONE distinct page.
     for (let i = 0; i < 24; i += 1) {
-      evaluateDirectoryAbuse(deps, rules, { key: 'same', page: 1, limit: 25, at: at(i * 1000) });
+      evaluateDirectoryAbuse(deps, rules, sig({ key: 'same', page: 1, limit: 25, at: at(i * 1000) }));
     }
     expect(events.some((e) => String(e.resourceLocator).includes('deep_crawl'))).toBe(false);
 
@@ -177,26 +206,85 @@ describe('directory-abuse-rules — the DETECTOR fires, and fires SPECIFICALLY',
     const fired: string[] = [];
     for (let p = 1; p <= 25; p += 1) {
       fired.push(
-        ...evaluateDirectoryAbuse(deps, rules, { key: 'walker', page: p, limit: 25, at: at(p * 1000) }),
+        ...evaluateDirectoryAbuse(deps, rules, sig({ key: 'walker', page: p, limit: 25, at: at(p * 1000) })),
       );
     }
     expect(fired).toContain('deep_crawl');
   });
 
-  it('rapid_pagination fires on page DEPTH', () => {
+  it('deep_page_access fires on page DEPTH — and it says so, rather than claiming a rate', () => {
     const { deps } = fakeDeps();
-    const fired = evaluateDirectoryAbuse(deps, rules, { key: 'deep', page: 40, limit: 25, at: at(0) });
-    expect(fired).toContain('rapid_pagination');
+    const fired = evaluateDirectoryAbuse(deps, rules, sig({ key: 'deep', page: 40, limit: 25, at: at(0) }));
+    expect(fired).toContain('deep_page_access');
     // …and a shallow page from a fresh key does not.
     expect(
-      evaluateDirectoryAbuse(deps, rules, { key: 'shallow', page: 2, limit: 25, at: at(0) }),
-    ).not.toContain('rapid_pagination');
+      evaluateDirectoryAbuse(deps, rules, sig({ key: 'shallow', page: 2, limit: 25, at: at(0) })),
+    ).not.toContain('deep_page_access');
+  });
+
+  it('⭐ rapid_pagination measures a RATE — one deep request does NOT trip it', () => {
+    // ⛔ THE REGRESSION GUARD FOR `2026-08-21-145` cl.4. The old rule set `observed` to the deepest
+    // page on the FIRST request, so a visitor following a shared link or resuming a bookmark to
+    // `?page=45` emitted an abuse line with ZERO velocity measured — and in a 10k-member Pariwar
+    // the whole second half of the legitimate page range was permanently flagged.
+    const { deps } = fakeDeps();
+    const fired = evaluateDirectoryAbuse(
+      deps,
+      rules,
+      sig({ key: 'bookmark', page: 190, limit: 25, at: at(0) }),
+    );
+    expect(fired).not.toContain('rapid_pagination');
+  });
+
+  it('⭐ rapid_pagination fires on sustained page-to-page ADVANCE', () => {
+    const { deps } = fakeDeps();
+    const fired: string[] = [];
+    // 25 transitions (pages 1→26), inside the 300s window.
+    for (let p = 1; p <= 26; p += 1) {
+      fired.push(
+        ...evaluateDirectoryAbuse(deps, rules, sig({ key: 'walk', page: p, limit: 25, at: at(p * 1000) })),
+      );
+    }
+    expect(fired).toContain('rapid_pagination');
+  });
+
+  it('⛔ NEGATIVE CONTROL — REFRESHING one page is not pagination, however often', () => {
+    // ⚠ Without this, `page_transitions` could be implemented as a plain request counter and every
+    // other assertion here would still pass — it would just be `high_volume_lookups` twice.
+    const { deps } = fakeDeps();
+    const fired: string[] = [];
+    for (let i = 0; i < 40; i += 1) {
+      fired.push(
+        ...evaluateDirectoryAbuse(deps, rules, sig({ key: 'refresher', page: 7, limit: 25, at: at(i * 1000) })),
+      );
+    }
+    expect(fired).not.toContain('rapid_pagination');
+  });
+
+  it('⭐ every emitted line carries its PARIWAR and trace — ⛔ never the nil GLOBAL pariwar', () => {
+    // ⛔ Regression guard: the emit omitted `pariwarId`/`traceId`, so `authEventToAuditInput`
+    // defaulted every abuse row to `00000000-…` with a null trace — invisible to the Story 1.10
+    // Pariwar-scoped audit reader, and two Pariwars crawled at once were indistinguishable.
+    const { deps, events } = fakeDeps();
+    for (let p = 1; p <= 30; p += 1) {
+      evaluateDirectoryAbuse(
+        deps,
+        rules,
+        sig({ key: 'attrib', page: p, limit: 25, at: at(p * 1000), traceId: 'trace-abc' }),
+      );
+    }
+    expect(events.length).toBeGreaterThan(0);
+    for (const e of events) {
+      expect(e.pariwarId).toBe(SIG_PARIWAR);
+      expect(e.pariwarId).not.toBe('00000000-0000-0000-0000-000000000000');
+      expect(e.traceId).toBe('trace-abc');
+    }
   });
 
   it('⛔ the NO-SUBJECT rule NEVER fires — it is declared, not evaluated', () => {
     const { deps, events } = fakeDeps();
     for (let p = 1; p <= 120; p += 1) {
-      evaluateDirectoryAbuse(deps, rules, { key: 'everything', page: p, limit: 50, at: at(p * 10) });
+      evaluateDirectoryAbuse(deps, rules, sig({ key: 'everything', page: p, limit: 50, at: at(p * 10) }));
     }
     expect(events.some((e) => String(e.resourceLocator).includes('repeated_district_queries'))).toBe(
       false,
@@ -211,7 +299,7 @@ describe('directory-abuse-rules — the DETECTOR fires, and fires SPECIFICALLY',
   it('an ordinary reader trips NOTHING — the rules are not a tripwire on normal use', () => {
     const { deps, events } = fakeDeps();
     for (let p = 1; p <= 5; p += 1) {
-      evaluateDirectoryAbuse(deps, rules, { key: 'reader', page: p, limit: 25, at: at(p * 20_000) });
+      evaluateDirectoryAbuse(deps, rules, sig({ key: 'reader', page: p, limit: 25, at: at(p * 20_000) }));
     }
     expect(events).toEqual([]);
   });
@@ -219,7 +307,7 @@ describe('directory-abuse-rules — the DETECTOR fires, and fires SPECIFICALLY',
   it('dedupes: one sustained crawler does NOT emit a line per request', () => {
     const { deps, events } = fakeDeps();
     for (let i = 0; i < 200; i += 1) {
-      evaluateDirectoryAbuse(deps, rules, { key: 'flood', page: 1, limit: 25, at: at(i * 100) });
+      evaluateDirectoryAbuse(deps, rules, sig({ key: 'flood', page: 1, limit: 25, at: at(i * 100) }));
     }
     const volume = events.filter((e) => String(e.resourceLocator).includes('high_volume_lookups'));
     // 200 requests × 100ms = 20s — one dedupe window, so exactly one line.
@@ -229,12 +317,16 @@ describe('directory-abuse-rules — the DETECTOR fires, and fires SPECIFICALLY',
   it('⛔ never throws into the request path, even on a nonsense signal', () => {
     const { deps } = fakeDeps();
     expect(() =>
-      evaluateDirectoryAbuse(deps, rules, {
-        key: 'x',
-        page: Number.NaN,
-        limit: Number.NaN,
-        at: new Date(Number.NaN),
-      }),
+      evaluateDirectoryAbuse(
+        deps,
+        rules,
+        sig({
+          key: 'x',
+          page: Number.NaN,
+          limit: Number.NaN,
+          at: new Date(Number.NaN),
+        }),
+      ),
     ).not.toThrow();
   });
 });

@@ -51,11 +51,18 @@ describe('resolvePublicMemberName (AC5)', () => {
 
   it('DELEGATES the split to splitFirstNameLastInitial (⛔ no second implementation)', () => {
     // Asserted by agreement rather than by inspection: whatever that function
-    // decides about tokenisation, this resolver must render.
-    for (const name of ['Ram Prasad Yadav', 'Sunita   Devi', 'राजेश शर्मा', 'Rajesh']) {
+    // decides about TOKENISATION, this resolver must render.
+    //
+    // ⚠ SHIELDABLE NAMES ONLY. The mononym case is deliberately NOT delegated — see the
+    // dedicated test below and `2026-08-21-145` cl.3. The old form of this loop computed
+    // `expected = lastInitial === '' ? firstName : …`, which RESTATED the resolver's own branch
+    // and so agreed with it no matter what it did — including when what it did was publish a
+    // mononym's full legal name under `shielded_name`. ⛔ A delegation test must pin tokenisation,
+    // never the policy branch it is supposed to be checking.
+    for (const name of ['Ram Prasad Yadav', 'Sunita   Devi', 'राजेश शर्मा']) {
       const { firstName, lastInitial } = splitFirstNameLastInitial(name);
-      const expected = lastInitial === '' ? firstName : `${firstName} ${lastInitial}.`;
-      expect(resolvePublicMemberName('shielded_name', name)).toBe(expected);
+      expect(lastInitial).not.toBe(''); // guards the fixture: these must be multi-token
+      expect(resolvePublicMemberName('shielded_name', name)).toBe(`${firstName} ${lastInitial}.`);
     }
   });
 
@@ -63,8 +70,23 @@ describe('resolvePublicMemberName (AC5)', () => {
     expect(resolvePublicMemberName('shielded_name', 'Ram Prasad Yadav')).toBe('Ram Y.');
   });
 
-  it('omits the initial for a single-token name (there is no surname to shield)', () => {
-    expect(resolvePublicMemberName('shielded_name', 'Rajesh')).toBe('Rajesh');
+  it('⭐ OMITS THE MEMBER for a single-token name — a mononym cannot be shielded', () => {
+    // `2026-08-21-145` cl.3. ⛔ This assertion previously read `.toBe('Rajesh')`, i.e. it PINNED
+    // the defect: under `shielded_name` a mononym returned the entire stored legal name,
+    // byte-identical to `full_name`, so the governed privacy act silently did nothing.
+    // ⭐ `''` means "omit this row" to every caller ⇒ the shield now FAILS CLOSED.
+    expect(resolvePublicMemberName('shielded_name', 'Rajesh')).toBe('');
+    expect(resolvePublicMemberName('shielded_name', 'Sunita')).toBe('');
+    // ⚠ Whitespace around a mononym must not smuggle it through as a two-token name.
+    expect(resolvePublicMemberName('shielded_name', '   Sunita   ')).toBe('');
+  });
+
+  it('⛔ NEGATIVE CONTROL — the mononym omission is the SHIELD, not a rejection of the name', () => {
+    // ⚠ Without this, a future "simplification" could omit mononyms under BOTH modes and every
+    // other test would still pass. `full_name` must still publish a mononym in full: the member
+    // has consented to their legal name being shown, and there is nothing to shield.
+    expect(resolvePublicMemberName('full_name', 'Rajesh')).toBe('Rajesh');
+    expect(resolvePublicMemberName('full_name', 'Sunita')).toBe('Sunita');
   });
 
   it('handles Devanagari graphemes (a combining mark stays with its base)', () => {

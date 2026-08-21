@@ -38,11 +38,23 @@
 #    legal review (`architecture.md` §5.8a). ⛔ But it is a NAMED DEPENDENCY, not a footnote:
 #    re-examine this file the moment an edge/CDN is actually configured. (`-143` clause 11.)
 #
-# 3. ⚠ THE KEY IS CALLER-SUPPLIED. `apps/api` runs `trustProxy: true`, so `request.ip` reads the
-#    `X-Forwarded-For` chain — which is what makes per-visitor keying possible AT ALL through the
-#    SSR proxy, and simultaneously means a caller reaching `apps/api` directly can spoof it. The
-#    route is defended only behind the trusted hop. ⛔ `trustProxy` is NOT re-tuned here: it would
-#    alter `request.ip` and origin checks for every route in the app. (`-143` clause 9.)
+# 3. ⚠ THE KEY IS TRUSTWORTHY ONLY BEHIND THE SSR HOP. `apps/api` runs `trustProxy: true`, so
+#    `request.ip` reads the `X-Forwarded-For` chain — which is what makes per-visitor keying
+#    possible AT ALL through the SSR proxy, and simultaneously means a caller reaching `apps/api`
+#    DIRECTLY can spoof it. The route is defended only behind the trusted hop; restricting direct
+#    access is an INFRA control (network ACL / mTLS), ⛔ not a code control, and it is deferred.
+#    ⛔ `trustProxy` is NOT re-tuned here: it would alter `request.ip` and origin checks for every
+#    route in the app. (`-143` clause 9.)
+#
+#    ⭐ CORRECTED AT `2026-08-21-145` cl.2 — the note above USED TO BE WRONG IN A LOAD-BEARING WAY.
+#    It said the key was "caller-supplied" and implied the only exposure was a caller who SKIPS the
+#    SSR hop. In fact `apps/public` was APPENDING the visitor address to the browser-supplied
+#    inbound chain, and `trustProxy: true` reads the LEFTMOST entry — so a scraper going THROUGH
+#    the legitimate hop chose its own key with one request header, getting a fresh bucket and a
+#    fresh counter window per request. ⛔ No infra control at the boundary could have seen it.
+#    `apps/public` now forwards ONLY `Astro.clientAddress` and discards the inbound chain.
+#    ⚠ The accepted cost: behind a real CDN the true client address is lost and the key becomes the
+#    CDN's address — coarse, but ⛔ not forgeable. Re-examine when an edge is configured (note 2).
 #
 # 4. ⚠ THE COUNTERS ARE IN-MEMORY AND PER-INSTANCE. §1.4 records no Redis, so the same is true of
 #    the rate-limit store: the EFFECTIVE ceiling is `max × instanceCount`, not a global limit.
@@ -91,7 +103,11 @@
 # REJECTED — at design time, before it is built and argued about.
 # ═══════════════════════════════════════════════════════════════════════════════════════════════
 
-version: 1
+# ⚠ BUMPED 1 → 2 at `2026-08-21-145` cl.4: `rapid_pagination` was split into a position rule
+# (`deep_page_access`) and a real rate rule (`rapid_pagination`), and `page_transitions` was added
+# to the `detects` vocabulary. ⛔ A rule-set change without a version bump is a silent change to a
+# committed governance artifact.
+version: 2
 
 # The audit action every fired rule emits under. ⛔ Deliberately NOT `abuse.honeypot`: reusing that
 # type would corrupt the honeypot signal AND break `security-headers.spec.ts`'s exact-count
@@ -120,15 +136,35 @@ rules:
     window_seconds: 300
     threshold: 25
 
-  - id: rapid_pagination
+  # ⚠ RENAMED FROM `rapid_pagination` AT `2026-08-21-145` cl.4. The old id promised a RATE and
+  # measured a POSITION: `observed` was the deepest page seen, set from the very first request, so
+  # following a shared link or a bookmark to `?page=45` fired it on request #1 with ZERO velocity
+  # measured — and in a 10k-member Pariwar (horizon page 200) the entire second half of the
+  # legitimate page range was permanently flagged. ⛔ The description said "faster than a human
+  # reads"; nothing in the implementation computed a rate. The rule is kept — deep access IS a real
+  # signal — but it now says what it measures, and the RATE it used to promise is `rapid_pagination`
+  # below, which actually measures one.
+  - id: deep_page_access
     status: active
     description: >-
-      A single visitor key advancing deep into the page range faster than a human reads — page
-      number over the threshold within the window. Catches the walker that paces itself under
-      high_volume_lookups but still intends to reach the end.
+      A single visitor key reaching a page number deep in the range within the window. ⚠ This is a
+      POSITION signal, not a rate: it fires on a single request to a deep page, which is exactly
+      what a resumed bookmark or a shared link looks like. Treat a lone hit as weak evidence — it
+      is corroborating, and it is the rule most likely to produce a false positive.
     detects: page_depth
     window_seconds: 300
     threshold: 40
+
+  - id: rapid_pagination
+    status: active
+    description: >-
+      A single visitor key ADVANCING through pages faster than a human reads — the count of
+      page-to-page TRANSITIONS within the window. ⛔ Unlike deep_page_access this cannot be tripped
+      by one request, however deep: reaching page 200 directly is one transition, while walking
+      1→2→…→30 is twenty-nine. This is the rule that means what the phrase "rapid pagination" says.
+    detects: page_transitions
+    window_seconds: 300
+    threshold: 20
 
   - id: repeated_district_queries
     # ⛔ NO SUBJECT ON THIS SURFACE — declared, NOT silently omitted, and NOT faked into an

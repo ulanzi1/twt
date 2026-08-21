@@ -123,10 +123,11 @@ const directory = paging.ok
   ? await fetchMemberDirectory({
       page: paging.page,
       limit: paging.limit,
-      forwardedFor: buildForwardedFor(
-        Astro.request.headers.get('x-forwarded-for'),
-        Astro.clientAddress,
-      ),
+      // ⛔ `Astro.clientAddress` ONLY. The inbound `X-Forwarded-For` header is deliberately NOT
+      // read here — it is caller-supplied, and `apps/api`'s `trustProxy: true` keys on the
+      // LEFTMOST chain entry, so forwarding it handed the attacker the rate-limit key
+      // (`2026-08-21-145` cl.2). ⛔ Do not "restore the full chain" without re-reading that ruling.
+      forwardedFor: buildForwardedFor(Astro.clientAddress),
     })
   : null;
 

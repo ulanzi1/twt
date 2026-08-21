@@ -1,4 +1,31 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-21d (TRUSTEE RATIFICATION of Decision 2026-08-21-145, ruled by Dhiraj Rahul
+#   + Kalpana Bharti, recorded as Decision 2026-08-21-146. ⛔ NO development_status row flips --
+#   11a.3 stays `done`; this is governance, not build.
+#   Q1 RATIFIED: 2026-08-20-143 D3(a) SUPERSEDED -- a member whose account is frozen following a
+#   reported death is excluded from the public directory; the amended member-facing sentence ADOPTED.
+#   Q1-sub: no additional mitigation for the death-related omission "at this time" (the Panel's own
+#   qualifier, recorded as given).
+#   Q2 = (b) accept + direct a mechanism: no new permission key or member-gating predicate lands
+#   without its decision-log entry. ⚠ Recorded IN TERMS as a PROCESS DISCIPLINE, ⛔ NOT a CI gate --
+#   no scan can answer "is this predicate governed?".
+#   ⭐ Q2-sub went FURTHER than recommended and is a DIRECTIVE: a dedicated ADMIN UI is REQUIRED
+#   before the per-Pariwar directory kill switch may be treated as an OPERATIONAL CONTROL. The
+#   mechanism STAYS (suspension rejected), but ⛔ direct DB manipulation must NOT be described as
+#   normal manual operation. Every such description corrected (directory-publication.ts,
+#   permissions.ts, permissions.test.ts, handlers.ts, story record). ✅ Verified the switch is named
+#   in NO runbook and NO degradation-policy doc -- the directive retracts nothing, it prevents a
+#   retraction later.
+#   ⛔ NEW WORK DIRECTED, not yet a story: the kill-switch ADMIN UI (owner John). ⛔ NOT bundled into
+#   11a.4. ⚠ Its floor is pre-recorded so the story cannot over-promise: even with a UI the switch is
+#   NOT immediate -- `edge_cacheable` s-maxage=300 keeps a pulled Pariwar served from warm PoPs, per
+#   page number.
+#   ⚠ STANDING FENCE raised at ratification, ⛔ NOT ruled: "frozen ⟺ death" is a CONSTRUCTION fact
+#   (ACCOUNT_FREEZE_EVENT_TYPE is exactly claim.intake_initiated). A future non-death freeze source
+#   would silently de-list members for a reason the Panel never approved. Fires on the next story
+#   touching overlay.ts's event constants.
+#   ⛔ STILL OPEN: 2026-08-20-140 cl.7 (WIDER -- the kill switch joins it); 2026-08-19-136 cl.5
+#   (DPDPA, SHARPENED -- the surface was publishing the deceased).
 # last_updated: 2026-08-21c (SECOND code-review pass on 11a.3, three layers over the POST-PATCH
 #   tree. 38 raised -> 36 unique -> 4 decision-needed + 30 patch + 2 dismissed. ALL 34 APPLIED.
 #   ⭐ THE FINDING OF THE ROUND: a DECEASED member was published on the open internet with their

@@ -45,7 +45,12 @@ function stubPage(limit) {
   const items = Array.from({ length: limit }, (_, i) => ({
     name: `Rajesh Kumar Sharma ${String(i).padStart(2, '0')}`,
     district: ['Lucknow', 'Kanpur', 'Gorakhpur', 'Muzaffarpur'][i % 4],
-    status: i % 7 === 0 ? 'lock-in' : 'active',
+    // ⛔ THE PUBLIC WIRE TOKEN, ⛔ never the internal `lock-in` (`2026-08-21-144` cl.4).
+    // ⚠ This stub used to emit `lock-in`, which `isDirectoryResponse` REJECTS — so the fetch
+    // resolved to `bad_response`, the page rendered the outage state with zero rows, and this
+    // script's own "the stub was not consumed" guard threw on EVERY run. ⛔ Nothing in CI runs this
+    // script, so nothing reported that the AC8 measurement deliverable could not execute at all.
+    status: i % 7 === 0 ? 'waiting-period' : 'active',
   }));
   return { items, page: 1, limit, total: 5000 };
 }

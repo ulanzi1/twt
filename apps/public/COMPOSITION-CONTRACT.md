@@ -124,7 +124,15 @@ member row needs a **Tier-1 KYC decrypt** (KMS deps), an **anti-enumeration ceil
 store) and an **abuse audit line** (the BYPASSRLS service pool) — and `apps/public` verifiably has
 **none of the three**. ⛔ **It must not gain the first**: the KEK is shared across *every* Tier-1
 field class (mobile, device tokens, KYC), so a decrypt capability here has a blast radius that is
-⛔ not "names". `tests/no-kms-in-public.test.ts` asserts that absence across the whole app.
+⛔ not "names". `tests/no-kms-in-public.test.ts` asserts that absence across **every directory that
+ships or runs code** — `src/` **and** `scripts/`.
+
+⚠ **Its honest limit, stated rather than discovered:** the scan covers source. The `package.json`
+leg matches dependency **names** containing `kms` / `node-vault`, so it ⛔ **cannot** see capability
+arriving *through* `@twt/domain`, which is already a dependency — that route is held closed by the
+source-token scan, ⛔ not by the dependency check. (The prose here previously said "across the whole
+app" while the scan root was `src/` alone, which left `scripts/` — two files added at 11a.3 —
+unwatched.)
 
 ## ⭐ The Member Directory is a LEGITIMACY surface, not a social graph
 

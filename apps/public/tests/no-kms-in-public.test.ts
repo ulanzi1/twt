@@ -30,9 +30,14 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 const here = dirname(fileURLToPath(import.meta.url));
+// ⭐ EVERY DIRECTORY THAT SHIPS OR RUNS CODE IN THIS APP — ⛔ not `src/` alone.
+// ⚠ The scan root used to be `src/` while two prose locations claimed the absence was asserted
+// "across the whole app". `scripts/` was outside it — and Story 11a.3 added TWO executable scripts
+// there, either of which could have imported KMS capability with every leg still green.
 const SRC = join(here, '../src');
+const SCRIPTS = join(here, '../scripts');
 
-/** Every source file in `apps/public/src`, recursively. */
+/** Every source file under `dir`, recursively. ⚠ A missing dir is an error, ⛔ never an empty scan. */
 function collect(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
     const full = join(dir, entry);
@@ -42,7 +47,16 @@ function collect(dir: string, out: string[] = []): string[] {
   return out;
 }
 
-const FILES = collect(SRC);
+const FILES = [...collect(SRC), ...collect(SCRIPTS)];
+
+// ⛔ A SCAN THAT FOUND NOTHING IS NOT A PASS. If a future refactor moves or renames either root,
+// `collect` would return `[]` and every assertion below would pass over an empty list — the
+// vacuous-green shape this repo removes on sight.
+it('the scan actually covers files in BOTH roots', () => {
+  expect(FILES.some((f) => f.startsWith(SRC))).toBe(true);
+  expect(FILES.some((f) => f.startsWith(SCRIPTS))).toBe(true);
+  expect(FILES.length).toBeGreaterThan(10);
+});
 
 /**
  * The tokens that mean "this process can decrypt Tier-1".

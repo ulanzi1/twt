@@ -41,7 +41,24 @@ import { ACTIVE_PARIWAR_ID } from './pariwar.server.js';
 const DEFAULT_API_ORIGIN = 'http://127.0.0.1:3000';
 
 export const API_ORIGIN: string = (() => {
-  const raw = process.env.PUBLIC_API_ORIGIN ?? DEFAULT_API_ORIGIN;
+  const configured = process.env.PUBLIC_API_ORIGIN;
+
+  // ⭐ REQUIRED IN PRODUCTION — ⛔ the localhost default is a DEV convenience only.
+  // ⚠ The guarded case used to be the MALFORMED value, which is the unlikely misconfiguration. The
+  // LIKELY one — the variable simply not set in the deployed SSR container — took the `??` branch,
+  // parsed cleanly, and every request then fetched `http://127.0.0.1:3000` inside that container,
+  // got ECONNREFUSED, and rendered the outage state. ⇒ exactly the "mysterious per-request failure
+  // state that looks like an outage" this block's own comment says must never happen, reached by
+  // the door the check was not watching.
+  if (configured === undefined && process.env.NODE_ENV === 'production') {
+    throw new Error(
+      `PUBLIC_API_ORIGIN is not set. ⛔ The public Member Directory cannot render without an API ` +
+        `origin, and defaulting to ${DEFAULT_API_ORIGIN} in production would surface as a permanent ` +
+        `"directory unavailable" page rather than as a failed boot.`,
+    );
+  }
+
+  const raw = configured ?? DEFAULT_API_ORIGIN;
   try {
     return new URL(raw).origin;
   } catch {

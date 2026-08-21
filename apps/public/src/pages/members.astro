@@ -58,8 +58,10 @@ import { buildForwardedFor, fetchMemberDirectory } from '../lib/directory.server
 import {
   buildMembersRejectionView,
   buildMembersView,
+  visibleDirectoryColumns,
   type MembersLabels,
 } from '../lib/members-render.js';
+import { visibilityOf } from '../lib/matrix.server.js';
 import { PUBLIC_PAGE_SIZE_MAX, pageHref, parsePageParams } from '../lib/pagination.js';
 import { ACTIVE_PARIWAR_ID } from '../lib/pariwar.server.js';
 
@@ -87,6 +89,7 @@ const tr = (key: string, params?: Record<string, string | number>) =>
 const labels: MembersLabels = {
   pageTitle: tr('page_title'),
   pageIntro: tr('page_intro'),
+  tableCaption: tr('table_caption'),
   notPublishedTitle: tr('not_published_title'),
   notPublishedBody: tr('not_published_body'),
   unavailableTitle: tr('unavailable_title'),
@@ -154,14 +157,41 @@ if (rejection !== null) Astro.response.status = rejection.status;
 // probe at a shared edge for 5 minutes would let a repeat of that exact probe be
 // answered from the cache without ever reaching the origin — weakening the very
 // "the rejection is the signal" posture `pagination.ts` documents.
-if (rejection === null) {
+// ⭐ AND NEITHER IS A FAILURE STATE — `2026-08-21-145`, second-round review.
+// ⚠ The branch below USED to key on `rejection === null` alone, which meant EVERY non-rejection
+// outcome took the `edge_cacheable` arm at HTTP 200: the API-outage render, the visitor's own 429,
+// and the kill-switched empty roster. ⇒ one transient upstream blip pinned "The directory could
+// not be loaded" into a shared edge for FIVE MINUTES for every visitor, long after the API
+// recovered — and one visitor's throttle was cached for everyone. ⛔ That is the same class of
+// false statement the outage copy exists to prevent, one layer up.
+//
+// ⚠ `pastEnd` is cacheable and deliberately so — it is a TRUE statement about a real roster.
+// ⛔ `apiUnavailable` is not: it is a statement about THIS request's luck.
+const cacheable = rejection === null && view !== null && !view.model.apiUnavailable;
+if (cacheable) {
   Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
   Astro.response.headers.set('Vary', 'Accept-Language');
 } else {
   Astro.response.headers.set('Cache-Control', 'no-store');
 }
+// ⚠ AND THE STATUS TELLS THE TRUTH TOO. A page that says "could not be loaded" at 200 is a lie to
+// every cache, crawler and uptime check in the path. 503 + `Retry-After` is the honest shape, and
+// it is what keeps an intermediary from storing the outage even if the header above were dropped.
+// ⛔ Not 500: the failure is upstream and transient, and this page rendered correctly.
+if (rejection === null && view !== null && view.model.apiUnavailable) {
+  Astro.response.status = 503;
+  Astro.response.headers.set('Retry-After', '60');
+}
 
 const firstPageHref = pageHref('/members', Astro.url.searchParams, 1);
+
+// ⭐ RESOLVED ONCE PER RENDER, ⛔ not per row. The matrix cannot vary within a page, and asking
+// `getVisibility()` three times per member would be an N+1 on a constant. ⛔ `visibilityOf` is the
+// ONLY thing consulted — no local tier comparison, no second viewer ceiling (AC5).
+const directoryColumns = visibleDirectoryColumns(
+  labels,
+  (fieldId) => visibilityOf('member-directory', fieldId, 'public').visible,
+);
 ---
 
 <PublicShell
@@ -218,12 +248,15 @@ const firstPageHref = pageHref('/members', Astro.url.searchParams, 1);
             screen-reader user needs the column each cell belongs to announced. */}
         {view.model.hasMembers && (
           <table class="members__table">
-            <caption class="members__caption">{labels.pageIntro}</caption>
+            {/* ⚠ The table's own accessible name — deliberately DISTINCT from the intro <p> above.
+                It used to repeat `labels.pageIntro` verbatim, which a screen reader then announced
+                twice in a row. */}
+            <caption class="members__caption">{labels.tableCaption}</caption>
             <thead>
               <tr>
-                <th scope="col">{labels.columnName}</th>
-                <th scope="col">{labels.columnDistrict}</th>
-                <th scope="col">{labels.columnStatus}</th>
+                {directoryColumns.map((col) => (
+                  <th scope="col">{col.headerLabel}</th>
+                ))}
               </tr>
             </thead>
             {/* ⭐ <MatrixField>'S FIRST REAL CALL SITES — the named follow-up of Decision
@@ -233,34 +266,24 @@ const firstPageHref = pageHref('/members', Astro.url.searchParams, 1);
                 a call site: if it does not fit, STOP AND RAISE IT.
                 ⛔ A not-visible verdict renders NOTHING — no placeholder, no empty span, no comment
                 naming the omitted field. An omission that announces itself is an ENUMERATION
-                SIGNAL: a scraper diffing renders learns exactly which fields exist. */}
+                SIGNAL: a scraper diffing renders learns exactly which fields exist.
+                ⭐ AND THAT NOW INCLUDES THE `<td>` AND THE `<th>` — `2026-08-21-145`. They used to
+                be unconditional, so a not-visible field still emitted an empty cell under a
+                labelled column: the omission announced itself through the table, not the
+                component. `visibleDirectoryColumns()` is what closes that, in the pure module. */}
             <tbody>
               {view.model.rows.map((row) => (
                 <tr>
-                  <td>
-                    <MatrixField
-                      surface="member-directory"
-                      field="member_name"
-                      viewerContext="public"
-                      value={row.memberName}
-                    />
-                  </td>
-                  <td>
-                    <MatrixField
-                      surface="member-directory"
-                      field="district"
-                      viewerContext="public"
-                      value={row.district ?? labels.districtUnknown}
-                    />
-                  </td>
-                  <td>
-                    <MatrixField
-                      surface="member-directory"
-                      field="member_status"
-                      viewerContext="public"
-                      value={row.memberStatus}
-                    />
-                  </td>
+                  {directoryColumns.map((col) => (
+                    <td>
+                      <MatrixField
+                        surface="member-directory"
+                        field={col.fieldId}
+                        viewerContext="public"
+                        value={col.valueOf(row)}
+                      />
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>

@@ -67,6 +67,7 @@ import {
 const MEMBERS_TEST_LABELS: MembersLabels = {
   pageTitle: 'Member Directory',
   pageIntro: 'intro',
+  tableCaption: 'caption',
   notPublishedTitle: 'not published',
   notPublishedBody: 'being prepared',
   unavailableTitle: 'unavailable',

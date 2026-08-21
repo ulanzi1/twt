@@ -1,6 +1,7 @@
 {
   "page_title": "Member Directory",
   "page_intro": "The member directory for this family.",
+  "table_caption": "Members of this family, with their district and membership status.",
   "not_published_title": "The member directory is not published yet",
   "not_published_body": "The directory is being prepared and is not open to the public yet. Nothing about your membership changes in the meantime, and no member details are shown on this page today.",
   "pagination_label": "Directory pages",

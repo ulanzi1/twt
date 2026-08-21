@@ -3969,7 +3969,10 @@ const PublicDirectoryResponseComponent = PublicDirectoryResponse.openapi('Public
 registry.register('PublicDirectoryResponse', PublicDirectoryResponseComponent);
 registry.registerPath({
   method: 'get',
-  path: '/api/v1/p/:pariwarId/public-pages/member-directory',
+  // ⚠ `{pariwarId}`, ⛔ NOT Fastify's `:pariwarId`. This is an OpenAPI document, and this entry was
+  // the ONLY colon-style path in the whole committed file — every other `/api/v1/p/…` route uses
+  // the brace form. A generated client could not construct the URL at all.
+  path: '/api/v1/p/{pariwarId}/public-pages/member-directory',
   summary: 'Public Member Directory page (UNAUTHENTICATED by Panel ruling)',
   description:
     'One page of the public Member Directory: presentation-resolved member name, raw latest-posting ' +
@@ -3979,7 +3982,13 @@ registry.registerPath({
     'page-size cap (50), a deep-pagination horizon (page 200), noindex, and the absence of any ' +
     'member-detail route or export affordance. Its defence is written in login-wall.spec.ts.',
   tags: ['public-pages'],
-  request: { query: PublicDirectoryQuery },
+  // ⭐ `params` IS DECLARED. Without it the published contract carried NO path parameter at all —
+  // so the required-uuid constraint on the one segment that selects a TENANT was invisible to every
+  // consumer, on a route that returns member PII. `routes.ts` validates it; the document must say so.
+  request: {
+    params: z.object({ pariwarId: z.string().uuid() }),
+    query: PublicDirectoryQuery,
+  },
   responses: {
     200: {
       description: 'One page of the public Member Directory',

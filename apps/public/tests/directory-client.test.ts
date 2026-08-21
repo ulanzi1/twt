@@ -39,36 +39,57 @@ const json = (body: unknown, status = 200): Response =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
 describe('⭐ TRAP 2 — buildForwardedFor', () => {
-  it('uses the visitor address when there is no inbound chain', () => {
-    expect(buildForwardedFor(null, '203.0.113.10')).toBe('203.0.113.10');
-    expect(buildForwardedFor('', '203.0.113.10')).toBe('203.0.113.10');
+  it('sends the visitor address this process observed', () => {
+    expect(buildForwardedFor('203.0.113.10')).toBe('203.0.113.10');
+    expect(buildForwardedFor('  203.0.113.10  ')).toBe('203.0.113.10');
   });
 
-  it('⭐ APPENDS to an inbound chain — ⛔ never replaces it', () => {
-    // ⛔ Replacing would discard the upstream hops an operator needs, and it is not what the
-    // standard means by the header.
-    expect(buildForwardedFor('198.51.100.1, 198.51.100.2', '203.0.113.10')).toBe(
-      '198.51.100.1, 198.51.100.2, 203.0.113.10',
-    );
-  });
-
-  it('does not duplicate an address already at the end of the chain', () => {
-    expect(buildForwardedFor('198.51.100.1, 203.0.113.10', '203.0.113.10')).toBe(
-      '198.51.100.1, 203.0.113.10',
-    );
-  });
-
-  it('tolerates a missing client address without producing a trailing separator', () => {
-    expect(buildForwardedFor('198.51.100.1', null)).toBe('198.51.100.1');
-    expect(buildForwardedFor(null, null)).toBe('');
+  it('⛔ RETURNS null — NEVER an empty string — when no address was observed', () => {
+    // ⛔ THE REGRESSION GUARD. An empty `X-Forwarded-For` reads to `proxy-addr` as "no chain", so
+    // `request.ip` falls back to the socket address — the SSR process — collapsing every such
+    // visitor into ONE bucket. That is the exact failure this module exists to prevent, arriving
+    // silently. `null` forces the caller to OMIT the header instead.
+    expect(buildForwardedFor(null)).toBeNull();
+    expect(buildForwardedFor(undefined)).toBeNull();
+    expect(buildForwardedFor('')).toBeNull();
+    expect(buildForwardedFor('   ')).toBeNull();
   });
 
   it('⭐ DIFFERENT VISITORS PRODUCE DIFFERENT VALUES — the property the ceiling depends on', () => {
     // ⛔ If this ever returned a constant, `apps/api`'s rate limit would key every visitor on earth
     // into one bucket while every other test in both apps continued to pass.
-    expect(buildForwardedFor(null, '203.0.113.10')).not.toBe(
-      buildForwardedFor(null, '198.51.100.20'),
+    expect(buildForwardedFor('203.0.113.10')).not.toBe(buildForwardedFor('198.51.100.20'));
+  });
+});
+
+describe('⭐⛔ THE KEY IS NOT CALLER-CHOSEN — `2026-08-21-145` cl.2', () => {
+  // ── WHAT THESE REPLACE, AND WHY ────────────────────────────────────────────────────────────
+  // This block previously asserted that `buildForwardedFor` APPENDED the visitor address to the
+  // inbound chain ("⛔ never replaces it"), on the reasoning that dropping upstream hops discards
+  // information and is not what the standard means. Both true — and together a security hole:
+  // `apps/api` runs `trustProxy: true`, under which `request.ip` is the LEFTMOST chain entry, and
+  // on a public SSR request the inbound chain is whatever the BROWSER sent. ⇒ appending put an
+  // ATTACKER-CHOSEN value in the position the rate limit and every abuse counter key on, and one
+  // rotated header gave every request a fresh bucket.
+  // ⚠ The old tests could not see it: they only ever asserted the STRING that came out, never
+  // which end of it `apps/api` would read.
+
+  it('⛔ an inbound X-Forwarded-For CANNOT influence the value sent onward', () => {
+    const hostile = '10.0.0.1, 10.0.0.2, 127.0.0.1';
+    // Whatever a caller sends, the value is decided solely by the observed address.
+    expect(buildForwardedFor('203.0.113.10')).toBe('203.0.113.10');
+    expect(buildForwardedFor('203.0.113.10')).not.toContain(hostile);
+    // ⛔ And the function cannot even be TOLD about a chain any more — the parameter is gone.
+    expect(buildForwardedFor.length).toBe(1);
+  });
+
+  it('⛔ a rotating attacker header does NOT produce rotating keys', () => {
+    // The scraper's lever was: vary the header, get a fresh bucket every request. With the chain
+    // discarded, every request from one visitor yields the SAME value however the header varies.
+    const keys = new Set(
+      ['10.0.0.1', '10.0.0.2', '10.0.0.3'].map(() => buildForwardedFor('203.0.113.10')),
     );
+    expect(keys.size).toBe(1);
   });
 });
 

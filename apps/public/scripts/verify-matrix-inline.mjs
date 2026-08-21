@@ -79,8 +79,33 @@ if (missing.length > 0) {
 }
 
 // The matrix must not be silently truncated: assert a LONG contiguous slice survives.
-const longSlice = matrix.slice(matrix.indexOf('- id: member-directory'), matrix.indexOf('- id: member-directory') + 200);
-const carriesSlice = files.some((f) => readFileSync(f, 'utf-8').includes(longSlice.split('\n')[0]));
+// ⭐ THE ANCHOR MUST EXIST. ⚠ Without this, a rename made `indexOf` return -1, `slice(-1, 199)`
+// yielded the file's LAST CHARACTER, and `includes()` found it in essentially any bundle — so the
+// check passed VACUOUSLY instead of failing.
+const ANCHOR = '- id: member-directory';
+const anchorAt = matrix.indexOf(ANCHOR);
+if (anchorAt === -1) {
+  console.error(
+    `✗ verify-matrix-inline: the anchor ${JSON.stringify(ANCHOR)} is not in the committed matrix. ` +
+      `⛔ Rename the anchor here too — a check that cannot find its anchor must FAIL, never pass quietly.`,
+  );
+  process.exit(1);
+}
+
+// ⭐ THE WHOLE SLICE IS COMPARED, ⛔ not just its first line.
+// ⚠ This previously did `longSlice.split('\n')[0]`, i.e. it computed 200 characters and then threw
+// them away to test the 22-character header `- id: member-directory`. A build that inlined the
+// surface header and TRUNCATED every field row beneath it passed — while the comment claimed the
+// matrix "must not be silently truncated". The slice is the point; use it.
+const longSlice = matrix.slice(anchorAt, anchorAt + 200);
+if (longSlice.length < 200) {
+  console.error(
+    `✗ verify-matrix-inline: only ${longSlice.length} chars follow the anchor — the committed matrix ` +
+      `is too short for this check to mean anything. ⛔ Fix the check, do not shrink the slice.`,
+  );
+  process.exit(1);
+}
+const carriesSlice = files.some((f) => readFileSync(f, 'utf-8').includes(longSlice));
 if (!carriesSlice) {
   console.error('✗ the member-directory surface header is not present verbatim in dist/server.');
   process.exit(1);

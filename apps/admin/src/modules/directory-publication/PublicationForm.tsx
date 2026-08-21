@@ -13,6 +13,7 @@
 // pulled a Pariwar's directory listing.
 
 import type { ReactElement } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { resolveEn as t } from './i18n-en.js';
@@ -27,6 +28,13 @@ export interface PublicationFormProps {
   onSubmit: (payload: { enabled: boolean; rationale: string }) => void;
   pending: boolean;
   submitError?: string;
+  /**
+   * Bumped by the parent after every successful flip. A stale rationale carried over in the
+   * textarea would otherwise be silently resubmittable as the justification for the OPPOSITE
+   * action on the very next click — corrupting the one thing this control exists to get right
+   * (Review Finding, this story).
+   */
+  resetToken: number;
 }
 
 export function PublicationForm({
@@ -34,13 +42,20 @@ export function PublicationForm({
   onSubmit,
   pending,
   submitError,
+  resetToken,
 }: PublicationFormProps): ReactElement {
   const {
     register,
     handleSubmit,
     watch,
+    reset,
     formState: { errors },
   } = useForm<PublicationFormValues>({ defaultValues: { rationale: '' }, mode: 'onChange' });
+
+  useEffect(() => {
+    reset({ rationale: '' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset() runs only when the parent bumps resetToken
+  }, [resetToken]);
 
   const targetEnabled = !currentlyEnabled;
   const rationale = watch('rationale');

@@ -47,6 +47,40 @@ const SCAN_TARGETS = [
   'apps/admin/src/routes/DirectoryPublicationRoute.tsx',
 ];
 
+/**
+ * Review Finding, this story: `apps/admin/src/api/{hooks,client}.ts` are SHARED files this story
+ * also added prose to (the query/mutation hooks + typed fetch wrappers), but they carry dozens of
+ * OTHER modules' comments too — scanning either file WHOLE hits unrelated, legitimate uses of
+ * "immediately" elsewhere in the same file (e.g. the News/Blog "publish immediately" action, a
+ * data-rights export comment) and would force this gate to be suppressed, which is the exact
+ * failure mode this file's own header warns a wide gate invites. Instead, extract just the section
+ * THIS STORY added — bounded by its own section-header comment and the next section's — and scan
+ * that snippet only.
+ */
+const SECTION_TARGETS = [
+  {
+    file: 'apps/admin/src/api/hooks.ts',
+    start: '── Directory-publication kill switch (Story 10.30)',
+    end: '── Verifier-console surface (Story 6.10)',
+  },
+  {
+    file: 'apps/admin/src/api/client.ts',
+    start: '── Directory-publication kill switch (Story 10.30)',
+    end: '── Auth surface (Story 1.9',
+  },
+] as const;
+
+/** ⛔ Returns '' (never throws) if a marker stops matching — the sanity check below then fails
+ *  loudly rather than this gate silently scanning zero content forever. */
+function extractSection(target: (typeof SECTION_TARGETS)[number]): string {
+  const full = readFileSync(path.join(repoRoot, target.file), 'utf8');
+  const startIdx = full.indexOf(target.start);
+  if (startIdx === -1) return '';
+  const endIdx = full.indexOf(target.end, startIdx + target.start.length);
+  if (endIdx === -1) return '';
+  return full.slice(startIdx, endIdx);
+}
+
 const SKIP_DIRS = new Set(['node_modules', 'dist', 'build', '.turbo', 'coverage', '.git']);
 const SCAN_EXT = new Set(['.ts', '.tsx']);
 
@@ -113,9 +147,13 @@ describe('Story 10.30 — the kill switch is NOT described as immediate (Decisio
   for (const term of FORBIDDEN) {
     it(`⛔ no directory-publication source or copy file uses '${term}'`, () => {
       const hits = filesContaining(term);
+      const sectionHits = SECTION_TARGETS.filter((t) =>
+        extractSection(t).toLowerCase().includes(term.toLowerCase()),
+      ).map((t) => `${t.file}#directory-publication-section`);
+      const allHits = [...hits, ...sectionHits];
       expect(
-        hits,
-        `'${term}' is FORBIDDEN by Decision 2026-08-21-147 clause 1(d). Found in: ${hits.join(', ')}.\n` +
+        allHits,
+        `'${term}' is FORBIDDEN by Decision 2026-08-21-147 clause 1(d). Found in: ${allHits.join(', ')}.\n` +
           `This control is NOT immediate and cannot be made so from here: /members is declared ` +
           `cache_policy: edge_cacheable with s-maxage=300, so a Pariwar that has just been ` +
           `unpublished keeps being served real member names from every warm edge PoP, PER PAGE ` +
@@ -157,6 +195,17 @@ describe('Story 10.30 — the kill switch is NOT described as immediate (Decisio
       expect(
         walk(path.join(repoRoot, target)).length,
         `scan target '${target}' resolved to ZERO files — the gate is not covering it`,
+      ).toBeGreaterThan(0);
+    }
+    // ⛔ Same discipline for the two extracted shared-file sections: if either marker stops matching
+    // (the section is renamed, or its bounding neighbour changes), extraction silently returns '' and
+    // the FORBIDDEN checks above would vacuously pass forever.
+    for (const section of SECTION_TARGETS) {
+      expect(
+        extractSection(section).length,
+        `section extraction for '${section.file}' (start: '${section.start}') resolved to EMPTY — ` +
+          `either marker has drifted and this gate is no longer covering that file's directory-` +
+          `publication prose`,
       ).toBeGreaterThan(0);
     }
   });

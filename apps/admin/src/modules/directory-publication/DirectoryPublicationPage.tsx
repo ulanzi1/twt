@@ -17,7 +17,7 @@
 // `requirePermissionHook` is the boundary; its 403 surfaces here as a readable page error.
 
 import type { ReactElement } from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { ApiError } from '../../api/client.js';
 import {
@@ -37,7 +37,9 @@ function errorMessage(error: unknown): string | undefined {
     // The one denial an operator is most likely to hit gets copy that explains it rather than a raw
     // machine code — the server, not this page, decided it (Trap 3).
     if (error.status === 403) return t('directoryPublication.error.forbidden');
-    return `${error.code}: ${error.message}`;
+    // Any other status is unexpected by design (Task 8's designed-status list is 400/401/403/409) —
+    // curated copy, not the raw server code/message, which may carry internal detail (Review Finding).
+    return t('directoryPublication.error.unexpected');
   }
   return error instanceof Error ? error.message : 'Something went wrong.';
 }
@@ -53,6 +55,13 @@ export function DirectoryPublicationPage({
   const status = useDirectoryPublicationStatus(pariwarId);
   const flip = useSetDirectoryPublicationStatus(pariwarId);
   const [savedEnabled, setSavedEnabled] = useState<boolean | null>(null);
+  const [resetToken, setResetToken] = useState(0);
+
+  // Client-side nav between two Pariwars' pages does not remount this component — clear the
+  // per-tenant "Saved" banner so it can never leak from the previous Pariwar's view (Review Finding).
+  useEffect(() => {
+    setSavedEnabled(null);
+  }, [pariwarId]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -133,11 +142,20 @@ export function DirectoryPublicationPage({
             {t('directoryPublication.form.heading')}
           </h2>
           <PublicationForm
+            key={pariwarId}
             currentlyEnabled={status.data.enabled}
             pending={flip.isPending}
             submitError={errorMessage(flip.error)}
+            resetToken={resetToken}
             onSubmit={(payload) =>
-              flip.mutate(payload, { onSuccess: (row) => setSavedEnabled(row.enabled) })
+              flip.mutate(payload, {
+                onSuccess: (row) => {
+                  setSavedEnabled(row.enabled);
+                  // Clears the rationale textarea so a prior submit's text can never be silently
+                  // resubmitted as the justification for the reverse flip (Review Finding).
+                  setResetToken((n) => n + 1);
+                },
+              })
             }
           />
           {savedEnabled !== null && !flip.isPending && !flip.error && (

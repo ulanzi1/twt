@@ -1,4 +1,32 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-21i (Story 10.30 REVIEWED via bmad-code-review: review -> done. ONE ROW
+#   FLIPS: 10-30-directory-publication-kill-switch-admin-ui: done.
+#   THREE LAYERS (Blind Hunter, Edge Case Hunter, Acceptance Auditor). Acceptance Auditor: ZERO
+#   AC/Trap/scope-boundary violations; every Dev Agent Record claim independently reproduced
+#   (comment-only domain diff, Row 17 stays open, test counts, grep zero-hits).
+#   5 PATCHES APPLIED (apps/admin only, zero apps/api or packages/ changes): PublicationForm resets
+#   the rationale after a successful flip (resetToken); the terminology gate's SCAN_TARGETS now also
+#   covers hooks.ts/client.ts via an extracted per-story section (scanning either file WHOLE would
+#   false-positive on unrelated "immediately" uses elsewhere in them); a non-403 ApiError now shows
+#   curated copy instead of the raw server code/message; the mutation's onSuccess writes the
+#   returned row into the query cache synchronously (qc.setQueryData) so "Current state" and the
+#   "Saved" banner can never disagree; savedEnabled resets on pariwarId change + the form remounts
+#   via `key={pariwarId}` so a client-side tenant switch can't leak the prior Pariwar's banner.
+#   1 DECISION resolved -> DEFERRED (user call): the s-maxage=300 propagation-floor copy is a
+#   disconnected literal with no cross-package constant; re-trigger is the next story touching
+#   /members' caching policy.
+#   4 MORE DEFERRED, all verified as PRE-EXISTING patterns inherited from the `degraded-mode`
+#   precedent this story mirrors file-for-file (not introduced by 10.30's diff): no idempotency-key
+#   on the write route; requestPayloadHash salted by a fresh audit_id; the console never names which
+#   Pariwar is being viewed; no pariwarId-existence check anywhere in the admin-route stack.
+#   3 DISMISSED: GET/PUT sharing one permission key (AC6/scope-boundary forbid a new key); AC3's
+#   form-never-mounts-for-a-denied-caller observation (intentional, already tested); and — caught
+#   only on verification, since Blind Hunter runs diff-only — the "backstop error path has zero
+#   test coverage" finding was FALSE: `directory-publication-policy.spec.ts:155-174` (Story 11a.3,
+#   unmodified, re-run green per AC9) already asserts it for both a no-grants actor and an actor
+#   holding every OTHER pariwar-dimension key.
+#   All patches verified: `pnpm --filter @twt/admin test` 36/36 files, 379/379 tests green;
+#   `tsc --noEmit` clean; `pnpm --filter @twt/admin lint` clean.
 # last_updated: 2026-08-21h (Story 10.30 IMPLEMENTED via bmad-dev-story: ready-for-dev -> in-progress
 #   -> review. ONE ROW FLIPS: 10-30-directory-publication-kill-switch-admin-ui: review.
 #   ⛔⛔ ROW 17 DOES NOT CLOSE AND THE SWITCH IS STILL NOT AN OPERATIONAL CONTROL. `current_status`
@@ -9179,7 +9207,7 @@ development_status:
   # member names from every warm PoP, PER PAGE NUMBER (2026-08-21-145 cl.5(e)). ⛔ The word
   # "immediate" may not be used about this control.
   # ⚠ `backlog` because NO story file exists yet -- owner John to author. ⛔ Not ready-for-dev.
-  10-30-directory-publication-kill-switch-admin-ui: review
+  10-30-directory-publication-kill-switch-admin-ui: done
   epic-10-retrospective: done
 
   # ==========================================================================

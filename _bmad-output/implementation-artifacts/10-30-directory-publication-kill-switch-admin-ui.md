@@ -4,7 +4,7 @@ baseline_commit: 46ffc59c58e7fd313343700549fd30288e1427e0
 
 # Story 10.30: Directory-Publication Kill-Switch Administrative UI `[SURFACE]`
 
-Status: review
+Status: done
 
 > ⚠ **THIS STORY WAS MINTED DIRECTLY INTO `sprint-status.yaml`, NOT INTO `epics.md`.** No epic section
 > exists for it — `epics.md`'s Epic 10 section ends at Story 10.29. The Acceptance Criteria below are
@@ -477,7 +477,26 @@ reader from looking. Leaving it is the exact defect class 11a.3's own second rev
 
 ### Review Findings
 
-_(none yet — populated by `bmad-code-review`)_
+_Reviewed 2026-08-21 via `bmad-code-review` (Blind Hunter + Edge Case Hunter + Acceptance Auditor,
+diff `46ffc59..HEAD`). Acceptance Auditor: zero AC/Trap/scope-boundary violations; every Dev Agent
+Record claim (comment-only domain diff, Row 17 stays open, test counts, grep zero-hits) independently
+reproduced. All findings below are from the Blind Hunter and Edge Case Hunter layers._
+
+- [x] [Review][Defer] Propagation-floor copy hardcodes `s-maxage=300` as a disconnected literal, no link back to the real edge-cache config [apps/admin/src/modules/directory-publication/i18n-en.ts:32-33] — deferred, pre-existing risk class; no shared constant currently crosses the apps/api → apps/admin boundary without new coupling
+
+- [x] [Review][Patch] `PublicationForm.tsx` never resets after a successful submit, risking stale-rationale resubmission and a lost-update race [apps/admin/src/modules/directory-publication/PublicationForm.tsx:38-51, DirectoryPublicationPage.tsx:93-148] — **Fixed:** a parent-bumped `resetToken` clears the rationale textarea via RHF's `reset()` after every successful flip; regression test `apps/admin/tests/directory-publication-page.test.tsx` "clears the rationale textarea after a successful save".
+- [x] [Review][Patch] AC5 terminology gate's `SCAN_TARGETS` omits `apps/admin/src/api/hooks.ts` and `apps/admin/src/api/client.ts`, both touched by this diff [apps/admin/tests/directory-publication-terminology.test.ts:43-48] — **Fixed:** added `SECTION_TARGETS` that extracts just this story's section from each shared file (bounded by its own header comment and the next section's), scanning that snippet rather than the whole file — scanning whole would false-positive on unrelated legitimate uses of "immediately" elsewhere in the same files (News/Blog "publish immediately", a data-rights comment). A sanity check asserts each extraction is non-empty so a marker rename fails loudly instead of silently hollowing the gate.
+- [x] [Review][Patch] Raw server error text (`${error.code}: ${error.message}`) shown verbatim to the operator for any non-403 `ApiError`, inconsistent with the page's own curated-403-copy precedent [apps/admin/src/modules/directory-publication/DirectoryPublicationPage.tsx:34-41] — **Fixed:** any non-403 `ApiError` now renders curated copy (`directoryPublication.error.unexpected`) instead of the raw code/message; regression test "shows curated copy, not the raw server code/message, for a non-403 error".
+- [x] [Review][Patch] "Current state" and "Saved" banner update on two different clocks (synchronous `setQueryData` vs. async `invalidateQueries` refetch), producing a real window of contradictory on-screen facts after every flip [DirectoryPublicationPage.tsx:93-97,130-148; apps/admin/src/api/hooks.ts:473-480] — **Fixed:** `useSetDirectoryPublicationStatus`'s `onSuccess` now writes the server's returned row into the query cache via `qc.setQueryData` synchronously, then invalidates for eventual revalidation; regression test "updates 'Current state' in the SAME render as the 'Saved' banner, never showing them contradict".
+- [x] [Review][Patch] `savedEnabled` state has no reset tied to `pariwarId` and the route has no remount `key` — client-side nav between two Pariwars can leak one tenant's stale "Saved" banner/rationale into the next [DirectoryPublicationPage.tsx:55,140-148; apps/admin/src/router.tsx:109-113] — **Fixed:** `savedEnabled` resets in a `useEffect` keyed on `pariwarId`, and `<PublicationForm key={pariwarId}>` fully remounts the form (clearing all its internal RHF state) on a tenant switch; regression test "does not leak a 'Saved' banner across a pariwarId change".
+
+- [x] [Review][Defer] `scopeCtx()` throws a bare untyped `Error` (unregistered in error-mapping) if `scopeTx`/`actorId` are ever absent [apps/api/src/modules/directory-publication/handlers.ts:85-92] — deferred, pre-existing (`degraded-mode/handlers.ts:53` carries the byte-identical throw for the identical defensive check; fixing it only here would diverge from the precedent this story explicitly mirrors file-for-file)
+- [x] [Review][Defer] No idempotency-key / retry-safety on the write route — a retry or double-click can produce a second audit line and reapply a stale rationale [apps/api/src/modules/directory-publication/routes.ts:61-73] — deferred, pre-existing (mirrors the `degraded-mode` precedent this story follows file-for-file; that module carries the identical gap)
+- [x] [Review][Defer] `requestPayloadHash` is salted by a freshly generated `audit_id`, so it can never match across identical requests despite its name [apps/api/src/modules/directory-publication/handlers.ts:141-146] — deferred, pre-existing (same audit-write construction mirrored from `degraded-mode/handlers.ts`, a house pattern this story didn't invent)
+- [x] [Review][Defer] Console page never displays which Pariwar/tenant is being viewed before a legally-sensitive flip [apps/admin/src/modules/directory-publication/DirectoryPublicationPage.tsx] — deferred, pre-existing (`DegradedModePage`, the precedent this page mirrors exactly, has the identical gap)
+- [x] [Review][Defer] No existence validation on the `pariwarId` path param anywhere in the stack — a mistyped tenant ID gets a silent 200 and a phantom row [apps/api/src/modules/directory-publication/routes.ts, handlers.ts:98-116] — deferred, pre-existing (a `scopeResolutionHook`-level gap shared by every sibling Pariwar-scoped admin route, not unique to this one)
+
+**Dismissed (3):** GET/PUT sharing one permission key — rejected, AC1/Task 3 explicitly specify this single-chain shape and AC6/the SCOPE BOUNDARY table forbid a new permission key or new grant "for symmetry"; fixing this would violate a ratified constraint. · Acceptance Auditor's note that AC3's flip form structurally never mounts for a denied caller — confirmed intentional and already tested in `admin.spec.ts` and `directory-publication-page.test.tsx`, not a gap. · Domain backstop failure path (`UngovernedDirectoryPublicationChangeError` on grant divergence) "has zero test coverage" — **false on verification**: `packages/domain/tests/integration/rls/directory-publication-policy.spec.ts:155-174` (Story 11a.3, unmodified by this diff, re-run green per AC9) already asserts this exact error for both a no-grants actor and an actor holding every OTHER pariwar-dimension key but not this one. Blind Hunter raised this with diff-only visibility and no way to see the domain package's own test suite.
 
 ## Dev Notes
 

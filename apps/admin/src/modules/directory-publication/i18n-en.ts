@@ -68,6 +68,8 @@ const EN: Record<string, string> = {
   'directoryPublication.error.heading': 'That change did not go through',
   'directoryPublication.error.forbidden':
     'Your account does not hold the permission this control requires. It is granted to super administrators only.',
+  'directoryPublication.error.unexpected':
+    'Something went wrong on the server and the change may not have been saved. Reload the page to check the current state before trying again.',
 };
 
 export function resolveEn(key: string): string {

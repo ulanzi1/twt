@@ -1,6 +1,57 @@
 # Trustee Panel Routing Note — ratification of Decision `2026-08-21-145`: ⭐ the Member Directory would have published **the DEAD**, the anti-enumeration key was **caller-chosen**, and ⚠ a member-gating predicate shipped **ahead of its governance record for the second time in one story**
 
-**Status:** ⏳ **OPEN — routed to the Trustee Panel 2026-08-21.**
+**Status:** ✅ **FULLY RULED 2026-08-21 — Dhiraj Rahul and Kalpana Bharti.** Recorded as Decision
+**`2026-08-21-146`**; `2026-08-21-145` is thereby **Trustee-ratified**. ⚠ **Both questions and both
+sub-questions answered; ⭐ ONE ruling went FURTHER than the recommendation.**
+⛔ **The questions below are left as put. They are annotated, never edited.**
+
+> ### ⭐ ANNOTATION — the ruling, 2026-08-21
+>
+> | Q | Ruling |
+> |---|---|
+> | **Q1** | ✅ **RATIFY** *(as recommended)* — D3(a) **superseded**: a member whose account is frozen following a **reported death** is excluded from the public directory |
+> | **Q1 — sentence** | ✅ **ADOPT** *(as recommended)*, verbatim |
+> | **Q1 — sub** | ✅ **NO ADDITIONAL MITIGATION REQUIRED** for the death-related omission — ⚠ **"at this time"**, the Panel's own qualifier |
+> | **Q2** | ✅ **(b) ACCEPT + DIRECT MECHANISM** *(as recommended)* — ⛔ (c) SUSPEND rejected |
+> | **Q2 — sub** | ⭐ **YES, and FURTHER than recommended** — see below |
+>
+> ⭐ **THE ONE RULING THAT WENT BEYOND THE NOTE.** The note put the Q2 sub-question as *"console
+> surface required before the switch is relied on? YES (story) / NO (record the limit)"*, and did
+> **not** recommend either arm. The Panel ruled **YES**, and added a prohibition the note had not
+> proposed:
+>
+> > *"A dedicated administrative UI is required before the kill switch is treated as an operational
+> > control. The underlying per-Pariwar kill switch should remain in place, but direct database
+> > manipulation should not be described as normal manual operation."*
+>
+> ⇒ three distinct commitments, ⛔ not one:
+> **(a)** the mechanism **stays** — ⛔ not removed, ⛔ not re-landed;
+> **(b)** ⛔ **no description anywhere** may present hand-run SQL as normal operation — code
+> comments, story record, runbooks, decision entries;
+> **(c)** until the UI ships the switch is a **mechanism present, ⛔ NOT an operational control**,
+> and ⛔ must not be relied on in any incident plan or DPDPA response as a lever someone can pull.
+>
+> ✅ **Verified at ratification:** the switch is named in ⛔ **no** runbook and ⛔ **no**
+> degradation-policy document today ⇒ (c) **retracts nothing**; it **prevents** a retraction being
+> needed later. ⛔ Recorded because "no change required" and "nothing to change" are different
+> claims.
+>
+> ⚠ **AND A NEW FINDING WAS RAISED AT RATIFICATION, ⛔ NOT RULED.** Clause 1's sentence says
+> *"frozen following a **reported death**"*. That is exactly true **only because**
+> `ACCOUNT_FREEZE_EVENT_TYPE` is precisely `claim.intake_initiated` (`member/overlay.ts:47`) — the
+> **sole** freeze source. ⛔ A future second freeze source that is **not** a death (a fraud hold, a
+> legal hold, a disputed identity) would silently de-list members for a reason **this Panel never
+> approved**, while the ratified sentence still says "death". ⇒ carried as a **STANDING FENCE** in
+> `-146`, ⛔ not resolved here.
+>
+> ⛔ **`2026-08-20-140` cl.7 is NOT closed by this ruling — it is WIDER.** The kill switch joins the
+> set of directory-publication mechanics no Niyamavali clause describes.
+> ⛔ **`2026-08-19-136` cl.5 (DPDPA) remains OPEN** and is **SHARPENED** — the surface was
+> publishing the deceased.
+
+---
+
+**Original status when routed:** ⏳ OPEN — routed to the Trustee Panel 2026-08-21.
 
 **Author:** BigDev (Solo Builder)
 **Raised:** 2026-08-21, against `story/11a.3-member-directory-pii-shielded` @ `f46cbad`
@@ -334,4 +385,5 @@ Provenance label per clause (Decision 2026-08-09-095):
 ---
 
 *Routed 2026-08-21. Verified live at `f46cbad`, clean tree, 15 commits ahead of `origin/main`.
-Production deploy runs: **zero**. ⏳ **AWAITING RULING.***
+Production deploy runs: **zero**. ✅ **RULED 2026-08-21 — Dhiraj Rahul, Kalpana Bharti. Recorded as
+Decision `2026-08-21-146`.** ⛔ Annotated, never edited.*

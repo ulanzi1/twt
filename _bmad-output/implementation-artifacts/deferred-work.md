@@ -215,6 +215,42 @@ epic** (a deferral naming an epic expires unowned).
   `directory-abuse-rules.yaml`. **Trigger:** the next `epics.md` correct-course pass should strike
   the citation at both sites. ⛔ Do not cite 10.6 as anti-enumeration coverage anywhere.
 
+### ⭐ DIRECTED BY THE TRUSTEE PANEL — ⛔ NOT author deferrals
+
+> These are **Panel directives** from Decision `2026-08-21-146` (Trustee-ratified 2026-08-21,
+> Dhiraj Rahul + Kalpana Bharti). ⛔ Their trigger is a **ruling**, not an author's judgement, and
+> ⛔ they may not be closed by re-deciding them.
+
+- **⭐ REQUIRED — a dedicated ADMINISTRATIVE UI for the per-Pariwar directory-publication kill
+  switch** (`2026-08-21-146` cl.5). ⛔ **Not "if wanted"** — the Panel ruled the switch is **NOT an
+  operational control** until this ships.
+  ⚠ Three commitments, ⛔ not one: **(a)** the mechanism **stays** — ⛔ not removed, ⛔ not
+  re-landed; **(b)** ⛔ **no description anywhere** may present hand-run SQL as normal operation
+  (code comments, story record, runbooks, decision entries — all corrected at ratification);
+  **(c)** until the UI ships it ⛔ **must not be relied on** in any incident plan, degradation
+  posture or DPDPA response as a lever someone can pull.
+  ⚠ **AND ITS FLOOR, recorded so the UI story does not over-promise:** even once the UI exists the
+  switch is ⛔ **not immediate** — `/members` is `edge_cacheable` with `s-maxage=300`, so a pulled
+  Pariwar keeps being served real member names from every warm PoP, **per page number**
+  (`2026-08-21-145` cl.5(e)). ⛔ The word *"immediate"* may not be used about this control.
+  **Trigger:** ⭐ **FIRED — the ruling itself.** Needs its own story and its own routing (owner:
+  John). ⛔ **NOT** bundled into 11a.4 (phone/email obfuscation).
+  ⚠ **Verified at ratification:** the switch is named in ⛔ no runbook and ⛔ no degradation-policy
+  document today, so (c) **retracts nothing** — it prevents a retraction being needed later.
+
+- **⭐ STANDING FENCE — the "frozen ⟺ death" equivalence is a CONSTRUCTION FACT, ⛔ not a
+  guarantee** (`2026-08-21-146`, raised at ratification, ⛔ **NOT RULED**). The ratified
+  member-facing sentence says a member stops appearing *"once your death has been reported"*. That
+  is exactly true **only because** `ACCOUNT_FREEZE_EVENT_TYPE` is precisely `claim.intake_initiated`
+  (`packages/domain/src/member/overlay.ts:47`) — the **sole** freeze source.
+  ⛔ A future **second** freeze source that is **not** a death — a fraud hold, a legal hold, a
+  disputed identity — would **silently de-list members from the public directory for a reason the
+  Panel never approved**, while the ratified sentence still says "death", and ⛔ the directory
+  discloses **no reason** for an omission (`2026-08-21-144` FQ-2) so nobody would see it.
+  **Trigger:** the next story touching `member/overlay.ts`'s event-type constants. That story
+  ⛔ **must** re-examine `NOT_DECEASED` in `directory-read.ts` **and** the member-facing sentence,
+  and route the result — ⛔ it may not absorb the widening.
+
 ### ⚠ CARRIED OPEN — ⛔ NOT new deferrals of Story 11a.3
 
 > ⚠ **HEADING CORRECTED, `2026-08-21-145`.** The `## Deferred from: 11a-3-…` heading above was

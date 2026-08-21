@@ -546,8 +546,12 @@ export function permissionKey(value: string): PermissionKey {
 // preference. NOT step-up-gated; accountability is the required rationale + actor + display
 // snapshot + §1.5 audit line, which the write path refuses to skip. The unauthenticated public
 // read touches NO key. district_admin / state_trustee excluded (inert in both directions, the
-// usual [[project_rbac_geo_scope_containment]] reason). ⛔ NO self-serve admin toggle UI ships
-// with this key — the mechanism exists ungated by UI, mirroring 11a.1's own posture.
+// usual [[project_rbac_geo_scope_containment]] reason).
+// ⛔⛔ NO ADMIN UI SHIPS WITH THIS KEY, AND THE SWITCH IS THEREFORE **NOT AN OPERATIONAL CONTROL** —
+// Decision `2026-08-21-146` cl.5 (Trustee-ratified). A dedicated administrative UI is REQUIRED
+// before it may be treated as one, and ⛔ direct database manipulation MUST NOT be described as
+// normal manual operation. ⚠ This is a DIRECTIVE, ⛔ not the "ungated by UI, mirroring 11a.1's
+// posture" framing that stood here — 11a.1's posture was not ruled on; this one was.
 export const PERMISSION_CATALOG_VERSION = 38 as const;
 
 /**

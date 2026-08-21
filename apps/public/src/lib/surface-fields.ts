@@ -149,6 +149,16 @@ export interface MembersRenderModel {
    * is a false statement about the trust.
    */
   readonly apiUnavailable: boolean;
+  /**
+   * ⚠ TRUE when this page is EMPTY but the roster is NOT — the visitor asked for a page number
+   * past the real last page. Code-review finding (2026-08-21): `!hasMembers` alone conflates this
+   * with a genuinely unpublished/empty directory, rendering the SAME "not published yet" copy for
+   * both. A valid, in-horizon page past the end is a materially different situation from "this
+   * trust has no members" and deserves its own copy, for the same reason `apiUnavailable` is not
+   * folded into `!hasMembers` above: an outage that looks like an empty membership is a false
+   * statement about the trust, and so is "not published yet" on a roster that plainly has members.
+   */
+  readonly pastEnd: boolean;
   /** The rows on this page. ⭐ The member attributes below are what the tier-leak leg now sees. */
   readonly rows: readonly MemberDirectoryRow[];
 }
@@ -170,6 +180,7 @@ export const MEMBERS_FIELD_IDS: FieldIdMapping<MembersRenderModel> = {
   page: null,
   limit: null,
   apiUnavailable: null,
+  pastEnd: null,
   rows: null,
 };
 

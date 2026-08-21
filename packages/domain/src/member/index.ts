@@ -29,6 +29,8 @@ export * from './posting.js';
 // listMemberIdsForPariwar / listMemberStatesForPariwar are unbounded whole-Pariwar sets, and
 // getMemberPostingLatest is per-member — none of them is a directory read).
 export * from './directory-read.js';
+// Code review, Story 11a.3 (2026-08-21, D3) — the per-Pariwar directory-publication kill switch.
+export * from './directory-publication.js';
 // Story 10.26 — the personal-event assertion: the write + the as-of existential reads (no table).
 export * from './personal-event.js';
 // Story 3.10 — voluntary-withdrawal record write + in-scope read (the rejoin-lock read is folded into

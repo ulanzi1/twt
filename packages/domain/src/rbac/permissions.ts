@@ -537,7 +537,18 @@ export function permissionKey(value: string): PermissionKey {
 // render a name, exactly as it reads any other public config.
 // ACCEPTANCE CONDITION for pariwar_admin: a Panel ruling superseding `-136` cl.3. ⛔ Never a
 // consistency argument from the neighbouring keys.
-export const PERMISSION_CATALOG_VERSION = 37 as const;
+// ── Bumped 37 → 38 at Story 11a.3 code review (2026-08-21, D3) — added ONE key: 45 → 46 ─────────
+// `pariwar.manage_directory_publication` — the per-Pariwar DIRECTORY-PUBLICATION kill switch write
+// key. Checked at `dimension: 'pariwar'` (value = scopeTx.pariwarId — the
+// pariwar.manage_public_name_presentation precedent, same mechanism, same reasoning).
+// ⭐ Granted to `super_admin` ONLY — this is a legal/privacy kill switch tied to DPDPA review
+// status (`-136` cl.5, still open) and a Niyamavali amendment still in draft, not a tenant content
+// preference. NOT step-up-gated; accountability is the required rationale + actor + display
+// snapshot + §1.5 audit line, which the write path refuses to skip. The unauthenticated public
+// read touches NO key. district_admin / state_trustee excluded (inert in both directions, the
+// usual [[project_rbac_geo_scope_containment]] reason). ⛔ NO self-serve admin toggle UI ships
+// with this key — the mechanism exists ungated by UI, mirroring 11a.1's own posture.
+export const PERMISSION_CATALOG_VERSION = 38 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -897,6 +908,10 @@ export const SEED_PERMISSION_KEYS = [
   // accountability is the required rationale + actor + display snapshot + §1.5 audit line. The
   // unauthenticated public read touches NO key.
   'pariwar.manage_public_name_presentation',
+  // Code review, Story 11a.3 (2026-08-21, D3) — the per-Pariwar DIRECTORY-PUBLICATION kill switch
+  // write key. Checked at `dimension: 'pariwar'`, mirroring the presentation key immediately
+  // above. Granted to `super_admin` ONLY — see the version-bump note above for the ruling.
+  'pariwar.manage_directory_publication',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

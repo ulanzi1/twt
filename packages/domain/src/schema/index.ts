@@ -237,6 +237,10 @@ export * from './pariwar_appeal_config.js';
 // MODE (full_name | shielded_name). One row per Pariwar; an absent row means the RULED default
 // (full_name), ⛔ not a fail-closed shield. ⛔ Holds a MODE, never a name.
 export * from './pariwar_public_name_presentation.js';
+// Code review, Story 11a.3 (2026-08-21, D3) — `pariwar_directory_publication`: the per-Pariwar
+// directory kill switch. One row per Pariwar; an absent row means ENABLED (not disabled), the
+// existing shipped posture. Governed write, same posture as the presentation-mode table above.
+export * from './pariwar_directory_publication.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

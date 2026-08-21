@@ -31,6 +31,8 @@ const LABELS: MembersLabels = {
   notPublishedBody: 'being prepared',
   unavailableTitle: 'temporarily unavailable',
   unavailableBody: 'a problem on our side',
+  pastEndTitle: "you've reached the end",
+  pastEndBody: 'no more entries past this point',
   paginationLabel: 'Directory pages',
   previousPage: 'Previous page',
   nextPage: 'Next page',
@@ -149,12 +151,36 @@ describe('⛔ an OUTAGE is not an empty directory', () => {
     const { model } = buildMembersView(accept(''), q(''), LABELS, dir([], 0));
     expect(model.apiUnavailable).toBe(false);
     expect(model.hasMembers).toBe(false);
+    // ⛔ AND it is not "past the end" either — never published is its own third state.
+    expect(model.pastEnd).toBe(false);
   });
 
   it('⛔ an outage offers NO next link — it knows nothing about how many pages exist', () => {
     const view = buildMembersView(accept('page=2'), q('page=2'), LABELS, null);
     expect(view.hasNext).toBe(false);
     expect(view.links.some((l) => l.rel === 'next')).toBe(false);
+  });
+});
+
+describe('⛔ "past the end" is not "never published" — a valid page beyond the roster', () => {
+  it('a page beyond the real roster sets pastEnd, not hasMembers false alone', () => {
+    // A 5-member roster, page 2 at limit 25 — well within horizon, but nothing lands here.
+    const { model } = buildMembersView(accept('page=2'), q('page=2'), LABELS, dir([], 5, 2, 25));
+    expect(model.apiUnavailable).toBe(false);
+    expect(model.hasMembers).toBe(false);
+    expect(model.pastEnd).toBe(true);
+  });
+
+  it('page 1 of a genuinely empty roster is NOT pastEnd, even though hasMembers is also false', () => {
+    const { model } = buildMembersView(accept(''), q(''), LABELS, dir([], 0, 1, 25));
+    expect(model.hasMembers).toBe(false);
+    expect(model.pastEnd).toBe(false);
+  });
+
+  it('a page WITH rows is never pastEnd', () => {
+    const { model } = buildMembersView(accept(''), q(''), LABELS, dir(ROWS));
+    expect(model.hasMembers).toBe(true);
+    expect(model.pastEnd).toBe(false);
   });
 });
 

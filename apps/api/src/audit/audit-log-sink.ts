@@ -58,6 +58,17 @@ function hashContext(context: unknown): string {
   }
 }
 
+/**
+ * `resourceLocator`'s runtime guard — Story 11a.3 code-review finding. The doc comment on
+ * `AuthAuditEvent.resourceLocator` says "NON-PII-only" and "a short, caller-authored locator", but
+ * nothing enforced it — a future emitter could put anything there, including exactly the PII the
+ * hashing + this field's own default scheme exists to defend against. This does NOT detect PII —
+ * that is undecidable from a bare string — but a LOCATOR-shaped allowlist (short, lowercase,
+ * colon/dot/dash/underscore-delimited, no whitespace) rejects the shape a human name, email, phone
+ * number, or free-text payload would take, which is the actual failure mode worth catching here.
+ */
+const RESOURCE_LOCATOR_PATTERN = /^[a-z0-9][a-z0-9:_.-]{0,127}$/;
+
 /** HTTP-equivalent status for an auth event type. */
 function statusForAuthEvent(type: AuthAuditEvent['type']): number {
   if (type === 'authz.denied') return 403;
@@ -94,7 +105,17 @@ export function authEventToAuditInput(event: AuthAuditEvent): AuditEntryInput {
     // ⛔ The DEFAULT is unchanged and remains the rule: `user:<actorId|anonymous>`. The override is
     // opt-in, used today by exactly one emitter (the Story 11a.3 directory-abuse signal, which has
     // no actor to name), and is documented at `AuthAuditEvent.resourceLocator` as non-PII-only.
-    resourceLocator: event.resourceLocator ?? `user:${event.actorId ?? 'anonymous'}`,
+    // ⚠ Guarded, not trusted on comment alone: an override failing the locator-shape allowlist
+    // falls back to the same safe default rather than being written as-is.
+    resourceLocator: (() => {
+      if (event.resourceLocator === undefined) return `user:${event.actorId ?? 'anonymous'}`;
+      if (RESOURCE_LOCATOR_PATTERN.test(event.resourceLocator)) return event.resourceLocator;
+      console.error(
+        '[audit-log-sink] resourceLocator failed its locator-shape guard — falling back to the default rather than writing it as-is',
+        JSON.stringify({ type: event.type }),
+      );
+      return `user:${event.actorId ?? 'anonymous'}`;
+    })(),
     requestPayloadHash: hashContext(event.context),
     responseStatus: statusForAuthEvent(event.type),
     traceId: event.traceId ?? null,

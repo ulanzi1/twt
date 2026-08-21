@@ -91,6 +91,8 @@ const labels: MembersLabels = {
   notPublishedBody: tr('not_published_body'),
   unavailableTitle: tr('unavailable_title'),
   unavailableBody: tr('unavailable_body'),
+  pastEndTitle: tr('past_end_title'),
+  pastEndBody: tr('past_end_body'),
   nextPage: tr('next_page'),
   columnName: tr('column_name'),
   columnDistrict: tr('column_district'),
@@ -193,7 +195,18 @@ const firstPageHref = pageHref('/members', Astro.url.searchParams, 1);
           </section>
         )}
 
-        {!view.model.apiUnavailable && !view.model.hasMembers && (
+        {/* ⛔ PAST THE END IS NOT "NOT PUBLISHED". Two distinct empty-page states, deliberately: a
+            roster that genuinely has members but none on THIS page is not the same claim as a
+            directory that has never published anyone. */}
+        {!view.model.apiUnavailable && !view.model.hasMembers && view.model.pastEnd && (
+          <section class="members__notice" aria-labelledby="members-past-end-title">
+            <h2 id="members-past-end-title" class="members__notice-title">{labels.pastEndTitle}</h2>
+            <p class="members__notice-body">{labels.pastEndBody}</p>
+            <p><a class="members__link" href={firstPageHref}>{labels.backToStart}</a></p>
+          </section>
+        )}
+
+        {!view.model.apiUnavailable && !view.model.hasMembers && !view.model.pastEnd && (
           <section class="members__notice" aria-labelledby="members-empty-title">
             <h2 id="members-empty-title" class="members__notice-title">{labels.notPublishedTitle}</h2>
             <p class="members__notice-body">{labels.notPublishedBody}</p>

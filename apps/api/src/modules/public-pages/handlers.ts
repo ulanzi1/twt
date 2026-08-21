@@ -125,7 +125,12 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
             // ⚠ `active-in-grace` PRESENTS AS `active`. A grace period is an internal billing
             // state; ⛔ publishing it would tell a stranger a member is late on a payment. The
             // ruled pill is two labels, and this is where the third state is folded away.
-            status: row.state === 'lock-in' ? 'lock-in' : 'active',
+            //
+            // ⭐ AND THIS LINE IS THE INTERNAL→PUBLIC VOCABULARY BOUNDARY (`2026-08-21-144` cl.4,
+            // cl.8). `row.state` is the INTERNAL lifecycle value; the wire carries the PUBLIC
+            // token. ⛔ The internal word `lock-in` STOPS HERE and must never appear on the right
+            // of this expression.
+            status: row.state === 'lock-in' ? 'waiting-period' : 'active',
           });
         }
 

@@ -531,7 +531,7 @@ describe('PII scrape — Member Directory (/members, Story 11a.3)', () => {
     {
       items: [
         { name: 'Rajesh Kumar Sharma', district: 'Lucknow', status: 'active' },
-        { name: 'Sunita Devi', district: null, status: 'lock-in' },
+        { name: 'Sunita Devi', district: null, status: 'waiting-period' },
       ],
       page: 1,
       limit: 25,

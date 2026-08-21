@@ -90,8 +90,9 @@ export interface MembersView {
 /**
  * Map one wire row onto its DISPLAY shape.
  *
- * ⚠ The only transformation is the status LABEL: the wire carries the ruled machine values
- * (`active` | `lock-in`) and the page renders localised copy. ⛔ The name and district are passed
+ * ⚠ The only transformation is the status LABEL: the wire carries the ruled PUBLIC machine values
+ * (`active` | `waiting-period` — ⛔ never the internal `lock-in`, `2026-08-21-144` cl.4) and the
+ * page renders localised copy. ⛔ The name and district are passed
  * through untouched — the name's FORM was already decided server-side by
  * `resolvePublicMemberName`, and ⛔ re-deriving it here would be the second copy of the presentation
  * policy that `-136` cl.2 forbids.
@@ -103,7 +104,7 @@ function toDisplayRow(
   return {
     memberName: row.name,
     district: row.district,
-    memberStatus: row.status === 'lock-in' ? labels.statusLockIn : labels.statusActive,
+    memberStatus: row.status === 'waiting-period' ? labels.statusLockIn : labels.statusActive,
   };
 }
 

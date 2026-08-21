@@ -165,7 +165,7 @@ function isDirectoryResponse(body: unknown): body is PublicDirectoryResponse {
     return (
       typeof r['name'] === 'string' &&
       (r['district'] === null || typeof r['district'] === 'string') &&
-      (r['status'] === 'active' || r['status'] === 'lock-in')
+      (r['status'] === 'active' || r['status'] === 'waiting-period')
     );
   });
 }

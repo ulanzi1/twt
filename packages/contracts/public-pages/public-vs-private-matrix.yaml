@@ -342,9 +342,14 @@ surfaces:
         description: >-
           ⭐ FIRST CLASSIFIED AT STORY 11a.3, under Decision `2026-08-20-143` cl.3
           (D3(a)) and cl.13. The two-label public status pill — EXACTLY `active` and
-          `lock-in`, and ⛔ nothing else. `active-in-grace` PRESENTS AS `active`: a
-          grace period is an internal billing state, and ⛔ publishing it would tell a
+          `waiting-period`, and ⛔ nothing else. `active-in-grace` PRESENTS AS `active`:
+          a grace period is an internal billing state, and ⛔ publishing it would tell a
           stranger that a member is late on a payment.
+          ⭐ THE WIRE TOKEN IS THE PUBLIC VOCABULARY, ⛔ NEVER THE INTERNAL ONE.
+          `2026-08-21-144` cl.4 rules the internal lifecycle value `lock-in` ⛔ NON-PUBLIC
+          while the label *"Waiting period"* IS public; `144` cl.8 records that this
+          surface PREVIOUSLY emitted the internal word on the public JSON route, and that
+          it is fixed here. ⛔ Do not reintroduce `lock-in` as a wire value.
           Derived, ⛔ never a column: it is a projection of `members.state` (already
           filtered to the ruled roster) — no `member_status` column exists, and ⛔ do
           not create one.
@@ -355,12 +360,16 @@ surfaces:
           `from` for a field that was never classified. Inventing one to make the ledger
           accept it would be a fabrication. (The ledger's own header settles the
           principle: "Declaring a surface for the first time is NOT an escalation".)
-          ⚠ AND ITS OPEN FINDING, RAISED ⛔ NOT ABSORBED: publishing `lock-in` tells the
-          internet that a member is in their waiting period, and D3(a) additionally makes
-          a SUSPENSION silently remove a member from this page. ⛔ NO Niyamavali clause
-          describes either consequence. Recorded as an OPEN finding for the Trustee Panel
-          at `2026-08-20-143` cl.8 — ⛔ not closed by this row, and ⛔ not a reason to
-          quietly drop the pill the epic's own disposition left unchanged.
+          ⚠ ITS OPEN FINDING IS NOW RULED, ⛔ BUT THE RULEBOOK HAS NOT CAUGHT UP.
+          `2026-08-20-143` cl.8 raised that publishing the waiting status, and de-listing
+          a SUSPENDED member, are ⛔ described by NO Niyamavali clause. The Trustee Panel
+          RULED both at `2026-08-21-144`: the waiting status is PUBLIC as a label (cl.4),
+          the de-listing stands and the directory ⛔ discloses NO REASON for an omission
+          (cl.5), and the Niyamavali IS AMENDED to say so (cl.1, cl.2).
+          ⛔ THE AMENDMENT IS AUTHORISED, NOT YET MADE — the text is drafted and awaits
+          ratification (`144` cl.7(c)), and `2026-08-20-140` cl.7 stays OPEN until the
+          amended rulebook actually renders (`144` cl.7(a)). ⛔ Not a reason to drop the
+          pill the epic's own disposition left unchanged.
 
 # ── The escalation ledger (AC8) ──────────────────────────────────────────────
 # One entry per visibility ESCALATION (a field moving toward `public`), each

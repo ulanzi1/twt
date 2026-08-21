@@ -56,7 +56,7 @@ const accept = (search: string) => {
 };
 
 const dir = (
-  items: Array<{ name: string; district: string | null; status: 'active' | 'lock-in' }>,
+  items: Array<{ name: string; district: string | null; status: 'active' | 'waiting-period' }>,
   total = items.length,
   page = 1,
   limit = 25,
@@ -64,7 +64,7 @@ const dir = (
 
 const ROWS = [
   { name: 'Rajesh Kumar Sharma', district: 'Lucknow', status: 'active' as const },
-  { name: 'Sunita Devi', district: null, status: 'lock-in' as const },
+  { name: 'Sunita Devi', district: null, status: 'waiting-period' as const },
 ];
 
 describe('AC4 — ⭐ the tier-leak field set is NON-EMPTY: the leg on this surface is OPERATIVE', () => {

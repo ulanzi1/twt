@@ -134,7 +134,7 @@ describe.skipIf(!hasDatabase)('public Member Directory route (:5433)', { timeout
       expect(names).toContain('Rajesh Kumar Sharma');
       expect(names).toContain('Sunita Devi');
       // The ruled two-label pill.
-      expect(body.items.map((i) => i['status']).sort()).toEqual(['active', 'lock-in']);
+      expect(body.items.map((i) => i['status']).sort()).toEqual(['active', 'waiting-period']);
 
       // ⛔ No ciphertext, no member id, anywhere in the serialized payload.
       expect(res.body).not.toContain('enc:');

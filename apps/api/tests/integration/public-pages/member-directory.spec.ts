@@ -14,8 +14,9 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { encryption, ids, kyc, schema } from '@twt/domain';
-import { describe, expect, it } from 'vitest';
+import { PublicDirectoryResponse } from '@twt/contracts';
+import { encryption, ids, kyc, member as memberDomain, schema } from '@twt/domain';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { __resetDirectoryAbuseCounters } from '../../../src/modules/public-pages/index.js';
@@ -96,6 +97,25 @@ async function setMode(t: TestApp, pariwarId: string, mode: 'full_name' | 'shiel
   }
 }
 
+/** Disable/re-enable the Pariwar's directory publication through the GOVERNED write path. */
+async function setDirectoryEnabled(t: TestApp, pariwarId: string, enabled: boolean): Promise<void> {
+  const scopeTx = await openScopeTx(t.deps, pariwarId);
+  try {
+    await memberDomain.setDirectoryPublicationEnabled(scopeTx.tx, {
+      pariwarId: ids.pariwarId(pariwarId),
+      enabled,
+      changedByActor: null,
+      changedByDisplay: null,
+      rationale: 'test fixture — exercising the code-review D3 kill switch',
+      auditId: randomUUID(),
+    });
+    await closeScopeTx(scopeTx, true);
+  } catch (err) {
+    await closeScopeTx(scopeTx, false);
+    throw err;
+  }
+}
+
 /** Read the stored ciphertext back, to prove the flip never touched the KYC record. */
 async function readCiphertext(t: TestApp, pariwarId: string, memberId: string): Promise<string> {
   const scopeTx = await openScopeTx(t.deps, pariwarId);
@@ -111,6 +131,15 @@ async function readCiphertext(t: TestApp, pariwarId: string, memberId: string): 
 }
 
 describe.skipIf(!hasDatabase)('public Member Directory route (:5433)', { timeout: 30000 }, () => {
+  // ⛔ The abuse-rule counters (`apps/api/src/modules/public-pages/abuse-rules.ts`) are
+  // process-global and per-instance, so a fresh window per TEST (not just per file) is what the
+  // module's own doc comment assumes. Most tests in this file don't set `x-forwarded-for` and so
+  // share the same default injected-request key — reset between tests rather than relying on each
+  // one to remember to pick a unique key, mirroring `directory-abuse-rules.test.ts`'s own pattern.
+  beforeEach(() => {
+    __resetDirectoryAbuseCounters();
+  });
+
   it('renders the three classified fields — and ⛔ NOTHING else on the wire', async () => {
     const t = await createTestApp();
     try {
@@ -136,11 +165,15 @@ describe.skipIf(!hasDatabase)('public Member Directory route (:5433)', { timeout
       // The ruled two-label pill.
       expect(body.items.map((i) => i['status']).sort()).toEqual(['active', 'waiting-period']);
 
-      // ⛔ No ciphertext, no member id, anywhere in the serialized payload.
+      // ⭐ THE PROPERTY, not a restatement of a fixture-picked field-name list: parse the WHOLE wire
+      // response through the real `.strict()` contract. This fails on ANY extra or renamed field,
+      // anywhere in the shape — not just the four names below, which a leak under a different name
+      // (`dob`, `email`, `moderationStatus`, …) would have sailed past.
+      expect(PublicDirectoryResponse.safeParse(body).success).toBe(true);
+      // ⚠ `.strict()` proves no EXTRA KEY exists; it says nothing about what a PERMITTED key's
+      // string value contains. Ciphertext leaking inside `name` itself would pass schema validation
+      // and only shows up here.
       expect(res.body).not.toContain('enc:');
-      for (const key of ['member_id', 'memberId', 'nameCiphertext', 'mobile', 'aadhaar']) {
-        expect(res.body).not.toContain(key);
-      }
     } finally {
       await teardown(t);
     }
@@ -276,7 +309,6 @@ describe.skipIf(!hasDatabase)('public Member Directory route (:5433)', { timeout
   // ── AC6.4 — the abuse rules are WIRED to the LIVE route ───────────────────────────────────────
 
   it('⭐ the abuse rules RUN ON THE REAL ROUTE — a deep page emits directory.abuse_suspected', async () => {
-    __resetDirectoryAbuseCounters();
     const t = await createTestApp();
     try {
       const { pariwarId } = await seedDirectory(t, [{ legalName: 'Anyone At All' }]);
@@ -301,6 +333,60 @@ describe.skipIf(!hasDatabase)('public Member Directory route (:5433)', { timeout
       // ⛔ AND IT IS NOT THE HONEYPOT SIGNAL — reusing that type would corrupt it and break
       // security-headers.spec.ts's exact-count assertion.
       expect(t.auditSink.ofType('abuse.honeypot')).toHaveLength(0);
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  // ── code review, 2026-08-21 (D3) — the per-Pariwar directory-publication kill switch ──────────
+
+  it('⭐ a DISABLED directory returns the SAME SHAPE as a genuinely empty roster, ⛔ not an error', async () => {
+    const t = await createTestApp();
+    try {
+      const { pariwarId } = await seedDirectory(t, [{ legalName: 'Should Not Appear' }]);
+      await setDirectoryEnabled(t, pariwarId, false);
+
+      const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId) });
+      expect(res.statusCode).toBe(200);
+      const body = res.json() as { items: unknown[]; total: number };
+      expect(body.items).toEqual([]);
+      expect(body.total).toBe(0);
+      // ⛔ The real (seeded) name never reaches the wire while disabled.
+      expect(res.body).not.toContain('Should Not Appear');
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('re-enabling moves BOTH ways — the kill switch is not a one-way ratchet', async () => {
+    const t = await createTestApp();
+    try {
+      const { pariwarId } = await seedDirectory(t, [{ legalName: 'Comes Back' }]);
+      await setDirectoryEnabled(t, pariwarId, false);
+      expect(
+        ((await t.app.inject({ method: 'GET', url: ROUTE(pariwarId) })).json() as { total: number })
+          .total,
+      ).toBe(0);
+
+      await setDirectoryEnabled(t, pariwarId, true);
+      const body = (await t.app.inject({ method: 'GET', url: ROUTE(pariwarId) })).json() as {
+        total: number;
+      };
+      expect(body.total).toBe(1);
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('an ABSENT row resolves to ENABLED — the default is the shipped posture, not a shield', async () => {
+    const t = await createTestApp();
+    try {
+      // No setDirectoryEnabled call at all: no row is ever written for this Pariwar.
+      const { pariwarId } = await seedDirectory(t, [{ legalName: 'Never Toggled' }]);
+      const body = (await t.app.inject({ method: 'GET', url: ROUTE(pariwarId) })).json() as {
+        total: number;
+      };
+      expect(body.total).toBe(1);
     } finally {
       await teardown(t);
     }

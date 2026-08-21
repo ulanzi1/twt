@@ -49,6 +49,9 @@ export interface MembersLabels {
   /** The OUTAGE state — ⛔ deliberately distinct copy from the empty state. */
   readonly unavailableTitle: string;
   readonly unavailableBody: string;
+  /** The PAST-THE-END state — ⛔ deliberately distinct copy from "not published yet". */
+  readonly pastEndTitle: string;
+  readonly pastEndBody: string;
   readonly nextPage: string;
   /** Column headers for the directory table. */
   readonly columnName: string;
@@ -133,11 +136,18 @@ export function buildMembersView(
   const rows = directory === null ? [] : directory.items.map((r) => toDisplayRow(r, labels));
   const total = directory?.total ?? 0;
 
+  // ⚠ "past the end" ⟺ the roster genuinely has members (`total > 0`) but none of them landed on
+  // THIS page — distinct from a directory that has never published a member at all (`total === 0`).
+  // Not derived from `page > 1` alone: a request for page 5 of a 0-member roster is still honestly
+  // "not published yet", not "you went too far".
+  const pastEnd = !apiUnavailable && total > 0 && rows.length === 0;
+
   const model: MembersRenderModel = {
     hasMembers: rows.length > 0,
     page: accepted.page,
     limit: accepted.limit,
     apiUnavailable,
+    pastEnd,
     rows,
   };
 

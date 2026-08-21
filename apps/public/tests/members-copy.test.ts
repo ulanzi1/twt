@@ -30,6 +30,8 @@ const KEYS = [
   'not_published_body',
   'unavailable_title',
   'unavailable_body',
+  'past_end_title',
+  'past_end_body',
   'pagination_label',
   'previous_page',
   'next_page',
@@ -107,6 +109,17 @@ describe('⭐ AC9 — the REAL t() path resolves every /members key, in both loc
       const empty = t('not_published_body', undefined, { locale, namespace: 'members' });
       const outage = t('unavailable_body', undefined, { locale, namespace: 'members' });
       expect(outage, `${locale}`).not.toBe(empty);
+    }
+  });
+
+  it('⛔ the PAST-THE-END copy is DISTINCT from the never-published copy, in both locales', () => {
+    // Code-review finding (2026-08-21): both states used to render the SAME "not published yet"
+    // copy — a valid, in-horizon page past the roster's actual end is not the same claim as "this
+    // trust has no members".
+    for (const locale of LOCALES) {
+      const neverPublished = t('not_published_body', undefined, { locale, namespace: 'members' });
+      const pastEnd = t('past_end_body', undefined, { locale, namespace: 'members' });
+      expect(pastEnd, `${locale}`).not.toBe(neverPublished);
     }
   });
 });

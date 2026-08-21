@@ -71,6 +71,8 @@ const MEMBERS_TEST_LABELS: MembersLabels = {
   notPublishedBody: 'being prepared',
   unavailableTitle: 'unavailable',
   unavailableBody: 'temporary',
+  pastEndTitle: 'end of directory',
+  pastEndBody: 'no more entries',
   paginationLabel: 'pages',
   previousPage: 'previous',
   nextPage: 'next',
@@ -570,6 +572,7 @@ describe('PII scrape — Member Directory (/members, Story 11a.3)', () => {
       'hasMembers',
       'limit',
       'page',
+      'pastEnd',
       'rows',
     ]);
     expect(Object.keys(model.rows[0] ?? {}).sort()).toEqual([
@@ -606,6 +609,14 @@ describe('PII scrape — Member Directory (/members, Story 11a.3)', () => {
     // "the set is non-empty" is not the proof — the proof is that the SAME snapshot passes, and
     // then fails once a leak is planted into it. At 11a.2 this test could not have existed at all,
     // because the set was empty and `evaluateSnapshot` evaluated nothing.
+    //
+    // ⚠ `member_full_name_authenticated_only` is a FABRICATED id, not a real `authenticated_member`
+    // field drawn from this surface's matrix rows — deliberately, not an oversight (code-review
+    // finding, 2026-08-21): `member-directory` declares NO `authenticated_member`-tier field at
+    // all, because that viewer has NO VIEWER to render it to on this surface (Trap 1 — members are
+    // token-bearer, there is no `apps/member-web/`). So this control and CONTROL 1 both exercise
+    // the SAME half of AC4's "or" (undeclared-field rejection); the tier-ceiling half is proven
+    // separately below, at CONTROL 4, using a REAL field and a REAL (simulated) tier.
     const clean = evaluateSnapshot(matrix, snapshot);
     expect(clean.status).toBe('pass');
 
@@ -623,5 +634,27 @@ describe('PII scrape — Member Directory (/members, Story 11a.3)', () => {
     const dropped = snapshot.fields!.filter((f) => f !== 'member_status');
     expect(dropped).not.toEqual(snapshot.fields);
     expect(dropped).toHaveLength(2);
+  });
+
+  it('CONTROL 4 — ⭐ a REAL authenticated_member-tier field at public FAILS (AC4\'s OTHER half)', () => {
+    // ⛔ Neither CONTROL 1 nor CONTROL 2 above exercises the TIER-CEILING rejection path
+    // (`above_viewer_ceiling` in `getVisibility`) — both plant an id the matrix has never heard of
+    // for this surface, which is the UNDECLARED path (`undeclared_field`). AC4 asks for "a tier OR
+    // undeclared field" to fail; this control is the tier half, done honestly: `member-directory`
+    // has no field CURRENTLY at `authenticated_member`, so this simulates the one that WAS — before
+    // Decision `2026-08-19-136` escalated `member_name` from `authenticated_member` to `public`
+    // (see the matrix's own `escalations` entry). If that escalation had never been ruled, would
+    // this leg have caught `member_name` leaking? This proves yes, using the real field id and the
+    // real matrix machinery, not a fabricated one.
+    const preEscalationMatrix: PublicVsPrivateMatrix = structuredClone(matrix);
+    const surface = preEscalationMatrix.surfaces.find((s) => s.id === 'member-directory');
+    const nameField = surface?.fields.find((f) => f.id === 'member_name');
+    if (nameField === undefined) throw new Error('fixture assumption broke: member_name row moved');
+    nameField.tier = 'authenticated_member';
+
+    const verdict = evaluateSnapshot(preEscalationMatrix, snapshot);
+    expect(verdict.status).toBe('fail');
+    const leak = verdict.leaks.find((l) => l.field === 'member_name');
+    expect(leak?.tier).toBe('authenticated_member');
   });
 });

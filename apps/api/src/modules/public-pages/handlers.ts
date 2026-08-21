@@ -86,6 +86,22 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
       const scopeTx = await openScopeTx(deps, pariwarIdStr);
       let ok = false;
       try {
+        // ⭐ THE PER-PARIWAR KILL SWITCH — code review, 2026-08-21 (D3). Checked FIRST, before any
+        // KYC decrypt: a Pariwar whose directory is disabled must cost nothing beyond this read.
+        // ⚠ A disabled directory returns the IDENTICAL SHAPE as a genuinely empty roster
+        // (`{items:[],total:0}`), ⛔ NOT a distinct error/404 — a differently-shaped response would
+        // itself be a new oracle (this route already treats a nonexistent Pariwar and a real,
+        // zero-member Pariwar identically for the same reason; see the code-review record on the
+        // withdrawn "gate on Pariwar existence" finding for why that asymmetry is deliberate here).
+        const directoryEnabled = await memberDomain.resolveDirectoryPublicationEnabled(
+          scopeTx.tx,
+          pariwarId,
+        );
+        if (!directoryEnabled) {
+          ok = true;
+          return { items: [], page, limit, total: 0 };
+        }
+
         // ⭐ THE PRESENTATION MODE IS RESOLVED ONCE PER REQUEST, ⛔ NEVER PER ROW. It is a config
         // value that cannot vary within a page, so a per-row read would be an N+1 on a constant.
         const mode = await kyc.resolvePublicNamePresentationMode(scopeTx.tx, pariwarId);
@@ -94,45 +110,75 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
           limit,
           offset,
         });
+        // ⚠ `total` IS ROSTER SIZE, ⛔ NOT a count of rendered `items` — RESOLVED (BigDev,
+        // 2026-08-21, code-review D1). An unresolvable name (decrypt failure, or the presentation
+        // policy resolving to `''`) suppresses that member's rendered row below, but does NOT
+        // change the underlying eligible-directory count: the member is still real, still visible
+        // by the ruled roster predicate, just not nameable on THIS request. Do not describe `total`
+        // as "the number of rendered entries" anywhere it is surfaced, and do not add an omission
+        // count unless a future story requires one.
         const total = await memberDomain.countPublicDirectoryMembers(scopeTx.tx, pariwarId);
 
-        const items: PublicDirectoryEntry[] = [];
-        for (const row of rows) {
-          // ⭐ THE TIER-1 DECRYPT — the existing helper, the existing field class, the member's real
-          // pariwarId. The decrypted value NEVER leaves this loop except through
-          // `resolvePublicMemberName`, and is never logged.
-          const storedName = await encryption.decryptKycField(
-            row.nameCiphertext,
-            pariwarId,
-            deps.encryption,
-          );
-
-          // ⭐ THE POLICY RENDER — `resolvePublicMemberName`'s FIRST production call site.
-          // ⛔ NEVER a literal `full_name`, ⛔ never a local re-implementation of
-          // `splitFirstNameLastInitial`, ⛔ never a second copy of the mode default.
-          // `2026-08-19-136` cl.1: *"a build in which the public name form cannot be changed
-          // without a code change FAILS this clause"* — the mode above is what satisfies it.
-          const name = kyc.resolvePublicMemberName(mode, storedName);
-
-          // ⛔ AN UNRESOLVABLE NAME OMITS THE ROW — never a blank cell where a person's name
-          // belongs (the `pool-identity.ts` fail-soft precedent). A shorter page is strictly better
-          // than a public page with an empty name on it.
-          if (name === '') continue;
-
-          items.push({
-            name,
-            district: row.district,
-            // ⚠ `active-in-grace` PRESENTS AS `active`. A grace period is an internal billing
-            // state; ⛔ publishing it would tell a stranger a member is late on a payment. The
-            // ruled pill is two labels, and this is where the third state is folded away.
+        // ⭐ ONE KMS `decryptDek` ROUND-TRIP PER ROW — envelope encryption gives every stored name
+        // its own DEK, so there is no shared secret to decrypt once and reuse. Resolved with bounded
+        // concurrency, ⛔ not sequentially: `limit` is capped at `PUBLIC_SURFACE_PAGE_SIZE_CAP` (50),
+        // and a full page paid for 50 sequential network round-trips before this fix. `rows.map`
+        // keeps each promise's result index-aligned with `rows`, so the deterministic roster order
+        // survives concurrent resolution — nothing here re-sorts.
+        const resolved = await Promise.all(
+          rows.map(async (row): Promise<PublicDirectoryEntry | null> => {
+            // ⭐ THE TIER-1 DECRYPT — the existing helper, the existing field class, the member's
+            // real pariwarId. The decrypted value NEVER leaves this closure except through
+            // `resolvePublicMemberName`, and is never logged.
             //
-            // ⭐ AND THIS LINE IS THE INTERNAL→PUBLIC VOCABULARY BOUNDARY (`2026-08-21-144` cl.4,
-            // cl.8). `row.state` is the INTERNAL lifecycle value; the wire carries the PUBLIC
-            // token. ⛔ The internal word `lock-in` STOPS HERE and must never appear on the right
-            // of this expression.
-            status: row.state === 'lock-in' ? 'waiting-period' : 'active',
-          });
-        }
+            // ⚠ A decrypt failure (bad ciphertext, transient KMS error) degrades the SAME way as an
+            // unresolvable name below — omit THIS row, never propagate out. Letting it throw would
+            // 500 the ENTIRE page for the whole Pariwar over one bad row, mirroring the fail-soft
+            // precedent at `resolvePoolIdentity` (`packages/domain/src/notifications/pool-identity.ts`).
+            let storedName: string;
+            try {
+              storedName = await encryption.decryptKycField(row.nameCiphertext, pariwarId, deps.encryption);
+            } catch (err) {
+              console.error('[public-pages] member-directory: KYC name decrypt failed — omitting row', err);
+              return null;
+            }
+
+            // ⭐ THE POLICY RENDER — `resolvePublicMemberName`'s FIRST production call site.
+            // ⛔ NEVER a literal `full_name`, ⛔ never a local re-implementation of
+            // `splitFirstNameLastInitial`, ⛔ never a second copy of the mode default.
+            // `2026-08-19-136` cl.1: *"a build in which the public name form cannot be changed
+            // without a code change FAILS this clause"* — the mode above is what satisfies it.
+            const name = kyc.resolvePublicMemberName(mode, storedName);
+
+            // ⛔ AN UNRESOLVABLE NAME OMITS THE ROW — never a blank cell where a person's name
+            // belongs (the `pool-identity.ts` fail-soft precedent). A shorter page is strictly
+            // better than a public page with an empty name on it.
+            if (name === '') return null;
+
+            return {
+              name,
+              // ⚠ Normalized, not passed through raw: the response schema's `district` is
+              // `.min(1).nullable()` — `null` means "no posting row" and is valid, but an EMPTY
+              // STRING is not `null` and would fail that check, 500ing the page. The governed
+              // life-events write path already rejects an empty district at the contract boundary
+              // (`z.string().trim().min(1)`), but the domain accessor that appends a posting row
+              // does not re-enforce it, so this stays a defensive normalization, not dead code.
+              district: row.district === '' ? null : row.district,
+              // ⚠ `active-in-grace` PRESENTS AS `active`. A grace period is an internal billing
+              // state; ⛔ publishing it would tell a stranger a member is late on a payment. The
+              // ruled pill is two labels, and this is where the third state is folded away.
+              //
+              // ⭐ AND THIS LINE IS THE INTERNAL→PUBLIC VOCABULARY BOUNDARY (`2026-08-21-144` cl.4,
+              // cl.8). `row.state` is the INTERNAL lifecycle value; the wire carries the PUBLIC
+              // token. ⛔ The internal word `lock-in` STOPS HERE and must never appear on the right
+              // of this expression.
+              status: row.state === 'lock-in' ? 'waiting-period' : 'active',
+            };
+          }),
+        );
+        const items: PublicDirectoryEntry[] = resolved.filter(
+          (entry): entry is PublicDirectoryEntry => entry !== null,
+        );
 
         ok = true;
         return { items, page, limit, total };

@@ -179,7 +179,6 @@ export function evaluateDirectoryAbuse(
 
       const last = win.emitted.get(rule.id);
       if (last !== undefined && now - last < EMIT_DEDUPE_MS) continue;
-      win.emitted.set(rule.id, now);
       fired.push(rule.id);
 
       deps.auditSink.emit({
@@ -195,10 +194,23 @@ export function evaluateDirectoryAbuse(
         context: { observed, threshold, detects: rule.detects },
         at: signal.at,
       });
+      // ⚠ Marked emitted AFTER the audit write, not before: `AuthAuditSink.emit` is contractually
+      // "never throws" (every implementation, including the console default, honors it), but a
+      // detector this close to an adversarial input is exactly the wrong place to lean on that
+      // contract holding forever. If a future sink ever violates it, the outer catch below still
+      // wins the request, but this rule's dedupe window won't have been spent on an emit that never
+      // landed.
+      win.emitted.set(rule.id, now);
     }
     return fired;
-  } catch {
-    // ⛔ A detection failure must never break the page it watches.
+  } catch (err) {
+    // ⛔ A detection failure must never break the page it watches — this stays fail-open.
+    // ⚠ But fail-open silently is indistinguishable from "nothing to detect": log it, so a genuine
+    // regression in the detector leaves a trail instead of a quiet, permanent loss of signal.
+    console.error(
+      '[directory-abuse-rules] evaluateDirectoryAbuse failed — abuse detection degraded for this request',
+      err,
+    );
     return [];
   }
 }

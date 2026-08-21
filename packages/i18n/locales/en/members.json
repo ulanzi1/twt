@@ -17,5 +17,7 @@
   "status_lock_in": "Waiting period",
   "district_unknown": "Not recorded",
   "unavailable_title": "The directory could not be loaded",
-  "unavailable_body": "The directory is temporarily unavailable. This is a problem on our side — it does not mean the directory is empty, and nothing about anyone's membership has changed. Please try again in a few minutes."
+  "unavailable_body": "The directory is temporarily unavailable. This is a problem on our side — it does not mean the directory is empty, and nothing about anyone's membership has changed. Please try again in a few minutes.",
+  "past_end_title": "You've reached the end of the directory",
+  "past_end_body": "There are no more entries past this point. Go back to the first page to browse from the start."
 }

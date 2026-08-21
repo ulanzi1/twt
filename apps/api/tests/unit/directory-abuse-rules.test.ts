@@ -10,8 +10,6 @@
 // than the server's first boot.
 
 import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { dirname, join } from 'node:path';
 
 import { parseDirectoryAbuseRules, type DirectoryAbuseRules } from '@twt/contracts';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -22,15 +20,17 @@ import {
   __resetDirectoryAbuseCounters,
   evaluateDirectoryAbuse,
   loadDirectoryAbuseRules,
+  resolveRulesPath,
   type DirectoryRequestSignal,
 } from '../../src/modules/public-pages/abuse-rules.js';
 
-const require = createRequire(import.meta.url);
-const RULES_PATH = join(
-  dirname(require.resolve('@twt/contracts/package.json')),
-  'public-pages',
-  'directory-abuse-rules.yaml',
-);
+// ⭐ THE PRODUCTION RESOLVER, ⛔ not a second copy of the same walk. This used to rebuild the
+// `createRequire` resolution itself, so the real one could break — an `exports` map added to
+// `@twt/contracts` without a `"./package.json"` entry, or a packaging step that copies `dist/`
+// without the sibling `public-pages/*.yaml` — while this stayed green. ⚠ That failure is not
+// contained to the directory: `loadDirectoryAbuseRules` runs inside `buildServer()`, so it takes
+// down EVERY route in the API.
+const RULES_PATH = resolveRulesPath();
 
 /** A minimal deps stub carrying only what the detector touches. */
 function fakeDeps(): { deps: AppDeps; events: AuthAuditEvent[] } {

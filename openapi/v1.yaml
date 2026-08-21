@@ -14537,13 +14537,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/p/:pariwarId/public-pages/member-directory:
+  /api/v1/p/{pariwarId}/public-pages/member-directory:
     get:
       summary: Public Member Directory page (UNAUTHENTICATED by Panel ruling)
       description: "One page of the public Member Directory: presentation-resolved member name, raw latest-posting district, and the two-label status pill. Deliberately requires NO session — the surface is public tier by ruling 2026-08-19-135/-136 and is consumed server-side by the apps/public SSR shell. Bounded by the named SEARCH rate ceiling keyed on the forwarded visitor address, a page-size cap (50), a deep-pagination horizon (page 200), noindex, and the absence of any member-detail route or export affordance. Its defence is written in login-wall.spec.ts."
       tags:
         - public-pages
       parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: pariwarId
+          in: path
         - schema:
             type: integer
             exclusiveMinimum: 0

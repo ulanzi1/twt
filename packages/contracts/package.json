@@ -4,6 +4,12 @@
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
+  "//files": "⛔ The `public-pages/*.yaml` entry is LOAD-BEARING, not tidiness: apps/api resolves directory-abuse-rules.yaml at handler construction (inside buildServer), so a packaging step that copied dist/ without these siblings would fail EVERY route in the API, not just the directory. If an `exports` map is ever added here it MUST keep a `\"./package.json\"` entry — abuse-rules.ts resolves the file through it.",
+  "files": [
+    "src",
+    "public-pages",
+    "package.json"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "lint": "eslint .",

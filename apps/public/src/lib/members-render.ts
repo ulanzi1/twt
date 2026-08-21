@@ -35,7 +35,7 @@
 // PURE: no fs, no db, no env, no clock.
 import type { PublicDirectoryResponse } from '@twt/contracts';
 
-import { pageHref, type PaginationResult } from './pagination.js';
+import { pageHref, PUBLIC_PAGE_HORIZON, type PaginationResult } from './pagination.js';
 import type { MemberDirectoryRow, MembersRenderModel } from './surface-fields.js';
 
 export const MEMBERS_ROUTE = '/members';
@@ -44,6 +44,8 @@ export const MEMBERS_ROUTE = '/members';
 export interface MembersLabels {
   readonly pageTitle: string;
   readonly pageIntro: string;
+  /** The table's accessible name. ⚠ DISTINCT from `pageIntro` — a repeat is announced twice. */
+  readonly tableCaption: string;
   readonly notPublishedTitle: string;
   readonly notPublishedBody: string;
   /** The OUTAGE state — ⛔ deliberately distinct copy from the empty state. */
@@ -140,7 +142,15 @@ export function buildMembersView(
   // THIS page — distinct from a directory that has never published a member at all (`total === 0`).
   // Not derived from `page > 1` alone: a request for page 5 of a 0-member roster is still honestly
   // "not published yet", not "you went too far".
-  const pastEnd = !apiUnavailable && total > 0 && rows.length === 0;
+  //
+  // ⭐ AND `page > 1` IS REQUIRED — `2026-08-21-145`, second-round review. `total` is the ROSTER
+  // count, taken BEFORE per-row name resolution; rows are dropped after it (a KMS decrypt failure,
+  // or a name the presentation policy cannot shield). ⇒ without this conjunct, a transient KMS
+  // fault that dropped every row on PAGE 1 of a 400-member roster rendered "You've reached the end
+  // of the directory — there are no more entries past this point". ⛔ On page 1 that is simply
+  // false, and it is the same class of lie the outage state exists to avoid.
+  // ⚠ Page 1 with rows dropped falls through to the empty state, which claims less.
+  const pastEnd = !apiUnavailable && total > 0 && rows.length === 0 && accepted.page > 1;
 
   const model: MembersRenderModel = {
     hasMembers: rows.length > 0,
@@ -152,8 +162,18 @@ export function buildMembersView(
   };
 
   const hasPrevious = model.page > 1;
-  // ⭐ A next page exists iff the roster holds more rows than this page's window covers.
-  const hasNext = !apiUnavailable && accepted.page * accepted.limit < total;
+  // ⭐ A next page exists iff the roster holds more rows than this page's window covers
+  // — AND the next page is one `parsePageParams` will actually ACCEPT.
+  //
+  // ⚠ THE HORIZON CLAMP IS NOT DECORATION — `2026-08-21-145`, second-round review. Without it, a
+  // 5001-member roster at the default limit of 25 rendered `<a rel="next" href="?page=201">` on
+  // page 200, and clicking it hit `page_above_horizon` and the 400 state. ⛔ A page must never
+  // advertise a link it knows the parser will refuse; the horizon is the same constant both sides
+  // read, so there is no second literal to drift.
+  const hasNext =
+    !apiUnavailable &&
+    accepted.page * accepted.limit < total &&
+    accepted.page + 1 <= PUBLIC_PAGE_HORIZON;
 
   const links: PaginationLink[] = [];
   if (hasPrevious) {
@@ -172,6 +192,61 @@ export function buildMembersView(
   }
 
   return { model, links, hasPrevious, hasNext };
+}
+
+/** One rendered directory column: its matrix field id, its header, and how to read its value. */
+export interface DirectoryColumn {
+  /** The snake_case matrix field id — what `getVisibility()` is asked about. */
+  readonly fieldId: string;
+  readonly headerLabel: string;
+  readonly valueOf: (row: MemberDirectoryRow) => string;
+}
+
+/**
+ * The directory's columns, IN RENDER ORDER, filtered to those the matrix says are visible.
+ *
+ * ⭐ WHY THIS EXISTS — AC5, `2026-08-21-145`, second-round review. `<MatrixField>` correctly
+ * renders NOTHING for a not-visible verdict, but the `<td>` wrapping it and the `<th>` labelling
+ * its column sat OUTSIDE the component and were unconditional. ⇒ a not-visible field produced an
+ * empty `<td>` in every row under a still-labelled header — which is precisely the thing AC5
+ * forbids: *"An omission that announces itself is an ENUMERATION SIGNAL: a scraper diffing renders
+ * learns exactly which fields exist."* The component honoured the rule; the table around it did not.
+ *
+ * ⭐ THE FIX IS HERE, ⛔ NOT IN `<MatrixField>`. AC5 forbids modifying the component to fit a call
+ * site, and nothing about it needed to change — the defect was the table's shape. This also keeps
+ * the decision in pure `.ts` where it is unit-testable, per Task 7 (display logic in the render
+ * module, ⛔ never in the `.astro` file, which on this surface is a gate evasion before it is a
+ * style choice).
+ *
+ * ⚠ `isVisible` is INJECTED rather than imported: this module must stay free of `matrix.server.ts`,
+ * which inlines the matrix YAML via a Vite `?raw` specifier and cannot load in a plain unit test.
+ * ⛔ It is not a seam for a second visibility rule — pass `visibilityOf(...).visible` and nothing else.
+ */
+export function visibleDirectoryColumns(
+  labels: MembersLabels,
+  isVisible: (fieldId: string) => boolean,
+): DirectoryColumn[] {
+  const all: DirectoryColumn[] = [
+    {
+      fieldId: 'member_name',
+      headerLabel: labels.columnName,
+      valueOf: (row) => row.memberName,
+    },
+    {
+      fieldId: 'district',
+      headerLabel: labels.columnDistrict,
+      // ⚠ The "not recorded" fallback lives HERE, ⛔ not in the template. It was computed inline in
+      // `members.astro` as `row.district ?? labels.districtUnknown`, which put a display decision
+      // outside the pure module — the exact pattern Trap 7 names.
+      valueOf: (row) => row.district ?? labels.districtUnknown,
+    },
+    {
+      fieldId: 'member_status',
+      headerLabel: labels.columnStatus,
+      valueOf: (row) => row.memberStatus,
+    },
+  ];
+  return all.filter((c) => isVisible(c.fieldId));
 }
 
 /**

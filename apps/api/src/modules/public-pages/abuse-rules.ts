@@ -28,8 +28,17 @@
 // `request.ip`, which under `trustProxy: true` reads the `X-Forwarded-For` chain — so the SSR proxy
 // forwarding `Astro.clientAddress` is what makes this per-VISITOR rather than per-PROXY. ⛔ Without
 // that forwarding every visitor on earth shares one bucket, and neither this nor the rate limit
-// means anything. ⚠ And it is therefore CALLER-SUPPLIED: the route is defended only behind the
-// trusted hop (`2026-08-20-143` cl.9).
+// means anything.
+//
+// ⚠ AND IT IS TRUSTWORTHY ONLY BEHIND THE SSR HOP. A caller reaching `apps/api` DIRECTLY can set
+// the header themselves; restricting that is an INFRA control (network ACL / mTLS), deferred
+// (`2026-08-20-143` cl.9).
+// ⭐ WHAT IS NO LONGER TRUE — `2026-08-21-145` cl.2. This paragraph used to say the key was simply
+// "caller-supplied". It was worse than that: `apps/public` APPENDED the visitor address to the
+// browser's own inbound chain, and `trustProxy: true` reads the LEFTMOST entry — so a scraper going
+// THROUGH the legitimate hop chose its own key with one header and got a fresh counter window per
+// request. ⛔ No infra control could have seen it. `apps/public` now forwards ONLY
+// `Astro.clientAddress` and discards the inbound chain.
 
 import {
   parseDirectoryAbuseRules,
@@ -42,8 +51,15 @@ import { dirname, join } from 'node:path';
 
 import type { AppDeps } from '../../context.js';
 
-/** Where the committed rules file lives, resolved through the package rather than a `../../..` walk. */
-function resolveRulesPath(): string {
+/**
+ * Where the committed rules file lives, resolved through the package rather than a `../../..` walk.
+ *
+ * ⭐ EXPORTED so the unit suite guards THIS resolution, ⛔ not a second copy of it. The test used to
+ * rebuild the same `createRequire` walk itself, so the two could drift and the real one could break
+ * while the test stayed green — and a failure here takes down `buildServer()`, i.e. EVERY route in
+ * the API, not just the directory.
+ */
+export function resolveRulesPath(): string {
   const require = createRequire(import.meta.url);
   // `@twt/contracts`'s package.json anchors the package root; the yaml sits beside the matrix.
   const pkgJson = require.resolve('@twt/contracts/package.json');

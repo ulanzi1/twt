@@ -27,6 +27,7 @@ import {
 const LABELS: MembersLabels = {
   pageTitle: 'Member Directory',
   pageIntro: 'The member directory for this family.',
+  tableCaption: 'Members of this family, with their district and membership status.',
   notPublishedTitle: 'not published yet',
   notPublishedBody: 'being prepared',
   unavailableTitle: 'temporarily unavailable',

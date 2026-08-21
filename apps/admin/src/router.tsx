@@ -17,6 +17,7 @@ import {
 import { ChannelConfigRoute } from './routes/ChannelConfigRoute.js';
 import { CycleFreezeRoute } from './routes/CycleFreezeRoute.js';
 import { DegradedModeRoute } from './routes/DegradedModeRoute.js';
+import { DirectoryPublicationRoute } from './routes/DirectoryPublicationRoute.js';
 import { GroundInspectionRoute } from './routes/GroundInspectionRoute.js';
 import { HelpdeskOperatorRoute } from './routes/HelpdeskOperatorRoute.js';
 import { HelpdeskQueueRoute } from './routes/HelpdeskQueueRoute.js';
@@ -100,6 +101,15 @@ const degradedModeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/p/$pariwarId/degraded-mode',
   component: DegradedModeRoute,
+});
+
+// Story 10.30 — the tenant-scoped directory-publication KILL SWITCH (super_admin only). The surface
+// Decision 2026-08-21-147 cl.1 made a launch gate for the public Member Directory. Un-linked by
+// design, like its degraded-mode / feature-flags / cycle-freeze siblings.
+const directoryPublicationRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/directory-publication',
+  component: DirectoryPublicationRoute,
 });
 
 // Story 6.3 — the tenant-scoped helpline operator console (claim intake on a caller's behalf).
@@ -247,6 +257,7 @@ const routeTree = rootRoute.addChildren([
   memberSearchRoute,
   channelConfigRoute,
   degradedModeRoute,
+  directoryPublicationRoute,
   helplineRoute,
   helpdeskRoute,
   helpdeskQueueRoute,

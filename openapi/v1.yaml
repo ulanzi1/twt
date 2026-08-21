@@ -2960,6 +2960,46 @@ components:
       required:
         - active
       additionalProperties: false
+    DirectoryPublicationStatusResponse:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        configured:
+          type: boolean
+        changedByDisplay:
+          type:
+            - string
+            - "null"
+        rationale:
+          type:
+            - string
+            - "null"
+        updatedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+      required:
+        - enabled
+        - configured
+        - changedByDisplay
+        - rationale
+        - updatedAt
+      additionalProperties: false
+    SetDirectoryPublicationRequest:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        rationale:
+          type: string
+          minLength: 1
+          maxLength: 2000
+      required:
+        - enabled
+        - rationale
+      additionalProperties: false
     MedicalDiscloseRequest:
       type: object
       properties:
@@ -10751,11 +10791,91 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/p/{pariwarId}/admin/directory-publication/status:
+    get:
+      summary: Read the Pariwar's directory-publication kill-switch state
+      description: "Returns whether the Pariwar's public Member Directory is published, plus the last-changing admin display name, rationale and timestamp. `configured: false` means no row was ever written (the default-enabled posture) and is reported EXPLICITLY — an unconfigured Pariwar and a deliberately re-enabled one are different facts. Requires pariwar.manage_directory_publication at pariwar scope."
+      tags: &a66
+        - directory-publication
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: pariwarId
+          in: path
+      responses:
+        "200":
+          description: The current directory-publication state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DirectoryPublicationStatusResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden — requires pariwar.manage_directory_publication at pariwar scope (super_admin only)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      summary: Flip the Pariwar's directory-publication kill switch (rationale required; audited)
+      description: "Publishes or unpublishes the Pariwar's public Member Directory. Moves in BOTH directions. A non-empty rationale is REQUIRED and is rejected at the contract boundary with a 400 when absent. The acting admin's display name is resolved SERVER-SIDE from users.display_name and is never accepted from the caller. Writes a §1.5 hash-chain audit line covering the same transaction as the state change. The effect is NOT instantaneous on the public surface: /members is edge-cached with s-maxage=300, so warm PoPs keep serving the prior state, per page number, until those entries expire. Requires pariwar.manage_directory_publication at pariwar scope."
+      tags: *a66
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: pariwarId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetDirectoryPublicationRequest"
+      responses:
+        "200":
+          description: The updated directory-publication state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DirectoryPublicationStatusResponse"
+        "400":
+          description: Request validation failed (e.g. an empty or whitespace-only rationale)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden — requires pariwar.manage_directory_publication at pariwar scope (super_admin only)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: The acting admin has no users.display_name (admin.display_name_missing)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/v1/member/medical-disclosure:
     post:
       summary: Signup medical disclosure — submit IMA disclosures + concealment-denial ack
       description: Submits 0..N IMA-listed conditions (zero is valid — most members disclose nothing) + the optional free-text additional context (both Tier-1 encrypted) with a MANDATORY concealment-denial acknowledgment (server rejects acknowledged !== true). Records a consent (medical_disclosure_ack, referencing niy.concealment.r14) via the audit-or-throw chain, APPENDS a disclosure row (append-only history — Epic 4 walks the full history), and emits member.medical_disclosed (a non-PII marker; count + ima_list_version + ack only). Requires a member session (no step-up at signup — Life Events adds it in 3.9).
-      tags: &a66
+      tags: &a67
         - member-medical
       requestBody:
         required: true
@@ -10791,7 +10911,7 @@ paths:
     get:
       summary: Signup medical disclosure — the latest disclosure status (NO PII echo-back)
       description: Returns the member's latest medical disclosure as a NON-PII summary (disclosedAt, imaListVersion, conditionCount, a presence flag for the free-text, ackLocale) + the total history count. NEVER the raw condition codes / free-text bytes (Tier-1 echo-back discipline). Requires a member session.
-      tags: *a66
+      tags: *a67
       responses:
         "200":
           description: Latest disclosure + history count
@@ -10809,7 +10929,7 @@ paths:
     get:
       summary: Signup medical disclosure — the IMA catalog + concealment-ack copy
       description: Returns the resolved IMA condition catalog (version = the niy.medical.ima-list clause_version_id + bilingual conditions) plus the concealment-ack copy (ackText.en / ackText.hi from niy.concealment.r14) the screen renders. Returns 503 when the registry is unprovisioned for the Pariwar (either clause absent). Requires a member session.
-      tags: *a66
+      tags: *a67
       responses:
         "200":
           description: IMA catalog + ack copy
@@ -10833,7 +10953,7 @@ paths:
     get:
       summary: Signup T&C — the current effective Terms & Conditions for the member’s Pariwar
       description: "Returns the current effective T&C version for the member’s Pariwar: the tcVersionId, the effective-from instant, the PRECOMPUTED sanitized HTML body (rendered once at write time — the screen emits it verbatim, no markdown render at read), and the echoed locale. Returns 503 when no effective T&C is provisioned for the Pariwar (a server-side gap, not a client error — the screen renders a graceful unavailable state). Requires a member session."
-      tags: &a67
+      tags: &a68
         - member-terms
       responses:
         "200":
@@ -10858,7 +10978,7 @@ paths:
     post:
       summary: Signup T&C — accept the current effective T&C (records a tc_acceptance consent)
       description: Records a tc_acceptance consent_records entry (consent_artifact_ref = the resolved tcVersionId, granted_via_actor = member_self) via the audit-or-throw chain (write the audit line FIRST, thread its id into recordConsent, all inside one member scope-tx; a compensating audit line is emitted on rollback). The effective version is resolved SERVER-SIDE (the client tcVersionId is an advisory staleness signal); if no effective T&C is resolvable the accept fails atomically (409, no orphan consent/audit). Requires a member session.
-      tags: *a67
+      tags: *a68
       requestBody:
         required: true
         content:
@@ -10894,7 +11014,7 @@ paths:
     post:
       summary: Signup fee — build the ₹110 Vyawastha Shulk UPI Intent URL
       description: Returns a SERVER-constructed UPI Intent URL (upi://pay?pa={trust VPA}&am={110}&cu=INR&tn=signup-shulk-{memberId}&tr=signup-{memberId}-{nonce}) — the VPA + amount are resolved server-side from config (never client-supplied). Echoes the `tr` idempotency nonce for the confirm step. 503 when the trust VPA is unconfigured (a server gap). Requires a member session.
-      tags: &a68
+      tags: &a69
         - member-vyawastha-shulk
       responses:
         "200":
@@ -10919,7 +11039,7 @@ paths:
     post:
       summary: Signup fee — self-attest the UTR → persist the receipt + the GATED lock-in transition
       description: Persists a vyawastha_shulk_receipts row ALWAYS (AR-67 indefinite retention; idempotent on the `tr` — a re-confirm returns the existing receipt without a second insert or re-emit). Captures the optional 6-digit Reference Code (D2 port seam — stored, NOT validated). Then evaluates the 5-condition lock-in gate (KYC + nominees + medical + T&C + the receipt); emits member.vyawastha_shulk_paid (pending-fee → lock-in) + member.lock_in_entered (with the FR-8 lock_in_days_at_join snapshot) ONLY when all five hold — otherwise the receipt persists, no event fires, and `outstanding` names the incomplete step(s). 503 lock_in.policy_unavailable when the gate passes but niy.lock-in.policy is unprovisioned (receipt kept; idempotent re-confirm completes once provisioned). Requires a member session.
-      tags: *a68
+      tags: *a69
       requestBody:
         required: true
         content:
@@ -10961,7 +11081,7 @@ paths:
     get:
       summary: Signup fee — the member’s paid / lock-in status
       description: Returns whether the member has paid (a receipt exists), the latest receipt’s validThrough, whether lock-in has been entered, and any still-outstanding pre-payment steps. Requires a member session.
-      tags: *a68
+      tags: *a69
       responses:
         "200":
           description: Paid / lock-in status
@@ -10979,7 +11099,7 @@ paths:
     get:
       summary: Renewal — the canonical FR-12A vyawastha_shulk_status payload
       description: "Returns the renewal/validity status Epic 4’s Validity Service (FR-12A) consumes: paid_through (latest receipt valid_through), days_until_lapse (ceil-clamped days to the valid_through + 91d grace-end/lapse boundary), in_renewal_grace (true iff the member’s state is active-in-grace), and grace_remaining_days. Computed live per request → within the ≤60s freshness invariant. Requires a member session."
-      tags: *a68
+      tags: *a69
       responses:
         "200":
           description: Renewal/validity status
@@ -10997,7 +11117,7 @@ paths:
     post:
       summary: Renewal — build the annual ₹ Vyawastha Shulk UPI Intent URL
       description: Identical to the signup intent (server-authoritative VPA + amount from config; `tr` idempotency nonce) but with a renewal `tn` grammar (renewal-shulk-{memberId}-{year}). Requires a member session. 503 when the trust VPA is unconfigured.
-      tags: *a68
+      tags: *a69
       responses:
         "200":
           description: UPI Intent URL + tr
@@ -11021,7 +11141,7 @@ paths:
     post:
       summary: Renewal — self-attest the UTR → persist the receipt + emit the renewal event
       description: "Persists a vyawastha_shulk_receipts row (server-stamped valid_through = now + 365d; idempotent on the `tr`) and emits member.vyawastha_shulk_paid (kind: renewal) in the same scope-tx. A renewing member is already post-lock-in, so there is NO lock-in gate and renewal NEVER re-applies lock-in (the reducer routes active-in-grace/lapsed-unpaid → active, and is identity from active). 409 when the member is in a terminal/pre-active state (renewal requires a post-lock-in member). Requires a member session."
-      tags: *a68
+      tags: *a69
       requestBody:
         required: true
         content:
@@ -12121,7 +12241,7 @@ paths:
     post:
       summary: Request a report export (scope-respecting, PII-masked; enqueues an async build)
       description: Authorizes the actor against the report template's own permission key at their resolved scope, inserts a pending report_exports row (idempotent per (actor, report_type, params_hash)), and enqueues a REPORT_EXPORT_BUILD job. The build runs off the request path; poll GET :id for status. Requires the template's permission key at the actor's scope (e.g. member.export_roster).
-      tags: &a69
+      tags: &a70
         - reports
       parameters:
         - schema:
@@ -12170,7 +12290,7 @@ paths:
     get:
       summary: List the actor's own report exports (newest-first, bounded)
       description: Returns the requestor's OWN report_exports rows only (actor-scoped, not tenant-wide), newest-first. Backs the admin console's export list so a page refresh does not lose knowledge of in-flight/ready exports.
-      tags: *a69
+      tags: *a70
       parameters:
         - schema:
             type: string
@@ -12195,7 +12315,7 @@ paths:
     get:
       summary: Poll a report export's status (pending → ready|failed)
       description: Returns the export's lifecycle metadata (status + timestamps + row count + a NON-PII failure code). NO artifact field — the bytes are streamed by the download route. 404 when not the requestor's export.
-      tags: *a69
+      tags: *a70
       parameters:
         - schema:
             type: string
@@ -12238,7 +12358,7 @@ paths:
     get:
       summary: Download a ready report export (one-time, 24h, authenticated stream)
       description: "Streams the envelope-decrypted artifact as text/csv or application/json (the format is the export's own). One-time: guards in order owned → not-consumed (410) → not-expired-status (410) → failed (409 `reports.build_failed`) → ready (409 `reports.not_ready`) → not-expired-window (410); consumed_at is stamped before streaming (a concurrent double-download loses → 410). The two 409 cases carry DISTINCT error codes so a client can tell a permanent build failure from a transient still-building state. NO response schema — the artifact bytes are streamed, never JSON-embedded (the R1 rule)."
-      tags: *a69
+      tags: *a70
       parameters:
         - schema:
             type: string
@@ -12289,7 +12409,7 @@ paths:
     get:
       summary: The cross-tenant feature-flag catalog (complete; no secret flags) — pariwar_admin+ or super_admin
       description: Returns EVERY registered flag resolved against the CROSS-TENANT tier — the global row if one is in force, else the code default. The listing is registry-driven, not row-driven, so a flag that has never been flipped still appears. Requires feature_flag.view, satisfied by holding it in ANY of the actor's own Pariwars (pariwar_admin+) or by a global grant (super_admin) — the catalog's data does not vary by tenant, so this is prd.md:892's "visible to Pariwar Admin role and above" read literally. GET /api/v1/p/{pariwarId}/feature-flags additionally shows each flag's effective resolution for one specific tenant, including any governing global row.
-      tags: &a70
+      tags: &a71
         - feature-flags
       responses:
         "200":
@@ -12314,7 +12434,7 @@ paths:
     post:
       summary: Flip a feature flag GLOBALLY (creates a new cross-tenant immutable version) — super_admin only
       description: "Publishes the next version row for this flag with `pariwar_id: null` — the cross-tenant tier that governs every Pariwar without its own override at once. Strictly higher-privilege than the catalog read (Decision 7's read/write key split), so this is super_admin-only regardless of who can view the catalog. Same immutability, rationale, and 409-on-race semantics as the per-Pariwar flip. Send an optional `Idempotency-Key` header to make a retried flip safe. NOTE: `effective_from` may not be in the future — scheduled flips are not supported."
-      tags: *a70
+      tags: *a71
       parameters:
         - schema:
             type: string
@@ -12374,7 +12494,7 @@ paths:
     get:
       summary: This Pariwar's effective feature flags (complete, with global-vs-override provenance)
       description: "Returns EVERY registered flag resolved for this tenant: its own override if one is in force, else the global row, else the code default — with `source` naming which tier answered. Requires feature_flag.view at the pariwar dimension."
-      tags: *a70
+      tags: *a71
       parameters:
         - schema:
             type: string
@@ -12405,7 +12525,7 @@ paths:
     get:
       summary: A flag's version history (newest first)
       description: The persisted immutable version rows governing this flag for this tenant (its own overrides plus the global rows). Version 1 is never listed — it is the code default, not a row. Requires feature_flag.view.
-      tags: *a70
+      tags: *a71
       parameters:
         - schema:
             type: string
@@ -12446,7 +12566,7 @@ paths:
     post:
       summary: Flip a feature flag for this Pariwar (creates a new immutable version)
       description: "Publishes the next version row for this flag in this tenant's scope. Prior rows are NEVER mutated (only their superseded_by_version forward-pointer), so historical flag states stay queryable for replay. `rationale` is REQUIRED and non-empty — FR-58C requires every flag change be audit-logged with actor + rationale, and a §1.5 hash-chain audit line is written on every flip. A concurrent double-flip loses the unique-constraint race and gets 409. Requires feature_flag.flip (narrower than feature_flag.view by design). Send an optional `Idempotency-Key` header to make a retried flip safe: a replay with the same key returns the original response instead of creating a second identical version. NOTE: `effective_from` may not be in the future — a flip takes effect immediately and scheduled flips are not supported."
-      tags: *a70
+      tags: *a71
       parameters:
         - schema:
             type: string
@@ -12512,7 +12632,7 @@ paths:
     get:
       summary: List the Pariwar's banners (newest-first, paginated, derived-display-state filterable)
       description: The `display_state` filter is a DERIVED state (draft | scheduled | live | expired | retracted) computed from the stored status plus the valid_from/valid_until window against the server's clock — it is never a stored column. `valid_from` is inclusive and `valid_until` exclusive.
-      tags: &a71
+      tags: &a72
         - banners
       parameters:
         - schema:
@@ -12543,7 +12663,7 @@ paths:
     post:
       summary: Create a banner draft
       description: Copy may be incomplete on a draft; all four copy fields become mandatory at publish. A popup MUST be dismissible (422 otherwise — enforced again by a DB CHECK), and the window must be non-empty (422 otherwise — likewise). A non-dismissible `banner` IS permitted.
-      tags: *a71
+      tags: *a72
       parameters:
         - schema:
             type: string
@@ -12591,7 +12711,7 @@ paths:
   /api/v1/p/{pariwarId}/banners/{bannerId}:
     get:
       summary: Read a single banner (admin)
-      tags: *a71
+      tags: *a72
       parameters:
         - schema:
             type: string
@@ -12633,7 +12753,7 @@ paths:
     patch:
       summary: Edit a banner (one unified edit; the server content hash decides whether a re-review is required)
       description: The server recomputes a content hash over the four member-visible copy fields. If the hash is UNCHANGED (e.g. extending valid_until, flipping display_once_per_member) the edit applies with no re-review and no revision bump, and every existing member dismissal stands. If the hash CHANGED on a PUBLISHED banner, a fresh NON-AUTHOR tone-review sign-off is required (409 otherwise), `revision` is bumped, and every prior dismissal stops suppressing — so the banner re-appears for members who had dismissed the earlier copy. On a draft, copy edits are free. A retracted banner is terminal and rejects every edit (409).
-      tags: *a71
+      tags: *a72
       parameters:
         - schema:
             type: string
@@ -12700,7 +12820,7 @@ paths:
     post:
       summary: Publish a banner draft (draft → published)
       description: "Publishing does NOT make the banner visible by itself — visibility is the read-time window. A published banner whose valid_from is in the future reads as `scheduled` and becomes visible when the clock passes it, with nothing running. Requires all four copy fields (422 otherwise) and a NON-AUTHOR tone-review sign-off: the publishing actor becomes the reviewer, so the banner's own author cannot publish it (409)."
-      tags: *a71
+      tags: *a72
       parameters:
         - schema:
             type: string
@@ -12761,7 +12881,7 @@ paths:
     post:
       summary: Retract a banner (draft → retracted as a discard, or published → retracted to pull it down)
       description: Terminal — a retracted banner is never member-visible again regardless of its window, and there is no un-retract.
-      tags: *a71
+      tags: *a72
       parameters:
         - schema:
             type: string
@@ -12816,7 +12936,7 @@ paths:
     get:
       summary: The member's currently visible banner + popup (RESOLVED server-side)
       description: "Returns AT MOST ONE banner and AT MOST ONE popup. Both may be present at once — the two display modes are independent lanes, so a popup never suppresses the strip. When several banners of one mode are simultaneously visible, the winner is chosen by a total, replayable order: severity (critical > warning > info), then valid_from descending, then banner_id ascending. Resolution happens on the server so every client agrees. Member-session-gated (no RBAC key); a `pariwarId` that does not match the member's own JWT is a 404, not a 403."
-      tags: *a71
+      tags: *a72
       parameters:
         - schema:
             type: string
@@ -12847,7 +12967,7 @@ paths:
     post:
       summary: Record the member's acknowledgement of a banner (dismissed, or an automatic display-once `shown`)
       description: "Persists server-side so a reinstall or a second device cannot resurrect a dismissed banner. The acted-on revision is read from the banner row, never client-supplied. IDEMPOTENT: a replayed dismiss is a clean no-op returning success, and the recorded revision only ever advances, so a stale replay cannot un-suppress a banner. A later copy revision re-surfaces the banner for members who had dismissed the earlier one."
-      tags: *a71
+      tags: *a72
       parameters:
         - schema:
             type: string
@@ -12896,7 +13016,7 @@ paths:
     get:
       summary: List the Pariwar's surveys (newest-first, paginated, derived-display-state filterable)
       description: The `display_state` filter is a DERIVED state (draft | scheduled | open | expired | closed) computed from the stored status plus the valid_from/valid_until window against the server's clock — it is never a stored column. `valid_from` is inclusive and `valid_until` exclusive.
-      tags: &a72
+      tags: &a73
         - surveys
       parameters:
         - schema:
@@ -12927,7 +13047,7 @@ paths:
     post:
       summary: Create a survey draft
       description: "Copy and questions may be incomplete on a draft; all four copy fields and at least one question become mandatory at publish. The window must be non-empty (422 otherwise — enforced again by a DB CHECK). The audience scope must be one that can resolve: `public` is REJECTED (422) because a survey has no unauthenticated respondent, and `role`/`cohort` are rejected because no member attribute exists to resolve them against."
-      tags: *a72
+      tags: *a73
       parameters:
         - schema:
             type: string
@@ -12975,7 +13095,7 @@ paths:
   /api/v1/p/{pariwarId}/surveys/{surveyId}:
     get:
       summary: Read a single survey (admin)
-      tags: *a72
+      tags: *a73
       parameters:
         - schema:
             type: string
@@ -13017,7 +13137,7 @@ paths:
     patch:
       summary: Edit a survey (a published survey may only have its valid_until EXTENDED)
       description: "On a DRAFT every field applies, re-validated. On a PUBLISHED survey the questionnaire, the response_threshold, the audience and the copy are FROZEN — a request touching any of them is a 409 naming the frozen field. The reason is that a response is an answer TO A QUESTION: change the question and every stored answer silently becomes an answer to something nobody asked. To ask something different, close this survey and publish a new one. The ONLY permitted post-publish mutation is EXTENDING valid_until; a shortening is a 422 pointing at `close`, which is the transition that exists for stopping collection. A closed survey is terminal and rejects every edit (409)."
-      tags: *a72
+      tags: *a73
       parameters:
         - schema:
             type: string
@@ -13084,7 +13204,7 @@ paths:
     post:
       summary: Publish a survey draft (draft → published)
       description: "Publishing does NOT open the survey by itself — openness is the read-time window. A published survey whose valid_from is in the future reads as `scheduled` and opens when the clock passes it, with nothing running. Requires all four copy fields and at least one question (422 otherwise) and a NON-AUTHOR tone-review sign-off: the publishing actor becomes the reviewer, so the survey's own author cannot publish it (409). The sign-off's content hash covers the copy AND the questionnaire, and since both are frozen from this moment it is a ONE-SHOT binding. Publishing also enqueues a member notification fan-out; a fan-out failure never rolls back the publish — the survey is published and the notification is retried."
-      tags: *a72
+      tags: *a73
       parameters:
         - schema:
             type: string
@@ -13145,7 +13265,7 @@ paths:
     post:
       summary: Close a survey (draft → closed as a discard, or published → closed to stop collecting)
       description: "TERMINAL — there is no reopen, deliberately: reopening would resume collecting answers into an aggregate an admin has already read and may have already quoted. To ask again, publish a new survey. Closing does not delete responses; a closed survey's aggregate stays readable."
-      tags: *a72
+      tags: *a73
       parameters:
         - schema:
             type: string
@@ -13200,7 +13320,7 @@ paths:
     get:
       summary: The survey's aggregate results (counts only — never who answered)
       description: 'Returns per-option selection counts for every choice question (every declared option appears, including at zero, so "nobody chose this" is distinguishable from "this option does not exist"), the total response count, and `threshold_met`. NO field in this response can carry a member identifier. `threshold_met` is INFORMATIONAL and tri-state: null when no threshold was authored (which must not render as "not met"), and even when set it gates nothing — a survey informs a decision and never makes one.'
-      tags: *a72
+      tags: *a73
       parameters:
         - schema:
             type: string
@@ -13243,7 +13363,7 @@ paths:
     get:
       summary: The free-text answers to one question, UNATTRIBUTED
       description: "Returns `{answer_text, submitted_at}` and nothing else: no member id, no row id, no question echo and no ordinal — a stable per-respondent ordinal would let two reads of two different questions be aligned row-for-row, reconstructing one member's whole submission. Ordered by submitted_at with no identifying tie-break, so answers submitted in the same instant have an unstable relative order across reads; that is the correct trade. Reading this writes an audit line carrying the survey id and the audited question, never the answer content and never a count either (the audit payload field is a one-way hash). Free-text answers are member-authored personal data and have no export path in v1."
-      tags: *a72
+      tags: *a73
       parameters:
         - schema:
             type: string
@@ -13292,7 +13412,7 @@ paths:
     get:
       summary: The member's open, in-audience surveys
       description: "Returns every survey that is open at the server's clock and whose audience contains this member, each carrying an `answered` flag. Surveys the member has ALREADY answered are returned with `answered: true` rather than filtered out — a member who answered yesterday must see that they did, not an empty list. Member-session-gated (no RBAC key); a `pariwarId` that does not match the member's own JWT is a 404, not a 403."
-      tags: *a72
+      tags: *a73
       parameters:
         - schema:
             type: string
@@ -13336,7 +13456,7 @@ paths:
     post:
       summary: Submit the member's response (ONE per member, final)
       description: "An idempotent INSERT, not an upsert: a second submission by the same member is a 409, and submission is FINAL. A member who submitted by mistake raises a helpdesk ticket — a human path that already exists and leaves a record. A replay carrying the SAME Idempotency-Key returns the original 201. Requires a Turnstile token and is rate-limited per member. Answering a survey that is not open at the server's clock is a 409: expiry is enforced on the write path, not merely hidden from the read. Every answer is validated against the survey's own questions, and a rejection names the offending question_id."
-      tags: *a72
+      tags: *a73
       parameters:
         - schema:
             type: string
@@ -13403,7 +13523,7 @@ paths:
     post:
       summary: "Suspend a member (moderation overlay: none → suspended)"
       description: "Records a suspension against the member with a registry reason code and a MANDATORY free-text rationale (stored Tier-1 encrypted; it never appears on any response, event payload or audit line). Moderation is an event-derived OVERLAY orthogonal to the member lifecycle — `members.state` is NOT touched. The member stops being covered for support (`is_valid` becomes false, which is the entire enforcement surface: pool assignment and claim eligibility inherit it), every session is revoked, and the member is notified. The member can STILL sign in — deliberately, so they can read the explanation and reach the appeal path. Step-up required (`member_moderation_suspend`)."
-      tags: &a73
+      tags: &a74
         - member-moderation
       parameters:
         - schema:
@@ -13465,7 +13585,7 @@ paths:
     post:
       summary: "Terminate a member (moderation overlay: suspended → terminated)"
       description: "Legal ONLY from `suspended` — FR-56 routes termination THROUGH suspension, so the harshest, rejoin-locking action can never be a single click; terminating an unmoderated member is a 409. Sets a 12-month rejoin lock (FR-6): a signup under the same identity is refused until `rejoin_permitted_at`. Revokes every session and notifies the member, who can still sign in. Step-up required (`member_moderation_terminate`) — an elevation minted for suspend or restore does NOT satisfy it."
-      tags: *a73
+      tags: *a74
       parameters:
         - schema:
             type: string
@@ -13526,7 +13646,7 @@ paths:
     post:
       summary: "Restore a member (moderation overlay: suspended | terminated → none)"
       description: Clears the moderation standing. The member is covered for support again (`is_valid` returns to true) and any 12-month rejoin lock is lifted — the signup guard reads the CURRENT standing, not the presence of a historical termination. Restore does NOT re-mint sessions; the member simply signs in normally. Uses the RESTORE reason-code family (a moderation code is a 422 here). Step-up required (`member_moderation_restore`).
-      tags: *a73
+      tags: *a74
       parameters:
         - schema:
             type: string
@@ -13587,7 +13707,7 @@ paths:
     get:
       summary: A member's current moderation standing + paginated history
       description: The standing is DERIVED by folding the member's moderation events — it is never a stored column. `legal_actions` is computed server-side from the same legality reducer the write path uses, so a console can drive button enablement without re-implementing any rule. ⚠ Neither the standing nor any history entry carries the rationale or its ciphertext.
-      tags: *a73
+      tags: *a74
       parameters:
         - schema:
             type: string
@@ -13643,7 +13763,7 @@ paths:
     get:
       summary: Decrypt ONE moderation action's free-text rationale
       description: 'The single exception to "the rationale never leaves the DB": a per-action, decrypt-on-demand read behind the same `member.moderate` gate as every other field on this surface — never a list, and no separate capability. Fail-soft on a CORRUPT/ROTATED STORED ENVELOPE: `rationale` is `null` rather than a 500. A KMS/key-service outage is deliberately NOT collapsed into that null — it returns 503, so an auditor can never mistake "temporarily undecryptable" for "no rationale was ever recorded".'
-      tags: *a73
+      tags: *a74
       parameters:
         - schema:
             type: string
@@ -13698,7 +13818,7 @@ paths:
     post:
       summary: Append a SUPPORTING ground to an existing moderation decision
       description: A LATER FINDING ATTACHES; it never rewrites (AC9). Records an append-only supporting ground against an existing decision, optionally superseding an earlier supporting ground — the PRIMARY ground is not reachable here and can never be superseded or replaced (structurally immutable by construction). Step-up gated (`member_moderation_append_ground`), a FOURTH context distinct from suspend/terminate/restore, so an elevation minted for one of those three can never be spent on appending a finding, and vice versa.
-      tags: *a73
+      tags: *a74
       parameters:
         - schema:
             type: string
@@ -13771,7 +13891,7 @@ paths:
     get:
       summary: The Pariwar's currently-moderated members
       description: "Members whose CURRENT standing is `suspended` or `terminated`, newest-action-first, paginated. Restored members drop out. Carries no rationale. NOTE: moderation items carry NO deadline and NO severity — a consumer cannot sort them by deadline-proximity."
-      tags: *a73
+      tags: *a74
       parameters:
         - schema:
             type: string
@@ -13815,7 +13935,7 @@ paths:
     get:
       summary: The full frozen moderation reason-code registry
       description: "All 10 codes (7 moderation grounds + 3 restore grounds), always — not paginated (Decision 3: the registry is code-level and frozen, never a per-Pariwar-growing list). The ONE source both the server's `appliesTo` 422 and the admin dropdown read."
-      tags: *a73
+      tags: *a74
       parameters:
         - schema:
             type: string
@@ -13846,7 +13966,7 @@ paths:
     get:
       summary: The member's own appeal context (member, in-portal)
       description: "What the member's appeal screen needs to render itself honestly, in one read: which moderation acts they may appeal RIGHT NOW (already filtered to acts with no open appeal, so the screen can show the one-open-at-a-time state without first earning a 409), plus their own appeals newest-first. ⚠ This read exists because the validity payload derives moderation standing from `specialFlags` and carries NO moderation-action id, while §8.8 identifies an appeal BY the act's §8.6 record. ⛔ The alternative — letting the server infer the act from the member's current standing — was rejected: an inferred subject on a governance write is the shape that lets a member appeal something other than what they were shown. ⛔ Carries no Tier-1 text."
-      tags: *a73
+      tags: *a74
       parameters:
         - schema:
             type: string
@@ -13876,7 +13996,7 @@ paths:
     post:
       summary: File an appeal against a moderation act (member, in-portal)
       description: "The MEMBER's own act under Niyamavali §8.8. Member-session gated; Turnstile (`x-turnstile-token`) and `Idempotency-Key` ride HEADERS, not the body. The member is the SESSION — there is no `member_id` field, deliberately. Appealable from suspension OR termination, with NO deadline (§8.8: \"no time limit runs against a member's right to appeal\"). Only ONE appeal against a given moderation act may be open at a time, but the right is NOT exhausted: once an appeal is determined a further appeal against the same act may be filed. Filing has NO SUSPENSIVE EFFECT — a suspended member remains suspended and a terminated member's access does not return. The grounds are stored Tier-1 encrypted and never appear on this response, on any event payload, or on any audit line."
-      tags: *a73
+      tags: *a74
       parameters:
         - schema:
             type: string
@@ -13937,7 +14057,7 @@ paths:
     post:
       summary: Record a member's appeal taken by helpline (operator, off-portal)
       description: "THE ARM THAT SURVIVES THE END OF AUTHENTICATED ACCESS. §8.8: \"the right to appeal does not depend on the access that termination removes.\" With `termination_access_block` enabled a terminated member holds no session at all, and this is the only route left to them. Gated on `helpdesk.create` — ⛔ NOT on `member.data_rights` (filing an appeal is not executing a DPDPA right) and ⛔ NOT on `member.moderate` (which would let the authority that sanctions a member also file their appeal). `helpdesk_ticket_id` is REQUIRED here and enforced by a DB CHECK: the ruling places the off-portal process ON a helpdesk ticket. The operator RECORDS the act; the event attributes it to the MEMBER, because the appeal is the member's own."
-      tags: *a73
+      tags: *a74
       parameters:
         - schema:
             type: string
@@ -13992,7 +14112,7 @@ paths:
     get:
       summary: The open moderation-appeal queue (Trustee Panel)
       description: "THE SURFACE ON WHICH A FILED APPEAL IS ACTUALLY FOUND. This is not a convenience read: the Trustee Panel holds NO helpdesk capability at all and helpdesk `routed_to_role` is advisory and inert, so no operator queue can ever surface an appeal to the Panel. Without this list an appeal would be reachable only by direct link — a complete record nobody can find. Open appeals in the caller's scope, oldest filing first. ⛔ Carries NO Tier-1 text."
-      tags: *a73
+      tags: *a74
       parameters:
         - schema:
             type: string
@@ -14030,7 +14150,7 @@ paths:
     get:
       summary: One moderation appeal, with both Tier-1 fields decrypted
       description: The single-item decrypt-on-demand read — the ONLY surface that ever carries the member's grounds or the adjudicator's reasoned outcome, behind the same gate as the determination (the `ModerationRationale` precedent). `grounds` / `reasoned_outcome` are null on a corrupt or rotated envelope (a per-row fact); a key-service outage answers 503 instead, so an unreachable KMS can never masquerade as a member who appealed and said nothing.
-      tags: *a73
+      tags: *a74
       parameters:
         - schema:
             type: string
@@ -14079,7 +14199,7 @@ paths:
     post:
       summary: Determine a moderation appeal (Trustee Panel)
       description: 'Records the §8.8 determination: `upheld` or `allowed`, and NOTHING ELSE — there is deliberately no third "varied" outcome, because a lesser sanction is a FRESH moderation act with its own ground, its own record and its own right of appeal. A REASONED OUTCOME is mandatory (stored Tier-1; never on an event payload or an audit line). Gated on `member.decide_moderation_appeal` — a SEPARATE key from `member.moderate`, because `member.moderate` is held by both pariwar_admin and the Trustee Panel and so cannot distinguish the appellate authority from the deciding one. Step-up required (`member_moderation_appeal`). ⭐ HOLDING THE KEY IS NOT SUFFICIENT: §8.8 requires the appeal be heard by a Panel member who did not take part in the act appealed against, and that exclusion is enforced server-side before any write as a 409. ⛔ AN `allowed` OUTCOME DOES NOT RESTORE THE MEMBER. It DIRECTS a restore; the restore is a subsequent, separately-attributed act through the moderation write path with its own Decision Note and the Panel-exclusive `member.restore_terminated` check. `directs_restore` on the response is a signal, not a report.'
-      tags: *a73
+      tags: *a74
       parameters:
         - schema:
             type: string

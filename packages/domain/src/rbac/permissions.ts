@@ -547,9 +547,15 @@ export function permissionKey(value: string): PermissionKey {
 // snapshot + §1.5 audit line, which the write path refuses to skip. The unauthenticated public
 // read touches NO key. district_admin / state_trustee excluded (inert in both directions, the
 // usual [[project_rbac_geo_scope_containment]] reason).
-// ⛔⛔ NO ADMIN UI SHIPS WITH THIS KEY, AND THE SWITCH IS THEREFORE **NOT AN OPERATIONAL CONTROL** —
-// Decision `2026-08-21-146` cl.5 (Trustee-ratified). A dedicated administrative UI is REQUIRED
-// before it may be treated as one, and ⛔ direct database manipulation MUST NOT be described as
+// ⭐ THE ADMIN UI SHIPS AT STORY 10.30 (Decision `2026-08-21-148`): a super_admin reads and flips
+// this switch from `/p/$pariwarId/directory-publication`, both directions, with a required
+// rationale — ⛔ no database access, which `2026-08-21-147` cl.1(c) withdrew as an acceptable answer.
+// ⛔⛔ AND THE SWITCH IS **STILL NOT AN OPERATIONAL CONTROL** — Decision `2026-08-21-146` cl.5
+// (Trustee-ratified). ⚠ Read that as its own sentence: what changed is that a UI now EXISTS; what
+// did ⛔ NOT change is the switch's status. The "therefore" that once joined them is the part that
+// broke. That status turns on the ≥2-trustee ratification launch-gate Row 17 requires — ⛔ NOT on
+// the UI existing — and until that Decision lands the row stays `open` and the public Member
+// Directory ⛔ may not go live. ⛔ Direct database manipulation still MUST NOT be described as
 // normal manual operation. ⚠ This is a DIRECTIVE, ⛔ not the "ungated by UI, mirroring 11a.1's
 // posture" framing that stood here — 11a.1's posture was not ruled on; this one was.
 export const PERMISSION_CATALOG_VERSION = 38 as const;

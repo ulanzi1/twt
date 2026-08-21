@@ -37,6 +37,7 @@ import { registerPaymentModule } from './modules/payment/index.js';
 import { registerMemberValidityModule } from './modules/member-validity/index.js';
 import { registerChannelConfigModule } from './modules/channel-config/index.js';
 import { registerDegradedModeModule } from './modules/degraded-mode/index.js';
+import { registerDirectoryPublicationModule } from './modules/directory-publication/index.js';
 import { registerChannelWebhooksModule } from './modules/channel-webhooks/index.js';
 import { registerWaOptInModule } from './modules/wa-opt-in/index.js';
 import { registerTelegramOptInModule } from './modules/telegram-opt-in/index.js';
@@ -214,6 +215,14 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // manual revoke + read-active, gated by pariwar.declare_degraded_mode. The declaration substrate for the
   // (future) live bridge fan-out; NO live dispatch call site here.
   registerDegradedModeModule(app, deps);
+  // Story 10.30 — the per-Pariwar directory-publication KILL-SWITCH admin surface: read + governed
+  // flip (both directions, rationale required), gated by pariwar.manage_directory_publication
+  // (super_admin ONLY). Makes operable, without database access, the switch Story 11a.3 shipped as a
+  // mechanism — the LAUNCH GATE Decision 2026-08-21-147 cl.1 placed on the public Member Directory.
+  // ⛔ The switch is still NOT an operational control: that turns on a separate >=2-trustee
+  // ratification (Row 17 stays `open`), NOT on this surface existing. The effect is also NOT
+  // instantaneous — /members is edge-cached with s-maxage=300.
+  registerDirectoryPublicationModule(app, deps);
   // Story 5.4 — WhatsApp inbound-webhook ingress primitive (§3.11): per-Pariwar Meta webhook receiver
   // (GET subscription challenge + POST verify-persist-ack-within-5s). Public (Meta is unauthenticated — the
   // verify-token / X-Hub-Signature-256 IS the auth; login-wall-allowlisted). Encapsulated so its raw-body

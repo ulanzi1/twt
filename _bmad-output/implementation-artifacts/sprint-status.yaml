@@ -1,4 +1,22 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-21a (bmad-code-review 11a.3: review pass complete, 4 decision-needed
+#   resolved + 14 patches applied + 2 deferred + 4 dismissed (1 corrected on inspection — its fix
+#   would have regressed an anti-enumeration property, withdrawn not applied). ONE row flips:
+#   development_status[11a-3-...] review -> in-progress. ⛔ epic-11a stays in-progress (3 stories
+#   remain: 11a.4-11a.6). ⛔ No other story status changes.
+#   ⭐ NEW SUBSTRATE: `pariwar_directory_publication` (migration 0111) — a per-Pariwar directory
+#   kill switch, mirroring `pariwar_public_name_presentation`'s governance shape (rationale +
+#   actor + audit anchor required; `pariwar.manage_directory_publication` minted, super_admin
+#   only, catalog version 37->38, 45->46 keys). ⚠ UNVERIFIED LIVE — no Postgres was available this
+#   session; typecheck + all non-DB suites are green, but the migration/RLS/2 new live-DB specs
+#   need a ci:local run before this can return to `review`.
+#   ⛔ ONE OUTSTANDING BEFORE `review`: the live-DB verification above. (The other finding from
+#   this pass — Story 11a.4's authoring work having bundled onto this branch at `440bde6` — is
+#   CLOSED BY EDIT: this branch's history was corrected so 11a-4's story file and its
+#   development_status row never land here at all; it now lives on its own
+#   `story/11a.4-phone-email-obfuscation` branch off `main`, with its own
+#   `chore(11a.4): story record + sprint-status → ready-for-dev` commit.) See the story file's own
+#   top banner and its Review Findings section for the full record.
 # last_updated: 2026-08-20i (bmad-dev-story 11a.3: IMPLEMENTED. ONE row flips:
 #   development_status[11a-3-...] ready-for-dev -> review. ⛔ epic-11a stays in-progress (3 stories
 #   remain: 11a.4-11a.6). ⛔ No other story status changes. ⛔ No migration, no new package, no new
@@ -8994,7 +9012,7 @@ development_status:
   epic-11a: in-progress
   11a-1-4-tier-visibility-matrix-codified-per-surface-public-vs-private-replacement: done
   11a-2-public-astro-ssr-shell-extension-for-member-directory-tiered-visibility-renderers: done
-  11a-3-member-directory-pii-shielded-tiered-render-scope-anti-enumeration-safeguards: review
+  11a-3-member-directory-pii-shielded-tiered-render-scope-anti-enumeration-safeguards: in-progress
   11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only: backlog
   11a-5-noticeboard-strip-foundational-layout-component: backlog
   11a-6-pinned-notice-component: backlog

@@ -90,9 +90,18 @@ export type PublicDirectoryEntry = z.output<typeof PublicDirectoryEntry>;
  * `?format=csv`, `?fields=mobile` and `?all=1` refusals rather than no-ops.
  *
  * ⚠ `limit` carries `.max(PUBLIC_SURFACE_PAGE_SIZE_CAP)` so Story 1.14's forced-pagination guard —
- * which walks the committed OpenAPI surface — SEES a bound on this route. That is the second,
- * independent FR-91 enforcement `2026-08-20-143` clause 1 names as a benefit of putting the read
- * here rather than on `apps/public`, which that guard is structurally outside of.
+ * which walks the LIVE in-process swagger document — SEES a bound on this route. That is the
+ * second, independent FR-91 enforcement `2026-08-20-143` clause 1 names as a benefit of putting the
+ * read here rather than on `apps/public`, which that guard is structurally outside of.
+ *
+ * ⚠ PRECISION, `2026-08-21-145`. The guard (`forced-pagination.spec.ts`) reads `t.app.swagger()`
+ * — it does ⛔ NOT read `openapi/v1.yaml`. The bound it sees therefore comes from the Fastify ROUTE
+ * SCHEMA, ⛔ not from the emitter registration. The enforcement is real; the ATTRIBUTION was wrong
+ * in four committed comments, and the difference mattered: in the committed file this route's 200
+ * body is a `$ref`, which the guard's own `isCollectionResponse` would ⛔ not detect — so if it were
+ * ever pointed at the file those comments named, this route would be INVISIBLE to it. Registering
+ * in the emitter remains required (the published contract must be accurate); it is just ⛔ not the
+ * thing enforcing FR-91 here.
  */
 export const PublicDirectoryQuery = z
   .object({
@@ -114,7 +123,7 @@ export const PublicDirectoryResponse = z
   .object({
     /**
      * ⭐ NAMED `items`, AND THAT IS LOAD-BEARING, ⛔ not a style choice. Story 1.14's
-     * forced-pagination guard walks the committed OpenAPI surface and recognises a collection GET
+     * forced-pagination guard walks the live in-process swagger document and recognises a collection GET
      * by a top-level array OR a `{ items: [] }` shape — literally that key. Calling this `entries`
      * would leave the route INVISIBLE to the guard while AC1's claim of "a second, independent
      * FR-91 enforcement on this data path" stayed in the comments, false. ⛔ Do not rename it.

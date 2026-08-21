@@ -537,7 +537,7 @@ export function permissionKey(value: string): PermissionKey {
 // render a name, exactly as it reads any other public config.
 // ACCEPTANCE CONDITION for pariwar_admin: a Panel ruling superseding `-136` cl.3. ⛔ Never a
 // consistency argument from the neighbouring keys.
-// ── Bumped 37 → 38 at Story 11a.3 code review (2026-08-21, D3) — added ONE key: 45 → 46 ─────────
+// ── Bumped 37 → 38 at Decision 2026-08-21-145 cl.5 — added ONE key: 45 → 46 ─────────
 // `pariwar.manage_directory_publication` — the per-Pariwar DIRECTORY-PUBLICATION kill switch write
 // key. Checked at `dimension: 'pariwar'` (value = scopeTx.pariwarId — the
 // pariwar.manage_public_name_presentation precedent, same mechanism, same reasoning).

@@ -3960,7 +3960,11 @@ registry.registerPath({
 // signal needs the BYPASSRLS audit writer, and the anti-enumeration ceiling needs a rate-limit
 // store — `apps/public` verifiably has none of the three (`2026-08-20-143` cl.1).
 // ⭐ REGISTERING IT HERE IS LOAD-BEARING, not bookkeeping: Story 1.14's forced-pagination guard
-// walks THIS document, so declaring the route is what gives FR-91 its second, independent
+// walks the LIVE in-process swagger document (`t.app.swagger()`), ⛔ NOT this file — so declaring
+// the route here keeps the PUBLISHED CONTRACT accurate; it is ⛔ not what enforces FR-91 on this
+// route. ⚠ Corrected at `2026-08-21-145`: four comments claimed the guard reads this file, and in
+// this file the 200 body is a `$ref`, which the guard's `isCollectionResponse` would not detect.
+// Registering the route is still required, and it gives FR-91 its second, independent
 // enforcement on this data path — the one `apps/public` Astro routes are structurally outside of.
 const { PublicDirectoryResponse, PublicDirectoryQuery } = await import(
   '../src/public-pages/directory.js'

@@ -54,8 +54,17 @@ import {
   renderNiyamavaliClauses,
   renderNiyamavaliHtml,
 } from '../../../src/lib/niyamavali-render.js';
-import { buildMembersView, type MembersLabels } from '../../../src/lib/members-render.js';
-import { membersSurfaceFieldIds } from '../../../src/lib/surface-fields.js';
+import {
+  buildMembersView,
+  visibleDirectoryColumns,
+  type MembersLabels,
+} from '../../../src/lib/members-render.js';
+import { matrixFieldOutput, visibilityOf } from '../../../src/lib/matrix.server.js';
+import {
+  deriveFieldIds,
+  membersSurfaceFieldIds,
+  MEMBER_DIRECTORY_ROW_FIELD_IDS,
+} from '../../../src/lib/surface-fields.js';
 import {
   buildTcRenderModel,
   renderTcHtml,
@@ -541,9 +550,46 @@ describe('PII scrape — Member Directory (/members, Story 11a.3)', () => {
       total: 2,
     },
   ).model;
+  /**
+   * ⭐ THE RENDERED HTML, BUILT THROUGH THE PRODUCTION PATH — ⛔ not hand-written, and ⛔ not a
+   * concatenation of the fields this test already knows about.
+   *
+   * ⚠ WHY THIS EXISTS: the `member-directory` snapshot used to carry `fields` but ⛔ NO `html`,
+   * while every other surface in this file passes both and the file's own header asserts *"Every
+   * snapshot below now carries BOTH `html` and `fields`"*. ⇒ on the ONE public surface that prints
+   * member PII, the FR-93 naked-PII leg evaluated NOTHING, and a committed record claimed coverage
+   * the flagship surface did not have.
+   *
+   * ⭐ It walks `visibleDirectoryColumns` + `matrixFieldOutput` — the SAME two functions
+   * `members.astro` uses — so a fourth rendered value appears here automatically. A hand-maintained
+   * string restating the render is what the header forbids, and it is exactly what a
+   * newly-rendered field would silently escape.
+   */
+  const columns = visibleDirectoryColumns(
+    MEMBERS_TEST_LABELS,
+    (fieldId) => visibilityOf('member-directory', fieldId, 'public').visible,
+  );
+  const DIRECTORY_HTML = [
+    '<table>',
+    `<thead><tr>${columns.map((c) => `<th scope="col">${c.headerLabel}</th>`).join('')}</tr></thead>`,
+    '<tbody>',
+    ...model.rows.map(
+      (row) =>
+        `<tr>${columns
+          .map((c) => {
+            const { output } = matrixFieldOutput('member-directory', c.fieldId, 'public', c.valueOf(row));
+            // ⛔ `null` ⇒ NOTHING — no cell, no placeholder. Mirrors the page exactly.
+            return output === null ? '' : `<td><span data-field="${c.fieldId}">${output}</span></td>`;
+          })
+          .join('')}</tr>`,
+    ),
+    '</tbody></table>',
+  ].join('');
+
   const snapshot: RenderSnapshot = {
     surfaceId: 'member-directory',
     viewerContext: 'public',
+    html: DIRECTORY_HTML,
     fields: membersSurfaceFieldIds(model),
   };
 
@@ -583,12 +629,26 @@ describe('PII scrape — Member Directory (/members, Story 11a.3)', () => {
     ]);
   });
 
-  it('⛔ the rendered rows leak no naked PII', () => {
-    // The row values reaching the DOM are display strings; `detectNakedPii` is the FR-93 scan.
-    const rendered = model.rows
-      .map((r) => `${r.memberName} ${r.district ?? ''} ${r.memberStatus}`)
-      .join(' ');
-    expect(detectNakedPii(rendered)).toEqual([]);
+  it('⛔ the rendered HTML leaks no naked PII — and the leg actually RUNS on this surface', () => {
+    // ⚠ This used to scan a hand-built `${memberName} ${district} ${memberStatus}` string, which
+    // the file's own header forbids ("⛔ never a hand-maintained list restating the render, which
+    // would drift silently"). It now scans the SAME html the snapshot carries.
+    expect(detectNakedPii(DIRECTORY_HTML)).toEqual([]);
+    // ⛔ And the snapshot must genuinely carry it — a missing `html` makes the FR-93 leg evaluate
+    // nothing while every assertion here still passes.
+    expect(snapshot.html).toBeDefined();
+    expect(snapshot.html).toContain('Rajesh Kumar Sharma');
+  });
+
+  it('⭐ NEGATIVE CONTROL — the FR-93 leg on THIS surface catches naked PII when it is there', () => {
+    // ⛔ Without this, `detectNakedPii(DIRECTORY_HTML) === []` proves only that the scan ran over
+    // something; it does not prove the scan can FAIL. Plant a mobile number in the same shape the
+    // render would produce and require it to be caught.
+    const leaky = DIRECTORY_HTML.replace(
+      '</tbody>',
+      '<tr><td><span data-field="member_mobile">9876543210</span></td></tr></tbody>',
+    );
+    expect(detectNakedPii(leaky).length).toBeGreaterThan(0);
   });
 
   // ── AC10 — INDEPENDENTLY PLANTED CONTROLS. ⛔ One fixture must never trip several checks. ──
@@ -629,12 +689,34 @@ describe('PII scrape — Member Directory (/members, Story 11a.3)', () => {
     expect(leaked.leaks.map((l) => l.field)).toContain('member_full_name_authenticated_only');
   });
 
-  it('CONTROL 3 — a DROPPED field is caught too (the set is asserted exactly, not loosely)', () => {
+  it('CONTROL 3 — a DROPPED field is caught by the REAL derivation, not by arithmetic', () => {
     // ⛔ An INDEPENDENT control: a leg that only detects ADDITIONS would silently accept a field
     // being removed from the render while the matrix still claims it is shown.
-    const dropped = snapshot.fields!.filter((f) => f !== 'member_status');
-    expect(dropped).not.toEqual(snapshot.fields);
-    expect(dropped).toHaveLength(2);
+    //
+    // ⚠ WHAT THIS REPLACES. The previous body was:
+    //     const dropped = snapshot.fields!.filter((f) => f !== 'member_status');
+    //     expect(dropped).not.toEqual(snapshot.fields);
+    //     expect(dropped).toHaveLength(2);
+    // — which called ⛔ NO production symbol. It built a 2-element array from a 3-element one and
+    // asserted it had 2 elements. Delete `MEMBER_DIRECTORY_ROW_FIELD_IDS`, delete `<MatrixField>`,
+    // delete `member_status` from the render entirely, and it still passed. ⭐ It was presented as
+    // AC10's control for a silently-dropped field and it caught nothing.
+    //
+    // ⭐ The real mechanism is `deriveFieldIds`, which throws in BOTH directions. A row shape that
+    // has LOST a key while the mapping still declares it is a STALE MAPPING — plant that and
+    // require the throw.
+    const rowWithDroppedField = { memberName: 'Rajesh Kumar Sharma', district: 'Lucknow' };
+    expect(() =>
+      deriveFieldIds(rowWithDroppedField, MEMBER_DIRECTORY_ROW_FIELD_IDS),
+    ).toThrow(/member_status|memberStatus/);
+
+    // ⭐ And the positive half, so the control cannot pass by throwing on everything.
+    expect(() =>
+      deriveFieldIds(
+        { memberName: 'Rajesh Kumar Sharma', district: 'Lucknow', memberStatus: 'Active' },
+        MEMBER_DIRECTORY_ROW_FIELD_IDS,
+      ),
+    ).not.toThrow();
   });
 
   it('CONTROL 4 — ⭐ a REAL authenticated_member-tier field at public FAILS (AC4\'s OTHER half)', () => {

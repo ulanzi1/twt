@@ -27,6 +27,7 @@
 
 import {
   PUBLIC_DIRECTORY_PAGE_HORIZON,
+  PUBLIC_SURFACE_PAGE_SIZE_DEFAULT,
   type PublicDirectoryEntry,
   type PublicDirectoryQuery,
   type PublicDirectoryResponse,
@@ -39,7 +40,8 @@ import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import { evaluateDirectoryAbuse, loadDirectoryAbuseRules } from './abuse-rules.js';
 
 /** Rows served when the caller asks for no page size. Mirrors `apps/public`'s own default. */
-export const PUBLIC_DIRECTORY_PAGE_SIZE_DEFAULT = 25;
+// ⭐ IMPORTED, ⛔ not a third bare `25`. See the constant's own doc-block in @twt/contracts.
+export const PUBLIC_DIRECTORY_PAGE_SIZE_DEFAULT = PUBLIC_SURFACE_PAGE_SIZE_DEFAULT;
 
 /**
  * Max KMS `decryptDek` round-trips in flight for ONE directory page render.
@@ -93,10 +95,10 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
      *
      * ⛔ DELIBERATELY UNAUTHENTICATED. The surface is `public` tier by Panel ruling
      * (`2026-08-19-135` / `-136`), so there is no session to require and ⛔ adding one would delete
-     * the route's purpose. What bounds it instead is written down in FOUR places that all have
-     * teeth: the named `search` rate limit on the route, the page-size cap and page horizon in the
-     * request schema, `noindex` on the page plus `X-Robots-Tag` on this response, and the absence
-     * of any member-detail route or export affordance.
+     * the route's purpose. What bounds it instead is FIVE controls, enumerated in `routes.ts` and
+     * in `login-wall.spec.ts`'s allowlist entry — the two places that decision is defended in
+     * writing. ⚠ Those two must state the SAME COUNT; this doc-block deliberately does not restate
+     * the list, so there is no third copy to drift.
      */
     async memberDirectory(request: FastifyRequest): Promise<PublicDirectoryResponse> {
       const { pariwarId: pariwarIdStr } = request.params as { pariwarId: string };

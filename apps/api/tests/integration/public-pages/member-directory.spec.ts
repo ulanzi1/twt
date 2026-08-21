@@ -15,6 +15,11 @@
 import { randomUUID } from 'node:crypto';
 
 import { PublicDirectoryResponse } from '@twt/contracts';
+// ⭐ THE HORIZON COMES FROM THE MODULE, ⛔ never a second hardcoded literal. This spec used to
+// compare against bare `201` / `200` while `handlers.ts` re-exported the constant with a comment
+// claiming "the route schema and the tests share ONE horizon" — a coupling that did not exist.
+// ⚠ That is the exact defect 11a.2's review found, reproduced one story later.
+import { PUBLIC_DIRECTORY_PAGE_HORIZON } from '../../../src/modules/public-pages/handlers.js';
 import { encryption, ids, kyc, member as memberDomain, schema } from '@twt/domain';
 import { beforeEach, describe, expect, it } from 'vitest';
 
@@ -247,7 +252,7 @@ describe.skipIf(!hasDatabase)('public Member Directory route (:5433)', { timeout
       expect((await t.app.inject({ method: 'GET', url: `${ROUTE(pariwarId)}?limit=51` })).statusCode).toBe(400);
       expect((await t.app.inject({ method: 'GET', url: `${ROUTE(pariwarId)}?limit=99999` })).statusCode).toBe(400);
       // The deep-pagination horizon (200).
-      expect((await t.app.inject({ method: 'GET', url: `${ROUTE(pariwarId)}?page=201` })).statusCode).toBe(400);
+      expect((await t.app.inject({ method: 'GET', url: `${ROUTE(pariwarId)}?page=${PUBLIC_DIRECTORY_PAGE_HORIZON + 1}` })).statusCode).toBe(400);
       expect((await t.app.inject({ method: 'GET', url: `${ROUTE(pariwarId)}?page=999999999` })).statusCode).toBe(400);
       // ⛔ NO BULK EXPORT — `.strict()` makes these refusals, not ignored parameters.
       expect((await t.app.inject({ method: 'GET', url: `${ROUTE(pariwarId)}?format=csv` })).statusCode).toBe(400);
@@ -256,7 +261,7 @@ describe.skipIf(!hasDatabase)('public Member Directory route (:5433)', { timeout
 
       // …and an in-range request still succeeds, so the bounds reject only what they should.
       expect((await t.app.inject({ method: 'GET', url: `${ROUTE(pariwarId)}?limit=10&page=1` })).statusCode).toBe(200);
-      expect((await t.app.inject({ method: 'GET', url: `${ROUTE(pariwarId)}?page=200` })).statusCode).toBe(200);
+      expect((await t.app.inject({ method: 'GET', url: `${ROUTE(pariwarId)}?page=${PUBLIC_DIRECTORY_PAGE_HORIZON}` })).statusCode).toBe(200);
     } finally {
       await teardown(t);
     }
@@ -317,7 +322,10 @@ describe.skipIf(!hasDatabase)('public Member Directory route (:5433)', { timeout
       await t.app.inject({ method: 'GET', url: `${ROUTE(pariwarId)}?page=1`, headers: { 'x-forwarded-for': '203.0.113.77' } });
       expect(t.auditSink.ofType('directory.abuse_suspected')).toHaveLength(0);
 
-      // A page past the rapid_pagination depth does. ⛔ It is a SIGNAL, not a block: still 200.
+      // A page past the deep_page_access depth does. ⛔ It is a SIGNAL, not a block: still 200.
+      // ⚠ `deep_page_access`, ⛔ NOT `rapid_pagination` — `2026-08-21-145` cl.4 split the two.
+      // ONE request to a deep page is a POSITION signal; it is deliberately NOT enough to fire
+      // the rate rule, because a resumed bookmark looks exactly like this.
       const res = await t.app.inject({
         method: 'GET',
         url: `${ROUTE(pariwarId)}?page=90`,
@@ -329,7 +337,12 @@ describe.skipIf(!hasDatabase)('public Member Directory route (:5433)', { timeout
       expect(lines.length).toBeGreaterThanOrEqual(1);
       // ⭐ The rule id survives in `resource_locator` — the ONLY triage field an unauthenticated
       // emitter has, since `context` is hashed and the default locator is a constant.
-      expect(lines[0]?.resourceLocator).toMatch(/^directory:rapid_pagination:p90:l\d+$/);
+      expect(lines[0]?.resourceLocator).toMatch(/^directory:deep_page_access:p90:l\d+$/);
+      // ⛔ AND THE RATE RULE DID NOT FIRE — one deep request is not pagination velocity. Without
+      // this, the split could regress to two rules that both trip on position and nothing would say so.
+      expect(
+        lines.some((l) => String(l.resourceLocator).includes('rapid_pagination')),
+      ).toBe(false);
       // ⛔ AND IT IS NOT THE HONEYPOT SIGNAL — reusing that type would corrupt it and break
       // security-headers.spec.ts's exact-count assertion.
       expect(t.auditSink.ofType('abuse.honeypot')).toHaveLength(0);

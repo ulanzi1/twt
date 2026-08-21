@@ -25,6 +25,20 @@ export type Cursor = z.output<typeof Cursor>;
  */
 export const PUBLIC_SURFACE_PAGE_SIZE_CAP = 50;
 
+/**
+ * Default page size for public surfaces — what a caller who asks for nothing gets.
+ *
+ * ⚠ A DIFFERENT NUMBER FROM THE CAP, and both are FR-91 numbers: 25 is the epic's
+ * *"e.g., 25 entries/page"*, 50 is the ceiling. ⛔ Raising either is an FR-91 change needing its
+ * own ruling — ⛔ neither is a tuning knob.
+ *
+ * ⭐ SINGLE SOURCE OF TRUTH, added at Story 11a.3's second review round. It had been re-declared as
+ * a bare `25` in THREE places (`apps/public`'s pagination module, the `apps/api` handler, and the
+ * domain accessor) with a cross-package drift guard covering only the CAP — so the same class of
+ * defect the cap's guard was written for existed one line away, unwatched.
+ */
+export const PUBLIC_SURFACE_PAGE_SIZE_DEFAULT = 25;
+
 /** Default public-surface pagination query (FR-91 max 50). */
 export const PaginationQuery = z
   .object({

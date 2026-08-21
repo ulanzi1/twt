@@ -233,8 +233,18 @@ epic** (a deferral naming an epic expires unowned).
   switch is ⛔ **not immediate** — `/members` is `edge_cacheable` with `s-maxage=300`, so a pulled
   Pariwar keeps being served real member names from every warm PoP, **per page number**
   (`2026-08-21-145` cl.5(e)). ⛔ The word *"immediate"* may not be used about this control.
-  **Trigger:** ⭐ **FIRED — the ruling itself.** Needs its own story and its own routing (owner:
-  John). ⛔ **NOT** bundled into 11a.4 (phone/email obfuscation).
+  ⭐⛔ **AND IT IS A LAUNCH GATE** (`2026-08-21-147` cl.1): the public Member Directory ⛔ **MUST NOT
+  GO LIVE** until this ships, and ⛔ **direct SQL is NOT the operational fallback.** ⚠ That withdraws
+  the answer the mechanism was implicitly relying on ⇒ there is ⛔ **no** operational pull-lever for
+  the directory today, which is exactly why the surface is gated.
+  ⚠ **Tracked as a GATE, ⛔ not only here:** `docs/launch-gate-inventory/inventory-roster.md`
+  **Row 17** (`directory-kill-switch-admin-ui`). ⛔ A gate living only in prose the launch checklist
+  does not read is not a gate. ⛔ It closes only on the story shipping **AND** ≥2-trustee
+  ratification — ⛔ never on a per-story author-commit `done`.
+  **Owner:** ⭐ **EPIC 10** (`2026-08-21-147` cl.2) — minted at `10-30-directory-publication-kill-switch-admin-ui: backlog`.
+  ⚠ Epic 11a carries the **dependency**; the **implementation** belongs to the admin-console surface.
+  ⛔ **NOT** bundled into 11a.4 (phone/email obfuscation). Authoring: John. Implementation: Amelia.
+  **Trigger:** ⭐ **FIRED — the ruling itself.**
   ⚠ **Verified at ratification:** the switch is named in ⛔ no runbook and ⛔ no degradation-policy
   document today, so (c) **retracts nothing** — it prevents a retraction being needed later.
 
@@ -243,13 +253,28 @@ epic** (a deferral naming an epic expires unowned).
   member-facing sentence says a member stops appearing *"once your death has been reported"*. That
   is exactly true **only because** `ACCOUNT_FREEZE_EVENT_TYPE` is precisely `claim.intake_initiated`
   (`packages/domain/src/member/overlay.ts:47`) — the **sole** freeze source.
-  ⛔ A future **second** freeze source that is **not** a death — a fraud hold, a legal hold, a
+  ⛔ A future freeze source or reason other than a reported death — a fraud hold, a legal hold, a
   disputed identity — would **silently de-list members from the public directory for a reason the
   Panel never approved**, while the ratified sentence still says "death", and ⛔ the directory
   discloses **no reason** for an omission (`2026-08-21-144` FQ-2) so nobody would see it.
-  **Trigger:** the next story touching `member/overlay.ts`'s event-type constants. That story
-  ⛔ **must** re-examine `NOT_DECEASED` in `directory-read.ts` **and** the member-facing sentence,
-  and route the result — ⛔ it may not absorb the widening.
+
+  ⭐ **WIDENED 2026-08-21 by `2026-08-21-147` cl.3 — the Panel's wording is BROADER than this fence
+  as first written, and the wider form governs:**
+  > *"Any future change that introduces a new **source/reason** for account-frozen must re-examine
+  > the directory exclusion predicate and the ratified member-facing sentence, and route the
+  > resulting policy question if necessary."*
+  ⚠ It was first scoped to *"a second freeze source that is **not a death**"*. ⛔ **Too narrow:** a
+  new **reason** that is still death-adjacent — a death reported through a different channel, a
+  presumption of death, a reversed or erroneous claim — would have slipped it while still changing
+  what the ratified sentence **means to a member**.
+  ✅ **No separate ratification is required** (`-147` cl.3); the fence stands as ruled.
+
+  **Trigger:** any change touching `member/overlay.ts`'s freeze/unfreeze event constants, **or**
+  introducing any new source **or reason** a member becomes account-frozen. That change ⛔ **must**
+  re-examine `NOT_DECEASED` in `directory-read.ts` **and** the ratified member-facing sentence.
+  ⚠ **"Route the resulting policy question IF NECESSARY"** is the Panel's own qualifier: the
+  **re-examination is MANDATORY**, the **routing is CONDITIONAL on what it finds**. ⛔ Do not
+  collapse the two — skipping the examination because routing "probably isn't needed" inverts it.
 
 ### ⚠ CARRIED OPEN — ⛔ NOT new deferrals of Story 11a.3
 

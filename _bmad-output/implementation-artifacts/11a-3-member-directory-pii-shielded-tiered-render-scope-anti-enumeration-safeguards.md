@@ -6,6 +6,26 @@ baseline_commit: 1bc46e01da11e3f7688c0ce977acf1cb10d4cf87
 
 Status: done
 
+> ⛔⛔ **THE SURFACE THIS STORY BUILT IS LAUNCH-GATED — Decision `2026-08-21-147` cl.1
+> (Trustee-ratified 2026-08-21).** The public Member Directory ⛔ **MUST NOT GO LIVE** until the
+> kill-switch **administrative UI** ships, and ⛔ **direct SQL is NOT the operational fallback.**
+>
+> ⚠ **The story is `done` and STAYS `done`.** A story being complete and the surface it built being
+> **LIVE** are ⛔ **different facts** — 11a.3 built the directory correctly and closed cleanly; the
+> gate governs its **exposure**, ⛔ not its completion. ⛔ Do not flip this Status back.
+>
+> **Tracked as a gate, ⛔ not only here:** `docs/launch-gate-inventory/inventory-roster.md` **Row 17**
+> (`directory-kill-switch-admin-ui`). The implementation is **Epic 10** story
+> `10-30-directory-publication-kill-switch-admin-ui` (`-147` cl.2) — ⚠ Epic 11a carries the
+> **dependency**, the admin-console surface carries the **implementation**. ⛔ **NOT** 11a.4.
+>
+> ⚠ **What the ruling withdrew:** before `-147` the implicit answer to *"how do we pull a Pariwar
+> today?"* was **hand-run SQL**. That answer is ⛔ **gone** ⇒ there is ⛔ **no** operational
+> pull-lever for this surface right now, which is exactly why it is gated.
+> ⚠ **And the gate does not end at the UI** — even then the control is ⛔ **not immediate**:
+> `edge_cacheable` + `s-maxage=300` keeps a pulled Pariwar served from warm PoPs, per page number
+> (`2026-08-21-145` cl.5(e)).
+
 > ✅ **CODE REVIEW PASS COMPLETE (2026-08-21). BOTH OUTSTANDING ITEMS NOW CLOSED.** See §Review
 > Findings under Tasks/Subtasks for the full record.
 >

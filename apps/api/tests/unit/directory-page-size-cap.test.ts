@@ -14,7 +14,10 @@
 // `apps/api` is the one package that already depends on BOTH `@twt/domain` and `@twt/contracts` —
 // so THIS is where the property can be asserted without restructuring the dependency graph.
 // Pure, DB-free, no network — this is a constant-equality check, not an integration test.
-import { PUBLIC_SURFACE_PAGE_SIZE_CAP } from '@twt/contracts';
+import {
+  PUBLIC_SURFACE_PAGE_SIZE_CAP,
+  PUBLIC_SURFACE_PAGE_SIZE_DEFAULT,
+} from '@twt/contracts';
 import { member as memberDomain } from '@twt/domain';
 import { describe, expect, it } from 'vitest';
 
@@ -29,5 +32,25 @@ describe('Member Directory page-size cap — the domain accessor never drifts fr
     // here means raising it (an FR-91 change, per directory-read.ts's own doc comment) requires
     // touching this assertion too, not just the two declarations.
     expect(PUBLIC_SURFACE_PAGE_SIZE_CAP).toBe(50);
+  });
+});
+
+describe('Member Directory page-size DEFAULT — the same guard, for the number one line away', () => {
+  // ⚠ WHY THIS BLOCK EXISTS. The cap above got a cross-package drift guard because 11a.2's review
+  // found a false "shared constant" claim. The DEFAULT (25) was then re-declared as a bare literal
+  // in THREE places — `apps/public`'s pagination module, the `apps/api` handler, and the domain
+  // accessor — and left unguarded, recreating the same class of defect immediately beside its own
+  // fix. Two of the three now IMPORT `PUBLIC_SURFACE_PAGE_SIZE_DEFAULT`; the domain accessor
+  // structurally cannot (contracts already depends on domain), so it is pinned here.
+  it('DIRECTORY_PAGE_SIZE_DEFAULT === PUBLIC_SURFACE_PAGE_SIZE_DEFAULT', () => {
+    expect(memberDomain.DIRECTORY_PAGE_SIZE_DEFAULT).toBe(PUBLIC_SURFACE_PAGE_SIZE_DEFAULT);
+  });
+
+  it('⚠ the default is 25 and the cap is 50 — DIFFERENT FR-91 numbers, ⛔ never merged', () => {
+    // ⛔ The epic's "e.g., 25 entries/page" is the DEFAULT, ⛔ not a second cap, and pinning both
+    // literals means moving either one requires touching this assertion — which is where a reader
+    // learns it is an FR-91 change needing its own ruling.
+    expect(PUBLIC_SURFACE_PAGE_SIZE_DEFAULT).toBe(25);
+    expect(PUBLIC_SURFACE_PAGE_SIZE_DEFAULT).toBeLessThan(PUBLIC_SURFACE_PAGE_SIZE_CAP);
   });
 });

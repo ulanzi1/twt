@@ -38,6 +38,14 @@
 #    legal review (`architecture.md` §5.8a). ⛔ But it is a NAMED DEPENDENCY, not a footnote:
 #    re-examine this file the moment an edge/CDN is actually configured. (`-143` clause 11.)
 #
+#    ⭐⛔ AND THE SAME MECHANISM DEFEATS THE KILL SWITCH — `2026-08-21-145` cl.5(e). This cost was
+#    recorded ONLY against detection; it applies identically to the per-Pariwar publication switch,
+#    whose whole justification is "pull one Pariwar without redeploying". A Pariwar disabled for a
+#    DPDPA or legal reason at time T keeps being served REAL MEMBER NAMES from every warm PoP for up
+#    to `s-maxage` (300s), longer with stale-while-revalidate, and PER PAGE NUMBER — so a walker's
+#    cached deep pages persist independently of page 1. ⇒ the kill switch has a multi-minute floor,
+#    ⛔ it is not immediate, and anyone reaching for it under time pressure must be told that.
+#
 # 3. ⚠ THE KEY IS TRUSTWORTHY ONLY BEHIND THE SSR HOP. `apps/api` runs `trustProxy: true`, so
 #    `request.ip` reads the `X-Forwarded-For` chain — which is what makes per-visitor keying
 #    possible AT ALL through the SSR proxy, and simultaneously means a caller reaching `apps/api`

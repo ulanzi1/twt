@@ -133,3 +133,60 @@ describe('createAuditLogSink / createKmsAuditHook (never throw into the request 
     expect(() => hook('computeHmac', { resourceName: 'fake:hmac' }, { pariwarId: A_UUID, fieldClass: 'admin_email' })).not.toThrow();
   });
 });
+
+// ═════════════════════════════════════════════════════════════════════════════════════════════
+// ⭐ THE `resourceLocator` OVERRIDE AND ITS SHAPE GUARD — Story 11a.3, second review round.
+// ═════════════════════════════════════════════════════════════════════════════════════════════
+// ⚠ WHY THIS BLOCK EXISTS. The override + `RESOURCE_LOCATOR_PATTERN` were added in the FIRST review
+// round to close a finding that read *"`resourceLocator` enforced only by a comment"* — and shipped
+// with ⛔ ZERO tests, so the replacement enforcement was itself enforced only by reading the code.
+// Deleting the regex, or widening it to accept `/` or uppercase, broke nothing.
+//
+// ⭐ This is a deliberate widening of a documented PII-poisoning defence (W6-CR1.6): the locator
+// column is one of the two fields that survive an abuse line (Trap 8), and it is now caller-settable.
+// The guard is what keeps a name, an email, a phone number or a free-text payload out of it.
+describe('authEventToAuditInput — the resourceLocator override (Story 11a.3)', () => {
+  it('DEFAULTS to the actor locator when no override is given', () => {
+    expect(authEventToAuditInput(evt()).resourceLocator).toBe(`user:${ACTOR}`);
+    expect(authEventToAuditInput(evt({ actorId: null })).resourceLocator).toBe('user:anonymous');
+  });
+
+  it('HONOURS a well-shaped override', () => {
+    const locator = 'directory:high_volume_lookups:p3:l25';
+    expect(authEventToAuditInput(evt({ resourceLocator: locator })).resourceLocator).toBe(locator);
+  });
+
+  it('⛔ REJECTS anything shaped like PII, falling back to the safe default', () => {
+    // ⛔ Each is a DIFFERENT arrival route for the failure this guard exists to prevent.
+    const hostile = [
+      'Rajesh Kumar Sharma', // a human name — spaces and capitals
+      'rajesh@example.com', // an email — `@`
+      '+91 98765 43210', // a phone number — `+` and spaces
+      'note: member said his wife called', // free text
+      'UPPERCASE:locator', // capitals alone are enough
+      'directory:rule:p1/l25', // a slash is not in the allowlist
+      '', // empty
+      ':leading-colon', // must start alphanumeric
+      `x${'y'.repeat(200)}`, // over the length ceiling
+    ];
+    for (const bad of hostile) {
+      expect(authEventToAuditInput(evt({ resourceLocator: bad })).resourceLocator).toBe(
+        `user:${ACTOR}`,
+      );
+    }
+  });
+
+  it('⛔ NEGATIVE CONTROL — the guard is not simply rejecting everything', () => {
+    // ⚠ Without this, a guard hard-coded to `return false` would pass every assertion above.
+    for (const good of ['directory:deep_crawl:p1:l25', 'a', 'user:anonymous', 'x.y-z_1:2']) {
+      expect(authEventToAuditInput(evt({ resourceLocator: good })).resourceLocator).toBe(good);
+    }
+  });
+
+  it('⛔ existing emitters are BYTE-IDENTICAL — the widening changed nothing for them', () => {
+    // The override is opt-in; an event that does not set it must produce exactly what it did before.
+    const before = authEventToAuditInput(evt({ type: 'rate_limit.exceeded', actorId: null }));
+    expect(before.resourceLocator).toBe('user:anonymous');
+    expect(before.responseStatus).toBe(429);
+  });
+});

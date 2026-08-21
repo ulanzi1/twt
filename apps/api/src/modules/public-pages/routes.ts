@@ -9,7 +9,11 @@
 // (`2026-08-20-143` cl.7: members are token-bearer, there is no `apps/member-web`, and
 // `apps/mobile` has no directory screen).
 //
-// ⭐ WHAT BOUNDS IT INSTEAD — four independent controls, each mechanized and each tested:
+// ⭐ WHAT BOUNDS IT INSTEAD — FIVE independent controls, each mechanized and each tested.
+// ⚠ FIVE, matching `login-wall.spec.ts`'s allowlist entry exactly. This list used to say FOUR (it
+// folded the page-size cap and the page horizon into one bullet) while that entry said FIVE — two
+// files both nominated as the authoritative written defence of a deliberately-unauthenticated PII
+// route, disagreeing on how many controls exist. ⛔ Keep the two counts identical.
 //   1. `config: { rateLimit: limits.search }` — the named SEARCH tier, UNMODIFIED. ⛔ Not
 //      `limits.read` (the looser tier, and backwards for an enumeration surface), ⛔ not an inline
 //      ad-hoc ceiling, and ⛔ NOT a hand-rolled `keyGenerator`: `limits.search` already keys on
@@ -18,13 +22,20 @@
 //      key the VISITOR's rather than the SSR proxy's is `apps/public`'s forwarding — ⛔ not a
 //      re-keying here. A `keyGenerator` override is exactly the ad-hoc deviation this clause
 //      forbids, and it is asserted by test that two forwarded addresses land in DIFFERENT buckets.
-//   2. The `.strict()` request schema — a bounded `limit` (so Story 1.14's forced-pagination guard,
-//      which walks the committed OpenAPI surface, COVERS this route) and a bounded `page` (the
-//      deep-pagination horizon). An unknown query parameter is a 400, which is what makes
-//      `?format=csv` a refusal rather than an ignored no-op.
-//   3. `X-Robots-Tag: noindex, nofollow` — ⚠ already stamped on EVERY response by the existing
+//      ⭐ AND `apps/public` FORWARDS ONLY `Astro.clientAddress` (`2026-08-21-145` cl.2). It used to
+//      APPEND that to the browser's inbound `X-Forwarded-For`, and since `trustProxy` reads the
+//      LEFTMOST entry, the caller was choosing this key. ⛔ Never restore the inbound chain.
+//   2. A bounded `limit` in the `.strict()` request schema — the page-size cap
+//      (`PUBLIC_SURFACE_PAGE_SIZE_CAP` = 50), which is also what makes Story 1.14's
+//      forced-pagination guard COVER this route.
+//   3. A bounded `page` — the deep-pagination HORIZON (`PUBLIC_DIRECTORY_PAGE_HORIZON` = 200),
+//      the ceiling that actually bounds a full walk, since offset paging was KEPT (D2(a)).
+//      ⚠ A separate control from the cap: the cap bounds ONE request, the horizon bounds the WALK.
+//      An unknown query parameter is a 400, which is what makes `?format=csv` a refusal rather
+//      than an ignored no-op.
+//   4. `X-Robots-Tag: noindex, nofollow` — ⚠ already stamped on EVERY response by the existing
 //      global `onSend` hook. VERIFIED, ⛔ not rebuilt here.
-//   4. The absence of a member-detail route and of any export affordance. ⛔ FR-91 forbids bulk
+//   5. The absence of a member-detail route and of any export affordance. ⛔ FR-91 forbids bulk
 //      export from the public side; a per-member permalink is an enumeration primitive in its own
 //      right and is in no AC.
 //

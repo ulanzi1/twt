@@ -20,7 +20,11 @@
 // rejection is the signal.
 //
 // PURE: no fs, no db, no env, no clock.
-import { PUBLIC_DIRECTORY_PAGE_HORIZON, PUBLIC_SURFACE_PAGE_SIZE_CAP } from '@twt/contracts';
+import {
+  PUBLIC_DIRECTORY_PAGE_HORIZON,
+  PUBLIC_SURFACE_PAGE_SIZE_CAP,
+  PUBLIC_SURFACE_PAGE_SIZE_DEFAULT,
+} from '@twt/contracts';
 
 /**
  * Maximum rows a public list surface will serve in one response.
@@ -35,7 +39,8 @@ import { PUBLIC_DIRECTORY_PAGE_HORIZON, PUBLIC_SURFACE_PAGE_SIZE_CAP } from '@tw
 export const PUBLIC_PAGE_SIZE_MAX = PUBLIC_SURFACE_PAGE_SIZE_CAP;
 
 /** Rows served when the caller does not ask for a specific page size. */
-export const PUBLIC_PAGE_SIZE_DEFAULT = 25;
+// ⭐ IMPORTED, ⛔ not re-declared — the same discipline `PUBLIC_PAGE_SIZE_MAX` already follows.
+export const PUBLIC_PAGE_SIZE_DEFAULT = PUBLIC_SURFACE_PAGE_SIZE_DEFAULT;
 
 /**
  * ⭐ THE DEEP-PAGINATION HORIZON — Story 11a.3 (Task 8; AC6.2), Decision `2026-08-20-143` cl.2.

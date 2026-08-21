@@ -215,6 +215,15 @@ epic** (a deferral naming an epic expires unowned).
   `directory-abuse-rules.yaml`. **Trigger:** the next `epics.md` correct-course pass should strike
   the citation at both sites. ⛔ Do not cite 10.6 as anti-enumeration coverage anywhere.
 
+### ⚠ CARRIED OPEN — ⛔ NOT new deferrals of Story 11a.3
+
+> ⚠ **HEADING CORRECTED, `2026-08-21-145`.** The `## Deferred from: 11a-3-…` heading above was
+> inserted mid-list, which re-homed every bullet below it — including the one this project is most
+> careful to describe as **ANSWERED but ⛔ NOT CLOSED** — under a heading that reads as *this
+> story's new deferrals*. ⛔ *"Closed by edit"*, *"Resolved via explicit deferral"* and *"carried
+> open"* are three different claims and must never be collapsed by document structure
+> ([[feedback_closure_language_precision]]).
+
 - **⚠ Decision `2026-08-20-140` cl.7 — the Niyamavali records NO directory publication — remains
   OPEN.** ⛔ Not closed here, and **now sharper**: D1(a) ships a `/members` page while the
   member-facing rulebook still does not mention one. That was ruled **knowingly** (Decision

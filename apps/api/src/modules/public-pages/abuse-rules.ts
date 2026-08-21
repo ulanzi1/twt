@@ -135,6 +135,17 @@ const MAX_TRACKED_KEYS = 10_000;
 /** Emit at most one line per (key, rule) per this interval. Mirrors the rate limiter's dedupe. */
 const EMIT_DEDUPE_MS = 60_000;
 
+/**
+ * Render a number for the audit `resource_locator`, in a shape its guard accepts.
+ *
+ * ⛔ `NaN` and `Infinity` stringify with CAPITALS, which the sink's lowercase locator-shape
+ * allowlist rejects — and a rejected locator falls back to `user:anonymous`, taking the rule id
+ * with it. `na` keeps the line triageable and is honest about the input.
+ */
+function locatorNum(n: number): string {
+  return Number.isSafeInteger(n) ? String(n) : 'na';
+}
+
 /** The longest window any rule can declare — the horizon past which state is always prunable. */
 function maxWindowMs(rules: DirectoryAbuseRules): number {
   return Math.max(
@@ -242,7 +253,11 @@ export function evaluateDirectoryAbuse(
         // shape (page number and page size — nothing a member typed, nothing a member owns).
         // ⛔ `context` below is HASHED away; do not rely on it and do not put anything there that
         // matters. See `2026-08-20-143` cl.10.
-        resourceLocator: `directory:${rule.id}:p${signal.page}:l${signal.limit}`,
+        // ⚠ `locatorNum`, ⛔ not raw interpolation. `${Number.NaN}` renders as `NaN` — UPPERCASE —
+        // which the sink's locator-shape guard rejects, so the whole locator fell back to
+        // `user:anonymous` and DISCARDED the rule id: the one triage field Trap 8's entire argument
+        // is built to preserve, lost exactly when the input was strange enough to be interesting.
+        resourceLocator: `directory:${rule.id}:p${locatorNum(signal.page)}:l${locatorNum(signal.limit)}`,
         context: { observed, threshold, detects: rule.detects },
         at: signal.at,
       });

@@ -11,6 +11,7 @@ import {
   buildMembersRejectionView,
   buildMembersView,
   MEMBERS_ROUTE,
+  visibleDirectoryColumns,
   type MembersLabels,
 } from '../src/lib/members-render.js';
 import {
@@ -272,5 +273,113 @@ describe('AC2/AC6.2 — a rejected page request renders a 400-shaped state', () 
       `page=${PUBLIC_PAGE_HORIZON + 1}`,
     ].map(rejectionFor);
     for (const view of views) expect(view).toEqual(views[0]);
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════════════════════
+// Second review round — `2026-08-21-145`. Each block is an INDEPENDENT planted control:
+// ⛔ one fixture must never trip several of these.
+// ═════════════════════════════════════════════════════════════════════════════════════════════
+
+describe('⭐ pastEnd requires page > 1 — page 1 must never say "you reached the end"', () => {
+  it('⛔ a page-1 roster whose rows all dropped is NOT pastEnd', () => {
+    // ⚠ THE REGRESSION. `total` is the ROSTER count, taken BEFORE per-row name resolution; rows are
+    // dropped after it (a KMS decrypt failure, or a name the presentation policy cannot shield).
+    // Without the `page > 1` conjunct, a transient fault that dropped every row on page 1 of a
+    // 400-member roster rendered "You've reached the end of the directory".
+    const view = buildMembersView({ page: 1, limit: 25 }, new URLSearchParams(), LABELS, {
+      items: [],
+      page: 1,
+      limit: 25,
+      total: 400,
+    });
+    expect(view.model.pastEnd).toBe(false);
+    expect(view.model.hasMembers).toBe(false);
+  });
+
+  it('✅ but a genuinely past-the-end page STILL reports pastEnd', () => {
+    // ⛔ The negative control for the fix: if the conjunct were written as `page > 1 && false`, or
+    // `pastEnd` were simply deleted, the assertion above would still pass. This one would not.
+    const view = buildMembersView({ page: 9, limit: 25 }, new URLSearchParams(), LABELS, {
+      items: [],
+      page: 9,
+      limit: 25,
+      total: 400,
+    });
+    expect(view.model.pastEnd).toBe(true);
+  });
+
+  it('⛔ a never-published roster is NOT pastEnd, on any page', () => {
+    for (const page of [1, 7]) {
+      const view = buildMembersView({ page, limit: 25 }, new URLSearchParams(), LABELS, {
+        items: [],
+        page,
+        limit: 25,
+        total: 0,
+      });
+      expect(view.model.pastEnd).toBe(false);
+    }
+  });
+});
+
+describe('⭐ hasNext is clamped by the pagination horizon', () => {
+  it('⛔ never links to a page the parser will REJECT', () => {
+    // ⚠ THE REGRESSION. 5001 members at limit 25: `200 * 25 = 5000 < 5001`, so `hasNext` was true
+    // and the page rendered `<a rel="next" href="?page=201">` — which `parsePageParams` then
+    // refuses with `page_above_horizon`, landing the visitor on the 400 state. A page must not
+    // advertise a link it knows the parser will refuse.
+    const view = buildMembersView(
+      { page: PUBLIC_PAGE_HORIZON, limit: 25 },
+      new URLSearchParams(),
+      LABELS,
+      { items: [], page: PUBLIC_PAGE_HORIZON, limit: 25, total: 5001 },
+    );
+    expect(view.hasNext).toBe(false);
+    expect(view.links.some((l) => l.rel === 'next')).toBe(false);
+  });
+
+  it('✅ and still links normally one page BELOW the horizon', () => {
+    // ⛔ The negative control: a clamp written as `hasNext = false` would pass the test above.
+    const view = buildMembersView(
+      { page: PUBLIC_PAGE_HORIZON - 1, limit: 25 },
+      new URLSearchParams(),
+      LABELS,
+      { items: [], page: PUBLIC_PAGE_HORIZON - 1, limit: 25, total: 5001 },
+    );
+    expect(view.hasNext).toBe(true);
+    expect(view.links.some((l) => l.rel === 'next')).toBe(true);
+  });
+});
+
+describe('⭐ visibleDirectoryColumns — a not-visible field takes its CELL and HEADER with it', () => {
+  const allVisible = () => true;
+
+  it('renders all three columns when the matrix says all three are visible', () => {
+    const cols = visibleDirectoryColumns(LABELS, allVisible);
+    expect(cols.map((c) => c.fieldId)).toEqual(['member_name', 'district', 'member_status']);
+  });
+
+  it('⛔ a not-visible field is ABSENT — ⛔ not an empty cell under a labelled header', () => {
+    // ⚠ THE REGRESSION. `<MatrixField>` correctly rendered nothing for a not-visible verdict, but
+    // the `<td>` around it and the `<th>` above it were unconditional — so the omission announced
+    // itself through the table. AC5: "An omission that announces itself is an ENUMERATION SIGNAL."
+    const cols = visibleDirectoryColumns(LABELS, (id) => id !== 'district');
+    expect(cols.map((c) => c.fieldId)).toEqual(['member_name', 'member_status']);
+    expect(cols.map((c) => c.headerLabel)).not.toContain(LABELS.columnDistrict);
+  });
+
+  it('⛔ hiding EVERYTHING yields no columns at all, not three blank ones', () => {
+    expect(visibleDirectoryColumns(LABELS, () => false)).toEqual([]);
+  });
+
+  it('the district fallback lives HERE, not in the template (Trap 7)', () => {
+    const cols = visibleDirectoryColumns(LABELS, allVisible);
+    const district = cols.find((c) => c.fieldId === 'district')!;
+    expect(district.valueOf({ memberName: 'X', district: null, memberStatus: 'Active' })).toBe(
+      LABELS.districtUnknown,
+    );
+    expect(district.valueOf({ memberName: 'X', district: 'Lucknow', memberStatus: 'Active' })).toBe(
+      'Lucknow',
+    );
   });
 });

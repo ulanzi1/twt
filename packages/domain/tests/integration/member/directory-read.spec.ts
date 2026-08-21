@@ -30,6 +30,7 @@ import {
   PARIWAR_A,
   PARIWAR_B,
   enterAppScope,
+  seedEvent,
   seedMember,
   seedMemberPosting,
 } from '../_helpers.js';
@@ -344,5 +345,142 @@ describe.skipIf(!hasDatabase)('directory read is transport-free (:5433)', () => 
     expect(Object.keys(row ?? {}).sort()).toEqual(
       ['district', 'memberId', 'nameCiphertext', 'state'].sort(),
     );
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════════════════════
+// ⭐ HALF THREE OF THE RULED PREDICATE — `account-frozen` (`2026-08-21-145` cl.1).
+// ═════════════════════════════════════════════════════════════════════════════════════════════
+// ⛔ THE DEFECT THIS FAMILY EXISTS FOR: `MEMBER_LIFECYCLE_STATES` has NO `deceased` label, so a
+// member whose death has been reported stays `active`/`lock-in` in `members.state`. The predicate
+// read only state + moderation ⇒ that member was PUBLISHED on the unauthenticated public directory,
+// full legal name decrypted from Tier-1, status pill reading "Active", for as long as the claim
+// stayed open. ⛔ No test could have caught it, because none existed.
+//
+// ⚠ These drive the SET-BASED `NOT_DECEASED` form, which must stay observationally equivalent to
+// `evaluateAccountOverlay` — including the Story 6.4 AGGREGATE rule (frozen iff ANY claim stream is
+// currently frozen). ⭐ "Change one, check the other."
+describe.skipIf(!hasDatabase)('public directory roster — the account-frozen half', () => {
+  setupLiveDb();
+
+  /** Open a claim naming `memberId` as the deceased. Returns its stream (claim_case_id). */
+  async function openClaim(tx: Db, pariwar: string, memberId: string, at: Date): Promise<string> {
+    return seedEvent(tx, pariwar, {
+      eventType: 'claim.intake_initiated',
+      payload: { deceased_member_id: memberId },
+      occurredAt: at,
+    });
+  }
+
+  it('⭐ a member with an OPEN claim naming them as deceased is OMITTED', async () => {
+    const { tx, client } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const alive = await seedDirectoryMember(tx, PARIWAR_A);
+    const deceased = await seedDirectoryMember(tx, PARIWAR_A);
+    await openClaim(tx, PARIWAR_A, deceased, new Date('2026-06-01T00:00:00Z'));
+
+    const ids = (await listPublicDirectoryMembers(tx, toPariwarId(PARIWAR_A), { limit: 50 })).map(
+      (r) => r.memberId as string,
+    );
+    expect(ids).toContain(alive);
+    expect(ids).not.toContain(deceased);
+  });
+
+  it('⭐ the COUNT excludes them too — ⛔ the two halves must not disagree', async () => {
+    // ⚠ A count that still included the deceased would make `hasNext` advertise a page that cannot
+    // be filled, and would report a roster size that no page can reproduce.
+    const { tx, client } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const deceased = await seedDirectoryMember(tx, PARIWAR_A);
+    const before = await countPublicDirectoryMembers(tx, toPariwarId(PARIWAR_A));
+    await openClaim(tx, PARIWAR_A, deceased, new Date('2026-06-01T00:00:00Z'));
+    const after = await countPublicDirectoryMembers(tx, toPariwarId(PARIWAR_A));
+    expect(after).toBe(before - 1);
+  });
+
+  it('a SETTLED claim releases the freeze — the member reappears', async () => {
+    // ⛔ NEGATIVE CONTROL for the conjunct: if `NOT_DECEASED` were written as "has any claim event",
+    // this member would stay hidden forever and every assertion above would still pass.
+    const { tx, client } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const member = await seedDirectoryMember(tx, PARIWAR_A);
+    const stream = await openClaim(tx, PARIWAR_A, member, new Date('2026-06-01T00:00:00Z'));
+    await seedEvent(tx, PARIWAR_A, {
+      streamId: stream,
+      eventVersion: 2,
+      eventType: 'claim.settled',
+      payload: { deceased_member_id: member },
+      occurredAt: new Date('2026-06-10T00:00:00Z'),
+    });
+
+    const ids = (await listPublicDirectoryMembers(tx, toPariwarId(PARIWAR_A), { limit: 50 })).map(
+      (r) => r.memberId as string,
+    );
+    expect(ids).toContain(member);
+  });
+
+  it('⭐ AGGREGATE over claims (Story 6.4) — one claim settling does NOT unfreeze while another is open', async () => {
+    // ⛔ THE HARDEST HALF, and the one a naive "latest event wins" implementation gets wrong. Two
+    // claim STREAMS name the same deceased member; the first settles, the second is still open.
+    // A last-wins-across-all-events fold would see `claim.settled` last and republish a member
+    // whose second claim is unresolved.
+    const { tx, client } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const member = await seedDirectoryMember(tx, PARIWAR_A);
+
+    const first = await openClaim(tx, PARIWAR_A, member, new Date('2026-06-01T00:00:00Z'));
+    await openClaim(tx, PARIWAR_A, member, new Date('2026-06-02T00:00:00Z'));
+    await seedEvent(tx, PARIWAR_A, {
+      streamId: first,
+      eventVersion: 2,
+      eventType: 'claim.settled',
+      payload: { deceased_member_id: member },
+      occurredAt: new Date('2026-06-20T00:00:00Z'), // the LATEST event overall
+    });
+
+    const ids = (await listPublicDirectoryMembers(tx, toPariwarId(PARIWAR_A), { limit: 50 })).map(
+      (r) => r.memberId as string,
+    );
+    expect(ids).not.toContain(member);
+  });
+
+  it('⚠ the freeze is AS-OF `now` — a claim opened AFTER the read instant does not hide the member', async () => {
+    const { tx, client } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const member = await seedDirectoryMember(tx, PARIWAR_A);
+    await openClaim(tx, PARIWAR_A, member, new Date('2026-07-01T00:00:00Z'));
+
+    const asOfBefore = (
+      await listPublicDirectoryMembers(tx, toPariwarId(PARIWAR_A), {
+        limit: 50,
+        now: new Date('2026-06-01T00:00:00Z'),
+      })
+    ).map((r) => r.memberId as string);
+    expect(asOfBefore).toContain(member);
+
+    const asOfAfter = (
+      await listPublicDirectoryMembers(tx, toPariwarId(PARIWAR_A), {
+        limit: 50,
+        now: new Date('2026-08-01T00:00:00Z'),
+      })
+    ).map((r) => r.memberId as string);
+    expect(asOfAfter).not.toContain(member);
+  });
+
+  it("⛔ a claim naming ANOTHER member as deceased does not hide this one", async () => {
+    // ⚠ The correlated-subquery correctness check, in the shape
+    // [[project_epic6_drizzle_correlated_subquery_bug]] is about: if the outer column reference
+    // collapsed into a tautology, EVERY member would vanish the moment ANY claim existed.
+    const { tx, client } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const deceased = await seedDirectoryMember(tx, PARIWAR_A);
+    const bystander = await seedDirectoryMember(tx, PARIWAR_A);
+    await openClaim(tx, PARIWAR_A, deceased, new Date('2026-06-01T00:00:00Z'));
+
+    const ids = (await listPublicDirectoryMembers(tx, toPariwarId(PARIWAR_A), { limit: 50 })).map(
+      (r) => r.memberId as string,
+    );
+    expect(ids).toContain(bystander);
+    expect(ids).not.toContain(deceased);
   });
 });

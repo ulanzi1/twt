@@ -4,6 +4,58 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 10-30-directory-publication-kill-switch-admin-ui (2026-08-21)
+
+All four items below are **pre-existing patterns inherited from precedent modules this story
+mirrors file-for-file** (`degraded-mode`, `DegradedModePage`, `scopeResolutionHook`) — none was
+introduced uniquely by Story 10.30's diff, so none is fixed here. Re-trigger: the next story that
+touches the named precedent module directly, or a dedicated audit-writer/admin-console-shell story
+— ⛔ never "Epic 10" or "Epic 11a" generally.
+
+- **No idempotency-key / retry-safety on a governed admin write route.** A client retry, proxy
+  replay, or a double-click beating the disabled-submit courtesy can produce a second audit line and
+  reapply a stale rationale. `apps/api/src/modules/directory-publication/routes.ts:61-73` mirrors
+  `degraded-mode`'s write route exactly, and `degraded-mode` carries the identical gap — only
+  `feature-flags` documents `Idempotency-Key` support. **Re-trigger:** the story that adds
+  idempotency-key handling to `degraded-mode` (or a shared admin-write-route helper), or any story
+  that reports a duplicate-audit-line incident on one of these routes.
+- **`requestPayloadHash` can never match across identical requests.** It's computed over a payload
+  that includes a freshly `randomUUID()`-generated `audit_id`
+  (`apps/api/src/modules/directory-publication/handlers.ts:141-146`), so despite its name it cannot
+  serve as a reproducible request fingerprint. This is the same construction this story mirrors from
+  `degraded-mode/handlers.ts` — a house audit-write pattern, not something 10.30 invented.
+  **Re-trigger:** a story that needs replay-detection or content-verification against the original
+  audit payload, or a dedicated audit-writer hardening story.
+- **The console page never displays which Pariwar/tenant is being viewed.** No name, no visible
+  confirmation beyond a `data-testid`, before an operator flips a legally-sensitive switch
+  (`apps/admin/src/modules/directory-publication/DirectoryPublicationPage.tsx`). `DegradedModePage` —
+  the precedent this page mirrors exactly — has the identical gap, so this isn't a regression unique
+  to 10.30. **Re-trigger:** any story reporting an operator flipping the wrong Pariwar's switch, or a
+  story that adds a shared Pariwar-context banner to the admin console shell.
+- **No existence validation on the `pariwarId` path param anywhere in the admin-route stack.** The
+  contract only checks UUID shape, the table has no FK (migration `0111`), and
+  `scopeResolutionHook` — shared across every Pariwar-scoped admin route — doesn't verify the
+  Pariwar exists. A mistyped tenant ID gets a silent `200` and a phantom config+audit row.
+  **Re-trigger:** the story that adds Pariwar-existence validation to `scopeResolutionHook` itself,
+  or any story that reports a phantom-row incident from a mistyped `pariwarId`.
+- **`scopeCtx()` throws a bare untyped `Error` if `scopeTx`/`actorId` are ever absent, instead of a
+  typed error registered in `error-mapping`** (`apps/api/src/modules/directory-publication/
+  handlers.ts:85-92`). Currently unreachable given the fixed hook order, but the one branch in the
+  module without a designed status. `degraded-mode/handlers.ts:53` carries the byte-identical throw
+  for the identical defensive check, confirming this is inherited, not introduced by 10.30.
+  **Re-trigger:** the story that adds a typed error for this defensive check to `degraded-mode`
+  (or a shared admin-route-handler helper), or any story that reports this branch actually firing.
+- **Propagation-floor UI copy hardcodes `s-maxage=300` as a disconnected literal.**
+  `apps/admin/src/modules/directory-publication/i18n-en.ts:32-33` types the 5-minute figure directly
+  into UI copy with no link back to the real edge-cache config in `apps/api`'s public-pages module;
+  the terminology test only asserts the string is *present*, not that it matches the configured
+  value. Reason for deferring (user call, 2026-08-21): no shared constant currently crosses the
+  `apps/api` → `apps/admin` boundary without new coupling. **Re-trigger:** the story that next
+  changes `/members`'s `s-maxage` value or its public-pages caching policy, or any story that adds a
+  shared cross-package config-constants module.
+
+---
+
 ## Deferred / recorded from: Story 11a.2 — public shell extension + tiered visibility renderers (2026-08-20)
 
 Closure-language posture per [[feedback_closure_language_precision]]: **Closed by [edit]** only where

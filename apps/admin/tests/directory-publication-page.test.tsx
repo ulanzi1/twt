@@ -15,12 +15,14 @@
 //     the live-DB spec separately proves the server rejects a whitespace rationale with a 400 — the
 //     real boundary.
 
-import { screen, waitFor } from '@testing-library/react';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { DirectoryPublicationStatusResponse } from '@twt/contracts';
 import { ApiError } from '../src/api/client.js';
+import { createQueryClient } from '../src/api/hooks.js';
 import { DirectoryPublicationPage } from '../src/modules/directory-publication/DirectoryPublicationPage.js';
 import { renderWithClient } from './_helpers.js';
 
@@ -231,5 +233,93 @@ describe('DirectoryPublicationPage — permission denial (Trap 3)', () => {
     renderWithClient(<DirectoryPublicationPage pariwarId={PARIWAR} />);
     const err = await screen.findByTestId('directory-publication-status-error');
     expect(err.textContent).toMatch(/super administrator/i);
+  });
+
+  it('shows curated copy, not the raw server code/message, for a non-403 error', async () => {
+    renderPage(status({ enabled: true, configured: false }));
+    client.setDirectoryPublicationStatus.mockRejectedValue(
+      new ApiError(500, 'internal.error', 'a raw internal detail that should never reach the operator'),
+    );
+
+    await userEvent.type(await screen.findByTestId('directory-publication-rationale'), 'r');
+    await userEvent.click(screen.getByTestId('directory-publication-submit'));
+
+    const err = await screen.findByTestId('directory-publication-submit-error');
+    expect(err.textContent).not.toMatch(/internal\.error/);
+    expect(err.textContent).not.toMatch(/raw internal detail/);
+  });
+});
+
+describe('DirectoryPublicationPage — Review Findings: reset-after-save and cross-tenant leak', () => {
+  // ⛔ Without a reset, a stale rationale in the textarea could be silently resubmitted as the
+  // justification for the OPPOSITE action on the very next click, corrupting the audit trail.
+  it('clears the rationale textarea after a successful save', async () => {
+    renderPage(status({ enabled: true, configured: false }));
+    client.setDirectoryPublicationStatus.mockResolvedValue(
+      status({ enabled: false, configured: true, changedByDisplay: 'Asha Verma', rationale: 'pulled', updatedAt: '2026-08-21T10:00:00.000Z' }),
+    );
+
+    const rationale = (await screen.findByTestId('directory-publication-rationale')) as HTMLTextAreaElement;
+    await userEvent.type(rationale, 'Pulled at the Pariwar request.');
+    await userEvent.click(screen.getByTestId('directory-publication-submit'));
+
+    await screen.findByTestId('directory-publication-saved');
+    await waitFor(() => expect(rationale.value).toBe(''));
+  });
+
+  // ⛔ "Current state" and the "Saved" banner must never disagree — the fix writes the server's
+  // returned row into the query cache synchronously rather than relying only on an async refetch.
+  it('updates "Current state" in the SAME render as the "Saved" banner, never showing them contradict', async () => {
+    client.getDirectoryPublicationStatus.mockResolvedValueOnce(status({ enabled: true, configured: false }));
+    renderWithClient(<DirectoryPublicationPage pariwarId={PARIWAR} />);
+    client.setDirectoryPublicationStatus.mockResolvedValue(
+      status({ enabled: false, configured: true, changedByDisplay: 'Asha Verma', rationale: 'pulled', updatedAt: '2026-08-21T10:00:00.000Z' }),
+    );
+    // The invalidate-triggered refetch hits the real GET route in production, which by now returns
+    // the just-written row — model that here rather than the initial mock (a real server never
+    // hands back the pre-flip state on the very next read).
+    client.getDirectoryPublicationStatus.mockResolvedValue(
+      status({ enabled: false, configured: true, changedByDisplay: 'Asha Verma', rationale: 'pulled', updatedAt: '2026-08-21T10:00:00.000Z' }),
+    );
+
+    await userEvent.type(await screen.findByTestId('directory-publication-rationale'), 'r');
+    await userEvent.click(screen.getByTestId('directory-publication-submit'));
+
+    const saved = await screen.findByTestId('directory-publication-saved');
+    expect(saved.textContent).toMatch(/withheld/i);
+    // The cache write in the mutation's onSuccess is synchronous, but React Query's notifyManager
+    // batches the resulting re-render onto a microtask — `waitFor` tolerates that one tick without
+    // reintroducing the async-refetch-only window this fix closes.
+    await waitFor(() =>
+      expect(screen.getByTestId('directory-publication-state').textContent).toMatch(/not published/i),
+    );
+  });
+
+  // ⛔ Client-side nav between two Pariwars' pages does not remount this component — the "Saved"
+  // banner and any in-progress rationale must never leak from the previous Pariwar's view.
+  it('does not leak a "Saved" banner across a pariwarId change', async () => {
+    client.getDirectoryPublicationStatus.mockResolvedValue(status({ enabled: true, configured: false }));
+    client.setDirectoryPublicationStatus.mockResolvedValue(status({ enabled: false, configured: true }));
+    const queryClient = createQueryClient();
+    const { rerender } = render(
+      <QueryClientProvider client={queryClient}>
+        <DirectoryPublicationPage pariwarId={PARIWAR} />
+      </QueryClientProvider>,
+    );
+
+    await userEvent.type(await screen.findByTestId('directory-publication-rationale'), 'r');
+    await userEvent.click(screen.getByTestId('directory-publication-submit'));
+    await screen.findByTestId('directory-publication-saved');
+
+    const OTHER_PARIWAR = '22222222-2222-2222-2222-222222222222';
+    client.getDirectoryPublicationStatus.mockResolvedValue(status({ enabled: true, configured: false }));
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <DirectoryPublicationPage pariwarId={OTHER_PARIWAR} />
+      </QueryClientProvider>,
+    );
+
+    await screen.findByTestId('directory-publication-state');
+    expect(screen.queryByTestId('directory-publication-saved')).toBeNull();
   });
 });

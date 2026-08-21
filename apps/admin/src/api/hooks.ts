@@ -475,8 +475,14 @@ export function useSetDirectoryPublicationStatus(pariwarId: string) {
   return useMutation({
     mutationFn: (body: Parameters<typeof api.setDirectoryPublicationStatus>[1]) =>
       api.setDirectoryPublicationStatus(pariwarId, body),
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: directoryPublicationStatusKey(pariwarId) }),
+    onSuccess: (row) => {
+      // Write the server's returned row into the cache SYNCHRONOUSLY (Review Finding, this story) —
+      // relying on invalidateQueries' async refetch alone left a real window where "Current state"
+      // (from the stale cache) and the "Saved" banner (from this response) showed contradictory facts,
+      // and where a fast second submit computed its target from the pre-flip state.
+      qc.setQueryData(directoryPublicationStatusKey(pariwarId), row);
+      void qc.invalidateQueries({ queryKey: directoryPublicationStatusKey(pariwarId) });
+    },
   });
 }
 

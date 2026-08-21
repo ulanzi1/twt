@@ -110,7 +110,7 @@ export interface MemberDirectoryRow {
   readonly memberName: string;
   /** Latest posting district, RAW. `null` when the member has no posting row. */
   readonly district: string | null;
-  /** The two-label public pill: `active` | `lock-in`. */
+  /** The two-label public pill: `active` | `waiting-period` (`2026-08-21-144` cl.4). */
   readonly memberStatus: string;
 }
 

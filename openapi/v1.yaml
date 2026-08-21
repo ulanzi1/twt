@@ -4174,7 +4174,7 @@ components:
                 type: string
                 enum:
                   - active
-                  - lock-in
+                  - waiting-period
             required:
               - name
               - district

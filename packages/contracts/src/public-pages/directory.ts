@@ -50,16 +50,22 @@ export const PUBLIC_DIRECTORY_PAGE_HORIZON = 200;
 /**
  * The ruled public status pill. TWO labels, and ⛔ exactly two.
  *
- * `2026-08-20-143` clause 3 (D3(a)) admits lifecycle ∈ `{active, active-in-grace, lock-in}`; the
- * epic's own field row declares the pill *"active / lock-in only"*, so `active-in-grace` presents
- * as `active` — a grace period is an internal billing state and ⛔ publishing it to the internet
- * would tell a stranger that a member is late on a payment.
+ * ⭐ THIS ENUM SPEAKS THE PUBLIC VOCABULARY, ⛔ NEVER THE INTERNAL LIFECYCLE VOCABULARY.
+ * `2026-08-21-144` clause 4 rules that the internal lifecycle value `lock-in` is ⛔ **non-public**,
+ * while the presentation label *"Waiting period"* IS public. The wire token is therefore
+ * `waiting-period`, and the internal `members.state` value it derives from ⛔ never crosses this
+ * boundary. ⚠ `144` clause 8 records that it PREVIOUSLY DID — this enum read `'lock-in'` and the
+ * handler emitted it — and this is that fix. ⛔ Do not reintroduce the internal word here.
  *
- * ⚠ `lock-in` DOES publish a member's waiting status to anyone on the internet. That consequence is
- * ⛔ described by no Niyamavali clause and is an OPEN finding raised to the Trustee Panel
- * (`2026-08-20-143` clause 8) — recorded here because this enum is where it becomes wire-visible.
+ * `2026-08-20-143` clause 3 (D3(a)) admits lifecycle ∈ `{active, active-in-grace, lock-in}`, and
+ * `active-in-grace` presents as `active` — a grace period is an internal billing state and ⛔
+ * publishing it to the internet would tell a stranger that a member is late on a payment.
+ *
+ * ⚠ `waiting-period` DOES publish that a member is serving a waiting period. That consequence is
+ * **ruled public** (`2026-08-21-144` cl.4) and is owed a Niyamavali clause — ⚠ drafted, ⛔ NOT YET
+ * RATIFIED (`144` cl.7(c)).
  */
-export const PublicDirectoryMemberStatus = z.enum(['active', 'lock-in']);
+export const PublicDirectoryMemberStatus = z.enum(['active', 'waiting-period']);
 export type PublicDirectoryMemberStatus = z.output<typeof PublicDirectoryMemberStatus>;
 
 /** One rendered directory row. ⛔ Three fields, all matrix-classified `public`. */

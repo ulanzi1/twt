@@ -1,4 +1,179 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-20i (bmad-dev-story 11a.3: IMPLEMENTED. ONE row flips:
+#   development_status[11a-3-...] ready-for-dev -> review. ⛔ epic-11a stays in-progress (3 stories
+#   remain: 11a.4-11a.6). ⛔ No other story status changes. ⛔ No migration, no new package, no new
+#   permission key.
+#   ⭐ THE HEADLINE: the `member-directory` TIER-LEAK LEG IS NOW OPERATIVE.
+#     `membersSurfaceFieldIds(model)` returned [] before this story, so evaluateSnapshot evaluated
+#     NOTHING on the flagship public surface and its green check proved only "renders no classified
+#     field". It now returns ['district','member_name','member_status'] and the leak rules actually
+#     run. ⭐ The discharge is proven by PLANTING A REAL LEAK into a snapshot that passes clean --
+#     "the set is non-empty" was never the proof. ⇒ `2026-08-19-136` cl.4, the LAUNCH-BLOCKING
+#     clause this whole epic was written around, is DISCHARGED (Decision `2026-08-20-143`).
+#     ⚠ All SIX committed records that said "armed but empty" were rewritten in the SAME commit as
+#     the code (matrix description, page header, render-model doc-block, live-render spec,
+#     deferred-work, gate-inventory). The committed "the field set IS empty" assertion was
+#     REPLACED, ⛔ never deleted, and the replacement asserts the EXACT set so a silently DROPPED
+#     field fails too.
+#   ⛔ TWO PRE-EXISTING DEFECTS ON `main` FOUND AND FIXED, both by tests this story owed:
+#     (a) /members THREW ON EVERY REQUEST at 1bc46e0. members.astro called t() with
+#         namespace:'members' and the locale files existed, but `members` was NEVER REGISTERED in
+#         packages/i18n/src/catalog.ts -- so getCatalog returned undefined and t() threw. Verified
+#         against the baseline commit, ⛔ not inferred. SAME DEFECT CLASS as 11a.2's {{max}} bug,
+#         via a different mechanism, and invisible for exactly the reason AC9 names: every test
+#         hand-built a MembersLabels fixture and bypassed the resolver. ⭐ THE GAP ITSELF IS NOW
+#         MECHANIZED, not just the instance fixed -- the parity gate walks the locales/ DIRECTORY
+#         while catalog.ts is hand-maintained, so the two could never meet; a new
+#         packages/i18n/tests/catalog-registration.test.ts asserts BOTH drift directions.
+#     (b) AC1's claimed "second, independent FR-91 enforcement" would have shipped FALSE. Story
+#         1.14's forced-pagination guard detects a collection GET by a literal `items` key; the
+#         response named its array `entries`, leaving the route INVISIBLE to the guard while the
+#         claim sat in the comments. Renamed, then VERIFIED by planting an unbounded limit and
+#         watching the guard fail and name this route explicitly.
+#   ⚠ ONE COMMENT CLAIM RETRACTED BEFORE IT SHIPPED: the Epic-6 correlated-subquery mitigation
+#     (literal `"members"."member_id"` qualifiers) compiles BYTE-IDENTICALLY to the interpolated
+#     form in this query, because the innerJoin already forces Drizzle to qualify. Verified by
+#     DUMPING THE GENERATED SQL rather than inheriting the precedent's rationale. The comment now
+#     states the honest bound (kept because the property is ONE EDIT AWAY from mattering), and the
+#     negative control that swaps the two spellings is recorded as PROVING NOTHING -- the control
+#     that does bite removes the correlation outright.
+#   D1-D6 IMPLEMENTED AS RULED, ⛔ none re-opened:
+#     D1(a) the read + Tier-1 decrypt at apps/api/src/modules/public-pages/ -- and the module lands
+#       WITH its route, which is exactly the condition 11a.2 named when it refused to create it
+#       empty. Deliberately unauthenticated, DEFENDED in writing in routes.ts AND in
+#       login-wall.spec.ts's allowlist entry (10.21 AC-R1 style).
+#     D2(a) offset paging KEPT + the missing ceiling added (PUBLIC_DIRECTORY_PAGE_HORIZON = 200,
+#       IMPORTED not re-declared) -- discharging BOTH deferred pagination items whose trigger was
+#       this story. The new rejection reason is REJECTION-INVARIANT (asserted): a prober cannot
+#       binary-search the bound.
+#     D3(a) roster = lifecycle in {active, active-in-grace, lock-in} AND moderation not in
+#       {suspended, terminated}. ONE set-based query adapted from surveys/read.ts, carrying the
+#       committed D3 comparator `created_at DESC, posting_id DESC`.
+#     D4(a) directory-abuse-rules.yaml SHIPS AND IS READ BY THE ROUTE; breaches emit under a NEWLY
+#       MINTED `directory.abuse_suspected` AuthAuditEventType (⛔ never a borrowed abuse.honeypot).
+#       The console VIEW is deferred with a named trigger.
+#     D5(a) /members STAYS edge_cacheable; the detection cost is RECORDED, not discovered later.
+#     D6(a) PARTIAL DISCHARGE of critical_render_path_ms -- see below.
+#   ⭐ AC8 PARTIALLY DISCHARGED (⛔ not a fourth consecutive re-deferral, which is decay): the
+#     DYNAMIC SSR HTML is measured for real against the built standalone server -- /members =
+#     19 234 B at the FR-91 cap, 4 220 B single-row, 306 B/row marginal. ⛔⛔ A DIFFERENT QUANTITY
+#     from the static per-route attribution (3 116 B for the same route) -- NEVER summed or
+#     compared; it lands in its own manifest with its own key names. Only the DEVICE-THROTTLED
+#     LIGHTHOUSE TIMING harness is re-deferred, with a GENUINELY NEW reason (the roster-scaling
+#     quantity is now known and measured; timing is a device-and-network question needing a real
+#     deployed origin, itself blocked on DPDPA review) and a NEW trigger: the first deployment with
+#     a CDN/edge configured -- ⛔ NOT "the next public surface story", the open-ended shape that let
+#     this metric slip at 2.6, 10.5, 11a.2 and 11a.3.
+#   ⛔ SAID LOUDLY, ⛔ NOT LEFT TO BE INFERRED -- what is NOT built:
+#     · THE `authenticated_member` TIER HAS NO VIEWER and is structurally unbuildable (`-143` cl.7:
+#       members are TOKEN-BEARER so a browser sends no Authorization header; there is no
+#       apps/member-web/; apps/mobile has no directory screen). This story ships the `public` tier
+#       FOR REAL. ⛔ Half a table shipping is fine; half a table shipping SILENTLY is the defect.
+#     · The abuse audit line is a COUNTER, NOT A FORENSIC RECORD -- no column stores query context
+#       (it is hashed), so the rule id + a coarse non-PII shape go in resource_locator. D4(a)'s
+#       "real and reachable" is TRUE; "triageable" is ⛔ FALSE, and the console deferral NAMES that
+#       limit rather than letting a reader assume a richer signal is waiting.
+#     · TWO epic-AC clauses have NO SUBJECT here ("an authenticated session does not bypass rate
+#       limits"; "abuse-detected accounts trigger suspension + trustee review") -- there are no
+#       sessions and no accounts on this surface. The enforceable residue is the 429 + the audit
+#       line. ⛔ A clause answered nowhere is indistinguishable from one quietly skipped.
+#     · A WARM EDGE HIDES SCRAPER TRAFFIC FROM ORIGIN-SIDE DETECTION entirely (D5(a)'s cost).
+#       Inert today; recorded as a NAMED DEPENDENCY with an edge-configuration re-trigger.
+#     · The forwarded rate-limit key is CALLER-SUPPLIED under trustProxy:true. ⛔ trustProxy was NOT
+#       re-tuned globally on a surface story; the network precondition is recorded instead.
+#   ⛔ RAISED TO THE TRUSTEE PANEL, ⛔ NOT CLOSED: under D3(a) a SUSPENSION SILENTLY REMOVES a
+#     member from the public directory, and the status pill PUBLISHES LOCK-IN STATUS to the
+#     internet -- and ⛔ NO NIYAMAVALI CLAUSE DESCRIBES EITHER (`2026-08-20-143` cl.8).
+#     `2026-08-20-140` cl.7 (the rulebook records no directory publication at all) REMAINS OPEN and
+#     is now at its SHARPEST -- the page now prints members' full legal names to the internet.
+#     ⛔ Amending the Niyamavali is Story 2.4's workflow and needs its own ruling.
+#   ⛔ ONE VERIFIED CROSS-REFERENCE ERROR re-confirmed: epics.md cites "Story 10.6 query throttling"
+#     as a protection layer -- 10.6 is the BULK OPERATIONS FRAMEWORK (epics.md:3736). ⛔ Not
+#     coverage. (Story 11a.4's authoring pass found the identical false citation independently.)
+#   VERIFICATION: 15 controls planted INDEPENDENTLY, run live, exit codes recorded, all reverted,
+#     tree verified clean (backups diffed byte-identical before deletion). Full regression green:
+#     public 163 · domain 1892 unit + 1135 live-DB · api 351 unit + 720 live-DB · contracts 1030 ·
+#     i18n 64 · lint 20/20 · pii:check (8 surfaces, 24 fields, 1 escalation) · i18n:check ·
+#     microcopy:check · friction:check (AC-4 leg verified AFTER committing).
+#   COMMITS (⛔ REBASE-MERGE, NEVER SQUASH -- the governance commit must stay first):
+#     governance(11a.3) -> feat(11a.3) -> docs(11a.3) -> chore(11a.3).
+#   Story 11a.3 file Status: review. NEXT: bmad-code-review, recommended with a DIFFERENT LLM.
+# last_updated: 2026-08-20g (bmad-create-story 11a.3: authored
+#   11a-3-member-directory-pii-shielded-tiered-render-scope-anti-enumeration-safeguards.md, D1-D6
+#   raised and RULED BY BIGDEV (each as recommended). ONE row flips:
+#   development_status[11a-3-...] backlog -> ready-for-dev. ⛔ epic-11a stays in-progress (3 stories
+#   remain: 11a.4-11a.6). ⛔ No other story status changes. ⛔ No code, no migration, no ADR.
+#   ⭐ THIS IS THE STORY `2026-08-19-136` cl.4 WAS WRITTEN ABOUT: the tier-leak CI leg must be
+#     OPERATIVE before the Member Directory ships. It is armed (11a.1) but EMPTY on
+#     `member-directory` (11a.2) -- `membersSurfaceFieldIds()` returns []. Six committed records
+#     currently say "armed but empty"; ⛔ shipping rows while any of them still says so would make
+#     the record certify the opposite of the truth. AC4 requires all six be rewritten.
+#   RULINGS (BigDev, 2026-08-20; decision-log entry `2026-08-20-143` is Task 1 and COMMITS FIRST):
+#     D1(a) the directory read + Tier-1 decrypt live at `apps/api/src/modules/public-pages/` -- the
+#       architecture's NAMED boundary (architecture.md:515-517), and the module lands WITH its route
+#       (11a.2 refused it empty; this story is the first consumer it named). ⛔ REJECTED (b)
+#       apps/public reading + decrypting directly: the KEK is shared across EVERY Tier-1 field class
+#       (mobile, device tokens, KYC), so the blast radius of the internet-facing process holding
+#       decrypt capability is ⛔ not "names" -- and apps/public can NEITHER write an audit line
+#       (writeAuditEntry needs the BYPASSRLS service pool; twt_app has no INSERT grant) NOR
+#       rate-limit (no Fastify, no store, §1.4 no Redis). ⭐ BONUS: a collection GET on apps/api is
+#       walked by Story 1.14's forced-pagination guard over the committed OpenAPI surface, so FR-91
+#       gains a SECOND independent enforcement on this data path.
+#     D2(a) keep offset `?page=N&limit=M` + ADD the missing `page` ceiling. ⚠ The AC's "cursor-based
+#       pagination with non-guessable cursors" is recorded as an EXPLICIT WRITTEN DEVIATION, ⛔ not
+#       silently dropped -- a cursor over a deterministic member_id ordering is an offset in
+#       disguise and would LOOK like an anti-enumeration control while changing nothing. Discharges
+#       BOTH deferred items whose trigger is this story (deferred-work.md:5660 `page` unbounded;
+#       :5663 offset precision loss) and preserves the `pagination_binding` leg -- the ONLY
+#       mechanized FR-91 enforcement on apps/public.
+#     D3(a) roster = lifecycle ∈ {active, active-in-grace, lock-in} AND moderation ∉ {suspended,
+#       terminated}. ⚠⚠ ITS COST IS A NEW OPEN FINDING FOR THE PANEL, raised ⛔ not absorbed: a
+#       SUSPENSION then silently removes a member from the public directory, and the status pill
+#       PUBLISHES LOCK-IN STATUS -- and ⛔ NO Niyamavali clause describes either consequence.
+#     D4(a) `directory-abuse-rules.yaml` + the enforcement that READS it ship; the admin console
+#       VIEW is deferred with a named trigger. ⛔ REJECTED (c) rules-file-only: a committed
+#       governance artifact nothing reads is the vacuous-green defect 11a.1 existed to remove.
+#     D5(a) `/members` STAYS `edge_cacheable` (the matrix comment obliged this story to re-decide),
+#       ⚠ with the detection cost RECORDED: a cached hit never reaches the origin, so the throttle
+#       and the abuse audit lines see only cache MISSES. Inert today (⛔ no Cloudflare in this repo,
+#       §5.8a) but a NAMED DEPENDENCY with an edge-configuration re-trigger.
+#     D6(a) `critical_render_path_ms` PARTIALLY DISCHARGED -- measure the DYNAMIC SSR HTML of
+#       /members at a full page at the cap (the quantity 11a.2's static per-route attribution
+#       explicitly does NOT capture); re-defer ONLY the device-throttled Lighthouse harness with a
+#       GENUINELY NEW reason. ⚠ Its trigger family has now fired at 2.6, 10.5, 11a.2 and 11a.3 -- a
+#       second consecutive re-deferral on the same reason is decay, not deferral.
+#   ⭐⛔ TRAP 1, VERIFIED AND STRUCTURAL: the AC's tiered-render table has THREE columns and only
+#     ONE has a viewer. Members are TOKEN-BEARER (Authorization header, exp<=15min); there is ⛔ no
+#     apps/member-web (architecture.md:486-494 defers it) and apps/mobile has ⛔ no directory screen
+#     (15 route groups, none is one). ⇒ ⛔ NO `authenticated_member` viewer exists for this surface
+#     by ANY mechanism. This story ships the PUBLIC tier FOR REAL; the authenticated tier is
+#     declared structurally unreachable and routed onto 11a.2's fragment-mechanism deferral (11b
+#     FR-77 / an apps/member-web split trigger). ⛔ No block/school/designation/pool_participation/
+#     registration_date rows -- the first three are blocked or permanently ineligible, the last two
+#     would be rows no substrate and no render backs (SD-1 by another route).
+#   ⛔ TWO VERIFIED CROSS-REFERENCE ERRORS RECORDED, ⛔ neither previously noticed:
+#     (a) epics.md Story 11a.4 cites "Story 10.6 query throttling" as a protection layer -- 10.6 is
+#         the BULK OPERATIONS FRAMEWORK. Same shape as the C3 Epic-3 dependency error. ⛔ Do not
+#         cite it as coverage.
+#     (b) the AC's "authenticated session does NOT bypass rate limits" has NO SUBJECT on this
+#         surface (Trap 1). The story answers it honestly rather than implying a control that has
+#         nothing to control.
+#   ⚠ FOUR MORE TRAPS RAISED: (2) the SSR proxy collapses per-IP rate limiting to ONE bucket unless
+#     apps/public forwards Astro.clientAddress -- a rate limit keyed on a constant passes every unit
+#     test, so AC10 requires a control proving two forwarded addresses land in DIFFERENT buckets;
+#     (3) trustProxy:true makes that forwarded key CALLER-SUPPLIED -- pre-existing, ⛔ NOT re-tuned
+#     globally on a surface story, recorded as a network precondition; (5) the escalation ledger
+#     STRUCTURALLY CANNOT attest the new `member_status` field (MatrixEscalationSchema requires a
+#     real `from` tier and rejects a non-escalation) ⇒ ⛔ never invent a `from`, the decision-log
+#     entry IS the attestation; (6) the roster read is an N+1 AND a 42P10 DISTINCT-ON trap AND a
+#     correlated-subquery trap simultaneously.
+#   ⚠ CARRIED OPEN, ⛔ not closed: Decision `2026-08-20-140` cl.7 -- the Niyamavali still records no
+#     directory publication, and this story makes it SHARPEST (the page now prints names). Amending
+#     it is Story 2.4's workflow and needs its own ruling.
+#   ⭐ `<MatrixField>` and `resolvePublicMemberName` BOTH get their FIRST call site here (both
+#     shipped with zero; the former is the named follow-up of `2026-08-20-142`).
+#   Story 11a.3 file Status: ready-for-dev. NEXT: bmad-dev-story; recommended code-review by a
+#   DIFFERENT LLM than the one that implements it.)
 # last_updated: 2026-08-20f (bmad-code-review 11a.2: REVIEWED AND PATCHED. ONE row flips:
 #   development_status[11a-2-...] review -> done. ⛔ epic-11a stays in-progress (4 stories remain:
 #   11a.3-11a.6). ⛔ No other story status changes.
@@ -8819,7 +8994,7 @@ development_status:
   epic-11a: in-progress
   11a-1-4-tier-visibility-matrix-codified-per-surface-public-vs-private-replacement: done
   11a-2-public-astro-ssr-shell-extension-for-member-directory-tiered-visibility-renderers: done
-  11a-3-member-directory-pii-shielded-tiered-render-scope-anti-enumeration-safeguards: backlog
+  11a-3-member-directory-pii-shielded-tiered-render-scope-anti-enumeration-safeguards: review
   11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only: backlog
   11a-5-noticeboard-strip-foundational-layout-component: backlog
   11a-6-pinned-notice-component: backlog

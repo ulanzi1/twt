@@ -102,6 +102,13 @@ export * from './telegram-opt-in/index.js';
 // for this story).
 export * from './degraded-mode/index.js';
 
+// Story 10.30 — the per-Pariwar directory-publication KILL-SWITCH admin DTOs (the status read + the
+// governed flip). Discharges Decision `2026-08-21-147` cl.2; the mechanism itself already shipped at
+// Story 11a.3 and is ⛔ NOT redefined here. ⛔ The request carries NO `changedByDisplay` — the display
+// name is server-resolved, never accepted from the caller. HTTP endpoints → these DO register in
+// openapi/v1.yaml (the GET/PUT status routes are the EXPECTED diff for this story).
+export * from './directory-publication/index.js';
+
 // Story 7.10 — member pool-onboarding-tutorial outcome DTO (member-session-gated completion/skip event).
 // HTTP endpoint → registers in openapi/v1.yaml (the member outcome route is the EXPECTED diff for this story).
 export * from './pool-onboarding/index.js';

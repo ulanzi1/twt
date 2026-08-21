@@ -179,6 +179,10 @@ const { ContributionHistoryResponse } = await import('../src/contributions/index
 // Story 5.8 — the trustee degraded-mode declare/revoke/read DTOs (admin-session + declare_degraded_mode).
 const { DegradedModeDeclareRequest, DegradedModeDeclarationResponse, DegradedModeActiveResponse } =
   await import('../src/degraded-mode/index.js');
+// Story 10.30 — the directory-publication kill-switch admin DTOs (super_admin-only status read + flip).
+const { DirectoryPublicationStatusResponse, SetDirectoryPublicationRequest } = await import(
+  '../src/directory-publication/index.js'
+);
 // Story 3.5 — the signup medical-disclosure DTOs (submit + status + ima-list). The fourth
 // signup-wizard SURFACE; all routes are member-session-gated (no step-up at signup — 3.9 adds it).
 const { MedicalDiscloseRequest, MedicalDisclosureStatusResponse, ImaListResponse } = await import(
@@ -461,6 +465,19 @@ const degradedModeComponents = {
   DegradedModeActiveResponse: DegradedModeActiveResponse.openapi('DegradedModeActiveResponse'),
 } as const;
 for (const [name, schema] of Object.entries(degradedModeComponents)) {
+  registry.register(name, schema);
+}
+
+// Story 10.30 — directory-publication kill-switch components (the status read + the governed flip).
+const directoryPublicationComponents = {
+  DirectoryPublicationStatusResponse: DirectoryPublicationStatusResponse.openapi(
+    'DirectoryPublicationStatusResponse',
+  ),
+  SetDirectoryPublicationRequest: SetDirectoryPublicationRequest.openapi(
+    'SetDirectoryPublicationRequest',
+  ),
+} as const;
+for (const [name, schema] of Object.entries(directoryPublicationComponents)) {
   registry.register(name, schema);
 }
 
@@ -1822,6 +1839,73 @@ registry.registerPath({
     200: { description: 'The active declaration or null', content: jsonOf(degradedModeComponents.DegradedModeActiveResponse) },
     401: degradedModeAuth,
     403: degradedModeForbidden,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+// ── Story 10.30 — the per-Pariwar directory-publication KILL SWITCH (super_admin-only; audited) ──
+// The administrative surface Decision 2026-08-21-147 cl.1 made a LAUNCH GATE for the public Member
+// Directory. The mechanism shipped at Story 11a.3; these are the routes that make it operable by a
+// human without database access. ⚠ The control is NOT immediate — /members is edge_cacheable with
+// s-maxage=300, so a pulled Pariwar keeps being served from warm PoPs, per page number, until those
+// entries expire (2026-08-21-145 cl.5(e)).
+const directoryPublicationTags = ['directory-publication'];
+const directoryPublicationParams = z.object({ pariwarId: z.string().uuid() });
+const directoryPublicationAuth = errorResponse('Authentication required');
+const directoryPublicationForbidden = errorResponse(
+  'Forbidden — requires pariwar.manage_directory_publication at pariwar scope (super_admin only)',
+);
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/admin/directory-publication/status',
+  summary: "Read the Pariwar's directory-publication kill-switch state",
+  description:
+    "Returns whether the Pariwar's public Member Directory is published, plus the last-changing " +
+    'admin display name, rationale and timestamp. `configured: false` means no row was ever written ' +
+    '(the default-enabled posture) and is reported EXPLICITLY — an unconfigured Pariwar and a ' +
+    'deliberately re-enabled one are different facts. Requires pariwar.manage_directory_publication ' +
+    'at pariwar scope.',
+  tags: directoryPublicationTags,
+  request: { params: directoryPublicationParams },
+  responses: {
+    200: {
+      description: 'The current directory-publication state',
+      content: jsonOf(directoryPublicationComponents.DirectoryPublicationStatusResponse),
+    },
+    401: directoryPublicationAuth,
+    403: directoryPublicationForbidden,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'put',
+  path: '/api/v1/p/{pariwarId}/admin/directory-publication/status',
+  summary: "Flip the Pariwar's directory-publication kill switch (rationale required; audited)",
+  description:
+    "Publishes or unpublishes the Pariwar's public Member Directory. Moves in BOTH directions. A " +
+    'non-empty rationale is REQUIRED and is rejected at the contract boundary with a 400 when absent. ' +
+    "The acting admin's display name is resolved SERVER-SIDE from users.display_name and is never " +
+    'accepted from the caller. Writes a §1.5 hash-chain audit line covering the same transaction as ' +
+    'the state change. The effect is NOT instantaneous on the public surface: /members is edge-cached ' +
+    'with s-maxage=300, so warm PoPs keep serving the prior state, per page number, until those ' +
+    'entries expire. Requires pariwar.manage_directory_publication at pariwar scope.',
+  tags: directoryPublicationTags,
+  request: {
+    params: directoryPublicationParams,
+    body: {
+      content: jsonOf(directoryPublicationComponents.SetDirectoryPublicationRequest),
+      required: true,
+    },
+  },
+  responses: {
+    200: {
+      description: 'The updated directory-publication state',
+      content: jsonOf(directoryPublicationComponents.DirectoryPublicationStatusResponse),
+    },
+    400: errorResponse('Request validation failed (e.g. an empty or whitespace-only rationale)'),
+    401: directoryPublicationAuth,
+    403: directoryPublicationForbidden,
+    409: errorResponse("The acting admin has no users.display_name (admin.display_name_missing)"),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 

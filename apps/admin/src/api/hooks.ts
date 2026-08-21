@@ -452,6 +452,34 @@ export function useRevokeDegradedMode(pariwarId: string) {
   });
 }
 
+// ── Directory-publication kill switch (Story 10.30) — the super_admin read + governed flip. ──
+// The flip invalidates the status query so the page re-derives from fresh server state (the
+// degraded-mode precedent). ⚠ That refreshes what the OPERATOR sees, ⛔ not what the PUBLIC sees:
+// /members is edge-cached with s-maxage=300, so warm PoPs keep serving the prior state, per page
+// number, until those entries expire. The page discloses that gap; this invalidation does not close it.
+
+export const directoryPublicationStatusKey = (pariwarId: string) =>
+  ['directory-publication-status', pariwarId] as const;
+
+/** The Pariwar's current directory-publication state. */
+export function useDirectoryPublicationStatus(pariwarId: string) {
+  return useQuery({
+    queryKey: directoryPublicationStatusKey(pariwarId),
+    queryFn: () => api.getDirectoryPublicationStatus(pariwarId),
+  });
+}
+
+/** Flip the kill switch (either direction), then refresh the status query. */
+export function useSetDirectoryPublicationStatus(pariwarId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.setDirectoryPublicationStatus>[1]) =>
+      api.setDirectoryPublicationStatus(pariwarId, body),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: directoryPublicationStatusKey(pariwarId) }),
+  });
+}
+
 // ── Verifier-console surface (Story 6.10) — the READ-ONLY bounded compound signals view. ──
 // A ₹50L-stakes strong-consistency read: cache-disabled by the createQueryClient defaults (staleTime/
 // gcTime 0, refetchOnMount 'always', no IndexedDB persister — §4.5, D7). The query key carries the

@@ -104,6 +104,7 @@ import {
   SessionResponse,
   DegradedModeActiveResponse,
   DegradedModeDeclarationResponse,
+  DirectoryPublicationStatusResponse,
   WaConfigResponse,
   WaTemplateDto,
   WaTemplatesResponse,
@@ -111,6 +112,8 @@ import {
   type DegradedModeActiveResponse as DegradedModeActive,
   type DegradedModeDeclarationResponse as DegradedModeDeclaration,
   type DegradedModeDeclareRequest,
+  type DirectoryPublicationStatusResponse as DirectoryPublicationStatus,
+  type SetDirectoryPublicationRequest,
   type WaConfigResponse as WaConfig,
   type WaConfigUpsertRequest,
   type WaTemplateDto as WaTemplate,
@@ -859,6 +862,36 @@ export function revokeDegradedMode(pariwarId: string, id: string): Promise<Degra
     DegradedModeActiveResponse,
     { method: 'POST', body: JSON.stringify({}) },
   );
+}
+
+// ── Directory-publication kill switch (Story 10.30) ───────────────────────────
+// Tenant-scoped under /p/:pariwarId/admin/directory-publication. The super_admin read + governed flip
+// for whether a Pariwar's members appear in the PUBLIC Member Directory. Gated server-side by
+// pariwar.manage_directory_publication — a pariwar-dimension grant that never appears in the session's
+// global-grant set, so the server's requirePermissionHook is the ONLY real boundary and the console
+// carries no client-side capability check (a 403 surfaces as a page error instead).
+// ⛔ The request body deliberately carries NO display name: the acting admin's `users.display_name` is
+// resolved SERVER-SIDE. A browser-supplied one would let an operator lie about who pulled a directory.
+
+const directoryPublicationBase = (pariwarId: string): string =>
+  `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/directory-publication`;
+
+/** GET the Pariwar's current directory-publication state. */
+export function getDirectoryPublicationStatus(
+  pariwarId: string,
+): Promise<DirectoryPublicationStatus> {
+  return apiFetch(`${directoryPublicationBase(pariwarId)}/status`, DirectoryPublicationStatusResponse);
+}
+
+/** PUT the governed flip (both directions); returns the updated state. */
+export function setDirectoryPublicationStatus(
+  pariwarId: string,
+  body: SetDirectoryPublicationRequest,
+): Promise<DirectoryPublicationStatus> {
+  return apiFetch(`${directoryPublicationBase(pariwarId)}/status`, DirectoryPublicationStatusResponse, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
 }
 
 // ── Auth surface (Story 1.9 endpoints, driven by the login page) ──────────────

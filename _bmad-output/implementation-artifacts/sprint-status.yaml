@@ -1,4 +1,77 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-21h (Story 10.30 IMPLEMENTED via bmad-dev-story: ready-for-dev -> in-progress
+#   -> review. ONE ROW FLIPS: 10-30-directory-publication-kill-switch-admin-ui: review.
+#   ⛔⛔ ROW 17 DOES NOT CLOSE AND THE SWITCH IS STILL NOT AN OPERATIONAL CONTROL. `current_status`
+#   stays `open`, `closure_evidence_link` stays EMPTY; only `cross_story_discharge_path`'s "no story
+#   file yet" clause now names the story. Closure needs a SECOND leg — a Decision recording
+#   >=2-trustee ratification that the switch may be TREATED as operational — which is outside this
+#   story's authority. ⇒ the public Member Directory STILL MAY NOT GO LIVE.
+#   ⛔ epic-10-retrospective NOT flipped (the 10-29 precedent).
+#   GOVERNANCE FIRST: Decision 2026-08-21-148 committed at eb0bb46 BEFORE any implementation commit,
+#   zero packages/ apps/ files. Records: the UI ships (cl.1), the posture is UNCHANGED (cl.2), Row 17
+#   stays open (cl.3), the non-immediacy is disclosed (cl.4), the mechanism is REUSED not re-ruled
+#   (cl.5), the two comments are corrected in ONE HALF ONLY (cl.6), kyc/presentation-policy.ts is
+#   out of scope (cl.7).
+#   SHIPPED: GET/PUT /api/v1/p/:pariwarId/admin/directory-publication/status on
+#   [requireAdminSession, scopeResolutionHook, requirePermissionHook(pariwar.manage_directory_publication)]
+#   + the console page /p/$pariwarId/directory-publication (un-linked, like every sibling per-Pariwar
+#   tool). ⛔ ZERO new permission key, ZERO catalog-version bump, ZERO new migration (AC6) — the
+#   rbac catalog tests + directory-publication-policy.spec.ts ran UNMODIFIED and green, which is what
+#   PROVES the catalog untouched rather than merely unexamined.
+#   ⭐ THE 400 IS AT THE CONTRACT, NOT THE DOMAIN. `rationale` is `.trim().min(1)`;
+#   UngovernedDirectoryPublicationChangeError extends Error (not ApiError), is unregistered in
+#   error-mapping, and would surface as a 500 on a plain input error. ⛔ NO test asserts a 500 —
+#   every rejection has a designed status: 400 contract / 401 no session / 403 no grant /
+#   409 admin.display_name_missing (fail-closed BEFORE the write; no partial state, no audit line).
+#   ⛔ `changedByDisplay` is UNREPRESENTABLE on the wire (.strict()), not merely unused — Trap 2.
+#   ⚠ AC5 GATE PROVEN IN BOTH HALVES: inserting "immediately" turned it RED with real output, AND
+#   deleting the disclosure turned the presence assertion RED. Reverted, green. ⚠ The gate self-hit
+#   on the first draft (the copy file spelled the banned words out in its own warning comment) —
+#   fixed the delivery-terminology-gate way: needles assembled at runtime + self-exclusion by name.
+#   ⚠ `publicReadSaysEnabled` nearly went through an UNSCOPED deps.db, which under RLS reads zero
+#   rows and returns default-true for EVERY case — a silently vacuous assertion. Switched to a real
+#   openScopeTx, the same handle public-pages/handlers.ts:137 uses.
+#   AC9: both stale "NO ADMIN UI SHIPS WITH THIS KEY" comments corrected in the "no UI" half ONLY;
+#   both still say NOT an operational control. `packages/domain` diff is PROVABLY comment-only.
+#   `grep -rin "future story if one is wanted" packages apps docs` → ZERO hits.
+#   COUNTS (all real local runs): contracts 61/1035 -> 62/1049; admin 34/355 -> 36/375; domain
+#   tests/rbac 4/153 unchanged+unmodified; directory-publication-policy 1/16 unchanged+unmodified;
+#   public-pages 2/14 unchanged; domain live-DB single-pass 126/1157; api live-DB single-pass 80/734;
+#   ci:local PASSED 31 jobs; lint clean in contracts+domain+api+admin. DATABASE_URL passed
+#   per-invocation, ⛔ never exported globally.)
+# last_updated: 2026-08-21g (Story 10.30 story file VALIDATED via bmad-create-story `validate`: stays
+#   READY-FOR-DEV -- no status flip; the story file gained scope it was missing.
+#   ⭐ AC9 + Task 6 ADDED (the consequential find): two authoritative comments -- permissions.ts ~552
+#   ("⛔⛔ NO ADMIN UI SHIPS WITH THIS KEY, AND THE SWITCH IS THEREFORE NOT AN OPERATIONAL CONTROL")
+#   and directory-publication.ts ~16-30 ("NOT AN OPERATIONAL CONTROL YET") -- become FALSE the moment
+#   this story lands, and nothing in the story touched them. ⚠ The correction is Trap-5 shaped: the
+#   "no UI" half is corrected, the "NOT an operational control" half STAYS -- that status turns on the
+#   >=2-trustee ratification, ⛔ NOT on the UI existing. Comments only; ⛔ zero SEED_PERMISSION_KEYS /
+#   catalog-version / function-body change (AC6 intact).
+#   ⛔ A 500 WAS A PERMITTED PASS: the empty-rationale test accepted "the domain error surfaced as a
+#   typed error", but UngovernedDirectoryPublicationChangeError extends Error (not ApiError) and is
+#   unregistered in error-mapping ⇒ 500. Rejection is now pinned to a 400 at the CONTRACT boundary
+#   (rationale .min(1) after trim); ⛔ no test may assert a 500.
+#   ⚠ The story's own "exhaustive grep" was NOT REPRODUCIBLE -- case-sensitive `directoryPublication`
+#   misses `resolveDirectoryPublicationEnabled` ⇒ ZERO hits, and the cited line was 174 (actual: 137).
+#   Substance held (exactly one caller, zero admin routes, re-verified case-insensitively); Task 0`s
+#   re-confirm bullet now demands `-i`.
+#   ⚠ i18n instruction pointed at files that DO NOT EXIST (degraded-mode/feature-flags carry no i18n
+#   file). Convention resolved instead of re-investigated: 11 admin modules carry i18n-en.ts, ALL
+#   English-only, ⛔ no i18n-hi.ts anywhere in apps/admin.
+#   Also: explicit `configured: boolean` (absence was signalled only by all-null fields);
+#   request.scopeGrants provenance named (types.ts:45, ?? [] fail-closed); AdminDisplayNameMissingError
+#   pinned as 409; degraded-mode is a FOUR-file module; no degraded-mode admin test exists to copy.
+#   ⛔ Row 17 untouched -- `current_status` stays `open`. ⛔ epic-10-retrospective NOT flipped.
+# last_updated: 2026-08-21f (Story 10.30 story file authored via bmad-create-story: mint -> ready-for-dev.
+#   Implements Decision 2026-08-21-147 cl.2 (Epic 10 ownership) discharging -146 cl.5 (the kill-switch UI
+#   directive). ⛔ Zero new domain code, zero new permission key, zero new migration -- the substrate
+#   (directory-publication.ts, pariwar_directory_publication table migration 0111, the
+#   pariwar.manage_directory_publication key at catalog v38, super_admin-only) already shipped at 11a.3.
+#   This story is a thin admin API + console surface exposing it, mirroring Story 5.8 (degraded-mode)
+#   file-for-file. ⛔ Completing this story does NOT flip launch-gate-inventory Row 17 to closed -- that
+#   requires a SEPARATE >=2-trustee ratification Decision per the row's own closure discipline; this
+#   story's own governance commit (Task 1) says so explicitly. ⛔ epic-10-retrospective NOT flipped.
 # last_updated: 2026-08-21e (THREE FOLLOW-UP RULINGS on 2026-08-21-146, recorded as Decision
 #   2026-08-21-147, Trustee-ratified by Dhiraj Rahul + Kalpana Bharti.
 #   ⭐⛔ THE CONSEQUENTIAL ONE -- cl.1: the kill-switch ADMIN UI is a LAUNCH GATE for the public
@@ -9106,7 +9179,7 @@ development_status:
   # member names from every warm PoP, PER PAGE NUMBER (2026-08-21-145 cl.5(e)). ⛔ The word
   # "immediate" may not be used about this control.
   # ⚠ `backlog` because NO story file exists yet -- owner John to author. ⛔ Not ready-for-dev.
-  10-30-directory-publication-kill-switch-admin-ui: backlog
+  10-30-directory-publication-kill-switch-admin-ui: review
   epic-10-retrospective: done
 
   # ==========================================================================

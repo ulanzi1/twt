@@ -14,16 +14,25 @@
 //   3. A §1.5 hash-chain audit line, anchored by a pre-generated `auditId`. Writing the LINE is
 //      the CALLER's obligation (the 10.12 narrow-write posture).
 //
-// ⛔⛔ NOT AN OPERATIONAL CONTROL YET — Decision `2026-08-21-146` cl.5 (Trustee-ratified).
-// The Panel ruled that a DEDICATED ADMINISTRATIVE UI IS REQUIRED before this switch may be treated
-// as an operational control, and that ⛔ DIRECT DATABASE MANIPULATION MUST NOT BE DESCRIBED AS
-// NORMAL MANUAL OPERATION. Three commitments, ⛔ not one:
-//   (a) the mechanism STAYS — ⛔ not removed, ⛔ not re-landed;
-//   (b) ⛔ no description anywhere may present hand-run SQL as the way this is operated;
-//   (c) until the UI ships this is a MECHANISM PRESENT, ⛔ NOT a lever anyone can pull — so it
-//       ⛔ must not be relied on in any incident plan, degradation posture or DPDPA response.
+// ⛔⛔ STILL NOT AN OPERATIONAL CONTROL — Decision `2026-08-21-146` cl.5 (Trustee-ratified),
+// ⚠ unchanged by the UI having shipped. The Panel ruled that a DEDICATED ADMINISTRATIVE UI IS
+// REQUIRED before this switch may be treated as an operational control, and that ⛔ DIRECT DATABASE
+// MANIPULATION MUST NOT BE DESCRIBED AS NORMAL MANUAL OPERATION. Three commitments, ⛔ not one:
+//   (a) the mechanism STAYS — ⛔ not removed, ⛔ not re-landed. ⛔ UNCHANGED and still binding.
+//   (b) ⛔ no description anywhere may present hand-run SQL as the way this is operated.
+//       ⛔ UNCHANGED and still binding — ⚠ and now easier to honour, because there is a real lever.
+//   (c) ⭐ THE UI SHIPPED AT STORY 10.30 (Decision `2026-08-21-148`): a super_admin reads and flips
+//       this switch from `/p/$pariwarId/directory-publication`, both directions, with a required
+//       rationale, ⛔ without database access. ⚠ AND THE STATUS IS STILL UNCHANGED. This is a
+//       MECHANISM PRESENT AND OPERABLE, ⛔ NOT YET a control anyone may TREAT as operational —
+//       because that status turns on the ≥2-trustee ratification launch-gate Row 17
+//       (`docs/launch-gate-inventory/inventory-roster.md`) requires, ⛔ NOT on the UI existing.
+//       ⛔ Until that ratifying Decision lands the row stays `open`, the public Member Directory
+//       ⛔ may not go live, and this switch ⛔ must not be relied on in any incident plan,
+//       degradation posture or DPDPA response.
 // ⚠ This SUPERSEDES the prose that stood here, which said a console surface was "a future story if
-// one is wanted". ⛔ It is not optional and it is not a preference: it is a directive.
+// one is wanted". ⛔ It was not optional and it was not a preference: it was a directive, and it is
+// now discharged — ⛔ which is a different thing from the ratification being granted.
 // ⚠ AND EVEN ONCE THE UI EXISTS the switch has a MULTI-MINUTE FLOOR — `/members` is
 // `edge_cacheable` with `s-maxage=300`, so a pulled Pariwar keeps being served real member names
 // from every warm PoP, PER PAGE NUMBER (`2026-08-21-145` cl.5(e)). ⛔ "Immediate" is not a word

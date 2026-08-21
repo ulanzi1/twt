@@ -1,4 +1,13 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-21b (live-DB verification 11a.3: `twt-test-pg` (:5433) became available.
+#   `pnpm db:migrate` applied 0111 cleanly (no 42P07); pg_class confirms relrowsecurity /
+#   relforcerowsecurity both true on pariwar_directory_publication. directory-publication-policy.
+#   spec.ts 16/16, member-directory.spec.ts 11/11 (incl. the 3 new kill-switch tests) in isolation;
+#   full @twt/domain live suite 3044/3045 (254/254 files, 1 pre-existing skip) and full @twt/api
+#   live suite 1051/1052 (122/122 files, 1 pre-existing skip) -- zero failures either package. Both
+#   items from the 2026-08-21a code-review pass now CLOSED. ONE row flips:
+#   development_status[11a-3-...] in-progress -> review. ⛔ epic-11a stays in-progress (3 stories
+#   remain: 11a.4-11a.6). ⛔ No other story status changes.
 # last_updated: 2026-08-21a (bmad-code-review 11a.3: review pass complete, 4 decision-needed
 #   resolved + 14 patches applied + 2 deferred + 4 dismissed (1 corrected on inspection — its fix
 #   would have regressed an anti-enumeration property, withdrawn not applied). ONE row flips:
@@ -9012,7 +9021,7 @@ development_status:
   epic-11a: in-progress
   11a-1-4-tier-visibility-matrix-codified-per-surface-public-vs-private-replacement: done
   11a-2-public-astro-ssr-shell-extension-for-member-directory-tiered-visibility-renderers: done
-  11a-3-member-directory-pii-shielded-tiered-render-scope-anti-enumeration-safeguards: in-progress
+  11a-3-member-directory-pii-shielded-tiered-render-scope-anti-enumeration-safeguards: review
   11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only: backlog
   11a-5-noticeboard-strip-foundational-layout-component: backlog
   11a-6-pinned-notice-component: backlog

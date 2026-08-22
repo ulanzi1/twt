@@ -1,0 +1,14 @@
+{
+  "masthead_title": "The Pariwar's pulse",
+  "seal_a11y": "Pariwar seal",
+  "pinned_header": "Notice board",
+  "pinned_empty": "No pinned notices",
+  "pinned_list_a11y": "Pinned notices",
+  "recent_closings_header": "Recent closings",
+  "next_meeting_header": "Next monthly meeting",
+  "loading_a11y": "Loading the notice board…",
+  "open_detail_terracotta": "Tap to open close-of-cycle notice detail",
+  "open_detail_green": "Tap to open milestone notice detail",
+  "open_detail_black": "Tap to open scheduled meeting detail",
+  "open_detail_ink": "Tap to open notice detail"
+}

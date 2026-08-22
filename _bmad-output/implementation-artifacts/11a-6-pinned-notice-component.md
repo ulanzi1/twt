@@ -888,16 +888,32 @@ import.
   rewind the clock"* — a pre-existing verdict is **zero-information** against that class. ⇒ checked:
   this spec pins **both** sides (`NOW = 2026-07-10`, `poolOpenAt` = `2026-07-01`/`2026-07-06`), so
   ⛔ it is **not** a date bomb and the baseline comparison **is** informative here.
-- ⭐ **The most likely class is the shared-:5433-DB accumulation family (#9/#10), ⛔ not plain
-  concurrency oversubscription** — recorded as a diagnosis, ⛔ not as a root cause, because it was not
-  proven. The spec seeds under the **fixed** `PARIWAR_A` constant that family warns about
-  (`_helpers.ts:39`), the read applies a `limit` with a `truncated` flag
-  (`reconciliation-review-read.ts:77`), and the container currently holds **5518** accumulated
-  own-committing `events_log` rows under that same fixed tenant. ⚠ A one-probe run printed
-  `rows.length=3, truncated=true` while **passing**, so a simple over-the-limit truncation is ⛔ not
-  demonstrated and the mechanism stays **open**. ⛔ The documented one-move remedy (recreating
-  `twt-test-pg`) was ⛔ **not** run — it destroys the local test DB and is BigDev's call, ⛔ not a
-  side effect of a story close-out.
+- ⭐ **CLASS CONFIRMED BY THE REMEDY: the shared-:5433-DB accumulation family (#9/#10), ⛔ not plain
+  concurrency oversubscription.** The spec seeds under the **fixed** `PARIWAR_A` constant that family
+  warns about (`_helpers.ts:39`), the read applies a `limit` with a `truncated` flag
+  (`reconciliation-review-read.ts:77`), and the container held **266,264** `events_log` rows —
+  **5,518** of them under that one fixed tenant.
+- ✅ **REMEDY RUN AND VERIFIED (2026-08-23, on BigDev's explicit instruction — ⛔ it was not taken as a
+  close-out side effect).** `twt-test-pg` was recreated and re-migrated; the full eight-package leg then
+  passed **23/23 tasks, TWICE**, `@twt/domain` included (**254 files / 3051 tests**), with
+  `review-queue-read.spec.ts` green. ⇒ the failure was the **DB's accumulated state**, ⛔ not this
+  story and ⛔ not the code.
+  - ⚠ **The remedy command in [[project_known_livedb_test_failures]] had DRIFTED from the live
+    container and was ⛔ not followed blindly:** the image is `postgres:16`, ⛔ not
+    `postgres:16-alpine`, and the container runs **without** `--rm`. Recreated to match the **actual**
+    inspected config, with `docker rm -f -v` so the anonymous PGDATA volume is removed rather than
+    orphaned.
+  - ⭐ **A measured accrual rate, recorded because it explains the slow onset:** one full leg leaves
+    only **43** rows under `PARIWAR_A`. ⇒ 5,518 is roughly **~128 legs'** worth, built up across days
+    — which is why this presents as *"suddenly failing for no reason"* rather than as an obvious
+    regression, and why the second leg (run against a DB already carrying run 1's 43 rows) is also
+    green.
+- ⚠ ⛔ **What is STILL not root-caused, stated so the entry is not over-read:** the exact threshold
+  mechanism. A probe before the remedy printed `rows.length=3, truncated=true` while **passing**, so a
+  simple over-the-limit truncation is ⛔ **not** demonstrated. The **class** is confirmed; the precise
+  trigger is not. ⛔ No fix was applied to the spec — the family's standard fix (a per-test
+  `randomUUID()` tenant instead of `PARIWAR_A`) belongs to whoever owns that Story-9.8 spec, ⛔ not to
+  a story that touches zero files in `packages/domain`.
 - ⚠ **A second, non-reproducing failure set is recorded rather than dropped:** the first full run also
   reported **4 failures in `@twt/api`**. They did ⛔ **not** reproduce — `@twt/api` alone is green
   (123 files / 1078 tests) and the domain+api pair is green. Same flake class. ⛔ Recorded because a
@@ -1028,3 +1044,5 @@ the routed notice-detail item, so it is routed with it rather than settled by om
 | 2026-08-22 | **D8(a)** — the `:491` → `:1819` UX-spec amendment APPLIED, zero-line-delta, in a new Appendix B |
 | 2026-08-22 | **Task 6** — five absences routed; four routed items closed in precise language (AC8) |
 | 2026-08-22 | **Task 7** — friction-budget disposition (⛔ no new row); `ci:local` 31/31 green; live-DB leg run and its one pre-existing failure attributed at the baseline; status → review |
+| 2026-08-23 | **Correction** — the live-DB attribution was re-derived: the date-bomb check (#12) was run BEFORE citing the baseline, and the class re-read as the shared-DB accumulation family |
+| 2026-08-23 | ✅ **Remedy run on BigDev's instruction** — `twt-test-pg` recreated (⚠ to its ACTUAL config, ⛔ not the memory's drifted command) and re-migrated; the full live-DB leg is **23/23 green, twice**. The accumulation class is **confirmed**; the precise threshold mechanism remains open, and ⛔ no fix was applied to the Story-9.8 spec |

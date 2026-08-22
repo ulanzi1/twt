@@ -34,13 +34,22 @@
 #   [[project_known_livedb_test_failures]]: "checking out an older commit does not rewind the
 #   clock"). Checked: the spec pins BOTH sides, so it is ⛔ not a date bomb and the baseline
 #   comparison IS informative.
-#   ⚠ It is INTERMITTENT (a later isolated run passed 10/10; domain+api at --concurrency=4 fully
-#   green). ⭐ Most likely the shared-DB ACCUMULATION family (#9/#10) — fixed PARIWAR_A + a limited
-#   read + 5518 accumulated rows under that tenant — but recorded as a DIAGNOSIS, ⛔ not a root
-#   cause: a probe printed `truncated=true` while PASSING, so the mechanism stays OPEN. ⛔ The
-#   documented remedy (recreating twt-test-pg) was NOT run — it destroys the local test DB and is
-#   BigDev's call. ⚠ A 4-failure @twt/api set seen on one attempt did NOT reproduce; recorded
-#   anyway, because a failure that vanished still happened.
+#   ✅ RESOLVED 2026-08-23 — REMEDY RUN ON BIGDEV'S EXPLICIT INSTRUCTION (⛔ not as a close-out side
+#   effect: it destroys the local test DB). twt-test-pg recreated + re-migrated; the full
+#   eight-package leg then passed 23/23 tasks TWICE, @twt/domain included (254 files / 3051 tests).
+#   ⇒ ⭐ the shared-DB ACCUMULATION class (#9/#10) is CONFIRMED — the DB held 266,264 events_log
+#   rows, 5,518 under the fixed PARIWAR_A the spec seeds into, against a limited read.
+#   ⚠ ⭐ THE MEMORY'S REMEDY COMMAND HAD DRIFTED and was ⛔ not followed blindly: the image is
+#   `postgres:16`, ⛔ NOT `-alpine`, and the container runs WITHOUT `--rm`. Recreated to the ACTUAL
+#   inspected config, with `docker rm -f -v` so the anonymous PGDATA volume is removed, not orphaned.
+#   ⭐ Measured accrual: ONE full leg leaves just 43 PARIWAR_A rows ⇒ 5,518 ≈ ~128 legs across days,
+#   which is why this presents as "suddenly failing for no reason".
+#   ⚠ ⛔ STILL NOT ROOT-CAUSED: the exact threshold mechanism. A pre-remedy probe printed
+#   `truncated=true` while PASSING, so simple over-the-limit truncation is NOT demonstrated. The
+#   CLASS is confirmed; the trigger is not. ⛔ No fix applied to the Story-9.8 spec — the family's
+#   standard fix (per-test randomUUID() tenant) belongs to its owner, ⛔ not to a story touching
+#   zero files in packages/domain. ⚠ The 4-failure @twt/api set seen on one earlier attempt also
+#   did not recur; recorded anyway, because a failure that vanished still happened.
 #   `pnpm ci:local` itself: ✅ 31 jobs green.
 #
 #   ⚠ FRICTION BUDGET: declaration affirmed, ⛔ NO new row. ⭐ The net movement is friction REMOVED

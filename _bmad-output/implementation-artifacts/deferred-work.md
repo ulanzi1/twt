@@ -4,6 +4,108 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred / recorded from: Story 11a.4 — phone/email obfuscation defense-in-depth (2026-08-22)
+
+Ruled at Decision `2026-08-22-149` (D1′=(a) · D2=(a) · D3=(e) · D4=(a) · D5=(a), BigDev 2026-08-22).
+⚠ Two items here are **routed to another owner**, ⛔ not deferred work this story schedules; two are
+**closures recorded elsewhere in this file** (CR-D1-1.16b and CR-D2-1.16b, annotated in place in the
+1.16b section — ⛔ not duplicated here); and the Trap 5 IP-provenance limit is **appended to the
+existing network-topology item** (~L201) because that item says in terms the two must be answered
+together, ⛔ **not opened as a second entry**.
+
+- **⭐⛔ THE AC1(a) MASKING PATTERN — DEFERRED ON THE MERITS, WITH A NAMED, EXISTING TRIGGER**
+  (D1′ = (a)). ⚠ **⛔ Read the WHY before the WHAT, or this gets un-deferred for the wrong reason.**
+  `epics.md` L4655 asks for phone/email masking (image rendering / JS-decoded display / partial
+  masking + helpdesk CTA) on *"helpline contact, footer"*. ⛔ **That is the TRUST'S OWN institutional
+  contact channel, ⛔ not member PII** — the two are **opposite in intent**. Member contact data is
+  matrix-governed and ⛔ never public; the trust's helpline is **deliberately public so a person in
+  need can reach the trust** (`ux-design-specification.md:243`, `:297`, `:87`). ⇒ its governing
+  property is ⭐ **REACHABILITY BOUNDED BY ACCESSIBILITY**, and all three techniques are **REFUSED ON
+  THE MERITS**: image rendering ⛔ is not tappable/copyable/screen-readable (**NFR-A11y-1 WCAG 2.1 AA
+  is a named LAUNCH BLOCKER for public-site primary nav**); JS-decoded display ⛔ fails with JS off,
+  on a surface that is Astro SSR *precisely* so it works without it; partial masking + helpdesk CTA
+  is ⛔ circular — the number **is** the helpdesk. ⚠ And indexing cuts the **other** way: a Contact
+  page would be `search_indexing_policy: index` and you ⭐ **want** the helpline findable.
+  ⇒ The residual concern is **CHANNEL INTEGRITY** (harvest → spam → a degraded helpline), ⛔ **NOT
+  privacy** — mitigated by rate limiting, provider-side filtering and the Story 11a.4 honeypot bait
+  paths, ⛔ **never** by making the number unreadable to the people it exists for.
+  ⭐ **Trigger: THE STORY THAT BUILDS THE COMMITTED PUBLIC CONTACT PAGE** — a named, existing
+  commitment. ⛔ **NOT** *"if a public contact surface is ever built"* (the withdrawn D1's wording,
+  which wrongly implied the page was hypothetical) ([[feedback_closure_language_precision]]).
+  ⚠ **⛔ A TRIGGER FIRING IS ⛔ NOT PERMISSION TO BUILD THE COMPONENT.** A masking component *would*
+  live at `apps/public/src/components/` (beside `MatrixField.astro`) — the location is recorded so a
+  future story ⛔ need not re-derive it, and ⛔ **recording the location is ⛔ NOT an endorsement**.
+  Any future proposal must **re-decide the technique against a real audience** (a grieving family, a
+  cheap Android, Ravi-mode), ⛔ never inherit one from here. Doctrine written at
+  `packages/contracts/src/public-pages/README.md` §FR-93 item 5.
+
+- **⭐⛔ ROUTED, ⛔ NOT DEFERRED — THE PUBLIC `Contact` AND `About` PAGES ARE COMMITTED PRODUCT WITH
+  ⛔ NO OWNING STORY (SD-1 shaped).** Both appear in the UX spec's committed public-website inventory
+  (`ux-design-specification.md:243`) — *"Member Directory, Sahyog Drive …, In Memoriam, Niyamavali
+  with version diff, **About**, **Contact (with Madad card)**"* — the **same inventory** as the three
+  surfaces 11a.1-11a.3 already built. And:
+  `grep -n "Contact page\|/contact\|About page" epics.md` → ⛔ **zero hits**; ⛔ no `apps/public`
+  route; ⛔ no matrix surface (the matrix declares eight; neither is among them).
+  ⚠⛔ **AND THE PII-SCRAPE GATE IS BLIND TO THIS BY CONSTRUCTION** — its route-coverage leg
+  reconciles **shipped pages ⇄ matrix surfaces** in *both* directions, so a surface that **should**
+  exist and **does not** is invisible to it. ⇒ ⛔ **no green check will EVER surface this gap**, and a
+  passing `pnpm pii:check` proves ⛔ nothing about a missing page. (In the other direction the gate
+  *would* catch it: shipping the page with no matrix row fails.)
+  ⚠ This is the **SD-1 shape** (`2026-08-19-132`), which went unnoticed for seven epics last time.
+  ⛔ **Record BOTH surfaces; ⛔ do not silently narrow to Contact.** They would live at
+  `apps/public/src/pages/contact.astro` and `about.astro`, each needing its own matrix surface entry.
+  **Owner: John** (authoring), as a **correct-course / epic-coverage question**. ⛔ Story 11a.4 does
+  ⛔ not build, schedule or close it.
+
+- **⚠ NAMED DEPENDENCY ON THE ABOVE, ⛔ not a separate orphan item: ⛔ NO PROVISIONED HELPLINE-NUMBER
+  SOURCE EXISTS.** ⛔ No `.env.example` entry, ⛔ no deploy config, ⛔ no validation
+  (`apps/api/src/modules/member-pool/note-template.ts:122-127`). The claim-note PDF prints
+  `HELPLINE_PENDING_TOKEN` = *"[PENDING — Epic 10 per-Pariwar helpline resolution]"* rather than
+  ⛔ fabricate a number, and the mobile CTA falls back to a placeholder `+911800000000`. ⇒ **the
+  Contact page cannot render a real number** until **Epic 10 per-Pariwar helpline resolution** lands.
+  ⛔ Recorded against the Contact-page routing above, ⛔ not as a standalone deferral.
+
+- **⚠ TRAP 4 RESIDUAL RISK — the publish-time backstop is a BACKSTOP, and what it does ⛔ NOT cover.**
+  D3 = (e) shipped a `detectNakedPii` scan over the canonical JSON of a clause payload on the
+  `niyamavali.amend` publish path, before the audit write, rejecting with a typed 422 that names the
+  matched pattern **TYPE only** (⛔ never the value). ⛔ **What it does NOT do:**
+  (a) ⛔ it does **not** make the render-time naked-PII leg cover tenant data — that leg still scans
+  **fixture-built** HTML in `scrape-test.spec.ts` only, and the two artifacts that used to claim
+  otherwise are corrected;
+  (b) ⛔ it does **not** cover clause versions **already published** before it landed — it is a
+  write-path check, ⛔ not a sweep, and ⛔ no backfill scan was run;
+  (c) ⛔ it does **not** validate payload **content** in any other respect —
+  `ClausePayloadSchema` is still `z.record(z.unknown())`;
+  (d) ⛔ it inherits the detector's precision exactly, so a payload string that genuinely reads as a
+  10-digit run in **text** position is rejected — the author must reword, and there is ⛔ no override.
+  ⚠ **And it is ⛔ NOT the primary control** — the non-author human sign-off is. ⛔ Do not let a
+  future reader think a regex replaced a human.
+  **Trigger for (b):** any story that needs assurance over *already-published* clause payloads — it
+  must run a **read-only sweep** and report, ⛔ never a silent mutation of a published rulebook.
+
+- **⛔ OPEN, ROUTED TO THE TRUSTEE PANEL — is ONE non-author reviewer sufficient authority to publish
+  a clause governing CLAIM ELIGIBILITY, and who answers for a wrong one?** Surfaced by the §Q3
+  investigation and ⛔ **not ruled anywhere.** The Story 2.4 workflow is genuinely strong on
+  **process** (non-author sign-off fail-closed on `reviewedBy !== authoredBy`, content-bound by
+  `sha256(canonicalJson(payload))`, audit-or-throw, append-only amendment ledger with a mandatory
+  `affected_member_scope`) and ⛔ **near-absent on CONTENT**: ⛔ no legal-review gate (Story 0.13 is
+  external and explicitly does **not** gate), ⛔ no Panel ratification step in code, ⛔ no content
+  schema. ⇒ the controls are (i) **one human reading a draft**, (ii) the publish-time PII backstop,
+  and (iii) an audit trail identifying who to hold responsible **afterwards**. ⚠ And `/niyamavali` is
+  `cache_policy: edge_cacheable` (`s-maxage=300`), so even an immediate correction carries a
+  **multi-minute propagation floor**. ⛔ **A regex is not an answer to a governance question**, and
+  D3(e) ⛔ did not settle this. **Owner: Trustee Panel.**
+
+- **⛔ OPEN, ROUTED TO THE TRUSTEE PANEL — `provisional` and `policy_review_required` are INERT
+  DATA.** Both flags sit in every seeded R7/R8 clause payload and ⛔ **nothing reads either one**.
+  Verified by grep: ⛔ zero `.provisional` / `.policy_review_required` property reads anywhere in the
+  repo; the only mentions are **comments** at `packages/niyamavali-engine/src/retirement-coverage.ts:67`
+  and `packages/validity-service/src/producer.ts:58`, both discussing the open `[[CR-4.5-D2]]`
+  question — ⛔ **not** a read of the flag as data. ⇒ a payload flag that looks like a control and is
+  not one. ⛔ Recorded so it is not mistaken for a running gate. **Owner: Trustee Panel.**
+
+---
+
 ## Deferred from: code review of 10-30-directory-publication-kill-switch-admin-ui (2026-08-21)
 
 All four items below are **pre-existing patterns inherited from precedent modules this story
@@ -211,6 +313,28 @@ epic** (a deferral naming an epic expires unowned).
   **Trigger:** the deployment story that fixes the network topology (which app terminates public
   traffic, and whether the origin is reachable except through the CDN). ⚠ Story 11a.4 records the
   same open topology question independently — ⛔ the two must be answered together, not twice.
+
+  ⭐ **APPENDED BY STORY 11a.4 — ⛔ THIS IS THE SAME ITEM, ⛔ NOT A SECOND ENTRY.** This item said in
+  terms that the two must be answered together, so 11a.4's honeypot IP-provenance limit is recorded
+  **here** rather than opened separately (Decision `2026-08-22-149` cl.6).
+  **The same defect, on a second surface, and worse there:** `honeypotHandler`
+  (`apps/api/src/plugins/security-headers/index.ts`) records `request.ip` on every `abuse.honeypot`
+  line. Under `trustProxy: true` that is the **LEFTMOST `X-Forwarded-For` entry** — and ⛔ **nothing
+  proxies the honeypot paths at all** (`apps/public` proxies only the directory route), so a scanner
+  reaches them **directly** and sets the header itself. ⚠ Sharper than the `/members` case: there the
+  fix at `2026-08-21-145` cl.2 (forward only `Astro.clientAddress`, discard the inbound chain)
+  **exists but ⛔ does not reach these paths**, because there is no proxy hop to apply it at.
+  ⇒ **The recorded `ip` on a honeypot line is CALLER-CHOSEN, so it is ⛔ NOT EVIDENCE**, rotating it
+  defeats both per-IP correlation and the per-IP ceiling, and ⛔ this project must **never** describe
+  the honeypot as *"flagging scraping IPs"* (the `epics.md` L4657 wording, which ⛔ cannot be built
+  as written). A hit is a **SIGNAL that a probe happened**, ⛔ never proof of who sent it.
+  ⛔ `trustProxy` is **NOT** re-tuned (`-143` cl.9's standing fence, unchanged).
+  ⚠ **And the second half of the precondition:** whether `apps/api` is internet-reachable **at all**
+  is this same open question ⇒ until it is answered, a **zero honeypot hit-count proves ⛔ nothing**
+  about scanner activity, and ⛔ must not be reported as evidence of a quiet perimeter.
+  Written into the plugin's module doc (limits 1 and 2) and the `honeypotHandler` doc, ⛔ not only here.
+  **Trigger:** ⭐ **unchanged — the SAME deployment story.** ⛔ Do not add a second trigger; ⛔ do not
+  split this item in two when it is answered.
 
 - **⚠ A WARM EDGE HIDES SCRAPER TRAFFIC FROM ORIGIN-SIDE DETECTION** (NEW — Story 11a.3) —
   **Recorded as a NAMED DEPENDENCY, ⛔ not a footnote, and ⛔ not omitted because it is inert**
@@ -3084,9 +3208,14 @@ Review layers: Blind Hunter ✓ · Edge Case Hunter ✗ (server error — layer 
 
 - **CR-D0-1.16b: `evaluateSnapshot` silently passes non-public HTML renders with no `fields`** — ✅ **DISCHARGED BY STORY 11a.2 — see the Story 11a.2 section at the top of this file (Closed by [edit]).** ⛔ The original text is left BELOW, byte-unchanged, because a discharged deferral is annotated, never rewritten. — When a `RenderSnapshot` provides `html` but no `fields` for an `authenticated_member` or `operator_restricted` viewer context, neither the tier-leak check (requires `fields`) nor the PII detector (public-only by spec) runs, and the verdict is `pass`. Spec-consistent behaviour (AC-2 explicitly limits PII detection to public renders); risk materialises at Story 2.5/11a.2 when the live-render integration spec (`scrape-test.spec.ts`) constructs `RenderSnapshot` objects. **Trigger: Story 2.5 / Epic 11a.2 live-render integration; ensure `RenderSnapshot` always provides `fields` for non-public renders, or extend the engine to warn when `html` is present but `fields` is absent on non-public viewers.** (`packages/contracts/src/public-pages/scrape.ts`)
 
-- **CR-D1-1.16b: Phone regex false positives on non-phone 10-digit strings (URL paths, order IDs, `0`-prefix landlines)** — The phone pattern `(?<!\d)(?:\+?91[\s-]?|0)?[6-9]\d{9}(?!\d)` will match any 10-digit sequence starting with `[6-9]` in raw HTML (e.g., resource IDs in URL paths, numeric `data-id` attributes). The `0`-prefix variant also matches `0[6-9]\d{9}` formatted landlines. V1 limitation; spec documents patterns as "conservative". **Trigger: Story 2.5 / first real public HTML snapshot is wired into `loadSnapshots()`; refine regex and add context-aware exclusions (e.g., reject matches inside URL paths or quoted attributes) before live renders are scanned.** (`packages/contracts/src/public-pages/scrape.ts`) — See also Story 11a.4 obfuscation as defence-in-depth.
+- **CR-D1-1.16b: Phone regex false positives on non-phone 10-digit strings (URL paths, order IDs, `0`-prefix landlines)** — ✅ **CLOSED BY [EDIT] AT STORY 11a.4** (D2 = (a), Decision `2026-08-22-149` cl.3). ⛔ The original text is left BELOW, byte-unchanged, because a closed deferral is annotated, never rewritten.
+  ⭐ **THE JUSTIFICATION IS ⛔ NOT A FIRED TRIGGER — read this before citing it.** The recorded trigger below names `loadSnapshots()`, a function **Story 11a.1 DELETED** (`check-pii-scrape.ts` now says in terms *"⛔ Do not re-add a snapshot loader here"*). ⇒ the trigger was **STALE**, ⛔ **not** *"fired and missed"* — writing it the other way would be a **false decay finding** ([[feedback_closure_language_precision]]). The honest justification is stronger: the integration corpus was **provably authored AROUND the defect, in writing** (`scrape-test.spec.ts:146-147`), so the detector was shaping the tests instead of the tests catching the detector.
+  **What actually landed:** a **precision regression net FIRST** (`packages/contracts/tests/public-pages.test.ts` — the repo had eleven PII assertions and ⛔ every one tested *recall*), then the `phone` lookbehind gained `(?<!\/)`, `(?<!=")`, `(?<!')`. ⛔ Pure regex change. ⛔ `email` untouched. ⛔ **`aadhaar` NOT widened** — D2(b) was ⛔ not ruled in: a 12-digit run genuinely *is* an Aadhaar shape, and loosening it trades a real recall guarantee on a `never_exposed` field for a hypothetical precision gain.
+  ⚠ **ONE CLAUSE OF THE ORIGINAL FINDING IS ⛔ NOT CLOSED, AND ⛔ NOT CLOSEABLE — it is RE-SCOPED as a permanent limitation.** The *"`0`-prefix landline"* clause: ⛔ **verified false as written** (`0801234 5678` and `080-12345678` return **no match** — checked by running the engine at `075827b`). The only `0`-prefix landline that *does* fire is the **contiguous** `08012345678`, and it is `0` + `[6-9]` + 9 digits — the **SAME token shape** as the legitimate 0-prefixed mobile `09876543210`. STD codes whose second digit falls in 6-9 (`079`, `080`, `066`) collide with the mobile pattern **BY CONSTRUCTION**, so ⛔ **no context-free regex separates them** and excluding the landline would stop catching the mobile. **Precision may ⛔ never be bought with recall.** ⇒ the collision is **pinned by test** (a recall pin on `09876543210` + guards on the separated shapes) and documented in `piiPatterns()`. ⛔ **Do not "fix" it in passing** — any future attempt must first re-decide whether losing 0-prefixed-mobile recall is acceptable, and that is a ruling, ⛔ not a refactor.
+  **Trigger:** ⛔ **none — this item is closed.** The residual collision above needs ⛔ no trigger; it needs a **ruling** if anyone ever proposes to trade it. Original text follows. — The phone pattern `(?<!\d)(?:\+?91[\s-]?|0)?[6-9]\d{9}(?!\d)` will match any 10-digit sequence starting with `[6-9]` in raw HTML (e.g., resource IDs in URL paths, numeric `data-id` attributes). The `0`-prefix variant also matches `0[6-9]\d{9}` formatted landlines. V1 limitation; spec documents patterns as "conservative". **Trigger: Story 2.5 / first real public HTML snapshot is wired into `loadSnapshots()`; refine regex and add context-aware exclusions (e.g., reject matches inside URL paths or quoted attributes) before live renders are scanned.** (`packages/contracts/src/public-pages/scrape.ts`) — See also Story 11a.4 obfuscation as defence-in-depth.
 
-- **CR-D2-1.16b: `loadSnapshots()` hardcoded stub with no discovery mechanism** — Returns `[]` unconditionally; no path-scanning, no environment variable override, no config-driven discovery. When Story 2.5 lands, a developer must know to extend this specific function. The gate will remain permanently green (no-op) on every PR regardless of what renders exist in CI until someone explicitly extends it. **Trigger: Story 2.5 (public Astro build HTML available in CI); add env-var-driven or convention-based snapshot discovery (e.g., `PUBLIC_SNAPSHOTS_DIR` or `apps/public/dist/snapshots/`).**  Note: the architecture-committed live-render path is `tests/integration/public-pages/scrape-test.spec.ts` (D13-1.2), which imports the engine separately — `loadSnapshots()` in the gate is the secondary path. (`packages/contracts/scripts/check-pii-scrape.ts`)
+- **CR-D2-1.16b: `loadSnapshots()` hardcoded stub with no discovery mechanism** — ✅ **CLOSED BY [EDIT] AT STORY 11a.1 — ⚠ AND ⛔ NEVER RECORDED UNTIL NOW (Story 11a.4).** ⛔ The original text is left BELOW, byte-unchanged. ⚠ **This is a records finding, ⛔ not a work finding**: the item was closed by an edit made *for another reason* — Story 11a.1 **deleted `loadSnapshots()` outright**, and `check-pii-scrape.ts`'s header now forbids re-adding it (*"⛔ Do not re-add a snapshot loader here"*). ⇒ the function this deferral is *about* ⛔ no longer exists, so there is ⛔ nothing left to extend and the *"permanently green no-op"* risk is gone with it. ⛔ Nobody wrote that down, so a **closed** item has been reading **open** ever since. Recorded now rather than left mis-stating the record ([[feedback_record_unattested_no_backfill]] — recorded as discovered, ⛔ not backfilled as though 11a.1 had done it). ⚠ The architecture-committed live-render path named in the original note (`scrape-test.spec.ts`) is ⛔ unaffected and remains the real path — ⛔ but see the Story 11a.4 section for what that path does ⛔ **not** cover (it scans **fixture-built** HTML, ⛔ never tenant data).
+  **Trigger:** ⛔ **none — this item is closed.** Original text follows. — Returns `[]` unconditionally; no path-scanning, no environment variable override, no config-driven discovery. When Story 2.5 lands, a developer must know to extend this specific function. The gate will remain permanently green (no-op) on every PR regardless of what renders exist in CI until someone explicitly extends it. **Trigger: Story 2.5 (public Astro build HTML available in CI); add env-var-driven or convention-based snapshot discovery (e.g., `PUBLIC_SNAPSHOTS_DIR` or `apps/public/dist/snapshots/`).**  Note: the architecture-committed live-render path is `tests/integration/public-pages/scrape-test.spec.ts` (D13-1.2), which imports the engine separately — `loadSnapshots()` in the gate is the secondary path. (`packages/contracts/scripts/check-pii-scrape.ts`)
 
 - **CR-D3-1.16b: `pii-scrape` CI job has no `needs: [test]` dependency — failing engine tests don't block the gate-specific CI check** — The unit tests ride `pnpm turbo run test` (the `test` job), not the `pii-scrape` job. If `tests/public-pages.test.ts` breaks, the `test` job fails but `pii-scrape` still passes. A reviewer checking only the `pii-scrape` green check could merge while engine tests are red. Acceptable if branch protection requires all CI jobs to pass before merge. **Trigger: branch protection policy review; add `test` to `needs:` or rely on required-status-check configuration.** (`.github/workflows/ci.yml`)
 

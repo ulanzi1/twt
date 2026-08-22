@@ -4,7 +4,7 @@ baseline_commit: 075827b5bebaaaa4e615bf508b841dd3f67c9d05
 
 # Story 11a.4: Phone/Email Obfuscation Defense-in-Depth — Public Surfaces Only `[GOVERNANCE]`
 
-Status: review
+Status: done
 
 > ⛔ **THIS FILE SUPERSEDES AN EARLIER AUTHORING PASS THAT LIVES ON A SIDE BRANCH.** A prior
 > `bmad-create-story` run for 11a.4 was un-bundled from `story/11a.3` and parked on
@@ -478,12 +478,17 @@ by reasoning about it
 
 ### AC2 — The phone/Aadhaar precision gap closes, and recall is PROVEN not to regress
 
-**Given** CR-D1-1.16b (`deferred-work.md:3087`) and D2's ruling
-**When** `piiPatterns()` (`packages/contracts/src/public-pages/scrape.ts:263-269`) is tightened
+**Given** CR-D1-1.16b (`deferred-work.md:3087`) and D2's ruling, **superseded on evidence found by
+code review at Decision `2026-08-22-150`** — D2's original scope (`phone` pattern only, precision
+may never be bought with recall) stands; the specific regex it landed excluded more than it should
+have
+**When** `piiPatterns()` (`packages/contracts/src/public-pages/scrape.ts:263-292`) is tightened
 **Then** the `phone` pattern's negative lookbehind — currently
-`(?<![a-zA-Z0-9._%+\-\d])` — additionally excludes URL-path and quoted-attribute contexts (`/`, `="`,
-`'`), as a **pure regex change**: ⛔ no new dependency, ⛔ no HTML parser, ⛔ no change to the
-`email` pattern
+`(?<![a-zA-Z0-9._%+\-\d])` — additionally excludes URL-path and quoted-attribute contexts, scoped to
+the actual markup signature rather than a bare character (`(?<![a-zA-Z\/]\/)`, `(?<!=")`, `(?<!=')`),
+as a **pure regex change**: ⛔ no new dependency, ⛔ no HTML parser, ⛔ no change to the
+`email` pattern. ⚠ A bare `'` or `/` exclusion (the original D2 regex) silently drops a quoted phone
+number in prose or the second number of a slash-separated pair — closed by Decision `2026-08-22-150`
 **And** every existing recall assertion still passes **unmodified** — `public-pages.test.ts:195-219`
 (six cases), `scrape-test.spec.ts:209` (the Niyamavali planted control) and `:643` (the FR-93
 directory control). ⛔ **A regex edit that silently stops catching a planted control is worse than
@@ -1054,6 +1059,25 @@ function, so *"the trigger fired and was missed"* would be a **false** decay fin
 
 ---
 
+### Review Findings
+
+_bmad-code-review, three parallel layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor) against `git diff main...HEAD`, 2026-08-22._
+
+- [x] [Review][Patch] **(resolved from Decision)** AC2's precision lookbehinds (bare `'` and bare `/`) are unscoped to markup context, creating two real recall regressions — Blind Hunter and Edge Case Hunter independently found that `(?<!')` silences ANY digit run preceded by a single quote, not just an HTML attribute (`data-id='...'`), so a phone number quoted in prose (`'9876543210'`) evades `detectNakedPii`. This reaches further than the render-time leg: `apps/api/src/modules/rules/index.ts`'s publish-time backstop scans canonical JSON text, where a stray apostrophe or a deliberately-quoted value has no markup meaning at all. Symmetrically, `(?<!\/)` silences any digit run preceded by a bare slash, so slash-separated alternate numbers (`9876543210/9123456789`, a common Indian convention) lose their second number. Contrast with `(?<!=")`, which requires the two-char attribute signature `="` and can't misfire this way. This asymmetry is written into AC2's own Given/When/Then verbatim ("`/`, `="`, `'`") and is locked in by D2's ruling — the implementation is spec-compliant; the defect is in the AC/decision text itself. **User decision (2026-08-22): tighten both lookbehinds to real markup signatures (mirror `(?<!=")`'s pattern — require an actual attribute/URL-path signature, not a bare character), which requires a NEW decision-log entry that SUPERSEDES D2 (never edits it, [[feedback_supersede_never_reinterpret]]) before the regex change lands, plus updating AC2's Given/When/Then text and adding precision-regression tests for both evasions found.** [packages/contracts/src/public-pages/scrape.ts:292]
+- [x] [Review][Patch] **(resolved from Decision)** AC1 case 3 (the `0`-prefix landline shape) was inverted mid-implementation after the story's own verification table was found false, "raised to BigDev, ruled, and recorded" entirely inside this story file's Debug Log — with no corresponding `.decision-log.md` entry, unlike D1–D5 which each got a dedicated governance-commit-first treatment (Task 1, `fa243d8`). The outcome is sound and honestly documented (Acceptance Auditor confirmed AC1's letter is satisfied). **User decision (2026-08-22): add a decision-log entry documenting the inversion and its evidence**, consistent with this project's governance-commits-precede-implementation convention. [Debug Log References, ~L1203]
+
+- [x] [Review][Patch] Dev Agent Record File List misstates the final `sprint-status.yaml` transition as `in-progress`; the row actually lands at `review` (confirmed by the diff hunk and git log `2c71f18`). Stale snapshot from an earlier sub-session, never updated. [File List, `_bmad-output/implementation-artifacts/sprint-status.yaml`]
+- [x] [Review][Patch] `sprint-status.yaml` carries a stale, self-contradicting comment directly above the 11a-4 row ("FIVE DECISIONS (D1-D5) ARE OPEN... dev agent may NOT rule them") left over from the pre-ruling snapshot — it now sits above a row whose value is `review`, contradicting the same diff's own `last_updated: 2026-08-22f` entry ("bmad-dev-story COMPLETE"). [_bmad-output/implementation-artifacts/sprint-status.yaml]
+- [x] [Review][Patch] The AC3a "PUBLISHES CLEANLY" negative-control test uses a payload (`threshold_percent: 90, min_contributions: 10`) with no digit run anywhere near phone/Aadhaar length, so it cannot distinguish "the precision fix correctly excludes markup-context digit runs" from "there was nothing long enough to match." Blind Hunter and Edge Case Hunter both flagged this independently — Edge Case Hunter additionally traced that the publish-time scan runs over the *entire* `draft.payload` (not just `clause_payload_display_fields`), so a legitimate large numeric field (an epoch-millis timestamp, a large threshold) is untested territory that could reject a real governance action with no override path. Add a legitimately long numeric field to the negative-control fixture to give this test teeth. [apps/api/tests/integration/niyamavali-workflow.spec.ts]
+
+- [x] [Review][Defer] The publish-time PII backstop covers only the `niyamavali.amend` API write path; other writers into `clause_versions` (seed scripts, migrations, future bulk-import/admin tooling — §Q3(a) itself names `packages/domain/seed/niyamavali-v1-clauses.sql` as a real source of clause payloads) are not covered. Consistent with this story's explicit SCOPE BOUNDARY ("one added precondition check on the existing publish handler"), so not a bug in this diff — a real coverage gap worth tracking if more write paths are added. — deferred, pre-existing scope limitation by design
+- [x] [Review][Defer] New honeypot bait paths `/members/export` and `/api/v1/members/emails` read as plausible real endpoint names rather than obvious scanner fingerprints (contrast `/wp-login.php`, `/phpmyadmin`). Edge Case Hunter confirmed no current route collision, but permanently reserving these literal paths risks colliding with a genuinely useful future feature under the same name. — deferred, no current collision, future-risk only
+- [x] [Review][Defer] `piiPatterns()`'s digit matching is ASCII `\d` only — full-width Unicode digits or digits split by zero-width characters would evade both the render-time leg and the publish-time backstop. Pre-existing characteristic of `detectNakedPii`, not introduced by this diff, which only narrows the `phone` pattern's precision. — deferred, pre-existing engine characteristic
+
+**Dismissed as noise (4):** "OPEN, ROUTED" governance items (Contact/About ownership, §Q3(d), inert flags) lack an enforcement mechanism — already an established, explicitly-acknowledged project convention, not a defect in this diff; `security-headers.spec.ts`'s `CONTACT_BAIT` pinned-membership block reintroducing a parallel-list anti-pattern for only 5 of 11 honeypot paths — verified false, `toHaveLength(HONEYPOT_PATHS.length)` (line 72) already catches deletion of any of the 11 paths, `CONTACT_BAIT` is additive, not a replacement; `ClausePayloadPiiError`'s remediation message glossing over sign-off invalidation sequencing with no full-recovery-path test — minor test-coverage nitpick, not a behavioral defect; README's `FR-93` anchor link — verified correct against GitHub's slug algorithm by hand-computation, false positive.
+
+---
+
 ## Dev Notes
 
 ### Files this story touches, and what must be preserved
@@ -1497,7 +1521,7 @@ globally ([[project_ci_local_double_run_pollution]]). It was run **separately** 
 - `.decision-log.md` — Decision `2026-08-22-149` (Task 1; committed first and alone)
 - `_bmad-output/implementation-artifacts/deferred-work.md` — the 11a.4 section; CR-D1-1.16b +
   CR-D2-1.16b annotated in place; the Trap 5 limit **appended** to the topology item
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `11a-4-…` → `in-progress`; ledger comment
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `11a-4-…` → `review`; ledger comment
 - `_bmad-output/implementation-artifacts/11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only.md`
   — this file (Status, Tasks, Dev Agent Record, File List, Change Log)
 
@@ -1546,3 +1570,4 @@ globally ([[project_ci_local_double_run_pollution]]). It was run **separately** 
 | 2026-08-22 | AC5 — the seven-item FR-93 doctrine section lands in the canonical README. |
 | 2026-08-22 | AC6 — `deferred-work.md`: closures in exact language, CR-D2-1.16b's **unrecorded** 11a.1 closure captured, the Trap 5 limit **appended** to the topology item, Contact/About routed to John, two §Q3 findings routed to the Panel. |
 | 2026-08-22 | ⭐ AC7 — revert-sanity **found the honeypot count assertion vacuous by construction**; a deletion-proof pin was added and the leg re-proven red-then-green. |
+| 2026-08-22 | `bmad-code-review` (three parallel layers). ⭐ Blind Hunter + Edge Case Hunter **independently** found AC2's `phone` lookbehind excluded a bare `'`/`/`, not the markup signature — spec-compliant (AC2 specified it verbatim) but a real recall regression reaching the AC3a backstop. Decision `2026-08-22-150` **SUPERSEDES D2** (never reinterprets it); both lookbehinds now require the real markup signature; 2 new precision tests added; all pre-existing recall + false-positive tests stay green. Decision `2026-08-22-151` records AC1 case 3's inline BigDev ruling (Debug Log evidence), matching D1–D5's governance-first treatment. 3 small patches applied (File List, stale sprint-status comment, AC3a fixture strengthened with a realistic 13-digit field). 3 items deferred, 4 dismissed (2 verified false positives). Status → `done`. |

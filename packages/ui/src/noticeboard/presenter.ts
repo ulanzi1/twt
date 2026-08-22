@@ -154,11 +154,11 @@ export function deriveNoticeboardViewModel(
 
   const state: NoticeboardStripState = isLoading
     ? 'loading'
-    : status === 'refreshing'
-      ? 'refreshing'
-      : rows.length > 0
-        ? 'default'
-        : 'empty';
+    : rows.length > 0
+      ? status === 'refreshing'
+        ? 'refreshing'
+        : 'default'
+      : 'empty';
 
   const pinnedRender: NoticeboardSection['render'] = isLoading
     ? { kind: 'silent' }

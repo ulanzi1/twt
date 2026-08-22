@@ -4,7 +4,7 @@ baseline_commit: 54492eb9d8a83c8107acaf21c673c96de96ec7ec
 
 # Story 11a.5: `<NoticeboardStrip>` Foundational Layout Component `[PRIMITIVE]`
 
-Status: review
+Status: done
 
 > ✅ **BASELINE VERIFIED LIVE.** `git fetch origin` was run at authoring time
 > ([[feedback_git_fetch_before_remote_reasoning]]): `HEAD == origin/main == 54492eb`, zero ahead /
@@ -501,6 +501,15 @@ is the widening Trap 2 exists to forbid, in a second place. ⚠ If a field's con
   - [x] `pnpm ci:local` green (⚠ `--concurrency=4`; ⚠ `git push` runs the full leg via the pre-push hook — the "hang" is expected, [[project_friction_budget_baseline_ratchet]])
   - [x] Sprint-status ledger entry per [[project_sprint_status_ledger]] — one combined top-of-file entry; flip **only** `11a-5-…`; ⛔ `epic-11a` stays `in-progress` (11a.6 remains)
   - [x] ⛔ **REBASE-merge**, never squash ([[project_story_automator_ops]])
+
+### Review Findings
+
+- [x] [Review][Defer] `NoticeboardBannerNoticeInput` drops 10.9's `revision` field, discarding the copy-staleness/re-surface-on-edit signal `BannerHost.tsx` already relies on via `bannerDismissalKey(bannerId, revision)` — `packages/ui/src/noticeboard/view-model.ts:199-207` and `apps/mobile/components/panchayat/banner-notice.ts:46-67`. When 11a.6 wires dismiss-with-ack against the row's bare `id` (the banner_id), an operator's copy edit (which bumps `revision` on the same `banner_id`) will not re-surface the row the way the established `BannerHost` precedent guarantees for the identical data. — deferred: out of scope for 11a.5; dismiss-with-ack and everything it needs is explicitly 11a.6's territory, not this story's row-interaction contract.
+- [x] [Review][Patch] `NoticeboardStripState` can report `'refreshing'` while zero rows are on screen, contradicting the state's own doc comment ("content is already on screen and STAYS there") [packages/ui/src/noticeboard/presenter.ts:155-161] — fixed: `state` derivation now requires `rows.length > 0` before `status === 'refreshing'` can produce `'refreshing'`; regression test added (`packages/ui/tests/noticeboard/presenter.test.ts`)
+- [x] [Review][Defer] No hairline separates the `pinned` section's rendered content from `<PollsEntry>`'s rendered content — the `polls` case in `Section()` never renders a `<Hairline />`, unlike `pinned`, contradicting "a hairline separates sections that actually rendered something" (UX `:490-494`) [apps/mobile/components/panchayat/PanchayatNoticeboard.tsx:125-129] — deferred: reclassified from patch during review. The unambiguous fix needs either touching `PollsEntry.tsx` (barred: "leave `<PollsEntry>` exactly where it is") or re-deriving its render-nothing-when-empty logic here (barred: "this screen owns only its POSITION"); an unconditional hairline dangles with nothing below it whenever there are no open polls. Needs a design call, not a same-story patch.
+- [x] [Review][Defer] `isBannerRenderedByRoute` suppresses on a bare last-path-segment match (`'panchayat'`) with no group/route-tree anchor — a future unrelated screen whose last segment happens to be the literal string `panchayat` would silently suppress the ambient banner app-wide [apps/mobile/components/banners/route-suppression.ts:36-38] — deferred, pre-existing tradeoff explicitly accepted in the file's own comments; narrow risk
+- [x] [Review][Defer] `toNoticeboardBannerNotice`'s empty-copy guard is an AND (`title === '' && body === ''`), so an empty-title/non-empty-body banner still produces a row — `PinnedItem`'s `accessibilityLabel` then reads with a leading `". "` [apps/mobile/components/panchayat/banner-notice.ts:53; apps/mobile/components/panchayat/PinnedItem.tsx:36] — deferred, pre-existing; only reachable via legacy/partial banner data since publish requires all four copy fields non-empty
+- [x] [Review][Defer] Minor accessibility polish: the Masthead Pariwar-seal `<View accessibilityLabel>` has no `accessible={true}` [apps/mobile/components/panchayat/PanchayatNoticeboard.tsx:167-176]; `PinnedSkeleton` uses `accessibilityRole="progressbar"` with no `accessibilityValue`, a misuse of the role for static skeleton rows [apps/mobile/components/panchayat/PanchayatNoticeboard.tsx:201-203] — deferred, pre-existing, low severity
 
 ---
 

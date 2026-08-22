@@ -1,4 +1,42 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-22m (Story 11a.5 — bmad-code-review COMPLETE. ONE ROW FLIPS:
+#   11a-5-noticeboard-strip-foundational-layout-component: review -> done.
+#   ⛔ epic-11a stays in-progress (11a.6 remains). ⛔ No other row moves.
+#
+#   Three parallel adversarial layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor) ran
+#   against the branch diff (baseline 54492eb..HEAD). Acceptance Auditor: CLEAN, zero violations
+#   against all six ACs and all seven ruled decisions. Of 17 raw findings across the other two
+#   layers, 11 were dismissed after verification (2 were UNREACHABLE — `severity`/`valid_until` are
+#   both zod-validated at the API boundary before reaching the presenter, so the "drifted wire
+#   value" crash paths Edge Case Hunter raised cannot fire; 1 was ALREADY ROUTED — the
+#   isError-not-read posture is the same deliberate `PollsEntry` deferral this story's own code
+#   comment cites and does not re-open; the rest were confirmed-deliberate design decisions
+#   [[project_noticeboard_strip_substrate]] already documents in-code).
+#
+#   ⭐ ONE PATCH APPLIED + VERIFIED: `NoticeboardStripState` could report `'refreshing'` while ZERO
+#   rows were on screen (`status === 'refreshing'` with an expired/absent/filtered banner),
+#   contradicting the state's own doc comment ("content is already on screen and STAYS there").
+#   Fixed in `packages/ui/src/noticeboard/presenter.ts` — `'refreshing'` now requires
+#   `rows.length > 0`; a regression test closes the gap (147/147 `@twt/ui` tests green, 327/327
+#   `apps/mobile` tests green).
+#
+#   ⚠ ONE PATCH RECLASSIFIED TO DEFER MID-REVIEW: the missing hairline between `pinned` and
+#   `<PollsEntry>`'s rendered content looked unambiguous at triage but is not — the fix needs
+#   either touching `PollsEntry.tsx` (a hard boundary this story is barred from crossing) or
+#   re-deriving its render-nothing-when-empty logic here (also barred — this story owns POSITION
+#   only). Routed to deferred-work.md as a design question, not silently patched.
+#
+#   ⭐ ONE decision-needed RESOLVED BY THE USER: `NoticeboardBannerNoticeInput` drops 10.9's
+#   `revision` field — the copy-staleness/re-surface-on-edit signal `BannerHost.tsx` already keys
+#   dismissal on via `bannerDismissalKey(bannerId, revision)`. Deferred to Story 11a.6 (out of
+#   scope for 11a.5 — dismiss-with-ack is entirely 11a.6's territory), not patched here.
+#
+#   ⚠ FIVE TOTAL ITEMS routed to deferred-work.md under "code review of story-11a.5": the revision
+#   gap above, the hairline gap above, the route-suppression bare-last-segment match risk
+#   (`route-suppression.ts`), an empty-title/non-empty-body banner producing a malformed a11y
+#   label (only reachable via legacy/partial data — publish requires all four copy fields
+#   non-empty), and two minor accessibility polish items (missing `accessible` on the Masthead
+#   seal; `progressbar` role misuse on the loading skeleton).
 # last_updated: 2026-08-22l (Story 11a.5 — bmad-dev-story COMPLETE. ONE ROW FLIPS:
 #   11a-5-noticeboard-strip-foundational-layout-component: in-progress -> review.
 #   ⛔ epic-11a stays in-progress (11a.6 remains). ⛔ No other row moves.
@@ -9782,7 +9820,7 @@ development_status:
   # ⛔ A superseded authoring pass sits on `story/11a.4-phone-email-obfuscation` (656aaa5) -- do NOT
   # check it out or merge it. ⛔ This story does NOT touch launch-gate Row 17.
   11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only: done
-  11a-5-noticeboard-strip-foundational-layout-component: review
+  11a-5-noticeboard-strip-foundational-layout-component: done
   11a-6-pinned-notice-component: backlog
   epic-11a-retrospective: optional
 

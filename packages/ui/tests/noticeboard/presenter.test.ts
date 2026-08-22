@@ -147,6 +147,18 @@ describe('ALL FOUR ratified states are reachable and DISTINCT (UX `:1808`, AC1)'
     expect(refreshing.skeleton).toBeNull();
   });
 
+  it('[Review][Patch] `refreshing` requires content ON SCREEN — a background re-read with zero rows is `empty`, never `refreshing`', () => {
+    // A `status: 'refreshing'` background re-read that yields no rows (banner absent, expired, or
+    // filtered out) must NOT report `refreshing`: that would claim "content is already on screen and
+    // STAYS there" (the type's own doc comment) while nothing is on screen at all.
+    const vm = deriveNoticeboardViewModel(input({ bannerNotice: null, status: 'refreshing' }), NOW);
+    expect(vm.state).toBe('empty');
+    expect(sectionById(vm, 'pinned').render).toEqual({
+      kind: 'empty-with-copy',
+      copyKey: NOTICEBOARD_PINNED_EMPTY_KEY,
+    });
+  });
+
   it('carries a skeleton IFF the state is `loading`', () => {
     for (const status of ['ready', 'refreshing'] as const) {
       expect(deriveNoticeboardViewModel(input({ status }), NOW).skeleton).toBeNull();

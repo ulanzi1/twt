@@ -86,4 +86,53 @@ describe('Honeypot traps (AC-4, hermetic — no DB)', () => {
       await teardown(t);
     }
   });
+
+  // ── Story 11a.4 (AC4 + AC7): the contact-harvesting bait family, PINNED BY NAME
+  //
+  // ⭐ WHY A NAMED LIST HERE, WHEN EVERY OTHER ASSERTION IN THIS FILE DERIVES:
+  // the derived assertions above are vacuous AGAINST DELETION by construction. Both
+  // the loop and `toHaveLength(HONEYPOT_PATHS.length)` read the SAME array, so
+  // removing a path changes both sides at once and the suite stays green. That is
+  // genuinely useful for "declared but not registered" — and it can ⛔ NEVER catch a
+  // path being deleted. Story 11a.4's revert-sanity leg found this by RUNNING the
+  // revert (delete a bait path → the count assertion did ⛔ NOT go red), which is
+  // exactly the "vacuous by construction" defect class Decision 2026-08-21-145
+  // recorded for the /members AC10 control.
+  //
+  // ⛔ This is NOT the hand-maintained parallel list the module doc forbids. That
+  // warning is about the login-wall ALLOWLIST, which must keep deriving so ADDING a
+  // path needs no edit. This is an anti-regression PIN on the five paths Story 11a.4
+  // is accountable for: adding a bait path still needs ⛔ no edit here; deleting one
+  // of THESE five is a deliberate scope reversal and ⭐ SHOULD force a red test and a
+  // conscious edit.
+  it('the Story 11a.4 contact-harvesting bait family is present and live (deletion-proof)', async () => {
+    const CONTACT_BAIT = [
+      '/staff-directory.csv',
+      '/contacts.json',
+      '/member-contacts.xlsx',
+      '/members/export',
+      '/api/v1/members/emails',
+    ] as const;
+
+    // Pinned MEMBERSHIP: this is the half that survives a deletion from HONEYPOT_PATHS.
+    for (const path of CONTACT_BAIT) {
+      expect(HONEYPOT_PATHS).toContain(path);
+    }
+
+    // …and each is actually wired, not merely declared.
+    const t = await createTestApp();
+    try {
+      for (const path of CONTACT_BAIT) {
+        const res = await t.app.inject({ method: 'GET', url: path });
+        expect(res.statusCode).toBe(200);
+        // ⛔ D4 = (a): the bare benign body, ⛔ NEVER a fake contact payload. A
+        // fabricated phone/email here would trip this project's own naked-PII
+        // discipline if it ever reached a scanned render.
+        expect(res.json()).toEqual({ status: 'ok' });
+      }
+      expect(t.auditSink.ofType('abuse.honeypot')).toHaveLength(CONTACT_BAIT.length);
+    } finally {
+      await teardown(t);
+    }
+  });
 });

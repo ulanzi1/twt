@@ -485,7 +485,7 @@ have
 **When** `piiPatterns()` (`packages/contracts/src/public-pages/scrape.ts:263-292`) is tightened
 **Then** the `phone` pattern's negative lookbehind — currently
 `(?<![a-zA-Z0-9._%+\-\d])` — additionally excludes URL-path and quoted-attribute contexts, scoped to
-the actual markup signature rather than a bare character (`(?<![a-zA-Z\/]\/)`, `(?<!=")`, `(?<!=')`),
+the actual markup signature rather than a bare character (`(?<![a-zA-Z/]\/)`, `(?<!=")`, `(?<!=')`),
 as a **pure regex change**: ⛔ no new dependency, ⛔ no HTML parser, ⛔ no change to the
 `email` pattern. ⚠ A bare `'` or `/` exclusion (the original D2 regex) silently drops a quoted phone
 number in prose or the second number of a slash-separated pair — closed by Decision `2026-08-22-150`

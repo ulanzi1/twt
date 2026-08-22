@@ -1,4 +1,191 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-22p (Story 11a.6 — dev-story pass BEGINS. ONE ROW FLIPS:
+#   11a-6-pinned-notice-component ready-for-dev -> in-progress.
+#   ⛔ epic-11a stays in-progress — ⭐ 11a.6 is the LAST story in the epic, so the epic becomes
+#   eligible for `done` at 11a.6 close-out (epic-11a-retrospective is `optional`). ⛔ No other row
+#   moves. ⛔ Row 17 untouched and still `open` — the noticeboard is a MEMBER-APP surface and bears
+#   on no directory launch gate ([[project_directory_launch_gated_on_killswitch_ui]]).
+#   ⭐ TASK 0 IS DISCHARGED AND LANDED FIRST: Decision `2026-08-22-153` (nine rulings, all as
+#   recommended) is committed ALONE with a `governance:` prefix BEFORE this bookkeeping commit and
+#   before any implementation ([[feedback_governance_commits_precede_implementation]]).
+#   ⚠ The `.decision-log.md` head was read LIVE at implementation time — it was `2026-08-22-152`
+#   (Story 11a.5), so the new entry is `-153`. ⛔ Not hardcoded from the story file.
+#   ⚠ ⭐ THE DURABLE RECORD IS THAT COMMIT, ⛔ not this ledger and ⛔ not the story file.
+#
+# last_updated: 2026-08-22o (Story 11a.6 — VALIDATED via bmad-create-story, then ✅ ALL NINE
+#   DECISIONS RULED BY BIGDEV, each AS RECOMMENDED: ✅ D1(a) · D2(a) · D3(a) · D4(a) · D5(a) ·
+#   D6(a) · D7(a) · D8(a) · D9(a).
+#   ⛔ NO ROW FLIPS; 11a-6-pinned-notice-component stays `ready-for-dev`.
+#   ⛔ epic-11a stays in-progress (11a.6 is the LAST story; the epic becomes eligible for `done` at
+#   11a.6 close-out). ⛔ Row 17 untouched — member-app surface.
+#   ⚠ DURABILITY IS TASK 0's `governance:` COMMIT, ⛔ not this ledger and ⛔ not the story file
+#   ([[feedback_governance_commits_precede_implementation]]) — history must read governance →
+#   implementation, and Task 0 reads the .decision-log.md head LIVE (⛔ 2026-08-22-152 was the head
+#   at authoring; ⛔ do not hardcode it).
+#
+#   ⚠ ⭐ THE STORY FILE IS NOW UNCONDITIONAL — every `IFF`, every `[GATED ON D9]` and every
+#   "if ruled (b)" branch was resolved IN PLACE rather than left to contradict the ruling (the
+#   11a.5 entry `j` precedent). ⭐ TWO RULINGS UNGATE WORK, AND ⛔ UNGATED MEANS REQUIRED:
+#     D8(a) — the :491→:1819 UX-SPEC AMENDMENT IS APPLIED HERE, as a standalone `docs:` commit,
+#     and deferred-work item (e) closes as "Closed by edit" ([[feedback_closure_language_precision]]).
+#     ⛔ SCOPE IS THE ALREADY-RULED SUPERSESSION ONLY (retire `saffron`; correct every
+#     black-as-bereavement reading). ⚠ The §1817/§1818 affordance gap is a NEW question and STAYS
+#     routed (Task 6a) — ⛔ it is not folded into the amendment.
+#     D9(a) — the `noticeboard` locale files JOIN microcopy.yaml `scope.copy_globs` WITH PROVEN
+#     TEETH (planted violation in BOTH locales + revert-sanity). ⛔ Named by NO epic AC; found by the
+#     authoring pass. ⭐ PRE-FLIGHTED AND MEASURED, ⛔ not assumed: both globs were added at d902b04
+#     and `pnpm microcopy:check` was RUN — it PASSES (18 copy files vs 16, zero findings), so
+#     closing the gap does ⛔ NOT drag 11a.5's shipped copy into a re-authoring
+#     ([[feedback_record_unattested_no_backfill]]). The probe was reverted; the entry is unmade.
+#     D6(a) — CATEGORY_HINT_KEYS / the four `open_detail_*` keys RETIRE; the category moves into the
+#     accessibility LABEL (UX :1820) and the row becomes NON-INTERACTIVE CONTENT. ⚠ The
+#     `black ≠ memorial` guarantee 11a.5 won SURVIVES VERBATIM into the successor keys.
+#
+#   ⭐ WHAT THE VALIDATION PASS FOUND — three CRITICAL, all now carried in the story file:
+#     1. ⛔ D6(a) SILENTLY DESTROYS UX :1820's "title and meta read as a unit". That guarantee holds
+#     TODAY only because the row is a `Pressable` (RN defaults it to `accessible={true}`, merging
+#     children into ONE announcement). Removing it removes the mechanism. ⇒ an EXPLICIT
+#     `accessible={true}` wrapper around title+meta ONLY, with the dismiss control as a SIBLING —
+#     ⛔ a control nested inside an accessible container is not individually focusable. ⚠ ⛔ ZERO
+#     in-repo precedent (`grep -rn 'accessible={true}' apps/mobile/components/` → zero hits), so
+#     ⛔ this will NOT happen by pattern-matching.
+#     2. ⛔ TASK 4 ORDERED RENDER-TEST ASSERTIONS IN A HARNESS THAT CANNOT RENDER. apps/mobile is
+#     pure-Vitest with ⛔ NO @testing-library/react-native anywhere. The only remedy a dev agent
+#     would reach for is a NEW WORKSPACE DEPENDENCY, which this story forbids. ⇒ restated as three
+#     reachable mechanisms (source-scan · real-`t()` · presenter unit tests) — ⭐ which is exactly
+#     why AC4 makes the affordance predicate a PRESENTER PROPERTY and the ≥44pt floor a NAMED
+#     CONSTANT: an inline JSX condition or an anonymous `44` is UNASSERTABLE here.
+#     3. ⛔ ONE ROUTED ITEM WAS THE ONLY ONE THE STORY NEVER NAMED: 11a.5 code-review item 5 (the
+#     seal <View accessibilityLabel> with no `accessible={true}`; PinnedSkeleton's `progressbar`
+#     role with no accessibilityValue). Its trigger is "an accessibility audit pass over the mobile
+#     app's newer screens" and THIS is the story whose own AC6 is semantic accessibility, editing
+#     that exact file ⇒ "the trigger did not fire" is ⛔ NOT available. ⚠ It is the SAME DEFECT
+#     CLASS as finding 1. Now Task 6(e), to be recorded as "Not addressed" ⛔ never silence.
+#
+#   ⚠ AND ONE INTERNAL INCONSISTENCY FOUND WHILE APPLYING: Task 0 said "recording BigDev's D1-D8
+#   rulings" while NINE were open — D9 was added late in authoring and ⛔ never propagated to the
+#   Tasks list. ⭐ That is exactly [[feedback_spec_edits_must_propagate_to_tasks]]: the dev agent
+#   works from Tasks, so D9's ruling would have been left OUT of the governance commit meant to make
+#   it durable. Task 0 now reads D1-D9 with an explicit "⛔ not eight".
+#
+#   ⭐ D1(a) IS STRONGER THAN THE STORY ORIGINALLY ARGUED, and the file now says so: this is ⛔ NOT
+#   "the UX spec overrides the epic". The 11a.6 AC's OWN `Given` anchors on UX-DR16, and
+#   epics.md:406 defines it as "Noticeboard ROW primitive with left colored stub" — as do UX :680
+#   and :1222. ⇒ FOUR ratified sources say ROW and ONE line of epic `Then` prose says "persistent
+#   banner above the fold". ⚠ That prose already describes SHIPPED `<BannerHost>` (10.9); building
+#   it would make a THIRD banner surface and deliberately recreate the one-banner-twice bug 11a.5's
+#   D7(a) + route-suppression.ts just fixed. ⇒ a DEFECTIVE AC SENTENCE, ⛔ not a competing contract.
+#
+#   ⚠ CITATION DRIFT CORRECTED: UX ":1806" (cited twice for "full-width vertical stack") is a BLANK
+#   LINE — the NoticeboardStrip Purpose line is :1807. ⭐ It was the ONE claim in the file traceable
+#   to an 11a.5 artifact (PanchayatNoticeboard.tsx:33 carries the same off-by-one) rather than to a
+#   fresh read; ~45 other line-anchored citations verified EXACT at d902b04. Also: scripts/ holds 19
+#   gate dirs (⛔ not 20) and copy_globs ends at :356 (⛔ not :355).
+#
+#   ✅ D3(a) SETTLES THE FRICTION DISPOSITION AS WRITTEN: one tap, ⛔ no confirm step ⇒ ⛔ NO new
+#   friction-budget row (the ledger's default is zero friction, and UX :2318 reserves confirmation
+#   modals for IRREVERSIBLE actions — a dismissal is reversible by a copy revision). ⛔ The D3(b)
+#   branch that would have owed a named-payer row is ⛔ not the ruling and ⛔ is not built.
+#
+#   ✅ D5(a) CLOSES THE ROUTED 11a.5 CODE-REVIEW FINDING BY DESIGN, ⛔ NOT BY ADDING THE FIELD: the
+#   SCREEN already holds `data.banner` (verified — PanchayatNoticeboard.tsx builds the presenter
+#   input from it), so it composes `bannerDismissalKey(banner_id, revision)` itself. ⇒ the
+#   source-agnostic row descriptor is ⛔ NOT widened, all THREE presenter.test.ts contract fences
+#   (:256, :294, :327) stay INTACT, and there stays exactly ONE implementation of the key format.
+#
+#   ⚠ POLICY MEANING (AI-10-1) UNCHANGED BY THE RULING — member-initiated self-suppression: "once
+#   you tap Dismiss, that notice is gone from your noticeboard for good unless the Pariwar rewrites
+#   it; it changes nothing else". ⛔ No Niyamavali clause governs it and that is CORRECT, ⛔ not a
+#   gap. ⭐ What keeps that true is Decision 2026-08-22-152 D4(a) as a STANDING CONSTRAINT: no
+#   coverage-bearing deadline ever rides the noticeboard. ⚠ The first story that puts one here owes
+#   a Niyamavali check before it ships.
+# last_updated: 2026-08-22n (Story 11a.6 story file AUTHORED via bmad-create-story: backlog ->
+#   ready-for-dev. ONE ROW FLIPS: 11a-6-pinned-notice-component.
+#   ⛔ epic-11a stays in-progress — ⭐ 11a.6 is the LAST story in the epic, so the epic becomes
+#   eligible for `done` at 11a.6 close-out (epic-11a-retrospective is `optional`).
+#   ⛔ Row 17 UNTOUCHED and still `open` — this is a MEMBER-APP surface and bears on it in no way.
+#
+#   ⭐ THE HEADLINE FINDING: THE EPIC AC FOR 11a.6 DESCRIBES A COMPONENT THAT ALREADY SHIPPED, AND
+#   IT IS NOT THE ONE THE UX SPEC NAMES. The epic says "a persistent pinned banner ABOVE THE FOLD
+#   with title, body, severity, dismiss-with-ack" — ⚠ every word of which already describes Story
+#   10.9's `<BannerHost>` (mounted at app/(tabs)/_layout.tsx:21 above EVERY authenticated tab,
+#   severity-coloured, ≥44pt dismiss → POST …/dismiss, optimistic + rollback). ⛔ UX
+#   :1814-1821 says something else entirely: "a single notice ROW … Surfaces: INSIDE
+#   `<NoticeboardStrip>`". ⇒ building the epic's words produces a THIRD banner surface — ⚠ and
+#   Story 11a.5 just spent a whole ruling (D7(a) + route-suppression.ts) stopping ONE banner from
+#   rendering TWICE on ONE screen. D1 rules it; the recommendation is the SAME shape as D2(a):
+#   the component-level spec section wins over epic/screen prose.
+#
+#   ⭐ 2nd STRUCTURAL FINDING: 11a.5's OWN TESTS FENCE THIS STORY'S WORK — FOUR assertions, and the
+#   distinction between them is the point. THREE protect a CONTRACT and must STAY
+#   (presenter.test.ts:256 the banner input's exactly-7 keys · :294 the row descriptor's exactly-5 ·
+#   ⭐ :327 which FORBIDS any row key matching /dismiss/i other than `dismissible`). TWO protect a
+#   BOUNDARY IN TIME and this is the story they were waiting for (panchayat-noticeboard-render
+#   .test.ts:334-340 forbidding `useDismissBannerMutation` in BOTH the board and the row;
+#   :191-198 on the category hint keys). ⚠ D5(a) is chosen SO THE THREE CONTRACT FENCES STAY INTACT.
+#
+#   ⭐ D5 CLOSES THE 11a.5 CODE-REVIEW DEFERRAL BY DESIGN, ⛔ NOT BY ADDING THE FIELD. The routed
+#   finding ("`NoticeboardBannerNoticeInput` drops 10.9's `revision`"; trigger: "Story 11a.6 wiring
+#   dismiss-with-ack") is answered: the dismissal identity belongs to the BANNER LANE, and the
+#   SCREEN already holds the banner — so it composes `bannerDismissalKey(banner_id, revision)`
+#   itself and hands the row a `dismissed` flag + an `onDismiss` callback. ⛔ The source-agnostic row
+#   descriptor is NOT widened with a source-specific identity, and there stays exactly ONE
+#   implementation of the key format.
+#
+#   ⭐⛔ D9 WAS FOUND BY THIS PASS AND IS NAMED BY NO EPIC AC: the `noticeboard` i18n namespace 11a.5
+#   minted on a LIVE MEMBER TAB is ABSENT from microcopy.yaml `scope.copy_globs` ⇒ the member
+#   vocabulary register, the blame/scarcity/fursat tone rules and the UX-DR73 numeral discipline are
+#   BLIND to it while `microcopy:check` reports green — and 11a.6 adds MORE copy there. ⚠ Story
+#   11a.2, THREE STORIES EARLIER IN THIS SAME EPIC, wrote the rule against exactly this
+#   (microcopy.yaml:350-352: "the register grows surface-by-surface BY BEING ADDED TO — a new
+#   namespace that is not globbed is UNSCANNED COPY wearing a green check"). Recommendation (a):
+#   close it here WITH PROVEN TEETH (planted violation in BOTH locales + revert-sanity), ⛔ not a
+#   green scan ([[feedback_gate_scope_semantic_coverage]]).
+#
+#   ⚠ A LIVE ACCESSIBILITY DEFECT IS RECORDED, ⛔ not inherited: PinnedItem.tsx:38-45 announces
+#   `accessibilityRole="button"` with a "Tap to open … detail" hint over an EMPTY onPress. There is
+#   ⛔ no detail screen and the descriptor carries ⛔ no link CTA (routed item (g), whose trigger
+#   fires here). ⇒ a screen-reader user is told there is a destination and nothing happens. D6(a)
+#   removes the LIE rather than inventing a feature, and moves the category into the LABEL per
+#   UX :1820. ⚠ The `black ≠ memorial` guarantee 11a.5 won must SURVIVE into the successor keys.
+#
+#   ⚠ TWO POST-DISMISS BEHAVIOURS COLLIDE over the SAME banner: UX :1818 ratifies "dismissed (faded
+#   if member-dismissable)" for `<PinnedNotice>`, while `<BannerHost>` REMOVES optimistically. D4
+#   rules it — (a) render the ratified faded state and let the refetch remove the row, because
+#   removing immediately makes a ratified state UNREACHABLE. ⭐ There is no flash-to-empty to design
+#   around: the in-flight refetch maps to `refreshing`, which keeps content on screen by construction.
+#
+#   ⭐ D8: THE :491→:1819 UX-SPEC AMENDMENT'S NAMED TRIGGER IS THIS AUTHORING PASS. deferred-work
+#   item (e) says so in terms ("or Story 11a.6's authoring pass — whichever comes first").
+#   Recommendation (a): APPLY it as a standalone `docs:` commit and close it as "Closed by edit"
+#   ([[feedback_closure_language_precision]]) — ⛔ scope is the ALREADY-RULED supersession only; the
+#   §1817/§1818 affordance gap is a NEW question and stays routed. ⚠ (b) re-routing a FIRED trigger
+#   is how a routed item becomes permanent.
+#
+#   ⛔ NINE DECISIONS OPEN — D1..D9, each with a recommendation. `dev-story` must NOT start before
+#   BigDev rules them; Task 0 commits the ruling as `governance:` FIRST (governance precedes
+#   implementation). ⚠ Recommendations: D1(a) · D2(a) · D3(a) · D4(a) · D5(a) · D6(a) · D7(a) ·
+#   D8(a) · D9(a). ⚠ D3(b) (a confirm step) would OWE A FRICTION-BUDGET ROW with a named payer —
+#   the ledger's default is zero friction; recommendation (a) is one tap, per UX :2318's own
+#   "when NOT to use a confirmation modal" list.
+#
+#   ⭐ WHAT THIS STORY REUSES RATHER THAN BUILDS (⛔ no migration, ⛔ no schema change, ⛔ no API
+#   route, ⛔ no new package, ⛔ no new workspace dep): the idempotent revision-aware dismiss
+#   endpoint, `useDismissBannerMutation`, `bannerDismissalKey`, the ≥44pt constant, the D6(a) colour
+#   map, the registered `noticeboard` namespace and the `NoticeboardRowDescriptor` contract. The only
+#   genuinely NEW artifacts are the row presenter, its tests and a handful of i18n keys.
+#
+#   ⚠ AC5 IS SATISFIED BY CONSTRUCTION AND ITS AC EXISTS TO KEEP IT THAT WAY: the epic's "respects
+#   Story 11a.1 matrix tier" SHIPPED at 11a.5 (presenter.ts:63-100, fail-closed). A row only reaches
+#   `<PinnedNotice>` after passing it, so a row-level filter could only ever DISAGREE. ⭐ Asserted BY
+#   SHAPE — the row presenter takes ⛔ no viewer/audience/tier input.
+#
+#   ⚠ POLICY MEANING (AI-10-1) — this story's predicate is MEMBER-INITIATED SELF-SUPPRESSION, and it
+#   is SHARPER than 11a.5's tier filter: a member can hide a notice from THEMSELVES, durably and
+#   server-side (read.ts:134-137 — suppressed until an operator bumps `revision`). ⛔ No Niyamavali
+#   clause governs it and that is CORRECT, ⛔ not a gap — a notice is announcement copy. ⭐ What keeps
+#   that answer true is Decision 2026-08-22-152 D4(a) as a STANDING CONSTRAINT: no coverage-bearing
+#   deadline ever rides the noticeboard. ⚠ The first story that puts one here owes a Niyamavali check.
 # last_updated: 2026-08-22m (Story 11a.5 — bmad-code-review COMPLETE. ONE ROW FLIPS:
 #   11a-5-noticeboard-strip-foundational-layout-component: review -> done.
 #   ⛔ epic-11a stays in-progress (11a.6 remains). ⛔ No other row moves.
@@ -9821,7 +10008,7 @@ development_status:
   # check it out or merge it. ⛔ This story does NOT touch launch-gate Row 17.
   11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only: done
   11a-5-noticeboard-strip-foundational-layout-component: done
-  11a-6-pinned-notice-component: backlog
+  11a-6-pinned-notice-component: in-progress
   epic-11a-retrospective: optional
 
   # ==========================================================================

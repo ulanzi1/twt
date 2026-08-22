@@ -354,6 +354,24 @@ scope:
     # blame/scarcity tone rules bite it.
     - packages/i18n/locales/hi/members.json
     - packages/i18n/locales/en/members.json
+    # Story 11a.6 — the `noticeboard` namespace strings (the Panchayat Noticeboard, a LIVE
+    # member tab: the masthead, the pinned-section header + its ratified empty copy, the
+    # <PinnedNotice> row's category labels, and the dismiss-with-ack a11y strings).
+    # ⛔ Named by NO epic AC — Story 11a.5 minted this namespace and rendered it on a live
+    # member surface WITHOUT globbing it, and Story 11a.6 adds more copy to it. Ruled at
+    # Decision 2026-08-22-153 D9(a): the story that makes the gap bigger closes it.
+    # ⚠ This copy is member-facing, so the member register + the blame/scarcity/fursat tone
+    # rules bite it — and the UX-DR73 numeral discipline is the semantically load-bearing one
+    # here: UX `:1161` (v4) rules THIS surface's standalone counts and dates LATIN, operational
+    # and celebration framing alike, so a Devanagari operational digit must fail at PR time.
+    # ⭐ Teeth proven (shipped copy clean + planted violations in BOTH locales that FIRE +
+    # revert-sanity), ⛔ not merely scanned — see scripts/microcopy/noticeboard.test.ts
+    # ([[feedback_gate_scope_semantic_coverage]]: a green scan over newly-scanned files proves
+    # nothing).
+    # ⛔ NOTICE CONTENT is not in scope and never will be: an operator's title and body arrive
+    # as DATA on the row descriptor. Only CHROME is catalog copy.
+    - packages/i18n/locales/hi/noticeboard.json
+    - packages/i18n/locales/en/noticeboard.json
 
 # Allow-list — a finding is suppressed when an entry's `pattern` (regex, case-insensitive)
 # matches the finding's line AND (if `file` is set) the file path ends with it. GENUINE

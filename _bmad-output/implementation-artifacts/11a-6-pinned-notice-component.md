@@ -479,11 +479,11 @@ vs *"Not addressed"* — ⛔ never collapsed, and ⛔ never marked closed merely
     - [x] **PURE UNIT TESTS** in `packages/ui` for anything about composition or state (Task 2) — ⛔ not here
   - [x] ⛔ **Do NOT add a renderer to make an assertion reachable.** `@testing-library/react-native` is a **new workspace dependency**, which this story forbids — if a guarantee seems to need one, **stop and raise it**; it means the logic belongs in the presenter
 
-- [ ] **Task 5 — ✅ bring the `noticeboard` copy into the microcopy register** (AC: 7) — ⚠ **D9(a) RULED: REQUIRED**
-  - [ ] Add `packages/i18n/locales/{hi,en}/noticeboard.json` to `microcopy.yaml` `scope.copy_globs`, with an inline rationale comment in the register of the existing entries
-  - [ ] ⭐ `scripts/microcopy/noticeboard.test.ts` — **real** `microcopy.yaml` + **real** locale files; shipped copy CLEAN **and** a planted violation in **BOTH** locales that **FIRES**, plus revert-sanity ([[feedback_gate_scope_semantic_coverage]])
-  - [ ] ⚠ Fix any real finding **in the copy** (the 8.10 `out-of-band` precedent); ⛔ no `allow:` entry to make a scan pass, ⛔ no edit to `scripts/microcopy/{check,lib}.ts`
-  - [ ] ⚠ ⭐ **The shipped 11a.5 copy is already CLEAN under the added scope** (measured: both globs added → `pnpm microcopy:check` passes, 18 copy files, zero findings) ⇒ ⛔ a finding here is a **NEW** defect, ⛔ not expected churn
+- [x] **Task 5 — ✅ bring the `noticeboard` copy into the microcopy register** (AC: 7) — ⚠ **D9(a) RULED: REQUIRED**
+  - [x] Add `packages/i18n/locales/{hi,en}/noticeboard.json` to `microcopy.yaml` `scope.copy_globs`, with an inline rationale comment in the register of the existing entries
+  - [x] ⭐ `scripts/microcopy/noticeboard.test.ts` — **real** `microcopy.yaml` + **real** locale files; shipped copy CLEAN **and** a planted violation in **BOTH** locales that **FIRES**, plus revert-sanity ([[feedback_gate_scope_semantic_coverage]])
+  - [x] ⚠ Fix any real finding **in the copy** (the 8.10 `out-of-band` precedent); ⛔ no `allow:` entry to make a scan pass, ⛔ no edit to `scripts/microcopy/{check,lib}.ts`
+  - [x] ⚠ ⭐ **The shipped 11a.5 copy is already CLEAN under the added scope** (measured: both globs added → `pnpm microcopy:check` passes, 18 copy files, zero findings) ⇒ ⛔ a finding here is a **NEW** defect, ⛔ not expected churn
 
 - [ ] **Task 6 — route what this story does not build** (AC: 8) ([[feedback_gap_analysis_observational]])
   - [ ] (a) ⭐ **`ux-design-specification.md:1817`'s row anatomy has NO dismiss slot while `:1818` ratifies a `dismissed` state.** ⚠ An **incompleteness**, ⛔ not a `:491`-style contradiction — ⛔ do not record it as a supersession. Route the anatomy addition (the affordance this story ships is the de-facto answer, and the spec should say so). **Trigger:** the next edit to §11

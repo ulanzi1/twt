@@ -4,6 +4,155 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred / recorded from: Story 11a.6 — `<PinnedNotice>` component (2026-08-22)
+
+Ruled at Decision `2026-08-22-153` (D1(a) · D2(a) · D3(a) · D4(a) · D5(a) · D6(a) · D7(a) · D8(a) ·
+D9(a), BigDev 2026-08-22). ⚠ Every item below is **observed and ROUTED**, ⛔ not scheduled and ⛔ not
+built ([[feedback_gap_analysis_observational]]).
+
+⭐ **This story also CLOSES four previously-routed items, each in precise language**
+([[feedback_closure_language_precision]]) — ⛔ never collapsed into one word, and ⛔ never marked closed
+merely because a trigger fired:
+
+| Item | Disposition |
+|---|---|
+| §Story 11a.5 **(e)** — the `:491` → `:1819` UX-spec amendment | ⭐ **CLOSED BY EDIT.** Applied to `ux-design-specification.md` as a standalone `docs:` commit (D8(a)). See the note under item (a) below on the form the edit took. |
+| §code review of story-11a.5, item **2** — the descriptor drops 10.9's `revision` | ⭐ **CLOSED BY DESIGN RULING (D5(a)) + the screen-side wiring** — ⛔ **not** by adding the field. Annotated in place in that section. |
+| §code review of story-11a.5, item **4** — the empty-title `". "` label | ⭐ **CLOSED BY EDIT**, in the row presenter. Annotated in place in that section. |
+| §Story 11a.5 **(g)** — the row descriptor's `link CTA` | ⚠ **NOT CLOSED.** Its trigger fired here and is answered *"there is no destination"*; **RE-ROUTED with a sharper trigger** — see item (b) below. |
+
+### ⭐ (a) §11 `<PinnedNotice>`'s **Anatomy** line has NO dismiss slot while its **States** line ratifies a `dismissed` state
+
+`ux-design-specification.md:1817` gives the row *"4pt colored left-stub · title (Devanagari sans, 14pt) ·
+meta line (12pt secondary, monospace where numeric)"* — and `:1818` ratifies *"dismissed (faded if
+member-dismissable)"*. ⇒ the spec ratifies a state the member can only reach through an **affordance the
+spec never names**.
+
+⚠ ⛔ **This is an INCOMPLETENESS, ⛔ not a `:491`-style contradiction — do NOT record it as a
+supersession.** Nothing in §11 says the row has no dismiss control; the anatomy line simply does not
+mention one, and the states line assumes one. ⭐ Story 11a.6 shipped the de-facto answer — a ≥44pt
+labelled control, a **sibling** of the row's accessible title+meta group — and the spec should say so.
+
+⭐ **Trigger: the next edit to `ux-design-specification.md` §11.**
+
+⚠ ⭐ **What that edit will owe, recorded so the form is not rediscovered:** amendments to this file now
+land in **Appendix B — Ratified amendments**, with the amended line edited **in place at its own line
+number**. That convention was established by D8(a) for a concrete reason: ~150 citations across ~20
+files (code comments, tests, story files, `.decision-log.md`) reference this spec **BY LINE**, and an
+inline multi-paragraph note at `:491` would have shifted every `:1814-1821` anchor — including the ones
+`<PinnedNotice>` itself is built to — by nine lines, silently. ⛔ An anatomy addition that inserts lines
+inside §11 will drift every citation **below** it; the Appendix B form is how to avoid that.
+
+### ⚠ (b) The notice DETAIL destination — ⛔ STILL ABSENT, and item (g) is RE-ROUTED rather than closed
+
+§Story 11a.5 item **(g)** routed the row descriptor's `link CTA` with the trigger *"Story 11a.6, which
+owns the ROW's press behaviour"*. ⚠ **That trigger FIRED, and the answer is that there is no
+destination.** D6(a) ruled the row **non-interactive content**: the prototype announced
+`accessibilityRole="button"` + *"Tap to open … notice detail"* over an **empty `onPress` body**, so the
+fix was to **remove the claim**, ⛔ not to invent a place for it to go.
+
+⛔ **Item (g) is therefore NOT closed** — the question it asks (should a notice be able to navigate
+somewhere, and what field would carry that?) is still open and now has a **sharper** trigger:
+
+⭐ **Trigger: the story that builds a notice-detail surface** — at which point the descriptor gains a CTA
+field **with a real consumer**, and `<PinnedNotice>` regains an interactive role that is **true**.
+⛔ *"11a.6 owns the press behaviour"* is spent and must not be reused.
+
+⚠ **A second, smaller divergence rides along and is recorded here rather than silently amended:**
+`ux-design-specification.md:491` still reads *"tap → detail"* for the pinned section. D8(a)'s scope was
+the **already-ruled** vocabulary supersession **only**, so that clause was deliberately left standing.
+⇒ ⚠ the spec currently describes a tap target the shipped row does not offer. ⛔ Recorded, ⛔ not fixed:
+it is the **same question** as this item, and it should be amended by the story that answers it — ⛔ not
+patched separately, which would settle by omission a question no one has ruled on.
+
+### ⛔ (c) The optimistic-dismissal shape is now DUPLICATED across two components over the same data
+
+`<BannerHost>` (`components/banners/BannerHost.tsx:142-174`) and the Panchayat Noticeboard
+(`components/panchayat/PanchayatNoticeboard.tsx`) each hold their own `bannerDismissalKey`-keyed
+optimistic set, their own `dismiss.mutate({kind:'dismissed'})` call and their own `onError` rollback —
+over the **same banner**, through the **same mutation**, against the **same endpoint**.
+
+⚠ **D7(b) — extracting a shared `useBannerDismissal` hook — is the architecturally TIDIER answer and was
+declined ON BLAST RADIUS, ⛔ NOT ON MERIT** (the same call `2026-08-22-152` D6(c) made): it re-opens a
+Story 10.9 component for a refactor from inside a story scoped to one row.
+
+⭐ **Why the duplication is safe TODAY, stated so the risk is not overestimated:** the two can never
+disagree **on screen**, because `<BannerHost>` already self-suppresses on the panchayat route (the fifth
+condition, `2026-08-22-152` D7(a)). ⚠ **And where the real risk sits, stated so it is not
+underestimated:** the two copies must stay in agreement about the **key format** and about **rolling
+back on failure**. The key format is safe by construction — there is exactly one `bannerDismissalKey`
+and both call it — but the rollback posture is duplicated *logic*, and a fix applied to one is not a fix
+applied to the other.
+
+⭐ **Trigger: a THIRD consumer of the banner dismissal path, or the first NON-banner notice producer for
+the noticeboard** (at which point the row's acknowledgement stops being banner-specific and the screen's
+`isAcknowledged` id-match stops being a one-source shortcut).
+
+### ⭐⛔ (d) CR item 5 of the 11a.5 code review — **NOT ADDRESSED**, stated explicitly rather than passed over
+
+⚠ ⛔ **This item is recorded with an explicit disposition because *"the trigger did not fire"* is NOT an
+available answer here.** Its trigger is *"an accessibility audit pass over the mobile app's newer
+screens"*, and Story 11a.6's own AC6 **is** semantic accessibility, **editing that exact file**.
+
+The two defects (both in `apps/mobile/components/panchayat/PanchayatNoticeboard.tsx`):
+
+1. the Masthead Pariwar-seal `<View accessibilityLabel={t('seal_a11y')}>` has ⛔ no `accessible={true}`,
+   so it is not guaranteed to be announced as one discrete element;
+2. `PinnedSkeleton` announces `accessibilityRole="progressbar"` with ⛔ no `accessibilityValue`, implying
+   a measurable value it never provides.
+
+⇒ **Disposition: NOT ADDRESSED** ([[feedback_closure_language_precision]] — ⛔ not *"closed"*, ⛔ not
+*"resolved"*). ⭐ **Why, stated rather than implied:** Story 11a.6 owns the **ROW**. The masthead and the
+skeleton are Story 11a.5's, this story moves **neither**, and reaching into them would be the same
+class of scope drift D7(a) declined for `<BannerHost>` — a shipped component re-opened from inside a
+story scoped to one row.
+
+⚠ ⭐ **What this story DOES change about the item, and it is worth recording:** the seal defect is the
+**SAME DEFECT CLASS** as the one AC6 just closed in the row — an `accessibilityLabel` on a container
+that was never made `accessible`. ⇒ the fix is no longer a design question: `PinnedItem.tsx` now carries
+a **worked, commented example** of the explicit-`accessible={true}`-grouping pattern (and of why the
+control must sit **outside** the group). ⭐ **The audit pass that picks this up should start there.**
+⚠ ⛔ And it still has **no CI net**: `scripts/` holds nineteen invariant gates and ⛔ none is an
+accessibility gate. Story 11a.6 minted none ([[feedback_no_premature_package]]), so this class of defect
+remains caught only by reading.
+
+⭐ **Trigger: unchanged — an accessibility audit pass over the mobile app's newer screens.**
+
+### ⚠ (e) The still-open Story 11a.5 routings this story touched the EDGES of — ⛔ **NOT ADDRESSED**, ⛔ never "closed"
+
+Restated so a reader of this section does not infer, from 11a.6 having worked in the same files, that any
+of them moved. ⛔ **None did.** Each keeps its **original trigger**, unchanged:
+
+- **(a) No close-of-cycle (FR-19) read model** — still no producer, still two gates (the read model **and**
+  the Epic-11b consent basis). ⛔ Untouched.
+- **(b) No aggregate member/district stat read model** — still no producer. ⚠ `apps/mobile/lib/format-count.ts`
+  still has **no call site by design**; ⛔ do not delete it as dead code.
+- **(c) The `<NoticeboardStrip>` public-website-embed variant** — still two absences (no host page; `apps/public`
+  still does not depend on `@twt/ui`). ⛔ Story 11a.6 ships **no route**, so ⛔ still no
+  `public-vs-private-matrix.yaml` surface entry is added or needed.
+- **(d) The `<NoticeboardStrip>` admin-home variant** — still owned by no story, still the **cheapest possible**
+  second consumer of the presenters. ⭐ 11a.6 makes it **cheaper still**: an admin variant would now inherit
+  the row's label composition and `dismissed` state from `derivePinnedNoticeViewModel` rather than re-deriving
+  them — which is what D2(c) refused to strand in one render stack.
+- **(f) Bridging `@twt/tokens` into `apps/mobile/tamagui.config.ts`** — still declined on blast radius, ⛔ not on
+  merit. ⚠ The migration list this item names **grew by one**: `apps/mobile/components/panchayat/tokens.ts` now
+  carries `PINNED_ROW_OPACITY` beside `CATEGORY_TOKENS` and `RULE_HAIRLINE_TOKEN`.
+- **The `<PollsEntry>` hairline** (§code review of story-11a.5, item 1) — ⚠ its trigger names *"the next story
+  touching `PanchayatNoticeboard.tsx`'s section dispatch"*, and 11a.6 **did** touch that file. ⛔ **NOT
+  ADDRESSED**: 11a.6 threaded acknowledgement props through `Section()` and ⛔ changed no section's render
+  decision, so the design call the item asks for (should `PollsEntry` report whether it rendered?) is
+  untouched and still needs its owner. ⚠ Recorded rather than silently skipped, because the trigger's
+  wording is broad enough to have caught this story.
+- **The `panchayat` bare-segment route match** (§code review of story-11a.5, item 3) — ⛔ untouched;
+  `route-suppression.ts` is one of the four D7(a) files with **zero** edits.
+- **The silent-on-a-PERSISTENT-failure question** (the item beginning *"`PollsEntry` ignores `usePollsQuery`'s
+  `isError`/`isLoading`"*) — ⛔ still not re-opened. ⚠ 11a.6 adds a **third** data point rather than a new
+  entry: a **failed dismiss** is now also silent to the member (the mutation has no error surface; the row
+  simply un-fades on rollback), which is the correct fail-soft posture for ambient chrome and the same
+  question that item already holds.
+
+---
+
 ## Deferred / recorded from: Story 11a.5 — `<NoticeboardStrip>` foundational layout component (2026-08-22)
 
 Ruled at Decision `2026-08-22-152` (D1(a) · D2(a) · D3(a) · D4(a) · D5(a) · D6(a) · D7(a), BigDev
@@ -87,6 +236,24 @@ the first admin-dashboard story that shows notices, announcements or a pinned li
 
 ### ⭐ (e) UX-SPECIFICATION AMENDMENT — `ux-design-specification.md:491` is SUPERSEDED by `:1819`
 
+> ⭐ **CLOSED BY EDIT — Story 11a.6, 2026-08-22 (Decision `2026-08-22-153` D8(a)).** The trigger below
+> fired (*"Story 11a.6's authoring pass"*) and the amendment was **applied to the file** as a standalone
+> `docs:` commit. ⛔ Not *"resolved via explicit deferral"* and ⛔ not *"satisfied because 11a.6 read
+> `:1819`"* — reading the right line is not the same act as amending the wrong one
+> ([[feedback_closure_language_precision]]).
+>
+> ⚠ ⭐ **Note the FORM, because it is now the convention for this file:** the amendment landed in a new
+> **Appendix B — Ratified amendments** at the END of the spec, with `:491` itself edited **in place, at
+> its own line number**. ~150 citations across ~20 files reference that spec BY LINE; an inline
+> multi-paragraph note would have shifted every `:1814-1821` anchor — the ones `<PinnedNotice>` is built
+> to — by nine lines, silently. Verified after the edit: `:491` is still `:491` and §11 is still
+> `1814-1821`.
+>
+> ⛔ **All four required points are in the edit** (saffron retired · `black` changed meaning ·
+> bereavement lost its category, with its own re-trigger · severity is the banner lane's own axis), and
+> ⛔ its stated scope excludes the warm-umber status-mismatch tone, §11's affordance gap, and `:491`'s
+> *"tap → detail"* clause — the last two are ROUTED in §Story 11a.6, items (a) and (b).
+
 Ruled at D2(a). ⚠ **The spec FILE is deliberately NOT edited by Story 11a.5** — the amendment is
 **routed** here so the edit is made by whoever owns the artifact, with the whole §5/§8 Panchayat grammar
 in front of them.
@@ -141,6 +308,17 @@ three local semantic→Tamagui maps become the **migration list**, ⛔ not obsta
 (`StatusPill.tsx:43-44` states it in terms), ⛔ not a new one this story introduced.
 
 ### ⛔ (g) The row descriptor's `link CTA` — LEFT OUT, ⛔ not forgotten
+
+> ⚠ ⛔ **STILL OPEN — RE-ROUTED, ⛔ NOT CLOSED (Story 11a.6, 2026-08-22).** The trigger below
+> (*"Story 11a.6, which owns the ROW's press behaviour"*) **FIRED**, and the answer is *"there is no
+> destination"*: D6(a) ruled the row **non-interactive content** and REMOVED the untrue
+> `accessibilityRole="button"` + *"tap to open detail"* claim rather than inventing a place for it to go.
+> ⛔ A fired trigger is **not** a closure ([[feedback_closure_language_precision]]).
+>
+> ⭐ **The trigger is REPLACED with a sharper one: the story that builds a notice-detail surface** — at
+> which point the descriptor gains a CTA field **with a real consumer**. ⛔ The old wording is spent and
+> must not be reused. See §Story 11a.6 item (b), which also records that `ux-design-specification.md:491`
+> still reads *"tap → detail"* and was deliberately left standing.
 
 The epic's 11a.5 AC names *"link CTA"* among the notice-item fields. `ux-design-specification.md:1817`'s
 `<PinnedNotice>` anatomy has **no CTA slot** (it is *"4pt colored left-stub · title · meta line"*), and
@@ -6194,7 +6372,7 @@ Decision `2026-08-17-126` cl. 6 mints the **narrow** `deferred-to-v2` value into
 ## Deferred from: code review of story-11a.5 (2026-08-22)
 
 - **No hairline separates the `pinned` section's rendered content from `<PollsEntry>`'s rendered content** — the `polls` case in `Section()` never renders a `<Hairline />`, unlike `pinned` (`apps/mobile/components/panchayat/PanchayatNoticeboard.tsx:125-129`), contradicting the file's own stated rule that "a hairline separates sections that actually rendered something" (UX `:490-494`). Not a same-story patch: the unambiguous fix needs either touching `PollsEntry.tsx` (Story 11a.5 is explicitly barred from modifying it — "leave `<PollsEntry>` exactly where it is") or re-deriving its render-nothing-when-empty logic in this file (also barred — "this screen owns only its POSITION"); an unconditional hairline dangles with nothing below it whenever there are no open polls. Needs a design call (e.g. `PollsEntry` reporting whether it rendered via a callback prop) owned by whoever next touches this boundary. Trigger: the next story touching either `PanchayatNoticeboard.tsx`'s section dispatch or `PollsEntry.tsx`.
-- **`NoticeboardBannerNoticeInput` drops 10.9's `revision` field, discarding the copy-staleness/re-surface-on-edit signal `BannerHost.tsx` already relies on** via `bannerDismissalKey(bannerId, revision)` (`apps/mobile/components/banners/copy.ts:48`) — `packages/ui/src/noticeboard/view-model.ts:199-207` and `apps/mobile/components/panchayat/banner-notice.ts:46-67`. The row's `id` is the bare `banner_id`; nothing downstream can distinguish "same banner, unchanged" from "same banner, operator just edited it" the way `BannerHost` already can for the identical underlying data. Deferred: out of scope for 11a.5 — dismiss-with-ack and everything it needs is explicitly 11a.6's territory, not this story's row-interaction contract. Trigger: Story 11a.6 wiring dismiss-with-ack against `NoticeboardRowDescriptor.id`.
+- **`NoticeboardBannerNoticeInput` drops 10.9's `revision` field, discarding the copy-staleness/re-surface-on-edit signal `BannerHost.tsx` already relies on** via `bannerDismissalKey(bannerId, revision)` (`apps/mobile/components/banners/copy.ts:48`) — `packages/ui/src/noticeboard/view-model.ts:199-207` and `apps/mobile/components/panchayat/banner-notice.ts:46-67`. The row's `id` is the bare `banner_id`; nothing downstream can distinguish "same banner, unchanged" from "same banner, operator just edited it" the way `BannerHost` already can for the identical underlying data. Deferred: out of scope for 11a.5 — dismiss-with-ack and everything it needs is explicitly 11a.6's territory, not this story's row-interaction contract. Trigger: Story 11a.6 wiring dismiss-with-ack against `NoticeboardRowDescriptor.id`. ⭐ **CLOSED BY DESIGN RULING — Story 11a.6, 2026-08-22 (Decision `2026-08-22-153` D5(a)) — ⛔ NOT by adding the field.** The trigger fired and the finding's own premise was found to be the thing to fix: the descriptor does not need to carry everything the row needs. The SCREEN already holds `data.banner` (it must, to build the presenter input), so `PanchayatNoticeboard.tsx` composes `bannerDismissalKey(banner_id, revision)` itself and hands the row a `dismissed` flag + an `onDismiss` callback. ⇒ the **substantive** concern the finding raised is discharged — a copy revision that is meant to RE-SURFACE the notice is **not** swallowed by a stale in-session dismissal, and the noticeboard keys its optimistic window exactly the way `<BannerHost>` keys its own. ⭐ And the **source-agnostic** row contract is not widened with a **source-specific** identity: all three `presenter.test.ts` contract fences (`:256` / `:294` / `:327`) stay intact, unamended, and there remains exactly ONE implementation of the key format. ⛔ Option (b) — adding `dismissalKey`/`revision` to the descriptor — was refused on the merits (widening a shared contract for one source's bookkeeping, one story after the fence was built); ⛔ option (c) — keying on the bare `banner_id` — is the defect this finding raised.
 - **`isBannerRenderedByRoute` suppresses on a bare last-path-segment match (`'panchayat'`) with no route-tree/group anchor** (`apps/mobile/components/banners/route-suppression.ts:36-38`). A future unrelated screen anywhere in the app — a different stack, a deep link, a search-result slug — whose last path segment happens to be the literal string `panchayat` would silently suppress the ambient `<BannerHost>` strip app-wide. The route-suppression module's own comments already accept the coupling cost deliberately; the test suite covers near-miss strings (`panchayat-archive`, `panchayat/index`) but not a genuine collision from an unrelated route tree. Trigger: a second route anywhere in the app whose last segment is exactly `panchayat`.
-- **`toNoticeboardBannerNotice`'s empty-copy guard is an AND (`title === '' && body === ''`), so an empty-title/non-empty-body banner still produces a noticeboard row** (`apps/mobile/components/panchayat/banner-notice.ts:53`) — `PinnedItem`'s `accessibilityLabel` (`apps/mobile/components/panchayat/PinnedItem.tsx:36`) then reads with a leading `". "`, and the visible title line renders blank above the meta line. Only reachable via legacy/partial banner data: `selectBannerCopy`'s own doc comment records that publishing a banner requires all four copy fields non-empty (a domain 422 otherwise), so no banner created through the normal admin flow can have this shape. Trigger: a legacy or partially-migrated banner row predating that publish validation.
-- **Minor accessibility polish on two new render-layer elements**: the Masthead Pariwar-seal `<View accessibilityLabel={t('seal_a11y')}>` has no `accessible={true}` (`apps/mobile/components/panchayat/PanchayatNoticeboard.tsx:167-176`), so it is not guaranteed to be announced as one discrete element rather than folded into surrounding layout; `PinnedSkeleton` uses `accessibilityRole="progressbar"` with no `accessibilityValue` for a set of static skeleton placeholder rows (`apps/mobile/components/panchayat/PanchayatNoticeboard.tsx:201-203`), which implies a measurable value this component never provides. Low severity, not exercised by any current a11y test. Trigger: an accessibility audit pass over the mobile app's newer screens.
+- **`toNoticeboardBannerNotice`'s empty-copy guard is an AND (`title === '' && body === ''`), so an empty-title/non-empty-body banner still produces a noticeboard row** (`apps/mobile/components/panchayat/banner-notice.ts:53`) — `PinnedItem`'s `accessibilityLabel` (`apps/mobile/components/panchayat/PinnedItem.tsx:36`) then reads with a leading `". "`, and the visible title line renders blank above the meta line. Only reachable via legacy/partial banner data: `selectBannerCopy`'s own doc comment records that publishing a banner requires all four copy fields non-empty (a domain 422 otherwise), so no banner created through the normal admin flow can have this shape. Trigger: a legacy or partially-migrated banner row predating that publish validation. ⭐ **CLOSED BY EDIT — Story 11a.6, 2026-08-22 (AC6).** Both halves. `derivePinnedNoticeViewModel` composes the row's accessibility label from **NON-EMPTY PARTS**, so a blank or whitespace-only title contributes **no part at all** rather than a `". "` prefix; and it nulls `title`, so the blank VISIBLE line above the meta line goes with it. ⚠ ⛔ **Deliberately NOT closed by tightening `toNoticeboardBannerNotice`'s `title === '' && body === ''` guard**, which is where the finding located it: that adapter belongs to the **banner lane** and this defect belongs to the **row** — a future non-banner notice source would otherwise inherit the same defect from the same place. Pinned by four assertions in `packages/ui/tests/noticeboard/pinned-notice.test.ts`, including the case where a row has **neither** title nor meta and must still announce its **category** rather than nothing.
+- **Minor accessibility polish on two new render-layer elements**: the Masthead Pariwar-seal `<View accessibilityLabel={t('seal_a11y')}>` has no `accessible={true}` (`apps/mobile/components/panchayat/PanchayatNoticeboard.tsx:167-176`), so it is not guaranteed to be announced as one discrete element rather than folded into surrounding layout; `PinnedSkeleton` uses `accessibilityRole="progressbar"` with no `accessibilityValue` for a set of static skeleton placeholder rows (`apps/mobile/components/panchayat/PanchayatNoticeboard.tsx:201-203`), which implies a measurable value this component never provides. Low severity, not exercised by any current a11y test. Trigger: an accessibility audit pass over the mobile app's newer screens. ⚠ ⛔ **NOT ADDRESSED — Story 11a.6, 2026-08-22 (stated explicitly, ⛔ never silence).** 11a.6's own AC6 IS semantic accessibility and it edits this exact file, so *"the trigger did not fire"* was not an available answer. It owns the **ROW**; the masthead and the skeleton are Story 11a.5's, this story moves **neither**, and reaching into them would be the same class of scope drift D7(a) declined for `<BannerHost>`. ⭐ **What DID change: the seal defect is now the SAME defect class 11a.6 closed in the row** — an `accessibilityLabel` on a container that was never made `accessible` — so the fix stopped being a design question. `apps/mobile/components/panchayat/PinnedItem.tsx` carries a worked, commented example of the explicit `accessible={true}` grouping (and of why a control must sit OUTSIDE the group to stay focusable). ⭐ The audit pass should start there. ⚠ ⛔ Still no CI net: `scripts/` holds nineteen invariant gates and none is an accessibility gate; 11a.6 minted none ([[feedback_no_premature_package]]). Trigger unchanged. See §Story 11a.6 item (d).

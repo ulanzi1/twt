@@ -170,9 +170,134 @@ naming the offending **surface + field**. A rendered field the matrix does not
 declare is **fail-closed** (`unclassified` leak). On a `public` HTML render, a
 naked phone / email / Aadhaar pattern is also a leak (FR-74 testable consequence;
 Story 11a.4 obfuscation is the defense-in-depth layer — the gate detects leaks).
+See **[FR-93 — obfuscation is defense-in-depth, ⛔ never primary](#fr-93--obfuscation-is-defense-in-depth--never-primary-story-11a4)**
+below for the full layering order and what obfuscation may ⛔ never be used for.
 
 Each surface also declares a `search_indexing_policy ∈ {index | noindex |
 conditional}` (epics L3614).
+
+## FR-93 — obfuscation is defense-in-depth, ⛔ never primary (Story 11a.4)
+
+The one-line version, because everything below is a gloss on it: **protection comes
+from the POLICY layer first.** Obfuscation is the layer you add on top of a field
+that is already correctly classified and correctly gated. A field that is obfuscated
+but unclassified is **less** protected than a plain one that is classified, because
+the obfuscation invites everyone to stop looking.
+
+### 1. The layering order (verbatim, epics L4658-4667)
+
+1. `never_exposed` — hidden by the matrix. Nothing renders it, anywhere.
+2. `operator_restricted` — requires **RBAC + audit + rate limits**.
+3. `authenticated_member` — requires **auth + rate limits + audit**.
+4. `public` — renders **visibly**, with obfuscation as defense-in-depth where
+   applicable.
+
+### 2. ⛔ The wrong-order warning
+
+Obfuscating a field on an authenticated surface **while neglecting its matrix entry
+or its RBAC enforcement** is ⛔ **explicitly wrong**. It is the failure this section
+exists to prevent: it looks like protection, it satisfies a reviewer's glance, and it
+leaves the actual control — the tier classification and the access check — unbuilt.
+
+### 3. Plain-text phone/email **IS permitted** on authenticated + operator surfaces
+
+For legitimate operator workflows, because **RBAC has already gated the access** and
+obfuscating the value would add nothing an operator cannot trivially undo. A staff
+member who is authorised to call a family should see the number and be able to tap it.
+`apps/mobile`'s `CallHelplineCTA` and `ShepherdContactCard` are exactly this case.
+
+### 4. ⚠ Clauses 2-3 are conditionals **awaiting a first subject**
+
+⛔ **No contact field is classified at any tier on any surface today.** `mobile`,
+`email` and `phone` appear in `public-vs-private-matrix.yaml` **only inside comments**
+— zero rows, on zero surfaces. So the rules above are correctly-scoped conditionals
+governing what *would* be true *if* a future escalation ever moved a contact field to
+`authenticated_member`. ⛔ They are **not** descriptions of a shipped surface, and ⛔ do
+not write a test asserting a matrix row that does not exist.
+
+⚠ The Mobile ✗/✗/✓ row sometimes cited as "the matrix" is the **epic's** Story 11a.3
+render-scope table (`epics.md` L4592-4593) — prose, ⛔ not the shipped contract, and
+that table's own banner says in terms that it *"is NOT a schema"*.
+
+### 5. ⭐⛔ MEMBER contact data and the TRUST'S OWN contact channel are OPPOSITE cases
+
+**This is the load-bearing item, and this document is where it is written down.**
+
+A **member's** phone/email is governed by the matrix and is ⛔ **never public**. That
+is FR-74, and every tier rule above governs it.
+
+The **trust's** helpline and email are a different thing entirely: they are
+**deliberately public so that a person in need can reach the trust.** The committed
+public **Contact page (with the Madad card)** carries them by design —
+*"Madad on the Contact page is the front door, not a fallback"*
+(`ux-design-specification.md:297`). ⇒ on that channel the governing property is
+⭐ **REACHABILITY, bounded by accessibility** — ⛔ **not concealment.**
+
+⇒ the three `epics.md` L4655 masking techniques are ⛔ **REJECTED for that channel, on
+the merits**, and here are the reasons by name:
+
+| Technique | Why it ⛔ fails on a reachability channel |
+| --- | --- |
+| **Image rendering** | ⛔ Not tappable, ⛔ not copyable, ⛔ not screen-readable. **NFR-A11y-1 (WCAG 2.1 AA) is a named LAUNCH BLOCKER for public-site primary nav** — an image of a phone number is a straight accessibility failure. |
+| **JS-decoded display** | ⛔ Fails with JS off or broken. `apps/public` is Astro SSR *precisely* so it works without heavy JS; decoding the one number a person in crisis needs is the worst thing to make JS-conditional. |
+| **Partial masking + helpdesk CTA** | ⛔ Circular — the number **is** the helpdesk. Masking the helpline behind a "contact the helpline" CTA is a dead end. |
+
+⚠ **And indexing cuts the OTHER way.** `/niyamavali` is `search_indexing_policy:
+index`; a Contact page would be too. You ⭐ *want* a search engine to surface the
+trust's helpline to someone searching for help. Obfuscation defeats that on purpose.
+
+✅ **The residual concern on that channel is real, and it is CHANNEL INTEGRITY, ⛔ NOT
+privacy.** Harvesting the helpline invites spam that could degrade a channel grieving
+families depend on. Its mitigations are **rate limiting, provider-side filtering, and
+the honeypot bait paths** (`apps/api/src/plugins/security-headers/`) — ⛔ **never**
+making the number unreadable to the people it exists for.
+⛔ **Do not collapse *"not a privacy problem"* into *"not a problem"*.**
+
+### 6. The public **Contact** and **About** pages are committed and ⛔ UNOWNED
+
+Both are in the UX spec's committed public-website inventory
+(`ux-design-specification.md:243`) — the same inventory as the three surfaces
+11a.1-11a.3 built. And: ⛔ **no epic story owns either**, ⛔ no `apps/public` route,
+⛔ no matrix surface.
+
+⚠ **The gate is blind to this by construction.** Its route-coverage leg reconciles
+**shipped pages ⇄ matrix surfaces** in both directions — so a surface that *should*
+exist and **does not** is invisible to it. ⛔ **A green gate proves nothing about a
+missing page.** Routed as a coverage gap (owner: John); ⛔ not built here.
+
+The masking decision for that page is deferred to **the story that builds it** — and
+it is deferred ⛔ **on the merits** (item 5), ⛔ **not** merely for want of a consumer.
+⛔ A future reader must not "un-defer" it by building a masking component the moment a
+page appears; the technique must be **re-decided against a real audience**.
+
+⚠ It cannot render a real number yet regardless: ⛔ no provisioned helpline source
+exists (`note-template.ts:122-127` — no `.env.example` entry, no deploy config, no
+validation; the PDF prints `HELPLINE_PENDING_TOKEN` rather than fabricate one). That
+waits on the **Epic 10 per-Pariwar helpline resolution**.
+
+### 7. The real anti-enumeration coverage on `/members`
+
+`limits.search` (the named SEARCH rate-limit tier) + the page-size cap (50) + the
+deep-page horizon (200) + `X-Robots-Tag` + the absence of any export affordance +
+`directory-abuse-rules.yaml` (four `active` rules emitting `directory.abuse_suspected`).
+Five controls, defended in writing at `apps/api/src/modules/public-pages/routes.ts`
+and `login-wall.spec.ts` — ⚠ the two counts must stay identical.
+
+⛔ **Story 10.6 is NEVER coverage.** `epics.md` L4660 cites *"Story 10.6 query
+throttling"*; Story 10.6 is the **Bulk Operations Framework**. Already recorded twice
+(`directory-abuse-rules.yaml` note 7; `deferred-work.md:265`). ⛔ Do not cite it.
+
+### 8. FR-93's `[v1-S — moot per policy]` tag does ⛔ NOT mean this was cut
+
+`[v1-S]` marks Should-have **cadence priority** — a nameable cut candidate under
+schedule pressure — ⛔ not *"skip"*. And the PRD's own gloss (`prd.md:1177`:
+*"Per FR-74 policy these are never public; obfuscation patterns retained as
+defense-in-depth for any leak"*) is the **source** of this section's invariant, ⛔ not
+a contradiction of it.
+
+⚠ And per item 5, ⛔ do not misread the matrix's *"member contact is never public"* as
+meaning FR-93 has **no** subject at all. It has two subjects with opposite governing
+properties, and conflating them is the error this section was written to correct.
 
 ## Mechanism — why a `packages/contracts/` turbo task (not a repo-root script)
 

@@ -4,6 +4,173 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred / recorded from: Story 11a.5 — `<NoticeboardStrip>` foundational layout component (2026-08-22)
+
+Ruled at Decision `2026-08-22-152` (D1(a) · D2(a) · D3(a) · D4(a) · D5(a) · D6(a) · D7(a), BigDev
+2026-08-22). ⚠ Every item below is **observed and ROUTED**, ⛔ not scheduled and ⛔ not built
+([[feedback_gap_analysis_observational]]). ⚠ Two of them (a, b) are **absences with NO OWNER AT ALL** —
+⛔ no story in Epic 11a owns them and none is minted here.
+
+### ⭐⛔ (a) NO close-of-cycle (FR-19) read model exists, and NO story owns one
+
+The Panchayat Noticeboard's *हाल की आहुति* (recent closings) section is part of the **ratified anatomy**
+(`ux-design-specification.md:493`: *"last 5 closed pools as ruled rows — name + district + contributor
+count"*), and it has **no producer**. The P0-5 prototype filled it with **five invented deceased-member
+names**; Story 11a.5 **deleted them** (D3(a)) and the section now renders nothing.
+
+⚠ **The re-trigger is NOT "someone wants the section back".** This is memorial data about real deceased
+members, and publishing it is gated by the **Epic 11b consent model**
+([[project_consent_subject_key_convention]]) as much as by the missing read model — ⛔ two gates, ⛔ not
+one. ⭐ **Trigger: the story that builds a close-of-cycle read model AND can point to the consent basis
+for naming a deceased member on a member-wide surface.** ⛔ A read model alone does not unblock it.
+
+⚠ ⛔ **A silent section is the CORRECT state, not a bug to be closed quickly.** *"The Pariwar has closed
+no pool"* and *"this project has not built the read model"* are different statements, and the second is
+not something to tell a member — which is why the presenter's `silent` arm carries **no copy at all** and
+⛔ does not borrow the pinned section's ratified *"No pinned notices"* line.
+
+### ⛔ (b) NO aggregate member/district stat read model exists, and NO story owns one
+
+The stat line (`ux-design-specification.md:489`: `[total] सदस्य · [districts] ज़िले · इस माह [N] आहुति
+पूर्ण`) is likewise ratified anatomy with no producer. The prototype invented `51,204 members / 38
+districts / 7 closings`; those are **deleted**. ⭐ **Trigger: the first story that needs a Pariwar-wide
+aggregate count on any surface** — ⚠ at which point the counting question (live query vs projection vs
+cached epoch) is a **read-model design decision**, ⛔ not a noticeboard decision.
+
+⚠ **The Latin-numeral discipline that section carried did NOT go with it.** `formatCount` (Indian digit
+grouping, `ux-design-specification.md:1161` v4 — standalone counts render **Latin**, operational *and*
+celebration framing alike) survives at **`apps/mobile/lib/format-count.ts`**, in the **render layer** and
+⛔ deliberately **not** in `@twt/ui` (the presenter emits raw numbers; formatting happens at the display
+boundary). It has **no call site today** and is kept with a test so the producer story **inherits** the
+discipline rather than re-deriving it. ⛔ Do not delete it as dead code without reading this line.
+
+⚠ Recorded, ⛔ not deferred: `StatLine.tsx` and `RecentClosingRow.tsx` were **deleted** with their
+fabricated sources rather than kept as unreachable code. Their Devanagari layout work is recoverable
+from git at `54492eb` and is a **starting point** for the producer story, ⛔ not a contract.
+
+### ⛔ (c) The `<NoticeboardStrip>` "public website embed" variant — TWO absences, not one
+
+`ux-design-specification.md:1809` names a *"public website embed (read-only, no admin sections)"* variant
+and `:1810` names *"public website home"* as a surface. ⚠ **Both are absent, and they are separate
+absences** (D5's corrected premise):
+
+1. **There is no host page.** `apps/public/src/pages/index.astro` is a **bare 302 redirect** to
+   `/niyamavali` with no body.
+2. **`apps/public` does not depend on `@twt/ui` at all**, and that is a **documented Story-2.5 variance**
+   (`apps/public/COMPOSITION-CONTRACT.md:156-158`: *"the epic AC names `@twt/ui`, which is still an empty
+   stub"*). ⚠ It is no longer a stub — but reversing a prior story's deliberate declination is a
+   **decision**, ⛔ not a side effect.
+
+⭐ **Trigger: the story that builds a public website home.** ⚠ **What it will owe, recorded so it is not
+rediscovered late:** a `public-vs-private-matrix.yaml` **surface entry** — the matrix's **bidirectional
+route-coverage leg fails CI when a route ships undeclared**. ⛔ Story 11a.5 needed no entry because it
+shipped **no route**; the leg is satisfied by the **absence of a route**, ⛔ not by a declaration. It will
+also owe a cache policy and an indexing policy.
+
+⭐ **What it will NOT have to re-decide:** the **tier filter already ships in the presenter** (AC5), so the
+public/authenticated rule exists **before** the surface does — including its **fail-closed** behaviour on
+the `role`/`cohort` un-targetable seam and on any audience outside the 10.9 vocabulary.
+
+### ⭐⛔ (d) The `<NoticeboardStrip>` "admin home" variant — OUT OF SCOPE HERE and owned by NO story
+
+`ux-design-specification.md:1809` names an *"admin home (with admin-only sections)"* variant, `:1810`
+names *"admin dashboard"* as a surface, and the §14 inventory at `:2228` repeats *"member home + admin
+home variants"*. ⛔ No story owns it.
+
+⚠ **Note the asymmetry for whoever picks it up, because it inverts the usual cost:** `apps/admin`
+**already depends on `@twt/ui`** (`apps/admin/package.json:24`, and it already consumes the
+`member-status` presenter at `MemberStatusPanel.tsx:11`). ⇒ the admin variant is the **CHEAPEST possible
+second consumer** of `deriveNoticeboardViewModel` — no new dependency, no new variance to reverse.
+⭐ **Which is exactly why leaving it unrouted would be dangerous: the cheapest thing to build is the
+thing most likely to get built TWICE**, once here and once as a fresh admin dashboard widget. ⭐ **Trigger:
+the first admin-dashboard story that shows notices, announcements or a pinned list.**
+
+### ⭐ (e) UX-SPECIFICATION AMENDMENT — `ux-design-specification.md:491` is SUPERSEDED by `:1819`
+
+Ruled at D2(a). ⚠ **The spec FILE is deliberately NOT edited by Story 11a.5** — the amendment is
+**routed** here so the edit is made by whoever owns the artifact, with the whole §5/§8 Panchayat grammar
+in front of them.
+
+⚠ **Record it as SUPERSEDED, ⛔ never "reinterpreted" and ⛔ never "clarified"**
+([[feedback_supersede_never_reinterpret]], [[feedback_closure_language_precision]]). ⛔ This was **not** a
+prototype-vs-spec drift: `:491` (*"a small left-stub colored by type (saffron/green/black per
+category)"*) is **ratified spec text**, and so is `:1819` (`terracotta`/`green`/`black`/`ink`) — **one
+ratified artifact disagreeing with itself**. `:1819` wins because it is the **component-level contract**
+and the anchor Story 11a.6 builds `<PinnedNotice>` to; `:491` is screen-grammar prose written before the
+component section existed.
+
+**What the edit must say:**
+- ⛔ `saffron` is **retired** — ⛔ not deprecated, ⛔ not aliased.
+- ⚠ ⭐ **`black` CHANGED MEANING**: §491 *bereavement* → §1819 *scheduled meeting*. ⛔ The words that look
+  shared are **not** shared. Any prose elsewhere in the spec reading `black` as bereavement is part of
+  the same amendment.
+- The epic AC's `info | warning | critical` is **the banner lane's own severity axis**, ⛔ not the
+  noticeboard's category vocabulary. The two are orthogonal and are ⛔ never conflated.
+- ⚠ **Bereavement lost its category** in the move to §1819, and that is a real consequence worth stating
+  in the amendment rather than discovering later: §491 carried a bereavement stub and §1819 does not.
+  Today nothing is worse off — the section that carried bereavement content has **no producer** (item a).
+  ⭐ **Re-trigger for revisiting the vocabulary itself: the story that gives bereavement notices a real
+  producer.**
+
+⭐ **Trigger: the next edit to `ux-design-specification.md` §5/§8/§11, or Story 11a.6's authoring pass** —
+whichever comes first. ⚠ 11a.6 builds `<PinnedNotice>` **directly against §1819** and must not be left
+reading a superseded §491.
+
+### ⭐ (f) D6(c) — bridging `@twt/tokens` INTO `apps/mobile/tamagui.config.ts`
+
+⚠ **This is the architecturally RIGHT answer, and it was declined ON BLAST RADIUS, ⛔ NOT ON MERIT.**
+
+FM-14 #2 says colours come from a token authority, never a magic literal — but ⛔ `apps/mobile` **does not
+depend on `@twt/tokens`** (`package.json:32-35`) and `tamagui.config.ts` overrides **fonts only**, so
+`stamp-mudra` and `rule-hairline` **do not exist in the mobile theme**. Bridging the token groups in as
+custom Tamagui theme tokens is the only path that makes `stamp-mudra` a **real mobile token** — and it
+**re-themes every mobile surface at once**, from inside a story scoped to one tab.
+
+⛔ D6(b) — importing `@twt/tokens` hexes directly into RN styles — was **refused on the merits** and is
+⛔ not the fallback: it bypasses the Tamagui theme entirely, so those colours would stop responding to
+theme switching while every neighbouring colour still did.
+
+⭐ **Trigger: the next story that needs a `@twt/tokens` colour ROLE on React Native.** ⚠ At that point the
+three local semantic→Tamagui maps become the **migration list**, ⛔ not obstacles:
+- `apps/mobile/components/status-pill/StatusPill.tsx` — `TONE_TOKENS` (Story 9.6)
+- `apps/mobile/components/banners/BannerHost.tsx` — `SEVERITY_TOKENS` (Story 10.9)
+- `apps/mobile/components/panchayat/tokens.ts` — `CATEGORY_TOKENS` + `RULE_HAIRLINE_TOKEN` (Story 11a.5)
+
+⚠ The accepted cost in the meantime, stated so it is not rediscovered as a surprise: the mobile palette is
+**ALIGNED TO** rather than **DERIVED FROM** `@twt/tokens` — an honest, **already-accepted** variance
+(`StatusPill.tsx:43-44` states it in terms), ⛔ not a new one this story introduced.
+
+### ⛔ (g) The row descriptor's `link CTA` — LEFT OUT, ⛔ not forgotten
+
+The epic's 11a.5 AC names *"link CTA"* among the notice-item fields. `ux-design-specification.md:1817`'s
+`<PinnedNotice>` anatomy has **no CTA slot** (it is *"4pt colored left-stub · title · meta line"*), and
+nothing renders one today — the prototype's row press handler is an **unwired stub**.
+
+Per AC6, a field whose consumer is unclear is **left out and routed**, ⛔ never speculatively emitted: an
+unused field in a shared presenter is the widening Trap 2 forbids, in a second place. ⭐ **Trigger: Story
+11a.6, which owns the ROW's press behaviour** — if a notice must navigate somewhere, 11a.6 decides what a
+destination looks like and the descriptor gains a field **then**, with a real consumer.
+
+⚠ Related and ⛔ NOT the same question: `dismissible` **is** carried, as a **FLAG ONLY**.
+⛔ Dismiss-with-ack — the interaction, the mutation, the persistence — is **Story 11a.6's**, and Story
+11a.5 wires ⛔ no dismiss call and reuses ⛔ none of 10.9's `DismissBannerResponse` path.
+
+### ⚠ (h) The silent-on-a-PERSISTENT-failure question reaches the noticeboard too — ⛔ NOT re-opened here
+
+`<BannerHost>` renders `null` on a failed read; `<PollsEntry>` renders `null` on empty **and on error** —
+a recorded, deliberate deferral in this file — the item beginning ***"`PollsEntry` ignores
+`usePollsQuery`'s `isError`/`isLoading`"*** (⚠ cited by its TEXT, ⛔ not a line number: this file grows at
+the top, so every prior line citation into it drifts). The Panchayat Noticeboard now **matches that
+posture**: a failed banner read renders as an **empty noticeboard**, ⛔ never an error surface of its own.
+
+⚠ ⛔ **This story deliberately does NOT re-open it** — it matches the house rule and notes it, which is
+what the Dev Notes asked for. ⭐ **The observation this story adds:** the noticeboard makes the existing
+question **slightly sharper**, because a quiet noticeboard and a broken noticeboard are now **visually
+identical to a member**, where a quiet teaser widget and a broken one at least sat inside a screen that
+still worked. ⭐ **Trigger: that existing item — this is a second data point on it, ⛔ not a new entry to schedule.**
+
+---
+
 ## Deferred / recorded from: Story 11a.4 — phone/email obfuscation defense-in-depth (2026-08-22)
 
 Ruled at Decision `2026-08-22-149` (D1′=(a) · D2=(a) · D3=(e) · D4=(a) · D5=(a), BigDev 2026-08-22).

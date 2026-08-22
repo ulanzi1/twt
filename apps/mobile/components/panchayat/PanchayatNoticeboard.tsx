@@ -37,8 +37,9 @@ import { RULE_HAIRLINE_TOKEN } from './tokens'
 // ── Fail-soft, the house rule ───────────────────────────────────────────────────────────────────────
 // A failed read renders as an EMPTY noticeboard, not an error surface — the `<BannerHost>` /
 // `<PollsEntry>` posture ("a quiet noticeboard stays quiet"). ⚠ The same
-// silent-on-a-PERSISTENT-failure question `PollsEntry` recorded as a deliberate deferral
-// (`deferred-work.md:5993`) applies here; this story MATCHES the posture and ⛔ does not re-open it.
+// silent-on-a-PERSISTENT-failure question `PollsEntry` recorded as a deliberate deferral applies here
+// (`deferred-work.md`, the item beginning "`PollsEntry` ignores `usePollsQuery`'s `isError`/`isLoading`");
+// this story MATCHES the posture, adds a second data point to that item, and ⛔ does not re-open it.
 //
 // ── Latin numerals ──────────────────────────────────────────────────────────────────────────────────
 // UX `:1161` (v4): standalone counts and dates render LATIN, operational AND celebration framing alike.

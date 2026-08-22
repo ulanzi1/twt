@@ -442,22 +442,22 @@ vs *"Not addressed"* — ⛔ never collapsed, and ⛔ never marked closed merely
   - [x] ⭐ **D9 is named by ⛔ NO epic AC and is the one most likely to be dropped in transcription** — the entry must record it either way: ruled (a) it is a **gate-scope closure**, ruled (b) it is a **routed gap with a re-trigger**. ⛔ An unrecorded D9 is indistinguishable from an unasked question
   - [x] Commit **alone**, `governance:` prefix, **before** any implementation commit
 
-- [ ] **Task 1 — author the row presenter** (AC: 2, 4, 5, 6)
-  - [ ] Read `packages/ui/src/noticeboard/{view-model,presenter,i18n-keys,index}.ts` end-to-end first — ⛔ the row descriptor's doc comment is the brief; do not re-derive it
-  - [ ] Add the row view-model types + `derivePinnedNoticeViewModel` per **D2(a)**; ⛔ **`NoticeboardRowDescriptor` itself is NOT modified** (D5(a); Trap 3)
-  - [ ] ⭐ The a11y label is composed from **non-empty parts** — the empty-title `". "` defect closes here (AC6)
-  - [ ] The `dismissed` state and the affordance predicate are presenter properties (AC4); ⛔ no `opacity` decision in `@twt/ui`
-  - [ ] ⛔ **No viewer / audience / tier parameter** (AC5)
-  - [ ] `i18n-keys.ts` — the category **label** keys (✅ D6(a): they **replace** the `open_detail_*` hint keys) + the dismiss/dismissed a11y keys; ⚠ the `banners.json` check is already answered (AC6): **mint in `noticeboard` matching `dismiss_a11y`'s wording**, ⛔ never resolve across namespaces from the row
-  - [ ] `index.ts` barrel + the Story-11a.6 line in `packages/ui/src/index.ts`; ⚠ `.js` ESM specifiers throughout
-  - [ ] ⛔ Verify zero react/react-native/tamagui imports and zero colour hex **by reading** — there is ⛔ no gate (AC2)
+- [x] **Task 1 — author the row presenter** (AC: 2, 4, 5, 6)
+  - [x] Read `packages/ui/src/noticeboard/{view-model,presenter,i18n-keys,index}.ts` end-to-end first — ⛔ the row descriptor's doc comment is the brief; do not re-derive it
+  - [x] Add the row view-model types + `derivePinnedNoticeViewModel` per **D2(a)**; ⛔ **`NoticeboardRowDescriptor` itself is NOT modified** (D5(a); Trap 3)
+  - [x] ⭐ The a11y label is composed from **non-empty parts** — the empty-title `". "` defect closes here (AC6)
+  - [x] The `dismissed` state and the affordance predicate are presenter properties (AC4); ⛔ no `opacity` decision in `@twt/ui`
+  - [x] ⛔ **No viewer / audience / tier parameter** (AC5)
+  - [x] `i18n-keys.ts` — the category **label** keys (✅ D6(a): they **replace** the `open_detail_*` hint keys) + the dismiss/dismissed a11y keys; ⚠ the `banners.json` check is already answered (AC6): **mint in `noticeboard` matching `dismiss_a11y`'s wording**, ⛔ never resolve across namespaces from the row
+  - [x] `index.ts` barrel + the Story-11a.6 line in `packages/ui/src/index.ts`; ⚠ `.js` ESM specifiers throughout
+  - [x] ⛔ Verify zero react/react-native/tamagui imports and zero colour hex **by reading** — there is ⛔ no gate (AC2)
 
-- [ ] **Task 2 — tests for the row presenter** (AC: 2, 4, 5, 6)
-  - [ ] `packages/ui/tests/noticeboard/pinned-notice.test.ts` — mirror the `presenter.test.ts` register
-  - [ ] ⭐ **The AC5 shape proof**: the row presenter's input surface admits ⛔ no viewer/audience/tier key (the `presenter.test.ts:245-250` anti-widening precedent)
-  - [ ] Both states reachable and **distinct**; the affordance is absent when `dismissible: false` **and** when already `dismissed`
-  - [ ] ⭐ The empty-title label case: ⛔ no leading `". "`, ⛔ no empty part, and title+meta announced as ONE unit
-  - [ ] ⛔ **`presenter.test.ts` is NOT amended** (D5(a)) — ⚠ if a change to it seems necessary, **stop and raise it**: it means the descriptor is being widened (Trap 3)
+- [x] **Task 2 — tests for the row presenter** (AC: 2, 4, 5, 6)
+  - [x] `packages/ui/tests/noticeboard/pinned-notice.test.ts` — mirror the `presenter.test.ts` register
+  - [x] ⭐ **The AC5 shape proof**: the row presenter's input surface admits ⛔ no viewer/audience/tier key (the `presenter.test.ts:245-250` anti-widening precedent)
+  - [x] Both states reachable and **distinct**; the affordance is absent when `dismissible: false` **and** when already `dismissed`
+  - [x] ⭐ The empty-title label case: ⛔ no leading `". "`, ⛔ no empty part, and title+meta announced as ONE unit
+  - [x] ⛔ **`presenter.test.ts` is NOT amended** (D5(a)) — ⚠ if a change to it seems necessary, **stop and raise it**: it means the descriptor is being widened (Trap 3)
 
 - [ ] **Task 3 — promote `PinnedItem.tsx` into the real row** (AC: 1, 3, 4, 6)
   - [ ] Render from the row view-model; ⛔ no composition decision left in JSX

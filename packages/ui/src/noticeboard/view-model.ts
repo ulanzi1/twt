@@ -239,3 +239,118 @@ export interface NoticeboardStripViewModel {
   /** The strip's sections IN RENDER ORDER (AC1). */
   sections: readonly NoticeboardSection[];
 }
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+// `<PinnedNotice>` — the ROW's view-model (Story 11a.6; Decision 2026-08-22-153, D1(a)/D2(a)/D4(a)).
+//
+// ⭐ THE ROW, ⛔ NOT A BANNER. The epic's 11a.6 AC prose ("persistent pinned banner above the fold")
+// describes `<BannerHost>` (Story 10.9), which already ships above every authenticated tab. Four
+// ratified sources say ROW — the AC's own `Given` anchor UX-DR16 (`epics.md:406`), UX `:680`, UX
+// `:1222` and the component contract at `ux-design-specification.md:1814-1821` — so D1(a) reads the
+// `Then` prose as a DEFECTIVE AC SENTENCE and builds the row. ⛔ No new above-the-fold surface.
+//
+// ── The descriptor is NOT widened (D5(a)) ────────────────────────────────────────────────────────
+// The types below CONSUME `NoticeboardRowDescriptor`; they do not change it. The dismissal IDENTITY
+// (10.9's `revision`) stays on the banner lane at the render boundary, where the screen already holds
+// `data.banner` — so the SOURCE-AGNOSTIC row contract is not widened with a SOURCE-SPECIFIC identity,
+// and `bannerDismissalKey` keeps exactly one implementation.
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * The two states `ux-design-specification.md:1818` ratifies for a row: *"Default · pinned (left-stub
+ * colored) · **dismissed (faded if member-dismissable)**"*. `pinned` is not a third state — every row on
+ * this surface is pinned, and the left-stub colour is `category`'s job.
+ *
+ * ⚠ `<BannerHost>` does the OPPOSITE for the same underlying banner: it REMOVES the row optimistically.
+ * Neither is wrong — they are different components — and D4(a) rules that this component renders its own
+ * ratified state and lets the refetch remove the row. Removing immediately would leave `dismissed`
+ * unreachable, and an unreachable ratified state is a spec amendment, not a shortcut.
+ *
+ * ⛔ The state's LIFETIME is the server's business: 10.9's dismissal join suppresses the banner on the
+ * next read (`packages/domain/src/banners/read.ts:134-137`). ⛔ No MMKV set, ⛔ no client-side expiry.
+ */
+export type PinnedNoticeState = 'default' | 'dismissed';
+
+/**
+ * One piece of the row's composed accessibility label. ⭐ The composition is a PROPERTY OF THE PRESENTER
+ * (AC6) — ⛔ never string concatenation in JSX — and every part is guaranteed NON-EMPTY, which is how the
+ * routed empty-title defect closes: a blank title contributes no part at all rather than a `". "` prefix.
+ *
+ *   · `key`  — a `noticeboard`-namespace i18n key the render layer resolves (category, dismissed state).
+ *   · `text` — OPERATOR-AUTHORED DATA rendered as-is (title, meta). ⛔ Notice content is not catalog copy.
+ */
+export type PinnedNoticeLabelPart =
+  | { kind: 'key'; key: string }
+  | { kind: 'text'; text: string };
+
+/**
+ * The row's dismiss affordance, or `null` when the row has none. ⭐ A PREDICATE, not a flag the render
+ * layer re-derives: it is absent when the notice is not dismissible (a legal, REACHABLE case —
+ * `packages/domain/src/banners/errors.ts:84-86`) AND once the member has acknowledged it, so it cannot be
+ * double-fired (AC4).
+ *
+ * ⛔ It carries no handler, no endpoint, no `banner_id` and no `revision`. The SCREEN owns the
+ * acknowledgement — it composes `bannerDismissalKey(banner_id, revision)` from the banner it already holds
+ * and POSTs through Story 10.9's EXISTING `useDismissBannerMutation` (D3(a)/D5(a)/D7(a)).
+ */
+export interface PinnedNoticeDismissAffordance {
+  /** The `noticeboard`-namespace key for the control's `accessibilityLabel`. */
+  labelKey: string;
+}
+
+/**
+ * The row presenter's INPUT — EXACTLY these two keys.
+ *
+ * ⭐ THERE IS DELIBERATELY NO VIEWER, AUDIENCE, AUTHENTICATION OR TIER FIELD (AC5). The Story 11a.1
+ * matrix-tier rule SHIPPED at 11a.5 (`presenter.ts:63-100`, fail-closed and exhaustive by type), and a
+ * descriptor only reaches this presenter AFTER `isVisibleToViewer` has passed it. A row-level filter could
+ * therefore only ever DISAGREE with the strip's — a second visibility taxonomy is the failure that absence
+ * exists to prevent. The shape is asserted, the `presenter.test.ts:245-250` anti-widening precedent.
+ */
+export interface PinnedNoticeInput {
+  /** The strip presenter's already-filtered row. ⛔ Consumed, ⛔ never modified (D5(a)). */
+  row: NoticeboardRowDescriptor;
+  /**
+   * Whether the member has acknowledged THIS notice — the optimistic window only. The screen owns the
+   * identity behind this boolean (`bannerDismissalKey(banner_id, revision)`), so a copy revision that is
+   * meant to RE-SURFACE the notice is not swallowed by a stale in-session dismissal.
+   */
+  acknowledged: boolean;
+}
+
+/**
+ * The row's complete render contract. Structured values and i18n KEYS only — ⛔ no colour, ⛔ no opacity,
+ * ⛔ no resolved chrome copy, ⛔ no numeral formatting. The render layer maps `category` to its palette
+ * (the D6(a) `CATEGORY_TOKENS` bridge) and `state` to its emphasis; this package holds neither.
+ */
+export interface PinnedNoticeViewModel {
+  /** The row's identity, carried through for list keys and for correlating the acknowledgement. */
+  id: string;
+  /** The D2(a) §1819 category — the 4pt left-stub, DECORATIVE (`:1820`) and also in the label below. */
+  category: NoticeCategory;
+  /** The ratified state (UX `:1818`). The render layer chooses the emphasis; the presenter names it. */
+  state: PinnedNoticeState;
+  /**
+   * The visible title, or `null` when the operator's copy is blank/whitespace-only. ⭐ Nulling it here is
+   * the second half of the routed empty-title fix: the shipped row rendered a BLANK LINE above the meta
+   * line. ⛔ Not closed by tightening `toNoticeboardBannerNotice` — that adapter belongs to the banner
+   * lane and the defect belongs to the row.
+   */
+  title: string | null;
+  /** The single secondary line (epic `body` ≡ §1817 `meta line`), or `null`. */
+  meta: string | null;
+  /**
+   * ⭐ The composed accessibility label, ORDERED and ALL NON-EMPTY: category → title → meta → (dismissed).
+   * UX `:1820` asks for both *"category conveyed in screen-reader label too"* and *"title and meta read as
+   * a unit"*, and one ordered label delivers both.
+   *
+   * ⚠ ⭐ THE UNIT NEEDS AN EXPLICIT MECHANISM ON RN, because D6(a) removes the implicit one: the shipped
+   * row is a `Pressable`, which React Native defaults to `accessible={true}`, and that is the ONLY reason
+   * the children merge into one announcement today. The render layer must wrap title+meta in an explicit
+   * `accessible={true}` container carrying this label — with the dismiss control as a SIBLING, ⛔ never a
+   * child, or the row's only action stops being focusable.
+   */
+  labelParts: readonly PinnedNoticeLabelPart[];
+  /** The dismiss affordance, or `null` when the row offers none (see the type's doc comment). */
+  dismiss: PinnedNoticeDismissAffordance | null;
+}

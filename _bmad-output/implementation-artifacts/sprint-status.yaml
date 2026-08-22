@@ -1,4 +1,51 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-22g (Story 11a.4 — bmad-code-review COMPLETE. ONE ROW FLIPS:
+#   11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only: review -> done.
+#   ⛔ epic-11a stays in-progress (2 stories remain: 11a.5, 11a.6). ⛔ No other row moves.
+#   ⛔ Row 17 UNTOUCHED and still `open` — the public Member Directory still may NOT go live.
+#
+#   THREE PARALLEL REVIEW LAYERS (Blind Hunter no-context, Edge Case Hunter full-repo,
+#   Acceptance Auditor vs the story spec) ran against `git diff main...HEAD`. 2 decision-needed,
+#   3 patch, 3 defer, 4 dismissed as noise (2 verified false positives on closer inspection).
+#
+#   ⭐ THE HEADLINE FINDING: Blind Hunter and Edge Case Hunter INDEPENDENTLY found the SAME bug —
+#   AC2's `phone`-pattern lookbehinds excluded a BARE `'` and bare `/`, not the markup signature
+#   they were meant to detect, so a phone number quoted in prose ('9876543210') or the second
+#   number of a slash-separated pair (9876543210/9123456789) silently evaded `detectNakedPii` —
+#   reaching as far as the AC3a publish-time backstop, where JSON text has no markup context at
+#   all. ⛔ The implementation was SPEC-COMPLIANT — AC2's own Given/When/Then specified this exact
+#   regex, locked in by D2's ruling — so the defect was in the AC/decision text, not the code.
+#   RESOLVED: Decision `2026-08-22-150` SUPERSEDES D2 (⛔ never reinterprets it — D2's scope-to-
+#   `phone`-only ruling stands); both lookbehinds now require the real markup signature
+#   (`(?<!=')` mirroring the existing `(?<!=")`; `(?<![a-zA-Z\/]\/)` for the URL-path case); two
+#   new precision-regression tests added; all eleven pre-existing recall assertions AND the
+#   pre-existing false-positive corpus stay green (verified: @twt/contracts 1057/1057,
+#   @twt/public scrape-test 36/36, @twt/api niyamavali-workflow 13/13, live DB).
+#
+#   SECOND DECISION: AC1 case 3's landline inversion was ruled inline by BigDev mid-implementation
+#   (Debug Log evidence: `0801234 5678` verified NO MATCH) but, unlike D1–D5, never got its own
+#   `.decision-log.md` entry. RESOLVED: Decision `2026-08-22-151` records it, matching D1–D5's
+#   governance-commits-precede-implementation treatment.
+#
+#   THREE SMALL PATCHES APPLIED: Dev Agent Record File List corrected (`in-progress` → `review`,
+#   matching what actually shipped); a stale sprint-status.yaml comment above this very row
+#   (claiming D1–D5 were still open) rewritten to match reality; AC3a's "PUBLISHES CLEANLY"
+#   negative-control fixture gained a realistic 13-digit epoch-millis field so the test can
+#   actually distinguish "precision fix works" from "nothing long enough was there to match".
+#
+#   THREE DEFERRED (real, pre-existing-by-design, not this story's to close): the publish-time
+#   backstop covers only the `niyamavali.amend` write path, not seed/migration/bulk-import writers
+#   (consistent with the story's own SCOPE BOUNDARY); the two new honeypot bait path NAMES
+#   (`/members/export`, `/api/v1/members/emails`) read as plausible real endpoints — future
+#   namespace-collision risk only, no current collision; `piiPatterns()`'s ASCII-only `\d` matching
+#   doesn't cover full-width Unicode digit evasion — pre-existing engine characteristic.
+#
+#   FOUR DISMISSED, two as verified false positives: the `CONTACT_BAIT` pinned-list "reintroduces
+#   the parallel-list anti-pattern" claim was FALSE — `toHaveLength(HONEYPOT_PATHS.length)` already
+#   covers deletion-detection for all 11 paths, the pin is additive; the README's `FR-93` anchor
+#   link was FALSE — hand-verified against GitHub's slug algorithm, resolves correctly. The other
+#   two (the "OPEN, ROUTED" governance items lacking enforcement; `ClausePayloadPiiError`'s
+#   remediation-message wording untested end-to-end) are real but out-of-scope nitpicks.
 # last_updated: 2026-08-22f (Story 11a.4 — bmad-dev-story COMPLETE. ONE ROW FLIPS:
 #   11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only: in-progress -> review.
 #   ⛔ epic-11a stays in-progress (2 stories remain: 11a.5, 11a.6). ⛔ No other row moves.
@@ -9487,11 +9534,11 @@ development_status:
   # between them. ⛔ Do NOT flip this row back; the gate is tracked on Row 17, not here.
   # ⚠ Epic 11a carries the DEPENDENCY; the implementation belongs to Epic 10 (cl.2).
   11a-3-member-directory-pii-shielded-tiered-render-scope-anti-enumeration-safeguards: done
-  # ⛔⛔ FIVE DECISIONS (D1-D5) ARE OPEN in the story file and MUST be ruled by BigDev before
-  # bmad-dev-story runs. ⛔ The dev agent may NOT rule them. ⛔ A superseded authoring pass sits on
-  # `story/11a.4-phone-email-obfuscation` (656aaa5) -- do NOT check it out or merge it; three of its
-  # load-bearing claims are now FALSE. ⛔ This story does NOT touch launch-gate Row 17.
-  11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only: review
+  # ✅ D1'-D5 RULED (Decision `2026-08-22-149`); bmad-code-review COMPLETE, D2 SUPERSEDED by
+  # Decision `2026-08-22-150` (AC2 lookbehind fix) and AC1 case 3 recorded at `2026-08-22-151`.
+  # ⛔ A superseded authoring pass sits on `story/11a.4-phone-email-obfuscation` (656aaa5) -- do NOT
+  # check it out or merge it. ⛔ This story does NOT touch launch-gate Row 17.
+  11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only: done
   11a-5-noticeboard-strip-foundational-layout-component: backlog
   11a-6-pinned-notice-component: backlog
   epic-11a-retrospective: optional

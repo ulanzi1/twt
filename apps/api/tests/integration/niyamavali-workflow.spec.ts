@@ -403,6 +403,13 @@ describe.skipIf(!hasDatabase)('Niyamavali amendment workflow (Story 2.4)', () =>
     // packages/domain/seed/niyamavali-v1-clauses.sql. If the backstop false-positives
     // on a numeric threshold it ⛔ BLOCKS A LEGITIMATE RULE AMENDMENT — which is why
     // AC3a is sequenced strictly behind the AC1+AC2 precision fix.
+    //
+    // ⚠ `effective_timestamp_ms` is a REALISTIC LONG DIGIT RUN (13 digits, epoch
+    // millis) — long enough to overlap both the 10-digit `phone` and 12-digit
+    // `aadhaar` shapes if the detector's digit-boundary check were broken. Without
+    // a field this long, this test cannot distinguish "the precision fix correctly
+    // excludes markup-context digit runs" from "there was nothing long enough to
+    // match in the first place" (code review, 2026-08-22).
     const { published } = await publishWithPayload(
       {
         rule_code: 'R8',
@@ -410,6 +417,7 @@ describe.skipIf(!hasDatabase)('Niyamavali amendment workflow (Story 2.4)', () =>
         rule_kind: 'conditional',
         threshold_percent: 90,
         min_contributions: 10,
+        effective_timestamp_ms: 1755878400000,
         policy_review_required: true,
         provisional: true,
       },

@@ -4,7 +4,7 @@ baseline_commit: 075827b5bebaaaa4e615bf508b841dd3f67c9d05
 
 # Story 11a.4: Phone/Email Obfuscation Defense-in-Depth — Public Surfaces Only `[GOVERNANCE]`
 
-Status: in-progress
+Status: review
 
 > ⛔ **THIS FILE SUPERSEDES AN EARLIER AUTHORING PASS THAT LIVES ON A SIDE BRANCH.** A prior
 > `bmad-create-story` run for 11a.4 was un-bundled from `story/11a.3` and parked on
@@ -1428,6 +1428,31 @@ Innocence established **two** ways:
 ⇒ **pre-existing CPU/connection contention, ⛔ not a regression.** `@twt/api` alone against the
 live DB is **1078 passed | 1 skipped** (Task 9 table). ⛔ Recorded openly as an un-attested green
 rather than reported as "all green" ([[feedback_record_unattested_no_backfill]]).
+
+#### `ci:local` — FINAL, run as the script documents
+
+```
+════════════ ci:local summary ════════════
+  ✓ lint          ✓ typecheck     ✓ build         ✓ test (unit)   ✓ db-check
+  ✓ contracts-determinism         ✓ crypto-check  ✓ tokens-theme-check
+  ✓ i18n-parity   ✓ pii-scrape    ✓ friction-budget               ✓ schema-diff
+  ✓ benefit-mechanism             ✓ microcopy     ✓ domain-invariants
+  ✓ member-state-invariant        ✓ claim-state-invariant
+  ✓ claim-canonical-id-invariant  ✓ claim-adjudication-human-actor-invariant
+  ✓ kyc-provider-boundary         ✓ access-wrapper-invariants
+  ✓ pool-state-invariant          ✓ pool-support-category-invariant
+  ✓ pool-bound-payment-invariant  ✓ alert-state-invariant
+  ✓ helpdesk-state-invariant      ✓ governance-boundary
+  ✓ custom-field-governance       ✓ survey-advisory-invariant
+  ✓ determinism-replay            ✓ channels-determinism
+  · SKIP integration-tests — set DATABASE_URL (twt-test-pg on :5433) to enable
+
+ci:local PASSED — 31 job(s) green
+```
+
+⚠ `integration-tests` shows **SKIP** here because `DATABASE_URL` is ⛔ deliberately **not** exported
+globally ([[project_ci_local_double_run_pollution]]). It was run **separately** against
+`twt-test-pg` — result and innocence evidence in finding (2) above.
 
 ### Completion Notes List
 

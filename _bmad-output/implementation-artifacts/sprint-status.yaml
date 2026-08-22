@@ -1,4 +1,177 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-22k (Story 11a.5 — bmad-dev-story STARTED. ONE ROW FLIPS:
+#   11a-5-noticeboard-strip-foundational-layout-component: ready-for-dev -> in-progress.
+#   ⛔ epic-11a stays in-progress (11a.6 remains). ⛔ No other row moves.
+#   ⛔ Row 17 untouched and still `open` — the noticeboard is a MEMBER-APP surface and
+#   ⛔ nothing in 11a.5 advances, closes or bears on the directory kill-switch launch gate
+#   ([[project_directory_launch_gated_on_killswitch_ui]]).
+#
+#   ⭐ TASK 0 DISCHARGED FIRST, AS A STANDALONE `governance:` COMMIT — the durability the
+#   2026-08-22j entry promised is now real: `.decision-log.md` gained **Decision 2026-08-22-152**
+#   recording D1–D7 with their reasoning, committed ALONE and BEFORE any implementation commit,
+#   so history reads governance → implementation
+#   ([[feedback_governance_commits_precede_implementation]]). ⚠ The head was read LIVE at
+#   implementation time and was `2026-08-22-151`, exactly as the authoring pass predicted — but it
+#   was ⛔ not hardcoded from that prediction.
+#
+#   ⚠ WHAT THAT ENTRY COMMITS THAT THIS LEDGER CANNOT: D2(a) is recorded as a
+#   **UX-SPECIFICATION AMENDMENT** in the required language — `ux-design-specification.md:491` is
+#   named **SUPERSEDED BY** `:1819` ([[feedback_supersede_never_reinterpret]],
+#   [[feedback_closure_language_precision]]), ⛔ never "reinterpreted" and ⛔ never
+#   "clarified". ⛔ The spec FILE is NOT edited by this story — the edit is ROUTED (Task 6e).
+# last_updated: 2026-08-22j (Story 11a.5 — ✅ ALL SEVEN DECISIONS RULED BY BIGDEV, each AS
+#   RECOMMENDED: ✅ D1(a) · D2(a) · D3(a) · D4(a) · D5(a) · D6(a) · D7(a).
+#   ⛔ NO ROW FLIPS; 11a-5-noticeboard-strip-foundational-layout-component stays `ready-for-dev`.
+#   ⛔ epic-11a stays in-progress (11a.6 remains). ⛔ Row 17 untouched — member-app surface.
+#   ⚠ DURABILITY IS TASK 0's `governance:` COMMIT, ⛔ not this ledger and ⛔ not the story file
+#   ([[feedback_governance_commits_precede_implementation]]) — history must read governance →
+#   implementation, and Task 0 reads the .decision-log.md head LIVE (⛔ 2026-08-22-151 was the head
+#   at authoring; ⛔ do not hardcode it).
+#
+#   ⭐ THREE RULINGS CHANGED THE STORY FILE AROUND THEM — recorded because a later reader must not
+#   take the pre-ruling text as still governing:
+#     D7(a) — ⛔ `BannerHost.tsx` IS NO LONGER ON THE UNTOUCHED LIST. The noticeboard reads the
+#     EXISTING useMemberBannersQuery (one fetch, one cache, one server-resolved winner) and
+#     `BannerHost` gains a FIFTH self-suppression condition (the panchayat route), in the component
+#     that already owns the other four. ⭐ THAT ONE `if` IS THE WHOLE EDIT — ⛔ not SEVERITY_TOKENS,
+#     ⛔ not the dismiss path, ⛔ not the banner-strip testID, ⛔ not the mount point. Trap 3's
+#     "not refactored, not touched" wording was AMENDED IN PLACE rather than left to contradict the
+#     ruling. ⚠ The render test must assert BOTH halves: exactly-once on panchayat AND still-present
+#     on a non-panchayat tab — ⛔ the second half is what catches an over-firing suppression.
+#     D2(a) — ux-design-specification.md:491 is SUPERSEDED by :1819. ⛔ `saffron` is DEAD (⛔ not
+#     deprecated, ⛔ not aliased); the vocabulary is terracotta|green|black|ink. ⚠ THE TRAP INSIDE
+#     THE RULING: `black` CHANGES MEANING — §491 bereavement → §1819 scheduled meeting — so
+#     PinnedItem.tsx:36's accessibilityHint (black→"memorial", saffron→"governance") is now WRONG,
+#     ⛔ not merely re-keyed. That a11y line + the vocabulary are the ONLY two PinnedItem changes
+#     permitted (⛔ 11a.6 owns the rest). ⚠ This is a UX-SPEC AMENDMENT: Task 0 names :491 as
+#     superseded ([[feedback_supersede_never_reinterpret]], [[feedback_closure_language_precision]]),
+#     Task 6(e) routes the spec edit, and ⛔ the spec file is NOT edited by this story.
+#     D6(a) — the RN colour authority is ONE named semantic→Tamagui-scale map (`as const satisfies
+#     Record<NoticeCategory,…>`, so a new category cannot compile without a colour). ⛔ @twt/tokens
+#     is NOT added to apps/mobile (that was (b)) and ⛔ tamagui.config.ts is NOT touched (that was
+#     (c)). ⚠ (c) is the architecturally RIGHT answer and was declined ON BLAST RADIUS, not on
+#     merit — routed as Task 6(f) with an explicit re-trigger (the next story needing a @twt/tokens
+#     role on RN), at which point the three local maps become the migration list.
+#
+#   ✅ D3(a) + D5(a) UNGATE AC4/Task 4 and AC5/Task 5 — ⚠ ⛔ UNGATED MEANS REQUIRED, ⛔ not optional.
+#   All six ACs are now unconditional. D3(a): the five invented deceased-member names are DELETED
+#   (⛔ not relocated, ⛔ not commented out); the section wires its real EMPTY source and renders
+#   nothing when empty. D5(a): the tier filter ships IN THE PRESENTER so the rule exists before the
+#   surface does — ⛔ no apps/public route, ⛔ no matrix surface entry, ⛔ no @twt/ui dependency added
+#   to apps/public.
+#
+#   ✅ D4(a) is a STANDING CONSTRAINT, ⛔ not a one-time scoping note: no coverage-bearing deadline
+#   ever rides the noticeboard (they stay in the Story 8.8 notification family). ⭐ THIS IS WHAT
+#   KEEPS THE §Policy-meaning ANSWER TRUE — the moment one does, the tier filter becomes
+#   eligibility-adjacent and owes a Niyamavali check (AI-10-1).
+#
+# last_updated: 2026-08-22i (Story 11a.5 story file AUTHORED + VALIDATED via bmad-create-story:
+#   backlog -> ready-for-dev, then a full validate pass re-verified every load-bearing claim
+#   against the tree at 54492eb and corrected six. ONE ROW FLIPS: 11a-5-noticeboard-strip-foundational-layout-component.
+#   ⛔ epic-11a stays in-progress (11a.6 remains). ⛔ No other row moves.
+#   ⛔ Row 17 UNTOUCHED and still `open` — this is a MEMBER-APP surface and bears on it in no way.
+#
+#   ⭐ THE HEADLINE FINDING: the component this story names ALREADY EXISTS AND ALREADY RENDERS.
+#   `apps/mobile/components/panchayat/` is a working, tab-wired Panchayat Noticeboard shipped by
+#   Story 0.14 (P0-5 native-stack validation prototype) — 5 components, live at tab 3 of 3
+#   (`app/(tabs)/panchayat.tsx`), rendering entirely from HARDCODED FIXTURES. Story 10.15 already
+#   added one real-data section to it (`PollsEntry`). ⇒ 11a.5 is a PROMOTION of a validation
+#   prototype into a real primitive, ⛔ NOT a greenfield authoring. A story file that did not say
+#   so would have had the dev agent build a SECOND noticeboard beside the first.
+#
+#   ⚠ SHARPEST EDGE (Trap 4): the prototype publishes FIVE INVENTED DECEASED-MEMBER NAMES
+#   (`sample-data.ts:76-81`, rendered under `हाल की आहुति` on a live tab). Leaving them ships
+#   fabricated bereavement records; wiring them to real data is impossible (⛔ NO close-of-cycle
+#   read model exists and ⛔ NO story owns one). D3 rules between them; the recommendation is the
+#   third path — delete the fixtures, wire the real EMPTY source, render nothing when empty.
+#
+#   ⛔ THE CENTRAL COLLISION (Trap 2): epic AC2 says the component "consumes Story 10.9
+#   banner/popup data", but 10.9 returns AT MOST ONE banner per lane
+#   (`MemberBannerListResponse = {banner|null, popup|null}`) — FR-58B "one at a time per surface",
+#   Load-Bearing Decision 3, defended in THREE file headers and pinned by a shuffled-input
+#   determinism test. A strip renders a LIST. The obvious reconciliation — widen the member read
+#   to return an array — would break all of it and would look reasonable doing so. D1 rules the
+#   banner lane as ONE SOURCE contributing at most one row; enforced BY SHAPE + an anti-widening
+#   test, with 10.9's files declared read-only.
+#
+#   ⭐ 2nd STRUCTURAL FINDING (Trap 1): `packages/ui` is HEADLESS — zero .tsx, deps = {@twt/contracts}
+#   only, every barrel says "Pure logic only (no react/react-native)". "Authored as an extension of
+#   packages/ui" therefore means a PRESENTER (presenter/view-model/i18n-keys/index — the 9.12
+#   `pool-progress` shape), ⛔ NOT a component file. A .tsx there serves one renderer and re-opens
+#   the drift the package exists to close.
+#
+#   OTHER RECORDED TRAPS: (3) TWO different things are called a "strip" — `BannerHost`'s ambient
+#   `banner-strip` (10.9, layout-level, above every tab) vs this noticeboard; ⛔ not merged, not
+#   refactored. (5) `<PinnedNotice>` is 11a.6's, ⛔ not absorbed here — 11a.5 owns the STRIP, 11a.6
+#   owns the ROW. (6) `sample-data.ts` is a MIXED MODULE: it also holds the TYPES four components
+#   import AND `formatCount` (the Latin-numeral helper) — deleting the file breaks the build in
+#   four places; `formatCount` STAYS in the render layer (the presenter emits raw numbers).
+#
+#   ⚠ THREE VOCABULARIES COLLIDE for pinned categories and their MEANINGS differ, not just their
+#   names — and ⭐ THE UX SPEC CONTRADICTS ITSELF: saffron/green/black is RATIFIED SPEC TEXT at
+#   ux-design-specification.md:491 (the §5/§8 Panchayat grammar — ⛔ NOT merely the prototype's
+#   invention), while §11 `<PinnedNotice>` at :1819 says terracotta/green/black/ink WITH DIFFERENT
+#   MEANINGS (⛔ even `black` differs: bereavement vs scheduled meeting), and the epic's OWN 11a.5
+#   AC names a third axis, info/warning/critical. ⇒ this is ONE ratified artifact disagreeing with
+#   itself ⇒ ⭐ EVERY D2 option is a UX-SPEC AMENDMENT. Task 0 records the superseded line by name
+#   ([[feedback_supersede_never_reinterpret]]); Task 6 routes the amendment. Recommendation: (a)
+#   §1819 canonical, §491 amended — the component-level contract 11a.6 builds to wins over
+#   screen-grammar prose written before the component section existed.
+#
+#   ⛔ SEVEN DECISIONS OPEN — D1..D7, each with a recommendation. `dev-story` must NOT start before
+#   BigDev rules them; Task 0 commits the ruling as `governance:` FIRST (governance precedes
+#   implementation). ⚠ Recommendations: D1(a) · D2(a) · D3(a) · D4(a) · D5(a) · D6(a) · D7(a).
+#
+#   ⭐ D6 + D7 WERE ADDED BY THE VALIDATION PASS — both close instructions that were UNBUILDABLE AS
+#   WRITTEN ([[feedback_verify_before_committing_governance_claims]] — verified by reading, not by
+#   inheriting):
+#     D6 — the draft ordered "replace raw hexes with @twt/tokens roles (stamp-mudra, rule-hairline)".
+#     ⛔ `apps/mobile` DOES NOT DEPEND ON @twt/tokens (package.json:32-35) and tamagui.config.ts
+#     overrides FONTS ONLY ⇒ ⛔ those roles DO NOT EXIST in the mobile theme. @twt/tokens colour
+#     roles are resolved only by apps/public (CSS vars) and apps/api (the PDF note-template) —
+#     StatusPill.tsx:43-44 says so in terms. The RN precedent is ONE named semantic→Tamagui-scale
+#     map (TONE_TOKENS / SEVERITY_TOKENS, `as const satisfies`). Left unruled, the two easiest
+#     paths were an undeclared workspace dep or a pasted #a23b2e — the same FM-14 #2 violation
+#     with a comment on it.
+#     D7 — Trap 3b: `BannerHost` mounts at app/(tabs)/_layout.tsx:21 ABOVE EVERY TAB including
+#     panchayat and renders the single winning banner. Under D1(a) the noticeboard consumes THAT
+#     SAME winner ⇒ ⛔ ONE BANNER, TWICE, ON ONE SCREEN. The draft's Trap 3 pre-empted a DIFFERENT
+#     question ("two components visible at once — not a bug"), which is true and does not answer
+#     this. D7 also settles where the noticeboard's banner input comes from at all — the draft
+#     never said.
+#
+#   ⛔ CORRECTED FALSE CLAIM (validation pass): the draft's verified-claims table asserted
+#   "members.astro imports @twt/ui ⇒ one presenter serves RN AND the public web render", and rested
+#   Trap 1's whole justification on it. ⛔ IT DOES NOT. apps/public/package.json has NO @twt/ui; the
+#   sole occurrence is a CSS COMMENT at members.astro:315 saying "@twt/ui is still a stub and there
+#   is NO Tailwind pipeline on this surface — ⛔ do not introduce one", and COMPOSITION-CONTRACT.md
+#   :156-158 records it under §Documented variances. ⭐ The architectural conclusion SURVIVES on
+#   REAL evidence — @twt/ui already has TWO consumers in TWO frameworks, apps/admin (React DOM)
+#   and apps/mobile (RN) — but D5's premise is corrected: a public render needs BOTH a host page
+#   AND reversal of a deliberate Story-2.5 variance. ⛔ Two absences, not one.
+#
+#   ⛔ EPIC-AC + UX-STATES GAPS CLOSED (validation pass): (1) new AC6 — the epic's own field list
+#   (title, body, severity, dismissible state, link CTA) was covered by NO acceptance criterion,
+#   leaving 11a.5's OUTPUT CONTRACT undefined and 11a.6 nothing to build against; AC6 also forces
+#   an explicit reconciliation with UX :1817 anatomy, which has NEITHER body NOR CTA. `dismissible`
+#   is a FLAG only — the dismiss-with-ack interaction stays 11a.6's. (2) UX :1808 ratifies FOUR
+#   states (default · loading "top + first 2 notices skeleton" · empty "No pinned notices" ·
+#   refreshing); the draft addressed empty ALONE and mandated the OPPOSITE of the spec for it.
+#   AC1 now carries all four, and ⭐ SPLITS the empty case: the pinned section's ratified copy KEY
+#   ("the Pariwar pinned nothing") is ⛔ NOT the same as a section with no producer at all
+#   ("this project has not built the read model") — the latter stays silent per AC4.
+#
+#   ROUTED, ⛔ NOT BUILT (Task 6): (a) ⛔ no close-of-cycle (FR-19) read model and no owning story;
+#   (b) ⛔ no aggregate member/district stat read model; (c) the UX spec's "public website embed"
+#   variant has ⛔ NO host surface — `apps/public/src/pages/index.astro` is a bare 302 to
+#   /niyamavali — AND apps/public does not depend on @twt/ui (⛔ two absences, not one);
+#   (d) ⭐ the UX spec's "admin home (with admin-only sections)" VARIANT (:1809; Surfaces :1810
+#   names "admin dashboard"; the §14 inventory :2228 repeats it) is OUT OF SCOPE and owned by ⛔ NO
+#   story — ⚠ and apps/admin ALREADY depends on @twt/ui (package.json:24), making it the CHEAPEST
+#   second consumer of this presenter, which is exactly why leaving it unrouted would let it be
+#   built twice; (e) the UX-spec amendment D2 forces (:491 vs :1819). All five are observations +
+#   re-triggers, ⛔ not schedule proposals ([[feedback_gap_analysis_observational]]).
+#
 # last_updated: 2026-08-22g (Story 11a.4 — bmad-code-review COMPLETE. ONE ROW FLIPS:
 #   11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only: review -> done.
 #   ⛔ epic-11a stays in-progress (2 stories remain: 11a.5, 11a.6). ⛔ No other row moves.
@@ -9539,7 +9712,7 @@ development_status:
   # ⛔ A superseded authoring pass sits on `story/11a.4-phone-email-obfuscation` (656aaa5) -- do NOT
   # check it out or merge it. ⛔ This story does NOT touch launch-gate Row 17.
   11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only: done
-  11a-5-noticeboard-strip-foundational-layout-component: backlog
+  11a-5-noticeboard-strip-foundational-layout-component: in-progress
   11a-6-pinned-notice-component: backlog
   epic-11a-retrospective: optional
 

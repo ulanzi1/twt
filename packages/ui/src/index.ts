@@ -19,3 +19,10 @@ export * from './pool-progress/index.js';
 // payment surface today; shareable by any later contribution surface so the two cannot tell a member
 // different things about their own coverage. Pure logic only.
 export * from './contribution-disclosure/index.js';
+
+// Story 11a.5 — the framework-agnostic `<NoticeboardStrip>` presenter (pure view-model builder): the one
+// place the Panchayat Noticeboard's composition, section ORDER, tier filter and four ratified states live.
+// Promotes the Story 0.14 P0-5 prototype from fixture-backed validation artifact to design-system primitive.
+// The Story 10.9 banner lane is ONE SOURCE contributing AT MOST ONE row — singular by SHAPE, so the 10.9
+// at-most-one-per-lane invariant cannot be widened from here. Pure logic only.
+export * from './noticeboard/index.js';

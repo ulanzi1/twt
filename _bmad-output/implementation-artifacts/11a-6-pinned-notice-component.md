@@ -4,7 +4,7 @@ baseline_commit: d902b04590497d109ad725d07ae6f319f0788394
 
 # Story 11a.6: `<PinnedNotice>` Component `[PRIMITIVE]`
 
-Status: in-progress
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -493,12 +493,12 @@ vs *"Not addressed"* — ⛔ never collapsed, and ⛔ never marked closed merely
   - [x] (e) ⭐⛔ **CR item 5 of the 11a.5 code review — the ONE routed item whose trigger arguably fires here, and it must NOT be passed over in silence.** The `PanchayatNoticeboard.tsx` seal `<View accessibilityLabel={t('seal_a11y')}>` has ⛔ no `accessible={true}` (`:167-176`) and `PinnedSkeleton` announces `accessibilityRole="progressbar"` with ⛔ no `accessibilityValue` (`:201-203`). ⚠ Its trigger is *"an accessibility audit pass over the mobile app's newer screens"*, and ⭐ **this is the story whose own AC6 is semantic accessibility, editing that exact file** — so *"the trigger did not fire"* is ⛔ **not** an available answer. ⚠ ⭐ **The seal defect is the SAME defect class as the one AC6 closes in the row**: an `accessibilityLabel` on a container that was never made `accessible`. Record the disposition **explicitly** — *"Not addressed"* if the masthead and skeleton stay 11a.5's (⛔ the default, since ⛔ this story moves neither), ⛔ **never silence** ([[feedback_closure_language_precision]])
   - [x] Add each with its re-trigger; ⛔ observe and route — do not schedule, and do not build
 
-- [ ] **Task 7 — story close-out**
-  - [ ] ⚠ **friction-budget disposition** — a **one-tap** dismiss on an already-rendered row introduces **no** gratuitous friction (and removes some: a member can clear their own board), ⇒ ⛔ **no new ledger row**. ⚠ Record the metric facet honestly: `apps/mobile` is an EAS-build no-op ⇒ `member-app-native` is **UN-MEASURED**, ⛔ not "passing" ([[feedback_record_unattested_no_backfill]]). ⭐ **D3(a) RULED (one tap, ⛔ no confirm step) ⇒ the disposition above STANDS as written** — ⛔ the confirm-step branch that would have owed a named-payer row is ⛔ not the ruling and ⛔ is not built
-  - [ ] `pnpm ci:local` green (⚠ `--concurrency=4`; ⚠ `git push` runs the full leg via the pre-push hook — the "hang" is expected, [[project_friction_budget_baseline_ratchet]])
-  - [ ] ⚠ Run the live-DB leg and **record its result openly**, attributing any failure rather than assuming it ([[project_known_livedb_test_failures]], [[project_ci_local_double_run_pollution]]) — ⭐ this story touches ⛔ zero files in `apps/api`, `apps/jobs`, `packages/domain`, `packages/events`, `packages/contracts`, `packages/queue`
-  - [ ] Sprint-status ledger entry per [[project_sprint_status_ledger]] — one combined top-of-file entry; flip **only** `11a-6-pinned-notice-component`. ⚠ ⭐ **`epic-11a` becomes eligible for `done` — 11a.6 is the LAST story in the epic** (`epic-11a-retrospective` is `optional`). ⛔ Row 17 untouched
-  - [ ] ⛔ **REBASE-merge**, never squash ([[project_story_automator_ops]])
+- [x] **Task 7 — story close-out**
+  - [x] ⚠ **friction-budget disposition** — a **one-tap** dismiss on an already-rendered row introduces **no** gratuitous friction (and removes some: a member can clear their own board), ⇒ ⛔ **no new ledger row**. ⚠ Record the metric facet honestly: `apps/mobile` is an EAS-build no-op ⇒ `member-app-native` is **UN-MEASURED**, ⛔ not "passing" ([[feedback_record_unattested_no_backfill]]). ⭐ **D3(a) RULED (one tap, ⛔ no confirm step) ⇒ the disposition above STANDS as written** — ⛔ the confirm-step branch that would have owed a named-payer row is ⛔ not the ruling and ⛔ is not built
+  - [x] `pnpm ci:local` green (⚠ `--concurrency=4`; ⚠ `git push` runs the full leg via the pre-push hook — the "hang" is expected, [[project_friction_budget_baseline_ratchet]])
+  - [x] ⚠ Run the live-DB leg and **record its result openly**, attributing any failure rather than assuming it ([[project_known_livedb_test_failures]], [[project_ci_local_double_run_pollution]]) — ⭐ this story touches ⛔ zero files in `apps/api`, `apps/jobs`, `packages/domain`, `packages/events`, `packages/contracts`, `packages/queue`
+  - [x] Sprint-status ledger entry per [[project_sprint_status_ledger]] — one combined top-of-file entry; flip **only** `11a-6-pinned-notice-component`. ⚠ ⭐ **`epic-11a` becomes eligible for `done` — 11a.6 is the LAST story in the epic** (`epic-11a-retrospective` is `optional`). ⛔ Row 17 untouched
+  - [x] ⛔ **REBASE-merge**, never squash ([[project_story_automator_ops]])
 
 ---
 
@@ -811,10 +811,204 @@ dependency.** If the design seems to need one, **stop and raise it**.
 
 ### Agent Model Used
 
+Claude Opus 5 (`claude-opus-5`) — bmad-dev-story workflow.
+
 ### Debug Log References
+
+**Task 0 — the `.decision-log.md` head, read LIVE.** It was `2026-08-22-152` (Story 11a.5), exactly as
+the story file recorded at authoring, so the new entry is **`2026-08-22-153`**. ⛔ Read, not assumed
+(commit `4dd5b8b`, `governance:` prefix, committed **alone and first**).
+
+**⭐ D8(a) — the UX-spec amendment took a ZERO-LINE-DELTA form, and that is a deliberate deviation from
+the obvious implementation.** The obvious edit — an inline blockquote note under `:491`, the
+`ux-design-specification.md:989` precedent — was written, measured and **backed out**: it added **+9
+lines above `:491`**, and `grep` found **~150 line citations into this spec across ~20 files** (code
+comments, tests, story files, `.decision-log.md`, `deferred-work.md`) — including the `:1814-1821`
+`<PinnedNotice>` anchors **this very story is built to**. Shifting all of them silently, inside a story
+whose whole method is citing ratified lines, would have been a worse outcome than the contradiction the
+amendment fixes. ⇒ `:491` is amended **in place as one line** and the full amendment lands in a new
+**Appendix B — Ratified amendments** appended at the **end** of the file. Verified after the edit:
+`:491` is still `:491`, and §11 is still `1814-1821`. ⚠ The form is recorded in `deferred-work.md` item
+(a) as the convention the next §11 edit will owe.
+
+**⚠ A Tamagui shorthand, found by typecheck rather than by review.** The first draft centred the dismiss
+control with `items="center"` on the row's `XStack` plus `alignSelf="stretch"` on the 4pt stub. Tamagui
+has ⛔ no `alignSelf` prop (the shorthand is `self`), and centring the row would have collapsed the stub
+from full-height to icon-height — a **visible regression to the ratified `:1817` anatomy**, not just a
+type error. Corrected to leave the row's default `stretch` alone (which is what makes the stub
+full-height) and give the **control** `self="center"`.
+
+**⚠ A source-scan false positive, found by the test failing.** The new "⛔ no confirmation step" scan
+matched `Sheet` inside **`StyleSheet.hairlineWidth`** — the section rule. Narrowed to `\bSheet\b`, with
+the reason stated inline so the next reader does not widen it back.
+
+**⭐ AC7 — the microcopy teeth, PROVEN END-TO-END rather than asserted through the library**
+([[feedback_gate_scope_semantic_coverage]]). Three measured runs of the **real** `pnpm microcopy:check`:
+
+| Probe | State | Result |
+|---|---|---|
+| Baseline | both globs added, shipped copy as committed | ✅ **PASSES** — **18** copy files (up from 16), **zero** findings ⇒ ⛔ closing the gap did NOT drag 11a.5's copy into a re-authoring |
+| **1** | a Devanagari operational digit planted in `hi`, a `member_only` term (`user`) planted in `en` | ✅ **FAILS with exactly 2 findings**, one per locale — `[numeral] hi/noticeboard.json:5 — "३"` and `[vocabulary] en/noticeboard.json:5 — "user" → "colleague / सम्मानित साथी"` |
+| **2** | ⭐ the **same** planted violations, **globs removed** | ✅ **GREEN over 16 copy files** ⇒ **the GLOBS are the teeth, ⛔ not the library** — and `noticeboard.test.ts`'s scope leg **FAILS** in exactly that state |
+| Revert | probes backed out | ✅ 18 copy files, gate green, **259** `scripts/microcopy` tests pass, locale files **byte-identical** to the committed copy |
+
+⭐ Probe 2 is the load-bearing one: without it, every planted-violation assertion would pass even with
+the globs absent, because `checkTone`/`checkNumerals` are pure functions that never consult scope.
+
+**⚠ AC6 / AC2 — verified BY READING, ⛔ not by CI, and recorded because there is no gate.** `scripts/`
+holds nineteen invariant gates; ⛔ none is an accessibility gate and ⛔ none bans `react` in
+`packages/ui`. This story mints neither ([[feedback_no_premature_package]]). Checked by hand across
+`packages/ui/src/`: zero `react` / `react-native` / `tamagui` imports (every grep hit is a comment
+saying there are none), zero colour hex in the new sources, `.js` ESM specifiers on every relative
+import.
+
+**`pnpm ci:local` — ✅ 31 jobs green** (`--concurrency=4`), including `microcopy`, `i18n-parity`,
+`friction-budget`, `tokens-theme-check` and all sixteen domain/state invariant gates.
+
+**⚠ THE LIVE-DB LEG — ONE FAILURE, RECORDED OPENLY AND ATTRIBUTED, ⛔ NOT ASSUMED INNOCENT**
+([[project_known_livedb_test_failures]], [[project_ci_local_concurrency_oversubscription]]):
+
+- **The failure:** `packages/domain` → `tests/integration/reconciliation/review-queue-read.spec.ts`
+  → *"orders by deadline proximity — the earlier-opened live cycle sorts first"* (Story **9.8**),
+  `expected -1 to be greater than or equal to 0`. Reproduced on **both** attempts of the full
+  eight-package leg.
+- ⭐ **Innocence PROVEN, ⛔ not asserted.** The identical spec, the identical assertion, fails
+  **identically at the story's `baseline_commit` `d902b04`** — `1 failed | 9 passed` there and
+  `1 failed | 9 passed` here, with this story's changes absent. ⇒ **pre-existing**.
+- ⭐ **And non-involvement is structural:** `git diff --name-only d902b04..HEAD -- packages/domain
+  apps/api apps/jobs packages/events packages/contracts packages/queue` returns **nothing at all**.
+  This story touches **zero** files in every package the live-DB leg runs.
+- ⚠ **It is load/order-dependent, which is worth recording rather than filing as a hard failure:**
+  running `@twt/domain` + `@twt/api` together at `--concurrency=4` was **fully green** (254 files /
+  3051 tests, and 123 files / 1078 tests). The failure appears only in the **full eight-package**
+  fan-out — the [[project_ci_local_concurrency_oversubscription]] signature.
+- ⚠ **A second, non-reproducing failure set is recorded rather than dropped:** the first full run also
+  reported **4 failures in `@twt/api`**. They did ⛔ **not** reproduce — `@twt/api` alone is green
+  (123 files / 1078 tests) and the domain+api pair is green. Same flake class. ⛔ Recorded because a
+  failure that vanished is still a failure that happened.
 
 ### Completion Notes List
 
+⭐ **The single most important thing this story got right is what it did NOT build.** The epic's 11a.6
+AC prose asks for a *"persistent pinned banner above the fold with title, body, severity,
+dismiss-with-ack"* — and **every one of those words already describes `<BannerHost>`** (Story 10.9),
+mounted above every authenticated tab since Epic 10. Building the AC as written would have produced a
+**third** banner surface, one story after 11a.5 spent an entire ruling (`-152` D7(a), plus a new
+`route-suppression.ts` module) suppressing a *duplicate render* of the first two. ⭐ **And the epic
+contradicts itself, which made this a reconciliation rather than a spec-beats-epic argument:** the AC's
+own `Given` anchors **UX-DR16**, which `epics.md:406` defines as *"Noticeboard **ROW** primitive with
+left colored stub"* — as do UX `:680`, UX `:1222` and the component contract at `:1814-1821`. Four
+ratified sources say ROW; one line of `Then` prose says banner. **D1(a): it is the ROW.**
+
+**AC1 — `<PinnedNotice>` is the promotion of `PinnedItem.tsx`.** ⛔ No new above-the-fold surface, ⛔ no
+sticky header, ⛔ no second `<BannerHost>`, ⛔ no new mount point. The four epic field names are
+reconciled explicitly in the component header, naming both sources: `title`→`title` · `body`→`meta`
+(ONE field) · `severity`→**mapped into `category`** (⛔ never a second axis) · `dismiss-with-ack`→AC3.
+*"Above the fold"* is recorded as **already true and requiring no work** — `stats` renders `silent`, so
+only the masthead sits above the pinned section.
+
+**AC2 — the shareable logic is a headless presenter in the module that already owns the row contract.**
+`derivePinnedNoticeViewModel` in `packages/ui/src/noticeboard/pinned-notice.ts`, pure, ⛔ no clock (the
+strip presenter takes `now` for the exclusive `validUntil` boundary; a row that reaches here has already
+survived it, and the arity is asserted so a clock cannot quietly re-enter).
+
+**AC3 — dismiss-with-ack is ONE explicit activation of Story 10.9's EXISTING path.** ⛔ No new endpoint,
+⛔ no new mutation hook, ⛔ no new table, ⛔ no new MMKV persistence, ⛔ no confirmation modal, ⛔ no
+bottom sheet, ⛔ no swipe-only path, ⛔ no auto-dismiss. The optimistic write **rolls back** on failure.
+⛔ `{kind:'shown'}` is never posted from this surface (Trap 4). A `dismissible: false` row renders **no
+affordance at all** — a legal, reachable case, ⛔ not a theoretical branch.
+
+**AC4 — the ratified `dismissed` state is reachable and is a presenter property.** UX `:1818`'s faded
+row, ⛔ not `<BannerHost>`'s optimistic removal: removing immediately would leave a ratified state
+**unreachable**, which is a spec amendment rather than a shortcut. The state is **announced**
+(`dismissed_a11y`), so it is ⛔ never carried by opacity alone; the emphasis VALUE lives in the render
+layer's `PINNED_ROW_OPACITY`, exhaustive by type.
+
+**AC5 — the tier rule is NOT re-implemented, and the presenter's SHAPE proves it.** `PinnedNoticeInput`
+has exactly two keys and admits ⛔ no viewer/audience/authentication/tier operand. ⛔ `AUDIENCE_VISIBILITY`,
+`SEVERITY_CATEGORY`, `isVisibleToViewer` and `bannerRow` are untouched; ⛔ no matrix surface entry and
+⛔ no route ships.
+
+**AC6 — semantic accessibility, in three parts.**
+(i) The **category reaches the LABEL** (UX `:1820`), as a composed, tested presenter property.
+(ii) ⭐ The **routed empty-title defect closes in the pure layer** — both halves: no `". "` prefix and
+no blank visible line. ⛔ Deliberately **not** closed by tightening `toNoticeboardBannerNotice`'s guard.
+(iii) ⭐⛔ **The `Pressable`'s implicit a11y grouping is REPLACED, not merely removed.** RN defaults
+`Pressable` to `accessible={true}`, and that was the **only** mechanism holding *"title and meta read as
+a unit"*. Dropping it silently would have traded one a11y defect for another. The replacement is an
+explicit `accessible={true}` wrapper around **title+meta only**, with the dismiss control as a
+**SIBLING** — a control nested inside an `accessible` container is not individually focusable, which
+would have made the row's only remaining action unreachable. ⛔ Zero in-repo precedent to imitate.
+
+**AC7 — the `noticeboard` copy joins the microcopy register, with teeth proven end-to-end** (see the
+Debug Log's probe table). ⛔ Named by no epic AC; found by the authoring pass. ⛔ No gate-code change,
+⛔ no `allow:` entry.
+
+**AC8 — five absences routed, four routed items closed in precise language.** ⭐ Including the one that
+was easiest to pass over in silence: CR-of-11a.5 item 5's trigger (*"an accessibility audit pass over
+the mobile app's newer screens"*) was arguably fired by a story whose own AC6 **is** semantic
+accessibility, editing **that exact file**. Disposition recorded explicitly as **NOT ADDRESSED**, with
+the reason (11a.6 owns the ROW; the masthead and skeleton are 11a.5's and this story moves neither) —
+and with the observation that the seal defect is now the **same defect class** the row just closed, so
+`PinnedItem.tsx` is a worked example the audit can start from.
+
+⚠ **Two deviations from the story file's letter, both stated rather than absorbed:**
+
+1. ⭐ **D8(a)'s edit form.** The story said *"apply it, as a standalone `docs:` commit"* and said nothing
+   about where the note goes. It landed in a new **Appendix B** with `:491` edited in place, ⛔ not as
+   an inline blockquote, to avoid silently shifting ~150 line citations. The amendment's **content** is
+   exactly the four points routed item (e) required; only its **placement** differs from the obvious
+   reading. Recorded in the Debug Log and in `deferred-work.md` item (a).
+2. **AC6's empty-title fix reaches one line further than the AC's letter.** The AC asks that an empty
+   title not produce a label beginning `". "`. The presenter also **nulls `title`**, which removes the
+   blank *visible* line the same routed finding named as its second half. Both halves of one defect,
+   closed in one place, ⛔ rather than half a fix in the pure layer and half left in JSX.
+
+⚠ **Recorded, ⛔ not fixed:** `ux-design-specification.md:491` still reads *"tap → detail"* while D6(a)
+made the row non-interactive. That clause is outside D8(a)'s ruled scope and is the **same question** as
+the routed notice-detail item, so it is routed with it rather than settled by omission here.
+
 ### File List
 
+**New**
+
+- `packages/ui/src/noticeboard/pinned-notice.ts` — the pure row presenter (`derivePinnedNoticeViewModel`)
+- `packages/ui/tests/noticeboard/pinned-notice.test.ts` — the row gate (27 assertions)
+- `scripts/microcopy/noticeboard.test.ts` — the AC7 teeth proof (29 assertions)
+
+**Modified**
+
+- `.decision-log.md` — Decision `2026-08-22-153` (nine rulings)
+- `_bmad-output/planning-artifacts/ux-design-specification.md` — `:491` amended in place + **Appendix B**
+- `_bmad-output/implementation-artifacts/deferred-work.md` — the Story 11a.6 section + five in-place annotations
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — the ledger entries + the row flips
+- `_bmad-output/implementation-artifacts/11a-6-pinned-notice-component.md` — this file
+- `friction-budget.md` — the Story 11a.6 disposition (⛔ no new row)
+- `microcopy.yaml` — two `scope.copy_globs` entries + their rationale comment
+- `packages/ui/src/index.ts` — the Story-11a.6 line in the house register
+- `packages/ui/src/noticeboard/index.ts` — barrel exports (`.js` ESM specifiers)
+- `packages/ui/src/noticeboard/view-model.ts` — the row view-model types (⛔ `NoticeboardRowDescriptor` unchanged)
+- `packages/ui/src/noticeboard/i18n-keys.ts` — category LABEL keys + the dismiss/dismissed a11y keys
+- `packages/i18n/locales/en/noticeboard.json` — 4 `open_detail_*` keys removed, 6 added
+- `packages/i18n/locales/hi/noticeboard.json` — the same, in parity
+- `apps/mobile/components/panchayat/PinnedItem.tsx` — ⭐ the story's subject
+- `apps/mobile/components/panchayat/PanchayatNoticeboard.tsx` — the acknowledgement wiring only
+- `apps/mobile/components/panchayat/tokens.ts` — `CATEGORY_HINT_KEYS` retired; `PINNED_ROW_OPACITY` added
+- `apps/mobile/tests/unit/panchayat-noticeboard-render.test.ts` — the two time-boundary fences amended
+
+⛔ **Untouched, and verified so:** all four `apps/mobile/components/banners/*` files · `packages/ui/src/noticeboard/presenter.ts` · `packages/ui/tests/noticeboard/presenter.test.ts` · `apps/mobile/components/panchayat/banner-notice.ts` · `packages/i18n/src/catalog.ts` · `scripts/microcopy/{check,lib}.ts` · `apps/mobile/tamagui.config.ts` · `apps/mobile/lib/format-count.ts` · `packages/contracts/**` · `apps/api/**` · `apps/admin/**` · `apps/public/**` · every migration.
+
 ### Change Log
+
+| Date | Change |
+|---|---|
+| 2026-08-22 | **Task 0** — Decision `2026-08-22-153` recorded and committed **alone, first** (`governance:`); head read live |
+| 2026-08-22 | Story file committed; sprint-status `ready-for-dev` → `in-progress` |
+| 2026-08-22 | **Task 1** — the headless `<PinnedNotice>` row presenter lands in `@twt/ui` (AC2, AC4, AC5, AC6) |
+| 2026-08-22 | **Task 2** — the row gate: the AC5 shape proof, both ratified states, the empty-title label (27 tests) |
+| 2026-08-22 | **Task 3** — `PinnedItem.tsx` promoted; the category reaches the LABEL; the "tap to open detail" lie removed (AC1, AC6) |
+| 2026-08-22 | **Task 4** — dismiss-with-ack wired to 10.9's existing endpoint; the two time-boundary fences amended (AC3, AC4) |
+| 2026-08-22 | **Task 5** — the `noticeboard` copy joins `scope.copy_globs`, teeth proven end-to-end (AC7) |
+| 2026-08-22 | **D8(a)** — the `:491` → `:1819` UX-spec amendment APPLIED, zero-line-delta, in a new Appendix B |
+| 2026-08-22 | **Task 6** — five absences routed; four routed items closed in precise language (AC8) |
+| 2026-08-22 | **Task 7** — friction-budget disposition (⛔ no new row); `ci:local` 31/31 green; live-DB leg run and its one pre-existing failure attributed at the baseline; status → review |

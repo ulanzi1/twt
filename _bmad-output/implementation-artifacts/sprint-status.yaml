@@ -1,4 +1,47 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-23 (Story 11a.6 — dev-story pass COMPLETE; all 57 task boxes checked.
+#   ONE ROW FLIPS: 11a-6-pinned-notice-component in-progress -> review.
+#   ⛔ epic-11a stays in-progress. ⚠ ⭐ 11a.6 IS THE LAST STORY IN THE EPIC, so epic-11a becomes
+#   ELIGIBLE for `done` — ⛔ but eligibility is not the flip: it moves when 11a.6 reaches `done`
+#   (epic-11a-retrospective is `optional`). ⛔ No other row moves. ⛔ Row 17 untouched and still
+#   `open` — the noticeboard is a MEMBER-APP surface
+#   ([[project_directory_launch_gated_on_killswitch_ui]]).
+#
+#   ⭐ WHAT SHIPPED, and the one thing that did NOT: `<PinnedNotice>` is the noticeboard ROW
+#   (D1(a)) — ⛔ NOT the epic AC's "persistent pinned banner above the fold", which already
+#   shipped as <BannerHost> at 10.9 and would have made a THIRD banner one story after 11a.5
+#   suppressed a duplicate render of the first two. ⭐ The epic contradicts its own `Given`:
+#   UX-DR16 (epics.md:406) reads "Noticeboard ROW primitive", as do UX :680 / :1222 / :1814-1821.
+#   Four ratified sources say ROW; one line of `Then` prose says banner.
+#
+#   ⭐ TWO ARTIFACTS OUTSIDE THE STORY'S OWN FILES CHANGED, both ruled:
+#     D8(a) — ux-design-specification.md:491 AMENDED (saffron retired; `black` stops meaning
+#     bereavement). ⚠ Deferred-work item (e) closes as "Closed by edit". ⭐ The edit is
+#     ZERO-LINE-DELTA above :491 — an inline note would have shifted ~150 line citations across
+#     ~20 files, including the :1814-1821 anchors this story is built to — so the amendment lands
+#     in a new Appendix B. Verified: :491 is still :491, §11 is still 1814-1821.
+#     D9(a) — the `noticeboard` locale files JOIN microcopy.yaml scope.copy_globs. ⛔ Named by NO
+#     epic AC. ⭐ Teeth PROVEN end-to-end, not asserted: planted violations in BOTH locales FAIL the
+#     real gate, and the SAME violations with the globs removed go GREEN — the globs are the teeth.
+#
+#   ⚠ LIVE-DB LEG — RECORDED OPENLY, ⛔ NOT ASSUMED INNOCENT
+#   ([[project_known_livedb_test_failures]]): the full eight-package leg fails ONE spec,
+#   packages/domain reconciliation/review-queue-read.spec.ts (Story 9.8). ⭐ Innocence PROVEN: the
+#   identical spec fails IDENTICALLY at this story's baseline_commit d902b04, and
+#   `git diff --name-only d902b04..HEAD` touches ZERO files in packages/domain, apps/api,
+#   apps/jobs, packages/events, packages/contracts or packages/queue. ⚠ It is also load-dependent
+#   (domain+api at --concurrency=4 is fully green) — the
+#   [[project_ci_local_concurrency_oversubscription]] signature. ⚠ A 4-failure @twt/api set seen on
+#   one attempt did NOT reproduce; recorded anyway, because a failure that vanished still happened.
+#   `pnpm ci:local` itself: ✅ 31 jobs green.
+#
+#   ⚠ FRICTION BUDGET: declaration affirmed, ⛔ NO new row. ⭐ The net movement is friction REMOVED
+#   (a member can clear their own board; and the row STOPPED LYING to screen readers — it announced
+#   a button over an empty handler). ⚠ The branch that WOULD have owed a row is named: D3(b)'s
+#   two-step confirm was considered and REFUSED. ⚠ member-app-native is UN-MEASURED, ⛔ not
+#   "passing" — the SECOND consecutive story to record that blind facet
+#   ([[feedback_record_unattested_no_backfill]]).
+#
 # last_updated: 2026-08-22p (Story 11a.6 — dev-story pass BEGINS. ONE ROW FLIPS:
 #   11a-6-pinned-notice-component ready-for-dev -> in-progress.
 #   ⛔ epic-11a stays in-progress — ⭐ 11a.6 is the LAST story in the epic, so the epic becomes
@@ -10008,7 +10051,7 @@ development_status:
   # check it out or merge it. ⛔ This story does NOT touch launch-gate Row 17.
   11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only: done
   11a-5-noticeboard-strip-foundational-layout-component: done
-  11a-6-pinned-notice-component: in-progress
+  11a-6-pinned-notice-component: review
   epic-11a-retrospective: optional
 
   # ==========================================================================

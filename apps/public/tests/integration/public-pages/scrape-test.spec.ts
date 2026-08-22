@@ -143,8 +143,24 @@ function clause(partial: {
   } as unknown as schema.ClauseVersionRow;
 }
 
-// Fixture clauses — structurally real Niyamavali content. Deliberately NO accidental
-// 10-digit runs (the phone regex false-positives on those — engine caveat CR-D1-1.16b).
+// Fixture clauses — structurally real Niyamavali content.
+//
+// ⚠ THIS COMMENT USED TO READ "Deliberately NO accidental 10-digit runs (the phone
+// regex false-positives on those — engine caveat CR-D1-1.16b)". CR-D1-1.16b is
+// CLOSED BY EDIT at Story 11a.4 (Decision 2026-08-22-149 cl.3): the `phone` pattern
+// no longer fires inside a URL path segment or a quoted attribute value. A corpus
+// authored around a fixed defect is a stale warning, so the warning is corrected
+// rather than left standing.
+//
+// ⛔ BUT THE CONSTRAINT ITSELF STAYS, for a NARROWER and still-live reason: a bare
+// 10-digit run in TEXT content (`<td>9876543210</td>`) is still flagged, correctly —
+// that is exactly the leak the FR-93 control at the bottom of this file plants on
+// purpose. Keep incidental 10-digit runs out of these fixtures so a planted control
+// stays the ONLY reason this suite can go red on `phone`.
+//
+// ⛔ And the fixture values are NOT edited by that story. An engine change and a
+// corpus change landing together makes it impossible to tell which one moved the
+// result.
 const FIXTURE_CLAUSES = [
   clause({
     clauseId: 'niy.contribution-discipline.r7-a',

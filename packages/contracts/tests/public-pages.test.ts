@@ -218,6 +218,67 @@ describe('naked-PII detector (AC-2)', () => {
   });
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// PRECISION — the other direction (Story 11a.4, AC-1)
+//
+// Every PII assertion above tests RECALL: a planted violation is caught. Before
+// this block nothing in the repo asserted that a NON-PII digit run is *not*
+// flagged, so the false-positive defect CR-D1-1.16b had no regression net and
+// the integration corpus was authored AROUND it (scrape-test.spec.ts:146-147).
+// This block is that net. Each case is planted INDEPENDENTLY — one fixture must
+// never carry several expectations, or one detector can silently stop firing
+// while its neighbours keep the suite green (scrape-test.spec.ts:654's doctrine).
+//
+// ⚠ Two of these are FIXED by the phone-lookbehind tightening; three are
+// STANDING GUARDS over shapes that already pass and must never start failing.
+// They are labelled so a future reader can tell which is which.
+describe('naked-PII detector — PRECISION (FR-93 / Story 11a.4)', () => {
+  // ── Fixed by the AC-2 tightening (each was a live false positive at 075827b).
+  it('does not flag a 10-digit URL path segment as a phone number', () => {
+    const matches = detectNakedPii('<a href="/blog/9876543210">Read the post</a>');
+    expect(matches.filter((m) => m.type === 'phone')).toHaveLength(0);
+  });
+
+  it('does not flag a double-quoted numeric attribute as a phone number', () => {
+    const matches = detectNakedPii('<span data-id="9123456789">Row</span>');
+    expect(matches.filter((m) => m.type === 'phone')).toHaveLength(0);
+  });
+
+  it('does not flag a single-quoted numeric attribute as a phone number', () => {
+    const matches = detectNakedPii("<span data-id='9123456789'>Row</span>");
+    expect(matches.filter((m) => m.type === 'phone')).toHaveLength(0);
+  });
+
+  // ── Standing guards. These already pass; they exist so a future widening of
+  // the pattern cannot start flagging a separated landline without going red.
+  //
+  // ⚠ THE CONTIGUOUS LANDLINE IS DELIBERATELY ABSENT, AND ITS ABSENCE IS THE
+  // POINT. `08012345678` (STD 080 + 8-digit local) IS flagged today and that is
+  // a genuine false positive — but it is `0` + [6-9] + 9 digits, the SAME token
+  // shape as the legitimate 0-prefixed mobile `09876543210` pinned below. STD
+  // codes whose second digit falls in 6-9 (079, 080, 066) collide with the
+  // mobile pattern BY CONSTRUCTION, so ⛔ no context-free regex separates them.
+  // Excluding the landline would stop catching the mobile — precision bought
+  // with recall, which AC-2 forbids in terms. ⛔ Do not "fix" it here.
+  it('does not flag a space-separated landline as a phone number', () => {
+    const matches = detectNakedPii('<p>Office: 0801234 5678</p>');
+    expect(matches.filter((m) => m.type === 'phone')).toHaveLength(0);
+  });
+
+  it('does not flag a hyphen-separated landline as a phone number', () => {
+    const matches = detectNakedPii('<p>Office: 080-12345678</p>');
+    expect(matches.filter((m) => m.type === 'phone')).toHaveLength(0);
+  });
+
+  // ── The recall pin on the collision. ⛔ This is NOT a precision case: it is
+  // what makes the two guards above safe to trust. If a future tightening buys
+  // precision with recall on the 0-prefix branch, this goes red first.
+  it('STILL flags a 0-prefixed mobile number (recall pin — precision may never cost recall)', () => {
+    const matches = detectNakedPii('<p>09876543210</p>');
+    expect(matches.some((m) => m.type === 'phone')).toBe(true);
+  });
+});
+
 describe('evaluateSnapshot orchestration (AC-2/AC-3)', () => {
   it('no html and no fields → no-op (a surface with no render)', () => {
     const v = evaluateSnapshot(FIXTURE, { surfaceId: 'member-directory', viewerContext: 'public' });

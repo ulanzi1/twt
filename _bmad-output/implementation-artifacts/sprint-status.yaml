@@ -29,10 +29,18 @@
 #   packages/domain reconciliation/review-queue-read.spec.ts (Story 9.8). ⭐ Innocence PROVEN: the
 #   identical spec fails IDENTICALLY at this story's baseline_commit d902b04, and
 #   `git diff --name-only d902b04..HEAD` touches ZERO files in packages/domain, apps/api,
-#   apps/jobs, packages/events, packages/contracts or packages/queue. ⚠ It is also load-dependent
-#   (domain+api at --concurrency=4 is fully green) — the
-#   [[project_ci_local_concurrency_oversubscription]] signature. ⚠ A 4-failure @twt/api set seen on
-#   one attempt did NOT reproduce; recorded anyway, because a failure that vanished still happened.
+#   apps/jobs, packages/events, packages/contracts or packages/queue.
+#   ⚠ ⭐ THE DATE-BOMB CHECK WAS RUN BEFORE THE BASELINE WAS TRUSTED (#12 of
+#   [[project_known_livedb_test_failures]]: "checking out an older commit does not rewind the
+#   clock"). Checked: the spec pins BOTH sides, so it is ⛔ not a date bomb and the baseline
+#   comparison IS informative.
+#   ⚠ It is INTERMITTENT (a later isolated run passed 10/10; domain+api at --concurrency=4 fully
+#   green). ⭐ Most likely the shared-DB ACCUMULATION family (#9/#10) — fixed PARIWAR_A + a limited
+#   read + 5518 accumulated rows under that tenant — but recorded as a DIAGNOSIS, ⛔ not a root
+#   cause: a probe printed `truncated=true` while PASSING, so the mechanism stays OPEN. ⛔ The
+#   documented remedy (recreating twt-test-pg) was NOT run — it destroys the local test DB and is
+#   BigDev's call. ⚠ A 4-failure @twt/api set seen on one attempt did NOT reproduce; recorded
+#   anyway, because a failure that vanished still happened.
 #   `pnpm ci:local` itself: ✅ 31 jobs green.
 #
 #   ⚠ FRICTION BUDGET: declaration affirmed, ⛔ NO new row. ⭐ The net movement is friction REMOVED

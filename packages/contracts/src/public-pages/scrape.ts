@@ -264,7 +264,7 @@ export interface PiiMatch {
 //             run is an identifier rather than a number a reader could dial
 //             (Story 11a.4, AC-2 — closes CR-D1-1.16b for the `phone` pattern;
 //             tightened at Decision 2026-08-22-150 — see below):
-//               (?<![a-zA-Z\/]\/)  — a URL path segment: href="/blog/9876543210"
+//               (?<![a-zA-Z/]\/)  — a URL path segment: href="/blog/9876543210"
 //                                    (excludes only when the slash is itself
 //                                    preceded by a letter or slash — a
 //                                    slash-separated number PAIR like
@@ -303,7 +303,7 @@ function piiPatterns(): { type: PiiPatternType; re: RegExp }[] {
     { type: 'aadhaar', re: /(?<!\d)\d{4}[\s-]?\d{4}[\s-]?\d{4}(?!\d)/g },
     {
       type: 'phone',
-      re: /(?<![a-zA-Z0-9._%+\-\d])(?<![a-zA-Z\/]\/)(?<!=")(?<!=')(?:\+?91[\s-]?|0)?[6-9]\d{9}(?!\d)/g,
+      re: /(?<![a-zA-Z0-9._%+\-\d])(?<![a-zA-Z/]\/)(?<!=")(?<!=')(?:\+?91[\s-]?|0)?[6-9]\d{9}(?!\d)/g,
     },
   ];
 }

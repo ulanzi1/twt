@@ -7,8 +7,10 @@
   "recent_closings_header": "हाल की आहुति",
   "next_meeting_header": "अगली मासिक बैठक",
   "loading_a11y": "सूचना पट्ट लोड हो रहा है…",
-  "open_detail_terracotta": "चक्र पूर्ण होने की सूचना खोलने के लिए दबाएँ",
-  "open_detail_green": "उपलब्धि की सूचना खोलने के लिए दबाएँ",
-  "open_detail_black": "निर्धारित बैठक की सूचना खोलने के लिए दबाएँ",
-  "open_detail_ink": "सूचना खोलने के लिए दबाएँ"
+  "category_terracotta": "चक्र पूर्ण होने की सूचना",
+  "category_green": "उपलब्धि की सूचना",
+  "category_black": "निर्धारित बैठक की सूचना",
+  "category_ink": "सूचना",
+  "dismiss_a11y": "यह संदेश हटाएँ",
+  "dismissed_a11y": "हटाई गई"
 }

@@ -1,13 +1,14 @@
 import { useLocale } from '@twt/i18n/react'
 import { deriveNoticeboardViewModel } from '@twt/ui'
 import type { NoticeboardSection, NoticeboardStripViewModel } from '@twt/ui'
-import { useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { ScrollView, StyleSheet } from 'react-native'
 import { Text, View, XStack, YStack } from 'tamagui'
 
 import { useNoticeboardT } from '../../lib/noticeboard-i18n'
 import { useSession } from '../../lib/session-context'
-import { useMemberBannersQuery } from '../banners/useMemberBannersQuery'
+import { bannerDismissalKey } from '../banners/copy'
+import { useDismissBannerMutation, useMemberBannersQuery } from '../banners/useMemberBannersQuery'
 import { PollsEntry } from '../polls/PollsEntry'
 import { PinnedItem } from './PinnedItem'
 import { toNoticeboardBannerNotice } from './banner-notice'
@@ -45,6 +46,30 @@ import { RULE_HAIRLINE_TOKEN } from './tokens'
 // UX `:1161` (v4): standalone counts and dates render LATIN, operational AND celebration framing alike.
 // This surface currently renders no numeral at all (the two counting sections have no producer); the
 // discipline itself survives as `lib/format-count.ts` for the producer story.
+//
+// ── Story 11a.6 adds ONE thing to this file: the acknowledgement wiring ─────────────────────────────
+// ⛔ Section order, the four states, the skeleton, the masthead, the hairlines and `<PollsEntry>`'s
+// position are Story 11a.5's and do not move. What is new is dismiss-with-ack (Decision 2026-08-22-153):
+//
+//   · D5(a) — ⭐ THE SCREEN OWNS THE DISMISSAL IDENTITY, which is why the row descriptor was NOT widened.
+//     `NoticeboardRowDescriptor.id` is the bare `banner_id`, but a dismissal is keyed by
+//     `bannerDismissalKey(banner_id, revision)` — a COPY REVISION bumps `revision` precisely so the
+//     banner RE-SURFACES for members who dismissed the previous wording, and a bare-id key would let a
+//     stale in-session dismissal swallow it. This screen already holds `data.banner` (it must, to build
+//     the presenter input), so it composes the key here. ⛔ The key FORMAT is not re-implemented and
+//     `components/banners/copy.ts` is not edited — there stays exactly ONE implementation.
+//   · D3(a) — ONE explicit activation, POSTed through 10.9's EXISTING idempotent endpoint via the
+//     EXISTING `useDismissBannerMutation`. ⛔ No confirmation modal, ⛔ no bottom sheet, ⛔ no two-step
+//     confirm, ⛔ no swipe-only path, ⛔ no auto-dismiss on scroll or timer. `:2318` reserves confirmation
+//     for IRREVERSIBLE actions and a dismissal is reversible by a copy revision.
+//   · D4(a) — the optimistic write ROLLS BACK on failure. A failed write must never permanently hide a
+//     notice the server did not suppress (the `BannerHost.tsx:162-170` posture).
+//   · ⛔ TRAP 4 — `{kind:'shown'}` is NOT posted from here. `<BannerHost>` already reports it on this
+//     tab (its route suppression is placed AFTER that effect, deliberately), its `useRef` once-guard is
+//     NOT shared, and `shown` suppresses IDENTICALLY to `dismissed` — so a second reporter would be a
+//     genuine double-post racing the first on the same suppression.
+//   · D7(a) — ⛔ NONE of `components/banners/{BannerHost,copy,route-suppression,useMemberBannersQuery}`
+//     is edited. The duplicated optimistic-set + rollback shape is ROUTED, declined on blast radius.
 
 export function PanchayatNoticeboard() {
   const t = useNoticeboardT()
@@ -53,11 +78,47 @@ export function PanchayatNoticeboard() {
   const pariwarId = session?.pariwarId ?? null
 
   const { data, isLoading, isFetching } = useMemberBannersQuery(pariwarId)
+  const dismiss = useDismissBannerMutation(pariwarId)
+
+  const banner = data?.banner ?? null
 
   const bannerNotice = useMemo(
-    () => toNoticeboardBannerNotice(data?.banner ?? null, locale),
-    [data?.banner, locale],
+    () => toNoticeboardBannerNotice(banner, locale),
+    [banner, locale],
   )
+
+  // The optimistic acknowledgement window, keyed by `bannerId:revision` (D5(a)). ⚠ Its LIFETIME is the
+  // server's business, not this set's: the mutation invalidates `onSettled`, 10.9's dismissal join
+  // suppresses the banner on the re-read, and the row is simply gone. ⛔ Nothing here is persisted to
+  // MMKV and ⛔ there is no client-side expiry.
+  const [acknowledged, setAcknowledged] = useState<ReadonlySet<string>>(new Set())
+
+  const onDismiss = useCallback(() => {
+    if (!banner) return
+    const key = bannerDismissalKey(banner.banner_id, banner.revision)
+    setAcknowledged((prev) => new Set(prev).add(key))
+    dismiss.mutate(
+      { bannerId: banner.banner_id, kind: 'dismissed' },
+      {
+        // Roll back: a failed write must never permanently hide a notice the server did not suppress.
+        onError: () =>
+          setAcknowledged((prev) => {
+            const next = new Set(prev)
+            next.delete(key)
+            return next
+          }),
+      },
+    )
+  }, [banner, dismiss])
+
+  // ⭐ The row is `dismissed` only while the optimistic window is open. There is at most ONE row (the
+  // banner lane is the noticeboard's only producer), so the correlation is a direct id match rather than
+  // a lookup table — and it is an EXPLICIT match, so a future second producer cannot silently inherit
+  // this banner-specific state.
+  const isAcknowledged = (rowId: string): boolean =>
+    banner !== null &&
+    rowId === banner.banner_id &&
+    acknowledged.has(bannerDismissalKey(banner.banner_id, banner.revision))
 
   const vm: NoticeboardStripViewModel = deriveNoticeboardViewModel(
     {
@@ -86,6 +147,8 @@ export function PanchayatNoticeboard() {
             t={t}
             // A hairline separates sections that actually rendered something, per UX `:490-494`.
             isFirst={index === 0}
+            isAcknowledged={isAcknowledged}
+            onDismiss={onDismiss}
           />
         ))}
       </ScrollView>
@@ -105,11 +168,15 @@ function Section({
   vm,
   t,
   isFirst,
+  isAcknowledged,
+  onDismiss,
 }: {
   section: NoticeboardSection
   vm: NoticeboardStripViewModel
   t: Translate
   isFirst: boolean
+  isAcknowledged: (rowId: string) => boolean
+  onDismiss: () => void
 }) {
   const { render } = section
 
@@ -138,7 +205,12 @@ function Section({
           ) : render.kind === 'rows' ? (
             <YStack accessibilityRole="list" accessibilityLabel={t('pinned_list_a11y')}>
               {render.rows.map((row) => (
-                <PinnedItem key={row.id} item={row} />
+                <PinnedItem
+                  key={row.id}
+                  item={row}
+                  acknowledged={isAcknowledged(row.id)}
+                  onDismiss={onDismiss}
+                />
               ))}
             </YStack>
           ) : render.kind === 'empty-with-copy' ? (

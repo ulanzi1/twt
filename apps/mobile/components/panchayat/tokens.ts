@@ -1,8 +1,8 @@
 // The Panchayat Noticeboard's mobile-palette bridge — Story 11a.5 (Task 3; AC3 / Decision
-// 2026-08-22-152 D6(a)).
+// 2026-08-22-152 D6(a)), extended by Story 11a.6 (Decision 2026-08-22-153, D4(a)/D6(a)).
 //
-// ⭐ THE ONLY PLACE a noticeboard notice CATEGORY (or its hairline rule) becomes a colour. FM-14 #2 —
-// colours come from a token authority, never a magic literal. The `StatusPill` `TONE_TOKENS` /
+// ⭐ THE ONLY PLACE a noticeboard notice CATEGORY (or its hairline rule, or a row STATE) becomes a visual
+// value. FM-14 #2 — colours come from a token authority, never a magic literal. The `StatusPill` `TONE_TOKENS` /
 // `BannerHost` `SEVERITY_TOKENS` precedent, and the shape D6(a) ruled: ONE named semantic→Tamagui-scale
 // map, `as const satisfies Record<NoticeCategory, …>`, so the mapping is EXHAUSTIVE BY TYPE and a new
 // category cannot compile without a colour.
@@ -24,7 +24,7 @@
 // rather than DERIVED FROM `@twt/tokens` — an honest, already-accepted variance (`StatusPill.tsx:43-44`
 // states it in terms), not a new one. Each entry below names the role it aligns to.
 
-import type { NoticeCategory } from '@twt/ui'
+import type { NoticeCategory, PinnedNoticeState } from '@twt/ui'
 import type { ColorTokens } from 'tamagui'
 
 /**
@@ -57,16 +57,20 @@ export const CATEGORY_TOKENS = {
 export const RULE_HAIRLINE_TOKEN = '$borderColor'
 
 /**
- * The `accessibilityHint` KEY per category (the `noticeboard` namespace).
+ * The `dismissed` state → its visual EMPHASIS. `ux-design-specification.md:1818` ratifies
+ * *"dismissed (faded if member-dismissable)"* and D4(a) of Decision 2026-08-22-153 rules that this
+ * component renders that state rather than removing the row the way `<BannerHost>` does for the same
+ * underlying banner.
  *
- * ⚠ THIS MAP IS THE CORRECTION D2(a) FORCES, not a re-keying. The prototype mapped `black` → "memorial"
- * and `saffron` → "governance", which were §491's meanings. Under §1819 `black` is a SCHEDULED MEETING
- * and `saffron` does not exist — so carrying the old hint across would have told a screen-reader user
- * "memorial" about a meeting notice.
+ * ⭐ The STATE is the presenter's property and the EMPHASIS is this layer's — the same split
+ * `CATEGORY_TOKENS` makes for colour (D6(a)). ⛔ Never an inline `opacity` literal decided in JSX, and
+ * `as const satisfies Record<PinnedNoticeState, number>` keeps it exhaustive by type, so a state added to
+ * the ratified set cannot compile without an emphasis.
+ *
+ * ⚠ Fading is a visual channel only, so it is NEVER the sole carrier: the presenter also appends a
+ * `dismissed_a11y` part to the row's composed label (AC4).
  */
-export const CATEGORY_HINT_KEYS = {
-  terracotta: 'open_detail_terracotta',
-  green: 'open_detail_green',
-  black: 'open_detail_black',
-  ink: 'open_detail_ink',
-} as const satisfies Record<NoticeCategory, string>
+export const PINNED_ROW_OPACITY = {
+  default: 1,
+  dismissed: 0.5,
+} as const satisfies Record<PinnedNoticeState, number>

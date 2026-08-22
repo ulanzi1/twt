@@ -1,4 +1,41 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-22f (Story 11a.4 — bmad-dev-story COMPLETE. ONE ROW FLIPS:
+#   11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only: in-progress -> review.
+#   ⛔ epic-11a stays in-progress (2 stories remain: 11a.5, 11a.6). ⛔ No other row moves.
+#   ⛔ Row 17 UNTOUCHED and still `open` — the public Member Directory still may NOT go live.
+#
+#   SHIPPED: AC1 the repo's FIRST precision coverage (every prior PII assertion tested recall);
+#   AC2 the `phone` lookbehind excludes URL-path + quoted-attribute contexts (CR-D1-1.16b CLOSED
+#   BY EDIT; ⛔ `aadhaar` NOT widened); AC3 both naked-PII over-claims corrected (⚠ one half moved,
+#   one half STAYED — renderer opaqueness is untouched); AC3a a publish-time naked-PII BACKSTOP on
+#   the niyamavali.amend path (typed 422, pattern TYPES only, ⛔ NEVER the value, before the audit
+#   write, both-direction controls); AC4 five contact-bait honeypot paths + the two limits recorded
+#   IN THE CODE; AC5 the seven-item FR-93 doctrine in the canonical README; AC6 the records.
+#   ⛔ THE PUBLISH SCAN IS A BACKSTOP — the non-author human sign-off REMAINS the primary control.
+#
+#   ⭐ TWO FINDINGS THIS STORY PRODUCED, both recorded rather than smoothed over:
+#   (1) AC1's third case rested on a VERIFIED-FALSE evidence row (`0801234 5678` does NOT match).
+#       Its only real subject (08012345678) is `0`+[6-9]+9 digits — the SAME token shape as the
+#       legitimate 0-prefixed mobile 09876543210 ⇒ INSEPARABLE BY CONSTRUCTION, and excluding it
+#       would buy precision WITH RECALL, which AC2 forbids. ⭐ RAISED to BigDev, RULED, inverted:
+#       guard the non-matching shapes + PIN the collision by test. ⛔ Never "fix" it in passing.
+#   (2) ⭐ AC7(b) FALSIFIED ITS OWN PREDICTION — deleting a bait path did ⛔ NOT turn
+#       security-headers.spec.ts red. Its loop AND its count assertion both read HONEYPOT_PATHS,
+#       so it is VACUOUS AGAINST DELETION BY CONSTRUCTION (the same class as 2026-08-21-145's
+#       /members AC10 control). Fixed with a deletion-proof pin, then re-proven red-then-green.
+#
+#   VERIFICATION — counts MEASURED in a clean 075827b worktree, ⛔ not inferred:
+#     @twt/contracts 1049 -> 1055 (+6) · @twt/public 179 -> 179 (+0, comment-only)
+#     @twt/api 1073 -> 1078 (+5) · ci:local PASSED — 31 jobs green · pii:check ✓
+#   ⚠ friction-budget fired a REAL AC-4 failure (comment-only apps/public touches still count, and
+#     it only fires once COMMITTED) — a disposition was added: declaration affirmed, ⛔ NO new row.
+#   ⚠ ci:local's integration-tests leg fails under 8-package concurrency ⛔ NOT from this story:
+#     proven by isolation (76/76 in 6.5s) AND by a BASELINE re-run at 075827b that also fails, on a
+#     DIFFERENT package. Pre-existing contention; recorded openly, ⛔ not reported as "all green".
+#
+#   OPEN + ROUTED by Decision 2026-08-22-149, ⛔ NOT closed here: the UNOWNED Contact + About pages
+#   (owner John; ⚠ the gate is blind to a missing page BY CONSTRUCTION); the §Q3(d) publishing-
+#   authority question and the inert provisional/policy_review_required flags (owner: Trustee Panel).
 # last_updated: 2026-08-22e (Story 11a.4 — bmad-dev-story STARTED. ONE ROW FLIPS:
 #   11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only: ready-for-dev -> in-progress.
 #   ⛔ epic-11a stays in-progress (2 stories remain: 11a.5, 11a.6). ⛔ No other row moves.
@@ -9454,7 +9491,7 @@ development_status:
   # bmad-dev-story runs. ⛔ The dev agent may NOT rule them. ⛔ A superseded authoring pass sits on
   # `story/11a.4-phone-email-obfuscation` (656aaa5) -- do NOT check it out or merge it; three of its
   # load-bearing claims are now FALSE. ⛔ This story does NOT touch launch-gate Row 17.
-  11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only: in-progress
+  11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only: review
   11a-5-noticeboard-strip-foundational-layout-component: backlog
   11a-6-pinned-notice-component: backlog
   epic-11a-retrospective: optional

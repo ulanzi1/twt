@@ -249,6 +249,22 @@ describe('naked-PII detector — PRECISION (FR-93 / Story 11a.4)', () => {
     expect(matches.filter((m) => m.type === 'phone')).toHaveLength(0);
   });
 
+  // ── Fixed by Decision 2026-08-22-150 (D2 superseded): the original AC-2
+  // lookbehinds excluded a bare `'` or `/`, not the markup signature they were
+  // meant to detect. These two cases were live false NEGATIVES at the tightened
+  // D2 regex — a real phone number silently evaded detection.
+  it('DOES flag a phone number quoted in prose, not inside an attribute', () => {
+    const matches = detectNakedPii("<p>Call us at '9876543210' for help.</p>");
+    expect(matches.some((m) => m.type === 'phone')).toBe(true);
+  });
+
+  it('DOES flag the second number of a slash-separated alternate-number pair', () => {
+    const matches = detectNakedPii('<p>Reach us at 9876543210/9123456789</p>');
+    const phoneMatches = matches.filter((m) => m.type === 'phone').map((m) => m.value);
+    expect(phoneMatches).toContain('9876543210');
+    expect(phoneMatches).toContain('9123456789');
+  });
+
   // ── Standing guards. These already pass; they exist so a future widening of
   // the pattern cannot start flagging a separated landline without going red.
   //

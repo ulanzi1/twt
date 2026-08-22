@@ -262,13 +262,27 @@ export interface PiiMatch {
 //             pattern never fires inside an email address or another number.
 //             Three further lookbehinds exclude MARKUP contexts where a 10-digit
 //             run is an identifier rather than a number a reader could dial
-//             (Story 11a.4, AC-2 — closes CR-D1-1.16b for the `phone` pattern):
-//               (?<!\/)  — a URL path segment: href="/blog/9876543210"
+//             (Story 11a.4, AC-2 — closes CR-D1-1.16b for the `phone` pattern;
+//             tightened at Decision 2026-08-22-150 — see below):
+//               (?<![a-zA-Z\/]\/)  — a URL path segment: href="/blog/9876543210"
+//                                    (excludes only when the slash is itself
+//                                    preceded by a letter or slash — a
+//                                    slash-separated number PAIR like
+//                                    9876543210/9123456789 is NOT excluded,
+//                                    because the second run's preceding slash
+//                                    is preceded by a digit, not a letter)
 //               (?<!=")  — a double-quoted attribute value: data-id="9123456789"
-//               (?<!')   — a single-quoted attribute value: data-id='9123456789'
+//               (?<!=')  — a single-quoted attribute value: data-id='9123456789'
 //             ⚠ Deliberately narrow. `:"` is NOT excluded, so a phone number
 //             planted in a JSON string value still matches — that is what the
 //             publish-time payload backstop (apps/api rules publish path) reads.
+//             ⛔ Decision 2026-08-22-150 SUPERSEDES the original D2 regex: the
+//             `'` and `/` exclusions had been scoped to a bare character, not
+//             the markup signature, so a quoted phone number in prose
+//             ('9876543210') and the second number of a slash-separated pair
+//             both silently evaded detection — including on the publish-time
+//             backstop, where JSON text has no markup context at all. Both
+//             exclusions now require the actual attribute/URL-path signature.
 //
 // ⛔ WHAT IS DELIBERATELY NOT FIXED HERE, so nobody "improves" it in passing:
 //   • The `aadhaar` pattern still matches any 12-digit run (e.g. 987654321012).
@@ -289,7 +303,7 @@ function piiPatterns(): { type: PiiPatternType; re: RegExp }[] {
     { type: 'aadhaar', re: /(?<!\d)\d{4}[\s-]?\d{4}[\s-]?\d{4}(?!\d)/g },
     {
       type: 'phone',
-      re: /(?<![a-zA-Z0-9._%+\-\d])(?<!\/)(?<!=")(?<!')(?:\+?91[\s-]?|0)?[6-9]\d{9}(?!\d)/g,
+      re: /(?<![a-zA-Z0-9._%+\-\d])(?<![a-zA-Z\/]\/)(?<!=")(?<!=')(?:\+?91[\s-]?|0)?[6-9]\d{9}(?!\d)/g,
     },
   ];
 }

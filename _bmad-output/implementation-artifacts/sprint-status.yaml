@@ -1,4 +1,231 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-22e (Story 11a.4 — bmad-dev-story STARTED. ONE ROW FLIPS:
+#   11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only: ready-for-dev -> in-progress.
+#   ⛔ epic-11a stays in-progress (2 stories remain: 11a.5, 11a.6). ⛔ No other row moves.
+#   ⛔ Row 17 (directory-kill-switch-admin-ui) is UNTOUCHED and stays `open` — ⛔ the public Member
+#   Directory still may not go live, and ⛔ nothing in 11a.4 closes, advances or bears on it.
+#
+#   ⭐ THE 2026-08-22d RULINGS NOW HAVE AN INDEPENDENT RECORD: `.decision-log.md` Decision
+#   2026-08-22-149 committed FIRST and ALONE (fa243d8, `governance:` prefix, ⛔ zero packages/ or
+#   apps/ files) per [[feedback_governance_commits_precede_implementation]]. ⚠ Until that commit this
+#   ledger and the story file were the only trace of the rulings, both written in the same pass —
+#   the entry is what makes them governance-of-record, ⛔ not a formality.
+#   The entry carries FOUR clauses that are OPEN and ROUTED, ⛔ not ruled: cl.7 the committed-but-
+#   UNOWNED public Contact + About pages (owner John; ⚠ the PII-scrape gate is blind to a missing
+#   page BY CONSTRUCTION, so ⛔ no green check will ever surface it); cl.8 whether ONE non-author
+#   reviewer suffices to publish a clause governing claim eligibility (owner: Trustee Panel);
+#   cl.9 `provisional` / `policy_review_required` are INERT DATA — ⛔ nothing reads either flag
+#   (owner: Trustee Panel); and the honeypot IP-provenance limit, which ⛔ JOINS deferred-work.md's
+#   existing topology item (~L205-213) rather than opening a second one.
+#   ⭐ cl.4/cl.5: the publish-time payload scan that ships under D3(e) is a BACKSTOP — ⛔ the
+#   non-author human sign-off REMAINS the primary control. ⛔ A regex has NOT replaced a human control.
+#   ⛔ Row 17 untouched · ⛔ no matrix tier moves · ⛔ no permission key, migration or catalog bump.
+# last_updated: 2026-08-22d (Story 11a.4 — ✅ ALL FIVE DECISIONS RULED BY BIGDEV, each AS RECOMMENDED:
+#   ⭐ D1'=(a) · D2=(a) · D3=(e) · D4=(a) · D5=(a). ⛔ NO ROW FLIPS; 11a-4 stays `ready-for-dev` —
+#   the rulings UNBLOCK bmad-dev-story, they do not change status.
+#   ⚠⛔ THE RULING HAS NO INDEPENDENT RECORD YET. No .decision-log.md entry exists; this ledger and
+#   the story file are the ONLY trace, both written in the same pass. Task 1's `governance:` commit is
+#   what makes it durable governance-of-record — a NON-OPTIONAL PRECONDITION, ⛔ not a formality.
+#   WHAT EACH RULING TURNS ON:
+#   · D1'=(a) — ship the DOCTRINE, ROUTE the gap, ⛔ BUILD NO MASKING COMPONENT. The three epics.md
+#     L4655 techniques stay refused ON THE MERITS for the trust's own contact channel (reachability
+#     bounded by accessibility). AC5 item 5 carries the institutional-vs-member distinction WITH the
+#     rejection reasons; Task 7 routes the ⛔ UNOWNED Contact + About surfaces (SD-1 shaped) to John.
+#     ⛔ The AC1(a) deferral trigger is "the story that builds the committed public Contact page".
+#   · D2=(a) — CR-D1-1.16b CLOSED BY [edit] here, on the evidence that the corpus is authored AROUND
+#     the defect (scrape-test.spec.ts:146-147), ⛔ NOT on a "fired trigger" (the recorded trigger names
+#     loadSnapshots(), DELETED at 11a.1 — recorded separately as STALE). ⭐ SCOPE IS THE `phone`
+#     PATTERN ONLY: ⛔ D2(b) was NOT ruled in ⇒ the `aadhaar` pattern is ⛔ NOT widened and ⛔ not
+#     "improved" in passing — a 12-digit run genuinely IS an Aadhaar shape and loosening it trades a
+#     real recall guarantee on a never_exposed field for a hypothetical precision gain.
+#   · D3=(e) — ⭐ AC3a + Task 4a ARE NOW ACTIVE, ⛔ no longer conditional. A publish-time
+#     detectNakedPii scan over canonicalJsonStringify(payload) lands on the niyamavali.amend publish
+#     path (rules/index.ts), BEFORE the audit write so a rejection leaves ⛔ no audit line and ⛔ no
+#     partial state. ⛔ SEQUENCED STRICTLY BEHIND AC1+AC2 — a false positive on a governance write
+#     path BLOCKS a legitimate rule amendment, so the precision fix is a PRECONDITION, not a
+#     neighbour. Error names the pattern TYPE ONLY, ⛔ NEVER the matched VALUE (echoing it writes the
+#     leaked PII into the response body + request log). ⛔ No 500 is a permitted pass (the 10.30
+#     finding). Negative controls BOTH directions: planted PII REJECTED, real R8 shape
+#     {"threshold_percent":90,"min_contributions":10} PUBLISHES CLEANLY.
+#     ⛔⛔ (e) IS A BACKSTOP, ⛔ NOT THE PRIMARY CONTROL — the non-author human sign-off REMAINS
+#     primary, and the decision-log entry MUST say so, or the record later reads as though a human
+#     control was replaced by a regex.
+#     ⛔ AND (e) DOES NOT SETTLE §Q3(d): whether ONE non-author reviewer is sufficient authority to
+#     publish a clause governing CLAIM ELIGIBILITY, and who answers for a wrong one, stays OPEN and
+#     ROUTED TO THE PANEL. ⛔ A regex is not an answer to a governance question.
+#     ⚠ D3(d) was NOT ruled in ⇒ ⛔ do NOT also add a planted-payload fixture to scrape-test.spec.ts;
+#     AC3a's publish-path controls are where planted PII belongs now.
+#   · D4=(a) — contact-shaped bait paths on apps/api reusing registerHoneypot; ⭐ the response body
+#     STAYS the bare {status:'ok'} for ALL paths, old and new (⛔ D4(b)'s fake contact payload NOT
+#     ruled in). ⛔ The recorded IP stays caller-supplied ⇒ a SIGNAL, ⛔ not evidence, ⛔ never
+#     "flagging scraping IPs"; the topology precondition JOINS deferred-work.md:205-213, ⛔ never a
+#     second entry.
+#   · D5=(a) — FR-93's `[v1-S — moot per policy]` is Should-have CADENCE PRIORITY, ⛔ NOT "skip".
+#     Resolved in the README so a future reader ⛔ cannot misread "moot" as "this story was cut", and
+#     ⛔ cannot misread "member contact is never public" as "FR-93 has no subject at all".
+#   ⛔ Still NO CODE, NO MIGRATION, NO ADR, NO DECISION-LOG ENTRY committed by this session.
+#   NEXT: bmad-dev-story. Task 1 (`governance:` decision-log entry) commits FIRST and ALONE.)
+# last_updated: 2026-08-22c (Story 11a.4 — ⛔ D1 WITHDRAWN AND RE-ASKED AS D1' after a BigDev
+#   correction. ⛔ NO ROW FLIPS; 11a-4 stays `ready-for-dev`.
+#   ⭐⛔ THE CORRECTION: the trust's contact phone/email are DELIBERATELY PUBLIC so people in need may
+#   contact the trust. ⇒ the story's Trap 1 committed a CATEGORY ERROR — it treated `epics.md` L4655's
+#   "helpline contact, footer" as the same subject FR-74/the matrix govern (MEMBER PII, never public),
+#   when it is the TRUST'S OWN institutional channel, whose governing property is REACHABILITY bounded
+#   by accessibility. ⛔ Opposite intents, collapsed into one topic.
+#   ⚠ ROOT CAUSE, RECORDED NOT SMOOTHED: the authoring pass NEVER OPENED THE UX SPEC — a DECLARED
+#   INPUT of the create-story workflow (Input Files table, `ux`). Trap 1's "no consumer, building for
+#   it would be scope invention" was reasoned from apps/public + epics.md alone.
+#   ⛔ THE CONSUMER IS COMMITTED PRODUCT: ux-design-specification.md:243 lists the public-website
+#   inventory as "Member Directory, Sahyog Drive, In Memoriam, Niyamavali with version diff, About,
+#   Contact (with Madad card)" — the SAME inventory as the three surfaces 11a.1-11a.3 built; :297
+#   "Madad on the Contact page is the FRONT DOOR, not a fallback"; :87 the card sits "above existing
+#   contact content"; :209 Contact is in the bottom bar.
+#   ⭐ THE MASKING TECHNIQUES ARE NOW REFUSED ON THE MERITS, ⛔ no longer "deferred for want of a call
+#   site": image rendering ⇒ ⛔ not tappable/copyable/screen-readable (NFR-A11y-1 WCAG 2.1 AA is a
+#   LAUNCH BLOCKER for public-site primary nav); JS-decode ⇒ ⛔ fails without JS, on a surface that is
+#   Astro SSR PRECISELY so it works without it; partial-mask + helpdesk CTA ⇒ ⛔ CIRCULAR, the number
+#   IS the helpdesk. ⚠ And indexing cuts the OTHER way — a Contact page would be
+#   `search_indexing_policy: index`; you WANT the helpline findable by someone searching for help.
+#   ✅ THE RESIDUAL CONCERN IS REAL BUT IS CHANNEL INTEGRITY (harvest -> spam -> a degraded helpline
+#   grieving families depend on), ⛔ NOT privacy ⇒ mitigated by the AC4 honeypot + rate limiting +
+#   provider-side filtering, ⛔ never by making the number unreadable. ⛔ Do not collapse "not a
+#   privacy problem" into "not a problem".
+#   ⭐⛔ SECOND FINDING, ROUTED NOT BUILT — SD-1 SHAPED: the Contact page AND About are committed in
+#   the UX spec inventory and ⛔ NO EPIC STORY OWNS EITHER (`grep "Contact page|/contact|About page"
+#   epics.md` -> ZERO hits), ⛔ no apps/public route, ⛔ no matrix surface. ⚠ AND THE PII-SCRAPE GATE
+#   IS BLIND TO THIS BY CONSTRUCTION — its route-coverage leg reconciles SHIPPED PAGES <-> MATRIX
+#   SURFACES in both directions, so a surface that SHOULD exist and does NOT is invisible to both.
+#   ⛔ No green check will ever surface it. Owner: John (correct-course), ⛔ not 11a.4's to schedule.
+#   ⚠ DEPENDENCY NAMED: ⛔ no provisioned helpline source exists (note-template.ts:122-127 — no
+#   .env.example entry, no deploy config, no validation; the PDF prints HELPLINE_PENDING_TOKEN
+#   "[PENDING — Epic 10 per-Pariwar helpline resolution]" rather than fabricate one; mobile falls back
+#   to placeholder +911800000000) ⇒ the Contact page cannot render a real number today either.
+#   EDITS: Trap 1 REWRITTEN (the shipped-tree FACT survives; the INFERENCE is withdrawn — ⛔ do not
+#   restore the earlier framing from git history); D1 -> D1' with four options, (a) recommended
+#   (doctrine + routing, ⛔ no component); AC5 gains item 5 — the institutional-vs-member distinction
+#   and the technique rejections WITH REASONS — plus item 6 (the unowned Contact page) and renumbering
+#   to 8; the "true today" table gains four rows; the AC1(a) deferral trigger CHANGES from "if a
+#   contact surface is ever built" to "the story that builds the committed public Contact page";
+#   Task 1 must record the WITHDRAWAL and the root cause as their own clauses, ⛔ never write the
+#   entry as though D1' were the question all along; scope boundary now separates the TWO different
+#   reasons Contact-page and masking-component are both out of scope.
+#   ⛔ Still NO CODE, NO MIGRATION, NO ADR, NO DECISION-LOG ENTRY committed by this session.)
+# last_updated: 2026-08-22b (Story 11a.4 story file EXTENDED — §Q3 governance evidence block + D3(e).
+#   ⛔ NO ROW FLIPS. 11a-4 stays `ready-for-dev`; the story file gained scope it was missing.
+#   ⭐ D3's RECOMMENDATION MOVED (a) -> (e) ON EVIDENCE. BigDev put four questions (Q3 a-d) about what
+#   the dynamic Niyamavali payload IS and who governs it BEFORE approving further protection around
+#   it. Answers read out of the substrate at 075827b, recorded IN THE STORY FILE as §Q3.
+#   Q3(a) THE PAYLOAD IS THE RULE, NOT COMMENTARY: `clause_versions.payload` carries the machine
+#   spec the Epic 4 engine evaluates (rule_kind/family/precedence/on_pass/on_fail/all_of predicates
+#   over pre-derived facts/thresholds). Must be dynamic for THREE reasons: per-Pariwar under RLS (a
+#   committed file re-commits the SD-1 shape); versioned with lineage (effective_date +
+#   predecessor_clause_ids + superseded_by_version — git history is NOT an effective-date index);
+#   and freeze row 14 (registry stores/diffs, NEVER interprets — committing rules to source means a
+#   code deploy per amendment).
+#   Q3(b) `niyamavali.amend` = pariwar_admin (+super_admin); `niyamavali.review` = pariwar_admin +
+#   state_trustee (state ceiling). Reads take either key, writes require amend, sign-off requires
+#   review.
+#   Q3(c) A REAL four-state machine WITH TEETH: draft->in_review->signed_off->published; non-author
+#   sign-off FAIL-CLOSED on three invariants (present / resource-bound / reviewedBy!==authoredBy);
+#   CONTENT-BOUND by sha256(canonicalJson(payload)) so edit-after-signoff 409s; audit-or-throw (a
+#   throw rolls the scope tx back ⇒ no published clause without an audit line); append-only
+#   amendment ledger with a MANDATORY affected_member_scope. ⛔ NOT in that chain: no legal-review
+#   gate (0.13 is external and does NOT gate), no Panel ratification step in code, no PII check, no
+#   content schema.
+#   ⭐⛔ Q3(d) IS THE FINDING: the workflow is strong on PROCESS and NEAR-ABSENT ON CONTENT.
+#   `ClausePayloadSchema` = `z.record(z.unknown())` (zero validation); "No PII fields exist in a rule
+#   payload" (niyamavali-render.ts:114-116) is an ASSUMPTION STATED AS FACT that nothing enforces;
+#   the naked-PII leg cited as the backstop never scans tenant data (Trap 4); the microcopy gate
+#   scans committed SOURCE GLOBS, never DB rows. ⇒ between an authored payload and the open internet
+#   there is ⛔ NO automated check of ANY kind — only ONE non-author human reading the draft, plus an
+#   audit trail that says who to blame AFTERWARDS. ⚠ And /niyamavali is edge_cacheable s-maxage=300,
+#   so even an immediate correction carries the same multi-minute floor as the kill switch.
+#   ⇒ D3(e) ADDED AND NOW RECOMMENDED OVER (a): scan the payload at PUBLISH (rules/index.ts), failing
+#   LOUDLY at authoring time when a human with niyamavali.amend is present — ⛔ not a render-time
+#   redactor that would silently mutate a RULEBOOK on its way to a reader. ⛔ It is a BACKSTOP; the
+#   non-author sign-off REMAINS the primary control, and the decision-log entry must say so.
+#   ⚠ (a) is kept and still defensible — it adds no false-positive surface to a governance write
+#   path; §Q3(d) is its cost, stated.
+#   ⚠ SEQUENCED, ⛔ NOT PARALLEL: AC3a/Task 4a are CONDITIONAL on D3(e) AND gated behind AC1+AC2 —
+#   a false positive on a governance write path BLOCKS a legitimate rule amendment, so the precision
+#   fix is a PRECONDITION. The error names the pattern TYPE ONLY, ⛔ never the matched VALUE (echoing
+#   it writes the leaked PII into the response body and the request log). ⛔ No 500 is a permitted
+#   pass (the 10.30 finding). Negative controls BOTH directions: planted PII REJECTED, and the real
+#   R8 shape {"threshold_percent":90,"min_contributions":10} PUBLISHES CLEANLY.
+#   ⛔ TWO §Q3 FINDINGS ROUTED TO THE PANEL, ⛔ NOT BUILT AND ⛔ NOT RULED HERE: (i) `provisional` and
+#   `policy_review_required` sit in every seeded R7/R8 payload as INERT DATA — nothing reads either
+#   flag (one comment, retirement-coverage.ts:67); (ii) whether ONE non-author reviewer is sufficient
+#   authority to publish a clause governing CLAIM ELIGIBILITY, and who answers for a wrong one, is
+#   ⛔ NOT RULED ANYWHERE. Task 1 must carry both as their own decision-log clauses marked OPEN, so a
+#   D3 ruling can never be read as having settled either.
+#   ⛔ Still NO CODE, NO MIGRATION, NO ADR, NO DECISION-LOG ENTRY committed by this session.)
+# last_updated: 2026-08-22a (Story 11a.4 story file AUTHORED via bmad-create-story: backlog ->
+#   ready-for-dev. ONE ROW FLIPS: 11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only.
+#   ⛔ epic-11a stays in-progress (2 stories remain: 11a.5, 11a.6). ⛔ No other row moves.
+#   ⛔ ROW 17 IS UNTOUCHED -- `current_status` stays `open`, `closure_evidence_link` stays EMPTY.
+#   Story 10.30 walked ONE of that row's two closure legs; the >=2-trustee ratification leg has NOT
+#   landed ⇒ the public Member Directory STILL MAY NOT GO LIVE. ⛔ This story does not advance it.
+#   ⛔ SUPERSEDES A SIDE-BRANCH DRAFT. A prior 11a.4 authoring pass was un-bundled from story/11a.3
+#   onto `story/11a.4-phone-email-obfuscation` (656aaa5, 2026-08-21), off a main predating 11a.3
+#   `done` + Decisions -145/-146/-147/-148 + Story 10.30. THREE of its load-bearing claims are now
+#   FALSE: (a) its Task 2 rests on CR-D1-1.16b's trigger "wired into loadSnapshots()" -- that
+#   function was DELETED at 11a.1 and check-pii-scrape.ts now forbids re-adding it, so the trigger
+#   is STALE, ⛔ NOT "fired and missed"; (b) its Task 3 asks for FR-93 coverage 11a.3 ALREADY
+#   shipped (scrape-test.spec.ts:643) plus per-type independence that 1.16b already has
+#   (public-pages.test.ts:195-219); (c) its Trap 2 cites "the matrix" for a Mobile ✗/✗/✓ row --
+#   the matrix declares ⛔ NO mobile/email field on ⛔ ANY surface (two hits, both comments); the
+#   table is epics.md L4592-4593 PROSE. ⛔ Do not check out or merge that branch; delete it.
+#   ⭐ THE FINDING OF THIS PASS -- A CLAIMED PROTECTION THAT NEVER RUNS ON WHAT IT CLAIMS TO PROTECT.
+#   The Niyamavali public render carries a DYNAMIC key→value payload block
+#   (`clause_payload_display_fields`) whose key set is tenant DATA, un-enumerable by any committed
+#   file. TWO artifacts name the naked-PII leg as what protects its contents
+#   (public-vs-private-matrix.yaml:134-141 and apps/public/src/lib/niyamavali-render.ts:222-227:
+#   "scans the real HTML and does not care where a phone number came from"). ⛔ The leg has NEVER
+#   scanned a byte of tenant data -- it runs in ONE place, scrape-test.spec.ts, over IN-FILE
+#   FIXTURES (that file's own header: "NO live Astro server and NO DB"), and the `pii-scrape` CI job
+#   does not run it at all. Both sentences are TRUE of the test corpus and FALSE of the live
+#   surface. ⚠ The correction is Trap-5/10.30-shaped: ONE HALF ONLY -- the implied REACH is
+#   corrected; the renderer-opaqueness half (freeze row 14) is a REAL protection and STAYS.
+#   ⚠ Residual risk weighed, ⛔ not assumed: clause payloads are GOVERNED content (Story 2.4
+#   amendment workflow, audit-logged, trustee-authored), so a render-time redactor over a RULEBOOK
+#   could silently alter a published rule's stated value -- a worse failure than the one it
+#   prevents. D3(a) recommends correcting the claim, ⛔ NOT building a scrub.
+#   ⭐ SECOND FINDING -- AC1(c) "flag scraping IPs" CANNOT BE BUILT AS WRITTEN. honeypotHandler
+#   records `request.ip`; apps/api runs `trustProxy: true` (server.ts:90) ⇒ LEFTMOST X-Forwarded-For.
+#   ⛔ apps/public proxies ONLY the directory route -- a scanner reaches the bait paths DIRECTLY and
+#   sets that header itself ⇒ the recorded IP is ATTACKER-CHOSEN. SAME defect class as
+#   2026-08-21-145 cl.2, whose fix (forward only Astro.clientAddress) ⛔ does NOT reach these paths.
+#   ⇒ a honeypot line is a SIGNAL, ⛔ not enforcement, and its IP is ⛔ not evidence.
+#   ⚠ Its second precondition -- whether apps/api is internet-reachable at all -- is the OPEN
+#   topology question deferred-work.md:205-213 already carries, which states in terms that
+#   "Story 11a.4 records the same open topology question independently -- ⛔ the two must be answered
+#   together, not twice". ⇒ AC6 requires APPENDING to that item, ⛔ NOT opening a second one.
+#   ⚠ CR-D1-1.16b IS REACHABLE AND EVIDENCED, but ⛔ not for the reason the draft gave. Verified by
+#   RUNNING the pattern, not by reading the caveat: `/blog/9876543210` → phone; `data-id="9123456789"`
+#   → phone; `0801234 5678` → phone; `987654321012` → aadhaar. ⭐ The real evidence is that the test
+#   corpus is authored AROUND the defect IN WRITING (scrape-test.spec.ts:145-146: "Deliberately NO
+#   accidental 10-digit runs ... engine caveat CR-D1-1.16b"). ⛔ And there is ZERO precision test in
+#   the repo -- all eleven PII assertions test RECALL -- so AC1 builds the regression net RED, and
+#   PROVES it red, BEFORE AC2 touches the regex. ⛔ Precision may never be bought with recall.
+#   ⚠ CR-D2-1.16b was CLOSED BY EDIT at 11a.1 (loadSnapshots() deleted) and ⛔ NEVER RECORDED --
+#   AC6 records it now rather than leaving a closed item reading open.
+#   ⛔ epics.md L4660's "Story 10.6 query throttling" is VERIFIED FALSE for the THIRD independent
+#   time (10.6 = Bulk Operations Framework); already committed at directory-abuse-rules.yaml note 7
+#   and deferred-work.md:265. ⛔ Never cite it as coverage.
+#   SCOPE: ⛔ zero new route/page/component, ⛔ zero matrix TIER edit (a git diff proving no
+#   tier:/pii_tier:/escalations:/escalation_count line moved is an AC), ⛔ zero permission key,
+#   ⛔ zero migration, ⛔ zero dependency, ⛔ no trustProxy change, ⛔ no second apps/api public route
+#   (public-pages/routes.ts:41 fences it). ⛔ NO masking component -- AC1(a) has NO call site
+#   (apps/public is 8 routes; the footer renders trustName only; zero tel:/mailto: on any public
+#   surface), and building one unused would repeat the <MatrixField> shape 2026-08-20-142 named a
+#   verified half-false rationale. Deferred with a NAMED trigger, ⛔ not silently dropped.
+#   AI-10-1 POLICY-MEANING NOTE: carried IN THE STORY FILE. This story introduces NO predicate
+#   gating a member's access to a benefit and adds no conjunct to one -- regex precision inside a CI
+#   detector, synthetic bait routes serving no member data, documentation, and comment corrections.
+#   ⛔ No member becomes more or less visible. Niyamavali cross-check: not applicable, and stated
+#   rather than skipped.
+#   ⛔ NO CODE, NO MIGRATION, NO ADR, NO DECISION-LOG ENTRY committed by this authoring session --
+#   Task 1's `governance:` commit is a NON-OPTIONAL precondition and must land FIRST and ALONE.)
 # last_updated: 2026-08-21i (Story 10.30 REVIEWED via bmad-code-review: review -> done. ONE ROW
 #   FLIPS: 10-30-directory-publication-kill-switch-admin-ui: done.
 #   THREE LAYERS (Blind Hunter, Edge Case Hunter, Acceptance Auditor). Acceptance Auditor: ZERO
@@ -9223,7 +9450,11 @@ development_status:
   # between them. ⛔ Do NOT flip this row back; the gate is tracked on Row 17, not here.
   # ⚠ Epic 11a carries the DEPENDENCY; the implementation belongs to Epic 10 (cl.2).
   11a-3-member-directory-pii-shielded-tiered-render-scope-anti-enumeration-safeguards: done
-  11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only: backlog
+  # ⛔⛔ FIVE DECISIONS (D1-D5) ARE OPEN in the story file and MUST be ruled by BigDev before
+  # bmad-dev-story runs. ⛔ The dev agent may NOT rule them. ⛔ A superseded authoring pass sits on
+  # `story/11a.4-phone-email-obfuscation` (656aaa5) -- do NOT check it out or merge it; three of its
+  # load-bearing claims are now FALSE. ⛔ This story does NOT touch launch-gate Row 17.
+  11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only: in-progress
   11a-5-noticeboard-strip-foundational-layout-component: backlog
   11a-6-pinned-notice-component: backlog
   epic-11a-retrospective: optional

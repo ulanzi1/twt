@@ -878,10 +878,26 @@ import.
 - ⭐ **And non-involvement is structural:** `git diff --name-only d902b04..HEAD -- packages/domain
   apps/api apps/jobs packages/events packages/contracts packages/queue` returns **nothing at all**.
   This story touches **zero** files in every package the live-DB leg runs.
-- ⚠ **It is load/order-dependent, which is worth recording rather than filing as a hard failure:**
-  running `@twt/domain` + `@twt/api` together at `--concurrency=4` was **fully green** (254 files /
-  3051 tests, and 123 files / 1078 tests). The failure appears only in the **full eight-package**
-  fan-out — the [[project_ci_local_concurrency_oversubscription]] signature.
+- ⚠ **It is INTERMITTENT and environment-state-dependent, ⛔ not deterministic** — recorded with the
+  evidence rather than as a verdict. It failed on both attempts of the full eight-package leg **and**
+  in isolation at HEAD and at baseline; it then passed **10/10 in a later isolated run**, and
+  `@twt/domain` + `@twt/api` together at `--concurrency=4` were **fully green** (254 files / 3051
+  tests, and 123 files / 1078 tests).
+- ⚠ ⭐ **The date-bomb check was RUN before the baseline was trusted**, because
+  [[project_known_livedb_test_failures]] #12 states that *"checking out an older commit does not
+  rewind the clock"* — a pre-existing verdict is **zero-information** against that class. ⇒ checked:
+  this spec pins **both** sides (`NOW = 2026-07-10`, `poolOpenAt` = `2026-07-01`/`2026-07-06`), so
+  ⛔ it is **not** a date bomb and the baseline comparison **is** informative here.
+- ⭐ **The most likely class is the shared-:5433-DB accumulation family (#9/#10), ⛔ not plain
+  concurrency oversubscription** — recorded as a diagnosis, ⛔ not as a root cause, because it was not
+  proven. The spec seeds under the **fixed** `PARIWAR_A` constant that family warns about
+  (`_helpers.ts:39`), the read applies a `limit` with a `truncated` flag
+  (`reconciliation-review-read.ts:77`), and the container currently holds **5518** accumulated
+  own-committing `events_log` rows under that same fixed tenant. ⚠ A one-probe run printed
+  `rows.length=3, truncated=true` while **passing**, so a simple over-the-limit truncation is ⛔ not
+  demonstrated and the mechanism stays **open**. ⛔ The documented one-move remedy (recreating
+  `twt-test-pg`) was ⛔ **not** run — it destroys the local test DB and is BigDev's call, ⛔ not a
+  side effect of a story close-out.
 - ⚠ **A second, non-reproducing failure set is recorded rather than dropped:** the first full run also
   reported **4 failures in `@twt/api`**. They did ⛔ **not** reproduce — `@twt/api` alone is green
   (123 files / 1078 tests) and the domain+api pair is green. Same flake class. ⛔ Recorded because a

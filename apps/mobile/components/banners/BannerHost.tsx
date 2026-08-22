@@ -16,6 +16,12 @@
 // `ActiveContributionCard` / `LockInClockWidget` posture. A banner is ambient chrome: it must never
 // take a screen down, and a fetch failure must never manufacture an error surface of its own.
 //
+// ⭐ A FIFTH condition was added by Story 11a.5 (Decision 2026-08-22-152, D7(a)): the panchayat route.
+// The Panchayat Noticeboard consumes the SAME server-resolved winner from the SAME query as a notice
+// row, so without this the member would see one banner TWICE on one screen (Trap 3b). See
+// `route-suppression.ts` for why the rule lives here and not in the presenter. ⛔ That one condition is
+// the WHOLE of this story's edit to this file.
+//
 // ── The client resolves NOTHING (AC5) ─────────────────────────────────────────────────────────────
 // The server returns an already-resolved `{ banner, popup }` pair. Both may be present at once — the
 // two display modes are INDEPENDENT LANES, so a popup never suppresses the strip. This component
@@ -34,12 +40,14 @@
 import { useLocale, useT } from '@twt/i18n/react'
 import type { MemberBannerResponse } from '@twt/contracts'
 import { X } from '@tamagui/lucide-icons-2'
+import { useSegments } from 'expo-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { StyleSheet } from 'react-native'
 import { Button, Paragraph, Text, View, XStack, YStack, type ColorTokens } from 'tamagui'
 
 import { useSession } from '../../lib/session-context'
 import { bannerDismissalKey, selectBannerCopy } from './copy'
+import { isBannerRenderedByRoute } from './route-suppression'
 import { useDismissBannerMutation, useMemberBannersQuery } from './useMemberBannersQuery'
 
 /** The banner chrome i18n namespace (the `banners` catalog — dismiss/close labels only). */
@@ -126,6 +134,7 @@ export function BannerHost() {
   const { locale } = useLocale()
   const { session } = useSession()
   const pariwarId = session?.pariwarId ?? null
+  const segments = useSegments()
 
   const { data, isLoading, isError } = useMemberBannersQuery(pariwarId)
   const dismiss = useDismissBannerMutation(pariwarId)
@@ -193,6 +202,13 @@ export function BannerHost() {
   // No session, a loading read, a FAILED read, or nothing visible → render nothing at all. A banner
   // is ambient chrome; it must never replace a screen or manufacture its own error surface.
   if (!pariwarId || isLoading || isError || !data) return null
+
+  // ⭐ The FIFTH condition (Story 11a.5, D7(a)): the surface being viewed renders this banner ITSELF, as
+  // a Panchayat Noticeboard row. Suppress the ambient strip so the same banner never appears twice on
+  // one screen. ⚠ Placed AFTER the `display_once_per_member` effect deliberately — the member DOES see
+  // the banner here, just in the noticeboard rather than the strip, so reporting it as `shown` stays
+  // truthful. ⛔ This is the only route the host knows about; every other tab is unaffected.
+  if (isBannerRenderedByRoute(segments)) return null
 
   const visibleBanner = banner && !locallyDismissed.has(keyOf(banner)) ? banner : null
   const visiblePopup = popup && !locallyDismissed.has(keyOf(popup)) ? popup : null

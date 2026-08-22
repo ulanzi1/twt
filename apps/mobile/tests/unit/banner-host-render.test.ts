@@ -22,6 +22,10 @@ import { BANNER_SEVERITIES } from '@twt/contracts'
 import { describe, expect, it } from 'vitest'
 
 import { bannerDismissalKey, selectBannerCopy } from '../../components/banners/copy'
+import {
+  NOTICEBOARD_ROUTE_SEGMENT,
+  isBannerRenderedByRoute,
+} from '../../components/banners/route-suppression'
 
 // apps/mobile/tests/unit → repo root is four levels up (unit → tests → mobile → apps → root).
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..')
@@ -103,6 +107,22 @@ describe('<BannerHost> source fence', () => {
     expect(/if\s*\(!visibleBanner\s*&&\s*!visiblePopup\)\s*return null/.test(src)).toBe(true)
   })
 
+  it('⭐ SELF-SUPPRESSES on the panchayat route — the FIFTH condition (Story 11a.5, D7(a))', () => {
+    // The surface that renders this banner ITSELF, as a noticeboard row. Without this the member sees
+    // one banner TWICE on one screen (Trap 3b).
+    expect(/if\s*\(isBannerRenderedByRoute\(segments\)\)\s*return null/.test(src)).toBe(true)
+    expect(/const segments = useSegments\(\)/.test(src)).toBe(true)
+  })
+
+  it('⛔ the fifth condition is the ONLY thing Story 11a.5 changed in this file', () => {
+    // Everything 10.9 owns here is frozen: the severity palette, the dismiss path, the query and the
+    // testID. If a future edit needs more than one `if`, that is a ruling to raise, not a patch to make.
+    expect(/const SEVERITY_TOKENS = \{/.test(src)).toBe(true)
+    expect(/useDismissBannerMutation/.test(src)).toBe(true)
+    expect(/useMemberBannersQuery\(pariwarId\)/.test(src)).toBe(true)
+    expect(/testID="banner-strip"/.test(src)).toBe(true)
+  })
+
   it('uses NO Alert.alert, alert() or confirm() — the popup is a rendered surface (AC8)', () => {
     expect(/\bAlert\.alert\b/.test(src)).toBe(false)
     expect(/(^|[^.\w])alert\s*\(/.test(src)).toBe(false)
@@ -154,6 +174,36 @@ describe('<BannerHost> source fence', () => {
   it('is NOT a FlatList — no empty→populated Fabric crash surface', () => {
     // [[project_fabric_flatlist_empty_populated_crash]]: the simple fix is not to introduce one.
     expect(/FlatList|SectionList/.test(src)).toBe(false)
+  })
+})
+
+describe('⭐ `isBannerRenderedByRoute` — BOTH halves (Story 11a.5, D7(a))', () => {
+  it('SUPPRESSES on the panchayat tab, which renders the banner as a noticeboard row', () => {
+    expect(isBannerRenderedByRoute(['(tabs)', 'panchayat'])).toBe(true)
+    expect(NOTICEBOARD_ROUTE_SEGMENT).toBe('panchayat')
+  })
+
+  it('⭐ STILL RENDERS on every other tab — the half that catches an OVER-FIRING suppression', () => {
+    // ⚠ This is the assertion the ruling explicitly asked for. A suppression that fired everywhere would
+    // silently delete ambient chrome from the whole app and still pass the first half.
+    for (const segments of [
+      ['(tabs)', 'index'],
+      ['(tabs)', 'shradhanjali'],
+      ['(contribution)', 'yogdaan'],
+      ['(polls)'],
+      ['(tabs)'],
+      [],
+    ]) {
+      expect(isBannerRenderedByRoute(segments), `over-fired on /${segments.join('/')}`).toBe(false)
+    }
+  })
+
+  it('matches the LAST segment exactly — a nested route under panchayat keeps the ambient banner', () => {
+    // A screen pushed from the noticeboard does NOT render the strip itself, so it must not suppress.
+    expect(isBannerRenderedByRoute(['(tabs)', 'panchayat', 'notice'])).toBe(false)
+    // …and no unrelated route whose path merely contains the word is caught.
+    expect(isBannerRenderedByRoute(['(tabs)', 'panchayat-archive'])).toBe(false)
+    expect(isBannerRenderedByRoute(['panchayat', 'index'])).toBe(false)
   })
 })
 

@@ -1,0 +1,14 @@
+{
+  "masthead_title": "परिवार की नब्ज़",
+  "seal_a11y": "परिवार मुहर",
+  "pinned_header": "सूचना पट्ट",
+  "pinned_empty": "अभी कोई सूचना पट्ट पर नहीं है।",
+  "pinned_list_a11y": "पिन की गई सूचनाएँ",
+  "recent_closings_header": "हाल की आहुति",
+  "next_meeting_header": "अगली मासिक बैठक",
+  "loading_a11y": "सूचना पट्ट लोड हो रहा है…",
+  "open_detail_terracotta": "चक्र पूर्ण होने की सूचना खोलने के लिए दबाएँ",
+  "open_detail_green": "उपलब्धि की सूचना खोलने के लिए दबाएँ",
+  "open_detail_black": "निर्धारित बैठक की सूचना खोलने के लिए दबाएँ",
+  "open_detail_ink": "सूचना खोलने के लिए दबाएँ"
+}

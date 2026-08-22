@@ -1474,3 +1474,50 @@ story. The baseline stays at its best-ever **3942**; ⛔ a rise is NEVER ratchet
 the first deployment to a real origin with a CDN/edge configured. ⛔ This story does **not**
 re-argue it, ⛔ does not re-trigger it, and ⛔ does not reset it to the open-ended "next public
 surface story" shape that let the metric slip at 2.6, 10.5, 11a.2 and 11a.3.
+
+---
+
+**Story 11a.5 disposition (declaration affirmed — ⛔ NO new row; ⭐ and the net movement is
+friction REMOVED, not added):** AC-4 fires on fourteen `apps/mobile` path touches — the
+Panchayat Noticeboard's promotion from a Story-0.14 P0-5 fixture-backed prototype into a real
+surface driven by the `@twt/ui` `<NoticeboardStrip>` presenter (Decision `2026-08-22-152`).
+The ledger was reviewed. **No row is warranted:**
+
+1. **No new tap, no new field, no new gate, no new step-up, no new interaction.** The
+   Panchayat Noticeboard is a **read-only content surface** and stays one. Nothing on it asks
+   a member to do anything; the one interactive affordance it has (`<PollsEntry>`, Story
+   10.15) is **unchanged in position and behaviour** and already sits in the ledger under its
+   own row.
+2. ⭐ **The net movement is friction REMOVED.** Three sections that rendered fabricated
+   content — an invented operational stat line, five **invented deceased-member names**, and
+   an invented meeting date — now render **nothing** (D3(a) / AC4). ⚠ Fabricated content a
+   member must read and mentally discount **is** a tax on attention, even though it is not a
+   tap; removing it is the opposite of adding a row. And the `<BannerHost>` fifth
+   self-suppression condition (D7(a)) removes a **duplicate banner** from this screen — the
+   member reads the same notice **once** instead of twice.
+3. **The tier filter is a VISIBILITY rule, ⛔ not friction, and this is worth stating because
+   the two are easy to conflate.** AC5's predicate decides **what a viewer SEES**; it asks a
+   member for ⛔ no effort, ⛔ no input and ⛔ no extra step. A member is never told to sign in
+   to reveal a notice — there is no unlock affordance and no prompt. ⚠ It is also not
+   member-facing **today**: the member app has no signed-out render, so the predicate ships in
+   the presenter ahead of any surface that could exercise it (D5(a)).
+4. ⛔ **Nothing here touches a benefit, an eligibility check or a coverage decision.** D4(a)
+   makes that structural rather than incidental: **no coverage-bearing deadline ever rides the
+   noticeboard, by construction** — those stay in the Story 8.8 notification family. ⇒ there is
+   no path by which not seeing a notice costs a member anything they must then pay friction to
+   recover.
+
+⚠ **Metric facet — an HONEST no-op, ⛔ not a pass to be read as coverage.**
+`member-public-web.page_weight_bytes` measures **6938**, ⛔ byte-identical to Story 11a.4's
+reading, because this story touches ⛔ **zero `apps/public` files**; the baseline stays at its
+best-ever **3942** and ⛔ a rise is never ratcheted
+([[project_friction_budget_baseline_ratchet]]).
+
+⭐ **But the surface this story ACTUALLY changed is `member-app-native`, and both of its facets
+are `no-op — no measurable build output`.** So the gate can see ⛔ **nothing** about a change
+that removes a diagnostic panel, four components and a fixture module from the RN bundle and
+adds a pure presenter to it. ⚠ Recorded openly as **un-measured**, ⛔ not reported as a pass
+and ⛔ not reconstructed from an estimate ([[feedback_record_unattested_no_backfill]]). ⛔ This
+story does **not** stand up an EAS/Metro bundle-measurement harness — that is its own piece of
+work, and inventing a number here would be worse than the silence. ⭐ **Re-trigger: the first
+story that needs a mobile bundle-size claim, or the first EAS build wired into CI.**

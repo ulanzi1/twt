@@ -9,6 +9,12 @@
 // ClauseIdConflictError → 409 + ClauseNotFoundError → 404 (AC6); the member-
 // notification hook fired with the right payload (AC3).
 //
+// Story 11a.4 (AC3a) APPENDS the publish-time naked-PII backstop's negative controls
+// at the bottom — planted phone/email → 422 with the VALUE never echoed; the real R8
+// numeric-threshold shape → 200; and a rejected publish leaving no audit line. ⛔ It
+// modifies NO test above it: the 2.4 suite running unmodified is what proves the draft
+// machine, the sign-off gate, the content-hash binding and audit-or-throw untouched.
+//
 // ⚠ Own-committing writes (the scope tx commits on 2xx; the audit writer commits its
 // own tx). clause_versions + niyamavali_amendments are append-only / FK-referenced and
 // CANNOT be deleted, so each test uses a FRESH random pariwarId and assertions key on
@@ -319,6 +325,126 @@ describe.skipIf(!hasDatabase)('Niyamavali amendment workflow (Story 2.4)', () =>
     const { client } = await authenticate(); // authenticated but not granted anywhere
     const res = await client.inject({ method: 'GET', url: niy(randomUUID(), '/clauses') });
     expect(res.statusCode).toBe(404);
+  });
+
+  // ── Story 11a.4 / AC3a: the publish-time naked-PII BACKSTOP ──────────────────
+  //
+  // ⚠ BOTH DIRECTIONS ARE REQUIRED, and the SECOND is the one that would actually
+  // hurt: a check that only ever rejects is a blocker on a governance write path,
+  // not a backstop. The first proves teeth; the second proves a legitimate rule
+  // amendment still publishes.
+  //
+  // ⛔ Every test above runs UNMODIFIED — that is what proves the four-state draft
+  // machine, the non-author sign-off gate, the content-hash binding and the
+  // audit-or-throw sequencing were not touched.
+
+  /** Drive a draft to `signed_off` with the given payload, then attempt publish. */
+  async function publishWithPayload(payload: object, clauseId: string) {
+    const { client: author, pariwarId } = await newAuthorInPariwar();
+    const reviewerAuth = await authenticate();
+    await grantPariwarAdmin(reviewerAuth.userId, pariwarId);
+
+    const created = await author.inject({
+      method: 'POST',
+      url: niy(pariwarId, '/clauses/drafts'),
+      payload: { operation: 'create', clauseId, payload, effectiveDate: '2026-08-01T00:00:00.000Z', benefitMechanism: 'pool' },
+    });
+    expect(created.statusCode).toBe(200);
+    const draft = created.json<DraftShape>();
+
+    await author.inject({ method: 'POST', url: niy(pariwarId, `/clauses/drafts/${draft.draftId}/submit-for-review`) });
+    const signoff = await reviewerAuth.client.inject({
+      method: 'POST',
+      url: niy(pariwarId, `/clauses/drafts/${draft.draftId}/tone-review`),
+      payload: { confirm: true },
+    });
+    // The sign-off itself must succeed — the backstop rejects at PUBLISH, ⛔ never
+    // by breaking the human review step it sits behind.
+    expect(signoff.statusCode).toBe(200);
+
+    const published = await author.inject({ method: 'POST', url: niy(pariwarId, `/clauses/drafts/${draft.draftId}/publish`) });
+    return { published, pariwarId, draft };
+  }
+
+  it('REJECTS a publish whose payload carries a naked phone number → 422, pattern TYPE only', async () => {
+    const { published } = await publishWithPayload(
+      { rule_code: 'R7(A)', title_en: 'Restoration after lapse', helpline: 'call 9876543210 to appeal' },
+      'niy.pii.phone.r1',
+    );
+
+    // A DESIGNED rejection, ⛔ not a 500. An unregistered domain error would surface
+    // as a 500, which is ⛔ not a designed rejection (the Story 10.30 finding).
+    expect(published.statusCode).toBe(422);
+    const body = published.json<{ error: { code: string; message: string; details: { pattern_types: string[] } } }>();
+    expect(body.error.code).toBe('niyamavali.clause_payload_pii');
+    expect(body.error.details.pattern_types).toContain('phone');
+
+    // ⭐ THE LOAD-BEARING ASSERTION: the matched VALUE is ⛔ NOWHERE in the response.
+    // Echoing it back would write the leaked PII into the body, the request log and
+    // the client — the check would leak further than the publish it just blocked.
+    expect(published.body).not.toContain('9876543210');
+  });
+
+  it('REJECTS a publish whose payload carries a naked email → 422, value never echoed', async () => {
+    const { published } = await publishWithPayload(
+      { rule_code: 'R7(B)', title_en: 'Appeals', contact: 'ram.kumar@example.org' },
+      'niy.pii.email.r1',
+    );
+
+    expect(published.statusCode).toBe(422);
+    const body = published.json<{ error: { code: string; details: { pattern_types: string[] } } }>();
+    expect(body.error.code).toBe('niyamavali.clause_payload_pii');
+    expect(body.error.details.pattern_types).toContain('email');
+    expect(published.body).not.toContain('ram.kumar@example.org');
+  });
+
+  it('PUBLISHES CLEANLY a payload with legitimate numeric thresholds (the real R8 shape)', async () => {
+    // ⭐ THE DIRECTION THAT MATTERS MOST. This is the committed R8 clause shape from
+    // packages/domain/seed/niyamavali-v1-clauses.sql. If the backstop false-positives
+    // on a numeric threshold it ⛔ BLOCKS A LEGITIMATE RULE AMENDMENT — which is why
+    // AC3a is sequenced strictly behind the AC1+AC2 precision fix.
+    const { published } = await publishWithPayload(
+      {
+        rule_code: 'R8',
+        title_en: 'Ninety-percent contribution rule (illness-death eligibility gate)',
+        rule_kind: 'conditional',
+        threshold_percent: 90,
+        min_contributions: 10,
+        policy_review_required: true,
+        provisional: true,
+      },
+      'niy.pii.clean.r8',
+    );
+
+    expect(published.statusCode).toBe(200);
+    const pub = published.json<PublishShape>();
+    expect(pub.clauseId).toBe('niy.pii.clean.r8');
+    expect(pub.version).toBe(1);
+    // The audit line still lands — the backstop did not disturb audit-or-throw.
+    expect(pub.auditId).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  it('a rejected publish leaves NO audit line and NO published clause (ordering is load-bearing)', async () => {
+    const { published, pariwarId } = await publishWithPayload(
+      { rule_code: 'R7(C)', title_en: 'Lapse', note: 'reach us on 9876543210' },
+      'niy.pii.noaudit.r1',
+    );
+    expect(published.statusCode).toBe(422);
+
+    // ⚠ The scan runs BEFORE the audit write, so a rejected publish must leave no
+    // trace at all. Fresh random pariwarId ⇒ assert on MEMBERSHIP for this tenant.
+    const c = await td.pool.connect();
+    try {
+      const audits = await c.query(
+        `SELECT 1 FROM audit_log_entries WHERE pariwar_id = $1 AND action = 'niyamavali.amended'`,
+        [pariwarId],
+      );
+      expect(audits.rowCount).toBe(0);
+      const versions = await c.query(`SELECT 1 FROM clause_versions WHERE pariwar_id = $1`, [pariwarId]);
+      expect(versions.rowCount).toBe(0);
+    } finally {
+      c.release();
+    }
   });
   // Live-DB suite timeout: the full-flow test alone runs ~9 sequential live-DB round-trips
   // (setup + 4 HTTP legs + audit assertions) against a shared :5433 container; under concurrent

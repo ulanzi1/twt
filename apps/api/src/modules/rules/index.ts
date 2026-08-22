@@ -18,6 +18,13 @@
 // PRE-GENERATED so the single audit line's provenance hash + resource locator carry
 // it (AC2). If the audit write throws, it propagates → the scope tx rolls back → no
 // published clause without an audit line (AC5).
+//
+// ── Publish preconditions, in order (all BEFORE the audit write) ──────────────
+// 1. non-author tone-review sign-off        (publishGate — THE PRIMARY CONTROL)
+// 2. affected_member_scope present on amend (DraftStateError → 409)
+// 3. naked-PII scan of the payload          (Story 11a.4 AC3a → 422)
+// ⚠ (3) is a BACKSTOP behind (1), ⛔ not a replacement for it. See the block at the
+// throw site for why the scan lives on the WRITE path rather than at render.
 
 import { createHash, randomUUID } from 'node:crypto';
 
@@ -33,6 +40,7 @@ import {
   PublishClauseResponse,
   ToneReviewSignoffRequest,
   UpdateClauseDraftRequest,
+  detectNakedPii,
 } from '@twt/contracts';
 import {
   audit,
@@ -490,6 +498,40 @@ export function registerRulesModule(app: FastifyInstance, deps: AppDeps): void {
           draft.draftId,
           draft.status,
           'an amend draft must carry affected_member_scope',
+        );
+      }
+
+      // ── Naked-PII BACKSTOP on the payload (Story 11a.4 AC3a; Decision 2026-08-22-149 cl.4)
+      //
+      // ⛔ THIS IS A BACKSTOP, ⛔ NOT THE PRIMARY CONTROL. The primary control is the
+      // NON-AUTHOR HUMAN SIGN-OFF enforced by `publishGate` above (reviewedBy !==
+      // authoredBy, content-bound by payload hash, cleared by any edit). This scan
+      // catches what a reviewer missed; it ⛔ does not replace one, and ⛔ nothing here
+      // may be described as making payload content "verified" or "safe".
+      //
+      // WHY HERE AND NOT AT RENDER: it fails LOUDLY at authoring time, while a human
+      // holding niyamavali.amend is present and can fix it — instead of silently
+      // mutating a RULEBOOK on its way to a reader. A render-time redactor could alter
+      // a published rule's stated value, which is a worse failure than the one it
+      // prevents. `clause_payload_display_fields` is the public block this guards; its
+      // key set is DATA (per clause, per Pariwar), so ⛔ no committed file can enumerate
+      // it and ⛔ ClausePayloadSchema (z.record(z.unknown())) validates none of it.
+      //
+      // ⚠ ORDERING IS LOAD-BEARING: this runs BEFORE the audit write below, so a
+      // rejected publish leaves ⛔ no audit line and ⛔ no partial state — the same
+      // "certain to fail" discipline as the scope-declaration check above.
+      //
+      // ⚠ The canonicaliser is the EXISTING one (canonicalJsonStringify), the same
+      // form the provenance hash and the audit chain already use. ⛔ Do not introduce a
+      // second serialisation — two canonical forms of one payload is a drift bug.
+      const payloadPii = detectNakedPii(canonicalJsonStringify(draft.payload));
+      if (payloadPii.length > 0) {
+        // ⛔ TYPES ONLY. ⛔ NEVER the matched value — echoing it back would write the
+        // leaked PII into the response body, the request log and the client, so the
+        // check would leak further than the publish it just blocked.
+        throw new niyamavali.ClausePayloadPiiError(
+          draft.draftId,
+          payloadPii.map((m) => m.type),
         );
       }
 

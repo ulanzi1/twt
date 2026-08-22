@@ -35,6 +35,7 @@ import {
   ClaimStateDirectWriteError,
   ClauseIdConflictError,
   ClauseNotFoundError,
+  ClausePayloadPiiError,
   DraftNotFoundError,
   DraftSelfReviewError,
   DraftStateError,
@@ -196,6 +197,11 @@ export function errorMappingHandler(
   //   DraftNotFoundError    → 404 niyamavali.draft_not_found
   //   DraftStateError       → 409 niyamavali.draft_invalid_state (illegal transition)
   //   DraftSelfReviewError  → 409 niyamavali.draft_self_review   (author signed own draft)
+  //   ClausePayloadPiiError → 422 niyamavali.clause_payload_pii  (Story 11a.4 AC3a —
+  //     naked PII in the payload; well-formed request, unpublishable CONTENT).
+  //     ⭐ Registered HERE deliberately: an unregistered domain error surfaces as a
+  //     500, which is ⛔ NOT a designed rejection (the Story 10.30 finding). The
+  //     status is pinned at this boundary and asserted by test.
   if (error instanceof ClauseIdConflictError) {
     void reply.status(409).send(error.toErrorResponse(requestId));
     return;
@@ -214,6 +220,11 @@ export function errorMappingHandler(
   }
   if (error instanceof DraftSelfReviewError) {
     void reply.status(409).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof ClausePayloadPiiError) {
+    // ⛔ `toErrorResponse` carries pattern TYPES only — ⛔ never the matched value.
+    void reply.status(422).send(error.toErrorResponse(requestId));
     return;
   }
 

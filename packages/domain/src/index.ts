@@ -62,6 +62,9 @@ export {
   DRAFT_INVALID_STATE_CODE,
   DraftSelfReviewError,
   DRAFT_SELF_REVIEW_CODE,
+  // Story 11a.4 — the publish-time naked-PII backstop (AC3a).
+  ClausePayloadPiiError,
+  CLAUSE_PAYLOAD_PII_CODE,
 } from './niyamavali/errors.js';
 // T&C registry typed errors (Story 2.6). Surfaced at the top level — mirroring
 // the niyamavali errors — so the apps/api error-mapping middleware imports the

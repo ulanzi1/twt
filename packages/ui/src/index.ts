@@ -25,4 +25,11 @@ export * from './contribution-disclosure/index.js';
 // Promotes the Story 0.14 P0-5 prototype from fixture-backed validation artifact to design-system primitive.
 // The Story 10.9 banner lane is ONE SOURCE contributing AT MOST ONE row — singular by SHAPE, so the 10.9
 // at-most-one-per-lane invariant cannot be widened from here. Pure logic only.
+//
+// Story 11a.6 — the `<PinnedNotice>` ROW presenter joins the same module (Decision 2026-08-22-153, D2(a)):
+// the strip decides WHICH rows exist, the row decides how ONE of them reads, is emphasised and is
+// acknowledged. ⭐ It takes NO viewer/audience/tier input — the Story 11a.1 matrix-tier rule shipped in the
+// strip presenter at 11a.5, and a descriptor only reaches the row having ALREADY passed it, so a row-level
+// filter could only ever disagree with the strip's. ⛔ The row descriptor itself is NOT widened: 10.9's
+// dismissal identity (`revision`) stays on the banner lane at the render boundary. Pure logic only.
 export * from './noticeboard/index.js';

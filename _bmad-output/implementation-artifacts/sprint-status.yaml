@@ -1,4 +1,74 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-22l (Story 11a.5 — bmad-dev-story COMPLETE. ONE ROW FLIPS:
+#   11a-5-noticeboard-strip-foundational-layout-component: in-progress -> review.
+#   ⛔ epic-11a stays in-progress (11a.6 remains). ⛔ No other row moves.
+#   ⛔ Row 17 untouched and still `open` — the noticeboard is a MEMBER-APP surface and ⛔ nothing
+#   in 11a.5 advances, closes or bears on the directory kill-switch launch gate.
+#   ⛔ NO migration, ⛔ no schema change, ⛔ no API route, ⛔ no new package.
+#
+#   ⭐ THE PROTOTYPE IS RETIRED. `apps/mobile/components/panchayat/` was a Story-0.14 P0-5
+#   VALIDATION artifact whose every row was a hardcoded fixture; it is now a real surface whose
+#   composition, section ORDER, tier filter and four ratified states come from the headless
+#   `@twt/ui` `<NoticeboardStrip>` presenter. ⭐ @twt/ui now has FIVE presenters and still ZERO
+#   .tsx files — the headless discipline held (Trap 1), enforced by READING, ⛔ not by a gate
+#   (there is none, and ⛔ this story minted none — [[feedback_no_premature_package]]).
+#
+#   ⭐⛔ THE SHARPEST THING THIS STORY DID: `sample-data.ts` published FIVE INVENTED
+#   DECEASED-MEMBER NAMES (दीनानाथ झा · शिवकुमारी देवी · विद्यानंद यादव · सुषमा कुमारी · महेश्वर पासवान),
+#   each with a district and a contributor count, under हाल की आहुति on a LIVE member tab. D3(a)
+#   DELETED them — ⛔ not relocated, ⛔ not commented out — along with the invented stat line and
+#   meeting footer. Those three sections have NO PRODUCER (⛔ no close-of-cycle (FR-19) read model,
+#   ⛔ no aggregate member/district read model, and ⛔ NO STORY OWNS EITHER), so they render NOTHING
+#   and ⛔ say nothing. ⚠ A test scans the WHOLE surface for all five names, so a copy-paste rescue
+#   into another component fails CI too.
+#
+#   ⭐ THE EMPTY-STATE SPLIT IS STRUCTURAL, ⛔ not a convention: `empty-with-copy` (a REAL source
+#   that is currently empty — INFORMATION, carrying UX :1808's ratified "No pinned notices") and
+#   `silent` (NO PRODUCER — "this project has not built the read model" is ⛔ not something to tell
+#   a member) are separate arms of a discriminated union and ⛔ can never be assert-equal. A
+#   revert-sanity mutation merging them produced 4 failures.
+#
+#   ⚠ THE LIVE-DB LEG WAS RUN AND ITS FAILURES ARE RECORDED OPENLY, ⛔ not skipped past
+#   ([[feedback_record_unattested_no_backfill]]). `pnpm ci:local` = 31 JOBS GREEN. With
+#   DATABASE_URL set, six specs failed and BOTH classes were CHECKED rather than assumed:
+#   (1) an apps/api E2E spec PASSES in isolation (9/9) ⇒ the documented double-run pollution
+#   ([[project_ci_local_double_run_pollution]]); (2) the packages/domain reconciliation spec fails
+#   IDENTICALLY on `main` at the baseline commit — checked out and re-run there, 1 failed | 9 passed
+#   on both ⇒ PRE-EXISTING ([[project_known_livedb_test_failures]]). ⭐ This story touches ⛔ ZERO
+#   files in apps/api, apps/jobs, packages/domain, packages/events, packages/contracts,
+#   packages/queue, packages/niyamavali-engine, packages/validity-service or packages/channels.
+#
+#   ⚠ ONE RECORDED DEVIATION, ⛔ not silent and ⛔ not a re-opened ruling: the story's §Project
+#   Structure Notes marked StatLine.tsx and RecentClosingRow.tsx as UPDATE; they were DELETED.
+#   Those Notes predate D3(a)'s CONSEQUENCE — with no producer their sections render `silent`, so
+#   neither component has a call site and keeping them would be unreachable code whose only
+#   possible input was fabricated data. ⛔ The protected behaviour did NOT go with them:
+#   `formatCount` moved to apps/mobile/lib/format-count.ts (the RENDER layer, ⛔ never @twt/ui) with
+#   its UX :1161 rationale, a test pinning Indian grouping, and a ⛔-do-not-delete note.
+#
+#   ⚠ friction-budget: DECLARATION AFFIRMED, ⛔ NO NEW ROW — the net movement is friction REMOVED
+#   (fabricated content gone; the same banner read ONCE instead of twice). ⭐ But the surface this
+#   story actually changed is `member-app-native`, and BOTH its metric facets are
+#   "no-op — no measurable build output" ⇒ the gate can see ⛔ NOTHING about it. Recorded as
+#   UN-MEASURED, ⛔ not reported as a pass and ⛔ not estimated; re-trigger routed.
+#
+#   ⭐ WHAT 11a.6 INHERITS, so its authoring pass does not re-derive it: the ROW DESCRIPTOR is a
+#   declared contract (id · category · title · meta · dismissible), with the epic-vs-UX-:1817
+#   reconciliation stated in the type's doc comment. ⛔ `severity` is NOT on it (D2(a) maps it INTO
+#   `category`; emitting both would re-introduce the axis D2(c) refused) and ⛔ `link CTA` is NOT on
+#   it (no §1817 slot, no consumer — LEFT OUT and ROUTED per AC6). ⚠ `dismissible` is a FLAG ONLY;
+#   dismiss-with-ack is 11a.6's and ⛔ this story wired no dismiss call.
+#   ⚠⛔ AND 11a.6 MUST READ ux-design-specification.md:1819, ⛔ NOT :491 — the spec FILE is still
+#   un-amended (D2(a) ROUTED the edit, deliberately). `black` = SCHEDULED MEETING, ⛔ not
+#   bereavement; `saffron` does ⛔ not exist.
+#
+#   ⚠ EIGHT ABSENCES ROUTED to deferred-work.md, each with a re-trigger — ⛔ observed, ⛔ not
+#   scheduled and ⛔ not built ([[feedback_gap_analysis_observational]]). ⭐ TWO ARE OWNED BY NO
+#   STORY AT ALL (the close-of-cycle read model — ⚠ TWO gates, the read model AND the Epic-11b
+#   consent basis for naming a deceased member; and the aggregate stat read model). ⭐ A THIRD is
+#   the ADMIN-HOME variant, whose asymmetry is worth knowing: apps/admin ALREADY depends on
+#   @twt/ui, so it is the CHEAPEST second consumer of this presenter — which is exactly why leaving
+#   it unrouted would let it be built TWICE.
 # last_updated: 2026-08-22k (Story 11a.5 — bmad-dev-story STARTED. ONE ROW FLIPS:
 #   11a-5-noticeboard-strip-foundational-layout-component: ready-for-dev -> in-progress.
 #   ⛔ epic-11a stays in-progress (11a.6 remains). ⛔ No other row moves.
@@ -9712,7 +9782,7 @@ development_status:
   # ⛔ A superseded authoring pass sits on `story/11a.4-phone-email-obfuscation` (656aaa5) -- do NOT
   # check it out or merge it. ⛔ This story does NOT touch launch-gate Row 17.
   11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only: done
-  11a-5-noticeboard-strip-foundational-layout-component: in-progress
+  11a-5-noticeboard-strip-foundational-layout-component: review
   11a-6-pinned-notice-component: backlog
   epic-11a-retrospective: optional
 

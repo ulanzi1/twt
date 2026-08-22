@@ -165,3 +165,57 @@ export class DraftSelfReviewError extends Error {
     };
   }
 }
+
+/** Namespaced error code for naked PII detected in a clause payload (HTTP 422). */
+export const CLAUSE_PAYLOAD_PII_CODE = 'niyamavali.clause_payload_pii';
+
+/**
+ * Thrown at the publish precondition when `detectNakedPii` matches inside the
+ * canonical JSON of a clause payload (Story 11a.4 / AC3a, Decision 2026-08-22-149
+ * cl.4). The 2.4 route maps this → HTTP 422: the request is well-formed, but its
+ * CONTENT is not publishable.
+ *
+ * ⛔ THIS ERROR CARRIES PATTERN TYPES ONLY — ⛔ NEVER THE MATCHED VALUE, and that
+ * is the whole point of the class. Echoing the value back would write the leaked
+ * PII into the response body, the request log and the client — i.e. the check
+ * would itself become a disclosure channel, leaking further than the publish it
+ * blocked. The author already has the payload in front of them and needs the
+ * TYPE to find it. ⛔ Do not add a `value`, `sample`, `context` or `snippet`
+ * field, and ⛔ do not interpolate a match into `message`. A test asserts the
+ * planted value is absent from the response body.
+ *
+ * ⚠ This is a BACKSTOP, ⛔ not the primary control. The primary control is the
+ * non-author human sign-off (`reviewedBy !== authoredBy`, content-bound by hash).
+ */
+export class ClausePayloadPiiError extends Error {
+  public readonly name = 'ClausePayloadPiiError';
+  public readonly code = CLAUSE_PAYLOAD_PII_CODE;
+  /** Distinct matched pattern types, sorted. ⛔ Types only — ⛔ never values. */
+  public readonly patternTypes: readonly string[];
+
+  public constructor(
+    public readonly draftId: string,
+    patternTypes: readonly string[],
+  ) {
+    // ⛔ The message names TYPES only. ⛔ Never interpolate a matched value here.
+    const types = [...new Set(patternTypes)].sort();
+    super(
+      `draft '${draftId}': the clause payload contains naked PII ` +
+        `(pattern type(s): ${types.join(', ')}). Remove it and re-submit for sign-off. ` +
+        `The matched value is deliberately not echoed back.`,
+    );
+    this.patternTypes = types;
+  }
+
+  public toErrorResponse(requestId: string): ErrorResponseShape {
+    return {
+      error: {
+        code: this.code,
+        message: this.message,
+        // ⛔ pattern_types ONLY. ⛔ Never the matched value.
+        details: { draft_id: this.draftId, pattern_types: this.patternTypes },
+        request_id: requestId,
+      },
+    };
+  }
+}

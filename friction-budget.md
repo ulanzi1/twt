@@ -1521,3 +1521,61 @@ and ⛔ not reconstructed from an estimate ([[feedback_record_unattested_no_back
 story does **not** stand up an EAS/Metro bundle-measurement harness — that is its own piece of
 work, and inventing a number here would be worse than the silence. ⭐ **Re-trigger: the first
 story that needs a mobile bundle-size claim, or the first EAS build wired into CI.**
+
+
+**Story 11a.6 disposition (declaration affirmed — ⛔ NO new row; ⭐ and the one thing this story
+ADDS is friction a member CHOOSES, which the ledger's own default already covers):** AC-4 fires on
+`apps/mobile` path touches — the promotion of `<PinnedNotice>` from a P0-5 prototype row into the
+real noticeboard row, plus the dismiss-with-ack wiring (Decision `2026-08-22-153`). The ledger was
+reviewed. **No row is warranted:**
+
+1. ⭐ **The one new interaction is ONE TAP on an already-rendered row, and it is entirely
+   OPTIONAL.** D3(a) ruled dismiss-with-ack as **one explicit activation of an explicit
+   affordance** — ⛔ no confirmation modal, ⛔ no bottom sheet, ⛔ no two-step confirm, ⛔ no swipe-only
+   path, ⛔ no auto-dismiss on scroll or timer. A member who never taps it is asked for **nothing**
+   and loses **nothing**: the notice behaves exactly as it did before this story. The friction
+   budget's default is **zero friction with named attribution**, and there is no unnamed payer
+   here because there is **no imposed step** — only an affordance a member may use.
+2. ⭐ **The net movement is friction REMOVED, in two distinct ways.**
+   ⚠ First: a member can now **clear their own board**. Before this story a notice a member had
+   read and dealt with stayed in front of them until an operator expired it. That is a standing
+   tax on attention on the quietest surface in the app, and the tap removes it **permanently**
+   (server-side, per 10.9's revision-aware suppression) rather than for one session.
+   ⚠ Second, and larger for the members it affects: the row **stopped lying to screen readers**.
+   It announced `accessibilityRole="button"` + *"tap to open … notice detail"* over an **empty
+   handler** — a VI member was spending real effort activating a control that did nothing, on
+   every notice, forever. ⭐ Removing a dead control is friction removed for exactly the members
+   least able to absorb it.
+3. ⚠ **THE BRANCH THAT WOULD HAVE OWED A ROW IS NAMED, so the absence of one is a finding rather
+   than an oversight.** D3(b) — a two-step confirm (a Tamagui `Sheet` per Pattern 2's mobile note)
+   — **was considered and REFUSED**, and had it been ruled, this section would owe a row **with a
+   named payer**, for the act of *clearing an announcement*. ⛔ It is not the ruling and ⛔ is not
+   built. `ux-design-specification.md:2318` reserves confirmation modals for **irreversible**
+   actions, and a dismissal is reversible by a copy revision.
+4. ⛔ **Nothing here touches a benefit, an eligibility check or a coverage decision** — and the
+   reason is structural, not incidental. ⚠ ⭐ It is worth stating sharply, because this story's
+   predicate is **sharper than 11a.5's**: 11a.5's tier filter decided what the *system* shows a
+   member; this one lets **a member hide something from themselves**, **durably and server-side**.
+   If a coverage-bearing deadline ever rode the noticeboard, one tap could permanently hide a
+   member's own deadline. ⛔ **That is not true today, and `2026-08-22-152` D4(a) is the STANDING
+   CONSTRAINT that keeps it untrue** — those deadlines ride the Story 8.8 notification family.
+   ⚠ **The first story that puts one here owes this section a fresh look**, ⛔ not an inherited
+   answer.
+5. **No new field, no new gate, no new step-up, no new upload, no new wait.** ⛔ No route, ⛔ no
+   endpoint, ⛔ no schema change; the acknowledgement rides Story 10.9's **existing** idempotent
+   endpoint through its **existing** mutation hook.
+
+⚠ **Metric facet — an HONEST no-op, ⛔ not a pass to be read as coverage.**
+`member-public-web.page_weight_bytes` is unchanged: this story touches ⛔ **zero `apps/public`
+files**, so the reading and the best-ever baseline **3942** both stand, and ⛔ a rise is never
+ratcheted ([[project_friction_budget_baseline_ratchet]]).
+
+⭐ **And, exactly as at 11a.5: the surface this story ACTUALLY changed is `member-app-native`, whose
+facets are `no-op — no measurable build output`.** ⇒ the gate can see ⛔ **nothing** about a change
+that removes a `Pressable` and four i18n keys from the RN bundle and adds a dismiss control and a
+pure presenter to it. ⚠ Recorded openly as **UN-MEASURED**, ⛔ not reported as a pass and ⛔ not
+reconstructed from an estimate ([[feedback_record_unattested_no_backfill]]). ⛔ This story does not
+stand up an EAS/Metro bundle-measurement harness. ⭐ **Re-trigger: unchanged — the first story that
+needs a mobile bundle-size claim, or the first EAS build wired into CI.** ⚠ This is now the
+**second consecutive** story to record that same un-measured facet; the re-trigger is not getting
+closer on its own.

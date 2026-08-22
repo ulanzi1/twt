@@ -1433,3 +1433,44 @@ still ships ⛔ not one client island. `page_weight_bytes` measured **6938** (wa
 That is a **RISE**, far under the 512000 ceiling, so it PASSES with the delta reported —
 and the baseline stays at its best-ever **3942**. ⛔ A rise is NEVER ratcheted
 ([[project_friction_budget_baseline_ratchet]]).
+
+---
+
+**Story 11a.4 disposition (declaration affirmed — ⛔ NO new row; ⭐ and the AC-4 trigger
+fired on a COMMENT-ONLY diff):** AC-4 fires on two `apps/public` path touches —
+`src/lib/niyamavali-render.ts` and `tests/integration/public-pages/scrape-test.spec.ts`.
+The ledger was reviewed. **No row is warranted, and this one is not a close call:**
+
+1. ⭐ **BOTH TOUCHES ARE COMMENT-ONLY. ⛔ Not one executable line changed in `apps/public`.**
+   `niyamavali-render.ts` gains a corrected module-doc paragraph (the naked-PII leg scans
+   **fixture-built** HTML in `scrape-test.spec.ts`, and ⛔ does **not** scan what a Pariwar
+   actually publishes — Trap 4 / Decision `2026-08-22-149` cl.4); `scrape-test.spec.ts`
+   gains a corrected caveat comment. ⛔ Zero render logic, ⛔ zero fixture values, ⛔ zero
+   field-id mappings, ⛔ zero markup. ⇒ a member's experience of `/niyamavali` and
+   `/members` is **byte-identical** to before this story.
+2. **No new tap, no new field, no new gate, no new step-up, no new interaction, on any
+   surface.** `/members` and `/niyamavali` remain **read-only content** surfaces — the same
+   finding the 2.5 / 2.6 / 11a.1 / 11a.2 / 11a.3 dispositions record for these paths.
+3. ⭐ **THE ONE NEW REJECTION THAT COULD LOOK LIKE FRICTION IS ⛔ NOT MEMBER-FACING AT ALL.**
+   Story 11a.4 adds a publish-time naked-PII backstop that can reject a clause publish with
+   a **422** (AC3a). That is an **operator/trustee write path** (`niyamavali.amend`, behind
+   the admin session + RBAC + a non-author sign-off), ⛔ not a member surface. The ledger
+   declares friction a **member pays**; a `pariwar_admin` being told to remove a phone number
+   from a rulebook payload before publishing it is a **governance control**, ⛔ not member
+   friction. ⚠ Recorded here rather than silently omitted, so a later reader can see the
+   question was asked and how it was answered.
+4. **The honeypot bait paths are ⛔ not a friction surface either** — synthetic routes a
+   legitimate client never requests, serving no data, blocking nothing, and reachable by
+   ⛔ no member flow.
+
+⚠ **Metric facet (static):** ⛔ unchanged and ⛔ not re-measured as a delta claim — `apps/public`
+gained ⛔ no executable line, so there is nothing new for the bundler to emit. The gate's own
+run reports `js_bundle_bytes: 0` and `page_weight_bytes: 6938 ≤ 512000 (Δ +2996 vs baseline
+3942)` — **the same 6938 Story 11a.3 recorded**, i.e. ⛔ no movement attributable to this
+story. The baseline stays at its best-ever **3942**; ⛔ a rise is NEVER ratcheted
+([[project_friction_budget_baseline_ratchet]]).
+
+⚠ **The device-throttled Lighthouse-CI timing harness stays RE-DEFERRED on 11a.3's trigger** —
+the first deployment to a real origin with a CDN/edge configured. ⛔ This story does **not**
+re-argue it, ⛔ does not re-trigger it, and ⛔ does not reset it to the open-ended "next public
+surface story" shape that let the metric slip at 2.6, 10.5, 11a.2 and 11a.3.

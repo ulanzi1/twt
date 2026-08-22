@@ -459,25 +459,25 @@ vs *"Not addressed"* — ⛔ never collapsed, and ⛔ never marked closed merely
   - [x] ⭐ The empty-title label case: ⛔ no leading `". "`, ⛔ no empty part, and title+meta announced as ONE unit
   - [x] ⛔ **`presenter.test.ts` is NOT amended** (D5(a)) — ⚠ if a change to it seems necessary, **stop and raise it**: it means the descriptor is being widened (Trap 3)
 
-- [ ] **Task 3 — promote `PinnedItem.tsx` into the real row** (AC: 1, 3, 4, 6)
-  - [ ] Render from the row view-model; ⛔ no composition decision left in JSX
-  - [ ] ✅ **D6** — the row's interactive semantics; ⚠ the `black ≠ memorial` guarantee **survives** into the successor keys (Trap 3)
-  - [ ] ⭐⛔ **Replace the a11y grouping the `Pressable` was providing** (AC6 / Trap 5): an explicit `accessible={true}` wrapper around **title+meta only**, carrying the presenter's composed label — and ⛔ **the dismiss control OUTSIDE it**, or it stops being focusable. ⚠ ⛔ Zero in-repo precedent; ⛔ this will not happen by imitation
-  - [ ] ✅ **D3/D4** — the dismiss affordance (≥44pt, labelled) and the `dismissed` render; ⛔ `dismissible: false` ⇒ no affordance
-  - [ ] ⛔ `CATEGORY_TOKENS` and `RULE_HAIRLINE_TOKEN` stay in `apps/mobile/components/panchayat/tokens.ts` — ⚠ **colour stays in the render layer** (D6(a) of `2026-08-22-152`); ⛔ do not add `@twt/tokens` to `apps/mobile` and ⛔ do not touch `tamagui.config.ts`
-  - [ ] Update `packages/i18n/locales/{hi,en}/noticeboard.json` — **both** locales, ⛔ never one
+- [x] **Task 3 — promote `PinnedItem.tsx` into the real row** (AC: 1, 3, 4, 6)
+  - [x] Render from the row view-model; ⛔ no composition decision left in JSX
+  - [x] ✅ **D6** — the row's interactive semantics; ⚠ the `black ≠ memorial` guarantee **survives** into the successor keys (Trap 3)
+  - [x] ⭐⛔ **Replace the a11y grouping the `Pressable` was providing** (AC6 / Trap 5): an explicit `accessible={true}` wrapper around **title+meta only**, carrying the presenter's composed label — and ⛔ **the dismiss control OUTSIDE it**, or it stops being focusable. ⚠ ⛔ Zero in-repo precedent; ⛔ this will not happen by imitation
+  - [x] ✅ **D3/D4** — the dismiss affordance (≥44pt, labelled) and the `dismissed` render; ⛔ `dismissible: false` ⇒ no affordance
+  - [x] ⛔ `CATEGORY_TOKENS` and `RULE_HAIRLINE_TOKEN` stay in `apps/mobile/components/panchayat/tokens.ts` — ⚠ **colour stays in the render layer** (D6(a) of `2026-08-22-152`); ⛔ do not add `@twt/tokens` to `apps/mobile` and ⛔ do not touch `tamagui.config.ts`
+  - [x] Update `packages/i18n/locales/{hi,en}/noticeboard.json` — **both** locales, ⛔ never one
 
-- [ ] **Task 4 — wire the acknowledgement** (AC: 3, 4)
-  - [ ] ✅ **D5(a)** — the SCREEN owns the dismissal identity: `bannerDismissalKey(banner_id, revision)` from the banner it already holds; ⛔ do not re-implement the key format and ⛔ do not edit `copy.ts`
-  - [ ] ✅ **D3(a)** — `useDismissBannerMutation` with `kind:'dismissed'`, optimistic + **rollback on error**
-  - [ ] ⛔ **Do NOT post `{kind:'shown'}`** (Trap 4)
-  - [ ] ✅ **D7(a)** — ⛔ `BannerHost.tsx`, `route-suppression.ts`, `useMemberBannersQuery.ts` and `copy.ts` are **NOT edited**
-  - [ ] ⚠ **Amend `panchayat-noticeboard-render.test.ts:334-340` into its inverse** — assert the dismiss path IS wired **through the existing mutation**, and that ⛔ no second mutation/endpoint/`'shown'` post was introduced. ⛔ Do not delete the test (Trap 3)
-  - [ ] Extend `panchayat-noticeboard-render.test.ts` — ⚠ ⛔ **and note WHAT that file can actually assert**: the mobile harness is **pure Vitest with ⛔ NO component renderer** (⛔ no `@testing-library/react-native` anywhere in `apps/mobile/package.json`; the file states it at `:3-4`). ⇒ three reachable mechanisms, ⛔ and no fourth:
-    - [ ] **SOURCE-SCAN** for the affordance, the ≥44pt floor and the `dismissible: false` guard — ⭐ which is exactly why AC4 makes the affordance predicate a **presenter property** and the touch target a **named constant**: an anonymous `44` or an inline JSX condition is **unassertable here**
-    - [ ] **REAL `t()`** resolution of every new key in **both** locales (the namespace-throw gate)
-    - [ ] **PURE UNIT TESTS** in `packages/ui` for anything about composition or state (Task 2) — ⛔ not here
-  - [ ] ⛔ **Do NOT add a renderer to make an assertion reachable.** `@testing-library/react-native` is a **new workspace dependency**, which this story forbids — if a guarantee seems to need one, **stop and raise it**; it means the logic belongs in the presenter
+- [x] **Task 4 — wire the acknowledgement** (AC: 3, 4)
+  - [x] ✅ **D5(a)** — the SCREEN owns the dismissal identity: `bannerDismissalKey(banner_id, revision)` from the banner it already holds; ⛔ do not re-implement the key format and ⛔ do not edit `copy.ts`
+  - [x] ✅ **D3(a)** — `useDismissBannerMutation` with `kind:'dismissed'`, optimistic + **rollback on error**
+  - [x] ⛔ **Do NOT post `{kind:'shown'}`** (Trap 4)
+  - [x] ✅ **D7(a)** — ⛔ `BannerHost.tsx`, `route-suppression.ts`, `useMemberBannersQuery.ts` and `copy.ts` are **NOT edited**
+  - [x] ⚠ **Amend `panchayat-noticeboard-render.test.ts:334-340` into its inverse** — assert the dismiss path IS wired **through the existing mutation**, and that ⛔ no second mutation/endpoint/`'shown'` post was introduced. ⛔ Do not delete the test (Trap 3)
+  - [x] Extend `panchayat-noticeboard-render.test.ts` — ⚠ ⛔ **and note WHAT that file can actually assert**: the mobile harness is **pure Vitest with ⛔ NO component renderer** (⛔ no `@testing-library/react-native` anywhere in `apps/mobile/package.json`; the file states it at `:3-4`). ⇒ three reachable mechanisms, ⛔ and no fourth:
+    - [x] **SOURCE-SCAN** for the affordance, the ≥44pt floor and the `dismissible: false` guard — ⭐ which is exactly why AC4 makes the affordance predicate a **presenter property** and the touch target a **named constant**: an anonymous `44` or an inline JSX condition is **unassertable here**
+    - [x] **REAL `t()`** resolution of every new key in **both** locales (the namespace-throw gate)
+    - [x] **PURE UNIT TESTS** in `packages/ui` for anything about composition or state (Task 2) — ⛔ not here
+  - [x] ⛔ **Do NOT add a renderer to make an assertion reachable.** `@testing-library/react-native` is a **new workspace dependency**, which this story forbids — if a guarantee seems to need one, **stop and raise it**; it means the logic belongs in the presenter
 
 - [ ] **Task 5 — ✅ bring the `noticeboard` copy into the microcopy register** (AC: 7) — ⚠ **D9(a) RULED: REQUIRED**
   - [ ] Add `packages/i18n/locales/{hi,en}/noticeboard.json` to `microcopy.yaml` `scope.copy_globs`, with an inline rationale comment in the register of the existing entries

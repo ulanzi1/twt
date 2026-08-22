@@ -19,11 +19,14 @@ import { fileURLToPath } from 'node:url'
 
 import { t } from '@twt/i18n'
 import {
+  NOTICEBOARD_CATEGORY_LABEL_KEYS,
   NOTICEBOARD_MASTHEAD_TITLE_KEY,
   NOTICEBOARD_NEXT_MEETING_HEADER_KEY,
   NOTICEBOARD_PINNED_EMPTY_KEY,
   NOTICEBOARD_PINNED_HEADER_KEY,
   NOTICEBOARD_RECENT_CLOSINGS_HEADER_KEY,
+  NOTICEBOARD_ROW_DISMISSED_A11Y_KEY,
+  NOTICEBOARD_ROW_DISMISS_A11Y_KEY,
   deriveNoticeboardViewModel,
 } from '@twt/ui'
 import type { MemberBannerResponse } from '@twt/contracts'
@@ -33,7 +36,7 @@ import {
   MEMBER_READ_AUDIENCE,
   toNoticeboardBannerNotice,
 } from '../../components/panchayat/banner-notice'
-import { CATEGORY_HINT_KEYS, CATEGORY_TOKENS } from '../../components/panchayat/tokens'
+import { CATEGORY_TOKENS, PINNED_ROW_OPACITY } from '../../components/panchayat/tokens'
 import { formatCount } from '../../lib/format-count'
 
 // apps/mobile/tests/unit → repo root is four levels up (unit → tests → mobile → apps → root).
@@ -123,7 +126,9 @@ describe('⭐ real i18n keys resolve through the REAL `t()` — the unregistered
     NOTICEBOARD_PINNED_EMPTY_KEY,
     NOTICEBOARD_RECENT_CLOSINGS_HEADER_KEY,
     NOTICEBOARD_NEXT_MEETING_HEADER_KEY,
-    ...Object.values(CATEGORY_HINT_KEYS),
+    ...Object.values(NOTICEBOARD_CATEGORY_LABEL_KEYS),
+    NOTICEBOARD_ROW_DISMISS_A11Y_KEY,
+    NOTICEBOARD_ROW_DISMISSED_A11Y_KEY,
     'seal_a11y',
     'pinned_list_a11y',
     'loading_a11y',
@@ -188,13 +193,44 @@ describe('⭐ the D6(a) token bridge — one named map, no hex, exhaustive by ty
     expect(/@twt\/tokens/.test(src)).toBe(false)
   })
 
-  it('gives EVERY category a corrected a11y hint key — ⚠ `black` is now SCHEDULED MEETING', () => {
-    expect(Object.keys(CATEGORY_HINT_KEYS)).toEqual(['terracotta', 'green', 'black', 'ink'])
-    // The correction itself: the prototype announced `black` as "memorial", which §1819 makes wrong.
+  it('⭐ gives EVERY category a LABEL key — ⚠ `black` is STILL SCHEDULED MEETING (D6(a), Trap 3)', () => {
+    // ⭐ AMENDED, ⛔ NOT DELETED. Story 11a.6's D6(a) retires the four `open_detail_*` HINT keys — the row
+    // is no longer a button and has no detail destination to promise — and moves the category into the
+    // accessibility LABEL, which is what UX `:1820` asked for. ⚠ The half of the 11a.5 correction that is
+    // ⛔ NOT negotiable survives VERBATIM: §491 `black` meant BEREAVEMENT, §1819 `black` means SCHEDULED
+    // MEETING, so announcing "memorial" about a meeting notice stays wrong on the successor key too.
+    expect(Object.keys(NOTICEBOARD_CATEGORY_LABEL_KEYS)).toEqual([
+      'terracotta',
+      'green',
+      'black',
+      'ink',
+    ])
     const en = (k: string): string => t(k, undefined, { locale: 'en', namespace: 'noticeboard' })
-    expect(en(CATEGORY_HINT_KEYS.black)).toMatch(/meeting/i)
-    expect(en(CATEGORY_HINT_KEYS.black)).not.toMatch(/memorial/i)
+    expect(en(NOTICEBOARD_CATEGORY_LABEL_KEYS.black)).toMatch(/meeting/i)
+    expect(en(NOTICEBOARD_CATEGORY_LABEL_KEYS.black)).not.toMatch(/memorial/i)
     expect(stripComments(read(ROW))).not.toMatch(/memorial/i)
+  })
+
+  it('⛔ the retired `open_detail_*` keys are GONE from both catalogs — ⛔ not aliased, ⛔ not kept', () => {
+    for (const locale of ['hi', 'en'] as const) {
+      const catalog = JSON.parse(read(`packages/i18n/locales/${locale}/noticeboard.json`)) as Record<
+        string,
+        string
+      >
+      expect(Object.keys(catalog).filter((k) => k.startsWith('open_detail'))).toEqual([])
+    }
+    expect(stripComments(read(`${PANCHAYAT_DIR}/tokens.ts`))).not.toMatch(/CATEGORY_HINT_KEYS/)
+  })
+
+  it('⭐ maps BOTH ratified row states to an emphasis — exhaustive, ⛔ no inline opacity literal', () => {
+    // The D4(a) counterpart of `CATEGORY_TOKENS`: the STATE is the presenter's property, the emphasis
+    // VALUE is the render layer's. ⛔ Fading is never the sole channel — the presenter also appends a
+    // `dismissed_a11y` label part, asserted in `packages/ui/tests/noticeboard/pinned-notice.test.ts`.
+    expect(Object.keys(PINNED_ROW_OPACITY)).toEqual(['default', 'dismissed'])
+    expect(PINNED_ROW_OPACITY.dismissed).toBeLessThan(PINNED_ROW_OPACITY.default)
+    const row = stripComments(read(ROW))
+    expect(/opacity=\{PINNED_ROW_OPACITY\[vm\.state\]\}/.test(row)).toBe(true)
+    expect(/opacity=\{0?\.\d/.test(row), 'an inline opacity literal survives in the row').toBe(false)
   })
 })
 
@@ -331,11 +367,158 @@ describe('⭐ the banner appears EXACTLY ONCE on the panchayat tab (Trap 3b / D7
     expect(/banner-strip/.test(read(BOARD))).toBe(false)
   })
 
-  it('⛔ wires NO dismiss path — `dismissible` is a FLAG and 11a.6 owns the interaction (AC6)', () => {
+  it('⭐ WIRES the dismiss path — through the EXISTING mutation, and ⛔ nothing new (Trap 3, AC3)', () => {
+    // ⭐ THIS FENCE IS AMENDED INTO ITS INVERSE, ⛔ NOT DELETED. Story 11a.5 wrote it to hold the
+    // interaction until 11a.6 arrived; this is 11a.6, so it now asserts the OTHER half — that the
+    // acknowledgement is wired, and wired to what already exists.
+    const board = stripComments(read(BOARD))
+    expect(/useDismissBannerMutation\(pariwarId\)/.test(board)).toBe(true)
+    expect(/dismiss\.mutate\(/.test(board)).toBe(true)
+    expect(/kind: 'dismissed'/.test(board)).toBe(true)
+    // ONE explicit activation (D3(a)) — ⛔ no confirmation modal, ⛔ no sheet, ⛔ no swipe-only path,
+    // ⛔ no auto-dismiss on scroll or timer.
+    // ⚠ `\bSheet\b` deliberately: `StyleSheet.hairlineWidth` is the section rule, not a bottom sheet.
+    expect(
+      /\bSheet\b|AlertDialog|Alert\.alert|confirm\(|setTimeout|Swipeable|PanGestureHandler/.test(board),
+    ).toBe(
+      false,
+    )
+  })
+
+  it('⛔ introduces NO second mutation, endpoint, table or persistence layer (AC3)', () => {
     const board = stripComments(read(BOARD))
     const row = stripComments(read(ROW))
     for (const src of [board, row]) {
-      expect(/useDismissBannerMutation|DismissBannerResponse|dismiss\.mutate/.test(src)).toBe(false)
+      // ⛔ No hand-rolled mutation and ⛔ no direct SDK/network call — the EXISTING hook or nothing.
+      expect(/useMutation\(|bannerApi|fetch\(|axios/.test(src)).toBe(false)
+      // ⛔ No local persistence: D3(c) refused an MMKV dismissal set, and the server is the authority.
+      expect(/mmkv|MMKV|AsyncStorage|persist/i.test(src)).toBe(false)
+    }
+    // Exactly one dismiss mutation hook call, in the SCREEN. ⛔ The row holds none — it takes a callback.
+    expect(board.match(/useDismissBannerMutation\(/g) ?? []).toHaveLength(1)
+    expect(/useDismissBannerMutation|dismiss\.mutate/.test(row)).toBe(false)
+  })
+
+  it('⛔ NEVER posts `{kind:\'shown\'}` — `<BannerHost>` already reports it on this tab (Trap 4)', () => {
+    // The `useRef` once-guard lives inside `<BannerHost>` and is NOT shared, so a second reporter is a
+    // genuine double-post — and `shown` suppresses IDENTICALLY to `dismissed` (`enums.ts:91`), so the two
+    // writers would race on the same suppression.
+    for (const src of [stripComments(read(BOARD)), stripComments(read(ROW))]) {
+      expect(/'shown'|"shown"/.test(src)).toBe(false)
+    }
+  })
+
+  it('⭐ keys the optimistic window by `bannerId:revision` — ⛔ the format is NOT re-implemented (D5(a))', () => {
+    // The routed 11a.5 code-review finding, closed BY DESIGN: the descriptor is not widened with 10.9's
+    // `revision`; the SCREEN composes the key from the banner it already holds, through the ONE existing
+    // helper. A bare-id key would let a stale in-session dismissal swallow a copy revision that is meant
+    // to RE-SURFACE the notice.
+    const board = stripComments(read(BOARD))
+    expect(/bannerDismissalKey\(banner\.banner_id, banner\.revision\)/.test(board)).toBe(true)
+    // ⛔ No second implementation of the `${id}:${revision}` format anywhere in the panchayat module.
+    for (const file of ['PanchayatNoticeboard.tsx', 'PinnedItem.tsx', 'banner-notice.ts']) {
+      expect(/:\$\{/.test(stripComments(read(`${PANCHAYAT_DIR}/${file}`))), file).toBe(false)
+    }
+  })
+
+  it('⛔ rolls the optimistic acknowledgement BACK on write failure (AC3/D4(a))', () => {
+    // A failed write must never permanently hide a notice the server did not suppress.
+    const board = stripComments(read(BOARD))
+    expect(/onError:[\s\S]{0,200}next\.delete\(key\)/.test(board)).toBe(true)
+  })
+
+  it('⛔ does NOT edit ANY of the four `components/banners/*` files (D7(a))', () => {
+    // Zero edits: the noticeboard reuses the endpoint, the mutation hook and the key helper as they are.
+    // Asserted by shape rather than by diff — each file still says what 10.9/11a.5 left it saying.
+    expect(/MIN_TOUCH_TARGET = 44/.test(read('apps/mobile/components/banners/BannerHost.tsx'))).toBe(true)
+    expect(
+      /export function bannerDismissalKey/.test(read('apps/mobile/components/banners/copy.ts')),
+    ).toBe(true)
+    expect(
+      /export function useDismissBannerMutation/.test(
+        read('apps/mobile/components/banners/useMemberBannersQuery.ts'),
+      ),
+    ).toBe(true)
+    expect(
+      /export function isBannerRenderedByRoute/.test(
+        read('apps/mobile/components/banners/route-suppression.ts'),
+      ),
+    ).toBe(true)
+  })
+})
+
+describe('⭐ the ROW promoted — semantic accessibility and the affordance (AC1, AC3, AC6)', () => {
+  const row = stripComments(read(ROW))
+
+  it('⭐ the row is NON-INTERACTIVE CONTENT — the "tap to open detail" LIE is gone (D6(a), Trap 5)', () => {
+    // The prototype announced `accessibilityRole="button"` over an EMPTY `onPress` body, with no detail
+    // screen and no link CTA on the descriptor. The fix REMOVES the claim; ⛔ it does not invent a
+    // destination, which would pre-empt the routed link-CTA item's trigger.
+    expect(/Pressable/.test(row)).toBe(false)
+    expect(/accessibilityHint/.test(row)).toBe(false)
+    // The ONLY `accessibilityRole="button"` left is on the dismiss control, which actually does something.
+    expect(row.match(/accessibilityRole="button"/g) ?? []).toHaveLength(1)
+    expect(/onPress=\{onDismiss\}/.test(row)).toBe(true)
+    // ⛔ No empty handler survives anywhere.
+    expect(/onPress=\{\(\) => \{\s*\}\}/.test(row)).toBe(false)
+  })
+
+  it('⭐ title + meta read as ONE unit via an EXPLICIT `accessible` wrapper (UX `:1820`, Trap 5)', () => {
+    // ⚠ RN defaults `Pressable` to `accessible={true}`, and that was the ONLY mechanism holding this
+    // guarantee. D6(a) removes the `Pressable`, so the unit is re-established explicitly — around
+    // title+meta ONLY, carrying the presenter's composed label.
+    expect(/accessible=\{true\}/.test(row)).toBe(true)
+    expect(/accessible=\{true\} accessibilityLabel=\{a11yLabel\}|accessibilityLabel=\{a11yLabel\}/.test(row)).toBe(
+      true,
+    )
+    // ⛔ AND THE CONTROL IS A SIBLING, ⛔ NEVER A CHILD: the accessible <YStack> closes BEFORE the
+    // <Button> opens. A control nested inside an `accessible` container is not individually focusable.
+    const wrapperClose = row.indexOf('</YStack>')
+    const buttonOpen = row.indexOf('<Button')
+    expect(wrapperClose).toBeGreaterThan(-1)
+    expect(buttonOpen).toBeGreaterThan(wrapperClose)
+  })
+
+  it('⛔ composes NO label string of its own — the composition is the presenter\'s (AC6)', () => {
+    expect(/derivePinnedNoticeViewModel\(/.test(row)).toBe(true)
+    expect(/PINNED_NOTICE_A11Y_SEPARATOR/.test(row)).toBe(true)
+    // The shipped defect: `` `${item.title}. ${item.meta}` `` produced ". <meta>" on an empty title.
+    expect(/\$\{item\.title\}|\$\{vm\.title\}/.test(row)).toBe(false)
+  })
+
+  it('⭐ the affordance is a PRESENTER PROPERTY, and ⛔ `dismissible: false` renders none (AC3)', () => {
+    // A non-dismissible `banner` is LEGAL and reachable (`packages/domain/src/banners/errors.ts:84-86`);
+    // only a POPUP must be dismissible. The guard is `vm.dismiss`, ⛔ never an inline `item.dismissible`
+    // condition in JSX — which is also what makes it assertable in this renderer-free harness.
+    expect(/\{vm\.dismiss !== null && \(/.test(row)).toBe(true)
+    expect(/item\.dismissible|row\.dismissible/.test(row)).toBe(false)
+  })
+
+  it('⭐ meets the ≥44pt touch-target floor, as a NAMED constant (AC3, UX `:2310`)', () => {
+    expect(/const MIN_TOUCH_TARGET = 44/.test(row)).toBe(true)
+    expect(/minWidth: MIN_TOUCH_TARGET, minHeight: MIN_TOUCH_TARGET/.test(row)).toBe(true)
+    expect(/accessibilityLabel=\{t\(vm\.dismiss\.labelKey\)\}/.test(row)).toBe(true)
+  })
+
+  it('⛔ re-implements NO tier filter and takes NO viewer input (AC5)', () => {
+    // A row reaches here only after the strip presenter's `isVisibleToViewer` passed it; a second filter
+    // could only ever DISAGREE with the first.
+    expect(/isVisibleToViewer|AUDIENCE_VISIBILITY|audience|isAuthenticated|useSession/.test(row)).toBe(
+      false,
+    )
+  })
+
+  it('⛔ adds NO severity axis to the row — D2(a) maps severity INTO `category` (Trap 2)', () => {
+    expect(/severity|SEVERITY_TOKENS|info|warning|critical/.test(row)).toBe(false)
+    // ⛔ And exactly ONE colour slot: the stub. No second tint, badge or icon keyed by anything else.
+    expect(row.match(/CATEGORY_TOKENS\[/g) ?? []).toHaveLength(1)
+  })
+
+  it('⛔ ships NO new above-the-fold surface, sticky header or second mount point (AC1/D1(a))', () => {
+    const board = stripComments(read(BOARD))
+    for (const src of [board, row]) {
+      expect(/sticky|stickyHeader|position: 'absolute'|zIndex/.test(src)).toBe(false)
+      expect(/BannerHost/.test(src)).toBe(false)
     }
   })
 })

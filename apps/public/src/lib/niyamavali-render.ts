@@ -221,10 +221,27 @@ export function renderDiff(versionA: ClauseRow, versionB: ClauseRow): DiffDispla
  * ⚠ `fields` (the generic payload key→value list) maps to ONE field id. That is
  * a deliberate and stated limit: the payload key set is DATA — clause payloads
  * differ per clause and per Pariwar — so no committed file can enumerate it. The
- * matrix classifies the payload DISPLAY BLOCK as a whole; what protects its
- * CONTENTS is `renderValue`'s opaqueness (freeze row 14: display rendering, never
- * rule interpretation) plus the naked-PII leg, which scans the real rendered HTML
- * and does not care where a phone number came from.
+ * matrix classifies the payload DISPLAY BLOCK as a whole.
+ *
+ * Two things protect its CONTENTS, and they run in DIFFERENT PLACES:
+ *   1. `renderValue`'s opaqueness — freeze row 14: display rendering, never rule
+ *      interpretation. Unchanged and real.
+ *   2. Payload content is scanned for naked PII AT PUBLISH, on the
+ *      `niyamavali.amend` path in `apps/api`, before the audit line is written —
+ *      a match rejects the publish with a typed 4xx naming the matched pattern
+ *      TYPE only, never the value (Story 11a.4, Decision 2026-08-22-149 cl.4).
+ *
+ * ⛔ THE RENDER-TIME naked-PII LEG DOES NOT PROTECT THIS BLOCK, and this comment
+ * used to say it did. That leg runs in exactly one place —
+ * `apps/public/tests/integration/public-pages/scrape-test.spec.ts` — over render
+ * HTML built from IN-FILE FIXTURES, on every PR. It has never scanned a byte of
+ * tenant data and ⛔ does not scan what a Pariwar actually publishes. It proves
+ * the ENGINE works; it proves ⛔ nothing about the live surface. ⛔ Do not restore
+ * the earlier wording, and ⛔ do not cite this module's fixtures as live coverage.
+ *
+ * ⚠ And the publish scan is a BACKSTOP, ⛔ not the primary control. The primary
+ * control is the non-author human sign-off (`reviewedBy !== authoredBy`,
+ * content-bound by hash, audit-or-throw). ⛔ A regex has not replaced a human.
  */
 const NIYAMAVALI_CLAUSE_FIELD_IDS: FieldIdMapping<ClauseDisplay> = {
   clauseId: 'clause_id',

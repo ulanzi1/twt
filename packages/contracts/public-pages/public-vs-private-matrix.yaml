@@ -135,10 +135,27 @@ surfaces:
         description: >-
           The generic key→value payload display block. ⚠ ONE field id for a
           DYNAMIC key set: clause payloads differ per clause and per Pariwar, so
-          no committed file can enumerate them. What protects the contents is the
-          renderer's opaqueness (freeze row 14 — display rendering, never rule
-          interpretation) plus the naked-PII leg, which scans the real HTML and
-          does not care where a phone number came from.
+          no committed file can enumerate them.
+
+          Two things protect the contents, and they run in DIFFERENT PLACES.
+          (1) The renderer's opaqueness — freeze row 14, display rendering and
+          never rule interpretation. Unchanged and real.
+          (2) Payload content is scanned for naked PII AT PUBLISH, on the
+          niyamavali.amend path, before the audit line is written: a match
+          rejects the publish with a typed 4xx naming the matched pattern TYPE
+          only, never the value (Story 11a.4, Decision 2026-08-22-149 cl.4).
+
+          ⛔ THE RENDER-TIME naked-PII LEG DOES NOT PROTECT THIS BLOCK, and this
+          description used to imply it did. That leg runs in exactly one place —
+          apps/public/tests/integration/public-pages/scrape-test.spec.ts — over
+          render HTML built from IN-FILE FIXTURES, on every PR. It has never
+          scanned a byte of tenant data and ⛔ does not scan what a Pariwar
+          actually publishes. It proves the ENGINE works; it proves ⛔ nothing
+          about the live surface.
+
+          ⚠ And the publish scan is a BACKSTOP, ⛔ not the primary control. The
+          primary control is the non-author human sign-off (reviewedBy !==
+          authoredBy, content-bound by hash, audit-or-throw).
 
   # ── Story 2.6 — Terms & Conditions ────────────────────────────────────────
   - id: terms

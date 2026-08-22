@@ -4,7 +4,7 @@ baseline_commit: 54492eb9d8a83c8107acaf21c673c96de96ec7ec
 
 # Story 11a.5: `<NoticeboardStrip>` Foundational Layout Component `[PRIMITIVE]`
 
-Status: in-progress
+Status: review
 
 > ✅ **BASELINE VERIFIED LIVE.** `git fetch origin` was run at authoring time
 > ([[feedback_git_fetch_before_remote_reasoning]]): `HEAD == origin/main == 54492eb`, zero ahead /
@@ -446,61 +446,61 @@ is the widening Trap 2 exists to forbid, in a second place. ⚠ If a field's con
   - [x] ⭐ **D2's ruling is a UX-spec AMENDMENT, and the entry must say so** — name the losing line (`ux-design-specification.md:491` or `:1819`) as **superseded**, ⛔ never "reinterpreted" ([[feedback_supersede_never_reinterpret]], [[feedback_closure_language_precision]])
   - [x] Commit **alone**, `governance:` prefix, **before** any implementation commit — history must read governance → implementation
 
-- [ ] **Task 1 — author the headless presenter** (AC: 1, 2, 6)
-  - [ ] Read `packages/ui/src/pool-progress/{view-model,presenter,i18n-keys,index}.ts` end-to-end and mirror its shape and comment register
-  - [ ] `view-model.ts` — input + output types; ⭐ the banner slot is **singular by SHAPE** (AC2); document *why* in the type's doc comment, naming Trap 2
-  - [ ] ⭐ `view-model.ts` — the **row descriptor** (AC6), with the epic-vs-UX-§1817 reconciliation stated in its doc comment; ⛔ `dismissible` is a flag only
-  - [ ] `view-model.ts` — all **four** ratified states (`default`/`loading`/`empty`/`refreshing`, UX `:1808`); ⛔ the pinned `empty` copy-key case is distinct from the no-producer silent case (AC1)
-  - [ ] `presenter.ts` — pure `deriveNoticeboardViewModel(input, now)`; sections in render order with explicit empty states
-  - [ ] `i18n-keys.ts` — KEY constants only; **reuse** existing keys where copy is identical, mint new only for genuinely new strings (the 9.12 Task-2 discipline)
-  - [ ] `index.ts` barrel + register the module in `packages/ui/src/index.ts` with a Story-11a.5 header
-  - [ ] ⚠ **Use `.js` ESM extensions on every relative import/export** — `export * from './noticeboard/index.js'`, `import … from './view-model.js'`. ⛔ The package is `"type": "module"` on NodeNext; the four existing barrels all do this and an extensionless specifier will not resolve the same way everywhere
-  - [ ] ⛔ Verify zero react/react-native/tamagui imports and zero colour hex — ⚠ **by reading, not by trusting CI**: there is ⛔ no gate for this (Trap 1)
+- [x] **Task 1 — author the headless presenter** (AC: 1, 2, 6)
+  - [x] Read `packages/ui/src/pool-progress/{view-model,presenter,i18n-keys,index}.ts` end-to-end and mirror its shape and comment register
+  - [x] `view-model.ts` — input + output types; ⭐ the banner slot is **singular by SHAPE** (AC2); document *why* in the type's doc comment, naming Trap 2
+  - [x] ⭐ `view-model.ts` — the **row descriptor** (AC6), with the epic-vs-UX-§1817 reconciliation stated in its doc comment; ⛔ `dismissible` is a flag only
+  - [x] `view-model.ts` — all **four** ratified states (`default`/`loading`/`empty`/`refreshing`, UX `:1808`); ⛔ the pinned `empty` copy-key case is distinct from the no-producer silent case (AC1)
+  - [x] `presenter.ts` — pure `deriveNoticeboardViewModel(input, now)`; sections in render order with explicit empty states
+  - [x] `i18n-keys.ts` — KEY constants only; **reuse** existing keys where copy is identical, mint new only for genuinely new strings (the 9.12 Task-2 discipline)
+  - [x] `index.ts` barrel + register the module in `packages/ui/src/index.ts` with a Story-11a.5 header
+  - [x] ⚠ **Use `.js` ESM extensions on every relative import/export** — `export * from './noticeboard/index.js'`, `import … from './view-model.js'`. ⛔ The package is `"type": "module"` on NodeNext; the four existing barrels all do this and an extensionless specifier will not resolve the same way everywhere
+  - [x] ⛔ Verify zero react/react-native/tamagui imports and zero colour hex — ⚠ **by reading, not by trusting CI**: there is ⛔ no gate for this (Trap 1)
 
-- [ ] **Task 2 — tests for the presenter** (AC: 1, 2, 6)
-  - [ ] `packages/ui/tests/noticeboard/presenter.test.ts` — section order, per-section empty states, injected-`now` boundaries
-  - [ ] ⭐ The **anti-widening** test: the input type admits **no banner list** (the 9.12 Task-3b precedent — `packages/ui/tests/pool-progress/presenter.test.ts:151`)
-  - [ ] ⭐ **All four states** are reachable and distinct (`default`/`loading`/`empty`/`refreshing`), and ⛔ the pinned-empty case yields a **copy key** while a no-producer section yields **silence** — the two must not be assert-equal
-  - [ ] Row-descriptor shape test (AC6): exactly the reconciled field set, ⛔ no speculative field
-  - [ ] Tier-filter tests incl. the **fail-closed** unknown-audience case (✅ D5(a) ruled — ⛔ required, not conditional)
+- [x] **Task 2 — tests for the presenter** (AC: 1, 2, 6)
+  - [x] `packages/ui/tests/noticeboard/presenter.test.ts` — section order, per-section empty states, injected-`now` boundaries
+  - [x] ⭐ The **anti-widening** test: the input type admits **no banner list** (the 9.12 Task-3b precedent — `packages/ui/tests/pool-progress/presenter.test.ts:151`)
+  - [x] ⭐ **All four states** are reachable and distinct (`default`/`loading`/`empty`/`refreshing`), and ⛔ the pinned-empty case yields a **copy key** while a no-producer section yields **silence** — the two must not be assert-equal
+  - [x] Row-descriptor shape test (AC6): exactly the reconciled field set, ⛔ no speculative field
+  - [x] Tier-filter tests incl. the **fail-closed** unknown-audience case (✅ D5(a) ruled — ⛔ required, not conditional)
 
-- [ ] **Task 3 — rewire the mobile render** (AC: 3)
-  - [ ] `PanchayatNoticeboard.tsx` consumes the presenter; ⛔ `SAMPLE_*` imports removed for every wired section
-  - [ ] ✅ **D7(a)** — wire the banner input to the **existing** `useMemberBannersQuery`; ⛔ no second query
-  - [ ] ✅ **D7(a)** — add the **fifth** self-suppression condition to `BannerHost.tsx` (the panchayat route). ⚠ **This is the ONE 10.9-owned file this story edits**, and ⛔ it is the ONLY change permitted in it — ⛔ not `SEVERITY_TOKENS`, ⛔ not the dismiss path, ⛔ not the `banner-strip` testID, ⛔ not the mount point
-  - [ ] ✅ **D7(a)** — a render test asserting the banner appears **exactly once** on the panchayat tab, and ⛔ **still appears** on a non-panchayat tab (⚠ the second half is what stops the suppression over-firing)
-  - [ ] ✅ **D6(a)** — replace the raw hexes with ONE named map, `as const satisfies Record<NoticeCategory,…>`; ⛔ do not add `@twt/tokens` to `apps/mobile` and ⛔ do not touch `tamagui.config.ts`
-  - [ ] ✅ **D2(a)** — `PinnedItem` consumes `terracotta|green|black|ink`; ⛔ delete `saffron`; ⚠ **correct the `:36` `accessibilityHint`** — ⛔ `black` is now *scheduled meeting*, ⛔ NOT *memorial*
-  - [ ] Render the `loading` state as the ratified **skeleton** (*"top + first 2 notices"*, UX `:1808`) — ⛔ not a spinner, ⛔ not a blank screen; `refreshing` keeps content on screen
-  - [ ] Register the i18n namespace in `packages/i18n/src/catalog.ts` — ⚠ **BOTH the `catalogs` map AND the `KNOWN_NAMESPACES` literal** (`:65`); ⛔ they are two separate literals that drift, and `catalog-registration.test.ts:70` asserts they agree
-  - [ ] ⚠ Add the catalog **files** — ⛔ they are NOT in `src/`: `packages/i18n/locales/hi/<ns>.json` **and** `packages/i18n/locales/en/<ns>.json` (the parity gate walks the `locales/` **directory**)
-  - [ ] Add the mobile namespace-bound hook wrapper following `apps/mobile/lib/{poll,helpdesk,claim}-i18n.ts` — ⛔ do not call bare `useT()` (it defaults to `common` and **throws**)
-  - [ ] Move hardcoded Hindi chrome literals to catalog keys; ⛔ keep all numerals Latin
-  - [ ] ⚠ **Trap 6 first** — `sample-data.ts` also holds the TYPES four components import **and** `formatCount`. Move types to the view-model; ⭐ keep `formatCount` in the RENDER layer; ⛔ do not touch the `yogdaan-bahi` / `shradhanjali` sample-data files
-  - [ ] Remove `<P3DiagnosticPanel>` + its file (✅ verified: imported only by `PanchayatNoticeboard.tsx:6,122`); ⛔ leave `<PollsEntry>` exactly where it is
-  - [ ] Update/extend the mobile render test alongside `banner-host-render.test.ts` / `status-pill-render.test.ts`
+- [x] **Task 3 — rewire the mobile render** (AC: 3)
+  - [x] `PanchayatNoticeboard.tsx` consumes the presenter; ⛔ `SAMPLE_*` imports removed for every wired section
+  - [x] ✅ **D7(a)** — wire the banner input to the **existing** `useMemberBannersQuery`; ⛔ no second query
+  - [x] ✅ **D7(a)** — add the **fifth** self-suppression condition to `BannerHost.tsx` (the panchayat route). ⚠ **This is the ONE 10.9-owned file this story edits**, and ⛔ it is the ONLY change permitted in it — ⛔ not `SEVERITY_TOKENS`, ⛔ not the dismiss path, ⛔ not the `banner-strip` testID, ⛔ not the mount point
+  - [x] ✅ **D7(a)** — a render test asserting the banner appears **exactly once** on the panchayat tab, and ⛔ **still appears** on a non-panchayat tab (⚠ the second half is what stops the suppression over-firing)
+  - [x] ✅ **D6(a)** — replace the raw hexes with ONE named map, `as const satisfies Record<NoticeCategory,…>`; ⛔ do not add `@twt/tokens` to `apps/mobile` and ⛔ do not touch `tamagui.config.ts`
+  - [x] ✅ **D2(a)** — `PinnedItem` consumes `terracotta|green|black|ink`; ⛔ delete `saffron`; ⚠ **correct the `:36` `accessibilityHint`** — ⛔ `black` is now *scheduled meeting*, ⛔ NOT *memorial*
+  - [x] Render the `loading` state as the ratified **skeleton** (*"top + first 2 notices"*, UX `:1808`) — ⛔ not a spinner, ⛔ not a blank screen; `refreshing` keeps content on screen
+  - [x] Register the i18n namespace in `packages/i18n/src/catalog.ts` — ⚠ **BOTH the `catalogs` map AND the `KNOWN_NAMESPACES` literal** (`:65`); ⛔ they are two separate literals that drift, and `catalog-registration.test.ts:70` asserts they agree
+  - [x] ⚠ Add the catalog **files** — ⛔ they are NOT in `src/`: `packages/i18n/locales/hi/<ns>.json` **and** `packages/i18n/locales/en/<ns>.json` (the parity gate walks the `locales/` **directory**)
+  - [x] Add the mobile namespace-bound hook wrapper following `apps/mobile/lib/{poll,helpdesk,claim}-i18n.ts` — ⛔ do not call bare `useT()` (it defaults to `common` and **throws**)
+  - [x] Move hardcoded Hindi chrome literals to catalog keys; ⛔ keep all numerals Latin
+  - [x] ⚠ **Trap 6 first** — `sample-data.ts` also holds the TYPES four components import **and** `formatCount`. Move types to the view-model; ⭐ keep `formatCount` in the RENDER layer; ⛔ do not touch the `yogdaan-bahi` / `shradhanjali` sample-data files
+  - [x] Remove `<P3DiagnosticPanel>` + its file (✅ verified: imported only by `PanchayatNoticeboard.tsx:6,122`); ⛔ leave `<PollsEntry>` exactly where it is
+  - [x] Update/extend the mobile render test alongside `banner-host-render.test.ts` / `status-pill-render.test.ts`
 
-- [ ] **Task 4 — ✅ `[D3(a) RULED]` honest empty sections** (AC: 4)
-  - [ ] ⛔ **Delete** `SAMPLE_RECENT_CLOSINGS` and every other fixture for an unwired section — ⛔ not relocated, ⛔ not commented out
-  - [ ] Wire the section to its real (empty) source; render nothing when empty
-  - [ ] ⛔ Build no close-of-cycle and no aggregate-stat read model
+- [x] **Task 4 — ✅ `[D3(a) RULED]` honest empty sections** (AC: 4)
+  - [x] ⛔ **Delete** `SAMPLE_RECENT_CLOSINGS` and every other fixture for an unwired section — ⛔ not relocated, ⛔ not commented out
+  - [x] Wire the section to its real (empty) source; render nothing when empty
+  - [x] ⛔ Build no close-of-cycle and no aggregate-stat read model
 
-- [ ] **Task 5 — ✅ `[D5(a) RULED]` tier filter** (AC: 5)
-  - [ ] Pure predicate over 10.9's `audience_scope`; ⛔ no new taxonomy
-  - [ ] **Fail-closed** on unknown/unresolvable audience
-  - [ ] ⛔ Ship no `apps/public` route; record the future matrix obligation in one line
+- [x] **Task 5 — ✅ `[D5(a) RULED]` tier filter** (AC: 5)
+  - [x] Pure predicate over 10.9's `audience_scope`; ⛔ no new taxonomy
+  - [x] **Fail-closed** on unknown/unresolvable audience
+  - [x] ⛔ Ship no `apps/public` route; record the future matrix obligation in one line
 
-- [ ] **Task 6 — route what this story does not build** ([[feedback_gap_analysis_observational]])
-  - [ ] A trustee-panel routing note recording: (a) ⛔ **no close-of-cycle (FR-19) read model exists and no story owns one**; (b) ⛔ **no aggregate member/district stat read model exists**; (c) the UX spec's *"public website embed"* variant has ⛔ **no host surface** (`index.astro` is a bare 302) **and `apps/public` does not depend on `@twt/ui`** (a documented Story-2.5 variance, `COMPOSITION-CONTRACT.md:156-158`) — ⛔ two separate absences, not one
-  - [ ] ⭐ (d) **The UX spec's `<NoticeboardStrip>` "admin home (with admin-only sections)" variant** (`ux-design-specification.md:1809`; Surfaces `:1810` names *"admin dashboard"*; the §14 inventory `:2228` repeats *"member home + admin home variants"*) is ⛔ **OUT OF SCOPE here and owned by NO story.** ⚠ Note the asymmetry for whoever picks it up: `apps/admin` **already depends on `@twt/ui`** (`package.json:24`), so the admin variant is the **cheapest** second consumer of this presenter — ⛔ which is exactly why leaving it unrouted would let it be built twice
-  - [ ] ⭐ (e) **The UX-spec amendment D2(a) forces** — `ux-design-specification.md:491` is **SUPERSEDED** by `:1819`. ⛔ Route the spec edit; ⛔ do not edit the spec inside this story. ⚠ Record it as **superseded**, ⛔ never "reinterpreted"
-  - [ ] ⭐ (f) **D6(c) — bridging `@twt/tokens` INTO `tamagui.config.ts`.** ⚠ The architecturally right answer and ⛔ the one this story deliberately did NOT take: it is the only path that makes `stamp-mudra` a real mobile token, but it re-themes **every** mobile surface from inside a one-tab story. ⭐ **Re-trigger:** the next story that needs a `@twt/tokens` colour role on RN — ⛔ at which point the local maps (`TONE_TOKENS`, `SEVERITY_TOKENS`, and this story's) become the migration list, ⛔ not obstacles
-  - [ ] Add each to `deferred-work.md` with its **re-trigger**; ⛔ observe and route — do not schedule, and do not build
+- [x] **Task 6 — route what this story does not build** ([[feedback_gap_analysis_observational]])
+  - [x] A trustee-panel routing note recording: (a) ⛔ **no close-of-cycle (FR-19) read model exists and no story owns one**; (b) ⛔ **no aggregate member/district stat read model exists**; (c) the UX spec's *"public website embed"* variant has ⛔ **no host surface** (`index.astro` is a bare 302) **and `apps/public` does not depend on `@twt/ui`** (a documented Story-2.5 variance, `COMPOSITION-CONTRACT.md:156-158`) — ⛔ two separate absences, not one
+  - [x] ⭐ (d) **The UX spec's `<NoticeboardStrip>` "admin home (with admin-only sections)" variant** (`ux-design-specification.md:1809`; Surfaces `:1810` names *"admin dashboard"*; the §14 inventory `:2228` repeats *"member home + admin home variants"*) is ⛔ **OUT OF SCOPE here and owned by NO story.** ⚠ Note the asymmetry for whoever picks it up: `apps/admin` **already depends on `@twt/ui`** (`package.json:24`), so the admin variant is the **cheapest** second consumer of this presenter — ⛔ which is exactly why leaving it unrouted would let it be built twice
+  - [x] ⭐ (e) **The UX-spec amendment D2(a) forces** — `ux-design-specification.md:491` is **SUPERSEDED** by `:1819`. ⛔ Route the spec edit; ⛔ do not edit the spec inside this story. ⚠ Record it as **superseded**, ⛔ never "reinterpreted"
+  - [x] ⭐ (f) **D6(c) — bridging `@twt/tokens` INTO `tamagui.config.ts`.** ⚠ The architecturally right answer and ⛔ the one this story deliberately did NOT take: it is the only path that makes `stamp-mudra` a real mobile token, but it re-themes **every** mobile surface from inside a one-tab story. ⭐ **Re-trigger:** the next story that needs a `@twt/tokens` colour role on RN — ⛔ at which point the local maps (`TONE_TOKENS`, `SEVERITY_TOKENS`, and this story's) become the migration list, ⛔ not obstacles
+  - [x] Add each to `deferred-work.md` with its **re-trigger**; ⛔ observe and route — do not schedule, and do not build
 
-- [ ] **Task 7 — story close-out**
-  - [ ] `pnpm ci:local` green (⚠ `--concurrency=4`; ⚠ `git push` runs the full leg via the pre-push hook — the "hang" is expected, [[project_friction_budget_baseline_ratchet]])
-  - [ ] Sprint-status ledger entry per [[project_sprint_status_ledger]] — one combined top-of-file entry; flip **only** `11a-5-…`; ⛔ `epic-11a` stays `in-progress` (11a.6 remains)
-  - [ ] ⛔ **REBASE-merge**, never squash ([[project_story_automator_ops]])
+- [x] **Task 7 — story close-out**
+  - [x] `pnpm ci:local` green (⚠ `--concurrency=4`; ⚠ `git push` runs the full leg via the pre-push hook — the "hang" is expected, [[project_friction_budget_baseline_ratchet]])
+  - [x] Sprint-status ledger entry per [[project_sprint_status_ledger]] — one combined top-of-file entry; flip **only** `11a-5-…`; ⛔ `epic-11a` stays `in-progress` (11a.6 remains)
+  - [x] ⛔ **REBASE-merge**, never squash ([[project_story_automator_ops]])
 
 ---
 
@@ -774,8 +774,204 @@ the UX spec is narrower and wins: *"Noticeboard strip — full-width with hairli
 
 ### Agent Model Used
 
+`claude-opus-5` (Claude Code, `bmad-dev-story`), 2026-08-22.
+
 ### Debug Log References
+
+**Baseline verified live before branching** ([[feedback_git_fetch_before_remote_reasoning]]):
+`git fetch origin` → `HEAD == origin/main == 54492eb`, zero ahead / zero behind. Branch
+`story/11a.5-noticeboard-strip` cut from `main` at that commit. The `baseline_commit` frontmatter
+was already present and was **preserved**, ⛔ not overwritten.
+
+**`.decision-log.md` head read LIVE at implementation time** — it was `2026-08-22-151`, exactly as
+the authoring pass predicted, but it was ⛔ **not** hardcoded from that prediction. The new entry is
+**`2026-08-22-152`**, committed **alone** and **first** (`bda5f9b`), before any implementation
+commit.
+
+**⭐ Revert-sanity — the presenter gate was proved NON-VACUOUS, ⛔ not assumed.** Four mutations were
+applied to `packages/ui/src/noticeboard/presenter.ts` and the suite re-run each time (the Story
+11a.4 `bcc97f0` precedent, which found a real vacuous assertion):
+
+| Mutation | Result |
+|---|---|
+| fail-**OPEN** on an unknown audience (`return false` → `return true`) | **1 failure** |
+| merge `empty-with-copy` into `silent` (the AC1 split) | **4 failures** |
+| make `validUntil` **INCLUSIVE** (`>=` → `>`) | **5 failures** |
+| move the polls section out of the ratified anatomy order | **7 failures** |
+
+**⭐ Revert-sanity — the D7(a) suppression, BOTH halves.** Three mutations to
+`route-suppression.ts`:
+
+| Mutation | Result |
+|---|---|
+| suppression **over-fires** (`return true`) | **2 failures** |
+| suppression **under-fires** (`return false`) | **1 failure** |
+| loose `segments.includes(…)` match (nested route over-fires) | **1 failure** |
+
+⭐ The over-fire case failing is the half the ruling explicitly asked for: a suppression that fired
+everywhere would silently delete ambient chrome from the whole app and still pass the first half.
+
+**⚠ ONE RECORDED DEVIATION from the story's §Project Structure Notes — ⛔ not silent, and ⛔ not a
+re-opened ruling.** The Notes marked `StatLine.tsx` and `RecentClosingRow.tsx` as **UPDATE**. They
+were **DELETED** instead. Reasoning: those Notes predate D3(a)'s *consequence*. Under D3(a) the two
+sections they render have **no producer**, so the presenter emits `silent` for both and neither
+component has a call site — keeping them would be **unreachable code whose only possible input was
+fabricated data**, which is keeping the prototype. ⛔ The behaviour the story explicitly protects did
+**not** go with them: `formatCount` was relocated to `apps/mobile/lib/format-count.ts` — the
+**render layer**, ⛔ never `@twt/ui` (Trap 6) — carrying its UX `:1161` Latin-numeral rationale, a
+test pinning Indian grouping (`100000` → `1,00,000`), and an explicit "⛔ do not delete this as dead
+code" note. Their Devanagari layout work is recoverable from git at `54492eb` and is routed as a
+**starting point** for the producer story. ⚠ This is a file-disposition consequence of a ruling, ⛔
+not a deviation from any of D1–D7.
+
+**⚠ A drifting line citation was found and fixed.** The story file and `PanchayatNoticeboard.tsx`'s
+draft header both cited the `PollsEntry` error-deferral as `deferred-work.md:5993`. That file grows
+at the **top**, and by this commit the item had drifted to **`:6160`**. Both citations now name the
+item by its **TEXT**, ⛔ not by a line number.
+
+**`pnpm ci:local` — 31 jobs GREEN** (`--concurrency=4` per
+[[project_ci_local_concurrency_oversubscription]]).
+
+⚠ **The live-DB leg was ALSO run, and its failures are recorded openly rather than skipped past**
+([[feedback_record_unattested_no_backfill]]). With `DATABASE_URL` set globally, six specs failed —
+five `apps/api` E2E specs at ~20 000 ms timeouts plus one `packages/domain` reconciliation spec.
+**Neither is attributable to this story, and both were checked rather than assumed:**
+
+1. `apps/api/tests/integration/helpdesk/member-helpdesk.spec.ts` **PASSES in isolation** (9/9) — the
+   documented double-run pollution ([[project_ci_local_double_run_pollution]]): a global
+   `DATABASE_URL` makes the *unit* leg run the integration specs too, so they execute twice
+   concurrently and time out.
+2. `packages/domain/tests/integration/reconciliation/review-queue-read.spec.ts` fails **identically
+   on `main` at the baseline commit** — checked out and re-run there: `1 failed | 9 passed` on both.
+   ⇒ **pre-existing**, ⛔ not a regression ([[project_known_livedb_test_failures]]).
+
+⭐ **This story touches ⛔ ZERO files in `apps/api`, `apps/jobs`, `packages/domain`,
+`packages/events`, `packages/contracts`, `packages/queue`, `packages/niyamavali-engine`,
+`packages/validity-service` or `packages/channels`** — there is no code path from this diff to any
+failing spec. ⛔ No migration, ⛔ no schema change, ⛔ no API route.
 
 ### Completion Notes List
 
+**⭐ AC5's one-line record, as the AC requires:** a **future** public (unauthenticated) noticeboard
+render **will owe a `public-vs-private-matrix.yaml` surface entry**, because the matrix's
+**bidirectional route-coverage leg fails CI when a route ships undeclared**. ⛔ Story 11a.5 needed no
+entry because it shipped **no route** — the leg is satisfied by the **absence of a route**, ⛔ not by
+a declaration. Routed in full as `deferred-work.md` item (c).
+
+**What shipped, against the six ACs:**
+
+- **AC1** — `packages/ui/src/noticeboard/` follows the `pool-progress` shape exactly (four modules,
+  `.js` ESM specifiers, registered in the house barrel with a Story-11a.5 header). ⛔ Zero
+  react/react-native/tamagui imports, ⛔ zero JSX, ⛔ zero colour hex, ⛔ zero resolved copy, ⛔ zero
+  numeral formatting — **verified by reading**, because ⛔ no CI gate enforces it (Trap 1) and this
+  story mints none ([[feedback_no_premature_package]]). `deriveNoticeboardViewModel(input, now)` is
+  pure with `now` **injected**. Section **order** is the presenter's output array. **All four**
+  ratified states ship (`default`/`loading`/`empty`/`refreshing`), `loading` carrying the ratified
+  skeleton anatomy. ⭐ The empty-state split is **structural**: `empty-with-copy` (a real, empty
+  source — information) and `silent` (no producer — nothing to say) are separate arms of a
+  discriminated union and can never be assert-equal.
+- **AC2** — the banner slot is `bannerNotice: … | null`; ⛔ there is **no** array field, so the 10.9
+  at-most-one-per-lane invariant cannot be widened from this side. ⛔ **Zero lines changed** in
+  `precedence.ts`, `display-state.ts`, `dto.ts`, `enums.ts`, `member-handlers.ts` or
+  `member-routes.ts`. The anti-widening test is the 9.12 Task-3b compile-time exhaustive key map.
+  ⚠ `now` **is** read, for the **exclusive `valid_until` boundary only** — the member DTO carries
+  neither `status` nor `valid_from`, so this cannot be and is not a second
+  `deriveBannerDisplayState`; it stops an MMKV-persisted banner outliving its window on the device.
+- **AC3** — the mobile render derives composition from the presenter, resolves all chrome through
+  the namespace-bound `useNoticeboardT` (namespace registered in **both** catalog literals), keeps
+  every numeral Latin, renders the ratified skeleton on `loading`, preserves and improves the a11y
+  posture (header roles, an announced pinned **list**, a labelled seal), keeps `<PollsEntry>`
+  exactly where it was, and removes `<P3DiagnosticPanel>` per its own *"production removes this"*.
+- **AC4** — ⛔ the five invented deceased-member names are **deleted**, ⛔ not relocated and ⛔ not
+  commented out, along with the invented stat line and meeting footer. A test scans the **whole
+  surface** for all five names, so a copy-paste rescue into another component is caught too. ⛔ No
+  close-of-cycle and no aggregate-stat read model was built.
+- **AC5** — the tier filter is a pure predicate over 10.9's **existing** `audience_scope`
+  vocabulary, exhaustive by `satisfies Record<BannerAudienceScope, …>`. ⛔ Fail-closed twice over:
+  `role`/`cohort` (the un-targetable seam) are hidden from **everyone**, and an audience outside the
+  vocabulary is hidden rather than shown to all. ⛔ No `apps/public` route shipped.
+- **AC6** — the row descriptor reconciles the epic's field list against UX `:1817` **explicitly, in
+  the type's doc comment, naming both**: `body` ≡ `meta line` collapse to **one** field; `severity`
+  **maps into** `category` per D2(a) and is ⛔ not emitted as a second axis; `link CTA` has no §1817
+  slot and no consumer, so it is ⛔ left out and **routed**; `dismissible` is a **flag only** and ⛔
+  no dismiss path is wired.
+
+**⚠ Two things a reviewer should look at first, because they are the judgement calls:**
+
+1. **The severity → category map sends all three severities to `ink`.** That is a decision, ⛔ not a
+   stub: §1819's vocabulary names three *specific* notice kinds (close-of-cycle celebration,
+   milestone, scheduled meeting) and a banner is none of them — it is an operator announcement,
+   which is what `ink = generic` denotes. Mapping `critical` onto `terracotta` would tell a member
+   "close-of-cycle celebration" about an outage notice, conflating operator **urgency** with notice
+   **kind** — exactly what D2(c) refused. The urgency still reaches the member through the banner's
+   own copy and through the ambient `<BannerHost>` strip on every other tab.
+2. **The banner notice's declared audience is `members-all`, supplied by the render layer.**
+   `MemberBannerResponse` deliberately carries no `audience_scope` and the server has already
+   applied the predicate, so the tier filter needs an audience the DTO does not provide. The
+   **more restrictive** of the possibilities is declared: it can only ever **hide** a notice from a
+   signed-out viewer, never reveal one. ⛔ Widening the 10.9 DTO to carry the scope was refused as
+   Trap 2 territory.
+
+**⛔ Untouched, as required:** `packages/contracts/src/banners/*` · `apps/api/src/modules/banners/*`
+· `apps/admin/src/modules/banners/*` · `PollsEntry.tsx` ·
+`packages/contracts/public-pages/public-vs-private-matrix.yaml` · `apps/mobile/tamagui.config.ts` ·
+`ux-design-specification.md` (D2(a)'s amendment is **routed**, ⛔ not applied) ·
+`apps/mobile/components/{yogdaan-bahi,shradhanjali}/*` · Epic 11a's Row 17 launch gate, still `open`
+— the noticeboard is a **member-app** surface and ⛔ nothing here bears on the directory kill switch.
+
+**⚠ `BannerHost.tsx` is the ONE 10.9-owned file edited**, for **one condition** — **16 lines added,
+⛔ zero removed**. A test asserts that `SEVERITY_TOKENS`, the dismiss path, the query and the
+`banner-strip` testID are all still there.
+
 ### File List
+
+**New — `packages/ui`**
+- `packages/ui/src/noticeboard/view-model.ts`
+- `packages/ui/src/noticeboard/presenter.ts`
+- `packages/ui/src/noticeboard/i18n-keys.ts`
+- `packages/ui/src/noticeboard/index.ts`
+- `packages/ui/tests/noticeboard/presenter.test.ts`
+
+**New — `packages/i18n`**
+- `packages/i18n/locales/hi/noticeboard.json`
+- `packages/i18n/locales/en/noticeboard.json`
+
+**New — `apps/mobile`**
+- `apps/mobile/lib/noticeboard-i18n.ts`
+- `apps/mobile/lib/format-count.ts`
+- `apps/mobile/components/panchayat/tokens.ts`
+- `apps/mobile/components/panchayat/banner-notice.ts`
+- `apps/mobile/components/banners/route-suppression.ts`
+- `apps/mobile/tests/unit/panchayat-noticeboard-render.test.ts`
+
+**Modified**
+- `packages/ui/src/index.ts` — register the `noticeboard` barrel
+- `packages/i18n/src/catalog.ts` — ⚠ BOTH literals: the `catalogs` map AND `KNOWN_NAMESPACES`
+- `apps/mobile/components/panchayat/PanchayatNoticeboard.tsx` — presenter-driven rewrite
+- `apps/mobile/components/panchayat/PinnedItem.tsx` — D2(a) vocabulary + the corrected a11y hint
+- `apps/mobile/components/banners/BannerHost.tsx` — ⭐ the FIFTH self-suppression condition, only
+- `apps/mobile/tests/unit/banner-host-render.test.ts` — the fifth-condition fence, both halves
+- `.decision-log.md` — Decision `2026-08-22-152`
+- `_bmad-output/implementation-artifacts/deferred-work.md` — the eight routed absences
+- `friction-budget.md` — the Story 11a.5 disposition (⛔ no new row)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — ledger + the one row flip
+- `_bmad-output/implementation-artifacts/11a-5-noticeboard-strip-foundational-layout-component.md`
+
+**Deleted**
+- `apps/mobile/components/panchayat/sample-data.ts` — ⛔ the five invented deceased-member names
+- `apps/mobile/components/panchayat/P3DiagnosticPanel.tsx` — its own *"production removes this"*
+- `apps/mobile/components/panchayat/StatLine.tsx` — ⚠ see the recorded deviation above
+- `apps/mobile/components/panchayat/RecentClosingRow.tsx` — ⚠ see the recorded deviation above
+
+### Change Log
+
+| Date | Change |
+|---|---|
+| 2026-08-22 | **Task 0** — Decision `2026-08-22-152` recording D1–D7, committed **alone and first** (`bda5f9b`). D2(a) recorded as a **UX-spec supersession** (`:491` **SUPERSEDED BY** `:1819`), ⛔ never a reinterpretation. |
+| 2026-08-22 | **Story record** — the story file lands; sprint-status `ready-for-dev` → `in-progress`. |
+| 2026-08-22 | **Tasks 1 + 5** — the headless `<NoticeboardStrip>` presenter lands in `@twt/ui` (AC1, AC2, AC5, AC6): four ratified states, structural empty/silent split, singular banner slot, fail-closed tier filter, the reconciled row descriptor. |
+| 2026-08-22 | **Task 2** — 38 presenter assertions, proved non-vacuous by a four-mutation revert-sanity pass. |
+| 2026-08-22 | **Task 3** — the `noticeboard` i18n namespace, registered in **both** catalog literals with hi/en parity. |
+| 2026-08-22 | **Tasks 3 + 4** — the mobile render is presenter-driven; ⛔ every fabricated fixture deleted; D6(a) token map replaces four raw hexes; D2(a) vocabulary + the corrected a11y hint; D7(a)'s fifth `BannerHost` suppression condition (16 lines added, ⛔ 0 removed) with **both halves** tested. |
+| 2026-08-22 | **Task 6** — eight absences **routed** to `deferred-work.md`, each with a re-trigger; two of them owned by **no story at all**. |
+| 2026-08-22 | **Task 7** — `pnpm ci:local` **31 jobs green**; the live-DB leg's six failures attributed (one **pre-existing on `main`**, five the documented **double-run pollution**, both checked rather than assumed). friction-budget disposition: declaration affirmed, ⛔ no new row, metric facet recorded **un-measured** for `member-app-native`. Status → `review`. |

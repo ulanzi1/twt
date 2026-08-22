@@ -834,31 +834,31 @@ function, so *"the trigger fired and was missed"* would be a **false** decay fin
 
 ### Task 0 — Branch, baseline, rulings (AC: all)
 
-- [ ] `git fetch origin`, then branch from `main`. ⚠ Confirm `HEAD == origin/main`; the recorded
+- [x] `git fetch origin`, then branch from `main`. ⚠ Confirm `HEAD == origin/main`; the recorded
       baseline is `075827b`. If `main` has moved, re-check the §What is actually true today table
       before trusting it — ⛔ it is a snapshot, not a standing fact.
-- [ ] ⛔ **Do not check out or merge `story/11a.4-phone-email-obfuscation`.** It is a superseded
+- [x] ⛔ **Do not check out or merge `story/11a.4-phone-email-obfuscation`.** It is a superseded
       draft (see the top banner). Delete it once this story lands.
-- [ ] Read Decisions `2026-08-20-140`, `-142`, `-143` and `2026-08-21-144` … `-148` before touching
+- [x] Read Decisions `2026-08-20-140`, `-142`, `-143` and `2026-08-21-144` … `-148` before touching
       code. D1-D5 extend their reasoning (a primitive with no real call site is not a delivered
       protection; a claimed protection that does not run is the vacuous-green defect; a
       cross-reference error is named, not absorbed).
-- [ ] ✅ **D1′-D5 ARE RULED** (a / a / e / a / a — BigDev, 2026-08-22). ⛔ Do not re-open or
+- [x] ✅ **D1′-D5 ARE RULED** (a / a / e / a / a — BigDev, 2026-08-22). ⛔ Do not re-open or
       re-interpret one. If a ruling looks wrong once the code is in front of you, ⛔ **stop and
       raise it**, ⛔ never silently deviate.
 
 ### Task 1 — `governance:` — the decision-log entry (AC: 6) — ⭐ **COMMITS FIRST, ALONE**
 
-- [ ] Write the `.decision-log.md` entry recording D1′-D5 **as ruled by BigDev on 2026-08-22**
+- [x] Write the `.decision-log.md` entry recording D1′-D5 **as ruled by BigDev on 2026-08-22**
       (**D1′=(a) · D2=(a) · D3=(e) · D4=(a) · D5=(a)**, each as recommended), in the established
       house form (clause-numbered, each clause naming what it rules and what it explicitly does
       **not**).
-- [ ] Number it the next free entry after `2026-08-21-148` — ⛔ read the head of the file; ⛔ do not
+- [x] Number it the next free entry after `2026-08-21-148` — ⛔ read the head of the file; ⛔ do not
       hardcode (it may drift if another story lands first).
-- [ ] The entry must state, in terms: ⛔ Row 17 is untouched; ⛔ no matrix tier moves; ⛔ no
+- [x] The entry must state, in terms: ⛔ Row 17 is untouched; ⛔ no matrix tier moves; ⛔ no
       permission key, migration or catalog bump; and that CR-D1-1.16b's original trigger was
       **stale, ⛔ not fired** (Trap 3).
-- [ ] ⭐ **The entry must record the D1 WITHDRAWAL as its own clause, ⛔ not as a silent re-scope.**
+- [x] ⭐ **The entry must record the D1 WITHDRAWAL as its own clause, ⛔ not as a silent re-scope.**
       State: the original D1 rested on the premise that AC1(a) had no consumer; ⛔ that premise is
       **withdrawn**, because the trust's contact details are **deliberately public** and the Contact
       page is **committed product** (`ux-design-specification.md:243`); ⇒ the three masking
@@ -866,67 +866,67 @@ function, so *"the trigger fired and was missed"* would be a **false** decay fin
       a call site. ⚠ Record the **root cause** plainly — the authoring pass did not open the UX spec,
       a declared workflow input ([[feedback_record_unattested_no_backfill]]). ⛔ Do not write the
       entry as though D1′ were the question all along.
-- [ ] ⭐ **The entry must carry the unowned-surface finding as an OPEN clause routed to John** — the
+- [x] ⭐ **The entry must carry the unowned-surface finding as an OPEN clause routed to John** — the
       Contact and About pages are committed in the UX spec's public-website inventory with ⛔ no
       owning story, and the gate is ⛔ structurally blind to it. ⛔ Recorded as a **coverage gap for
       correct-course**, ⛔ not as work this story schedules or closes.
-- [ ] ⭐ **The entry must carry the §Q3 findings as their own clauses, ⛔ not as background to D3.**
+- [x] ⭐ **The entry must carry the §Q3 findings as their own clauses, ⛔ not as background to D3.**
       Two are **routed to the Panel, ⛔ not ruled by this entry**: (i) `provisional` /
       `policy_review_required` are **inert data** — ⛔ nothing reads either flag; (ii) whether **one**
       non-author reviewer is sufficient authority to publish a clause governing **claim eligibility**,
       and who answers for a wrong one, is ⛔ **not ruled anywhere**. ⛔ Record them as OPEN with the
       Panel named; ⛔ do not let a D3 ruling read as though it settled either
       ([[feedback_closure_language_precision]]).
-- [ ] ⭐ **D3=(e) is ruled, so the entry MUST state** that the publish-time scan is a ⛔ **BACKSTOP**
+- [x] ⭐ **D3=(e) is ruled, so the entry MUST state** that the publish-time scan is a ⛔ **BACKSTOP**
       and that the **non-author sign-off remains the primary control** — ⛔ so the decision-log cannot
       later be read as having replaced a human control with a regex.
-- [ ] Commit **alone**, ⛔ before any code, ⛔ zero `packages/` or `apps/` files
+- [x] Commit **alone**, ⛔ before any code, ⛔ zero `packages/` or `apps/` files
       ([[feedback_governance_commits_precede_implementation]]).
 
 ### Task 2 — The precision regression net (AC: 1) — `packages/contracts/tests/public-pages.test.ts`
 
-- [ ] Add `describe('naked-PII detector — PRECISION (FR-93 / Story 11a.4)', …)` beside the existing
+- [x] Add `describe('naked-PII detector — PRECISION (FR-93 / Story 11a.4)', …)` beside the existing
       recall block at `:195`. ⛔ Do not modify the recall block.
-- [ ] One independently-planted case per shape, each asserting **no match of that type**:
+- [x] One independently-planted case per shape, each asserting **no match of that type**:
       `<a href="/blog/9876543210">`, `<span data-id="9123456789">`, and the `0`-prefix landline
       shape. ⛔ One fixture must never carry several expectations.
-- [ ] ⭐ **Run it now, before Task 3.** It must be **RED**. Paste the output into the Dev Agent
+- [x] ⭐ **Run it now, before Task 3.** It must be **RED**. Paste the output into the Dev Agent
       Record — the red run is the evidence that the net has teeth; ⛔ a net written after the fix is
       not a regression test.
 
 ### Task 3 — Tighten the phone pattern (AC: 2) — `packages/contracts/src/public-pages/scrape.ts`
 
-- [ ] Extend the `phone` pattern's negative lookbehind (`:267`) to exclude `/`, `="` and `'`
+- [x] Extend the `phone` pattern's negative lookbehind (`:267`) to exclude `/`, `="` and `'`
       contexts. ⛔ Pure regex change — ⛔ no new dependency, ⛔ no HTML parsing, ⛔ no change to
       `email`, and ⛔ **no change to `aadhaar`** — D2 = (a) scopes this to the `phone` pattern ONLY.
-- [ ] Update the `piiPatterns()` doc comment (`:253-262`) to describe what the pattern now excludes
+- [x] Update the `piiPatterns()` doc comment (`:253-262`) to describe what the pattern now excludes
       and why — the file's established "conservative pattern" voice.
-- [ ] Run **all** of: `pnpm --filter @twt/contracts test`, then
+- [x] Run **all** of: `pnpm --filter @twt/contracts test`, then
       `pnpm --filter @twt/public test`. ⛔ Every existing recall assertion must pass **unmodified**:
       `public-pages.test.ts:195-219`, `scrape-test.spec.ts:209`, `:643`.
-- [ ] Update `scrape-test.spec.ts:146-147`'s "Deliberately NO accidental 10-digit runs" comment to
+- [x] Update `scrape-test.spec.ts:146-147`'s "Deliberately NO accidental 10-digit runs" comment to
       state what is true after the change. ⛔ Do **not** change the fixture payload values in the
       same edit — a corpus change and an engine change landing together makes it impossible to tell
       which one moved the result.
 
 ### Task 4 — Correct the two over-claims (AC: 3) — **Trap 4**
 
-- [ ] `packages/contracts/public-pages/public-vs-private-matrix.yaml`, the
+- [x] `packages/contracts/public-pages/public-vs-private-matrix.yaml`, the
       `clause_payload_display_fields` description (~L134-141): state that the naked-PII leg runs in
       `scrape-test.spec.ts` over **fixture-built** render HTML on every PR, and ⛔ does **not** scan
       what a Pariwar actually publishes.
-- [ ] `apps/public/src/lib/niyamavali-render.ts` (~L216-228): the same correction, in the module
+- [x] `apps/public/src/lib/niyamavali-render.ts` (~L216-228): the same correction, in the module
       doc's voice.
-- [ ] ⛔ **The renderer-opaqueness half STAYS** in both (freeze row 14). ⛔ Correct one half only —
+- [x] ⛔ **The renderer-opaqueness half STAYS** in both (freeze row 14). ⛔ Correct one half only —
       the 10.30 AC9 pattern.
-- [ ] ⚠ **D3(d) was NOT ruled in** — (e) was. ⛔ Do not add the planted-payload fixture to
+- [x] ⚠ **D3(d) was NOT ruled in** — (e) was. ⛔ Do not add the planted-payload fixture to
       `scrape-test.spec.ts` on your own judgement; AC3a's publish-path negative controls are where
       the planted PII belongs now. ⛔ Adding both would assert the same thing twice, in the weaker
       place.
-- [ ] ⭐ **Prove the contract is untouched, ⛔ do not assert it:** `git diff` on the matrix must show
+- [x] ⭐ **Prove the contract is untouched, ⛔ do not assert it:** `git diff` on the matrix must show
       ⛔ zero changes to any `tier:` / `pii_tier:` / `escalations:` / `escalation_count` line, and
       `public-pages.test.ts:342-440` must run **unmodified** and green. Paste both.
-- [ ] ✅ **D3=(e) is ruled ⇒ write the two corrected sentences in their AC3a form** (a protection
+- [x] ✅ **D3=(e) is ruled ⇒ write the two corrected sentences in their AC3a form** (a protection
       that RUNS at publish), ⛔ not the AC3 boundary form. ⛔ One edit, ⛔ never AC3's wording with
       AC3a bolted on afterwards.
 
@@ -937,63 +937,63 @@ function, so *"the trigger fired and was missed"* would be a **false** decay fin
 > the precision fix means a legitimate numeric threshold ⛔ blocks a rule amendment — a governance
 > write path is ⛔ the worst possible place to discover a false positive.
 
-- [ ] Read the publish handler end-to-end **before** editing — the audit-or-throw sequencing
+- [x] Read the publish handler end-to-end **before** editing — the audit-or-throw sequencing
       (`index.ts:14-20`) is load-bearing: the audit line is written FIRST with a pre-generated
       `clause_version_id`, and a throw rolls the scope tx back. ⛔ The scan must run **before** the
       audit write, so a rejected publish leaves ⛔ no audit line and ⛔ no partial state.
-- [ ] Scan `detectNakedPii(canonicalJsonStringify(payload))` — ⛔ the **existing** canonicaliser
+- [x] Scan `detectNakedPii(canonicalJsonStringify(payload))` — ⛔ the **existing** canonicaliser
       (`packages/domain/src/canonical-json.ts`), the one the content hash and audit chain already
       use. ⛔ Do not introduce a second serialisation; two canonical forms of the same payload is a
       drift bug waiting to happen.
-- [ ] Reject with a **typed 4xx at the route precondition**, naming the matched pattern **type only**.
+- [x] Reject with a **typed 4xx at the route precondition**, naming the matched pattern **type only**.
       ⛔ **NEVER the matched value** — it would write the leaked PII into the response body, the
       request log and the client. ⛔ Assert its absence by test.
-- [ ] ⛔ **No 500 is a permitted pass.** If the rejection surfaces as an unregistered domain error it
+- [x] ⛔ **No 500 is a permitted pass.** If the rejection surfaces as an unregistered domain error it
       becomes a 500 — the Story 10.30 finding. Pin the status at the contract/route boundary; ⛔ no
       test may assert a 500.
-- [ ] Document it **in the handler** as a ⛔ **BACKSTOP** — ⛔ the primary control is the **non-author
+- [x] Document it **in the handler** as a ⛔ **BACKSTOP** — ⛔ the primary control is the **non-author
       human sign-off** (§Q3(c)). ⛔ Omitting that sentence recreates Trap 4 one layer down.
-- [ ] **Negative controls, both directions:** a planted phone/email payload is **REJECTED**; the real
+- [x] **Negative controls, both directions:** a planted phone/email payload is **REJECTED**; the real
       R8 shape (`{"threshold_percent":90,"min_contributions":10}`) **PUBLISHES CLEANLY**. ⛔ Without
       the second, the check is a blocker rather than a backstop.
-- [ ] ⭐ **Prove the workflow is untouched:** the existing Story 2.4 route tests must run
+- [x] ⭐ **Prove the workflow is untouched:** the existing Story 2.4 route tests must run
       **unmodified** and green. ⛔ Zero change to the draft state machine, the sign-off gate, the
       content-hash binding, the append-only ledger, or any permission key. Paste the run.
 
 ### Task 5 — The contact-harvesting honeypot (AC: 4) — `apps/api/src/plugins/security-headers/index.ts`
 
-- [ ] Add the contact-shaped bait paths to `HONEYPOT_PATHS` (`:38-45`), keeping the same
+- [x] Add the contact-shaped bait paths to `HONEYPOT_PATHS` (`:38-45`), keeping the same
       `schema: { hide: true }` + GET-only + `registerHoneypot()` shape. ⛔ No new handler, ⛔ no new
       audit type.
-- [ ] Extend the module doc (`:18-23`) with the **two** limits, stated plainly:
+- [x] Extend the module doc (`:18-23`) with the **two** limits, stated plainly:
       (1) a hit is a **SIGNAL**, ⛔ not an enforcement — nothing blocks;
       (2) the recorded `ip` is **caller-supplied** (`trustProxy: true` reads the leftmost
       `X-Forwarded-For`, and ⛔ nothing proxies these paths) ⇒ ⛔ **not evidence**, and ⛔ never
       describe this as "flagging scraping IPs". Cross-reference `2026-08-21-145` cl.2 as the same
       defect class, and state that ⛔ `trustProxy` is **not** re-tuned (`-143` cl.9).
-- [ ] Correct `:36`'s "exempt … from the forced-pagination guard by allowlist" — that guard walks
+- [x] Correct `:36`'s "exempt … from the forced-pagination guard by allowlist" — that guard walks
       the OpenAPI surface, which `hide: true` keeps these out of. ⛔ It is not an allowlist there.
-- [ ] Run `apps/api`'s `security-headers.spec.ts` and `login-wall.spec.ts`. ⛔ Both derive from
+- [x] Run `apps/api`'s `security-headers.spec.ts` and `login-wall.spec.ts`. ⛔ Both derive from
       `HONEYPOT_PATHS`, so ⛔ no allowlist edit should be needed — if either turns red, fix the
       **derivation**, ⛔ never hardcode a list.
-- [ ] ✅ **D4 = (a): the body stays the bare `{status: 'ok'}` for ALL paths, old and new.** ⛔ No
+- [x] ✅ **D4 = (a): the body stays the bare `{status: 'ok'}` for ALL paths, old and new.** ⛔ No
       fake contact payload — (b) was ⛔ not ruled in.
 
 ### Task 6 — The FR-93 doctrine section (AC: 5) — `packages/contracts/src/public-pages/README.md`
 
-- [ ] Add `## FR-93 — obfuscation is defense-in-depth, ⛔ never primary (Story 11a.4)` carrying all
+- [x] Add `## FR-93 — obfuscation is defense-in-depth, ⛔ never primary (Story 11a.4)` carrying all
       **seven** items enumerated in AC5, in the document's established voice.
-- [ ] Place it after `## The 4 tiers + the leak rules` (:159) and before
+- [x] Place it after `## The 4 tiers + the leak rules` (:159) and before
       `## Mechanism` (:177) — the layering doctrine belongs beside the tier model it layers on.
-- [ ] ⛔ Do not create a second doc; ⛔ do not restructure existing sections; ⛔ do not soften
+- [x] ⛔ Do not create a second doc; ⛔ do not restructure existing sections; ⛔ do not soften
       `## ⚠ What this gate does NOT prove` (:39) — this story **adds to** that posture, it does not
       dilute it.
 
 ### Task 7 — Records (AC: 6)
 
-- [ ] `deferred-work.md` — a new `## Deferred / recorded from: Story 11a.4 — phone/email
+- [x] `deferred-work.md` — a new `## Deferred / recorded from: Story 11a.4 — phone/email
       obfuscation defense-in-depth (2026-08-…)` section carrying:
-  - [ ] **AC1(a) masking pattern — deferred ON THE MERITS, with a NAMED, EXISTING trigger.**
+  - [x] **AC1(a) masking pattern — deferred ON THE MERITS, with a NAMED, EXISTING trigger.**
         ⭐ **Trigger: the story that builds the committed public Contact page** — ⛔ not *"if a contact
         surface is ever built"* (the withdrawn D1's wording, which implied it was hypothetical).
         ⛔ **Record WHY, not just that**: on the trust's own contact channel the governing property is
@@ -1002,54 +1002,54 @@ function, so *"the trigger fired and was missed"* would be a **false** decay fin
         building the component the moment a page appears. Record where a component *would* live if
         one is ever justified (`apps/public/src/components/`, beside `MatrixField.astro`), and that
         the technique must be **re-decided against a real audience**, ⛔ never inherited from here.
-  - [ ] ⭐ **NEW — ROUTE THE UNOWNED PUBLIC SURFACES (SD-1 shaped).** The **Contact** page (with the
+  - [x] ⭐ **NEW — ROUTE THE UNOWNED PUBLIC SURFACES (SD-1 shaped).** The **Contact** page (with the
         Madad card) and **About** are in the UX spec's committed public-website inventory
         (`ux-design-specification.md:243`) and ⛔ **no epic story owns either** — ⛔ no route, ⛔ no
         matrix surface. ⚠ Record that the PII-scrape gate's route-coverage leg is **structurally
         blind** to a page that should exist and does not, so ⛔ no green check will ever surface this.
         ⛔ Record both surfaces, ⛔ do not narrow to Contact. **Owner: John** (authoring), as a
         correct-course/epic question — ⛔ not this story's to schedule.
-  - [ ] ⚠ **Dependency, named not assumed:** ⛔ no provisioned helpline-number source exists
+  - [x] ⚠ **Dependency, named not assumed:** ⛔ no provisioned helpline-number source exists
         (`note-template.ts:122-127` — no `.env.example` entry, no deploy config, no validation; the
         PDF prints `HELPLINE_PENDING_TOKEN` rather than fabricate one). ⇒ the Contact page cannot
         render a real number until **Epic 10 per-Pariwar helpline resolution** lands. ⛔ Record it
         against the Contact-page routing above, ⛔ not as a separate orphan item.
-  - [ ] **CR-D1-1.16b** — disposition in D2's **exact** language. ⛔ Never collapse *"Closed by
+  - [x] **CR-D1-1.16b** — disposition in D2's **exact** language. ⛔ Never collapse *"Closed by
         [edit]"* / *"Re-scoped"* / *"Not addressed"* ([[feedback_closure_language_precision]]).
-  - [ ] **CR-D2-1.16b** — record as **closed by [edit] at Story 11a.1** (`loadSnapshots()` deleted;
+  - [x] **CR-D2-1.16b** — record as **closed by [edit] at Story 11a.1** (`loadSnapshots()` deleted;
         `check-pii-scrape.ts` now forbids re-adding it). ⚠ It was closed and ⛔ never recorded —
         record it now rather than leaving a closed item reading open.
-  - [ ] **Trap 4 residual risk** per D3, with its named trigger.
-  - [ ] **Trap 5 IP provenance** — ⛔ **appended to the existing topology item (~L205-213)**, ⛔ NOT
+  - [x] **Trap 4 residual risk** per D3, with its named trigger.
+  - [x] **Trap 5 IP provenance** — ⛔ **appended to the existing topology item (~L205-213)**, ⛔ NOT
         a new entry. That item states in terms that the two questions must be answered together.
-- [ ] `sprint-status.yaml` — flip `development_status[11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only]`
+- [x] `sprint-status.yaml` — flip `development_status[11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only]`
       `backlog` → `ready-for-dev` (done by this authoring session), and add the `last_updated`
       ledger comment per [[project_sprint_status_ledger]]. ⛔ `epic-11a` stays `in-progress`;
       ⛔ no other row moves; ⛔ Row 17 untouched.
-- [ ] Story file Status → `ready-for-dev` (done by this session).
+- [x] Story file Status → `ready-for-dev` (done by this session).
 
 ### Task 8 — Revert-sanity (AC: 7) — ⭐ **run it, ⛔ do not reason about it**
 
-- [ ] Revert the Task 3 regex change → the Task 2 precision block must go **RED**. Restore; green.
-- [ ] Delete one new bait path → `security-headers.spec.ts`'s derived count assertion must go
+- [x] Revert the Task 3 regex change → the Task 2 precision block must go **RED**. Restore; green.
+- [x] Delete one new bait path → `security-headers.spec.ts`'s derived count assertion must go
       **RED**. Restore; green.
-- [ ] ✅ **D3(e) is ruled ⇒ REQUIRED:** remove the Task 4a scan → the planted-PII publish test must go **RED**;
+- [x] ✅ **D3(e) is ruled ⇒ REQUIRED:** remove the Task 4a scan → the planted-PII publish test must go **RED**;
       restore. ⭐ **And run the OTHER direction too** — the legitimate-threshold publish must be
       **GREEN with the scan in place**. ⛔ A one-directional revert here proves the check fires, ⛔ not
       that it lets a real amendment through, and the second is the failure that would actually hurt.
-- [ ] Paste **actual command output** for both into the Dev Agent Record
+- [x] Paste **actual command output** for both into the Dev Agent Record
       ([[feedback_record_unattested_no_backfill]]).
 
 ### Task 9 — Full verification before `review`
 
-- [ ] `pnpm --filter @twt/contracts test` · `pnpm --filter @twt/public test` ·
+- [x] `pnpm --filter @twt/contracts test` · `pnpm --filter @twt/public test` ·
       `pnpm --filter @twt/api test` — record before/after counts, ⛔ not "all green".
-- [ ] `pnpm pii:check` (the gate — it must stay green; this story touches its matrix input).
-- [ ] `pnpm typecheck` + `pnpm lint` on `@twt/contracts`, `@twt/public`, `@twt/api`.
-- [ ] ⚠ `ci:local` runs the full suite; per [[project_ci_local_concurrency_oversubscription]] use
+- [x] `pnpm pii:check` (the gate — it must stay green; this story touches its matrix input).
+- [x] `pnpm typecheck` + `pnpm lint` on `@twt/contracts`, `@twt/public`, `@twt/api`.
+- [x] ⚠ `ci:local` runs the full suite; per [[project_ci_local_concurrency_oversubscription]] use
       `--concurrency=4`, and per [[project_ci_local_double_run_pollution]] pass `DATABASE_URL`
       **per-invocation**, ⛔ never exported globally.
-- [ ] ⚠ `git push` triggers full `ci:local` via a pre-push hook — that is the "hang", ⛔ not a
+- [x] ⚠ `git push` triggers full `ci:local` via a pre-push hook — that is the "hang", ⛔ not a
       failure ([[project_friction_budget_baseline_ratchet]]).
 
 ---
@@ -1192,10 +1192,332 @@ function, so *"the trigger fired and was missed"* would be a **false** decay fin
 
 ### Agent Model Used
 
-_(to be filled at dev-story time)_
+`claude-opus-5` (Claude Opus 5) via `bmad-dev-story`, 2026-08-22.
 
 ### Debug Log References
 
+**Branch:** `story/11a.4-phone-email-obfuscation-defense-in-depth`, off `main` at `075827b`
+(`git fetch origin` run first; `HEAD == origin/main == 075827b`, zero ahead / zero behind).
+⛔ `story/11a.4-phone-email-obfuscation` (`656aaa5`) was ⛔ never checked out and ⛔ never merged.
+
+#### ⭐ AC1 case 3 — a VERIFIED-FALSE row in the §What-is-actually-true table (raised, ruled by BigDev)
+
+The table (L128) claims `0801234 5678` → `phone`. ⛔ **Verified false by running the engine at
+`075827b`.** Two of three claimed false positives reproduce; the third does not:
+
+```
+"<a href=\"/blog/9876543210\">post</a>"  => [{"type":"phone","value":"9876543210"}]   ✅ reproduces
+"<span data-id=\"9123456789\">x</span>"  => [{"type":"phone","value":"9123456789"}]   ✅ reproduces
+"0801234 5678"                           => []                                        ⛔ NO MATCH
+"080-12345678"                           => []                                        ⛔ NO MATCH
+```
+
+The only `0`-prefix landline that *does* fire is the **contiguous** form, and it is **inseparable
+from a legitimate 0-prefixed mobile**:
+
+```
+08012345678  => ["08012345678"]   Bangalore landline (STD 080 + 8-digit local)  = FALSE POSITIVE
+07912345678  => ["07912345678"]   Ahmedabad landline (STD 079 + local)          = FALSE POSITIVE
+09876543210  => ["09876543210"]   0-prefixed MOBILE                             = TRUE POSITIVE
+01123456789  => []                Delhi (011) — second digit 1, no collision
+```
+
+All three matching cases are one token shape: `0` + `[6-9]` + 9 digits. STD codes whose second digit
+falls in 6-9 (`079`, `080`, `066`) collide with the mobile pattern **BY CONSTRUCTION** ⇒ ⛔ no
+context-free regex separates them, and excluding the landline would stop catching the mobile —
+**precision bought with recall**, which AC2 forbids in terms. ⚠ Also: AC2's normative `Then` names
+only `/`, `="` and `'`, so the ruled change would ⛔ not have turned that case green anyway — the test
+would have landed RED and stayed RED.
+
+⭐ **Raised to BigDev rather than silently deviated from** (the story's own standing instruction).
+**RULED: invert case 3** — guard the shapes that must never *start* matching, and **pin the collision
+by test**. Implemented as 3 guards + 1 recall pin; documented in `piiPatterns()` and in the test so
+⛔ nobody "fixes" it in passing.
+
+#### AC1 — the precision net is RED before the regex moves (Task 2, ⛔ run, not reasoned about)
+
+```
+ FAIL  tests/public-pages.test.ts > naked-PII detector — PRECISION (FR-93 / Story 11a.4)
+   × does not flag a 10-digit URL path segment as a phone number
+   × does not flag a double-quoted numeric attribute as a phone number
+   × does not flag a single-quoted numeric attribute as a phone number
+ Test Files  1 failed | 61 passed (62)
+      Tests  3 failed | 1052 passed (1055)
+```
+
+The three standing guards and the recall pin were **green from the start**, by design.
+
+#### AC2 — GREEN after, with every recall assertion UNMODIFIED (Task 3)
+
+```
+@twt/contracts   Test Files 62 passed (62)   Tests 1055 passed (1055)
+@twt/public      Test Files 12 passed (12)   Tests  179 passed (179)
+```
+
+Regex-change impact table (12 cases, run before editing the source):
+
+```
+ ~ PRECISION url path       old=["9876543210"]     new=[]
+ ~ PRECISION attr dquote    old=["9123456789"]     new=[]
+ ~ PRECISION attr squote    old=["9123456789"]     new=[]
+   GUARD spaced landline    old=[]                 new=[]
+   GUARD hyphen landline    old=[]                 new=[]
+   RECALL 0-prefix mobile   old=["09876543210"]    new=["09876543210"]
+   RECALL bare mobile       old=["9876543210"]     new=["9876543210"]
+   RECALL +91 mobile        old=["+91 9876543210"] new=["+91 9876543210"]
+   RECALL tag-adjacent      old=["9876543210"]     new=["9876543210"]
+   RECALL json value        old=["9876543210"]     new=["9876543210"]
+   RECALL rupee prefix      old=["9876543210"]     new=["9876543210"]
+   CLEAN r8 payload         old=[]                 new=[]
+```
+
+⭐ Exactly three cases move; ⛔ every recall case is byte-identical — **including the JSON
+string-value shape**, which is what the AC3a publish backstop reads. `:"` is deliberately ⛔ **not**
+excluded for that reason.
+
+#### AC3 — the matrix contract PROVEN untouched (Task 4), ⛔ not asserted
+
+```
+$ git diff <matrix> | grep -E "tier:|pii_tier:|escalations:|escalation_count|tier1_public_exception"
+(no matches — zero contract lines changed)
+$ pnpm pii:check
+  ▸ Escalation ledger: 1 entr(y/ies), attestation cross-checked
+    · member-directory.member_name: authenticated_member → public  [2026-08-19-136]
+    ✓ every escalation cites a decision that exists, and the count agrees
+  ✓ pii-scrape gate passed
+```
+
+#### AC3a — the publish backstop, BOTH directions (Task 4a)
+
+```
+✓ tests/integration/niyamavali-workflow.spec.ts (13 tests)
+      Tests  13 passed (13)
+$ git diff <spec> | grep '^-'   →  EMPTY (⛔ zero deleted lines; additive only)
+```
+
+⇒ the **9 pre-existing Story 2.4 tests run UNMODIFIED**, which is what proves the four-state draft
+machine, the non-author sign-off gate, the content-hash binding and audit-or-throw untouched.
+
+#### AC4 — the derivation held with ⛔ ZERO allowlist edits (Task 5)
+
+```
+✓ tests/integration/login-wall.spec.ts       (4 tests)   ← derives via HONEYPOT_PATHS.map()
+✓ tests/integration/security-headers.spec.ts (5 tests)   ← toHaveLength(HONEYPOT_PATHS.length)
+      Tests  9 passed (9)
+```
+
+#### ⭐ AC7 — revert-sanity, and THE FINDING IT PRODUCED (Task 8)
+
+**(a) revert the AC2 regex → the AC1 precision block goes RED**
+
+```
+   × does not flag a 10-digit URL path segment as a phone number
+   × does not flag a double-quoted numeric attribute as a phone number
+   × does not flag a single-quoted numeric attribute as a phone number
+      Tests  3 failed | 1052 passed (1055)
+restore → Tests 1055 passed (1055)
+```
+
+**(b) delete one new bait path → ⛔ THE ASSERTION HAD NO TEETH. This is the finding.**
+
+```
+BEFORE THE FIX:  Tests 5 passed (5)      ⛔ deleting '/contacts.json' left the suite GREEN
+```
+
+⭐ `security-headers.spec.ts` loops `HONEYPOT_PATHS` **and** asserts
+`toHaveLength(HONEYPOT_PATHS.length)` — ⛔ **both sides read the same array**, so a deletion moves
+both at once. The assertion is **VACUOUS AGAINST DELETION BY CONSTRUCTION**. It still catches
+"declared but not registered"; it can ⛔ never catch a removal. ⚠ **The same defect class
+`2026-08-21-145` recorded for the `/members` AC10 control** — a green check proving less than its
+name suggests. ⛔ AC7(b) asserted this revert *would* fail; running it is what proved otherwise.
+
+Fixed with an anti-regression **PIN by name** on the five contact-bait paths. ⛔ This is **not** the
+hand-maintained parallel list the module doc forbids — that warning is about the login-wall
+**allowlist**, which must keep deriving so *adding* a path needs no edit. Adding still needs ⛔ zero
+edits; **deleting** one of these five is a deliberate scope reversal and ⭐ *should* force a red test.
+
+```
+AFTER THE FIX:
+   × the Story 11a.4 contact-harvesting bait family is present and live (deletion-proof)
+     → expected [ '/wp-login.php', '/wp-admin', …(8) ] to include '/contacts.json'
+      Tests  1 failed | 5 passed (6)
+restore → Tests 6 passed (6)
+```
+
+**(c) remove the Task 4a scan → the planted-PII publish tests go RED, ⛔ and the other direction too**
+
+```
+   × REJECTS a publish whose payload carries a naked phone number → 422  → expected 200 to be 422
+   × REJECTS a publish whose payload carries a naked email → 422         → expected 200 to be 422
+   × a rejected publish leaves NO audit line and NO published clause     → expected 200 to be 422
+      Tests  3 failed | 10 passed (13)
+restore → Tests 13 passed (13)
+```
+
+⭐ The legitimate-threshold publish (**the real R8 shape**) is GREEN **with the scan in place** — a
+one-directional revert proves the check *fires*, ⛔ not that it lets a real amendment *through*, and
+the second is the failure that would actually hurt.
+
+#### Task 9 — full verification, before/after counts MEASURED against `075827b`
+
+⚠ Baselines were **re-run in a clean worktree at `075827b`**, ⛔ not inferred by subtraction.
+
+| Suite | Before (`075827b`) | After | Δ |
+|---|---|---|---|
+| `@twt/contracts` | 1049 passed (62 files) | **1055 passed** (62 files) | **+6** — the precision block |
+| `@twt/public` | 179 passed (12 files) | **179 passed** (12 files) | **+0** — comment-only edits |
+| `@twt/api` (live DB) | 1073 passed, 1 skipped (123 files) | **1078 passed, 1 skipped** (123 files) | **+5** — 4 publish controls + 1 bait pin |
+
+```
+typecheck  @twt/contracts · @twt/public · @twt/api · @twt/domain   → 0 errors
+lint       @twt/contracts · @twt/public · @twt/api · @twt/domain   → clean
+pnpm pii:check                                                     → ✓ gate passed
+```
+
+⛔ Zero regressions in any suite; ⛔ every pre-existing test passed unmodified.
+
+#### ⚠ Two `ci:local` findings — one REAL and FIXED, one PRE-EXISTING and ⛔ NOT this story's
+
+**(1) `friction-budget` — a REAL gate failure, ⛔ correctly fired, now FIXED.**
+
+```
+▸ Declaration attribution-on-change (AC-4)
+  ✗ member-facing surface touched (apps/public/src/lib/niyamavali-render.ts,
+    apps/public/tests/integration/public-pages/scrape-test.spec.ts)
+    but friction-budget.md was not changed.
+```
+
+⚠ **It only fires once the touch is COMMITTED** — AC-4 diffs committed history
+([[project_friction_budget_baseline_ratchet]]), so it passed vacuously until the code
+commits landed, then failed. A `friction-budget.md` **disposition** was added (declaration
+affirmed, ⛔ **NO new row**) and committed; both `apps/public` touches are **comment-only**, and
+AC3a's 422 is an **operator write path**, ⛔ not member friction. ⇒ **`✓ friction-budget gate passed`.**
+
+**(2) `test (unit)` + `integration-tests` — ⛔ NOT caused by this story. Proven, ⛔ not asserted.**
+
+⚠ **`test (unit)` was MY invocation error, ⛔ not a defect.** I exported `DATABASE_URL` for the
+whole `ci:local` run; the script supplies it **per-job** for the live-DB leg only
+([[project_ci_local_double_run_pollution]]). Re-run correctly:
+
+```
+$ pnpm turbo run test --concurrency=4
+  Tasks: 37 successful, 37 total       ⇒ ✓ (@twt/api: 365 passed | 714 skipped — unit-only, as designed)
+```
+
+**`integration-tests` fails under 8-package concurrency — and it fails at the BASELINE too.**
+8 failures on this branch (all timeouts at 15-20s or `500`s consistent with pool exhaustion), in
+⛔ **modules this story does not touch**: `banners.spec.ts` (2), `surveys.spec.ts` (2),
+`moderation-grounds.spec.ts` (2), `moderation-escalation.spec.ts` (1),
+`verifier-console-shape.spec.ts` (1), plus `@twt/jobs` `verifyAuditChain` (timeout).
+
+Innocence established **two** ways:
+
+```
+(i)  ISOLATION (the project's documented innocence check):
+     $ npx vitest run banners + surveys + moderation-grounds + moderation-escalation
+                      + verifier-console-shape
+       Test Files 5 passed (5)     Tests 76 passed (76)     Duration 6.52s
+     ⇒ all 76 pass in 6.5s isolated, vs 15-20s TIMEOUTS under load.
+
+(ii) BASELINE RE-RUN in a clean worktree at 075827b, same concurrent command:
+       Tasks: 15 successful, 20 total     Failed: @twt/validity-service#test
+     ⇒ ⭐ the baseline fails TOO — and on a DIFFERENT package. The victim wanders
+       per run, exactly as [[project_ci_local_concurrency_oversubscription]] records.
+```
+
+⇒ **pre-existing CPU/connection contention, ⛔ not a regression.** `@twt/api` alone against the
+live DB is **1078 passed | 1 skipped** (Task 9 table). ⛔ Recorded openly as an un-attested green
+rather than reported as "all green" ([[feedback_record_unattested_no_backfill]]).
+
 ### Completion Notes List
 
+- **AC1 — ✅ satisfied, with one case INVERTED under a BigDev ruling.** The repo's first precision
+  coverage: 6 independently-planted cases (3 fixed by AC2, 2 standing guards, 1 recall pin). ⚠ The
+  story's own evidence row for case 3 was **verified false**; the divergence was **raised, ruled, and
+  recorded**, ⛔ not taken silently. See the Debug Log.
+- **AC2 — ✅ satisfied.** `phone` lookbehind gains `(?<!\/)`, `(?<!=")`, `(?<!')`. ⛔ Pure regex.
+  ⛔ `email` untouched. ⛔ `aadhaar` ⛔ NOT widened (D2 = (a)). Every recall assertion passes
+  unmodified. The stale `scrape-test.spec.ts:146-147` caveat is corrected — ⚠ the *constraint* stays
+  for a narrower live reason (a bare 10-digit run in **text** is still flagged, correctly), and ⛔ zero
+  fixture values were edited.
+- **AC3 — ✅ satisfied.** Both over-claim sites corrected in their **AC3a form** (one edit, ⛔ not AC3
+  wording with AC3a bolted on). ⚠ **One half moved, one half stayed**: renderer opaqueness (freeze row
+  14) is ⛔ not softened. Contract untouched, **proven by diff**.
+- **AC3a — ✅ satisfied.** `ClausePayloadPiiError` → **422** (registered, so ⛔ never a 500 — the 10.30
+  finding). Scan runs over `canonicalJsonStringify(draft.payload)` — the **existing** canonicaliser —
+  **before** the audit write. ⛔ Pattern **types** only; the class documents why no `value`/`sample`
+  field may ever be added, and a test asserts the planted value is absent **from the raw body**.
+  Documented as a **BACKSTOP** in three places; the **non-author sign-off remains primary**.
+- **AC4 — ✅ satisfied.** 5 contact-bait paths, same `registerHoneypot` shape, ⛔ same bare
+  `{status:'ok'}` (⛔ D4(b) not ruled in). Both limits recorded in the module doc; the `:36`
+  "allowlist" claim corrected. ⛔ Zero allowlist edits needed.
+- **AC5 — ✅ satisfied.** All **seven** items in the canonical README, placed between the tier model
+  and `## Mechanism`. ⛔ No second doc; ⛔ nothing restructured or softened.
+- **AC6 — ✅ satisfied.** Decision `2026-08-22-149` committed **FIRST and ALONE** (`fa243d8`, ⛔ zero
+  `packages/` or `apps/` files). Closures use D2's exact language; the Trap 5 limit **joins** the
+  existing topology item (⛔ not a second entry); four findings **routed**, ⛔ not absorbed.
+- **AC7 — ✅ satisfied, and it EARNED ITS KEEP.** Leg (b) **falsified its own prediction**: the
+  honeypot count assertion was **vacuous by construction** against deletion. Found by *running* it.
+  Fixed, then re-proven red-then-green.
+- ⛔ **Row 17 untouched** — still `open`, `closure_evidence_link` still empty; the public Member
+  Directory ⛔ still may not go live. ⛔ No matrix tier moved, ⛔ no permission key, ⛔ no
+  `PERMISSION_CATALOG_VERSION` bump, ⛔ no migration, ⛔ no npm dependency, ⛔ no new route or page.
+- ⚠ **Two Panel questions and one John question are OPEN and routed** — ⛔ this story settles none of
+  them, and D3(e) ⛔ did not answer §Q3(d).
+
 ### File List
+
+**Governance / records**
+
+- `.decision-log.md` — Decision `2026-08-22-149` (Task 1; committed first and alone)
+- `_bmad-output/implementation-artifacts/deferred-work.md` — the 11a.4 section; CR-D1-1.16b +
+  CR-D2-1.16b annotated in place; the Trap 5 limit **appended** to the topology item
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `11a-4-…` → `in-progress`; ledger comment
+- `_bmad-output/implementation-artifacts/11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only.md`
+  — this file (Status, Tasks, Dev Agent Record, File List, Change Log)
+
+**AC1 + AC2 — the precision net and the regex**
+
+- `packages/contracts/src/public-pages/scrape.ts` — `phone` lookbehind + the "what is deliberately
+  NOT fixed" note
+- `packages/contracts/tests/public-pages.test.ts` — the PRECISION describe block (**added**)
+- `apps/public/tests/integration/public-pages/scrape-test.spec.ts` — the stale caveat corrected
+  (⛔ comment only; ⛔ zero fixture values changed)
+
+**AC3 — the two over-claims**
+
+- `packages/contracts/public-pages/public-vs-private-matrix.yaml` — `clause_payload_display_fields`
+  description (⛔ description text only)
+- `apps/public/src/lib/niyamavali-render.ts` — module doc (⛔ comment only)
+
+**AC3a — the publish backstop**
+
+- `packages/domain/src/niyamavali/errors.ts` — `ClausePayloadPiiError` + `CLAUSE_PAYLOAD_PII_CODE`
+- `packages/domain/src/index.ts` — the export
+- `apps/api/src/middleware/error-mapping/index.ts` — → 422
+- `apps/api/src/modules/rules/index.ts` — the scan at the publish precondition + the header
+- `apps/api/tests/integration/niyamavali-workflow.spec.ts` — 4 controls (**appended**; ⛔ zero
+  existing lines changed)
+
+**AC4 — the honeypot**
+
+- `apps/api/src/plugins/security-headers/index.ts` — 5 bait paths, the two limits, the `:36` correction
+- `apps/api/tests/integration/security-headers.spec.ts` — the deletion-proof bait pin (**added**, AC7(b))
+
+**AC5 — the doctrine**
+
+- `packages/contracts/src/public-pages/README.md` — the FR-93 section + a cross-reference
+
+### Change Log
+
+| Date | Change |
+|---|---|
+| 2026-08-22 | Decision `2026-08-22-149` recorded and committed **first and alone** (`governance:`, ⛔ zero code files) — D1′=(a) · D2=(a) · D3=(e) · D4=(a) · D5=(a), plus four findings routed as OPEN. |
+| 2026-08-22 | AC1 + AC2 — the repo's first **precision** regression net (RED first, ⛔ proven by running), then the `phone` lookbehind tightened. CR-D1-1.16b **Closed by [edit]**. |
+| 2026-08-22 | ⭐ AC1 case 3 **inverted under a BigDev ruling** after the story's evidence row was verified false and the only real subject proved inseparable from a legitimate 0-prefixed mobile. |
+| 2026-08-22 | AC3 — both naked-PII over-claims corrected; ⚠ one half moved, one half stayed; matrix contract proven untouched by diff. |
+| 2026-08-22 | AC3a — publish-time naked-PII **backstop** on the Niyamavali amendment path (422, pattern **types** only, before the audit write, both-direction controls). |
+| 2026-08-22 | AC4 — 5 contact-harvesting bait paths + the two limits recorded **in the code**; the "allowlist" claim corrected. |
+| 2026-08-22 | AC5 — the seven-item FR-93 doctrine section lands in the canonical README. |
+| 2026-08-22 | AC6 — `deferred-work.md`: closures in exact language, CR-D2-1.16b's **unrecorded** 11a.1 closure captured, the Trap 5 limit **appended** to the topology item, Contact/About routed to John, two §Q3 findings routed to the Panel. |
+| 2026-08-22 | ⭐ AC7 — revert-sanity **found the honeypot count assertion vacuous by construction**; a deletion-proof pin was added and the leg re-proven red-then-green. |

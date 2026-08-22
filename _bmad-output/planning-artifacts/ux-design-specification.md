@@ -488,7 +488,7 @@ Visual grammar:
 - Top strip: Pariwar seal left, *परिवार की नब्ज़* center
 - Single quiet stat-line, no card: `[total] सदस्य · [districts] ज़िले · इस माह [N] आहुति पूर्ण`
 - Hairline
-- **Pinned section** header *सूचना पट्ट* (Notice Board); 2-3 items maximum; each row has a small left-stub colored by type (saffron/green/black per category); tap → detail
+- **Pinned section** header *सूचना पट्ट* (Notice Board); 2-3 items maximum; each row has a small left-stub colored by type (terracotta/green/black/ink per category — §11 `<PinnedNotice>` **Variants** is canonical; ⚠ this line's former *saffron/green/black* reading is **SUPERSEDED** — see **Appendix B.1**); tap → detail
 - Hairline
 - **हाल की आहुति** (Recent closings): last 5 closed pools as ruled rows — name + district + contributor count
 - Hairline
@@ -2869,3 +2869,31 @@ When a new FR is added to PRD or a new loop / journey is added to UX §9, this a
 - If the edit cites an FR-N, confirm whether the cite is loop-local (use §A.2 numbering) or PRD-global (use `PRD FR-N` prefix).
 - If a new loop-local FR-N is introduced, add a §A.2 row mapping it to its PRD anchor before merging.
 - If a UJ-N gains a dedicated journey diagram, update the §A.3 coverage row and §A.4 deferral note accordingly.
+
+---
+
+## Appendix B — Ratified amendments to this specification
+
+Amendments are recorded here rather than inline so that **line citations into this file from code, tests, story files and the decision log do not drift** when one is applied. Each entry names the line it amends, the decision that ruled it, and what the amendment does and does not reach. ⛔ An amendment is a **supersession**, ⛔ never a reinterpretation and ⛔ never a clarification — the superseded text is quoted here so a later reader can see exactly what changed.
+
+### B.1 — §5 Panchayat Noticeboard pinned-stub vocabulary is SUPERSEDED by §11 `<PinnedNotice>`
+
+**Amends:** the §5 *Panchayat Noticeboard* visual-grammar **Pinned section** line.
+**Ruled at:** Decision `2026-08-22-152` D2(a) (Story 11a.5). **Applied at:** Decision `2026-08-22-153` D8(a) (Story 11a.6).
+
+**Superseded text:** *"each row has a small left-stub colored by type (saffron/green/black per category)"*.
+
+⛔ **This was not a prototype-vs-spec drift.** Both the §5 line and the §11 `<PinnedNotice>` **Variants** line were **ratified spec text**, with a **different vocabulary** and **different meanings** — one ratified artifact disagreeing with itself. §11 wins because it is the **component-level contract** and the anchor `<PinnedNotice>` is built to; §5 is screen-grammar prose written before the component section existed. (Story 11a.6's D1(a) resolved a second collision the same way, for the same reason.)
+
+What the amendment says:
+
+- ⛔ **`saffron` is RETIRED** — ⛔ not deprecated, ⛔ not aliased, ⛔ not kept for legacy fixtures. The canonical vocabulary is **`terracotta`** (close-of-cycle celebration) · **`green`** (milestone) · **`black`** (scheduled meeting) · **`ink`** (generic).
+- ⚠ ⭐ **`black` CHANGED MEANING** — *bereavement* under §5's original reading → **scheduled meeting** under §11. ⛔ The word that looks shared is **not** shared, and any screen-reader copy inherited from the bereavement reading is **wrong**, ⛔ not merely re-keyed. It shipped once, as the P0-5 prototype's *"memorial"* accessibility hint on a meeting notice, and was corrected at Story 11a.5.
+- ⚠ **Bereavement lost its category** in the move, and that is a real consequence rather than an oversight to rediscover later: §5 carried a bereavement stub and §11 does not. Nothing is worse off today — the section that carried bereavement content (*हाल की आहुति*, §5) has **no producer**, and the fabricated rows the prototype published there were deleted at Story 11a.5. ⭐ **Re-trigger for revisiting the vocabulary itself: the story that gives bereavement notices a real producer.**
+- The Story 10.9 banner **severity** axis (`info | warning | critical`) is **the banner lane's own**, ⛔ not this category vocabulary. The two are orthogonal and are ⛔ never conflated: severity **maps into** a category rather than being rendered beside it, on a row anatomy with exactly **one** colour slot.
+
+⛔ **Scope — what this amendment does NOT reach:**
+
+- ⚠ The **warm umber / saffron-brown** status-mismatch tone in §Visual Design Foundation is a **different colour on a different axis** (a contribution status, not a notice category) and is ⛔ **untouched**.
+- ⚠ §11 `<PinnedNotice>`'s own gap — a ratified **`dismissed`** state in its **States** line with **no dismiss slot** in its **Anatomy** line — is a **NEW question** and is ⛔ **not** folded in here. It is an **incompleteness**, ⛔ not a second §5-style contradiction, and it is routed in `_bmad-output/implementation-artifacts/deferred-work.md`.
+- ⚠ §5's *"tap → detail"* on the same line is likewise ⛔ **out of scope for this amendment** and is left standing. Story 11a.6's D6(a) made the shipped row **non-interactive content** because no detail destination exists; that divergence is **routed**, ⛔ not silently amended here.

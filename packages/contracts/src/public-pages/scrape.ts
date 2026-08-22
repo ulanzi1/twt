@@ -260,11 +260,37 @@ export interface PiiMatch {
 //   phone   — Indian mobile: optional +91 / 0 prefix, then [6-9] + 9 digits;
 //             extended lookbehind excludes digits AND email-local chars so the
 //             pattern never fires inside an email address or another number.
+//             Three further lookbehinds exclude MARKUP contexts where a 10-digit
+//             run is an identifier rather than a number a reader could dial
+//             (Story 11a.4, AC-2 — closes CR-D1-1.16b for the `phone` pattern):
+//               (?<!\/)  — a URL path segment: href="/blog/9876543210"
+//               (?<!=")  — a double-quoted attribute value: data-id="9123456789"
+//               (?<!')   — a single-quoted attribute value: data-id='9123456789'
+//             ⚠ Deliberately narrow. `:"` is NOT excluded, so a phone number
+//             planted in a JSON string value still matches — that is what the
+//             publish-time payload backstop (apps/api rules publish path) reads.
+//
+// ⛔ WHAT IS DELIBERATELY NOT FIXED HERE, so nobody "improves" it in passing:
+//   • The `aadhaar` pattern still matches any 12-digit run (e.g. 987654321012).
+//     A 12-digit run genuinely IS an Aadhaar shape; loosening it would trade a
+//     real recall guarantee on a `never_exposed` field for a hypothetical
+//     precision gain. Ruled out of scope at Decision 2026-08-22-149 cl.3.
+//   • A CONTIGUOUS landline like 08012345678 (STD 080 + 8-digit local) is still
+//     flagged. It is `0` + [6-9] + 9 digits — the SAME token shape as the
+//     legitimate 0-prefixed mobile 09876543210. STD codes whose second digit
+//     falls in 6-9 (079, 080, 066) collide with the mobile pattern BY
+//     CONSTRUCTION, so ⛔ no context-free regex separates them, and excluding
+//     the landline would stop catching the mobile. Precision may ⛔ never be
+//     bought with recall; the collision is pinned by test in
+//     packages/contracts/tests/public-pages.test.ts.
 function piiPatterns(): { type: PiiPatternType; re: RegExp }[] {
   return [
     { type: 'email', re: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g },
     { type: 'aadhaar', re: /(?<!\d)\d{4}[\s-]?\d{4}[\s-]?\d{4}(?!\d)/g },
-    { type: 'phone', re: /(?<![a-zA-Z0-9._%+\-\d])(?:\+?91[\s-]?|0)?[6-9]\d{9}(?!\d)/g },
+    {
+      type: 'phone',
+      re: /(?<![a-zA-Z0-9._%+\-\d])(?<!\/)(?<!=")(?<!')(?:\+?91[\s-]?|0)?[6-9]\d{9}(?!\d)/g,
+    },
   ];
 }
 

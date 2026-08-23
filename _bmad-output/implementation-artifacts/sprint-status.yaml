@@ -1,4 +1,63 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-23e (⭐ AI-11a-2 RULED — the targeted Epic-11b substrate/publication-model
+#   validation session. ⛔ ZERO ROWS FLIP. Governance doc act, ⛔ no story row, ⛔ no
+#   development_status key. ⛔ epic-11b stays backlog and ⛔ all EIGHT 11b story rows stay
+#   backlog; ⛔ epic-11a stays in-progress; ⛔ Row 17 untouched and still `open`.
+#
+#   WHAT LANDED: Decision 2026-08-23-154 + FOUR ruling blocks APPENDED to
+#   `_bmad-output/planning-artifacts/epics.md` (Epic 11b header, 11b.1, 11b.3, 11b.6) —
+#   **63 lines ADDED, 0 REMOVED**, ⛔ recorded as RULINGS, ⛔ NEVER silent rewrites; every
+#   original AC line stands and carries an annotation beside it, matching `24b19d5` /
+#   `99b4a46` discipline. SCP:
+#   _bmad-output/planning-artifacts/sprint-change-proposal-2026-08-23.md
+#
+#   ⭐ THE HEADLINE: SD-2 WAS PRESENT ON THREE STORIES, ⛔ NOT ONE. 11b.1 and 11b.6 carry the
+#   same absent `authenticated_member` viewer and ⛔ NOTHING HAD RECORDED EITHER. ⚠ They are
+#   ⛔ NOT the same KIND of defect as 11b.3's and are ⛔ NOT collapsed: 11b.3's is a fragment
+#   MECHANISM over money-routing PII; 11b.1's and 11b.6's are NAME-FORM / ATTRIBUTE TIERS.
+#
+#   ⭐ THE SUBSTRATE FINDING, STATED PRECISELY: ⛔ no current browser surface HOLDS or PRESENTS
+#   the member token. A plain navigation to apps/public carries no Authorization header, and
+#   there is ⛔ no apps/member-web/. ⛔ This is NOT a claim that browsers categorically cannot
+#   send an Authorization header — script on an authenticated origin can; ⛔ there is no such
+#   origin here.
+#
+#   RULINGS: SD-2 -> disposition (c), the authenticated half DEFERRED across all three, ⭐ on the
+#   EXISTING 11a.2/11a.3 trigger (⛔ not a second, parallel deferral). ⚠ Resolved via explicit
+#   deferral, ⛔ NOT "Closed by [edit]". · C-1 -> headless presenter + per-stack render layer;
+#   `apps/public` adds `@twt/ui`; `@twt/ui` deps stay EXACTLY `@twt/contracts`. · C-5 -> Row 17
+#   EXTENDS to 11b.1/11b.3/11b.6, ⛔ no new roster rows, PLUS each surface's own per-subject
+#   consent gate — ⛔ two levers, ⛔ NEITHER discharging the other.
+#
+#   ⚠⛔ WHAT THIS DOES ⛔ NOT MEAN: the SD-2 PRE-AUTHORING BLOCK is discharged — ⛔ Epic 11b is
+#   ⛔ NOT launch-ready, and ⛔ "authorable" is ⛔ NOT "ready-for-dev" (⭐ bmad-create-story is what
+#   moves the row; flipping one now would claim work that has not happened). Still OPEN and
+#   ⛔ untouched: Row 17's >=2-trustee ratification (⚠ now WIDER — it gates all three 11b public
+#   surfaces) · DPDPA counsel NOT engaged (⚠ widened to the deceased + their families) · C-3 no
+#   aggregate-stat producer · C-4 no FR-19 producer + the separate consent gate · C-2 no a11y CI
+#   gate · 2026-08-20-140 cl.7. ⭐ A story may reach `done` with every one of these still open.
+#
+#   ⚠ A NEW OPEN FINDING AGAINST `architecture.md` ITSELF, recorded UN-ATTESTED and ⛔ NOT
+#   back-filled: :495-525 commits a composition contract whose fragments "hydrate client-side",
+#   and ⛔ THAT pattern is equally unbuildable today — ⭐ the architecture commits a property the
+#   substrate cannot satisfy, naming FR-77 nominee bank details as its own worked example.
+#   ⛔ Amending it was ruled OUTSIDE this session's fence by BigDev -> routed to Winston.
+#
+#   ⭐ ONE PRIOR CHARACTERISATION CORRECTED ON THE EVIDENCE, ⛔ not propagated and ⛔ not silently
+#   dropped: Story 11b.7's 2026-08-23 block calls the `apps/public` <-> `@twt/ui` link a
+#   "deliberate declination". ⛔ VERIFIED FALSE — `@twt/ui` was an EMPTY STUB (`export {}`) at
+#   Story 2.5, so that variance is about where TOKENS live. ⭐ And `packages/ui/src/index.ts` has
+#   said since Story 9.12 that <PoolProgressCard> is for "the Epic-11b public Sahyog Vivran render
+#   later" ⇒ ⭐ C-1 is an ORDINARY DEPENDENCY ADDITION, ⛔ NOT a governance reversal. ⇒ 11a.5's
+#   <NoticeboardStrip> public-embed deferral (c) now HAS a host. ⛔ Recorded, ⛔ not built.
+#
+#   ⚠ AI-11a-1(b) is ⛔ NOT discharged — it fires at Epic 11b's FIRST AUTHORING PASS, which is
+#   the next act. ⭐ AND A PROCESS FINDING RECORDED OBSERVATIONALLY, ⛔ NOT elevated to an action
+#   item by this fenced session: AI-11a-1(a) would ⛔ NOT have caught SD-2's 2nd/3rd instances —
+#   11b.6's defective phrase was ITSELF REWRITTEN by the 2026-08-19 pass, and 11b.1's survived
+#   TWO passes. ⇒ a reconciliation answers the question it was POINTED AT; it does ⛔ NOT sweep
+#   the sentence it edits. ⚠ That is a SCOPE failure, ⛔ not a TIMING one ⇒ ⛔ a close-of-epic
+#   pass would ⛔ NOT have caught it either. -> the next retrospective's call, ⛔ not this session's.)
 # last_updated: 2026-08-23d (⭐ AI-11a-1(a) DISCHARGED — the FIRST end-of-epic `epics.md`
 #   reconciliation. ⛔ ZERO ROWS FLIP. This is a governance doc act with no story row and
 #   ⛔ no development_status key; ⛔ epic-11a stays in-progress, ⛔ epic-11b stays backlog,

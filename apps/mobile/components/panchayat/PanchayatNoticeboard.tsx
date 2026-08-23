@@ -1,8 +1,8 @@
 import { useLocale } from '@twt/i18n/react'
-import { deriveNoticeboardViewModel } from '@twt/ui'
+import { NOTICEBOARD_ROW_DISMISSED_A11Y_KEY, deriveNoticeboardViewModel } from '@twt/ui'
 import type { NoticeboardSection, NoticeboardStripViewModel } from '@twt/ui'
 import { useCallback, useMemo, useState } from 'react'
-import { ScrollView, StyleSheet } from 'react-native'
+import { AccessibilityInfo, ScrollView, StyleSheet } from 'react-native'
 import { Text, View, XStack, YStack } from 'tamagui'
 
 import { useNoticeboardT } from '../../lib/noticeboard-i18n'
@@ -93,11 +93,20 @@ export function PanchayatNoticeboard() {
   // MMKV and ⛔ there is no client-side expiry.
   const [acknowledged, setAcknowledged] = useState<ReadonlySet<string>>(new Set())
 
+  // ⚠ Depend on `dismiss.mutate`, ⛔ not the whole `dismiss` object — `useMutation` returns a fresh
+  // object identity most renders, but `mutate` itself is the stable reference; depending on the object
+  // silently defeated this `useCallback` (Review Findings, patch 1).
+  const dismissMutate = dismiss.mutate
   const onDismiss = useCallback(() => {
     if (!banner) return
     const key = bannerDismissalKey(banner.banner_id, banner.revision)
     setAcknowledged((prev) => new Set(prev).add(key))
-    dismiss.mutate(
+    // AC4 — "the state is announced, ⛔ not conveyed by opacity alone." The `dismissed_a11y` key already
+    // reaches the row's label once `acknowledged` flips (the presenter's `labelParts`), but the control
+    // just activated is GONE on the next render (absent once acknowledged, so it cannot double-fire) —
+    // a focused screen-reader user hears nothing on that transition unless it is announced explicitly.
+    AccessibilityInfo.announceForAccessibility(t(NOTICEBOARD_ROW_DISMISSED_A11Y_KEY))
+    dismissMutate(
       { bannerId: banner.banner_id, kind: 'dismissed' },
       {
         // Roll back: a failed write must never permanently hide a notice the server did not suppress.
@@ -109,16 +118,19 @@ export function PanchayatNoticeboard() {
           }),
       },
     )
-  }, [banner, dismiss])
+  }, [banner, dismissMutate, t])
 
   // ⭐ The row is `dismissed` only while the optimistic window is open. There is at most ONE row (the
   // banner lane is the noticeboard's only producer), so the correlation is a direct id match rather than
   // a lookup table — and it is an EXPLICIT match, so a future second producer cannot silently inherit
   // this banner-specific state.
-  const isAcknowledged = (rowId: string): boolean =>
-    banner !== null &&
-    rowId === banner.banner_id &&
-    acknowledged.has(bannerDismissalKey(banner.banner_id, banner.revision))
+  const isAcknowledged = useCallback(
+    (rowId: string): boolean =>
+      banner !== null &&
+      rowId === banner.banner_id &&
+      acknowledged.has(bannerDismissalKey(banner.banner_id, banner.revision)),
+    [banner, acknowledged],
+  )
 
   const vm: NoticeboardStripViewModel = deriveNoticeboardViewModel(
     {

@@ -1,4 +1,121 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-23c (⭐ EPIC 11a RETROSPECTIVE — Public Trust Identity Shell, the
+#   PUBLICATION-POSTURE epic. ONE ROW FLIPS: epic-11a-retrospective optional -> done.
+#   ⛔ epic-11a stays in-progress, BYTE-UNCHANGED — every one of the eleven epic rows is
+#   in-progress, including fully-retrospected epic-10, so ⛔ this is the project's never-flipped
+#   epic-row convention, ⛔ NOT an omission and ⛔ NOT a defect. ⛔ No other row moves.
+#   ⛔ Row 17 untouched and still `open`. Retro doc:
+#   _bmad-output/implementation-artifacts/epic-11a-retro-2026-08-23.md
+#
+#   METRICS (93ec291..HEAD, verified by git, ⛔ not read off story prose): 6/6 stories done ·
+#   ⭐ ZERO STORIES ADDED, the first exactly-planned epic since Epic 5 · 98 commits · 177 files ·
+#   +35,814/-929 · migrations 0110->0111 (2, hand-authored on the frozen 0020 snapshot, 11th epic) ·
+#   RBAC catalog v36->v38 · 22 decision entries (2026-08-19-132 ... 2026-08-22-153) · ADR-0039
+#   authored AND ratified + ADR-0037/0038 ratified (`drafted` reached ZERO) · 0 CI gates minted ·
+#   0 production incidents (pre-launch).
+#
+#   ⭐ THE HEADLINE: THIS IS WHERE "DONE" AND "LIVE" SEPARATED. BigDev's framing is adopted verbatim
+#   as the record: the Public Trust Identity Shell is TECHNICALLY DELIVERED; the public identity is
+#   ⛔ NOT operationally or publicly live. 11a.3 is done, /members renders real full legal names, the
+#   kill switch exists and is enforced, and 10.30 shipped the admin UI -- and Row 17 stays `open`
+#   because >=2-trustee ratification is its SECOND closure leg. ⚠ Even once it closes the control is
+#   ⛔ NOT IMMEDIATE: /members is edge_cacheable at s-maxage=300, so a pulled Pariwar keeps being
+#   served real member names from every warm PoP, PER PAGE NUMBER.
+#
+#   ⭐ THE COROLLARY: AN EPIC AC IS A HYPOTHESIS, NOT A SPECIFICATION. FOUR of six stories found
+#   their OWN acceptance criteria defective -- ⛔ not stale (describing something once true) but
+#   UNBUILDABLE (describing something never true): 11a.1's fixed-schema framing (superseded by R7's
+#   Pariwar-selected model) · 11a.2 (`2026-08-20-141`: the epic AC and architecture.md CONTRADICT and
+#   the AC's version is UNBUILDABLE) · 11a.3 (the AC table's `authenticated_member` column HAS NO
+#   VIEWER) · 11a.6 (`2026-08-22-153`: the AC describes <BannerHost>, which ALREADY SHIPPED; building
+#   it literally makes a THIRD banner one story after 11a.5 ruled one out of existence). ⭐ Every one
+#   caught at AUTHORING time and RULED, ⛔ never silently deviated from. The mechanism works; the
+#   document it protects us from is our own.
+#
+#   ⭐ SECOND HEADLINE: THE FR-74 TIER-LEAK GATE HAD BEEN GREEN OVER NOTHING FOR FOUR EPICS.
+#   `loadSnapshots(): return []` + a matrix declaring ZERO surfaces, while SEVEN public pages shipped.
+#   11a.1 DELETED the stub (⛔ did not "fix" it): 0 surfaces -> 8, 23 tier-classified fields, 1
+#   attributed escalation cross-checked against a real decision. 11a.3's AC4 then proved the discharge
+#   BY PLANTING A LEAK, ⛔ not by asserting. ⭐ And 11a.1 added a check NO AC ASKED FOR: a
+#   `renders:false` surface whose route later ships fails as STALE -- so 11a.3 STRUCTURALLY could not
+#   ship /members and forget to flip the flag. [[feedback_gate_scope_semantic_coverage]] gets its
+#   strongest instance yet: the gate was ⛔ not mis-scoped, it had ZERO SUBJECTS.
+#
+#   PREVIOUS-RETRO FOLLOW-THROUGH (Epic 10 -> 11a) -- ⭐ FIVE FOR FIVE ON THE ELEVATED ITEMS, the
+#   strongest in the series, after Epic 10 broke a three-epic streak. AI-10-4 ✅ COMPLETED (the
+#   blocking pre-authoring session RAN; no 11a.1 commit precedes it; ⭐ BigDev REFRAMED it mid-session
+#   and R7 turned a fixed six-column directory into a Pariwar-selected attribute model -- the
+#   counterfactual is the value) · AI-10-2 ✅ COMPLETED, ⚠ AND INSUFFICIENT BY CONSTRUCTION (six
+#   RECONCILED blocks landed 2026-08-19; it ⛔ COULD NOT catch SD-2 because it ran the day BEFORE the
+#   ruling that creates it) · AI-10-1 ✅ COMPLETED AND EXERCISED (a `📜 Policy meaning` section in ALL
+#   SIX story files + checklist family 11) · AI-10-3 ✅ COMPLETED (checklist family 12; vehicle
+#   honoured exactly -- ⛔ no package, ⛔ no gate) · AI-10-5 ✅ COMPLETED (`env -u DATABASE_URL`,
+#   ⭐ shipped WITH a DERIVED coverage guard against the failure mode the fix itself creates, matching
+#   on `hasDatabase` ⛔ not the coincidental `DATABASE_URL` literal; --concurrency=4 correctly left
+#   alone). ⭐ AI-10-1/-3/-5 are recorded as COMPLETED AND NOW STANDING, ⛔ NOT as carries: their
+#   vehicles persist, so there is no future moment at which someone must remember to run them --
+#   which is exactly how AI-9-2 decayed. AI-9-3/8-2/6-4/7-3/7-5/4-4/5-5 carried, none due.
+#
+#   WHAT LEAKED: ⭐ a DECEASED MEMBER WAS PUBLISHED TO THE OPEN INTERNET MARKED "Active"
+#   (`2026-08-21-145` RD1, superseding `2026-08-20-143` D3(a) ONE DAY after it was ruled) -- death is
+#   an OVERLAY, not a lifecycle label, so ⛔ EVERY predicate over members.state is blind to it BY
+#   CONSTRUCTION [[project_death_is_an_overlay_not_a_state]]; caught by SECOND-ROUND review, ⛔ by no
+#   gate · the AC10 anti-enumeration negative control is VACUOUS BY CONSTRUCTION because the key is
+#   ATTACKER-CHOSEN (one sentence across three story analyses: the recorded IP is not evidence) ·
+#   ⭐ a RECALL REGRESSION SHIPPED INSIDE THE STORY WHOSE AC1 MANDATED A REGRESSION NET
+#   (`2026-08-22-150`: the '/' and "'" exclusions were scoped to a BARE CHARACTER, not the markup
+#   signature, so `'9876543210'` and `9876543210/9123456789` evaded detectNakedPii as far as the
+#   publish-time backstop over RAW JSON where no markup exists) -- the net existed and guarded
+#   PRECISION ONLY · two components now duplicate optimistic-dismissal logic over the same endpoint
+#   (declined on BLAST RADIUS, ⛔ not merit) · ⛔ NINETEEN invariant gates in scripts/ and NONE is an
+#   accessibility gate, with two a11y defects left explicitly NOT ADDRESSED.
+#   ⭐ AND ONE PROCESS FAILURE WAS DISCLOSED, ⛔ NOT BACKFILLED: `2026-08-21-145` records that the
+#   publication kill switch shipped IMPLEMENTATION-FIRST with no governance entry
+#   [[feedback_record_unattested_no_backfill]] -- confessing the one breach of
+#   [[feedback_governance_commits_precede_implementation]] is the stronger outcome than an unbroken
+#   record would have been.
+#
+#   🚨 SIGNIFICANT DISCOVERY REQUIRING AN EPIC-11b UPDATE SESSION: 1 (SD-2) -- BLOCKING. Story
+#   11b.3's AR-48 authenticated fragment is specified against the EXACT contract 11a.2 ruled
+#   UNBUILDABLE one epic earlier. Verified live: members are TOKEN-BEARER (Authorization-header JWT,
+#   exp<=15min), a browser sends COOKIES and never that header, there is ⛔ NO apps/member-web/, and
+#   architecture.md:504-517 commits that fragments hydrate CLIENT-SIDE with the auth boundary AT THE
+#   API ⛔ not the page or the edge. ⚠ SHARPER THAN 11a.2's CASE: the payload is NOMINEE BANK DETAILS
+#   on a live pool. ⛔ SAME DEFECT CLASS AS SD-1, RECURRING ONE EPIC LATER, in the very prose AI-10-2
+#   reconciled -- and that RECURRENCE, ⛔ not the finding, is what AI-11a-1 exists to stop.
+#   Four non-blocking carries: C-1 apps/public does ⛔ NOT depend on @twt/ui and @twt/ui has NO REACT
+#   (11b.5 + 11b.7 both assume the link) · C-2 no a11y CI gate while 11b.8 makes an a11y audit a
+#   LAUNCH-BLOCKER · C-3 no aggregate-stat read model (11b.7 has no producer; ⛔ format-count.ts has
+#   no call site BY DESIGN -- do not delete as dead code) · C-4 no close-of-cycle read model AND the
+#   Epic-11b consent basis -- ⛔ TWO GATES, NOT ONE · C-5 Row 17's publication posture generalizes to
+#   11b.1/11b.3/11b.6, and the members.state death-blindness binds THE MEMORIAL EPIC directly.
+#
+#   TEN ACTION ITEMS; ALL FIVE NEW DISPOSITIONS CONFIRMED BY BigDev 2026-08-23: AI-11a-2 (a TARGETED
+#   blocking pre-authoring substrate/publication-model session for Epic 11b -- ⛔ explicitly NOT a
+#   universal ceremony, because a standing session at every epic boundary becomes the thing that gets
+#   skipped; sweeps C-1 + C-5) · AI-11a-1 (⭐ BOTH VEHICLES: (a) reconcile epics.md at END of epic
+#   against THAT epic's rulings, ⛔ not at the start against the previous retro's -- which is exactly
+#   why AI-10-2 could not see SD-2 -- AND (b) the authoring pass WRITES THE RECONCILIATION BACK into
+#   epics.md so the correction lives in the document the next author reads; ⭐ FIRST INSTANCE IS OWED
+#   NOW) · AI-11a-3 (accessibility as CHECKLIST/INVARIANT FAMILY 13 FIRST, ⛔ a CI gate only if later
+#   mechanically justified [[feedback_no_premature_package]]; revisit after 11b.8's audit shows what
+#   is actually mechanizable) · AI-11a-4 (regression-net SYMMETRY rule -- a precision fix owes a
+#   RECALL assertion on the changed pattern and vice versa -- story template + code-review checklist,
+#   BOTH) · AI-11a-5 (⭐ DRIVE ROW 17's >=2-trustee ratification leg NOW, jointly with the DPDPA
+#   counsel dependency TRACKED SEPARATELY; ⚠ the ratification must state the control is NOT immediate;
+#   ⛔ Row 3 and Row 17 bind the SAME going-live event and NEITHER discharges the other) · plus
+#   AI-9-3/8-2/6-4/7-3/7-5 carries and AI-4-4/5-5 unchanged.
+#   RECORDED, NOT ELEVATED: --concurrency=4 oversubscription · the @twt/tokens bridge (⚠ its
+#   migration list GREW BY ONE this epic: PINNED_ROW_OPACITY) · duplicated dismissal logic ·
+#   the notice-detail destination (11a.5 item (g) ⛔ RE-ROUTED, NOT closed -- its old trigger is
+#   SPENT) · five still-open 11a.5 routings, each keeping its ORIGINAL trigger · the TEN standing
+#   Panel obligations, still none discharged, ⭐ still four behind ONE upstream act (Story 0.13 Task 8
+#   counsel selection) which AI-11a-5 now touches · Escalation 6 · the copy-truth defect · the
+#   rejoin-model drift with ⛔ NO OWNER · 0099's NOT VALID CHECK · the unadopted instrument ·
+#   ⚠ the public Contact and About pages, COMMITTED AND UNOWNED, which the PII gate is BLIND to by
+#   construction (`2026-08-22-149`) -- recorded here so it is not lost between epics.
+#   Action items live in the retro document + this comment -- no YAML action_items block, consistent
+#   with Epics 0-10.)
 # last_updated: 2026-08-23b (Story 11a.6 — bmad-code-review COMPLETE. ONE ROW FLIPS:
 #   11a-6-pinned-notice-component review -> done.
 #   ⛔ epic-11a stays in-progress — 11a.6 was the LAST story in the epic, so the epic is now
@@ -10106,7 +10223,7 @@ development_status:
   11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only: done
   11a-5-noticeboard-strip-foundational-layout-component: done
   11a-6-pinned-notice-component: done
-  epic-11a-retrospective: optional
+  epic-11a-retrospective: done
 
   # ==========================================================================
   # Epic 11b: Memorial + Sahyog Drive

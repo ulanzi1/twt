@@ -4552,6 +4552,14 @@ So that every visibility decision in every Epic 11 surface (and downstream) read
 >
 > ⭐ **Additionally in scope:** the **per-Pariwar public-name presentation policy** (`full_name` → `shielded_name` → future modes). ⚠ It is a **policy control, not a directory attribute** — ⛔ not subject to the `2026-08-19-133` classification — but it governs what the `public` tier renders, so the matrix must reference it rather than duplicate it (architecture §2.13.3).
 
+> ⛔ **RECONCILED 2026-08-23 (AI-11a-1, end-of-Epic-11a) — clause (3) above is DISCHARGED. Recorded here so a later reader does not act on a launch-blocker that is closed.**
+>
+> ⭐ **The tier-leak leg had been GREEN OVER NOTHING for four epics, and is now ARMED.** `loadSnapshots()` returned `[]` and the matrix declared **zero surfaces**, while **seven public pages had already shipped**. Story 11a.1 **DELETED the stub** — ⛔ it did not "fix" it: **0 → 8 surfaces, 23 tier-classified fields, 1 attributed escalation** cross-checked against a real decision. `2026-08-19-136` clause 4's launch-blocking condition is **satisfied**. ⛔ The naked-PII leg's separate standing is unchanged.
+>
+> ⭐ **The story shipped a check NO AC ASKED FOR**: route coverage reconciles **shipped pages ⇄ matrix surfaces bidirectionally**, so a `renders:false` surface whose route later ships fails as **STALE**. ⇒ Story 11a.3 was **structurally unable** to ship `/members` and forget to flip the flag. ⚠ Its cost is ruled at `2026-08-20-141` D1 and ⛔ must not be inferred from a green check: the `member-directory` tier-leak leg was **ARMED BUT EMPTY** between 11a.2 and 11a.3.
+>
+> ⚠ **Still OPEN, ⛔ not closed by this epic.** `2026-08-20-140` cl.7 — the Niyamavali carries **no clause** governing directory publication or name visibility — is **ANSWERED but ⛔ NOT CLOSED** (`2026-08-21-144`); the amendment lands in the **prose** rulebook because the clause registry ⛔ structurally cannot carry it (draft: `niyamavali-amendment-draft-2026-08-21-directory-publication.md`). ⚠ `2026-08-19-136` cl.5's **DPDPA exposure** (legal counsel ⛔ not engaged) also remains open, and is now **sharper** because the page it describes exists.
+
 ### Story 11a.2: Public Astro SSR Shell Extension for Member Directory + Tiered Visibility Renderers `[PRIMITIVE]`
 
 As Solo Builder extending the Story 2.5 Astro shell foundation,
@@ -4566,6 +4574,20 @@ So that Epic 11a surfaces consume the same shell foundation and the matrix-drive
 **And** the authenticated-fragment composition pattern is established (foundation for 11b extension): public shell can include `<AuthenticatedFragment>` slots that render server-side when the viewer is authenticated, hydrating only the required data; cache-safe for unauthenticated viewers
 **And** routes are added for Member Directory (`/members`) with pagination support; route handler reads the matrix to determine which tier the current viewer can see
 **And** Cloudflare edge cache TTL respects the cache-safe contract — only `public`-tier rendered content is edge-cacheable; `authenticated_member` and `operator_restricted` content bypass edge cache
+
+> ⛔ **RECONCILED 2026-08-23 (AI-11a-1, end-of-Epic-11a) — ⭐ THE `<AuthenticatedFragment>` SENTENCE ABOVE IS UNBUILDABLE, AND WAS UNBUILDABLE WHEN WRITTEN. ⛔ It was NOT built. Read this before specifying any authenticated fragment, here or in Epic 11b.**
+>
+> Ruled at `2026-08-20-141` D2 + cl.6. The AC asks for slots that *"render **server-side** when the viewer is authenticated"*. `architecture.md:504-517` commits the **opposite** property: fragments *"hydrate client-side"*, the SSR output carries *"no PII, no member-state, and no auth-derived branching"*, and *"the auth boundary lives at the API … **not at the page or the edge**"*. Per [[feedback_architecture_vs_prd_boundary]] **the architecture commits the property and the epic does not get to relax it by prose.**
+>
+> ⛔ **And it is worse than a conflict — there is no viewer to render for.** Members are **token-bearer**, ⛔ not cookie-session (`member-session-guard.ts` reads an access-token JWT from the **`Authorization` header**, `exp ≤ 15 min`). A browser navigating to `twt.org/...` sends **cookies, never an `Authorization` header**; there is ⛔ **no `apps/member-web/`** (`apps/` holds `admin · api · jobs · mobile · public`). ⇒ ⛔ **no browser surface holds a member token, by any mechanism**, and manufacturing one is a **new auth surface at the page layer** that the architecture forbids.
+>
+> **What SHIPPED instead:** a **public-fallback-only** slot with an **honestly-empty** registry — it reads **no session, no cookie, no header** and emits **no auth-derived branch**, preserving §2.5's cache-safe guarantee **structurally, ⛔ not by documented discipline**. ⚠ The file states three explicit ⛔ **DO NOT**s, including ⛔ *do not add an `isAuthenticated` prop* — a prop only moves the read to the caller and puts auth-derived branching back into cache-safe SSR output.
+>
+> ⇒ **The hydration mechanism is DEFERRED with a named trigger** (⛔ not dropped, ⛔ not built): the first real fragment (**Epic 11b FR-77** — nominee bank + IFSC + UPI CTA) **or** an `apps/member-web/` split trigger firing. ⭐ Astro 6 **server islands** (`server:defer`) are the **recorded leading candidate** — the one reading under which the AC and the architecture agree — ⛔ neither adopted nor discarded here, because it still needs a viewer the browser cannot identify. ⚠ **This is the ruling Epic 11b Story 11b.3 is specified against and does not yet satisfy — see SD-2 there.**
+>
+> **Two adjacent corrections, ⛔ recorded as verified, ⛔ not inherited claims** (`2026-08-20-141` cl.7): **(a) FR-91 forced pagination was NOT enforced on `apps/public`** — the 1.14 guard walks the **committed OpenAPI surface**, which Astro routes do not emit, so `/members?page=all` was **entirely unpoliced**; ⛔ Story 1.14 must not be cited as coverage for a public page. **Closed by this story**, mechanized. **(b) `/blog` set NO `Cache-Control` at all** and **nothing checked any surface's cache headers** — it shipped uncached-and-unnoticed for a whole epic because **absence read as "the default is fine"**. **Closed by this story**: the new leg is **fail-closed** — a rendering surface with no `Cache-Control` **fails CI** — and per-surface `cache_policy` is **declared explicitly in the matrix**, ⛔ never inferred from field tiers (`2026-08-20-141` D4).
+>
+> ⚠ **No claim is made about Cloudflare.** The edge is not in this repo and its selection is contingent on DPDPA review (architecture §5.8a) ⇒ the gate proves only **what the origin emits**.
 
 ### Story 11a.3: Member Directory PII-Shielded — Tiered Render Scope + Anti-Enumeration Safeguards `[SURFACE]`
 
@@ -4641,6 +4663,18 @@ So that the directory supports institutional legitimacy and trust verification w
 **When** the directory renders for assistive-tech users
 **Then** semantic structure, ARIA labels, keyboard navigation all per Story 1.17 design system
 
+> ⛔ **RECONCILED 2026-08-23 (AI-11a-1, end-of-Epic-11a) — THREE corrections from this story's own build and review rulings. ⚠ The first one reached the open internet.**
+>
+> **(1) ⭐ THE ROSTER PREDICATE TAKES A THIRD CONJUNCT — A DECEASED MEMBER WAS PUBLISHED MARKED "Active".** `2026-08-21-145` **RD1**, ✅ trustee-ratified by `2026-08-21-146`. It ⛔ **SUPERSEDES `2026-08-20-143` D3(a)** — ruled **one day** after D3(a) was itself ruled — and D3(a) is ⛔ **never re-read** ([[feedback_supersede_never_reinterpret]]). The predicate is now *lifecycle state ∈ {active, active-in-grace, lock-in}* **AND** *moderation status ∉ {suspended, terminated}* **AND** ⛔ **not carrying the `account-frozen` overlay**.
+>
+> ⭐ **Why the two-conjunct version was wrong, and why no table row above shows it: `MEMBER_LIFECYCLE_STATES` has NO `deceased` label — death NEVER touches `members.state`.** It is carried by the `account-frozen` **overlay**, which is *"NEVER written to `members.state`"* ([[project_death_is_an_overlay_not_a_state]]). ⇒ ⛔ **every predicate over `members.state` is blind to death BY CONSTRUCTION.** A member whose death had been reported was published on the **unauthenticated** page — full legal name decrypted from **Tier-1** — with a status pill reading **"Active"**, indefinitely, **including while their family's claim was in intake**. ⚠ Caught by **second-round review**; the matrix gate, the tier-leak leg and `ci:local` were **all green through it**. ⚠ **This binds Epic 11b directly — see the Epic 11b C-5 block.**
+>
+> **(2) ⛔ THE STATUS-PILL ROW MUST NOT PUBLISH INTERNAL VALUES.** The table's *"member-status pill (limited: active / lock-in only)"* was emitted by the public JSON route as the **internal** value `lock-in` — a **verified new gap** (`2026-08-21-144`), which that ruling makes **non-public**.
+>
+> **(3) ⛔ THE AC10 ANTI-ENUMERATION CONTROL WAS VACUOUS BY CONSTRUCTION, AND ITS NEGATIVE CONTROL COULD NOT HAVE CAUGHT IT.** `2026-08-21-145` **RD2**: `buildForwardedFor` **appended** the real visitor to the **caller-supplied** `X-Forwarded-For` chain, and `trustProxy: true` reads the **LEFTMOST** entry (✅ verified empirically, ⛔ not reasoned) ⇒ **one request header yielded a fresh rate-limit bucket AND a fresh abuse-counter window per request**; AC6.3, AC6.4 and Trap 2 **all fell to a single header**. `apps/public` now forwards **only** `Astro.clientAddress` and ⛔ **discards** the inbound chain. ⭐ One sentence carries the whole class, and it recurs three more times in this epic: **the recorded IP is not evidence.** ⇒ the abuse audit line is stated **in the code** as *"a COUNTER, ⛔ not a forensic record"*.
+>
+> ⚠ **Also ruled here and load-bearing for the table above:** the `authenticated_member` column had ⛔ **NO VIEWER** at this story and was **structurally unbuildable** (`2026-08-20-143`; the reason is `2026-08-20-141` cl.6 — see the Story 11a.2 block). ⛔ Its rows are ⛔ **not** evidence that an authenticated web viewer exists.
+
 ### Story 11a.4: Phone/Email Obfuscation Defense-in-Depth — Public Surfaces Only `[GOVERNANCE]`
 
 As Solo Builder authoring contact-information protection,
@@ -4665,6 +4699,20 @@ So that the architecture's protection layering is clear: matrix governs visibili
 **When** the protection-layering decision matrix is reviewed
 **Then** the order is: (1) `never_exposed` fields are hidden by matrix; (2) `operator_restricted` fields require RBAC + audit + rate limits; (3) `authenticated_member` fields require auth + rate limits + audit; (4) `public` fields render visibly, with obfuscation as defense-in-depth where applicable
 
+> ⛔ **RECONCILED 2026-08-23 (AI-11a-1, end-of-Epic-11a) — ⭐ AC1(a)'s THREE MASKING TECHNIQUES AND AC1(c)'s "flag scraping IPs" ARE BOTH REFUSED. ⛔ Neither was built, and neither is a deferral.**
+>
+> **(1) ⭐ D1 IS WITHDRAWN ON THE MERITS** (`2026-08-22-149` cl.1–2) — ⛔ **not re-scoped, and ⛔ not refused for want of a call site.** On the **trust's own** contact channel the governing property is **REACHABILITY bounded by accessibility**, ⛔ not concealment ⇒ all three techniques fail **against their own purpose**: **image rendering** is ⛔ not tappable / copyable / screen-readable (**NFR-A11y-1, WCAG 2.1 AA is a named launch blocker for public-site primary nav**); **JS-decoded display** ⛔ fails with JS off, on a surface that is Astro SSR *precisely* so it works without it; **partial masking + helpdesk CTA** is ⛔ **circular — the number IS the helpdesk**. ⚠ And indexing cuts the **other** way: you ⭐ *want* a search engine to surface the helpline to someone looking for help.
+>
+> ⇒ ⭐ **member contact data and the trust's own contact channel are OPPOSITE CASES**, and that distinction is written where it binds (`packages/contracts/src/public-pages/README.md`). ⛔ The residual concern on that channel is **CHANNEL INTEGRITY** (harvest → spam → a degraded helpline), ⛔ **not privacy** — addressed by honeypot, rate limiting and provider-side filtering, ⛔ **never** by making the number unreadable to the people it exists for. ⛔ *"Not a privacy problem"* is ⛔ not *"not a problem"*. ⚠ The AC's own invariant — **obfuscation is defense-in-depth, never primary** — is **unchanged and ratified**; it is the **techniques** that are refused.
+>
+> **(2) ⛔ AC1(c) CANNOT BE BUILT AS WRITTEN, AND THIS STORY MUST NEVER BE DESCRIBED AS "FLAGGING SCRAPING IPs"** (`2026-08-22-149` cl.6). A honeypot hit is a **SIGNAL, ⛔ not an enforcement**, and its recorded `ip` is ⛔ **NOT evidence**: `apps/api` runs `trustProxy: true`, ⛔ nothing proxies the bait paths, so the value is **caller-chosen by one header** — the **same defect class** as the Story 11a.3 block's item (3). ⛔ `trustProxy` is **NOT** re-tuned (`2026-08-20-143` cl.9's standing fence). ⛔ **And no fake contact payload ships** — the bait body stays a bare `{status: 'ok'}`: a fabricated phone/email in a response body would trip this project's own naked-PII discipline.
+>
+> **(3) ⭐ A PUBLISH-TIME PII BACKSTOP LANDED THAT NO AC ASKED FOR** (`2026-08-22-149` cl.4–5) — because two committed artifacts named the naked-PII leg as protecting the dynamic Niyamavali clause-payload block, and ⛔ **that leg had never scanned a byte of tenant data**. `detectNakedPii` now runs over the payload's **canonical JSON on the `niyamavali.amend` publish path**, rejecting with a typed 4xx naming the matched pattern **TYPE only** — ⛔ **never the matched value**, which would write the leaked PII into the response body, the request log and the client. ⛔ **It is a BACKSTOP; the primary control remains the non-author human sign-off** — ⛔ this project does not replace a human control with a regex.
+>
+> ⚠ **And the precision fix shipped a RECALL REGRESSION, inside the story that shipped the precision net** (`2026-08-22-150`, superseding D2): the `'` and `/` exclusions were scoped to a **bare character** rather than the **markup signature** they were meant to detect ⇒ `'9876543210'` and `9876543210/9123456789` **silently evaded `detectNakedPii`**, reaching the publish-time backstop over **raw JSON text, where no markup exists at all**. ⭐ **A regression net that guards only the direction you are pushing is not a net** → **AI-11a-4**.
+>
+> ⛔ **OPEN, ROUTED, ⛔ NOT SCHEDULED AND ⛔ NOT CLOSED** (`2026-08-22-149` cl.7): **the public Contact and About pages are committed product with NO OWNING STORY** — SD-1 shaped. Both are in the UX spec's committed public-website inventory; `epics.md` returns **zero** matches for either; there is ⛔ no `apps/public` route and ⛔ no matrix surface. ⚠ **The PII-scrape gate is blind to this BY CONSTRUCTION** — route coverage reconciles *shipped pages ⇄ matrix surfaces*, so a surface that **should exist and does not** is invisible to it: ⛔ **no green check will ever surface this gap.** ⚠ A named dependency travels with it — ⛔ no provisioned helpline-number source exists, so the page cannot render a real number until the **Epic 10 per-Pariwar helpline resolution** lands. Owner: **John** (authoring).
+
 ### Story 11a.5: `<NoticeboardStrip>` Foundational Layout Component `[PRIMITIVE]`
 
 As any public or authenticated surface needing to display a strip of important notices,
@@ -4679,6 +4727,18 @@ So that announcement-rendering is consistent across surfaces.
 **And** the component consumes Story 10.9 banner/popup data; respects tier visibility (some notices public, others authenticated only)
 **And** semantic accessibility per Story 1.17 design system
 
+> ⛔ **RECONCILED 2026-08-23 (AI-11a-1, end-of-Epic-11a) — the AC's two vocabulary claims are corrected, and the public render is recorded as NOT SHIPPED.** Ruled at `2026-08-22-152`.
+>
+> **(1) *"consumes Story 10.9 banner/popup data"* means the banner lane is ONE SOURCE among several, contributing ⛔ AT MOST ONE ROW** (D1(a)). ⛔ The member read is **not** widened to return an array — that was refused **on the merits**: it would break FR-58B (*"one at a time per surface"*), load-bearing Decision 3 in `precedence.ts`, the total comparator, the shuffled-input determinism CI test, and 10.9's AC5 single-implementation rule. The presenter merges **sources**; it re-derives **no** precedence and asks **no** source to widen. The singular slot is enforced **structurally** (there is deliberately no array-of-banners field) plus an anti-widening test.
+>
+> **(2) ⭐ THE AC's `info / warning / critical` IS THE BANNER LANE'S OWN SEVERITY AXIS — ⛔ NOT the noticeboard's category vocabulary.** The two are **orthogonal** and are ⛔ not conflated. ⚠ The category vocabulary itself was **amended**: `ux-design-specification.md:491` is **SUPERSEDED BY `:1819`** — ⛔ `saffron` is **dead** (⛔ not deprecated, ⛔ not aliased, ⛔ not retained for legacy fixtures), and ⚠ **`black` CHANGES MEANING**: *bereavement* → *scheduled meeting*. This was ⛔ **not** prototype-vs-spec drift — **both lines are ratified spec text**, and `:1819` wins because it is the **component-level** contract. ⭐ The amendment was **APPLIED to the spec file at Story 11a.6** (`2026-08-22-153` D8), landing in **Appendix B with the amended line edited in place at its own line number**, because ~150 citations across ~20 files reference that spec **BY LINE**.
+>
+> **(3) ⛔ NO PUBLIC (UNAUTHENTICATED) NOTICEBOARD RENDER SHIPS — and the premise is TWO absences, not one** (D5(a)): there is **no host page**, ⛔ **and `apps/public` does not depend on `@twt/ui` at all** — a documented Story-2.5 variance. ⇒ presenter + **mobile** render only, and ⛔ **no matrix surface entry is added or needed** — the bidirectional route-coverage leg is satisfied by the **absence of a route**, ⛔ not by a declaration. ⭐ The tier filter still ships **in the presenter**, so the rule exists **before** the surface does. ⚠ **This absence is C-1 and it binds Epic 11b's `packages/ui` stories — see the Epic 11b block.**
+>
+> **(4) ⭐ FIVE INVENTED DECEASED-MEMBER NAMES WERE DELETED FROM A LIVE MEMBER TAB** (D3(a)) — fabricated bereavement records under *हाल की आहुति*. ⛔ Wiring them to real data was **not possible**: there is **no close-of-cycle (FR-19) read model**, **no story owns one**, and the data is **memorial data gated by the Epic-11b consent model**. The section takes its **real, currently-empty source** and **renders nothing when empty** — ⛔ never a fabricated row, ⛔ never a "coming soon" placeholder. ⭐ **A silent section is the CORRECT state, ⛔ not a bug to be closed quickly.** ⚠ **The two absent producers are C-3 and C-4 — see the Epic 11b block.**
+>
+> **(5) ⭐ A STANDING CONSTRAINT ON EVERY FUTURE NOTICE SOURCE, ⛔ not a one-time scoping note** (D4(a)): ⛔ **no coverage-bearing deadline ever rides the noticeboard.** Deadlines a member's coverage turns on stay in the Story 8.8 notification family ⇒ the tier filter gates what a member **SEES**, ⛔ never what a member **GETS**. ⚠ The moment a coverage-bearing deadline rides it, the tier filter becomes eligibility-adjacent and **owes a Niyamavali check**.
+
 ### Story 11a.6: `<PinnedNotice>` Component `[PRIMITIVE]`
 
 As any surface needing to render a persistent pinned notice above the fold,
@@ -4692,6 +4752,16 @@ So that critical communications stay visible until acknowledged.
 **Then** the component renders a persistent pinned banner above the fold with: title, body, severity, dismiss-with-ack pattern (only acknowledged after explicit user action)
 **And** the component respects Story 11a.1 matrix tier — public-tier pinned notices visible to all; authenticated-tier visible only to logged-in members
 **And** semantic accessibility per Story 1.17 design system
+
+> ⛔ **RECONCILED 2026-08-23 (AI-11a-1, end-of-Epic-11a) — ⭐ THE AC's *"persistent pinned banner above the fold"* DESCRIBES A COMPONENT THAT ALREADY SHIPPED. ⛔ It was NOT built as written.** Ruled at `2026-08-22-153` D1(a).
+>
+> `<BannerHost>` (Story 10.9) is **already** a persistent, above-the-fold, severity-coloured, dismiss-with-acknowledgement banner mounted above every authenticated tab. ⇒ building this AC literally would have produced a **THIRD banner surface**, **one story after** Story 11a.5 spent a whole ruling (D7(a) + `route-suppression.ts`) stopping **one banner from rendering twice**.
+>
+> ⚠ **This is the epic contradicting its own `Given`, ⛔ not the spec overriding the epic.** The AC's own anchor is **UX-DR16**, and `epics.md:406` defines UX-DR16 as *"`<PinnedNotice>`. Noticeboard **ROW** primitive with left colored stub"*; UX `:680` and `:1222` say the same; `ux-design-specification.md:1814-1821` is the **component-level contract** (*"a single notice **row** … **Surfaces:** Inside `<NoticeboardStrip>`"*). ⇒ **four ratified sources say ROW and one line of epic `Then` prose says banner** — a **defective AC sentence**, ⛔ not a competing contract. ⭐ *"Above the fold"* is recorded as **already true and requiring no work**.
+>
+> **Two further AC readings, ruled:** *"dismiss-with-ack (only acknowledged after explicit user action)"* means **ONE explicit activation of an explicit affordance**, ⛔ **not a second confirmation step** (D3(a)) — confirmation modals are reserved for **irreversible** actions, and a second step would owe a friction-budget row **with a named payer, for clearing an announcement**. ⛔ Dismissal is ⛔ **not** local-only: server-authoritative, revision-aware suppression is 10.9's and is ⛔ not reinvented. And after acknowledgement the row renders the **ratified `dismissed` (faded)** state (D4(a)) — ⚠ **two ratified post-dismiss behaviours exist in this app for the same underlying banner** (`<BannerHost>` **removes**; UX `:1818` **fades**), ⛔ neither wrong because they are **different components**, but picking silently would have left two ratified behaviours contradicting each other **with no record**.
+>
+> ⭐ **And the shareable logic EXTENDS `packages/ui/src/noticeboard/` as a PRESENTER** (D2(a)) — *"authored as an extension of `packages/ui`"* cannot mean a component, because ⛔ **`packages/ui` is headless (zero `.tsx`; its only dependency is `@twt/contracts`)**. ⚠ **This is C-1, and it binds Epic 11b's `packages/ui` stories — see the Epic 11b block.**
 
 ---
 
@@ -4712,6 +4782,22 @@ So that critical communications stay visible until acknowledged.
 **Dependencies:** Epic 11a (shell + 4-tier matrix + composition contract) · Story 0.9 closed · Epic 6 (claim approval + Story 6.16 reversed-denial hook + Story 6.9 consent) · Epic 7 (pool) · Epic 8 (contribution events) · Epic 9 (reconciliation settled + Story 9.5 canonical financial-truth events).
 
 **Story label legend:** `[PRIMITIVE]` · `[SURFACE]` · `[GOVERNANCE]` · `[CONSUMER]`.
+
+> ⛔ **RECONCILED 2026-08-23 (AI-11a-1, end-of-Epic-11a) — ⭐ FIVE CARRIES FROM EPIC 11a LAND ON THIS EPIC. Read this before authoring any story below. One of them (SD-2, at Story 11b.3) is BLOCKING.**
+>
+> ⚠ **Why this block exists at all:** the Epic 11a/11b prose was reconciled once already, on 2026-08-19 (AI-10-2) — a genuine success by its own terms — and it **still missed SD-2**, because it ran **against the previous retrospective's findings** while the contradiction it needed to catch was ruled **one day later**. ⇒ ⭐ **a reconciliation gated at the START of an epic cannot carry that epic's own rulings forward**, which is why reconciliation now happens at each epic's **CLOSE**, against **that epic's** rulings ([[feedback_spec_edits_must_propagate_to_tasks]] applies downstream: these corrections must reach the Tasks list, not only the ACs).
+>
+> | # | Carry | Verified state at Epic 11a's close |
+> |---|---|---|
+> | **C-1** | ⛔ **`apps/public` does NOT depend on `@twt/ui`, and `@twt/ui` has NO React** — zero `.tsx`, its only dependency is `@twt/contracts`, its modules are **headless presenters** | **Shape question, ⛔ no owner.** Stories **11b.5** and **11b.7** are specified as `packages/ui` **components** whose named consumers are **Astro public surfaces** — ⛔ that composition does not exist today. ⚠ Also open from 11a.5: the `<NoticeboardStrip>` public-embed variant has **no host page**, for the same reason |
+> | **C-2** | ⛔ **No accessibility CI gate exists** (19 gates in `scripts/`, ⛔ none a11y) while **Story 11b.8 makes an accessibility audit a LAUNCH-BLOCKER** (UX-DR70) | → **AI-11a-3** (checklist/invariant **family 13 first**; a CI gate ⛔ only if later mechanically justified). ⚠ Two a11y defects sit **NOT ADDRESSED** — ⛔ not *closed*, ⛔ not *resolved* — in the mobile app from 11a.6. ⭐ 11a.6 left a **worked, commented example** of the explicit-`accessible={true}`-grouping pattern in `PinnedItem.tsx`; the audit pass should start there |
+> | **C-3** | ⛔ **No aggregate-stat read model exists** (11a.5 deferral (b)) ⇒ **Story 11b.7's `<StatCardStrip>` has NO PRODUCER** | **No owner.** ⚠ `apps/mobile/lib/format-count.ts` has ⛔ **no PRODUCTION call site, BY DESIGN** (only a unit test and a pointer comment) — ⛔ do **not** delete it as dead code |
+> | **C-4** | ⛔ **The close-of-cycle (FR-19) read model has NO PRODUCER, ⛔ AND naming a deceased member on a member-wide surface is gated by the Epic 11b consent model** — ⛔ **TWO GATES, NOT ONE** ([[project_consent_subject_key_convention]]) | **Stories 11b.4 / 11b.5 / 11b.6 land exactly here.** ⭐ 11a.5 **deleted five invented deceased-member names** rather than making them real: the section renders nothing, and *"a silent section is the CORRECT state, ⛔ not a bug to be closed quickly"* |
+> | **C-5** | ⭐ **Row 17's publication posture GENERALIZES to Stories 11b.1, 11b.3 and 11b.6** — all public surfaces inheriting **no operable pull-lever**, a **non-immediate edge cache**, and **DPDPA counsel ⛔ not engaged** | **Load-bearing → AI-11a-5.** ⚠ **And the Story 11a.3 death-blindness ruling binds them DIRECTLY** — see below |
+>
+> ⭐⛔ **C-5's SHARP EDGE, STATED ONCE FOR THE WHOLE EPIC: ANY 11b SURFACE THAT READS `members.state` IS BLIND TO DEATH BY CONSTRUCTION — ON AN EPIC WHOSE ENTIRE SUBJECT IS DECEASED MEMBERS.** `MEMBER_LIFECYCLE_STATES` carries ⛔ **no `deceased` label**; death is an **overlay** (`account-frozen`), ⛔ never a lifecycle label (`2026-08-21-145` RD1, ✅ ratified `2026-08-21-146`; [[project_death_is_an_overlay_not_a_state]]). ⇒ ⛔ **no story below may derive "is this member deceased?" from `members.state`, and a roster predicate that omits the overlay conjunct is wrong in the same way Story 11a.3's was — that one published a deceased member to the open internet marked "Active".**
+>
+> ⚠ **And "done" is NOT "live".** Epic 11a is **technically delivered**; the public identity is ⛔ **not operationally or publicly live**. Row 17 stays **open** because ≥2-trustee ratification is its **second** closure leg (`2026-08-21-147`, `2026-08-21-148`). ⚠ Even once it closes the control is ⛔ **NOT IMMEDIATE**: `/members` is edge-cacheable at `s-maxage=300`, so a pulled Pariwar keeps being served real member names **from every warm PoP, per page number**. ⛔ Direct SQL is **NOT** the operational fallback.
 
 ### Story 11b.1: Sahyog Drive Active + Archive — Searchable, Paginated, No Bulk Export + Remembrance-Not-Analytics Invariant `[SURFACE]`
 
@@ -4746,6 +4832,14 @@ So that the surface supports trust transparency and claim discoverability withou
 > ⚠ **`block` is additionally gated** on `2026-08-19-137`'s migration mechanism (member-aware publish + member choice surface), neither of which exists.
 >
 > ⛔ **The full-name ruling does NOT reach this surface.** `-135`/`-136` were scoped to **Story 11a.3, the Member Directory**. Contributor and donor name forms here are **unruled** and unchanged. ⚠ Changing them requires its own Panel ruling.
+
+> ⛔ **RECONCILED 2026-08-23 (AI-11a-1, end-of-Epic-11a) — the search AC above reads `members.state` by implication, and inherits Story 11a.3's ANTI-ENUMERATION posture as a FLOOR.**
+>
+> **(1) ⛔ *"search … by deceased member's name"* must NOT be built on a `members.state` predicate** — death is an **overlay** and every `members.state` predicate is **blind to it by construction** (see the epic-level C-5 block). ⚠ The failure mode here is the **inverse** of Story 11a.3's and is ⛔ not hypothetical: 11a.3 wrongly **published** a deceased member; a drive/archive surface that filters on lifecycle state would wrongly **omit** the very people it exists to commemorate.
+>
+> **(2) ⚠ ANTI-ENUMERATION IS INHERITED AS A FLOOR, ⛔ NOT A CEILING** — and the mechanism the AC points at was found **vacuous by construction** at Story 11a.3. ⛔ **The recorded IP is not evidence** (`2026-08-21-145` RD2): under `trustProxy: true` a caller-supplied `X-Forwarded-For` yields a fresh rate-limit bucket **and** a fresh abuse-counter window per request. ⇒ *"scraper-detection heuristics apply … per Story 11a.3 patterns"* is only true of the **corrected** pattern — forward **only** `Astro.clientAddress`, ⛔ never the inbound chain — and any abuse counter here is **a COUNTER, ⛔ not a forensic record**.
+>
+> ⚠ **Its 2026-08-19 name-form ruling above is UNCHANGED and still binds** (contributor and donor name forms are **unruled**; the `-135`/`-136` full-name ruling ⛔ does not reach this surface).
 
 ### Story 11b.2: ContributionList Components — Table (50k-row Desktop) + Mobile Row (10k Contract) `[PRIMITIVE]`
 
@@ -4793,6 +4887,25 @@ So that public transparency exists for trust legitimacy while member-only sensit
 **When** `sahyog_vivran_publication` consent is revoked (Story 2.7)
 **Then** the Sahyog Vivran page is taken down within the cache-safe invalidation window (Cloudflare TTL + Story 4.8 conservative-recompute pattern); a "Page removed by family request" placeholder serves at the URL
 **And** consent re-grant restores the page; full audit trail of consent transitions preserved per Story 2.7
+
+> ⛔⛔ **NOT RECONCILED — BLOCKED. 2026-08-23 (AI-11a-1, end-of-Epic-11a). ⭐ THIS IS SIGNIFICANT DISCOVERY SD-2, AND IT IS THE SECOND INSTANCE OF SD-1's DEFECT CLASS, ONE EPIC LATER. ⛔ Do NOT author this story until AI-11a-2's blocking session rules it.**
+>
+> ⚠ **Recorded as BLOCKED, ⛔ not as reconciled** — a reconciliation states what the correct reading is, and here **there is no correct reading available without a ruling** ([[feedback_closure_language_precision]]).
+>
+> ⛔ **The AR-48 AC above — *"the fragment is server-rendered at request time for authenticated viewers + bypasses edge cache; public visitors see a placeholder"* — is specified against the EXACT contract Story 11a.2 ruled UNBUILDABLE** at `2026-08-20-141` cl.6, **one epic earlier**. Verified live at Epic 11a's close:
+>
+> | Claim the AC depends on | Verified state |
+> |---|---|
+> | Members are cookie-session | ⛔ **False.** Members are **token-bearer** — `member-session-guard.ts` verifies an access-token JWT from the **`Authorization` header**, `exp ≤ 15 min` |
+> | A browser can present that token | ⛔ **False.** A browser navigating to `twt.org/...` sends **cookies, never an `Authorization` header** |
+> | Some browser surface holds a member token | ⛔ **False.** There is ⛔ **no `apps/member-web/`**; `apps/` holds `admin · api · jobs · mobile · public`. ⛔ **No browser surface holds a member token, by any mechanism** |
+> | Server-side auth branching is permitted on the public shell | ⛔ **False.** `architecture.md:504-517` commits that fragments **hydrate client-side**, that the SSR output carries *"no PII, no member-state, and no auth-derived branching"*, and that *"the auth boundary lives at the API … **not at the page or the edge**"* |
+>
+> ⚠ **AND THIS IS A SHARPER CASE THAN STORY 11a.2's WAS.** The fragment's payload is **nominee bank details on a live pool** ([[project_nominee_bank_disbursement_channel]]). ⇒ inventing a browser member session to satisfy the AC means **minting a new auth surface at the page layer** — which the architecture forbids — **while the data at stake is money-routing PII**.
+>
+> ⭐ **THREE DISPOSITIONS ARE AVAILABLE, AND EACH IS A RULING, ⛔ NOT AN AUTHORING CHOICE:** **(a)** mint a **member browser-session story** as a predecessor, with its own PII-posture routing note · **(b)** **narrow the fragment to public-shell-only** · **(c)** **defer the authenticated half**. ⚠ Astro 6 **server islands** (`server:defer`) are the **recorded leading candidate** from `2026-08-20-141` D2 — ⭐ the one reading under which the AC and the architecture agree — ⛔ but they still need **a viewer the browser cannot identify**, so they are ⛔ not a disposition on their own. → **AI-11a-2**.
+>
+> ⚠ **Two further constraints on this surface, ⛔ neither discharged by the ruling above:** its **consent gating** is C-4's second gate, ⛔ not the same act as the FR-19 read model; and Story 11a.2's **fail-closed cache-policy leg** now applies — a rendering surface with ⛔ **no `Cache-Control` fails CI**, and per-surface `cache_policy` is **declared explicitly in the matrix**, ⛔ never inferred from field tiers.
 
 ### Story 11b.4: MemorialAuthorshipSurface — Family Writes the Story + Family-Authorship-Preserved Invariant `[SURFACE]`
 
@@ -4865,6 +4978,14 @@ So that the trust's institutional memorial honors deceased members while respect
 **And** the audit chain preserves all consent transitions per Story 2.7; the trust does not retain memorial-listing data beyond consent (active or revoked) for public surfacing — Story 1.5 PII encryption + Story 3.12 RTBF patterns apply for retention boundaries
 **And** if the deceased's family is multi-member (multiple nominees, kin), the system handles consent by the consenting party with audit attribution; conflicts surface to trustee moderation per Story 10.10
 
+> ⛔ **RECONCILED 2026-08-23 (AI-11a-1, end-of-Epic-11a) — TWO gates, ⛔ not one, and the surface reads a predicate that cannot see death.**
+>
+> **(1) ⛔ THE PRODUCER DOES NOT EXIST, AND CONSENT IS A SEPARATE GATE (C-4).** There is **no close-of-cycle (FR-19) read model** and ⛔ **no story owns one**; naming a deceased member on a member-wide surface is **additionally** gated by the Epic 11b consent model ([[project_consent_subject_key_convention]]). ⛔ **Neither gate discharges the other.** ⭐ Story 11a.5 met exactly this seam and ruled the third path: take the **real, currently-empty source** and **render nothing when empty** — ⛔ never a fabricated row, ⛔ never a "coming soon" placeholder.
+>
+> **(2) ⛔ THE ROLL'S MEMBERSHIP PREDICATE MUST READ THE `account-frozen` OVERLAY, ⛔ NEVER `members.state`** — see the epic-level C-5 block. ⚠ On this surface the blindness inverts: a `members.state` predicate would **omit the deceased from the memorial roll**.
+>
+> ⚠ **Its 2026-08-19 name-form ruling above is UNCHANGED and still binds** — In Memoriam keeps **first-name + last-initial** at the public tier, and the `-135`/`-136` full-name ruling ⛔ does **not** reach it. ⭐ Reinforced by Epic 11a's own experience: 11a.3's full-name publication is the surface that published a **deceased member marked "Active"**, and this roll is **consent-governed, revocable, and its subject cannot re-consent**.
+
 ### Story 11b.7: StatCardStrip Component `[PRIMITIVE]`
 
 As any Sahyog Drive / Sahyog Vivran / member dashboard surface displaying aggregate statistics,
@@ -4879,6 +5000,12 @@ So that aggregate stats render consistently with canonical financial-truth (Stor
 **And** all stats derive from Story 9.5 canonical events; no yellow-pill or attested-only counts; no inferred or estimated totals during live cycles
 **And** matrix-tier respecting: aggregate counts may be public; per-member breakdowns are tier-gated
 **And** Hindi-first numeral formatting per Story 1.17 numeral discipline + Story 2.1
+
+> ⛔ **RECONCILED 2026-08-23 (AI-11a-1, end-of-Epic-11a) — ⛔ THIS COMPONENT HAS NO PRODUCER (C-3), AND ITS `packages/ui` FRAMING DOES NOT COMPOSE WITH ITS NAMED CONSUMERS (C-1).**
+>
+> **(1) ⛔ No aggregate-stat read model exists** (11a.5 deferral (b)) ⇒ every stat this AC enumerates — pools spawned, contributors, amount raised, active pools — has ⛔ **no source**, while the AC **simultaneously and correctly** forbids deriving them from anything but Story 9.5 canonical events (⛔ no attested-only counts, ⛔ no live-cycle estimates). ⚠ **No owner.** ⛔ `apps/mobile/lib/format-count.ts` has **no PRODUCTION call site, BY DESIGN** — only a unit test and a pointer comment — so ⛔ do **not** delete it as dead code, and ⛔ do **not** read its existence as a producer.
+>
+> **(2) ⛔ *"authored as an extension of `packages/ui`"* CANNOT MEAN A COMPONENT HERE.** `packages/ui` is **headless** — zero `.tsx`, its only dependency is `@twt/contracts` — and ⛔ **`apps/public` does not depend on it at all** (a documented Story-2.5 variance). ⇒ as at Story 11a.6, the buildable reading is a **presenter** plus a per-stack render layer; ⚠ shipping an Astro consumer additionally requires **reversing a prior story's deliberate declination**, which is a ruling, ⛔ not an authoring choice. Same constraint on **Story 11b.5**.
 
 ### Story 11b.8: Real Data Test Gate + Accessibility Audit Gate (Phase 4 Launch-Blockers) `[GOVERNANCE]`
 

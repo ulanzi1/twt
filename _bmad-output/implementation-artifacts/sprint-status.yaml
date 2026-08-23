@@ -1,4 +1,42 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-23d (⭐ AI-11a-1(a) DISCHARGED — the FIRST end-of-epic `epics.md`
+#   reconciliation. ⛔ ZERO ROWS FLIP. This is a governance doc act with no story row and
+#   ⛔ no development_status key; ⛔ epic-11a stays in-progress, ⛔ epic-11b stays backlog,
+#   ⛔ Row 17 untouched and still `open`. ⛔ No other row moves.
+#
+#   WHAT LANDED: **127 lines ADDED, 0 REMOVED** in `_bmad-output/planning-artifacts/epics.md`
+#   — ⛔ recorded as RECONCILIATIONS, ⛔ NEVER silent rewrites: every original AC line stands
+#   and carries an annotation beside it, matching `99b4a46`'s discipline exactly. ELEVEN blocks:
+#   six across Epic 11a (11a.1 ... 11a.6) and five across its SUCCESSOR Epic 11b (epic-level
+#   carries + 11b.1 + 11b.3 + 11b.6 + 11b.7).
+#
+#   ⭐ THE POINT OF THE NEW VEHICLE, AND WHY THE OLD ONE MISSED: AI-10-2 ran 2026-08-19 against
+#   the PREVIOUS retro's findings; the contradiction it needed to catch was ruled 2026-08-20
+#   (`2026-08-20-141`). A reconciliation gated at an epic's START ⛔ CANNOT carry that epic's
+#   OWN rulings forward. This pass runs at the epic's CLOSE, against Epic 11a's own decisions
+#   `2026-08-20-140` ... `2026-08-22-153`.
+#
+#   ⚠ ONE BLOCK IS ⛔ NOT A RECONCILIATION AND IS LABELLED SO: Story 11b.3 is recorded
+#   **NOT RECONCILED — BLOCKED** (SD-2). ⛔ A reconciliation states the correct reading; here
+#   there is NO correct reading available without a ruling, and inventing one is the very
+#   failure the block exists to stop ([[feedback_closure_language_precision]]). Its three
+#   dispositions are named as RULINGS, ⛔ not authoring choices ⇒ ⛔ Story 11b.3 MUST NOT be
+#   authored until AI-11a-2's blocking session sits.
+#
+#   ⚠ AI-11a-1 IS ⛔ NOT FULLY DISCHARGED — ⭐ only vehicle (a). Vehicle (b) (a story-authoring
+#   pass that reconciles a defective AC WRITES THE RECONCILIATION BACK into `epics.md` in the
+#   same commit family) is ⛔ STANDING and fires at the NEXT authoring pass, which is Epic 11b's
+#   first story. ⛔ Do not record AI-11a-1 as closed on the strength of this entry.
+#
+#   ⚠ FIVE LOAD-BEARING NEGATIVE CLAIMS WERE RE-VERIFIED LIVE IN THE TREE at this HEAD before
+#   being written into the build document, ⛔ not carried over from the retro on trust
+#   ([[feedback_negative_claims_checkable_in_repo]], [[feedback_verify_before_committing_governance_claims]]):
+#   `apps/` = admin|api|jobs|mobile|public (⛔ no `apps/member-web/`) · `@twt/ui` deps = ONLY
+#   `@twt/contracts`, ZERO `.tsx` · `apps/public` package.json has ⛔ no `@twt/ui` · 19 gate
+#   dirs in `scripts/`, ⛔ none a11y · `MEMBER_LIFECYCLE_STATES` carries ⛔ NO `deceased` label.
+#   ⭐ ONE retro phrasing was TIGHTENED as a result, ⛔ not copied: `format-count.ts` has no
+#   PRODUCTION call site — it does have a unit test and a pointer comment, and a reader running
+#   a dead-code check would have hit that discrepancy.)
 # last_updated: 2026-08-23c (⭐ EPIC 11a RETROSPECTIVE — Public Trust Identity Shell, the
 #   PUBLICATION-POSTURE epic. ONE ROW FLIPS: epic-11a-retrospective optional -> done.
 #   ⛔ epic-11a stays in-progress, BYTE-UNCHANGED — every one of the eleven epic rows is

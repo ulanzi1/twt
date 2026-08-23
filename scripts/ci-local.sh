@@ -98,15 +98,22 @@ if [ -n "${DATABASE_URL:-}" ]; then
   # Before the fix such a spec still ran (the exported DATABASE_URL leaked into the unit job), so this
   # failure mode is CREATED by the fix and must not rest on a one-time manual check. Both sets are DERIVED,
   # never hand-listed: if they ever diverge, this fails loudly instead of quietly testing less.
-  gated=$(grep -rl "DATABASE_URL" --include="*.spec.ts" --include="*.test.ts" packages apps 2>/dev/null \
+  # Matches on `hasDatabase` (the actual `describe.skipIf(!hasDatabase)` gating identifier), not the
+  # literal string `DATABASE_URL` — most gated specs import `hasDatabase` from a shared setup helper and
+  # never spell out `DATABASE_URL` themselves, so that literal was a coincidental, not structural, proxy.
+  gated=$(grep -rl "hasDatabase" --include="*.spec.ts" --include="*.test.ts" packages apps 2>/dev/null \
             | sed 's|/tests/.*||; s|/src/.*||' | sort -u)
   filtered=$(grep '^  run "integration-tests"' "$0" | grep -o '@twt/[a-z-]*' | sed 's|@twt/||' | sort -u \
             | while read -r pkg; do
                 if [ -d "packages/$pkg" ]; then echo "packages/$pkg"; else echo "apps/$pkg"; fi
               done | sort -u)
   if [ "$gated" != "$filtered" ]; then
+    missing=$(comm -23 <(printf '%s\n' "$gated") <(printf '%s\n' "$filtered"))
+    extra=$(comm -13 <(printf '%s\n' "$gated") <(printf '%s\n' "$filtered"))
     printf '\n\033[1;31m✗ AI-10-5 coverage guard FAILED\033[0m — DB-gated packages != integration filter set.\n'
-    printf 'Specs gated on DATABASE_URL live in:\n%s\n\nintegration-tests filters to:\n%s\n\n' "$gated" "$filtered"
+    [ -n "$missing" ] && printf 'Missing from --filter (has DB-gated specs, not integrated):\n%s\n\n' "$missing"
+    [ -n "$extra" ] && printf 'In --filter but no DB-gated specs found (stale entry?):\n%s\n\n' "$extra"
+    printf 'Full sets — gated:\n%s\n\nintegration-tests filters to:\n%s\n\n' "$gated" "$filtered"
     printf 'Add the missing package to the --filter list below, or those specs run NOWHERE.\n'
     FAILED+=("ai-10-5-coverage-guard")
   else

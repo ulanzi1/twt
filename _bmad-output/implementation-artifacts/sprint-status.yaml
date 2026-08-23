@@ -1,4 +1,41 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-23b (Story 11a.6 — bmad-code-review COMPLETE. ONE ROW FLIPS:
+#   11a-6-pinned-notice-component review -> done.
+#   ⛔ epic-11a stays in-progress — 11a.6 was the LAST story in the epic, so the epic is now
+#   ELIGIBLE for `done`, but that is a SEPARATE, deliberate epic-closure action
+#   (`epic-11a-retrospective` is `optional`), ⛔ not a side effect of this row flipping. ⛔ No other
+#   row moves. ⛔ Row 17 untouched.
+#
+#   3 review layers run (Blind Hunter / Edge Case Hunter / Acceptance Auditor) against
+#   `origin/main..HEAD` (13 commits, 20 files): 0 decision-needed, 7 patch, 4 defer, 3 dismissed as
+#   noise (one REFUTED by the Acceptance Auditor's own project-access check — a flagged
+#   `@tamagui/lucide-icons-2` import was confirmed an existing dependency; one already routed via
+#   this story's own AC8 mechanism; one the Auditor itself downgraded to a non-defect).
+#
+#   ⭐ All 7 patches were APPLIED, not left as action items: an ineffective `useCallback`
+#   memoization (a `dismiss` object dep defeated it — TanStack Query returns a fresh object each
+#   render even though `mutate` itself is stable); a tautological a11y test whose OR collapsed to a
+#   vacuous check; a "zero banner-file edits" test tightened from one hardcoded string per file to
+#   a byte-for-byte SHA-256 pin against each file's content at the story's own `baseline_commit`; a
+#   vacuous "no clock" arity-only assertion strengthened with a real fake-timer determinism proof;
+#   a gameable dismissal-key-format guard (matched one template-literal spelling) widened to catch
+#   string-concat / `.join(':')` / any-delimiter reimplementations; a loose `>=12` microcopy
+#   population floor tightened to the exact committed count (14, both locales); and a missing
+#   `AccessibilityInfo.announceForAccessibility` call added on dismiss (AC4 requires the
+#   `dismissed` state be ANNOUNCED, not merely reflected in a label prop a focused screen reader
+#   will not necessarily re-read before the control it was on unmounts).
+#
+#   ⚠ 4 items DEFERRED to `deferred-work.md` (code review of 11a-6-pinned-notice-component,
+#   2026-08-23), each with a re-trigger: `onDismiss` not row-scoped (unreachable today — at most
+#   one row exists per AC1) · an unbounded `acknowledged` Set (low real-world impact) ·
+#   unsubstantiated test-run claims in `.decision-log.md`/`sprint-status.yaml` (documentation
+#   completeness, not a code defect) · a `dismiss_a11y` cross-catalog copy-parity claim with no
+#   automated test (true today, unguarded against drift).
+#
+#   `pnpm ci:local` re-verified after the patches: mobile (342 tests), @twt/ui (174 tests) and the
+#   microcopy gate all green; `pnpm microcopy:check` still passes (18 copy files, zero findings)
+#   after the tightened population-count assertion.
+#
 # last_updated: 2026-08-23 (Story 11a.6 — dev-story pass COMPLETE; all 57 task boxes checked.
 #   ONE ROW FLIPS: 11a-6-pinned-notice-component in-progress -> review.
 #   ⛔ epic-11a stays in-progress. ⚠ ⭐ 11a.6 IS THE LAST STORY IN THE EPIC, so epic-11a becomes
@@ -10068,7 +10105,7 @@ development_status:
   # check it out or merge it. ⛔ This story does NOT touch launch-gate Row 17.
   11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only: done
   11a-5-noticeboard-strip-foundational-layout-component: done
-  11a-6-pinned-notice-component: review
+  11a-6-pinned-notice-component: done
   epic-11a-retrospective: optional
 
   # ==========================================================================

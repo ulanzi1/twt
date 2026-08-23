@@ -4,7 +4,7 @@ baseline_commit: d902b04590497d109ad725d07ae6f319f0788394
 
 # Story 11a.6: `<PinnedNotice>` Component `[PRIMITIVE]`
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -499,6 +499,23 @@ vs *"Not addressed"* — ⛔ never collapsed, and ⛔ never marked closed merely
   - [x] ⚠ Run the live-DB leg and **record its result openly**, attributing any failure rather than assuming it ([[project_known_livedb_test_failures]], [[project_ci_local_double_run_pollution]]) — ⭐ this story touches ⛔ zero files in `apps/api`, `apps/jobs`, `packages/domain`, `packages/events`, `packages/contracts`, `packages/queue`
   - [x] Sprint-status ledger entry per [[project_sprint_status_ledger]] — one combined top-of-file entry; flip **only** `11a-6-pinned-notice-component`. ⚠ ⭐ **`epic-11a` becomes eligible for `done` — 11a.6 is the LAST story in the epic** (`epic-11a-retrospective` is `optional`). ⛔ Row 17 untouched
   - [x] ⛔ **REBASE-merge**, never squash ([[project_story_automator_ops]])
+
+### Review Findings
+
+> bmad-code-review (2026-08-23), diff `origin/main..HEAD` (13 commits, 20 files) vs this story file.
+> 3 layers run (Blind Hunter, Edge Case Hunter, Acceptance Auditor) — 0 decision-needed, 7 patch, 4 defer, 3 dismissed as noise.
+
+- [x] [Review][Patch] Ineffective/inconsistent memoization in `PanchayatNoticeboard.tsx` — `isAcknowledged` is recreated every render (no `useCallback`) while `onDismiss`'s `useCallback([banner, dismiss])` likely never memoizes, since `dismiss` (the TanStack Query mutation object) is a fresh reference on most renders. [apps/mobile/components/panchayat/PanchayatNoticeboard.tsx]
+- [x] [Review][Patch] Tautological accessibility test — the `accessible={true} accessibilityLabel=\{a11yLabel\}|accessibilityLabel=\{a11yLabel\}` regex's OR collapses to "does the label appear anywhere in the file," proving nothing about co-location on the AC6 wrapper. [apps/mobile/tests/unit/panchayat-noticeboard-render.test.ts]
+- [x] [Review][Patch] "Zero edits (D7(a))" claim oversold by its own test — it only checks one hardcoded string/signature per `banners/*` file, not a full diff against `origin/main`, so unrelated edits to those files would still pass. [apps/mobile/tests/unit/panchayat-noticeboard-render.test.ts]
+- [x] [Review][Patch] Vacuous purity assertion — `derivePinnedNoticeViewModel.length).toBe(1)` under the "takes NO clock" heading checks function arity only, not actual determinism or absence of `Date`/clock usage. [packages/ui/tests/noticeboard/pinned-notice.test.ts]
+- [x] [Review][Patch] Gameable "one implementation of the key format" guard — the source-scan regex matches only one template-literal spelling (`:${`); string concatenation or a different delimiter would evade it while still violating the invariant it claims to enforce. [apps/mobile/tests/unit/panchayat-noticeboard-render.test.ts]
+- [x] [Review][Patch] Weak non-vacuous bound in the microcopy proof test — `resolvedStrings(...).length >= 12` would still pass if several real keys were accidentally dropped. [scripts/microcopy/noticeboard.test.ts]
+- [x] [Review][Patch] No accessibility announcement on the dismiss-state transition — AC4 requires the `dismissed` state be "announced," but nothing calls `AccessibilityInfo.announceForAccessibility` when the affordance fires; a focused control can go silent/vanish for VoiceOver/TalkBack users with no spoken confirmation. [apps/mobile/components/panchayat/PinnedItem.tsx:123-141]
+- [x] [Review][Defer] `onDismiss` is not row-scoped in `PanchayatNoticeboard.tsx` — the same closure, bound to a single `banner` variable, is passed to every mapped `<PinnedNotice>`, unlike `isAcknowledged` which is deliberately correlated by row id. Not reachable today (the banner lane yields at most one row — AC1, `presenter.ts:153`), so no live bug; a footgun for the next producer, echoing deferred-work item (c)'s own trigger. Building a generalized fix now would also cut against AC1's minimalism ruling. [apps/mobile/components/panchayat/PanchayatNoticeboard.tsx] — deferred, pre-existing invariant makes it unreachable
+- [x] [Review][Defer] Unbounded `acknowledged` `Set<string>` in `PanchayatNoticeboard.tsx` — never pruned as banners rotate. Low real-world impact (bounded by distinct banners seen per session) but an unbounded-growth code smell. [apps/mobile/components/panchayat/PanchayatNoticeboard.tsx] — deferred, low severity
+- [x] [Review][Defer] Governance claims recorded with no artifact in the diff — `.decision-log.md` / `sprint-status.yaml` / the Debug Log assert specific test-run results ("23/23 twice," "254 files / 3051 tests," microcopy probe counts) with no log excerpt or CI link in the diff to substantiate them. [.decision-log.md, sprint-status.yaml] — deferred, documentation-completeness gap not a code defect
+- [x] [Review][Defer] `dismiss_a11y` copy-parity claim not backed by an automated cross-catalog test — the doc comment asserts the copy "matches `banners.json`'s wording word-for-word"; true today (manually verified) but nothing tests it, so the two catalogs could silently drift. [packages/ui/src/noticeboard/i18n-keys.ts] — deferred, low severity
 
 ---
 

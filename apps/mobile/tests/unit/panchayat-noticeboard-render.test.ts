@@ -13,6 +13,7 @@
 //      fixtures survive, no hex literal survives, the presenter drives composition, the loading state is
 //      a skeleton rather than a spinner, and `<PollsEntry>` is still there and still unrestructured.
 
+import { createHash } from 'node:crypto'
 import { readFileSync, existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -373,7 +374,10 @@ describe('⭐ the banner appears EXACTLY ONCE on the panchayat tab (Trap 3b / D7
     // acknowledgement is wired, and wired to what already exists.
     const board = stripComments(read(BOARD))
     expect(/useDismissBannerMutation\(pariwarId\)/.test(board)).toBe(true)
-    expect(/dismiss\.mutate\(/.test(board)).toBe(true)
+    // ⚠ `dismiss.mutate` is destructured to a stable `dismissMutate` local (Review Findings, patch 1:
+    // depending on the whole `dismiss` object in a `useCallback` dep array silently defeated it, since
+    // `useMutation` returns a fresh object identity most renders even though `mutate` itself is stable).
+    expect(/dismissMutate\(/.test(board)).toBe(true)
     expect(/kind: 'dismissed'/.test(board)).toBe(true)
     // ONE explicit activation (D3(a)) — ⛔ no confirmation modal, ⛔ no sheet, ⛔ no swipe-only path,
     // ⛔ no auto-dismiss on scroll or timer.
@@ -415,9 +419,19 @@ describe('⭐ the banner appears EXACTLY ONCE on the panchayat tab (Trap 3b / D7
     // to RE-SURFACE the notice.
     const board = stripComments(read(BOARD))
     expect(/bannerDismissalKey\(banner\.banner_id, banner\.revision\)/.test(board)).toBe(true)
-    // ⛔ No second implementation of the `${id}:${revision}` format anywhere in the panchayat module.
+    // ⛔ No second implementation of the key format anywhere in the panchayat module. ⚠ Strip the ONE
+    // blessed call first, then look for the id and `revision` combined ANY OTHER way — string
+    // concatenation, `.join(':')`, a different delimiter — ⛔ not just the one `:${` template-literal
+    // spelling, which any of those would silently evade (Review Findings, patch 5).
     for (const file of ['PanchayatNoticeboard.tsx', 'PinnedItem.tsx', 'banner-notice.ts']) {
-      expect(/:\$\{/.test(stripComments(read(`${PANCHAYAT_DIR}/${file}`))), file).toBe(false)
+      const src = stripComments(read(`${PANCHAYAT_DIR}/${file}`))
+      const withoutBlessedCall = src.replace(/bannerDismissalKey\([^)]*\)/g, '')
+      expect(
+        /(banner_id|bannerId)[\s\S]{0,40}revision|revision[\s\S]{0,40}(banner_id|bannerId)/.test(
+          withoutBlessedCall,
+        ),
+        file,
+      ).toBe(false)
     }
   })
 
@@ -429,21 +443,25 @@ describe('⭐ the banner appears EXACTLY ONCE on the panchayat tab (Trap 3b / D7
 
   it('⛔ does NOT edit ANY of the four `components/banners/*` files (D7(a))', () => {
     // Zero edits: the noticeboard reuses the endpoint, the mutation hook and the key helper as they are.
-    // Asserted by shape rather than by diff — each file still says what 10.9/11a.5 left it saying.
-    expect(/MIN_TOUCH_TARGET = 44/.test(read('apps/mobile/components/banners/BannerHost.tsx'))).toBe(true)
-    expect(
-      /export function bannerDismissalKey/.test(read('apps/mobile/components/banners/copy.ts')),
-    ).toBe(true)
-    expect(
-      /export function useDismissBannerMutation/.test(
-        read('apps/mobile/components/banners/useMemberBannersQuery.ts'),
-      ),
-    ).toBe(true)
-    expect(
-      /export function isBannerRenderedByRoute/.test(
-        read('apps/mobile/components/banners/route-suppression.ts'),
-      ),
-    ).toBe(true)
+    // ⚠ Asserted BYTE-FOR-BYTE, ⛔ not by one hardcoded string/signature per file — a single-substring
+    // check only proves that ONE spot survives, not that the file is unedited (Review Findings, patch 3).
+    // Each hash below was taken directly from these files at the story's own `baseline_commit`
+    // (`d902b04590497d109ad725d07ae6f319f0788394`, the story frontmatter) — ⛔ NOT re-derived from the
+    // current tree, so this genuinely proves "unedited" rather than "unedited relative to itself".
+    const UNEDITED_SHA256: Record<string, string> = {
+      'apps/mobile/components/banners/BannerHost.tsx':
+        'ab19f9e5b001bd3aafc65c335f8463fc9bc7e2f26b457426feee76cc1b52c08c',
+      'apps/mobile/components/banners/copy.ts':
+        'fb3e79499d2228faebe4aaee6f5aeb3f05d775675bb6e65d97ac83a7861dc9af',
+      'apps/mobile/components/banners/useMemberBannersQuery.ts':
+        'bdee1bc726059eb72cc68f1e1e9a00434c94ebcedb1a756585903cefb20facda',
+      'apps/mobile/components/banners/route-suppression.ts':
+        '3865ff409f17f5c9a0c6f46cafb730323018ca44e4186927122f318dedb91a52',
+    }
+    for (const [file, expectedHash] of Object.entries(UNEDITED_SHA256)) {
+      const actualHash = createHash('sha256').update(read(file)).digest('hex')
+      expect(actualHash, file).toBe(expectedHash)
+    }
   })
 })
 
@@ -468,9 +486,16 @@ describe('⭐ the ROW promoted — semantic accessibility and the affordance (AC
     // guarantee. D6(a) removes the `Pressable`, so the unit is re-established explicitly — around
     // title+meta ONLY, carrying the presenter's composed label.
     expect(/accessible=\{true\}/.test(row)).toBe(true)
-    expect(/accessible=\{true\} accessibilityLabel=\{a11yLabel\}|accessibilityLabel=\{a11yLabel\}/.test(row)).toBe(
-      true,
-    )
+    // ⚠ Both attributes must land on the SAME JSX tag — a `[^<>]*` span (no `<`/`>` between them) stays
+    // within one opening tag regardless of attribute order or what else sits between them. ⛔ Checking
+    // for `accessibilityLabel={a11yLabel}` alone (previously OR'd in as a fallback) proved nothing about
+    // co-location, since it is a strict subset of the conjunction it was meant to strengthen
+    // (Review Findings, patch 2).
+    expect(
+      /<[A-Za-z][^<>]*\baccessible=\{true\}[^<>]*\baccessibilityLabel=\{a11yLabel\}[^<>]*>|<[A-Za-z][^<>]*\baccessibilityLabel=\{a11yLabel\}[^<>]*\baccessible=\{true\}[^<>]*>/.test(
+        row,
+      ),
+    ).toBe(true)
     // ⛔ AND THE CONTROL IS A SIBLING, ⛔ NEVER A CHILD: the accessible <YStack> closes BEFORE the
     // <Button> opens. A control nested inside an `accessible` container is not individually focusable.
     const wrapperClose = row.indexOf('</YStack>')

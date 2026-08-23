@@ -24,7 +24,7 @@
 // ⛔ `presenter.test.ts` is NOT amended by this story (Decision 2026-08-22-153, D5(a)): the strip's three
 // CONTRACT fences hold because the recommended design adds NO descriptor field.
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   NOTICEBOARD_CATEGORY_LABEL_KEYS,
@@ -268,6 +268,22 @@ describe('the row presenter is PURE (AC2)', () => {
   });
 
   it('⛔ takes NO clock — the strip presenter owns the window, the row owns none of it', () => {
+    // Arity proves the SHAPE (no injectable `now` parameter) but nothing about whether the body itself
+    // still reaches for the ambient clock — ⛔ Date.now()/`new Date()` calls do not add a parameter
+    // (Review Findings, patch 4). Pin the system clock to two different instants and assert the SAME
+    // input still produces byte-identical output either way — the only thing that actually proves "no
+    // clock", arity or not.
+    const fixed = input();
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2020-01-01T00:00:00.000Z'));
+      const atT1 = derivePinnedNoticeViewModel(fixed);
+      vi.setSystemTime(new Date('2030-06-15T12:34:56.000Z'));
+      const atT2 = derivePinnedNoticeViewModel(fixed);
+      expect(atT1).toEqual(atT2);
+    } finally {
+      vi.useRealTimers();
+    }
     expect(derivePinnedNoticeViewModel.length).toBe(1);
   });
 

@@ -106,8 +106,13 @@ describe('the real noticeboard surface carries no prohibited frame', () => {
   }
 
   it('the catalogs are actually populated (an empty one would make the above vacuously green)', () => {
-    expect(resolvedStrings(EN_BOARD).length).toBeGreaterThanOrEqual(12);
-    expect(resolvedStrings(HI_BOARD).length).toBeGreaterThanOrEqual(12);
+    // ⚠ Pinned to the EXACT committed count, ⛔ not a loose `>=` floor — a loose bound would still pass
+    // if several real keys were silently dropped, which is the exact "vacuously green" failure mode this
+    // test exists to catch (Review Findings, patch 6). Bump this pair together with a locale edit that
+    // deliberately adds or removes a key; a mismatch between the two numbers below is itself a defect
+    // (locale parity), not just a stale count.
+    expect(resolvedStrings(EN_BOARD).length).toBe(14);
+    expect(resolvedStrings(HI_BOARD).length).toBe(14);
   });
 
   it("Story 11a.6's OWN new keys exist and read clean in both locales (non-vacuous)", () => {

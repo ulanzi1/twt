@@ -4799,6 +4799,27 @@ So that critical communications stay visible until acknowledged.
 >
 > ⚠ **And "done" is NOT "live".** Epic 11a is **technically delivered**; the public identity is ⛔ **not operationally or publicly live**. Row 17 stays **open** because ≥2-trustee ratification is its **second** closure leg (`2026-08-21-147`, `2026-08-21-148`). ⚠ Even once it closes the control is ⛔ **NOT IMMEDIATE**: `/members` is edge-cacheable at `s-maxage=300`, so a pulled Pariwar keeps being served real member names **from every warm PoP, per page number**. ⛔ Direct SQL is **NOT** the operational fallback.
 
+> ⭐ **RULED 2026-08-23 (AI-11a-2) — C-1 AND C-5 ARE SETTLED AT THE EPIC LEVEL. ⛔ SD-2 is ruled per-story (11b.1 · 11b.3 · 11b.6), ⛔ not here.**
+>
+> ### C-1 — RULED: headless presenter + per-stack render layer. ⛔ `@twt/ui` stays React-free.
+>
+> ⭐ **`packages/ui` presenters are the shared layer; the `.astro` markup lives in `apps/public`.** `apps/public` **adds `@twt/ui` as a dependency**; `@twt/ui`'s dependency list stays **exactly `@twt/contracts`**. ⛔ No React, ⛔ no `.astro`, ⛔ no framework of any kind enters `@twt/ui` — that headlessness is what lets **one** presenter serve the RN bundle **and** an Astro surface without either dictating to the other ([[project_contracts_domain_bundle_boundary]]). ⇒ Stories **11b.2**, **11b.5** and **11b.7** are authored as **presenters + Astro render layers**, ⛔ not as components.
+>
+> ⚠ ⛔ **A CHARACTERISATION IN STORY 11b.7's 2026-08-23 BLOCK IS CORRECTED HERE, ⛔ NOT SILENTLY.** That block states an Astro consumer *"requires reversing a prior story's deliberate declination, which is a ruling, ⛔ not an authoring choice."* ⛔ **Verified against the tree and the story file: there was no declination.** `2-5-…-public-astro-ssr-shell-foundation.md:152-153` records that **`@twt/ui` was an empty stub (`export {}`)** at Story 2.5, so the epic AC's *"`packages/ui` tokens + typography"* correctly resolved to **`@twt/tokens`**. ⇒ ⭐ **the variance is about where TOKENS live; it is ⛔ not a refusal to depend on `@twt/ui`.**
+> ⇒ ⭐ **C-1 IS THEREFORE AN ORDINARY DEPENDENCY ADDITION, ⛔ NOT A GOVERNANCE REVERSAL** — materially cheaper than both the retrospective and that block assumed.
+> ⭐ **AND THE COMPOSITION WAS PLANNED IN THE PACKAGE ITSELF:** `packages/ui/src/index.ts` has stated since **Story 9.12** that `<PoolProgressCard>` is *"shared by the apps/mobile RN progress meter today **+ the Epic-11b public Sahyog Vivran render later**."* ⇒ ⛔ `apps/public` lacks the dep because it had **no presenter to consume**, ⛔ not because anyone declined one.
+> ⇒ ⭐ **Story 11a.5's `<NoticeboardStrip>` public-embed variant (deferral (c)) now HAS a host** — the same ruling unblocks it. ⛔ Recorded, ⛔ not built here.
+>
+> ⚠ **C-1 IS RULED; C-3 IS ⛔ NOT.** Story 11b.7 still has ⛔ **no producer** — ⭐ this ruling settles the **SHAPE** of the component, and ⛔ **nothing about where its numbers come from**. ⛔ Do not read a settled shape as a settled source.
+>
+> ### C-5 — RULED: two levers, ⛔ neither discharging the other.
+>
+> ⭐ **Row 17's per-Pariwar publication kill switch EXTENDS to every Epic 11b public surface** (11b.1 · 11b.3 · 11b.6). ⛔ **No new launch-gate roster rows are minted** — a per-surface roster turns a *posture* into a checklist, and the posture is what binds. ⇒ Row 17's **second leg (≥2-trustee ratification) gates Epic 11b's public surfaces exactly as it gates `/members`** → **AI-11a-5**.
+>
+> ⭐ **AND EACH 11b SURFACE ADDITIONALLY DECLARES ITS OWN CONSENT GATE** — `sahyog_vivran_publication` (11b.3) · `in_memoriam_listing` (11b.6). ⚠ **These are a DIFFERENT LEVER, ⛔ not a second copy of Row 17:** the kill switch operates **per-Pariwar** and is an **operational** control; consent operates **per-subject** and is a **family-authored** one. ⛔ **Neither discharges the other**, and ⛔ a surface is not launch-ready on one alone — the same two-gates discipline C-4 states for the producer/consent seam.
+>
+> ⚠ **THREE INHERITED PROPERTIES BIND ALL THREE SURFACES, ⛔ none softened by this ruling:** (i) the pull-lever is ⛔ **NOT IMMEDIATE** — `s-maxage=300` per page number, so a revoked consent or a pulled Pariwar keeps being served **from every warm PoP**, and ⛔ direct SQL is **NOT** the operational fallback; (ii) **DPDPA counsel is ⛔ NOT ENGAGED** (`2026-08-19-136` cl.5), and Epic 11b widens the exposure from members to **the deceased and their families**; (iii) every surface declares `cache_policy` **explicitly** in the matrix — ⛔ never inferred from field tiers — and a rendering surface with ⛔ no `Cache-Control` **fails CI**.
+
 ### Story 11b.1: Sahyog Drive Active + Archive — Searchable, Paginated, No Bulk Export + Remembrance-Not-Analytics Invariant `[SURFACE]`
 
 As a non-member visitor or authenticated member browsing the trust's drive activity,
@@ -4840,6 +4861,18 @@ So that the surface supports trust transparency and claim discoverability withou
 > **(2) ⚠ ANTI-ENUMERATION IS INHERITED AS A FLOOR, ⛔ NOT A CEILING** — and the mechanism the AC points at was found **vacuous by construction** at Story 11a.3. ⛔ **The recorded IP is not evidence** (`2026-08-21-145` RD2): under `trustProxy: true` a caller-supplied `X-Forwarded-For` yields a fresh rate-limit bucket **and** a fresh abuse-counter window per request. ⇒ *"scraper-detection heuristics apply … per Story 11a.3 patterns"* is only true of the **corrected** pattern — forward **only** `Astro.clientAddress`, ⛔ never the inbound chain — and any abuse counter here is **a COUNTER, ⛔ not a forensic record**.
 >
 > ⚠ **Its 2026-08-19 name-form ruling above is UNCHANGED and still binds** (contributor and donor name forms are **unruled**; the `-135`/`-136` full-name ruling ⛔ does not reach this surface).
+
+> ⛔ **RULED 2026-08-23 (AI-11a-2) — ⭐ SD-2 IS PRESENT ON THIS STORY TOO, AND ⛔ NOTHING HAD RECORDED IT. ⚠ THIS IS A NEW FINDING OF THAT SESSION, ⛔ not a carry.**
+>
+> ⛔ The AC above reads *"public visitor sees first-name + last-initial; **authenticated sees fuller** per Story 11a.3 directory"*. ⇒ ⛔ **That authenticated tier has no viewer** — the same verified property that blocked Story 11b.3 (`2026-08-20-141` cl.6, `2026-08-20-143` cl.7): ⛔ **no current browser surface HOLDS or PRESENTS the member token.** A plain navigation to `apps/public` carries no `Authorization` header, there is ⛔ no `apps/member-web/`, and `apps/` holds `admin · api · jobs · mobile · public`. ⚠ ⛔ This is **not** a claim that browsers categorically cannot send an `Authorization` header — script on an authenticated origin can; ⛔ **there is no such origin here.**
+>
+> ⚠ **⛔ IT IS ⛔ NOT THE SAME KIND OF DEFECT AS 11b.3's, AND THE TWO ARE ⛔ NOT COLLAPSED HERE.** 11b.3's is a **fragment MECHANISM** — server-rendered, cache-bypassing, over **money-routing PII**. This one is a **NAME-FORM TIER** in a search result. ⭐ Same root cause, ⛔ different mechanism, ⛔ different stakes, ⛔ different remedy shape. The shared fact is only that **the viewer does not exist**.
+>
+> ⭐ **HOW IT SURVIVED:** ⛔ this sentence was ⛔ **never reconciled against the substrate** — the 2026-08-19 pass ruled the `-135`/`-136` full-name ruling does not *reach* this surface (correct, and still binding), and the 2026-08-23 pass ruled the `members.state` and anti-enumeration legs. ⚠ **Both passes touched this AC and neither asked whether the authenticated tier had a viewer.** ⇒ ⭐ a reconciliation answers the question it was pointed at; it does ⛔ **not** sweep the sentence it edits.
+>
+> ⭐ **RULING — DISPOSITION (c), IDENTICAL TO 11b.3's AND ON THE SAME TRIGGER.** Search ships **public-tier-only**: **first-name + last-initial**, ⛔ full stop. The authenticated tier is **deferred** onto the browser-member-token trigger (an `apps/member-web/` split, or a dedicated member browser-session story). ⚠ **Resolved via explicit deferral**, ⛔ not *Closed by [edit]*.
+>
+> ⛔ **AND THE 2026-08-19 NAME-FORM RULING IS ⛔ NOT DISTURBED BY THIS.** Contributor and donor name forms on this surface remain **unruled**, and `-135`/`-136` still ⛔ does not reach them. ⚠ ⛔ Do **not** read this deferral as having settled them — ⛔ a deferral of the *authenticated tier* is ⛔ not a ruling on the *public tier's* name form. Changing that still needs its own Panel ruling ([[feedback_supersede_never_reinterpret]]).
 
 ### Story 11b.2: ContributionList Components — Table (50k-row Desktop) + Mobile Row (10k Contract) `[PRIMITIVE]`
 
@@ -4906,6 +4939,22 @@ So that public transparency exists for trust legitimacy while member-only sensit
 > ⭐ **THREE DISPOSITIONS ARE AVAILABLE, AND EACH IS A RULING, ⛔ NOT AN AUTHORING CHOICE:** **(a)** mint a **member browser-session story** as a predecessor, with its own PII-posture routing note · **(b)** **narrow the fragment to public-shell-only** · **(c)** **defer the authenticated half**. ⚠ Astro 6 **server islands** (`server:defer`) are the **recorded leading candidate** from `2026-08-20-141` D2 — ⭐ the one reading under which the AC and the architecture agree — ⛔ but they still need **a viewer the browser cannot identify**, so they are ⛔ not a disposition on their own. → **AI-11a-2**.
 >
 > ⚠ **Two further constraints on this surface, ⛔ neither discharged by the ruling above:** its **consent gating** is C-4's second gate, ⛔ not the same act as the FR-19 read model; and Story 11a.2's **fail-closed cache-policy leg** now applies — a rendering surface with ⛔ **no `Cache-Control` fails CI**, and per-surface `cache_policy` is **declared explicitly in the matrix**, ⛔ never inferred from field tiers.
+
+> ⭐ **RULED 2026-08-23 (AI-11a-2, targeted Epic-11b substrate/publication-model validation session). ⛔ THE BLOCK ABOVE IS DISCHARGED — ⚠ by RULING, not by reconciliation, and the block stays in place as the record of why.**
+>
+> ⭐ **DISPOSITION (c) — THE AUTHENTICATED HALF IS DEFERRED WITH A WRITTEN TRIGGER.** ⛔ Not narrowed away (disposition (b)), ⛔ not unblocked by minting a browser member session (disposition (a)). Story 11b.3 ships **public-shell-only**: the per-claim surface renders the public story, verifiers and contributor count at the `public` tier and is declared **`edge_cacheable`** in the matrix. ⛔ The nominee-bank authenticated fragment is **NOT built at this story**.
+>
+> ⚠ **Recorded as "Resolved via explicit deferral", ⛔ NOT "Closed by [edit]"** ([[feedback_closure_language_precision]]). The AR-48 registry concept is **carried, not deleted** — what is deferred is its *first entry*, and the trigger below is the same one `2026-08-20-141` and `2026-08-20-143` cl.7 already wrote.
+>
+> **THE TRIGGER (⛔ unchanged from 11a.2/11a.3 — this ruling joins that deferral, it does not mint a second one):** a browser surface that holds a member token — an `apps/member-web/` split firing, **or** a dedicated member browser-session story carrying its own PII-posture routing note. ⚠ Until one fires, there is ⛔ **no `authenticated_member` viewer on `apps/public`, by any mechanism**.
+>
+> ⭐ **THE DECISIVE STRUCTURAL EVIDENCE, RECORDED SO THE NEXT AUTHOR DOES NOT RE-DERIVE IT:** `cache_policy` (`packages/contracts/src/public-pages/matrix.ts:111`) is a **PER-SURFACE** enum of exactly `edge_cacheable | private_no_store | redirect`. The original AC asks for ONE surface that is simultaneously edge-cached **and** request-time-rendered-bypassing-cache. ⛔ **That is not representable in the shipped matrix, and it should not be made representable** — the split it asks for is the split between a *page* and an *API call*, which is precisely where `architecture.md:515-517` already puts the auth boundary.
+>
+> ⚠ **AND A NEW OPEN FINDING THIS RULING DOES ⛔ NOT CLOSE — ROUTED, ⛔ NOT BACK-FILLED.** The defect is **not only in the AC**. `architecture.md:495-525` commits a composition contract whose fragments *"hydrate client-side"* — and **that pattern is equally unbuildable today**, for the identical reason: client-side hydration still needs a browser surface holding a member token. ⇒ ⭐ **the architecture commits a property the substrate cannot satisfy**, and it names FR-77 nominee bank details as its own worked example. ⛔ Ruling that is **outside this session's fence** — recorded here as **un-attested and open**, routed to Winston with the trigger above ([[feedback_record_unattested_no_backfill]]).
+>
+> ⚠ **Two constraints from the block above survive this ruling untouched:** the consent gate (C-4's second gate, ⛔ not the same act as the FR-19 read model), and the fail-closed cache-policy leg — a rendering surface with ⛔ no `Cache-Control` fails CI, and `cache_policy` is declared **explicitly** in the matrix, ⛔ never inferred.
+>
+> ⛔ **`apps/api/src/modules/public-pages/` IS NOT TOUCHED BY THIS STORY.** It shipped at 11a.3 **deliberately unauthenticated**, defended in writing in two places, and carries a ⛔ **NO SECOND ROUTE** fence. ⚠ `2026-08-20-141` cl.9 had ruled the module must not exist yet; it was created one story later. ⇒ ⛔ Adding an authenticated route there is **not** the cheap path it looks like — it needs its own ruling, its own written defence, and its own `login-wall.spec.ts` allowlist entry.
 
 ### Story 11b.4: MemorialAuthorshipSurface — Family Writes the Story + Family-Authorship-Preserved Invariant `[SURFACE]`
 
@@ -4985,6 +5034,20 @@ So that the trust's institutional memorial honors deceased members while respect
 > **(2) ⛔ THE ROLL'S MEMBERSHIP PREDICATE MUST READ THE `account-frozen` OVERLAY, ⛔ NEVER `members.state`** — see the epic-level C-5 block. ⚠ On this surface the blindness inverts: a `members.state` predicate would **omit the deceased from the memorial roll**.
 >
 > ⚠ **Its 2026-08-19 name-form ruling above is UNCHANGED and still binds** — In Memoriam keeps **first-name + last-initial** at the public tier, and the `-135`/`-136` full-name ruling ⛔ does **not** reach it. ⭐ Reinforced by Epic 11a's own experience: 11a.3's full-name publication is the surface that published a **deceased member marked "Active"**, and this roll is **consent-governed, revocable, and its subject cannot re-consent**.
+
+> ⛔ **RULED 2026-08-23 (AI-11a-2) — ⭐ THE THIRD INSTANCE OF SD-2, AND ⚠ THE ONE THAT SURVIVED A RECONCILIATION OF ITS OWN SENTENCE.**
+>
+> ⛔ The AC above reads *"**authenticated members see fuller** per Story 11a.3 directory pattern"*. ⇒ ⛔ **That authenticated tier has no viewer**, by the same verified property that blocked 11b.3 and that this session found on 11b.1 — ⛔ **no current browser surface HOLDS or PRESENTS the member token.**
+>
+> ⭐⚠ **WHY THIS CASE IS THE SHARPEST OF THE THREE AS A PROCESS FINDING.** The 2026-08-19 pass **rewrote this exact phrase** — it ruled, correctly and bindingly, that *"fuller"* means **more Pariwar-selected attributes**, ⛔ not a fuller name form. ⇒ ⭐ **a reconciliation settled WHAT the authenticated tier shows without ever asking WHETHER that tier has a viewer.** ⛔ The defect did not slip past an unread sentence; it survived an edit **to itself**. ⚠ That is the precise failure mode AI-11a-1(b) exists to catch, and it is now evidenced ⛔ **twice** (here and at 11b.1).
+>
+> ⭐ **RULING — DISPOSITION (c), ON THE SAME TRIGGER AS 11b.1 AND 11b.3.** In Memoriam ships **public-tier-only**: **first-name + last-initial + dates + district**. The authenticated tier — the additional Pariwar-selected attributes — is **deferred** onto the browser-member-token trigger. ⚠ **Resolved via explicit deferral**, ⛔ not *Closed by [edit]*.
+>
+> ⭐ **THE DEFERRAL IS DOUBLY GROUNDED HERE, ⛔ AND THE SECOND GROUND IS INDEPENDENT OF SD-2.** Even if the viewer existed, `block` could not render: it is gated on `2026-08-19-137`'s migration mechanism (member-aware publish + a member choice surface), ⛔ **neither of which exists** — the same gate already recorded against the shared attribute model at Story 11b.1. ⇒ ⛔ the authenticated tier here was **unbuildable on two independent counts**, and ⛔ closing only the SD-2 one would have left it unbuildable anyway ([[feedback_trace_reachability_before_escalating]] read in reverse — both paths were traced before this deferral was written).
+>
+> ⚠ **THREE PRIOR RULINGS ON THIS STORY ARE ⛔ UNDISTURBED, AND ⛔ NONE IS DISCHARGED BY THIS ONE:** (i) the **name form** — In Memoriam keeps first-name + last-initial at the public tier and `-135`/`-136` ⛔ does not reach it; (ii) **C-4's two gates** — the absent FR-19 producer and the consent gate, ⛔ neither discharging the other, with 11a.5's third path binding (render the real, currently-empty source and **render nothing when empty** — ⛔ never a fabricated row, ⛔ never a "coming soon" placeholder); (iii) the **`account-frozen` overlay predicate**, ⛔ never `members.state`.
+>
+> ⚠ ⛔ **AND THE CONSENT ASYMMETRY IS RESTATED, BECAUSE THE DEFERRAL DOES NOT TOUCH IT.** This roll is **consent-governed and revocable**, and its subject is **deceased and cannot re-consent**. ⇒ ⛔ a future story that fires the trigger and lights the authenticated tier ⛔ **must not** treat that as a rendering change — it widens what is published about a person who ⛔ **cannot be asked**, and it needs a **consent-aware ruling of its own** ([[project_consent_subject_key_convention]]).
 
 ### Story 11b.7: StatCardStrip Component `[PRIMITIVE]`
 

@@ -79,7 +79,7 @@
 | Date | Engagement letter on-file path | NDA signed | COI disclosure | Retainer schedule | Engagement letter git-SHA | Counsel acceptance of scope-charter |
 |---|---|---|---|---|---|---|
 | `<PENDING-TASK-9>` | `<trustee-accessible repo path + counsel-side archive path>` | `signed` + signature date + NDA-on-file path | `disclosed-no-conflicts` OR `disclosed-with-managed-conflicts` (with plan) | `<activated date + retainer amount per `engagement-letter-template.md` §5>` | `<git SHA>` | `accepted` + date OR `accepted-with-amendments` + amendment notes |
-| **2026-06-21** ⚠ *(recorded 2026-08-24; ⛔ NOT contemporaneous)* | **Trustee-owned OneDrive → Personal Vault** ⚠ **location named 2026-08-24; ⛔ per-document locator (folder/filename/link) NOT supplied.** ⛔ Counsel-side archive path (§14 step 5 wants **both**) ⛔ still OWED | `signed` asserted 2026-06-21 · **same vault**. ⚠ A2.1 box **unticked**, date only | **`disclosed-no-conflicts`** — ⭐ the **fact** is attested and counsel-signed; the **filing** is asserted 2026-06-21, **same vault**. ⚠ A2.3 box **unticked**, date only | ✅ **Activated 2026-06-21 · ₹2,00,000 per year** (`engagement-letter-template.md` §5) | ⛔ **n/a** — executed off-repo by design; ⛔ no git SHA exists | ✅ **`accepted` 2026-06-21** — counsel accepted `review-scope-charter.md` |
+| **2026-06-21** ⚠ *(recorded 2026-08-24; ⛔ NOT contemporaneous)* | ⚠ **INTERIM: trustee-owned OneDrive Personal Vault.** ⭐ **DESTINATION: credential-escrow envelope** — `credential-inventory.md` row `legal-instruments-custody`, `pending-task-7-sealing-event`, custodial location per Decision `2026-06-05-018` (physical sealed envelope · joint bank safe deposit / trustee residences). ⛔ **The envelope ID becomes this field's resolvable reference path at sealing.** ⛔ Counsel-side archive path (§14 step 5 wants **both**) still OWED | `signed` asserted 2026-06-21 · **same vault**. ⚠ A2.1 box **unticked**, date only | **`disclosed-no-conflicts`** — ⭐ the **fact** is attested and counsel-signed; the **filing** is asserted 2026-06-21, **same vault**. ⚠ A2.3 box **unticked**, date only | ✅ **Activated 2026-06-21 · ₹2,00,000 per year** (`engagement-letter-template.md` §5) | ⛔ **n/a** — executed off-repo by design; ⛔ no git SHA exists | ✅ **`accepted` 2026-06-21** — counsel accepted `review-scope-charter.md` |
 
 > ⚠ **RECORDED 2026-08-24 per [Decision 2026-08-24-157](../../.decision-log.md#decision-2026-08-24-157) cl.2 — counsel-asserted, ⛔ NOT verified.**
 > ⭐ **A correction worth keeping:** the executed engagement letter's **absence from this repo is BY DESIGN** — `engagement-letter-template.md` **§14 step 5** places it in *"secure non-git trustee-accessible storage"*, with only the **reference path + receipt** committed here. ⛔ So its absence is ⛔ **not** evidence against the engagement. ⛔ **What IS missing is the reference path**, which §14 step 5 requires and which this row records as **OWED**.
@@ -90,6 +90,21 @@
 > ⚠⛔ **A STORAGE-POSTURE CONCERN, RECORDED ⛔ NOT RULED.** The three instruments are held in a **trustee's PERSONAL OneDrive Personal Vault**. §14 step 5 requires *"secure non-git **trustee-accessible** storage"* — ⭐ a personal vault is **secure** but is **single-person-controlled**, which is the ⛔ opposite of trust-accessible. ⇒ if that trustee is unavailable, the trust's **engagement letter, NDA and COI disclosure are unreachable** — precisely the failure mode Stories **0.1–0.6** exist to mitigate. ⚠ These are **legal instruments, ⛔ not credentials**, so they fall ⛔ outside `docs/escrow/credential-inventory.md`'s seven PRD §9.1.1 domains and are covered by **no** escrow envelope. ⛔ **Observational — the Panel has ruled nothing here** ([[feedback_gap_analysis_observational]]).
 >
 > ⚠ **And the locator is still owed.** A named *location* is ⛔ not a **reference path + receipt**: §14 step 5 asks for a resolvable pointer, and *"OneDrive/Personal Vault"* ⛔ does not resolve to a document.
+>
+> ⭐ **RESOLVED-BY-ROUTE 2026-08-24 — the destination is now recorded, and it ⛔ is not OneDrive.** A
+> `legal-instruments-custody` row is minted in `docs/escrow/credential-inventory.md`, modelled on the
+> **`dr-runbook-pdf-custody`** precedent — a **document**, ⛔ not a credential, held in a
+> credential-escrow envelope per architecture §5.7. Custody terms are already ≥2-trustee ratified at
+> Decision **`2026-06-05-018`**. ⇒ **OneDrive is recorded INTERIM**; the escrow envelope is the
+> destination, and ⛔ **sealing is what closes this field** — the repo holds ⛔ no payload, only the
+> pointer, so the **envelope ID *is* the reference path**.
+> ⚠ **Status `pending-task-7-sealing-event`** — the mechanism and location are ratified but sealing
+> execution is pending across **21** inventory rows. ⛔ Nothing is sealed today.
+> ⚠ **Two needs the escrow does ⛔ NOT serve, recorded so they are not assumed away:** the
+> **counsel-side archive** (§14 step 5 wants both copies) and a **working reference copy** — an
+> engagement letter is consulted routinely (§4 SLA, §5 pricing, §13 termination) and a sealed vault
+> copy ⛔ does not serve that. A **trust-controlled — ⛔ not personal — shared location** should hold
+> the working copy.
 
 ---
 

@@ -50,17 +50,21 @@ Per Story 0.13 AC-1:
 |---|---|
 | `artifact_id` | `epic-2-tc-draft-v1` |
 | `artifact_type` | T&C-draft |
-| `source_artifact_path` | `_bmad-output/planning-artifacts/prds/prd-TWT-2026-05-22/prd.md` §FR-94 verbatim trust-posture phrasings (PRD lines 1190-1204) + the Niyamavali reference per Stories 2.3 + 2.4 + 2.5 |
+| `source_artifact_path` | ⭐ **DRAFT NOW EXISTS (2026-08-24):** `docs/legal-counsel-engagement/handover/TWT-Terms-and-Conditions-DRAFT-v0.1-for-counsel-review.docx` — v0.1, 16 clauses + a 7-question counsel annex, assembled **strictly** from committed sources: `prd.md` §FR-94 (the **seven verbatim phrasings**, PRD :1215-1226) + the posture FRs (FR-6 · FR-19 · FR-32 · FR-33 · FR-36 · FR-43A · FR-74) + §4.14.1 regulatory surface + the Niyamavali reference per Stories 2.3/2.4/2.5. ⛔ **Nothing invented; no legal drafting originated** |
 | `owning_story + epic` | Story 2.6 T&C version-pinning + Epic 2 demoable closure FR-94 verbatim |
 | `submission_priority` | 1 |
-| `target_submission_date` | `<computed at Task 9: engagement-signature-date + 14 calendar days per Open Question #9>` |
+| `target_submission_date` | ⛔⛔ **2026-07-05** — **BREACHED.** Computed 2026-08-24 from the engagement-signature date (**2026-06-21**) + 14 calendar days, per AC-1 and `README.md:39` (*"first-artifact-submission within 2 weeks of signing is a structural property"*). ⚠ **50 days overdue at time of computation.** ⭐ The date was uncomputable until 2026-08-24 because the signature date itself was unrecorded — see `notes` |
 | `actual_submission_date` | `<PENDING-TASK-10>` |
 | `sla_target_return_date` | `<PENDING-TASK-10: actual_submission_date + 5-10 biz days per engagement-letter-template.md §4>` |
 | `actual_return_date` | `<PENDING-TASK-11>` |
 | `return_summary_link` | `per-artifact-return-roster.md#epic-2-tc-draft-v1` |
 | `integration_target_story_or_section` | Story 2.6 T&C version-pinning + Epic 2 demoable closure FR-94 verbatim; if Epic 2 has shipped, integration via Story 2.4 Niyamavali amendment workflow; if Epic 2 has not shipped, integration via the PRD edit + Story 2.4 implementation |
 | `integration_status` | `pending-submission` |
-| `notes` | AC-1 commits this as the first artifact submitted within 2 weeks of signing per epics line 917. Cross-references scope-charter §1(a) trust-posture copy review. |
+| `notes` | AC-1 commits this as the first artifact submitted within 2 weeks of signing per epics line 917. Cross-references scope-charter §1(a) trust-posture copy review.
+⚠⛔ **2026-08-24 — WHY THIS ROW SAT AT `pending-submission` FOR 50 DAYS, stated plainly.** ⛔ **The artefact did not exist.** Story 2.6 shipped the T&C **registry** — `terms_and_conditions_versions`, pinned-clause junction, `body_html_rendered`, RLS, public render — but `body_markdown` is *"canonical T&C content authored by the trustee"*, and ⛔ **no T&C prose was ever authored**: verified 2026-08-24, the only T&C-adjacent prose anywhere in the repo is the tagline in `packages/i18n/locales/hi/contribution.json`. ⇒ ⭐ **the overdue item was never a stalled submission — it was an unauthored artefact**, and ⛔ no amount of submission coordination would have discharged it.
+⭐ **RESOLVED 2026-08-24: a v0.1 draft is authored** (see `source_artifact_path`). ⛔ **`integration_status` stays `pending-submission`** — this roster's own schema says *"the dev-story agent does ⛔ NOT submit; Solo Builder + Trustee Panel coordinate the submission outside the dev-story scope"*, so ⛔ **the row is ⛔ NOT flipped and `actual_submission_date` stays `<PENDING-TASK-10>`.** ⚠ Authoring the artefact and submitting it are **different acts**; only the first has happened ([[feedback_closure_language_precision]]).
+⚠ **The draft is UNREVIEWED and marked so on its face** — ⛔ not adopted, ⛔ not published, ⛔ not shown to any member. Its purpose **is** to be reviewed.
+⭐ **AND THIS ROW IS ON THE CRITICAL PATH OF A SECOND ITEM:** counsel cited *"Member Consent of Term of service of TWT"* as the basis for extending his 2026-08-24 clearance to the three Epic 11b surfaces (`2026-08-24-157` cl.3) — ⛔ **this** document. ⇒ counsel's held revisit should follow this submission, ⛔ not precede it. |
 
 ---
 

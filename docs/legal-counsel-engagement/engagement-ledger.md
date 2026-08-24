@@ -134,6 +134,21 @@
 > owed him 50 days ago and ⛔ never sent.**
 > ⛔ Recorded, ⛔ not actioned — surfacing it is this ledger's job; scheduling it is not.
 >
+> ⭐⭐ **ROOT CAUSE FOUND 2026-08-24, AND IT IS ⛔ NOT A SCHEDULING FAILURE: THE ARTEFACT DID NOT
+> EXIST.** Story 2.6 shipped the T&C **registry** (versions table, pinned-clause junction,
+> `body_html_rendered`, RLS, public render at `apps/public/src/pages/terms.astro`) — but
+> `body_markdown` is *"canonical T&C content **authored by the trustee**"*, and ⛔ **no T&C prose was
+> ever authored.** Verified: the only T&C-adjacent prose in the entire repo is the tagline in
+> `packages/i18n/locales/hi/contribution.json`. ⇒ ⛔ **there was nothing to submit**, and ⛔ no amount
+> of submission coordination would have discharged this.
+> ⭐ **A v0.1 draft is authored 2026-08-24** —
+> `docs/legal-counsel-engagement/handover/TWT-Terms-and-Conditions-DRAFT-v0.1-for-counsel-review.docx`,
+> assembled **strictly** from committed sources (FR-94's seven verbatim phrasings, the posture FRs,
+> §4.14.1) with ⛔ **no originated legal drafting**, carrying a **7-question counsel annex**.
+> ⛔ **THE SUBMISSION ITSELF HAS ⛔ NOT HAPPENED** and this log is ⛔ not flipped: the
+> review-artifact-roster reserves submission to *"Solo Builder + Trustee Panel … outside the
+> dev-story scope"*. ⚠ **Authoring and submitting are different acts**; ⛔ only the first is done.
+>
 > ⛔⛔ **Counsel act #2 (2026-08-24, full-name publication) is ⛔ ABSENT from this section BY CONSTRUCTION** — it was a **verbal consultation**, ⛔ not an artifact submission. ⛔ There is nothing to log here, and ⛔ inventing a row would assert a submission that never occurred.
 
 ---

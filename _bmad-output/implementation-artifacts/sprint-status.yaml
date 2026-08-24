@@ -1,4 +1,55 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-24g (⭐ HANDOVER PACK + THE T&C DRAFT AUTHORED -- and the 50-day overdue item
+#   turns out ⛔ NOT to have been a scheduling failure. ⛔ ZERO ROWS FLIP. ⛔ No story row, ⛔ no
+#   development_status key, ⛔ no decision entry. ⛔ Story 2.6 stays `done` -- ⭐ the registry it
+#   shipped is CORRECT and complete; the missing thing was never in its scope.
+#
+#   WHAT LANDED: docs/legal-counsel-engagement/handover/ -- TWO printable .docx files + the
+#   dependency-free OOXML generator that builds them + a README.
+#   (1) TWT-Counsel-Engagement-Framework-2026-08-24.docx -- for Trustee + Counsel: engagement nature,
+#   the SIX verified criteria, review scope, the two opinions and their scope fences, custody, and
+#   the five outstanding items.
+#   (2) TWT-Terms-and-Conditions-DRAFT-v0.1-for-counsel-review.docx -- ⭐ THE PRIORITY-1 ARTEFACT
+#   (`epic-2-tc-draft-v1`): 16 clauses + a 7-question counsel annex.
+#
+#   ⭐⭐ THE FINDING: THE OVERDUE T&C SUBMISSION WAS NEVER A STALLED SUBMISSION -- THE ARTEFACT DID
+#   ⛔ NOT EXIST. Story 2.6 shipped the T&C REGISTRY (versions table, pinned-clause junction,
+#   body_html_rendered, RLS, apps/public/src/pages/terms.astro) but `body_markdown` is "canonical T&C
+#   content AUTHORED BY THE TRUSTEE" -- and ⛔ no T&C prose was ever authored. Verified: the only
+#   T&C-adjacent prose in the whole repo is the tagline in packages/i18n/locales/hi/contribution.json.
+#   ⇒ ⛔ NO amount of submission coordination would have discharged this. ⭐ Story 2.6 is ⛔ NOT at
+#   fault -- authoring the canonical text was never in its scope; it is trustee-authored DATA.
+#
+#   ⛔ WHAT I DID ⛔ NOT DO: mark it submitted. review-artifact-roster.md's own schema reserves
+#   submission to "Solo Builder + Trustee Panel ... OUTSIDE the dev-story scope" ⇒ Row 1 stays
+#   `pending-submission` and `actual_submission_date` stays <PENDING-TASK-10>. ⚠ AUTHORING AND
+#   SUBMITTING ARE DIFFERENT ACTS; ⛔ only the first has happened. `target_submission_date` is now
+#   COMPUTED and recorded BREACHED: 2026-07-05 (= signature 2026-06-21 + 14d per AC-1 / README:39).
+#
+#   ⛔ THE DRAFT ORIGINATES NO LEGAL DRAFTING. Every substantive clause is assembled from committed
+#   sources: FR-94's SEVEN VERBATIM PHRASINGS (which FR-94 requires survive verbatim -- several
+#   TSCT-inherited), the posture FRs (FR-6 · FR-19 · FR-32 · FR-33 · FR-36 · FR-43A · FR-74), §4.14.1's
+#   regulatory surface, and the Niyamavali reference. [TO SUPPLY] marks TRUST gaps (registration
+#   particulars, governing law); [FOR COUNSEL] marks questions put to counsel, collected in the annex.
+#   ⛔ Marked UNREVIEWED / not adopted / not published ON ITS FACE.
+#
+#   ⭐ AND IT UNBLOCKS A SECOND ITEM: counsel cited "Member Consent of Term of service of TWT" as his
+#   basis for the three Epic 11b surfaces (-157 cl.3) -- THIS document. ⇒ his HELD revisit should
+#   FOLLOW this submission, ⛔ not precede it.
+#
+#   ⚠ TOOLING NOTE: ⛔ no pandoc / LibreOffice / python-docx in this environment (pip is PEP-668
+#   externally-managed). docxgen.py is a dependency-free OOXML writer (stdlib zipfile + hand-written
+#   WordprocessingML); both files validated -- all 6 parts parse as XML, Devanagari preserved.
+#   ⛔ Edit the .py, ⛔ NEVER the .docx -- regeneration silently discards .docx edits.
+#
+#   ⛔ NOTHING ELSE MOVES: Row 17 `closed` · roster Row 3 `closed` · Row 10 open · /members authorised
+#   · 11b clearance NARROWED and A3.2/A3.3 HELD · counsel FULLY VERIFIED · escrow row
+#   `pending-task-7-sealing-event`, ⛔ nothing sealed.
+#
+#   STILL OPEN: ⛔ THE SUBMISSION ITSELF (a human act) · counsel's revisit of A3.2/A3.3 (⭐ after the
+#   submission) · [TO SUPPLY] gaps in the draft · counsel-side archive path · trust-controlled
+#   working-copy location · escrow sealing · the false "counsel unengaged" spread (36 lines · 18
+#   files · 11 entries), ⛔ not swept · each 11b surface's per-subject consent gate.)
 # last_updated: 2026-08-24f (⭐ THE LEGAL INSTRUMENTS GET A CUSTODY DESTINATION -- and the project had
 #   already ratified it. ⛔ ZERO ROWS FLIP. ⛔ No story row, ⛔ no development_status key, ⛔ no new
 #   decision entry -- ⭐ this APPLIES Decision 2026-06-05-018, it ⛔ does not make a new custody rule.

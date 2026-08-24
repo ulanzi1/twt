@@ -1,4 +1,49 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-24h (⭐⭐ THE T&C DRAFT IS SUBMITTED TO COUNSEL — Task 10, the FIRST real
+#   submission this engagement has ever recorded. ⛔ ZERO ROWS FLIP. ⛔ No story row, ⛔ no
+#   development_status key, ⛔ no decision entry -- an EVENT occurring, ⛔ not a ruling.
+#
+#   WHAT LANDED: review-artifact-roster.md Row 1 `epic-2-tc-draft-v1` flips
+#   `pending-submission` -> `awaiting-counsel-return` (⭐ the first genuine lifecycle transition in
+#   this engagement) + engagement-ledger.md §6 gains its first real submission row +
+#   counsel-roster.md lifecycle log records the event.
+#
+#   THE FACTS AS RECORDED: submitted 2026-08-24 by IN-PERSON HANDOVER of the printed draft ·
+#   acknowledged by counsel THE SAME DAY, inside the §11 two-business-hour window ⇒ ⛔ NO
+#   acknowledgment-SLA breach and ⛔ NO §8 row owed · STANDARD tier (5-10 biz days per §4), ⛔ NOT
+#   expedited, ⛔ no surge pricing incurred · return due 2026-09-07, earliest 2026-08-31.
+#   ⭐ sla_target_return_date recorded at the OUTER BOUND so the breach clock is ⛔ not started early.
+#
+#   ⭐ THE AC-1 OBLIGATION IS DISCHARGED -- **LATE**. 50 days past the 2026-07-05 target. ⛔ NOT
+#   recorded as "closed" and ⛔ NOT back-dated: the breach happened, it STAYS recorded, and the
+#   obligation is now met ([[feedback_closure_language_precision]]).
+#
+#   ⚠ TWO PROCESS NOTES, recorded ⛔ not treated as faults:
+#   (i) IN-PERSON HANDOVER LEAVES ⛔ NO TRANSMISSION TIMESTAMP ⇒ ⭐ the ACKNOWLEDGMENT is the
+#   evidentiary anchor for this submission, ⛔ not a send record. ⛔ Nothing inferred.
+#   (ii) it is the INTERIM mechanism BY DEFAULT -- the counsel-side encrypted-document-exchange ADR
+#   (adr-index.md Section K row #2) is ⛔ STILL UNAUTHORED, so ⛔ no contemplated channel existed.
+#
+#   ⭐ WHAT THIS UNBLOCKS: counsel's HELD revisit of the three Epic 11b surfaces (-157 cl.3). He cited
+#   "Member Consent of Term of service of TWT" as his basis -- ⭐ that document is NOW IN HIS HANDS,
+#   so the revisit can proceed on the actual text rather than on its absence.
+#
+#   ⛔ WHAT IT DOES ⛔ NOT DO: ⛔ does NOT adopt / publish / approve the draft (it is UNREVIEWED and
+#   says so on its face) · ⛔ does NOT discharge the remaining charter §1 scope items · ⛔ does NOT
+#   make Epic 11b launch-ready · ⛔ does NOT move Story 2.6, which stays `done` (authoring the
+#   canonical text was never in its scope).
+#
+#   ⛔ NOTHING ELSE MOVES: Row 17 `closed` · roster Row 3 `closed` · Row 10 open · /members authorised
+#   · 11b clearance NARROWED, A3.2/A3.3 HELD · counsel FULLY VERIFIED · escrow row
+#   `pending-task-7-sealing-event`, ⛔ nothing sealed.
+#
+#   NEXT DATE THAT MATTERS: **2026-09-07** -- counsel's return due. ⚠ If it does not land, THAT is a
+#   counsel-side §8 SLA breach and belongs in §8, ⛔ unlike the trust-side lapse just discharged.
+#
+#   STILL OPEN: counsel's return (due 2026-09-07) · his A3.2/A3.3 revisit · the [TO SUPPLY] gaps in
+#   the draft (registration particulars, governing law) · counsel-side archive path · trust-controlled
+#   working-copy location · escrow sealing · the false "counsel unengaged" spread (36 lines · 18
+#   files · 11 entries), ⛔ not swept · each 11b surface's per-subject consent gate.)
 # last_updated: 2026-08-24g (⭐ HANDOVER PACK + THE T&C DRAFT AUTHORED -- and the 50-day overdue item
 #   turns out ⛔ NOT to have been a scheduling failure. ⛔ ZERO ROWS FLIP. ⛔ No story row, ⛔ no
 #   development_status key, ⛔ no decision entry. ⛔ Story 2.6 stays `done` -- ⭐ the registry it

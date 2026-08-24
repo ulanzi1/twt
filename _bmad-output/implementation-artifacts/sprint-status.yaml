@@ -1,4 +1,51 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-24j (⭐ AI-11a-3 DISCHARGED — accessibility becomes FAMILY 13 of the
+#   load-bearing-invariant checklist. ⛔ ZERO ROWS FLIP. ⛔ No story row, ⛔ no development_status key,
+#   ⛔ NO DECISION ENTRY MINTED — ⭐ the RETRO is the authority ("CONFIRMED BigDev 2026-08-23,
+#   checklist first"); adding the family is EXECUTION, ⛔ not a new ruling. Precedent: families 11+12
+#   (AI-10-1 / AI-10-3) landed the same way, inside commit 9d859cf, with ⛔ no dedicated entry.
+#
+#   WHAT LANDED: _bmad/custom/load-bearing-invariant-checklist.md — family 13 + a dated header note.
+#   **+37 lines ADDED, ⛔ 0 REMOVED**; ⛔ families 1-12 BYTE-UNCHANGED (verified mechanically).
+#
+#   THE FOUR CHECKS, for every COMPONENT or SURFACE story: (a) a container carrying
+#   `accessibilityLabel` is explicitly `accessible={true}` · (b) a role implying a measurable value
+#   (progressbar/slider) supplies `accessibilityValue` · (c) a role implying interaction
+#   (button/link) has a REAL handler, ⛔ never announced over an empty body · (d) a state the AC
+#   ratifies as reachable is ANNOUNCED, ⛔ not merely reflected in a prop.
+#
+#   ⭐ IT IS LIVE ON MERGE — ⛔ NO WIRING OWED. bmad-code-review.toml:9 ALREADY loads this file, so
+#   the Acceptance Auditor picks family 13 up immediately. ⚠ Checked deliberately: a checklist
+#   nothing reads is not a checklist, and this project has been bitten by exactly that (Row 17's
+#   "a gate in prose the launch checklist doesn't read is not a gate").
+#
+#   SOURCE (H-6 + I-5): 11a.6 closed `done` leaving TWO defects NOT ADDRESSED in
+#   PanchayatNoticeboard.tsx -- Masthead seal has `accessibilityLabel` with ⛔ no
+#   `accessible={true}`; PinnedSkeleton announces role=progressbar with ⛔ no `accessibilityValue`.
+#   ⚠ THAT DISPOSITION WAS CORRECT (those elements are 11a.5's; reaching in = the D7(a) scope drift
+#   already declined). ⭐ THE LEAK IS THE SURROUNDING FACT: 11a.6's OWN AC6 *was* semantic
+#   accessibility, EDITING THAT EXACT FILE, and the seal defect is the SAME CLASS AC6 had just
+#   closed one row above. ⇒ the gap is ⛔ not the deferral -- it is that NOTHING CATCHES THE CLASS:
+#   19 invariant gates in scripts/, ⛔ ZERO cover accessibility, on the epic immediately preceding
+#   the one that makes an a11y audit a LAUNCH-BLOCKER (11b.8 / UX-DR70).
+#
+#   ⛔ RULED A CHECKLIST -- ⛔ NOT a CI gate, ⛔ NOT a package ([[feedback_no_premature_package]]).
+#   ⚠ ONE vehicle only (unlike AI-10-1's two) -- BigDev: "checklist first".
+#   ⚠⭐ AND THE CHECKLIST RECORDS ITS OWN WEAKNESS: this family is UN-MECHANIZED BY RULING, so it is
+#   the half that DECAYS (Epic 10 E3 / I-5) -- the Acceptance Auditor is the only thing reading it
+#   and ⛔ a missed check leaves ⛔ NO TRACE. ⇒ NAMED FORWARD REVISIT: mechanization is re-examined
+#   at Story 11b.8's audit, which shows what is actually mechanizable.
+#   ⭐ The checklist points at the WORKED EXAMPLE 11a.6 deliberately left:
+#   apps/mobile/components/panchayat/PinnedItem.tsx.
+#
+#   ⇒ AI-11a-3 is DISCHARGED (with the named 11b.8 revisit). ⚠ STILL OPEN of the retro's ten:
+#   AI-11a-1(b) -- fires at Epic 11b's FIRST AUTHORING PASS, which is the NEXT act (Story 11b.1) --
+#   and AI-11a-4 (regression-net symmetry, BOTH vehicles), triggered before the next
+#   pattern-changing story.
+#
+#   ⛔ NOTHING ELSE MOVES: epic-11b stays backlog and all EIGHT 11b rows stay backlog · Row 17
+#   `closed` · /members authorised · 11b clearance NARROWED, A3.2/A3.3 HELD · T&C
+#   `awaiting-counsel-return` due 2026-09-07.)
 # last_updated: 2026-08-24i (⭐ THE "COUNSEL NOT ENGAGED" SWEEP -- 41 instances · 18 files, and ⭐ EVERY
 #   ONE was false WHEN WRITTEN. ⛔ ZERO ROWS FLIP. ⛔ No story row, ⛔ no development_status key.
 #   Decision 2026-08-24-158, AUTHOR-COMMITTED -- ⛔ NOT Trustee-routed: it corrects statements of

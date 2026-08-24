@@ -63,6 +63,10 @@
 | Date | Ratifying trustees | Shortlisted candidates | Interview outcomes | Selected candidate | Selection rationale | Alternatives considered | Multi-counsel notes |
 |---|---|---|---|---|---|---|---|
 | `<PENDING-TASK-8>` | `<≥2 trustees>` | `<≥2 candidates per counsel-roster.md>` | `<interview-outcome-per-candidate>` | `<lc-N>` | `<selection rationale per shortlist criteria match + COI clearance + concurrent-review-mode availability + budget fit per Story 0.12 contract-help-path>` | `<alternatives + non-selection rationale>` | `<multi-counsel coordination notes if applicable per README §4 invariant 11>` |
+| **2026-08-24** ⚠ *(RECONSTRUCTED, ⛔ not a Task-8 record)* | ⛔ **UNKNOWN — no record of who selected** | ⛔ **NONE ON RECORD** | ⛔ **NONE ON RECORD** | **`lc-1` — Adv. Mohit Agrawal** | ⛔ **UNKNOWN.** ⚠ The counsel is real and engaged since **2026-06-21** (`2026-06-21-057`), but ⛔ **no shortlist, no interview and no selection rationale was ever recorded** | ⛔ **UNKNOWN** | ⛔ Single counsel |
+
+> ⛔⛔ **THE ROW ABOVE IS A RECONSTRUCTION, ⛔ NOT A TASK-8 EXECUTION RECORD** ([Decision 2026-08-24-156](../../.decision-log.md#decision-2026-08-24-156) cl.4). ⭐ **It documents that the Task-8 process did ⛔ NOT run in recorded form — ⛔ it does not substitute for it.** The `<PENDING-TASK-8>` template row above is **deliberately preserved unfilled**: the shortlist-and-interview process it describes remains **un-executed on the record**, and ⛔ nothing here should be read as having discharged it ([[feedback_record_unattested_no_backfill]]).
+> ⚠ **What that leaves open, stated plainly:** the mandatory shortlist criteria in `counsel-roster.md` — **COI disclosure**, **professional-indemnity insurance**, **Bar Council of India enrollment**, **Indian Trust Act practice**, **no-TSCT-conflict** — are ⛔ **UNVERIFIED**, in both directions. ⛔ Not asserted met; ⛔ not asserted unmet.
 
 ---
 
@@ -87,6 +91,10 @@
 | Date | artifact_id | source_artifact_path | SLA target return date | Paging surface | Counsel ack date |
 |---|---|---|---|---|---|
 | `<PENDING-TASK-10>` | `epic-2-tc-draft-v1` | `_bmad-output/planning-artifacts/prds/prd-TWT-2026-05-22/prd.md §FR-94 + Niyamavali reference` | `<submission_date + 5-10 biz days per `engagement-letter-template.md` §4>` | `<counsel-side encrypted document exchange per deferred ADR `adr-index.md` Section K row #2>` | `<counsel ack date — within 2 biz hours per `engagement-letter-template.md` §11>` |
+| **2026-06-21 or earlier** ⚠ *(RECONSTRUCTED)* | ⛔ **UNREGISTERED** — the edge/WAF review predates `review-artifact-roster.md` having a row for it | `docs/adr/ADR-0010-edge-waf-cloudflare-turnstile.md` (the design as recorded) | ⛔ **UNKNOWN** | ⛔ **UNKNOWN** | ⛔ **UNKNOWN** |
+
+> ⚠ **RECONSTRUCTED 2026-08-24** (`2026-08-24-156` cl.4). ⭐ **The submission side of counsel act #1 was never captured** — only its *return* is on record (`2026-06-21-057`). ⛔ Submission date, SLA target, paging surface and acknowledgment are **all unknown and are ⛔ not inferred** from the return date. ⛔ The `<PENDING-TASK-10>` row above stays unfilled: the Epic 2 T&C first-artifact submission it describes has ⛔ still not happened.
+> ⛔⛔ **Counsel act #2 (2026-08-24, full-name publication) is ⛔ ABSENT from this section BY CONSTRUCTION** — it was a **verbal consultation**, ⛔ not an artifact submission. ⛔ There is nothing to log here, and ⛔ inventing a row would assert a submission that never occurred.
 
 ---
 
@@ -99,6 +107,12 @@
 | Date | artifact_id | return_summary_link | integration_target_story | integration_status | Gap list | Remediation plan |
 |---|---|---|---|---|---|---|
 | `<PENDING-TASK-11>` | `<artifact_id from review-artifact-roster.md>` | `per-artifact-return-roster.md#<artifact_id>` | `<owning Story per review-artifact-roster.md>` | `returned-pending-integration` → `integrated-into-Story-X` | `<gap list per return>` | `<remediation plan + responsible owner + target date>` |
+| **2026-06-21** ⚠ *(RECONSTRUCTED)* | ⛔ unregistered — edge/WAF design review | [Decision 2026-06-21-057](../../.decision-log.md#decision-2026-06-21-057) cl.1 — *"Cloudflare acceptable as designed"* ⚠ **the decision log is the return record; ⛔ there is no `per-artifact-return-roster.md` row** | Story 1.13 / ADR-0010 | `integrated` — ADR-0010 §6 `OPEN → CLEARED`; roster **Row 3** `closed` | ⛔ **No gaps recorded** | ⛔ n/a. ⚠ **Standing condition:** `-057` cl.5 — a material change to the edge data-flow **re-opens** the review |
+
+> ⚠ **RECONSTRUCTED 2026-08-24** (`2026-08-24-156` cl.4) — ⛔ this section did not capture the one return this engagement has produced.
+>
+> ⛔⛔ **COUNSEL ACT #2 (2026-08-24 — full-name publication, all four public surfaces) IS ⛔ DELIBERATELY ⛔ NOT LOGGED HERE, AND ITS ABSENCE IS THE POINT.** §7 records **returns**; a return requires a **returned artifact**. Act #2 was **verbal, relayed by a trustee, with ⛔ no written artifact** — so ⛔ it does not qualify, and `2026-08-24-156` cl.1(b) forbids citing it as a §7 entry. ⭐ It is recorded instead at `counsel-roster.md` **§ Reconstructed engagement record**, act #2, and in `-156` cl.1.
+> ⚠ **This is the asymmetry worth seeing:** the clearance that authorised **publishing real members' full legal names to the open internet** (`-156` cl.2) is the one that ⛔ **cannot be entered in the return-receipt log** — ⛔ because nothing was returned. ⇒ `-156` open follow-up: **obtain it in writing.**
 
 ---
 

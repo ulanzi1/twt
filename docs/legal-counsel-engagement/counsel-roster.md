@@ -2,7 +2,9 @@
 
 **Authority cite:** Story 0.13 AC-1; `README.md` §4 invariant 11 (multi-counsel permission); `review-scope-charter.md` shortlist criteria; Decision 2026-06-02-013.
 
-**Status:** Author-committed with single template row at `pending-trustee-selection`; named-counsel selection lands at Story 0.13 Task 8.
+**Status:** ⚠️ **CORRECTED 2026-08-24 (Decision `2026-08-24-156` cl.4) — ⛔ THIS ROSTER WAS WRONG, AND ITS WRONGNESS WAS LOAD-BEARING.** A named counsel — **Adv. Mohit Agrawal** — has been **engaged since 2026-06-21** and has returned work, while this roster showed only a template row at `pending-trustee-selection`. ⇒ downstream readers (the Epic 11a retrospective, AI-11a-1(a)'s reconciliation, and a Trustee Panel routing note) each concluded *"DPDPA counsel is not engaged"* and put that to the Panel as fact. See **§ Reconstructed engagement record** below.
+⛔ **The record below is RECONSTRUCTED from the decision log, ⛔ NOT contemporaneously captured, and is marked un-attested throughout** ([[feedback_record_unattested_no_backfill]]). ⛔ The `<PENDING-TASK-8>` placeholder rows are **deliberately left untouched** — filling them would assert a Task-8 process that ⛔ never ran.
+⚠ **Original author-commit status, preserved verbatim:** *Author-committed with single template row at `pending-trustee-selection`; named-counsel selection lands at Story 0.13 Task 8.*
 
 > **Header note:** The roster is **append-only**. Forbidden-removal rule applied; termination flips status to `terminated` (not row deletion); supersession-marker entry is logged in `engagement-ledger.md` §4 Counsel-selection log. The roster supports MULTIPLE counsel — more than one legal counsel is permitted if the practice-area scope exceeds a single counsel's competence (e.g., one for DPDPA + one for Indian Trust Act + financial-services). At v1 the trust engages one counsel; the framework does not assume one.
 >
@@ -124,9 +126,39 @@ The framework permits multiple counsel if practice-area coverage requires. If at
 
 ---
 
+## Reconstructed engagement record — Adv. Mohit Agrawal
+
+> ⛔⛔ **RECONSTRUCTED 2026-08-24 from `.decision-log.md`. ⛔ NOT a contemporaneous capture, ⛔ NOT a backfill, and ⛔ NOT evidence that the Task-7/8 process ran.** Authority: [Decision 2026-08-24-156](../../.decision-log.md#decision-2026-08-24-156) cl.4. ⭐ The engagement is recorded **where it was actually found** — the decision log — rather than reconstructed into the placeholder slots below as though this framework had captured it.
+
+| Field | Value | Attestation |
+|---|---|---|
+| `counsel_id` | `lc-1` | ⚠ Assigned **at this reconstruction**, ⛔ not at selection |
+| `name` | **Adv. Mohit Agrawal** | ✅ Named in [Decision 2026-06-21-057](../../.decision-log.md#decision-2026-06-21-057), ADR-0010, `architecture.md:249`, `adr-index.md`, `deferred-work.md:2456`, roster Row 3 |
+| `practice_areas` | DPDPA (demonstrated — data-residency / sub-processor analysis) | ⚠ **Un-attested against the shortlist criteria above.** ⛔ Indian Trust Act practice, PI insurance, Bar Council enrollment and COI status are ⛔ **UNVERIFIED** — ⛔ no record exists either way |
+| `qualification_status` | `engaged` | ⚠ **De facto.** ⛔ The `shortlisted → interviewed → selected` lifecycle was ⛔ never recorded; ⛔ do not read this as those steps having occurred |
+| `nda_signature_status` | ⛔ **UNKNOWN — no record** | ⛔ Un-attested. ⛔ Not asserted `unsigned`; ⛔ not asserted `signed` |
+| `engagement_letter_signature_status` | ⛔ **UNKNOWN — no record** | ⛔ Un-attested, as above |
+| `coi_disclosure_status` | ⛔ **UNKNOWN — no record** | ⛔ Un-attested. ⚠ A mandatory criterion above; its absence is a **live gap**, ⛔ not a formality |
+| `status` | `active` | Two returns on record (2026-06-21 written; 2026-08-24 verbal) |
+
+**Counsel acts on record — TWO, and they are ⛔ NOT the same kind of act:**
+
+| # | Date | Scope | Return form | Outcome |
+|---|---|---|---|---|
+| 1 | **2026-06-21** | **Edge/WAF design as recorded in ADR-0010** — ⛔ fenced by `2026-06-21-057` cl.5: *"⛔ Do NOT extend the assertion to data-flows beyond that recorded design"* | ✅ **Written return**, cited in six artifacts | *"Cloudflare acceptable as designed"* → closed roster **Row 3** |
+| 2 | **2026-08-24** | **Full-name publication across all four public surfaces** (`/members` + Stories 11b.1 / 11b.3 / 11b.6) | ⚠⛔ **VERBAL, relayed by trustee. ⛔ NO written artifact** | **Cleared** → `2026-08-24-156` cl.1; authorised `/members` exposure (cl.2) |
+
+⚠⛔ **THE STANDING RISK ON ACT #2, recorded here as well as in the decision:** it is the **thinnest attestation carrying the widest scope** in this project's record — verbal, unwritten, spanning **four** surfaces of which **three are ⛔ not built** and therefore ⛔ could not have been described to counsel as artifacts. ⭐ `-156` cl.7(a) adopts the `-057` fence by analogy: the clearance reaches the **posture as described**; ⛔ a surface shipping a new data class, subject population or recipient re-opens the review. ⛔ **It is ⛔ not a standing waiver.**
+
+⛔ **Act #2 may ⛔ NOT be logged as an `engagement-ledger.md` §7 Return-receipt** — §7 requires a returned artifact, and there is none.
+
+---
+
 ## Lifecycle log
 
 (Populated as the roster lifecycle progresses through Tasks 8-11. Schema-only at author-commit.)
+
+> ⚠ **The `<PENDING-TASK-*>` rows below are ⛔ DELIBERATELY UNFILLED** (`2026-08-24-156` cl.4). The Task-7/8 shortlist-and-selection process ⛔ never ran; ⛔ writing `lc-1` into those slots would assert a process that did not happen. The real engagement is recorded in **§ Reconstructed engagement record** above.
 
 | Date | Event | counsel_id | Old status | New status | Note |
 |---|---|---|---|---|---|
@@ -140,3 +172,6 @@ The framework permits multiple counsel if practice-area coverage requires. If at
 | `<PENDING-TASK-10>` | First artifact submitted — `engaged-not-onboarded → active` transition | `<lc-N>` | `engaged-not-onboarded` | `active` | First-artifact submission (Epic 2 T&C draft, Row 1 priority-1) is the `engaged-not-onboarded → active` trigger; ongoing concurrent-review per term commences. |
 | `<PENDING-TASK-10>` | First artifact submitted — engagement event | `<lc-N>` | `active` | `active` (last_engagement_event_date updated) | Per `engagement-ledger.md` §7. |
 | `<PENDING-TASK-11>` | Counsel returns first artifact | `<lc-N>` | `active` | `active` (last_engagement_event_date updated) | Per `engagement-ledger.md` §7. |
+| **2026-08-24** ⚠ *(reconstructed)* | ⛔ **Engagement RECORDED, ⛔ not created** — `lc-1` Adv. Mohit Agrawal entered on the roster retrospectively | `lc-1` | ⛔ (absent from this roster) | `active` | ⚠ `2026-08-24-156` cl.4. ⛔ The engagement dates to **2026-06-21**; only the *recording* is 2026-08-24. ⛔ Tasks 7-9 un-attested; COI/NDA/PI-insurance ⛔ UNKNOWN. |
+| **2026-06-21** ⚠ *(reconstructed)* | Counsel act #1 — written edge/WAF DPDPA clearance | `lc-1` | ⛔ (unrecorded) | ⛔ (unrecorded) | `2026-06-21-057` cl.1. Closed roster Row 3. ⚠ Row out of chronological order **by design** — it is entered on the date it was *recorded*, ⛔ not re-sorted, so the reconstruction stays visible. |
+| **2026-08-24** ⚠ *(reconstructed)* | Counsel act #2 — ⛔ **VERBAL** full-name-publication clearance, all four public surfaces | `lc-1` | `active` | `active` | `2026-08-24-156` cl.1. ⛔ **No written return.** ⛔ NOT a §7 Return-receipt. Standing risk per cl.7(a). |

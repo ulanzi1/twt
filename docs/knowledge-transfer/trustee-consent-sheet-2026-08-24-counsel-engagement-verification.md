@@ -1,5 +1,10 @@
 # Counsel Engagement Verification — Trustee / Counsel Consent Sheet (2026-08-24)
 
+**Status:** ⚠️ **SESSION HELD 2026-08-24 — quorate; counsel signed Part A; Panel ruled Part B.** ⭐ Part A's
+boxes are counsel's own and Part B's are the Panel's; ⛔ **nothing above was overwritten.** Five
+post-session annotations were **appended** — A1.5 (corrected), A2 (paths owed), A3.2/A3.3 (**HELD**),
+Row 2 (**moot**), Row 3 (**ruled (a)**). Logged as Decision `2026-08-24-157`.
+
 **Purpose:** obtain, from **Adv. Mohit Agrawal** and from the Trustee Panel, the attestations that the
 Story 0.13 framework requires of an engaged counsel and **never captured** — and then rule what
 follows. Raised by Decision `2026-08-24-156` cl.4, which recorded the engagement as **reconstructed**
@@ -90,21 +95,41 @@ pressure with a live public surface.**
 
 | # | Criterion | Attestation | Evidence / reference |
 |---|---|---|---|
-| **A1.1** | **Bar Council of India enrollment** — ⛔ non-enrollment is **disqualifying** | ☐ Enrolled · ☐ Not enrolled | Enrollment no.: ____________ State Bar Council: ____________ |
-| **A1.2** | **DPDPA practice** — current engagement with DPDPA jurisprudence | ☐ Yes · ☐ No | ⭐ Partially demonstrated by the 2026-06-21 return. Confirm it is **current** practice: ____________ |
-| **A1.3** | **Indian Trust Act 1882 practice** — Bihar jurisdiction relevant | ☐ Yes · ☐ No | ____________ |
-| **A1.4** | **Concurrent-review-mode availability** across a 12-month term (`engagement-letter-template.md` §8 + §9) — ⛔ lack of it is **disqualifying** | ☐ Available · ☐ Per-artifact only · ☐ No | ⚠ ⛔ Per-artifact-only is **incompatible** with the engagement nature (§2 + §9) |
-| **A1.5** | **Professional-indemnity insurance** adequate for engagement scope (§12) — ⛔ inadequate coverage is **disqualifying** | ☐ Held · ☐ Not held | Insurer: ____________ Limit: ____________ Expiry: ____________ |
-| **A1.6** | **COI — no prior engagement with TSCT or any other operating mutual-aid trust** (§6) — ⛔ an unmanaged conflict is **disqualifying** | ☐ No conflicts · ☐ Conflicts, manageable (plan attached) · ☐ Conflicts, unmanaged | ⭐ TSCT is this trust's **precedent and benchmark**; a prior TSCT engagement is a privileged-information conflict |
+| **A1.1** | **Bar Council of India enrollment** — ⛔ non-enrollment is **disqualifying** | Enrolled | Enrollment no.: ___BR/869/2014_________ State Bar Council: ____Bihar________ |
+| **A1.2** | **DPDPA practice** — current engagement with DPDPA jurisprudence | Yes | ⭐ Partially demonstrated by the 2026-06-21 return. Confirm it is **current** practice: ____Yes________ |
+| **A1.3** | **Indian Trust Act 1882 practice** — Bihar jurisdiction relevant | Yes | ____________ |
+| **A1.4** | **Concurrent-review-mode availability** across a 12-month term (`engagement-letter-template.md` §8 + §9) — ⛔ lack of it is **disqualifying** | Available  | ⚠ ⛔ Per-artifact-only is **incompatible** with the engagement nature (§2 + §9) |
+| **A1.5** | **Professional-indemnity insurance** adequate for engagement scope (§12) — ⛔ inadequate coverage is **disqualifying** | Held | Insurer: ___LIC_________ Limit: ___1 crore_________ Expiry: ____2045________ |
+| **A1.6** | **COI — no prior engagement with TSCT or any other operating mutual-aid trust** (§6) — ⛔ an unmanaged conflict is **disqualifying** | No conflicts  | ⭐ TSCT is this trust's **precedent and benchmark**; a prior TSCT engagement is a privileged-information conflict |
+
+> ⛔⛔ **A1.5 CORRECTED POST-SESSION 2026-08-24 — ⛔ counsel's entry above is left as written.**
+> The particulars given (**LIC · 1 crore · expiry 2045**) describe a **LIFE** policy, ⛔ not
+> professional indemnity: **LIC of India is a statutory life insurer** under the LIC Act 1956 and
+> ⛔ cannot write PI/E&O cover, and a **2045 expiry** is a life-policy maturity — PI cover is
+> **annually renewable**. ⚠ Put to counsel, who confirmed this row was **misread** and that a
+> **separate professional-indemnity policy exists**.
+> ⇒ ⭐ **A1.5 is recorded ASSERTED-MET with its PARTICULARS OWED** — ⛔ insurer, limit and expiry were
+> ⛔ not supplied, so it is ⛔ **not** recorded as verified (`2026-08-24-157` cl.1(e)). ⛔ The
+> disqualifying condition does ⛔ **not** obtain; ⛔ nor is the criterion evidenced.
 
 ## A2 — Engagement instruments (`counsel-roster.md` § Schema — all currently `UNKNOWN`)
 
 | # | Instrument | Attestation | Note |
 |---|---|---|---|
-| **A2.1** | **NDA** (`engagement-letter-template.md` §7) | ☐ Signed — date ________ · ☐ Not signed | ⛔ No record exists either way |
-| **A2.2** | **Engagement letter** (§14) | ☐ Signed — date ________ · ☐ Not signed | ⚠ §14 requires Panel chair + ≥1 further trustee + a trust-side witness |
-| **A2.3** | **COI disclosure filed** (§6) | ☐ Filed — date ________ · ☐ Not filed | Distinct from A1.6: A1.6 is the *fact*, A2.3 is the *filing* |
+| **A2.1** | **NDA** (`engagement-letter-template.md` §7) | ☐ Signed — date __2026-06-21______  | ⛔ No record exists either way |
+| **A2.2** | **Engagement letter** (§14) | Signed — date __2026-06-21______  | ⚠ §14 requires Panel chair + ≥1 further trustee + a trust-side witness |
+| **A2.3** | **COI disclosure filed** (§6) | ☐ Filed — date __2026-06-21______ | Distinct from A1.6: A1.6 is the *fact*, A2.3 is the *filing* |
 
+
+> ⚠ **CLARIFIED POST-SESSION 2026-08-24** (`2026-08-24-157` cl.2). ⭐ `engagement-letter-template.md`
+> **§14 step 5** places the executed letter in **secure non-git trustee-accessible storage** — so its
+> absence from this repo is **by design** and is ⛔ **not** evidence against A2. ⛔ What §14 step 5
+> *does* require and what is missing is the **storage reference path + receipt**, recorded in
+> `engagement-ledger.md` **§5**, which is **empty**.
+> ⇒ all three instruments are recorded **counsel-asserted, executed off-repo, reference paths OWED**
+> and **un-attested** until the paths land ([[feedback_record_unattested_no_backfill]]).
+> ⚠ Note the A2.1 and A2.3 **boxes are unticked** — only dates were written. Read as asserted, ⛔ not
+> as marked.
 ## A3 — ⭐ Confirm the 2026-08-24 verbal clearance **in writing**
 
 > ⚠ **The single highest-value line on this sheet.** `2026-08-24-156` cl.1 records this clearance as
@@ -115,14 +140,26 @@ pressure with a live public surface.**
 
 | # | Question | Attestation |
 |---|---|---|
-| **A3.1** | Do you confirm **in writing** that you cleared **publication of members' full legal names on an unauthenticated public page**? | ☐ Confirmed · ☐ Confirmed with conditions (below) · ☐ ⛔ Not as stated |
-| **A3.2** | Does that clearance extend to the **three unbuilt** Epic 11b surfaces — **11b.1** and **11b.6** (**deceased** members and their families) and **11b.3** (**nominee BANK DETAILS**)? | ☐ Yes, all three · ☐ `/members` only · ☐ Names yes, bank details ⛔ no · ☐ Other |
-| **A3.3** | ⚠ Those three surfaces **do not yet exist** and so ⛔ could not have been shown to you. On what basis does the clearance reach them, and what **re-opens** it? | ____________________________________________ |
-| **A3.4** | Do you adopt the `2026-06-21-057` cl.5 **scope fence** for this clearance — that it covers the **posture as described**, and a new **data class / subject population / recipient** re-opens the review? | ☐ Adopted · ☐ Different fence (state it): ____________ |
+| **A3.1** | Do you confirm **in writing** that you cleared **publication of members' full legal names on an unauthenticated public page**? | Confirmed  |
+| **A3.2** | Does that clearance extend to the **three unbuilt** Epic 11b surfaces — **11b.1** and **11b.6** (**deceased** members and their families) and **11b.3** (**nominee BANK DETAILS**)? |  Yes, all three |
+| **A3.3** | ⚠ Those three surfaces **do not yet exist** and so ⛔ could not have been shown to you. On what basis does the clearance reach them, and what **re-opens** it? | __Based on Member Consent of Term of service of TWT__ |
+| **A3.4** | Do you adopt the `2026-06-21-057` cl.5 **scope fence** for this clearance — that it covers the **posture as described**, and a new **data class / subject population / recipient** re-opens the review? | Adopted|
+
+> ⛔⛔ **A3.2 AND A3.3 ARE HELD 2026-08-24 — counsel will REVISIT.** ⛔ Counsel's answers above are
+> left exactly as given. ⚠ The stated basis — *"Member Consent of Term of service of TWT"* — does
+> ⛔ **not reach** the subjects those three surfaces publish: **11b.1/11b.6** publish **deceased**
+> members and their **families**, who accepted no ToS; **11b.3** publishes **nominee BANK DETAILS**,
+> and nominees are **third parties** who accepted none either. ⚠ And `2026-08-23-154` ruled C-5 as
+> **two levers** — each 11b surface owes its **own per-subject consent gate** — so ToS consent is
+> precisely what this project already ruled insufficient. ⛔ Separately, the **T&C are priority-1
+> UNRETURNED** on counsel's own `review-scope-charter.md` §1(a), so the basis cites a document
+> counsel has ⛔ not reviewed.
+> ⇒ **the clearance is NARROWED to `/members` pending counsel's revisit** (`2026-08-24-157` cl.3).
+> ⭐ Costs nothing today: all three surfaces are unbuilt and Epic 11b is `backlog`.
 
 **Conditions, if any:** ______________________________________________________________
 
-**Counsel signature:** __________________________  **Date:** ____________
+**Counsel signature:** ___Mohit_______________________  **Date:** ___2026-08-24_________
 
 ---
 
@@ -143,7 +180,7 @@ engagement letter or COI filing is on record. `engagement-letter-template.md` ex
 | **(b)** | **Execute the engagement letter now**, forward-looking, with the two prior acts recorded as pre-instrument. |
 | **(c)** | **Execute, and have counsel re-affirm both prior clearances** under it. |
 
-**Decision:** ☐ Ruled as: __________ **Conditions:** ______________________
+**Decision:** ☐ Ruled as: _Stands as-is_________ **Conditions:** ______________________
 
 ---
 
@@ -159,7 +196,13 @@ invariant 11).
 | **(b)** | **Engage a second counsel** for the unmet practice areas (Indian Trust Act / financial-services), under a separate engagement letter. |
 | **(c)** | **Defer** — the unmet areas are not yet load-bearing; revisit at the next checkpoint. |
 
-**Decision:** ☐ Ruled as: __________ **Conditions:** ______________________
+**Decision:** ☐ Ruled as: ___(a)_______ **Conditions:** _______None_______________
+
+> ⚠⛔ **RECORDED MOOT 2026-08-24 — ⛔ NOT an exercised waiver** (`2026-08-24-157` cl.4). ⭐ Part A
+> returned **no mandatory criterion unmet**, so *"(a) waive the unmet criteria"* waives **nothing**.
+> ⛔ The mark above is left exactly as the Panel made it. ⛔ It may ⛔ **not** be written up as *"the
+> Panel waived mandatory counsel criteria"* — that would be false and damaging. ⚠ Confirmed with the
+> Panel post-session: **moot**, ⛔ not a waiver of A1.5 and ⛔ not a standing forward waiver.
 
 ---
 
@@ -182,6 +225,12 @@ later.
 
 **Decision:** ☐ Ruled as: __________ **Conditions:** ______________________
 
+> ⭐ **RULED POST-SESSION 2026-08-24 — (a) BOTH CLEARANCES STAND.** ⛔ The box above is left as the
+> Panel marked it (blank); the ruling is recorded here and in Decision `2026-08-24-157` cl.5.
+> Qualification is a **procurement** criterion, ⛔ not a validity condition on advice already given.
+> ⇒ launch-gate **Row 3 stays `closed`**; **`/members` stays authorised**. ⚠ Ruled while A1.5's
+> particulars were still owed, so it is a **live** ruling, ⛔ not a hypothetical one.
+
 ---
 
 ### Row 4 — Do the four `un-attested (counsel unengaged)` rulings get revisited?
@@ -197,7 +246,7 @@ engaged. ⛔ The rulings themselves are ⛔ not in question — only their attes
 | **(c)** | **Route a subset** — name which: ____________ |
 | **(d)** | **Annotate only** — correct the stated reason in the record, ⛔ change no attestation status. |
 
-**Decision:** ☐ Ruled as: __________ **Conditions:** ______________________
+**Decision:** Ruled as: ___(a)_______ **Conditions:** _________None_____________
 
 ---
 
@@ -217,7 +266,7 @@ counsel selection"* is carried by the Epic 11a retro and the sprint ledger. ⛔ 
 demonstrably wrong** — selection happened in June. This row's answer determines what those four are
 actually waiting on.
 
-**Decision:** ☐ Ruled as: __________ **Conditions:** ______________________
+**Decision:** Ruled as: ____(b)______ **Conditions:** ______________________
 
 ---
 
@@ -226,23 +275,23 @@ actually waiting on.
 > ⛔ **BLANK BY CONSTRUCTION.** Filled only from what is actually ruled at a real, quorate session,
 > and ⛔ never in advance. ⛔ Part B may ⛔ not be filled before Part A returns.
 
-Quorum met: ☐ Yes (≥2 trustees present) ☐ No — session not quorate, ⛔ no rulings recorded
+Quorum met: Yes (≥2 trustees present) 
 
-Part A returned by counsel: ☐ Yes — date ________ ☐ No — Part B ⛔ not ruled
+Part A returned by counsel: ☐ Yes — date __2026-08-24______ ☐ No — Part B ⛔ not ruled
 
 | Row | Question | Decision | Conditions / amendments |
 |---|---|---|---|
-| 1 | Engagement instrument | ☐ | |
-| 2 | Unmet mandatory criteria | ☐ | |
-| 3 | Disqualifying-answer contingency | ☐ | |
-| 4 | The four `un-attested` rulings | ☐ | |
-| 5 | Task 7/8 disposition | ☐ | |
+| 1 | Engagement instrument | ☑ **Ruled — (a) stands as-is** | ⛔ No new instrument executed. ⚠ Counsel asserts all three were executed 2026-06-21 off-repo (A2); **reference paths OWED**. ⇒ §7 NDA, §12 insurance and §13 termination bind only what those unfiled documents say. |
+| 2 | Unmet mandatory criteria | ⚠ **MOOT — ⛔ NOT an exercised waiver** | ⭐ Part A returned **no** mandatory criterion unmet, so *(a) waive* waives nothing. ⛔ May ⛔ **not** be written up as the Panel waiving counsel criteria. Confirmed moot post-session. |
+| 3 | Disqualifying-answer contingency | ☑ **Ruled — (a) both clearances stand** | ⭐ Ruled **post-session** (the box was left blank in-session). Qualification is a **procurement** criterion, ⛔ not a validity condition on advice given. Roster **Row 3 stays `closed`**; **`/members` stays authorised**. |
+| 4 | The four `un-attested` rulings | ☑ **Ruled — (a) leave them** | `2026-08-14-109` rows 3/4/5/6 keep Panel attestation. ⚠ The stated **reason** (*"counsel unengaged"*) was false; the **disposition** stands. ⛔ Reason not corrected by this ruling → carried to the next reconciliation. |
+| 5 | Task 7/8 disposition | ☑ **Ruled — (b) they remain open** | The shortlist / interview / COI-at-interview discipline is owed for **any future counsel**; `<PENDING-TASK-8>` slots stay as the template. ⭐ ⇒ the *"four of ten obligations behind counsel selection"* figure is ⛔ **wrong** — selection is done; those four wait on something else. |
 
-**Trustee initials:** ______ (DR)  ______ (KB)   **Date:** ____________
+**Trustee initials:** ___dr___ (DR)  __kb____ (KB)   **Date:** ___2026-08-24_________
 
-**Counsel signature (Part A):** __________________________  **Date:** ____________
+**Counsel signature (Part A):** _____Mohit_____________________  **Date:** ____2026-08-24________
 
-To be logged in `.decision-log.md` as Decision **`2026-08-__-___`** · roster + ledger cascade per that entry.
+Logged in `.decision-log.md` as Decision **`2026-08-24-157`** · roster + ledger cascade applied in the same commit series.
 
 ---
 

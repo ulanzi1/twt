@@ -1,4 +1,48 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-24e (⭐ THE 0.13 LEDGER IS NOW SUBSTANTIVELY POPULATED -- storage, retainer and
+#   scope-charter acceptance supplied. ⛔ ZERO ROWS FLIP. ⛔ No story row, ⛔ no development_status key,
+#   ⛔ no new decision entry -- facts arriving against named open follow-ups, ⛔ not rulings.
+#
+#   WHAT LANDED: engagement-ledger.md §5 substantively filled (storage location · retainer ₹2,00,000/yr
+#   activated 2026-06-21 · counsel `accepted` review-scope-charter 2026-06-21) + §6 the overdue-clock
+#   finding + counsel-roster.md `retainer` and `scope_charter_acceptance` fields + consent-sheet A2
+#   annotation. ⛔ Counsel's and the Panel's marks untouched throughout.
+#
+#   ⚠⛔ FINDING 1 -- AC-1's FIRST-ARTIFACT DEADLINE IS 50 DAYS BREACHED, AND ⛔ NOBODY WAS TRACKING IT.
+#   README.md:39 commits it as a STRUCTURAL PROPERTY: "first-artifact-submission within 2 weeks of
+#   signing". Signing 2026-06-21 ⇒ due 2026-07-05. Today is 2026-08-24 and ⛔ NOTHING has been
+#   submitted. ⭐ The clock only became computable once the signing date was recorded -- ⇒ the ledger
+#   gap wasn't just a missing record, it SUPPRESSED A LIVE DEADLINE for ~7 weeks.
+#   ⭐ TRUST-SIDE lapse, ⛔ NOT a counsel SLA breach -- counsel cannot return what he was never sent.
+#   Recorded in §6, ⛔ deliberately NOT in §8 SLA-breach-tracking.
+#
+#   ⚠⛔ FINDING 2 -- AND IT IS THE SAME DOCUMENT AS THE A3.3 PROBLEM. The overdue priority-1 artifact
+#   is the EPIC 2 T&C DRAFT -- ⭐ the very document counsel cited as his BASIS for clearing the three
+#   Epic 11b surfaces (-157 cl.3). ⇒ COUNSEL GROUNDED A CLEARANCE IN A DOCUMENT THE TRUST OWED HIM 50
+#   DAYS AGO AND ⛔ NEVER SENT. ⚠ Sharper still: counsel `accepted` the review-scope-charter on
+#   2026-06-21 -- the charter that names the T&C priority-1 and the DPDPA consent flow §1(b) -- so he
+#   accepted a scope whose first two items were never delivered to him.
+#
+#   ⚠⛔ FINDING 3, OBSERVATIONAL ⛔ NOT RULED -- STORAGE POSTURE. The engagement letter, NDA and COI
+#   disclosure live in a TRUSTEE'S PERSONAL OneDrive Personal Vault. §14 step 5 requires "secure
+#   non-git TRUSTEE-ACCESSIBLE storage" -- ⭐ a personal vault is SECURE but SINGLE-PERSON-CONTROLLED,
+#   the ⛔ opposite of trust-accessible. If that trustee is unavailable the trust cannot reach its own
+#   legal instruments -- precisely what Stories 0.1-0.6 exist to mitigate. ⚠ They are LEGAL
+#   INSTRUMENTS, ⛔ not credentials, so they sit ⛔ OUTSIDE credential-inventory.md's seven PRD §9.1.1
+#   domains and ⛔ no escrow envelope covers them. ⛔ The Panel has ruled nothing here.
+#
+#   ⚠ STILL OWED on storage: a PER-DOCUMENT LOCATOR. A named LOCATION is ⛔ not the "reference path +
+#   receipt" §14 step 5 asks for -- "OneDrive/Personal Vault" ⛔ does not resolve to a document. Plus
+#   the counsel-side archive path (§14 step 5 wants BOTH).
+#
+#   ⛔ NOTHING ELSE MOVES: Row 17 `closed` · roster Row 3 `closed` · Row 10 open · /members authorised
+#   (-156 cl.2) · the 11b clearance NARROWED, A3.2/A3.3 HELD (-157 cl.3) · counsel FULLY VERIFIED.
+#
+#   STILL OPEN: the per-document locators + counsel-side archive path · ⛔ THE OVERDUE T&C SUBMISSION
+#   (Finding 1) · counsel's revisit of A3.2/A3.3 -- ⭐ which Finding 2 suggests should follow the T&C
+#   submission, ⛔ not precede it · the storage-posture question (Finding 3) · the false "counsel
+#   unengaged" spread, 36 lines · 18 files · 11 decision-log entries, ⛔ not swept · each 11b surface's
+#   per-subject consent gate · the live ~5-min /members cache tail.)
 # last_updated: 2026-08-24d (⭐⭐ COUNSEL FULLY VERIFIED — the sixth and last mandatory criterion is
 #   EVIDENCED; 2026-08-24-157 cl.1(e) DISCHARGED. ⛔ ZERO ROWS FLIP. ⛔ No story row, ⛔ no
 #   development_status key. ⛔ No new decision entry minted -- ⭐ this is a FACT ARRIVING, ⛔ not a

@@ -148,6 +148,15 @@ pressure with a live public surface.**
 > and **un-attested** until the paths land ([[feedback_record_unattested_no_backfill]]).
 > ⚠ Note the A2.1 and A2.3 **boxes are unticked** — only dates were written. Read as asserted, ⛔ not
 > as marked.
+>
+> ⚠ **PARTIALLY SUPPLIED 2026-08-24:** the instruments live in a **trustee-owned OneDrive Personal
+> Vault**; retainer **₹2,00,000/year activated 2026-06-21**; counsel **`accepted`** the
+> review-scope-charter **2026-06-21**. ⛔ **Still owed:** a **per-document locator** — a named
+> *location* is ⛔ not the *"reference path + receipt"* §14 step 5 asks for — and the **counsel-side
+> archive path**.
+> ⚠⛔ **And a posture concern, recorded ⛔ not ruled:** a **personal** vault is single-person-
+> controlled, which is the ⛔ opposite of §14 step 5's *"trustee-**accessible**"*. ⛔ These are legal
+> instruments, ⛔ not credentials, so ⛔ no escrow envelope covers them either.
 ## A3 — ⭐ Confirm the 2026-08-24 verbal clearance **in writing**
 
 > ⚠ **The single highest-value line on this sheet.** `2026-08-24-156` cl.1 records this clearance as

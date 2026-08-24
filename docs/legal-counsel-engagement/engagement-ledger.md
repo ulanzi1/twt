@@ -79,12 +79,17 @@
 | Date | Engagement letter on-file path | NDA signed | COI disclosure | Retainer schedule | Engagement letter git-SHA | Counsel acceptance of scope-charter |
 |---|---|---|---|---|---|---|
 | `<PENDING-TASK-9>` | `<trustee-accessible repo path + counsel-side archive path>` | `signed` + signature date + NDA-on-file path | `disclosed-no-conflicts` OR `disclosed-with-managed-conflicts` (with plan) | `<activated date + retainer amount per `engagement-letter-template.md` §5>` | `<git SHA>` | `accepted` + date OR `accepted-with-amendments` + amendment notes |
-| **2026-06-21** ⚠ *(counsel-asserted 2026-08-24; ⛔ NOT contemporaneous)* | ⛔⛔ **OWED** — §14 step 5 requires the storage reference path + receipt, and ⛔ none was supplied | `signed` **asserted** 2026-06-21 — ⛔ on-file path **OWED**. ⚠ Consent-sheet box A2.1 **unticked**, date only | **`disclosed-no-conflicts`** — ⭐ the **fact** is attested and counsel-signed; the **filing** is asserted 2026-06-21 with ⛔ path **OWED**. ⚠ A2.3 box **unticked**, date only | ⛔ **UNKNOWN** — ⛔ not asked on the sheet | ⛔ **n/a** — the executed letter is off-repo by design; ⛔ no git SHA exists | ⛔ **UNKNOWN** — ⛔ not asked on the sheet |
+| **2026-06-21** ⚠ *(recorded 2026-08-24; ⛔ NOT contemporaneous)* | **Trustee-owned OneDrive → Personal Vault** ⚠ **location named 2026-08-24; ⛔ per-document locator (folder/filename/link) NOT supplied.** ⛔ Counsel-side archive path (§14 step 5 wants **both**) ⛔ still OWED | `signed` asserted 2026-06-21 · **same vault**. ⚠ A2.1 box **unticked**, date only | **`disclosed-no-conflicts`** — ⭐ the **fact** is attested and counsel-signed; the **filing** is asserted 2026-06-21, **same vault**. ⚠ A2.3 box **unticked**, date only | ✅ **Activated 2026-06-21 · ₹2,00,000 per year** (`engagement-letter-template.md` §5) | ⛔ **n/a** — executed off-repo by design; ⛔ no git SHA exists | ✅ **`accepted` 2026-06-21** — counsel accepted `review-scope-charter.md` |
 
 > ⚠ **RECORDED 2026-08-24 per [Decision 2026-08-24-157](../../.decision-log.md#decision-2026-08-24-157) cl.2 — counsel-asserted, ⛔ NOT verified.**
 > ⭐ **A correction worth keeping:** the executed engagement letter's **absence from this repo is BY DESIGN** — `engagement-letter-template.md` **§14 step 5** places it in *"secure non-git trustee-accessible storage"*, with only the **reference path + receipt** committed here. ⛔ So its absence is ⛔ **not** evidence against the engagement. ⛔ **What IS missing is the reference path**, which §14 step 5 requires and which this row records as **OWED**.
 > ⛔ The `<PENDING-TASK-9>` template row above stays unfilled: the Task-9 signature *event* — Panel chair + ≥1 further trustee + trust-side witness per §14 — is ⛔ **not** recorded as having occurred, and ⛔ counsel was not asked whether it did.
 > ⚠ **Two schema fields were never asked on the consent sheet** and are recorded UNKNOWN rather than inferred: **retainer schedule** (§5 pricing) and **counsel acceptance of `review-scope-charter.md`**. ⛔ Not back-filled ([[feedback_record_unattested_no_backfill]]).
+> ✅ **SUPPLIED 2026-08-24 — the two fields above are no longer UNKNOWN:** retainer **activated 2026-06-21 at ₹2,00,000/year**, and counsel **`accepted`** the `review-scope-charter.md` on **2026-06-21**. ⛔ The row is updated; this note is kept because it records that they were never *asked*, which is why they were missing.
+>
+> ⚠⛔ **A STORAGE-POSTURE CONCERN, RECORDED ⛔ NOT RULED.** The three instruments are held in a **trustee's PERSONAL OneDrive Personal Vault**. §14 step 5 requires *"secure non-git **trustee-accessible** storage"* — ⭐ a personal vault is **secure** but is **single-person-controlled**, which is the ⛔ opposite of trust-accessible. ⇒ if that trustee is unavailable, the trust's **engagement letter, NDA and COI disclosure are unreachable** — precisely the failure mode Stories **0.1–0.6** exist to mitigate. ⚠ These are **legal instruments, ⛔ not credentials**, so they fall ⛔ outside `docs/escrow/credential-inventory.md`'s seven PRD §9.1.1 domains and are covered by **no** escrow envelope. ⛔ **Observational — the Panel has ruled nothing here** ([[feedback_gap_analysis_observational]]).
+>
+> ⚠ **And the locator is still owed.** A named *location* is ⛔ not a **reference path + receipt**: §14 step 5 asks for a resolvable pointer, and *"OneDrive/Personal Vault"* ⛔ does not resolve to a document.
 
 ---
 
@@ -100,6 +105,20 @@
 | **2026-06-21 or earlier** ⚠ *(RECONSTRUCTED)* | ⛔ **UNREGISTERED** — the edge/WAF review predates `review-artifact-roster.md` having a row for it | `docs/adr/ADR-0010-edge-waf-cloudflare-turnstile.md` (the design as recorded) | ⛔ **UNKNOWN** | ⛔ **UNKNOWN** | ⛔ **UNKNOWN** |
 
 > ⚠ **RECONSTRUCTED 2026-08-24** (`2026-08-24-156` cl.4). ⭐ **The submission side of counsel act #1 was never captured** — only its *return* is on record (`2026-06-21-057`). ⛔ Submission date, SLA target, paging surface and acknowledgment are **all unknown and are ⛔ not inferred** from the return date. ⛔ The `<PENDING-TASK-10>` row above stays unfilled: the Epic 2 T&C first-artifact submission it describes has ⛔ still not happened.
+> ⛔⛔ **AND NOW THE CLOCK IS COMPUTABLE — AC-1's FIRST-ARTIFACT DEADLINE IS ⛔ 50 DAYS BREACHED.**
+> `README.md:39` commits it as a **structural property**: *"First-artifact-submission within 2 weeks
+> of signing is a structural property. AC-1 commits this as a deadline."* ⇒ signing **2026-06-21**
+> ⇒ first artifact due **2026-07-05**. ⚠ Today is **2026-08-24** and **⛔ nothing has been
+> submitted** — this log's only real row is the *reconstructed* edge review, whose submission side
+> was never captured.
+> ⭐ **This is a TRUST-SIDE lapse, ⛔ not a counsel SLA breach** — counsel cannot return an artifact
+> he was never sent, so it is recorded **here** and ⛔ **not** in §8 SLA-breach-tracking.
+> ⚠⛔ **AND IT IS THE SAME DOCUMENT AS THE A3.3 PROBLEM.** The overdue priority-1 artifact is the
+> **Epic 2 T&C draft** — ⭐ the very document counsel cited as the *basis* for clearing the three
+> Epic 11b surfaces (`2026-08-24-157` cl.3). ⇒ **counsel grounded a clearance in a document the trust
+> owed him 50 days ago and ⛔ never sent.**
+> ⛔ Recorded, ⛔ not actioned — surfacing it is this ledger's job; scheduling it is not.
+>
 > ⛔⛔ **Counsel act #2 (2026-08-24, full-name publication) is ⛔ ABSENT from this section BY CONSTRUCTION** — it was a **verbal consultation**, ⛔ not an artifact submission. ⛔ There is nothing to log here, and ⛔ inventing a row would assert a submission that never occurred.
 
 ---

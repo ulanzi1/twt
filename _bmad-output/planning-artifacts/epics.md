@@ -4560,6 +4560,11 @@ So that every visibility decision in every Epic 11 surface (and downstream) read
 >
 > ⚠ **Still OPEN, ⛔ not closed by this epic.** `2026-08-20-140` cl.7 — the Niyamavali carries **no clause** governing directory publication or name visibility — is **ANSWERED but ⛔ NOT CLOSED** (`2026-08-21-144`); the amendment lands in the **prose** rulebook because the clause registry ⛔ structurally cannot carry it (draft: `niyamavali-amendment-draft-2026-08-21-directory-publication.md`). ⚠ `2026-08-19-136` cl.5's **DPDPA exposure** (legal counsel ⛔ not engaged) also remains open, and is now **sharper** because the page it describes exists.
 
+> ⛔ **CORRECTED 2026-08-24 (sweep — Decision `2026-08-24-158`): the *"counsel not engaged"* claim above is FALSE, and was false when written.**
+> **Adv. Mohit Agrawal** has been Story 0.13 **engaged counsel since 2026-06-21** (`2026-06-21-057`; ⭐ launch-gate **Row 3** is `closed` **on his return**). ⛔ Annotated, ⛔ never rewritten.
+> ⚠ **The correct form of words, and what was really true:** counsel had ⛔ not reviewed **this** subject — the 2026-06-21 clearance is fenced to the **ADR-0010 edge design** and reaches nothing else. ⇒ write *"counsel has not reviewed X"*, ⛔ never *"counsel is not engaged"*.
+> ⭐ **The other half of this sentence STANDS, ⛔ untouched:** the **Niyamavali is still an unadopted draft** (`docs/legal/niyamavali.md:5` — `[[v1.0]]` / `[[date]]` unfilled, DRAFT banner). ⛔ Only the counsel clause is corrected.
+
 ### Story 11a.2: Public Astro SSR Shell Extension for Member Directory + Tiered Visibility Renderers `[PRIMITIVE]`
 
 As Solo Builder extending the Story 2.5 Astro shell foundation,
@@ -4799,6 +4804,10 @@ So that critical communications stay visible until acknowledged.
 >
 > ⚠ **And "done" is NOT "live".** Epic 11a is **technically delivered**; the public identity is ⛔ **not operationally or publicly live**. Row 17 stays **open** because ≥2-trustee ratification is its **second** closure leg (`2026-08-21-147`, `2026-08-21-148`). ⚠ Even once it closes the control is ⛔ **NOT IMMEDIATE**: `/members` is edge-cacheable at `s-maxage=300`, so a pulled Pariwar keeps being served real member names **from every warm PoP, per page number**. ⛔ Direct SQL is **NOT** the operational fallback.
 
+> ⛔ **CORRECTED 2026-08-24 (sweep — Decision `2026-08-24-158`): the *"counsel not engaged"* claim above is FALSE, and was false when written.**
+> **Adv. Mohit Agrawal** has been Story 0.13 **engaged counsel since 2026-06-21** (`2026-06-21-057`; ⭐ launch-gate **Row 3** is `closed` **on his return**). ⛔ Annotated, ⛔ never rewritten.
+> ⚠ **The correct form of words, and what was really true:** counsel had ⛔ not reviewed **this** subject — the 2026-06-21 clearance is fenced to the **ADR-0010 edge design** and reaches nothing else. ⇒ write *"counsel has not reviewed X"*, ⛔ never *"counsel is not engaged"*.
+
 > ⭐ **RULED 2026-08-23 (AI-11a-2) — C-1 AND C-5 ARE SETTLED AT THE EPIC LEVEL. ⛔ SD-2 is ruled per-story (11b.1 · 11b.3 · 11b.6), ⛔ not here.**
 >
 > ### C-1 — RULED: headless presenter + per-stack render layer. ⛔ `@twt/ui` stays React-free.
@@ -4819,6 +4828,10 @@ So that critical communications stay visible until acknowledged.
 > ⭐ **AND EACH 11b SURFACE ADDITIONALLY DECLARES ITS OWN CONSENT GATE** — `sahyog_vivran_publication` (11b.3) · `in_memoriam_listing` (11b.6). ⚠ **These are a DIFFERENT LEVER, ⛔ not a second copy of Row 17:** the kill switch operates **per-Pariwar** and is an **operational** control; consent operates **per-subject** and is a **family-authored** one. ⛔ **Neither discharges the other**, and ⛔ a surface is not launch-ready on one alone — the same two-gates discipline C-4 states for the producer/consent seam.
 >
 > ⚠ **THREE INHERITED PROPERTIES BIND ALL THREE SURFACES, ⛔ none softened by this ruling:** (i) the pull-lever is ⛔ **NOT IMMEDIATE** — `s-maxage=300` per page number, so a revoked consent or a pulled Pariwar keeps being served **from every warm PoP**, and ⛔ direct SQL is **NOT** the operational fallback; (ii) **DPDPA counsel is ⛔ NOT ENGAGED** (`2026-08-19-136` cl.5), and Epic 11b widens the exposure from members to **the deceased and their families**; (iii) every surface declares `cache_policy` **explicitly** in the matrix — ⛔ never inferred from field tiers — and a rendering surface with ⛔ no `Cache-Control` **fails CI**.
+
+> ⛔ **CORRECTED 2026-08-24 (sweep — Decision `2026-08-24-158`): the *"counsel not engaged"* claim above is FALSE, and was false when written.**
+> **Adv. Mohit Agrawal** has been Story 0.13 **engaged counsel since 2026-06-21** (`2026-06-21-057`; ⭐ launch-gate **Row 3** is `closed` **on his return**). ⛔ Annotated, ⛔ never rewritten.
+> ⚠ **The correct form of words, and what was really true:** counsel had ⛔ not reviewed **this** subject — the 2026-06-21 clearance is fenced to the **ADR-0010 edge design** and reaches nothing else. ⇒ write *"counsel has not reviewed X"*, ⛔ never *"counsel is not engaged"*.
 
 ### Story 11b.1: Sahyog Drive Active + Archive — Searchable, Paginated, No Bulk Export + Remembrance-Not-Analytics Invariant `[SURFACE]`
 

@@ -57,6 +57,14 @@ rows today, the ruling arrives on Panel attestation alone and must be recorded a
 clause 5. That is a legitimate route; it is not a substitute for counsel, and it must not be written
 up as one.
 
+> ⛔ **CORRECTED 2026-08-24 (sweep — Decision `2026-08-24-158`): the *"counsel not engaged"* claim above is FALSE, and was false when written.**
+> **Adv. Mohit Agrawal** has been Story 0.13 **engaged counsel since 2026-06-21** (`2026-06-21-057`; ⭐ launch-gate **Row 3** is `closed` **on his return**). ⛔ Annotated, ⛔ never rewritten.
+> ⚠ **The correct form of words, and what was really true:** counsel had ⛔ not reviewed **this** subject — the 2026-06-21 clearance is fenced to the **ADR-0010 edge design** and reaches nothing else. ⇒ write *"counsel has not reviewed X"*, ⛔ never *"counsel is not engaged"*.
+
+> ⛔ **CORRECTED 2026-08-24 (sweep — Decision `2026-08-24-158`): the *"counsel not engaged"* claim above is FALSE, and was false when written.**
+> **Adv. Mohit Agrawal** has been Story 0.13 **engaged counsel since 2026-06-21** (`2026-06-21-057`; ⭐ launch-gate **Row 3** is `closed` **on his return**). ⛔ Annotated, ⛔ never rewritten.
+> ⚠ **The correct form of words, and what was really true:** counsel had ⛔ not reviewed **this** subject — the 2026-06-21 clearance is fenced to the **ADR-0010 edge design** and reaches nothing else. ⇒ write *"counsel has not reviewed X"*, ⛔ never *"counsel is not engaged"*.
+
 > ⚠ *Correction to a repeated claim, so the Panel is not misled by our own paperwork:* Story 10.21
 > states that *"every field in `docs/legal-counsel-engagement/` is `<PENDING>`."* That literal
 > phrasing is **stale** — there are no `<PENDING>` tokens left in those files. **The substance is
@@ -370,6 +378,10 @@ Quorum met: ☑ Yes (≥2 trustees present) ☐ No — session not quorate, no r
 | 6 | `consumed`-row retention | ☑ **Ruled — A: retain `consumed` as the fulfilment/audit record** | ⭐ Already the shipped behaviour. Zeroing still applies. AC11's `consumed` arm un-blocks as **already-correct**; no code change. **Un-attested.** |
 | 7 | Trustee-authority recipient | ☑ **Ruled — 7(i): No, no DPDPA action inherently requires Panel authority · 7(ii): Trustee decides, authorised administrator executes** | **AC-R3 closes with a disposition and NO code changes.** ⛔ `trustee_panel` is not granted `member.data_rights`; the exclusion's rationale changes from *pending a ruling* to *ruled: not required*. |
 | 8 | Export-content ownership | ☑ **Ruled — A: a separate successor story owns the export-content contract** | AC5's content half **transfers out** of Story 10.21 — transferred, not abandoned. Successor story still **unnamed**. |
+
+> ⛔ **CORRECTED 2026-08-24 (sweep — Decision `2026-08-24-158`): the *"counsel not engaged"* claim above is FALSE, and was false when written.**
+> **Adv. Mohit Agrawal** has been Story 0.13 **engaged counsel since 2026-06-21** (`2026-06-21-057`; ⭐ launch-gate **Row 3** is `closed` **on his return**). ⛔ Annotated, ⛔ never rewritten.
+> ⚠ **The correct form of words, and what was really true:** counsel had ⛔ not reviewed **this** subject — the 2026-06-21 clearance is fenced to the **ADR-0010 edge design** and reaches nothing else. ⇒ write *"counsel has not reviewed X"*, ⛔ never *"counsel is not engaged"*.
 
 Counsel attestation status for Rows 3, 4, 5, 6: ☑ **un-attested (Panel alone)** ☐ counsel-attested
 

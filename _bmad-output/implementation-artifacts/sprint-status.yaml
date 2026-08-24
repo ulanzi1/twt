@@ -1,4 +1,57 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-24i (⭐ THE "COUNSEL NOT ENGAGED" SWEEP -- 41 instances · 18 files, and ⭐ EVERY
+#   ONE was false WHEN WRITTEN. ⛔ ZERO ROWS FLIP. ⛔ No story row, ⛔ no development_status key.
+#   Decision 2026-08-24-158, AUTHOR-COMMITTED -- ⛔ NOT Trustee-routed: it corrects statements of
+#   FACT, ⛔ rules nothing and ⛔ reverses no ruling.
+#
+#   ⭐⭐ THE FINDING, AND IT IS SHARPER THAN "THE RECORD WENT STALE": ⛔ NOT ONE INSTANCE PREDATES THE
+#   ENGAGEMENT. All 41 were date-checked against 2026-06-21; ZERO were true when written. The earliest
+#   in the decision log is 2026-08-10-096 ⇒ ⭐ THE CLAIM FIRST APPEARS ~SEVEN WEEKS AFTER COUNSEL WAS
+#   ENGAGED, and ⛔ never once before. ⇒ this was ⛔ NOT a true statement that decayed; it is a FALSE
+#   statement ORIGINATED AFTER THE FACT and then COPIED FORWARD.
+#
+#   WHAT LANDED: 26 non-log instances ANNOTATED IN PLACE across 14 files -- **+109 lines ADDED,
+#   ⛔ 0 REMOVED** (the 24b19d5 / 99b4a46 discipline; every original sentence stands with a dated
+#   correction beside it). ⛔ Three files were already annotated at -156/-157 and are ⛔ NOT
+#   re-annotated. Verified mechanically: ⛔ 0 split tables, ⛔ 0 self-annotations, ⛔ 0 duplicates.
+#
+#   ⭐ THE 15 INSTANCES IN .decision-log.md ARE CORRECTED IN -158 ITSELF, AND THE 12 RATIFIED ENTRIES
+#   CARRYING THEM ARE ⛔ NOT TOUCHED -- the log's OWN rule governs: "Decisions, once ratified, are
+#   never edited in place; corrections are recorded as NEW entries that reference the prior one."
+#   Affected: -154(2) -143(2) -141 -140(2) -136 -135 -110 -106 -100 -099 -097 -096. ⚠ A reader of any
+#   of those twelve must read -158 cl.3 with it -- ⭐ that is the COST of the never-edit rule, PAID
+#   deliberately rather than dodged by editing.
+#
+#   ⭐ THE ERROR IS REPLACED, ⛔ NOT MERELY DELETED. What was TRUE in all 41 places is NARROWER:
+#   counsel had not reviewed THAT SUBJECT. The 2026-06-21 clearance is fenced by -057 cl.5 to "the edge
+#   design as recorded in ADR-0010". ⇒ sanctioned phrasing is "counsel has not reviewed X"; ⛔ "counsel
+#   is not engaged" may ⛔ NOT be written again.
+#
+#   ⭐ A COMPOUND-CLAIM CARVE-OUT, ⛔ NOT SWEPT: many instances read "the Niyamavali remains an
+#   unadopted draft AND counsel is not engaged". ⛔ ONLY the counsel clause is corrected -- verified
+#   live, docs/legal/niyamavali.md:5 still carries [[v1.0]] / [[date]] unfilled under a DRAFT banner
+#   ⇒ ⭐ the Niyamavali half is STILL TRUE and is untouched. ⚠ Sweeping the sentence wholesale would
+#   have DELETED A TRUE STATEMENT alongside a false one.
+#
+#   ⚠⛔ ONE INSTANCE WAS LOAD-BEARING AND ITS CONSEQUENCE IS ⛔ NOT REVERSED: the 2026-08-14 consent
+#   sheet (:45) told the Panel counsel was unengaged ⇒ 2026-08-14-109 rows 3/4/5/6 recorded
+#   `un-attested (counsel unengaged)` -- four DPDPA-shaped rulings taken ALONE. Counsel had been
+#   engaged EIGHT WEEKS. ⛔ The Panel already ruled this at -157 cl.6 (Row 4): LEAVE THEM. ⇒ -158
+#   corrects the REASON and ⛔ changes NO attestation status; ⛔ it does NOT re-open -109.
+#
+#   ⚠ A DURABLE GUARD IS ⛔ NOT BUILT. ⛔ Nothing stops the phrase being written again; -158 ⛔ mints no
+#   gate. Whether it deserves a content-gate assertion (pii-scrape / microcopy is the nearest
+#   precedent family) is recorded ⛔ OBSERVATIONALLY -> the next retrospective's call, ⛔ not this
+#   sweep's ([[feedback_gap_analysis_observational]]).
+#
+#   ⛔ NOTHING ELSE MOVES: Row 17 `closed` · roster Row 3 `closed` · Row 10 open · /members authorised
+#   · 11b clearance NARROWED, A3.2/A3.3 HELD · counsel FULLY VERIFIED · T&C draft `awaiting-counsel-
+#   return`, due 2026-09-07 · escrow row `pending-task-7-sealing-event`, ⛔ nothing sealed.
+#
+#   STILL OPEN: counsel's return (2026-09-07) · his A3.2/A3.3 revisit · the [TO SUPPLY] draft gaps ·
+#   counsel-side archive path · trust-controlled working-copy location · escrow sealing · ⭐ the
+#   "four of ten obligations behind counsel selection" RE-COUNT (⛔ not this sweep's) · whether to
+#   mechanize a guard for the phrase.)
 # last_updated: 2026-08-24h (⭐⭐ THE T&C DRAFT IS SUBMITTED TO COUNSEL — Task 10, the FIRST real
 #   submission this engagement has ever recorded. ⛔ ZERO ROWS FLIP. ⛔ No story row, ⛔ no
 #   development_status key, ⛔ no decision entry -- an EVENT occurring, ⛔ not a ruling.

@@ -229,6 +229,10 @@ shield. Story 11a.3 is its **first production call site**, and the meaning ⛔ d
 | A re-examination trigger for the `resourceLocator` widening | ⚠ **OWED** — the one documented bypass on this surface carrying no trigger (checklist Family 9) |
 | `dynamic-html-weight.mjs` | ⚠ Fixed, but runs in **no CI leg** — nothing would report it breaking again |
 
+> ⛔ **CORRECTED 2026-08-24 (sweep — Decision `2026-08-24-158`): the *"counsel not engaged"* claim above is FALSE, and was false when written.**
+> **Adv. Mohit Agrawal** has been Story 0.13 **engaged counsel since 2026-06-21** (`2026-06-21-057`; ⭐ launch-gate **Row 3** is `closed` **on his return**). ⛔ Annotated, ⛔ never rewritten.
+> ⚠ **The correct form of words, and what was really true:** counsel had ⛔ not reviewed **this** subject — the 2026-06-21 clearance is fenced to the **ADR-0010 edge design** and reaches nothing else. ⇒ write *"counsel has not reviewed X"*, ⛔ never *"counsel is not engaged"*.
+
 ### F-8 — ⚠ this review's **own** reach is bounded, and it is disclosed rather than glossed
 
 Two of the three review layers **died mid-run on an account session limit**. On relaunch they were

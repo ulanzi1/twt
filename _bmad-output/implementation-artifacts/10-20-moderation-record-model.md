@@ -150,6 +150,11 @@ Identical constraint to Stories 10.18 and 10.19, unmoved. The Niyamavali is an *
 (`niyamavali.md:5` — `[[v1.0]]`, `[[date]]`, unfilled) and **counsel is not engaged** (every return
 field in `docs/legal-counsel-engagement/` is `<PENDING>`).
 
+> ⛔ **CORRECTED 2026-08-24 (sweep — Decision `2026-08-24-158`): the *"counsel not engaged"* claim above is FALSE, and was false when written.**
+> **Adv. Mohit Agrawal** has been Story 0.13 **engaged counsel since 2026-06-21** (`2026-06-21-057`; ⭐ launch-gate **Row 3** is `closed` **on his return**). ⛔ Annotated, ⛔ never rewritten.
+> ⚠ **The correct form of words, and what was really true:** counsel had ⛔ not reviewed **this** subject — the 2026-06-21 clearance is fenced to the **ADR-0010 edge design** and reaches nothing else. ⇒ write *"counsel has not reviewed X"*, ⛔ never *"counsel is not engaged"*.
+> ⭐ **The other half of this sentence STANDS, ⛔ untouched:** the **Niyamavali is still an unadopted draft** (`docs/legal/niyamavali.md:5` — `[[v1.0]]` / `[[date]]` unfilled, DRAFT banner). ⛔ Only the counsel clause is corrected.
+
 | Landing means | Landing does NOT mean |
 |---|---|
 | §8.5, §8.6, §8.9 authored into `niyamavali.md` **and** `niyamavali.hi.md` | A `[[v1.0]]` → `v1.1` version bump |

@@ -120,6 +120,10 @@ draft — `niyamavali.md:5` carries `[[v1.0]]`, `[[date]]` and `[[date]]`, none 
 before publication, and **counsel is not engaged**: every return field in `docs/legal-counsel-engagement/`
 is a placeholder, and Story 0.13 has not closed.
 
+> ⛔ **CORRECTED 2026-08-24 (sweep — Decision `2026-08-24-158`): the *"counsel not engaged"* claim above is FALSE, and was false when written.**
+> **Adv. Mohit Agrawal** has been Story 0.13 **engaged counsel since 2026-06-21** (`2026-06-21-057`; ⭐ launch-gate **Row 3** is `closed` **on his return**). ⛔ Annotated, ⛔ never rewritten.
+> ⚠ **The correct form of words, and what was really true:** counsel had ⛔ not reviewed **this** subject — the 2026-06-21 clearance is fenced to the **ADR-0010 edge design** and reaches nothing else. ⇒ write *"counsel has not reviewed X"*, ⛔ never *"counsel is not engaged"*.
+
 | A ruling here means | A ruling here does NOT mean |
 |---|---|
 | §8.4 is **amended** and §8.4a **authored**, both locales, **Panel-ratified** | The Niyamavali is versioned or effective |

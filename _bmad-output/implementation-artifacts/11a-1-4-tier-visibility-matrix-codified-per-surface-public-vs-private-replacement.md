@@ -214,6 +214,10 @@ today cannot learn that their full legal name will be published on an unauthenti
 Story 2.4's workflow and needs its own ruling ([[feedback_supersede_never_reinterpret]]). It
 compounds `-136` cl.5's already-recorded DPDPA exposure (*"legal counsel not engaged"*).
 
+> ⛔ **CORRECTED 2026-08-24 (sweep — Decision `2026-08-24-158`): the *"counsel not engaged"* claim above is FALSE, and was false when written.**
+> **Adv. Mohit Agrawal** has been Story 0.13 **engaged counsel since 2026-06-21** (`2026-06-21-057`; ⭐ launch-gate **Row 3** is `closed` **on his return**). ⛔ Annotated, ⛔ never rewritten.
+> ⚠ **The correct form of words, and what was really true:** counsel had ⛔ not reviewed **this** subject — the 2026-06-21 clearance is fenced to the **ADR-0010 edge design** and reaches nothing else. ⇒ write *"counsel has not reviewed X"*, ⛔ never *"counsel is not engaged"*.
+
 ---
 
 ## Acceptance Criteria
@@ -818,6 +822,10 @@ pii-scrape gate — FR-74 Public-vs-Private matrix (Story 1.16b, armed by 11a.1)
   route-coverage leg fails when an 11b route ships undeclared.
 - **`member-directory` is `renders: false`.** Story 11a.3 fills it and flips the flag; the STALE
   `renders:false` check fails until it does.
+
+> ⛔ **CORRECTED 2026-08-24 (sweep — Decision `2026-08-24-158`): the *"counsel not engaged"* claim above is FALSE, and was false when written.**
+> **Adv. Mohit Agrawal** has been Story 0.13 **engaged counsel since 2026-06-21** (`2026-06-21-057`; ⭐ launch-gate **Row 3** is `closed` **on his return**). ⛔ Annotated, ⛔ never rewritten.
+> ⚠ **The correct form of words, and what was really true:** counsel had ⛔ not reviewed **this** subject — the 2026-06-21 clearance is fenced to the **ADR-0010 edge design** and reaches nothing else. ⇒ write *"counsel has not reviewed X"*, ⛔ never *"counsel is not engaged"*.
 
 #### Verification
 

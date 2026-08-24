@@ -827,6 +827,10 @@ epic** (a deferral naming an epic expires unowned).
   `dist/server/chunks/`, then was reverted. So the risk Trap 3 names is retired for 11a.3.
   **Re-trigger / owner:** **Story 11a.3**, the first story with a member field to render.
 
+> ⛔ **CORRECTED 2026-08-24 (sweep — Decision `2026-08-24-158`): the *"counsel not engaged"* claim above is FALSE, and was false when written.**
+> **Adv. Mohit Agrawal** has been Story 0.13 **engaged counsel since 2026-06-21** (`2026-06-21-057`; ⭐ launch-gate **Row 3** is `closed` **on his return**). ⛔ Annotated, ⛔ never rewritten.
+> ⚠ **The correct form of words, and what was really true:** counsel had ⛔ not reviewed **this** subject — the 2026-06-21 clearance is fenced to the **ADR-0010 edge design** and reaches nothing else. ⇒ write *"counsel has not reviewed X"*, ⛔ never *"counsel is not engaged"*.
+
 ---
 
 ## Deferred / recorded from: Story 10.21 — off-portal DPDPA access (2026-08-14)
@@ -1137,6 +1141,10 @@ written in the action's transaction (and therefore what happens if the second wr
 (`[[v1.0]]`, `[[date]]` unfilled) and **counsel is not engaged** — every return field in
 `docs/legal-counsel-engagement/` is still `<PENDING>`. §8.5/§8.6/§8.9 are **authored and
 Panel-ratified**; **counsel review remains outstanding** ([[feedback_closure_language_precision]]).
+
+> ⛔ **CORRECTED 2026-08-24 (sweep — Decision `2026-08-24-158`): the *"counsel not engaged"* claim above is FALSE, and was false when written.**
+> **Adv. Mohit Agrawal** has been Story 0.13 **engaged counsel since 2026-06-21** (`2026-06-21-057`; ⭐ launch-gate **Row 3** is `closed` **on his return**). ⛔ Annotated, ⛔ never rewritten.
+> ⚠ **The correct form of words, and what was really true:** counsel had ⛔ not reviewed **this** subject — the 2026-06-21 clearance is fenced to the **ADR-0010 edge design** and reaches nothing else. ⇒ write *"counsel has not reviewed X"*, ⛔ never *"counsel is not engaged"*.
 
 ---
 
@@ -4783,6 +4791,10 @@ never "final"._
   line was written and none may be inferred.** **Re-trigger:** Story 0.13 closing, or any counsel
   engagement that can accept a Niyamavali amendment.
 
+> ⛔ **CORRECTED 2026-08-24 (sweep — Decision `2026-08-24-158`): the *"counsel not engaged"* claim above is FALSE, and was false when written.**
+> **Adv. Mohit Agrawal** has been Story 0.13 **engaged counsel since 2026-06-21** (`2026-06-21-057`; ⭐ launch-gate **Row 3** is `closed` **on his return**). ⛔ Annotated, ⛔ never rewritten.
+> ⚠ **The correct form of words, and what was really true:** counsel had ⛔ not reviewed **this** subject — the 2026-06-21 clearance is fenced to the **ADR-0010 edge design** and reaches nothing else. ⇒ write *"counsel has not reviewed X"*, ⛔ never *"counsel is not engaged"*.
+
 - **The `member.suspend` REMOVAL bump has an owner now, and so does D5's gate extension.** Both previously
   named *"the first story that builds a `role_grants` write path"* — a story that **does not exist and is
   unowned**, which is the epic-named-deferral failure AC7 diagnoses, one indirection deeper.
@@ -6082,6 +6094,10 @@ to any `TERMINAL_STATES` set.
 ⛔ **No claim that Part 8 is legally settled.** The Niyamavali remains an **unadopted draft**
 (`[[v1.0]]`, `[[date]]` unfilled) and **counsel is not engaged** — every return field in
 `docs/legal-counsel-engagement/` is still `<PENDING>`.
+
+> ⛔ **CORRECTED 2026-08-24 (sweep — Decision `2026-08-24-158`): the *"counsel not engaged"* claim above is FALSE, and was false when written.**
+> **Adv. Mohit Agrawal** has been Story 0.13 **engaged counsel since 2026-06-21** (`2026-06-21-057`; ⭐ launch-gate **Row 3** is `closed` **on his return**). ⛔ Annotated, ⛔ never rewritten.
+> ⚠ **The correct form of words, and what was really true:** counsel had ⛔ not reviewed **this** subject — the 2026-06-21 clearance is fenced to the **ADR-0010 edge design** and reaches nothing else. ⇒ write *"counsel has not reviewed X"*, ⛔ never *"counsel is not engaged"*.
 
 ### 8. The standing Trustee Panel obligation queue
 

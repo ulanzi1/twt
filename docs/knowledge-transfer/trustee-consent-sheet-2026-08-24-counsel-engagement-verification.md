@@ -111,6 +111,24 @@ pressure with a live public surface.**
 > ⇒ ⭐ **A1.5 is recorded ASSERTED-MET with its PARTICULARS OWED** — ⛔ insurer, limit and expiry were
 > ⛔ not supplied, so it is ⛔ **not** recorded as verified (`2026-08-24-157` cl.1(e)). ⛔ The
 > disqualifying condition does ⛔ **not** obtain; ⛔ nor is the criterion evidenced.
+>
+> ✅✅ **PARTICULARS SUPPLIED 2026-08-24 — A1.5 IS NOW EVIDENCED. `-157` cl.1(e) DISCHARGED.**
+> **Insurer: New India Assurance · Cover: ₹50 lakh · Expiry: 2027-08-01.**
+> ⭐ **Coherent with a real PI policy, on all three particulars:** New India Assurance is a general
+> insurer that **does** write professional-indemnity/E&O cover; and a **2027-08-01** expiry is ~11
+> months out, consistent with the **annually renewable** claims-made form. ⇒ ⭐ **all six mandatory
+> criteria are now satisfied, and counsel is FULLY VERIFIED.**
+> ⚠ **Two things recorded rather than passed over:**
+> **(i)** the cover figure **changed with the correction** — the original entry read **1 crore**, the
+> corrected policy is **50 lakh**. ⛔ Not a discrepancy to resolve (the 1 crore belonged to the life
+> policy), but recorded so a later reader is not confused by two numbers.
+> **(ii)** ⛔ **§12 sets NO numeric floor** — it says only *"adequate for the engagement scope per
+> Counsel's standard professional-indemnity coverage."* ⇒ ⭐ **the criterion cannot be failed on
+> amount, because no threshold exists to fail against.** ₹50 lakh is recorded as **attested**,
+> ⛔ **not** as *"assessed adequate"* — nobody has assessed it, and the framework gives no yardstick
+> ([[feedback_closure_language_precision]]).
+> ⚠ **Renewal tracking:** the policy expires **2027-08-01**. A 12-month engagement term from
+> 2026-06-21 closes 2027-06-21, so the cover spans it — ⛔ but any extension crosses the expiry.
 
 ## A2 — Engagement instruments (`counsel-roster.md` § Schema — all currently `UNKNOWN`)
 

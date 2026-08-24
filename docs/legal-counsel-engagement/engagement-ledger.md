@@ -79,6 +79,12 @@
 | Date | Engagement letter on-file path | NDA signed | COI disclosure | Retainer schedule | Engagement letter git-SHA | Counsel acceptance of scope-charter |
 |---|---|---|---|---|---|---|
 | `<PENDING-TASK-9>` | `<trustee-accessible repo path + counsel-side archive path>` | `signed` + signature date + NDA-on-file path | `disclosed-no-conflicts` OR `disclosed-with-managed-conflicts` (with plan) | `<activated date + retainer amount per `engagement-letter-template.md` §5>` | `<git SHA>` | `accepted` + date OR `accepted-with-amendments` + amendment notes |
+| **2026-06-21** ⚠ *(counsel-asserted 2026-08-24; ⛔ NOT contemporaneous)* | ⛔⛔ **OWED** — §14 step 5 requires the storage reference path + receipt, and ⛔ none was supplied | `signed` **asserted** 2026-06-21 — ⛔ on-file path **OWED**. ⚠ Consent-sheet box A2.1 **unticked**, date only | **`disclosed-no-conflicts`** — ⭐ the **fact** is attested and counsel-signed; the **filing** is asserted 2026-06-21 with ⛔ path **OWED**. ⚠ A2.3 box **unticked**, date only | ⛔ **UNKNOWN** — ⛔ not asked on the sheet | ⛔ **n/a** — the executed letter is off-repo by design; ⛔ no git SHA exists | ⛔ **UNKNOWN** — ⛔ not asked on the sheet |
+
+> ⚠ **RECORDED 2026-08-24 per [Decision 2026-08-24-157](../../.decision-log.md#decision-2026-08-24-157) cl.2 — counsel-asserted, ⛔ NOT verified.**
+> ⭐ **A correction worth keeping:** the executed engagement letter's **absence from this repo is BY DESIGN** — `engagement-letter-template.md` **§14 step 5** places it in *"secure non-git trustee-accessible storage"*, with only the **reference path + receipt** committed here. ⛔ So its absence is ⛔ **not** evidence against the engagement. ⛔ **What IS missing is the reference path**, which §14 step 5 requires and which this row records as **OWED**.
+> ⛔ The `<PENDING-TASK-9>` template row above stays unfilled: the Task-9 signature *event* — Panel chair + ≥1 further trustee + trust-side witness per §14 — is ⛔ **not** recorded as having occurred, and ⛔ counsel was not asked whether it did.
+> ⚠ **Two schema fields were never asked on the consent sheet** and are recorded UNKNOWN rather than inferred: **retainer schedule** (§5 pricing) and **counsel acceptance of `review-scope-charter.md`**. ⛔ Not back-filled ([[feedback_record_unattested_no_backfill]]).
 
 ---
 

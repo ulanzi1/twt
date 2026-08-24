@@ -132,25 +132,29 @@ The framework permits multiple counsel if practice-area coverage requires. If at
 
 | Field | Value | Attestation |
 |---|---|---|
-| `counsel_id` | `lc-1` | ⚠ Assigned **at this reconstruction**, ⛔ not at selection |
-| `name` | **Adv. Mohit Agrawal** | ✅ Named in [Decision 2026-06-21-057](../../.decision-log.md#decision-2026-06-21-057), ADR-0010, `architecture.md:249`, `adr-index.md`, `deferred-work.md:2456`, roster Row 3 |
-| `practice_areas` | DPDPA (demonstrated — data-residency / sub-processor analysis) | ⚠ **Un-attested against the shortlist criteria above.** ⛔ Indian Trust Act practice, PI insurance, Bar Council enrollment and COI status are ⛔ **UNVERIFIED** — ⛔ no record exists either way |
-| `qualification_status` | `engaged` | ⚠ **De facto.** ⛔ The `shortlisted → interviewed → selected` lifecycle was ⛔ never recorded; ⛔ do not read this as those steps having occurred |
-| `nda_signature_status` | ⛔ **UNKNOWN — no record** | ⛔ Un-attested. ⛔ Not asserted `unsigned`; ⛔ not asserted `signed` |
-| `engagement_letter_signature_status` | ⛔ **UNKNOWN — no record** | ⛔ Un-attested, as above |
-| `coi_disclosure_status` | ⛔ **UNKNOWN — no record** | ⛔ Un-attested. ⚠ A mandatory criterion above; its absence is a **live gap**, ⛔ not a formality |
-| `status` | `active` | Two returns on record (2026-06-21 written; 2026-08-24 verbal) |
+| `counsel_id` | `lc-1` | ⚠ Assigned **at the 2026-08-24 reconstruction**, ⛔ not at selection |
+| `name` | **Adv. Mohit Agrawal** | ✅ Named in [Decision 2026-06-21-057](../../.decision-log.md#decision-2026-06-21-057), ADR-0010, `architecture.md:249`, `adr-index.md`, `deferred-work.md:2456`, roster Row 3 — and **self-attested by signature** 2026-08-24 |
+| `practice_areas` | **DPDPA** (current) · **Indian Trust Act 1882** · concurrent-review-mode available | ✅ **ATTESTED 2026-08-24** by counsel, signed (`2026-08-24-157` cl.1(b)(c)(d)). ⭐ DPDPA independently corroborated by the 2026-06-21 return |
+| `qualification_status` | `engaged` | ⭐ **QUALIFIED 2026-08-24** — ⛔ no disqualifying condition obtains (`-157` cl.1). ⚠ Still **de facto** as to lifecycle: the `shortlisted → interviewed → selected` steps were ⛔ never recorded and the Panel ruled Task 7/8 **open for future counsel** (`-157` cl.6, Row 5). ⛔ Do not read this as those steps having occurred |
+| `nda_signature_status` | **Counsel-asserted `signed` 2026-06-21** — ⛔ reference path OWED | ⚠ `-157` cl.2. Executed **off-repo by design** (`engagement-letter-template.md` §14 step 5); ⛔ the required `engagement-ledger.md` §5 reference path is **missing**. ⛔ Un-attested until it lands. ⚠ The sheet's A2.1 box was **unticked** — date only |
+| `engagement_letter_signature_status` | **Counsel-asserted `signed` 2026-06-21** — ⛔ reference path OWED | ⚠ `-157` cl.2, as above. ⚠ §14 also requires **Panel chair + ≥1 further trustee + a trust-side witness**; ⛔ whether those were obtained is ⛔ not recorded |
+| `coi_disclosure_status` | **`disclosed-no-conflicts`** (fact, attested) · **filing** counsel-asserted 2026-06-21, ⛔ path OWED | ✅ The **fact** is attested and signed (`-157` cl.1(f)): ⛔ no prior TSCT or mutual-aid-trust engagement. ⚠ The **filing** is asserted, ⛔ not on file. A2.3 box **unticked** — date only |
+| `bar_council_enrollment` | **BR/869/2014 · Bihar State Bar Council** | ✅ **ATTESTED 2026-08-24**, signed. ⇒ the disqualifying non-enrollment condition ⛔ does not obtain (`-157` cl.1(a)) |
+| `professional_indemnity` | ⚠ **ASSERTED HELD — ⛔ PARTICULARS OWED** | ⛔⛔ **The one mandatory criterion still standing on assertion alone.** The particulars first given (*LIC · 1 crore · expiry 2045*) describe a **LIFE** policy — LIC of India is a statutory life insurer and ⛔ cannot write PI/E&O; a 2045 expiry is a life-policy maturity where PI cover is annually renewable. ⚠ Counsel confirmed the row was **misread** and a **separate PI policy exists**, but insurer/limit/expiry were ⛔ **not supplied**. ⇒ ⭐ the disqualifying condition ⛔ does **not** obtain, **AND** the criterion is ⛔ **not evidenced** (`-157` cl.1(e)) |
+| `status` | `active` | Two returns on record (2026-06-21 written; 2026-08-24 written + counsel-signed) |
 
 **Counsel acts on record — TWO, and they are ⛔ NOT the same kind of act:**
 
 | # | Date | Scope | Return form | Outcome |
 |---|---|---|---|---|
 | 1 | **2026-06-21** | **Edge/WAF design as recorded in ADR-0010** — ⛔ fenced by `2026-06-21-057` cl.5: *"⛔ Do NOT extend the assertion to data-flows beyond that recorded design"* | ✅ **Written return**, cited in six artifacts | *"Cloudflare acceptable as designed"* → closed roster **Row 3** |
-| 2 | **2026-08-24** | **Full-name publication across all four public surfaces** (`/members` + Stories 11b.1 / 11b.3 / 11b.6) | ⚠⛔ **VERBAL, relayed by trustee. ⛔ NO written artifact** | **Cleared** → `2026-08-24-156` cl.1; authorised `/members` exposure (cl.2) |
+| 2 | **2026-08-24** | ⚠⛔ **NARROWED to `/members`.** Originally recorded as all four public surfaces; the three **Epic 11b** surfaces are **HELD** — counsel's basis (*ToS consent*) ⛔ reaches neither deceased subjects and their non-signatory **families** (11b.1/11b.6) nor third-party **nominees** (11b.3), and `2026-08-23-154` already ruled ToS consent insufficient (two levers). ⇒ counsel will **revisit** (`-157` cl.3) | ⭐ **WRITTEN + counsel-signed 2026-08-24** on the consent sheet (A3.1). ⛔ Was verbal-only until then; ⛔ not on letterhead; ⛔ still **not** a §7 Return-receipt | **Cleared for `/members`** → `-156` cl.1 as narrowed by `-157` cl.3. `/members` exposure authorisation (`-156` cl.2) **stands untouched** |
 
 ⚠⛔ **THE STANDING RISK ON ACT #2, recorded here as well as in the decision:** it is the **thinnest attestation carrying the widest scope** in this project's record — verbal, unwritten, spanning **four** surfaces of which **three are ⛔ not built** and therefore ⛔ could not have been described to counsel as artifacts. ⭐ `-156` cl.7(a) adopts the `-057` fence by analogy: the clearance reaches the **posture as described**; ⛔ a surface shipping a new data class, subject population or recipient re-opens the review. ⛔ **It is ⛔ not a standing waiver.**
 
-⛔ **Act #2 may ⛔ NOT be logged as an `engagement-ledger.md` §7 Return-receipt** — §7 requires a returned artifact, and there is none.
+⭐⭐ **STANDING RISK SUBSTANTIALLY DISCHARGED 2026-08-24 for `/members`** (`-157` cl.7): counsel answered A3.1 **Confirmed** and **signed Part A**, so the clearance is **written**, ⛔ no longer verbal-only. ⚠ And for the three 11b surfaces the risk is ⛔ not discharged — it is **withdrawn along with the scope** (cl.3). ⭐ Counsel also **adopted** the `-057` scope fence at A3.4.
+
+⛔ **Act #2 may ⛔ still NOT be logged as an `engagement-ledger.md` §7 Return-receipt** — §7 requires a **returned review artifact**, and a signed attestation is ⛔ not one.
 
 ---
 

@@ -53,3 +53,10 @@ export * from './contribution-binding.js';
 // across repeats (idempotency by construction). No live call site — Epic 8's <UPIIntentButton> produces
 // it, Epic 9's reconciler dedupes on it. Kept support-category-token-free for the recursive pool/ gate walk.
 export * from './contribution-reference.js';
+// Story 11b.1 (Task 1) — the PUBLIC Sahyog Drive pool index read + its matching count: one bounded,
+// filterable page of pools at `closed` (Active) or `settled` (Archive), resolved in ONE set-based
+// query with lateral aggregates for the reversal-compensated confirmed-contribution count and the
+// per-subject name-consent verdict. Transport-free, audit-free and DECRYPT-FREE by rule — it returns
+// `name_ciphertext` as stored and the boundary at apps/api/src/modules/public-pages/ decrypts, which
+// is the only place in the repo that can. ⛔ It decides a RENDER, never a BENEFIT.
+export * from './public-read.js';

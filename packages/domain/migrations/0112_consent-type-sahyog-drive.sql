@@ -1,0 +1,35 @@
+-- Migration 0112 — consent_type ADD VALUE 'sahyog_drive_publication'
+-- (Story 11b.1, Task 3b; AC12; Decision 2026-08-24-159 cl.6 / D4(b)):
+-- The per-subject publication consent for the PUBLIC Sahyog Drive index (Active + Archive).
+-- Subject = the DECEASED MEMBER (pools.claim_id → claims.deceased_member_id), keyed
+-- (pariwar_id, deceased_member_id, 'sahyog_drive_publication') — the Story 6.9 convention.
+--
+-- ⭐⛔ WHY THIS DDL COULD NOT WAIT FOR THE SURFACE TO BE PUBLISHED — the finding that decided D4:
+-- consent is RECORDABLE only in the five PRE-ADJUDICATION states (DPDPA_CONSENT_RECORDABLE_STATES),
+-- and pool/spawn.ts spawns pools ONE PER *APPROVED* CLAIM. ⇒ by the time a pool exists at all — i.e.
+-- by the time it could be listed on Sahyog Drive — the recording window has ALREADY SHUT. There is
+-- NO moment in this system where a pool is listable AND its family can still be asked.
+-- ⇒ every claim filed BEFORE this type exists is PERMANENTLY UNASKABLE, with NO remedy: its pool can
+-- never carry a name, however the family later feels about it. Minting the type PRE-LAUNCH is what
+-- makes that unreachable cohort EMPTY BY CONSTRUCTION. Cheap today; impossible later.
+--
+-- ⚠ IT GATES THE *NAME*, NEVER THE *ROW* (AC2). A pool with no consent still renders in full — letter
+-- code, canonical identifier, district, close date, confirmed count, close-of-cycle framing. The index
+-- degrades PER-POOL, never per-page: a family's declination removes a NAME, never a DRIVE from the
+-- public record. And a MISSING consent and a REVOKED one are the SAME verdict.
+--
+-- ⚠ IT IS DECLINABLE AND REVOCABLE, AND THAT IS NOT NEGOTIABLE: Niyamavali §4.4 ("public rendering of
+-- any personal information is consent-gated and never default opt-in"), Part 10, and — prevailing
+-- above both under cl.28 — Trust Deed cl.15(c). A consent that cannot be refused is not consent.
+-- Making it mandatory would be a RULEBOOK AMENDMENT (routed 2026-08-24), never a migration.
+--
+-- ⚠ ADD VALUE cannot run inside a transaction block on Postgres, AND a newly-added enum value cannot
+-- be USED in the same transaction it was added. So this is its OWN migration file, separate from any
+-- migration inserting a row with this value (none do — consent rows are written at RUNTIME by the 6.9
+-- capture path, well after this DDL has committed). `IF NOT EXISTS` makes it idempotent.
+--
+-- ⚠ APPENDED AT THE END of the enum — NEVER reorder an existing pgEnum (stored ordinals).
+-- ⚠ DO NOT REGENERATE THIS FILE with `db:generate` (drizzle journal `when`, not SQL hash → skips;
+-- snapshots stop at 0020). Hand-authored, mirroring 0040/0048/0058. DO NOT reset via DROP SCHEMA.
+
+ALTER TYPE "consent_type" ADD VALUE IF NOT EXISTS 'sahyog_drive_publication';

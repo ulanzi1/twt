@@ -31,6 +31,18 @@ const DPDPA_CONSENT_COPY: Record<DpdpaConsentType, Record<DpdpaConsentLocale, st
     en: 'I consent to the deceased member appearing in the In Memoriam remembrance listing. You may decline this without affecting the claim.',
     hi: 'मैं दिवंगत सदस्य को स्मृति-शेष (In Memoriam) सूची में शामिल करने की सहमति देता/देती हूँ। आप इसे अस्वीकार कर सकते हैं, इससे दावे पर कोई असर नहीं होगा।',
   },
+  // Story 11b.1 (D4(b) / D10) — the FOURTH box. It authorises the deceased member's NAME on the
+  // PUBLIC Sahyog Drive pool index, and NOTHING else: the drive itself (its code, district, close
+  // date and confirmed contribution count) is published regardless, so declining removes a NAME,
+  // never a DRIVE from the public record.
+  // ⭐ It carries the SAME declinability sentence as its two siblings, in BOTH locales, and that is
+  // not stylistic: Niyamavali §4.4 + Part 10 + Trust Deed cl.15(c) forbid default opt-in, so the box
+  // is unchecked by default and sits OUTSIDE the `.refine()` that forces claimTimeDpdpa. A consent
+  // that cannot be refused is not consent.
+  sahyog_drive_publication: {
+    en: 'I consent to publishing the deceased member’s name on the public Sahyog Drive record of the drive held in their memory. You may decline this without affecting the claim.',
+    hi: 'मैं दिवंगत सदस्य के नाम को उनकी स्मृति में चलाए गए सहयोग अभियान के सार्वजनिक रिकॉर्ड में प्रकाशित करने की सहमति देता/देती हूँ। आप इसे अस्वीकार कर सकते हैं, इससे दावे पर कोई असर नहीं होगा।',
+  },
 };
 
 /** Resolve the trust's canonical consent copy for a given type + locale (the evidence text). */

@@ -69,11 +69,17 @@ function grantedTypesFromRequest(body: RecordDpdpaConsentRequest): DpdpaConsentT
   if (body.claimTimeDpdpa) granted.push('claim_time_dpdpa');
   if (body.sahyogVivranPublication) granted.push('sahyog_vivran_publication');
   if (body.inMemoriamListing) granted.push('in_memoriam_listing');
+  // Story 11b.1 (D4(b)) — the fourth box. Same shape as its siblings: an UNCHECKED box records
+  // nothing at all, so a decline leaves no grant row and `consentExists` returns the same verdict it
+  // returns for a family never asked. That equivalence is intended — 11b.1's render gate treats a
+  // MISSING and a REVOKED consent identically, and neither omits the pool, only the name.
+  if (body.sahyogDrivePublication) granted.push('sahyog_drive_publication');
   return granted;
 }
 
 /**
- * The NON-PII presence view: which of the three claim-time consent types are CURRENTLY valid for the
+ * The NON-PII presence view: which of the FOUR claim-time consent types (Story 11b.1 added the
+ * Sahyog Drive box) are CURRENTLY valid for the
  * deceased member (the D1a member-scoped key). Uses `consentExists` per type at DB now() — a revoked
  * or never-granted type is absent. No decryption, no PII (the granted-type flags only).
  */

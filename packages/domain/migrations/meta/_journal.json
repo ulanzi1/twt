@@ -785,6 +785,13 @@
       "when": 1790307600000,
       "tag": "0111_directory-publication",
       "breakpoints": true
+    },
+    {
+      "idx": 112,
+      "version": "7",
+      "when": 1790394000000,
+      "tag": "0112_consent-type-sahyog-drive",
+      "breakpoints": true
     }
   ]
 }

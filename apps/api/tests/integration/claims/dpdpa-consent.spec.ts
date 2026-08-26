@@ -114,7 +114,7 @@ describe.skipIf(!hasDatabase)('Claim-time DPDPA consent — member-app E2E (:543
       const { memberId, pariwarId, claimCaseId } = await setupClaim(t);
 
       const res = await inject(t, 'POST', url(claimCaseId), {
-        payload: { claimTimeDpdpa: true, sahyogVivranPublication: true, inMemoriamListing: true, locale: 'en' },
+        payload: { claimTimeDpdpa: true, sahyogVivranPublication: true, inMemoriamListing: true, sahyogDrivePublication: false, locale: 'en' },
         token: token(t, memberId, pariwarId),
       });
       expect(res.status).toBe(201);
@@ -226,7 +226,7 @@ describe.skipIf(!hasDatabase)('Claim-time DPDPA consent — member-app E2E (:543
     try {
       const { memberId, pariwarId, claimCaseId } = await setupClaim(t);
       const res = await inject(t, 'POST', url(claimCaseId), {
-        payload: { claimTimeDpdpa: false, sahyogVivranPublication: true, inMemoriamListing: false, locale: 'en' },
+        payload: { claimTimeDpdpa: false, sahyogVivranPublication: true, inMemoriamListing: false, sahyogDrivePublication: false, locale: 'en' },
         token: token(t, memberId, pariwarId),
       });
       expect(res.status).toBe(400);
@@ -251,7 +251,7 @@ describe.skipIf(!hasDatabase)('Claim-time DPDPA consent — member-app E2E (:543
       await closeScopeTx(scopeTx, true);
 
       const res = await inject(t, 'POST', url(claimCaseId), {
-        payload: { claimTimeDpdpa: true, sahyogVivranPublication: false, inMemoriamListing: false, locale: 'en' },
+        payload: { claimTimeDpdpa: true, sahyogVivranPublication: false, inMemoriamListing: false, sahyogDrivePublication: false, locale: 'en' },
         token: token(t, memberId, pariwarId),
       });
       expect(res.status).toBe(409);
@@ -267,7 +267,7 @@ describe.skipIf(!hasDatabase)('Claim-time DPDPA consent — member-app E2E (:543
       const a = await setupClaim(t);
       const b = await seedMember(t);
       const res = await inject(t, 'POST', url(a.claimCaseId), {
-        payload: { claimTimeDpdpa: true, sahyogVivranPublication: false, inMemoriamListing: false, locale: 'en' },
+        payload: { claimTimeDpdpa: true, sahyogVivranPublication: false, inMemoriamListing: false, sahyogDrivePublication: false, locale: 'en' },
         token: token(t, b.memberId, b.pariwarId),
       });
       expect(res.status).toBe(404);
@@ -284,7 +284,7 @@ describe.skipIf(!hasDatabase)('Claim-time DPDPA consent — member-app E2E (:543
       const { memberId, pariwarId, claimCaseId } = await setupClaim(t);
       const tok = token(t, memberId, pariwarId);
       const record = await inject(t, 'POST', url(claimCaseId), {
-        payload: { claimTimeDpdpa: true, sahyogVivranPublication: true, inMemoriamListing: false, locale: 'en' },
+        payload: { claimTimeDpdpa: true, sahyogVivranPublication: true, inMemoriamListing: false, sahyogDrivePublication: false, locale: 'en' },
         token: tok,
       });
       expect(record.status).toBe(201);
@@ -333,7 +333,7 @@ describe.skipIf(!hasDatabase)('Claim-time DPDPA consent — member-app E2E (:543
     try {
       const a = await setupClaim(t);
       const record = await inject(t, 'POST', url(a.claimCaseId), {
-        payload: { claimTimeDpdpa: true, sahyogVivranPublication: true, inMemoriamListing: false, locale: 'en' },
+        payload: { claimTimeDpdpa: true, sahyogVivranPublication: true, inMemoriamListing: false, sahyogDrivePublication: false, locale: 'en' },
         token: token(t, a.memberId, a.pariwarId),
       });
       expect(record.status).toBe(201);
@@ -363,7 +363,7 @@ describe.skipIf(!hasDatabase)('Claim-time DPDPA consent — member-app E2E (:543
     const t = await createTestApp();
     try {
       const res = await inject(t, 'POST', url(randomUUID()), {
-        payload: { claimTimeDpdpa: true, sahyogVivranPublication: false, inMemoriamListing: false, locale: 'en' },
+        payload: { claimTimeDpdpa: true, sahyogVivranPublication: false, inMemoriamListing: false, sahyogDrivePublication: false, locale: 'en' },
       });
       expect(res.status).toBe(401);
     } finally {

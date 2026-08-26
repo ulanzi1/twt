@@ -125,6 +125,20 @@ export const consentTypeEnum = pgEnum('consent_type', [
   // "Epic 11b adds them" note that used to sit in the header. APPENDED at the END — never reorder.
   'sahyog_vivran_publication',
   'in_memoriam_listing',
+  // Story 11b.1 (D4(b); Decision 2026-08-24-159 cl.6) — the per-subject publication consent for the
+  // PUBLIC Sahyog Drive index. Subject = the DECEASED MEMBER (pools.claim_id → claims.deceased_member_id),
+  // same keying as its two siblings above. Captured at claim-time by the SAME 6.9 DPDPA step (a FOURTH
+  // box, unchecked by default) and CONSUMED at render time by 11b.1's gate.
+  // ⭐⛔ MINTED PRE-LAUNCH ON PURPOSE, and the reason is the whole of D4(b): consent is recordable only
+  // in the five PRE-ADJUDICATION states, and pools spawn one per APPROVED claim ⇒ by the time a pool is
+  // listable, the recording window has already shut. Every claim filed before this value existed is
+  // PERMANENTLY UNASKABLE and its pool can never carry a name. Pre-launch, that cohort is EMPTY BY
+  // CONSTRUCTION; after launch there is NO remedy.
+  // ⚠ It gates the NAME, NEVER the ROW — an unconsented pool still renders in full (11b.1 AC2), so the
+  // index degrades PER-POOL, never per-page. A missing consent and a REVOKED one are the SAME verdict.
+  // APPENDED at the END — never reorder (stored ordinals). Migration 0112, its OWN file (ADD VALUE
+  // cannot run in a tx nor be used in the tx that adds it).
+  'sahyog_drive_publication',
 ]);
 
 /**

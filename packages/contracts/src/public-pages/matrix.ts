@@ -373,24 +373,49 @@ export const PublicVsPrivateMatrixSchema = z
       seenRoutes.add(surface.route);
     }
 
-    // ── The Tier-1 exception is EXACTLY ONE, matrix-wide (AC4) ────────────────
+    // ── The Tier-1 public exceptions are an ENUMERATED ALLOWLIST, matrix-wide (AC4) ──
     // Scoped at the ROOT rather than per-surface on purpose: a per-surface check
     // would permit one exception on EVERY surface, which is a general door wearing
     // the costume of an exception.
+    //
+    // ⭐ WIDENED FROM "EXACTLY ONE" TO "EXACTLY THESE TWO" by Decision 2026-08-24-159 cl.2
+    // (Story 11b.1 / D1(b)). ⛔ The check is NOT relaxed — it is made STRICTER in the
+    // dimension that matters. Before, ANY single field anywhere could hold the exception and
+    // pass; now the permitted (surface, field) pairs are named, so an exception appearing on
+    // some third field FAILS even while the COUNT is still within budget. A widening that
+    // pins identity is not the same act as a widening that raises a ceiling.
+    //
+    // ⛔ ADDING TO THIS LIST IS A RULING, NEVER A CODE CHANGE. Each entry cites the decision
+    // that authorised it; an entry without one is a relaxation wearing an allowlist's costume.
+    // ⚠ And do NOT "fix" a failing third entry by appending it here — that inverts the
+    // control. The gate failing is the gate working.
+    const RULED_TIER1_PUBLIC_EXCEPTIONS: ReadonlyMap<string, string> = new Map([
+      // The public Member Directory renders living members' full legal names by default.
+      ['member-directory.member_name', '2026-08-19-135 cl.7(c) / -136'],
+      // Story 11b.1 — the DECEASED member's name on the public Sahyog Drive pool index.
+      // ⚠ Consent-gated per subject (sahyog_drive_publication), which the directory's is NOT.
+      // ⛔ Its scope does NOT reach 11b.3 (Sahyog Vivran) or 11b.6 (In Memoriam): those keep
+      // first-name + last-initial, and moving them requires each surface's OWN Panel ruling.
+      ['sahyog-drive.deceased_member_name', '2026-08-24-159 cl.2 (D1(b))'],
+    ]);
+
     const exceptions = data.surfaces.flatMap((surface) =>
       surface.fields
         .filter((f) => f.tier1_public_exception !== undefined)
         .map((f) => `${surface.id}.${f.id}`),
     );
-    if (exceptions.length > 1) {
+    const unruled = exceptions.filter((id) => !RULED_TIER1_PUBLIC_EXCEPTIONS.has(id));
+    if (unruled.length > 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['surfaces'],
         message:
-          `EXACTLY ONE Tier-1 public exception is permitted matrix-wide, found ` +
-          `${exceptions.length}: ${exceptions.join(', ')}. The ruling (2026-08-19-135 ` +
-          `cl.7(c) / -136) authorises one field on one surface class — a second one is ` +
-          `not an exception, it is a relaxation of the rule, and it needs its own ruling.`,
+          `Tier-1 public exceptions are an ENUMERATED allowlist, and ${unruled.join(', ')} ` +
+          `${unruled.length === 1 ? 'is' : 'are'} not on it. Permitted matrix-wide: ` +
+          `${[...RULED_TIER1_PUBLIC_EXCEPTIONS.keys()].join(', ')}. A further exception is ` +
+          `not an exception, it is a relaxation of the rule, and it needs its own ruling — ` +
+          `see 2026-08-19-135 cl.7(c) / -136 and 2026-08-24-159 cl.2. Do NOT resolve this by ` +
+          `adding the field to the allowlist: that inverts the control this check exists to be.`,
       });
     }
 

@@ -133,7 +133,7 @@ describe.skipIf(!hasDatabase)('Claim-time DPDPA consent — helpline E2E (:5433)
     const { claimCaseId } = await seedConvergedClaim(pariwarId);
     const res = await client.inject({
       method: 'POST', url: recordUrl(pariwarId, claimCaseId),
-      payload: { claimTimeDpdpa: true, sahyogVivranPublication: false, inMemoriamListing: false, locale: 'en' } as unknown as object,
+      payload: { claimTimeDpdpa: true, sahyogVivranPublication: false, inMemoriamListing: false, sahyogDrivePublication: false, locale: 'en' } as unknown as object,
     });
     expect([403, 404]).toContain(res.statusCode);
     const rows = await td.pool.query(`SELECT 1 FROM consent_records WHERE consent_artifact_ref = $1`, [claimCaseId]);
@@ -149,7 +149,7 @@ describe.skipIf(!hasDatabase)('Claim-time DPDPA consent — helpline E2E (:5433)
 
     const res = await client.inject({
       method: 'POST', url: recordUrl(pariwarId, claimCaseId),
-      payload: { claimTimeDpdpa: true, sahyogVivranPublication: true, inMemoriamListing: false, locale: 'hi' } as unknown as object,
+      payload: { claimTimeDpdpa: true, sahyogVivranPublication: true, inMemoriamListing: false, sahyogDrivePublication: false, locale: 'hi' } as unknown as object,
     });
     expect(res.statusCode).toBe(201);
     expect(res.json<{ granted: string[] }>().granted).toEqual(['claim_time_dpdpa', 'sahyog_vivran_publication']);
@@ -197,7 +197,7 @@ describe.skipIf(!hasDatabase)('Claim-time DPDPA consent — helpline E2E (:5433)
 
     const record = await client.inject({
       method: 'POST', url: recordUrl(pariwarId, claimCaseId),
-      payload: { claimTimeDpdpa: true, sahyogVivranPublication: true, inMemoriamListing: false, locale: 'en' } as unknown as object,
+      payload: { claimTimeDpdpa: true, sahyogVivranPublication: true, inMemoriamListing: false, sahyogDrivePublication: false, locale: 'en' } as unknown as object,
     });
     expect(record.statusCode).toBe(201);
 
@@ -224,7 +224,7 @@ describe.skipIf(!hasDatabase)('Claim-time DPDPA consent — helpline E2E (:5433)
     const { claimCaseId } = await seedConvergedClaim(pariwarId);
     const record = await op.client.inject({
       method: 'POST', url: recordUrl(pariwarId, claimCaseId),
-      payload: { claimTimeDpdpa: true, sahyogVivranPublication: true, inMemoriamListing: false, locale: 'en' } as unknown as object,
+      payload: { claimTimeDpdpa: true, sahyogVivranPublication: true, inMemoriamListing: false, sahyogDrivePublication: false, locale: 'en' } as unknown as object,
     });
     expect(record.statusCode).toBe(201);
 

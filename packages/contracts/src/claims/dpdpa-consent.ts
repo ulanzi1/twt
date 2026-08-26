@@ -47,26 +47,49 @@ export const DpdpaConsentLocale = z.enum(['en', 'hi']);
 export type DpdpaConsentLocale = z.output<typeof DpdpaConsentLocale>;
 
 /**
- * The three claim-time DPDPA consent types (the `consent_type` pgEnum subset Story 6.9 captures):
+ * The FOUR claim-time DPDPA consent types (the `consent_type` pgEnum subset Story 6.9 captures):
  *   · claim_time_dpdpa           — the trust's processing of deceased + claimant + nominee PII (a);
  *   · sahyog_vivran_publication  — contributor-list + verifier-name publication on Sahyog Vivran (b);
- *   · in_memoriam_listing        — In Memoriam appearance (c).
+ *   · in_memoriam_listing        — In Memoriam appearance (c);
+ *   · sahyog_drive_publication   — the deceased member's NAME on the public Sahyog Drive pool index
+ *     (d) — Story 11b.1 / D4(b) / Decision 2026-08-24-159 cl.6.
  * Value-aligned with the domain `consent_type` pgEnum (contracts cannot import domain).
+ *
+ * ⭐⛔ WHY (d) IS CAPTURED HERE RATHER THAN AT PUBLICATION TIME — D4(b)'s whole ground, and it is a
+ * ONE-WAY DOOR: consent is RECORDABLE only in the five PRE-ADJUDICATION claim states, while pools
+ * spawn one per APPROVED claim. ⇒ by the time a pool is listable on Sahyog Drive, the window to ask
+ * has ALREADY SHUT. A claim filed before this value existed is PERMANENTLY UNASKABLE and its pool can
+ * never carry a name. Minted pre-launch, that cohort is empty by construction.
+ * ⚠ (d) gates the NAME, NEVER the ROW: an unconsented pool still renders in full on 11b.1's index.
  */
 export const DpdpaConsentType = z.enum([
   'claim_time_dpdpa',
   'sahyog_vivran_publication',
   'in_memoriam_listing',
+  'sahyog_drive_publication',
 ]);
 export type DpdpaConsentType = z.output<typeof DpdpaConsentType>;
 
 /**
- * The two PUBLICATION (public-transparency) consents — the only types revocable via 6.9's revoke
- * path (D7): a family later withdraws Sahyog Vivran / In Memoriam publication and Epic 11b takes the
- * page down on the next render check. The trust-processing consent (a) is not a publication opt-in
- * and is not revoked here.
+ * The THREE PUBLICATION (public-transparency) consents — the only types revocable via 6.9's revoke
+ * path (D7): a family later withdraws Sahyog Vivran / In Memoriam / Sahyog Drive publication and
+ * Epic 11b takes the page down on the next render check. The trust-processing consent (a) is not a
+ * publication opt-in and is not revoked here.
+ *
+ * ⚠ REVOCATION IS OPEN AT ANY CLAIM STATE — including AFTER settlement (6.9 AC3's whole point is a
+ * post-settlement takedown). So a family may withdraw the deceased member's name from the public
+ * Sahyog Drive at any time, and the next render drops it.
+ * ⛔ BUT IT IS NOT IMMEDIATE, and 11b.1 states that on the surface: at `s-maxage=300` a revoked
+ * consent keeps being served from every warm PoP, per page number, for up to five minutes. Direct SQL
+ * is NOT the operational fallback.
+ * ⚠ Note the deliberate ASYMMETRY with GRANTING — recorded observationally at Decision 2026-08-24-159
+ * cl.6 and NOT fixed here: granting closes at adjudication, revocation never does.
  */
-export const DpdpaRevocableConsentType = z.enum(['sahyog_vivran_publication', 'in_memoriam_listing']);
+export const DpdpaRevocableConsentType = z.enum([
+  'sahyog_vivran_publication',
+  'in_memoriam_listing',
+  'sahyog_drive_publication',
+]);
 export type DpdpaRevocableConsentType = z.output<typeof DpdpaRevocableConsentType>;
 
 /**
@@ -82,6 +105,13 @@ export const RecordDpdpaConsentRequest = z
     claimTimeDpdpa: z.boolean(),
     sahyogVivranPublication: z.boolean(),
     inMemoriamListing: z.boolean(),
+    // Story 11b.1 (D4(b) / AC12) — the FOURTH box. ⛔ It is deliberately OUTSIDE the `.refine()`
+    // below: the refine forces `claimTimeDpdpa` only, and extending it to this box would make the
+    // publication consent compulsory, which Niyamavali §4.4, Part 10 and Trust Deed cl.15(c) each
+    // forbid. ⚠ REQUIRED-not-optional on the wire on purpose (matching its three siblings): an
+    // optional field would let a client that never RENDERED the box submit a body indistinguishable
+    // from one where the family saw it and declined.
+    sahyogDrivePublication: z.boolean(),
     locale: DpdpaConsentLocale,
   })
   .strict()

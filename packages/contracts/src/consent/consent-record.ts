@@ -47,6 +47,13 @@ export const ConsentTypeSchema = z.enum([
   // by Epic 11b's render gate). Lockstep with the domain `consent_type` pgEnum (migration 0058).
   'sahyog_vivran_publication',
   'in_memoriam_listing',
+  // Story 11b.1 (D4(b); Decision 2026-08-24-159 cl.6) — the per-subject publication consent for the
+  // PUBLIC Sahyog Drive pool index. Captured by the SAME 6.9 claim-time step (a fourth box, unchecked
+  // by default), consumed by 11b.1's render gate. Lockstep with the domain `consent_type` pgEnum
+  // (migration 0112). ⚠ Minted PRE-LAUNCH deliberately: consent is recordable only pre-adjudication
+  // and pools spawn one per APPROVED claim, so a claim filed before this value existed is permanently
+  // unaskable and its pool can never carry a name.
+  'sahyog_drive_publication',
 ]);
 export type ConsentTypeSchema = z.output<typeof ConsentTypeSchema>;
 

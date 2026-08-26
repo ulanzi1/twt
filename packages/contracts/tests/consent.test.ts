@@ -75,7 +75,7 @@ describe('Story 2.7 — consent enum lockstep (dual anti-drift guard)', () => {
     );
   });
 
-  it('consent_type declares the seven AC1 values + the 5.4/5.5 opt-in + 6.9 publication additives', () => {
+  it('consent_type declares the seven AC1 values + the 5.4/5.5 opt-in + 6.9/11b.1 publication additives', () => {
     expect([...ConsentTypeSchema.options].sort()).toEqual(
       [
         'claim_time_dpdpa',
@@ -86,6 +86,11 @@ describe('Story 2.7 — consent enum lockstep (dual anti-drift guard)', () => {
         'marketing',
         'medical_disclosure_ack',
         'nominee_share_split',
+        // Story 11b.1 (D4(b)) — the deceased member's NAME on the public Sahyog Drive pool index
+        // (additive via ALTER TYPE 0112 + lockstep). Minted PRE-LAUNCH on purpose: consent is
+        // recordable only pre-adjudication and pools spawn one per APPROVED claim, so a claim filed
+        // before this value existed is permanently unaskable.
+        'sahyog_drive_publication',
         // Story 6.9 (D2) — Sahyog Vivran publication consent (additive via ALTER TYPE 0058 + lockstep).
         'sahyog_vivran_publication',
         'tc_acceptance',

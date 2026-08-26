@@ -23,6 +23,7 @@ const validRecord = {
   claimTimeDpdpa: true,
   sahyogVivranPublication: false,
   inMemoriamListing: false,
+  sahyogDrivePublication: false,
   locale: 'en',
 };
 
@@ -42,7 +43,7 @@ describe('DPDPA-consent DTOs (strict + shapes)', () => {
     const parsed = RecordDpdpaConsentRequest.parse({
       claimTimeDpdpa: true,
       sahyogVivranPublication: true,
-      inMemoriamListing: true,
+      inMemoriamListing: true, sahyogDrivePublication: false,
       locale: 'hi',
     });
     expect(parsed.sahyogVivranPublication).toBe(true);
@@ -71,12 +72,43 @@ describe('DPDPA-consent DTOs (strict + shapes)', () => {
     expect(DpdpaConsentLocale.options).toEqual(['en', 'hi']);
   });
 
-  it('DpdpaConsentType is the three claim-time consent types', () => {
+  it('DpdpaConsentType is the four claim-time consent types', () => {
     expect([...DpdpaConsentType.options].sort()).toEqual([
       'claim_time_dpdpa',
       'in_memoriam_listing',
+      // Story 11b.1 (D4(b)) — the FOURTH box: the deceased member's name on the public Sahyog Drive.
+      'sahyog_drive_publication',
       'sahyog_vivran_publication',
     ]);
+  });
+
+  // Story 11b.1 AC12: the fourth box is OUTSIDE the `.refine()`. This is the load-bearing half of
+  // D4(b) — Niyamavali §4.4, Part 10 and Trust Deed cl.15(c) each forbid default opt-in, so a request
+  // declining the Sahyog Drive publication must be perfectly VALID. If a future edit folds this box
+  // into the refine, the publication consent silently becomes compulsory and these two fail.
+  it('ACCEPTS a request declining the Sahyog Drive publication (it is NOT compulsory)', () => {
+    expect(
+      RecordDpdpaConsentRequest.parse({ ...validRecord, sahyogDrivePublication: false }),
+    ).toMatchObject({ sahyogDrivePublication: false });
+  });
+
+  it('ACCEPTS a request declining ALL THREE publication consents', () => {
+    expect(
+      RecordDpdpaConsentRequest.parse({
+        claimTimeDpdpa: true,
+        sahyogVivranPublication: false,
+        inMemoriamListing: false,
+        sahyogDrivePublication: false,
+        locale: 'en',
+      }),
+    ).toMatchObject({ claimTimeDpdpa: true });
+  });
+
+  // REQUIRED, not optional, on purpose: an optional field would let a client that never RENDERED the
+  // box submit a body indistinguishable from one where the family saw it and declined.
+  it('REJECTS a request that OMITS the Sahyog Drive box (a client must make a deliberate choice)', () => {
+    const { sahyogDrivePublication: _omitted, ...withoutBox } = validRecord;
+    expect(() => RecordDpdpaConsentRequest.parse(withoutBox)).toThrow();
   });
 
   it('the record request does NOT carry checkboxTextShown (server resolves the copy)', () => {
@@ -87,8 +119,14 @@ describe('DPDPA-consent DTOs (strict + shapes)', () => {
 });
 
 describe('RevokeDpdpaConsentRequest', () => {
-  it('accepts the two publication types with a reason', () => {
-    for (const consentType of ['sahyog_vivran_publication', 'in_memoriam_listing'] as const) {
+  it('accepts the three publication types with a reason', () => {
+    for (const consentType of [
+      'sahyog_vivran_publication',
+      'in_memoriam_listing',
+      // Story 11b.1 — a family may withdraw the deceased member's name from the public Sahyog Drive
+      // at ANY claim state, including after settlement (6.9 AC3's post-settlement takedown).
+      'sahyog_drive_publication',
+    ] as const) {
       expect(RevokeDpdpaConsentRequest.parse({ consentType, reason: 'family withdrew' })).toMatchObject({
         consentType,
       });

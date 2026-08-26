@@ -58,7 +58,7 @@ function fakeRequest(): FastifyRequest {
     body: {
       claimTimeDpdpa: true,
       sahyogVivranPublication: true,
-      inMemoriamListing: false,
+      inMemoriamListing: false, sahyogDrivePublication: false,
       locale: 'en',
     },
   } as unknown as FastifyRequest;

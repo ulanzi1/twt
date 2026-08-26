@@ -1,11 +1,20 @@
 // Claim-time DPDPA consent (Story 6.9, Task 5; AC1/AC4/D3) — the reserved (claim)/consent step.
 //
-// Three GRANULAR, INDEPENDENT, explicit-opt-in consent checkboxes (UX-DR2), all UNCHECKED by default:
+// FOUR GRANULAR, INDEPENDENT, explicit-opt-in consent checkboxes (UX-DR2), all UNCHECKED by default:
 //   (a) claim_time_dpdpa          — the trust's processing of PII (REQUIRED to continue — D3a default);
 //   (b) sahyog_vivran_publication — Sahyog Vivran contributor-list/verifier publication (OPTIONAL);
-//   (c) in_memoriam_listing       — In Memoriam appearance (OPTIONAL).
-// Declining (b)/(c) NEVER blocks the claim (D3 — private processing must not compromise disbursement):
+//   (c) in_memoriam_listing       — In Memoriam appearance (OPTIONAL);
+//   (d) sahyog_drive_publication  — the deceased member's NAME on the public Sahyog Drive (OPTIONAL)
+//       — Story 11b.1 / D4(b) / Decision 2026-08-24-159 cl.6.
+// Declining (b)/(c)/(d) NEVER blocks the claim (D3 — private processing must not compromise disbursement):
 // they carry a dignified "you can choose private processing — this will not affect the claim" reassurance.
+//
+// ⭐⛔ WHY (d) IS ASKED HERE AND NOT LATER — it is the ONLY moment it can be asked. Consent is
+// recordable only in the five PRE-ADJUDICATION claim states, and a pool (the thing Sahyog Drive lists)
+// spawns one per APPROVED claim. ⇒ by the time the drive exists, this window has shut for good. A
+// family not asked HERE can never be asked, and their drive can never carry the name.
+// ⚠ Declining (d) removes a NAME, never a DRIVE: the drive still appears publicly with its code,
+// district, close date and confirmed contribution count.
 //
 // The screen submits ONLY the box selections + the active locale — the SERVER resolves the canonical
 // consent copy written as evidence (consent-copy integrity, D2). The displayed checkbox copy (the
@@ -78,10 +87,11 @@ export default function ConsentScreen(): React.ReactElement {
   const memberId = session?.memberId
   const claimCaseId = memberId ? loadClaimDraft(memberId).claimCaseId : undefined
 
-  // All three boxes default UNCHECKED (explicit opt-in — UX-DR2; never pre-ticked).
+  // All FOUR boxes default UNCHECKED (explicit opt-in — UX-DR2; never pre-ticked).
   const [claimTimeDpdpa, setClaimTimeDpdpa] = useState(false)
   const [sahyogVivran, setSahyogVivran] = useState(false)
   const [inMemoriam, setInMemoriam] = useState(false)
+  const [sahyogDrive, setSahyogDrive] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -97,6 +107,7 @@ export default function ConsentScreen(): React.ReactElement {
         setClaimTimeDpdpa(status.granted.includes('claim_time_dpdpa'))
         setSahyogVivran(status.granted.includes('sahyog_vivran_publication'))
         setInMemoriam(status.granted.includes('in_memoriam_listing'))
+        setSahyogDrive(status.granted.includes('sahyog_drive_publication'))
       } catch {
         // Absence-is-a-signal — leave the boxes unchecked.
       }
@@ -125,6 +136,7 @@ export default function ConsentScreen(): React.ReactElement {
         claimTimeDpdpa,
         sahyogVivranPublication: sahyogVivran,
         inMemoriamListing: inMemoriam,
+        sahyogDrivePublication: sahyogDrive,
         locale,
       })
       if (memberId) saveClaimDraft(memberId, { lastStep: 'consent' })
@@ -164,6 +176,11 @@ export default function ConsentScreen(): React.ReactElement {
             checked={inMemoriam}
             onToggle={() => setInMemoriam((v) => !v)}
             label={t('dpdpa.in_memoriam')}
+          />
+          <ConsentRow
+            checked={sahyogDrive}
+            onToggle={() => setSahyogDrive((v) => !v)}
+            label={t('dpdpa.sahyog_drive')}
           />
         </YStack>
 

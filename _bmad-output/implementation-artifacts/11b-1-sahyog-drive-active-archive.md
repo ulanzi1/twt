@@ -634,14 +634,14 @@ merging and records the count — ⛔ never assumes it.
 >
 > ⚠ Everything after Task 4 is ordinary implementation and may be sequenced freely.
 
-- [ ] **Task 0 — Governance first (AC: all)** ⛔ **BEFORE any code.** [[feedback_governance_commits_precede_implementation]]
-  - [ ] Read `.decision-log.md` **live** for the head number — ⛔ do not hardcode `-159`
-  - [ ] Mint the decision entry recording **D1(b) · D2(a) · D3(a) · D4(b) · D5(a) · D6(a) · D7(a) · D8(a) · D9(a)**, in a `governance:` commit
-  - [ ] ⭐ The entry must carry **D1(b)'s matrix-governance widening** as its own clause — ⛔ the `escalations:` ledger is the wrong vehicle (a first-time declaration is ⛔ not an escalation; there is no honest `from` tier)
-  - [ ] ⚠ Record that **D1(b) was taken while counsel's `-157` cl.3(a) hold is OPEN**, and that **D4(a) was VACATED, ⛔ not reversed** — its question ceased to exist
-  - [ ] ⚠ Write *"counsel has not reviewed X"* — ⛔ **never** *"counsel is not engaged"* (`2026-08-24-158`)
-  - [ ] Confirm the `epics.md` `RECONCILED 2026-08-24 (AI-11a-1(b))` block is present (authored by this pass) and rides the **same commit family**
-  - [ ] ⛔ Do **not** flip any launch-gate row, do **not** record Row 17 as advanced, do **not** describe counsel's hold as lifted
+- [x] **Task 0 — Governance first (AC: all)** ⛔ **BEFORE any code.** [[feedback_governance_commits_precede_implementation]]
+  - [x] Read `.decision-log.md` **live** for the head number — ⛔ do not hardcode `-159`
+  - [x] Mint the decision entry recording **D1(b) · D2(a) · D3(a) · D4(b) · D5(a) · D6(a) · D7(a) · D8(a) · D9(a)**, in a `governance:` commit
+  - [x] ⭐ The entry must carry **D1(b)'s matrix-governance widening** as its own clause — ⛔ the `escalations:` ledger is the wrong vehicle (a first-time declaration is ⛔ not an escalation; there is no honest `from` tier)
+  - [x] ⚠ Record that **D1(b) was taken while counsel's `-157` cl.3(a) hold is OPEN**, and that **D4(a) was VACATED, ⛔ not reversed** — its question ceased to exist
+  - [x] ⚠ Write *"counsel has not reviewed X"* — ⛔ **never** *"counsel is not engaged"* (`2026-08-24-158`)
+  - [x] Confirm the `epics.md` `RECONCILED 2026-08-24 (AI-11a-1(b))` block is present (authored by this pass) and rides the **same commit family**
+  - [x] ⛔ Do **not** flip any launch-gate row, do **not** record Row 17 as advanced, do **not** describe counsel's hold as lifted
 - [ ] **Task 1 — The pool index read model (AC: 1, 4)** — per **D7**
   - [ ] `packages/domain/src/pool/public-read.ts`: ONE set-based query, ⛔ never a per-row fan-out (AR-65)
   - [ ] Predicate: `pariwar_id` explicit **alongside** RLS + `current_state IN ('closed','settled')` + the D-ruled district/date/pool-code filters

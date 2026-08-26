@@ -439,7 +439,20 @@ describe('committed matrix — the POPULATED invariants (Story 11a.1)', () => {
     // gate and the suite would have to be defeated together.
     const routes = committed().surfaces.map((s) => s.route).sort();
     expect(routes).toEqual(
-      ['/', '/404', '/500', '/blog', '/blog/[postId]', '/members', '/niyamavali', '/terms'].sort(),
+      [
+        '/',
+        '/404',
+        '/500',
+        '/blog',
+        '/blog/[postId]',
+        '/members',
+        '/niyamavali',
+        // Story 11b.1 — the first Epic 11b surface to be declared, and declared only
+        // because it SHIPPED A ROUTE. ⛔ 11b.3 (/sahyog-vivran) and 11b.6 (/in-memoriam)
+        // stay undeclared and must stay absent from this list until they ship theirs.
+        '/sahyog',
+        '/terms',
+      ].sort(),
     );
   });
 
@@ -456,15 +469,34 @@ describe('committed matrix — the POPULATED invariants (Story 11a.1)', () => {
     expect(total).toBeGreaterThanOrEqual(20);
   });
 
-  it('carries the ruled Tier-1 public exception EXACTLY ONCE, attributed to its decision', () => {
+  // ⭐ WIDENED 2026-08-24 by Decision `2026-08-24-159` cl.2 (Story 11b.1 / D1(b)) from ONE
+  // ruled exception to EXACTLY TWO, BY NAME. ⛔ This asserts IDENTITY, not just the count —
+  // a count-only assertion would pass while an exception silently migrated to some third
+  // field, which is the failure the enumerated allowlist exists to make impossible.
+  it('carries EXACTLY the two ruled Tier-1 public exceptions, each attributed to its decision', () => {
     const exceptions = committed().surfaces.flatMap((s) =>
       s.fields.filter((f) => f.tier1_public_exception !== undefined).map((f) => ({ s, f })),
     );
-    expect(exceptions).toHaveLength(1);
-    expect(exceptions[0]!.s.id).toBe('member-directory');
-    expect(exceptions[0]!.f.id).toBe('member_name');
-    expect(exceptions[0]!.f.pii_tier).toBe(1);
-    expect(exceptions[0]!.f.tier1_public_exception?.decision).toBe('2026-08-19-136');
+    expect(
+      exceptions
+        .map((e) => `${e.s.id}.${e.f.id}@${e.f.tier1_public_exception?.decision ?? '??'}`)
+        .sort(),
+    ).toEqual([
+      'member-directory.member_name@2026-08-19-136',
+      'sahyog-drive.deceased_member_name@2026-08-24-159',
+    ]);
+    for (const e of exceptions) expect(e.f.pii_tier).toBe(1);
+  });
+
+  // ⚠ THE TWO LEDGERS ARE NOT THE SAME LEDGER, and this is the assertion that keeps them
+  // apart. Adding the second `tier1_public_exception` above did NOT add an escalation: an
+  // `escalations:` entry records a tier MOVE (from → to) for a field ALREADY declared, and a
+  // field being declared for the FIRST time has no honest `from` tier. Declaring a surface is
+  // not an escalation. ⇒ exception blocks 1 → 2, escalation_count 1 → 1.
+  it('declaring the second exception did NOT inflate the escalation ledger', () => {
+    expect(committed().escalation_count).toBe(1);
+    expect(committed().escalations).toHaveLength(1);
+    expect(committed().escalations[0]?.surface).toBe('member-directory');
   });
 
   it('the escalation ledger count matches its entries, and each cites a decision', () => {

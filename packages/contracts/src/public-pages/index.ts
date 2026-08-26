@@ -19,4 +19,8 @@ export * from './abuse-rules.js';
 export * from './directory.js';
 export * from './gate.js';
 export * from './matrix.js';
+// Story 11b.1 — the public Sahyog Drive transport DTO. The SECOND collection-returning public-pages
+// route, and Epic 11b's first. It SHARES the deep-pagination horizon with the directory rather than
+// declaring a second one.
+export * from './sahyog-drive.js';
 export * from './scrape.js';

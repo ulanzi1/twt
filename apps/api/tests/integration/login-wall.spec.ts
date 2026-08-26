@@ -105,6 +105,45 @@ const PUBLIC_ALLOWLIST = new Set<string>([
   // every route in the app.
   // ⛔ Do not "fix" this entry by adding a session guard.
   'GET /api/v1/p/:pariwarId/public-pages/member-directory',
+  // ── Story 11b.1 — the PUBLIC Sahyog Drive pool index read ─────────────────────
+  // ⛔ DELIBERATELY UNAUTHENTICATED, and this entry is where that decision is DEFENDED.
+  // ⭐ THE SECOND `public-pages` collection GET, and it is here because `routes.ts`'s
+  // *"⛔ NO SECOND ROUTE"* clause NAMED THE PRICE of one — its own allowlist entry, its
+  // own written defence, its own rate-limit choice. This is that entry.
+  // WHY UNAUTHENTICATED: the surface exists so that anyone — a member's family, a
+  // prospective member, a journalist — can verify for themselves that this trust
+  // actually moves money. A login would defeat that purpose, and there is no member
+  // session to add anyway (members are TOKEN-BEARER, there is no `apps/member-web`,
+  // `2026-08-23-154` disposition (c) DEFERRED the authenticated tier for exactly that
+  // reason). ⛔ Do not "fix" this by adding a session guard.
+  // ⚠ IT IS NOT AN OPEN SURFACE. THE SAME FIVE controls bound it, each mechanized and
+  // tested — ⚠ FIVE, matching `routes.ts` exactly; ⛔ two authoritative documents
+  // disagreeing on how many controls exist is a defect this file has already had once:
+  //   · the named SEARCH rate limit, UNMODIFIED — ⛔ NOT `limits.read`, the looser tier,
+  //     which is backwards for an enumeration surface. Keyed on the FORWARDED VISITOR
+  //     ADDRESS via the same `perSessionKey` → `request.ip` → `trustProxy` chain.
+  //   · a page-size CAP (`PUBLIC_SURFACE_PAGE_SIZE_CAP` = 50) in the `.strict()` query
+  //     schema, so Story 1.14's forced-pagination guard covers this route too.
+  //   · a deep-pagination HORIZON — ⭐ the SAME `PUBLIC_DIRECTORY_PAGE_HORIZON` (200),
+  //     re-exported rather than re-declared: two public surfaces with two horizons is
+  //     the drift a shared constant exists to prevent.
+  //   · `X-Robots-Tag: noindex, nofollow` from the existing global hook, plus `noindex`
+  //     on the page itself.
+  //   · ⛔ NO per-pool detail route and ⛔ NO export affordance of any kind (FR-91). The
+  //     `.strict()` schema makes `?format=csv` a 400 rather than an ignored parameter —
+  //     and it is also what makes `?name=…` a refusal, which matters here: there is no
+  //     name-search substrate and the obvious workaround is an amplification attack.
+  // ⭐ AND ONE CONTROL THE DIRECTORY DOES NOT HAVE — a per-subject CONSENT gate
+  // (`sahyog_drive_publication`), evaluated BEFORE the Tier-1 decrypt so an unconsented
+  // row costs ZERO KMS calls and no decrypt happens without an authorising basis.
+  // ⚠ It gates the NAME, ⛔ never the ROW.
+  // ⚠ ITS HONEST LIMITS, recorded rather than glossed: `trustProxy: true` makes the
+  // forwarded address CALLER-SUPPLIED (`2026-08-20-143` cl.9); and a cached hit never
+  // reaches the origin, so the abuse counter here sees only cache MISSES.
+  // ⛔⛔ AND BUILT IS ⛔ NOT PUBLISHED: counsel's DPDPA review of this exact subject is
+  // HELD (`2026-08-24-157` cl.3(a), returning 2026-09-07) and this surface has no Row-17
+  // publication ratification of its own. ⛔ Allowlisting the route closes neither.
+  'GET /api/v1/p/:pariwarId/public-pages/sahyog-drive',
   // Developer-convenience OpenAPI doc (read-only, no data).
   'GET /docs/json',
   // Story 5.4 — the WhatsApp inbound-webhook ingress (§3.11) is PUBLIC by design: Meta is unauthenticated,

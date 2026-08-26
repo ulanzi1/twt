@@ -84,6 +84,19 @@
 # as enumerating attributes, by another route. The bidirectional route-coverage
 # leg is what makes the omission safe: when 11b ships a route, the gate FAILS
 # until it is declared here. That is a stronger guarantee than a guessed entry.
+#
+# ⭐ AMENDED 2026-08-24 (Story 11b.1) — FOR SAHYOG DRIVE ONLY, AND THE NOTE ABOVE
+# STAYS TRUE FOR THE OTHER TWO. Sahyog Drive shipped its route (`/sahyog`), so the
+# clause that made the omission safe has now done exactly what it promised: the
+# gate demanded a declaration, and the `sahyog-drive` surface below is it. Its
+# field set is no longer invented — it is read off a route that exists.
+# ⛔ SAHYOG VIVRAN (11b.3) AND IN MEMORIAM (11b.6) REMAIN UNDECLARED, deliberately
+# and on the same reasoning: they do not render, their field sets still do not
+# exist, and when they ship a route this gate will FAIL until they are declared
+# too. ⛔ Do not read the Sahyog Drive entry as licensing a guessed entry for
+# either of them, and ⛔ do not read it as reaching their name forms — 11b.1's
+# ruling (2026-08-24-159 cl.2 / D1(b)) is scoped to this surface, and each of the
+# other two must seek its own.
 
 version: 2
 
@@ -331,13 +344,31 @@ surfaces:
             Tier-2 blind index everywhere, and no PII tier changes (-136 cl.6).
             ⛔ It is not a general relaxation of the "authenticated_member never
             renders on public" rule — that rule is untouched. The parser enforces
-            the boundary: a second Tier-1 `public` exception anywhere in this file
-            is REJECTED.
+            the boundary.
+            ⚠ ANNOTATED 2026-08-24 (Story 11b.1 / D1(b) / `2026-08-24-159` cl.2):
+            that last sentence used to read "a SECOND Tier-1 `public` exception
+            anywhere in this file is REJECTED". A second one is now RULED and sits
+            below. ⛔ The boundary did not disappear — it CHANGED SHAPE, and in the
+            stricter direction: the parser no longer counts exceptions, it NAMES
+            them. Exactly two (surface, field) pairs are admitted, each citing the
+            decision that authorised it; an exception on any OTHER field FAILS even
+            while the count is still two. ⛔ Adding to that list is a RULING, never a
+            code change — and ⛔ never the way to make a failing gate pass.
           scope: >-
             Exactly this field on exactly this surface class. ⛔ It does NOT reach
             In Memoriam or Sahyog Vivran, which keep first-name + last-initial and
             are consent-governed in a way the directory is not (epics.md C5);
             changing those requires its own Panel ruling.
+            ⚠ ANNOTATED 2026-08-24 (Story 11b.1 / D10), ⛔ NOT REWRITTEN — the two
+            sentences above are LEFT STANDING because they remain true of the two
+            surfaces they name. What is now incomplete is the implied generalisation:
+            SAHYOG DRIVE — a surface this text never named, and which sits FURTHER
+            outside this fence, not nearer — renders the DECEASED member's FULL NAME
+            under its own exception below, consent-gated per subject
+            (`sahyog_drive_publication`) in a way this directory field is ⛔ NOT.
+            ⛔ IN MEMORIAM AND SAHYOG VIVRAN STILL KEEP FIRST-NAME + LAST-INITIAL and
+            still need their own Panel ruling. ⛔ D10 moved ONE surface's name form
+            and reached ⛔ nothing else — do not cite it for a third.
         presentation_policy_ref: pariwar_public_name_presentation.mode
         description: >-
           The FORM this renders in is CONFIGURABLE per Pariwar (`full_name` |
@@ -388,6 +419,191 @@ surfaces:
           amended rulebook actually renders (`144` cl.7(a)). ⛔ Not a reason to drop the
           pill the epic's own disposition left unchanged.
 
+  # ── Story 11b.1 — the public Sahyog Drive pool index (FR-77) ───────────────
+  # ⭐ THE FIRST EPIC 11b SURFACE TO BE DECLARED HERE, and it is declared because it
+  # SHIPPED A ROUTE — the header note's promise ("when 11b ships a route, the gate
+  # FAILS until it is declared here") doing exactly what it was written to do.
+  # ⛔ 11b.3 and 11b.6 stay undeclared; see that note.
+  - id: sahyog-drive
+    route: /sahyog
+    description: >-
+      The public transparency index over POOLS — Active (`pools.current_state` =
+      `closed`: the collection window has shut, the family is not yet paid) and
+      Archive (`settled`: disbursed, terminal). One bounded page at a time,
+      filterable by district + date range + pool code.
+      ⭐ THE GRAIN IS THE POOL, ⛔ NOT THE CONTRIBUTION. The UX spec's 10-column
+      contribution-level "Sahyog List" is a DIFFERENT table: 11b.2's components on
+      11b.3's per-claim host (D5(a)). Three of its columns have no substrate at all
+      (`Donation ID`, `HRMS`, `Member ID` — the last being an enumeration primitive
+      11a.3's handler refuses in terms) and two of its labels are microcopy-
+      prohibited. ⛔ Do not build it here.
+      ⛔ REMEMBRANCE, NOT ANALYTICS: no contributor leaderboards, no rankings, no
+      gamification, no social-performance metrics, no popularity metrics — and the
+      SORT ORDER IS NOT A RANKING (close/settle instant descending with a
+      deterministic tie-break; ⛔ never by contribution count, ⛔ never by amount).
+    search_indexing_policy: noindex
+    # Mirrors /members under FR-75, and re-decided on ITS OWN ground at D8(a).
+    # ⚠ THE GROUND CHANGED AND IS RESTATED, ⛔ NOT QUIETLY PATCHED. D8(a) was first
+    # argued as "the content is non-PII by construction, so it is cacheable by
+    # construction". D1(b) + D10 DESTROYED that: this page shared-caches Tier-1 PII —
+    # a deceased member's full legal name — behind a REVOCABLE consent. The ruling now
+    # rests on the /members PRECEDENT (same class of field, same policy, re-decided at
+    # 11a.3 and kept, `2026-08-20-143`).
+    # ⛔ AND THE COST IS LARGER THAN THAT ORIGINAL ARGUMENT SUPPOSED: a family's
+    # REVOCATION keeps being served from every warm PoP, per page number, for up to
+    # FIVE MINUTES. ⛔ Direct SQL is NOT the operational fallback. Same edge-blindness
+    # of the abuse counter as /members applies here unchanged.
+    cache_policy: edge_cacheable   # public, max-age=60, s-maxage=300
+    # FR-91: binds apps/public/src/lib/pagination.ts — parsePageParams() reused
+    # UNCHANGED (page-size cap 50, deep-page horizon 200, ⛔ no silent clamp).
+    paginated: true
+    fields:
+      - id: deceased_member_name
+        tier: public
+        pii_tier: 1
+        tier1_public_exception:
+          decision: '2026-08-24-159'
+          rationale: >-
+            Story 11b.1 D1(b), ruled AGAINST the authoring recommendation on a stated
+            institutional-legitimacy ground: an UNNAMED beneficiary on a public
+            transparency index reads as the trust diverting funds to its own account.
+            Publication of the beneficiary is therefore treated as CONSTITUTIVE of the
+            mutual-aid model, ⛔ not as a courtesy.
+            ⭐ THE FORM IS D10's: the deceased member's FULL NAME, ⛔ not first-name +
+            last-initial. Three independent grounds, and (1) and (3) each suffice alone:
+            (1) a shielded name defeats D1(b)'s own verification purpose — the UX spec's
+            Real Data Test shows duplicate FULL names already need a second identifier to
+            disambiguate, so first-name + last-initial is useless for verification;
+            (2) it is strictly MORE protective than /members, which publishes LIVING
+            members' full names by default with no opt-out — ⚠ but see the scope note,
+            this ground is flagged and must ⛔ not be cited for a third surface;
+            (3) `shielded_name` returns '' — omit — for EVERY single-token stored name,
+            and mononyms are common in India, so the shield would leave an entire class
+            of deceased members unnamed with no signal.
+            ⛔ THIS IS A DECRYPT AT A NAMED SURFACE, ⛔ NOT A RECLASSIFICATION: the field
+            stays Tier-1 ciphertext everywhere and ⛔ no PII tier changes.
+            ⚠ TAKEN WITH COUNSEL'S REVIEW OF THIS EXACT SUBJECT *HELD* (`2026-08-24-157`
+            cl.3(a), returning 2026-09-07), deliberately and on the record. ⛔ BUILT IS
+            ⛔ NOT PUBLISHED — Row 17's posture and the per-Pariwar switch both stand.
+            ⚠ PANEL RATIFICATION OF THE NAME FORM IS *OWED* and is routed: recorded
+            AUTHORISED, ⛔ NOT MADE (the `2026-08-21-144` precedent). ⛔ Do not record it
+            as Panel-ratified until it is.
+          scope: >-
+            Exactly this field on exactly this surface. ⛔ It does NOT reach Sahyog
+            Vivran (11b.3) or In Memoriam (11b.6), which keep first-name + last-initial
+            and must each seek their OWN Panel ruling — and ⛔ when they do, cite grounds
+            (1) and (3) above, ⛔ never (2): ground (2) reasons FROM the /members
+            baseline, and the same pass that ruled D10 found that baseline non-compliant
+            with Trust Deed cl.15(c) (which prevails, cl.28, and requires explicit,
+            revocable, purpose-specific consent and never default opt-in). ⇒ if cl.15(c)
+            is enforced, /members moves TO consent-gating — which is what THIS surface
+            already does. ⭐ 11b.1 is the compliant shape and the DIRECTORY is the
+            outlier, the ⛔ OPPOSITE of how ground (2) frames the pair.
+            ⛔ IT ALSO DOES NOT REACH THE NOMINEE / FAMILY IDENTIFIER, which is ⛔ not
+            rendered on this surface at all: a nominee never joined the Trust, so no
+            membership term reaches them, Deed cl.15(c) names "nominee" expressly, and
+            counsel's `-157` cl.3(b) third-party objection stands intact.
+            ⛔ AND IT SETTLES NOTHING ABOUT CONTRIBUTOR OR DONOR NAME FORMS on this or
+            any surface — those remain UNRULED, and `-135`/`-136` does not reach them.
+        presentation_policy_ref: pariwar_public_name_presentation.mode
+        description: >-
+          ⭐⛔ RESOLVED THROUGH `resolvePublicMemberName(mode, storedName)`, ⛔ NEVER
+          THROUGH `resolvePoolIdentity()` AND ⛔ NEVER AS A LITERAL. This is the sharpest
+          build consequence of D10 and the easiest to get wrong: `resolvePoolIdentity()`
+          — the resolver 8.6/8.7/8.8 share, and the obvious thing to reach for on a POOL
+          surface — HARD-CODES `splitFirstNameLastInitial`, so it can ⛔ only ever return
+          the form D10 rejected.
+          The FORM is per-Pariwar configurable (`full_name` | `shielded_name`) and
+          `full_name` is the DEFAULT, ⛔ not a constant: `-136` cl.1 states that a build
+          in which the public name form cannot be changed without a code change FAILS
+          that clause. A Pariwar that shields still shields, in both directions.
+          ⭐⛔ CONSENT DECIDES WHETHER A ROW IS *NAMED*, ⛔ NEVER WHETHER IT *EXISTS*.
+          It renders only where `consentExists(…, 'sahyog_drive_publication')` holds at
+          render time, subject = the DECEASED member — and a MISSING consent and a
+          REVOKED one are the SAME verdict. An unconsented pool still renders in full:
+          letter code, canonical identifier, district, close date, confirmed count and
+          close-of-cycle framing. ⇒ the index degrades PER-POOL, ⛔ never per-page, and a
+          family's declination removes a NAME, ⛔ never a DRIVE from the public record.
+          ⚠ An unresolvable name or a failed decrypt omits the NAME, ⛔ never the ROW —
+          the DELIBERATE INVERSE of /members, where a row with no name has no purpose;
+          here it still carries the drive. ⛔ And the omission never announces itself:
+          no placeholder, no empty span, no comment — an omission that announces itself
+          is an enumeration signal.
+      - id: pool_letter_code
+        tier: public
+        pii_tier: 3
+        description: >-
+          The pool's human-facing letter code (Story 7.2's dual identifier). Non-PII by
+          construction — it names a COLLECTION, ⛔ never a person — and one of the three
+          dimensions this surface is searchable by, precisely because it costs ⛔ no
+          decrypt to filter on.
+      - id: pool_canonical_identifier
+        tier: public
+        pii_tier: 3
+        description: >-
+          The pool's canonical identifier (7.2). ⛔ NOT `pools.id` and ⛔ not any member
+          or claim id: the response carries ⛔ no `member_id`, ⛔ no `deceased_member_id`,
+          ⛔ no `claim_id` and ⛔ no ciphertext. A per-entity permalink is an enumeration
+          primitive in its own right (11a.3, control 5), so there is ⛔ no per-pool detail
+          route here — a detail surface is 11b.3's.
+      - id: district
+        tier: public
+        pii_tier: 3
+        description: >-
+          The raw latest-posting district string, already classified `pii_tier: 3` and
+          public on /members — declared here for THIS surface because the tier-leak leg
+          is per-surface and an undeclared rendered field is a leak. One of the three
+          searchable dimensions (no decrypt required).
+          ⚠ `school` / `block` are ⛔ NOT declared and ⛔ must not be added: `school` and
+          `designation` are PERMANENTLY INELIGIBLE (`-133` cl.1, `-132` cl.3) and `block`
+          is gated on `2026-08-19-137` cl.7(a)+(b) — a member-aware publish path AND a
+          member choice surface, ⛔ neither of which exists.
+      - id: drive_closed_at
+        tier: public
+        pii_tier: 3
+        description: >-
+          The pool's close (Active) or settle (Archive) instant — the sort key and the
+          third searchable dimension. ⛔ A date about a COLLECTION, ⛔ never a date about
+          a person: this is ⛔ not a date of death and ⛔ must never be sourced from one.
+          Rendered in Latin numerals + Gregorian dates (operational register, UX-DR73).
+      - id: drive_status
+        tier: public
+        pii_tier: 3
+        description: >-
+          Exactly `active` | `archive` — the two-label public vocabulary, derived from
+          `pools.current_state` (`closed` → active, `settled` → archive). ⛔ THE WIRE
+          TOKEN IS THE PUBLIC VOCABULARY, ⛔ NEVER THE INTERNAL ONE: the raw lifecycle
+          value ⛔ never reaches the wire (the `member_status` / `lock-in` lesson at
+          `2026-08-21-144` cl.8, which this surface is built to ⛔ not repeat).
+          Derived, ⛔ never a column.
+      - id: confirmed_contribution_count
+        tier: public
+        pii_tier: 3
+        description: >-
+          A COUNT of contributions confirmed as money actually received — derived ONLY
+          from live `contribution.confirmed` events with their
+          `reconciliation.confirmation-reversed` compensations applied (Story 9.5's
+          canonical financial truth). ⛔ NEVER yellow / attested / pending / projected,
+          and ⛔ never a SUM of per-event amounts.
+          ⚠ A reversal is a `reconciliation.*` event, deliberately off the 8.10
+          `contribution.*` fence — ⛔ do not filter reversals out by prefix.
+          ⛔ It is a count, ⛔ not a score: ⛔ no ordering by it, ⛔ no "most-supported"
+          view at any tier, and ⛔ no contributor identity at any grain (D9(a) binds
+          11b.2/11b.3, which own contributor lists; this surface satisfies it vacuously).
+      - id: close_of_cycle_framing
+        tier: public
+        pii_tier: 3
+        description: >-
+          Pool-Reality #2 framing, from `selectCloseOfCycleFraming()` — ⛔ never a locally
+          authored outcome branch and ⛔ never a re-implementation.
+          ⭐⛔ NO TARGET, EXPECTED-TOTAL, PERCENTAGE, SHORTFALL OR COMPARISON FIGURE
+          ENTERS ANY RENDER MODEL ON THIS SURFACE, in any field, under any name.
+          `classifyCycleOutcome` QUARANTINES the target by construction — totals flow in,
+          only the `CycleFundingOutcome` enum flows out — so a shortfall figure physically
+          cannot reach the copy path. ⛔ Do not pass a target into any render model here,
+          and note the microcopy `pool-reality-comparison` tone rule bites a
+          comparison-to-target frame at PR time anyway.
+
 # ── The escalation ledger (AC8) ──────────────────────────────────────────────
 # One entry per visibility ESCALATION (a field moving toward `public`), each
 # naming the `.decision-log.md` entry that authorised it. `escalation_count` must
@@ -409,7 +625,16 @@ escalations:
       The Trustee Panel ruled that members' full legal names are published on the
       unauthenticated Member Directory, superseding the first-name + last-initial
       form. ⚠ CARRIED WITH ITS OPEN FINDINGS, ⛔ not as a settled matter:
-      (a) `-136` cl.5 records DPDPA exposure with legal counsel NOT engaged, and
+      (a) `-136` cl.5 records DPDPA exposure taken while legal counsel had NOT
+      REVIEWED this publication — ⚠ CORRECTED 2026-08-24 (`2026-08-24-158`), and
+      the correction is to the REASON, ⛔ never to the finding: this rationale used
+      to say counsel was "NOT engaged", which is ⛔ FALSE and has been since
+      2026-06-21 (Adv. Mohit Agrawal). ⭐ The DPDPA exposure it records is ⛔ STILL
+      OPEN — counsel's review of the public surfaces is HELD (`2026-08-24-157`
+      cl.3), returning 2026-09-07 — so ⛔ nothing here is discharged by the
+      correction. ⚠ This file is a LIVE machine-read governance artifact asserting
+      the PRESENT tense, which is why it is corrected in place while the historical
+      decision-log entries correctly keep their original wording; and
       (b) Decision `2026-08-20-140` cl.7 found that the Niyamavali — the
       member-facing rulebook — does not record this publication anywhere, so a
       member reading it cannot learn that their full legal name will be public.

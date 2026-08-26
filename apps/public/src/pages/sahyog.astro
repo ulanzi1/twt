@@ -157,10 +157,14 @@ const rejection = paging.ok ? null : buildSahyogRejectionView(labels);
 // index and envelope encryption gives every name its own DEK, so the only way to answer one is to
 // decrypt the whole roster per request — the exact amplification `DIRECTORY_DECRYPT_CONCURRENCY`
 // exists to close. ⚠ Deferred on a `name_blind_index` substrate story, ⛔ not closed.
-const districtFilter = Astro.url.searchParams.get('district') ?? undefined;
-const closedFromFilter = Astro.url.searchParams.get('closedFrom') ?? undefined;
-const closedToFilter = Astro.url.searchParams.get('closedTo') ?? undefined;
-const poolCodeFilter = Astro.url.searchParams.get('poolCode') ?? undefined;
+// ⚠ `?? undefined` alone does NOT catch an empty string — and a GET form submission with any
+// field left blank sends that field as `field=` (present, empty), not omitted. Forwarding `''`
+// trips the API's `.min(1)` validation on a perfectly ordinary "I only care about one filter"
+// submission (Review finding, 2026-08-26). `|| undefined` treats blank the same as absent.
+const districtFilter = Astro.url.searchParams.get('district') || undefined;
+const closedFromFilter = Astro.url.searchParams.get('closedFrom') || undefined;
+const closedToFilter = Astro.url.searchParams.get('closedTo') || undefined;
+const poolCodeFilter = Astro.url.searchParams.get('poolCode') || undefined;
 const isFiltered =
   districtFilter !== undefined ||
   closedFromFilter !== undefined ||
@@ -168,13 +172,20 @@ const isFiltered =
   poolCodeFilter !== undefined;
 
 // ── The drive read (AC1, AC8) ───────────────────────────────────────────────
+// ⚠ `<input type="date">` yields a bare `YYYY-MM-DD`, but the API's `closedFrom`/`closedTo` are
+// `z.string().datetime()` — a full ISO timestamp is REQUIRED, and a bare date string fails that
+// schema (Review finding, 2026-08-26). Widened to the inclusive day boundary in each direction so
+// "closed on this day" reads naturally to a visitor picking a single date in either box.
+const closedFromIso = closedFromFilter ? `${closedFromFilter}T00:00:00.000Z` : undefined;
+const closedToIso = closedToFilter ? `${closedToFilter}T23:59:59.999Z` : undefined;
+
 const drive = paging.ok
   ? await fetchSahyogDrive({
       page: paging.page,
       limit: paging.limit,
       district: districtFilter,
-      closedFrom: closedFromFilter,
-      closedTo: closedToFilter,
+      closedFrom: closedFromIso,
+      closedTo: closedToIso,
       poolCode: poolCodeFilter,
       // ⛔ `Astro.clientAddress` ONLY, via the REUSED `buildForwardedFor`. The inbound
       // `X-Forwarded-For` header is deliberately NOT read — it is caller-supplied, and `apps/api`'s

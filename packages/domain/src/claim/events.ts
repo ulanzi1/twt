@@ -28,6 +28,14 @@ import { z } from 'zod';
 
 import { SHEPHERD_ASSIGNMENT_REASONS } from '../schema/claim_shepherd_assignments.js';
 import { CLAIM_INTAKE_CHANNELS, CLAIM_LIFECYCLE_STATES } from '../schema/claims.js';
+// ⚠ VALUE imports (the claim-time consent-type tuples), ⛔ not types — `schema/consent_records.ts`
+// is the AUTHORITY on which consent types the 6.9 capture step collects, and re-spelling them here
+// is exactly how the two drifted apart (see those constants' own doc-blocks).
+// ⛔ No cycle: `schema/consent_records.ts` imports only `ids/` + `schema/audit_log_entries.ts`.
+import {
+  CLAIM_TIME_CONSENT_TYPES,
+  CLAIM_TIME_PUBLICATION_CONSENT_TYPES,
+} from '../schema/consent_records.js';
 
 /**
  * Who caused the transition (architecture §1.14 line 1262-1268). `system` = SIE /
@@ -234,9 +242,11 @@ export const ClaimDpdpaConsentRecordedPayloadSchema = requireIdentityTransition(
   ...auditShape,
   // The granted subset — always non-empty (the event is emitted only when ≥1 grant row is written).
   // Non-PII type flags ONLY (no checkbox text, no subject id).
-  consent_types_granted: z
-    .array(z.enum(['claim_time_dpdpa', 'sahyog_vivran_publication', 'in_memoriam_listing']))
-    .min(1),
+  // ⭐ DERIVED, ⛔ NEVER RE-SPELLED. This was an inline `z.enum([...])` — a FIFTH hand-maintained
+  // copy of the claim-time subset with no lockstep test — and Story 11b.1's new consent type was
+  // silently left out of it. The request parsed, the consent row was written, and the event append
+  // then 500'd, ⛔ only on the path where a family actually ticked the box.
+  consent_types_granted: z.array(z.enum(CLAIM_TIME_CONSENT_TYPES)).min(1),
 });
 
 /**
@@ -253,7 +263,9 @@ export const ClaimDpdpaConsentRecordedPayloadSchema = requireIdentityTransition(
  */
 export const ClaimDpdpaConsentRevokedPayloadSchema = requireIdentityTransition({
   ...auditShape,
-  consent_type: z.enum(['sahyog_vivran_publication', 'in_memoriam_listing']),
+  // ⭐ DERIVED, ⛔ never re-spelled — the same defect as `consent_types_granted` above, one field
+  // apart. A revocation of the new publication consent would have 500'd identically.
+  consent_type: z.enum(CLAIM_TIME_PUBLICATION_CONSENT_TYPES),
 });
 
 /** Verifier console opened review → `verifier_review`. Owner: Story 6.10/6.11. */

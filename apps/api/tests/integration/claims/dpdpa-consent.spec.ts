@@ -166,30 +166,75 @@ describe.skipIf(!hasDatabase)('Claim-time DPDPA consent — member-app E2E (:543
   // were never exercised. Each combo must independently: write exactly the rows for the checked
   // boxes (never a row for an unchecked one), return exactly that `granted` set, and NEVER block or
   // alter claim progression regardless of which of (b)/(c) is declined.
+  // ⭐ EXTENDED AT STORY 11b.1 — a FOURTH optional box, `(d) sahyog_drive_publication`, and it is
+  // exercised in BOTH directions rather than merely appended as `false` to satisfy the schema.
+  // ⚠ (d) IS THE ONE MOST WORTH PROVING NON-BLOCKING. It authorises publishing the deceased
+  // member's NAME on a public page, so it is the box a family is most likely to decline — and
+  // Niyamavali §4.4, Part 10 and Trust Deed cl.15(c) each forbid making it mandatory. A regression
+  // that folded (d) into the `.refine()` would make declining it BLOCK THE CLAIM, which is the
+  // worst failure this file can catch: a grieving family told they cannot file unless they agree
+  // to publication.
   const OPTIONAL_CONSENT_COMBOS: Array<{
     label: string;
-    payload: { sahyogVivranPublication: boolean; inMemoriamListing: boolean };
+    payload: {
+      sahyogVivranPublication: boolean;
+      inMemoriamListing: boolean;
+      sahyogDrivePublication: boolean;
+    };
     expectedGranted: string[];
   }> = [
     {
-      label: '(a) only',
-      payload: { sahyogVivranPublication: false, inMemoriamListing: false },
+      label: '(a) only — ⭐ ALL THREE publication consents DECLINED, and the claim proceeds',
+      payload: {
+        sahyogVivranPublication: false,
+        inMemoriamListing: false,
+        sahyogDrivePublication: false,
+      },
       expectedGranted: ['claim_time_dpdpa'],
     },
     {
-      label: '(a) + (b), (c) declined',
-      payload: { sahyogVivranPublication: true, inMemoriamListing: false },
+      label: '(a) + (b), (c) + (d) declined',
+      payload: {
+        sahyogVivranPublication: true,
+        inMemoriamListing: false,
+        sahyogDrivePublication: false,
+      },
       expectedGranted: ['claim_time_dpdpa', 'sahyog_vivran_publication'],
     },
     {
-      label: '(a) + (c), (b) declined',
-      payload: { sahyogVivranPublication: false, inMemoriamListing: true },
+      label: '(a) + (c), (b) + (d) declined',
+      payload: {
+        sahyogVivranPublication: false,
+        inMemoriamListing: true,
+        sahyogDrivePublication: false,
+      },
       expectedGranted: ['claim_time_dpdpa', 'in_memoriam_listing'],
     },
     {
-      label: 'all three',
-      payload: { sahyogVivranPublication: true, inMemoriamListing: true },
-      expectedGranted: ['claim_time_dpdpa', 'sahyog_vivran_publication', 'in_memoriam_listing'],
+      label: '(a) + (d) ONLY — ⭐ the Sahyog Drive name consent alone, its siblings declined',
+      payload: {
+        sahyogVivranPublication: false,
+        inMemoriamListing: false,
+        sahyogDrivePublication: true,
+      },
+      // ⛔ Proves (d) writes its OWN row and does not ride on a sibling's. Reusing
+      // `sahyog_vivran_publication` for this surface was rejected at D4(c) precisely because it
+      // would silently widen what a family agreed to.
+      expectedGranted: ['claim_time_dpdpa', 'sahyog_drive_publication'],
+    },
+    {
+      label: 'all four',
+      payload: {
+        sahyogVivranPublication: true,
+        inMemoriamListing: true,
+        sahyogDrivePublication: true,
+      },
+      expectedGranted: [
+        'claim_time_dpdpa',
+        'sahyog_vivran_publication',
+        'in_memoriam_listing',
+        'sahyog_drive_publication',
+      ],
     },
   ];
 

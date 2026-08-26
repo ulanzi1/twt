@@ -41,6 +41,36 @@ deliberately accepted.
 | member (answering a poll — a whole questionnaire in one pass, with NO save-and-resume and NO way to change an answer once sent) | The MEANING of the aggregate an admin reads (Story 10.15 LBD-6): one response per member, enforced by the composite PK, is what makes a count a count. An editable answer would make the aggregate a moving target, and a resumable draft would let a member submit against a poll that has since closed. ⚠ The finality is stated BEFORE the member commits, not after — a member who answers by mistake raises a helpdesk ticket (Story 10.2), a human path that already exists and leaves a record | optional |
 | trustee (emergency fixed-amount override — the attesting panel must now be CHOSEN from the eligible-attestor directory, and a named actor who does not hold `pool.fixed_amount_emergency` at this Pariwar is refused server-side) | The immutable Emergency Adjustment Record's authority — before Story 10.13 any global user id with a display name could be written onto it, including an admin of a different Pariwar, so the record named an authority the governing instruments do not confer (Deed Cl. 10(b) / Niyamavali §4.2 vest amount-fixing in the Board; Decision `2026-08-16-123` cl.2) | forced |
 | member under suspension or termination (stating, in their own words, WHY the moderation decision against them is wrong — a free-text grounds field, minimum length enforced, before the appeal can be sent) | The Niyamavali §8.8 right to be heard. ⭐ The friction IS the mechanism: §8.8 promises "notice, a fair hearing and a reasoned outcome", and an appeal with no stated grounds gives the Trustee Panel nothing to hear — the member would have exercised the right and gained nothing. ⚠ The screen deliberately pays MORE friction than the write requires: before the field it states that the review is by a trustee who took no part in the decision, that filing does NOT pause the sanction (§8.8 has no suspensive effect), and that using the appeal waives no external recourse (Deed Clause 26 / R10(E)) — so a member commits knowing what they get. ⛔ NOT payable off-portal: a terminated member states the same grounds to a helpline operator, who records them, so the friction does not depend on the access termination removes (Story 10.22) | forced |
+| family at claim intake (a FOURTH consent checkbox — whether their relative may be NAMED on the public Sahyog Drive record of the drive run in their memory) | The family's own authorship of a public naming, at the ONLY moment it can be asked. ⭐ THE TIMING IS THE WHOLE REASON THE FRICTION IS PAID HERE, on the worst day of their lives: consent is recordable only in the five PRE-adjudication claim states, and a pool spawns one per APPROVED claim ⇒ by the time the drive exists and could be published, the window to ask has already shut. A family not asked at intake can NEVER be asked, and their drive can never carry the name. ⚠ The box is UNCHECKED by default and sits OUTSIDE the `.refine()` that forces the processing consent — Niyamavali §4.4, Part 10 and (prevailing above both, cl.28) Trust Deed cl.15(c) each forbid default opt-in, and the copy states in both locales that declining does not affect the claim. ⛔ Declining removes a NAME, never a DRIVE: the drive still publishes with its code, district, date and confirmed count (Story 11b.1) | optional |
+| visitor / mourner on the public Sahyog Drive (finding a drive by DISTRICT + DATE + DRIVE CODE — ⛔ there is no search by the deceased member's name) | ⭐ THE FRICTION IS THE ABSENCE OF A FEATURE, DECLARED RATHER THAN LEFT AS AN APOLOGY. `member_kyc_profiles` carries no blind index and envelope encryption gives every name its OWN DEK, so two people with the same name have unrelated ciphertext — there is nothing to match on. The only way to answer a name query is to decrypt the whole roster per request, which is the exact amplification `DIRECTORY_DECRYPT_CONCURRENCY` exists to close, one order of magnitude worse than a page render, on an unauthenticated route, with the cache structurally unable to help. ⇒ what this friction protects is every member's Tier-1 KYC record against a query anyone on the internet could issue. ⚠ Deferred on a `name_blind_index` substrate story — Resolved via explicit deferral, ⛔ not closed; the page states plainly that name search is not offered rather than letting a mourner conclude the drive is absent (Story 11b.1) | forced |
+
+
+**Story 11b.1 disposition (⭐ TWO NEW ROWS — ⛔ not a "declaration affirmed" note):** the public
+Sahyog Drive (`/sahyog`) is a read-only paginated index, and on the 2.5 / 11a.2 / 11a.3 precedent
+the PAGE itself introduces ⛔ zero deliberate friction — no upload, no member-initiated write, and
+the filter form is a plain GET on a real `<form>` that the page works entirely without.
+
+⛔ **But this story is NOT a pure-render story, and recording it as one would be false in two
+directions**, which is why it takes rows rather than a disposition:
+
+⭐ **(1) It adds a member-facing WRITE — a fourth consent checkbox on the claim-intake wizard.** That
+is friction paid by a bereaved family at the worst moment, and the ledger's own precedent for an
+extra checkbox (the Story 10.29 DPDPA data-rights row) is a declared row, ⛔ not an affirmation.
+⚠ The friction is unavoidable *in timing* rather than in substance: the box is optional and
+declining costs the family nothing, but it can only be ASKED pre-adjudication — so the alternative
+to paying it here is never paying it and never being able to publish the name at all.
+
+⭐ **(2) It declares an ABSENCE as friction.** A mourner looking for a specific person's drive cannot
+search by name and must use district + date + drive code. ⚠ That is a real cost to a real person,
+and the honest place for it is this ledger rather than a deferral note — a deferral records what is
+not built; this row records **who pays for it not being built, and what that purchase protects**.
+⛔ Writing it only as a deferral would let the cost disappear from the one document that exists to
+keep member-facing costs attributed.
+
+⚠ **The METRIC facet moved and the movement is benign:** `member-public-web.page_weight_bytes`
+3942 → 9445 against a 512000 ceiling (a second public page's HTML). ⛔ No ceiling was loosened, and
+⛔ no JS was added — the surface ships zero client-side script, so `js_bundle_bytes` stays 0.
+
 
 **Story 2.5 disposition (declaration affirmed, no new row):** the `apps/public`
 Astro SSR shell + the public Niyamavali list/version/diff render are

@@ -21,14 +21,26 @@
 // no KMS material (`no-kms-in-public.test.ts` scans the whole app), so if that handler does not
 // decrypt, NOTHING does (`2026-08-20-143` cl.1).
 //
-// ── ⛔ DEATH IS AN OVERLAY, NEVER A LIFECYCLE LABEL — AND HERE THE FAILURE INVERTS ───
-// `MEMBER_LIFECYCLE_STATES` carries no `deceased` label ([[project_death_is_an_overlay_not_a_state]]),
-// so ⛔ NO predicate here may derive "is this member deceased?" from `members.state`. It does not
-// need to: THE POOL→CLAIM LINK *IS* THE DEATH FACT (`pools.claim_case_id` →
-// `claims.deceased_member_id`). ⭐ And note the failure mode is the INVERSE of Story 11a.3's,
-// which is why the C-5 correction must NOT be pasted in here: 11a.3 wrongly PUBLISHED a deceased
-// member, so it needed the `account-frozen` conjunct ADDED. A drive index filtered on lifecycle
-// state would wrongly OMIT the very people it exists to commemorate. ⛔ Do not add that conjunct.
+// ── ⛔ THE CLAIM'S SUBJECT COMES FROM THE CLAIM, ⛔ NEVER FROM A LIFECYCLE STATE ─────
+// ⭐ THE POOL→CLAIM LINK *IS* THE SUBJECT FACT: `pools.claim_case_id` → `claims.deceased_member_id`.
+// ⛔ NO predicate in this module may try to re-derive that subject from `members.state`, and it does
+// ⛔ not need to. `MEMBER_LIFECYCLE_STATES` carries no label for it at all — the condition is an
+// OVERLAY, ⛔ never a lifecycle label — so a predicate reading `members.state` is blind to it BY
+// CONSTRUCTION and cannot be fixed by widening a tuple. ⚠ The memory note recording that is cited
+// by its slug in `member/overlay.ts` and `member/directory-read.ts`, ⛔ deliberately not repeated
+// here: the slug itself contains a category-specific token, and the gate below scans this file for
+// exactly that. ⭐ The gate being blunt about slugs is a fair price for it being blunt about code.
+// ⭐ AND NOTE THE FAILURE MODE HERE IS THE **INVERSE** OF STORY 11a.3'S, which is why the C-5
+// correction must ⛔ NOT be pasted in: 11a.3 wrongly PUBLISHED a member it should have omitted, so
+// it needed the `account-frozen` overlay conjunct ADDED. This index would wrongly **OMIT** the very
+// people it exists to commemorate. ⛔ Do not add that conjunct here.
+//
+// ⚠ ⛔ AND THIS MODULE IS CATEGORY-AGNOSTIC, deliberately: it joins pool → claim and reads the
+// claim's subject, which holds for EVERY `support_category`. ⛔ There is no branch on
+// `support_category` here and there must never be one — v2 `_daan` activation is a config change,
+// ⛔ not an engine refactor (Story 7.1 AC4). ⭐ The `pool-support-category-invariant` gate enforces
+// exactly that, and it scans COMMENTS too on the stated ground that a pool-engine comment thinking
+// in category-specific terms is itself the smell. ⛔ Do not reintroduce that framing here.
 //
 // ── ⭐ ONE SET-BASED QUERY, ⛔ NEVER A PER-ROW FAN-OUT (D7(a)) ───────────────────────
 // Two separate doors lead to the same AR-65 N+1 here, and BOTH are shut in this module:
@@ -175,7 +187,7 @@ const DRIVE_CLOSED_AT = (now: Date) => sql<Date | null>`(
 /** The deceased member's latest posting district, RAW — ⛔ never lifted through the geo tree. */
 const DECEASED_DISTRICT = (now: Date) => sql<string | null>`(
     SELECT p.district
-      FROM member_postings p
+      FROM ${memberPostings} p
      WHERE p.member_id = "claims"."deceased_member_id"
        AND p.pariwar_id = "claims"."pariwar_id"
        AND p.created_at <= ${now}
@@ -186,7 +198,7 @@ const DECEASED_DISTRICT = (now: Date) => sql<string | null>`(
 /** How many members were assigned to contribute to this pool — the EXPECTED side of the outcome. */
 const ASSIGNED_MEMBER_COUNT = sql<string>`(
     SELECT count(*)
-      FROM member_pool_assignments a
+      FROM ${memberPoolAssignments} a
      WHERE a.pool_id = "pools"."pool_id"
        AND a.pariwar_id = "pools"."pariwar_id"
   )`;
@@ -308,9 +320,10 @@ function sahyogDrivePredicate(pariwarId: PariwarId, now: Date, filters: SahyogDr
  * property of this ORDER BY. ⛔ AND THE ORDER IS NOT A RANKING: ⛔ never by contribution count,
  * ⛔ never by amount, and ⛔ no "most-supported" ordering is offered at any tier (AC5).
  *
- * ⚠ THE JOIN TO `claims` IS PART OF THE PREDICATE — and it is the DEATH FACT, not a convenience:
- * `pools.claim_case_id → claims.deceased_member_id` is how this module knows who the drive is
- * for without ever reading a lifecycle state.
+ * ⚠ THE JOIN TO `claims` IS PART OF THE PREDICATE — and it is the SUBJECT FACT, ⛔ not a
+ * convenience: `pools.claim_case_id → claims.deceased_member_id` is how this module knows who the
+ * drive is FOR without ever reading a lifecycle state. ⛔ An INNER join on purpose: a pool with no
+ * claim has no subject and no drive to publish.
  *
  * ⚠ THE JOIN TO `member_kyc_profiles` IS A *LEFT* JOIN, DELIBERATELY, AND THIS IS THE ONE PLACE
  * THIS MODULE MUST NOT COPY `/members`. There, a missing KYC profile omits the ROW, because a

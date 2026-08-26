@@ -63,7 +63,11 @@ import MatrixField from '../components/MatrixField.astro';
 import PublicShell from '../layouts/PublicShell.astro';
 import { getDb } from '../lib/db.server.js';
 import { visibilityOf } from '../lib/matrix.server.js';
-import { PUBLIC_PAGE_SIZE_MAX, pageHref, parsePageParams } from '../lib/pagination.js';
+// ⚠ `PUBLIC_PAGE_SIZE_MAX` is deliberately NOT imported. `/members` interpolates the cap into its
+// rejection copy; this surface's rejection state is REJECTION-INVARIANT and says only "return to
+// the first page", so naming the cap would tell a prober which bound it hit — the one thing that
+// state is shaped to withhold. ⛔ The cap is still enforced, by `parsePageParams`, unchanged.
+import { pageHref, parsePageParams } from '../lib/pagination.js';
 import { ACTIVE_PARIWAR_ID } from '../lib/pariwar.server.js';
 import {
   buildSahyogRejectionView,

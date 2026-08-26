@@ -4,6 +4,196 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred / recorded from: Story 11b.1 — Sahyog Drive Active + Archive (2026-08-24)
+
+Ruled at Decision `2026-08-24-159` (D1(b) · D2(a) · D3(a) · D4(b) · D5(a) · D6(a) · D7(a) · D8(a) ·
+D9(a), BigDev 2026-08-24), plus **D10** — ⚠ **routed for Trustee Panel ratification, ⛔ not ratified**.
+⚠ Every item below is **observed and ROUTED**, ⛔ not scheduled and ⛔ not built
+([[feedback_gap_analysis_observational]]). ⛔ **None is described as closed.**
+
+⛔⛔ **AND THE SURFACE ITSELF IS BUILT, ⛔ NOT PUBLISHED.** Three independent gates stand between this
+code and a live page — counsel's **HELD** DPDPA review of this exact subject (`2026-08-24-157`
+cl.3(a), returning **2026-09-07**), Row 17's ≥2-trustee publication posture extended by C-5 (this
+surface has ⛔ no ratification of its own → **AI-11a-5**), and the per-subject consent gate. ⛔ Story
+11b.1 closes **NONE** of them. ⚠ Counsel **has not REVIEWED** this subject — ⛔ never *"counsel is not
+engaged"*, which has been false since 2026-06-21 (`2026-08-24-158`).
+
+### (a) The **nominee / family identifier** is ⛔ NOT rendered
+
+⛔ **NOT the deceased member's name**, which D1(b) admits and which this story ships consent-gated.
+This is the *nominee* — a different person, with a different basis problem.
+
+A nominee **never joined the Trust**, so ⛔ no membership term reaches them and ⛔ no consent was
+captured from them for this surface. **Trust Deed cl.15(c) names *"nominee"* expressly**, and
+counsel's `2026-08-24-157` cl.3(b) third-party objection binds it directly and **stands intact** —
+⛔ nothing in D1(b) or D10 touches it.
+
+⭐ **Trigger: counsel's A3.2/A3.3 revisit (due 2026-09-07) PLUS a consent basis that reaches a
+non-member.** ⚠ **Both** — the revisit alone does not supply a basis, and a basis alone does not
+lift the objection.
+
+### (b) **Name search** — there is no substrate, and the workaround is an attack
+
+`member_kyc_profiles` carries ⛔ **no blind-index column of any kind**, and envelope encryption gives
+every name its **own DEK** ⇒ two members named the same have unrelated ciphertext and there is
+nothing to `WHERE` on. `MemberSearchCriteria` is exactly `memberId | mobileBlindIndex | pariwar`.
+
+⛔ The workaround — decrypt the roster and filter in JS — is **rejected on the record**: it is the
+exact amplification `DIRECTORY_DECRYPT_CONCURRENCY = 8` exists to close, **one order of magnitude
+worse** (a page decrypt is 50 rows per request; a name search is the **whole roster, per request,
+per keystroke**) with the cache **structurally unable to help**, on an **unauthenticated** route.
+
+⚠ **Resolved via explicit deferral, ⛔ not *Closed by [edit]*** ([[feedback_closure_language_precision]]).
+
+⭐ **Trigger: a `name_blind_index` substrate story.** ⚠ **ONE condition, ⛔ not two.** The deferral was
+originally written as *"(i) a blind index AND (ii) D1 reversing so a name may be rendered at all"*;
+**D1(b) DISCHARGED (ii)** — the name IS renderable now. ⛔ Do not carry the two-condition form forward.
+
+⚠ ⭐ **And a RENDERED name is still ⛔ NOT a SEARCHABLE one** — rendering reads **one row you already
+selected**; searching needs a predicate over **every row you have not**. ⛔ No filter may ever be
+implemented by scanning, caching or re-reading rendered pages.
+
+### (c) The **authenticated tier** — ⚠ Resolved via explicit deferral, ⛔ NOT closed
+
+The epic AC reads *"public visitor sees first-name + last-initial; authenticated sees fuller"*.
+⛔ **That authenticated tier has no viewer.** Members are **token-bearer**, ⛔ no browser surface holds
+or presents the member token, `apps/` holds `admin · api · jobs · mobile · public`, and there is
+⛔ no `apps/member-web/` ([[project_no_browser_member_token_surface]]).
+
+Already ruled at **`2026-08-23-154`, disposition (c)** — ships public-tier-only.
+
+⭐ **Trigger: an `apps/member-web/` split, or a browser-member-session story.**
+
+⚠ ⭐ **HOW THIS DEFECT SURVIVED IS THE WARNING, and it is recorded here rather than in a retro:** two
+prior reconciliations (2026-08-19 and 2026-08-23) both **edited this exact AC** and ⛔ neither asked
+whether the tier had a viewer. *"A reconciliation answers the question it was pointed at; it does
+⛔ not sweep the sentence it edits."*
+
+### (d) The **BASIS** for publishing the deceased member's own name
+
+⚠ ⭐ **THE CONSENT GATE ITSELF IS ⛔ NOT DEFERRED — it is BUILT** (AC12: `sahyog_drive_publication`,
+minted, captured at claim intake, declinable and revocable). ⛔ Do not read this item as the gate
+being outstanding.
+
+What is routed is whether a **term of membership** supplies an **ADDITIONAL** basis. D1(b)'s ground —
+that publication of the beneficiary is **constitutive** of the mutual-aid model — is an argument that
+**consent is the wrong INSTRUMENT**: the right one is a term the member accepted *themselves*, in
+advance, with capacity. ⛔ It is **NOT** an argument for making the consent mandatory, which
+Niyamavali **§4.4**, **Part 10** and — prevailing above both under cl.28 — **Trust Deed cl.15(c)**
+each forbid. *A consent that cannot be refused is not consent.*
+
+⭐ **Trigger: the routed Niyamavali §4.4 / T&C amendment.** Both drafts are committed:
+`niyamavali-amendment-draft-2026-08-24-drive-record-consent.md` and its routing note
+`trustee-panel-routing-note-2026-08-24-drive-record-publication-basis.md`.
+
+### (e) **D10's Trustee Panel ratification** — ⚠ *authorised, ⛔ NOT made*
+
+The deceased member's **FULL NAME** renders (⛔ not first-name + last-initial). ⭐ **Two committed
+records reserve a public name-form change to the Trustee Panel**, in terms: the matrix exception's own
+`scope:` (*"changing those requires its own Panel ruling"*) and the 2026-08-19 `RECONCILED` block on
+this story. ⇒ D10 is **ruled by the author and built to**, and **routed** — the `2026-08-21-144`
+precedent governs the form. ⛔ **Do not record it as Panel-ratified until it is.**
+
+⚠ **An INVERSION it creates, recorded observationally and ⛔ not resolved here:** `resolvePoolIdentity`
+shields the same family's name on the **member-facing** My Pool card, passbook and notifications
+(8.6/8.7/8.8). ⇒ after D10 the **public** page shows **MORE** than the **member app** does for the same
+pool. ⛔ Not this story's to resolve — it binds **11b.2** and **11b.3**.
+
+⭐ **Trigger: the Panel's ruling on the routing note.**
+
+### (f) The **UX-spec Sahyog List column inventory** owes an amendment (D5(a))
+
+`ux-design-specification.md:1158` specifies a **CONTRIBUTION-level** 10-column table:
+`Donation ID | Member ID | HRMS | Donor Name | School | District | Block | Pool | Late Teacher | Date`.
+
+⛔ **Three columns have NO substrate at all** — verified: no `donation_id` anywhere in `packages/`,
+no HRMS field on any member table, and `Member ID` on a public wire is what 11a.3's handler **refuses
+in terms** (a per-member permalink is an enumeration primitive). ⛔ **Two labels are
+microcopy-PROHIBITED** — *"Donor Name"* (`microcopy.yaml:42`) and *"Late Teacher"* (`:48`), both
+`member_only: true`, and both now **bite** since this story added the `sahyog-drive` namespace to
+`copy_globs`. ⚠ And `school` / `block` are separately ineligible or gated (`-133` cl.1, `-132` cl.3,
+`2026-08-19-137` cl.7).
+
+⭐ That table is **11b.2's components on 11b.3's host** — different grain, different row count,
+different story. Building it here would re-commit **SD-1** (rows no substrate backs, unowned for
+seven epics).
+
+⭐ **Trigger: Story 11b.2 or 11b.3 authoring, whichever comes first.**
+
+### (g) The **edge-cache blindness** of the abuse counter
+
+A cached hit **never reaches the origin**, so the origin-side rate limit and every abuse signal see
+only cache **MISSES**. A scraper walking pages 1..N through a warm edge is **invisible** to the
+detection this story ships.
+
+⚠ ⭐ **AND ON THIS SURFACE IT IS WORSE IN ONE SPECIFIC WAY:** `/sahyog` is `edge_cacheable` at
+`s-maxage=300` **and** it shared-caches **Tier-1 PII** behind a **REVOCABLE** consent. ⇒ a family's
+revocation keeps being served **from every warm PoP, per page number**, for up to **five minutes**
+after the switch flips — and the same is true of a pulled Pariwar. ⛔ **Direct SQL is NOT the
+operational fallback.**
+
+⛔ Inert TODAY (no edge configured in this repo; `architecture.md` §5.8a) but a **NAMED DEPENDENCY**.
+⛔ Do not "fix" it by making the surface `private_no_store` — that discards the edge for a public
+surface and was already **REJECTED** at 11a.3 (option (b)).
+
+⭐ **Trigger: edge / CDN configuration.**
+
+### (h) `school` / `block` columns
+
+⛔ `school` and `designation` are **PERMANENTLY INELIGIBLE** (`2026-08-19-133` cl.1, `-132` cl.3) —
+⛔ there is no trigger, and this row exists so a future author stops looking rather than rediscovering
+the ruling. `block` is gated on `2026-08-19-137` cl.7(a)+(b): a **member-aware publish path** AND a
+**member choice surface**, ⛔ neither of which exists.
+
+⚠ And they are **Pariwar-SELECTED directory attributes**, ⛔ not a fixed column set — a Pariwar
+selecting neither renders neither, so any table that assumes them must degrade without them.
+
+⭐ **Trigger (for `block` only): both limbs of `2026-08-19-137` cl.7.**
+
+### (i) ⭐ **NEW FINDING OF THIS STORY** — `repeated_district_queries` now has a REAL vector it cannot see
+
+⚠ **Raised by this story because this story CREATED it**, and ⛔ recorded rather than quietly fixed
+([[feedback_gap_analysis_observational]]).
+
+`directory-abuse-rules.yaml`'s `repeated_district_queries` rule sits at `no_subject_yet`, and its
+stated reason is *"⛔ THE DIRECTORY HAS NO DISTRICT FILTER TO QUERY BY."* ⭐ **That reason was written
+when `/members` was the file's only consumer.** Story 11b.1's `/sahyog` route **reuses these rules
+unchanged** and **DOES** ship a district filter (plus date-range and pool-code, D2(a)) ⇒ the
+district-by-district enumeration vector the rule was reserved for is **REAL NOW**, on that surface.
+
+⭐ **WHY IT IS NEVERTHELESS LEFT `no_subject_yet`, VERIFIED RATHER THAN ASSUMED:**
+`evaluateDirectoryAbuse` is handed `{key, pariwarId, traceId, page, limit, at}` and ⛔ **nothing
+else** — the Sahyog Drive handler passes ⛔ no district, and `district_query_volume` yields `null` by
+construction (`abuse-rules.ts:218`). ⇒ the rule has ⛔ no subject **in the data it receives**, and
+flipping it to `active` today would produce exactly the **always-false rule reporting green forever**
+that the whole file exists to refuse. ⛔ Activating it is a **REAL change**, ⛔ not a status flip.
+
+⚠ The rule is **annotated in place** with this finding; ⛔ the original `no_subject_reason` is
+**preserved, not rewritten**.
+
+⭐ **Trigger: a story that (i) threads the filter dimensions into `evaluateDirectoryAbuse`'s input
+and (ii) chooses a threshold PER SURFACE** — ⚠ per **surface**, because `/members` and `/sahyog` have
+different legitimate query shapes, and one shared threshold would either miss a crawl on the busier
+one or flag ordinary use on the quieter.
+
+### (j) ⚠ Story 6.9's **granting/revocation asymmetry** — ⛔ observational, ⛔ not this story's to change
+
+**Revocation** is open at **any** claim state (*"the whole point of AC3 is a post-settlement
+takedown"*) while **granting** closes at adjudication. That window was drawn for the **processing**
+consent, whose rationale — *"consent captured after adjudication would be evidentially meaningless
+for the claim it was supposed to gate"* — ⛔ does **not** reach a **publication** consent, since
+publication happens after adjudication **by nature**.
+
+⭐ **This is exactly what makes AC12 a one-way door:** a claim filed before `sahyog_drive_publication`
+existed is **permanently unaskable** and its pool can ⛔ never carry a name. Minted pre-launch, that
+cohort is empty by construction; after launch there is ⛔ no remedy.
+
+⚠ It binds **11b.3** and **11b.6** as much as this story.
+
+⭐ **Trigger: Story 11b.3 or 11b.6 authoring, whichever comes first.**
+
+---
+
 ## Deferred / recorded from: Story 11a.6 — `<PinnedNotice>` component (2026-08-22)
 
 Ruled at Decision `2026-08-22-153` (D1(a) · D2(a) · D3(a) · D4(a) · D5(a) · D6(a) · D7(a) · D8(a) ·

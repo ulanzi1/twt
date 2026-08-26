@@ -110,6 +110,66 @@
 # verification?"* If the honest answer is ENGAGEMENT or SOCIAL DISCOVERY, the proposal is
 # REJECTED — at design time, before it is built and argued about.
 # ═══════════════════════════════════════════════════════════════════════════════════════════════
+#
+#
+# ═══════════════════════════════════════════════════════════════════════════════════════════════
+# ⭐ THE INVARIANT THE **SAHYOG DRIVE** EXISTS UNDER: REMEMBRANCE, NOT ANALYTICS
+# (Story 11b.1 AC5 — the THIRD of the three places this block is recorded, alongside
+#  `apps/public/src/lib/sahyog-render.ts` and `apps/public/src/pages/sahyog.astro`)
+# ═══════════════════════════════════════════════════════════════════════════════════════════════
+# ⚠ THIS FILE NOW GOVERNS TWO SURFACES. Story 11b.1's `/sahyog` route reuses these rules unchanged
+# (`loadDirectoryAbuseRules`), which is deliberate: the rules describe "an unauthenticated,
+# paginated public collection", ⛔ not the Member Directory specifically. ⛔ But the two surfaces'
+# INVARIANTS are ⛔ NOT the same, and collapsing them would lose both — the directory's failure mode
+# is a SOCIAL GRAPH, this one's is a LEADERBOARD.
+#
+# The Sahyog Drive exists so anyone — a member's family, a prospective member, a stranger — can
+# verify for themselves that this trust actually moves money, and so a drive run in someone's
+# memory stays on the public record. ⛔ It is NOT a leaderboard, NOT a scoreboard, and NOT a way to
+# harvest who gave what.
+#
+# ⛔ EXPLICITLY PROHIBITED DIRECTIONS — reject these at DESIGN time, ⛔ not at review time:
+#   (a) contributor LEADERBOARDS of any kind
+#   (b) RANKINGS — "top contributors", "supporter of the month", "most generous district"
+#   (c) GAMIFICATION — badges, streaks, achievements, contribution milestones
+#   (d) SOCIAL-PERFORMANCE METRICS — most-supportive district, public scoreboards, comparisons
+#       between Pariwars, districts or people
+#   (e) POPULARITY METRICS — most-viewed memorial, trending pools, view counts
+#
+# ✅ ACCEPTABLE DIRECTIONS:
+#   · legitimate trust verification
+#   · district / date historical research
+#   · accessibility and performance improvements
+#
+# ⭐ THE TEST A PROPOSAL MUST PASS: *"Does this serve remembrance, transparency or claim
+# discoverability?"* If the honest answer is ENGAGEMENT, RANKING or SOCIAL PERFORMANCE, the
+# proposal is REJECTED — at design time, before it is built and argued about.
+#
+# ⛔⛔ AND THE SORT ORDER IS NOT A RANKING. The index orders by the drive's close/settle instant
+# DESCENDING with a deterministic tie-break — ⛔ never by contribution count, ⛔ never by amount, and
+# ⛔ no "most-supported" ordering is offered at any tier. ⭐ THIS IS THE PROHIBITION MOST LIKELY TO
+# BE BREACHED BY ACCIDENT, because "sort by contributions" reads like a harmless table affordance
+# rather than the leaderboard it builds. There is deliberately NO sortable column header on that
+# page, and `visibleSahyogColumns` carries no comparator for one to hang off.
+#
+# ⚠ AND A SECOND THING THIS SURFACE CARRIES THAT THE DIRECTORY DOES NOT — a per-subject CONSENT gate
+# (`sahyog_drive_publication`). ⭐ It gates the NAME, ⛔ never the ROW: an unconsented drive renders
+# in full, so the index degrades PER-POOL, ⛔ never per-page, and a family's declination removes a
+# NAME, ⛔ never a DRIVE from the public record. ⛔ Do not add a rule, a metric or a log line that
+# counts withheld names — a per-row "name withheld" tally is exactly the enumeration signal the
+# render is built to avoid emitting.
+#
+# ⚠ THE EDGE-CACHE BLINDNESS AT NOTE 2 ABOVE APPLIES HERE UNCHANGED, and on this surface it is
+# WORSE in one specific way: `/sahyog` is `edge_cacheable` at `s-maxage=300` AND it shared-caches
+# Tier-1 PII behind a REVOCABLE consent. ⇒ a family's revocation keeps being served from every warm
+# PoP, PER PAGE NUMBER, for up to five minutes after the switch flips. ⛔ Direct SQL is NOT the
+# operational fallback. Re-examine the moment an edge/CDN is actually configured.
+#
+# ⛔⛔ BUILT IS ⛔ NOT PUBLISHED. Counsel's DPDPA review of THIS subject is HELD (`2026-08-24-157`
+# cl.3(a), returning 2026-09-07) and this surface has ⛔ no Row-17 publication ratification of its
+# own. ⚠ Counsel HAS NOT REVIEWED this subject — ⛔ never write that counsel is not engaged, which
+# has been false since 2026-06-21 (`2026-08-24-158`).
+# ═══════════════════════════════════════════════════════════════════════════════════════════════
 
 # ⚠ BUMPED 1 → 2 at `2026-08-21-145` cl.4: `rapid_pagination` was split into a position rule
 # (`deep_page_access`) and a real rate rule (`rapid_pagination`), and `page_transitions` was added
@@ -193,3 +253,23 @@ rules:
       The first story that ships a district (or any other) FILTER parameter on the public Member
       Directory. That story must flip this rule to `active`, choose a threshold against the real
       filter shape, and add its own planted negative control.
+      ⚠⚠ ANNOTATED 2026-08-24 (Story 11b.1) — ⛔ THE REASON ABOVE IS NO LONGER TRUE OF THIS FILE'S
+      WHOLE SCOPE, AND THE RULE IS DELIBERATELY LEFT `no_subject_yet` ANYWAY. Read both halves.
+      ⭐ WHAT CHANGED: this file now governs TWO surfaces. Story 11b.1's `/sahyog` reuses these
+      rules unchanged, and it DOES ship a district filter (plus date-range and pool-code — D2(a)).
+      ⇒ the district-by-district enumeration vector this rule was reserved for is REAL NOW, on that
+      surface. ⛔ The `no_subject_reason` above was written when the only consumer was `/members`,
+      and it reads as a claim about the FILE while being a claim about ONE surface.
+      ⭐ WHY IT IS STILL `no_subject_yet`, VERIFIED RATHER THAN ASSUMED: `evaluateDirectoryAbuse` is
+      handed `{key, pariwarId, traceId, page, limit, at}` and ⛔ NOTHING ELSE — the Sahyog Drive
+      handler passes no district, and `district_query_volume` yields `null` by construction
+      (`abuse-rules.ts:218`). ⇒ the rule has no subject IN THE DATA IT RECEIVES, and flipping it to
+      `active` today would produce exactly the always-false rule reporting green forever that this
+      whole file exists to refuse. ⛔ Activating it is a REAL change — a new evaluator input, a
+      threshold chosen against real filter shapes, and its own planted control — ⛔ not a status flip.
+      ⚠ RECORDED OBSERVATIONALLY, ⛔ NOT FIXED HERE, and routed in `deferred-work.md` with the
+      re-trigger below. ⛔ Story 11b.1 does NOT claim to have discharged it.
+      ⭐ THE CORRECTED TRIGGER: a story that (i) threads the filter dimensions into
+      `evaluateDirectoryAbuse`'s input and (ii) chooses a threshold per surface — ⚠ per SURFACE,
+      because `/members` and `/sahyog` have different legitimate query shapes and one shared
+      threshold would either miss a crawl on the busier one or flag ordinary use on the quieter.

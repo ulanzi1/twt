@@ -372,6 +372,24 @@ scope:
     # as DATA on the row descriptor. Only CHROME is catalog copy.
     - packages/i18n/locales/hi/noticeboard.json
     - packages/i18n/locales/en/noticeboard.json
+    # Story 11b.1 — the `sahyog-drive` namespace strings (the PUBLIC Sahyog Drive pool index).
+    # ⭐ THIS ENTRY IS WHY THE PROHIBITIONS BITE THIS SURFACE AT ALL, and three of them bite it
+    # specifically:
+    #   · `donor` (→ colleague / सम्मानित साथी) and `Late Teacher` (→ Deceased Member) are both
+    #     `member_only: true`, so they were UNSCANNED until this line existed — and the UX spec's own
+    #     Sahyog List column inventory uses BOTH as column headings (D5(a) records that the inventory
+    #     owes an amendment). Without this entry, copying that inventory would have shipped clean.
+    #   · the STRENGTHENED `pool-reality-comparison` tone rule — this surface renders Pool-Reality #2
+    #     framing, and a comparison-to-target / shortfall frame is exactly what AC4 forbids. The
+    #     numbers are already quarantined upstream by `classifyCycleOutcome`; this is the second
+    #     place that quarantine has to hold, because COPY is where a shortfall would actually surface.
+    #   · UX-DR73 numeral discipline — this is an OPERATIONAL register surface (drive codes, dates), so
+    #     Latin numerals + Gregorian dates, ⛔ never Devanagari digits, even under `hi`.
+    # Teeth proven (planted-violation fixtures in BOTH locales + revert-sanity), ⛔ not merely
+    # scanned — see scripts/microcopy/sahyog-drive.test.ts
+    # ([[feedback_gate_scope_semantic_coverage]]: a green scan over newly-scanned files proves nothing).
+    - packages/i18n/locales/hi/sahyog-drive.json
+    - packages/i18n/locales/en/sahyog-drive.json
 
 # Allow-list — a finding is suppressed when an entry's `pattern` (regex, case-insensitive)
 # matches the finding's line AND (if `file` is set) the file path ends with it. GENUINE

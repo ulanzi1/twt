@@ -222,3 +222,145 @@ const MEMBER_DIRECTORY_ROW_SHAPE: MemberDirectoryRow = {
   district: null,
   memberStatus: '',
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// /sahyog — the Sahyog Drive pool index. Story 11b.1 (Task 3; AC7).
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * One rendered drive row — the display shape, ⛔ not the wire shape and ⛔ not a domain row.
+ *
+ * ⚠ Its keys are camelCase and its matrix ids are snake_case, mapped BY HAND in
+ * {@link SAHYOG_DRIVE_ROW_FIELD_IDS} (see the camelCase↔snake_case note at the top of this file).
+ */
+export interface SahyogDriveRow {
+  /**
+   * ⭐ THE DECEASED MEMBER'S NAME — `null` when the family has not consented, has REVOKED, or the
+   * name is unresolvable. ⚠ ALL THREE ARE THE SAME VALUE ON PURPOSE, and the template renders
+   * NOTHING for a null: ⛔ no placeholder, ⛔ no empty span, ⛔ no comment naming the omitted field.
+   * *An omission that announces itself is an enumeration signal.*
+   *
+   * ⛔ NULL NEVER REMOVES THE ROW. Every other key below renders regardless — consent decides
+   * whether a drive is NAMED, ⛔ never whether it EXISTS.
+   *
+   * ⚠ It is STILL a classified field when null: the field id below is what the tier-leak leg reads,
+   * and a field that is sometimes absent is not an unclassified one.
+   */
+  readonly deceasedMemberName: string | null;
+  /** The pool's letter code (Story 7.2's dual identifier) — a label for a COLLECTION. */
+  readonly poolLetterCode: string;
+  /** `P-YYYY-MM-###`. */
+  readonly poolCanonicalIdentifier: string;
+  /** `active` | `archive`, already localised. ⛔ The internal lifecycle word never reaches here. */
+  readonly driveStatus: string;
+  /** The close/settle instant, already formatted. `null` ⇒ the "not recorded" copy. */
+  readonly driveClosedAt: string | null;
+  /** Latest posting district, RAW. `null` ⇒ the "not recorded" copy. */
+  readonly district: string | null;
+  /** Confirmed contributions, already formatted. ⛔ A count, ⛔ never a sum and ⛔ never a score. */
+  readonly confirmedContributionCount: string;
+  /** Pool-Reality #2 framing copy. ⛔ Contains NO target, percentage or shortfall, by construction. */
+  readonly closeOfCycleFraming: string;
+}
+
+/**
+ * The `/sahyog` render model.
+ *
+ * ⚠ ADDING A FIELD TO THIS INTERFACE IS A MATRIX ACT. `deriveFieldIds` throws in BOTH directions,
+ * so a new key with no mapping entry — or a mapping entry with no key — fails the build. ⭐ That is
+ * the mechanism WORKING, ⛔ not an obstacle to route around.
+ *
+ * ⛔ THE `authenticated_member` TIER IS NOT RENDERED HERE and has NO VIEWER — members are
+ * token-bearer, no browser surface holds the member token, and `2026-08-23-154` disposition (c)
+ * DEFERRED the authenticated tier onto that trigger. ⛔ Do not add fields "ready for" it.
+ */
+export interface SahyogDriveRenderModel {
+  /** True when this page has drives to show. */
+  readonly hasDrives: boolean;
+  /** 1-based current page, echoed into the pagination controls. */
+  readonly page: number;
+  /** Rows per page, already validated against the FR-91 cap. */
+  readonly limit: number;
+  /**
+   * ⚠ TRUE WHEN THE API COULD NOT BE REACHED — an OUTAGE, ⛔ never "no drives".
+   * ⭐ On THIS surface the conflation is at its most damaging: the page exists so a stranger can
+   * check whether this trust actually moves money, so rendering "no drives" during an upstream
+   * blip is the single most misleading thing it could say.
+   */
+  readonly apiUnavailable: boolean;
+  /** ⚠ TRUE when this page is EMPTY but the index is NOT — a page number past the real last page. */
+  readonly pastEnd: boolean;
+  /** ⚠ TRUE when a filter is active — so "no drives" can say "none MATCH" rather than "none exist". */
+  readonly filtered: boolean;
+  /** The rows on this page. */
+  readonly rows: readonly SahyogDriveRow[];
+}
+
+/**
+ * `null` declares "carried in the model but ⛔ NOT rendered as a classified field", and it is
+ * correct for exactly the non-attribute keys: the booleans select between blocks of fixed i18n
+ * copy, `page`/`limit` drive the pagination controls, and `rows` is the CONTAINER — its per-row
+ * attributes carry the ids, not the array itself.
+ */
+export const SAHYOG_DRIVE_FIELD_IDS: FieldIdMapping<SahyogDriveRenderModel> = {
+  hasDrives: null,
+  page: null,
+  limit: null,
+  apiUnavailable: null,
+  pastEnd: null,
+  filtered: null,
+  rows: null,
+};
+
+/**
+ * The per-ROW mapping. ⛔ Every id below is declared in `public-vs-private-matrix.yaml` for the
+ * `sahyog-drive` surface — ⛔ do not add an entry here without adding the row there.
+ */
+export const SAHYOG_DRIVE_ROW_FIELD_IDS: FieldIdMapping<SahyogDriveRow> = {
+  deceasedMemberName: 'deceased_member_name',
+  poolLetterCode: 'pool_letter_code',
+  poolCanonicalIdentifier: 'pool_canonical_identifier',
+  driveStatus: 'drive_status',
+  driveClosedAt: 'drive_closed_at',
+  district: 'district',
+  confirmedContributionCount: 'confirmed_contribution_count',
+  closeOfCycleFraming: 'close_of_cycle_framing',
+};
+
+/**
+ * The representative row shape the derivation runs against.
+ *
+ * ⛔ NOT a fixture and ⛔ not test data — it is the structural declaration of which attributes a
+ * drive row renders, and it is what keeps the field set independent of whether a given page happens
+ * to have rows on it.
+ *
+ * ⭐⚠ `deceasedMemberName` IS DECLARED HERE EVEN THOUGH IT IS OFTEN NULL, AND THAT IS THE POINT.
+ * Deriving row ids from `rows[0]` would make the surface's classified field set depend on whether
+ * the first family on the page happened to consent — so a page of entirely unconsented drives would
+ * silently declare a SMALLER field set and the tier-leak leg would go partly vacuous on exactly the
+ * pages nobody would look at. ⛔ The field a surface CAN render is what gets classified, ⛔ never
+ * the field it happens to be rendering right now.
+ */
+const SAHYOG_DRIVE_ROW_SHAPE: SahyogDriveRow = {
+  deceasedMemberName: null,
+  poolLetterCode: '',
+  poolCanonicalIdentifier: '',
+  driveStatus: '',
+  driveClosedAt: null,
+  district: null,
+  confirmedContributionCount: '',
+  closeOfCycleFraming: '',
+};
+
+/**
+ * Derive the `/sahyog` snapshot field set.
+ *
+ * ⭐ NON-EMPTY FROM THE FIRST COMMIT — the tier-leak leg is OPERATIVE on this surface, ⛔ not
+ * armed-but-empty. A planted `authenticated_member`-tier or UNDECLARED field at `public` FAILS a
+ * run that previously passed, which is the only thing that makes a green scan mean anything.
+ */
+export function sahyogDriveSurfaceFieldIds(model: SahyogDriveRenderModel): string[] {
+  const shell = deriveFieldIds(model, SAHYOG_DRIVE_FIELD_IDS);
+  const rowIds = deriveFieldIds(SAHYOG_DRIVE_ROW_SHAPE, SAHYOG_DRIVE_ROW_FIELD_IDS);
+  return [...new Set([...shell, ...rowIds])].sort();
+}

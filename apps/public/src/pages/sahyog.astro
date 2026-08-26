@@ -1,0 +1,477 @@
+---
+// The public Sahyog Drive — Story 11b.1 (Task 3; AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC9, AC10).
+//
+// ⭐⛔ READ THIS FIRST — THE TIER-LEAK LEG ON THIS SURFACE IS **OPERATIVE FROM ITS FIRST COMMIT**.
+// `sahyogDriveSurfaceFieldIds(model)` returns a NON-EMPTY set, so `evaluateSnapshot` actually
+// evaluates the leak rules here and a planted `authenticated_member`-tier or UNDECLARED field at
+// `public` FAILS a run that previously passed. ⛔ A green scan over an armed-but-empty leg proves
+// nothing, which is why this surface never had one.
+//
+// ⭐ WHAT THIS PAGE RENDERS: the drives this trust has run — Active (window closed, family not yet
+// paid) and Archive (paid out) — one bounded page at a time, filterable by district, date and drive
+// code, each row carrying the number of contributions CONFIRMED as money received.
+// ⛔ EVERY value goes through `<MatrixField>`, so `getVisibility()` is the ONLY thing deciding what
+// appears.
+//
+// ═════════════════════════════════════════════════════════════════════════════════════════════
+// ⭐ REMEMBRANCE, NOT ANALYTICS (AC5)
+// ═════════════════════════════════════════════════════════════════════════════════════════════
+// This page exists so anyone can verify the trust actually moves money, and so a drive run in
+// someone's memory stays on the public record. ⛔ It is NOT a leaderboard, NOT a scoreboard, and
+// NOT a way to harvest who gave what.
+// ⛔ PROHIBITED: contributor leaderboards · rankings ("top contributors", "supporter of the month")
+// · gamification (badges, streaks, achievements) · social-performance metrics (most-supportive
+// district, public scoreboards) · popularity metrics (most-viewed memorial, trending pools).
+// ✅ ACCEPTABLE: legitimate trust verification · district/date historical research · accessibility
+// · performance.
+// ⭐ THE TEST: *"Does this serve remembrance, transparency or claim discoverability?"* If the honest
+// answer is ENGAGEMENT, RANKING or SOCIAL PERFORMANCE, the proposal is REJECTED at design time.
+// ⛔⛔ AND THE SORT ORDER IS NOT A RANKING — close/settle instant descending, ⛔ never by
+// contribution count and ⛔ never by amount. ⭐ There is deliberately NO sortable column header
+// here: "sort by contributions" is a leaderboard wearing a table affordance.
+// (Also recorded in `lib/sahyog-render.ts` and the abuse-rules README.)
+// ═════════════════════════════════════════════════════════════════════════════════════════════
+//
+// ⭐⛔ CONSENT DECIDES WHETHER A ROW IS **NAMED**, ⛔ NEVER WHETHER IT **EXISTS**. A family that
+// declines — or later withdraws — removes their relative's NAME. The drive still appears, with its
+// code, its district, its date and its contribution count. ⇒ the index degrades PER-POOL, ⛔ never
+// per-page. ⛔ And a withheld name renders NOTHING: no placeholder, no dash, no "withheld" marker —
+// *an omission that announces itself is an ENUMERATION SIGNAL.*
+//
+// ⛔⛔ BUILT IS ⛔ NOT PUBLISHED. Counsel's DPDPA review of this exact subject is HELD
+// (`2026-08-24-157` cl.3(a), returning 2026-09-07); Row 17's ≥2-trustee publication posture extends
+// here via C-5 and this surface has ⛔ no ratification of its own; and the per-Pariwar switch is
+// consulted on every request. ⛔ Nothing about this file being merged enables the surface anywhere.
+// ⚠ Counsel HAS NOT REVIEWED this subject — ⛔ never write that counsel is not engaged, which has
+// been false since 2026-06-21 (`2026-08-24-158`).
+//
+// ── ⛔ WHY THE DATA COMES OVER HTTP AND NOT FROM A LOCAL READ ────────────────────────────────
+// D6(a), and `2026-08-20-143` cl.1 before it. Rendering a NAMED drive row needs a Tier-1 KYC
+// decrypt (KMS deps), an anti-enumeration ceiling (a rate-limit store) and an abuse counter (the
+// BYPASSRLS service pool). `apps/public` has NONE of the three, and ⛔ must not gain the first: the
+// KEK is shared across EVERY Tier-1 field class. ⛔ Do not add a `withPublicScope` read here.
+//
+// House shape, mirroring `members.astro`: thin frontmatter, ALL display logic in the pure
+// `lib/sahyog-render.ts`, explicit `namespace` on every `t()` call (⚠ `t()` defaults to `common`
+// and THROWS on a miss — the `{{max}}` vs `{max}` defect that made `/members` throw on EVERY
+// request at 11a.2 was exactly this shape, and no test caught it because every test bypassed `t()`).
+import { getLocale, isLocale, t } from '@twt/i18n';
+import type { Locale } from '@twt/i18n';
+import { passport } from '@twt/domain';
+
+import MatrixField from '../components/MatrixField.astro';
+import PublicShell from '../layouts/PublicShell.astro';
+import { getDb } from '../lib/db.server.js';
+import { visibilityOf } from '../lib/matrix.server.js';
+import { PUBLIC_PAGE_SIZE_MAX, pageHref, parsePageParams } from '../lib/pagination.js';
+import { ACTIVE_PARIWAR_ID } from '../lib/pariwar.server.js';
+import {
+  buildSahyogRejectionView,
+  buildSahyogView,
+  splitSections,
+  visibleSahyogColumns,
+  type SahyogLabels,
+} from '../lib/sahyog-render.js';
+import { buildForwardedFor, fetchSahyogDrive } from '../lib/sahyog.server.js';
+
+// ── Locale + branding (cache-safe: no session, no member state) ──────────────
+const langParam = Astro.url.searchParams.get('lang');
+const acceptLanguage = Astro.request.headers.get('accept-language') ?? undefined;
+const db = getDb().db;
+const passportRow = await passport.getPariwarPassportCached(db, ACTIVE_PARIWAR_ID);
+const locale: Locale = isLocale(langParam)
+  ? langParam
+  : getLocale({ pariwarPassportLocale: passportRow?.localeDefault, acceptLanguage });
+const trustName =
+  (locale === 'hi'
+    ? (passportRow?.displayNameHi ?? passportRow?.displayNameEn)
+    : (passportRow?.displayNameEn ?? passportRow?.displayNameHi)) ?? 'Sahyog Drive';
+const branding = passportRow?.brandingBundle ?? null;
+
+// ⛔ NOTE THE ABSENCE: there is no `withPublicScope` member or pool read here, and there must not
+// be one. The passport read above is branding, ⛔ not drive data.
+
+// ⚠ EXPLICIT NAMESPACE ON EVERY CALL — `t()` defaults to `common` and THROWS on a miss.
+const tr = (key: string, params?: Record<string, string | number>) =>
+  t(key, params, { locale, namespace: 'sahyog-drive' });
+
+const labels: SahyogLabels = {
+  pageTitle: tr('page.title'),
+  pageIntro: tr('page.intro'),
+  tableCaptionActive: tr('table.caption.active'),
+  tableCaptionArchive: tr('table.caption.archive'),
+  sectionActiveTitle: tr('section.active.title'),
+  sectionArchiveTitle: tr('section.archive.title'),
+  columnName: tr('table.col.name'),
+  columnPool: tr('table.col.pool'),
+  columnLetter: tr('table.col.letter'),
+  columnDistrict: tr('table.col.district'),
+  columnDate: tr('table.col.date'),
+  columnContributions: tr('table.col.contributions'),
+  columnOutcome: tr('table.col.outcome'),
+  districtUnknown: tr('value.district_unknown'),
+  dateUnknown: tr('value.date_unknown'),
+  statusActive: tr('status.active'),
+  statusArchive: tr('status.archive'),
+  emptyTitle: tr('empty.title'),
+  emptyBody: tr('empty.body'),
+  emptyFilteredTitle: tr('empty.filtered.title'),
+  emptyFilteredBody: tr('empty.filtered.body'),
+  outageTitle: tr('outage.title'),
+  outageBody: tr('outage.body'),
+  pastEndTitle: tr('past_end.title'),
+  pastEndBody: tr('past_end.body'),
+  rejectedTitle: tr('rejected.title'),
+  rejectedBody: tr('rejected.body'),
+  paginationLabel: tr('pagination.label'),
+  previousPage: tr('pagination.previous'),
+  nextPage: tr('pagination.next'),
+  // ⭐ THREE DISTINCT STRINGS, one per opaque outcome token — ⛔ and NONE of them compares to a
+  // target, quotes a percentage, or names a shortfall. `classifyCycleOutcome` already quarantined
+  // the numbers upstream; this is the second place that quarantine has to hold, because copy is
+  // where a shortfall would actually surface. ⚠ `microcopy.yaml`'s `pool-reality-comparison` tone
+  // rule bites `fell short` / `shortfall` / `\d+% of the target` / `लक्ष्य से कम` at PR time.
+  outcomeFullyFunded: tr('outcome.fully_funded'),
+  outcomeUnderFunded: tr('outcome.under_funded'),
+  outcomePartial: tr('outcome.partial'),
+  // ⚠ Interpolated THROUGH `t()`, ⛔ never by local string surgery — the 11a.2 `{{max}}` vs `{max}`
+  // defect threw on EVERY request and no test caught it, because every test bypassed `t()`.
+  contributionsCount: (count: number) => tr('value.contributions_count', { count }),
+};
+
+// ── FR-91 forced pagination (AC6) ───────────────────────────────────────────
+// ⭐ `parsePageParams()` REUSED UNCHANGED — ⛔ do not write a second parser. ⛔ NO SILENT CLAMP: an
+// over-cap or out-of-horizon request is REFUSED with a decidable reason.
+// ⚠ THE ONLY THING ENFORCING FR-91 ON THIS SURFACE. Story 1.14's guard walks the live in-process
+// swagger document and Astro routes emit none — ⛔ do not cite it as coverage here (it DOES cover
+// the `apps/api` route behind this page, which is a different claim).
+const paging = parsePageParams(Astro.url.searchParams);
+const rejection = paging.ok ? null : buildSahyogRejectionView(labels);
+
+// ── The three ruled filter dimensions (AC3, D2(a)) ──────────────────────────
+// ⛔ THERE IS NO NAME FILTER, and its absence is the design: `member_kyc_profiles` carries no blind
+// index and envelope encryption gives every name its own DEK, so the only way to answer one is to
+// decrypt the whole roster per request — the exact amplification `DIRECTORY_DECRYPT_CONCURRENCY`
+// exists to close. ⚠ Deferred on a `name_blind_index` substrate story, ⛔ not closed.
+const districtFilter = Astro.url.searchParams.get('district') ?? undefined;
+const closedFromFilter = Astro.url.searchParams.get('closedFrom') ?? undefined;
+const closedToFilter = Astro.url.searchParams.get('closedTo') ?? undefined;
+const poolCodeFilter = Astro.url.searchParams.get('poolCode') ?? undefined;
+const isFiltered =
+  districtFilter !== undefined ||
+  closedFromFilter !== undefined ||
+  closedToFilter !== undefined ||
+  poolCodeFilter !== undefined;
+
+// ── The drive read (AC1, AC8) ───────────────────────────────────────────────
+const drive = paging.ok
+  ? await fetchSahyogDrive({
+      page: paging.page,
+      limit: paging.limit,
+      district: districtFilter,
+      closedFrom: closedFromFilter,
+      closedTo: closedToFilter,
+      poolCode: poolCodeFilter,
+      // ⛔ `Astro.clientAddress` ONLY, via the REUSED `buildForwardedFor`. The inbound
+      // `X-Forwarded-For` header is deliberately NOT read — it is caller-supplied, and `apps/api`'s
+      // `trustProxy: true` keys on the LEFTMOST chain entry, so forwarding it hands the attacker
+      // the rate-limit key AND a fresh abuse-counter window per request (`2026-08-21-145` cl.2).
+      // ⛔ Do not "restore the full chain" without re-reading that ruling.
+      forwardedFor: buildForwardedFor(Astro.clientAddress),
+    })
+  : null;
+
+const view = paging.ok
+  ? buildSahyogView(paging, Astro.url.searchParams, labels, drive?.ok ? drive.data : null, {
+      filtered: isFiltered,
+    })
+  : null;
+const sections = view !== null ? splitSections(view, labels) : { active: [], archive: [] };
+
+// ⛔ A rejected request renders a 400-shaped state — ⛔ NOT a redirect to page 1, and ⛔ NOT a
+// successful render of a different page than was asked for.
+if (rejection !== null) Astro.response.status = rejection.status;
+
+// ── Cache headers (AC7, D8(a)) ──────────────────────────────────────────────
+// Declared `edge_cacheable` in public-vs-private-matrix.yaml, and the gate's cache-policy leg FAILS
+// if this line and that declaration disagree.
+//
+// ⚠ ⭐ THE RULING STANDS; ITS ORIGINAL GROUND DOES NOT — RESTATED, ⛔ NOT QUIETLY PATCHED. D8(a) was
+// argued as "the content is non-PII by construction, so it is cacheable by construction". D1(b) +
+// D10 DESTROYED that: this page shared-caches Tier-1 PII — a deceased member's full legal name —
+// behind a REVOCABLE consent. ⇒ the ruling now rests on the `/members` PRECEDENT (same class of
+// field, same policy, re-decided at 11a.3 and kept, `2026-08-20-143`).
+// ⛔ AND THE ACCEPTED COST IS LARGER THAN THAT ORIGINAL ARGUMENT SUPPOSED: a family's REVOCATION
+// keeps being served from every warm PoP, PER PAGE NUMBER, for up to FIVE MINUTES. ⛔ Direct SQL is
+// NOT the operational fallback.
+// ⛔ AND THE COUNTER IS EDGE-BLIND: a cached hit never reaches the origin, so the origin-side rate
+// limit and every abuse signal see only cache MISSES. Inert today (no edge in this repo; §5.8a) but
+// a NAMED DEPENDENCY. ⛔ Do not "fix" it by making this surface `private_no_store` — that discards
+// the edge for a public surface and was already REJECTED at 11a.3.
+//
+// ⭐ FOUR STATES, FOUR CACHE/STATUS PAIRS, AND THEY ARE ⛔ NOT INTERCHANGEABLE (Trap 7).
+// `members.astro` keyed this branch on "not a rejection" alone, so the API-outage render, the
+// visitor's own 429 and the kill-switched empty index ALL took the `edge_cacheable` arm at HTTP
+// 200 — one transient blip pinned "could not be loaded" into a shared edge for five minutes.
+// ⚠ `pastEnd` IS cacheable and deliberately so: it is a TRUE statement about a real index.
+// ⛔ `apiUnavailable` is not: it is a statement about THIS request's luck.
+const cacheable = rejection === null && view !== null && !view.model.apiUnavailable;
+if (cacheable) {
+  Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
+  Astro.response.headers.set('Vary', 'Accept-Language');
+} else {
+  Astro.response.headers.set('Cache-Control', 'no-store');
+}
+// ⚠ AND THE STATUS TELLS THE TRUTH TOO. A page that says "could not be loaded" at 200 is a lie to
+// every cache, crawler and uptime check in the path. 503 + `Retry-After` is the honest shape.
+// ⛔ Not 500: the failure is upstream and transient, and this page rendered correctly.
+if (rejection === null && view !== null && view.model.apiUnavailable) {
+  Astro.response.status = 503;
+  Astro.response.headers.set('Retry-After', '60');
+}
+
+const firstPageHref = pageHref('/sahyog', Astro.url.searchParams, 1);
+
+// ⭐ RESOLVED ONCE PER RENDER, ⛔ not per row. The matrix cannot vary within a page, and asking
+// `getVisibility()` per cell would be an N+1 on a constant. ⛔ `visibilityOf` is the ONLY thing
+// consulted — no local tier comparison, no second viewer ceiling.
+const driveColumns = visibleSahyogColumns(
+  labels,
+  (fieldId) => visibilityOf('sahyog-drive', fieldId, 'public').visible,
+);
+---
+
+<PublicShell
+  locale={locale}
+  title={labels.pageTitle}
+  description={labels.pageIntro}
+  trustName={trustName}
+  branding={branding}
+  noindex
+>
+  <main class="sahyog" aria-labelledby="sahyog-title">
+    <h1 id="sahyog-title" class="sahyog__title">{labels.pageTitle}</h1>
+
+    {rejection !== null && (
+      <section class="sahyog__notice" role="alert" aria-labelledby="sahyog-rejected-title">
+        <h2 id="sahyog-rejected-title" class="sahyog__notice-title">{rejection.title}</h2>
+        <p class="sahyog__notice-body">{rejection.body}</p>
+        <p><a class="sahyog__link" href={rejection.linkHref}>{rejection.linkLabel}</a></p>
+      </section>
+    )}
+
+    {view !== null && (
+      <>
+        <p class="sahyog__intro">{labels.pageIntro}</p>
+
+        {/* ⭐ The three ruled filters, as PLAIN GET parameters on a REAL form — the shell's
+            works-with-JS-disabled posture (Story 2.5 AC3). ⛔ No JS, no fetch, no island.
+            ⛔ There is NO name field, and the note says so rather than leaving its absence to be
+            read as an oversight. */}
+        <form class="sahyog__filters" method="get" action="/sahyog">
+          <fieldset>
+            <legend>{tr('filter.legend')}</legend>
+            <p class="sahyog__filter-row">
+              <label for="f-district">{tr('filter.district.label')}</label>
+              <input id="f-district" name="district" type="text" value={districtFilter ?? ''} />
+            </p>
+            <p class="sahyog__filter-row">
+              <label for="f-from">{tr('filter.closed_from.label')}</label>
+              <input id="f-from" name="closedFrom" type="date" value={closedFromFilter ?? ''} />
+            </p>
+            <p class="sahyog__filter-row">
+              <label for="f-to">{tr('filter.closed_to.label')}</label>
+              <input id="f-to" name="closedTo" type="date" value={closedToFilter ?? ''} />
+            </p>
+            <p class="sahyog__filter-row">
+              <label for="f-code">{tr('filter.pool_code.label')}</label>
+              <input id="f-code" name="poolCode" type="text" value={poolCodeFilter ?? ''} />
+            </p>
+            <p class="sahyog__filter-note">{tr('filter.no_name_search')}</p>
+            <p><button type="submit">{tr('filter.submit')}</button></p>
+          </fieldset>
+        </form>
+
+        {/* ⛔ AN OUTAGE IS NOT AN EMPTY INDEX. Two distinct states, deliberately: rendering an
+            unreachable API as "no drives" would be a false statement about the trust — and on THIS
+            surface that is the single most misleading thing the page could say. */}
+        {view.model.apiUnavailable && (
+          <section class="sahyog__notice" role="alert" aria-labelledby="sahyog-outage-title">
+            <h2 id="sahyog-outage-title" class="sahyog__notice-title">{labels.outageTitle}</h2>
+            <p class="sahyog__notice-body">{labels.outageBody}</p>
+          </section>
+        )}
+
+        {/* ⛔ PAST THE END IS NOT "NOTHING YET". An index that genuinely has drives but none on THIS
+            page is not the same claim as a trust that has run none. */}
+        {!view.model.apiUnavailable && !view.model.hasDrives && view.model.pastEnd && (
+          <section class="sahyog__notice" aria-labelledby="sahyog-past-end-title">
+            <h2 id="sahyog-past-end-title" class="sahyog__notice-title">{labels.pastEndTitle}</h2>
+            <p class="sahyog__notice-body">{labels.pastEndBody}</p>
+            <p><a class="sahyog__link" href={firstPageHref}>{labels.pageTitle}</a></p>
+          </section>
+        )}
+
+        {/* ⚠ "None MATCH" is not "none EXIST" — a filtered empty result must not imply the trust
+            has run no drives. ⭐ AND THE PULLED-PARIWAR CASE LANDS HERE TOO, INDISTINGUISHABLY:
+            the API returns the identical `{items:[],total:0}` shape for a disabled publication, and
+            this state discloses ⛔ NO reason for the absence (`2026-08-21-144` cl.5). A distinct
+            "publication disabled" message would itself be a NEW ORACLE. */}
+        {!view.model.apiUnavailable && !view.model.hasDrives && !view.model.pastEnd && (
+          <section class="sahyog__notice" aria-labelledby="sahyog-empty-title">
+            <h2 id="sahyog-empty-title" class="sahyog__notice-title">
+              {view.model.filtered ? labels.emptyFilteredTitle : labels.emptyTitle}
+            </h2>
+            <p class="sahyog__notice-body">
+              {view.model.filtered ? labels.emptyFilteredBody : labels.emptyBody}
+            </p>
+          </section>
+        )}
+
+        {/* Semantic <table> + <caption> + <th scope="col"> — family 13(a) in its web form (AC10):
+            a real table, ⛔ not <div>s with labels, so a screen-reader user hears the column each
+            cell belongs to. ⚠ Each caption is DISTINCT from the intro <p> above — a repeat is
+            announced consecutively, which is noise where a caption should orient. */}
+        {sections.active.length > 0 && (
+          <section aria-labelledby="sahyog-active-title">
+            <h2 id="sahyog-active-title">{labels.sectionActiveTitle}</h2>
+            <p>{tr('section.active.help')}</p>
+            <table class="sahyog__table">
+              <caption class="sahyog__caption">{labels.tableCaptionActive}</caption>
+              <thead>
+                <tr>{driveColumns.map((col) => <th scope="col">{col.headerLabel}</th>)}</tr>
+              </thead>
+              {/* ⛔ EVERY value goes through <MatrixField>, so `getVisibility()` is the ONLY thing
+                  deciding what appears. ⛔ Never interpolate a value directly, and ⛔ never modify
+                  the component to fit a call site: if it does not fit, STOP AND RAISE IT.
+                  ⭐ THE `<th>`/`<td>` PAIR IS SUPPRESSED TOGETHER by `visibleSahyogColumns()` — an
+                  unconditional pair emits an empty cell under a labelled header, so the omission
+                  announces itself through the TABLE even though the component stayed silent.
+                  ⛔ A WITHHELD NAME RENDERS NOTHING — no placeholder, no dash, no marker. */}
+              <tbody>
+                {sections.active.map((row) => (
+                  <tr>
+                    {driveColumns.map((col) => (
+                      <td>
+                        <MatrixField
+                          surface="sahyog-drive"
+                          field={col.fieldId}
+                          viewerContext="public"
+                          value={col.valueOf(row) ?? ''}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        )}
+
+        {sections.archive.length > 0 && (
+          <section aria-labelledby="sahyog-archive-title">
+            <h2 id="sahyog-archive-title">{labels.sectionArchiveTitle}</h2>
+            <p>{tr('section.archive.help')}</p>
+            <table class="sahyog__table">
+              <caption class="sahyog__caption">{labels.tableCaptionArchive}</caption>
+              <thead>
+                <tr>{driveColumns.map((col) => <th scope="col">{col.headerLabel}</th>)}</tr>
+              </thead>
+              <tbody>
+                {sections.archive.map((row) => (
+                  <tr>
+                    {driveColumns.map((col) => (
+                      <td>
+                        <MatrixField
+                          surface="sahyog-drive"
+                          field={col.fieldId}
+                          viewerContext="public"
+                          value={col.valueOf(row) ?? ''}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        )}
+
+        {/* ⚠ Stated on the surface itself, ⛔ not only in a decision record: the family's choice is
+            theirs, it is revocable, and revoking removes a NAME rather than a DRIVE. */}
+        {view.model.hasDrives && <p class="sahyog__consent-note">{tr('consent.note')}</p>}
+
+        {view.links.length > 0 && (
+          <nav class="sahyog__pagination" aria-label={labels.paginationLabel}>
+            <ul class="sahyog__pagination-list">
+              {view.links.map((link) => (
+                <li>
+                  <a class="sahyog__link" href={link.href} rel={link.rel}>{link.label}</a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )}
+      </>
+    )}
+  </main>
+</PublicShell>
+
+<style>
+  /* Story 1.17 design system via @twt/tokens (the documented Story 2.5 variance: @twt/ui is not a
+     dependency of this app and there is NO Tailwind pipeline on this surface — ⛔ do not introduce
+     one, and ⛔ do not add @twt/ui here: its 11b consumers are 11b.2 / 11b.5 / 11b.7). */
+  .sahyog { margin: 0 auto; max-width: 60rem; padding: var(--space-page-gutter); }
+  .sahyog__title {
+    font-family: var(--font-display-name);
+    color: var(--color-rule-heavy);
+    margin: 0 0 var(--space-block);
+  }
+  .sahyog__intro { color: var(--color-rule-heavy); margin-top: 0; }
+  .sahyog__filters { margin: var(--space-block) 0; }
+  .sahyog__filters fieldset {
+    border: var(--border-rule) solid var(--color-rule-hairline);
+    padding: var(--space-page-gutter);
+  }
+  .sahyog__filter-row { display: flex; flex-wrap: wrap; gap: var(--space-row); align-items: baseline; }
+  .sahyog__filter-row label { min-width: 12rem; }
+  .sahyog__filter-note { color: var(--color-rule-heavy); font-size: 0.9em; }
+  .sahyog__notice {
+    border: var(--border-rule) dashed var(--color-rule-hairline);
+    background: var(--color-surface);
+    padding: var(--space-page-gutter);
+    margin: var(--space-block) 0;
+  }
+  .sahyog__notice-title { margin-top: 0; font-family: var(--font-display-parichay); }
+  .sahyog__notice-body { margin-bottom: 0; line-height: 1.6; }
+  .sahyog__table { border-collapse: collapse; margin: var(--space-block) 0; width: 100%; }
+  .sahyog__caption {
+    text-align: left;
+    color: var(--color-rule-heavy);
+    padding-bottom: var(--space-row);
+  }
+  .sahyog__table th,
+  .sahyog__table td {
+    border-bottom: var(--border-rule) solid var(--color-rule-hairline);
+    padding: var(--space-row);
+    text-align: left;
+  }
+  .sahyog__table th { font-family: var(--font-display-parichay); color: var(--color-rule-heavy); }
+  .sahyog__consent-note { color: var(--color-rule-heavy); font-size: 0.9em; }
+  .sahyog__pagination { margin: var(--space-block) 0; }
+  .sahyog__pagination-list {
+    display: flex;
+    gap: var(--space-row);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  /* Visible focus (Story 0.10 P0-2c): keyboard users must always see where they are. */
+  .sahyog__link { color: var(--color-accent); text-decoration: underline; }
+  .sahyog__link:focus-visible,
+  .sahyog__filters button:focus-visible,
+  .sahyog__filters input:focus-visible {
+    outline: var(--border-rule) solid var(--color-accent);
+    outline-offset: 2px;
+  }
+</style>

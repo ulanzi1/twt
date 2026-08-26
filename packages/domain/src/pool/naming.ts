@@ -52,6 +52,14 @@ export class PoolLetterCodeRangeError extends Error {
   }
 }
 
+/** Thrown when `poolIndexFromLetterCode` is handed a string that is not a run of `A`-`Z`. */
+export class PoolLetterCodeDecodeError extends Error {
+  public readonly name = 'PoolLetterCodeDecodeError';
+  public constructor(public readonly received: string) {
+    super(`letter code must be one or more of A-Z, received ${JSON.stringify(received)}`);
+  }
+}
+
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
 /**
@@ -80,6 +88,26 @@ export function poolLetterCode(poolIndex: number): string {
     n = Math.floor(n / 26);
   }
   return code;
+}
+
+/**
+ * The inverse of {@link poolLetterCode} — a member-facing letter code back to its 0-based
+ * `pool_index`. Bijective base-26, so every non-empty run of `A`–`Z` decodes to exactly one index.
+ *
+ *   A → 0   Z → 25   AA → 26   AB → 27   AZ → 51   BA → 52   ZZ → 701   AAA → 702
+ *
+ * Case-insensitive by convention at call sites (Sahyog Drive search, AC3/D2(a)) — this function
+ * itself expects upper-case and leaves normalization to the caller.
+ */
+export function poolIndexFromLetterCode(code: string): number {
+  if (!/^[A-Z]+$/.test(code)) {
+    throw new PoolLetterCodeDecodeError(code);
+  }
+  let n = 0;
+  for (let i = 0; i < code.length; i += 1) {
+    n = n * 26 + (code.charCodeAt(i) - 64); // 'A' → 1, ..., 'Z' → 26
+  }
+  return n - 1; // shift back to 0-based
 }
 
 // ── Canonical identifier: the pure formatter (AC1) ────────────────────────────

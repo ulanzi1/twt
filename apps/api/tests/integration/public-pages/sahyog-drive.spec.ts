@@ -14,7 +14,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { PublicSahyogDriveResponse } from '@twt/contracts';
-import { encryption, ids, kyc, member as memberDomain, schema } from '@twt/domain';
+import { encryption, ids, kyc, member as memberDomain, pool, schema } from '@twt/domain';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
@@ -374,7 +374,12 @@ describe.skipIf(!hasDatabase)('public Sahyog Drive route (:5433)', { timeout: 30
         expect(pulledRes.statusCode).toBe(200);
         expect(emptyRes.statusCode).toBe(200);
         expect(pulledRes.body).toBe(emptyRes.body);
-        expect(pulledRes.json()).toEqual({ items: [], page: 1, limit: 25, total: 0 });
+        expect(pulledRes.json()).toEqual({
+          items: [],
+          page: 1,
+          limit: pool.SAHYOG_DRIVE_PAGE_SIZE_DEFAULT,
+          total: 0,
+        });
         // ⛔ And nothing about the suppressed drive may leak — not the name, not the reason.
         expect(pulledRes.body).not.toContain('Rajesh');
       } finally {

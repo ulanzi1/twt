@@ -64,6 +64,7 @@ import { classifyCycleOutcome, type CycleFundingOutcome } from '../close-of-cycl
 import type { Db } from '../db.js';
 import type { MemberId, PariwarId, PoolId } from '../ids/index.js';
 import { clampLimit } from '../pagination.js';
+import { poolIndexFromLetterCode } from './naming.js';
 import { claims } from '../schema/claims.js';
 import { memberKycProfiles } from '../schema/member_kyc_profiles.js';
 import { memberPostings } from '../schema/member_postings.js';
@@ -184,13 +185,22 @@ const DRIVE_CLOSED_AT = (now: Date) => sql<Date | null>`(
      LIMIT 1
   )`;
 
-/** The deceased member's latest posting district, RAW — ⛔ never lifted through the geo tree. */
+/**
+ * The deceased member's posting district, RAW — ⛔ never lifted through the geo tree.
+ *
+ * ⭐ FROZEN AS OF THE DRIVE'S CLOSE/SETTLE INSTANT, ⛔ never `now` — this surface calls the
+ * Archive section "a permanent record" (Review finding, 2026-08-26), so a posting correction
+ * made AFTER a pool closed must never retroactively change what an already-published row shows.
+ * `COALESCE(..., now)` only covers the already-flagged data anomaly of a closed/settled pool
+ * whose stream carries no close/settle event yet ({@link DRIVE_CLOSED_AT}) — it is not a second
+ * intended code path.
+ */
 const DECEASED_DISTRICT = (now: Date) => sql<string | null>`(
     SELECT p.district
       FROM ${memberPostings} p
      WHERE p.member_id = "claims"."deceased_member_id"
        AND p.pariwar_id = "claims"."pariwar_id"
-       AND p.created_at <= ${now}
+       AND p.created_at <= COALESCE(${DRIVE_CLOSED_AT(now)}, ${now})
      ORDER BY p.created_at DESC, p.posting_id DESC
      LIMIT 1
   )`;
@@ -293,7 +303,12 @@ function sahyogDrivePredicate(pariwarId: PariwarId, now: Date, filters: SahyogDr
   ];
 
   if (filters.district !== undefined) {
-    conjuncts.push(sql`${DECEASED_DISTRICT(now)} = ${filters.district}`);
+    // Case/whitespace-folded on both sides: the RENDERED district is trimmed (handlers.ts), so
+    // the filter must match under the same normalization or a district that displays correctly
+    // becomes unfindable by filtering on it (Review finding, 2026-08-26).
+    conjuncts.push(
+      sql`trim(lower(${DECEASED_DISTRICT(now)})) = lower(trim(${filters.district}))`,
+    );
   }
   if (filters.closedFrom !== undefined) {
     conjuncts.push(sql`${DRIVE_CLOSED_AT(now)} >= ${filters.closedFrom}`);
@@ -305,7 +320,19 @@ function sahyogDrivePredicate(pariwarId: PariwarId, now: Date, filters: SahyogDr
     // Matched against the canonical identifier OR the letter code the pool index yields.
     // ⛔ An EXACT match, ⛔ never a LIKE/prefix scan: a prefix filter over a public index is an
     // enumeration primitive wearing a search box.
-    conjuncts.push(sql`${pools.poolCanonicalIdentifier} = ${filters.poolCode}`);
+    //
+    // The letter code is decoded (bijective base-26, case-insensitive) rather than matched in
+    // SQL — `poolIndexFromLetterCode` is the one inverse of `poolLetterCode` and must stay the
+    // only decoder (Review finding, 2026-08-26: this OR half was previously never wired in).
+    const upperPoolCode = filters.poolCode.toUpperCase();
+    const letterIndex = /^[A-Z]+$/.test(upperPoolCode)
+      ? poolIndexFromLetterCode(upperPoolCode)
+      : null;
+    conjuncts.push(
+      letterIndex === null
+        ? sql`${pools.poolCanonicalIdentifier} = ${filters.poolCode}`
+        : sql`(${pools.poolCanonicalIdentifier} = ${filters.poolCode} OR ${pools.poolIndex} = ${letterIndex})`,
+    );
   }
 
   return and(...conjuncts);
@@ -361,7 +388,11 @@ export async function listPublicSahyogDrivePools(
     .innerJoin(claims, eq(claims.claimCaseId, pools.claimCaseId))
     .leftJoin(memberKycProfiles, eq(memberKycProfiles.memberId, claims.deceasedMemberId))
     .where(sahyogDrivePredicate(pariwarId, now, opts))
-    .orderBy(desc(DRIVE_CLOSED_AT(now)), desc(pools.poolId))
+    // ⚠ EXPLICIT `NULLS LAST` — the predicate already restricts to closed/settled pools, so a
+    // null `driveClosedAt` here is a data anomaly, not a legitimate "not yet closed" row. `DESC`
+    // defaults to `NULLS FIRST` in Postgres, which would sort that anomaly to the very top ahead
+    // of genuinely-recent closures (Review finding, 2026-08-26).
+    .orderBy(sql`${DRIVE_CLOSED_AT(now)} DESC NULLS LAST`, desc(pools.poolId))
     .limit(
       clampLimit(opts.limit, {
         default: SAHYOG_DRIVE_PAGE_SIZE_DEFAULT,

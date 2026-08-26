@@ -31,8 +31,11 @@ import {
   type PublicDirectoryEntry,
   type PublicDirectoryQuery,
   type PublicDirectoryResponse,
+  type PublicSahyogDriveEntry,
+  type PublicSahyogDriveQuery,
+  type PublicSahyogDriveResponse,
 } from '@twt/contracts';
-import { encryption, ids, kyc, member as memberDomain } from '@twt/domain';
+import { encryption, ids, kyc, member as memberDomain, pool as poolDomain } from '@twt/domain';
 import type { FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
@@ -81,6 +84,7 @@ async function mapWithConcurrency<T, R>(
 
 export interface PublicPagesHandlers {
   memberDirectory(request: FastifyRequest): Promise<PublicDirectoryResponse>;
+  sahyogDrive(request: FastifyRequest): Promise<PublicSahyogDriveResponse>;
 }
 
 export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
@@ -261,6 +265,193 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
         );
         const items: PublicDirectoryEntry[] = resolved.filter(
           (entry): entry is PublicDirectoryEntry => entry !== null,
+        );
+
+        ok = true;
+        return { items, page, limit, total };
+      } finally {
+        await closeScopeTx(scopeTx, ok);
+      }
+    },
+
+    /**
+     * `GET /api/v1/p/:pariwarId/public-pages/sahyog-drive` — one page of the public Sahyog Drive.
+     *
+     * ⛔ DELIBERATELY UNAUTHENTICATED, on the same reasoning as the directory above and with the
+     * SAME FIVE controls, enumerated in `routes.ts` and in `login-wall.spec.ts`'s allowlist entry —
+     * the two places that decision is defended in writing. ⚠ Those two must state the SAME COUNT;
+     * this doc-block deliberately does not restate the list, so there is no third copy to drift.
+     *
+     * ⭐⛔ THE TIER-1 DECRYPT LIVES HERE AND NOWHERE ELSE, AND IT IS EASY TO LEAVE UNOWNED:
+     * `pool/public-read.ts` is decrypt-free BY RULE, and `apps/public` provably CANNOT decrypt
+     * (`no-kms-in-public.test.ts` scans the whole app for any encryption symbol). ⇒ if this handler
+     * does not do it, ⛔ NOTHING does, and the surface silently ships nameless.
+     */
+    async sahyogDrive(request: FastifyRequest): Promise<PublicSahyogDriveResponse> {
+      const { pariwarId: pariwarIdStr } = request.params as { pariwarId: string };
+      const query = request.query as PublicSahyogDriveQuery;
+      const page = query.page ?? 1;
+      const limit = query.limit ?? PUBLIC_DIRECTORY_PAGE_SIZE_DEFAULT;
+      const offset = (page - 1) * limit;
+      const pariwarId = ids.pariwarId(pariwarIdStr);
+
+      // ⭐ ONE INSTANT FOR THE WHOLE REQUEST, ⛔ never `new Date()` at each read — the same rule the
+      // directory handler above states at length. Here it binds THREE as-of reads: the drive's
+      // close instant, the confirmed-contribution count, and the consent validity window. A second
+      // clock would let a family's revocation land between the page read and the count, so the two
+      // would describe different indexes. From `deps.clock()` so tests can pin it.
+      const now = deps.clock();
+
+      const scopeTx = await openScopeTx(deps, pariwarIdStr);
+      let ok = false;
+      try {
+        // ⭐ THE PER-PARIWAR KILL SWITCH — CHECKED FIRST, before any read and before the abuse
+        // counter (D3(a)): a Pariwar whose public surfaces are disabled must cost nothing beyond
+        // this one read.
+        // ⚠ THE SAME SWITCH THE DIRECTORY USES, its documented meaning generalised to "this
+        // Pariwar's public member-data surfaces" — ⛔ NOT a new column and ⛔ not a new launch-gate
+        // roster row. A per-surface flag would let a Pariwar be pulled from `/members` while still
+        // publishing its drives, which is the opposite of what the posture means.
+        // ⚠ A disabled Pariwar returns the IDENTICAL SHAPE as a genuinely empty index
+        // (`{items:[],total:0}`), ⛔ NEVER a distinct error, 403 or 404 — a differently-shaped
+        // response is itself a NEW ORACLE, which is precisely what the kill switch exists to avoid
+        // creating. The page renders the empty state disclosing ⛔ NO reason (`2026-08-21-144` cl.5).
+        // ⚠ AND THE LEVER IS ⛔ NOT IMMEDIATE: at `s-maxage=300` a pulled Pariwar keeps being served
+        // from every warm PoP, per page number, for up to five minutes. ⛔ Direct SQL is NOT the
+        // operational fallback.
+        const publicationEnabled = await memberDomain.resolveDirectoryPublicationEnabled(
+          scopeTx.tx,
+          pariwarId,
+        );
+        if (!publicationEnabled) {
+          ok = true;
+          return { items: [], page, limit, total: 0 };
+        }
+
+        // ── Anti-enumeration detection, AFTER the switch and BEFORE the read ───────────────────
+        // ⚠ Inherited as a FLOOR, ⛔ not a ceiling. It emits a COUNTER, ⛔ not a forensic record: no
+        // column stores query context, so the rule id + a coarse non-PII query shape ride `action`
+        // + `resource_locator`. ⛔ Never describe it as carrying the query, and ⛔ the recorded IP
+        // is NOT evidence (`2026-08-21-145` RD2). It does ⛔ not block — the rate limit is the
+        // enforcement, this is the signal.
+        // ⚠ AND IT IS BLIND TO A WARM EDGE, which is RECORDED rather than discovered: a cached hit
+        // never reaches the origin, so this counter sees only cache MISSES and a scraper walking
+        // pages 1..N through an edge is invisible to it. Inert today (no edge configured) but a
+        // NAMED DEPENDENCY — see the abuse-rules README. ⛔ Do not write that the origin sees
+        // everything, and ⛔ do not "fix" it by making the surface `private_no_store` (rejected at
+        // 11a.3: that discards the edge for a public surface).
+        evaluateDirectoryAbuse(deps, abuseRules, {
+          key: request.ip,
+          pariwarId: pariwarIdStr,
+          traceId: request.requestContext.traceId ?? null,
+          page,
+          limit,
+          at: now,
+        });
+
+        // ⭐ RESOLVED ONCE PER REQUEST, ⛔ NEVER PER ROW — a config value that cannot vary within a
+        // page, so a per-row read would be an N+1 on a constant.
+        const mode = await kyc.resolvePublicNamePresentationMode(scopeTx.tx, pariwarId);
+
+        const filters = {
+          district: query.district,
+          poolCode: query.poolCode,
+          closedFrom: query.closedFrom === undefined ? undefined : new Date(query.closedFrom),
+          closedTo: query.closedTo === undefined ? undefined : new Date(query.closedTo),
+          now,
+        };
+
+        const rows = await poolDomain.listPublicSahyogDrivePools(scopeTx.tx, pariwarId, {
+          ...filters,
+          limit,
+          offset,
+        });
+        // ⚠ `total` is INDEX SIZE. ⭐ Note the reason it can differ from the rendered count is NOT
+        // the directory's reason: there an unresolvable name drops the ROW. Here it drops only the
+        // NAME, so these agree except for pagination and the publication switch — a nameless row
+        // still counts. ⛔ Never add an omission count: a per-row "name withheld" tally is exactly
+        // the enumeration signal AC2 forbids announcing.
+        const total = await poolDomain.countPublicSahyogDrivePools(scopeTx.tx, pariwarId, filters);
+
+        // ⭐ ONE KMS `decryptDek` ROUND-TRIP PER *CONSENTED* ROW — envelope encryption gives every
+        // stored name its own DEK, so there is no shared secret to decrypt once and reuse.
+        //
+        // ⚠ GENUINELY BOUNDED, ⛔ not "bounded" by the page size. `Promise.all` would place NO bound
+        // at all — its only ceiling is `limit` (50), so N concurrent visitors put 50×N KMS calls in
+        // flight against a quota-limited external service, on an UNAUTHENTICATED route. That is the
+        // defect 11a.3 fixed, and ⛔ it is not optional here just because this page is smaller.
+        // ⛔ A comment asserting a bound the code does not impose is worse than no comment: it stops
+        // the next reader from looking.
+        //
+        // ⭐ Order is preserved by writing into a pre-sized slot array indexed by the row's own
+        // position, ⛔ never by completion order — nothing here may re-sort, or "page N is the same
+        // page N on every request" stops being true.
+        const items = await mapWithConcurrency(
+          rows,
+          DIRECTORY_DECRYPT_CONCURRENCY,
+          async (row): Promise<PublicSahyogDriveEntry> => {
+            const base = {
+              poolLetterCode: poolDomain.poolLetterCode(row.poolIndex),
+              poolCanonicalIdentifier: row.poolCanonicalIdentifier,
+              status: row.status,
+              closedAt: row.driveClosedAt === null ? null : row.driveClosedAt.toISOString(),
+              // ⚠ `.trim() || null`, ⛔ not `=== ''`. A whitespace-only district passes the schema's
+              // `.min(1)`, arrives TRUTHY so the page's fallback never fires, and renders a visually
+              // BLANK cell where the design says "Not recorded" (the 11a.3 finding).
+              district: row.district?.trim() || null,
+              confirmedContributionCount: row.confirmedContributionCount,
+              fundingOutcome: row.fundingOutcome,
+            };
+
+            // ⭐⛔ CONSENT IS EVALUATED *BEFORE* THE DECRYPT, ⛔ NEVER AFTER. An unconsented row must
+            // cost ZERO KMS calls. Decrypting a name the gate is about to discard is both a wasted
+            // round-trip on a quota-limited service AND a decrypt with no authorising basis — and
+            // the second half is the one that matters. ⚠ A MISSING consent and a REVOKED one reach
+            // this branch identically, which is intended: neither authorises a render.
+            if (!row.nameConsentGranted || row.deceasedNameCiphertext === null) {
+              return { ...base, deceasedMemberName: null };
+            }
+
+            // ⭐ THE TIER-1 DECRYPT — the EXISTING helper, the EXISTING field class, the member's
+            // real pariwarId. ⛔ No new field class, ⛔ no new namespace, ⛔ no second crypto helper.
+            // The decrypted value ⛔ NEVER leaves this closure except through
+            // `resolvePublicMemberName`, and is ⛔ never logged.
+            let storedName: string;
+            try {
+              storedName = await encryption.decryptKycField(
+                row.deceasedNameCiphertext,
+                pariwarId,
+                deps.encryption,
+              );
+            } catch (err) {
+              // ⭐ OMIT THE NAME, ⛔ KEEP THE ROW — the DELIBERATE INVERSE of the directory above,
+              // which omits the row. There a row with no name has no purpose; here it still carries
+              // the drive, and a shorter index is ⛔ not acceptable while a nameless row is.
+              // ⛔ Letting this throw would 500 the ENTIRE page for the whole Pariwar over one bad
+              // row (the `resolvePoolIdentity` fail-soft precedent).
+              console.error(
+                '[public-pages] sahyog-drive: KYC name decrypt failed — omitting the NAME, keeping the row',
+                err,
+              );
+              return { ...base, deceasedMemberName: null };
+            }
+
+            // ⭐⛔ `resolvePublicMemberName`, ⛔ NEVER `resolvePoolIdentity()`. This is the sharpest
+            // build consequence of D10 and the easiest thing to get wrong on a POOL surface:
+            // `resolvePoolIdentity()` — the resolver 8.6/8.7/8.8 share, and the obvious thing to
+            // reach for here — HARD-CODES `splitFirstNameLastInitial`, so it can ⛔ only ever return
+            // the shielded form D10 rejected. Reaching for it because it is "the pool identity
+            // resolver" would silently ship the wrong name form with every test still green.
+            // ⛔ And ⛔ never a literal `full_name`: `2026-08-19-136` cl.1 — a build in which the
+            // public name form cannot be changed without a code change FAILS that clause.
+            // ⚠ Under `full_name` a MONONYM resolves normally, whereas `shielded_name` returns `''`
+            // for every single-token name (`2026-08-21-145` cl.3). ⛔ Do not re-implement that branch.
+            const name = kyc.resolvePublicMemberName(mode, storedName);
+
+            // An unresolvable name omits the NAME, ⛔ never the row — same rule as the decrypt
+            // failure above, and the same inverse of the directory.
+            return { ...base, deceasedMemberName: name === '' ? null : name };
+          },
         );
 
         ok = true;

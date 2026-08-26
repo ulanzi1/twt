@@ -39,10 +39,41 @@
 //      export from the public side; a per-member permalink is an enumeration primitive in its own
 //      right and is in no AC.
 //
-// ⛔ NO SECOND ROUTE. One collection-returning GET. If a follow-up needs another, it needs its own
-// allowlist entry, its own defence, and its own rate-limit choice — ⛔ never a quiet addition here.
+// ── ⭐ THE TWO-ROUTE RULE (Story 11b.1) — ⛔ THIS CLAUSE IS UPDATED, ⛔ NOT DELETED ─────────────
+// This header used to read *"⛔ NO SECOND ROUTE. One collection-returning GET. If a follow-up needs
+// another, it needs its own allowlist entry, its own defence, and its own rate-limit choice —
+// ⛔ never a quiet addition here."*
+//
+// ⭐ THAT CLAUSE DID EXACTLY WHAT IT WAS WRITTEN TO DO. Story 11b.1 needed a second route, and the
+// clause named its price: an allowlist entry, a written defence, a deliberate rate-limit choice.
+// All three were paid. ⇒ the rule is now TWO collection-returning GETs, and the SAME price stands
+// for a third — ⛔ still never a quiet addition here.
+//
+// ⚠ BOTH ROUTES ARE DEFENDED BY THE SAME FIVE CONTROLS ABOVE, and that is a finding rather than a
+// convenience: the controls are properties of "an unauthenticated, paginated, PII-bearing public
+// collection", ⛔ not of the Member Directory specifically. A third route that CANNOT reuse them
+// unchanged is a third route that needs its own ruling, ⛔ not its own bullet list.
+//
+// ⭐ WHAT THE SECOND ROUTE ADDS THAT THE FIRST DOES NOT HAVE — a per-subject CONSENT gate
+// (`sahyog_drive_publication`, 11b.1 AC12), evaluated BEFORE the Tier-1 decrypt so an unconsented
+// row costs zero KMS calls. ⚠ It gates the NAME, ⛔ never the ROW: an unconsented drive still
+// renders in full, so the index degrades PER-POOL, ⛔ never per-page. ⛔ The Member Directory has no
+// such gate and is ⛔ not made to have one by this addition.
+//
+// ⛔⛔ AND BUILT IS ⛔ NOT PUBLISHED. Three independent gates stand between the Sahyog Drive route
+// and a live page — counsel's HELD DPDPA review of this exact subject (`2026-08-24-157` cl.3(a),
+// returning 2026-09-07), Row 17's ≥2-trustee publication posture extended by C-5 (this surface has
+// ⛔ no ratification of its own), and the per-subject consent gate. ⛔ Registering this route closes
+// NONE of them, and ⛔ nothing here may be read as enabling the surface for any Pariwar.
+// ⚠ Counsel HAS NOT REVIEWED this subject — ⛔ never write that counsel is not engaged, which has
+// been false since 2026-06-21 (`2026-08-24-158`).
 
-import { PublicDirectoryQuery, PublicDirectoryResponse } from '@twt/contracts';
+import {
+  PublicDirectoryQuery,
+  PublicDirectoryResponse,
+  PublicSahyogDriveQuery,
+  PublicSahyogDriveResponse,
+} from '@twt/contracts';
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
@@ -73,5 +104,28 @@ export function registerPublicPagesRoutes(app: FastifyInstance, deps: AppDeps): 
       config: { rateLimit: limits.search },
     },
     h.memberDirectory,
+  );
+
+  // ── Story 11b.1 — the SECOND collection-returning GET (D6(a)) ────────────────────────────────
+  // ⭐ ITS OWN DEFENCE IS THE HEADER'S TWO-ROUTE CLAUSE + THE FIVE CONTROLS, reused UNCHANGED and
+  // deliberately: see the header for why reusing them is a finding rather than a shortcut.
+  // ⚠ Its own `login-wall.spec.ts` allowlist entry states the SAME control count — ⛔ two
+  // authoritative documents disagreeing on how many controls exist is the defect this file records
+  // having already had once.
+  r.get(
+    '/api/v1/p/:pariwarId/public-pages/sahyog-drive',
+    {
+      schema: {
+        params: PariwarParam,
+        querystring: PublicSahyogDriveQuery,
+        response: { 200: PublicSahyogDriveResponse },
+        tags: [PUBLIC_PAGES_TAG],
+      },
+      // ⛔ UNMODIFIED, and the SAME named tier as the directory. See control 1 in the header before
+      // changing anything on this line. ⛔ Not `limits.read` (looser, and backwards for an
+      // enumeration surface), ⛔ not an inline ceiling, ⛔ not a hand-rolled `keyGenerator`.
+      config: { rateLimit: limits.search },
+    },
+    h.sahyogDrive,
   );
 }

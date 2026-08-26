@@ -1,0 +1,391 @@
+// The `/sahyog` pure render module — Story 11b.1 (Task 3 + Task 6; AC1, AC2, AC4, AC5, AC7, AC10).
+//
+// House convention (and the thing that makes `deriveFieldIds` sound): ALL display logic lives here;
+// `sahyog.astro` is a thin wrapper. ⛔ Breaking that is a GATE EVASION before it is a style choice —
+// a value computed inline in `.astro` frontmatter never enters the render model and is therefore
+// invisible to the tier-leak leg.
+//
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// ⭐ THE INVARIANT THIS SURFACE EXISTS UNDER: REMEMBRANCE, NOT ANALYTICS (AC5)
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// The Sahyog Drive exists so that anyone — a member's family, a prospective member, a stranger —
+// can verify for themselves that this trust actually moves money, and so that a drive run in
+// someone's memory stays on the public record. ⛔ It is NOT a leaderboard, NOT a scoreboard, and
+// NOT a way to harvest who gave what.
+//
+// ⛔ EXPLICITLY PROHIBITED DIRECTIONS — reject these at DESIGN time, ⛔ not at review time:
+//   (a) contributor LEADERBOARDS of any kind
+//   (b) RANKINGS — "top contributors", "supporter of the month", "most generous district"
+//   (c) GAMIFICATION — badges, streaks, achievements, contribution milestones
+//   (d) SOCIAL-PERFORMANCE METRICS — most-supportive district, public scoreboards, comparisons
+//       between Pariwars, districts or people
+//   (e) POPULARITY METRICS — most-viewed memorial, trending pools, view counts
+//
+// ✅ ACCEPTABLE DIRECTIONS: legitimate trust verification; district/date historical research;
+// accessibility; performance.
+//
+// ⭐ THE TEST A PROPOSAL MUST PASS: *"Does this serve remembrance, transparency or claim
+// discoverability?"* If the honest answer is ENGAGEMENT, RANKING or SOCIAL PERFORMANCE, the
+// proposal is REJECTED at design time.
+//
+// ⛔⛔ AND THE SORT ORDER IS NOT A RANKING. The index orders by the drive's close/settle instant
+// DESCENDING with a deterministic tie-break — ⛔ never by contribution count, ⛔ never by amount,
+// and ⛔ no "most-supported" ordering is offered at any tier. ⭐ THIS IS THE PROHIBITION MOST
+// LIKELY TO BE BREACHED BY ACCIDENT, because "sort by contributions" reads like a harmless table
+// affordance rather than the leaderboard it builds.
+// (Recorded identically in `sahyog.astro`'s header and in the abuse-rules README — this file, that
+// file and the page are the three places a future author actually opens.)
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+//
+// PURE: no fs, no db, no env, no clock.
+import type { PublicSahyogDriveResponse } from '@twt/contracts';
+
+import { pageHref, PUBLIC_PAGE_HORIZON } from './pagination.js';
+import type { PaginationResult } from './pagination.js';
+import type { SahyogDriveRenderModel, SahyogDriveRow } from './surface-fields.js';
+
+export const SAHYOG_ROUTE = '/sahyog';
+
+/** Copy the page passes in, already resolved through `t()` with an EXPLICIT namespace. */
+export interface SahyogLabels {
+  readonly pageTitle: string;
+  readonly pageIntro: string;
+  /** The table's accessible name. ⚠ MUST BE DISTINCT from `pageIntro` — a screen reader announces
+   *  a repeat consecutively, which is noise where a caption should orient (AC10). */
+  readonly tableCaptionActive: string;
+  readonly tableCaptionArchive: string;
+  readonly sectionActiveTitle: string;
+  readonly sectionArchiveTitle: string;
+  readonly columnName: string;
+  /** Header for the canonical `P-YYYY-MM-###` identifier column. */
+  readonly columnPool: string;
+  /** Header for the letter-code column. ⚠ DISTINCT from `columnPool` — two columns sharing one
+   *  accessible name is announced identically by a screen reader (AC10). */
+  readonly columnLetter: string;
+  readonly columnDistrict: string;
+  readonly columnDate: string;
+  readonly columnContributions: string;
+  readonly columnOutcome: string;
+  /** Shown in a district cell when the deceased member has no posting row. */
+  readonly districtUnknown: string;
+  /** Shown in a date cell when the pool's stream carries no close/settle event. */
+  readonly dateUnknown: string;
+  readonly statusActive: string;
+  readonly statusArchive: string;
+  /** The EMPTY state — ⛔ deliberately distinct copy from the outage and past-end states. */
+  readonly emptyTitle: string;
+  readonly emptyBody: string;
+  /** The FILTERED-empty state — "none MATCH", ⛔ never "none exist". */
+  readonly emptyFilteredTitle: string;
+  readonly emptyFilteredBody: string;
+  /** The OUTAGE state — ⛔ deliberately distinct copy from the empty state. */
+  readonly outageTitle: string;
+  readonly outageBody: string;
+  /** The PAST-THE-END state — ⛔ deliberately distinct copy from "no drives yet". */
+  readonly pastEndTitle: string;
+  readonly pastEndBody: string;
+  /** The 400-REJECTION state. */
+  readonly rejectedTitle: string;
+  readonly rejectedBody: string;
+  readonly paginationLabel: string;
+  readonly previousPage: string;
+  readonly nextPage: string;
+  /** Close-of-cycle framing copy, keyed by the opaque outcome enum. */
+  readonly outcomeFullyFunded: string;
+  readonly outcomeUnderFunded: string;
+  readonly outcomePartial: string;
+  /** `{{count}} confirmed` — the count already interpolated by `t()`. */
+  readonly contributionsCount: (count: number) => string;
+}
+
+/** One pagination control — always a REAL link, ⛔ never a JS-dependent button. */
+export interface PaginationLink {
+  readonly href: string;
+  readonly label: string;
+  readonly rel: 'prev' | 'next';
+}
+
+export interface SahyogView {
+  /** The model whose OWN KEYS are the tier-leak snapshot's field set. */
+  readonly model: SahyogDriveRenderModel;
+  readonly links: readonly PaginationLink[];
+  readonly hasPrevious: boolean;
+  readonly hasNext: boolean;
+}
+
+/**
+ * Map the opaque funding-outcome token onto its localised framing copy.
+ *
+ * ⭐ THE TARGET IS ALREADY GONE BY THE TIME THIS RUNS, and that is the whole design:
+ * `classifyCycleOutcome` compares the totals once, inside the domain read, and ⛔ only this token
+ * leaves. ⇒ a shortfall figure PHYSICALLY CANNOT reach the copy path. ⛔ Do not add a numeric
+ * parameter to any of these labels, under any name, and ⛔ do not pass a target into this module.
+ *
+ * ⚠ Note the copy is deliberately NOT a comparison to a target — `microcopy.yaml`'s
+ * `pool-reality-comparison` tone rule bites `fell short`, `shortfall`, `\d+% of the target` and
+ * their Hindi equivalents at PR time, so a comparison frame fails the gate before it fails review.
+ */
+function framingFor(
+  outcome: PublicSahyogDriveResponse['items'][number]['fundingOutcome'],
+  labels: SahyogLabels,
+): string {
+  switch (outcome) {
+    case 'fully_funded':
+      return labels.outcomeFullyFunded;
+    case 'under_funded':
+      return labels.outcomeUnderFunded;
+    case 'partial':
+      return labels.outcomePartial;
+    default: {
+      // Exhaustiveness guard — a new outcome without a branch is a compile-time error here, and a
+      // runtime throw if an out-of-union value is forced past the type system.
+      const _never: never = outcome;
+      throw new Error(`[sahyog-render] unhandled funding outcome: ${String(_never)}`);
+    }
+  }
+}
+
+/**
+ * Format the drive's close/settle instant.
+ *
+ * ⚠ LATIN NUMERALS + GREGORIAN DATES on this surface (operational register, UX-DR73) — ⛔ never
+ * Devanagari digits, even under `hi`. A drive code and a date are operational facts a person may
+ * need to quote back to the helpline.
+ */
+function formatClosedAt(iso: string | null): string | null {
+  if (iso === null) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  const yyyy = String(d.getUTCFullYear()).padStart(4, '0');
+  const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(d.getUTCDate()).padStart(2, '0');
+  return `${dd}-${mm}-${yyyy}`;
+}
+
+/**
+ * Map one wire row onto its DISPLAY shape.
+ *
+ * ⭐⛔ THE NAME IS PASSED THROUGH UNTOUCHED, INCLUDING ITS `null`. Its FORM was already decided
+ * server-side by `resolvePublicMemberName` under the Pariwar's configured mode, and ⛔ re-deriving
+ * or re-shortening it here would be the second copy of the presentation policy that `-136` cl.2
+ * forbids. ⛔ And a `null` must ⛔ NEVER be replaced with a placeholder, an em-dash, "withheld", or
+ * any other marker: *an omission that announces itself is an ENUMERATION SIGNAL.*
+ */
+function toDisplayRow(
+  row: PublicSahyogDriveResponse['items'][number],
+  labels: SahyogLabels,
+): SahyogDriveRow {
+  return {
+    deceasedMemberName: row.deceasedMemberName,
+    poolLetterCode: row.poolLetterCode,
+    poolCanonicalIdentifier: row.poolCanonicalIdentifier,
+    driveStatus: row.status === 'archive' ? labels.statusArchive : labels.statusActive,
+    driveClosedAt: formatClosedAt(row.closedAt),
+    district: row.district,
+    confirmedContributionCount: labels.contributionsCount(row.confirmedContributionCount),
+    closeOfCycleFraming: framingFor(row.fundingOutcome, labels),
+  };
+}
+
+/**
+ * Build the view for an ACCEPTED page request.
+ *
+ * ⚠ `drive === null` is an OUTAGE, ⛔ never an empty index. On THIS surface the conflation is at
+ * its most damaging: the page exists so a stranger can check whether this trust moves money, so
+ * rendering "no drives" during an upstream blip is the single most misleading thing it could say.
+ *
+ * ⭐ THE "NEXT" LINK IS DERIVED FROM THE REAL TOTAL, ⛔ never from "this page came back full" — an
+ * index with exactly `limit` drives would then advertise a page 2 that is empty, which is both a
+ * lie and an enumeration invitation.
+ */
+export function buildSahyogView(
+  accepted: { page: number; limit: number },
+  search: URLSearchParams,
+  labels: SahyogLabels,
+  drive: PublicSahyogDriveResponse | null,
+  opts: { readonly filtered: boolean } = { filtered: false },
+): SahyogView {
+  const apiUnavailable = drive === null;
+  const rows = drive === null ? [] : drive.items.map((r) => toDisplayRow(r, labels));
+  const total = drive?.total ?? 0;
+
+  // ⚠ "past the end" ⟺ the index genuinely HAS drives (`total > 0`) but none landed on THIS page.
+  // ⛔ Distinct from an index that has never published a drive (`total === 0`), which is honestly
+  // "nothing yet" rather than "you went too far".
+  //
+  // ⭐ NOTE THE `page > 1` CONJUNCT IS KEPT even though this surface's rows-vs-total asymmetry is
+  // WEAKER than `/members`'. There, a KMS failure drops ROWS after the count is taken, so page 1
+  // could come up empty against a non-zero total. HERE a failed decrypt drops only the NAME and
+  // the row survives — so that specific mismatch cannot arise. ⛔ The conjunct stays anyway: it
+  // costs nothing, and "you have reached the end" on page 1 would be false under ANY future cause.
+  const pastEnd = !apiUnavailable && total > 0 && rows.length === 0 && accepted.page > 1;
+
+  const model: SahyogDriveRenderModel = {
+    hasDrives: rows.length > 0,
+    page: accepted.page,
+    limit: accepted.limit,
+    apiUnavailable,
+    pastEnd,
+    filtered: opts.filtered,
+    rows,
+  };
+
+  const hasPrevious = model.page > 1;
+  // ⭐ A next page exists iff the index holds more rows than this page's window covers — AND the
+  // next page is one `parsePageParams` will actually ACCEPT.
+  // ⚠ THE HORIZON CLAMP IS NOT DECORATION: without it a large index advertises
+  // `<a rel="next" href="?page=201">` on page 200, and clicking it hits the 400 state. ⛔ A page
+  // must never advertise a link it knows the parser will refuse.
+  const hasNext =
+    !apiUnavailable &&
+    accepted.page * accepted.limit < total &&
+    accepted.page + 1 <= PUBLIC_PAGE_HORIZON;
+
+  const links: PaginationLink[] = [];
+  if (hasPrevious) {
+    links.push({
+      href: pageHref(SAHYOG_ROUTE, search, model.page - 1),
+      label: labels.previousPage,
+      rel: 'prev',
+    });
+  }
+  if (hasNext) {
+    links.push({
+      href: pageHref(SAHYOG_ROUTE, search, model.page + 1),
+      label: labels.nextPage,
+      rel: 'next',
+    });
+  }
+
+  return { model, links, hasPrevious, hasNext };
+}
+
+/**
+ * Split the page's rows into the two rendered sections.
+ *
+ * ⚠ ONE bounded page read feeds BOTH sections — ⛔ not two requests and ⛔ not two paginations.
+ * The page is the unit of bounding; Active/Archive is a presentation split within it.
+ */
+export function splitSections(
+  view: SahyogView,
+  labels: SahyogLabels,
+): { active: readonly SahyogDriveRow[]; archive: readonly SahyogDriveRow[] } {
+  return {
+    active: view.model.rows.filter((r) => r.driveStatus === labels.statusActive),
+    archive: view.model.rows.filter((r) => r.driveStatus === labels.statusArchive),
+  };
+}
+
+/** One rendered drive column: its matrix field id, its header, and how to read its value. */
+export interface SahyogColumn {
+  /** The snake_case matrix field id — what `getVisibility()` is asked about. */
+  readonly fieldId: string;
+  readonly headerLabel: string;
+  /**
+   * ⚠ Returns `null` to mean *render NOTHING in this cell* — ⛔ not an empty string, ⛔ not a dash.
+   * The template must emit an EMPTY cell for a null, with ⛔ no placeholder text of any kind.
+   */
+  readonly valueOf: (row: SahyogDriveRow) => string | null;
+}
+
+/**
+ * The drive index's columns, IN RENDER ORDER, filtered to those the matrix says are visible.
+ *
+ * ⭐ WHY THIS EXISTS — the 11a.3 finding, inherited rather than rediscovered: `<MatrixField>`
+ * correctly renders NOTHING for a not-visible verdict, but the `<td>` wrapping it and the `<th>`
+ * labelling its column sit OUTSIDE the component. An unconditional pair produces an empty `<td>`
+ * in every row under a still-labelled header — which is precisely what AC5 forbids: *"An omission
+ * that announces itself is an ENUMERATION SIGNAL: a scraper diffing renders learns exactly which
+ * fields exist."* ⇒ the `<th>`/`<td>` pair is suppressed TOGETHER, here.
+ *
+ * ⚠ `isVisible` is INJECTED rather than imported: this module must stay free of `matrix.server.ts`,
+ * which inlines the matrix YAML via a Vite `?raw` specifier and cannot load in a plain unit test.
+ * ⛔ It is not a seam for a second visibility rule — pass `visibilityOf(...).visible` and nothing else.
+ *
+ * ⛔ THERE IS NO SORT AFFORDANCE ON ANY COLUMN, and its absence is the AC5 prohibition in code: a
+ * "sort by contributions" header link is a leaderboard wearing a table affordance.
+ */
+export function visibleSahyogColumns(
+  labels: SahyogLabels,
+  isVisible: (fieldId: string) => boolean,
+): SahyogColumn[] {
+  const all: SahyogColumn[] = [
+    {
+      fieldId: 'deceased_member_name',
+      headerLabel: labels.columnName,
+      // ⭐⛔ A NULL NAME RENDERS NOTHING — ⛔ no placeholder, ⛔ no "withheld", ⛔ no em-dash.
+      // ⚠ Note this DIFFERS from the district/date columns below, which DO carry a "not recorded"
+      // fallback, and the difference is deliberate: a missing district is an incomplete RECORD,
+      // while a missing name is a family's CHOICE — and announcing a choice is what turns the
+      // omission into a signal a scraper can diff.
+      valueOf: (row) => row.deceasedMemberName,
+    },
+    {
+      fieldId: 'pool_canonical_identifier',
+      headerLabel: labels.columnPool,
+      valueOf: (row) => row.poolCanonicalIdentifier,
+    },
+    {
+      fieldId: 'pool_letter_code',
+      headerLabel: labels.columnLetter,
+      valueOf: (row) => row.poolLetterCode,
+    },
+    {
+      fieldId: 'district',
+      headerLabel: labels.columnDistrict,
+      // ⚠ The "not recorded" fallback lives HERE, ⛔ not in the template — a display decision in
+      // `.astro` frontmatter never enters the render model and is invisible to the tier-leak leg.
+      valueOf: (row) => row.district ?? labels.districtUnknown,
+    },
+    {
+      fieldId: 'drive_closed_at',
+      headerLabel: labels.columnDate,
+      valueOf: (row) => row.driveClosedAt ?? labels.dateUnknown,
+    },
+    {
+      fieldId: 'confirmed_contribution_count',
+      headerLabel: labels.columnContributions,
+      valueOf: (row) => row.confirmedContributionCount,
+    },
+    {
+      fieldId: 'close_of_cycle_framing',
+      headerLabel: labels.columnOutcome,
+      valueOf: (row) => row.closeOfCycleFraming,
+    },
+  ];
+  return all.filter((c) => isVisible(c.fieldId));
+}
+
+/**
+ * The 400-shaped state for a REJECTED page request.
+ *
+ * ⛔ Not a redirect to page 1, and ⛔ not a successful render of a different page than was asked
+ * for. Both would answer a probe with a normal-looking page, which is the silent-clamp behaviour
+ * FR-91's rejection exists to replace.
+ *
+ * ⭐ IT TAKES NO `rejection` ARGUMENT, AND THAT IS THE POINT — the rendered state is
+ * REJECTION-INVARIANT. `?page=all`, `?limit=99999`, `?page=-1` and `?format=csv` all produce
+ * byte-identical output, so a prober learns ⛔ nothing about WHICH bound it hit or where the
+ * boundary sits. The decidable reason lives on the parser's verdict for logs and tests; ⛔ it never
+ * reaches the DOM.
+ */
+export interface SahyogRejectionView {
+  readonly title: string;
+  readonly body: string;
+  readonly linkLabel: string;
+  readonly linkHref: string;
+  readonly status: 400;
+}
+
+export function buildSahyogRejectionView(labels: SahyogLabels): SahyogRejectionView {
+  return {
+    title: labels.rejectedTitle,
+    body: labels.rejectedBody,
+    linkLabel: labels.pageTitle,
+    linkHref: SAHYOG_ROUTE,
+    status: 400,
+  };
+}
+
+/** Re-exported so the page never re-derives the reason for logging. */
+export type { PaginationResult };

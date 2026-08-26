@@ -61,9 +61,16 @@ import {
 } from '../../../src/lib/members-render.js';
 import { matrixFieldOutput, visibilityOf } from '../../../src/lib/matrix.server.js';
 import {
+  buildSahyogView,
+  visibleSahyogColumns,
+  type SahyogLabels,
+} from '../../../src/lib/sahyog-render.js';
+import {
   deriveFieldIds,
   membersSurfaceFieldIds,
+  sahyogDriveSurfaceFieldIds,
   MEMBER_DIRECTORY_ROW_FIELD_IDS,
+  SAHYOG_DRIVE_ROW_FIELD_IDS,
 } from '../../../src/lib/surface-fields.js';
 import {
   buildTcRenderModel,
@@ -754,6 +761,260 @@ describe('PII scrape — Member Directory (/members, Story 11a.3)', () => {
     const verdict = evaluateSnapshot(preEscalationMatrix, snapshot);
     expect(verdict.status).toBe('fail');
     const leak = verdict.leaks.find((l) => l.field === 'member_name');
+    expect(leak?.tier).toBe('authenticated_member');
+  });
+});
+
+// ⭐⛔ THE SAHYOG DRIVE TIER-LEAK LEG IS **OPERATIVE FROM THIS SURFACE'S FIRST COMMIT** — Story
+// 11b.1 (AC7). ⛔ It was never armed-but-empty, deliberately: a green scan over a surface whose
+// field set is empty proves NOTHING, and the green check would then actively certify an invariant
+// nobody is enforcing ([[feedback_gate_scope_semantic_coverage]]).
+//
+// ⭐ AND THIS SURFACE IS THE ONE THAT MOST NEEDED IT: it is the SECOND field in the whole matrix to
+// render Tier-1 PII at `public`, admitted only by the widening at `2026-08-24-159` cl.2 (D1(b)).
+// The planted controls below are what make "the widening is enumerated, not a door" checkable at
+// the RENDER layer, not just at the parser.
+describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
+  /** Labels are irrelevant to the field-set derivation; only the model's KEYS matter. */
+  const SAHYOG_TEST_LABELS: SahyogLabels = {
+    pageTitle: 'Sahyog Drive',
+    pageIntro: 'intro',
+    tableCaptionActive: 'active caption',
+    tableCaptionArchive: 'archive caption',
+    sectionActiveTitle: 'Active',
+    sectionArchiveTitle: 'Archive',
+    columnName: 'In memory of',
+    columnPool: 'Drive code',
+    columnLetter: 'Pool',
+    columnDistrict: 'District',
+    columnDate: 'Closed on',
+    columnContributions: 'Contributions confirmed',
+    columnOutcome: 'Close of cycle',
+    districtUnknown: 'Not recorded',
+    dateUnknown: 'Not recorded',
+    statusActive: 'Active',
+    statusArchive: 'Archive',
+    emptyTitle: 'none yet',
+    emptyBody: 'none yet body',
+    emptyFilteredTitle: 'none match',
+    emptyFilteredBody: 'none match body',
+    outageTitle: 'unavailable',
+    outageBody: 'temporary',
+    pastEndTitle: 'end of list',
+    pastEndBody: 'no more drives',
+    rejectedTitle: 'bad request',
+    rejectedBody: 'return to page one',
+    paginationLabel: 'pages',
+    previousPage: 'previous',
+    nextPage: 'next',
+    outcomeFullyFunded: 'The cycle closed with the support it needed.',
+    outcomeUnderFunded: 'The cycle closed. The trust met its commitment.',
+    outcomePartial: 'The cycle closed. Reconciliation continues.',
+    contributionsCount: (n) => `${String(n)} confirmed`,
+  };
+
+  const model = buildSahyogView({ page: 1, limit: 25 }, new URLSearchParams(''), SAHYOG_TEST_LABELS, {
+    items: [
+      {
+        deceasedMemberName: 'Rajesh Kumar Sharma',
+        poolLetterCode: 'A',
+        poolCanonicalIdentifier: 'P-2026-08-001',
+        status: 'active',
+        closedAt: '2026-08-01T00:00:00.000Z',
+        district: 'Lucknow',
+        confirmedContributionCount: 12,
+        fundingOutcome: 'fully_funded',
+      },
+      // ⭐ AN UNCONSENTED ROW IS IN THE FIXTURE ON PURPOSE — the render must still emit the row,
+      // and must emit NOTHING where the name would be. A fixture of only consented rows would let
+      // a placeholder ("—", "withheld") ship without any test noticing.
+      {
+        deceasedMemberName: null,
+        poolLetterCode: 'B',
+        poolCanonicalIdentifier: 'P-2026-08-002',
+        status: 'archive',
+        closedAt: null,
+        district: null,
+        confirmedContributionCount: 0,
+        fundingOutcome: 'under_funded',
+      },
+    ],
+    page: 1,
+    limit: 25,
+    total: 2,
+  }).model;
+
+  /**
+   * ⭐ THE RENDERED HTML, BUILT THROUGH THE PRODUCTION PATH — ⛔ not hand-written, and ⛔ not a
+   * concatenation of the fields this test already knows about. It walks `visibleSahyogColumns` +
+   * `matrixFieldOutput` — the SAME two functions `sahyog.astro` uses — so a newly-rendered value
+   * appears here automatically. A hand-maintained string restating the render is exactly what a
+   * newly-rendered field would silently escape.
+   */
+  const columns = visibleSahyogColumns(
+    SAHYOG_TEST_LABELS,
+    (fieldId) => visibilityOf('sahyog-drive', fieldId, 'public').visible,
+  );
+  const SAHYOG_HTML = [
+    '<table>',
+    `<thead><tr>${columns.map((c) => `<th scope="col">${c.headerLabel}</th>`).join('')}</tr></thead>`,
+    '<tbody>',
+    ...model.rows.map(
+      (row) =>
+        `<tr>${columns
+          .map((c) => {
+            const { output } = matrixFieldOutput('sahyog-drive', c.fieldId, 'public', c.valueOf(row) ?? '');
+            // ⛔ `null` ⇒ NOTHING — no cell, no placeholder. Mirrors the page exactly.
+            return output === null ? '' : `<td><span data-field="${c.fieldId}">${output}</span></td>`;
+          })
+          .join('')}</tr>`,
+    ),
+    '</tbody></table>',
+  ].join('');
+
+  const snapshot: RenderSnapshot = {
+    surfaceId: 'sahyog-drive',
+    viewerContext: 'public',
+    html: SAHYOG_HTML,
+    fields: sahyogDriveSurfaceFieldIds(model),
+  };
+
+  it('⭐ the snapshot field set is NON-EMPTY, and is EXACTLY the eight classified fields', () => {
+    // ⛔ Asserting the EXACT set — rather than "length > 0" — is what makes a DROPPED field fail
+    // here too. A leg that only detects additions accepts a field vanishing from the render while
+    // the matrix still claims it is shown.
+    expect(snapshot.fields).toEqual([
+      'close_of_cycle_framing',
+      'confirmed_contribution_count',
+      'deceased_member_name',
+      'district',
+      'drive_closed_at',
+      'drive_status',
+      'pool_canonical_identifier',
+      'pool_letter_code',
+    ]);
+  });
+
+  it('evaluateSnapshot passes — and the pass proves the drive index IS policed', () => {
+    const verdict = evaluateSnapshot(matrix, snapshot);
+    expect(verdict.status).toBe('pass');
+    expect(verdict.leaks).toEqual([]);
+  });
+
+  it('⭐ deceased_member_name IS rendered, and the matrix declares it visible at public', () => {
+    // ⚠ It is visible under the SECOND `tier1_public_exception` matrix-wide — the one D1(b) had to
+    // widen the parser to admit. ⛔ There is no configuration in which this renders and that block
+    // is absent: `matrix.ts:176-197` is biconditional.
+    expect(getVisibility(matrix, 'sahyog-drive', 'deceased_member_name', 'public').visible).toBe(true);
+    expect(snapshot.fields).toContain('deceased_member_name');
+  });
+
+  it('⭐⛔ AN UNCONSENTED ROW RENDERS, AND ITS NAME CELL IS ABSENT — ⛔ no placeholder', () => {
+    // ⭐ THE WHOLE OF AC2 AT THE RENDER LAYER. Both rows are present, and the unconsented one
+    // carries NO name text of any kind: no "—", no "withheld", no empty labelled span.
+    // ⛔ An omission that announces itself is an ENUMERATION SIGNAL — a scraper diffing renders
+    // would learn exactly which families declined.
+    expect(model.rows).toHaveLength(2);
+    expect(SAHYOG_HTML).toContain('P-2026-08-002'); // the unconsented drive is on the page
+    expect(SAHYOG_HTML).toContain('Rajesh Kumar Sharma'); // the consented one is named
+    // The name cell for the second row emits nothing at all.
+    const nameCells = SAHYOG_HTML.match(/data-field="deceased_member_name"/g) ?? [];
+    expect(nameCells).toHaveLength(1);
+    for (const marker of ['withheld', 'Withheld', '&mdash;', 'N/A', 'Not recorded—']) {
+      expect(SAHYOG_HTML).not.toContain(marker);
+    }
+  });
+
+  it('⛔ the rendered HTML leaks no naked PII — and the leg actually RUNS on this surface', () => {
+    expect(detectNakedPii(SAHYOG_HTML)).toEqual([]);
+    expect(snapshot.html).toBeDefined();
+    expect(snapshot.html).toContain('Rajesh Kumar Sharma');
+  });
+
+  it('⭐ NEGATIVE CONTROL — the FR-93 leg on THIS surface catches naked PII when it is there', () => {
+    // ⛔ Without this, `detectNakedPii(SAHYOG_HTML) === []` proves only that the scan ran over
+    // something; it does not prove the scan can FAIL.
+    const leaky = SAHYOG_HTML.replace(
+      '</tbody>',
+      '<tr><td><span data-field="nominee_mobile">9876543210</span></td></tr></tbody>',
+    );
+    expect(detectNakedPii(leaky).length).toBeGreaterThan(0);
+  });
+
+  // ── INDEPENDENTLY PLANTED CONTROLS. ⛔ One fixture must never trip several checks. ──
+
+  it('CONTROL 1 — an UNDECLARED field at public FAILS (and names the field)', () => {
+    // ⚠ `nominee_family_identifier` is the honest choice of planted id here: it is the field AC11(a)
+    // explicitly ROUTES rather than builds, and counsel's `-157` cl.3(b) third-party objection
+    // binds it. If a future story renders it without declaring it, THIS is what fires.
+    const verdict = evaluateSnapshot(matrix, {
+      surfaceId: 'sahyog-drive',
+      viewerContext: 'public',
+      fields: [...snapshot.fields!, 'nominee_family_identifier'],
+    });
+    expect(verdict.status).toBe('fail');
+    expect(verdict.leaks).toHaveLength(1);
+    expect(verdict.leaks[0]!.tier).toBe('unclassified');
+    expect(verdict.leaks[0]!.field).toBe('nominee_family_identifier');
+  });
+
+  it('CONTROL 2 — ⭐ the leak fails a run that PREVIOUSLY PASSED, on the REAL field set', () => {
+    // ⭐ "The set is non-empty" is not the proof. The proof is that the SAME snapshot passes, and
+    // then FAILS once a leak is planted into it.
+    const clean = evaluateSnapshot(matrix, snapshot);
+    expect(clean.status).toBe('pass');
+
+    const leaked = evaluateSnapshot(matrix, {
+      ...snapshot,
+      fields: [...snapshot.fields!, 'deceased_member_mobile'],
+    });
+    expect(leaked.status).toBe('fail');
+    expect(leaked.leaks.map((l) => l.field)).toContain('deceased_member_mobile');
+  });
+
+  it('CONTROL 3 — a DROPPED field is caught by the REAL derivation, not by arithmetic', () => {
+    // ⛔ An INDEPENDENT control: a leg that only detects ADDITIONS would silently accept a field
+    // being removed from the render while the matrix still claims it is shown. The real mechanism
+    // is `deriveFieldIds`, which throws in BOTH directions — plant a STALE MAPPING and require it.
+    const rowWithDroppedField = {
+      deceasedMemberName: 'Rajesh Kumar Sharma',
+      poolLetterCode: 'A',
+      poolCanonicalIdentifier: 'P-2026-08-001',
+      driveStatus: 'Active',
+      driveClosedAt: '01-08-2026',
+      district: 'Lucknow',
+      confirmedContributionCount: '12 confirmed',
+      // ⛔ `closeOfCycleFraming` deliberately absent.
+    };
+    expect(() => deriveFieldIds(rowWithDroppedField, SAHYOG_DRIVE_ROW_FIELD_IDS)).toThrow(
+      /close_of_cycle_framing|closeOfCycleFraming/,
+    );
+
+    // ⭐ And the positive half, so the control cannot pass by throwing on everything.
+    expect(() =>
+      deriveFieldIds(
+        { ...rowWithDroppedField, closeOfCycleFraming: 'ok' },
+        SAHYOG_DRIVE_ROW_FIELD_IDS,
+      ),
+    ).not.toThrow();
+  });
+
+  it("CONTROL 4 — ⭐ a REAL authenticated_member-tier field at public FAILS (the tier half)", () => {
+    // ⛔ CONTROLS 1 and 2 both plant an id the matrix has never heard of, which is the UNDECLARED
+    // path. This is the TIER-CEILING path (`above_viewer_ceiling`), done honestly with a REAL field
+    // and a simulated tier: if `deceased_member_name` had NOT been admitted to `public` by D1(b),
+    // would this leg have caught it leaking? This proves yes.
+    const preWideningMatrix: PublicVsPrivateMatrix = structuredClone(matrix);
+    const surface = preWideningMatrix.surfaces.find((s) => s.id === 'sahyog-drive');
+    const nameField = surface?.fields.find((f) => f.id === 'deceased_member_name');
+    if (nameField === undefined) {
+      throw new Error('fixture assumption broke: deceased_member_name row moved');
+    }
+    nameField.tier = 'authenticated_member';
+
+    const verdict = evaluateSnapshot(preWideningMatrix, snapshot);
+    expect(verdict.status).toBe('fail');
+    const leak = verdict.leaks.find((l) => l.field === 'deceased_member_name');
     expect(leak?.tier).toBe('authenticated_member');
   });
 });

@@ -142,6 +142,42 @@ export const consentTypeEnum = pgEnum('consent_type', [
 ]);
 
 /**
+ * ⭐ THE CLAIM-TIME SUBSET, DECLARED ONCE — the four `consent_type` values Story 6.9's capture step
+ * collects, in the order the boxes appear.
+ *
+ * ⚠ ⛔ THIS EXISTS BECAUSE THE SUBSET WAS RE-SPELLED IN FIVE PLACES AND ONE OF THEM WAS MISSED.
+ * Story 11b.1 added `sahyog_drive_publication` to the pgEnum above, to `@twt/contracts`'
+ * `ConsentTypeSchema`, `DpdpaConsentType` and `DpdpaRevocableConsentType` — and the FIFTH copy, the
+ * `claim.dpdpa_consent_recorded` event payload's inline `z.enum([...])`, had no lockstep test and
+ * was silently left behind. ⇒ recording the new consent parsed fine at the API boundary and then
+ * **500'd at the event append**, and it did so ONLY on the path where a family actually TICKED the
+ * box. ⭐ A test that appended the new field as `false` everywhere would have stayed green.
+ *
+ * ⇒ the event schema now derives from THIS tuple. ⛔ Do not re-spell the list at a call site again.
+ * ⚠ It is a deliberate SUBSET of the pgEnum, ⛔ not the whole of it: `marketing`, `tc_acceptance`
+ * and the channel opt-ins are not claim-time consents and must never widen this payload.
+ */
+export const CLAIM_TIME_CONSENT_TYPES = [
+  'claim_time_dpdpa',
+  'sahyog_vivran_publication',
+  'in_memoriam_listing',
+  'sahyog_drive_publication',
+] as const;
+
+/**
+ * The PUBLICATION subset — the claim-time consents that are REVOCABLE (Story 6.9 D7).
+ *
+ * ⛔ `claim_time_dpdpa` is deliberately absent: it authorises PROCESSING, not publication, and is
+ * not a takedown target. ⚠ Revocation is open at ANY claim state, including after settlement —
+ * 6.9 AC3's whole point is a post-settlement takedown.
+ */
+export const CLAIM_TIME_PUBLICATION_CONSENT_TYPES = [
+  'sahyog_vivran_publication',
+  'in_memoriam_listing',
+  'sahyog_drive_publication',
+] as const;
+
+/**
  * How a consent was granted (AC1): `member_self` (the member acted directly),
  * `staff_assisted` (a staff actor recorded it on the member's behalf), or
  * `inherited` (carried forward from a prior consent context). Also a `pgEnum` →

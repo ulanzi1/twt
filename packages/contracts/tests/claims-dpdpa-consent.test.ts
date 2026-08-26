@@ -107,7 +107,8 @@ describe('DPDPA-consent DTOs (strict + shapes)', () => {
   // REQUIRED, not optional, on purpose: an optional field would let a client that never RENDERED the
   // box submit a body indistinguishable from one where the family saw it and declined.
   it('REJECTS a request that OMITS the Sahyog Drive box (a client must make a deliberate choice)', () => {
-    const { sahyogDrivePublication: _omitted, ...withoutBox } = validRecord;
+    const withoutBox: Record<string, unknown> = { ...validRecord };
+    delete withoutBox['sahyogDrivePublication'];
     expect(() => RecordDpdpaConsentRequest.parse(withoutBox)).toThrow();
   });
 

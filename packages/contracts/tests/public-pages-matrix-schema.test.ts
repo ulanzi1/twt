@@ -146,7 +146,57 @@ describe('the ruled Tier-1 public exception (AC4)', () => {
     ).toThrow(/tier1_public_exception/);
   });
 
-  it('REJECTS a SECOND Tier-1 `public` exception anywhere in the matrix (⛔ an exception, not a door)', () => {
+  // ── Decision 2026-08-24-159 cl.2 (Story 11b.1 / D1(b)) — the allowlist ──────────────────
+  // The rule moved from "exactly ONE, whichever it is" to "exactly THESE TWO, by name". These
+  // four cases pin both halves: the two ruled pairs are admitted, and identity is now load-
+  // bearing — an exception on ANY other field fails even though only two exist matrix-wide.
+
+  const sahyogDriveException = `  - id: sahyog-drive
+    route: /sahyog
+    renders: true
+    search_indexing_policy: noindex
+    cache_policy: edge_cacheable
+    fields:
+      - id: deceased_member_name
+        tier: public
+        pii_tier: 1
+        tier1_public_exception:
+          decision: '2026-08-24-159'
+          rationale: Story 11b.1 D1(b) — consent-gated deceased member name.
+          scope: this surface only
+`;
+
+  it('ADMITS the SECOND ruled exception — sahyog-drive.deceased_member_name (D1(b))', () => {
+    const m = parsePublicVsPrivateMatrix(doc(`${withException}${sahyogDriveException}`));
+    expect(m?.surfaces[1]?.fields[0]?.tier1_public_exception?.decision).toBe('2026-08-24-159');
+  });
+
+  it('REJECTS a THIRD Tier-1 `public` exception (⛔ the widening is enumerated, not a door)', () => {
+    expect(() =>
+      parsePublicVsPrivateMatrix(
+        doc(`${withException}${sahyogDriveException}  - id: in-memoriam
+    route: /in-memoriam
+    renders: false
+    search_indexing_policy: noindex
+    cache_policy: edge_cacheable
+    fields:
+      - id: deceased_name
+        tier: public
+        pii_tier: 1
+        tier1_public_exception:
+          decision: '2026-08-19-136'
+          rationale: A third one, which must not be allowed.
+          scope: this surface only
+`),
+      ),
+    ).toThrow(/enumerated allowlist|not on it/i);
+  });
+
+  // ⭐ THE CASE THE OLD COUNT-ONLY CHECK COULD NOT SEE. Only TWO exceptions exist here, so the
+  // pre-widening `exceptions.length > 1` rule would have counted 2 and — under a naive "raise
+  // the ceiling to 2" widening — PASSED, licensing In Memoriam to publish a Tier-1 name that
+  // no ruling ever authorised. Identity is the control; the count never was.
+  it('REJECTS a second exception on an UNRULED field even though only two exist', () => {
     expect(() =>
       parsePublicVsPrivateMatrix(
         doc(`${withException}  - id: in-memoriam
@@ -160,11 +210,34 @@ describe('the ruled Tier-1 public exception (AC4)', () => {
         pii_tier: 1
         tier1_public_exception:
           decision: '2026-08-19-136'
-          rationale: A second one, which must not be allowed.
+          rationale: Not the ruled pair — in-memoriam keeps first-name + last-initial.
           scope: this surface only
 `),
       ),
-    ).toThrow(/exactly one|second|more than one/i);
+    ).toThrow(/in-memoriam\.deceased_name/);
+  });
+
+  // ⛔ D1(b)/D10's scope fence, asserted rather than merely written down: the Sahyog Drive
+  // ruling does NOT travel to 11b.3's surface just because the field means the same thing.
+  it('REJECTS the ruled Sahyog Drive field id when it appears on a DIFFERENT surface', () => {
+    expect(() =>
+      parsePublicVsPrivateMatrix(
+        doc(`${withException}  - id: sahyog-vivran
+    route: /sahyog-vivran
+    renders: false
+    search_indexing_policy: noindex
+    cache_policy: edge_cacheable
+    fields:
+      - id: deceased_member_name
+        tier: public
+        pii_tier: 1
+        tier1_public_exception:
+          decision: '2026-08-24-159'
+          rationale: Borrowing 11b.1's ruling for a surface it does not reach.
+          scope: this surface only
+`),
+      ),
+    ).toThrow(/sahyog-vivran\.deceased_member_name/);
   });
 
   it('REJECTS an exception block missing its decision ref (attribution is mandatory)', () => {

@@ -4,7 +4,7 @@ baseline_commit: a231ca7b3e1ee8b7c8a63de3189095f5427706ea
 
 # Story 11b.1: Sahyog Drive Active + Archive — Searchable, Paginated, No Bulk Export + Remembrance-Not-Analytics Invariant `[SURFACE]`
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -642,74 +642,74 @@ merging and records the count — ⛔ never assumes it.
   - [x] ⚠ Write *"counsel has not reviewed X"* — ⛔ **never** *"counsel is not engaged"* (`2026-08-24-158`)
   - [x] Confirm the `epics.md` `RECONCILED 2026-08-24 (AI-11a-1(b))` block is present (authored by this pass) and rides the **same commit family**
   - [x] ⛔ Do **not** flip any launch-gate row, do **not** record Row 17 as advanced, do **not** describe counsel's hold as lifted
-- [ ] **Task 1 — The pool index read model (AC: 1, 4)** — per **D7**
-  - [ ] `packages/domain/src/pool/public-read.ts`: ONE set-based query, ⛔ never a per-row fan-out (AR-65)
-  - [ ] Predicate: `pariwar_id` explicit **alongside** RLS + `current_state IN ('closed','settled')` + the D-ruled district/date/pool-code filters
-  - [ ] Confirmed count as a **lateral aggregate** over `events_log`, applying `reconciliation.confirmation-reversed` compensation — ⛔ never `listConfirmedContributorsForPool` per row
-  - [ ] `clampLimit()` on every dynamic `.limit()` (the `domain-accessor-invariants` gate clamps **every** one — [[project_domain_limit_clamp_and_savepoint_retry]])
-  - [ ] Deterministic `ORDER BY` with a PK tie-break — offset paging over a non-deterministic order duplicates rows across pages
-  - [ ] A matching `count*` accessor sharing the **same** predicate function; ⛔ never two spellings; ONE injected `now` for both
-  - [ ] ⚠ `count(*)` returns `bigint` ⇒ a **string** from the driver — coerce at the accessor
-  - [ ] ⭐ **Return each row's `deceased_member_id`** (from `pools.claim_id → claims.deceased_member_id`) as the **consent subject key** ([[project_consent_subject_key_convention]]) — ⚠ it is an **internal** field for the consent join and the decrypt, ⛔ **never** serialized onto the public wire (AC8)
-  - [ ] ⭐⛔ **BATCH THE CONSENT VERDICT — ⛔ never `consentExists` per row.** One set-based read over the page's subject set (`inArray`, or a lateral join in this same query), sharing the **ONE injected `now`** ⇒ ⛔ the D7(a) AR-65 N+1 must not return through the consent door (AC2)
-  - [ ] Copy `directory-read.ts`'s *"decides a render, never a benefit"* fence into the header verbatim
-  - [ ] ⛔ **This module stays decrypt-free** — it returns the *ciphertext* + the consent verdict; the decrypt is **Task 2's**, at `apps/api`, where the KMS binding lives
-- [ ] **Task 2 — The `apps/api` route (AC: 8, 9)**
-  - [ ] Add the route to `apps/api/src/modules/public-pages/` with its **own** defence block enumerating its controls
-  - [ ] Add its **own** `login-wall.spec.ts` allowlist entry — ⚠ **matching control count** in both places
-  - [ ] `config: { rateLimit: limits.search }`, `.strict()` schemas, bounded `page` + `limit` from `@twt/contracts` (⛔ imported, ⛔ never re-declared)
-  - [ ] Publication switch checked **FIRST** (per **D3**), returning the identical empty shape
-  - [ ] Abuse counter after the switch, before the read, passing `pariwarId` **and** `traceId`
-  - [ ] ⭐⛔ **THE TIER-1 NAME RESOLUTION LIVES HERE, AND NOWHERE ELSE (AC2).** ⚠ It is easy to leave this task unowned: Task 1's module is decrypt-free by rule and `apps/public` **cannot** decrypt (`no-kms-in-public.test.ts` scans the whole app). ⇒ ⛔ if this handler does not do it, **nothing does**:
-    - [ ] **Consent verdict FIRST** — skip the decrypt entirely for an unconsented row (⛔ zero KMS calls, and ⛔ no decrypt without an authorising basis)
-    - [ ] `mapWithConcurrency(rows, DIRECTORY_DECRYPT_CONCURRENCY, …)` — ⛔ **never** `Promise.all`, whose only ceiling is `limit` ⇒ 50×N in-flight KMS calls for N visitors on an **unauthenticated** route (`handlers.ts:192-200`, the defect 11a.3 fixed)
-    - [ ] `encryption.decryptKycField(ciphertext, pariwarId, deps.encryption)` inside a per-row `try/catch` — ⛔ **omit the NAME, keep the ROW** (⚠ this is the deliberate inverse of `/members`, which omits the row); ⛔ never let one bad row 500 the page
-    - [ ] `resolvePublicMemberName(await resolvePublicNamePresentationMode(tx, pariwarId), storedName)` — ⛔ **never** `resolvePoolIdentity()` (it hard-codes `splitFirstNameLastInitial`), ⛔ never a literal (`-136` cl.1)
-    - [ ] **Pre-sized slot array indexed by row position** — ⛔ never completion order; nothing here may re-sort, or *"page N is the same page N"* stops being true
-    - [ ] ⛔ The decrypted value **never leaves the closure** except through `resolvePublicMemberName`, and is ⛔ **never logged**
-  - [ ] Response DTO carries only classified fields — a test asserts the **absence** of `member_id`, `deceased_member_id`, ciphertext and claim id
-- [ ] **Task 3 — The `apps/public` client + route (AC: 1, 6, 7)**
-  - [ ] `apps/public/src/lib/sahyog.server.ts` mirroring `directory.server.ts`; **reuse `buildForwardedFor`**, ⛔ do not re-implement
-  - [ ] `apps/public/src/lib/sahyog-render.ts` — ALL display logic, pure, DB-free-testable
-  - [ ] `apps/public/src/pages/sahyog.astro` — thin frontmatter, `<MatrixField>` on every value, explicit `t()` namespace everywhere
-  - [ ] `parsePageParams()` reused **unchanged**; the four Trap-7 states each rendered and each with the right cache header + status
-- [ ] **Task 3b — The consent substrate (AC: 12)** — per **D4(b)** ⭐ **DO THIS EARLY: it is cheap now and impossible after launch**
-  - [ ] ⚠ **Confirm the existing claim cohort is EMPTY and record the count** — every claim already filed is permanently unaskable. ⛔ Do not assume; query it
-  - [ ] `ALTER TYPE consent_type ADD VALUE 'sahyog_drive_publication'` — **its own migration file**, appended at the **END** (⛔ never reorder a pgEnum; stored ordinals). ⚠ That DDL ⛔ cannot run in a tx or in the same tx it is added
-  - [ ] `@twt/contracts`: add to `DpdpaConsentType` **and** `DpdpaRevocableConsentType`; ⚠ the lockstep equality test (pgEnum `.enumValues` ⇄ schema `.options`) must cover it — ⛔ contracts must not import domain
-  - [ ] Story 6.9 capture path: a **fourth box**, **unchecked by default**, ⛔ **OUTSIDE** the `.refine()` that forces `claimTimeDpdpa`
-  - [ ] Canonical bilingual copy in `resolveDpdpaConsentCopy` **and** the mobile `claim.json` `dpdpa.*` keys, held **identical by value** — ⚠ that text is the persisted EVIDENCE (`checkboxTextShown`)
-  - [ ] ⭐ The copy carries the **same declinability sentence its siblings carry**, both locales. ⛔ It is NOT mandatory — Niyamavali §4.4 + Part 10 forbid default opt-in
-  - [ ] Wire the render gate on `sahyog_drive_publication`, subject = the **deceased member**; ⛔ missing and **revoked** are the same verdict. ⚠ ⭐ **BATCHED, ⛔ not per row** — `consentExists(db, pariwarId, subjectId, type, validAt?)` (`consent/read.ts:36`) is **one query per subject**; the page's verdicts resolve in Task 1's set-based read (⛔ the D7(a) N+1 must not return through this door)
-- [ ] **Task 3c — The matrix widening (AC: 2, 7)** — per **D1(b)**, ⛔ AFTER Task 0's decision entry exists
-  - [ ] Widen `matrix.ts`'s exactly-one `superRefine` to admit this surface, citing the decision entry **in the message text** — ⛔ never a bare relaxation
-  - [ ] ⚠ Keep it an **enumerated** admission, ⛔ not a removal of the check: a third exception must still FAIL. Prove it with a planted third
-  - [ ] ⛔ `escalation_count` stays `1`; ⛔ no `tier1_public_exception` count is "fixed" by deleting the rule
-- [ ] **Task 4 — The matrix declaration (AC: 7)**
-  - [ ] Add the `sahyog-drive` surface with **explicit** `cache_policy`, `paginated: true`, `renders: true`, `noindex`, and a fully-classified `fields:` list
-  - [ ] The `deceased_member_name` field carries `pii_tier: 1`, `tier: public`, its own `tier1_public_exception` naming the D1(b) decision entry, and a `scope:` that ⛔ **does not reach 11b.3 or 11b.6**
-  - [ ] ⚠ Amend the file header's *"Epic 11b surfaces are DELIBERATELY NOT DECLARED"* note for **this surface only** — ⛔ 11b.3 and 11b.6 stay undeclared and the note must still say so
-  - [ ] ⭐⚠ **Amend the EXISTING `member-directory.member_name` exception's `scope:` text** — it currently asserts that the 11b surfaces *"keep first-name + last-initial"*, which **D10 makes false for this surface**. ⛔ **Annotate, ⛔ never rewrite**, and ⛔ keep it true for **11b.3 and 11b.6**, which D10 does ⛔ not reach
-  - [ ] ⚠ **AND WHILE THAT EXCEPTION BLOCK IS OPEN — correct the FALSE COUNSEL CLAIM one field below it.** `public-vs-private-matrix.yaml:412` (the `member-directory.member_name` **escalation** rationale) still reads *"records DPDPA exposure with legal counsel **NOT engaged**"*. ⛔ That is false and has been since **2026-06-21** (`2026-08-24-158`; Adv. Mohit Agrawal — [[project_dpdpa_counsel_engaged_but_unrecorded]]). ⭐ **Annotate to *"counsel had not REVIEWED this publication"*, ⛔ never delete the finding** — the DPDPA exposure it records is still open. ⚠ This is a **live machine-read governance artifact** asserting present tense, ⛔ unlike the historical ledger entries that correctly keep their original wording ([[feedback_supersede_never_reinterpret]])
-  - [ ] `deriveFieldIds()` mapping — every model key mapped or explicitly `null`; ⛔ never guess an id
-  - [ ] ⭐⚠ **`escalation_count` stays `1` — and that is ⛔ NOT in tension with adding the exception block above.** ⚠ **Two different ledgers:** `escalations:` records a **tier MOVE** (`from` → `to`) and a first-time declaration has ⛔ no honest `from`; `tier1_public_exception` records an **attributed authorisation** and is **mandatory** for a Tier-1 field at `public` (`matrix.ts:176-197`, biconditional). ⇒ **exception blocks: 1 → 2** (admitted by Task 3c) · **`escalation_count`: 1 → 1** (verified `:417`)
-  - [ ] **Prove the teeth**: a planted `authenticated_member`-tier field and a planted **undeclared** field each FAIL; revert-sanity green
-  - [ ] ⭐ **And prove the fail-closed direction the other way:** `deceased_member_name` declared `pii_tier: 1` at `public` **with its `tier1_public_exception` REMOVED** must FAIL (`matrix.ts:177`) — ⛔ the block is not decoration, and a green run without that proof does not show it is load-bearing
-- [ ] **Task 5 — i18n + microcopy (AC: 4, 5)**
-  - [ ] New namespace, hi-primary + en parity — ⚠ ⭐ **`catalog.ts` has THREE registration sites, ⛔ not two**, and a namespace registered in only some of them is the 11a.2 shape again: **(i)** the two `import` lines · **(ii)** the `catalogs` map's `en:` **and** `hi:` entries (`:62`, `:63`) · **(iii)** ⭐ **`KNOWN_NAMESPACES` (`:67`) — a SEPARATE hand-maintained literal that can drift from the map.** ⚠ `packages/i18n/tests/catalog-registration.test.ts:70` asserts both directions, so the drift **fails loudly** ⛔ rather than silently — ⭐ run it, ⛔ do not merely add the files
-  - [ ] ⚠ Verify **every** interpolation token spelling against `t()` (the 11a.2 `{{max}}`/`{max}` defect threw on **every** request and ⛔ no test caught it — assert through `t()`, ⛔ not around it)
-  - [ ] Add the namespace to `microcopy.yaml` `scope.copy_globs` + prove the teeth (planted `shortfall` fixture + revert-sanity)
-  - [ ] ⚠ Check the copy against the prohibited vocabulary: ⛔ *"donor"*, ⛔ *"Late Teacher"*, ⛔ *"report"*, ⛔ *"receipt"*, ⛔ *"passbook"*
-  - [ ] Latin numerals + Gregorian dates (operational register, UX-DR73) — ⛔ never Devanagari digits on this surface
-- [ ] **Task 6 — The remembrance-not-analytics invariant (AC: 5)**
-  - [ ] Record it in all three places; state THE TEST verbatim; state the sort-order prohibition
-- [ ] **Task 7 — Tests**
-  - [ ] Pure unit: render module (all four states), field-id derivation (both drift directions), filter parsing
-  - [ ] Live-DB integration: the read model's predicate, the confirmed-count reversal compensation, the kill switch's identical-shape guarantee, page stability across pages
-  - [ ] Negative controls that **bite**: a planted undeclared field, a planted over-tier field, a planted `shortfall` string, a planted `?format=csv`
-  - [ ] ⚠ Live-DB gotchas: never regenerate an applied migration; assert **membership**, ⛔ not counts, on the shared `PARIWAR_A` tenant ([[project_live_db_test_gotchas]])
-- [ ] **Task 8 — Route the deferrals (AC: 11)** — all seven items, each with a re-trigger, ⛔ none marked closed
-- [ ] **Task 9 — Sprint status + Change Log** — flip `11b-1-…` to `done` at review; one combined reverse-chron ledger entry ([[project_sprint_status_ledger]])
+- [x] **Task 1 — The pool index read model (AC: 1, 4)** — per **D7**
+  - [x] `packages/domain/src/pool/public-read.ts`: ONE set-based query, ⛔ never a per-row fan-out (AR-65)
+  - [x] Predicate: `pariwar_id` explicit **alongside** RLS + `current_state IN ('closed','settled')` + the D-ruled district/date/pool-code filters
+  - [x] Confirmed count as a **lateral aggregate** over `events_log`, applying `reconciliation.confirmation-reversed` compensation — ⛔ never `listConfirmedContributorsForPool` per row
+  - [x] `clampLimit()` on every dynamic `.limit()` (the `domain-accessor-invariants` gate clamps **every** one — [[project_domain_limit_clamp_and_savepoint_retry]])
+  - [x] Deterministic `ORDER BY` with a PK tie-break — offset paging over a non-deterministic order duplicates rows across pages
+  - [x] A matching `count*` accessor sharing the **same** predicate function; ⛔ never two spellings; ONE injected `now` for both
+  - [x] ⚠ `count(*)` returns `bigint` ⇒ a **string** from the driver — coerce at the accessor
+  - [x] ⭐ **Return each row's `deceased_member_id`** (from `pools.claim_id → claims.deceased_member_id`) as the **consent subject key** ([[project_consent_subject_key_convention]]) — ⚠ it is an **internal** field for the consent join and the decrypt, ⛔ **never** serialized onto the public wire (AC8)
+  - [x] ⭐⛔ **BATCH THE CONSENT VERDICT — ⛔ never `consentExists` per row.** One set-based read over the page's subject set (`inArray`, or a lateral join in this same query), sharing the **ONE injected `now`** ⇒ ⛔ the D7(a) AR-65 N+1 must not return through the consent door (AC2)
+  - [x] Copy `directory-read.ts`'s *"decides a render, never a benefit"* fence into the header verbatim
+  - [x] ⛔ **This module stays decrypt-free** — it returns the *ciphertext* + the consent verdict; the decrypt is **Task 2's**, at `apps/api`, where the KMS binding lives
+- [x] **Task 2 — The `apps/api` route (AC: 8, 9)**
+  - [x] Add the route to `apps/api/src/modules/public-pages/` with its **own** defence block enumerating its controls
+  - [x] Add its **own** `login-wall.spec.ts` allowlist entry — ⚠ **matching control count** in both places
+  - [x] `config: { rateLimit: limits.search }`, `.strict()` schemas, bounded `page` + `limit` from `@twt/contracts` (⛔ imported, ⛔ never re-declared)
+  - [x] Publication switch checked **FIRST** (per **D3**), returning the identical empty shape
+  - [x] Abuse counter after the switch, before the read, passing `pariwarId` **and** `traceId`
+  - [x] ⭐⛔ **THE TIER-1 NAME RESOLUTION LIVES HERE, AND NOWHERE ELSE (AC2).** ⚠ It is easy to leave this task unowned: Task 1's module is decrypt-free by rule and `apps/public` **cannot** decrypt (`no-kms-in-public.test.ts` scans the whole app). ⇒ ⛔ if this handler does not do it, **nothing does**:
+    - [x] **Consent verdict FIRST** — skip the decrypt entirely for an unconsented row (⛔ zero KMS calls, and ⛔ no decrypt without an authorising basis)
+    - [x] `mapWithConcurrency(rows, DIRECTORY_DECRYPT_CONCURRENCY, …)` — ⛔ **never** `Promise.all`, whose only ceiling is `limit` ⇒ 50×N in-flight KMS calls for N visitors on an **unauthenticated** route (`handlers.ts:192-200`, the defect 11a.3 fixed)
+    - [x] `encryption.decryptKycField(ciphertext, pariwarId, deps.encryption)` inside a per-row `try/catch` — ⛔ **omit the NAME, keep the ROW** (⚠ this is the deliberate inverse of `/members`, which omits the row); ⛔ never let one bad row 500 the page
+    - [x] `resolvePublicMemberName(await resolvePublicNamePresentationMode(tx, pariwarId), storedName)` — ⛔ **never** `resolvePoolIdentity()` (it hard-codes `splitFirstNameLastInitial`), ⛔ never a literal (`-136` cl.1)
+    - [x] **Pre-sized slot array indexed by row position** — ⛔ never completion order; nothing here may re-sort, or *"page N is the same page N"* stops being true
+    - [x] ⛔ The decrypted value **never leaves the closure** except through `resolvePublicMemberName`, and is ⛔ **never logged**
+  - [x] Response DTO carries only classified fields — a test asserts the **absence** of `member_id`, `deceased_member_id`, ciphertext and claim id
+- [x] **Task 3 — The `apps/public` client + route (AC: 1, 6, 7)**
+  - [x] `apps/public/src/lib/sahyog.server.ts` mirroring `directory.server.ts`; **reuse `buildForwardedFor`**, ⛔ do not re-implement
+  - [x] `apps/public/src/lib/sahyog-render.ts` — ALL display logic, pure, DB-free-testable
+  - [x] `apps/public/src/pages/sahyog.astro` — thin frontmatter, `<MatrixField>` on every value, explicit `t()` namespace everywhere
+  - [x] `parsePageParams()` reused **unchanged**; the four Trap-7 states each rendered and each with the right cache header + status
+- [x] **Task 3b — The consent substrate (AC: 12)** — per **D4(b)** ⭐ **DO THIS EARLY: it is cheap now and impossible after launch**
+  - [x] ⚠ **Confirm the existing claim cohort is EMPTY and record the count** — every claim already filed is permanently unaskable. ⛔ Do not assume; query it
+  - [x] `ALTER TYPE consent_type ADD VALUE 'sahyog_drive_publication'` — **its own migration file**, appended at the **END** (⛔ never reorder a pgEnum; stored ordinals). ⚠ That DDL ⛔ cannot run in a tx or in the same tx it is added
+  - [x] `@twt/contracts`: add to `DpdpaConsentType` **and** `DpdpaRevocableConsentType`; ⚠ the lockstep equality test (pgEnum `.enumValues` ⇄ schema `.options`) must cover it — ⛔ contracts must not import domain
+  - [x] Story 6.9 capture path: a **fourth box**, **unchecked by default**, ⛔ **OUTSIDE** the `.refine()` that forces `claimTimeDpdpa`
+  - [x] Canonical bilingual copy in `resolveDpdpaConsentCopy` **and** the mobile `claim.json` `dpdpa.*` keys, held **identical by value** — ⚠ that text is the persisted EVIDENCE (`checkboxTextShown`)
+  - [x] ⭐ The copy carries the **same declinability sentence its siblings carry**, both locales. ⛔ It is NOT mandatory — Niyamavali §4.4 + Part 10 forbid default opt-in
+  - [x] Wire the render gate on `sahyog_drive_publication`, subject = the **deceased member**; ⛔ missing and **revoked** are the same verdict. ⚠ ⭐ **BATCHED, ⛔ not per row** — `consentExists(db, pariwarId, subjectId, type, validAt?)` (`consent/read.ts:36`) is **one query per subject**; the page's verdicts resolve in Task 1's set-based read (⛔ the D7(a) N+1 must not return through this door)
+- [x] **Task 3c — The matrix widening (AC: 2, 7)** — per **D1(b)**, ⛔ AFTER Task 0's decision entry exists
+  - [x] Widen `matrix.ts`'s exactly-one `superRefine` to admit this surface, citing the decision entry **in the message text** — ⛔ never a bare relaxation
+  - [x] ⚠ Keep it an **enumerated** admission, ⛔ not a removal of the check: a third exception must still FAIL. Prove it with a planted third
+  - [x] ⛔ `escalation_count` stays `1`; ⛔ no `tier1_public_exception` count is "fixed" by deleting the rule
+- [x] **Task 4 — The matrix declaration (AC: 7)**
+  - [x] Add the `sahyog-drive` surface with **explicit** `cache_policy`, `paginated: true`, `renders: true`, `noindex`, and a fully-classified `fields:` list
+  - [x] The `deceased_member_name` field carries `pii_tier: 1`, `tier: public`, its own `tier1_public_exception` naming the D1(b) decision entry, and a `scope:` that ⛔ **does not reach 11b.3 or 11b.6**
+  - [x] ⚠ Amend the file header's *"Epic 11b surfaces are DELIBERATELY NOT DECLARED"* note for **this surface only** — ⛔ 11b.3 and 11b.6 stay undeclared and the note must still say so
+  - [x] ⭐⚠ **Amend the EXISTING `member-directory.member_name` exception's `scope:` text** — it currently asserts that the 11b surfaces *"keep first-name + last-initial"*, which **D10 makes false for this surface**. ⛔ **Annotate, ⛔ never rewrite**, and ⛔ keep it true for **11b.3 and 11b.6**, which D10 does ⛔ not reach
+  - [x] ⚠ **AND WHILE THAT EXCEPTION BLOCK IS OPEN — correct the FALSE COUNSEL CLAIM one field below it.** `public-vs-private-matrix.yaml:412` (the `member-directory.member_name` **escalation** rationale) still reads *"records DPDPA exposure with legal counsel **NOT engaged**"*. ⛔ That is false and has been since **2026-06-21** (`2026-08-24-158`; Adv. Mohit Agrawal — [[project_dpdpa_counsel_engaged_but_unrecorded]]). ⭐ **Annotate to *"counsel had not REVIEWED this publication"*, ⛔ never delete the finding** — the DPDPA exposure it records is still open. ⚠ This is a **live machine-read governance artifact** asserting present tense, ⛔ unlike the historical ledger entries that correctly keep their original wording ([[feedback_supersede_never_reinterpret]])
+  - [x] `deriveFieldIds()` mapping — every model key mapped or explicitly `null`; ⛔ never guess an id
+  - [x] ⭐⚠ **`escalation_count` stays `1` — and that is ⛔ NOT in tension with adding the exception block above.** ⚠ **Two different ledgers:** `escalations:` records a **tier MOVE** (`from` → `to`) and a first-time declaration has ⛔ no honest `from`; `tier1_public_exception` records an **attributed authorisation** and is **mandatory** for a Tier-1 field at `public` (`matrix.ts:176-197`, biconditional). ⇒ **exception blocks: 1 → 2** (admitted by Task 3c) · **`escalation_count`: 1 → 1** (verified `:417`)
+  - [x] **Prove the teeth**: a planted `authenticated_member`-tier field and a planted **undeclared** field each FAIL; revert-sanity green
+  - [x] ⭐ **And prove the fail-closed direction the other way:** `deceased_member_name` declared `pii_tier: 1` at `public` **with its `tier1_public_exception` REMOVED** must FAIL (`matrix.ts:177`) — ⛔ the block is not decoration, and a green run without that proof does not show it is load-bearing
+- [x] **Task 5 — i18n + microcopy (AC: 4, 5)**
+  - [x] New namespace, hi-primary + en parity — ⚠ ⭐ **`catalog.ts` has THREE registration sites, ⛔ not two**, and a namespace registered in only some of them is the 11a.2 shape again: **(i)** the two `import` lines · **(ii)** the `catalogs` map's `en:` **and** `hi:` entries (`:62`, `:63`) · **(iii)** ⭐ **`KNOWN_NAMESPACES` (`:67`) — a SEPARATE hand-maintained literal that can drift from the map.** ⚠ `packages/i18n/tests/catalog-registration.test.ts:70` asserts both directions, so the drift **fails loudly** ⛔ rather than silently — ⭐ run it, ⛔ do not merely add the files
+  - [x] ⚠ Verify **every** interpolation token spelling against `t()` (the 11a.2 `{{max}}`/`{max}` defect threw on **every** request and ⛔ no test caught it — assert through `t()`, ⛔ not around it)
+  - [x] Add the namespace to `microcopy.yaml` `scope.copy_globs` + prove the teeth (planted `shortfall` fixture + revert-sanity)
+  - [x] ⚠ Check the copy against the prohibited vocabulary: ⛔ *"donor"*, ⛔ *"Late Teacher"*, ⛔ *"report"*, ⛔ *"receipt"*, ⛔ *"passbook"*
+  - [x] Latin numerals + Gregorian dates (operational register, UX-DR73) — ⛔ never Devanagari digits on this surface
+- [x] **Task 6 — The remembrance-not-analytics invariant (AC: 5)**
+  - [x] Record it in all three places; state THE TEST verbatim; state the sort-order prohibition
+- [x] **Task 7 — Tests**
+  - [x] Pure unit: render module (all four states), field-id derivation (both drift directions), filter parsing
+  - [x] Live-DB integration: the read model's predicate, the confirmed-count reversal compensation, the kill switch's identical-shape guarantee, page stability across pages
+  - [x] Negative controls that **bite**: a planted undeclared field, a planted over-tier field, a planted `shortfall` string, a planted `?format=csv`
+  - [x] ⚠ Live-DB gotchas: never regenerate an applied migration; assert **membership**, ⛔ not counts, on the shared `PARIWAR_A` tenant ([[project_live_db_test_gotchas]])
+- [x] **Task 8 — Route the deferrals (AC: 11)** — all seven items, each with a re-trigger, ⛔ none marked closed
+- [x] **Task 9 — Sprint status + Change Log** — flip `11b-1-…` to `done` at review; one combined reverse-chron ledger entry ([[project_sprint_status_ledger]])
 
 ---
 
@@ -1129,16 +1129,174 @@ made, in files you can read.
 
 ### Agent Model Used
 
+Claude Opus 5 (`claude-opus-5`) via `/bmad-dev-story`, 2026-08-26.
+
 ### Debug Log References
+
+⭐ **Four defects were found by RUNNING things rather than by reading them.** Recorded here because
+three of the four would have shipped green under a plausible faster implementation.
+
+1. ⭐⛔ **A FIFTH hand-maintained copy of the claim-time consent-type list — and it 500'd ONLY on the
+   path where a family actually TICKED the new box.** `sahyog_drive_publication` was added to the
+   domain pgEnum, `ConsentTypeSchema`, `DpdpaConsentType` and `DpdpaRevocableConsentType`. The fifth
+   copy — an inline `z.enum([...])` inside `ClaimDpdpaConsentRecordedPayloadSchema` — had ⛔ no
+   lockstep test, so the request parsed, the consent row was written, and the **event append threw**.
+   `ClaimDpdpaConsentRevokedPayloadSchema` carried the identical defect one field away.
+   ⚠ **It surfaced only because the integration combo table was extended to GRANT the consent in two
+   combinations.** Appending `sahyogDrivePublication: false` to the existing rows — which is what
+   satisfying the compiler looks like — leaves every test green and ships the bug.
+   ⇒ fixed at the root: `CLAIM_TIME_CONSENT_TYPES` + `CLAIM_TIME_PUBLICATION_CONSENT_TYPES` declared
+   once, both event schemas derived.
+2. ⚠ `operator does not exist: uuid = text` (42883) — `consent_records.subject_id` is a **`uuid`
+   COLUMN**. Story 2.7 kept the subject polymorphic in **MEANING**, ⛔ not in **TYPE**, so the
+   `::text` cast the convention suggests is wrong here. Recorded at the fragment.
+3. ⚠ A backticked comment inside a `` sql`` `` template breaks the **esbuild transform**, ⛔ not the
+   query — the failure names a SQL parse error and is not one.
+4. ⚠ `intake_channels` is `claim_intake_channel[]`, ⛔ not `text[]`; a raw-SQL seed needs the enum cast.
+
+⚠ **And one assertion of MINE was wrong and is corrected rather than worked around:** a test asserted
+the internal lifecycle words never appear as a raw-body substring, but `closedAt` is a legitimate
+FIELD NAME containing *"closed"*. The rule is about internal tokens crossing as **DATA**, so it now
+asserts over parsed values.
 
 ### Completion Notes List
 
+⛔⛔ **BUILT IS ⛔ NOT PUBLISHED, AND THIS STORY CLOSES ⛔ NONE OF THE THREE GATES.** Counsel's DPDPA
+review of this exact subject is **HELD** (`2026-08-24-157` cl.3(a), returning **2026-09-07**); Row 17's
+≥2-trustee publication posture extends here via C-5 and this surface has ⛔ **no ratification of its
+own**; the per-subject consent gate is built and consulted. ⛔ No Pariwar is enabled, ⛔ no launch-gate
+row moved, ⛔ Epic 11b is not launch-ready. ⚠ Counsel **has not REVIEWED** this subject — ⛔ never
+*"counsel is not engaged"*, false since 2026-06-21 (`2026-08-24-158`).
+
+⚠⚠ **THE ONE TASK INSTRUCTION THAT COULD NOT BE SATISFIED AS WRITTEN — REPORTED, ⛔ NOT QUIETLY
+DROPPED** ([[feedback_record_unattested_no_backfill]]). Task 3b says: *"⚠ **Confirm the existing claim
+cohort is EMPTY and record the count** — every claim already filed is permanently unaskable. ⛔ Do not
+assume; query it."* ⭐ **It was queried, and it is ⛔ NOT empty:**
+
+| Queried | Result |
+|---|---|
+| `select count(*) from claims` (dev DB `twt_dev` @ :5433) | **765** |
+| …of which already PAST the recordable window (⇒ permanently unaskable) | **255** |
+| …still in one of the five pre-adjudication states | **510** |
+| `select current_state, count(*) from pools` | **1111, ALL `spawned`** ⇒ ⛔ **zero rows would appear on the Sahyog Drive index today** |
+
+⭐ **The honest reading, and why the ruling is UNDISTURBED:** every one of those 765 is an
+**integration-test fixture**, and the shape says so — the per-state counts are exact multiples of 5
+spread across all 13 claim states, and no pool has ever left `spawned`. This is the local dev/test
+database, ⛔ not a production one.
+⛔⛔ **AND THE PRODUCTION COHORT WAS ⛔ NOT VERIFIED, BECAUSE IT COULD NOT BE FROM HERE.** No production
+database is reachable from this workstation; `infra/gcp/cloud-sql-prod.tf` gates the prod instance on
+`var.environment == "prod"`, which is ⛔ evidence of a module, ⛔ not of an applied instance.
+⇒ ⚠ **the claim "the unaskable cohort is empty by construction" rests on the trust being PRE-LAUNCH,
+which is a GOVERNANCE fact recorded in the story — ⛔ it is NOT a queried one, and it is recorded here
+`un-attested` rather than reconstructed.** ⭐ Nothing about the ruling changes: minting the type before
+the first REAL claim is what makes the cohort empty, and that is exactly what happened here.
+
+⭐ **What shipped, against the ACs:**
+
+- **AC1 · AC7** — `/sahyog` ships on the `members.astro` shape: thin frontmatter, all display logic in
+  the pure `sahyog-render.ts`, explicit `t()` namespace on every call, `<MatrixField>` on every value,
+  `noindex`, ⛔ no per-pool detail route and ⛔ no `member_id` on any wire. The **four Trap-7 states**
+  each render distinctly with their own cache/status pair. ⭐ The tier-leak leg is **OPERATIVE from
+  the first commit** — ⛔ never armed-but-empty — with **four independently planted controls**.
+- **AC2 · AC12** — the deceased member's **FULL NAME** renders, consent-gated, resolved through
+  `resolvePublicMemberName(mode, …)` and ⛔ **never** `resolvePoolIdentity()` (which hard-codes the
+  shielded form D10 rejected). Consent is **BATCHED** into Task 1's set-based read and evaluated
+  **BEFORE** the decrypt, so an unconsented row costs **zero KMS calls**. The decrypt is bounded by
+  `mapWithConcurrency` + `DIRECTORY_DECRYPT_CONCURRENCY` into a pre-sized slot array.
+  ⭐ **Consent decides whether a row is NAMED, ⛔ never whether it EXISTS** — proven at three layers
+  (domain, route, render), including on a **MIXED page**.
+- **AC3** — district + date-range + pool code, all answerable **without a decrypt**; `?name=` is a
+  **400**, ⛔ not an ignored no-op.
+- **AC4** — count from `contribution.confirmed` with `reconciliation.confirmation-reversed`
+  compensation applied set-based; the **target is quarantined on one line** and no key that could
+  carry one exists on any shape (asserted by regex over the keys, at two layers).
+- **AC5** — the invariant is in **all three places**, and a test **checks that claim** rather than
+  trusting it.
+- **AC6 · AC8 · AC9** — `parsePageParams()` reused unchanged; `buildForwardedFor` reused **verbatim**;
+  a **second** `public-pages` route with its own written defence and allowlist entry, **both stating
+  FIVE controls**; a pulled Pariwar returns a **byte-identical** body to an empty one.
+- **AC10** — real `<table>` + `<caption>` + `<th scope="col">`, captions **distinct** from the intro,
+  `:focus-visible` on every control, and ⛔ **no a11y CI gate minted** (11b.8's call).
+- **AC11** — **ten** items routed, each with a named re-trigger, ⛔ none marked closed.
+
+⚠ **TWO OBSERVATIONAL FINDINGS RAISED, ⛔ NEITHER FIXED HERE** ([[feedback_gap_analysis_observational]]):
+
+1. ⭐ **`repeated_district_queries` now has a REAL vector it cannot see — and this story created it.**
+   That rule sits at `no_subject_yet` because *"THE DIRECTORY HAS NO DISTRICT FILTER TO QUERY BY"* — a
+   reason written when `/members` was the file's only consumer. `/sahyog` **reuses these rules
+   unchanged** and **does** ship a district filter. ⭐ **It is nevertheless left `no_subject_yet`,
+   verified rather than assumed:** `evaluateDirectoryAbuse` receives `{key, pariwarId, traceId, page,
+   limit, at}` and ⛔ nothing else, so the rule has ⛔ no subject **in the data it receives**, and
+   flipping it today would produce the always-false rule reporting green forever that the file exists
+   to refuse. Annotated in place; the original reason **preserved**.
+2. ⚠ **The public-vs-member inversion D10 creates** — `resolvePoolIdentity` shields the same family's
+   name on the member-facing My Pool card, passbook and notifications, so the **public** page now
+   shows **more** than the **member app** does for the same pool. Binds **11b.2** + **11b.3**.
+
+⚠ **D9 is satisfied VACUOUSLY and ⛔ is not claimed as discharged** — this surface renders ⛔ no
+contributor rows at any grain. It binds **11b.2** and **11b.3**.
+
 ### File List
+
+**NEW**
+- `packages/domain/migrations/0112_consent-type-sahyog-drive.sql`
+- `packages/domain/src/pool/public-read.ts`
+- `packages/domain/tests/integration/pool/sahyog-drive-public-read.spec.ts`
+- `packages/contracts/src/public-pages/sahyog-drive.ts`
+- `apps/api/tests/integration/public-pages/sahyog-drive.spec.ts`
+- `apps/public/src/lib/sahyog.server.ts`
+- `apps/public/src/lib/sahyog-render.ts`
+- `apps/public/src/pages/sahyog.astro`
+- `apps/public/tests/sahyog-render.test.ts`
+- `apps/public/tests/sahyog-copy.test.ts`
+- `apps/public/tests/sahyog-invariant.test.ts`
+- `packages/i18n/locales/en/sahyog-drive.json`
+- `packages/i18n/locales/hi/sahyog-drive.json`
+- `scripts/microcopy/sahyog-drive.test.ts`
+
+**UPDATED**
+- `.decision-log.md` (Decision `2026-08-24-159`)
+- `packages/domain/migrations/meta/_journal.json`
+- `packages/domain/src/schema/consent_records.ts`
+- `packages/domain/src/claim/events.ts`
+- `packages/domain/src/pool/index.ts`
+- `packages/contracts/src/consent/consent-record.ts`
+- `packages/contracts/src/claims/dpdpa-consent.ts`
+- `packages/contracts/src/public-pages/matrix.ts`
+- `packages/contracts/src/public-pages/index.ts`
+- `packages/contracts/public-pages/public-vs-private-matrix.yaml`
+- `packages/contracts/public-pages/directory-abuse-rules.yaml`
+- `packages/contracts/tests/consent.test.ts`
+- `packages/contracts/tests/claims-dpdpa-consent.test.ts`
+- `packages/contracts/tests/public-pages-matrix-schema.test.ts`
+- `packages/contracts/tests/public-pages.test.ts`
+- `apps/api/src/modules/claims/dpdpa-consent-copy.ts`
+- `apps/api/src/modules/claims/claims.dpdpa-consent.handlers.ts`
+- `apps/api/src/modules/public-pages/routes.ts`
+- `apps/api/src/modules/public-pages/handlers.ts`
+- `apps/api/tests/unit/dpdpa-consent-copy.test.ts`
+- `apps/api/tests/unit/dpdpa-consent-record-atomicity.test.ts`
+- `apps/api/tests/integration/login-wall.spec.ts`
+- `apps/api/tests/integration/claims/dpdpa-consent.spec.ts`
+- `apps/api/tests/integration/claims/dpdpa-consent-helpline.spec.ts`
+- `apps/mobile/app/(claim)/consent.tsx`
+- `apps/public/src/lib/surface-fields.ts`
+- `apps/public/tests/integration/public-pages/scrape-test.spec.ts`
+- `packages/i18n/src/catalog.ts`
+- `packages/i18n/locales/en/claim.json`
+- `packages/i18n/locales/hi/claim.json`
+- `microcopy.yaml`
+- `friction-budget.md`
+- `_bmad-output/implementation-artifacts/deferred-work.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `_bmad-output/implementation-artifacts/11b-1-sahyog-drive-active-archive.md`
 
 ### Change Log
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-08-26 | 2.0 | **IMPLEMENTED — all ten tasks, ⭐ `ci:local` 33/33 green.** Governance first: **Decision `2026-08-24-159`** minted at the live head before any code, carrying D1(b)'s matrix widening as its own clause (⛔ the `escalations:` ledger is the wrong vehicle) and recording D1(b) as taken with counsel's hold OPEN, D4(a) as **VACATED** not reversed, and D10 as **authorised, ⛔ not made**. ⭐⛔ **THE HEADLINE FINDING IS A LATENT 500 THAT ONLY A TEST WRITTEN THE HARD WAY COULD CATCH:** the claim-time consent list was re-spelled in **FIVE** places; four were updated and the fifth — an inline `z.enum([...])` in `ClaimDpdpaConsentRecordedPayloadSchema`, with ⛔ no lockstep test — was not, so recording the new consent parsed, wrote its row, and **threw at the event append**, ⛔ only on the path where a family actually TICKED the box (the revoke payload had the identical defect one field away). ⚠ Appending `sahyogDrivePublication: false` to the existing combos — what satisfying the compiler looks like — leaves every test green and ships it; the bug surfaced only because the combo table was extended to **GRANT** the consent. Fixed at the root (`CLAIM_TIME_CONSENT_TYPES` declared once, both event schemas derived). ⭐ The matrix rule was widened **by IDENTITY, ⛔ not by count** — a naive `> 2` would have let In Memoriam take the second slot and publish an unauthorised Tier-1 name while the gate passed; four planted controls, all confirmed to fail with the allowlist stubbed. ⚠ **AND ONE TASK INSTRUCTION COULD NOT BE SATISFIED AS WRITTEN AND IS REPORTED, ⛔ NOT DROPPED:** Task 3b's *"confirm the existing claim cohort is EMPTY"* was queried and is **⛔ NOT empty** — 765 claims, 255 already past the recordable window — all integration-test fixtures (exact multiples of 5 across all 13 states; 1111 pools, ⛔ all `spawned`, so ⛔ zero rows would list today), and ⛔ **no production DB is reachable from this workstation**, so the *"empty by construction"* claim rests on the trust being pre-launch — a **governance** fact, ⛔ not a queried one, recorded `un-attested`. ⭐ Also: `repeated_district_queries` now has a REAL vector it cannot see (this story created it) and is left `no_subject_yet` on **verified** grounds — the evaluator is passed ⛔ no district — annotated in place, original reason preserved. **Ten** deferrals routed, ⛔ none closed. ⛔⛔ **BUILT IS ⛔ NOT PUBLISHED: ⛔ no launch-gate row moved, ⛔ no Pariwar enabled, counsel's hold ⛔ not lifted.** | BigDev + Claude |
 | 2026-08-24 | 1.2 | **Validation pass — ⭐ the ruling text was current, the ACs and Tasks were ⛔ NOT.** D1(b) + D10 were ruled *after* the ACs were drafted and the rewrite did not reach everywhere. ⛔ **Six contradictions removed:** the AC preamble still declared AC2/AC3 *"gated on … the recommended rulings (D1(a) + D2(a))"*; **AC7 forbade the `tier1_public_exception` Task 4 requires** — and `matrix.ts:176-197` is **biconditional**, so under D10 the block is mandatory (the `escalation_count` **stays 1**, a *different* ledger); AC3 still published the shielded form; **D8's cache ruling rested on *"non-PII by construction under D1(a)"***, a ground D1(b) destroyed (restated on the `/members` precedent, with revocation latency as the accepted cost); D1's Niyamavali-draft filename was **dangling**; and the Policy-meaning note stated only **one** of the story's **two** render predicates. ⭐⛔ **AND TWO PERFORMANCE DEFECTS D10 CREATED, BOTH UNOWNED:** the **Tier-1 decrypt had no task at all** (Task 1 is decrypt-free by rule, `apps/public` provably cannot decrypt) ⇒ assigned to Task 2 with `mapWithConcurrency` + `DIRECTORY_DECRYPT_CONCURRENCY` **required, ⛔ not merely cited**; and **`consentExists` is one query PER SUBJECT** ⇒ per-row calling is the identical AR-65 N+1 **D7(a) had just ruled out**, now batched with consent evaluated **before** the decrypt. ⚠ Also: `catalog.ts` has **three** registration sites (`KNOWN_NAMESPACES` is a separate literal); a binding **execution order** added (Task 3b's one-way door first); D10's ground (2) carries an **observational** note that it argues from the `/members` baseline the same pass found Deed-cl.15(c)-non-compliant (⛔ grounds (1)+(3) are independently sufficient — D10 undisturbed); and `epics.md`'s DISPOSITIONS paragraph, which contradicted D10 one paragraph above it, annotated in place. | BigDev + Claude |
 | 2026-08-24 | 1.1 | **D10 ruled (BigDev): the deceased member's FULL NAME renders**, ⛔ not first-name + last-initial. ⭐ Three grounds: a shielded name **defeats D1(b)'s own ground** (the UX Real Data Test shows duplicate *full* names already need a second identifier); it is **strictly more protective** than `/members`, which publishes **living** members' full names unconsented; and `shielded_name` **omits every mononym** (`-145` cl.3), common in India. ⚠ **Panel ratification OWED** — recorded *authorised, ⛔ not made*, and routed. ⭐ Build consequence: `resolvePublicMemberName(mode, …)`, ⛔ **never** `resolvePoolIdentity()`, which hard-codes the split. ⚠ Observational: the public page now shows **more** than the member app does for the same pool — binds 11b.2/11b.3. | BigDev + Claude |
 | 2026-08-24 | 1.0 | **All nine decisions RULED (BigDev): D1(b) · D2(a) · D3(a) · D4(b) · D5(a) · D6(a) · D7(a) · D8(a) · D9(a).** ⚠ D1 ruled **against** the recommendation on a stated institutional-legitimacy ground — an unnamed beneficiary reads as fund diversion. ⭐ That vacated **D4(a)** (whose ground was D1(a)), re-put and re-ruled **(b)**. AC2 rewritten (name renders consent-gated; ⭐ consent gates the NAME, ⛔ never the ROW); **AC12 added** (the consent substrate — ⭐ cheap now, **impossible after launch**); AC3/AC11 re-scoped; Tasks 3b/3c added. ⚠ Recorded: D1(b) taken with counsel's hold open, and the mandatory-consent question routed as a **Niyamavali §4.4 / T&C amendment**, ⛔ not encoded here. | BigDev + Claude |

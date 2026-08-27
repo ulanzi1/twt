@@ -337,7 +337,13 @@ describe.skipIf(!hasDatabase)('public Member Directory route (:5433)', { timeout
       expect(lines.length).toBeGreaterThanOrEqual(1);
       // ⭐ The rule id survives in `resource_locator` — the ONLY triage field an unauthenticated
       // emitter has, since `context` is hashed and the default locator is a constant.
-      expect(lines[0]?.resourceLocator).toMatch(/^directory:deep_page_access:p90:l\d+$/);
+      // ⚠ AND THE SURFACE LEADS IT (Review finding, 2026-08-27). This used to read `directory:`
+      // whichever surface fired, so once Story 11b.1 added `/sahyog` as a SECOND caller of
+      // `evaluateDirectoryAbuse` an operator could ⛔ not tell which public page had been crawled.
+      // ⭐ `member-directory` still satisfies `RESOURCE_LOCATOR_PATTERN` (lowercase + hyphen are
+      // both in the allowlist) — worth stating, because a locator that FAILS that guard is
+      // silently replaced by `user:anonymous`, discarding the very rule id this line exists to pin.
+      expect(lines[0]?.resourceLocator).toMatch(/^member-directory:deep_page_access:p90:l\d+$/);
       // ⛔ AND THE RATE RULE DID NOT FIRE — one deep request is not pagination velocity. Without
       // this, the split could regress to two rules that both trip on position and nothing would say so.
       expect(

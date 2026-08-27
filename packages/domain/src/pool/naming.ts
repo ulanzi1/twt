@@ -60,6 +60,29 @@ export class PoolLetterCodeDecodeError extends Error {
   }
 }
 
+/**
+ * The longest letter code that can decode to a value `pools.pool_index` can hold.
+ *
+ * ⭐⛔ THIS BOUND IS A CORRECTNESS CONTROL, ⛔ NOT A STYLE CHOICE (Review finding, 2026-08-27).
+ * `pool_index` is `integer` (int4, max 2147483647). Bijective base-26 crosses that at SEVEN
+ * letters: `AAAAAAA` → 321272406 still fits, but `ZZZZZZZ` → 8353082581 does ⛔ NOT, and the
+ * public Sahyog Drive filter accepts a free-text drive code up to 64 characters.
+ *
+ * ⚠ AND THE FAILURE IS A BIND, ⛔ NOT A COMPARISON: drizzle passes the decoded value as a query
+ * PARAMETER, so Postgres resolves `$n` to `int4` from `pool_index = $n` and raises `22003 value
+ * out of range for type integer` — reproduced live. An inlined literal would have promoted to
+ * int8 and quietly matched nothing instead. ⇒ an unbounded decode is an unauthenticated 500 on a
+ * public route, reachable by typing any seven-letter word into the drive-code box.
+ *
+ * ⛔ Do not raise this to 7: `ZZZZZZZ` overflows while `AAAAAAA` does not, so LENGTH alone cannot
+ * admit 7-letter codes safely — {@link poolIndexFromLetterCodeOrNull} range-checks the decoded
+ * VALUE, and this constant is the cheap pre-filter that keeps the arithmetic itself bounded.
+ */
+export const MAX_POOL_LETTER_CODE_LENGTH = 6;
+
+/** The largest `pool_index` an int4 column can hold — the decode's upper bound. */
+export const MAX_POOL_INDEX = 2147483647;
+
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
 /**
@@ -100,7 +123,7 @@ export function poolLetterCode(poolIndex: number): string {
  * itself expects upper-case and leaves normalization to the caller.
  */
 export function poolIndexFromLetterCode(code: string): number {
-  if (!/^[A-Z]+$/.test(code)) {
+  if (!/^[A-Z]+$/.test(code) || code.length > MAX_POOL_LETTER_CODE_LENGTH) {
     throw new PoolLetterCodeDecodeError(code);
   }
   let n = 0;
@@ -108,6 +131,30 @@ export function poolIndexFromLetterCode(code: string): number {
     n = n * 26 + (code.charCodeAt(i) - 64); // 'A' → 1, ..., 'Z' → 26
   }
   return n - 1; // shift back to 0-based
+}
+
+/**
+ * {@link poolIndexFromLetterCode}, but TOTAL: returns `null` where the strict form throws.
+ *
+ * ⭐⛔ THIS IS THE FORM AN UNTRUSTED CALLER MUST USE, and the public Sahyog Drive filter is one
+ * (Review finding, 2026-08-27). A public search box is ⛔ not a programming error — a visitor
+ * typing `LUCKNOW` into a drive-code field is asking a question, ⛔ not violating a contract, and
+ * the honest answer is "no drive matches", ⛔ never a 500.
+ *
+ * Returns `null` for: a non-`A`-`Z` string, a code longer than
+ * {@link MAX_POOL_LETTER_CODE_LENGTH}, or any code decoding above {@link MAX_POOL_INDEX}. ⚠ The
+ * range check is ⛔ NOT redundant with the length check — six letters admit `ZZZZZZ` (321272405,
+ * fine) but the guard keeps the invariant stated on the VALUE, which is what the int4 column
+ * actually constrains.
+ */
+export function poolIndexFromLetterCodeOrNull(code: string): number | null {
+  if (!/^[A-Z]+$/.test(code) || code.length > MAX_POOL_LETTER_CODE_LENGTH) return null;
+  let n = 0;
+  for (let i = 0; i < code.length; i += 1) {
+    n = n * 26 + (code.charCodeAt(i) - 64);
+  }
+  const index = n - 1;
+  return index > MAX_POOL_INDEX ? null : index;
 }
 
 // ── Canonical identifier: the pure formatter (AC1) ────────────────────────────

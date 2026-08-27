@@ -1,4 +1,30 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-27 (⭐⭐ STORY 11b.1 CODE-REVIEWED A SECOND TIME -- ⛔ ZERO ROWS FLIP.
+#   11b-1-sahyog-drive-active-archive was ALREADY `done` from -26b and STAYS `done`; ⛔ epic-11b stays
+#   in-progress and ⛔ the other SEVEN 11b rows stay `backlog`. ⛔ NO DECISION ENTRY MINTED HERE.
+#   Second three-layer adversarial pass (Blind Hunter, Edge Case Hunter, Acceptance Auditor) over the
+#   SAME branch at c02dae2 -- run because -26b's own patches were themselves unreviewed. 33 raw
+#   findings -> 24 after dedup: FOUR decisions ruled, NINETEEN patches applied, four deferred, four
+#   dismissed. ✅ typecheck 20/20 · lint 20/20 · all unit suites green · DB-gated specs run LIVE
+#   (domain sahyog 22/22, api sahyog-drive 16/16, dpdpa-consent 12/12).
+#   ⭐⭐ THE FINDING THAT MATTERS MOST IS NOT A BUG, IT IS A PATTERN: ⛔ THREE OF THE 24 WERE
+#   RE-OPENINGS OF -26b's OWN CLOSURES. (1) the 0/0 -> `fully_funded` case was deferred on 2026-08-26
+#   as "unreachable" -- ⛔ FALSIFIED: `pool/assign.ts:147` returns an empty assignment on an empty
+#   roster and calls it "the common (B)-scope case"; worse, `seedDrive` has NEVER written
+#   `member_pool_assignments`, so EVERY drive in that spec was a zero-assignee drive being classified
+#   `fully_funded`, under an assertion (`toMatch(/^(fully_funded|under_funded|partial)$/)`) that
+#   passes for the whole union and asserted NOTHING. (2) -26b patched two TRIGGERS of the 400->503
+#   outage collapse and left the SHAPE, so it was found again. (3) -26b's own text named "no test
+#   exercises a letter-code lookup" and checked the row `[x]` -- the gap was still open.
+#   ⚠ D1 RULED KEEP (BigDev): the publication switch is an EMERGENCY/OFF control, a missing row
+#   resolves to ENABLED BY DESIGN, and §Launch posture:169's "do not enable" is an instruction to the
+#   OPERATOR, ⛔ not a spec for a code control. ⇒ RECORDED OPENLY: what keeps /sahyog dark is
+#   DEPLOYMENT + the counsel/Panel process, ⛔ NOT a code mechanism -- ⛔ nobody may cite the switch as
+#   this surface's technical launch gate. ⛔ Counsel's DPDPA clearance for this subject stays HELD
+#   (2026-08-24-157 cl.3(a)) and this surface still has ⛔ no Row 17 ratification of its own.
+#   ⭐ ONE load-bearing-invariant REAL GAP closed: family 13(a) -- `accessibilityRole="checkbox"` on a
+#   Tamagui XStack with ⛔ no `accessible={true}`, so role/label/checked state were NEVER announced on
+#   the screen where a family decides whether their relative is named publicly.
 # last_updated: 2026-08-26b (⭐⭐ STORY 11b.1 CODE-REVIEWED -- review -> done. ⛔ ONE ROW FLIPS
 #   (11b-1-sahyog-drive-active-archive); ⛔ epic-11b stays in-progress and ⛔ the other SEVEN 11b rows
 #   stay `backlog`.

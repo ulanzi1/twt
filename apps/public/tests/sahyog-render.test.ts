@@ -293,9 +293,38 @@ describe('pagination + section split', () => {
       labels,
       wire([row({ status: 'active' }), row({ status: 'archive' }), row({ status: 'active' })]),
     );
-    const { active, archive } = splitSections(view, labels);
+    const { active, archive } = splitSections(view);
     expect(active).toHaveLength(2);
     expect(archive).toHaveLength(1);
+  });
+
+  // ⭐⛔ THE PARTITION SURVIVES A LOCALE WHOSE TWO STATUS LABELS COINCIDE (Review finding,
+  // 2026-08-27).
+  //
+  // `splitSections` used to recover the Active/Archive split by string-comparing each row's
+  // LOCALISED `driveStatus` against `labels.statusActive` / `labels.statusArchive` — destroying
+  // the wire discriminant and reconstructing it from copy. ⛔ If a translator (or a copy edit)
+  // ever made the two labels identical, BOTH filters matched EVERY row and every drive rendered
+  // TWICE, under two headings making contradictory claims about whether the family had been paid.
+  // ⚠ No existing test could catch it: the fixture above uses two DISTINCT labels, and the copy
+  // test never compares the two keys to each other.
+  it('⛔ does NOT partition on display strings — identical status labels still split correctly', () => {
+    const collidingLabels: SahyogLabels = {
+      ...labels,
+      statusActive: 'अभियान',
+      statusArchive: 'अभियान', // ⚠ the SAME string — the exact translator slip
+    };
+    const view = buildSahyogView(
+      { page: 1, limit: 25 },
+      search(),
+      collidingLabels,
+      wire([row({ status: 'active' }), row({ status: 'archive' }), row({ status: 'active' })]),
+    );
+    const { active, archive } = splitSections(view);
+    expect(active).toHaveLength(2);
+    expect(archive).toHaveLength(1);
+    // ⛔ And no row is rendered twice: the two sections partition the page, they do not overlap.
+    expect(active.length + archive.length).toBe(view.model.rows.length);
   });
 });
 

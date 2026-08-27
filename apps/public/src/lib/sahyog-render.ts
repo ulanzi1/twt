@@ -111,6 +111,26 @@ export interface SahyogView {
   readonly links: readonly PaginationLink[];
   readonly hasPrevious: boolean;
   readonly hasNext: boolean;
+  /**
+   * ⭐ THE ACTIVE/ARCHIVE PARTITION, COMPUTED FROM THE WIRE ENUM (Review finding, 2026-08-27).
+   *
+   * ⚠ IT IS COMPUTED HERE, ⛔ NOT RECOVERED FROM THE RENDERED ROWS. `toDisplayRow` collapses
+   * `status` into a LOCALISED display string, and `splitSections` used to recover the partition by
+   * string-comparing those strings back against the same labels — destroying the discriminant and
+   * reconstructing it from copy. ⛔ If a translator (or a copy edit) ever made `status.active` and
+   * `status.archive` identical in one locale, BOTH filters matched EVERY row and every drive
+   * rendered TWICE, under two headings making contradictory claims about whether the family had
+   * been paid. ⛔ No test could catch it: the render fixture uses two distinct labels and the copy
+   * test never compares the two keys.
+   *
+   * ⚠ Carried on the VIEW rather than on `SahyogDriveRow` deliberately — adding a key to that
+   * interface is a MATRIX ACT (`deriveFieldIds` throws in both directions), and this token is a
+   * routing fact, ⛔ not a rendered field.
+   */
+  readonly sections: {
+    readonly active: readonly SahyogDriveRow[];
+    readonly archive: readonly SahyogDriveRow[];
+  };
 }
 
 /**
@@ -129,6 +149,14 @@ function framingFor(
   outcome: PublicSahyogDriveResponse['items'][number]['fundingOutcome'],
   labels: SahyogLabels,
 ): string {
+  // ⭐⛔ NO EXPECTATION WAS EVER SET ⇒ SAY NOTHING (Review finding, 2026-08-27; ✅ RULED BigDev
+  // 2026-08-27). `null` means the drive closed with ZERO assigned contributors, so there is
+  // nothing to compare a delivery against. ⚠ Before this, the domain classified `0 >= 0` as
+  // `fully_funded` and the row published *"The cycle closed with the support it needed."* beside
+  // *"0 confirmed"* — a false statement about money on the one surface built to make checkable
+  // ones. ⛔ Do not substitute a placeholder, an em-dash or a "not recorded" string: the honest
+  // render for "we have nothing to say about this" is an EMPTY cell.
+  if (outcome === null) return '';
   switch (outcome) {
     case 'fully_funded':
       return labels.outcomeFullyFunded;
@@ -151,14 +179,30 @@ function framingFor(
  * ⚠ LATIN NUMERALS + GREGORIAN DATES on this surface (operational register, UX-DR73) — ⛔ never
  * Devanagari digits, even under `hi`. A drive code and a date are operational facts a person may
  * need to quote back to the helpline.
+ *
+ * ⭐⛔ AND IT IS RENDERED IN **IST**, ⛔ NOT UTC (Review finding, 2026-08-27). The numerals rule
+ * above is argued from *"a date a person may need to quote back to the helpline"* — and that
+ * argument decides the TIME ZONE too, which the original said nothing about. IST is UTC+5:30, so
+ * a drive closed between 00:00 and 05:30 IST rendered as the PREVIOUS DAY: a family quoting
+ * 1 August to an operator whose internal view says 2 August. ⭐ The repo already scopes facts to
+ * IST elsewhere (`packages/validity-service/src/producer.ts` — "the current IST calendar year"),
+ * so this is the established convention, ⛔ not a new one.
+ *
+ * ⚠ `sahyog.astro` widens the `<input type="date">` filter bounds to the same IST day boundary —
+ * ⛔ the two must not drift, or a date a visitor can SEE becomes a date they cannot FILTER for.
  */
+export const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+
 function formatClosedAt(iso: string | null): string | null {
   if (iso === null) return null;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
-  const yyyy = String(d.getUTCFullYear()).padStart(4, '0');
-  const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
-  const dd = String(d.getUTCDate()).padStart(2, '0');
+  // Shift the instant by IST's fixed offset, then read the UTC parts — India has no DST, so a
+  // fixed offset is exact and needs no `Intl` timezone database at render time.
+  const ist = new Date(d.getTime() + IST_OFFSET_MS);
+  const yyyy = String(ist.getUTCFullYear()).padStart(4, '0');
+  const mm = String(ist.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(ist.getUTCDate()).padStart(2, '0');
   return `${dd}-${mm}-${yyyy}`;
 }
 
@@ -209,6 +253,23 @@ export function buildSahyogView(
   const rows = drive === null ? [] : drive.items.map((r) => toDisplayRow(r, labels));
   const total = drive?.total ?? 0;
 
+  // ⭐ THE PARTITION IS TAKEN FROM THE WIRE ENUM, HERE, WHILE IT STILL EXISTS — see
+  // {@link SahyogView.sections}. `toDisplayRow` collapses `status` into localised copy, so this is
+  // the LAST point at which the discriminant is still a token. ⛔ Never recover it downstream by
+  // string-comparing display labels.
+  // ⚠ Indices are zipped against `drive.items` rather than re-mapping, so a row appears in EXACTLY
+  // one section by construction — ⛔ not by two independent filters that could both match.
+  const activeRows: SahyogDriveRow[] = [];
+  const archiveRows: SahyogDriveRow[] = [];
+  if (drive !== null) {
+    drive.items.forEach((item, i) => {
+      const displayRow = rows[i];
+      if (displayRow === undefined) return;
+      if (item.status === 'archive') archiveRows.push(displayRow);
+      else activeRows.push(displayRow);
+    });
+  }
+
   // ⚠ "past the end" ⟺ the index genuinely HAS drives (`total > 0`) but none landed on THIS page.
   // ⛔ Distinct from an index that has never published a drive (`total === 0`), which is honestly
   // "nothing yet" rather than "you went too far".
@@ -257,7 +318,13 @@ export function buildSahyogView(
     });
   }
 
-  return { model, links, hasPrevious, hasNext };
+  return {
+    model,
+    links,
+    hasPrevious,
+    hasNext,
+    sections: { active: activeRows, archive: archiveRows },
+  };
 }
 
 /**
@@ -266,14 +333,16 @@ export function buildSahyogView(
  * ⚠ ONE bounded page read feeds BOTH sections — ⛔ not two requests and ⛔ not two paginations.
  * The page is the unit of bounding; Active/Archive is a presentation split within it.
  */
-export function splitSections(
-  view: SahyogView,
-  labels: SahyogLabels,
-): { active: readonly SahyogDriveRow[]; archive: readonly SahyogDriveRow[] } {
-  return {
-    active: view.model.rows.filter((r) => r.driveStatus === labels.statusActive),
-    archive: view.model.rows.filter((r) => r.driveStatus === labels.statusArchive),
-  };
+export function splitSections(view: SahyogView): {
+  active: readonly SahyogDriveRow[];
+  archive: readonly SahyogDriveRow[];
+} {
+  // ⭐ The partition was computed in `buildSahyogView` from the WIRE ENUM and is carried on the
+  // view — see {@link SahyogView.sections}. ⛔ Do not re-derive it here by comparing localised
+  // display strings: that destroys the discriminant and reconstructs it from copy, and a locale
+  // in which the two status labels coincide renders every drive TWICE under contradictory
+  // headings (Review finding, 2026-08-27).
+  return { active: view.sections.active, archive: view.sections.archive };
 }
 
 /** One rendered drive column: its matrix field id, its header, and how to read its value. */
@@ -364,10 +433,18 @@ export function visibleSahyogColumns(
  * FR-91's rejection exists to replace.
  *
  * ⭐ IT TAKES NO `rejection` ARGUMENT, AND THAT IS THE POINT — the rendered state is
- * REJECTION-INVARIANT. `?page=all`, `?limit=99999`, `?page=-1` and `?format=csv` all produce
- * byte-identical output, so a prober learns ⛔ nothing about WHICH bound it hit or where the
- * boundary sits. The decidable reason lives on the parser's verdict for logs and tests; ⛔ it never
- * reaches the DOM.
+ * REJECTION-INVARIANT. `?page=all`, `?limit=99999` and `?page=-1` all produce byte-identical
+ * output, so a prober learns ⛔ nothing about WHICH bound it hit or where the boundary sits. The
+ * decidable reason lives on the parser's verdict for logs and tests; ⛔ it never reaches the DOM.
+ *
+ * ⚠ ⛔ `?format=csv` WAS NAMED HERE AND DID NOT BELONG (Review finding, 2026-08-27). This
+ * doc-block asserted it produced the same byte-identical rejection — it did ⛔ not.
+ * `parsePageParams` examines ONLY `page` and `limit`, so an unknown parameter fell through
+ * unexamined and rendered a normal **200**. ⭐ The `.strict()` refusal that makes `?format=csv` a
+ * 400 lives on the API DTO and is only ever reached for the four parameters the page forwards.
+ * ⇒ the page now REFUSES an unrecognised parameter itself (see `sahyog.astro`), which is what
+ * makes this sentence true rather than aspirational — and which also closes the unbounded
+ * shared-cache key space an arbitrary `?x=<n>` otherwise minted on an `edge_cacheable` surface.
  */
 export interface SahyogRejectionView {
   readonly title: string;

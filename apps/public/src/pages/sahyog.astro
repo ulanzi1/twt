@@ -72,6 +72,7 @@ import { ACTIVE_PARIWAR_ID } from '../lib/pariwar.server.js';
 import {
   buildSahyogRejectionView,
   buildSahyogView,
+  IST_OFFSET_MS,
   splitSections,
   visibleSahyogColumns,
   type SahyogLabels,
@@ -149,8 +150,34 @@ const labels: SahyogLabels = {
 // ⚠ THE ONLY THING ENFORCING FR-91 ON THIS SURFACE. Story 1.14's guard walks the live in-process
 // swagger document and Astro routes emit none — ⛔ do not cite it as coverage here (it DOES cover
 // the `apps/api` route behind this page, which is a different claim).
+// ⭐⛔ AN UNRECOGNISED QUERY PARAMETER IS A REFUSAL (AC3), AND IT IS REFUSED **HERE** (Review
+// finding, 2026-08-27). `parsePageParams` examines only `page`/`limit`, so anything else used to
+// fall through unexamined and render a normal 200 — falsifying `buildSahyogRejectionView`'s own
+// doc-block, which named `?format=csv` as producing byte-identical rejection output.
+// ⚠ AND THE CACHE MAKES IT MORE THAN A CORRECTNESS NICK: this surface is `edge_cacheable`
+// (`s-maxage=300`), so an arbitrary `?x=<n>` minted an UNBOUNDED space of distinct shared-cache
+// keys, each a fresh origin miss re-serving Tier-1 PII into a new PoP entry.
+// ⛔ `lang` is allowed: it is the locale selector `PublicShell` reads, ⛔ not a filter.
+const SAHYOG_ALLOWED_QUERY_PARAMS = new Set([
+  'page',
+  'limit',
+  'district',
+  'closedFrom',
+  'closedTo',
+  'poolCode',
+  'lang',
+]);
+const hasUnknownParam = [...Astro.url.searchParams.keys()].some(
+  (k) => !SAHYOG_ALLOWED_QUERY_PARAMS.has(k),
+);
+
+// ⚠ THE ONLY THING ENFORCING FR-91 ON THIS SURFACE. Story 1.14's guard walks the live in-process
+// swagger document and Astro routes emit none — ⛔ do not cite it as coverage here (it DOES cover
+// the `apps/api` route behind this page, which is a different claim).
 const paging = parsePageParams(Astro.url.searchParams);
-const rejection = paging.ok ? null : buildSahyogRejectionView(labels);
+// ⚠ REJECTION-INVARIANT: an unknown parameter produces the SAME byte-identical state as a bad
+// `page`/`limit`, so a prober learns ⛔ nothing about which bound it hit.
+const rejection = paging.ok && !hasUnknownParam ? null : buildSahyogRejectionView(labels);
 
 // ── The three ruled filter dimensions (AC3, D2(a)) ──────────────────────────
 // ⛔ THERE IS NO NAME FILTER, and its absence is the design: `member_kyc_profiles` carries no blind
@@ -176,10 +203,24 @@ const isFiltered =
 // `z.string().datetime()` — a full ISO timestamp is REQUIRED, and a bare date string fails that
 // schema (Review finding, 2026-08-26). Widened to the inclusive day boundary in each direction so
 // "closed on this day" reads naturally to a visitor picking a single date in either box.
-const closedFromIso = closedFromFilter ? `${closedFromFilter}T00:00:00.000Z` : undefined;
-const closedToIso = closedToFilter ? `${closedToFilter}T23:59:59.999Z` : undefined;
+// ⭐⛔ THE DAY BOUNDARY IS **IST**, ⛔ NOT UTC (Review finding, 2026-08-27). `formatClosedAt`
+// renders in IST, so anchoring the filter to a UTC day put the two 5½ hours out of step: a drive
+// closed 2026-08-02 01:00 IST DISPLAYED as `02-08-2026` and then did ⛔ not come back when the
+// visitor filtered for 2 August — a date you can SEE but cannot FILTER FOR. ⛔ Do not change one
+// of these without the other; `IST_OFFSET_MS` is exported from `sahyog-render.ts` so there is ⛔
+// one definition, not two. India has no DST, so the fixed offset is exact.
+const istDayStartIso = (day: string): string =>
+  new Date(new Date(`${day}T00:00:00.000Z`).getTime() - IST_OFFSET_MS).toISOString();
+const istDayEndIso = (day: string): string =>
+  new Date(new Date(`${day}T23:59:59.999Z`).getTime() - IST_OFFSET_MS).toISOString();
 
-const drive = paging.ok
+const closedFromIso = closedFromFilter ? istDayStartIso(closedFromFilter) : undefined;
+const closedToIso = closedToFilter ? istDayEndIso(closedToFilter) : undefined;
+
+// ⚠ Gated on `rejection`, ⛔ not on `paging.ok` alone — a rejected request must cost NOTHING
+// upstream. An unknown parameter is a refusal, so it must not reach the API hop either.
+const drive =
+  rejection === null && paging.ok
   ? await fetchSahyogDrive({
       page: paging.page,
       limit: paging.limit,
@@ -196,16 +237,27 @@ const drive = paging.ok
     })
   : null;
 
-const view = paging.ok
+// ⭐ A 4xx FROM THE API IS AN INPUT REFUSAL, ⛔ NOT AN OUTAGE (Review finding, 2026-08-27;
+// ✅ RULED AC7 GOVERNS, BigDev 2026-08-27). `fetchSahyogDrive` now distinguishes the two, and a
+// `'rejected'` reason routes to the SAME rejection state a bad `page`/`limit` produces — so a
+// visitor who typed a space into the District box is told their search could not be read, ⛔ not
+// that the trust's systems are down. ⚠ AC8's "`ok:false` presented as an OUTAGE" means TRANSPORT
+// FAILURE; ⛔ the two states are not interchangeable, and the first review pass patched two
+// triggering inputs while leaving this collapse in place.
+const apiRejected = drive !== null && !drive.ok && drive.reason === 'rejected';
+const effectiveRejection = rejection ?? (apiRejected ? buildSahyogRejectionView(labels) : null);
+
+const view =
+  effectiveRejection === null && paging.ok
   ? buildSahyogView(paging, Astro.url.searchParams, labels, drive?.ok ? drive.data : null, {
       filtered: isFiltered,
     })
   : null;
-const sections = view !== null ? splitSections(view, labels) : { active: [], archive: [] };
+const sections = view !== null ? splitSections(view) : { active: [], archive: [] };
 
 // ⛔ A rejected request renders a 400-shaped state — ⛔ NOT a redirect to page 1, and ⛔ NOT a
 // successful render of a different page than was asked for.
-if (rejection !== null) Astro.response.status = rejection.status;
+if (effectiveRejection !== null) Astro.response.status = effectiveRejection.status;
 
 // ── Cache headers (AC7, D8(a)) ──────────────────────────────────────────────
 // Declared `edge_cacheable` in public-vs-private-matrix.yaml, and the gate's cache-policy leg FAILS
@@ -230,7 +282,7 @@ if (rejection !== null) Astro.response.status = rejection.status;
 // 200 — one transient blip pinned "could not be loaded" into a shared edge for five minutes.
 // ⚠ `pastEnd` IS cacheable and deliberately so: it is a TRUE statement about a real index.
 // ⛔ `apiUnavailable` is not: it is a statement about THIS request's luck.
-const cacheable = rejection === null && view !== null && !view.model.apiUnavailable;
+const cacheable = effectiveRejection === null && view !== null && !view.model.apiUnavailable;
 if (cacheable) {
   Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
   Astro.response.headers.set('Vary', 'Accept-Language');
@@ -240,7 +292,7 @@ if (cacheable) {
 // ⚠ AND THE STATUS TELLS THE TRUTH TOO. A page that says "could not be loaded" at 200 is a lie to
 // every cache, crawler and uptime check in the path. 503 + `Retry-After` is the honest shape.
 // ⛔ Not 500: the failure is upstream and transient, and this page rendered correctly.
-if (rejection === null && view !== null && view.model.apiUnavailable) {
+if (effectiveRejection === null && view !== null && view.model.apiUnavailable) {
   Astro.response.status = 503;
   Astro.response.headers.set('Retry-After', '60');
 }
@@ -254,6 +306,30 @@ const driveColumns = visibleSahyogColumns(
   labels,
   (fieldId) => visibilityOf('sahyog-drive', fieldId, 'public').visible,
 );
+
+// ⭐⛔ `drive_status` IS THE ONE CLASSIFIED FIELD WITH NO `<MatrixField>` CELL, SO IT NEEDS THIS
+// GUARD (Review finding, 2026-08-27).
+//
+// It is declared in `SAHYOG_DRIVE_ROW_FIELD_IDS` and in the matrix YAML — so the tier-leak leg
+// counts it as governed — but it has ⛔ no entry in `visibleSahyogColumns`. Its value is disclosed
+// STRUCTURALLY instead: by which of the two `<section>`s a row lands in, and by those sections'
+// `<h2>` headings. ⇒ flipping `drive_status.tier` to `authenticated_member` in the YAML would
+// suppress ⛔ NOTHING, every row would keep disclosing its status through placement, and the leak
+// gate would stay GREEN because the field id is still declared.
+//
+// ⛔ This guard does NOT hide the sections — hiding them is a real design change (the Active /
+// Archive split IS this page's structure) and inventing a silent fallback would be worse than the
+// gap. ⭐ What it does is make the inertness IMPOSSIBLE TO INTRODUCE QUIETLY: a matrix verdict this
+// page cannot honour now FAILS THE RENDER instead of being ignored.
+const driveStatusVisible = visibilityOf('sahyog-drive', 'drive_status', 'public').visible;
+if (!driveStatusVisible) {
+  throw new Error(
+    '[sahyog.astro] the matrix suppresses `drive_status` for `sahyog-drive` at the `public` tier, ' +
+      'but this page discloses it STRUCTURALLY — through the Active/Archive section split and its ' +
+      'headings — and has no cell to suppress. Honouring that verdict requires removing the ' +
+      'sectioned layout, not a config change. Restore the tier, or redesign the page deliberately.',
+  );
+}
 ---
 
 <PublicShell
@@ -267,11 +343,11 @@ const driveColumns = visibleSahyogColumns(
   <main class="sahyog" aria-labelledby="sahyog-title">
     <h1 id="sahyog-title" class="sahyog__title">{labels.pageTitle}</h1>
 
-    {rejection !== null && (
+    {effectiveRejection !== null && (
       <section class="sahyog__notice" role="alert" aria-labelledby="sahyog-rejected-title">
-        <h2 id="sahyog-rejected-title" class="sahyog__notice-title">{rejection.title}</h2>
-        <p class="sahyog__notice-body">{rejection.body}</p>
-        <p><a class="sahyog__link" href={rejection.linkHref}>{rejection.linkLabel}</a></p>
+        <h2 id="sahyog-rejected-title" class="sahyog__notice-title">{effectiveRejection.title}</h2>
+        <p class="sahyog__notice-body">{effectiveRejection.body}</p>
+        <p><a class="sahyog__link" href={effectiveRejection.linkHref}>{effectiveRejection.linkLabel}</a></p>
       </section>
     )}
 
@@ -284,11 +360,32 @@ const driveColumns = visibleSahyogColumns(
             ⛔ There is NO name field, and the note says so rather than leaving its absence to be
             read as an oversight. */}
         <form class="sahyog__filters" method="get" action="/sahyog">
+          {/* ⭐⛔ THE LOCALE RIDES THE FORM, OR THE SEARCH DROPS IT (Review finding, 2026-08-27).
+              A GET submit REPLACES the entire query string, so a Hindi reader who arrived at
+              `/sahyog?lang=hi`, typed a district and pressed खोजें landed on `/sahyog?district=…`
+              with `lang` GONE — falling back to `Accept-Language`, which for a browser configured
+              in English silently flips the whole page to English mid-task. ⛔ On a page addressed
+              to grieving families that is not cosmetic.
+              ⚠ Emitted ONLY when the visitor actually chose a locale: an unconditional hidden
+              field would pin the negotiated default into the URL and mint a second cache key for
+              what is byte-identical output. */}
+          {langParam !== null && isLocale(langParam) && (
+            <input type="hidden" name="lang" value={langParam} />
+          )}
           <fieldset>
             <legend>{tr('filter.legend')}</legend>
             <p class="sahyog__filter-row">
               <label for="f-district">{tr('filter.district.label')}</label>
-              <input id="f-district" name="district" type="text" value={districtFilter ?? ''} />
+              {/* ⚠ `maxlength` MIRRORS the API's `z.string().trim().max(120)` / `.max(64)`. It is
+                  a courtesy that keeps an ordinary typo from becoming a round-trip refusal — ⛔ NOT
+                  the enforcement, which stays server-side where it cannot be edited away. */}
+              <input
+                id="f-district"
+                name="district"
+                type="text"
+                maxlength="120"
+                value={districtFilter ?? ''}
+              />
             </p>
             <p class="sahyog__filter-row">
               <label for="f-from">{tr('filter.closed_from.label')}</label>
@@ -300,7 +397,13 @@ const driveColumns = visibleSahyogColumns(
             </p>
             <p class="sahyog__filter-row">
               <label for="f-code">{tr('filter.pool_code.label')}</label>
-              <input id="f-code" name="poolCode" type="text" value={poolCodeFilter ?? ''} />
+              <input
+                id="f-code"
+                name="poolCode"
+                type="text"
+                maxlength="64"
+                value={poolCodeFilter ?? ''}
+              />
             </p>
             <p class="sahyog__filter-note">{tr('filter.no_name_search')}</p>
             <p><button type="submit">{tr('filter.submit')}</button></p>

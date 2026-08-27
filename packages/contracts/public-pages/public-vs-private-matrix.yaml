@@ -426,6 +426,12 @@ surfaces:
   # ⛔ 11b.3 and 11b.6 stay undeclared; see that note.
   - id: sahyog-drive
     route: /sahyog
+    # ⭐ DECLARED EXPLICITLY, ⛔ not left to the schema default (Review finding, 2026-08-27). AC7 and
+    # Task 4 both name `renders: true` in the required key list, and the story's own test fixture
+    # writes it — so the shipped YAML and the fixture disagreed on this surface's shape while
+    # `matrix.ts`'s `z.boolean().default(true)` made the omission behaviourally invisible.
+    # ⛔ A key an AC names is not optional just because a default happens to supply it.
+    renders: true
     description: >-
       The public transparency index over POOLS — Active (`pools.current_state` =
       `closed`: the collection window has shut, the family is not yet paid) and

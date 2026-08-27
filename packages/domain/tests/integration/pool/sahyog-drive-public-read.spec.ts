@@ -45,6 +45,18 @@ async function seedDrive(
     fixedAmount?: number;
     withKyc?: boolean;
     closedAt?: Date;
+    /**
+     * How many members were ASSIGNED to contribute to this drive.
+     *
+     * ⭐ DEFAULTS TO 0, WHICH IS WHAT EVERY DRIVE IN THIS SPEC ALREADY WAS — `seedDrive` has never
+     * written `member_pool_assignments`. That is ⛔ not a fixture nicety: under the pre-2026-08-27
+     * code every one of these drives had `expectedTotal === 0`, `0 >= 0` classified vacuously as
+     * `fully_funded`, and the surface would have published *"The cycle closed with the support it
+     * needed."* beside *"0 confirmed"*. ⚠ The one assertion covering it was
+     * `toMatch(/^(fully_funded|under_funded|partial)$/)`, which passes for all three and asserts
+     * nothing.
+     */
+    assignedMembers?: number;
   } = {},
 ): Promise<{ poolId: string; claimCaseId: string; deceasedMemberId: string }> {
   const deceasedMemberId = await seedMember(tx, pariwarId);
@@ -76,6 +88,22 @@ async function seedDrive(
       occurredAt: opts.closedAt,
       payload: {},
     });
+  }
+  // ⚠ The EXPECTED side of the funding outcome. Assignments are what make a drive's outcome
+  // classifiable at all — with none, no expectation was ever set and `fundingOutcome` is `null`.
+  const assignedMembers = opts.assignedMembers ?? 0;
+  if (assignedMembers > 0) {
+    const cycleId = randomUUID();
+    for (let i = 0; i < assignedMembers; i += 1) {
+      const memberId = await seedMember(tx, pariwarId);
+      await tx.insert(schema.memberPoolAssignments).values({
+        poolId: ids.poolId(poolId),
+        memberId: ids.memberId(memberId),
+        pariwarId: ids.pariwarId(pariwarId),
+        cycleId: ids.cycleFreezeCommitId(cycleId),
+        assignedAt: new Date('2026-08-01T00:00:00.000Z'),
+      });
+    }
   }
   return { poolId, claimCaseId, deceasedMemberId };
 }
@@ -542,20 +570,51 @@ describe.skipIf(!hasDatabase)('Sahyog Drive public pool index (Story 11b.1)', ()
   describe('⛔ the target is quarantined (AC4)', () => {
     it('returns an opaque outcome enum and ⛔ NO total, percentage or shortfall field', async () => {
       const { client, tx } = getTx();
-      const drive = await seedDrive(tx, PARIWAR_A, { fixedAmount: 100 });
+      const drive = await seedDrive(tx, PARIWAR_A, { fixedAmount: 100, assignedMembers: 3 });
 
       await enterAppScope(client, PARIWAR_A);
       const row = (
         await poolDomain.listPublicSahyogDrivePools(tx, ids.pariwarId(PARIWAR_A), { limit: 50 })
       ).find((r) => r.poolId === drive.poolId);
 
-      expect(row?.fundingOutcome).toMatch(/^(fully_funded|under_funded|partial)$/);
+      // ⚠ An EXACT membership assertion, ⛔ not the old `toMatch(/^(fully_funded|under_funded|
+      // partial)$/)` — that regex passed for every member of the union AND would have passed for a
+      // vacuous classification, so it asserted nothing at all (Review finding, 2026-08-27).
+      // 3 assigned × 100 expected vs 0 confirmed ⇒ genuinely under-funded.
+      expect(row?.fundingOutcome).toBe('under_funded');
       // ⛔ Not "no target is CURRENTLY set" — no key that could carry one EXISTS on the shape.
       // A future edit adding `expectedTotal`, `shortfall`, `percentFunded` or a renamed cousin
       // fails here, which is the point: `classifyCycleOutcome` quarantines the target by
       // construction and this surface must not smuggle one past it.
       const forbidden = /target|expected|shortfall|percent|ratio|remaining|deficit|goal/i;
       expect(Object.keys(row ?? {}).filter((k) => forbidden.test(k))).toEqual([]);
+    });
+
+    // ⭐⛔ THE ZERO-EXPECTATION DRIVE SAYS NOTHING (Review finding, 2026-08-27; ✅ RULED BigDev
+    // 2026-08-27).
+    //
+    // ⚠ AND IT IS REACHABLE ON THE ORDINARY PATH, which is why the first review pass's deferral —
+    // "unreachable; assignments are written at spawn, well before a pool can close" — did ⛔ not
+    // hold. `pool/assign.ts:147` returns an empty assignment on an empty roster (its own comment:
+    // *"the common (B)-scope case"*), and `capacity[i] = floor(m/n) + (i < m % n)` gives 0 to the
+    // trailing `n − m` pools whenever approved claims outnumber the assignable roster. Pools spawn
+    // one per approved claim, independently of roster size.
+    it('⭐ a drive with ZERO assigned members yields a NULL outcome — ⛔ never a vacuous fully_funded', async () => {
+      const { client, tx } = getTx();
+      const drive = await seedDrive(tx, PARIWAR_A, { fixedAmount: 100, assignedMembers: 0 });
+
+      await enterAppScope(client, PARIWAR_A);
+      const row = (
+        await poolDomain.listPublicSahyogDrivePools(tx, ids.pariwarId(PARIWAR_A), { limit: 50 })
+      ).find((r) => r.poolId === drive.poolId);
+
+      // ⛔ The row still EXISTS — no expectation is not a reason to hide a drive.
+      expect(row).toBeDefined();
+      expect(row?.confirmedContributionCount).toBe(0);
+      // ⛔ NOT 'fully_funded'. `0 >= 0` is vacuously true, and publishing "the cycle closed with
+      // the support it needed" for a drive that collected nothing is a false statement about money
+      // on the one surface whose premise is that its statements can be checked.
+      expect(row?.fundingOutcome).toBeNull();
     });
   });
 });

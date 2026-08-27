@@ -11,12 +11,17 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  MAX_POOL_INDEX,
+  MAX_POOL_LETTER_CODE_LENGTH,
   POOL_CANONICAL_IDENTIFIER_CONSTRAINT,
   PoolCanonicalIdentifierCollisionError,
+  PoolLetterCodeDecodeError,
   PoolLetterCodeRangeError,
   formatPoolCanonicalIdentifier,
   isPoolCanonicalIdentifierConflict,
   poolAuditIdentifier,
+  poolIndexFromLetterCode,
+  poolIndexFromLetterCodeOrNull,
   poolLetterCode,
   resolvePoolDisplay,
 } from '../../src/pool/naming.js';
@@ -75,6 +80,92 @@ describe('poolLetterCode — bijective base-26 (AC2)', () => {
       expect(() => poolLetterCode(bad)).toThrow(PoolLetterCodeRangeError);
     },
   );
+});
+
+// ── poolIndexFromLetterCode — the INVERSE (Story 11b.1 AC3 / D2(a)) ──────────────────
+//
+// ⭐ ADDED BY THE 2026-08-27 REVIEW. The letter-code half of the Sahyog Drive's pool-code
+// filter shipped with ZERO tests at any layer, and `poolIndexFromLetterCode` had no test
+// anywhere in the repo — while `poolLetterCode` above carries an explicit "the obvious
+// implementation passes every test up to 25" warning. The first review pass NAMED this gap
+// ("No test (domain or API integration) exercises a letter-code lookup") and the row was
+// checked off with the gap still open.
+
+describe('poolIndexFromLetterCode — the inverse of poolLetterCode', () => {
+  it.each([
+    ['A', 0],
+    ['B', 1],
+    ['Z', 25],
+    ['AA', 26],
+    ['AB', 27],
+    ['AZ', 51],
+    ['BA', 52],
+    ['ZZ', 701],
+    ['AAA', 702],
+  ])('decodes %s to %i', (code, index) => {
+    expect(poolIndexFromLetterCode(code)).toBe(index);
+  });
+
+  // ⭐ THE PROPERTY THE WHOLE FILTER RESTS ON, asserted rather than assumed: the pair is a
+  // BIJECTION. A round-trip failure anywhere here means a member who reads "Pool F" on their
+  // card cannot find Pool F in the public index.
+  it('round-trips poolLetterCode for every index across the base-26 boundaries', () => {
+    for (let i = 0; i <= 800; i += 1) {
+      expect(poolIndexFromLetterCode(poolLetterCode(i))).toBe(i);
+    }
+  });
+
+  it.each(['', 'a', 'A1', 'P-2026-08-001', 'AB ', '-'])(
+    'throws PoolLetterCodeDecodeError on %o',
+    (bad) => {
+      expect(() => poolIndexFromLetterCode(bad)).toThrow(PoolLetterCodeDecodeError);
+    },
+  );
+
+  // ⛔ THE int4 OVERFLOW. `pools.pool_index` is `integer`, and drizzle BINDS the decoded value,
+  // so Postgres resolves the parameter to int4 and raises `22003` — an unauthenticated 500,
+  // reproduced live against the test container before this bound existed.
+  it('refuses a code longer than MAX_POOL_LETTER_CODE_LENGTH', () => {
+    const tooLong = 'A'.repeat(MAX_POOL_LETTER_CODE_LENGTH + 1);
+    expect(() => poolIndexFromLetterCode(tooLong)).toThrow(PoolLetterCodeDecodeError);
+  });
+
+  it('every code at the maximum length still decodes inside int4', () => {
+    const widest = 'Z'.repeat(MAX_POOL_LETTER_CODE_LENGTH);
+    expect(poolIndexFromLetterCode(widest)).toBeLessThanOrEqual(MAX_POOL_INDEX);
+  });
+});
+
+describe('poolIndexFromLetterCodeOrNull — the TOTAL form an untrusted caller must use', () => {
+  it('agrees with the strict form on every valid code', () => {
+    for (let i = 0; i <= 800; i += 1) {
+      const code = poolLetterCode(i);
+      expect(poolIndexFromLetterCodeOrNull(code)).toBe(poolIndexFromLetterCode(code));
+    }
+  });
+
+  // ⭐ A PUBLIC SEARCH BOX IS NOT A PROGRAMMING ERROR. A visitor typing an ordinary word into
+  // the Sahyog Drive's drive-code field is asking a question; the honest answer is "no drive
+  // matches", ⛔ never a 500. `LUCKNOW` is 7 letters and decodes past int4.
+  it.each(['LUCKNOW', 'AAAAAAA', 'ZZZZZZZ', 'AAAAAAAA', 'A'.repeat(64)])(
+    'returns null rather than throwing or overflowing for %o',
+    (word) => {
+      expect(poolIndexFromLetterCodeOrNull(word)).toBeNull();
+    },
+  );
+
+  it.each(['', 'a', 'p-2026-08-001', 'A1', '  '])('returns null for the non-code %o', (bad) => {
+    expect(poolIndexFromLetterCodeOrNull(bad)).toBeNull();
+  });
+
+  it('never returns a value outside int4 range', () => {
+    for (const code of ['A', 'Z', 'ZZ', 'ZZZ', 'ZZZZ', 'ZZZZZ', 'ZZZZZZ']) {
+      const index = poolIndexFromLetterCodeOrNull(code);
+      expect(index).not.toBeNull();
+      expect(index!).toBeGreaterThanOrEqual(0);
+      expect(index!).toBeLessThanOrEqual(MAX_POOL_INDEX);
+    }
+  });
 });
 
 describe('formatPoolCanonicalIdentifier — the P-YYYY-MM-### grammar (AC1)', () => {

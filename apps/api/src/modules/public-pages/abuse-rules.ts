@@ -88,9 +88,35 @@ export function loadDirectoryAbuseRules(path = resolveRulesPath()): DirectoryAbu
 }
 
 /** One directory request, reduced to the non-PII facts the detectors count. */
+/**
+ * Which public surface a signal came from.
+ *
+ * ⭐⛔ REQUIRED, AND IT PARTITIONS THE COUNTER STATE (Review finding, 2026-08-27). Until Story
+ * 11b.1 this evaluator had exactly ONE caller, so `key: request.ip` alone was a sufficient
+ * identity. It now has TWO, and every window field — `hits`, `pages`, `deepestPage`,
+ * `transitions`, and the per-rule `emitted` dedupe — was being SHARED between them. Three
+ * consequences, all live:
+ *   1. ⛔ A visitor legitimately paging `/members` and then `/sahyog` accumulated ONE merged rate
+ *      and could trip `rapid_pagination` — a false positive that dilutes the only abuse signal
+ *      this surface has.
+ *   2. ⛔ A scraper could SPLIT a walk across the two routes to stay under a per-key threshold
+ *      that was calibrated for one.
+ *   3. ⛔ The `EMIT_DEDUPE_MS` window is keyed `(key, ruleId)`, so a `/members` crawl that emitted
+ *      a line SUPPRESSED the `/sahyog` line for the next 60 seconds entirely.
+ * ⚠ The abuse-rules YAML already recognised the per-surface problem — but only for the INACTIVE
+ * `district_query_volume` rule. The reasoning applies with equal force to the three ACTIVE ones.
+ */
+export type DirectorySurface = 'member-directory' | 'sahyog-drive';
+
 export interface DirectoryRequestSignal {
   /** The visitor key — `request.ip` under `trustProxy`. ⚠ Trustworthy only behind the SSR hop. */
   key: string;
+  /**
+   * ⭐ WHICH SURFACE. ⛔ REQUIRED — see {@link DirectorySurface}. It partitions the counter windows
+   * AND it is what makes an emitted line say which page was actually crawled: every line used to
+   * read `directory:…` regardless of origin, so an operator could ⛔ not tell the two apart.
+   */
+  surface: DirectorySurface;
   /**
    * The Pariwar whose directory was requested.
    * ⭐ REQUIRED. Omitting it wrote every abuse line under the nil GLOBAL pariwar
@@ -181,7 +207,13 @@ export function evaluateDirectoryAbuse(
     const now = signal.at.getTime();
     const horizon = maxWindowMs(rules);
 
-    let win = windows.get(signal.key);
+    // ⭐ THE COUNTER IDENTITY IS (SURFACE, VISITOR), ⛔ NOT VISITOR ALONE — see
+    // {@link DirectorySurface}. ⛔ Never collapse this back to `signal.key`: two surfaces sharing
+    // one window merge their rates, let a scraper split a walk under the threshold, and let one
+    // surface's emit suppress the other's through the 60s dedupe.
+    const windowKey = `${signal.surface} ${signal.key}`;
+
+    let win = windows.get(windowKey);
     if (win === undefined) {
       if (windows.size >= MAX_TRACKED_KEYS) evictColdest(now, horizon);
       win = {
@@ -193,7 +225,7 @@ export function evaluateDirectoryAbuse(
         transitions: [],
         emitted: new Map(),
       };
-      windows.set(signal.key, win);
+      windows.set(windowKey, win);
     }
 
     win.hits.push(now);
@@ -257,7 +289,11 @@ export function evaluateDirectoryAbuse(
         // which the sink's locator-shape guard rejects, so the whole locator fell back to
         // `user:anonymous` and DISCARDED the rule id: the one triage field Trap 8's entire argument
         // is built to preserve, lost exactly when the input was strange enough to be interesting.
-        resourceLocator: `directory:${rule.id}:p${locatorNum(signal.page)}:l${locatorNum(signal.limit)}`,
+        // ⚠ THE SURFACE LEADS THE LOCATOR (Review finding, 2026-08-27). Every line previously read
+        // `directory:…` whichever surface fired it, so an operator reading an abuse line could
+        // ⛔ not tell whether the Member Directory or the Sahyog Drive had been crawled — on the
+        // one triage field Trap 8's whole argument exists to preserve.
+        resourceLocator: `${signal.surface}:${rule.id}:p${locatorNum(signal.page)}:l${locatorNum(signal.limit)}`,
         context: { observed, threshold, detects: rule.detects },
         at: signal.at,
       });

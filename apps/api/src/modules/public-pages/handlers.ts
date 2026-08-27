@@ -166,6 +166,7 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
         // are in hand right here — ⛔ there was never a reason to discard them.
         evaluateDirectoryAbuse(deps, abuseRules, {
           key: request.ip,
+          surface: 'member-directory',
           pariwarId: pariwarIdStr,
           traceId: request.requestContext.traceId ?? null,
           page,
@@ -283,15 +284,32 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
      * this doc-block deliberately does not restate the list, so there is no third copy to drift.
      *
      * ⭐⛔ THE TIER-1 DECRYPT LIVES HERE AND NOWHERE ELSE, AND IT IS EASY TO LEAVE UNOWNED:
-     * `pool/public-read.ts` is decrypt-free BY RULE, and `apps/public` provably CANNOT decrypt
-     * (`no-kms-in-public.test.ts` scans the whole app for any encryption symbol). ⇒ if this handler
-     * does not do it, ⛔ NOTHING does, and the surface silently ships nameless.
+     * `pool/public-read.ts` is decrypt-free BY RULE, and no module in `apps/public` ASKS for
+     * encryption — `no-kms-in-public.test.ts` scans that app for the import, the symbol and the
+     * config key. ⇒ if this handler does not do it, ⛔ NOTHING does, and the surface silently
+     * ships nameless.
+     *
+     * ⚠ ⛔ DO NOT WRITE *"`apps/public` PROVABLY CANNOT DECRYPT"* — that overstates what the gate
+     * proves, and the gate's own header says so in terms: it *"says nothing about what
+     * `@twt/domain`'s OTHER namespaces transitively contain. What it proves is that no module in
+     * this app ASKS for encryption."* `sahyog.astro` imports `passport` from the `@twt/domain`
+     * barrel, which re-exports `encryption`; a source-text scan for named symbols cannot see
+     * through a barrel. ⭐ The real protection is that no KMS client is wired into `apps/public`'s
+     * dependencies — a CONFIGURATION fact, ⛔ not a structural proof. Stating it as a proof is how
+     * a future author stops checking (Review finding, 2026-08-27).
      */
     async sahyogDrive(request: FastifyRequest): Promise<PublicSahyogDriveResponse> {
       const { pariwarId: pariwarIdStr } = request.params as { pariwarId: string };
       const query = request.query as PublicSahyogDriveQuery;
       const page = query.page ?? 1;
-      const limit = query.limit ?? PUBLIC_DIRECTORY_PAGE_SIZE_DEFAULT;
+      // ⚠ THIS SURFACE'S OWN DEFAULT, ⛔ NOT THE DIRECTORY'S (Review finding, 2026-08-27). The
+      // domain declares `SAHYOG_DRIVE_PAGE_SIZE_DEFAULT` and this handler was reaching past it for
+      // `PUBLIC_DIRECTORY_PAGE_SIZE_DEFAULT` — so the domain constant was DEAD (the accessor never
+      // sees an undefined `limit`) while the integration test asserted against it. Both passed only
+      // because the two numbers coincide today; tuning the directory's would have silently moved
+      // this surface's page size and failed a test pointing at an unrelated constant. ⭐ Same
+      // discipline the file already applies to `PUBLIC_SAHYOG_DRIVE_PAGE_HORIZON`.
+      const limit = query.limit ?? poolDomain.SAHYOG_DRIVE_PAGE_SIZE_DEFAULT;
       const offset = (page - 1) * limit;
       const pariwarId = ids.pariwarId(pariwarIdStr);
 
@@ -342,6 +360,7 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
         // 11a.3: that discards the edge for a public surface).
         evaluateDirectoryAbuse(deps, abuseRules, {
           key: request.ip,
+          surface: 'sahyog-drive',
           pariwarId: pariwarIdStr,
           traceId: request.requestContext.traceId ?? null,
           page,

@@ -48,11 +48,30 @@ function ConsentRow(props: {
   label: string
 }): React.ReactElement {
   return (
+    // ⭐⛔ `accessible` IS EXPLICIT, AND IT IS LOAD-BEARING — load-bearing-invariant family 13(a)
+    // (Review finding, 2026-08-27).
+    //
+    // ⚠ A container carrying `accessibilityLabel` that is NOT itself an accessibility element is
+    // ⛔ NEVER ANNOUNCED. RN sets `accessible={true}` on `Pressable` BY DEFAULT — that default is
+    // the only reason the pattern works elsewhere in this app — but a Tamagui `XStack` is ⛔ not a
+    // `Pressable`, so the role, the label and the checked STATE were all being dropped: a
+    // screen-reader user heard the label text as prose, with no role and ⛔ no indication of
+    // whether the box was ticked.
+    // ⛔ On the one screen where a family decides whether their deceased relative's name is
+    // published to the open internet.
+    //
+    // ⭐ The worked example this follows deliberately:
+    // `apps/mobile/components/panchayat/PinnedItem.tsx` — *"Dropping the `Pressable` drops the
+    // mechanism, so the unit is re-established EXPLICITLY."*
+    // ⛔ Do not remove this prop to "clean up": nothing in CI catches its absence — family 13 is
+    // un-mechanized BY RULING (BigDev 2026-08-23, revisit at 11b.8), so a missed check here leaves
+    // ⛔ no trace at all.
     <XStack
       gap="$3"
       items="flex-start"
       onPress={props.onToggle}
       pressStyle={{ opacity: 0.7 }}
+      accessible={true}
       accessibilityRole="checkbox"
       accessibilityState={{ checked: props.checked }}
       accessibilityLabel={props.label}

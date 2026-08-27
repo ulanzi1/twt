@@ -50,7 +50,20 @@ const REQUEST_TIMEOUT_MS = 4000;
  */
 export type SahyogDriveFetchResult =
   | { readonly ok: true; readonly data: PublicSahyogDriveResponse }
-  | { readonly ok: false; readonly reason: 'unreachable' | 'timeout' | 'bad_response' };
+  | {
+      readonly ok: false;
+      /**
+       * ⭐ `'rejected'` IS AN INPUT REFUSAL AND IS ⛔ NOT AN OUTAGE — the API read the request and
+       * returned a 4xx, so the visitor's filter was malformed and the fix is theirs. The caller
+       * MUST present it as AC7's REJECTION state (400 + `no-store` + fixable-input copy).
+       *
+       * ⚠ The other three are all genuine upstream failure and are the OUTAGE state (503 +
+       * `Retry-After`). ⛔ Never fold `'rejected'` in with them: telling a visitor their own typo
+       * is "a problem on our side" is what AC7's four-state contract exists to prevent, and it
+       * reports a user-caused 4xx to crawlers and uptime monitors as a server fault.
+       */
+      readonly reason: 'unreachable' | 'timeout' | 'bad_response' | 'rejected';
+    };
 
 /** The three ruled filter dimensions (D2(a)). ⛔ There is no fourth, and ⛔ no name filter. */
 export interface SahyogDriveFilters {
@@ -111,7 +124,22 @@ export async function fetchSahyogDrive(
       },
       signal: controller.signal,
     });
-    if (!res.ok) return { ok: false, reason: 'bad_response' };
+    // ⭐⛔ AN INPUT REFUSAL IS NOT AN OUTAGE (Review finding, 2026-08-27; ✅ RULED AC7 GOVERNS,
+    // BigDev 2026-08-27). A 4xx means the API READ the request and REFUSED it — the visitor's
+    // filter was malformed. A 5xx, a timeout or an unreachable origin means the surface is down.
+    // ⚠ Collapsing the two made the page tell a visitor who typed a space into the District box
+    // *"This is a problem on our side, not a statement about the trust's activity"* at HTTP 503 —
+    // reporting a user's typo to them, and to every crawler and uptime monitor, as a server fault.
+    // ⚠ AC8's *"`ok:false` presented as an OUTAGE"* is read as meaning TRANSPORT FAILURE; AC7's
+    // four-state contract governs, and the two states are ⛔ not interchangeable.
+    // ⛔ Do not collapse this back: the first review pass patched two triggering INPUTS and left
+    // the shape, and the shape was found again by the next pass.
+    if (!res.ok) {
+      return {
+        ok: false,
+        reason: res.status >= 400 && res.status < 500 ? 'rejected' : 'bad_response',
+      };
+    }
 
     const body = (await res.json()) as unknown;
     if (!isSahyogDriveResponse(body)) return { ok: false, reason: 'bad_response' };
@@ -146,14 +174,32 @@ function isSahyogDriveResponse(body: unknown): body is PublicSahyogDriveResponse
       // ⚠ `null` is a VALID name here and is not a degraded read — it is the consent gate's normal
       // verdict. ⛔ Treating a null name as a bad response would turn every unconsented drive into
       // an outage, which inverts AC2 exactly.
-      (r['deceasedMemberName'] === null || typeof r['deceasedMemberName'] === 'string') &&
+      // ⚠ ⛔ BUT `''` IS NOT A VALID NAME (Review finding, 2026-08-27). The contract is
+      // `z.string().min(1).nullable()` and the API maps `name === '' ? null : name` precisely
+      // because `shielded_name` returns `''` for a mononym. An empty string is truthy-DISTINCT
+      // from null here, so it would survive as a "present" name and render a blank name cell —
+      // the announced-omission signal AC2 forbids, arriving through the one field it matters most
+      // for. Accept `null` or a NON-EMPTY string, nothing between.
+      (r['deceasedMemberName'] === null ||
+        (typeof r['deceasedMemberName'] === 'string' && r['deceasedMemberName'].length > 0)) &&
       typeof r['poolLetterCode'] === 'string' &&
       typeof r['poolCanonicalIdentifier'] === 'string' &&
       (r['status'] === 'active' || r['status'] === 'archive') &&
       (r['closedAt'] === null || typeof r['closedAt'] === 'string') &&
       (r['district'] === null || typeof r['district'] === 'string') &&
       typeof r['confirmedContributionCount'] === 'number' &&
-      typeof r['fundingOutcome'] === 'string'
+      // ⚠ VALIDATED AGAINST THE LITERAL SET, ⛔ not `typeof === 'string'` (Review finding,
+      // 2026-08-27). `framingFor` switches on this value and its `default:` branch THROWS, inside
+      // `buildSahyogView`, which the `.astro` frontmatter calls unguarded — so a bare `string`
+      // check let any unknown token through and defeated this module's own "⛔ NEVER THROWS"
+      // guarantee one function later. ⭐ `status` immediately above was already checked this way;
+      // the two are now symmetric.
+      // ⚠ `null` is VALID and load-bearing: it means no expectation was ever set for the drive
+      // (zero assigned contributors) and the row deliberately says nothing.
+      (r['fundingOutcome'] === null ||
+        r['fundingOutcome'] === 'fully_funded' ||
+        r['fundingOutcome'] === 'under_funded' ||
+        r['fundingOutcome'] === 'partial')
     );
   });
 }

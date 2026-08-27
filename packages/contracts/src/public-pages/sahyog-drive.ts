@@ -115,7 +115,27 @@ export const PublicSahyogDriveEntry = z
      * by it, and no "most-supported" view is offered at any tier (AC5).
      */
     confirmedContributionCount: z.number().int().nonnegative(),
-    fundingOutcome: PublicSahyogDriveFundingOutcome,
+    /**
+     * ⭐ NULLABLE, AND THE NULL IS LOAD-BEARING (Review, 2026-08-27): `null` means ⛔ NO EXPECTATION
+     * WAS EVER SET for this drive — the pool closed with ZERO assigned contributors, so there is
+     * nothing to compare a delivery against and the surface SAYS NOTHING rather than saying
+     * something false.
+     *
+     * ⚠ WHY THIS IS NOT A CLASSIFIER BUG: `classifyCycleOutcome` compares `deliveredTotal >=
+     * expectedTotal`, and at `0 >= 0` that is VACUOUSLY TRUE ⇒ it returned `fully_funded` for a
+     * drive that collected nothing, publishing *"The cycle closed with the support it needed."*
+     * beside *"0 confirmed"*. ⛔ The classifier is NOT changed — it is shared with the Panchayat
+     * Noticeboard and Sahyog Vivran and its union's ordering is provenance-stable. The zero-
+     * expectation case is resolved BEFORE the call, by returning `null` instead of classifying.
+     *
+     * ⛔ `partial` was considered and REJECTED: its copy says *"Reconciliation is still in
+     * progress"*, which is ⛔ not true of a drive that had nobody assigned — that trades a false
+     * statement for a misleading one.
+     *
+     * ⭐ The page renders NOTHING for a null — the SAME *"null ⇒ NOTHING, ⛔ no placeholder"*
+     * discipline `deceasedMemberName` above already uses. ⛔ NULL NEVER OMITS THE ROW.
+     */
+    fundingOutcome: PublicSahyogDriveFundingOutcome.nullable(),
   })
   .strict();
 export type PublicSahyogDriveEntry = z.output<typeof PublicSahyogDriveEntry>;

@@ -864,8 +864,19 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
         `<tr>${columns
           .map((c) => {
             const { output } = matrixFieldOutput('sahyog-drive', c.fieldId, 'public', c.valueOf(row) ?? '');
-            // ⛔ `null` ⇒ NOTHING — no cell, no placeholder. Mirrors the page exactly.
-            return output === null ? '' : `<td><span data-field="${c.fieldId}">${output}</span></td>`;
+            // ⭐⛔ THE `<td>` IS UNCONDITIONAL, BECAUSE THE PAGE'S IS (Review finding,
+            // 2026-08-27). `sahyog.astro` renders `<td><MatrixField … value={col.valueOf(row) ??
+            // ''} /></td>` — the CELL always exists and only its CONTENT disappears. This builder
+            // previously emitted NO `<td>` at all for a null while claiming to "mirror the page
+            // exactly", so the load-bearing `nameCells` assertion below and the placeholder scan
+            // both ran against a string the page never produces — a test written to pass rather
+            // than to falsify.
+            // ⚠ What must stay absent for a withheld name is the `data-field` SPAN, ⛔ not the
+            // cell: an empty `<td>` is structurally identical for every suppressed column and
+            // carries ⛔ no per-row signal a scraper could diff.
+            return output === null
+              ? '<td></td>'
+              : `<td><span data-field="${c.fieldId}">${output}</span></td>`;
           })
           .join('')}</tr>`,
     ),

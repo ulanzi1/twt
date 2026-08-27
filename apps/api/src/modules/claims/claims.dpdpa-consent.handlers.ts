@@ -291,34 +291,74 @@ export function createDpdpaConsentHandlers(deps: AppDeps) {
           }
           const subjectId = claimRow.deceasedMemberId;
 
-          // Resolve the currently-valid (non-revoked) grants of this publication type for the subject.
-          // Explicitly request the hard cap (200), not the accessor's default page (50) — a subject
-          // with >50 accumulated grants (the grant-history "every resubmission is a new row" model)
-          // would otherwise leave stale active rows beyond the first page un-revoked, letting
-          // `consentExists` (uncapped) keep returning true after a "successful" revoke (AC3). `listConsents`
-          // has no cursor/offset (Story 2.7, frozen primitive), so 200 is the practical ceiling here.
-          const active = await consent.listConsents(scopeTx.tx, ctx.pariwarId, subjectId, {
-            consentType: body.consentType,
-            includeRevoked: false,
-            limit: 200,
-          });
-          if (active.length === 0) {
+          // ⭐⛔ DRAIN UNTIL EXHAUSTED — A CEILING HERE IS A FAILED REVOCATION THAT REPORTS SUCCESS
+          // (Review finding, 2026-08-27).
+          //
+          // The grant-history model is DELIBERATE: `recordConsent` is a plain INSERT with ⛔ no
+          // unique constraint on `(subject_id, consent_type)` — "re-recording after a revoke is a
+          // fresh row by design (AC3)" — because a revoked row must survive so that
+          // `consentExists(…, pastTimestamp)` stays true. ⇒ every pre-adjudication re-submit of the
+          // claim-time consent form appends ANOTHER live grant, without bound.
+          //
+          // ⚠ THE BUG WAS A CEILING WHERE THE LOOP SHOULD HAVE BEEN UNBOUNDED. A single
+          // `listConsents(limit: 200)` revoked at most 200 rows, while `NAME_CONSENT_GRANTED` on
+          // the public Sahyog Drive is an UNCAPPED `EXISTS` — so ONE surviving row past the cap
+          // kept the verdict `true`. A family's DPDPA withdrawal returned 200 OK while the deceased
+          // member's full legal name kept publishing on an unauthenticated, edge-cached page.
+          //
+          // ⛔ `listConsents` is NOT given a cursor (Story 2.7, frozen primitive) and ⛔ no unique
+          // index is added (it would break the grant history above). ⭐ Draining in pages preserves
+          // the per-row audit/event pair each `revokeConsent` writes — a set-based UPDATE would
+          // collapse N events into a contract question this story does not own.
+          //
+          // ⚠ The loop RE-READS each pass rather than paging by offset: `revokeConsent` sets
+          // `revoked_at`, so `includeRevoked: false` means the rows just handled ⛔ cannot come
+          // back and page 1 is always the remaining work. `MAX_REVOKE_PAGES` is a runaway guard,
+          // ⛔ not a functional bound — reaching it means `revokeConsent` failed to clear a row,
+          // which is a bug, ⛔ never a large-but-legitimate history.
+          const REVOKE_PAGE_SIZE = 200;
+          const MAX_REVOKE_PAGES = 100;
+          let revokedCount = 0;
+          let drained = false;
+          for (let pass = 0; pass < MAX_REVOKE_PAGES; pass += 1) {
+            const active = await consent.listConsents(scopeTx.tx, ctx.pariwarId, subjectId, {
+              consentType: body.consentType,
+              includeRevoked: false,
+              limit: REVOKE_PAGE_SIZE,
+            });
+            if (active.length === 0) {
+              drained = true;
+              break;
+            }
+            // The row is mutated, never deleted — a pre-revocation consentExists(..., pastTimestamp)
+            // stays true.
+            for (const row of active) {
+              await consent.revokeConsent(scopeTx.tx, {
+                pariwarId: ctx.pariwarId,
+                consentId: row.consentId,
+                reason: body.reason,
+                revokedAuditId: auditId,
+              });
+              revokedCount += 1;
+            }
+          }
+          if (!drained) {
+            // ⛔ NEVER report success on a partial revocation — that is the exact defect this loop
+            // exists to close, and a 500 here is strictly better than a family believing their
+            // withdrawal took effect while the name still publishes.
+            throw new Error(
+              `[dpdpa-consent.revoke] active grants still present after ${String(MAX_REVOKE_PAGES)} passes ` +
+                `(${String(revokedCount)} revoked) — revokeConsent is not clearing rows for subject ` +
+                `${subjectId} / type ${body.consentType}`,
+            );
+          }
+          if (revokedCount === 0) {
             // Mirrors the wa-opt-in/telegram-opt-in revoke convention (handlers.ts) — no ACTIVE grant
             // to revoke is a 409, not a silent no-op, even on a repeat/retried request.
             throw new ConflictError(
               'There is no active consent of this type to revoke',
               'dpdpa_consent.nothing_to_revoke',
             );
-          }
-          // Revoke every active grant so consentExists deterministically flips to false (AC3). The row
-          // is mutated, never deleted — a pre-revocation consentExists(..., pastTimestamp) stays true.
-          for (const row of active) {
-            await consent.revokeConsent(scopeTx.tx, {
-              pariwarId: ctx.pariwarId,
-              consentId: row.consentId,
-              reason: body.reason,
-              revokedAuditId: auditId,
-            });
           }
 
           // The symmetric identity annotation (code review addition, D6's own rationale extended to

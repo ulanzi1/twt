@@ -164,11 +164,16 @@ describe('directory-abuse-rules — the DETECTOR fires, and fires SPECIFICALLY',
    * would hide it.
    */
   const sig = (
-    s: Omit<DirectoryRequestSignal, 'pariwarId' | 'traceId'> &
-      Partial<Pick<DirectoryRequestSignal, 'pariwarId' | 'traceId'>>,
+    s: Omit<DirectoryRequestSignal, 'pariwarId' | 'traceId' | 'surface'> &
+      Partial<Pick<DirectoryRequestSignal, 'pariwarId' | 'traceId' | 'surface'>>,
   ): DirectoryRequestSignal => ({
     pariwarId: SIG_PARIWAR,
     traceId: null,
+    // ⚠ Defaulted HERE for the rule-behaviour cases, which are surface-agnostic — ⛔ but `surface`
+    // is REQUIRED on the interface for the same reason `pariwarId` is: the counter windows and the
+    // per-rule emit dedupe are keyed on it, so omitting it merged two public surfaces into one
+    // rate (Review finding, 2026-08-27). The partition itself is asserted explicitly below.
+    surface: 'member-directory',
     ...s,
   });
 
@@ -188,7 +193,9 @@ describe('directory-abuse-rules — the DETECTOR fires, and fires SPECIFICALLY',
     expect(line).toBeDefined();
     expect(line?.type).toBe('directory.abuse_suspected');
     // ⭐ The rule id + a coarse, NON-PII shape, in the ONE field that survives the audit row.
-    expect(line?.resourceLocator).toMatch(/^directory:high_volume_lookups:p\d+:l\d+$/);
+    // ⚠ The SURFACE leads the locator (Review finding, 2026-08-27) — it used to read `directory:`
+    // whichever surface fired, so an operator could not tell the two public pages apart.
+    expect(line?.resourceLocator).toMatch(/^member-directory:high_volume_lookups:p\d+:l\d+$/);
     // ⛔ No account here to name — every visitor is unauthenticated.
     expect(line?.actorId).toBeNull();
   });
@@ -312,6 +319,85 @@ describe('directory-abuse-rules — the DETECTOR fires, and fires SPECIFICALLY',
     const volume = events.filter((e) => String(e.resourceLocator).includes('high_volume_lookups'));
     // 200 requests × 100ms = 20s — one dedupe window, so exactly one line.
     expect(volume).toHaveLength(1);
+  });
+
+  // ── The SURFACE partition (Review finding, 2026-08-27) ────────────────────────────────
+  //
+  // ⭐ Until Story 11b.1 this evaluator had exactly ONE caller, so `key: request.ip` alone was a
+  // sufficient counter identity. It now has TWO — `/members` and `/sahyog` — and every window
+  // field was being SHARED between them.
+
+  it('⭐ two SURFACES on one IP do NOT share a counter window', () => {
+    const { deps } = fakeDeps();
+    // 40 pages on the directory: below `deep_page_access`, which needs a deeper page than this.
+    const directoryFired: string[] = [];
+    for (let i = 1; i <= 40; i += 1) {
+      directoryFired.push(
+        ...evaluateDirectoryAbuse(
+          deps,
+          rules,
+          sig({ key: 'shared-ip', surface: 'member-directory', page: i, limit: 25, at: new Date(i * 100) }),
+        ),
+      );
+    }
+    // The SAME ip now walks the drive index from page 1. ⛔ If the windows were shared, these
+    // requests would land on top of 40 accumulated hits and transitions and could trip a rule the
+    // visitor never earned on THIS surface.
+    const sahyogFired: string[] = [];
+    for (let i = 1; i <= 3; i += 1) {
+      sahyogFired.push(
+        ...evaluateDirectoryAbuse(
+          deps,
+          rules,
+          sig({ key: 'shared-ip', surface: 'sahyog-drive', page: i, limit: 25, at: new Date(5000 + i * 100) }),
+        ),
+      );
+    }
+    expect(sahyogFired).toEqual([]);
+  });
+
+  it('⭐ an emitted line names the SURFACE, so an operator can tell which page was crawled', () => {
+    const { deps, events } = fakeDeps();
+    for (let i = 0; i < 61; i += 1) {
+      evaluateDirectoryAbuse(
+        deps,
+        rules,
+        sig({ key: 'crawler', surface: 'sahyog-drive', page: 1, limit: 25, at: new Date(i * 10) }),
+      );
+    }
+    const locators = events
+      .map((e) => (e as { resourceLocator?: string }).resourceLocator)
+      .filter((l): l is string => typeof l === 'string');
+    expect(locators.length).toBeGreaterThan(0);
+    // ⛔ Every line used to read `directory:…` whichever surface fired it.
+    for (const locator of locators) {
+      expect(locator.startsWith('sahyog-drive:')).toBe(true);
+      expect(locator.startsWith('directory:')).toBe(false);
+    }
+  });
+
+  it('⭐⛔ one surface\'s emit does NOT spend the other surface\'s dedupe window', () => {
+    const { deps, events } = fakeDeps();
+    // Trip the volume rule on the directory.
+    for (let i = 0; i < 61; i += 1) {
+      evaluateDirectoryAbuse(
+        deps,
+        rules,
+        sig({ key: 'dual', surface: 'member-directory', page: 1, limit: 25, at: new Date(i * 10) }),
+      );
+    }
+    const afterDirectory = events.length;
+    expect(afterDirectory).toBeGreaterThan(0);
+    // Immediately trip the SAME rule on the drive index, well inside EMIT_DEDUPE_MS.
+    for (let i = 0; i < 61; i += 1) {
+      evaluateDirectoryAbuse(
+        deps,
+        rules,
+        sig({ key: 'dual', surface: 'sahyog-drive', page: 1, limit: 25, at: new Date(1000 + i * 10) }),
+      );
+    }
+    // ⛔ The Sahyog crawl must produce its OWN line. Sharing the dedupe suppressed it entirely.
+    expect(events.length).toBeGreaterThan(afterDirectory);
   });
 
   it('⛔ never throws into the request path, even on a nonsense signal', () => {

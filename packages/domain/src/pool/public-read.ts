@@ -64,7 +64,7 @@ import { classifyCycleOutcome, type CycleFundingOutcome } from '../close-of-cycl
 import type { Db } from '../db.js';
 import type { MemberId, PariwarId, PoolId } from '../ids/index.js';
 import { clampLimit } from '../pagination.js';
-import { poolIndexFromLetterCode } from './naming.js';
+import { poolIndexFromLetterCodeOrNull } from './naming.js';
 import { claims } from '../schema/claims.js';
 import { memberKycProfiles } from '../schema/member_kyc_profiles.js';
 import { memberPostings } from '../schema/member_postings.js';
@@ -233,8 +233,16 @@ export interface SahyogDriveEntry {
    * Pool-Reality #2, as an OPAQUE ENUM. ⭐ The target is QUARANTINED by construction: the totals
    * are compared inside this module and ⛔ only this enum leaves it, so no expected-total,
    * percentage, shortfall or comparison figure can reach any render model (AC4).
+   *
+   * ⭐⛔ `null` MEANS NO EXPECTATION WAS EVER SET — the pool closed with ZERO assigned
+   * contributors, so there is ⛔ nothing to compare a delivery against (Review finding,
+   * 2026-08-27). ⚠ `classifyCycleOutcome` compares `deliveredTotal >= expectedTotal`, which at
+   * `0 >= 0` is VACUOUSLY TRUE ⇒ it returned `fully_funded` for a drive that collected nothing.
+   * The surface then published *"The cycle closed with the support it needed."* beside *"0
+   * confirmed"*, edge-cached, on the one page whose premise is that its statements can be checked.
+   * ⇒ the zero-expectation case is resolved BEFORE the call and the row SAYS NOTHING.
    */
-  fundingOutcome: CycleFundingOutcome;
+  fundingOutcome: CycleFundingOutcome | null;
   /**
    * The consent subject — `claims.deceased_member_id`.
    * ⚠ INTERNAL, for the consent join and the decrypt ONLY. ⛔ NEVER serialized onto the public
@@ -324,10 +332,15 @@ function sahyogDrivePredicate(pariwarId: PariwarId, now: Date, filters: SahyogDr
     // The letter code is decoded (bijective base-26, case-insensitive) rather than matched in
     // SQL — `poolIndexFromLetterCode` is the one inverse of `poolLetterCode` and must stay the
     // only decoder (Review finding, 2026-08-26: this OR half was previously never wired in).
+    // ⚠ THE TOTAL FORM, ⛔ NEVER THE THROWING ONE (Review finding, 2026-08-27). This value comes
+    // from a public search box on an UNAUTHENTICATED route: a visitor typing `LUCKNOW` is asking a
+    // question, ⛔ not violating a contract. `poolIndexFromLetterCodeOrNull` returns null for a
+    // non-letter string, an over-long one, OR one decoding past int4 — and null falls through to
+    // the canonical-identifier-only branch below, which correctly matches nothing.
+    // ⛔ The unbounded decode this replaces was a 500: `pool_index` is int4 and drizzle BINDS the
+    // decoded value, so Postgres resolved `$n` to int4 and raised `22003` on any 7-letter code.
     const upperPoolCode = filters.poolCode.toUpperCase();
-    const letterIndex = /^[A-Z]+$/.test(upperPoolCode)
-      ? poolIndexFromLetterCode(upperPoolCode)
-      : null;
+    const letterIndex = poolIndexFromLetterCodeOrNull(upperPoolCode);
     conjuncts.push(
       letterIndex === null
         ? sql`${pools.poolCanonicalIdentifier} = ${filters.poolCode}`
@@ -418,10 +431,25 @@ export async function listPublicSahyogDrivePools(
       // enum is returned. ⛔ Do not widen `SahyogDriveEntry` to carry either of them, under any
       // name: `classifyCycleOutcome` quarantines the target by construction and this surface must
       // not smuggle one past it (AC4).
-      fundingOutcome: classifyCycleOutcome({
-        expectedTotal: assignedCount * r.fixedAmount,
-        deliveredTotal: confirmedContributionCount * r.fixedAmount,
-      }),
+      //
+      // ⭐⛔ ZERO ASSIGNEES ⇒ NO CLASSIFICATION AT ALL, ⛔ never a vacuous one (Review finding,
+      // 2026-08-27). `assignedCount === 0` makes `expectedTotal` 0, and `0 >= 0` is TRUE, so the
+      // classifier returned `fully_funded` for a drive that collected nothing. ⚠ AND IT IS
+      // REACHABLE ON THE ORDINARY PATH — `pool/assign.ts` returns an empty assignment on an empty
+      // roster (its own comment: *"the common (B)-scope case"*), and `capacity[i] = floor(m/n) +
+      // (i < m % n)` gives 0 to the trailing `n − m` pools whenever approved claims outnumber the
+      // assignable roster. Pools spawn one per approved claim, independently of roster size.
+      // ⛔ `classifyCycleOutcome` is NOT patched: it is shared with the Panchayat Noticeboard and
+      // Sahyog Vivran and its union's ordering is provenance-stable. ⛔ `partial` is NOT reused
+      // either — its copy says "Reconciliation is still in progress", which is not true of a drive
+      // that had nobody assigned. The honest render for "no expectation was ever set" is SILENCE.
+      fundingOutcome:
+        assignedCount === 0
+          ? null
+          : classifyCycleOutcome({
+              expectedTotal: assignedCount * r.fixedAmount,
+              deliveredTotal: confirmedContributionCount * r.fixedAmount,
+            }),
       deceasedMemberId: r.deceasedMemberId,
       deceasedNameCiphertext: r.deceasedNameCiphertext,
       nameConsentGranted: r.nameConsentGranted,

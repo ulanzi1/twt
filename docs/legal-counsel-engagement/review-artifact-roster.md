@@ -78,6 +78,32 @@ Per Story 0.13 AC-1:
 
 ## Priority-2 to Priority-5 rows (AC-named scope items)
 
+### Row 1b: `claim-terms-draft-v1`
+
+> ⭐⭐ **ROW MINTED 2026-08-28 — AND THE ARTEFACT IT TRACKS DID ⛔ NOT EXIST UNTIL COUNSEL'S OWN CLAUSE REQUIRED IT TO.** Counsel's disclosure clause (T&C v0.2 clause 15) binds the **Nominee** *"as a condition of submitting or pursuing a claim"* and refers to *"the applicable **Claim Terms**"* — ⛔ **an instrument the Trust had never drafted, and which no roster row tracked.** ⚠ Numbered **1b** deliberately: it is the **sibling instrument** to Row 1, ⛔ not a later item, and renumbering 2–19 to insert it would have broken every cross-reference.
+
+| Field | Value |
+|---|---|
+| `artifact_id` | `claim-terms-draft-v1` |
+| `artifact_type` | Claim-Terms-draft |
+| `source_artifact_path` | ⭐ **DRAFT EXISTS (2026-08-28):** `docs/legal-counsel-engagement/handover/TWT-Claim-Terms-DRAFT-v0.1-for-counsel-review.docx` — v0.1, 14 clauses + a 10-question counsel annex. Built by `handover/build_claim_terms.py` (the `.docx` is a build artifact). Assembled **strictly** from committed sources: **FR-31** (dual equal nominee accounts, donor choice, ⛔ no routing) · **FR-37** (claim filing open to a non-Member nominee; two accounts + IFSC + holder names; optional VPA; death certificate) · **FR-41** (human shepherd) · **FR-43A** (internal denial appeal) · the facilitator/no-guaranteed-sum/overpayment posture carried from the membership T&C · and **Decision `2026-08-28-160` cl.10** (the masking policy, restated in plain terms at clause 9). ⛔ **Clause 8 is counsel's own text, verbatim.** ⛔ Apart from clause 8, nothing invented; no legal drafting originated |
+| `owning_story + epic` | Story **11b.3** (Sahyog Vivran — the nominee-bank surface this instrument is the basis for) + Epic 6 claim intake (Stories 6.2 / 6.3 / 6.9) |
+| `submission_priority` | **2** — ⚠ a **deliberate tie** with `fr-43a-denial-appeal-flow-v1` (ties permitted per this roster's schema). ⛔ Not priority-1: AC-1 commits that slot to the T&C draft and ⛔ that commitment is not re-cut here |
+| `target_submission_date` | `<PENDING — Solo Builder + Trustee Panel coordinate; the dev-story agent does ⛔ NOT submit>` |
+| `actual_submission_date` | `<PENDING>` |
+| `sla_target_return_date` | `<PENDING — computed at submission per §4 standard tier>` |
+| `actual_return_date` | `<PENDING>` |
+| `return_summary_link` | `per-artifact-return-roster.md#claim-terms-draft-v1` |
+| `integration_target_story_or_section` | Story 11b.3 (the nominee-bank public surface) + Epic 6 claim-intake acceptance flow + the claim-time consent step (Story 6.9) |
+| `integration_status` | `pending-submission` — ⭐ **authored, ⛔ not submitted.** ⚠ Authoring an artefact and submitting it are **different acts** ([[feedback_closure_language_precision]]); ⛔ only the first has happened |
+| `notes` | ⭐⭐ **WHY THIS ROW EXISTS AT ALL, and it is the Story-0.13 lesson repeating in a new place:** Row 1 sat at `pending-submission` for **50 days** because *the artefact did not exist* — ⛔ never a stalled submission. ⚠ **The same shape was forming here**: counsel's clause 15 pointed at a document nobody had written, and ⛔ **no row tracked its absence**, so the gap would have surfaced only when Story 11b.3 was authored. ⇒ the row is minted **with** the draft, ⛔ not after it.
+⚠⛔ **⛔ THIS IS NOT A BLOCKER ON STORY 11b.9, and the distinction has already been got wrong once.** Story 11b.9 (Sahyog Drive) publishes the **deceased member's own name**, which rests on the **member's T&C clause 14** — ⛔ the Sahyog Drive renders **no nominee data at all** (Story 11b.1 AC11(a)). ⇒ these Claim Terms gate **Story 11b.3**, ⛔ not 11b.9 (`2026-08-28-161` cl.5).
+⭐ **HELD CHEAP ONLY WHILE 11b.3 IS `backlog`.** ⚠ `2026-08-24-157` cl.3 justified a hold with *"all three surfaces are unbuilt"* and that premise **lapsed silently** when 11b.1 shipped the day before the sitting. ⇒ this instrument is to be settled **before** Story 11b.3 is authored, ⛔ not after.
+⚠ **TEN questions are put to counsel**, four of which are gaps the Trust is flagging rather than papering over: the **validity of acceptance** taken from a non-signatory at a point of acute grief (Q2); **whose bank details** the Trust is exposed to when a nominee enters another person's (Q3); whether clause 9's plain-terms description of the masking policy should be **binding rather than descriptive** (Q5); and ⭐ **what data-subject rights a NON-MEMBER nominee holds** — export, correction, erasure — given that the Trust's DPDPA design was built around Members and clause 8 publishes bank details (Q6).
+⭐ **AND ONE QUESTION THAT REACHES BACK INTO THE PRODUCT (Q10):** with clause 8 in force as the nominee's disclosure basis, **which claim-time consents remain necessary and which are now duplicative?** ⛔ Deliberately ⛔ NOT answered here — it is Story 11b.3's and Story 11b.6's to settle, and `2026-08-28-160` cl.3 superseded the per-subject gate as a **mechanism** without ruling on which boxes survive the claim screen. |
+
+---
+
 ### Row 2: `fr-43a-denial-appeal-flow-v1`
 
 | Field | Value |

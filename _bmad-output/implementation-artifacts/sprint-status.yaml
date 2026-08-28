@@ -1,4 +1,34 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-28l (⭐⭐ THE LEGAL CORPUS GETS A CANONICAL HOME — Decision 2026-08-28-167.
+#   ⛔ ZERO ROWS FLIP. ⛔ NO LEGAL WORDING CHANGED, REVIEWED OR RATIFIED.
+#   ⚠⛔ AND THE OBVIOUS FIX WAS THE WRONG ONE — the finding worth carrying. "track docs/legal and push"
+#   would have PUBLISHED THE CORPUS TO THE OPEN INTERNET: `ulanzi1/twt` is PUBLIC (isPrivate:false,
+#   verified), and .gitignore ALREADY carried a deliberate exclusion WITH A WRITTEN RATIONALE ⇒ the
+#   exclusion was a CONSIDERED DECISION, ⛔ not an oversight. ⭐ The requirement (2026-08-21-144
+#   cl.7(a)) and the exclusion were BOTH RIGHT; what was missing was A THIRD PLACE TO PUT THE FILES.
+#   ⭐ PII scan before any push came back CLEAN — ⛔ no trustee names, ⛔ no PANs, ⛔ no account numbers;
+#   the Aadhaar/IFSC hits are POLICY PROSE ("collected only at claim time", "a one-way hash"), ⛔ not
+#   data. ⇒ the hazard was ⛔ never leaked PII — it was DRAFT INSTRUMENTS BEING PUBLICLY READABLE UNDER
+#   THE TRUST'S NAME, where a reader could take a draft for the operative instrument.
+#   ✅ `ulanzi1/twt-legal` CREATED — PRIVATE (verified at creation AND after push), first commit
+#   8850254, ten instruments + a README. ⇒ supplies the diff/history/attribution/backup cl.7(a)
+#   requires ⇒ ⭐ cl.7(a) DISCHARGED BY MECHANISM, a week after it fell due and while blocking a
+#   FOURTH item.
+#   ⛔⛔ `docs/legal/` STAYS EXCLUDED FROM THE PUBLIC REPO — THE ABSENCE IS THE CONTROL. ⛔ Nobody may
+#   "fix" a missing docs/legal/ by deleting the .gitignore entry. The entry's COMMENT is rewritten IN
+#   PLACE to say so and to name the private repo.
+#   ⭐ DOCUMENTED IN THREE PLACES, DELIBERATELY: the .gitignore comment (the POINT OF CONFUSION), a
+#   tracked pointer `docs/legal-corpus-location.md` (the POINT OF SEARCH), and the private repo README
+#   (the POINT OF ARRIVAL). Each states the corpus is a DESIGN REFERENCE ⛔ not binding authority, and
+#   each carries the "NOT LEGAL ADVICE" header verbatim.
+#   ⭐ DIVISION OF RECORD, STATED ONCE: GOVERNANCE lives in the public repo (.decision-log.md, routing
+#   notes); TEXT lives in twt-legal. ⛔ Neither is the other's backup. Amendments stay DRAFTING
+#   DECISIONS — routed and recorded HERE before the wording changes THERE.
+#   ✅ UNBLOCKS the four drafting decisions routed at -166 cl.5 (Deed 15(c) · 26 · 18(a)/19(b)/19(c) ·
+#   28), which would otherwise land in a corpus with no history. ⛔ MAKES NONE OF THEM.
+#   ⚠⛔ A SECOND-ORDER RISK RECORDED ⛔ NOT SOLVED: the corpus now lives where THIS REPO'S CI CANNOT
+#   SEE IT ⇒ a change there is ⛔ not gated by any check here, and the two can DRIFT SILENTLY. ⛔ No
+#   mechanism guards that today.)
 # last_updated: 2026-08-28k (⭐ Q7 ANSWERED + THE DEED-CITATION SWEEP IS RUN — Decision 2026-08-28-166
 #   + artifact `planning-artifacts/deed-citation-alignment-sweep-2026-08-28.md`. ⛔ ZERO ROWS FLIP.
 #   ⛔⛔ NOTHING REWRITTEN, NOTHING RATIFIED, NOTHING AMENDED — the instruction was "identify and

@@ -5001,6 +5001,14 @@ So that public transparency exists for trust legitimacy while member-only sensit
 
 ### Story 11b.4: MemorialAuthorshipSurface — Family Writes the Story + Family-Authorship-Preserved Invariant `[SURFACE]`
 
+> ⭐⛔ **BINDING CONSTRAINT ADDED 2026-08-28 — [Decision 2026-08-28-162](../../.decision-log.md#decision-2026-08-28-162) clause 3. ⚠ This story now OWES an authorisation it did not previously carry, and it must reach the ACs and Tasks list, ⛔ not sit as a note ([[feedback_spec_edits_must_propagate_to_tasks]]).**
+>
+> The claim-time publication consent boxes **(b) `sahyog_vivran_publication`** and **(c) `in_memoriam_listing`** are **RETIRED** — ⛔ **not re-scoped, ⛔ not re-worded**. They previously stood in as a prospective, claim-time consent covering family-authored memorial content.
+>
+> ⇒ ⭐⭐ **FAMILY-OWNED MATERIAL IS AUTHORISED AT THE POINT OF SUBMISSION — in THIS surface, at the moment the family submits it.** ⛔ **Never prospectively at claim time**, about content that does ⛔ not yet exist. ⛔ It is ⛔ **not** discharged by adding a box back to the claim screen under a new name.
+>
+> ⚠ **Scope fence — ⛔ this authorisation covers FAMILY-OWNED content ONLY.** The deceased **Member's** own name and personal information rest on the **membership T&C clause 14**, and the **Nominee's** information and bank details on the **Claim Terms clause 8** (`2026-08-28-160` cl.3). ⛔ This surface must ⛔ **not** re-ask for either, and ⛔ must not reintroduce a per-subject gate over data it does not own.
+
 As a bereaved family member writing the memorial story for the deceased,
 I want a MemorialAuthorshipSurface that captures my voice + intent — moderated against harmful content but never algorithmically rewritten, summarized, embellished, or AI-generated,
 So that my words for my loved one remain mine.

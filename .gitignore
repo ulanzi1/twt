@@ -64,5 +64,13 @@ __pycache__/
 # Story-automator run artifacts
 _bmad-output/story-automator/
 
-# Legal instruments (trust deed, niyamavali) — kept out of version control
+# Legal instruments (trust deed, niyamavali, T&C, privacy policy) — DELIBERATELY excluded.
+# This repository is PUBLIC. The instruments are UNEXECUTED, agent-drafted and unratified
+# ("DRAFT — NOT YET EXECUTED. NOT LEGAL ADVICE"), so publishing them under the Trust's name
+# would invite a reader to take a draft for the operative instrument.
+#
+# ⛔ DO NOT "fix" a missing docs/legal/ by deleting this entry — the absence IS the control.
+#
+# The corpus IS version-controlled: canonical home is the PRIVATE repo ulanzi1/twt-legal
+# (Decision 2026-08-28-167, satisfying 2026-08-21-144 cl.7(a)). See docs/legal-corpus-location.md.
 docs/legal/

@@ -6,7 +6,13 @@
 entry is the record; this note is the instrument** — it is what actually puts the questions to the
 Panel. ⛔ A decision-log entry does not route anything.
 **Routed to:** Trustee Panel · **Adv. Mohit Agrawal** (T&C review return due **2026-09-07**).
-**Status:** ⏳ **ROUTED, ⛔ NOTHING RATIFIED AND NOTHING APPLIED.**
+**Status:** ✅ **ANSWERED 2026-08-28 — logged as `.decision-log.md#decision-2026-08-28-164`.** ⛔ The questions below are left **exactly as put**; the answers are appended at **§8**, ⛔ never written back over the questions.
+
+> ⛔⛔ **READ §8 BEFORE §1–§3. Q1's PREMISE IS FALSE, AND THE ERROR IS THIS AUTHOR'S.**
+> §1–§3 argue that the 28 August model conflicts with *"the instrument that governs it"*.
+> ⛔ **Deed Clause 15(c) governs nothing** — the Deed is **agent-drafted, unratified**, and its own
+> header says *"NOT LEGAL ADVICE"*. ⇒ the sections below are **preserved as the record of a wrong
+> turn**, ⛔ not as a live finding ([[feedback_closure_language_precision]]).
 
 > ⛔⛔ **THE HEADLINE, AND IT IS NOT THE ONE THIS NOTE WAS OPENED TO WRITE.**
 > This note was started to route two consequences of `2026-08-28-160` **cl.10**. Checking them
@@ -167,3 +173,86 @@ whether the **instrument beneath them** says what they assume it says.
 - `packages/contracts/src/public-pages/matrix.ts` **:376-398** · `packages/domain/src/schema/claim_nominee_bank_accounts.ts` **:61**
 - `_bmad-output/planning-artifacts/epics.md` — the SD-2 / AI-11a-2 disposition (c) block at Story 11b.3
 - `docs/legal-counsel-engagement/review-artifact-roster.md` Row 1 notes (the *"no T&C prose was ever authored"* claim §4(b) corrects)
+
+---
+
+## 8. ✅ ANSWERED — 2026-08-28 (BigDev, relaying the Panel). Logged as `2026-08-28-164`
+
+### A1 — ⛔ Q1's PREMISE IS FALSE. The Deed is agent-drafted and unratified.
+
+**BigDev:** *"Deed is prepared by Agent not by counsel. Apart from that deed has not been ratified."*
+
+⭐ **And the document says so on its own face** — `docs/legal/trust-deed.md:7`:
+> *"**⚠️ DRAFT — NOT YET EXECUTED. NOT LEGAL ADVICE.** … It **must** be reviewed, corrected, and
+> settled by qualified Indian legal counsel and a chartered accountant."*
+
+⇒ ⛔ **There is no conflict with a binding instrument, because there is no binding instrument.** The
+28 August model does ⛔ not fail Clause 15(c); 15(c) is a **drafting proposal awaiting counsel**, and
+the model is a **later, better-informed statement of the same Trust's intent**.
+
+⚠ **What survives is much narrower, and is hygiene ⛔ not compliance:** the two texts still disagree,
+and `docs/legal/` is the corpus counsel will be asked to settle. ⇒ **redraft 15(c) to match the
+adopted model before that corpus goes to counsel.** ⛔ Not a blocker on anything.
+
+> ⭐⭐ **BUT A LARGER FINDING REPLACES IT, AND IT IS ROUTED ⛔ NOT SWEPT.** That agent-drafted,
+> self-declared *"NOT LEGAL ADVICE"* draft is cited **29 times** in `.decision-log.md` — several times
+> as the **operative constraint on a ratified decision**, ⛔ not as a design reference: **Cl. 18(a)**
+> Board size · **19(b)** quorum · **19(c)** casting vote · **20(h)** non-delegability · **20(a)/(c)**
+> + **10(b)** the per-Pool amount authority · **22(b)** the amendment mechanism.
+> ⚠⛔ **And it has already changed an outcome:** the **2026-08-24** routing note reversed its own
+> advice with *"⛔ That route is NOT AVAILABLE, and the Trust Deed is why."*
+> ⭐ **Treatment is INCONSISTENT, ⛔ not uniformly wrong** — at least one decision records the
+> *"⚠️ DRAFT — NOT YET EXECUTED"* qualifier in place. ⇒ the defect is that **some** citations carry it
+> and **some** do not — ⭐ the same defect class as the *"counsel is not engaged"* sweep
+> (`2026-08-24-158`): **a false premise, repeated, that changed rulings.**
+
+### A2 — ✅ SD-2 is **RE-PURPOSED, ⛔ not dissolved**
+
+Recorded in the Panel's own terms:
+
+- The original trigger — an **authenticated-member browser surface** — ⛔ no longer governs the
+  **active-campaign** policy, because nominee bank details may be **publicly displayed** during the
+  active campaign.
+- ⭐ **SD-2's underlying presentation/security concern remains live for the POST-CAMPAIGN state.**
+- ⇒ **SD-2 now governs post-campaign disclosure:** complete details stay in the **protected internal
+  record**; the **public projection is masked** per the Trust-Admin policy (**0 days · N days ·
+  permanent**).
+- ⛔⛔ **The absence of an authenticated-member surface is ⛔ NOT grounds to delete the requirement.**
+- The **post-masking authenticated-member presentation** is a **separate future decision** — ⛔ not
+  carried, ⛔ not foreclosed.
+
+### A3 — ✅ The third Tier-1 allowlist entry is **RULED** — ⚠ but ⛔ cannot yet be encoded
+
+**BigDev:** *"Ruled third entry for nominee bank fields."* ⇒ Story 11b.3 may declare its surface.
+
+⚠⛔ **The allowlist pins (surface, field) pairs** — *"a widening that **pins identity** is not the same
+act as a widening that raises a ceiling"* (`matrix.ts:381-385`). ⇒ *"nominee bank fields"* is a
+**category, ⛔ not a field**, and **four** Tier-1 candidates exist
+(`schema/claim_nominee_bank_accounts.ts:61-67`):
+
+| Field | Tier | In scope? |
+|---|---|---|
+| `account_holder_name` | 1 | ⚠ presumed yes — ⛔ not assumed |
+| `account_number` | 1 | ⚠ presumed yes — ⛔ not assumed |
+| `ifsc` | 1 | ⚠ presumed yes — ⛔ not assumed |
+| `vpa` *(optional, Story 8.13)* | 1 | ⛔ **open — see Q5** |
+
+⛔ **Until enumerated, ⛔ nothing is added to the allowlist.** A category-shaped entry is exactly the
+*"general door wearing the costume of an exception"* the root-scoping exists to prevent.
+
+## 9. Follow-up questions arising from the answers
+
+**Q5 — To the Panel.** Which **exact fields** does A3 cover? ⭐ Specifically: **is `vpa` included?** It
+is a **payment destination** rather than an identifier, and UPI-Intent pre-fill may need it publicly
+(FR-16 / FR-27) — so it may belong in scope for a different reason than the other three, or be
+excluded as a distinct data class.
+
+**Q6 — To the Panel.** Does the **masked** projection (last-4 + bank/branch/IFSC, `-160` cl.10(d))
+need its **own** allowlist entries, or is it out of scope on the ground that a **truncated** account
+number is no longer Tier-1? ⚠ If the latter, that classification should be stated somewhere the
+matrix gate can be reasoned against — ⛔ it is not self-evident from the schema, where the column is
+Tier-1 whole.
+
+**Q7 — To BigDev, ⛔ not the Panel.** Does the **29-citation Deed sweep** (A1) get its own vehicle
+now, or wait for the next reconciliation? ⚠ The comparable sweep (`2026-08-24-158`) found **41
+instances across 18 files**, and its lesson was that the cost grows with delay.

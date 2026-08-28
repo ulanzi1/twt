@@ -1,4 +1,29 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-28j (⭐ Decision 2026-08-28-165 — THE THIRD TIER-1 WIDENING IS NOW ENCODABLE.
+#   ⛔ ZERO ROWS FLIP.
+#   ✅ Q5 — ALL FOUR FIELDS IN SCOPE on `sahyog-vivran`: account_holder_name · account_number · ifsc ·
+#   vpa (all four piiColumn(1,...) at claim_nominee_bank_accounts.ts:61-67). ⭐ `vpa` was the genuinely
+#   open one and is ruled IN — consistent with its role as the UPI-Intent `pa=` destination
+#   (FR-16/FR-27), ⛔ useless if the contributing member cannot reach it. ⚠ FOUR ENTRIES, ⛔ NOT ONE.
+#   ⇒ -164 cl.3's owed enumeration DISCHARGED.
+#   ✅⭐⭐ Q6 — MASKING IS A PRESENTATION/PROJECTION POLICY; ⛔ DO NOT MINT A SECOND CLASSIFICATION. The
+#   underlying account fields REMAIN TIER-1 IN EVERY STATE (full during the active campaign, masked
+#   after) ⇒ the four entries cover BOTH states and the masked projection needs ⛔ NO entries of its
+#   own. ⭐ THIS FORECLOSES A SPECIFIC FUTURE ARGUMENT — "the masked view is only last-4, so it isn't
+#   really Tier-1". ⛔ IT IS. Keeping ONE classification is what keeps -160 cl.10(g)'s future-proofing
+#   intact: masking stays CONFIG OVER ONE RECORD, ⛔ never a second record, ⛔ never a second class.
+#   ⛔ THE ENTRIES ARE ⛔ NOT ADDED TO matrix.ts HERE — 11b.3 adds them at surface declaration, each
+#   citing -165 cl.1. ⚠ VERIFIED: the check is ONE-DIRECTIONAL (matrix.ts:402-407) — it flags a
+#   DECLARED exception missing from the allowlist and ⛔ does NOT flag an allowlist entry with no
+#   declared field ⇒ pre-adding is mechanically SAFE but SEMANTICALLY WRONG: a standing permission
+#   with ⛔ no subject, in a file whose discipline is that an entry is ruled, identity-pinned AND
+#   CITED. ⚠ The matrix field IDENTIFIERS are 11b.3's to fix at declaration — this ruling fixes the
+#   SET, ⛔ not the spelling.
+#   ⚠⛔ Q7 IS ⛔ NOT ANSWERED AND IS ⛔ NOT RECORDED AS ANSWERED — the reply to Q7 REPEATS Q6's TEXT
+#   VERBATIM, which does ⛔ not address "does the 29-citation Deed sweep get its own vehicle now or
+#   wait?". ⇒ Q7 STAYS OPEN. ⛔ Recorded rather than inferred: this is the SECOND duplicate-label event
+#   in this series (the earlier "Q4" reply answered Q6), and ⛔ a question silently marked answered by
+#   an unrelated reply is exactly how a real obligation disappears.)
 # last_updated: 2026-08-28i (⭐ THE ROUTING NOTE IS ANSWERED — Decision 2026-08-28-164. ⛔ ZERO ROWS
 #   FLIP. Q2 + Q3 are TRUSTEE-RATIFIED RULINGS; clause 1's correction + clause 5's finding are
 #   AUTHOR-COMMITTED.

@@ -256,3 +256,47 @@ Tier-1 whole.
 **Q7 — To BigDev, ⛔ not the Panel.** Does the **29-citation Deed sweep** (A1) get its own vehicle
 now, or wait for the next reconciliation? ⚠ The comparable sweep (`2026-08-24-158`) found **41
 instances across 18 files**, and its lesson was that the cost grows with delay.
+
+---
+
+## 10. ✅ §9 ANSWERED — 2026-08-28. Logged as `2026-08-28-165`
+
+### A5 — ✅ All four fields, **`vpa` included**
+
+The third widening covers, on `sahyog-vivran`: **`account_holder_name` · `account_number` · `ifsc` ·
+`vpa`**. ⇒ `-164` cl.3's owed enumeration is **DISCHARGED** and the widening is **encodable**.
+⭐ `vpa` was the genuinely open one and is ruled **IN** — consistent with its role as the UPI-Intent
+`pa=` destination (FR-16 / FR-27), which is ⛔ useless if the contributing member cannot reach it.
+⚠ **Four entries, ⛔ not one** — the allowlist pins **(surface, field)** pairs.
+
+### A6 — ✅ Masking is a **presentation/projection policy**; the fields stay Tier-1
+
+**BigDev, verbatim:** *"Do not create a separate Tier-1 classification merely because the public
+projection is masked. The underlying account fields remain Tier-1. Treat masking as a
+presentation/projection policy."*
+
+⇒ the fields are **Tier-1 in every state** — full during the active campaign, masked after it — so the
+four A5 entries **cover both**, and the masked projection needs ⛔ **no entries of its own**.
+⭐ **And this forecloses a specific future argument:** *"the masked view is only last-4, so it isn't
+really Tier-1."* ⛔ It is. Keeping one classification is what keeps `-160` cl.10(g)'s future-proofing
+intact — masking stays **configuration over ONE record**, ⛔ never a second record and ⛔ never a
+second classification.
+
+### ⛔ A7 — **NOT ANSWERED.** The reply to Q7 repeats Q6's answer verbatim
+
+Q7 asked whether the **29-citation Deed sweep** gets its own vehicle now or waits for the next
+reconciliation. The reply received was Q6's text again, which does ⛔ not address it.
+⇒ ⛔ **Q7 stays OPEN and is ⛔ not recorded as answered.**
+⚠ This is the **second** duplicate-label event in this series — the earlier *"Q4"* reply answered Q6.
+⛔ Recorded rather than inferred: a question silently marked answered by an unrelated reply is exactly
+how a real obligation disappears.
+
+## 11. Still open after this round
+
+- ⛔ **Q7** — the Deed-citation sweep's vehicle and timing.
+- ⛔ **Story 11b.3** adds the four allowlist entries at surface declaration, each citing `-165` cl.1.
+  ⚠ ⛔ Not added now: the matrix check is one-directional, so a pre-added entry is a standing
+  permission with ⛔ no subject.
+- ⛔ Carried from `-164`: redraft **Deed 15(c)** before `docs/legal/` goes to counsel · **track
+  `docs/legal/`** · assess **`docs/legal/terms-and-conditions.md`** against the `handover/` drafts ·
+  amend **`epics.md`** Story 11b.3 for the re-purposed SD-2 and the public-tier bank fields.

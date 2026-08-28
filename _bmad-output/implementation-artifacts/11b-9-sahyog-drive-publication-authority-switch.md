@@ -262,6 +262,13 @@ no-bulk-export posture, and the abuse counter all behave exactly as at `e3257b9`
       `apps/api/src/modules/public-pages/handlers.ts` and its contract; keep the decrypt gated
       **before** the Tier-1 read. Update `routes.ts:58`'s explanatory comment — it currently names
       `sahyog_drive_publication` as the gate.
+      - [ ] ⚠ **AND FIX A STALE COMMENT IN THE MATRIX — routed here by `2026-08-28-163` finding 3.**
+            `packages/contracts/src/public-pages/matrix.ts` describes 11b.1's Tier-1 exception as
+            *"⚠ Consent-gated per subject (`sahyog_drive_publication`), which the directory's is
+            NOT."* ⛔ **Stale as of `-160` cl.5 and `-162`** — that gate is de-authorised and the box
+            retired. ⇒ rewrite it to name the **T&C-clause basis**.
+            ⛔ **Change the COMMENT only.** ⛔ Do ⛔ **not** touch `RULED_TIER1_PUBLIC_EXCEPTIONS`
+            itself — the entry and its cited decision stay exactly as they are.
 - [ ] **Task 4 — ⭐ WIDENED (`-162`): reduce the claim consent screen to box (a) alone.**
       Retire **(b) `sahyog_vivran_publication`**, **(c) `in_memoriam_listing`** and
       **(d) `sahyog_drive_publication`**. ⚠ **(a) `claim_time_dpdpa` stays byte-identical.**

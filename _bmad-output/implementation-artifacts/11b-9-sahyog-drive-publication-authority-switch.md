@@ -228,11 +228,17 @@ no-bulk-export posture, and the abuse counter all behave exactly as at `e3257b9`
 - [ ] **Task 0 — ⛔ VERIFY THE GOVERNANCE LANDED FIRST.** Confirm `2026-08-28-160` + the signed
       consent sheet are on `main` ([[feedback_governance_commits_precede_implementation]]). ⛔ If they
       are not, **stop** — this story has no authority without them.
-- [ ] **Task 1 — Name the clause.** Export a single constant for the post-death-publication
-      **`clause_id`** in `@twt/domain` (alongside `SAHYOG_DRIVE_CONSENT_TYPE`, which stays). Document
-      that it is a **stable `clause_id`**, ⛔ not a `clause_version_id`, and why (T3).
-      ⚠ **Coordinate the literal with counsel's returning T&C clause** — ⛔ do not invent an id that
-      the seeded clause will not carry.
+- [ ] **Task 1 — ⛔ GATED ON D6. Name the clause, once D6 says what kind of thing it is.**
+      ⚠ **The clause TEXT exists** (counsel, 2026-08-28 — T&C v0.2 clause 14, verbatim), ⛔ but under
+      **D6(b)** there is no `clause_id` to name at all. ⇒ ⛔ **do not start this task before D6 is
+      ruled.**
+      - [ ] **If D6(a):** seed the disclosure clause as a Niyamavali `clause_versions` row, **pin** it
+            into the effective T&C version, and export a single constant for its **stable
+            `clause_id`** in `@twt/domain` (alongside `SAHYOG_DRIVE_CONSENT_TYPE`, which stays).
+            Document that it is a **`clause_id`**, ⛔ not a `clause_version_id`, and why (T3).
+      - [ ] **If D6(b):** ⛔ this task is replaced by a migration + a version-level marker, and
+            **AC2(d) must be rewritten** — ⚠ it is written to the pin-join and would otherwise ship a
+            predicate against a table the ruling just removed from the path.
 - [ ] **Task 2 — Build the predicate.** Replace `NAME_CONSENT_GRANTED` in
       `packages/domain/src/pool/public-read.ts` with the T&C-basis expression: `consent_records`
       (`tc_acceptance`, subject = `"claims"."deceased_member_id"`, existing validity window) →
@@ -270,9 +276,14 @@ no-bulk-export posture, and the abuse counter all behave exactly as at `e3257b9`
 
 ---
 
-## ⚖️ Decisions — ⛔ FIVE OPEN, ALL OWED BEFORE DEV
+## ⚖️ Decisions — ⛔ SIX OPEN, ALL OWED BEFORE DEV
 
 > ⚠ Unlike 11b.1, these are ⛔ **not** pre-ruled. Each changes the built shape.
+> ⚠⭐ **UPDATED 2026-08-28 — counsel's clause landed, and it did ⛔ NOT open this story.** D3's
+> **external** half is discharged (the text exists, verbatim, in T&C v0.2), ⛔ but its **repo** half is
+> not — and integrating the clause **exposed D6**, a shape blocker that ⛔ did not exist when this
+> file was written. ⇒ **five open became six.** ⛔ Do ⛔ not read "the clause arrived" as
+> "ready to build".
 
 **D1 — Does box (d) leave the UI, or merely stop being read?**
 (a) ⭐ **Remove it** (recommended, and what AC3 is written to). The Panel said *"remove the family
@@ -288,10 +299,33 @@ authoritative.
 (b) `OR` — either basis publishes. ⛔ Re-authorises the family tick-box the Panel just removed.
 (c) `AND` — both required. ⛔ Restores the family veto that clause 6 deliberately removed.
 
-**D3 — What is the clause's `clause_id` literal?** ⛔ Cannot be settled inside this repo alone — it
-must match the clause counsel returns (due **2026-09-07**) as seeded into `clause_versions`.
-⚠ **This is the story's one true external dependency.** Dev can build against a named constant, but
-⛔ the surface stays inert until the real clause is seeded **and pinned**.
+**D3 — What is the clause's `clause_id` literal?** ⚠ **PARTIALLY RESOLVED 2026-08-28 — and resolving
+it EXPOSED D6, which is now the harder half.**
+✅ **The external half is discharged:** counsel delivered the clause text on 2026-08-28
+(`2026-08-28-160` cl.4(b) / sheet A2.1), integrated **verbatim** as **clause 14** of
+`handover/TWT-Terms-and-Conditions-DRAFT-v0.2-for-counsel-review.docx`. ⇒ ⛔ this story is **no longer
+waiting on counsel** for content.
+⛔ **The repo half is ⛔ NOT discharged.** The `clause_id` is an identifier **this repo assigns at
+seeding time** — ⛔ counsel does not supply it. Nothing is seeded, nothing is pinned, and ⛔ **the
+literal cannot be chosen until D6 is ruled**, because D6 decides whether a `clause_versions` row is
+the right home for it at all.
+
+**D6 — ⛔⛔ NEW, AND IT IS A BLOCKER ON THE PREDICATE'S SHAPE. Counsel's clause arrived as T&C BODY
+TEXT; this story's predicate joins through the PIN TABLE. Those two do not meet.**
+⚠ **The gap, verified at `e3257b9`:** `schema/terms_and_conditions_versions.ts:10-12` states in terms
+that *"The T&C only REFERENCES pinned clause versions by id (via the
+`terms_and_conditions_pinned_clauses` junction table) — it never interprets the Niyamavali payload"*.
+⇒ **`pinned_clauses` pins NIYAMAVALI clauses** (`clause_versions`); the T&C's own prose lives in
+`terms_and_conditions_versions.body_markdown`. ⛔ **Counsel's disclosure clause is T&C prose.** As
+drafted, AC1/AC2(d) would join to a `clause_versions` row that ⛔ **does not exist and has no obvious
+right to exist**.
+| | Option |
+|---|---|
+| **(a)** | ⭐ **Mint the disclosure clause as a Niyamavali clause too, and pin it.** The predicate ships **exactly as designed**, on existing substrate, ⛔ no migration. ⚠ Coherent with the T&C's own clause 17 (*"These terms are tied to a version of the Niyamavali"*) — ⛔ but it asserts that a **disclosure authorisation is a rulebook rule**, which is a real characterisation question and arguably counsel's, not the author's. |
+| **(b)** | **Key the predicate off the T&C VERSION rather than a pinned clause** — e.g. a marker column on `terms_and_conditions_versions`. ⛔ Needs a **migration**, which is precisely what `-160` cl.11's "no new substrate" sizing assumed away. ⚠ A bare version-number threshold is ⛔ **not** acceptable: fragile, per-Pariwar, and silently wrong the first time a Pariwar's numbering diverges. |
+| **(c)** | **Match on `body_markdown` content.** ⛔ **Rejected on sight** — a legal basis resolved by substring search over prose is the worst option available. Recorded only so nobody proposes it later. |
+⚠ **Bearing:** (a) keeps `-160` cl.11's sizing honest (existing join, no migration); (b) invalidates
+it. ⛔ **Do ⛔ not start Task 2 before this is ruled** — it decides what Task 2 builds.
 
 **D4 — Per-Pariwar divergence: is a Pariwar whose T&C omits the clause an error or a valid state?**
 (a) ⭐ **Valid, inert** (recommended) — renders unnamed, AC8 makes it visible. Multi-Pariwar means

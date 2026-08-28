@@ -286,6 +286,14 @@ no-bulk-export posture, and the abuse counter all behave exactly as at `e3257b9`
             rows must stay explicable.
       - [ ] ⛔ **PRESERVE the enum values and migration 0058** (`-162` cl.5) — retiring a **box** is
             ⛔ not deleting a **type**. Extend the AC9 in-place comments to cover (b) and (c).
+      - [ ] ⚠⭐ **TWO STALE DEED CITATIONS FALL INSIDE THIS TASK — routed here by `2026-08-28-166`
+            cl.3.** `packages/contracts/src/claims/dpdpa-consent.ts:110` and
+            `apps/api/src/modules/claims/dpdpa-consent-copy.ts:39` both cite **Trust Deed cl.15(c)**
+            as the reason claim-time publication consent is compulsory / not default-opt-in.
+            ⛔ **Falsified twice over:** `-160` cl.3 superseded that mechanism, and this very task
+            **retires the boxes those comments explain**. ⇒ rewrite both comments as part of the
+            retirement. ⚠ ⛔ Do ⛔ **not** simply delete the Deed reference — the Deed is an
+            **unratified draft** (`-164` cl.1), so if a citation survives it needs that qualifier.
 - [ ] **Task 5 — Preserve, and say so (AC4 + AC9).** In-place comments at
       `schema/consent_records.ts`, `migrations/0112_consent-type-sahyog-drive.sql`, and
       `pool/public-read.ts`. Add the enum-still-exists guard test.

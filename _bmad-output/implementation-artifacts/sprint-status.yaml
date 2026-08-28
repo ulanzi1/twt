@@ -1,4 +1,47 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-28e (⭐ CLAIM TERMS v0.2 — three trustee answers incorporated. ⛔ ZERO ROWS
+#   FLIP. ⛔ NO DECISION ENTRY MINTED — answers to draft questions, nothing RULED.
+#   ⛔⛔ ONE ANSWER CORRECTED A FACTUAL ERROR IN MY OWN v0.1 FRAMING, and it is the finding worth
+#   carrying: v0.1 Q2 asked about acceptance taken "at a point of acute grief". ⚠ THE COMMITTED
+#   SOURCE SAID THE OPPOSITE AND HAD ALREADY BEEN READ — `prd.md:63` records the nominee "Files a
+#   claim ~1 month after death (GRIEF EASES THE RUSH)". ⇒ the question was contradicted by the very
+#   document the draft was assembled from. Q2 WITHDRAWN, ⛔ not answered; the grief framing is STRUCK
+#   from clause 2 and ⛔ not re-put. ⭐ THE LESSON: "assembled strictly from committed sources" is a
+#   claim about the CLAUSES; ⛔ the [FOR COUNSEL] questions were NOT held to the same standard, and
+#   one of them contradicted a line I had read an hour earlier.
+#   ✅ Q3 ANSWERED AND PROMOTED FROM DISCLAIMER TO RULE: both accounts must be the NOMINEE'S OWN,
+#   holder name must MATCH, Trust may refuse/halt on mismatch. v0.1's "the Trust does not verify that
+#   an account belongs to you" REMOVED — it contradicted the rule.
+#   ⚠⛔ BUT THE RULE IS ⛔ UNENFORCED AND THERE IS ⛔ NOTHING TO ENFORCE IT AGAINST (verified at
+#   e3257b9): `contracts/src/claims/nominee-bank.ts:56` types accountHolderName as FREE TEXT
+#   (z.string().trim().min(1).max(200)), stored as TIER-1 ENVELOPE CIPHERTEXT
+#   (`schema/claim_nominee_bank_accounts.ts:61`); ⛔ NO validation anywhere, and ⛔ NO nominee/claimant
+#   name column on `claims` to compare against. ⇒ the match is a HUMAN check at claim review, ⛔ not a
+#   system control — and automating it hits the SAME per-row-DEK problem that blocked name search at
+#   11b.1 (D2). ⛔ A term doing legal work while nothing enforces it must ⛔ NOT be recorded as
+#   enforced. Carried as Annex Q8 + owed as an ENGINEERING item.
+#   ✅ Q6 PARTLY ANSWERED — RETENTION SETTLED: RBI circulars mandate preserving transactional/account
+#   records up to 10 YEARS; DPDPA does not require erasure where retention is necessary for
+#   compliance with a law in force. ⭐⭐ AND A DISTINCTION ADDED THAT THE ANSWER DOES ⛔ NOT ITSELF
+#   MAKE: RETENTION IS ⛔ NOT PUBLICATION. A duty to KEEP is ⛔ not a licence to DISPLAY — public is
+#   governed by cl.9 masking, held is governed by cl.12. Same line -160 cl.10(f) draws. ⛔ STILL OPEN:
+#   the nominee's EXPORT + CORRECTION rights, and whether the cl.8 authority may be WITHDRAWN after
+#   settlement.
+#   ⚠ Q4 (overpayment) was ⛔ NOT answered — the third answer was LABELLED "Q4" but its content
+#   answers Q6. Applied to Q6; ⛔ Q4 ⛔ not treated as answered, carried forward as v0.2 Annex Q2.
+#   ⭐⭐ Q10 EXPANDED INTO ITS OWN ANNEX B at BigDev's request: a four-row table naming each claim-time
+#   consent box and what now carries it — (a) claim-time processing UNAFFECTED; (b) Sahyog Vivran →
+#   contributor names are OTHER MEMBERS' data (their cl.14), verifiers are staff, nominee bank is
+#   cl.8; (c) In Memoriam → the deceased Member's own name is cl.14; (d) Sahyog Drive → cl.14, box
+#   being REMOVED by 11b.9. ⇒ the question put: do (b) and (c) retain ANY subject other than
+#   FAMILY-AUTHORED, FAMILY-OWNED content, and if not should they be RE-SCOPED or RETIRED? ⭐ With a
+#   third part stated as the Trust's own position: A BOX PRESENTED AS CONTROLLING SOMETHING IT NO
+#   LONGER CONTROLS IS WORSE THAN NO BOX — it invites a family to believe they have a choice the terms
+#   have already settled. ⛔ Deliberately NOT self-answered — -160 cl.3 superseded the gate as a
+#   MECHANISM without ruling which boxes survive; 11b.3's and 11b.6's to settle.
+#   ⛔ Claim Terms v0.1 .docx REMOVED — ⛔ never submitted, ⛔ no evidentiary role, retained in git at
+#   ea24bed. ⭐ CONTRAST T&C v0.1, which IS kept: that one WAS handed over and is the record of what
+#   counsel received.)
 # last_updated: 2026-08-28d (⭐ D6 RULED (a) + ⭐⭐ THE CLAIM TERMS DRAFTED — ⛔ ZERO ROWS FLIP.
 #   11b-9 stays `ready-for-dev`. ⭐ DECISION 2026-08-28-161 MINTED (head READ: -160 -> -161).
 #   ⭐ D6 RULED (a) MINT-AND-PIN: the disclosure clause is represented as a NIYAMAVALI clause with a

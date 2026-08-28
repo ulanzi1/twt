@@ -2,8 +2,8 @@ import sys; sys.path.insert(0, sys.argv[1])
 import docxgen as D
 B=[]; a=B.append
 a(D.para('Tirhut Wing Trust', 'Title'))
-a(D.para('Claim Terms — DRAFT v0.1', 'Subtitle'))
-a(D.para('Submitted for legal review  |  28 August 2026  |  NOT FOR PUBLICATION', 'Subtitle'))
+a(D.para('Claim Terms — DRAFT v0.2', 'Subtitle'))
+a(D.para('Trustee answers incorporated  |  28 August 2026  |  NOT FOR PUBLICATION', 'Subtitle'))
 a(D.para(''))
 a(D.para('**This is an unreviewed first draft prepared for counsel.** It has not been adopted, published, or shown to any nominee. Passages marked [TO SUPPLY] are gaps the trust must fill; passages marked [FOR COUNSEL] are specific questions put to counsel.'))
 a(D.para('**Why this document exists.** On 28 August 2026 counsel supplied a clause — reproduced verbatim at clause 8 below — which binds the Nominee to disclosure "as a condition of submitting or pursuing a claim" and which refers to "the applicable Claim Terms". **No such instrument existed.** This draft is that instrument, assembled so the clause has somewhere to live. It was raised as question 9 of the Terms and Conditions v0.2 annex; **that question remains open**, and clause 8 may on counsel\'s advice belong here, in the Terms and Conditions, or in both.'))
@@ -23,8 +23,8 @@ a(D.bullet('**Cycle** — the bounded period during which Members are asked to c
 
 a(D.heading('2. Who may file, and when', 1))
 a(D.para('A claim may be filed by the Nominee, whether or not the Nominee is a Member of the Trust (FR-37). The Trust may also assist filing through its helpline where the Nominee cannot file directly.'))
-a(D.para('[TO SUPPLY — the filing window: how long after death a claim may be brought, and whether any limitation applies. The Trust\'s own persona research anticipates filing roughly one month after death; no deadline has been committed to.]'))
-a(D.para('[FOR COUNSEL] The Trust accepts claims from persons who have signed nothing until the moment of filing, at a point of acute grief, and asks them to accept these terms at that moment. Please advise on what is required for that acceptance to be valid and informed, and whether a cooling-off or withdrawal right should attach.'))
+a(D.para('Claims are typically brought some months after the death, not in its immediate aftermath.'))
+a(D.para('[TO SUPPLY — the filing window: how long after death a claim may be brought, and whether any limitation applies. No deadline has been committed to.]'))
 
 a(D.heading('3. What you must provide', 1))
 a(D.para('To file a claim you provide (FR-37):'))
@@ -33,8 +33,8 @@ a(D.bullet('**Bank account #2** — account number, IFSC, and account holder nam
 a(D.bullet('Optionally, a **UPI VPA** for each account.'))
 a(D.bullet('A **death certificate** for the Deceased Member.'))
 a(D.bullet('Such identity evidence as the Trust requires to verify your relationship to the Deceased Member.'))
-a(D.para('You are responsible for the accuracy of the bank details you provide. **The Trust does not verify that an account belongs to you**, and cannot recover a contribution paid to details you entered incorrectly.'))
-a(D.para('[FOR COUNSEL] Please advise on the Trust\'s exposure where a Nominee enters bank details belonging to someone else, whether in error or otherwise, and what the Trust must do or say to limit it.'))
+a(D.para('**Both accounts must be your own.** The account holder name on each account must match your name as the Nominee. **You may not give the details of an account belonging to anyone else**, and the Trust may refuse or halt a claim where the names do not match.'))
+a(D.para('You are responsible for the accuracy of the details you provide. Contributions are paid **directly by Members to the account you name**, so the Trust cannot recover a contribution sent to details you entered incorrectly.'))
 
 a(D.heading('4. Two accounts, and the Member chooses', 1))
 a(D.para('The two accounts you provide are **equal**. There is no primary and no secondary account, no default, and **no routing by the Trust** (FR-31). Each contributing Member chooses which of the two to pay. You may therefore receive contributions across both accounts, in proportions the Trust neither sets nor predicts.'))
@@ -75,7 +75,9 @@ a(D.para('[TO SUPPLY — the appeal window, who decides, and the external forum 
 
 a(D.heading('12. Your information and your rights over it', 1))
 a(D.para('The Trust processes your personal data to operate the mutual-aid scheme and to administer your claim. At the time you file, the Trust records your consent to specified uses of information relating to the Deceased Member separately from clause 8.'))
-a(D.para('[FOR COUNSEL] **A gap the Trust wishes to flag rather than paper over.** The Trust\'s data-subject rights — export, and erasure with anonymisation — were designed around **Members**. A Nominee is not necessarily a Member, but is plainly a data principal, and clause 8 authorises publishing their bank details. Please advise what export, correction and erasure rights the Nominee must have, how erasure interacts with a public record the Trust has already published, and whether a Nominee may withdraw the clause 8 authority after a claim is settled.'))
+a(D.para('**Retention.** The Trust retains claim and transaction records for the period required by law, including the record-retention periods applicable to transactional and account records. **A request to erase does not override a retention obligation the Trust is subject to**, and the Digital Personal Data Protection Act 2023 does not require erasure where retention is necessary for compliance with any law in force.'))
+a(D.para('**Retention is not publication.** That the Trust must keep a record does **not** mean the record stays public. What is shown publicly, and for how long, is governed by clause 9; what the Trust holds internally is governed by this clause. The two are separate, and the masking in clause 9 applies regardless of how long the underlying record is retained.'))
+a(D.para('[FOR COUNSEL] **A gap the Trust wishes to flag rather than paper over.** The Trust\'s data-subject rights — export, and erasure with anonymisation — were designed around **Members**. A Nominee is not necessarily a Member, but is plainly a data principal, and clause 8 authorises publishing their bank details. **The retention position above is settled**; what is not is: what **export and correction** rights the Nominee must have, and whether a Nominee may **withdraw the clause 8 authority** after a claim is settled — noting that withdrawal would bear on public display under clause 9, not on retention.'))
 
 a(D.heading('13. Changes to these terms', 1))
 a(D.para('These terms are versioned. The version you accept is recorded against your claim, with the date and time of acceptance, and is retained.'))
@@ -88,17 +90,32 @@ a(D.heading('Annex — matters specifically referred to counsel', 1))
 a(D.table([
   ['#', 'Clause', 'Question'],
   ['1', 'Whole', 'Does clause 8 belong in these Claim Terms, in the membership Terms and Conditions, or in both? This is question 9 of the T&C v0.2 annex, restated here.'],
-  ['2', '2', 'Validity of acceptance obtained from a non-signatory at a point of acute grief. Is a cooling-off or withdrawal right required?'],
-  ['3', '3', 'Trust exposure where a Nominee enters bank details belonging to another person.'],
-  ['4', '7', 'Is the facilitate-but-not-enforce position on overpayment sustainable? Does an independent obligation to repay arise?'],
-  ['5', '9', 'Should the practical-effect clause be binding rather than descriptive? Must a Nominee be told their applicable masking period at acceptance?'],
-  ['6', '12', 'What export, correction and erasure rights must a non-Member Nominee have? How does erasure interact with already-published information, and may the clause 8 authority be withdrawn after settlement?'],
-  ['7', '13', 'Confirm that a claim is governed by the version accepted at filing.'],
-  ['8', '14', 'Governing law, seat and dispute-resolution mechanism; alignment with the membership Terms and Conditions.'],
-  ['9', '8, 9', 'Both instruments turn on "as the Trust deems necessary". The Trust has resolved to align the final pre-launch wording to the DPDP Act 2023. Advise what that alignment requires here, given that clause 8 reaches bank details rather than a name.'],
-  ['10', 'Whole', 'The Trust records claim-time consents covering publication of information relating to the Deceased Member. With clause 8 in force, advise which of those consents remain necessary and which are now duplicative.'],
+  ['2', '7', 'Is the facilitate-but-not-enforce position on overpayment sustainable? Does an independent obligation to repay arise?'],
+  ['3', '9', 'Should the practical-effect clause be binding rather than descriptive? Must a Nominee be told their applicable masking period at acceptance?'],
+  ['4', '12', 'Retention is settled (see the clause). What remains: what EXPORT and CORRECTION rights must a non-Member Nominee have, and may the clause 8 authority be withdrawn after settlement — bearing on public display under clause 9, not on retention?'],
+  ['5', '13', 'Confirm that a claim is governed by the version accepted at filing.'],
+  ['6', '14', 'Governing law, seat and dispute-resolution mechanism; alignment with the membership Terms and Conditions.'],
+  ['7', '8, 9', 'Both instruments turn on "as the Trust deems necessary". The Trust has resolved to align the final pre-launch wording to the DPDP Act 2023. Advise what that alignment requires here, given that clause 8 reaches bank details rather than a name.'],
+  ['8', '3', 'Clause 3 requires the account holder name to match the Nominee. Advise what the Trust must do when they do not match — refuse the claim, require correction, or accept with evidence — and whether the Trust may pay out on a matching-name account without further identity proof.'],
 ], [500, 900, 7960]))
 a(D.para(''))
+a(D.heading('Annex B — the claim-time consent boxes: what is left for them to do', 2))
+a(D.para('This is a **scoping question about the Trust\'s own consent screen**, put here because clause 8 changed the answer. It is not a question about the drafting of these terms.'))
+a(D.para('At claim time the Trust presently records four consents. Following the Trustee Panel decision of 28 August 2026, each data class has its **own** basis, and the boxes no longer all carry the weight they were built to carry:'))
+a(D.table([
+  ['Box', 'What it was built to authorise', 'What now authorises that'],
+  ['(a) claim-time data processing (required)', "The Trust's processing of personal data at claim time", 'Unaffected. Still required, still the basis.'],
+  ['(b) Sahyog Vivran publication', "Contributor list and verifier names on the per-claim page", "Contributor names are OTHER MEMBERS' data → their own membership terms, clause 14. Verifier names are staff data. Nominee bank details → clause 8 of these terms."],
+  ['(c) In Memoriam listing', "The deceased Member's appearance on the In Memoriam roll", "The deceased Member's own name and personal information → membership terms, clause 14."],
+  ['(d) Sahyog Drive publication', "The deceased Member's name on the public Sahyog Drive", "Membership terms, clause 14. This box is being removed from the claim screen."],
+], [1800, 3400, 4160]))
+a(D.para('**The question.** If clause 14 of the membership terms carries the Member\'s own information, and clause 8 of these terms carries the Nominee\'s, then boxes (b) and (c) appear to retain only one genuine subject: **information belonging to the family** — for example a memorial text the family writes about the deceased. That is not the Member\'s own information and not the Nominee\'s, so neither clause reaches it.'))
+a(D.para('[FOR COUNSEL] Three parts, in order:'))
+a(D.bullet('**(i)** Is that reading right — that with clauses 14 and 8 in force, the residual subject of boxes (b) and (c) is family-authored and family-owned content only?'))
+a(D.bullet('**(ii)** If so, should those boxes be **re-scoped and re-worded** to ask only about family-owned content, or **retired** in favour of a single family-content consent captured where that content is actually authored?'))
+a(D.bullet('**(iii)** A box that is presented as controlling something it no longer controls is, in the Trust\'s view, worse than no box: it invites a family to believe they have a choice the terms have already settled. **Please confirm the Trust must not keep such a box** for continuity or familiarity.'))
+a(D.para('⚠ The Trust is **not** asking counsel to design the screen. The Panel decision superseded a consent mechanism without ruling which boxes survive it, and the Trust would rather ask than assume.'))
+a(D.para(''))
 a(D.para('_Clause 8 supplied by counsel and reproduced verbatim; all other clauses assembled from the Trust\'s committed product requirements and the Trustee Panel decision of 28 August 2026. Unreviewed. Not adopted. Not published._', spacing_after=0))
-D.build('docs/legal-counsel-engagement/handover/TWT-Claim-Terms-DRAFT-v0.1-for-counsel-review.docx', ''.join(B))
-print('Claim Terms draft v0.1 written')
+D.build('docs/legal-counsel-engagement/handover/TWT-Claim-Terms-DRAFT-v0.2-for-counsel-review.docx', ''.join(B))
+print('Claim Terms draft v0.2 written')

@@ -99,7 +99,7 @@ a(D.table([
   ['8', '3', 'Clause 3 requires the account holder name to match the Nominee. Advise what the Trust must do when they do not match — refuse the claim, require correction, or accept with evidence — and whether the Trust may pay out on a matching-name account without further identity proof.'],
 ], [500, 900, 7960]))
 a(D.para(''))
-a(D.heading('Annex B — the claim-time consent boxes: what is left for them to do', 2))
+a(D.heading('Annex B — the claim-time consent boxes: DISPOSED 28 August 2026', 2))
 a(D.para('This is a **scoping question about the Trust\'s own consent screen**, put here because clause 8 changed the answer. It is not a question about the drafting of these terms.'))
 a(D.para('At claim time the Trust presently records four consents. Following the Trustee Panel decision of 28 August 2026, each data class has its **own** basis, and the boxes no longer all carry the weight they were built to carry:'))
 a(D.table([
@@ -109,12 +109,13 @@ a(D.table([
   ['(c) In Memoriam listing', "The deceased Member's appearance on the In Memoriam roll", "The deceased Member's own name and personal information → membership terms, clause 14."],
   ['(d) Sahyog Drive publication', "The deceased Member's name on the public Sahyog Drive", "Membership terms, clause 14. This box is being removed from the claim screen."],
 ], [1800, 3400, 4160]))
-a(D.para('**The question.** If clause 14 of the membership terms carries the Member\'s own information, and clause 8 of these terms carries the Nominee\'s, then boxes (b) and (c) appear to retain only one genuine subject: **information belonging to the family** — for example a memorial text the family writes about the deceased. That is not the Member\'s own information and not the Nominee\'s, so neither clause reaches it.'))
-a(D.para('[FOR COUNSEL] Three parts, in order:'))
-a(D.bullet('**(i)** Is that reading right — that with clauses 14 and 8 in force, the residual subject of boxes (b) and (c) is family-authored and family-owned content only?'))
-a(D.bullet('**(ii)** If so, should those boxes be **re-scoped and re-worded** to ask only about family-owned content, or **retired** in favour of a single family-content consent captured where that content is actually authored?'))
-a(D.bullet('**(iii)** A box that is presented as controlling something it no longer controls is, in the Trust\'s view, worse than no box: it invites a family to believe they have a choice the terms have already settled. **Please confirm the Trust must not keep such a box** for continuity or familiarity.'))
-a(D.para('⚠ The Trust is **not** asking counsel to design the screen. The Panel decision superseded a consent mechanism without ruling which boxes survive it, and the Trust would rather ask than assume.'))
+a(D.para('**The reasoning.** If clause 14 of the membership terms carries the Member\'s own information, and clause 8 of these terms carries the Nominee\'s, then boxes (b) and (c) retain only one genuine subject: **information belonging to the family** — for example a memorial text the family writes about the deceased. That is not the Member\'s own information and not the Nominee\'s, so neither clause reaches it.'))
+a(D.para('**The Trust has now disposed of this, on 28 August 2026.** It is recorded here because it changes what these terms have to do, and because counsel\'s view on one part of it is still wanted.'))
+a(D.bullet('**Boxes (b), (c) and (d) are no longer required as general publication-consent mechanisms.** Each subject has its own basis: the Member\'s own information under clause 14 of the membership terms, the Nominee\'s under clause 8 of these terms.'))
+a(D.bullet('**Boxes (b) and (c) are retired, not reinterpreted.** Re-wording them to cover family content only was considered and rejected: a control that survives by having its meaning quietly rewritten is worse than no control, because the family sees something familiar and reasons about it using the old meaning.'))
+a(D.bullet('**Family-owned material is authorised at the point of submission** — where and when the family actually submits it — and never prospectively, at claim time, about content that does not yet exist.'))
+a(D.bullet('**Box (a) is unchanged.** It remains required, and remains the basis for the Trust\'s processing of personal data at claim time.'))
+a(D.para('[FOR COUNSEL] The screen disposition above is the Trust\'s own and is made. What is still asked is narrower: **do clauses 14 and 8, standing alone, carry everything those boxes previously purported to authorise** — or is there a subject that falls between them, which neither clause reaches and which the retirement would therefore leave without a basis?'))
 a(D.para(''))
 a(D.para('_Clause 8 supplied by counsel and reproduced verbatim; all other clauses assembled from the Trust\'s committed product requirements and the Trustee Panel decision of 28 August 2026. Unreviewed. Not adopted. Not published._', spacing_after=0))
 D.build('docs/legal-counsel-engagement/handover/TWT-Claim-Terms-DRAFT-v0.2-for-counsel-review.docx', ''.join(B))

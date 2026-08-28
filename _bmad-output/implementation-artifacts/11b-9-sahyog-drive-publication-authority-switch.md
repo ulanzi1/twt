@@ -182,10 +182,18 @@ against malformed/NULL refs (T2) — a bad row **excludes that member**, ⛔ it 
 (d) Resolution is through **`clause_versions.clause_id`** (T3), against a single exported named
 constant — ⛔ never an inline string literal, ⛔ never a `clause_version_id`.
 
-**AC3 — Box (d) leaves the active publication decision.** The `sahyog_drive_publication` checkbox is
-**removed** from the claim consent screen and from the request contract, so ⛔ **no new rows are
-written**. ⚠ The three remaining boxes — `claim_time_dpdpa` (required), `sahyog_vivran_publication`,
-`in_memoriam_listing` — are **untouched in behaviour and copy**.
+**AC3 — ⭐ WIDENED by `2026-08-28-162`: the claim consent screen reduces to box (a) ALONE.** All three
+publication checkboxes — **(b) `sahyog_vivran_publication`**, **(c) `in_memoriam_listing`** and
+**(d) `sahyog_drive_publication`** — are **removed** from the claim consent screen and from the
+request contract, so ⛔ **no new rows of any of the three types are written**.
+⚠ **(a) `claim_time_dpdpa` is UNCHANGED** — still required, still the basis for claim-time processing.
+⛔ **RETIRED, ⛔ NOT REINTERPRETED** (`-162` cl.2): re-wording (b)/(c) to cover family content was on
+the table and **rejected** — a box that survives by having its meaning quietly rewritten is worse than
+no box, because the family reasons about it using the **old** meaning.
+⭐ **An asymmetry the implementer must know** (`-162` cl.6): removing **(d)** is a **behaviour change**
+— it has a live reader (`pool/public-read.ts`). Removing **(b)/(c)** changes ⛔ **no runtime behaviour
+at all**: verified at `e3257b9`, they have ⛔ **no reader anywhere**, because 11b.3 and 11b.6 are
+unbuilt. ⇒ ⛔ do not go looking for a gate to switch on (b)/(c); there isn't one.
 
 **AC4 — ⛔ Nothing is deleted.** The `consent_type` enum value, **migration 0112**, the
 `consentArtifactRef`/type plumbing in `@twt/contracts` and `@twt/domain`, and **every existing
@@ -254,13 +262,23 @@ no-bulk-export posture, and the abuse counter all behave exactly as at `e3257b9`
       `apps/api/src/modules/public-pages/handlers.ts` and its contract; keep the decrypt gated
       **before** the Tier-1 read. Update `routes.ts:58`'s explanatory comment — it currently names
       `sahyog_drive_publication` as the gate.
-- [ ] **Task 4 — Remove box (d) from the active decision.**
-      - [ ] `apps/mobile/app/(claim)/consent.tsx` — drop the checkbox, its state, its hydration
-            (`:129`) and its submit field (`:158`); leave (a)/(b)/(c) byte-identical in behaviour.
-      - [ ] `apps/api/src/modules/claims/claims.dpdpa-consent.handlers.ts:76` — stop writing the row.
-      - [ ] Contract + i18n: retire the request field and the `dpdpa.sahyog_drive` copy key from the
-            **active** path. ⚠ ⛔ Do **not** delete the consent-copy record for **already-written**
-            rows — historical rows must stay explicable.
+- [ ] **Task 4 — ⭐ WIDENED (`-162`): reduce the claim consent screen to box (a) alone.**
+      Retire **(b) `sahyog_vivran_publication`**, **(c) `in_memoriam_listing`** and
+      **(d) `sahyog_drive_publication`**. ⚠ **(a) `claim_time_dpdpa` stays byte-identical.**
+      - [ ] `apps/mobile/app/(claim)/consent.tsx` — drop all three checkboxes, their state
+            (`:113` and the (b)/(c) equivalents), their hydration (`:127-129`) and their submit
+            fields (`:158`). ⚠ The screen's header comment describes **four** boxes — rewrite it, ⛔ do
+            not leave it describing a screen that no longer exists.
+            ⚠⭐ **The "declining never blocks the claim" reassurance copy loses its subject** — with
+            only a **required** box left there is nothing optional to reassure about. ⛔ Do not leave
+            orphaned reassurance text; re-read the whole screen as a user would.
+      - [ ] `apps/api/src/modules/claims/claims.dpdpa-consent.handlers.ts:76` — stop writing all three.
+      - [ ] Contract + i18n: retire the three request fields and the `dpdpa.sahyog_drive` /
+            `dpdpa.sahyog_vivran` / `dpdpa.in_memoriam` copy keys from the **active** path.
+            ⚠ ⛔ Do **not** delete the consent-copy records for **already-written** rows — historical
+            rows must stay explicable.
+      - [ ] ⛔ **PRESERVE the enum values and migration 0058** (`-162` cl.5) — retiring a **box** is
+            ⛔ not deleting a **type**. Extend the AC9 in-place comments to cover (b) and (c).
 - [ ] **Task 5 — Preserve, and say so (AC4 + AC9).** In-place comments at
       `schema/consent_records.ts`, `migrations/0112_consent-type-sahyog-drive.sql`, and
       `pool/public-read.ts`. Add the enum-still-exists guard test.

@@ -5130,6 +5130,31 @@ So that memorial / Sahyog Drive / In Memoriam surfaces pass measured validation 
 
 ---
 
+### Story 11b.9: Sahyog Drive Publication Authority Switch — T&C-Basis Render Gate + `sahyog_drive_publication` De-authorisation `[SURFACE]`
+
+> ⭐⛔ **ADDED 2026-08-28 BY RULING, ⛔ NOT BY THE EPIC PLAN.** This epic enumerated Stories 11b.1–11b.8 at authoring. Story 11b.9 exists because [Decision 2026-08-28-160](../../.decision-log.md#decision-2026-08-28-160) **de-authorised a gate that Story 11b.1 had already shipped and merged**. ⚠ Recorded here, in the document the next author reads, per **AI-11a-1(b)** — ⛔ the story file alone is not enough. ⛔ It is ⛔ **not** a new feature and ⛔ **not** scope growth: it is a **correction to merged behaviour**, and until it lands `/sahyog` reads a **superseded** authority.
+
+As a family who lost a member of this trust,
+I want the decision about whether my relative's name appears publicly to rest on what **they themselves agreed to while alive**, recorded against a specific version of the terms they accepted,
+So that the trust neither asks me to speak for them at the worst moment of my life, nor publishes their name on an authority nobody can point to.
+
+**Acceptance Criteria:**
+
+**Given** Decision `2026-08-28-160` clauses 3–7 + 11 and the signed consent sheet `trustee-consent-sheet-2026-08-28-11b-consent-model.md` (Part B Rows 1 · 2 · 3 · 4 · 8), superseding `2026-08-23-154` **C-5** as a **mechanism** and `2026-08-24-159` **D4(b)** as to the gate's **authority**
+**When** the Sahyog Drive resolves whether a deceased member's name renders
+**Then** the authority is the **member's own valid `tc_acceptance`** whose accepted T&C version **pins the post-death-publication clause** — resolved through the stable `clause_versions.clause_id`, ⛔ never a `clause_version_id` — and `sahyog_drive_publication` is ⛔ **not consulted**
+**And** the predicate is **set-based, tenant-scoped on every join leg, and defensive** against the nullable unconstrained `consent_records.consent_artifact_ref` (⛔ a malformed ref excludes that member; it ⛔ does not raise)
+**And** the claim-screen tick-box (d) **leaves the active publication decision** so ⛔ no new rows are written, while `claim_time_dpdpa` / `sahyog_vivran_publication` / `in_memoriam_listing` are **untouched**
+**And** ⛔ **nothing is deleted** — the `consent_type` enum value, migration 0112 and every existing `consent_records` row are **preserved by ruling** (`-160` cl.5); deletion requires a **separate** decision, and the code says so **in place**
+**And** the family's **decline path for the member's own name is deliberately removed** (`-160` cl.6) — ⛔ a reversal of 11b.1's shipped *"declinable and revocable"* gate that a later reader must ⛔ not restore as a "missing feature"
+**And** 11b.1's invariant holds unchanged: **the basis decides whether a row is NAMED, ⛔ never whether it EXISTS** — degradation stays per-pool, ⛔ never per-page
+**And** the **fail-closed inert state is OBSERVABLE** — until counsel's clause is drafted **and pinned into an effective T&C version**, every row renders unnamed, and that condition is distinguishable in diagnostics from *"every member declined"*, so it is ⛔ never debugged as a bug
+
+> ⚠ **SCOPE FENCE.** What C-5's supersession removed is the **per-subject-consent-gate MECHANISM**, ⛔ **not** the per-data-class **basis**. Nominee information and bank details rest on the **nominee's own Claim Terms**; family-owned information on the **family's own consent**. ⛔ Nothing in this story may be cited as authority that a member's T&C reaches another person's data.
+> ⛔ **NOT in this story:** Story **11b.6** is cleared by `-160` cl.7 but is `backlog` and unbuilt — it is built to the new basis **from the start**, ⛔ not switched afterwards. Story **11b.3** carries the nominee basis and its own masking-delay control (`-160` cl.10), ⛔ untouched here. Scroll-through enforcement, the **digital signature** and the **90-day physical-document tracking** are **v2 / pre-launch** (`-160` cl.11) — ⚠ deferral is safe **only** while the code is not in production and no members exist; ⛔ that property expires at first signup.
+
+---
+
 ## Epic 12: Module Marketplace
 
 Members see their eligible-modules shelf below My Pool. Admin targets modules by Pariwar/scope/cohort with validity windows + slot caps. Time-bombed auto-archive. First partners: HDFC home loan, LIC term plan, health-camp pilot. **Suppressed in all account-frozen states (UX-DR1, Stance #1) — structurally absent on a deceased member's phone, not "empty" or "hidden".**

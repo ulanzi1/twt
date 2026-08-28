@@ -218,6 +218,32 @@ Notwithstanding the immediate-termination nature, Counsel completes handover of 
 3. Trustee Panel chair + ≥1 additional trustee sign per the ≥2-trustee authorization quorum; trust-side witness signs
 4. Counsel signs
 5. Signed engagement letter is filed at: **secure non-git trustee-accessible storage** (the executed letter is held outside the git repository — only the storage reference path + receipt is committed to the repo); counsel-side archive holds the executed copy per §7 NDA + §10 work-product-ownership; reference path recorded in `engagement-ledger.md` §5 Engagement-signature log
+
+   > ⭐⭐ **AMENDED 2026-08-28 — ⛔ A WITHHELD LOCATOR IS A *COMPLETE* STATE, ⛔ NOT AN OUTSTANDING ROW.**
+   > Authority: [Decision 2026-08-28-160](../../.decision-log.md#decision-2026-08-28-160) clause 2 +
+   > consent sheet `trustee-consent-sheet-2026-08-28-11b-consent-model.md` **Row 7 (ruled (a);
+   > amendment authorised: Yes)**.
+   >
+   > ⚠ **Why this amendment is required rather than optional.** As drafted, step 5 demanded a
+   > **resolvable reference path** in every case. The Trustee Panel and counsel have ruled that the
+   > **actual custody location is deliberately kept out of the agent-accessible repository unless
+   > absolutely necessary**. ⇒ an unamended step 5 permanently demands what the Panel has ruled it
+   > will not supply, so the row **regenerates as "outstanding" at every reconciliation, forever**. A
+   > clause that conflicts with ratified behaviour is a **required amendment**, ⛔ not a standing
+   > breach ([[feedback_niyamavali_rulebook_not_spec]]).
+   >
+   > ⭐ **Step 5 is satisfied by EITHER:**
+   > **(a) `path-recorded`** — a resolvable storage reference path + receipt in `engagement-ledger.md` §5; **OR**
+   > **(b) `custody-attested-locator-withheld`** — custody **attested by the holder** (who holds it, in
+   > what form), with the **locator deliberately withheld** by trustee/counsel ruling, and the ruling
+   > cited in `engagement-ledger.md` §5.
+   >
+   > ⛔ **Under (b) the row is CLOSED, ⛔ not open.** ⛔ It may ⛔ not be re-raised as an outstanding
+   > item, and ⛔ *"reference path OWED"* may ⛔ not be written against it
+   > ([[feedback_closure_language_precision]] — *withheld by ruling* ≠ *not addressed*).
+   > ⚠ **What (b) does ⛔ NOT do:** it does ⛔ not attest that the §14 signature *event* occurred
+   > (Panel chair + ≥1 further trustee + trust-side witness), and it does ⛔ not evidence the document's
+   > contents. Those remain separately recorded wherever they actually stand.
 6. `.decision-log.md` Decision 2026-06-02-013 supersession entry records the engagement-signature event per the Story 0.1 + 0.2 + 0.3 + 0.4 + 0.5 + 0.6 + 0.7 + 0.12 supersession schema
 
 **Engagement-letter amendment:** any amendment to the executed engagement letter requires ≥2-trustee + Counsel co-signature + `.decision-log.md` `[LEGAL]` entry per the supersession schema. The framework engagement-letter-template is amended via Story 0.13 ledger entries; the executed engagement letter is amended via supersession entries.

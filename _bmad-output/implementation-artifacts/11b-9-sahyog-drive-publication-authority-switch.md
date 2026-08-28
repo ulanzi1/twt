@@ -228,17 +228,21 @@ no-bulk-export posture, and the abuse counter all behave exactly as at `e3257b9`
 - [ ] **Task 0 — ⛔ VERIFY THE GOVERNANCE LANDED FIRST.** Confirm `2026-08-28-160` + the signed
       consent sheet are on `main` ([[feedback_governance_commits_precede_implementation]]). ⛔ If they
       are not, **stop** — this story has no authority without them.
-- [ ] **Task 1 — ⛔ GATED ON D6. Name the clause, once D6 says what kind of thing it is.**
-      ⚠ **The clause TEXT exists** (counsel, 2026-08-28 — T&C v0.2 clause 14, verbatim), ⛔ but under
-      **D6(b)** there is no `clause_id` to name at all. ⇒ ⛔ **do not start this task before D6 is
-      ruled.**
-      - [ ] **If D6(a):** seed the disclosure clause as a Niyamavali `clause_versions` row, **pin** it
-            into the effective T&C version, and export a single constant for its **stable
-            `clause_id`** in `@twt/domain` (alongside `SAHYOG_DRIVE_CONSENT_TYPE`, which stays).
-            Document that it is a **`clause_id`**, ⛔ not a `clause_version_id`, and why (T3).
-      - [ ] **If D6(b):** ⛔ this task is replaced by a migration + a version-level marker, and
-            **AC2(d) must be rewritten** — ⚠ it is written to the pin-join and would otherwise ship a
-            predicate against a table the ruling just removed from the path.
+- [ ] **Task 1 — ✅ D6 RULED (a). Mint the clause through the AMENDMENT WORKFLOW, ⛔ not a seed.**
+      ⚠ **The clause TEXT exists** (counsel, 2026-08-28 — T&C v0.2 clause 14, verbatim). ⛔ **What does
+      not exist is the `clause_versions` row, and it may ⛔ not be inserted directly.**
+      - [ ] Run the **Story 2.4 Niyamavali amendment cycle** for the disclosure clause: draft →
+            **tone review by a NON-AUTHOR reviewer** → sign-off → **audit-logged publish**.
+            ⚠ The sign-off is **content-hash-bound** — ⛔ any edit to the payload clears it and the
+            cycle repeats. ⛔ **Do ⛔ not route around `requireToneReviewSignoff`.**
+      - [ ] **Pin** the published clause version into the **effective** T&C version via
+            `terms_and_conditions_pinned_clauses`. ⚠ Per-Pariwar — see **D4**.
+      - [ ] Export a single constant for the **stable `clause_id`** in `@twt/domain` (alongside
+            `SAHYOG_DRIVE_CONSENT_TYPE`, which stays). Document that it is a **`clause_id`**, ⛔ not a
+            `clause_version_id`, and why (T3).
+      - [ ] ⚠ **Sequencing:** the amendment cycle needs a **second human** (the non-author reviewer).
+            ⛔ It is ⛔ not a dev-time step and ⛔ cannot be completed unilaterally — plan for it, ⛔ do
+            not discover it at the end.
 - [ ] **Task 2 — Build the predicate.** Replace `NAME_CONSENT_GRANTED` in
       `packages/domain/src/pool/public-read.ts` with the T&C-basis expression: `consent_records`
       (`tc_acceptance`, subject = `"claims"."deceased_member_id"`, existing validity window) →
@@ -276,7 +280,7 @@ no-bulk-export posture, and the abuse counter all behave exactly as at `e3257b9`
 
 ---
 
-## ⚖️ Decisions — ⛔ SIX OPEN, ALL OWED BEFORE DEV
+## ⚖️ Decisions — ✅ D6 RULED · ⛔ FOUR STILL OPEN (D1 · D2 · D4 · D5) + D3's repo half
 
 > ⚠ Unlike 11b.1, these are ⛔ **not** pre-ruled. Each changes the built shape.
 > ⚠⭐ **UPDATED 2026-08-28 — counsel's clause landed, and it did ⛔ NOT open this story.** D3's
@@ -310,8 +314,25 @@ seeding time** — ⛔ counsel does not supply it. Nothing is seeded, nothing is
 literal cannot be chosen until D6 is ruled**, because D6 decides whether a `clause_versions` row is
 the right home for it at all.
 
-**D6 — ⛔⛔ NEW, AND IT IS A BLOCKER ON THE PREDICATE'S SHAPE. Counsel's clause arrived as T&C BODY
-TEXT; this story's predicate joins through the PIN TABLE. Those two do not meet.**
+**D6 — ✅ RULED (a) (BigDev, 2026-08-28 — `.decision-log.md#decision-2026-08-28-161`). MINT AND PIN.**
+⭐ The disclosure clause is represented as a **Niyamavali clause** carrying a stable `clause_id` and
+**pinned** into the effective T&C version. ⇒ **AC1/AC2(d) ship exactly as written**, on existing
+substrate, ⛔ no migration — and `-160` cl.11's *"no new substrate"* sizing **survives**.
+⚠⛔ **THE RULING COSTS MORE THAN IT LOOKS. IT IS ⛔ NOT A SEED SCRIPT.** Verified: `createClause` is
+`packages/domain/src/niyamavali/write.ts:129` and publish is gated by `requireToneReviewSignoff`
+(`apps/api/src/modules/rules/index.ts:464`). ⇒ minting runs the **Story 2.4 amendment workflow**:
+draft → **tone review by a NON-AUTHOR reviewer** → sign-off (**content-hash-bound**, so any edit
+clears it) → **audit-logged publish**. ⛔ **Do ⛔ not seed directly into `clause_versions` to skip the
+gate** — the gate is why the rulebook is trustworthy.
+⚠ **And the characterisation is on the record, ⛔ not inherited silently:** (a) asserts that a
+**disclosure authorisation is a rulebook rule**. Supported by T&C v0.2 clause 17 (*"These terms are
+tied to a version of the Niyamavali"*) — ⛔ but it is properly **counsel's** to confirm, and is put to
+him in the v0.2 Annex round. ⛔ Ruled now because this story cannot be built without it; ⛔ **not**
+ruled as beyond his revision.
+
+> _The options as put, retained for the record:_
+> **⛔⛔ THE BLOCKER WAS: counsel's clause arrived as T&C BODY TEXT; this story's predicate joins
+> through the PIN TABLE. Those two do not meet.**
 ⚠ **The gap, verified at `e3257b9`:** `schema/terms_and_conditions_versions.ts:10-12` states in terms
 that *"The T&C only REFERENCES pinned clause versions by id (via the
 `terms_and_conditions_pinned_clauses` junction table) — it never interprets the Niyamavali payload"*.

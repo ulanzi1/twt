@@ -1,4 +1,47 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-28d (⭐ D6 RULED (a) + ⭐⭐ THE CLAIM TERMS DRAFTED — ⛔ ZERO ROWS FLIP.
+#   11b-9 stays `ready-for-dev`. ⭐ DECISION 2026-08-28-161 MINTED (head READ: -160 -> -161).
+#   ⭐ D6 RULED (a) MINT-AND-PIN: the disclosure clause is represented as a NIYAMAVALI clause with a
+#   stable clause_id and PINNED into the effective T&C version ⇒ 11b.9's predicate ships EXACTLY as
+#   designed, on existing substrate, ⛔ no migration, and -160 cl.11's "no new substrate" sizing
+#   SURVIVES (D6(b) would have invalidated it; D6(c) was rejected on sight).
+#   ⚠⛔ AND THE RULING COSTS MORE THAN IT LOOKS — ⛔ IT IS NOT A SEED SCRIPT. Verified: createClause is
+#   `niyamavali/write.ts:129` and publish is gated by `requireToneReviewSignoff`
+#   (`rules/index.ts:464`) ⇒ minting runs the STORY 2.4 AMENDMENT WORKFLOW: draft -> TONE REVIEW BY A
+#   NON-AUTHOR REVIEWER -> sign-off (CONTENT-HASH-BOUND, so any edit clears it) -> audit-logged
+#   publish. ⛔ Do NOT seed directly into clause_versions to skip the gate. ⇒ Task 1 now needs A
+#   SECOND HUMAN and is ⛔ not a dev-time step — plan for it, ⛔ do not discover it at the end.
+#   ⚠ THE CHARACTERISATION IS ON THE RECORD, ⛔ not inherited silently: (a) asserts a DISCLOSURE
+#   AUTHORISATION IS A RULEBOOK RULE. Supported by T&C v0.2 cl.17 ("these terms are tied to a version
+#   of the Niyamavali") ⛔ but properly COUNSEL'S to confirm; ruled now only because 11b.9 cannot be
+#   built without it, ⛔ NOT as beyond his revision.
+#   ⇒ ⛔ 11b.9 IS STILL NOT OPEN: D1/D2/D4/D5 remain unruled and D3's repo half (choosing the literal)
+#   is unblocked ⛔ but not performed. Fail-closed posture UNCHANGED.
+#   ⭐⭐ CLAIM TERMS v0.1 DRAFTED — `handover/TWT-Claim-Terms-DRAFT-v0.1-for-counsel-review.docx`
+#   (source `build_claim_terms.py`), 14 clauses + a 10-question annex, with counsel's clause 15
+#   reproduced VERBATIM as clause 8 (verified). Assembled STRICTLY from committed sources: FR-31 ·
+#   FR-37 · FR-41 · FR-43A · the facilitator/no-guaranteed-sum/overpayment posture from the T&C · and
+#   -160 cl.10 restated in plain terms at clause 9. ⛔ Nothing invented apart from counsel's own text.
+#   ⭐ NEW ROSTER ROW `1b: claim-terms-draft-v1` (priority-2, a deliberate TIE with FR-43A; ⛔ NOT
+#   priority-1 — AC-1 commits that slot to the T&C and ⛔ that is not re-cut). Numbered 1b because it
+#   is the SIBLING INSTRUMENT to Row 1 and renumbering 2-19 would have broken every cross-reference.
+#   ⭐⭐ WHY THE ROW MATTERS AS MUCH AS THE DRAFT: Row 1 sat 50 days at `pending-submission` because
+#   THE ARTEFACT DID NOT EXIST. The SAME SHAPE was forming here — counsel's clause 15 pointed at a
+#   document nobody had written and ⛔ NO ROW TRACKED ITS ABSENCE, so the gap would have surfaced only
+#   when 11b.3 was authored. The row is minted WITH the draft, ⛔ not after it.
+#   ⛔⛔ AND THE CORRECTION WORTH CARRYING: THE CLAIM TERMS ARE ⛔ NOT A BLOCKER ON 11b.9 — that was
+#   got wrong once already. 11b.9 publishes the DECEASED MEMBER'S OWN NAME (member's T&C cl.14); the
+#   Sahyog Drive renders ⛔ NO nominee data at all (11b.1 AC11(a)). ⇒ the Claim Terms gate 11b.3
+#   (-161 cl.5). ⭐ Held cheap ONLY while 11b.3 is `backlog` — and -157 cl.3's "all three surfaces are
+#   unbuilt" premise LAPSED SILENTLY when 11b.1 shipped, so settle this BEFORE 11b.3 is authored.
+#   ⚠ FOUR GAPS FLAGGED TO COUNSEL RATHER THAN PAPERED OVER: validity of acceptance taken from a
+#   NON-SIGNATORY AT A POINT OF ACUTE GRIEF (Q2); exposure when a nominee enters ANOTHER PERSON'S bank
+#   details (Q3); whether cl.9's plain-terms masking description should be BINDING not descriptive
+#   (Q5); and ⭐ WHAT DATA-SUBJECT RIGHTS A NON-MEMBER NOMINEE HOLDS — the DPDPA design was built
+#   around MEMBERS, and cl.8 publishes BANK DETAILS (Q6). ⭐ Q10 reaches back into the product: with
+#   cl.8 in force, WHICH CLAIM-TIME CONSENTS REMAIN NECESSARY? ⛔ Deliberately NOT answered — 11b.3's
+#   and 11b.6's to settle; -160 cl.3 superseded the gate as a MECHANISM without ruling which boxes
+#   survive the claim screen.)
 # last_updated: 2026-08-28c (⭐ COUNSEL DELIVERED THE TWO DISCLOSURE CLAUSES — ⛔ ZERO ROWS FLIP.
 #   11b-9 stays `ready-for-dev`; ⛔ epic-11b stays in-progress; ⛔ NO DECISION ENTRY MINTED — nothing
 #   is RULED here, counsel DISCHARGED a commitment (`2026-08-28-160` cl.4(b) / sheet A2.1).

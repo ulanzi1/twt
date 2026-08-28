@@ -1,4 +1,49 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-28h (⛔⛔ THE ROUTING NOTE IS RAISED — AND IT FOUND SOMETHING BIGGER THAN THE
+#   THREE FINDINGS IT WAS OPENED FOR. ⛔ ZERO ROWS FLIP. ⛔ NOTHING RATIFIED, ⛔ NOTHING APPLIED.
+#   ⚠⛔ FIRST, A VEHICLE ERROR CORRECTED: -163 was written as a decision-log entry TITLED "routing
+#   note". ⛔ WRONG INSTRUMENT — this project has a distinct artifact,
+#   `planning-artifacts/trustee-panel-routing-note-YYYY-MM-DD-<slug>.md` (TEN of them exist). A
+#   decision-log entry RECORDS; ⛔ it does not ROUTE. -163 stands as the record; the note is the ask:
+#   `trustee-panel-routing-note-2026-08-28-11b3-publication-basis-and-matrix.md`.
+#   ⭐⭐⭐ THE HEADLINE, AND IT IS ⛔ NOT WHAT THE NOTE WAS OPENED TO WRITE: THE 28 AUGUST CONSENT MODEL
+#   IS, ON ITS FACE, INCONSISTENT WITH TRUST DEED CLAUSE 15(c). Read at `docs/legal/trust-deed.md:191`
+#   and ⛔ UNCHANGED: public rendering of "member, contributor, nominee, or verifier information
+#   (including memorial or contributor-list surfaces)" may be effected "ONLY WITH EXPLICIT, REVOCABLE,
+#   PURPOSE-SPECIFIC CONSENT AND NEVER ON A DEFAULT OPT-IN BASIS." ⇒ of the four mandatory adjectives
+#   the model arguably meets ONE (explicit — scroll + digital signature) and ⛔ fails three:
+#   REVOCABLE (⛔ -160 cl.6 removes the decline path; clause 8 binds "as a CONDITION of" claiming),
+#   PURPOSE-SPECIFIC (⛔ "as the Trust deems necessary" is its opposite — the SAME phrase -160 cl.9
+#   already defers for DPDP alignment ⇒ ⭐ THE DEED WAS ALREADY ASKING FOR IT, so that work is a
+#   DEED-COMPLIANCE matter owed BEFORE RELIANCE, ⛔ not merely before launch), and NEVER-DEFAULT-OPT-IN
+#   (⛔ a condition of membership is not an opt-in at all).
+#   ⚠⚠ AND THE 2026-08-24 ROUTING NOTE HAD ALREADY ASKED THIS EXACT QUESTION. Its Q1: "if yes, THE
+#   CHANGE IS TO DEED CLAUSE 15(c) … a DRAFTING instruction to counsel" (the Deed is UNEXECUTED —
+#   `:25` still carries [[City]], [[Month]] — and in active redraft; ⚠ but v4 does ⛔ NOT reach 15(c),
+#   and its "15" is OBJECT 15, a numbering TRAP). ⇒ the Panel ANSWERED YES IN SUBSTANCE on 2026-08-28
+#   (-160 cl.4(a) + cl.3, -162) ⛔ BUT NO DEED DRAFTING INSTRUCTION WAS EVER ISSUED. The model is
+#   ratified while the instrument governing it still says the opposite.
+#   ⛔⛔ TWO PRECONDITIONS, BOTH WORSE THAN WHEN LAST RAISED:
+#   (a) `docs/legal/` IS STILL UNTRACKED — `git ls-files docs/legal` returns EMPTY; TEN files on disk
+#   incl. trust-deed.md, niyamavali.md and BOTH T&C files. Decision 2026-08-21-144 cl.7(a) required
+#   version control ONE WEEK AGO; ⛔ not done, and it now blocks a THIRD amendment. ⇒ the entire legal
+#   corpus — INCLUDING THE T&C THE WHOLE MODEL RESTS ON — has ⛔ no diff, ⛔ no history, ⛔ no
+#   attribution.
+#   (b) ⭐⭐ A T&C ALREADY EXISTS: `docs/legal/terms-and-conditions.md`, 133 lines, 13 sections, with an
+#   FR-94 verbatim section + completion checklist. ⚠⛔ THE REVIEW ROSTER RECORDS THE OPPOSITE BY NAME
+#   ("no T&C prose was ever authored: verified 2026-08-24 …") ⇒ ⭐ that verification was almost
+#   certainly run GIT-AWARE and the untracked corpus was INVISIBLE to it — (a) is what made the error
+#   possible. ⇒ the handover v0.1/v0.2 drafts were assembled FROM THE PRD on a FALSE PREMISE; ⛔
+#   whether they duplicate/supersede/conflict with the existing file is ⛔ NOT ASSESSED. ⚠ That file is
+#   headed "ALL INDIA PARIWAR WELFARE TRUST", ⛔ not Tirhut Wing Trust — status UNKNOWN, ⛔ not assumed.
+#   ⇒ FOUR QUESTIONS PUT: Q1 amend Deed 15(c) to match the adopted model, or does the model not stand?
+#   (+ sub-question to counsel: does an accepted contractual TERM satisfy 15(c)'s "consent", or does
+#   15(c) require the SEPARATE REVOCABLE ACT that -160 cl.3 superseded?) · Q2 is SD-2 dissolved,
+#   narrowed, or surviving post-masking? · Q3 will the Panel rule a THIRD Tier-1-at-public allowlist
+#   entry (11b.3 ⛔ cannot declare its surface until it lands; ⛔ do not resolve by editing the
+#   allowlist) · Q4 to BigDev ⛔ not the Panel: track docs/legal, then assess the existing T&C.
+#   ⚠ NOTHING THE PANEL SETTLED IS REOPENED: -162's box retirement and -160 cl.7's clearance STAND.
+#   ⛔ What is unsettled is whether the INSTRUMENT BENEATH THEM says what they assume it says.)
 # last_updated: 2026-08-28g (⛔ ROUTING NOTE 2026-08-28-163 — THREE FINDINGS ON STORY 11b.3 THAT -160
 #   cl.10 CREATED AND ⛔ NOBODY RECORDED. ⛔ ZERO ROWS FLIP. ⛔⛔ NOTHING IS RULED — observational,
 #   author-committed, ⛔ not trustee-ratified ([[feedback_gap_analysis_observational]]).

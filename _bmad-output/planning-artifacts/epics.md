@@ -4939,9 +4939,9 @@ So that public transparency exists for trust legitimacy while member-only sensit
 
 **Acceptance Criteria:**
 
-**Given** FR-77 + Sprint Change Proposal Item 12 + Story 11a.2 Astro shell + Story 6.9 consent (`sahyog_vivran_publication`) + Story 6.16 reversed-denial hook
+**Given** FR-77 + Sprint Change Proposal Item 12 + Story 11a.2 Astro shell + the **per-data-class publication basis** (`2026-08-28-160` cl.3 / cl.7 — ⛔ **NOT** `sahyog_vivran_publication`, retired by `2026-08-28-162`) + Story 6.16 reversed-denial hook
 **When** Sahyog Vivran per-claim surface is implemented
-**Then** the surface renders for any closed pool with `sahyog_vivran_publication` consent active (Story 2.7 `consentExists` check); URL structure: `/sahyog-vivran/{pool_canonical_identifier}`
+**Then** the surface renders for any closed pool — ⛔ there is **no per-subject publication-consent gate on this surface** (`-160` cl.3 superseded C-5's lever **wholly, across all three 11b surfaces**); URL structure: `/sahyog-vivran/{pool_canonical_identifier}`
 **And** **public cache-safe shell content** (`public` tier per matrix): pool letter + Mahabharata name (Story 7.2), close-of-cycle framing (Pool-Reality #2 per Story 7.8), confirmed contributor count + amount raised (from Story 9.5 canonical events), family story (family-written per Story 11b.4, dignified-validation Pattern 4), verifier hyperlinks resolving to verifier profile pages (verifier identity at `authenticated_member` tier — public visitor sees role only, authenticated sees name + scope)
 **And** **AR-48 final extension — per-claim authenticated-fragment registry**: when the pool is `live` (not yet settled), an authenticated-fragment slot renders nominee bank details (UX-DR42 `<DocumentPreview>` style) ONLY to logged-in members; public visitors see a placeholder ("Visible to members"); the fragment is server-rendered at request time for authenticated viewers + bypasses edge cache; cache-safe public shell stays edge-cached
 **And** the In Memoriam-style memorial visual components (Story 11b.5: MemorialRecord + PortraitFrame + KinshipLattice) consume into this surface per the family-authored memorial content
@@ -4959,10 +4959,11 @@ So that public transparency exists for trust legitimacy while member-only sensit
 **Then** the publish hook consumer routes the claim to Sahyog Vivran publication queue; the per-claim Sahyog Vivran surface includes a "Reversed by appeal" narrative with appeal-stage attribution + reversal date
 **And** the appeal lineage is visible (deny → appeal stage → reversal); audit-logged via Story 1.10
 
-**Given** the consent-gating invariant
-**When** `sahyog_vivran_publication` consent is revoked (Story 2.7)
-**Then** the Sahyog Vivran page is taken down within the cache-safe invalidation window (Cloudflare TTL + Story 4.8 conservative-recompute pattern); a "Page removed by family request" placeholder serves at the URL
-**And** consent re-grant restores the page; full audit trail of consent transitions preserved per Story 2.7
+**Given** the **per-data-class publication basis** (⭐ SUPERSEDES the consent-gating invariant — see the 2026-08-29 block below)
+**When** the Sahyog Vivran surface renders any person's information
+**Then** each data class rests on **its own instrument**, ⛔ never on a single per-subject gate: the **deceased member's own name** on the **member's T&C clause 14** (the Story 11b.9 predicate is the precedent — `tc_acceptance` whose accepted version pins the disclosure clause); **contributor + verifier names** on **those members' own T&C**; **nominee information and bank details** on the **nominee's own Claim Terms clause 8**; **family-authored story content** on the **family's own act of submission** (`-162` cl.2 — authorised AT THE POINT OF SUBMISSION, ⛔ never prospectively at claim time)
+**And** ⛔ **no `sahyog_vivran_publication` row is read, written, or consulted** — the type is preserved by ruling (`-162` cl.5) and is **write-never / read-never**
+**And** ⚠ the **mechanism** for each class is this story's to design; ⛔ only the **basis** is settled above — ⛔ do not assume the 11b.9 predicate transfers unchanged to a class it was not built for
 
 > ⛔⛔ **NOT RECONCILED — BLOCKED. 2026-08-23 (AI-11a-1, end-of-Epic-11a). ⭐ THIS IS SIGNIFICANT DISCOVERY SD-2, AND IT IS THE SECOND INSTANCE OF SD-1's DEFECT CLASS, ONE EPIC LATER. ⛔ Do NOT author this story until AI-11a-2's blocking session rules it.**
 >
@@ -4998,6 +4999,21 @@ So that public transparency exists for trust legitimacy while member-only sensit
 > ⚠ **Two constraints from the block above survive this ruling untouched:** the consent gate (C-4's second gate, ⛔ not the same act as the FR-19 read model), and the fail-closed cache-policy leg — a rendering surface with ⛔ no `Cache-Control` fails CI, and `cache_policy` is declared **explicitly** in the matrix, ⛔ never inferred.
 >
 > ⛔ **`apps/api/src/modules/public-pages/` IS NOT TOUCHED BY THIS STORY.** It shipped at 11a.3 **deliberately unauthenticated**, defended in writing in two places, and carries a ⛔ **NO SECOND ROUTE** fence. ⚠ `2026-08-20-141` cl.9 had ruled the module must not exist yet; it was created one story later. ⇒ ⛔ Adding an authenticated route there is **not** the cheap path it looks like — it needs its own ruling, its own written defence, and its own `login-wall.spec.ts` allowlist entry.
+
+> ⭐⭐ **SUPERSEDED IN PART 2026-08-29 — THE CONSENT GATE ON THIS SURFACE IS GONE. ⛔ The blocks above STAY as the record of why; ⛔ do not read their consent sentences as live.**
+>
+> **What fell, and by which ruling:** `2026-08-28-160` cl.3 superseded **C-5's per-subject consent-gate lever WHOLLY, across all three 11b surfaces**, and `2026-08-28-162` cl.2 **retired** the `sahyog_vivran_publication` box — ⛔ **retired, not reinterpreted**: re-wording it to cover family content was on the table and was **rejected on the record**, because a control that survives by having its meaning quietly rewritten is worse than no control. ⇒ Story **11b.9** removes its write path, so ⛔ **no new row of that type can ever be written**. A gate keyed on it would render **nothing, permanently**, with every CI gate green.
+>
+> ⛔⛔ **THE TWO SENTENCES ABOVE THAT SAY *"its consent gating is C-4's second gate"* ARE FALSIFIED IN THEIR CONSENT THIRD ONLY — ⚠ READ THIS BEFORE YOU EDIT EITHER.** Each bundles **three** constraints, and ⛔ only one falls:
+> · **C-4 — the absent FR-19 producer:** ⭐ **SURVIVES, untouched.** C-4 is the *no-FR-19-producer* constraint, ⛔ **not** a consent gate; `-160` did not reach it. 11a.5's third path still binds — render the real, currently-empty source and **render nothing when empty**, ⛔ never a fabricated row, ⛔ never a "coming soon" placeholder.
+> · **the consent gate:** ⛔ **FALLS** (`-160` cl.3 + `-162`).
+> · **the fail-closed cache-policy leg:** ⭐ **SURVIVES** — a rendering surface with ⛔ no `Cache-Control` fails CI, and `cache_policy` is declared **explicitly** in the matrix, ⛔ never inferred from field tiers.
+>
+> ⭐ **AND THE DPDPA HOLD IS LIFTED** — `-160` cl.7 cleared this surface (superseding `-157` cl.3), **on clause 4's model**, ⛔ not on the basis counsel rejected on 2026-08-24. ⛔ That does ⛔ **not** make the surface live: what keeps it dark is **deployment plus the counsel/Panel process**, ⛔ not a code mechanism, and ⛔ the publication kill switch may ⛔ **not** be cited as its technical launch gate ([[project_directory_launch_gated_on_killswitch_ui]]).
+>
+> ⚠ **UNDISTURBED BY THIS SUPERSESSION, ⛔ none of it discharged:** the **AR-48 authenticated-fragment deferral** (disposition (c)) and its browser-member-token trigger; the **financial-truth-from-canonical-events** invariant; the **reversed-denial publish hook**; and the ⛔ **NO SECOND ROUTE** fence on `apps/api/src/modules/public-pages/`.
+>
+> ⚠⛔ **PER STORY 11b.9's D5, THIS SURFACE IS BUILT TO THE NEW BASIS FROM THE START, ⛔ NEVER SWITCHED AFTERWARDS.** ⛔ Do ⛔ not author a `consentExists`-shaped publication gate here and plan to retire it later — that is the exact defect 11b.9 exists to correct, one surface over.
 
 ### Story 11b.4: MemorialAuthorshipSurface — Family Writes the Story + Family-Authorship-Preserved Invariant `[SURFACE]`
 
@@ -5051,14 +5067,15 @@ So that memorial-surface rendering is consistent + dignified across consumer sur
 ### Story 11b.6: In Memoriam Roll + Consent-Governed-Revocable Invariant `[SURFACE]`
 
 As any non-member visitor or member viewing the trust's In Memoriam,
-I want a respectful roll listing of deceased members under consent-governed visibility,
-So that the trust's institutional memorial honors deceased members while respecting family consent authority.
+I want a respectful roll listing of deceased members on an authority they themselves gave while alive,
+So that the trust's institutional memorial honors deceased members without asking their family to speak for them at the worst moment of their life.
 
 **Acceptance Criteria:**
 
-**Given** FR-78 + Story 11a.1 matrix (`in_memoriam_listing` tier) + Story 6.9 `in_memoriam_listing` consent + Story 11b.5 memorial components
+**Given** FR-78 + Story 11a.1 matrix + the **member's own T&C clause 14** as the publication basis (`2026-08-28-160` cl.3 — ⛔ **NOT** `in_memoriam_listing` consent, retired by `2026-08-28-162`) + Story 11b.5 memorial components
 **When** In Memoriam is implemented
-**Then** the surface lists deceased members for whom `in_memoriam_listing` consent is active (Story 2.7 `consentExists` check at render time); each entry uses `<MemorialRecord>` (Story 11b.5)
+**Then** the surface lists deceased members who hold a **valid `tc_acceptance` whose accepted T&C version pins the post-death-publication clause** — the **Story 11b.9 predicate**, which this story reuses ⛔ rather than re-deriving; each entry uses `<MemorialRecord>` (Story 11b.5)
+**And** ⛔ **fail-closed in every direction**: no `tc_acceptance`, a **revoked** one, or an accepted version that ⛔ does **not** pin the clause all yield **not listed**
 **And** entries display per the 4-tier matrix: public-tier visitors see deceased's first-name + last-initial + dates + district; authenticated members see fuller per Story 11a.3 directory pattern
 
 > ⛔ **RECONCILED 2026-08-19 (C5 + C9, AI-10-2) — ⚠ THE AC ABOVE IS CORRECT AND MUST NOT BE "HARMONISED" WITH THE MEMBER DIRECTORY.** The phrase *"fuller per Story 11a.3 directory pattern"* now points at a surface ruled to show **full legal names**. ⛔ **That ruling (`-135`/`-136`) was scoped to Story 11a.3 and does NOT reach In Memoriam.** In Memoriam keeps **first-name + last-initial** at the public tier.
@@ -5069,14 +5086,14 @@ So that the trust's institutional memorial honors deceased members while respect
 **And** the surface is paginated + searchable (consistent with Story 11b.1 remembrance-not-analytics invariant — no leaderboards, no "most viewed", no engagement metrics)
 **And** Pattern 4 dignified-validation copy applies; Hindi-first per Story 2.1; accessibility per Story 0.10
 
-**Given** the **memorial-visibility-consent-governed-and-revocable invariant** (this story's load-bearing commitment, per user direction)
-**When** family consent transitions occur
-**Then** **In Memoriam visibility is governed by explicit publication consent and remains revocable**
-**And** the visibility flow: family grants `in_memoriam_listing` consent at claim-time (Story 6.9) OR via the Life Events panel (Story 3.9 extension); the listing appears within the cache-safe window
-**And** **consent withdrawal must remove the memorial listing within the cache-safe invalidation window** established for public-surface governance (Cloudflare TTL + Story 4.8 conservative-recompute pattern + Story 9.5-style canonical event)
-**And** consent withdrawal is an explicit family-authored action (or family-representative on behalf via Story 10.10 moderation if family unavailable); withdrawal does not require justification; withdrawal is final-and-revertible (family can re-grant later)
-**And** the audit chain preserves all consent transitions per Story 2.7; the trust does not retain memorial-listing data beyond consent (active or revoked) for public surfacing — Story 1.5 PII encryption + Story 3.12 RTBF patterns apply for retention boundaries
-**And** if the deceased's family is multi-member (multiple nominees, kin), the system handles consent by the consenting party with audit attribution; conflicts surface to trustee moderation per Story 10.10
+**Given** the **member-authored-visibility invariant** (⭐ this story's load-bearing commitment as RE-CUT 2026-08-29 — ⛔ it SUPERSEDES the "consent-governed-and-revocable" invariant named in this story's title; see the block below)
+**When** the roll's membership is resolved
+**Then** **In Memoriam visibility rests on the deceased member's OWN accepted T&C**, ⛔ **not** on a family publication consent — **the member already answered, while alive**
+**And** ⛔ **the family has NO decline path and NO veto over the member's own name** (`-160` cl.6 — removed **deliberately**); ⛔ a later reader must ⛔ not restore it as a "missing feature"
+**And** **withdrawal runs through revocation of the member's own `tc_acceptance`**, ⛔ never a family takedown request; a revoked acceptance removes the listing within the cache-safe invalidation window (Cloudflare TTL + Story 4.8 conservative-recompute pattern)
+**And** ⛔ **no `in_memoriam_listing` row is read, written, or consulted** — the type is preserved by ruling (`-162` cl.5) and is **write-never / read-never**
+**And** the audit chain preserves all acceptance/revocation transitions per Story 2.7; Story 1.5 PII encryption + Story 3.12 RTBF patterns still apply for retention boundaries
+**And** ⚠ the multi-member-family conflict case is **dissolved, ⛔ not solved**: with no family consent to give, there is ⛔ nothing for kin to disagree about on **this** surface — ⛔ family-AUTHORED content (Story 11b.4) is a different data class on a different basis and keeps its own rules
 
 > ⛔ **RECONCILED 2026-08-23 (AI-11a-1, end-of-Epic-11a) — TWO gates, ⛔ not one, and the surface reads a predicate that cannot see death.**
 >
@@ -5099,6 +5116,23 @@ So that the trust's institutional memorial honors deceased members while respect
 > ⚠ **THREE PRIOR RULINGS ON THIS STORY ARE ⛔ UNDISTURBED, AND ⛔ NONE IS DISCHARGED BY THIS ONE:** (i) the **name form** — In Memoriam keeps first-name + last-initial at the public tier and `-135`/`-136` ⛔ does not reach it; (ii) **C-4's two gates** — the absent FR-19 producer and the consent gate, ⛔ neither discharging the other, with 11a.5's third path binding (render the real, currently-empty source and **render nothing when empty** — ⛔ never a fabricated row, ⛔ never a "coming soon" placeholder); (iii) the **`account-frozen` overlay predicate**, ⛔ never `members.state`.
 >
 > ⚠ ⛔ **AND THE CONSENT ASYMMETRY IS RESTATED, BECAUSE THE DEFERRAL DOES NOT TOUCH IT.** This roll is **consent-governed and revocable**, and its subject is **deceased and cannot re-consent**. ⇒ ⛔ a future story that fires the trigger and lights the authenticated tier ⛔ **must not** treat that as a rendering change — it widens what is published about a person who ⛔ **cannot be asked**, and it needs a **consent-aware ruling of its own** ([[project_consent_subject_key_convention]]).
+
+> ⭐⭐ **SUPERSEDED IN PART 2026-08-29 — THE CONSENT MODEL NAMED IN THIS STORY'S TITLE IS GONE. ⛔ The blocks above STAY as the record of why; ⛔ do not read their consent sentences as live.**
+>
+> **What fell, and by which ruling:** `2026-08-28-160` cl.3 made the **member's own versioned T&C acceptance** the publication authority for their name after death and superseded **C-5's per-subject consent-gate lever wholly, across all three 11b surfaces**; cl.6 **removed the family's decline path deliberately**; `2026-08-28-162` cl.2 **retired** the `in_memoriam_listing` box — ⛔ **retired, not reinterpreted**. Story **11b.9** removes its write path ⇒ ⛔ **no new row of that type can ever be written**, so a `consentExists('in_memoriam_listing')` roll would list **nobody, permanently**, with every CI gate green.
+>
+> ⛔⛔ **THE STORY TITLE AND KEY STILL SAY "CONSENT-GOVERNED-REVOCABLE". ⛔ THAT IS DELIBERATE AND ⛔ MUST NOT BE "FIXED".** The sprint-status key `11b-6-in-memoriam-roll-consent-governed-revocable-invariant` is the join between this section and the ledger; renaming the heading breaks it. ⇒ ⭐ read the title as **historical provenance**, ⛔ not as a live commitment — the invariant it names is superseded by the **member-authored-visibility** invariant in the ACs above.
+>
+> ⚠⭐ **THE 2026-08-19 REASONING IS ⛔ NOT MERELY OBSOLETE — IT IS ANSWERED.** That pass wrote that this roll is *"consent-governed, revocable, and its subject cannot re-consent"*, and treated the **deceased subject who cannot be asked** as the reason to hold the line at first-name + last-initial. ⭐ The new basis **resolves the premise**: the subject was asked, **while alive**, as a condition of membership. ⛔ It does ⛔ **not** thereby widen anything — see the next paragraph.
+>
+> ⛔⛔ **AND ⛔ NOTHING HERE WIDENS WHAT IS PUBLISHED. ⛔ THREE PRIOR RULINGS SURVIVE INTACT:**
+> · **(i) the NAME FORM** — In Memoriam keeps **first-name + last-initial** at the public tier; `-135`/`-136`'s full-name ruling ⛔ still does **not** reach it. ⛔ A changed *basis* is ⛔ not a changed *name form*, and ⛔ must never be cited as one.
+> · **(ii) C-4's ABSENT FR-19 PRODUCER** — ⭐ **survives untouched.** C-4 is the *no-FR-19-producer* constraint, ⛔ **not** the consent gate; ⛔ only the consent half of *"C-4's two gates"* falls. 11a.5's third path still binds: render the real, currently-empty source and **render nothing when empty** — ⛔ never a fabricated row, ⛔ never a "coming soon" placeholder.
+> · **(iii) the `account-frozen` OVERLAY PREDICATE, ⛔ never `members.state`** — ⭐ **survives, and is now MORE load-bearing, not less.** Death is an overlay, ⛔ not a lifecycle label ([[project_death_is_an_overlay_not_a_state]]); on this surface a `members.state` predicate would **omit the deceased from the memorial roll**.
+>
+> ⚠ **The AI-11a-2 authenticated-tier DEFERRAL is ⛔ undisturbed** — In Memoriam ships **public-tier-only**, on the browser-member-token trigger, ⛔ doubly grounded (the missing viewer **and** `2026-08-19-137`'s absent migration mechanism). ⚠ Its closing caution now reads differently and ⛔ must not be dropped: a future story lighting the authenticated tier still widens what is published about a person — ⛔ but the question it must answer is now *"does the member's clause 14 reach THIS attribute?"*, ⛔ no longer *"can the family consent on their behalf?"*
+>
+> ⚠⛔ **PER STORY 11b.9's D5, THIS SURFACE IS BUILT TO THE NEW BASIS FROM THE START, ⛔ NEVER SWITCHED AFTERWARDS.** ⚠ And it inherits 11b.9's **fail-closed day-one reality**: until a T&C version pinning the disclosure clause is effective in a Pariwar, ⛔ **the roll is empty** — ⭐ that is **correct and expected**, ⛔ not a bug, and it must be **observable in diagnostics** rather than debugged as one.
 
 ### Story 11b.7: StatCardStrip Component `[PRIMITIVE]`
 

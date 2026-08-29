@@ -45,6 +45,43 @@ deliberately accepted.
 | visitor / mourner on the public Sahyog Drive (finding a drive by DISTRICT + DATE + DRIVE CODE — ⛔ there is no search by the deceased member's name) | ⭐ THE FRICTION IS THE ABSENCE OF A FEATURE, DECLARED RATHER THAN LEFT AS AN APOLOGY. `member_kyc_profiles` carries no blind index and envelope encryption gives every name its OWN DEK, so two people with the same name have unrelated ciphertext — there is nothing to match on. The only way to answer a name query is to decrypt the whole roster per request, which is the exact amplification `DIRECTORY_DECRYPT_CONCURRENCY` exists to close, one order of magnitude worse than a page render, on an unauthenticated route, with the cache structurally unable to help. ⇒ what this friction protects is every member's Tier-1 KYC record against a query anyone on the internet could issue. ⚠ Deferred on a `name_blind_index` substrate story — Resolved via explicit deferral, ⛔ not closed; the page states plainly that name search is not offered rather than letting a mourner conclude the drive is absent (Story 11b.1) | forced |
 
 
+**Story 11b.9 disposition (RETIRES the Story 11b.1 row below — ⛔ not a "declaration affirmed" note,
+and ⛔ not a new row either):** the claim consent screen (`apps/mobile/app/(claim)/consent.tsx`)
+drops from four checkboxes to one. Decision `2026-08-28-160` cl.3-6 supersedes the mechanism the row
+below describes: whether a deceased member's name renders on the public Sahyog Drive is no longer
+decided by a family tick-box at claim intake — it is decided by the member's own accepted, versioned
+T&C, a condition of membership set long before any claim is filed. The family's decline path is
+removed on purpose (cl.6) — there is no family veto over the member's own name.
+
+Three of the four boxes this ledger has tracked are retired:
+
+(1) **The Story 11b.1 "FOURTH checkbox" row (below, `optional`, `family at claim intake`) is
+RETIRED, not deleted.** The row is left byte-unchanged (`[[feedback_supersede_never_reinterpret]]`)
+— it accurately records what was once paid, by whom, and why, at the time it was written. It no
+longer describes a friction any family pays: `sahyogDrivePublication` is removed from
+`RecordDpdpaConsentRequest` (`packages/contracts/src/claims/dpdpa-consent.ts`) and from both the
+member-app and helpline consent screens. The underlying `sahyog_drive_publication` consent TYPE,
+migration 0112, and every existing `consent_records` row are separately preserved by ruling (`-160`
+cl.5) — preservation of the DATA is not preservation of the FRICTION; the ledger tracks the latter,
+and it is gone.
+
+(2) **The two Story 6.9-disposition boxes ((b) `sahyog_vivran_publication`, (c)
+`in_memoriam_listing`) are also retired.** That disposition already classified both as "fully
+optional, zero forced friction" with no row — their removal changes nothing about the ledger's
+accounting (zero friction retired is zero friction), but is recorded here so a future reader does
+not go looking for a three-box screen that no longer exists.
+
+(3) **Box (a) — trust-processing consent — is unchanged**, still the mandatory legal/compliance
+acknowledgment the Story 6.9 disposition already classified as not-gratuitous-friction (same
+category as Stories 3.5/3.6a).
+
+Net effect on the ledger: **one row (the FOURTH checkbox) goes from payable to historical**, and the
+ledger records why rather than letting it silently stop matching the code. No new row is warranted
+— this story adds no friction, it removes some. The **page-weight baseline is unchanged**: the
+touched file is in the authenticated mobile app (`apps/mobile`, EAS build is a no-op →
+`member-app-native` stays a no-op); the page-weight ceilings the gate has teeth on cover the PUBLIC
+`apps/public` Astro surface, which this story does not touch.
+
 **Story 11b.1 disposition (⭐ TWO NEW ROWS — ⛔ not a "declaration affirmed" note):** the public
 Sahyog Drive (`/sahyog`) is a read-only paginated index, and on the 2.5 / 11a.2 / 11a.3 precedent
 the PAGE itself introduces ⛔ zero deliberate friction — no upload, no member-initiated write, and

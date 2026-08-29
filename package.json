@@ -64,6 +64,7 @@
     "custom-field:check": "tsx scripts/custom-field-governance/check.ts",
     "custom-field:test": "vitest run scripts/custom-field-governance",
     "seed:tc": "tsx scripts/seed-placeholder-tc.ts",
+    "provision:admin": "tsx scripts/provision-admin.ts",
     "ci:local": "bash scripts/ci-local.sh"
   },
   "devDependencies": {

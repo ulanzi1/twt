@@ -3,8 +3,14 @@
 // (1) DTO behaviour: strict, valid parse, reject unknown key.
 // (2) The record request enforces the D3a default — claimTimeDpdpa must be true (.refine()).
 // (3) The locale is the constrained ['en','hi'] enum (never an arbitrary string).
-// (4) The revoke request accepts ONLY the two publication types + requires a reason.
+// (4) The revoke request accepts ONLY the three publication types + requires a reason.
 // (5) Responses are a NON-PII presence view (granted-type flags only — no checkbox text / subject id).
+//
+// ⭐⭐ MIGRATED BY STORY 11b.9 — and read the discriminator before "fixing" anything here:
+// a case that changed because the REQUEST lost three booleans is EXPECTED (`2026-08-28-162` cl.2
+// retired the boxes). A case that changed because a TYPE, TUPLE or ENUM lost a value would be an
+// AC4 VIOLATION — ⛔ revert the source, ⛔ never the test. ⇒ `DpdpaConsentType` and
+// `DpdpaRevocableConsentType` are asserted UNCHANGED below, on purpose.
 
 import { describe, expect, it } from 'vitest';
 
@@ -19,11 +25,10 @@ import {
   RevokeDpdpaConsentRequest,
 } from '../src/claims/index.js';
 
+// ⭐ ONE box + the locale since Story 11b.9. ⛔ The three publication booleans are GONE from the
+// request — the object is `.strict()`, so re-adding one here fails rather than being ignored.
 const validRecord = {
   claimTimeDpdpa: true,
-  sahyogVivranPublication: false,
-  inMemoriamListing: false,
-  sahyogDrivePublication: false,
   locale: 'en',
 };
 
@@ -35,19 +40,13 @@ describe('DPDPA-consent DTOs (strict + shapes)', () => {
     expect(() => RecordDpdpaConsentRequest.parse({ ...validRecord, extra: 1 })).toThrow();
   });
 
-  it('accepts a valid record (only the processing consent)', () => {
+  it('accepts a valid record (the processing consent — now the ONLY box)', () => {
     expect(RecordDpdpaConsentRequest.parse(validRecord)).toMatchObject({ claimTimeDpdpa: true });
   });
 
-  it('accepts all three boxes checked', () => {
-    const parsed = RecordDpdpaConsentRequest.parse({
-      claimTimeDpdpa: true,
-      sahyogVivranPublication: true,
-      inMemoriamListing: true, sahyogDrivePublication: false,
-      locale: 'hi',
-    });
-    expect(parsed.sahyogVivranPublication).toBe(true);
-    expect(parsed.inMemoriamListing).toBe(true);
+  it('accepts the other locale', () => {
+    const parsed = RecordDpdpaConsentRequest.parse({ claimTimeDpdpa: true, locale: 'hi' });
+    expect(parsed.locale).toBe('hi');
   });
 
   it('REJECTS claimTimeDpdpa: false (D3a — processing consent required to proceed)', () => {
@@ -72,44 +71,38 @@ describe('DPDPA-consent DTOs (strict + shapes)', () => {
     expect(DpdpaConsentLocale.options).toEqual(['en', 'hi']);
   });
 
-  it('DpdpaConsentType is the four claim-time consent types', () => {
+  // ⛔⛔ THE ANTI-CLEANUP GUARD (11b.9 AC4). The BOXES were retired; the TYPES are PRESERVED BY
+  // RULING (`2026-08-28-160` cl.5, `-162` cl.5) so already-written rows stay readable and revocable
+  // and historical event payloads stay parseable. ⛔ If this goes red because a value was deleted,
+  // revert the SOURCE — deleting values to make a narrowed Record typecheck is the violation, not
+  // the fix.
+  it('DpdpaConsentType STILL carries all four claim-time consent types — retiring a box is not deleting a type', () => {
     expect([...DpdpaConsentType.options].sort()).toEqual([
       'claim_time_dpdpa',
       'in_memoriam_listing',
-      // Story 11b.1 (D4(b)) — the FOURTH box: the deceased member's name on the public Sahyog Drive.
+      // ⛔ Preserved by ruling: write-never and read-never since 11b.9, and ⛔ still not deletable.
       'sahyog_drive_publication',
       'sahyog_vivran_publication',
     ]);
   });
 
-  // Story 11b.1 AC12: the fourth box is OUTSIDE the `.refine()`. This is the load-bearing half of
-  // D4(b) — Niyamavali §4.4, Part 10 and Trust Deed cl.15(c) each forbid default opt-in, so a request
-  // declining the Sahyog Drive publication must be perfectly VALID. If a future edit folds this box
-  // into the refine, the publication consent silently becomes compulsory and these two fail.
-  it('ACCEPTS a request declining the Sahyog Drive publication (it is NOT compulsory)', () => {
-    expect(
-      RecordDpdpaConsentRequest.parse({ ...validRecord, sahyogDrivePublication: false }),
-    ).toMatchObject({ sahyogDrivePublication: false });
-  });
+  // ⭐⭐ THE RETIREMENT, PROVED ON THE CONTRACT. Story 11b.9 removed the three publication booleans
+  // from the request, so ⛔ NO NEW ROW of those types can ever be written. The object is `.strict()`,
+  // which is what makes this a real gate rather than a silently-ignored field: a client (or a
+  // regressed screen) still submitting a retired box is REJECTED, not quietly accepted.
+  it.each(['sahyogVivranPublication', 'inMemoriamListing', 'sahyogDrivePublication'])(
+    'REJECTS a request still carrying the retired %s box (-162 cl.2)',
+    (retiredKey) => {
+      expect(() =>
+        RecordDpdpaConsentRequest.parse({ ...validRecord, [retiredKey]: false }),
+      ).toThrow();
+    },
+  );
 
-  it('ACCEPTS a request declining ALL THREE publication consents', () => {
-    expect(
-      RecordDpdpaConsentRequest.parse({
-        claimTimeDpdpa: true,
-        sahyogVivranPublication: false,
-        inMemoriamListing: false,
-        sahyogDrivePublication: false,
-        locale: 'en',
-      }),
-    ).toMatchObject({ claimTimeDpdpa: true });
-  });
-
-  // REQUIRED, not optional, on purpose: an optional field would let a client that never RENDERED the
-  // box submit a body indistinguishable from one where the family saw it and declined.
-  it('REJECTS a request that OMITS the Sahyog Drive box (a client must make a deliberate choice)', () => {
-    const withoutBox: Record<string, unknown> = { ...validRecord };
-    delete withoutBox['sahyogDrivePublication'];
-    expect(() => RecordDpdpaConsentRequest.parse(withoutBox)).toThrow();
+  it('ACCEPTS the reduced one-box request — (a) is unchanged and still the only thing asked', () => {
+    expect(RecordDpdpaConsentRequest.parse({ claimTimeDpdpa: true, locale: 'en' })).toMatchObject({
+      claimTimeDpdpa: true,
+    });
   });
 
   it('the record request does NOT carry checkboxTextShown (server resolves the copy)', () => {
@@ -119,13 +112,20 @@ describe('DPDPA-consent DTOs (strict + shapes)', () => {
   });
 });
 
+// ⭐⛔ THE REVOKE PATH SURVIVES A STORY THAT RETIRED THE BOXES — ⛔ read this before "finishing the
+// cleanup". Retiring a box stops NEW rows; it ⛔ does not extinguish the rights attached to rows that
+// already exist. Revocation is the ONLY remaining data-subject action on preserved rows, and
+// `2026-08-28-160` cl.5 preserves them precisely so they stay ACTIONABLE, not merely stored.
+// ⇒ a family who granted (b)/(c)/(d) BEFORE 11b.9 can still withdraw it AFTER (story D7(a)).
 describe('RevokeDpdpaConsentRequest', () => {
-  it('accepts the three publication types with a reason', () => {
+  it('accepts the three publication types with a reason — ⛔ still, after 11b.9', () => {
     for (const consentType of [
       'sahyog_vivran_publication',
       'in_memoriam_listing',
       // Story 11b.1 — a family may withdraw the deceased member's name from the public Sahyog Drive
       // at ANY claim state, including after settlement (6.9 AC3's post-settlement takedown).
+      // ⚠ Since 11b.9 this can only ever apply to a row granted BEFORE the box was retired — and
+      // that is exactly the row the ruling preserves. ⛔ Do not remove this case.
       'sahyog_drive_publication',
     ] as const) {
       expect(RevokeDpdpaConsentRequest.parse({ consentType, reason: 'family withdrew' })).toMatchObject({

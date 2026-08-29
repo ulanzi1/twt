@@ -23,11 +23,14 @@ import {
   PARIWAR_B,
   enterAppScope,
   seedClaim,
+  seedClauseVersion,
   seedConsentRecord,
   seedEvent,
   seedMember,
   seedMemberPosting,
+  seedPinnedClause,
   seedPool,
+  seedTcVersion,
 } from '../_helpers.js';
 import type { Db } from '../../../src/db.js';
 
@@ -295,95 +298,362 @@ describe.skipIf(!hasDatabase)('Sahyog Drive public pool index (Story 11b.1)', ()
     });
   });
 
-  describe('the consent verdict — it gates the NAME, ⛔ never the ROW', () => {
-    it('⭐ an UNCONSENTED drive STILL APPEARS, with its consent verdict false', async () => {
+  describe("the PUBLICATION BASIS — the member's own accepted T&C, and it gates the NAME, ⛔ never the ROW", () => {
+    // ⭐⭐ STORY 11b.9 REPLACED THE AUTHORITY THESE CASES TEST, ⛔ AND DID NOT REMOVE ANY OF THEM.
+    // 11b.1 gated on `sahyog_drive_publication` — a tick-box the FAMILY ticked at claim time.
+    // `2026-08-28-160` cl.3-5 DE-AUTHORISED that and put the authority on the MEMBER'S OWN accepted
+    // versioned T&C, pinning the post-death publication clause. Every property below is the SAME
+    // property re-expressed against the new basis: name-not-row, missing == revoked, per-subject,
+    // fail-closed. ⛔ The old gate is not ANDed or ORed in — see the de-authorisation proof.
+    //
+    // ⛔⛔ ⛔ NO TEST HERE MAY HARDCODE THE CLAUSE-ID LITERAL (story D3). Fixtures create their own
+    // clause row from `poolDomain.SAHYOG_DRIVE_PUBLICATION_CLAUSE_ID`, so counsel's final value is a
+    // ONE-LINE change in `public-read.ts` and ⛔ ZERO changes here.
+
+    /**
+     * Give a deceased member a VALID `tc_acceptance` whose accepted T&C version PINS the publication
+     * clause — the full basis, exactly as `member-terms.handlers.ts` writes it
+     * (`consent_artifact_ref` = the server-resolved `tc_version_id`).
+     */
+    async function seedPublicationBasis(
+      tx: Db,
+      pariwarId: string,
+      deceasedMemberId: string,
+      opts: {
+        /** Pin the clause into the accepted version? `false` = accepted a version without it. */
+        pinClause?: boolean;
+        /** Tenant that owns the clause version + the pin row — for the cross-tenant case (T5). */
+        clausePariwarId?: string;
+        /** Overwrite what the consent row stores as its artifact ref (for the malformed case, T2). */
+        artifactRefOverride?: string | null;
+        revokedAt?: Date | null;
+      } = {},
+    ): Promise<{ tcVersionId: string }> {
+      const tcVersionId = await seedTcVersion(tx, pariwarId, { version: 1 });
+      if (opts.pinClause !== false) {
+        const clausePariwar = opts.clausePariwarId ?? pariwarId;
+        const clauseVersionId = await seedClauseVersion(tx, clausePariwar, {
+          clauseId: poolDomain.SAHYOG_DRIVE_PUBLICATION_CLAUSE_ID,
+        });
+        await seedPinnedClause(tx, clausePariwar, tcVersionId, clauseVersionId);
+      }
+      await seedConsentRecord(tx, pariwarId, {
+        subjectId: deceasedMemberId,
+        consentType: 'tc_acceptance',
+        consentArtifactRef:
+          opts.artifactRefOverride === undefined ? tcVersionId : opts.artifactRefOverride,
+        grantedAt: new Date(Date.now() - 120_000),
+        revokedAt: opts.revokedAt ?? null,
+      });
+      return { tcVersionId };
+    }
+
+    /** Fetch one drive's row, in app scope. ⭐ Asserts the ROW exists — AC5's whole point. */
+    async function readDriveRow(
+      client: Parameters<typeof enterAppScope>[0],
+      tx: Db,
+      poolId: string,
+    ) {
+      await enterAppScope(client, PARIWAR_A);
+      const rows = await poolDomain.listPublicSahyogDrivePools(tx, ids.pariwarId(PARIWAR_A), {
+        limit: 50,
+      });
+      return rows.find((r) => r.poolId === poolId);
+    }
+
+    it('⭐ a drive with NO basis STILL APPEARS, in full, with the verdict false', async () => {
       const { client, tx } = getTx();
       const drive = await seedDrive(tx, PARIWAR_A, { district: 'Jaipur' });
 
-      await enterAppScope(client, PARIWAR_A);
-      const row = (
-        await poolDomain.listPublicSahyogDrivePools(tx, ids.pariwarId(PARIWAR_A), { limit: 50 })
-      ).find((r) => r.poolId === drive.poolId);
+      const row = await readDriveRow(client, tx, drive.poolId);
 
-      // The row exists in full — this is the whole of AC2's "degrades per-pool, never per-page".
+      // ⭐ The ROW exists in full — this is AC5 / "degrades per-pool, never per-page", and it is
+      // asserted POSITIVELY: the row is PRESENT and the name is ABSENT, ⛔ not merely that the call
+      // succeeded (the 11b.1 whole-union fixture trap).
       expect(row).toBeDefined();
-      expect(row?.nameConsentGranted).toBe(false);
+      expect(row?.namePublicationAuthorised).toBe(false);
       expect(row?.district).toBe('Jaipur');
       expect(row?.poolCanonicalIdentifier).toBeTruthy();
+      expect(row?.driveClosedAt).toBeDefined();
     });
 
-    it('a granted `sahyog_drive_publication` consent for the DECEASED member yields true', async () => {
+    it('⭐ a valid `tc_acceptance` whose accepted version PINS the clause yields true', async () => {
       const { client, tx } = getTx();
       const drive = await seedDrive(tx, PARIWAR_A, {});
+      await seedPublicationBasis(tx, PARIWAR_A, drive.deceasedMemberId);
+
+      const row = await readDriveRow(client, tx, drive.poolId);
+
+      expect(row?.namePublicationAuthorised).toBe(true);
+    });
+
+    it('⛔ NO `tc_acceptance` at all → unnamed, row still present', async () => {
+      const { client, tx } = getTx();
+      const drive = await seedDrive(tx, PARIWAR_A, {});
+      // The clause is minted and pinned for the Pariwar — the member simply never accepted.
+      const tcVersionId = await seedTcVersion(tx, PARIWAR_A, { version: 1 });
+      const clauseVersionId = await seedClauseVersion(tx, PARIWAR_A, {
+        clauseId: poolDomain.SAHYOG_DRIVE_PUBLICATION_CLAUSE_ID,
+      });
+      await seedPinnedClause(tx, PARIWAR_A, tcVersionId, clauseVersionId);
+
+      const row = await readDriveRow(client, tx, drive.poolId);
+
+      expect(row).toBeDefined();
+      expect(row?.namePublicationAuthorised).toBe(false);
+    });
+
+    it('⭐ a REVOKED acceptance reads exactly like a MISSING one — same verdict, row still present', async () => {
+      const { client, tx } = getTx();
+      const drive = await seedDrive(tx, PARIWAR_A, {});
+      await seedPublicationBasis(tx, PARIWAR_A, drive.deceasedMemberId, {
+        revokedAt: new Date(Date.now() - 60_000),
+      });
+
+      const row = await readDriveRow(client, tx, drive.poolId);
+
+      expect(row).toBeDefined(); // ⛔ revocation removes a NAME, never a DRIVE
+      expect(row?.namePublicationAuthorised).toBe(false);
+    });
+
+    it('⛔ an accepted version that does NOT pin the clause → unnamed (AC7 fail-closed)', async () => {
+      const { client, tx } = getTx();
+      const drive = await seedDrive(tx, PARIWAR_A, {});
+      await seedPublicationBasis(tx, PARIWAR_A, drive.deceasedMemberId, { pinClause: false });
+
+      const row = await readDriveRow(client, tx, drive.poolId);
+
+      expect(row).toBeDefined();
+      expect(row?.namePublicationAuthorised).toBe(false);
+    });
+
+    it('⛔ a pin whose clause version belongs to ANOTHER Pariwar does NOT authorise (T5)', async () => {
+      const { client, tx } = getTx();
+      const drive = await seedDrive(tx, PARIWAR_A, {});
+      // ⚠ The pin table's FK targets the GLOBAL clause_versions PK, so this row LINKS FINE. The
+      // predicate must reject it on its own explicit tenant scoping — ⛔ not on the FK, and ⛔ not
+      // on RLS alone inside a correlated subquery on an unauthenticated route.
+      await seedPublicationBasis(tx, PARIWAR_A, drive.deceasedMemberId, {
+        clausePariwarId: PARIWAR_B,
+      });
+
+      const row = await readDriveRow(client, tx, drive.poolId);
+
+      expect(row).toBeDefined();
+      expect(row?.namePublicationAuthorised).toBe(false);
+    });
+
+    it.each([
+      ['a non-UUID string', 'not-a-uuid'],
+      ['an empty string', ''],
+      ['NULL', null],
+    ])(
+      '⛔ a malformed `consent_artifact_ref` (%s) EXCLUDES the member and ⛔ does NOT throw (T2)',
+      async (_label, ref) => {
+        const { client, tx } = getTx();
+        const drive = await seedDrive(tx, PARIWAR_A, {});
+        // ⭐ THE TRAP THIS PROVES SHUT: `consent_artifact_ref` is unconstrained NULLABLE text with no
+        // FK. A naive `consent_artifact_ref::uuid` raises 22P02 and 500s the WHOLE public page for
+        // the whole Pariwar. Casting the uuid side to text instead (`tc_version_id::text = ref`) is
+        // TOTAL, so a bad row simply fails to match.
+        await seedPublicationBasis(tx, PARIWAR_A, drive.deceasedMemberId, {
+          artifactRefOverride: ref,
+        });
+
+        // ⛔ The assertion is that this RESOLVES, not that it rejects — a throw is the failure mode.
+        const row = await readDriveRow(client, tx, drive.poolId);
+
+        expect(row).toBeDefined();
+        expect(row?.namePublicationAuthorised).toBe(false);
+      },
+    );
+
+    it('⛔⛔ THE DE-AUTHORISATION, PROVED: a granted `sahyog_drive_publication` names NOTHING on its own', async () => {
+      const { client, tx } = getTx();
+      const drive = await seedDrive(tx, PARIWAR_A, {});
+      // ⭐ This is the case 11b.1 shipped as the WHOLE basis, and `2026-08-28-160` cl.5 retired it.
+      // ⛔ Not ANDed, ⛔ not ORed — the row is simply NOT CONSULTED (story D2). The type and every
+      // existing row are PRESERVED by the same clause, which is exactly why this case must keep
+      // being asserted rather than deleted along with the gate.
       await seedConsentRecord(tx, PARIWAR_A, {
         subjectId: drive.deceasedMemberId,
         consentType: 'sahyog_drive_publication',
         grantedAt: new Date(Date.now() - 60_000),
       });
 
-      await enterAppScope(client, PARIWAR_A);
-      const row = (
-        await poolDomain.listPublicSahyogDrivePools(tx, ids.pariwarId(PARIWAR_A), { limit: 50 })
-      ).find((r) => r.poolId === drive.poolId);
+      const row = await readDriveRow(client, tx, drive.poolId);
 
-      expect(row?.nameConsentGranted).toBe(true);
+      expect(row).toBeDefined();
+      expect(row?.namePublicationAuthorised).toBe(false);
     });
 
-    it('⭐ a REVOKED consent reads exactly like a MISSING one — same verdict, row still present', async () => {
+    it('⛔ a DIFFERENT publication consent does NOT authorise this surface either', async () => {
       const { client, tx } = getTx();
       const drive = await seedDrive(tx, PARIWAR_A, {});
-      await seedConsentRecord(tx, PARIWAR_A, {
-        subjectId: drive.deceasedMemberId,
-        consentType: 'sahyog_drive_publication',
-        grantedAt: new Date(Date.now() - 120_000),
-        revokedAt: new Date(Date.now() - 60_000),
-      });
-
-      await enterAppScope(client, PARIWAR_A);
-      const row = (
-        await poolDomain.listPublicSahyogDrivePools(tx, ids.pariwarId(PARIWAR_A), { limit: 50 })
-      ).find((r) => r.poolId === drive.poolId);
-
-      expect(row).toBeDefined(); // ⛔ revocation removes a NAME, never a DRIVE
-      expect(row?.nameConsentGranted).toBe(false);
-    });
-
-    it('⛔ a DIFFERENT publication consent does NOT authorise this surface', async () => {
-      const { client, tx } = getTx();
-      const drive = await seedDrive(tx, PARIWAR_A, {});
-      // The family consented to Sahyog Vivran. That is a DIFFERENT publication, and reusing it
-      // would silently widen what they agreed to (D4(c), rejected on the record).
       await seedConsentRecord(tx, PARIWAR_A, {
         subjectId: drive.deceasedMemberId,
         consentType: 'sahyog_vivran_publication',
         grantedAt: new Date(Date.now() - 60_000),
       });
 
-      await enterAppScope(client, PARIWAR_A);
-      const row = (
-        await poolDomain.listPublicSahyogDrivePools(tx, ids.pariwarId(PARIWAR_A), { limit: 50 })
-      ).find((r) => r.poolId === drive.poolId);
+      const row = await readDriveRow(client, tx, drive.poolId);
 
-      expect(row?.nameConsentGranted).toBe(false);
+      expect(row?.namePublicationAuthorised).toBe(false);
     });
 
-    it("⭐ consent is per-SUBJECT — one family's grant does not name another family's drive", async () => {
+    it("⭐ the basis is per-SUBJECT — one member's acceptance does not name another member's drive", async () => {
       const { client, tx } = getTx();
-      const consented = await seedDrive(tx, PARIWAR_A, {});
-      const notConsented = await seedDrive(tx, PARIWAR_A, {});
-      await seedConsentRecord(tx, PARIWAR_A, {
-        subjectId: consented.deceasedMemberId,
-        consentType: 'sahyog_drive_publication',
-        grantedAt: new Date(Date.now() - 60_000),
-      });
+      const authorised = await seedDrive(tx, PARIWAR_A, {});
+      const notAuthorised = await seedDrive(tx, PARIWAR_A, {});
+      await seedPublicationBasis(tx, PARIWAR_A, authorised.deceasedMemberId);
 
       await enterAppScope(client, PARIWAR_A);
       const rows = await poolDomain.listPublicSahyogDrivePools(tx, ids.pariwarId(PARIWAR_A), {
         limit: 50,
       });
 
-      expect(rows.find((r) => r.poolId === consented.poolId)?.nameConsentGranted).toBe(true);
-      expect(rows.find((r) => r.poolId === notConsented.poolId)?.nameConsentGranted).toBe(false);
+      const authorisedRow = rows.find((r) => r.poolId === authorised.poolId);
+      const notAuthorisedRow = rows.find((r) => r.poolId === notAuthorised.poolId);
+      expect(authorisedRow?.namePublicationAuthorised).toBe(true);
+      // ⭐ ROW PRESENT, NAME ABSENT — asserted on the same page as a named row, so a fixture that
+      // silently returned nothing cannot make this pass.
+      expect(notAuthorisedRow).toBeDefined();
+      expect(notAuthorisedRow?.namePublicationAuthorised).toBe(false);
+    });
+
+    it('⭐⛔ the accepted version does NOT have to still be EFFECTIVE — a later version never un-publishes', async () => {
+      const { client, tx } = getTx();
+      const drive = await seedDrive(tx, PARIWAR_A, {});
+      // ⚠ THE CONJUNCT THAT IS DELIBERATELY ABSENT (11b.9 §Policy meaning). The member consented to
+      // WHAT THEY CONSENTED TO; the Pariwar rolling a newer T&C is ⛔ not a withdrawal of their own
+      // authority, and "amend the T&C" is ⛔ NOT an un-publish lever. Adding `AND the version is
+      // effective` here is the 10.10 `is_valid: false` shape — one conjunct, constitutional meaning,
+      // every CI gate still green.
+      const acceptedAt = new Date(Date.now() - 7_200_000);
+      const supersededAt = new Date(Date.now() - 3_600_000);
+      const acceptedVersionId = await seedTcVersion(tx, PARIWAR_A, {
+        version: 1,
+        effectiveFrom: new Date(Date.now() - 86_400_000),
+        effectiveUntil: supersededAt, // ⛔ NO LONGER the effective version
+      });
+      const clauseVersionId = await seedClauseVersion(tx, PARIWAR_A, {
+        clauseId: poolDomain.SAHYOG_DRIVE_PUBLICATION_CLAUSE_ID,
+      });
+      await seedPinnedClause(tx, PARIWAR_A, acceptedVersionId, clauseVersionId);
+      // The Pariwar's CURRENT version pins nothing.
+      await seedTcVersion(tx, PARIWAR_A, { version: 2, effectiveFrom: supersededAt });
+      await seedConsentRecord(tx, PARIWAR_A, {
+        subjectId: drive.deceasedMemberId,
+        consentType: 'tc_acceptance',
+        consentArtifactRef: acceptedVersionId,
+        grantedAt: acceptedAt,
+      });
+
+      const row = await readDriveRow(client, tx, drive.poolId);
+
+      expect(row?.namePublicationAuthorised).toBe(true);
+    });
+
+    it('⭐ ANY version of the clause satisfies the basis — the join is on `clause_id`, ⛔ not `clause_version_id` (T3)', async () => {
+      const { client, tx } = getTx();
+      const drive = await seedDrive(tx, PARIWAR_A, {});
+      // ⚠ The disclosure clause is rulebook content and WILL be amended. Pinning the predicate to one
+      // `clause_version_id` would make the FIRST amendment silently un-publish every name, with ⛔ no
+      // error and ⛔ no failing test. Here the pinned row is version 3 of the same `clause_id`.
+      const tcVersionId = await seedTcVersion(tx, PARIWAR_A, { version: 1 });
+      const amendedClauseVersionId = await seedClauseVersion(tx, PARIWAR_A, {
+        clauseId: poolDomain.SAHYOG_DRIVE_PUBLICATION_CLAUSE_ID,
+        version: 3,
+      });
+      await seedPinnedClause(tx, PARIWAR_A, tcVersionId, amendedClauseVersionId);
+      await seedConsentRecord(tx, PARIWAR_A, {
+        subjectId: drive.deceasedMemberId,
+        consentType: 'tc_acceptance',
+        consentArtifactRef: tcVersionId,
+        grantedAt: new Date(Date.now() - 60_000),
+      });
+
+      const row = await readDriveRow(client, tx, drive.poolId);
+
+      expect(row?.namePublicationAuthorised).toBe(true);
+    });
+  });
+
+  describe('the AC8 inert-state discriminator — ⛔ a diagnostic, ⛔ never a gate', () => {
+    it('⛔ reports NOT PINNED when no effective T&C version in the Pariwar pins the clause', async () => {
+      const { client, tx } = getTx();
+      // ⭐ THE DAY-ONE STATE, and it is the whole reason AC8 exists: with no clause minted, every row
+      // in the Pariwar renders unnamed. That is a PROVISIONING answer, ⛔ not a member-record one.
+      await seedDrive(tx, PARIWAR_A, {});
+
+      await enterAppScope(client, PARIWAR_A);
+      const pinned = await poolDomain.isSahyogDrivePublicationClausePinned(
+        tx,
+        ids.pariwarId(PARIWAR_A),
+      );
+
+      expect(pinned).toBe(false);
+    });
+
+    it('⭐ reports PINNED once the clause is minted and pinned into the effective version', async () => {
+      const { client, tx } = getTx();
+      const tcVersionId = await seedTcVersion(tx, PARIWAR_A, { version: 1 });
+      const clauseVersionId = await seedClauseVersion(tx, PARIWAR_A, {
+        clauseId: poolDomain.SAHYOG_DRIVE_PUBLICATION_CLAUSE_ID,
+      });
+      await seedPinnedClause(tx, PARIWAR_A, tcVersionId, clauseVersionId);
+
+      await enterAppScope(client, PARIWAR_A);
+      const pinned = await poolDomain.isSahyogDrivePublicationClausePinned(
+        tx,
+        ids.pariwarId(PARIWAR_A),
+      );
+
+      expect(pinned).toBe(true);
+    });
+
+    it('⛔ a version that is NOT effective does not count — the two inert states stay separable', async () => {
+      const { client, tx } = getTx();
+      // ⚠ This is precisely the case that must read (i)-PROVISIONING-INERT rather than (ii)-per-member:
+      // the clause exists, but nothing CURRENTLY EFFECTIVE pins it, so no member can be named.
+      const staleVersionId = await seedTcVersion(tx, PARIWAR_A, {
+        version: 1,
+        effectiveFrom: new Date(Date.now() - 86_400_000),
+        effectiveUntil: new Date(Date.now() - 3_600_000),
+      });
+      const clauseVersionId = await seedClauseVersion(tx, PARIWAR_A, {
+        clauseId: poolDomain.SAHYOG_DRIVE_PUBLICATION_CLAUSE_ID,
+      });
+      await seedPinnedClause(tx, PARIWAR_A, staleVersionId, clauseVersionId);
+
+      await enterAppScope(client, PARIWAR_A);
+      const pinned = await poolDomain.isSahyogDrivePublicationClausePinned(
+        tx,
+        ids.pariwarId(PARIWAR_A),
+      );
+
+      expect(pinned).toBe(false);
+    });
+
+    it('⛔ an unapproved (pending legal review) version does not count either', async () => {
+      const { client, tx } = getTx();
+      const pendingVersionId = await seedTcVersion(tx, PARIWAR_A, {
+        version: 1,
+        legalReviewStatus: 'pending',
+      });
+      const clauseVersionId = await seedClauseVersion(tx, PARIWAR_A, {
+        clauseId: poolDomain.SAHYOG_DRIVE_PUBLICATION_CLAUSE_ID,
+      });
+      await seedPinnedClause(tx, PARIWAR_A, pendingVersionId, clauseVersionId);
+
+      await enterAppScope(client, PARIWAR_A);
+      const pinned = await poolDomain.isSahyogDrivePublicationClausePinned(
+        tx,
+        ids.pariwarId(PARIWAR_A),
+      );
+
+      // ⭐ Same predicate as `getEffectiveTc` — "change one, check the other".
+      expect(pinned).toBe(false);
     });
   });
 

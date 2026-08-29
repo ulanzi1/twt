@@ -4,6 +4,31 @@
 -- Subject = the DECEASED MEMBER (pools.claim_id → claims.deceased_member_id), keyed
 -- (pariwar_id, deceased_member_id, 'sahyog_drive_publication') — the Story 6.9 convention.
 --
+-- ══════════════════════════════════════════════════════════════════════════════════════════════
+-- ⛔⛔ READ THIS BEFORE ANYTHING BELOW IT — Story 11b.9 (2026-08-29), Decision 2026-08-28-160 cl.5.
+--
+-- ⭐ THIS TYPE IS **PRESERVED BY RULING**, AND IT IS **WRITE-NEVER AND READ-NEVER**.
+--   · WRITE-NEVER — 11b.9 removed the claim-screen box and its request boolean, so no NEW row of
+--     this type can be created. (`2026-08-28-162` cl.2 retired the (b)/(c) boxes with it.)
+--   · READ-NEVER  — the render gate this type existed to feed was DE-AUTHORISED: publishing a
+--     deceased member's name now rests on the MEMBER'S OWN accepted versioned T&C pinning the
+--     post-death publication clause (`-160` cl.3-4). `pool/public-read.ts` no longer consults it.
+--
+-- ⛔⛔ ⇒ IT WILL LOOK EXACTLY LIKE DEAD CODE TO THE NEXT READER. IT IS NOT.
+-- `-160` cl.5 preserves the consent type, THIS MIGRATION, and EVERY EXISTING consent_records row,
+-- explicitly. ⛔ DELETING ANY OF IT REQUIRES A **SEPARATE DECISION** finding it has no remaining
+-- purpose. ⛔ Do not "clean it up", and ⛔ do not write a down-migration.
+-- ⭐ The rows stay ACTIONABLE, not merely stored: both revoke routes and the GET presence view
+-- survive on purpose, so a family who granted this BEFORE 11b.9 can still SEE it and WITHDRAW it.
+-- That is the last remaining data-subject action on these rows (story 11b.9 D7(a)).
+--
+-- ⚠ EVERYTHING BELOW IS RE-DATED, ⛔ NOT ERASED — the original rationale is WHY THIS TYPE EXISTS,
+-- and keeping it is what lets a reader tell preserved-by-ruling from dead code. Each paragraph is
+-- annotated with what 11b.9 did to it.
+-- ══════════════════════════════════════════════════════════════════════════════════════════════
+--
+-- ⛔ MOOT SINCE 11b.9, ⛔ KEPT AS PROVENANCE — nobody is asked again, ever, so the "unaskable
+-- cohort" problem this paragraph solves cannot arise. ⛔ Do not delete it: it is why the type exists.
 -- ⭐⛔ WHY THIS DDL COULD NOT WAIT FOR THE SURFACE TO BE PUBLISHED — the finding that decided D4:
 -- consent is RECORDABLE only in the five PRE-ADJUDICATION states (DPDPA_CONSENT_RECORDABLE_STATES),
 -- and pool/spawn.ts spawns pools ONE PER *APPROVED* CLAIM. ⇒ by the time a pool exists at all — i.e.
@@ -13,16 +38,35 @@
 -- never carry a name, however the family later feels about it. Minting the type PRE-LAUNCH is what
 -- makes that unreachable cohort EMPTY BY CONSTRUCTION. Cheap today; impossible later.
 --
+-- ⭐ STILL TRUE, AND STILL TRUE OF THE REPLACEMENT BASIS (11b.9 AC5) — ⛔ leave this paragraph alone.
 -- ⚠ IT GATES THE *NAME*, NEVER THE *ROW* (AC2). A pool with no consent still renders in full — letter
 -- code, canonical identifier, district, close date, confirmed count, close-of-cycle framing. The index
 -- degrades PER-POOL, never per-page: a family's declination removes a NAME, never a DRIVE from the
 -- public record. And a MISSING consent and a REVOKED one are the SAME verdict.
 --
--- ⚠ IT IS DECLINABLE AND REVOCABLE, AND THAT IS NOT NEGOTIABLE: Niyamavali §4.4 ("public rendering of
--- any personal information is consent-gated and never default opt-in"), Part 10, and — prevailing
--- above both under cl.28 — Trust Deed cl.15(c). A consent that cannot be refused is not consent.
--- Making it mandatory would be a RULEBOOK AMENDMENT (routed 2026-08-24), never a migration.
+-- ⛔⛔ FALSIFIED BY 11b.9 IN BOTH HALVES — RECORDED, ⛔ NOT DELETED, because a reader who meets the
+-- original wording elsewhere needs to know it was checked and did not survive. It read:
+--   ⛔ *"IT IS DECLINABLE AND REVOCABLE, AND THAT IS NOT NEGOTIABLE: Niyamavali §4.4 ("public
+--      rendering of any personal information is consent-gated and never default opt-in"), Part 10,
+--      and — prevailing above both under cl.28 — Trust Deed cl.15(c). A consent that cannot be
+--      refused is not consent. Making it mandatory would be a RULEBOOK AMENDMENT (routed
+--      2026-08-24), never a migration."*
 --
+-- ⛔ (i)  THE MECHANISM IS SUPERSEDED. `-160` cl.3 rests publication on the member's own accepted
+--         T&C — a CONDITION OF MEMBERSHIP, not a declinable claim-time act — and cl.6 removed the
+--         family's decline path ON PURPOSE: the family gets no veto over the member's own name.
+--         ⚠ This paragraph is NOT the objection it looks like; the Trust ruled otherwise.
+-- ⛔ (ii) NEITHER CITED AUTHORITY IS RATIFIED, so neither the §4.4 clause nor the cl.28 prevailing
+--         hierarchy binds anything. The Trust Deed is an unexecuted, agent-drafted draft
+--         (`2026-08-28-164` cl.1) and the Niyamavali sits in the SAME corpus and category
+--         (`2026-08-28-167`) — DESIGN REFERENCES, not binding instruments. ⚠ Citing the Trust's
+--         INTENDED model is legitimate; citing it AS THOUGH IT BINDS is the defect. ⛔ Do not
+--         silently drop the references either.
+-- ⛔ (iii) THE ROUTED AMENDMENT IS DISCHARGED DIFFERENTLY THAN THIS LINE ANTICIPATED: NO Niyamavali
+--         amendment is owed, required or routed by 11b.9 — there is no ratified instrument to
+--         amend, and revocation remains available on every existing row regardless.
+--
+-- ⭐ STILL TRUE — the ADD VALUE / do-not-regenerate mechanics below are unaffected by 11b.9.
 -- ⚠ ADD VALUE cannot run inside a transaction block on Postgres, AND a newly-added enum value cannot
 -- be USED in the same transaction it was added. So this is its OWN migration file, separate from any
 -- migration inserting a row with this value (none do — consent rows are written at RUNTIME by the 6.9
@@ -33,3 +77,6 @@
 -- snapshots stop at 0020). Hand-authored, mirroring 0040/0048/0058. DO NOT reset via DROP SCHEMA.
 
 ALTER TYPE "consent_type" ADD VALUE IF NOT EXISTS 'sahyog_drive_publication';
+
+-- ⛔⛔ AND ⛔ NO DOWN-MIGRATION. Postgres cannot DROP an enum value, the rows are preserved by
+-- ruling, and reversing this file would be a governance act — ⛔ not a schema cleanup.

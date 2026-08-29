@@ -91,6 +91,17 @@ import { auditLogEntries } from './audit_log_entries.js';
  * additive extension (migration 0058), exactly as Story 5.4 owned `whatsapp_opt_in`
  * even though the "consumers" live elsewhere.
  *
+ * ⛔⛔ AMENDED BY STORY 11b.9 (2026-08-29) — THAT "Epic 11b render-consumer" IS ⛔ NEVER
+ * GOING TO EXIST, FOR EITHER TYPE. ⛔ Do not go looking for it and ⛔ do not build it.
+ * 11b.3 (Sahyog Vivran) and 11b.6 (In Memoriam) are UNBUILT, and Decision
+ * `2026-08-28-162` has them built to the NEW basis FROM THE START rather than switched
+ * afterwards (story 11b.9 D5). ⚠ 11b.3 in particular rests on the NOMINEE'S OWN Claim
+ * Terms — a DIFFERENT data class on a DIFFERENT basis (`-162` cl.1). ⇒ ⛔ there is no
+ * `consentExists`-shaped gate on either value anywhere, and ⛔ none may be added.
+ * ⚠ The CAPTURE half is retired too: 11b.9 reduced the claim consent screen to
+ * `claim_time_dpdpa` alone, so all three publication types are now WRITE-NEVER. ⛔ They
+ * are PRESERVED BY RULING, ⛔ not dead code — see each value's comment below.
+ *
  * ⚠ LOCKSTEP with the `@twt/contracts` `ConsentTypeSchema` z.enum: the literal list
  * is DUPLICATED there because `@twt/domain` must NOT import `@twt/contracts` (turbo
  * cycle). Drift is prevented by an equality assertion in the contracts test
@@ -123,6 +134,11 @@ export const consentTypeEnum = pgEnum('consent_type', [
   // 6.9 DPDPA consent step and CONSUMED at publication-time by Epic 11b's render gate (consentExists).
   // 6.9 is the FIRST writer, so it owns the additive extension (migration 0058), superseding the stale
   // "Epic 11b adds them" note that used to sit in the header. APPENDED at the END — never reorder.
+  // ⛔⛔ PRESERVED BY RULING, WRITE-NEVER AND READ-NEVER SINCE STORY 11b.9 — `2026-08-28-162` cl.2
+  // retired both capture boxes and cl.5 preserves the types, migration 0058 and every existing row.
+  // ⛔ Deleting either value requires a SEPARATE decision. ⛔ They will look like dead values; they
+  // are not — existing rows stay readable (the GET presence view) and revocable (both revoke routes).
+  // ⚠ And the "render gate" above never arrived and never will (see the header amendment).
   'sahyog_vivran_publication',
   'in_memoriam_listing',
   // Story 11b.1 (D4(b); Decision 2026-08-24-159 cl.6) — the per-subject publication consent for the
@@ -138,6 +154,15 @@ export const consentTypeEnum = pgEnum('consent_type', [
   // index degrades PER-POOL, never per-page. A missing consent and a REVOKED one are the SAME verdict.
   // APPENDED at the END — never reorder (stored ordinals). Migration 0112, its OWN file (ADD VALUE
   // cannot run in a tx nor be used in the tx that adds it).
+  // ⛔⛔ DE-AUTHORISED BY `2026-08-28-160` cl.3-5 AND PRESERVED BY THE SAME CLAUSE — Story 11b.9.
+  // The render gate above no longer reads this type: publishing a deceased member's name rests on the
+  // MEMBER'S OWN accepted versioned T&C pinning the post-death publication clause, so the family is
+  // ⛔ not asked and gets ⛔ no veto (cl.6). Its box was retired from the claim screen too ⇒ this value
+  // is WRITE-NEVER and READ-NEVER. ⛔ IT IS STILL NOT DEAD CODE: cl.5 preserves the type, migration
+  // 0112 and every existing row explicitly, and deleting any of it needs a SEPARATE decision.
+  // ⚠ The "PERMANENTLY UNASKABLE cohort" rationale above is MOOT (nobody is asked again, ever) but is
+  // kept deliberately — it is WHY this value exists, and that is how a reader tells preserved-by-ruling
+  // from dead code.
   'sahyog_drive_publication',
 ]);
 
@@ -156,6 +181,14 @@ export const consentTypeEnum = pgEnum('consent_type', [
  * ⇒ the event schema now derives from THIS tuple. ⛔ Do not re-spell the list at a call site again.
  * ⚠ It is a deliberate SUBSET of the pgEnum, ⛔ not the whole of it: `marketing`, `tc_acceptance`
  * and the channel opt-ins are not claim-time consents and must never widen this payload.
+ *
+ * ⛔⛔ AND IT DOES ⛔ NOT SHRINK EITHER — Story 11b.9 CAPTURES only `claim_time_dpdpa` now, but this
+ * TUPLE KEEPS ALL FOUR. `claim/events.ts` derives `claim.dpdpa_consent_recorded`'s
+ * `consent_types_granted` from it, so dropping a value makes every HISTORICAL event carrying that
+ * value UNPARSEABLE — in a system whose `events_log` is the source of truth and whose reducers must
+ * stay TOTAL. ⚠ This is the SAME hazard the paragraph above records, arriving from the opposite
+ * direction: 11b.1 paid for widening the subset in four places instead of five; ⛔ do not now pay for
+ * narrowing it. ⭐ Story 11b.9 removes BOOLEANS FROM A REQUEST, ⛔ not values from a type.
  */
 export const CLAIM_TIME_CONSENT_TYPES = [
   'claim_time_dpdpa',
@@ -170,6 +203,15 @@ export const CLAIM_TIME_CONSENT_TYPES = [
  * ⛔ `claim_time_dpdpa` is deliberately absent: it authorises PROCESSING, not publication, and is
  * not a takedown target. ⚠ Revocation is open at ANY claim state, including after settlement —
  * 6.9 AC3's whole point is a post-settlement takedown.
+ *
+ * ⛔⛔ IT DOES ⛔ NOT SHRINK, AND IT SURVIVES STORY 11b.9 FOR **TWO INDEPENDENT** REASONS:
+ *   1. `claim/events.ts` derives `claim.dpdpa_consent_revoked`'s `consent_type` from THIS tuple —
+ *      narrowing it makes historical revoke events unparseable (see CLAIM_TIME_CONSENT_TYPES).
+ *   2. ⭐ Revocation is the ONLY REMAINING DATA-SUBJECT ACTION on the preserved rows. Retiring the
+ *      capture boxes stopped NEW grants; it ⛔ did not extinguish the rights attached to grants that
+ *      already exist, and `2026-08-28-160` cl.5 preserves those rows precisely so they stay
+ *      ACTIONABLE, ⛔ not merely stored. ⛔ Removing this would be a rights regression wearing a
+ *      cleanup's clothes (story 11b.9 D7(a)).
  */
 export const CLAIM_TIME_PUBLICATION_CONSENT_TYPES = [
   'sahyog_vivran_publication',

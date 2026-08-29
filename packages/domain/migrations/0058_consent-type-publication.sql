@@ -8,6 +8,30 @@
 -- The three claim-time DPDPA consents (claim_time_dpdpa already exists from Story 2.7 + these two) are the
 -- canonical `consentExists(pariwarId, deceasedMemberId, <type>, at)` surfaces Epic 11b resolves at render time.
 --
+-- ══════════════════════════════════════════════════════════════════════════════════════════════
+-- ⛔⛔ BOTH VALUES ARE **PRESERVED BY RULING** AND ARE **WRITE-NEVER** — Story 11b.9 (2026-08-29),
+-- Decision `2026-08-28-162` cl.2 + cl.5.
+--
+-- ⛔ THE TWO CAPTURE BOXES ARE RETIRED. 11b.9 reduced the claim consent screen to `claim_time_dpdpa`
+-- alone and removed both booleans from the request contract, so ⛔ no NEW row of either type can be
+-- created. ⚠ `-162` cl.2 also REJECTED, on the record, the alternative of re-wording the boxes to
+-- cover family-owned content: *"a control that survives by having its meaning quietly rewritten is
+-- worse than no control"*. ⇒ RETIRED, ⛔ not reinterpreted.
+--
+-- ⛔⛔ ⇒ THEY WILL LOOK LIKE DEAD VALUES. THEY ARE NOT. `-162` cl.5 preserves the types, THIS
+-- MIGRATION, and EVERY EXISTING consent_records row explicitly. ⛔ Deleting any of it requires a
+-- SEPARATE decision. ⛔ No down-migration — Postgres cannot DROP an enum value anyway.
+-- ⭐ The rows stay ACTIONABLE: both revoke routes and the GET presence view survive on purpose, so a
+-- family who granted either BEFORE 11b.9 can still SEE it and WITHDRAW it (story 11b.9 D7(a)).
+--
+-- ⚠⛔ AND THE "Epic 11b render-consumer" ABOVE IS ⛔ NEVER GOING TO EXIST — ⛔ do not go build it.
+-- 11b.3 (Sahyog Vivran) and 11b.6 (In Memoriam) are UNBUILT, and they are built to the NEW basis
+-- FROM THE START rather than switched afterwards (story 11b.9 D5). ⚠ 11b.3 in particular rests on
+-- the NOMINEE's own Claim Terms — a DIFFERENT data class on a DIFFERENT basis (`-162` cl.1).
+-- ⛔ There is no `consentExists`-shaped gate for either type anywhere in the codebase, and ⛔ none
+-- may be added on these values.
+-- ══════════════════════════════════════════════════════════════════════════════════════════════
+--
 -- ⚠ ADD VALUE cannot run inside a transaction block on Postgres, AND a newly-added enum value cannot be USED
 -- in the same transaction it was added. So this is its OWN migration file, separate from any migration that
 -- inserts a row with these values (none do — consent rows are written at RUNTIME by the 6.9 routes, well

@@ -50,6 +50,10 @@
 //   2. ⭐ `consentExists` is ONE `LIMIT 1` QUERY PER SUBJECT. Calling it per rendered pool is 50
 //      round-trips for one page — the IDENTICAL N+1, arriving through a different door. ⇒ the
 //      verdict is a correlated EXISTS below, resolved for the whole page in the same query.
+//      ⚠⛔ AND SINCE STORY 11b.9 THAT VERDICT IS A **TWO-JOIN** SUBQUERY
+//      (`consent_records` → `terms_and_conditions_pinned_clauses` → `clause_versions`), so the
+//      temptation to hoist it into JS is STRONGER, not weaker. ⛔ Resist it: the door is the same
+//      door. See {@link NAME_PUBLICATION_AUTHORISED}.
 // ⚠ ONE injected `now` feeds every time-bounded fragment AND the count accessor, so the page and
 // its total can never disagree about the instant they describe.
 //
@@ -62,7 +66,7 @@ import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 
 import { classifyCycleOutcome, type CycleFundingOutcome } from '../close-of-cycle/framing.js';
 import type { Db } from '../db.js';
-import type { MemberId, PariwarId, PoolId } from '../ids/index.js';
+import { type ClauseId, type MemberId, type PariwarId, type PoolId, clauseId } from '../ids/index.js';
 import { clampLimit } from '../pagination.js';
 import { poolIndexFromLetterCodeOrNull } from './naming.js';
 import { claims } from '../schema/claims.js';
@@ -112,8 +116,71 @@ const CONFIRMATION_REVERSED_EVENT_TYPE = 'reconciliation.confirmation-reversed' 
 const CONFIRMED_PAYLOAD_POOL_KEY = 'poolId' as const;
 const REVERSED_CONFIRMED_EVENT_ID_KEY = 'reversedConfirmedEventId' as const;
 
-/** The per-subject publication gate this surface declares (Story 11b.1 AC12 / D4(b)). */
+/**
+ * ⛔⛔ RETIRED AS AN AUTHORITY, ⛔ PRESERVED AS A RECORD — Story 11b.9 (AC9), `2026-08-28-160` cl.5.
+ *
+ * This is the consent type Story 11b.1 shipped as the per-subject publication gate (AC12 / D4(b)).
+ * `2026-08-28-160` **de-authorised** it: the basis for publishing a deceased member's name is the
+ * member's OWN accepted versioned T&C, ⛔ never a tick-box the family ticked at claim time. The live
+ * predicate is {@link NAME_PUBLICATION_AUTHORISED}; this constant is ⛔ NOT consulted by it.
+ *
+ * ⛔⛔ AND IT IS ⛔ NOT DEAD CODE — ⛔ DO NOT DELETE IT. `-160` cl.5 preserves the `consent_type`
+ * value, migration `0112`, and every existing `consent_records` row **explicitly**. Since 11b.9 the
+ * type is **write-never** (Story 11b.9 Task 4 removed the claim-screen box that wrote it) and
+ * **read-never** (this module stopped reading it), which is exactly what makes it LOOK deletable.
+ * ⛔ Deleting it requires a SEPARATE trustee decision finding it has no remaining purpose — the rows
+ * stay actionable (both revoke routes and the GET presence view survive, story D7(a)).
+ *
+ * ⚠ Kept exported because tests assert the value still exists — the guard against a future
+ * "cleanup" ([[feedback_supersede_never_reinterpret]]).
+ */
 export const SAHYOG_DRIVE_CONSENT_TYPE = 'sahyog_drive_publication' as const;
+
+/**
+ * ⭐ THE LIVE BASIS — the member's own T&C acceptance (Story 3.6a's write path, `tc_acceptance`).
+ *
+ * `apps/api/src/modules/terms/member-terms.handlers.ts:153` writes this row with the SERVER-resolved
+ * `tcVersionId` in `consent_artifact_ref`, and `member/lock-in-gate.ts` already makes it a signup
+ * lock-in requirement — so this is existing, load-bearing substrate, ⛔ not a new one.
+ */
+export const TC_ACCEPTANCE_CONSENT_TYPE = 'tc_acceptance' as const;
+
+/**
+ * ⭐⭐ THE POSTHUMOUS PUBLICATION CLAUSE — the single place this literal may appear.
+ *
+ * ⚠ Worded WITHOUT the category noun on purpose: the `pool-support-category-invariant` gate scans
+ * this module's COMMENTS too, on the stated ground that a pool-engine comment thinking in
+ * category-specific terms is itself the smell. ⛔ This module is category-agnostic (Story 7.1 AC4).
+ *
+ * The stable `clause_id` of the Niyamavali clause carrying T&C clause 14 *"Public Disclosure of
+ * Member Information"*, which the accepted T&C version must PIN for a deceased member's name to
+ * render (Story 11b.9 AC1/AC2(d); D6(a), `.decision-log.md#decision-2026-08-28-161`).
+ *
+ * ⛔⛔ A `clause_id`, ⛔ NEVER A `clause_version_id` — and the distinction is load-bearing (T3).
+ * `clause_versions.clause_id` is the STABLE slug that survives amendment; `clause_version_id` is the
+ * per-amendment uuid. The disclosure clause is rulebook content and WILL be amended, so pinning the
+ * predicate to a single `clause_version_id` would make the FIRST amendment silently un-publish every
+ * name in the system, with ⛔ no error and ⛔ no failing test. Resolving through `clause_id` means
+ * ANY version of the clause satisfies the basis.
+ *
+ * ⚠⛔ PROVISIONAL VALUE (story D3). Counsel's FINAL clause text — the v0.2 draft is still in the
+ * Annex round — decides this literal. ⭐ That is why it is a single exported constant and why ⛔ no
+ * inline string may appear in the predicate, the API layer, or ⛔ any test: counsel's answer is a
+ * ONE-LINE change here and ⛔ zero changes anywhere else.
+ *
+ * ⭐⛔ UNTIL A MATCHING `clause_versions` ROW EXISTS AND IS PINNED, THIS PREDICATE IS FALSE FOR EVERY
+ * MEMBER AND ⛔ NO NAME RENDERS. That is **AC8's designed inert state** — fail-closed, correct, and
+ * ⛔ NOT A BUG. ⛔ Do ⛔ not seed a placeholder `clause_versions` row to make the surface look alive:
+ * a stand-in makes names render on an authority that does ⛔ not exist, which is the exact defect
+ * this story corrects (D3).
+ *
+ * ⚠ Built with the `clauseId()` smart constructor, ⛔ never a bare string — a typo then fails at
+ * MODULE LOAD (`InvalidClauseIdError`) rather than silently at render time as an everyone-unnamed
+ * page. Precedent: `member/lock-in.ts`, `member/moderation/dwell.ts`, `medical/ima-list.ts`.
+ */
+export const SAHYOG_DRIVE_PUBLICATION_CLAUSE_ID: ClauseId = clauseId(
+  'niy.public-disclosure.member-information',
+);
 
 /** Page size served when the caller asks for nothing, and the hard ceiling. */
 export const SAHYOG_DRIVE_PAGE_SIZE_DEFAULT = 25;
@@ -149,29 +216,85 @@ const CONFIRMED_CONTRIBUTION_COUNT = (now: Date) => sql<string>`(
   )`;
 
 /**
- * ⭐ THE CONSENT VERDICT, BATCHED — the D7(a) N+1 must not return through this door.
+ * ⭐⭐ THE PUBLICATION BASIS, BATCHED — the member's OWN accepted T&C, ⛔ not the family's tick-box.
  *
- * The set-based form of `consentExists(db, pariwarId, subjectId, type, validAt)`, and it must
- * stay observationally equivalent to it: the SAME validity window
- * (`granted_at <= at AND (revoked_at IS NULL OR at < revoked_at)`), the same subject convention
- * (subject = the DECEASED member — [[project_consent_subject_key_convention]]), the same
- * tenant scope. ⭐ "Change one, check the other" — `consent/read.ts` is the other.
+ * Story 11b.9 / `2026-08-28-160` cl.3-5. True iff the DECEASED member holds a VALID `tc_acceptance`
+ * consent whose accepted T&C version PINS the posthumous publication clause
+ * ({@link SAHYOG_DRIVE_PUBLICATION_CLAUSE_ID}). ⛔ `sahyog_drive_publication` is ⛔ NOT consulted —
+ * it was de-authorised, ⛔ not ANDed and ⛔ not ORed (story D2, ruled in substance by `-160` cl.5).
  *
- * ⚠ A MISSING consent and a REVOKED one are the SAME verdict, and that is intended: neither
- * authorises a render. ⛔ Neither omits the ROW — see {@link SahyogDriveEntry.nameConsentGranted}.
+ * ⛔⛔ AND THE FAMILY'S DECLINE PATH IS GONE ON PURPOSE (`-160` cl.6). 11b.1 shipped this gate as
+ * "declinable and revocable"; that is REVERSED by ruling, because the family is not asked to speak
+ * for the member — the member already answered. ⛔ A later reader must ⛔ not restore it as a
+ * "missing feature".
+ *
+ * ── ⛔ TWO CONJUNCTS THAT LOOK MISSING AND ARE DELIBERATELY ABSENT ───────────────────
+ * 1. ⛔ NO "the accepted version is still EFFECTIVE" conjunct. The gate is the version the member
+ *    ACCEPTED, ⛔ not whether that version is still the Pariwar's current one: a later
+ *    effective-window change is ⛔ not a withdrawal of the member's own authority. ⚠ Adding
+ *    `AND the version is effective` is the Story 10.10 `is_valid: false` shape exactly — a one-line
+ *    conjunct carrying constitutional meaning that every CI gate stays green through.
+ *    ⭐ CONSEQUENCE, STATED SO NOBODY DISCOVERS IT LATER: publishing a NEW T&C version that DROPS
+ *    the clause does ⛔ NOT un-publish anyone who accepted an earlier version carrying it.
+ *    ⛔ "Amend the T&C" is ⛔ NOT an un-publish lever; withdrawal runs through revocation of the
+ *    member's own `tc_acceptance` row, and ⛔ nothing else.
+ * 2. ⛔ NO physical-document conjunct. The 90-day physical copy is track-and-chase with ⛔ no
+ *    punitive effect (`-160` cl.8): the DIGITAL acceptance is operative, and a missing physical
+ *    copy must ⛔ not stop publication.
+ *
+ * ── ⭐ THE ONE CAST, IN THE ONE SAFE DIRECTION — it closes TWO traps at once ─────────
+ * `consent_records.consent_artifact_ref` is `text`, NULLABLE, with ⛔ NO FK and ⛔ no check ("the
+ * ref is polymorphic across artifact tables; resolution is the consumer's concern" —
+ * `schema/consent_records.ts`), while `terms_and_conditions_pinned_clauses.tc_version_id` is
+ * `uuid`. ⇒ the comparison NEEDS a cast (uncast raises `operator does not exist: uuid = text`,
+ * 42883) — ⛔ this is the MIRROR IMAGE of the subject comparison below, where both sides are
+ * already `uuid` and a cast is what BREAKS it.
+ * ⭐⭐ CAST THE `uuid` COLUMN TO `text`, ⛔ NEVER THE `text` COLUMN TO `uuid`. `uuid → text` is
+ * TOTAL; `text → uuid` is PARTIAL and would raise `22P02 invalid input syntax for type uuid` on any
+ * row whose ref is `''` or any non-UUID string — taking down the whole public page. In this
+ * direction a malformed, empty or NULL ref simply FAILS TO MATCH and excludes that member, ⛔ it
+ * does not raise.
+ *
+ * ── ⚠ TENANCY: THREE TABLES, THREE `pariwar_id`s, ALL SCOPED EXPLICITLY ─────────────
+ * `terms_and_conditions_pinned_clauses`' own header warns that its FK "targets the global PK and
+ * would happily link a DIFFERENT Pariwar's clause version" — the same-Pariwar guard is a DOMAIN
+ * pre-check, ⛔ not the FK. ⇒ every leg is scoped to `"pools"."pariwar_id"` directly. ⛔ Do not rely
+ * on RLS alone inside a correlated subquery on a public, UNAUTHENTICATED route.
+ *
+ * ⚠ A MISSING acceptance, a REVOKED one, and one against a version that does ⛔ not pin the clause
+ * are the SAME verdict — fail-closed in every direction (AC7). ⛔ None of them omits the ROW — see
+ * {@link SahyogDriveEntry.namePublicationAuthorised}.
  *
  * ⚠ ⛔ NO `::text` CAST ON THE SUBJECT COMPARISON. `consent_records.subject_id` is a `uuid`
  * COLUMN — Story 2.7 kept the subject polymorphic in MEANING, ⛔ not in TYPE — so casting either
  * side raises `operator does not exist: uuid = text` (42883). Both sides are already uuid.
+ *
+ * ⭐⭐ "CHANGE ONE, CHECK THE OTHER" — THIS PREDICATE NOW HAS **TWO** PAIRINGS, ⛔ NOT ONE:
+ *   1. `consent/read.ts` (`consentExists`) — the VALIDITY WINDOW. This expression is the set-based
+ *      form of that same window (`granted_at <= at AND (revoked_at IS NULL OR at < revoked_at)`)
+ *      and must stay observationally equivalent to it. ⛔ The D7(a) N+1 must not return through
+ *      this door: `consentExists` is one `LIMIT 1` query PER SUBJECT.
+ *   2. ⭐⛔ `apps/api/src/modules/terms/member-terms.handlers.ts` — the T&C acceptance WRITER, which
+ *      stores `consentArtifactRef: tcVersionId`. ⛔ IF THAT WRITER EVER STORES ANYTHING ELSE IN
+ *      `consent_artifact_ref`, THIS PREDICATE RETURNS FALSE FOR EVERY MEMBER — silently, with ⛔ no
+ *      error anywhere and ⛔ no failing test. That coupling is invisible from either file alone,
+ *      which is exactly why it is written down in both.
  */
-const NAME_CONSENT_GRANTED = (now: Date) => sql<boolean>`EXISTS (
+const NAME_PUBLICATION_AUTHORISED = (now: Date) => sql<boolean>`EXISTS (
     SELECT 1
       FROM consent_records cr
+      JOIN terms_and_conditions_pinned_clauses tcpc
+        ON tcpc.pariwar_id = "pools"."pariwar_id"
+       AND tcpc.tc_version_id::text = cr.consent_artifact_ref
+      JOIN clause_versions cv
+        ON cv.clause_version_id = tcpc.clause_version_id
+       AND cv.pariwar_id = "pools"."pariwar_id"
      WHERE cr.pariwar_id = "pools"."pariwar_id"
        AND cr.subject_id = "claims"."deceased_member_id"
-       AND cr.consent_type = ${SAHYOG_DRIVE_CONSENT_TYPE}
+       AND cr.consent_type = ${TC_ACCEPTANCE_CONSENT_TYPE}
        AND cr.granted_at <= ${now}
        AND (cr.revoked_at IS NULL OR ${now} < cr.revoked_at)
+       AND cv.clause_id = ${SAHYOG_DRIVE_PUBLICATION_CLAUSE_ID}
   )`;
 
 /** The drive's close (Active) or settle (Archive) instant, from the pool's own event stream. */
@@ -260,10 +383,20 @@ export interface SahyogDriveEntry {
    * `false` ⇒ the boundary skips the decrypt entirely (⛔ zero KMS calls, and ⛔ no decrypt
    * without an authorising basis) and renders the row WITHOUT a name. Everything else — letter
    * code, canonical identifier, district, close date, confirmed count, framing — renders
-   * regardless. ⇒ the index degrades PER-POOL, ⛔ never per-page, and a family's declination
-   * removes a NAME, ⛔ never a DRIVE from the public record.
+   * regardless. ⇒ the index degrades PER-POOL, ⛔ never per-page, and an absent basis removes a
+   * NAME, ⛔ never a DRIVE from the public record.
+   *
+   * ⚠⛔ NAMED FOR THE BASIS, ⛔ NOT FOR A CONSENT (Story 11b.9 AC6). It carried a consent-shaped
+   * name while 11b.1's family tick-box was the authority; the value no longer reflects a
+   * per-subject consent act at all, so that name would now be a documentation defect. The
+   * authority is the MEMBER'S OWN accepted T&C — see {@link NAME_PUBLICATION_AUTHORISED}.
+   *
+   * ⚠⭐ `false` FOR EVERY ROW IS THE EXPECTED DAY-ONE STATE, ⛔ not a fault: until a
+   * `clause_versions` row for {@link SAHYOG_DRIVE_PUBLICATION_CLAUSE_ID} exists AND is pinned into
+   * a T&C version, nothing can satisfy the basis. The surface is INERT, ⛔ not broken — and the
+   * API boundary emits a diagnostic that says which of the two inert states it is (AC8).
    */
-  nameConsentGranted: boolean;
+  namePublicationAuthorised: boolean;
 }
 
 /** The three ruled search dimensions (D2(a)) — ⭐ all answerable WITHOUT a single decrypt. */
@@ -395,7 +528,7 @@ export async function listPublicSahyogDrivePools(
       // accessor boundary below — ⛔ never left to an implicit `+` somewhere downstream.
       confirmedCount: CONFIRMED_CONTRIBUTION_COUNT(now),
       assignedCount: ASSIGNED_MEMBER_COUNT,
-      nameConsentGranted: NAME_CONSENT_GRANTED(now),
+      namePublicationAuthorised: NAME_PUBLICATION_AUTHORISED(now),
     })
     .from(pools)
     .innerJoin(claims, eq(claims.claimCaseId, pools.claimCaseId))
@@ -452,7 +585,7 @@ export async function listPublicSahyogDrivePools(
             }),
       deceasedMemberId: r.deceasedMemberId,
       deceasedNameCiphertext: r.deceasedNameCiphertext,
-      nameConsentGranted: r.nameConsentGranted,
+      namePublicationAuthorised: r.namePublicationAuthorised,
     };
   });
 }
@@ -487,4 +620,66 @@ export async function countPublicSahyogDrivePools(
 
   // ⚠ `count(*)` is bigint ⇒ a STRING from the driver.
   return Number(rows[0]?.total ?? 0);
+}
+
+/**
+ * ⭐⭐ AC8's DISCRIMINATOR — is this Pariwar PROVISIONING-INERT, or is the gap PER-MEMBER?
+ *
+ * `true` ⇔ the Pariwar's currently-EFFECTIVE T&C version pins
+ * {@link SAHYOG_DRIVE_PUBLICATION_CLAUSE_ID}. `false` ⇒ ⛔ NO member of this Pariwar can EVER be
+ * named right now, whatever their own record says — a WHOLE-PARIWAR condition with a
+ * PROVISIONING answer.
+ *
+ * ⛔⛔ THIS IS A DIAGNOSTIC, ⛔ NOT A GATE. It is ⛔ NOT conjoined into
+ * {@link NAME_PUBLICATION_AUTHORISED} and ⛔ must never be: the render basis is the version the
+ * member ACCEPTED, ⛔ not whichever version happens to be effective now (see that predicate's
+ * "two conjuncts deliberately absent"). Wiring this into the gate would silently un-publish every
+ * member the moment a Pariwar rolled a new T&C version — the exact failure the ruling forbids.
+ *
+ * ⚠ WHY IT EXISTS AT ALL: without it a first responder cannot tell
+ *   (i)  PROVISIONING-INERT — nothing pins the clause, so the whole Pariwar renders unnamed; from
+ *   (ii) PER-MEMBER — the clause IS pinned, but this member has no valid `tc_acceptance`, has
+ *        revoked it, or accepted a version that does not pin it.
+ * ⛔ A diagnostic that cannot separate those sends the responder to the WRONG HALF of the system:
+ * (i) is answered by provisioning, (ii) by a member record.
+ *
+ * ⭐ Per-Pariwar divergence is a VALID state, ⛔ not an error (story D4(a)): multi-Pariwar means
+ * Pariwars adopt T&C versions at DIFFERENT times, and a build that treated ordinary rollout skew
+ * as a failure would be wrong on day one. ⇒ this returns a fact; it ⛔ does not throw and ⛔ does
+ * not block the surface.
+ *
+ * ⚠ ONE query for the whole page, called at most ONCE per request and ⛔ only when at least one row
+ * came back unnamed — the D7(a) N+1 must not return through this door either.
+ *
+ * ⚠ The effective-window predicate is `getEffectiveTc`'s, re-spelled set-based here for the same
+ * reason the verdict above is: ⭐ "change one, check the other" — `terms-and-conditions/read.ts`
+ * is the other. `legal_review_status = 'approved'` is part of it, ⛔ not an extra.
+ */
+export async function isSahyogDrivePublicationClausePinned(
+  db: Db,
+  pariwarId: PariwarId,
+  now: Date = new Date(),
+): Promise<boolean> {
+  const rows = await db.execute<{ pinned: boolean }>(sql`
+    SELECT EXISTS (
+      SELECT 1
+        FROM terms_and_conditions_versions tcv
+        JOIN terms_and_conditions_pinned_clauses tcpc
+          ON tcpc.tc_version_id = tcv.tc_version_id
+         AND tcpc.pariwar_id = ${pariwarId}
+        JOIN clause_versions cv
+          ON cv.clause_version_id = tcpc.clause_version_id
+         AND cv.pariwar_id = ${pariwarId}
+       WHERE tcv.pariwar_id = ${pariwarId}
+         AND tcv.legal_review_status = 'approved'
+         AND tcv.effective_from <= ${now}
+         AND (tcv.effective_until IS NULL OR ${now} < tcv.effective_until)
+         AND cv.clause_id = ${SAHYOG_DRIVE_PUBLICATION_CLAUSE_ID}
+    ) AS pinned
+  `);
+
+  // ⚠ `db.execute` hands back `{ rows }` (the `dbNow` precedent in `pool/fixed-amount.ts`), ⛔ not a
+  // bare array. `EXISTS` cannot produce zero rows, but the optional read keeps this total anyway.
+  const row = rows.rows[0] as { pinned: boolean } | undefined;
+  return row?.pinned === true;
 }

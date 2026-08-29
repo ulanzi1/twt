@@ -393,7 +393,11 @@ export const PublicVsPrivateMatrixSchema = z
       // The public Member Directory renders living members' full legal names by default.
       ['member-directory.member_name', '2026-08-19-135 cl.7(c) / -136'],
       // Story 11b.1 — the DECEASED member's name on the public Sahyog Drive pool index.
-      // ⚠ Consent-gated per subject (sahyog_drive_publication), which the directory's is NOT.
+      // ⚠ Gated on the MEMBER'S OWN accepted T&C version pinning the post-death publication
+      // clause, which the directory's is NOT. ⛔ It is ⛔ NOT a per-subject consent: the family
+      // tick-box (`sahyog_drive_publication`) was DE-AUTHORISED by `2026-08-28-160` cl.3-5 and
+      // the box retired by `-162` (Story 11b.9). ⚠ COMMENT ONLY — the entry below and its cited
+      // decision are unchanged; ⛔ changing either is a governance act, ⛔ not a comment fix.
       // ⛔ Its scope does NOT reach 11b.3 (Sahyog Vivran) or 11b.6 (In Memoriam): those keep
       // first-name + last-initial, and moving them requires each surface's OWN Panel ruling.
       ['sahyog-drive.deceased_member_name', '2026-08-24-159 cl.2 (D1(b))'],

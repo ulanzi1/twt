@@ -16,7 +16,24 @@ import type { DpdpaConsentLocale, DpdpaConsentType } from '@twt/contracts';
 
 /**
  * The canonical, approved consent copy per (consent type × locale). Grief-register / dignified
- * (UX §7). Kept in lockstep with the mobile `dpdpa.*` i18n keys (en + hi).
+ * (UX §7).
+ *
+ * ⛔⛔ THIS IS THE **EVIDENCE** COPY, ⛔ NOT THE UI LABELS — and Story 11b.9 made the distinction
+ * load-bearing, so read it before touching either. There are TWO different things called "copy":
+ *   · UI LABELS — the checkbox text a family reads, in `packages/i18n/locales/{en,hi}/claim.json`.
+ *     ⛔ The three publication ones were REMOVED with their boxes (`2026-08-28-162` cl.2).
+ *   · ⭐ THIS MAP — the server-resolved copy recorded AGAINST EACH WRITTEN ROW. It is what makes a
+ *     HISTORICAL row explicable ("what exactly did this family agree to?"), and it is read back
+ *     TODAY by `dpdpa-consent-helpline.spec.ts`. ⛔ IT STAYS, IN FULL.
+ *
+ * ⛔⛔ AND IT IS `Record`-TOTAL OVER `DpdpaConsentType`, WHICH IS PRESERVED BY RULING — so deleting
+ * the three retired entries is a TYPECHECK FAILURE, and the tempting fix (deleting the enum values
+ * to make the Record legal again) is ⛔ EXACTLY the deletion `2026-08-28-160` cl.5 forbids.
+ * ⚠ Recognise that failure when you meet it; ⛔ do not "resolve" it downward.
+ *
+ * ⚠ The two sides were byte-identical by design (Story 6.9 — one source per locale) and
+ * `apps/api/tests/unit/dpdpa-consent-copy.test.ts` asserts the type→key mapping. Since 11b.9 only
+ * `claim_time_dpdpa` has a live UI label; the other three entries are evidence-only.
  */
 const DPDPA_CONSENT_COPY: Record<DpdpaConsentType, Record<DpdpaConsentLocale, string>> = {
   claim_time_dpdpa: {
@@ -31,14 +48,26 @@ const DPDPA_CONSENT_COPY: Record<DpdpaConsentType, Record<DpdpaConsentLocale, st
     en: 'I consent to the deceased member appearing in the In Memoriam remembrance listing. You may decline this without affecting the claim.',
     hi: 'मैं दिवंगत सदस्य को स्मृति-शेष (In Memoriam) सूची में शामिल करने की सहमति देता/देती हूँ। आप इसे अस्वीकार कर सकते हैं, इससे दावे पर कोई असर नहीं होगा।',
   },
-  // Story 11b.1 (D4(b) / D10) — the FOURTH box. It authorises the deceased member's NAME on the
-  // PUBLIC Sahyog Drive pool index, and NOTHING else: the drive itself (its code, district, close
-  // date and confirmed contribution count) is published regardless, so declining removes a NAME,
-  // never a DRIVE from the public record.
-  // ⭐ It carries the SAME declinability sentence as its two siblings, in BOTH locales, and that is
-  // not stylistic: Niyamavali §4.4 + Part 10 + Trust Deed cl.15(c) forbid default opt-in, so the box
-  // is unchecked by default and sits OUTSIDE the `.refine()` that forces claimTimeDpdpa. A consent
-  // that cannot be refused is not consent.
+  // ⛔ RETIRED AS A CAPTURE SURFACE, PRESERVED AS EVIDENCE — Story 11b.9. Its box left the claim
+  // screen (`2026-08-28-162` cl.2) and the render gate it fed was DE-AUTHORISED (`-160` cl.3-5):
+  // the authority for publishing a deceased member's name is the MEMBER'S OWN accepted versioned
+  // T&C. ⇒ ⛔ no new row of this type is ever written; this text explains the ones already there.
+  //
+  // ⚠⛔ THE CLAIM THAT STOOD HERE IS FALSIFIED, AND IS RECORDED RATHER THAN DELETED. It read that
+  // *"Niyamavali §4.4 + Part 10 + Trust Deed cl.15(c) forbid default opt-in"*, which is why the box
+  // was declinable. ⛔ (i) That mechanism is SUPERSEDED — `-160` cl.3 rests publication on a
+  // CONDITION OF MEMBERSHIP, and cl.6 removed the family's decline path ON PURPOSE; the family gets
+  // ⛔ no veto over the member's own name. ⛔ (ii) Neither authority is RATIFIED: the Trust Deed is
+  // an unexecuted, agent-drafted draft (`2026-08-28-164` cl.1) and the Niyamavali sits in the SAME
+  // corpus and category (`2026-08-28-167`) — DESIGN REFERENCES, ⛔ not binding instruments.
+  // ⚠ Citing the Trust's INTENDED model is fine; citing it AS THOUGH IT BINDS is the defect. ⛔ And
+  // ⛔ no Niyamavali amendment is owed or routed — there is no ratified instrument to amend.
+  //
+  // ⚠ Still true, and the reason the text below reads as it does: it authorised the NAME and
+  // NOTHING else — the drive's code, district, close date and confirmed count publish regardless.
+  // ⭐ The replacement basis keeps that property exactly (11b.9 AC5).
+  // ⚠ The declinability sentence is INSIDE this string, which is why it left the UI when the label
+  // key was removed. ⛔ It stays HERE: this is what the family actually saw and agreed to.
   sahyog_drive_publication: {
     en: 'I consent to publishing the deceased member’s name on the public Sahyog Drive record of the drive held in their memory. You may decline this without affecting the claim.',
     hi: 'मैं दिवंगत सदस्य के नाम को उनकी स्मृति में चलाए गए सहयोग अभियान के सार्वजनिक रिकॉर्ड में प्रकाशित करने की सहमति देता/देती हूँ। आप इसे अस्वीकार कर सकते हैं, इससे दावे पर कोई असर नहीं होगा।',

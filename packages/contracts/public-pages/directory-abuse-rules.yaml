@@ -152,12 +152,17 @@
 # rather than the leaderboard it builds. There is deliberately NO sortable column header on that
 # page, and `visibleSahyogColumns` carries no comparator for one to hang off.
 #
-# ⚠ AND A SECOND THING THIS SURFACE CARRIES THAT THE DIRECTORY DOES NOT — a per-subject CONSENT gate
-# (`sahyog_drive_publication`). ⭐ It gates the NAME, ⛔ never the ROW: an unconsented drive renders
-# in full, so the index degrades PER-POOL, ⛔ never per-page, and a family's declination removes a
-# NAME, ⛔ never a DRIVE from the public record. ⛔ Do not add a rule, a metric or a log line that
-# counts withheld names — a per-row "name withheld" tally is exactly the enumeration signal the
-# render is built to avoid emitting.
+# ⚠ AND A SECOND THING THIS SURFACE CARRIES THAT THE DIRECTORY DOES NOT — a PUBLICATION-BASIS gate
+# on the deceased member's name: the MEMBER'S OWN accepted T&C version must PIN the post-death
+# publication clause. ⭐ It gates the NAME, ⛔ never the ROW: an unnamed drive renders in full, so the
+# index degrades PER-POOL, ⛔ never per-page, and an absent basis removes a NAME, ⛔ never a DRIVE
+# from the public record. ⛔ Do not add a rule, a metric or a log line that counts withheld names — a
+# per-row "name withheld" tally is exactly the enumeration signal the render is built to avoid
+# emitting.
+# ⚠⛔ ⛔ NOT a per-subject consent gate, and it was until Story 11b.9: the family tick-box
+# (`sahyog_drive_publication`) was DE-AUTHORISED by `2026-08-28-160` cl.3-5 and the box retired by
+# `-162`. The family has ⛔ no veto over the member's own name (cl.6). ⭐ Every abuse property above
+# is unchanged by that — only the BASIS moved.
 #
 # ⚠ THE EDGE-CACHE BLINDNESS AT NOTE 2 ABOVE APPLIES HERE UNCHANGED, and on this surface it is
 # WORSE in one specific way: `/sahyog` is `edge_cacheable` at `s-maxage=300` AND it shared-caches

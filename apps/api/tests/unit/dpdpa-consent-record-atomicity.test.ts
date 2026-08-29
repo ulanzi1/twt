@@ -1,11 +1,19 @@
 // DPDPA consent RECORD atomicity — DB-free unit test (Story 6.9 code review gap-closure).
 //
-// Verifies the property that no live-DB test can deterministically force: when a LATER grant in
-// the checked-boxes loop fails, the handler must (1) never reach the `claim.projectClaimState`
+// Verifies the property that no live-DB test can deterministically force: when a grant in the
+// checked-boxes loop fails, the handler must (1) never reach the `claim.projectClaimState`
 // identity-event emission (the event's own contract is "consent recorded" never means "nothing
 // was granted" — a partial grant set must not look like a real grant set), and (2) close the
-// scope-tx with `commit=false` so the real Postgres transaction rolls back the earlier grant(s)
-// too. `audit.withCompensatingAudit`'s own rollback/compensating-line protocol is already
+// scope-tx with `commit=false` so the real Postgres transaction rolls back any earlier grant too.
+//
+// ⚠⛔ RE-FIXTURED BY STORY 11b.9, AND ONE HALF OF THE ORIGINAL PROPERTY IS NOW UNREACHABLE — said
+// plainly rather than papered over. The claim consent screen reduced to `claim_time_dpdpa` alone
+// (`2026-08-28-162` cl.2), so `grantedTypesFromRequest` can yield AT MOST ONE type and "a LATER
+// grant fails after an earlier one succeeded" can no longer be constructed THROUGH THE REQUEST.
+// ⭐ What is still real, and still asserted: a failing grant must not emit the identity event and
+// must close the scope-tx with commit=false. ⛔ The loop itself is unchanged — if a future story
+// ever captures more than one type again, the multi-grant case becomes reachable and should be
+// restored here rather than re-derived. `audit.withCompensatingAudit`'s own rollback/compensating-line protocol is already
 // exhaustively unit-tested generically (packages/domain/tests/audit/compensating.test.ts) against
 // a mocked DB writer — this test is scoped to THIS consumer's control flow, not that primitive.
 //
@@ -55,11 +63,10 @@ function fakeRequest(): FastifyRequest {
   return {
     requestContext: { traceId: 'trace-1', actorId: DECEASED_MEMBER_ID, pariwarId: PARIWAR_ID },
     params: { claimCaseId: CLAIM_CASE_ID },
+    // ⭐ ONE box since 11b.9 — the three publication booleans were removed from the request, and
+    // the contract is `.strict()`, so re-adding one here would be REJECTED, not ignored.
     body: {
       claimTimeDpdpa: true,
-      sahyogVivranPublication: true,
-      inMemoriamListing: false,
-      sahyogDrivePublication: false,
       locale: 'en',
     },
   } as unknown as FastifyRequest;
@@ -69,18 +76,18 @@ function fakeReply(): FastifyReply {
   return { status: vi.fn().mockReturnThis() } as unknown as FastifyReply;
 }
 
-describe('dpdpa-consent record() — atomicity when a later grant fails', () => {
-  it('stops after the failing grant, never emits the identity event, and rolls back the scope-tx', async () => {
+describe('dpdpa-consent record() — atomicity when a grant fails', () => {
+  it('stops at the failing grant, never emits the identity event, and rolls back the scope-tx', async () => {
     lockClaimCase.mockResolvedValue({
       deceasedMemberId: DECEASED_MEMBER_ID,
       currentState: 'documents_pending',
       intakeChannels: ['member_app'],
       claimantActorId: null,
     });
-    // Two boxes checked (claim_time_dpdpa + sahyog_vivran_publication) → two recordConsent calls.
-    // The FIRST succeeds; the SECOND rejects (simulating a real mid-loop DB failure).
+    // ⭐ ONE box checked (claim_time_dpdpa) → one recordConsent call, and it REJECTS (simulating a
+    // real DB failure inside the grant loop).
     recordConsent
-      .mockResolvedValueOnce({ consentId: 'row-1' })
+      .mockReset()
       .mockRejectedValueOnce(new Error('simulated mid-loop DB failure on grant 2'));
     openScopeTx.mockResolvedValue({ client: {}, tx: {}, pariwarId: PARIWAR_ID, scopeSet: true });
     closeScopeTx.mockResolvedValue(undefined);
@@ -92,8 +99,8 @@ describe('dpdpa-consent record() — atomicity when a later grant fails', () => 
       'simulated mid-loop DB failure on grant 2',
     );
 
-    // Exactly two attempts (stopped at the failing grant — never reached a hypothetical 3rd).
-    expect(recordConsent).toHaveBeenCalledTimes(2);
+    // Exactly one attempt — stopped at the failing grant, and ⛔ nothing after it ran.
+    expect(recordConsent).toHaveBeenCalledTimes(1);
     // The identity annotation must NEVER fire on a partial/failed grant set.
     expect(projectClaimState).not.toHaveBeenCalled();
     // consentExists (presenceView) is only reached after `ok = true` — never called either.
@@ -121,7 +128,7 @@ describe('dpdpa-consent record() — atomicity when a later grant fails', () => 
 
     await handlers.recordMember(fakeRequest(), fakeReply());
 
-    expect(recordConsent).toHaveBeenCalledTimes(2);
+    expect(recordConsent).toHaveBeenCalledTimes(1);
     expect(projectClaimState).toHaveBeenCalledTimes(1);
     expect(closeScopeTx).toHaveBeenCalledWith(expect.anything(), true);
   });

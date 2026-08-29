@@ -6,7 +6,7 @@
 //
 // Families:
 //   · the response shape — ⛔ NOTHING on the wire but the classified fields.
-//   · ⭐ the consent gate: it decides whether a row is NAMED, ⛔ never whether it EXISTS.
+//   · ⭐ the publication-basis gate: it decides whether a row is NAMED, ⛔ never whether it EXISTS.
 //   · the kill switch: a pulled Pariwar is INDISTINGUISHABLE from an empty one.
 //   · the anti-enumeration bounds — over-cap limit, over-horizon page, unknown parameter.
 //   · the name FORM is mode-resolved (D10 + `-136` cl.1), ⛔ never hard-coded.
@@ -15,7 +15,7 @@ import { randomUUID } from 'node:crypto';
 
 import { PublicSahyogDriveResponse } from '@twt/contracts';
 import { encryption, ids, kyc, member as memberDomain, pool, schema } from '@twt/domain';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { PUBLIC_DIRECTORY_PAGE_HORIZON } from '../../../src/modules/public-pages/handlers.js';
@@ -24,14 +24,28 @@ import { createTestApp, hasDatabase, teardown, type TestApp } from '../_setup.js
 
 const ROUTE = (pariwarId: string): string => `/api/v1/p/${pariwarId}/public-pages/sahyog-drive`;
 
+// ⭐⭐ MIGRATED BY STORY 11b.9 — the fixtures now seed the basis the surface ACTUALLY reads.
+// 11b.1 made a name render by inserting a `sahyog_drive_publication` consent row (the family's
+// claim-time tick-box). `2026-08-28-160` cl.3-5 DE-AUTHORISED that: the authority is the DECEASED
+// MEMBER'S OWN valid `tc_acceptance` whose accepted T&C version PINS the post-death publication
+// clause. ⇒ these fixtures seed a T&C version + the clause + the pin + the acceptance.
+// ⛔ NO TEST HERE HARDCODES THE CLAUSE-ID LITERAL — it comes from
+// `pool.SAHYOG_DRIVE_PUBLICATION_CLAUSE_ID`, so counsel's final value (story D3) is a one-line
+// change in the domain and ⛔ zero changes here.
+
 interface SeedDriveSpec {
   legalName: string;
   district?: string;
   poolState?: 'closed' | 'settled' | 'live';
-  /** Whether the family consented to `sahyog_drive_publication`. */
-  consented?: boolean;
-  /** Seed the consent as granted-then-REVOKED (which must read exactly like never-granted). */
+  /** Give the deceased member the full publication basis (acceptance + pinned clause). */
+  authorised?: boolean;
+  /** Seed the acceptance as granted-then-REVOKED (which must read exactly like never-granted). */
   revoked?: boolean;
+  /**
+   * ⛔ Seed the RETIRED `sahyog_drive_publication` consent, granted and valid — and ⛔ nothing else.
+   * ⭐ The de-authorisation proof: this must name NOTHING on its own (story D2).
+   */
+  retiredConsentOnly?: boolean;
   canonicalIdentifier?: string;
 }
 
@@ -43,6 +57,8 @@ async function seedDrives(
   const pariwarId = randomUUID();
   const scopeTx = await openScopeTx(t.deps, pariwarId);
   const poolIds: string[] = [];
+  /** The Pariwar's single effective, clause-pinning T&C version — minted on first need. */
+  let pinnedTcVersionId: string | null = null;
   try {
     const pid = ids.pariwarId(pariwarId);
     for (const d of drives) {
@@ -97,13 +113,57 @@ async function seedDrives(
       );
       await scopeTx.client.query("SET LOCAL app.pool_state_writer = 'off'");
 
-      if (d.consented === true || d.revoked === true) {
+      if (d.authorised === true || d.revoked === true) {
+        // ⭐ ONE effective T&C version PER PARIWAR, minted lazily — ⛔ not one per member.
+        // `terms_and_conditions_versions_pariwar_current_uq` is a PARTIAL UNIQUE index allowing at
+        // most ONE open-ended (currently-in-force) version per Pariwar, so a per-member version
+        // would 23505 the moment two members in one Pariwar were authorised. ⚠ It is also what
+        // production looks like: a Pariwar has one effective T&C and MANY members accept it.
+        // ⇒ what varies per member is the ACCEPTANCE row, which is exactly where the basis lives.
+        if (pinnedTcVersionId === null) {
+          pinnedTcVersionId = randomUUID();
+          const clauseVersionId = randomUUID();
+          await scopeTx.client.query(
+            `INSERT INTO terms_and_conditions_versions
+               (tc_version_id, pariwar_id, version, body_markdown, body_html_rendered,
+                effective_from, legal_review_status)
+             VALUES ($1, $2, 1, '# Terms', '<h1>Terms</h1>', now() - interval '1 day', 'approved')`,
+            [pinnedTcVersionId, pariwarId],
+          );
+          await scopeTx.client.query(
+            `INSERT INTO clause_versions
+               (clause_version_id, clause_id, pariwar_id, version, effective_date, payload,
+                benefit_mechanism)
+             VALUES ($1, $2, $3, 1, now() - interval '1 day', '{}'::jsonb, 'pool')`,
+            [clauseVersionId, pool.SAHYOG_DRIVE_PUBLICATION_CLAUSE_ID, pariwarId],
+          );
+          await scopeTx.client.query(
+            `INSERT INTO terms_and_conditions_pinned_clauses
+               (tc_version_id, clause_version_id, pariwar_id)
+             VALUES ($1, $2, $3)`,
+            [pinnedTcVersionId, clauseVersionId, pariwarId],
+          );
+        }
+        // The acceptance, exactly as `member-terms.handlers.ts` writes it: the SERVER-resolved
+        // `tc_version_id` goes in `consent_artifact_ref`. ⛔ If that writer ever stores anything
+        // else there, the predicate returns false for every member — silently.
+        await scopeTx.client.query(
+          `INSERT INTO consent_records (pariwar_id, subject_id, consent_type, consent_artifact_ref,
+                                        granted_via_actor, consent_payload, granted_at, revoked_at)
+           VALUES ($1, $2, 'tc_acceptance', $3, 'member_self', '{}'::jsonb,
+                   now() - interval '1 day', $4)`,
+          [pariwarId, memberId, pinnedTcVersionId, d.revoked === true ? new Date() : null],
+        );
+      }
+
+      if (d.retiredConsentOnly === true) {
+        // ⛔ The 11b.1 gate, granted and valid — and DE-AUTHORISED. It must name nothing.
         await scopeTx.client.query(
           `INSERT INTO consent_records (pariwar_id, subject_id, consent_type, granted_via_actor,
                                         consent_payload, granted_at, revoked_at)
            VALUES ($1, $2, 'sahyog_drive_publication', 'member_self', '{}'::jsonb,
-                   now() - interval '1 day', $3)`,
-          [pariwarId, memberId, d.revoked === true ? new Date() : null],
+                   now() - interval '1 day', NULL)`,
+          [pariwarId, memberId],
         );
       }
       poolIds.push(poolId);
@@ -171,7 +231,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Drive route (:5433)', { timeout: 30
     const t = await createTestApp();
     try {
       const { pariwarId } = await seedDrives(t, [
-        { legalName: 'Rajesh Kumar Sharma', district: 'Lucknow', consented: true },
+        { legalName: 'Rajesh Kumar Sharma', district: 'Lucknow', authorised: true },
       ]);
 
       const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId) });
@@ -209,12 +269,12 @@ describe.skipIf(!hasDatabase)('public Sahyog Drive route (:5433)', { timeout: 30
     }
   });
 
-  describe('⭐ the consent gate decides whether a row is NAMED, ⛔ never whether it EXISTS', () => {
-    it('a CONSENTED drive carries the deceased member’s FULL NAME (D10)', async () => {
+  describe('⭐ the publication basis decides whether a row is NAMED, ⛔ never whether it EXISTS', () => {
+    it('an AUTHORISED drive carries the deceased member’s FULL NAME (D10)', async () => {
       const t = await createTestApp();
       try {
         const { pariwarId } = await seedDrives(t, [
-          { legalName: 'Rajesh Kumar Sharma', district: 'Lucknow', consented: true },
+          { legalName: 'Rajesh Kumar Sharma', district: 'Lucknow', authorised: true },
         ]);
         const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId) });
         const body = res.json() as { items: Array<Record<string, unknown>> };
@@ -226,16 +286,16 @@ describe.skipIf(!hasDatabase)('public Sahyog Drive route (:5433)', { timeout: 30
       }
     });
 
-    it('⭐ an UNCONSENTED drive STILL RENDERS, with the NAME null and everything else intact', async () => {
+    it('⭐ a drive with NO BASIS STILL RENDERS, with the NAME null and everything else intact', async () => {
       const t = await createTestApp();
       try {
         const { pariwarId } = await seedDrives(t, [
-          { legalName: 'Sunita Devi', district: 'Kanpur', consented: false },
+          { legalName: 'Sunita Devi', district: 'Kanpur', authorised: false },
         ]);
         const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId) });
         const body = res.json() as { items: Array<Record<string, unknown>>; total: number };
 
-        // ⭐ THE WHOLE OF AC2: consent removes a NAME, ⛔ never a DRIVE from the public record.
+        // ⭐ THE WHOLE OF AC5: an absent basis removes a NAME, ⛔ never a DRIVE from the record.
         expect(body.total).toBe(1);
         expect(body.items).toHaveLength(1);
         expect(body.items[0]?.['deceasedMemberName']).toBeNull();
@@ -249,7 +309,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Drive route (:5433)', { timeout: 30
       }
     });
 
-    it('a REVOKED consent reads EXACTLY like a missing one — same wire value, row still present', async () => {
+    it('a REVOKED acceptance reads EXACTLY like a missing one — same wire value, row still present', async () => {
       const t = await createTestApp();
       try {
         const { pariwarId } = await seedDrives(t, [
@@ -266,12 +326,63 @@ describe.skipIf(!hasDatabase)('public Sahyog Drive route (:5433)', { timeout: 30
       }
     });
 
+    it('⛔⛔ THE DE-AUTHORISATION, PROVED ON THE WIRE: a granted `sahyog_drive_publication` names NOTHING', async () => {
+      const t = await createTestApp();
+      try {
+        // ⭐ This fixture is EXACTLY what made a name render under Story 11b.1 — a valid, granted,
+        // un-revoked family tick-box. `2026-08-28-160` cl.5 retired it as the authority, and the
+        // predicate simply does ⛔ NOT CONSULT it: ⛔ not ANDed, ⛔ not ORed (story D2).
+        // ⚠ The row and its consent type are PRESERVED by the same clause — which is precisely why
+        // this case must keep being asserted rather than deleted along with the gate.
+        const { pariwarId } = await seedDrives(t, [
+          { legalName: 'Kamla Devi', district: 'Patna', retiredConsentOnly: true },
+        ]);
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId) });
+        const body = res.json() as { items: Array<Record<string, unknown>>; total: number };
+
+        // ⭐ ROW PRESENT, NAME ABSENT — asserted positively, ⛔ not merely "the call succeeded".
+        expect(body.total).toBe(1);
+        expect(body.items).toHaveLength(1);
+        expect(body.items[0]?.['district']).toBe('Patna');
+        expect(body.items[0]?.['deceasedMemberName']).toBeNull();
+        expect(res.body).not.toContain('Kamla');
+      } finally {
+        await teardown(t);
+      }
+    });
+
+    it('⛔ the Tier-1 DECRYPT is NOT CALLED when the basis is false (AC6 — zero KMS calls)', async () => {
+      const t = await createTestApp();
+      try {
+        // ⭐⛔ THE HALF THAT MATTERS IS ⛔ NOT THE WASTED ROUND-TRIP — it is that an unauthenticated
+        // route must ⛔ never decrypt a name it has no authorising basis to read. Asserted by
+        // counting real calls into the KMS-backed decrypt, ⛔ not by inspecting the response.
+        const decryptSpy = vi.spyOn(encryption, 'decryptKycField');
+        const { pariwarId } = await seedDrives(t, [
+          { legalName: 'No Basis', district: 'Kanpur', authorised: false },
+          { legalName: 'Retired Only', district: 'Patna', retiredConsentOnly: true },
+          { legalName: 'Revoked One', district: 'Agra', revoked: true },
+        ]);
+        decryptSpy.mockClear();
+
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId) });
+        const body = res.json() as { items: Array<Record<string, unknown>>; total: number };
+
+        expect(body.total).toBe(3);
+        expect(decryptSpy).not.toHaveBeenCalled();
+        expect(body.items.every((i) => i['deceasedMemberName'] === null)).toBe(true);
+        decryptSpy.mockRestore();
+      } finally {
+        await teardown(t);
+      }
+    });
+
     it('⭐ the index degrades PER-POOL, ⛔ never per-page — a mixed page renders BOTH rows', async () => {
       const t = await createTestApp();
       try {
         const { pariwarId } = await seedDrives(t, [
-          { legalName: 'Named Member', district: 'Lucknow', consented: true },
-          { legalName: 'Unnamed Member', district: 'Kanpur', consented: false },
+          { legalName: 'Named Member', district: 'Lucknow', authorised: true },
+          { legalName: 'Unnamed Member', district: 'Kanpur', authorised: false },
         ]);
         const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId) });
         const body = res.json() as { items: Array<Record<string, unknown>>; total: number };
@@ -294,7 +405,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Drive route (:5433)', { timeout: 30
       const t = await createTestApp();
       try {
         const { pariwarId } = await seedDrives(t, [
-          { legalName: 'Rajesh Kumar Sharma', district: 'Lucknow', consented: true },
+          { legalName: 'Rajesh Kumar Sharma', district: 'Lucknow', authorised: true },
         ]);
 
         // Default (no row) is `full_name` — the DEFAULT, ⛔ not a constant.
@@ -338,7 +449,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Drive route (:5433)', { timeout: 30
         // the shielded form an entire class of deceased members would appear UNNAMED with no
         // signal. Mononyms are common in India. This asserts the ground D10 rests on.
         const { pariwarId } = await seedDrives(t, [
-          { legalName: 'Sushil', district: 'Jaipur', consented: true },
+          { legalName: 'Sushil', district: 'Jaipur', authorised: true },
         ]);
         const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId) });
         expect(
@@ -357,7 +468,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Drive route (:5433)', { timeout: 30
       const t = await createTestApp();
       try {
         const { pariwarId: pulled } = await seedDrives(t, [
-          { legalName: 'Rajesh Kumar Sharma', district: 'Lucknow', consented: true },
+          { legalName: 'Rajesh Kumar Sharma', district: 'Lucknow', authorised: true },
         ]);
         await setPublicationEnabled(t, pulled, false);
 
@@ -393,8 +504,8 @@ describe.skipIf(!hasDatabase)('public Sahyog Drive route (:5433)', { timeout: 30
       const t = await createTestApp();
       try {
         const { pariwarId } = await seedDrives(t, [
-          { legalName: 'Closed Drive', poolState: 'closed', consented: true },
-          { legalName: 'Live Drive', poolState: 'live', consented: true },
+          { legalName: 'Closed Drive', poolState: 'closed', authorised: true },
+          { legalName: 'Live Drive', poolState: 'live', authorised: true },
         ]);
         const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId) });
         const body = res.json() as { items: Array<Record<string, unknown>>; total: number };
@@ -410,7 +521,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Drive route (:5433)', { timeout: 30
       const t = await createTestApp();
       try {
         const { pariwarId } = await seedDrives(t, [
-          { legalName: 'Settled Drive', poolState: 'settled', consented: true },
+          { legalName: 'Settled Drive', poolState: 'settled', authorised: true },
         ]);
         const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId) });
         expect(
@@ -484,7 +595,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Drive route (:5433)', { timeout: 30
       const t = await createTestApp();
       try {
         const { pariwarId } = await seedDrives(t, [
-          { legalName: 'Rajesh Kumar Sharma', consented: true },
+          { legalName: 'Rajesh Kumar Sharma', authorised: true },
         ]);
         // ⭐ NOT a "feature not implemented yet" 200-with-everything. `member_kyc_profiles` has no
         // blind index and envelope encryption gives every name its own DEK, so the only way to
@@ -505,8 +616,8 @@ describe.skipIf(!hasDatabase)('public Sahyog Drive route (:5433)', { timeout: 30
       try {
         const code = 'P-2026-08-EXACT1';
         const { pariwarId } = await seedDrives(t, [
-          { legalName: 'A', district: 'Lucknow', canonicalIdentifier: code, consented: true },
-          { legalName: 'B', district: 'Kanpur', consented: true },
+          { legalName: 'A', district: 'Lucknow', canonicalIdentifier: code, authorised: true },
+          { legalName: 'B', district: 'Kanpur', authorised: true },
         ]);
 
         const byDistrict = await t.app.inject({

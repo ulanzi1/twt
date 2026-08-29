@@ -364,8 +364,11 @@ surfaces:
             surfaces they name. What is now incomplete is the implied generalisation:
             SAHYOG DRIVE — a surface this text never named, and which sits FURTHER
             outside this fence, not nearer — renders the DECEASED member's FULL NAME
-            under its own exception below, consent-gated per subject
-            (`sahyog_drive_publication`) in a way this directory field is ⛔ NOT.
+            under its own exception below, gated on the MEMBER'S OWN accepted T&C
+            version pinning the post-death publication clause, in a way this
+            directory field is ⛔ NOT. ⚠ ⛔ It is ⛔ NOT a per-subject consent gate:
+            the family tick-box (`sahyog_drive_publication`) was DE-AUTHORISED by
+            `2026-08-28-160` cl.3-5 and the box retired by `-162` (Story 11b.9).
             ⛔ IN MEMORIAM AND SAHYOG VIVRAN STILL KEEP FIRST-NAME + LAST-INITIAL and
             still need their own Panel ruling. ⛔ D10 moved ONE surface's name form
             and reached ⛔ nothing else — do not cite it for a third.
@@ -523,13 +526,21 @@ surfaces:
           `full_name` is the DEFAULT, ⛔ not a constant: `-136` cl.1 states that a build
           in which the public name form cannot be changed without a code change FAILS
           that clause. A Pariwar that shields still shields, in both directions.
-          ⭐⛔ CONSENT DECIDES WHETHER A ROW IS *NAMED*, ⛔ NEVER WHETHER IT *EXISTS*.
-          It renders only where `consentExists(…, 'sahyog_drive_publication')` holds at
-          render time, subject = the DECEASED member — and a MISSING consent and a
-          REVOKED one are the SAME verdict. An unconsented pool still renders in full:
-          letter code, canonical identifier, district, close date, confirmed count and
-          close-of-cycle framing. ⇒ the index degrades PER-POOL, ⛔ never per-page, and a
-          family's declination removes a NAME, ⛔ never a DRIVE from the public record.
+          ⭐⛔ THE BASIS DECIDES WHETHER A ROW IS *NAMED*, ⛔ NEVER WHETHER IT *EXISTS*.
+          It renders only where the DECEASED member holds a VALID `tc_acceptance` whose
+          accepted T&C version PINS the post-death publication clause — the member's own
+          act, ⛔ never the family's. A MISSING acceptance, a REVOKED one, and one against
+          a version that does ⛔ not pin the clause are the SAME verdict. An unnamed pool
+          still renders in full: letter code, canonical identifier, district, close date,
+          confirmed count and close-of-cycle framing. ⇒ the index degrades PER-POOL,
+          ⛔ never per-page, and an absent basis removes a NAME, ⛔ never a DRIVE from the
+          public record.
+          ⚠⛔ THE BASIS MOVED, THE PROPERTIES DID ⛔ NOT (Story 11b.9). Until
+          `2026-08-28-160` this read `consentExists(…, 'sahyog_drive_publication')` — the
+          tick-box the FAMILY ticked at claim time. That mechanism is DE-AUTHORISED
+          (cl.3-5) and the box retired by `-162`; the family has ⛔ no veto over the
+          member's own name (cl.6), and its decline path is removed ON PURPOSE. ⛔ A later
+          reader must ⛔ not restore it as a missing feature.
           ⚠ An unresolvable name or a failed decrypt omits the NAME, ⛔ never the ROW —
           the DELIBERATE INVERSE of /members, where a row with no name has no purpose;
           here it still carries the drive. ⛔ And the omission never announces itself:

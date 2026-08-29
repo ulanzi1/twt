@@ -422,12 +422,14 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
               fundingOutcome: row.fundingOutcome,
             };
 
-            // ⭐⛔ CONSENT IS EVALUATED *BEFORE* THE DECRYPT, ⛔ NEVER AFTER. An unconsented row must
-            // cost ZERO KMS calls. Decrypting a name the gate is about to discard is both a wasted
-            // round-trip on a quota-limited service AND a decrypt with no authorising basis — and
-            // the second half is the one that matters. ⚠ A MISSING consent and a REVOKED one reach
-            // this branch identically, which is intended: neither authorises a render.
-            if (!row.nameConsentGranted || row.deceasedNameCiphertext === null) {
+            // ⭐⛔ THE BASIS IS EVALUATED *BEFORE* THE DECRYPT, ⛔ NEVER AFTER. A row with no basis
+            // must cost ZERO KMS calls. Decrypting a name the gate is about to discard is both a
+            // wasted round-trip on a quota-limited service AND a decrypt with no authorising basis
+            // — and the second half is the one that matters (11b.9 AC6).
+            // ⚠ A MISSING `tc_acceptance`, a REVOKED one, and one against a T&C version that does
+            // ⛔ not pin the publication clause all reach this branch identically. That is intended:
+            // ⛔ none of them authorises a render, and the gate is FAIL-CLOSED in every direction.
+            if (!row.namePublicationAuthorised || row.deceasedNameCiphertext === null) {
               return { ...base, deceasedMemberName: null };
             }
 
@@ -473,6 +475,12 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
           },
         );
 
+        // ⭐⭐ THE INERT-STATE DIAGNOSTIC (11b.9 AC8) — so the fail-closed day-one posture is
+        // ⛔ NEVER debugged as a bug, and so a first responder is not sent to the wrong half of the
+        // system. ⛔ It changes ⛔ NOTHING about what was rendered; every decision above is already
+        // made. Best-effort and ⛔ never able to fail the request.
+        await logNamePublicationBasisAbsence(scopeTx.tx, pariwarId, rows);
+
         ok = true;
         return { items, page, limit, total };
       } finally {
@@ -480,6 +488,79 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
       }
     },
   };
+}
+
+/**
+ * ⭐⭐ AC8 — MAKE THE INERT STATE OBSERVABLE, AND SEPARATE ITS TWO CAUSES.
+ *
+ * Story 11b.9 ships FAIL-CLOSED: until counsel's post-death clause is minted and pinned into an
+ * effective T&C version, ⛔ NO name renders anywhere. ⚠ The surface is INERT, ⛔ not broken — but
+ * from the outside "every row unnamed" looks identical to a bug, so it is said out loud here.
+ *
+ * ⛔⛔ THE CONTRAST PAIR IS ⛔ NOT "EVERYONE DECLINED" — ⛔ NOBODY CAN DECLINE ANY MORE. The family's
+ * decline path was removed by ruling (`2026-08-28-160` cl.6) and the member's clause is a CONDITION
+ * OF MEMBERSHIP, so that state is UNREACHABLE BY CONSTRUCTION. The two states that must be
+ * separated are:
+ *   (i)  PROVISIONING-INERT — ⛔ no effective T&C version in this Pariwar pins the clause, so ⛔ NO
+ *        member in it can be named at all. A WHOLE-PARIWAR condition with a PROVISIONING answer.
+ *   (ii) PER-MEMBER — the clause IS pinned, but THIS member has no valid `tc_acceptance`, has
+ *        revoked it, or accepted a version that does not pin it. A MEMBER-RECORD answer.
+ * ⛔ A diagnostic that cannot tell (i) from (ii) sends the first responder to the wrong half.
+ *
+ * ⚠ MEMBER-ATTRIBUTED, and the signal is the ACTION NAME
+ * ([[project_anonymous_diagnostic_log_convention]]): the (ii) line carries the deceased member's id
+ * so the record can actually be looked up, and (i) carries only the Pariwar because it is ⛔ not a
+ * per-member fact at all. ⛔ NO free text, ⛔ no ciphertext, ⛔ no name, ⛔ no district — the payload
+ * is ids and counts only. ⚠ A server log is ⛔ not the public wire: `deceasedMemberId` is
+ * INTERNAL-ONLY and is still ⛔ never serialized onto a response (11a.3 control 5).
+ *
+ * ⚠⭐ AT MOST ONE EXTRA QUERY PER REQUEST, and ⛔ ONLY when a row actually came back unnamed — the
+ * D7(a) N+1 must not return through this door either. A fully-named page costs ⛔ nothing.
+ *
+ * ⛔ BEST-EFFORT: this is telemetry about a page that has already been resolved. A diagnostic that
+ * could 500 the public page it is describing would be strictly worse than no diagnostic.
+ */
+async function logNamePublicationBasisAbsence(
+  tx: Parameters<typeof poolDomain.isSahyogDrivePublicationClausePinned>[0],
+  pariwarId: ids.PariwarId,
+  rows: readonly { namePublicationAuthorised: boolean; deceasedMemberId: string }[],
+): Promise<void> {
+  const unauthorised = rows.filter((r) => !r.namePublicationAuthorised);
+  if (unauthorised.length === 0) return;
+
+  try {
+    const clausePinned = await poolDomain.isSahyogDrivePublicationClausePinned(tx, pariwarId);
+
+    if (!clausePinned) {
+      // (i) WHOLE-PARIWAR. ⛔ Deliberately NOT emitted per member: attributing a provisioning gap to
+      // each individual member is the thing that would send the responder to the wrong half.
+      // ⚠ `console.info`, ⛔ NOT warn/error (review 2026-08-29): this is expected, ⛔ not a bug — it
+      // fires on close to every request in this Pariwar for the whole fail-closed period.
+      console.info(
+        '[public-pages] sahyog-drive: name-publication-basis PROVISIONING-INERT — no effective T&C version in this Pariwar pins the publication clause, so no member can be named (11b.9 AC8; expected until the clause is minted and pinned)',
+        { pariwarId, unnamedRowsOnThisPage: unauthorised.length },
+      );
+      return;
+    }
+
+    // (ii) PER-MEMBER. The clause IS pinned for this Pariwar ⇒ the gap is in the member's own
+    // record: no valid `tc_acceptance`, a revoked one, or one against a version that does not pin.
+    // ⚠ Deduped by `deceasedMemberId` (review 2026-08-29): a member with more than one Sahyog Drive
+    // pool on the same page must log once, ⛔ not once per pool.
+    for (const memberId of new Set(unauthorised.map((r) => r.deceasedMemberId))) {
+      // ⚠ `console.debug`, ⛔ NOT warn/error (review 2026-08-29) — see (i) above.
+      console.debug(
+        '[public-pages] sahyog-drive: name-publication-basis ABSENT-PER-MEMBER — the publication clause IS pinned for this Pariwar, so this member has no valid tc_acceptance, has revoked it, or accepted a version that does not pin it (11b.9 AC8)',
+        { pariwarId, deceasedMemberId: memberId },
+      );
+    }
+  } catch (err) {
+    // ⛔ NEVER let telemetry break the page it describes.
+    console.error(
+      '[public-pages] sahyog-drive: name-publication-basis diagnostic failed — rendering is unaffected',
+      err,
+    );
+  }
 }
 
 /**

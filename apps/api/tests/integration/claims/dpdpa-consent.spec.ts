@@ -2,16 +2,28 @@
 //
 // Drives the member-app consent step through the REAL guard chain [requireMemberSession] (NO step-up
 // — consent is not a financial action) via `app.inject`:
-//   · AC1/AC2 happy path: 3 boxes → 201, THREE consent_records rows (subject_id = deceased_member_id,
+//   · AC1/AC2 happy path: the ONE box → 201, ONE consent_records row (subject_id = deceased_member_id,
 //     artifact_ref = claim_case_id, granted_via = member_self, payload = { server-canonical copy, locale }),
 //     ONE claim.dpdpa_consent_recorded event (consent_types_granted only, NO PII), audit NON-PII;
 //   · AC2 consent-copy integrity: the stored checkboxTextShown is the SERVER-resolved canonical copy;
-//   · D3 no-block: only (a) → 201, ONE row, the claim state is UNCHANGED (declining b/c never blocks);
+//   · ⭐ the RETIREMENT, proved on the wire: a request still carrying a retired box → 400;
 //   · D3a: claimTimeDpdpa:false → 400 (the processing consent is required to proceed);
 //   · AC5 pre-adjudication guard: a verifier_approved claim → 409 dpdpa_consent.not_recordable;
 //   · AC5 ownership: a member cannot record onto ANOTHER member's claim → 404;
-//   · AC3 revoke (time-travel): revoke (b) → consentExists false NOW but true at a pre-revocation instant;
+//   · ⭐ AC3 revoke still works on a PRE-EXISTING grant — the D7(a) property;
 //   · the member-session guard: no token → 401.
+//
+// ⭐⭐ MIGRATED BY STORY 11b.9 — and read the discriminator before "fixing" anything here.
+// `2026-08-28-162` cl.2 reduced the claim consent screen to `claim_time_dpdpa` ALONE and removed the
+// three publication booleans from the request contract. ⇒ a case that changed because the REQUEST
+// lost three booleans is EXPECTED. A case that changed because a TYPE, TUPLE or ENUM lost a value
+// would be an AC4 VIOLATION — ⛔ revert the source, ⛔ never the test.
+//
+// ⛔⛔ THE REVOKE CASES ARE ⛔ NOT DELETED, AND THAT IS THE POINT (story D7(a)). Retiring a box stops
+// NEW rows; it ⛔ does not extinguish the rights attached to rows that ALREADY EXIST. Revocation is
+// the last remaining data-subject action on those preserved rows, so the fixtures now seed the grant
+// DIRECTLY — which is exactly the pre-11b.9 row the ruling preserves — and then revoke it through
+// the live route. ⛔ Removing these would be a rights regression wearing a cleanup's clothes.
 //
 // The claim is driven to `intake_converged` via the real intake flow (a pre-adjudication state).
 
@@ -29,6 +41,27 @@ type Json = Record<string, unknown>;
 
 const EN_PROCESSING_COPY =
   'I consent to the Trust processing the deceased member’s, my, and the nominees’ personal information as needed to verify and settle this claim.';
+
+/**
+ * ⭐ Seed a PRE-11b.9 publication grant directly — the row `2026-08-28-160` cl.5 preserves.
+ *
+ * ⛔ It can no longer be created through the record route (the box is retired), and that is precisely
+ * why it is inserted here: the property under test is that such a row stays VISIBLE and REVOCABLE.
+ */
+async function seedLegacyPublicationGrant(
+  t: TestApp,
+  pariwarId: string,
+  deceasedMemberId: string,
+  claimCaseId: string,
+  consentType: 'sahyog_vivran_publication' | 'in_memoriam_listing' | 'sahyog_drive_publication',
+): Promise<void> {
+  await t.pool.query(
+    `INSERT INTO consent_records (pariwar_id, subject_id, consent_type, consent_artifact_ref,
+                                  granted_via_actor, consent_payload, granted_at)
+     VALUES ($1, $2, $3, $4, 'member_self', '{}'::jsonb, now() - interval '1 hour')`,
+    [pariwarId, deceasedMemberId, consentType, claimCaseId],
+  );
+}
 
 async function seedMember(t: TestApp): Promise<{ memberId: string; pariwarId: string }> {
   const memberId = randomUUID();
@@ -108,19 +141,19 @@ async function setupClaim(t: TestApp): Promise<{ memberId: string; pariwarId: st
 const url = (claimCaseId: string) => `/api/v1/member/claims/${claimCaseId}/dpdpa-consent`;
 
 describe.skipIf(!hasDatabase)('Claim-time DPDPA consent — member-app E2E (:5433)', () => {
-  it('AC1/AC2: three boxes → 201, three consent rows (subject=deceased, artifact=claim), one event, audit NON-PII', async () => {
+  it('AC1/AC2: the ONE box → 201, one consent row (subject=deceased, artifact=claim), one event, audit NON-PII', async () => {
     const t = await createTestApp();
     try {
       const { memberId, pariwarId, claimCaseId } = await setupClaim(t);
 
       const res = await inject(t, 'POST', url(claimCaseId), {
-        payload: { claimTimeDpdpa: true, sahyogVivranPublication: true, inMemoriamListing: true, sahyogDrivePublication: false, locale: 'en' },
+        payload: { claimTimeDpdpa: true, locale: 'en' },
         token: token(t, memberId, pariwarId),
       });
       expect(res.status).toBe(201);
-      expect(res.body.granted).toEqual(['claim_time_dpdpa', 'sahyog_vivran_publication', 'in_memoriam_listing']);
+      expect(res.body.granted).toEqual(['claim_time_dpdpa']);
 
-      // THREE consent_records rows keyed on the DECEASED member (D1), artifact_ref = claim_case_id.
+      // ONE consent_records row keyed on the DECEASED member (D1), artifact_ref = claim_case_id.
       const rows = await t.pool.query<{
         subject_id: string; consent_type: string; consent_artifact_ref: string;
         granted_via_actor: string; consent_payload: { checkboxTextShown: string; locale: string };
@@ -129,7 +162,7 @@ describe.skipIf(!hasDatabase)('Claim-time DPDPA consent — member-app E2E (:543
            FROM consent_records WHERE consent_artifact_ref = $1 ORDER BY consent_type`,
         [claimCaseId],
       );
-      expect(rows.rows).toHaveLength(3);
+      expect(rows.rows).toHaveLength(1);
       for (const r of rows.rows) {
         expect(r.subject_id).toBe(memberId); // D1 — the deceased member is the subject
         expect(r.consent_artifact_ref).toBe(claimCaseId); // D1 — provenance back-link
@@ -147,7 +180,7 @@ describe.skipIf(!hasDatabase)('Claim-time DPDPA consent — member-app E2E (:543
       );
       expect(events.rows).toHaveLength(1);
       expect(events.rows[0]?.payload).toMatchObject({
-        consent_types_granted: ['claim_time_dpdpa', 'sahyog_vivran_publication', 'in_memoriam_listing'],
+        consent_types_granted: ['claim_time_dpdpa'],
         from_state: 'intake_converged', to_state: 'intake_converged',
       });
       // NO PII / checkbox text in the event payload.
@@ -161,117 +194,103 @@ describe.skipIf(!hasDatabase)('Claim-time DPDPA consent — member-app E2E (:543
     }
   });
 
-  // D3 (no-block), the full optional-consent independence matrix (code review gap-closure): the
-  // original test only covered (a)-only and all-three — (a)+(b)-without-(c) and (a)+(c)-without-(b)
-  // were never exercised. Each combo must independently: write exactly the rows for the checked
-  // boxes (never a row for an unchecked one), return exactly that `granted` set, and NEVER block or
-  // alter claim progression regardless of which of (b)/(c) is declined.
-  // ⭐ EXTENDED AT STORY 11b.1 — a FOURTH optional box, `(d) sahyog_drive_publication`, and it is
-  // exercised in BOTH directions rather than merely appended as `false` to satisfy the schema.
-  // ⚠ (d) IS THE ONE MOST WORTH PROVING NON-BLOCKING. It authorises publishing the deceased
-  // member's NAME on a public page, so it is the box a family is most likely to decline — and
-  // Niyamavali §4.4, Part 10 and Trust Deed cl.15(c) each forbid making it mandatory. A regression
-  // that folded (d) into the `.refine()` would make declining it BLOCK THE CLAIM, which is the
-  // worst failure this file can catch: a grieving family told they cannot file unless they agree
-  // to publication.
-  const OPTIONAL_CONSENT_COMBOS: Array<{
-    label: string;
-    payload: {
-      sahyogVivranPublication: boolean;
-      inMemoriamListing: boolean;
-      sahyogDrivePublication: boolean;
-    };
-    expectedGranted: string[];
-  }> = [
-    {
-      label: '(a) only — ⭐ ALL THREE publication consents DECLINED, and the claim proceeds',
-      payload: {
-        sahyogVivranPublication: false,
-        inMemoriamListing: false,
-        sahyogDrivePublication: false,
-      },
-      expectedGranted: ['claim_time_dpdpa'],
-    },
-    {
-      label: '(a) + (b), (c) + (d) declined',
-      payload: {
-        sahyogVivranPublication: true,
-        inMemoriamListing: false,
-        sahyogDrivePublication: false,
-      },
-      expectedGranted: ['claim_time_dpdpa', 'sahyog_vivran_publication'],
-    },
-    {
-      label: '(a) + (c), (b) + (d) declined',
-      payload: {
-        sahyogVivranPublication: false,
-        inMemoriamListing: true,
-        sahyogDrivePublication: false,
-      },
-      expectedGranted: ['claim_time_dpdpa', 'in_memoriam_listing'],
-    },
-    {
-      label: '(a) + (d) ONLY — ⭐ the Sahyog Drive name consent alone, its siblings declined',
-      payload: {
-        sahyogVivranPublication: false,
-        inMemoriamListing: false,
-        sahyogDrivePublication: true,
-      },
-      // ⛔ Proves (d) writes its OWN row and does not ride on a sibling's. Reusing
-      // `sahyog_vivran_publication` for this surface was rejected at D4(c) precisely because it
-      // would silently widen what a family agreed to.
-      expectedGranted: ['claim_time_dpdpa', 'sahyog_drive_publication'],
-    },
-    {
-      label: 'all four',
-      payload: {
-        sahyogVivranPublication: true,
-        inMemoriamListing: true,
-        sahyogDrivePublication: true,
-      },
-      expectedGranted: [
-        'claim_time_dpdpa',
-        'sahyog_vivran_publication',
-        'in_memoriam_listing',
-        'sahyog_drive_publication',
-      ],
-    },
-  ];
+  // ⭐⭐ THE OPTIONAL-CONSENT INDEPENDENCE MATRIX IS GONE, AND ⛔ NOT BECAUSE IT WAS REDUNDANT.
+  //
+  // It exercised (a)+(b), (a)+(c), (a)+(d) and all-four to prove each optional box wrote its OWN row
+  // and that declining any of them NEVER blocked the claim — with (d) singled out as *"the one most
+  // worth proving non-blocking"*, since a regression folding it into the `.refine()` would tell a
+  // grieving family they cannot file unless they agree to publication.
+  //
+  // ⛔ EVERY ONE OF THOSE COMBINATIONS IS NOW UNCONSTRUCTIBLE: `2026-08-28-162` cl.2 retired all
+  // three optional boxes, so `RecordDpdpaConsentRequest` carries exactly ONE boolean. There is no
+  // "decline" to make non-blocking, because there is nothing left to decline.
+  // ⭐ WHAT REPLACES IT is stronger for what it can still assert: the request is `.strict()`, so a
+  // client (or a regressed screen) still SENDING a retired box is REJECTED outright rather than
+  // silently ignored — which is what actually guarantees no new row of those types is ever written.
+  const RETIRED_BOXES = [
+    'sahyogVivranPublication',
+    'inMemoriamListing',
+    'sahyogDrivePublication',
+  ] as const;
 
-  for (const combo of OPTIONAL_CONSENT_COMBOS) {
-    it(`D3 (no-block): ${combo.label} → 201, exactly the checked rows, claim state UNCHANGED`, async () => {
+  for (const retiredBox of RETIRED_BOXES) {
+    it(`⛔ the retirement, on the wire: a request still carrying ${retiredBox} → 400, no rows written`, async () => {
       const t = await createTestApp();
       try {
         const { memberId, pariwarId, claimCaseId } = await setupClaim(t);
         const res = await inject(t, 'POST', url(claimCaseId), {
-          payload: { claimTimeDpdpa: true, ...combo.payload, locale: 'en' },
+          payload: { claimTimeDpdpa: true, [retiredBox]: true, locale: 'en' },
           token: token(t, memberId, pariwarId),
         });
-        expect(res.status).toBe(201);
-        expect((res.body.granted as string[]).sort()).toEqual([...combo.expectedGranted].sort());
-
-        const rows = await t.pool.query<{ consent_type: string }>(
-          `SELECT consent_type FROM consent_records WHERE consent_artifact_ref = $1`, [claimCaseId],
+        expect(res.status).toBe(400);
+        // ⛔ And critically: NOTHING was written — not the retired type, and not (a) either.
+        const rows = await t.pool.query(
+          `SELECT 1 FROM consent_records WHERE consent_artifact_ref = $1`, [claimCaseId],
         );
-        expect(rows.rows.map((r) => r.consent_type).sort()).toEqual([...combo.expectedGranted].sort());
-
-        // Declining (b) and/or (c) NEVER blocks — the claim proceeds normally in every combo.
-        const claimRow = await t.pool.query<{ current_state: string }>(
-          `SELECT current_state FROM claims WHERE claim_case_id = $1`, [claimCaseId],
-        );
-        expect(claimRow.rows[0]?.current_state).toBe('intake_converged');
+        expect(rows.rows).toHaveLength(0);
       } finally {
         await teardown(t);
       }
     });
   }
 
+  it('D3 (no-block): the reduced one-box request → 201, exactly one row, claim state UNCHANGED', async () => {
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId, claimCaseId } = await setupClaim(t);
+      const res = await inject(t, 'POST', url(claimCaseId), {
+        payload: { claimTimeDpdpa: true, locale: 'en' },
+        token: token(t, memberId, pariwarId),
+      });
+      expect(res.status).toBe(201);
+      expect(res.body.granted).toEqual(['claim_time_dpdpa']);
+
+      const rows = await t.pool.query<{ consent_type: string }>(
+        `SELECT consent_type FROM consent_records WHERE consent_artifact_ref = $1`, [claimCaseId],
+      );
+      expect(rows.rows.map((r) => r.consent_type)).toEqual(['claim_time_dpdpa']);
+
+      // Consent NEVER alters claim progression — unchanged by the reduction.
+      const claimRow = await t.pool.query<{ current_state: string }>(
+        `SELECT current_state FROM claims WHERE claim_case_id = $1`, [claimCaseId],
+      );
+      expect(claimRow.rows[0]?.current_state).toBe('intake_converged');
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('⭐ the GET presence view still SHOWS a pre-11b.9 publication grant (D7(a))', async () => {
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId, claimCaseId } = await setupClaim(t);
+      const tok = token(t, memberId, pariwarId);
+      const record = await inject(t, 'POST', url(claimCaseId), {
+        payload: { claimTimeDpdpa: true, locale: 'en' }, token: tok,
+      });
+      expect(record.status).toBe(201);
+      // ⭐ The row a family granted BEFORE the box was retired — preserved by `-160` cl.5.
+      await seedLegacyPublicationGrant(t, pariwarId, memberId, claimCaseId, 'sahyog_drive_publication');
+
+      const res = await inject(t, 'GET', url(claimCaseId), { token: tok });
+
+      expect(res.status).toBe(200);
+      // ⛔ The presence view is driven by the FULL enum on purpose. Narrowing it to the one captured
+      // type would blind the family to their own record — half the right, silently removed.
+      expect((res.body.granted as string[]).sort()).toEqual(
+        ['claim_time_dpdpa', 'sahyog_drive_publication'].sort(),
+      );
+    } finally {
+      await teardown(t);
+    }
+  });
+
   it('D3a: claimTimeDpdpa:false → 400 (processing consent is required to proceed)', async () => {
     const t = await createTestApp();
     try {
       const { memberId, pariwarId, claimCaseId } = await setupClaim(t);
       const res = await inject(t, 'POST', url(claimCaseId), {
-        payload: { claimTimeDpdpa: false, sahyogVivranPublication: true, inMemoriamListing: false, sahyogDrivePublication: false, locale: 'en' },
+        payload: { claimTimeDpdpa: false, locale: 'en' },
         token: token(t, memberId, pariwarId),
       });
       expect(res.status).toBe(400);
@@ -296,7 +315,7 @@ describe.skipIf(!hasDatabase)('Claim-time DPDPA consent — member-app E2E (:543
       await closeScopeTx(scopeTx, true);
 
       const res = await inject(t, 'POST', url(claimCaseId), {
-        payload: { claimTimeDpdpa: true, sahyogVivranPublication: false, inMemoriamListing: false, sahyogDrivePublication: false, locale: 'en' },
+        payload: { claimTimeDpdpa: true, locale: 'en' },
         token: token(t, memberId, pariwarId),
       });
       expect(res.status).toBe(409);
@@ -312,7 +331,7 @@ describe.skipIf(!hasDatabase)('Claim-time DPDPA consent — member-app E2E (:543
       const a = await setupClaim(t);
       const b = await seedMember(t);
       const res = await inject(t, 'POST', url(a.claimCaseId), {
-        payload: { claimTimeDpdpa: true, sahyogVivranPublication: false, inMemoriamListing: false, sahyogDrivePublication: false, locale: 'en' },
+        payload: { claimTimeDpdpa: true, locale: 'en' },
         token: token(t, b.memberId, b.pariwarId),
       });
       expect(res.status).toBe(404);
@@ -323,16 +342,22 @@ describe.skipIf(!hasDatabase)('Claim-time DPDPA consent — member-app E2E (:543
     }
   });
 
-  it('AC3 (revoke honored, time-travel): revoke (b) → consentExists false NOW but true at a pre-revocation instant', async () => {
+  // ⭐⛔ THE D7(a) PROPERTY, AND THE REASON THIS CASE SURVIVES A STORY THAT RETIRED THE BOX.
+  // The grant can no longer be MADE through the route — so it is seeded directly, which is exactly
+  // the pre-11b.9 row `2026-08-28-160` cl.5 preserves. What must still work is WITHDRAWAL: a family
+  // who granted before the retirement can still withdraw after it. ⛔ Preserving a row means
+  // preserving what can be DONE with it, ⛔ not merely that it sits in a table.
+  it('AC3 (revoke honored, time-travel): a PRE-11b.9 grant → consentExists false NOW but true at a pre-revocation instant', async () => {
     const t = await createTestApp();
     try {
       const { memberId, pariwarId, claimCaseId } = await setupClaim(t);
       const tok = token(t, memberId, pariwarId);
       const record = await inject(t, 'POST', url(claimCaseId), {
-        payload: { claimTimeDpdpa: true, sahyogVivranPublication: true, inMemoriamListing: false, sahyogDrivePublication: false, locale: 'en' },
+        payload: { claimTimeDpdpa: true, locale: 'en' },
         token: tok,
       });
       expect(record.status).toBe(201);
+      await seedLegacyPublicationGrant(t, pariwarId, memberId, claimCaseId, 'sahyog_vivran_publication');
 
       // Capture a pre-revocation instant (after grant, before revoke). 150ms margin — wider than a
       // bare minimum gap — to stay robust under ci:local's documented concurrency-oversubscription
@@ -378,10 +403,12 @@ describe.skipIf(!hasDatabase)('Claim-time DPDPA consent — member-app E2E (:543
     try {
       const a = await setupClaim(t);
       const record = await inject(t, 'POST', url(a.claimCaseId), {
-        payload: { claimTimeDpdpa: true, sahyogVivranPublication: true, inMemoriamListing: false, sahyogDrivePublication: false, locale: 'en' },
+        payload: { claimTimeDpdpa: true, locale: 'en' },
         token: token(t, a.memberId, a.pariwarId),
       });
       expect(record.status).toBe(201);
+      // ⭐ The preserved pre-11b.9 grant the unauthorized caller tries to reach (see D7(a) above).
+      await seedLegacyPublicationGrant(t, a.pariwarId, a.memberId, a.claimCaseId, 'sahyog_vivran_publication');
 
       // A different member (not the claim's own deceased-member session) attempts to revoke.
       const b = await seedMember(t);
@@ -408,7 +435,7 @@ describe.skipIf(!hasDatabase)('Claim-time DPDPA consent — member-app E2E (:543
     const t = await createTestApp();
     try {
       const res = await inject(t, 'POST', url(randomUUID()), {
-        payload: { claimTimeDpdpa: true, sahyogVivranPublication: false, inMemoriamListing: false, sahyogDrivePublication: false, locale: 'en' },
+        payload: { claimTimeDpdpa: true, locale: 'en' },
       });
       expect(res.status).toBe(401);
     } finally {

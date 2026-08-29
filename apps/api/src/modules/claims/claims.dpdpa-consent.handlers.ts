@@ -48,7 +48,17 @@ import { resolveDpdpaConsentCopy } from './dpdpa-consent-copy.js';
 /** The pre-adjudication window in which consent may be RECORDED (AC5; mirror the domain const). */
 const RECORDABLE_STATES = new Set<string>(claim.DPDPA_CONSENT_RECORDABLE_STATES);
 
-/** All three claim-time consent types, in a stable order (for the presence view). */
+/**
+ * All FOUR claim-time consent types, in a stable order (for the presence view).
+ *
+ * ⛔⛔ IT STAYS THE FULL ENUM AFTER STORY 11b.9, AND ⛔ THAT IS NOT AN OVERSIGHT. Only
+ * `claim_time_dpdpa` is still CAPTURED — the other three boxes were retired (`2026-08-28-162`
+ * cl.2, `-160` cl.5-6) so ⛔ no new rows of those types are written. But rows written BEFORE 11b.9
+ * are preserved by ruling, and the presence view is how a family SEES what they granted — the other
+ * half of the right that the surviving revoke routes let them exercise. ⛔ Narrowing this to the one
+ * captured type would blind them to their own record: a rights regression wearing a cleanup's
+ * clothes (story D7(a)).
+ */
 const ALL_TYPES = DpdpaConsentType.options;
 
 interface ActorCtx {
@@ -63,25 +73,36 @@ interface ActorCtx {
   requireDeceasedMemberId?: ids.MemberId;
 }
 
-/** The granted subset the request encodes, in canonical order — the box-to-type mapping. */
+/**
+ * The granted subset the request encodes, in canonical order — the box-to-type mapping.
+ *
+ * ⭐ ONE BOX SINCE STORY 11b.9. This is the WRITE path, and it is now the reason ⛔ no new
+ * `sahyog_vivran_publication`, `in_memoriam_listing` or `sahyog_drive_publication` row can ever be
+ * created: the boxes were retired from the claim consent screen and their booleans removed from
+ * {@link RecordDpdpaConsentRequest} (`2026-08-28-162` cl.2, `-160` cl.5-6).
+ *
+ * ⚠⭐ ONE EDIT CLOSED BOTH SURFACES: the helpline (operator-assisted) route shares this same
+ * `createDpdpaConsentHandlers` core, so the operator path retired with the member one. ⛔ There is no
+ * second writer to hunt for, and ⛔ no admin UI ever rendered these boxes.
+ *
+ * ⛔⛔ THE TYPES THEMSELVES ARE PRESERVED and ⛔ must not be deleted — see {@link ALL_TYPES}, the
+ * surviving revoke routes, and `DpdpaConsentType`'s own docstring. Retiring a BOX is ⛔ not deleting
+ * a TYPE.
+ */
 function grantedTypesFromRequest(body: RecordDpdpaConsentRequest): DpdpaConsentType[] {
   const granted: DpdpaConsentType[] = [];
   if (body.claimTimeDpdpa) granted.push('claim_time_dpdpa');
-  if (body.sahyogVivranPublication) granted.push('sahyog_vivran_publication');
-  if (body.inMemoriamListing) granted.push('in_memoriam_listing');
-  // Story 11b.1 (D4(b)) — the fourth box. Same shape as its siblings: an UNCHECKED box records
-  // nothing at all, so a decline leaves no grant row and `consentExists` returns the same verdict it
-  // returns for a family never asked. That equivalence is intended — 11b.1's render gate treats a
-  // MISSING and a REVOKED consent identically, and neither omits the pool, only the name.
-  if (body.sahyogDrivePublication) granted.push('sahyog_drive_publication');
   return granted;
 }
 
 /**
- * The NON-PII presence view: which of the FOUR claim-time consent types (Story 11b.1 added the
- * Sahyog Drive box) are CURRENTLY valid for the
+ * The NON-PII presence view: which of the FOUR claim-time consent types are CURRENTLY valid for the
  * deceased member (the D1a member-scoped key). Uses `consentExists` per type at DB now() — a revoked
  * or never-granted type is absent. No decryption, no PII (the granted-type flags only).
+ *
+ * ⚠ After Story 11b.9 only `claim_time_dpdpa` can ever be newly granted, so on a fresh claim the
+ * other three are always absent. ⛔ That does NOT make checking them dead work: a claim filed BEFORE
+ * 11b.9 may carry any of them, and this view is how the family sees it (story D7(a)).
  */
 async function presenceView(
   tx: Awaited<ReturnType<typeof openScopeTx>>['tx'],

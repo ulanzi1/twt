@@ -127,13 +127,36 @@ describe.skipIf(!hasDatabase)('Claim-time DPDPA consent — helpline E2E (:5433)
   const recordUrl = (pariwarId: string, claimCaseId: string) => `/api/v1/p/${pariwarId}/admin/claims/${claimCaseId}/dpdpa-consent`;
   const revokeUrl = (pariwarId: string, claimCaseId: string) => `${recordUrl(pariwarId, claimCaseId)}/revoke`;
 
+  /**
+   * ⭐ Seed a PRE-11b.9 publication grant directly — the row `2026-08-28-160` cl.5 preserves.
+   *
+   * ⛔ It can no longer be created through the record route on EITHER surface: `-162` cl.2 retired
+   * the boxes, and the helpline shares the SAME `createDpdpaConsentHandlers` core as the member app,
+   * so the operator-assisted path retired with the member one. ⇒ what the revoke cases below still
+   * prove is the D7(a) property: an operator can still WITHDRAW on behalf of a family who granted
+   * before the retirement. ⛔ Preserving a row means preserving what can be DONE with it.
+   */
+  async function seedLegacyPublicationGrant(
+    pariwarId: string,
+    deceasedMemberId: string,
+    claimCaseId: string,
+  ): Promise<void> {
+    await td.pool.query(
+      `INSERT INTO consent_records (pariwar_id, subject_id, consent_type, consent_artifact_ref,
+                                    granted_via_actor, consent_payload, granted_at)
+       VALUES ($1, $2, 'sahyog_vivran_publication', $3, 'staff_assisted', '{}'::jsonb,
+               now() - interval '1 hour')`,
+      [pariwarId, deceasedMemberId, claimCaseId],
+    );
+  }
+
   it('RECORD gate: an admin WITHOUT claim.file is denied (not 201), no rows written', async () => {
     const pariwarId = randomUUID();
     const { client } = await authenticate();
     const { claimCaseId } = await seedConvergedClaim(pariwarId);
     const res = await client.inject({
       method: 'POST', url: recordUrl(pariwarId, claimCaseId),
-      payload: { claimTimeDpdpa: true, sahyogVivranPublication: false, inMemoriamListing: false, sahyogDrivePublication: false, locale: 'en' } as unknown as object,
+      payload: { claimTimeDpdpa: true, locale: 'en' } as unknown as object,
     });
     expect([403, 404]).toContain(res.statusCode);
     const rows = await td.pool.query(`SELECT 1 FROM consent_records WHERE consent_artifact_ref = $1`, [claimCaseId]);
@@ -149,12 +172,12 @@ describe.skipIf(!hasDatabase)('Claim-time DPDPA consent — helpline E2E (:5433)
 
     const res = await client.inject({
       method: 'POST', url: recordUrl(pariwarId, claimCaseId),
-      payload: { claimTimeDpdpa: true, sahyogVivranPublication: true, inMemoriamListing: false, sahyogDrivePublication: false, locale: 'hi' } as unknown as object,
+      payload: { claimTimeDpdpa: true, locale: 'hi' } as unknown as object,
     });
     expect(res.statusCode).toBe(201);
-    expect(res.json<{ granted: string[] }>().granted).toEqual(['claim_time_dpdpa', 'sahyog_vivran_publication']);
+    expect(res.json<{ granted: string[] }>().granted).toEqual(['claim_time_dpdpa']);
 
-    // Two rows, subject = deceased member, granted_via = staff_assisted (D4).
+    // ⭐ ONE row since Story 11b.9 — subject = deceased member, granted_via = staff_assisted (D4).
     const rows = await td.pool.query<{
       subject_id: string;
       granted_via_actor: string;
@@ -163,18 +186,22 @@ describe.skipIf(!hasDatabase)('Claim-time DPDPA consent — helpline E2E (:5433)
     }>(
       `SELECT subject_id, granted_via_actor, consent_type, consent_payload FROM consent_records WHERE consent_artifact_ref = $1`, [claimCaseId],
     );
-    expect(rows.rows).toHaveLength(2);
+    expect(rows.rows).toHaveLength(1);
     for (const r of rows.rows) {
       expect(r.subject_id).toBe(deceasedMemberId);
       expect(r.granted_via_actor).toBe('staff_assisted');
     }
     // Code review gap-closure: this request used locale:'hi' — assert the STORED evidence copy is
-    // the actual Hindi canonical text (not just "some server copy, not the English one"), for BOTH
-    // granted types. Locale selection, not just locale-vs-client-forgery, is what's under test here.
+    // the actual Hindi canonical text (not just "some server copy, not the English one"). Locale
+    // selection, not just locale-vs-client-forgery, is what's under test here.
+    // ⭐⛔ AND THIS READ-BACK IS THE LIVE EVIDENCE FOR `DPDPA_CONSENT_COPY`'s PRESERVATION (11b.9 T7).
+    // The copy map is the OTHER thing called "copy": the UI LABELS for the retired boxes are gone,
+    // but this server-resolved canonical text STAYS, because it is what makes an already-written row
+    // explicable. ⛔ Do not delete this assertion, and ⛔ do not narrow the map to make it pass.
     for (const r of rows.rows) {
       expect(r.consent_payload.locale).toBe('hi');
       expect(r.consent_payload.checkboxTextShown).toBe(
-        resolveDpdpaConsentCopy(r.consent_type as 'claim_time_dpdpa' | 'sahyog_vivran_publication', 'hi'),
+        resolveDpdpaConsentCopy(r.consent_type as 'claim_time_dpdpa', 'hi'),
       );
     }
 
@@ -183,7 +210,7 @@ describe.skipIf(!hasDatabase)('Claim-time DPDPA consent — helpline E2E (:5433)
       `SELECT payload FROM events_log WHERE stream_id = $1 AND event_type = 'claim.dpdpa_consent_recorded'`, [claimCaseId],
     );
     expect(ev.rows).toHaveLength(1);
-    expect(ev.rows[0]?.payload).toMatchObject({ actor: 'operator', consent_types_granted: ['claim_time_dpdpa', 'sahyog_vivran_publication'] });
+    expect(ev.rows[0]?.payload).toMatchObject({ actor: 'operator', consent_types_granted: ['claim_time_dpdpa'] });
 
     expect(td.auditSink.ofType('helpline_claim.dpdpa_consent_recorded').length).toBeGreaterThanOrEqual(1);
   });
@@ -193,13 +220,15 @@ describe.skipIf(!hasDatabase)('Claim-time DPDPA consent — helpline E2E (:5433)
     const { client, userId } = await authenticate();
     await grantRole(userId, pariwarId, 'helpline_operator');
     await elevateClaimFile(client);
-    const { claimCaseId } = await seedConvergedClaim(pariwarId);
+    const { claimCaseId, deceasedMemberId } = await seedConvergedClaim(pariwarId);
 
     const record = await client.inject({
       method: 'POST', url: recordUrl(pariwarId, claimCaseId),
-      payload: { claimTimeDpdpa: true, sahyogVivranPublication: true, inMemoriamListing: false, sahyogDrivePublication: false, locale: 'en' } as unknown as object,
+      payload: { claimTimeDpdpa: true, locale: 'en' } as unknown as object,
     });
     expect(record.statusCode).toBe(201);
+    // ⭐ The preserved pre-11b.9 grant — see `seedLegacyPublicationGrant` (D7(a)).
+    await seedLegacyPublicationGrant(pariwarId, deceasedMemberId, claimCaseId);
 
     // Revoke needs NO step-up (not a financial action) — just the dedicated permission.
     const revoke = await client.inject({
@@ -217,16 +246,18 @@ describe.skipIf(!hasDatabase)('Claim-time DPDPA consent — helpline E2E (:5433)
 
   it('REVOKE gate: an admin WITHOUT claim.manage_dpdpa_consent is denied revoke (403/404)', async () => {
     const pariwarId = randomUUID();
-    // First, an operator records a publication consent.
+    // First, an operator records (a), and a pre-11b.9 publication grant is seeded alongside it.
     const op = await authenticate();
     await grantRole(op.userId, pariwarId, 'helpline_operator');
     await elevateClaimFile(op.client);
-    const { claimCaseId } = await seedConvergedClaim(pariwarId);
+    const { claimCaseId, deceasedMemberId } = await seedConvergedClaim(pariwarId);
     const record = await op.client.inject({
       method: 'POST', url: recordUrl(pariwarId, claimCaseId),
-      payload: { claimTimeDpdpa: true, sahyogVivranPublication: true, inMemoriamListing: false, sahyogDrivePublication: false, locale: 'en' } as unknown as object,
+      payload: { claimTimeDpdpa: true, locale: 'en' } as unknown as object,
     });
     expect(record.statusCode).toBe(201);
+    // ⭐ The preserved pre-11b.9 grant the unauthorized caller tries to reach (D7(a)).
+    await seedLegacyPublicationGrant(pariwarId, deceasedMemberId, claimCaseId);
 
     // A different admin with NO grant (no claim.manage_dpdpa_consent) tries to revoke → denied.
     const other = await authenticate();

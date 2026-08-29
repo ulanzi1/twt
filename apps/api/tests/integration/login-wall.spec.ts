@@ -133,16 +133,24 @@ const PUBLIC_ALLOWLIST = new Set<string>([
   //     `.strict()` schema makes `?format=csv` a 400 rather than an ignored parameter —
   //     and it is also what makes `?name=…` a refusal, which matters here: there is no
   //     name-search substrate and the obvious workaround is an amplification attack.
-  // ⭐ AND ONE CONTROL THE DIRECTORY DOES NOT HAVE — a per-subject CONSENT gate
-  // (`sahyog_drive_publication`), evaluated BEFORE the Tier-1 decrypt so an unconsented
-  // row costs ZERO KMS calls and no decrypt happens without an authorising basis.
+  // ⭐ AND ONE CONTROL THE DIRECTORY DOES NOT HAVE — a PUBLICATION-BASIS gate on the
+  // deceased member's name, evaluated BEFORE the Tier-1 decrypt so a row with no basis
+  // costs ZERO KMS calls and no decrypt happens without an authorising basis.
   // ⚠ It gates the NAME, ⛔ never the ROW.
+  // ⚠⛔ ⛔ NOT a per-subject consent gate, and it was until Story 11b.9: the family
+  // tick-box (`sahyog_drive_publication`) was DE-AUTHORISED by `2026-08-28-160` cl.3-5
+  // and the box retired by `-162`. The authority is the MEMBER'S OWN accepted versioned
+  // T&C pinning the post-death publication clause.
   // ⚠ ITS HONEST LIMITS, recorded rather than glossed: `trustProxy: true` makes the
   // forwarded address CALLER-SUPPLIED (`2026-08-20-143` cl.9); and a cached hit never
   // reaches the origin, so the abuse counter here sees only cache MISSES.
-  // ⛔⛔ AND BUILT IS ⛔ NOT PUBLISHED: counsel's DPDPA review of this exact subject is
-  // HELD (`2026-08-24-157` cl.3(a), returning 2026-09-07) and this surface has no Row-17
-  // publication ratification of its own. ⛔ Allowlisting the route closes neither.
+  // ⛔⛔ AND BUILT IS ⛔ NOT PUBLISHED — ⭐ still true, but ⛔ NOT for the reasons this
+  // comment used to give, both falsified on 2026-08-28: counsel's DPDPA hold was LIFTED
+  // (`-160` cl.7, superseding `-157` cl.3) and Row 17's ≥2-trustee posture rested on C-5,
+  // which FELL WHOLLY as a mechanism. ⭐ What keeps `/sahyog` dark is DEPLOYMENT plus the
+  // counsel/Panel process — ⛔ not a code mechanism, and ⛔ never the publication kill
+  // switch (an emergency control that defaults to ENABLED). ⛔ Allowlisting the route
+  // closes nothing.
   'GET /api/v1/p/:pariwarId/public-pages/sahyog-drive',
   // Developer-convenience OpenAPI doc (read-only, no data).
   'GET /docs/json',

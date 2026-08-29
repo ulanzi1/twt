@@ -1,25 +1,40 @@
 // Claim-time DPDPA consent (Story 6.9, Task 5; AC1/AC4/D3) — the reserved (claim)/consent step.
 //
-// FOUR GRANULAR, INDEPENDENT, explicit-opt-in consent checkboxes (UX-DR2), all UNCHECKED by default:
-//   (a) claim_time_dpdpa          — the trust's processing of PII (REQUIRED to continue — D3a default);
-//   (b) sahyog_vivran_publication — Sahyog Vivran contributor-list/verifier publication (OPTIONAL);
-//   (c) in_memoriam_listing       — In Memoriam appearance (OPTIONAL);
-//   (d) sahyog_drive_publication  — the deceased member's NAME on the public Sahyog Drive (OPTIONAL)
-//       — Story 11b.1 / D4(b) / Decision 2026-08-24-159 cl.6.
-// Declining (b)/(c)/(d) NEVER blocks the claim (D3 — private processing must not compromise disbursement):
-// they carry a dignified "you can choose private processing — this will not affect the claim" reassurance.
+// ⭐ ONE explicit-opt-in consent checkbox (UX-DR2), UNCHECKED by default:
+//   (a) claim_time_dpdpa — the trust's processing of PII (REQUIRED to continue — D3a default).
 //
-// ⭐⛔ WHY (d) IS ASKED HERE AND NOT LATER — it is the ONLY moment it can be asked. Consent is
-// recordable only in the five PRE-ADJUDICATION claim states, and a pool (the thing Sahyog Drive lists)
-// spawns one per APPROVED claim. ⇒ by the time the drive exists, this window has shut for good. A
-// family not asked HERE can never be asked, and their drive can never carry the name.
-// ⚠ Declining (d) removes a NAME, never a DRIVE: the drive still appears publicly with its code,
-// district, close date and confirmed contribution count.
+// ⚠⛔ IT USED TO BE FOUR, AND THE OTHER THREE WERE RETIRED BY RULING — ⛔ NOT LOST, ⛔ NOT A
+// REGRESSION, AND ⛔ NOT TO BE RESTORED AS A "MISSING FEATURE" (Story 11b.9; `2026-08-28-162` cl.2,
+// `-160` cl.5-6). The retired boxes were:
+//   ⛔ (b) sahyog_vivran_publication — Sahyog Vivran contributor-list/verifier publication;
+//   ⛔ (c) in_memoriam_listing       — In Memoriam appearance;
+//   ⛔ (d) sahyog_drive_publication  — the deceased member's NAME on the public Sahyog Drive.
 //
-// The screen submits ONLY the box selections + the active locale — the SERVER resolves the canonical
+// ⭐⭐ WHY (d) WENT: the authority for publishing a deceased member's name is now the MEMBER'S OWN
+// accepted versioned T&C, carrying an express post-death publication clause (`-160` cl.3-4). The
+// member already answered while alive, so ⛔ the family is not asked to speak for them at the worst
+// moment of their life — and the family gets ⛔ NO VETO over the member's own name (cl.6). ⚠ The old
+// gate is DE-AUTHORISED, ⛔ not ANDed and ⛔ not ORed with the new one.
+// ⭐⭐ WHY (b)/(c) WENT: `-162` cl.2 retired them too, and REJECTED the alternative of re-wording
+// them to cover family-owned content on the record — *"a control that survives by having its meaning
+// quietly rewritten is worse than no control"*, because the family reasons about it using the OLD
+// meaning. ⛔ RETIRED, ⛔ not reinterpreted.
+//
+// ⛔⛔ AND RETIRING A BOX IS ⛔ NOT DELETING A TYPE. The three `consent_type` enum values, migrations
+// 0058 and 0112, and every `consent_records` row already written are all PRESERVED BY RULING
+// (`-160` cl.5, `-162` cl.5). ⇒ ⛔ no new rows of those types are written, but a family who granted
+// one BEFORE this story can still SEE it (the GET presence view) and still WITHDRAW it (both revoke
+// routes) — those survive deliberately. ⛔ Removing them would be a rights regression wearing a
+// cleanup's clothes.
+//
+// ⚠ (a) IS UNCHANGED, byte for byte: still required, still the basis for claim-time processing, and
+// its `processing_required_hint` below is a REQUIRED-box hint — ⛔ not an optional-box reassurance,
+// and ⛔ not something the retirement takes with it.
+//
+// The screen submits ONLY the box selection + the active locale — the SERVER resolves the canonical
 // consent copy written as evidence (consent-copy integrity, D2). The displayed checkbox copy (the
 // `dpdpa.*` claim i18n keys) is the SAME canonical text the server persists — single source per locale.
-// NO PII is persisted to the local draft (only the lastStep marker); current grants are re-hydrated
+// NO PII is persisted to the local draft (only the lastStep marker); the current grant is re-hydrated
 // from the server on re-entry (the save-and-resume thread). The CallHelplineCTA fallback is preserved.
 
 import { useEffect, useState } from 'react'
@@ -38,9 +53,12 @@ import { useSession } from '../../lib/session-context'
 
 /**
  * One grief-register consent row — a pressable checkbox with dignified copy, unchecked by default.
- * `label` is the SERVER-canonical consent text (single source per locale — the (b)/(c) copy already
- * carries the "you can decline without affecting the claim" reassurance, so there is no separate
- * reassurance line to drift from the evidence copy).
+ * `label` is the SERVER-canonical consent text (single source per locale).
+ *
+ * ⚠ Still a REUSABLE row though only one caller remains: the retired optional boxes carried their
+ * own "you can decline without affecting the claim" reassurance INSIDE their label strings, so that
+ * reassurance left with them. ⛔ Do not re-add a standalone reassurance line for (a) — (a) is
+ * REQUIRED, and telling a family they may decline it would be false.
  */
 function ConsentRow(props: {
   checked: boolean
@@ -106,16 +124,16 @@ export default function ConsentScreen(): React.ReactElement {
   const memberId = session?.memberId
   const claimCaseId = memberId ? loadClaimDraft(memberId).claimCaseId : undefined
 
-  // All FOUR boxes default UNCHECKED (explicit opt-in — UX-DR2; never pre-ticked).
+  // The box defaults UNCHECKED (explicit opt-in — UX-DR2; never pre-ticked).
   const [claimTimeDpdpa, setClaimTimeDpdpa] = useState(false)
-  const [sahyogVivran, setSahyogVivran] = useState(false)
-  const [inMemoriam, setInMemoriam] = useState(false)
-  const [sahyogDrive, setSahyogDrive] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
-  // Re-entry: re-hydrate the currently-granted consents from the server (the save-and-resume thread).
-  // Best-effort — a failure leaves the boxes at their unchecked default (never a hard error).
+  // Re-entry: re-hydrate the current grant from the server (the save-and-resume thread).
+  // Best-effort — a failure leaves the box at its unchecked default (never a hard error).
+  // ⚠ The status response still LISTS the retired types when a family granted one before Story
+  // 11b.9 — the GET presence view is preserved on purpose (see header). ⛔ This screen simply has no
+  // box to hydrate from them any more; ⛔ do not re-add one to "use" the data.
   useEffect(() => {
     if (!claimCaseId) return
     let active = true
@@ -124,11 +142,8 @@ export default function ConsentScreen(): React.ReactElement {
         const status = await claimApi.dpdpaConsentStatus(claimCaseId)
         if (!active) return
         setClaimTimeDpdpa(status.granted.includes('claim_time_dpdpa'))
-        setSahyogVivran(status.granted.includes('sahyog_vivran_publication'))
-        setInMemoriam(status.granted.includes('in_memoriam_listing'))
-        setSahyogDrive(status.granted.includes('sahyog_drive_publication'))
       } catch {
-        // Absence-is-a-signal — leave the boxes unchecked.
+        // Absence-is-a-signal — leave the box unchecked.
       }
     })()
     return () => {
@@ -153,9 +168,6 @@ export default function ConsentScreen(): React.ReactElement {
     try {
       await claimApi.recordDpdpaConsent(claimCaseId, {
         claimTimeDpdpa,
-        sahyogVivranPublication: sahyogVivran,
-        inMemoriamListing: inMemoriam,
-        sahyogDrivePublication: sahyogDrive,
         locale,
       })
       if (memberId) saveClaimDraft(memberId, { lastStep: 'consent' })
@@ -181,25 +193,12 @@ export default function ConsentScreen(): React.ReactElement {
         <Paragraph color="$colorPress">{t('dpdpa.help')}</Paragraph>
 
         <YStack gap="$4" pt="$2">
+          {/* ⛔ ONE box. The three optional publication boxes that stood here were RETIRED by
+              ruling (see header) — ⛔ do not re-add one without a decision that says so. */}
           <ConsentRow
             checked={claimTimeDpdpa}
             onToggle={() => setClaimTimeDpdpa((v) => !v)}
             label={t('dpdpa.processing')}
-          />
-          <ConsentRow
-            checked={sahyogVivran}
-            onToggle={() => setSahyogVivran((v) => !v)}
-            label={t('dpdpa.sahyog_vivran')}
-          />
-          <ConsentRow
-            checked={inMemoriam}
-            onToggle={() => setInMemoriam((v) => !v)}
-            label={t('dpdpa.in_memoriam')}
-          />
-          <ConsentRow
-            checked={sahyogDrive}
-            onToggle={() => setSahyogDrive((v) => !v)}
-            label={t('dpdpa.sahyog_drive')}
           />
         </YStack>
 

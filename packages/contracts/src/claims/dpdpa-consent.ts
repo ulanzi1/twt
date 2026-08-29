@@ -1,8 +1,8 @@
 // packages/contracts/src/claims/dpdpa-consent.ts
 //
 // Claim-time DPDPA consent transport DTOs (Story 6.9 — CONSUMER of the Story 2.7 consent registry).
-// The request/response wire shapes for the three granular, independent, explicit-opt-in consents
-// captured on BOTH the member-app (Ravi-mode) wizard step and the helpline (operator) read-back:
+// The request/response wire shapes for the explicit-opt-in claim-time consent captured on BOTH the
+// member-app (Ravi-mode) wizard step and the helpline (operator) read-back:
 //   · POST /api/v1/member/claims/:claimCaseId/dpdpa-consent               → record (member-app)
 //   · GET  /api/v1/member/claims/:claimCaseId/dpdpa-consent               → presence view (member-app)
 //   · POST /api/v1/member/claims/:claimCaseId/dpdpa-consent/revoke        → revoke (member-app)
@@ -51,16 +51,32 @@ export type DpdpaConsentLocale = z.output<typeof DpdpaConsentLocale>;
  *   · claim_time_dpdpa           — the trust's processing of deceased + claimant + nominee PII (a);
  *   · sahyog_vivran_publication  — contributor-list + verifier-name publication on Sahyog Vivran (b);
  *   · in_memoriam_listing        — In Memoriam appearance (c);
- *   · sahyog_drive_publication   — the deceased member's NAME on the public Sahyog Drive pool index
- *     (d) — Story 11b.1 / D4(b) / Decision 2026-08-24-159 cl.6.
+ *   · sahyog_drive_publication   — the deceased member's NAME on the public Sahyog Drive pool index (d).
  * Value-aligned with the domain `consent_type` pgEnum (contracts cannot import domain).
  *
- * ⭐⛔ WHY (d) IS CAPTURED HERE RATHER THAN AT PUBLICATION TIME — D4(b)'s whole ground, and it is a
- * ONE-WAY DOOR: consent is RECORDABLE only in the five PRE-ADJUDICATION claim states, while pools
- * spawn one per APPROVED claim. ⇒ by the time a pool is listable on Sahyog Drive, the window to ask
- * has ALREADY SHUT. A claim filed before this value existed is PERMANENTLY UNASKABLE and its pool can
- * never carry a name. Minted pre-launch, that cohort is empty by construction.
- * ⚠ (d) gates the NAME, NEVER the ROW: an unconsented pool still renders in full on 11b.1's index.
+ * ⛔⛔ THIS UNION IS **PRESERVED BY RULING** AND ⛔ MUST NOT SHRINK — Story 11b.9 / `2026-08-28-160`
+ * cl.5 + `2026-08-28-162` cl.5. Only (a) is still CAPTURED: the boxes for (b)/(c)/(d) were retired
+ * from the claim consent screen and from {@link RecordDpdpaConsentRequest}, so ⛔ no NEW rows of
+ * those three types are ever written. ⚠ RETIRING A BOX IS ⛔ NOT DELETING A TYPE.
+ *
+ * ⚠⛔ THREE REASONS DELETING A VALUE HERE WOULD BREAK THINGS, NAMED SO NOBODY "FINISHES THE CLEANUP":
+ *   1. ⛔ Existing `consent_records` rows are preserved by ruling and must stay READABLE — the GET
+ *      presence view still shows a family what they granted, and both revoke routes still let them
+ *      WITHDRAW it. That is the last remaining data-subject action on those rows.
+ *   2. ⛔ The domain claim-time TUPLES derive two EVENT PAYLOAD schemas
+ *      (`claim.dpdpa_consent_recorded` / `_revoked`). Shrinking them makes every HISTORICAL event
+ *      carrying a retired type UNPARSEABLE, in a system whose `events_log` is the source of truth.
+ *   3. ⛔ `DPDPA_CONSENT_COPY` in apps/api is `Record`-TOTAL over this enum — it is what keeps an
+ *      already-written row EXPLICABLE. Deleting values to make a narrowed Record typecheck is the
+ *      violation, ⛔ not the fix.
+ *
+ * ⚠ (d)'s original ground, retained because it explains why the type exists at all: consent was
+ * RECORDABLE only in the five PRE-ADJUDICATION claim states while pools spawn one per APPROVED
+ * claim, so by the time a pool was listable the window to ask had ALREADY SHUT. ⭐ That whole
+ * one-way-door problem is MOOT now — nobody is asked again, ever, because the authority moved to the
+ * member's own accepted T&C (`-160` cl.3-4). ⛔ It is kept, ⛔ not deleted, precisely so the next
+ * reader can tell preserved-by-ruling from dead code.
+ * ⚠ (d) gated the NAME, NEVER the ROW — still true of the replacement basis (11b.9 AC5).
  */
 export const DpdpaConsentType = z.enum([
   'claim_time_dpdpa',
@@ -72,9 +88,18 @@ export type DpdpaConsentType = z.output<typeof DpdpaConsentType>;
 
 /**
  * The THREE PUBLICATION (public-transparency) consents — the only types revocable via 6.9's revoke
- * path (D7): a family later withdraws Sahyog Vivran / In Memoriam / Sahyog Drive publication and
- * Epic 11b takes the page down on the next render check. The trust-processing consent (a) is not a
- * publication opt-in and is not revoked here.
+ * path (D7): a family later withdraws Sahyog Vivran / In Memoriam / Sahyog Drive publication. The
+ * trust-processing consent (a) is not a publication opt-in and is not revoked here.
+ *
+ * ⭐⛔ THIS SURVIVES STORY 11b.9, WHICH RETIRED ALL THREE CAPTURE BOXES — ⛔ AND THAT IS DELIBERATE.
+ * Retiring a box stops NEW rows; it ⛔ does not extinguish the rights attached to rows that already
+ * exist. Revocation is the ONLY remaining data-subject action on preserved rows, and `-160` cl.5
+ * preserves them precisely so they stay ACTIONABLE, ⛔ not merely stored. ⇒ a family who granted
+ * (b)/(c)/(d) BEFORE 11b.9 can still withdraw it AFTER. ⛔ Removing this union, either revoke route,
+ * or the presence view would be a RIGHTS REGRESSION wearing a cleanup's clothes.
+ * ⚠ Story-level disposition (BigDev, 2026-08-29, story 11b.9 D7(a)) — ⛔ NOT a trustee-ratified
+ * clause, and ⛔ must not later be cited as one. It is the STATUS-QUO option, which is why adopting
+ * it needed no ratification; ⛔ REVERSING it would.
  *
  * ⚠ REVOCATION IS OPEN AT ANY CLAIM STATE — including AFTER settlement (6.9 AC3's whole point is a
  * post-settlement takedown). So a family may withdraw the deceased member's name from the public
@@ -93,25 +118,34 @@ export const DpdpaRevocableConsentType = z.enum([
 export type DpdpaRevocableConsentType = z.output<typeof DpdpaRevocableConsentType>;
 
 /**
- * `POST …/dpdpa-consent` — the three independent box selections + the locale. Per-type booleans (all
- * UNCHECKED by default in the UI — explicit opt-in, UX-DR2). The `.refine()` enforces the D3a default
- * — (a) `claimTimeDpdpa` must be `true` to advance (you cannot file a claim while forbidding
+ * `POST …/dpdpa-consent` — the ONE box selection + the locale. The `.refine()` enforces the D3a
+ * default — (a) `claimTimeDpdpa` must be `true` to advance (you cannot file a claim while forbidding
  * processing of its own PII); this is the un-attested-pending Story 0.13 legal rule, structured as a
  * SINGLE guard so a counsel answer that (a) must also be optional is a one-line flip. The request does
  * NOT carry `checkboxTextShown` (the server resolves the canonical copy — consent-copy integrity).
+ *
+ * ⚠⛔ IT CARRIED THREE MORE BOOLEANS UNTIL STORY 11b.9 — `sahyogVivranPublication`,
+ * `inMemoriamListing` and `sahyogDrivePublication`, retired by `2026-08-28-162` cl.2 and `-160`
+ * cl.5-6. ⛔⛔ THAT IS THE **WHOLE** OF THE CONTRACT SHRINK: {@link DpdpaConsentType},
+ * {@link DpdpaRevocableConsentType} and the domain claim-time tuples do ⛔ NOT move.
+ *
+ * ⚠⛔ AND THE COMMENT THAT STOOD ON THE RETIRED (d) FIELD WAS FALSIFIED TWICE OVER — recorded here
+ * rather than deleted, because it is the shape of a mistake worth not repeating. It read that
+ * extending the `.refine()` to (d) *"would make the publication consent compulsory, which Niyamavali
+ * §4.4, Part 10 and Trust Deed cl.15(c) each forbid."*
+ *   ⛔ (i)  That mechanism is SUPERSEDED: `-160` cl.3 rests publication on the member's own accepted
+ *          T&C — a CONDITION OF MEMBERSHIP, ⛔ not a declinable claim-time act — and cl.6 removed
+ *          the family's decline path ON PURPOSE.
+ *   ⛔ (ii) Neither cited authority is a RATIFIED instrument. The Trust Deed is an unexecuted,
+ *          agent-drafted draft (`2026-08-28-164` cl.1) and the Niyamavali sits in the SAME corpus
+ *          and the SAME category (`2026-08-28-167`) — both are DESIGN REFERENCES, ⛔ not binding
+ *          authority. ⚠ Citing the Trust's INTENDED model is legitimate; citing it AS THOUGH IT
+ *          BINDS is the defect. ⛔ Do not silently drop the reference either — and ⛔ no Niyamavali
+ *          amendment is owed, required or routed: there is no ratified instrument to amend.
  */
 export const RecordDpdpaConsentRequest = z
   .object({
     claimTimeDpdpa: z.boolean(),
-    sahyogVivranPublication: z.boolean(),
-    inMemoriamListing: z.boolean(),
-    // Story 11b.1 (D4(b) / AC12) — the FOURTH box. ⛔ It is deliberately OUTSIDE the `.refine()`
-    // below: the refine forces `claimTimeDpdpa` only, and extending it to this box would make the
-    // publication consent compulsory, which Niyamavali §4.4, Part 10 and Trust Deed cl.15(c) each
-    // forbid. ⚠ REQUIRED-not-optional on the wire on purpose (matching its three siblings): an
-    // optional field would let a client that never RENDERED the box submit a body indistinguishable
-    // from one where the family saw it and declined.
-    sahyogDrivePublication: z.boolean(),
     locale: DpdpaConsentLocale,
   })
   .strict()

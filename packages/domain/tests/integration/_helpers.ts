@@ -223,6 +223,65 @@ export async function seedClauseVersion(
   return row.clauseVersionId;
 }
 
+export interface SeedTcVersionOptions {
+  /** Monotonic per Pariwar, starting at 1. Distinct per call when seeding several. */
+  version?: number;
+  /** When this version comes into force. Defaults to an hour ago (so it is EFFECTIVE now). */
+  effectiveFrom?: Date;
+  /** NULL = currently in force. Set it to make a version historical / not-yet-effective. */
+  effectiveUntil?: Date | null;
+  /** ⚠ `getEffectiveTc` requires `approved`; a `pending` version is never the effective one. */
+  legalReviewStatus?: schema.TcLegalReviewStatus;
+}
+
+/**
+ * Insert one `terms_and_conditions_versions` row (Story 2.6). Like the other seeds, run this BEFORE
+ * `enterAppScope` (Docker superuser, RLS bypassed); afterEach ROLLBACK reverts it.
+ * Returns the `tc_version_id` — which is ALSO what a `tc_acceptance` consent row stores in
+ * `consent_artifact_ref` (`member-terms.handlers.ts`), and therefore what Story 11b.9's publication
+ * predicate joins on.
+ */
+export async function seedTcVersion(
+  tx: Db,
+  pariwarId: string,
+  opts: SeedTcVersionOptions = {},
+): Promise<string> {
+  const [row] = await tx
+    .insert(schema.termsAndConditionsVersions)
+    .values({
+      pariwarId: toPariwarId(pariwarId),
+      version: opts.version ?? 1,
+      bodyMarkdown: '# Terms\n\nSeeded for tests.',
+      bodyHtmlRendered: '<h1>Terms</h1><p>Seeded for tests.</p>',
+      effectiveFrom: opts.effectiveFrom ?? new Date(Date.now() - 3_600_000),
+      effectiveUntil: opts.effectiveUntil ?? null,
+      legalReviewStatus: opts.legalReviewStatus ?? 'approved',
+    })
+    .returning();
+  if (!row) throw new Error('seedTcVersion: insert returned no row');
+  return row.tcVersionId;
+}
+
+/**
+ * Pin a clause version into a T&C version (`terms_and_conditions_pinned_clauses`, Story 2.6).
+ *
+ * ⚠ The FK targets the GLOBAL `clause_versions` PK and would happily link a DIFFERENT Pariwar's
+ * clause version — the same-Pariwar guard is a DOMAIN pre-check, ⛔ not the FK. This helper takes
+ * `pariwarId` explicitly so a test can deliberately construct the cross-tenant case.
+ */
+export async function seedPinnedClause(
+  tx: Db,
+  pariwarId: string,
+  tcVersionId: string,
+  clauseVersionId: string,
+): Promise<void> {
+  await tx.insert(schema.termsAndConditionsPinnedClauses).values({
+    tcVersionId: tcVersionId as never,
+    clauseVersionId: clauseVersionId as never,
+    pariwarId: toPariwarId(pariwarId),
+  });
+}
+
 export interface SeedConsentOptions {
   subjectId?: string;
   consentType?: schema.ConsentType;

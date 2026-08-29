@@ -54,19 +54,46 @@
 // collection", ⛔ not of the Member Directory specifically. A third route that CANNOT reuse them
 // unchanged is a third route that needs its own ruling, ⛔ not its own bullet list.
 //
-// ⭐ WHAT THE SECOND ROUTE ADDS THAT THE FIRST DOES NOT HAVE — a per-subject CONSENT gate
-// (`sahyog_drive_publication`, 11b.1 AC12), evaluated BEFORE the Tier-1 decrypt so an unconsented
-// row costs zero KMS calls. ⚠ It gates the NAME, ⛔ never the ROW: an unconsented drive still
-// renders in full, so the index degrades PER-POOL, ⛔ never per-page. ⛔ The Member Directory has no
-// such gate and is ⛔ not made to have one by this addition.
+// ⭐ WHAT THE SECOND ROUTE ADDS THAT THE FIRST DOES NOT HAVE — a PUBLICATION-BASIS gate on the
+// deceased member's name, evaluated BEFORE the Tier-1 decrypt so a row with no basis costs zero KMS
+// calls. ⚠ It gates the NAME, ⛔ never the ROW: an unnamed drive still renders in full, so the index
+// degrades PER-POOL, ⛔ never per-page. ⛔ The Member Directory has no such gate and is ⛔ not made
+// to have one by this addition.
 //
-// ⛔⛔ AND BUILT IS ⛔ NOT PUBLISHED. Three independent gates stand between the Sahyog Drive route
-// and a live page — counsel's HELD DPDPA review of this exact subject (`2026-08-24-157` cl.3(a),
-// returning 2026-09-07), Row 17's ≥2-trustee publication posture extended by C-5 (this surface has
-// ⛔ no ratification of its own), and the per-subject consent gate. ⛔ Registering this route closes
-// NONE of them, and ⛔ nothing here may be read as enabling the surface for any Pariwar.
-// ⚠ Counsel HAS NOT REVIEWED this subject — ⛔ never write that counsel is not engaged, which has
-// been false since 2026-06-21 (`2026-08-24-158`).
+// ⚠⛔ AND THE BASIS IS ⛔ NOT A PER-SUBJECT CONSENT ANY MORE — it was until Story 11b.9. This header
+// used to name `sahyog_drive_publication`, the tick-box the FAMILY ticked at claim time (11b.1
+// AC12 / D4(b)). `2026-08-28-160` cl.3-5 DE-AUTHORISED that: the authority is the MEMBER'S OWN
+// accepted versioned T&C, carrying the post-death publication clause — the member already answered,
+// so the family is ⛔ not asked. The predicate is `pool/public-read.ts`'s
+// `NAME_PUBLICATION_AUTHORISED`; the retired type is PRESERVED by ruling and ⛔ not consulted.
+//
+// ⛔⛔ AND BUILT IS ⛔ NOT PUBLISHED. ⭐ THAT SENTENCE IS STILL TRUE — but ⛔ NOT for the three
+// reasons this block used to give, and ⛔ all three were falsified on 2026-08-28. Rewritten by
+// Story 11b.9 rather than deleted, because THIS FILE is where the next reader looks for the launch
+// posture. The retired claims, named so nobody restores one:
+//   ⛔ (1) *"counsel's HELD DPDPA review of this exact subject (`2026-08-24-157` cl.3(a), returning
+//          2026-09-07)"* — ⛔ LIFTED. `2026-08-28-160` cl.7 cleared all three 11b surfaces.
+//   ⛔ (2) *"Row 17's ≥2-trustee publication posture extended by C-5"* — ⛔ C-5 FELL WHOLLY as a
+//          governance mechanism (`2026-08-23-154` C-5, superseded by `-160`).
+//   ⛔ (3) *"the per-subject consent gate"* — ⛔ DE-AUTHORISED by Story 11b.9 itself.
+//   ⛔ (4) *"Counsel HAS NOT REVIEWED this subject"* — ⛔ FALSE since `-160`, which records counsel
+//          as FULLY VERIFIED and delivering the clause text on 2026-08-28. ⚠ The half of that
+//          sentence which STANDS: ⛔ never write that counsel is not engaged — false since
+//          2026-06-21 (`2026-08-24-158`).
+//
+// ⭐⭐ THE ACTUAL POSTURE, AND IT IS ⛔ NOT A CODE MECHANISM: what keeps `/sahyog` dark is
+// DEPLOYMENT plus the counsel/Panel process (`2026-08-24-159` D1, `-160` cl.4(e)). ⛔ Registering
+// this route closes nothing, and ⛔ nothing here may be read as enabling the surface for any Pariwar.
+//
+// ⛔⛔ AND THE PUBLICATION KILL SWITCH MAY ⛔ NOT BE CITED AS THIS SURFACE'S TECHNICAL LAUNCH GATE.
+// It is an EMERGENCY OPERATIONAL control: a missing row resolves to ENABLED BY DESIGN (RULED
+// `2026-08-27`), and it is ⛔ not a consent mechanism
+// ([[project_directory_launch_gated_on_killswitch_ui]]). ⛔ Do not write it in here as one.
+//
+// ⚠⭐ AND THE SURFACE IS INERT ON DAY ONE BY DESIGN, ⛔ not broken: until a `clause_versions` row
+// for the post-death publication clause exists AND is pinned into a T&C version, the basis is false
+// for every member and ⛔ no name renders. Fail-closed, expected, and made observable by the
+// diagnostic in `handlers.ts` (11b.9 AC8). ⛔ Do ⛔ not debug it as a bug.
 
 import {
   PublicDirectoryQuery,

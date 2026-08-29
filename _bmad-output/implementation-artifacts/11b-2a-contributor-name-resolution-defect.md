@@ -6,11 +6,13 @@ baseline_commit: 07a5ced
 
 Status: blocked-awaiting-decisions
 
-> ⛔⛔ **BLOCKED — A THIRD VALIDATION PASS FALSIFIED THE GROUND OF A RULING (2026-08-29, at `07a5ced`).**
-> ⭐ **D3(a) · D3-shape(ii)(a) · D4(a) STAND.** ⛔ **D3-rollout(a) is RE-OPENED — its zero-population
-> ground is FALSE: Epic 9's `contribution.confirmed` producer SHIPPED at Story 9.4/9.5.** ⚠ And
-> **D3-shape(i)** ruled the union's SHAPE but never `rowKey`'s **DERIVATION** — a privacy decision
-> (**D3-key**) that AC5 cannot be built without. ⇒ **Tasks 0/1/3/4 are startable; ⛔ Tasks 2 and 5 are NOT.**
+> ⛔ **BLOCKED ON EXACTLY ONE DECISION — D3-rollout.** A third validation pass (2026-08-29, `07a5ced`)
+> falsified its ground: Epic 9's `contribution.confirmed` producer **SHIPPED at Story 9.4/9.5**, so the
+> zero-population premise it rested on is false. ⛔ It must be **re-ruled**; ⛔ it does not carry over.
+>
+> ✅ **EVERYTHING ELSE IS RULED (BigDev, 2026-08-29):** D3(a) · D3-shape(i)(a) SHAPE + (ii)(a) ·
+> **D3-key(c)** · **D4(a), re-ruled on the corrected ground**. ⇒ ⭐ **Tasks 0/1/3/4/5 are startable —
+> that is the whole RTBF defect fix and the decrypt bound. ⛔ Only Task 2 (the wire widening) waits.**
 
 > ⭐⛔ **THIS STORY EXISTS BECAUSE A VALIDATION PASS FOUND A LIVE, USER-VISIBLE DEFECT ON SHIPPED
 > CODE.** It was split out of Story 11b.2 on 2026-08-29 because it is a different risk class from a
@@ -25,14 +27,15 @@ Status: blocked-awaiting-decisions
 
 ⭐ **Ruled and STANDING (BigDev, 2026-08-29), written below with their grounds:**
 · **D3(a)** — fix the RTBF defect **here**, as its own story.
-· **D3-shape (i)(a)** — the wire is a **discriminated union** (SHAPE only — ⛔ see D3-key).
+· **D3-shape (i)(a)** — the wire is a **discriminated union** (SHAPE; the key derivation is D3-key).
 · **D3-shape (ii)(a)** — **one batched** state read.
-· **D4(a)** — **bound** the N+1 decrypt here. ⭐ Its ground CHANGED (see D4) but its verdict did not.
+· **D4(a)** — **bound** the N+1 decrypt here. ⭐ **RE-RULED** on the corrected ground (see D4).
 
-⛔⛔ **RE-OPENED / UNRULED — ⛔ do NOT proceed on either:**
+· **D3-key(c)** — the two union variants derive `rowKey` **differently**: `HMAC(memberId, server-held
+  per-pool salt)` on `name`, **per-row random** on `anonymized`. ⭐ Erasure leaves no stable handle.
+
+⛔⛔ **RE-OPENED / UNRULED — ⛔ ONE, and it gates ONLY Task 2:**
 · **D3-rollout** — ⛔ **the ruling's whole ground is FALSIFIED.** See the block below.
-· **D3-key** (NEW) — ⛔ **`rowKey`'s derivation was never ruled**, and AC5's two requirements pull
-  against each other. See the D3-key block in Decisions.
 
 ⛔ **Task 0 TRANSCRIBES those rulings into `.decision-log.md`. It does ⛔ NOT author them, ⛔ not
 paraphrase them, and ⛔ not supply a ground.** ⚠ If any decision below has been edited back to UNRULED,
@@ -353,7 +356,7 @@ quantities and must not drift into each other.
 per-row call is forbidden, and why `members.state` was ⛔ **not** joined instead (projector liveness
 must not enter the RTBF correctness path).
 
-### AC3 — The decrypt cost is BOUNDED ✅ `[D4(a) RULED]`
+### AC3 — The decrypt cost is BOUNDED ✅ `[D4(a) RE-RULED on the corrected ground]`
 
 The serial per-row decrypt is replaced by a **bounded-concurrency** batch on the `public-pages`
 precedent (`apps/api/src/modules/public-pages/handlers.ts:58` `DIRECTORY_DECRYPT_CONCURRENCY = 8`;
@@ -403,7 +406,7 @@ test rather than leaving the copy unguarded.
 **And** `deferred-work.md:2162` (`lastInitial` `.max(16)` doesn't guarantee initial-only) is **noted
 as touched-and-unchanged**, ⛔ not silently fixed and ⛔ not silently ignored.
 
-### AC5 — ⭐ A STABLE ROW KEY IS ADDED, because this is the only story that can add one ⛔ `[BLOCKED — D3-key UNRULED]`
+### AC5 — ⭐ A STABLE ROW KEY IS ADDED, because this is the only story that can add one ✅ `[D3-key(c) RULED]`
 
 `deferred-work.md:2163` (Story 8.3) defers the FlashList `keyExtractor` `index` churn, and names its
 blocker in terms: *"removing `index` risks duplicate-key collisions **since the PII-shielded shape
@@ -415,29 +418,24 @@ performance contract.
 ⇒ the widened row carries **`rowKey`** — present on **both** union variants (an anonymized row still
 needs a stable identity to recycle against).
 
-⛔⛔ **BUT ITS DERIVATION WAS NEVER RULED, AND THE TWO REQUIREMENTS AS WRITTEN PULL AGAINST EACH
-OTHER.** D3-shape(i)(a) ruled the **SHAPE** (`rowKey: z.string().min(1)`) and ⛔ nothing else. The prose
-demands a key that is simultaneously:
-· **STABLE** — it must survive the 60s poll, or FlashList recycling is no better than the `index` this
-  AC exists to remove; **and**
-· **NON-RE-IDENTIFYING across requests** — *"⛔ not anything that re-identifies across rows or
-  requests"*, because a per-member permalink is the enumeration primitive `11a.3`'s handler refuses in
-  terms (`epics.md:4904`).
+⭐⛔ **THE TWO VARIANTS DERIVE THEIR KEYS DIFFERENTLY — D3-key(c), and this is the whole substance of
+the AC:**
 
-⚠ ⭐ **Every derivation that is stable across polls is a deterministic function of `memberId` — i.e. a
-cross-request pseudonym.** A per-response salt satisfies the second and ⛔ fails the first. ⇒ ⛔ **the
-two clauses cannot both hold at full strength, and the trade is a PRIVACY ruling, ⛔ not a dev-agent
-implementation detail.**
+| Variant | Derivation | Property bought |
+|---|---|---|
+| `kind: 'name'` | `HMAC(memberId, per-pool salt)` | **stable across the 60s poll** ⇒ real recycling |
+| `kind: 'anonymized'` | **per-response random**, generated **per row** | ⭐ **erasure leaves no stable handle** |
 
-⛔⛔ **AND THE RTBF EDGE IS SHARPER STILL — READ IT BEFORE PROPOSING A SCHEME.** The ruled union puts
-`rowKey` on the **`anonymized` variant too**. A deterministic per-member key therefore leaves a
-**stable identifier attached to an erased member's row** — a residual handle surviving erasure, ⭐ **in
-the very story whose purpose is erasure**, and on the one surface where the marker is supposed to mean
-*"this person is gone."* ⇒ **D3-key must rule the anonymized variant's key explicitly**, ⛔ not inherit
-the `name` variant's scheme by default.
-
-⇒ ⛔ **AC5 is BLOCKED pending D3-key.** ⛔ It must ⛔ not be `memberId` and ⛔ not a blind index —
-those two exclusions stand regardless of how D3-key rules.
+**And** ⛔⛔ **the per-pool salt is a SERVER-HELD SECRET, ⛔ never `poolId`** — `HMAC(memberId, poolId)`
+is computable by anyone holding a `memberId` and becomes a **membership-confirmation oracle**, the
+enumeration property `11a.3`'s handler refuses in terms (`epics.md:4904`).
+**And** ⛔ it must ⛔ not be `memberId` and ⛔ not a blind index.
+**And** ⭐ both variants emit the **same format** (length/charset) so no consumer branches on key shape
+instead of on `kind`.
+**And** ⚠ ⭐ **the honest limit is DOCUMENTED at the contract, ⛔ not claimed away:** (c) closes the
+**key** channel, ⛔ not the **neighbour** channel — the surviving rows' stable keys still reveal *which*
+key vanished when a member is erased (see D3-key). ⛔ Do not write a comment or test asserting that
+erasure is uncorrelatable; it is not, and Task 6 routes the residual.
 **And** `deferred-work.md:2163` is marked **discharged**, with 11b.2b named as the consumer that
 removes `index` from the `keyExtractor`.
 
@@ -468,7 +466,7 @@ existing fixture rows (Trap 4, half 2).
 > bound). ⛔ **Task 2 needs D3-rollout re-ruled AND D3-key ruled; Task 5's rowKey assertions need D3-key.**
 > ⚠ Tasks 3 and 4 do ⛔ not touch the wire — they are genuinely independent of the widening.
 
-- [ ] **Task 0 — Governance first** ✅ `[startable — transcribe 3 STANDING rulings + 1 falsification + 1 new OPEN decision]`
+- [ ] **Task 0 — Governance first** ✅ `[startable — transcribe 5 rulings (1 of them a RE-ruling) + 1 falsification + 1 recorded residual]`
   - [ ] Read the `.decision-log.md` head **live** (`2026-08-28-167` at authoring; ⛔ do not hardcode)
         and **TRANSCRIBE** the **STANDING** rulings — **D3(a)** / **D3-shape (i)(a) SHAPE-ONLY +
         (ii)(a) batched read)** / **D4(a)** — one clause each, quoting the ground verbatim.
@@ -483,9 +481,15 @@ existing fixture rows (Trap 4, half 2).
         ([[feedback_supersede_never_reinterpret]], [[feedback_closure_language_precision]]).
         ⚠ ⭐ **And record the residual UN-ATTESTED fact**: whether production holds zero confirmed rows
         has ⛔ never been measured ([[feedback_record_unattested_no_backfill]]).
-  - [ ] ⛔ **Record D3-key as OPEN** — `rowKey`'s derivation was never ruled and AC5's stability and
-        non-re-identification clauses conflict; the anonymized variant's key needs its own ruling.
-        ⛔⛔ **The dev agent does not decide and does not supply a ground for D3-rollout or D3-key.**
+  - [ ] ⭐ **Transcribe D3-key(c)** — the SPLIT derivation (`HMAC(memberId, server-held per-pool salt)`
+        on `name`; **per-row random** on `anonymized`), its ground (it pays the recycling cost only
+        where erasure makes correlation a real harm), its **three constraints** (secret salt ⛔ never
+        `poolId` · per-**row** uniqueness · same format both variants), ⭐ **and its RECORDED RESIDUAL** —
+        (c) closes the key channel, ⛔ not the neighbour channel.
+  - [ ] ⭐ **Transcribe D4(a) as a RE-RULING, ⛔ not a restatement** — the first ground (*"currently
+        costs nothing, 0 confirmed contributors"*) was **falsified**; the verdict was re-taken on the
+        corrected ground, which is **stronger**.
+        ⛔⛔ **The dev agent does not decide and does not supply a ground for D3-rollout.**
         ⛔ `governance:` prefix, own commit, before any code.
   - [ ] Record in the same entry that **RTBF-D1's re-trigger fired at Story 8.3 and was not acted on**
         — the honest framing, ⛔ not "newly discovered".
@@ -496,10 +500,12 @@ existing fixture rows (Trap 4, half 2).
   - [ ] ⛔ State only — no decrypt, no KYC join, ⛔ no death overlay. ⛔ No dynamic `.limit()`.
   - [ ] ⛔ Do not push the state read into the domain contributor read (`ConfirmedContributor` is
         `{ memberId }` by design and the boundary decrypts).
-- [ ] **Task 2 — Widen the contract at the ROOT (AC4, AC5)** ⛔ `[BLOCKED — D3-rollout re-opened + D3-key unruled]`
+- [ ] **Task 2 — Widen the contract at the ROOT (AC4, AC5)** ⛔ `[BLOCKED — D3-rollout re-opened. ✅ D3-key(c) RULED, so this is now its ONLY blocker.]`
   - [ ] `grep -rn "lastInitial" packages apps --include='*.ts' --include='*.tsx'` and reconcile
         **every** site in Trap 4's table. ⛔ Declare once, derive; ⛔ do not append a field to each copy.
-  - [ ] Add `rowKey` to **both** union variants (AC5). Re-test `.strict()` **inside** the union.
+  - [ ] Add `rowKey` to **both** union variants (AC5) — ⭐ `HMAC(memberId, server-held per-pool salt)`
+        on `name`, **per-row random** on `anonymized` (D3-key(c)). ⛔ The salt is ⛔ never `poolId`.
+        Re-test `.strict()` **inside** the union.
   - [ ] ⛔⛔ **DO NOT START.** The LIVE check has already been run and it **FAILED** — the producer
         landed at Story 9.4/9.5. ⛔ Task 2 resumes only once **D3-rollout is re-ruled** and **D3-key is
         ruled**.
@@ -517,12 +523,19 @@ existing fixture rows (Trap 4, half 2).
   - [ ] Bounded concurrency on the `public-pages` precedent; per-row fail-soft preserved exactly.
   - [ ] ⭐ **ONE exported constant imported by both sites** — ⛔ not a cross-reference comment.
   - [ ] ⛔ No plaintext cache at rest.
-- [ ] **Task 5 — Prove it (AC6)** ⚠ `[AC6 startable; ⛔ the rowKey assertions wait on D3-key]`
+- [ ] **Task 5 — Prove it (AC6)** ✅ `[AC6 startable; ⭐ the rowKey assertions are now SPECIFIED by D3-key(c)]`
   - [ ] `apps/api/tests/integration/contributions/pool-contributors-rtbf.spec.ts` — real
         anonymization, fixture that **exercises** the variant, aggregates unchanged.
   - [ ] A test asserting state-resolution round trips are O(1) in the contributor count (AC2).
   - [ ] ⭐ A test asserting the batched resolver's SQL carries **no `occurred_at` upper bound** (AC2's
         clock domain) — so a later refactor toward `getMemberStateAt` fails loudly (Trap 1).
+  - [ ] ⭐⛔ **THE D3-key(c) PAIR — both halves, or the ruling is untested:** (i) a `name` row's `rowKey`
+        is **IDENTICAL across two requests**; (ii) an `anonymized` row's `rowKey` **DIFFERS across two
+        requests**. ⚠ ⭐ **And the load-bearing third:** the anonymized row's `rowKey` is ⛔ **NOT** the
+        HMAC that member's row carried **before** anonymization — i.e. a client holding the pre-erasure
+        response cannot match the rows **by key**. ⛔ That third assertion is the entire point of (c).
+  - [ ] ⚠ A test that two anonymized rows in one response carry **distinct** `rowKey`s (per-row, ⛔ not
+        per-response generation).
 - [ ] **Task 6 — Discharge the records, ⛔ do not re-file them**
   - [ ] `deferred-work.md`: **RTBF-D1** discharged · **`:2161`** (N+1) discharged · **`:2163`**
         (keyExtractor) discharged with 11b.2b named as the consumer · **`:2162`** noted as
@@ -537,6 +550,14 @@ existing fixture rows (Trap 4, half 2).
         any widening is a real break for stale clients over a real, UNMEASURED population. D3-rollout
         is RE-OPENED pending a posture ruled against measured exposure."* **Re-trigger: the widening
         being scheduled.** ⛔ Not marked closed.
+  - [ ] ⭐⛔ **File the D3-key(c) RESIDUAL — the neighbour channel.** *"`rowKey` randomization on the
+        `anonymized` variant (D3-key(c)) removes the KEY as a cross-request correlation channel, but
+        ⛔ NOT the NEIGHBOUR channel: surviving `name` rows keep stable HMAC keys by design, so a client
+        persisting responses (⚠ the SDK auto-persists to MMKV) can diff two polls and identify which key
+        vanished when a member was erased. ⛔ Not fixable within (c) — the only cure is per-response
+        randomization of every key, which is option (b), rejected on recycling grounds."* **Re-trigger:
+        any future work that makes contributor rows individually addressable, or any re-costing of (b).**
+        ⛔ Not marked closed. ⛔ Do ⛔ NOT record this as "erasure is uncorrelatable".
   - [ ] ⭐⛔ **File the STALE-COMMENT finding as its own item** — three shipped files still assert Epic
         9's producer is *"unbuilt"* (`pool-contributor-list.ts:88`, `contribution/read.ts:18`,
         `contribution-notify-triggers.ts:18`), one of them contradicting its own file header at `:7-8`.
@@ -681,10 +702,44 @@ zero-row population is SD-1.
 
 </details>
 
-### ⛔ D3-key — **NEW, OPEN. `rowKey`'s DERIVATION was never ruled.** ⛔ Blocks AC5 + Task 2.
+### ✅ D3-key — **RULED BigDev 2026-08-29: (c) — split derivation.** ⛔ Do not re-litigate.
 
-**The question:** how is `rowKey` derived, and ⭐ **does the `anonymized` variant derive it the same
-way as the `name` variant?**
+**The question was:** how is `rowKey` derived, and ⭐ **does the `anonymized` variant derive it the same
+way as the `name` variant?** → ✅ **(c): NO — the two variants derive their keys DIFFERENTLY.**
+
+· **`kind: 'name'`** → `HMAC(memberId, per-pool salt)` — stable across the 60s poll, so FlashList
+  recycling is genuinely better than the `index` AC5 exists to remove.
+· **`kind: 'anonymized'`** → a **per-response random** value — ⭐ **erasure leaves no stable handle.**
+
+**Ground:** it is the only option that pays the recycling cost *only* on the rows where erasure makes
+correlation a real harm. ⛔ **(a)** was rejected because a deterministic key on an erased row is a
+residual identifier surviving erasure — the thing this story exists to prevent. ⛔ **(b)** was rejected
+because it destroys recycling for **every** row and so fails AC5's own ground. ⛔ **(d)** was rejected
+because it costs AC5 entirely and leaves 11b.2b on `index`.
+
+⚠ ⭐ **THREE IMPLEMENTATION CONSTRAINTS THE RULING CARRIES, ⛔ none optional:**
+· ⛔⛔ **The per-pool salt is a SERVER-HELD SECRET, ⛔ never the `poolId` itself.** `HMAC(memberId,
+  poolId)` is computable by anyone holding a `memberId` ⇒ it becomes a **membership-confirmation
+  oracle** ("is this member in this pool?"), which is the enumeration property `11a.3` refuses in terms.
+  ⛔ Do not derive the salt from public data.
+· ⚠ **The anonymized key must be unique WITHIN the response.** Two anonymized rows in one pool must not
+  collide — generate per **row**, ⛔ not per response, or React/FlashList duplicate-key behaviour
+  re-creates exactly the churn `deferred-work.md:2163` recorded.
+· ⭐ **Both variants emit the same FORMAT** (same length/charset). ⛔ Not for secrecy — `kind` already
+  discriminates — but so no downstream consumer can branch on key shape instead of on `kind`.
+
+⛔⛔ **AND THE HONEST LIMIT OF (c) — ⛔ do NOT let the story claim erasure is uncorrelatable.** (c)
+closes the **key** channel, ⛔ not the **neighbour** channel. A client that persists responses (⚠ **and
+the mobile client DOES — the SDK auto-persists to MMKV**) can diff two polls:
+
+> pre-erasure key set `{hA, hB, hC}` → post-erasure `{hA, hC, <random>}`. `hA` and `hC` are **stable by
+> design**, so `hB` is visibly **missing** and one anonymized row is visibly **new** ⇒ the erased member
+> is identified as the holder of `hB`.
+
+⚠ ⭐ **The randomization of the erased row's own key is defeated by the STABILITY OF ITS NEIGHBOURS'
+keys.** ⛔ This is ⛔ not fixable within (c) — the only cure is per-response randomization of **every**
+key, which is option (b), rejected on recycling. ⇒ ⭐ **(c) remains the right trade, and the residual is
+RECORDED, ⛔ not claimed away** ([[feedback_record_unattested_no_backfill]]). **Task 6 routes it.**
 
 **Why it is a decision and ⛔ not an implementation detail** — AC5's two requirements conflict:
 **stable across the 60s poll** (or it is no better than the `index` it replaces) vs **⛔ must not
@@ -695,18 +750,25 @@ refuses in terms, `epics.md:4904`). ⭐ Every scheme stable across polls is a de
 ⛔⛔ **And the RTBF edge is the sharp one:** a deterministic key on the **`anonymized`** variant leaves
 a **stable handle on an erased member's row**, in the story whose purpose is erasure.
 
-**Costed options (⛔ none ruled):**
+<details><summary>The four costed options, preserved as the record of what (c) was chosen over</summary>
+
 · **(a)** HMAC(`memberId`, per-**pool** salt) — stable within a pool, ⛔ correlatable across requests.
 · **(b)** HMAC(`memberId`, per-**response** salt) — ⛔ breaks recycling across polls; AC5's own ground fails.
-· **(c)** (a) for `name` rows + a **per-response random** key for `anonymized` rows — ⭐ erasure leaves no
-  stable handle; ⚠ anonymized rows recycle worse (⛔ but they are the rare case).
+· **(c)** ✅ **RULED** — (a) for `name` rows + a **per-response random** key for `anonymized` rows.
 · **(d)** Drop `rowKey` from this story and leave `deferred-work.md:2163` open — ⛔ costs AC5 entirely
   and 11b.2b keeps `index`.
 
-⚠ ⭐ **Whichever is ruled, the ground must state what the key is allowed to reveal to a client that
-collects responses over time.** ⛔ An unstated answer is what AC5 currently ships.
+</details>
 
-### ✅ D4 — Bound the N+1 decrypt here? → **(a) bound it HERE.** RULED 2026-08-29.
+### ✅ D4 — Bound the N+1 decrypt here? → **(a) bound it HERE. RE-RULED 2026-08-29 on the CORRECTED ground.**
+
+⭐⛔ **THE RE-RULING IS ⛔ NOT REDUNDANT, AND THE DISTINCTION IS THE POINT.** D4(a) was first ruled on a
+ground that included *"currently costs nothing (0 confirmed contributors)"* — ⛔ **false** (Preflight).
+A verdict standing on a falsified ground is ⛔ **not** a verdict that carries over
+([[feedback_supersede_never_reinterpret]]); it is re-taken. **BigDev re-ruled (a) on the corrected
+ground, and the corrected ground is STRONGER** — the N+1 is a live cost on a live path, ⛔ not a
+forward-looking one. ⇒ Task 0 transcribes **the re-ruling and why the first ground fell**, ⛔ not the
+original clause.
 
 The serial per-row decrypt is pre-existing (8.3) and **already routed** at `deferred-work.md:2161` with
 a re-trigger that has fired.
@@ -819,5 +881,6 @@ pnpm ci:local                               # before push — integration concur
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-08-29 | 0.3 | ✅ **TWO DECISIONS RULED BY BigDev — D3-key(c) and D4(a).** ⭐ **D3-key(c): the two union variants derive `rowKey` DIFFERENTLY** — `HMAC(memberId, per-pool salt)` on `kind:'name'` (stable across the 60s poll ⇒ real FlashList recycling), **per-row random** on `kind:'anonymized'` (⭐ erasure leaves no stable handle). (a) rejected — a deterministic key on an erased row is a residual identifier surviving erasure; (b) rejected — destroys recycling for every row and fails AC5's own ground; (d) rejected — costs AC5 entirely and leaves 11b.2b on `index`. ⇒ **AC5 UNBLOCKED and now fully specified**; Task 2's blocker list drops from two to one. ⚠ ⭐ **Three constraints the ruling carries, added to AC5 + Task 2:** the per-pool salt is a **SERVER-HELD SECRET, ⛔ never `poolId`** (`HMAC(memberId, poolId)` is computable by anyone holding a memberId ⇒ a **membership-confirmation oracle**, the enumeration property `11a.3` refuses in terms) · the anonymized key is generated **per ROW, not per response** (or duplicate-key churn returns) · both variants emit the **same format** so no consumer branches on key shape instead of `kind`. ⛔⛔ **AND THE HONEST LIMIT IS RECORDED, ⛔ not claimed away:** (c) closes the **key** channel, ⛔ NOT the **neighbour** channel — surviving rows keep stable keys by design, so a client persisting responses (⚠ the SDK auto-persists to **MMKV**) can diff two polls, see which key **vanished**, and identify the erased member anyway. ⛔ Not fixable within (c); the only cure is option (b), rejected. **Task 6 routes it as a standing residual, and AC5 forbids any test or comment asserting erasure is uncorrelatable.** Task 5 gains the **D3-key(c) test triple** — a `name` key identical across two requests · an `anonymized` key differing across two requests · ⭐ **the anonymized key is NOT the HMAC that member carried pre-anonymization** (the entire point of (c)) — plus a per-row-uniqueness test. ⭐ **D4(a) RE-RULED, ⛔ not restated:** its first ground included *"currently costs nothing (0 confirmed contributors)"*, which v0.2 falsified; a verdict standing on a falsified ground does ⛔ not carry over ([[feedback_supersede_never_reinterpret]]), so it was **re-taken on the corrected ground — which is STRONGER** (the N+1 is a live cost on a live path). Task 0 now transcribes the re-ruling **and why the first ground fell**. ⛔ **D3-rollout remains RE-OPENED and is now the story's ONLY blocker** — status stays `blocked-awaiting-decisions`, but **Tasks 0/1/3/4/5 are startable**, which is the whole RTBF defect fix plus the decrypt bound; ⛔ only Task 2 (the wire widening) waits. | BigDev + Claude |
 | 2026-08-29 | 0.2 | ⛔⛔ **THIRD VALIDATION PASS (`bmad-create-story validate 11b.2a`, at `07a5ced`) — STATUS DROPPED `ready-for-dev` → `blocked-awaiting-decisions`.** Baseline re-pinned `80e0d12` → `07a5ced` (⛔ no verified claim moved: `git diff --name-only` returns four `_bmad-output/` files and nothing else). ⭐⭐ **THE FINDING: D3-rollout(a)'s SOLE GROUND IS FALSE.** *"Epic 9's `contribution.confirmed` producer is unbuilt ⇒ population ZERO"* — the producer **shipped at Story 9.4/9.5** (`sprint-status:12178-12179` both `done`; `matcher-write.ts:117` `appendConfirmedContribution`; `boot.ts:652` registered unconditionally; *"two live emitters since Story 9.4"* in two packages). ⚠ **The false premise was read off STALE Epic-8-era comments** (`pool-contributor-list.ts:88`, `contribution/read.ts:18`) — ⭐ **one of which contradicts its own file header at `:7-8`**. ⇒ D3-rollout **RE-OPENED** (superseded by falsification, ⛔ not reversed on merits); AC4's *"widen BEFORE Epic 9's producer"* ordering is **UNSATISFIABLE**; Task 6's standing item would have routed a **future** watch for a **past** event — the RTBF-D1 decay pattern re-created inside the story discharging RTBF-D1. ⭐ The residual *"zero rows in production"* claim is recorded **UN-ATTESTED** — never measured. **(2)** ⛔⛔ **AC2 named the WRONG state-read sibling.** `read.ts` has two: `getMemberStateAt` (`:127`, `occurred_at`-bounded) and `getCurrentMemberState` (`:151`, unbounded), whose doc-block warns that an **app-clock** bound can disagree with the projector's **DB-clock** replay ⇒ an `rtbf_anonymized` event falling outside the window **renders the erased name** — this story's own defect, reintroduced. AC2 now mirrors `getCurrentMemberState` + a test asserting no `occurred_at` bound. **(3)** ⛔ **NEW decision D3-key** — D3-shape(i)(a) ruled `rowKey`'s SHAPE, ⛔ never its DERIVATION; AC5's *"stable"* and *"must not re-identify across requests"* clauses **conflict**, and a deterministic key on the `anonymized` variant leaves **a stable handle on an erased row**. AC5 + Task 2 BLOCKED; four options costed, ⛔ none ruled. **(4)** ⛔ **Every `continue` line number was wrong** — `:313`/`:326`/`:331` → **`:317`/`:327`/`:332`** (conditions `:312`/`:323-325`/`:330`; comments `:313-315`/`:319-321`, ⛔ not `:322-324`). 11b.2's re-validate fixed this family at `07a5ced` but that commit ⛔ never touched this file. **(5)** AC3 shared only the CONSTANT — ⚠ `mapWithConcurrency` (`public-pages/handlers.ts:67`) is **equally module-private** and carries the load-bearing input-order behaviour ⇒ **both** are extracted. **(6)** *"§4.4 **governs** it"* → **SPEAKS to but governs nothing** (unratified; ranked below a Deed clause that itself binds nothing) — the obligation discharged here is **statutory + ratified**, ⛔ neither needs §4.4. **(7)** Trap 4's grep returns **~20 files** against a **10-row** table ⇒ the out-of-scope classes are now named (the 8.2 `deceasedLastInitial` family + the `splitFirstNameLastInitial` producer/tests). Citation corrections: `11b-9-…md:753-757` → **`:762-767`** · `getMemberStateAt` is `occurred_at`-bounded, ⛔ not *"unbounded"* · `resolveMemberDisplayName` has **no `dist/` reference** (the zero-production-call-sites half is CONFIRMED) · `governance:` 142 → **144**. ⭐ **Verified clean:** the entire defect trace line-by-line, Trap 1's no-`state`-column claim, the mobile local `ConfirmedRow:40-43`, the SDK parse site, all four `deferred-work.md` anchors, `friction-budget/lib.ts:453`, decision-log head `2026-08-28-167`, the commitlint-unwired claim, the death-vs-RTBF table against `epics.md:4906`, and `tests/integration/contributions/` as a valid home. | BigDev + Claude |
 | 2026-08-29 | 0.1 | **Split out of Story 11b.2 by the validation pass at `80e0d12`.** Carries the live RTBF contributor-name defect, the decrypt bound, the wire widening and the stable row key. ⭐ Findings applied at authoring: **(1)** ⛔ *"nothing had recorded it"* is **false** — **RTBF-D1** (`deferred-work.md:3980`) recorded the unwired seam and its re-trigger **fired at Story 8.3**; this story **discharges** it rather than claiming novelty. **(2)** ⛔⛔ *"the boundary already loads the member"* is **false** — `getMemberKycProfile` returns no `state` and `getMemberStateAt` is a **full event-stream replay per member**, so the naive fix is an N+1 **worse** than the one AC3 bounds ⇒ new **D3-shape(ii)** and **AC2**. **(3)** The anonymized wire shape was **entirely unspecified** ⇒ **D3-shape(i)** with four costed options. **(4)** Widening a `.strict()` **response** breaks every stale mobile client — **no OTA**, SDK-validated, **MMKV-persisted** ⇒ Trap 3 + an explicit rollout-posture AC. **(5)** *"must not silently `continue`"* re-scoped to the anonymized case only — three existing integrity `continue`s preserved verbatim. **(6)** The resolver returns **THREE** kinds; `unknown` gets an exhaustive throwing check recorded un-attested. **(7)** Trap 4 now names the working grep (`lastInitial`), all seven re-spellings, and 11b.1's **two** load-bearing halves (root-derivation + exercise-the-variant). **(8)** AC3's drift mechanism changed from a cross-reference comment — **already filed as insufficient by 11b.9's review** — to one shared constant. **(9)** **AC5 added**: `deferred-work.md:2163`'s keyExtractor re-trigger has fired by name and this is the only story that can supply the stable key it lacks. **(10)** AC6 given a real home, the two real-anonymization precedents, and the exercise-the-variant fixture rule. **(11)** Task 0 is **TRANSCRIBE-or-STOP**. | BigDev + Claude |

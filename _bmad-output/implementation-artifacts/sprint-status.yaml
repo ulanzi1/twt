@@ -1,5 +1,74 @@
 # generated: 2026-05-29
-# last_updated: 2026-08-29 (story 11b-9 — ⭐ ADMIN PROVISIONING PATH BUILT: `scripts/provision-admin.ts`
+# last_updated: 2026-08-29 (story 11b-9 — ⭐ CODE REVIEW PASSED, `review` → `done`. Three-layer
+#   review (Blind Hunter / Edge Case Hunter / Acceptance Auditor) found ⛔ ZERO AC VIOLATIONS —
+#   "an unusually faithful implementation." Two decision-needed items resolved: (1) the `.strict()`
+#   DPDPA-contract shrink's mobile-rollout skew risk — verified `apps/mobile` has NO expo-updates/OTA
+#   config (ships via EAS Build → app-store submission only), so the review-window risk is real;
+#   accepted as-is (low volume, recoverable via helpline/retry), deferred; (2) the AC8 diagnostic's
+#   `console.warn`/`console.error` levels contradicted its own "never debugged as a bug" intent on a
+#   hot path firing on ~every `/sahyog` request — patched to `console.info`/`console.debug`, plus a
+#   dedupe-by-`deceasedMemberId` fix for a duplicate-log-line bug the Edge Case Hunter found. Six
+#   items deferred to `deferred-work.md` (KYC-null diagnostic gap, a diagnostic-only TOCTOU race, an
+#   unreachable-in-production `tc_acceptance`-revoked branch, two hand-written SQL predicates synced
+#   only by comment, and a Hindi/English i18n phrasing asymmetry) — none blocking, all pre-existing
+#   or out of this story's scope. See the story file's `### Review Findings` section for detail.
+# last_updated_prior: 2026-08-29 (story 11b-9 — ⭐ PUBLICATION AUTHORITY SWITCHED. `ready-for-dev` →
+#   `in-progress` → `review`. Tasks 2-8 built; ⛔ TASK 1 REMAINS OPEN AND IS NOT A MERGE GATE (D3):
+#   it waits on counsel's FINAL clause (T&C return due 2026-09-07) and a SECOND REAL PERSON to run
+#   the non-author tone review. ⛔ NO DECISION MINTED — every ruling this story implements
+#   (`2026-08-28-160` · `-161` · `-162` · `-167`) was already on `main`.
+#   ⭐⭐ THE STORY MERGES **INERT**, AND THAT IS THE DESIGNED DAY-ONE STATE, ⛔ NOT AN INCOMPLETE
+#   BUILD: with no `clause_versions` row minted and nothing pinned, the new predicate is false for
+#   every member and ⛔ NO NAME RENDERS on `/sahyog`. Fail-closed, expected, and made OBSERVABLE by
+#   the AC8 diagnostic so nobody debugs it as a bug. ⛔ Do NOT seed a placeholder clause row to make
+#   the surface look alive — a stand-in makes names render on an authority that does not exist,
+#   which is the exact defect this story corrects.
+#   ⭐ THE SWITCH: `pool/public-read.ts`'s render gate no longer reads the family's claim-time
+#   tick-box (`sahyog_drive_publication`, DE-AUTHORISED by `-160` cl.3-5). It now requires the
+#   DECEASED MEMBER'S OWN valid `tc_acceptance` whose accepted T&C version PINS the publication
+#   clause — one set-based, tenant-scoped, cast-defensive two-join subquery. ⛔ Not ANDed, ⛔ not
+#   ORed with the old gate: RETIRED. The row field renamed `nameConsentGranted` →
+#   `namePublicationAuthorised` (AC6) — the value no longer reflects a consent at all.
+#   ⚠ THE ONE CAST, IN ONE DIRECTION, CLOSES TWO TRAPS: `tc_version_id::text = consent_artifact_ref`.
+#   `uuid→text` is TOTAL; the reverse is PARTIAL and would 22P02 the WHOLE public page on any row
+#   whose unconstrained-text ref is empty or malformed. Proved by three fixtures (non-UUID / '' /
+#   NULL) that assert the read RESOLVES and excludes the member, ⛔ never that it rejects.
+#   ⭐ THE CLAIM CONSENT SCREEN REDUCED TO BOX (a) ALONE (`-162` cl.2): (b) sahyog_vivran, (c)
+#   in_memoriam and (d) sahyog_drive removed from the screen, the request contract and both locales'
+#   UI labels. ⛔ ONE EDIT CLOSED BOTH SURFACES — the helpline route shares the same handler core.
+#   ⛔⛔ AND NOTHING WAS DELETED. The three `consent_type` values, migrations 0058 + 0112, every
+#   existing row, both claim-time TUPLES, `DPDPA_CONSENT_COPY`, BOTH revoke routes and the GET
+#   presence view ALL STAY (`-160` cl.5 / `-162` cl.5 / story D7(a)). Retiring a BOX is ⛔ not
+#   deleting a TYPE. A new guard suite pins the enum + both tuples so a future "cleanup" fails loudly.
+#   ⚠ TWO SUITES HAD TO STAY GREEN **UNCHANGED** AND DID — `dpdpa-consent-events.test.ts` and
+#   `dpdpa-claim-consent.spec.ts`. They are the live proof the tuples did not shrink; a red there
+#   would have meant a narrowed type, and the fix would have been reverting the SOURCE.
+#   ⭐ THE REVOKE CASES SURVIVE BY SEEDING THE GRANT DIRECTLY — it can no longer be MADE through the
+#   route, and that is exactly the pre-11b.9 row the ruling preserves. Withdrawal is the last
+#   remaining data-subject action on those rows; removing it would be a rights regression.
+#   ⚠ THE COMMENT SWEEP WAS THE HALF MOST LIKELY TO BE LEFT UNDONE, and it was FOUR sites not one:
+#   `matrix.ts` (comment only — the RULED entry and its cited decision untouched),
+#   `public-vs-private-matrix.yaml` ×2 (⚠ the second is DATA the PII-scrape gate parses, ⛔ not a
+#   comment — `description:` prose only, ⛔ never `escalations:`), `directory-abuse-rules.yaml`, and
+#   `login-wall.spec.ts`. Plus `routes.ts`'s three-gate launch block, in which ALL THREE gates were
+#   falsified on 2026-08-28 — rewritten, ⛔ not deleted: "BUILT IS NOT PUBLISHED" is still true, and
+#   what keeps `/sahyog` dark is DEPLOYMENT plus the counsel/Panel process, ⛔ never the kill switch.
+#   ⚠ AND THE STALE THREE-AUTHORITY CITATION WAS AT **THREE** SITES, ⛔ not the two `-166` cl.3
+#   routed — migration 0112 was the unrouted third, and it went furthest ("DECLINABLE AND REVOCABLE
+#   … NOT NEGOTIABLE"). All three now carry the unratified-draft qualifier for BOTH the Deed AND the
+#   Niyamavali (`-164` cl.1 / `-167`). ⛔ NO Niyamavali amendment is owed — there is no ratified
+#   instrument to amend, and §4.4 is ⛔ not a blocker.
+#   ⚠ CAUGHT BY A GATE, WORTH KNOWING: `pool-support-category-invariant` scans this module's
+#   COMMENTS, so "post-death publication clause" FAILED CI. Reworded to "posthumous" — the gate is
+#   right that a pool-engine comment thinking in category terms is itself the smell.
+#   ⚠ ONE PRE-EXISTING FLAKE, ⛔ not caused here: `tests/db.test.ts` timed out at 5131ms in the first
+#   full run and passed in 484ms isolated and on re-run — the known concurrency-oversubscription
+#   flake. Final `pnpm ci:local`: 33/33 green.
+#   ⚠ ONE PROPERTY BECAME UNTESTABLE AND IS RECORDED RATHER THAN QUIETLY DROPPED: the optional-consent
+#   independence matrix and the atomicity suite's "a LATER grant fails" case are both unconstructible
+#   now that the request carries ONE boolean. Replaced with what can still be asserted — a `.strict()`
+#   rejection of any retired box, which is what actually guarantees no new row is written.)
+# last_updated_prior: 2026-08-29 (story 11b-9 — ⭐ ADMIN PROVISIONING PATH BUILT: `scripts/provision-admin.ts`
 #   + `pnpm provision:admin`. ⛔ ZERO ROWS FLIP; 11b-9 stays `ready-for-dev`. ⛔ NO DECISION MINTED.
 #   ⭐ THIS IS THE CALLER THE CODE ALREADY ANTICIPATED: `mintEnrollmentToken` documents itself as
 #   "issued by an ops/super-admin path (NOT a public route)" and `createAdminAccount` is headed
@@ -11894,10 +11963,14 @@ development_status:
   # ⭐⛔ 11b-9 ADDED 2026-08-28 BY RULING, ⛔ NOT BY THE EPIC PLAN (Decision 2026-08-28-160). It is a
   # CORRECTION to MERGED behaviour, ⛔ not a new feature: Story 11b.1 shipped a render gate that
   # -160 cl.5 de-authorised, so until 11b-9 lands `/sahyog` reads a SUPERSEDED authority.
-  # ⛔ FIVE DECISIONS (D1-D5) ARE OPEN AND OWED BEFORE DEV — D3 (the clause_id literal) depends on
-  # counsel's T&C return, due 2026-09-07. ⚠ The story is FAIL-CLOSED until that clause is seeded AND
-  # pinned: every row renders unnamed. INERT, ⛔ not broken.
-  11b-9-sahyog-drive-publication-authority-switch: ready-for-dev
+  # ⚠⛔ THE LINE THAT STOOD HERE IS SPENT — it read "FIVE DECISIONS (D1-D5) ARE OPEN AND OWED BEFORE
+  # DEV". ⭐ ALL SEVEN (D1-D7) WERE DISPOSED 2026-08-29 and the story is BUILT (Tasks 2-8).
+  # ⛔ WHAT REMAINS IS NOT A DECISION: counsel's FINAL clause (T&C return due 2026-09-07) and a
+  # SECOND REAL PERSON for the non-author tone review. Between them they gate TASK 1 ALONE, and
+  # ⛔ Task 1 is NOT a merge gate (`-160` cl.9: development proceeds).
+  # ⚠ The story is FAIL-CLOSED until that clause is minted AND pinned: every row renders unnamed.
+  # INERT, ⛔ not broken — and ⛔ do not seed a placeholder clause row to make it look alive.
+  11b-9-sahyog-drive-publication-authority-switch: done
   epic-11b-retrospective: optional
 
   # ==========================================================================

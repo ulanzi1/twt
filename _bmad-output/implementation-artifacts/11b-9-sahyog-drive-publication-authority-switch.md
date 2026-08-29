@@ -4,7 +4,7 @@ baseline_commit: b87fb0450dc39a3dc00d94a9df49a279480fed57
 
 # Story 11b.9: Sahyog Drive Publication Authority Switch — T&C-Basis Render Gate + `sahyog_drive_publication` De-authorisation `[SURFACE]`
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -494,12 +494,12 @@ no-bulk-export posture, and the abuse counter all behave exactly as at **`b18d18
             ⚠ **Observational, ⛔ not this story's to fix:** `state_trustee`'s `niyamavali.review`
             grant is **inert by construction** — a key it can never exercise. ⛔ Recorded, ⛔ not
             raised as a defect and ⛔ not routed ([[feedback_gap_analysis_observational]]).
-- [ ] **Task 2 — Build the predicate.** Replace `NAME_CONSENT_GRANTED` in
+- [x] **Task 2 — Build the predicate.** Replace `NAME_CONSENT_GRANTED` in
       `packages/domain/src/pool/public-read.ts` with the T&C-basis expression: `consent_records`
       (`tc_acceptance`, subject = `"claims"."deceased_member_id"`, existing validity window) →
       `terms_and_conditions_pinned_clauses` (cast-correct, defensive — T1/T2) → `clause_versions`
       (`clause_id` = the constant below). Tenant-scope **every** leg (T5). Keep it **set-based** (T4).
-      - [ ] ⭐⭐ **FIRST — export the single `clause_id` constant in `@twt/domain`** (alongside
+      - [x] ⭐⭐ **FIRST — export the single `clause_id` constant in `@twt/domain`** (alongside
             `SAHYOG_DRIVE_CONSENT_TYPE`, which stays). ⚠ Document that it is a **`clause_id`**, ⛔ not
             a `clause_version_id`, and **why** (T3).
             ⚠⛔ **ITS VALUE IS PENDING COUNSEL'S FINAL CLAUSE (D3) — and that is ⛔ FINE.** ⭐ Ship it
@@ -526,13 +526,13 @@ no-bulk-export posture, and the abuse counter all behave exactly as at **`b18d18
             against the regex, on-convention, and descriptive of T&C clause 14 (*"Public Disclosure of
             Member Information"*). ⚠ ⛔ **Provisional by D3** — counsel's final clause decides it, and
             changing it is the **one line** this seam exists to protect.
-      - [ ] Update the file's *"change one, check the other"* pairing comments so they point at the
+      - [x] Update the file's *"change one, check the other"* pairing comments so they point at the
             **live** predicate, ⛔ not the retired one.
-- [ ] **Task 3 — Rewire the API surface.** Rename the row field (AC6) through
+- [x] **Task 3 — Rewire the API surface.** Rename the row field (AC6) through
       `apps/api/src/modules/public-pages/handlers.ts` and its contract; keep the decrypt gated
       **before** the Tier-1 read. Update `routes.ts:58`'s explanatory comment — it currently names
       `sahyog_drive_publication` as the gate.
-      - [ ] ⚠ **AND FIX A STALE COMMENT IN THE MATRIX — routed here by `2026-08-28-163` finding 3.**
+      - [x] ⚠ **AND FIX A STALE COMMENT IN THE MATRIX — routed here by `2026-08-28-163` finding 3.**
             `packages/contracts/src/public-pages/matrix.ts` describes 11b.1's Tier-1 exception as
             *"⚠ Consent-gated per subject (`sahyog_drive_publication`), which the directory's is
             NOT."* ⛔ **Stale as of `-160` cl.5 and `-162`** — that gate is de-authorised and the box
@@ -540,7 +540,7 @@ no-bulk-export posture, and the abuse counter all behave exactly as at **`b18d18
             ⛔ **Change the COMMENT only** (`matrix.ts:396`). ⛔ Do ⛔ **not** touch
             `RULED_TIER1_PUBLIC_EXCEPTIONS` itself — the entry and its cited decision stay exactly as
             they are.
-      - [ ] ⭐⭐ **AND THE SAME FALSIFIED SENTENCE IS IN ⛔ FOUR PLACES, ⛔ NOT ONE — `-163` finding 3
+      - [x] ⭐⭐ **AND THE SAME FALSIFIED SENTENCE IS IN ⛔ FOUR PLACES, ⛔ NOT ONE — `-163` finding 3
             routed only the `.ts` copy.** ⚠ Verified at `b18d188`. Fixing one and leaving three is
             the **`-166` cl.3 defect class repeating inside its own remedy**: the survivors then read
             as though they were checked.
@@ -560,7 +560,7 @@ no-bulk-export posture, and the abuse counter all behave exactly as at **`b18d18
             (`…matrix.yaml:624`), `escalation_count`, or any `tier1_public_exception` entry: those are
             cross-checked in **both directions** and a change there is a **governance act**, ⛔ not a
             comment fix.
-      - [ ] ⚠⛔ **AND `routes.ts` ASSERTS A THREE-GATE LAUNCH POSTURE IN WHICH ⛔ ALL THREE GATES ARE
+      - [x] ⚠⛔ **AND `routes.ts` ASSERTS A THREE-GATE LAUNCH POSTURE IN WHICH ⛔ ALL THREE GATES ARE
             NOW FALSIFIED** — `apps/api/src/modules/public-pages/routes.ts:63-70`, ⛔ a separate block
             from `:58`. ⚠ Verified at `b18d188`:
             **(1)** *"counsel's HELD DPDPA review of this exact subject (`2026-08-24-157` cl.3(a),
@@ -577,10 +577,10 @@ no-bulk-export posture, and the abuse counter all behave exactly as at **`b18d18
             ([[project_directory_launch_gated_on_killswitch_ui]]). ⛔ Do ⛔ not simply delete the
             block: *"BUILT IS ⛔ NOT PUBLISHED"* is still **true**, and this file is where the next
             reader looks for it.
-- [ ] **Task 4 — ⭐ WIDENED (`-162`): reduce the claim consent screen to box (a) alone.**
+- [x] **Task 4 — ⭐ WIDENED (`-162`): reduce the claim consent screen to box (a) alone.**
       Retire **(b) `sahyog_vivran_publication`**, **(c) `in_memoriam_listing`** and
       **(d) `sahyog_drive_publication`**. ⚠ **(a) `claim_time_dpdpa` stays byte-identical.**
-      - [ ] `apps/mobile/app/(claim)/consent.tsx` — drop all three `<ConsentRow>` blocks
+      - [x] `apps/mobile/app/(claim)/consent.tsx` — drop all three `<ConsentRow>` blocks
             (**`:189-193 · :194-198 · :199-203`**), their state (**`:111 · :112 · :113`**), their
             hydration (**`:127 · :128 · :129`**) and ⚠ **all three** submit fields
             (**`:156 · :157 · :158`** — ⛔ not just `:158`). ⚠ The screen's header comment (`:3-9`)
@@ -592,26 +592,26 @@ no-bulk-export posture, and the abuse counter all behave exactly as at **`b18d18
             that belongs to **(a)** and is a *required*-box hint, ⛔ not an optional-box reassurance.
             ⭐ Still re-read the whole screen as a user would: a one-checkbox consent step reads
             differently from a four-checkbox one.
-      - [ ] `apps/api/src/modules/claims/claims.dpdpa-consent.handlers.ts:70-71 · :76` — stop writing
+      - [x] `apps/api/src/modules/claims/claims.dpdpa-consent.handlers.ts:70-71 · :76` — stop writing
             all three (`grantedTypesFromRequest`).
             ⭐ **ONE EDIT CLOSES BOTH SURFACES, and knowing that saves a hunt:** the helpline route
             `apps/api/src/modules/claims/claims.helpline.routes.ts:200` shares the **same**
             `createDpdpaConsentHandlers` core, so the operator-assisted path retires with the member
             one. ⭐ **Verified: there is ⛔ no admin UI rendering these boxes** — `apps/admin`'s only
             `dpdpa` hit is an unrelated helpdesk subcategory string.
-      - [ ] Contract: retire the three **booleans** on `RecordDpdpaConsentRequest`. ⛔⛔ **That is the
+      - [x] Contract: retire the three **booleans** on `RecordDpdpaConsentRequest`. ⛔⛔ **That is the
             WHOLE of the contract shrink** — see **AC4's table** and **T6**: `DpdpaConsentType`,
             `DpdpaRevocableConsentType` and both claim-time tuples ⛔ **do not move**.
-      - [ ] i18n: remove the `dpdpa.sahyog_vivran` / `dpdpa.in_memoriam` / `dpdpa.sahyog_drive` **UI
+      - [x] i18n: remove the `dpdpa.sahyog_vivran` / `dpdpa.in_memoriam` / `dpdpa.sahyog_drive` **UI
             label** keys from `packages/i18n/locales/en/claim.json:79 · :81` **and**
             `hi/claim.json:79 · :81`. ⚠ **Both locales, in the same commit** — there is an
             **i18n-parity CI leg**.
             ⛔⛔ **AND ⛔ NOT `DPDPA_CONSENT_COPY`** (`dpdpa-consent-copy.ts:21`) — that is the *other*
             thing called "copy", it is `Record`-total over the preserved enum, and it is what keeps
             **already-written rows explicable**. ⚠ See **T7** before you touch either.
-      - [ ] ⛔ **PRESERVE the enum values and migration 0058** (`-162` cl.5) — retiring a **box** is
+      - [x] ⛔ **PRESERVE the enum values and migration 0058** (`-162` cl.5) — retiring a **box** is
             ⛔ not deleting a **type**. Extend the AC9 in-place comments to cover (b) and (c).
-      - [ ] ⚠⭐ **TWO STALE DEED CITATIONS FALL INSIDE THIS TASK — routed here by `2026-08-28-166`
+      - [x] ⚠⭐ **TWO STALE DEED CITATIONS FALL INSIDE THIS TASK — routed here by `2026-08-28-166`
             cl.3.** `packages/contracts/src/claims/dpdpa-consent.ts:110` and
             `apps/api/src/modules/claims/dpdpa-consent-copy.ts:39` both cite **Trust Deed cl.15(c)**
             as the reason claim-time publication consent is compulsory / not default-opt-in.
@@ -619,7 +619,7 @@ no-bulk-export posture, and the abuse counter all behave exactly as at **`b18d18
             **retires the boxes those comments explain**. ⇒ rewrite both comments as part of the
             retirement. ⚠ ⛔ Do ⛔ **not** simply delete the Deed reference — the Deed is an
             **unratified draft** (`-164` cl.1), so if a citation survives it needs that qualifier.
-      - [ ] ⭐⭐ **AND THE SWEEP CAUGHT ONLY ONE THIRD OF EACH COMMENT — AND ONLY TWO OF THE THREE
+      - [x] ⭐⭐ **AND THE SWEEP CAUGHT ONLY ONE THIRD OF EACH COMMENT — AND ONLY TWO OF THE THREE
             SITES. READ ALL OF THEM BEFORE YOU EDIT.**
             ⚠ Verified at `b18d188`. **THREE** sites each cite **THREE** authorities — *"Niyamavali
             §4.4, Part 10 and Trust Deed cl.15(c) each **forbid**"* making publication consent
@@ -646,11 +646,11 @@ no-bulk-export posture, and the abuse counter all behave exactly as at **`b18d18
             ⚠ ⛔ Do ⛔ not silently delete the Niyamavali reference either: it records the Trust's
             **intended** model, which is legitimate to cite — ⛔ what is not legitimate is citing it
             **as though it binds** (the `-164` cl.5 / `-158` defect class, ⛔ not a new one).
-- [ ] **Task 5 — Preserve, and say so (AC4 + AC9).** In-place comments at
+- [x] **Task 5 — Preserve, and say so (AC4 + AC9).** In-place comments at
       `schema/consent_records.ts`, `migrations/0112_consent-type-sahyog-drive.sql`,
       `migrations/0058_consent-type-publication.sql` and `pool/public-read.ts`. Add the
       enum-still-exists guard test.
-      - [ ] ⛔⛔ **MIGRATION 0112 IS ⛔ NOT A BLANK MARGIN — RECONCILE WHAT IS ALREADY THERE.**
+      - [x] ⛔⛔ **MIGRATION 0112 IS ⛔ NOT A BLANK MARGIN — RECONCILE WHAT IS ALREADY THERE.**
             ⚠ Verified at `b18d188`, its header asserts **five things this story falsifies**, and
             bolting an AC9 note onto the end without touching them produces a file that argues with
             itself:
@@ -671,12 +671,12 @@ no-bulk-export posture, and the abuse counter all behave exactly as at **`b18d18
             ⇒ ⭐ the note to write is: **preserved by `-160` cl.5 · write-never and read-never since
             11b.9 · ⛔ not deletable without a separate decision** — and the paragraphs above it
             **re-dated, ⛔ not erased**.
-      - [ ] ⭐ **Extend the same treatment to migration 0058** (`-162` cl.5 preserves it identically)
+      - [x] ⭐ **Extend the same treatment to migration 0058** (`-162` cl.5 preserves it identically)
             and to `schema/consent_records.ts:87-92` — the Story 6.9 D2 NOTE explaining that Epic 11b
             is the *"render-consumer"* of (b)/(c). ⛔ That consumer is now ⛔ never going to exist:
             11b.3 and 11b.6 are built to the **new** basis from the start (**D5**).
-- [ ] **Task 6 — The inert-state diagnostic (AC8).**
-- [ ] **Task 7 — Tests. ⭐ TWO HALVES: ELEVEN EXISTING SUITES TO MIGRATE, THEN THE NEW ONES.**
+- [x] **Task 6 — The inert-state diagnostic (AC8).**
+- [x] **Task 7 — Tests. ⭐ TWO HALVES: ELEVEN EXISTING SUITES TO MIGRATE, THEN THE NEW ONES.**
 
       > ⛔⛔ **THE MIGRATION HALF IS ⛔ NOT OPTIONAL AND ⛔ NOT DISCOVERABLE AT TASK 8.** ⚠ Verified at
       > `b18d188`: **~73 assertions across ELEVEN files** reference the three retired types. If you
@@ -701,19 +701,76 @@ no-bulk-export posture, and the abuse counter all behave exactly as at **`b18d18
       > booleans is **expected** — migrate it. A suite that breaks because a **TYPE, TUPLE, ENUM or
       > COPY ENTRY** lost a value is a **⛔ VIOLATION OF AC4** — ⛔ revert the source, ⛔ never the test.
 
-      - [ ] Domain integration (live DB): basis present → named; **no `tc_acceptance`** → unnamed;
+      - [x] Domain integration (live DB): basis present → named; **no `tc_acceptance`** → unnamed;
             **revoked** → unnamed; **accepted version does not pin the clause** → unnamed;
             **different Pariwar's** clause version pinned → unnamed (T5); **malformed
             `consent_artifact_ref`** → unnamed, ⛔ no throw (T2).
-      - [ ] ⭐ **A row-still-renders test for every unnamed case** (AC5) — ⛔ the whole-union assertion
+      - [x] ⭐ **A row-still-renders test for every unnamed case** (AC5) — ⛔ the whole-union assertion
             trap that made a 11b.1 fixture green on nothing must not repeat: assert the **row is
             present and the name is absent**, ⛔ not merely that the call succeeded.
-      - [ ] API integration: decrypt ⛔ not called when the predicate is false (AC6).
-      - [ ] A test proving `sahyog_drive_publication` rows are **ignored** — present-and-granted must
+      - [x] API integration: decrypt ⛔ not called when the predicate is false (AC6).
+      - [x] A test proving `sahyog_drive_publication` rows are **ignored** — present-and-granted must
             ⛔ **not** produce a name on its own (the de-authorisation, proved).
-- [ ] **Task 8 — `pnpm ci:local`** + the sprint-status ledger entry.
+- [x] **Task 8 — `pnpm ci:local`** + the sprint-status ledger entry.
 
 ---
+
+### Review Findings
+
+Code review run 2026-08-29 (bmad-code-review, three parallel layers: Blind Hunter, Edge Case Hunter,
+Acceptance Auditor) against uncommitted changes + the new untracked `packages/domain/tests/consent/`
+file, baseline `b87fb04`. Acceptance Auditor found **no AC violations** — this is called out as an
+unusually faithful implementation.
+
+- [x] [Review][Defer] `.strict()` retirement of the three DPDPA booleans will hard-reject any
+      mobile client still on a pre-11b.9 build during a staggered rollout — `RecordDpdpaConsentRequest`
+      (`packages/contracts/src/claims/dpdpa-consent.ts:106-131`) now rejects
+      `sahyogVivranPublication`/`inMemoriamListing`/`sahyogDrivePublication` as unknown keys; the
+      mobile catch (`apps/mobile/app/(claim)/consent.tsx:168-184`) maps any such 400 to the generic
+      `t('dpdpa.error')` ("please try again"), which cannot ever succeed for that build. Verified
+      `apps/mobile` has no `expo-updates`/OTA config — it ships via EAS Build → app-store submission
+      only (`package.json`, `eas.json`), so the review window is real. Deferred, decision made
+      2026-08-29: claim-filing volume during a short app-store review window is judged low, and a
+      rejected submission is recoverable (helpline/retry after update) rather than data loss — not
+      worth a compat shim for this story.
+- [x] [Review][Patch] Drop `logNamePublicationBasisAbsence`'s two log calls from
+      `console.warn`/`console.error` to `console.info`/`console.debug`
+      [`apps/api/src/modules/public-pages/handlers.ts:482-548`] — decision 2026-08-29: AC8's stated
+      intent is "never debugged as a bug," and warn/error are the levels most likely to page someone
+      or get the channel ignored, across the entire (currently open-ended) fail-closed period where
+      this fires on close to every `/sahyog` request.
+- [x] [Review][Patch] Duplicate ABSENT-PER-MEMBER log line when one deceased member has >1 Sahyog
+      Drive pool on a page [`apps/api/src/modules/public-pages/handlers.ts:540-548`] — dedupe by
+      `deceasedMemberId` (e.g. via a `Set`) before logging.
+- [x] [Review][Defer] AC8 diagnostic doesn't cover the `deceasedNameCiphertext === null` (KYC-profile-
+      incomplete) unnamed case — silently excluded from `logNamePublicationBasisAbsence`'s classification
+      since it filters on `namePublicationAuthorised` only [`apps/api/src/modules/public-pages/handlers.ts:483-548`]
+      — deferred, pre-existing (KYC-profile completeness is outside AC8's T&C-clause scope per spec; a
+      future observability story's concern).
+- [x] [Review][Defer] Small TOCTOU race between `listPublicSahyogDrivePools` and
+      `isSahyogDrivePublicationClausePinned` inside the same open scope-tx
+      [`packages/domain/src/pool/public-read.ts:753-789`, `handlers.ts:482`] — deferred, pre-existing
+      (diagnostic-only impact: could misclassify PROVISIONING-INERT vs ABSENT-PER-MEMBER for one
+      request; never affects the actual render decision).
+- [x] [Review][Defer] The predicate's defensive "revoked `tc_acceptance`" branch is currently
+      unreachable in production — confirmed by grep: `DpdpaRevocableConsentType` (the only revoke
+      route) does not include `tc_acceptance`, and no writer anywhere sets `revoked_at` on a
+      `tc_acceptance` row [`packages/domain/src/pool/public-read.ts` predicate;
+      `packages/contracts/src/claims/dpdpa-consent.ts:113-118`] — deferred, pre-existing (harmless
+      defensive code with test coverage; worth a note if a future story ever adds `tc_acceptance`
+      revocation).
+- [x] [Review][Defer] Two independently hand-written SQL predicates answer overlapping "is the
+      clause pinned" questions with deliberately different semantics (`NAME_PUBLICATION_AUTHORISED`,
+      per-member, no effective-window check, vs. `isSahyogDrivePublicationClausePinned`, per-Pariwar,
+      with an effective-window + `legal_review_status='approved'` check), reconciled only by a
+      "change one, check the other" comment [`packages/domain/src/pool/public-read.ts`] — deferred,
+      pre-existing (real maintainability/drift risk, not a current bug; the two predicates are
+      supposed to differ, which makes an accidental future unification the actual hazard).
+- [x] [Review][Defer] Hindi `dpdpa.error` was left unchanged while English was reworded from plural
+      "choices" to singular "choice" to match the reduced one-box screen [`packages/i18n/locales/hi/claim.json`]
+      — deferred, pre-existing (the story's own File List scoped this edit to `en` only; worth a
+      native-speaker check on whether "पसंद" already reads correctly for singular use, since the
+      i18n-parity CI leg only checks key presence, not phrasing symmetry).
 
 ## ⚖️ Decisions — ✅ ALL SEVEN DISPOSED (BigDev, 2026-08-29) — D1 · D2 · D3 · D4 · D5 · D6 · D7
 
@@ -927,4 +984,217 @@ different basis.
 
 ## Dev Agent Record
 
-_(empty until dev-story runs)_
+### Implementation Plan / Debug Log
+
+**Baseline:** `b87fb04` (frontmatter, pre-existing — ⛔ not re-pinned). Branch
+`story/11b.9-publication-authority-switch`, `git fetch origin` re-run before starting.
+
+**⭐ Order:** Task 2 (predicate + constant) → Task 3 (API + the four-site comment sweep) → Task 4
+(screen + contract + i18n) → Task 5 (preservation notes + guard test) → Task 6 (AC8 diagnostic, at
+the API boundary) → Task 7 (suite migration, then the new cases) → Task 8 (`ci:local` + ledger).
+⛔ **Task 1 was NOT attempted** — see "What is NOT done" below.
+
+**The predicate, as built** (`packages/domain/src/pool/public-read.ts`) — one set-based correlated
+`EXISTS`, ⛔ no per-row query:
+
+```
+consent_records cr  (tc_acceptance, subject = "claims"."deceased_member_id", existing validity window)
+  JOIN terms_and_conditions_pinned_clauses tcpc  ON tcpc.tc_version_id::text = cr.consent_artifact_ref
+  JOIN clause_versions cv                        ON cv.clause_version_id = tcpc.clause_version_id
+ WHERE cv.clause_id = SAHYOG_DRIVE_PUBLICATION_CLAUSE_ID
+```
+
+Every leg scoped explicitly to `"pools"."pariwar_id"` (T5) — ⛔ not transitively, and ⛔ not on RLS
+inside a correlated subquery on an unauthenticated route.
+
+**⭐ T1/T2 — one cast, one direction, both traps shut.** `tc_version_id::text = consent_artifact_ref`.
+`uuid → text` is TOTAL; `text → uuid` is PARTIAL and would raise `22P02` on any row whose
+unconstrained-text ref is `''` or malformed, 500-ing the whole public page. Proved by three live-DB
+fixtures (non-UUID / empty / NULL) that assert the read **resolves and excludes the member** — ⛔ the
+assertion is that it does not throw, which is the actual failure mode.
+
+**⭐ T3 — `clause_id`, never `clause_version_id`**, via the `clauseId()` smart constructor
+(`niy.public-disclosure.member-information`, provisional per D3). A test pins that ANY version of the
+clause satisfies the basis, so the first amendment cannot silently un-publish everyone.
+
+**⭐ AC8 (Task 6)** — `isSahyogDrivePublicationClausePinned()` in the domain + a best-effort
+`logNamePublicationBasisAbsence()` at the API boundary. It runs **only when a row came back unnamed**
+(⛔ a fully-named page costs nothing) and emits **one line per page** for
+`PROVISIONING-INERT` (Pariwar-scoped, ⛔ no member ids — a provisioning answer) versus **one line per
+member** for `ABSENT-PER-MEMBER` (carrying `deceasedMemberId` — a member-record answer). Signal in the
+action name, ids/counts only, ⛔ no free text ([[project_anonymous_diagnostic_log_convention]]).
+⛔⛔ **The pinned-clause read is a DIAGNOSTIC and is NOT conjoined into the render predicate** —
+wiring it in would silently un-publish every member the moment a Pariwar rolled a new T&C version,
+which is the "effective version" conjunct §Policy meaning forbids.
+
+**⚠ Two findings from the build, recorded because they were not obvious from the story:**
+
+1. **`terms_and_conditions_versions_pariwar_current_uq` is a PARTIAL UNIQUE index** — at most ONE
+   open-ended (currently-in-force) T&C version per Pariwar. The first cut of the route-spec fixture
+   minted a version **per member** and 23505'd the moment two members in one Pariwar were authorised.
+   ⭐ Fixed by minting **one clause-pinning version per Pariwar** and varying the **acceptance** row —
+   which is also what production looks like.
+2. ⛔ **`pool-support-category-invariant` scans this module's COMMENTS**, so the phrase "post-death
+   publication clause" **failed CI**. Reworded to "posthumous". ⭐ The gate is right: a pool-engine
+   comment thinking in category-specific terms is itself the smell (Story 7.1 AC4). Noted in place so
+   the next author does not reintroduce it.
+
+**⚠ One pre-existing flake, ⛔ not caused here:** `packages/domain/tests/db.test.ts` timed out at
+5131ms in the first full `ci:local` and passed in 484ms both isolated and on re-run — the known
+concurrency-oversubscription flake ([[project_ci_local_concurrency_oversubscription]]). Final run:
+**33/33 green**.
+
+### Completion Notes
+
+**⭐⭐ THE STORY MERGES INERT, AND THAT IS THE DESIGNED DAY-ONE STATE (D3 / AC8), ⛔ NOT AN INCOMPLETE
+BUILD.** No `clause_versions` row is minted and nothing is pinned, so the new predicate is **false for
+every member** and ⛔ **no name renders on `/sahyog`**. Fail-closed, correct, expected, and now
+**observable**. ⛔ Do not "fix" it, and ⛔ **do not seed a placeholder clause row** to make the surface
+look alive — a stand-in makes names render on an authority that does not exist, which is the exact
+defect this story corrects.
+
+**AC-by-AC:**
+
+- **AC1 ✅** — the render authority is the member's own valid `tc_acceptance` whose accepted T&C
+  version pins the publication clause. ⛔ `sahyog_drive_publication` is **not consulted**.
+- **AC2 ✅** — (a) set-based correlated `EXISTS`, ⛔ no per-row query (T4); (b) all three legs
+  tenant-scoped explicitly (T5); (c) cast-correct and defensive, proved by three malformed-ref
+  fixtures (T1/T2); (d) resolved through `clause_versions.clause_id` against one exported constant
+  built with `clauseId()` — ⛔ **the literal appears nowhere else, including in no test** (T3/D3).
+- **AC3 ✅** — the claim consent screen reduces to box (a). All three retired boxes removed from
+  `consent.tsx`, from `RecordDpdpaConsentRequest`, and from **both** locales' UI labels. ⭐ One edit
+  closed both surfaces (the helpline route shares the same handler core). ⚠ (a) is unchanged.
+- **AC4 ✅** — ⛔ nothing deleted. The `consent_type` pgEnum, `ConsentTypeSchema`, migrations **0058
+  and 0112**, every existing row, `DpdpaConsentType`, `DpdpaRevocableConsentType`, **both claim-time
+  tuples**, `DPDPA_CONSENT_COPY`, the GET presence view and **both revoke routes** all stay. A new
+  guard suite (`packages/domain/tests/consent/preserved-consent-types.test.ts`, 7 cases) pins the
+  enum + both tuples so a future "cleanup" fails loudly.
+- **AC5 ✅** — every unnamed case asserts the **row is present AND the name is absent**, ⛔ never
+  merely that the call succeeded (the 11b.1 whole-union fixture trap). Asserted at both the domain
+  and the route layer, and on a **mixed page** so a fixture returning nothing cannot pass.
+- **AC6 ✅** — the decrypt stays gated on the NEW predicate, before the Tier-1 read. Field renamed
+  `nameConsentGranted` → `namePublicationAuthorised`. ⭐ Proved by **spying on the real
+  `decryptKycField`** across three no-basis rows: **zero calls**.
+- **AC7 ✅** — missing, revoked, non-pinning, cross-tenant-pinned and malformed-ref all yield false.
+- **AC8 ✅** — see the diagnostic above; four live-DB cases pin the discriminator (unpinned /
+  pinned / non-effective version / unapproved version).
+- **AC9 ✅** — in-place preservation notes at the `consent_type` enum, migration **0112**, migration
+  **0058**, and the retired predicate's former site. ⛔ 0112's five falsified assertions were
+  **reconciled, not bolted around**: the "unaskable cohort" rationale re-dated as provenance, the
+  name-not-row and ADD-VALUE paragraphs left standing, and the three-authority "DECLINABLE AND
+  REVOCABLE … NOT NEGOTIABLE" paragraph quoted-then-refuted rather than erased.
+- **AC10 ✅** — pagination, caps, the district freeze, `NULLS LAST`, letter-code lookup, the
+  no-bulk-export posture and the abuse counter are untouched; their suites pass unchanged.
+
+**⭐ The sweep was four sites, not one** (`-163` finding 3 routed only the `.ts`): `matrix.ts:396`
+(⛔ comment only — the RULED entry and its cited decision untouched), `public-vs-private-matrix.yaml`
+**×2** (⚠ the second is **DATA** the PII-scrape gate parses — `description:` prose only, ⛔ never
+`escalations:` or any `tier1_public_exception`), `directory-abuse-rules.yaml`, and
+`login-wall.spec.ts`. Plus `routes.ts`'s three-gate launch block, in which **all three gates plus the
+"counsel has not reviewed" line were falsified** — rewritten rather than deleted, because
+*"BUILT IS NOT PUBLISHED"* is still true and this file is where the next reader looks for it. ⛔ The
+publication kill switch is **not** written in as the technical gate.
+
+**⚠ The stale three-authority citation was at THREE sites, not the two `-166` cl.3 routed** —
+`migration 0112` was the unrouted third, and it went furthest. All three now carry the
+unratified-draft qualifier for **both** the Deed **and** the Niyamavali. ⛔ **No Niyamavali amendment
+is owed, required or routed** — there is no ratified instrument to amend, and §4.4 is ⛔ not a blocker
+([[feedback_niyamavali_rulebook_not_spec]]).
+
+**⚠ Two things became untestable and are recorded rather than quietly dropped:**
+1. The **optional-consent independence matrix** (5 combos proving each optional box wrote its own row
+   and that declining never blocked the claim) is **unconstructible** — there is nothing left to
+   decline. ⭐ Replaced by a `.strict()` rejection test per retired box, which is what actually
+   guarantees no new row of those types is ever written, plus a check that **nothing at all** is
+   written on such a request.
+2. The atomicity suite's *"a LATER grant fails after an earlier succeeded"* case likewise — the
+   request yields at most one grant. ⭐ The surviving half (a failing grant never emits the identity
+   event and closes the scope-tx with `commit=false`) is real and still asserted; the loop is
+   unchanged, and the note says to restore the multi-grant case if a future story captures more.
+
+**⭐ Two suites had to stay green UNCHANGED and did** — `dpdpa-consent-events.test.ts` and
+`dpdpa-claim-consent.spec.ts`. They are the live proof of **T6**: the tuples did not shrink. A red
+there would have meant a narrowed type, and the fix would have been reverting the **source**.
+
+**⭐ The revoke cases survive by seeding the grant DIRECTLY** (member + helpline). It can no longer be
+made through the route — and that is precisely the pre-11b.9 row `-160` cl.5 preserves. Withdrawal is
+the **last remaining data-subject action** on those rows, and a GET-presence test now proves the
+family can still **see** what they granted (D7(a)).
+
+**⛔⛔ WHAT IS NOT DONE, AND WHY — ⛔ do not read this as an oversight.**
+**Task 1 (mint the clause through the Story 2.4 amendment workflow, then pin it) is OPEN.** It is
+⛔ **not a merge gate** — `-160` cl.9 records that development proceeds, and D3 disposes the clause
+as a counsel-dependent **seam**, not a blocker. Two things must **arrive**, and neither is a thing
+this story can produce:
+1. **Counsel's FINAL clause** — the 2026-08-28 text is v0.2 DRAFT, back with counsel carrying Annex
+   Q9-11. The T&C return is due **2026-09-07** (earliest 2026-08-31). ⚠ Minting on draft text would
+   run a **content-hash-bound** sign-off that any later edit clears — spending the second human twice.
+2. **A SECOND REAL PERSON** with a different `actorId` holding `niyamavali.review` at `pariwar`
+   dimension. ⭐ The tool now exists (`pnpm provision:admin`); what remains is not technical.
+
+⇒ when the clause lands, the change here is **ONE LINE**: the value of
+`SAHYOG_DRIVE_PUBLICATION_CLAUSE_ID`. ⛔ Zero changes to the predicate, the API surface, or any test —
+that is exactly what AC2(d)'s single named constant exists to guarantee.
+
+**Validation:** `pnpm ci:local` — **33/33 green** (lint · typecheck · build · unit · db-check · all
+invariant gates · i18n-parity · pii-scrape · friction-budget · integration-tests).
+
+### File List
+
+**Domain**
+- `packages/domain/src/pool/public-read.ts` — the predicate, the clause-id constant, the field
+  rename, the AC8 accessor, the AC9 preservation note, the two-pairing comment.
+- `packages/domain/src/schema/consent_records.ts` — AC9 notes on the enum + both tuples.
+- `packages/domain/migrations/0112_consent-type-sahyog-drive.sql` — AC9 header + five reconciled
+  assertions (comments only; ⛔ the DDL is untouched).
+- `packages/domain/migrations/0058_consent-type-publication.sql` — the same treatment (comments only).
+
+**Contracts**
+- `packages/contracts/src/claims/dpdpa-consent.ts` — the three booleans retired; preservation
+  docstrings on `DpdpaConsentType` / `DpdpaRevocableConsentType`.
+- `packages/contracts/src/public-pages/matrix.ts` — comment only (`:396`).
+- `packages/contracts/public-pages/public-vs-private-matrix.yaml` — `description:` prose, two sites.
+- `packages/contracts/public-pages/directory-abuse-rules.yaml` — `description:` prose.
+
+**API**
+- `apps/api/src/modules/public-pages/handlers.ts` — the renamed gate + the AC8 diagnostic.
+- `apps/api/src/modules/public-pages/routes.ts` — the basis paragraph + the rewritten launch posture.
+- `apps/api/src/modules/claims/claims.dpdpa-consent.handlers.ts` — the writer reduced to (a);
+  preservation notes on `ALL_TYPES` and the presence view.
+- `apps/api/src/modules/claims/dpdpa-consent-copy.ts` — evidence-vs-UI-labels note; the falsified
+  three-authority comment rewritten. ⛔ The copy map itself is unchanged.
+
+**Mobile / i18n**
+- `apps/mobile/app/(claim)/consent.tsx` — reduced to one box (header, state, hydration, submit, row).
+- `packages/i18n/locales/en/claim.json` · `packages/i18n/locales/hi/claim.json` — three UI label keys
+  removed in both locales; `dpdpa.help` (and en `dpdpa.error`) reworded for a one-box screen.
+
+**Tests**
+- `packages/domain/tests/consent/preserved-consent-types.test.ts` — **NEW**, the anti-cleanup guard.
+- `packages/domain/tests/integration/_helpers.ts` — **NEW** `seedTcVersion` + `seedPinnedClause`.
+- `packages/domain/tests/integration/pool/sahyog-drive-public-read.spec.ts` — the basis describe
+  rewritten + the AC8 discriminator describe added (35 tests).
+- `apps/api/tests/integration/public-pages/sahyog-drive.spec.ts` — fixtures reseeded to the basis;
+  the de-authorisation proof + the decrypt-not-called test added (18 tests).
+- `apps/api/tests/integration/claims/dpdpa-consent.spec.ts` — one-box happy path, the retirement
+  proved on the wire, the GET presence view, revoke via a seeded legacy grant (12 tests).
+- `apps/api/tests/integration/claims/dpdpa-consent-helpline.spec.ts` — same reduction; ⛔ the
+  canonical-copy read-back kept as `DPDPA_CONSENT_COPY`'s live evidence (4 tests).
+- `apps/api/tests/unit/dpdpa-consent-copy.test.ts` — split into live-label parity vs
+  retired-label-gone/evidence-preserved (18 tests).
+- `apps/api/tests/unit/dpdpa-consent-record-atomicity.test.ts` — re-fixtured to one box.
+- `apps/api/tests/integration/login-wall.spec.ts` — comment only.
+- `packages/contracts/tests/claims-dpdpa-consent.test.ts` — retired-box rejection + the enum
+  anti-cleanup guard.
+
+**Planning**
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — status flip + ledger entry; the stale
+  "FIVE DECISIONS ARE OPEN" comment above the row corrected.
+- `_bmad-output/implementation-artifacts/11b-9-sahyog-drive-publication-authority-switch.md` — this
+  record.
+
+### Change Log
+
+| Date | Change |
+|---|---|
+| 2026-08-29 | Tasks 2-8 implemented; story → `review`. The Sahyog Drive render authority switched from the family's claim-time tick-box to the member's own accepted, clause-pinning T&C version (`2026-08-28-160` cl.3-5); the claim consent screen reduced to box (a) alone (`-162` cl.2); every retired type, migration, row, tuple, revoke route and presence view preserved by ruling and pinned by a new guard suite. ⛔ **Task 1 remains open** — it waits on counsel's final clause and a second human, and is ⛔ not a merge gate. The surface ships **inert by design**. `pnpm ci:local` 33/33 green. |

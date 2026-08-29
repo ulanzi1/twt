@@ -1,5 +1,5 @@
 ---
-baseline_commit: b18d18876b7a2c151d73446ba7b63e2cf9ba9b27
+baseline_commit: b87fb0450dc39a3dc00d94a9df49a279480fed57
 ---
 
 # Story 11b.9: Sahyog Drive Publication Authority Switch — T&C-Basis Render Gate + `sahyog_drive_publication` De-authorisation `[SURFACE]`
@@ -8,7 +8,13 @@ Status: ready-for-dev
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
-> ✅ **BASELINE RE-VERIFIED LIVE 2026-08-29 at `b18d188` (= `origin/main`).** `git fetch origin` was
+> ⭐ **BASELINE RE-PINNED 2026-08-29 to `b87fb04` (= `origin/main`), and ⛔ NOT A SINGLE VERIFIED CLAIM MOVED.**
+> The three commits since `b18d188` (`1fd985f` · `44ad1cb` · `b87fb04`) touched **only**
+> planning artifacts, `package.json` and the new `scripts/provision-admin.ts` — ⛔ **no file this
+> story cites for a line reference was modified**, checked with `git diff --name-only`. ⇒ every
+> `:NNN` below still resolves byte-for-byte. ⚠ ⛔ Do ⛔ not re-verify them on the SHA change alone.
+>
+> ✅ **ORIGINALLY VERIFIED LIVE 2026-08-29 at `b18d188`.** `git fetch origin` was
 > re-run ([[feedback_git_fetch_before_remote_reasoning]]) and every claim below was re-checked by
 > **reading the named file at `b18d188`** — ⛔ none is inherited from an epic line, a retro, or a
 > prior story record.

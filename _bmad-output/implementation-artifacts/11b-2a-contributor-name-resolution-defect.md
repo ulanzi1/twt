@@ -672,28 +672,28 @@ is a second reason the ruled change is a value re-word.
 > ✅⭐ **D6(a) and D7(c) are RULED (fourth pass) ⇒ Task 2 is REVIVED as D7(c)'s copy fix, Task 5 gains
 > the drop-to-zero case, and Task 6's 11b.2 routing is PRESCRIPTIVE. ⛔ NOTHING is gated.**
 
-- [ ] **Task 0 — Governance first** ✅ `[startable]`
-  - [ ] Read the `.decision-log.md` head **live** (`2026-08-28-167` at authoring; ⛔ do not hardcode).
-  - [ ] ⭐⭐ **TRANSCRIBE D5 as the governing ruling**: RTBF **removes the contributor entirely**;
+- [x] **Task 0 — Governance first** ✅ `[startable]`
+  - [x] Read the `.decision-log.md` head **live** (`2026-08-28-167` at authoring; ⛔ do not hardcode).
+  - [x] ⭐⭐ **TRANSCRIBE D5 as the governing ruling**: RTBF **removes the contributor entirely**;
         ⛔ no anonymized row, marker or placeholder key. ⭐ **Public erasure, ⛔ NOT destruction of the
         legal record** — legally-required records persist in restricted internal systems and are
         ⛔ never used to restore the public representation. ⭐ Record the **consistency ground**:
         `DIRECTORY_VISIBLE_MEMBER_STATES` (`2026-08-20-143` cl.3) already omits `anonymized`, so the
         contributor list was the outlier.
-  - [ ] ⛔ **Record D3-shape(i), D3-key and D3-rollout as VACATED — ⛔ NOT reversed, ⛔ NOT closed.**
+  - [x] ⛔ **Record D3-shape(i), D3-key and D3-rollout as VACATED — ⛔ NOT reversed, ⛔ NOT closed.**
         ⭐ Their questions **ceased to exist** when the anonymized row did (`2026-08-24-159`'s
         *"D4(a) was VACATED by D1(b)"* is the precedent and the required language
         [[feedback_closure_language_precision]]). ⚠ D3-key(c) was ruled **2026-08-29** and vacated
         **2026-08-30** — record both dates; it was **correct for the union D5 abolished**.
-  - [ ] ⭐ Transcribe the **STANDING** rulings — **D3(a)** · **D3-shape(ii)(a)** (with the clock-domain
+  - [x] ⭐ Transcribe the **STANDING** rulings — **D3(a)** · **D3-shape(ii)(a)** (with the clock-domain
         constraint) · **D4(a)** *(as a RE-ruling, and why its first ground fell)*.
-  - [ ] ⭐ **Transcribe D3-aggregate**: the omitted contributor **still counts** toward `confirmedCount`
+  - [x] ⭐ **Transcribe D3-aggregate**: the omitted contributor **still counts** toward `confirmedCount`
         and every aggregate representing **confirmed historical transactions**; RTBF removes the
         **public individual representation** and ⛔ does not retroactively alter that the contribution
         was confirmed. ⭐ Record the two-axis form verbatim — **Contribution state: `CONFIRMED` ·
         Public representation: `OMITTED`** — and clause (2): `rosterSize` is **representation
         eligibility**, ⛔ **never** an inference of financial status.
-  - [ ] ⭐ **Transcribe D5-scope**: D5 applies **wherever the contributor list is rendered** — the
+  - [x] ⭐ **Transcribe D5-scope**: D5 applies **wherever the contributor list is rendered** — the
         member-session-gated surface **and** the public one. ⛔ Record that the *"public vs
         member-gated"* framing was **REJECTED**, and that the earlier recorded assumption is
         **superseded** — ⛔ it reached the right surface for the wrong reason.

@@ -760,15 +760,15 @@ is a second reason the ruled change is a value re-word.
         still **exists in both** locales (`t()` throws on a miss —
         [[project_missed_cycle_visibility_substrate]]).
   - [x] ⛔ **No `rowKey` assertions** — nothing ships to assert on (AC5 vacated).
-- [ ] **Task 6 — Route and re-disposition the records, ⛔ do not re-file them**
-  - [ ] ⭐⭐ **RTBF-D1 (`deferred-work.md:3980`) — ⛔ NOT DISCHARGED. RE-DISPOSITION IT.** Its subject is
+- [x] **Task 6 — Route and re-disposition the records, ⛔ do not re-file them**
+  - [x] ⭐⭐ **RTBF-D1 (`deferred-work.md:3980`) — ⛔ NOT DISCHARGED. RE-DISPOSITION IT.** Its subject is
         the **display-time name-resolver seam**, and under D5 the contributor path **omits instead of
         masking** ⇒ `resolveMemberDisplayName` still has **ZERO production call sites** after this
         story. ⇒ record: *"the re-trigger fired at Story 8.3 and was not acted on; Story 11b.2a fixed
         the underlying defect by OMISSION (D5), so the seam remains unwired and this item is
         **superseded as to contributor surfaces** — masking is ⛔ not the mechanism there."*
         ⛔ Not "discharged", ⛔ not "closed" ([[feedback_closure_language_precision]]).
-  - [ ] ⭐⭐ **`ANONYMOUS_MEMBER_I18N_KEY` / `member.anonymousMember` — ⛔ *"possibly-dead"* is
+  - [x] ⭐⭐ **`ANONYMOUS_MEMBER_I18N_KEY` / `member.anonymousMember` — ⛔ *"possibly-dead"* is
         SUPERSEDED; D6(a) makes the observation DEFINITE** ([[feedback_closure_language_precision]]).
         Record, verified at `3a51745`: the key lives at `common.json:215` (**en and hi**), the const at
         `display-name.ts:26`, the type arm at `:39`, plus `display-name.test.ts` — and it has ⛔ **ZERO
@@ -780,10 +780,10 @@ is a second reason the ruled change is a value re-word.
         and a **ratified bilingual string** is a distinct governance act with its own blast radius, and
         ⛔ D6 ruled the **presenter variant**, ⛔ not the seam. ⇒ route the **deletion question** as its
         own decision, ⛔ not marked closed.
-  - [ ] ⭐ **`deferred-work.md:2163` (keyExtractor) — STAYS OPEN.** ⛔ Do ⛔ not mark it discharged and
+  - [x] ⭐ **`deferred-work.md:2163` (keyExtractor) — STAYS OPEN.** ⛔ Do ⛔ not mark it discharged and
         ⛔ do not name 11b.2b as the consumer. Its recorded blocker — *"the PII-shielded shape carries
         no stable per-member identifier"* — **is still true**; D5 supplied none.
-  - [ ] ⭐⛔ **Correct 11b.2b — ⚠ AND IT IS SIX ANCHORS, ⛔ NOT THE THREE AN EARLIER PASS NAMED.**
+  - [x] ⭐⛔ **Correct 11b.2b — ⚠ AND IT IS SIX ANCHORS, ⛔ NOT THE THREE AN EARLIER PASS NAMED.**
         Verified live at `3a51745`: `:38-40` (its **Preflight** — *"11b.2a's D3-shape(i)(a) made the wire
         row a two-variant discriminated union … ⇒ branch on `kind`"*) · `:85` (the local-tuple row) ·
         ⛔⛔ **`:86`** · ⛔⛔ **`:162-167` — THE WHOLE OF ITS AC3** · `:169-170` (the *"explicit
@@ -794,14 +794,14 @@ is a second reason the ruled change is a value re-word.
         marks it; this story is the named consumer)"*. ⭐ **The bullet directly above forbids both.**
         ⇒ 11b.2b **keeps `index`**; its union / `rowKey` expectations are **VOID**; **its AC3 has no
         subject left** and needs re-authoring or deletion, ⛔ not a line-number patch.
-  - [ ] `deferred-work.md:2161` (N+1 decrypt) **discharged** by AC3. ⚠ `:2162` **noted as
+  - [x] `deferred-work.md:2161` (N+1 decrypt) **discharged** by AC3. ⚠ `:2162` **noted as
         touched-and-unchanged** — ⛔ the schema was never opened.
-  - [ ] ⭐⭐ **FILE THE AC7 NOTICE-COPY ROUTING PACKET** — the three D5 statements verbatim; the **six
+  - [x] ⭐⭐ **FILE THE AC7 NOTICE-COPY ROUTING PACKET** — the three D5 statements verbatim; the **six
         falsified keys** (`rtbf.entry_hint` / `rtbf.ack_body` / `rtbf.done_body` × en+hi); the
         **`anonymize.ts:144` name-destruction fact** that statement 3 must not contradict; and the
         **counsel + Story-2.4 amendment-workflow + non-author tone-review** obligations
         (`2026-08-28-161` precedent). ⛔ **No `common.json` edit in this diff.**
-  - [ ] ⛔⛔ **File the STALE-COMMENT finding — ⚠ AND IT IS ~4× WIDER THAN THE THREE FILES AN EARLIER
+  - [x] ⛔⛔ **File the STALE-COMMENT finding — ⚠ AND IT IS ~4× WIDER THAN THE THREE FILES AN EARLIER
         PASS NAMED. ⭐ THE FAMILY REACHES INTO THIS STORY'S OWN DIFF.** Verified live at `3a51745`,
         `grep -rn "unbuilt\|0 confirmed" apps packages`. ⛔ Filing only the three is how the next
         reader greps, hits an un-named one, and **re-derives the identical false premise**
@@ -841,7 +841,7 @@ is a second reason the ruled change is a value re-word.
         ⛔ File it as ONE finding with the full site list. ⛔ **Do ⛔ not fix the out-of-diff sites in
         this story** — that is scope creep; ⭐ **but `handlers.ts:296/:304/:339` ARE in the diff and
         Tasks 3/4 correct them.**
-  - [ ] ⭐⭐ **FILE THE `rosterSize` NAMING HAZARD — ⛔ this is the one that can silently understate
+  - [x] ⭐⭐ **FILE THE `rosterSize` NAMING HAZARD — ⛔ this is the one that can silently understate
         confirmation.** D3-aggregate cl.(2) names `rosterSize` *"contributors currently eligible for
         public representation"*, but the shipped `pool.rosterSize` is the **FROZEN pool snapshot**
         (`contribution-binding.ts:426`; the *frozen-roster invariant*, `handlers.ts:566`) and feeds
@@ -851,7 +851,7 @@ is a second reason the ruled change is a value re-word.
         failures from D3-aggregate: `pending` understating, and the `:488` clamp **deleting a confirmed
         contribution from the meter**. **Re-trigger: any story that renames, redefines or recomputes
         `rosterSize`, or that first needs a representation-eligibility count.** ⛔ Not marked closed.
-  - [ ] ⭐⛔ **ROUTE D5 + D5-scope TO THE SIBLING STORIES — ⛔ they will otherwise re-derive an
+  - [x] ⭐⛔ **ROUTE D5 + D5-scope TO THE SIBLING STORIES — ⛔ they will otherwise re-derive an
         anonymized row from their own epic text** ([[feedback_spec_edits_must_propagate_to_tasks]]):
         **11b.2** (presenter), **11b.2b** (mobile — ⛔ no `kind`, ⛔ no `rowKey`, keeps `index`),
         **11b.3** (the public host — D5 binds it by name).
@@ -878,7 +878,7 @@ is a second reason the ruled change is a value re-word.
           **anti-widening** assertion (one kind; a second requires a ruling).
         · `:419` — ⛔ **VOID**; it asserts a wire fact D5 made false.
         ⚠ ⭐ **11b.2 is `ready-for-dev` with Task 1 `startable` — this routing is time-critical.**
-  - [ ] ⚠ ⭐ **NAME THE FOURTH RENDERER — D5-scope says *"wherever the contributor list is rendered"*,
+  - [x] ⚠ ⭐ **NAME THE FOURTH RENDERER — D5-scope says *"wherever the contributor list is rendered"*,
         and the routing list is three stories against FOUR live/planned surfaces.** Verified at
         `3a51745`, the shipped list is mounted **twice**: `apps/mobile/app/(contribution)/
         contributors.tsx:13` (the 8.3 route) **and** ⭐ **`apps/mobile/components/nominee-console/
@@ -887,13 +887,13 @@ is a second reason the ruled change is a value re-word.
         ⭐ **Both inherit the fix automatically** — one API handler, one `usePoolContributorsQuery` —
         so ⛔ **no code change is owed there**; record it so the next reader ⛔ cannot mistake the
         three-story routing list for the surface inventory.
-  - [ ] ⭐ **RECORD THE VERIFIED NEGATIVE: there is ⛔ NO public contributor-NAME render today.**
+  - [x] ⭐ **RECORD THE VERIFIED NEGATIVE: there is ⛔ NO public contributor-NAME render today.**
         `packages/domain/src/pool/public-read.ts` emits a confirmed **COUNT**
         (`CONFIRMED_CONTRIBUTION_COUNT`, `:201-215`) and the **deceased's** name — its header states
         *"⛔ no decryption"* (`:18-22`). ⇒ ⭐ **D5-scope's *public* contributor list is PROSPECTIVE and
         owned by 11b.3**, and the ONE live contributor-name path today is `handlers.ts:309-334`, which
         this story fixes. ⛔ Do ⛔ not read D5-scope as an un-actioned public defect.
-  - [ ] ⚠ **Trap 4's seven re-spellings stay recorded as a standing hazard** — ⛔ unexercised by this
+  - [x] ⚠ **Trap 4's seven re-spellings stay recorded as a standing hazard** — ⛔ unexercised by this
         story, live the moment any story widens this tuple.
 - [ ] **Task 7 — Close out**
   - [ ] `pnpm --filter @twt/api test` · `pnpm turbo run typecheck` · then `pnpm ci:local` green.

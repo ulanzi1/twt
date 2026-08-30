@@ -6849,3 +6849,204 @@ not. These are the adjacent things, stated so the fix is not over-read as closin
 ## Deferred from: code review of 11b-2-contribution-list-components-table-mobile-row (2026-08-30)
 
 - **The regex-based comment/string-stripping mechanism shared by all three of 11b.2's mechanized scan tests is blind to `//`-shaped sequences inside string literals.** `forbidden-imports.test.ts`, `no-list-iteration.test.ts`, and `death-term.test.ts` (`packages/ui/tests/contribution-list/`) each independently implement `stripComments`/`scopes` as `src.replace(/\/\*[\s\S]*?\*\//g,'').replace(/\/\/.*$/gm,'')` — none of the three account for `//` or `/* */`-shaped character sequences occurring inside a string literal (e.g. a URL in a doc comment), so a single such string could defeat all three checks at once. Currently harmless (the module's actual contents contain no such string), and the pattern is pre-existing — explicitly copied from `apps/mobile/tests/unit/status-pill-render.test.ts:31-32` per `death-term.test.ts`'s own comment, not introduced fresh by this story. **Trigger:** any future edit to one of these three test files, or a cross-cutting follow-up that replaces all copies of this pattern with a real lexer/tokenizer at once (touching `apps/mobile`'s original too).
+
+## Routed by: 11b-2a-contributor-name-resolution-defect (2026-08-30) — Task 6
+
+> ⭐ **Every prior entry named below is left BYTE-UNCHANGED and is re-dispositioned HERE**
+> ([[feedback_supersede_never_reinterpret]]). ⛔ Nothing is edited in place, ⛔ nothing is re-filed as a
+> new finding, and the closure verbs are used precisely ([[feedback_closure_language_precision]]).
+> ⚠ Every claim below was **re-verified live at `68d081c`**, and **three of them had moved since the
+> story was authored** — the corrections are recorded in place rather than the instruction being
+> executed against a stale world ([[feedback_verify_before_committing_governance_claims]]).
+
+- **RTBF-D1 (Story 3.12, AC3) — ⛔ NOT DISCHARGED. RE-DISPOSITIONED.** Its subject is the *display-time
+  name-resolver seam*, and under D5 the contributor path **OMITS instead of masking** ⇒
+  `resolveMemberDisplayName` still has **ZERO production call sites** after this story (re-verified at
+  `68d081c`: the only references are its own definition at `packages/domain/src/member/display-name.ts:47`
+  and `packages/domain/tests/member/display-name.test.ts`). ⇒ **the re-trigger fired at Story 8.3 and
+  was not acted on; Story 11b.2a fixed the underlying defect by OMISSION (D5), so the seam remains
+  unwired and this item is SUPERSEDED AS TO CONTRIBUTOR SURFACES — masking is ⛔ not the mechanism
+  there.** ⛔ Not "discharged", ⛔ not "closed". ⚠ Its stated ground (*"no real member-backed public read
+  exists yet"*) has been **falsified since Story 8.3**; that is recorded, ⛔ not repaired in place.
+
+- **"Sequential per-contributor KYC decrypt loop (N+1)" (8.3 code review, 2026-07-21) — ✅ DISCHARGED by
+  Story 11b.2a AC3 / D4(a).** The loop is now a bounded-concurrency batch at
+  `DIRECTORY_DECRYPT_CONCURRENCY`, with the constant **and** `mapWithConcurrency` extracted to one shared
+  module (`apps/api/src/modules/kyc/bounded-decrypt.ts`) imported by both the member-pool and
+  public-pages call sites. ⛔ **No plaintext cache at rest was introduced** — the entry's own bracketed
+  prohibition, honoured. ⚠ Its recorded ground (*"moot today at 0 confirmed contributors"*) was **FALSE
+  when written**: Epic 9's producer shipped at Story 9.4/9.5. ⇒ ⭐ the discharge rests on the corrected
+  ground (a live cost on a live path), ⛔ not the recorded one. ⚠ Its `handlers.ts:203-220` citation is
+  the pre-10.27 line range for the same loop.
+
+- **"`ConfirmedContributorRow.lastInitial` (`.max(16)`) doesn't structurally guarantee initial-only"
+  (8.3 code review) — NOTED AS TOUCHED-AND-UNCHANGED.** ⛔ Not fixed, ⛔ not ignored: D5 vacated Story
+  11b.2a's contract widening, so `packages/contracts/src/contributions/pool-contributor-list.ts` was
+  **never opened**. The entry stands with its original re-trigger.
+
+- **"FlashList `keyExtractor` includes `index`" (8.3 code review) — ⛔ STAYS OPEN. ⛔ DO NOT MARK IT
+  DISCHARGED, and ⛔ do not name Story 11b.2b as its consumer.** Its recorded blocker — *"the
+  PII-shielded shape carries no stable per-member identifier"* — **is still true**: D3-key was VACATED
+  with D5 and **no `rowKey` ships**. Re-verified at `68d081c`: `rowKey` appears **nowhere** in
+  `packages/ui/src`, `packages/contracts/src` or `apps/mobile/components`. ⇒ the `keyExtractor` **keeps
+  `index`** until a separate story supplies a stable key.
+
+- **⭐ CORRECTION TO THIS STORY'S OWN ROUTING INSTRUCTION — the 11b.2 half is ALREADY DISCHARGED, BY
+  11b.2 ITSELF.** Story 11b.2a's Task 6 ordered six D6(a) artefacts routed into Story 11b.2 by line,
+  noting *"11b.2 is `ready-for-dev` with Task 1 `startable` — this routing is time-critical."*
+  ⭐ **11b.2 has since shipped (`done`, `8a79cdd`) WITH D6(a) APPLIED.** Verified: the presenter's
+  view-model is single-arm `{ kind: 'nameParts' }` with the `anonymized` arm gone
+  (`packages/ui/src/contribution-list/view-model.ts:37-38,54-55`), `member.anonymousMember` is
+  **deliberately absent** from the declared i18n refs (`i18n-keys.ts:16`, and
+  `presenter.test.ts:202-205` asserts the absence), and no duplicate key was minted. ⇒ ⛔ **no routing
+  action is owed to 11b.2**, and this is recorded so the next reader does not attempt to route into a
+  `done` story.
+
+- **⛔⛔ BUT A REAL, LIVE CORRECTION SURVIVES — AND IT NOW POINTS THE OTHER WAY. Story 11b.2b describes
+  a `rowKey` THAT NEVER SHIPPED, and routes its removal to a story that never had it.** Verified at
+  `68d081c` in `11b-2b-contributor-list-mobile-render-layer.md` (`ready-for-dev`, so a dev agent will
+  execute this text): `:161-167` states *"`ContributionRowInput.rowKey` and `ContributionRowViewModel.rowKey`
+  are both **required**"* and routes their removal to **11b.2 Task 0 as a seventh artefact** — but
+  11b.2 is `done` and the shipped interfaces are `{ displayName, poolLetterCode }` and
+  `{ displayName, poolLetterCode, rowA11y }`, with ⛔ **no `rowKey` in either**. The same stale premise
+  recurs at `:226`, `:339`, `:387` and `:599`. ⇒ ⭐ **11b.2b's adapter has nothing to REMOVE, not
+  nothing to PUT** — the instruction is a no-op that reads like a blocker, and a dev agent following
+  `:165` would go looking for a seventh artefact in a merged story.
+  ⭐ **Its CONCLUSIONS are all correct and unchanged** — ⛔ no `rowKey`, ⛔ no `kind`, `deferred-work`'s
+  keyExtractor entry stays open, `keyExtractor` keeps `index`. **Only the "routed to 11b.2 for removal"
+  MECHANISM is void.** **Trigger: 11b.2b's next authoring or validation pass — and at the latest its
+  Task 0**, which must not re-route to a `done` story.
+
+- **⭐⭐ THE AC7 NOTICE-COPY ROUTING PACKET — ⛔ NO `common.json` EDIT LANDS IN THIS STORY'S DIFF.**
+  D5 **falsified shipped, member-facing copy in both locales**, and it is copy that promises exactly the
+  behaviour D5 abolishes. Verified live in `packages/i18n/locales/{en,hi}/common.json`:
+  `rtbf.entry_hint` (`:217`) — *"Your contribution history stays on record, **without your name**"*;
+  `rtbf.ack_body` (`:219`) — *"stays on record **as 'an anonymous member'**"*, which names the very
+  marker D5 removes; `rtbf.done_body` (`:227`) — *"Your contribution history remains, without your
+  name."* **Six keys, 3 × 2 locales.**
+  **The three statements D5 requires the notice to make, recorded VERBATIM so the owning story builds
+  from the ruling and ⛔ not from a paraphrase:** (1) identifying information + the public contributor
+  representation are **removed from public-facing surfaces**; (2) the contribution / claim and other
+  applicable public representations are **no longer publicly displayed**; (3) records the Trust is
+  **legally required to retain** remain in **restricted internal systems** for the applicable
+  statutory/regulatory retention period, and are ⛔ **never used to restore the public representation**.
+  ⛔⛔ **AND STATEMENT 3 MUST BE CHECKED AGAINST THE BUILD BEFORE IT IS PROMISED:**
+  `packages/domain/src/member/anonymize.ts:144` **OVERWRITES `name_ciphertext`** with an encrypted
+  sentinel — the member's **NAME IS DESTROYED, ⛔ not retained**. What survives is the
+  financial/contribution trail keyed by `member_id`. ⇒ the notice must be precise about **WHICH**
+  records are retained; a member reading statement 3 as *"they still hold my name"* would be **MISLED**,
+  and the build cannot honour that reading.
+  ⛔ **Statutory copy ⇒ counsel + the Story-2.4 amendment workflow + a NON-AUTHOR tone review**
+  (`2026-08-28-161` precedent); Adv. Mohit Agrawal is engaged
+  ([[project_dpdpa_counsel_engaged_but_unrecorded]]). **Trigger: the owning RTBF-flow story (Story 3.12 /
+  the member-data-rights module).** ⛔ Not marked closed.
+
+- **⛔⛔ THE STALE *"Epic 9's producer is unbuilt"* COMMENT FAMILY — ONE finding, the FULL site list.**
+  This is what falsified D3-rollout's sole ground one level up: an authoring pass read *"the producer is
+  unbuilt"* off an Epic-8-era comment, concluded the confirmed population was zero, and ruled a
+  stale-client break acceptable on that basis. Filing only a subset is how the next reader greps, hits an
+  un-named site, and **re-derives the identical false premise** ([[project_mechanization_split_commitment]]).
+  Re-verified at `68d081c`. ⭐ **The three sites inside this story's own diff
+  (`apps/api/src/modules/member-pool/handlers.ts` — the `[]`-today comment, the DECRYPT-COST SEAM
+  comment AC3 exists to discharge, and the pending-aggregate comment) ARE CORRECTED by Tasks 3/4.**
+  ⛔ **The rest are OUT OF DIFF and are ⛔ NOT fixed here** — that would be scope creep:
+  · ⭐⭐ **`packages/contracts/src/contributions/pool-contributor-list.ts:88` — WITH A NAMED CONSUMER:
+    STORY 11b.3** (routed by BigDev, 2026-08-30). Ground: the file names 11b.3 **itself** at `:26-28`
+    (*"the downstream Sahyog Vivran public render (Epic 11b) reuses it unchanged"*) ⇒
+    `11b-3-sahyog-vivran-per-claim-story-surface` (`backlog`, ⛔ no story file yet). ⚠ ⭐ **AND THE
+    REACHABILITY CAVEAT IS RECORDED, ⛔ NOT ASSUMED AWAY** ([[feedback_trace_reachability_before_escalating]]):
+    that same sentence says 11b.3 reuses it **unchanged**, so 11b.3 may **read** this contract without
+    **editing** it. ⇒ **TWO triggers, ⛔ not one: (i)** 11b.3's authoring pass — `:88` is precisely the
+    line that would make it re-derive *"the list is structurally empty"*; **(ii) FALLBACK — the next
+    story that edits `pool-contributor-list.ts` for ANY reason**, so the item cannot evaporate if 11b.3
+    ships without opening the file. ⚠ Story 11b.2b's AC9 already **fences** this line against being
+    tidied in passing while importing from the file — ⛔ the fence stays.
+  · ⛔ **A SELF-CONTRADICTING FILE: `packages/domain/src/contribution/read.ts:18`** (*"is unbuilt"*)
+    **vs `:127`** (*"Epic 9's producer landed at 9.4"*). ⚠ An earlier pass cited `:18` alone — **its
+    stale half**, which is exactly the error being filed.
+  · The rest of the family, verified live: `packages/api-client/src/index.ts:553` ·
+    `apps/mobile/components/contributor-list/PoolContributorList.tsx:11` ·
+    `apps/mobile/components/contributor-list/usePoolContributorsQuery.ts:14` ·
+    `apps/jobs/src/scheduler/contribution-notify-triggers.ts:18,480` · `apps/jobs/src/index.ts:75` ·
+    `packages/queue/src/index.ts:249` · `packages/contracts/src/contributions/contribution-history.ts:8`.
+  · ⚠ ⭐ **AND IT IS ASSERTED IN TEST NAMES, ⛔ not only in comments** —
+    `packages/contracts/tests/contributions.test.ts:81,167` and
+    `packages/domain/tests/integration/contribution/confirmed-contributors.spec.ts:10,59` (plus
+    `acted-member-ids.spec.ts:10`, `member-history.spec.ts:11`,
+    `apps/jobs/tests/contribution-notify-triggers.test.ts:694`) name the false premise **in the test
+    title**. ⛔ **A green suite therefore RESTATES it on every run.**
+  ⛔ Not marked closed.
+
+- **⭐⭐ THE `rosterSize` NAMING HAZARD — the one that can silently UNDERSTATE CONFIRMATION.**
+  D3-aggregate cl.(2) names `rosterSize` *"contributors currently eligible for public representation"*,
+  but the shipped `pool.rosterSize` is the **FROZEN pool snapshot** (`pool/contribution-binding.ts:426`;
+  the frozen-roster invariant, `member-pool/handlers.ts`) and feeds **two financial computations** —
+  `computePendingAggregate` and the on-the-wire 8.2 meter `progress: { confirmedCount, rosterSize }`.
+  ⛔ **They are TWO QUANTITIES ON TWO AXES and must never be merged.** Both worked failures, recorded:
+  (1) **`pending` understates** — pool of 10, 4 confirmed, one RTBF'd ⇒ representation-eligible roster 9,
+  `confirmedCount` still 4 ⇒ `pending = 9 − 4 = 5`, but **6 members genuinely have not confirmed**;
+  (2) ⛔⛔ **the `Math.min` clamp fires and DELETES A CONFIRMED CONTRIBUTION FROM THE METER** — pool of
+  3, all 3 confirmed, one RTBF'd ⇒ `confirmedCount` 3 > eligible roster 2 ⇒ the clamp renders *"2 of 2"*.
+  ⭐ Story 11b.2a documents both axes at `computePendingAggregate`'s call site.
+  **Re-trigger: any story that renames, redefines or recomputes `rosterSize`, or that first needs a
+  representation-eligibility count.** ⛔ Not marked closed.
+
+- **⭐ THE `ANONYMOUS_MEMBER_I18N_KEY` / `member.anonymousMember` DELETION QUESTION — routed as its own
+  decision.** ⛔ *"Possibly-dead"* is **SUPERSEDED**; after D6(a) the observation is **DEFINITE**
+  ([[feedback_closure_language_precision]]). Verified at `68d081c`: the key lives at `common.json:215`
+  (**en and hi**), the const at `packages/domain/src/member/display-name.ts:26`, the type arm at `:39`,
+  plus `display-name.test.ts` — and it has ⛔ **ZERO production call sites**. D6(a) removed the **last
+  named prospective consumer**, and the only other surface that could plausibly have rendered it — the
+  public member directory — **already omits `anonymized`** (`DIRECTORY_VISIBLE_MEMBER_STATES`,
+  `2026-08-20-143` cl.3). ⇒ **un-consumed, with ⛔ no named prospective consumer remaining across every
+  KNOWN surface.** ⛔⛔ **NOTHING WAS DELETED.** Removing a domain export, its type arm, its unit test
+  and a **ratified bilingual string** is a distinct governance act with its own blast radius, and
+  ⛔ D6 ruled the **presenter variant**, ⛔ not the seam. **Trigger: a dedicated dead-seam-removal
+  decision.** ⛔ Not marked closed.
+
+- **⭐ D5 + D5-scope ROUTED TO THE SIBLING SURFACES, so none re-derives an anonymized row from its own
+  epic text** ([[feedback_spec_edits_must_propagate_to_tasks]]): **11b.2** (presenter — ✅ already
+  applied, see above) · **11b.2b** (mobile render layer — ⛔ no `kind`, ⛔ no `rowKey`, keeps `index`;
+  ✅ already carries the correction) · **11b.3** (the public host — **D5 binds it BY NAME**, and it has
+  ⛔ no story file yet, so this entry is where its authoring pass must find the ruling).
+
+- **⚠ THE SURFACE INVENTORY IS FOUR, NOT THREE — the routing list is stories, ⛔ not renderers.**
+  D5-scope says *"wherever the contributor list is rendered"*. Verified at `68d081c`, the shipped
+  `<PoolContributorList>` is mounted **twice**: `apps/mobile/app/(contribution)/contributors.tsx:13`
+  (the 8.3 route) **and** ⭐ `apps/mobile/components/nominee-console/NomineeConsole.tsx:213` — Story
+  9.1's staff-takeover-session-as-deceased surface. ⭐ **Both inherit the fix automatically** (one API
+  handler, one `usePoolContributorsQuery`) ⇒ ⛔ **no code change is owed there.** Recorded so the next
+  reader cannot mistake the three-story routing list for the surface inventory.
+
+- **⭐ THE VERIFIED NEGATIVE: there is ⛔ NO public contributor-NAME render today.**
+  `packages/domain/src/pool/public-read.ts` emits a confirmed **COUNT**
+  (`CONFIRMED_CONTRIBUTION_COUNT`, `:201`, consumed at `:529`) and the **deceased's** name — its header
+  states *"⛔ no decryption"*. ⇒ ⭐ **D5-scope's *public* contributor list is PROSPECTIVE and owned by
+  11b.3**, and the ONE live contributor-name path today is the member-pool handler this story fixes.
+  ⛔ Do **not** read D5-scope as an un-actioned public defect.
+
+- **⚠ TRAP 4 — the hand-maintained `ConfirmedContributorRow` tuple re-spellings stay recorded as a
+  STANDING HAZARD.** ⛔ **Unexercised by Story 11b.2a** (D5 vacated the widening, so nothing derives from
+  a changed contract and ⛔ no lockstep reconciliation was owed). It goes live **the moment ANY story
+  widens this tuple**: the canonical schema
+  (`packages/contracts/src/contributions/pool-contributor-list.ts`), the independent inline structural
+  type in `apps/api/src/modules/member-pool/contribution-note.ts`, the producer + `SplitName`
+  (`member-pool/name.ts`, `packages/domain/src/kyc/name.ts`), the `deceasedLastInitial` re-spelling in
+  `packages/domain/src/notifications/pool-identity.ts`, and the three fixture copies. ⚠ ⭐ The
+  `apps/mobile` local `interface ConfirmedRow` — 11b.1's defect class, present since 8.3 — is
+  **DELETED by 11b.2b's D10(a)**, which removes one re-spelling from this list once that story ships.
+  ⛔ **Do not reconcile them opportunistically.** ⛔ Not marked closed.
+
+- **⛔ OWED BEFORE MERGE — the NON-AUTHOR tone-review sign-off for AC8's two strings.**
+  `packages/i18n/locales/{en,hi}/contribution.json` **is** in the microcopy gate's `copy_globs` and
+  `pnpm microcopy:check` is **green**, but `docs/tone-guide.md` §5 is explicit that *"automated lint
+  passing does not substitute for a recorded human tone-review sign-off"*, and
+  `docs/tone-review-checklist.md` requires `reviewedBy ≠ authoredBy`. ⭐ **It is recorded here as OWED
+  and UN-ATTESTED rather than self-signed** ([[feedback_record_unattested_no_backfill]]): the strings
+  were **authored by BigDev** (ruled verbatim in AC8) and **transcribed by the dev agent**, so both
+  parties are disqualified as reviewer. ⚠ Story 10.16 set the precedent for recording this obligation
+  the same way (*"Owed before merge: the Story 2.2 non-author tone sign-off"*). ⚠ ⭐ **The contributor
+  list is also ⛔ NOT in the checklist's governed-surfaces table**, so ⛔ no runtime publish gate and
+  ⛔ no review permission exists for it — the obligation is real but **unmechanized**, which is exactly
+  how it would decay. **Trigger: merge review of this story; and, separately, the next story that adds a
+  member-facing surface to the governed-surfaces table.** ⛔ Not marked closed.

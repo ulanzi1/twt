@@ -943,25 +943,25 @@ dated `⛔ RECONCILED 2026-08-29 (AI-11a-1(b), Story 11b.2 authoring + validatio
         existence** — let `readFileSync` throw. A guarded wrong path is a **silent skip**, which is
         the failure this bullet exists to prevent; belt-and-braces, assert the bundle is non-empty
         before asserting any key.
-- [ ] **Task 3 — Route the deferrals (AC6, AC7)** ✅ `[D7-nameform(a) RULED — startable]`
-  - [ ] **SIX items — (i) … (vi)**, roman-numeralled and section-qualified as `11b.2 (i)` etc.
+- [x] **Task 3 — Route the deferrals (AC6, AC7)** ✅ `[D7-nameform(a) RULED — startable]`
+  - [x] **SIX items — (i) … (vi)**, roman-numeralled and section-qualified as `11b.2 (i)` etc.
         (⚠ `deferred-work.md` already holds 11b.1's unqualified (a)…(j) — ⚠ and 11a.6 at `:214-311`
         and 11a.5 at `:353-526` do the same, so the roman-numeral rule is **more** necessary, not
         less), each with a named re-trigger, ⛔ none marked closed. ⚠ **SIX, ⛔ not seven** — the old
         item (vi) is deleted (D6(a) removed its subject).
-  - [ ] ⛔ **Write BOTH not-recorded stubs in `deferred-work.md` ITSELF**, ⛔ not only in this story:
+  - [x] ⛔ **Write BOTH not-recorded stubs in `deferred-work.md` ITSELF**, ⛔ not only in this story:
         `(vii)` the public/member inversion (already open at `:97-100` under 11b.1 item (e)) and
         `(viii)` the `member.anonymousMember` duplicate (subject removed by 11b.2a's D6(a); its
         successor deletion question is **11b.2a's Task 6**). ⛔ Two records of one obligation is the
         failure both stubs exist to prevent.
-  - [ ] ⚠ **Item (v) — the commitlint divergence — is ⛔ not optional.** `sprint-status.yaml` and
+  - [x] ⚠ **Item (v) — the commitlint divergence — is ⛔ not optional.** `sprint-status.yaml` and
         **11b.2a both bank on this Task writing it**. ⛔ Do not stop at four items. ⭐ Re-verified
         2026-08-30: `commitlint.config.js` overrides only `scope-enum`/`subject-case`/the max-length
         rules — **`type-enum` is untouched** — and `core.hooksPath` = `.githooks`, which holds only
         `pre-push`.
-  - [ ] **Item (ii)** — ⚠ a bare *"(b)"* here would mean **11b.1's** item (b) — is written as
+  - [x] **Item (ii)** — ⚠ a bare *"(b)"* here would mean **11b.1's** item (b) — is written as
         **8.3 D11's re-trigger having fired at 11a.1**, ⛔ not as a fresh item.
-  - [ ] Write the D7-nameform Panel packet as its **own named file** (AC7), in
+  - [x] Write the D7-nameform Panel packet as its **own named file** (AC7), in
         ⭐ **`_bmad-output/planning-artifacts/`** (⛔ **not** `implementation-artifacts/` — all 22
         existing routing notes live there) —
         `trustee-panel-routing-note-2026-08-30-contributor-name-public-tier.md` — with **all SIX**
@@ -974,7 +974,7 @@ dated `⛔ RECONCILED 2026-08-29 (AI-11a-1(b), Story 11b.2 authoring + validatio
         ⛔ not a block; (6) `-162` cl.2 retired `sahyog_vivran_publication` + `in_memoriam_listing`.
         ⛔ **Ruling nothing** (D7-nameform(a)). Add the file to the File List (the Project Structure
         row already exists).
-  - [ ] ✅⭐ **THE ADAPTER SEAM IS ⛔ NO LONGER OUTSTANDING — RECORD IT DISCHARGED, ⛔ DO NOT RE-FILE
+  - [x] ✅⭐ **THE ADAPTER SEAM IS ⛔ NO LONGER OUTSTANDING — RECORD IT DISCHARGED, ⛔ DO NOT RE-FILE
         IT.** 11b.2b wrote **AC9** for it on 2026-08-30 (`4bbe28b`), with Task 2 building it. ⇒ the
         note reads **"Discharged by 11b.2b's AC9 (2026-08-30)"**
         ([[feedback_closure_language_precision]]) — ⛔ never *"11b.2b does not currently own it in an

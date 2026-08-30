@@ -1,0 +1,186 @@
+# Trustee Panel routing note — 2026-08-30
+## On what authority, and in what FORM, does a CONTRIBUTOR's name render at the `public` tier?
+
+**Author:** BigDev, Solo Builder — 2026-08-30
+**Occasion:** Story 11b.2 (the `@twt/ui` `contribution-list` presenter) authoring + three validation
+passes. Decision **D7-nameform(a)** — transcribed as `.decision-log.md#decision-2026-08-30-168`
+**cl.4** — ruled that this story **records the question and rules NOTHING**. ⛔ Nothing 11b.2 builds
+requires an answer; it is raised because **Story 11b.3 cannot start without one**, and the evidence
+was assembled here.
+**Routed to:** Trustee Panel · **Adv. Mohit Agrawal** (engaged counsel since 2026-06-21; T&C return
+due **2026-09-07**).
+**Status:** ⏳ **ROUTED, ⛔ NOTHING RATIFIED AND NOTHING APPLIED.**
+
+> ⭐⛔ **THE HEADLINE: THE BASIS IS SETTLED AND THE FORM IS NOT — AND ⛔ NOTHING IN THE TREE SAYS SO.**
+> Story 11b.3's AC rests contributor names on *"those members' own T&C"*, so **why** a contributor's
+> name may appear publicly is answered. But **which name** — full, or first-name + last-initial, or
+> something else — is **UNRULED**, has been since 2026-08-19, and is re-affirmed undisturbed at
+> `.decision-log.md:1061`.
+>
+> ⚠⛔ **AND THE COUNTERWEIGHT IS ⛔ NOT "EXACTLY ONE COMMITTED DOCUMENT". IT IS THREE.** That claim was
+> asserted three times in this story's own history and it was **false** each time. ⛔ The correction
+> matters to the Panel because it changes how much unruled practice is already assumed in writing.
+
+---
+
+## 1. What is being asked, precisely
+
+Two questions, and they are **separable**:
+
+**(Q1) — the DECLARATION.** May `contributor_name` be declared at the `public` tier on a Sahyog Drive
+/ Sahyog Vivran surface at all? That is a `(surface, field)` pair in `matrix.ts`'s ruled Tier-1
+public-exception allowlist, and **adding one is a RULING, ⛔ never a code edit** — the file says so on
+its own face (`matrix.ts:388-391`): *"⛔ ADDING TO THIS LIST IS A RULING, NEVER A CODE CHANGE … do NOT
+'fix' a failing third entry by appending it here — that inverts the control. **The gate failing is the
+gate working.**"*
+
+**(Q2) — the FORM.** If yes, in what form does it render?
+
+⚠ **Q2 is ⛔ not a sub-case of Q1**, and ⛔ neither is answered by the other.
+
+## 2. ⭐ The allowlist has **TWO** entries, and ⛔ NEITHER is a contributor
+
+Verified in the file at the SHA below (`matrix.ts:392-404`; ⚠ the `Map` literal **closes** at `:404`):
+
+- `member-directory.member_name` (`:394`) — cites `2026-08-19-135` cl.7(c) / `-136`.
+- `sahyog-drive.deceased_member_name` (`:403`) — cites `2026-08-24-159` cl.2 (D1(b)).
+
+⇒ ⛔ **There is no contributor entry, on any surface.**
+
+⚠⛔ **AND `matrix.ts:401-402` IS ⛔ NOT A THIRD ONE.** Read in full it keeps **11b.3 and 11b.6** at
+first-name + last-initial for the **deceased member's** name, and says *"moving them requires each
+surface's OWN Panel ruling."* ⛔ It is ⛔ not about a contributor.
+
+## 3. ⭐ The THIRD widening is **four nominee-bank fields on a different surface** — ⛔ nothing contributor-shaped
+
+`2026-08-28-165` **cl.1** ruled all four fields in scope — `account_holder_name` · `account_number` ·
+`ifsc` · `vpa` — on **`sahyog-vivran`**, and **cl.3** ruled that **Story 11b.3 adds them at surface
+declaration**, ⛔ not this entry. ⇒ they are ⛔ **not yet in `matrix.ts`**, and their arrival will ⛔
+**not** create a contributor precedent: they are **disbursement-channel** fields, ⛔ not a person's
+public identity on a contributor list.
+
+## 4. ⚠⛔ `-165` **cl.2** is scoped to ACCOUNT fields — and the extension to a contributor name is an INFERENCE, ⛔ not a ruling
+
+cl.2, verbatim in the Panel's own terms: *"Do not create a separate Tier-1 classification merely
+because the public projection is masked. **The underlying account fields remain Tier-1.** Treat masking
+as a presentation/projection policy."*
+
+⇒ the natural extension — *"a **shielded** contributor name (first-name + last-initial) is **still
+Tier-1**, so shielding does not lower its tier"* — is, in these words:
+
+> ⭐ **A SOUND INFERENCE, VIA `pii_tier` BEING A FACT ABOUT THE DATA** — the matrix's own schema
+> comment says so (`public-vs-private-matrix.yaml:60`: *"a FACT about the data; ⛔ never changed to
+> permit a render"*) — ⛔ **and NOT something the ruling decided.**
+
+⚠ The Panel is asked to notice the difference. cl.2's subject was **bank account fields**; extending
+it to a **person's name** is this author's reasoning, offered openly so the Panel can reject it. ⛔ It
+is ⛔ not presented as settled.
+
+## 5. ⭐ THE ASYMMETRY — the BASIS is settled; the DECLARATION and the MECHANISM are not
+
+| Layer | State |
+|---|---|
+| **The BASIS** — *why* a contributor's name may render publicly | ✅ **SETTLED.** Story 11b.3's AC rests it on *"those members' own T&C"*. `2026-08-28-160` **cl.7** (`.decision-log.md:746-750`) cleared **all three** 11b surfaces, superseding `-157` cl.3's hold. |
+| **The DECLARATION** — the `(surface, field)` matrix pair | ⛔ **NOT MADE.** Two entries, neither a contributor (§2). |
+| **The FORM** — full name vs first-name + last-initial vs other | ⛔ **UNRULED** since 2026-08-19 (`.decision-log.md:1061`). |
+| **The MECHANISM** — what actually gates it at render time | ⛔ **NOT BUILT** (§7). |
+
+⚠ ⛔ **This asymmetry is the whole reason the note exists.** A reader who checks only the basis
+concludes the question is answered. It is not.
+
+## 6. ⚠⛔ THREE committed documents already ASSUME first-name + last-initial for CONTRIBUTORS — ⛔ and none is a ruling
+
+This is the correction the Panel most needs, because the prior framing (*"exactly ONE committed
+document"*) understated the standing practice by a factor of three:
+
+1. ⭐ **`epics.md:3145`** — **the load-bearing one.** Story **8.3**'s own *"I want"*, which names the
+   audience as *"any pool member viewing the My Pool card **or any visitor on Sahyog Drive (Epic
+   11b)**"* and specifies *"(first-name + last-initial only)"*. ⇒ the **public** contributor case was
+   contemplated in an epic AC **two epics before** Epic 11b.
+2. **`epics.md:3238`** — the receipt PDF embeds the contributing member's *"first-name + last-initial"*.
+3. **`epics.md:4931`** — Story 11b.2's own epic AC.
+
+⇒ ⭐ **"Unruled" survives against THREE assumptions, ⛔ not one — and it survives for exactly one
+reason: ⛔ an epic AC is ⛔ not a ruling.**
+
+⚠ **The shipped WIRE already implements the shielded form**, so a ruling either way costs no
+migration: `packages/contracts/src/contributions/pool-contributor-list.ts:42-51` —
+`ConfirmedContributorRow = { firstName: min(1), lastInitial: max(16) }`, `.strict()`. ⛔ That is a
+**built-to** form, ⛔ not a ratified one.
+
+## 7. ⛔ THE 11b.9 PRECEDENT IS **INERT** TODAY — and its wait is a ruled **CHOICE**, ⛔ NOT a block
+
+The Panel will reasonably ask whether the T&C-version mechanism that grounds the *basis* is available
+to gate the *form*. ⛔ **Today it is not, and presenting it as a working mechanism would misstate the
+tree:**
+
+- ⛔ **No `clause_versions` row is minted.** The predicate is **false for every member**.
+- ⚠ **Story 11b.9's Task 1 — and ⛔ ONLY Task 1 — WAITS**, on counsel's T&C return (**2026-09-07**)
+  **and** on a second real person holding `niyamavali.review` (`11b-9-…md:935, :945`).
+- ⭐ **Its Tasks 2-8 are ⛔ NOT waiting** — they shipped **inert by design**, and 11b.9 ruled that
+  posture *"not merely permitted — they are the ruled posture."*
+
+⚠⛔ **AND THE WORD *"BLOCKED"* IS ⛔ NOT USED OF 11b.9 ANYWHERE IN THIS NOTE, DELIBERATELY.** 11b.9
+ruled the wait a **CHOICE, ⛔ not a constraint**. Calling a deliberate choice a block would misstate
+the precedent **to the very body being asked to rule on it**
+([[feedback_closure_language_precision]]).
+
+## 8. ⚠ THE MOST ADJACENT FAMILY-FACING CONTROL NO LONGER EXISTS
+
+`2026-08-28-162` **cl.2** retired **`sahyog_vivran_publication`** and **`in_memoriam_listing`**
+alongside `sahyog_drive_publication`. ⇒ the consent type most adjacent to a contributor list on
+`/sahyog-vivran` is ⛔ **gone as a family-facing control**; `sahyog_drive_publication` is
+**preserved-but-de-authorised** ([[project_11b_consent_model_c5_superseded]]).
+
+⇒ ⛔ **The Panel cannot route this question to a per-subject consent tick-box. There is none, by
+ruling.**
+
+## 9. What is put to the Panel
+
+1. **Q1 — the DECLARATION.** Should a `(surface, field)` pair for a contributor's name be added to
+   `matrix.ts:392`'s ruled allowlist, and on which surface(s)?
+2. **Q2 — the FORM.** Full name, or first-name + last-initial, or another form — **for CONTRIBUTORS**,
+   distinctly from the deceased member, whose form was ruled separately at D10 and is itself ⛔ still
+   awaiting Panel ratification (`deferred-work.md` 11b.1 item (e)).
+3. **Q3 — the ASYMMETRY.** Does the settled **basis** carry any weight on the **form**, or are they
+   fully independent? ⚠ This author's view is that they are independent, and offers it as a view.
+
+## 10. ⚠ A precondition the Panel should know about
+
+⭐ **The public/member INVERSION is already open and binds the answer.** `resolvePoolIdentity` shields
+the same family's name on the **member-facing** My Pool card, passbook and notifications (8.6/8.7/8.8)
+— so a permissive ruling here can make the **public** page show **MORE** than the **member app** does
+for the same pool. It sits at `deferred-work.md:289-292` under 11b.1 item **(e)** (`:281`), with the same
+*"binds 11b.2 and 11b.3"* language. ⛔ Not re-filed here; ⛔ two records of one obligation is its own
+failure.
+
+## 11. What this note does ⛔ NOT do
+
+⛔ Does **not** rule, ratify, amend or apply anything · ⛔ does **not** add a matrix entry (that is the
+ruling being sought, and appending one would **invert the control**) · ⛔ does **not** declare a
+surface or a field · ⛔ does **not** block Story 11b.2, which builds nothing that needs an answer —
+its presenter emits name **PARTS** and ⛔ never joins them, precisely so that ⛔ nothing in it decides
+the form (`-168` cl.6) · ⛔ does **not** advance Row 17 · ⛔ does **not** re-open the settled basis ·
+⛔ mints **no** launch-gate roster row · ⛔ does **not** claim the contributor list is authorised to go
+live, which remains a matter of deployment plus the counsel/Panel process, ⛔ never a code mechanism
+and ⛔ never the publication kill switch.
+
+⚠ **And the phrasing rule binds every line above:** *"counsel has not reviewed X"* — ⛔ **never**
+*"counsel is not engaged"*, which is **false and has been since 2026-06-21** (`2026-08-24-158`).
+
+---
+
+## Sources — every one read at `6028581`
+
+- `packages/contracts/src/public-pages/matrix.ts:388-391` (⛔ adding is a RULING; *"the gate failing is the gate working"*) · `:392-404` (the TWO-entry allowlist; the `Map` closes at `:404`) · `:394` · `:403` · ⚠ `:401-402` (the **deceased member's** name on 11b.3/11b.6 — ⛔ NOT a contributor's)
+- `packages/contracts/public-pages/public-vs-private-matrix.yaml:60` — `pii_tier` is *"a FACT about the data; ⛔ never changed to permit a render"* (the inference in §4 rests on this) · `:358-364` (the exception's own `scope:`, reserving a change to a Panel ruling)
+- `.decision-log.md#decision-2026-08-28-165` **cl.1** (four nominee-bank fields on `sahyog-vivran`) · **cl.2** (masking is a presentation policy; ⚠ scoped to **account** fields) · **cl.3** (11b.3 adds them at declaration; ⛔ not yet in the file)
+- `.decision-log.md#decision-2026-08-28-162` **cl.2** — `sahyog_vivran_publication` + `in_memoriam_listing` retired
+- `.decision-log.md:746-750` (`-160` **cl.7** — clears all three 11b surfaces, superseding `-157` cl.3; ⚠ ⛔ NOT at `:676-680`, which is cl.3's preserved **basis**)
+- `.decision-log.md:1061` (the contributor/donor name form stays **UNRULED**) · `:1068-1069` (`2026-08-24-159` **cl.12** — the TWO committed records reserving a public name-form change to the Panel; ⚠ ⛔ the reservation is NOT at `:1061`)
+- `.decision-log.md#decision-2026-08-30-168` **cl.4** (D7-nameform(a) — the ruling that produced this note) · **cl.6** (D9(a) — why 11b.2 decides nothing here)
+- ⭐ `_bmad-output/planning-artifacts/epics.md:3145` (Story 8.3's own *"I want"* — *"any visitor on Sahyog Drive (Epic 11b)"*, *"first-name + last-initial only"*) · `:3238` (the receipt PDF) · `:4931` (11b.2's epic AC) · `:4868` / `:4888` (the Panel reservation for contributors)
+- `packages/contracts/src/contributions/pool-contributor-list.ts:42-51` — the shipped shielded wire shape, `.strict()` at `:51`
+- `_bmad-output/implementation-artifacts/11b-9-sahyog-drive-publication-authority-switch.md:139-140` (the lifted hold) · `:570` (the de-authorised gate) · `:574-576` · ⭐ `:935`, `:945` (the wait is a **CHOICE**, ⛔ not a constraint — the reason *"blocked"* appears nowhere above)
+- `_bmad-output/implementation-artifacts/deferred-work.md:281` + `:289-292` (11b.1 item (e) — the public/member inversion, already open) · `:296-313` (item (f), discharged by Story 11b.2) · `:7-196` (⭐ THIS story's own section). ⚠⛔ **These are POST-INSERT line numbers.** Story 11b.2's section was prepended on 2026-08-30 per the file's newest-first discipline, shifting every 11b.1 anchor down by **192** — so the pre-insert citations `:89` · `:97-100` · `:104-121` that appear in `-168` and in older documents were TRUE WHEN WRITTEN and now point 192 lines short. ⛔ The ITEM LETTERS are stable; cite those.
+- Memory: [[feedback_closure_language_precision]] · [[project_11b_consent_model_c5_superseded]] · [[project_dpdpa_counsel_engaged_but_unrecorded]] · [[project_directory_launch_gated_on_killswitch_ui]]

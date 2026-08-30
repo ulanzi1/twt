@@ -4,6 +4,198 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred / recorded from: Story 11b.2 — the `@twt/ui` `contribution-list` presenter (2026-08-30)
+
+Ruled at Decision `2026-08-30-168` (**D1 · D2(a) · D6-uxspec(a) · D7-nameform(a) · D8(a) · D9(a) ·
+D11-outputshape(a) · D12-refscope(a) · D13-numbering(a)**, BigDev 2026-08-29 and 2026-08-30).
+⚠ Every item below is **observed and ROUTED**, ⛔ not scheduled and ⛔ not built
+([[feedback_gap_analysis_observational]]). ⛔ **None is described as closed.**
+
+⚠⛔⛔ **LETTERING — READ THIS BEFORE CITING ANY ITEM BELOW.** This story's items are **roman-numerled
+and section-qualified**: `11b.2 (i)` … `11b.2 (vi)`. ⛔ **A bare `(a)`/`(b)`/`(e)`/`(f)` anywhere in
+this file means Story 11b.1's**, whose unqualified `(a)`…`(j)` sit directly below — and 11a.6 and
+11a.5 do the same. ⛔ Never write a bare letter for one of these.
+
+⚠⛔ **AND `D6`/`D7` HERE MEAN `D6-uxspec`/`D7-nameform` (D13-numbering(a)).** ⛔ **Story 11b.2a has a
+DIFFERENT `D6(a)` and `D7(c)`**, and 11b.2b renamed its own `D5` to `D5-prototype` for the same
+reason. ⛔ Never cite a bare number across this sibling set.
+
+⚠⛔⛔ **LINE-NUMBER DRIFT, RECORDED AT THE POINT OF CONFUSION — ⛔ NOT SILENTLY LEFT.** This section
+was **prepended** on 2026-08-30 per this file's newest-first discipline, which shifted **every Story
+11b.1 anchor below it down by 192 lines**: item **(e)** `:89` → **`:281`** (its inversion paragraph
+`:97-100` → **`:289-292`**), item **(f)** `:104-121` → **`:296-313`**, and 11b.1's block as a whole
+`:21-179` → **`:213-371`**.
+⇒ ⚠ **`.decision-log.md#decision-2026-08-30-168`'s pointer to `:104-121` was TRUE WHEN WRITTEN and now
+points 192 lines short.** ⛔ **It is ⛔ NOT corrected there, and that is deliberate** — a decision entry
+is **never edited in place**; a correction would be a new entry that binds the old one
+([[feedback_supersede_never_reinterpret]] cl.4), and a drifted convenience pointer does not warrant
+one. ⭐ **The ITEM LETTERS are the stable address. Cite those, ⛔ not the lines.**
+
+⛔⛔ **AND THIS STORY PUBLISHES NOTHING.** A presenter has ⛔ no route, ⛔ no cache policy and ⛔ no
+viewer. It closes ⛔ no launch gate and opens ⛔ no surface. ⛔ Nothing below may be read as Epic 11b
+being launch-ready or a public contributor list being authorised.
+
+### 11b.2 (i) The **Astro contributor render layer** — ⚠ *deferred, ⛔ NEVER "blocked"*
+
+⛔ `@twt/ui` is **not** added to `apps/public/package.json`; ⛔ no `.astro` component is authored.
+
+⭐⛔ **THE GROUND IS THAT NO HOST EXISTS — ⛔ NOT that C-1 forbids the dep, and getting this backwards
+has already happened once.** `2026-08-23-154` **cl.6** ruled that `apps/public` **adds `@twt/ui`** and
+called it *"an **ORDINARY DEPENDENCY ADDITION**"*; `.decision-log.md:1734` records *"⛔ **Verified:
+there was no declination.**"* Story 11b.1's decline was **scope-limited** and named **11b.2 / 11b.5 /
+11b.7** as the consumers (`11b-1-…md:203`). ⇒ the word is **deferred**
+([[feedback_closure_language_precision]]).
+
+Verified: `apps/public/src/pages/` holds `404 · 500 · blog · blog/[postId] · index · members ·
+niyamavali · sahyog · terms`. `/sahyog` renders ⛔ no contributor rows at any grain, and 11b.3's
+`/sahyog-vivran/{id}` is `backlog`.
+
+⭐ **Trigger: Story 11b.3 authoring** (it owns the host).
+
+> ⚠ **RECORDED WITH THIS ITEM, ⛔ deliberately NOT a seventh numbered item — the `unknown`
+> display-name branch is UN-ATTESTED / UNEXERCISED.** The presenter's `unknown` arm **throws**
+> (D8(a)) and ⛔ **no producer can reach it today**: the API boundary skips a row whose contributor
+> name it cannot resolve (`apps/api/src/modules/member-pool/handlers.ts:312-318`, and two further
+> skips follow at `:327`/`:332`). ⇒ recorded **un-attested, ⛔ never written up as tested**
+> ([[feedback_record_unattested_no_backfill]]). ⭐ It is a **throwing exhaustiveness guard**, and a
+> guard that never fires is working — ⛔ unlike a render arm that never fires, which is dead code and
+> is why 11b.2a's D6(a) deleted the anonymized one.
+> ⛔ **It is not numbered because AC6 fixes this story's count at SIX**, and it shares this item's
+> trigger exactly. ⭐ **Trigger: 11b.3's Astro producer**, which may legitimately emit one.
+
+### 11b.2 (ii) A **contributor name at the `public` tier** — ⚠ ⭐ this is **8.3 D11's RE-TRIGGER**, ⛔ not a fresh item
+
+⛔ No matrix surface or field is declared by this story. The allowlist keeps **two** entries
+(`matrix.ts:394`, `:403`) and ⛔ **neither is a contributor**.
+
+⭐⛔ **AND IT MUST BE FILED AS A RE-TRIGGER THAT ALREADY FIRED AND WAS NOT ACTED ON.** Story 8.3's
+**D11** deferred exactly this matrix entry — prescribing `live-contributor-list` (`first_name` +
+`last_initial`) — with a re-trigger naming **Story 11a.1**. ⭐ **11a.1 is `done`, and the matrix still
+has two pairs.** ⇒ *"8.3 D11's re-trigger fired at 11a.1 and was not acted on"* — ⛔ filing this as
+fresh is the exact failure D6-uxspec(b) names, applied to this story.
+
+⚠ (⛔ A bare *"(b)"* here would mean **11b.1's** item (b) — see the lettering rule above.)
+
+⭐ **Trigger: a Panel ruling adding a `(surface, field)` pair to `matrix.ts:392`** — ⛔ **never a code
+edit.** The file says so itself (`:388-391`): *"do NOT 'fix' a failing third entry by appending it
+here — that inverts the control. **The gate failing is the gate working.**"*
+
+### 11b.2 (iii) The **contributor NAME FORM** — ⛔ UNRULED, and ⛔ nothing in this story decides it
+
+⚠⛔ **THREE committed `epics.md` lines assume first-name + last-initial FOR CONTRIBUTORS — ⛔ not the
+"exactly ONE" this was asserted as three times.** ⭐ `:3145` (Story **8.3**'s own *"I want"*, and the
+load-bearing one — it names the audience as *"any pool member viewing the My Pool card **or any
+visitor on Sahyog Drive (Epic 11b)**"* and specifies *"(first-name + last-initial only)"*) · `:3238`
+(the receipt PDF) · `:4931` (this story's epic AC). ⛔ **None is a RULING** — that is the only reason
+*"unruled"* survives — but the **count is three**.
+
+⭐⛔ **D9(a) IS WHAT KEEPS THIS ITEM TRUE.** The presenter emits name **PARTS** and ⛔ never joins
+them, so ⛔ nothing in `presenter.ts` decides the form. A join there would have made this routed
+deferral **false on the day it was written**. The join is **11b.2b's**, under the form the Panel
+rules; until then 11b.2b uses the form already committed at `epics.md:4931` and records it
+**built-to, ⛔ not ratified**.
+
+⭐ **Trigger: its own Panel ruling.** ⭐ **The packet is a FILE, and it is written** —
+`_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-08-30-contributor-name-public-tier.md`
+— ⏳ **ROUTED, ⛔ nothing ratified and ⛔ nothing applied.**
+
+### 11b.2 (iv) **`<StatCardStrip>`** — ⛔ NO PRODUCER, NO OWNER
+
+`ux-design-specification.md:1788` names an *"aggregate stat-cards row above the table"*. **C-3**
+(`epics.md:4799`) records *"NO PRODUCER | No owner"*, and `2026-08-23-154` **declined to settle it**
+— *"a settled **shape** is ⛔ not a settled **source**."*
+
+⛔ Out of scope for this story, and ⛔ **do not stub it** — a stub would assert an aggregate nothing
+computes.
+
+⭐ **Trigger: C-3's producer** — ⛔ **unowned.**
+
+### 11b.2 (v) The **`governance:` commit prefix is formally INVALID** under the checked-in commitlint config
+
+⚠⛔ **THIS ITEM IS ⛔ NOT OPTIONAL AND ⛔ NOT NEW.** `sprint-status.yaml` **and Story 11b.2a both
+record that THIS story's Task 3 writes it**, and an earlier pass left it in Dev Notes prose while AC6
+said *"four items"* — the exact way a cross-referenced obligation evaporates.
+
+⭐ **Re-verified live at this story's implementation (2026-08-30):**
+- `commitlint.config.js` extends `@commitlint/config-conventional` and overrides **only**
+  `scope-enum` · `subject-case` · `header-max-length` · `body-max-line-length` ·
+  `footer-max-line-length`. ⇒ **`type-enum` is UNTOUCHED**, at conventional's default, which ⛔ does
+  **not** include `governance`.
+- It survives only because **commitlint is wired to NOTHING**: `core.hooksPath` = `.githooks`, which
+  holds **only `pre-push`** (⛔ no `commit-msg` hook); and `commitlint` appears in ⛔ neither
+  `scripts/ci-local.sh` nor `.github/workflows/ci.yml`.
+- The convention is nonetheless **real and dominant**: **154** `governance:` commits in history.
+
+⇒ ⭐ **Use the prefix — convention wins.** ⚠ But the divergence is recorded, because the day
+commitlint is wired in, every future `governance:` commit fails and the cheapest repair will look
+like abandoning the convention.
+
+⭐ **Trigger: any story that wires commitlint into a hook or a CI leg.**
+
+### 11b.2 (vi) ⛔ There is **no `t()`-through assertion** for `@twt/ui`'s emitted i18n keys
+
+AC2's test reads the locale JSON **from disk** and therefore asserts **around `t()`**. ⚠ That is a
+**known limitation recorded openly**, ⛔ not an oversight: `@twt/i18n` is deliberately ⛔ not a
+dependency **or** devDependency of `@twt/ui`, `packages/ui/package.json` was READ-ONLY for this
+story, and ⛔ **a test must not be the reason a package boundary moves**. Two in-package tests already
+solve the disk read the same way and state the same reason
+(`tests/member-status/presenter.test.ts:277-283`, `tests/contribution-disclosure/presenter.test.ts:342`).
+
+⚠⛔ **AND READING AROUND `t()` IS THE SHAPE OF THE 11a.2 DEFECT** — `resolver.ts:33`'s `TOKEN` regex
+is single-brace, and 11a.2's test fed a hand-built fixture and bypassed `t()` entirely. ⇒ what is
+**not** proven here is that the key resolves **through the real resolver**, with the real namespace
+argument in the real (**third**) slot.
+
+⭐ **Trigger: Story 11b.2b**, which *can* call `t()`.
+
+### ⛔ 11b.2 (vii) — INTENTIONALLY NOT RECORDED
+
+**The public/member INVERSION** — `resolvePoolIdentity` shields the same family's name on the
+**member-facing** My Pool card, passbook and notifications (8.6/8.7/8.8), so a permissive public
+ruling makes the **public** page show **MORE** than the **member app** does for the same pool.
+
+⛔ **It is already open, in this file, under Story 11b.1 item (e)**, with the same *"binds 11b.2 and
+11b.3"* language. ⛔ **Two records of one obligation is the failure this stub exists to prevent.**
+⚠ The stub is written **here, at the destination**, because a future reader of `deferred-work.md`
+sees only what is in `deferred-work.md`.
+
+### ⛔ 11b.2 (viii) — INTENTIONALLY NOT RECORDED
+
+**The un-linked `member.anonymousMember` duplicate.** ⛔ **Its subject ceased to exist**: Story
+11b.2a's **D6(a)** removed the ref from the `contribution-list` module entirely, so there is ⛔ **no
+duplicate to link** — nothing in that module can render it, and none is declared.
+
+⭐ **Its successor is already owned elsewhere.** 11b.2a's **Task 6** records `ANONYMOUS_MEMBER_I18N_KEY`
+as *"un-consumed, with ⛔ no named prospective consumer remaining"* and routes **the deletion question
+as its own decision**. ⛔ **Do not re-file it here**, and ⛔ do not delete the domain export, its type
+arm, its unit test or a **ratified bilingual string** on the strength of this story — that is a
+distinct governance act with its own blast radius, and ⛔ it is not what D6(a) ruled.
+
+### ✅ 11b.2 (ix) — DISCHARGED, ⛔ not deferred and ⛔ not re-filed: the render-layer ADAPTER seam
+
+⚠ **The presenter's INPUT is deliberately ⛔ NOT the wire row**, and something must bridge them. The
+shipped wire row is `ConfirmedContributorRow = { firstName, lastInitial }` `.strict()`
+(`pool-contributor-list.ts:42-51`) — ⛔ **no `kind`, ⛔ no `rowKey`** — and `letterCode` lives **ONCE
+PER RESPONSE** on the pool identity block (`:73-80`, `:94`), ⛔ not per row. ⇒ a render layer must
+wrap the name fields as `{ kind: 'name', … }` under `displayName` and splice `pool.letterCode` onto
+each row.
+
+⛔ **Story 11b.2 does not do that and must not** — an adapter that reads a *response* shape is ⛔ not
+framework-free and would take a **build dependency on the contract**, breaking the parallelism that
+lets 11b.2 and 11b.2a run at the same time.
+
+✅⭐ **AND THIS OBLIGATION IS ⛔ NO LONGER OUTSTANDING. Story 11b.2b wrote AC9 for it on 2026-08-30
+(`4bbe28b`), and its Task 2 builds it.** ⇒ the correct record is **"Discharged by 11b.2b's AC9
+(2026-08-30)"** ([[feedback_closure_language_precision]]) — ⛔ **never** *"11b.2b does not currently
+own it in an AC"*, which an earlier pass ordered written and which is **false on the day it would be
+written**.
+
+⚠⛔ **AND ⛔ DO NOT TELL THE ADAPTER TO CARRY A `rowKey`:** 11b.2b's AC9 *"supplies ⛔ NO `rowKey`"*
+and forbids inventing one. 11b.2a's D3-key was **VACATED** by D5 — ⛔ its question ceased to exist, it
+was ⛔ not reversed on its merits — so a `rowKey` anywhere in this chain would silently restore a
+vacated ruling.
+
+---
 ## Deferred / recorded from: Story 11b.1 — Sahyog Drive Active + Archive (2026-08-24)
 
 Ruled at Decision `2026-08-24-159` (D1(b) · D2(a) · D3(a) · D4(b) · D5(a) · D6(a) · D7(a) · D8(a) ·

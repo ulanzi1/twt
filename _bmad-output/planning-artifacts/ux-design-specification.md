@@ -1310,7 +1310,7 @@ Identifier semantics committed in §8:
 
 > ⛔⛔ **AMENDED 2026-08-30 — THE INVENTORY ABOVE IS ⛔ NOT BUILDABLE AS WRITTEN. THREE OF THE TEN COLUMNS HAVE ⛔ NO SUBSTRATE, TWO LABELS ARE MICROCOPY-PROHIBITED, AND TWO MORE ARE PARIWAR-CONDITIONAL.** ⭐ **This is the CANONICAL record of the finding**; the four other anchors point here.
 >
-> **Occasion:** Story 11b.2 authoring + its three validation passes. **Ruled:** `D6-uxspec(a)`, BigDev 2026-08-30 — transcribed as `.decision-log.md#decision-2026-08-30-168` **cl.3**. **Trigger discharged:** `_bmad-output/implementation-artifacts/deferred-work.md:104-121` item **(f)** — *"Story 11b.2 or 11b.3 authoring, whichever comes first"* — which **fired**.
+> **Occasion:** Story 11b.2 authoring + its three validation passes. **Ruled:** `D6-uxspec(a)`, BigDev 2026-08-30 — transcribed as `.decision-log.md#decision-2026-08-30-168` **cl.3**. **Trigger discharged:** `_bmad-output/implementation-artifacts/deferred-work.md` item **(f)** (`:296-313`) — *"Story 11b.2 or 11b.3 authoring, whichever comes first"* — which **fired**.
 > ⛔⛔ **ANNOTATION, ⛔ NEVER A REWRITE.** The inventory line `:1291` and the identifier semantics `:1295-1298` stand **exactly as written**. ⛔ Nothing above is deleted, and ⛔ no column is removed from the spec by this block ([[feedback_supersede_never_reinterpret]]).
 >
 > **THREE COLUMNS HAVE ⛔ NO SUBSTRATE — verified in the repository, ⛔ not inferred:**

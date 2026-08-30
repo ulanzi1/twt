@@ -1,4 +1,69 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-30i (✅✅ STORY 11b-2 — IMPLEMENTED. ⭐ ROW FLIPS `ready-for-dev` →
+#   `in-progress` → **`review`**. ⛔ 11b-2a and 11b-2b are ⛔ NOT touched and ⛔ NOT flipped.
+#   ⭐ FOUR COMMITS, governance FIRST throughout ([[feedback_governance_commits_precede_implementation]]):
+#   `f513816` (Task 0) · `6028581` (Tasks 1-2, the only code) · `9560fb0` (Task 3) · this one.
+#   ✅ PREFLIGHT STEP 1 PASSED, ⛔ NOT ASSUMED: `git log c9d86ab..HEAD` over `11b-2a-…md` and
+#   `11b-2b-…md` is EMPTY ⇒ ⛔ no sibling ruled since the baseline, so ⛔ no STOP condition fired.
+#   The `.decision-log.md` head was re-read LIVE and was still `2026-08-28-167` ⇒ **168 was free**.
+#   ⭐ AC0 — **ALL NINE TRANSCRIBED** as Decision `2026-08-30-168`, one clause each, grounds quoted
+#   VERBATIM: D1 · D2(a) · D6-uxspec(a) · D7-nameform(a) · D8(a) · D9(a) · D11-outputshape(a) ·
+#   D12-refscope(a) · D13-numbering(a). ⛔ NINE, ⛔ not five — D1 is the clause an earlier banner's
+#   "ALL FIVE" dropped. ⛔ Nothing authored, paraphrased, re-grounded or re-scoped.
+#   ⭐ THE CODE IS FOUR FILES + A BARREL LINE, and ⛔ that is the whole diff under `packages/`:
+#   `packages/ui/src/contribution-list/{index,view-model,presenter,i18n-keys}.ts`. ⛔ ZERO `apps/`
+#   edits · ⛔ `packages/ui/package.json` untouched (`dependencies` still exactly `@twt/contracts`) ·
+#   ⛔ `pool-contributor-list.ts` untouched · ⛔ `matrix.ts` untouched · ⛔ `friction-budget.md`
+#   untouched (AC-4's path trigger is `apps/mobile/` + `apps/public/` — the leg stayed DORMANT and
+#   ⭐ CONFIRMED green in `ci:local` anyway).
+#   ⭐⭐ THE TEETH WERE MUTATION-VERIFIED, ⛔ NOT ASSUMED — NINE deliberate breakages, NINE bites:
+#   (1) array parameter → `TS2322: Type 'true' is not assignable to type 'never'`, the exact error
+#       AC1(b) predicts; (2) `rowKey` on the interface → `TS2741` at BOTH literals, proving AC3/AC4(a)
+#       really are the COUPLED edit the third validation pass found; (3) `displayName.status` →
+#       `TS2741` at the `Record<AllKeys<T>, true>` literal that `keyof` alone would have MISSED, and
+#       (3b) silencing it by adding the key then FIRES the runtime substring loop — ⭐ both directions
+#       bite, which is the whole point of AC4(c); (4) a `.map(` parked in `view-model.ts` → caught by
+#       the MODULE-WIDE scan, ⛔ which a `presenter.ts`-only scan would have missed; (5) a `@twt/tokens`
+#       VALUE import → caught by the parsed-import scan and ⛔ INVISIBLE to `package-boundary.test.ts`,
+#       exactly as AC1 warns; (6a/6b) a lifecycle term in a COMMENT and separately in CODE → the two
+#       scopes are independently live; (7) a confirmed-tone literal → raw-text scan; (8) a ref key
+#       absent from the locale JSON → both locales; (9) a second namespace in the union → the
+#       all-ten/`contributor_list.*` assertion.
+#   ⭐ AND AC1(a)'s WORD BOUNDARIES WERE CONFIRMED NON-VACUOUS THE OTHER WAY: this module's own types
+#   carry **10** `readonly` occurrences and the `\bdo\s*\{` regex does ⛔ NOT fire on them — the
+#   unsatisfiable-scan trap the third pass caught is really closed, ⛔ not merely described.
+#   ⭐ AC7 — the Panel packet is a FILE, in ⭐ `planning-artifacts/` (⛔ NOT `implementation-artifacts/`):
+#   `trustee-panel-routing-note-2026-08-30-contributor-name-public-tier.md`, all SIX recordings, and
+#   ⛔ the word "blocked" appears NOWHERE of 11b.9 — its wait is a ruled CHOICE. ⏳ ROUTED, ⛔ NOTHING
+#   RATIFIED, ⛔ NOTHING APPLIED. ⛔ The contributor NAME FORM stays UNRULED.
+#   ⭐ AC6 — SIX items `11b.2 (i)`…`(vi)`, roman-numerled so they cannot be read as 11b.1's (a)…(j),
+#   each with a named re-trigger, ⛔ none closed. (ii) filed as 8.3 D11's re-trigger HAVING FIRED at
+#   11a.1 and not been acted on. (v) the commitlint divergence RE-VERIFIED LIVE (`type-enum` untouched;
+#   `core.hooksPath`=`.githooks` holds only `pre-push`; absent from `ci-local.sh` AND `ci.yml`; 154
+#   `governance:` commits) — ⛔ the item this ledger and 11b.2a both banked on, and it is WRITTEN.
+#   (vii)/(viii) written as INTENTIONALLY-NOT-RECORDED stubs AT THE DESTINATION; (ix) the adapter seam
+#   recorded ✅ DISCHARGED BY 11b.2b's AC9, ⛔ never re-filed as outstanding.
+#   ⭐ AC8 — the UX-spec amendment lands on ALL FIVE anchors, canonical record at `:1287-1298`, the
+#   section literally titled "Public Column Inventory — Sahyog List". ⛔ Annotation, ⛔ never a rewrite;
+#   ⛔ no column deleted, ⛔ no replacement inventory authored (that is 11b.3's, when it has a host).
+#   `deferred-work.md` item (f) marked ✅ DISCHARGED, ⛔ not "closed".
+#   ⚠⛔ ONE THING RECORDED RATHER THAN FIXED, AND THE REASON IS A RULE: prepending the 11b.2 section to
+#   `deferred-work.md` (newest-first discipline) shifted every 11b.1 anchor down by **192** lines, so
+#   `-168`'s pointer to `:104-121` was TRUE WHEN WRITTEN and now points short. ⛔ It is ⛔ NOT corrected
+#   in the log — ⭐ a decision entry is NEVER edited in place; a correction would be a NEW entry binding
+#   the old one ([[feedback_supersede_never_reinterpret]] cl.4), which a drifted convenience pointer
+#   does ⛔ not warrant. The drift is recorded AT THE DESTINATION with the new anchors, and the three
+#   artefacts this story OWNS (the packet · the `epics.md` block · the UX annotation) are corrected.
+#   ⚠ UN-ATTESTED, ⛔ NOT TESTED: the `unknown` display-name branch is UNEXERCISED — ⛔ no producer can
+#   emit it (`handlers.ts:312-318`). ⛔ No passing reachability test was written; it is a THROWING
+#   EXHAUSTIVENESS GUARD ([[feedback_record_unattested_no_backfill]]). Trigger: 11b.3's Astro producer.
+#   ⚠ AND AC2's locale test reads JSON FROM DISK — deliberately AROUND `t()`, the 11a.2 defect's shape,
+#   because `@twt/i18n` is ⛔ not a dep of `@twt/ui` and a test must ⛔ not move a package boundary.
+#   Recorded as item (vi); trigger 11b.2b, which CAN call `t()`.
+#   ✅ `pnpm --filter @twt/ui test` **251 passed** · `pnpm turbo run typecheck` **20/20** · `eslint .`
+#   clean · ⭐ `pnpm ci:local` **33 jobs green INCLUDING `integration-tests`** — the leg was ⛔ not left
+#   skipped: `twt-test-pg` on `:5433` was up, so `DATABASE_URL` was supplied and the leg RAN.
+#   ⛔ THIS STORY PUBLISHES NOTHING — ⛔ no route, ⛔ no viewer, ⛔ no gate closed, ⛔ no surface opened.)
 # last_updated: 2026-08-30h (✅✅ STORY 11b-2 — THIRD VALIDATION PASS (`bmad-create-story validate
 #   11b.2`, 4 adversarial verifiers at `c9d86ab`). ⛔ NO ROW FLIP — 11b-2 STAYS `ready-for-dev`,
 #   because the THREE decisions this pass raised were RULED BY BigDev IN THE SAME SESSION.
@@ -12765,7 +12830,7 @@ development_status:
   # ⛔ A `blocked-awaiting-decisions` value was considered and deliberately NOT minted — per the
   # `deferred-to-v2` precedent (Decision 2026-08-17-126 cl.6) an enum addition is a RATIFIED
   # GOVERNANCE ACT, not an authoring convenience. ⇒ `ready-for-dev` here means what the enum says.
-  11b-2-contribution-list-components-table-mobile-row: in-progress
+  11b-2-contribution-list-components-table-mobile-row: review
   11b-2a-contributor-name-resolution-defect: ready-for-dev
   11b-2b-contributor-list-mobile-render-layer: ready-for-dev
   11b-3-sahyog-vivran-per-claim-story-surface: backlog

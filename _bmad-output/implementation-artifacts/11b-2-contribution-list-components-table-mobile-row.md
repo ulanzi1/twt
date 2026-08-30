@@ -4,7 +4,7 @@ baseline_commit: c9d86ab97ad79cdd70f1cea5cce33143fb306f6a
 
 # Story 11b.2: ContributionList Presenter — the sixth `@twt/ui` module `[PRIMITIVE]`
 
-Status: ready-for-dev
+Status: review
 
 > ⭐ **NINE DECISIONS ARE COMMITTED, AND ⛔ "FIVE" WAS NEVER THE RIGHT COUNT.** Ruled by BigDev
 > 2026-08-29: **D2(a) · D6-uxspec(a) · D7-nameform(a) · D8(a) · D9(a)**. Ruled by BigDev **2026-08-30
@@ -980,15 +980,15 @@ dated `⛔ RECONCILED 2026-08-29 (AI-11a-1(b), Story 11b.2 authoring + validatio
         ([[feedback_closure_language_precision]]) — ⛔ never *"11b.2b does not currently own it in an
         AC"*, which an earlier pass ordered written and which is **false on the day it would be
         written**.
-- [ ] **Task 4 — Close out**
-  - [ ] `pnpm --filter @twt/ui test` · `pnpm turbo run typecheck` (⭐ where AC4's compile half bites)
+- [x] **Task 4 — Close out**
+  - [x] `pnpm --filter @twt/ui test` · `pnpm turbo run typecheck` (⭐ where AC4's compile half bites)
         · then `pnpm ci:local` green. ⚠ `git push` runs the full `ci:local` via a pre-push hook —
         that is the "hang", ⛔ not a failure. ⚠ `integration-tests` concurrency is `1` and is
         **LOAD-BEARING** — ⛔ never raise it.
-  - [ ] ⛔ **`friction-budget.md` is NOT touched by this story** — AC-4 is a path trigger over
+  - [x] ⛔ **`friction-budget.md` is NOT touched by this story** — AC-4 is a path trigger over
         `apps/mobile/` + `apps/public/` (`scripts/friction-budget/lib.ts:453`), and this story
         touches neither. The leg stays **dormant**. (11b.2b owes it.)
-  - [ ] Flip `development_status[11b-2-contribution-list-components-table-mobile-row]` and add ONE
+  - [x] Flip `development_status[11b-2-contribution-list-components-table-mobile-row]` and add ONE
         combined top-of-file `last_updated` entry ([[project_sprint_status_ledger]]). ⚠ The head is
         **already an 11b.2-family entry** — at the THIRD validation pass it was **`2026-08-30h`**
         (⚠ ⛔ **not** the `2026-08-29g` an earlier pass recorded — the calendar day has rolled and
@@ -1293,16 +1293,137 @@ pnpm ci:local                     # before push only — integration concurrency
 
 ### Agent Model Used
 
+Claude Opus 5 (`claude-opus-5`) via Claude Code, `bmad-dev-story` workflow, 2026-08-30.
+
 ### Debug Log References
+
+⭐ **The teeth were MUTATION-VERIFIED, ⛔ not assumed green.** Nine deliberate breakages were introduced
+and reverted, each confirming the mechanism that is supposed to catch it actually does:
+
+| # | Mutation | Caught by | Observed failure |
+|---|---|---|---|
+| 1 | `row: ContributionRowInput[]` | AC1(b) compile half | `no-list-iteration.test.ts(77,9): TS2322: Type 'true' is not assignable to type 'never'` — ⭐ the AC's predicted error, verbatim |
+| 2 | `rowKey` added to `ContributionRowInput` only | AC4(a) **and** AC4(c) | `TS2741` at **both** literals — ⭐ confirms the removal really is the COUPLED edit the third validation pass found |
+| 3 | `status` nested inside `displayName` | AC4(c) compile | `TS2741: Property 'status' is missing … Record<"status" \| …, true>` — ⛔ `keyof`-only would have PASSED |
+| 3b | `status: true` added to the literal to silence (3) | AC4(c) runtime | `'status' carries the banned token 'status'` — ⭐ **both directions bite** |
+| 4 | `.map(` helper parked in `view-model.ts` | AC1(a) source half | `view-model.ts matches /\.map\(/` — ⛔ a `presenter.ts`-only scan would have missed it |
+| 5 | value import of the `@twt/tokens` **devDependency** | AC5(a) parsed-import scan | `['presenter.ts → @twt/tokens']` — ⚠ `package-boundary.test.ts` stayed **green**, exactly as AC1 warns |
+| 6a | a lifecycle term added to a **doc-block** | AC5(b) comment scope | `'deceased' is ABSENT from the comments` failed |
+| 6b | the same term added to **code** | AC5(b) code scope | `'deceased' is ABSENT from the code` failed |
+| 7 | a confirmed-tone literal in a comment | Trap 2 raw-text scan | `presenter.ts emits 'green'` |
+| 8 | a ref key absent from the locale JSON | AC2 | failed in **both** `en` and `hi` |
+| 9 | a second namespace + a `common` ref | AC2 / D12-refscope(a) | the all-ten `contributor_list.*` assertion failed |
+
+⭐ **AC1(a)'s word boundaries were also confirmed non-vacuous the OTHER way:** this module's own types
+carry **10** `readonly` occurrences and `/\bdo\s*\{/` does ⛔ **not** fire on any of them. The
+unsatisfiable-scan trap the third validation pass caught (`rea⟨do⟩nly`) is really closed, ⛔ not merely
+described.
+
+**Verification commands, all run at close-out:**
+`pnpm --filter @twt/ui test` → **251 passed / 13 files** · `pnpm turbo run typecheck` → **20/20** ·
+`eslint .` → clean · `pnpm ci:local` → **33 jobs green**.
+⭐ **`integration-tests` was ⛔ NOT left skipped** — `twt-test-pg` was up on `:5433`, so `DATABASE_URL`
+was supplied and the leg **ran**. (Without it, `ci:local` reports 31 jobs with the leg `SKIP`.)
 
 ### Completion Notes List
 
+**✅ PREFLIGHT — both STOP conditions checked, ⛔ neither fired.**
+- **STEP 1:** `git log c9d86ab..HEAD` over `11b-2a-…md` and over `11b-2b-…md` returned **empty**, and
+  neither file had uncommitted changes ⇒ ⛔ **no sibling has ruled since this file's baseline.** The
+  trip-wire's condition (*"if 11b.2a has ruled at all since this file's baseline"*) is ⛔ not met.
+- Every decision in the Decisions section read **RULED** ⇒ ⛔ no *"reads UNRULED"* stop.
+- Branched from `governance/11b-2-validate-split` (⛔ **not** `main`, which still carries the
+  pre-ruling file reading `blocked-awaiting-decisions`), `git fetch origin` first.
+
+**⭐ AC0 — the head was read LIVE and 168 was free.** `.decision-log.md`'s head was still
+`2026-08-28-167` (every sibling minted into its **story file** only), so **`2026-08-30-168`** was
+taken. All **NINE** transcribed, one clause each, grounds quoted **verbatim**, every cross-story
+citation qualified by its owning story. ⛔ Nothing authored, paraphrased, re-grounded or re-scoped.
+
+**⭐ What the code actually is:** four files plus one barrel comment — and ⛔ that is the entire diff
+under `packages/`. ⛔ Zero `apps/` edits · ⛔ `packages/ui/package.json` untouched · ⛔
+`pool-contributor-list.ts` untouched · ⛔ `matrix.ts` untouched · ⛔ `friction-budget.md` untouched
+(AC-4's path trigger is `apps/mobile/` + `apps/public/`; the leg stayed **dormant** and was confirmed
+green anyway).
+
+**⚠ RECORDED UN-ATTESTED, ⛔ NOT TESTED — the `unknown` display-name branch is UNEXERCISED.** ⛔ No
+producer can emit it: the API boundary skips a row whose contributor name it cannot resolve
+(`apps/api/src/modules/member-pool/handlers.ts:312-318`, with two further skips at `:327`/`:332`).
+⛔ **No passing reachability test was written** — it is a **throwing exhaustiveness guard**, and a
+guard that never fires is working ([[feedback_record_unattested_no_backfill]]). What **is** asserted
+is its BEHAVIOUR when handed one: it throws. **Trigger: 11b.3's Astro producer.**
+
+**⚠ A SECOND KNOWN LIMITATION, RECORDED NOT HIDDEN — AC2's test asserts AROUND `t()`.** It reads the
+locale JSON from disk because `@twt/i18n` is ⛔ not a dependency **or** devDependency of `@twt/ui` and
+`packages/ui/package.json` was READ-ONLY here — ⛔ **a test must not be the reason a package boundary
+moves**. That is the **11a.2 defect's shape**, so it is routed as `11b.2 (vi)`, trigger **11b.2b**.
+
+**⚠⛔ ONE THING RECORDED RATHER THAN FIXED, AND THE REASON IS A RULE.** Prepending the 11b.2 section to
+`deferred-work.md` (its newest-first discipline) shifted every Story 11b.1 anchor down by **192**
+lines, so `2026-08-30-168`'s pointer to `deferred-work.md:104-121` was **true when written** and now
+points short. ⛔ **It is ⛔ NOT corrected in the log:** a decision entry is **never edited in place**,
+and a correction would have to be a **new entry binding the old one**
+([[feedback_supersede_never_reinterpret]] cl.4) — which a drifted *convenience* pointer does ⛔ not
+warrant, especially as the entry also names **item (f)**, which is the stable address. ⇒ the drift is
+recorded **at the destination** with the new anchors, and the three artefacts this story **owns** (the
+Panel packet · the `epics.md` RECONCILED block · the UX-spec annotation) were corrected.
+
+**⛔ WHAT THIS STORY DID NOT DO, stated so it is not inferred:**
+⛔ It publishes **nothing** — no route, no viewer, no cache policy; ⛔ no launch gate closed and ⛔ no
+surface opened. ⛔ The contributor **NAME FORM** stays **UNRULED** — the packet is ⏳ **ROUTED, nothing
+ratified, nothing applied**. ⛔ No matrix pair declared (the allowlist still has **two** entries,
+neither a contributor). ⛔ No i18n key minted and ⛔ no namespace created. ⛔ `member.anonymousMember`
+and `ANONYMOUS_MEMBER_I18N_KEY` were **not deleted** — that successor question is **11b.2a's Task 6**.
+⛔ No `<StatCardStrip>` stub. ⛔ No status pill, in the presenter **or** as render-layer chrome (D2(a)
+rejected (c) **by name**, and that binds 11b.2b).
+
+**⚠ A11y — family 13's verdict here is *covered-by-construction*, ⛔ never *skipped*.** The four checks
+are RN-shaped (`accessible={true}`, `accessibilityValue`, real handlers, announced states) and are ⛔
+not constructible in a headless presenter. What this story **does** owe and ships is the a11y REF plus
+the **nested two-step `{name}` resolution** written into the type where the consumer will read it.
+**Mechanization lands in 11b.2b.**
+
+**⚠ For the reviewer — the one thing most likely to be got wrong downstream:** the `rowA11y` doc-block
+is read by 11b.2b's consumer and prescribes **`t(key, params, { namespace })`**. The namespace is the
+**THIRD** argument (`packages/i18n/src/resolver.ts:53`). Passing it second lands it in the params
+slot, falls back to `'common'`, and **throws on every row** inside a `renderItem` hot path. ⛔ Do not
+"simplify" that call.
+
 ### File List
+
+**New — the module (the only code in this story):**
+- `packages/ui/src/contribution-list/index.ts`
+- `packages/ui/src/contribution-list/view-model.ts`
+- `packages/ui/src/contribution-list/presenter.ts`
+- `packages/ui/src/contribution-list/i18n-keys.ts`
+
+**New — the teeth:**
+- `packages/ui/tests/contribution-list/presenter.test.ts`
+- `packages/ui/tests/contribution-list/no-list-iteration.test.ts`
+- `packages/ui/tests/contribution-list/forbidden-imports.test.ts`
+- `packages/ui/tests/contribution-list/death-term.test.ts`
+- `packages/ui/tests/package-boundary.test.ts`
+
+**New — governance:**
+- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-08-30-contributor-name-public-tier.md`
+
+**Modified:**
+- `packages/ui/src/index.ts` (one `export *` + its per-story annotation)
+- `.decision-log.md` (Decision `2026-08-30-168`)
+- `_bmad-output/planning-artifacts/epics.md` (the `RECONCILED 2026-08-30 (AI-11a-1(b))` block)
+- `_bmad-output/planning-artifacts/ux-design-specification.md` (five `AMENDED 2026-08-30` annotations)
+- `_bmad-output/implementation-artifacts/deferred-work.md` (the 11b.2 section; item (f) discharged)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (row → `review`; ledger `2026-08-30i`)
+- `_bmad-output/implementation-artifacts/11b-2-contribution-list-components-table-mobile-row.md` (this file)
+
+⛔ **Deliberately NOT in this list:** `packages/ui/package.json` · `packages/contracts/**` ·
+`apps/**` · `friction-budget.md` · `public-vs-private-matrix.yaml`.
 
 ### Change Log
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-08-30 | 1.0 | **IMPLEMENTED.** Four commits, governance first: `f513816` (Task 0 — Decision `2026-08-30-168` transcribing all NINE; the `epics.md` RECONCILED block; the UX-spec amendment across all five anchors; `deferred-work.md` item (f) **discharged**) · `6028581` (Tasks 1-2 — the four-file `contribution-list` module + five test files; ⛔ the only code in the story) · `9560fb0` (Task 3 — the SIX roman-numerled deferrals, the (vii)/(viii) not-recorded stubs, the (ix) adapter-seam **discharge**, and the D7-nameform Panel packet in `planning-artifacts/`) · this one (Task 4 — close-out). ⭐ **The teeth were MUTATION-VERIFIED: nine deliberate breakages, nine bites**, including both directions of AC4(c) and the `@twt/tokens` value-import hole that `package-boundary.test.ts` is blind to by construction. ✅ `@twt/ui` 251 tests · typecheck 20/20 · `eslint` clean · `ci:local` **33 jobs green including `integration-tests`** (the leg was run, ⛔ not skipped). ⚠ Recorded rather than fixed: prepending the 11b.2 section shifted `deferred-work.md`'s 11b.1 anchors by 192, so `-168`'s `:104-121` pointer drifted — ⛔ **not** corrected in the log, because a decision entry is never edited in place ([[feedback_supersede_never_reinterpret]] cl.4); the drift is recorded at the destination. ⚠ Un-attested: the `unknown` branch is unexercised. Status → `review`. | BigDev + Claude |
 | 2026-08-29 | 0.1 | Story authored at `80e0d12`. Five defective AC clauses found. Seven decisions raised, all unruled. | BigDev + Claude |
 | 2026-08-29 | 0.2 | **Validation pass (4 adversarial verifiers at `80e0d12`).** ⭐ **Scope SPLIT three ways** — this file keeps the presenter (the true `[PRIMITIVE]`); the RTBF defect + decrypt bound moved to **11b.2a**; the mobile render layer + a11y moved to **11b.2b**. Findings applied: **(1)** the authoring pass specified a **guaranteed runtime crash** — `member.anonymousMember` is a **`common`** key while `contributor_list.*` is `contribution`, and `t()` throws ⇒ AC2 now requires namespace-tagged refs. **(2)** ⛔ **C-1 was read backwards** — `-154` cl.6 ruled `apps/public` **adds** `@twt/ui` as *"an ORDINARY DEPENDENCY ADDITION"* and `:1734` records *"there was no declination"*; 11b.1's decline was scope-limited and named **11b.2** as the consumer. D1's ground corrected to *"no host exists"*. **(3)** `resolveMemberDisplayName` returns **THREE** kinds, not two. **(4)** The presenter's type is now **written out** (AC3) instead of described in prose. **(5)** Trap 3 added — importing `MemberDisplayName` from `@twt/domain` violates AC1 and trips the bundle-boundary trap; 9.12's local-structural-mirror is the solution. **(6)** Trap 4 added — 9.12's review found a throwing presenter on a fail-soft path; the blast radius here is a `renderItem` hot path. **(7)** AC4 now names **both halves** of the 9.12 anti-widening precedent; AC5's scans given three anti-vacuity properties. **(8)** Deferral **(d) DELETED** — already open at `deferred-work.md:97-100`; **(b)** re-framed as 8.3 D11's re-trigger having fired at 11a.1. **(9)** D7 packet must record that the 11b.9 precedent is **inert** and that `-162` cl.2 retired two adjacent consent types. **(10)** Task 0 rewritten from *"mint BigDev's rulings"* to **TRANSCRIBE-or-STOP**. **(11)** Status → `blocked-awaiting-decisions` + Preflight (⚠ superseded by 0.3 — the Status now reads `ready-for-dev`). **(12)** friction-budget AC-4 confirmed **dormant** here. Line-range corrections: `catalog.ts` imports `:29-56`; `microcopy.yaml` `:350-352`; ux-spec inventory `:1158` only. | BigDev + Claude |
 | 2026-08-29 | 0.3 | **Ruling pass (BigDev).** D2(a) · D6(a) · D7(a) ruled with grounds and rejection reasons; every `[GATED ON Dn]` marker cleared; Status → `ready-for-dev`; Preflight added on TRANSCRIBE-or-STOP terms. ⛔ No AC re-scoped. | BigDev |

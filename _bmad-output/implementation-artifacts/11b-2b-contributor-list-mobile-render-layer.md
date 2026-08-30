@@ -1,47 +1,51 @@
 ---
-baseline_commit: 80e0d12f4cd0fb071d1faedfd7bb151ddd3635d6
+baseline_commit: dbb4a25f9f9321779fc3a41ca039c0c5e957c11c
 ---
 
 # Story 11b.2b: Contributor List — Mobile Render Layer + Family-13 Accessibility `[SURFACE]`
 
-Status: ready-for-dev
+Status: blocked-awaiting-decisions
 
-> ✅ **D5 IS RULED (BigDev, 2026-08-29): (a) — ⛔ do NOT promote the memorial prototype.**
-> ⛔⛔ **BUT THIS STORY IS STILL NOT STARTABLE, AND THE REASON IS A DEPENDENCY, ⛔ NOT A DECISION.**
-> It needs **11b.2** and **11b.2a** merged. `ready-for-dev` here means only what the enum means —
-> *"story file created"* (`sprint-status.yaml` STATUS DEFINITIONS). ⚠ A `blocked-awaiting-decisions`
-> value was considered and ⛔ deliberately NOT minted: per the `deferred-to-v2` precedent (Decision
-> `2026-08-17-126` cl.6) a `development_status` addition is a **ratified governance act**.
+> ⛔⛔ **FIFTH-PASS VALIDATION (2026-08-30, at `dbb4a25`) — ONE NEW UNRULED DECISION (D10), AND THREE
+> HARD CONTRADICTIONS CORRECTED.** ⭐ The story is **materially smaller and materially different** from
+> its authoring pass, because **11b.2a's D5 · D3-aggregate · D5-scope · D6(a) · D7(c)** all landed
+> AFTER this file was written and between them **abolished the subject of three of its ACs**.
+> ⛔ Do not read this file's v0.1 text; every ⭐-marked correction below is verified live.
+
+> ✅ **BASELINE RE-PINNED `80e0d12` → `dbb4a25`.** `git diff --name-only 80e0d12..dbb4a25` returns
+> **four `_bmad-output/` files and nothing else** ⇒ ⛔ **NO VERIFIED CODE CLAIM MOVED.** Every line
+> number in this file was re-verified live at `dbb4a25`.
 
 > ⭐⛔ **SPLIT OUT OF STORY 11b.2 ON 2026-08-29.** It owns the **render layer**: rewiring the shipped
-> `<PoolContributorList>` onto 11b.2's presenter, removing the inline label, and holding family-13
-> accessibility. ⛔ It ships no presenter and no API change.
+> `<PoolContributorList>` onto 11b.2's presenter, removing the inline label, **authoring the wire→presenter
+> adapter 11b.2 routes to it by name**, and holding family-13 accessibility. ⛔ It ships no presenter
+> and no API change.
 >
 > ⛔⛔ **HARD DEPENDENCY — THIS STORY RUNS LAST.** It needs **11b.2** (the presenter exists) **and**
-> **11b.2a** (the anonymized variant has a producer, and the stable row key exists). ⛔ Starting
-> before both are merged means rewiring onto a module that does not exist and testing a variant
-> nothing emits.
+> **11b.2a** (the RTBF omission ships, so the list this renders is the corrected one). ⛔ Both are
+> `ready-for-dev` and ⛔ **NEITHER IS MERGED** — verified live: `origin/main` is `80e0d12`.
+
+---
 
 ## ⛔ PREFLIGHT — the dev agent's first action
 
-✅ **D5 is RULED (BigDev, 2026-08-29): (a) — ⛔ do not promote the prototype.** ⛔ No decision gates
-this story any longer.
+⛔⛔ **THE HARD DEPENDENCY IS THE FIRST GATE: `11b-2` AND `11b-2a` MUST BOTH BE `done` AND MERGED.**
+`git fetch origin` first ([[feedback_git_fetch_before_remote_reasoning]]). ⛔ If either is unmerged, the
+dev agent's ONLY legal action is to **report blocked**.
 
-⛔⛔ **THE HARD DEPENDENCY REMAINS AND IT IS THE REAL GATE: `11b-2` AND `11b-2a` MUST BOTH BE `done`
-AND MERGED.** `git fetch origin` first ([[feedback_git_fetch_before_remote_reasoning]]). ⛔ If either is
-unmerged, the dev agent's ONLY legal action is to **report blocked** — starting early means rewiring
-onto a presenter that does not exist and testing a variant nothing emits.
+⛔⛔ **THE SECOND GATE IS D10, WHICH IS UNRULED** (see Decisions). It gates **Task 2 (the adapter)
+only**; Tasks 0/3/4/5/6/7 are startable the moment the dependency clears.
 
-⚠ ⭐ **TWO RULINGS MADE ELSEWHERE BIND THIS STORY — ⛔ read them before Task 1:**
-· **11b.2's D2(a)** rejected option (c) — *"a constant confirmed-chrome element in the render layer"* —
-  **by name**. ⇒ ⛔ do **not** re-introduce the status pill here as chrome.
-· **11b.2a's D3-shape(i)(a)** made the wire row a **two-variant discriminated union**
-  (`kind: 'name' | 'anonymized'`, both carrying `rowKey`). ⇒ ⛔ branch on `kind`; ⛔ never read
-  `firstName` unguarded.
+### ⭐⭐ FIVE RULINGS MADE ELSEWHERE BIND THIS STORY — ⛔ read them before any task
 
-> ✅ **BASELINE VERIFIED LIVE.** `HEAD == origin/main == 80e0d12`, clean, branch `main`. ⭐
-> `apps/mobile/components/contributor-list/` has been **untouched since Story 8.3 (`afce9e0`)** — every
-> line number below is stable at this tree. ⚠ Re-verify after 11b.2a lands; it may edit `:40-43`.
+| Ruling | Where | What it does to THIS story |
+|---|---|---|
+| ⭐⭐ **D5** — RTBF removes the contributor **entirely**; ⛔ **NO anonymized row is ever emitted** | 11b.2a, BigDev 2026-08-30 | ⛔⛔ **There is exactly ONE kind of contributor row.** ⛔ Do not branch on `kind`. ⛔ Do not resolve `member.anonymousMember`. **Trap 3 of the authoring pass is DELETED** — its subject cannot exist. |
+| ⭐⭐ **D6(a)** — DROP the anonymized **presenter** variant | 11b.2a, BigDev 2026-08-30 | 11b.2's presenter variant becomes **`name \| unknown`**, and ⭐ **`unknown` THROWS** (11b.2's D8(a)) — it is a **throwing exhaustiveness guard**, ⛔ not a render arm. ⇒ ⭐ **the render layer has exactly ONE renderable branch, and the try/catch (Trap 1) is the ONLY thing between that throw and a red-boxed list.** |
+| ⛔ **D3-key / D3-shape(i) VACATED by D5** — ⛔ **no `rowKey` ships** | 11b.2a, 2026-08-30 | ⛔⛔ **AC3 of the authoring pass HAD NO SUBJECT and is re-authored.** `deferred-work.md:2163` **STAYS OPEN**; ⛔ this story is **NOT** its consumer; **the `keyExtractor` KEEPS `index`.** |
+| ⭐ **D3-aggregate** — two axes: *contribution state CONFIRMED · public representation OMITTED* | 11b.2a, 2026-08-30 | ⛔ `confirmedCount` / `pending` / `rosterSize` keep their financial meaning. ⛔ **Never write `rows.length === confirmedCount`** — under D5 they legitimately diverge. |
+| ⭐ **D7(c)** — `contributor_list.empty`'s **VALUE** is re-worded in both locales | 11b.2a, 2026-08-30 | ⭐ Its only consumer is **this file, `:124`**. ⛔ **Do not revert it, ⛔ do not byte-pin the sentence in any test** — 11b.2a's AC8 forbids exactly that (it turns every future tone review into a test edit). |
+| ⛔ **D2(a)** — ⛔ **NO status on the row**, and option (c) — *"a constant confirmed-chrome element in the render layer"* — was **rejected BY NAME** | 11b.2, BigDev 2026-08-29 | ⛔⛔ **AC4 of the authoring pass ORDERED THE THING THIS RULING FORBIDS** and is **INVERTED** (see AC4). |
 
 ---
 
@@ -60,77 +64,103 @@ so that the list is one thing with one voice, however long it gets and however I
 layer: it draws rows whose content was decided upstream. ⛔ Nothing in it may be read by, joined into,
 or referenced from an eligibility, validity, assignability, pool-assignment or claim path.
 
-⚠ **It introduces ⛔ no NEW identity predicate either** — it *renders* the two decided in 11b.2a
-(RTBF removes the name; death changes nothing). Both are restated in one line each so a reader of
-this file alone is not blind to them:
-· **RTBF:** *"if you exercised your right to erasure, your contribution stays counted but your name
-  does not appear next to it — in either language."*
-· **Death:** *"a contribution you made while you were alive stays in the record with your name on it."*
+⚠ **It introduces ⛔ no NEW identity predicate either.** ⭐⭐ **AND THE AUTHORING PASS'S VERSION OF THIS
+NOTE WAS FALSIFIED BY D5 — it is REWRITTEN, ⛔ not patched.** Both restated in one line each, in the
+member's terms, so a reader of this file alone is not blind to them:
+· **RTBF (D5 + D3-aggregate cl.(1)):** *"if you exercised your right to erasure, your contribution
+  stays counted in the pool's totals, but **you do not appear in the list of contributors at all** —
+  ⛔ not by name, and ⛔ not as an anonymous placeholder either, in either language."*
+  ⚠ ⭐ **The authoring pass wrote *"your name does not appear next to it"*, which describes an
+  anonymized ROW. Under D5 the ROW does not appear.** Checked against the Niyamavali: it is silent on
+  erasure representation; the governing record is D5 + `2026-08-20-143` cl.3, and the contributor
+  list was **the outlier** the ruling aligned.
+· **Death (D9(a), `2026-08-24-159` cl.11):** *"a contribution you made while you were alive stays in
+  the record with your name on it."*
 
 ⛔⛔ **AND THE C-5 SHARP EDGE INVERTS HERE TOO.** ⛔ No death-derived term may filter, mask, anonymize
-or reorder a contributor row (`2026-08-24-159` cl.11). ⛔ A diff that adds an `account-frozen` or
-`deceased` conjunct to any contributor render path must be **rejected in review** — *"the right
-conjunct in the wrong read"*. ⚠ ⭐ **This bites twice here**, because this story touches **two**
-render sites and one of them is a death-context surface (see AC2).
+or reorder a contributor row. ⛔ A diff that adds an `account-frozen` or `deceased` conjunct to any
+contributor render path must be **rejected in review** — *"the right conjunct in the wrong read"*.
+⚠ ⭐ **This bites twice**, because this story touches **two** render sites and one of them is a
+death-context surface (AC2).
 
 ---
 
-## 🎯 What already exists — verified at `80e0d12`
+## 🎯 What already exists — ⭐ re-verified live at `dbb4a25`
 
 | Claim | Verified state |
 |---|---|
-| The **member-facing list** | ✅ `apps/mobile/components/contributor-list/PoolContributorList.tsx` (8.3): FlashList-virtualized (`:132-141`), `contributorLabel()` composing `firstName + lastInitial` **inline at `:46-48`**, per-row a11y label, aggregate pending strip (`:149-164`), four distinct states (loading `:57` · absence `:68` · empty `:121` · list `:128`). ⛔ **Do NOT write a second list.** ⭐ The inline label at `:46-48` is exactly what the presenter replaces. |
-| ⭐⛔ How many places render it | ⛔⛔ **TWO, AND THE AUTHORING PASS NAMED NEITHER ROUTE.** **(1)** `apps/mobile/app/(contribution)/contributors.tsx:13` — the 8.3 route. **(2)** ⭐ **`apps/mobile/components/nominee-console/NomineeConsole.tsx:213`** — Story 9.1's **Nominee Console** composes it directly (import `:31`), deliberately outside the parent `ScrollView` (`:208-211`). ⇒ **this story changes a staff-takeover-session-as-deceased surface.** → **AC2**. |
-| A **third file** in the directory | ⚠ `ViewContributorsEntry.tsx` — the CTA into route (1). 8.3's own review re-pointed it at `usePoolContributorsQuery` *"so the CTA and the list agree exactly"*, so it shares the wire shape 11b.2a widens. ⛔ Do not leave it out of the grep. |
-| The **local tuple copy** | ⛔ `PoolContributorList.tsx:40-43` declares `interface ConfirmedRow { firstName; lastInitial }` — ⛔ **NOT imported from `@twt/contracts`.** ⚠ 11b.2a's AC4 makes this derive from the contract; if it already did, ⛔ do not undo it. ⭐ **After 11b.2a the wire row is a two-variant discriminated union (`kind: 'name' \| 'anonymized'`, both carrying `rowKey`)** — ⛔ this component must branch on `kind`, ⛔ never read `firstName` unguarded. |
-| The **keyExtractor** | ⛔ `:138` — `` `${item.firstName}-${item.lastInitial}-${index}` ``. `deferred-work.md:2163` defers the `index` churn; its re-trigger *"reused for the Epic 11b public render"* **has fired**, and **11b.2a supplies the stable key** its deferral named as the blocker. → **AC3**. |
+| The **member-facing list** | ✅ `apps/mobile/components/contributor-list/PoolContributorList.tsx` (8.3, **167 lines**): FlashList-virtualized (`:132-141`), `contributorLabel()` composing `firstName + lastInitial` **inline at `:46-48`**, per-row a11y label, aggregate pending strip (`:149-164`), four distinct states (loading `:57` · absence `:68` · empty `:121-126` · list `:128`). ⛔ **Do NOT write a second list.** ⭐ The inline label at `:46-48` is exactly what the presenter replaces. |
+| ⭐⛔ How many places render it | ⛔⛔ **TWO, AND THE AUTHORING PASS NAMED NEITHER ROUTE.** Verified by grep — these are the **only** two importers: **(1)** `apps/mobile/app/(contribution)/contributors.tsx:13` (import `:7`) — the 8.3 route. **(2)** ⭐ `apps/mobile/components/nominee-console/NomineeConsole.tsx:213` (import `:31`), deliberately **outside** the parent `ScrollView` (which closes at `:206`; rationale `:208-211`) ⇒ **this story changes a staff-takeover-session-as-deceased surface.** → **AC2**. |
+| ⭐⛔ `ViewContributorsEntry.tsx` | ⛔⛔ **THE AUTHORING PASS'S CLAIM IS FALSE AND IS REPLACED BY A VERIFIED NEGATIVE.** It said the file *"shares the wire shape 11b.2a widens"*. Verified live: **(i)** 11b.2a widens **nothing** (AC4 VACATED by D5); **(ii)** the file reads **`data.assigned` ONLY** (`:26`, `:30`) and ⛔ **never touches `confirmed`, `firstName` or `lastInitial`.** ⇒ ⭐ **⛔ NOTHING IS OWED HERE.** Recorded so a later pass does not re-derive the check. |
+| The **local tuple copy** | ⛔ `PoolContributorList.tsx:40-43` declares `interface ConfirmedRow { firstName; lastInitial }` — ⛔ **NOT imported from `@twt/contracts`.** ⛔⛔ **THE AUTHORING PASS SAID *"11b.2a's AC4 makes this derive from the contract"* — ⭐ THAT AC IS VACATED. Nothing makes it derive from anything.** It is 11b.1's defect class, still present, and 11b.2a's Trap 4 names this exact site. ⇒ **D10 (UNRULED).** ⭐ Note `apps/mobile` **already imports `@twt/contracts` in 20+ files** (`pay.tsx:38-39`, `polls/index.tsx:20`, …), so ⛔ there is **no** bundle-boundary objection to (a). |
+| The **keyExtractor** | ⛔ `:137-139` — `` `${item.firstName}-${item.lastInitial}-${index}` ``. ⭐⭐ **IT STAYS.** `deferred-work.md:2163` remains **OPEN** — its blocker (*"the PII-shielded shape carries no stable per-member identifier"*) is **still true**, because D5 supplied none. ⚠ ⭐ **AND THE AUTHORING PASS'S SECOND CLAIM WAS ALSO FALSE:** it said the deferral's re-trigger — *"reused for the Epic 11b **public** render"* — *"has fired"*. ⛔ It has **not**: this story is the **member** render of **a single pool's roster**, which is the exact scale the deferral records as fine. **11b.3** is the public host. → **AC3**. ⚠ Separately, the deferral's own citation `PoolContributorList.tsx:124-126` is **stale** (live: `:137-139`) — routed, ⛔ not silently fixed. |
 | Latin numerals | ✅ `:81-82` uses `String(...)`. ⭐ Operational figures stay Latin even in Hindi (UX-DR73 / amendment-A2). ⛔ Never `toHindiNumeral` here. |
-| ⛔ Does the mobile layer read `@twt/tokens` role names? | ⛔⛔ **NO — AND BigDev RULED THIS ON 2026-07-27.** 9.6's review found `StatusPill.tsx` *"never reads `vm.colorTokenRole`"*; ruled: *"accept `$purple` as a documented approximation — **mobile bridges tone→Tamagui-scale independently of the PDF's `@twt/tokens` hex** — do not add an exact-match mobile token. **Correct the overclaiming wording instead.**"* 9.12 then *added a `METER_FILL_TOKENS` mobile-palette bridge (**the `StatusPill` `TONE_TOKENS` precedent**)*. ⇒ **the render layer maps the presenter's role NAME through a local bridge, ⛔ it does not import `@twt/tokens`.** → **AC4**. |
-| ⛔ Is there an RN mount harness? | ⛔⛔ **NO.** `grep -n "testing-library\|react-test-renderer" apps/mobile/package.json` → **no matches**. All 27 files in `apps/mobile/tests/unit/` are **source scans**. `status-pill-render.test.ts:1-18` says so: *"pure-Vitest (no @testing-library/react-native — RN component MOUNT tests aren't set up here) … **A source scan (comments stripped) rather than a mount**."* 9.6 Dev Notes: *"**Don't stand up a new RN component renderer just for this.**"* → **AC5**. |
-| The **a11y family** | ⭐ Family 13 of `_bmad/custom/load-bearing-invariant-checklist.md`, live on merge via `bmad-code-review.toml:9`, applies *"for every **component or surface** story"* — **this is one** (11b.2 was not). Worked example: `apps/mobile/components/panchayat/PinnedItem.tsx`. ⚠ Mechanization is re-examined at **11b.8**, ⛔ not here. |
-| i18n | ⭐ The `contribution` namespace is already registered at all three `catalog.ts` sites (imports `:29-56`, map `:63-66`, `KNOWN_NAMESPACES:69`) and already globbed (`microcopy.yaml:317-318`); `common` likewise. ⛔ **Mint no namespace.** ⚠ `t()` defaults to `common` and **THROWS**. |
-| The **memorial prototype** | ⚠ `apps/mobile/components/shradhanjali/ContributorRow.tsx` + `sample-data.ts` — the P0-5 memorial scroll. `display-name.ts:11-12` names it (by **component identifier**, ⛔ not by path) as **SAMPLE-DATA only**. ⚠ ⭐ **Correction to the authoring pass: `district` DOES have a read model** (`packages/domain/src/schema/member_postings.ts:51`, plaintext non-PII, already public on the directory wire at `public-pages/directory.ts:82`). ⇒ **two** producer-less fields (`memoryLine`, `monthYear`), ⛔ not three. → **D5**. |
+| ⛔⛔ Does the row view-model carry a **token role**? | ⛔⛔ **NO — AND THIS IS THE PASS'S HEADLINE CORRECTION.** Verified live in 11b.2 (`:366-382`): `ContributionRowViewModel` is exactly `{ displayName, poolLetterCode, rowKey, rowA11y }`. ⭐ **There is NO colour, tone or token field, BY RULING** — 11b.2's **D2(a)**: *"⛔ No `status` field, ⛔ no `deriveStatusPillViewModel` call, ⛔ no `'green'` literal"*, and option **(c) *"a constant confirmed chrome element in the render layer"* was rejected BY NAME**, with the ruling adding *"⭐⛔ **AND THIS RULING BINDS 11b.2b**"*. ⇒ **AC4 is INVERTED.** |
+| ⛔ Is there an RN mount harness? | ⛔⛔ **NO.** `grep -n "testing-library\|react-test-renderer" apps/mobile/package.json` → **no matches** (re-run live). All **27** files in `apps/mobile/tests/unit/` are **source scans**. `status-pill-render.test.ts:1-18` says so in terms: *"RN component MOUNT tests aren't set up here … **A source scan (comments stripped) rather than a mount**"*. 9.6 Dev Notes: *"**Don't stand up a new RN component renderer just for this.**"* → **AC6**. |
+| The **a11y family** | ⭐ Family **13** of `_bmad/custom/load-bearing-invariant-checklist.md` (**`:72-84`**), live on merge via `bmad-code-review.toml:8-12`, applies *"for every **component or surface** story"* — **this is one**. Worked example: `apps/mobile/components/panchayat/PinnedItem.tsx` (verified present). ⚠ Mechanization is re-examined at **11b.8**, ⛔ not here. |
+| i18n | ⭐ `contributor_list.*` is **ten keys at `contribution.json:30-39`** (en **and** hi). ⚠ ⭐ **CITATION CORRECTED: `contributor_list.row_a11y` is at `:35`, ⛔ not `:36`** (`:36` is `contributor_list.title`). The `contribution` and `common` namespaces are already registered and globbed. ⛔ **Mint no key and no namespace.** ⚠ `t()` defaults to `common` and **THROWS**. |
+| ⛔⛔ A **stale comment inside this story's own diff** | ⛔⛔ **`PoolContributorList.tsx:11` states *"Epic 9's producer is unbuilt, so the list is `[]` right now"* — ⭐ FALSE since Story 9.4/9.5** ([[project_epic9_confirmed_producer_is_live]]). 11b.2a filed the ~12-site family but correctly scoped it **out of its own diff**; ⭐ **this file IS in THIS story's diff** (AC1 deletes `:46-48` from it), as is `:119`'s *"0 confirmed today"*. → **AC10**. |
+| The **memorial prototype** | ⚠ `apps/mobile/components/shradhanjali/ContributorRow.tsx` + `sample-data.ts`. `packages/domain/src/member/display-name.ts:10-12` names it (by **component identifier**, ⛔ not by path) as **SAMPLE-DATA only**. ⚠ ⭐ `district` **DOES** have a read model (`member_postings.ts:51`, plaintext non-PII, public at `public-pages/directory.ts:82`) ⇒ **two** producer-less fields (`memoryLine`, `monthYear`), ⛔ not three. → **D5-prototype**. |
 
 ---
 
-## ⛔ THE THREE TRAPS
+## ⛔ THE TRAPS
 
-### Trap 1 — ⭐⛔ THE PRESENTER THROWS, AND THIS STORY OWNS THE try/catch.
+### Trap 1 — ⭐⛔ THE PRESENTER THROWS **BY RULING**, AND THIS STORY OWNS THE ONLY GUARD.
 
-9.12's code review found — independently, in **all three** review layers — *"unguarded
-`derivePoolProgressCardViewModel(...)` throw wired into a fail-soft-designed render path"*, resolved
-by wrapping the **consumer** call in try/catch and rendering `null` on throw.
+⭐⭐ **This trap got STRONGER, ⛔ not weaker, under D6(a).** 11b.2's **D8(a)** rules that the presenter's
+`unknown` kind **THROWS**, and 11b.2 says so in terms: *"⚠ **11b.2b's try/catch is the only thing
+between this throw and a red-boxed list**, which is why that delegation is ⛔ not optional."*
+
+9.12's code review independently found, in **all three** review layers, an *"unguarded
+`derive…ViewModel(...)` throw wired into a fail-soft-designed render path"*, resolved by wrapping the
+**consumer** call in try/catch and rendering `null` on throw.
 
 ⚠ ⭐ **The blast radius is strictly worse here.** 9.12's consumer is **one card**; this consumer is a
 FlashList **`renderItem`, called once per visible row on every scroll frame**. A throw there red-boxes
 the whole list.
 
 ⇒ ⛔ **`deriveContributionRowViewModel` is called inside a try/catch in `renderItem`**, and a throwing
-row degrades to a skipped/placeholder row — ⛔ never a crashed list. ⛔ Do not assume the presenter is
-total; 11b.2's AC3 requires its doc-block to say in terms that it throws.
+row degrades to a skipped/placeholder row — ⛔ never a crashed list.
 
 ### Trap 2 — ⚠ FABRIC RED-BOXES ON empty→populated IN PLACE.
 
 New-Arch FlashList red-boxes when a list crosses empty→populated **in place**
 ([[project_fabric_flatlist_empty_populated_crash]]). ⭐ **8.3 already renders the empty / loading /
-absence branches OUTSIDE the list** (`:57` · `:68` · `:121` are siblings of `:128`, not list states).
-⛔ **Do not "simplify" this into an `ListEmptyComponent`.** ⚠ The 60s poll makes the transition a
-routine occurrence, ⛔ not an edge case.
+absence branches OUTSIDE the list** (`:57` · `:68` · `:121-126` are siblings of `:128`, not list
+states). ⛔ **Do not "simplify" this into a `ListEmptyComponent`.** ⚠ The 60s poll makes the
+transition a routine occurrence, ⛔ not an edge case.
 
-### Trap 3 — ⭐⛔ THE ANONYMIZED ROW NEEDS A **NESTED** i18n RESOLUTION, AND THE NAIVE CALL THROWS.
+### ⛔ Trap 3 (the authoring pass's *"nested two-namespace `t()`"*) — **DELETED. ITS SUBJECT CANNOT EXIST.**
 
-`contributor_list.row_a11y` = `"{name}, confirmed contributor"` (`contribution.json:36`) — it takes a
-**`{name}` param**. The anonymized name is `member.anonymousMember`, which resolves in **`common`**
-(`common.json:215`), while `row_a11y` resolves in **`contribution`**.
+⭐ It described resolving `member.anonymousMember` in `common` and passing it as `{name}` into
+`contributor_list.row_a11y` in `contribution`. **Under D5 + D6(a) no anonymized row is ever emitted
+and the presenter carries no anonymized variant** ⇒ the display name reaching the render layer is
+always `{kind:'nameParts'}`, and `row_a11y` takes a **plain composed string** as `{name}` — **one
+call, one namespace (`contribution`)**. ⛔ Do not re-derive the nested resolution from 11b.2's
+`rowA11y` doc-block; that doc-block is one of the artefacts 11b.2a's Task 6 corrects.
 
-⇒ the render layer must:
-1. resolve `member.anonymousMember` with namespace **`common`** → *"an anonymous member"* / *"एक गुमनाम सदस्य"*;
-2. pass **that string** as the `{name}` param into `contributor_list.row_a11y` with namespace **`contribution`**.
+⚠ ⭐ **What SURVIVES from it, and still bites:** `t()` **defaults to `common` and THROWS on a miss**,
+so ⛔ **every** call site must pass an explicit namespace — and assert **through** `t()`, ⛔ not around
+it (that is exactly how the 11a.2 `{{max}}` vs `{max}` defect reached production green;
+`resolver.ts:33`'s `TOKEN` regex is single-brace). → **AC6**.
 
-⛔⛔ **A single call with one namespace throws** — `t()` defaults to `common` and **throws on a miss**.
-⭐ 11b.2's view-model hands you `{key, namespace}` pairs precisely so this cannot be guessed. ⚠ And
-assert copy **through** `t()`, ⛔ not around it — that is exactly how the 11a.2 `{{max}}` vs `{max}`
-defect reached production green (the test fed a hand-built fixture and bypassed `t()` entirely).
+### ⭐⭐ Trap 4 (NEW) — THE ADAPTER IS THIS STORY'S, AND 11b.2 SAYS SO BY NAME.
+
+11b.2's presenter input is ⛔ **not** the wire row, deliberately. 11b.2 (`:384-393`), verbatim:
+*"a render layer must **ADAPT**: re-nest the row's name fields under `displayName` … and splice
+`pool.letterCode` onto each row. ⛔ **This presenter does not do that and must not** … ⭐ **The adapter
+is 11b.2b's, and 11b.2b owes it an AC** — routed by Task 3, ⛔ not assumed."*
+
+⛔⛔ **The authoring pass never wrote that AC.** → **AC9**.
+
+⚠ ⭐ **AND THE ADAPTER IS WHERE D5's UNDER-ROUTING SURFACES.** `ContributionRowInput.rowKey` and
+`ContributionRowViewModel.rowKey` are both **required** (`11b-2-…md:363`, `:373`) and their doc-block
+(`:360-362`) sources them to *"the ruled opaque virtualization identity (11b.2a **D3-shape(i)(a)**)"* —
+⛔ **a ruling D5 VACATED.** 11b.2a's Task-6 routing lists six artefacts for D6(a) and ⛔ **does not list
+these**. ⇒ ⭐ **the adapter has nothing to put in `rowKey`.** Routed to 11b.2 (Task 0) as a **seventh**
+artefact: `rowKey` **goes** from both interfaces. ⛔ Do **not** invent a value to satisfy the type, and
+⛔ do not let `rowKey` reach the `keyExtractor` — it keeps `index` (AC3).
 
 ---
 
@@ -142,57 +172,89 @@ defect reached production green (the test fed a hand-built fixture and bypassed 
 `contributorLabel()` at `:46-48` is **deleted**, ⛔ not left beside it.
 
 **And** the call is inside a **try/catch** in `renderItem`; a throwing row degrades, ⛔ never crashes
-the list (Trap 1).
+the list (Trap 1). ⭐ **Under D6(a) there is exactly ONE renderable `displayName` kind
+(`'nameParts'`)** — ⛔ do **not** branch on `kind:'anonymized'`, ⛔ do not resolve
+`member.anonymousMember`, and ⛔ do not write a render arm for `'unknown'` (it throws, by D8(a); the
+try/catch **is** its handling).
+
 **And** ⛔ **no death-derived term** (`account-frozen`, `deceased`, `members.state`) appears anywhere
-in the contributor render path — a test asserts it over **both** render sites.
+in the contributor render path — a test asserts it over **both** render sites. ⚠ Verified live: all
+three files are currently **clean**, so this is a **regression fence**, ⛔ not a fix.
 
 ### AC2 — ⭐ BOTH render sites are covered, and the Nominee Console is named
 
 ⛔ The rewire changes **two** surfaces, ⛔ not one:
  **(1)** `apps/mobile/app/(contribution)/contributors.tsx:13` — the 8.3 route;
- **(2)** ⭐ `apps/mobile/components/nominee-console/NomineeConsole.tsx:213` — Story 9.1's Nominee
-     Console, a **staff-takeover-session-as-deceased** surface.
+ **(2)** ⭐ `apps/mobile/components/nominee-console/NomineeConsole.tsx:213` — Story 9.1's **Nominee
+     Console**, a **staff-takeover-session-as-deceased** surface.
 
 Each is smoke-asserted after the rewire. ⚠ ⭐ **Site (2) is where the D9 constraint is easiest to get
 wrong**: the session context *is* the deceased member, so a dev "fixing" the list for that surface is
 one conjunct away from deleting dead contributors from it. ⛔ The no-death-term assertion (AC1) must
 run against site (2) explicitly.
-**And** `ViewContributorsEntry.tsx` is checked for the same wire shape and left consistent.
 
-### AC3 — The `keyExtractor` stops churning row identity `[depends on 11b.2a]`
+⭐ **And `ViewContributorsEntry.tsx` is recorded as a VERIFIED NEGATIVE, ⛔ not re-checked** — it reads
+`data.assigned` only and never touches the row shape (see the table above). ⛔ **Nothing is owed.**
 
-`:138`'s `` `${firstName}-${lastInitial}-${index}` `` is replaced by **11b.2a's ruled `rowKey`**
-(D3-shape(i)(a), BigDev 2026-08-29 — present on **both** union variants, so an anonymized row recycles
-correctly too). `deferred-work.md:2163` is confirmed **discharged** (11b.2a marks it; this story is the named
-consumer).
+### AC3 — ⭐⭐ THE `keyExtractor` KEEPS `index`, AND THE DEFERRAL STAYS OPEN `[re-authored — D3-key VACATED]`
 
-⚠ ⭐ **This is an explicit EXEMPTION from AC5's behaviour-preservation list — say so in the diff.** The
-first pass's *"preserved byte-for-byte in behaviour"* would have **pinned this known defect**, whose
-own deferral names Epic 11b's reuse as its re-trigger and whose stated ground (*"dozens, not the ~16k
-scale"*) is falsified by the epic's performance contract.
+⛔⛔ **The authoring pass's AC3 ordered the opposite and had NO SUBJECT LEFT.** It said `:137-139`'s
+`` `${firstName}-${lastInitial}-${index}` `` *"is replaced by **11b.2a's ruled `rowKey`**"* and that
+`deferred-work.md:2163` *"is confirmed **discharged** … this story is the named consumer"*.
 
-### AC4 — Token roles resolve through the MOBILE BRIDGE, ⛔ not `@twt/tokens`
+⭐ **D5 vacated `rowKey` in full. 11b.2a ships none.** ⇒
+· the `keyExtractor` is **left byte-unchanged** — it is ⛔ **no longer an exemption from AC5**;
+· `deferred-work.md:2163` **STAYS OPEN**; ⛔ **do not mark it discharged**, ⛔ do not name this story
+  as its consumer;
+· ⭐ **its re-trigger has ⛔ NOT fired.** The re-trigger reads *"reused for the Epic 11b **public**
+  render"*; this is the **member** render of **a single pool's roster** — the exact scale the
+  deferral's own ground calls fine. **11b.3** is the public host and the real re-trigger.
 
-The presenter's token **role names** are mapped through a **local mobile palette bridge**, on the
-`StatusPill` `TONE_TOKENS` / `PoolProgressCard` `METER_FILL_TOKENS` precedent.
+**And** the deferral's stale self-citation (`PoolContributorList.tsx:124-126`; live `:137-139`) is
+**routed** in Task 7 — ⛔ not silently corrected, and ⛔ not used as cover to re-open the deferral.
 
-⛔ `apps/mobile` does **not** import `@twt/tokens` for this. ⭐ **Ground: BigDev ruled it on
-2026-07-27** — *"mobile bridges tone→Tamagui-scale independently of the PDF's `@twt/tokens` hex … do
-not add an exact-match mobile token. Correct the overclaiming wording instead."* ⛔ A diff that
-imports `@twt/tokens` here re-commits the exact overclaim 9.6's review made the dev retract.
+### AC4 — ⛔⛔ INVERTED: **NO** token bridge, **NO** confirmed chrome — and a fence proves it `[D2(a)]`
+
+⛔⛔ **The authoring pass ordered *"map the presenter's token role names through a local mobile
+palette bridge"*. ⭐ THE PRESENTER EMITS NO TOKEN ROLE, BY RULING, and building the bridge would ship
+the exact thing D2(a) rejected by name.**
+
+Verified: `ContributionRowViewModel` = `{ displayName, poolLetterCode, rowKey, rowA11y }`
+(`11b-2-…md:366-382`) — ⛔ no colour, tone, status or token field. D2(a): *"⛔ No `status` field, ⛔ no
+`deriveStatusPillViewModel` call, ⛔ no `'green'` literal … ⛔ (c) **a constant 'confirmed' chrome
+element in the render layer** was rejected too: **it asserts a fact nothing checked** … ⭐⛔ **AND THIS
+RULING BINDS 11b.2b.**"*
+
+⇒ the AC becomes a **fence**, asserted by source scan over the touched files:
+ **(a)** ⛔ **no `@twt/tokens` import** in `apps/mobile` for this work;
+ **(b)** ⛔ **no status/tone/colour-role element is introduced into the contributor row** — no
+     `StatusPill`, no `TONE_TOKENS`/`METER_FILL_TOKENS`-style map, no `'confirmed'`/`'green'` literal;
+ **(c)** ⛔ **no new local palette bridge is created at all.**
+
+⚠ ⭐ **If a future ruling ever puts a tone on this row, the mobile pattern is the bridge** — BigDev
+ruled on 2026-07-27 that *"mobile bridges tone→Tamagui-scale independently of the PDF's `@twt/tokens`
+hex … do not add an exact-match mobile token"* (`StatusPill` `TONE_TOKENS`; 9.12's
+`METER_FILL_TOKENS`). ⭐ Recorded so the precedent is not lost — ⛔ **it is NOT licence to build one
+here.**
 
 ### AC5 — Behaviour preservation, stated as FIVE named assertions
 
 ⛔ *"Preserved byte-for-byte"* is not an acceptance criterion — the diff necessarily changes bytes.
 The following five are asserted individually:
  **(1)** `FlashList` remains the list renderer;
- **(2)** the four states each still render their own distinct branch (loading · absence · empty · list);
+ **(2)** the four states each still render their own distinct branch (loading `:57` · absence `:68` ·
+     empty `:121-126` · list `:128`);
  **(3)** `String(...)` is still used for the pending strip's count and percentage — **Latin numerals
      in both locales**, ⛔ never `toHindiNumeral`;
  **(4)** the pending strip keeps `accessibilityLiveRegion="polite"`, ⛔ never `assertive`;
  **(5)** the empty / loading / absence branches still render **OUTSIDE** the list (Trap 2).
 
-⛔ **The `keyExtractor` is EXEMPT** (AC3).
+⭐⭐ **THERE IS NO LONGER ANY EXEMPTION — the `keyExtractor` is now PART of what is preserved** (AC3).
+
+⚠ ⭐ **AND ONE THING AC5 MUST NOT DO:** ⛔ **no test may byte-assert the value of
+`contributor_list.empty`.** 11b.2a's **D7(c)** re-words that string in both locales and its AC8
+forbids pinning the sentence (*"a byte-equality test on copy … turns every future tone review into a
+test edit"*). Assert the **key resolves and the branch renders**, ⛔ never the words.
 
 ### AC6 — Tests are written in the harness that actually exists
 
@@ -201,135 +263,236 @@ The following five are asserted individually:
 (9.6 Dev Notes, in terms).
 
 `apps/mobile/tests/unit/contributor-list-render.test.ts` is a **comment-stripped source scan +
-presenter-driven** test asserting: every variant the presenter can emit is mapped by the adapter (the
-`status-pill-render.test.ts:7-12` exhaustiveness precedent); AC5's five properties; AC1's
-no-death-term scan over both render sites.
+presenter-driven** test asserting: **every `displayName` kind the presenter can emit is either
+rendered or provably guarded** (the `status-pill-render.test.ts:7-12` exhaustiveness precedent —
+⭐ under D6(a) that is **one rendered kind + one throwing kind caught by the try/catch**, and an
+**anti-widening** assertion that a third kind requires a ruling); AC5's five properties; AC4's three
+fences; AC1's no-death-term scan over **both** render sites; AC10's stale-comment correction.
+
+⭐⭐ **THE i18n HALF IS SMALLER THAN THE AUTHORING PASS THOUGHT, AND ⛔ MUST NOT DUPLICATE 11b.2.**
+The nested two-namespace proof is **void** (Trap 3). And 11b.2's AC2 (`:313-320`) **already** owns a
+`packages/i18n`-backed test that *"every declared ref resolves in the namespace it claims, in **both**
+locales"* for **all ten `contributor_list.*` keys** — declared there **specifically for this story**
+(*"a bare key there is this AC's crash, one story later"*). ⛔ **Do not write a second one.**
+⇒ ⭐ **this story's i18n obligation is a SOURCE SCAN of its OWN call sites**: every `t()` in the
+touched files passes an **explicit** namespace (`t()` defaults to `common` and throws), and
+`contributor_list.row_a11y` is called **with** a `{name}` param.
 
 **And** ⭐ **what this harness CANNOT prove is recorded as un-attested, ⛔ not asserted as passing**
 ([[feedback_record_unattested_no_backfill]]): a real screen-reader announcement, and a real `t()`
-resolution at the mobile call site. ⚠ ⭐ **The `t()` nesting in Trap 3 is instead proven where it CAN
-be — a `packages/i18n` test that resolves `member.anonymousMember` (`common`) and feeds it as the
-`{name}` param into `contributor_list.row_a11y` (`contribution`), through `t()`, in both locales.**
-⛔ Asserting around `t()` is what shipped the 11a.2 defect.
+resolution at the mobile call site.
 
 ### AC7 — Semantic accessibility (family 13), with the vacuous checks recorded as such
 
 For each element this story touches — the row container (`:84`), the four state branches, the pending
-strip, the header — the family-13 checks are evaluated and **recorded**:
+strip, the header — the family-13 checks (`load-bearing-invariant-checklist.md:72-84`) are evaluated
+and **recorded**:
  **(a)** a container carrying `accessibilityLabel` is explicitly `accessible={true}` — **asserted**;
  **(d)** every state the ACs ratify as reachable is **ANNOUNCED**, ⛔ not merely reflected in a prop —
-     **asserted**, and the **anonymized** row is one of those reachable states.
+     **asserted**. ⭐⭐ **The reachable set is: loading · absence · empty · a `name` row · the pending
+     strip. ⛔ THE ANONYMIZED ROW IS ⛔ NOT ONE OF THEM** — the authoring pass listed it; **D5 makes it
+     unreachable by construction**, and an a11y assertion over an unreachable state is the vacuous
+     green the checklist exists to catch.
  **(b)** `accessibilityValue` for a measurable-value role and **(c)** a real handler for an
      interactive role are ⛔ **VACUOUSLY SATISFIED on this surface** — it has no
      `progressbar`/`slider` and no `button`/`link`. ⛔ **Record them as NOT-APPLICABLE, ⛔ never as
-     passing** — a check that cannot fail is a green scan proving nothing
-     ([[feedback_gate_scope_semantic_coverage]]).
+     passing** ([[feedback_gate_scope_semantic_coverage]]).
 
 **And** ⛔ **no accessibility CI gate is minted here** — that is 11b.8's call, by ruling. ⭐ Start from
 `apps/mobile/components/panchayat/PinnedItem.tsx`.
 
 ### AC8 — The friction-budget ledger is updated, UNCONDITIONALLY
 
-⛔⛔ **This is not an "if".** AC-4 is a pure path trigger: `MEMBER_FACING_PREFIXES = ['apps/mobile/', 'apps/public/']`
-(`scripts/friction-budget/lib.ts:453`); `evaluateDeclaration` fails when any changed file matches and
-`friction-budget.md` is unchanged. This story touches `apps/mobile/` in **at least three** files
-(the component, both render sites) plus a test — **there is no test exclusion**.
+⛔⛔ **This is not an "if".** AC-4 is a pure path trigger: `MEMBER_FACING_PREFIXES =
+['apps/mobile/', 'apps/public/']` (`scripts/friction-budget/lib.ts:453`, re-verified live);
+`evaluateDeclaration` fails when any changed file matches and `friction-budget.md` is unchanged. This
+story touches `apps/mobile/` in **at least three** files (the component, the adapter, a test) —
+**there is no test exclusion**.
+
+⚠ ⭐ **This is the ONE AC in this file the fifth pass did NOT have to change** — and it is checked, ⛔
+not inherited: 11b.2a's own D7(c) ruling turned on the fact that AC-4 does **not** fire for a
+locale-only edit. **It fires here**, because this story edits `apps/mobile/`.
 
 ⇒ `friction-budget.md` **MUST change in the same PR** or `pnpm ci:local` fails.
 **And** ⭐ **the correct shape is an affirmation/disposition note, ⛔ not a new row and ⛔ not an edit
 to an existing row** — this story *removes* an inline label and adds no member-payable friction. ⭐
-The precedent is HEAD itself: `80e0d12 feat(11b.9): declare the retired fourth consent checkbox in
-friction-budget.md`, whose body opens *"AC-4 (attribution-on-change) requires every member-facing
-diff to touch friction-budget.md … a retirement note, not a new row."* ⛔ Leave existing rows
-byte-unchanged ([[feedback_supersede_never_reinterpret]]).
-⚠ The leg diffs **committed** history, so it passes vacuously until you commit — the failure surfaces
-at `git push` (pre-push hook), ⛔ not during local iteration
+The precedent is `80e0d12 feat(11b.9): declare the retired fourth consent checkbox in
+friction-budget.md`. ⛔ Leave existing rows byte-unchanged ([[feedback_supersede_never_reinterpret]]).
+⚠ The leg diffs **committed** history (`check.ts:77-79`, `${baseRef}...HEAD`), so it passes vacuously
+until you commit — the failure surfaces at `git push` (pre-push hook), ⛔ not during local iteration
 ([[project_friction_budget_baseline_ratchet]]).
+
+### ⭐⭐ AC9 (NEW) — THE WIRE→PRESENTER ADAPTER, which 11b.2 routes here BY NAME `[GATED ON D10]`
+
+11b.2's presenter input is ⛔ not the wire row (Trap 4). This story authors the adapter, and 11b.2
+states the obligation in terms: *"⭐ The adapter is 11b.2b's, and **11b.2b owes it an AC**."*
+
+The adapter:
+ **(1)** re-nests the flat wire row's name fields under `displayName` as `{kind:'nameParts', firstName,
+     lastInitial}` — ⭐ **one kind only** (D5 + D6(a));
+ **(2)** splices the response-level `pool.letterCode` (`pool-contributor-list.ts:73-80,94` — it is
+     **once per response**, ⛔ not per row) onto each row's `poolLetterCode`;
+ **(3)** ⛔ **supplies NO `rowKey`.** D5 vacated it; `11b-2-…md:363`/`:373` still declare it required
+     from a **vacated** ruling, and Task 0 routes its removal to 11b.2. ⛔ **Do not invent a value to
+     satisfy the type**, and ⛔ never let it reach the `keyExtractor` (AC3).
+ **(4)** ⛔ performs **no** derivation, joining, formatting or interpretation — it re-shapes only. ⛔ It
+     does **not** join `firstName + lastInitial` (11b.2's **D9(a)**: the name FORM is UNRULED and
+     joining it would RULE it).
+
+⚠ **Its input type is D10's subject.** ⛔ Do not start this AC until D10 is ruled.
+
+### ⭐ AC10 (NEW) — the in-diff stale comments are corrected
+
+⛔⛔ `PoolContributorList.tsx:11` asserts *"Epic 9's producer is unbuilt, so the list is `[]` right
+now"* — **false since Story 9.4/9.5** ([[project_epic9_confirmed_producer_is_live]]) — and `:119`
+says *"0 confirmed today"*. **This file is in this story's diff** (AC1 deletes `:46-48` from it).
+
+⇒ both are corrected. ⛔ **Scope is THIS FILE ONLY.** 11b.2a filed the ~12-site family with the full
+list; ⛔ **do not fix the out-of-diff sites here** — that is the scope creep 11b.2a's Task 6 forbids by
+name. ⚠ ⭐ `NomineeConsole.tsx:3,8,208` carry the same staleness but this story only **verifies** that
+file (AC2) ⇒ ⛔ **not corrected here**; recorded so the omission is deliberate, ⛔ not missed.
 
 ---
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Preflight** ✅ *D5 RULED* · ⛔ `[GATED ON both dependencies merged]`
+- [ ] **Task 0 — Preflight + routing** ⛔ `[GATED ON both dependencies merged]`
   - [ ] ⛔ Confirm `11b-2-…` and `11b-2a-…` are both `done` in `sprint-status.yaml` and merged into
         `main`. `git fetch origin` first ([[feedback_git_fetch_before_remote_reasoning]]). ⛔ If either
-        is not, **STOP and report blocked**.
-  - [ ] ⛔ **TRANSCRIBE** D5's ruling **(a) — do not promote the prototype** from this file into
-        `.decision-log.md` (read the head **live**). ⛔ The dev agent does not decide, does not
-        paraphrase, and does not supply a ground. ⛔ `governance:` prefix, own commit, before any code.
-  - [ ] Re-verify `PoolContributorList.tsx`'s line numbers — ⚠ 11b.2a may have edited `:40-43`.
-- [ ] **Task 1 — Rewire the list (AC1, AC3, AC4, AC5)**
+        is not, **STOP and report blocked.**
+  - [ ] ⛔ **TRANSCRIBE** this file's rulings into `.decision-log.md` (read the head **live**) — ⭐ **the
+        `D5-prototype` ruling below is the ONLY one this story owns**; D5 · D6(a) · D7(c) ·
+        D3-aggregate · D5-scope are **11b.2a's** and D2(a) is **11b.2's** (⛔ do not re-transcribe
+        another story's rulings). ⛔ `governance:` prefix, own commit, before any code.
+  - [ ] ⭐⛔ **ROUTE THE SEVENTH D5 ARTEFACT TO 11b.2** (Trap 4): `11b-2-…md:360-362` (the doc-block
+        sourcing `rowKey` to the **VACATED** D3-shape(i)(a)) · `:363` · `:373` ⇒ **`rowKey` is removed
+        from `ContributionRowInput` and `ContributionRowViewModel`.** ⛔ 11b.2a's Task-6 list does not
+        cover these.
+  - [ ] Re-verify `PoolContributorList.tsx`'s line numbers at merge — ⚠ 11b.2a does **not** edit this
+        file (no wire change), so they should be stable at `:40-43` / `:46-48` / `:137-139`.
+- [ ] **Task 1 — Rewire the list (AC1, AC5)**
   - [ ] Consume `deriveContributionRowViewModel` **inside a try/catch** in `renderItem` (Trap 1);
         **delete** `contributorLabel()` at `:46-48`.
-  - [ ] Replace `:138`'s `keyExtractor` with 11b.2a's stable key (AC3).
-  - [ ] Map token role names through the **local mobile bridge** (AC4). ⛔ No `@twt/tokens` import.
+  - [ ] ⛔ **ONE renderable kind.** ⛔ No `kind:'anonymized'` branch, ⛔ no `member.anonymousMember`,
+        ⛔ no render arm for `'unknown'` (it throws — the try/catch is its handling).
+  - [ ] ⛔ **Leave `:137-139`'s `keyExtractor` byte-unchanged** (AC3).
   - [ ] ⛔ Keep the four states OUTSIDE the list (Trap 2). ⛔ Keep `String(...)` numerals.
-- [ ] **Task 2 — The anonymized row's copy (Trap 3)**
-  - [ ] Resolve `member.anonymousMember` with namespace **`common`**, then pass it as `{name}` into
-        `contributor_list.row_a11y` with namespace **`contribution`**. ⛔ Never one call, one namespace.
-  - [ ] Announce it (AC7(d)). ⛔ Mint no key and ⛔ no namespace — reuse `contributor_list.*`.
-- [ ] **Task 3 — Both render sites (AC2)**
+- [ ] **Task 2 — The adapter (AC9)** ⛔ `[GATED ON D10]`
+  - [ ] Re-nest name fields under `displayName`; splice `pool.letterCode`; ⛔ emit **no** `rowKey`;
+        ⛔ join nothing (D9(a)).
+- [ ] **Task 3 — The anti-chrome fence (AC4)**
+  - [ ] ⛔⛔ **Build NO token bridge and NO palette map.** Write the three fence assertions instead.
+        ⛔ No `@twt/tokens` import.
+- [ ] **Task 4 — Both render sites (AC2)**
   - [ ] Smoke-assert `contributors.tsx:13` **and** `NomineeConsole.tsx:213`. ⭐ Run the no-death-term
         assertion against the Nominee Console explicitly.
-  - [ ] Check `ViewContributorsEntry.tsx` for wire-shape consistency.
-- [ ] **Task 4 — Tests in the harness that exists (AC6)**
-  - [ ] `apps/mobile/tests/unit/contributor-list-render.test.ts` — comment-stripped source scan;
-        variant exhaustiveness; AC5's five properties; the two-site death-term scan.
-  - [ ] A `packages/i18n` test proving the **nested** `t()` resolution in both locales (Trap 3).
+  - [ ] ⛔ **Do NOT re-check `ViewContributorsEntry.tsx`** — recorded as a verified negative (AC2).
+- [ ] **Task 5 — Tests in the harness that exists (AC6)**
+  - [ ] `apps/mobile/tests/unit/contributor-list-render.test.ts` — comment-stripped source scan; one
+        rendered kind + one guarded throw + an anti-widening assertion; AC5's five properties; AC4's
+        three fences; the two-site death-term scan.
+  - [ ] ⛔ **Write NO second i18n ref test** — 11b.2's AC2 owns it for all ten keys. ⭐ Scan **own call
+        sites** for explicit namespaces + the `{name}` param instead.
+  - [ ] ⛔ **No test byte-asserts `contributor_list.empty`'s value** (D7(c) / 11b.2a AC8).
   - [ ] ⛔ Record the screen-reader announcement and the live mobile `t()` call as **un-attested**.
-- [ ] **Task 5 — Accessibility (AC7)**
+- [ ] **Task 6 — Accessibility (AC7)**
   - [ ] Run family 13's four checks over every element touched; start from `PinnedItem.tsx`.
   - [ ] ⛔ Record (b) and (c) as **NOT-APPLICABLE**, ⛔ never as passing.
-- [ ] **Task 6 — Close out**
-  - [ ] ⛔⛔ **`friction-budget.md` — write the affirmation/disposition note (AC8). This is mandatory,
-        ⛔ not conditional.** ⛔ Leave existing rows byte-unchanged.
-  - [ ] `pnpm --filter @twt/mobile test` · `pnpm --filter @twt/i18n test` · `pnpm turbo run typecheck`
-        · then `pnpm ci:local` green. ⚠ `git push` runs the full `ci:local` via a pre-push hook —
-        that is the "hang", ⛔ not a failure.
+  - [ ] ⛔ **The anonymized row is NOT in the reachable set** — ⛔ do not assert over it.
+- [ ] **Task 7 — Close out**
+  - [ ] Correct `PoolContributorList.tsx:11` and `:119` (AC10). ⛔ This file only.
+  - [ ] ⭐ **Route** `deferred-work.md:2163`'s stale self-citation (`:124-126` → `:137-139`) and
+        **re-affirm it OPEN** with its re-trigger restated as **11b.3, the public render** (AC3).
+        ⛔ Do not mark it discharged.
+  - [ ] ⛔⛔ **`friction-budget.md` — write the affirmation/disposition note (AC8). Mandatory, ⛔ not
+        conditional.** ⛔ Leave existing rows byte-unchanged.
+  - [ ] `pnpm --filter @twt/mobile test` · `pnpm turbo run typecheck` · then `pnpm ci:local` green.
+        ⚠ `git push` runs the full `ci:local` via a pre-push hook — that is the "hang", ⛔ not a failure.
   - [ ] Flip `development_status[11b-2b-contributor-list-mobile-render-layer]` and add ONE combined
         top-of-file `last_updated` entry ([[project_sprint_status_ledger]]).
 
 ---
 
-## ⚖️ Decisions — ✅ **RULED (BigDev, 2026-08-29).** ⛔ Do not re-litigate.
+## ⚖️ Decisions
 
-### ✅ D5 — Promote the memorial `<ContributorRow>` prototype? → **(a) ⛔ NO.** RULED 2026-08-29.
+### ⛔⛔ D10 (NEW, **UNRULED**) — does the adapter type against `@twt/contracts`, or against the local `ConfirmedRow` duplicate?
+
+`PoolContributorList.tsx:40-43` hand-spells `interface ConfirmedRow { firstName; lastInitial }` and
+⛔ **does not import it from `@twt/contracts`**. 11b.2a's **Trap 4** names this exact site: *"⭐⛔ a
+LOCAL `interface ConfirmedRow` — ⛔ NOT imported from `@twt/contracts`. **Widening the contract will
+⛔ NOT fail this file's typecheck.** This is 11b.1's defect class, already present."*
+
+⛔⛔ **WHY IT IS OPEN NOW AND WAS NOT BEFORE.** The authoring pass wrote *"11b.2a's AC4 makes this
+derive from the contract; if it already did, ⛔ do not undo it."* ⭐ **11b.2a's AC4 is VACATED by D5** —
+⛔ nothing makes it derive from anything, and 11b.2a's own instruction is *"⛔ Do not do it
+opportunistically. It survives as the standing hazard **the moment ANY story widens this tuple**."*
+⚠ ⭐ **But that condition is not the one this story meets.** 11b.2b does not widen the tuple — it
+**authors the adapter that sits exactly at the wire→presenter seam** (AC9) and **rewrites the tuple's
+only consumer** (`renderItem`). The adapter must declare an input type, so ⛔ **the question cannot be
+deferred by inaction** — some type gets written either way.
+
+**Options:**
+ **(a) Type the adapter against `@twt/contracts`'s `ConfirmedContributorRow` and delete the local
+     duplicate.** ⭐ Closes 11b.1's defect class at the one site Trap 4 names as already-present; ⭐ a
+     future contract widening then **fails this file's typecheck**, which is the whole point. ⭐ ⛔ **No
+     bundle-boundary objection** — verified live, `apps/mobile` already imports `@twt/contracts` in
+     20+ files (`pay.tsx:38-39`, `polls/index.tsx:20`, `nominee-review.tsx:16`, …) and it is a
+     declared dependency (`apps/mobile/package.json:33`). ⚠ Cost: deleting `ConfirmedRow` touches
+     `renderItem`'s and `keyExtractor`'s parameter types, which **AC5 pins as preserved** — the
+     preservation is behavioural, ⛔ not textual, but it must be stated in the diff.
+ **(b) Keep the local `ConfirmedRow` and type the adapter against it.** ⭐ Smallest diff; honours
+     11b.2a's *"⛔ do not do it opportunistically"* on its plain reading. ⚠ Cost: the hazard survives
+     **and now has a second hand-maintained consumer** (the adapter), i.e. this story makes 11b.1's
+     defect class **worse**, not merely unaddressed.
+ **(c) Type against `@twt/contracts` but leave `ConfirmedRow` in place** — ⛔ rejected on its face:
+     that is **three** spellings where there were two.
+
+⚠ ⭐ **What this decision does NOT touch:** ⛔ the wire (D5 — no change) and ⛔ the other ~8 Trap-4
+re-spellings, which stay out of scope under 11b.2a's ruling.
+
+### ✅ D5-prototype — Promote the memorial `<ContributorRow>` prototype? → **(a) ⛔ NO.** RULED BigDev 2026-08-29.
+
+⚠ ⭐ **Renamed from "D5" by the fifth pass to end a live collision** — 11b.2a's **D5** is *the*
+governing RTBF ruling that reshaped this file, and two different D5s in one sibling set is exactly how
+a ruling gets applied to the wrong question.
 
 `shradhanjali/ContributorRow.tsx` is the UX spec's mobile row, but on **sample data**.
 
 ⚠ ⭐ **Corrected arithmetic (the authoring pass said three; it is two).** `district` **has a shipped
 read model** — `member_postings.district` (`packages/domain/src/schema/member_postings.ts:51`,
-plaintext, explicitly non-PII), already published on a public wire (`public-pages/directory.ts:82`) and
-a ruled `member-directory` matrix field. ⇒ the producer-less fields are **`memoryLine` and
-`monthYear`**. ⭐ **The ruling holds on the corrected arithmetic, ⛔ not on the inflated one.**
+plaintext, explicitly non-PII), already published on a public wire
+(`packages/contracts/src/public-pages/directory.ts:82`) and a ruled `member-directory` matrix field.
+⇒ the producer-less fields are **`memoryLine` and `monthYear`**. ⭐ **The ruling holds on the corrected
+arithmetic, ⛔ not on the inflated one.**
 
 **Ground:** rewire only `<PoolContributorList>` (8.3), which has a **real producer**. Promoting the
 prototype still means **inventing two producers** — SD-1 — and the 11a.5 lesson (*"a silent section is
 the CORRECT state"*) says render the real, currently-empty source. ⛔ (b) was rejected because it
 **ships fabricated rows on a memorial surface**. ⛔ (c) was rejected because it puts un-producible
-fields into a shared contract — **and it is out of this story's reach anyway**, since 11b.2 ships first
-and would own that change.
+fields into a shared contract — **and it is out of this story's reach anyway**.
 
-⇒ ⛔ **`apps/mobile/components/shradhanjali/*` is NOT TOUCHED by this story.** ⚠ ⭐ And the prototype's
-**divergence is now a recorded fact, ⛔ not a silent one**: the UX spec's mobile row and the shipped
-mobile row are two different things, and `deferred-work.md` already carries the column-inventory
-amendment (11b.2's AC8) that says why. ⛔ Do not "reconcile" them here.
+⇒ ⛔ **`apps/mobile/components/shradhanjali/*` is NOT TOUCHED by this story.** ⚠ ⭐ The prototype's
+**divergence is a recorded fact, ⛔ not a silent one**. ⛔ Do not "reconcile" them here.
 
 ## Dev Notes
 
+- **⛔⛔ ONE KIND OF ROW.** D5 + D6(a) mean the contributor row has exactly one kind, wire to pixel.
+  ⛔ Never branch on `kind:'anonymized'`; ⛔ never resolve `member.anonymousMember` here.
+- **⛔ `rows.length === confirmedCount` IS THE WRONG MODEL** (D3-aggregate). Under D5 an omitted
+  contributor still counts in `confirmedCount` and `pending` while `rows` shrinks — ⭐ **that
+  divergence is DESIGNED.** ⛔ Never assert equality between them, in a test or in a comment.
 - **⚠ Fabric FlatList/FlashList red-boxes crossing empty→populated in place.** 8.3 already renders the
   empty/loading/absence branches **outside** the list — ⛔ do not "simplify" it (Trap 2).
 - **⚠ Latin numerals for operational figures, even in Hindi** (UX-DR73 / amendment-A2). `:81-82`'s
   `String(...)` is the pattern; ⛔ never `toHindiNumeral` here.
-- **⚠ `t()` defaults to `common` and THROWS.** Every call site passes an explicit namespace, and the
-  anonymized row needs **two** namespaces in one label (Trap 3). Assert **through** `t()`.
+- **⚠ `t()` defaults to `common` and THROWS.** Every call site passes an explicit namespace. Assert
+  **through** `t()` — `resolver.ts:33`'s `TOKEN` is single-brace, which is how the 11a.2 defect shipped.
 - **⚠ Type-only → value import cycles** break consuming packages at runtime while typecheck, lint and
-  local tests stay green ([[project_type_only_import_cycle_trap]]). `apps/mobile` imports `@twt/ui` —
-  be deliberate.
-- **⭐ MMKV is this app's AsyncStorage** ([[project_mmkv_asyncstorage_equivalent]]) — and the
-  contributor response is **auto-persisted** to it (`usePoolContributorsQuery.ts:33`). ⚠ If 11b.2a's
-  widening landed, a stale cached row shape can reach this component on first launch after update;
-  confirm 11b.2a's rollout posture before assuming the new shape is always present.
+  local tests stay green ([[project_type_only_import_cycle_trap]]). `apps/mobile` imports `@twt/ui`
+  and (under D10(a)) `@twt/contracts` — ⭐ **`import type` both**, deliberately.
+- **⭐ MMKV is this app's AsyncStorage** ([[project_mmkv_asyncstorage_equivalent]]) — the contributor
+  response is auto-persisted (`usePoolContributorsQuery.ts:33`). ⭐ **Under D5 there is NO wire change**,
+  so ⛔ the stale-cached-shape hazard the authoring pass warned about **does not arise**.
 - **⚠ `integration-tests` concurrency is `1` and is LOAD-BEARING** — ⛔ never raise it.
 - **⭐ CI Actions availability flips both ways without warning — re-verify live**
   ([[project_ci_actions_suspension_local_mirror]]).
@@ -338,44 +501,54 @@ amendment (11b.2's AC8) that says why. ⛔ Do not "reconcile" them here.
 
 ```
 pnpm --filter @twt/mobile test    # apps/mobile/tests/** — pure Vitest, SOURCE SCANS, no RN mount
-pnpm --filter @twt/i18n test      # where Trap 3's nested t() resolution is actually provable
 pnpm turbo run typecheck
 pnpm ci:local                     # before push — and AC8's ledger note must be committed first
 ```
+⛔ **No `@twt/i18n` test is owed by this story** — 11b.2's AC2 owns the ref-resolution proof (AC6).
 
 ### Project Structure Notes
 
 | Path | New/Update | Note |
 |---|---|---|
-| `apps/mobile/components/contributor-list/PoolContributorList.tsx` | UPDATE | Consume the presenter in a **try/catch**; **delete** `contributorLabel()` `:46-48`; replace `:138`'s `keyExtractor`. ⛔ FlashList + the four states + the pending strip otherwise unchanged. |
-| `apps/mobile/app/(contribution)/contributors.tsx` | ⚠ **VERIFY** | Render site 1 — smoke-assert after the rewire. |
-| `apps/mobile/components/nominee-console/NomineeConsole.tsx` | ⚠ **VERIFY** | ⭐ Render site 2 (`:213`) — a death-context surface. ⛔ Run the no-death-term assertion here explicitly. |
-| `apps/mobile/components/contributor-list/ViewContributorsEntry.tsx` | ⚠ **VERIFY** | Shares the wire shape; check consistency. |
+| `apps/mobile/components/contributor-list/PoolContributorList.tsx` | UPDATE | Consume the presenter in a **try/catch**; **delete** `contributorLabel()` `:46-48`; correct `:11`/`:119` (AC10). ⛔⛔ **`:137-139`'s `keyExtractor` is LEFT ALONE** (AC3). ⛔ FlashList + the four states + the pending strip otherwise unchanged. |
+| the adapter | **NEW** `[D10]` | AC9. ⛔ Its input type is D10's subject — ⛔ do not start before D10 is ruled. |
+| `apps/mobile/app/(contribution)/contributors.tsx` | ⚠ **VERIFY** | Render site 1 (`:13`) — smoke-assert after the rewire. |
+| `apps/mobile/components/nominee-console/NomineeConsole.tsx` | ⚠ **VERIFY** | ⭐ Render site 2 (`:213`) — a death-context surface. ⛔ Run the no-death-term assertion here explicitly. ⛔ Its stale comments (`:3,8,208`) are ⛔ **NOT** corrected here (AC10). |
+| `apps/mobile/components/contributor-list/ViewContributorsEntry.tsx` | ⛔ **NOT TOUCHED** | ⭐ **Verified negative** — reads `data.assigned` only. ⛔ Nothing owed. |
 | `apps/mobile/tests/unit/contributor-list-render.test.ts` | **NEW** | ⛔ Source scan + presenter-driven. ⛔ No mount harness — do not stand one up. |
 | `packages/ui/**` | ⛔ **READ-ONLY** | The presenter is 11b.2's. ⛔ Do not edit it to make this story easier. |
-| `packages/contracts/**` · `apps/api/**` | ⛔ **NOT TOUCHED** | 11b.2a's. |
-| `packages/tokens/**` | ⛔ **NOT IMPORTED** | AC4 — mobile bridges tone→Tamagui locally, by ruling. |
-| `apps/mobile/components/shradhanjali/ContributorRow.tsx` | ⚠ **LEAVE ALONE** `[D5]` | Sample-data prototype; **two** producer-less fields. |
+| `packages/contracts/**` · `apps/api/**` | ⛔ **NOT MODIFIED** | ⚠ Under D10(a) `@twt/contracts` is **imported (type-only)**, ⛔ never edited. |
+| `packages/tokens/**` | ⛔ **NOT IMPORTED, AND NO BRIDGE IS BUILT** | AC4 — inverted by D2(a). |
+| `apps/mobile/components/shradhanjali/ContributorRow.tsx` | ⚠ **LEAVE ALONE** `[D5-prototype]` | Sample-data prototype; **two** producer-less fields. |
 | `friction-budget.md` | ⛔ **MUST UPDATE** | AC8 — unconditional. An affirmation/disposition note; ⛔ existing rows byte-unchanged. |
-| `_bmad-output/implementation-artifacts/deferred-work.md` | ⚠ **VERIFY** | `:2163` should already be discharged by 11b.2a with this story named as consumer. |
-| `.decision-log.md` | UPDATE | Task 0 — D5 only. Read the head **live**. |
+| `_bmad-output/implementation-artifacts/deferred-work.md` | UPDATE | `:2163` **STAYS OPEN**; stale self-citation routed; re-trigger restated as 11b.3 (AC3). |
+| `.decision-log.md` | UPDATE | Task 0 — **`D5-prototype` only** (+ D10 once ruled). ⛔ Not 11b.2a's or 11b.2's rulings. |
 
 ### References
 
-- [Source: `apps/mobile/components/contributor-list/PoolContributorList.tsx:15-19,40-43,46-48,57,68,81-82,121,128,132-141,149-164`] — the virtualization rationale (⚠ `:15-19`, not `:15-24`), the local tuple copy, the inline label, the four states, the Latin numerals, the keyExtractor, the pending strip
-- [Source: `apps/mobile/app/(contribution)/contributors.tsx:13`] — render site 1
-- [Source: `apps/mobile/components/nominee-console/NomineeConsole.tsx:31,208-213`] — ⭐ render site 2, and why it sits outside the ScrollView
-- [Source: `apps/mobile/tests/unit/status-pill-render.test.ts:1-18,7-12,16`] — ⛔ no mount harness; the exhaustiveness precedent; comment-stripping
-- [Source: `9-6-…md` Review Findings 1] — ⭐ BigDev's 2026-07-27 ruling: mobile bridges tone→Tamagui, ⛔ do not import `@twt/tokens`
-- [Source: `9-12-…md` Review Findings 1] — ⭐ the unguarded-presenter-throw finding and its try/catch resolution (Trap 1); `METER_FILL_TOKENS`
-- [Source: `packages/i18n/locales/{en,hi}/common.json:215` · `locales/en/contribution.json:30-39`] — ⭐ the TWO namespaces one a11y label needs (Trap 3)
-- [Source: `packages/i18n/src/resolver.ts:33`] — the single-brace `TOKEN` regex behind the 11a.2 defect
-- [Source: `deferred-work.md:2163`] — the keyExtractor deferral, its fired re-trigger, and its falsified ground
-- [Source: `_bmad/custom/load-bearing-invariant-checklist.md`] — family 13 and its four checks; `bmad-code-review.toml:9` makes it live on merge
+- [Source: `apps/mobile/components/contributor-list/PoolContributorList.tsx:9-19,40-43,46-48,57,68,81-82,119,121-126,128,132-141,137-139,149-164`] — the stale-comment block, the local tuple, the inline label, the four states, the Latin numerals, the keyExtractor, the pending strip
+- [Source: `apps/mobile/app/(contribution)/contributors.tsx:7,13`] — render site 1
+- [Source: `apps/mobile/components/nominee-console/NomineeConsole.tsx:31,206,208-213`] — ⭐ render site 2, and why it sits outside the ScrollView
+- [Source: `apps/mobile/components/contributor-list/ViewContributorsEntry.tsx:19,26,30`] — ⭐ the verified negative: `data.assigned` only
+- [Source: `apps/mobile/tests/unit/status-pill-render.test.ts:1-18`] — ⛔ no mount harness; the exhaustiveness precedent; comment-stripping
+- [Source: `11b-2-…md:366-382`] — ⭐⭐ `ContributionRowViewModel` carries **no token role** (AC4's inversion)
+- [Source: `11b-2-…md:738-751`] — ⭐⭐ **D2(a)**, incl. *"(c) a constant 'confirmed' chrome element in the render layer was rejected"* and *"⭐⛔ AND THIS RULING BINDS 11b.2b"*
+- [Source: `11b-2-…md:384-393`] — ⭐⭐ the adapter is 11b.2b's and *"11b.2b owes it an AC"* (Trap 4 → AC9)
+- [Source: `11b-2-…md:360-363,373`] — ⭐ the **required `rowKey`** sourced from the **VACATED** D3-shape(i)(a) (Task 0 routing)
+- [Source: `11b-2-…md:313-320`] — ⭐ 11b.2 declares the ten `contributor_list.*` refs **for this story** and owns their resolution test (AC6's de-duplication)
+- [Source: `11b-2-…md:398-412`] — **D8(a)**: `unknown` **THROWS**; the try/catch is the only guard
+- [Source: `11b-2a-…md:499-544`] — ⭐⭐ AC4/AC5 **VACATED**: ⛔ no wire change, ⛔ no `kind`, ⛔ no `rowKey`; *"11b.2b keeps `index`"*
+- [Source: `11b-2a-…md:377-412`] — **Trap 4**, naming `PoolContributorList.tsx:40-43` (D10's subject)
+- [Source: `11b-2a-…md:786-795`] — 11b.2a's own routing of this story's six stale anchors
+- [Source: `deferred-work.md:2163`] — the keyExtractor deferral: **OPEN**, blocker still true, re-trigger **not** fired, self-citation stale
+- [Source: `_bmad/custom/load-bearing-invariant-checklist.md:72-84`] — family 13's four checks; `bmad-code-review.toml:8-12` makes it live on merge
 - [Source: `apps/mobile/components/panchayat/PinnedItem.tsx`] — the family-13 worked example
-- [Source: `scripts/friction-budget/lib.ts:453-501` · `scripts/friction-budget/check.ts:73-79`] — ⭐ why AC8 is unconditional
-- [Source: commit `80e0d12`] — the affirmation-note precedent for a friction-reducing member-facing diff
-- [Source: `packages/domain/src/schema/member_postings.ts:51` · `packages/contracts/src/public-pages/directory.ts:82`] — ⭐ `district` HAS a read model (D5's corrected arithmetic)
+- [Source: `scripts/friction-budget/lib.ts:453` · `scripts/friction-budget/check.ts:77-79`] — ⭐ why AC8 is unconditional, and why it only fails at push
+- [Source: `packages/i18n/locales/{en,hi}/contribution.json:30-39`] — the ten `contributor_list.*` keys; ⭐ `row_a11y` at **`:35`**
+- [Source: `packages/i18n/src/resolver.ts:33`] — the single-brace `TOKEN` regex behind the 11a.2 defect
+- [Source: `apps/mobile/package.json:32-35`] — ⭐ `@twt/contracts` is already a declared mobile dependency (D10(a))
+- [Source: `packages/domain/src/schema/member_postings.ts:51` · `packages/contracts/src/public-pages/directory.ts:82`] — ⭐ `district` HAS a read model (D5-prototype's corrected arithmetic)
+- [Source: `packages/domain/src/member/display-name.ts:10-12`] — the memorial prototype named as SAMPLE-DATA (⚠ path is `member/`, ⛔ not `kyc/`)
 - [Source: `.decision-log.md#decision-2026-08-24-159` cl.11] — D9(a); *"the right conjunct in the wrong read"*
 
 ---
@@ -394,4 +567,5 @@ pnpm ci:local                     # before push — and AC8's ledger note must b
 
 | Date | Version | Description | Author |
 |---|---|---|---|
-| 2026-08-29 | 0.1 | **Split out of Story 11b.2 by the validation pass at `80e0d12`.** Carries the mobile render layer and family-13 accessibility; runs **after** 11b.2 and 11b.2a. ⭐ Findings applied at authoring: **(1)** ⛔⛔ `<PoolContributorList>` has **TWO** live render sites — the 8.3 route **and** `NomineeConsole.tsx:213`, a staff-takeover-session-as-deceased surface the authoring pass never named ⇒ **AC2**, with the no-death-term assertion aimed at it explicitly. **(2)** *"Preserved byte-for-byte"* would have **pinned a known defect** — `deferred-work.md:2163`'s keyExtractor re-trigger has fired by name and its ground is falsified ⇒ **AC3** makes it an explicit exemption, consuming 11b.2a's stable key. **(3)** ⛔ AC "resolve token roles through `@twt/tokens`" **contradicted BigDev's 2026-07-27 ruling** that mobile bridges tone→Tamagui independently ⇒ **AC4** inverted. **(4)** ⛔ There is **no RN mount harness** — *"byte-for-byte behaviour"* and *"a screen-reader user hears"* were unwriteable ⇒ **AC5** restated as five named source-scan assertions and **AC6** records what the harness cannot prove as **un-attested**, moving the `t()` proof to `packages/i18n`. **(5)** Trap 3 added — the anonymized a11y label needs a **nested, two-namespace** `t()` resolution; the naive single call **throws**. **(6)** Trap 1 added — 9.12's unguarded-presenter-throw finding, with a worse blast radius on a `renderItem` hot path ⇒ the try/catch is this story's half. **(7)** **AC7** records family-13 (b) and (c) as **NOT-APPLICABLE** rather than passing — they cannot fail on this surface. **(8)** ⛔⛔ **AC8**: friction-budget AC-4 is a **path trigger** and fires unconditionally once `apps/mobile/` is touched — the authoring pass's *"if any declaration moved"* would have produced a red gate at `git push`. **(9)** D5's arithmetic corrected — `district` **has** a read model, so two producer-less fields, not three. | BigDev + Claude |
+| 2026-08-30 | 0.2 | ⛔⛔ **FIFTH VALIDATION PASS (`bmad-create-story validate 11b.2b`, at `dbb4a25`) — STATUS `ready-for-dev` → `blocked-awaiting-decisions`. ONE NEW DECISION (D10), ⛔ NOT DEFAULTED.** ✅ Baseline re-pinned `80e0d12` → `dbb4a25`; `git diff --name-only` returns **four `_bmad-output/` files and nothing else** ⇒ ⛔ no verified code claim moved. ⭐⭐ **THE PASS'S GROUND: 11b.2a's D5 · D3-aggregate · D5-scope · D6(a) · D7(c) all landed AFTER this file was authored and between them ABOLISHED THE SUBJECT OF THREE OF ITS ACs.** ⛔⛔ **(1) AC4 ORDERED THE THING D2(a) REJECTED BY NAME — the pass's headline.** It required *"map the presenter's token role names through a local mobile palette bridge"*; verified live, `ContributionRowViewModel` is `{displayName, poolLetterCode, rowKey, rowA11y}` (`11b-2-…md:366-382`) and carries ⛔ **no token role at all**, because 11b.2's **D2(a)** ruled *"⛔ no status on the row"* and rejected option **(c) *"a constant 'confirmed' chrome element in the render layer"*** — adding *"⭐⛔ **AND THIS RULING BINDS 11b.2b**"*. ⭐ The story's own Preflight restated that ban two screens above the AC that violated it. ⇒ **AC4 INVERTED into a three-part anti-chrome fence**; the 2026-07-27 tone→Tamagui precedent is **retained as precedent, ⛔ not as licence**. ⛔⛔ **(2) AC3 HAD NO SUBJECT.** It ordered the `keyExtractor` replaced by *"11b.2a's ruled `rowKey`"* and declared `deferred-work.md:2163` **discharged**; **D5 vacated `rowKey` in full** ⇒ ⭐ re-authored: **the `keyExtractor` KEEPS `index`**, the deferral **STAYS OPEN**, and ⭐ **its re-trigger has ⛔ NOT fired** — it names the Epic 11b **public** render, and this is the **member** render of a single pool's roster (**11b.3** is the real re-trigger). The deferral's own stale self-citation (`:124-126` → live `:137-139`) is **routed**. ⛔ The AC5 exemption is **removed** — the keyExtractor is now part of what is preserved. ⛔⛔ **(3) TRAP 3 DELETED — its subject cannot exist.** The *"nested two-namespace `t()`"* trap presupposed an anonymized row; **D5 + D6(a)** mean ⛔ none is ever emitted ⇒ one call, one namespace. ⭐ **AC6's i18n half shrank and was DE-DUPLICATED**: 11b.2's AC2 (`:313-320`) already owns the ten-key ref-resolution test **declared for this story**, so ⛔ no second `@twt/i18n` test is owed — this story scans **its own call sites** instead. ⭐⭐ **(4) TWO NEW ACs FOR OBLIGATIONS THE AUTHORING PASS NEVER WROTE. AC9 — THE ADAPTER**, which 11b.2 routes here **by name** (`:384-393`: *"⭐ The adapter is 11b.2b's, and **11b.2b owes it an AC**"*) — re-nest `displayName`, splice response-level `pool.letterCode`, ⛔ emit no `rowKey`, ⛔ join nothing (D9(a)). ⚠ ⭐ **And the adapter is where D5's UNDER-ROUTING surfaces:** `11b-2-…md:363`/`:373` still declare `rowKey` **required**, sourced at `:360-362` to the **VACATED** D3-shape(i)(a), and 11b.2a's Task-6 list of six artefacts ⛔ **does not cover them** ⇒ Task 0 routes a **seventh**. **AC10 — the in-diff stale comment**: `PoolContributorList.tsx:11` asserts *"Epic 9's producer is unbuilt"*, false since 9.4/9.5 ([[project_epic9_confirmed_producer_is_live]]); 11b.2a correctly scoped the family out of **its** diff, but ⭐ **this file is in THIS story's diff**. ⛔⛔ **(5) D10 (NEW, UNRULED) — does the adapter type against `@twt/contracts` or against the local `ConfirmedRow` duplicate?** 11b.2a's **Trap 4** names `PoolContributorList.tsx:40-43` as 11b.1's defect class **already present**; the authoring pass wrote *"11b.2a's AC4 makes this derive from the contract"* — ⭐ **that AC is VACATED**, so nothing does. ⚠ ⭐ **It cannot be deferred by inaction**: AC9's adapter must declare an input type either way, and (b) would give the hazard a **second** hand-maintained consumer. ⭐ Verified there is ⛔ **no bundle-boundary objection** — `apps/mobile` already imports `@twt/contracts` in 20+ files and declares it at `package.json:33`. ⛔ (c) rejected on its face (three spellings). ⚠ **(6) TWO FALSE CLAIMS REPLACED BY VERIFIED NEGATIVES:** `ViewContributorsEntry.tsx` *"shares the wire shape 11b.2a widens"* — ⛔ 11b.2a widens nothing, and the file reads **`data.assigned` only** ⇒ ⛔ nothing owed; and the AI-10-1 **Policy-meaning note** said *"your name does not appear next to it"*, which describes an **anonymized row** — ⛔ under D5 the **ROW** does not appear ⇒ **REWRITTEN** ([[feedback_spec_edits_must_propagate_to_tasks]]). ⭐ **(7) D5 → `D5-prototype` RENAMED** — a live collision with 11b.2a's governing **D5**, which is exactly how a ruling gets applied to the wrong question; the ruling itself and its corrected two-field arithmetic are **unchanged**. ⭐ **(8) D3-aggregate carried in as a Dev Note fence**: ⛔ never assert `rows.length === confirmedCount` — under D5 the divergence is **designed**. ⭐ **(9) D7(c) carried in**: `contributor_list.empty`'s only consumer is **this file, `:124`** ⇒ ⛔ do not revert it and ⛔ **no test may byte-pin the sentence** (11b.2a AC8). ✅ **(10) AC8 is the ONE AC unchanged — and it was CHECKED, ⛔ not inherited**: `MEMBER_FACING_PREFIXES` re-verified at `lib.ts:453`; it fires here precisely because this story edits `apps/mobile/`, the same test that made it **not** fire for D7(c). **Citation corrections:** `contributor_list.row_a11y` is `contribution.json:35`, ⛔ not `:36` · the `keyExtractor` is `:137-139`, ⛔ not `:138` alone · family 13 is checklist `:72-84` and the gate is `bmad-code-review.toml:8-12`, ⛔ not `:9` · `display-name.ts` is `packages/domain/src/**member**/`, ⛔ not `kyc/` · `NomineeConsole`'s `ScrollView` closes at `:206`. ⭐ **Verified clean at `dbb4a25`:** both render sites are the **only** two importers · all 27 `tests/unit/` files and ⛔ no mount harness · no death-term at any of the three sites · `member.anonymousMember` at `common.json:215` · `member_postings.ts:51` · `directory.ts:82` · `PinnedItem.tsx` present · `resolver.ts:33`. | BigDev + Claude |
+| 2026-08-29 | 0.1 | **Split out of Story 11b.2 by the validation pass at `80e0d12`.** Carries the mobile render layer and family-13 accessibility; runs **after** 11b.2 and 11b.2a. ⭐ Findings applied at authoring: **(1)** ⛔⛔ `<PoolContributorList>` has **TWO** live render sites — the 8.3 route **and** `NomineeConsole.tsx:213`, a staff-takeover-session-as-deceased surface the authoring pass never named ⇒ **AC2**, with the no-death-term assertion aimed at it explicitly. **(2)** *"Preserved byte-for-byte"* would have **pinned a known defect** ⇒ **AC3** (⚠ ⭐ **since REVERSED by the fifth pass — D5 vacated `rowKey` and the keyExtractor KEEPS `index`**). **(3)** ⛔ AC *"resolve token roles through `@twt/tokens`"* contradicted BigDev's 2026-07-27 ruling ⇒ **AC4** inverted to a mobile bridge (⚠ ⭐ **since INVERTED AGAIN by the fifth pass — D2(a) forbids the bridge too**). **(4)** ⛔ There is **no RN mount harness** ⇒ **AC5** restated as five named source-scan assertions and **AC6** records what the harness cannot prove as **un-attested**. **(5)** Trap 3 added — the nested two-namespace `t()` (⚠ ⭐ **since DELETED by the fifth pass — D5/D6(a) abolished its subject**). **(6)** Trap 1 added — 9.12's unguarded-presenter-throw finding ⇒ the try/catch is this story's half (⭐ **strengthened by the fifth pass: D8(a) makes the throw a RULING**). **(7)** **AC7** records family-13 (b) and (c) as **NOT-APPLICABLE**. **(8)** ⛔⛔ **AC8**: friction-budget AC-4 is a **path trigger** and fires unconditionally once `apps/mobile/` is touched. **(9)** D5's arithmetic corrected — `district` **has** a read model, so two producer-less fields, not three. | BigDev + Claude |

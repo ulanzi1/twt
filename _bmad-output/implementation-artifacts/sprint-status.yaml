@@ -1,5 +1,75 @@
 # generated: 2026-05-29
-# last_updated: 2026-08-30d (✅✅ STORY 11b-2a — BOTH FOURTH-PASS DECISIONS RULED BY BigDev ⇒ ROW
+# last_updated: 2026-08-30e (⛔⛔ STORY 11b-2b — FIFTH VALIDATION PASS (`bmad-create-story validate
+#   11b.2b`, at dbb4a25) ⇒ ROW FLIPPED `ready-for-dev` → `blocked-awaiting-decisions`. ONE NEW
+#   DECISION (D10), ⛔ NOT DEFAULTED. ⛔ NO DECISION MINTED IN .decision-log.md (that is 11b-2b Task 0).
+#   ✅ BASELINE RE-PINNED 80e0d12 → dbb4a25 — `git diff --name-only` returns FOUR _bmad-output/ files
+#   and nothing else ⇒ ⛔ NO VERIFIED CODE CLAIM MOVED.
+#   ⭐⭐ THE GROUND: 11b-2a's D5 · D3-aggregate · D5-scope · D6(a) · D7(c) ALL LANDED AFTER 11b-2b WAS
+#   AUTHORED AND BETWEEN THEM ABOLISHED THE SUBJECT OF THREE OF ITS ACs. 11b-2a's Task 6 named six
+#   stale anchors; this pass re-authored them and found three more the routing did not reach.
+#   ⛔⛔ (1) AC4 ORDERED THE THING D2(a) REJECTED BY NAME — THE HEADLINE. It required "map the
+#   presenter's token role names through a local mobile palette bridge". Verified live:
+#   ContributionRowViewModel is {displayName, poolLetterCode, rowKey, rowA11y} (11b-2-…md:366-382) and
+#   carries ⛔ NO TOKEN ROLE AT ALL, because 11b-2's D2(a) ruled "⛔ no status on the row" and rejected
+#   option (c) "a constant 'confirmed' chrome element in the render layer", adding "⭐⛔ AND THIS RULING
+#   BINDS 11b-2b". ⭐ The story's own Preflight restated that ban TWO SCREENS ABOVE the AC that
+#   violated it, and Task 1 ordered the bridge built ⇒ a dev working from the Tasks list would have
+#   had to INVENT a role, i.e. ship D2(a)(c) ([[feedback_spec_edits_must_propagate_to_tasks]]).
+#   ⇒ AC4 INVERTED into a three-part anti-chrome fence; the 2026-07-27 tone→Tamagui ruling is
+#   RETAINED AS PRECEDENT, ⛔ NOT as licence to build a bridge here.
+#   ⛔⛔ (2) AC3 HAD NO SUBJECT. It ordered the keyExtractor replaced by "11b-2a's ruled rowKey" and
+#   declared deferred-work.md:2163 DISCHARGED; D5 vacated rowKey in full ⇒ re-authored: the
+#   keyExtractor KEEPS `index`, the deferral STAYS OPEN, and ⭐ ITS RE-TRIGGER HAS ⛔ NOT FIRED — it
+#   names the Epic 11b PUBLIC render and this is the MEMBER render of a single pool's roster (11b-3 is
+#   the real re-trigger). ⛔ The AC5 exemption is REMOVED. ⚠ The deferral's own self-citation
+#   (PoolContributorList.tsx:124-126) is STALE — live :137-139 — routed, ⛔ not silently fixed.
+#   ⛔⛔ (3) TRAP 3 DELETED — ITS SUBJECT CANNOT EXIST. The "nested two-namespace t()" trap
+#   presupposed an anonymized row; D5 + D6(a) mean ⛔ none is ever emitted ⇒ one call, one namespace.
+#   ⭐ AC6's i18n half SHRANK AND WAS DE-DUPLICATED: 11b-2's AC2 (:313-320) already owns the ten-key
+#   ref-resolution test DECLARED FOR THIS STORY ⇒ ⛔ no second @twt/i18n test is owed; 11b-2b scans
+#   ITS OWN CALL SITES for explicit namespaces instead.
+#   ⭐⭐ (4) TWO NEW ACs FOR OBLIGATIONS THE AUTHORING PASS NEVER WROTE. AC9 — THE ADAPTER, which
+#   11b-2 routes here BY NAME (:384-393: "The adapter is 11b-2b's, and 11b-2b OWES IT AN AC"):
+#   re-nest displayName, splice response-level pool.letterCode, ⛔ emit no rowKey, ⛔ join nothing
+#   (D9(a)). ⚠ ⭐ AND THE ADAPTER IS WHERE D5's UNDER-ROUTING SURFACES: 11b-2-…md:363/:373 still
+#   declare rowKey REQUIRED, sourced at :360-362 to the VACATED D3-shape(i)(a), and 11b-2a's Task-6
+#   list of SIX artefacts ⛔ DOES NOT COVER THEM ⇒ 11b-2b Task 0 routes a SEVENTH to 11b-2.
+#   AC10 — the IN-DIFF stale comment: PoolContributorList.tsx:11 asserts "Epic 9's producer is
+#   unbuilt", false since 9.4/9.5; 11b-2a correctly scoped that family out of ITS diff, but ⭐ this
+#   file is in THIS story's diff (AC1 deletes :46-48 from it). ⛔ Scope is that file only —
+#   NomineeConsole.tsx:3,8,208 carry the same staleness and are DELIBERATELY not corrected.
+#   ⛔⛔ (5) D10 (NEW, UNRULED) — DOES THE ADAPTER TYPE AGAINST @twt/contracts OR AGAINST THE LOCAL
+#   `ConfirmedRow` DUPLICATE? 11b-2a's Trap 4 names PoolContributorList.tsx:40-43 as 11b-1's defect
+#   class ALREADY PRESENT; the authoring pass wrote "11b-2a's AC4 makes this derive from the contract"
+#   — ⭐ THAT AC IS VACATED, so nothing does. ⚠ ⭐ IT CANNOT BE DEFERRED BY INACTION: AC9's adapter
+#   must declare an input type either way, and (b) would give the hazard a SECOND hand-maintained
+#   consumer ⇒ this story would make 11b-1's defect class WORSE, not merely unaddressed. ⭐ Verified
+#   there is ⛔ NO bundle-boundary objection — apps/mobile already imports @twt/contracts in 20+ files
+#   and declares it at package.json:33. (a) derive + delete the duplicate · (b) keep the local tuple ·
+#   ⛔ (c) both — rejected on its face (three spellings where there were two).
+#   ⚠ (6) TWO FALSE CLAIMS REPLACED BY VERIFIED NEGATIVES: ViewContributorsEntry.tsx "shares the wire
+#   shape 11b-2a widens" — ⛔ 11b-2a widens NOTHING, and the file reads `data.assigned` ONLY (:26,:30)
+#   ⇒ ⛔ nothing owed; and the AI-10-1 POLICY-MEANING NOTE said "your name does not appear next to
+#   it", which describes an ANONYMIZED ROW — ⛔ under D5 the ROW does not appear ⇒ REWRITTEN.
+#   ⭐ (7) D5 → `D5-prototype` RENAMED — a LIVE COLLISION with 11b-2a's governing D5, which is exactly
+#   how a ruling gets applied to the wrong question; the ruling and its corrected two-field arithmetic
+#   are UNCHANGED.
+#   ⭐ (8) D3-aggregate carried in as a Dev Note fence: ⛔ NEVER assert rows.length === confirmedCount
+#   — under D5 the divergence is DESIGNED. ⭐ (9) D7(c) carried in: contributor_list.empty's ONLY
+#   consumer is this file, :124 ⇒ ⛔ do not revert it and ⛔ NO TEST MAY BYTE-PIN THE SENTENCE
+#   (11b-2a AC8). ✅ (10) AC8 IS THE ONE AC UNCHANGED — AND IT WAS CHECKED, ⛔ NOT INHERITED:
+#   MEMBER_FACING_PREFIXES re-verified at friction-budget/lib.ts:453; it FIRES here precisely because
+#   this story edits apps/mobile/, the same test that made it NOT fire for D7(c).
+#   CITATION CORRECTIONS: contributor_list.row_a11y is contribution.json:35, ⛔ not :36 (:36 is
+#   .title) · the keyExtractor is :137-139, ⛔ not :138 alone · family 13 is checklist :72-84 and the
+#   gate is bmad-code-review.toml:8-12, ⛔ not :9 · display-name.ts is packages/domain/src/MEMBER/,
+#   ⛔ not kyc/ · NomineeConsole's ScrollView closes at :206.
+#   ⭐ VERIFIED CLEAN AT dbb4a25: both render sites are the ONLY two importers (grep) · all 27
+#   tests/unit files and ⛔ NO mount harness · ⛔ no death-term at any of the three sites ·
+#   member.anonymousMember at common.json:215 · member_postings.ts:51 · directory.ts:82 ·
+#   PinnedItem.tsx present · resolver.ts:33 · deferred-work.md:2163.)
+#
+# last_updated_prior: 2026-08-30d (✅✅ STORY 11b-2a — BOTH FOURTH-PASS DECISIONS RULED BY BigDev ⇒ ROW
 #   FLIPPED `blocked-awaiting-decisions` → `ready-for-dev`. ⛔ NOTHING IS GATED; ALL TASKS STARTABLE.
 #   ⛔ NO DECISION MINTED IN .decision-log.md (that is 11b-2a Task 0).
 #   ⭐⭐ D6 → (a) DROP THE ANONYMIZED PRESENTER VARIANT. ⛔ No producer may emit an anonymized
@@ -12564,7 +12634,7 @@ development_status:
   # GOVERNANCE ACT, not an authoring convenience. ⇒ `ready-for-dev` here means what the enum says.
   11b-2-contribution-list-components-table-mobile-row: ready-for-dev
   11b-2a-contributor-name-resolution-defect: ready-for-dev
-  11b-2b-contributor-list-mobile-render-layer: ready-for-dev
+  11b-2b-contributor-list-mobile-render-layer: blocked-awaiting-decisions
   11b-3-sahyog-vivran-per-claim-story-surface: backlog
   11b-4-memorial-authorship-surface-family-writes-the-story: backlog
   11b-5-memorial-visual-components-memorial-record-portrait-frame-kinship-lattice: backlog

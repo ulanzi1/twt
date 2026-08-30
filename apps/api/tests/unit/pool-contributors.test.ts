@@ -16,6 +16,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { AppDeps } from '../../src/context.js';
 
 const getMemberStateAt = vi.fn();
+const getCurrentMemberStates = vi.fn();
 const listLiveAlertsForPariwar = vi.fn();
 const getCycleFreezeCommittedAt = vi.fn();
 const resolveAssignedPoolWithRosterForMember = vi.fn();
@@ -27,7 +28,7 @@ vi.mock('@twt/domain', async (importActual) => {
   const actual = await importActual<typeof import('@twt/domain')>();
   return {
     ...actual,
-    member: { ...actual.member, getMemberStateAt },
+    member: { ...actual.member, getMemberStateAt, getCurrentMemberStates },
     alert: { ...actual.alert, listLiveAlertsForPariwar },
     pool: { ...actual.pool, getCycleFreezeCommittedAt, resolveAssignedPoolWithRosterForMember, reserveNames },
     contribution: { ...actual.contribution, listConfirmedContributorsForPool },
@@ -62,6 +63,12 @@ function fakeRequest(): FastifyRequest {
 describe('poolContributors — pending aggregate uses the CONFIRMED-SET size, not the visible-row count', () => {
   it('a confirmed contributor with an unresolvable KYC name is omitted from `confirmed` rows but still counted for `pending`', async () => {
     getMemberStateAt.mockResolvedValue('active');
+    // Story 11b.2a: the handler batches contributor lifecycle state to decide whom to OMIT (AC1/AC2).
+    // Neither contributor here is `anonymized`, so this case is unchanged by the RTBF fix — which is
+    // the point: the three INTEGRITY skips still behave exactly as Story 8.3 shipped them.
+    getCurrentMemberStates.mockImplementation(
+      async (_tx: unknown, ids: readonly string[]) => new Map(ids.map((id) => [id, 'active'])),
+    );
     listLiveAlertsForPariwar.mockResolvedValue([{ cycleId: CYCLE_ID, poolCount: 1 }]);
     getCycleFreezeCommittedAt.mockResolvedValue(new Date('2026-07-01T00:00:00.000Z'));
     resolveAssignedPoolWithRosterForMember.mockResolvedValue({

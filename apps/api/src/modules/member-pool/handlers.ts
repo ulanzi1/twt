@@ -62,6 +62,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { AppDeps } from '../../context.js';
 import { NotFoundError, UnauthorizedError } from '../../http-errors.js';
 import { decryptKycField } from '../kyc/kyc-crypto.js';
+import { DIRECTORY_DECRYPT_CONCURRENCY, mapWithConcurrency } from '../kyc/bounded-decrypt.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import { contributionNoteFilename, resolveContributionNoteFacts } from './contribution-note.js';
 import { splitFirstNameLastInitial } from './name.js';
@@ -293,50 +294,98 @@ async function resolveContributorList(
   const { pool, poolCount, cycleId } = chosen;
 
   // (6) The CONFIRMED contributors — sources EXCLUSIVELY from `contribution.confirmed` (AC1/AC4). The
-  //     confirmed-only guard is in the domain read (no status/state param). Legitimately `[]` today (D2).
+  //     confirmed-only guard is in the domain read (no status/state param). LIVE since Story 9.4/9.5 —
+  //     the Epic-9 matcher is the producer (`reconciliation/matcher-write.ts` → `appendConfirmedContribution`).
   const confirmed = await contributionDomain.listConfirmedContributorsForPool(tx, {
     pariwarId,
     cycleId,
     poolId: pool.poolId,
   });
 
-  // (7) Decrypt each confirmed member's OWN KYC name (member-session layer, D4 — NOT the admin path) →
-  //     PII-shielded first+last-initial. DECRYPT-COST SEAM (D5): today 0 confirmed → 0 decrypts; once Epic 9
-  //     populates this is up to the confirmed-subset size (≪ roster early in a cycle) Tier-1 KMS decrypts
-  //     per read. When confirmation volume grows (the Epic-11b public Sahyog Vivran render is where it bites,
-  //     not member-session-gated), introduce a BATCH-decrypt + short-TTL read-model cache — NEVER a plaintext
-  //     cache at rest ([[project_validity_cache_failopen_pattern]]). Do NOT build the cache here.
-  const rows: ConfirmedContributorRow[] = [];
-  for (const contributor of confirmed) {
-    const kycProfile = await kycDomain.getMemberKycProfile(tx, pariwarId, contributor.memberId);
-    if (!kycProfile || kycProfile.nameCiphertext === null) {
-      // A confirmed contributor whose name is unresolvable is SKIPPED from the visible rows (an integrity
-      // anomaly worth logging), but still counts toward `confirmedCount` for the pending math below (they
-      // ARE confirmed — the aggregate must never understate confirmation). Skip, don't blank the whole list.
-      request.log.warn({ memberId: contributor.memberId }, 'pool-contributors: confirmed contributor name unresolvable — omitting row');
-      continue;
-    }
-    // A decrypt failure (bad ciphertext, transient KMS error) must degrade the SAME way as an unresolvable
-    // profile — skip this one row (Review fix) — not propagate out and fail-soft the WHOLE response, which
-    // would hide every already-resolved row and understate the pending aggregate far worse than one omission.
-    let fullName: string;
-    try {
-      fullName = await decryptKycField(kycProfile.nameCiphertext, pariwarId, deps.encryption);
-    } catch (err) {
-      request.log.warn({ err, memberId: contributor.memberId }, 'pool-contributors: confirmed contributor name decrypt failed — omitting row');
-      continue;
-    }
-    const { firstName, lastInitial } = splitFirstNameLastInitial(fullName);
-    if (firstName === '') {
-      request.log.warn({ memberId: contributor.memberId }, 'pool-contributors: confirmed contributor name empty after split — omitting row');
-      continue;
-    }
-    rows.push({ firstName, lastInitial });
-  }
+  // (6a) RTBF ERASURE (Story 11b.2a, AC1/AC2 — Decision 2026-08-30-169 cl.1/cl.4). ONE batched
+  //      lifecycle read over the whole confirmed set, so the loop below knows WHOM TO OMIT without
+  //      paying an event-stream replay per row.
+  //      ⛔ NEVER `getMemberStateAt` per contributor — that is one FULL replay per row, strictly worse
+  //      than the KMS decrypt bounded below, and its app-clock `occurred_at` bound can place a
+  //      DB-stamped `member.rtbf_anonymized` event outside the window and render the ERASED NAME.
+  const contributorStates = await memberDomain.getCurrentMemberStates(
+    tx,
+    confirmed.map((c) => c.memberId),
+  );
+
+  // (7) Decrypt each REPRESENTABLE confirmed member's OWN KYC name (member-session layer, D4 — NOT the
+  //     admin path) → PII-shielded first+last-initial. The decrypt is BOUNDED-CONCURRENCY (Story 11b.2a
+  //     AC3 / D4(a)): the confirmed subset is a live, growing population since Epic 9's producer landed
+  //     at Story 9.4, so a serial per-row Tier-1 KMS decrypt is a real cost on a real path — the bound
+  //     and its helper are SHARED with the public-directory render, never re-implemented here.
+  //     ⛔ NEVER a plaintext-name cache at rest ([[project_validity_cache_failopen_pattern]]).
+  // ⭐⭐ THE D5 ERASURE OMISSION — Story 11b.2a. This is ⛔ NOT a fail-soft like the three integrity
+  //     skips below, and a later reader must not "repair" it by restoring a row. An RTBF'd member's
+  //     public contributor representation DISAPPEARS: ⛔ no marker, ⛔ no placeholder, ⛔ no "an
+  //     anonymous member" row. That is PUBLIC ERASURE, ⛔ not destruction of the legal record — the
+  //     Trust's retained records live in restricted internal systems and are ⛔ never used to restore
+  //     this representation. The contributor list was the OUTLIER: `DIRECTORY_VISIBLE_MEMBER_STATES`
+  //     already omits `anonymized` from the public member directory (2026-08-20-143 cl.3).
+  //     ⭐ It filters BEFORE the decrypt fan-out, deliberately — an erased member's ciphertext is
+  //     never even SCHEDULED for decryption, so strictly LESS Tier-1 plaintext is materialised than
+  //     before this fix, and fewer rows reach the bounded decrypt below.
+  //     ⛔⛔ AND IT MOVES NO AGGREGATE. D3-aggregate: contribution state CONFIRMED · public
+  //     representation OMITTED. The omitted member STILL COUNTS toward `confirmedCount` — `rows.length`
+  //     diverging from `confirmedCount` is the RULED, CORRECT state, ⛔ not a bug to reconcile.
+  const representable = confirmed.filter(
+    (contributor) => contributorStates.get(contributor.memberId) !== 'anonymized',
+  );
+
+  // Each row degrades INDEPENDENTLY: `null` means "omit this one row", never "fail the response".
+  // The three `null` returns below are the Story 8.3 integrity skips, preserved verbatim with their
+  // rationale — the catch lives INSIDE the mapped function precisely so one bad row cannot reject the
+  // whole batch and hide every already-resolved row.
+  const resolved = await mapWithConcurrency(
+    representable,
+    DIRECTORY_DECRYPT_CONCURRENCY,
+    async (contributor): Promise<ConfirmedContributorRow | null> => {
+      const kycProfile = await kycDomain.getMemberKycProfile(tx, pariwarId, contributor.memberId);
+      if (!kycProfile || kycProfile.nameCiphertext === null) {
+        // A confirmed contributor whose name is unresolvable is SKIPPED from the visible rows (an integrity
+        // anomaly worth logging), but still counts toward `confirmedCount` for the pending math below (they
+        // ARE confirmed — the aggregate must never understate confirmation). Skip, don't blank the whole list.
+        request.log.warn({ memberId: contributor.memberId }, 'pool-contributors: confirmed contributor name unresolvable — omitting row');
+        return null;
+      }
+      // A decrypt failure (bad ciphertext, transient KMS error) must degrade the SAME way as an unresolvable
+      // profile — skip this one row (Review fix) — not propagate out and fail-soft the WHOLE response, which
+      // would hide every already-resolved row and understate the pending aggregate far worse than one omission.
+      let fullName: string;
+      try {
+        fullName = await decryptKycField(kycProfile.nameCiphertext, pariwarId, deps.encryption);
+      } catch (err) {
+        request.log.warn({ err, memberId: contributor.memberId }, 'pool-contributors: confirmed contributor name decrypt failed — omitting row');
+        return null;
+      }
+      const { firstName, lastInitial } = splitFirstNameLastInitial(fullName);
+      if (firstName === '') {
+        request.log.warn({ memberId: contributor.memberId }, 'pool-contributors: confirmed contributor name empty after split — omitting row');
+        return null;
+      }
+      return { firstName, lastInitial };
+    },
+  );
+  // `mapWithConcurrency` writes each result at its own INPUT index, so this filter preserves the
+  // domain read's deterministic contributor order — ⛔ never completion order.
+  const rows: ConfirmedContributorRow[] = resolved.filter(
+    (row): row is ConfirmedContributorRow => row !== null,
+  );
 
   // (8) AGGREGATE pending (D3) — `rosterSize − confirmedCount`, NOT attested-derived. `confirmedCount` is
-  //     the CONFIRMED-SET size (the truth), independent of how many rows we could decrypt, so the aggregate
-  //     never misstates confirmation. Today: 0 confirmed ⇒ pendingCount == rosterSize, pendingPercentage 100%.
+  //     the CONFIRMED-SET size (the truth), independent of how many rows we could decrypt OR represent, so
+  //     the aggregate never misstates confirmation.
+  //     ⛔⛔ TWO QUANTITIES ON TWO AXES, AND THEY MUST NEVER SUBTRACT FROM EACH OTHER (Decision
+  //     2026-08-30-169 cl.6). `pool.rosterSize` here is the FROZEN pool snapshot — the FINANCIAL
+  //     denominator, the frozen-roster invariant below. It is ⛔ NOT "contributors currently eligible for
+  //     public representation": re-defining it as that makes `pending` UNDERSTATE (pool of 10, 4 confirmed,
+  //     one RTBF'd ⇒ 9−4=5 where 6 genuinely have not confirmed) and fires the clamp so that a CONFIRMED
+  //     contribution vanishes from the member-visible meter. `confirmedCount` is `confirmed.length` — the
+  //     pre-omission set — precisely so an RTBF'd contributor keeps counting.
   const pending = contributionDomain.computePendingAggregate({
     rosterSize: pool.rosterSize,
     confirmedCount: confirmed.length,

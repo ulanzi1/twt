@@ -28,7 +28,7 @@
   "close_of_cycle.settling.body_a11y": "यह चक्र {date} को पूर्ण हुआ। हम अभी योगदानों का मिलान अपने बैंक विवरण से कर रहे हैं। मिलान पूर्ण होते ही आपके योगदान की पुष्टि हो जाएगी।",
   "close_of_cycle.settling.title": "मिलान जारी है",
   "contributor_list.confirmed_header": "पुष्ट अंशदान",
-  "contributor_list.empty": "अभी तक कोई पुष्ट अंशदान नहीं।",
+  "contributor_list.empty": "अभी दिखाने के लिए कोई योगदानकर्ता नाम नहीं है।",
   "contributor_list.no_pool": "अभी आपका कोई सक्रिय पूल नहीं है।",
   "contributor_list.pending_strip": "{count} पुष्टि हेतु शेष ({percentage}%)",
   "contributor_list.pending_strip_a11y": "{count} अंशदान पुष्टि हेतु शेष, पूल का {percentage} प्रतिशत",

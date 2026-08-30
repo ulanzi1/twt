@@ -698,45 +698,45 @@ is a second reason the ruled change is a value re-word.
         member-gated"* framing was **REJECTED**, and that the earlier recorded assumption is
         **superseded** — ⛔ it reached the right surface for the wrong reason.
         ⛔ `governance:` prefix, own commit, before any code.
-- [ ] **Task 1 — Bound the state load (AC2)** ✅ `[D3-shape(ii)(a) RULED — startable]`
-  - [ ] Add the batched state resolver in `packages/domain/src/member/read.ts` →
+- [x] **Task 1 — Bound the state load (AC2)** ✅ `[D3-shape(ii)(a) RULED — startable]`
+  - [x] Add the batched state resolver in `packages/domain/src/member/read.ts` →
         `Map<MemberId, MemberLifecycleState>`, one query, chunked at a named constant.
         ⛔ **Never `getMemberStateAt` per row** (Trap 1).
-  - [ ] ⛔⛔ **Mirror `getCurrentMemberState` (`:150`) — no `atTimestamp`, no `occurred_at` bound.**
+  - [x] ⛔⛔ **Mirror `getCurrentMemberState` (`:150`) — no `atTimestamp`, no `occurred_at` bound.**
         ⭐ Under D5 this is **sharper than before**: a missed anonymization no longer renders a marker,
         it renders **the erased member's REAL NAME**.
-  - [ ] ⛔ State only — no decrypt, no KYC join, ⛔ no death overlay. ⛔ No dynamic `.limit()`.
-- [ ] **Task 2 — The empty-state copy (AC8)** ✅ `[D7(c) RULED — startable]`
+  - [x] ⛔ State only — no decrypt, no KYC join, ⛔ no death overlay. ⛔ No dynamic `.limit()`.
+- [x] **Task 2 — The empty-state copy (AC8)** ✅ `[D7(c) RULED — startable]`
       ⛔⛔ ~~**Widen the contract**~~ **STAYS DELETED BY D5.** ⛔ The contract is ⛔ not opened.
       ⚠ ⭐ **Do ⛔ NOT opportunistically fix `deferred-work.md:2162` or reconcile Trap 4's re-spellings** —
       ⛔ nothing derives from a widened tuple now. Both stay recorded in Task 6.
       ⭐ **The slot now carries D7(c)'s surface fix, which is a VALUE re-word and nothing else.**
-  - [ ] Re-word `contributor_list.empty` in **both** locales to AC8's **verbatim** strings
+  - [x] Re-word `contributor_list.empty` in **both** locales to AC8's **verbatim** strings
         (`packages/i18n/locales/en/contribution.json:31` · `hi/contribution.json:31`).
         ⛔ **No new key. ⛔ No code change. ⛔ No `apps/mobile/` edit. ⛔ Nothing on the wire.**
-  - [ ] ⛔ **Do ⛔ NOT touch `contributor_list.pending_strip` / `pending_strip_a11y`** — ⭐ they own the
+  - [x] ⛔ **Do ⛔ NOT touch `contributor_list.pending_strip` / `pending_strip_a11y`** — ⭐ they own the
         confirmation claim and are correct.
-  - [ ] `pnpm microcopy:check` green (`contribution.json` is in `copy_globs`), **and** record a
+  - [x] `pnpm microcopy:check` green (`contribution.json` is in `copy_globs`), **and** record a
         **NON-AUTHOR tone-review sign-off** (`docs/tone-guide.md §5` — ⛔ the lint does ⛔ not substitute).
-  - [ ] ⛔ **⛔ NOT the AC7 path** — ⛔ no counsel, ⛔ no Story-2.4 amendment workflow. ⭐ Ordinary
+  - [x] ⛔ **⛔ NOT the AC7 path** — ⛔ no counsel, ⛔ no Story-2.4 amendment workflow. ⭐ Ordinary
         product microcopy on a surface this story owns.
-- [ ] **Task 3 — The boundary fix (AC1)** ✅ `[D3(a) + D5 + D3-aggregate RULED — startable]`
-  - [ ] ⭐ Skip every `anonymized` contributor **BEFORE the decrypt**, using AC2's state map —
+- [x] **Task 3 — The boundary fix (AC1)** ✅ `[D3(a) + D5 + D3-aggregate RULED — startable]`
+  - [x] ⭐ Skip every `anonymized` contributor **BEFORE the decrypt**, using AC2's state map —
         ⛔ never decrypt-then-discard.
-  - [ ] ⭐ Give the skip **its own comment** marking it as the **D5 erasure behaviour**, ⛔ explicitly
+  - [x] ⭐ Give the skip **its own comment** marking it as the **D5 erasure behaviour**, ⛔ explicitly
         distinct from the three integrity `continue`s beside it (Trap 2).
-  - [ ] ⛔ Preserve the **`:317` / `:327` / `:332`** `continue`s verbatim with their comments
+  - [x] ⛔ Preserve the **`:317` / `:327` / `:332`** `continue`s verbatim with their comments
         (`:313-315` / `:319-321`) — ⚠ **Trap 2's corrected table.**
-  - [ ] ⛔ **`resolveMemberDisplayName` is NOT called.** ⛔ Add no death conjunct anywhere.
-  - [ ] ⛔⛔ **Touch ⛔ NO aggregate.** D3-aggregate ruled the omitted contributor **still counts**:
+  - [x] ⛔ **`resolveMemberDisplayName` is NOT called.** ⛔ Add no death conjunct anywhere.
+  - [x] ⛔⛔ **Touch ⛔ NO aggregate.** D3-aggregate ruled the omitted contributor **still counts**:
         ⛔ `confirmedCount` unchanged · ⛔ `computePendingAggregate` unchanged · ⛔ `pool.rosterSize`
         unchanged (it is the **frozen financial denominator**, ⛔ NOT the ruling's representation-
         eligibility count — see D3-aggregate's clamp warning). ⭐ **Only `rows` shrinks.**
-- [ ] **Task 4 — Bound the decrypt (AC3)** ✅ `[D4(a) RE-RULED — startable]`
-  - [ ] Bounded concurrency on the `public-pages` precedent; per-row fail-soft preserved exactly.
-  - [ ] ⭐ **ONE exported constant AND the `mapWithConcurrency` helper, both shared** — ⛔ not a
+- [x] **Task 4 — Bound the decrypt (AC3)** ✅ `[D4(a) RE-RULED — startable]`
+  - [x] Bounded concurrency on the `public-pages` precedent; per-row fail-soft preserved exactly.
+  - [x] ⭐ **ONE exported constant AND the `mapWithConcurrency` helper, both shared** — ⛔ not a
         cross-reference comment, ⛔ not a copy-pasted helper.
-  - [ ] ⛔ No plaintext cache at rest.
+  - [x] ⛔ No plaintext cache at rest.
 - [ ] **Task 5 — Prove it (AC6)** ✅ `[startable]`
   - [ ] `pool-contributors-rtbf.spec.ts` — real anonymization; assert the member is **ABSENT**, the
         sentinel appears **nowhere in the serialized JSON**, and peer rows are **untouched**.

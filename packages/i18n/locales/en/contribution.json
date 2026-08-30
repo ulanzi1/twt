@@ -28,7 +28,7 @@
   "close_of_cycle.settling.body_a11y": "This cycle closed on {date}. We are matching contributions against our bank records now. Your contribution will be confirmed once matching settles.",
   "close_of_cycle.settling.title": "Matching is underway",
   "contributor_list.confirmed_header": "Confirmed contributions",
-  "contributor_list.empty": "No confirmed contributions yet.",
+  "contributor_list.empty": "No contributor names to show right now.",
   "contributor_list.no_pool": "You have no live pool right now.",
   "contributor_list.pending_strip": "{count} pending confirmation ({percentage}%)",
   "contributor_list.pending_strip_a11y": "{count} contributions pending confirmation, {percentage} percent of the pool",

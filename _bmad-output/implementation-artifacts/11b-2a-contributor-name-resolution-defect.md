@@ -737,29 +737,29 @@ is a second reason the ruled change is a value re-word.
   - [x] ⭐ **ONE exported constant AND the `mapWithConcurrency` helper, both shared** — ⛔ not a
         cross-reference comment, ⛔ not a copy-pasted helper.
   - [x] ⛔ No plaintext cache at rest.
-- [ ] **Task 5 — Prove it (AC6)** ✅ `[startable]`
-  - [ ] `pool-contributors-rtbf.spec.ts` — real anonymization; assert the member is **ABSENT**, the
+- [x] **Task 5 — Prove it (AC6)** ✅ `[startable]`
+  - [x] `pool-contributors-rtbf.spec.ts` — real anonymization; assert the member is **ABSENT**, the
         sentinel appears **nowhere in the serialized JSON**, and peer rows are **untouched**.
-  - [ ] A test asserting state-resolution round trips are **O(1)** in the contributor count (AC2).
-  - [ ] ⭐ A test asserting the batched resolver's SQL carries **no `occurred_at` upper bound** (AC2).
-  - [ ] ⭐⭐ **THE D3-aggregate TEST — assert the DIVERGENCE, ⛔ not equality.** After a real
+  - [x] A test asserting state-resolution round trips are **O(1)** in the contributor count (AC2).
+  - [x] ⭐ A test asserting the batched resolver's SQL carries **no `occurred_at` upper bound** (AC2).
+  - [x] ⭐⭐ **THE D3-aggregate TEST — assert the DIVERGENCE, ⛔ not equality.** After a real
         anonymization: `confirmedCount` / `pending.count` / `pending.percentage` are **byte-identical
         to before**, while `confirmed.length` has **dropped by one**. ⭐ *Contribution state:
         `CONFIRMED` · Public representation: `OMITTED`* — ⛔ a test asserting `rows.length ===
         confirmedCount` would encode the **wrong** model and must ⛔ not be written.
-  - [ ] ⛔⛔ **THE DROP-TO-ZERO CASE** ✅ `[D7(c) RULED]`. ⭐ The divergence test above drops `rows` from
+  - [x] ⛔⛔ **THE DROP-TO-ZERO CASE** ✅ `[D7(c) RULED]`. ⭐ The divergence test above drops `rows` from
         N to N−1; ⛔ **it never reaches ZERO, which is the case that rendered the contradiction.** Assert
         the wire for a pool whose **ONLY** confirmed contributor is RTBF'd: `confirmed` is `[]` **while**
         `pending.count === rosterSize − 1` and `pending.percentage` is unchanged.
         ⛔⛔ **AND ASSERT THE ⛔ ABSENCE OF A REASON FIELD** — the response carries ⛔ no `omittedCount`,
         ⛔ no `hasHiddenContributors`, ⛔ no reason code, ⛔ no new key of any shape. ⭐ `.strict()` would
         reject one, ⛔ but assert it explicitly so a later "helpful" addition fails loudly (AC8).
-  - [ ] ⭐ **A locale test for AC8** — `contributor_list.empty` in **both** locales makes ⛔ NO
+  - [x] ⭐ **A locale test for AC8** — `contributor_list.empty` in **both** locales makes ⛔ NO
         confirmation claim. ⚠ ⭐ **Assert the PROPERTY, ⛔ not the sentence** — ⛔ a byte-equality test on
         copy pins the wording and turns every future tone review into a test edit. ⛔ And assert the key
         still **exists in both** locales (`t()` throws on a miss —
         [[project_missed_cycle_visibility_substrate]]).
-  - [ ] ⛔ **No `rowKey` assertions** — nothing ships to assert on (AC5 vacated).
+  - [x] ⛔ **No `rowKey` assertions** — nothing ships to assert on (AC5 vacated).
 - [ ] **Task 6 — Route and re-disposition the records, ⛔ do not re-file them**
   - [ ] ⭐⭐ **RTBF-D1 (`deferred-work.md:3980`) — ⛔ NOT DISCHARGED. RE-DISPOSITION IT.** Its subject is
         the **display-time name-resolver seam**, and under D5 the contributor path **omits instead of

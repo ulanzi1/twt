@@ -877,36 +877,36 @@ dated `⛔ RECONCILED 2026-08-29 (AI-11a-1(b), Story 11b.2 authoring + validatio
         sites *refer* to the inventory without restating it** (`:1317`, `:1319`, `:1321`, `:1330`,
         `:1787`, `:2581`) so the annotated set is not read as exhaustive.
   - [x] Mark `deferred-work.md` item (f) **discharged by this story**, ⛔ not "closed".
-- [ ] **Task 1 — The presenter (AC1, AC2, AC3, AC4)** ✅ `[D2(a) · D11-outputshape(a) · D12-refscope(a) RULED — startable]`
-  - [ ] ⛔⛔ **RE-READ `11b-2a-…md` BEFORE WRITING A LINE OF `view-model.ts`** — its rulings bind this
+- [x] **Task 1 — The presenter (AC1, AC2, AC3, AC4)** ✅ `[D2(a) · D11-outputshape(a) · D12-refscope(a) RULED — startable]`
+  - [x] ⛔⛔ **RE-READ `11b-2a-…md` BEFORE WRITING A LINE OF `view-model.ts`** — its rulings bind this
         presenter **by line number**, and they have already moved once (D5 · D6(a) · the D3-shape(i)
         and D3-key vacations all landed after this story's second validation pass). If it has ruled
         again, **STOP and report the conflict** ([[feedback_supersede_never_reinterpret]]).
-  - [ ] ⛔ **Read `packages/ui/src/pool-progress/*` end to end first** — ⚠ **FIVE files, ~245 lines**
+  - [x] ⛔ **Read `packages/ui/src/pool-progress/*` end to end first** — ⚠ **FIVE files, ~245 lines**
         (the fifth is `constants.ts`, and it is the worked answer to "how do I emit a token ROLE
         without importing `@twt/tokens`"). It answers nearly every "how should this be shaped?"
         question here. ⛔ Do not invent a shape.
-  - [ ] Create `packages/ui/src/contribution-list/{index,view-model,presenter,i18n-keys}.ts`.
-  - [ ] `view-model.ts` — the AC3 types **verbatim**. ⚠⛔ **They carry ⛔ NO `rowKey` on either
+  - [x] Create `packages/ui/src/contribution-list/{index,view-model,presenter,i18n-keys}.ts`.
+  - [x] `view-model.ts` — the AC3 types **verbatim**. ⚠⛔ **They carry ⛔ NO `rowKey` on either
         interface** (D5 vacated it) and the view-model's `displayName` is a **SINGLE `nameParts` arm**
         (D11-outputshape(a)); the input variant is **`name | unknown`, ⛔ two kinds** (D6(a) dropped
         `anonymized`). Plus the `ContributionListI18nRef` declaration with `namespace: 'contribution'`
         (AC2/D12-refscope(a)), the confirmed-only doc-block (AC4) and the kind-tag-mirror note
         explaining the **deliberate** omission of `anonymized` (Trap 3).
-  - [ ] `presenter.ts` — `deriveContributionRowViewModel(row)`; exhaustive `never` check over the
+  - [x] `presenter.ts` — `deriveContributionRowViewModel(row)`; exhaustive `never` check over the
         **two** kinds; ⛔ **`unknown` THROWS and mints nothing** (D8(a)); ⛔ **no name join** — emit
         `{kind:'nameParts', firstName, lastInitial}` (D9(a)); doc-block stating it throws and that
         **every consumer owes a try/catch** (Trap 4).
-  - [ ] `i18n-keys.ts` — `import type { ContributionListI18nRef } from './view-model.js';` then one
+  - [x] `i18n-keys.ts` — `import type { ContributionListI18nRef } from './view-model.js';` then one
         iterable `CONTRIBUTION_LIST_I18N_REFS` record over **all ten** `contributor_list.*` keys
         (`contribution`). ⛔⛔ **⛔ NOT `member.anonymousMember`** — 11b.2a's D6(a) removed it; nothing
         in this module can render it. ⭐ **Reuse; ⛔ mint nothing, and ⛔ do not create a namespace** —
         a namespace not in `copy_globs` is unscanned copy wearing a green check
         (`microcopy.yaml:350-352`).
-  - [ ] `index.ts` — **explicit named exports** on the `pool-progress/index.ts` precedent; then
+  - [x] `index.ts` — **explicit named exports** on the `pool-progress/index.ts` precedent; then
         barrel from `packages/ui/src/index.ts` with the per-story annotation comment.
-- [ ] **Task 2 — The teeth (AC1, AC2, AC4, AC5)**
-  - [ ] `packages/ui/tests/contribution-list/presenter.test.ts` — the **three-half** anti-widening
+- [x] **Task 2 — The teeth (AC1, AC2, AC4, AC5)**
+  - [x] `packages/ui/tests/contribution-list/presenter.test.ts` — the **three-half** anti-widening
         test (AC4: compile · runtime · **nesting+rename**, the last using the prescribed
         `Record<AllKeys<T>, true>` literal, ⛔ never a hand-written key array), the **two-kind**
         exhaustiveness test, the **`nameParts`** test (⛔ assert no joined string is ever emitted),
@@ -919,20 +919,20 @@ dated `⛔ RECONCILED 2026-08-29 (AI-11a-1(b), Story 11b.2 authoring + validatio
         `continue`s on a null ciphertext); un-attested, ⛔ not tested. Trigger: 11b.3's Astro
         producer."* ⭐ It is a **throwing exhaustiveness guard**, and a guard that never fires is
         working.
-  - [ ] `packages/ui/tests/contribution-list/no-list-iteration.test.ts` (AC1) — the source half over
+  - [x] `packages/ui/tests/contribution-list/no-list-iteration.test.ts` (AC1) — the source half over
         **all** module files (`readdirSync`, comment-stripped) **and** the compile-time
         array-parameter assertion. ⛔ Both halves; the source half alone is a proxy.
-  - [ ] ⛔ **TWO scan files, ⛔ not one** (AC5): `forbidden-imports.test.ts` (parsed import
+  - [x] ⛔ **TWO scan files, ⛔ not one** (AC5): `forbidden-imports.test.ts` (parsed import
         specifiers, incl. `react`/`react-native`/`astro`/`@twt/tokens`) **and** `death-term.test.ts`
         (raw text, asserting the terms are ⛔ **ABSENT** from the comment-stripped source **and**
         ⛔ **ABSENT** from the comments — ⛔ never asserting one is present). ⚠ Merging them makes the
         death half **vacuous for every possible file**. Plus the `'green'`-literal check.
         ⭐ Both scans point `readdirSync` at **`packages/ui/src/contribution-list/`** — ⛔ never at
         `packages/ui/src/`.
-  - [ ] `packages/ui/tests/package-boundary.test.ts` — `dependencies` is exactly `@twt/contracts`
+  - [x] `packages/ui/tests/package-boundary.test.ts` — `dependencies` is exactly `@twt/contracts`
         (AC1). ⚠ ⭐ **The `@twt/tokens` hole is closed by `forbidden-imports.test.ts`, ⛔ not here** —
         a `devDependency` **value import** never touches `dependencies`.
-  - [ ] ⚠⛔ **THE AC2 TEST'S PATH — GET THE DEPTH RIGHT; AN EARLIER PASS NAMED THE WRONG ORIGIN.** The
+  - [x] ⚠⛔ **THE AC2 TEST'S PATH — GET THE DEPTH RIGHT; AN EARLIER PASS NAMED THE WRONG ORIGIN.** The
         AC2 locale test lives at **`packages/ui/tests/contribution-list/presenter.test.ts`**, ⛔ not
         `packages/ui/tests/`, so it is **four** levels to the repo root, ⛔ not three:
         `path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..')` then

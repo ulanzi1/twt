@@ -831,11 +831,11 @@ dated `⛔ RECONCILED 2026-08-29 (AI-11a-1(b), Story 11b.2 authoring + validatio
 > ⛔ **EXECUTION ORDER IS BINDING.** Task 0 first ([[feedback_governance_commits_precede_implementation]]).
 > ✅ **All decisions are ruled; ⛔ no task is gated.**
 
-- [ ] **Task 0 — Governance first (AC0, AC8)** ✅ `[ALL NINE RULED — startable]`
-  - [ ] ⛔⛔ **FIRST: RE-READ `11b-2a-…md`'s PREFLIGHT AND ITS TASK-6 "WHAT DROPS" TABLE** (Preflight
+- [x] **Task 0 — Governance first (AC0, AC8)** ✅ `[ALL NINE RULED — startable]`
+  - [x] ⛔⛔ **FIRST: RE-READ `11b-2a-…md`'s PREFLIGHT AND ITS TASK-6 "WHAT DROPS" TABLE** (Preflight
         STEP 1). If 11b.2a has ruled since this file's `c9d86ab` baseline, **STOP and report the
         conflict** — ⛔ do not reconcile it yourself.
-  - [ ] Read the `.decision-log.md` head **live** (`2026-08-28-167`, re-verified unmoved 2026-08-30;
+  - [x] Read the `.decision-log.md` head **live** (`2026-08-28-167`, re-verified unmoved 2026-08-30;
         ⛔ do not hardcode the next number) and **TRANSCRIBE** into it the rulings **already recorded
         in the Decisions section of this file** — **ALL NINE**: **D1** (ruled by construction: the
         presenter only; the Astro layer deferred because **there is no host**, ⛔ not because C-1
@@ -849,18 +849,18 @@ dated `⛔ RECONCILED 2026-08-29 (AI-11a-1(b), Story 11b.2 authoring + validatio
         qualified by its owning story) — one clause each, quoting the ground verbatim.
         ⛔⛔ **The dev agent does not decide, does not paraphrase, and does not supply a ground.**
         ⛔ `governance:` prefix, own commit, before any code.
-  - [ ] ⚠ ⭐ **AND 11b.2a IS MINTING AGAINST THE SAME HEAD.** The two stories run in **parallel**
+  - [x] ⚠ ⭐ **AND 11b.2a IS MINTING AGAINST THE SAME HEAD.** The two stories run in **parallel**
         and both read `2026-08-28-167`. ⇒ ⛔ **re-read the head immediately before you write, on a
         freshly-`fetch`ed branch**, and if the number you were about to take is taken, **take the
         next one** — ⛔ never edit, merge into, or renumber 11b.2a's entry
         ([[feedback_supersede_never_reinterpret]]). ⭐ Same rule for the `sprint-status.yaml`
         `last_updated` ledger: **append above whatever head exists**, ⛔ never overwrite a sibling's.
-  - [ ] Append the `⛔ RECONCILED 2026-08-30` block to `epics.md`'s Story 11b.2 section — the
+  - [x] Append the `⛔ RECONCILED 2026-08-30` block to `epics.md`'s Story 11b.2 section — the
         defective-AC findings **and** the 11b.2 / 11b.2a / 11b.2b split, with the new sprint-status
         keys named so a future `sprint-planning` run does not regenerate a ghost. ⭐ Verified: **no
         RECONCILED block exists there yet**, and 11b.2a/11b.2b appear **nowhere** in `epics.md` — so
         this is a **write**, ⛔ not an extend. ⛔ Annotate only.
-  - [ ] ⭐⛔ **Write the UX-spec amendment (AC8) AGAINST ALL FIVE ANCHORS, NAMED HERE** — ⚠ an earlier
+  - [x] ⭐⛔ **Write the UX-spec amendment (AC8) AGAINST ALL FIVE ANCHORS, NAMED HERE** — ⚠ an earlier
         pass compressed this to *"Write the UX-spec amendment (AC8)"*, and the dev agent works from
         the Tasks list ([[feedback_spec_edits_must_propagate_to_tasks]]), so the anchors evaporated:
         · **`:1158`** (the layout-primitive inventory)
@@ -876,7 +876,7 @@ dated `⛔ RECONCILED 2026-08-29 (AI-11a-1(b), Story 11b.2 authoring + validatio
         ⛔ never a rewrite** ([[feedback_supersede_never_reinterpret]]). ⚠ **And note that six further
         sites *refer* to the inventory without restating it** (`:1317`, `:1319`, `:1321`, `:1330`,
         `:1787`, `:2581`) so the annotated set is not read as exhaustive.
-  - [ ] Mark `deferred-work.md` item (f) **discharged by this story**, ⛔ not "closed".
+  - [x] Mark `deferred-work.md` item (f) **discharged by this story**, ⛔ not "closed".
 - [ ] **Task 1 — The presenter (AC1, AC2, AC3, AC4)** ✅ `[D2(a) · D11-outputshape(a) · D12-refscope(a) RULED — startable]`
   - [ ] ⛔⛔ **RE-READ `11b-2a-…md` BEFORE WRITING A LINE OF `view-model.ts`** — its rulings bind this
         presenter **by line number**, and they have already moved once (D5 · D6(a) · the D3-shape(i)

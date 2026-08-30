@@ -120,6 +120,24 @@ seven epics).
 
 ⭐ **Trigger: Story 11b.2 or 11b.3 authoring, whichever comes first.**
 
+✅⛔ **DISCHARGED BY STORY 11b.2 (2026-08-30) — ⛔ NOT "closed"** ([[feedback_closure_language_precision]]).
+The trigger above **FIRED** at Story 11b.2 authoring, and the amendment was **written**, ⛔ not deferred again.
+
+⭐ **Ruled `D6-uxspec(a)`** (BigDev, 2026-08-29), transcribed as `.decision-log.md#decision-2026-08-30-168` **cl.3**.
+⚠⛔ **`D6-uxspec` is the RENAMED `D6`** (`-168` cl.9) — ⛔ **11b.2a's `D6(a)` is a DIFFERENT ruling** (drop the anonymized presenter variant). ⛔ Never cite a bare `D6` across this sibling set.
+
+⭐ **WHAT WAS WRITTEN, AND WHERE — the amendment spans FIVE anchors, ⛔ not `:1158` alone:**
+· `ux-design-specification.md:1287-1298` — ⭐ **the CANONICAL record**, in the section literally titled *"Public Column Inventory — Sahyog List"*; the other four point here.
+· `:1158` (the layout primitive) · `:1252` (the Real Data Test's 10-column restatement) · `:1788`/`:1798` (desktop + mobile row anatomies) · `:2161`+`:2165` (the performance contract).
+⛔ **Annotation, ⛔ never a rewrite** — ⛔ no column was deleted and ⛔ no replacement inventory was authored ([[feedback_supersede_never_reinterpret]]).
+⚠ **Six further sites *refer* to the inventory without restating it and are ⛔ NOT in scope** (`:1317`, `:1319`, `:1321`, `:1330`, `:1787`, and ⭐ `:2581`, in a breakpoint table). ⛔ Do not read the annotated set as exhaustive.
+
+⚠⛔ **WHAT REMAINS OPEN — the amendment RECORDS the defect; it does ⛔ NOT repair the surface:**
+· ⛔ **Naming the BUILDABLE inventory is 11b.3's**, at the point it has a host (`apps/public/src/pages/` holds ⛔ no contributor route today).
+· ⛔ **The contributor NAME FORM stays UNRULED** and is routed to the Trustee Panel as `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-08-30-contributor-name-public-tier.md` — ⛔ **ROUTED, ⛔ nothing ratified, ⛔ nothing applied** (`-168` cl.4). ⚠ **Three** committed `epics.md` lines assume first-name + last-initial for contributors (`:3145` · `:3238` · `:4931`) and ⛔ **none is a ruling**.
+· ⛔ **`<StatCardStrip>` stays unowned** — C-3 (`epics.md:4799`), *"NO PRODUCER | No owner"*.
+· ⛔ **The Real Data Test's disambiguation question is still owed** — its scenarios rest on `Member ID` + `HRMS`, which do not exist. ⚠ The **gate is not weakened**; the **means** must be re-posed against fields that do exist. ⛔ Re-posing it was ⛔ not this amendment's to do.
+
 ### (g) The **edge-cache blindness** of the abuse counter
 
 A cached hit **never reaches the origin**, so the origin-side rate limit and every abuse signal see

@@ -4,7 +4,7 @@ baseline_commit: c9d86ab97ad79cdd70f1cea5cce33143fb306f6a
 
 # Story 11b.2: ContributionList Presenter — the sixth `@twt/ui` module `[PRIMITIVE]`
 
-Status: review
+Status: done
 
 > ⭐ **NINE DECISIONS ARE COMMITTED, AND ⛔ "FIVE" WAS NEVER THE RIGHT COUNT.** Ruled by BigDev
 > 2026-08-29: **D2(a) · D6-uxspec(a) · D7-nameform(a) · D8(a) · D9(a)**. Ruled by BigDev **2026-08-30
@@ -996,6 +996,74 @@ dated `⛔ RECONCILED 2026-08-29 (AI-11a-1(b), Story 11b.2 authoring + validatio
         ⇒ **read it live**, take the next free suffix, and ⛔ **do not overwrite any existing entry.**
 
 ---
+
+### Review Findings
+
+3-layer adversarial review (Blind Hunter, Edge Case Hunter, Acceptance Auditor) at baseline
+`c9d86ab..HEAD`. Acceptance Auditor found zero AC violations (all nine ACs independently re-verified
+against live code, including two mutation tests). All six patch findings below are test/gate-scope
+completeness gaps in the new mechanized scans — not defects in the presenter's behavior.
+
+- [x] [Review][Patch] `forbidden-imports.test.ts`'s `IMPORT_RE` only matches `import ... from` / bare
+      `import '...'` — it does not match `export ... from '...'` or dynamic `import(...)`. `index.ts`
+      (the module barrel) is composed entirely of `export { ... } from` statements, so it contributes
+      **zero** entries to the scan despite the file's own comment claiming it is "the only thing that
+      closes the `@twt/tokens` hole." [packages/ui/tests/contribution-list/forbidden-imports.test.ts:39]
+      — Fixed: `IMPORT_RE` now also matches `export ... from '...'` and dynamic `import('...')`; a new
+      sanity test asserts `index.ts` contributes at least one parsed entry.
+- [x] [Review][Patch] `no-list-iteration.test.ts`'s `ITERATION_CONSTRUCTS` array omits `.some(`,
+      `.every(`, `.find(`, `.findIndex(`, `.sort(`, `.entries(` — a future row-set construct written
+      with any of these bypasses the AC1(a) mechanized scan entirely.
+      [packages/ui/tests/contribution-list/no-list-iteration.test.ts:35-45] — Fixed: all six added to
+      `ITERATION_CONSTRUCTS`.
+- [x] [Review][Patch] `death-term.test.ts`'s `FORBIDDEN_TERMS` list is literal-string matches only
+      (`account-frozen`, `account_frozen`, `deceased`, `members.state`, `date_of_death`) and misses
+      camelCase (`accountFrozen`, `dateOfDeath`) and bracket-access (`members['state']`) forms of the
+      same lifecycle terms this scan exists specifically to fence out (AC5(b), the C-5-inversion guard).
+      [packages/ui/tests/contribution-list/death-term.test.ts:50-56] — Fixed: both the source text and
+      the terms are normalized (lower-cased, non-alphanumeric stripped) before comparison, so kebab /
+      snake / camelCase / bracket-access spellings of the same term all collapse to one check.
+- [x] [Review][Patch] `presenter.test.ts`'s ANTI-WIDENING assertions (AC4) check only hand-typed TS
+      literals (`INPUT_KEYS`/`VIEW_MODEL_KEYS`) against the declared types — no test calls
+      `Object.keys()` on the function's actual runtime return value and compares it to the expected
+      shape, so a stray extra property introduced via an unsafe cast or object spread in `presenter.ts`
+      would not be caught by any test in this suite.
+      [packages/ui/tests/contribution-list/presenter.test.ts:119-127] — Fixed: added test (d), which
+      calls `deriveContributionRowViewModel` and asserts `Object.keys()` on the actual return value (and
+      its nested `displayName`/`rowA11y`) against the declared shape.
+- [x] [Review][Patch] `no-list-iteration.test.ts`'s "no list-level presenter export" regex
+      (`/list.*viewmodel|viewmodel.*list/i`, AC1(b)) only catches export names containing both
+      substrings — a differently-named list-level export (e.g. `deriveAllContributionRows`) would pass
+      silently. Low severity: primary protection is the construct scan + compile-time array guard above
+      it; this is a redundant belt-and-braces layer, not load-bearing on its own.
+      [packages/ui/tests/contribution-list/no-list-iteration.test.ts:85-95] — Fixed: replaced the naming
+      heuristic with a naming-independent check — the module's runtime exports must contain exactly one
+      function, full stop, regardless of what it's called.
+- [x] [Review][Defer] The regex-based comment/string-stripping mechanism
+      (`.replace(/\/\*[\s\S]*?\*\//g,'').replace(/\/\/.*$/gm,'')`) shared by all three scan tests
+      (`forbidden-imports.test.ts`, `no-list-iteration.test.ts`, `death-term.test.ts`) is blind to
+      `//`-shaped sequences inside string literals — one such string could defeat all three checks at
+      once. Pre-existing pattern explicitly copied from
+      `apps/mobile/tests/unit/status-pill-render.test.ts:31-32` (per `death-term.test.ts`'s own
+      comment), not introduced fresh by this diff — deferred, pre-existing.
+
+**Dismissed as noise (8, verified live before dismissal):** a claimed unexplained citation
+`epics.md:4888` (verified real — a second reconciliation paragraph independently confirming the same
+Panel-reservation fact as `:4868`, not a typo); `deferred-work.md`'s item-count / "None is described as
+closed" framing (verified consistent with the established discharged-vs-closed convention,
+[[feedback_closure_language_precision]] — AC6's "SIX" count correctly excludes the (vii)/(viii) stubs
+and the (ix) discharge entry); `sprint-status.yaml`'s pass/fail figures being "unverifiable from the
+diff alone" (the Acceptance Auditor independently re-ran the suite and confirmed 251/251 pass and clean
+`tsc`); `presenter.ts` lacking null/empty-string guards on `row`/`displayName`/`poolLetterCode` (D8(a)'s
+throw requirement is scoped to the `unknown` kind specifically per `.decision-log.md:119-124`'s
+verbatim ground; the wire contract's `.strict()` + `min(1)` already forecloses this upstream, and this
+fn is on a per-row scroll hot path that the story explicitly wants allocation-light); the exhaustiveness
+default branch's `JSON.stringify` theoretically throwing on a non-JSON-safe value (still an observable
+throw either way); the compile-time array-not-detected-under-hypothetical-overloads concern (the
+function has no overloads today); D12-refscope's per-ref namespace tagging having "no observable effect
+today" (faithfully implements a already-ruled decision, not an implementation defect); the single-arm
+union / hand-forged-cast exhaustiveness test (both are deliberate, explicitly-commented, standard TS
+exhaustiveness patterns).
 
 ## ⚖️ Decisions — ✅ **ALL NINE COMMITTED (BigDev, 2026-08-29 and 2026-08-30).** ⛔ Do not re-litigate.
 

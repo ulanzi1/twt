@@ -1,5 +1,40 @@
 # generated: 2026-05-29
-# last_updated: 2026-08-30a (⭐⭐ STORY 11b-2a — FINAL RULING D5 BY BigDev: RTBF REMOVES THE
+# last_updated: 2026-08-30b (✅✅ STORY 11b-2a — THE LAST TWO OPEN ITEMS RULED BY BigDev ⇒ ROW FLIPPED
+#   `blocked-awaiting-decisions` → `ready-for-dev`. ⛔ NOTHING IS GATED. ⛔ NO DECISION MINTED IN
+#   .decision-log.md (that is 11b-2a Task 0, now fully startable).
+#   ⭐⭐ D3-aggregate — THE TWO-AXIS MODEL: Contribution state: CONFIRMED · Public representation:
+#   OMITTED. The RTBF-omitted contributor CONTINUES to contribute to confirmedCount and every
+#   aggregate financial/statistical measure whose semantics represent CONFIRMED HISTORICAL
+#   TRANSACTIONS. RTBF removes the PUBLIC INDIVIDUAL REPRESENTATION; ⛔ it does NOT retroactively
+#   alter that the contribution was confirmed. cl.(2): rosterSize = contributors CURRENTLY ELIGIBLE
+#   FOR PUBLIC REPRESENTATION; ⛔ NOT a measure of confirmation state, ⛔ never usable to infer a
+#   contributor's financial status. ⇒ ⭐ 11b-2a NOW CHANGES NO AGGREGATE AT ALL — only `rows` shrinks.
+#   ⛔⛔ TRAP CAUGHT WHILE APPLYING cl.(2): THE NAME `rosterSize` IS ALREADY TAKEN BY A DIFFERENT
+#   QUANTITY. pool.rosterSize is the FROZEN POOL SNAPSHOT (contribution-binding.ts:426; the
+#   frozen-roster invariant, handlers.ts:566) and feeds TWO FINANCIAL computations —
+#   computePendingAggregate (read.ts:232-242) and the ON-THE-WIRE 8.2 meter
+#   progress:{confirmedCount, rosterSize} (handlers.ts:569). If a later pass "aligns" it to cl.(2):
+#   (i) pending UNDERSTATES — pool of 10, 4 confirmed, one RTBF'd ⇒ 9−4=5 pending while SIX genuinely
+#   have not confirmed; (ii) ⛔⛔ the :488 clamp FIRES AND DELETES A CONFIRMED CONTRIBUTION FROM THE
+#   METER — pool of 3, all confirmed, one RTBF'd ⇒ confirmedCount 3 > eligible 2 ⇒ renders "2 of 2",
+#   EXACTLY the harm cl.(1) forbids and what :313-315 has forbidden since 8.3.
+#   ⇒ RULED IMPLEMENTATION (minimal): pool.rosterSize KEEPS its meaning and uses (frozen FINANCIAL
+#   denominator); cl.(2)'s representation-eligibility count is a DISTINCT quantity NO surface needs
+#   yet ⇒ ⛔ do not build it, ⛔ do not rename anything; ⛔ the two axes NEVER subtract from each other.
+#   Task 6 files the naming hazard; Task 5 gains the DIVERGENCE test (confirmedCount/pending
+#   byte-identical while confirmed.length drops by one — ⛔ a rows.length===confirmedCount assertion
+#   would encode the WRONG model).
+#   ⭐⭐ D5 SCOPE — the "public vs member-gated" FRAMING IS REJECTED. The contributor list is a PRODUCT
+#   intended to exist on BOTH surfaces (member-session-gated AND public); the current fact that
+#   /api/v1/member/pool-contributors is member-gated ⛔ does NOT make the product member-only. ⇒ D5
+#   applies to the contributor's individual public/member-visible representation WHEREVER THE
+#   CONTRIBUTOR LIST IS RENDERED. ⚠ The earlier recorded scope ASSUMPTION is SUPERSEDED — it reached
+#   the right surface FOR THE WRONG REASON, and the reason is what binds the siblings ⇒ Task 6 routes
+#   D5 + D5-scope to 11b-2, 11b-2b and 11b-3 so ⛔ none re-derives an anonymized row from its epic text.
+#   ⭐ The AI-10-1 note's second half is now RULED PURELY PRESENTATIONAL, with the axis-merge named as
+#   the one way this predicate could become an accounting change.
+#
+# last_updated_prior: 2026-08-30a (⭐⭐ STORY 11b-2a — FINAL RULING D5 BY BigDev: RTBF REMOVES THE
 #   CONTRIBUTOR ENTIRELY; ⛔ NO ANONYMIZED ROW IS EMITTED. ⛔ NO ROW FLIP — 11b-2a stays
 #   `blocked-awaiting-decisions`, on a DIFFERENT and much smaller blocker than before (D3-aggregate,
 #   not D3-rollout). ⛔ NO DECISION MINTED IN .decision-log.md (that is 11b-2a Task 0, startable).
@@ -12407,7 +12442,7 @@ development_status:
   # `deferred-to-v2` precedent (Decision 2026-08-17-126 cl.6) an enum addition is a RATIFIED
   # GOVERNANCE ACT, not an authoring convenience. ⇒ `ready-for-dev` here means what the enum says.
   11b-2-contribution-list-components-table-mobile-row: ready-for-dev
-  11b-2a-contributor-name-resolution-defect: blocked-awaiting-decisions
+  11b-2a-contributor-name-resolution-defect: ready-for-dev
   11b-2b-contributor-list-mobile-render-layer: ready-for-dev
   11b-3-sahyog-vivran-per-claim-story-surface: backlog
   11b-4-memorial-authorship-surface-family-writes-the-story: backlog

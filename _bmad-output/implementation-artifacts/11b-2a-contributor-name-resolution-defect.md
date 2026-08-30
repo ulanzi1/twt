@@ -2,17 +2,29 @@
 baseline_commit: 07a5ced
 ---
 
-# Story 11b.2a: Contributor Name Resolution — RTBF defect fix + decrypt bound `[DEFECT]`
+# Story 11b.2a: Contributor Erasure — RTBF defect fix (D5: OMIT the row) + decrypt bound `[DEFECT]`
 
 Status: blocked-awaiting-decisions
 
-> ⛔ **BLOCKED ON EXACTLY ONE DECISION — D3-rollout.** A third validation pass (2026-08-29, `07a5ced`)
-> falsified its ground: Epic 9's `contribution.confirmed` producer **SHIPPED at Story 9.4/9.5**, so the
-> zero-population premise it rested on is false. ⛔ It must be **re-ruled**; ⛔ it does not carry over.
+> ⭐⭐ **FINAL RULING (BigDev, 2026-08-30) — D5: RTBF REMOVES THE CONTRIBUTOR ENTIRELY. ⛔ NO ANONYMIZED
+> ROW IS EMITTED.** The erased member's public contributor representation **disappears**; ⛔ it is ⛔ not
+> replaced by a marker, a placeholder or a `rowKey`. ⭐ **This is PUBLIC ERASURE, ⛔ not destruction of
+> the underlying legal record** — legally-required records persist in restricted internal systems and
+> ⛔ are never used to restore the public representation.
 >
-> ✅ **EVERYTHING ELSE IS RULED (BigDev, 2026-08-29):** D3(a) · D3-shape(i)(a) SHAPE + (ii)(a) ·
-> **D3-key(c)** · **D4(a), re-ruled on the corrected ground**. ⇒ ⭐ **Tasks 0/1/3/4/5 are startable —
-> that is the whole RTBF defect fix and the decrypt bound. ⛔ Only Task 2 (the wire widening) waits.**
+> ⭐⭐ **AND IT SIMPLIFIES THE STORY DRAMATICALLY.** With omission there is only ONE kind of row ⇒ the
+> discriminated union, the `rowKey` and the whole `.strict()` wire widening **cease to exist as
+> questions**. ⇒ ✅ **D3-shape(i) · D3-key · D3-rollout are all VACATED** — ⛔ their questions ceased to
+> exist, ⛔ they were ⛔ not reversed on their merits (`2026-08-24-159`'s "D4(a) was VACATED by D1(b)"
+> precedent). ⛔ **THE STORY HAS NO WIRE CHANGE AND THEREFORE NO ROLLOUT RISK.**
+>
+> ⭐ **The ruling is a CONSISTENCY correction, ⛔ not a new posture.** `directory-read.ts`'s
+> `DIRECTORY_VISIBLE_MEMBER_STATES` (`2026-08-20-143` cl.3, D3(a)) **already OMITS `anonymized`** from
+> the public member directory. ⇒ the contributor list was **the outlier**, and this brings it into line.
+>
+> ⛔ **ONE NEW DECISION IS OPEN AND IT IS UNAVOIDABLE — D3-aggregate** (does the erased member still
+> count in `confirmedCount` / `rosterSize`?). ⚠ **Plus a SCOPE question** — this endpoint is
+> **member-session-gated**, ⛔ not public. See the Decisions section.
 
 > ⭐⛔ **THIS STORY EXISTS BECAUSE A VALIDATION PASS FOUND A LIVE, USER-VISIBLE DEFECT ON SHIPPED
 > CODE.** It was split out of Story 11b.2 on 2026-08-29 because it is a different risk class from a
@@ -25,17 +37,23 @@ Status: blocked-awaiting-decisions
 
 ## ✅ PREFLIGHT — the dev agent's first action
 
-⭐ **Ruled and STANDING (BigDev, 2026-08-29), written below with their grounds:**
+⭐ **Ruled and STANDING:**
+· **D5 (BigDev, 2026-08-30) — ⭐ THE GOVERNING RULING.** RTBF **removes the contributor entirely** from
+  the contributor surface. ⛔ No anonymized row, ⛔ no marker, ⛔ no placeholder key. **Public erasure,
+  ⛔ not destruction of the legal record.**
 · **D3(a)** — fix the RTBF defect **here**, as its own story.
-· **D3-shape (i)(a)** — the wire is a **discriminated union** (SHAPE; the key derivation is D3-key).
-· **D3-shape (ii)(a)** — **one batched** state read.
-· **D4(a)** — **bound** the N+1 decrypt here. ⭐ **RE-RULED** on the corrected ground (see D4).
+· **D3-shape (ii)(a)** — **one batched** state read. ⭐ **SURVIVES D5 and is now MORE central** — you
+  still need each contributor's lifecycle state to know **whom to omit**.
+· **D4(a)** — **bound** the N+1 decrypt here (RE-RULED on the corrected ground).
 
-· **D3-key(c)** — the two union variants derive `rowKey` **differently**: `HMAC(memberId, server-held
-  per-pool salt)` on `name`, **per-row random** on `anonymized`. ⭐ Erasure leaves no stable handle.
+⛔ **VACATED BY D5 — ⛔ their questions ceased to exist; ⛔ they were NOT reversed on merits:**
+· **D3-shape(i)** (the discriminated union) · **D3-key** (the `rowKey` derivation) · **D3-rollout**
+  (the stale-client break). ⭐ **With omission there is one kind of row ⇒ ⛔ no wire change at all.**
 
-⛔⛔ **RE-OPENED / UNRULED — ⛔ ONE, and it gates ONLY Task 2:**
-· **D3-rollout** — ⛔ **the ruling's whole ground is FALSIFIED.** See the block below.
+⛔⛔ **NEWLY OPEN — ⛔ do NOT proceed past it in Task 3:**
+· **D3-aggregate** — does an erased member still count in `confirmedCount` / `rosterSize`?
+  ⚠ **Plus the SCOPE question:** does D5 reach this **member-session-gated** endpoint, or only the
+  Epic-11b **public** render? See Decisions.
 
 ⛔ **Task 0 TRANSCRIBES those rulings into `.decision-log.md`. It does ⛔ NOT author them, ⛔ not
 paraphrase them, and ⛔ not supply a ground.** ⚠ If any decision below has been edited back to UNRULED,
@@ -81,8 +99,10 @@ refuted. *"Zero confirmed rows in production"* is a **DATA** claim about live Pa
 ## Story
 
 As a member who exercised my right to erasure,
-I want my name to be genuinely absent from the contributor list my contribution still appears on,
-so that the erasure I asked for is the erasure I actually got — in both languages, on every surface.
+I want to be genuinely gone from the contributor list — ⛔ not renamed, ⛔ not marked, ⛔ not left as a
+placeholder someone can point at — so that the erasure I asked for is the erasure I actually got, in
+both languages, on every surface, while the records the Trust must keep stay where only the Trust can
+see them.
 
 ---
 
@@ -92,16 +112,23 @@ so that the erasure I asked for is the erasure I actually got — in both langua
 already-decided contributor row is **displayed**. ⛔ Nothing in it may be read by, joined into, or
 referenced from an eligibility, validity, assignability, pool-assignment or claim path.
 
-⚠ **It DOES introduce one render predicate over a member's own identity, and it must be stated:**
+⚠ **It DOES introduce one render predicate over a member's own identity, and D5 CHANGED IT — the
+statement below is the D5 version and ⛔ supersedes the masking version:**
 
-**Predicate — *"does this member's NAME appear on a contributor row, or the anonymized marker?"***
-The name appears iff the member's lifecycle state is **not `anonymized`**; an `anonymized` member
-resolves to the ratified *"an anonymous member"* key **regardless of any residual stored name**
-(`display-name.ts:47-58`, Story 3.12 defense-in-depth).
+**Predicate — *"does this member's ROW appear on the contributor list at all?"*** ⛔ **Not** *"which
+name renders"* — that was the pre-D5 predicate and it is superseded. The row appears iff the member's
+lifecycle state is **not `anonymized`**; an `anonymized` member is **omitted entirely**.
 
-**In the member's terms:** *"if you exercised your right to erasure, your contribution stays counted
-but your name does not appear next to it — anywhere, on any surface, in any language. If you did not,
-your name appears exactly as it always did."*
+**In the member's terms:** *"if you exercised your right to erasure, you disappear from the contributor
+list — not as 'an anonymous member', but simply not there. If you did not, your name appears exactly as
+it always did."*
+
+⛔⛔ **AND THE AI-10-1 CHECK HAS A SECOND HALF UNDER D5, BECAUSE OMISSION CAN TOUCH AN AGGREGATE.**
+Masking changed only what a row *said*; omission changes **how many rows there are**. ⇒ if the erased
+member is also dropped from `confirmedCount` / `rosterSize`, the predicate stops being purely
+presentational and starts moving a **pool-level financial aggregate** — reaching the accounting the
+Trust's completeness claim rests on. ⚠ **That is exactly why D3-aggregate is OPEN and Task 3 stops at
+it.** ⛔ Do not let a display filter silently become an accounting change.
 
 **Checked against the Niyamavali:** ⚠ **§4.4 SPEAKS to it but ⛔ GOVERNS NOTHING** (*"public rendering
 of any personal information is consent-gated and never default opt-in"* — `.decision-log.md:902`), and
@@ -109,9 +136,12 @@ the distinction is ⛔ not pedantry: the Niyamavali is **agent-drafted and UNRAT
 ([[feedback_niyamavali_rulebook_not_spec]]), and `friction-budget.md:44` ranks it **below** Trust Deed
 cl.15(c), which ⭐ itself binds nothing ([[project_legal_corpus_private_repo_split]]). ⇒ cite §4.4 as
 **alignment, ⛔ never as authority**. ⭐ **The obligation this story actually discharges is STATUTORY
-(DPDPA erasure) and RATIFIED (`member.anonymousMember`, Story 3.12) — ⛔ neither needs §4.4.** On that
-footing the story moves the build INTO compliance — today the marker silently does not happen. ⚠ The **positive** half (on what authority
-a contributor's name renders publicly at all) is ⛔ not this story's; 11b.3 owns it.
+(DPDPA erasure) — ⛔ it does not need §4.4.** ⚠ ⭐ **And under D5 the ratified `member.anonymousMember`
+copy is ⛔ NO LONGER the remedy either** — it was the pre-D5 answer, and D5 replaced masking with
+omission. On that footing the story moves the build INTO compliance: today the erased member's row
+renders the raw `'[anonymized]'` sentinel where a name belongs, and under D5 it must ⛔ not render
+**at all**. ⚠ The **positive** half (on what authority a contributor's name renders publicly at all)
+is ⛔ not this story's; 11b.3 owns it.
 
 ⛔⛔ **AND THE C-5 SHARP EDGE INVERTS HERE — READ IT BEFORE YOU ADD A CONJUNCT.** The epic instructs
 authors to add the `account-frozen` (death) overlay conjunct to predicates that lack it. ⭐ **On a
@@ -244,9 +274,18 @@ than the KMS decrypt AC3 exists to bound, and `mapWithConcurrency` does not make
 Each has a documented rationale, and the **`:319-321`** comment (⛔ not `:322-324`) exists to preserve
 exactly that fail-soft posture (skip one row, ⛔ never fail the response).
 
-⛔ **Removing them turns three per-row degradations into a whole-response failure.** The prohibition
-is: **the anonymized case must not `continue`** — an RTBF member's contribution still **counts**.
+⛔ **Removing them turns three per-row degradations into a whole-response failure.**
 ⚠ The three existing `continue`s are preserved **verbatim, with their comments**.
+
+⭐⭐ **AND D5 INVERTS THE OTHER HALF OF THIS TRAP — READ THIS, THE OLD TEXT SAID THE OPPOSITE.** An
+earlier pass wrote *"the anonymized case must NOT `continue`"*. **D5 rules the reverse: the anonymized
+case MUST be omitted.** ⇒ this story **adds a FOURTH skip**, deliberately, and it is ⛔ **not** an
+integrity degradation like the other three — it is the **ruled erasure behaviour**. ⚠ ⭐ **Give it its
+own comment saying so**, so a later reader ⛔ cannot mistake it for a fail-soft and ⛔ cannot "fix" it
+by restoring a row.
+⛔⛔ **But whether the omitted member still counts toward `confirmedCount` is D3-aggregate and is
+⛔ NOT ruled** — the other three skips deliberately DO still count (`:313-315`'s comment says so in
+terms). ⛔ Do not copy that posture by default; ⛔ do not invent the opposite either.
 
 ### Trap 3 — ⭐⛔ WIDENING A `.strict()` RESPONSE SHAPE BREAKS EVERY STALE MOBILE CLIENT.
 
@@ -314,21 +353,27 @@ family (`active-contribution-card.ts:24`, `yogdaan-bahi/sample-data.ts:18,50,58`
 
 ## Acceptance Criteria
 
-### AC1 — The RTBF defect is FIXED, and the marker really reaches the wire ✅ `[D3(a) RULED]`
+### AC1 — The RTBF defect is FIXED: the erased contributor is ⛔ ABSENT from the wire ✅ `[D3(a) + D5 RULED]`
 
-`handlers.ts:309-334` routes every contributor row through `resolveMemberDisplayName({ state, name })`
-before the row is pushed, so an `anonymized` member yields the anonymized variant and ⛔ never the
-decrypted `'[anonymized]'` sentinel.
+`handlers.ts:309-334` **OMITS every `anonymized` contributor from `rows` entirely** — ⛔ no marker,
+⛔ no placeholder, ⛔ no decrypted `'[anonymized]'` sentinel, ⛔ no row of any kind.
 
-**And ⛔ THREE kinds, not two.** The resolver returns `name | unknown | anonymized`
-(`display-name.ts:36-39`). `unknown` is **unreachable here** — the `:312` guard already `continue`s
-on a null ciphertext — so map it with an **exhaustive `never` check that throws**, ⛔ never a silent
-fall-through to a blank name, and **record the branch as un-attested**
-([[feedback_record_unattested_no_backfill]]).
-**And** ⛔ the fix must **not** be a magic string in `firstName`, and ⛔ must **not** `continue` for
-the anonymized case — an RTBF member's contribution still **counts**: `confirmedCount` is the
-confirmed-set size and ⛔ must not move. ⚠ The three **existing** integrity `continue`s at **`:317` /
-`:327` / `:332`** are preserved **verbatim with their comments** (Trap 2's corrected table).
+⭐⭐ **AND THE OMISSION HAPPENS BEFORE THE DECRYPT, ⛔ NOT AFTER — this is the whole shape of the fix.**
+The state is already in hand from AC2's batched map, so an erased member is skipped **without ever
+decrypting their name**. ⇒ ⭐ **strictly less Tier-1 plaintext is materialised than today**, and it
+composes with AC3: fewer rows reach the bounded decrypt. ⛔ Do ⛔ not decrypt-then-discard.
+
+**And** ⭐ **the skip carries its OWN comment marking it as the D5 erasure behaviour**, ⛔ explicitly
+distinguished from the three integrity `continue`s beside it — a later reader must ⛔ not mistake it
+for a fail-soft and "repair" it by restoring a row (Trap 2).
+**And** ⛔ **`resolveMemberDisplayName` is NOT called** — D5 makes the contributor path an **omission**
+question, ⛔ not a display-resolution one. ⚠ ⭐ **Consequence to record, ⛔ not to hide:** that seam
+still has **zero production call sites** after this story, so **RTBF-D1 is ⛔ NOT discharged here** —
+see Task 6, which re-dispositions it precisely.
+**And** ⚠ **`confirmedCount` / the pending aggregate are ⛔ NOT touched until D3-aggregate is ruled.**
+⛔ The dev agent does ⛔ not pick a default.
+⚠ The three **existing** integrity `continue`s at **`:317` / `:327` / `:332`** are preserved
+**verbatim with their comments** (Trap 2's corrected table).
 **And** ⛔ the fix adds **no** death-derived conjunct anywhere.
 
 ### AC2 — The lifecycle state is loaded in BOUNDED work, ⛔ never one replay per row ✅ `[D3-shape(ii)(a) RULED]`
@@ -381,68 +426,64 @@ drift risk**."* ⛔ Do not ship the mechanism a live review already rejected.
 **And** the routing note for `deferred-work.md:2161` is marked **discharged by this story**, ⛔ not
 "closed", and ⛔ not re-filed as a new item.
 
-### AC4 — The wire carries the anonymized case as a DISCRIMINATED UNION ⛔ `[BLOCKED — D3-rollout RE-OPENED]`
+### AC4 — ⛔ **VACATED BY D5.** The wire does ⛔ NOT change. `[D3-shape(i) + D3-rollout VACATED]`
 
-`ConfirmedContributorRow` becomes the ruled `z.discriminatedUnion('kind', [...])` — `kind: 'name'`
-carrying `firstName` + `lastInitial` + `rowKey`, `kind: 'anonymized'` carrying `rowKey` only, both
-`.strict()`. ⛔ Never a sentinel string, ⛔ never an ambiguous optional field.
+⛔⛔ **DO NOT WIDEN `ConfirmedContributorRow`. DO NOT ADD `kind`. DO NOT ADD `rowKey`.**
 
-**And** ⚠ **`.strict()` is re-tested INSIDE the union** — the existing shape test asserts strictness on
-a flat object, and discriminated-union strictness is a different code path. ⛔ Do not assume it carried.
-⛔⛔ **THIS AC CANNOT BE SATISFIED AS WRITTEN AND ⛔ MUST NOT BE ATTEMPTED.** Its rollout half rested on
-D3-rollout(a), whose ground is **falsified** (Preflight): Epic 9's producer landed at Story 9.4/9.5.
-⇒ · the *"population is zero"* clause is **false**; · the *"widening lands BEFORE Epic 9's producer"*
-ordering is **unsatisfiable**; · and the exposure window is ⛔ **no longer provably empty**.
-**And** ⛔ **the re-ruled posture — whatever BigDev rules — is RECORDED in the decision entry with its
-real, measured exposure.** ⛔ An unstated posture fails this AC; ⛔ **an inherited one fails it worse.**
-⚠ **Task 2 stays BLOCKED until D3-rollout is re-ruled.** ⛔ The dev agent does ⛔ not re-rule it, and
-⛔ does not treat the impossible ordering constraint as vacuously satisfied
-([[feedback_supersede_never_reinterpret]], [[feedback_closure_language_precision]]).
-**And** ⭐ **every re-spelling of the tuple is reconciled at the ROOT, ⛔ not by appending a field to
-each copy** (Trap 4). At minimum, `PoolContributorList.tsx:40-43`'s local `ConfirmedRow` is made to
-**derive from the contract** so a future widening cannot pass its typecheck silently. ⚠ That file is
-11b.2b's to edit — ⛔ if 11b.2b has not landed, this story adds a **failing-by-construction** lockstep
-test rather than leaving the copy unguarded.
-**And** `deferred-work.md:2162` (`lastInitial` `.max(16)` doesn't guarantee initial-only) is **noted
-as touched-and-unchanged**, ⛔ not silently fixed and ⛔ not silently ignored.
+D5 removes the erased contributor's row entirely ⇒ there is exactly **ONE** kind of contributor row, so
+the discriminated union has **nothing to discriminate**. ⭐ **The question ceased to exist; it was ⛔ not
+answered in the negative** (`2026-08-24-159`'s *"D4(a) was VACATED by D1(b) … ⛔ (a) did not become
+wrong, its QUESTION ceased to exist"*, the precedent for this closure language
+[[feedback_closure_language_precision]]).
 
-### AC5 — ⭐ A STABLE ROW KEY IS ADDED, because this is the only story that can add one ✅ `[D3-key(c) RULED]`
+⭐⭐ **AND THIS IS THE STORY'S BIGGEST WIN:** with no wire change there is **no `.strict()` break**, so
+⛔ no stale-client hazard, ⛔ no OTA problem, ⛔ no MMKV-cache problem, ⛔ no rollout window to price and
+⛔ nothing for D3-rollout to rule. **A live RTBF defect now ships behind ⛔ zero contract risk.**
 
-`deferred-work.md:2163` (Story 8.3) defers the FlashList `keyExtractor` `index` churn, and names its
-blocker in terms: *"removing `index` risks duplicate-key collisions **since the PII-shielded shape
-carries no stable per-member identifier**."* Its re-trigger — *"if this list ever needs to scale
-beyond a single pool's roster (**e.g. reused for the Epic 11b public render**)"* — **has fired by
-name**, and its deferral ground (*"dozens, not the ~16k scale"*) is falsified by Epic 11b's own
-performance contract.
+⚠ `deferred-work.md:2162` (`lastInitial` `.max(16)` doesn't structurally guarantee initial-only) is
+**noted as touched-and-unchanged** — ⛔ the schema is not opened at all now, so it is ⛔ not silently
+fixed and ⛔ not silently ignored.
 
-⇒ the widened row carries **`rowKey`** — present on **both** union variants (an anonymized row still
-needs a stable identity to recycle against).
+⚠ ⭐ **Trap 4 (the seven hand-maintained tuple re-spellings) is therefore ⛔ NOT exercised by this
+story** — ⛔ nothing derives from a widened contract, so ⛔ no lockstep reconciliation is owed here.
+⛔ **Do not do it opportunistically.** It survives as the standing hazard the moment ANY story widens
+this tuple; Task 6 keeps it visible.
 
-⭐⛔ **THE TWO VARIANTS DERIVE THEIR KEYS DIFFERENTLY — D3-key(c), and this is the whole substance of
-the AC:**
+### AC5 — ⛔ **VACATED BY D5 and DESCOPED.** No `rowKey` ships here. `[D3-key VACATED]`
 
-| Variant | Derivation | Property bought |
-|---|---|---|
-| `kind: 'name'` | `HMAC(memberId, per-pool salt)` | **stable across the 60s poll** ⇒ real recycling |
-| `kind: 'anonymized'` | **per-response random**, generated **per row** | ⭐ **erasure leaves no stable handle** |
+⛔⛔ **DO NOT ADD `rowKey`.** D5 removes the anonymized row, so the `anonymized`-variant key question —
+the whole of D3-key — ⛔ ceases to exist, and yesterday's D3-key(c) ruling is **VACATED with it**
+(⛔ not reversed: it was correct for the union D5 abolished).
 
-**And** ⛔⛔ **the per-pool salt is a SERVER-HELD SECRET, ⛔ never `poolId`** — `HMAC(memberId, poolId)`
-is computable by anyone holding a `memberId` and becomes a **membership-confirmation oracle**, the
-enumeration property `11a.3`'s handler refuses in terms (`epics.md:4904`).
-**And** ⛔ it must ⛔ not be `memberId` and ⛔ not a blind index.
-**And** ⭐ both variants emit the **same format** (length/charset) so no consumer branches on key shape
-instead of on `kind`.
-**And** ⚠ ⭐ **the honest limit is DOCUMENTED at the contract, ⛔ not claimed away:** (c) closes the
-**key** channel, ⛔ not the **neighbour** channel — the surviving rows' stable keys still reveal *which*
-key vanished when a member is erased (see D3-key). ⛔ Do not write a comment or test asserting that
-erasure is uncorrelatable; it is not, and Task 6 routes the residual.
-**And** `deferred-work.md:2163` is marked **discharged**, with 11b.2b named as the consumer that
-removes `index` from the `keyExtractor`.
+⭐⭐ **AND THE DESCOPE IS THE POINT, ⛔ not a loss.** `rowKey`'s only surviving justification was
+`deferred-work.md:2163`'s FlashList `keyExtractor` churn — a **VIRTUALIZATION-PERFORMANCE** concern
+that has ⛔ nothing to do with RTBF. Keeping it here would:
+· re-introduce the **only** `.strict()` wire widening in the story ⇒ resurrect the stale-client break
+  and D3-rollout **that D5 just dissolved**; and
+· **couple a live, user-visible RTBF defect to an unresolved rollout decision** — ⛔ exactly the
+  coupling this story was split out of 11b.2 to avoid.
 
-### AC6 — It is proven end-to-end over a REALLY-anonymized member ✅ `[D3(a) RULED]`
+⇒ ⭐ **`rowKey` moves OUT. `deferred-work.md:2163` stays OPEN** and is re-dispositioned in Task 6 with
+its blocker **restated correctly**: its recorded blocker was *"the PII-shielded shape carries no stable
+per-member identifier"*, and ⛔ that is still true — D5 did ⛔ not supply one. ⛔ **Do NOT mark `:2163`
+discharged**; ⛔ do not name 11b.2b as a consumer of a key that no longer ships.
+
+⚠ ⭐ **And 11b.2b must be told**, because it was written expecting this key: its `:164` says
+`` `${firstName}-${lastInitial}-${index}` `` *"is replaced by 11b.2a's ruled `rowKey`"* — ⛔ now false.
+**11b.2b keeps `index` in its `keyExtractor`** until a separate story supplies a stable key. Task 6
+routes the correction.
+
+### AC6 — It is proven end-to-end over a REALLY-anonymized member ✅ `[D3(a) + D5 RULED]`
 
 An integration test at **`apps/api/tests/integration/contributions/pool-contributors-rtbf.spec.ts`**
-drives a real anonymization and asserts the marker reaches the wire.
+drives a real anonymization and asserts the member is **GONE from the wire**.
+
+⭐⭐ **THE ASSERTIONS INVERT UNDER D5 — an earlier pass asserted the marker was PRESENT; assert ABSENCE:**
+· the erased member's row is **⛔ absent from `confirmed[]` entirely** — ⛔ no `firstName`, ⛔ no marker,
+  ⛔ no `member.anonymousMember`, ⛔ no `'[anonymized]'`, ⛔ no placeholder of any shape;
+· ⭐ **the response contains the sentinel string NOWHERE** — assert on the **serialized JSON**, ⛔ not
+  on a parsed field, so a leak through any new field is caught;
+· ⚠ **the OTHER contributors are untouched** — same names, same order, ⛔ no shifted or dropped peers.
 
 ⛔ **Not by stubbing `resolveMemberDisplayName`.** ⛔ Not in `apps/api/tests/unit/` — ⚠ note that
 `apps/api/tests/unit/pool-contributors.test.ts` **already exists and is DB-free**, so extending it is
@@ -456,126 +497,208 @@ existing fixture rows (Trap 4, half 2).
 ⚠ `integration-tests` concurrency is **1** and is **LOAD-BEARING** — ⛔ never raise it
 ([[project_ci_local_concurrency_oversubscription]]).
 
+### AC7 — ⭐ THE RTBF NOTICE IS CORRECTED — but ⛔ NOT WRITTEN HERE `[D5, routed]`
+
+⛔⛔ **D5 FALSIFIED SHIPPED, USER-FACING COPY IN BOTH LOCALES — and it is copy that promises exactly the
+behaviour D5 abolishes.** Verified live in `packages/i18n/locales/{en,hi}/common.json`:
+
+| Key | Ships today (en) | Under D5 |
+|---|---|---|
+| `rtbf.entry_hint` (`:217`) | *"Your contribution history stays on record, **without your name**."* | ⛔ **FALSE** — the row is gone, not renamed |
+| `rtbf.ack_body` (`:219`) | *"Your contribution history stays on record **as "an anonymous member"**, so the trust's accounts remain complete."* | ⛔ **FALSE** — ⭐ and it names the very marker D5 removes |
+| `rtbf.done_body` (`:227`) | *"We have removed your personal details from our records. **Your contribution history remains, without your name.**"* | ⛔ **FALSE on the second half**, ⚠ and **imprecise on the first** — D5 says legally-required records **DO** remain internally |
+
+⚠ The Hindi rows (`:217`/`:219`/`:227`) carry the same three claims and fall the same way.
+
+⭐ **The three statements D5 requires the notice to make** — recorded here verbatim so the owning story
+builds from the ruling, ⛔ not from a paraphrase:
+1. identifying information + the public contributor representation are **removed from public-facing
+   surfaces**;
+2. the contribution / claim and other applicable public representations are **no longer publicly
+   displayed**;
+3. records the Trust is **legally required to retain** remain in **restricted internal systems** for the
+   applicable statutory/regulatory retention period, and are ⛔ **never used to restore the public
+   representation**.
+
+⛔⛔ **THIS AC IS DISCHARGED BY ROUTING, ⛔ NOT BY EDITING `common.json`. THREE REASONS, EACH SUFFICIENT:**
+· ⭐ **It is a STATUTORY claim.** Naming a *"retention period"* to a member is legal text. This repo
+  routes counsel's wording through the **Story 2.4 amendment workflow + a NON-AUTHOR tone-review
+  sign-off**, ⛔ never a direct edit (`2026-08-28-161` precedent). Adv. Mohit Agrawal is engaged
+  ([[project_dpdpa_counsel_engaged_but_unrecorded]]).
+· ⚠ **The copy is ⛔ not this story's surface.** It belongs to the RTBF flow (Story 3.12 / the
+  member-data-rights module), which this story does ⛔ not otherwise touch.
+· ⛔⛔ **AND ONE STATEMENT MUST BE CHECKED AGAINST THE BUILD BEFORE IT IS PROMISED.** Statement 3 says
+  retained records persist. ⚠ ⭐ **But `anonymize.ts:144` OVERWRITES `name_ciphertext` with an
+  encrypted `[anonymized]` sentinel — the member's NAME is DESTROYED, ⛔ not retained.** What survives
+  is the **financial/contribution trail keyed by `member_id`**. ⇒ the notice must be precise about
+  **WHICH** records are retained; ⛔ a member reading statement 3 as *"they still hold my name"* would
+  be **misled**, and the build cannot honour that reading.
+
+⇒ **Task 6 files the routing packet** naming: the three statements, the six falsified keys (3 × 2
+locales), the `anonymize.ts:144` name-destruction fact, and the microcopy-gate + tone-review
+obligations. ⛔ **No `common.json` edit lands in this story's diff.**
+
 ---
 
 ## Tasks / Subtasks
 
 > ⛔ **Task 0 first** ([[feedback_governance_commits_precede_implementation]]).
-> ⛔⛔ **TASKS 2 AND 5 ARE GATED.** ✅ Startable now: **Task 0** (transcribe the STANDING rulings + the
-> falsification), **Task 1** (batched state read), **Task 3** (the boundary fix), **Task 4** (the decrypt
-> bound). ⛔ **Task 2 needs D3-rollout re-ruled AND D3-key ruled; Task 5's rowKey assertions need D3-key.**
-> ⚠ Tasks 3 and 4 do ⛔ not touch the wire — they are genuinely independent of the widening.
+> ⭐⭐ **D5 DELETED TASK 2 ENTIRELY** — there is no wire change, so ⛔ nothing widens, ⛔ nothing breaks,
+> ⛔ nothing waits on a rollout ruling. ✅ **Tasks 0/1/4/5/6/7 are startable NOW.**
+> ⛔ **Task 3 (the boundary fix) starts, but STOPS at the aggregate — D3-aggregate is unruled.**
 
-- [ ] **Task 0 — Governance first** ✅ `[startable — transcribe 5 rulings (1 of them a RE-ruling) + 1 falsification + 1 recorded residual]`
-  - [ ] Read the `.decision-log.md` head **live** (`2026-08-28-167` at authoring; ⛔ do not hardcode)
-        and **TRANSCRIBE** the **STANDING** rulings — **D3(a)** / **D3-shape (i)(a) SHAPE-ONLY +
-        (ii)(a) batched read)** / **D4(a)** — one clause each, quoting the ground verbatim.
-        ⭐ D3-shape's entry carries **both** sub-clauses and its three implementation constraints
-        (chunking · no dynamic `.limit()` · state-only), ⭐ **plus the clock-domain constraint**
-        (mirror `getCurrentMemberState`, ⛔ never `getMemberStateAt`).
-  - [ ] ⛔⛔ **RECORD THE FALSIFICATION AS ITS OWN CLAUSE — this is the load-bearing half of Task 0.**
-        **D3-rollout(a) is RE-OPENED**: its sole ground (*"Epic 9's producer is unbuilt ⇒ population
-        zero"*) is **FALSE and was false when ruled** — the producer shipped at Story 9.4/9.5 (cite the
-        Preflight evidence table). ⭐ Record **precisely**: the ruling is **superseded by falsification
-        of its ground**, ⛔ NOT reversed on its merits, ⛔ NOT "closed"
-        ([[feedback_supersede_never_reinterpret]], [[feedback_closure_language_precision]]).
-        ⚠ ⭐ **And record the residual UN-ATTESTED fact**: whether production holds zero confirmed rows
-        has ⛔ never been measured ([[feedback_record_unattested_no_backfill]]).
-  - [ ] ⭐ **Transcribe D3-key(c)** — the SPLIT derivation (`HMAC(memberId, server-held per-pool salt)`
-        on `name`; **per-row random** on `anonymized`), its ground (it pays the recycling cost only
-        where erasure makes correlation a real harm), its **three constraints** (secret salt ⛔ never
-        `poolId` · per-**row** uniqueness · same format both variants), ⭐ **and its RECORDED RESIDUAL** —
-        (c) closes the key channel, ⛔ not the neighbour channel.
-  - [ ] ⭐ **Transcribe D4(a) as a RE-RULING, ⛔ not a restatement** — the first ground (*"currently
-        costs nothing, 0 confirmed contributors"*) was **falsified**; the verdict was re-taken on the
-        corrected ground, which is **stronger**.
-        ⛔⛔ **The dev agent does not decide and does not supply a ground for D3-rollout.**
-        ⛔ `governance:` prefix, own commit, before any code.
-  - [ ] Record in the same entry that **RTBF-D1's re-trigger fired at Story 8.3 and was not acted on**
-        — the honest framing, ⛔ not "newly discovered".
+- [ ] **Task 0 — Governance first** ✅ `[startable]`
+  - [ ] Read the `.decision-log.md` head **live** (`2026-08-28-167` at authoring; ⛔ do not hardcode).
+  - [ ] ⭐⭐ **TRANSCRIBE D5 as the governing ruling**: RTBF **removes the contributor entirely**;
+        ⛔ no anonymized row, marker or placeholder key. ⭐ **Public erasure, ⛔ NOT destruction of the
+        legal record** — legally-required records persist in restricted internal systems and are
+        ⛔ never used to restore the public representation. ⭐ Record the **consistency ground**:
+        `DIRECTORY_VISIBLE_MEMBER_STATES` (`2026-08-20-143` cl.3) already omits `anonymized`, so the
+        contributor list was the outlier.
+  - [ ] ⛔ **Record D3-shape(i), D3-key and D3-rollout as VACATED — ⛔ NOT reversed, ⛔ NOT closed.**
+        ⭐ Their questions **ceased to exist** when the anonymized row did (`2026-08-24-159`'s
+        *"D4(a) was VACATED by D1(b)"* is the precedent and the required language
+        [[feedback_closure_language_precision]]). ⚠ D3-key(c) was ruled **2026-08-29** and vacated
+        **2026-08-30** — record both dates; it was **correct for the union D5 abolished**.
+  - [ ] ⭐ Transcribe the **STANDING** rulings — **D3(a)** · **D3-shape(ii)(a)** (with the clock-domain
+        constraint) · **D4(a)** *(as a RE-ruling, and why its first ground fell)*.
+  - [ ] ⛔ **Record D3-aggregate and the SCOPE question as OPEN.** ⛔⛔ **The dev agent does not decide
+        either and does not supply a ground.** ⛔ `governance:` prefix, own commit, before any code.
 - [ ] **Task 1 — Bound the state load (AC2)** ✅ `[D3-shape(ii)(a) RULED — startable]`
-  - [ ] Add the batched state resolver next to `getMemberStateAt` in
-        `packages/domain/src/member/read.ts` → `Map<MemberId, MemberLifecycleState>`, one query,
-        chunked at a named constant. ⛔ **Never `getMemberStateAt` per row** (Trap 1).
+  - [ ] Add the batched state resolver in `packages/domain/src/member/read.ts` →
+        `Map<MemberId, MemberLifecycleState>`, one query, chunked at a named constant.
+        ⛔ **Never `getMemberStateAt` per row** (Trap 1).
+  - [ ] ⛔⛔ **Mirror `getCurrentMemberState` (`:151`) — no `atTimestamp`, no `occurred_at` bound.**
+        ⭐ Under D5 this is **sharper than before**: a missed anonymization no longer renders a marker,
+        it renders **the erased member's REAL NAME**.
   - [ ] ⛔ State only — no decrypt, no KYC join, ⛔ no death overlay. ⛔ No dynamic `.limit()`.
-  - [ ] ⛔ Do not push the state read into the domain contributor read (`ConfirmedContributor` is
-        `{ memberId }` by design and the boundary decrypts).
-- [ ] **Task 2 — Widen the contract at the ROOT (AC4, AC5)** ⛔ `[BLOCKED — D3-rollout re-opened. ✅ D3-key(c) RULED, so this is now its ONLY blocker.]`
-  - [ ] `grep -rn "lastInitial" packages apps --include='*.ts' --include='*.tsx'` and reconcile
-        **every** site in Trap 4's table. ⛔ Declare once, derive; ⛔ do not append a field to each copy.
-  - [ ] Add `rowKey` to **both** union variants (AC5) — ⭐ `HMAC(memberId, server-held per-pool salt)`
-        on `name`, **per-row random** on `anonymized` (D3-key(c)). ⛔ The salt is ⛔ never `poolId`.
-        Re-test `.strict()` **inside** the union.
-  - [ ] ⛔⛔ **DO NOT START.** The LIVE check has already been run and it **FAILED** — the producer
-        landed at Story 9.4/9.5. ⛔ Task 2 resumes only once **D3-rollout is re-ruled** and **D3-key is
-        ruled**.
-  - [ ] ⭐ **While here, fix the stale comments that caused the false premise** — `pool-contributor-list.ts:88`
-        and `contribution/read.ts:18` still say the producer is *"unbuilt"*, contradicting `:7-8` of the
-        same file. ⛔ A self-contradicting contract is what a future pass will misread again.
-  - [ ] Record the **re-ruled** D3-rollout posture and its **measured** exposure in the contract's
-        doc-block (Trap 3). ⛔ Not the old window.
-- [ ] **Task 3 — The boundary fix (AC1)** ✅ `[D3(a) RULED — startable]`
-  - [ ] Route `:309-334` through `resolveMemberDisplayName`; exhaustive `never` over three kinds.
+- [ ] ~~**Task 2 — Widen the contract**~~ ⛔ **DELETED BY D5.** ⛔ The contract is ⛔ not opened.
+      ⚠ ⭐ **Do ⛔ NOT opportunistically fix `deferred-work.md:2162` or reconcile Trap 4's re-spellings** —
+      ⛔ nothing derives from a widened tuple now. Both stay recorded in Task 6.
+- [ ] **Task 3 — The boundary fix (AC1)** ⚠ `[D3(a)+D5 RULED — startable, but STOPS at the aggregate]`
+  - [ ] ⭐ Skip every `anonymized` contributor **BEFORE the decrypt**, using AC2's state map —
+        ⛔ never decrypt-then-discard.
+  - [ ] ⭐ Give the skip **its own comment** marking it as the **D5 erasure behaviour**, ⛔ explicitly
+        distinct from the three integrity `continue`s beside it (Trap 2).
   - [ ] ⛔ Preserve the **`:317` / `:327` / `:332`** `continue`s verbatim with their comments
-        (`:313-315` / `:319-321`) — ⚠ **Trap 2's corrected table, ⛔ not the old `:313`/`:326`/`:331`.**
-  - [ ] ⛔ Add no death conjunct anywhere.
-- [ ] **Task 4 — Bound the decrypt (AC3)** ✅ `[D4(a) RULED — startable]`
+        (`:313-315` / `:319-321`) — ⚠ **Trap 2's corrected table.**
+  - [ ] ⛔ **`resolveMemberDisplayName` is NOT called.** ⛔ Add no death conjunct anywhere.
+  - [ ] ⛔⛔ **STOP before touching `confirmedCount` / `computePendingAggregate`. That is D3-aggregate
+        and it is UNRULED.** ⛔ Do not pick a default; ⛔ do not copy the other three skips' posture.
+- [ ] **Task 4 — Bound the decrypt (AC3)** ✅ `[D4(a) RE-RULED — startable]`
   - [ ] Bounded concurrency on the `public-pages` precedent; per-row fail-soft preserved exactly.
-  - [ ] ⭐ **ONE exported constant imported by both sites** — ⛔ not a cross-reference comment.
+  - [ ] ⭐ **ONE exported constant AND the `mapWithConcurrency` helper, both shared** — ⛔ not a
+        cross-reference comment, ⛔ not a copy-pasted helper.
   - [ ] ⛔ No plaintext cache at rest.
-- [ ] **Task 5 — Prove it (AC6)** ✅ `[AC6 startable; ⭐ the rowKey assertions are now SPECIFIED by D3-key(c)]`
-  - [ ] `apps/api/tests/integration/contributions/pool-contributors-rtbf.spec.ts` — real
-        anonymization, fixture that **exercises** the variant, aggregates unchanged.
-  - [ ] A test asserting state-resolution round trips are O(1) in the contributor count (AC2).
-  - [ ] ⭐ A test asserting the batched resolver's SQL carries **no `occurred_at` upper bound** (AC2's
-        clock domain) — so a later refactor toward `getMemberStateAt` fails loudly (Trap 1).
-  - [ ] ⭐⛔ **THE D3-key(c) PAIR — both halves, or the ruling is untested:** (i) a `name` row's `rowKey`
-        is **IDENTICAL across two requests**; (ii) an `anonymized` row's `rowKey` **DIFFERS across two
-        requests**. ⚠ ⭐ **And the load-bearing third:** the anonymized row's `rowKey` is ⛔ **NOT** the
-        HMAC that member's row carried **before** anonymization — i.e. a client holding the pre-erasure
-        response cannot match the rows **by key**. ⛔ That third assertion is the entire point of (c).
-  - [ ] ⚠ A test that two anonymized rows in one response carry **distinct** `rowKey`s (per-row, ⛔ not
-        per-response generation).
-- [ ] **Task 6 — Discharge the records, ⛔ do not re-file them**
-  - [ ] `deferred-work.md`: **RTBF-D1** discharged · **`:2161`** (N+1) discharged · **`:2163`**
-        (keyExtractor) discharged with 11b.2b named as the consumer · **`:2162`** noted as
-        touched-and-unchanged. ⛔ Precise closure language ([[feedback_closure_language_precision]]).
-  - [ ] ⛔⛔ **DO NOT FILE THE OLD ORDERING CONSTRAINT — IT IS ALREADY IMPOSSIBLE.** An earlier pass
-        drafted a standing item reading *"the widening must land BEFORE Epic 9's producer … re-trigger:
-        Epic 9's producer landing."* ⭐ **That re-trigger fired at Story 9.4, before this story was
-        written.** Filing it would route a **future** watch for a **past** event — ⛔ the RTBF-D1 decay
-        pattern re-created inside the story that discharges RTBF-D1.
-  - [ ] ⭐ **File instead what is actually true and actually open:** *"`ConfirmedContributorRow` is
-        `.strict()` and SDK-parsed from the bundled schema, with no OTA. Epic 9's producer is LIVE, so
-        any widening is a real break for stale clients over a real, UNMEASURED population. D3-rollout
-        is RE-OPENED pending a posture ruled against measured exposure."* **Re-trigger: the widening
-        being scheduled.** ⛔ Not marked closed.
-  - [ ] ⭐⛔ **File the D3-key(c) RESIDUAL — the neighbour channel.** *"`rowKey` randomization on the
-        `anonymized` variant (D3-key(c)) removes the KEY as a cross-request correlation channel, but
-        ⛔ NOT the NEIGHBOUR channel: surviving `name` rows keep stable HMAC keys by design, so a client
-        persisting responses (⚠ the SDK auto-persists to MMKV) can diff two polls and identify which key
-        vanished when a member was erased. ⛔ Not fixable within (c) — the only cure is per-response
-        randomization of every key, which is option (b), rejected on recycling grounds."* **Re-trigger:
-        any future work that makes contributor rows individually addressable, or any re-costing of (b).**
-        ⛔ Not marked closed. ⛔ Do ⛔ NOT record this as "erasure is uncorrelatable".
-  - [ ] ⭐⛔ **File the STALE-COMMENT finding as its own item** — three shipped files still assert Epic
-        9's producer is *"unbuilt"* (`pool-contributor-list.ts:88`, `contribution/read.ts:18`,
-        `contribution-notify-triggers.ts:18`), one of them contradicting its own file header at `:7-8`.
-        ⭐ **This is what falsely grounded a ruling.** ⛔ Not a cosmetic docs nit.
+- [ ] **Task 5 — Prove it (AC6)** ✅ `[startable]`
+  - [ ] `pool-contributors-rtbf.spec.ts` — real anonymization; assert the member is **ABSENT**, the
+        sentinel appears **nowhere in the serialized JSON**, and peer rows are **untouched**.
+  - [ ] A test asserting state-resolution round trips are **O(1)** in the contributor count (AC2).
+  - [ ] ⭐ A test asserting the batched resolver's SQL carries **no `occurred_at` upper bound** (AC2).
+  - [ ] ⛔ **No `rowKey` assertions** — nothing ships to assert on (AC5 vacated).
+- [ ] **Task 6 — Route and re-disposition the records, ⛔ do not re-file them**
+  - [ ] ⭐⭐ **RTBF-D1 (`deferred-work.md:3980`) — ⛔ NOT DISCHARGED. RE-DISPOSITION IT.** Its subject is
+        the **display-time name-resolver seam**, and under D5 the contributor path **omits instead of
+        masking** ⇒ `resolveMemberDisplayName` still has **ZERO production call sites** after this
+        story. ⇒ record: *"the re-trigger fired at Story 8.3 and was not acted on; Story 11b.2a fixed
+        the underlying defect by OMISSION (D5), so the seam remains unwired and this item is
+        **superseded as to contributor surfaces** — masking is ⛔ not the mechanism there."*
+        ⛔ Not "discharged", ⛔ not "closed" ([[feedback_closure_language_precision]]).
+  - [ ] ⚠ ⭐ **Flag `ANONYMOUS_MEMBER_I18N_KEY` / `member.anonymousMember` as possibly-dead** — if no
+        surface renders it under D5, say so **observationally**. ⛔ Do ⛔ NOT delete it in this story.
+  - [ ] ⭐ **`deferred-work.md:2163` (keyExtractor) — STAYS OPEN.** ⛔ Do ⛔ not mark it discharged and
+        ⛔ do not name 11b.2b as the consumer. Its recorded blocker — *"the PII-shielded shape carries
+        no stable per-member identifier"* — **is still true**; D5 supplied none.
+  - [ ] ⭐⛔ **Correct 11b.2b**: its `:164` says the `index` keyExtractor *"is replaced by 11b.2a's ruled
+        `rowKey`"* — ⛔ **now false.** 11b.2b **keeps `index`**, and its `:39`/`:85` union expectations
+        (`kind`, `rowKey`) are ⛔ **void** — the wire is unchanged.
+  - [ ] `deferred-work.md:2161` (N+1 decrypt) **discharged** by AC3. ⚠ `:2162` **noted as
+        touched-and-unchanged** — ⛔ the schema was never opened.
+  - [ ] ⭐⭐ **FILE THE AC7 NOTICE-COPY ROUTING PACKET** — the three D5 statements verbatim; the **six
+        falsified keys** (`rtbf.entry_hint` / `rtbf.ack_body` / `rtbf.done_body` × en+hi); the
+        **`anonymize.ts:144` name-destruction fact** that statement 3 must not contradict; and the
+        **counsel + Story-2.4 amendment-workflow + non-author tone-review** obligations
+        (`2026-08-28-161` precedent). ⛔ **No `common.json` edit in this diff.**
+  - [ ] ⛔ **File the STALE-COMMENT finding** — three shipped files still assert Epic 9's producer is
+        *"unbuilt"* (`pool-contributor-list.ts:88`, `contribution/read.ts:18`,
+        `contribution-notify-triggers.ts:18`), one contradicting its own header at `:7-8`.
+        ⭐ **This is what falsely grounded a ruling.**
+  - [ ] ⚠ **Trap 4's seven re-spellings stay recorded as a standing hazard** — ⛔ unexercised by this
+        story, live the moment any story widens this tuple.
 - [ ] **Task 7 — Close out**
-  - [ ] `pnpm --filter @twt/api test` · `pnpm --filter @twt/contracts test` · `pnpm turbo run typecheck`
-        · then `pnpm ci:local` green. ⚠ `git push` runs the full `ci:local` via a pre-push hook —
-        that is the "hang", ⛔ not a failure.
-  - [ ] ⛔ **`friction-budget.md` is NOT touched** — AC-4 is a path trigger over `apps/mobile/` +
-        `apps/public/` (`scripts/friction-budget/lib.ts:453`) and this story touches neither. ⚠ **Unless**
-        AC4 forces the `PoolContributorList.tsx:40-43` edit — **then it fires and the ledger MUST
-        change in the same PR** (see 11b.2b's Task for the shape of that note).
+  - [ ] `pnpm --filter @twt/api test` · `pnpm turbo run typecheck` · then `pnpm ci:local` green.
+        ⚠ `git push` runs the full `ci:local` via a pre-push hook — that is the "hang", ⛔ not a failure.
+  - [ ] ⛔ **`friction-budget.md` is NOT touched** — AC-4 triggers on `apps/mobile/` + `apps/public/`
+        (`scripts/friction-budget/lib.ts:453`) and ⭐ **under D5 this story touches NEITHER** (the mobile
+        edit was AC4's, now vacated). ⚠ ⛔ `packages/contracts` is not member-facing either.
   - [ ] Flip `development_status[11b-2a-contributor-name-resolution-defect]` and add ONE combined
         top-of-file `last_updated` entry ([[project_sprint_status_ledger]]).
 
----
 
-## ⚖️ Decisions — ✅ **ALL FOUR RULED (BigDev, 2026-08-29).** ⛔ Do not re-litigate.
+## ⚖️ Decisions
+
+### ⭐⭐ D5 — **THE GOVERNING RULING. RTBF REMOVES THE CONTRIBUTOR ENTIRELY.** RULED BigDev 2026-08-30. ⛔ FINAL.
+
+**An RTBF invocation removes the contributor from the contributor surface.** ⛔ **No anonymized row is
+emitted** — ⛔ no marker, ⛔ no placeholder, ⛔ no `rowKey`, ⛔ nothing occupying the position where that
+person used to be.
+
+**Ground:** the person's public contribution / name / claim representation **should disappear**, rather
+than leaving an **identifiable or correlatable placeholder**. ⭐ The UX consequences are handled
+**explicitly**, ⛔ not solved with an anonymized row and a `rowKey`.
+
+⭐⭐ **AND IT IS PUBLIC ERASURE, ⛔ NOT DESTRUCTION OF THE UNDERLYING LEGAL RECORD.** Records the Trust
+is legally required to retain **remain in restricted internal systems** for the applicable
+statutory/regulatory retention period, and are ⛔ **never used to restore the public representation.**
+
+⭐ **A ratified precedent supports it ⇒ this is a CONSISTENCY correction, ⛔ not a new posture:**
+`DIRECTORY_VISIBLE_MEMBER_STATES` (`packages/domain/src/member/directory-read.ts`, `2026-08-20-143`
+cl.3 D3(a)) **already OMITS `anonymized`** from the public member directory. ⇒ the contributor list was
+**the outlier**; D5 aligns it.
+
+**What D5 does to this story:**
+· ✅ **AC1 becomes an OMISSION** — skip before decrypt. ⭐ Strictly less Tier-1 plaintext materialised.
+· ✅ **AC2 SURVIVES and matters MORE** — the state decides whom to omit, and a clock-domain miss now
+  leaks **the real name**, ⛔ not a marker.
+· ✅ **AC3 / D4(a) survive**, marginally cheaper (fewer rows reach the decrypt).
+· ⛔ **AC4 · AC5 · D3-shape(i) · D3-key · D3-rollout are VACATED** — one kind of row ⇒ ⛔ no union,
+  ⛔ no key, ⛔ no wire change, ⛔ no stale-client break, ⛔ nothing to rule.
+· ⭐ **AC7 is NEW** — D5 falsified shipped RTBF notice copy in **both locales**; routed, ⛔ not edited here.
+
+### ⛔⛔ D3-aggregate — **NEW, OPEN. ⛔ Blocks the last step of Task 3.**
+
+**The question:** when an `anonymized` contributor's row is omitted, does that member still count
+toward **`confirmedCount`** (and so `pending.count = rosterSize − confirmedCount`)?
+
+**⛔ Both answers cost something real — this is ⛔ not a dev-agent call:**
+
+| | Keep the count | Drop the count |
+|---|---|---|
+| Aggregate truth | ⭐ accounting stays complete; matches the **existing documented posture** of the other three skips (`:313-315`: *"they ARE confirmed — the aggregate must never understate confirmation"*) | ⛔ a confirmed contribution vanishes from the pool's totals |
+| Erasure completeness | ⛔ `rows.length < confirmedCount` ⇒ ⭐ **the delta is itself a correlatable trace**: a client caching polls (⚠ the SDK persists to **MMKV**) sees rows drop while the count holds ⇒ *"someone here was erased"* | ⭐ no residual trace in the aggregate |
+| Consistency | ⭐ mirrors the three integrity skips exactly | ⛔ **retroactively moves a financial aggregate** — reaches accounting, ⛔ not just display |
+
+⚠ ⭐ **`rosterSize` IS A THIRD, SEPARATE QUESTION** — it comes from the **pool snapshot**, ⛔ not this
+read. If `confirmedCount` drops while `rosterSize` holds, the erased member silently becomes
+**"pending"** — ⛔ misrepresenting someone who *did* contribute as someone who did not. ⛔ Do not assume
+the two move together.
+
+⛔ **Ruling owed. Task 3 stops here. ⛔ The dev agent does not pick a default.**
+
+### ⚠ SCOPE QUESTION — **does D5 reach THIS endpoint, or only the PUBLIC render?** ⛔ OPEN.
+
+⭐ **`GET /api/v1/member/pool-contributors` is MEMBER-SESSION-GATED, ⛔ not public** (`routes.ts:57`;
+8.3's own comment calls the Epic-11b public render *"where it bites, **not** member-session-gated"*).
+D5's wording is *"public contributor surface"* / *"publicly displayed"*.
+
+· **If D5 reaches it** (the reading this file implements): the erased member also disappears from the
+  ~15 pool peers' view — ⭐ consistent, and it is the surface the live defect is actually on.
+· **If D5 is public-only**: this endpoint keeps rendering and the `'[anonymized]'` sentinel defect
+  **stays live here** — ⛔ leaving the story's whole reason for existing unfixed.
+
+⇒ ⭐ **This file proceeds on "D5 reaches it", because the alternative leaves the defect shipped.**
+⚠ ⛔ **It is an ASSUMPTION, ⛔ not a ruling** — recorded openly rather than silently resolved
+([[feedback_record_unattested_no_backfill]]). ⛔ Confirm before merge.
 
 ### ✅ D3 — Fix the RTBF defect here? → **(a) fix it HERE, as its own story.** RULED 2026-08-29.
 
@@ -592,7 +715,11 @@ which is strictly more bookkeeping than fixing it.
 ⇒ ⭐ **This story is a `[DEFECT]` fix on shipped code, and it may ship independently of — and before —
 11b.2.** ⛔ It does not wait on the presenter.
 
-### ⚠ D3-shape — **RULED BigDev 2026-08-29: (i)(a) SHAPE-ONLY + (ii)(a).** ⛔ Do not re-litigate the ruled halves.
+### ⚠ D3-shape — **(ii)(a) STANDS. (i)(a) ⛔ VACATED BY D5 (2026-08-30).**
+
+⛔ **(i)(a) — the discriminated union — is VACATED**: with omission there is one kind of row, so the
+question ceased to exist. ⛔ It was ⛔ not reversed on its merits. ✅ **(ii)(a) — the batched state read —
+STANDS and is now MORE central** (it decides whom to omit). ⛔ Read the union material below as history.
 
 ⛔ **(i)(a) ruled the union's SHAPE and ⛔ NOT `rowKey`'s derivation — that is D3-key, still OPEN.**
 ⚠ **(ii)(a)'s clock domain was under-specified and is corrected in AC2** (mirror `getCurrentMemberState`,
@@ -647,7 +774,14 @@ RTBF guarantee depend on projector liveness, which is exactly the coupling
   not take a death overlay — `resolveMemberDisplayName` takes a `MemberLifecycleState` and is blind to
   death **by construction**, and that blindness is **correct here** (Trap 2's table).
 
-### ⛔⛔ D3-rollout — **RE-OPENED 2026-08-29 (third validation pass). ⛔ UNRULED. Its ground is FALSIFIED.**
+### ⛔ D3-rollout — **⛔ VACATED BY D5 (2026-08-30).** ⛔ No wire change ⇒ ⛔ no break ⇒ ⛔ nothing to rule.
+
+⭐⭐ **D5 DISSOLVED this question rather than answering it.** No `.strict()` widening ⇒ ⛔ no stale-client
+hazard, ⛔ no OTA window, ⛔ no MMKV-cache problem, ⛔ no exposure to price.
+⚠ **Its falsification record STANDS and still matters** — the Epic-9-producer-is-live finding is what
+Task 0 records, and the stale comments that caused it are still in the tree (Task 6).
+
+#### ⛔ History — the 2026-08-29 re-opening, preserved
 
 ⛔ **(a) "accept the break, name the window" was ruled on 2026-08-29 and is SUPERSEDED THE SAME DAY —
 ⛔ by falsification of its ground, ⛔ NOT on its merits.** ⭐ The verdict may well be re-taken; ⛔ it may
@@ -702,7 +836,12 @@ zero-row population is SD-1.
 
 </details>
 
-### ✅ D3-key — **RULED BigDev 2026-08-29: (c) — split derivation.** ⛔ Do not re-litigate.
+### ⛔ D3-key — **RULED (c) 2026-08-29 · ⛔ VACATED BY D5 2026-08-30.** ⛔ History only.
+
+⭐ **(c) was CORRECT for the union D5 abolished** — ⛔ it did not become wrong; its question ceased to
+exist when the `anonymized` variant did. ⚠ **Both dates are recorded deliberately**: a ruling that
+lived one day is still a ruling, and Task 0 transcribes it as **vacated**, ⛔ not as never-taken
+([[feedback_supersede_never_reinterpret]]).
 
 **The question was:** how is `rowKey` derived, and ⭐ **does the `anonymized` variant derive it the same
 way as the `name` variant?** → ✅ **(c): NO — the two variants derive their keys DIFFERENTLY.**
@@ -802,9 +941,10 @@ replay** (one batched read, D3-shape(ii)(a)); AC3 bounds the **KMS decrypt** (bo
   `packages/domain/src/contribution/read.ts:132` `listConfirmedContributorsForPool` →
   `ConfirmedContributor = { memberId }` (`:112-114`). ⛔ Do not push decryption or state into it —
   the boundary decrypts, by design.
-- **⚠ `.strict()` + Zod discriminated unions.** D3-shape(i)(a) **is** ruled ⇒ re-test the `.strict()`
-  semantics **inside** the union — the existing shape test asserts strictness on a flat object, and
-  union-member strictness is a different code path. ⛔ Do not assume it carried.
+- **⛔ ~~`.strict()` + Zod discriminated unions~~ — VOID under D5.** There is ⛔ no union and ⛔ no
+  contract edit, so ⛔ nothing to re-test. ⚠ ⭐ **Keep the lesson for whoever DOES widen this tuple
+  later:** discriminated-union strictness is a **different code path** from flat-object strictness —
+  ⛔ do not assume the existing shape test carries.
 - **⭐ The `2026-08-28-165` cl.2 masking ruling does NOT apply here.** It is scoped to **account**
   fields on `sahyog-vivran`. ⛔ Do not cite it as authority for anything about contributor names.
 - **⚠ `git push` runs the full `ci:local` via a pre-push hook** — the "hang", ⛔ not a failure
@@ -830,14 +970,16 @@ pnpm ci:local                               # before push — integration concur
 | Path | New/Update | Note |
 |---|---|---|
 | `apps/api/src/modules/member-pool/handlers.ts` | UPDATE ✅ `[D3(a) + D4(a) RULED]` | `:309-334`. ⛔ Preserve the three `continue`s and `confirmedCount` semantics **exactly**. ⛔ No death conjunct. |
-| `packages/contracts/src/contributions/pool-contributor-list.ts` | ⛔ **BLOCKED** `[D3-rollout re-opened + D3-key unruled]` | The ruled `discriminatedUnion('kind', …)` + `rowKey` on both variants. ⚠ Re-test `.strict()` INSIDE the union. ⚠ ⛔ Grep `lastInitial` and reconcile at the ROOT first (Trap 4). |
+| `packages/contracts/src/contributions/pool-contributor-list.ts` | ⛔ **NOT TOUCHED** `[AC4 VACATED by D5]` | The ruled `discriminatedUnion('kind', …)` + `rowKey` on both variants. ⚠ Re-test `.strict()` INSIDE the union. ⚠ ⛔ Grep `lastInitial` and reconcile at the ROOT first (Trap 4). |
 | `packages/domain/src/member/read.ts` | **UPDATE** ✅ `[D3-shape(ii)(a) RULED]` | ⭐ **NEW: the batched lifecycle read** → `Map<MemberId, MemberLifecycleState>`, one query, chunked at a named constant. ⛔ None exists today. ⛔ State only; ⛔ no dynamic `.limit()`. ⛔⛔ **Mirrors `getCurrentMemberState` (`:151`) — ⛔ NEVER `getMemberStateAt` (`:127`): no `atTimestamp`, no `occurred_at` bound (Trap 1's clock domain).** |
 | `packages/domain/src/member/display-name.ts` | ⚠ **READ-ONLY — reuse** | ⛔ Do not reimplement the `anonymized` branch; ⛔ do not add a death conjunct to it. |
-| `apps/api/src/modules/member-pool/contribution-note.ts` · `name.ts` | UPDATE `[Trap 4]` | Re-spellings of the tuple. |
-| `apps/mobile/components/contributor-list/PoolContributorList.tsx` | ⚠ **AC4 boundary** | `:40-43`'s local `ConfirmedRow` must derive from the contract. ⛔ If 11b.2b has not landed, add a failing-by-construction lockstep test instead of editing here. ⚠ **Editing this path FIRES friction-budget AC-4.** |
+| `apps/api/src/modules/member-pool/contribution-note.ts` · `name.ts` | ⛔ **NOT TOUCHED** `[D5]` | Re-spellings of a tuple that ⛔ no longer changes. |
+| `apps/mobile/components/contributor-list/PoolContributorList.tsx` | ⛔ **NOT TOUCHED** `[AC4/AC5 VACATED]` | ⭐ The wire is unchanged ⇒ `:40-43`'s local `ConfirmedRow` stays valid and `:137-138`'s `index` keyExtractor stays. ⚠ ⭐ **So friction-budget AC-4 does ⛔ NOT fire.** |
 | `apps/api/tests/integration/contributions/pool-contributors-rtbf.spec.ts` | **NEW** | ⛔ `.spec.ts` under `tests/integration/`. ⛔ Not `tests/unit/pool-contributors.test.ts` (DB-free — the wrong-home trap). |
 | `packages/ui/**` | ⛔ **NOT TOUCHED** | The presenter is 11b.2's. |
 | `packages/contracts/src/public-pages/matrix.ts` | ⛔ **NOT TOUCHED** | No surface or field is declared here. |
+| `packages/i18n/locales/{en,hi}/common.json` | ⛔ **NOT TOUCHED — ROUTED** `[AC7]` | ⛔ Three keys × two locales FALSIFIED by D5 (`rtbf.entry_hint` `:217` / `ack_body` `:219` / `done_body` `:227`). ⛔ Statutory copy ⇒ counsel + Story-2.4 amendment workflow + non-author tone review. |
+| `packages/domain/src/member/directory-read.ts` | ⚠ **READ-ONLY — the PRECEDENT** | `DIRECTORY_VISIBLE_MEMBER_STATES` already omits `anonymized` (`2026-08-20-143` cl.3). ⛔ Do not edit; cite it. |
 | `.decision-log.md` | UPDATE | Task 0. Read the head **live**. |
 | `_bmad-output/implementation-artifacts/deferred-work.md` | UPDATE | RTBF-D1 · `:2161` · `:2163` discharged; `:2162` noted. ⛔ Precise closure language. |
 
@@ -850,7 +992,10 @@ pnpm ci:local                               # before push — integration concur
 - [Source: `packages/domain/src/reconciliation/matcher-write.ts:117` · `apps/jobs/src/boot.ts:635,652` · `packages/domain/src/index.ts:177`] — ⭐⛔ **Epic 9's `contribution.confirmed` producer is LIVE** (Story 9.4/9.5) — what falsified D3-rollout's ground
 - [Source: `packages/domain/src/member/anonymize.ts:70,101-113,144`] — the sentinel, `encSentinel`, and the **encrypted** write into `name_ciphertext`
 - [Source: `packages/domain/src/kyc/name.ts:25,47-53`] — `SplitName`; the single-token path that lets the sentinel through
-- [Source: `packages/domain/src/member/display-name.ts:26,36-39,47-58`] — ⭐ the THREE-kind union; `ANONYMOUS_MEMBER_I18N_KEY`
+- [Source: `packages/domain/src/member/display-name.ts:26,36-39,47-58`] — ⚠ the THREE-kind union + `ANONYMOUS_MEMBER_I18N_KEY`. ⛔ **Under D5 this seam is NOT called by this story** — cited to explain why RTBF-D1 stays un-discharged (Task 6)
+- [Source: `packages/domain/src/member/directory-read.ts:82-96`] — ⭐⭐ `DIRECTORY_VISIBLE_MEMBER_STATES`: the RATIFIED precedent that already OMITS `anonymized` (`2026-08-20-143` cl.3) — D5's consistency ground
+- [Source: `packages/i18n/locales/{en,hi}/common.json:217,219,227`] — ⛔ the three RTBF notice keys D5 FALSIFIED, in both locales (AC7)
+- [Source: `apps/api/src/modules/member-pool/routes.ts:57`] — ⚠ the endpoint is **member-session-gated**, ⛔ not public (the open SCOPE question)
 - [Source: `packages/domain/src/contribution/read.ts:112-114,132`] — `ConfirmedContributor = { memberId }`
 - [Source: `packages/contracts/src/contributions/pool-contributor-list.ts:16-22,39,42-51,59-65`] — the shape; ⚠ the `pending` **aggregate** that does exist
 - [Source: `apps/api/src/modules/public-pages/handlers.ts:58,67,210,408`] — `DIRECTORY_DECRYPT_CONCURRENCY`; `mapWithConcurrency` def + both call sites
@@ -881,6 +1026,7 @@ pnpm ci:local                               # before push — integration concur
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-08-30 | 1.0 | ⭐⭐ **FINAL RULING D5 (BigDev) — RTBF REMOVES THE CONTRIBUTOR ENTIRELY; ⛔ NO ANONYMIZED ROW IS EMITTED.** The erased member's public representation **disappears** rather than leaving an **identifiable or correlatable placeholder**; UX consequences handled explicitly, ⛔ not solved with an anonymized row + `rowKey`. ⭐ **Public erasure, ⛔ NOT destruction of the legal record** — legally-required records persist in restricted internal systems for the statutory retention period and are ⛔ never used to restore the public representation. ⭐ **Recorded as a CONSISTENCY correction, ⛔ not a new posture:** `DIRECTORY_VISIBLE_MEMBER_STATES` (`directory-read.ts`, `2026-08-20-143` cl.3) **already omits `anonymized`** from the public directory — the contributor list was **the outlier**. ⭐⭐ **THE STORY SHRANK AND UNBLOCKED:** with one kind of row, **AC4 · AC5 · D3-shape(i) · D3-key · D3-rollout are all VACATED** — ⛔ their questions **ceased to exist**, ⛔ they were **NOT reversed on merits** (`2026-08-24-159`'s "D4(a) was VACATED by D1(b)" precedent, [[feedback_closure_language_precision]]). ⇒ ⛔ **NO WIRE CHANGE ⇒ no `.strict()` break, no OTA/MMKV hazard, no rollout window, and Task 2 is DELETED.** ⚠ D3-key(c) lived exactly one day (ruled 08-29, vacated 08-30) — **both dates recorded**; it was **correct for the union D5 abolished**. **AC1 rewritten as an OMISSION** that skips **BEFORE the decrypt** (⭐ strictly less Tier-1 plaintext materialised, and it composes with AC3), carrying its **own comment** marking it the D5 erasure behaviour so a later reader ⛔ cannot mistake it for a fail-soft — ⚠ **Trap 2 INVERTED**: the old text said *"the anonymized case must NOT `continue`"*, D5 rules the reverse. **AC2 SURVIVES and matters MORE** — the state decides whom to omit, so a clock-domain miss now leaks **the real name**, ⛔ not a marker. **AC6's assertions INVERT** to absence, incl. a **serialized-JSON** sentinel check. ⭐ **AC7 NEW — D5 FALSIFIED SHIPPED USER-FACING COPY IN BOTH LOCALES:** `rtbf.entry_hint` `:217`, `rtbf.ack_body` `:219` (⭐ it names *"an anonymous member"*, the very marker D5 removes) and `rtbf.done_body` `:227` all promise *"your contribution history stays on record, without your name"* — ⛔ now false. ⛔⛔ **Routed, ⛔ NOT edited here:** it is **statutory** text (counsel + Story-2.4 amendment workflow + non-author tone review, `2026-08-28-161` precedent), it is **3.12's surface**, and ⭐ **statement 3 must be checked against the build — `anonymize.ts:144` DESTROYS the name** (encrypted-sentinel overwrite), so the notice must be precise about **which** records are retained or it misleads. ⛔⛔ **TWO THINGS D5 DOES NOT SETTLE, both recorded OPEN, ⛔ neither defaulted:** **D3-aggregate** — does the omitted member still count in `confirmedCount`/`rosterSize`? Keeping it leaves `rows.length < confirmedCount`, and ⭐ **that delta is itself a correlatable trace** across MMKV-cached polls; dropping it **retroactively moves a financial aggregate**; and ⚠ `rosterSize` is a **third** question — if the count drops while the roster holds, the erased member silently becomes **"pending"**, misrepresenting someone who *did* contribute. **SCOPE** — this endpoint is **member-session-gated**, ⛔ not public (`routes.ts:57`), while D5 says *"public"*; the file **proceeds on "D5 reaches it"** because the alternative leaves the defect shipped, ⚠ but that is an **ASSUMPTION recorded openly**, ⛔ not a ruling. ⭐ **RTBF-D1 is ⛔ NOT discharged** — under D5 the path **omits instead of masking**, so `resolveMemberDisplayName` still has **zero production call sites**; re-dispositioned as **superseded as to contributor surfaces**. ⭐ **`deferred-work.md:2163` STAYS OPEN** — its blocker (*"no stable per-member identifier"*) is still true, D5 supplied none ⇒ **11b.2b keeps `index`** and its union/`rowKey` expectations at `:39`/`:85`/`:164` are **void**; Task 6 corrects it. ⚠ Trap 4's re-spellings are **unexercised** and stay a standing hazard; friction-budget AC-4 **does not fire** (no `apps/mobile` edit). | BigDev + Claude |
 | 2026-08-29 | 0.3 | ✅ **TWO DECISIONS RULED BY BigDev — D3-key(c) and D4(a).** ⭐ **D3-key(c): the two union variants derive `rowKey` DIFFERENTLY** — `HMAC(memberId, per-pool salt)` on `kind:'name'` (stable across the 60s poll ⇒ real FlashList recycling), **per-row random** on `kind:'anonymized'` (⭐ erasure leaves no stable handle). (a) rejected — a deterministic key on an erased row is a residual identifier surviving erasure; (b) rejected — destroys recycling for every row and fails AC5's own ground; (d) rejected — costs AC5 entirely and leaves 11b.2b on `index`. ⇒ **AC5 UNBLOCKED and now fully specified**; Task 2's blocker list drops from two to one. ⚠ ⭐ **Three constraints the ruling carries, added to AC5 + Task 2:** the per-pool salt is a **SERVER-HELD SECRET, ⛔ never `poolId`** (`HMAC(memberId, poolId)` is computable by anyone holding a memberId ⇒ a **membership-confirmation oracle**, the enumeration property `11a.3` refuses in terms) · the anonymized key is generated **per ROW, not per response** (or duplicate-key churn returns) · both variants emit the **same format** so no consumer branches on key shape instead of `kind`. ⛔⛔ **AND THE HONEST LIMIT IS RECORDED, ⛔ not claimed away:** (c) closes the **key** channel, ⛔ NOT the **neighbour** channel — surviving rows keep stable keys by design, so a client persisting responses (⚠ the SDK auto-persists to **MMKV**) can diff two polls, see which key **vanished**, and identify the erased member anyway. ⛔ Not fixable within (c); the only cure is option (b), rejected. **Task 6 routes it as a standing residual, and AC5 forbids any test or comment asserting erasure is uncorrelatable.** Task 5 gains the **D3-key(c) test triple** — a `name` key identical across two requests · an `anonymized` key differing across two requests · ⭐ **the anonymized key is NOT the HMAC that member carried pre-anonymization** (the entire point of (c)) — plus a per-row-uniqueness test. ⭐ **D4(a) RE-RULED, ⛔ not restated:** its first ground included *"currently costs nothing (0 confirmed contributors)"*, which v0.2 falsified; a verdict standing on a falsified ground does ⛔ not carry over ([[feedback_supersede_never_reinterpret]]), so it was **re-taken on the corrected ground — which is STRONGER** (the N+1 is a live cost on a live path). Task 0 now transcribes the re-ruling **and why the first ground fell**. ⛔ **D3-rollout remains RE-OPENED and is now the story's ONLY blocker** — status stays `blocked-awaiting-decisions`, but **Tasks 0/1/3/4/5 are startable**, which is the whole RTBF defect fix plus the decrypt bound; ⛔ only Task 2 (the wire widening) waits. | BigDev + Claude |
 | 2026-08-29 | 0.2 | ⛔⛔ **THIRD VALIDATION PASS (`bmad-create-story validate 11b.2a`, at `07a5ced`) — STATUS DROPPED `ready-for-dev` → `blocked-awaiting-decisions`.** Baseline re-pinned `80e0d12` → `07a5ced` (⛔ no verified claim moved: `git diff --name-only` returns four `_bmad-output/` files and nothing else). ⭐⭐ **THE FINDING: D3-rollout(a)'s SOLE GROUND IS FALSE.** *"Epic 9's `contribution.confirmed` producer is unbuilt ⇒ population ZERO"* — the producer **shipped at Story 9.4/9.5** (`sprint-status:12178-12179` both `done`; `matcher-write.ts:117` `appendConfirmedContribution`; `boot.ts:652` registered unconditionally; *"two live emitters since Story 9.4"* in two packages). ⚠ **The false premise was read off STALE Epic-8-era comments** (`pool-contributor-list.ts:88`, `contribution/read.ts:18`) — ⭐ **one of which contradicts its own file header at `:7-8`**. ⇒ D3-rollout **RE-OPENED** (superseded by falsification, ⛔ not reversed on merits); AC4's *"widen BEFORE Epic 9's producer"* ordering is **UNSATISFIABLE**; Task 6's standing item would have routed a **future** watch for a **past** event — the RTBF-D1 decay pattern re-created inside the story discharging RTBF-D1. ⭐ The residual *"zero rows in production"* claim is recorded **UN-ATTESTED** — never measured. **(2)** ⛔⛔ **AC2 named the WRONG state-read sibling.** `read.ts` has two: `getMemberStateAt` (`:127`, `occurred_at`-bounded) and `getCurrentMemberState` (`:151`, unbounded), whose doc-block warns that an **app-clock** bound can disagree with the projector's **DB-clock** replay ⇒ an `rtbf_anonymized` event falling outside the window **renders the erased name** — this story's own defect, reintroduced. AC2 now mirrors `getCurrentMemberState` + a test asserting no `occurred_at` bound. **(3)** ⛔ **NEW decision D3-key** — D3-shape(i)(a) ruled `rowKey`'s SHAPE, ⛔ never its DERIVATION; AC5's *"stable"* and *"must not re-identify across requests"* clauses **conflict**, and a deterministic key on the `anonymized` variant leaves **a stable handle on an erased row**. AC5 + Task 2 BLOCKED; four options costed, ⛔ none ruled. **(4)** ⛔ **Every `continue` line number was wrong** — `:313`/`:326`/`:331` → **`:317`/`:327`/`:332`** (conditions `:312`/`:323-325`/`:330`; comments `:313-315`/`:319-321`, ⛔ not `:322-324`). 11b.2's re-validate fixed this family at `07a5ced` but that commit ⛔ never touched this file. **(5)** AC3 shared only the CONSTANT — ⚠ `mapWithConcurrency` (`public-pages/handlers.ts:67`) is **equally module-private** and carries the load-bearing input-order behaviour ⇒ **both** are extracted. **(6)** *"§4.4 **governs** it"* → **SPEAKS to but governs nothing** (unratified; ranked below a Deed clause that itself binds nothing) — the obligation discharged here is **statutory + ratified**, ⛔ neither needs §4.4. **(7)** Trap 4's grep returns **~20 files** against a **10-row** table ⇒ the out-of-scope classes are now named (the 8.2 `deceasedLastInitial` family + the `splitFirstNameLastInitial` producer/tests). Citation corrections: `11b-9-…md:753-757` → **`:762-767`** · `getMemberStateAt` is `occurred_at`-bounded, ⛔ not *"unbounded"* · `resolveMemberDisplayName` has **no `dist/` reference** (the zero-production-call-sites half is CONFIRMED) · `governance:` 142 → **144**. ⭐ **Verified clean:** the entire defect trace line-by-line, Trap 1's no-`state`-column claim, the mobile local `ConfirmedRow:40-43`, the SDK parse site, all four `deferred-work.md` anchors, `friction-budget/lib.ts:453`, decision-log head `2026-08-28-167`, the commitlint-unwired claim, the death-vs-RTBF table against `epics.md:4906`, and `tests/integration/contributions/` as a valid home. | BigDev + Claude |
 | 2026-08-29 | 0.1 | **Split out of Story 11b.2 by the validation pass at `80e0d12`.** Carries the live RTBF contributor-name defect, the decrypt bound, the wire widening and the stable row key. ⭐ Findings applied at authoring: **(1)** ⛔ *"nothing had recorded it"* is **false** — **RTBF-D1** (`deferred-work.md:3980`) recorded the unwired seam and its re-trigger **fired at Story 8.3**; this story **discharges** it rather than claiming novelty. **(2)** ⛔⛔ *"the boundary already loads the member"* is **false** — `getMemberKycProfile` returns no `state` and `getMemberStateAt` is a **full event-stream replay per member**, so the naive fix is an N+1 **worse** than the one AC3 bounds ⇒ new **D3-shape(ii)** and **AC2**. **(3)** The anonymized wire shape was **entirely unspecified** ⇒ **D3-shape(i)** with four costed options. **(4)** Widening a `.strict()` **response** breaks every stale mobile client — **no OTA**, SDK-validated, **MMKV-persisted** ⇒ Trap 3 + an explicit rollout-posture AC. **(5)** *"must not silently `continue`"* re-scoped to the anonymized case only — three existing integrity `continue`s preserved verbatim. **(6)** The resolver returns **THREE** kinds; `unknown` gets an exhaustive throwing check recorded un-attested. **(7)** Trap 4 now names the working grep (`lastInitial`), all seven re-spellings, and 11b.1's **two** load-bearing halves (root-derivation + exercise-the-variant). **(8)** AC3's drift mechanism changed from a cross-reference comment — **already filed as insufficient by 11b.9's review** — to one shared constant. **(9)** **AC5 added**: `deferred-work.md:2163`'s keyExtractor re-trigger has fired by name and this is the only story that can supply the stable key it lacks. **(10)** AC6 given a real home, the two real-anonymization precedents, and the exercise-the-variant fixture rule. **(11)** Task 0 is **TRANSCRIBE-or-STOP**. | BigDev + Claude |

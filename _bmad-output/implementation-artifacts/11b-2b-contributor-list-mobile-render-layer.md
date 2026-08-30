@@ -4,9 +4,13 @@ baseline_commit: dbb4a25f9f9321779fc3a41ca039c0c5e957c11c
 
 # Story 11b.2b: Contributor List — Mobile Render Layer + Family-13 Accessibility `[SURFACE]`
 
-Status: blocked-awaiting-decisions
+Status: ready-for-dev
 
-> ⛔⛔ **FIFTH-PASS VALIDATION (2026-08-30, at `dbb4a25`) — ONE NEW UNRULED DECISION (D10), AND THREE
+> ✅✅ **D10 IS RULED (BigDev, 2026-08-30): (a) — derive from `@twt/contracts`, delete the duplicate.**
+> ⛔ **NOTHING IS GATED BY A DECISION ANY LONGER.** ⚠ The **hard dependency remains** and is the only
+> gate: `ready-for-dev` here means what the enum means — *"story file created"*.
+>
+> ⛔⛔ **FIFTH-PASS VALIDATION (2026-08-30, at `dbb4a25`) — ONE NEW DECISION (D10, now RULED), AND THREE
 > HARD CONTRADICTIONS CORRECTED.** ⭐ The story is **materially smaller and materially different** from
 > its authoring pass, because **11b.2a's D5 · D3-aggregate · D5-scope · D6(a) · D7(c)** all landed
 > AFTER this file was written and between them **abolished the subject of three of its ACs**.
@@ -33,8 +37,8 @@ Status: blocked-awaiting-decisions
 `git fetch origin` first ([[feedback_git_fetch_before_remote_reasoning]]). ⛔ If either is unmerged, the
 dev agent's ONLY legal action is to **report blocked**.
 
-⛔⛔ **THE SECOND GATE IS D10, WHICH IS UNRULED** (see Decisions). It gates **Task 2 (the adapter)
-only**; Tasks 0/3/4/5/6/7 are startable the moment the dependency clears.
+✅ **D10 IS RULED (a).** ⛔ No decision gates any task. **Every task is startable the moment the
+dependency clears.**
 
 ### ⭐⭐ FIVE RULINGS MADE ELSEWHERE BIND THIS STORY — ⛔ read them before any task
 
@@ -92,7 +96,7 @@ death-context surface (AC2).
 | The **member-facing list** | ✅ `apps/mobile/components/contributor-list/PoolContributorList.tsx` (8.3, **167 lines**): FlashList-virtualized (`:132-141`), `contributorLabel()` composing `firstName + lastInitial` **inline at `:46-48`**, per-row a11y label, aggregate pending strip (`:149-164`), four distinct states (loading `:57` · absence `:68` · empty `:121-126` · list `:128`). ⛔ **Do NOT write a second list.** ⭐ The inline label at `:46-48` is exactly what the presenter replaces. |
 | ⭐⛔ How many places render it | ⛔⛔ **TWO, AND THE AUTHORING PASS NAMED NEITHER ROUTE.** Verified by grep — these are the **only** two importers: **(1)** `apps/mobile/app/(contribution)/contributors.tsx:13` (import `:7`) — the 8.3 route. **(2)** ⭐ `apps/mobile/components/nominee-console/NomineeConsole.tsx:213` (import `:31`), deliberately **outside** the parent `ScrollView` (which closes at `:206`; rationale `:208-211`) ⇒ **this story changes a staff-takeover-session-as-deceased surface.** → **AC2**. |
 | ⭐⛔ `ViewContributorsEntry.tsx` | ⛔⛔ **THE AUTHORING PASS'S CLAIM IS FALSE AND IS REPLACED BY A VERIFIED NEGATIVE.** It said the file *"shares the wire shape 11b.2a widens"*. Verified live: **(i)** 11b.2a widens **nothing** (AC4 VACATED by D5); **(ii)** the file reads **`data.assigned` ONLY** (`:26`, `:30`) and ⛔ **never touches `confirmed`, `firstName` or `lastInitial`.** ⇒ ⭐ **⛔ NOTHING IS OWED HERE.** Recorded so a later pass does not re-derive the check. |
-| The **local tuple copy** | ⛔ `PoolContributorList.tsx:40-43` declares `interface ConfirmedRow { firstName; lastInitial }` — ⛔ **NOT imported from `@twt/contracts`.** ⛔⛔ **THE AUTHORING PASS SAID *"11b.2a's AC4 makes this derive from the contract"* — ⭐ THAT AC IS VACATED. Nothing makes it derive from anything.** It is 11b.1's defect class, still present, and 11b.2a's Trap 4 names this exact site. ⇒ **D10 (UNRULED).** ⭐ Note `apps/mobile` **already imports `@twt/contracts` in 20+ files** (`pay.tsx:38-39`, `polls/index.tsx:20`, …), so ⛔ there is **no** bundle-boundary objection to (a). |
+| The **local tuple copy** | ⛔ `PoolContributorList.tsx:40-43` declares `interface ConfirmedRow { firstName; lastInitial }` — ⛔ **NOT imported from `@twt/contracts`.** ⛔⛔ **THE AUTHORING PASS SAID *"11b.2a's AC4 makes this derive from the contract"* — ⭐ THAT AC IS VACATED. Nothing makes it derive from anything.** It is 11b.1's defect class, still present, and 11b.2a's Trap 4 names this exact site. ⇒ ✅ **D10(a) RULED — it is DELETED and the adapter types against the contract.** ⭐⭐ **And the verification found it is not even a duplicate — it is a SHADOW:** `data.confirmed` is **already** `ConfirmedContributorRow[]` at the call site (the SDK returns `PoolContributorListResponse`, re-exported as `PoolContributorListResult` at `api-client:88`), so `ConfirmedRow` only re-annotates `renderItem`/`keyExtractor` params TypeScript already infers. ⛔ `ConfirmedContributorRow` appears **nowhere** in `apps/mobile` today. |
 | The **keyExtractor** | ⛔ `:137-139` — `` `${item.firstName}-${item.lastInitial}-${index}` ``. ⭐⭐ **IT STAYS.** `deferred-work.md:2163` remains **OPEN** — its blocker (*"the PII-shielded shape carries no stable per-member identifier"*) is **still true**, because D5 supplied none. ⚠ ⭐ **AND THE AUTHORING PASS'S SECOND CLAIM WAS ALSO FALSE:** it said the deferral's re-trigger — *"reused for the Epic 11b **public** render"* — *"has fired"*. ⛔ It has **not**: this story is the **member** render of **a single pool's roster**, which is the exact scale the deferral records as fine. **11b.3** is the public host. → **AC3**. ⚠ Separately, the deferral's own citation `PoolContributorList.tsx:124-126` is **stale** (live: `:137-139`) — routed, ⛔ not silently fixed. |
 | Latin numerals | ✅ `:81-82` uses `String(...)`. ⭐ Operational figures stay Latin even in Hindi (UX-DR73 / amendment-A2). ⛔ Never `toHindiNumeral` here. |
 | ⛔⛔ Does the row view-model carry a **token role**? | ⛔⛔ **NO — AND THIS IS THE PASS'S HEADLINE CORRECTION.** Verified live in 11b.2 (`:366-382`): `ContributionRowViewModel` is exactly `{ displayName, poolLetterCode, rowKey, rowA11y }`. ⭐ **There is NO colour, tone or token field, BY RULING** — 11b.2's **D2(a)**: *"⛔ No `status` field, ⛔ no `deriveStatusPillViewModel` call, ⛔ no `'green'` literal"*, and option **(c) *"a constant confirmed chrome element in the render layer"* was rejected BY NAME**, with the ruling adding *"⭐⛔ **AND THIS RULING BINDS 11b.2b**"*. ⇒ **AC4 is INVERTED.** |
@@ -322,7 +326,7 @@ friction-budget.md`. ⛔ Leave existing rows byte-unchanged ([[feedback_supersed
 until you commit — the failure surfaces at `git push` (pre-push hook), ⛔ not during local iteration
 ([[project_friction_budget_baseline_ratchet]]).
 
-### ⭐⭐ AC9 (NEW) — THE WIRE→PRESENTER ADAPTER, which 11b.2 routes here BY NAME `[GATED ON D10]`
+### ⭐⭐ AC9 (NEW) — THE WIRE→PRESENTER ADAPTER, which 11b.2 routes here BY NAME ✅ `[D10(a) RULED]`
 
 11b.2's presenter input is ⛔ not the wire row (Trap 4). This story authors the adapter, and 11b.2
 states the obligation in terms: *"⭐ The adapter is 11b.2b's, and **11b.2b owes it an AC**."*
@@ -339,7 +343,22 @@ The adapter:
      does **not** join `firstName + lastInitial` (11b.2's **D9(a)**: the name FORM is UNRULED and
      joining it would RULE it).
 
-⚠ **Its input type is D10's subject.** ⛔ Do not start this AC until D10 is ruled.
+✅ **Its input type is RULED: `import type { ConfirmedContributorRow } from '@twt/contracts'`** (D10(a)),
+and `PoolContributorList.tsx:40-43`'s local `ConfirmedRow` is **deleted** in the same diff.
+⚠ ⭐ **State in the diff that AC5's preservation is BEHAVIOURAL, ⛔ not textual** — `renderItem`'s and
+`keyExtractor`'s parameter types change spelling, and the params lose the local `readonly` modifiers
+(`z.output` is not readonly). ⛔ Neither is a behaviour change; ⛔ do not "restore" `readonly` by
+re-declaring a local type.
+
+⛔⛔ **AND THE ONE THING D10(a) MUST NOT BECOME A LICENCE FOR.** Reading the contract to import from it
+puts `pool-contributor-list.ts:88` in front of you: *"Legitimately `[]` today (Epic 9's
+`contribution.confirmed` producer is **unbuilt** — D2)."* ⭐ **That is FALSE and it CONTRADICTS ITS OWN
+FILE HEADER at `:7-8`** (*"produced by the Epic 9 matcher since Story 9.4 — this list is **live, not
+structurally empty**"*). ⚠ ⭐ **It is a SEPARATE stale-contract issue, ⛔ NOT D10's subject:** D10(a) is
+an `import type` **from** contracts — ⛔ `packages/contracts/` is **not** edited by this story and does
+**not** enter its diff. 11b.2a already filed this exact site in its stale-comment family and ruled
+⛔ do not fix out-of-diff sites. ⇒ ⛔ **do not "tidy" it while you are in the file**, and ⛔ **do not
+re-derive the false "unbuilt" premise from it** ([[project_epic9_confirmed_producer_is_live]]).
 
 ### ⭐ AC10 (NEW) — the in-diff stale comments are corrected
 
@@ -377,9 +396,13 @@ file (AC2) ⇒ ⛔ **not corrected here**; recorded so the omission is deliberat
         ⛔ no render arm for `'unknown'` (it throws — the try/catch is its handling).
   - [ ] ⛔ **Leave `:137-139`'s `keyExtractor` byte-unchanged** (AC3).
   - [ ] ⛔ Keep the four states OUTSIDE the list (Trap 2). ⛔ Keep `String(...)` numerals.
-- [ ] **Task 2 — The adapter (AC9)** ⛔ `[GATED ON D10]`
+- [ ] **Task 2 — The adapter (AC9)** ✅ `[D10(a) RULED — startable]`
+  - [ ] `import type { ConfirmedContributorRow } from '@twt/contracts'`; **delete** the local
+        `ConfirmedRow` at `:40-43` (D10(a)). ⛔ Do not leave both.
   - [ ] Re-nest name fields under `displayName`; splice `pool.letterCode`; ⛔ emit **no** `rowKey`;
         ⛔ join nothing (D9(a)).
+  - [ ] ⛔⛔ **Do NOT edit `packages/contracts/`** — incl. `pool-contributor-list.ts:88`'s stale
+        *"producer is unbuilt"* doc-block. ⭐ Out-of-diff, filed by 11b.2a, routed ⛔ not fixed (AC9).
 - [ ] **Task 3 — The anti-chrome fence (AC4)**
   - [ ] ⛔⛔ **Build NO token bridge and NO palette map.** Write the three fence assertions instead.
         ⛔ No `@twt/tokens` import.
@@ -415,40 +438,70 @@ file (AC2) ⇒ ⛔ **not corrected here**; recorded so the omission is deliberat
 
 ## ⚖️ Decisions
 
-### ⛔⛔ D10 (NEW, **UNRULED**) — does the adapter type against `@twt/contracts`, or against the local `ConfirmedRow` duplicate?
+### ✅⭐ D10 — Type the adapter against `@twt/contracts`? → **(a) YES. Derive, and DELETE the duplicate.** RULED BigDev 2026-08-30. ⛔ FINAL.
 
 `PoolContributorList.tsx:40-43` hand-spells `interface ConfirmedRow { firstName; lastInitial }` and
 ⛔ **does not import it from `@twt/contracts`**. 11b.2a's **Trap 4** names this exact site: *"⭐⛔ a
 LOCAL `interface ConfirmedRow` — ⛔ NOT imported from `@twt/contracts`. **Widening the contract will
 ⛔ NOT fail this file's typecheck.** This is 11b.1's defect class, already present."*
 
-⛔⛔ **WHY IT IS OPEN NOW AND WAS NOT BEFORE.** The authoring pass wrote *"11b.2a's AC4 makes this
-derive from the contract; if it already did, ⛔ do not undo it."* ⭐ **11b.2a's AC4 is VACATED by D5** —
-⛔ nothing makes it derive from anything, and 11b.2a's own instruction is *"⛔ Do not do it
-opportunistically. It survives as the standing hazard **the moment ANY story widens this tuple**."*
-⚠ ⭐ **But that condition is not the one this story meets.** 11b.2b does not widen the tuple — it
-**authors the adapter that sits exactly at the wire→presenter seam** (AC9) and **rewrites the tuple's
-only consumer** (`renderItem`). The adapter must declare an input type, so ⛔ **the question cannot be
-deferred by inaction** — some type gets written either way.
+**Why it was open:** the authoring pass wrote *"11b.2a's AC4 makes this derive from the contract"* —
+⭐ **that AC is VACATED by D5**, so nothing does. And it ⛔ could not be deferred by inaction: AC9's
+adapter must declare an input type either way, and keeping the local tuple would have given the hazard
+a **second** hand-maintained consumer — this story would have made 11b.1's defect class **worse**.
 
-**Options:**
- **(a) Type the adapter against `@twt/contracts`'s `ConfirmedContributorRow` and delete the local
-     duplicate.** ⭐ Closes 11b.1's defect class at the one site Trap 4 names as already-present; ⭐ a
-     future contract widening then **fails this file's typecheck**, which is the whole point. ⭐ ⛔ **No
-     bundle-boundary objection** — verified live, `apps/mobile` already imports `@twt/contracts` in
-     20+ files (`pay.tsx:38-39`, `polls/index.tsx:20`, `nominee-review.tsx:16`, …) and it is a
-     declared dependency (`apps/mobile/package.json:33`). ⚠ Cost: deleting `ConfirmedRow` touches
-     `renderItem`'s and `keyExtractor`'s parameter types, which **AC5 pins as preserved** — the
-     preservation is behavioural, ⛔ not textual, but it must be stated in the diff.
- **(b) Keep the local `ConfirmedRow` and type the adapter against it.** ⭐ Smallest diff; honours
-     11b.2a's *"⛔ do not do it opportunistically"* on its plain reading. ⚠ Cost: the hazard survives
-     **and now has a second hand-maintained consumer** (the adapter), i.e. this story makes 11b.1's
-     defect class **worse**, not merely unaddressed.
- **(c) Type against `@twt/contracts` but leave `ConfirmedRow` in place** — ⛔ rejected on its face:
-     that is **three** spellings where there were two.
+⇒ ⛔ **`ConfirmedRow` is DELETED**; the adapter and `renderItem`/`keyExtractor` type against
+`import type { ConfirmedContributorRow } from '@twt/contracts'`.
 
-⚠ ⭐ **What this decision does NOT touch:** ⛔ the wire (D5 — no change) and ⛔ the other ~8 Trap-4
-re-spellings, which stay out of scope under 11b.2a's ruling.
+**Grounds — ⭐⭐ TWO OF THE THREE WERE FOUND BY THE RULING'S OWN VERIFICATION, ⛔ not by the option text:**
+ **(1)** ⭐⭐ **THE CONTRACT FILE'S OWN STATED DISCIPLINE ALREADY FORBIDS THIS.**
+     `pool-contributor-list.ts:14`, verbatim: *"Consumed via `import type … from '@twt/contracts'` in
+     the SDK + the apps/api handler — **NO type-shadowing**."* ⇒ `:40-43` **is** a type-shadow, and
+     (a) brings the file into compliance with a discipline the contract already declares.
+ **(2)** ⭐⭐ **IT IS NOT A DUPLICATE — IT IS A SHADOW, AND THE DELETION IS TYPE-NEUTRAL.** Verified:
+     `memberPoolContributors()` returns `PoolContributorListResult`, which is
+     `PoolContributorListResponse` re-exported (`api-client/src/index.ts:88,558`) ⇒ **`data.confirmed`
+     is ALREADY `ConfirmedContributorRow[]` at the call site.** `ConfirmedRow` only re-annotates params
+     TypeScript already infers correctly. ⭐ And `ConfirmedContributorRow` appears **nowhere** in
+     `apps/mobile` today — the shadow is currently the *only* mobile spelling.
+ **(3)** ⛔ **No bundle-boundary objection** — `apps/mobile` already imports `@twt/contracts` in 20+
+     files (`pay.tsx:38-39`, `polls/index.tsx:20`, `nominee-review.tsx:16`, …) and declares it at
+     `package.json:33`. ⚠ `import type`, deliberately ([[project_type_only_import_cycle_trap]]).
+
+⛔ **(b) keep the local tuple** — rejected: it survives the hazard *and* adds a second consumer.
+⛔ **(c) both spellings** — rejected on its face: three where there were two.
+
+### ⛔⛔ THE VERIFICATION D10 WAS RULED ON — and the SEPARATE issue it surfaced
+
+⭐ **The ruling was conditioned on the contract actually describing the post-D5 single-row shape.**
+Verified live at `dbb4a25`, `packages/contracts/src/contributions/pool-contributor-list.ts:42-52`:
+
+```ts
+export const ConfirmedContributorRow = z
+  .object({ firstName: z.string().min(1), lastInitial: z.string().max(16) })
+  .strict();
+```
+
+✅ **CLEAN — and the reason matters.** ⛔ No `kind`, ⛔ no `rowKey`, ⛔ no anonymized arm, ⛔ no
+`status`. ⭐ **There is no stale union to inherit, because D5 vacated the widening BEFORE IT WAS EVER
+BUILT** — the two-variant union existed only as 11b.2a's planned AC4, ⛔ never as shipped contract. ⇒
+the type (a) imports is **exactly** the post-D5 shape, and `.strict()` + `AssignedPoolContributorList`
+(`:91-99`) carry no residue either.
+
+⛔⛔ **BUT THE VERIFICATION FOUND A REAL STALE-CONTRACT DEFECT NEXT TO IT, AND ⛔ IT IS NOT D10's TO FIX.**
+`pool-contributor-list.ts:88` — the `confirmed` field's doc-block — says *"Legitimately `[]` today
+(Epic 9's `contribution.confirmed` producer is **unbuilt** — D2)."*
+⭐ **FALSE since Story 9.4/9.5, and it CONTRADICTS ITS OWN FILE HEADER at `:7-8`**: *"produced by the
+Epic 9 matcher since Story 9.4 — this list is **live, not structurally empty**."*
+
+⇒ recorded as a **separate stale-contract issue**, ⛔ **not silently fixed under D10**:
+· ⛔ **out of this story's diff** — D10(a) is an `import type` **from** contracts; ⛔ `packages/contracts/`
+  is never edited here;
+· ⭐ **already filed** — 11b.2a's Task 6 names `pool-contributor-list.ts:88` in its ~12-site
+  stale-comment family and rules ⛔ do not fix out-of-diff sites;
+· ⛔ **AC9 fences it explicitly**, because reading the file to import from it is exactly when a dev
+  would "tidy" it, or worse, **re-derive the false premise from it**
+  ([[project_epic9_confirmed_producer_is_live]] — *"never read population from a comment"*).
 
 ### ✅ D5-prototype — Promote the memorial `<ContributorRow>` prototype? → **(a) ⛔ NO.** RULED BigDev 2026-08-29.
 
@@ -511,13 +564,13 @@ pnpm ci:local                     # before push — and AC8's ledger note must b
 | Path | New/Update | Note |
 |---|---|---|
 | `apps/mobile/components/contributor-list/PoolContributorList.tsx` | UPDATE | Consume the presenter in a **try/catch**; **delete** `contributorLabel()` `:46-48`; correct `:11`/`:119` (AC10). ⛔⛔ **`:137-139`'s `keyExtractor` is LEFT ALONE** (AC3). ⛔ FlashList + the four states + the pending strip otherwise unchanged. |
-| the adapter | **NEW** `[D10]` | AC9. ⛔ Its input type is D10's subject — ⛔ do not start before D10 is ruled. |
+| the adapter | **NEW** ✅ `[D10(a)]` | AC9. Types against `@twt/contracts`'s `ConfirmedContributorRow`; the local `ConfirmedRow` `:40-43` is **deleted**. |
 | `apps/mobile/app/(contribution)/contributors.tsx` | ⚠ **VERIFY** | Render site 1 (`:13`) — smoke-assert after the rewire. |
 | `apps/mobile/components/nominee-console/NomineeConsole.tsx` | ⚠ **VERIFY** | ⭐ Render site 2 (`:213`) — a death-context surface. ⛔ Run the no-death-term assertion here explicitly. ⛔ Its stale comments (`:3,8,208`) are ⛔ **NOT** corrected here (AC10). |
 | `apps/mobile/components/contributor-list/ViewContributorsEntry.tsx` | ⛔ **NOT TOUCHED** | ⭐ **Verified negative** — reads `data.assigned` only. ⛔ Nothing owed. |
 | `apps/mobile/tests/unit/contributor-list-render.test.ts` | **NEW** | ⛔ Source scan + presenter-driven. ⛔ No mount harness — do not stand one up. |
 | `packages/ui/**` | ⛔ **READ-ONLY** | The presenter is 11b.2's. ⛔ Do not edit it to make this story easier. |
-| `packages/contracts/**` · `apps/api/**` | ⛔ **NOT MODIFIED** | ⚠ Under D10(a) `@twt/contracts` is **imported (type-only)**, ⛔ never edited. |
+| `packages/contracts/**` · `apps/api/**` | ⛔ **NOT MODIFIED** | ✅ D10(a): `@twt/contracts` is **imported (type-only)**, ⛔ never edited. ⛔⛔ Incl. `pool-contributor-list.ts:88`'s stale *"producer is unbuilt"* doc-block — ⭐ a **separate** stale-contract issue, ⛔ not D10's subject (AC9). |
 | `packages/tokens/**` | ⛔ **NOT IMPORTED, AND NO BRIDGE IS BUILT** | AC4 — inverted by D2(a). |
 | `apps/mobile/components/shradhanjali/ContributorRow.tsx` | ⚠ **LEAVE ALONE** `[D5-prototype]` | Sample-data prototype; **two** producer-less fields. |
 | `friction-budget.md` | ⛔ **MUST UPDATE** | AC8 — unconditional. An affirmation/disposition note; ⛔ existing rows byte-unchanged. |
@@ -567,5 +620,6 @@ pnpm ci:local                     # before push — and AC8's ledger note must b
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-08-30 | 0.3 | ✅✅ **D10 RULED (a) BY BigDev ⇒ STATUS `blocked-awaiting-decisions` → `ready-for-dev`. ⛔ NOTHING IS GATED BY A DECISION; the hard dependency is the only remaining gate.** ⇒ the local `ConfirmedRow` (`PoolContributorList.tsx:40-43`) is **DELETED** and the adapter types against `import type { ConfirmedContributorRow } from '@twt/contracts'`. ⭐⭐ **TWO OF THE THREE GROUNDS WERE FOUND BY THE RULING'S OWN VERIFICATION, ⛔ not by the option text: (1)** `pool-contributor-list.ts:14` **already declares the discipline** — *"Consumed via `import type … from `@twt/contracts`` … **NO type-shadowing**"* — so `:40-43` **is** the forbidden shadow and (a) brings the file into compliance with the contract's own rule; **(2)** ⭐ **it is not a duplicate, it is a SHADOW, and the deletion is TYPE-NEUTRAL** — `memberPoolContributors()` returns `PoolContributorListResponse` re-exported as `PoolContributorListResult` (`api-client:88,558`), so **`data.confirmed` is ALREADY `ConfirmedContributorRow[]` at the call site** and `ConfirmedRow` only re-annotates params TS already infers; ⭐ `ConfirmedContributorRow` appears **nowhere** in `apps/mobile` today. **(3)** ⛔ no bundle-boundary objection (20+ existing imports; `package.json:33`), `import type` deliberately. ⛔ (b) rejected — survives the hazard **and** adds a second hand-maintained consumer, making 11b.1's defect class **worse**; ⛔ (c) rejected on its face. ⚠ AC9 now states that **AC5's preservation is BEHAVIOURAL, ⛔ not textual** — the params change spelling and lose the local `readonly` (`z.output` is not readonly); ⛔ do not "restore" it by re-declaring a local type. ⭐⭐ **THE CONDITIONING VERIFICATION, RECORDED: `ConfirmedContributorRow` (`:42-52`) is `{firstName, lastInitial}` `.strict()` — ⛔ NO `kind`, ⛔ no `rowKey`, ⛔ no anonymized arm.** ⭐ **CLEAN, and the reason matters: D5 vacated the widening BEFORE IT WAS EVER BUILT** — the two-variant union existed only as 11b.2a's *planned* AC4, ⛔ never as shipped contract ⇒ ⛔ no stale union to inherit. ⛔⛔ **BUT THE VERIFICATION SURFACED A REAL SEPARATE STALE-CONTRACT DEFECT, ⛔ NOT SILENTLY FIXED UNDER D10:** `pool-contributor-list.ts:88` says *"Epic 9's producer is **unbuilt**"* — false since 9.4/9.5 and ⭐ **contradicting its own file header at `:7-8`** (*"live, not structurally empty"*). ⇒ ⛔ **out of this story's diff** (D10(a) imports **from** contracts; ⛔ `packages/contracts/` is never edited here), ⭐ **already filed** by 11b.2a's Task 6, and ⛔ **AC9 fences it explicitly** — reading the file to import from it is exactly when a dev would tidy it, or worse **re-derive the false premise from it** ([[project_epic9_confirmed_producer_is_live]]). | BigDev + Claude |
 | 2026-08-30 | 0.2 | ⛔⛔ **FIFTH VALIDATION PASS (`bmad-create-story validate 11b.2b`, at `dbb4a25`) — STATUS `ready-for-dev` → `blocked-awaiting-decisions`. ONE NEW DECISION (D10), ⛔ NOT DEFAULTED.** ✅ Baseline re-pinned `80e0d12` → `dbb4a25`; `git diff --name-only` returns **four `_bmad-output/` files and nothing else** ⇒ ⛔ no verified code claim moved. ⭐⭐ **THE PASS'S GROUND: 11b.2a's D5 · D3-aggregate · D5-scope · D6(a) · D7(c) all landed AFTER this file was authored and between them ABOLISHED THE SUBJECT OF THREE OF ITS ACs.** ⛔⛔ **(1) AC4 ORDERED THE THING D2(a) REJECTED BY NAME — the pass's headline.** It required *"map the presenter's token role names through a local mobile palette bridge"*; verified live, `ContributionRowViewModel` is `{displayName, poolLetterCode, rowKey, rowA11y}` (`11b-2-…md:366-382`) and carries ⛔ **no token role at all**, because 11b.2's **D2(a)** ruled *"⛔ no status on the row"* and rejected option **(c) *"a constant 'confirmed' chrome element in the render layer"*** — adding *"⭐⛔ **AND THIS RULING BINDS 11b.2b**"*. ⭐ The story's own Preflight restated that ban two screens above the AC that violated it. ⇒ **AC4 INVERTED into a three-part anti-chrome fence**; the 2026-07-27 tone→Tamagui precedent is **retained as precedent, ⛔ not as licence**. ⛔⛔ **(2) AC3 HAD NO SUBJECT.** It ordered the `keyExtractor` replaced by *"11b.2a's ruled `rowKey`"* and declared `deferred-work.md:2163` **discharged**; **D5 vacated `rowKey` in full** ⇒ ⭐ re-authored: **the `keyExtractor` KEEPS `index`**, the deferral **STAYS OPEN**, and ⭐ **its re-trigger has ⛔ NOT fired** — it names the Epic 11b **public** render, and this is the **member** render of a single pool's roster (**11b.3** is the real re-trigger). The deferral's own stale self-citation (`:124-126` → live `:137-139`) is **routed**. ⛔ The AC5 exemption is **removed** — the keyExtractor is now part of what is preserved. ⛔⛔ **(3) TRAP 3 DELETED — its subject cannot exist.** The *"nested two-namespace `t()`"* trap presupposed an anonymized row; **D5 + D6(a)** mean ⛔ none is ever emitted ⇒ one call, one namespace. ⭐ **AC6's i18n half shrank and was DE-DUPLICATED**: 11b.2's AC2 (`:313-320`) already owns the ten-key ref-resolution test **declared for this story**, so ⛔ no second `@twt/i18n` test is owed — this story scans **its own call sites** instead. ⭐⭐ **(4) TWO NEW ACs FOR OBLIGATIONS THE AUTHORING PASS NEVER WROTE. AC9 — THE ADAPTER**, which 11b.2 routes here **by name** (`:384-393`: *"⭐ The adapter is 11b.2b's, and **11b.2b owes it an AC**"*) — re-nest `displayName`, splice response-level `pool.letterCode`, ⛔ emit no `rowKey`, ⛔ join nothing (D9(a)). ⚠ ⭐ **And the adapter is where D5's UNDER-ROUTING surfaces:** `11b-2-…md:363`/`:373` still declare `rowKey` **required**, sourced at `:360-362` to the **VACATED** D3-shape(i)(a), and 11b.2a's Task-6 list of six artefacts ⛔ **does not cover them** ⇒ Task 0 routes a **seventh**. **AC10 — the in-diff stale comment**: `PoolContributorList.tsx:11` asserts *"Epic 9's producer is unbuilt"*, false since 9.4/9.5 ([[project_epic9_confirmed_producer_is_live]]); 11b.2a correctly scoped the family out of **its** diff, but ⭐ **this file is in THIS story's diff**. ⛔⛔ **(5) D10 (NEW, UNRULED) — does the adapter type against `@twt/contracts` or against the local `ConfirmedRow` duplicate?** 11b.2a's **Trap 4** names `PoolContributorList.tsx:40-43` as 11b.1's defect class **already present**; the authoring pass wrote *"11b.2a's AC4 makes this derive from the contract"* — ⭐ **that AC is VACATED**, so nothing does. ⚠ ⭐ **It cannot be deferred by inaction**: AC9's adapter must declare an input type either way, and (b) would give the hazard a **second** hand-maintained consumer. ⭐ Verified there is ⛔ **no bundle-boundary objection** — `apps/mobile` already imports `@twt/contracts` in 20+ files and declares it at `package.json:33`. ⛔ (c) rejected on its face (three spellings). ⚠ **(6) TWO FALSE CLAIMS REPLACED BY VERIFIED NEGATIVES:** `ViewContributorsEntry.tsx` *"shares the wire shape 11b.2a widens"* — ⛔ 11b.2a widens nothing, and the file reads **`data.assigned` only** ⇒ ⛔ nothing owed; and the AI-10-1 **Policy-meaning note** said *"your name does not appear next to it"*, which describes an **anonymized row** — ⛔ under D5 the **ROW** does not appear ⇒ **REWRITTEN** ([[feedback_spec_edits_must_propagate_to_tasks]]). ⭐ **(7) D5 → `D5-prototype` RENAMED** — a live collision with 11b.2a's governing **D5**, which is exactly how a ruling gets applied to the wrong question; the ruling itself and its corrected two-field arithmetic are **unchanged**. ⭐ **(8) D3-aggregate carried in as a Dev Note fence**: ⛔ never assert `rows.length === confirmedCount` — under D5 the divergence is **designed**. ⭐ **(9) D7(c) carried in**: `contributor_list.empty`'s only consumer is **this file, `:124`** ⇒ ⛔ do not revert it and ⛔ **no test may byte-pin the sentence** (11b.2a AC8). ✅ **(10) AC8 is the ONE AC unchanged — and it was CHECKED, ⛔ not inherited**: `MEMBER_FACING_PREFIXES` re-verified at `lib.ts:453`; it fires here precisely because this story edits `apps/mobile/`, the same test that made it **not** fire for D7(c). **Citation corrections:** `contributor_list.row_a11y` is `contribution.json:35`, ⛔ not `:36` · the `keyExtractor` is `:137-139`, ⛔ not `:138` alone · family 13 is checklist `:72-84` and the gate is `bmad-code-review.toml:8-12`, ⛔ not `:9` · `display-name.ts` is `packages/domain/src/**member**/`, ⛔ not `kyc/` · `NomineeConsole`'s `ScrollView` closes at `:206`. ⭐ **Verified clean at `dbb4a25`:** both render sites are the **only** two importers · all 27 `tests/unit/` files and ⛔ no mount harness · no death-term at any of the three sites · `member.anonymousMember` at `common.json:215` · `member_postings.ts:51` · `directory.ts:82` · `PinnedItem.tsx` present · `resolver.ts:33`. | BigDev + Claude |
 | 2026-08-29 | 0.1 | **Split out of Story 11b.2 by the validation pass at `80e0d12`.** Carries the mobile render layer and family-13 accessibility; runs **after** 11b.2 and 11b.2a. ⭐ Findings applied at authoring: **(1)** ⛔⛔ `<PoolContributorList>` has **TWO** live render sites — the 8.3 route **and** `NomineeConsole.tsx:213`, a staff-takeover-session-as-deceased surface the authoring pass never named ⇒ **AC2**, with the no-death-term assertion aimed at it explicitly. **(2)** *"Preserved byte-for-byte"* would have **pinned a known defect** ⇒ **AC3** (⚠ ⭐ **since REVERSED by the fifth pass — D5 vacated `rowKey` and the keyExtractor KEEPS `index`**). **(3)** ⛔ AC *"resolve token roles through `@twt/tokens`"* contradicted BigDev's 2026-07-27 ruling ⇒ **AC4** inverted to a mobile bridge (⚠ ⭐ **since INVERTED AGAIN by the fifth pass — D2(a) forbids the bridge too**). **(4)** ⛔ There is **no RN mount harness** ⇒ **AC5** restated as five named source-scan assertions and **AC6** records what the harness cannot prove as **un-attested**. **(5)** Trap 3 added — the nested two-namespace `t()` (⚠ ⭐ **since DELETED by the fifth pass — D5/D6(a) abolished its subject**). **(6)** Trap 1 added — 9.12's unguarded-presenter-throw finding ⇒ the try/catch is this story's half (⭐ **strengthened by the fifth pass: D8(a) makes the throw a RULING**). **(7)** **AC7** records family-13 (b) and (c) as **NOT-APPLICABLE**. **(8)** ⛔⛔ **AC8**: friction-budget AC-4 is a **path trigger** and fires unconditionally once `apps/mobile/` is touched. **(9)** D5's arithmetic corrected — `district` **has** a read model, so two producer-less fields, not three. | BigDev + Claude |

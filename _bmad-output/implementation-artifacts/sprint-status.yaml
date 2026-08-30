@@ -1,5 +1,63 @@
 # generated: 2026-05-29
-# last_updated: 2026-08-30j (✅✅ STORY 11b-2 — CODE REVIEW COMPLETE (`bmad-code-review 11b.2`,
+# last_updated: 2026-08-30k (✅✅ STORY 11b-2a IMPLEMENTED (`bmad-dev-story`) — ⭐ THE LIVE,
+#   MEMBER-VISIBLE RTBF DEFECT IS FIXED. ROW FLIPS `in-progress` → **`review`**.
+#   ⛔ 11b-2 (`done`) and 11b-2b (`ready-for-dev`) are ⛔ NOT touched and ⛔ NOT flipped.
+#   ⭐ DECISION 2026-08-30-169 MINTED (Task 0, committed BEFORE any code): nine clauses — D5
+#   governing (RTBF removes the contributor ENTIRELY; public erasure, ⛔ not destruction of the legal
+#   record) · D3-shape(i)/D3-key/D3-rollout recorded **VACATED, ⛔ not reversed, ⛔ not closed**
+#   (D3-key(c) lived ONE day and both dates are recorded) · D3(a)/D3-shape(ii)(a)/D4(a) standing, D4(a)
+#   as a RE-ruling because its first ground ("0 confirmed contributors") was FALSE · D3-aggregate's
+#   two-axis model verbatim · D5-scope · D6(a) · D7(c).
+#   ⭐ WHAT SHIPPED: AC2's `getCurrentMemberStates` (ONE events_log query per chunk, chunked at a NAMED
+#   constant that is deliberately NOT the decrypt bound; mirrors `getCurrentMemberState` so ⛔ NO
+#   `occurred_at` bound can put a DB-stamped rtbf event outside the window and render the ERASED NAME —
+#   four tests assert the EMITTED SQL) · AC1's omission BEFORE the decrypt fan-out (⇒ strictly LESS
+#   Tier-1 plaintext than before the fix; the three integrity skips preserved verbatim, the erasure skip
+#   given its own comment saying it is ⛔ NOT one of them) · AC3's shared bounded-decrypt module (BOTH
+#   the constant AND `mapWithConcurrency`, ⛔ not a cross-reference comment — the mechanism 11b.9's
+#   review already rejected — with a test that fails if either call site re-declares a local copy) ·
+#   AC8's two-locale VALUE re-word (⛔ no new key, ⛔ no code change, ⛔ no wire change, ⛔ no
+#   apps/mobile edit ⇒ friction-budget AC-4 does NOT fire, RE-CHECKED not inherited).
+#   ⛔ NO AGGREGATE MOVED: `confirmedCount` is still `confirmed.length` — the PRE-omission set. Only
+#   `rows` shrinks, and the divergence is the RULED, CORRECT state.
+#   ⭐⭐ THE REVERT-SANITY PROBE REPRODUCED THE DEFECT VERBATIM: with the omission filter reverted, the
+#   drop-to-zero case put `{ firstName: '[anonymized]', lastInitial: '' }` ON THE WIRE.
+#   ⛔⛔ AND THE FULL ci:local FOUND A REAL PRE-EXISTING DEFECT A SINGLE-FILE RUN DID NOT:
+#   `listConfirmedContributorsForPool` carries ⛔ NO `ORDER BY` AT ALL, so contributor row order is
+#   unstable across runs (it transposed two peers in the integration leg). PRE-EXISTING since 8.3 and
+#   ⛔ NOT introduced here — the bounded batch preserves INPUT order by construction. COSMETIC today
+#   (the surface is unpaginated), but a CORRECTNESS bug the moment it is paginated: LIMIT/OFFSET over an
+#   unordered query duplicates and omits rows, and 11b.3 is the ~10k paginated consumer. Filed with TWO
+#   triggers; ⛔ not fixed here (out of diff; an ORDER BY changes a shipped read for every consumer).
+#   ⚠ ⭐ TWO ROUTING INSTRUCTIONS HAD GONE STALE AND WERE CORRECTED, ⛔ NOT EXECUTED BLIND
+#   ([[feedback_verify_before_committing_governance_claims]]): (1) 11b-2a's Task 6 called the 11b-2
+#   D6(a) routing "time-critical" — but 11b-2 SHIPPED `done` (8a79cdd) WITH D6(a) ALREADY APPLIED
+#   (single-arm view-model, `member.anonymousMember` deliberately absent, a test asserting the absence)
+#   ⇒ ⛔ NO action owed. (2) THE SURVIVING CORRECTION NOW POINTS THE OTHER WAY: 11b-2b (ready-for-dev,
+#   so a dev agent WILL execute its text) still says `rowKey` is "required" on both interfaces and
+#   routes its removal to 11b-2 Task 0 as a SEVENTH artefact — but `rowKey` shipped NOWHERE
+#   (packages/ui/src, packages/contracts/src, apps/mobile/components all clean). Its CONCLUSIONS are
+#   correct and unchanged; only the routing MECHANISM is void. Trigger: 11b-2b's Task 0.
+#   ⭐ ROUTED, ⛔ NOT CLOSED (Task 6, 15 items): RTBF-D1 SUPERSEDED AS TO CONTRIBUTOR SURFACES (⛔ not
+#   discharged — `resolveMemberDisplayName` still has ZERO production call sites, verified) · the N+1
+#   decrypt DISCHARGED but on the CORRECTED ground · `.max(16)` NOTED touched-and-unchanged · the
+#   keyExtractor entry STAYS OPEN (its blocker re-verified still true) · the AC7 notice-copy packet (six
+#   falsified keys × both locales, the three D5 statements VERBATIM, and the anonymize.ts fact statement
+#   3 must not contradict — the member's NAME IS DESTROYED, so "records are retained" read as "they
+#   still hold my name" would MISLEAD) · the rosterSize naming hazard with both worked failures · the
+#   ANONYMOUS_MEMBER deletion question (DEFINITE now, ⛔ not "possibly-dead" — but ⛔ nothing deleted) ·
+#   the ~12-site stale "producer unbuilt" family, ASSERTED IN SIX TEST NAMES so a GREEN SUITE RESTATES
+#   THE FALSE PREMISE ON EVERY RUN · the FOURTH renderer (NomineeConsole — inherits the fix, ⛔ no code
+#   owed) · the verified negative that NO public contributor-NAME render exists today.
+#   ⛔ OWED BEFORE MERGE, RECORDED UN-ATTESTED RATHER THAN SELF-SIGNED: the NON-AUTHOR tone-review
+#   sign-off for AC8's two strings. microcopy:check is GREEN, but tone-guide §5 says a green lint does
+#   NOT substitute, and both the author (BigDev, who ruled the strings verbatim) and the transcriber
+#   (the dev agent) are disqualified under `reviewedBy ≠ authoredBy`. ⚠ The contributor list is also
+#   ABSENT from the checklist's governed-surfaces table ⇒ ⛔ no runtime gate, ⛔ no review permission:
+#   the obligation is REAL but UNMECHANIZED ([[feedback_record_unattested_no_backfill]], the 10.16
+#   precedent).
+#   ⭐ ci:local 33 JOBS GREEN WITH THE INTEGRATION LEG RUN.)
+# last_updated_prior: 2026-08-30j (✅✅ STORY 11b-2 — CODE REVIEW COMPLETE (`bmad-code-review 11b.2`,
 #   3-layer adversarial: Blind Hunter · Edge Case Hunter · Acceptance Auditor, diff `c9d86ab..HEAD`).
 #   ⭐ ROW FLIPS `review` → **`done`**.
 #   ⭐ ACCEPTANCE AUDITOR: ZERO AC VIOLATIONS — all nine ACs independently re-verified against live
@@ -12870,7 +12928,7 @@ development_status:
   # `deferred-to-v2` precedent (Decision 2026-08-17-126 cl.6) an enum addition is a RATIFIED
   # GOVERNANCE ACT, not an authoring convenience. ⇒ `ready-for-dev` here means what the enum says.
   11b-2-contribution-list-components-table-mobile-row: done
-  11b-2a-contributor-name-resolution-defect: in-progress
+  11b-2a-contributor-name-resolution-defect: review
   11b-2b-contributor-list-mobile-render-layer: ready-for-dev
   11b-3-sahyog-vivran-per-claim-story-surface: backlog
   11b-4-memorial-authorship-surface-family-writes-the-story: backlog

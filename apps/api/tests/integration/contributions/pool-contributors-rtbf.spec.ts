@@ -332,11 +332,18 @@ describe.skipIf(!hasDatabase)('pool-contributors — RTBF erasure (:5433)', { ti
       expect(after.raw).not.toContain('anonymized');
       expect(after.raw).not.toContain('anonymousMember');
 
-      // (3) THE PEERS ARE UNTOUCHED — same names, same order, nothing shifted or dropped.
-      expect(rowsAfter).toEqual([
-        { firstName: 'Rajesh', lastInitial: 'S' },
-        { firstName: 'Vikram', lastInitial: 'S' },
-      ]);
+      // (3) THE PEERS ARE UNTOUCHED — the same rows, nothing shifted in content or dropped.
+      // ⚠⛔ ASSERTED AS A SET, ⛔ NOT A SEQUENCE, AND THE REASON IS A REAL PROPERTY OF THE READ, not
+      // test convenience: `listConfirmedContributorsForPool` carries ⛔ NO `ORDER BY` (verified —
+      // `packages/domain/src/contribution/read.ts`), so row order is whatever Postgres returns and is
+      // NOT stable across runs. A `toEqual([...])` here passes alone and fails in the full suite.
+      // ⭐ The property this story COULD have broken — that the bounded-concurrency batch preserves its
+      // INPUT order rather than completion order — is proven where it is actually decidable, in
+      // `tests/unit/bounded-decrypt.test.ts` under deliberately reversed latency. Filed as a standing
+      // finding in deferred-work.md; ⛔ not fixed here (an ORDER BY on the domain read is out of diff).
+      expect(rowsAfter).toHaveLength(2);
+      expect(rowsAfter).toContainEqual({ firstName: 'Rajesh', lastInitial: 'S' });
+      expect(rowsAfter).toContainEqual({ firstName: 'Vikram', lastInitial: 'S' });
     } finally {
       await teardown(t);
     }
@@ -418,6 +425,7 @@ describe.skipIf(!hasDatabase)('pool-contributors — RTBF erasure (:5433)', { ti
       // This request runs on the injected test clock, so the row's presence would prove the bug.
       const after = await fetchList(t, f);
       expect(after.raw).not.toContain('Asha');
+      // A single surviving row, so this one IS order-free by construction.
       expect(after.body['confirmed']).toEqual([{ firstName: 'Rajesh', lastInitial: 'S' }]);
     } finally {
       await teardown(t);

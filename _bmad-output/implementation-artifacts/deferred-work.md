@@ -7050,3 +7050,33 @@ not. These are the adjacent things, stated so the fix is not over-read as closin
   ⛔ no review permission exists for it — the obligation is real but **unmechanized**, which is exactly
   how it would decay. **Trigger: merge review of this story; and, separately, the next story that adds a
   member-facing surface to the governed-surfaces table.** ⛔ Not marked closed.
+
+- **⭐⛔ THE CONFIRMED-CONTRIBUTOR READ IS UNORDERED — `listConfirmedContributorsForPool` carries ⛔ NO
+  `ORDER BY` at all.** Found at `68d081c` by Story 11b.2a's own AC6 spec, which asserted peer rows as a
+  SEQUENCE, passed in isolation, and **failed in the full `ci:local` integration leg** with the two
+  surviving contributors transposed. `packages/domain/src/contribution/read.ts`'s
+  `listConfirmedContributorsForPool` selects from `events_log` with no ordering clause, so row order is
+  whatever the plan returns — it is ⛔ **not** stable across runs, and the reconciliation step that
+  follows walks a `Map`, which fixes insertion order to that unstable input.
+  ⚠ ⭐ **This is PRE-EXISTING (Story 8.3) and ⛔ NOT introduced by 11b.2a** — the bounded-concurrency
+  batch preserves its INPUT order by construction (results written at each item's own index, unit-proven
+  in `apps/api/tests/unit/bounded-decrypt.test.ts` under deliberately reversed latency). ⛔ The
+  instability is upstream of it.
+  **Impact today is COSMETIC and bounded:** the member surface renders one pool's roster with ⛔ no
+  pagination (`usePoolContributorsQuery` fetches the whole list), so the visible effect is row order
+  churning across the 60 s poll — which also silently worsens the FlashList `keyExtractor` churn already
+  filed above, since `index` is part of the key.
+  ⛔⛔ **BUT IT BECOMES A CORRECTNESS BUG THE MOMENT THIS READ IS PAGINATED.** `LIMIT`/`OFFSET` over an
+  unordered query can return the same row on two pages and omit another entirely — and the Epic-11b
+  public render is the ~10,000-row, paginated case that `public-pages` already needed
+  `mapWithConcurrency`'s index-preservation for, under a doc-block whose stated reason is that *"page N
+  is the same page N on every request"*. ⇒ the property the public surface depends on is **not**
+  established by the read that feeds it.
+  ⛔ **Not fixed here — out of this story's diff** (11b.2a edits the API boundary, ⛔ not the domain
+  read, and adding an `ORDER BY` changes a shipped read's behaviour for every existing consumer).
+  ⭐ **Fix at the read**, not at each caller: an explicit deterministic order (the confirmation
+  `event_version`, i.e. confirmation order, is the member-meaningful one — ⛔ not `member_id`, which
+  would leak an arbitrary identifier ordering onto a PII-shielded surface).
+  **Two triggers, ⛔ not one: (i)** Story 11b.3's authoring pass — the first paginated consumer, where
+  this stops being cosmetic; **(ii) FALLBACK — the next story that adds a `LIMIT`, an `OFFSET` or a
+  cursor to any confirmed-contributor read.** ⛔ Not marked closed.

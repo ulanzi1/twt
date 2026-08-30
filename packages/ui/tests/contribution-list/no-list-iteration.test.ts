@@ -38,6 +38,12 @@ const ITERATION_CONSTRUCTS: readonly RegExp[] = [
   /\.forEach\(/,
   /\.filter\(/,
   /\.reduce\(/,
+  /\.some\(/,
+  /\.every\(/,
+  /\.find\(/,
+  /\.findIndex\(/,
+  /\.sort\(/,
+  /\.entries\(/,
   /\bArray\.from\(/,
   /\bfor\s*\(/,
   /\bwhile\s*\(/,
@@ -82,15 +88,17 @@ describe('AC1 (b) THE COMPILE HALF — the parameter is a ROW, not an array', ()
     expect(_assertNotArray).toBe(true);
   });
 
-  it('⛔ the module exports NO list-level presenter', async () => {
+  it('⛔ the module exports NO list-level presenter — naming-independent: exactly ONE function, ever', async () => {
+    // ⚠ A name-pattern check (e.g. `/list.*viewmodel/i`) only catches a list-level export that happens to
+    // be named that way — `deriveAllContributionRows` would pass it silently. This checks the property
+    // Trap 1 actually cares about: there is exactly one function in this module, full stop.
     const mod = (await import('../../src/contribution-list/index.js')) as Record<string, unknown>;
-    const exported = Object.keys(mod);
-    expect(exported).toContain('deriveContributionRowViewModel');
-    for (const name of exported) {
-      expect(
-        /list.*viewmodel|viewmodel.*list/i.test(name) && name !== 'deriveContributionRowViewModel',
-        `${name} looks like a list-level presenter — this module owns ONE ROW (Trap 1)`,
-      ).toBe(false);
-    }
+    const functionExports = Object.entries(mod)
+      .filter(([, value]) => typeof value === 'function')
+      .map(([name]) => name);
+    expect(
+      functionExports,
+      'a second function export is a second presenter — this module owns ONE ROW, ONE function (Trap 1)',
+    ).toEqual(['deriveContributionRowViewModel']);
   });
 });

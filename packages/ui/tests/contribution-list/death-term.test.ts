@@ -55,6 +55,15 @@ const FORBIDDEN_TERMS = [
   'date_of_death',
 ] as const;
 
+// ⚠ A raw `.includes(term)` over the literal separator form only catches ONE spelling. The same lifecycle
+// term reaches source as `account-frozen` (kebab, e.g. a doc comment), `account_frozen` (snake, e.g. a DB
+// column), `accountFrozen` (camelCase, e.g. a JS/TS identifier — the MOST likely form in this codebase and
+// the one the literal list above cannot see), or `members['state']` (bracket access, vs. `members.state`
+// dot access). Stripping every non-alphanumeric character and lower-casing BOTH the source text and the
+// term before comparing collapses all of those spellings to one normalized string, so one scan catches
+// every syntactic form of the same forbidden concept.
+const normalize = (s: string): string => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+
 describe('AC5 (b) — ⛔ no lifecycle-overlay term reaches this module, in code OR in comments', () => {
   it('the module is non-empty and both scopes carry text (the scan is not vacuous)', () => {
     expect(moduleFiles.length).toBeGreaterThanOrEqual(4);
@@ -65,16 +74,16 @@ describe('AC5 (b) — ⛔ no lifecycle-overlay term reaches this module, in code
 
   for (const file of moduleFiles) {
     for (const term of FORBIDDEN_TERMS) {
-      it(`${file} — '${term}' is ABSENT from the code`, () => {
+      it(`${file} — '${term}' is ABSENT from the code, in any spelling (kebab/snake/camelCase/bracket-access)`, () => {
         expect(
-          scopes(file).code.toLowerCase().includes(term),
+          normalize(scopes(file).code).includes(normalize(term)),
           `${file}'s CODE references '${term}' — a lifecycle-derived predicate on a contributor read deletes people from the historical record`,
         ).toBe(false);
       });
 
-      it(`${file} — '${term}' is ABSENT from the comments`, () => {
+      it(`${file} — '${term}' is ABSENT from the comments, in any spelling (kebab/snake/camelCase/bracket-access)`, () => {
         expect(
-          scopes(file).comments.toLowerCase().includes(term),
+          normalize(scopes(file).comments).includes(normalize(term)),
           `${file}'s COMMENTS reference '${term}' — the wrong conjunct arrives as an idea before it arrives as code`,
         ).toBe(false);
       });

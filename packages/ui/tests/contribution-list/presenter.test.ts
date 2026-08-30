@@ -164,6 +164,13 @@ describe('ANTI-WIDENING — confirmed-only is preserved as a SHAPE (AC4, D2(a))'
     }
   });
 
+  it('(d) the ACTUAL RUNTIME return value carries exactly the declared keys — a compile-time literal alone cannot see an unsafe cast or object spread adding an extra property', () => {
+    const vm = deriveContributionRowViewModel(row());
+    expect(Object.keys(vm).sort()).toEqual(Object.keys(VIEW_MODEL_KEYS).sort());
+    expect(Object.keys(vm.displayName).sort()).toEqual(['firstName', 'kind', 'lastInitial']);
+    expect(Object.keys(vm.rowA11y).sort()).toEqual(['ref']);
+  });
+
   it('(c) ⭐ no banned token appears at ANY nesting depth, under any rename, in either type', () => {
     // ⚠ SCOPE: the ROW TYPES only. This scan must NOT run over `i18n-keys.ts` or raw module text —
     // `contributor_list.pending_strip` and `…_a11y` contain the banned token `pending` BY DESIGN. They are the

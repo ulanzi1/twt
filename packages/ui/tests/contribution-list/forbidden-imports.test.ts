@@ -36,14 +36,18 @@ interface ParsedImport {
   readonly clause: string;
 }
 
-const IMPORT_RE = /import\s+(?:type\s+)?([\s\S]*?)\s*from\s*['"]([^'"]+)['"]|import\s*['"]([^'"]+)['"]/g;
+// ⚠ Matches BOTH `import ... from '...'` AND `export ... from '...'` — a barrel file composed entirely
+// of `export { x } from '...'` re-exports (e.g. this module's own `index.ts`) is otherwise invisible to
+// this scan. Also matches a dynamic `import('...')` call.
+const IMPORT_RE =
+  /(?:import|export)\s+(?:type\s+)?([\s\S]*?)\s*from\s*['"]([^'"]+)['"]|import\s*['"]([^'"]+)['"]|import\(\s*['"]([^'"]+)['"]\s*\)/g;
 
 function parseImports(file: string): ParsedImport[] {
   const src = stripComments(readFileSync(path.join(MODULE_DIR, file), 'utf8'));
   const found: ParsedImport[] = [];
   let m: RegExpExecArray | null = IMPORT_RE.exec(src);
   while (m !== null) {
-    found.push({ file, specifier: m[2] ?? m[3] ?? '', clause: m[1] ?? '' });
+    found.push({ file, specifier: m[2] ?? m[3] ?? m[4] ?? '', clause: m[1] ?? '' });
     m = IMPORT_RE.exec(src);
   }
   return found;
@@ -74,6 +78,10 @@ describe('AC5 (a) — the module imports nothing it is forbidden to import', () 
     expect(imports.length).toBeGreaterThan(0);
     // Sanity: the intra-module relative imports ARE seen, so the regex is really parsing this module.
     expect(imports.some((i) => i.specifier.startsWith('./'))).toBe(true);
+  });
+
+  it('the parse sees `index.ts`\'s `export { … } from` re-exports too, not just `import` statements', () => {
+    expect(imports.some((i) => i.file === 'index.ts')).toBe(true);
   });
 
   for (const pkg of FORBIDDEN_PACKAGES) {

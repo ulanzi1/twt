@@ -419,10 +419,18 @@ describe.skipIf(!hasDatabase)('pool-contributors — RTBF erasure (:5433)', { ti
       });
       await reallyAnonymize(t, f.pariwarId, f.contributors[1]!.memberId);
 
-      // The clock-domain guard, end to end: `member.rtbf_anonymized` carries a DB-generated
-      // `occurred_at` that is LATER than the app clock this request injects. A resolver bounded by
-      // `lte(occurred_at, now)` would miss the event, resolve the member `active`, and render "Asha".
-      // This request runs on the injected test clock, so the row's presence would prove the bug.
+      // ⚠ Review fix (2026-08-30): this docstring previously claimed the request "runs on the
+      // injected test clock" — it does not; no clock is skewed anywhere in this file. Investigated
+      // adding a genuine end-to-end clock-skew case (bump the written `member.rtbf_anonymized` row's
+      // `occurred_at` into the future) and found it currently BLOCKED, not merely undone: `events_log`
+      // is append-only by grant (`twt_app` has no UPDATE — "permission denied for table events_log",
+      // verified live against :5433) and `ProjectMemberStateInput` has no `occurredAt` override (the
+      // schema's own comment: "test clock injection lands with Story 1.10 audit-log + downstream
+      // stories" — i.e. not yet built). Filed to deferred-work.md as a decision for that future
+      // clock-injection substrate rather than faked here. What THIS test actually proves: the erasure
+      // is read off the REAL event stream via `projectMemberState`/`anonymizeMember`, not a stub — the
+      // no-`occurred_at`-bound property itself is proven structurally, at the SQL-shape level, by
+      // `packages/domain/tests/member/batched-member-states.test.ts`'s "THE CLOCK DOMAIN" suite.
       const after = await fetchList(t, f);
       expect(after.raw).not.toContain('Asha');
       // A single surviving row, so this one IS order-free by construction.

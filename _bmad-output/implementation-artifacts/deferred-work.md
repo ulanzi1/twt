@@ -4,6 +4,11 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 11b-2a-contributor-name-resolution-defect (2026-08-30)
+
+- **Raw-JSON leak assertions are coarse substring checks.** `apps/api/tests/integration/contributions/pool-contributors-rtbf.spec.ts`'s `expect(after.raw).not.toContain('anonymized')` / `.not.toContain('anonymousMember')` would false-fail against any future, legitimately-named field or value containing those substrings (e.g. a hypothetical `wasAnonymizedPreviously` flag), since the check isn't scoped to the specific leaking field/shape. Low risk today; worth tightening if the wire schema grows a field with either substring.
+- **⚠ No test-clock injection substrate exists for `events_log` — a genuine "clock-domain guard, end to end" test is currently BLOCKED, not just unwritten.** Discovered while attempting to fix a code-review finding on `pool-contributors-rtbf.spec.ts`'s AC2 test (whose docstring wrongly claimed to run "on the injected test clock"). Two paths were tried and both are closed today: (1) a direct `UPDATE events_log SET occurred_at = ...` fails live — `twt_app` has no UPDATE grant, `events_log` is append-only by design; (2) `ProjectMemberStateInput` has no `occurredAt` override — the schema's own comment says clock injection "lands with Story 1.10 audit-log + downstream stories." Until that substrate exists, any story claiming to test an `occurred_at`/app-clock-vs-DB-clock boundary end-to-end can only prove it at the SQL-shape level (asserting the emitted query has no `occurred_at` bound), not by actually forcing a skew through a live request. Trigger: whichever story builds the Story 1.10 audit-log clock-injection mechanism — retrofit a real clock-skew case onto 11b.2a's AC2 test at that point.
+
 ## Deferred / recorded from: Story 11b.2 — the `@twt/ui` `contribution-list` presenter (2026-08-30)
 
 Ruled at Decision `2026-08-30-168` (**D1 · D2(a) · D6-uxspec(a) · D7-nameform(a) · D8(a) · D9(a) ·

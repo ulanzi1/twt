@@ -344,6 +344,14 @@ async function resolveContributorList(
     representable,
     DIRECTORY_DECRYPT_CONCURRENCY,
     async (contributor): Promise<ConfirmedContributorRow | null> => {
+      // (Review fix — TOCTOU) The batched snapshot above can go stale: an RTBF commits between the
+      // snapshot and THIS row's turn in the concurrency-bounded queue. Re-check immediately before
+      // decrypt so a member erased mid-request is never decrypted off the now-overwritten ciphertext.
+      const currentState = await memberDomain.getCurrentMemberState(tx, contributor.memberId);
+      if (currentState === 'anonymized') {
+        request.log.warn({ memberId: contributor.memberId }, 'pool-contributors: member erased between snapshot and decrypt — omitting row');
+        return null;
+      }
       const kycProfile = await kycDomain.getMemberKycProfile(tx, pariwarId, contributor.memberId);
       if (!kycProfile || kycProfile.nameCiphertext === null) {
         // A confirmed contributor whose name is unresolvable is SKIPPED from the visible rows (an integrity

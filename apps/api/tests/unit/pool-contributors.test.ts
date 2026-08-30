@@ -17,6 +17,7 @@ import type { AppDeps } from '../../src/context.js';
 
 const getMemberStateAt = vi.fn();
 const getCurrentMemberStates = vi.fn();
+const getCurrentMemberState = vi.fn();
 const listLiveAlertsForPariwar = vi.fn();
 const getCycleFreezeCommittedAt = vi.fn();
 const resolveAssignedPoolWithRosterForMember = vi.fn();
@@ -28,7 +29,7 @@ vi.mock('@twt/domain', async (importActual) => {
   const actual = await importActual<typeof import('@twt/domain')>();
   return {
     ...actual,
-    member: { ...actual.member, getMemberStateAt, getCurrentMemberStates },
+    member: { ...actual.member, getMemberStateAt, getCurrentMemberStates, getCurrentMemberState },
     alert: { ...actual.alert, listLiveAlertsForPariwar },
     pool: { ...actual.pool, getCycleFreezeCommittedAt, resolveAssignedPoolWithRosterForMember, reserveNames },
     contribution: { ...actual.contribution, listConfirmedContributorsForPool },
@@ -69,6 +70,10 @@ describe('poolContributors — pending aggregate uses the CONFIRMED-SET size, no
     getCurrentMemberStates.mockImplementation(
       async (_tx: unknown, ids: readonly string[]) => new Map(ids.map((id) => [id, 'active'])),
     );
+    // Review fix (TOCTOU re-check): the handler re-confirms each representable contributor's state
+    // immediately before decrypt. Neither contributor here is `anonymized`, so this is a no-op for
+    // this scenario's assertions.
+    getCurrentMemberState.mockResolvedValue('active');
     listLiveAlertsForPariwar.mockResolvedValue([{ cycleId: CYCLE_ID, poolCount: 1 }]);
     getCycleFreezeCommittedAt.mockResolvedValue(new Date('2026-07-01T00:00:00.000Z'));
     resolveAssignedPoolWithRosterForMember.mockResolvedValue({

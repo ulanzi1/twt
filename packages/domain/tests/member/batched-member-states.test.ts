@@ -153,11 +153,17 @@ describe('getCurrentMemberStates — the batched lifecycle resolver (AC2)', () =
     });
 
     it('the chunk size is a NAMED constant, ⛔ not an inline literal — and ⛔ not the decrypt bound', () => {
-      // A chunk size and a KMS concurrency bound are DIFFERENT quantities. Reusing
-      // DIRECTORY_DECRYPT_CONCURRENCY (8) here would silently turn a roster of 50 into 7 round trips
-      // and couple two unrelated capacity decisions.
+      // A chunk size and a KMS concurrency bound are DIFFERENT quantities, deliberately decoupled
+      // (@twt/domain must never depend on apps/api, so this file cannot import
+      // `DIRECTORY_DECRYPT_CONCURRENCY` to compare directly — that is the point, not a gap: reusing it
+      // here would silently turn a roster of 50 into 7 round trips and couple two unrelated capacity
+      // decisions). `KNOWN_DECRYPT_CONCURRENCY_AT_TIME_OF_WRITING` mirrors apps/api's current value so
+      // this assertion states what it actually depends on instead of a bare, unexplained `8` — if
+      // `DIRECTORY_DECRYPT_CONCURRENCY` ever changes, this constant needs a matching manual update
+      // (Review fix: the prior bare-literal form gave no signal that a sync was ever owed).
+      const KNOWN_DECRYPT_CONCURRENCY_AT_TIME_OF_WRITING = 8;
       expect(typeof MEMBER_STATE_REPLAY_CHUNK_SIZE).toBe('number');
-      expect(MEMBER_STATE_REPLAY_CHUNK_SIZE).toBeGreaterThan(8);
+      expect(MEMBER_STATE_REPLAY_CHUNK_SIZE).toBeGreaterThan(KNOWN_DECRYPT_CONCURRENCY_AT_TIME_OF_WRITING);
       expect(Number.isInteger(MEMBER_STATE_REPLAY_CHUNK_SIZE)).toBe(true);
     });
   });

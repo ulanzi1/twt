@@ -7,6 +7,7 @@
 // Sharing only the CONSTANT and re-typing the helper would leave (2) hand-written twice — the drift
 // class 11b.9's review already filed as insufficient.
 
+import { PUBLIC_SURFACE_PAGE_SIZE_CAP } from '@twt/contracts';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -83,8 +84,9 @@ describe('DIRECTORY_DECRYPT_CONCURRENCY', () => {
   it('is a real, small, positive ceiling', () => {
     expect(Number.isInteger(DIRECTORY_DECRYPT_CONCURRENCY)).toBe(true);
     expect(DIRECTORY_DECRYPT_CONCURRENCY).toBeGreaterThan(0);
-    // A ceiling that exceeds a page is not a ceiling. 50 is the public directory's max page size.
-    expect(DIRECTORY_DECRYPT_CONCURRENCY).toBeLessThan(50);
+    // A ceiling that exceeds a page is not a ceiling — compare against the REAL cap (Review fix:
+    // this used to hardcode `50`, so raising the cap wouldn't have failed this test).
+    expect(DIRECTORY_DECRYPT_CONCURRENCY).toBeLessThan(PUBLIC_SURFACE_PAGE_SIZE_CAP);
   });
 });
 
@@ -98,9 +100,14 @@ describe('⛔ ONE implementation, ⛔ not two reconciled by a comment (AC3)', ()
     for (const site of sites) {
       const source = await readFile(site, 'utf8');
       expect(source).toMatch(/from\s+'(\.\.\/)+kyc\/bounded-decrypt\.js'/);
-      // The regression this catches: someone re-adds a local copy "just for this module".
-      expect(source).not.toMatch(/^(const|let)\s+DIRECTORY_DECRYPT_CONCURRENCY\s*=/m);
-      expect(source).not.toMatch(/^async function mapWithConcurrency\b/m);
+      // The regression this catches: someone re-adds a local copy "just for this module" — indented,
+      // exported, `var`-declared, or written as a function expression all still count (Review fix:
+      // the original guard only matched an unindented, non-exported `const`/`let` and the
+      // `function` keyword form at start-of-line).
+      expect(source).not.toMatch(/^\s*(export\s+)?(const|let|var)\s+DIRECTORY_DECRYPT_CONCURRENCY\s*=/m);
+      expect(source).not.toMatch(
+        /^\s*(export\s+)?(async\s+function\s+mapWithConcurrency\b|(const|let|var)\s+mapWithConcurrency\s*=)/m,
+      );
     }
   });
 });

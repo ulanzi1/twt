@@ -35,21 +35,36 @@ export const DIRECTORY_DECRYPT_CONCURRENCY = 8;
  * every request" true, and a completion-ordered result would silently shuffle a public page. That
  * property is the reason this helper is shared rather than re-typed at each call site.
  *
- * ⚠ Rejections propagate (`Promise.all`). Callers that must degrade per item — the confirmed
- * contributor render fail-softs one row rather than the whole response — catch INSIDE `fn`.
+ * ⚠ Rejections propagate (`Promise.all`) and stop every worker from claiming further items — a
+ * rejection is a hard stop, ⛔ never a reason for sibling workers to keep spending KMS quota on a
+ * batch already being discarded. Callers that must degrade per item — the confirmed contributor
+ * render fail-softs one row rather than the whole response — catch INSIDE `fn`.
+ *
+ * @throws {RangeError} if `concurrency` is not a positive integer — a silent 0-worker no-op is a
+ *   worse failure mode than a loud one for a bound this load-bearing.
  */
 export async function mapWithConcurrency<T, R>(
   items: readonly T[],
   concurrency: number,
   fn: (item: T) => Promise<R>,
 ): Promise<R[]> {
+  if (!Number.isInteger(concurrency) || concurrency <= 0) {
+    throw new RangeError(`mapWithConcurrency: concurrency must be a positive integer, got ${concurrency}`);
+  }
   const out = new Array<R>(items.length);
   let next = 0;
+  let stopped = false;
   const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
     for (;;) {
+      if (stopped) return;
       const i = next++;
       if (i >= items.length) return;
-      out[i] = await fn(items[i]!);
+      try {
+        out[i] = await fn(items[i]!);
+      } catch (err) {
+        stopped = true;
+        throw err;
+      }
     }
   });
   await Promise.all(workers);

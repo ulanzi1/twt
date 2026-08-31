@@ -960,6 +960,14 @@ _⭐⭐ **THE HEADLINE: THE FIRST PASS'S OWN TOCTOU FIX IS AN AC2 / Trap-1 VIOLA
 
 **✅ RESOLUTION (BigDev, 2026-08-30) — ALL 11 APPLIED AND VERIFIED.**
 
+> ⭐⭐ **MINTED AS Decision `2026-08-31-170`** (2026-08-31). D1's outcome is ⛔ not merely a review
+> disposition — it establishes a durable architectural position (**the erasure guarantee lives on the
+> DECRYPTED PLAINTEXT, ⛔ not on the lifecycle-state read**; a per-row re-check is **FORBIDDEN**; the
+> batched map's seeded default is **PERMISSIVE** and binds ⛔ no caller), which otherwise existed only
+> as a source comment and this record. ⚠ The entry is **author-committed** and honest about its own
+> lateness: the code landed at `1f88332` **before** the entry, ⇒ the one place in this story where
+> implementation preceded its governance record ([[feedback_governance_commits_precede_implementation]]).
+
 · ⭐⭐ **D1 → drop the re-check, guard the PLAINTEXT.** The per-row `getCurrentMemberState` is **DELETED**
   (AC2's O(1) and Trap 1 restored; the comment at `handlers.ts:307` no longer contradicts the code 40
   lines below it). In its place the decrypted plaintext is compared against

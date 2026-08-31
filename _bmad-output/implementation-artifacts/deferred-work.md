@@ -4,6 +4,46 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: Story 11b-2a — AC8's NON-AUTHOR tone-review sign-off (2026-08-31)
+
+- **CR-11b.2a-AC8-TONE — ⛔ AN UNMET ACCEPTANCE CRITERION, ⛔ NOT A NICE-TO-HAVE.** Story 11b.2a's
+  **AC8** requires that *"a NON-AUTHOR tone-review sign-off is recorded (`docs/tone-review-checklist.md`)"*
+  for the two re-worded `contributor_list.empty` strings (en + hi). ⛔ **It is NOT recorded, and the
+  story shipped `done` anyway — deliberately, by ruling, with the clause carried open.**
+  ⭐ **WHY IT COULD NOT SIMPLY BE DONE — two independent blockers, ⛔ neither of which is neglect:**
+  · **(1) Every available party is disqualified.** The strings were **authored by BigDev** (ruled
+    verbatim in D7(c)) and **transcribed by this agent** ⇒ `reviewedBy ≠ authoredBy` — the checklist's
+    own non-author invariant — fails for **both**. ⚠ BigDev **elected to sign on 2026-08-30 and the
+    signature was DECLINED on verification**; that refusal is the correct outcome, ⛔ not an obstacle
+    to route around.
+  · **(2) There is no mechanism to record it through.** A real sign-off is a **runtime**
+    `tone_review.signoff` audit entry emitted via the consuming surface's review endpoint
+    (`docs/tone-review-checklist.md` → *Sign-off is audit-recorded*). The contributor list is ⛔ **absent
+    from the governed-surfaces table**, so it has ⛔ no publish endpoint, ⛔ no review permission, and
+    ⛔ no gate that could emit one. ⇒ even a qualified reviewer has nowhere to file it today.
+  ⛔⛔ **WHAT MUST NOT HAPPEN:** ⛔ do **not** write a `tone_review.signoff` (no gate evaluated it, so
+  the audit entry would be a fabrication); ⛔ do **not** add a row to the **Nominee Console periodic
+  fursat review log** (Story 9.1 — a different, surface-specific obligation); ⛔ do **not** treat
+  `pnpm microcopy:check` being green as substituting for it (`docs/tone-guide.md §5`, verbatim:
+  *"automated lint passing does not substitute for a recorded human tone-review sign-off"*).
+  ⭐ **The ad-hoc record section added at `docs/tone-review-checklist.md` (commit `08b57f2`) is the
+  right shape for an interim entry** — a human review recorded in the repo, labelled as ⛔ **not** an
+  audited publish-gate sign-off. ⚠ That section's existing row covers **four OTHER** `contribution.json`
+  strings and explicitly states it does ⛔ **not** discharge this item.
+  **TRIGGER — BigDev's pre-production tone sweep** over the 20 `copy_globs` namespaces
+  (*"for other stories, I will pay visit to their tone and fix it before production"*, BigDev
+  2026-08-31). ⭐ The two strings to review are `contributor_list.empty` in
+  `packages/i18n/locales/{en,hi}/contribution.json`. ⚠ **Nearest launch-gating checkpoint** is Story
+  **11b.8** (real-data + accessibility audit gates) — ⛔ 11b.8 does **not own** this item, but it is the
+  last structured pass before launch, so ⛔ do not let this slip past it unreviewed.
+  ⭐ **A cheaper permanent fix exists and is worth considering at that sweep:** add the contributor
+  list (and the rest of the `contribution` namespace) to the **governed-surfaces table**, which would
+  give the obligation a mechanism instead of leaving it un-mechanized — the half that decays
+  ([[feedback_mechanization_split_commitment]]).
+  ⛔ **Until then this stays OPEN and UN-ATTESTED, ⛔ never backfilled**
+  ([[feedback_record_unattested_no_backfill]]).
+
+---
 ## Deferred from: code review of 11b-2a-contributor-name-resolution-defect — SECOND PASS (2026-08-30)
 
 _Second independent 3-layer pass (Blind Hunter · Edge Case Hunter · Acceptance Auditor) over the SAME diff `8a79cdd..HEAD`, run AFTER `cc22c79` so the first pass's own fixes were under review for the first time. **Only the three deferred items are recorded here** — the 2 decision-needed and 9 patch findings live in the story's `### Review Findings — SECOND PASS` section, ⛔ not in this file._

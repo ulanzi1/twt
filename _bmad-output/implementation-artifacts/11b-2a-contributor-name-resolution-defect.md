@@ -4,9 +4,23 @@ baseline_commit: 3a51745
 
 # Story 11b.2a: Contributor Erasure — RTBF defect fix (D5: OMIT the row) + decrypt bound `[DEFECT]`
 
-Status: in-progress
+Status: done
 
-> ⚠⚠ **ROW REOPENED `done` → `in-progress` BY THE SECOND CODE-REVIEW PASS (2026-08-30).** ⛔ Two
+> ✅⭐ **ROW CLOSED `in-progress` → `done` (BigDev, 2026-08-31) — WITH AC8's SIGN-OFF EXPLICITLY
+> DEFERRED, ⛔ NOT SIGNED AND ⛔ NOT WAIVED.** The engineering work is complete and verified
+> (`ci:local` 33/33 including the live-DB leg; the revert-sanity probe proved the erasure guard
+> bites). The one clause that is ⛔ **not** met is AC8's **NON-AUTHOR tone-review sign-off**, which
+> ⛔ no engineering verification can discharge: BigDev **authored** the two strings and this agent
+> transcribed them, so `reviewedBy ≠ authoredBy` disqualifies **both**, and the surface has ⛔ no
+> publish endpoint through which a sign-off could be recorded at all.
+> ⇒ ⭐ **RULED: carry it as an OPEN, UN-ATTESTED obligation with a named trigger** — BigDev's
+> pre-production tone sweep over the `copy_globs` namespaces — ⛔ rather than block a finished fix on
+> a human obligation already scheduled elsewhere, and ⛔ rather than manufacture a signature.
+> Carried as `CR-11b.2a-AC8-TONE` in `deferred-work.md`.
+> ⛔⛔ **`done` HERE MEANS "SHIPPED WITH ONE CLAUSE OPENLY OUTSTANDING", ⛔ NOT "EVERY AC MET".**
+> ⚠ A later reader must ⛔ not infer from this row that the tone review happened.
+
+> ⚠⚠ **PRIOR STATE — ROW WAS REOPENED `done` → `in-progress` BY THE SECOND CODE-REVIEW PASS (2026-08-30).** ⛔ Two
 > reasons, and ⛔ neither is a re-litigation of a ruled decision:
 > · ⭐ The first pass's own TOCTOU patch was an **AC2 / Trap 1 violation** — now fixed, and the
 >   erasure guarantee moved onto a snapshot-independent plaintext check that a revert-sanity probe
@@ -728,15 +742,26 @@ is a second reason the ruled change is a value re-word.
         ⛔ **No new key. ⛔ No code change. ⛔ No `apps/mobile/` edit. ⛔ Nothing on the wire.**
   - [x] ⛔ **Do ⛔ NOT touch `contributor_list.pending_strip` / `pending_strip_a11y`** — ⭐ they own the
         confirmation claim and are correct.
-  - [~] `pnpm microcopy:check` green (`contribution.json` is in `copy_globs`) — ✅ DONE. **The
-        NON-AUTHOR tone-review sign-off is ⛔ NOT done and this box is ⛔ NOT checked** (second review
-        pass, 2026-08-30): it was previously `[x]` while the story's own record at the AC8 closure
-        note said *"⛔ OWED BEFORE MERGE … recorded as OWED and UN-ATTESTED rather than
-        self-signed"*, and `docs/tone-review-checklist.md` carries no entry for this story. ⛔ BigDev
-        cannot sign it either — the strings were **authored by BigDev** (ruled verbatim in AC8) and
-        transcribed by this agent, so `reviewedBy ≠ authoredBy` disqualifies both parties. ⚠ The
-        obligation is real, **unmechanized** (the contributor list is absent from the checklist's
-        governed-surfaces table), and stays OPEN ([[feedback_record_unattested_no_backfill]]).
+  - [x] `pnpm microcopy:check` green (`contribution.json` is in `copy_globs`) — ✅ **DONE.**
+        ⚠⚠ **The NON-AUTHOR tone-review sign-off is ⛔ NOT done. This box is checked as
+        RESOLVED VIA EXPLICIT DEFERRAL, ⛔ NOT as "closed by edit"** ([[feedback_closure_language_precision]]
+        — the two are never collapsed). ⛔ **Nothing was signed, and ⛔ no sign-off is claimed.**
+        **The history, recorded rather than smoothed:** the box was originally `[x]` while the story's
+        own AC8 closure note said *"⛔ OWED BEFORE MERGE … recorded as OWED and UN-ATTESTED rather than
+        self-signed"* — the second review pass (2026-08-30) caught the contradiction and unchecked it.
+        BigDev then **elected to sign and the signature was DECLINED on verification**: the strings were
+        **authored by BigDev** (ruled verbatim in AC8) and transcribed by this agent, so
+        `reviewedBy ≠ authoredBy` disqualifies **both** parties.
+        ⭐ **RULED 2026-08-31 (BigDev): close the story and carry AC8's sign-off as an OPEN, UN-ATTESTED
+        obligation with a named trigger** — ⛔ rather than block a finished, verified fix on a human
+        obligation already scheduled for a different pass, and ⛔ rather than manufacture a signature.
+        ⇒ **AC8 is ⛔ NOT fully met, and this story ⛔ does not claim it is.**
+        **TRIGGER: BigDev's pre-production tone sweep** over the 20 `copy_globs` namespaces
+        (*"for other stories, I will pay visit to their tone and fix it before production"*, 2026-08-31).
+        Carried as `CR-11b.2a-AC8-TONE` in `deferred-work.md`. ⚠ The obligation is real and
+        **unmechanized** — the contributor list is ⛔ absent from `docs/tone-review-checklist.md`'s
+        governed-surfaces table, so there is ⛔ no publish endpoint and ⛔ no review permission through
+        which a `tone_review.signoff` could even be emitted ([[feedback_record_unattested_no_backfill]]).
   - [x] ⛔ **⛔ NOT the AC7 path** — ⛔ no counsel, ⛔ no Story-2.4 amendment workflow. ⭐ Ordinary
         product microcopy on a surface this story owns.
 - [x] **Task 3 — The boundary fix (AC1)** ✅ `[D3(a) + D5 + D3-aggregate RULED — startable]`

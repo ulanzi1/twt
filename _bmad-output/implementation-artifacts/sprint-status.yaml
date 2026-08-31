@@ -1,5 +1,61 @@
 # generated: 2026-05-29
-# last_updated: 2026-08-30l (✅✅ STORY 11b-2a — CODE REVIEW COMPLETE (`bmad-code-review 11b.2a`,
+# last_updated: 2026-08-30m (⚠⚠ STORY 11b-2a — SECOND CODE-REVIEW PASS (`bmad-code-review 11b.2a`,
+#   3 layers re-run BLIND over the SAME diff `8a79cdd..HEAD`, but AFTER `cc22c79` — so the FIRST
+#   PASS'S OWN FIXES were under review for the first time). ⛔⛔ ROW REOPENED `done` → **`in-progress`**.
+#   ⛔ 11b-2 (`done`) and 11b-2b (`ready-for-dev`) are ⛔ NOT touched and ⛔ NOT flipped.
+#   ⭐⭐ THE HEADLINE: THE FIRST PASS'S OWN TOCTOU FIX WAS AN AC2 / Trap-1 VIOLATION — AND IT DID NOT
+#   CLOSE THE RACE IT NAMED. All THREE layers converged on it independently; the Blind Hunter found it
+#   with ⛔ NO spec access at all, from the self-contradicting comment alone. The per-row
+#   `getCurrentMemberState` re-check is one FULL event-stream replay per row — the construction Trap 1
+#   rejects BY NAME, including its "`mapWithConcurrency` does not make it acceptable" clause — sitting
+#   40 lines below a comment forbidding exactly that with the sibling function. ⭐ And it was
+#   INEFFECTIVE: `openScopeTx` is a bare `BEGIN` (READ COMMITTED), so the state read and the ciphertext
+#   read take DIFFERENT snapshots; an RTBF landing between them still decrypts the `[anonymized]`
+#   sentinel, and `splitFirstNameLastInitial('[anonymized]')` returns a NON-EMPTY `firstName` that
+#   sails past the empty-name guard.
+#   ✅ FIXED, AND THE FIX IS STRICTLY STRONGER: the re-check is DELETED (AC2's O(1) restored) and the
+#   guarantee moved onto the DECRYPTED PLAINTEXT (`ANONYMIZED_SENTINEL`) — snapshot-independent, so it
+#   holds for EVERY interleaving, at ⛔ ZERO extra queries. ⭐⭐ REVERT-SANITY PROBE RUN: with the guard
+#   disabled the new test FAILED and the wire carried `{"firstName":"[anonymized]","lastInitial":""}`
+#   VERBATIM. The new integration test reproduces the race's END STATE deterministically (erase the
+#   ciphertext, ⛔ omit the `member.rtbf_anonymized` event) ⇒ ⛔ no sleep, ⛔ no flake.
+#   ⇒ load-bearing-invariant FAMILY 2 REAL GAP is CLOSED.
+#   ⭐ AC2 IS NOW ASSERTED AT THE CALL SITE — `getCurrentMemberStates` called EXACTLY ONCE,
+#   `getCurrentMemberState` NEVER. The domain-level O(1) suite was structurally BLIND to the handler,
+#   which is how a per-row replay shipped for a whole commit under a green gate
+#   ([[feedback_gate_scope_semantic_coverage]]).
+#   ⚠⚠ WHY THE ROW IS HELD OPEN, AND IT IS ⛔ NOT AN ENGINEERING DEFECT: AC8's NON-AUTHOR tone-review
+#   sign-off is genuinely UN-ATTESTED. BigDev elected to sign it and THE SIGN-OFF WAS DECLINED ON
+#   VERIFICATION — the story's own `:1537` records the strings as AUTHORED BY BigDev (ruled verbatim in
+#   AC8), so `reviewedBy ≠ authoredBy` disqualifies BigDev exactly as it disqualifies the transcribing
+#   agent. Task 2's box moves `[x]` → `[~]`: microcopy half done, sign-off half OPEN. ⛔ The row may not
+#   read `done` while an AC clause is open. Flip to `done` when a qualified non-author signs.
+#   ⭐ ALSO CORRECTED AT SOURCE: the first pass's "ZERO AC VIOLATIONS" verdict is annotated SUPERSEDED
+#   where it is written — correct when taken, false as published, because the patch that entry records
+#   as ✅ FIXED is the violation ([[feedback_closure_language_precision]]).
+#   NINE further patches applied: two unguarded per-row awaits now fail CLOSED per-row instead of
+#   collapsing the surface into a false "you have no live pool"; the i18n confirmation guard widened to
+#   the VERB and EVENT NOUN and made SELF-VERIFYING against seven known-false re-words (⭐ `hi` needs
+#   `/योगदान(?!कर्ता)/` — the CORRECT string contains `योगदानकर्ता`, of which `योगदान` is a literal
+#   prefix, so a bare pattern would fail the very string it protects); the pending-strip assertion stops
+#   pinning the word `confirmation`; `mapWithConcurrency` gains four `RangeError` tests and can no
+#   longer resolve with holes; the chunk-size test asserts ORDER OF MAGNITUDE (`>= 100`) instead of a
+#   `> 8` that `9` satisfied; uuid case normalised on BOTH sides of the state `Map`; AC2's call-site doc
+#   gains its missing `members.state` half; the fixture derives names through the PRODUCTION splitter.
+#   THREE deferred as `CR-11b.2a-2P-W1..W3` in deferred-work.md; FIVE dismissed after live verification
+#   (incl. two the layers got WRONG: `events_log` DOES carry FORCE RLS with tenant isolation, and the
+#   anonymize + event append DO share one tx — the leak was real but the proposed mechanism was not).
+#   ⭐ W3's coupling DISSOLVED rather than being paid: the erasure guarantee moved OFF the state map, so
+#   removing the re-check did ⛔ NOT convert a masked fail-open into a silent un-erasure.
+#   ✅⭐ VERIFICATION: `pnpm ci:local` with DATABASE_URL — **33 of 33 JOBS GREEN**, including BOTH
+#   `test (unit)` and the live-DB `integration-tests` leg. ⚠ Recorded because it is true and ⛔ not
+#   because it changes the verdict: an EARLIER ci:local run in this same pass failed `test (unit)`
+#   ONCE and did ⛔ NOT reproduce in FOUR subsequent runs (standalone `--force`, standalone cached,
+#   the exact `integration-tests` → `test (unit)` ordering with both legs exit 0 and 37/37 turbo
+#   tasks, and the full 33-job run above). ⛔ THE FAILING TEST WAS NEVER IDENTIFIED — the summary
+#   elided it — so it stays recorded UN-ATTESTED rather than attributed to a known flake class
+#   ([[feedback_record_unattested_no_backfill]]). ⛔ Not caused by this diff.)
+# last_updated_prior: 2026-08-30l (✅✅ STORY 11b-2a — CODE REVIEW COMPLETE (`bmad-code-review 11b.2a`,
 #   3-layer adversarial: Blind Hunter · Edge Case Hunter · Acceptance Auditor, diff `8a79cdd..HEAD`).
 #   ⭐ ROW FLIPS `review` → **`done`**.
 #   ⭐ ACCEPTANCE AUDITOR: ZERO AC VIOLATIONS — the omission-before-decrypt ordering, the untouched
@@ -12955,7 +13011,7 @@ development_status:
   # `deferred-to-v2` precedent (Decision 2026-08-17-126 cl.6) an enum addition is a RATIFIED
   # GOVERNANCE ACT, not an authoring convenience. ⇒ `ready-for-dev` here means what the enum says.
   11b-2-contribution-list-components-table-mobile-row: done
-  11b-2a-contributor-name-resolution-defect: done
+  11b-2a-contributor-name-resolution-defect: in-progress
   11b-2b-contributor-list-mobile-render-layer: ready-for-dev
   11b-3-sahyog-vivran-per-claim-story-surface: backlog
   11b-4-memorial-authorship-surface-family-writes-the-story: backlog

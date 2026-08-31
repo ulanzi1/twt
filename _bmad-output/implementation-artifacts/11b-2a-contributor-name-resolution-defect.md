@@ -4,7 +4,19 @@ baseline_commit: 3a51745
 
 # Story 11b.2a: Contributor Erasure — RTBF defect fix (D5: OMIT the row) + decrypt bound `[DEFECT]`
 
-Status: done
+Status: in-progress
+
+> ⚠⚠ **ROW REOPENED `done` → `in-progress` BY THE SECOND CODE-REVIEW PASS (2026-08-30).** ⛔ Two
+> reasons, and ⛔ neither is a re-litigation of a ruled decision:
+> · ⭐ The first pass's own TOCTOU patch was an **AC2 / Trap 1 violation** — now fixed, and the
+>   erasure guarantee moved onto a snapshot-independent plaintext check that a revert-sanity probe
+>   proved bites. ✅ **That half is CLOSED.**
+> · ⚠ **AC8 is NOT fully met.** The NON-AUTHOR tone-review sign-off is genuinely **un-attested**:
+>   BigDev authored the strings (AC8, verbatim) and this agent transcribed them, so
+>   `reviewedBy ≠ authoredBy` disqualifies **both**. ⛔ The row may not read `done` while an AC
+>   clause is open ([[feedback_closure_language_precision]], [[feedback_record_unattested_no_backfill]]).
+> ⇒ ⭐ **The code is complete and verified; the row is held open on a HUMAN obligation, ⛔ not on an
+> engineering defect.** Flip to `done` the moment a qualified non-author signs off.
 
 > ⭐⭐ **FINAL RULING (BigDev, 2026-08-30) — D5: RTBF REMOVES THE CONTRIBUTOR ENTIRELY. ⛔ NO ANONYMIZED
 > ROW IS EMITTED.** The erased member's public contributor representation **disappears**; ⛔ it is ⛔ not
@@ -716,8 +728,15 @@ is a second reason the ruled change is a value re-word.
         ⛔ **No new key. ⛔ No code change. ⛔ No `apps/mobile/` edit. ⛔ Nothing on the wire.**
   - [x] ⛔ **Do ⛔ NOT touch `contributor_list.pending_strip` / `pending_strip_a11y`** — ⭐ they own the
         confirmation claim and are correct.
-  - [x] `pnpm microcopy:check` green (`contribution.json` is in `copy_globs`), **and** record a
-        **NON-AUTHOR tone-review sign-off** (`docs/tone-guide.md §5` — ⛔ the lint does ⛔ not substitute).
+  - [~] `pnpm microcopy:check` green (`contribution.json` is in `copy_globs`) — ✅ DONE. **The
+        NON-AUTHOR tone-review sign-off is ⛔ NOT done and this box is ⛔ NOT checked** (second review
+        pass, 2026-08-30): it was previously `[x]` while the story's own record at the AC8 closure
+        note said *"⛔ OWED BEFORE MERGE … recorded as OWED and UN-ATTESTED rather than
+        self-signed"*, and `docs/tone-review-checklist.md` carries no entry for this story. ⛔ BigDev
+        cannot sign it either — the strings were **authored by BigDev** (ruled verbatim in AC8) and
+        transcribed by this agent, so `reviewedBy ≠ authoredBy` disqualifies both parties. ⚠ The
+        obligation is real, **unmechanized** (the contributor list is absent from the checklist's
+        governed-surfaces table), and stays OPEN ([[feedback_record_unattested_no_backfill]]).
   - [x] ⛔ **⛔ NOT the AC7 path** — ⛔ no counsel, ⛔ no Story-2.4 amendment workflow. ⭐ Ordinary
         product microcopy on a surface this story owns.
 - [x] **Task 3 — The boundary fix (AC1)** ✅ `[D3(a) + D5 + D3-aggregate RULED — startable]`
@@ -912,6 +931,13 @@ is a second reason the ruled change is a value re-word.
 
 _3-layer adversarial review (Blind Hunter · Edge Case Hunter · Acceptance Auditor), diff `8a79cdd..HEAD`. Acceptance Auditor found zero AC violations. Two decision-needed, five patch, one deferred, five dismissed as noise after live verification against the repo._
 
+> ⚠⚠ **THIS PASS'S "ZERO AC VIOLATIONS" VERDICT IS SUPERSEDED — it was correct when taken and false as
+> published.** The verdict was reached against the code as it stood **before** this pass's own TOCTOU
+> patch was applied; that patch — the per-row `getCurrentMemberState` re-check recorded as ✅ FIXED in
+> the first bullet below — **is itself an AC2 / Trap 1 violation**, and it did not close the race it
+> named. Found by the SECOND PASS below, independently by all three layers. ⛔ Do not cite this
+> section's verdict as a clean bill; ⛔ do not re-apply the re-check ([[feedback_closure_language_precision]]).
+
 - [x] [Review][Patch] TOCTOU window between the batched member-state read and the per-row decrypt fan-out can reproduce the exact defect this story fixes — `apps/api/src/modules/member-pool/handlers.ts:311-347` snapshots `contributorStates` once, then decrypts confirmed rows concurrently; the scope-tx runs plain `BEGIN` (READ COMMITTED, no snapshot isolation — confirmed in `apps/api/src/modules/multi-tenant/scope-tx.ts`). If a member's RTBF commits after the snapshot but before their row's decrypt call, the row was not filtered (stale snapshot said not-yet-anonymized) and decrypt proceeds against the now-overwritten KYC ciphertext, rendering the `[anonymized]` sentinel on the wire. **Decision (2026-08-30): re-check state per-row immediately before each decrypt call inside `mapWithConcurrency`'s callback.** ✅ FIXED: `handlers.ts`'s mapped function now calls `memberDomain.getCurrentMemberState(tx, contributor.memberId)` first and omits the row (with a warn log) if it now reads `anonymized`. `tests/unit/pool-contributors.test.ts` updated to mock the new call.
 - [x] [Review][Patch] The "clock-domain guard, end to end" integration test doesn't inject any clock skew — `apps/api/tests/integration/contributions/pool-contributors-rtbf.spec.ts`'s AC2 test claims (in its own comment) that it runs "on the injected test clock" to prove the fix, but neither `fetchList`, `token`, nor `createTestApp` inject or skew a clock anywhere in the file; it is functionally identical to the AC1/AC6 test (seed, anonymize, assert absence). **Decision (2026-08-30): add a real clock-injection test that skews the app clock relative to the DB-stamped `rtbf_anonymized` event to actually prove the no-`occurred_at`-bound guarantee end to end.** ⚠ **DECISION COULD NOT BE EXECUTED AS RULED — DISCOVERED BLOCKED, NOT FIXED AS SPECIFIED.** Attempted a direct `UPDATE events_log SET occurred_at = ...`: **"permission denied for table events_log"**, live against `:5433` — `twt_app` holds no UPDATE grant (events_log is append-only by design, matching `anonymize.ts`'s own "the caller APPENDS, never mutates" invariant). Checked the app-level alternative: `ProjectMemberStateInput` has no `occurredAt` override; the schema's own comment says *"test clock injection lands with Story 1.10 audit-log + downstream stories"* — i.e. genuinely not built yet. **Applied instead:** corrected the test's docstring to state what it actually proves (a real event-stream replay, not a stub) and pointed to `batched-member-states.test.ts`'s SQL-shape "THE CLOCK DOMAIN" suite as the actual proof of the no-bound property. Filed the real clock-injection substrate as a deferred decision trigger in `deferred-work.md` — this is new information the original decision didn't have, surfaced during implementation rather than executed silently.
 - [x] [Review][Patch] `mapWithConcurrency` has no guard against `concurrency <= 0` — silently resolves with an array of `undefined` and processes nothing instead of throwing or clamping [apps/api/src/modules/kyc/bounded-decrypt.ts] — ✅ FIXED: throws `RangeError` for non-positive-integer `concurrency`.
@@ -926,6 +952,130 @@ _3-layer adversarial review (Blind Hunter · Edge Case Hunter · Acceptance Audi
 - [x] [Review][Dismiss] Raw SQL string interpolation in test helper `stateWriter` (`SET LOCAL app.${table}_state_writer = '${mode}'`) — confirmed this is an established, repo-wide test convention (same pattern in `nominee-accounts.spec.ts`, `sahyog-drive.spec.ts`, `suspended-member-reachability.spec.ts`) over compile-time-constrained literal unions, not a novel or real injection surface
 - [x] [Review][Dismiss] Task 0 checkbox for "read `.decision-log.md` head live" has no evidence co-located with the checkbox — the live-verified value (`2026-08-28-167`) is in fact recorded elsewhere in this same document (the 2026-08-30 validation-pass row's "Verified clean at `3a51745`" list), just not adjacent to the checkbox itself
 
+### Review Findings — SECOND PASS (`bmad-code-review 11b.2a`, 2026-08-30)
+
+_Independent 3-layer adversarial re-review (Blind Hunter · Edge Case Hunter · Acceptance Auditor) over the SAME diff `8a79cdd..HEAD`, run AFTER `cc22c79` — so the fixes the first pass applied are themselves under review for the first time. The three layers ran blind to the first pass's findings list. **2 decision-needed, 9 patch, 3 deferred, 5 dismissed after live verification.**_
+
+_⭐⭐ **THE HEADLINE: THE FIRST PASS'S OWN TOCTOU FIX IS AN AC2 / Trap-1 VIOLATION, AND IT DOES NOT CLOSE THE RACE IT NAMES.** All three layers converged on it independently — the Blind Hunter with no spec access at all, from the self-contradicting comment alone._
+
+**✅ RESOLUTION (BigDev, 2026-08-30) — ALL 11 APPLIED AND VERIFIED.**
+
+· ⭐⭐ **D1 → drop the re-check, guard the PLAINTEXT.** The per-row `getCurrentMemberState` is **DELETED**
+  (AC2's O(1) and Trap 1 restored; the comment at `handlers.ts:307` no longer contradicts the code 40
+  lines below it). In its place the decrypted plaintext is compared against
+  `memberDomain.ANONYMIZED_SENTINEL` and the row is **OMITTED** on a match. ⭐ **This is strictly
+  STRONGER than what it replaces:** it is snapshot-independent, so it holds for EVERY interleaving —
+  ⛔ not just the one the re-check narrowed — and it costs **zero** extra queries. ⭐ It also makes the
+  erasure guarantee independent of the batched state read entirely, which is why defer **W3**'s
+  fail-open default is no longer load-bearing on the erasure path (recorded on `read.ts`'s docblock).
+· ⭐⭐ **AND THE NEW TEST BITES — PROVEN, ⛔ NOT ASSUMED.** `pool-contributors-rtbf.spec.ts` gains
+  *"AC1 (TOCTOU): a stale state read can NEVER put the `[anonymized]` sentinel on the wire"*, which
+  reproduces the race's **end state deterministically** (a new `anonymizeCiphertextOnly` helper erases
+  the ciphertext and ⛔ deliberately omits the `member.rtbf_anonymized` event, so the replay still says
+  `active` while the ciphertext is already the sentinel) — ⛔ **no sleep, no timing dependence, no
+  flake.** ⭐ **REVERT-SANITY PROBE RUN:** with the sentinel guard disabled the test FAILED and the wire
+  carried `{"firstName":"[anonymized]","lastInitial":""}` **verbatim**. ⇒ load-bearing-invariant
+  **family 2 REAL GAP is CLOSED**. ⚠ Note what this also proves: the first pass's re-check would ⛔ NOT
+  have caught this input either.
+· ⭐ **AC2 is now asserted AT THE CALL SITE**, which is the gate the first pass's own fix walked
+  through: `pool-contributors.test.ts` asserts `getCurrentMemberStates` is called **exactly once** and
+  `getCurrentMemberState` **never**. The domain-level O(1) suite was structurally blind to the handler,
+  which is how a per-row replay shipped for a whole commit under a green gate
+  ([[feedback_gate_scope_semantic_coverage]]).
+· **D2 → the checkbox is CORRECTED, the obligation stays OPEN.** ⛔ **NOT signed off.** BigDev first
+  elected to sign, and the sign-off was **declined on verification**: `:1537` records that the strings
+  were **authored by BigDev** (ruled verbatim in AC8), so `reviewedBy ≠ authoredBy` disqualifies BigDev
+  exactly as it disqualifies the transcribing agent. Task 2's box moves `[x]` → `[~]` with the
+  microcopy half marked done and the sign-off half explicitly **un-attested**
+  ([[feedback_record_unattested_no_backfill]]). ⇒ ⚠ **AC8 is NOT fully met and the row must not claim
+  it is.**
+· **The nine patches**, all applied and all re-verified: the two unguarded per-row awaits now fail
+  **CLOSED** per-row instead of collapsing the surface into a false *"you have no live pool"*; the i18n
+  guard is widened to match the **verb and event noun** (`/confirm/i`, `/\bcontribut(ed|ing|ion|ions)\b/i`,
+  `/\bnothing\b/i`; `hi` gains `/योगदान(?!कर्ता)/` — ⭐ the negative lookahead is load-bearing, because
+  the CORRECT Hindi string contains `योगदानकर्ता`, of which `योगदान` is a literal prefix) and is now
+  **self-verifying** against seven known-false re-words; the pending-strip assertion stops pinning the
+  word `confirmation` and reuses the same vocabulary list; `mapWithConcurrency`'s `@throws RangeError`
+  gains four tests and its result array can no longer resolve with holes (counted, ⛔ not scanned, so it
+  stays sound for an `R` whose own domain contains `undefined`); the chunk-size test asserts **order of
+  magnitude** (`>= 100`) instead of a `> 8` that `9` satisfied; `getCurrentMemberStates` normalises uuid
+  case on **both** sides of the `Map`; AC2's call-site doc gains its missing `members.state` half; the
+  integration fixture derives names through the **production** `splitFirstNameLastInitial`; and the
+  first pass's superseded *"zero AC violations"* verdict is annotated at its source.
+
+**Verification:** ✅ **`pnpm ci:local` with `DATABASE_URL` set — 33 of 33 jobs GREEN, including
+BOTH `test (unit)` and the live-DB `integration-tests` leg at `:5433`.** ⚠ Recorded because it is true
+and ⛔ not because it changes the verdict: an EARLIER `ci:local` run in this same pass failed
+`test (unit)` ONCE. It did ⛔ not reproduce in **four** subsequent runs — standalone `--force`,
+standalone cached, the exact `integration-tests` → `test (unit)` ordering (both legs exit 0, 37/37
+turbo tasks), and the full 33-job `ci:local` above. ⛔ **The failing test was never identified** (the
+ci:local summary elided it), so it is recorded here **un-attested** rather than attributed to a known
+flake class ([[feedback_record_unattested_no_backfill]]). ⛔ Not caused by this diff.
+
+- [x] [Review][Decision → RESOLVED & FIXED] **The per-row `getCurrentMemberState` re-check applied by the first review pass is forbidden by AC2 / Trap 1 BY NAME, and it still leaks the `[anonymized]` sentinel** — `apps/api/src/modules/member-pool/handlers.ts:350`. **(a) It is the rejected construction.** `getCurrentMemberState` (`packages/domain/src/member/read.ts:150-157`) is `select().from(eventsLog).where(eq(streamId, memberId))` — a full event-stream replay, no `LIMIT` — so the handler now issues **1 + n** state reads, one per representable contributor. Trap 1 (`:317`) forbids exactly this, verbatim: *"Calling it per contributor row adds one full event-stream replay per row — strictly worse than the KMS decrypt AC3 exists to bound, **and `mapWithConcurrency` does not make it acceptable**."* D3-shape(ii) ground (`:1188`): *"(c) was rejected outright — a bounded N+1 of full event-stream replays is still an N+1 (Trap 1)."* AC2 (`:455`) requires the state-resolution round trips be **O(1)** in the contributor count. The call site's own comment at `handlers.ts:307-309` — *"⛔ NEVER `getMemberStateAt` per contributor — that is one FULL replay per row"* — sits **40 lines above** code doing precisely that with the sibling function, and the re-check carries no `DELIBERATE` block acknowledging it re-opens rejected option (c). The batched read at `:311` is now pure redundancy: `:350` re-decides every row. Worse, all workers share ONE `pg.PoolClient` (`scope-tx.ts:35` → `db.ts:147-149`), so the n replays **serialize on one connection** — `DIRECTORY_DECRYPT_CONCURRENCY` parallelises only the KMS leg. **(b) And it does not close the window.** Order is: state re-check `:350` → `getMemberKycProfile` `:355` → `decryptKycField` `:368`. `openScopeTx` issues a bare `BEGIN` with no isolation level (`apps/api/src/modules/multi-tenant/scope-tx.ts:37-42`) ⇒ READ COMMITTED ⇒ **every statement takes a fresh snapshot**. An RTBF committing between `:350` and `:355` hands the row the overwritten sentinel ciphertext; `decryptKycField` **succeeds**; `splitFirstNameLastInitial('[anonymized]')` returns `{ firstName: '[anonymized]', lastInitial: '' }` (`packages/domain/src/kyc/name.ts:47-53`); `firstName` is non-empty so the `:374` guard does **not** fire; **the internal sentinel renders verbatim where the contributor's name belongs.** ⭐ The atomicity question is settled and is NOT an escape hatch: `anonymize.ts:125` states the caller projects `member.rtbf_anonymized` in the SAME tx — the leak survives that, because the two READS are what straddle the commit. ⭐ Reachability of an erasure while the member is a live confirmed contributor is proven: `resolveRtbfLegality` (`packages/domain/src/member/rtbf-legality.ts:62-75`) permits erasure from `withdrawn` **or from any lifecycle label when the moderation overlay reads `terminated`**. **(c) Load-bearing-invariant family 2 = REAL GAP** (same severity ladder as an AC violation, per the checklist): the diff added concurrency to a path that had none, named a race as its justification, paid an O(n) replay cost for the mitigation, and left the property **un-asserted at every level** — `pool-contributors-rtbf.spec.ts` anonymizes *between* two complete requests, never during one, and `pool-contributors.test.ts:76` stubs the re-check to a constant `'active'`, making it a no-op for every assertion in the file. The checklist's family-2 standard is *"true two-connection races proven live"*, and the repo has the infrastructure (`:5433`, concurrency 1) plus a working `reallyAnonymize` helper in this very spec.
+- [x] [Review][Decision → RESOLVED, OBLIGATION STAYS OPEN] **AC8's NON-AUTHOR tone-review sign-off is UNMET while Task 2's checkbox is `[x]` and the row shipped `done`** — AC8 (`:652`) requires *"A NON-AUTHOR tone-review sign-off is recorded (`docs/tone-review-checklist.md`)"*; Task 2 (`:719-720`) is checked. `docs/tone-review-checklist.md` exists and carries **no entry** for 11b.2a or `contributor_list.empty` (verified). The story's own record (`:1511`) is honest and says the opposite of the checkbox: *"⛔ OWED BEFORE MERGE … recorded as OWED and UN-ATTESTED rather than self-signed."* `pnpm microcopy:check` is genuinely green, but `docs/tone-guide.md §5` states the lint does not substitute. ⇒ family 10 (closure honesty) **holds in the prose and fails in the checkbox**, and the row flipped `done` with an AC clause open. Author and transcriber are both disqualified from signing.
+- [x] [Review][Patch] `getCurrentMemberState` and `getMemberKycProfile` are the only two per-row awaits OUTSIDE any `try`, so one transient failure rejects the whole batch — directly contradicting the comment above them (*"Each row degrades INDEPENDENTLY: `null` means 'omit this one row', never 'fail the response'"*). `mapWithConcurrency` sets `stopped` and `Promise.all` rejects (`bounded-decrypt.ts:62-70`), `poolContributors`' catch then returns `CONTRIBUTOR_LIST_UNASSIGNED` (`handlers.ts:163-168`) ⇒ an assigned member is told *"You have no live pool right now"* (`PoolContributorList.tsx:72`) — a false statement — and the pending aggregate vanishes with it. Wrapping both in `try`/`return null` is fail-CLOSED for the erasure check (a failed state read omits the row), so the fix is unambiguous. [apps/api/src/modules/member-pool/handlers.ts:350,355]
+- [x] [Review][Patch] The i18n "makes NO claim about confirmation" test is a two-term denylist, not a property test — the obvious wrong copy passes it. `en` bans `/confirmed/i` and `/contributions? yet/i`, so **"No one has contributed yet."** (a direct, arithmetically false confirmation claim beside *"2 pending confirmation (67%)"*) is green — it is `contributed`, not `contributions`. `hi` bans `पुष्ट`/`पुष्टि`/`अंशदान`, so **"अभी तक किसी ने योगदान नहीं दिया।"** is green — `योगदान`, not `अंशदान`. The file's own header insists *"⛔⛔ THIS FILE ASSERTS THE PROPERTY, ⛔ NEVER THE SENTENCE."* Secondary, same file: the final test asserts `/confirmation/i` on `contributor_list.pending_strip`, pinning a word in the copy — the exact practice the header forbids. [packages/i18n/tests/contributor-list-empty.test.ts]
+- [x] [Review][Patch] `mapWithConcurrency`'s documented `@throws {RangeError}` guard — added by the first review pass with an explicit rationale (*"a silent 0-worker no-op is a worse failure mode"*) — has **no test**. No case passes `0`, `-1`, `1.5` or `NaN`; delete the guard and the suite is green. [apps/api/tests/unit/bounded-decrypt.test.ts]
+- [x] [Review][Patch] The chunk-size test named "⛔ not the decrypt bound" asserts only `MEMBER_STATE_REPLAY_CHUNK_SIZE > 8` against the hand-copied `KNOWN_DECRYPT_CONCURRENCY_AT_TIME_OF_WRITING = 8`. Setting the chunk size to `9` — collapsing the very distinction the test is named after — passes. The literal is a comment with an `expect` around it. [packages/domain/tests/member/batched-member-states.test.ts]
+- [x] [Review][Patch] `mapWithConcurrency` returns an `R[]` that is unsound on the early-stop path — `new Array<R>(items.length)` plus workers that `return` without filling their indices leaves holes typed as `R`; the caller's guard is `row !== null`, which `undefined` passes, and the type predicate then asserts `undefined is ConfirmedContributorRow`. Unreachable today (the throwing worker rejects `Promise.all` first), but one refactor away — `Promise.allSettled` or any non-throwing early exit serialises `undefined` into `confirmed` with no type error. Also `items[i]!` is a false non-null assertion for a sparse input. [apps/api/src/modules/kyc/bounded-decrypt.ts; apps/api/src/modules/member-pool/handlers.ts:381]
+- [x] [Review][Patch] `getCurrentMemberStates` keys `byStream` on `row.streamId` — returned canonically lowercased from the `uuid` column — while `chunk` holds the raw JSONB text `payload->>'memberId'` (`packages/domain/src/contribution/read.ts:140,171`, cast `as MemberId` without re-validation). Postgres normalises the bound parameter so `inArray` still matches, but the JS `Map.get` does not, and `z.string().uuid()` (`contribution/events.ts:150`) accepts uppercase hex. A case-variant uuid therefore falls through to the **fail-open** seeded default. Normalising both sides is unambiguous; the broader fail-open posture is filed separately as a defer. [packages/domain/src/member/read.ts:211-235]
+- [x] [Review][Patch] AC2's call-site documentation requirement is half-met — AC2 (`:471`) requires a note saying why the per-row call is forbidden **and why `members.state` was ⛔ not joined instead** (projector liveness must not enter the RTBF correctness path). The call-site block `handlers.ts:304-313` covers only the first half; the `members.state` rationale lives solely in the domain docblock (`packages/domain/src/member/read.ts:194-196`). [apps/api/src/modules/member-pool/handlers.ts:304-313]
+- [x] [Review][Patch] The integration fixture re-derives the expected display name with its own `legalName.split(' ')` logic into `SeededMember.firstName`/`.lastInitial` instead of importing `splitFirstNameLastInitial` — and then never uses the derived fields, because every assertion uses hardcoded literals (`{ firstName: 'Asha', lastInitial: 'D' }`). A second, divergent copy of production logic that is simultaneously dead: either make it the assertion source via the real splitter, or delete it. [apps/api/tests/integration/contributions/pool-contributors-rtbf.spec.ts]
+- [x] [Review][Patch] The first pass's own closure claim is stale at HEAD — the story's `### Review Findings` preamble (*"Acceptance Auditor found zero AC violations"*) and the `sprint-status.yaml` `2026-08-30l` head (*"independently re-verified against live code"*) both describe the post-fix state, yet the fix that entry records as applied **is** the AC2 violation above. The verdict was correct when taken and false as published. [story `### Review Findings`; `_bmad-output/implementation-artifacts/sprint-status.yaml` head]
+- [x] [Review][Defer] `getCurrentMemberStates` issues `db.select()` with no column projection — all eight `events_log` columns including the full `payload` JSONB, for the ENTIRE history of up to 500 members per chunk — while the reducer consumes only `eventType` and one `payload.kyc_verified` arm (`packages/domain/src/member/state.ts:88-95,216-218`). `events_log` has no per-stream row cap (`DELETE`/`TRUNCATE` are trigger-blocked; several `MEMBER_EVENT_TYPES` are repeatable markers), and the constant's own doc-block sizes the design for "the ~10,000-member case" ⇒ 20 sequential waves materialising every event row of 10,000 members in Node heap to fold type strings. Chunking bounds statement COUNT, not working set. — deferred, pre-existing: narrowing requires changing the shared `replayMemberState(rows: readonly EventRow[])` signature (`member/state.ts:35,214`), which is out of this diff and shared with two sibling readers [packages/domain/src/member/read.ts:218-222]
+- [x] [Review][Defer] The AC3 anti-drift test is a source-text grep over a hardcoded two-file list — a duplicate helper named anything other than `mapWithConcurrency`/`DIRECTORY_DECRYPT_CONCURRENCY` passes; the import-presence regex is satisfied by an UNUSED import and never proves the module is called; a third consumer that hand-rolls a copy is not scanned at all; and a cwd change makes `readFile` throw ENOENT, which reads as infrastructure failure rather than a drift finding. — deferred, pre-existing test-mechanism class; the first pass already widened this regex once, which is evidence the grep approach is the wrong shape rather than that it is nearly right [apps/api/tests/unit/bounded-decrypt.test.ts]
+- [x] [Review][Defer] The erasure pre-filter fails **OPEN by construction** — `out` is pre-seeded with `replayMemberState([])` = `pending-kyc` for every requested id and a row group is applied only `if (stream !== undefined)`, so ANY cause of stream invisibility resolves the member as representable and schedules the decrypt. The docblock (`read.ts:172-175`) claims the map never leaves the erasure decision to a default, then hard-codes the permissive one. ⚠ **Coupled to the decision above:** today the per-row re-check masks this; if that re-check is removed as the AC2 fix, this becomes a silent un-erasure. Flipping the default is a contract change — `batched-member-states.test.ts` pins *"a member with NO events resolves to the machine initial state"* — so it needs its own ruling.  ⭐⭐ **NARROWED 2026-08-30 (same pass):** the erasure half is ⛔ NO LONGER load-bearing on this default — the contributor render's guarantee moved to the `ANONYMIZED_SENTINEL` check on the DECRYPTED PLAINTEXT, which is independent of this read, of the tx snapshot, and of whether the stream was visible at all. ⇒ what remains deferred is the GENERAL posture (a non-anonymized member made invisible by some other cause resolving as `pending-kyc`), ⛔ not a privacy leak. — deferred, needs a decision on the no-events contract [packages/domain/src/member/read.ts:211-213,234-235]
+- [x] [Review][Dismiss] "Every RTBF assertion is behind `describe.skipIf(!hasDatabase)`, so a DB-less run is green and proves nothing" — `scripts/ci-local.sh:134` runs `integration-tests` with `--filter=@twt/api`, and `:106-116` carries the **AI-10-5 coverage guard** that FAILS the run if the set of DB-gated packages diverges from the integration filter set. The leg ran green for this story.
+- [x] [Review][Dismiss] "The empty-state copy fix is a bundled string, so shipped clients keep rendering the false sentence" — true, and true of every string in `@twt/i18n` (a `workspace:*` dependency of `apps/mobile`). This is the app's standard release model, not a defect introduced or worsened by this diff.
+- [x] [Review][Dismiss] "`getCurrentMemberStates` carries no `pariwar_id` predicate ⇒ cross-tenant event reads" — `events_log` is `ENABLE` + **`FORCE ROW LEVEL SECURITY`** with `events_log_tenant_isolation_select … USING (pariwar_id = current_setting('app.pariwar_id'))` (`packages/domain/migrations/0002_events-log-rls.sql:69-75`), and `openScopeTx` does `SET LOCAL ROLE twt_app` → `setPariwarScope` → `assertPariwarScopeSet` before any statement (`scope-tx.ts:35-42`). Identical posture to the pre-existing `getCurrentMemberState`; no BYPASSRLS worker calls the new export.
+- [x] [Review][Dismiss] "The sentinel leak is caused by `anonymizeMember` and the `member.rtbf_anonymized` append being in SEPARATE transactions" — false premise: `packages/domain/src/member/anonymize.ts:125` states the caller projects the event *"in the SAME tx"*. The leak is real but arrives via the READ COMMITTED two-statement path, which is carried in the decision above; the split-tx theory is not the mechanism.
+- [x] [Review][Dismiss] "The AC2 'decided by the event REPLAY' integration test proves nothing the first test does not" — accurate as an observation, but already disclosed and corrected by the first review pass, which rewrote the docstring to state what the test actually proves and filed the real clock-injection substrate as a deferred trigger. Nothing further is owed here.
+
+
+### Review Findings — THIRD PASS (focused verification of the D1 patch, 2026-08-30)
+
+_⛔ NOT a fourth adversarial sweep and ⛔ NOT a re-litigation: five named checks over the post-D1 patch
+only, with settled decisions treated as settled. **Four verified as-is; ONE gap found and closed.**_
+
+- [x] **(1) ✅ VERIFIED — no per-row `getCurrentMemberState` replay remains on the contributor path.**
+      The only occurrence in `apps/api/src` is the ⛔-prefixed comment forbidding it
+      (`member-pool/handlers.ts:351`). The function still exists in the domain and has exactly ONE
+      caller repo-wide — `packages/domain/src/member/restoration-discipline/write.ts:354`, a
+      single-member write path that predates this story and is ⛔ not a render fan-out. ⇒ nothing to do.
+- [x] **(2) ✅ VERIFIED — `ANONYMIZED_SENTINEL` is rejected BEFORE presenter materialization.**
+      Ordering at `handlers.ts`: decrypt `:380` → **sentinel check `:394` → `return null`** →
+      `splitFirstNameLastInitial` `:398` → `return { firstName, lastInitial }` `:403`. ⇒ the sentinel
+      never reaches the splitter, never becomes a `ConfirmedContributorRow`, and therefore never
+      reaches `rows` or the wire. ⭐ The ordering is load-bearing, ⛔ not incidental: the splitter is
+      what turns `'[anonymized]'` into a NON-EMPTY `firstName` that the empty-name guard would pass.
+- [x] **(3) ⚠→✅ GAP FOUND AND CLOSED — the race test did not pin its own premise.**
+      The test was CORRECT (the revert-sanity probe proved it exercises the sentinel path), but it
+      asserted only the OUTCOME. If anything ever caused the replay to resolve the member
+      `anonymized`, the **pre-filter** at step (6a) would omit the row, the sentinel guard would ⛔
+      never execute, and the test would stay **green while covering nothing** — hollowing out the only
+      TOCTOU coverage in the suite without a single failing assertion. ⭐ Precisely the vacuous-green
+      class D3(a) rejected ("a vacuous branch reporting green forever"). ✅ **FIXED:** the test now
+      opens its own scope-tx and asserts `getCurrentMemberState(erased) !== 'anonymized'` immediately
+      after `anonymizeCiphertextOnly` and before the request — pinning `anonymizeMember`'s documented
+      *"does NOT touch `members.state` or the event stream"* contract **from the consumer side**.
+      ⇒ the two proofs are now independent: the premise assertion says the pre-filter did ⛔ not omit
+      the row, and the revert probe says the guard is what did.
+- [x] **(4) ✅ VERIFIED — AC2's O(1) state-read assertion is intact and at the CALL SITE.**
+      `pool-contributors.test.ts:121-122` asserts `getCurrentMemberStates` called **exactly once** and
+      `getCurrentMemberState` **never**. ⭐ This is the gate whose ABSENCE let a per-row replay ship for
+      a whole commit under a green domain-level O(1) suite ([[feedback_gate_scope_semantic_coverage]]).
+- [x] **(5) ✅ VERIFIED — no unrelated changes.** Every hunk in the uncommitted diff maps to a named
+      finding; ⛔ no drive-by refactors, ⛔ no renames, ⛔ no dependency or config edits, ⛔ no contract
+      or migration touch. ⭐ One deletion checked rather than assumed: the `hi` guard dropped
+      `/पुष्टि/`, which is ⛔ not a loosening — `/पुष्ट/` is a literal prefix of it and subsumes it.
+
+**⚠⛔ AC8 REMAINS OPEN AND IS ⛔ NOT AFFECTED BY THIS PASS.** The NON-AUTHOR tone-review sign-off is an
+**independent, blocking, human** obligation ([[feedback_record_unattested_no_backfill]]) — ⛔ no amount
+of engineering verification discharges it, and ⛔ this pass did not try to. Row stays `in-progress`.
+
+**Verification:** the RTBF integration spec (5 tests, live `:5433`) green with the added premise
+assertion; `@twt/api` typecheck + lint green (32 turbo tasks).
 
 ## ⚖️ Decisions
 

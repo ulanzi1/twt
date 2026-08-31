@@ -51,8 +51,14 @@ export async function mapWithConcurrency<T, R>(
   if (!Number.isInteger(concurrency) || concurrency <= 0) {
     throw new RangeError(`mapWithConcurrency: concurrency must be a positive integer, got ${concurrency}`);
   }
-  const out = new Array<R>(items.length);
+  // ⚠ Typed `R | undefined` on purpose. The early-stop path leaves indices UNFILLED, so a bare
+  //   `Array<R>` would be a lie the type system cannot see — and the contributor caller's guard is
+  //   `row !== null`, which `undefined` passes straight through into a `row is ConfirmedContributorRow`
+  //   predicate. Unreachable today (a stopping worker always throws, so `Promise.all` rejects before
+  //   this returns), but `Promise.allSettled` or any non-throwing early exit would make it live.
+  const out = new Array<R | undefined>(items.length);
   let next = 0;
+  let filled = 0;
   let stopped = false;
   const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
     for (;;) {
@@ -61,6 +67,7 @@ export async function mapWithConcurrency<T, R>(
       if (i >= items.length) return;
       try {
         out[i] = await fn(items[i]!);
+        filled++;
       } catch (err) {
         stopped = true;
         throw err;
@@ -68,5 +75,12 @@ export async function mapWithConcurrency<T, R>(
     }
   });
   await Promise.all(workers);
-  return out;
+  // The narrowing is EARNED, ⛔ not asserted: counting is sound for every `R`, including one whose
+  // own domain contains `undefined` (a `some(v => v === undefined)` scan would not be).
+  if (filled !== items.length) {
+    throw new Error(
+      `mapWithConcurrency: resolved with ${filled} of ${items.length} results — a non-throwing early exit left holes in a typed array`,
+    );
+  }
+  return out as R[];
 }

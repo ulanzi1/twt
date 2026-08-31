@@ -29,8 +29,40 @@ const LOCALES = ['en', 'hi'] as const;
  * in the EMPTY state is the defect.
  */
 const CONFIRMATION_CLAIM_TERMS: Record<(typeof LOCALES)[number], readonly RegExp[]> = {
-  en: [/confirmed/i, /contributions? yet/i],
-  hi: [/पुष्ट/, /पुष्टि/, /अंशदान/],
+  // ⚠ WIDENED (second review pass). The original pair — /confirmed/i and /contributions? yet/i — was a
+  // two-string denylist, and the most obvious wrong re-word walked straight through it: "No one has
+  // contributed yet." is `contributed`, not `contributions`, and carries no `confirmed`. Match the
+  // VERB and the EVENT NOUN, not one inflection of each.
+  // ⛔ Note what is deliberately NOT banned: `contributor`. The correct copy names the people whose
+  //   names are absent — the defect is asserting something about the CONTRIBUTION EVENT.
+  en: [/confirm/i, /\bcontribut(ed|ing|ion|ions)\b/i, /\bnothing\b/i],
+  // ⚠ `पुष्ट` already subsumes `पुष्टि` — kept as one pattern, not two that look independent.
+  // ⭐ `योगदान` needs a NEGATIVE LOOKAHEAD, and this is the whole subtlety of the Hindi guard: the
+  //   CORRECT string contains `योगदानकर्ता` ("contributor"), of which `योगदान` ("contribution") is a
+  //   literal prefix. A bare /योगदान/ would fail the very string it is meant to protect, while
+  //   omitting it lets "अभी तक किसी ने योगदान नहीं दिया।" pass. Match the event noun only when it is
+  //   NOT the agent noun.
+  hi: [/पुष्ट/, /अंशदान/, /योगदान(?!कर्ता)/],
+};
+
+/**
+ * Re-words that MUST be caught. ⭐ The guard above is a denylist, and a denylist that has quietly
+ * stopped matching anything still reports green — so these pin that it actually bites. Both were
+ * constructed as real tone-review candidates: each is fluent, plausible, and arithmetically FALSE
+ * beside "2 pending confirmation (67%)" on a pool of 3 whose only confirmed contributor was erased.
+ */
+const MUST_BE_REJECTED: Record<(typeof LOCALES)[number], readonly string[]> = {
+  en: [
+    'No one has contributed yet.',
+    'No confirmed contributions yet.',
+    'Nothing to show here yet.',
+    'No contributions have been confirmed.',
+  ],
+  hi: [
+    'अभी तक किसी ने योगदान नहीं दिया।',
+    'अभी तक कोई पुष्ट अंशदान नहीं।',
+    'अभी तक कोई योगदान पुष्ट नहीं हुआ है।',
+  ],
 };
 
 describe('contributor_list.empty — AC8 / D7(c)', () => {
@@ -61,9 +93,24 @@ describe('contributor_list.empty — AC8 / D7(c)', () => {
     });
   }
 
+  it('the guard BITES — every known-false re-word is rejected by the same terms', () => {
+    // ⭐ Without this, the denylist could silently stop matching anything and still report green —
+    // which is exactly how the original two-term version passed "No one has contributed yet."
+    for (const locale of LOCALES) {
+      for (const candidate of MUST_BE_REJECTED[locale]) {
+        const caught = CONFIRMATION_CLAIM_TERMS[locale].some((term) => term.test(candidate));
+        expect(caught, `${locale}: "${candidate}" must be rejected but no term matched`).toBe(true);
+      }
+    }
+  });
+
   it('⛔ the PENDING STRIP is untouched — it owns the confirmation claim and is CORRECT', () => {
     // D7(c) moves one LIST-AXIS string back onto its own axis. It does not silence the aggregate.
     // If a later pass "tidies" the confirmation language out of the strip too, information IS lost.
+    // ⚠ Asserted through the SAME vocabulary list as the empty-state guard (second review pass —
+    // this used to hardcode /confirmation/i, i.e. pin a word in the copy, the exact practice this
+    // file's header forbids). Reusing the list also keeps the two sides from drifting apart: the
+    // strip must MATCH the register the empty state must NOT.
     for (const locale of LOCALES) {
       const strip = t(
         'contributor_list.pending_strip',
@@ -72,7 +119,8 @@ describe('contributor_list.empty — AC8 / D7(c)', () => {
       );
       expect(strip).toContain('2');
       expect(strip).toContain('67');
-      expect(strip).toMatch(locale === 'en' ? /confirmation/i : /पुष्टि/);
+      const ownsTheClaim = CONFIRMATION_CLAIM_TERMS[locale].some((term) => term.test(strip));
+      expect(ownsTheClaim, `${locale}: the pending strip must still assert confirmation`).toBe(true);
     }
   });
 });

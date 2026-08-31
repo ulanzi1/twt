@@ -163,8 +163,15 @@ describe('getCurrentMemberStates — the batched lifecycle resolver (AC2)', () =
       // (Review fix: the prior bare-literal form gave no signal that a sync was ever owed).
       const KNOWN_DECRYPT_CONCURRENCY_AT_TIME_OF_WRITING = 8;
       expect(typeof MEMBER_STATE_REPLAY_CHUNK_SIZE).toBe('number');
-      expect(MEMBER_STATE_REPLAY_CHUNK_SIZE).toBeGreaterThan(KNOWN_DECRYPT_CONCURRENCY_AT_TIME_OF_WRITING);
       expect(Number.isInteger(MEMBER_STATE_REPLAY_CHUNK_SIZE)).toBe(true);
+      // ⚠ `> 8` was NOT the property (second review pass): setting the chunk size to 9 collapsed the
+      //   very distinction this test is named after and still passed. What actually separates the two
+      //   quantities is ORDER OF MAGNITUDE. A statement-planning bound is in the hundreds — the whole
+      //   point is to put many ids in ONE statement; an in-flight bound against a quota-limited
+      //   external service is single- or low-double-digit. 100 is the floor below which this constant
+      //   would have stopped being a chunk size and started being a fan-out bound.
+      expect(MEMBER_STATE_REPLAY_CHUNK_SIZE).toBeGreaterThanOrEqual(100);
+      expect(MEMBER_STATE_REPLAY_CHUNK_SIZE).not.toBe(KNOWN_DECRYPT_CONCURRENCY_AT_TIME_OF_WRITING);
     });
   });
 

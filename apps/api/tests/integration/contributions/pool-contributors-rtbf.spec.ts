@@ -30,6 +30,7 @@ import { alert as alertDomain, encryption, ids, member as memberDomain, pool as 
 import { describe, expect, it } from 'vitest';
 
 import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
+import { splitFirstNameLastInitial } from '../../../src/modules/member-pool/name.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { createTestApp, hasDatabase, teardown, type TestApp } from '../_setup.js';
 
@@ -126,8 +127,11 @@ async function seedPoolWithConfirmedContributors(
         verificationStrength: 'aadhaar_kyc',
         source: 'digilocker',
       });
-      const [first = '', last = ''] = legalName.split(' ');
-      contributors.push({ memberId, legalName, firstName: first, lastInitial: last.slice(0, 1) });
+      // ⭐ Derived with the PRODUCTION splitter, ⛔ never a second hand-rolled `split(' ')` (second
+      //   review pass): a fixture that re-implements the logic under test can agree with a broken
+      //   implementation. These fields are the assertion source for the sentinel test below.
+      const { firstName, lastInitial } = splitFirstNameLastInitial(legalName);
+      contributors.push({ memberId, legalName, firstName, lastInitial });
     }
 
     // The frozen roster: every contributor plus the requester plus any padding (members who have NOT
@@ -252,6 +256,34 @@ async function stateWriter(
  * ⛔ Deliberately NOT a hand-set `members.state = 'anonymized'`: the state the boundary reads comes
  * from the event REPLAY, so a projection-only fixture would prove nothing about the real path.
  */
+/**
+ * ⭐⭐ THE TOCTOU END-STATE, REPRODUCED DETERMINISTICALLY — ⛔ not a timing race.
+ *
+ * Overwrites the Tier-1 KYC name with the ENCRYPTED `[anonymized]` sentinel via the real
+ * `anonymizeMember`, and ⛔ deliberately does NOT append `member.rtbf_anonymized`. The member's
+ * event replay therefore still resolves `active` while the ciphertext is already erased — which is
+ * EXACTLY what the handler observes when an RTBF commits between its state read and its ciphertext
+ * read (the two take different snapshots under this transaction's READ COMMITTED isolation).
+ *
+ * ⛔ This is ⛔ NOT a claim that production ever leaves a member in this state — `anonymizeMember`
+ *    and the projection share one transaction (`anonymize.ts:125`). It is a way to put the boundary
+ *    in front of the same INPUT the race produces, without racing. A sleep-and-hope test would be
+ *    flaky and would still only cover one interleaving.
+ */
+async function anonymizeCiphertextOnly(t: TestApp, pariwarId: string, memberId: string): Promise<void> {
+  const scopeTx = await openScopeTx(t.deps, pariwarId);
+  try {
+    await memberDomain.anonymizeMember(scopeTx.tx, t.deps.encryption, {
+      memberId: ids.memberId(memberId),
+      pariwarId: ids.pariwarId(pariwarId),
+    });
+    await closeScopeTx(scopeTx, true);
+  } catch (err) {
+    await closeScopeTx(scopeTx, false);
+    throw err;
+  }
+}
+
 async function reallyAnonymize(t: TestApp, pariwarId: string, memberId: string): Promise<void> {
   const scopeTx = await openScopeTx(t.deps, pariwarId);
   try {
@@ -435,6 +467,76 @@ describe.skipIf(!hasDatabase)('pool-contributors — RTBF erasure (:5433)', { ti
       expect(after.raw).not.toContain('Asha');
       // A single surviving row, so this one IS order-free by construction.
       expect(after.body['confirmed']).toEqual([{ firstName: 'Rajesh', lastInitial: 'S' }]);
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  // ── The TOCTOU class (second review pass, 2026-08-30) ────────────────────────────────────────────
+  // Load-bearing-invariant family 2. The first review pass named this race as the justification for a
+  // per-row state re-check, and left the property asserted NOWHERE: the tests above anonymize BETWEEN
+  // two complete requests, never mid-request, and the unit test stubbed the re-check to a constant.
+  // The re-check has since been removed — it was the construction Trap 1 rejects by name, AND it did
+  // not close the window, because the state read and the ciphertext read take different snapshots.
+  // The guarantee now lives on the DECRYPTED PLAINTEXT, which is snapshot-independent; this is the
+  // test that proves it, on the real path, with no timing dependence.
+  it('AC1 (TOCTOU): a stale state read can NEVER put the `[anonymized]` sentinel on the wire', async () => {
+    const t = await createTestApp();
+    try {
+      const f = await seedPoolWithConfirmedContributors(t, {
+        contributorNames: ['Rajesh Sharma', 'Asha Devi'],
+      });
+      const erased = f.contributors[1]!;
+      const survivor = f.contributors[0]!;
+
+      // Captured BEFORE, so the aggregate assertion below compares against the real value rather
+      // than a hand-computed literal that would rot with the fixture.
+      const before = await fetchList(t, f);
+      expect(before.body['confirmed']).toHaveLength(2);
+      const pendingBefore = before.body['pending'];
+
+      // Erase the CIPHERTEXT ONLY. The replay still resolves this member `active`, so the batched
+      // state read — and any per-row re-check that might be re-added later — says "representable"
+      // and schedules the decrypt. This is precisely the input the race produces.
+      await anonymizeCiphertextOnly(t, f.pariwarId, erased.memberId);
+
+      // ⭐⭐ THE PREMISE, ASSERTED — ⛔ not assumed. Without this the test could pass for the WRONG
+      //    REASON: if the replay ever resolved this member `anonymized`, the PRE-FILTER at step (6a)
+      //    would omit the row and the sentinel guard would ⛔ never be exercised, leaving a green test
+      //    that no longer covers the thing it is named after. `anonymizeMember` documents that it
+      //    "does NOT touch `members.state` or the event stream" — this pins that contract from the
+      //    consumer side, so a future change that starts writing state fails HERE, loudly, instead of
+      //    silently hollowing out the only TOCTOU coverage in the suite.
+      const probe = await openScopeTx(t.deps, f.pariwarId);
+      try {
+        const stateNow = await memberDomain.getCurrentMemberState(probe.tx, ids.memberId(erased.memberId));
+        expect(stateNow).not.toBe('anonymized');
+      } finally {
+        await closeScopeTx(probe, false);
+      }
+
+      const after = await fetchList(t, f);
+      expect(after.status).toBe(200);
+
+      // ⭐ THE ASSERTION THAT WOULD HAVE FAILED BEFORE THIS FIX. `decryptKycField` SUCCEEDS here —
+      //   the sentinel is validly encrypted — and `splitFirstNameLastInitial('[anonymized]')` returns
+      //   a NON-EMPTY `firstName`, so the empty-name guard does not catch it. Without the sentinel
+      //   check the row renders as a contributor literally named "[anonymized]".
+      expect(after.raw).not.toContain('[anonymized]');
+      expect(after.raw).not.toContain(erased.legalName);
+      const rows = after.body['confirmed'] as readonly Record<string, unknown>[];
+      expect(rows.some((r) => r['firstName'] === '[anonymized]')).toBe(false);
+      expect(rows).not.toContainEqual({ firstName: erased.firstName, lastInitial: erased.lastInitial });
+
+      // ⛔ And the row is OMITTED, ⛔ not blanked and ⛔ not replaced by a marker — D5, one layer
+      //   later. The unaffected contributor is untouched, so this is an omission and not a collapse.
+      expect(rows).toContainEqual({ firstName: survivor.firstName, lastInitial: survivor.lastInitial });
+      expect(rows).toHaveLength(1);
+
+      // ⛔ AND NO AGGREGATE MOVED (D3-aggregate): the erased member's contribution is still CONFIRMED,
+      //   only its public representation is gone. `pending` must be byte-identical to the un-erased
+      //   run — the divergence between `rows.length` and the confirmed set IS the ruled model.
+      expect(after.body['pending']).toEqual(pendingBefore);
     } finally {
       await teardown(t);
     }

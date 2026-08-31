@@ -180,6 +180,15 @@ export const MEMBER_STATE_REPLAY_CHUNK_SIZE = 500;
  * missing key: the caller must not have to supply a default, because the default WOULD BE the
  * erasure decision.
  *
+ * ⚠⚠ BUT BE HONEST ABOUT WHICH DEFAULT THIS IS: `pending-kyc` is `!== 'anonymized'`, so the seeded
+ * default is PERMISSIVE. Any cause of stream invisibility — not just an absent member — resolves as
+ * representable. ⛔ This map is therefore ⛔ NOT a sufficient erasure guarantee on its own, and no
+ * caller may treat it as one. The contributor render's actual backstop is the `ANONYMIZED_SENTINEL`
+ * check on the DECRYPTED PLAINTEXT (`member-pool/handlers.ts`), which is independent of this read,
+ * of the transaction snapshot, and of whether the stream was visible at all. Flipping this default
+ * to fail-closed is a CONTRACT change (`tests/member/batched-member-states.test.ts` pins the
+ * no-events case as deliberate) and is carried as `CR-11b.2a-2P-W3` in `deferred-work.md`.
+ *
  * ⛔⛔ MIRRORS {@link getCurrentMemberState}, ⛔ NEVER {@link getMemberStateAt} — NO `atTimestamp`
  * parameter and NO `occurred_at` upper bound, and that is a CORRECTNESS constraint, not a style
  * choice. RTBF is a RIGHT-NOW question. `occurred_at` is DB-generated while any timestamp a caller
@@ -224,14 +233,21 @@ export async function getCurrentMemberStates(
     // Group in memory, then fold each stream on its own. Ordered by `event_version` in SQL, so the
     // per-stream slices stay in replay order without a second sort (`occurred_at` CAN tie inside one
     // transaction — the monotonic version is the only deterministic key).
+    // ⚠ KEYED CASE-INSENSITIVELY, DELIBERATELY. `stream_id` is a `uuid` column, so Postgres
+    //   normalises both the bound parameter and the returned value to lowercase — `inArray` matches
+    //   a caller's upper-case id, but a JS `Map.get` would NOT. Contributor ids reach this function
+    //   as RAW JSONB text (`payload ->> 'memberId'`, cast `as MemberId` without re-validation) and
+    //   `z.string().uuid()` admits upper-case hex, so a case variant would silently miss its own
+    //   stream and fall through to the seeded default. Normalise both sides, ⛔ never one.
     const byStream = new Map<string, (typeof rows)[number][]>();
     for (const row of rows) {
-      const bucket = byStream.get(row.streamId);
+      const key = row.streamId.toLowerCase();
+      const bucket = byStream.get(key);
       if (bucket) bucket.push(row);
-      else byStream.set(row.streamId, [row]);
+      else byStream.set(key, [row]);
     }
     for (const id of chunk) {
-      const stream = byStream.get(id);
+      const stream = byStream.get(id.toLowerCase());
       if (stream !== undefined) out.set(id, replayMemberState(stream));
     }
   }

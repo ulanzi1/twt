@@ -308,6 +308,10 @@ async function resolveContributorList(
   //      ⛔ NEVER `getMemberStateAt` per contributor — that is one FULL replay per row, strictly worse
   //      than the KMS decrypt bounded below, and its app-clock `occurred_at` bound can place a
   //      DB-stamped `member.rtbf_anonymized` event outside the window and render the ERASED NAME.
+  //      ⛔ AND NEVER a `members.state` join instead (AC2's second half). That column is
+  //      PROJECTOR-maintained current state; joining it would make the RTBF guarantee depend on
+  //      projector liveness. Every other read in this path trusts the REPLAY, and the erasure
+  //      decision — the one read where being wrong is a privacy breach — must trust it too.
   const contributorStates = await memberDomain.getCurrentMemberStates(
     tx,
     confirmed.map((c) => c.memberId),
@@ -344,15 +348,23 @@ async function resolveContributorList(
     representable,
     DIRECTORY_DECRYPT_CONCURRENCY,
     async (contributor): Promise<ConfirmedContributorRow | null> => {
-      // (Review fix — TOCTOU) The batched snapshot above can go stale: an RTBF commits between the
-      // snapshot and THIS row's turn in the concurrency-bounded queue. Re-check immediately before
-      // decrypt so a member erased mid-request is never decrypted off the now-overwritten ciphertext.
-      const currentState = await memberDomain.getCurrentMemberState(tx, contributor.memberId);
-      if (currentState === 'anonymized') {
-        request.log.warn({ memberId: contributor.memberId }, 'pool-contributors: member erased between snapshot and decrypt — omitting row');
+      // ⛔⛔ NEVER re-check state with a per-row `getCurrentMemberState` here. That is one FULL
+      //     event-stream replay per row — the construction Trap 1 rejects BY NAME, including its
+      //     "`mapWithConcurrency` does not make it acceptable" clause — and it does NOT close the
+      //     race it appears to: under this tx's READ COMMITTED isolation the state read and the
+      //     ciphertext read below take DIFFERENT snapshots, so an RTBF landing between them is
+      //     decrypted anyway. The TOCTOU window is closed at the PLAINTEXT instead (see below),
+      //     which is snapshot-independent and costs nothing. (Second review pass, 2026-08-30.)
+      let kycProfile: Awaited<ReturnType<typeof kycDomain.getMemberKycProfile>>;
+      try {
+        kycProfile = await kycDomain.getMemberKycProfile(tx, pariwarId, contributor.memberId);
+      } catch (err) {
+        // Fail CLOSED and per-row: an unreadable profile omits THIS row, never rejects the batch.
+        // Unguarded, this rejected `mapWithConcurrency` and collapsed the whole surface into
+        // CONTRIBUTOR_LIST_UNASSIGNED — telling an assigned member "you have no live pool".
+        request.log.warn({ err, memberId: contributor.memberId }, 'pool-contributors: confirmed contributor profile read failed — omitting row');
         return null;
       }
-      const kycProfile = await kycDomain.getMemberKycProfile(tx, pariwarId, contributor.memberId);
       if (!kycProfile || kycProfile.nameCiphertext === null) {
         // A confirmed contributor whose name is unresolvable is SKIPPED from the visible rows (an integrity
         // anomaly worth logging), but still counts toward `confirmedCount` for the pending math below (they
@@ -368,6 +380,19 @@ async function resolveContributorList(
         fullName = await decryptKycField(kycProfile.nameCiphertext, pariwarId, deps.encryption);
       } catch (err) {
         request.log.warn({ err, memberId: contributor.memberId }, 'pool-contributors: confirmed contributor name decrypt failed — omitting row');
+        return null;
+      }
+      // ⭐⭐ THE ERASURE BACKSTOP — and the ONLY check in this path that is snapshot-independent.
+      //     `anonymizeMember` overwrites `name_ciphertext` with an ENCRYPTED `[anonymized]` sentinel
+      //     (`ANONYMIZED_SENTINEL`), so the decrypt SUCCEEDS and the sentinel would otherwise render
+      //     verbatim where a contributor's name belongs — `splitFirstNameLastInitial('[anonymized]')`
+      //     returns a NON-EMPTY `firstName`, so the empty-name guard below does ⛔ not catch it.
+      //     This closes the TOCTOU window completely: whatever the batched state read decided, and
+      //     whenever the RTBF committed relative to it, a row whose plaintext IS the sentinel is
+      //     omitted. It is the D5 ERASURE OMISSION applied one layer later — ⛔ not a fail-soft, and
+      //     a later reader must ⛔ not "repair" it by rendering a marker row.
+      if (fullName === memberDomain.ANONYMIZED_SENTINEL) {
+        request.log.warn({ memberId: contributor.memberId }, 'pool-contributors: erasure sentinel reached the decrypt — omitting row (state read was stale)');
         return null;
       }
       const { firstName, lastInitial } = splitFirstNameLastInitial(fullName);

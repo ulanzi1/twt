@@ -67,6 +67,33 @@ describe('mapWithConcurrency', () => {
     expect(calls).toBe(0);
   });
 
+  // ── The `@throws {RangeError}` contract (second review pass) ────────────────────────────────────
+  // It was documented with a rationale — "a silent 0-worker no-op is a worse failure mode" — and then
+  // left untested, so deleting the guard kept the suite green. These are the four shapes that reach a
+  // zero-worker `Array.from({length: Math.min(concurrency, items.length)})`.
+  it.each([
+    ['zero', 0],
+    ['negative', -1],
+    ['fractional', 1.5],
+    ['NaN', Number.NaN],
+  ])('rejects a %s concurrency with RangeError rather than silently processing nothing', async (_label, bad) => {
+    await expect(mapWithConcurrency([1, 2, 3], bad, async (n) => n)).rejects.toThrow(RangeError);
+  });
+
+  it('a valid concurrency LARGER than the input is fine — only non-positive integers are rejected', async () => {
+    await expect(mapWithConcurrency([1, 2], 999, async (n) => n)).resolves.toEqual([1, 2]);
+  });
+
+  it('every index is filled on the resolving path — no holes reach a caller typed `R[]`', async () => {
+    // The caller's guard is `row !== null`; `undefined` passes it and the type predicate then asserts
+    // `undefined is ConfirmedContributorRow`. This pins that a resolved array is fully populated, so a
+    // future non-throwing early exit fails HERE rather than serialising `undefined` onto the wire.
+    const out = await mapWithConcurrency([1, 2, 3, 4, 5], 2, async (n) => (n % 2 === 0 ? null : n));
+    expect(out).toHaveLength(5);
+    expect(out.every((v) => v !== undefined)).toBe(true);
+    expect(Object.keys(out)).toHaveLength(5); // ⛔ not sparse
+  });
+
   it('a rejection inside `fn` propagates — per-item degradation is the CALLER\'s job', async () => {
     // Documented on purpose: the confirmed-contributor render fail-softs ONE row by catching inside
     // `fn`. If this helper ever swallowed rejections instead, that catch would look redundant and a

@@ -70,9 +70,10 @@ describe('poolContributors — pending aggregate uses the CONFIRMED-SET size, no
     getCurrentMemberStates.mockImplementation(
       async (_tx: unknown, ids: readonly string[]) => new Map(ids.map((id) => [id, 'active'])),
     );
-    // Review fix (TOCTOU re-check): the handler re-confirms each representable contributor's state
-    // immediately before decrypt. Neither contributor here is `anonymized`, so this is a no-op for
-    // this scenario's assertions.
+    // ⛔ The per-row `getCurrentMemberState` re-check was REMOVED by the second review pass — it was
+    //    Trap 1's rejected construction (one full event-stream replay per row) AND it did not close
+    //    the window it named. The stub stays wired but is asserted UNUSED below, so a silent
+    //    re-introduction fails here rather than passing unnoticed on a constant 'active'.
     getCurrentMemberState.mockResolvedValue('active');
     listLiveAlertsForPariwar.mockResolvedValue([{ cycleId: CYCLE_ID, poolCount: 1 }]);
     getCycleFreezeCommittedAt.mockResolvedValue(new Date('2026-07-01T00:00:00.000Z'));
@@ -111,5 +112,13 @@ describe('poolContributors — pending aggregate uses the CONFIRMED-SET size, no
     // `rosterSize(3) − visibleRows(1)` = 2. A regression that swaps `confirmed.length` for
     // `rows.length` in the handler would understate confirmation and must fail this test.
     expect(result.pending).toEqual({ count: 1, percentage: 33 });
+
+    // ⭐⭐ AC2 / Trap 1, ASSERTED AT THE CALL SITE — the gate the first review pass's own fix walked
+    //    through. `batched-member-states.test.ts` proves the DOMAIN resolver is O(1), but it is
+    //    structurally blind to how the handler calls it: a per-row `getCurrentMemberState` re-check
+    //    shipped for a whole commit while that suite stayed green. State resolution must cost ONE
+    //    round trip for the whole confirmed set, whatever the contributor count.
+    expect(getCurrentMemberStates).toHaveBeenCalledTimes(1);
+    expect(getCurrentMemberState).not.toHaveBeenCalled();
   });
 });

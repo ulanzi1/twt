@@ -1,4 +1,85 @@
-# last_updated: 2026-09-01d (⛔⛔ STORY 11b-2b — THIRD CODE-REVIEW PASS (`bmad-code-review 11b.2b`, the
+# last_updated: 2026-09-01e (⭐⭐ STORIES 11b-2 + 11b-2a + 11b-2b — ONE **COMBINED** CODE-REVIEW PASS
+#   (`bmad-code-review 11b.2, 11b.2a, 11b.2b altogether`) over the WHOLE STACKED RANGE `80e0d12..HEAD`
+#   — all 36 commits, all three stories at once, run AFTER all three rows had closed `done` on FIVE
+#   separate single-story passes. ⛔ It is ⛔ NOT a re-run of those passes. ⭐ **ITS UNIT IS THE SEAMS
+#   BETWEEN THE STORIES** — the one thing a per-story diff structurally cannot see.
+#   ⛔⛔ **ZERO ROWS FLIP.** 11b-2, 11b-2a and 11b-2b ALL stay `done`; ⛔ 11b-3 stays `backlog`. Every
+#   finding was APPLIED, so no row is held open — ⛔ and `done` here means what it meant before, ⛔ not
+#   a re-reading of it ([[feedback_closure_language_precision]]).
+#   **2 decision-needed (both RESOLVED by BigDev), 12 patch (ALL applied), 2 deferred, 1 dismissed.**
+#   ⚠ `failed_layers`: **NONE** — all three layers reported on the first launch (contrast `2026-09-01d`,
+#   where two died on a provider session limit).
+#   ⭐⭐ THE HEADLINE: **A CIRCULAR DEFERRAL — 11b.2 AND 11b.2b EACH ROUTED THE SAME OBLIGATION TO THE
+#   OTHER, AND IT WAS DISCHARGED BY NEITHER.** `presenter.test.ts:193-197` records that 11b.2's AC2
+#   asserts AROUND `t()` (it reads the locale JSON from disk) and routes the real proof to "11b.2b —
+#   which CAN call `t()`" as deferred item `11b.2 (vi)`. `contributor-list-render.test.ts:13-17` then
+#   recorded that same proof as one ITS harness *"CANNOT PROVE … (no mount)"* and routed it BACK to
+#   11b.2's AC2. ⛔ The loop closes on nothing. ⚠⚠ **AND THE GROUND WAS FALSE:**
+#   `panchayat-noticeboard-render.test.ts:21,141` calls the REAL `t()` with a real namespace in the
+#   THIRD slot, in the SAME pure-Vitest mount-free harness, in the SAME directory.
+#   ⇒ **Family 10 REAL GAP** — a **CONSTRUCTIBLE** obligation recorded as not-constructible, which is
+#   the INVERSE of closure honesty and ⛔ NOT the same thing as this project's honest un-attested
+#   records ([[feedback_record_unattested_no_backfill]]). ⭐ Why five passes missed it: each read a
+#   well-formed pointer to a LIVE sibling obligation and correctly let it through. The loop is visible
+#   only with both story files open. `11b.2 (vi)` is now AMENDED IN PLACE — the trigger line is left
+#   VERBATIM and an amendment block records that it FIRED and was SPENT, because a silently re-pointed
+#   trigger is indistinguishable from one that never fired.
+#   ⭐ THE SECOND REAL GAP (family 13(a)/(d)): the empty / no-row-derivable branch declared
+#   `accessibilityRole="text"` on a `<YStack>` with ⛔ NO `accessible`, and its inner `<Text>` carried
+#   ⛔ no role either ⇒ the role was **INERT**. The ONLY one of five branches shaped that way — in the
+#   same diff that ADDED `accessible` to the pending strip citing *"relying on that default is exactly
+#   how check (a) has failed silently in this codebase before"*, and did not apply that reasoning ONE
+#   BRANCH UP. ⚠ The AC7 fence tested role **PRESENCE, ⛔ never EFFECT**, and had ALREADY been rewritten
+#   TWICE for precision (pass 2: file-wide count → per-branch; pass 3: character windows → enclosing
+#   tags) — three cuts, still the wrong property.
+#   ⛔⛔ ONE FINDING WAS RESOLVED **DIFFERENTLY THAN PROPOSED — THE REMEDY WAS THEATRE.** Two layers
+#   asked for a try/catch on the batched lifecycle read at `handlers.ts` step (6a). Tracing it
+#   ([[feedback_trace_reachability_before_escalating]]) showed it can neither fire nor help:
+#   `replayMemberState` is a TOTAL reducer (`member/state.ts:15`, `.safeParse` throughout) so there is
+#   ⛔ no in-process throw to rescue, and every remaining failure is a SQL error that ABORTS the scope
+#   tx ⇒ a catch only reaches the next statement's `25P02`. ⭐ **The FINDING was real and the REMEDY was
+#   wrong.** The actual defect was adjacent: at concurrency 8 on the single pinned client, ONE fault
+#   became N `25P02`s, each caught per-row and logged as a name-integrity anomaly **against a NAMED
+#   INNOCENT MEMBER** — on the one surface where that log is the ONLY signal separating a render failure
+#   from a LAWFUL ERASURE. `isAbortedTransaction` re-throws instead, and the unguarded call now carries
+#   a ⛔-block saying why hardening it would be theatre, so the next reviewer does ⛔ not re-file it.
+#   ⭐ THE NEW `t()` TEST FAILED ON ITS FIRST RUN — the reviewer's OWN defect, ⛔ not the product's:
+#   three of the ten refs take interpolation params and `t()` HARD-FAILS on a missing one
+#   (`resolver.ts:36-40`). ⇒ that is precisely what a disk read of the JSON can ⛔ never see, which is
+#   the whole reason the deferral existed. The params map is now part of the proof.
+#   ⚖️ **DECISION `2026-09-01-172` MINTED** — the RTBF contributor-erasure guarantee **ENDS AT THE
+#   WIRE**; the device-side persisted query cache is OUT OF SCOPE **by ruling, ⛔ not by oversight**.
+#   ⚠ The residual is REAL and VERIFIED at five call sites (MMKV `gcTime`/`maxAge` 7d, ⛔ no
+#   `encryptionKey`, and `signOut()` clears ⛔ NO query cache) ⇒ an erased contributor can render
+#   offline for a week, and the cache SURVIVES an account switch on a shared device. ⛔ NO CODE LANDS
+#   ON THE RULING (both mitigations touch shared app substrate outside all three stories' scope and
+#   neither closes both exposures); carried OPEN as `CR-11b.2a-COMBINED-W3` with a three-way trigger.
+#   ⛔ cl.2 FORBIDS citing the ruling as evidence the residual was weighed and dismissed. ⭐ The gap it
+#   closes is the **SILENCE** — three prior passes verified the erasure at the API and ⛔ none asked
+#   where it stopped. ⚠ cl.4 routes the DPDPA disclosure question to engaged counsel, ⛔ answers it not.
+#   ⭐ 1 DISMISSED AFTER LIVE VERIFICATION (`splitFirstNameLastInitial` is TOTAL, so the guard's coverage
+#   claim held) and 1 TRIGGER REFUTED mid-review (`events.ts:150` pins `memberId: z.string().uuid()`, so
+#   the malformed-UUID path was unreachable — the finding survived on a different trigger, narrowed).
+#   ⚠ ONE DELIBERATE NARROWING, FLAGGED: the new "role must LAND" fence is scoped to the TWO branches
+#   whose copy is announced by a container, ⛔ NOT file-wide. A blanket rule would flag the three
+#   `accessibilityRole="summary"` wrappers, and "fixing" the one at the main return by adding
+#   `accessible` would collapse the header + the WHOLE virtualized list + the pending strip into ONE
+#   announcement. ⛔ A fence that orders a HARMFUL remedy is worse than the defect it catches.
+#   VERIFICATION: `typecheck` + `lint` 18/18 each; unit suites 253 (@twt/ui) + 424 (@twt/mobile) + 72
+#   (@twt/i18n) + 364 (@twt/api) + 1945 (@twt/domain) green. ⭐ FOUR mutation probes, each reverted,
+#   each biting — and each on a fence the OLD version passed green.
+#   ⚠⚠ **THE 31-JOB TRAP FIRED AND WAS CAUGHT:** the first `ci:local` returned **31 green with
+#   `· SKIP integration-tests`** (no DATABASE_URL) — ⛔ and an integration spec was EDITED in this pass,
+#   so that green was ⛔ NOT sufficient. Re-run with DATABASE_URL against the live `twt-test-pg` (:5433):
+#   ✅ **PASSED, 33 job(s), `✓ integration-tests`** — the branch convention, ⛔ not the 31-job skip
+#   variant, the exact box whose un-ticking reopened this row at `2026-09-01d`. ⭐ AND THE SPEC WAS
+#   CONFIRMED EXECUTING, ⛔ not self-skipping: `pool-contributors-rtbf.spec.ts` run directly, **5 tests
+#   green in 783ms** against the live DB (the run log was tail-truncated, so the summary line alone was
+#   ⛔ not accepted as proof).
+#   COMMITS: `2026add` (`governance:` — records FIRST) then `f8ce75a` (`fix:` — the twelve patches).
+#   ⏭️ NEXT: 11b-3 remains `backlog` and is the named re-trigger for `pool-contributor-list.ts:88`'s
+#   stale doc-block and for `CR-11b.2-COMBINED-W1`'s closed-namespace type.)
+# last_updated_prior: 2026-09-01d (⛔⛔ STORY 11b-2b — THIRD CODE-REVIEW PASS (`bmad-code-review 11b.2b`, the
 #   same diff PLUS the second pass's own 14 patches, so THOSE were under review for the first time).
 #   ⛔⛔ ROW REOPENED `done` → **`in-progress`** — ⛔ NOT an engineering regression (all 13 findings FIXED,
 #   every fence mutation-proven) but because **Task 7's `ci:local` box is UN-TICKED and a clean run with

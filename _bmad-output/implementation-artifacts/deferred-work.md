@@ -204,6 +204,33 @@ argument in the real (**third**) slot.
 
 ⭐ **Trigger: Story 11b.2b**, which *can* call `t()`.
 
+> ⚠⚠⚠ **AMENDED 2026-09-01 (combined code-review pass over 11b.2 + 11b.2a + 11b.2b) — THE TRIGGER ABOVE
+> FIRED, AND WAS SPENT WITHOUT DISCHARGING THIS ITEM.** ⛔ The trigger line is left standing verbatim
+> rather than re-pointed, because a silently re-pointed trigger is indistinguishable from one that never
+> fired ([[feedback_closure_language_precision]]).
+>
+> Story **11b.2b shipped `done`** (2026-09-01) with ⛔ **no `t()`-through assertion**.
+> `apps/mobile/tests/unit/contributor-list-render.test.ts:13-17` records the obligation as one **its**
+> harness *"CANNOT PROVE … (no mount)"* and points **back** at Story 11b.2's AC2 as the owner — while
+> `packages/ui/tests/contribution-list/presenter.test.ts:193-197` (the item above) points **forward** at
+> 11b.2b. ⇒ ⭐⭐ **A CIRCULAR DEFERRAL: each story routes the obligation to the other, and it is
+> discharged by NEITHER.** Five prior single-story review passes each read a well-formed pointer to a
+> live sibling obligation and correctly let it through; the loop is only visible with both files open,
+> which is what the combined pass did.
+>
+> ⛔⛔ **AND THE GROUND 11b.2b GAVE IS FALSE.** *"No mount"* does ⛔ not prevent a real `t()` call:
+> `apps/mobile/tests/unit/panchayat-noticeboard-render.test.ts:21` imports `t` from `@twt/i18n` and `:141`
+> calls `t(key, undefined, { locale, namespace: 'noticeboard' })` — **real resolver, real namespace, in
+> the third slot** — in the **same pure-Vitest mount-free harness, in the same directory**.
+> ⇒ this is a **Family 10 REAL GAP**: a **CONSTRUCTIBLE** obligation was recorded as
+> **not-constructible**, which is the exact inverse of the family, and is ⛔ not the same thing as the
+> honest un-attested records this project makes elsewhere ([[feedback_record_unattested_no_backfill]]).
+>
+> ⭐ **DISPOSITION: routed as a PATCH on the combined pass, ⛔ NOT re-deferred and ⛔ NOT re-triggered.**
+> The assertion lands in `contributor-list-render.test.ts` on the noticeboard precedent. ⛔ This item does
+> ⛔ not close until that assertion exists and resolves all ten `CONTRIBUTION_LIST_I18N_REFS` through the
+> real `t()` in both locales.
+
 ### ⛔ 11b.2 (vii) — INTENTIONALLY NOT RECORDED
 
 **The public/member INVERSION** — `resolvePoolIdentity` shields the same family's name on the
@@ -7342,3 +7369,75 @@ own 14 patches — so the second review's fixes were under review for the first 
   update, a `TypeError` fires in the un-guarded prologue and bypasses the fail-soft posture AC1 buys.
   ⛔ Not fixed here: a `buster` keyed to the contract version is an app-wide cache decision.
   **Re-trigger: the next change to `AssignedPoolContributorList`'s shape, or any persister work.**
+
+---
+
+## Deferred from: code review of 11b-2 + 11b-2a + 11b-2b, COMBINED PASS (2026-09-01)
+
+_A single 3-layer adversarial pass over the whole stacked range `80e0d12..HEAD` — all three stories at
+once — run AFTER all three rows closed `done`. ⭐ Its subject is the SEAMS BETWEEN the stories, which no
+single-story pass could see: each prior pass read a well-formed pointer into a sibling story and had no
+way to check the sibling honoured it. **2 decision-needed, 12 patch, 2 deferred, 1 dismissed.**_
+
+- **CR-11b.2-COMBINED-W1 — `ContributionListI18nRef.namespace` is a CLOSED literal type that contradicts
+  its own doc-block.** `packages/ui/src/contribution-list/view-model.ts` declares
+  `readonly namespace: 'contribution'` while the doc immediately above it says *"The namespace is carried
+  per-REF anyway — … 11b.3 may add a second namespace."* ⇒ the per-ref carrying buys nothing until the
+  type widens, and `i18n-keys.ts`'s `satisfies Record<string, ContributionListI18nRef>` will **reject the
+  first such addition** — inside a file Story 11b.3 is told is reuse-only.
+  ⛔ **Deferred rather than patched, deliberately.** The closed literal is the CORRECT type for today's
+  single namespace, and widening it now would be a type change with no consumer. ⚠ The defect is the
+  CONTRADICTION, not the type — a reader is told the shape is extensible when it is not.
+  ⭐ **Trigger: Story 11b.3**, at the moment it declares a ref outside the `contribution` namespace. It
+  will hit a compile error in a file its story calls reuse-only; that error IS the trigger firing.
+
+- **CR-11b.2a-COMBINED-W2 — the `contribution.json` tone pass made two EN/HI-ASYMMETRIC edits, one of
+  which strengthens a money-handling promise in Hindi only.** `out_of_band.helpline.boundary.title` was
+  edited in **en only** (*"do not voice this"* → *"do not say this"*; operator-facing, harmless).
+  ⚠ `amount_mismatch_over.body` was edited in **hi only**: *"सुलझा देगी"* (will help resolve) →
+  *"सही कर देगी"* (will set it right), while the untouched en string still says the helpdesk will *work
+  with you to sort it out*. ⇒ hi-locale members reading an **overpayment** message are now promised a
+  firmer remedy than en-locale members, and the parallel sibling `amount_mismatch.body` still reads
+  *"सुलझा देगी"* in Hindi — so the two diverge in Hindi where English keeps them parallel.
+  ⛔ **Deferred rather than patched:** this is a copy/tone judgement on strings BigDev authored, and
+  correcting it here would put the transcribing agent back in the author seat.
+  ⭐ **NO NEW TRIGGER IS MINTED.** Carried onto `CR-11b.2a-AC8-TONE`'s EXISTING trigger — BigDev's
+  pre-production tone sweep over the `copy_globs` namespaces — because a qualified non-author sweep over
+  exactly these namespaces is already scheduled, and a second trigger for the same sweep would be a
+  record that looks like coverage and is not.
+  ⚠ ⛔ This is ⛔ NOT a re-litigation of `08b57f2`, BigDev's non-author review of the four corrections.
+  That record is correct and does not claim to discharge AC8. The asymmetry is a finding the Blind Hunter
+  raised against the STRINGS, with ⛔ no spec access and ⛔ no knowledge of that review.
+
+- **CR-11b.2a-COMBINED-W3 — the RTBF erasure guarantee ends AT THE WIRE, and the device-side residual
+  is REAL.** Ruled by BigDev 2026-09-01 as Decision `2026-09-01-172` cl.1/cl.2. An RTBF'd contributor is
+  omitted correctly by the API, but the already-delivered response is persisted to MMKV in **plaintext**
+  (`twt-p0-5-cache`, no `encryptionKey`) with `gcTime: 7d` + `maxAge: 7d`, and `signOut()` clears ⛔ **no**
+  query cache. ⇒ two exposures: **(a)** an offline / unopened device renders the erased member's
+  `firstName + lastInitial` for up to a week; **(b)** an **account switch on a shared device** shows the
+  previous member's contributor list, because the cache is ⛔ not scoped to the member who filled it.
+  ⭐ Online, the 60s poll replaces the list on the next tick — the practical window is one render, and
+  ⛔ overstating this would be as bad as missing it.
+  ⛔ **The cache substrate is PRE-EXISTING** (P0-5 / Story 8.3) ⇒ ⛔ **not** a regression from any of the
+  three stories, and ⛔ **not** a defect attributable to 11b.2a.
+  ⛔ **NO CODE CHANGE LANDS ON THIS.** Both candidate mitigations (a per-query `gcTime`; a
+  `queryClient.clear()` on `signOut`) touch shared app substrate outside all three stories' scope and
+  ⛔ neither closes both exposures.
+  ⚠ ⛔ **DEFERRED, ⛔ NOT DISMISSED ON THE MERITS.** `2026-09-01-172` cl.1 is a statement of SCOPE — a
+  later reader must ⛔ never cite it as evidence that device-side erasure was weighed and rejected.
+  ⭐ **Trigger — whichever comes FIRST:** (i) Story **11b.8**'s real-data + accessibility audit (the
+  nearest launch-gating checkpoint); (ii) the first member-facing or counsel-facing statement that
+  describes erasure as **complete** — at which point cl.4's DPDPA disclosure question is live and routes
+  to Adv. Mohit Agrawal, ⛔ not to a Panel session ([[project_dpdpa_counsel_engaged_but_unrecorded]]);
+  (iii) any story adding a **second** member-scoped persisted query, which generalises exposure (b)
+  beyond this one surface.
+
+⚠⚠ **ONE ITEM IS NOT LISTED HERE BECAUSE IT IS NOT DEFERRABLE — it is an item whose trigger has ALREADY
+FIRED AND WAS SPENT UNRECORDED.** `11b.2 (vi)` (the missing `t()`-through assertion for `@twt/ui`'s ten
+i18n refs, at `:191-205` above) names **Story 11b.2b** as its trigger. 11b.2b shipped `done` without
+discharging it, and recorded the obligation as impossible in its own harness (*"no mount"*) — a ground
+that is **FALSE**: `apps/mobile/tests/unit/panchayat-noticeboard-render.test.ts:21,141` calls the real
+`t()` with a real namespace in the third slot, in the same mount-free harness, in the same directory.
+⇒ the item is routed as a **PATCH** on the combined pass, ⛔ not re-deferred, and item `11b.2 (vi)` above
+must be AMENDED to record that its trigger fired and what happened — ⛔ never silently re-pointed at a
+later story ([[feedback_closure_language_precision]], [[feedback_record_unattested_no_backfill]]).

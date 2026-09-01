@@ -1,5 +1,1389 @@
+# last_updated: 2026-09-01e (⭐⭐ STORIES 11b-2 + 11b-2a + 11b-2b — ONE **COMBINED** CODE-REVIEW PASS
+#   (`bmad-code-review 11b.2, 11b.2a, 11b.2b altogether`) over the WHOLE STACKED RANGE `80e0d12..HEAD`
+#   — all 36 commits, all three stories at once, run AFTER all three rows had closed `done` on FIVE
+#   separate single-story passes. ⛔ It is ⛔ NOT a re-run of those passes. ⭐ **ITS UNIT IS THE SEAMS
+#   BETWEEN THE STORIES** — the one thing a per-story diff structurally cannot see.
+#   ⛔⛔ **ZERO ROWS FLIP.** 11b-2, 11b-2a and 11b-2b ALL stay `done`; ⛔ 11b-3 stays `backlog`. Every
+#   finding was APPLIED, so no row is held open — ⛔ and `done` here means what it meant before, ⛔ not
+#   a re-reading of it ([[feedback_closure_language_precision]]).
+#   **2 decision-needed (both RESOLVED by BigDev), 12 patch (ALL applied), 2 deferred, 1 dismissed.**
+#   ⚠ `failed_layers`: **NONE** — all three layers reported on the first launch (contrast `2026-09-01d`,
+#   where two died on a provider session limit).
+#   ⭐⭐ THE HEADLINE: **A CIRCULAR DEFERRAL — 11b.2 AND 11b.2b EACH ROUTED THE SAME OBLIGATION TO THE
+#   OTHER, AND IT WAS DISCHARGED BY NEITHER.** `presenter.test.ts:193-197` records that 11b.2's AC2
+#   asserts AROUND `t()` (it reads the locale JSON from disk) and routes the real proof to "11b.2b —
+#   which CAN call `t()`" as deferred item `11b.2 (vi)`. `contributor-list-render.test.ts:13-17` then
+#   recorded that same proof as one ITS harness *"CANNOT PROVE … (no mount)"* and routed it BACK to
+#   11b.2's AC2. ⛔ The loop closes on nothing. ⚠⚠ **AND THE GROUND WAS FALSE:**
+#   `panchayat-noticeboard-render.test.ts:21,141` calls the REAL `t()` with a real namespace in the
+#   THIRD slot, in the SAME pure-Vitest mount-free harness, in the SAME directory.
+#   ⇒ **Family 10 REAL GAP** — a **CONSTRUCTIBLE** obligation recorded as not-constructible, which is
+#   the INVERSE of closure honesty and ⛔ NOT the same thing as this project's honest un-attested
+#   records ([[feedback_record_unattested_no_backfill]]). ⭐ Why five passes missed it: each read a
+#   well-formed pointer to a LIVE sibling obligation and correctly let it through. The loop is visible
+#   only with both story files open. `11b.2 (vi)` is now AMENDED IN PLACE — the trigger line is left
+#   VERBATIM and an amendment block records that it FIRED and was SPENT, because a silently re-pointed
+#   trigger is indistinguishable from one that never fired.
+#   ⭐ THE SECOND REAL GAP (family 13(a)/(d)): the empty / no-row-derivable branch declared
+#   `accessibilityRole="text"` on a `<YStack>` with ⛔ NO `accessible`, and its inner `<Text>` carried
+#   ⛔ no role either ⇒ the role was **INERT**. The ONLY one of five branches shaped that way — in the
+#   same diff that ADDED `accessible` to the pending strip citing *"relying on that default is exactly
+#   how check (a) has failed silently in this codebase before"*, and did not apply that reasoning ONE
+#   BRANCH UP. ⚠ The AC7 fence tested role **PRESENCE, ⛔ never EFFECT**, and had ALREADY been rewritten
+#   TWICE for precision (pass 2: file-wide count → per-branch; pass 3: character windows → enclosing
+#   tags) — three cuts, still the wrong property.
+#   ⛔⛔ ONE FINDING WAS RESOLVED **DIFFERENTLY THAN PROPOSED — THE REMEDY WAS THEATRE.** Two layers
+#   asked for a try/catch on the batched lifecycle read at `handlers.ts` step (6a). Tracing it
+#   ([[feedback_trace_reachability_before_escalating]]) showed it can neither fire nor help:
+#   `replayMemberState` is a TOTAL reducer (`member/state.ts:15`, `.safeParse` throughout) so there is
+#   ⛔ no in-process throw to rescue, and every remaining failure is a SQL error that ABORTS the scope
+#   tx ⇒ a catch only reaches the next statement's `25P02`. ⭐ **The FINDING was real and the REMEDY was
+#   wrong.** The actual defect was adjacent: at concurrency 8 on the single pinned client, ONE fault
+#   became N `25P02`s, each caught per-row and logged as a name-integrity anomaly **against a NAMED
+#   INNOCENT MEMBER** — on the one surface where that log is the ONLY signal separating a render failure
+#   from a LAWFUL ERASURE. `isAbortedTransaction` re-throws instead, and the unguarded call now carries
+#   a ⛔-block saying why hardening it would be theatre, so the next reviewer does ⛔ not re-file it.
+#   ⭐ THE NEW `t()` TEST FAILED ON ITS FIRST RUN — the reviewer's OWN defect, ⛔ not the product's:
+#   three of the ten refs take interpolation params and `t()` HARD-FAILS on a missing one
+#   (`resolver.ts:36-40`). ⇒ that is precisely what a disk read of the JSON can ⛔ never see, which is
+#   the whole reason the deferral existed. The params map is now part of the proof.
+#   ⚖️ **DECISION `2026-09-01-172` MINTED** — the RTBF contributor-erasure guarantee **ENDS AT THE
+#   WIRE**; the device-side persisted query cache is OUT OF SCOPE **by ruling, ⛔ not by oversight**.
+#   ⚠ The residual is REAL and VERIFIED at five call sites (MMKV `gcTime`/`maxAge` 7d, ⛔ no
+#   `encryptionKey`, and `signOut()` clears ⛔ NO query cache) ⇒ an erased contributor can render
+#   offline for a week, and the cache SURVIVES an account switch on a shared device. ⛔ NO CODE LANDS
+#   ON THE RULING (both mitigations touch shared app substrate outside all three stories' scope and
+#   neither closes both exposures); carried OPEN as `CR-11b.2a-COMBINED-W3` with a three-way trigger.
+#   ⛔ cl.2 FORBIDS citing the ruling as evidence the residual was weighed and dismissed. ⭐ The gap it
+#   closes is the **SILENCE** — three prior passes verified the erasure at the API and ⛔ none asked
+#   where it stopped. ⚠ cl.4 routes the DPDPA disclosure question to engaged counsel, ⛔ answers it not.
+#   ⭐ 1 DISMISSED AFTER LIVE VERIFICATION (`splitFirstNameLastInitial` is TOTAL, so the guard's coverage
+#   claim held) and 1 TRIGGER REFUTED mid-review (`events.ts:150` pins `memberId: z.string().uuid()`, so
+#   the malformed-UUID path was unreachable — the finding survived on a different trigger, narrowed).
+#   ⚠ ONE DELIBERATE NARROWING, FLAGGED: the new "role must LAND" fence is scoped to the TWO branches
+#   whose copy is announced by a container, ⛔ NOT file-wide. A blanket rule would flag the three
+#   `accessibilityRole="summary"` wrappers, and "fixing" the one at the main return by adding
+#   `accessible` would collapse the header + the WHOLE virtualized list + the pending strip into ONE
+#   announcement. ⛔ A fence that orders a HARMFUL remedy is worse than the defect it catches.
+#   VERIFICATION: `typecheck` + `lint` 18/18 each; unit suites 253 (@twt/ui) + 424 (@twt/mobile) + 72
+#   (@twt/i18n) + 364 (@twt/api) + 1945 (@twt/domain) green. ⭐ FOUR mutation probes, each reverted,
+#   each biting — and each on a fence the OLD version passed green.
+#   ⚠⚠ **THE 31-JOB TRAP FIRED AND WAS CAUGHT:** the first `ci:local` returned **31 green with
+#   `· SKIP integration-tests`** (no DATABASE_URL) — ⛔ and an integration spec was EDITED in this pass,
+#   so that green was ⛔ NOT sufficient. Re-run with DATABASE_URL against the live `twt-test-pg` (:5433):
+#   ✅ **PASSED, 33 job(s), `✓ integration-tests`** — the branch convention, ⛔ not the 31-job skip
+#   variant, the exact box whose un-ticking reopened this row at `2026-09-01d`. ⭐ AND THE SPEC WAS
+#   CONFIRMED EXECUTING, ⛔ not self-skipping: `pool-contributors-rtbf.spec.ts` run directly, **5 tests
+#   green in 783ms** against the live DB (the run log was tail-truncated, so the summary line alone was
+#   ⛔ not accepted as proof).
+#   COMMITS: `2026add` (`governance:` — records FIRST) then `f8ce75a` (`fix:` — the twelve patches).
+#   ⏭️ NEXT: 11b-3 remains `backlog` and is the named re-trigger for `pool-contributor-list.ts:88`'s
+#   stale doc-block and for `CR-11b.2-COMBINED-W1`'s closed-namespace type.)
+# last_updated_prior: 2026-09-01d (⛔⛔ STORY 11b-2b — THIRD CODE-REVIEW PASS (`bmad-code-review 11b.2b`, the
+#   same diff PLUS the second pass's own 14 patches, so THOSE were under review for the first time).
+#   ⛔⛔ ROW REOPENED `done` → **`in-progress`** — ⛔ NOT an engineering regression (all 13 findings FIXED,
+#   every fence mutation-proven) but because **Task 7's `ci:local` box is UN-TICKED and a clean run with
+#   the integration leg is OWED**. Closing over an unchecked box is the closure collapse this pass raised
+#   three times ([[feedback_closure_language_precision]]).
+#   ⛔ 11b-2 (`done`) and 11b-2a (`done`) are ⛔ NOT touched. ⛔ 11b-3 stays `backlog`.
+#   ⚠ `failed_layers`: Edge Case Hunter AND Acceptance Auditor both died mid-run on a provider session
+#   limit; both relaunched; all three layers ultimately reported.
+#   ⭐⭐ THE HEADLINE: THE SECOND PASS'S "ALL 14 APPLIED" WAS **FALSE**, AND ITS DIAGNOSTIC PATCH SHIPPED
+#   A WHOLE-SURFACE CRASH. Patch 11 wrote a bare `if (__DEV__)` INSIDE THE CATCH — `declare const` emits
+#   nothing, so that is a ReferenceError wherever Metro has not injected the global, and being in the
+#   CATCH it ESCAPES the per-row guard and red-boxes the surface: Trap 1 reinstated ON THE RECOVERY PATH,
+#   by the patch meant to make failures visible. ⚠ The suite was GREEN through it — every test is a
+#   source scan, so the component is never executed. Three passes, three times a review's own fix carried
+#   the defect it was fixing.
+#   ⛔ TWO PATCHES WERE HALF-DONE: patch 13 (Change-Log counts — the replace missed the bold markers and
+#   nothing re-read the file) and patch 5, whose correction was ITSELF FALSE ("neither is inert" —
+#   `refetchOnReconnect` IS inert on RN; query-core wires only `window.addEventListener('online')` and no
+#   bridge exists, which the same file admits 17 lines above). ⇒ AC10's own defect class, committed BY
+#   the patch that closed AC10.
+#   ⭐ AND THE FENCES DID NOT FENCE: FENCE 2 checked only that the IDENTIFIER `hasRenderableRow` appeared,
+#   so `= confirmedRows.length > 0` — the exact semantics its own failure message describes — passed
+#   green; FENCE 4 was an OR, so an UNGATED production log satisfied it; `balancedFrom` had no string
+#   awareness and no tests while the two lexers beside it were hardened; `stripComments` opened phantom
+#   regex mode after `+`/`-` and its doc-block characterised its own limitation BACKWARDS (a phantom
+#   string STOPS stripping ⇒ comment prose satisfies ~20 positive fences — a FALSE GREEN, not a red).
+#   ⛔ THE DEATH FENCE WAS A LIVE FALSE-RED TRAP: the widening banned `shradhanjali`/`memorial`, and the
+#   component names `ShradhanjaliSahyogVivran` TWICE as the pattern to follow while `_layout.tsx` uses
+#   "memorial" as a font role — green ONLY because stripComments removed those comments.
+#   ⭐ AC7 ratified FIVE states while the shipped fence asserted SIX; Task 0 still ordered the gate
+#   decision 3 vacated; Trap 1 still ordered the superseded structure AC1 defers to. ALL FIXED.
+#   VERIFICATION: `pnpm --filter @twt/mobile test` — 28 files / **419 green** (77 in the file);
+#   `typecheck lint` — **14/14**. ⭐ SIX mutation probes, each reverted, each biting. ⚠ One tightened
+#   fence was TOO tight on its first draft and was re-cut.
+#   ✅✅ THE OWED RUN CAME BACK GREEN — `pnpm ci:local` with DATABASE_URL against the live `twt-test-pg`:
+#   **PASSED, 33 job(s), `✓ integration-tests`** (the branch convention, ⛔ not the 31-job skip variant).
+#   ⇒ ⭐ ROW CLOSED `in-progress` → **`done`** on a real green, ⛔ not on a re-reading of "done".
+#   ⭐⭐ AND IT SETTLES THE FLAKE ATTRIBUTION EMPIRICALLY: the three `@twt/domain` specs the second pass
+#   excused PASSED here with the SAME mobile diff present ⇒ the load/oversubscription reading is now
+#   DEMONSTRATED, ⛔ not merely argued ([[project_ci_local_concurrency_oversubscription]]).
+#   ⏭️ NEXT: commit — `governance:` records FIRST, then the implementation, per convention.)
+# last_updated_prior: 2026-09-01c (⚠⚠ STORY 11b-2b — SECOND CODE-REVIEW PASS (`bmad-code-review 11b.2b`,
+#   3 layers re-run over the SAME diff `abdb42b..HEAD`, but AFTER `9cbf5dd` — so the FIRST PASS'S OWN
+#   SIX PATCHES were under review for the first time; the 11b.2a `2026-08-30m` shape).
+#   ⭐ ROW STAYS **`done`** — all 14 patches APPLIED, all 3 decisions RESOLVED, 5 items deferred+named.
+#   ⛔ 11b-2 (`done`) and 11b-2a (`done`) are ⛔ NOT touched and ⛔ NOT flipped. ⛔ 11b-3 stays `backlog`.
+#   ⭐⭐ THE HEADLINE, MUTATION-PROVEN TWICE (Acceptance Auditor + reviewer, independently): **BOTH OF
+#   THE FIRST PASS'S HEADLINE FIXES WERE UNMECHANIZED.** Reverting `|| !hasRenderableRow` left 397/397
+#   GREEN; moving the a11y `t()` back outside the try left 55/55 GREEN. The test file contained ⛔ ZERO
+#   occurrences of `renderableRows`/`hasRenderableRow`. The two behaviours the first pass called "THE
+#   ONLY GUARD" and load-bearing shipped with ⛔ NO regression fence
+#   ([[feedback_gate_scope_semantic_coverage]], [[feedback_mechanization_split_commitment]]).
+#   ⭐ AND THE FIX CONTRADICTED AC1's LITERAL TEXT: AC1 (`:178`) + Task 1 (`:399`) both ordered the derive
+#   "inside a try/catch in `renderItem`"; the refactor moved it to a component-body `.map()` and the box
+#   was ticked with the spec unamended ([[feedback_spec_edits_must_propagate_to_tasks]]).
+#   ⛔⛔ THE GUARD'S STATED TRIGGER COULD NOT REACH THE GUARD: `rowA11y.ref.namespace` is hardcoded
+#   `'contribution'` (`i18n-keys.ts:38`) — the SAME namespace as the five UNGUARDED `t()` calls — so a
+#   "systemic namespace miss" throws at the header (`:154`) before the fallback is evaluated. And the
+#   presenter's throw arm is UNREACHABLE from this call site (the adapter hardcodes `kind:'name'`), so
+#   the try's ONE live trigger is a `row_a11y`-KEY-only miss. RULED (a)→(b): comment corrected to state
+#   the guard's REAL narrow coverage; the route `ErrorBoundary` IS the surface-level answer.
+#   ⭐ TWO MORE FALSE GREENS, both fixed: AC6's namespace fence matched `namespace:` ANYWHERE, so
+#   `t(key, {namespace})` — the namespace in the PARAMS slot, the documented 11a.2 defect — passed then
+#   THREW at runtime; and AC10's stale-claim scan read the component ALONE while
+#   `usePoolContributorsQuery.ts:14,35` — the file that FETCHES these rows — still asserted "Epic 9's
+#   producer is unbuilt" as the justification for the poll (a THIRD live instance,
+#   [[project_epic9_confirmed_producer_is_live]]).
+#   ⭐⭐ EVERY NEW FENCE WAS MUTATION-VERIFIED, one at a time, reverted after each — because the finding
+#   this pass opened with was that the last pass's fixes were unmechanized. ⚠ TWO of the new fences did
+#   ⛔ NOT bite on their first draft (FENCE 3's dep regex missed `t` in final position; the regex-literal
+#   fixture put its token on the wrong LINE) and were corrected until they did.
+#   ⚠ THE REVIEWER'S OWN `stripComments` FIX BROKE THE SUITE FIRST: `<`/`>` in the regex-opener set made
+#   `</Text>` a regex start and ate the JSX; AC5(4) caught it. And an EXISTING fence caught the reviewer
+#   byte-pinning the empty-state sentence (11b.2a AC8 / D7(c)) — both corrected.
+#   ⭐ 5 DISMISSED, 4 of them because VERIFICATION CONTRADICTED THE LAYER: the Blind Hunter's "the empty
+#   branch lies to the member" quoted SUPERSEDED copy (the live string speaks about NAMES and is truthful
+#   in both states); its "~56px reserved-height hole" is wrong (FlashList **v2** self-measures); its
+#   missing-`data.pool` path red-boxes at `:87` before the map; and the Edge Case Hunter's "`accessible`
+#   was deleted" was an ARTIFACT OF CONCURRENT AGENTS — it read the tree mid-flight during the
+#   Acceptance Auditor's mutation probe (verified after: tree clean, prop present).
+#   VERIFICATION: `pnpm --filter @twt/mobile test` — 28 files / **414 tests green** (**72** in
+#   `contributor-list-render.test.ts`, up from 55). `pnpm turbo run typecheck lint --filter=@twt/mobile`
+#   — **14/14 green**.
+#   ⚠⚠ FULL `ci:local` WAS RUN AND IS ⛔ NOT REPORTED AS 33-GREEN, BECAUSE IT WAS NOT: run 1 PASSED but
+#   with `SKIP integration-tests` (31 jobs — ⛔ not the convention); run 2, with DATABASE_URL against the
+#   live `twt-test-pg`, FAILED on `integration-tests`. ⭐ ALL THREE failing specs pass IN ISOLATION
+#   (`shepherd-assign-concurrency` 651,473ms→**152ms**; `icp` + `news-blog-state-audience` together
+#   **1.27s**) and `@twt/domain` has ⛔ NO dependency on `apps/mobile` ⇒ UNREACHABLE from this diff; the
+#   load/oversubscription flake shape ([[project_ci_local_concurrency_oversubscription]]).
+#   ⛔ NOT backfilled into a green. ⚠ OWED BEFORE MERGE: a clean `ci:local` with the integration leg RUN.
+#   ⏭️ NEXT: the 5 deferrals are named with re-triggers in deferred-work.md; 4 of them re-trigger at
+#   11b-8 or at the next contract/producer story.)
 # generated: 2026-05-29
-# last_updated: 2026-08-29 (story 11b-9 — ⭐ CODE REVIEW PASSED, `review` → `done`. Three-layer
+# last_updated_prior: 2026-09-01b (✅✅ STORY 11b-2b — CODE REVIEW COMPLETE (`bmad-code-review 11b.2b`, diff
+#   scope `abdb42b..HEAD` — this story's own three commits only, excluding the two already-closed sibling
+#   stories stacked earlier on `governance/11b-2-validate-split`). ⭐ ROW FLIPS `review` → **`done`**.
+#   ⛔ 11b-2 (`done`) and 11b-2a (`done`) are ⛔ NOT touched and ⛔ NOT flipped. ⛔ 11b-3 stays `backlog`.
+#   Three layers: Blind Hunter (diff-only) + Edge Case Hunter (diff + repo access) + Acceptance Auditor
+#   (diff + spec) — Acceptance Auditor returned ZERO violations; every self-flagged correction in the Dev
+#   Agent Record (AC9's `kind:'name'` fix, the void Task-0 routing, the preflight substance argument)
+#   checked out live against the actual code. Triage: 1 decision-needed (resolved by BigDev → patch), 5
+#   patch, 0 deferred, 11 dismissed as noise (governance/process observations already self-flagged in the
+#   story's own record, or claims that checked out true on verification).
+#   ⭐⭐ ALL 6 PATCHES APPLIED, converging on ONE root cause in `renderItem` — the try/catch the code
+#   itself calls "THE ONLY GUARD" against a red-boxed list did NOT actually cover everything it claimed
+#   to: **(1)** the row a11y `t()` call ran AFTER the try/catch resolved, unguarded, even though the
+#   surrounding comment says `t()` itself throws on a key/namespace miss; **(2)** `confirmedRows.length`
+#   (the raw wire count, not post-derivation survivors) governed the list-vs-empty branch, so a systemic
+#   derive/`t()` failure across every row would have mounted a blank `FlashList` with no empty/error copy.
+#   FIX: row derivation — adapter call, presenter call, label join, AND the a11y `t()` resolution — now
+#   all run inside ONE try per row, computed once per data change into a `renderableRows` array (not
+#   per scroll frame); the branch decision is `confirmedRows.length === 0 || !hasRenderableRow`.
+#   Plus 4 test-harness patches: a REAL invocation test for `toContributionRowInput` (every prior "AC9"
+#   assertion only regex-scanned its source text); `stripComments` rewritten as a string-aware scanner
+#   (the old two-regex version could delete real code following a `//` inside a string literal); the
+#   death-term `BANNED` regex's `\bdeceased\b` widened to bare `deceased` (compound identifiers like
+#   `deceasedMemberId` have no word boundary and slipped past the old fence — verified live that none of
+#   the 3 scanned files currently contain the substring, so this is a pure widening, no new false
+#   positives today); AC10's "no packages/contracts import" check extended to also scan `adapter` (it
+#   previously checked only `component`, leaving the one file that actually imports the contract type
+#   unchecked for a relative-path alias bypass).
+#   Verification: `pnpm --filter @twt/mobile test` — 28 files / **397 tests green** (55 in
+#   `contributor-list-render.test.ts`, up from 53 — the two new adapter-invocation tests).
+#   `pnpm turbo run typecheck lint --filter=@twt/mobile` — **14/14 green**. ⚠ Full `pnpm ci:local` was
+#   ⛔ NOT re-run after these patches (scope: one component file + one test file, both verified directly);
+#   re-run it before merge per project convention.
+#   Files changed by the review: `apps/mobile/components/contributor-list/PoolContributorList.tsx`
+#   (`renderableRows` refactor); `apps/mobile/tests/unit/contributor-list-render.test.ts` (`stripComments`
+#   rewrite, `BANNED` regex widened, AC10 check extended, 2 new adapter-invocation tests); story file
+#   (Review Findings section + Status → `done`); `sprint-status.yaml` (this entry).
+# last_updated_prior: 2026-09-01a (✅✅ STORY 11b-2b IMPLEMENTED (`bmad-dev-story`) — the mobile render layer
+#   rewires onto 11b.2's presenter. ⭐ ROW FLIPS `ready-for-dev` → `in-progress` → **`review`**.
+#   ⛔ 11b-2 (`done`) and 11b-2a (`done`) are ⛔ NOT touched and ⛔ NOT flipped. ⛔ 11b-3 stays `backlog`.
+#   ⭐ GOVERNANCE FIRST, OWN COMMIT (`c6cd5bf`, `governance:` prefix, before any code): Decision
+#   `2026-09-01-171` transcribes ⛔ ONLY this story's own two rulings — D10(a) (the adapter types against
+#   `@twt/contracts`; the local `ConfirmedRow` type-shadow DELETED) and D5-prototype(a) (the memorial
+#   `<ContributorRow>` ⛔ NOT promoted, on the CORRECTED two-field arithmetic — `district` HAS a read
+#   model). ⛔ 11b.2a's D5/D6(a)/D7(c)/D3-aggregate/D5-scope and 11b.2's D2(a)/D8(a)/D9(a)/D7-nameform(a)
+#   were ⛔ NOT re-transcribed — they already sit at `2026-08-30-169` / `2026-08-30-168`.
+#   ⛔⛔ THE PREFLIGHT'S `origin/main` MERGE GATE WAS SATISFIED ON SUBSTANCE, AND THE DEVIATION IS STATED
+#   RATHER THAN PASSED SILENTLY (cl.4): `git fetch origin` run; `origin/main` is STILL `80e0d12` and
+#   ⛔ NEITHER SIBLING IS MERGED THERE — but ⭐ BOTH ARE ANCESTORS OF `HEAD` on
+#   `governance/11b-2-validate-split`, and the substance the gate stands for is verified live
+#   (`deriveContributionRowViewModel` at `presenter.ts:50`; 11b.2a's erasure omission ships). The pin was
+#   written 2026-08-29 as a PROXY for "the presenter exists", BEFORE IT DID. ⭐ The proxy is stale; the
+#   condition it proxied is MET. ⛔ cl.4 rules NOTHING about merge policy.
+#   ⛔⛔ TASK 0's "ROUTE THE SEVENTH D5 ARTEFACT TO 11b.2" WAS VOID AND NOTHING WAS ROUTED (cl.3):
+#   `rowKey` SHIPPED NOWHERE — the merged interfaces are `{displayName, poolLetterCode}` and
+#   `{displayName, poolLetterCode, rowA11y}` (`view-model.ts:44-47,49-65`), and 11b-2 is `done`, so the
+#   route would have entered a MERGED story. ⇒ ⭐ the adapter had nothing to REMOVE, ⛔ not nothing to
+#   PUT. Independently found by 11b.2a's own routing pass; ratified here. ⛔ EVERY CONCLUSION it carried
+#   is correct and unchanged (⛔ no `rowKey`, `keyExtractor` keeps `index`, the deferral stays OPEN).
+#   ⚠ ⭐ ONE STORY-FILE ERROR CORRECTED AGAINST THE LIVE TYPE, ⛔ not implemented as written: AC9(1)
+#   orders the adapter emit `{kind:'nameParts'}` — ⛔ that is the presenter's OUTPUT kind; the INPUT
+#   discriminant is `'name'` (`view-model.ts:40-42`; the presenter's doc-block `:15` says so) ⇒
+#   implementing AC9(1) VERBATIM WOULD NOT HAVE COMPILED. Recorded so a reviewer reads it as a
+#   CORRECTION, ⛔ not drift ([[feedback_spec_edits_must_propagate_to_tasks]] — the inverse case: an AC
+#   that had gone stale against the code it orders).
+#   ⭐ THE a11y KEY RESOLVES THE PRESENTER'S REF — key AND namespace both (`view-model.ts:57-64`),
+#   ⛔ not a re-spelled literal: a hard-coded `t('contributor_list.row_a11y', …, NS)` would satisfy AC6's
+#   letter while leaving the namespace guessed at the call site, which is the exact failure mode
+#   `t()`-defaults-to-`common`-and-THROWS creates. Asserted PRESENTER-DRIVEN, ⛔ not by string match.
+#   ⭐⭐ AC7 (family 13) FOUND ONE REAL SUBJECT AND CLOSED IT — ⛔ it did not come back vacuous: the
+#   pending strip's `<Paragraph>` carried `accessibilityLabel` with ⛔ NO explicit `accessible`, announced
+#   only by an RN `Text` default — precisely how check (a) has failed silently in this codebase before
+#   (11a.6's `<PinnedItem>` note: "dropping the `Pressable` drops the mechanism"). Now explicit, and
+#   asserted over EVERY label-carrying element with `accessible` matched as a BARE PROP so
+#   `accessibilityRole`/`accessibilityLabel` cannot satisfy it. ⛔ (b) and (c) recorded NOT-APPLICABLE,
+#   ⛔ NEVER as passing ([[feedback_gate_scope_semantic_coverage]]). (d) asserted over the FIVE reachable
+#   states — ⛔⛔ THE ANONYMIZED ROW IS ⛔ NOT ONE OF THEM (D5 makes it unreachable BY CONSTRUCTION; an
+#   a11y assertion over an unreachable state is the vacuous green family 13 exists to catch).
+#   ⛔ NO accessibility CI gate minted — 11b-8's call, by ruling.
+#   ⭐ AC4 BUILT AS THE FENCE IT WAS INVERTED INTO, ⛔ not the bridge the authoring pass ordered: ⛔ no
+#   `@twt/tokens` import, ⛔ no `StatusPill`, ⛔ no `*_TOKENS` map, ⛔ no `'green'` literal, ⛔ no
+#   `tone:`/`status:` field, ⛔ no `contributor-list/tokens.ts`. D2(a) rejected "a constant 'confirmed'
+#   chrome element in the render layer" BY NAME.
+#   ⭐ AC3: the `keyExtractor` is BYTE-UNCHANGED and the 8.3 deferral is RE-AFFIRMED OPEN — ⛔ not
+#   discharged, ⛔ this story ⛔ NOT named its consumer, and ⭐ its re-trigger has ⛔ NOT FIRED (it names
+#   the Epic 11b PUBLIC render; this is the MEMBER render of a SINGLE POOL'S ROSTER — the scale the
+#   deferral's own ground calls fine). 11b-3 is the real re-trigger. Its stale self-citation
+#   (`:124-126` → live `:254-256`) is ROUTED in deferred-work.md, ⛔ NOT written into the ratified entry
+#   ([[feedback_supersede_never_reinterpret]]) — a moved line number is ⛔ not a changed decision.
+#   ⭐⭐ THREE MUTATION CHECKS, ⛔ NOT ASSUMED TO BITE (each reverted immediately): removing the
+#   `renderItem` try/catch FAILED the Trap-1 fence; adding `{deceased ? null : <PoolContributorList/>}`
+#   to `NomineeConsole.tsx` FAILED the no-death-term fence ON THE EXACT SURFACE IT WAS AIMED AT (the
+#   staff-takeover-session-as-deceased one); dropping the bare `accessible` FAILED family-13 (a).
+#   ⭐ RED CONFIRMED FIRST — the test could not even collect (ENOENT on the adapter) before Task 2.
+#   ✅ 53/53 new · 393/393 mobile suite (28 files) · 14/14 typecheck+lint · `pnpm ci:local` **33 jobs
+#   green WITH THE INTEGRATION LEG RUN** (`DATABASE_URL` set against `twt-test-pg` on :5433 — ⛔ not
+#   the 31-job skipped-leg variant; the `friction-budget` leg is among the 33 and evaluated
+#   NON-vacuously because the diff was committed first).
+#   ⛔ UN-ATTESTED, ⛔ NOT BACKFILLED ([[feedback_record_unattested_no_backfill]]): a real SCREEN-READER
+#   ANNOUNCEMENT and a real `t()` RESOLUTION AT THE MOBILE CALL SITE. ⛔ NO RN mount harness was stood up
+#   (9.6's Dev Note in terms; all 28 `tests/unit/**` files are source scans). Re-trigger: 11b-8's
+#   accessibility-audit gate.
+#   ⭐ AC8's friction-budget note is an AFFIRMATION — ⛔ no new row, ⛔ existing rows byte-unchanged (the
+#   `80e0d12` 11b.9 precedent) — and it NAMES THE BRANCH THAT WOULD HAVE OWED A ROW (the rejected token
+#   bridge + constant confirmed chrome), so the absence of one is a FINDING, ⛔ not an oversight. ⚠ It
+#   records `member-app-native` as UN-MEASURED for the THIRD CONSECUTIVE STORY (11a.5 → 11b.9 → here) and
+#   says plainly that a FOURTH should be read as a standing blind spot on the app most members actually
+#   use, ⛔ not as three unlucky diffs.
+#   ⛔ NOT DONE, DELIBERATELY (all recorded in deferred-work.md): ⛔ `packages/contracts/` never entered
+#   the diff — incl. `pool-contributor-list.ts:88`'s stale "producer is unbuilt" doc-block (routed to
+#   11b-3 with a FALLBACK trigger); ⛔ `NomineeConsole.tsx:3,8,208`'s identical staleness (that file is
+#   VERIFIED, ⛔ not edited — AC2); ⛔ `shradhanjali/*` untouched; ⛔ `ViewContributorsEntry.tsx` ⛔ not
+#   re-checked (recorded VERIFIED NEGATIVE — `data.assigned` only); ⛔ `packages/ui/**` read-only.
+#   ⏭️ NEXT: `bmad-code-review 11b.2b` — ⭐ ideally on a DIFFERENT model than the implementer.)
+# last_updated_prior: 2026-08-31b (✅⚠ STORY 11b-2a — CLOSED `in-progress` → **`done`**, WITH AC8's
+#   NON-AUTHOR TONE-REVIEW SIGN-OFF **EXPLICITLY DEFERRED — ⛔ NOT SIGNED, ⛔ NOT WAIVED, ⛔ NOT MET**.
+#   ⛔ 11b-2 (`done`) and 11b-2b (`ready-for-dev`) are ⛔ NOT touched and ⛔ NOT flipped.
+#   ⭐ THE ENGINEERING IS COMPLETE AND VERIFIED: `ci:local` 33/33 green including the live-DB
+#   integration leg, and the revert-sanity probe PROVED the erasure guard bites (guard disabled ⇒ the
+#   wire carried `{"firstName":"[anonymized]"}` verbatim).
+#   ⛔⛔ WHAT `done` MEANS HERE, AND A LATER READER MUST ⛔ NOT READ IT OTHERWISE: "SHIPPED WITH ONE
+#   CLAUSE OPENLY OUTSTANDING", ⛔ NOT "EVERY AC MET". ⛔ Do ⛔ not infer that a tone review happened.
+#   ⭐ WHY IT WAS DEFERRED RATHER THAN DONE — TWO INDEPENDENT BLOCKERS, ⛔ neither of them neglect:
+#   (1) EVERY AVAILABLE PARTY IS DISQUALIFIED — the two `contributor_list.empty` strings were AUTHORED
+#   BY BigDev (ruled verbatim in D7(c)) and TRANSCRIBED by this agent ⇒ `reviewedBy ≠ authoredBy`
+#   fails for BOTH. ⚠ BigDev ELECTED TO SIGN 2026-08-30 AND THE SIGNATURE WAS DECLINED ON
+#   VERIFICATION; that refusal is the CORRECT outcome, ⛔ not an obstacle routed around.
+#   (2) THERE IS NO MECHANISM TO RECORD IT THROUGH — a real sign-off is a RUNTIME `tone_review.signoff`
+#   audit entry via the surface's review endpoint, and the contributor list is ⛔ ABSENT from the
+#   governed-surfaces table ⇒ ⛔ no endpoint, ⛔ no review permission, ⛔ no gate. Even a qualified
+#   reviewer has nowhere to file it today.
+#   ⇒ RULED (BigDev 2026-08-31): close the row, carry the clause OPEN and UN-ATTESTED with a NAMED
+#   TRIGGER — BigDev's PRE-PRODUCTION TONE SWEEP over the 20 `copy_globs` namespaces. Filed as
+#   `CR-11b.2a-AC8-TONE` in deferred-work.md, which also records what must ⛔ NOT be done to satisfy
+#   it (⛔ no fabricated `tone_review.signoff`, ⛔ no row in the Story-9.1 Nominee Console periodic log,
+#   ⛔ a green `microcopy:check` does NOT substitute — tone-guide §5 says so verbatim).
+#   ⚠ NEAREST LAUNCH-GATING CHECKPOINT is 11b-8 (real-data + accessibility audit gates) — ⛔ 11b-8 does
+#   NOT own this item, but it is the last structured pass before launch.
+#   ⭐ A CHEAPER PERMANENT FIX IS RECORDED FOR THAT SWEEP: add the `contribution` namespace to the
+#   governed-surfaces table, giving the obligation a MECHANISM instead of leaving it un-mechanized —
+#   the half that decays ([[feedback_mechanization_split_commitment]]).
+#   ⭐ ALSO THIS SESSION, ⛔ SEPARATE FROM 11b-2a: a human tone pass over `contribution.json` (`bb77a53`,
+#   six BigDev edits + four Claude corrections incl. a Hindi SUBJECT-VERB AGREEMENT defect that had the
+#   helpdesk telling the MEMBER to fix their own overpayment), and BigDev's non-author review of those
+#   four recorded in a NEW ad-hoc section of `docs/tone-review-checklist.md` (`08b57f2`) — labelled a
+#   human review recorded in the repo, ⛔ NOT an audited publish-gate sign-off. ⛔ That row explicitly
+#   does NOT discharge AC8: different strings, different authorship.
+#   ⚠ TWO `out_of_band.helpline.*` STRINGS RAISED AND LEFT OPEN BY RULING: en `acknowledge.title` says
+#   "the gift" while its own script, BOTH Hindi strings and the register (`donor → colleague`) all say
+#   "support"; and hi `clarify.title` renders "never corrective" as "टोकें नहीं" (don't INTERRUPT) —
+#   a different instruction from the one the UX-DR76 posture requires. ⏳ Routed to the same sweep.)
+# last_updated_prior: 2026-08-31a (⚖️ DECISION 2026-08-31-170 MINTED for Story 11b-2a — the second review
+#   pass's D1 outcome is transcribed as a DURABLE ARCHITECTURAL POSITION, ⛔ not left as a source
+#   comment. ⛔ NO ROW FLIPS — 11b-2a STAYS `in-progress`, and it stays there on AC8's NON-AUTHOR
+#   tone-review sign-off, which this entry ⛔ does NOT discharge and ⛔ does not try to.
+#   ⭐ THE POSITION, in one line: THE RTBF ERASURE GUARANTEE LIVES ON THE DECRYPTED PLAINTEXT, ⛔ NOT
+#   ON THE LIFECYCLE-STATE READ. The batched state read is an OPTIMIZATION (fewer ciphertexts even
+#   SCHEDULED for decrypt), ⛔ never the guarantee. ⛔⛔ A per-row state re-check is FORBIDDEN as a
+#   TOCTOU mitigation — it fails on BOTH counts independently (Trap 1's rejected N+1, AND it does not
+#   close the window under READ COMMITTED) ⇒ ⛔ neither a faster state read nor a future isolation-level
+#   change revives it. ⚠⚠ AND THE SEEDED DEFAULT IS PERMISSIVE BY CONSTRUCTION: `pending-kyc` is
+#   `!== 'anonymized'`, so ANY cause of stream invisibility reads as representable — safe on the
+#   contributor path ONLY because the plaintext guard backstops it, and ⛔ NO other caller may rely on
+#   the map (that is CR-11b.2a-2P-W3's new trigger).
+#   ⭐ cl.5 records WHY AC2 is now asserted at the CALL SITE: the domain-level O(1) suite is
+#   STRUCTURALLY BLIND to the handler, which is how a per-row replay shipped for a whole commit under a
+#   green gate ([[feedback_gate_scope_semantic_coverage]]). cl.6 records the first pass's
+#   "zero AC violations" verdict as SUPERSEDED — correct when taken, false as published, annotated at
+#   its source, ⛔ never deleted ([[feedback_closure_language_precision]]).
+#   ⚠⛔ THE ENTRY IS HONEST ABOUT ITS OWN LATENESS: the code landed at `1f88332` BEFORE the decision
+#   entry, ⇒ the ONE place in this story where implementation preceded its governance record. Recorded
+#   in the entry itself rather than smoothed over
+#   ([[feedback_governance_commits_precede_implementation]]).)
+# last_updated_prior: 2026-08-30m (⚠⚠ STORY 11b-2a — SECOND CODE-REVIEW PASS (`bmad-code-review 11b.2a`,
+#   3 layers re-run BLIND over the SAME diff `8a79cdd..HEAD`, but AFTER `cc22c79` — so the FIRST
+#   PASS'S OWN FIXES were under review for the first time). ⛔⛔ ROW REOPENED `done` → **`in-progress`**.
+#   ⛔ 11b-2 (`done`) and 11b-2b (`ready-for-dev`) are ⛔ NOT touched and ⛔ NOT flipped.
+#   ⭐⭐ THE HEADLINE: THE FIRST PASS'S OWN TOCTOU FIX WAS AN AC2 / Trap-1 VIOLATION — AND IT DID NOT
+#   CLOSE THE RACE IT NAMED. All THREE layers converged on it independently; the Blind Hunter found it
+#   with ⛔ NO spec access at all, from the self-contradicting comment alone. The per-row
+#   `getCurrentMemberState` re-check is one FULL event-stream replay per row — the construction Trap 1
+#   rejects BY NAME, including its "`mapWithConcurrency` does not make it acceptable" clause — sitting
+#   40 lines below a comment forbidding exactly that with the sibling function. ⭐ And it was
+#   INEFFECTIVE: `openScopeTx` is a bare `BEGIN` (READ COMMITTED), so the state read and the ciphertext
+#   read take DIFFERENT snapshots; an RTBF landing between them still decrypts the `[anonymized]`
+#   sentinel, and `splitFirstNameLastInitial('[anonymized]')` returns a NON-EMPTY `firstName` that
+#   sails past the empty-name guard.
+#   ✅ FIXED, AND THE FIX IS STRICTLY STRONGER: the re-check is DELETED (AC2's O(1) restored) and the
+#   guarantee moved onto the DECRYPTED PLAINTEXT (`ANONYMIZED_SENTINEL`) — snapshot-independent, so it
+#   holds for EVERY interleaving, at ⛔ ZERO extra queries. ⭐⭐ REVERT-SANITY PROBE RUN: with the guard
+#   disabled the new test FAILED and the wire carried `{"firstName":"[anonymized]","lastInitial":""}`
+#   VERBATIM. The new integration test reproduces the race's END STATE deterministically (erase the
+#   ciphertext, ⛔ omit the `member.rtbf_anonymized` event) ⇒ ⛔ no sleep, ⛔ no flake.
+#   ⇒ load-bearing-invariant FAMILY 2 REAL GAP is CLOSED.
+#   ⭐ AC2 IS NOW ASSERTED AT THE CALL SITE — `getCurrentMemberStates` called EXACTLY ONCE,
+#   `getCurrentMemberState` NEVER. The domain-level O(1) suite was structurally BLIND to the handler,
+#   which is how a per-row replay shipped for a whole commit under a green gate
+#   ([[feedback_gate_scope_semantic_coverage]]).
+#   ⚠⚠ WHY THE ROW IS HELD OPEN, AND IT IS ⛔ NOT AN ENGINEERING DEFECT: AC8's NON-AUTHOR tone-review
+#   sign-off is genuinely UN-ATTESTED. BigDev elected to sign it and THE SIGN-OFF WAS DECLINED ON
+#   VERIFICATION — the story's own `:1537` records the strings as AUTHORED BY BigDev (ruled verbatim in
+#   AC8), so `reviewedBy ≠ authoredBy` disqualifies BigDev exactly as it disqualifies the transcribing
+#   agent. Task 2's box moves `[x]` → `[~]`: microcopy half done, sign-off half OPEN. ⛔ The row may not
+#   read `done` while an AC clause is open. Flip to `done` when a qualified non-author signs.
+#   ⭐ ALSO CORRECTED AT SOURCE: the first pass's "ZERO AC VIOLATIONS" verdict is annotated SUPERSEDED
+#   where it is written — correct when taken, false as published, because the patch that entry records
+#   as ✅ FIXED is the violation ([[feedback_closure_language_precision]]).
+#   NINE further patches applied: two unguarded per-row awaits now fail CLOSED per-row instead of
+#   collapsing the surface into a false "you have no live pool"; the i18n confirmation guard widened to
+#   the VERB and EVENT NOUN and made SELF-VERIFYING against seven known-false re-words (⭐ `hi` needs
+#   `/योगदान(?!कर्ता)/` — the CORRECT string contains `योगदानकर्ता`, of which `योगदान` is a literal
+#   prefix, so a bare pattern would fail the very string it protects); the pending-strip assertion stops
+#   pinning the word `confirmation`; `mapWithConcurrency` gains four `RangeError` tests and can no
+#   longer resolve with holes; the chunk-size test asserts ORDER OF MAGNITUDE (`>= 100`) instead of a
+#   `> 8` that `9` satisfied; uuid case normalised on BOTH sides of the state `Map`; AC2's call-site doc
+#   gains its missing `members.state` half; the fixture derives names through the PRODUCTION splitter.
+#   THREE deferred as `CR-11b.2a-2P-W1..W3` in deferred-work.md; FIVE dismissed after live verification
+#   (incl. two the layers got WRONG: `events_log` DOES carry FORCE RLS with tenant isolation, and the
+#   anonymize + event append DO share one tx — the leak was real but the proposed mechanism was not).
+#   ⭐ W3's coupling DISSOLVED rather than being paid: the erasure guarantee moved OFF the state map, so
+#   removing the re-check did ⛔ NOT convert a masked fail-open into a silent un-erasure.
+#   ✅⭐ VERIFICATION: `pnpm ci:local` with DATABASE_URL — **33 of 33 JOBS GREEN**, including BOTH
+#   `test (unit)` and the live-DB `integration-tests` leg. ⚠ Recorded because it is true and ⛔ not
+#   because it changes the verdict: an EARLIER ci:local run in this same pass failed `test (unit)`
+#   ONCE and did ⛔ NOT reproduce in FOUR subsequent runs (standalone `--force`, standalone cached,
+#   the exact `integration-tests` → `test (unit)` ordering with both legs exit 0 and 37/37 turbo
+#   tasks, and the full 33-job run above). ⛔ THE FAILING TEST WAS NEVER IDENTIFIED — the summary
+#   elided it — so it stays recorded UN-ATTESTED rather than attributed to a known flake class
+#   ([[feedback_record_unattested_no_backfill]]). ⛔ Not caused by this diff.)
+# last_updated_prior: 2026-08-30l (✅✅ STORY 11b-2a — CODE REVIEW COMPLETE (`bmad-code-review 11b.2a`,
+#   3-layer adversarial: Blind Hunter · Edge Case Hunter · Acceptance Auditor, diff `8a79cdd..HEAD`).
+#   ⭐ ROW FLIPS `review` → **`done`**.
+#   ⭐ ACCEPTANCE AUDITOR: ZERO AC VIOLATIONS — the omission-before-decrypt ordering, the untouched
+#   aggregates, both locales' AC8 strings, and full Task/AC traceability were independently
+#   re-verified against live code.
+#   ⭐⭐ TWO DECISION-NEEDED FINDINGS, BOTH RULED BY THE USER AND APPLIED: (1) a TOCTOU window between
+#   the batched member-state snapshot and the per-row decrypt fan-out — FIXED by re-checking state
+#   per-row immediately before decrypt (`handlers.ts`). (2) the AC2 integration test's "clock-domain
+#   guard, end to end" docstring overstated its own coverage (no clock was ever actually skewed) —
+#   ruled to add a REAL clock-injection test, but that turned out to be **infrastructurally BLOCKED**:
+#   `events_log` is append-only by grant (`twt_app` has no UPDATE, verified live against `:5433`) and
+#   the write path has no `occurredAt` override (clock injection is explicitly a FUTURE Story 1.10
+#   mechanism per the schema's own comment). Corrected the docstring instead and filed the real
+#   substrate as a deferred trigger — new information surfaced during implementation, not executed
+#   blind against a ruling that predated it.
+#   ⭐ FIVE PATCH FINDINGS FIXED: `mapWithConcurrency` now throws on non-positive concurrency and
+#   stops sibling workers on the first rejection; the AC3 anti-duplication regex now catches
+#   indented/exported/`var`/arrow-function re-declarations; two magic-number test literals replaced —
+#   one with the real `PUBLIC_SURFACE_PAGE_SIZE_CAP` import, the other (chunk-size vs. decrypt-bound)
+#   kept as a NAMED, commented literal because `@twt/domain` cannot import `apps/api` (the reverse
+#   would be a layering violation and would re-couple two deliberately independent quantities).
+#   ⭐ ONE FINDING DEFERRED (raw-JSON leak assertions are coarse substring checks — low risk today) ·
+#   FIVE DISMISSED AS NOISE after live verification against the repo (the `last_updated_prior` ledger
+#   rotation, the 11b-2 sibling-story claim, the RTBF fixture's lifecycle precursor, the test-helper
+#   SQL interpolation, and the un-co-located decision-log-head evidence were all confirmed non-issues).
+#   ⭐ ALL TOUCHED SUITES RE-VERIFIED GREEN, INCLUDING THE LIVE-DB INTEGRATION SPEC AT `:5433`.
+# last_updated_prior: 2026-08-30k (✅✅ STORY 11b-2a IMPLEMENTED (`bmad-dev-story`) — ⭐ THE LIVE,
+#   MEMBER-VISIBLE RTBF DEFECT IS FIXED. ROW FLIPS `in-progress` → **`review`**.
+#   ⛔ 11b-2 (`done`) and 11b-2b (`ready-for-dev`) are ⛔ NOT touched and ⛔ NOT flipped.
+#   ⭐ DECISION 2026-08-30-169 MINTED (Task 0, committed BEFORE any code): nine clauses — D5
+#   governing (RTBF removes the contributor ENTIRELY; public erasure, ⛔ not destruction of the legal
+#   record) · D3-shape(i)/D3-key/D3-rollout recorded **VACATED, ⛔ not reversed, ⛔ not closed**
+#   (D3-key(c) lived ONE day and both dates are recorded) · D3(a)/D3-shape(ii)(a)/D4(a) standing, D4(a)
+#   as a RE-ruling because its first ground ("0 confirmed contributors") was FALSE · D3-aggregate's
+#   two-axis model verbatim · D5-scope · D6(a) · D7(c).
+#   ⭐ WHAT SHIPPED: AC2's `getCurrentMemberStates` (ONE events_log query per chunk, chunked at a NAMED
+#   constant that is deliberately NOT the decrypt bound; mirrors `getCurrentMemberState` so ⛔ NO
+#   `occurred_at` bound can put a DB-stamped rtbf event outside the window and render the ERASED NAME —
+#   four tests assert the EMITTED SQL) · AC1's omission BEFORE the decrypt fan-out (⇒ strictly LESS
+#   Tier-1 plaintext than before the fix; the three integrity skips preserved verbatim, the erasure skip
+#   given its own comment saying it is ⛔ NOT one of them) · AC3's shared bounded-decrypt module (BOTH
+#   the constant AND `mapWithConcurrency`, ⛔ not a cross-reference comment — the mechanism 11b.9's
+#   review already rejected — with a test that fails if either call site re-declares a local copy) ·
+#   AC8's two-locale VALUE re-word (⛔ no new key, ⛔ no code change, ⛔ no wire change, ⛔ no
+#   apps/mobile edit ⇒ friction-budget AC-4 does NOT fire, RE-CHECKED not inherited).
+#   ⛔ NO AGGREGATE MOVED: `confirmedCount` is still `confirmed.length` — the PRE-omission set. Only
+#   `rows` shrinks, and the divergence is the RULED, CORRECT state.
+#   ⭐⭐ THE REVERT-SANITY PROBE REPRODUCED THE DEFECT VERBATIM: with the omission filter reverted, the
+#   drop-to-zero case put `{ firstName: '[anonymized]', lastInitial: '' }` ON THE WIRE.
+#   ⛔⛔ AND THE FULL ci:local FOUND A REAL PRE-EXISTING DEFECT A SINGLE-FILE RUN DID NOT:
+#   `listConfirmedContributorsForPool` carries ⛔ NO `ORDER BY` AT ALL, so contributor row order is
+#   unstable across runs (it transposed two peers in the integration leg). PRE-EXISTING since 8.3 and
+#   ⛔ NOT introduced here — the bounded batch preserves INPUT order by construction. COSMETIC today
+#   (the surface is unpaginated), but a CORRECTNESS bug the moment it is paginated: LIMIT/OFFSET over an
+#   unordered query duplicates and omits rows, and 11b.3 is the ~10k paginated consumer. Filed with TWO
+#   triggers; ⛔ not fixed here (out of diff; an ORDER BY changes a shipped read for every consumer).
+#   ⚠ ⭐ TWO ROUTING INSTRUCTIONS HAD GONE STALE AND WERE CORRECTED, ⛔ NOT EXECUTED BLIND
+#   ([[feedback_verify_before_committing_governance_claims]]): (1) 11b-2a's Task 6 called the 11b-2
+#   D6(a) routing "time-critical" — but 11b-2 SHIPPED `done` (8a79cdd) WITH D6(a) ALREADY APPLIED
+#   (single-arm view-model, `member.anonymousMember` deliberately absent, a test asserting the absence)
+#   ⇒ ⛔ NO action owed. (2) THE SURVIVING CORRECTION NOW POINTS THE OTHER WAY: 11b-2b (ready-for-dev,
+#   so a dev agent WILL execute its text) still says `rowKey` is "required" on both interfaces and
+#   routes its removal to 11b-2 Task 0 as a SEVENTH artefact — but `rowKey` shipped NOWHERE
+#   (packages/ui/src, packages/contracts/src, apps/mobile/components all clean). Its CONCLUSIONS are
+#   correct and unchanged; only the routing MECHANISM is void. Trigger: 11b-2b's Task 0.
+#   ⭐ ROUTED, ⛔ NOT CLOSED (Task 6, 15 items): RTBF-D1 SUPERSEDED AS TO CONTRIBUTOR SURFACES (⛔ not
+#   discharged — `resolveMemberDisplayName` still has ZERO production call sites, verified) · the N+1
+#   decrypt DISCHARGED but on the CORRECTED ground · `.max(16)` NOTED touched-and-unchanged · the
+#   keyExtractor entry STAYS OPEN (its blocker re-verified still true) · the AC7 notice-copy packet (six
+#   falsified keys × both locales, the three D5 statements VERBATIM, and the anonymize.ts fact statement
+#   3 must not contradict — the member's NAME IS DESTROYED, so "records are retained" read as "they
+#   still hold my name" would MISLEAD) · the rosterSize naming hazard with both worked failures · the
+#   ANONYMOUS_MEMBER deletion question (DEFINITE now, ⛔ not "possibly-dead" — but ⛔ nothing deleted) ·
+#   the ~12-site stale "producer unbuilt" family, ASSERTED IN SIX TEST NAMES so a GREEN SUITE RESTATES
+#   THE FALSE PREMISE ON EVERY RUN · the FOURTH renderer (NomineeConsole — inherits the fix, ⛔ no code
+#   owed) · the verified negative that NO public contributor-NAME render exists today.
+#   ⛔ OWED BEFORE MERGE, RECORDED UN-ATTESTED RATHER THAN SELF-SIGNED: the NON-AUTHOR tone-review
+#   sign-off for AC8's two strings. microcopy:check is GREEN, but tone-guide §5 says a green lint does
+#   NOT substitute, and both the author (BigDev, who ruled the strings verbatim) and the transcriber
+#   (the dev agent) are disqualified under `reviewedBy ≠ authoredBy`. ⚠ The contributor list is also
+#   ABSENT from the checklist's governed-surfaces table ⇒ ⛔ no runtime gate, ⛔ no review permission:
+#   the obligation is REAL but UNMECHANIZED ([[feedback_record_unattested_no_backfill]], the 10.16
+#   precedent).
+#   ⭐ ci:local 33 JOBS GREEN WITH THE INTEGRATION LEG RUN.)
+# last_updated_prior: 2026-08-30j (✅✅ STORY 11b-2 — CODE REVIEW COMPLETE (`bmad-code-review 11b.2`,
+#   3-layer adversarial: Blind Hunter · Edge Case Hunter · Acceptance Auditor, diff `c9d86ab..HEAD`).
+#   ⭐ ROW FLIPS `review` → **`done`**.
+#   ⭐ ACCEPTANCE AUDITOR: ZERO AC VIOLATIONS — all nine ACs independently re-verified against live
+#   code (including two mutation tests: reverting AC1(b)'s array guard and AC4(a)/(c)'s `rowKey`
+#   coupled-edit both failed `tsc` with the exact predicted errors), and it independently RE-RAN
+#   `pnpm --filter @twt/ui test` (251/251) and `tsc --noEmit` (clean) rather than trusting the ledger.
+#   ⭐ SIX PATCH FINDINGS, ALL FIXED AND VERIFIED (253/253 tests · `tsc --noEmit` clean · `eslint .`
+#   clean after the fix): (1) `forbidden-imports.test.ts`'s `IMPORT_RE` didn't match `export … from`,
+#   so `index.ts` — composed ENTIRELY of re-exports — contributed ZERO entries to the scan it claims
+#   is "the only thing that closes the `@twt/tokens` hole"; now matches export-from and dynamic
+#   `import(...)` too, plus a sanity test that `index.ts` is actually parsed. (2)
+#   `no-list-iteration.test.ts`'s `ITERATION_CONSTRUCTS` missed `.some/.every/.find/.findIndex/.sort/
+#   .entries`; added. (3) `death-term.test.ts`'s `FORBIDDEN_TERMS` were literal kebab/snake matches
+#   only, blind to camelCase (`accountFrozen`) and bracket-access (`members['state']`) spellings of the
+#   same lifecycle terms; now normalized (strip non-alphanumeric, lower-case) on both sides before
+#   comparing. (4) `presenter.test.ts`'s ANTI-WIDENING check only asserted hand-typed TS literals,
+#   never the function's ACTUAL runtime return value; added an `Object.keys()` check on a real call.
+#   (5) the "no list-level presenter" check was a fragile naming regex (`/list.*viewmodel/i`) —
+#   replaced with a naming-independent invariant: exactly ONE function export, full stop.
+#   ⭐ ONE DEFER: the regex comment-stripper shared by all three scan tests is blind to `//`-shaped
+#   text inside a string literal — pre-existing, copied verbatim from
+#   `apps/mobile/tests/unit/status-pill-render.test.ts:31-32`, ⛔ not introduced by this story. Filed
+#   at `deferred-work.md` under a NEW `## Deferred from: code review of 11b-2-…` heading.
+#   ⭐ EIGHT DISMISSED, EACH VERIFIED LIVE BEFORE DISMISSAL rather than taken on the Blind Hunter's
+#   diff-only word: the `epics.md:4888` citation Blind Hunter called "unexplained" is a REAL second
+#   reconciliation paragraph independently confirming the same Panel-reservation fact as `:4868`;
+#   `deferred-work.md`'s (ix) DISCHARGED entry does ⛔ NOT contradict "none is described as closed" —
+#   confirmed against the established discharged-vs-closed convention
+#   ([[feedback_closure_language_precision]]); the sprint-ledger's 251-test/33-job figures Blind Hunter
+#   called unverifiable-from-diff were independently RE-RUN true by the Auditor; four `presenter.ts`
+#   null/malformed-input guard suggestions were out of scope — D8(a)'s throw requirement is scoped to
+#   the `unknown` kind only (`.decision-log.md:119-124` verbatim), the wire contract's `.strict()` +
+#   `min(1)` already forecloses the rest upstream, and this fn is a per-scroll-frame hot path this
+#   story explicitly wants allocation-light; the remaining three (D12-refscope critique, a distributive
+#   conditional-type concern, a single-arm-union/forged-cast concern) were speculative or critiques of
+#   an already-ruled decision, ⛔ not implementation defects.
+#   Findings written to the story's Review Findings section; patches applied as a direct edit — this
+#   is a code-review action, ⛔ not a new governance ruling; nothing here reopens D1–D13.)
+# last_updated_prior: 2026-08-30i (✅✅ STORY 11b-2 — IMPLEMENTED. ⭐ ROW FLIPS `ready-for-dev` →
+#   `in-progress` → **`review`**. ⛔ 11b-2a and 11b-2b are ⛔ NOT touched and ⛔ NOT flipped.
+#   ⭐ FOUR COMMITS, governance FIRST throughout ([[feedback_governance_commits_precede_implementation]]):
+#   `f513816` (Task 0) · `6028581` (Tasks 1-2, the only code) · `9560fb0` (Task 3) · this one.
+#   ✅ PREFLIGHT STEP 1 PASSED, ⛔ NOT ASSUMED: `git log c9d86ab..HEAD` over `11b-2a-…md` and
+#   `11b-2b-…md` is EMPTY ⇒ ⛔ no sibling ruled since the baseline, so ⛔ no STOP condition fired.
+#   The `.decision-log.md` head was re-read LIVE and was still `2026-08-28-167` ⇒ **168 was free**.
+#   ⭐ AC0 — **ALL NINE TRANSCRIBED** as Decision `2026-08-30-168`, one clause each, grounds quoted
+#   VERBATIM: D1 · D2(a) · D6-uxspec(a) · D7-nameform(a) · D8(a) · D9(a) · D11-outputshape(a) ·
+#   D12-refscope(a) · D13-numbering(a). ⛔ NINE, ⛔ not five — D1 is the clause an earlier banner's
+#   "ALL FIVE" dropped. ⛔ Nothing authored, paraphrased, re-grounded or re-scoped.
+#   ⭐ THE CODE IS FOUR FILES + A BARREL LINE, and ⛔ that is the whole diff under `packages/`:
+#   `packages/ui/src/contribution-list/{index,view-model,presenter,i18n-keys}.ts`. ⛔ ZERO `apps/`
+#   edits · ⛔ `packages/ui/package.json` untouched (`dependencies` still exactly `@twt/contracts`) ·
+#   ⛔ `pool-contributor-list.ts` untouched · ⛔ `matrix.ts` untouched · ⛔ `friction-budget.md`
+#   untouched (AC-4's path trigger is `apps/mobile/` + `apps/public/` — the leg stayed DORMANT and
+#   ⭐ CONFIRMED green in `ci:local` anyway).
+#   ⭐⭐ THE TEETH WERE MUTATION-VERIFIED, ⛔ NOT ASSUMED — NINE deliberate breakages, NINE bites:
+#   (1) array parameter → `TS2322: Type 'true' is not assignable to type 'never'`, the exact error
+#       AC1(b) predicts; (2) `rowKey` on the interface → `TS2741` at BOTH literals, proving AC3/AC4(a)
+#       really are the COUPLED edit the third validation pass found; (3) `displayName.status` →
+#       `TS2741` at the `Record<AllKeys<T>, true>` literal that `keyof` alone would have MISSED, and
+#       (3b) silencing it by adding the key then FIRES the runtime substring loop — ⭐ both directions
+#       bite, which is the whole point of AC4(c); (4) a `.map(` parked in `view-model.ts` → caught by
+#       the MODULE-WIDE scan, ⛔ which a `presenter.ts`-only scan would have missed; (5) a `@twt/tokens`
+#       VALUE import → caught by the parsed-import scan and ⛔ INVISIBLE to `package-boundary.test.ts`,
+#       exactly as AC1 warns; (6a/6b) a lifecycle term in a COMMENT and separately in CODE → the two
+#       scopes are independently live; (7) a confirmed-tone literal → raw-text scan; (8) a ref key
+#       absent from the locale JSON → both locales; (9) a second namespace in the union → the
+#       all-ten/`contributor_list.*` assertion.
+#   ⭐ AND AC1(a)'s WORD BOUNDARIES WERE CONFIRMED NON-VACUOUS THE OTHER WAY: this module's own types
+#   carry **10** `readonly` occurrences and the `\bdo\s*\{` regex does ⛔ NOT fire on them — the
+#   unsatisfiable-scan trap the third pass caught is really closed, ⛔ not merely described.
+#   ⭐ AC7 — the Panel packet is a FILE, in ⭐ `planning-artifacts/` (⛔ NOT `implementation-artifacts/`):
+#   `trustee-panel-routing-note-2026-08-30-contributor-name-public-tier.md`, all SIX recordings, and
+#   ⛔ the word "blocked" appears NOWHERE of 11b.9 — its wait is a ruled CHOICE. ⏳ ROUTED, ⛔ NOTHING
+#   RATIFIED, ⛔ NOTHING APPLIED. ⛔ The contributor NAME FORM stays UNRULED.
+#   ⭐ AC6 — SIX items `11b.2 (i)`…`(vi)`, roman-numerled so they cannot be read as 11b.1's (a)…(j),
+#   each with a named re-trigger, ⛔ none closed. (ii) filed as 8.3 D11's re-trigger HAVING FIRED at
+#   11a.1 and not been acted on. (v) the commitlint divergence RE-VERIFIED LIVE (`type-enum` untouched;
+#   `core.hooksPath`=`.githooks` holds only `pre-push`; absent from `ci-local.sh` AND `ci.yml`; 154
+#   `governance:` commits) — ⛔ the item this ledger and 11b.2a both banked on, and it is WRITTEN.
+#   (vii)/(viii) written as INTENTIONALLY-NOT-RECORDED stubs AT THE DESTINATION; (ix) the adapter seam
+#   recorded ✅ DISCHARGED BY 11b.2b's AC9, ⛔ never re-filed as outstanding.
+#   ⭐ AC8 — the UX-spec amendment lands on ALL FIVE anchors, canonical record at `:1287-1298`, the
+#   section literally titled "Public Column Inventory — Sahyog List". ⛔ Annotation, ⛔ never a rewrite;
+#   ⛔ no column deleted, ⛔ no replacement inventory authored (that is 11b.3's, when it has a host).
+#   `deferred-work.md` item (f) marked ✅ DISCHARGED, ⛔ not "closed".
+#   ⚠⛔ ONE THING RECORDED RATHER THAN FIXED, AND THE REASON IS A RULE: prepending the 11b.2 section to
+#   `deferred-work.md` (newest-first discipline) shifted every 11b.1 anchor down by **192** lines, so
+#   `-168`'s pointer to `:104-121` was TRUE WHEN WRITTEN and now points short. ⛔ It is ⛔ NOT corrected
+#   in the log — ⭐ a decision entry is NEVER edited in place; a correction would be a NEW entry binding
+#   the old one ([[feedback_supersede_never_reinterpret]] cl.4), which a drifted convenience pointer
+#   does ⛔ not warrant. The drift is recorded AT THE DESTINATION with the new anchors, and the three
+#   artefacts this story OWNS (the packet · the `epics.md` block · the UX annotation) are corrected.
+#   ⚠ UN-ATTESTED, ⛔ NOT TESTED: the `unknown` display-name branch is UNEXERCISED — ⛔ no producer can
+#   emit it (`handlers.ts:312-318`). ⛔ No passing reachability test was written; it is a THROWING
+#   EXHAUSTIVENESS GUARD ([[feedback_record_unattested_no_backfill]]). Trigger: 11b.3's Astro producer.
+#   ⚠ AND AC2's locale test reads JSON FROM DISK — deliberately AROUND `t()`, the 11a.2 defect's shape,
+#   because `@twt/i18n` is ⛔ not a dep of `@twt/ui` and a test must ⛔ not move a package boundary.
+#   Recorded as item (vi); trigger 11b.2b, which CAN call `t()`.
+#   ✅ `pnpm --filter @twt/ui test` **251 passed** · `pnpm turbo run typecheck` **20/20** · `eslint .`
+#   clean · ⭐ `pnpm ci:local` **33 jobs green INCLUDING `integration-tests`** — the leg was ⛔ not left
+#   skipped: `twt-test-pg` on `:5433` was up, so `DATABASE_URL` was supplied and the leg RAN.
+#   ⛔ THIS STORY PUBLISHES NOTHING — ⛔ no route, ⛔ no viewer, ⛔ no gate closed, ⛔ no surface opened.)
+# last_updated: 2026-08-30h (✅✅ STORY 11b-2 — THIRD VALIDATION PASS (`bmad-create-story validate
+#   11b.2`, 4 adversarial verifiers at `c9d86ab`). ⛔ NO ROW FLIP — 11b-2 STAYS `ready-for-dev`,
+#   because the THREE decisions this pass raised were RULED BY BigDev IN THE SAME SESSION.
+#   ⛔ NO DECISION MINTED IN .decision-log.md (that is 11b-2's Task 0, and the head 2026-08-28-167 is
+#   ⭐ RE-VERIFIED UNMOVED — every sibling minted into its STORY FILE only).
+#   ⭐⭐ THE HEADLINE: 11b-2 HAD BEEN SUPERSEDED BY ITS OWN SIBLINGS FOR SIX COMMITS AND NOBODY
+#   APPLIED IT. Last edited at 07a5ced; since then 11b-2a's D5 (RTBF OMITS the contributor entirely) +
+#   D6(a) (⛔ NO anonymized presenter variant) + the D3-shape(i)/D3-key/D3-rollout VACATIONS, and
+#   11b-2b's D10, all landed. ⭐ 11b-2a's Task 6 + 11b-2b's Task 0 routed SEVEN artefacts INTO 11b-2
+#   BY LINE NUMBER — ⛔⛔ ZERO WERE ABSORBED, while the story read `ready-for-dev` with Task 1
+#   `startable`. ⭐ ALL SEVEN ARE NOW APPLIED. ⚠ 11b-2a's own note ("this routing is time-critical")
+#   was correct and had been outstanding across six commits.
+#   ⭐ THREE NEW DECISIONS, ⛔ NOT DEFAULTED — RULED BY BigDev 2026-08-30:
+#   · D11-outputshape(a) — the view-model's `displayName` collapses to a SINGLE `nameParts` arm.
+#     D6(a) ruled only the INPUT variant; it left the `i18n` arm with ZERO emitters and `literal` was
+#     already unreachable. ⛔ (b)/(c) "keep as forward seams" rejected — that is the vacuous-branch
+#     posture D6(a) rejected BY NAME, one type down.
+#   · D12-refscope(a) — per-REF namespace tagging SURVIVES, on a NEW ground, union narrowed to
+#     'contribution'. ⭐ THE GROUND MOVED, THE MECHANISM DID NOT: the two-namespace crash is gone
+#     (D6(a) deleted the `common` ref), but 11b-2b's AC6 de-duplicates against 11b-2's AC2 BY NAME ⇒
+#     ⛔ falling back to a per-module constant would silently break a SIBLING'S SHIPPED AC.
+#   · D13-numbering(a) — 11b-2's D6/D7 RENAMED to D6-uxspec/D7-nameform. ⭐ On the D5→D5-prototype
+#     precedent set in 11b-2b: 11b-2a has DIFFERENT rulings numbered D6(a)/D7(c), and BOTH stories'
+#     Task 0 mints against ONE .decision-log.md head. ⛔ 11b-2a/11b-2b are ⛔ NOT edited here — each
+#     picks the rename up at its own next pass.
+#   ⛔⛔ FIVE BLOCKERS FOUND THAT THREE PRIOR PASSES MISSED:
+#   (1) ⭐ AC3's `rowA11y` doc-block — ordered written VERBATIM, and READ BY 11b-2b's CONSUMER —
+#       prescribed `t(ref.key, { namespace })`. But `t(key, params?, options?)` puts the NAMESPACE
+#       THIRD (resolver.ts:53): it landed in the PARAMS slot, `namespace` fell back to 'common'
+#       (:55), and :63-64 THREW — on EVERY row, not just one, inside a renderItem hot path.
+#       ⭐⭐ THE AC WRITTEN TO PREVENT A CRASH SHIPPED THE CRASH.
+#   (2) AC1(a) banned the bare token `do` — a substring of `readonly`, which AC3's types declare on
+#       EVERY field (shipped contribution-disclosure/view-model.ts has ten). UNSATISFIABLE; the
+#       cheapest repair was deleting the tokens with teeth. ⇒ word-boundary regexes.
+#   (3) AC4(c) ordered a RUNTIME assertion over the COMPILE-TIME `AllKeys<T>`. The naive reading is a
+#       hand-written key array = VACUOUS BY CONSTRUCTION (the 38a2d8b class AC5 cites BY NAME).
+#       ⇒ now a typed `Record<AllKeys<T>, true>` literal that bites in both directions.
+#   (4) ⭐ `rowKey`'s removal is COUPLED to AC4(a)'s literal (`Record<keyof ContributionRowInput,
+#       true>` with `rowKey: true`): applying the routing to the INTERFACE ALONE makes the literal an
+#       EXCESS PROPERTY ⇒ typecheck FAILS ⇒ the likeliest repair puts `rowKey` BACK, defeating the
+#       routing. ⛔ NEITHER SIBLING'S ROUTING LIST NAMED :461.
+#   (5) The story's own trip-wire FIRED and was too narrow twice: scoped to "if D3-shape(i) is
+#       AMENDED" (it was VACATED — a stronger event its vocabulary did not describe) and to
+#       `view-model.ts` alone (seven files were affected). ⇒ moved to the PREFLIGHT as STEP 1 + a
+#       STOP condition.
+#   ⚠ CITATION CORRECTIONS — 11b-2b's + THIS LEDGER'S OWN ROUTING POINTED AT WRONG LINES:
+#   ":363/:373 declare rowKey, sourced at :360-362" is WRONG on two of three — :373 is the `i18n`
+#   UNION ARM; the ViewModel's rowKey is :375; and the D3-shape(i)(a) citation is on :359, not
+#   :360-362. ⛔ 11b-2b is `ready-for-dev` and its Task 0 ships those numbers AS AN INSTRUCTION.
+#   ⭐ OTHER DEFECTS FIXED IN 11b-2: "exactly ONE committed document" assumes the contributor name
+#   form — FALSE, it is THREE (epics.md:3145 — Story 8.3's own AC, naming "any visitor on Sahyog
+#   Drive (Epic 11b)" and "first-name + last-initial only" — plus :3238 and :4931); it was a
+#   REJECTION GROUND for D9(b), and the rejection survives only because ⛔ an epic AC is ⛔ not a
+#   ruling. AC7's packet was pathed to implementation-artifacts/ when ALL 22 routing notes live in
+#   planning-artifacts/. `pending` collides with TWO of AC2's ten mandated refs under AC4(c)'s ban
+#   (scope clause added; `utr` collides with NOTHING). AC1(b) fails eslint without `void`. Task 2's
+#   path origin was off by one level — the SILENT SKIP it warns about. AC6 mandated roman numerals
+#   then wrote a bare "(b)" 38 lines later. Counts reconciled: "four items" vs "SEVEN" ⇒ SIX, now
+#   agreeing in ALL THREE places; "ALL FIVE decisions" vs AC0's six ⇒ NINE; "eight list-level keys"
+#   listing nine ⇒ NINE. AC5(b)'s "assert them in the COMMENTS too" admitted the INVERSE reading,
+#   whose cheapest green is ADDING a death term to a doc-block. The adapter obligation was
+#   DISCHARGED by 11b-2b's AC9 (4bbe28b) and still recorded outstanding ⇒ now "Discharged by", ⛔ not
+#   "closed" ([[feedback_closure_language_precision]]). AC8's five anchors never reached Task 0
+#   ([[feedback_spec_edits_must_propagate_to_tasks]]). D7's own ground used "blocked" — the word AC7
+#   bans BY NAME, because 11b.9 ruled that wait a CHOICE.
+#   ⚠ BASELINE RE-PINNED 9b05372 → c9d86ab. ⭐⭐ AND THE "NOTHING MOVED" ARGUMENT IS NOW FENCED: the
+#   diff is four _bmad-output/ files — but those are THE THREE SIBLING STORIES PLUS THIS LEDGER, i.e.
+#   exactly the governance state 11b-2 depends on most. ⛔ "No code path moved" is ⛔ NOT "nothing
+#   moved". Branch off c9d86ab; ⛔ NEVER off 9b05372, and ⛔ never off main (10 ahead / 0 behind).
+#   ⛔ NO CODE CHANGE; ⛔ packages/ untouched; ⛔ 11b-2a and 11b-2b NOT edited.)
+#
+# last_updated_prior: 2026-08-30g (✅ ROUTING ONLY — `pool-contributor-list.ts:88` ROUTED TO STORY 11b-3 BY
+#   BigDev. ⛔ NO ROW FLIP (11b-2a and 11b-2b both stay `ready-for-dev`); ⛔ NO DECISION MINTED; ⛔ NO
+#   CODE CHANGE — packages/contracts/ is ⛔ NOT edited by any current story.
+#   ⭐ THE ITEM: pool-contributor-list.ts:88 says "Legitimately [] today (Epic 9's
+#   contribution.confirmed producer is UNBUILT — D2)" — FALSE since 9.4/9.5, and ⭐ CONTRADICTING ITS
+#   OWN FILE HEADER at :7-8 ("produced by the Epic 9 matcher since Story 9.4 — this list is LIVE, not
+#   structurally empty"). ⭐ Verified :88 is the ONLY stale line in that file.
+#   ⭐⭐ WHY 11b-3 — THE FILE NAMES IT ITSELF, at :26-28: "the downstream SAHYOG VIVRAN PUBLIC RENDER
+#   (Epic 11b) reuses it unchanged" ⇒ 11b-3-sahyog-vivran-per-claim-story-surface (`backlog`, ⛔ NO
+#   STORY FILE YET). ⇒ the routing LANDS IN 11b-2a's TASK-6 FILING, which 11b-3's authoring pass reads
+#   — ⛔ there is no 11b-3 story file to write it into.
+#   ⚠ ⭐ THE REACHABILITY CAVEAT IS RECORDED, ⛔ NOT ASSUMED AWAY
+#   ([[feedback_trace_reachability_before_escalating]]): that SAME sentence says 11b-3 "reuses it
+#   UNCHANGED", so 11b-3 may READ this contract without EDITING it — and a route to a story that never
+#   opens the file just RELOCATES the problem. ⇒ ⛔⛔ TWO TRIGGERS ARE FILED, ⛔ NOT ONE:
+#   (i) 11b-3's AUTHORING PASS — ⭐ :88 is precisely the line that would make it re-derive "the list is
+#   structurally empty", THE SAME FALSE PREMISE that falsified D3-rollout's sole ground in 11b-2a's
+#   own third pass; (ii) FALLBACK — THE NEXT STORY THAT EDITS pool-contributor-list.ts FOR ANY REASON,
+#   so the item ⛔ CANNOT EVAPORATE if 11b-3 ships without opening the file. ⛔ Not marked closed.
+#   ⛔ 11b-2b's AC9 FENCE STAYS — the route does ⛔ NOT license tidying :88 in passing while importing
+#   ConfirmedContributorRow under D10(a). ⛔ The rest of the ~12-site stale-comment family is filed
+#   exactly as before, with ⛔ no named consumer.)
+#
+# last_updated_prior: 2026-08-30f (✅✅ STORY 11b-2b — D10 RULED (a) BY BigDev ⇒ ROW FLIPPED
+#   `blocked-awaiting-decisions` → `ready-for-dev`. ⛔ NOTHING IS GATED BY A DECISION; the HARD
+#   DEPENDENCY (11b-2 + 11b-2a both merged) is the only remaining gate, and ⛔ that is a DEPENDENCY,
+#   ⛔ NOT a decision. ⛔ NO DECISION MINTED IN .decision-log.md (that is 11b-2b Task 0).
+#   ⭐⭐ D10 → (a) DERIVE FROM @twt/contracts AND DELETE THE DUPLICATE. The local
+#   `interface ConfirmedRow` at PoolContributorList.tsx:40-43 is DELETED; the adapter and
+#   renderItem/keyExtractor type against `import type { ConfirmedContributorRow } from '@twt/contracts'`.
+#   ⭐⭐ TWO OF THE THREE GROUNDS WERE FOUND BY THE RULING'S OWN VERIFICATION, ⛔ NOT BY THE OPTION TEXT:
+#   (1) THE CONTRACT FILE ALREADY DECLARES THE DISCIPLINE — pool-contributor-list.ts:14, verbatim:
+#   "Consumed via `import type … from '@twt/contracts'` in the SDK + the apps/api handler — NO
+#   type-shadowing." ⇒ :40-43 IS that forbidden shadow, and (a) brings the file into compliance with a
+#   rule the contract itself states. (2) ⭐ IT IS NOT A DUPLICATE, IT IS A SHADOW — AND THE DELETION IS
+#   TYPE-NEUTRAL: memberPoolContributors() returns PoolContributorListResponse re-exported as
+#   PoolContributorListResult (api-client/src/index.ts:88,558) ⇒ `data.confirmed` is ALREADY
+#   ConfirmedContributorRow[] at the call site, so ConfirmedRow only re-annotates params TypeScript
+#   already infers; ⭐ ConfirmedContributorRow appears NOWHERE in apps/mobile today. (3) ⛔ no
+#   bundle-boundary objection (20+ existing @twt/contracts imports; package.json:33), `import type`
+#   deliberately ([[project_type_only_import_cycle_trap]]).
+#   ⛔ (b) REJECTED — it survives the hazard AND adds a SECOND hand-maintained consumer, i.e. the story
+#   would make 11b-1's defect class WORSE, not merely unaddressed. ⛔ (c) rejected on its face.
+#   ⚠ AC9 now states AC5's preservation is BEHAVIOURAL, ⛔ NOT TEXTUAL — the params change spelling and
+#   lose the local `readonly` (z.output is not readonly); ⛔ do not "restore" it with a local type.
+#   ⭐⭐ THE CONDITIONING VERIFICATION, RECORDED IN FULL (BigDev asked for it explicitly):
+#   ConfirmedContributorRow (pool-contributor-list.ts:42-52) is `{firstName, lastInitial}` .strict() —
+#   ⛔ NO `kind`, ⛔ NO `rowKey`, ⛔ NO anonymized arm, ⛔ no status. ✅ CLEAN — ⭐ AND THE REASON
+#   MATTERS: D5 VACATED THE WIDENING BEFORE IT WAS EVER BUILT. The two-variant union existed only as
+#   11b-2a's PLANNED AC4, ⛔ never as shipped contract ⇒ ⛔ there is NO stale union to inherit, and
+#   AssignedPoolContributorList (:91-99) carries no residue either.
+#   ⛔⛔ BUT THE VERIFICATION SURFACED A REAL SEPARATE STALE-CONTRACT DEFECT, AND ⛔ IT IS NOT SILENTLY
+#   FIXED UNDER D10: pool-contributor-list.ts:88 says "Legitimately [] today (Epic 9's
+#   contribution.confirmed producer is UNBUILT — D2)" — ⭐ FALSE since 9.4/9.5 AND CONTRADICTING ITS
+#   OWN FILE HEADER at :7-8 ("produced by the Epic 9 matcher since Story 9.4 — this list is LIVE, not
+#   structurally empty"). ⇒ recorded SEPARATELY: ⛔ OUT OF THIS STORY'S DIFF (D10(a) is an `import
+#   type` FROM contracts; ⛔ packages/contracts/ is never edited here) · ⭐ ALREADY FILED by 11b-2a's
+#   Task 6 in its ~12-site stale-comment family, which rules ⛔ do not fix out-of-diff sites · ⛔ AC9
+#   FENCES IT EXPLICITLY, because reading the file to import from it is exactly when a dev would
+#   "tidy" it, or worse RE-DERIVE THE FALSE PREMISE FROM IT
+#   ([[project_epic9_confirmed_producer_is_live]] — "never read population from a comment").)
+#
+# last_updated_prior: 2026-08-30e (⛔⛔ STORY 11b-2b — FIFTH VALIDATION PASS (`bmad-create-story validate
+#   11b.2b`, at dbb4a25) ⇒ ROW FLIPPED `ready-for-dev` → `blocked-awaiting-decisions`. ONE NEW
+#   DECISION (D10), ⛔ NOT DEFAULTED. ⛔ NO DECISION MINTED IN .decision-log.md (that is 11b-2b Task 0).
+#   ✅ BASELINE RE-PINNED 80e0d12 → dbb4a25 — `git diff --name-only` returns FOUR _bmad-output/ files
+#   and nothing else ⇒ ⛔ NO VERIFIED CODE CLAIM MOVED.
+#   ⭐⭐ THE GROUND: 11b-2a's D5 · D3-aggregate · D5-scope · D6(a) · D7(c) ALL LANDED AFTER 11b-2b WAS
+#   AUTHORED AND BETWEEN THEM ABOLISHED THE SUBJECT OF THREE OF ITS ACs. 11b-2a's Task 6 named six
+#   stale anchors; this pass re-authored them and found three more the routing did not reach.
+#   ⛔⛔ (1) AC4 ORDERED THE THING D2(a) REJECTED BY NAME — THE HEADLINE. It required "map the
+#   presenter's token role names through a local mobile palette bridge". Verified live:
+#   ContributionRowViewModel is {displayName, poolLetterCode, rowKey, rowA11y} (11b-2-…md:366-382) and
+#   carries ⛔ NO TOKEN ROLE AT ALL, because 11b-2's D2(a) ruled "⛔ no status on the row" and rejected
+#   option (c) "a constant 'confirmed' chrome element in the render layer", adding "⭐⛔ AND THIS RULING
+#   BINDS 11b-2b". ⭐ The story's own Preflight restated that ban TWO SCREENS ABOVE the AC that
+#   violated it, and Task 1 ordered the bridge built ⇒ a dev working from the Tasks list would have
+#   had to INVENT a role, i.e. ship D2(a)(c) ([[feedback_spec_edits_must_propagate_to_tasks]]).
+#   ⇒ AC4 INVERTED into a three-part anti-chrome fence; the 2026-07-27 tone→Tamagui ruling is
+#   RETAINED AS PRECEDENT, ⛔ NOT as licence to build a bridge here.
+#   ⛔⛔ (2) AC3 HAD NO SUBJECT. It ordered the keyExtractor replaced by "11b-2a's ruled rowKey" and
+#   declared deferred-work.md:2163 DISCHARGED; D5 vacated rowKey in full ⇒ re-authored: the
+#   keyExtractor KEEPS `index`, the deferral STAYS OPEN, and ⭐ ITS RE-TRIGGER HAS ⛔ NOT FIRED — it
+#   names the Epic 11b PUBLIC render and this is the MEMBER render of a single pool's roster (11b-3 is
+#   the real re-trigger). ⛔ The AC5 exemption is REMOVED. ⚠ The deferral's own self-citation
+#   (PoolContributorList.tsx:124-126) is STALE — live :137-139 — routed, ⛔ not silently fixed.
+#   ⛔⛔ (3) TRAP 3 DELETED — ITS SUBJECT CANNOT EXIST. The "nested two-namespace t()" trap
+#   presupposed an anonymized row; D5 + D6(a) mean ⛔ none is ever emitted ⇒ one call, one namespace.
+#   ⭐ AC6's i18n half SHRANK AND WAS DE-DUPLICATED: 11b-2's AC2 (:313-320) already owns the ten-key
+#   ref-resolution test DECLARED FOR THIS STORY ⇒ ⛔ no second @twt/i18n test is owed; 11b-2b scans
+#   ITS OWN CALL SITES for explicit namespaces instead.
+#   ⭐⭐ (4) TWO NEW ACs FOR OBLIGATIONS THE AUTHORING PASS NEVER WROTE. AC9 — THE ADAPTER, which
+#   11b-2 routes here BY NAME (:384-393: "The adapter is 11b-2b's, and 11b-2b OWES IT AN AC"):
+#   re-nest displayName, splice response-level pool.letterCode, ⛔ emit no rowKey, ⛔ join nothing
+#   (D9(a)). ⚠ ⭐ AND THE ADAPTER IS WHERE D5's UNDER-ROUTING SURFACES: 11b-2-…md:363/:373 still
+#   declare rowKey REQUIRED, sourced at :360-362 to the VACATED D3-shape(i)(a), and 11b-2a's Task-6
+#   list of SIX artefacts ⛔ DOES NOT COVER THEM ⇒ 11b-2b Task 0 routes a SEVENTH to 11b-2.
+#   AC10 — the IN-DIFF stale comment: PoolContributorList.tsx:11 asserts "Epic 9's producer is
+#   unbuilt", false since 9.4/9.5; 11b-2a correctly scoped that family out of ITS diff, but ⭐ this
+#   file is in THIS story's diff (AC1 deletes :46-48 from it). ⛔ Scope is that file only —
+#   NomineeConsole.tsx:3,8,208 carry the same staleness and are DELIBERATELY not corrected.
+#   ⛔⛔ (5) D10 (NEW, UNRULED) — DOES THE ADAPTER TYPE AGAINST @twt/contracts OR AGAINST THE LOCAL
+#   `ConfirmedRow` DUPLICATE? 11b-2a's Trap 4 names PoolContributorList.tsx:40-43 as 11b-1's defect
+#   class ALREADY PRESENT; the authoring pass wrote "11b-2a's AC4 makes this derive from the contract"
+#   — ⭐ THAT AC IS VACATED, so nothing does. ⚠ ⭐ IT CANNOT BE DEFERRED BY INACTION: AC9's adapter
+#   must declare an input type either way, and (b) would give the hazard a SECOND hand-maintained
+#   consumer ⇒ this story would make 11b-1's defect class WORSE, not merely unaddressed. ⭐ Verified
+#   there is ⛔ NO bundle-boundary objection — apps/mobile already imports @twt/contracts in 20+ files
+#   and declares it at package.json:33. (a) derive + delete the duplicate · (b) keep the local tuple ·
+#   ⛔ (c) both — rejected on its face (three spellings where there were two).
+#   ⚠ (6) TWO FALSE CLAIMS REPLACED BY VERIFIED NEGATIVES: ViewContributorsEntry.tsx "shares the wire
+#   shape 11b-2a widens" — ⛔ 11b-2a widens NOTHING, and the file reads `data.assigned` ONLY (:26,:30)
+#   ⇒ ⛔ nothing owed; and the AI-10-1 POLICY-MEANING NOTE said "your name does not appear next to
+#   it", which describes an ANONYMIZED ROW — ⛔ under D5 the ROW does not appear ⇒ REWRITTEN.
+#   ⭐ (7) D5 → `D5-prototype` RENAMED — a LIVE COLLISION with 11b-2a's governing D5, which is exactly
+#   how a ruling gets applied to the wrong question; the ruling and its corrected two-field arithmetic
+#   are UNCHANGED.
+#   ⭐ (8) D3-aggregate carried in as a Dev Note fence: ⛔ NEVER assert rows.length === confirmedCount
+#   — under D5 the divergence is DESIGNED. ⭐ (9) D7(c) carried in: contributor_list.empty's ONLY
+#   consumer is this file, :124 ⇒ ⛔ do not revert it and ⛔ NO TEST MAY BYTE-PIN THE SENTENCE
+#   (11b-2a AC8). ✅ (10) AC8 IS THE ONE AC UNCHANGED — AND IT WAS CHECKED, ⛔ NOT INHERITED:
+#   MEMBER_FACING_PREFIXES re-verified at friction-budget/lib.ts:453; it FIRES here precisely because
+#   this story edits apps/mobile/, the same test that made it NOT fire for D7(c).
+#   CITATION CORRECTIONS: contributor_list.row_a11y is contribution.json:35, ⛔ not :36 (:36 is
+#   .title) · the keyExtractor is :137-139, ⛔ not :138 alone · family 13 is checklist :72-84 and the
+#   gate is bmad-code-review.toml:8-12, ⛔ not :9 · display-name.ts is packages/domain/src/MEMBER/,
+#   ⛔ not kyc/ · NomineeConsole's ScrollView closes at :206.
+#   ⭐ VERIFIED CLEAN AT dbb4a25: both render sites are the ONLY two importers (grep) · all 27
+#   tests/unit files and ⛔ NO mount harness · ⛔ no death-term at any of the three sites ·
+#   member.anonymousMember at common.json:215 · member_postings.ts:51 · directory.ts:82 ·
+#   PinnedItem.tsx present · resolver.ts:33 · deferred-work.md:2163.)
+#
+# last_updated_prior: 2026-08-30d (✅✅ STORY 11b-2a — BOTH FOURTH-PASS DECISIONS RULED BY BigDev ⇒ ROW
+#   FLIPPED `blocked-awaiting-decisions` → `ready-for-dev`. ⛔ NOTHING IS GATED; ALL TASKS STARTABLE.
+#   ⛔ NO DECISION MINTED IN .decision-log.md (that is 11b-2a Task 0).
+#   ⭐⭐ D6 → (a) DROP THE ANONYMIZED PRESENTER VARIANT. ⛔ No producer may emit an anonymized
+#   contributor row ⇒ the contributor row has EXACTLY ONE KIND — wire, presenter, render layer,
+#   tests — and ⛔ the unreachable branch is NOT preserved as defense-in-depth. ⭐ GROUND: this
+#   HONOURS D3(a)'s OWN ground, which rejected "a vacuous branch reporting green forever"; D5
+#   produces exactly that condition, and a test for the branch could only pass by hand-forging a row
+#   the API is STRUCTURALLY INCAPABLE of constructing (a test of the fixture, ⛔ not the system).
+#   ⛔ (b) REJECTED BY NAME: display-name.ts:42-45's defense-in-depth rationale is sound WHERE IT
+#   LIVES (a resolver handed a (state,name) pair) and ⛔ does NOT transfer to a presenter handed a row
+#   the boundary already decided to emit — the contributor path's guard IS the omission at
+#   handlers.ts. ⇒ Task 6's 11b-2 routing is now PRESCRIPTIVE across SIX artefacts by line: :76-77
+#   the AI-10-1 POLICY-MEANING NOTE REWRITTEN (⭐ :78-79's "your contribution stays counted" is
+#   EXACTLY D3-aggregate cl.(1) and STAYS; "your name does not appear next to it" is restated — ⛔ the
+#   ROW does not appear either) · :350-354/:398/:442-445 the variant DROPPED to the `name` kind
+#   (⚠ ⭐ `unknown` is a SEPARATE question and is ⛔ NOT dropped — it fires on name===null) ·
+#   :160-161 the MINTED DUPLICATE KEY and its common-vs-contribution namespace-crash analysis BOTH
+#   GO (⭐ the crash they mitigate is a crash on a row that can no longer exist) · :669/:875 the
+#   anonymized-variant tests DELETED ⛔ not skipped, replaced by an ANTI-WIDENING assertion · :419
+#   VOID. ⭐ ANONYMOUS_MEMBER_I18N_KEY / member.anonymousMember DISPOSITION SHARPENED —
+#   "possibly-dead" is SUPERSEDED: D6(a) removed the LAST NAMED PROSPECTIVE CONSUMER, and the only
+#   other plausible surface (the public directory) ALREADY OMITS `anonymized` ⇒ recorded as
+#   UN-CONSUMED WITH NO NAMED PROSPECTIVE CONSUMER REMAINING. ⛔⛔ But ⛔ NOT DELETED HERE — removing a
+#   domain export, its type arm, its unit test and a RATIFIED BILINGUAL STRING is a distinct
+#   governance act, and D6 ruled the PRESENTER VARIANT ⛔ not the seam; deletion routed as its own
+#   decision.
+#   ⭐⭐ D7 → (c) FIX AT THE SURFACE. ⛔ confirmedCount / rosterSize / pending and their FINANCIAL
+#   SEMANTICS ARE UNTOUCHED; ⛔ NO new financial or status state for RTBF omission. ⭐ NEW AC8: when
+#   the representable rows are empty the copy DESCRIBES THE LIST'S REPRESENTATIONAL STATE instead of
+#   asserting nothing was confirmed, in BOTH LOCALES, strings recorded VERBATIM.
+#   ⭐⭐ THE FRAMING THAT MAKES IT ONE STRING NOT TWO, and it is D3-aggregate's OWN model:
+#   contributor_list.empty is a LIST-AXIS element that was making an AGGREGATE-AXIS CLAIM; D7(c)
+#   returns it to its own axis, and ⛔ NO information is lost because the pending strip beside it
+#   already owns the confirmation claim.
+#   ⛔⛔ BOTH ALTERNATIVES COSTED AND REJECTED ON VERIFIED GROUNDS: (i) a SERVER-EMITTED REASON FIELD
+#   IS FORBIDDEN — AssignedPoolContributorList is .strict() (pool-contributor-list.ts:98) and the SDK
+#   parses with the BUNDLED schema (api-client:558-564) ⇒ it breaks EVERY read on EVERY stale client
+#   ⇒ ⭐ TRAP 3 AND D3-ROLLOUT RESURRECTED IN FULL, in the story whose headline win is "no wire
+#   change"; (ii) a CLIENT-SIDE INFERENCE IS UNSOUND — the response carries ⛔ NO rosterSize (:73-79),
+#   so "are there confirmations?" could only come from pending.percentage < 100, and percentage is
+#   Math.round-ed (read.ts:240) ⇒ it reads 100 with a confirmation present once the roster hits ~200.
+#   ⇒ ⭐⭐ RULED CHANGE IS THE MINIMAL ONE — A VALUE RE-WORD OF THE EXISTING KEY IN BOTH LOCALES:
+#   ⛔ no new key, ⛔ NO CODE CHANGE AT ALL. Verified: the key's only consumer is
+#   PoolContributorList.tsx:124 and ⛔ NO TEST PINS ITS VALUE. Four CHECKED consequences: ⛔ no wire
+#   change ⇒ the .strict() hazard stays dissolved · ⛔ NO apps/mobile EDIT ⇒ friction-budget AC-4
+#   STILL DOES NOT FIRE (⚠ ⭐ CHECKED ⛔ not inherited — a new key or a render-side branch WOULD have
+#   fired it) · ⛔ NO COLLISION WITH 11b-2, whose :162/:315 say "reuse the existing contributor_list.*
+#   keys; mint nothing" — ⭐ a re-worded VALUE on the SAME key is the only change that keeps that true
+#   · ⚠ BOTH REVIEW LAYERS APPLY — contribution.json (en+hi) IS in the microcopy gate's copy_globs,
+#   and docs/tone-guide.md §5 requires a NON-AUTHOR TONE-REVIEW SIGN-OFF ("automated lint passing
+#   does not substitute"); ⛔ this is ORDINARY PRODUCT MICROCOPY, ⛔ NOT the statutory AC7 path —
+#   ⛔ no counsel, ⛔ no Story-2.4 amendment workflow.
+#   ⛔ (a) record-and-route-only rejected (leaves a false sentence about money renderable between this
+#   merge and 11b-2) · ⛔ (b) representation-aware pending rejected on its face (D3-aggregate cl.(2))
+#   · ⛔ (d) accept-as-correct rejected (contributor_list.empty is a sentence about CONTRIBUTIONS,
+#   ⛔ not about the list).
+#   TASK 2 REVIVED IN PLACE — the wire widening ⛔ STAYS DELETED by D5; the slot now carries D7(c)'s
+#   copy fix. TASK 5 gains the DROP-TO-ZERO case + an assertion the response carries ⛔ NO REASON
+#   FIELD OF ANY SHAPE, and an AC8 locale test asserting the PROPERTY ⛔ NOT THE SENTENCE (⛔ a
+#   byte-equality test on copy pins the wording and turns every future tone review into a test edit).)
+#
+# last_updated_prior: 2026-08-30c (⛔⛔ STORY 11b-2a — FOURTH VALIDATION PASS (`bmad-create-story validate
+#   11b.2a`, at 3a51745) ⇒ ROW FLIPPED `ready-for-dev` → `blocked-awaiting-decisions`. TWO NEW
+#   DECISIONS, ⛔ NEITHER DEFAULTED. ⛔ NO DECISION MINTED IN .decision-log.md (that is 11b-2a Task 0).
+#   ✅ BASELINE RE-PINNED 07a5ced → 3a51745 — git diff --name-only returns TWO _bmad-output/ files and
+#   nothing else, so ⛔ NO VERIFIED CLAIM MOVED.
+#   ⭐⭐ THE FIX IS UNTOUCHED. D5 · D3-shape(ii)(a) · D3-aggregate · D4(a) · D5-scope were all
+#   re-verified line-by-line and STAND. ⛔ Tasks 0/1/3/4 remain FULLY STARTABLE — the whole RTBF
+#   omission plus the decrypt bound. What the pass found is that D5's BLAST RADIUS OUTSIDE THE DIFF
+#   was under-recorded, in two places that are live TODAY.
+#   ⛔⛔ D6 (NEW, UNRULED) — 11b-2 IS `ready-for-dev` AND ITS AI-10-1 POLICY-MEANING NOTE STATES
+#   SUPERSEDED POLICY IN TERMS. 11b-2-…md:76-77, verbatim: "An `anonymized` member renders the
+#   ratified 'an anonymous member' marker." Under D5 no such row is ever emitted ⇒ FALSE — and that is
+#   the ONE note the whole AI-10-1 mechanism exists to put in front of the dev agent, with 11b-2's
+#   Task 1 marked `startable` right now. ⇒ DOES 11b-2's PRESENTER KEEP A PERMANENTLY-UNREACHABLE
+#   `anonymized` VARIANT, OR DROP TO ONE KIND? (a) DROP — ⭐ D3(a)'s OWN ground rejected "a vacuous
+#   branch reporting green forever", and D5 produces exactly that, so D3(a)'s second ground is now
+#   SELF-DEFEATING; (b) KEEP as defense-in-depth — display-name.ts:42-45's own stated rationale,
+#   ⚠ but it MINTS A DUPLICATE of the ANONYMOUS_MEMBER_I18N_KEY that Task 6 is simultaneously flagging
+#   POSSIBLY-DEAD ⇒ ⛔ the two must be ruled TOGETHER; (c) defer — ⛔ rejected on its face (11b-2 is
+#   startable today). ⭐ The note itself is CORRECTED EITHER WAY.
+#   ⛔⛔ D7 (NEW, UNRULED) — UNDER D5 THE SHIPPED MEMBER SURFACE CAN STATE TWO CONTRADICTORY THINGS
+#   ABOUT MONEY AT ONCE. `pending` is computed from the UN-SHRUNK domain list (handlers.ts:340-343)
+#   while `rows` SHRINKS, and the mobile surface reads BOTH (PoolContributorList.tsx:121-126 · :81).
+#   ⇒ pool of 3, EXACTLY ONE confirmed and that member RTBF'd ⇒ "No confirmed contributions yet."
+#   rendered beside "2 pending confirmation (67%)" — ⛔⛔ 0 + 2 ≠ 3; one member is NEITHER confirmed
+#   NOR pending, and the 8.2 card on the sibling screen simultaneously says "1 of 3".
+#   ⭐ ⛔ NOT a re-litigation of D3-aggregate — that ruling governs the AGGREGATE axis and is correct;
+#   the harm it forbids arrives through the PRESENTATION door, which it does not govern. ⚠ And it is
+#   NEW: the three integrity `continue`s can already produce the divergence, but they are LOGGED
+#   ANOMALIES — D5 makes it the ORDINARY, DESIGNED path. Four options costed; (b) "make `pending`
+#   representation-aware" NAMED AND FORBIDDEN (D3-aggregate cl.(2)). Task 5 gains the DROP-TO-ZERO
+#   case [waits on D7] — ⛔ assert the divergence only, ⛔ never an answer to D7.
+#   ⚠ NOT A DECISION — THE STALE-COMMENT FINDING WAS UNDER-SCOPED ~4× AND MISSED THE FILE IN THIS
+#   STORY'S OWN DIFF. Three files were named; the live family is ~12 source sites PLUS TEST TITLES.
+#   ⭐⛔ handlers.ts:296/:304/:339 are INSIDE Tasks 3/4 — and :304 is the DECRYPT-COST SEAM comment
+#   AC3 exists to discharge ("today 0 confirmed → 0 decrypts"), while :562-563 in the SAME FILE
+#   already says "Story 9.5 Task 1a wired this to the real read" ⇒ ⛔ handlers.ts CONTRADICTS ITSELF,
+#   the pool-contributor-list.ts shape one file closer in. ⛔ A SECOND self-contradicting file:
+#   contribution/read.ts:18 vs :127 — an earlier pass cited ITS STALE HALF, the exact error it was
+#   filing. ⚠ And contracts/tests/contributions.test.ts:81,167 + confirmed-contributors.spec.ts:10,59
+#   ASSERT IT IN THEIR TEST NAMES, so a green suite restates the false premise on every run.
+#   ⚠ 11b-2b ROUTING NAMED 3 ANCHORS; LIVE THERE ARE SIX — :38-40 · :85 · :86 · :162-167 (THE WHOLE
+#   OF ITS AC3) · :169-170 — and ⛔⛔ TWO ASSERT THE OPPOSITE OF THIS STORY'S RULING ("11b.2a supplies
+#   the stable key"; "`:2163` is confirmed DISCHARGED … this story is the named consumer"), which the
+#   bullet above them forbids. Its AC3 has NO SUBJECT LEFT — re-author or delete, ⛔ not a patch.
+#   ⚠ THE D5 SURFACE INVENTORY IS FOUR, NOT THREE — the shipped list is mounted TWICE
+#   (app/(contribution)/contributors.tsx:13 AND NomineeConsole.tsx:213, Story 9.1's staff-takeover
+#   surface); ⭐ both inherit the server-side fix, so ⛔ NO code is owed — recorded so the three-story
+#   routing list is ⛔ not mistaken for the surface inventory.
+#   ⭐ VERIFIED NEGATIVE RECORDED: there is ⛔ NO public contributor-NAME render today —
+#   pool/public-read.ts emits a confirmed COUNT (:201-215) + the DECEASED's name, header ":18-22"
+#   states "⛔ no decryption" ⇒ D5-scope's PUBLIC list is PROSPECTIVE, owned by 11b-3.
+#   CITATION CORRECTIONS: getCurrentMemberState is read.ts:150, ⛔ not :151 (5 sites — ⚠ :151 is its
+#   query BODY, the same "body line, not the declaration" class Trap 2 corrected) ·
+#   appendConfirmedContribution is matcher-write.ts:116, ⛔ not :117 · sprint-status rows are
+#   :12317-12318, ⛔ not :12178-12179 · governance: 144 → 148 · Trap 4's grep returns 16 files, ⛔ not
+#   "~20" · kyc/public-name.ts:78-99 was labelled the splitFirstNameLastInitial PRODUCER — it is a
+#   CONSUMER; the producer is kyc/name.ts:47.)
+#
+# last_updated_prior: 2026-08-30b (✅✅ STORY 11b-2a — THE LAST TWO OPEN ITEMS RULED BY BigDev ⇒ ROW FLIPPED
+#   `blocked-awaiting-decisions` → `ready-for-dev`. ⛔ NOTHING IS GATED. ⛔ NO DECISION MINTED IN
+#   .decision-log.md (that is 11b-2a Task 0, now fully startable).
+#   ⭐⭐ D3-aggregate — THE TWO-AXIS MODEL: Contribution state: CONFIRMED · Public representation:
+#   OMITTED. The RTBF-omitted contributor CONTINUES to contribute to confirmedCount and every
+#   aggregate financial/statistical measure whose semantics represent CONFIRMED HISTORICAL
+#   TRANSACTIONS. RTBF removes the PUBLIC INDIVIDUAL REPRESENTATION; ⛔ it does NOT retroactively
+#   alter that the contribution was confirmed. cl.(2): rosterSize = contributors CURRENTLY ELIGIBLE
+#   FOR PUBLIC REPRESENTATION; ⛔ NOT a measure of confirmation state, ⛔ never usable to infer a
+#   contributor's financial status. ⇒ ⭐ 11b-2a NOW CHANGES NO AGGREGATE AT ALL — only `rows` shrinks.
+#   ⛔⛔ TRAP CAUGHT WHILE APPLYING cl.(2): THE NAME `rosterSize` IS ALREADY TAKEN BY A DIFFERENT
+#   QUANTITY. pool.rosterSize is the FROZEN POOL SNAPSHOT (contribution-binding.ts:426; the
+#   frozen-roster invariant, handlers.ts:566) and feeds TWO FINANCIAL computations —
+#   computePendingAggregate (read.ts:232-242) and the ON-THE-WIRE 8.2 meter
+#   progress:{confirmedCount, rosterSize} (handlers.ts:569). If a later pass "aligns" it to cl.(2):
+#   (i) pending UNDERSTATES — pool of 10, 4 confirmed, one RTBF'd ⇒ 9−4=5 pending while SIX genuinely
+#   have not confirmed; (ii) ⛔⛔ the :488 clamp FIRES AND DELETES A CONFIRMED CONTRIBUTION FROM THE
+#   METER — pool of 3, all confirmed, one RTBF'd ⇒ confirmedCount 3 > eligible 2 ⇒ renders "2 of 2",
+#   EXACTLY the harm cl.(1) forbids and what :313-315 has forbidden since 8.3.
+#   ⇒ RULED IMPLEMENTATION (minimal): pool.rosterSize KEEPS its meaning and uses (frozen FINANCIAL
+#   denominator); cl.(2)'s representation-eligibility count is a DISTINCT quantity NO surface needs
+#   yet ⇒ ⛔ do not build it, ⛔ do not rename anything; ⛔ the two axes NEVER subtract from each other.
+#   Task 6 files the naming hazard; Task 5 gains the DIVERGENCE test (confirmedCount/pending
+#   byte-identical while confirmed.length drops by one — ⛔ a rows.length===confirmedCount assertion
+#   would encode the WRONG model).
+#   ⭐⭐ D5 SCOPE — the "public vs member-gated" FRAMING IS REJECTED. The contributor list is a PRODUCT
+#   intended to exist on BOTH surfaces (member-session-gated AND public); the current fact that
+#   /api/v1/member/pool-contributors is member-gated ⛔ does NOT make the product member-only. ⇒ D5
+#   applies to the contributor's individual public/member-visible representation WHEREVER THE
+#   CONTRIBUTOR LIST IS RENDERED. ⚠ The earlier recorded scope ASSUMPTION is SUPERSEDED — it reached
+#   the right surface FOR THE WRONG REASON, and the reason is what binds the siblings ⇒ Task 6 routes
+#   D5 + D5-scope to 11b-2, 11b-2b and 11b-3 so ⛔ none re-derives an anonymized row from its epic text.
+#   ⭐ The AI-10-1 note's second half is now RULED PURELY PRESENTATIONAL, with the axis-merge named as
+#   the one way this predicate could become an accounting change.
+#
+# last_updated_prior: 2026-08-30a (⭐⭐ STORY 11b-2a — FINAL RULING D5 BY BigDev: RTBF REMOVES THE
+#   CONTRIBUTOR ENTIRELY; ⛔ NO ANONYMIZED ROW IS EMITTED. ⛔ NO ROW FLIP — 11b-2a stays
+#   `blocked-awaiting-decisions`, on a DIFFERENT and much smaller blocker than before (D3-aggregate,
+#   not D3-rollout). ⛔ NO DECISION MINTED IN .decision-log.md (that is 11b-2a Task 0, startable).
+#   ⭐ D5: the erased member's public contribution/name/claim representation DISAPPEARS rather than
+#   leaving an IDENTIFIABLE OR CORRELATABLE PLACEHOLDER; UX consequences handled explicitly, ⛔ not
+#   solved with an anonymized row + rowKey. ⭐ PUBLIC ERASURE, ⛔ NOT DESTRUCTION OF THE LEGAL RECORD —
+#   legally-required records persist in RESTRICTED INTERNAL SYSTEMS for the statutory retention
+#   period and are ⛔ NEVER used to restore the public representation.
+#   ⭐ CONSISTENCY GROUND, ⛔ not a new posture: DIRECTORY_VISIBLE_MEMBER_STATES (directory-read.ts,
+#   2026-08-20-143 cl.3) ALREADY omits `anonymized` from the public directory ⇒ the contributor list
+#   was THE OUTLIER and D5 aligns it.
+#   ⭐⭐ THE STORY SHRANK: with ONE kind of row, AC4 · AC5 · D3-shape(i) · D3-key · D3-rollout are all
+#   VACATED — ⛔ their QUESTIONS CEASED TO EXIST, ⛔ NOT reversed on merits (the 2026-08-24-159
+#   "D4(a) was VACATED by D1(b)" precedent). ⇒ ⛔ NO WIRE CHANGE ⇒ no .strict() break, no OTA/MMKV
+#   hazard, no rollout window ⇒ TASK 2 IS DELETED and D3-rollout is dissolved rather than re-ruled.
+#   ⚠ D3-key(c) lived ONE DAY (ruled 08-29, vacated 08-30) — both dates recorded; it was CORRECT for
+#   the union D5 abolished.
+#   ⭐ AC1 is now an OMISSION that skips BEFORE the decrypt (less Tier-1 plaintext materialised, and
+#   it composes with AC3). ⚠ TRAP 2 INVERTED — the old text said "the anonymized case must NOT
+#   continue"; D5 rules the reverse, and the new skip carries its OWN comment so it is ⛔ never
+#   mistaken for a fail-soft. AC2 SURVIVES AND MATTERS MORE (a clock-domain miss now leaks THE REAL
+#   NAME, ⛔ not a marker). AC6 assertions INVERT to absence + a serialized-JSON sentinel check.
+#   ⭐ AC7 NEW — D5 FALSIFIED SHIPPED USER-FACING COPY IN BOTH LOCALES: rtbf.entry_hint :217,
+#   rtbf.ack_body :219 (⭐ it names "an anonymous member", the very marker D5 removes) and
+#   rtbf.done_body :227 all promise "your contribution history stays on record, without your name".
+#   ⛔⛔ ROUTED, ⛔ NOT EDITED HERE — statutory text (counsel + Story-2.4 amendment workflow +
+#   non-author tone review, 2026-08-28-161 precedent), 3.12's surface, ⭐ and statement 3 must be
+#   checked against the build: anonymize.ts:144 DESTROYS the name, so the notice must be precise
+#   about WHICH records are retained or it misleads.
+#   ⛔⛔ TWO OPEN ITEMS, ⛔ neither defaulted: (1) D3-aggregate — does the omitted member still count
+#   in confirmedCount/rosterSize? Keeping it leaves rows.length < confirmedCount and THAT DELTA IS
+#   ITSELF A CORRELATABLE TRACE across MMKV-cached polls; dropping it RETROACTIVELY MOVES A FINANCIAL
+#   AGGREGATE; and rosterSize is a THIRD question — if the count drops while the roster holds, the
+#   erased member silently becomes "pending". (2) SCOPE — the endpoint is MEMBER-SESSION-GATED
+#   (routes.ts:57) while D5 says "public"; the file proceeds on "D5 reaches it" because the
+#   alternative leaves the defect shipped, ⚠ but that is an ASSUMPTION RECORDED OPENLY, ⛔ not a ruling.
+#   ⭐ RTBF-D1 is ⛔ NOT DISCHARGED — under D5 the path OMITS instead of masking, so
+#   resolveMemberDisplayName still has ZERO production call sites; re-dispositioned as SUPERSEDED AS
+#   TO CONTRIBUTOR SURFACES. ⭐ deferred-work :2163 STAYS OPEN (its "no stable per-member identifier"
+#   blocker is still true) ⇒ ⛔ 11b-2b KEEPS `index` and its union/rowKey expectations at :39/:85/:164
+#   are VOID — Task 6 corrects 11b-2b. ⚠ friction-budget AC-4 does ⛔ NOT fire (no apps/mobile edit).
+#   ⭐ STARTABLE NOW: Tasks 0/1/4/5/6/7 in full; Task 3 starts but STOPS at the aggregate.
+#
+# last_updated_prior: 2026-08-29i (⭐ STORY 11b-2a — TWO DECISIONS RULED BY BigDev: D3-key(c) + D4(a).
+#   ⛔ NO ROW FLIP — 11b-2a stays `blocked-awaiting-decisions`, because D3-rollout is STILL re-opened
+#   and is now the story's ONLY blocker. ⛔ NO DECISION MINTED IN .decision-log.md (that is 11b-2a
+#   Task 0, which is startable).
+#   ⭐ D3-key(c) — THE TWO UNION VARIANTS DERIVE rowKey DIFFERENTLY: HMAC(memberId, per-pool salt) on
+#   kind:'name' (stable across the 60s poll ⇒ real FlashList recycling), PER-ROW RANDOM on
+#   kind:'anonymized' (⭐ erasure leaves no stable handle). (a) rejected — a deterministic key on an
+#   erased row is a residual identifier surviving erasure; (b) rejected — kills recycling for EVERY
+#   row and fails AC5's own ground; (d) rejected — costs AC5 entirely, leaves 11b-2b on `index`.
+#   ⇒ AC5 UNBLOCKED and fully specified; Task 2's blocker list drops from two to one.
+#   ⚠ THREE CONSTRAINTS THE RULING CARRIES: the per-pool salt is a SERVER-HELD SECRET, ⛔ NEVER
+#   `poolId` — HMAC(memberId, poolId) is computable by anyone holding a memberId ⇒ a MEMBERSHIP-
+#   CONFIRMATION ORACLE, the enumeration property 11a.3 refuses in terms · the anonymized key is
+#   generated PER ROW, ⛔ not per response (else duplicate-key churn returns) · both variants emit the
+#   SAME FORMAT so ⛔ no consumer branches on key shape instead of on `kind`.
+#   ⛔⛔ AND THE HONEST LIMIT IS RECORDED, ⛔ NOT CLAIMED AWAY: (c) closes the KEY channel, ⛔ not the
+#   NEIGHBOUR channel — surviving rows keep stable keys BY DESIGN, so a client persisting responses
+#   (⚠ the SDK auto-persists to MMKV) can diff two polls, see WHICH KEY VANISHED, and identify the
+#   erased member anyway. ⛔ Not fixable within (c); the only cure is (b), rejected. Task 6 routes it
+#   as a standing residual and AC5 FORBIDS any test or comment asserting erasure is uncorrelatable.
+#   ⭐ D4(a) RE-RULED, ⛔ NOT RESTATED — its first ground included "currently costs nothing (0
+#   confirmed contributors)", which the 29h pass falsified; a verdict on a falsified ground does ⛔ not
+#   carry over, so it was RE-TAKEN on the corrected ground, which is STRONGER (the N+1 is a live cost
+#   on a live path). Task 0 transcribes the re-ruling AND why the first ground fell.
+#   ⭐ STARTABLE NOW IN 11b-2a: Tasks 0/1/3/4/5 — the whole RTBF defect fix plus the decrypt bound.
+#   ⛔ ONLY Task 2 (the wire widening) waits, on D3-rollout being re-ruled.
+#
+# last_updated_prior: 2026-08-29h (⭐⭐ STORY 11b-2a VALIDATED — `bmad-create-story validate 11b.2a` at
+#   `07a5ced`. ⛔⛔ ROW FLIPPED ready-for-dev → blocked-awaiting-decisions. ⛔ NO DECISION MINTED IN
+#   .decision-log.md (that is still 11b-2a Task 0). ⭐ BASELINE RE-PINNED 80e0d12 → 07a5ced in
+#   11b-2a's frontmatter — ⛔ NO VERIFIED CLAIM MOVED (both intervening commits are governance-only;
+#   `git diff --name-only 80e0d12..07a5ced` returns four _bmad-output/ files and nothing else).
+#   ⭐⭐ THE FINDING: D3-rollout(a)'s SOLE GROUND IS FALSE AND WAS FALSE WHEN RULED. It rested on
+#   "Epic 9's contribution.confirmed producer is unbuilt ⇒ confirmed-contributor population ZERO".
+#   ⛔ THE PRODUCER SHIPPED AT STORY 9.4/9.5 — both `done` in this ledger (:12178-12179);
+#   `matcher-write.ts:117` appendConfirmedContribution; `boot.ts:652` registerReconciliationMatch-
+#   Workers, registered UNCONDITIONALLY; "two live emitters since Story 9.4" in two packages.
+#   ⚠ THE PREMISE CAME FROM STALE EPIC-8 COMMENTS (pool-contributor-list.ts:88, contribution/
+#   read.ts:18) — ⭐ one of which CONTRADICTS ITS OWN FILE HEADER at :7-8 ("live, not structurally
+#   empty"). ⇒ D3-rollout RE-OPENED — superseded BY FALSIFICATION OF ITS GROUND, ⛔ not reversed on
+#   merits, ⛔ not closed. AC4's "widen BEFORE Epic 9's producer" ordering is UNSATISFIABLE, and
+#   Task 6 would have filed a FUTURE watch for a PAST event — the RTBF-D1 decay pattern re-created
+#   inside the story that discharges RTBF-D1. ⭐ "Zero rows in production" is recorded UN-ATTESTED:
+#   it is a DATA claim about live Pariwar DBs and ⛔ nobody has ever measured it.
+#   ⭐ SECOND CRITICAL: AC2 NAMED THE WRONG STATE-READ SIBLING. read.ts has two — getMemberStateAt
+#   (:127, occurred_at-bounded) and getCurrentMemberState (:151, unbounded) — and the latter's doc
+#   warns an APP-clock bound can disagree with the projector's DB-clock replay ⇒ an rtbf_anonymized
+#   event outside the window RENDERS THE ERASED NAME, i.e. this story's own defect reintroduced by
+#   the choice of sibling. AC2 now mirrors getCurrentMemberState + a no-upper-bound SQL test.
+#   ⭐ NEW DECISION D3-key (OPEN, BLOCKS AC5 + Task 2): D3-shape(i)(a) ruled rowKey's SHAPE, ⛔ never
+#   its DERIVATION. AC5's "stable across the 60s poll" and "⛔ must not re-identify across requests"
+#   CONFLICT, and a deterministic key on the `anonymized` variant leaves A STABLE HANDLE ON AN
+#   ERASED ROW — in the story whose purpose is erasure. Four options costed, ⛔ none ruled.
+#   ⚠ ALSO FIXED: every `continue` line number was wrong (:313/:326/:331 → :317/:327/:332) — 11b-2's
+#   re-validate corrected this family one commit earlier but ⛔ never touched 11b-2a · AC3 shared only
+#   the CONSTANT while mapWithConcurrency is equally module-private ⇒ both extracted · "§4.4 GOVERNS
+#   it" → SPEAKS to but governs nothing · Trap 4's grep returns ~20 files against a 10-row table ⇒
+#   out-of-scope classes named · 11b-9 citation :753-757 → :762-767 · governance: 142 → 144.
+#   ⛔ START ORDER UNCHANGED for 11b-2; ⛔ 11b-2a Tasks 0/1/3/4 are startable, Tasks 2 and 5 are NOT.
+#
+# last_updated_prior: 2026-08-29g (⭐⭐ STORY 11b-2 RE-VALIDATED — `bmad-create-story validate 11b.2`, a
+#   SECOND adversarial pass at 9b05372 over the already-ruled file. ⛔ NO ROW FLIPS; ⛔ NO DECISION
+#   MINTED IN .decision-log.md (that is still 11b-2 Task 0, now AC0). ⛔ epic-11b stays in-progress;
+#   ⛔ the other SIX 11b rows stay `backlog`.
+#   ⭐ BASELINE RE-PINNED 80e0d12 → 9b05372 in 11b-2's frontmatter — ⛔ NO VERIFIED CLAIM MOVED. The
+#   diff is governance-only (four _bmad-output files, ZERO under packages/ apps/ scripts/), and ⛔ no
+#   path 11b-2 cites for a :NNN reference is among them. The `fe8a6f9` precedent, checked the same way.
+#   ⭐⭐ TWO NEW DECISIONS RAISED BY THE PASS AND RULED BY BigDev — ⇒ ELEVEN total across the three
+#   stories, ⛔ zero open:
+#   · D8(a) — a row whose name is UNKNOWN **THROWS**, and ⛔ NO KEY IS MINTED. AC3 had mandated a
+#     three-kind branch and then forbidden every output it could have had. ⛔ (b) mint
+#     `contributor_list.unknown_contributor` rejected — speculative copy for a case no producer can
+#     emit (handlers.ts:312-318 `continue`s on a null ciphertext); 11b.3 mints it when a producer
+#     exists. ⛔⛔ (c) reuse `member.anonymousMember` rejected AND IT IS THE DANGEROUS ONE — it states
+#     "this person exercised their right to erasure" when the name was merely NULL, a FALSE CLAIM
+#     ABOUT A DATA-SUBJECT RIGHT on the one surface RTBF exists to protect. ⛔ (d) blank rejected.
+#     ⚠ COST, STATED: this puts a throw on a renderItem hot path ⇒ 11b.2b's try/catch is LOAD-BEARING.
+#   · D9(a) — the presenter emits name **PARTS** and ⛔ NEVER joins them. ⛔ (b) join per the committed
+#     first-name+last-initial form rejected: a join in presenter.ts would DECIDE THE CONTRIBUTOR NAME
+#     FORM — the exact question D7(a) ruled must not be ruled and AC6 routes to the Panel — making the
+#     routed deferral false on the day it was written, by the person least authorised to decide it.
+#     ⚠ And exactly ONE committed document assumes that form for CONTRIBUTORS (epics.md:4931);
+#     matrix.ts:401-402 is about the DECEASED MEMBER's name, ⛔ not a contributor's.
+#     ⇒ the join is 11b.2b's, built-to-not-ratified until the Panel rules.
+#   ⭐ THE FINDING THAT WOULD HAVE SHIPPED: `rowKey` was mandated in 11b-2's AC3 PROSE, absent from the
+#   types Task 1 orders written VERBATIM — and AC4's `Record<keyof ContributionRowInput, true>` would
+#   have LOCKED THE OMISSION IN AS A PASSING GATE while 11b.2b's keyExtractor had no stable identity.
+#   Found INDEPENDENTLY BY THREE of the four verifiers.
+#   ⛔⛔ THE GOVERNANCE FINDING: 11b-2's Launch-posture block restated the THREE-GATE posture 11b.1
+#   recorded as "untouched" — but Story 11b.9 (`done`, merged at b287ba1, ONE COMMIT EARLIER) falsified
+#   two legs: gate 1 (counsel's DPDPA hold) was LIFTED by -160 cl.7 for all three 11b surfaces, and
+#   gate 3 (the per-subject consent gate) was DE-AUTHORISED BY 11b.9 ITSELF. The block also MISNAMED
+#   gate 3, substituting -160 cl.3's "per-data-class publication basis" — a preserved BASIS, ⛔ NOT a
+#   gate — which silently dropped the one gate that fell and contradicted 11b-2's own AC7.
+#   ⚠ ALSO FIXED IN 11b-2: AC5's death-term scan was VACUOUS BY CONSTRUCTION (asserted on parsed import
+#   specifiers; a death term is never one) ⇒ now two tests, two mechanisms, plus a comments-inclusive
+#   half because the C-5 inversion enters as an IDEA before it enters as a conjunct · the Preflight
+#   sent the dev agent to branch off `main`, where 11b-2 still reads `blocked-awaiting-decisions` ·
+#   AC8 was scoped to ux-spec :1158 "only", leaving the section literally titled "Public Column
+#   Inventory — Sahyog List" (:1287-1298) un-annotated · the .decision-log transcription discharged NO
+#   AC ⇒ new AC0 · deferral lettering collided with 11b.1's existing (a)-(j) ⇒ roman numerals, SEVEN
+#   items incl. the commitlint item this ledger and 11b-2a both expect 11b-2 Task 3 to write · D9(a)
+#   of Decision -159 does ⛔ NOT say "reorder" (an earlier pass added the word) · §4.4 SPEAKS to RTBF
+#   but ⛔ GOVERNS nothing.
+#   ⚠ ROUTED, ⛔ NOT FIXED (out of this run's scope — 11b-2 only): 11b-2b must ACCEPT the no-pill-as-
+#   chrome bind and the wire→presenter ADAPTER into an AC/Task (both currently live only in prose);
+#   11b-2a should drop a conditional whose true branch is unreachable under the ruled ordering, move
+#   its LIVE producer check to its Task's first bullet, and warn that pool-contributor-list.ts's
+#   header at :7 CONTRADICTS :88 on whether the list is live.
+#   NO GATE RUN AND NONE OWED: zero source files changed — one story file + this ledger only.)
+# last_updated_prior: 2026-08-29f (⭐⭐ ALL REMAINING DECISIONS RULED BY BigDev ACROSS ALL THREE 11b-2
+#   STORIES — D2(a) · D3(a) · D4(a) · D5(a) · D6(a) · D7(a). ⛔ NO ROW FLIPS; ⛔ NO DECISION MINTED IN
+#   .decision-log.md YET — each story's Task 0 TRANSCRIBES its own rulings, and Task 0 is now startable.
+#   ⭐ WITH THE EARLIER D3-shape + D3-rollout rulings this closes the set: NINE decisions total, ⛔ zero
+#   open. Every `[GATED ON Dn]` marker in all three files is gone.
+#   ⭐ 11b-2 (presenter): D2(a) ⛔ NO status on the row — the epic's status-pill clause is a DEFECTIVE
+#   AC and is reconciled away in epics.md by AC8; confirmed-only stays a SHAPE and the .strict() teeth
+#   are honoured, not fought. ⚠⭐ (c) — "a constant confirmed-chrome element in the render layer" — was
+#   rejected BY NAME, so the ruling BINDS 11b-2b too: ⛔ the pill must not reappear as chrome there.
+#   D6(a) YES, write the UX-spec column-inventory amendment; the deferred-work.md:121 trigger has fired
+#   and (b) is "how a real obligation disappears" — which AC6 records has ALREADY happened once on this
+#   surface (8.3's D11 re-triggered at 11a.1 and vanished). D7(a) record the question, ⛔ rule nothing:
+#   (b) rejected because BigDev may not have STANDING — two committed records reserve a public
+#   name-form change to the PANEL; (c) rejected as contradicting 11b.3's shipped epic AC. ⚠ (a) is NOT
+#   a way of doing nothing — AC7's packet is assembled and ROUTED, and must record that the third
+#   matrix widening is four NOMINEE-BANK fields on a different surface, that -165 cl.2 is scoped to
+#   ACCOUNT fields so the "shielded ⇒ lower tier" foreclosure is a sound INFERENCE not a ruling, and
+#   that the 11b.9 precedent is INERT (blocked on counsel's 2026-09-07 return AND a second real person;
+#   -162 cl.2 retired sahyog_vivran_publication + in_memoriam_listing).
+#   ⭐ 11b-2a (defect): D3(a) fix it HERE as its own story — (b) rejected because it would have required
+#   recording the branch un-attested AND correcting RTBF-D1's now-falsified ground in place, strictly
+#   more bookkeeping than fixing it; and leaving it would ship 11b-2's anonymized branch with NO
+#   PRODUCER, a vacuous branch reporting green forever. ⇒ ⭐ 11b-2a may ship INDEPENDENTLY OF AND BEFORE
+#   11b-2. D4(a) bound the N+1 HERE — (b) rejected because the story would then edit the loop and leave
+#   the known cost in place, firing deferred-work.md:2161's trigger a SECOND time unacted, i.e. the
+#   RTBF-D1 decay pattern repeating inside the very story that discharges RTBF-D1. ⚠⭐ AC2 and AC3 are
+#   now TWO SEPARATE BOUNDS and must not be conflated — AC2 bounds the STATE REPLAY (one batched read),
+#   AC3 bounds the KMS DECRYPT (bounded concurrency); ⛔ one constant does not serve both.
+#   ⭐ 11b-2b (surface): D5(a) ⛔ do NOT promote the memorial prototype — (b) ships fabricated rows on a
+#   MEMORIAL surface; (c) puts un-producible fields into a shared contract and is out of reach anyway
+#   since 11b-2 ships first. ⚠ The ruling holds on the CORRECTED arithmetic (two producer-less fields,
+#   `memoryLine` + `monthYear` — `district` HAS a shipped read model), ⛔ not the inflated three.
+#   ⇒ apps/mobile/components/shradhanjali/* is NOT TOUCHED.
+#   ⛔⛔ WHAT IS STILL NOT STARTABLE, AND WHY IT IS NOT A DECISION:
+#   (1) 11b-2b is gated on 11b-2 AND 11b-2a being `done` + MERGED — starting early means rewiring onto
+#   a presenter that does not exist and testing a variant nothing emits. `git fetch origin` first.
+#   (2) 11b-2a Task 2 opens with a LIVE check that Epic 9's contribution.confirmed producer has NOT
+#   landed. D3-rollout(a) accepted the stale-client break ONLY on the zero-population ground; if the
+#   producer landed, that ground is FALSIFIED and the posture is re-opened, ⛔ not inherited.
+#   ⭐ START ORDER: 11b-2 and 11b-2a in PARALLEL (each at its own Task 0), 11b-2b after both.
+#   NO GATE RUN AND NONE OWED: zero source files changed — three story files + this ledger only.)
+# last_updated_prior: 2026-08-29e (story 11b-2a — ⭐ D3-rollout RULED BY BigDev: (a) ACCEPT THE BREAK AND
+#   NAME THE WINDOW. ⛔ NO ROW FLIPS; ⛔ NO DECISION MINTED IN .decision-log.md YET (11b-2a Task 0, still
+#   gated on D3 + D4).
+#   ⭐ THE BREAK, RECORDED HONESTLY: the ruled discriminated union is a HARD break for every stale
+#   mobile client on EVERY row on EVERY read — ⛔ not only anonymized rows. The SDK parses with the
+#   BUNDLED PoolContributorListResponse (packages/api-client/src/index.ts:558-564) and
+#   ConfirmedContributorRow is .strict() (:51), so a stale build's old schema rejects `kind` + `rowKey`
+#   as unknown keys and the WHOLE response fails to parse. No OTA; MMKV-persisted both directions.
+#   ⭐ THE WINDOW, which is the entire ground of the ruling: the confirmed-contributor population is
+#   ZERO today (Epic 9's contribution.confirmed producer is unbuilt) ⇒ there is nothing to fail on.
+#   Exposure runs from merge to the next app-store release and is EMPTY throughout — PROVIDED the
+#   ordering holds.
+#   ⛔⛔ THE ORDERING IS THE LOAD-BEARING HALF: the widening MUST land BEFORE Epic 9's producer, ⛔ NEVER
+#   after. If the producer lands first the zero-population ground is FALSIFIED, and the posture is
+#   RE-OPENED, ⛔ not inherited. ⇒ 11b-2a Task 2 now opens by verifying LIVE that the producer has not
+#   landed, and STOPS if it has; and Task 6 routes the ordering into deferred-work.md as a standing
+#   item with re-trigger = "Epic 9's contribution.confirmed producer landing", ⛔ not marked closed.
+#   ⚠ That routing is deliberate: an ordering constraint living only in a story file is EXACTLY the
+#   shape that decayed in RTBF-D1 and in 8.3's D11 — a real obligation with a named trigger nobody
+#   re-read.
+#   ⛔ (b) expand/contract was rejected on VERIFIED grounds, not taste: a tolerant stale client would
+#   ignore kind/rowKey but the `anonymized` variant HAS NO firstName, which the old schema requires
+#   (.min(1)) ⇒ anonymized rows fail anyway. It buys a PARTIAL break for two releases plus relaxing the
+#   .strict() teeth the 8.3 contract exists to keep. ⛔ (c) endpoint versioning rejected — no versioning
+#   substrate exists; building one for a zero-row population is SD-1.
+#   ⭐ NOW STARTABLE IN 11b-2a: Tasks 1 AND 2 (the batched lifecycle read + the contract widening).
+#   ⛔ STILL GATED: Tasks 0, 3, 4 on D3 and D4.
+#   ⚠⭐ COHERENCE NOTE RECORDED IN THE STORY, ⛔ NOT ACTED ON AS AN INFERENCE: D3-shape and D3-rollout
+#   are both ruled, and each only DOES anything under D3(a) "fix it here" — but D3 itself still has no
+#   written line, and per [[feedback_supersede_never_reinterpret]] a decision is ruled when WRITTEN,
+#   ⛔ never when implied by a sibling. D3 needs an explicit ruling.
+#   NO GATE RUN AND NONE OWED: zero source files changed — one story file + this ledger only.)
+# last_updated_prior: 2026-08-29d (story 11b-2a — ⭐ D3-shape RULED BY BigDev; ⛔ NO ROW FLIPS, ⛔ NO
+#   DECISION MINTED IN .decision-log.md YET (that is 11b-2a Task 0, and Task 0 is still gated).
+#   ⭐ RULING: (i) wire shape → (a) DISCRIMINATED UNION —
+#   `z.discriminatedUnion('kind', [{kind:'name', firstName, lastInitial, rowKey}.strict(),
+#   {kind:'anonymized', rowKey}.strict()])`. Mirrors MemberDisplayName's own union; makes an illegal
+#   state unrepresentable; forces every consumer to handle both. (b)/(c) rejected for representable
+#   illegal states; (d) rejected for putting COPY ON THE WIRE (11b-2's presenter could not then
+#   distinguish the marker from a real name).
+#   (ii) lifecycle state → (a) ONE BATCHED READ, added next to `getMemberStateAt` in
+#   packages/domain/src/member/read.ts — one eventsLog query over the contributor streamId SET,
+#   grouped + replayed in memory → Map<MemberId, MemberLifecycleState>. O(1) round trips.
+#   (c) rejected: a bounded N+1 of full event-stream replays is still an N+1. ⛔ (b) (`members.state`
+#   join) rejected because members.state is PROJECTOR-MAINTAINED and every other read in that module
+#   trusts the REPLAY — joining it would make the RTBF guarantee depend on projector liveness.
+#   ⚠ Three implementation constraints carried by the ruling, none optional: chunk the streamId set at
+#   a NAMED constant (⛔ never reuse DIRECTORY_DECRYPT_CONCURRENCY — a chunk size and a concurrency
+#   bound are different quantities); ⛔ no dynamic .limit() (the domain limit-clamp gate); ⛔ state
+#   ONLY — no decrypt, no KYC join, no death overlay.
+#   ⭐⛔ THE RULING OPENED A NEW CLAUSE — `D3-rollout`, UNRULED, and it GATES 11b-2a Task 2.
+#   Verified at 80e0d12 while recording the ruling: the SDK parses with the BUNDLED
+#   `PoolContributorListResponse` (packages/api-client/src/index.ts:558-564) and ConfirmedContributorRow
+#   is .strict() (:51). ⇒ a stale mobile build carries the OLD schema, so the new `kind` + `rowKey` are
+#   UNKNOWN KEYS and .strict() rejects ⇒ THE ENTIRE RESPONSE FAILS TO PARSE — every row, every read,
+#   ⛔ not only anonymized rows — until an app-store update (there is NO OTA). ⚠ Tractable only because
+#   the confirmed-contributor population is ZERO today (Epic 9's producer is unbuilt) — but that is an
+#   argument about TIMING, ⛔ not that no posture is owed. Three options recorded in the story
+#   (accept-and-name-the-window on 11b.9's precedent / expand-contract in two phases — ⚠ verified NOT
+#   clean, a tolerant stale client still fails the anonymized variant which has no firstName / version
+#   the endpoint — ⛔ no versioning substrate exists, SD-1).
+#   ⭐ WHAT THE RULING UNBLOCKS TODAY: 11b-2a Task 1 ALONE (the batched lifecycle read — a pure domain
+#   addition no other decision touches). ⛔ Tasks 0/2/3/4 stay gated (D3 · D3-rollout · D4).
+#   ⚠ PROPAGATED, ⛔ not left to the dev agent: 11b-2's presenter keeps THREE kinds
+#   (name|unknown|anonymized) against the wire's TWO — the asymmetry is deliberate because the API
+#   boundary's :313 guard makes `unknown` unreachable on THAT producer, while 11b-3's Astro producer may
+#   legitimately emit one; the branch is recorded UN-ATTESTED, ⛔ not deleted to "match the wire".
+#   11b-2b's keyExtractor now names `rowKey` concretely, and PoolContributorList.tsx must branch on
+#   `kind` and ⛔ never read firstName unguarded.
+#   NO GATE RUN AND NONE OWED: zero source files changed — three story files + this ledger only.)
+# last_updated_prior: 2026-08-29c (story 11b-2 VALIDATED via bmad-create-story validate — ⭐⭐ SCOPE SPLIT
+#   THREE WAYS + 25 FINDINGS APPLIED. THREE ROWS NOW EXIST WHERE ONE DID:
+#   `11b-2-contribution-list-components-table-mobile-row` (the presenter, the true [PRIMITIVE]) ·
+#   `11b-2a-contributor-name-resolution-defect` (NEW, [DEFECT]) ·
+#   `11b-2b-contributor-list-mobile-render-layer` (NEW, [SURFACE]). ⛔ NO DECISION MINTED — seven
+#   decisions remain UNRULED across the three, and every Task 0 is now TRANSCRIBE-or-STOP.
+#   ⛔ epic-11b stays in-progress; ⛔ the other SIX 11b rows stay `backlog`.
+#   ⭐ METHOD: four adversarial verifiers re-opened every file:line claim at 80e0d12 independently of
+#   the authoring pass (code claims · governance citations · prior-story continuity · AC coherence).
+#   TWO findings were reached independently by two verifiers each.
+#   ⭐⛔ WHAT THE AUTHORING PASS GOT WRONG — the four that would have shipped a defect:
+#   (1) ⛔⛔ IT SPECIFIED A GUARANTEED RUNTIME CRASH. `ANONYMOUS_MEMBER_I18N_KEY` = `member.anonymousMember`
+#   resolves in the `common` catalog (locales/{en,hi}/common.json:215) while `contributor_list.*`
+#   resolves in `contribution` (contribution.json:30-39) — and `t()` THROWS on a miss. Trap 6 + Task 1
+#   ordered the presenter to emit keys in `contribution`; AC6 ordered explicit-namespace resolution.
+#   ⇒ the anonymized row — THE row the story exists to render correctly — would throw. The view-model
+#   now emits `{key, namespace}` pairs (11b-2 AC2), and the a11y label needs a NESTED two-namespace
+#   resolution because `contributor_list.row_a11y` = "{name}, confirmed contributor" takes a {name}
+#   PARAM (11b-2b Trap 3).
+#   (2) ⛔⛔ "THE API BOUNDARY ALREADY LOADS THE MEMBER" IS FALSE, AND THE NAIVE FIX IS WORSE THAN THE
+#   BUG IT SITS NEXT TO. `getMemberKycProfile` (kyc/profile-read.ts:24-37) returns NO `state` column;
+#   the only state load in the module is `getMemberStateAt` at handlers.ts:398, keyed on the REQUESTING
+#   member; and `getMemberStateAt` (member/read.ts:127-138) is a FULL UNBOUNDED EVENT-STREAM REPLAY PER
+#   MEMBER. ⇒ routing contributor rows through `resolveMemberDisplayName` per-row adds one replay per
+#   row — strictly worse than the KMS-decrypt N+1 the sibling AC exists to bound, and mapWithConcurrency
+#   does not cover it. New 11b-2a D3-shape(ii) + AC2; ⛔ no batched lifecycle read exists today.
+#   (3) ⛔⛔ C-1 WAS READ BACKWARDS. The story used C-1 to FORBID `apps/public` from depending on
+#   `@twt/ui`. `2026-08-23-154` cl.6 ruled the OPPOSITE — "`apps/public` **adds `@twt/ui`**" and
+#   "⭐ C-1 is an ORDINARY DEPENDENCY ADDITION" (.decision-log.md:1729,1741) — and :1734 records
+#   "⛔ Verified: there was no declination." The quoted 11b.1 line was also mis-attributed (it is at
+#   11b-1-…md:203 in the What-exists table, ⛔ not Project Structure Notes) and its full row INVERTS the
+#   use made of it: 11b.1 declined the dep FOR ITSELF and named 11b.2 as the consumer. ⇒ D1's ground is
+#   corrected to "no host exists yet" (11b-3 is backlog — TRUE) and the deferral is worded `deferred`,
+#   ⛔ never `blocked`.
+#   (4) ⛔⛔ "NOTHING HAD RECORDED IT" IS FALSE. deferred-work.md:3980 RTBF-D1 (Story 3.12) recorded the
+#   unwired name-resolver seam, its file, its consequence class AND a re-trigger — "when Epic 6/8
+#   introduces a real contributor/member-directory read" — which FIRED AT STORY 8.3 and was never
+#   acted on. Its stated ground ("no real member-backed public read exists yet") is now FALSIFIED.
+#   ⇒ 11b-2a DISCHARGES RTBF-D1 rather than claiming novelty [[feedback_negative_claims_checkable_in_repo]].
+#   Same shape for THREE more 8.3 items the story re-derived: :2161 (the N+1 — already routed, and it
+#   IS the sibling AC verbatim), :2162 (lastInitial .max(16)), :2163 (the keyExtractor). And AC7(d)
+#   duplicated an item ALREADY OPEN at :97-100 — it is DELETED, not filed twice.
+#   ⭐ THE DEFECT ITSELF IS CONFIRMED AND REACHABLE, and is STRONGER than the story claimed:
+#   `resolveMemberDisplayName` has ZERO production call sites repo-wide. RTBF writes an ENCRYPTED
+#   '[anonymized]' sentinel (anonymize.ts:70,101-113,144) which decrypts cleanly, splits to
+#   {firstName:'[anonymized]', lastInitial:''} (kyc/name.ts:47-53), passes all three fail-soft guards
+#   (:313/:326/:331) and renders VERBATIM in both locales where a person's name belongs.
+#   ⭐⛔ WHAT ELSE CHANGED (the findings that would have caused an implementation error):
+#   · `<PoolContributorList>` has TWO live render sites, not one — the 8.3 route AND
+#     NomineeConsole.tsx:213 (Story 9.1, a staff-takeover-session-as-deceased surface). The rewire
+#     silently changed it; now named, smoke-asserted, and the no-death-term scan aims at it explicitly.
+#   · "Preserved byte-for-byte in behaviour" would have PINNED A KNOWN DEFECT — deferred-work.md:2163's
+#     keyExtractor re-trigger has fired BY NAME ("reused for the Epic 11b public render") and its ground
+#     ("dozens, not the ~16k scale") is falsified by the epic's own performance contract. It is now an
+#     explicit EXEMPTION, and 11b-2a supplies the stable row key its deferral named as the blocker.
+#   · AC "resolve token roles through @twt/tokens" CONTRADICTED BigDev's 2026-07-27 ruling that mobile
+#     bridges tone→Tamagui independently of the PDF hex. Inverted to a local bridge (TONE_TOKENS /
+#     METER_FILL_TOKENS precedent). ⚠ Related: @twt/tokens is already a devDependency of packages/ui,
+#     so the "dependencies is exactly @twt/contracts" test passes while a value import still typechecks.
+#   · apps/mobile has NO RN MOUNT HARNESS (no @testing-library/react-native; all 27 tests/unit files are
+#     source scans; 9.6 Dev Notes: "don't stand up a new RN component renderer just for this").
+#     "Byte-for-byte behaviour" and "a screen-reader user hears" were UNWRITEABLE. Restated as five named
+#     source-scan assertions; what the harness cannot prove is recorded UN-ATTESTED; the t() proof moved
+#     to packages/i18n where it can actually run through t() rather than around it (the 11a.2 defect).
+#   · WIDENING A .strict() RESPONSE SHAPE BREAKS EVERY STALE MOBILE CLIENT — no OTA (EAS Build →
+#     store submission only, verified by 11b.9's review), SDK Zod-validated, MMKV-PERSISTED. 11b.9
+#     accepted an analogous break only because it was a low-volume WRITE path. Now an explicit
+#     rollout-posture AC; the anonymized wire shape (entirely unspecified before) is now D3-shape(i)
+#     with four costed options.
+#   · The presenter's TYPE is now WRITTEN OUT. A story whose thesis is "an invariant expressed as a
+#     SHAPE" described its own shape only in prose. Also: `resolveMemberDisplayName` returns THREE
+#     kinds (name|unknown|anonymized), not two — `unknown` gets an exhaustive throwing check recorded
+#     un-attested.
+#   · Trap added: importing MemberDisplayName from @twt/domain would violate the dep invariant AND trip
+#     the bundle-boundary + type-only-cycle traps; 9.12 solved it with a LOCAL STRUCTURAL MIRROR
+#     (pool-progress/view-model.ts:17-21) and the story cited that file six times without saying so.
+#   · Trap added: 9.12's review found an UNGUARDED PRESENTER THROW on a fail-soft path; the blast radius
+#     here is a FlashList renderItem hot path. 11b-2 owns the doc-block; 11b-2b owns the try/catch.
+#   · "⛔ must not silently continue" was UNSCOPED and read as a ban on the three EXISTING integrity
+#     continues (:313/:326/:331) the sibling AC orders preserved "exactly". Re-scoped to the anonymized
+#     case only.
+#   · The N+1 drift mechanism was a cross-reference COMMENT — the exact mechanism 11b.9's review filed
+#     as insufficient EIGHT DAYS AGO (11b-9-…md:753-757). Changed to one shared exported constant.
+#   · Task 4's grep was under-specified: the naive grep for the NEW symbol finds nothing (that is why
+#     11b.1's fifth copy survived). Now names the working grep (`lastInitial`), all seven re-spellings,
+#     and 11b.1's TWO load-bearing halves (declare-once-and-derive + EXERCISE-the-variant). ⭐ Headline:
+#     PoolContributorList.tsx:40-43 is ALREADY a local hand-maintained tuple copy that a contract
+#     widening will NOT fail the typecheck of.
+#   · The integration test had no home and the WRONG home already exists (apps/api/tests/unit/
+#     pool-contributors.test.ts is DB-free, forcing the stub the AC forbids). Now
+#     apps/api/tests/integration/contributions/pool-contributors-rtbf.spec.ts, with the two real
+#     anonymization precedents named.
+#   · FRICTION-BUDGET AC-4 WOULD HAVE GONE RED. It is a pure PATH trigger (MEMBER_FACING_PREFIXES =
+#     ['apps/mobile/','apps/public/'], lib.ts:453) with no test exclusion; "update it IF any
+#     declaration moved" is too weak. 11b-2b's AC8 makes it UNCONDITIONAL (affirmation note, existing
+#     rows byte-unchanged — the precedent is HEAD itself, 80e0d12); 11b-2 and 11b-2a leave the leg
+#     DORMANT because they touch neither prefix.
+#   · Task 0 told the DEV AGENT to "mint the decision entry carrying BigDev's D1–D7 rulings" — with all
+#     seven unruled, that manufactures seven ratified governance clauses it has no authority to write.
+#     All three Task 0s are now TRANSCRIBE-or-STOP.
+#   · Task 7 (route the deferrals) was the ONLY startable task and carried NO gate, so a Tasks-driven
+#     dev agent would have written the five deferral entries D7 exists to decide. Now gated.
+#   · 8.3's D11 matrix obligation re-triggered at 11a.1 and VANISHED; the story re-filed it as fresh —
+#     its own D6(b) failure mode applied to itself. Now written as a fired re-trigger.
+#   · D7's Panel packet must record that the 11b.9 T&C precedent is INERT (no clause_versions row;
+#     blocked on counsel's 2026-09-07 return AND a second real person) and that 2026-08-28-162 cl.2
+#     retired sahyog_vivran_publication + in_memoriam_listing.
+#   · D5's arithmetic corrected: `district` HAS a shipped read model (member_postings.ts:51, already
+#     public at directory.ts:82) ⇒ TWO producer-less memorial fields, not three.
+#   ⚠ CITATION DRIFT CORRECTED: catalog.ts imports run :29-56 (not :29-54 — the old range stopped two
+#   imports short of the file Task 6 tells the dev to edit); microcopy.yaml's "unscanned copy wearing a
+#   green check" is at :350-352 (not :293-295); the UX column inventory is at :1158 ONLY (:1791/:1801
+#   are the performance contracts; the anatomies are :1788/:1798); three verbatim quotes sourced to
+#   .decision-log.md live only in epics.md:4815. ⭐ CONFIRMED SOUND and NOT changed: the 50k-vs-10k
+#   reconciliation via ux:2165; the two-entry Tier-1 allowlist; family 13 and its four checks; the
+#   :55→:58 / :205→:212 drift the authoring pass itself caught; every sprint-status dependency state.
+#   ⚠ ALSO RECORDED, no story owns it yet: the `governance:` commit prefix is a real convention (142
+#   commits) but is FORMALLY INVALID under the checked-in commitlint.config.js (type-enum left at
+#   conventional's default). It survives only because commitlint is wired to nothing — no commit-msg
+#   hook, absent from ci-local.sh and CI. Routed by 11b-2 Task 3 as a one-line deferred-work note.
+#   NO GATE RUN AND NONE OWED: zero source files changed by this pass — three story files + this
+#   ledger only. ci:local would be vacuous over that diff; recorded as such rather than run and
+#   reported as meaningful [[feedback_record_unattested_no_backfill]].)
+# last_updated_prior: 2026-08-29b (story 11b-2 AUTHORED via bmad-create-story — ⭐⭐ ONE ROW FLIPS:
+#   `11b-2-contribution-list-components-table-mobile-row` `backlog` → `ready-for-dev`. ⛔ epic-11b
+#   stays in-progress; ⛔ the other SIX 11b rows stay `backlog`; ⛔ NO DECISION MINTED — ⭐ all SEVEN
+#   of this story's decisions (D1–D7) are raised UNRULED and Task 0 is gated on BigDev ruling them.
+#   ⭐⛔ THE HEADLINE: THIS STORY'S THREE-LINE EPIC AC IS THE SHORTEST IN EPIC 11b AND THE MOST
+#   DEFECTIVE — FIVE CLAUSES DESCRIBE THINGS THE SUBSTRATE, THE MATRIX OR THE C-1 RULING FORBIDS,
+#   AND FOUR ARE NEW FINDINGS OF THIS PASS (⛔ nothing had recorded them):
+#   (1) ⛔ `packages/ui` CANNOT HOLD A VIRTUALIZED COMPONENT — verified at 80e0d12: zero `.tsx`, one
+#   dependency (`@twt/contracts`), five headless presenter modules. C-1 (`2026-08-23-154`) ruled
+#   11b.2 is "presenters + Astro render layers, ⛔ not components", and windowing needs a scroll
+#   container / viewport / mount lifecycle a pure `(input)→view-model` fn ⛔ does not have. ⇒ the
+#   presenter carries everything EXCEPT virtualization; the render layers own the windowing.
+#   (2) ⛔⛔ A CONTRIBUTOR NAME AT `public` IS AN UNRULED *THIRD* Tier-1 ALLOWLIST PAIR. `matrix.ts`
+#   :392-403 names exactly TWO ruled pairs; the third widening (`2026-08-28-165` cl.1) enumerates
+#   FOUR `sahyog-vivran` pairs and ⭐ EVERY ONE IS A NOMINEE-BANK FIELD. ⚠ And `-165` cl.2 forecloses
+#   the escape BY NAME: masking is a presentation policy, the underlying field stays Tier-1 in every
+#   state ⇒ first-name + last-initial is STILL Tier-1. ⇒ a public contributor list needs its own
+#   Panel ruling (routed, ⛔ not ruled here — D7).
+#   (3) ⛔ THERE IS NO HOST: 11b.3 is `backlog`, `apps/public` does ⛔ not depend on `@twt/ui`, and
+#   11b.1 declined to add it IN TERMS ("⛔ Do not add the dep here for a surface that needs no
+#   presenter"). ⇒ an Astro table with no page is SD-1's defect class.
+#   (4) ⛔ THE AC CONTRADICTS ITSELF ON THE STATUS PILL, IN ADJACENT CLAUSES — and the shipped
+#   contract already forbids the field with `.strict()` teeth ("the one change this contract exists
+#   to forbid", `pool-contributor-list.ts:16-22`).
+#   (5) ⭐⛔⛔ A LIVE, UNRECORDED DEFECT ON THE EXACT PATH THIS PRESENTER FEEDS, AND IT IS D9's RTBF
+#   HALF FAILING IN SHIPPED CODE: `member-pool/handlers.ts:309-334` decrypts → splits → pushes and
+#   ⛔ NEVER routes through `resolveMemberDisplayName`. RTBF does ⛔ not null the column — it writes
+#   an ENCRYPTED `'[anonymized]'` sentinel (`member/anonymize.ts:70,144`) that DECRYPTS CLEANLY,
+#   splits to `firstName: '[anonymized]'`, and renders VERBATIM, un-i18n'd, in BOTH locales, where a
+#   person's name belongs. ⛔ Not a tier leak — the ratified `member.anonymousMember` copy silently
+#   not happening. (D3 asks whether 11b.2 fixes it or routes it.)
+#   ⚠ ALSO VERIFIED, EACH BY READING THE FILE: the PUBLIC row ceiling is 10,000 (50-row cap ×
+#   200-page horizon, `pagination.ts:39,65`), ⛔ NOT 50k — and ⭐ the UX spec ITSELF resolves the
+#   apparent conflict at `:2165` ("a performance contract, ⛔ not an implementation specification …
+#   may use windowing, PAGINATION, infinite scroll"); the contributor-path decrypt is SERIAL,
+#   PER-ROW AND UNBOUNDED (the bound exists only in a different module, `public-pages/handlers.ts`
+#   :58/:67 — ⚠ whose line numbers MOVED since 11b.1 cited `:55`/`:205`, corrected here); and
+#   `deferred-work.md:121`'s UX-amendment trigger ("Story 11b.2 or 11b.3, whichever comes first")
+#   HAS NOW FIRED (D6).
+#   ⭐ D9 (`2026-08-24-159`) is carried into this story's OWN ACs and Tasks, ⛔ not left as a note
+#   ([[feedback_spec_edits_must_propagate_to_tasks]]) — two rules, ⛔ neither subsuming the other:
+#   death ⇒ the name STAYS (⛔ a death conjunct on a contributor read is "the right conjunct in the
+#   wrong read"); RTBF ⇒ the name GOES via the existing branch.
+#   ⛔ NOTHING IS PUBLISHED BY THIS STORY: a presenter has no route, no cache policy and no viewer.
+#   ⛔ No launch gate moves, ⛔ no Pariwar is enabled, ⛔ no matrix surface or field is declared.
+# last_updated_prior: 2026-08-29 (story 11b-9 — ⭐ CODE REVIEW PASSED, `review` → `done`. Three-layer
 #   review (Blind Hunter / Edge Case Hunter / Acceptance Auditor) found ⛔ ZERO AC VIOLATIONS —
 #   "an unusually faithful implementation." Two decision-needed items resolved: (1) the `.strict()`
 #   DPDPA-contract shrink's mobile-rollout skew risk — verified `apps/mobile` has NO expo-updates/OTA
@@ -11953,7 +13337,29 @@ development_status:
   # ==========================================================================
   epic-11b: in-progress
   11b-1-sahyog-drive-active-archive: done
-  11b-2-contribution-list-components-table-mobile-row: backlog
+  # ⭐⛔ 11b-2 WAS SPLIT THREE WAYS ON 2026-08-29 BY A VALIDATION PASS (bmad-create-story validate).
+  # The epic's Story 11b.2 bundled a headless presenter, a LIVE RTBF defect on shipped API code, an
+  # N+1 decrypt bound, and a mobile render-layer rewire — three risk classes, three reviewers, three
+  # revert units. 11b-2a and 11b-2b are ⛔ NOT in epics.md's story list; they are recorded there as an
+  # annotation (AI-11a-1(b) RECONCILED block, owed by 11b-2 Task 0) so a future sprint-planning run
+  # does ⛔ NOT regenerate a ghost 11b-2 or drop these two.
+  # ⛔ ORDER: 11b-2 and 11b-2a run in PARALLEL; 11b-2b runs AFTER BOTH. ⭐ If capacity is scarce ship
+  # 11b-2a FIRST — it is the only one of the three that fixes something a member can see today.
+  # ⭐⛔ SUPERSEDED 2026-08-29g — THIS BLOCK PREVIOUSLY READ "⛔ NONE IS STARTABLE: seven decisions
+  # are UNRULED". THAT IS NO LONGER TRUE AND HAD BECOME THE OPPOSITE OF THE TRUTH. All decisions are
+  # RULED: the original seven, plus D3-shape + D3-rollout (2026-08-29d/e), plus 11b-2's D8(a) + D9(a)
+  # raised and ruled by its SECOND validation pass (2026-08-29g) ⇒ ELEVEN total, ⛔ zero open.
+  # ⭐ STARTABLE NOW: 11b-2 and 11b-2a, IN PARALLEL, each at its own Task 0. 11b-2b runs AFTER BOTH
+  # are `done` AND MERGED. Each Task 0 remains TRANSCRIBE-or-STOP: the dev agent transcribes BigDev's
+  # rulings into .decision-log.md and ⛔ never authors, paraphrases or re-grounds one.
+  # ⚠ 11b-2 and 11b-2a MINT AGAINST THE SAME .decision-log.md HEAD — re-read it immediately before
+  # writing and take the next free number; ⛔ never renumber or merge into a sibling's entry.
+  # ⛔ A `blocked-awaiting-decisions` value was considered and deliberately NOT minted — per the
+  # `deferred-to-v2` precedent (Decision 2026-08-17-126 cl.6) an enum addition is a RATIFIED
+  # GOVERNANCE ACT, not an authoring convenience. ⇒ `ready-for-dev` here means what the enum says.
+  11b-2-contribution-list-components-table-mobile-row: done
+  11b-2a-contributor-name-resolution-defect: done
+  11b-2b-contributor-list-mobile-render-layer: done
   11b-3-sahyog-vivran-per-claim-story-surface: backlog
   11b-4-memorial-authorship-surface-family-writes-the-story: backlog
   11b-5-memorial-visual-components-memorial-record-portrait-frame-kinship-lattice: backlog

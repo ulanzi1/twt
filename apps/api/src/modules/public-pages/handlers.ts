@@ -39,48 +39,13 @@ import { encryption, ids, kyc, member as memberDomain, pool as poolDomain } from
 import type { FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
+import { DIRECTORY_DECRYPT_CONCURRENCY, mapWithConcurrency } from '../kyc/bounded-decrypt.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import { evaluateDirectoryAbuse, loadDirectoryAbuseRules } from './abuse-rules.js';
 
 /** Rows served when the caller asks for no page size. Mirrors `apps/public`'s own default. */
 // ⭐ IMPORTED, ⛔ not a third bare `25`. See the constant's own doc-block in @twt/contracts.
 export const PUBLIC_DIRECTORY_PAGE_SIZE_DEFAULT = PUBLIC_SURFACE_PAGE_SIZE_DEFAULT;
-
-/**
- * Max KMS `decryptDek` round-trips in flight for ONE directory page render.
- *
- * ⚠ A REAL bound, ⛔ not the page size wearing the word "bounded". At 8, a full 50-row page costs
- * ceil(50/8) = 7 sequential waves instead of 50 round-trips, while capping what a single
- * unauthenticated request can put in flight against a quota-limited external service.
- * ⛔ Raising this trades KMS quota safety for page latency on an anonymous surface — it is a
- * capacity decision, not a tuning knob.
- */
-const DIRECTORY_DECRYPT_CONCURRENCY = 8;
-
-/**
- * Map `items` through `fn` with at most `concurrency` promises in flight, preserving INPUT ORDER.
- *
- * ⭐ Results are written into a pre-sized array at the item's own index, ⛔ never pushed in
- * completion order — the deterministic roster order is what makes "page N is the same page N on
- * every request" true, and a completion-ordered result would silently shuffle a public page.
- */
-async function mapWithConcurrency<T, R>(
-  items: readonly T[],
-  concurrency: number,
-  fn: (item: T) => Promise<R>,
-): Promise<R[]> {
-  const out = new Array<R>(items.length);
-  let next = 0;
-  const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
-    for (;;) {
-      const i = next++;
-      if (i >= items.length) return;
-      out[i] = await fn(items[i]!);
-    }
-  });
-  await Promise.all(workers);
-  return out;
-}
 
 export interface PublicPagesHandlers {
   memberDirectory(request: FastifyRequest): Promise<PublicDirectoryResponse>;

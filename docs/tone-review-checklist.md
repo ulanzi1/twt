@@ -194,3 +194,29 @@ the API layer (HTTP `409 tone_review.required`) and the blocked attempt is itsel
 `tone_review.publish_blocked`. **Persistence** of which-artifact-was-reviewed is owned by
 the consuming surface (Story 2.4 records tone-reviewer attribution + `clause_version_id`);
 Story 2.2 ships the gate mechanism, not a speculative store.
+
+---
+
+## Ad-hoc copy-review record (surfaces with no publish endpoint yet)
+
+The publish routing above is a **runtime** gate: a sign-off becomes a `tone_review.signoff`
+audit entry submitted through the consuming surface's own review endpoint. Surfaces that have
+**not yet shipped such an endpoint** — most of the `copy_globs` namespaces — therefore have
+**no mechanism** to record a sign-off, even though `tone-guide.md §5` requires one before
+publish. ⛔ A review of that copy must **not** be written as a `tone_review.signoff`, because
+no publish gate evaluated it and no audit entry was emitted. It is recorded here instead, as
+what it is: a **human review, recorded in the repo, ⛔ not an audited publish-gate sign-off.**
+
+⚠ This section is **not** the Nominee Console periodic-review log above (Story 9.1), which
+tracks a different, surface-specific obligation. ⛔ Do not merge the two.
+
+| Date | Reviewer (non-author) | Artifact reviewed | Authored by | Outcome |
+|---|---|---|---|---|
+| 2026-08-31 | BigDev (Solo Builder) | `contribution.json` (en+hi) — the four corrections in commit `bb77a53`: `amount_mismatch_over.body` (hi), `missed_cycle.section_note` (en), `personal_event.before_you_record` (en), `missed_cycle.state_a11y` (hi) | Claude (second code-review pass, Story 11b.2a session) | ✅ **Reviewed and accepted.** `reviewedBy ≠ authoredBy` holds — BigDev authored none of the four. |
+
+⛔⛔ **THIS ROW DOES ⛔ NOT DISCHARGE STORY 11b.2a's AC8.** AC8 attaches to
+`contributor_list.empty` (en+hi) — a **different pair of strings**, ⛔ none of the four above —
+and those were **authored by BigDev** (ruled verbatim in Story 11b.2a's D7(c)). ⇒
+`reviewedBy ≠ authoredBy` **fails** for BigDev on that pair, exactly as it fails for the
+transcribing agent. AC8 stays **OPEN and un-attested** until a qualified third party reviews it
+([[feedback_record_unattested_no_backfill]]).

@@ -33,3 +33,11 @@ export * from './contribution-disclosure/index.js';
 // filter could only ever disagree with the strip's. ⛔ The row descriptor itself is NOT widened: 10.9's
 // dismissal identity (`revision`) stays on the banner lane at the render boundary. Pure logic only.
 export * from './noticeboard/index.js';
+
+// Story 11b.2 — the framework-agnostic confirmed-contributor ROW presenter (pure view-model builder) shared
+// by the Story 11b.2b mobile `<PoolContributorList>` + Nominee Console today and a Story 11b.3 Astro render
+// layer later. The single source of what ONE contributor row CONTAINS, so the app and the public page can
+// never tell two different stories about the same list. Confirmed-only by SHAPE (no status field exists to
+// hang a pill on); name PARTS only, never joined (the contributor name FORM is UNRULED and routed to the
+// Trustee Panel); per-ROW, never per-list — virtualization is a render-layer property. Pure logic only.
+export * from './contribution-list/index.js';

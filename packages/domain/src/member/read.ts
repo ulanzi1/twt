@@ -17,7 +17,7 @@
 // member/project.ts header. The `events_log_pariwar_occurred_at_idx` index assists
 // the bound, and the stream is small per member.
 
-import { and, asc, desc, eq, lte } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, lte } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import type { MemberId, PariwarId } from '../ids/index.js';
@@ -154,6 +154,105 @@ export async function getCurrentMemberState(db: Db, memberId: MemberId): Promise
     .where(eq(eventsLog.streamId, memberId))
     .orderBy(asc(eventsLog.eventVersion));
   return replayMemberState(rows);
+}
+
+/**
+ * Max `stream_id`s bound into ONE batched `events_log` replay query.
+ *
+ * ⚠ A REAL chunk bound, ⛔ not a page size wearing the word "chunked". A pool roster is dozens, but
+ * the Epic-11b public contributor render is the ~10,000-member case, and an unbounded `inArray` is a
+ * query-plan cliff (and, past ~65k, a bind-parameter ceiling). At 500, a 10,000-member set costs 20
+ * sequential waves instead of one unplannable statement.
+ *
+ * ⛔⛔ This is NOT `DIRECTORY_DECRYPT_CONCURRENCY` and must never be collapsed into it. A CHUNK SIZE
+ * (how many ids fit in one SQL statement) and a CONCURRENCY BOUND (how many KMS round-trips may be in
+ * flight) are different quantities answering different questions; sharing one number couples a
+ * Postgres planning decision to an external-quota decision, and the two will drift.
+ */
+export const MEMBER_STATE_REPLAY_CHUNK_SIZE = 500;
+
+/**
+ * The CURRENT lifecycle state of MANY members at once — {@link getCurrentMemberState}'s batched
+ * sibling. Story 11b.2a (AC2), for the confirmed-contributor boundary that must know WHOM TO OMIT.
+ *
+ * Returns a `Map` keyed by every id in `memberIds` — a member with no events maps to the machine's
+ * initial state (`pending-kyc`), the same degenerate case `getMemberStateAt` documents. ⛔ Never a
+ * missing key: the caller must not have to supply a default, because the default WOULD BE the
+ * erasure decision.
+ *
+ * ⚠⚠ BUT BE HONEST ABOUT WHICH DEFAULT THIS IS: `pending-kyc` is `!== 'anonymized'`, so the seeded
+ * default is PERMISSIVE. Any cause of stream invisibility — not just an absent member — resolves as
+ * representable. ⛔ This map is therefore ⛔ NOT a sufficient erasure guarantee on its own, and no
+ * caller may treat it as one. The contributor render's actual backstop is the `ANONYMIZED_SENTINEL`
+ * check on the DECRYPTED PLAINTEXT (`member-pool/handlers.ts`), which is independent of this read,
+ * of the transaction snapshot, and of whether the stream was visible at all. Flipping this default
+ * to fail-closed is a CONTRACT change (`tests/member/batched-member-states.test.ts` pins the
+ * no-events case as deliberate) and is carried as `CR-11b.2a-2P-W3` in `deferred-work.md`.
+ *
+ * ⛔⛔ MIRRORS {@link getCurrentMemberState}, ⛔ NEVER {@link getMemberStateAt} — NO `atTimestamp`
+ * parameter and NO `occurred_at` upper bound, and that is a CORRECTNESS constraint, not a style
+ * choice. RTBF is a RIGHT-NOW question. `occurred_at` is DB-generated while any timestamp a caller
+ * holds is the injected APP clock; bounding this replay by an app clock that lags the DB clock puts
+ * a `member.rtbf_anonymized` event OUTSIDE the window, resolves the member `active`, and renders the
+ * erased member's REAL NAME on the contributor list — the exact defect Story 11b.2a exists to fix,
+ * re-created by the choice of sibling. See Decision 2026-08-30-169 cl.4 and
+ * `tests/member/batched-member-states.test.ts`, which fails loudly if the bound is ever added back.
+ *
+ * ⛔ Returns STATE ONLY. ⛔ No decrypt, ⛔ no KYC join, ⛔ no death overlay — `members.state`
+ * deliberately carries no `deceased` label ([[project_death_is_an_overlay_not_a_state]]), and on a
+ * CONTRIBUTOR read that blindness is CORRECT: a death conjunct here would delete dead contributors
+ * from the historical record ("the right conjunct in the wrong read", 2026-08-24-159 cl.11).
+ *
+ * ⛔ Takes no dynamic `.limit()` — the set is the bound ([[project_domain_limit_clamp_and_savepoint_retry]]).
+ * Tenant scope is RLS (the caller has set `app.pariwar_id`); `stream_id` is globally unique.
+ *
+ * ⛔ NOT a `members.state` join. That column is PROJECTOR-maintained current state, and every other
+ * read in the contributor path trusts the REPLAY; joining it would make the RTBF guarantee depend on
+ * projector liveness ([[project_member_lifecycle_domain_substrate]]).
+ */
+export async function getCurrentMemberStates(
+  db: Db,
+  memberIds: readonly MemberId[],
+): Promise<Map<MemberId, MemberLifecycleState>> {
+  const unique = [...new Set(memberIds)];
+  // Seeded with the initial state for EVERY requested id, so a member with an empty stream is
+  // present-and-correct rather than absent-and-defaulted-by-the-caller.
+  const out = new Map<MemberId, MemberLifecycleState>(
+    unique.map((id) => [id, replayMemberState([])]),
+  );
+  if (unique.length === 0) return out;
+
+  for (let i = 0; i < unique.length; i += MEMBER_STATE_REPLAY_CHUNK_SIZE) {
+    const chunk = unique.slice(i, i + MEMBER_STATE_REPLAY_CHUNK_SIZE);
+    const rows = await db
+      .select()
+      .from(eventsLog)
+      .where(inArray(eventsLog.streamId, chunk))
+      .orderBy(asc(eventsLog.eventVersion));
+
+    // Group in memory, then fold each stream on its own. Ordered by `event_version` in SQL, so the
+    // per-stream slices stay in replay order without a second sort (`occurred_at` CAN tie inside one
+    // transaction — the monotonic version is the only deterministic key).
+    // ⚠ KEYED CASE-INSENSITIVELY, DELIBERATELY. `stream_id` is a `uuid` column, so Postgres
+    //   normalises both the bound parameter and the returned value to lowercase — `inArray` matches
+    //   a caller's upper-case id, but a JS `Map.get` would NOT. Contributor ids reach this function
+    //   as RAW JSONB text (`payload ->> 'memberId'`, cast `as MemberId` without re-validation) and
+    //   `z.string().uuid()` admits upper-case hex, so a case variant would silently miss its own
+    //   stream and fall through to the seeded default. Normalise both sides, ⛔ never one.
+    const byStream = new Map<string, (typeof rows)[number][]>();
+    for (const row of rows) {
+      const key = row.streamId.toLowerCase();
+      const bucket = byStream.get(key);
+      if (bucket) bucket.push(row);
+      else byStream.set(key, [row]);
+    }
+    for (const id of chunk) {
+      const stream = byStream.get(id.toLowerCase());
+      if (stream !== undefined) out.set(id, replayMemberState(stream));
+    }
+  }
+
+  return out;
 }
 
 /**

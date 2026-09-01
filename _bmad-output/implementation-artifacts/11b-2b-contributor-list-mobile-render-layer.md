@@ -4,7 +4,7 @@ baseline_commit: dbb4a25f9f9321779fc3a41ca039c0c5e957c11c
 
 # Story 11b.2b: Contributor List — Mobile Render Layer + Family-13 Accessibility `[SURFACE]`
 
-Status: review
+Status: done
 
 > ✅✅ **D10 IS RULED (BigDev, 2026-08-30): (a) — derive from `@twt/contracts`, delete the duplicate.**
 > ⛔ **NOTHING IS GATED BY A DECISION ANY LONGER.** ⚠ The **hard dependency remains** and is the only
@@ -440,6 +440,23 @@ file (AC2) ⇒ ⛔ **not corrected here**; recorded so the omission is deliberat
         ⚠ `git push` runs the full `ci:local` via a pre-push hook — that is the "hang", ⛔ not a failure.
   - [x] Flip `development_status[11b-2b-contributor-list-mobile-render-layer]` and add ONE combined
         top-of-file `last_updated` entry ([[project_sprint_status_ledger]]).
+
+### Review Findings
+
+_`bmad-code-review 11b.2b`, 2026-09-01. Diff scope: `abdb42b..HEAD` (this story's own three commits,
+excluding the two already-closed sibling stories stacked earlier on `governance/11b-2-validate-split`).
+Three layers: Blind Hunter (diff-only), Edge Case Hunter (diff + repo access), Acceptance Auditor
+(diff + this spec) — Acceptance Auditor returned zero violations, all self-flagged corrections in the
+Dev Agent Record checked out live._
+
+- [x] [Review][Patch] The catch→null path in `renderItem` has no total-failure fallback — `PoolContributorList.tsx:93,101-103` — `confirmedRows.length` (the raw wire count) still decides the list-vs-empty branch, so if every row's `try` throws (e.g. a systemic i18n-key miss — more reachable once the `t()` finding below is fixed, since resolver throws would then also route through this catch), the member sees a mounted, entirely blank `FlashList` with no error or empty-state copy, rather than falling to the calm empty-state branch. **Resolved (BigDev, decision-needed → patch); FIXED:** row derivation (including the a11y `t()` call) is now computed once per data change into a `renderableRows` array, and the branch decision is `confirmedRows.length === 0 || !hasRenderableRow` — a total-derivation-failure now falls to the empty-state branch. `renderItem` reads the pre-derived row by index; no re-derivation per scroll frame.
+- [x] [Review][Patch] `t()` call for the row a11y label is OUTSIDE the try/catch it's documented as covered by [`PoolContributorList.tsx:101-103,128-132`] — the comment at `:96-99` calls the try/catch "THE ONLY GUARD" between a ruled throw and a red-boxed list, but `vm` is resolved inside the guard while `label` (`:110`) and the `t(vm.rowA11y.ref.key, …)` call (`:128-132`) run after it, unguarded — and the surrounding comment itself notes `t()` "defaults to `common` and THROWS on a miss" and throws at interpolation if `{name}` is omitted. A resolver-side namespace/key miss red-boxes the whole list on every scroll frame, exactly the failure mode Trap 1 was built to prevent. **FIXED** — folded into the same `renderableRows` refactor above: derive, label-join, and the `t()` a11y call now all run inside the one try block.
+- [x] [Review][Patch] The new adapter `toContributionRowInput` is never actually invoked by a test [`apps/mobile/tests/unit/contributor-list-render.test.ts` AC9 block, `apps/mobile/components/contributor-list/contribution-row-input.ts:812-824`] — every "AC9" assertion is a regex scan of the adapter's raw source text (`adapter.toMatch(/kind:\s*'name'/)` etc.), never an import + call. A subtly wrong implementation (swapped fields, wrong nesting) containing the right substrings would still pass every assertion. **FIXED** — added two real-invocation tests importing and calling `toContributionRowInput` directly, asserting the exact returned shape (including an empty-`lastInitial` case).
+- [x] [Review][Patch] `stripComments` strips everything after `//` with no string-literal awareness [`apps/mobile/tests/unit/contributor-list-render.test.ts:859-860`] — `src.replace(/\/\/.*$/gm, '')` would delete real code following a `//` that appears inside a string literal (e.g. a URL), which could silently remove a banned pattern before the regression-fence regexes run, defeating the "comment-stripped so a ban can never be satisfied by prose" guarantee the file's own header claims. **FIXED** — replaced with a string-aware character-scanner that tracks quote/template-literal state and only treats `//`/`/* */` as comments outside of a string.
+- [x] [Review][Patch] The death-term regression fence's `\bdeceased\b` misses compound identifiers [`apps/mobile/tests/unit/contributor-list-render.test.ts:1099`] — there's no word boundary between "deceased" and an immediately-following capital letter, so `deceasedMemberId`-style identifiers would not trip the ban; a future dev could introduce exactly such an identifier at a render site and this fence would stay green. **FIXED** — dropped the `\b...\b` boundaries around `deceased` in `BANNED`; verified live that none of the three scanned files currently contain the substring, so this is a pure widening with no new false positives today.
+- [x] [Review][Patch] AC10's "does not import from packages/contracts" assertion is near-tautological [`apps/mobile/tests/unit/contributor-list-render.test.ts:1285-1288`] — it checks for the literal substring `"packages/contracts"`, but the code only ever imports via the package alias `@twt/contracts`, so this specific assertion would pass regardless of whether D10(a) were honored. (The substance of D10(a) — no local type-shadow — is correctly covered by the earlier "DELETES the local ConfirmedRow" test in the same file, so this is a redundant/misleadingly-named assertion, not a coverage gap in the story overall.) **FIXED** — the assertion previously scanned only `component`; it now also scans `adapter`, the one file that actually imports `ConfirmedContributorRow` and so is the file this check should have been guarding against a relative-path alias bypass on.
+
+**Verification:** `pnpm --filter @twt/mobile test` — 28 files / 397 tests green (55 in `contributor-list-render.test.ts`, up from 53). `pnpm turbo run typecheck lint --filter=@twt/mobile` — 14/14 green.
 
 ---
 

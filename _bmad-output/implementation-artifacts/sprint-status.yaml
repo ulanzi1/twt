@@ -13071,7 +13071,7 @@ development_status:
   # GOVERNANCE ACT, not an authoring convenience. ⇒ `ready-for-dev` here means what the enum says.
   11b-2-contribution-list-components-table-mobile-row: done
   11b-2a-contributor-name-resolution-defect: done
-  11b-2b-contributor-list-mobile-render-layer: ready-for-dev
+  11b-2b-contributor-list-mobile-render-layer: in-progress
   11b-3-sahyog-vivran-per-claim-story-surface: backlog
   11b-4-memorial-authorship-surface-family-writes-the-story: backlog
   11b-5-memorial-visual-components-memorial-record-portrait-frame-kinship-lattice: backlog

@@ -38,8 +38,12 @@ import type { ContributionRowInput } from '@twt/ui'
  * Re-shape ONE confirmed-contributor wire row into the presenter's per-row input, splicing on the
  * response-level pool letter code.
  *
- * Per-row by shape, deliberately: the consumer is a windowing render layer that calls this once per
- * visible row on every scroll frame, so there is no list-level variant here either (11b.2's Trap 1).
+ * Per-row by shape, deliberately — but ⛔ NOT because the caller windows it. The shipped consumer calls
+ * this EAGERLY, once per row, inside a memoized `.map()` computed per data change
+ * (`PoolContributorList.tsx`) — ⛔ not once per visible row per scroll frame, which is what this
+ * doc-block claimed until the second code review. The per-row SHAPE is what 11b.2's Trap 1 requires
+ * (no `deriveContributionListViewModel(rows[])` anywhere), and that holds regardless of how the caller
+ * iterates; ⛔ a list-level variant is still forbidden.
  */
 export function toContributionRowInput(
   row: ConfirmedContributorRow,

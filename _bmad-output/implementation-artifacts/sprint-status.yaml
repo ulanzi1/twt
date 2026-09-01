@@ -1,5 +1,98 @@
+# last_updated: 2026-09-01d (⛔⛔ STORY 11b-2b — THIRD CODE-REVIEW PASS (`bmad-code-review 11b.2b`, the
+#   same diff PLUS the second pass's own 14 patches, so THOSE were under review for the first time).
+#   ⛔⛔ ROW REOPENED `done` → **`in-progress`** — ⛔ NOT an engineering regression (all 13 findings FIXED,
+#   every fence mutation-proven) but because **Task 7's `ci:local` box is UN-TICKED and a clean run with
+#   the integration leg is OWED**. Closing over an unchecked box is the closure collapse this pass raised
+#   three times ([[feedback_closure_language_precision]]).
+#   ⛔ 11b-2 (`done`) and 11b-2a (`done`) are ⛔ NOT touched. ⛔ 11b-3 stays `backlog`.
+#   ⚠ `failed_layers`: Edge Case Hunter AND Acceptance Auditor both died mid-run on a provider session
+#   limit; both relaunched; all three layers ultimately reported.
+#   ⭐⭐ THE HEADLINE: THE SECOND PASS'S "ALL 14 APPLIED" WAS **FALSE**, AND ITS DIAGNOSTIC PATCH SHIPPED
+#   A WHOLE-SURFACE CRASH. Patch 11 wrote a bare `if (__DEV__)` INSIDE THE CATCH — `declare const` emits
+#   nothing, so that is a ReferenceError wherever Metro has not injected the global, and being in the
+#   CATCH it ESCAPES the per-row guard and red-boxes the surface: Trap 1 reinstated ON THE RECOVERY PATH,
+#   by the patch meant to make failures visible. ⚠ The suite was GREEN through it — every test is a
+#   source scan, so the component is never executed. Three passes, three times a review's own fix carried
+#   the defect it was fixing.
+#   ⛔ TWO PATCHES WERE HALF-DONE: patch 13 (Change-Log counts — the replace missed the bold markers and
+#   nothing re-read the file) and patch 5, whose correction was ITSELF FALSE ("neither is inert" —
+#   `refetchOnReconnect` IS inert on RN; query-core wires only `window.addEventListener('online')` and no
+#   bridge exists, which the same file admits 17 lines above). ⇒ AC10's own defect class, committed BY
+#   the patch that closed AC10.
+#   ⭐ AND THE FENCES DID NOT FENCE: FENCE 2 checked only that the IDENTIFIER `hasRenderableRow` appeared,
+#   so `= confirmedRows.length > 0` — the exact semantics its own failure message describes — passed
+#   green; FENCE 4 was an OR, so an UNGATED production log satisfied it; `balancedFrom` had no string
+#   awareness and no tests while the two lexers beside it were hardened; `stripComments` opened phantom
+#   regex mode after `+`/`-` and its doc-block characterised its own limitation BACKWARDS (a phantom
+#   string STOPS stripping ⇒ comment prose satisfies ~20 positive fences — a FALSE GREEN, not a red).
+#   ⛔ THE DEATH FENCE WAS A LIVE FALSE-RED TRAP: the widening banned `shradhanjali`/`memorial`, and the
+#   component names `ShradhanjaliSahyogVivran` TWICE as the pattern to follow while `_layout.tsx` uses
+#   "memorial" as a font role — green ONLY because stripComments removed those comments.
+#   ⭐ AC7 ratified FIVE states while the shipped fence asserted SIX; Task 0 still ordered the gate
+#   decision 3 vacated; Trap 1 still ordered the superseded structure AC1 defers to. ALL FIXED.
+#   VERIFICATION: `pnpm --filter @twt/mobile test` — 28 files / **419 green** (77 in the file);
+#   `typecheck lint` — **14/14**. ⭐ SIX mutation probes, each reverted, each biting. ⚠ One tightened
+#   fence was TOO tight on its first draft and was re-cut.
+#   ✅✅ THE OWED RUN CAME BACK GREEN — `pnpm ci:local` with DATABASE_URL against the live `twt-test-pg`:
+#   **PASSED, 33 job(s), `✓ integration-tests`** (the branch convention, ⛔ not the 31-job skip variant).
+#   ⇒ ⭐ ROW CLOSED `in-progress` → **`done`** on a real green, ⛔ not on a re-reading of "done".
+#   ⭐⭐ AND IT SETTLES THE FLAKE ATTRIBUTION EMPIRICALLY: the three `@twt/domain` specs the second pass
+#   excused PASSED here with the SAME mobile diff present ⇒ the load/oversubscription reading is now
+#   DEMONSTRATED, ⛔ not merely argued ([[project_ci_local_concurrency_oversubscription]]).
+#   ⏭️ NEXT: commit — `governance:` records FIRST, then the implementation, per convention.)
+# last_updated_prior: 2026-09-01c (⚠⚠ STORY 11b-2b — SECOND CODE-REVIEW PASS (`bmad-code-review 11b.2b`,
+#   3 layers re-run over the SAME diff `abdb42b..HEAD`, but AFTER `9cbf5dd` — so the FIRST PASS'S OWN
+#   SIX PATCHES were under review for the first time; the 11b.2a `2026-08-30m` shape).
+#   ⭐ ROW STAYS **`done`** — all 14 patches APPLIED, all 3 decisions RESOLVED, 5 items deferred+named.
+#   ⛔ 11b-2 (`done`) and 11b-2a (`done`) are ⛔ NOT touched and ⛔ NOT flipped. ⛔ 11b-3 stays `backlog`.
+#   ⭐⭐ THE HEADLINE, MUTATION-PROVEN TWICE (Acceptance Auditor + reviewer, independently): **BOTH OF
+#   THE FIRST PASS'S HEADLINE FIXES WERE UNMECHANIZED.** Reverting `|| !hasRenderableRow` left 397/397
+#   GREEN; moving the a11y `t()` back outside the try left 55/55 GREEN. The test file contained ⛔ ZERO
+#   occurrences of `renderableRows`/`hasRenderableRow`. The two behaviours the first pass called "THE
+#   ONLY GUARD" and load-bearing shipped with ⛔ NO regression fence
+#   ([[feedback_gate_scope_semantic_coverage]], [[feedback_mechanization_split_commitment]]).
+#   ⭐ AND THE FIX CONTRADICTED AC1's LITERAL TEXT: AC1 (`:178`) + Task 1 (`:399`) both ordered the derive
+#   "inside a try/catch in `renderItem`"; the refactor moved it to a component-body `.map()` and the box
+#   was ticked with the spec unamended ([[feedback_spec_edits_must_propagate_to_tasks]]).
+#   ⛔⛔ THE GUARD'S STATED TRIGGER COULD NOT REACH THE GUARD: `rowA11y.ref.namespace` is hardcoded
+#   `'contribution'` (`i18n-keys.ts:38`) — the SAME namespace as the five UNGUARDED `t()` calls — so a
+#   "systemic namespace miss" throws at the header (`:154`) before the fallback is evaluated. And the
+#   presenter's throw arm is UNREACHABLE from this call site (the adapter hardcodes `kind:'name'`), so
+#   the try's ONE live trigger is a `row_a11y`-KEY-only miss. RULED (a)→(b): comment corrected to state
+#   the guard's REAL narrow coverage; the route `ErrorBoundary` IS the surface-level answer.
+#   ⭐ TWO MORE FALSE GREENS, both fixed: AC6's namespace fence matched `namespace:` ANYWHERE, so
+#   `t(key, {namespace})` — the namespace in the PARAMS slot, the documented 11a.2 defect — passed then
+#   THREW at runtime; and AC10's stale-claim scan read the component ALONE while
+#   `usePoolContributorsQuery.ts:14,35` — the file that FETCHES these rows — still asserted "Epic 9's
+#   producer is unbuilt" as the justification for the poll (a THIRD live instance,
+#   [[project_epic9_confirmed_producer_is_live]]).
+#   ⭐⭐ EVERY NEW FENCE WAS MUTATION-VERIFIED, one at a time, reverted after each — because the finding
+#   this pass opened with was that the last pass's fixes were unmechanized. ⚠ TWO of the new fences did
+#   ⛔ NOT bite on their first draft (FENCE 3's dep regex missed `t` in final position; the regex-literal
+#   fixture put its token on the wrong LINE) and were corrected until they did.
+#   ⚠ THE REVIEWER'S OWN `stripComments` FIX BROKE THE SUITE FIRST: `<`/`>` in the regex-opener set made
+#   `</Text>` a regex start and ate the JSX; AC5(4) caught it. And an EXISTING fence caught the reviewer
+#   byte-pinning the empty-state sentence (11b.2a AC8 / D7(c)) — both corrected.
+#   ⭐ 5 DISMISSED, 4 of them because VERIFICATION CONTRADICTED THE LAYER: the Blind Hunter's "the empty
+#   branch lies to the member" quoted SUPERSEDED copy (the live string speaks about NAMES and is truthful
+#   in both states); its "~56px reserved-height hole" is wrong (FlashList **v2** self-measures); its
+#   missing-`data.pool` path red-boxes at `:87` before the map; and the Edge Case Hunter's "`accessible`
+#   was deleted" was an ARTIFACT OF CONCURRENT AGENTS — it read the tree mid-flight during the
+#   Acceptance Auditor's mutation probe (verified after: tree clean, prop present).
+#   VERIFICATION: `pnpm --filter @twt/mobile test` — 28 files / **414 tests green** (**72** in
+#   `contributor-list-render.test.ts`, up from 55). `pnpm turbo run typecheck lint --filter=@twt/mobile`
+#   — **14/14 green**.
+#   ⚠⚠ FULL `ci:local` WAS RUN AND IS ⛔ NOT REPORTED AS 33-GREEN, BECAUSE IT WAS NOT: run 1 PASSED but
+#   with `SKIP integration-tests` (31 jobs — ⛔ not the convention); run 2, with DATABASE_URL against the
+#   live `twt-test-pg`, FAILED on `integration-tests`. ⭐ ALL THREE failing specs pass IN ISOLATION
+#   (`shepherd-assign-concurrency` 651,473ms→**152ms**; `icp` + `news-blog-state-audience` together
+#   **1.27s**) and `@twt/domain` has ⛔ NO dependency on `apps/mobile` ⇒ UNREACHABLE from this diff; the
+#   load/oversubscription flake shape ([[project_ci_local_concurrency_oversubscription]]).
+#   ⛔ NOT backfilled into a green. ⚠ OWED BEFORE MERGE: a clean `ci:local` with the integration leg RUN.
+#   ⏭️ NEXT: the 5 deferrals are named with re-triggers in deferred-work.md; 4 of them re-trigger at
+#   11b-8 or at the next contract/producer story.)
 # generated: 2026-05-29
-# last_updated: 2026-09-01b (✅✅ STORY 11b-2b — CODE REVIEW COMPLETE (`bmad-code-review 11b.2b`, diff
+# last_updated_prior: 2026-09-01b (✅✅ STORY 11b-2b — CODE REVIEW COMPLETE (`bmad-code-review 11b.2b`, diff
 #   scope `abdb42b..HEAD` — this story's own three commits only, excluding the two already-closed sibling
 #   stories stacked earlier on `governance/11b-2-validate-split`). ⭐ ROW FLIPS `review` → **`done`**.
 #   ⛔ 11b-2 (`done`) and 11b-2a (`done`) are ⛔ NOT touched and ⛔ NOT flipped. ⛔ 11b-3 stays `backlog`.
@@ -86,7 +179,7 @@
 #   discharged, ⛔ this story ⛔ NOT named its consumer, and ⭐ its re-trigger has ⛔ NOT FIRED (it names
 #   the Epic 11b PUBLIC render; this is the MEMBER render of a SINGLE POOL'S ROSTER — the scale the
 #   deferral's own ground calls fine). 11b-3 is the real re-trigger. Its stale self-citation
-#   (`:124-126` → live `:180-185`) is ROUTED in deferred-work.md, ⛔ NOT written into the ratified entry
+#   (`:124-126` → live `:254-256`) is ROUTED in deferred-work.md, ⛔ NOT written into the ratified entry
 #   ([[feedback_supersede_never_reinterpret]]) — a moved line number is ⛔ not a changed decision.
 #   ⭐⭐ THREE MUTATION CHECKS, ⛔ NOT ASSUMED TO BITE (each reverted immediately): removing the
 #   `renderItem` try/catch FAILED the Trap-1 fence; adding `{deceased ? null : <PoolContributorList/>}`

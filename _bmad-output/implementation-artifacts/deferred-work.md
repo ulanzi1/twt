@@ -7169,7 +7169,7 @@ re-trigger**, and it is `backlog` with no story file yet.
 ⭐ **Citation correction, ⛔ routed rather than silently patched** ([[feedback_closure_language_precision]]):
 the entry cites `apps/mobile/components/contributor-list/PoolContributorList.tsx:124-126`. That anchor
 was already stale before this story (live at `:137-139` at `dbb4a25`) and this story's diff moved it
-again — the `keyExtractor` now lives at **`:180-185`**. ⛔ **The correction is recorded here, ⛔ not
+again — the `keyExtractor` now lives at **`:254-256`**. ⛔ **The correction is recorded here, ⛔ not
 written into the original entry** — a ratified record is superseded, never re-read
 ([[feedback_supersede_never_reinterpret]]) — and ⛔ **it is not cover to re-open the deferral**: a moved
 line number is not a changed decision.
@@ -7220,3 +7220,125 @@ line number is not a changed decision.
   **third consecutive** story to record that same un-measured facet (11a.5 → 11b.9 → here); the
   re-trigger — the first story that needs a mobile bundle-size claim, or the first EAS build wired into
   CI — is ⛔ not getting closer on its own.
+
+## Deferred from: code review of 11b-2b-contributor-list-mobile-render-layer (2026-09-01, SECOND PASS)
+
+⚠ Raised by the **second** `bmad-code-review 11b.2b` pass, re-run over the same diff `abdb42b..HEAD`
+AFTER `9cbf5dd` — so the first pass's own six patches were under review for the first time.
+
+- **A whitespace-only `firstName` renders a blank row, and nothing throws.** `ConfirmedContributorRow`
+  is `firstName: z.string().min(1)` with ⛔ no trim (`packages/contracts/src/contributions/pool-contributor-list.ts:44`),
+  so `" "` validates. The presenter branches ⛔ only on `displayName.kind`, so it returns normally, the
+  join at the row label join in `PoolContributorList.tsx` yields a space, and the row renders as a blank line with a
+  hairline rule while the a11y label announces *", confirmed contributor"*. ⭐ **D8(a)'s "never silently
+  render a blank where a name belongs" is defeated on a path where the try/catch is inert** — the guard
+  cannot fire because nothing throws. Same class: `lastInitial = " "` is truthy, producing `"Ram  "`.
+  ⛔ Not fixable in the render layer without ruling the name form. **Re-trigger: the contract/producer
+  story that next touches `splitFirstNameLastInitial` or the confirmed-row shape.**
+
+- **`lastInitial` is bounded by LENGTH, not by SHAPE.** `z.string().max(16)`
+  (`pool-contributor-list.ts:49`) accepts `"Sharma"` (6) and `"Chattopadhyay"` (13). The adapter
+  re-shapes verbatim — correctly, per AC9(4) — the presenter passes it through, and the render layer
+  joins it into the visible label. ⇒ **a producer-side regression that widened the initial to a full
+  surname would reach pixels on the one surface documented as PII-shielded**, with ⛔ no client-side
+  shape check and ⛔ no test covering a multi-character `lastInitial`. The `.max(16)` bound exists for
+  Devanagari conjuncts, so it ⛔ cannot simply be tightened to 1. **Re-trigger: the story that next
+  edits the confirmed-row contract, or 11b.3's public render (the wider blast radius).**
+
+- **A first-fetch error renders the absence copy — `isError` is never consumed.**
+  `usePoolContributorsQuery` returns the raw `useQuery` result; the component destructures only
+  `{ data, isLoading }` (the `usePoolContributorsQuery()` destructure). On a cold start with no persisted cache, an
+  offline or 5xx response that exhausts `retry: 1` leaves `isLoading === false` and `data === undefined`,
+  falling to `!data` → *"You have no live pool right now."* ⇒ **a transport failure is presented as an
+  authoritative statement about the member's pool assignment** — the same false-claim shape the loading
+  branch at `:63-65` was explicitly added to avoid, one branch down. ⛔ Pre-existing: this diff does not
+  touch the branch. **Re-trigger: the next story that edits either branch, or 11b.8's real-data gate.**
+
+- **AC7's accessibility scans never reach the two render sites this same test file names.**
+  the `AC2 — both render sites` block in `contributor-list-render.test.ts` asserts that `apps/mobile/app/(contribution)/contributors.tsx`
+  and `apps/mobile/components/nominee-console/NomineeConsole.tsx` both mount `<PoolContributorList>` —
+  but all four family-13 checks scan `component` alone, so ⛔ neither render site is ever a11y-scanned.
+  ⚠ Family 13 is **un-mechanized by ruling**, so ⛔ nothing else covers them either — this is the half
+  that decays ([[feedback_mechanization_split_commitment]]). ⛔ Extending the scans is out of this
+  story's scope. **Re-trigger: Story 11b.8's accessibility-audit gate.**
+
+- **⚠ Family 13(d) on iOS — the aggregate strip is ⛔ NEVER announced.** `accessibilityLiveRegion` is an
+  **Android-only** RN prop. Story 11b.2b hardened the pending-strip `<Paragraph>` in `PoolContributorList.tsx` for family-13 check
+  **(a)** by making `accessible` explicit, but check **(d)** — *"a state a sighted user can see and a
+  screen-reader user cannot is ⛔ not delivered"* — still fails on iOS + VoiceOver: the strip is
+  documented in its own header and beside the `accessible` prop as the surface's **ONLY** ambient status and the only place the
+  aggregate is stated as a sentence, and it updates **silently** on the 60s poll. ⚠ AC5(4)'s test
+  asserts ⛔ only that the string `accessibilityLiveRegion="polite"` is PRESENT, so ⛔ nothing catches
+  this. ⭐ The repo already carries the cross-platform mechanism —
+  `AccessibilityInfo.announceForAccessibility` (`apps/mobile/components/panchayat/PanchayatNoticeboard.tsx:108`)
+  — ⛔ unused here. **DEFERRED by ruling (BigDev, 2026-09-01), ⛔ not waived and ⛔ not met:** the
+  announcement CADENCE on a 60s poll is a product question this story ⛔ cannot settle.
+  **Re-trigger: Story 11b.8's accessibility-audit gate** (launch-blocking, UX-DR70) — the story that
+  owns device-backed checks and would have to answer the cadence question anyway.
+
+> ⚠⚠ **CITATION POLICY, ruled at the third code review of 11b-2b.** The entries above were filed with
+> LINE RANGES and every one of them was stale within the same session — twice. ⭐ **Deferred-work
+> entries cite SYMBOLS, ⛔ never line numbers**: a line number is a fact with a half-life of one edit,
+> and three consecutive passes each raised citation staleness as a finding while re-introducing it.
+
+## Deferred from: code review of 11b-2b-contributor-list-mobile-render-layer (2026-09-01, THIRD PASS)
+
+⚠ Raised by the **third** `bmad-code-review 11b.2b` pass, run over the same diff plus the SECOND pass's
+own 14 patches — so the second review's fixes were under review for the first time. ⭐ Citations are
+**SYMBOL ANCHORS, ⛔ not line numbers** (see the policy note above).
+
+- **⛔ The identical dead `estimatedItemSize` ships one directory over, behind the identical cast.**
+  This story proved live that `estimatedItemSize` was REMOVED in `@shopify/flash-list@2.0.2` (absent from
+  `FlashListProps.d.ts`) and deleted it here. ⚠ `apps/mobile/components/shradhanjali/ShradhanjaliSahyogVivran.tsx`
+  still declares `CONTRIBUTOR_ROW_ESTIMATED_HEIGHT` and passes `estimatedItemSize`, behind its own
+  `FlashList as any` — inert, with a dead constant behind it. ⛔ `shradhanjali/**` is out of this story's
+  EDIT scope (D5-prototype(a)) — ⭐ but **filing is not editing**, and this story files out-of-diff
+  siblings elsewhere (`pool-contributor-list.ts` → 11b.3). It was surfaced by this story's own
+  verification and routed NOWHERE until now. **Re-trigger: the next story that edits
+  `ShradhanjaliSahyogVivran.tsx`, or any FlashList major upgrade.**
+
+- **⚠ The `FlashList as any` cast has a proven cost and no re-examination trigger (family 9).**
+  The cast suppresses unknown-prop errors — which is exactly how an inert `estimatedItemSize` survived a
+  whole story here. The comment now carries rationale and a narrow rule, but the CAST itself carries
+  ⛔ no re-examination trigger. **Re-trigger: the FlashList upgrade that fixes the React-19 prop-typing
+  wrinkle the cast exists for — at which point the cast should be deleted, not carried.**
+
+- **⚠ A 7th render state exists in principle: SOME rows derive, some do not.** `hasRenderableRow` is
+  `.some(…)`, so one surviving row keeps the list branch; failed rows render `null` into an UNFILTERED
+  `data`. The member sees fewer names with ⛔ no marker, a screen reader hears fewer rows, and the
+  pending strip is unchanged (a failed row is CONFIRMED, so nothing on the surface accounts for it).
+  ⭐⭐ **It is NOT-CONSTRUCTIBLE TODAY, and that is the honest verdict, ⛔ not a gap**: the adapter
+  hardcodes `kind:'name'` so the presenter's throw arm is unreachable, and every remaining throw is
+  `t()`-level and CATALOG-scoped (unknown namespace / missing key / missing param) ⇒ every live trigger
+  fails **all** rows or **none**. That is precisely why the 6th state exists and the 7th does not.
+  ⛔⛔ **What was missing is this record and its trigger.** `packages/ui/src/contribution-list/presenter.ts`
+  states in its own doc-block that *"a second producer (11b.3's Astro path) may legitimately hand it
+  one"* — at which point `'unknown'` becomes reachable PER ROW, the 7th state is real, unannounced,
+  unenumerated, and indistinguishable from an RTBF omission. **Re-trigger: Story 11b.3 — the moment a
+  second producer can emit `kind:'unknown'`.**
+
+- **⚠ Index alignment rests on an undocumented, unasserted coupling.** `renderItem` reads
+  `renderableRows[index]` while FlashList is fed `confirmedRows`. It is correct today ONLY because
+  FlashList's `ViewHolder` excludes `index` from its children memo deps (deliberately, behind an
+  eslint-disable) while INCLUDING `renderItem`, and `renderItem` is memoized on `[renderableRows]` — so
+  any change that can move an index also changes `renderItem`'s identity. ⛔ Nothing asserts that.
+  ⭐ A future "optimization" that stabilises `renderItem` would render **another row's name under this
+  row's a11y label**, on a PII-shielded surface. **Re-trigger: any change to `renderItem`'s memoization,
+  or a FlashList major upgrade.**
+
+- **⚠ `refetchOnReconnect: true` is INERT on React Native.** query-core's `OnlineManager` wires only
+  `window.addEventListener('online'/'offline')` (its own source: *"addEventListener does not exist in
+  React Native, but window does"*); RN never fires those, and this app wires ⛔ no `onlineManager`/
+  `NetInfo` bridge — the same absence the file's focus-bridge note already admits for `focusManager`.
+  ⇒ the flag is decoration until a bridge exists. ⛔ Not fixed here: wiring a connectivity bridge is an
+  app-wide concern, ⛔ not this story's. **Re-trigger: the story that wires `AppState`→`focusManager`
+  (already an open seam in the same file) — both bridges belong to one change.**
+
+- **⚠ The MMKV-restored query cache is ⛔ NOT re-validated by Zod, and this story hoisted two reads above
+  every guard.** Zod runs on the NETWORK path only (`@twt/api-client`'s `call(url, schema, …)`); the
+  restore path rehydrates an MMKV blob verbatim (`Provider.tsx` passes `persistOptions` with ⛔ no
+  `buster`). This story moved `assigned.pool.letterCode` and `assigned.confirmed` ABOVE `if (isLoading)`
+  and `if (!data || !data.assigned)` to make memoization legal ⇒ on a contract change across an app
+  update, a `TypeError` fires in the un-guarded prologue and bypasses the fail-soft posture AC1 buys.
+  ⛔ Not fixed here: a `buster` keyed to the contract version is an app-wide cache decision.
+  **Re-trigger: the next change to `AssignedPoolContributorList`'s shape, or any persister work.**

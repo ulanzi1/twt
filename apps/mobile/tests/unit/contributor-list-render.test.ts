@@ -23,11 +23,69 @@ import { fileURLToPath } from 'node:url'
 import { deriveContributionRowViewModel, type ContributionRowInput } from '@twt/ui'
 import { describe, expect, it } from 'vitest'
 
+import { toContributionRowInput } from '../../components/contributor-list/contribution-row-input'
+
 // apps/mobile/tests/unit → repo root is four levels up (unit → tests → mobile → apps → root).
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..')
 const read = (rel: string): string => readFileSync(path.join(repoRoot, rel), 'utf8')
-const stripComments = (src: string): string =>
-  src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
+
+/**
+ * Strip `//` and `/* *\/` comments with a real string-aware scanner — the two-regex approach this
+ * replaced (`.replace(/\/\*...\*\//g,'').replace(/\/\/.*$/gm,'')`) had no notion of string literals, so
+ * a `//` inside a quoted string (e.g. a URL) would silently delete the rest of that line as if it were
+ * a comment, which could hide a banned pattern from every regression fence below it.
+ */
+const stripComments = (src: string): string => {
+  let out = ''
+  let quote: string | null = null
+  let inLineComment = false
+  let inBlockComment = false
+  for (let i = 0; i < src.length; i += 1) {
+    const ch = src[i]
+    const next = src[i + 1]
+    if (inLineComment) {
+      if (ch === '\n') {
+        inLineComment = false
+        out += ch
+      }
+      continue
+    }
+    if (inBlockComment) {
+      if (ch === '*' && next === '/') {
+        inBlockComment = false
+        i += 1
+      }
+      continue
+    }
+    if (quote) {
+      out += ch
+      if (ch === '\\') {
+        out += next ?? ''
+        i += 1
+      } else if (ch === quote) {
+        quote = null
+      }
+      continue
+    }
+    if (ch === '"' || ch === "'" || ch === '`') {
+      quote = ch
+      out += ch
+      continue
+    }
+    if (ch === '/' && next === '/') {
+      inLineComment = true
+      i += 1
+      continue
+    }
+    if (ch === '/' && next === '*') {
+      inBlockComment = true
+      i += 1
+      continue
+    }
+    out += ch
+  }
+  return out
+}
 
 const COMPONENT = 'apps/mobile/components/contributor-list/PoolContributorList.tsx'
 const ADAPTER = 'apps/mobile/components/contributor-list/contribution-row-input.ts'
@@ -135,6 +193,22 @@ describe('AC9 — the wire→presenter adapter (routed here BY NAME by Story 11b
       'The adapter composes firstName and lastInitial. It must re-shape only — joining the parts would ' +
         'RULE the name form, the exact question D7-nameform(a) routes to the Trustee Panel.',
     ).toBe(false)
+  })
+
+  it('actually invoked: re-shapes a real wire row into the exact presenter input (not just source-matched)', () => {
+    // Every other assertion in this describe block regex-scans the adapter's SOURCE TEXT — a subtly
+    // wrong implementation containing the right substrings (swapped fields, wrong nesting) would still
+    // pass all of them. This is the one assertion that imports and calls the function for real.
+    const result = toContributionRowInput({ firstName: 'Reena', lastInitial: 'S' }, 'F')
+    expect(result).toEqual({
+      displayName: { kind: 'name', firstName: 'Reena', lastInitial: 'S' },
+      poolLetterCode: 'F',
+    })
+  })
+
+  it('actually invoked: an empty lastInitial is re-shaped as-is, not coerced or dropped', () => {
+    const result = toContributionRowInput({ firstName: 'Amit', lastInitial: '' }, 'B')
+    expect(result.displayName).toEqual({ kind: 'name', firstName: 'Amit', lastInitial: '' })
   })
 })
 
@@ -266,7 +340,12 @@ describe('AC1/AC2 — no death-derived term reaches ANY contributor render path'
     ['render site 1 — the 8.3 route', ROUTE_SITE],
     ['render site 2 — the Nominee Console', CONSOLE_SITE],
   ]
-  const BANNED = /\bdeceased\b|account[-_]?frozen|accountFrozen|members\.state/i
+  // No word boundary around "deceased": camelCase/compound identifiers like `deceasedMemberId` or
+  // `isDeceasedFlag` have no non-word character adjacent to "deceased", so `\bdeceased\b` would miss
+  // them entirely. The bare substring is unambiguous enough on its own — false positives on legitimate,
+  // unrelated uses of the word "deceased" in this narrow surface are an acceptable trade for not letting
+  // a compound identifier slip past the fence undetected.
+  const BANNED = /deceased|account[-_]?frozen|accountFrozen|members\.state/i
 
   for (const [label, rel] of sites) {
     it(`${label} (${rel}) carries no death-derived conjunct`, () => {
@@ -453,7 +532,12 @@ describe('AC10 — the stale "producer is unbuilt" claims are corrected in this 
   })
 
   it('does not import from packages/contracts source or edit the contract (out of diff)', () => {
-    // D10(a) is an `import type` FROM contracts; packages/contracts/ never enters this story's diff.
+    // D10(a) is an `import type` FROM contracts, via the `@twt/contracts` package alias — never a
+    // relative path into the source tree. Checked over BOTH files that reference the contract: the
+    // component (which only imports the type) and the adapter (which is the one file that actually
+    // consumes `ConfirmedContributorRow`) — a prior version of this test checked only the component,
+    // which meant the adapter file could bypass the alias with a relative import undetected.
     expect(/packages\/contracts/.test(component)).toBe(false)
+    expect(/packages\/contracts/.test(adapter)).toBe(false)
   })
 })

@@ -90,26 +90,43 @@ export function PoolContributorList() {
   const pendingCount = String(data.pending.count)
   const pendingPercentage = String(data.pending.percentage)
 
-  const renderItem = ({ item }: { item: ConfirmedContributorRow }) => {
-    // THE ONLY GUARD BETWEEN A RULED THROW AND A RED-BOXED LIST (Trap 1 / 11b.2's D8(a)). The presenter
-    // THROWS on an unresolvable name rather than rendering a blank where a name belongs — and this
-    // consumer is a FlashList `renderItem`, called once per visible row on EVERY SCROLL FRAME, so an
-    // unguarded throw takes the whole list down and hides every good row with the one bad one. The
-    // Story 9.12 `<ActiveContributionCard>` shape (`:123-138`): degrade this ONE row, never the list.
-    // There is no render arm for the throwing kind — this catch IS its handling.
-    let vm: ContributionRowViewModel
+  // THE ONLY GUARD BETWEEN A RULED THROW AND A RED-BOXED LIST (Trap 1 / 11b.2's D8(a)). The presenter
+  // THROWS on an unresolvable name rather than rendering a blank where a name belongs, and `t()` itself
+  // throws on a key/namespace miss (11a.2's failure shape) — so BOTH the derive call and the a11y-label
+  // resolution live inside this one try, per row: an unguarded throw from either takes the whole list
+  // down and hides every good row with the one bad one (Story 9.12 `<ActiveContributionCard>` shape,
+  // `:123-138`: degrade this ONE row, never the list). Computed once per data change (not per scroll
+  // frame — `confirmedRows` is fully in memory already, "dozens, not the ~16k Sahyog Vivran scale"), and
+  // reused by index in `renderItem`, so a failing row is invisible to FlashList AND to the branch
+  // decision below: if EVERY row fails (a systemic key/namespace miss), the list falls back to the
+  // empty-state branch instead of mounting a FlashList with nothing but null rows in it.
+  const renderableRows = confirmedRows.map((item): { label: string; ariaLabel: string } | null => {
     try {
-      vm = deriveContributionRowViewModel(toContributionRowInput(item, data.pool.letterCode))
+      const vm: ContributionRowViewModel = deriveContributionRowViewModel(
+        toContributionRowInput(item, data.pool.letterCode),
+      )
+      // The JOIN lives here, in the render layer, and nowhere upstream: the presenter emits name PARTS
+      // and never composes them, because the contributor name FORM is UNRULED (D9(a) / D7-nameform(a),
+      // routed to the Trustee Panel). This is the form Story 8.3 already ships — it settles nothing.
+      const label = vm.displayName.lastInitial
+        ? `${vm.displayName.firstName} ${vm.displayName.lastInitial}`
+        : vm.displayName.firstName
+      // The KEY AND ITS NAMESPACE BOTH COME FROM THE PRESENTER'S REF, never guessed here — `t()`
+      // defaults to `common` and THROWS on a miss, and the namespace is the THIRD argument (passing
+      // it second lands it in the params slot and throws on every call). The `{name}` param is the
+      // render layer's, deliberately: the presenter does not fill it. `row_a11y` is a SINGLE-brace
+      // `{name}` token, so omitting the param throws at interpolation — the shape of the 11a.2 defect.
+      const ariaLabel = t(vm.rowA11y.ref.key, { name: label }, { namespace: vm.rowA11y.ref.namespace })
+      return { label, ariaLabel }
     } catch {
       return null
     }
+  })
+  const hasRenderableRow = renderableRows.some((row) => row !== null)
 
-    // The JOIN lives here, in the render layer, and nowhere upstream: the presenter emits name PARTS and
-    // never composes them, because the contributor name FORM is UNRULED (D9(a) / D7-nameform(a), routed
-    // to the Trustee Panel). This is the form Story 8.3 already ships — it settles nothing.
-    const label = vm.displayName.lastInitial
-      ? `${vm.displayName.firstName} ${vm.displayName.lastInitial}`
-      : vm.displayName.firstName
+  const renderItem = ({ index }: { index: number }) => {
+    const renderable = renderableRows[index]
+    if (!renderable) return null
 
     return (
       <View
@@ -120,19 +137,10 @@ export function PoolContributorList() {
         bg="$background"
         accessible
         accessibilityRole="text"
-        // The KEY AND ITS NAMESPACE BOTH COME FROM THE PRESENTER'S REF, never guessed here — `t()`
-        // defaults to `common` and THROWS on a miss, and the namespace is the THIRD argument (passing
-        // it second lands it in the params slot and throws on every call). The `{name}` param is the
-        // render layer's, deliberately: the presenter does not fill it. `row_a11y` is a SINGLE-brace
-        // `{name}` token, so omitting the param throws at interpolation — the shape of the 11a.2 defect.
-        accessibilityLabel={t(
-          vm.rowA11y.ref.key,
-          { name: label },
-          { namespace: vm.rowA11y.ref.namespace },
-        )}
+        accessibilityLabel={renderable.ariaLabel}
       >
         <Text fontFamily="$body" fontSize="$4" color="$color">
-          {label}
+          {renderable.label}
         </Text>
       </View>
     )
@@ -157,7 +165,7 @@ export function PoolContributorList() {
           (NOT an error; a low/empty list is not a failure — the 8.2 "low meter is not danger"). It is a
           SIBLING of the list, never a ListEmptyComponent: New-Arch FlashList red-boxes crossing
           empty→populated IN PLACE, and the 60s poll makes that transition routine (Trap 2). */}
-      {confirmedRows.length === 0 ? (
+      {confirmedRows.length === 0 || !hasRenderableRow ? (
         <YStack px="$5" py="$6" accessibilityRole="text">
           <Text fontFamily="$body" fontSize="$4" color="$colorPress">
             {t('contributor_list.empty', undefined, NS)}

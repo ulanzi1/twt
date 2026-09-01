@@ -7136,3 +7136,87 @@ not. These are the adjacent things, stated so the fix is not over-read as closin
   **Two triggers, ⛔ not one: (i)** Story 11b.3's authoring pass — the first paginated consumer, where
   this stops being cosmetic; **(ii) FALLBACK — the next story that adds a `LIMIT`, an `OFFSET` or a
   cursor to any confirmed-contributor read.** ⛔ Not marked closed.
+
+---
+
+## Deferred / recorded from: implementation of story 11b-2b-contributor-list-mobile-render-layer (2026-09-01)
+
+_Story 11b.2b is the mobile render layer of the three-way 11b.2 split: it rewires the shipped
+`<PoolContributorList>` (Story 8.3) onto 11b.2's presenter, authors the wire→presenter adapter 11b.2
+routed here by name, and holds family-13 accessibility. It ships no presenter and no API change. What it
+deliberately does NOT do is recorded here rather than left for a future reader to re-derive._
+
+### ⛔⛔ The Story 8.3 `keyExtractor` deferral — RE-AFFIRMED **OPEN**, and its stale self-citation corrected
+
+The `deferred-work` entry *"FlashList `keyExtractor` includes `index`, so row identity churns …"* (8.3
+code review) **STAYS OPEN.** ⛔ It is ⛔ **not** discharged by this story, and ⛔ Story 11b.2b is ⛔ **not**
+its consumer.
+
+⭐ **Its recorded blocker is still true, verbatim:** *"the PII-shielded shape carries no stable
+per-member identifier."* 11b.2a's **D5** vacated the `rowKey` that would have supplied one, and
+`rowKey` ships in **neither** `@twt/ui` interface, in the contract, or anywhere in `apps/mobile`
+(re-verified live at implementation). ⇒ the `keyExtractor` is **left byte-unchanged** and **keeps
+`index`**; only its parameter TYPE spelling changed, as a consequence of D10(a) deleting the local
+type-shadow — a type-level edit, ⛔ not a behaviour change.
+
+⚠ ⭐ **AND ITS RE-TRIGGER HAS ⛔ NOT FIRED — this is the correction that matters most, because the story
+file's own authoring pass claimed it had.** The recorded re-trigger reads *"if this list ever needs to
+scale beyond a single pool's roster (e.g. reused for the Epic 11b **public** render)."* Story 11b.2b is
+the **member** render of **a single pool's roster** — the exact scale the deferral's own ground calls
+fine (*"dozens, not the ~16k Sahyog Vivran scale"*). **Story 11b.3 is the public host and the real
+re-trigger**, and it is `backlog` with no story file yet.
+
+⭐ **Citation correction, ⛔ routed rather than silently patched** ([[feedback_closure_language_precision]]):
+the entry cites `apps/mobile/components/contributor-list/PoolContributorList.tsx:124-126`. That anchor
+was already stale before this story (live at `:137-139` at `dbb4a25`) and this story's diff moved it
+again — the `keyExtractor` now lives at **`:180-185`**. ⛔ **The correction is recorded here, ⛔ not
+written into the original entry** — a ratified record is superseded, never re-read
+([[feedback_supersede_never_reinterpret]]) — and ⛔ **it is not cover to re-open the deferral**: a moved
+line number is not a changed decision.
+
+### ⛔ Recorded as NOT DONE, deliberately
+
+- **⛔ `packages/contracts/src/contributions/pool-contributor-list.ts:88`'s stale *"Epic 9's
+  `contribution.confirmed` producer is **unbuilt** — D2"* doc-block is ⛔ NOT fixed here.** It is false
+  since Story 9.4/9.5 and contradicts its **own file header at `:7-8`**
+  ([[project_epic9_confirmed_producer_is_live]]). ⛔ `packages/contracts/` never entered this story's
+  diff — **D10(a) is an `import type` FROM contracts**, and reading the file to import from it is exactly
+  when a dev would "tidy" it. Already filed and **routed to Story 11b.3** with a **fallback** trigger
+  (the next story that edits that file for any reason); Decision `2026-09-01-171` cl.1 restates the
+  fence. ⛔ Not a new item — recorded so this story's non-action is legible as deliberate.
+
+- **⛔ `NomineeConsole.tsx:3,8,208` carry the SAME stale-comment staleness and are ⛔ NOT corrected
+  here.** Story 11b.2b only **verifies** that file (AC2 — it is render site 2 and a
+  staff-takeover-session-as-deceased surface); it does not edit it. The ~12-site family was filed by
+  Story 11b.2a, which correctly scoped it out of its own diff for the same reason. ⛔ Only the sites in
+  **this** story's diff were corrected (`PoolContributorList.tsx`'s header and its empty-branch comment).
+  **Re-trigger: unchanged — the next story that edits `NomineeConsole.tsx` for any reason.**
+
+- **⛔ The memorial `<ContributorRow>` prototype is ⛔ NOT promoted** (`D5-prototype(a)`, Decision
+  `2026-09-01-171` cl.2). `apps/mobile/components/shradhanjali/*` is **untouched**. Promoting it means
+  inventing producers for **two** fields (`memoryLine`, `monthYear` — ⛔ **not three**: `district` HAS a
+  shipped read model at `member_postings.ts:51`, already public at `directory.ts:82`). ⛔ Do not
+  "reconcile" the prototype with the live row.
+
+- **⛔ NO accessibility CI gate is minted.** Family 13 is a **checklist**, ⛔ not a gate (BigDev
+  2026-08-18), and its mechanization is re-examined at **Story 11b.8**, ⛔ not here. This story asserts
+  the four checks over its own surface in `apps/mobile/tests/unit/contributor-list-render.test.ts`;
+  ⛔ that is per-surface coverage, ⛔ not a mechanism that would catch the next surface.
+
+- **⛔ NO RN mount harness was stood up**, and none is proposed. All 28 `apps/mobile/tests/unit/**` files
+  are source scans; Story 9.6's Dev Notes say so in terms (*"Don't stand up a new RN component renderer
+  just for this"*). ⚠ ⭐ **Consequence, recorded UN-ATTESTED rather than asserted as passing**
+  ([[feedback_record_unattested_no_backfill]]): **(i)** a real **screen-reader announcement** of any of
+  the five reachable states is ⛔ unverified — the tests prove announced COPY IS RESOLVED and the a11y
+  props are present, ⛔ never that a screen reader speaks them; **(ii)** a real **`t()` resolution at the
+  mobile call site** is ⛔ unverified — Story 11b.2's AC2 proves all ten `contributor_list.*` refs
+  resolve in both locales against `@twt/i18n`, and this story proves its own call sites pass an
+  explicit namespace and the `{name}` param, but ⛔ nothing here executes `t()` inside a mounted RN tree.
+  **Re-trigger: Story 11b.8's accessibility-audit gate** — the story that owns the real-data +
+  accessibility gates, and the first place a device-backed check would belong.
+
+- **⚠ The friction-budget `member-app-native` facets remain `no-op — no measurable build output`, so
+  this story's change to the RN bundle is UN-MEASURED**, ⛔ not reported as a pass. ⭐ This is now the
+  **third consecutive** story to record that same un-measured facet (11a.5 → 11b.9 → here); the
+  re-trigger — the first story that needs a mobile bundle-size claim, or the first EAS build wired into
+  CI — is ⛔ not getting closer on its own.

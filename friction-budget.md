@@ -1646,3 +1646,67 @@ stand up an EAS/Metro bundle-measurement harness. ⭐ **Re-trigger: unchanged �
 needs a mobile bundle-size claim, or the first EAS build wired into CI.** ⚠ This is now the
 **second consecutive** story to record that same un-measured facet; the re-trigger is not getting
 closer on its own.
+
+---
+
+**Story 11b.2b disposition (an AFFIRMATION, ⛔ not a new row and ⛔ not an edit to an existing one):**
+the mobile Live Contributor List (`apps/mobile/components/contributor-list/`) is rewired onto Story
+11b.2's `@twt/ui` row presenter, gains a pure wire→presenter adapter, and drops a local inline label
+plus a local contract type-shadow.
+
+⛔⛔ **This declaration is UNCONDITIONAL, and it is checked rather than inherited.** AC-4
+(attribution-on-change) is a pure **path** trigger: `MEMBER_FACING_PREFIXES = ['apps/mobile/',
+'apps/public/']` (`scripts/friction-budget/lib.ts:453`) and `evaluateDeclaration` fails when any
+changed file matches and this ledger is unchanged. ⭐ There is ⛔ **no test exclusion** — the story's
+new `apps/mobile/tests/unit/` scan matches the prefix exactly as the component does. ⚠ The leg diffs
+**committed** history (`check.ts:77-79`, `${baseRef}...HEAD`), so it passes vacuously until the diff is
+committed and surfaces at `git push`, ⛔ not during local iteration
+([[project_friction_budget_baseline_ratchet]]).
+
+**⛔ NO ROW IS OWED, and the reason is structural rather than a judgement call:**
+
+1. ⭐ **Nothing was ADDED that a member does anything with.** ⛔ No new field, ⛔ no new step, ⛔ no new
+   gate, ⛔ no new tap, ⛔ no new upload, ⛔ no new wait, ⛔ no new route, ⛔ no new endpoint, ⛔ no schema
+   change. The surface renders the same four states from the same read on the same 60s poll. The
+   friction budget's unit of account is **what a member is asked to do**, and this story asks for
+   nothing new.
+2. ⭐ **The net movement is friction REMOVED, once, and for the members least able to absorb it.** The
+   pending strip carried `accessibilityLabel` without declaring itself an accessibility element,
+   relying on a React Native default to be announced at all. It now declares itself explicitly
+   (family-13 check (a)) — the one place the aggregate is stated as a sentence rather than inferred
+   from a glance no longer depends on a framework default to reach a screen-reader user. ⚠ Small, and
+   named rather than inflated: the strip **was** being announced; what changed is that it no longer
+   depends on an inherited mechanism to keep being announced.
+3. ⛔ **Nothing here touches a benefit, an eligibility check or a coverage decision**, and the reason is
+   structural: this is a **render layer** over content decided upstream and server-side. The client
+   resolves nothing about confirmation status. ⛔ No contributor row may be read by, joined into, or
+   referenced from an eligibility, validity, assignability, pool-assignment or claim path.
+4. ⭐⛔ **THE BRANCH THAT WOULD HAVE OWED A ROW IS NAMED, so the absence of one is a finding and ⛔ not
+   an oversight.** The story's authoring pass ordered a **token bridge** mapping presenter tone roles
+   through a mobile palette, and a **constant "confirmed" chrome element** on every row. Story 11b.2's
+   **D2(a)** rejected option (c) — *"a constant 'confirmed' chrome element in the render layer"* — **BY
+   NAME**, on the ground that *"it asserts a fact nothing checked"*, and bound Story 11b.2b explicitly.
+   ⛔ It is not the ruling and ⛔ is not built. Had it been, this section would owe a row for a visual
+   claim about money that no check stands behind — the most expensive kind of friction on a
+   contribution surface, because it is paid in **trust** rather than in taps.
+5. ⚠ **One thing a member sees is materially unchanged and is stated so it cannot be mistaken for a
+   silent regression:** an erased contributor's row is **absent entirely** from this list while their
+   contribution still counts in the pool's totals (11b.2a's D5 + D3-aggregate). ⛔ That divergence is
+   **designed**, it shipped at 11b.2a, and ⛔ this story neither introduces nor widens it.
+
+⚠ **Metric facet — an HONEST no-op, ⛔ not a pass to be read as coverage.**
+`member-public-web.page_weight_bytes` is unchanged: this story touches ⛔ **zero `apps/public` files**,
+so the reading and the best-ever baseline **3942** both stand, and ⛔ a rise is never ratcheted
+([[project_friction_budget_baseline_ratchet]]).
+
+⭐ **And, exactly as at 11a.5 and 11b.9: the surface this story ACTUALLY changed is
+`member-app-native`, whose facets are `no-op — no measurable build output`.** ⇒ the gate can see ⛔
+**nothing** about a change that deletes an inline label and a local interface from the RN bundle and
+adds a pure adapter plus a `@twt/ui` presenter call to it. ⚠ Recorded openly as **UN-MEASURED**, ⛔ not
+reported as a pass and ⛔ not reconstructed from an estimate
+([[feedback_record_unattested_no_backfill]]). ⛔ This story does not stand up an EAS/Metro
+bundle-measurement harness. ⭐ **Re-trigger: unchanged — the first story that needs a mobile bundle-size
+claim, or the first EAS build wired into CI.** ⚠⛔ This is now the **THIRD consecutive** story to record
+that same un-measured facet (11a.5 → 11b.9 → 11b.2b); ⛔ the re-trigger is not getting closer on its own,
+and a fourth consecutive recording should be read as the gate having a standing blind spot on the
+app most members actually use, ⛔ not as three unlucky diffs.

@@ -396,10 +396,23 @@ re-derive the false "unbuilt" premise from it** ([[project_epic9_confirmed_produ
 now"* — **false since Story 9.4/9.5** ([[project_epic9_confirmed_producer_is_live]]) — and `:119`
 says *"0 confirmed today"*. **This file is in this story's diff** (AC1 deletes `:46-48` from it).
 
-⇒ both are corrected. ⛔ **Scope is THIS FILE ONLY.** 11b.2a filed the ~12-site family with the full
-list; ⛔ **do not fix the out-of-diff sites here** — that is the scope creep 11b.2a's Task 6 forbids by
-name. ⚠ ⭐ `NomineeConsole.tsx:3,8,208` carry the same staleness but this story only **verifies** that
+⇒ both are corrected. ⛔ **Scope is THE TWO IN-DIFF FILES.** 11b.2a filed the ~12-site family with the
+full list; ⛔ **do not fix the out-of-diff sites here** — that is the scope creep 11b.2a's Task 6 forbids
+by name. ⚠ ⭐ `NomineeConsole.tsx:3,8,208` carry the same staleness but this story only **verifies** that
 file (AC2) ⇒ ⛔ **not corrected here**; recorded so the omission is deliberate, ⛔ not missed.
+
+> ⚠⚠ **AMENDED 2026-09-01 (combined code-review pass) — THIS AC SAID "⛔ Scope is THIS FILE ONLY" AND THE
+> SHIPPED MECHANIZATION FENCES *TWO* FILES.** `usePoolContributorsQuery.ts` carried the same stale
+> producer claim, was corrected in this diff, and is fenced by its own test
+> (`it('the sibling FETCH hook no longer asserts the producer is unbuilt either')`). ⇒ three files with
+> identical staleness receive **three different dispositions** — corrected+fenced (the component),
+> corrected+fenced (the hook), and verified-but-deliberately-untouched (`NomineeConsole.tsx`, routed to
+> Story 11b.3 with a fallback trigger) — and the AC text accounted for **two**.
+> ⭐⭐ **THE DISPOSITIONS WERE ALL CORRECT; THE AC TEXT WAS WRONG.** ⛔ Nothing about the shipped code
+> changes here. ⚠ **This is the SAME defect class AC9 records against itself one AC above** — *"the
+> shipped adapter was always right … ⛔ the AC text was never fixed, so a reader of the spec alone was
+> still misled"* — recurring within the same story file, which is why it is corrected rather than noted
+> ([[feedback_spec_edits_must_propagate_to_tasks]] — the dev agent works from this text).
 
 ---
 
@@ -905,15 +918,15 @@ _⭐⭐ **THE HEADLINE — A CIRCULAR DEFERRAL. The `t()`-through obligation is 
 
 **Findings owned by 11b.2b (the render layer). The full cross-story list lives in all three story files, routed by owner.**
 
-- [ ] [Review][Patch] **The empty / no-row-derivable branch's `accessibilityRole` is INERT — and the AC7 fence is green over it** [`apps/mobile/components/contributor-list/PoolContributorList.tsx:237`]
+- [x] [Review][Patch] **The empty / no-row-derivable branch's `accessibilityRole` is INERT — and the AC7 fence is green over it** [`apps/mobile/components/contributor-list/PoolContributorList.tsx:237`]
   — `<YStack px="$5" py="$6" accessibilityRole="text">` carries ⛔ no `accessible`, so RN never makes it an accessibility element and the role is never applied; the inner `<Text>` at `:238` carries ⛔ no role of its own either. ⚠ It is the **only** state branch shaped that way — the loading branch (`:186-187`) and the absence branch (`:197-198`) both put `accessibilityRole="text"` on the inner `<Text>`, the row (`:168-169`) and the pending strip (`:287-288`) both declare `accessible`. ⭐ The diff **adds** `accessible` to the pending strip and justifies it in a comment as *"relying on that default is exactly how check (a) has failed silently in this codebase before"* — and then does not apply that reasoning one branch up. **Family 13(a)/(d) REAL GAP** — triaged at AC severity, ⛔ not downgraded. ⚠ The AC7 per-branch fence (`apps/mobile/tests/unit/contributor-list-render.test.ts:994`) asserts `/accessibilityRole=/.test(slice)` — **presence, never effect** — so it cannot distinguish a role that lands from one that does not. ⛔ That fence has already been rewritten TWICE (second pass: file-wide count → per-branch; third pass: character-windows → enclosing open tags) for precision, and still tests the wrong property. Fix BOTH halves: the component AND the fence.
-- [ ] [Review][Patch] **AC10 still reads "⛔ Scope is THIS FILE ONLY" while the shipped mechanization fences TWO files** [`_bmad-output/implementation-artifacts/11b-2b-contributor-list-mobile-render-layer.md:393-404`]
+- [x] [Review][Patch] **AC10 still reads "⛔ Scope is THIS FILE ONLY" while the shipped mechanization fences TWO files** [`_bmad-output/implementation-artifacts/11b-2b-contributor-list-mobile-render-layer.md:393-404`]
   — the diff corrects the stale producer claim in `usePoolContributorsQuery.ts` as well and the test fences it (`it('the sibling FETCH hook no longer asserts the producer is unbuilt either')`), while `NomineeConsole.tsx:8-9,208-209` still carries the same staleness by ruling. ⇒ three files with identical staleness now receive three different dispositions and the AC accounts for two. ⚠ This is the **exact defect class AC9 records against itself** (*"the shipped adapter was always right … ⛔ the AC text was never fixed, so a reader of the spec alone was still misled"*), recurring one AC below ([[feedback_spec_edits_must_propagate_to_tasks]]).
-- [ ] [Review][Patch] **AC4's anti-chrome fence scopes to 2 files while the sibling AC1 fence was widened to 4 — the query hook is unscanned for a token/status field** [`apps/mobile/tests/unit/contributor-list-render.test.ts`, `const touched = [component, adapter]`]
+- [x] [Review][Patch] **AC4's anti-chrome fence scopes to 2 files while the sibling AC1 fence was widened to 4 — the query hook is unscanned for a token/status field** [`apps/mobile/tests/unit/contributor-list-render.test.ts`, `const touched = [component, adapter]`]
   — the death-term fence in the same file was deliberately widened at the second pass with the note *"⭐ ADDED at the second code review. The QUERY HOOK is the natural place to add a filter — it is where the rows come from — and it was in no scanned set at all."* `usePoolContributorsQuery.ts` **is** a touched file in this diff, and AC4(a)'s `@twt/tokens` ban + AC4(b)'s status/tone-field ban do ⛔ not run over it. ⇒ the identical gap, closed for one fence, left open for the other, on the same file, in the same test ([[feedback_gate_scope_semantic_coverage]]).
-- [ ] [Review][Patch] **`the component reads the nameParts arm off the view-model, not the wire row` does not assert what its name claims** [`apps/mobile/tests/unit/contributor-list-render.test.ts`, AC6 block]
+- [x] [Review][Patch] **`the component reads the nameParts arm off the view-model, not the wire row` does not assert what its name claims** [`apps/mobile/tests/unit/contributor-list-render.test.ts`, AC6 block]
   — the check is a **global budget** (`itemReads.length <= 2` over `/\bitem\.(firstName|lastInitial)\b/g` across the whole component), ⛔ not a location check. `keyExtractor` alone consumes both allowed slots. ⇒ a refactor that composes the label from `item.firstName`/`item.lastInitial` inside `renderItem` while switching `keyExtractor` to `` `${index}` `` leaves exactly 2 wire-row reads and passes **green**, restoring the inline composition AC1 exists to delete.
-- [ ] [Review][Patch] **F2 (shared seam) — the `t()`-through proof is circularly deferred and its stated ground is false** [`apps/mobile/tests/unit/contributor-list-render.test.ts:13-17`]
+- [x] [Review][Patch] **F2 (shared seam) — the `t()`-through proof is circularly deferred and its stated ground is false** [`apps/mobile/tests/unit/contributor-list-render.test.ts:13-17`]
   — this file records a real `t()` resolution as what *"THIS HARNESS CANNOT PROVE … (no mount)"* and points at 11b.2's AC2 as the owner; `packages/ui/tests/contribution-list/presenter.test.ts:193-197` records that it asserts **AROUND** `t()` and names **11b.2b — which CAN call `t()` — as the trigger**. ⛔ Neither discharges it. ⚠ **The "no mount" ground is FALSE:** `apps/mobile/tests/unit/panchayat-noticeboard-render.test.ts:21,141` imports `t` from `@twt/i18n` and calls `t(key, undefined, { locale, namespace })` in the SAME pure-Vitest mobile harness, in the same directory. **Family 10 REAL GAP** — a **constructible** obligation recorded as not-constructible, which is the inverse of the family. ⇒ add the `t()`-through assertion here on the noticeboard precedent, and amend `deferred-work.md` item `11b.2 (vi)`, whose trigger has now been spent unrecorded.
 
 ## Dev Agent Record

@@ -6,9 +6,19 @@
 // same output. Because there is nothing to mock, it is asserted with pure unit tests.
 //
 // ⛔ ONE ROW IN, ONE VIEW-MODEL OUT (Trap 1). There is NO `deriveContributionListViewModel(rows[])` here and
-// there never will be: the consumer is a WINDOWING render layer that calls this once per visible row on every
-// scroll frame, so this function must stay per-row and allocation-light. The module-wide scan in
-// `no-list-iteration.test.ts` mechanizes it in both halves — source AND the compile-time parameter type.
+// there never will be. The module-wide scan in `no-list-iteration.test.ts` mechanizes it in both halves —
+// source AND the compile-time parameter type.
+// ⚠⚠ THE RATIONALE IS CORRECTED HERE (combined review, 2026-09-01), ⛔ and the RULE is unchanged. This
+// block used to justify the per-row shape with "the consumer is a WINDOWING render layer that calls this
+// once per visible row on every scroll frame". ⛔ THAT IS FALSE, and the adapter shipped in the SAME diff
+// already said so: `apps/mobile/components/contributor-list/contribution-row-input.ts` records that "the
+// shipped consumer calls this EAGERLY, once per row, inside a memoized `.map()` … ⛔ not once per visible
+// row per scroll frame". The two `@twt/ui` headers were simply never updated with it.
+// ⭐ WHY THE RULE SURVIVES ITS OWN RATIONALE: the per-row SHAPE is what Trap 1 requires, and that holds
+// however the caller iterates. ⚠ WHAT CHANGES IS THE COST MODEL a later reader will act on — on Story
+// 11b.3's public render (the documented ~10,000-member case) virtualization does ⛔ NOT bound derivation,
+// because the caller's memo runs this function, and a `t()` resolution, for EVERY row on every locale
+// change and every poll result. ⛔ Do not re-derive "it is fine, it is windowed" from a stale comment.
 //
 // ⛔ IT DOES NOT ADAPT THE WIRE ROW. The shipped `ConfirmedContributorRow` is `{ firstName, lastInitial }`
 // `.strict()`, and `letterCode` lives ONCE PER RESPONSE on the pool identity block — so a render layer must
@@ -71,9 +81,27 @@ export function deriveContributionRowViewModel(
     default: {
       // Exhaustiveness over the kind discriminant — a THIRD kind added upstream fails typecheck here rather
       // than falling through to a silently blank name.
+      //
+      // ⛔⛔ THE MESSAGE CARRIES THE KIND, ⛔ NEVER THE OPERAND. It used to be
+      // `JSON.stringify(exhaustive)`, which serialised the WHOLE display-name object — `firstName` and
+      // `lastInitial` included — into `error.message`. ⚠ That message is CAUGHT AND LOGGED by the mobile
+      // render layer (`PoolContributorList.tsx`, the per-row catch), whose own comment justifies logging
+      // `error.message` on the ground that "every resolver throw carries the param NAME … ⛔ never a
+      // param VALUE" — a verification that covers the i18n RESOLVER only, while THIS function is the
+      // other thing inside that same `try`. ⇒ the stated safety ground was narrower than the catch it
+      // justified, and the first producer able to emit a third kind would have turned a dev log into a
+      // NAME LEAK on the one surface whose entire subject is PII shielding.
+      // ⚠ Caught at the combined review (2026-09-01) while still LATENT — today's adapter hardcodes
+      // `kind:'name'`, so no operand can reach here. ⭐ Fixed at the THROW, ⛔ not at the log: a guard
+      // that depends on every future consumer logging carefully is not a guard
+      // ([["anonymous" diagnostic log convention]] — the signal is the ACTION, never the subject).
       const exhaustive: never = displayName;
+      const leakedKind =
+        typeof (exhaustive as { kind?: unknown }).kind === 'string'
+          ? (exhaustive as { kind: string }).kind
+          : 'unrecognized';
       throw new Error(
-        `[deriveContributionRowViewModel] unhandled display-name kind: ${JSON.stringify(exhaustive)}`,
+        `[deriveContributionRowViewModel] unhandled display-name kind: ${leakedKind}`,
       );
     }
   }

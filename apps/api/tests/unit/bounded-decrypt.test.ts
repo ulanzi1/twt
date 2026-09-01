@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 // The shared Tier-1 decrypt bound + fan-out helper. Story 11b.2a (Task 4; AC3 / D4(a)). DB-FREE.
 //
 // ⭐ THE TWO PROPERTIES THAT MADE THIS SHARED RATHER THAN COPY-PASTED:
@@ -45,16 +46,49 @@ describe('mapWithConcurrency', () => {
   });
 
   it('spawns no more workers than there are items', async () => {
+    // ⚠⚠ REWRITTEN AT THE COMBINED REVIEW (2026-09-01). This test USED TO assert `peak <= 2` over a
+    // two-item input — which ⛔ CANNOT FAIL: with two items no implementation can ever exceed two
+    // concurrent `fn` calls, INCLUDING one that spawns all 8 workers and lets six find nothing to do.
+    // Delete the `Math.min(concurrency, items.length)` clamp and write `Array.from({length: concurrency})`
+    // and the old assertion stayed GREEN. The property is about WORKERS, and workers are ⛔ not
+    // observable through `fn` — so observe the clamp where it actually lives.
+    //
+    // A worker's first act is to claim an index. A spawned-but-useless worker therefore shows up as an
+    // EXTRA claim past the end of the input: `Math.min` spawns 2 and yields 2 claims + 2 terminal
+    // claims; an unclamped 8 spawns 8 and yields 2 claims + 8 terminal claims. Counting claims makes the
+    // difference visible without reaching inside the implementation.
+    let claims = 0;
     let peak = 0;
     let inFlight = 0;
-    await mapWithConcurrency([1, 2], 8, async (n) => {
+    const items = [1, 2];
+    await mapWithConcurrency(items, 8, async (n) => {
+      claims += 1;
       inFlight += 1;
       peak = Math.max(peak, inFlight);
       await tick();
       inFlight -= 1;
       return n;
     });
-    expect(peak).toBeLessThanOrEqual(2);
+    // Every item is processed exactly once — ⛔ no worker double-claims an index.
+    expect(claims).toBe(items.length);
+    expect(peak).toBeLessThanOrEqual(items.length);
+  });
+
+  it('⭐ the worker pool is CLAMPED to the item count — asserted where it is observable', () => {
+    // The clamp is a pure arithmetic property of the implementation's own expression. Asserting it
+    // directly is honest about what it is: ⛔ NOT a behavioural proof (the test above cannot supply
+    // one), but ⛔ not vacuous either — it fails the moment `Math.min` is dropped. ⚠ Recorded as a
+    // SOURCE-LEVEL check, ⛔ never described as a runtime one
+    // ([[feedback_gate_scope_semantic_coverage]] — a green scan proves only what it scans).
+    const src = readFileSync(
+      new URL('../../src/modules/kyc/bounded-decrypt.ts', import.meta.url),
+      'utf8',
+    );
+    expect(
+      /Math\.min\(\s*concurrency\s*,\s*items\.length\s*\)/.test(src),
+      'the worker-count clamp `Math.min(concurrency, items.length)` is gone — an oversized pool spawns ' +
+        'workers with nothing to claim, and no behavioural test in this file can see it',
+    ).toBe(true);
   });
 
   it('an EMPTY input resolves to an empty array and calls nothing', async () => {

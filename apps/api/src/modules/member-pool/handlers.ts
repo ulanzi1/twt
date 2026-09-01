@@ -269,6 +269,25 @@ export function createMemberPoolHandlers(deps: AppDeps) {
   };
 }
 
+/**
+ * Whether `err` is Postgres' "current transaction is aborted" (`25P02`) — i.e. an EARLIER statement on
+ * this scope tx already failed and every subsequent one will fail identically until rollback.
+ *
+ * ⚠ The code can sit on the error OR on its `cause`: Drizzle wraps the driver error, which is the same
+ * placement the `23505` retry path already relies on
+ * ([[project_domain_limit_clamp_and_savepoint_retry]]) — ⛔ check both, never one.
+ *
+ * ⛔ This is ⛔ NOT a recovery mechanism and must never grow into one. It exists so a per-row fail-soft
+ * can tell "THIS row is bad" (degrade it) from "the transaction is gone" (stop), because conflating the
+ * two turns one fault into N false accusations against named members.
+ */
+function isAbortedTransaction(err: unknown): boolean {
+  const code = (e: unknown): unknown =>
+    typeof e === 'object' && e !== null ? (e as { code?: unknown }).code : undefined;
+  const cause = typeof err === 'object' && err !== null ? (err as { cause?: unknown }).cause : undefined;
+  return code(err) === '25P02' || code(cause) === '25P02';
+}
+
 const CONTRIBUTOR_LIST_UNASSIGNED: PoolContributorListResponse = { assigned: false };
 
 /**
@@ -312,6 +331,18 @@ async function resolveContributorList(
   //      PROJECTOR-maintained current state; joining it would make the RTBF guarantee depend on
   //      projector liveness. Every other read in this path trusts the REPLAY, and the erasure
   //      decision — the one read where being wrong is a privacy breach — must trust it too.
+  //      ⛔⛔ AND IT IS DELIBERATELY *NOT* WRAPPED IN A TRY/CATCH — that would be THEATRE, and the
+  //      combined review (2026-09-01) traced it rather than assuming. Two layers flagged this call as
+  //      "the one step with no degradation path", which is TRUE, but the proposed catch fixes nothing:
+  //        · `replayMemberState` is a TOTAL reducer — it "never throws on a well-formed event"
+  //          (`member/state.ts:15`) and uses `.safeParse` throughout — so there is ⛔ no in-process
+  //          throw for a catch to rescue;
+  //        · every REMAINING failure mode is a SQL/connection error, which ABORTS this scope tx ⇒ a
+  //          catch here lets execution continue only for every subsequent statement to fail `25P02`,
+  //          and the surface collapses at the next one regardless.
+  //      ⇒ ⭐ THE HONEST FIX WAS THE OTHER ONE: the per-row catch below no longer MIS-ATTRIBUTES an
+  //      aborted transaction to N innocent members (see `isAbortedTransaction`), and its coverage
+  //      comment no longer over-claims. ⛔ Do not "harden" this line with a catch that cannot fire.
   const contributorStates = await memberDomain.getCurrentMemberStates(
     tx,
     confirmed.map((c) => c.memberId),
@@ -344,6 +375,21 @@ async function resolveContributorList(
   // The three `null` returns below are the Story 8.3 integrity skips, preserved verbatim with their
   // rationale — the catch lives INSIDE the mapped function precisely so one bad row cannot reject the
   // whole batch and hide every already-resolved row.
+  // ⚠⚠ WHAT THAT CATCH ACTUALLY COVERS, CORRECTED AT THE COMBINED REVIEW (2026-09-01) — the claim was
+  // broader than the guard, which is the SAME class as `e300928` ("the try/catch renderItem calls its
+  // only guard didn't guard everything it claimed to"), one story later:
+  //   · ✅ it DOES isolate a per-row fault that leaves the transaction usable — a decrypt failure, a
+  //     missing profile, a row-shape error. That is the case it was written for and it holds.
+  //   · ⛔ it does ⛔ NOT save the response from a TX-ABORTING statement error. Postgres aborts the
+  //     whole tx, every later statement returns `25P02`, and step (9)'s `resolveCuratedPoolName` throws
+  //     into the handler's fail-soft anyway ⇒ `CONTRIBUTOR_LIST_UNASSIGNED`. ⛔ No per-row catch can
+  //     change that, and describing this guard as preventing the whole-surface collapse is FALSE.
+  //   · ⚠⚠ WORSE, UNGUARDED IT MADE THAT FAULT *HARDER TO DIAGNOSE*: at concurrency 8 on the single
+  //     pinned client this scope tx holds, ONE failed statement turned into N `25P02`s, each caught
+  //     here and logged as a name-integrity anomaly AGAINST A NAMED MEMBER. ⭐ That log is the ONLY
+  //     signal distinguishing a render failure from a LAWFUL ERASURE on this surface
+  //     (`PoolContributorList.tsx`, the per-row catch comment) ⇒ an operator auditing erasure
+  //     completeness was pointed at innocent members. `isAbortedTransaction` below stops that.
   const resolved = await mapWithConcurrency(
     representable,
     DIRECTORY_DECRYPT_CONCURRENCY,
@@ -359,6 +405,13 @@ async function resolveContributorList(
       try {
         kycProfile = await kycDomain.getMemberKycProfile(tx, pariwarId, contributor.memberId);
       } catch (err) {
+        // ⛔⛔ AN ABORTED TRANSACTION IS ⛔ NOT A PER-ROW INTEGRITY ANOMALY, and must never be logged as
+        // one. Once any statement on this scope tx fails, every later statement returns `25P02` — so
+        // WITHOUT this re-throw a single fault produced one false "name unresolvable" warning per
+        // remaining contributor, each naming an innocent member, on the one surface where that log is
+        // the only thing distinguishing a render failure from a lawful erasure. ⭐ Re-throwing lets it
+        // fail ONCE, honestly, at the handler's fail-soft — ⛔ rather than N times, misleadingly, here.
+        if (isAbortedTransaction(err)) throw err;
         // Fail CLOSED and per-row: an unreadable profile omits THIS row, never rejects the batch.
         // Unguarded, this rejected `mapWithConcurrency` and collapsed the whole surface into
         // CONTRIBUTOR_LIST_UNASSIGNED — telling an assigned member "you have no live pool".

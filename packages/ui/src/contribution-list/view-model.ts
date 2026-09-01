@@ -5,12 +5,16 @@
 // (presenter.ts): NO react/react-native/astro, NO copy (i18n KEYS only), NO palette, NO numeral formatting,
 // and NO `@twt/domain` import.
 //
-// ── PER-ROW BY SHAPE, because the consumer is a WINDOWING render layer (Trap 1) ──────────────────────────
-// A windowing layer calls the row presenter ONCE PER VISIBLE ROW, ON EVERY SCROLL FRAME. There is deliberately
-// NO list-level function in this module and no type describing a row SET: virtualization is a render-layer
-// property (it needs a scroll container, a viewport and a mount lifecycle, none of which a pure
-// `(input) → view-model` function has). This module owns the row's CONTENT CONTRACT; 11b.2b and a future
-// Astro layer own the WINDOWING.
+// ── PER-ROW BY SHAPE (Trap 1) ────────────────────────────────────────────────────────────────────────────
+// There is deliberately NO list-level function in this module and no type describing a row SET:
+// virtualization is a render-layer property (it needs a scroll container, a viewport and a mount lifecycle,
+// none of which a pure `(input) → view-model` function has). This module owns the row's CONTENT CONTRACT;
+// 11b.2b and a future Astro layer own the WINDOWING.
+// ⚠⚠ CORRECTED (combined review, 2026-09-01): this block used to open "because the consumer is a WINDOWING
+// render layer … ONCE PER VISIBLE ROW, ON EVERY SCROLL FRAME". ⛔ The shipped consumer does ⛔ NOT do that —
+// it derives EAGERLY over the whole list inside a memo (`contribution-row-input.ts` records this, and
+// `presenter.ts`'s header now carries the full correction). ⭐ The per-row shape requirement is unaffected;
+// only the reason given for it was wrong.
 //
 // ── Confirmed-only, by SHAPE (Stories 8.3 + 9.5; D2(a)) ─────────────────────────────────────────────────
 // The INPUT type carries NO way to express yellow/pending/attested/projected/utr/status — a row's mere

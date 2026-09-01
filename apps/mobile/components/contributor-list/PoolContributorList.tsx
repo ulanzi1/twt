@@ -234,7 +234,17 @@ export function PoolContributorList() {
           redundant (an empty array has no renderable row) and KEPT deliberately, because the two
           conditions are different facts and the branch reads as the union it is. */}
       {confirmedRows.length === 0 || !hasRenderableRow ? (
-        <YStack px="$5" py="$6" accessibilityRole="text">
+        // Family-13 check (a), made EXPLICIT — ⚠ CAUGHT AT THE COMBINED REVIEW (2026-09-01). This
+        // branch carried `accessibilityRole="text"` on a container that was ⛔ NOT an accessibility
+        // element, and the inner `<Text>` carried ⛔ no role either — so the role was INERT and this
+        // was the ONLY one of the five state branches shaped that way (loading `:186-187` and absence
+        // `:197-198` both put the role on the inner `<Text>`; the row `:168` and the pending strip
+        // `:287` both declare `accessible`). ⛔⛔ The irony is the point: this same diff ADDED
+        // `accessible` to the pending strip citing "relying on that default is exactly how check (a)
+        // has failed silently in this codebase before" — and did not apply that reasoning one branch
+        // up. ⭐ `accessible` groups the child text and announces it under the declared role (the
+        // `panchayat/PinnedItem.tsx` explicit-grouping precedent the checklist points at).
+        <YStack px="$5" py="$6" accessible accessibilityRole="text">
           <Text fontFamily="$body" fontSize="$4" color="$colorPress">
             {t('contributor_list.empty', undefined, NS)}
           </Text>

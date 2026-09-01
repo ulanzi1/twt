@@ -39,7 +39,14 @@ const URL = '/api/v1/member/pool-contributors';
 type Json = Record<string, unknown>;
 
 /** The `member.rtbf_anonymized` sentinel, spelled out here so the leak assertion is literal. */
-const ANONYMIZED_SENTINEL = '[anonymized]';
+// ⭐ IMPORTED, ⛔ NOT re-typed. It used to be a hand-written `'[anonymized]'` literal ("spelled out here
+// so the leak assertion is literal") — ⚠ which is the EXACT drift class this story's own AC3 forbids, in
+// the one test that proves the leak is closed. `bounded-decrypt.ts`'s header argues at length that
+// "sharing ONLY the constant while re-implementing the helper" is the danger; here the CONSTANT was the
+// re-typed half. ⛔ Change `ANONYMIZED_SENTINEL` in @twt/domain with the literal in place and both
+// `not.toContain(...)` assertions pass VACUOUSLY against a string that is no longer the sentinel — a
+// green leak test over a live leak. Caught at the combined review (2026-09-01).
+const ANONYMIZED_SENTINEL = memberDomain.ANONYMIZED_SENTINEL;
 
 const audit = (from: string | null, to: string, trigger: string, actor: 'member' | 'system', extra: Json = {}): Json => ({
   from_state: from,
@@ -251,12 +258,6 @@ async function stateWriter(
 }
 
 /**
- * Drive a REAL RTBF anonymization of `memberId` — `anonymizeMember` (which overwrites the KYC name
- * with an ENCRYPTED sentinel, ⛔ never NULL) plus the `member.rtbf_anonymized` projection.
- * ⛔ Deliberately NOT a hand-set `members.state = 'anonymized'`: the state the boundary reads comes
- * from the event REPLAY, so a projection-only fixture would prove nothing about the real path.
- */
-/**
  * ⭐⭐ THE TOCTOU END-STATE, REPRODUCED DETERMINISTICALLY — ⛔ not a timing race.
  *
  * Overwrites the Tier-1 KYC name with the ENCRYPTED `[anonymized]` sentinel via the real
@@ -284,6 +285,12 @@ async function anonymizeCiphertextOnly(t: TestApp, pariwarId: string, memberId: 
   }
 }
 
+/**
+ * Drive a REAL RTBF anonymization of `memberId` — `anonymizeMember` (which overwrites the KYC name
+ * with an ENCRYPTED sentinel, ⛔ never NULL) plus the `member.rtbf_anonymized` projection.
+ * ⛔ Deliberately NOT a hand-set `members.state = 'anonymized'`: the state the boundary reads comes
+ * from the event REPLAY, so a projection-only fixture would prove nothing about the real path.
+ */
 async function reallyAnonymize(t: TestApp, pariwarId: string, memberId: string): Promise<void> {
   const scopeTx = await openScopeTx(t.deps, pariwarId);
   try {

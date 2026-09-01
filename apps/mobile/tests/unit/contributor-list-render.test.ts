@@ -11,16 +11,37 @@
 // taxonomy grows and this render layer does not keep up.
 //
 // ⛔⛔ WHAT THIS HARNESS CANNOT PROVE IS RECORDED IN THE STORY AS UN-ATTESTED, NOT ASSERTED HERE:
-//   · a real screen-reader announcement (no device, no accessibility tree);
-//   · a real `t()` resolution at the mobile call site (no mount).
-// Story 11b.2's AC2 owns the ten-key ref-resolution proof against `@twt/i18n` in BOTH locales. ⛔ This
-// file writes NO second i18n ref test (D12-refscope(a)); it scans its OWN call sites instead.
+//   · a real screen-reader announcement (no device, no accessibility tree).
+//
+// ⚠⚠⚠ CORRECTED AT THE COMBINED REVIEW (2026-09-01). This list USED TO CARRY a second entry — "a real
+// `t()` resolution at the mobile call site (no mount)" — and ⛔ THAT GROUND WAS FALSE. `t()` is a plain
+// function; resolving a key needs ⛔ no mount, ⛔ no renderer and ⛔ no device, and the counter-example
+// sat in this very directory the whole time: `panchayat-noticeboard-render.test.ts:21,141` imports `t`
+// from `@twt/i18n` and calls `t(key, undefined, { locale, namespace })` in this SAME pure-Vitest harness.
+//
+// ⭐⭐ WHY IT MATTERED: `packages/ui/tests/contribution-list/presenter.test.ts:193-197` records that
+// 11b.2's AC2 asserts AROUND `t()` (it reads the locale JSON from disk) and routes the real proof to
+// "11b.2b — which CAN call `t()`" as `11b.2 (vi)` in deferred-work.md. This file then routed it BACK to
+// 11b.2's AC2. ⇒ A CIRCULAR DEFERRAL: each story pointed at the other and the obligation was discharged
+// by NEITHER, through five single-story review passes — each of which saw a well-formed pointer to a
+// live sibling obligation and correctly let it through. Only the combined pass could see the loop.
+// ⇒ ⛔ A CONSTRUCTIBLE obligation recorded as not-constructible is the INVERSE of closure honesty
+// (Family 10) — it is ⛔ not the same thing as the honest un-attested records this project keeps
+// elsewhere. The `t()`-through block at the bottom of this file DISCHARGES `11b.2 (vi)`.
+//
+// ⛔ This file still writes NO second i18n REF-CATALOGUE test (D12-refscope(a)) — it does not re-declare
+// the ten refs; it IMPORTS them from `@twt/ui` and resolves what that record already owns.
 
 import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { deriveContributionRowViewModel, type ContributionRowInput } from '@twt/ui'
+import { t } from '@twt/i18n'
+import {
+  CONTRIBUTION_LIST_I18N_REFS,
+  deriveContributionRowViewModel,
+  type ContributionRowInput,
+} from '@twt/ui'
 import { describe, expect, it } from 'vitest'
 
 import { toContributionRowInput } from '../../components/contributor-list/contribution-row-input'
@@ -201,6 +222,23 @@ const balancedFrom = (src: string, opener: RegExp, open: string, close: string):
  *  happens to sit within N characters. Depth 2 because RN's announced unit here is legitimately the
  *  CONTAINER (`<YStack accessibilityRole="text"><Text>{copy}</Text></YStack>`) — asserting only the
  *  innermost tag would demand a role on a node that must not carry one. */
+/** The enclosing open tags as a LIST, innermost first. ⭐ ADDED at the combined review: the joined
+ *  form below cannot attribute a prop to the tag that carries it, which is exactly how an INERT
+ *  `accessibilityRole` passed the AC7 fence. Keep both — the joined form is what the presence checks
+ *  read, this one is what the LANDS check reads. */
+const enclosingOpenTagList = (src: string, idx: number, depth = 2): readonly string[] => {
+  const tags: string[] = []
+  let cursor = idx
+  for (let n = 0; n < depth; n += 1) {
+    const lt = src.lastIndexOf('<', cursor)
+    if (lt === -1) break
+    const gt = src.indexOf('>', lt)
+    if (gt !== -1) tags.push(src.slice(lt, gt + 1))
+    cursor = lt - 1
+  }
+  return tags
+}
+
 const enclosingOpenTags = (src: string, idx: number, depth = 2): string => {
   const tags: string[] = []
   let cursor = idx
@@ -582,15 +620,42 @@ describe('AC6 — every displayName kind the presenter can take is rendered or P
   })
 
   it('the component reads the nameParts arm off the view-model, not the wire row', () => {
-    expect(component).toMatch(/\bfirstName\b/)
-    expect(component).toMatch(/\blastInitial\b/)
-    // The join reads the VIEW-MODEL, so `item.firstName` may only survive in the keyExtractor (AC3).
-    const itemReads = component.match(/\bitem\.(firstName|lastInitial)\b/g) ?? []
+    // ⚠⚠ REWRITTEN AT THE COMBINED REVIEW (2026-09-01). This USED TO BE a file-wide BUDGET
+    // (`itemReads.length <= 2`) rather than a LOCATION check — and `keyExtractor` alone consumes both
+    // allowed slots. ⇒ a refactor that composed the label from `item.firstName`/`item.lastInitial`
+    // INSIDE `renderItem` while switching `keyExtractor` to `` `${index}` `` left exactly two wire-row
+    // reads and passed GREEN — restoring the inline composition AC1 exists to delete. A budget cannot
+    // distinguish WHERE a read happens, and WHERE is the whole property.
+    //
+    // The rule, stated positively: the wire row may be read ONLY by `keyExtractor` (which needs the
+    // parts for its composite key, AC3's still-open `index` deferral). ⛔ The derivation block and the
+    // render block must go through the presenter's view-model and touch `item.*` NEVER.
+    const WIRE_READ = /\bitem\.(firstName|lastInitial)\b/g
+
+    expect(derivationBlock, 'derivation block not found — the check would be vacuous').not.toBe('')
+    expect(renderItemBlock, 'renderItem block not found — the check would be vacuous').not.toBe('')
+
+    const inDerivation = derivationBlock.match(WIRE_READ) ?? []
     expect(
-      itemReads.length <= 2,
-      'The component still composes the display name from the WIRE row (item.firstName / ' +
-        'item.lastInitial) outside the keyExtractor. AC1 routes row content through the presenter.',
-    ).toBe(true)
+      inDerivation,
+      `the derivation block reads the WIRE row directly (${inDerivation.join(', ')}) — it must go ` +
+        'through toContributionRowInput() and the presenter view-model',
+    ).toEqual([])
+
+    const inRender = renderItemBlock.match(WIRE_READ) ?? []
+    expect(
+      inRender,
+      `renderItem reads the WIRE row directly (${inRender.join(', ')}) — this is exactly the inline ` +
+        'name composition AC1 deletes; read the derived row from renderableRows[index] instead',
+    ).toEqual([])
+
+    // Non-vacuity floor: the parts ARE still read somewhere (keyExtractor), so an empty file or a
+    // renamed field cannot make the two assertions above pass by accident.
+    const wholeFile = component.match(WIRE_READ) ?? []
+    expect(
+      wholeFile.length,
+      'no wire-row read anywhere — keyExtractor should still consume the parts; this check has lost its subject',
+    ).toBeGreaterThan(0)
   })
 })
 
@@ -638,7 +703,13 @@ describe('AC3 — the keyExtractor KEEPS index; the 8.3 deferral stays open', ()
 // ─── AC4 — the anti-chrome fence (11b.2 D2(a) rejected the bridge BY NAME) ───────────────────────────
 
 describe('AC4 — NO token bridge and NO confirmed chrome (D2(a))', () => {
-  const touched = [component, adapter]
+  // ⚠⚠ THE FETCH HOOK WAS ADDED AT THE COMBINED REVIEW (2026-09-01). It was in ⛔ NO scanned set for
+  // this fence — the identical gap the SECOND review had already closed for the death-term fence one
+  // describe-block away, with the note "the QUERY HOOK is the natural place to add a filter … and it was
+  // in no scanned set at all". ⇒ the same file, the same test, the same reasoning, applied to one fence
+  // and not its sibling ([[feedback_gate_scope_semantic_coverage]] — a gate is complete only when it
+  // MEANINGFULLY covers the surface, and `usePoolContributorsQuery.ts` is a touched file in this diff).
+  const touched = [component, adapter, stripComments(read(HOOK))]
 
   it('(a) imports no @twt/tokens anywhere in the touched files', () => {
     for (const src of touched) expect(/@twt\/tokens/.test(src)).toBe(false)
@@ -994,6 +1065,50 @@ describe('AC7 — family 13 (d): every state ratified REACHABLE is ANNOUNCED, no
       expect(/accessibilityRole=/.test(slice), `${label} branch carries no accessibilityRole`).toBe(true)
     }
   })
+
+  // ⭐⭐ ADDED AT THE COMBINED REVIEW (2026-09-01). The check above tests that a role is PRESENT. It
+  // ⛔ cannot distinguish a role that LANDS from one that does not — and the empty branch shipped
+  // `accessibilityRole="text"` on a `<YStack>` with ⛔ no `accessible`, which RN never makes an
+  // accessibility element, so the role was INERT and the branch was green. That fence had already
+  // been rewritten TWICE for precision (file-wide count → per-branch; character windows → enclosing
+  // tags) and still tested the wrong property. This is the property.
+  //
+  // ⛔⛔ SCOPED TO THE TWO BRANCHES WHOSE COPY IS ANNOUNCED BY A CONTAINER, ⛔ NOT file-wide, and the
+  // narrowness is CORRECTNESS rather than convenience. A blanket "every declared role must land" rule
+  // would flag the three `accessibilityRole="summary"` wrappers — and "fixing" the one at the main
+  // return by adding `accessible` would collapse the header + the whole virtualized list + the pending
+  // strip into a SINGLE announcement, which is strictly worse than an inert role on a wrapper whose
+  // children are each announced on their own. ⚠ A fence that orders a harmful remedy is a worse defect
+  // than the one it catches ([[project_helpdesk_default_policy_version_trap]] is that exact shape).
+  it('⭐ a declared accessibilityRole must LAND — the element carrying it IS an accessibility element', () => {
+    // RN treats <Text>/<Paragraph> as accessibility elements by default; every OTHER element must say
+    // so explicitly, which is family-13 check (a).
+    const ANNOUNCES_BY_DEFAULT = /^<(Text|Paragraph)\b/
+    const roleLands = (tag: string): boolean =>
+      /\baccessible\b/.test(tag) || ANNOUNCES_BY_DEFAULT.test(tag)
+
+    const subjects: ReadonlyArray<readonly [string, string]> = [
+      ['empty / no-row-derivable', "t('contributor_list.empty'"],
+      ['the pending strip', "'contributor_list.pending_strip_a11y'"],
+    ]
+    for (const [label, needle] of subjects) {
+      const idx = component.indexOf(needle)
+      expect(idx, `${label}: copy not found — the check would be vacuous`).toBeGreaterThan(-1)
+      const bearing = enclosingOpenTagList(component, idx).filter((tag) =>
+        /accessibilityRole=/.test(tag),
+      )
+      expect(
+        bearing.length,
+        `${label}: no enclosing element declares an accessibilityRole at all`,
+      ).toBeGreaterThan(0)
+      expect(
+        bearing.some(roleLands),
+        `${label}: every enclosing accessibilityRole sits on an element that is NOT an accessibility ` +
+          `element, so the role is INERT and this state is not announced under it. Add \`accessible\` to ` +
+          `the container, or move the role onto the <Text>. Tags: ${bearing.join(' | ')}`,
+      ).toBe(true)
+    }
+  })
 })
 
 describe('AC7 — family 13 (b) and (c) are NOT-APPLICABLE on this surface, and that is asserted', () => {
@@ -1064,5 +1179,71 @@ describe('AC10 — the stale "producer is unbuilt" claims are corrected in this 
     // which meant the adapter file could bypass the alias with a relative import undetected.
     expect(/packages\/contracts/.test(component)).toBe(false)
     expect(/packages\/contracts/.test(adapter)).toBe(false)
+  })
+})
+
+// ─── `11b.2 (vi)` DISCHARGED — the `t()`-THROUGH PROOF ──────────────────────────────────────────────
+//
+// ⭐⭐ THIS BLOCK EXISTS BECAUSE OF A CIRCULAR DEFERRAL, and it is the half neither story wrote.
+// 11b.2's AC2 (`packages/ui/tests/contribution-list/presenter.test.ts`) proves every ref's key EXISTS in
+// both locale JSONs — but it reads those files FROM DISK, so it asserts AROUND `t()` and cannot see a
+// resolver-level failure. `@twt/i18n` is deliberately ⛔ not a dependency of `@twt/ui`, and ⛔ a test must
+// not be the reason a package boundary moves — so 11b.2 was RIGHT to defer, and routed the proof here.
+// ⛔ 11b.2b then routed it back. This closes the loop on the side that CAN import `@twt/i18n`.
+//
+// ⚠ WHAT THIS ADDS OVER A DISK READ, and why the distinction is not academic: the refs carry a NAMESPACE
+// (`view-model.ts`'s `ContributionListI18nRef`), `t()` takes it as the THIRD argument, and `t()` defaults
+// to `common` and THROWS on a miss (`resolver.ts:55,:63-64`). ⇒ a namespace that is present in the JSON
+// but ⛔ not REGISTERED in the runtime catalog, or a ref passed into the params slot, is invisible to a
+// disk read and fatal at the render layer. That is the shape of the 11a.2 defect the deferral named.
+describe('⭐ `11b.2 (vi)` — every @twt/ui contribution-list REF resolves through the REAL `t()`', () => {
+  const refs = Object.values(CONTRIBUTION_LIST_I18N_REFS)
+
+  it('the ref catalogue is non-empty and is the one @twt/ui exports — the check cannot be vacuous', () => {
+    // ⛔ NOT re-declared here (D12-refscope(a)): the record is 11b.2's and this file IMPORTS it, so a ref
+    // added there is automatically covered here and cannot be silently missed.
+    expect(refs.length).toBe(10)
+  })
+
+  // ⭐⭐ THE PARAMS MAP IS ITSELF PART OF THE PROOF, and it is why a disk read was never equivalent.
+  // `t()` THROWS on a missing interpolation param (`resolver.ts:36-40`) — so a ref whose string takes
+  // `{count}` and a call site that forgets it is a HARD RENDER FAILURE, invisible to a JSON key scan.
+  // ⚠ Three of the ten refs take params; the other seven must take NONE. Both halves are asserted:
+  // supplying a param a string does not use is silently fine, so the empty-params refs are the ones that
+  // would mask a newly-added token, and they are covered by the same loop.
+  const PARAMS: Readonly<Record<string, Record<string, string> | undefined>> = {
+    'contributor_list.pending_strip': { count: '3', percentage: '30' },
+    'contributor_list.pending_strip_a11y': { count: '3', percentage: '30' },
+    'contributor_list.row_a11y': { name: 'Reena S' },
+  }
+
+  for (const locale of ['en', 'hi'] as const) {
+    it(`[${locale}] every ref resolves to non-empty copy in the namespace it CLAIMS`, () => {
+      for (const ref of refs) {
+        // The namespace is the THIRD argument. Passing it second lands it in the params slot, falls back
+        // to `common`, and throws — which is precisely what a disk read cannot catch.
+        const value = t(ref.key, PARAMS[ref.key], { locale, namespace: ref.namespace })
+        // ⛔ No `{token}` may survive resolution in EITHER locale — this is the half that catches a
+        // Hindi string carrying a token its English sibling dropped (or vice versa).
+        expect(value, `${locale}/${ref.namespace}:${ref.key} left an unresolved token`).not.toMatch(
+          /\{[a-zA-Z_]+\}/,
+        )
+        expect(value.length, `${locale}/${ref.namespace}:${ref.key} resolved empty`).toBeGreaterThan(0)
+        // A resolver MISS returns the bare key on some paths rather than throwing — assert we did not
+        // merely get the key echoed back at us.
+        expect(value, `${locale}/${ref.namespace}:${ref.key} echoed its own key`).not.toBe(ref.key)
+      }
+    })
+  }
+
+  it('the row a11y ref INTERPOLATES its {name} param through the real resolver, in both locales', () => {
+    // The one ref this presenter actually emits, and the one the render layer fills. `{name}` is supplied
+    // by the render layer, never by the presenter — so an unfilled param is a live render-layer bug.
+    for (const locale of ['en', 'hi'] as const) {
+      const ref = CONTRIBUTION_LIST_I18N_REFS.rowA11y
+      const value = t(ref.key, { name: 'Reena S' }, { locale, namespace: ref.namespace })
+      expect(value, `${locale}: {name} was not interpolated`).toContain('Reena S')
+      expect(value, `${locale}: an unresolved token survived`).not.toMatch(/\{name\}/)
+    }
   })
 })

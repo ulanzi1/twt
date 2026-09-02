@@ -11,6 +11,14 @@ was assembled here.
 due **2026-09-07**).
 **Status:** ⏳ **ROUTED, ⛔ NOTHING RATIFIED AND NOTHING APPLIED.**
 
+> ### 📖 **Panel members — please start at [Appendix A: In plain words](#appendix-a--in-plain-words).**
+> It is at the end of this note and it is **complete on its own** — the whole question, the options,
+> and what follows from each, with ⛔ no technical detail. ⭐ **You can answer this note from
+> Appendix A alone.** The numbered sections are the **evidence**, written for the engineering record.
+> ⛔ You are not expected to read them.
+>
+> *(Appendix added 2026-09-02, in the same form as the note you answered that day.)*
+
 > ⭐⛔ **THE HEADLINE: THE BASIS IS SETTLED AND THE FORM IS NOT — AND ⛔ NOTHING IN THE TREE SAYS SO.**
 > Story 11b.3's AC rests contributor names on *"those members' own T&C"*, so **why** a contributor's
 > name may appear publicly is answered. But **which name** — full, or first-name + last-initial, or
@@ -184,3 +192,106 @@ and ⛔ never the publication kill switch.
 - `_bmad-output/implementation-artifacts/11b-9-sahyog-drive-publication-authority-switch.md:139-140` (the lifted hold) · `:570` (the de-authorised gate) · `:574-576` · ⭐ `:935`, `:945` (the wait is a **CHOICE**, ⛔ not a constraint — the reason *"blocked"* appears nowhere above)
 - `_bmad-output/implementation-artifacts/deferred-work.md:281` + `:289-292` (11b.1 item (e) — the public/member inversion, already open) · `:296-313` (item (f), discharged by Story 11b.2) · `:7-196` (⭐ THIS story's own section). ⚠⛔ **These are POST-INSERT line numbers.** Story 11b.2's section was prepended on 2026-08-30 per the file's newest-first discipline, shifting every 11b.1 anchor down by **192** — so the pre-insert citations `:89` · `:97-100` · `:104-121` that appear in `-168` and in older documents were TRUE WHEN WRITTEN and now point 192 lines short. ⛔ The ITEM LETTERS are stable; cite those.
 - Memory: [[feedback_closure_language_precision]] · [[project_11b_consent_model_c5_superseded]] · [[project_dpdpa_counsel_engaged_but_unrecorded]] · [[project_directory_launch_gated_on_killswitch_ui]]
+
+
+---
+
+# Appendix A — In plain words
+
+*Added 2026-09-02, at BigDev's direction, in the same form as the 2 September note. ⛔ Nothing here is
+new — it is §1–§11 above without the technical detail. Where the two differ, the numbered sections
+govern.*
+
+## What this is about
+
+When a colleague dies, other members contribute to a drive for that family. Afterwards the drive has a
+**public page** so that anyone — a family member, a prospective member, a journalist — can check the
+Trust really moved the money.
+
+**The question is whether the people who CONTRIBUTED may be named on that page, and if so, how much of
+their name.**
+
+## ⚠ Whose names — this is NOT the question you answered on 2 September
+
+| Whose name | Which question |
+|---|---|
+| The member who **died** | ✅ **You answered this on 2 September** — yes, full name. ⛔ **Not this note.** |
+| The **colleagues who contributed money** | ⭐ **THIS NOTE.** Still open. |
+| The family member whose **bank account** receives the money | ⛔ A separate question, not before you. |
+
+⚠ **These are different people, and one difference is worth holding in mind:** the member who died is
+**one person per drive**. The contributors are **many living colleagues**, one row each, on every
+drive they gave to.
+
+## Where things stand
+
+- **WHY their names may appear is already settled.** Contributors are members, and they accepted the
+  Trust's terms themselves. That basis was cleared on 28 August. ⛔ Nobody is asking you to re-open it.
+- **WHAT FORM the name takes was never decided** — not by anyone, at any point. It has been open since
+  19 August.
+
+⚠ **A reader who checks only the first line concludes the question is answered. It is not.** That gap
+is the only reason this note exists.
+
+## ⚠ Something we must disclose, because it works against us
+
+**Three of our own planning documents already assume "first name + last initial"** — one of them
+written two stages of work before this page was even designed, and the software already stores names
+that way today.
+
+⛔ **None of those is a decision of yours.** A planning document is not a ruling. We are telling you
+this plainly rather than letting the existing practice quietly stand in for your answer.
+
+⭐ **And it costs nothing either way.** Whichever form you choose, there is **no rebuild and no data
+migration** — the change is small. ⛔ Please do not let "it is already built that way" weigh on the
+answer.
+
+## ⚠ One option that is no longer available
+
+You **cannot** answer this by saying *"ask each member for permission first."* The tick-box that would
+have done that was **retired by ruling on 28 August**. There is no per-person consent to route this to
+— the basis is the terms they already accepted, or nothing.
+
+## What we are asking you
+
+1. **May a contributor's name appear on the public page at all?** Yes / No / Not yet.
+2. **If yes — in what form?** The **full name**, or **first name + last initial** (e.g. "Ramesh K.")?
+3. **Does the reason we may publish tell us anything about how much to publish?**
+   Our view is that these are **independent** questions — the fact that someone agreed to the terms
+   does not by itself say whether their full name or a short form should appear. ⚠ We offer that as a
+   view, ⛔ not as a recommendation, and you may disagree.
+
+## What happens with each answer
+
+| Your answer | What follows |
+|---|---|
+| **Yes, first name + last initial** | Matches what the software already does. The list shows "Ramesh K.". |
+| **Yes, full name** | The list shows full names. Small change, no rebuild. |
+| **Not yet / No** | The page ships **with no contributor list**. ⛔ Nothing breaks — the rest of the page works. It can be revisited at any time. |
+
+## ⚠ Two things worth knowing before you decide
+
+1. **The member app currently shows *less* than the public page does**, for the same family. That gap
+   already exists and your 2 September answer widened it. A permissive answer here widens it again.
+   It is recorded as a separate open item and ⛔ this note does not ask you to fix it.
+2. **This list is a record of who stood behind a family — ⛔ not a ranking.** Whatever you decide, the
+   page will never rank contributors, show "top givers", or add badges or scores. That is already
+   fixed and is ⛔ not part of this question.
+
+## What this note does not do
+
+⛔ It decides nothing — it only asks · ⛔ it does **not** re-open why contributors' names may appear ·
+⛔ it does **not** touch the member who died (answered 2 September) or the family's bank details ·
+⛔ and it publishes nothing: **built is not published**, and no page goes live to the public on the
+strength of this note.
+
+## Why it matters now
+
+⭐ **This is the last thing holding up the work.** The other question on this page was answered on
+2 September; **this one is the only remaining blocker**, and the work cannot begin until you answer
+it — even with a "not yet", which is a complete and legitimate answer.
+
+## If you want to answer
+
+**Questions 1 and 2 are enough** to unblock the work. **Question 3** is useful for the record but the
+work does not wait on it.

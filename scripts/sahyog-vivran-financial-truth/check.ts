@@ -10,9 +10,10 @@
 // testable-pure-core / impure-entry split every gate in `scripts/` follows).
 //
 // ── ⭐ SCOPE, AND THE PER-STORY SCOPE TAX THIS GATE OWES ITS SIBLINGS ───────────────────────────
-// The files below ARE the Sahyog Vivran read path today. ⚠ **11b.3a** adds the nominee-bank
-// presentation and **11b.3b** the named-identity render layer + the amount-raised render — ⛔ each of
-// them adds files to this path, and each MUST add them to {@link SCAN_FILES} in its own commit.
+// The files below ARE the Sahyog Vivran read path today. ⭐ **11b.3a PAID ITS SHARE** (the three
+// `claim/nominee-bank-*` modules at the end of the list). ⚠ **11b.3b** still owes its own — the
+// named-identity render layer + the amount-raised render — ⛔ and it MUST add them to
+// {@link SCAN_FILES} in its own commit.
 // ⛔ A gate that does not cover the new surface silently under-protects, and a green scan over files
 // it never reads proves nothing ([[feedback_gate_scope_semantic_coverage]]).
 // ⚠⛔ AND **11b.3b IS THE SHARP ONE**: it lifts the `@twt/ui` fence and RENDERS the amount, so it must
@@ -64,6 +65,19 @@ const SCAN_FILES: readonly { readonly path: string; readonly renderPath: boolean
     path: 'apps/public/src/pages/sahyog-vivran/[poolCanonicalIdentifier].astro',
     renderPath: true,
   },
+  // ⭐ STORY 11b.3a — THE SCOPE TAX THIS GATE'S HEADER NAMED, PAID. The nominee-bank presentation
+  // added three modules to this read path, and *"a gate that does not cover the new surface silently
+  // under-protects"* ([[feedback_gate_scope_semantic_coverage]]).
+  // ⚠ `renderPath: false` on all three, and each for a stated reason rather than by default:
+  //   · the masking policy accessor and the pure projection carry ⛔ no amount operand and ⛔ no
+  //     event type at all — they are scanned for rules (1) and (2) so that a future edit CANNOT
+  //     introduce one unnoticed, which is the whole purchase of adding them;
+  //   · the API boundary module was already on the list at `renderPath: false` and is unchanged.
+  // ⛔ Flipping any of these to `true` without reading rule (3) would forbid a legitimate operand in
+  // a module that has nothing to do with the render.
+  { path: 'packages/domain/src/claim/nominee-bank-masking.ts', renderPath: false },
+  { path: 'packages/domain/src/claim/nominee-bank-masking-policy.ts', renderPath: false },
+  { path: 'packages/domain/src/claim/nominee-bank-read.ts', renderPath: false },
 ];
 
 /**

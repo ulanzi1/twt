@@ -27,6 +27,29 @@ const OK_BODY = {
     confirmedContributionCount: 137,
     fundingOutcome: 'fully_funded',
     appealReversal: null,
+    // ⭐ Story 11b.3a — ONE FULL and ONE MASKED account, on purpose: the two arms of the
+    // discriminated union validate differently, and a fixture with only one leaves the other's
+    // check unexercised.
+    nomineeBankAccounts: [
+      {
+        masked: false,
+        accountRank: 1,
+        bankName: 'State Bank of India',
+        branch: 'Vaishali',
+        accountHolderName: 'A Holder',
+        accountNumber: '50100123456789',
+        ifsc: 'SBIN0001234',
+        vpa: null,
+      },
+      {
+        masked: true,
+        accountRank: 2,
+        bankName: 'Bank of Baroda',
+        branch: null,
+        accountNumberLast4: '6789',
+        ifsc: 'BARB0VJVAIS',
+      },
+    ],
   },
 };
 
@@ -157,6 +180,117 @@ describe('⭐ fetchSahyogVivran — every bounded field is validated against its
     stubFetch(() => json({ drive: { ...OK_BODY.drive, fundingOutcome: null } }));
     const res = await fetchSahyogVivran({ poolCanonicalIdentifier: 'P-1', forwardedFor: null });
     expect(res.ok).toBe(true);
+  });
+
+  it('⭐⭐ REJECTS a MASKED account that carries the full account number — the AC4 absence check', async () => {
+    // ⛔⛔ THE ASSERTION THIS MODULE EXISTS TO MAKE ON THIS STORY. AC4 requires that *"the full value
+    // never crosses the wire once masked"*, and the contract makes that structural: the masked arm
+    // has ⛔ NO `accountNumber` key. ⇒ this SSR-side check refuses a body carrying one, so a
+    // regression at the API boundary is caught AT THE PAGE rather than published.
+    // ⚠ A `typeof === 'object'` check would let it straight through — which is why the validator
+    // checks for ABSENCE, ⛔ not merely for what the arm does carry.
+    stubFetch(() =>
+      json({
+        drive: {
+          ...OK_BODY.drive,
+          nomineeBankAccounts: [
+            {
+              masked: true,
+              accountRank: 1,
+              bankName: 'Bank of Baroda',
+              branch: null,
+              accountNumberLast4: '6789',
+              ifsc: 'BARB0VJVAIS',
+              accountNumber: '50100123456789',
+            },
+          ],
+        },
+      }),
+    );
+    const res = await fetchSahyogVivran({ poolCanonicalIdentifier: 'P-1', forwardedFor: null });
+    expect(res).toEqual({ ok: false, reason: 'bad_response' });
+  });
+
+  it('⛔ REJECTS a masked account whose holder name or VPA survived the projection', async () => {
+    // ⚠ cl.10(e) is a RETENTION list and a retention list is EXHAUSTIVE: what it does not name is
+    // not retained. ⛔ Neither field may reappear on the ground that it is "less sensitive".
+    for (const extra of [{ accountHolderName: 'A Holder' }, { vpa: 'someone@upi' }]) {
+      stubFetch(() =>
+        json({
+          drive: {
+            ...OK_BODY.drive,
+            nomineeBankAccounts: [
+              {
+                masked: true,
+                accountRank: 1,
+                bankName: 'Bank of Baroda',
+                branch: null,
+                accountNumberLast4: '6789',
+                ifsc: 'BARB0VJVAIS',
+                ...extra,
+              },
+            ],
+          },
+        }),
+      );
+      const res = await fetchSahyogVivran({ poolCanonicalIdentifier: 'P-1', forwardedFor: null });
+      expect(res).toEqual({ ok: false, reason: 'bad_response' });
+    }
+  });
+
+  it('⛔ REJECTS an accountNumberLast4 that is not exactly four digits', async () => {
+    // ⚠ A longer string here is the REDUCTION HAVING SILENTLY NOT HAPPENED — the single most
+    // consequential regression this surface can have, and it would otherwise render as a plausible
+    // "ending in …" phrase.
+    for (const bad of ['501001234', '69', 'abcd', '  6789']) {
+      stubFetch(() =>
+        json({
+          drive: {
+            ...OK_BODY.drive,
+            nomineeBankAccounts: [
+              {
+                masked: true,
+                accountRank: 1,
+                bankName: 'Bank of Baroda',
+                branch: null,
+                accountNumberLast4: bad,
+                ifsc: 'BARB0VJVAIS',
+              },
+            ],
+          },
+        }),
+      );
+      const res = await fetchSahyogVivran({ poolCanonicalIdentifier: 'P-1', forwardedFor: null });
+      expect(res).toEqual({ ok: false, reason: 'bad_response' });
+    }
+  });
+
+  it('⭐ ACCEPTS an EMPTY accounts array — bank details were never collected, ⛔ not an outage', async () => {
+    // ⚠ 6.8's AC3 absence signal. Treating `[]` as a bad response would turn every drive whose bank
+    // details were not collected into a 503 — a statement about the trust that is not true.
+    stubFetch(() => json({ drive: { ...OK_BODY.drive, nomineeBankAccounts: [] } }));
+    const res = await fetchSahyogVivran({ poolCanonicalIdentifier: 'P-1', forwardedFor: null });
+    expect(res.ok).toBe(true);
+  });
+
+  it('⛔ REJECTS a THIRD account — the substrate admits exactly {1, 2}', async () => {
+    const account = {
+      masked: false as const,
+      accountRank: 1 as const,
+      bankName: 'B',
+      branch: null,
+      accountHolderName: null,
+      accountNumber: null,
+      ifsc: null,
+      vpa: null,
+    };
+    stubFetch(() =>
+      json({
+        drive: { ...OK_BODY.drive, nomineeBankAccounts: [account, account, account] },
+      }),
+    );
+    const res = await fetchSahyogVivran({ poolCanonicalIdentifier: 'P-1', forwardedFor: null });
+    expect(res).toEqual({ ok: false, reason: 'bad_response' });
   });
 
   it('⛔ REJECTS an out-of-range appeal stage and an unknown disposition tag', async () => {

@@ -143,6 +143,26 @@ const labels: SahyogVivranLabels = {
   contributionsCount: (count: number) => tr('value.contributions_count', { count }),
   outageTitle: tr('outage.title'),
   outageBody: tr('outage.body'),
+  // ── ⭐ Story 11b.3a — the nominee bank block ──────────────────────────────────────────────────
+  bankTitle: tr('bank.title'),
+  bankGroupLabel: tr('bank.group_label'),
+  // ⭐ THE EQUALITY STATEMENT IS COPY, ⛔ not a comment: a reader with two accounts in front of them
+  // will otherwise infer a preference from the order. `account_rank` is row identity (Story 9.9).
+  bankEqualDestinations: tr('bank.equal_destinations'),
+  // ⚠ Interpolated THROUGH `t()` with a SINGLE-brace token, ⛔ never by local string surgery — the
+  // 11a.2 `{{max}}` vs `{max}` defect threw on EVERY request and no test caught it.
+  bankAccountLabel: (rank: number) => tr('bank.account_label', { rank }),
+  labelAccountHolder: tr('label.account_holder'),
+  labelAccountNumber: tr('label.account_number'),
+  labelIfsc: tr('label.ifsc'),
+  labelVpa: tr('label.vpa'),
+  labelBankName: tr('label.bank_name'),
+  labelBranch: tr('label.branch'),
+  // ⭐⭐ THE MASKED NUMBER AS ONE COHERENT PHRASE (AC4/AC7) — the API hands over FOUR DIGITS ALONE,
+  // and this is what makes a screen reader announce "Account ending in 1234" instead of reading a
+  // bare truncated string digit by digit. ⛔ Never render the digits unwrapped.
+  valueAccountEndingIn: (last4: string) => tr('value.account_ending_in', { last4 }),
+  bankMaskedNote: tr('bank.masked_note'),
 };
 
 // ── Cache headers (AC2's `edge_cacheable` declaration) ──────────────────────
@@ -372,6 +392,105 @@ if (!driveStatusVisible) {
                 <dd class="text-sm"><MatrixField surface="sahyog-vivran" field="appeal_disposition_category" viewerContext="public" value={model.appealDispositionCategory} /></dd>
               </div>
             </dl>
+          </section>
+        )}
+
+        {/*
+          ⭐⭐ STORY 11b.3a — THE NOMINEE BANK BLOCK. `2026-08-28-160` cl.10(a): the Panel does ⛔ NOT
+          treat public bank details as an automatic reason to prohibit publication, and the
+          transparency benefit during an active Sahyog Drive is ACCEPTED. This is the surface where a
+          visitor can check the trust is routing funds to a real family and ⛔ not to itself.
+
+          ⛔⛔ RENDERS NOTHING WHEN THERE ARE NO ACCOUNTS — ⛔ no "not recorded" marker, ⛔ no
+          placeholder. The claim's bank details may simply never have been collected (6.8's AC3
+          absence signal), and an omission that announces itself is an enumeration signal on the most
+          sensitive surface in this epic.
+
+          ⛔⛔ THE TWO ACCOUNTS ARE **EQUAL PAYMENT DESTINATIONS**, and the page SAYS SO. `accountRank`
+          is composite-PK row identity — ⛔ not a priority, ⛔ not a nominee rank, ⛔ not a split, ⛔ not
+          routing (Story 9.9's re-scope). ⛔ Never label one "primary", and ⛔ never order them by
+          anything that implies preference.
+
+          ⚠⛔ AND ⛔ NOTHING HERE IS LABELLED "NOMINEE". 6.8's D1 removed that linkage DELIBERATELY:
+          the accounts are a CLAIM-SCOPED payment channel with ⛔ no FK to `member_nominees`, ⛔ no
+          rank and ⛔ no match rule. The label is what the column HOLDS — the ACCOUNT HOLDER — ⛔ never
+          what a reader assumes it holds.
+
+          ⛔ NO MASKING HAPPENS ON THIS PAGE. The projection was applied at the `apps/api` boundary
+          (cl.10(e)); *"mask it in CSS/JS"* and *"send it and hide it"* are both ruled out by AC4, and
+          they cannot be reintroduced by accident because the masked wire arm carries ⛔ no
+          `accountNumber` key at all.
+
+          ⭐ AC7 — FAMILY 13 IN ITS **WEB** FORM, same translation as the facts block above: each
+          account is a REAL GROUPING ELEMENT with a `role` AND an `aria-label`, and its `<dl>` pairs
+          every term with its value, so the announced order carries its own meaning.
+        */}
+        {model.nomineeAccounts.length > 0 && (
+          <section role="group" aria-label={labels.bankGroupLabel} class="mt-6 rounded border border-gray-300 p-4">
+            <h2 class="text-lg font-semibold">{labels.bankTitle}</h2>
+            {/* ⭐ STANDING copy, rendered whenever the block renders — ⛔ not only when there are two. */}
+            <p class="mt-2 text-sm text-gray-700">{labels.bankEqualDestinations}</p>
+            {model.nomineeAccounts.map((account) => (
+              <section
+                role="group"
+                aria-label={labels.bankAccountLabel(account.accountRank)}
+                class="mt-4 rounded border border-gray-200 p-3"
+              >
+                <dl class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <dt class="text-xs uppercase tracking-wide text-gray-500">{labels.labelBankName}</dt>
+                    {/* ⚠ Tier-3 PLAINTEXT — ⛔ nothing was decrypted for it. */}
+                    <dd class="text-sm"><MatrixField surface="sahyog-vivran" field="nominee_bank_name" viewerContext="public" value={account.nomineeBankName} /></dd>
+                  </div>
+                  {/* ⛔ The branch cell is OMITTED ENTIRELY when the filer recorded none — ⛔ never a
+                      "not recorded" placeholder, which would announce the omission. */}
+                  {account.nomineeBranch !== null && (
+                    <div>
+                      <dt class="text-xs uppercase tracking-wide text-gray-500">{labels.labelBranch}</dt>
+                      <dd class="text-sm"><MatrixField surface="sahyog-vivran" field="nominee_branch" viewerContext="public" value={account.nomineeBranch} /></dd>
+                    </div>
+                  )}
+                  {/* ⚠ THE ACCOUNT HOLDER, ⛔ not "the nominee". `null` when the window has elapsed
+                      (⛔ absent from cl.10(e)'s retention list) or on a failed decrypt ⇒ render
+                      NOTHING. */}
+                  {account.nomineeAccountHolderName !== null && (
+                    <div>
+                      <dt class="text-xs uppercase tracking-wide text-gray-500">{labels.labelAccountHolder}</dt>
+                      <dd class="text-sm"><MatrixField surface="sahyog-vivran" field="nominee_account_holder_name" viewerContext="public" value={account.nomineeAccountHolderName} /></dd>
+                    </div>
+                  )}
+                  {/* ⭐ ALREADY THE RULED PROJECTION: the full number within the window, and the
+                      localised "Account ending in NNNN" phrase once masked. ⛔ This page neither
+                      truncates nor formats digits. */}
+                  {account.nomineeAccountNumber !== null && (
+                    <div>
+                      <dt class="text-xs uppercase tracking-wide text-gray-500">{labels.labelAccountNumber}</dt>
+                      <dd class="text-sm"><MatrixField surface="sahyog-vivran" field="nominee_account_number" viewerContext="public" value={account.nomineeAccountNumber} /></dd>
+                    </div>
+                  )}
+                  {/* ⭐ RETAINED in the masked projection — cl.10(e) names IFSC among the
+                      identification needed for verification. */}
+                  {account.nomineeIfsc !== null && (
+                    <div>
+                      <dt class="text-xs uppercase tracking-wide text-gray-500">{labels.labelIfsc}</dt>
+                      <dd class="text-sm"><MatrixField surface="sahyog-vivran" field="nominee_ifsc" viewerContext="public" value={account.nomineeIfsc} /></dd>
+                    </div>
+                  )}
+                  {/* ⚠⛔ NULL FOR EVERY NOMINEE TODAY — Story 8.4 shipped the VPA resolver seam
+                      ABSENT. ⛔ Not an error, ⛔ not a gap, ⛔ not a reason to hold the render: the
+                      cell is omitted ENTIRELY, ⛔ never a "not provided" marker. */}
+                  {account.nomineeVpa !== null && (
+                    <div>
+                      <dt class="text-xs uppercase tracking-wide text-gray-500">{labels.labelVpa}</dt>
+                      <dd class="text-sm"><MatrixField surface="sahyog-vivran" field="nominee_vpa" viewerContext="public" value={account.nomineeVpa} /></dd>
+                    </div>
+                  )}
+                </dl>
+                {/* ⭐ SAYS WHY the details are reduced, so the difference is EXPLAINED rather than
+                    silently different — and it names the protected internal record (cl.10(g)). */}
+                {account.isMasked && <p class="mt-3 text-sm text-gray-700">{labels.bankMaskedNote}</p>}
+              </section>
+            ))}
           </section>
         )}
       </>

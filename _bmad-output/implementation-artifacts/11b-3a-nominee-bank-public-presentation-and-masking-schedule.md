@@ -453,30 +453,22 @@ sibling that routes it back).
   - [x] ✅ `claim_nominee_bank_accounts.ts` is **untouched** — verified by `git diff --stat`.
   - [x] ✅ **7 live-DB tests green** (`tests/integration/claim/nominee-bank-masking-schedule.spec.ts`) + **14 pure tests**. ⛔ No migration regenerated, ⛔ no `DROP SCHEMA`, membership/explicit-value assertions only. ⭐ Found mid-write: a failed CHECK probe ABORTS the tx, so probes 2 and 3 returned a false-`undefined` — each now runs inside its own raw SAVEPOINT ([[project_domain_limit_clamp_and_savepoint_retry]]).
 
-- [ ] **Task 2 — The projection function + the boundary read** (AC: 2, 4)
-  - [ ] Pure masking function (last-4 + bank/branch/IFSC), unit-tested at the boundaries — ⚠ including
-        a `null` `vpa` and an account number shorter than 4 digits.
-  - [ ] Decrypt at `apps/api`; bound and document the amplification (Trap 6).
-  - [ ] ⛔ The full value never crosses the wire once masked.
+- [x] **Task 2 — The projection function + the boundary read** (AC: 2, 4)
+  - [x] ✅ `maskAccountNumberLast4` + `isNomineeBankMasked`, **14 pure tests**. ⭐ `null` at **four OR FEWER** digits — at exactly four, *"the last four"* IS the whole number, which cl.10(e) forbids exposing. Null `vpa`, separators, and the negative/non-integer/over-ceiling throws all covered.
+  - [x] ✅ Decrypt at `apps/api` via `mapWithConcurrency(DIRECTORY_DECRYPT_CONCURRENCY)`, reusing `decryptNomineeBankFieldSoft`. ⭐ Bound WRITTEN DOWN in the handler, the route header and the login-wall entry: **at most EIGHT** per page, and only **TWO per account** when masked (cl.10(e)'s retention list excludes holder name + VPA). ⛔ `apps/public` gains no KMS dependency (`no-kms-in-public.test.ts` still green).
+  - [x] ✅ **STRUCTURAL, ⛔ not a convention**: the wire is a discriminated union whose masked arm has ⛔ NO `accountNumber` / `accountHolderName` / `vpa` key, and `.strict()` makes populating one a parse error. Asserted against the RAW serialized body in the live-DB spec, ⛔ not merely against a parsed field.
 
-- [ ] **Task 3 — Declare the four fields + the four allowlist entries, in ONE commit** (AC: 1)
-  - [ ] YAML fields with full `tier1_public_exception` blocks; four `matrix.ts` entries citing
-        `-165` cl.1.
-  - [ ] ⛔ **READ** the current Tier-1-count assertion and update it by **+4** — ⛔ never hard-code
-        `0 → 4`. If 11b.3b merged first it reads **2** and the correct value is **6**. ⛔ Do not delete it.
-  - [ ] Extend the `FieldIdMapping` so the tier-leak leg still derives a complete set.
+- [x] **Task 3 — Declare the four fields + the four allowlist entries, in ONE commit** (AC: 1)
+  - [x] ✅ Six YAML fields (four Tier-1 + two Tier-3 siblings that carry ⛔ no exception and need none) with full `{decision, rationale, scope}` blocks, and four `matrix.ts` entries citing `2026-08-28-165 cl.1` — **same commit**.
+  - [x] ✅ **READ, ⛔ not assumed.** Verified live: 11b.3b is `ready-for-dev` and unmerged ⇒ the surface assertion read **0** and is now **4** BY NAME; the matrix-wide identity assertion read **2** and is now **6** BY NAME. ⛔ Neither deleted; both assert IDENTITY, ⛔ not a count.
+  - [x] ✅ A per-ROW mapping (`SAHYOG_VIVRAN_NOMINEE_ACCOUNT_FIELD_IDS`) + a REPRESENTATIVE SHAPE, on the `/members` precedent. ⭐ Load-bearing here: deriving from `accounts[0]` would shrink the set on every bank-detail-less AND every MASKED drive — the vacuous leg, per request. Set 10 → 16.
 
-- [ ] **Task 4 — Render them on the surface + move the route's written defence** (AC: 2, 4, 7)
-  - [ ] ⭐ Update the `routes.ts` header **and** the `login-wall.spec.ts` allowlist entry to the control
-        set that applies now the route is **PII-bearing** — ⛔ both stating the **same** count.
-        ⚠⛔ **If 11b.3b landed first, EXTEND what it wrote; ⛔ never overwrite it** — it restores the
-        two pagination controls on the same two documents, in parallel.
-  - [ ] ⭐ State the **enumeration bound** in the route header beside the decrypt (AC2) — `limits.search`
-        over a **sequential** `P-YYYY-MM-###`, with ⛔ no `page`/`limit` for controls 2/3 to bind to.
-  - [ ] Extend `apps/public/src/lib/sahyog-vivran-render.ts` (pure) + the `.astro` wrapper.
-  - [ ] Every value through `<MatrixField>`. ⛔ No `Astro.cookies` / `Astro.request.headers` /
-        `Astro.session` — the surface stays auth-blind.
-  - [ ] Render **nothing** for a null `vpa`.
+- [x] **Task 4 — Render them on the surface + move the route's written defence** (AC: 2, 4, 7)
+  - [x] ✅ Both amended, both stating **FOUR** (three + the bounded, projected Tier-1 read). ⛔ The stale *"carries ZERO Tier-1 fields"* / *"there is nothing to decrypt"* claims are AMENDED and NAMED, ⛔ not deleted. ⭐ 11b.3b had not landed; both documents now tell it its count is **SIX** and to EXTEND, ⛔ never overwrite.
+  - [x] ✅ Stated in **three** places — the route header, the login-wall entry and beside the handler's decrypt — with `2026-09-02-183` cl.5's rule that judging it insufficient is **A DECISION**, ⛔ not a tuning knob, in either direction.
+  - [x] ✅ Pure `nomineeAccountRow` mapper + the `.astro` block. ⛔ The render module has nothing to hide: the masked arm arrives with no full value, so *"mask it in CSS/JS"* cannot be reintroduced by accident.
+  - [x] ✅ All six through `<MatrixField>`; ⛔ no session read added (`authenticated-fragment.test.ts` + `no-kms-in-public.test.ts` green).
+  - [x] ✅ The whole cell is OMITTED for a null `vpa` (and for a null branch / holder / IFSC) — ⛔ no placeholder, ⛔ no *"not provided"* marker.
 
 - [ ] **Task 5 — The Trust-Admin knob** (AC: 5, 6)
   - [x] ✅ **`D8(ii)` RULED 2026-09-02 (`-178`): `super_admin`, the Trust centrally.** ⛔ `pariwar_admin`

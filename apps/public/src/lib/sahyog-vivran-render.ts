@@ -56,7 +56,10 @@
 // PURE: no fs, no db, no env, no clock.
 import type { PublicSahyogVivranResponse } from '@twt/contracts';
 
-import type { SahyogVivranRenderModel } from './surface-fields.js';
+import type {
+  SahyogVivranNomineeAccountRow,
+  SahyogVivranRenderModel,
+} from './surface-fields.js';
 
 /** The route this surface renders at. ⚠ The identifier segment is appended by the caller. */
 export const SAHYOG_VIVRAN_ROUTE_PREFIX = '/sahyog-vivran';
@@ -111,6 +114,32 @@ export interface SahyogVivranLabels {
   /** The OUTAGE state — ⛔ deliberately distinct copy from the 404 the page returns instead. */
   readonly outageTitle: string;
   readonly outageBody: string;
+  // ── ⭐ Story 11b.3a — the nominee bank block ────────────────────────────────────────────────────
+  /** The bank block's section heading. */
+  readonly bankTitle: string;
+  /** The bank block's group accessible name (AC7 — a real `role` + `aria-label`). */
+  readonly bankGroupLabel: string;
+  /**
+   * ⭐ THE EQUALITY STATEMENT, and it is copy rather than a comment because a reader with two
+   * accounts in front of them will otherwise infer a preference from the order. ⛔ Never "primary".
+   */
+  readonly bankEqualDestinations: string;
+  /** Per-account accessible name. ⚠ Interpolated THROUGH `t()`, ⛔ never by local string surgery. */
+  readonly bankAccountLabel: (rank: number) => string;
+  readonly labelAccountHolder: string;
+  readonly labelAccountNumber: string;
+  readonly labelIfsc: string;
+  readonly labelVpa: string;
+  readonly labelBankName: string;
+  readonly labelBranch: string;
+  /**
+   * ⭐⭐ THE MASKED ACCOUNT NUMBER, AS ONE COHERENT PHRASE (AC4/AC7). The API hands the page FOUR
+   * DIGITS ALONE; this label is what makes a screen reader announce *"account ending in 1234"*
+   * rather than a bare truncated string read digit by digit. ⛔ Never render the digits unwrapped.
+   */
+  readonly valueAccountEndingIn: (last4: string) => string;
+  /** ⭐ Says WHY the details are reduced — ⛔ so the omission is explained, not silently different. */
+  readonly bankMaskedNote: string;
 }
 
 export interface SahyogVivranView {
@@ -222,6 +251,61 @@ function dispositionLabel(
 }
 
 /**
+ * ⭐ MAP ONE WIRE ACCOUNT ONTO ITS RENDER ROW — Story 11b.3a (AC2, AC4, AC7).
+ *
+ * ⛔⛔ THIS FUNCTION DOES ⛔ NOT MASK ANYTHING, AND IT MUST NEVER LEARN HOW. The reduction happened
+ * at the `apps/api` boundary (cl.10(e)): the masked arm of the wire shape carries ⛔ no
+ * `accountNumber` key at all, so the full value is structurally absent by the time it gets here.
+ * ⚠⛔ *"Mask it in CSS/JS"* and *"send it and hide it"* are BOTH ruled out by AC4 — and the reason
+ * they cannot be reintroduced by accident is that this module has nothing to hide.
+ *
+ * ⭐ THE MASKED ACCOUNT NUMBER IS FRAMED HERE, THROUGH `t()`. The API hands over FOUR DIGITS ALONE;
+ * `valueAccountEndingIn` turns them into one coherent phrase so assistive tech announces a single
+ * field rather than reading a truncated string digit by digit (AC4/AC7). ⛔ Do not render the digits
+ * unwrapped, and ⛔ do not interpolate them by local string surgery — the 11a.2 `{{max}}` vs `{max}`
+ * defect threw on EVERY request and no test caught it, because every test bypassed `t()`.
+ *
+ * ⛔ EVERY KEY IS PRESENT ON EVERY ROW, INCLUDING ITS NULLS. `deriveFieldIds` reads keys, and a key
+ * omitted when its value is absent would shrink the classified field set on exactly the pages nobody
+ * checks. ⛔ Never conditionally spread a key into this object.
+ */
+function nomineeAccountRow(
+  account: PublicSahyogVivranResponse['drive']['nomineeBankAccounts'][number],
+  labels: SahyogVivranLabels,
+): SahyogVivranNomineeAccountRow {
+  if (account.masked) {
+    return {
+      accountRank: account.accountRank,
+      isMasked: true,
+      nomineeBankName: account.bankName,
+      nomineeBranch: account.branch,
+      // ⛔ ABSENT FROM cl.10(e)'s RETENTION LIST ⇒ absent from the wire's masked arm ⇒ null here.
+      // The page renders NOTHING for them — ⛔ no placeholder, ⛔ no "not provided" marker.
+      nomineeAccountHolderName: null,
+      nomineeAccountNumber:
+        account.accountNumberLast4 === null
+          ? null
+          : labels.valueAccountEndingIn(account.accountNumberLast4),
+      nomineeIfsc: account.ifsc,
+      nomineeVpa: null,
+    };
+  }
+  return {
+    accountRank: account.accountRank,
+    isMasked: false,
+    nomineeBankName: account.bankName,
+    nomineeBranch: account.branch,
+    // ⚠ THE ACCOUNT HOLDER, ⛔ not "the nominee" — 6.8's D1 removed that linkage deliberately.
+    nomineeAccountHolderName: account.accountHolderName,
+    nomineeAccountNumber: account.accountNumber,
+    nomineeIfsc: account.ifsc,
+    // ⚠ NULL for every nominee today (Story 8.4's absent seam). ⛔ Not an error, ⛔ not a gap, and
+    // the page renders NOTHING for it.
+    nomineeVpa: account.vpa,
+  };
+}
+
+/**
  * Build the view for a drive that WAS found.
  *
  * ⚠ There is deliberately ⛔ NO "empty" arm here. A drive that is not on the public record does not
@@ -263,6 +347,9 @@ export function buildSahyogVivranView(
       appealDispositionCategory:
         reversal === null ? null : dispositionLabel(reversal.dispositionCategory, labels),
       appealReversalAt: reversal === null ? null : formatClosedAt(reversal.reversedAt),
+      // ⭐ Story 11b.3a. ⛔ The order is the substrate's (`#1` then `#2`) — ⛔ never a preference,
+      // and ⛔ never re-sorted here: the two are EQUAL payment destinations (Story 9.9).
+      nomineeAccounts: drive.nomineeBankAccounts.map((a) => nomineeAccountRow(a, labels)),
     },
   };
 }
@@ -304,6 +391,10 @@ export function buildSahyogVivranOutageView(poolCanonicalIdentifier: string): Sa
       appealReversalStage: null,
       appealDispositionCategory: null,
       appealReversalAt: null,
+      // ⛔ EMPTY, and ⛔ never a fabricated account: nothing is known on this arm. ⭐ The CLASSIFIED
+      // FIELD SET is unaffected — the per-row ids come from a representative shape, so an outage
+      // page declares the SAME set a rendered one does (`surface-fields.ts`).
+      nomineeAccounts: [],
     },
   };
 }

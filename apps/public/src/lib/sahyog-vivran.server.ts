@@ -214,6 +214,11 @@ function isSahyogVivranResponse(body: unknown): body is PublicSahyogVivranRespon
     return false;
   }
 
+  // ⭐ STORY 11b.3a — THE NOMINEE BANK ACCOUNTS. ⚠ Checked BEFORE the appeal block's early `return
+  // true`: putting it after would leave the whole array unvalidated on every drive that was never
+  // reversed, which is most of them (the vacuous-leg shape, in a validator).
+  if (!isNomineeBankAccounts(r['nomineeBankAccounts'])) return false;
+
   const rev = r['appealReversal'];
   if (rev === null) return true;
   if (typeof rev !== 'object') return false;
@@ -229,4 +234,53 @@ function isSahyogVivranResponse(body: unknown): body is PublicSahyogVivranRespon
     return false;
   }
   return typeof a['reversedAt'] === 'string';
+}
+
+/**
+ * ⭐ THE NOMINEE BANK ACCOUNTS — Story 11b.3a (AC2, AC4).
+ *
+ * ⛔⛔ THE MASKED ARM IS CHECKED FOR **ABSENCE**, ⛔ not merely for what it carries, and that is the
+ * point of validating it here at all. AC4 requires that *"the full value never crosses the wire once
+ * masked"*; the contract makes that structural with a discriminated union whose masked arm has ⛔ no
+ * `accountNumber` and ⛔ no `accountHolderName` key. ⇒ this SSR-side check refuses a body that
+ * carries either on a masked account — so a regression at the API boundary is caught at the page
+ * rather than published. ⚠ A `typeof === 'object'` check alone would let it straight through.
+ *
+ * ⭐ `accountNumberLast4` is checked against `^\d{4}$` — the SAME shape the contract states. A
+ * longer string here would be the reduction having silently not happened.
+ *
+ * ⚠ AT MOST TWO, matching the substrate's composite PK `{1, 2}`. ⛔ Not a page size and ⛔ not a
+ * pagination affordance — see the contract's own note.
+ */
+function isNomineeBankAccounts(value: unknown): boolean {
+  if (!Array.isArray(value) || value.length > 2) return false;
+  for (const item of value) {
+    if (typeof item !== 'object' || item === null) return false;
+    const a = item as Record<string, unknown>;
+    if (a['accountRank'] !== 1 && a['accountRank'] !== 2) return false;
+    if (typeof a['bankName'] !== 'string' || a['bankName'].length === 0) return false;
+    if (a['branch'] !== null && (typeof a['branch'] !== 'string' || a['branch'].length === 0)) {
+      return false;
+    }
+    if (a['ifsc'] !== null && (typeof a['ifsc'] !== 'string' || a['ifsc'].length === 0)) {
+      return false;
+    }
+    if (a['masked'] === true) {
+      // ⛔⛔ THE ABSENCE CHECK. A masked account carrying either key is a boundary regression that
+      // would publish what cl.10(e) says is not published.
+      if ('accountNumber' in a || 'accountHolderName' in a || 'vpa' in a) return false;
+      const last4 = a['accountNumberLast4'];
+      if (last4 !== null && (typeof last4 !== 'string' || !/^\d{4}$/.test(last4))) return false;
+      continue;
+    }
+    if (a['masked'] !== false) return false;
+    // ⛔ The FULL arm must not carry the masked arm's key either — the two are exclusive, and a body
+    // carrying both is a shape nobody authored.
+    if ('accountNumberLast4' in a) return false;
+    for (const key of ['accountHolderName', 'accountNumber', 'vpa']) {
+      const v = a[key];
+      if (v !== null && (typeof v !== 'string' || v.length === 0)) return false;
+    }
+  }
+  return true;
 }

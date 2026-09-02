@@ -441,20 +441,74 @@ export interface SahyogVivranRenderModel {
   readonly appealDispositionCategory: string | null;
   /** The reversal instant, already formatted. `null` when there was no reversal. */
   readonly appealReversalAt: string | null;
+  /**
+   * ⭐ THE NOMINEE BANK ACCOUNTS — Story 11b.3a. At most TWO, ordered `#1` then `#2`, and that is an
+   * ORDER, ⛔ not a ranking: they are EQUAL payment destinations.
+   *
+   * ⚠ `[]` when the claim's bank details were never collected, and the page renders NOTHING —
+   * ⛔ no *"not recorded"* marker. ⭐ The CLASSIFIED FIELD SET does ⛔ not shrink when this is empty:
+   * the per-row ids are derived from a representative shape, ⛔ never from `nomineeAccounts[0]`.
+   */
+  readonly nomineeAccounts: readonly SahyogVivranNomineeAccountRow[];
+}
+
+/**
+ * ⭐ ONE RENDERED NOMINEE BANK ACCOUNT — Story 11b.3a (AC2, AC4, AC7).
+ *
+ * The DISPLAY shape, ⛔ not the wire shape and ⛔ not a domain row. Every value has already been
+ * decrypted and — when the Pariwar's window has elapsed — REDUCED at the `apps/api` boundary, so
+ * ⛔ nothing here decrypts and ⛔ nothing here masks: by the time a value reaches this shape the
+ * projection is already the ruled one (AC4 — *"the full value never crosses the wire once masked"*).
+ *
+ * ⛔⛔ THE TWO ACCOUNTS ARE **EQUAL PAYMENT DESTINATIONS**. `accountRank` is row IDENTITY — ⛔ not a
+ * priority, ⛔ not a nominee rank, ⛔ not a split, ⛔ not routing (Story 9.9's re-scope). It is
+ * mapped to `null` below because it is ⛔ not a rendered field: it keys the list, and rendering
+ * *"Account 1"* / *"Account 2"* as a classified value would put an ordering that implies preference
+ * onto the page.
+ *
+ * ⚠⛔ `accountHolderName` IS ⛔ NOT LABELLED "NOMINEE" — 6.8's D1 removed that linkage deliberately
+ * ([[project_nominee_bank_disbursement_channel]]). ⛔ Do not rename it or label it so in the copy.
+ */
+export interface SahyogVivranNomineeAccountRow {
+  /** ⛔ NOT a classified field — row identity only. See the doc-block. */
+  readonly accountRank: number;
+  /** ⚠ TRUE when the Pariwar's masking window has elapsed — selects the reduced copy block. */
+  readonly isMasked: boolean;
+  /** Tier-3 plaintext. ⛔ Nothing was decrypted for it. */
+  readonly nomineeBankName: string;
+  /** Tier-3 plaintext. `null` ⇒ render NOTHING. */
+  readonly nomineeBranch: string | null;
+  /** ⚠ THE ACCOUNT HOLDER. `null` when masked (⛔ absent from cl.10(e)'s retention list) or on a
+   * failed decrypt. `null` ⇒ render NOTHING — ⛔ no placeholder. */
+  readonly nomineeAccountHolderName: string | null;
+  /**
+   * The account number AS THE RULED PROJECTION ALREADY MADE IT — the FULL value while the drive is
+   * within its window, and the LAST FOUR DIGITS ALONE once masked (already framed by the localised
+   * copy, so assistive tech announces ONE coherent field rather than reading a truncated string
+   * digit by digit — AC4/AC7). ⛔ This module never truncates: the reduction happened at the API.
+   */
+  readonly nomineeAccountNumber: string | null;
+  /** RETAINED in the masked projection (cl.10(e)). `null` ⇒ render NOTHING. */
+  readonly nomineeIfsc: string | null;
+  /** ⚠ NULL for every nominee today (Story 8.4's absent seam) and null whenever masked. ⛔ Render
+   * NOTHING — ⛔ no "not provided" marker, which would be an enumeration signal. */
+  readonly nomineeVpa: string | null;
 }
 
 /**
  * `null` declares "carried in the model but ⛔ NOT rendered as a classified field", and it is
- * correct for exactly the three booleans: they select between blocks of fixed i18n copy.
+ * correct for exactly the three booleans (they select between blocks of fixed i18n copy) and for
+ * `nomineeAccounts`, which is the CONTAINER — its per-row attributes carry the ids, ⛔ not the array.
  *
  * ⛔ Every id below is declared in `public-vs-private-matrix.yaml` for the `sahyog-vivran` surface
  * — ⛔ do not add an entry here without adding the row there.
  *
- * ⚠ THERE IS NO SEPARATE PER-ROW MAPPING, and its absence is the surface's shape: this page renders
- * ONE drive and ⛔ no list, which is also why the matrix declares `paginated: false` and
- * `parsePageParams()` is never called. ⭐ **11b.3b adds the contributor list** — that is when a
- * per-ROW mapping arrives here, and when `paginated` flips to `true` in the matrix AND in
- * `routes.ts`'s written defence AND in the `login-wall.spec.ts` allowlist entry (D11(a)).
+ * ⚠ THIS PAGE STILL RENDERS ⛔ NO PAGED LIST, and 11b.3a does ⛔ not change that: the nominee
+ * accounts are AT MOST TWO by the substrate's composite PK, so there is nothing to page, nothing to
+ * filter and nothing to walk. ⇒ the matrix still declares `paginated: false` and `parsePageParams()`
+ * is still never called. ⭐ **11b.3b adds the contributor list** — that is what flips `paginated` to
+ * `true` in the matrix AND in `routes.ts`'s written defence AND in the `login-wall.spec.ts` allowlist
+ * entry (D11(a)). ⛔ Do not read the per-row mapping below as that flip having happened.
  */
 export const SAHYOG_VIVRAN_FIELD_IDS: FieldIdMapping<SahyogVivranRenderModel> = {
   apiUnavailable: null,
@@ -470,6 +524,53 @@ export const SAHYOG_VIVRAN_FIELD_IDS: FieldIdMapping<SahyogVivranRenderModel> = 
   appealReversalStage: 'appeal_reversal_stage',
   appealDispositionCategory: 'appeal_disposition_category',
   appealReversalAt: 'appeal_reversal_at',
+  nomineeAccounts: null,
+};
+
+/**
+ * The per-ROW mapping for the nominee bank accounts — Story 11b.3a.
+ *
+ * ⚠ Split from {@link SAHYOG_VIVRAN_FIELD_IDS} for the reason the directory's is: `nomineeAccounts`
+ * is a container key with no tier of its own, and its element attributes are the classified fields.
+ * ⛔ Folding the two together would either classify the array (meaningless) or leave FOUR Tier-1
+ * fields outside the derivation — which is the vacuous set this leg exists to eliminate, on the one
+ * surface where it would matter most.
+ */
+export const SAHYOG_VIVRAN_NOMINEE_ACCOUNT_FIELD_IDS: FieldIdMapping<SahyogVivranNomineeAccountRow> =
+  {
+    // ⛔ Row identity, ⛔ not a rendered value — see the interface's doc-block.
+    accountRank: null,
+    // Selects the masked vs. full copy block; the values it selects between are classified below.
+    isMasked: null,
+    nomineeBankName: 'nominee_bank_name',
+    nomineeBranch: 'nominee_branch',
+    nomineeAccountHolderName: 'nominee_account_holder_name',
+    nomineeAccountNumber: 'nominee_account_number',
+    nomineeIfsc: 'nominee_ifsc',
+    nomineeVpa: 'nominee_vpa',
+  };
+
+/**
+ * The representative account shape the derivation runs against.
+ *
+ * ⛔ NOT a fixture and ⛔ not test data — it is the structural declaration of which attributes an
+ * account row renders, and it is what keeps the field set independent of whether a given drive
+ * happens to have bank details collected. Its VALUES are never rendered; only its KEYS are read.
+ *
+ * ⭐⭐ THIS IS THE LOAD-BEARING PART ON THIS SURFACE. Deriving from `accounts[0]` would make the
+ * classified set SHRINK on every drive with no bank details — and on every MASKED drive, where the
+ * wire's masked arm carries no `accountHolderName` key at all. ⇒ four Tier-1 declarations would go
+ * unasserted on exactly the pages nobody would check, which is the vacuous-leg defect, per request.
+ */
+const SAHYOG_VIVRAN_NOMINEE_ACCOUNT_SHAPE: SahyogVivranNomineeAccountRow = {
+  accountRank: 1,
+  isMasked: false,
+  nomineeBankName: '',
+  nomineeBranch: null,
+  nomineeAccountHolderName: null,
+  nomineeAccountNumber: null,
+  nomineeIfsc: null,
+  nomineeVpa: null,
 };
 
 /**
@@ -481,9 +582,16 @@ export const SAHYOG_VIVRAN_FIELD_IDS: FieldIdMapping<SahyogVivranRenderModel> = 
  * field at `public` FAILS a run that previously passed, which is the only thing that makes a green
  * scan mean anything ([[feedback_gate_scope_semantic_coverage]]).
  *
- * ⚠ Derived from the model instance rather than a representative shape because this surface has no
- * row container — every classified field is a top-level key, present whether or not it is null.
+ * ⚠ The top-level fields are derived from the model INSTANCE (every classified field is a top-level
+ * key, present whether or not it is null); the nominee-account attributes from a REPRESENTATIVE
+ * SHAPE, so a drive with no bank details — or a masked one — still declares them. See
+ * {@link SAHYOG_VIVRAN_NOMINEE_ACCOUNT_SHAPE} for why that distinction is load-bearing here.
  */
 export function sahyogVivranSurfaceFieldIds(model: SahyogVivranRenderModel): string[] {
-  return deriveFieldIds(model, SAHYOG_VIVRAN_FIELD_IDS);
+  const shell = deriveFieldIds(model, SAHYOG_VIVRAN_FIELD_IDS);
+  const accountIds = deriveFieldIds(
+    SAHYOG_VIVRAN_NOMINEE_ACCOUNT_SHAPE,
+    SAHYOG_VIVRAN_NOMINEE_ACCOUNT_FIELD_IDS,
+  );
+  return [...new Set([...shell, ...accountIds])].sort();
 }

@@ -816,6 +816,152 @@ surfaces:
           AC5's visible lineage — deny → appeal stage → reversal. `null` when there was no
           reversal. Latin numerals + Gregorian dates (UX-DR73).
 
+      # ── ⭐⭐ STORY 11b.3a — THE FOUR RULED TIER-1 NOMINEE-BANK FIELDS + THEIR TWO TIER-3 SIBLINGS ──
+      #
+      # ⚠⛔ THE ZERO-TIER-1 PROPERTY ABOVE IS ⛔ NOT CONTRADICTED — IT WAS ⛔ NEVER A PERMANENT
+      # CEILING, and this block's header says so in terms: *"**11b.3a** adds the four ruled
+      # nominee-bank pairs (`2026-08-28-165` cl.1/cl.3) … ⭐ Each adds its entry IN THE COMMIT THAT
+      # DECLARES ITS FIELD."* This is that commit. The four `RULED_TIER1_PUBLIC_EXCEPTIONS` entries in
+      # `matrix.ts` and the `tests/…` Tier-1 count assertion move WITH these declarations.
+      # ⛔ Adding an allowlist entry EARLIER would have been *"a standing permission with ⛔ no
+      # subject"* (routing note §11).
+      #
+      # ⭐⛔ AND MASKING DOES ⛔ NOT CHANGE THE TIER. `2026-08-28-165` cl.2, BigDev verbatim: *"Do not
+      # create a separate Tier-1 classification merely because the public projection is masked. The
+      # underlying account fields remain Tier-1. Treat masking as a presentation/projection policy."*
+      # ⇒ these four entries cover BOTH states — full during the active campaign, last-4 after the
+      # per-Pariwar window elapses — and the masked projection needs ⛔ NO declaration of its own.
+      # ⛔ The argument *"the masked view is only last-4, so it isn't really Tier-1"* is FORECLOSED.
+      #
+      # ⚠⛔ AND ⛔ NO FIFTH TIER-1 ENTRY BELONGS HERE. The deceased member's name and the contributor's
+      # are **11b.3b**'s, gated on their own Panel rulings (`2026-09-02-173` / `-174`).
+      - id: nominee_account_holder_name
+        tier: public
+        pii_tier: 1
+        description: >-
+          ⭐ The name on the disbursement account, decrypted SERVER-SIDE at `apps/api` and rendered
+          at the `public` tier. ⚠⛔ IT IS THE **ACCOUNT HOLDER**, ⛔ NOT "the nominee", and this
+          surface may ⛔ never label it so: Story 6.8's **D1** removed the nominee linkage
+          DELIBERATELY — the accounts are a CLAIM-SCOPED payment channel with ⛔ no FK to
+          `member_nominees`, ⛔ no rank and ⛔ no match rule. ⛔ Do not add a join or a match rule
+          to "fix" it.
+          ⚠⭐ RECORDED BECAUSE IT IS THE SHARPEST FACT ABOUT THIS FIELD: the value is guarded by a
+          multi-stage human approval chain — verifier → state trustee → freeze — that ⛔ CANNOT SEE
+          IT (the verifier console has no bank surface; the only read-back is a presence boolean).
+          ⇒ this publishes a value ⛔ no approver in that chain can read. Routed, ⛔ not built here.
+          ⛔ Absent from the masked projection entirely (cl.10(e) is a RETENTION list).
+        tier1_public_exception:
+          decision: '2026-08-28-165 cl.1'
+          rationale: >-
+            The Trustee Panel ruled that complete nominee bank details MAY be publicly displayed
+            during an active Sahyog Drive (`2026-08-28-160` cl.10(a)), and `-165` cl.1 named all
+            four fields in scope ON THIS SURFACE. ⚠⛔ The Panel's framing is part of the ruling and
+            ⛔ may not be restated otherwise: it does ⛔ NOT treat public bank details as an
+            automatic reason to prohibit publication, the transparency benefit during an active
+            drive is ACCEPTED, and this must ⛔ never be written up as "consent makes it lawful but
+            not safe" nor as a claim that knowing a name and bank details by itself enables banking
+            fraud — cl.10 forbids BOTH framings in terms. ⭐ The stated concern is the broader
+            public exposure / security posture and the ability to REDUCE it as TWT grows, which is
+            what the per-Pariwar masking schedule (cl.10(b)-(d)) exists to do.
+            ⚠ It renders UN-GATED (`2026-09-02-177`, D5(a)): ⛔ no per-subject consent gate and
+            ⛔ no minted `consent_type`. The price of that ruling is carried openly — the Claim
+            Terms instrument is recorded UN-ATTESTED and counsel's `2026-08-24-157` cl.3(b)
+            third-party objection is CARRIED AS RISK, ⛔ not closed.
+          scope: >-
+            ⛔ `sahyog-vivran` ONLY. It reaches ⛔ no other surface: ⛔ not `sahyog-drive`, ⛔ not
+            `member-directory`, ⛔ not `in-memoriam`, and ⛔ not any authenticated tier. Each would
+            need its own Panel ruling.
+            ⭐⛔ AND MASKING DOES ⛔ NOT CHANGE THE TIER (`-165` cl.2): this entry covers the field
+            in BOTH states — full during the active campaign and absent from the masked projection
+            after the per-Pariwar window elapses. ⛔ A masked or shielded value is STILL Tier-1;
+            `pii_tier` is a FACT about the data, ⛔ never changed to permit a render.
+      - id: nominee_account_number
+        tier: public
+        pii_tier: 1
+        description: >-
+          The disbursement account number, decrypted SERVER-SIDE at `apps/api`.
+          ⭐⛔ THE MASKED PROJECTION IS **DEFINED**, ⛔ not left to implementation discretion
+          (cl.10(e)): the LAST FOUR DIGITS ONLY, plus bank / branch / IFSC. ⛔ The complete number is
+          ⛔ NOT exposed after masking, and the reduction happens at the API BOUNDARY — ⛔ never
+          "send it and hide it", ⛔ never "mask it in CSS/JS". The wire's masked arm carries ⛔ no
+          `accountNumber` key at all, so the full value is structurally unrepresentable once masked.
+          ⚠ `null` when the stored value carries FOUR OR FEWER digits — at exactly four, "the last
+          four" IS the complete number. The page then renders NOTHING.
+        tier1_public_exception:
+          decision: '2026-08-28-165 cl.1'
+          rationale: >-
+            One of the four fields `-165` cl.1 ruled in scope on this surface, under
+            `2026-08-28-160` cl.10(a)'s acceptance of the transparency benefit during an active
+            drive. ⭐ cl.10(e) then DEFINES what survives masking — the last four digits plus the
+            bank / branch / IFSC identification needed for verification — so the Panel specified the
+            reduced projection rather than delegating it.
+          scope: >-
+            ⛔ `sahyog-vivran` ONLY; ⛔ no other surface and ⛔ no authenticated tier.
+            ⭐⛔ MASKING DOES ⛔ NOT CHANGE THE TIER (`-165` cl.2) — this entry covers BOTH the full
+            number and the last-four projection. ⛔ *"It is only last-4, so it isn't really Tier-1"*
+            is the specific argument that ruling FORECLOSES.
+      - id: nominee_ifsc
+        tier: public
+        pii_tier: 1
+        description: >-
+          The account's IFSC, decrypted SERVER-SIDE at `apps/api`. ⭐ RETAINED in the masked
+          projection — cl.10(e) names it among the identification needed for verification.
+          ⚠⛔ `ifsc_validated` is a SEPARATE, non-PII boolean and is ⛔ NOT corroboration of the
+          holder: it is a format + branch lookup, proving the BRANCH exists, ⛔ not that the PERSON
+          does, and ⛔ not that they are a nominee.
+        tier1_public_exception:
+          decision: '2026-08-28-165 cl.1'
+          rationale: >-
+            One of the four fields `-165` cl.1 ruled in scope on this surface, under
+            `2026-08-28-160` cl.10(a). ⭐ cl.10(e) names the IFSC among what a masked projection
+            RETAINS, so it is public in both states by the ruling's own terms.
+          scope: >-
+            ⛔ `sahyog-vivran` ONLY; ⛔ no other surface and ⛔ no authenticated tier.
+            ⭐⛔ Masking does ⛔ not change the tier (`-165` cl.2) — it stays Tier-1 in both states.
+      - id: nominee_vpa
+        tier: public
+        pii_tier: 1
+        description: >-
+          The nominee's own UPI VPA — the `pa=` PAYEE destination (money IN, member → nominee),
+          ⛔ never the Story 9.4 sender/member VPA. Decrypted SERVER-SIDE at `apps/api`.
+          ⚠⛔ IT IS **NULL FOR EVERY NOMINEE TODAY** and that is ⛔ NOT a gap: `vpa_ciphertext` is
+          nullable BY DESIGN (a nominee without a VPA is a first-class state) and Story 8.4 shipped
+          the VPA resolver seam ABSENT (`{available:false}`), deferring collection to its own story.
+          ⇒ ⛔ do not treat a null as an error, ⛔ do not hold the render for it, and ⛔ do not build a
+          collection surface here. The page renders NOTHING — ⛔ no placeholder, ⛔ no "not provided"
+          marker, because an omission that announces itself is an enumeration signal.
+          ⛔ Absent from the masked projection entirely (cl.10(e) is a RETENTION list).
+        tier1_public_exception:
+          decision: '2026-08-28-165 cl.1'
+          rationale: >-
+            ⭐ `vpa` was the genuinely OPEN one of the four and `-165` cl.1 ruled it **IN**,
+            consistent with its role as the UPI-Intent `pa=` destination: a public page that shows
+            where money goes and omits the payee handle shows less than the ruling intends.
+            Under `2026-08-28-160` cl.10(a) with the rest.
+          scope: >-
+            ⛔ `sahyog-vivran` ONLY; ⛔ no other surface and ⛔ no authenticated tier.
+            ⭐⛔ Masking does ⛔ not change the tier (`-165` cl.2). ⚠ The entry stands even though the
+            field is null for every nominee today — the ruling is about the FIELD, ⛔ not about
+            whether a row happens to carry a value.
+      - id: nominee_bank_name
+        tier: public
+        pii_tier: 3
+        description: >-
+          The account's bank, TIER-3 PLAINTEXT — "public, IFSC-derived, non-identifying"
+          (`claim_nominee_bank_accounts.ts:69-72`). ⛔ NOTHING IS DECRYPTED to render it, and it is
+          ⛔ NOT one of the four ruled Tier-1 fields — it carries ⛔ no `tier1_public_exception` and
+          needs none.
+          ⭐ Declared here because the tier-leak leg is PER-SURFACE and an UNDECLARED RENDERED FIELD
+          IS A LEAK (the `district` precedent). ⭐ RETAINED in the masked projection — cl.10(e).
+      - id: nominee_branch
+        tier: public
+        pii_tier: 3
+        description: >-
+          The account's branch, TIER-3 PLAINTEXT (nullable — the filer may record none). ⛔ Nothing
+          is decrypted for it and it carries ⛔ no Tier-1 exception. ⭐ RETAINED in the masked
+          projection — cl.10(e) names branch among the identification needed for verification.
+          `null` ⇒ the page renders NOTHING for it.
+
 # ── The escalation ledger (AC8) ──────────────────────────────────────────────
 # One entry per visibility ESCALATION (a field moving toward `public`), each
 # naming the `.decision-log.md` entry that authorised it. `escalation_count` must

@@ -28,6 +28,7 @@
 import { createHash } from 'node:crypto';
 
 import {
+  NOMINEE_BANK_DECRYPT_FAILED_SENTINEL,
   PUBLIC_DIRECTORY_PAGE_HORIZON,
   PUBLIC_SURFACE_PAGE_SIZE_DEFAULT,
   type PublicDirectoryEntry,
@@ -36,13 +37,23 @@ import {
   type PublicSahyogDriveEntry,
   type PublicSahyogDriveQuery,
   type PublicSahyogDriveResponse,
+  type PublicSahyogVivranNomineeAccount,
   type PublicSahyogVivranParams,
   type PublicSahyogVivranResponse,
 } from '@twt/contracts';
-import { audit, encryption, ids, kyc, member as memberDomain, pool as poolDomain } from '@twt/domain';
+import {
+  audit,
+  claim as claimDomain,
+  encryption,
+  ids,
+  kyc,
+  member as memberDomain,
+  pool as poolDomain,
+} from '@twt/domain';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
+import { decryptNomineeBankFieldSoft } from '../claims/nominee-bank-crypto.js';
 import { DIRECTORY_DECRYPT_CONCURRENCY, mapWithConcurrency } from '../kyc/bounded-decrypt.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import { evaluateDirectoryAbuse, loadDirectoryAbuseRules } from './abuse-rules.js';
@@ -570,6 +581,122 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
           );
         }
 
+        // ⭐⭐ STORY 11b.3a — THE TIER-1 DECRYPT, AND EVERY BOUND ON IT, STATED HERE.
+        //
+        // ⚠⛔ THIS IS WHERE THE ROUTE BECOMES **PII-BEARING**. `routes.ts`'s header and the
+        // `login-wall.spec.ts` allowlist entry are updated in the SAME commit to state the control
+        // set that applies now — ⛔ both with the SAME count, because *"two authoritative documents
+        // disagreeing on how many controls exist is the defect this file records having already had
+        // once"*.
+        //
+        // ⭐ THE AMPLIFICATION, BOUNDED AND SAID IN WRITING RATHER THAN LEFT TO BE RE-DERIVED:
+        // a Sahyog Vivran page decrypts **AT MOST EIGHT** values — four fields × at most two EQUAL
+        // accounts — against the directory's FIFTY per page, which is why
+        // `DIRECTORY_DECRYPT_CONCURRENCY = 8` was introduced at 11a.3. ⭐ A **MASKED** projection
+        // costs only **TWO per account**: cl.10(e)'s retention list names the account number and the
+        // IFSC, so the holder name and the VPA are ⛔ never decrypted when masked. ⛔ Do not "simplify"
+        // that into decrypting all four and discarding two — it would spend KMS quota on plaintext
+        // this surface has been ruled not to show.
+        //
+        // ⭐⛔ AND THE ROUTE'S ONLY ENUMERATION BOUND IS `limits.search`, STATED BESIDE THE DECRYPT
+        // BECAUSE THIS IS WHERE IT BECOMES EXPENSIVE. `P-YYYY-MM-###` is **SEQUENTIAL**, this is a
+        // single-item GET on a path parameter, and **D11(a)** recorded controls 2 and 3 structurally
+        // N/A *precisely because there is no `page` and no `limit` for them to bind to*. ⇒ with four
+        // DECRYPTED Tier-1 fields behind a walkable identifier, and `D8-default` ruled **FAIL-OPEN**
+        // for every Pariwar until the Trust sets a window (`2026-09-02-179` cl.1), `limits.search` is
+        // the ONLY thing bounding a walk. ⚠⛔ IF THAT IS JUDGED INSUFFICIENT, THAT IS **A DECISION**
+        // (`2026-09-02-183` cl.5) — ⛔ do ⛔ not quietly tighten or loosen the tier on this line.
+        //
+        // ⚠⭐ AND THE INVERSION THIS PUBLISHES, RECORDED HERE RATHER THAN LEFT FOR A REVIEWER
+        // (`D5-subject`): the value below is guarded by a real multi-stage human approval chain —
+        // verifier → state trustee → freeze — that ⛔ **CANNOT SEE IT**. The verifier console has ⛔ no
+        // bank surface, ⛔ no verification handler reads the field, and even a tier-2 admin making a
+        // correction reads back only `NomineeBankStatusResponse`, a PRESENCE view
+        // (`holderNamePresent: boolean`). ⇒ ⛔ **this route publishes to the internet a value no
+        // approver in that chain can read.** ⚠ `ifsc_validated` is ⛔ NOT corroboration — it is a
+        // format + branch lookup, proving the BRANCH exists, ⛔ not that the PERSON does. ⭐ Closing
+        // it is a **verifier-console** act (Story 6.10's family), ROUTED at `deferred-work.md` and
+        // ⛔ not built here.
+        //
+        // ⚠⛔ AND `accountHolderName` IS ⛔ NOT LABELLED "NOMINEE" ANYWHERE DOWNSTREAM. 6.8's D1
+        // removed the linkage deliberately — ⛔ no FK to `member_nominees`, ⛔ no rank, ⛔ no match
+        // rule ([[project_nominee_bank_disbursement_channel]]). It is the ACCOUNT HOLDER.
+        const nomineeBankAccounts = await mapWithConcurrency(
+          drive.nomineeBank.accounts,
+          DIRECTORY_DECRYPT_CONCURRENCY,
+          async (account): Promise<PublicSahyogVivranNomineeAccount> => {
+            // ⚠ FAIL-SOFT PER FIELD, ⛔ never per page: a corrupted envelope on one account must not
+            // 500 a whole public transparency page. The sentinel is mapped to `null` immediately
+            // below — ⛔ an operator-facing placeholder string must never reach a public page.
+            const fieldLog = (field: string) => (err: unknown) =>
+              request.log.error(
+                { err, account_rank: account.accountRank, field },
+                'sahyog-vivran nominee-bank field decrypt failed — rendering nothing',
+              );
+            const soft = async (
+              ciphertext: string | null,
+              field: string,
+            ): Promise<string | null> => {
+              if (ciphertext === null) return null;
+              const value = await decryptNomineeBankFieldSoft(
+                ciphertext,
+                pariwarIdStr,
+                deps.encryption,
+                fieldLog(field),
+              );
+              // ⛔ THE SENTINEL IS AN OPERATOR STRING AND ⛔ MUST NOT BE PUBLISHED. On a public page
+              // the honest answer to "we could not decrypt this" is to render NOTHING — the same
+              // posture every other absent value on this surface takes.
+              return value === NOMINEE_BANK_DECRYPT_FAILED_SENTINEL || value.length === 0
+                ? null
+                : value;
+            };
+
+            if (drive.nomineeBank.masked) {
+              // ⭐ cl.10(e)'s DEFINED projection. ⛔ TWO decrypts, ⛔ not four: the holder name and the
+              // VPA are absent from the retention list, so they are never decrypted, never held in
+              // memory here, and — because the masked arm has ⛔ no key for either — structurally
+              // unrepresentable on the wire (AC4).
+              const [accountNumber, ifsc] = await Promise.all([
+                soft(account.accountNumberCiphertext, 'accountNumber'),
+                soft(account.ifscCiphertext, 'ifsc'),
+              ]);
+              return {
+                masked: true,
+                accountRank: account.accountRank,
+                bankName: account.bankName,
+                branch: account.branch,
+                // ⭐ THE FULL VALUE DIES ON THIS LINE. `null` for four or fewer digits — at exactly
+                // four, "the last four" IS the complete number, which cl.10(e) forbids exposing.
+                accountNumberLast4:
+                  accountNumber === null
+                    ? null
+                    : claimDomain.maskAccountNumberLast4(accountNumber),
+                ifsc,
+              };
+            }
+
+            const [accountHolderName, accountNumber, ifsc, vpa] = await Promise.all([
+              soft(account.accountHolderNameCiphertext, 'accountHolderName'),
+              soft(account.accountNumberCiphertext, 'accountNumber'),
+              soft(account.ifscCiphertext, 'ifsc'),
+              // ⚠ NULL for every nominee today — Story 8.4 shipped the VPA resolver seam ABSENT.
+              // ⛔ Not an error, ⛔ not a gap, ⛔ not a reason to hold the render.
+              soft(account.vpaCiphertext, 'vpa'),
+            ]);
+            return {
+              masked: false,
+              accountRank: account.accountRank,
+              bankName: account.bankName,
+              branch: account.branch,
+              accountHolderName,
+              accountNumber,
+              ifsc,
+              vpa,
+            };
+          },
+        );
+
         ok = true;
         return {
           drive: {
@@ -603,6 +730,10 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
                     dispositionCategory: drive.appealReversal.dispositionCategory,
                     reversedAt: drive.appealReversal.reversedAt.toISOString(),
                   },
+            // ⭐ STORY 11b.3a. ⛔ The two accounts are EQUAL payment destinations — `accountRank` is
+            // row IDENTITY, ⛔ not a priority and ⛔ not a nominee rank (Story 9.9's re-scope). The
+            // order is `#1` then `#2` because that is the substrate's order, ⛔ not a preference.
+            nomineeBankAccounts,
           },
         };
       } finally {

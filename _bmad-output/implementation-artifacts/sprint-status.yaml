@@ -1,4 +1,54 @@
-# last_updated: 2026-09-02p (⭐⭐ **STORY 11b.3 IMPLEMENTED — `in-progress` -> `review`.** ONE row
+# last_updated: 2026-09-02s (⭐ **STORY 11b.3a STARTS — Task 0's GOVERNANCE WRITE, before the first
+#   line of code.** ONE row flips:
+#   development_status[11b-3a-nominee-bank-public-presentation-and-masking-schedule]
+#   `ready-for-dev` -> `in-progress`. ⛔ epic-11b stays `in-progress`; ⛔ 11b-3b stays
+#   `ready-for-dev` (independent of this story and may run in parallel).
+#
+#   ✅ **THE GATE IS SATISFIED, VERIFIED LIVE, ⛔ NOT ASSUMED:** this story is gated on 11b-3
+#   **MERGED**, ⛔ not on it reaching `done`. `git fetch origin` + `git rev-list --left-right --count
+#   origin/main...HEAD` = `0 0`, and all four 11b.3 commits (`254e9fe`, `65ca766`, `c64c21b`,
+#   `3745d00`, `e16cc69`) are ON `origin/main` ([[feedback_git_fetch_before_remote_reasoning]]).
+#
+#   ⭐⭐ **`2026-09-02-183` MINTED — the ONE governed act this story owed, plus TWO dispositions and
+#   ONE recorded interpretation.**
+#   · **`D8(i)` RULED: MINT `pariwar.manage_nominee_bank_masking`, catalog v38 -> v39 (46 -> 47 keys),
+#     `super_admin` ONLY.** ⛔ NOT an overload of `pariwar.manage_public_name_presentation` — the two
+#     govern DIFFERENT governed acts and that key's doc-block forbids widening it "for symmetry" —
+#     ⭐ but they cross-reference, because `-178` cl.2 put both under the SAME authority.
+#     ⛔ `pariwar_admin` FORECLOSED (`-178`); ⛔ `district_admin` / `state_trustee` NOT seeded (INERT
+#     in both directions under scope containment).
+#   · ⚠⛔⛔ **AND A CLAUSE READING IS RECORDED RATHER THAN SLID IN: cl.10(c)'s THIRD SETTING.** Read as
+#     three post-close offsets, *"permanent masking"* and *"0 days"* are the SAME projection and one
+#     of the Panel's three settings would ship as a synonym of another. ⇒ built as **cl.10(d)'s
+#     TERMINAL RUNG — masked in EVERY state, including while the drive is `live`** — which is the only
+#     reading under which the ruled ladder (full disclosure -> N days -> immediate -> permanent) is
+#     strictly TIGHTENING at every step. ⭐ cl.10(a) is a PERMISSION ("**may** be publicly displayed"),
+#     ⛔ not a mandate, so it is ⛔ not contradicted. ⭐ Chosen in the MORE PROTECTIVE direction on
+#     purpose: if wrong, the cost is a reversible over-application of privacy, ⛔ never a leak, while
+#     the opposite error publishes a FULL ACCOUNT NUMBER for a Trust that asked for the opposite.
+#     ⚠⛔ **AN AUTHORING READING, ⛔ NOT A RULING** — routed to `deferred-work.md` for Panel
+#     confirmation, ⛔ never citable as the Panel having decided.
+#   · ⭐ **`D4-linkage` READ AS AN ENUMERATION QUESTION AND DISPOSED — ⛔ the tier is NOT touched.**
+#     `P-YYYY-MM-###` is SEQUENTIAL, D11(a) recorded controls 2/3 N/A *because* there is no
+#     `page`/`limit`, so `limits.search` is the ONLY bound on a walk — and after this story that walk
+#     reaches FOUR DECRYPTED Tier-1 fields with `D8-default` FAIL-OPEN for every Pariwar until the
+#     Trust acts. ⇒ **STATE THE BOUND WHERE THE DECRYPT IS** (routes.ts header + login-wall entry +
+#     beside the handler decrypt). ⛔ The rate-limit tier is ⛔ NOT tightened and ⛔ NOT loosened —
+#     AC2 rules that judging it insufficient is A DECISION, ⛔ not a tuning knob. ⛔ No inbound link
+#     to a `live` drive is added.
+#   · ⚠⛔ **`D5(a)`'s PRICE IS CARRIED, ⛔ not shipped as permission alone:** the Claim Terms substrate
+#     recorded **UN-ATTESTED** (⛔ never back-filled) and counsel's `2026-08-24-157` cl.3(b)
+#     third-party objection **CARRIED AS RISK** — ⛔ "carried", ⛔ never "closed", ⛔ never "resolved
+#     via deferral": `-160` cl.7 lifted only the FIRST half of its two-part trigger and this story
+#     ships without the second. `D5-subject` stays OPEN in BOTH halves (the consent-subject gap AND
+#     the un-mechanized approver duty — ⛔ nobody in the approval chain can SEE the holder name).
+#
+#   ⛔ NOTHING ELSE IS TRANSCRIBED. `-176` / `-177` / `-178` / `-179` / `-182` are ⛔ NOT
+#   re-transcribed; `D8(ii)`, `D8-default`, `D4(b)`, `D11(a)` and `D5(a)` were already ruled and
+#   recorded. ⛔ The `epics.md` annotation is **11b.3's Task 0**, ⛔ not this story's — ⛔ no second
+#   one is written ([[feedback_circular_deferral_between_sibling_stories]]).
+#
+# last_updated_prior: 2026-09-02p (⭐⭐ **STORY 11b.3 IMPLEMENTED — `in-progress` -> `review`.** ONE row
 #   flips. ⛔ epic-11b stays `in-progress`; ⛔ 11b-3a / 11b-3b stay `ready-for-dev` — both are gated on
 #   11b-3 **MERGED**, ⛔ not on it reaching review.
 #
@@ -14335,7 +14385,7 @@ development_status:
   # ⚠ This story owns the family's ONLY migration, and cl.10(d) makes "configuration over ONE record"
   # load-bearing: ⛔ never a boolean, ⛔ never a second bank-detail record. A later "simplification"
   # to a boolean is a DEFECT, not a cleanup.
-  11b-3a-nominee-bank-public-presentation-and-masking-schedule: ready-for-dev
+  11b-3a-nominee-bank-public-presentation-and-masking-schedule: in-progress
   # ⭐ 11b-3b — the named-identity render layer: the deceased member's name AND the contributor list,
   # plus the `apps/public` -> `@twt/ui` dependency addition and the Astro render layer over 11b.2's
   # presenter (11b.2 item (i)'s named trigger).

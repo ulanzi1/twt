@@ -1,4 +1,34 @@
-# last_updated: 2026-09-02h (⚠⭐ **`D8` (11b-3a) RE-FRAMED — the live question is ⛔ NOT "does it need a
+# last_updated: 2026-09-02i (✅ **THE PANEL RULED `D8(ii)` — THE TRUST CENTRALLY, `super_admin`.**
+#   Dhiraj Rahul + Kalpana Bharti; transcribed `2026-09-02-178`. ⛔ ZERO ROWS FLIP.
+#   ⇒ `2026-08-28-160` cl.10(b)'s "Trust-Admin controlled" spoke to AUTHORITY and means the TRUST —
+#   ⛔ NOT a Pariwar Admin. ⭐⭐ **`2026-08-19-136` cl.3's two-axis separation is FOLLOWED**: the knob is
+#   PER-PARIWAR IN SCOPE and CENTRAL IN AUTHORITY, exactly like the public-name presentation policy ⇒
+#   the two controls are now ALIGNED, ⛔ not divergent. ⛔ `pariwar_admin` FORECLOSED — granting it "for
+#   symmetry" is the "reverse a ratified ruling by way of a catalog edit" move the catalog names.
+#   ⛔ `district_admin` / `state_trustee` stay excluded (INERT under scope containment).
+#   ⭐ **Q3 VACATED** — its antecedent did not obtain ⇒ ⛔ the name-presentation control is UNTOUCHED.
+#   ⛔ Not "answered in the negative" ([[feedback_closure_language_precision]]).
+#   ⭐⭐ AND THE PROCESS POINT: §2's inference (applying cl.3, whose subject is the NAME policy, to BANK
+#   MASKING) was **PUT, ⛔ NOT ASSUMED** — citing `-175`, the same-day correction where extending a
+#   ruling past its subject had to be undone. ⇒ it was ASKED and is now RULED. ⭐ The discipline that
+#   cost a correction on Monday earned a clean ruling on Tuesday.
+#
+#   ⇒ **`D8(i)` IS UNBLOCKED and is BigDev's:** mint a NEW key granted `super_admin` ONLY (⛔ do not
+#   overload `pariwar.manage_public_name_presentation`; ⭐ DO cross-reference it), as a CATALOG VERSION
+#   BUMP from **v38** — a governed act, ⛔ not a code change. ⚠ Version is ⛔ NOT a key count.
+#
+#   ⛔⛔ **AND THE RULING CREATED A NEW BLOCKING QUESTION — `D8-default`.** Because authority is CENTRAL,
+#   a Pariwar ⛔ CANNOT set its own window ⇒ **whatever the code does for a Pariwar with NO schedule row
+#   governs EVERY Pariwar until the Trust acts.** The default therefore carries far more weight than it
+#   would under tenant control — and cl.10 states NO default, only what it is NOT ("immediate masking is
+#   NOT hard-coded — '0 days' is a value an admin chose"). Three shapes: (a) FAIL-OPEN — visible until
+#   configured (⚠ the analogous name control chose exactly this, deliberately — ⛔ but on the ground that
+#   the posture was RULED, and cl.10(a) rules only the ACTIVE campaign and is silent after) · (b)
+#   FAIL-CLOSED — masked at close (⚠ safer, ⛔ but makes "immediate masking" the code's assumption, which
+#   cl.10(b) forbids in terms) · (c) a single Trust-set GLOBAL default the per-Pariwar row overrides
+#   (⚠ a third config layer; ⛔ must not become the "second record" cl.10(d) forbids).
+#   ⛔ A RULING, ⛔ not an authoring choice. Blocks 11b-3a Tasks 1 and 5.)
+# last_updated_prior: 2026-09-02h (⚠⭐ **`D8` (11b-3a) RE-FRAMED — the live question is ⛔ NOT "does it need a
 #   new permission key?" but **"WHO HOLDS IT?"**, and that may ⛔ NOT be BigDev's to rule.**
 #   ⛔ ZERO ROWS FLIP · ⛔ no .decision-log.md entry (D8 is still OPEN and CONDITIONAL — ⛔ nothing ruled)
 #   · ⛔ no source code touched.

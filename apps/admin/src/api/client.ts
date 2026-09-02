@@ -105,6 +105,7 @@ import {
   DegradedModeActiveResponse,
   DegradedModeDeclarationResponse,
   DirectoryPublicationStatusResponse,
+  NomineeBankMaskingScheduleResponse,
   WaConfigResponse,
   WaTemplateDto,
   WaTemplatesResponse,
@@ -113,7 +114,9 @@ import {
   type DegradedModeDeclarationResponse as DegradedModeDeclaration,
   type DegradedModeDeclareRequest,
   type DirectoryPublicationStatusResponse as DirectoryPublicationStatus,
+  type NomineeBankMaskingScheduleResponse as NomineeBankMaskingSchedule,
   type SetDirectoryPublicationRequest,
+  type SetNomineeBankMaskingRequest,
   type WaConfigResponse as WaConfig,
   type WaConfigUpsertRequest,
   type WaTemplateDto as WaTemplate,
@@ -892,6 +895,45 @@ export function setDirectoryPublicationStatus(
     method: 'PUT',
     body: JSON.stringify(body),
   });
+}
+
+// ── Nominee-bank masking schedule (Story 11b.3a) ──────────────────────────────
+// Tenant-scoped under /p/:pariwarId/admin/nominee-bank-masking. The super_admin read + governed
+// change for how long a family's bank account details stay visible on the public Sahyog Vivran after
+// a drive closes. Gated server-side by pariwar.manage_nominee_bank_masking — a pariwar-dimension
+// grant that never appears in the session's global-grant set, so the server's requirePermissionHook
+// is the ONLY real boundary and the console carries no client-side capability check (a 403 surfaces
+// as a page error).
+// ⛔ The request body deliberately carries NO display name and NO effective-from: the first is
+// resolved SERVER-SIDE (a browser-supplied one would let an operator lie about who made the change),
+// the second is the server's instant (a caller-supplied one would allow back-dating a window).
+// ⚠ The change is not reflected on the public pages at once — those pages are edge-cached with
+// s-maxage=300, and the previous projection can include a full account number until the cached
+// copies expire.
+
+const nomineeBankMaskingBase = (pariwarId: string): string =>
+  `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/nominee-bank-masking`;
+
+/** GET the Pariwar's current masking schedule. */
+export function getNomineeBankMaskingSchedule(
+  pariwarId: string,
+): Promise<NomineeBankMaskingSchedule> {
+  return apiFetch(
+    `${nomineeBankMaskingBase(pariwarId)}/schedule`,
+    NomineeBankMaskingScheduleResponse,
+  );
+}
+
+/** PUT the governed change (every direction); returns the updated schedule. */
+export function setNomineeBankMaskingSchedule(
+  pariwarId: string,
+  body: SetNomineeBankMaskingRequest,
+): Promise<NomineeBankMaskingSchedule> {
+  return apiFetch(
+    `${nomineeBankMaskingBase(pariwarId)}/schedule`,
+    NomineeBankMaskingScheduleResponse,
+    { method: 'PUT', body: JSON.stringify(body) },
+  );
 }
 
 // ── Auth surface (Story 1.9 endpoints, driven by the login page) ──────────────

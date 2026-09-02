@@ -108,6 +108,11 @@ export * from './degraded-mode/index.js';
 // name is server-resolved, never accepted from the caller. HTTP endpoints → these DO register in
 // openapi/v1.yaml (the GET/PUT status routes are the EXPECTED diff for this story).
 export * from './directory-publication/index.js';
+// Story 11b.3a — the per-Pariwar NOMINEE-BANK MASKING SCHEDULE admin DTOs (the schedule read + the
+// governed change). `pariwar.manage_nominee_bank_masking`-gated, super_admin ONLY (`2026-09-02-178`).
+// ⛔ The SETTING is a discriminated union of cl.10(c)'s three, ⛔ never a boolean — cl.10(d) rules a
+// later "simplification" to one a DEFECT, not a cleanup.
+export * from './nominee-bank-masking/index.js';
 
 // Story 7.10 — member pool-onboarding-tutorial outcome DTO (member-session-gated completion/skip event).
 // HTTP endpoint → registers in openapi/v1.yaml (the member outcome route is the EXPECTED diff for this story).

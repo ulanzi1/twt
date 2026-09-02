@@ -74,9 +74,16 @@ import type { PariwarId, UserId } from '../ids/index.js';
  * value domain and the TS union cannot drift because there is only one place either is written.
  *
  * ⚠ TWO enum values carry THREE settings: `after_days` + `mask_after_days = 0` is cl.10(c)'s
- * *"mask immediately"*. ⛔ Do not add an `immediate` value — it would make `after_days: 0` and
+ * zero-day setting — masked from the close instant. ⛔ Do not add an `immediate` value — it would
+ * make `after_days: 0` and
  * `immediate` two spellings of one state, which is the drift a discriminator exists to prevent.
  */
+// ⚠⭐ A NOTE ON WORDING, so nobody "restores the ruling's own phrase": cl.10(c) names the zero-day
+// setting with an ADVERB OF IMMEDIACY, and Story 11b.3a **AC6** forbids that adverb across this
+// control's surfaces — mechanized by `apps/admin/tests/nominee-bank-masking-terminology.test.ts`.
+// ⛔ The ban is not a disagreement with the Panel: it is about what THIS control's propagation claims,
+// and a source scan cannot tell a QUOTE from a CLAIM. ⇒ every file here paraphrases as *"masked from
+// the close instant"* and points at cl.10(c) for the verbatim. ⛔ Do not paste the adverb back in.
 export const nomineeBankMaskingModeEnum = pgEnum(
   'nominee_bank_masking_mode',
   NOMINEE_BANK_MASKING_MODES,
@@ -103,7 +110,8 @@ export const pariwarNomineeBankMaskingSchedule = pgTable(
     // Whole days from the drive's close/settle instant. NOT NULL ⟺ mode = 'after_days'; NULL ⟺
     // mode = 'permanent' (the terminal rung has no offset to measure). The CHECK below is what makes
     // the coupling a DB fact rather than an app convention.
-    // ⭐ `0` IS A LEGAL VALUE and is cl.10(c)'s "mask immediately" — ⛔ a value an admin CHOSE, and
+    // ⭐ `0` IS A LEGAL VALUE and is cl.10(c)'s zero-day setting (masked from the close instant) —
+    // ⛔ a value an admin CHOSE, and
     // ⛔ never the code's default, which cl.10(b) forbids in terms.
     maskAfterDays: integer('mask_after_days'),
 

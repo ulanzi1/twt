@@ -470,29 +470,20 @@ sibling that routes it back).
   - [x] ✅ All six through `<MatrixField>`; ⛔ no session read added (`authenticated-fragment.test.ts` + `no-kms-in-public.test.ts` green).
   - [x] ✅ The whole cell is OMITTED for a null `vpa` (and for a null branch / holder / IFSC) — ⛔ no placeholder, ⛔ no *"not provided"* marker.
 
-- [ ] **Task 5 — The Trust-Admin knob** (AC: 5, 6)
+- [x] **Task 5 — The Trust-Admin knob** (AC: 5, 6)
   - [x] ✅ **`D8(ii)` RULED 2026-09-02 (`-178`): `super_admin`, the Trust centrally.** ⛔ `pariwar_admin`
         is **foreclosed**; ⛔ `district_admin` / `state_trustee` stay excluded (inert).
-  - [ ] ⭐ **`D8(i)`: MINT the key, granted `super_admin` ONLY**, as a **catalog version bump** from
-        **v38** — a governed act, ⛔ not a code change. ⛔ Do ⛔ not overload
-        `pariwar.manage_public_name_presentation`; ⭐ **do** cross-reference it — the two are the same
-        class under the same authority now (`-178` cl.2).
+  - [x] ✅ **`pariwar.manage_nominee_bank_masking` MINTED, v38 → v39 (46 → 47 keys), `super_admin` ONLY**, transcribed FIRST at `2026-09-02-183` cl.1-3. ⛔ Not an overload; ⭐ the two keys cross-reference in both catalog notes. ⭐ The live-DB spec's denial case uses a REAL `pariwar_admin` grant, so `-178`'s foreclosure has teeth rather than a comment.
   - [x] ✅ **`D8-default` RULED FAIL-OPEN** (`-179` cl.1) — no row ⇒ details stay **visible** until the
         Trust sets a window. ⛔ Do ⛔ **not** default to masked; that is the assumption cl.10(b) forbids.
-  - [ ] ⚠ **Amend the `sahyog-drive.deceased_member_name` exception's `rationale:`** while you are in
-        `public-vs-private-matrix.yaml` — it says D10's Panel ratification is **OWED**, which is now
-        **stale** (`-179` cl.2 ratified it). ⛔ **Amendment, ⛔ never a rewrite** of the surrounding
-        grounds ([[feedback_supersede_never_reinterpret]]).
-  - [ ] Admin screen. ⚠⭐ **This is the project's FIRST self-serve presentation-toggle UI** — 11a.1
-        shipped none by design. ⛔ Not a blocker; ⛔ do say so in the story record.
-  - [ ] ⭐ **Reuse the governed-config SHAPE, ⛔ not the key:** `kyc/presentation-policy.ts` already
-        enforces required `rationale` + actor + display snapshot + a §1.5 hash-chain **audit anchor**,
-        and **refuses a write carrying neither**. ⛔ Do ⛔ not re-invent that accountability wrapper.
-  - [ ] `users.display_name` snapshot at action time; audit via 1.10.
-  - [ ] The non-immediacy statement, in **all three** places (AC6).
+  - [x] ✅ Amended in place — the *"ratification is OWED"* clause now records it **MADE** (`-179` cl.2), names what it does ⛔ NOT discharge (the DPDPA exposure, counsel's review, Row 17, the switch), and leaves the three grounds and the scope note **untouched**.
+  - [x] ✅ `/p/$pariwarId/nominee-bank-masking` — read + change in every direction, THREE settings (⛔ not a toggle). ⭐ The **FIRST self-serve presentation-toggle UI** is recorded in the module barrel, the handler header, `server.ts`, the page component AND the friction-budget disposition. **15 UI tests**, incl. `0` submitting as a real value and a blank day field being refused.
+  - [x] ✅ Shape reused — the same four refusals (rationale / anchor / display name / grant) plus a fifth for the day range, on `presentation-policy.ts`'s pattern via `directory-publication.ts`. ⛔ No new accountability wrapper invented.
+  - [x] ✅ `getDisplayName` fail-closed BEFORE the write (409, ⛔ never a partial state); `withCompensatingAudit` writes `pariwar.nominee_bank_masking.changed`. ⛔ The wire carries ⛔ no `changedByDisplay` and ⛔ no `effectiveFrom` — `.strict()` refuses both with a 400 (back-dating a window is refused, ⛔ not merely unused).
+  - [x] ✅ All three — the schema file, the public route header and the admin console — and **MECHANIZED**: `apps/admin/tests/nominee-bank-masking-terminology.test.ts` bans the adverbs AND the direct-SQL offer across seven targets, and asserts the `s-maxage=300` disclosure is PRESENT at each of AC6's three sites. ⭐ It bit during the build: my own quotes of cl.10(c)'s wording were the first violations, now paraphrased with a note saying why.
 
-- [ ] **Task 6 — Route what is not built** (AC: 8)
-  - [ ] Write this story's `deferred-work.md` section, every item with a trigger.
+- [x] **Task 6 — Route what is not built** (AC: 8)
+  - [x] ✅ Seven items (a)-(g), each with a trigger: the un-attested Claim Terms substrate **and** counsel's objection CARRIED AS RISK in ONE item · `D5-subject`'s two halves with the two-document contradiction named · ⭐ **the NEW 12-digit/Aadhaar collision** · the cl.10(c) reading routed for Panel confirmation · VPA collection · the post-masking authenticated tier · the edge-cache blindness **RE-AFFIRMED, ⛔ not re-filed**. ⛔ No second `epics.md` annotation written — that is 11b.3's Task 0.
 
 ---
 

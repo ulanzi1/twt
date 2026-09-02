@@ -3146,6 +3146,17 @@ As any pool member viewing the My Pool card or any visitor on Sahyog Drive (Epic
 I want to see the real-time list of confirmed contributors (first-name + last-initial only) — separate from any pending-but-not-yet-confirmed contributors — with confirmation visibility deriving exclusively from Epic 9 reconciliation,
 So that the published contributor list reflects only actually-confirmed contributions and never leaks unverified yellow-pill states as confirmed.
 
+> ⭐⛔ **ANNOTATED 2026-09-02 (Story 11b.3 Task 0) — ⛔ THE `first-name + last-initial only` FORM IN THE `I want` ABOVE IS SUPERSEDED. ⛔ Annotation only; ⛔ the story statement is not rewritten ([[feedback_supersede_never_reinterpret]]).**
+>
+> ⭐ **This line is the FIRST of the three the 2026-08-30 block at Story 11b.2 counted**, and it is the sharpest of them because its **audience clause names the public surface directly** — *"any pool member viewing the My Pool card **or any visitor on Sahyog Drive (Epic 11b)**"*.
+>
+> [`2026-09-02-174`](../../.decision-log.md#decision-2026-09-02-174) (**Trustee Panel**) ruled a contributor's name **MAY render at the `public` tier, in the FULL NAME form**; [`-175`](../../.decision-log.md#decision-2026-09-02-175) made Q1/Q2 unconditional; and [`2026-09-02-180`](../../.decision-log.md#decision-2026-09-02-180) closed the public/member inversion in **ALL FOUR** member-facing places. ⇒ ⛔ **do not build a contributor list to `first-name + last-initial` on the strength of this line.**
+>
+> ⚠⛔ **A CEILING, ⛔ NOT A LITERAL** — [`2026-08-19-136`](../../.decision-log.md#decision-2026-08-19-136) cl.1 fails any build whose public name form cannot change without a code change, and [`2026-09-02-181`](../../.decision-log.md#decision-2026-09-02-181) put **both** sides on the stored per-Pariwar `public_name_presentation_mode`. ⇒ resolve the mode; ⛔ never hard-code a form.
+>
+> ⭐ **Unchanged:** everything else this story commits — the **confirmed/pending separation**, and *"confirmation visibility deriving exclusively from Epic 9 reconciliation"*, which is the ancestor of Story 11b.3's **financial-truth-from-canonical-events** invariant. ⚠ And the read's **ordering** changes at 11b.3 (`member_id` ASC → the earliest live confirmation's `event_version`) — ⛔ a **replacement** of the sort this story shipped, ⛔ not the addition of a missing one.
+
+
 **Acceptance Criteria:**
 
 **Given** FR-24 + FR-25 `[v1-S]` + Story 7.4 deterministic assignment + Story 9.x reconciliation event stream
@@ -3237,6 +3248,16 @@ So that I have an artifact that reflects the trust relationship rather than a tr
 **Then** the PDF is titled "Yogdaan Pratigya" (Contribution Note) in Hindi + English; **explicitly NOT** "Receipt" or "Invoice"; lint set (Story 1.17 FM-1..FM-14) catches these prohibited terms
 **And** the PDF embeds: member's first-name + last-initial, pool letter + cultural name, cycle ID, amount, date, UTR (when confirmed), `clause_version_id` reference to the relevant Niyamavali rules effective at contribution time
 **And** the PDF carries a TWT watermark + per-Pariwar branding (Story 1.7); copy is reviewed by legal counsel per Story 0.13 engagement (pending-review pattern); PDF is regenerable for any past contribution
+
+> ⭐⛔ **ANNOTATED 2026-09-02 (Story 11b.3 Task 0) — ⛔ THE `first-name + last-initial` FORM IN THE AC ABOVE IS SUPERSEDED. ⛔ Annotation only; ⛔ the AC is not rewritten ([[feedback_supersede_never_reinterpret]]).**
+>
+> This is **one of the three committed lines** the 2026-08-30 block at Story 11b.2 counted as assuming the shielded contributor form. [`2026-09-02-174`](../../.decision-log.md#decision-2026-09-02-174) (**Trustee Panel**) ruled the **FULL NAME** form, [`-175`](../../.decision-log.md#decision-2026-09-02-175) made Q1/Q2 unconditional, and [`2026-09-02-180`](../../.decision-log.md#decision-2026-09-02-180) ruled the full name appears in **ALL FOUR** member-facing places — ⭐ **this PDF named among them.**
+>
+> ⚠⛔ **The PDF is one of the TWO consumers that LEAVE THE APP** (the other being the cycle-open push / WhatsApp / SMS), which is why `-180` put the scope back explicitly rather than assuming it. ⇒ ⛔ **do not read this AC's `first-name + last-initial` as live.**
+>
+> ⚠⛔ **AND IT IS A CEILING, ⛔ NOT A LITERAL.** [`2026-09-02-181`](../../.decision-log.md#decision-2026-09-02-181) ruled the member-facing form **MODE-RESOLVED** — read from the Pariwar's stored `public_name_presentation_mode`, ⛔ **never hard-coded** — so a Pariwar that shields publicly is ⛔ not published in full into a forwardable document. ⚠ **And the trap `-181` names applies here:** `resolvePublicMemberName` may ⛔ **not** be reused verbatim, because it **OMITS mononyms** and the member side must ⛔ not.
+
+
 
 **Given** the member downloads the PDF
 **When** rendered
@@ -4953,6 +4974,17 @@ So that performance contracts (60fps target / 30fps minimum on entry-level Andro
 >
 > ⚠ **The epic-level C-5 block's sharp edge INVERTS on this surface, and a diff that gets it backwards must be rejected in review.** C-5 tells authors to add the `account-frozen` (death) overlay conjunct to predicates that lack it, because 11a.3 wrongly **published** a deceased member. ⭐ **The same correction applied to a CONTRIBUTOR read silently DELETES dead contributors from the historical record** — *"the right conjunct in the wrong read"* (`2026-08-24-159` cl.11, verbatim), which also rules that ⛔ **no death-derived predicate may filter, mask or anonymize a contributor row, on any surface, at any tier.** ⚠ ⛔ And do **not** restate this as *"contribution history is immutable"* — it is **not**, and that sentence implements the wrong thing in the RTBF direction (11b.2a's **D5**: an RTBF invocation **omits the contributor's row entirely** — ⛔ no marker, ⛔ no placeholder — while the contribution **stays counted** in every aggregate).
 
+> ⭐⛔ **ANNOTATED 2026-09-02 (Story 11b.3 Task 0) — ⛔ ITEM (5) OF THE BLOCK ABOVE IS SUPERSEDED. ⛔ Annotation only; ⛔ the 2026-08-30 block is neither deleted nor re-worded ([[feedback_supersede_never_reinterpret]]).**
+>
+> Item **(5)** reads *"⏳ THE CONTRIBUTOR NAME FORM IS ⛔ STILL UNRULED"* and counts **three** committed lines assuming *first-name + last-initial* for contributors — `:3145` (Story 8.3's own audience line), `:3238` (the Contribution Note PDF) and **the AC above**. ⭐ **It has since been ruled.**
+>
+> [`2026-09-02-174`](../../.decision-log.md#decision-2026-09-02-174) (**Trustee Panel**) ruled a **CONTRIBUTOR's name MAY render at the `public` tier, in the FULL NAME form**, and [`-175`](../../.decision-log.md#decision-2026-09-02-175) corrected `-174` cl.3 so that **Q1/Q2 stand UNCONDITIONALLY** — the staged reduction is the **nominee bank fields'**, ⛔ not a person's name. ⇒ the AC above's *"first-name + last-initial"* is **superseded**; the render layer is **11b.3b's**.
+>
+> ⚠⛔ **AND THE RULING IS A CEILING, ⛔ NOT A LITERAL — ⛔ do NOT hard-code the full name.** [`2026-08-19-136`](../../.decision-log.md#decision-2026-08-19-136) cl.1 **fails any build** whose public name form cannot change without a code change; `/sahyog` already resolves through the stored per-Pariwar `public_name_presentation_mode` (`apps/public/src/lib/sahyog-render.ts`), and [`2026-09-02-181`](../../.decision-log.md#decision-2026-09-02-181) put the **member** side on that **same** mode so the two can ⛔ never diverge again. ⇒ a Pariwar set to `shielded_name` still shields **everywhere**.
+>
+> ⭐ **Unchanged by this annotation:** items **(1)**–**(4)** and **(6)** of the block above, and the C-5 inversion warning at its foot — ⛔ **no death-derived predicate may filter, mask or anonymize a contributor row, on any surface, at any tier**, and an RTBF invocation **omits the row entirely while the contribution stays counted** ([`2026-08-30-169`](../../.decision-log.md#decision-2026-08-30-169)).
+
+
 ### Story 11b.3: Sahyog Vivran Per-Claim Story Surface + AR-48 Authenticated-Fragment Composition + Reversed-Denial Publish Hook Consumer + Financial-Truth-From-Canonical-Events Invariant `[SURFACE]`
 
 As a non-member visitor (or authenticated member) viewing a closed pool's Sahyog Vivran,
@@ -5036,6 +5068,29 @@ So that public transparency exists for trust legitimacy while member-only sensit
 > ⚠ **UNDISTURBED BY THIS SUPERSESSION, ⛔ none of it discharged:** the **AR-48 authenticated-fragment deferral** (disposition (c)) and its browser-member-token trigger; the **financial-truth-from-canonical-events** invariant; the **reversed-denial publish hook**; and the ⛔ **NO SECOND ROUTE** fence on `apps/api/src/modules/public-pages/`.
 >
 > ⚠⛔ **PER STORY 11b.9's D5, THIS SURFACE IS BUILT TO THE NEW BASIS FROM THE START, ⛔ NEVER SWITCHED AFTERWARDS.** ⛔ Do ⛔ not author a `consentExists`-shaped publication gate here and plan to retire it later — that is the exact defect 11b.9 exists to correct, one surface over.
+
+
+> ⭐⛔ **ANNOTATED 2026-09-02 (Story 11b.3 Task 0, before the first line of code). ⛔ ANNOTATION ONLY — ⛔ no AC above is rewritten, and ⛔ the 2026-08-23 / 2026-08-29 blocks are neither deleted nor re-worded ([[feedback_supersede_never_reinterpret]]).**
+>
+> ⛔⛔ **THE ACs ABOVE ARE STALE, AND THE STALENESS WAS ALREADY A KNOWN OPEN CARRY.** The 2026-08-29 block says the AR-48 deferral is **UNDISTURBED**. ⭐ **That is true of the AUTHENTICATED half ONLY.** Three rulings landed **one day earlier** and never reached this file; the omission is recorded as owed at `trustee-panel-routing-note-2026-08-28-11b3-publication-basis-and-matrix.md` **§11**.
+>
+> **(i) ⭐ SD-2 IS RE-PURPOSED, ⛔ NOT DISSOLVED, AND THE NOMINEE BANK FIELDS ARE PUBLIC DURING AN ACTIVE CAMPAIGN.**
+> · [`2026-08-28-160`](../../.decision-log.md#decision-2026-08-28-160) **cl.10** ruled nominee bank details **publicly displayable during an active campaign**, with a **staged post-campaign reduction** of exposure.
+> · [`2026-08-28-164`](../../.decision-log.md#decision-2026-08-28-164) **A2** **RE-PURPOSED SD-2** onto the **post-campaign masking** state: the active-campaign policy no longer needs an authenticated viewer (that data is now **public**), ⭐ but SD-2's concern **survives** for the post-campaign presentation, and ⛔ *"the absence of an authenticated-member surface is ⛔ NOT grounds to delete the requirement."* The **post-masking authenticated presentation** is a **separate future decision** — ⛔ not carried, ⛔ not foreclosed.
+> · [`2026-08-28-165`](../../.decision-log.md#decision-2026-08-28-165) **cl.1/cl.3** ruled **four** named `(surface, field)` Tier-1 pairs on `sahyog-vivran`, and **cl.2** re-affirmed that ⛔ **a masked value is still Tier-1** — *"treat masking as a presentation/projection policy"*, ⛔ never a change to `pii_tier`.
+> ⇒ ⛔ **Do NOT build to the ACs above.** The AR-48 authenticated-fragment deferral stands for the **authenticated** half; the **public** half of the nominee-bank question is **ruled and is 11b.3a's**.
+>
+> **(ii) ⭐⭐ STORY 11b.3 IS SPLIT THREE WAYS — [`2026-09-01`](../../.decision-log.md#decision-2026-09-02-176) **D6(b)**, ruled by BigDev. ⛔ THE KEY IS UNCHANGED, and a future `sprint-planning` run must ⛔ NOT regenerate a single ghost 11b.3 or drop the two siblings.** The sprint-status keys are named here so it cannot:
+> · **`11b-3-sahyog-vivran-per-claim-story-surface`** `[SURFACE]` — the public shell, the route, the read, the **reversed-denial render-time derivation**, the **financial-truth CI gate** — ⭐ and **ZERO `pii_tier: 1` fields at `tier: public`**, which is what makes it startable with ⛔ no Panel ruling and ⛔ no allowlist entry. Gated on ⛔ nothing.
+> · **`11b-3a-nominee-bank-public-presentation-and-masking-schedule`** — the nominee bank **public presentation** + the **per-Pariwar masking schedule** + the `super_admin` knob ([`2026-09-02-178`](../../.decision-log.md#decision-2026-09-02-178)) + the **four ruled Tier-1 allowlist entries**. Gated on 11b.3 merged.
+> · **`11b-3b-sahyog-vivran-named-identity-render-layer`** — the **named-identity render layer** (the deceased member's name **and** the contributor list), the `@twt/ui` dependency, and — per [`2026-09-02-176`](../../.decision-log.md#decision-2026-09-02-176) **D1(b)** — the **amount-raised render**. Gated on 11b.3 merged **and** the Panel rulings ([`-173`](../../.decision-log.md#decision-2026-09-02-173) / [`-174`](../../.decision-log.md#decision-2026-09-02-174)) plus counsel's still-owed written clause.
+>
+> ⭐ **AND `-165` cl.3's ALLOWLIST DUTY TRAVELS WITH THE FIELDS, ⛔ it does NOT evaporate.** cl.3 reads *"Story 11b.3 adds the four allowlist entries"*; post-split those four fields are **11b.3a's**, so the duty lands at **11b.3a**. ⛔ **It is NOT pre-added here** — the matrix check is **one-directional**, so an entry added before its field exists is a **standing permission with ⛔ no subject** (routing note **§11**). Each sibling adds its own entry **in the commit that declares the field**.
+>
+> **(iii) ⛔⛔ THREE ACs ELSEWHERE IN THIS FILE ASSUME THE SHIELDED CONTRIBUTOR FORM, AND ALL THREE ARE SUPERSEDED — ⚠ they are ⛔ NOT under this heading and ⛔ not in one place.** [`2026-09-02-174`](../../.decision-log.md#decision-2026-09-02-174) (Trustee Panel) ruled a contributor's name **MAY render at the `public` tier, in the FULL NAME form**, and [`-175`](../../.decision-log.md#decision-2026-09-02-175) confirmed **Q1/Q2 stand unconditionally**. ⇒ the 2026-08-30 block's item **(5)** — *"⏳ THE CONTRIBUTOR NAME FORM IS ⛔ STILL UNRULED"* — is **superseded**, and the three lines it counted are annotated at their own anchors: **Story 8.3's `As any pool member` / `I want`** · **the Contribution Note PDF AC** · **Story 11b.2's `first-name + last-initial` AC**.
+> ⚠⛔ **AND THE RULING IS A CEILING, ⛔ NOT A LITERAL.** [`2026-08-19-136`](../../.decision-log.md#decision-2026-08-19-136) cl.1 fails any build whose public name form cannot change without a code change; `/sahyog` already resolves through the stored per-Pariwar `public_name_presentation_mode`, and [`2026-09-02-181`](../../.decision-log.md#decision-2026-09-02-181) put the **member** side on that **same** mode. ⇒ ⛔ **never hard-code the full name** — resolve the mode.
+> ⭐ **Story 11b.3 writes item (iii) because it MERGES FIRST.** 11b.3b folded its own annotation duty into this one; had this story skipped it, the obligation would have landed **nowhere** ([[feedback_circular_deferral_between_sibling_stories]]).
+
 
 ### Story 11b.4: MemorialAuthorshipSurface — Family Writes the Story + Family-Authorship-Preserved Invariant `[SURFACE]`
 

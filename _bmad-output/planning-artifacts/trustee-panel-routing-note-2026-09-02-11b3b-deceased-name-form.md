@@ -9,7 +9,10 @@ three-way split of Story 11b.3 was ruled partly *because* of it: moving both nam
 dependency at all**.
 **Routed to:** Trustee Panel · **Adv. Mohit Agrawal** (engaged counsel since 2026-06-21; T&C return
 due **2026-09-07** — ⭐ **five days from this note**, and §3 turns on that date).
-**Status:** ⏳ **ROUTED, ⛔ NOTHING RATIFIED AND NOTHING APPLIED.**
+**Status:** ✅ **ANSWERED 2026-09-02** — see **§10** below. Q1 **YES** · Q2 **FULL NAME** · Q3 the
+**broad** scope, ⚠ confirmed **in discussion**, written instrument ⛔ **OUTSTANDING**. Logged as
+`.decision-log.md#decision-2026-09-02-173`. ⛔ **Nothing is APPLIED yet**, and ⛔ no name renders until
+counsel's clause exists and is pinned (§10).
 
 > ### 📖 **Panel members — please start at [Appendix A: In plain words](#appendix-a--in-plain-words).**
 > It is at the end of this note and it is **complete on its own** — it contains the whole question,
@@ -242,10 +245,77 @@ by design ([[project_directory_launch_gated_on_killswitch_ui]]).
 
 ---
 
+## 10. ✅ ANSWERED — 2026-09-02 (BigDev, relaying the Panel). Logged as `2026-09-02-173`
+
+**Ratifying trustees:** **Kalpana Bharti**, **Dhiraj Rahul**.
+
+| | Question | Answer |
+|---|---|---|
+| **Q1** | May `deceased_member_name` be declared at `public` on `sahyog-vivran`? | ✅ **YES** |
+| **Q2** | In what form? | ✅ **THE FULL NAME** (⛔ not first-name + last-initial) |
+| **Q3** | The clause scope put to counsel | ⚠ **The BROAD scope** — *"may be published on the Trust's public pages"* — ✅ confirmed **in discussion**; ⛔ **the written rule has NOT arrived** ("will soon follow") |
+
+⇒ the `matrix.ts:401-402` fence is **satisfied for `sahyog-vivran`**, and a third
+`RULED_TIER1_PUBLIC_EXCEPTIONS` entry — `sahyog-vivran.deceased_member_name` — is authorised, citing
+`2026-09-02-173`.
+
+### ⛔⛔ What the answer does ⛔ NOT do — read this before building
+
+- ⛔⛔ **It does ⛔ NOT make a name render.** `NAME_PUBLICATION_AUTHORISED` needs a real
+  `clause_versions` row for `niy.public-disclosure.member-information`, **pinned into a T&C version
+  the member accepted**. Until then the predicate is **false for every member** and the surface is
+  **inert by ruled design** (`public-read.ts:171-175`). ⇒ **the ruling unblocks the DECLARATION; the
+  RENDER waits on counsel's written text.**
+  ⛔ **And the no-placeholder prohibition is STRENGTHENED, ⛔ not relaxed, by a favourable ruling:**
+  *"⛔ Do ⛔ not seed a placeholder `clause_versions` row to make the surface look alive — a stand-in
+  makes names render on an authority that does ⛔ not exist."* ⚠ A ruling in hand is exactly when that
+  shortcut stops looking like a lie.
+- ⛔ **It does ⛔ NOT unblock Story 11b.3b.** Its Task 0 is a STOP gate on **BOTH** name questions, and
+  **D2 (the contributor name)** is ⏳ **still open** on the 2026-08-30 note. ⛔ One of two rulings is
+  ⛔ not "the rulings".
+- ⛔ **It does ⛔ NOT ratify D10** (the `sahyog-drive` form) — a different surface; `deferred-work.md`
+  11b.1 item **(e)** stays *"authorised, ⛔ NOT made"*. ⭐ Recorded as an **opportunity**, ⛔ not an
+  outcome: the Panel is engaged on this exact subject.
+- ⛔ **It does ⛔ NOT reach 11b.6 (In Memoriam)** (§7), and ⛔ **does not bear on the nominee bank
+  fields** (11b.3a's D5 / D5-subject).
+
+⚠⛔ **THE GROUNDS WERE ⛔ NOT RELAYED, and are ⛔ NOT reconstructed here.** §5 put a constraint in front
+of the Panel — reuse D10's grounds **(1)** and **(3)**, ⛔ never **(2)**. The relay carried the
+**answers**, ⛔ not the reasoning. ⇒ ⛔ no ground is attributed to the Panel, and ⛔ nobody may later
+cite this note as having adopted (1) and (3) ([[feedback_record_unattested_no_backfill]]).
+
+⚠ **The INVERSION (§6) is now WIDER and was ruled through with the fact in front of the Panel:** the
+public side names the member in full on **two** surfaces while the member app shields them on three.
+⛔ Not re-filed — open at 11b.1 item (e); 11b.3b's **D9** decides carry-vs-resolve.
+
+### ⛔ Still owed after this round
+
+- ⛔⛔ **Counsel's WRITTEN clause** — the only thing between this ruling and a rendered name. Per
+  `2026-08-28-161` it routes through the **Story 2.4 amendment workflow** + a **non-author tone-review
+  sign-off**, ⛔ not a seed script. **Trigger: counsel's delivery.**
+- ⛔ **D2** — the contributor name (2026-08-30 note).
+- ⛔ **D10's Panel ratification** (11b.1 item (e)).
+- ⚠ **Whether the deceased-member field may land ALONE**, ahead of the contributor field, given
+  11b.3b's AC2 declares both in one commit. ⛔ Not decided here — the story's to raise. ⚠ Either way
+  the §11 timing rule binds: **field declaration and allowlist entry land in the SAME commit.**
+
+---
+
 # Appendix A — In plain words
 
 *Added 2026-09-02 for the Panel. ⛔ Nothing here is new — it is §1–§9 above, without the technical
 detail. Where the two differ, the sections above govern.*
+
+> ## ✅ **This has now been ANSWERED — 2026-09-02, by Kalpana Bharti and Dhiraj Rahul.**
+> **1. May the page show the name? — YES.  2. In what form? — THE FULL NAME.
+> 3. The lawyer's wording — the BROAD one** (*"the Trust's public pages"*), agreed in discussion.
+>
+> ⚠ **One thing to know, because it is easy to assume otherwise:** the page **still shows no name
+> today**. The permission is granted, but it rests on a written rule the lawyer has ⛔ **not yet
+> sent**. The name appears once that written rule arrives and is recorded — ⛔ not before. **That is
+> the system working as intended, ⛔ not a fault.**
+>
+> *The rest of this appendix is kept as the record of what was asked.*
 
 ## What the two pages are
 

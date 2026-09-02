@@ -1,4 +1,47 @@
-# last_updated: 2026-09-02a (⭐ STORY 11b-3b — THE **D3 TRUSTEE-PANEL PACKET IS WRITTEN AND ROUTED**:
+# last_updated: 2026-09-02b (⭐⭐ **THE TRUSTEE PANEL RULED `D3` — Story 11b-3b's deceased-member name.**
+#   **Kalpana Bharti + Dhiraj Rahul** (quorate, matching the Row 17 >=2-trustee posture), answering the
+#   2026-09-02 routing note. **Q1 YES · Q2 THE FULL NAME · Q3 the BROAD clause scope.**
+#   ⭐ TRANSCRIBED as `.decision-log.md#decision-2026-09-02-173` — a REAL ratified ruling, so an entry
+#   IS minted here (unlike -02a / -01h, which were authoring and validation passes).
+#
+#   ⛔⛔ **ZERO ROWS FLIP. 11b-3b IS STILL BLOCKED, AND THIS IS THE THING MOST LIKELY TO BE MIS-READ.**
+#   Its Task 0 is a STOP gate on **BOTH** name questions. **D2 (the CONTRIBUTOR name, the 2026-08-30
+#   note) is STILL OPEN, nothing ratified.** ⇒ ONE of two rulings is ⛔ NOT "the rulings". 11b-3b stays
+#   `ready-for-dev` and stays un-startable; 11b-3 and 11b-3a are unaffected (they never depended on it).
+#
+#   ⛔⛔ **AND A RULING IS ⛔ NOT A RENDER — the second thing most likely to be mis-read.** Counsel
+#   confirmed the broad wording ("may be published on the Trust's public pages") **IN DISCUSSION**; the
+#   WRITTEN rule "will soon follow" and ⛔ HAS NOT ARRIVED. `NAME_PUBLICATION_AUTHORISED`
+#   (`pool/public-read.ts:283-299`) needs a real `clause_versions` row for
+#   `niy.public-disclosure.member-information` PINNED into an accepted T&C version; until then the
+#   predicate is false for every member and NO NAME RENDERS — the ruled inert state (`:171-175`).
+#   ⇒ D3 unblocks the DECLARATION; the RENDER waits on counsel ([[feedback_record_unattested_no_backfill]]).
+#   ⛔⛔ AND THE NO-PLACEHOLDER PROHIBITION IS **STRENGTHENED** BY A FAVOURABLE RULING, ⛔ not relaxed:
+#   "do NOT seed a placeholder clause_versions row to make the surface look alive." ⚠ A ruling in hand
+#   is exactly when that shortcut stops looking like a lie. Per `2026-08-28-161` counsel's text routes
+#   through the **Story 2.4 amendment workflow + a non-author tone-review sign-off** — ⛔ not a seed
+#   script, ⛔ not a migration.
+#
+#   ⭐ ONE NEW DECISION RAISED — **`D11-order`** (11b-3b): AC2 declares BOTH names and BOTH allowlist
+#   entries in ONE commit, a shape that presumed both rulings landing together. With D3 ruled and D2
+#   open, may the deceased-member field land ALONE? (a) hold both [recommended] · (b) split, which
+#   moves the Tier-1-count test TWICE and gives the story a partial-completion state it does not have.
+#   ⛔ Either way: NEVER pre-add the contributor entry — "a standing permission with no subject".
+#
+#   ⛔ WHAT THE RULING DOES **NOT** DO, each recorded so it cannot be over-read: ⛔ does NOT ratify
+#   **D10** (the /sahyog form — a DIFFERENT surface; 11b.1 item (e) stays "authorised, NOT made").
+#   ⭐ Recorded as an OPPORTUNITY, not an outcome: the Panel is engaged on this exact subject and could
+#   ratify D10 in a following sitting · ⛔ does NOT reach **11b.6 (In Memoriam)**, fenced by the same
+#   `matrix.ts:401-402` sentence · ⛔ does NOT bear on 11b-3a's **D5 / D5-subject** (a NON-member's data
+#   on an instrument that does not exist).
+#   ⚠⛔ AND THE **GROUNDS WERE NOT RELAYED AND ARE NOT RECONSTRUCTED.** The note put a constraint to the
+#   Panel — reuse D10's grounds (1) and (3), NEVER (2), because the /members baseline was found
+#   non-compliant with Trust Deed cl.15(c). The relay carried the ANSWERS, not the reasoning. ⛔ No
+#   ground is attributed to the Panel, and ⛔ nobody may later cite -173 as having adopted (1) and (3).
+#   ⚠ THE INVERSION IS NOW WIDER and was ruled through with the fact in front of the Panel (note §6):
+#   the public side names the member IN FULL on TWO surfaces while the member app shields them on
+#   three. ⛔ Not re-filed — open at 11b.1 item (e); 11b-3b's D9 decides carry-vs-resolve.)
+# last_updated_prior: 2026-09-02a (⭐ STORY 11b-3b — THE **D3 TRUSTEE-PANEL PACKET IS WRITTEN AND ROUTED**:
 #   `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-02-11b3b-deceased-name-form.md`.
 #   ⛔⛔ **ZERO ROWS FLIP.** 11b-3b stays `ready-for-dev` and its Task 0 stays a **STOP gate** — the
 #   packet being WRITTEN discharges the writing, ⛔ NOT the question ([[feedback_closure_language_precision]]).
@@ -13633,6 +13676,12 @@ development_status:
   # ⛔ Do NOT resolve either by appending to `RULED_TIER1_PUBLIC_EXCEPTIONS`: the gate failing IS the
   # gate working (`matrix.ts:388-391`). ⛔ Do NOT ship "first-name + last-initial for now" — THREE
   # committed epics.md lines already assume that form (`:3145` `:3238` `:4931`) and NONE is a ruling.
+  # ⭐ UPDATE 2026-09-02: **D3 IS RULED** (`2026-09-02-173`, Kalpana Bharti + Dhiraj Rahul) — YES, at
+  # the FULL NAME. ⛔⛔ **D2 (the CONTRIBUTOR name) IS STILL OPEN, so Task 0's STOP gate HOLDS and this
+  # story is STILL UN-STARTABLE.** ⛔ One of two rulings is ⛔ NOT "the rulings".
+  # ⛔ And a ruling is ⛔ NOT a render: counsel's clause was confirmed IN DISCUSSION only; until a real
+  # `clause_versions` row is pinned the surface renders UNNAMED by design, and ⛔ NO placeholder row
+  # may be seeded. New decision `D11-order`: may the deceased-member field land alone?
   11b-3b-sahyog-vivran-named-identity-render-layer: ready-for-dev
   11b-4-memorial-authorship-surface-family-writes-the-story: backlog
   11b-5-memorial-visual-components-memorial-record-portrait-frame-kinship-lattice: backlog

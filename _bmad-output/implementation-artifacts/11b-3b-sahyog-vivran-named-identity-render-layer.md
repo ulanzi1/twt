@@ -14,7 +14,9 @@ Status: ready-for-dev
 
 > ⛔⛔ **AND THIS STORY IS GATED ON A PANEL RULING THAT HAS ⛔ NOT ARRIVED. ⚠ READ THIS BEFORE ANYTHING ELSE.**
 >
-> **BOTH** of this story's subjects are **UNRULED**, and each needs a `(surface, field)` entry in
+> ⭐⭐ **UPDATE 2026-09-02 — D3 IS RULED (YES, FULL NAME). ⛔ D2 IS NOT. THE STOP GATE HOLDS.**
+>
+> Each subject needs a `(surface, field)` entry in
 > `matrix.ts`'s enumerated Tier-1 allowlist — *"⛔ ADDING TO THIS LIST IS A RULING, NEVER A CODE
 > CHANGE … do NOT 'fix' a failing third entry by appending it here — **the gate failing is the gate
 > working**"* (`matrix.ts:388-391`).
@@ -22,7 +24,7 @@ Status: ready-for-dev
 > | Subject | Basis | Declaration | Form |
 > |---|---|---|---|
 > | **contributor name** | ✅ settled (`2026-08-28-160` cl.7) | ⛔ **UNRULED** (D2/Q1) | ⛔ **UNRULED** (D2/Q2) |
-> | **deceased member's name** on `sahyog-vivran` | ✅ settled (member's own T&C, cl.4) | ⛔ **UNRULED** (D3) | ⚠ reserved to *"this surface's OWN Panel ruling"* (`matrix.ts:401-402`) |
+> | **deceased member's name** on `sahyog-vivran` | ✅ settled (member's own T&C, cl.4) | ✅ **RULED YES** (`2026-09-02-173`) | ✅ **RULED: FULL NAME** |
 >
 > ⏳ **BOTH packets are now written, routed FILES — ⛔ and NEITHER is ratified.**
 > · contributor → `trustee-panel-routing-note-2026-08-30-contributor-name-public-tier.md`
@@ -32,7 +34,16 @@ Status: ready-for-dev
 > applied** — this story's STOP gate is ⛔ **unchanged** ([[feedback_closure_language_precision]]).
 >
 > ⇒ ⛔ **Task 0 is a STOP gate here in a way it is not on the siblings.** Until both rulings land,
-> ⛔ **no code**.
+> ⛔ **no code**. ⚠⛔ **ONE OF TWO HAS LANDED, AND ⛔ ONE OF TWO IS ⛔ NOT "THE RULINGS."** D2 is
+> ⏳ still open on the 2026-08-30 note ⇒ **this story is still blocked.**
+>
+> ⚠⛔ **AND EVEN FOR D3, A RULING IS ⛔ NOT A RENDER.** `NAME_PUBLICATION_AUTHORISED` needs a real
+> `clause_versions` row for `niy.public-disclosure.member-information`, **pinned** into an accepted
+> T&C version. Counsel confirmed the **broad** scope **in discussion**; the **written rule has ⛔ not
+> arrived**. ⇒ D3 unblocks the **DECLARATION**; the **RENDER** waits on counsel
+> ([[feedback_record_unattested_no_backfill]]). ⛔⛔ **And ⛔ do ⛔ NOT seed a placeholder
+> `clause_versions` row** — `public-read.ts:171-175` forbids it in terms, and a favourable ruling is
+> exactly when that shortcut stops looking like a lie.
 
 ---
 
@@ -199,6 +210,11 @@ PoP at `s-maxage=300`. ⛔ **State it; ⛔ do not re-derive it as new.**
 surface's **OWN Panel ruling**"*
 **And** ⛔ **if either ruling is absent → STOP and report.** ⛔ Do not ship *"first-name + last-initial
 for now"*, ⛔ do not add a matrix field, ⛔ do not add `@twt/ui` to `apps/public/package.json`
+**And** ⭐ **D3 LANDED 2026-09-02 (`2026-09-02-173`) — YES, at the FULL NAME.** ⛔ **D2 has ⛔ not**, so
+this AC is ⛔ **not** satisfied and the STOP gate holds. ⚠ ⛔ A single ruling is ⛔ not *"both rulings"*
+**And** ⚠⛔ **D3's ruling authorises the DECLARATION, ⛔ not the RENDER** — the basis predicate stays
+false until counsel's `clause_versions` row exists and is pinned, so a correctly-built surface renders
+**unnamed** in the interim. ⛔ That is the designed inert state, ⛔ not an incomplete implementation
 **And** both rulings are **transcribed** into `.decision-log.md` — ⛔ the dev agent transcribes, it
 ⛔ **never** authors, paraphrases or re-grounds one.
 
@@ -208,7 +224,12 @@ for now"*, ⛔ do not add a matrix field, ⛔ do not add `@twt/ui` to `apps/publ
 subject"*)
 **When** the fields are declared
 **Then** `sahyog-vivran.contributor_name` and `sahyog-vivran.deceased_member_name` are added to
-`RULED_TIER1_PUBLIC_EXCEPTIONS`, **each citing the ruling that authorised it**
+`RULED_TIER1_PUBLIC_EXCEPTIONS`, **each citing the ruling that authorised it** — ⭐
+`deceased_member_name` cites **`2026-09-02-173`** (ruled: **FULL NAME**); `contributor_name` cites
+whatever **D2** produces
+**And** ⚠ **whether the two may land in SEPARATE commits, now that only D3 is ruled, is `D11-order`** —
+⛔ not an authoring choice. ⛔ **Never pre-add the contributor entry** to keep them together: *"a
+pre-added entry is a standing permission with ⛔ no subject"*
 **And** each YAML field carries a full `tier1_public_exception: {decision, rationale, scope}` whose
 `scope` fences it to **this surface** and states the **ruled form**
 **And** ⭐ the surface's Tier-1-count test is updated **in the same commit** (⛔ never deleted) — ⚠ its
@@ -363,12 +384,18 @@ second one.
         `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-02-11b3b-deceased-name-form.md`,
         in the house shape, ⛔ not re-arguing D2. ⚠⛔ **This discharges the WRITING, ⛔ not the
         question** — D3 stays **UNRULED** and this task stays a STOP gate.
-  - [ ] ⭐ **Check whether the Panel answered it** — an `§8`-style appendix on that note, or a new
-        `.decision-log.md` entry. ⛔ Do ⛔ not infer an answer from silence.
-  - [ ] ⚠ **Check the note's Q3 (the CLAUSE SCOPE) outcome too** — counsel's clause returned
-        **2026-09-07** under `niy.public-disclosure.member-information`. ⛔ A Q1 "yes" over a
-        narrowly-scoped clause is a ruling with ⛔ no instrument, and the surface renders unnamed
-        anyway. ⛔ Do not build to Q1 without reading Q3.
+  - [x] ✅ **THE PANEL ANSWERED — 2026-09-02** (Kalpana Bharti, Dhiraj Rahul): **Q1 YES · Q2 FULL
+        NAME · Q3 the BROAD clause scope**. Recorded at the note's **§10** and transcribed as
+        `.decision-log.md#decision-2026-09-02-173`. ⛔ **Already transcribed — ⛔ do not re-transcribe
+        and ⛔ do not renumber it.**
+  - [ ] ⚠⛔ **Q3 IS ⛔ NOT AN INSTRUMENT — verify before building to it.** Counsel confirmed the broad
+        scope **in discussion**; the written rule *"will soon follow"* and ⛔ had not arrived at
+        2026-09-02. ⇒ ⛔ **check for a real `clause_versions` row for
+        `niy.public-disclosure.member-information`, pinned into an accepted T&C version.** If it is
+        absent, the field may be **DECLARED** and the surface **still renders unnamed** — that is
+        correct, ⛔ not a bug. ⛔⛔ **Do ⛔ NOT seed a placeholder row** (`public-read.ts:171-175`).
+  - [ ] ⛔ **D2 is STILL OPEN → this task is STILL A STOP GATE.** ⛔ One of two rulings is ⛔ not "the
+        rulings"; ⛔ do not read D3 landing as clearance to start.
   - [ ] Check whether **D2** has been answered (`§8`-style appendix on the 2026-08-30 note, or a new
         `.decision-log.md` entry). ⛔ Do ⛔ not infer an answer from silence.
   - [ ] ⛔ **If either is unruled → STOP and report.** ⚠ This is the one story in the family where
@@ -396,7 +423,7 @@ second one.
 
 ---
 
-## ⚖️ Decisions — ⛔ **FOUR OPEN. D2 and D3 are THE PANEL'S and are BLOCKING.**
+## ⚖️ Decisions — ✅ **D3 RULED 2026-09-02 (YES · FULL NAME).** ⛔ **FOUR OPEN: D2 (Panel, BLOCKING) · D9 · D10 · D11-order**
 
 ### ⛔ D2 — **PANEL, BLOCKING.** May `contributor_name` be declared at `public` on `sahyog-vivran`, and in what FORM?
 
@@ -405,7 +432,35 @@ second one.
 ⭐ The note's *"Story 11b.3 cannot start without one"* resolves, after the D6(b) split, to: **this
 story cannot start**; 11b.3 and 11b.3a can.
 
-### ⛔ D3 — **PANEL, BLOCKING.** Does `sahyog-vivran.deceased_member_name` get an allowlist entry, and in what form?
+### ✅ D3 — **RULED by the Trustee Panel, 2026-09-02** (Kalpana Bharti, Dhiraj Rahul) — **(b): YES, at the FULL NAME**
+
+⭐ **Transcribed at `.decision-log.md#decision-2026-09-02-173`.** The packet
+(`trustee-panel-routing-note-2026-09-02-11b3b-deceased-name-form.md` §10) carries the answers:
+**Q1 YES** · **Q2 FULL NAME** · **Q3 the BROAD clause scope**, ✅ confirmed **in discussion**,
+⛔ **written instrument OUTSTANDING**.
+
+⇒ the `matrix.ts:401-402` fence is **satisfied for `sahyog-vivran`**, and **AC2's
+`sahyog-vivran.deceased_member_name` entry is authorised**, citing `2026-09-02-173`.
+
+⚠⛔ **FOUR THINGS THE RULING DOES ⛔ NOT DO — ⛔ do not over-read it:**
+1. ⛔ **It does ⛔ not unblock this story.** **D2** is ⏳ still open; Task 0's STOP gate holds.
+2. ⛔⛔ **It does ⛔ not make a name render.** The clause row must exist and be pinned. ⛔ **No
+   placeholder** (`public-read.ts:171-175`).
+3. ⛔ **It does ⛔ not ratify D10** — a different surface. 11b.1 item (e) stays *"authorised, ⛔ NOT
+   made"*, and **D9** is untouched. ⚠ The **inversion is now WIDER**: the public side names the member
+   in full on **two** surfaces while the member app shields them on three. The Panel ruled with that
+   fact in front of them (§6 of the note).
+4. ⛔ **It does ⛔ not reach 11b.6 (In Memoriam)**, fenced by the same sentence.
+
+⚠ **The GROUNDS were ⛔ not relayed and are ⛔ not reconstructed.** ⛔ Do ⛔ not cite this story as
+having adopted D10's grounds (1) and (3) — the relay carried the answers, ⛔ not the reasoning
+([[feedback_record_unattested_no_backfill]]).
+
+⚠ **AC2 declares BOTH names in ONE commit, and only one is ruled** → **D11-order** below.
+
+<details><summary>⛔ The question as originally put (kept as the record — ⛔ not deleted)</summary>
+
+**Does `sahyog-vivran.deceased_member_name` get an allowlist entry, and in what form?**
 
 ⭐ **A NEW FINDING of the 2026-09-01 authoring pass — ⛔ nothing had recorded it.** `matrix.ts:401-402`
 says 11b.3/11b.6 *"keep first-name + last-initial"* and that *"moving them requires each surface's OWN
@@ -420,6 +475,25 @@ deceased member at all**, beside a `/sahyog` that names them in **full**.
   cited for a third surface. ⇒ (b) builds on unratified ground **twice over**.
 - **(c)** Ship the surface **un-named** and defer. ⚠ Legitimate and fail-closed — ⛔ but a **choice**,
   ⛔ never a default, and it must be recorded as such ([[feedback_closure_language_precision]]).
+
+⭐ **RULED (b).** ⚠ ⛔ (a) did ⛔ not become wrong — the Panel chose the wider of two authorised forms.
+
+</details>
+
+### ⛔ D11-order — May the DECEASED-MEMBER field land ALONE, ahead of the contributor field? (AC2)
+
+⭐ **A NEW question, created by D3 landing while D2 does not.** AC2 declares **both** fields and
+**both** entries in one commit — a shape that presumed both rulings arriving together.
+
+- **(a) Hold both** until D2 rules; AC2 unchanged, the story stays fully blocked. ⭐ *Authoring
+  recommendation: it is the shape the story was written to, and it keeps ONE commit carrying ONE
+  coherent widening.*
+- **(b) Split** — declare `deceased_member_name` + its entry now, the contributor field when D2 rules.
+  ⚠ Then **AC2 splits in two**, the Tier-1-count test moves **twice**, and this story acquires a
+  partial-completion state it does ⛔ not currently have. ⛔ Not free.
+
+⚠⛔ **Whichever way: ⛔ never pre-add the contributor entry.** *"A pre-added entry is a standing
+permission with ⛔ no subject"* (routing note §11).
 
 ✅ **THE PACKET NOW EXISTS AND IS ROUTED (2026-09-02):**
 `trustee-panel-routing-note-2026-09-02-11b3b-deceased-name-form.md`. ⛔ **Written, ⛔ not answered** —
@@ -568,6 +642,7 @@ _(to be filled by the dev agent)_
 
 | Date | Change |
 |---|---|
+| 2026-09-02 | ✅ **D3 RULED by the Trustee Panel** (Kalpana Bharti, Dhiraj Rahul) — **YES**, at the **FULL NAME**; transcribed `2026-09-02-173`. ⚠⛔ **Task 0's STOP gate HOLDS — D2 is still open**, and ⛔ one of two rulings is ⛔ not "the rulings". ⛔ **And a ruling is ⛔ not a render:** counsel confirmed the broad clause scope **in discussion** only; until the `clause_versions` row exists and is pinned the surface stays **inert by design**, and ⛔ **no placeholder row** may be seeded. New decision **D11-order** raised: may the deceased-member field land alone, ahead of the contributor field? |
 | 2026-09-02 | **The D3 packet is WRITTEN AND ROUTED** — `trustee-panel-routing-note-2026-09-02-11b3b-deceased-name-form.md`. ⛔ Task 0 stays a STOP gate: the packet is written, D3 is ⛔ not answered. ⭐ The packet surfaced a **third question (Q3, the CLAUSE SCOPE)**: 11b.9's basis predicate pins `niy.public-disclosure.member-information` — a **general** clause under a Sahyog-Drive-*named* constant — so whether a D3 "yes" is **buildable** turns on counsel's clause text (returned 2026-09-07), ⛔ not on the ruling alone. |
 | 2026-09-01 | **Combined validation of 11b.3 / 11b.3a / 11b.3b.** Six fixes, the sharpest being AC7's namespace: all ten `CONTRIBUTION_LIST_I18N_REFS` resolve in **`contribution`**, ⛔ not `sahyog-vivran` — pointing them at this surface's namespace would have opened a **third** instance of the 11b.2↔11b.2b circular deferral wearing a green run. Also: this story flips `paginated` and makes the third route PII-bearing, so it now owes `routes.ts` + `login-wall.spec.ts` their update (11b.3's **D11**); **D10 gains option (a)** — Astro SSR needs no row key at all; AC6 now names the **buildable** columns; `resolvePublicMemberName`'s path corrected to `kyc/public-name.ts:73`. |
 | 2026-09-01 | Story created by the D6(b) three-way split of Story 11b.3 (ruled by BigDev, 2026-09-01). ⭐ Carries **BOTH** named-identity questions — the contributor list (**D2**, Panel, routed 2026-08-30) and the deceased member's name (**D3**, a **new finding** of the authoring pass, ⛔ no packet yet). That pairing is what lets 11b.3 ship with **zero Tier-1 fields** and no Panel dependency. Task 0 is a **STOP gate**; stopping on a first pass is the expected outcome. |

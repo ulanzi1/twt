@@ -7,7 +7,8 @@ public/member inversion gap shall be closed."* ⭐ **The direction is ⛔ not in
 ruling's words do ⛔ not settle is **how far the closure reaches** — and two of the four places the
 name appears **leave the app**.
 **Routed to:** Trustee Panel.
-**Status:** ⏳ **ROUTED, ⛔ NOTHING RATIFIED AND NOTHING APPLIED.**
+**Status:** ✅ **ANSWERED 2026-09-02** — see **§10**. **ALL FOUR.** Logged as
+`.decision-log.md#decision-2026-09-02-180`. ⛔ Nothing is **applied** yet — Story 8.16 does the work.
 
 > ### 📖 **Panel members — please start at [Appendix A: In plain words](#appendix-a--in-plain-words).**
 > It is at the end and is **complete on its own** — the whole question, the options, and what follows
@@ -157,11 +158,59 @@ is not engaged"*, which is **false and has been since 2026-06-21** (`2026-08-24-
 
 ---
 
+## 10. ✅ ANSWERED — 2026-09-02 (BigDev, relaying the Panel). Logged as `2026-09-02-180`
+
+**Ratifying trustees:** **Kalpana Bharti**, **Dhiraj Rahul**.
+
+| | Question | Answer |
+|---|---|---|
+| **Q1** | Which consumers rise to the full name? | ✅ **ALL FOUR** — card · passbook · **PDF** · **push/WhatsApp/SMS** |
+| **Q2** | If narrower: is the remainder accepted, or open? | ⭐ **VACATED** — its antecedent did ⛔ not obtain |
+
+⇒ ⭐⭐ **THE INVERSION CLOSES, ⛔ IT IS NOT NARROWED.** Story 8.16's AC6 guard resolves to **CLOSED** —
+⚠ **on SHIP, ⛔ not on ruling:** `deferred-work.md` 11b.1 item (e) stays **OPEN until 8.16 merges**.
+
+⇒ ⭐ **THE RESOLVER'S DESIGN PROPERTY SURVIVES INTACT.** By ruling all four the Panel **avoided a
+deliberate re-divergence** of the *"two different pools"* property (§5). ⛔ There is now ⛔ no authorised
+reason for any consumer to resolve a name differently, and ⛔ **a future story that splits them is
+reversing `-180`, ⛔ not optimising.**
+
+### ⚠ What the answer sharpens — `INV-form`, still open and ⛔ not the Panel's
+
+Under a **narrow** scope, hard-coding the full name on the member side would have been contained to two
+in-app screens. ⛔ **Under ALL FOUR it is not:** a Pariwar that sets its public mode to `shielded_name`
+would still push a **full name to its members' handsets** and print it into a **forwardable PDF**.
+⇒ ⭐ **the case for MODE-RESOLVED is materially stronger after this ruling.** ⛔ BigDev's to rule.
+
+### ⚠ Two precisions recorded, ⛔ neither grounds to revisit
+
+- The dispatch is **live** and cascades **push → WhatsApp → SMS**; WA and SMS are the **PAID** channels
+  and are reached **when push fails** ⇒ the full name lands in an **unencrypted SMS** precisely for
+  members whose app is not working. ⛔ The Panel ruled with all three channels named in §2.
+- A longer name may push an **SMS past a 160-character segment** (cost + deliverability). ⛔ An
+  implementation concern for 8.16, ⛔ never a reason to narrow a ruled scope.
+
+---
+
 # Appendix A — In plain words
 
 *Added 2026-09-02 for the Panel, in the same form as the notes you answered earlier today. ⛔ Nothing
 here is new — it is §1–§9 without the technical detail. Where the two differ, the numbered sections
 govern.*
+
+> ## ✅ **ANSWERED — 2026-09-02, by Kalpana Bharti and Dhiraj Rahul: ALL FOUR.**
+> **The family's full name will appear in all four places — both screens in the app, the Contribution
+> Note PDF, and the message sent when a cycle opens.**
+>
+> ⇒ ⭐ **The gap closes properly**, and the four places go on showing the name **identically** — so no
+> member will ever see one name in a message and a different one on the card.
+>
+> ⚠ **Two honest notes:**
+> · **Nothing changes until the work ships.** Your decision authorises it; it does not perform it.
+> · **For families with a single name, nothing changes at all** — the app already showed the whole
+>   name for them.
+>
+> *The rest of this appendix is kept as the record of what was asked.*
 
 ## What you already decided
 

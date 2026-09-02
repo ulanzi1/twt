@@ -1,4 +1,36 @@
-# last_updated: 2026-09-02k (⭐⭐ **STORY `8-16-member-pool-identity-name-form-alignment` MINTED BY PANEL
+# last_updated: 2026-09-02l (✅✅ **THE PANEL RULED `INV-scope` — ALL FOUR.** Kalpana Bharti + Dhiraj
+#   Rahul; transcribed `2026-09-02-180`. ⛔ ZERO ROWS FLIP — `8-16` stays `ready-for-dev`.
+#   ⇒ the deceased family's FULL NAME renders on EVERY consumer of `resolvePoolIdentity`: the My Pool
+#   card · the Yogdaan Bahi · the **Contribution Note PDF** · the **cycle-open push/WhatsApp/SMS**.
+#
+#   ⭐⭐ **THE INVERSION CLOSES, ⛔ IT IS NOT NARROWED.** 8-16's AC6 guard (which would have forced the
+#   record to say "narrowed" under a partial scope) resolves to **CLOSED** — ⚠ **ON SHIP, ⛔ NOT ON
+#   RULING.** `deferred-work.md` 11b.1 item (e) stays OPEN until 8-16 MERGES: a ruling authorises the
+#   work, ⛔ it does not perform it ([[feedback_closure_language_precision]]). **Q2 VACATED** — its
+#   antecedent did not obtain.
+#   ⭐ **AND THE RESOLVER'S "ONE IDENTITY EVERYWHERE" PROPERTY SURVIVES INTACT** — by ruling all four the
+#   Panel AVOIDED a deliberate re-divergence of the "two different pools" property 8.8 moved the
+#   resolver into @twt/domain to protect. ⛔ There is now ⛔ NO authorised reason for any consumer to
+#   resolve a name differently, and ⛔ a future story that splits them is REVERSING `-180`, ⛔ not
+#   optimising.
+#
+#   ⛔ **`INV-form` STILL BLOCKS 8-16 — AND THIS RULING MADE IT MATTER MORE, which is recorded because
+#   the REASONING CHANGED WITH THE SCOPE.** Under a narrow scope a hard-coded full name would have been
+#   contained to two in-app screens. ⛔ Under ALL FOUR it is not: a Pariwar that sets its public mode to
+#   `shielded_name` would still have a FULL NAME PUSHED TO ITS MEMBERS' HANDSETS and printed into a
+#   FORWARDABLE PDF, because the member path would ignore the mode. ⇒ ⭐ the case for MODE-RESOLVED is
+#   materially stronger than when it was raised. ⛔ Still BigDev's.
+#
+#   ⚠ TWO PRECISIONS, ⛔ neither grounds to revisit (the Panel ruled with all three channels named):
+#   · the dispatch is LIVE and cascades **push → WhatsApp → SMS**; WA/SMS are the PAID channels and are
+#     reached **WHEN PUSH FAILS** ⇒ the full name lands in an UNENCRYPTED SMS precisely for the members
+#     whose app is not working.
+#   · a longer name may push an SMS past a **160-character segment** (cost + deliverability) — MEASURE
+#     before shipping consumer ④. ⛔ An implementation concern, ⛔ never a reason to narrow a ruled scope.
+#   ⚠ 8-16's AC5 microcopy re-check is now **LIVE, ⛔ not conditional** (it was scoped "if INV-scope
+#   includes ④" — it does). ⚠ And the MONONYM class is unchanged on ALL FOUR: the member side already
+#   renders the whole stored name ⇒ ⛔ 8-16 must NOT report a change for that class anywhere.)
+# last_updated_prior: 2026-09-02k (⭐⭐ **STORY `8-16-member-pool-identity-name-form-alignment` MINTED BY PANEL
 #   DIRECTION and AUTHORED — ⛔ ONE ROW ADDED at `ready-for-dev`.** ⛔ No other row moves; ⛔ epic-8 stays
 #   `in-progress` (it already was — 8-15 is backlog). ⛔ NO .decision-log.md entry is minted: the ruling
 #   it implements is `2026-09-02-179` cl.3, already transcribed; an authoring pass rules nothing.

@@ -42,7 +42,24 @@
 #   display snapshot + a §1.5 hash-chain AUDIT ANCHOR, and REFUSES A WRITE CARRYING NEITHER — the exact
 #   accountability shape AC5 needs. ⛔ Reuse the SHAPE, ⛔ not the key. Paired with
 #   `pool_fixed_amount_schedule` (which the Panel itself named for cl.10(c)/(d)) for the
-#   effective-window half, the knob is mostly assembly.)
+#   effective-window half, the knob is mostly assembly.
+#
+#   ⭐⭐ **UPDATE, SAME DAY: `D8(ii)` IS NOW ROUTED TO THE PANEL** — packet written at
+#   `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-02-11b3a-masking-knob-authority.md`
+#   (⏳ ROUTED, ⛔ nothing ratified). 11b-3a's Task 5 now STOPS if it is unanswered.
+#   ⭐⭐ AND WRITING THE PACKET FOUND THE GROUND ALREADY RATIFIED: **`2026-08-19-136` cl.3**
+#   (Trustee-ratified, Dhiraj Rahul + Kalpana Bharti) rules VERBATIM: "Two different axes, and they must
+#   not be collapsed … (a) SCOPE — the setting is per-Pariwar; (b) AUTHORITY — changing it is a GOVERNED
+#   ACT, ⛔ not a casual Pariwar-Admin toggle", mirroring `2026-08-19-133` cl.4 layer 2.
+#   ⇒ ⛔ "per Pariwar" does ⛔ NOT imply "a Pariwar Admin controls it" — the Panel ruled that in terms,
+#   about the CLOSEST ANALOGOUS CONTROL. ⇒ cl.10's "Trust-Admin controlled, per Pariwar" COLLAPSES the
+#   two axes cl.3 separates, and the ONLY open question is whether cl.10 meant to FOLLOW cl.3 or DEPART
+#   from it. ⇒ the packet asks the Panel to DISAMBIGUATE ITS OWN PHRASE, ⛔ not to make new policy.
+#   ⚠⛔ AND APPLYING cl.3 HERE IS STILL AN INFERENCE — its subject is the public-NAME presentation
+#   policy, ⛔ not bank masking. ⭐ `2026-09-02-175` (the same-day correction, where extending a ruling
+#   past its subject had to be undone) is the LIVE warning ⇒ it is PUT, ⛔ NOT assumed.
+#   ⚠ The packet also records §7: `district_admin` and `state_trustee` CANNOT hold it either way — both
+#   grants are INERT under scope containment — so the Panel is not offered an impossible option.)
 # last_updated_prior: 2026-09-02g (⭐⭐ **THE LAST THREE OPEN DECISIONS RULED — `D5(a)` · `D9(a)` · `D10(a)`
 #   (BigDev, `2026-09-02-177`). ⇒ ALL THREE STORIES NOW HAVE ZERO BLOCKING DECISIONS.**
 #   ⛔ ZERO ROWS FLIP — all three were already `ready-for-dev`; the gates lived in the story files.

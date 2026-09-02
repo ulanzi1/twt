@@ -1,4 +1,49 @@
-# last_updated: 2026-09-02g (⭐⭐ **THE LAST THREE OPEN DECISIONS RULED — `D5(a)` · `D9(a)` · `D10(a)`
+# last_updated: 2026-09-02h (⚠⭐ **`D8` (11b-3a) RE-FRAMED — the live question is ⛔ NOT "does it need a
+#   new permission key?" but **"WHO HOLDS IT?"**, and that may ⛔ NOT be BigDev's to rule.**
+#   ⛔ ZERO ROWS FLIP · ⛔ no .decision-log.md entry (D8 is still OPEN and CONDITIONAL — ⛔ nothing ruled)
+#   · ⛔ no source code touched.
+#
+#   ⭐⭐ TWO FINDINGS, both checked live at `79ed41d`:
+#   (1) ⛔⛔ **THERE IS NO `trust_admin` ROLE.** Seeded set: super_admin / pariwar_admin / state_trustee /
+#       district_admin / block_admin / finance_officer / it_cell / verifier / auditor / field_worker /
+#       helpline_operator / trustee_panel. `grep trust_admin` over packages/ + apps/ = ZERO hits.
+#       ⇒ `2026-08-28-160` cl.10's phrase "Trust-Admin controlled, per Pariwar" was carried into AC5
+#       VERBATIM and MAPS TO NOTHING. It must resolve to `pariwar_admin` (a tenant control) OR to
+#       `super_admin`/`trustee_panel` (a governed act) — ⛔ and those are OPPOSITE answers.
+#   (2) ⭐⛔ **THE NEAREST PRECEDENT DELIBERATELY WENT THE OTHER WAY.**
+#       `pariwar.manage_public_name_presentation` (11a.1, catalog 36->37) governs the per-Pariwar PUBLIC
+#       PRESENTATION MODE of a TIER-1 field — structurally the SAME CLASS as this knob — and is
+#       **`super_admin` ONLY**. `kyc/presentation-policy.ts:11-13`: "granted to super_admin ONLY —
+#       deliberately NOT `pariwar_admin` … THAT EXCLUSION IS THE RULING, EXPRESSED IN THE CATALOG."
+#       ⭐ Its ground transfers almost word-for-word: "the authority that ruled full names would be
+#       published is the Trustee Panel, so the authority to change that form is theirs too." ⇒ the Panel
+#       ruled the nominee bank data publishable (cl.10), so the authority to TIME-LIMIT it is arguably
+#       theirs. ⚠⛔ And the catalog warns about exactly this move: granting the class to `pariwar_admin`
+#       "for symmetry" would "REVERSE A RATIFIED RULING BY WAY OF A CATALOG EDIT … its own Panel
+#       decision, not a tidy-up."
+#
+#   ⇒ D8 SPLITS: **D8(i) the KEY** — ⭐ recommendation MINT (a distinct governed act; overloading the
+#   name-presentation key would make one key mean two unrelated things, and its own doc-block forbids
+#   widening "for symmetry"). **D8(ii) the HOLDER** — `pariwar_admin` vs `super_admin`/`trustee_panel`,
+#   ⛔ possibly the PANEL's call, ⛔ not a catalog edit.
+#   ⛔ `district_admin` DEFERRED / `state_trustee` EXCLUDED both ways — either grant is INERT under
+#   scope containment ([[project_rbac_geo_scope_containment]]). ⛔ Seed neither.
+#
+#   ⚠ TWO SUPPORTING FACTS RECORDED SO THEY ARE NOT RE-DERIVED:
+#   · **Catalog version is ⛔ NOT a key count.** It is v38 now; 10.18 and 6.17 BOTH bumped with ZERO
+#     keys ("the catalog version is the version of the CAPABILITY MODEL"). ⇒ a bump is owed even when a
+#     key is reused and only a HOLDER changes.
+#   · ⭐ **AC5 WOULD BE THE PROJECT'S FIRST SELF-SERVE PRESENTATION-TOGGLE UI.** 11a.1 shipped NONE by
+#     design ("NO self-serve admin toggle UI ships in this story"); presentation changes have so far
+#     been governed by a WRITE PATH with rationale + actor + audit anchor and NO screen. ⛔ Not a reason
+#     to refuse the screen — a reason to say so out loud.
+#
+#   ⭐ AND A REUSE FOUND: `kyc/presentation-policy.ts` already enforces required `rationale` + actor +
+#   display snapshot + a §1.5 hash-chain AUDIT ANCHOR, and REFUSES A WRITE CARRYING NEITHER — the exact
+#   accountability shape AC5 needs. ⛔ Reuse the SHAPE, ⛔ not the key. Paired with
+#   `pool_fixed_amount_schedule` (which the Panel itself named for cl.10(c)/(d)) for the
+#   effective-window half, the knob is mostly assembly.)
+# last_updated_prior: 2026-09-02g (⭐⭐ **THE LAST THREE OPEN DECISIONS RULED — `D5(a)` · `D9(a)` · `D10(a)`
 #   (BigDev, `2026-09-02-177`). ⇒ ALL THREE STORIES NOW HAVE ZERO BLOCKING DECISIONS.**
 #   ⛔ ZERO ROWS FLIP — all three were already `ready-for-dev`; the gates lived in the story files.
 #

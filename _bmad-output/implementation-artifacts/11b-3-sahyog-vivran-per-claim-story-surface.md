@@ -256,6 +256,11 @@ signal
 **And** ⚠ **`D4-linkage` is OPEN:** a `live` pool's page has ⛔ no inbound link today (`/sahyog` lists
 only `closed` + `settled`), so it would be reachable only by constructing the **sequential**
 `P-YYYY-MM-###`. ⛔ **Do not add a link to a `live` pool without reading that ruling**
+**And** ⚠⛔ **ITS SUBJECT CHANGES UNDER 11b.3a: the live question is ⛔ not only *"will anyone find
+it"* but *"what bounds someone WALKING it"*** — **D11** ruled **(a)**, and it was option **(c)** that
+would have obliged this route to say what bounds identifier enumeration. ⇒ under (a) the only bound is
+`limits.search`, **unstated**, and 11b.3a puts **four decrypted Tier-1 fields** behind that same
+sequential identifier. ⛔ **Routed to 11b.3a's AC2 by name** — ⛔ not left as a shared worry
 
 ### AC2 — The matrix declares this surface EXPLICITLY, with ⛔ ZERO Tier-1 fields at `public`
 
@@ -306,6 +311,15 @@ anywhere in this diff is the defect
 **And** ⚠ **the interim asymmetry is EXPECTED and is ⛔ NOT a defect to file:** until 11b.3b merges, this
 page shows a count while the member app shows an amount for the same pool. ⭐ That is **ordering**, ⛔ not
 a ruling, and it is **closed by 11b.3b** — ⛔ it is ⛔ **NOT** a second instance of the D7 inversion
+**And** ⭐⛔ **THE COUNT IS THE EVENT COUNT, ⛔ NEVER A ROW COUNT — and the two are DESIGNED to
+disagree.** RTBF removes a contributor from any rendered list **entirely** (⛔ no anonymized row, ⛔ no
+marker, ⛔ no placeholder key) while the omitted contributor **still counts** toward every confirmed
+aggregate (`2026-08-30-169`). ⇒ ⛔ **never derive this count from the length of a contributor list** —
+here or in 11b.3b — a list length silently **under-reports** the aggregate and breaks `-169`
+**And** ⚠ **the visible consequence is 11b.3b's to carry, and it is ⛔ NOT a defect to file there:**
+its page will read *"N contributors confirmed"* beside **fewer than N** named rows, and `amountRaisedInr`
+is computed from **N**. ⛔ Copy on either surface may ⛔ not claim the list is complete — a true figure
+beside a contradicting one is 11b.1's `0 >= 0` → *"fully_funded"* shape
 **And** the close-of-cycle framing reuses `classifyCycleOutcome` **UNCHANGED** — ⛔ it is shared with
 the Panchayat Noticeboard and `/sahyog`, and its union's ordering is provenance-stable
 **And** ⭐ the **zero-expectation** case is resolved **BEFORE** the call: 11b.1's review found
@@ -462,7 +476,7 @@ confirmation for one pool shares one stream, so `event_version` **is** a total o
 **And** ⚠ this changes a shipped read's behaviour for every existing consumer — check
 `apps/api/src/modules/member-pool/handlers.ts:318,612` and the mobile list — ⛔ and the read's own
 docstring at `:127` (*"Ordered by member id ASC"*) is part of the change, ⛔ not left behind
-**And** ⭐ **`deferred-work.md:7137` is AMENDED IN PLACE — the false ground is corrected and the item's
+**And** ⭐ **the deferral titled *"THE CONFIRMED-CONTRIBUTOR READ IS UNORDERED"* is AMENDED IN PLACE — the false ground is corrected and the item's
 disposition recorded — ⛔ never silently deleted and ⛔ never re-filed** (the `11b.2 (vi)`
 amended-in-place precedent; [[feedback_supersede_never_reinterpret]])
 **And** ⭐ **`D7(a)` RULED: the public/member name INVERSION is CARRIED** (`2026-09-02-176`) — ⛔
@@ -494,8 +508,17 @@ resolve it even in principle.
   - [ ] Annotate `epics.md` Story 11b.3 with **(i)** the re-purposed SD-2 (`-164` A2) and the
         public-tier bank fields (`-160` cl.10, `-165` cl.1/cl.3) — the carry recorded at the 2026-08-28
         routing note **§11** — and **(ii)** the three-way split, so `sprint-planning` does ⛔ not
-        regenerate a ghost 11b.3 or drop 11b.3a/11b.3b. ⛔ **Annotation, ⛔ never a rewrite**; ⛔ do not
-        delete or re-word the 2026-08-23 or 2026-08-29 blocks.
+        regenerate a ghost 11b.3 or drop 11b.3a/11b.3b — and **(iii)** ⭐⭐ **the THREE ACs ELSEWHERE in
+        the file that assume the SHIELDED contributor form**, each **superseded by `2026-09-02-174`**
+        (the Panel ruled the **FULL NAME**): `epics.md:3145` (**Story 8.3**'s own *"I want"*, which
+        names *"any visitor on Sahyog Drive (Epic 11b)"* and specifies *"first-name + last-initial
+        only"*) · `:3238` (the **Contribution Note PDF**) · `:4931` (**Story 11b.2**).
+        ⚠⛔ **These are ⛔ NOT under this story's heading and ⛔ not in one place — ⛔ do not look for
+        them there.** ⭐⭐ **11b.3b DEPENDS on item (iii) existing:** it folds its own annotation duty
+        into this one, and this file **merges before 11b.3b starts** — ⇒ if (iii) is skipped here the
+        obligation lands **nowhere** ([[feedback_circular_deferral_between_sibling_stories]]).
+        ⛔ **Annotation, ⛔ never a rewrite**; ⛔ do not delete or re-word the 2026-08-23 or 2026-08-29
+        blocks.
   - [ ] ⭐ Record in the same entry that `-165` **cl.3**'s *"Story 11b.3 adds the four allowlist
         entries"* now lands at **11b.3a** — ⚠ the **obligation moves with the fields, it does ⛔ not
         evaporate**, and the *"⛔ not added now / a pre-added entry is a standing permission with no
@@ -568,7 +591,9 @@ resolve it even in principle.
 
 - [ ] **Task 8 — Discharge Trap 6's one line; route everything else** (AC: 9)
   - [ ] Fix `packages/contracts/src/contributions/pool-contributor-list.ts:88`. ⛔ Sweep nothing else.
-  - [ ] ⭐ **Amend `deferred-work.md:7137` IN PLACE** — its *"carries ⛔ NO `ORDER BY` at all"* ground is
+  - [ ] ⭐ **Amend the item titled *"THE CONFIRMED-CONTRIBUTOR READ IS UNORDERED"* IN PLACE**
+        (`deferred-work.md:7137` **today** — ⛔ find it by **TITLE**, ⛔ never by line: `:81` records a
+        prior edit that pushed the 11b.1 anchors down **192 lines**) — its *"carries ⛔ NO `ORDER BY` at all"* ground is
         **false at `79ed41d`** and was false when filed (AC9). ⛔ Correct the ground and record the
         disposition; ⛔ never delete the item, ⛔ never re-file it as new.
   - [ ] Write this story's `deferred-work.md` section (newest-first), every item with a trigger.
@@ -648,6 +673,15 @@ index's `SAHYOG_DRIVE_VISIBLE_POOL_STATES` (`['closed','settled']`) — ⛔ neve
 in its top box.
 
 #### ⛔ D4-linkage — OPEN. Is a `live` pool's page LINKED, or reachable BY IDENTIFIER ONLY?
+
+⭐⛔ **AND READ IT IN BOTH DIRECTIONS, BECAUSE THE TWO STORIES ASK OPPOSITE THINGS OF IT.** On **this**
+story the concern is **discoverability** — a page nobody can reach is a transparency surface that does
+not work. On **11b.3a** the concern is its mirror: an **unlinked, sequentially-addressable** URL that
+returns **four decrypted Tier-1 fields**, fail-open for every Pariwar until the Trust acts (`-179`
+cl.1). ⚠ **D11(a) recorded controls 2/3 structurally N/A *because* there is no `page` and no `limit`**
+— so ⛔ **nothing in either document names what bounds identifier enumeration**, which is precisely
+what option **(c)** would have obliged. ⇒ ⛔ this story does ⛔ not close that; it **routes it to
+11b.3a's AC2**, where the cost lands.
 
 ⚠ D4(b) named this rider and ⛔ the ruling does ⛔ not answer it. `/sahyog` lists only `closed` +
 `settled`, so a `live` Vivran page has ⛔ **no inbound link today** and would be reachable only by
@@ -899,6 +933,7 @@ _(to be filled by the dev agent)_
 
 | Date | Change |
 |---|---|
+| 2026-09-02 | **Second combined validation of 11b.3 / 11b.3a / 11b.3b** (`bmad-create-story validate`), run as one pass. Four fixes here. ⭐⭐ **Task 0's `epics.md` annotation gains item (iii)** — the THREE ACs elsewhere in the file that assume the shielded contributor form (`:3145` Story 8.3 · `:3238` the Contribution Note PDF · `:4931` Story 11b.2), all superseded by `-174`: **11b.3b folds its annotation duty into this one and this file merges FIRST**, so without (iii) the obligation lands nowhere. ⭐ **AC3 fences the count**: it is the EVENT count, ⛔ never a row count — RTBF omits the row and still counts (`-169`), so 11b.3b's page reads *"N confirmed"* beside fewer than N rows **by design**, ⛔ not as a defect. ⭐ **`D4-linkage` re-read in BOTH directions** — discoverability here, **identifier ENUMERATION** on 11b.3a, where D11(a) left `limits.search` as the only (unstated) bound over four decrypted Tier-1 fields; routed to 11b.3a's AC2 by name. ⚠ The ORDER BY deferral is now cited by **title**, ⛔ not by line. |
 | 2026-09-01 | Story authored (`bmad-create-story 11b.3`). Scope reconciled against `2026-08-28-160` cl.10 / `-164` A2 / `-165` cl.1–cl.3, which `epics.md` had never carried. Seven decisions raised. |
 | 2026-09-02 | ✅ **ALL FIVE OPEN DECISIONS RULED by BigDev** (`2026-09-02-176`) — **D1(b)** consume the shipped `amountRaisedInr`, ⭐ **and it MOVES to 11b.3b** because the `@twt/ui` fence stays (this surface renders the **count only**; ⛔ (c) re-deriving stays refused) · **D4(b)** `live` + `closed` + `settled`, ⭐ which gives 11b.3a's active-campaign subject a host · **D7(a)** the inversion is CARRIED, binder 11b.3b · **D11(a)** the route states **three** applicable controls and names the two N/A ones, ⚠ with the note that 11b.3b's pagination restores them · **D12(a)** the reversed-denial hook is a **render-time derivation** — ⛔ no queue, ⛔ no consumer; 6.16's obligation *"Closed by [edit]"*. ⇒ ⭐⭐ **Task 0's STOP condition is DISCHARGED and this story is STARTABLE.** ⚠ One new rider: **`D4-linkage`** (is a `live` pool's page linked, or identifier-only? `P-YYYY-MM-###` is sequential). ⚠ And the publish-queue prose at `registry.ts:351` / `claim/events.ts:492` is now **stale**, routed ⛔ not swept. |
 | 2026-09-01 | **Combined validation of 11b.3 / 11b.3a / 11b.3b** (`bmad-create-story validate`), run as one pass because a per-story pass cannot see the split seam. Six criticals applied. **D1 RE-POSED** — `amountRaisedInr` is shipped and ruled (9.12 D3), ⛔ not unbuilt. **D11** (the third route's control set — `routes.ts:52-55` reserves it) and **D12** (the reversed-denial consumer's mechanism — ⛔ no publication queue exists) minted OPEN. AC9's *"missing ORDER BY"* premise corrected: the read has sorted by `member_id` since 8.3, and `member_id` is the key the AC prohibits. |

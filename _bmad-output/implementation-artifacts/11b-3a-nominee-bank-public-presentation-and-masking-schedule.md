@@ -229,7 +229,11 @@ whose **`scope`** states, in terms, that it reaches **`sahyog-vivran` only** and
 ⛔ not change the tier** (`-165` cl.2)
 **And** ⛔ **field declaration and allowlist entry land in the SAME commit** — a pre-added entry is *"a
 standing permission with ⛔ no subject"*
-**And** ⭐ **11b.3's AC2 Tier-1-count test is updated from 0 to 4 in the same commit** — ⛔ the test is
+**And** ⭐ **11b.3's AC2 Tier-1-count test is updated by `+4` in the same commit — ⛔ READ the current
+value, ⛔ NEVER hard-code `0 → 4`** (Trap 2). **11b.3b runs in parallel** and adds **two** entries of
+its own: if it merged first the assertion already reads **2** and the correct value is **6**.
+⚠⛔ A hard-coded `4` silently deletes 11b.3b's two from the count and leaves the control asserting a
+number **smaller than the truth** — the one direction in which this gate fails **OPEN**. ⛔ The test is
 ⛔ **not** deleted
 **And** ⛔ **no fifth entry is added** — the deceased member's name and the contributor name belong to
 **11b.3b** and are gated on their own Panel rulings.
@@ -262,6 +266,17 @@ framings in terms. ⭐ The stated concern is the **broader public exposure / sec
 **ability to reduce it as TWT grows**
 **And** the decrypt happens **server-side at the `apps/api` boundary**, bounded and documented
 (Trap 6); ⛔ `apps/public` gains ⛔ **no** KMS dependency
+**And** ⭐⛔ **THE ROUTE'S ONLY ENUMERATION BOUND IS `limits.search`, AND IT IS UNSTATED — ⛔ say so
+where the decrypt is.** `P-YYYY-MM-###` is **sequential**, this is a **single-item GET on a path
+parameter**, and 11b.3's **D11(a)** recorded controls **2**/**3** structurally N/A *precisely because
+there is no `page` and no `limit` to bind them to* — ⚠ it was option **(c)** that would have obliged
+the route to name what bounds **identifier enumeration**, and (c) was ⛔ **not** ruled. ⇒ ⭐⭐ **this
+story is what makes that gap expensive:** four **decrypted Tier-1** fields, `D8-default` **FAIL-OPEN**
+for every Pariwar until the Trust acts (`-179` cl.1), behind a **walkable** identifier. ⛔ State the
+bound in the route header **beside the decrypt**, ⛔ never leave it for a reviewer to re-derive
+**And** ⚠⛔ **if `limits.search` is judged insufficient for a Tier-1-bearing single-item GET, that is a
+DECISION, ⛔ not a tuning knob** — ⛔ do ⛔ not quietly tighten or loosen the tier here (11b.3's
+`D4-linkage` routes this question to this AC by name)
 **And** ⭐⛔ **THIS STORY MAKES THE THIRD PUBLIC-PAGES ROUTE `PII-BEARING`, AND THE ROUTE'S WRITTEN
 DEFENCE MUST MOVE WITH IT — ⛔ IN THIS COMMIT.** `apps/api/src/modules/public-pages/routes.ts:52-55`
 rules that the control set is a property of *"an unauthenticated, paginated, **PII-BEARING** public
@@ -270,6 +285,12 @@ header **and** the `login-wall.spec.ts` allowlist entry are both updated to stat
 applies, ⛔ **both stating the SAME count** — *"two authoritative documents disagreeing on how many
 controls exist is the defect this file records having already had once"*. ⛔ **Do ⛔ not leave them
 describing a zero-Tier-1 route while serving four Tier-1 fields**
+**And** ⚠⛔⛔ **11b.3b RESTORES A DIFFERENT PROPERTY ON THE SAME TWO DOCUMENTS, IN PARALLEL — ⛔ READ
+WHAT IS THERE AND EXTEND IT, ⛔ NEVER OVERWRITE IT.** 11b.3b flips `paginated` `false → true` and owes
+this same pair its own update; the two stories are declared **independent and parallel**. ⇒ if 11b.3b
+landed first the set already names the **pagination** controls, and replacing it with a PII-only set
+**drops a control both documents must state identically** — which is the two-documents-disagreeing
+defect `routes.ts` records having already had once, arrived at from the other side
 
 ### AC3 — The masking schedule: Trust-Admin, PER PARIWAR, configuration over ONE record [cl.10(b)–(d), (g)]
 
@@ -390,6 +411,9 @@ sibling that routes it back).
         surface 11b.3 creates.
   - [x] ✅ **11b.3's `D4` RULED (b)** — `live` + `closed` + `settled`. ⇒ AC2 **has a host** and this
         story does ⛔ **not** widen the predicate. ⚠ `D4-linkage` (linked vs identifier-only) is open.
+  - [ ] ⚠⛔ **Read `D4-linkage` as an ENUMERATION question, ⛔ not only a discoverability one.** 11b.3
+        raised it as *"is a `live` pool's page linked?"*; ⭐ **on this story the live question is what
+        bounds someone WALKING the sequential identifier** to four decrypted Tier-1 fields (AC2).
   - [x] ✅ **11b.3's `D11` RULED (a)** — the route states **three** applicable controls, with controls
         2/3 recorded N/A. ⚠⛔ **This story makes the route PII-bearing**, so **Task 4 owes `routes.ts` +
         `login-wall.spec.ts` an update** to the set that applies then — ⛔ both stating the same count.
@@ -442,6 +466,10 @@ sibling that routes it back).
 - [ ] **Task 4 — Render them on the surface + move the route's written defence** (AC: 2, 4, 7)
   - [ ] ⭐ Update the `routes.ts` header **and** the `login-wall.spec.ts` allowlist entry to the control
         set that applies now the route is **PII-bearing** — ⛔ both stating the **same** count.
+        ⚠⛔ **If 11b.3b landed first, EXTEND what it wrote; ⛔ never overwrite it** — it restores the
+        two pagination controls on the same two documents, in parallel.
+  - [ ] ⭐ State the **enumeration bound** in the route header beside the decrypt (AC2) — `limits.search`
+        over a **sequential** `P-YYYY-MM-###`, with ⛔ no `page`/`limit` for controls 2/3 to bind to.
   - [ ] Extend `apps/public/src/lib/sahyog-vivran-render.ts` (pure) + the `.astro` wrapper.
   - [ ] Every value through `<MatrixField>`. ⛔ No `Astro.cookies` / `Astro.request.headers` /
         `Astro.session` — the surface stays auth-blind.
@@ -819,6 +847,7 @@ _(to be filled by the dev agent)_
 
 | Date | Change |
 |---|---|
+| 2026-09-02 | **Second combined validation of 11b.3 / 11b.3a / 11b.3b.** Three fixes. ⭐⭐ **AC1 contradicted its own Trap 2 and Task 3** — it said the Tier-1-count test is *"updated from 0 to 4"*, which Trap 2 forbids **in terms**; 11b.3b runs in parallel and adds two, so a hard-coded `4` deletes them from the count and the control fails **OPEN**. Now `+4`, read from the file. ⭐ **The two siblings rewrite the SAME two documents in parallel** (`routes.ts` header + `login-wall.spec.ts`): 11b.3b already carried *"extend, never overwrite"*; this file did not, so whichever landed second dropped the other's control. ⭐ **The enumeration bound is named where the decrypt is** — `P-YYYY-MM-###` is sequential, D11(a) recorded controls 2/3 N/A *because* there is no `page`/`limit`, and it was option **(c)** — ⛔ not ruled — that would have obliged the route to say what bounds walking it. ⇒ this story is what makes that gap expensive: four decrypted Tier-1 fields, `D8-default` fail-open for every Pariwar. |
 | 2026-09-02 | ✅ **PRECONDITION SATISFIED — 11b.3's `D4` ruled (b)** (`2026-09-02-176`): `live` + `closed` + `settled` all render, so **AC2's active-campaign subject has a host** and this story does ⛔ not widen the predicate. **`D11` ruled (a)** too — the route states three applicable controls, and this story's PII-bearing change owes `routes.ts` + `login-wall.spec.ts` their update at Task 4. ⚠ New open rider from D4: **`D4-linkage`** — a `live` pool's page has no inbound link today and `P-YYYY-MM-###` is sequential. |
 | 2026-09-02 | ⭐ **NO CHANGE TO THIS STORY — recorded because it was briefly in doubt.** `2026-09-02-174` cl.3 appeared to extend cl.10's staged schedule to contributor names, which would have given this schedule a second subject. ⛔ **Corrected the same day, Panel-ratified** (`2026-09-02-175`): the staged reduction is the **nominee bank fields'**, as cl.10 always said. ⇒ **`D12-schedule` VACATED**, Task 1 returns to a single subject, and ⛔ nothing here ever moved. |
 | ~~2026-09-02~~ | ~~⚠ **This story's schedule gained a POTENTIAL SECOND SUBJECT.**~~ ⛔ **SUPERSEDED by the row above** — ⛔ left as the record, ⛔ not deleted. `2026-09-02-174` cl.3 (Panel) **extended `-160` cl.10's staged schedule from bank fields to a PERSON'S NAME** — contributor names on 11b.3b. Whether the two share one per-Pariwar row is **`D12-schedule`**, a **policy** question, ⛔ not a de-duplication. Task 1 now reads that ruling before designing the table, and ⛔ must neither generalise unilaterally nor foreclose D12. |

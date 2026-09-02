@@ -1,4 +1,42 @@
-# last_updated: 2026-09-02l (✅✅ **THE PANEL RULED `INV-scope` — ALL FOUR.** Kalpana Bharti + Dhiraj
+# last_updated: 2026-09-02m (✅✅ **`INV-form` RULED MODE-RESOLVED (BigDev, `2026-09-02-181`) ⇒ STORY
+#   8-16's TASK-0 STOP GATE IS DISCHARGED. ⭐⭐ NO STORY IN THE 11b.3 / 8.16 FAMILY HAS AN OPEN
+#   DECISION.** ⛔ ZERO ROWS FLIP — `8-16` stays `ready-for-dev` (the gate lived in the story file).
+#
+#   ⭐ THE RULING: the member side reads the **same stored per-Pariwar `public_name_presentation_mode`**
+#   the public side reads ⇒ the two forms can ⛔ NEVER DIVERGE AGAIN **BY CONSTRUCTION** — a stronger
+#   guarantee than "they match today". ⛔ A future mode change moves BOTH sides together.
+#   ⚠ It is what `-180` made necessary: under ALL FOUR, a hard-coded full name would have pushed a full
+#   name TO HANDSETS and into a FORWARDABLE PDF for a Pariwar that had chosen to shield publicly.
+#
+#   ⭐ AND THE MODE IS AN **INPUT**, ⛔ NOT A DB READ INSIDE THE RESOLVER — the CALLER reads it once via
+#   `kyc/presentation-policy.ts`, mirroring the pure/accessor split `resolvePublicMemberName(mode,
+#   storedName)` already uses ("without dragging a database into their graph"). ⚠⛔ NOT COSMETIC: the
+#   mode is PER-PARIWAR while the cycle-open fan-out is "one notification PER MEMBER ASSIGNED TO A
+#   POOL" ⇒ a read INSIDE the resolver is an **N+1 ACROSS THE WHOLE FAN-OUT**. Batch it per Pariwar.
+#
+#   ⛔⛔ **AND THE RULING CREATED A TRAP THAT WOULD SILENTLY BREAK A MEMBER SURFACE — `Trap 5`, now in
+#   the story.** The obvious move is to call `resolvePublicMemberName` directly: same modes, same
+#   shielding helper, one function. ⛔ IT OMITS MONONYMS. In `shielded_name` mode the PUBLIC resolver
+#   returns `''` for a single-token name — deliberately, ruled `2026-08-21-145` cl.3 ("a shorter page
+#   beats an unshielded name on a page that promises shielding") — and callers treat `''` as OMIT THE
+#   ROW. The MEMBER resolver returns the identity with `deceasedLastInitial: ''` and only bails when
+#   `firstName === ''`. ⇒ reusing it turns "show the family's single name" into **"OMIT THE POOL"** on
+#   the My Pool card, the Yogdaan Bahi, the PDF AND the notification. ⭐ Mononyms are common in India —
+#   ⛔ NOT a corner case.
+#   ⭐ THE RULE: the two surfaces need the SAME FORM RULE and ⛔ DIFFERENT ABSENCE BEHAVIOUR — omitting a
+#   row from a public directory is a PRIVACY PROTECTION; omitting a member's own pool is a FUNCTIONAL
+#   REGRESSION. ⇒ **share the MODE, ⛔ never the whole function.** ⚠ This is precisely the mechanism by
+#   which the story's own Trap 4 / AC4 (⛔ do not change the mononym path) would have been violated BY
+#   ACCIDENT. A mononym test on EVERY consumer in BOTH modes is now Task 4's, plus a divergence test
+#   that flips the mode and asserts public + member move TOGETHER.
+#
+#   ⚠ TWO THINGS RECORDED, ⛔ NEITHER ACTED ON: the setting's SEMANTIC WIDENING —
+#   `public_name_presentation_mode` now governs MEMBER-facing surfaces too, so record it AT THE SETTING
+#   and ⛔ DO NOT RENAME (a governed config table's rename is a migration AND a governance act; its
+#   authority `super_admin` and per-Pariwar scope are already correct) · and the DEFAULT carries across
+#   unchanged — `full_name`, deliberately ⛔ not fail-closed ⇒ an unconfigured Pariwar renders full names
+#   on BOTH sides, ⛔ no new default introduced.)
+# last_updated_prior: 2026-09-02l (✅✅ **THE PANEL RULED `INV-scope` — ALL FOUR.** Kalpana Bharti + Dhiraj
 #   Rahul; transcribed `2026-09-02-180`. ⛔ ZERO ROWS FLIP — `8-16` stays `ready-for-dev`.
 #   ⇒ the deceased family's FULL NAME renders on EVERY consumer of `resolvePoolIdentity`: the My Pool
 #   card · the Yogdaan Bahi · the **Contribution Note PDF** · the **cycle-open push/WhatsApp/SMS**.

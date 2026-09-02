@@ -241,6 +241,12 @@ export * from './pariwar_public_name_presentation.js';
 // directory kill switch. One row per Pariwar; an absent row means ENABLED (not disabled), the
 // existing shipped posture. Governed write, same posture as the presentation-mode table above.
 export * from './pariwar_directory_publication.js';
+// Story 11b.3a (AC3) — `pariwar_nominee_bank_masking_schedule`: the per-Pariwar NOMINEE-BANK
+// masking schedule. ⭐ An EFFECTIVE-WINDOW record on `pool_fixed_amount_schedule`'s shape, which
+// `2026-08-28-160` names as *"the precedent for clause 10(c)/(d)"* — ⛔ never a boolean and ⛔ never
+// a column on `claim_nominee_bank_accounts` (cl.10(d): a later "simplification" to a boolean is a
+// DEFECT, not a cleanup). No row ⇒ NOT masked (`D8-default` FAIL-OPEN, `2026-09-02-179` cl.1).
+export * from './pariwar_nominee_bank_masking_schedule.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

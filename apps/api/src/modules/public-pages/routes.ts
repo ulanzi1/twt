@@ -54,6 +54,39 @@
 // collection", ⛔ not of the Member Directory specifically. A third route that CANNOT reuse them
 // unchanged is a third route that needs its own ruling, ⛔ not its own bullet list.
 //
+// ── ⭐⭐ THE THIRD ROUTE (Story 11b.3) — AND THE CLAUSE ABOVE FIRED EXACTLY AS WRITTEN ──────────
+// ⛔ THE FIVE ARE ⛔ NOT REUSED HERE, AND STATING FIVE WOULD BE THE DEFECT THIS FILE ALREADY HAD ONCE,
+// INVERTED. `GET …/public-pages/sahyog-vivran/:poolCanonicalIdentifier` is NONE OF THE THREE THINGS
+// the clause above names: it is a SINGLE-ITEM GET on a path parameter (⛔ not a collection), it
+// declares `paginated: false` in the matrix (⛔ not paginated), and it carries ZERO Tier-1 fields
+// (⛔ not PII-bearing). ⇒ controls 2 (`PUBLIC_SURFACE_PAGE_SIZE_CAP`) and 3
+// (`PUBLIC_DIRECTORY_PAGE_HORIZON`) have ⛔ NO QUERY PARAMETER TO BIND TO and cannot be reused.
+//
+// ⭐ **D11(a)** (`2026-09-02-176`) RULED IT STATES ITS **APPLICABLE** SET — **THREE**:
+//   1. `config: { rateLimit: limits.search }` — the named SEARCH tier, UNMODIFIED. ⛔ Not
+//      `limits.read` (looser, and backwards for an enumeration surface), ⛔ not an inline ceiling,
+//      ⛔ not a hand-rolled `keyGenerator`. Same reasoning as control 1 above, unchanged.
+//   4. `X-Robots-Tag: noindex, nofollow` — the existing GLOBAL `onSend` hook. VERIFIED, ⛔ not rebuilt.
+//   5. The absence of any DETAIL or EXPORT affordance. ⭐ Note what this means HERE, because it reads
+//      differently on a single-item route: this route IS the detail view, so what "absence" names is
+//      that it exposes ⛔ no onward affordance — ⛔ no list, ⛔ no sibling links, ⛔ no `format`/`csv`,
+//      and the `.strict()` EMPTY query schema makes every query parameter a 400.
+//
+// ⛔ CONTROLS **2** AND **3**: ⛔ NOT APPLICABLE — NO COLLECTION, NO `limit`, NO `page`.
+// ⚠⛔ AND THAT N/A HAS AN EXPIRY, ⛔ it is not a permanent exemption: **Story 11b.3b adds the
+// contributor list, which makes this route PAGINATED and RESTORES BOTH CONTROLS.** ⇒ 11b.3b owes this
+// header and the `login-wall.spec.ts` allowlist entry an update IN ITS OWN COMMIT — a bare "not
+// applicable" with no expiry is how two controls quietly never come back.
+// ⭐ AND THE OTHER PROPERTY COMES BACK TOO: **Story 11b.3a** makes this route **PII-BEARING** (four
+// ruled Tier-1 nominee-bank fields, `2026-08-28-165` cl.1/cl.3). ⛔ Neither sibling may restore a
+// property and leave these two documents saying what they say today.
+//
+// ⚠⛔ AND THE ONE RESIDUAL, RECORDED RATHER THAN GLOSSED: `P-YYYY-MM-###` is SEQUENTIAL and therefore
+// ENUMERABLE, and with controls 2/3 structurally absent, `limits.search` is the ONLY thing bounding a
+// walk of it. ⭐ `D4-linkage` is OPEN and its cost lands on **11b.3a**, which puts four DECRYPTED
+// Tier-1 fields behind this same identifier — routed to that story's AC2 by name, ⛔ not left here as
+// a shared worry.
+//
 // ⭐ WHAT THE SECOND ROUTE ADDS THAT THE FIRST DOES NOT HAVE — a PUBLICATION-BASIS gate on the
 // deceased member's name, evaluated BEFORE the Tier-1 decrypt so a row with no basis costs zero KMS
 // calls. ⚠ It gates the NAME, ⛔ never the ROW: an unnamed drive still renders in full, so the index
@@ -100,6 +133,9 @@ import {
   PublicDirectoryResponse,
   PublicSahyogDriveQuery,
   PublicSahyogDriveResponse,
+  PublicSahyogVivranParams,
+  PublicSahyogVivranQuery,
+  PublicSahyogVivranResponse,
 } from '@twt/contracts';
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
@@ -154,5 +190,39 @@ export function registerPublicPagesRoutes(app: FastifyInstance, deps: AppDeps): 
       config: { rateLimit: limits.search },
     },
     h.sahyogDrive,
+  );
+
+  // ── Story 11b.3 — the THIRD route, and the FIRST that is not a collection (D6(b), D11(a)) ────
+  // ⭐ ITS DEFENCE IS THE HEADER'S THIRD-ROUTE CLAUSE — the **THREE** applicable controls, with 2 and
+  // 3 recorded as structurally N/A and their RESTORATION named (11b.3b's pagination). ⛔ The five are
+  // NOT reused, because this route is neither a collection, nor paginated, nor PII-bearing.
+  // ⚠ Its own `login-wall.spec.ts` allowlist entry states the SAME control count — ⛔ two
+  // authoritative documents disagreeing on how many controls exist is the defect this file records
+  // having already had once.
+  // ⛔ AND IT IS ⛔ NEVER AN AUTHENTICATED ROUTE. Adding one to this module needs its own ruling, its
+  // own written defence and its own allowlist entry — and there is ⛔ no member session on this
+  // surface to add anyway (`2026-08-23-154` disposition (c); SD-2 is RE-PURPOSED onto the
+  // post-campaign masking state by `2026-08-28-164` A2, ⛔ not dissolved).
+  r.get(
+    '/api/v1/p/:pariwarId/public-pages/sahyog-vivran/:poolCanonicalIdentifier',
+    {
+      schema: {
+        params: PublicSahyogVivranParams,
+        // ⛔ EMPTY AND `.strict()` — there is nothing to filter, page or export, so EVERY query
+        // parameter is a 400. ⭐ That emptiness is precisely WHY controls 2 and 3 are N/A.
+        querystring: PublicSahyogVivranQuery,
+        // ⚠ ⛔ NO `404` ENTRY, deliberately: the handler sends an EMPTY 404 body, and declaring a
+        // response schema for it would invite one — a distinguishable not-found body is an
+        // enumeration oracle on a SEQUENTIAL identifier.
+        response: { 200: PublicSahyogVivranResponse },
+        tags: [PUBLIC_PAGES_TAG],
+      },
+      // ⛔ UNMODIFIED, and the SAME named tier as the two routes above. ⭐ On THIS route it carries
+      // more weight than on either: with controls 2 and 3 structurally absent, it is the ONLY thing
+      // bounding a walk of the sequential `P-YYYY-MM-###`. ⛔ Not `limits.read`, ⛔ not an inline
+      // ceiling, ⛔ not a hand-rolled `keyGenerator`.
+      config: { rateLimit: limits.search },
+    },
+    h.sahyogVivran,
   );
 }

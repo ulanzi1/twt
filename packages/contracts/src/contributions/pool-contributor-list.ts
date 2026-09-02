@@ -84,8 +84,18 @@ export type PoolContributorListPoolIdentity = z.output<typeof PoolContributorLis
  * `active` AND assigned to a pool whose cycle's alert is `live`.
  *
  *   · `pool`      — the pool identity (letter code / curated name / canonical id).
- *   · `confirmed` — the reconciliation-confirmed contributor rows (first-name + last-initial). Legitimately
- *                   `[]` today (Epic 9's `contribution.confirmed` producer is unbuilt — D2). NO status field.
+ *   · `confirmed` — the reconciliation-confirmed contributor rows (first-name + last-initial). ⭐ LIVE since
+ *                   Stories 9.4/9.5 — the Epic-9 matcher is the producer (`reconciliation/matcher-write.ts`
+ *                   → `appendConfirmedContribution`), so an empty list means "nobody confirmed YET",
+ *                   ⛔ never "the producer does not exist". NO status field.
+ *                   ⚠⛔ THIS LINE SAID *"unbuilt — D2"* UNTIL STORY 11b.3, WHICH IS THE FENCE'S NAMED
+ *                   CONSUMER (`2026-09-01-171` cl.1). It was false since 9.4/9.5 and it CONTRADICTED THIS
+ *                   FILE'S OWN HEADER seven lines up, which already said *"this list is live, not
+ *                   structurally empty"*. ⭐ It is fixed HERE and only here: Story 11b.2b's AC9 fenced it
+ *                   against being tidied IN PASSING, and 11b.3 is the story that would otherwise re-derive
+ *                   *"the list is structurally empty"* from it. ⛔ The REST of the stale-comment family is
+ *                   deliberately NOT swept — that is scope creep, and each member keeps its own fallback
+ *                   trigger ([[project_epic9_confirmed_producer_is_live]]).
  *   · `pending`   — the AGGREGATE pending signal (count + percentage) — NO per-member identity (D3).
  */
 export const AssignedPoolContributorList = z

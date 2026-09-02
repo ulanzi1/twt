@@ -219,6 +219,11 @@ describe('the ruled Tier-1 public exception (AC4)', () => {
 
   // ⛔ D1(b)/D10's scope fence, asserted rather than merely written down: the Sahyog Drive
   // ruling does NOT travel to 11b.3's surface just because the field means the same thing.
+  // ⚠ The document below is a SYNTHETIC fixture, ⛔ not a mirror of the committed matrix — Story
+  // 11b.3 declared the real `sahyog-vivran` surface at `/sahyog-vivran/[poolCanonicalIdentifier]`
+  // with ⛔ ZERO Tier-1 fields, which is precisely why this control still bites: **11b.3b** is the
+  // story that will add a name here, and it must arrive with its OWN ruling (`2026-09-02-173` /
+  // `-174`) and its own allowlist entry — ⛔ never by borrowing 11b.1's.
   it('REJECTS the ruled Sahyog Drive field id when it appears on a DIFFERENT surface', () => {
     expect(() =>
       parsePublicVsPrivateMatrix(

@@ -152,6 +152,59 @@ const PUBLIC_ALLOWLIST = new Set<string>([
   // switch (an emergency control that defaults to ENABLED). ⛔ Allowlisting the route
   // closes nothing.
   'GET /api/v1/p/:pariwarId/public-pages/sahyog-drive',
+  // ── Story 11b.3 — the PUBLIC PER-CLAIM Sahyog Vivran read ─────────────────────
+  // ⛔ DELIBERATELY UNAUTHENTICATED, and this entry is where that decision is DEFENDED.
+  // ⭐ THE THIRD `public-pages` GET, and the FIRST that is not a collection. It is here
+  // because `routes.ts`'s two-route clause named the price of another route — its own
+  // allowlist entry, its own written defence, its own rate-limit choice. This is that entry.
+  // WHY UNAUTHENTICATED: the surface exists so that anyone can check one drive's record for
+  // themselves — which pool it was, how it closed, and how many contributions were CONFIRMED
+  // as money received. A login would defeat that purpose, and there is no member session to
+  // add anyway (members are TOKEN-BEARER, there is no `apps/member-web`; `2026-08-23-154`
+  // disposition (c) DEFERRED the authenticated tier for exactly that reason, and
+  // `2026-08-28-164` A2 RE-PURPOSED SD-2 onto the post-campaign masking state rather than
+  // dissolving it). ⛔ Do not "fix" this by adding a session guard.
+  //
+  // ⚠⛔ IT IS NOT AN OPEN SURFACE — AND IT IS ⛔ NOT BOUNDED BY THE SAME FIVE CONTROLS THE TWO
+  // ROUTES ABOVE SHARE. ⛔ STATING FIVE HERE WOULD BE FALSE. `routes.ts:52-55` ruled that the
+  // five are properties of "an unauthenticated, PAGINATED, PII-BEARING public COLLECTION"; this
+  // route is a SINGLE-ITEM GET on a path parameter, declares `paginated: false`, and carries
+  // ZERO Tier-1 fields. ⇒ **D11(a)** (`2026-09-02-176`) ruled it states its APPLICABLE set —
+  // ⭐ **THREE**, matching `routes.ts` exactly:
+  //   · the named SEARCH rate limit, UNMODIFIED — ⛔ NOT `limits.read`, the looser tier, which is
+  //     backwards for an enumeration surface. Keyed on the FORWARDED VISITOR ADDRESS via the same
+  //     `perSessionKey` → `request.ip` → `trustProxy` chain.
+  //   · `X-Robots-Tag: noindex, nofollow` from the existing global hook, plus `noindex` on the
+  //     page itself.
+  //   · ⛔ NO onward DETAIL or EXPORT affordance. ⚠ Read that carefully on a single-item route:
+  //     this route IS the detail view, so what is absent is any onward affordance — ⛔ no list,
+  //     ⛔ no sibling links, ⛔ no `format`/`csv`, and an EMPTY `.strict()` query schema that
+  //     makes every query parameter a 400.
+  //
+  // ⛔ CONTROLS 2 (`PUBLIC_SURFACE_PAGE_SIZE_CAP`) AND 3 (`PUBLIC_DIRECTORY_PAGE_HORIZON`):
+  // ⛔ NOT APPLICABLE — NO COLLECTION, NO `limit`, NO `page` to bind them to.
+  // ⚠⛔ AND THE N/A HAS AN EXPIRY: **Story 11b.3b adds the contributor list, which makes this
+  // route PAGINATED and RESTORES BOTH.** ⇒ 11b.3b owes this entry AND the `routes.ts` header an
+  // update in its own commit — a bare "not applicable" with no expiry is how two controls quietly
+  // never come back. ⭐ And **Story 11b.3a** makes this route PII-BEARING (four ruled Tier-1
+  // nominee-bank fields, `2026-08-28-165` cl.1/cl.3) — ⛔ neither sibling may restore a property
+  // and leave these two documents saying what they say today. ⛔ EXTEND, ⛔ never overwrite.
+  //
+  // ⭐ AND ONE PROPERTY NEITHER ROUTE ABOVE HAS: ⛔ THERE IS NOTHING TO DECRYPT. This read selects
+  // no Tier-1 column at all, so it costs ZERO KMS round-trips and holds no plaintext — that is the
+  // whole purchase of the D6(b) split. ⚠ It is ⛔ NOT a reason to move the read to `apps/public`:
+  // the rate-limit store and the audit line still live only here, and on a route fronted by a
+  // SEQUENTIAL identifier the ceiling is the load-bearing one.
+  //
+  // ⚠ ITS HONEST LIMITS, recorded rather than glossed: `trustProxy: true` makes the forwarded
+  // address CALLER-SUPPLIED (`2026-08-20-143` cl.9); a cached hit never reaches the origin, so
+  // origin-side signals see only cache MISSES; and with controls 2/3 structurally absent,
+  // `limits.search` is the ONLY bound on walking the sequential identifier — ⭐ `D4-linkage` is
+  // OPEN and its cost lands on 11b.3a's AC2.
+  // ⛔⛔ AND BUILT IS ⛔ NOT PUBLISHED. What keeps this surface dark is DEPLOYMENT plus the
+  // counsel/Panel process — ⛔ not a code mechanism, and ⛔ never the publication kill switch (an
+  // emergency control that defaults to ENABLED). ⛔ Allowlisting the route closes nothing.
+  'GET /api/v1/p/:pariwarId/public-pages/sahyog-vivran/:poolCanonicalIdentifier',
   // Developer-convenience OpenAPI doc (read-only, no data).
   'GET /docs/json',
   // Story 5.4 — the WhatsApp inbound-webhook ingress (§3.11) is PUBLIC by design: Meta is unauthenticated,

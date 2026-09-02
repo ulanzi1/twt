@@ -1,0 +1,379 @@
+---
+// The public per-claim Sahyog Vivran — Story 11b.3 (Task 4; AC1, AC3, AC5, AC8).
+//
+// ⭐⛔ READ THIS FIRST — THE TIER-LEAK LEG ON THIS SURFACE IS **OPERATIVE FROM ITS FIRST COMMIT**.
+// `sahyogVivranSurfaceFieldIds(model)` returns a NON-EMPTY set, so `evaluateSnapshot` actually
+// evaluates the leak rules here and a planted `authenticated_member`-tier or UNDECLARED field at
+// `public` FAILS a run that previously passed. ⛔ A green scan over an armed-but-empty leg proves
+// nothing.
+//
+// ⭐ WHAT THIS PAGE RENDERS: ONE drive's own record — which pool it was, how it closed, how many
+// contributions were CONFIRMED as money received, and, when the claim reached it by appeal, the
+// non-PII reversal lineage.
+// ⛔ EVERY value goes through `<MatrixField>`, so `getVisibility()` is the ONLY thing deciding what
+// appears.
+//
+// ═════════════════════════════════════════════════════════════════════════════════════════════
+// ⭐⭐ IT NAMES ⛔ NOBODY — ⛔ NOT THE DECEASED MEMBER, ⛔ NOT A CONTRIBUTOR, ⛔ NOT A VERIFIER,
+// ⛔ NOT A NOMINEE. THAT IS THE CORRECT STATE, ⛔ NOT A BROKEN ONE.
+// ═════════════════════════════════════════════════════════════════════════════════════════════
+// It is what the D6(b) split bought (`2026-09-02-182` cl.2): with ⛔ no `pii_tier: 1` field at
+// `tier: public`, this surface needs ⛔ no `tier1_public_exception`, ⛔ no `RULED_TIER1_PUBLIC_
+// EXCEPTIONS` entry and ⛔ no Panel ruling — so ⛔ nothing outside this repository can block it.
+// ⇒ **11b.3b** adds the named-identity render layer (`2026-09-02-173` / `-174`) and **11b.3a** the
+// nominee bank presentation (`2026-08-28-160` cl.10, `-165` cl.1/cl.3), each WITH its allowlist entry
+// in the same commit. ⛔ Do not "fill the gap" here.
+//
+// ⛔⛔ AND FOUR PRODUCERS THE EPIC AC NAMES DO ⛔ NOT EXIST — verifier profile pages (⛔ zero hits in
+// the repo), the family story (11b.4, `backlog`), the memorial components (11b.5, `backlog`) and
+// `<StatCardStrip>` (C-3, ⛔ no producer AND ⛔ no owner). ⭐ The ruled posture is 11a.5's third path
+// and C-4 SURVIVED `-160` untouched: *render nothing when empty* — ⛔ never a fabricated row, ⛔ never
+// a "coming soon" placeholder. ⚠ *A silent section is the CORRECT state, ⛔ not a bug to close
+// quickly.* ⛔ Do ⛔ not stub `<StatCardStrip>`: a stub asserts an aggregate nothing computes, and
+// building any of the four re-commits SD-1.
+//
+// ⛔⛔ AND ⛔ NO RUPEE FIGURE. `amountRaisedInr = confirmedCount × fixedAmount` is SHIPPED and ruled
+// canonical (Story 9.12 D3) and **D1(b)** ruled it CONSUMED — but it lives behind the `@twt/ui` fence
+// this story does ⛔ not lift, so the amount MOVES to **11b.3b**. ⛔ Re-deriving the multiplication
+// here is **D1(c)**, REFUSED. ⚠ The interim asymmetry (a count here, an amount in the member app) is
+// ORDERING, ⛔ not a ruling, and ⛔ NOT a second D7 inversion.
+//
+// ⛔⛔ AND ⛔ NO SESSION, EVER: ⛔ no `Astro.cookies`, ⛔ no auth read of `Astro.request.headers`,
+// ⛔ no `Astro.session`, ⛔ no `isAuthenticated` prop on `<AuthenticatedFragment>`. ⭐ Every visitor
+// sees BYTE-IDENTICAL markup ([[project_no_browser_member_token_surface]]). ⚠ SD-2 is RE-PURPOSED
+// onto the POST-campaign masking state (`2026-08-28-164` A2) — ⛔ not dissolved; the post-masking
+// authenticated presentation is a SEPARATE FUTURE DECISION, ⛔ not carried and ⛔ not foreclosed.
+//
+// ⛔⛔ BUILT IS ⛔ NOT PUBLISHED. DPDPA clearance for this surface was LIFTED (`2026-08-28-160` cl.7)
+// on clause 4's model. ⚠ ⛔ Never write that counsel is not engaged — **Adv. Mohit Agrawal** has been
+// engaged since 2026-06-21 (`2026-08-24-158`); the correct form is *"counsel has not reviewed X"*.
+// ⭐ What keeps this surface dark is DEPLOYMENT plus the counsel/Panel process — ⛔ never a code
+// mechanism, and ⛔ never the publication kill switch, which is an EMERGENCY control that defaults to
+// ENABLED by design ([[project_directory_launch_gated_on_killswitch_ui]]).
+//
+// ── ⛔ WHY THE DATA COMES OVER HTTP AND NOT FROM A LOCAL READ ────────────────────────────────
+// ⚠ ⛔ NOT for the reason the two sibling surfaces give. Theirs is the Tier-1 KYC decrypt; this read
+// selects ⛔ no Tier-1 column and costs ZERO KMS round-trips, which is the point of the split.
+// ⭐ THE OTHER TWO REASONS STILL HOLD, and here the first is load-bearing: an anti-enumeration ceiling
+// (a rate-limit store) and an audit line (the BYPASSRLS service pool), ⛔ neither of which
+// `apps/public` has. The identifier is SEQUENTIAL and controls 2/3 are structurally N/A (D11(a)), so
+// `limits.search` is the ONLY bound on walking it. ⛔ Do not add a `withPublicScope` read here.
+//
+// House shape, mirroring `sahyog.astro` and `members.astro`: thin frontmatter, ALL display logic in
+// the pure `lib/sahyog-vivran-render.ts`, explicit `namespace` on every `t()` call (⚠ `t()` defaults
+// to `common` and THROWS on a miss — the `{{max}}` vs `{max}` defect that made `/members` throw on
+// EVERY request at 11a.2 was exactly this shape, and no test caught it because every test bypassed
+// `t()`).
+import { getLocale, isLocale, t } from '@twt/i18n';
+import type { Locale } from '@twt/i18n';
+import { passport } from '@twt/domain';
+
+import MatrixField from '../../components/MatrixField.astro';
+import PublicShell from '../../layouts/PublicShell.astro';
+import { getDb } from '../../lib/db.server.js';
+import { visibilityOf } from '../../lib/matrix.server.js';
+import {
+  buildSahyogVivranOutageView,
+  buildSahyogVivranView,
+  type SahyogVivranLabels,
+} from '../../lib/sahyog-vivran-render.js';
+import { buildForwardedFor, fetchSahyogVivran } from '../../lib/sahyog-vivran.server.js';
+import { ACTIVE_PARIWAR_ID } from '../../lib/pariwar.server.js';
+
+const { poolCanonicalIdentifier: rawIdentifier } = Astro.params;
+
+// ── Locale + branding (cache-safe: no session, no member state) ──────────────
+const langParam = Astro.url.searchParams.get('lang');
+// ⚠ `accept-language` is a CONTENT-NEGOTIATION header, ⛔ not an auth signal. Reading it is the
+// house pattern on every public page and does ⛔ not breach the "no auth-derived branching" rule —
+// the page sets `Vary: Accept-Language` so the edge keys on it honestly.
+const acceptLanguage = Astro.request.headers.get('accept-language') ?? undefined;
+const db = getDb().db;
+const passportRow = await passport.getPariwarPassportCached(db, ACTIVE_PARIWAR_ID);
+const locale: Locale = isLocale(langParam)
+  ? langParam
+  : getLocale({ pariwarPassportLocale: passportRow?.localeDefault, acceptLanguage });
+const trustName =
+  (locale === 'hi'
+    ? (passportRow?.displayNameHi ?? passportRow?.displayNameEn)
+    : (passportRow?.displayNameEn ?? passportRow?.displayNameHi)) ?? 'Sahyog Vivran';
+const branding = passportRow?.brandingBundle ?? null;
+
+// ⛔ NOTE THE ABSENCE: there is no `withPublicScope` pool, claim or member read here, and there must
+// not be one. The passport read above is branding, ⛔ not drive data.
+
+// ⚠ EXPLICIT NAMESPACE ON EVERY CALL — `t()` defaults to `common` and THROWS on a miss.
+const tr = (key: string, params?: Record<string, string | number>) =>
+  t(key, params, { locale, namespace: 'sahyog-vivran' });
+
+const labels: SahyogVivranLabels = {
+  pageTitle: tr('page.title'),
+  pageIntro: tr('page.intro'),
+  factsGroupLabel: tr('facts.group_label'),
+  labelDriveCode: tr('label.drive_code'),
+  labelPoolLetter: tr('label.pool_letter'),
+  labelDistrict: tr('label.district'),
+  labelClosedOn: tr('label.closed_on'),
+  labelContributions: tr('label.contributions'),
+  labelStatus: tr('label.status'),
+  districtUnknown: tr('value.district_unknown'),
+  statusCollecting: tr('status.collecting'),
+  statusActive: tr('status.active'),
+  statusArchive: tr('status.archive'),
+  collectingTitle: tr('collecting.title'),
+  collectingBody: tr('collecting.body'),
+  // ⭐ THREE DISTINCT STRINGS, one per opaque outcome token — ⛔ and NONE of them compares to a
+  // target, quotes a percentage, or names a shortfall. `classifyCycleOutcome` already quarantined the
+  // numbers upstream; this is the second place that quarantine has to hold, because COPY is where a
+  // shortfall would actually surface. ⚠ `microcopy.yaml`'s `pool-reality-comparison` tone rule bites
+  // `fell short` / `shortfall` / `\d+% of the target` / `लक्ष्य से कम` at PR time.
+  outcomeFullyFunded: tr('outcome.fully_funded'),
+  outcomeUnderFunded: tr('outcome.under_funded'),
+  outcomePartial: tr('outcome.partial'),
+  appealTitle: tr('appeal.title'),
+  appealLineage: tr('appeal.lineage'),
+  // ⚠ Interpolated THROUGH `t()`, ⛔ never by local string surgery — the 11a.2 `{{max}}` vs `{max}`
+  // defect threw on EVERY request and no test caught it, because every test bypassed `t()`.
+  appealStage: (stage: number) => tr('appeal.stage', { stage }),
+  appealReversedOn: tr('appeal.reversed_on'),
+  dispositionNewEvidence: tr('disposition.new_evidence_presented'),
+  dispositionProceduralCorrection: tr('disposition.procedural_correction'),
+  dispositionReconsideration: tr('disposition.reconsideration_on_merits'),
+  contributionsCount: (count: number) => tr('value.contributions_count', { count }),
+  outageTitle: tr('outage.title'),
+  outageBody: tr('outage.body'),
+};
+
+// ── Cache headers (AC2's `edge_cacheable` declaration) ──────────────────────
+// ⛔ SET BEFORE THE 404 BRANCH, DELIBERATELY — the `blog/[postId].astro` precedent, and for the same
+// mechanical reason: `checkCachePolicyReconciliation` scans this file's WHOLE SOURCE for the call's
+// presence, ⛔ not per-branch, so a header set only after an early `return` reads as compliant to the
+// gate while the 404 response ships with none. An unknown identifier 404s deterministically for that
+// URL forever, so caching that is correct, ⛔ not merely convenient.
+//
+// ⚠⛔ AND THE ACCEPTED COST IS THE SAME ONE `/sahyog` CARRIES: at `s-maxage=300` a pulled Pariwar
+// keeps being served from every warm PoP for up to five minutes, and the origin-side rate limit sees
+// only cache MISSES (a cached hit never reaches the origin). ⛔ Direct SQL is NOT the operational
+// fallback, and ⛔ do not "fix" the edge-blindness by making this surface `private_no_store` — that
+// discards the edge for a public surface and was already REJECTED at 11a.3.
+Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
+Astro.response.headers.set('Vary', 'Accept-Language');
+
+// ⭐⛔ A MISSING OR BLANK IDENTIFIER IS A 404, ⛔ NOT AN ERROR AND ⛔ NOT A REDIRECT — the same answer
+// an unknown drive gets, because a distinguishable *"malformed"* answer is an enumeration signal on a
+// SEQUENTIAL identifier.
+const poolCanonicalIdentifier = (rawIdentifier ?? '').trim();
+
+const fetched =
+  poolCanonicalIdentifier === ''
+    ? ({ ok: false, reason: 'not_found' } as const)
+    : await fetchSahyogVivran({
+        poolCanonicalIdentifier,
+        // ⛔ `Astro.clientAddress` ONLY, via the REUSED `buildForwardedFor`. The inbound
+        // `X-Forwarded-For` header is deliberately NOT read — it is caller-supplied, and `apps/api`'s
+        // `trustProxy: true` keys on the LEFTMOST chain entry, so forwarding it hands the attacker
+        // the rate-limit key (`2026-08-21-145` cl.2). ⛔ Do not "restore the full chain".
+        forwardedFor: buildForwardedFor(Astro.clientAddress),
+      });
+
+// ⭐⛔ 404 IS THE ANSWER FOR EVERY *"nothing to show"* CASE, AND THEY ARE BYTE-IDENTICAL.
+// *"No such drive"*, *"exists but is not visible at this surface's predicate"*, *"this Pariwar's
+// public surfaces are switched off"* and *"the identifier was malformed"* all land here. ⛔ Never an
+// error distinguishing them — a distinguishable miss is an ENUMERATION SIGNAL, and the identifier is
+// sequential. ⛔ A plain 404, ⛔ never a redirect: a `Location` header has no effect on a non-3xx
+// response, and a prior surface's version of that was dead weight masquerading as a redirect.
+if (!fetched.ok && (fetched.reason === 'not_found' || fetched.reason === 'rejected')) {
+  return new Response(null, { status: 404, headers: Astro.response.headers });
+}
+
+// ⭐⛔ AN OUTAGE IS ⛔ NOT A 404, AND THE TWO MUST NEVER COLLAPSE. *"We could not load this just now"*
+// is a statement about THIS REQUEST'S luck; *"there is no such drive"* is a statement about the public
+// record. ⚠ Rendering the second on the first's evidence is the most misleading thing this surface
+// could say about a family's drive. 503 + `Retry-After` + `no-store` is the honest shape — ⛔ not 500
+// (the failure is upstream and transient, and this page rendered correctly), and ⛔ not 200 (a page
+// that says "could not be loaded" at 200 is a lie to every cache, crawler and uptime check).
+const apiUnavailable = !fetched.ok;
+const view = fetched.ok
+  ? buildSahyogVivranView(fetched.data, labels)
+  : buildSahyogVivranOutageView(poolCanonicalIdentifier);
+
+if (apiUnavailable) {
+  Astro.response.status = 503;
+  Astro.response.headers.set('Retry-After', '60');
+  // ⛔ OVERRIDES the shared-cache header above: an outage is a statement about this request, and
+  // pinning it into a shared edge for five minutes would outlive the failure it describes.
+  Astro.response.headers.set('Cache-Control', 'no-store');
+}
+
+const model = view.model;
+
+// ⭐ RESOLVED ONCE PER RENDER. The matrix cannot vary within a page, and asking `getVisibility()`
+// repeatedly would be an N+1 on a constant. ⛔ `visibilityOf` is the ONLY thing consulted — ⛔ no
+// local tier comparison, ⛔ no second viewer ceiling.
+//
+// ⭐⛔ `drive_status` NEEDS THIS GUARD FOR THE SAME REASON `/sahyog`'s DOES, AND IT IS SHARPER HERE.
+// The status is disclosed STRUCTURALLY as well as in its own cell: the "still collecting" block below
+// renders ⟺ the drive is `collecting`, and the close-of-cycle framing renders ⟺ it is not. ⇒ flipping
+// `drive_status.tier` to `authenticated_member` in the YAML would suppress the CELL and change
+// ⛔ nothing about what the page discloses, while the leak gate stayed GREEN because the field id is
+// still declared. ⛔ This guard does not hide those blocks — hiding them is a real design change (the
+// live/closed distinction IS this page's structure). ⭐ What it does is make the inertness IMPOSSIBLE
+// TO INTRODUCE QUIETLY: a matrix verdict this page cannot honour now FAILS THE RENDER.
+const driveStatusVisible = visibilityOf('sahyog-vivran', 'drive_status', 'public').visible;
+if (!driveStatusVisible) {
+  throw new Error(
+    '[sahyog-vivran] the matrix suppresses `drive_status` for `sahyog-vivran` at the `public` tier, ' +
+      'but this page discloses it STRUCTURALLY — through the still-collecting block and the ' +
+      'close-of-cycle framing block, which render on opposite sides of that very value — and has no ' +
+      'single cell to suppress. Honouring that verdict requires redesigning the page, not a config ' +
+      'change. Restore the tier, or make the change deliberately.',
+  );
+}
+---
+
+<PublicShell
+  locale={locale}
+  title={labels.pageTitle}
+  description={labels.pageIntro}
+  trustName={trustName}
+  branding={branding}
+  noindex={true}
+>
+  <main class="mx-auto max-w-2xl px-4 py-8">
+    <p class="mb-4"><a href="/sahyog" class="text-sm text-blue-600 hover:underline">← {tr('page.title')}</a></p>
+
+    <header class="mb-6">
+      <h1 class="text-2xl font-semibold">{labels.pageTitle}</h1>
+      <p class="mt-2 text-sm text-gray-700">{labels.pageIntro}</p>
+    </header>
+
+    {apiUnavailable ? (
+      <section class="rounded border border-gray-300 p-4">
+        <h2 class="text-lg font-semibold">{labels.outageTitle}</h2>
+        <p class="mt-2 text-sm text-gray-700">{labels.outageBody}</p>
+      </section>
+    ) : (
+      <>
+        {/*
+          ⭐ AC8 — FAMILY 13 (Semantic accessibility, AI-11a-3) IN ITS **WEB** FORM.
+          ⚠⛔ Family 13 is written in REACT-NATIVE vocabulary and its worked example is
+          `apps/mobile/components/panchayat/PinnedItem.tsx`; `accessible` / `accessibilityLabel` /
+          `accessibilityValue` are RN props with ⛔ NO HTML equivalent. ⛔ Do ⛔ not record family 13 as
+          held by pointing at that file. The web translation this story owes, written down:
+            (a) the labelled container is a REAL GROUPING ELEMENT carrying a `role` AND an
+                `aria-label` — ⛔ never a bare `<div>` carrying a label no role announces. Here that is
+                the `role="group"` + `aria-label` below, and the `<dl>` whose own semantics pair each
+                term with its value.
+            (b) a role implying a VALUE carries `aria-valuenow` / `aria-valuetext`. ⭐ This page has
+                ⛔ NO such role — there is no meter, no progressbar and no slider, deliberately: the
+                progress meter is `@twt/ui`'s and D1(b) did ⛔ not authorise it here. ⇒ (b) is held
+                VACUOUSLY, and that is stated rather than left to be inferred.
+            (c) a role implying INTERACTION is a real `<a>` / `<button>` — the one interactive element
+                on this page is the back link above, a real `<a href>` that works with JS disabled.
+            (d) ⛔ NO announced-order dependence on visual order: every value is announced through its
+                own `<dt>` label, so the reading order carries its own meaning and a CSS reflow cannot
+                change what is said.
+          ⛔ NO a11y CI gate is minted here — AI-11a-3 routes that to *"checklist/invariant family 13
+          first; a CI gate ⛔ only if later mechanically justified"* (C-2: 19 gates in `scripts/`, ⛔ none
+          a11y, while Story 11b.8 makes an accessibility audit a LAUNCH-BLOCKER).
+        */}
+        <section role="group" aria-label={labels.factsGroupLabel} class="rounded border border-gray-300 p-4">
+          <dl class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <dt class="text-xs uppercase tracking-wide text-gray-500">{labels.labelPoolLetter}</dt>
+              <dd class="text-sm"><MatrixField surface="sahyog-vivran" field="pool_letter_code" viewerContext="public" value={model.poolLetterCode} /></dd>
+            </div>
+            <div>
+              <dt class="text-xs uppercase tracking-wide text-gray-500">{labels.labelDriveCode}</dt>
+              <dd class="text-sm"><MatrixField surface="sahyog-vivran" field="pool_canonical_identifier" viewerContext="public" value={model.poolCanonicalIdentifier} /></dd>
+            </div>
+            <div>
+              <dt class="text-xs uppercase tracking-wide text-gray-500">{labels.labelStatus}</dt>
+              <dd class="text-sm"><MatrixField surface="sahyog-vivran" field="drive_status" viewerContext="public" value={model.driveStatus} /></dd>
+            </div>
+            <div>
+              <dt class="text-xs uppercase tracking-wide text-gray-500">{labels.labelDistrict}</dt>
+              {/*
+                ⚠ `?? districtUnknown` — a missing posting row renders the "Not recorded" copy, ⛔ not
+                a blank cell. That is a DIFFERENT nothing from a matrix suppression, which
+                `<MatrixField>` renders as literally nothing.
+              */}
+              <dd class="text-sm"><MatrixField surface="sahyog-vivran" field="district" viewerContext="public" value={model.district ?? labels.districtUnknown} /></dd>
+            </div>
+            {/*
+              ⭐⛔ THE CLOSE DATE'S CELL IS OMITTED ENTIRELY WHILE THE DRIVE IS COLLECTING, ⛔ not
+              rendered with a "not yet" placeholder. There is no close instant to state, and inventing
+              a marker for it would be the announced omission this family of surfaces forbids.
+            */}
+            {model.driveClosedAt !== null && (
+              <div>
+                <dt class="text-xs uppercase tracking-wide text-gray-500">{labels.labelClosedOn}</dt>
+                <dd class="text-sm"><MatrixField surface="sahyog-vivran" field="drive_closed_at" viewerContext="public" value={model.driveClosedAt} /></dd>
+              </div>
+            )}
+            <div>
+              <dt class="text-xs uppercase tracking-wide text-gray-500">{labels.labelContributions}</dt>
+              {/*
+                ⛔ A COUNT, ⛔ never a sum and ⛔ never a score — and there is deliberately ⛔ NO rupee
+                figure anywhere on this page (D1(b) moved it to 11b.3b; D1(c) is REFUSED).
+              */}
+              <dd class="text-sm"><MatrixField surface="sahyog-vivran" field="confirmed_contribution_count" viewerContext="public" value={model.confirmedContributionCount} /></dd>
+            </div>
+          </dl>
+        </section>
+
+        {/*
+          ⭐ AC3's HONEST LIVE-DRIVE COPY — ⛔ never an estimate, ⛔ never a projected final amount,
+          ⛔ never an "X% confirmed so far" frame that exposes the attested↔confirmed gap.
+        */}
+        {model.isCollecting && (
+          <section class="mt-6 rounded border border-gray-300 p-4">
+            <h2 class="text-lg font-semibold">{labels.collectingTitle}</h2>
+            <p class="mt-2 text-sm text-gray-700">{labels.collectingBody}</p>
+          </section>
+        )}
+
+        {/*
+          ⭐ Pool-Reality #2 framing. ⚠ RENDERS NOTHING when null — the drive is still collecting, or
+          ⛔ no expectation was ever set (zero assignees). ⛔ Never a fabricated outcome: `0 >= 0` is
+          vacuously true and once published "the cycle closed with the support it needed" beside
+          "0 confirmed" (the 11b.1 review finding), which is why the null arm exists.
+        */}
+        {model.closeOfCycleFraming !== null && (
+          <section class="mt-6 rounded border border-gray-300 p-4">
+            <p class="text-sm"><MatrixField surface="sahyog-vivran" field="close_of_cycle_framing" viewerContext="public" value={model.closeOfCycleFraming} /></p>
+          </section>
+        )}
+
+        {/*
+          ⭐ AC5 — THE "REVERSED BY APPEAL" LINEAGE, DERIVED AT REQUEST TIME (D12(a): ⛔ no queue,
+          ⛔ no consumer, ⛔ no publication record).
+          ⛔⛔ IT NEVER CARRIES RATIONALE TEXT OR A REVIEWER IDENTITY — those live on the
+          `claim.appeal_stageN_reviewed` DECISION event's Tier-1 metadata row and are ⛔ NEVER public.
+          `claim.reversed` is the PUBLISH SIGNAL, ⛔ not the decision.
+          ⚠ RENDERS NOTHING when the claim was never reversed — ⛔ no "not reversed" marker, which
+          would publish a fact about claims that were NOT appealed.
+        */}
+        {model.wasReversedByAppeal && (
+          <section class="mt-6 rounded border border-gray-300 p-4">
+            <h2 class="text-lg font-semibold">{labels.appealTitle}</h2>
+            <p class="mt-2 text-sm text-gray-700">{labels.appealLineage}</p>
+            <dl class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <dt class="text-xs uppercase tracking-wide text-gray-500">{labels.appealTitle}</dt>
+                <dd class="text-sm"><MatrixField surface="sahyog-vivran" field="appeal_reversal_stage" viewerContext="public" value={model.appealReversalStage} /></dd>
+              </div>
+              <div>
+                <dt class="text-xs uppercase tracking-wide text-gray-500">{labels.appealReversedOn}</dt>
+                <dd class="text-sm"><MatrixField surface="sahyog-vivran" field="appeal_reversal_at" viewerContext="public" value={model.appealReversalAt} /></dd>
+              </div>
+              <div class="sm:col-span-2">
+                <dd class="text-sm"><MatrixField surface="sahyog-vivran" field="appeal_disposition_category" viewerContext="public" value={model.appealDispositionCategory} /></dd>
+              </div>
+            </dl>
+          </section>
+        )}
+      </>
+    )}
+  </main>
+</PublicShell>

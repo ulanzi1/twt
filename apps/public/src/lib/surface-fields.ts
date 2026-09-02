@@ -364,3 +364,122 @@ export function sahyogDriveSurfaceFieldIds(model: SahyogDriveRenderModel): strin
   const rowIds = deriveFieldIds(SAHYOG_DRIVE_ROW_SHAPE, SAHYOG_DRIVE_ROW_FIELD_IDS);
   return [...new Set([...shell, ...rowIds])].sort();
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// /sahyog-vivran/[poolCanonicalIdentifier] — ONE drive's own page. Story 11b.3 (Task 1; AC2).
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * The `/sahyog-vivran/[poolCanonicalIdentifier]` render model.
+ *
+ * ⭐⭐ IT NAMES ⛔ NOBODY, AND THAT IS THE SPLIT'S LOAD-BEARING PROPERTY, ⛔ not an omission
+ * (`2026-09-02-182` cl.2, D6(b)). ⛔ No key below carries a person's name — ⛔ not the deceased
+ * member's, ⛔ not a contributor's, ⛔ not a verifier's, ⛔ not a nominee's — so every matrix field
+ * this model derives is `pii_tier: 3` and the surface declares ⛔ ZERO Tier-1 fields at `public`.
+ * ⇒ it needs ⛔ no `tier1_public_exception`, ⛔ no `RULED_TIER1_PUBLIC_EXCEPTIONS` entry and
+ * ⛔ no Panel ruling, so ⛔ nothing outside this repository can block it.
+ *
+ * ⚠⛔ ADDING A KEY HERE IS A MATRIX ACT, and on THIS surface it is more than that: a key carrying
+ * a person's name would make the emptiness above false and must arrive WITH its cited ruling and
+ * its allowlist entry, in the SAME commit (11b.3a's four nominee-bank pairs, `2026-08-28-165`
+ * cl.1/cl.3; 11b.3b's two names, `2026-09-02-173` / `-174`). `deriveFieldIds` throws in BOTH
+ * directions, and `tests/surface-fields.test.ts` asserts the Tier-1-at-`public` count is 0 — ⛔ that
+ * assertion is a COUNT FOR THIS STORY, ⛔ not a permanent ceiling, and each sibling owes it an
+ * update.
+ *
+ * ⛔ THE `authenticated_member` TIER IS NOT RENDERED HERE AND HAS NO VIEWER. Members are
+ * token-bearer, no browser surface holds the member token, and SD-2 is RE-PURPOSED onto the
+ * POST-campaign masking state (`2026-08-28-164` A2) — ⛔ not dissolved, and the post-masking
+ * authenticated presentation is a separate future decision. ⛔ Do not add fields "ready for" it,
+ * and ⛔ do not add an `isAuthenticated` flag to this model.
+ *
+ * ⛔ AND THERE IS NO RUPEE FIGURE. D1(b) ruled the SHIPPED `amountRaisedInr` producer CONSUMED —
+ * but it lives behind the `@twt/ui` fence this story does not lift, so the amount lands at
+ * **11b.3b**. ⛔ Re-deriving `confirmedCount × fixedAmount` here is D1(c), REFUSED, and a second
+ * multiplication anywhere in this app is the defect.
+ */
+export interface SahyogVivranRenderModel {
+  /**
+   * ⚠ TRUE WHEN THE API COULD NOT BE REACHED — an OUTAGE, ⛔ never "this drive does not exist".
+   * ⭐ On a per-claim page the conflation is at its sharpest: a 404 for a drive that DOES exist
+   * tells a visitor the trust has no record of it.
+   */
+  readonly apiUnavailable: boolean;
+  /**
+   * ⚠ TRUE while the drive is still COLLECTING (`pools.current_state = 'live'`, admitted by D4(b)).
+   * ⭐ It selects AC3's honest copy — *"final outcome will appear after reconciliation settles"* —
+   * ⛔ never an estimate, ⛔ never a projection, ⛔ never an "X% confirmed so far" frame.
+   */
+  readonly isCollecting: boolean;
+  /** ⚠ TRUE when the claim reached this drive BY APPEAL — selects the AC5 lineage block. */
+  readonly wasReversedByAppeal: boolean;
+  /** The drive's letter code (or the Pariwar's curated registry name), already resolved. */
+  readonly poolLetterCode: string;
+  /** `P-YYYY-MM-###` — and on this surface also the route parameter. */
+  readonly poolCanonicalIdentifier: string;
+  /** `collecting` | `active` | `archive`, already localised. ⛔ The internal word never reaches here. */
+  readonly driveStatus: string;
+  /** The close/settle instant, already formatted. `null` ⇒ render NOTHING (still collecting). */
+  readonly driveClosedAt: string | null;
+  /** The deceased member's latest posting district, RAW. `null` ⇒ the "not recorded" copy. */
+  readonly district: string | null;
+  /** Confirmed contributions, already formatted. ⛔ A count, ⛔ never a sum and ⛔ never a score. */
+  readonly confirmedContributionCount: string;
+  /**
+   * Pool-Reality #2 framing copy. `null` in TWO cases and the page then says NOTHING: the drive is
+   * still collecting, or ⛔ no expectation was ever set (zero assignees).
+   * ⛔ Contains NO target, percentage or shortfall, by construction.
+   */
+  readonly closeOfCycleFraming: string | null;
+  /** `1` | `2` | `3` as display copy. `null` when the claim was never reversed. */
+  readonly appealReversalStage: string | null;
+  /** The bounded NON-PII disposition tag, already localised. ⛔ Never rationale, ⛔ never a person. */
+  readonly appealDispositionCategory: string | null;
+  /** The reversal instant, already formatted. `null` when there was no reversal. */
+  readonly appealReversalAt: string | null;
+}
+
+/**
+ * `null` declares "carried in the model but ⛔ NOT rendered as a classified field", and it is
+ * correct for exactly the three booleans: they select between blocks of fixed i18n copy.
+ *
+ * ⛔ Every id below is declared in `public-vs-private-matrix.yaml` for the `sahyog-vivran` surface
+ * — ⛔ do not add an entry here without adding the row there.
+ *
+ * ⚠ THERE IS NO SEPARATE PER-ROW MAPPING, and its absence is the surface's shape: this page renders
+ * ONE drive and ⛔ no list, which is also why the matrix declares `paginated: false` and
+ * `parsePageParams()` is never called. ⭐ **11b.3b adds the contributor list** — that is when a
+ * per-ROW mapping arrives here, and when `paginated` flips to `true` in the matrix AND in
+ * `routes.ts`'s written defence AND in the `login-wall.spec.ts` allowlist entry (D11(a)).
+ */
+export const SAHYOG_VIVRAN_FIELD_IDS: FieldIdMapping<SahyogVivranRenderModel> = {
+  apiUnavailable: null,
+  isCollecting: null,
+  wasReversedByAppeal: null,
+  poolLetterCode: 'pool_letter_code',
+  poolCanonicalIdentifier: 'pool_canonical_identifier',
+  driveStatus: 'drive_status',
+  driveClosedAt: 'drive_closed_at',
+  district: 'district',
+  confirmedContributionCount: 'confirmed_contribution_count',
+  closeOfCycleFraming: 'close_of_cycle_framing',
+  appealReversalStage: 'appeal_reversal_stage',
+  appealDispositionCategory: 'appeal_disposition_category',
+  appealReversalAt: 'appeal_reversal_at',
+};
+
+/**
+ * Derive the `/sahyog-vivran` snapshot field set.
+ *
+ * ⭐ NON-EMPTY FROM THIS SURFACE'S FIRST COMMIT — ⛔ not armed-but-empty. `evaluateSnapshot` only
+ * runs the leak rules when a snapshot carries `fields`, so a leg fed an empty set is a green check
+ * certifying an invariant nobody enforces. A planted `authenticated_member`-tier or UNDECLARED
+ * field at `public` FAILS a run that previously passed, which is the only thing that makes a green
+ * scan mean anything ([[feedback_gate_scope_semantic_coverage]]).
+ *
+ * ⚠ Derived from the model instance rather than a representative shape because this surface has no
+ * row container — every classified field is a top-level key, present whether or not it is null.
+ */
+export function sahyogVivranSurfaceFieldIds(model: SahyogVivranRenderModel): string[] {
+  return deriveFieldIds(model, SAHYOG_VIVRAN_FIELD_IDS);
+}

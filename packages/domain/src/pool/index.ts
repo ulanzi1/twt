@@ -60,3 +60,10 @@ export * from './contribution-reference.js';
 // `name_ciphertext` as stored and the boundary at apps/api/src/modules/public-pages/ decrypts, which
 // is the only place in the repo that can. ⛔ It decides a RENDER, never a BENEFIT.
 export * from './public-read.js';
+// Story 11b.3 (Task 2 + Task 5) — the PER-CLAIM Sahyog Vivran read: ONE drive resolved as of ONE
+// instant, on a WIDER visible-drive predicate than the index's (`live` + `closed` + `settled`,
+// D4(b)), plus the RENDER-TIME derivation of the `claim.reversed` appeal lineage (D12(a) — ⛔ no
+// queue, ⛔ no consumer, ⛔ no publication record). Transport-free, audit-free and — unlike the
+// index — with ⛔ NOTHING to decrypt: it returns ⛔ no name, ⛔ no ciphertext and ⛔ no member,
+// claim or pool identifier. ⛔ It decides a RENDER, never a BENEFIT.
+export * from './sahyog-vivran-read.js';

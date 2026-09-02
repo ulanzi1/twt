@@ -4,6 +4,159 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred / recorded from: implementation of story 11b-3-sahyog-vivran-per-claim-story-surface (2026-09-02)
+
+_Story 11b.3 is the public shell of the three-way 11b.3 split: the route, the domain read, the
+render-time reversed-denial derivation, and the financial-truth CI gate — with ⛔ **ZERO `pii_tier: 1`
+fields at `tier: public`**, which is the property that made it startable with no Panel ruling of its
+own. It renders ⛔ no person's name and ⛔ no rupee figure. What it deliberately does NOT do is
+recorded here rather than left for a future reader to re-derive._
+
+- **⭐⭐ FOUND AND ⭐ FIXED HERE — `GET /sahyog` RETURNED **HTTP 500** FOR EVERY REAL CLOSED DRIVE.
+  ⛔ Recorded as *"Closed by [edit]"*, ⛔ not deferred** ([[feedback_closure_language_precision]]).
+  ⚠⛔ **A LIVE, USER-VISIBLE DEFECT ON A SHIPPED PUBLIC TRANSPARENCY SURFACE, AND IT SHIPPED GREEN.**
+  `pool/public-read.ts`'s `DRIVE_CLOSED_AT` is a RAW `sql` fragment, ⛔ not a mapped Drizzle column, so
+  its declared `sql<Date | null>` is a CLAIM the runtime does ⛔ not honour — the value arrives as an
+  ISO **STRING**. `apps/api`'s `sahyogDrive` handler then calls `row.driveClosedAt.toISOString()` ⇒
+  `TypeError` ⇒ **500**, for any Pariwar whose pools carry a real `pool.closed` / `pool.settled` event.
+  ⭐ It was **REACHABLE ON THE ORDINARY PATH** and is the ⛔ only state a production closed drive can be
+  in ([[feedback_trace_reachability_before_escalating]] — traced, ⛔ not assumed).
+  ⛔⛔ **WHY NOTHING CAUGHT IT — the shape matters more than the bug:** the route's own live-DB spec
+  seeded pools but ⛔ **never a close/settle EVENT**, so `driveClosedAt` was `null` on every fixture row
+  and the `.toISOString()` branch was ⛔ NEVER EXECUTED. ⭐ The suite was green over a branch it could
+  not reach — the vacuous-leg defect, arriving in a **SPEC** rather than in a gate.
+  ⭐ **FIXED AT THE SOURCE** (`coerceDriveInstant`, beside the fragment), ⛔ not per call site: the
+  fragment is SHARED with this story's `sahyog-vivran-read.ts`, which would otherwise have inherited
+  the identical break — and that is how it was found.
+  ⚠ **WHY IT IS FIXED HERE RATHER THAN ROUTED**, stated openly: it is ⛔ not a comment sweep and ⛔ not
+  scope creep — it is a live 500 on a sibling route, in a file this story already edits, surfaced BY
+  this story's read. ⛔ Filing it and shipping would have left a known 500 on the public record.
+  ⭐ Covered by a named regression case in `sahyog-drive.spec.ts` + the fixture now seeds the event, and
+  the case was proven to BITE by removing the coercion and watching it go red. ✅ **CLOSED.**
+  ⚠ **One consequence recorded rather than discovered:** back-dating the fixture postings was necessary
+  because `DECEASED_DISTRICT` is FROZEN AS OF THE CLOSE INSTANT, so a `now()` posting fell on the wrong
+  side of the new boundary. ⭐ That is the freeze WORKING — the fixture was what was wrong.
+
+- **⭐⛔ THE NAMED-IDENTITY RENDER LAYER — the deceased member's name AND the contributor list.**
+  ⛔ Not built here, and ⛔ not because it is unruled: the Trustee Panel ruled BOTH at the **FULL NAME**
+  form (`2026-09-02-173` for the deceased member, `-174` for a contributor, `-175` confirming Q1/Q2
+  stand unconditionally). ⭐ It is out because the D6(b) split PUT it out: a name is a Tier-1 field at
+  `public`, and declaring one here would have cost this story a `tier1_public_exception`, an entry on
+  `RULED_TIER1_PUBLIC_EXCEPTIONS`, and a dependency on a ruling it does not otherwise need.
+  ⚠⛔ **AND THE RULING IS A CEILING, ⛔ NOT A LITERAL** — `2026-08-19-136` cl.1 FAILS any build whose
+  public name form cannot change without a code change, and `2026-09-02-181` put the MEMBER side on the
+  same stored per-Pariwar `public_name_presentation_mode`. ⛔ Do not hard-code the full name.
+  ⚠ Counsel's WRITTEN CLAUSE from `-173` Q3 is still owed and is still the only thing between the
+  deceased-member ruling and a rendered name. **→ Story 11b.3b. Trigger: 11b.3 merged.** ⛔ Not closed.
+
+- **⭐⛔ THE AMOUNT-RAISED RENDER — this page shows a COUNT and ⛔ no rupee figure.**
+  `amountRaisedInr = confirmedCount × fixedAmount` is the SHIPPED canonical definition
+  (`packages/ui/src/pool-progress/presenter.ts`, Story 9.12 D3) and **D1(b)** ruled it CONSUMED — ⭐ but
+  the presenter lives behind the `@twt/ui` fence this story does ⛔ not lift, so the amount MOVES to the
+  story that adds the dependency. ⛔ **D1(c) — re-deriving the multiplication locally — stays REFUSED**,
+  and the `render_path_multiplication` rule in `scripts/sahyog-vivran-financial-truth/` is what makes
+  the refusal enforceable rather than aspirational.
+  ⚠⛔ **THE INTERIM ASYMMETRY IS ⛔ NOT A DEFECT AND MUST ⛔ NOT BE FILED AS ONE:** until 11b.3b merges,
+  this public page shows a count while the member app shows an amount for the same pool. ⭐ That is
+  **ORDERING**, ⛔ not a ruling, and it is ⛔ **NOT** a second instance of the D7 inversion.
+  **→ Story 11b.3b. Trigger: 11b.3 merged.** ⛔ Not closed.
+
+- **⭐⛔ THE NOMINEE BANK PUBLIC PRESENTATION + THE PER-PARIWAR MASKING SCHEDULE.**
+  `2026-08-28-160` cl.10 ruled nominee bank details **publicly displayable during an active campaign**
+  with a staged post-campaign reduction; `-165` cl.1/cl.3 ruled **four** named `(surface, field)` Tier-1
+  pairs on this surface; `2026-09-02-178` put the masking knob with the **Trust centrally**
+  (`super_admin`). ⛔ None of it is built here — all four fields are Tier-1, which is exactly what this
+  story declares zero of.
+  ⭐ **`-165` cl.3's allowlist duty TRAVELS WITH THE FIELDS** (`2026-09-02-182` cl.3): it lands at
+  11b.3a and is added **in the commit that declares each field**, ⛔ never earlier — the matrix check is
+  one-directional, so a pre-added entry is a standing permission with ⛔ no subject.
+  **→ Story 11b.3a. Trigger: 11b.3 merged.** ⛔ Not closed.
+
+- **⭐⛔ `D4-linkage` — IS A `live` DRIVE'S PAGE LINKED, OR REACHABLE BY IDENTIFIER ONLY?**
+  **D4(b)** widened this surface's predicate to `live` + `closed` + `settled`, and named this rider
+  without answering it. ⚠ `/sahyog` lists only `closed` + `settled`, so a `live` drive's page has ⛔ **no
+  inbound link today** and is reachable only by constructing `P-YYYY-MM-###` — **sequential and
+  enumerable**.
+  ⭐ **THIS STORY'S DISPOSITION, RECORDED — the rider is ⛔ NOT closed:** `live` drives RENDER when
+  requested by identifier, and ⛔ **no inbound link to a `live` drive is added**. `/sahyog` is unchanged.
+  ⇒ this story neither answers the rider nor forecloses it.
+  ⚠⛔ **READ IT IN BOTH DIRECTIONS — THE TWO STORIES ASK OPPOSITE THINGS OF IT.** Here the concern is
+  **discoverability** (a page nobody can reach is a transparency surface that does not work). On
+  **11b.3a** it is the mirror: an unlinked, sequentially-addressable URL returning **four DECRYPTED
+  Tier-1 fields**, fail-open for every Pariwar until the Trust acts (`-179` cl.1). ⚠ **D11(a)** recorded
+  controls 2/3 structurally N/A *because* there is no `page` and no `limit`, so ⛔ **nothing in either
+  written defence names what bounds identifier ENUMERATION** beyond `limits.search`.
+  **→ Story 11b.3a's AC2, by name. Trigger: 11b.3a's route work.** ⛔ Not closed.
+
+- **⚠⛔ THE PUBLISH-QUEUE PROSE IS NOW STALE — ⛔ ROUTED, ⛔ NOT SWEPT.**
+  `packages/events/src/registry.ts:351` and `packages/domain/src/claim/events.ts:492` both describe
+  `claim.reversed` as *"the SOLE subscription point Epic 11b routes to the Sahyog Vivran publication
+  queue."* ⛔ **There is no such queue and there never will be one:** **D12(a)** ruled the reversed-denial
+  hook a **RENDER-TIME DERIVATION** — ⛔ no queue, ⛔ no consumer, ⛔ no publication record — on the ground
+  that this surface holds ⛔ no publication STATE for a queue to advance.
+  ⭐ Story 6.16's publish-hook obligation is **DISCHARGED BY THE READ** — recorded *"Closed by [edit]"*,
+  ⛔ **not** *"deferred"* ([[feedback_closure_language_precision]]).
+  ⛔ **This story fixes exactly ONE stale line** (`pool-contributor-list.ts:88`, which is routed to it by
+  name) and sweeps nothing else — that is the stale-comment-family discipline
+  ([[project_epic9_confirmed_producer_is_live]]).
+  **Trigger: the next story that edits either file for any reason.** ⛔ Not closed.
+
+- **⛔ FOUR PRODUCERS THE EPIC AC NAMES THAT DO ⛔ NOT EXIST — the ruled posture is RENDER NOTHING.**
+  · **verifier profile pages** — `grep -r "verifier profile\|verifierProfile"` over `packages/` +
+    `apps/` returns **ZERO hits**. The epic AC's *"verifier hyperlinks resolving to verifier profile
+    pages"* has ⛔ no destination. ⛔ Unowned.
+  · **the family story** (Story **11b.4**) — `backlog`.
+  · **the memorial visual components** (Story **11b.5**) — `backlog`.
+  · **`<StatCardStrip>`** — **C-3**: ⛔ NO PRODUCER **and** ⛔ NO OWNER; `2026-08-23-154` declined to
+    settle it (*"a settled SHAPE is ⛔ not a settled SOURCE"*). ⛔⛔ **Do ⛔ not stub it** — a stub asserts
+    an aggregate that nothing computes.
+  ⭐ **The ruled posture is 11a.5's third path, and C-4 SURVIVED `2026-08-28-160` untouched:** render the
+  real, currently-empty source and **render nothing when empty** — ⛔ never a fabricated row, ⛔ never a
+  "coming soon" placeholder. ⚠ *A silent section is the CORRECT state, ⛔ not a bug to close quickly.*
+  Building any of the four re-commits **SD-1**. **Trigger: each producer's own owning story.**
+  ⛔ Not closed, and ⛔ `<StatCardStrip>` + the verifier pages have ⛔ no owner to route to.
+
+- **⛔ THE FR-19 CLOSE-OF-CYCLE READ MODEL (C-4) — still absent, still unowned.**
+  ⭐ **SURVIVED `2026-08-28-160` untouched** — C-4 is the *no-FR-19-producer* constraint, ⛔ **not** the
+  consent gate that fell, and the two are routinely conflated because one sentence bundled them.
+  This surface consumes `classifyCycleOutcome` + `selectCloseOfCycleFraming` UNCHANGED and renders
+  nothing when there is no outcome. **Trigger: the story that builds the FR-19 read model.**
+  ⛔ Not closed, ⛔ no owner.
+
+- **⛔ THE POST-MASKING **AUTHENTICATED** PRESENTATION — SD-2 is RE-PURPOSED, ⛔ not dissolved.**
+  `2026-08-28-164` **A2**: the active-campaign policy no longer needs an authenticated viewer (that data
+  is now PUBLIC — 11b.3a's subject), ⭐ but SD-2's concern **SURVIVES for the POST-campaign state**, and
+  ⛔ *"the absence of an authenticated-member surface is ⛔ NOT grounds to delete the requirement."*
+  ⚠ It is *"a separate future decision — ⛔ not carried, ⛔ not foreclosed."*
+  **Trigger: a browser surface that holds a member token** — an `apps/member-web/` split firing, or a
+  dedicated member browser-session story with its own PII-posture routing note. ⛔ Not closed.
+
+- **⭐⛔ 11b.1 ITEM (e) — THE PUBLIC/MEMBER NAME INVERSION IS **RE-AFFIRMED**, ⛔ NOT RE-FILED.**
+  **D7(a)** (`2026-09-02-176`) carried it: *"two records of one obligation is its own failure."* It stays
+  open at its own item under **Story 11b.1**, and its **binder is 11b.3b** (**D9**). ⭐ The ground is
+  unchanged and now stronger: resolving it means changing the **MEMBER** app's form, which is ⛔ not this
+  surface's act — and this story renders ⛔ no name at all, so it ⛔ could not resolve it even in
+  principle. ⛔ **Do not open a second item for it here.**
+
+- **⚠ `ci-local.sh`'s HEADER UNDERSTATES ITS OWN JOB COUNT — ⛔ pre-existing, ⛔ not swept.**
+  Its header says *"18 jobs"* while the file has run **32** for some time; this story's gate makes it 33.
+  ⛔ The staleness is ⛔ not introduced here and correcting prose this story did not author is scope
+  creep with no gate behind it. ⚠ ⛔ Nothing reads the number — it is documentation, ⛔ not a control.
+  **Trigger: the next story that edits `scripts/ci-local.sh`'s header for any reason.** ⛔ Not closed.
+
+- **⚠ THE APPEAL-DISCLOSURE AUDIT LINE TAKES A GLOBAL ADVISORY LOCK — bounded, ⛔ but recorded.**
+  AC5's Story-1.10 line is written when — and ⛔ only when — a request actually DISCLOSES an appeal
+  reversal. ⚠ `writeAuditEntry` serializes every writer on ONE global advisory lock (DD-2 / W8-CR1.6), so
+  an unauthenticated route writing one line per request would be a serialization amplifier. ⭐ What bounds
+  it is **control 1** — the named `limits.search` tier that bounds the route itself — plus the rarity of a
+  reversal, and the write is best-effort so an audit fault ⛔ cannot 500 the page it describes.
+  ⛔ **Do not widen it to log every request**, and ⛔ do not "improve observability" by logging the
+  non-reversal case (that would put a fact about claims that were NOT appealed into the audit chain, on
+  every request, forever). **Trigger: any story that adds a second audit write on a public-pages route.**
+  ⛔ Not a defect today.
+
+---
+
 ## Deferred from: Story 11b-2a — AC8's NON-AUTHOR tone-review sign-off (2026-08-31)
 
 - **CR-11b.2a-AC8-TONE — ⛔ AN UNMET ACCEPTANCE CRITERION, ⛔ NOT A NICE-TO-HAVE.** Story 11b.2a's
@@ -7163,6 +7316,46 @@ not. These are the adjacent things, stated so the fix is not over-read as closin
   **Two triggers, ⛔ not one: (i)** Story 11b.3's authoring pass — the first paginated consumer, where
   this stops being cosmetic; **(ii) FALLBACK — the next story that adds a `LIMIT`, an `OFFSET` or a
   cursor to any confirmed-contributor read.** ⛔ Not marked closed.
+
+  > ⭐⭐ **AMENDED IN PLACE 2026-09-02 (Story 11b.3, AC9) — ✅ CLOSED BY [edit], AND ⛔ THE GROUND ABOVE
+  > WAS FALSE WHEN IT WAS FILED.** ⛔ The item is ⛔ **not** deleted and ⛔ **not** re-filed as new: the
+  > `11b.2 (vi)` amended-in-place precedent, and a correction that erased its own subject would take the
+  > false ground with it ([[feedback_supersede_never_reinterpret]]).
+  >
+  > ⛔⛔ **THE FALSE HALF, NAMED:** *"carries ⛔ NO `ORDER BY` at all … row order is whatever the plan
+  > returns … it is ⛔ not stable across runs."* ⚠ **Verified live:** `contribution/read.ts` has ended
+  > `return liveMemberIds.sort().map(...)` — under the comment *"Sort ascending for a stable,
+  > replay-deterministic list"* — since the read's **FIRST COMMIT** (Story 8.3, `afce9e0`), carried
+  > through 9.5 (`318f88b`). ⇒ the read WAS ordered and WAS stable across runs, and the 11b.2a symptom
+  > that prompted this item had a different cause. ⛔ Its own remedy sentence already named the right
+  > key without noticing the contradiction.
+  >
+  > ⭐ **THE REAL DEFECT WAS NARROWER AND SHARPER:** the order the read HAD was **`member_id`
+  > ASCENDING** — ⛔ **the exact key this item's own remedy prohibits** (*"⛔ not `member_id`, which would
+  > leak an arbitrary identifier ordering onto a PII-shielded surface"*). ⇒ the work was to **REPLACE a
+  > sort, ⛔ never to add a missing one**, and a diff written to the ground above would have ADDED an
+  > `ORDER BY` beside a `.sort()` that was already deciding the answer.
+  >
+  > ⭐ **DISPOSITION — DONE at Story 11b.3.** `listConfirmedContributorsForPool` now orders by the
+  > **EARLIEST LIVE CONFIRMATION'S `event_version`**, with `member_id` surviving ONLY as the final
+  > tie-break. `eventsLog.eventVersion` was added to the projection and carried through the `Map`
+  > reconciliation — ⛔ a `.sort()` over the old row shape could not express the ordering at all. The
+  > docstring's *"Ordered by member id ASC"* moved with it, and both existing consumers
+  > (`member-pool/handlers.ts` — the contributor list and the card's `.length`) were checked: neither
+  > asserts `member_id` order, so this is a RE-ORDERING, ⛔ not a contract break.
+  > ⚠ **The AMBIGUITY was ruled rather than left to the implementation:** a member may hold SEVERAL live
+  > confirmations (a re-confirmation after a reversal re-lists them), so the key is the **earliest LIVE**
+  > one — the instant that member FIRST became confirmed, stable under a later re-confirmation. ⛔ Not
+  > the latest, ⛔ not `occurred_at` (wall-clock, ⛔ not the append order). `event_version` is per-STREAM
+  > monotonic and `contribution.confirmed` rides the ALERT stream, so it is a TOTAL order within a pool.
+  > ⭐ Proven by two live-DB cases whose fixtures make `event_version` order the EXACT REVERSE of
+  > `member_id` order — a fixture where the two coincide would pass under either implementation.
+  >
+  > ⚠⛔ **AND TRIGGER (i)'s PREMISE WAS ALSO WRONG, WHICH DOES ⛔ NOT MATTER TO THE OUTCOME:** it called
+  > Story 11b.3 *"the first PAGINATED consumer"*. After the D6(b) split 11b.3 renders ⛔ no list at all
+  > and declares `paginated: false`; **11b.3b** is the paginated consumer. ⭐ The fix landed at 11b.3
+  > anyway, and landing it BEFORE the paginated consumer is the better ordering — but ⛔ do not read the
+  > trigger as evidence that 11b.3 paginates.
 
 ---
 

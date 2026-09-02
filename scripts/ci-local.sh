@@ -79,6 +79,7 @@ run "access-wrapper-invariants" "pnpm access-wrapper:test && pnpm access-wrapper
 run "pool-state-invariant"  "pnpm pool-state:test && pnpm pool-state:check"
 run "pool-support-category-invariant" "pnpm pool-support-category:test && pnpm pool-support-category:check"
 run "pool-bound-payment-invariant" "pnpm pool-bound-payment:test && pnpm pool-bound-payment:check"
+run "sahyog-vivran-financial-truth" "pnpm sahyog-vivran-financial-truth:test && pnpm sahyog-vivran-financial-truth:check"
 run "alert-state-invariant"  "pnpm alert-state:test && pnpm alert-state:check"
 run "helpdesk-state-invariant"  "pnpm helpdesk-state:test && pnpm helpdesk-state:check"
 run "governance-boundary"  "pnpm governance-boundary:test && pnpm governance-boundary:check"

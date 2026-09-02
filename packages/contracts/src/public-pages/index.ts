@@ -23,4 +23,9 @@ export * from './matrix.js';
 // route, and Epic 11b's first. It SHARES the deep-pagination horizon with the directory rather than
 // declaring a second one.
 export * from './sahyog-drive.js';
+// Story 11b.3 — the public PER-CLAIM Sahyog Vivran transport DTO. The THIRD public-pages route, and
+// ⭐ the first that is NOT a collection: a single-item GET on a path parameter, `paginated: false`,
+// carrying ⛔ ZERO Tier-1 fields. It therefore shares ⛔ neither pagination constant — controls 2 and
+// 3 are structurally N/A (D11(a)) and come back at 11b.3b.
+export * from './sahyog-vivran.js';
 export * from './scrape.js';

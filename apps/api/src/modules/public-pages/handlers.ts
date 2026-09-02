@@ -25,6 +25,8 @@
 // structurally CANNOT see — it scans rendered HTML, not this payload — so the discipline has to be
 // held here, by construction and by test.
 
+import { createHash } from 'node:crypto';
+
 import {
   PUBLIC_DIRECTORY_PAGE_HORIZON,
   PUBLIC_SURFACE_PAGE_SIZE_DEFAULT,
@@ -34,9 +36,11 @@ import {
   type PublicSahyogDriveEntry,
   type PublicSahyogDriveQuery,
   type PublicSahyogDriveResponse,
+  type PublicSahyogVivranParams,
+  type PublicSahyogVivranResponse,
 } from '@twt/contracts';
-import { encryption, ids, kyc, member as memberDomain, pool as poolDomain } from '@twt/domain';
-import type { FastifyRequest } from 'fastify';
+import { audit, encryption, ids, kyc, member as memberDomain, pool as poolDomain } from '@twt/domain';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
 import { DIRECTORY_DECRYPT_CONCURRENCY, mapWithConcurrency } from '../kyc/bounded-decrypt.js';
@@ -50,6 +54,12 @@ export const PUBLIC_DIRECTORY_PAGE_SIZE_DEFAULT = PUBLIC_SURFACE_PAGE_SIZE_DEFAU
 export interface PublicPagesHandlers {
   memberDirectory(request: FastifyRequest): Promise<PublicDirectoryResponse>;
   sahyogDrive(request: FastifyRequest): Promise<PublicSahyogDriveResponse>;
+  /**
+   * ⚠ THE ONLY HANDLER IN THIS MODULE THAT TAKES `reply`, and it is not a style drift: this is the
+   * first SINGLE-ITEM route here, so it is the first that can legitimately answer 404. The two
+   * collection GETs above cannot — an empty collection is `{items:[],total:0}`, ⛔ never a 404.
+   */
+  sahyogVivran(request: FastifyRequest, reply: FastifyReply): Promise<PublicSahyogVivranResponse | void>;
 }
 
 export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
@@ -452,7 +462,215 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
         await closeScopeTx(scopeTx, ok);
       }
     },
+    /**
+     * `GET /api/v1/p/:pariwarId/public-pages/sahyog-vivran/:poolCanonicalIdentifier` — ONE drive's
+     * Sahyog Vivran. Story 11b.3 (AC1, AC3, AC5, AC6).
+     *
+     * ⛔ DELIBERATELY UNAUTHENTICATED, and — ⭐ unlike the two routes above — it is ⛔ NOT defended by
+     * their five controls. `routes.ts:52-55` reserved that as a RULING: *"a third route that CANNOT
+     * reuse them unchanged is a third route that needs its own ruling, ⛔ not its own bullet list."*
+     * **D11(a)** (`2026-09-02-176`) ruled it states its APPLICABLE set — **THREE** — and names the two
+     * that are structurally N/A. ⚠ `routes.ts` and `login-wall.spec.ts` are the two places that count
+     * is written and they must state the SAME number; this doc-block deliberately does not restate the
+     * list, so there is no third copy to drift.
+     *
+     * ⭐⭐ AND THERE IS ⛔ NOTHING TO DECRYPT — WHICH IS THE WHOLE POINT OF THE D6(b) SPLIT.
+     * The two handlers above exist where they do because the read needs KMS. This one does ⛔ not:
+     * it selects ⛔ no Tier-1 column, so it costs ⛔ ZERO KMS round-trips and holds ⛔ no plaintext.
+     * ⚠ ⛔ THAT IS ⛔ NOT A REASON TO MOVE IT TO `apps/public`. The other two justifications stand
+     * unchanged — the anti-enumeration ceiling (a rate-limit store) and the audit line (the BYPASSRLS
+     * service pool), neither of which `apps/public` has — and on a route fronted by a SEQUENTIAL
+     * identifier the ceiling is the load-bearing one. ⛔ Do not add a `withPublicScope` read there.
+     *
+     * ⭐⛔ 404 COLLAPSES THREE CASES ON PURPOSE — *"no such drive"*, *"exists but is not visible here"*
+     * (a `spawned` pool) and *"this Pariwar's public surfaces are switched off"*. ⛔ A response that
+     * distinguishes them is an ENUMERATION ORACLE, and `P-YYYY-MM-###` is SEQUENTIAL, which is exactly
+     * when that matters. ⛔ Never a 403, ⛔ never a distinct error code, ⛔ never a different body shape.
+     */
+    async sahyogVivran(
+      request: FastifyRequest,
+      reply: FastifyReply,
+    ): Promise<PublicSahyogVivranResponse | void> {
+      const { pariwarId: pariwarIdStr, poolCanonicalIdentifier } =
+        request.params as PublicSahyogVivranParams;
+      const pariwarId = ids.pariwarId(pariwarIdStr);
+
+      // ⭐ ONE INSTANT FOR THE WHOLE REQUEST, ⛔ never `new Date()` per read — the same rule the two
+      // handlers above state at length. Here it binds THREE as-of reads inside the domain accessor:
+      // the drive's close instant, the confirmed-contribution count, and the appeal-reversal lineage.
+      // A second clock would let a confirmation land between them so the page and its lineage
+      // described different instants. From `deps.clock()` so tests can pin it.
+      const now = deps.clock();
+
+      const scopeTx = await openScopeTx(deps, pariwarIdStr);
+      let ok = false;
+      try {
+        // ⭐ THE PER-PARIWAR KILL SWITCH — CHECKED FIRST, before any read (D3(a) at 11b.1): a Pariwar
+        // whose public surfaces are disabled must cost nothing beyond this one read.
+        // ⚠ THE SAME SWITCH the other two use, its documented meaning generalised to "this Pariwar's
+        // public member-data surfaces" — ⛔ NOT a new column and ⛔ not a new launch-gate roster row.
+        // ⚠⛔ AND HERE IT ANSWERS **404**, ⛔ not an empty shape, because this route has no empty shape
+        // to answer with. That is the SAME answer an unknown identifier gets, which is the property
+        // that matters: a disabled Pariwar must be indistinguishable from a drive that is not there.
+        // ⚠ AND THE LEVER IS ⛔ NOT IMMEDIATE: at `s-maxage=300` a pulled Pariwar keeps being served
+        // from every warm PoP for up to five minutes. ⛔ Direct SQL is NOT the operational fallback.
+        const publicationEnabled = await memberDomain.resolveDirectoryPublicationEnabled(
+          scopeTx.tx,
+          pariwarId,
+        );
+        if (!publicationEnabled) {
+          ok = true;
+          void reply.status(404).send();
+          return;
+        }
+
+        // ⭐⛔ THE ANTI-ENUMERATION COUNTER IS DELIBERATELY **NOT** CALLED HERE, and the omission is a
+        // decision rather than an oversight. `evaluateDirectoryAbuse` keys on `(page, limit)` — a
+        // COLLECTION-walk shape — and this route has neither. ⚠ Feeding it synthetic values would put
+        // fabricated query shapes into a governance counter, which is worse than not counting.
+        // ⛔ WHAT BOUNDS THIS ROUTE IS `limits.search` (control 1), and that is stated as the bound in
+        // both written defences rather than implied. ⚠ `D4-linkage` records the residual openly: the
+        // identifier is SEQUENTIAL, nothing else bounds a walk of it, and **11b.3a** — which puts four
+        // DECRYPTED Tier-1 fields behind this same identifier — owns closing that at its AC2.
+
+        const drive = await poolDomain.readPublicSahyogVivran(
+          scopeTx.tx,
+          pariwarId,
+          poolCanonicalIdentifier,
+          { now },
+        );
+        if (drive === null) {
+          ok = true;
+          void reply.status(404).send();
+          return;
+        }
+
+        // ⭐⭐ AC5's AUDIT LINE (Story 1.10) — ⛔ AND IT LOGS THE **DISCLOSURE**, ⛔ not a "routing".
+        // Under **D12(a)** there is ⛔ no routing act to log: the reversed-denial hook is a RENDER-TIME
+        // DERIVATION, ⛔ no queue and ⛔ no consumer. ⇒ the accountable act is that this request
+        // DISCLOSED an appeal reversal publicly, and that is what is written.
+        // ⚠ FIRES ⛔ ONLY WHEN A LINEAGE IS ACTUALLY DISCLOSED. A drive with no reversal writes
+        // NOTHING — ⛔ never a "no reversal" line, which would publish a fact about claims that were
+        // not appealed into the audit chain.
+        // ⚠⛔ AND THE AMPLIFICATION IS BOUNDED BY CONTROL 1, STATED RATHER THAN ASSUMED:
+        // `writeAuditEntry` takes a GLOBAL advisory lock, so an unauthenticated route that wrote one
+        // per request would be a serialization amplifier. What bounds it is `limits.search` — the same
+        // named tier that bounds the route itself — plus the fact that a reversal is rare. ⛔ Do not
+        // widen this to log every request.
+        // ⛔ ACTOR IS `null`: the caller is an anonymous visitor, and there is ⛔ no member session on
+        // this surface to attribute to. ⛔ No IP, ⛔ no user agent, ⛔ no free text — the recorded IP
+        // is not evidence (`2026-08-21-145` RD2) and this line is about WHAT was disclosed.
+        if (drive.appealReversal !== null) {
+          await writeAppealReversalDisclosureAudit(
+            deps,
+            pariwarIdStr,
+            poolCanonicalIdentifier,
+            drive.appealReversal.reversedAtStage,
+            request.requestContext.traceId ?? null,
+          );
+        }
+
+        ok = true;
+        return {
+          drive: {
+            // ⚠ `poolLetterCode`, ⛔ not the curated registry name: `resolveCuratedPoolName` re-derives
+            // it via `reserveNames`, which RESERVES rows — ⛔ a write path an unauthenticated GET may
+            // not trigger. Mirrors `/sahyog` exactly.
+            poolLetterCode: poolDomain.poolLetterCode(drive.poolIndex),
+            poolCanonicalIdentifier: drive.poolCanonicalIdentifier,
+            // ⚠ `driveStatus`, ⛔ NOT `status` — see `SAHYOG_VIVRAN_PROHIBITED_KEYS`. A key called
+            // `status` on a contribution-bearing surface reads as a contribution pill, which is the
+            // yellow/attested door 8.3 and 9.5 closed structurally.
+            driveStatus: drive.status,
+            closedAt: drive.driveClosedAt === null ? null : drive.driveClosedAt.toISOString(),
+            // ⚠ `.trim() || null`, ⛔ not `=== ''`. A whitespace-only district passes the schema's
+            // `.min(1)`, arrives TRUTHY so the page's fallback never fires, and renders a visually
+            // BLANK cell where the design says "Not recorded" (the 11a.3 finding).
+            district: drive.district?.trim() || null,
+            confirmedContributionCount: drive.confirmedContributionCount,
+            fundingOutcome: drive.fundingOutcome,
+            appealReversal:
+              drive.appealReversal === null
+                ? null
+                : {
+                    reversedAtStage: drive.appealReversal.reversedAtStage,
+                    // ⛔ THE BOUNDED TAG AND THE INSTANT, AND ⛔ NOTHING ELSE. The rationale text and
+                    // the reviewer identity live on the `claim.appeal_stageN_reviewed` DECISION
+                    // event's Tier-1 metadata row and are ⛔ NEVER public.
+                    dispositionCategory: drive.appealReversal.dispositionCategory,
+                    reversedAt: drive.appealReversal.reversedAt.toISOString(),
+                  },
+          },
+        };
+      } finally {
+        await closeScopeTx(scopeTx, ok);
+      }
+    },
   };
+}
+
+/**
+ * ⭐⭐ AC5's AUDIT LINE (Story 1.10) — the PUBLIC DISCLOSURE of an appeal reversal.
+ *
+ * ⛔ IT IS ⛔ NOT A "ROUTING" LINE, AND THAT WORDING CHANGE IS A RULING, ⛔ not a paraphrase. The epic
+ * AC said the consumer *"routes the claim to the Sahyog Vivran publication queue"* and that the routing
+ * is audit-logged. **D12(a)** (`2026-09-02-176`) ruled there is ⛔ no queue, ⛔ no consumer and ⛔ no
+ * publication record — the hook is a RENDER-TIME DERIVATION — so there is ⛔ no routing act left to
+ * log. ⭐ The accountable act that DOES occur is this one: a public, unauthenticated request caused an
+ * appeal reversal to be disclosed. That is what this writes.
+ *
+ * ⚠ FIRES ⛔ ONLY WHEN A LINEAGE IS ACTUALLY DISCLOSED. A drive with no reversal writes NOTHING —
+ * ⛔ never a "no reversal" line, which would put a fact about claims that were NOT appealed into the
+ * audit chain, on every request, forever.
+ *
+ * ⚠⛔ WHAT BOUNDS IT, STATED RATHER THAN ASSUMED: `writeAuditEntry` serializes every writer on ONE
+ * global advisory lock (DD-2 / W8-CR1.6), so an unauthenticated route writing one line per request
+ * would be a serialization amplifier. The bound is control 1 — the named `limits.search` tier that
+ * bounds the route itself — plus the rarity of a reversal. ⛔ Do not widen this to log every request,
+ * and ⛔ do not "improve observability" by logging the non-reversal case.
+ *
+ * ⛔ THE PAYLOAD IS IDS AND A BOUNDED STAGE, AND ⛔ NOTHING ELSE. ⛔ No actor (the caller is an
+ * anonymous visitor and there is ⛔ no member session on this surface to attribute to), ⛔ no IP (the
+ * recorded IP is not evidence — `2026-08-21-145` RD2), ⛔ no disposition rationale, ⛔ no reviewer
+ * identity, ⛔ no `claim_case_id` and ⛔ no `deceased_member_id`. ⚠ The RESOURCE LOCATOR is the public
+ * route, which is already public by construction.
+ *
+ * ⛔ BEST-EFFORT, AND THE ORDER MATTERS: the disclosure has already been decided by the time this runs.
+ * ⚠ ⛔ It is ⛔ NOT awaited-and-thrown: an audit-chain hiccup must not 500 a public transparency page,
+ * which would turn a logging fault into an availability fault on the surface whose whole purpose is
+ * being checkable. ⭐ The failure is logged loudly so a gap in the chain is never silent.
+ */
+async function writeAppealReversalDisclosureAudit(
+  deps: AppDeps,
+  pariwarId: string,
+  poolCanonicalIdentifier: string,
+  reversedAtStage: 1 | 2 | 3,
+  traceId: string | null,
+): Promise<void> {
+  try {
+    await audit.writeAuditEntry(deps.servicePool, {
+      pariwarId,
+      // ⛔ An anonymous public visitor. There is ⛔ no member session on this surface, by design
+      // (`2026-08-23-154` disposition (c) — the authenticated tier has no viewer).
+      actorId: null,
+      actorRole: null,
+      action: 'public_pages.sahyog_vivran.appeal_reversal_disclosed',
+      resourceLocator: `pariwar/${pariwarId}/public-pages/sahyog-vivran/${poolCanonicalIdentifier}`,
+      // ⚠ The BOUNDED stage only — ⛔ never the disposition tag's meaning, ⛔ never rationale.
+      requestPayloadHash: createHash('sha256')
+        .update(JSON.stringify({ poolCanonicalIdentifier, reversedAtStage }))
+        .digest('hex'),
+      responseStatus: 200,
+      traceId,
+    });
+  } catch (err) {
+    // ⛔ NEVER let the audit write break the page it describes — but ⛔ never swallow it silently
+    // either: a gap in the §1.5 chain is exactly the thing that must be visible.
+    console.error(
+      '[public-pages] sahyog-vivran: appeal-reversal disclosure audit FAILED — the page rendered, the audit line did not',
+      err,
+    );
+  }
 }
 
 /**

@@ -1,4 +1,68 @@
-# last_updated: 2026-09-02s (⭐ **STORY 11b.3a STARTS — Task 0's GOVERNANCE WRITE, before the first
+# last_updated: 2026-09-02t (⭐⭐ **STORY 11b.3a IMPLEMENTED — `in-progress` -> `review`.** ONE row
+#   flips: development_status[11b-3a-nominee-bank-public-presentation-and-masking-schedule]
+#   `in-progress` -> `review`. ⛔ epic-11b stays `in-progress`; ⛔ 11b-3b stays `ready-for-dev`
+#   (independent, may run in parallel).
+#
+#   ⭐ WHAT SHIPPED: the four ruled nominee-bank Tier-1 fields on `sahyog-vivran` **WITH their four
+#   `RULED_TIER1_PUBLIC_EXCEPTIONS` entries IN THE SAME COMMIT** (`-165` cl.3 + routing note §11) ·
+#   the per-Pariwar **masking schedule** (`pariwar_nominee_bank_masking_schedule` + migration 0113 +
+#   RLS) on `pool_fixed_amount_schedule`'s effective-window shape · the **masked projection** applied
+#   at the `apps/api` boundary · the **`super_admin` knob** at `/p/$pariwarId/nominee-bank-masking`
+#   (key `pariwar.manage_nominee_bank_masking`, catalog **v38 -> v39**) · **34/34 `ci:local` green
+#   WITH the integration leg run**.
+#
+#   ⭐ THE COUNT WAS **READ**, ⛔ NEVER ASSUMED (Trap 2): 11b-3b verified `ready-for-dev` and
+#   UNMERGED, so the surface assertion moved **0 -> 4** and the matrix-wide identity assertion
+#   **2 -> 6**, both **BY NAME**. ⛔ Neither deleted. ⛔ No fifth entry.
+#
+#   ⭐ BOTH WRITTEN DEFENCES MOVED TOGETHER and state **FOUR**: the route is now **PII-BEARING**, the
+#   stale *"carries ZERO Tier-1 fields"* / *"there is nothing to decrypt"* claims are AMENDED and
+#   NAMED (⛔ not deleted), and each document tells **11b-3b its count is SIX** and to **EXTEND,
+#   ⛔ never overwrite**.
+#
+#   ⚠⛔⛔ **ONE REAL FINDING, RECORDED RATHER THAN HIDDEN — A COLLISION BETWEEN TWO RULED CONTROLS.**
+#   A **12-DIGIT ACCOUNT NUMBER TRIPS THE FR-74 NAKED-PII *AADHAAR* HEURISTIC.** `2026-08-28-160`
+#   cl.10(a) rules the COMPLETE number publishable and `D8-default` is **FAIL-OPEN**, so it renders in
+#   full for EVERY Pariwar until the Trust acts — while `detectNakedPii` treats any bare 12-digit run
+#   at `public` as an Aadhaar number. ⭐ Verified precisely: **11, 13 and 14 digits do NOT match;
+#   exactly 12 does**, and 12 is a real Indian account-number length (ICICI's). ⇒ the FR-74 snapshot
+#   reports `fail` with **ZERO tier leaks** and one `aadhaar` match that is ⛔ not an Aadhaar number.
+#   ⛔⛔ **THE DETECTOR IS ⛔ NOT WEAKENED** — it is a LAUNCH-BLOCKING control scanning a STRING with
+#   ⛔ no field context, so narrowing it by length/surface/field is a **GOVERNANCE ACT**, ⛔ not a
+#   fixture fix. ⛔ Nor is it hidden behind a friendlier 11-digit fixture. ⭐ **THREE tests now pin the
+#   behaviour** (tier-leak leg passes alone · PII leg fails with zero leaks · the MASKED projection
+#   does ⛔ not trip it) so it is ASSERTED, ⛔ not latent. Routed at `deferred-work.md` item (c).
+#   ⚠ **A question about which control YIELDS, ⛔ not an engineering preference.**
+#
+#   ⚠⛔ **AND ONE AUTHORING READING, RECORDED AS SUCH** (`2026-09-02-183` cl.4): cl.10(c)'s third
+#   setting, *"permanent masking"*, is built as cl.10(d)'s **TERMINAL RUNG** — masked in every state,
+#   including while the drive is `live`. ⭐ Ground: read as a fourth post-close offset it is a
+#   **synonym for `after_days: 0`** and one of the Panel's THREE settings would ship meaning nothing;
+#   cl.10(d)'s ladder only tightens at its last step if the terminal rung covers the active campaign.
+#   ⚠ cl.10(a) is a **PERMISSION** ("**may** be publicly displayed"), ⛔ not a mandate. ⭐ Chosen in the
+#   **MORE PROTECTIVE** direction: if wrong the cost is a reversible over-application of privacy,
+#   ⛔ never a leak. ⛔⛔ **AN AUTHORING READING, ⛔ NOT A RULING** — routed for Panel confirmation, and
+#   it is **ONE PREDICATE LINE** to change.
+#
+#   ⚠ **A STANDING GATE DEFECT ESCALATED, ⛔ not footnoted:** `page_weight_bytes` reads **9445**,
+#   BYTE-IDENTICAL to 11b.1's and 11b.3's, after a story that added a block of DECRYPTED BANK DETAILS
+#   to a public page. ⇒ **11a.5 -> 11b.9 -> 11b.2b -> 11b.3 -> 11b.3a is the FIFTH consecutive**
+#   recording of the same un-measured facet, and 11b.3's own note said a FOURTH *"should be read as
+#   the gate having a standing blind spot"*. Recorded UN-MEASURED; ⛔ no number invented.
+#
+#   ⭐ THE PROJECT'S **FIRST SELF-SERVE PRESENTATION-TOGGLE UI** shipped (11a.1 shipped none by
+#   design) — ⛔ not a blocker, recorded in five places. ⭐ AC6 is **MECHANIZED**: a new terminology
+#   gate bans the adverbs AND the direct-SQL offer across seven targets and asserts the
+#   `s-maxage=300` disclosure is PRESENT at each of AC6's three sites. ⚠ It bit during the build — on
+#   this story's own quotes of cl.10(c)'s wording.
+#
+#   ⛔ STILL OPEN: `D5-subject` **both halves** (the consent-subject gap; the **un-mechanized approver
+#   duty** — ⛔ nobody in the verifier -> state-trustee -> correcting-admin chain can SEE the holder
+#   name) · the **UN-ATTESTED** Claim Terms substrate · counsel's `2026-08-24-157` cl.3(b) objection
+#   **CARRIED AS RISK** (⛔ not closed) · `D4-linkage` · VPA collection · the post-masking
+#   authenticated tier. ⛔⛔ **BUILT IS ⛔ NOT PUBLISHED.**)
+#
+# last_updated_prior: 2026-09-02s (⭐ **STORY 11b.3a STARTS — Task 0's GOVERNANCE WRITE, before the first
 #   line of code.** ONE row flips:
 #   development_status[11b-3a-nominee-bank-public-presentation-and-masking-schedule]
 #   `ready-for-dev` -> `in-progress`. ⛔ epic-11b stays `in-progress`; ⛔ 11b-3b stays
@@ -14385,7 +14449,7 @@ development_status:
   # ⚠ This story owns the family's ONLY migration, and cl.10(d) makes "configuration over ONE record"
   # load-bearing: ⛔ never a boolean, ⛔ never a second bank-detail record. A later "simplification"
   # to a boolean is a DEFECT, not a cleanup.
-  11b-3a-nominee-bank-public-presentation-and-masking-schedule: in-progress
+  11b-3a-nominee-bank-public-presentation-and-masking-schedule: review
   # ⭐ 11b-3b — the named-identity render layer: the deceased member's name AND the contributor list,
   # plus the `apps/public` -> `@twt/ui` dependency addition and the Astro render layer over 11b.2's
   # presenter (11b.2 item (i)'s named trigger).

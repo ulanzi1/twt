@@ -1,4 +1,50 @@
-# last_updated: 2026-09-02e (⭐⭐ **STORY 11b-3's FIVE OPEN DECISIONS RULED BY BIGDEV — ITS TASK-0 STOP
+# last_updated: 2026-09-02f (⚠⭐ **`D5-subject` (11b-3a) NARROWED — its first form OVERSTATED the
+#   exposure and is WITHDRAWN; the corrected finding is SHARPER.** ⛔ ZERO ROWS FLIP · ⛔ no
+#   .decision-log.md entry (observational, ⛔ rules nothing) · ⛔ no source code touched.
+#
+#   ⭐⭐ **BIGDEV CHALLENGED THE FINDING AND WAS RIGHT.** The question: *isn't verifying the account
+#   holder the claim approver's job before a drive is approved?* ⇒ IT IS, and a real control chain
+#   exists that the first version had ⛔ NOT TRACED ([[feedback_trace_reachability_before_escalating]]
+#   — the discipline had been applied in only ONE direction: proving the gap reachable, ⛔ never
+#   checking what guards it):
+#   · bank details are collected BEFORE the verifier decides — collectable window is
+#     intake_converged / documents_pending / verification_in_progress / verifier_review
+#     (`packages/domain/src/claim/errors.ts:198-203`);
+#   · after that the window is `verifier_approved` ONLY — ⛔ not open to the nominee, ADMIN-ONLY, gated
+#     on a separate tier-2 `claim.correct_nominee_bank`, AUDITED and REASON-REQUIRED (`:205-210`);
+#   · past the claim/cycle freeze it needs the separately governed emergency correction workflow.
+#   ⇒ ⛔ **WITHDRAWN: "a filer may type any name and nothing checks it."** ⛔ Do not repeat it.
+#
+#   ⭐⭐ **BUT CHECKING IT SURFACED THE REAL FINDING: ⛔ NOBODY IN THAT CHAIN CAN *SEE* THE HOLDER NAME.**
+#   · VERIFIER — Story 6.10's console (UX-DR39) mandates prior comments / peer-mesh / ground-inspection
+#     notes+photos / precedents / reason-codes / trustee audit UI / cross-Pariwar scope. ⛔ NO bank
+#     surface, and ⛔ no verification handler reads nominee bank data.
+#   · STATE TRUSTEE — ⛔ no.
+#   · THE TIER-2 ADMIN MAKING A CORRECTION — ⛔ no. The only read-back is `NomineeBankStatusResponse`,
+#     a PRESENCE VIEW: rank / bankName / ifscValidated / **holderNamePresent: boolean** / vpaPresent,
+#     whose own doc-block says "never echo account number / holder name / raw IFSC"
+#     (`contracts/src/claims/nominee-bank.ts:107-122`). ⇒ **they correct a name they cannot see.**
+#   · WHO CAN: the filer typing it; the contributing member at payment (Story 9.9's donor display —
+#     the ONE production decrypt, `payment/handlers.ts:305`); and ⭐ **the anonymous PUBLIC, once
+#     11b-3a ships.**
+#   ⇒ ⭐⭐ **THE INVERSION: this story would publish to the whole internet a value that ⛔ no verifier,
+#   ⛔ no state trustee and ⛔ no correcting admin in the approval chain can see.**
+#   ⚠ AND `ifsc_validated` IS ⛔ NOT CORROBORATION — a format + branch lookup proves the BRANCH exists,
+#   ⛔ not that the PERSON does.
+#
+#   ⭐ WHAT SURVIVES FOR D5, narrower and better-evidenced: the CONSENT-SUBJECT point — a verified
+#   account establishes the ACCOUNT is legitimate, ⛔ not that the named holder ACCEPTED CLAIM TERMS,
+#   and the row still identifies no nominee (⛔ no FK, ⛔ no rank, ⛔ no match rule). ⭐ And it
+#   STRENGTHENS reading (i) of cl.10(a) — that the ruling is about THE ACCOUNT as a payment coordinate,
+#   ⛔ not a nominee's informational PII. ⛔ Still not adopted; only the Panel can say.
+#   ⭐ THE SHAPE: the duty is real and the process is built for it, but it is UN-MECHANIZED — the data
+#   is ⛔ not rendered where the approval happens ([[project_mechanization_split_commitment]]).
+#   ⛔ CLOSING IT IS A **VERIFIER-CONSOLE** ACT (Story 6.10's family), needing its own PII-posture
+#   reasoning for a Tier-1 decrypt at a new surface — ROUTED via 11b-3a's AC8, ⛔ NOT built there.
+#   ⚠ The two-document contradiction stands, unaffected: `nominee-accounts.ts:18` calls it "the NOMINEE
+#   name"; the schema denies the linkage. ⛔ The SCHEMA is the authority; the comment is recorded with a
+#   trigger, ⛔ not swept.)
+# last_updated_prior: 2026-09-02e (⭐⭐ **STORY 11b-3's FIVE OPEN DECISIONS RULED BY BIGDEV — ITS TASK-0 STOP
 #   CONDITION IS DISCHARGED AND IT IS STARTABLE.** Transcribed `2026-09-02-176`. Author-committed:
 #   product/technical scope rulings, ⛔ NOT a policy change and ⛔ not a Panel matter.
 #   ⛔⛔ **ZERO ROWS FLIP** — `ready-for-dev` already means startable; the STOP condition lived in the

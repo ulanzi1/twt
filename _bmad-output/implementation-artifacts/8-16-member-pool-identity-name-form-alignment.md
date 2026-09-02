@@ -223,9 +223,11 @@ and/or the push/WA/SMS still shield while the public names in full, ⇒ ⛔ **th
 ## Tasks / Subtasks
 
 - [ ] **Task 0 — ⛔ STOP GATE. ⛔ No code until both decisions land.** (AC: 1)
-  - [ ] ⛔ **Write and route the `INV-scope` packet to the Panel** — a trustee-panel routing note in the
-        house shape, putting **push vs pull** in front of them: ⛔ do ⛔ not re-argue the direction
-        (`-179` cl.3 settled that), and ⛔ do ⛔ not bundle `INV-form`. ⚠ **One note, one question set.**
+  - [x] ✅ **The `INV-scope` packet is WRITTEN AND ROUTED (2026-09-02)** —
+        `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-02-8-16-inversion-scope.md`.
+        ⚠⛔ **WRITTEN ⛔ IS NOT ANSWERED** — `INV-scope` stays **OPEN** and this task stays a STOP gate.
+  - [ ] ⭐ **Check whether the Panel answered it** — a `§`-appendix on that note, or a new
+        `.decision-log.md` entry. ⛔ Do ⛔ not infer an answer from silence.
   - [ ] Rule **`INV-form`** (BigDev); transcribe both. Re-read `.decision-log.md` head first.
   - [ ] ⛔ **If either is unruled → STOP and report.**
   - [ ] `governance:` commit first ([[feedback_governance_commits_precede_implementation]]).
@@ -261,6 +263,23 @@ leave the app: the **Contribution Note PDF** (shareable) and the **cycle-open pu
   ⚠ A principled middle, ⛔ and it still splits the resolver.
 
 ⛔ **Only the Panel can rule this**, because the exposure it decides is ⛔ not the one they were shown.
+
+⏳ **ROUTED 2026-09-02** — `trustee-panel-routing-note-2026-09-02-8-16-inversion-scope.md`.
+⛔ **Nothing ratified.**
+
+⭐ **THREE FINDINGS OF THE PACKET-WRITING PASS, all verified and all narrowing the question:**
+1. ⚠ **The notification DOES carry the name — ⛔ it is ⛔ not just "Pool F".**
+   `apps/jobs/src/scheduler/contribution-notify-triggers.ts:251-253` **joins the parts**, and the copy
+   renders it (*"Standing with **{family}**'s family"*). ⇒ consumer ④ is ⛔ **not** hypothetical.
+2. ⭐ **The audience is BOUNDED and it is smaller than "a broadcast":** *"one … notification **per
+   member assigned to a pool in that cycle**"* (`:10`) ⇒ **the pool roster — dozens**, ⛔ not the
+   Pariwar and ⛔ not the membership. ⚠ And they are **the contributors to that family's drive**, who
+   see the full name in-app under **every** option. ⇒ the real delta is *"also on a lock screen / in a
+   WhatsApp thread / in an SMS"*, ⛔ **not** *"to strangers"*. ⛔ Do ⛔ not argue it as the latter.
+3. ⭐ **The FOUR consumers are the COMPLETE set — a fifth was checked and ruled out.**
+   `close-of-cycle/framing.ts:56` makes `familyName` a **required param**, ⚠ but it has **ZERO
+   production suppliers** and the Panchayat Noticeboard renders ⛔ no family name. ⇒ ⛔ **there is no
+   fifth surface**, and a future reader who finds `close-of-cycle.json` should ⛔ not re-derive one.
 
 ### ⛔ `INV-form` — **BigDev, BLOCKING.** Hard-coded full name, or MODE-RESOLVED?
 
@@ -346,4 +365,5 @@ _(to be filled by the dev agent)_
 
 | Date | Change |
 |---|---|
+| 2026-09-02 | ⭐ **The `INV-scope` packet is WRITTEN AND ROUTED to the Panel** — `trustee-panel-routing-note-2026-09-02-8-16-inversion-scope.md`. ⏳ Routed, ⛔ nothing ratified; Task 0 stays a STOP gate. ⭐ **Three findings of the packet-writing pass, all verified:** ① the cycle-open notification **does** carry the name (`contribution-notify-triggers.ts:251-253` joins the parts; the copy renders *"Standing with {family}'s family"*) ⇒ consumer ④ is ⛔ not hypothetical · ② the audience is **bounded** — *"per member assigned to a pool in that cycle"* ⇒ the **pool roster, dozens**, and they are the contributors who see the full name in-app anyway ⇒ the real delta is *"also on a lock screen"*, ⛔ not *"to strangers"* · ③ ⭐ **the four consumers are the COMPLETE set** — `close-of-cycle`'s `{familyName}` has **zero production suppliers** and the Noticeboard renders none, so ⛔ **no fifth surface**. |
 | 2026-09-02 | Story minted by **Panel direction** (`2026-09-02-179` cl.3 — *"the public/member inversion gap shall be closed"*), discharging **`INV-owner`**. ⭐ Against **Epic 8**, which owns `resolvePoolIdentity` and its four consumers (the **`7-11` precedent**: mint against the epic that owns the **write path**). Two decisions carried OPEN: **`INV-scope`** (⛔ the **Panel's** — two consumers leave the app, and the ruling does not distinguish push from pull) and **`INV-form`** (hard-coded vs mode-resolved — ⚠ hard-coding re-creates the inversion the moment a Pariwar shields publicly). ⚠ Two findings of the authoring pass: the resolver emits **PARTS**, so this is a **shape change** across four consumers plus a contract; and **mononyms already render in full** on the member side, so part of the "inversion" is ⛔ not real and must ⛔ not be reported as closed. |

@@ -1,4 +1,45 @@
-# last_updated: 2026-09-02f (⚠⭐ **`D5-subject` (11b-3a) NARROWED — its first form OVERSTATED the
+# last_updated: 2026-09-02g (⭐⭐ **THE LAST THREE OPEN DECISIONS RULED — `D5(a)` · `D9(a)` · `D10(a)`
+#   (BigDev, `2026-09-02-177`). ⇒ ALL THREE STORIES NOW HAVE ZERO BLOCKING DECISIONS.**
+#   ⛔ ZERO ROWS FLIP — all three were already `ready-for-dev`; the gates lived in the story files.
+#
+#   · **D5 → (a)** (11b-3a, was BLOCKING) — the nominee bank render ships **UN-GATED** on cl.10(a).
+#     Ground: cl.10 is a Panel ruling about THIS EXACT DATA ON THIS EXACT SURFACE, so what is missing
+#     is a RECORD-KEEPING instrument, ⛔ NOT an authorisation. ⇒ ⛔ no per-subject gate · ⛔ no
+#     `consentExists` predicate (11b.9's D5) · ⛔ NO `consent_type` minted (`-162` retired the three;
+#     re-wording one "was on the table and was rejected on the record").
+#     ⚠⛔⛔ **AND (a)'s PRICE IS PART OF (a), ⛔ not a footnote:** the Claim Terms substrate is recorded
+#     **UN-ATTESTED**, and **counsel's third-party objection (11b.1 item (a), `2026-08-24-157` cl.3(b))
+#     is CARRIED AS RISK** — `-160` cl.7 lifted only the FIRST half of its two-part trigger, and ⛔ this
+#     story ships without the second ("a consent basis that reaches a NON-MEMBER"). ⛔ CARRIED, ⛔ never
+#     "closed", ⛔ never "resolved via deferral" ([[feedback_closure_language_precision]]).
+#     ⚠ `D5-subject` is made NON-BLOCKING, ⛔ NOT resolved. ⛔ And (a) adopts NEITHER reading of
+#     cl.10(a) — only the Panel can. ⭐ **BUILT IS STILL ⛔ NOT PUBLISHED.**
+#   · **D9 → (a)** (11b-3b) — the public/member INVERSION is CARRIED. ⛔ Re-affirmed, ⛔ not re-filed.
+#     ⚠⛔ AT ITS **WIDENED** SIZE, and that is recorded rather than left implicit: after `-173`/`-174`
+#     the PUBLIC side names people IN FULL on TWO surfaces (/sahyog + /sahyog-vivran, deceased member
+#     AND contributor) while the MEMBER app shields the same family on THREE (My Pool card, Yogdaan
+#     Bahi, notifications). D7(a) carried it; D9(a) carries it BIGGER.
+#   · **D10 → (a)** (11b-3b) — ⛔ **NO ROW KEY IS MINTED.** `keyExtractor` is a FlashList concern; this
+#     is Astro SSR — static HTML, no virtualization, no reconciler, no re-render ⇒ ⛔ nothing for a key
+#     to be stable FOR, and minting one would add an identifier with no consumer on the surface where a
+#     per-row identifier is most expensive. ⭐ NOTHING IS ADDED.
+#     ⚠⛔ AND STORY 8.3's `keyExtractor` DEFERRAL IS **RE-AFFIRMED OPEN** with its trigger **RE-POINTED**
+#     to "the first VIRTUALIZED render of a multi-pool contributor list" — ⛔ EXPLICITLY and citing the
+#     ruling, ⛔ never silently, ⛔ NOT discharged. (11b-3b's AC8 required exactly this.)
+#
+#   ⭐ THE FAMILY'S DECISION STATE:
+#     11b-3  — ⛔ zero blocking (`-176`). ⚠ rider `D4-linkage` open.
+#     11b-3a — ⛔ zero blocking (D5 ruled here). ⚠ `D8` CONDITIONAL (fires only if a new permission key
+#              is needed — a catalog version bump, a ratified governance act; ⛔ never minted silently).
+#              ⚠ `D5-subject` open + routed.
+#     11b-3b — ⛔ ZERO OPEN DECISIONS.
+#
+#   ⛔ STILL OWED AND ⛔ NOT A DECISION: counsel's WRITTEN clause (`-173`) — still the only thing between
+#   the ruled deceased-member name and a RENDERED one, ⛔ and no placeholder `clause_versions` row may
+#   be seeded · the `epics.md` annotation (11b-3 Task 0, now also covering the three ACs `-174` Q2 made
+#   stale) · `deferred-work.md:7137`'s false ORDER BY ground (11b-3 Task 8, amended IN PLACE) · the
+#   stale publish-queue prose falsified by `-176` D12(a), routed ⛔ not swept.)
+# last_updated_prior: 2026-09-02f (⚠⭐ **`D5-subject` (11b-3a) NARROWED — its first form OVERSTATED the
 #   exposure and is WITHDRAWN; the corrected finding is SHARPER.** ⛔ ZERO ROWS FLIP · ⛔ no
 #   .decision-log.md entry (observational, ⛔ rules nothing) · ⛔ no source code touched.
 #

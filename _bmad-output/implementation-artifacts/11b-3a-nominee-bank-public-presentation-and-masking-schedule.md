@@ -236,7 +236,8 @@ standing permission with ⛔ no subject"*
 
 **Given** cl.10's ruled framing — the Panel does ⛔ **not** treat public bank details as an automatic
 reason to prohibit publication, and the transparency benefit during an active Sahyog Drive is
-**accepted**
+**accepted** — ⭐ **and `D5(a)` (`2026-09-02-177`): this renders UN-GATED**, with ⛔ no per-subject
+consent gate, ⛔ no `consentExists` predicate and ⛔ no minted `consent_type`
 **When** the pool is in the **`live`** state (collecting; ⛔ not yet `closed`/`settled`)
 **Then** the **complete** details render at the `public` tier for **each of the at-most-two equal
 accounts**: `account_holder_name` · `account_number` · `ifsc` · `vpa`, each through `<MatrixField>` so
@@ -347,8 +348,12 @@ digit-by-digit is the exact failure AC4 names
 
 ### AC8 — What this story does ⛔ NOT build is ROUTED
 
-**Then** `deferred-work.md` gains this story's section recording, each with a trigger: the **Claim
-Terms acceptance substrate** (D5's mechanism — ⛔ whatever D5 rules, the *record* is still absent) ·
+**Then** `deferred-work.md` gains this story's section recording, each with a trigger: ⭐⭐ **the Claim
+Terms acceptance substrate — D5(a)'s ROUTED mechanism, recorded UN-ATTESTED** ([[feedback_record_unattested_no_backfill]]),
+**and, ⛔ in the same item, counsel's third-party objection (11b.1 item (a), `2026-08-24-157` cl.3(b))
+recorded CARRIED AS RISK** — ⛔ *"carried"*, ⛔ never *"closed"*, ⛔ never *"resolved via deferral"*:
+`-160` cl.7 lifted only the FIRST half of its two-part trigger, and ⛔ **this story ships without the
+second** ·
 ⭐ **the ACCOUNT-HOLDER SUBJECT gap** (**D5-subject**, ⚠ **narrowed 2026-09-02**) — ⚠ it **survives a
 D5(a) ruling**, because building un-gated does ⛔ not make the holder a nominee. ⭐ Route **BOTH** halves:
 **(i)** the consent-subject gap, with the **two-document contradiction** named
@@ -381,10 +386,14 @@ sibling that routes it back).
   - [ ] Re-read `.decision-log.md` head; take the next free number. ⚠ **11b.3a and 11b.3b mint against
         the same head** — re-read immediately before writing; ⛔ never renumber or merge into a
         sibling's entry.
-  - [ ] Transcribe BigDev's rulings for **D5** (and **D8** if a new permission key is needed). ⛔ The
-        dev agent transcribes; it ⛔ never authors or re-grounds a ruling.
-  - [ ] ⛔ **If D5 is unruled → STOP and report.** ⚠ D5 is not a preference — it decides whether AC2
-        ships at all.
+  - [x] ✅ **D5 RULED (a) — 2026-09-02** (`2026-09-02-177`): build **UN-GATED** on cl.10(a); the
+        mechanism is **routed**; the missing instrument is recorded **UN-ATTESTED** and counsel's
+        third-party objection is **CARRIED AS RISK**. ⛔ Already transcribed — ⛔ do not re-transcribe.
+  - [ ] ⛔⛔ **CARRY (a)'s PRICE INTO THE BUILD, ⛔ do not ship only its permission.** AC8 must record
+        the un-attested substrate **and** counsel's standing objection — ⛔ *"carried"*, ⛔ never
+        *"closed"* or *"resolved via deferral"* ([[feedback_closure_language_precision]]).
+  - [ ] ⛔ **Transcribe D8 IF a new permission key turns out to be needed** (AC5). ⚠ Conditional — it
+        fires at build time, ⛔ not before. ⛔ Never mint a key silently.
   - [ ] ⚠ **Put `D5-subject` in front of whoever rules D5** (⚠ **narrowed 2026-09-02** — read the
         current form, ⛔ not the withdrawn one): the row does ⛔ not identify the **nominee** the
         instrument's subject would be, **and** the approval chain that guards the account ⛔ **cannot
@@ -438,9 +447,37 @@ sibling that routes it back).
 
 ---
 
-## ⚖️ Decisions — ⛔ **TWO OPEN: D5 (blocking; carries `D5-subject`, ⚠ NARROWED 2026-09-02) · D8 (conditional)**
+## ⚖️ Decisions — ✅ **D5 RULED (a) 2026-09-02** (`2026-09-02-177`). ⛔ **ZERO BLOCKING.** ⚠ `D8` conditional (fires only if a new permission key is needed) · `D5-subject` open + routed, ⛔ made non-blocking by D5(a)
 
-### ⛔ D5 — The nominee data's MECHANISM, when its BASIS has no instrument (Trap 1, AC2)
+### ✅ D5 — RULED **(a)** by BigDev, 2026-09-02 — **BUILD UN-GATED**, mechanism routed, absence recorded **UN-ATTESTED**
+
+⭐ `2026-09-02-177`. Built on **cl.10(a)**, which authorises public display during an active campaign.
+⭐ **Ground:** cl.10 is a Panel ruling about **this exact data on this exact surface**, so what is
+missing is a **RECORD-KEEPING instrument**, ⛔ **not an authorisation**.
+⇒ ⛔ **no per-subject consent gate is authored** · ⛔ no `consentExists`-shaped gate (11b.9's D5) ·
+⛔ **NO `consent_type` value is minted** (`-162` retired the three types; re-wording one *"was on the
+table and was rejected on the record"*).
+
+⚠⛔⛔ **AND (a)'s PRICE IS PART OF (a) — ⛔ it is not a footnote, and it must ⛔ not decay:**
+- ⛔ **The Claim Terms substrate does ⛔ NOT exist** — recorded **UN-ATTESTED**, ⛔ never back-filled
+  ([[feedback_record_unattested_no_backfill]]).
+- ⛔⛔ **Counsel's third-party objection STANDS and is CARRIED AS RISK.** `deferred-work.md` **11b.1
+  item (a)** — `2026-08-24-157` cl.3(b), **intact**, two-part trigger. `-160` cl.7 lifted the **first**
+  half; ⛔ the second — *"a consent basis that reaches a **non-member**"* — is exactly what is missing,
+  and **(a) ships without it.** ⛔ **CARRIED**, ⛔ not closed, ⛔ not "resolved via deferral".
+- ⚠ **`D5-subject` is made NON-BLOCKING, ⛔ NOT resolved** — un-gated means ⛔ nothing gates on
+  identifying a subject; the instrument gap **and** the un-mechanized approver duty stay open.
+- ⛔ **(a) adopts ⛔ NEITHER reading of cl.10(a)** — ⛔ not (i) *"about the ACCOUNT"*, ⛔ not (ii)
+  *"about the NOMINEE's data"*. ⭐ **Only the Panel can decide that**, and ⛔ nobody may cite this as
+  having done so.
+
+⭐⭐ **AND BUILT IS ⛔ STILL NOT PUBLISHED.** (a) authorises the **BUILD** only. ⛔ What keeps this dark
+is **deployment plus the counsel/Panel process** — ⛔ never a code mechanism, ⛔ **never** the kill
+switch ([[project_directory_launch_gated_on_killswitch_ui]]).
+
+<details><summary>⛔ The question as put (kept as the record)</summary>
+
+**The nominee data's MECHANISM, when its BASIS has no instrument (Trap 1, AC2)**
 
 `-160` cl.3 preserves the basis — **the nominee's own Claim Terms acceptance** — and the epic AC says
 *"the **mechanism** for each class is this story's to design; ⛔ only the **basis** is settled."*
@@ -542,6 +579,8 @@ publication types were **RETIRED, ⛔ not reinterpreted** (`2026-08-28-162`), an
 cover a new class *"was on the table and was **rejected on the record**"*
 ([[project_11b_consent_model_c5_superseded]]).
 
+</details>
+
 ### ⛔ D8 — Does the Trust-Admin knob need a NEW permission key? (AC5, conditional)
 
 Check the existing catalog first. ⚠ If a new key is needed it is a **catalog version bump with a scope
@@ -633,6 +672,7 @@ _(to be filled by the dev agent)_
 | 2026-09-02 | ✅ **PRECONDITION SATISFIED — 11b.3's `D4` ruled (b)** (`2026-09-02-176`): `live` + `closed` + `settled` all render, so **AC2's active-campaign subject has a host** and this story does ⛔ not widen the predicate. **`D11` ruled (a)** too — the route states three applicable controls, and this story's PII-bearing change owes `routes.ts` + `login-wall.spec.ts` their update at Task 4. ⚠ New open rider from D4: **`D4-linkage`** — a `live` pool's page has no inbound link today and `P-YYYY-MM-###` is sequential. |
 | 2026-09-02 | ⭐ **NO CHANGE TO THIS STORY — recorded because it was briefly in doubt.** `2026-09-02-174` cl.3 appeared to extend cl.10's staged schedule to contributor names, which would have given this schedule a second subject. ⛔ **Corrected the same day, Panel-ratified** (`2026-09-02-175`): the staged reduction is the **nominee bank fields'**, as cl.10 always said. ⇒ **`D12-schedule` VACATED**, Task 1 returns to a single subject, and ⛔ nothing here ever moved. |
 | ~~2026-09-02~~ | ~~⚠ **This story's schedule gained a POTENTIAL SECOND SUBJECT.**~~ ⛔ **SUPERSEDED by the row above** — ⛔ left as the record, ⛔ not deleted. `2026-09-02-174` cl.3 (Panel) **extended `-160` cl.10's staged schedule from bank fields to a PERSON'S NAME** — contributor names on 11b.3b. Whether the two share one per-Pariwar row is **`D12-schedule`**, a **policy** question, ⛔ not a de-duplication. Task 1 now reads that ruling before designing the table, and ⛔ must neither generalise unilaterally nor foreclose D12. |
+| 2026-09-02 | ✅ **D5 RULED (a) by BigDev** (`2026-09-02-177`) — the nominee bank render ships **UN-GATED** on cl.10(a); the mechanism is routed. ⭐ **This story has ZERO blocking decisions** (D8 stays conditional). ⚠⛔ **And (a)'s price is carried, ⛔ not glossed:** the Claim Terms substrate is recorded **UN-ATTESTED**, and **counsel's third-party objection (11b.1 item (a)) is CARRIED AS RISK** — `-160` cl.7 lifted only the first half of its two-part trigger and this story ships without the second. ⚠ `D5-subject` is made **non-blocking**, ⛔ **not** resolved; and (a) adopts ⛔ **neither** reading of cl.10(a) — only the Panel can. ⭐ **Built is still ⛔ NOT published.** |
 | 2026-09-02 | ⚠⭐ **`D5-subject` NARROWED — its first form OVERSTATED the exposure and is WITHDRAWN.** BigDev challenged it: *isn't verifying the holder the claim approver's job?* ⭐ **It is, and the chain is real** — bank details are collected **before** the verifier decides (`errors.ts:198-203`), the post-approval window is `verifier_approved` only, admin-only, tier-2-permissioned, audited and reason-required (`:205-210`), and past the freeze it needs the emergency workflow. ⛔ The first version had ⛔ not traced it. ⭐⭐ **But the check surfaced a SHARPER finding: ⛔ nobody in that chain can SEE the holder name** — the verifier console has no bank surface, no verification handler reads it, and the only read-back is `NomineeBankStatusResponse`, a **presence view** (`holderNamePresent: boolean`), so even a tier-2 admin **corrects a name they cannot see**. ⇒ this story would publish to the internet a value ⛔ no approver can read. ⚠ `ifsc_validated` is ⛔ not corroboration (branch lookup, ⛔ not a person). ⭐ What survives for D5: the **consent-subject** point, and it **strengthens reading (i)** of cl.10(a). ⛔ Closing it is a **verifier-console** act, routed ⛔ not built here. |
 | ~~2026-09-02~~ | ~~**D5-subject recorded** (observational)~~ ⛔ **SUPERSEDED by the row above** — ⛔ left as the record, ⛔ not deleted. — arising from the 11b.3b packet's "whose name" pass. `-160` cl.3's basis is *"the **nominee's** own Claim Terms acceptance"*, but `account_holder_name` is **free text the filer types**, with ⛔ no FK and ⛔ no match rule (`claim_nominee_bank_accounts.ts:7-11`), verified reachable through the contract (`:56`) and the handler (`:155`). ⇒ a second gap **under** D5: even with an instrument, the row does ⛔ not identify its subject. ⚠ Two committed documents disagree (`nominee-accounts.ts:18` calls it *"the NOMINEE name"*); the schema is the authority and the comment is ⛔ recorded, ⛔ not swept. ⛔ Nothing ruled; both readings of cl.10(a) recorded. |
 | 2026-09-01 | **Combined validation of 11b.3 / 11b.3a / 11b.3b.** Three fixes: the Tier-1-count update is **+4 read from the file**, ⛔ never `0 → 4` (11b.3b runs in parallel and adds two); this story restores the route's **PII-bearing** property and now owes `routes.ts` + `login-wall.spec.ts` their update (11b.3's **D11**); and **11b.3's D4 is named as a precondition** — under D4(a) this story has no host for AC2. |

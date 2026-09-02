@@ -1,4 +1,54 @@
-# last_updated: 2026-09-02d (⚠⭐ **`2026-09-02-174` cl.3 IS CORRECTED — PANEL-RATIFIED — AND STORY
+# last_updated: 2026-09-02e (⭐⭐ **STORY 11b-3's FIVE OPEN DECISIONS RULED BY BIGDEV — ITS TASK-0 STOP
+#   CONDITION IS DISCHARGED AND IT IS STARTABLE.** Transcribed `2026-09-02-176`. Author-committed:
+#   product/technical scope rulings, ⛔ NOT a policy change and ⛔ not a Panel matter.
+#   ⛔⛔ **ZERO ROWS FLIP** — `ready-for-dev` already means startable; the STOP condition lived in the
+#   story file, ⛔ not in the enum ([[project_sprint_status_ledger]]).
+#
+#   · **D1 → (b)** — consume the SHIPPED canonical `amountRaisedInr` (9.12 Decision 3). ⭐⭐ **AND IT
+#     MOVES TO 11b-3b**, because the `@twt/ui` fence is ⛔ NOT lifted for 11b-3. D1(b) had named exactly
+#     this price ("either lift the fence, or move the amount"), and BigDev took the second. ⇒ 11b-3
+#     renders the confirmed COUNT and ⛔ no rupee figure; ⛔ **(c) re-deriving inline stays REFUSED**,
+#     and the fence is what makes that refusal enforceable rather than aspirational.
+#     ⚠ INTERIM: until 11b-3b merges, the public page shows a count while the member app shows an
+#     amount for the same pool. ⭐ That is ORDERING, ⛔ not a ruling — CLOSED by 11b-3b, and ⛔ it is
+#     ⛔ NOT a second instance of the D7 inversion. ⛔ Do not file it as one.
+#     ⚠ SCOPED TO THE AMOUNT: the presenter also emits a PROGRESS METER (confirmedPercentage /
+#     isComplete / daysRemaining) designed for a LIVE pool. ⛔ NOT authorised — completion framing on a
+#     SETTLED drive is the same family as 11b.1's `0 >= 0` -> "fully_funded" defect and needs its own
+#     decision.
+#   · **D4 → (b)** — `live` + `closed` + `settled` all render, declared EXPLICITLY on this surface and
+#     ⛔ never imported from the index's narrower SAHYOG_DRIVE_VISIBLE_POOL_STATES (['closed','settled']).
+#     ⭐ **This gives 11b-3a's active-campaign subject A HOST** — the precondition flagged in its top box
+#     is SATISFIED, and 11b-3a does ⛔ not widen the predicate itself.
+#   · **D7 → (a)** — the public/member name INVERSION is CARRIED. ⛔ Re-affirmed, ⛔ NOT re-filed; binder
+#     is 11b-3b (D9). ⭐ 11b-3 renders no name at all, so it could ⛔ not resolve it even in principle.
+#   · **D11 → (a)** — the third route states its APPLICABLE control set: **THREE** (limits.search ·
+#     the global X-Robots-Tag hook · no detail/export affordance), recording controls 2/3 as "NOT
+#     APPLICABLE: no collection, no limit, no page", ⛔ BOTH documents stating the SAME count.
+#     ⚠⛔ AND THE N/A NOTE MUST SAY 11b-3b's PAGINATION RESTORES THEM — a bare "not applicable" with no
+#     expiry is how the two controls quietly never come back.
+#   · **D12 → (a)** — the reversed-denial hook is a **RENDER-TIME DERIVATION**: ⛔ no queue, ⛔ no
+#     consumer, ⛔ no publication record. Story 6.16's publish-hook obligation is DISCHARGED BY THE READ
+#     and recorded "Closed by [edit]", ⛔ not "deferred" ([[feedback_closure_language_precision]]).
+#     ⚠ ⇒ the publish-queue PROSE at `events/src/registry.ts:351` and `claim/events.ts:492` is now
+#     STALE — routed with a trigger, ⛔ NOT swept in passing (the stale-comment-family discipline).
+#
+#   ⚠ **STORY 11b-3b GAINS A REAL OBLIGATION IT DID NOT HAVE: the AMOUNT-RAISED RENDER (new AC3b).**
+#   ⛔ A scope addition, ⛔ not a clarification. Its DTO gains `rosterSize` + `fixedAmount` (the
+#   presenter's input is FIVE keys); `daysRemaining: 0` is supplied for non-live pools and nothing is
+#   rendered from it; the presenter THROWS on confirmedCount > rosterSize, so the per-row try/catch
+#   covers this call too.
+#
+#   ⭐ ONE NEW RIDER RAISED, ⛔ not a blocker: **`D4-linkage`** — is a `live` pool's page LINKED from
+#   anywhere, or reachable BY IDENTIFIER ONLY? D4(b) named the rider and the ruling does ⛔ not answer
+#   it. `/sahyog` lists only closed+settled, so a live page has ⛔ no inbound link today and would be
+#   reachable only by constructing `P-YYYY-MM-###` — ⚠ which is SEQUENTIAL and enumerable.
+#   **Trigger: before 11b-3's Task 4 renders a `live` pool.**
+#
+#   ⛔ STILL OPEN elsewhere: D5 / D5-subject / D8 (11b-3a) · D9 / D10 (11b-3b) · and counsel's WRITTEN
+#   CLAUSE from `-173`, still the only thing between the deceased-member ruling and a rendered name.
+#   ⛔ Amended no epics.md · ⛔ minted no launch-gate row · ⛔ touched no source code · ⛔ ruled no Panel matter.)
+# last_updated_prior: 2026-09-02d (⚠⭐ **`2026-09-02-174` cl.3 IS CORRECTED — PANEL-RATIFIED — AND STORY
 #   11b-3b's STOP GATE IS LIFTED.** Transcribed `2026-09-02-175`.
 #
 #   ⭐⭐ THE CORRECTION: the *"progressive reduction of public exposure"* is the **NOMINEE BANK
@@ -13735,7 +13785,14 @@ development_status:
   # ⚠ ITS EPIC ACs ARE STALE — `2026-08-28-160` cl.10 / `-164` A2 / `-165` cl.1+cl.3 never reached
   # `epics.md`, and the 2026-08-28 routing note §11 records the amendment as owed. ⛔ Build to the
   # STORY FILES, ⛔ not to the epic.
-  # ⛔ STARTABLE NOW: 11b-3 alone, at its Task 0 (TRANSCRIBE-or-STOP). FIVE decisions open on it —
+  # ✅ UPDATE 2026-09-02 (`2026-09-02-176`): **ALL FIVE RULED — D1(b) · D4(b) · D7(a) · D11(a) · D12(a)
+  # — and the Task-0 STOP CONDITION IS DISCHARGED. 11b-3 IS STARTABLE.** ⭐ D1(b) MOVED the amount to
+  # 11b-3b (the @twt/ui fence stays), so this surface renders the COUNT only; D4(b) gives 11b-3a's
+  # active-campaign subject a host; D12(a) means ⛔ NO queue and ⛔ no consumer are built.
+  # ⚠ One new rider, ⛔ not a blocker: `D4-linkage` (is a `live` pool's page linked, or identifier-only?
+  # `P-YYYY-MM-###` is sequential). ⛔ Read before Task 4 renders a `live` pool.
+  #
+  # ⛔ (Superseded, left as the record) STARTABLE NOW: 11b-3 alone, at its Task 0. FIVE decisions open —
   # D1 (RE-POSED 2026-09-01h: `amount raised` DOES have a canonical producer — `amountRaisedInr =
   # confirmedCount × fixedAmount`, Story 9.12 Decision 3, shipped in @twt/ui/pool-progress and naming
   # this surface as its next consumer; the question is consume-vs-show-less-than-the-member-app, ⛔ NOT

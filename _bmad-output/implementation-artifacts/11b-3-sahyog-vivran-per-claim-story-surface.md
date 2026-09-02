@@ -249,7 +249,13 @@ at 11a.2 was exactly this shape, and no test caught it because every test bypass
 **And** an unknown or non-visible pool identifier renders the shell's **404**, ⛔ never an error
 distinguishing *"does not exist"* from *"not published"* — a distinguishable miss is an enumeration
 signal
-**And** the visible-pool predicate is **declared explicitly** (⛔ never inferred) and is ruled by **D4**.
+**And** ⭐ the visible-pool predicate is **declared explicitly** on this surface — **`live` + `closed` +
+`settled`** (**D4(b)**, `2026-09-02-176`) — ⛔ never inferred, and ⛔ **never imported from
+`SAHYOG_DRIVE_VISIBLE_POOL_STATES`**, which is the *index's* narrower `['closed','settled']`
+(`pool/public-read.ts:89`). ⚠ Two surfaces, two predicates, ⛔ deliberately
+**And** ⚠ **`D4-linkage` is OPEN:** a `live` pool's page has ⛔ no inbound link today (`/sahyog` lists
+only `closed` + `settled`), so it would be reachable only by constructing the **sequential**
+`P-YYYY-MM-###`. ⛔ **Do not add a link to a `live` pool without reading that ruling**
 
 ### AC2 — The matrix declares this surface EXPLICITLY, with ⛔ ZERO Tier-1 fields at `public`
 
@@ -290,10 +296,16 @@ so far"* framing that exposes the attested↔confirmed gap; (d) synthesized conf
 **And** if Epic 9 has emitted no `contribution.confirmed` for a contribution, **it does not appear**;
 if the pool is not `settled`, settlement totals **do not render** — the surface says
 *"Pool live — final outcome will appear after reconciliation settles"* rather than estimating
-**And** ⭐ **any RUPEE figure is D1's, and D1 is re-posed against a producer that EXISTS** — ⛔ if the
-surface renders one, it consumes `derivePoolProgressCardViewModel`'s `amountRaisedInr` (Story 9.12
-Decision 3, `packages/ui/src/pool-progress/presenter.ts:69`) and ⛔ **NEVER** re-derives it inline.
-⛔ A second multiplication anywhere in this diff is the defect, ⛔ whichever way D1 rules
+**And** ⭐⭐ **THIS STORY RENDERS ⛔ NO RUPEE FIGURE — `D1(b)` MOVED THE AMOUNT TO 11b.3b**
+(`2026-09-02-176`). The canonical `amountRaisedInr` lives behind the `@twt/ui` fence this story does
+⛔ not lift, so the amount lands with the story that adds the dependency. ⇒ this surface renders the
+confirmed **COUNT** only
+**And** ⛔⛔ **DO ⛔ NOT re-derive `confirmedCount × fixedAmount` here to fill the gap** — that is
+**D1(c)**, **REFUSED**, and the fence is what makes the refusal enforceable. ⚠ A second multiplication
+anywhere in this diff is the defect
+**And** ⚠ **the interim asymmetry is EXPECTED and is ⛔ NOT a defect to file:** until 11b.3b merges, this
+page shows a count while the member app shows an amount for the same pool. ⭐ That is **ordering**, ⛔ not
+a ruling, and it is **closed by 11b.3b** — ⛔ it is ⛔ **NOT** a second instance of the D7 inversion
 **And** the close-of-cycle framing reuses `classifyCycleOutcome` **UNCHANGED** — ⛔ it is shared with
 the Panchayat Noticeboard and `/sahyog`, and its union's ordering is provenance-stable
 **And** ⭐ the **zero-expectation** case is resolved **BEFORE** the call: 11b.1's review found
@@ -323,14 +335,17 @@ Record** — ⛔ never merely scanned green ([[feedback_gate_scope_semantic_cove
 **Given** Story 6.16's `claim.reversed` — **live**, the *"ONE clean subscription point Epic 11b
 consumes"*, carrying `reversed_at_stage` (1\|2\|3) + `disposition_category` (bounded, **NON-PII**)
 **When** the event is appended
-**Then** ⛔⛔ **the CONSUMER'S MECHANISM IS `D12`, AND IT IS OPEN — ⛔ do not infer one.** ⚠ Verified by
-grep: there is ⛔ **no Sahyog Vivran publication queue**. The phrase exists only as PROSE, in
-`packages/events/src/registry.ts:351` and `packages/domain/src/claim/events.ts:492`. The two real
-queue precedents are `apps/api/src/modules/news-blog/queue.ts` and `surveys/queue.ts` — ⛔ neither is
-this. ⭐ **And AC1 renders this page from live event data at REQUEST TIME**, so the narrative below is
-derivable at render with ⛔ no consumer and ⛔ no queue at all. ⇒ building an inert queue and building
-nothing are ⛔ both available and ⛔ both wrong to choose silently → **D12**
-**And** ⭐ **whatever D12 rules, the RENDERED OUTPUT below is unchanged and is this AC's testable half**
+**Then** ⭐⭐ **`D12(a)` RULED: this is a RENDER-TIME DERIVATION — ⛔ NO queue, ⛔ NO consumer, ⛔ NO
+publication record** (`2026-09-02-176`). The read joins the claim's `claim.reversed` event and derives
+the narrative at request time from `reversed_at_stage` + `disposition_category`
+**And** ⭐ **Story 6.16's publish-hook obligation is DISCHARGED BY THE READ** — recorded *"Closed by
+[edit]"*, ⛔ **not** *"deferred"* ([[feedback_closure_language_precision]]). ⭐ Ground: this surface holds
+⛔ **no publication STATE** for a queue to advance, so a queue here is a consumer with ⛔ no effect —
+the shape 11b.2a's D6(a) deleted (*"a render arm that never fires is dead code"*)
+**And** ⚠ **the publish-queue PROSE is now STALE** — `packages/events/src/registry.ts:351` and
+`packages/domain/src/claim/events.ts:492` both say *"the SOLE subscription point Epic 11b routes to the
+Sahyog Vivran publication queue"*. ⛔ **Routed with a trigger, ⛔ NOT swept in passing**
+([[project_epic9_confirmed_producer_is_live]])
 **And** the surface renders a **"Reversed by appeal"** narrative carrying the **appeal-stage
 attribution** + the **reversal date**, and the lineage **deny → appeal stage → reversal** is visible
 **And** ⛔⛔ **the narrative NEVER carries rationale text or a reviewer identity** — those live on the
@@ -357,10 +372,12 @@ CANNOT reuse them unchanged is a third route that needs its own ruling, ⛔ not 
 parameter (⛔ not a collection), it declares `paginated: false` (⛔ not paginated), and it carries
 **zero Tier-1 fields** (⛔ not PII-bearing). ⇒ controls **2** (`PUBLIC_SURFACE_PAGE_SIZE_CAP`) and **3**
 (`PUBLIC_DIRECTORY_PAGE_HORIZON`) have ⛔ **no query parameter to bind to** and cannot be reused
-**And** ⇒ the applicable set and the count are ruled at **D11**, ⛔ never chosen by the dev agent, and
-⛔ **a control claimed in writing that does not exist is worse than a control honestly absent** —
-*"two authoritative documents disagreeing on how many controls exist is the defect this file records
-having already had once"*
+**And** ⭐⭐ **`D11(a)` RULED: state the APPLICABLE set — THREE** (`2026-09-02-176`) — the named
+`limits.search` tier · the global `X-Robots-Tag` hook · the absence of a detail/export affordance —
+**and record controls 2 and 3 as *"⛔ not applicable: no collection, no `limit`, no `page`"***, ⛔ both
+documents stating the **SAME count**
+**And** ⚠⛔ **THE N/A NOTE MUST SAY 11b.3b's PAGINATION RESTORES THEM** — ⛔ a bare *"not applicable"*
+with no expiry is how the two controls quietly never come back
 **And** ⭐ **the two properties come BACK, in the siblings, and each owes this file an update:**
 11b.3a makes the route **PII-bearing**, 11b.3b makes it **paginated** — ⛔ neither may restore a
 property and leave the defence and the `login-wall.spec.ts` entry saying what they say today
@@ -448,8 +465,10 @@ docstring at `:127` (*"Ordered by member id ASC"*) is part of the change, ⛔ no
 **And** ⭐ **`deferred-work.md:7137` is AMENDED IN PLACE — the false ground is corrected and the item's
 disposition recorded — ⛔ never silently deleted and ⛔ never re-filed** (the `11b.2 (vi)`
 amended-in-place precedent; [[feedback_supersede_never_reinterpret]])
-**And** ⛔ **the public/member name INVERSION is RE-AFFIRMED, ⛔ NOT re-filed** (11b.1 item (e)) — ⛔
-*"two records of one obligation is its own failure"* — and it is **carried, ⛔ not resolved** (**D7**).
+**And** ⭐ **`D7(a)` RULED: the public/member name INVERSION is CARRIED** (`2026-09-02-176`) — ⛔
+**re-affirmed, ⛔ NOT re-filed** (11b.1 item (e)); *"two records of one obligation is its own failure"*.
+⚠ Its **binder is 11b.3b** (**D9**), and ⛔ this story renders **no name at all**, so it ⛔ could not
+resolve it even in principle.
 
 ---
 
@@ -462,10 +481,16 @@ amended-in-place precedent; [[feedback_supersede_never_reinterpret]])
   - [ ] Transcribe **BigDev's rulings** for **D1 · D4 · D6 · D7** into `.decision-log.md`, including
         **D6 = (b) SPLIT, ruled 2026-09-01**. ⛔ **The dev agent transcribes; it ⛔ never authors,
         paraphrases or re-grounds a ruling.**
-  - [ ] ⛔ **If D1, D4, D7, D11 or D12 is unruled → STOP and report.** ⚠ **FIVE, ⛔ not three** — D11
-        (the third route's control set) and D12 (the reversed-denial consumer's mechanism) are ⛔ not
-        preferences: D11 is a ruling `routes.ts:52-55` **demands in terms**, and D12 decides whether
-        Task 5 builds anything at all.
+  - [x] ✅ **ALL FIVE RULED 2026-09-02 — the STOP condition is DISCHARGED** (`2026-09-02-176`):
+        **D1(b)** the shipped `amountRaisedInr` is consumed and **MOVES TO 11b.3b** (the `@twt/ui`
+        fence stays) · **D4(b)** `live` + `closed` + `settled` render · **D7(a)** the inversion is
+        CARRIED · **D11(a)** the route states its APPLICABLE control set (**three**), naming the two
+        N/A ones · **D12(a)** the reversed-denial hook is a **render-time derivation** — ⛔ no queue.
+        ⛔ Already transcribed — ⛔ do not re-transcribe, ⛔ do not renumber.
+  - [ ] ⚠ **`D4-linkage` is a NEW open rider, ⛔ not a blocker:** is a `live` pool's page **linked**
+        from anywhere, or reachable **by identifier only**? ⚠ `P-YYYY-MM-###` is **sequential and
+        enumerable**, and `/sahyog` lists only `closed` + `settled`. ⛔ **Read it before Task 4 renders
+        a `live` pool.**
   - [ ] Annotate `epics.md` Story 11b.3 with **(i)** the re-purposed SD-2 (`-164` A2) and the
         public-tier bank fields (`-160` cl.10, `-165` cl.1/cl.3) — the carry recorded at the 2026-08-28
         routing note **§11** — and **(ii)** the three-way split, so `sprint-planning` does ⛔ not
@@ -501,8 +526,10 @@ amended-in-place precedent; [[feedback_supersede_never_reinterpret]])
 
 - [ ] **Task 3 — The third public-pages route + its defence in BOTH places** (AC: 6, 4)
   - [ ] Register with `limits.search`; write the header defence.
-  - [ ] ⛔ **Write the control set D11 ruled — ⛔ never "five" by copy.** Controls 2 and 3 have no query
-        parameter on a single-item route; ⛔ a claimed control that does not exist is the defect.
+  - [ ] ⭐ **D11(a): write THREE.** The named `limits.search` tier · the global `X-Robots-Tag` hook ·
+        the absence of a detail/export affordance. Record controls **2**/**3** as *"⛔ not applicable:
+        no collection, no `limit`, no `page`"* ⭐ **and state that 11b.3b's pagination RESTORES them.**
+        ⛔ Never "five" by copy.
   - [ ] Add the `login-wall.spec.ts` allowlist entry stating the **same control count** as the header.
   - [ ] Author the `.strict()` DTO with the shape teeth.
 
@@ -511,17 +538,21 @@ amended-in-place precedent; [[feedback_supersede_never_reinterpret]])
   - [ ] `apps/public/src/lib/sahyog-vivran-render.ts` — all display logic, pure.
   - [ ] Every value through `<MatrixField>`. ⛔ No `Astro.cookies` / `Astro.request.headers` /
         `Astro.session` anywhere on this surface.
+  - [ ] ⭐ **Render `live` + `closed` + `settled`** (D4(b)), the predicate declared explicitly here —
+        ⛔ never imported from `SAHYOG_DRIVE_VISIBLE_POOL_STATES`. ⚠ **Read `D4-linkage` before adding
+        any link to a `live` pool.**
+  - [ ] ⛔ **Render NO rupee figure** (D1(b) moved it to 11b.3b). The confirmed **count** only, and
+        ⛔ **never** an inline `confirmedCount × fixedAmount`.
   - [ ] Render **nothing** for absent producers (family story, memorial components, FR-19,
         `<StatCardStrip>`) — ⛔ no placeholder, ⛔ no "coming soon".
   - [ ] Explicit `namespace` on every `t()`; add `sahyog-vivran.json` for **both** locales.
 
 - [ ] **Task 5 — The `claim.reversed` consumer** (AC: 5)
-  - [ ] ⛔ **Build the mechanism D12 ruled, ⛔ nothing else.** ⚠ There is ⛔ no publication queue in the
-        codebase — the phrase is prose in `events/src/registry.ts:351`. If D12 rules render-time
-        derivation, ⛔ **no queue and no consumer are built** and this task is the READ; if it rules a
-        publication record, the precedents are `news-blog/queue.ts` / `surveys/queue.ts` — ⛔ never a
-        third queue shape invented here.
-  - [ ] Route by `claim_case_id`; audit-log via 1.10.
+  - [x] ✅ **D12(a) RULED — ⛔ BUILD NO QUEUE AND NO CONSUMER.** This task is **the READ**: join the
+        claim's `claim.reversed` event and derive the narrative at request time. ⛔ Do ⛔ not create a
+        queue, a job, a subscription or a publication table.
+  - [ ] Derive the lineage at render from `reversed_at_stage` + `disposition_category`; audit-log via
+        1.10. ⛔ No rationale text, ⛔ no reviewer identity.
   - [ ] Render the lineage from `reversed_at_stage` + `disposition_category` **only**. ⛔ No rationale
         text, ⛔ no reviewer identity.
   - [ ] ⛔ Do not add `claim.reversed` to `ACCOUNT_UNFREEZE_EVENT_TYPES`.
@@ -545,7 +576,7 @@ amended-in-place precedent; [[feedback_supersede_never_reinterpret]])
 
 ---
 
-## ⚖️ Decisions — ✅ **D6 RULED (b) by BigDev, 2026-09-01.** ⛔ **FIVE OPEN: D1 · D4 · D7 · D11 · D12**
+## ⚖️ Decisions — ✅ **ALL RULED. D6(b) 2026-09-01; D1(b) · D4(b) · D7(a) · D11(a) · D12(a) on 2026-09-02** (`2026-09-02-176`). ⛔ **ZERO OPEN — ⚠ one new rider: `D4-linkage`**
 
 ### ✅ D6 — RULED **(b)** (BigDev, 2026-09-01) — the story is **SPLIT THREE WAYS**
 
@@ -565,7 +596,20 @@ aspiration, and is what makes this story startable today.
 re-open a ruled question, and ⛔ it does not move `-165` cl.3's allowlist duty off the project — the
 duty **travels with the fields** to 11b.3a (Task 0 records this).
 
-### ⛔ D1 — *"Amount raised"*: what, if anything, does this surface render? (Trap 1, AC3)
+### ✅ D1 — RULED **(b)** by BigDev, 2026-09-02 — ⭐ **CONSUME the shipped figure, and it MOVES TO 11b.3b**
+
+⭐ `2026-09-02-176`. **(b)** is ruled **and its stated price is paid by MOVING, ⛔ not by lifting the
+fence**: `@twt/ui` stays out of `apps/public` on this story, so **11b.3b** — which adds the dependency
+(C-1) — owns the amount-raised render. ⇒ **this surface renders the confirmed COUNT and ⛔ no rupee
+figure.** ⛔ **(c) stays REFUSED**, and the fence is what makes that enforceable.
+⚠ **The interim asymmetry is ORDERING, ⛔ not a ruling** — closed by 11b.3b, ⛔ never filed as a second
+D7 inversion. ⚠ **And the consumption is scoped to `amountRaisedInr`** — the presenter's progress meter
+(`confirmedPercentage` / `isComplete` / `daysRemaining`) is ⛔ **not** authorised, and completion framing
+on a **settled** drive would need its own decision.
+
+<details><summary>⛔ The question as posed (kept as the record)</summary>
+
+**"Amount raised": what, if anything, does this surface render? (Trap 1, AC3)**
 
 ⚠⭐ **RE-POSED 2026-09-01 (combined 11b.3/11b.3a/11b.3b validation). ⛔ THE FIRST POSING RESTED ON A
 FALSE PREMISE and is corrected here rather than re-argued** ([[feedback_supersede_never_reinterpret]]):
@@ -594,7 +638,25 @@ existing canonical producer, or deliberately render less than the member app doe
   definition of a money figure into a second site. ⛔ Reject.
 - **(d) Add an amount to `contribution.confirmed`** — ⛔ an Epic 9 contract change, ⛔ out of scope.
 
-### ⛔ D4 — Which pool states does this surface render? (AC1)
+</details>
+
+### ✅ D4 — RULED **(b)** by BigDev, 2026-09-02 — **`live` + `closed` + `settled`**
+
+⭐ `2026-09-02-176`. The predicate is **declared explicitly on this surface** and is **wider** than the
+index's `SAHYOG_DRIVE_VISIBLE_POOL_STATES` (`['closed','settled']`) — ⛔ never imported from it.
+⭐ **This gives Story 11b.3a's active-campaign subject a HOST**, and satisfies the precondition flagged
+in its top box.
+
+#### ⛔ D4-linkage — OPEN. Is a `live` pool's page LINKED, or reachable BY IDENTIFIER ONLY?
+
+⚠ D4(b) named this rider and ⛔ the ruling does ⛔ not answer it. `/sahyog` lists only `closed` +
+`settled`, so a `live` Vivran page has ⛔ **no inbound link today** and would be reachable only by
+constructing `P-YYYY-MM-###` — ⚠ **sequential and enumerable**. ⛔ **Read before Task 4 renders a
+`live` pool.**
+
+<details><summary>⛔ The question as posed (kept as the record)</summary>
+
+**Which pool states does this surface render? (AC1)**
 
 The state machine is `live —pool.closed→ closed —pool.settled→ settled` (`pool/state.ts:96`).
 `/sahyog` shows `closed` + `settled` (`SAHYOG_DRIVE_VISIBLE_POOL_STATES`).
@@ -606,7 +668,16 @@ The state machine is `live —pool.closed→ closed —pool.settled→ settled` 
   Tier-1 fields is the worse ordering.* ⚠ Then decide whether a `live` pool's page is **linked** from
   anywhere or reachable **by identifier only**.
 
-### ⛔ D7 — Does the name INVERSION get resolved here? (AC9)
+</details>
+
+### ✅ D7 — RULED **(a)** by BigDev, 2026-09-02 — **CARRY it**
+
+⭐ `2026-09-02-176`. ⛔ **Re-affirmed, ⛔ NOT re-filed** — it stays open at `deferred-work.md` 11b.1 item
+**(e)**, and its **binder becomes 11b.3b** (**D9**).
+
+<details><summary>⛔ The question as posed (kept as the record)</summary>
+
+**Does the name INVERSION get resolved here? (AC9)**
 
 11b.1 item (e) records that after D10 the **public** page shows **MORE** than the **member app** does
 for the same pool (`resolvePoolIdentity` shields the same family's name on the My Pool card, Yogdaan
@@ -617,7 +688,18 @@ Bahi and notifications), and says *"⛔ Not this story's to resolve — it binds
   at all, so it cannot resolve it even in principle.* ⚠ Then the item's **binder becomes 11b.3b**.
 - **(b) Resolve it here.** ⛔ Out of this story's diff.
 
-### ⛔ D11 — What is the THIRD route's control set, and what count do both documents state? (Trap 4, AC6)
+</details>
+
+### ✅ D11 — RULED **(a)** by BigDev, 2026-09-02 — **state the APPLICABLE set: THREE**
+
+⭐ `2026-09-02-176`. The header **and** the `login-wall.spec.ts` entry state the **three** controls that
+apply, and record controls **2** / **3** as *"⛔ not applicable: no collection, no `limit`, no `page`"*
+— ⛔ both stating the **same count**. ⚠⛔ **And the N/A note must say 11b.3b's pagination RESTORES
+them** — a bare *"not applicable"* with no expiry is how they quietly never come back.
+
+<details><summary>⛔ The question as posed (kept as the record)</summary>
+
+**What is the THIRD route's control set, and what count do both documents state? (Trap 4, AC6)**
 
 ⭐ **This is ⛔ not an authoring question — `routes.ts:52-55` reserves it in terms:** *"A third route
 that CANNOT reuse them unchanged is a third route that **needs its own ruling**, ⛔ not its own bullet
@@ -637,13 +719,23 @@ parameter to bind to**.
 - **(c) Give the third route a single-item control set of its own** — ⚠ legitimate, ⛔ but it must then
   say what bounds **identifier enumeration** of `P-YYYY-MM-###`, which is sequential.
 
+</details>
+
 ⚠⛔ **AND WHICHEVER WAY IT GOES, THE OBLIGATION TRAVELS:** **11b.3a** makes this route **PII-bearing**
 and **11b.3b** makes it **paginated** — each owes the header and the `login-wall.spec.ts` entry an
 update **in its own commit**, ⛔ never leaving them stating what they state today. ⭐ That obligation is
 now written in **all three** files, so ⛔ no pair can route it to each other
 ([[feedback_circular_deferral_between_sibling_stories]]).
 
-### ⛔ D12 — What does the reversed-denial CONSUMER actually do? (AC5, Task 5)
+### ✅ D12 — RULED **(a)** by BigDev, 2026-09-02 — **RENDER-TIME DERIVATION. ⛔ No queue, ⛔ no consumer.**
+
+⭐ `2026-09-02-176`. Story 6.16's publish-hook obligation is **DISCHARGED BY THE READ** — *"Closed by
+[edit]"*, ⛔ not *"deferred"*. ⚠ ⇒ the publish-queue **prose** at `events/src/registry.ts:351` and
+`claim/events.ts:492` is now **STALE**, routed with a trigger and ⛔ **not swept in passing**.
+
+<details><summary>⛔ The question as posed (kept as the record)</summary>
+
+**What does the reversed-denial CONSUMER actually do? (AC5, Task 5)**
 
 ⭐ **A NEW FINDING of the 2026-09-01 combined pass — ⛔ nothing had recorded it.** The epic AC and
 `claim/events.ts:492` both say the consumer *"routes the claim to the Sahyog Vivran publication
@@ -662,6 +754,8 @@ REQUEST TIME**, so the "Reversed by appeal" narrative is derivable at render wit
   because AC1's read does not. ⛔ An empty queue built to satisfy the AC's wording is (a) in ceremony.
 - **(c) DEFER the consumer with a named trigger**, shipping the render half only. ⚠ Legitimate and
   honest — ⛔ but a **ruling**, ⛔ never the silent outcome of Task 5 being hard to interpret.
+
+</details>
 
 ### ⏭️ Moved to siblings — ⛔ recorded so they cannot evaporate
 
@@ -759,7 +853,7 @@ cannot identify*, so it is ⛔ **not a disposition on its own**. `apps/public` p
 |---|---|
 | `packages/contracts/public-pages/public-vs-private-matrix.yaml` | **UPDATE** — the 10th surface, ⛔ zero Tier-1 fields |
 | `packages/contracts/src/public-pages/matrix.ts` | ⛔ **NOT TOUCHED** (11b.3a's) |
-| `packages/contracts/src/public-pages/sahyog-vivran.ts` | **NEW** — the DTO (`.strict()`) |
+| `packages/contracts/src/public-pages/sahyog-vivran.ts` | **NEW** — the DTO (`.strict()`). ⚠ **No amount field** (D1(b) → 11b.3b); ⭐ 11b.3b will need `rosterSize` + `fixedAmount` for the presenter, so ⛔ do not shape the DTO in a way that forbids adding them |
 | `packages/contracts/src/contributions/pool-contributor-list.ts` | **UPDATE** — `:88` only (Trap 6) |
 | `packages/domain/src/pool/sahyog-vivran-read.ts` | **NEW** |
 | `packages/domain/src/contribution/read.ts` | **UPDATE** — deterministic ORDER BY |
@@ -806,5 +900,6 @@ _(to be filled by the dev agent)_
 | Date | Change |
 |---|---|
 | 2026-09-01 | Story authored (`bmad-create-story 11b.3`). Scope reconciled against `2026-08-28-160` cl.10 / `-164` A2 / `-165` cl.1–cl.3, which `epics.md` had never carried. Seven decisions raised. |
+| 2026-09-02 | ✅ **ALL FIVE OPEN DECISIONS RULED by BigDev** (`2026-09-02-176`) — **D1(b)** consume the shipped `amountRaisedInr`, ⭐ **and it MOVES to 11b.3b** because the `@twt/ui` fence stays (this surface renders the **count only**; ⛔ (c) re-deriving stays refused) · **D4(b)** `live` + `closed` + `settled`, ⭐ which gives 11b.3a's active-campaign subject a host · **D7(a)** the inversion is CARRIED, binder 11b.3b · **D11(a)** the route states **three** applicable controls and names the two N/A ones, ⚠ with the note that 11b.3b's pagination restores them · **D12(a)** the reversed-denial hook is a **render-time derivation** — ⛔ no queue, ⛔ no consumer; 6.16's obligation *"Closed by [edit]"*. ⇒ ⭐⭐ **Task 0's STOP condition is DISCHARGED and this story is STARTABLE.** ⚠ One new rider: **`D4-linkage`** (is a `live` pool's page linked, or identifier-only? `P-YYYY-MM-###` is sequential). ⚠ And the publish-queue prose at `registry.ts:351` / `claim/events.ts:492` is now **stale**, routed ⛔ not swept. |
 | 2026-09-01 | **Combined validation of 11b.3 / 11b.3a / 11b.3b** (`bmad-create-story validate`), run as one pass because a per-story pass cannot see the split seam. Six criticals applied. **D1 RE-POSED** — `amountRaisedInr` is shipped and ruled (9.12 D3), ⛔ not unbuilt. **D11** (the third route's control set — `routes.ts:52-55` reserves it) and **D12** (the reversed-denial consumer's mechanism — ⛔ no publication queue exists) minted OPEN. AC9's *"missing ORDER BY"* premise corrected: the read has sorted by `member_id` since 8.3, and `member_id` is the key the AC prohibits. |
 | 2026-09-01 | **D6 RULED (b) by BigDev — SPLIT THREE WAYS.** This file narrowed to the public shell + reversed-denial hook + financial-truth gate, with ⛔ **zero Tier-1 fields at `public`** as a checkable property (AC2). D2/D3 → 11b.3b; D5 → 11b.3a. ⛔ The story KEY is unchanged — `deferred-work.md` and `2026-09-01-171` cite it by name. |

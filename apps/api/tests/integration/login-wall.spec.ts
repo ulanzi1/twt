@@ -168,9 +168,14 @@ const PUBLIC_ALLOWLIST = new Set<string>([
   // ⚠⛔ IT IS NOT AN OPEN SURFACE — AND IT IS ⛔ NOT BOUNDED BY THE SAME FIVE CONTROLS THE TWO
   // ROUTES ABOVE SHARE. ⛔ STATING FIVE HERE WOULD BE FALSE. `routes.ts:52-55` ruled that the
   // five are properties of "an unauthenticated, PAGINATED, PII-BEARING public COLLECTION"; this
-  // route is a SINGLE-ITEM GET on a path parameter, declares `paginated: false`, and carries
-  // ZERO Tier-1 fields. ⇒ **D11(a)** (`2026-09-02-176`) ruled it states its APPLICABLE set —
-  // ⭐ **THREE**, matching `routes.ts` exactly:
+  // route is a SINGLE-ITEM GET on a path parameter and declares `paginated: false`.
+  // ⚠⛔⛔ AMENDED BY STORY 11b.3a — THE THIRD PROPERTY NO LONGER HOLDS. This entry used to add
+  // "and carries ZERO Tier-1 fields". ⭐ TRUE AT 11b.3; ⛔ FALSE NOW: 11b.3a declares FOUR ruled
+  // Tier-1 nominee-bank fields on this surface (`2026-08-28-165` cl.1/cl.3, under `2026-08-28-160`
+  // cl.10) and the handler DECRYPTS them ⇒ **THIS ROUTE IS PII-BEARING**. ⛔ Amended, ⛔ not
+  // deleted — the previous claim is named so nobody restores it.
+  // ⇒ **D11(a)** (`2026-09-02-176`) ruled it states its APPLICABLE set; 11b.3a changed WHICH
+  // controls apply, ⛔ not the rule — ⭐ **FOUR**, matching `routes.ts` exactly:
   //   · the named SEARCH rate limit, UNMODIFIED — ⛔ NOT `limits.read`, the looser tier, which is
   //     backwards for an enumeration surface. Keyed on the FORWARDED VISITOR ADDRESS via the same
   //     `perSessionKey` → `request.ip` → `trustProxy` chain.
@@ -180,27 +185,44 @@ const PUBLIC_ALLOWLIST = new Set<string>([
   //     this route IS the detail view, so what is absent is any onward affordance — ⛔ no list,
   //     ⛔ no sibling links, ⛔ no `format`/`csv`, and an EMPTY `.strict()` query schema that
   //     makes every query parameter a 400.
+  //   · ⭐ NEW AT 11b.3a — the BOUNDED, PROJECTED Tier-1 read. The four fields are decrypted
+  //     SERVER-SIDE here and ⛔ never by `apps/public` (the KEK is shared across EVERY Tier-1 field
+  //     class, so granting it for ONE gives it ALL — `2026-08-20-143` cl.1). The fan-out is bounded
+  //     by `DIRECTORY_DECRYPT_CONCURRENCY` at AT MOST EIGHT values per page (four fields × at most
+  //     two EQUAL accounts) — and only TWO per account once the Pariwar's masking window has
+  //     elapsed, because cl.10(e)'s retention list excludes the holder name and the VPA. The masked
+  //     projection is applied HERE: the wire's masked arm carries ⛔ no `accountNumber` key at all.
   //
   // ⛔ CONTROLS 2 (`PUBLIC_SURFACE_PAGE_SIZE_CAP`) AND 3 (`PUBLIC_DIRECTORY_PAGE_HORIZON`):
-  // ⛔ NOT APPLICABLE — NO COLLECTION, NO `limit`, NO `page` to bind them to.
-  // ⚠⛔ AND THE N/A HAS AN EXPIRY: **Story 11b.3b adds the contributor list, which makes this
+  // ⛔ STILL NOT APPLICABLE — NO COLLECTION, NO `limit`, NO `page` to bind them to.
+  // ⚠⛔ THE N/A STILL HAS AN EXPIRY: **Story 11b.3b adds the contributor list, which makes this
   // route PAGINATED and RESTORES BOTH.** ⇒ 11b.3b owes this entry AND the `routes.ts` header an
   // update in its own commit — a bare "not applicable" with no expiry is how two controls quietly
-  // never come back. ⭐ And **Story 11b.3a** makes this route PII-BEARING (four ruled Tier-1
-  // nominee-bank fields, `2026-08-28-165` cl.1/cl.3) — ⛔ neither sibling may restore a property
-  // and leave these two documents saying what they say today. ⛔ EXTEND, ⛔ never overwrite.
+  // never come back.
+  // ⚠⛔⛔ AND 11b.3b MUST **EXTEND** WHAT 11b.3a WROTE, ⛔ NEVER OVERWRITE IT. The two are declared
+  // INDEPENDENT AND PARALLEL and restore DIFFERENT properties on these SAME two documents: 11b.3a
+  // restored PII-BEARING (the fourth bullet above), 11b.3b restores PAGINATED (controls 2 and 3).
+  // ⛔ Replacing this set with a pagination-only one would DROP a control both documents must state
+  // identically. ⇒ 11b.3b's count is **SIX**, ⛔ not five.
+  // ⚠ 11b.3a's `nomineeBankAccounts` restores ⛔ NEITHER control: its `.max(2)` is the shape of a
+  // substrate whose composite PK admits exactly `{1, 2}` — nothing to page, filter or walk.
   //
-  // ⭐ AND ONE PROPERTY NEITHER ROUTE ABOVE HAS: ⛔ THERE IS NOTHING TO DECRYPT. This read selects
-  // no Tier-1 column at all, so it costs ZERO KMS round-trips and holds no plaintext — that is the
-  // whole purchase of the D6(b) split. ⚠ It is ⛔ NOT a reason to move the read to `apps/public`:
-  // the rate-limit store and the audit line still live only here, and on a route fronted by a
-  // SEQUENTIAL identifier the ceiling is the load-bearing one.
+  // ⚠⛔ AND THE PROPERTY THAT WAS TRUE HERE IS NOW GONE: this entry used to say "⛔ THERE IS NOTHING
+  // TO DECRYPT … ZERO KMS round-trips", which was the whole purchase of the D6(b) split. ⛔ FALSE
+  // since 11b.3a. ⚠ What STILL holds is the conclusion it supported: this is ⛔ NOT a reason to move
+  // the read to `apps/public` — and it is now a much STRONGER reason not to, because the decrypt
+  // capability would go with it.
   //
   // ⚠ ITS HONEST LIMITS, recorded rather than glossed: `trustProxy: true` makes the forwarded
   // address CALLER-SUPPLIED (`2026-08-20-143` cl.9); a cached hit never reaches the origin, so
   // origin-side signals see only cache MISSES; and with controls 2/3 structurally absent,
-  // `limits.search` is the ONLY bound on walking the sequential identifier — ⭐ `D4-linkage` is
-  // OPEN and its cost lands on 11b.3a's AC2.
+  // `limits.search` is the ONLY bound on walking the sequential identifier — ⭐ which after 11b.3a
+  // fronts FOUR DECRYPTED Tier-1 fields, rendered in FULL for every Pariwar until the Trust sets a
+  // masking window (`D8-default` FAIL-OPEN, `2026-09-02-179` cl.1). ⚠⛔ Judging `limits.search`
+  // insufficient for that is **A DECISION** (`2026-09-02-183` cl.5), ⛔ not a tuning knob.
+  // ⚠⛔ AND A MASKING FLIP IS ⛔ NOT IMMEDIATE: `s-maxage=300` means the previous projection — which
+  // may be a FULL ACCOUNT NUMBER — keeps being served from every warm PoP for up to five minutes.
+  // ⛔ Direct SQL is NOT the operational fallback.
   // ⛔⛔ AND BUILT IS ⛔ NOT PUBLISHED. What keeps this surface dark is DEPLOYMENT plus the
   // counsel/Panel process — ⛔ not a code mechanism, and ⛔ never the publication kill switch (an
   // emergency control that defaults to ENABLED). ⛔ Allowlisting the route closes nothing.

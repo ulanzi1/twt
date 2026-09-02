@@ -77,6 +77,7 @@ import {
   MEMBER_DIRECTORY_ROW_FIELD_IDS,
   SAHYOG_DRIVE_ROW_FIELD_IDS,
   SAHYOG_VIVRAN_FIELD_IDS,
+  SAHYOG_VIVRAN_NOMINEE_ACCOUNT_FIELD_IDS,
 } from '../../../src/lib/surface-fields.js';
 import {
   buildTcRenderModel,
@@ -1091,6 +1092,18 @@ const SAHYOG_VIVRAN_TEST_LABELS: SahyogVivranLabels = {
   contributionsCount: (n) => `${String(n)} confirmed`,
   outageTitle: 'could not load',
   outageBody: 'our side',
+  bankTitle: 'Where the money goes',
+  bankGroupLabel: 'Bank details this drive pays to',
+  bankEqualDestinations: 'Either account may be used. Neither is preferred.',
+  bankAccountLabel: (rank) => `Account ${String(rank)}`,
+  labelAccountHolder: 'Account holder',
+  labelAccountNumber: 'Account number',
+  labelIfsc: 'IFSC',
+  labelVpa: 'UPI ID',
+  labelBankName: 'Bank',
+  labelBranch: 'Branch',
+  valueAccountEndingIn: (last4) => `Account ending in ${last4}`,
+  bankMaskedNote: 'Full details were shown while the drive was collecting.',
 };
 
 describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak leg is OPERATIVE', () => {
@@ -1111,6 +1124,29 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
           dispositionCategory: 'procedural_correction',
           reversedAt: '2026-08-20T05:00:00.000Z',
         },
+        // ⭐ Story 11b.3a — TWO accounts, one FULL and one MASKED, on purpose. A fixture with only
+        // one arm would leave the other's four Tier-1 declarations unexercised on the very leg that
+        // exists to catch a leak, and the masked arm is the one whose keys are ABSENT from the wire.
+        nomineeBankAccounts: [
+          {
+            masked: false,
+            accountRank: 1,
+            bankName: 'State Bank of India',
+            branch: 'Vaishali',
+            accountHolderName: 'A Holder',
+            accountNumber: '123456789012',
+            ifsc: 'SBIN0001234',
+            vpa: null,
+          },
+          {
+            masked: true,
+            accountRank: 2,
+            bankName: 'Bank of Baroda',
+            branch: null,
+            accountNumberLast4: '9012',
+            ifsc: 'BARB0VJVAIS',
+          },
+        ],
       },
     },
     SAHYOG_VIVRAN_TEST_LABELS,
@@ -1130,9 +1166,22 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
   const SAHYOG_VIVRAN_HTML = [
     '<dl>',
     ...sahyogVivranSurfaceFieldIds(model).map((fieldId) => {
-      const value = (model as unknown as Record<string, string | null>)[
-        Object.entries(SAHYOG_VIVRAN_FIELD_IDS).find(([, id]) => id === fieldId)![0]
-      ];
+      // ⭐ TWO MAPPINGS SINCE STORY 11b.3a: the top-level fields plus the per-ACCOUNT ones, exactly
+      // as the page renders them — the shell's `<dl>` and then one block per nominee bank account.
+      // ⛔ Looking only in the shell mapping would silently emit `''` for the four Tier-1 fields,
+      // making the leak leg pass over values it never actually saw.
+      const shellKey = Object.entries(SAHYOG_VIVRAN_FIELD_IDS).find(([, id]) => id === fieldId)?.[0];
+      const accountKey = Object.entries(SAHYOG_VIVRAN_NOMINEE_ACCOUNT_FIELD_IDS).find(
+        ([, id]) => id === fieldId,
+      )?.[0];
+      const value =
+        shellKey !== undefined
+          ? (model as unknown as Record<string, string | null>)[shellKey]
+          : accountKey !== undefined
+            ? ((model.nomineeAccounts[0] as unknown as Record<string, string | null> | undefined)?.[
+                accountKey
+              ] ?? null)
+            : null;
       const { output } = matrixFieldOutput('sahyog-vivran', fieldId, 'public', value ?? '');
       return `<dt>${fieldId}</dt><dd>${
         output === null ? '' : `<span data-field="${fieldId}">${output}</span>`
@@ -1148,9 +1197,14 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
     fields: sahyogVivranSurfaceFieldIds(model),
   };
 
-  it('⭐ the snapshot field set is NON-EMPTY, and is EXACTLY the ten classified fields', () => {
+  it('⭐ the snapshot field set is NON-EMPTY, and is EXACTLY the sixteen classified fields', () => {
     // ⛔ The EXACT set, ⛔ not "length > 0": a leg that only detects additions accepts a field
     // vanishing from the render while the matrix still claims it is shown.
+    // ⭐ TEN → SIXTEEN at Story 11b.3a: the four ruled Tier-1 nominee-bank fields plus their two
+    // Tier-3 siblings (`nominee_bank_name` / `nominee_branch`, which carry NO exception and need
+    // none). ⚠ They appear here even though the fixture's SECOND account is masked — the per-row
+    // ids come from a REPRESENTATIVE SHAPE, so the classified set does not shrink on a masked or
+    // bank-detail-less drive, which is the vacuous-leg defect this leg exists to avoid.
     expect(snapshot.fields).toEqual([
       'appeal_disposition_category',
       'appeal_reversal_at',
@@ -1160,32 +1214,133 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
       'district',
       'drive_closed_at',
       'drive_status',
+      'nominee_account_holder_name',
+      'nominee_account_number',
+      'nominee_bank_name',
+      'nominee_branch',
+      'nominee_ifsc',
+      'nominee_vpa',
       'pool_canonical_identifier',
       'pool_letter_code',
     ]);
   });
 
-  it('evaluateSnapshot passes — and the pass proves the per-claim page IS policed', () => {
-    const verdict = evaluateSnapshot(matrix, snapshot);
+  it('the TIER-LEAK leg passes — and the pass proves the per-claim page IS policed', () => {
+    // ⚠⭐ SPLIT AT STORY 11b.3a, ⛔ not weakened. This used to evaluate the FULL snapshot (fields +
+    // html) and assert `status: 'pass'`. `evaluateSnapshot` folds TWO independent legs into one
+    // verdict, and 11b.3a made the naked-PII leg fire on this surface FOR A REAL REASON — see the
+    // test immediately below, which records it rather than hiding it behind a friendlier fixture.
+    // ⇒ this leg is asserted on its own so a genuine TIER LEAK can still fail it.
+    const verdict = evaluateSnapshot(matrix, { ...snapshot, html: undefined });
     expect(verdict.status).toBe('pass');
     expect(verdict.leaks).toEqual([]);
   });
 
-  it('⭐⭐ AC2 — the surface declares ZERO Tier-1 fields at `public`, asserted POSITIVELY', () => {
-    // ⛔ NOT a permanent ceiling — see this block's header. 11b.3a and 11b.3b each add theirs WITH a
-    // cited ruling and each owes this assertion an update in the SAME commit.
+  it('⚠⛔ RECORDED, ⛔ NOT HIDDEN — a 12-digit account number trips the FR-74 AADHAAR heuristic', () => {
+    // ══════════════════════════════════════════════════════════════════════════════════════════
+    // ⭐⭐ A REAL, REACHABLE COLLISION BETWEEN TWO RULED CONTROLS — FOUND AT 11b.3a, ⛔ NOT INVENTED
+    // ══════════════════════════════════════════════════════════════════════════════════════════
+    // `2026-08-28-160` cl.10(a) rules the COMPLETE nominee bank account number publishable during
+    // an active drive, and `D8-default` is FAIL-OPEN (`2026-09-02-179` cl.1) ⇒ it renders in full
+    // for EVERY Pariwar until the Trust sets a window. Meanwhile `detectNakedPii` treats ANY bare
+    // 12-digit run on a `public` render as an **Aadhaar** number.
+    //
+    // ⚠ Indian account numbers are commonly 11-16 digits and **12 is a real length** (ICICI's), so
+    // this is ⛔ not a fixture artefact — it fires on production HTML. ⭐ Verified precisely: 11,
+    // 13 and 14-digit numbers do ⛔ NOT match the pattern; exactly 12 does.
+    //
+    // ⛔ THE DETECTOR IS ⛔ NOT WEAKENED HERE, AND THAT IS DELIBERATE. It is a launch-blocking FR-74
+    // control and it scans a STRING with ⛔ no field context, so it structurally cannot tell an
+    // AUTHORISED 12-digit account number from a naked Aadhaar number. Narrowing it — by length, by
+    // surface, or by field — is a **governance act on a launch-blocking control**, ⛔ not a fixture
+    // fix and ⛔ not this story's to make. ⚠ Equally, ⛔ do NOT "resolve" this by picking an
+    // 11-digit fixture: that hides a live conflict behind a friendlier number.
+    //
+    // ⇒ ROUTED at `deferred-work.md` (Story 11b.3a) with its trigger. ⭐ What this test does is make
+    // the behaviour ASSERTED rather than latent: if the detector, the ruling or the render changes,
+    // this fails and the collision is re-read instead of being silently resolved.
+    const verdict = evaluateSnapshot(matrix, snapshot);
+    expect(verdict.status).toBe('fail');
+    // ⛔ ZERO tier leaks — the failure is ENTIRELY the naked-PII heuristic, which is the whole
+    // point: the field system says this render is authorised, and the string scanner cannot see it.
+    expect(verdict.leaks).toEqual([]);
+    expect(verdict.piiMatches).toEqual([{ type: 'aadhaar', value: '123456789012' }]);
+  });
+
+  it('⭐ and the MASKED projection does NOT trip it — last-4 is four digits, not twelve', () => {
+    // ⚠ The other half of the finding, and it is the reassuring half: once a Pariwar's masking
+    // window elapses the page carries only "Account ending in 9012", so the collision above is
+    // scoped to the UNMASKED state. ⛔ That is ⛔ not a reason to call the conflict theoretical —
+    // fail-open means unmasked is the DEFAULT for every Pariwar until the Trust acts.
+    const maskedOnly = SAHYOG_VIVRAN_HTML.replace('123456789012', 'Account ending in 9012');
+    const verdict = evaluateSnapshot(matrix, { ...snapshot, html: maskedOnly });
+    expect(verdict.piiMatches).toEqual([]);
+    expect(verdict.status).toBe('pass');
+  });
+
+  it('⭐⭐ AC2 — the surface declares EXACTLY the FOUR ruled Tier-1 fields at `public`, BY NAME', () => {
+    // ⭐ WAS "ZERO", asserted positively, and 11b.3 said so in terms: *"⛔ NOT a permanent ceiling —
+    // 11b.3a and 11b.3b each add theirs WITH a cited ruling and each owes this assertion an update
+    // in the SAME commit."* This is 11b.3a paying that price: **0 → 4**.
+    //
+    // ⚠⛔ READ AS `+4`, ⛔ NEVER AS A HARD-CODED `4`. **11b.3b runs in parallel** and adds TWO
+    // entries of its own (the deceased member's name and the contributor's, `2026-09-02-173` /
+    // `-174`). If it merges first this reads **6**, ⛔ not 4 — and a hard-coded 4 would silently
+    // DELETE its two from the count, leaving the control asserting a number SMALLER than the truth,
+    // which is the one direction in which this gate fails OPEN. ⛔ The value here was read from the
+    // matrix at 11b.3a, when 11b.3b had not merged.
+    //
+    // ⛔ AND IT ASSERTS IDENTITY, ⛔ not just a count: a count-only assertion passes while a Tier-1
+    // declaration silently migrates to some other field.
     const surface = matrix.surfaces.find((s) => s.id === 'sahyog-vivran');
     expect(surface).toBeDefined();
     const tier1AtPublic = surface!.fields.filter((f) => f.pii_tier === 1 && f.tier === 'public');
-    expect(tier1AtPublic).toEqual([]);
+    expect(tier1AtPublic.map((f) => f.id).sort()).toEqual([
+      'nominee_account_holder_name',
+      'nominee_account_number',
+      'nominee_ifsc',
+      'nominee_vpa',
+    ]);
   });
 
-  it('⭐ and therefore carries NO `tier1_public_exception` block anywhere on the surface', () => {
-    // ⚠ The parser is FAIL-CLOSED IN BOTH DIRECTIONS, so this is not a restatement of the assertion
-    // above: an exception block on a field that is NOT Tier-1-at-public also fails. Asserting the
-    // absence directly means a decorative block cannot be added "ready for" 11b.3a either.
+  it('⭐ each of the four cites `2026-08-28-165` cl.1, and its scope names THIS surface only', () => {
+    // ⚠ The parser is FAIL-CLOSED IN BOTH DIRECTIONS, so this is not a restatement: a Tier-1 field
+    // at `public` WITHOUT an exception fails, and an exception on a field that is not Tier-1-at-
+    // public fails too. What this adds is that the four are ATTRIBUTED and BOUNDED — an exception
+    // block whose `scope` quietly reached another surface would parse fine.
     const surface = matrix.surfaces.find((s) => s.id === 'sahyog-vivran');
-    expect(surface!.fields.filter((f) => f.tier1_public_exception !== undefined)).toEqual([]);
+    const withException = surface!.fields.filter((f) => f.tier1_public_exception !== undefined);
+    expect(withException.map((f) => f.id).sort()).toEqual([
+      'nominee_account_holder_name',
+      'nominee_account_number',
+      'nominee_ifsc',
+      'nominee_vpa',
+    ]);
+    for (const f of withException) {
+      expect(f.tier1_public_exception?.decision).toBe('2026-08-28-165 cl.1');
+      expect(f.tier1_public_exception?.scope).toContain('sahyog-vivran');
+      // ⭐ `-165` cl.2 — masking does NOT change the tier, and each scope has to SAY so: the four
+      // entries cover BOTH states, and *"it is only last-4, so it isn't really Tier-1"* is foreclosed.
+      expect(f.tier1_public_exception?.scope.toLowerCase()).toMatch(/mask/);
+    }
+  });
+
+  it('⛔ NO FIFTH Tier-1 entry — the two Tier-3 bank fields carry no exception and need none', () => {
+    // ⚠ The other direction of the same control. `nominee_bank_name` / `nominee_branch` are Tier-3
+    // PLAINTEXT (public, IFSC-derived, non-identifying), so nothing is decrypted for them and an
+    // exception on either would be an "exception that does not except anything".
+    // ⛔ And the deceased member's name + the contributor's belong to **11b.3b**, gated on their own
+    // Panel rulings — ⛔ not pre-added here.
+    const surface = matrix.surfaces.find((s) => s.id === 'sahyog-vivran');
+    const tier3Bank = surface!.fields.filter(
+      (f) => f.id === 'nominee_bank_name' || f.id === 'nominee_branch',
+    );
+    expect(tier3Bank).toHaveLength(2);
+    for (const f of tier3Bank) {
+      expect(f.pii_tier).toBe(3);
+      expect(f.tier1_public_exception).toBeUndefined();
+    }
+    expect(surface!.fields.some((f) => f.id === 'deceased_member_name')).toBe(false);
   });
 
   it('⭐ every field on the surface is `public` — there is no unrenderable declaration', () => {

@@ -27,5 +27,17 @@
   "disposition.procedural_correction": "A procedural correction was made",
   "disposition.reconsideration_on_merits": "The claim was reconsidered on its merits",
   "outage.title": "We could not load this drive just now",
-  "outage.body": "This is a problem on our side, not a statement about the drive or about the trust's activity. Please try again in a few moments."
+  "outage.body": "This is a problem on our side, not a statement about the drive or about the trust's activity. Please try again in a few moments.",
+  "bank.title": "Where the money goes",
+  "bank.group_label": "Bank details for this drive",
+  "bank.equal_destinations": "Either account can be used. Neither one is preferred over the other.",
+  "bank.account_label": "Account {rank}",
+  "label.account_holder": "Account holder",
+  "label.account_number": "Account number",
+  "label.ifsc": "IFSC code",
+  "label.vpa": "UPI ID",
+  "label.bank_name": "Bank",
+  "label.branch": "Branch",
+  "value.account_ending_in": "Account ending in {last4}",
+  "bank.masked_note": "This drive has closed, so only part of the account is shown here. The trust holds the complete details in its own records."
 }

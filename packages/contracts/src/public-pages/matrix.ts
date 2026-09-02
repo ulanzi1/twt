@@ -379,7 +379,8 @@ export const PublicVsPrivateMatrixSchema = z
     // the costume of an exception.
     //
     // ⭐ WIDENED FROM "EXACTLY ONE" TO "EXACTLY THESE TWO" by Decision 2026-08-24-159 cl.2
-    // (Story 11b.1 / D1(b)). ⛔ The check is NOT relaxed — it is made STRICTER in the
+    // (Story 11b.1 / D1(b)), and to **SIX** by `2026-08-28-165` cl.1 (Story 11b.3a — the four
+    // nominee-bank pairs below). ⛔ The check is NOT relaxed — it is made STRICTER in the
     // dimension that matters. Before, ANY single field anywhere could hold the exception and
     // pass; now the permitted (surface, field) pairs are named, so an exception appearing on
     // some third field FAILS even while the COUNT is still within budget. A widening that
@@ -401,6 +402,31 @@ export const PublicVsPrivateMatrixSchema = z
       // ⛔ Its scope does NOT reach 11b.3 (Sahyog Vivran) or 11b.6 (In Memoriam): those keep
       // first-name + last-initial, and moving them requires each surface's OWN Panel ruling.
       ['sahyog-drive.deceased_member_name', '2026-08-24-159 cl.2 (D1(b))'],
+      // ── ⭐⭐ STORY 11b.3a — THE FOUR RULED NOMINEE-BANK PAIRS ON `sahyog-vivran` ────────────────
+      // `2026-08-28-165` **cl.1** ruled ALL FOUR in scope on this surface (⭐ `vpa` was the genuinely
+      // open one and is ruled IN), under `2026-08-28-160` **cl.10(a)**: the Panel does ⛔ not treat
+      // public bank details as an automatic reason to prohibit publication, and the transparency
+      // benefit during an active Sahyog Drive is ACCEPTED. **cl.3** ruled they are added AT SURFACE
+      // DECLARATION — ⇒ these four entries land in the SAME COMMIT as the YAML field declarations.
+      // ⛔ A pre-added entry is *"a standing permission with ⛔ no subject"* (routing note §11).
+      //
+      // ⭐⛔ FOUR ENTRIES, ⛔ NOT ONE, AND THAT IS THE CONTROL WORKING: the allowlist pins
+      // **(surface, field)** PAIRS, so each field is named rather than a ceiling being raised.
+      //
+      // ⚠⛔ MASKING DOES ⛔ NOT CREATE A SECOND TIER, so these four cover BOTH states — full during
+      // the active campaign, reduced to last-4 + bank/branch/IFSC after the per-Pariwar window
+      // elapses. `-165` **cl.2**, verbatim: *"Do not create a separate Tier-1 classification merely
+      // because the public projection is masked. The underlying account fields remain Tier-1."*
+      // ⇒ the masked projection needs ⛔ NO entry of its own, and the specific future argument —
+      // *"the masked view is only last-4, so it isn't really Tier-1"* — is FORECLOSED.
+      //
+      // ⚠ `nominee_bank_name` and `nominee_branch` are ⛔ NOT here and must never be: they are
+      // Tier-3 PLAINTEXT (public, IFSC-derived, non-identifying), so an entry for either would be an
+      // *"exception that does not except anything"*, which the field-level check already rejects.
+      ['sahyog-vivran.nominee_account_holder_name', '2026-08-28-165 cl.1'],
+      ['sahyog-vivran.nominee_account_number', '2026-08-28-165 cl.1'],
+      ['sahyog-vivran.nominee_ifsc', '2026-08-28-165 cl.1'],
+      ['sahyog-vivran.nominee_vpa', '2026-08-28-165 cl.1'],
     ]);
 
     const exceptions = data.surfaces.flatMap((surface) =>

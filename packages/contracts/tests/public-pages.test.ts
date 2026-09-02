@@ -478,10 +478,14 @@ describe('committed matrix — the POPULATED invariants (Story 11a.1)', () => {
   });
 
   // ⭐ WIDENED 2026-08-24 by Decision `2026-08-24-159` cl.2 (Story 11b.1 / D1(b)) from ONE
-  // ruled exception to EXACTLY TWO, BY NAME. ⛔ This asserts IDENTITY, not just the count —
-  // a count-only assertion would pass while an exception silently migrated to some third
-  // field, which is the failure the enumerated allowlist exists to make impossible.
-  it('carries EXACTLY the two ruled Tier-1 public exceptions, each attributed to its decision', () => {
+  // ruled exception to EXACTLY TWO, BY NAME — and 2026-09-02 by `2026-08-28-165` cl.1
+  // (Story 11b.3a) to **SIX**: the four nominee-bank pairs on `sahyog-vivran`. ⛔ This asserts
+  // IDENTITY, not just the count — a count-only assertion would pass while an exception silently
+  // migrated to some seventh field, which is the failure the enumerated allowlist exists to make
+  // impossible. ⚠⛔ AND THE FOUR ARE ⛔ NOT SIX: `nominee_bank_name` / `nominee_branch` are Tier-3
+  // PLAINTEXT and carry NO exception — an entry for either would be an "exception that does not
+  // except anything", which the field-level check rejects in the other direction.
+  it('carries EXACTLY the six ruled Tier-1 public exceptions, each attributed to its decision', () => {
     const exceptions = committed().surfaces.flatMap((s) =>
       s.fields.filter((f) => f.tier1_public_exception !== undefined).map((f) => ({ s, f })),
     );
@@ -492,6 +496,10 @@ describe('committed matrix — the POPULATED invariants (Story 11a.1)', () => {
     ).toEqual([
       'member-directory.member_name@2026-08-19-136',
       'sahyog-drive.deceased_member_name@2026-08-24-159',
+      'sahyog-vivran.nominee_account_holder_name@2026-08-28-165 cl.1',
+      'sahyog-vivran.nominee_account_number@2026-08-28-165 cl.1',
+      'sahyog-vivran.nominee_ifsc@2026-08-28-165 cl.1',
+      'sahyog-vivran.nominee_vpa@2026-08-28-165 cl.1',
     ]);
     for (const e of exceptions) expect(e.f.pii_tier).toBe(1);
   });
@@ -502,6 +510,9 @@ describe('committed matrix — the POPULATED invariants (Story 11a.1)', () => {
   // field being declared for the FIRST time has no honest `from` tier. Declaring a surface is
   // not an escalation. ⇒ exception blocks 1 → 2, escalation_count 1 → 1.
   it('declaring the second exception did NOT inflate the escalation ledger', () => {
+    // ⭐ NOR DID 11b.3a's FOUR, and for exactly the same reason: an `escalations:` entry records a
+    // tier MOVE (from → to) for a field ALREADY declared, and a field being declared for the FIRST
+    // time has no honest `from` tier. ⇒ exception blocks 2 → 6, escalation_count 1 → 1.
     expect(committed().escalation_count).toBe(1);
     expect(committed().escalations).toHaveLength(1);
     expect(committed().escalations[0]?.surface).toBe('member-directory');

@@ -56,36 +56,85 @@
 //
 // ── ⭐⭐ THE THIRD ROUTE (Story 11b.3) — AND THE CLAUSE ABOVE FIRED EXACTLY AS WRITTEN ──────────
 // ⛔ THE FIVE ARE ⛔ NOT REUSED HERE, AND STATING FIVE WOULD BE THE DEFECT THIS FILE ALREADY HAD ONCE,
-// INVERTED. `GET …/public-pages/sahyog-vivran/:poolCanonicalIdentifier` is NONE OF THE THREE THINGS
-// the clause above names: it is a SINGLE-ITEM GET on a path parameter (⛔ not a collection), it
-// declares `paginated: false` in the matrix (⛔ not paginated), and it carries ZERO Tier-1 fields
-// (⛔ not PII-bearing). ⇒ controls 2 (`PUBLIC_SURFACE_PAGE_SIZE_CAP`) and 3
-// (`PUBLIC_DIRECTORY_PAGE_HORIZON`) have ⛔ NO QUERY PARAMETER TO BIND TO and cannot be reused.
+// INVERTED. `GET …/public-pages/sahyog-vivran/:poolCanonicalIdentifier` is a SINGLE-ITEM GET on a
+// path parameter (⛔ not a collection) and declares `paginated: false` in the matrix (⛔ not
+// paginated). ⇒ controls 2 (`PUBLIC_SURFACE_PAGE_SIZE_CAP`) and 3 (`PUBLIC_DIRECTORY_PAGE_HORIZON`)
+// have ⛔ NO QUERY PARAMETER TO BIND TO and cannot be reused.
 //
-// ⭐ **D11(a)** (`2026-09-02-176`) RULED IT STATES ITS **APPLICABLE** SET — **THREE**:
+// ⚠⛔⛔ **AMENDED BY STORY 11b.3a — THE THIRD PROPERTY NO LONGER HOLDS, AND THAT IS THE POINT.**
+// This clause used to close with *"and it carries ZERO Tier-1 fields (⛔ not PII-bearing)"*. ⭐ TRUE
+// AT 11b.3; ⛔ **FALSE NOW**: 11b.3a declares **FOUR** ruled Tier-1 nominee-bank fields on this
+// surface (`2026-08-28-165` cl.1/cl.3, under `2026-08-28-160` cl.10) and the handler **DECRYPTS**
+// them. ⇒ **THIS ROUTE IS PII-BEARING.** ⛔ Amended, ⛔ not deleted — the previous claim is named so
+// nobody restores it. ⚠ The `login-wall.spec.ts` allowlist entry is amended in the SAME commit and
+// states the SAME count: *"two authoritative documents disagreeing on how many controls exist is the
+// defect this file records having already had once."*
+//
+// ⭐ **D11(a)** (`2026-09-02-176`) RULED IT STATES ITS **APPLICABLE** SET. ⚠ 11b.3a changed which
+// controls apply, ⛔ not the rule — the set is now **FOUR**:
 //   1. `config: { rateLimit: limits.search }` — the named SEARCH tier, UNMODIFIED. ⛔ Not
 //      `limits.read` (looser, and backwards for an enumeration surface), ⛔ not an inline ceiling,
 //      ⛔ not a hand-rolled `keyGenerator`. Same reasoning as control 1 above, unchanged.
+//      ⭐⭐ ON THIS ROUTE IT NOW CARRIES MORE WEIGHT THAN ANYWHERE ELSE IN THIS MODULE — see the
+//      ENUMERATION BOUND clause below, which is 11b.3a's addition.
 //   4. `X-Robots-Tag: noindex, nofollow` — the existing GLOBAL `onSend` hook. VERIFIED, ⛔ not rebuilt.
 //   5. The absence of any DETAIL or EXPORT affordance. ⭐ Note what this means HERE, because it reads
 //      differently on a single-item route: this route IS the detail view, so what "absence" names is
 //      that it exposes ⛔ no onward affordance — ⛔ no list, ⛔ no sibling links, ⛔ no `format`/`csv`,
 //      and the `.strict()` EMPTY query schema makes every query parameter a 400.
+//   6. ⭐ **NEW AT 11b.3a — THE BOUNDED, PROJECTED TIER-1 READ.** The four fields are decrypted
+//      SERVER-SIDE here and ⛔ never by `apps/public`, which must ⛔ not gain KMS capability for ONE
+//      field class when the KEK is shared across EVERY Tier-1 field class (`2026-08-20-143` cl.1,
+//      D6(a)). The fan-out is bounded by `DIRECTORY_DECRYPT_CONCURRENCY` and is **AT MOST EIGHT**
+//      values per page (four fields × at most two EQUAL accounts) against the directory's fifty —
+//      and only **TWO per account** when the Pariwar's masking window has elapsed, because
+//      `2026-08-28-160` cl.10(e)'s retention list excludes the holder name and the VPA. The masked
+//      projection is applied HERE, at the boundary: the wire's masked arm carries ⛔ no
+//      `accountNumber` key at all, so the full value cannot cross once masked (AC4).
 //
-// ⛔ CONTROLS **2** AND **3**: ⛔ NOT APPLICABLE — NO COLLECTION, NO `limit`, NO `page`.
-// ⚠⛔ AND THAT N/A HAS AN EXPIRY, ⛔ it is not a permanent exemption: **Story 11b.3b adds the
+// ⛔ CONTROLS **2** AND **3**: ⛔ STILL NOT APPLICABLE — NO COLLECTION, NO `limit`, NO `page`.
+// ⚠⛔ THE N/A STILL HAS AN EXPIRY, ⛔ it is not a permanent exemption: **Story 11b.3b adds the
 // contributor list, which makes this route PAGINATED and RESTORES BOTH CONTROLS.** ⇒ 11b.3b owes this
 // header and the `login-wall.spec.ts` allowlist entry an update IN ITS OWN COMMIT — a bare "not
 // applicable" with no expiry is how two controls quietly never come back.
-// ⭐ AND THE OTHER PROPERTY COMES BACK TOO: **Story 11b.3a** makes this route **PII-BEARING** (four
-// ruled Tier-1 nominee-bank fields, `2026-08-28-165` cl.1/cl.3). ⛔ Neither sibling may restore a
-// property and leave these two documents saying what they say today.
+// ⚠⛔⛔ **AND 11b.3b MUST EXTEND WHAT 11b.3a WROTE, ⛔ NEVER OVERWRITE IT.** The two stories are
+// declared INDEPENDENT AND PARALLEL and they restore DIFFERENT properties on these SAME two
+// documents: 11b.3a restored **PII-BEARING** (control 6 above), 11b.3b restores **PAGINATED**
+// (controls 2 and 3). ⛔ Replacing this set with a pagination-only one would DROP a control both
+// documents must state identically — which is the two-documents-disagreeing defect, arrived at from
+// the other side. ⇒ 11b.3b's count is **SIX**, ⛔ not five.
+// ⚠ 11b.3a's `nomineeBankAccounts` is ⛔ NOT a collection affordance and restores ⛔ neither control:
+// its `.max(2)` is the shape of a substrate whose composite PK admits exactly `{1, 2}` — there is
+// nothing to page, nothing to filter and nothing to walk.
 //
-// ⚠⛔ AND THE ONE RESIDUAL, RECORDED RATHER THAN GLOSSED: `P-YYYY-MM-###` is SEQUENTIAL and therefore
-// ENUMERABLE, and with controls 2/3 structurally absent, `limits.search` is the ONLY thing bounding a
-// walk of it. ⭐ `D4-linkage` is OPEN and its cost lands on **11b.3a**, which puts four DECRYPTED
-// Tier-1 fields behind this same identifier — routed to that story's AC2 by name, ⛔ not left here as
-// a shared worry.
+// ⚠⛔⛔ **THE ENUMERATION BOUND, STATED HERE BECAUSE 11b.3a IS WHAT MAKES IT EXPENSIVE.**
+// `P-YYYY-MM-###` is **SEQUENTIAL** and therefore ENUMERABLE; with controls 2/3 structurally absent,
+// **`limits.search` is the ONLY thing bounding a walk of it** — and after 11b.3a that walk reaches
+// **FOUR DECRYPTED TIER-1 FIELDS**, with `D8-default` ruled **FAIL-OPEN** (`2026-09-02-179` cl.1) so
+// the details render in FULL for every Pariwar until the Trust sets a window.
+// ⚠ D11(a) recorded controls 2 and 3 structurally N/A *precisely because there is no `page` and no
+// `limit` to bind them to*; it was option **(c)** — ⛔ NOT ruled — that would have obliged this route
+// to name what bounds identifier enumeration. ⇒ this clause names it.
+// ⚠⛔ **IF `limits.search` IS JUDGED INSUFFICIENT FOR A TIER-1-BEARING SINGLE-ITEM GET, THAT IS A
+// DECISION** (`2026-09-02-183` cl.5), ⛔ not a tuning knob. ⛔ Do ⛔ not quietly tighten or loosen the
+// tier on the route registration below. ⭐ `D4-linkage` is OPEN and ⛔ no inbound link to a `live`
+// drive is added.
+//
+// ⚠⭐ **AND THE INVERSION THIS ROUTE PUBLISHES, RECORDED HERE RATHER THAN LEFT FOR A REVIEWER**
+// (`D5-subject`): `account_holder_name` is guarded by a real multi-stage human approval chain —
+// verifier → state trustee → freeze — that ⛔ **CANNOT SEE IT**. The verifier console has ⛔ no bank
+// surface, ⛔ no verification handler reads the field, and even a tier-2 admin making a correction
+// reads back only a PRESENCE view (`holderNamePresent: boolean`). ⇒ this route publishes to the
+// internet a value ⛔ no approver in that chain can read. ⚠ `ifsc_validated` is ⛔ NOT corroboration —
+// a format + branch lookup proves the BRANCH exists, ⛔ not that the PERSON does. ⭐ Closing it is a
+// **verifier-console** act (Story 6.10's family), ROUTED at `deferred-work.md`, ⛔ not built here.
+//
+// ⚠⛔ **AND A MASKING FLIP IS ⛔ NOT IMMEDIATE.** This surface is `edge_cacheable` at `s-maxage=300`,
+// so the PREVIOUS projection keeps being served from **every warm PoP for up to five minutes** — and
+// here what is served stale is a **FULL ACCOUNT NUMBER**. ⛔ **Direct SQL is NOT the operational
+// fallback.** ⚠ This statement is one of THREE (the schema file and the admin console carry the
+// others), because it is the property most likely to be discovered during an incident rather than
+// before one.
 //
 // ⭐ WHAT THE SECOND ROUTE ADDS THAT THE FIRST DOES NOT HAVE — a PUBLICATION-BASIS gate on the
 // deceased member's name, evaluated BEFORE the Tier-1 decrypt so a row with no basis costs zero KMS
@@ -193,9 +242,10 @@ export function registerPublicPagesRoutes(app: FastifyInstance, deps: AppDeps): 
   );
 
   // ── Story 11b.3 — the THIRD route, and the FIRST that is not a collection (D6(b), D11(a)) ────
-  // ⭐ ITS DEFENCE IS THE HEADER'S THIRD-ROUTE CLAUSE — the **THREE** applicable controls, with 2 and
-  // 3 recorded as structurally N/A and their RESTORATION named (11b.3b's pagination). ⛔ The five are
-  // NOT reused, because this route is neither a collection, nor paginated, nor PII-bearing.
+  // ⭐ ITS DEFENCE IS THE HEADER'S THIRD-ROUTE CLAUSE — the **FOUR** applicable controls (⚠ THREE
+  // until Story 11b.3a added the bounded, projected Tier-1 read), with 2 and 3 recorded as
+  // structurally N/A and their RESTORATION named (11b.3b's pagination). ⛔ The five are NOT reused,
+  // because this route is neither a collection nor paginated — ⚠ but it IS **PII-BEARING** now.
   // ⚠ Its own `login-wall.spec.ts` allowlist entry states the SAME control count — ⛔ two
   // authoritative documents disagreeing on how many controls exist is the defect this file records
   // having already had once.
@@ -217,10 +267,14 @@ export function registerPublicPagesRoutes(app: FastifyInstance, deps: AppDeps): 
         response: { 200: PublicSahyogVivranResponse },
         tags: [PUBLIC_PAGES_TAG],
       },
-      // ⛔ UNMODIFIED, and the SAME named tier as the two routes above. ⭐ On THIS route it carries
+      // ⛔ UNMODIFIED, and the SAME named tier as the two routes above. ⭐⭐ On THIS route it carries
       // more weight than on either: with controls 2 and 3 structurally absent, it is the ONLY thing
-      // bounding a walk of the sequential `P-YYYY-MM-###`. ⛔ Not `limits.read`, ⛔ not an inline
-      // ceiling, ⛔ not a hand-rolled `keyGenerator`.
+      // bounding a walk of the sequential `P-YYYY-MM-###` — and since Story 11b.3a that walk reaches
+      // FOUR DECRYPTED TIER-1 FIELDS, rendered in FULL for every Pariwar until the Trust sets a
+      // masking window (`D8-default` FAIL-OPEN). ⛔ Not `limits.read`, ⛔ not an inline ceiling,
+      // ⛔ not a hand-rolled `keyGenerator`.
+      // ⚠⛔ AND CHANGING THIS TIER IS **A DECISION** (`2026-09-02-183` cl.5), ⛔ not a tuning knob —
+      // in EITHER direction. ⛔ Do not tighten it here and ⛔ do not loosen it here.
       config: { rateLimit: limits.search },
     },
     h.sahyogVivran,

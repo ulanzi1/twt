@@ -21,6 +21,7 @@ import {
 } from '../src/lib/sahyog-vivran-render.js';
 import {
   SAHYOG_VIVRAN_FIELD_IDS,
+  SAHYOG_VIVRAN_NOMINEE_ACCOUNT_FIELD_IDS,
   sahyogVivranSurfaceFieldIds,
 } from '../src/lib/surface-fields.js';
 
@@ -54,6 +55,18 @@ const LABELS: SahyogVivranLabels = {
   contributionsCount: (count) => `${String(count)} confirmed`,
   outageTitle: 'We could not load this drive just now',
   outageBody: 'This is a problem on our side.',
+  bankTitle: 'Where the money goes',
+  bankGroupLabel: 'Bank details this drive pays to',
+  bankEqualDestinations: 'Either account may be used. Neither is preferred.',
+  bankAccountLabel: (rank) => `Account ${String(rank)}`,
+  labelAccountHolder: 'Account holder',
+  labelAccountNumber: 'Account number',
+  labelIfsc: 'IFSC',
+  labelVpa: 'UPI ID',
+  labelBankName: 'Bank',
+  labelBranch: 'Branch',
+  valueAccountEndingIn: (last4) => `Account ending in ${last4}`,
+  bankMaskedNote: 'Full details were shown while the drive was collecting.',
 };
 
 const SETTLED: PublicSahyogVivranResponse = {
@@ -66,6 +79,7 @@ const SETTLED: PublicSahyogVivranResponse = {
     confirmedContributionCount: 137,
     fundingOutcome: 'fully_funded',
     appealReversal: null,
+    nomineeBankAccounts: [],
   },
 };
 
@@ -105,14 +119,26 @@ describe('buildSahyogVivranView — the settled drive', () => {
     expect(serialized).not.toMatch(/\braised\b/i);
   });
 
-  it('⭐⛔ carries NO person, under any key — the split’s load-bearing property', () => {
-    // ⛔ No name key of any kind may appear on this surface. 11b.3b adds the named-identity render
-    // layer WITH its Panel ruling and its allowlist entry; ⛔ this story adds neither, so a name key
-    // appearing here would be a Tier-1 field at `public` with no exception behind it.
+  it('⭐⛔ carries NO UN-RULED person, under any key — ⚠ NARROWED at 11b.3a, ⛔ not deleted', () => {
+    // ⚠⭐ THIS ASSERTION WAS *"carries NO person, under any key"* AND IT IS NARROWED, ⛔ NOT RELAXED.
+    // Story 11b.3a adds the four ruled nominee-bank fields WITH their Panel ruling
+    // (`2026-08-28-165` cl.1) and their four `RULED_TIER1_PUBLIC_EXCEPTIONS` entries, in the same
+    // commit as the declarations — which is exactly the price the original clause named. ⇒ what the
+    // test still forbids is a person key with ⛔ NO ruling behind it.
+    //
+    // ⛔ THE DECEASED MEMBER AND THE CONTRIBUTOR STAY FORBIDDEN — they are **11b.3b**'s, gated on
+    // `2026-09-02-173` / `-174`, and ⛔ this story adds neither.
+    // ⚠⛔ AND `nominee` IS ⛔ NOT SIMPLY REMOVED FROM THE LIST: the shell model carries only the
+    // CONTAINER key `nomineeAccounts`; the per-account attributes are asserted separately below.
     const keys = Object.keys(model);
-    for (const forbidden of [/name/i, /contributor/i, /verifier/i, /nominee/i, /deceased/i]) {
+    for (const forbidden of [/contributor/i, /verifier/i, /deceased/i]) {
       expect(keys.filter((k) => forbidden.test(k))).toEqual([]);
     }
+    // ⛔ The ONLY nominee-shaped key on the shell is the container. A second one would be a field
+    // nobody declared.
+    expect(keys.filter((k) => /nominee/i.test(k))).toEqual(['nomineeAccounts']);
+    // ⛔ And no NAME key on the shell at all — the account holder's name lives on the account row.
+    expect(keys.filter((k) => /name/i.test(k))).toEqual([]);
   });
 
   it('⭐⛔ carries NO prohibited financial key — the AC4 shape, at the render layer too', () => {
@@ -253,10 +279,15 @@ describe('buildSahyogVivranOutageView — ⛔ an outage is NOT a 404', () => {
 describe('the field-id derivation is OPERATIVE from this surface’s first commit (AC2)', () => {
   const { model } = buildSahyogVivranView(SETTLED, LABELS);
 
-  it('⭐ returns EXACTLY the ten classified field ids — ⛔ not "length > 0"', () => {
+  it('⭐ returns EXACTLY the sixteen classified field ids — ⛔ not "length > 0"', () => {
     // ⛔ Asserting the EXACT set — rather than non-emptiness — is what makes a DROPPED field fail here
     // too. A leg that only detects additions accepts a field vanishing from the render while the
     // matrix still claims it is shown.
+    // ⭐ TEN → SIXTEEN at Story 11b.3a: the four ruled Tier-1 nominee-bank fields plus their two
+    // Tier-3 siblings. ⚠⛔ AND NOTE THE FIXTURE: `SETTLED` carries `nomineeBankAccounts: []`, so all
+    // six appear here on a drive with NO bank details at all — because the per-row ids come from a
+    // REPRESENTATIVE SHAPE, ⛔ never from `nomineeAccounts[0]`. A derivation keyed on the first row
+    // would go vacuous on exactly the pages nobody would check.
     expect(sahyogVivranSurfaceFieldIds(model)).toEqual([
       'appeal_disposition_category',
       'appeal_reversal_at',
@@ -266,17 +297,44 @@ describe('the field-id derivation is OPERATIVE from this surface’s first commi
       'district',
       'drive_closed_at',
       'drive_status',
+      'nominee_account_holder_name',
+      'nominee_account_number',
+      'nominee_bank_name',
+      'nominee_branch',
+      'nominee_ifsc',
+      'nominee_vpa',
       'pool_canonical_identifier',
       'pool_letter_code',
     ]);
   });
 
-  it('⛔ maps ONLY the three booleans to null — every other key is a classified field', () => {
+  it('⛔ the shell maps ONLY the three booleans + the accounts CONTAINER to null', () => {
+    // ⭐ `nomineeAccounts` joins the three booleans at 11b.3a, and for a DIFFERENT reason worth
+    // keeping distinct: the booleans select between blocks of fixed i18n copy, while `nomineeAccounts`
+    // is a CONTAINER whose per-row attributes carry the ids. ⛔ Classifying the array itself would be
+    // meaningless; leaving its attributes outside the derivation would drop FOUR Tier-1 fields.
     const unrendered = Object.entries(SAHYOG_VIVRAN_FIELD_IDS)
       .filter(([, id]) => id === null)
       .map(([key]) => key)
       .sort();
-    expect(unrendered).toEqual(['apiUnavailable', 'isCollecting', 'wasReversedByAppeal']);
+    expect(unrendered).toEqual([
+      'apiUnavailable',
+      'isCollecting',
+      'nomineeAccounts',
+      'wasReversedByAppeal',
+    ]);
+  });
+
+  it('⛔ the per-ACCOUNT mapping maps ONLY the rank + the masked flag to null', () => {
+    // ⚠ `accountRank` is row IDENTITY, ⛔ not a rendered value: rendering "Account 1" / "Account 2"
+    // as a classified field would put an ordering that implies preference onto a page whose whole
+    // point is that the two accounts are EQUAL (Story 9.9). `isMasked` selects a copy block.
+    // ⛔ EVERY OTHER key is a classified field — the four Tier-1 ones and their two Tier-3 siblings.
+    const unrendered = Object.entries(SAHYOG_VIVRAN_NOMINEE_ACCOUNT_FIELD_IDS)
+      .filter(([, id]) => id === null)
+      .map(([key]) => key)
+      .sort();
+    expect(unrendered).toEqual(['accountRank', 'isMasked']);
   });
 
   it('⭐ NEGATIVE CONTROL — an unclassified key added to the model THROWS (the fail-closed coupling)', () => {

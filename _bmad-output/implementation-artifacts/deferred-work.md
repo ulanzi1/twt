@@ -4,6 +4,68 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 11b-3-sahyog-vivran-per-claim-story-surface, chunk 2 (2026-09-02)
+
+_Governance/copy/docs group follow-up pass — see the story's own Review Findings "Chunk 2" subsection
+for the full triage. Two items deferred; two other findings from this chunk were PATCHED (a confirmed
+double-brace i18n interpolation defect + a `microcopy.yaml` doc-accuracy fix), recorded in the story
+file directly rather than here._
+
+- **`ci-local.sh` job-count bookkeeping mismatch between `deferred-work.md` and `sprint-status.yaml`**:
+  one says 32→33, the other says 33→34 for the same new gate. Same recurring low-priority category
+  already tracked elsewhere in this file (the "D4 — Dev Agent Record job count discrepancy" item).
+- **`deferred-work.md`'s "THE AMOUNT-RAISED RENDER" item's `Trigger:` line omits the Panel-gating
+  condition** that 11b.3b also carries (stated in prose elsewhere in the same section, just not in the
+  formal `Trigger:` line) — doc-completeness nitpick only.
+
+⭐ **Separate, out-of-scope discovery (not this story's diff) — FOUND AND FIXED, per BigDev
+2026-09-02:** the double-brace i18n interpolation defect patched in `sahyog-vivran.json` this session
+(`{{count}}` vs the resolver's single-brace `{count}` contract) was ALSO live in
+`packages/i18n/locales/{en,hi}/sahyog-drive.json` — the sibling `/sahyog` route, confirmed reachable
+via `apps/public/src/pages/sahyog.astro`, predating this diff entirely. Same one-line fix applied to
+both locales; `apps/public/tests/sahyog-copy.test.ts`'s matching weak assertion
+(`not.toContain('{{count}}')`, which passed on the broken `"{42} confirmed"` output) strengthened to
+`not.toMatch(/[{}]/)`. ⛔ Not routed or filed separately — a live public-page rendering defect found
+mid-review, per this story's own precedent for the `DRIVE_CLOSED_AT`/`coerceDriveInstant` 500 bug.
+
+## Deferred from: code review of 11b-3-sahyog-vivran-per-claim-story-surface (2026-09-02)
+
+_3-layer parallel review (Blind Hunter / Edge Case Hunter / Acceptance Auditor) against
+`2270dc2..HEAD`, code-only groups (API, public app, domain, contracts, financial-truth CI gate).
+Governance/copy/docs group not yet reviewed — chunked out by diff size, follow-up run owed. Full
+findings (including decision-needed and patch items) are in this story's own Review Findings
+subsection._
+
+- **Enumeration + timing side-channel on `poolCanonicalIdentifier`**: the `P-YYYY-MM-###` space is
+  ≤1000 values/month; the only defense is the shared `limits.search` rate-limit tier (3 distinct
+  "not found" causes are byte-identical in body but not latency-normalized). Resolved by BigDev
+  (2026-09-02): deferred as-is — `limits.search` accepted as the interim bound, hardening owned by
+  11b.3a.
+- **Public unauthenticated GET awaits a global-advisory-lock audit write per disclosure**
+  (`writeAppealReversalDisclosureAudit` in `apps/api/src/modules/public-pages/handlers.ts:556`). The
+  bound is the shared `limits.search` rate-limit tier plus an assumed rarity of reversals — not an
+  enforced volume cap or backpressure. Already reasoned in-code as a stated tradeoff; watch if reversal
+  volume ever isn't rare.
+- **The financial-truth AST scanner is a name-matching tripwire**
+  (`scripts/sahyog-vivran-financial-truth/lib.ts`), defeatable by a rename/destructure-alias (rule 3)
+  or a template-literal-with-substitution (rule 1). The script's own README already frames it as "a
+  tripwire, not a formal proof" — accepted limitation of the chosen enforcement mechanism.
+- **Cache-then-transition staleness**: a `spawned` pool's cached 404 (`s-maxage=300`) can outlive the
+  pool's transition to `live` for up to 5 minutes, serving a stale "not found" to a warm PoP. Same
+  tradeoff class already accepted in this diff for the "pulled Pariwar" scenario.
+- **`isSahyogVivranResponse` (`apps/public/src/lib/sahyog-vivran.server.ts`) hand-rolls response
+  validation that duplicates the `@twt/contracts` Zod schema** instead of reusing it (stated reason:
+  avoid a second parse) — risks silent drift if the schema changes without a matching update here.
+- **Audit-entry `requestPayloadHash` (`apps/api/src/modules/public-pages/handlers.ts`) SHA-256-hashes
+  non-sensitive fields** (the already-public pool identifier + a bounded stage enum), adding
+  obfuscation with no confidentiality benefit and hurting auditability (can't grep the audit log by
+  drive).
+- **Some non-404 API failures collapse into the SSR page's generic 404, which then gets cached for 300s**
+  as if it were a stable "not found" rather than a transient rejection — needs its own review pass to
+  separate the classification.
+
+---
+
 ## Deferred / recorded from: implementation of story 11b-3-sahyog-vivran-per-claim-story-surface (2026-09-02)
 
 _Story 11b.3 is the public shell of the three-way 11b.3 split: the route, the domain read, the

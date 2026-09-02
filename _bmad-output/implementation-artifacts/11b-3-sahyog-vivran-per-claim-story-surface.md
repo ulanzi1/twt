@@ -4,7 +4,7 @@ baseline_commit: 2270dc24e48ec1eeb8aa0ccb8a2af031fbdc5cb3
 
 # Story 11b.3: Sahyog Vivran Per-Claim Story Surface — Public Shell + Reversed-Denial Publish Hook Consumer + Financial-Truth-From-Canonical-Events Invariant `[SURFACE]`
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -603,7 +603,162 @@ resolve it even in principle.
   - [x] Write this story's `deferred-work.md` section (newest-first), every item with a trigger.
   - [x] ⛔ **Re-affirm, ⛔ do not re-file**, 11b.1 item (e) (the public/member inversion).
 
----
+### Review Findings
+
+> Code review (2026-09-02) — 3-layer parallel review (Blind Hunter / Edge Case Hunter / Acceptance
+> Auditor) against `baseline_commit` `2270dc2..HEAD`, scoped to the code groups (API, public app,
+> domain, contracts, financial-truth CI gate — 35 files, ~5.7k diff lines). ⚠ **Governance/copy/docs
+> group (`.decision-log.md`, `epics.md`, `sprint-status.yaml`, this file, `deferred-work.md`, i18n,
+> `docs/tone-review-checklist.md`) was NOT reviewed this pass** — chunked out by size, follow-up run
+> owed.
+
+All 4 decision-needed items resolved by BigDev (2026-09-02):
+
+- [x] [Review][Defer] Enumeration + timing side-channel on `poolCanonicalIdentifier` — the
+      `P-YYYY-MM-###` space is ≤1000 values/month; the only stated defense is the shared
+      `limits.search` rate-limit tier. Separately, the 3 distinct "not found" causes are byte-identical
+      in body but not latency-normalized. — **deferred, as-is: `limits.search` accepted as the interim
+      bound; hardening owned by 11b.3a** [apps/api/src/modules/public-pages/handlers.ts]
+- [x] [Review][Patch] Financial-truth gate's `SCAN_FILES` (`scripts/sahyog-vivran-financial-truth/check.ts`)
+      does not include `apps/public/src/pages/sahyog-vivran/[poolCanonicalIdentifier].astro` today
+      (harmless now — the page has no amount reference, per D1(c)) and has no structural mechanism
+      forcing 11b.3a/11b.3b to add their new files — only prose ("MUST add them"). **Applied:** added
+      the `.astro` page to `SCAN_FILES` (`renderPath: true`); added `findUnscannedCandidates` (pure,
+      `lib.ts`) + a directory-walk safeguard in `check.ts` that fails the gate if a new
+      `*sahyog-vivran*`-named file (or any file under the route's own directory) lands outside
+      `SCAN_FILES`; 3 new unit tests in `lib.test.ts`. Verified: `pnpm sahyog-vivran-financial-truth:check`
+      and `:test` both pass. [scripts/sahyog-vivran-financial-truth/]
+- [x] [Review][Dismiss] Page-crash risk cluster: the matrix-visibility check `throw`s on a config typo,
+      and `Astro.clientAddress` + `passport.getPariwarPassportCached()`/`getDb()` calls in
+      `[poolCanonicalIdentifier].astro` are unguarded. — **dismissed: intentional, consistent with this
+      page's own "outage ≠ 404" design — a raw 500 IS the outage signal**
+- [x] [Review][Patch] `packages/domain/src/pool/sahyog-vivran-read.ts` reuses raw `sql<T>` fragments
+      (`CONFIRMED_CONTRIBUTION_COUNT`, `DECEASED_DISTRICT`, `ASSIGNED_MEMBER_COUNT`) from
+      `public-read.ts`, hardcoding that query's outer-table aliases with no runtime coercion of the
+      declared type — the exact bug class from `[[project_epic6_drizzle_correlated_subquery_bug]]`.
+      **Applied:** added `coerceCount` next to `coerceDriveInstant` in `public-read.ts` (same
+      fail-to-zero-not-NaN family), used it in `sahyog-vivran-read.ts` for `confirmedContributionCount`
+      / `assignedCount`. Scoped to this story's own file — `public-read.ts`'s pre-existing (out-of-diff)
+      call site not swept. [packages/domain/src/pool/sahyog-vivran-read.ts]
+
+- [x] [Review][Patch] `isSahyogVivranResponse` (`apps/public/src/lib/sahyog-vivran.server.ts`) and the
+      domain read (`packages/domain/src/pool/sahyog-vivran-read.ts`) don't validate
+      `confirmedContributionCount`/`assignedCount` as non-negative integers before render — add
+      `Number.isInteger` + `>= 0` guards. **Applied:** `isSahyogVivranResponse` now checks
+      `Number.isInteger` + `>= 0` (matching the wire contract's `.int().nonnegative()`); the domain-side
+      half covered by the `coerceCount` patch above. [apps/public/src/lib/sahyog-vivran.server.ts:197]
+- [x] [Review][Patch] `district` field doesn't strip zero-width/invisible Unicode whitespace before the
+      truthy check in the handler — a whitespace-only-but-invisible value renders a blank cell instead
+      of the "Not recorded" fallback the line was written to guarantee. **Applied:**
+      `.replace(/[\u200b-\u200f\ufeff]/g, '')` added before the truthy check.
+      [apps/api/src/modules/public-pages/handlers.ts:589]
+- [x] [Review][Patch] Accessibility: the appeal-reversal `<dt>` reuses `labels.appealTitle` (the same
+      text as the section `<h2>` two lines above) instead of a dedicated "Appeal stage" term, producing
+      a redundant/confusing accessible name under AC8. Add a dedicated i18n label. **Applied:** new
+      `label.appeal_stage` key (en/hi), `labelAppealStage` added to `SahyogVivranLabels`, `<dt>` now
+      uses it; both label fixtures (`sahyog-vivran-render.test.ts`, `scrape-test.spec.ts`) updated.
+      [apps/public/src/pages/sahyog-vivran/[poolCanonicalIdentifier].astro:363]
+- [x] [Review][Patch] Stale/contradictory doc comment on `poolLetterCode` in the new
+      `SahyogVivranRenderModel` interface says "(or the Pariwar's curated registry name), already
+      resolved" — contradicts the explicit "DELIBERATELY NOT RESOLVED" design stated in the sibling
+      contract file and the handler itself. **Applied:** doc comment corrected to state the
+      never-resolved invariant and why. [apps/public/src/lib/surface-fields.ts]
+- [x] [Review][Patch] `readPublicSahyogVivran`'s docstring oversells "resolved as of ONE instant" — the
+      two queries share a `now` parameter but are separate round trips, not one transaction/snapshot; a
+      write landing between them isn't bounded by the shared timestamp. Correct the docstring wording
+      (or make it an explicit, accepted-risk note). **Applied:** header comment corrected — `now` is a
+      bound, not a snapshot; the residual race is now stated explicitly.
+      [packages/domain/src/pool/sahyog-vivran-read.ts]
+
+**Verification:** all 4 touched packages typecheck clean (`@twt/domain`, `@twt/public` via
+`astro check`, `@twt/api`); `sahyog-vivran-financial-truth:check` + `:test` pass; the 6 directly
+affected vitest suites (`sahyog-vivran-read.test.ts`, `sahyog-vivran-render.test.ts`,
+`sahyog-vivran-client.test.ts`, `sahyog-vivran-copy.test.ts`, `scrape-test.spec.ts`,
+`matrix.server.test.ts`) plus the `packages/domain/tests/pool` + `scripts/microcopy` suites all pass
+(682 tests total across these runs).
+
+- [x] [Review][Defer] Public unauthenticated GET awaits a global-advisory-lock audit write per
+      disclosure (`writeAppealReversalDisclosureAudit`); the bound is `limits.search` + assumed
+      reversal rarity, not enforced volume/backpressure. Already reasoned in-code as a stated tradeoff —
+      flagged to watch if reversal volume ever isn't rare. — deferred, pre-existing tradeoff
+      [apps/api/src/modules/public-pages/handlers.ts:556]
+- [x] [Review][Defer] The financial-truth AST scanner is a name-matching tripwire, defeatable by a
+      rename/destructure-alias (Rule 3) or a template-literal-with-substitution (Rule 1) — the script's
+      own README already frames it as "a tripwire, not a formal proof." Accepted limitation of the
+      chosen enforcement mechanism. — deferred, pre-existing design limitation
+      [scripts/sahyog-vivran-financial-truth/lib.ts]
+- [x] [Review][Defer] Cache-then-transition staleness: a `spawned` pool's cached 404 (`s-maxage=300`)
+      can outlive the pool's transition to `live` for up to 5 minutes — same tradeoff class already
+      accepted in this diff for the "pulled Pariwar" scenario. — deferred, same accepted tradeoff class
+- [x] [Review][Defer] `isSahyogVivranResponse` hand-rolls response validation that duplicates the
+      `@twt/contracts` Zod schema instead of reusing it (stated reason: avoid a second parse) — risks
+      silent drift if the schema changes without a matching update here. — deferred, documented
+      performance tradeoff [apps/public/src/lib/sahyog-vivran.server.ts]
+- [x] [Review][Defer] Audit-entry `requestPayloadHash` SHA-256-hashes non-sensitive fields (the already-
+      public pool identifier + a bounded stage enum), adding obfuscation with no confidentiality
+      benefit and hurting auditability (can't grep the audit log by drive). — deferred, low-priority
+      simplification [apps/api/src/modules/public-pages/handlers.ts]
+- [x] [Review][Defer] Some non-404 API failures collapse into the SSR page's generic 404, which then
+      gets cached for 300s as if it were a stable "not found" rather than a transient rejection. —
+      deferred, needs its own review pass
+
+#### Chunk 2 — governance/copy/docs group (2026-09-02, follow-up pass)
+
+> Same 3-layer review, scoped to the group deferred from the first pass: `.decision-log.md`,
+> `epics.md`, `sprint-status.yaml`, this story file, `deferred-work.md`, both `sahyog-vivran.json`
+> locales + `catalog.ts`, `docs/tone-review-checklist.md`, `microcopy.yaml`, `package.json` (11 files,
+> ~1.1k diff lines). Most of the Blind Hunter layer's findings were meta-critiques of this project's
+> established self-attestation/Author-committed governance model (not diff-specific defects) or
+> already independently verified accurate by the Acceptance Auditor — dismissed as out of a code
+> review's scope. Two real, verified issues surfaced:
+
+- [x] [Review][Patch] **Confirmed, reproduced defect**: the two new interpolated i18n keys
+      (`value.contributions_count`, `appeal.stage`) in `sahyog-vivran.json` (en+hi) used
+      `{{count}}`/`{{stage}}` double-brace tokens, but `packages/i18n/src/resolver.ts`'s interpolation
+      contract is single-brace `{name}` only (`TOKEN = /\{(\w+)\}/g`) — the exact defect class the
+      codebase already has a named incident for (11a.2's `{{max}}` vs `{max}`, which threw on every
+      request). Reproduced directly: `{{count}} confirmed` with `{count:42}` resolves to
+      `"{42} confirmed"`, not `"42 confirmed"` — a stray-brace public-page rendering bug, not a throw
+      (so the existing loud-by-default missing-param guard never caught it). **Applied:** both tokens
+      changed to single-brace in both locale files. **Also strengthened** the two dedicated regression
+      tests in `sahyog-vivran-copy.test.ts` (lines ~77-89) — they asserted `not.toContain('{{count}}')`
+      / `not.toContain('{count}')`, which is the literal TOKEN NAME and would have passed on the actual
+      broken output `"{42} confirmed"` (no such substring). Now assert `not.toMatch(/[{}]/)` — no brace
+      of any kind survives. Verified: `sahyog-vivran-copy.test.ts` + `sahyog-copy.test.ts` both green
+      (154 tests). [packages/i18n/locales/{en,hi}/sahyog-vivran.json,
+      apps/public/tests/sahyog-vivran-copy.test.ts]
+- [x] [Review][Patch] `microcopy.yaml`'s comment claimed "FOUR prohibitions bite this surface" but the
+      enumerated list named `report` as a standalone 4th item and omitted `out-of-band-blame` — despite
+      the paragraph immediately above it stating `out-of-band-blame` is the very reason this scan entry
+      exists. `docs/tone-review-checklist.md`'s parallel "four automated families" list (correctly)
+      folds `report` under `member_only` vocabulary and includes `out-of-band-blame`. **Applied:**
+      corrected `microcopy.yaml`'s list to match. Verified: `scripts/microcopy` suite green (308 tests).
+      [microcopy.yaml]
+- [x] [Review][Defer] `deferred-work.md`'s `ci-local.sh` job-count item says "32 (pre-existing) → 33
+      (with this story's gate)"; `sprint-status.yaml`'s validation line says "34 jobs green (33 + the
+      new gate)" — a 1-job bookkeeping mismatch between "jobs defined in the script's header" vs "jobs
+      that ran green". Same recurring low-priority bookkeeping category this project already tracks
+      elsewhere (a near-identical prior entry: "D4 — Dev Agent Record job count discrepancy... project
+      memory records 14 `ci:local` jobs... Bookkeeping inconsistency only; actual code is unaffected").
+      — deferred, matches an established low-priority tracked category
+- [x] [Review][Defer] `deferred-work.md`'s new "THE AMOUNT-RAISED RENDER" item's formal `Trigger:` line
+      reads only "11b.3 merged", omitting that 11b.3b is *also* gated on the Panel rulings/counsel's
+      clause per the story's own header table — the fuller condition IS stated in prose elsewhere in
+      the same section, so this is a completeness nitpick on the `Trigger:` line specifically, not a
+      missing fact. — deferred, low-priority doc-completeness
+
+⭐ **Separate, out-of-diff-scope discovery — FOUND AND FIXED, per BigDev 2026-09-02:** the SAME
+double-brace defect (`"{{count}}"` for `value.contributions_count`) was live in
+`packages/i18n/locales/{en,hi}/sahyog-drive.json` — the sibling `/sahyog` index route's locale file,
+confirmed reachable via `apps/public/src/lib/sahyog-render.ts` → `apps/public/src/pages/sahyog.astro`,
+and NOT part of this diff (predates it entirely). `apps/public/tests/sahyog-copy.test.ts` had the
+identical weak assertion (`not.toContain('{{count}}')`, which passed on the broken `"{42} confirmed"`
+output) and did not catch it. Flagged mid-review, BigDev opted to fix immediately rather than file
+separately (mirrors this story's own `DRIVE_CLOSED_AT`/`coerceDriveInstant` precedent): both locales
+patched to single-brace, the test's assertion strengthened to `not.toMatch(/[{}]/)`. Verified:
+`@twt/public` typecheck clean (0 errors), 746 tests green across `apps/public/tests` +
+`scripts/microcopy`. [packages/i18n/locales/{en,hi}/sahyog-drive.json,
+apps/public/tests/sahyog-copy.test.ts]
 
 ## ⚖️ Decisions — ✅ **ALL RULED. D6(b) 2026-09-01; D1(b) · D4(b) · D7(a) · D11(a) · D12(a) on 2026-09-02** (`2026-09-02-176`). ⛔ **ZERO OPEN — ⚠ one new rider: `D4-linkage`**
 

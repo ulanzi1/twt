@@ -253,6 +253,9 @@ form are independent — is recorded **NOT ANSWERED**, ⛔ not answered in the n
 
 ## 13. ⚠⭐ CORRECTED — 2026-09-02, **Panel-ratified**. Logged as `2026-09-02-175`
 
+**Ratifying trustees:** **Kalpana Bharti**, **Dhiraj Rahul** — ⭐ the **same two** who answered §12,
+in the **same day's session**.
+
 ⛔ **§12 is left exactly as relayed and is ⛔ NOT rewritten** ([[feedback_supersede_never_reinterpret]]).
 This section records the correction beside it.
 

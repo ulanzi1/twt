@@ -6,7 +6,8 @@
 day. ⭐ **This note asks the Panel to disambiguate ITS OWN PHRASE** — it does ⛔ not ask for a new
 policy, and the substantive principle it turns on is one **the Panel already ruled** (§2).
 **Routed to:** Trustee Panel.
-**Status:** ⏳ **ROUTED, ⛔ NOTHING RATIFIED AND NOTHING APPLIED.**
+**Status:** ✅ **ANSWERED 2026-09-02** — see **§10**. **THE TRUST CENTRALLY — `super_admin`.**
+Logged as `.decision-log.md#decision-2026-09-02-178`. ⛔ Nothing is **applied** yet.
 
 > ### 📖 **Panel members — please start at [Appendix A: In plain words](#appendix-a--in-plain-words).**
 > It is at the end and is **complete on its own** — the whole question, the options, and what follows
@@ -168,10 +169,56 @@ is not engaged"*, which is **false and has been since 2026-06-21** (`2026-08-24-
 
 ---
 
+## 10. ✅ ANSWERED — 2026-09-02 (BigDev, relaying the Panel). Logged as `2026-09-02-178`
+
+**Ratifying trustees:** **Dhiraj Rahul**, **Kalpana Bharti**.
+
+| | Question | Answer |
+|---|---|---|
+| **Q1** | Did *"Trust-Admin controlled"* speak to authority, or only scope? | ✅ **AUTHORITY** — and the authority is the **Trust's** |
+| **Q2** | Who may change it? | ✅ **THE TRUST CENTRALLY — `super_admin`.** ⛔ Not `pariwar_admin` |
+| **Q3** | If `pariwar_admin`, does it reach the name control? | ⭐ **VACATED** — its antecedent did ⛔ not obtain. ⛔ Not answered, ⛔ not answered in the negative; the name control is **untouched** |
+
+⇒ ⭐⭐ **`2026-08-19-136` cl.3 is FOLLOWED, ⛔ not departed from.** The knob is **per-Pariwar in SCOPE**
+and **central in AUTHORITY** — exactly like the public-name presentation policy. ⭐ **The two controls
+are now aligned**, ⛔ not divergent.
+
+⭐ **AND §2's INFERENCE WAS PUT, ⛔ NOT ASSUMED — AND ADOPTED.** Applying cl.3 (subject: the **name**
+policy) to **bank masking** was flagged as an inference and cited `2026-09-02-175` as the live warning
+against extending a ruling past its subject. ⇒ it was **asked**, and is now **ruled**. ⛔ For **this
+control** only; ⛔ nothing extends by analogy further.
+
+⛔ **`pariwar_admin` is FORECLOSED**, and ⛔ `district_admin` / `state_trustee` stay excluded — either
+grant would be **inert** (§7).
+
+### ⛔⛔ ONE NEW QUESTION THE ANSWER CREATED — `D8-default`
+
+⚠ **Because authority is central, a Pariwar ⛔ cannot set its own window** ⇒ **whatever the code does
+for a Pariwar with NO schedule row governs EVERY Pariwar until the Trust acts.** ⛔ cl.10 states ⛔ no
+default — only what it is **not** (*"immediate masking is ⛔ NOT hard-coded"*).
+⇒ **fail-OPEN** (stays visible until configured), **fail-CLOSED** (masked at close), or **a single
+Trust-set global default** the per-Pariwar row overrides. ⛔ Raised on Story 11b.3a, ⛔ **not** decided
+here.
+
+---
+
 # Appendix A — In plain words
 
 *Added 2026-09-02 for the Panel, in the same form as the two notes you answered today. ⛔ Nothing here
 is new — it is §1–§9 without the technical detail. Where the two differ, the numbered sections govern.*
+
+> ## ✅ **ANSWERED — 2026-09-02, by Dhiraj Rahul and Kalpana Bharti: THE TRUST CENTRALLY.**
+> **The Trust decides centrally how long a family's bank details stay visible after a drive closes —
+> ⛔ not a Pariwar Admin.** That matches what you decided in August for the names setting, so the two
+> now work the same way.
+>
+> ⚠ **One thing your answer creates, and we will come back to you on it.** Because the Trust decides
+> centrally, a Pariwar **cannot** set its own window. ⇒ whatever happens for a Pariwar the Trust has
+> **not yet configured** applies to **everyone**, by default. ⛔ Your August ruling did not say what
+> that should be: **do the details stay visible until the Trust sets a window, or are they hidden
+> automatically once the drive closes?**
+>
+> *The rest of this appendix is kept as the record of what was asked.*
 
 ## The short version
 

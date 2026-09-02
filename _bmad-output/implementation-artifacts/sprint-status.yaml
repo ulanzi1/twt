@@ -1,4 +1,44 @@
-# last_updated: 2026-09-02m (✅✅ **`INV-form` RULED MODE-RESOLVED (BigDev, `2026-09-02-181`) ⇒ STORY
+# last_updated: 2026-09-02n (⭐ **SECOND COMBINED VALIDATION OF `11b-3` / `11b-3a` / `11b-3b`**
+#   (`bmad-create-story validate`), run as ONE pass — a per-story pass structurally cannot see the split
+#   seam. **ELEVEN findings applied across the three files.** ⛔ ZERO ROWS FLIP — all three stay
+#   `ready-for-dev`; every finding was a story-file defect, ⛔ none a status change and ⛔ none a new
+#   decision.
+#
+#   ⭐⭐ THE TWO SHARPEST ARE **NEW**, CREATED BY RULINGS THAT LANDED AFTER 11b-3b WAS LAST VALIDATED:
+#   (1) ⛔⛔ **11b-3b HARD-CODED THE FULL NAME.** `-173`/`-174` ruled a **CEILING**, ⛔ not a literal:
+#       `2026-08-19-136` cl.1 FAILS any build whose public name form cannot change without a code
+#       change; `/sahyog` already resolves through the stored per-Pariwar mode
+#       (`apps/public/src/lib/sahyog-render.ts:213`); and `-181` just put the MEMBER side on that SAME
+#       mode. ⇒ for a Pariwar set to `shielded_name`, `/sahyog` shields, the member app (post-8.16)
+#       shields, and `/sahyog-vivran` would publish IN FULL — ⭐ the inversion `-180` just closed,
+#       RE-OPENED POINTING THE OTHER WAY, on the surface with the widest reach. ⛔ No gate sees it.
+#       ⇒ new **Trap 6** + AC2/AC3/Task 2. ⚠ With it, the MONONYM path: `resolvePublicMemberName`
+#       returns `''` (⇒ omit the row) and ⛔ falling through to `firstName` publishes the whole stored
+#       legal name (`public-name.ts:84`) — here an omitted row is INDISTINGUISHABLE from an RTBF one.
+#   (2) ⛔ **11b-3b NEVER MENTIONED THE TIER-1 DECRYPT** — names are ciphertext, one KMS round-trip per
+#       row, **50 + 1 per page** at the cap — while **11b-3a**, whose page costs AT MOST EIGHT,
+#       documents the bound, the boundary and the `apps/public`-no-KMS fence. ⭐ The two were inverted.
+#
+#   ⭐ AND ONE ONE-WAY SIBLING ROUTE, THE SHAPE THIS EPIC HAS ALREADY BEEN BURNED BY: 11b-3b folded its
+#   `epics.md` annotation duty into "11b-3's already-owed annotation" — ⛔ but the three stale ACs are
+#   Story **8.3**'s (`:3145`), the **PDF**'s (`:3238`) and **11b.2**'s (`:4931`), ⛔ NOT under Story
+#   11b.3's heading, and ⛔ NOT in 11b-3's Task 0 list — and **11b-3 MERGES FIRST**. ⇒ it landed
+#   NOWHERE. 11b-3's Task 0 gains **item (iii)**; 11b-3b VERIFIES it and writes it itself if absent.
+#
+#   ⚠ THE REST: **11b-3a's AC1 contradicted its own Trap 2** (*"updated from 0 to 4"* vs *"NEVER 0 → 4,
+#   READ IT"*) — a hard-coded `4` deletes 11b-3b's two entries and the control fails **OPEN** ·
+#   **11b-3a lacked 11b-3b's "extend, ⛔ never overwrite"** for the `routes.ts` + `login-wall.spec.ts`
+#   control count the two rewrite IN PARALLEL · **`INV-scope` is ⛔ no longer open** (`-180` ALL FOUR ·
+#   `-181`), and 8-16 is `ready-for-dev` TODAY while 11b-3b is gated behind 11b-3 ⇒ AC8 now READS
+#   `deferred-work.md` item (e) rather than restating *"the member app shields on three"* ·
+#   **`matrix.ts:401-402`'s fence comment goes FALSE** when 11b-3b's entries land three lines below it
+#   and nobody owned amending it (⛔ the 11b.6 half stays standing) · **`D4-linkage` re-read in BOTH
+#   directions** — discoverability on 11b-3, identifier ENUMERATION on 11b-3a, where D11(a) left
+#   `limits.search` the only (unstated) bound over four decrypted Tier-1 fields, fail-open per `-179`
+#   · **the count is the EVENT count, ⛔ never a row count** (`-169`: RTBF omits the row and STILL
+#   counts) ⇒ 11b-3b's page reads "N confirmed" beside fewer than N rows BY DESIGN.)
+#
+# last_updated_prior: 2026-09-02m (✅✅ **`INV-form` RULED MODE-RESOLVED (BigDev, `2026-09-02-181`) ⇒ STORY
 #   8-16's TASK-0 STOP GATE IS DISCHARGED. ⭐⭐ NO STORY IN THE 11b.3 / 8.16 FAMILY HAS AN OPEN
 #   DECISION.** ⛔ ZERO ROWS FLIP — `8-16` stays `ready-for-dev` (the gate lived in the story file).
 #

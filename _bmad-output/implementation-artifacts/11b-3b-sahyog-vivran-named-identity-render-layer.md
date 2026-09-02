@@ -113,7 +113,7 @@ and ⛔ **RTBF is a separate rule that is ⛔ NOT collapsed into it** — see Tr
 | The confirmed-contributor **wire** | ✅ `ConfirmedContributorRow = { firstName: min(1), lastInitial: max(16) }`, `.strict()` — ⚠ a **BUILT-TO** form, ⛔ **not a ratified one** | `packages/contracts/src/contributions/pool-contributor-list.ts:42-51` |
 | The **mobile** render layer (11b.2b) | ✅ **LIVE** — the adapter + per-row `try/catch` pattern to mirror | `apps/mobile/components/contributor-list/PoolContributorList.tsx` |
 | `resolvePublicMemberName` | ✅ the **Pariwar-configured** form (`full_name` is the **DEFAULT**, ⛔ not a constant — `2026-08-19-136` cl.1) | ⚠ `packages/domain/src/kyc/public-name.ts:73` — ⛔ **NOT** `pool/public-read.ts`, which holds the different `NAME_PUBLICATION_AUTHORISED` SQL predicate at `:283` |
-| `resolvePoolIdentity` | ✅ **hard-codes the SHIELDED** form; used by the **member-facing** My Pool card / Yogdaan Bahi / notifications (8.6/8.7/8.8) | `packages/domain/src/notifications/pool-identity.ts:76` |
+| `resolvePoolIdentity` | ✅ **hard-codes the SHIELDED** form; used by the **member-facing** My Pool card / Yogdaan Bahi / notifications (8.6/8.7/8.8). ⚠⭐ **Story 8.16 replaces the hard-coding with a read of the SAME stored per-Pariwar mode** (`-181`, `ready-for-dev`) — ⛔ do ⛔ not encode today's form as permanent | `packages/domain/src/notifications/pool-identity.ts:76` |
 | The `sahyog-vivran` surface | ✅ **created by 11b.3** with ⛔ **zero** Tier-1 fields + a test asserting that count | `public-vs-private-matrix.yaml` |
 | The ruled Tier-1 allowlist | ✅ **two** entries — `member-directory.member_name`, `sahyog-drive.deceased_member_name`. ⛔ **Neither is a contributor** | `matrix.ts:392-404` |
 | C-1's ruling: `apps/public` **adds `@twt/ui`** | ✅ *"an **ORDINARY DEPENDENCY ADDITION**"* (`2026-08-23-154` cl.6); ⛔ **there was no prior declination** (`.decision-log.md:1734`) | — |
@@ -132,7 +132,7 @@ and ⛔ **RTBF is a separate rule that is ⛔ NOT collapsed into it** — see Tr
 
 ---
 
-## ⛔ THE FIVE TRAPS
+## ⛔ THE SIX TRAPS
 
 ### Trap 1 — ⭐⛔ THE BASIS IS SETTLED AND THE FORM IS NOT, AND A READER WHO CHECKS ONLY THE BASIS CONCLUDES WRONGLY
 
@@ -181,6 +181,14 @@ rationale flags its comparative ground as *"⛔ not to be cited for a third surf
 not re-file it** — *"two records of one obligation is its own failure."* Whether this story **resolves**
 it is **D9**.
 
+⭐⭐ **AND IT NOW HAS A DESTINATION AND A DATE — read D9's update box before AC8.** The Panel directed
+the inversion **CLOSED** (`2026-09-02-179` cl.3); Story **`8-16`** owns the member-side work and is
+`ready-for-dev` with **both** its decisions ruled (`-180` ALL FOUR · `-181` MODE-RESOLVED). ⇒ ⚠ **the
+member app's shielded form is a state with an expiry**, and ⛔ this story must ⛔ not encode it as
+permanent — ⛔ neither in `deferred-work.md` (AC8) nor in a comment. ⭐ **And `-181` is why Trap 6
+exists:** with the member side mode-resolved, a hard-coded literal HERE is the only way left to
+re-open the divergence.
+
 ### Trap 4 — ⛔ THE FlashList `keyExtractor` RE-TRIGGER FIRES **HERE**, AND ITS BLOCKER IS STILL TRUE
 
 The Story 8.3 deferral (*"`keyExtractor` includes `index`, so row identity churns"*) records its
@@ -212,6 +220,39 @@ contributor's name can render from MMKV for up to **7 days offline** and **survi
 shared device**. ⭐ **That residual is a MOBILE one** — ⛔ this Astro surface has no MMKV — ⚠ but the
 **edge cache is this surface's equivalent exposure**: an erasure keeps being served from every warm
 PoP at `s-maxage=300`. ⛔ **State it; ⛔ do not re-derive it as new.**
+
+
+### Trap 6 — ⭐⛔ *"FULL NAME"* IS A **CEILING**, ⛔ NOT A LITERAL — AND HARD-CODING IT RE-CREATES THE INVERSION POINTING THE OTHER WAY
+
+`-173` and `-174` ruled the full name **AUTHORISED**. ⛔ They did ⛔ **not** make it a constant, and
+three live facts say so:
+
+- `2026-08-19-136` **cl.1** — *"a build in which the public name form cannot be changed without a code
+  change **FAILS** this clause."* `kyc/public-name.ts` implements exactly that: `full_name` is
+  `DEFAULT_PUBLIC_NAME_PRESENTATION_MODE`, ⛔ **never a hard-coded literal**, and the mode is **stored
+  per Pariwar** under a `super_admin` key (re-affirmed for this class at `2026-09-02-178`).
+- ⭐ **The sibling public surface ALREADY resolves through it.** `apps/public/src/lib/sahyog-render.ts:213`:
+  the name's form *"was already decided server-side by `resolvePublicMemberName` under the Pariwar's
+  configured mode, and ⛔ re-deriving or re-shortening it here would be the second copy of the
+  presentation policy that `-136` cl.2 forbids."*
+- ⭐⭐ **`2026-09-02-181` just put the MEMBER side on the SAME stored mode** (Story 8.16, `INV-form`
+  **MODE-RESOLVED**), *"so the two forms can ⛔ **never diverge again BY CONSTRUCTION**."*
+
+⇒ ⛔⛔ **A HARD-CODED FULL NAME HERE BREAKS THAT GUARANTEE FROM THE PUBLIC SIDE.** For a Pariwar whose
+stored mode is `shielded_name`: `/sahyog` shields, the member app (post-8.16) shields, and
+`/sahyog-vivran` would publish **in full** — ⭐ the inversion this family just closed, **re-opened
+pointing the other way**, on the surface with the widest reach. ⚠ It is also the mirror of the trap
+`-181` names for the member side, and it is ⛔ **not** caught by any gate: every allowlist check, tier
+check and CI leg passes on a hard-coded literal.
+
+⚠⛔ **AND THE RESOLVER CARRIES A SECOND TRAP — ⛔ MONONYMS.** In `shielded_name` mode
+`resolvePublicMemberName` returns **`''`** for a single-token name (`2026-08-21-145` cl.3 — *"a shorter
+page beats an unshielded name on a page that promises shielding"*), and **every caller treats `''` as
+"omit this row"**. ⛔ Do ⛔ **not** *"fix"* that by falling through to `firstName`: `public-name.ts:84`
+records that exact bug — for a mononym it returns **the entire stored legal name**, byte-identical to
+what `full_name` publishes, so a Pariwar performed the governed privacy act and **it did nothing**,
+with ⛔ no signal anywhere. ⚠ **Mononyms are common in India; ⛔ this is not a corner case.**
+⇒ **AC3 rules the behaviour for both subjects** — ⛔ it is ⛔ not discovered at render.
 
 ---
 
@@ -258,15 +299,37 @@ the Panel withdrew
 **And** ⭐ **both land in the SAME commit**, as this AC was always written — `D11-order` is **VACATED**
 now that both names are ruled at the same form. ⛔ **Never pre-add an entry** ahead of its field: *"a
 pre-added entry is a standing permission with ⛔ no subject"*
-**And** ⛔ **the render form is the FULL NAME, ⛔ not `first + lastInitial`** — ⚠ the shipped
+**And** ⛔ **the RULED form is the FULL NAME, ⛔ not `first + lastInitial`** — ⚠ the shipped
 `ConfirmedContributorRow` (`pool-contributor-list.ts:42-51`) is the **wrong shape for this surface**
 and the three epic ACs that assume the shielded form (`epics.md:3145` · `:3238` · `:4931`) are
-**STALE**, superseded by `-174`. ⛔ Annotation is folded into **11b.3's** already-owed `epics.md`
-annotation — ⛔ do ⛔ not write a second one
+**STALE**, superseded by `-174`. ⛔ Annotation is folded into **11b.3's Task 0 annotation, item
+(iii)**, which names all three by line — ⛔ do ⛔ not write a second one
+**And** ⚠⛔⛔ **VERIFY ITEM (iii) ACTUALLY LANDED — ⛔ do not assume it.** The three are ⛔ **NOT** under
+`epics.md`'s Story 11b.3 heading and ⛔ not in one place (`:3145` is **Story 8.3**'s own *"I want"*,
+`:3238` the **Contribution Note PDF**, `:4931` **Story 11b.2**), and **11b.3 merges BEFORE this story
+starts**. ⇒ ⭐ **if item (iii) is absent from the merged annotation, THIS story writes it** — ⛔ an
+obligation routed to a story that has already shipped lands **nowhere**
+([[feedback_circular_deferral_between_sibling_stories]])
+**And** ⭐⭐ **THE RULING IS A CEILING, ⛔ NOT A CONSTANT — THE RENDER RESOLVES THROUGH THE STORED
+PER-PARIWAR MODE** (**Trap 6**). `-173`/`-174` authorise the full name; `2026-08-19-136` **cl.1** rules
+that *"a build in which the public name form cannot be changed without a code change **FAILS** this
+clause"*, and `full_name` is the **DEFAULT** in `kyc/public-name.ts`, ⛔ never a literal
 **And** each YAML field carries a full `tier1_public_exception: {decision, rationale, scope}` whose
-`scope` fences it to **this surface** and states the **ruled form**
+`scope` fences it to **this surface** and states the **ruled CEILING** — ⛔ never the bare words *"full
+name"*, which read as a constant to the next author and would make the entry contradict `-136` cl.1
 **And** ⭐ the surface's Tier-1-count test is updated **in the same commit** (⛔ never deleted) — ⚠ its
 value depends on whether **11b.3a** has merged first; ⛔ **read it, ⛔ do not assume it**
+**And** ⭐⛔ **THE FENCE COMMENT THREE LINES ABOVE THE ENTRIES IS AMENDED IN THE SAME COMMIT — ⛔ IT GOES
+FALSE THE MOMENT THEY LAND.** `matrix.ts:401-402` reads *"Its scope does NOT reach 11b.3 (Sahyog
+Vivran) or 11b.6 (In Memoriam): **those keep first-name + last-initial**, and moving them requires each
+surface's OWN Panel ruling."* ⚠ Its **second half is now SATISFIED** for this surface (it got its own
+rulings) and its **first half becomes UNTRUE** for `sahyog-vivran` — ⭐ while staying **TRUE for
+11b.6**, which is ⛔ **not** touched and whose fence ⛔ must survive the edit
+**And** ⇒ ⭐ **amend the sentence to record `sahyog-vivran` as RULED (citing `-173` / `-174`) and leave
+the 11b.6 fence standing** — ⛔ **amendment, ⛔ never a rewrite** of the surrounding grounds
+([[feedback_supersede_never_reinterpret]]), ⛔ never a deletion. ⚠ **This story is what makes it stale,
+so it is ⛔ THIS story's to fix** — ⛔ that is Trap 6's discipline applied to the one line this diff
+falsifies, ⛔ not a sweep of the comment family
 **And** ⛔⛔ **an entry is ⛔ NEVER added to make a failing check pass** — *"the gate failing is the gate
 working."*
 
@@ -281,6 +344,24 @@ about where **tokens** live)
 **And** the `.astro` component consumes `deriveContributionRowViewModel` and renders the **name parts**
 in the ruled form — ⭐ **the JOIN happens in the render layer, ⛔ never in the presenter** (D9(a) is what
 keeps the form question open, and moving the join would make a routed deferral false)
+**And** ⭐⭐ **THE FORM COMES FROM `resolvePublicMemberName(mode, storedName)` UNDER THE PARIWAR'S
+STORED MODE — ⛔ NEVER FROM A LITERAL** (**Trap 6**). It is resolved **server-side at `apps/api`**,
+exactly as the sibling public surface already does (`sahyog-render.ts:213`), and the render layer joins
+**parts** — ⛔ it does ⛔ **not** choose a form, ⛔ does not re-shorten one, and ⛔ does not hold a
+second copy of the presentation policy (`-136` cl.2)
+**And** ⚠⛔ **THE MONONYM PATH IS RULED HERE, ⛔ not discovered at render.** Under `shielded_name`
+`resolvePublicMemberName` returns **`''`** for a single-token name and every caller treats `''` as
+**omit this row**. ⇒ ⭐ **the row is OMITTED, the omission is COUNTED like any other (AC5), and ⛔ NO
+marker announces it** — an omission that announces itself is an enumeration signal. ⛔⛔ **Do ⛔ NOT
+fall through to `firstName`**: `public-name.ts:84` records that as publishing the **entire stored legal
+name** on a page that promises shielding
+**And** ⚠⛔ **AND SAY WHAT IT COSTS, because ⛔ nothing distinguishes the two omissions:** on this
+surface a mononym omission is **indistinguishable from an RTBF omission** (AC5) and widens the
+count-vs-rows gap with ⛔ no signal. ⭐ That is **accepted**, ⛔ not a defect to file — ⛔ and it is
+⛔ **not** grounds to mint a marker, a placeholder or a per-row diagnostic
+**And** ⚠ for the **deceased member's name** a mononym under `shielded_name` yields `''` ⇒ the page
+renders **unnamed** — ⛔ correct, and ⛔ **a DIFFERENT reason** from AC1's unpinned-clause inert state.
+⛔ Do ⛔ not collapse the two in the write-up ([[feedback_closure_language_precision]])
 **And** the presenter's **input** name kind is `'name'`; `'nameParts'` is **OUTPUT only** — ⚠ 11b.2b's
 AC9 got this wrong ([[project_contribution_row_render_layer_substrate]])
 **And** ⭐ **every row is wrapped in its own `try/catch`** — the `unknown` arm **throws** by design
@@ -345,6 +426,28 @@ extend it; ⛔ neither may overwrite the other's control set
 **And** the order is the **deterministic** one 11b.3 established at the read (confirmation
 `event_version`) — ⛔ **never `member_id`**, which leaks an arbitrary identifier ordering onto a
 PII-shielded surface
+**And** ⭐⛔⛔ **THE DECRYPT IS BOUNDED AT `apps/api`, AND THIS IS THE MOST EXPENSIVE PAGE IN THE
+EPIC.** Contributor names live ⛔ **only** as `member_kyc_profiles.nameCiphertext` (**Tier-1**), so a
+rendered page is **one KMS `decryptDek` round-trip PER ROW** — envelope encryption gives every stored
+name its **own DEK**, so there is ⛔ nothing to decrypt once and reuse
+(`apps/api/src/modules/public-pages/handlers.ts:162-163`). ⇒ at the page-size cap that is **50 decrypts
++ 1** for the deceased member, per request. ⚠ `packages/contracts/src/public-pages/sahyog-drive.ts:154-156`
+already states this cost in terms (*"a page decrypt is 50 rows per request"*) — ⛔ do ⛔ not re-derive it
+**And** ⛔ **reuse `mapWithConcurrency` + `DIRECTORY_DECRYPT_CONCURRENCY`**
+(`apps/api/src/modules/kyc/bounded-decrypt.ts` — as `public-pages/handlers.ts:42` and
+`member-pool/handlers.ts:65` both already do) — ⛔ never an unbounded `Promise.all`, ⛔ never a new
+constant, ⛔ never a per-surface copy of the bound
+**And** ⛔⛔ **`apps/public` gains ⛔ NO KMS dependency and ⛔ no `withPublicScope` read** — D6(a) /
+`2026-08-20-143` cl.1: *"the KEK is shared across EVERY Tier-1 field class"*, so the capability for one
+class is the capability for **all** of them. ⚠ ⭐ This is the same fence 11b.3a's Trap 6 holds for a
+page costing **at most eight** values; ⛔ it does ⛔ not loosen for a page costing fifty
+**And** ⭐ **the publication-basis gate is evaluated BEFORE the decrypt**, on the second route's own
+precedent (`routes.ts`: *"a PUBLICATION-BASIS gate … evaluated BEFORE the Tier-1 decrypt so a row with
+no basis costs zero KMS calls"*) — ⚠ ⇒ while counsel's clause is unpinned the deceased-member name
+costs **zero** decrypts and the surface is **cheap**, ⛔ not broken (AC1's inert state)
+**And** ⚠ a **decrypt failure** degrades the way the existing handler degrades — the row's name is
+**absent**, ⛔ never a placeholder, ⛔ never an error page; ⭐ and the per-row `try/catch` (AC3) is what
+keeps one bad row from taking the surface down
 **And** ⛔ **PROHIBITED:** contributor leaderboards · rankings (*"top contributors"*, *"supporter of the
 month"*) · gamification (badges, streaks, achievements) · social-performance metrics · popularity
 metrics. ⛔⛔ **AND THE SORT ORDER IS NOT A RANKING** — there is deliberately **no sortable column
@@ -437,9 +540,13 @@ discharged only at the 2026-09-01 combined review; ⛔ **do not let a third inst
 rulings do not arrive** · the **public/member name INVERSION** (11b.1 item (e) — ⛔ re-affirmed, ⛔ not
 re-filed; **D9** decides whether it moves) · ⭐ the **FlashList `keyExtractor`** deferral — **`D10(a)` supplied NO key**, so it is
 **RE-AFFIRMED OPEN** and its trigger is **RE-POINTED** to *"the first VIRTUALIZED render of a
-multi-pool contributor list"*, ⛔ **explicitly and citing `2026-09-02-177`** · ⭐ the **public/member
-INVERSION** at its **WIDENED** size (**`D9(a)`** — ⛔ re-affirmed, ⛔ not re-filed; the public names in
-full on TWO surfaces while the member app shields on three) · the
+multi-pool contributor list"*, ⛔ **explicitly and citing `2026-09-02-177`** · ⭐ the **public/member INVERSION**
+(**`D9(a)`** — ⛔ re-affirmed, ⛔ not re-filed). ⚠⛔⛔ **READ ITEM (e)'s CURRENT STATE FIRST — ⛔ do
+⛔ NOT restate it from this file.** It moved from *"carried"* to **DIRECTED TO CLOSE**
+(`2026-09-02-179` cl.3) and is **owned by `8-16`**, whose own decisions are **ruled** (`-180` ALL FOUR ·
+`-181` MODE-RESOLVED). ⇒ ⛔ **if 8.16 has MERGED, record the CLOSURE — ⛔ never re-affirm it open, and
+⛔ never write *"the member app shields on three"***, which `-180` makes false. ⭐ If 8.16 has ⛔ not
+merged, re-affirm it open and name **8.16** as its binder · the
 **Real Data Test disambiguation** question (AC6)
 **And** ⛔ **the `epics.md` annotation is 11b.3's Task 0, ⛔ not this story's** — ⛔ do not write a
 second one.
@@ -488,8 +595,25 @@ second one.
         same head). `governance:` commit first.
 
 - [ ] **Task 1 — Declare the two fields + their two allowlist entries, in ONE commit** (AC: 2)
+  - [ ] ⛔ **READ** the surface's Tier-1-count assertion and update it by **+2** — ⛔ never hard-code;
+        **11b.3a** runs in parallel and may already have added **four**.
+  - [ ] ⭐ **Amend the `matrix.ts:401-402` fence comment IN THE SAME COMMIT** — it goes **false** for
+        `sahyog-vivran` the moment these entries land. ⛔ **Keep the 11b.6 fence standing**;
+        ⛔ amendment, ⛔ never a rewrite, ⛔ never a deletion.
+  - [ ] ⭐ Write the `scope:` blocks as a **ruled CEILING**, ⛔ never the bare words *"full name"*.
+  - [ ] ⚠ **Verify 11b.3's Task 0 annotation carried item (iii)** (the three stale epic ACs at
+        `:3145` / `:3238` / `:4931`); ⭐ **write it here if it did not** — ⛔ it lands nowhere otherwise.
 - [ ] **Task 2 — Add `@twt/ui` to `apps/public`; author the Astro render layer** (AC: 3, 3b)
   - [ ] Per-row `try/catch`; the join lives in the render layer, ⛔ never in the presenter.
+  - [ ] ⭐⭐ **Resolve the name FORM through `resolvePublicMemberName(mode, storedName)` under the
+        Pariwar's stored mode** (**Trap 6**), server-side at `apps/api` — ⛔ **never a hard-coded full
+        name**, which re-creates the inversion pointing the other way (`-136` cl.1, `-181`).
+  - [ ] ⚠ **Mononym: `''` ⇒ OMIT the row**, count it like any other, ⛔ no marker. ⛔ **Never fall
+        through to `firstName`** (`public-name.ts:84` — that publishes the whole stored legal name).
+  - [ ] ⭐ **Bound the Tier-1 decrypt at `apps/api`** — `mapWithConcurrency` +
+        `DIRECTORY_DECRYPT_CONCURRENCY`, ⛔ never an unbounded `Promise.all`, ⛔ never a new constant.
+        ⚠ **50 decrypts + 1 per page** at the cap; the basis gate runs **before** the decrypt.
+        ⛔ `apps/public` gains ⛔ no KMS dependency.
   - [ ] ⛔ `@twt/ui`'s own dependency list stays exactly `@twt/contracts`.
   - [ ] ⭐ **Wire the AMOUNT-RAISED render (`D1(b)`, moved here):** extend the DTO with `rosterSize` +
         `fixedAmount`, consume `derivePoolProgressCardViewModel(...).amountRaisedInr` **unchanged**,
@@ -536,8 +660,10 @@ disclosed **three** epic ACs assuming first-name + last-initial (`epics.md:3145`
 - ⛔ **`ConfirmedContributorRow = { firstName, lastInitial }` is the WRONG SHAPE for this surface**
   (`pool-contributor-list.ts:42-51`). ⚠ ⛔ Whether the **member** surface follows is ⛔ **not** decided —
   and note it narrows the public/member inversion **from the other side** (**D9**).
-- ⛔ The three epic ACs are **stale** and owe **annotation** (⛔ never a rewrite) — folded into 11b.3's
-  already-owed `epics.md` Task 0 annotation, ⛔ **not** a second one
+- ⛔ The three epic ACs are **stale** and owe **annotation** (⛔ never a rewrite) — folded into
+  **11b.3's Task 0 annotation, item (iii)**, which names all three by line, ⛔ **not** a second one.
+  ⚠⛔ **Verify it landed** — 11b.3 merges first, and ⭐ **if (iii) is absent, THIS story writes it**;
+  an obligation routed to a story that has already shipped lands nowhere
   ([[feedback_circular_deferral_between_sibling_stories]]).
 - ⚠ **11b.2's presenter emits name PARTS and never joins them** (D9(a)) — ⭐ that design **survives
   intact**: it kept the form question open, and the render layer still owns the join. ⛔ The join now
@@ -667,8 +793,19 @@ placeholder in terms: *"a stand-in makes names render on an authority that does 
 > 8's (8.6/8.7/8.8), and ⭐ a directive naming an **epic** expires unowned.
 > ⇒ ✅ **`INV-owner` IS DISCHARGED (2026-09-02):** the work is owned by
 > **`8-16-member-pool-identity-name-form-alignment`** (`ready-for-dev`), minted against **Epic 8** on
-> the `7-11` precedent. ⛔ **`INV-scope` stays OPEN and is the PANEL's** — and it is **8.16's** Task 0,
-> ⛔ **not this story's**.
+> the `7-11` precedent.
+> ⇒ ✅✅ **AND 8.16's OWN DECISIONS ARE NOW RULED — ⛔ `INV-scope` IS ⛔ NOT OPEN.** `2026-09-02-180`
+> ruled it **ALL FOUR** (the My Pool card, the Yogdaan Bahi, the **Contribution Note PDF** and the
+> cycle-open **push / WhatsApp / SMS**) ⇒ the inversion **CLOSES**, ⛔ it is ⛔ not narrowed, and the
+> resolver's *"one identity everywhere"* property is **PRESERVED**. `2026-09-02-181` then ruled
+> **`INV-form` MODE-RESOLVED** — the member side reads the **same stored per-Pariwar mode** the public
+> side reads, *"so the two forms can ⛔ never diverge again **BY CONSTRUCTION**."*
+> ⇒ ⭐⭐ **8.16 IS FULLY UNBLOCKED AND `ready-for-dev` TODAY**, while this story is gated behind 11b.3
+> — ⛔ **expect 8.16 to MERGE FIRST**, and ⛔ do not write this file's state as though it will not
+> (AC8 reads item (e)'s current state rather than restating it).
+> ⚠⛔⛔ **AND `-181` BINDS THIS STORY'S OWN RENDER — read Trap 6 before Task 2.** A hard-coded full
+> name here would re-create the inversion **pointing the other way**, on the very surfaces `-180`
+> just aligned.
 
 ⚠⛔ **AND IT IS CARRIED AT ITS WIDENED SIZE — ⛔ recorded, ⛔ not left implicit.** After `-173` and
 `-174` the **public** side names people **in full on TWO surfaces** (`/sahyog` and `/sahyog-vivran`,
@@ -747,6 +884,15 @@ surface does not need, on the surface where a per-row identifier is most expensi
 - ⚠ **Type-only → value import** materializes a module-init cycle that breaks **consuming** packages at
   runtime while typecheck/lint/local tests stay green ([[project_type_only_import_cycle_trap]]) —
   ⭐ **directly relevant**: this story adds a new cross-package import edge (`apps/public` → `@twt/ui`).
+- ⛔⛔ **THE TIER-1 DECRYPT HAPPENS AT `apps/api`, BOUNDED — and this is the epic's most expensive
+  page.** Envelope encryption gives every stored name its **own DEK** ⇒ **one KMS round-trip per row**,
+  **50 + 1** at the page cap. ⛔ `apps/public` gains ⛔ no KMS capability: *"the KEK is shared across
+  EVERY Tier-1 field class"* (`2026-08-20-143` cl.1), so the capability for one class is the capability
+  for all. ⭐ Reuse `mapWithConcurrency` + `DIRECTORY_DECRYPT_CONCURRENCY` — ⛔ never a second bound.
+- ⭐⛔ **THE PUBLIC NAME FORM IS STORED CONFIGURATION, ⛔ NOT A LITERAL** — `-136` cl.1 makes a build
+  whose form cannot change without a code change **FAIL** the clause, `/sahyog` already resolves
+  through it (`sahyog-render.ts:213`), and `-181` put the **member** side on the same mode. ⛔ A
+  hard-coded form here is the one remaining way to re-open the inversion (**Trap 6**).
 
 ### Testing standards
 
@@ -791,7 +937,8 @@ surface does not need, on the surface where a per-row identifier is most expensi
 | `packages/contracts/src/public-pages/sahyog-vivran.ts` | **UPDATE** — ⭐ add `rosterSize` + `fixedAmount` for the presenter (D1(b)); 11b.3 left room deliberately |
 | `packages/i18n/locales/{en,hi}/sahyog-vivran.json` | **UPDATE** — ⛔ surface-minted copy ONLY; the ten `contributor_list.*` keys stay in `contribution.json` |
 | `packages/contracts/public-pages/public-vs-private-matrix.yaml` | **UPDATE** — also flips `paginated` `false` → `true` |
-| `apps/api/src/modules/public-pages/routes.ts` | **UPDATE** — the header defence, now paginated + PII-bearing (D11) |
+| `apps/api/src/modules/public-pages/handlers.ts` | **UPDATE** — the **bounded Tier-1 decrypt** (`mapWithConcurrency` + `DIRECTORY_DECRYPT_CONCURRENCY`) + the **mode-resolved** name form; basis gate **before** the decrypt |
+| `apps/api/src/modules/public-pages/routes.ts` | **UPDATE** — the header defence, now paginated + PII-bearing (D11). ⚠ **11b.3a rewrites the same header in parallel — EXTEND, ⛔ never overwrite** |
 | `apps/api/tests/integration/login-wall.spec.ts` | **UPDATE** — the same control count as the header |
 | `_bmad-output/planning-artifacts/ux-design-specification.md` | **UPDATE** — annotate `:1287-1298` (AC6) |
 | `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-02-11b3b-deceased-name-form.md` | ✅ **WRITTEN 2026-09-02** — ⛔ the RULING it seeks is still open |
@@ -827,6 +974,7 @@ _(to be filled by the dev agent)_
 
 | Date | Change |
 |---|---|
+| 2026-09-02 | **Second combined validation of 11b.3 / 11b.3a / 11b.3b.** Six fixes, and ⭐⭐ **the two sharpest are NEW — created by rulings that landed after this file was last validated.** **(1) `-173`/`-174` rule a CEILING, ⛔ not a literal** (new **Trap 6**): `-136` cl.1 fails any build whose public name form cannot change without a code change, `/sahyog` already resolves through the stored per-Pariwar mode (`sahyog-render.ts:213`), and **`-181` just put the MEMBER side on that same mode** — so a hard-coded full name here re-creates the inversion **pointing the other way** for a Pariwar set to `shielded_name`, on the surface with the widest reach. **(2) The mononym path**: `resolvePublicMemberName` returns `''` and every caller omits the row — here indistinguishable from an RTBF omission — and ⛔ falling through to `firstName` publishes the whole stored legal name (`public-name.ts:84`). **(3) The Tier-1 DECRYPT was never mentioned**: names are ciphertext, one KMS round-trip per row, **50 + 1 per page** — while 11b.3a, whose page costs **at most eight**, documents the bound and the `apps/public`-no-KMS fence. **(4)** The `epics.md` fold now **verifies item (iii) landed and writes it here if not** — 11b.3 merges first. **(5) `INV-scope` is ⛔ no longer open** (`-180` ALL FOUR · `-181` MODE-RESOLVED); 8.16 is `ready-for-dev` **today** and will likely merge first, so AC8 **reads** item (e)'s state rather than restating *"the member app shields on three"*. **(6)** `matrix.ts:401-402`'s fence comment goes **false** when these entries land and is amended in the same commit — ⛔ keeping the 11b.6 fence standing. |
 | 2026-09-02 | ⭐⭐ **THE PANEL DIRECTED THAT THE PUBLIC/MEMBER INVERSION BE CLOSED** (`2026-09-02-179` cl.3) — 11b.1 item (e) moves from *"carried"* to **DIRECTED TO CLOSE**. ⛔ **`D9(a)` is ⛔ NOT reversed:** it ruled that **this story** does not resolve it, and the ruling supplies a **destination**, ⛔ not a relocation of the work here. ⇒ **D9(a) stands.** ⚠⛔ Two OPEN and ⛔ neither this story's: **`INV-scope`** (the resolver has **four** consumers; **two leave the app** — the Contribution Note **PDF** and the cycle-open **push/WA/SMS** — and splitting them re-creates the *"two different pools"* divergence 8.8 prevented) and **`INV-owner`** (⛔ no story owns it; Epic 8 owns the consumers, and a directive naming an epic expires unowned). |
 | 2026-09-02 | ✅ **D9(a) + D10(a) RULED by BigDev** (`2026-09-02-177`) ⇒ ⭐⭐ **THIS STORY NOW HAS ZERO OPEN DECISIONS.** **D9(a)** carries the public/member inversion — ⛔ re-affirmed, ⛔ not re-filed — ⚠ **at its WIDENED size**: the public names in full on **two** surfaces while the member app shields on **three**. **D10(a)** mints ⛔ **no row key at all** — Astro SSR has no reconciler, so a key would be an identifier with no consumer — and Story 8.3's `keyExtractor` deferral is **RE-AFFIRMED OPEN** with its trigger **RE-POINTED** to *"the first VIRTUALIZED render of a multi-pool contributor list"*, ⛔ explicitly and citing the ruling, ⛔ **not discharged**. |
 | 2026-09-02 | ⭐ **THIS STORY GAINED AN OBLIGATION: the AMOUNT-RAISED render (new `AC3b`).** BigDev ruled **`D1(b)`** on 11b.3 (`2026-09-02-176`) — consume the shipped canonical `amountRaisedInr` — ⛔ and did ⛔ **not** lift the `@twt/ui` fence for 11b.3, so **the amount MOVES here**, to the story that adds the dependency. ⚠ A real **scope addition**, ⛔ not a clarification: the DTO gains `rosterSize` + `fixedAmount`, `daysRemaining: 0` is supplied for non-`live` pools, and ⛔ **only** `amountRaisedInr` is authorised — the presenter's progress meter is ⛔ **not** (completion framing on a settled drive needs its own decision). ⭐ Also closes the interim count-only asymmetry 11b.3 ships with — ⛔ ordering, ⛔ not a second inversion. |

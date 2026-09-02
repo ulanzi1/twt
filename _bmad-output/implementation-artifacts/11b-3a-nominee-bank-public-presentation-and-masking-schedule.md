@@ -12,12 +12,14 @@ Status: ready-for-dev
 > ⛔ **ORDER: this story runs AFTER `11b-3` is `done` AND MERGED.** It declares fields on a surface
 > 11b.3 creates. ⭐ It is **independent of 11b.3b** and the two may run in parallel.
 >
-> ⚠⛔ **AND IT HAS A SECOND, SHARPER PRECONDITION THAT IS ⛔ NOT AN ORDERING ONE: 11b.3's `D4`.**
-> AC2's whole subject is the **`live`** pool — the active campaign. `SAHYOG_DRIVE_VISIBLE_POOL_STATES`
-> is `['closed','settled']` (`packages/domain/src/pool/public-read.ts:89`), and 11b.3's **D4(a)** would
-> mirror it. ⇒ ⛔ **if D4 ruled (a), this story has NO HOST for AC2** and widening the visible-pool
-> predicate becomes **this story's Task 1**, ⛔ not a detail. ⭐ Read D4's ruling before Task 0 —
-> ⛔ never infer it from the fact that this file was written.
+> ✅ **PRECONDITION SATISFIED 2026-09-02 — 11b.3's `D4` RULED (b)** (`2026-09-02-176`): the surface
+> renders **`live` + `closed` + `settled`**. ⇒ ⭐ **AC2's active-campaign subject HAS A HOST**, and
+> ⛔ this story does ⛔ **not** need to widen the visible-pool predicate — that was the whole point of
+> ruling it on 11b.3 rather than on the story that adds the Tier-1 bank fields.
+> ⚠ **One rider is open and touches this story's subject: `D4-linkage`** — is a `live` pool's page
+> **linked** from anywhere, or reachable **by identifier only**? `/sahyog` lists only `closed` +
+> `settled`, and `P-YYYY-MM-###` is **sequential**. ⛔ Read it before assuming an active campaign's
+> page is discoverable.
 
 > ⭐⭐ **WHY THIS STORY EXISTS AT ALL, AND WHY `epics.md` DOES NOT SAY SO.**
 > `epics.md` Story 11b.3's newest annotation (**2026-08-29**) says the AR-48 authenticated-fragment
@@ -361,11 +363,11 @@ sibling that routes it back).
 - [ ] **Task 0 — ⛔ TRANSCRIBE-or-STOP.** (AC: all)
   - [ ] ⛔ **Verify `11b-3` is `done` AND MERGED** before starting. This story declares fields on a
         surface 11b.3 creates.
-  - [ ] ⛔ **Read 11b.3's `D4` ruling.** If D4 ruled **(a)** (`closed` + `settled` only), AC2 has ⛔ no
-        host and widening the visible-pool predicate is **this story's Task 1** — ⛔ record it as this
-        story's act, ⛔ never as an incidental edit.
-  - [ ] ⛔ **Read 11b.3's `D11` ruling** (the third route's control set). This story restores the
-        route's **PII-bearing** property, so Task 4 owes `routes.ts` + `login-wall.spec.ts` an update.
+  - [x] ✅ **11b.3's `D4` RULED (b)** — `live` + `closed` + `settled`. ⇒ AC2 **has a host** and this
+        story does ⛔ **not** widen the predicate. ⚠ `D4-linkage` (linked vs identifier-only) is open.
+  - [x] ✅ **11b.3's `D11` RULED (a)** — the route states **three** applicable controls, with controls
+        2/3 recorded N/A. ⚠⛔ **This story makes the route PII-bearing**, so **Task 4 owes `routes.ts` +
+        `login-wall.spec.ts` an update** to the set that applies then — ⛔ both stating the same count.
   - [ ] Re-read `.decision-log.md` head; take the next free number. ⚠ **11b.3a and 11b.3b mint against
         the same head** — re-read immediately before writing; ⛔ never renumber or merge into a
         sibling's entry.
@@ -600,6 +602,7 @@ _(to be filled by the dev agent)_
 
 | Date | Change |
 |---|---|
+| 2026-09-02 | ✅ **PRECONDITION SATISFIED — 11b.3's `D4` ruled (b)** (`2026-09-02-176`): `live` + `closed` + `settled` all render, so **AC2's active-campaign subject has a host** and this story does ⛔ not widen the predicate. **`D11` ruled (a)** too — the route states three applicable controls, and this story's PII-bearing change owes `routes.ts` + `login-wall.spec.ts` their update at Task 4. ⚠ New open rider from D4: **`D4-linkage`** — a `live` pool's page has no inbound link today and `P-YYYY-MM-###` is sequential. |
 | 2026-09-02 | ⭐ **NO CHANGE TO THIS STORY — recorded because it was briefly in doubt.** `2026-09-02-174` cl.3 appeared to extend cl.10's staged schedule to contributor names, which would have given this schedule a second subject. ⛔ **Corrected the same day, Panel-ratified** (`2026-09-02-175`): the staged reduction is the **nominee bank fields'**, as cl.10 always said. ⇒ **`D12-schedule` VACATED**, Task 1 returns to a single subject, and ⛔ nothing here ever moved. |
 | ~~2026-09-02~~ | ~~⚠ **This story's schedule gained a POTENTIAL SECOND SUBJECT.**~~ ⛔ **SUPERSEDED by the row above** — ⛔ left as the record, ⛔ not deleted. `2026-09-02-174` cl.3 (Panel) **extended `-160` cl.10's staged schedule from bank fields to a PERSON'S NAME** — contributor names on 11b.3b. Whether the two share one per-Pariwar row is **`D12-schedule`**, a **policy** question, ⛔ not a de-duplication. Task 1 now reads that ruling before designing the table, and ⛔ must neither generalise unilaterally nor foreclose D12. |
 | 2026-09-02 | **D5-subject recorded** (observational) — arising from the 11b.3b packet's "whose name" pass. `-160` cl.3's basis is *"the **nominee's** own Claim Terms acceptance"*, but `account_holder_name` is **free text the filer types**, with ⛔ no FK and ⛔ no match rule (`claim_nominee_bank_accounts.ts:7-11`), verified reachable through the contract (`:56`) and the handler (`:155`). ⇒ a second gap **under** D5: even with an instrument, the row does ⛔ not identify its subject. ⚠ Two committed documents disagree (`nominee-accounts.ts:18` calls it *"the NOMINEE name"*); the schema is the authority and the comment is ⛔ recorded, ⛔ not swept. ⛔ Nothing ruled; both readings of cl.10(a) recorded. |

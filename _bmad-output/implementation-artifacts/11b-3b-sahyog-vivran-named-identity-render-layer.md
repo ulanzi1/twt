@@ -291,6 +291,37 @@ AC9 got this wrong ([[project_contribution_row_render_layer_substrate]])
 later**"* — ⇒ ⛔ `apps/public` lacked the dep because it had **no presenter to consume**, ⛔ not because
 anyone declined one.
 
+### AC3b — ⭐ **THE AMOUNT-RAISED RENDER — moved here by `D1(b)` (`2026-09-02-176`)**
+
+**Given** BigDev ruled **D1(b)** on Story 11b.3: the surface consumes the **shipped canonical**
+`amountRaisedInr`, ⛔ and the `@twt/ui` fence is **NOT lifted** for 11b.3 ⇒ **the amount lands HERE**,
+in the story that adds the dependency (**AC3**)
+**When** the Sahyog Vivran renders a pool's figures
+**Then** the rupee figure is `derivePoolProgressCardViewModel(...).amountRaisedInr` — *"the **SINGLE
+canonical definition** of 'amount raised'"* (`packages/ui/src/pool-progress/presenter.ts:10,69`, Story
+9.12 **Decision 3**), consumed **UNCHANGED**
+**And** ⛔⛔ **it is ⛔ NEVER re-derived inline.** `confirmedCount × fixedAmount` written anywhere in this
+diff is **D1(c)**, which is **REFUSED** — it forks the canonical definition of a money figure into a
+second site
+**And** ⚠⭐ **the presenter's INPUT is FIVE keys** — `pool` · `confirmedCount` · `rosterSize` ·
+`fixedAmount` · `daysRemaining` (`packages/ui/src/pool-progress/view-model.ts:30-50`). ⇒ **`rosterSize`
+and `fixedAmount` must reach the DTO** (11b.3 authored it **without** them, deliberately leaving room —
+⛔ this story extends it)
+**And** ⚠ **`daysRemaining` is a 15-day-WINDOW concept with ⛔ no meaning for a `closed`/`settled` pool**
+⇒ supply **`0`** and render **nothing** from it. ⛔ Not a ruling — nothing derived from it reaches the
+page
+**And** ⛔⛔ **ONLY `amountRaisedInr` IS AUTHORISED.** The presenter also emits `confirmedPercentage`,
+`isComplete`, `meterFillTokenRole` and `daysRemaining` — ⭐ **a progress meter designed for a LIVE
+pool.** ⛔ Rendering completion framing on a **settled** drive is a **different act**, is ⛔ **not**
+authorised by D1(b), and is the same family as 11b.1's `0 >= 0` → *"fully_funded"* defect. ⛔ It needs
+its own decision
+**And** ⚠ **the presenter THROWS on `confirmedCount > rosterSize`** — an impossible state by design.
+⭐ The per-row `try/catch` discipline (**AC3**) covers this call too; ⛔ one bad pool must ⛔ not take
+down the surface
+**And** ⭐ **the interim asymmetry 11b.3 shipped with is CLOSED HERE** — until this story merged, the
+public page showed a count while the member app showed an amount. ⛔ That was **ordering**, ⛔ not a
+ruling, and ⛔ it is ⛔ **not** a second instance of the D7/D9 inversion.
+
 ### AC4 — The list is paginated, deterministically ordered, and ⛔ never a leaderboard
 
 **Given** FR-91 and the **remembrance-not-analytics** invariant this epic enforces in three places
@@ -451,9 +482,13 @@ second one.
         same head). `governance:` commit first.
 
 - [ ] **Task 1 — Declare the two fields + their two allowlist entries, in ONE commit** (AC: 2)
-- [ ] **Task 2 — Add `@twt/ui` to `apps/public`; author the Astro render layer** (AC: 3)
+- [ ] **Task 2 — Add `@twt/ui` to `apps/public`; author the Astro render layer** (AC: 3, 3b)
   - [ ] Per-row `try/catch`; the join lives in the render layer, ⛔ never in the presenter.
   - [ ] ⛔ `@twt/ui`'s own dependency list stays exactly `@twt/contracts`.
+  - [ ] ⭐ **Wire the AMOUNT-RAISED render (`D1(b)`, moved here):** extend the DTO with `rosterSize` +
+        `fixedAmount`, consume `derivePoolProgressCardViewModel(...).amountRaisedInr` **unchanged**,
+        supply `daysRemaining: 0` for non-`live` pools, and render ⛔ **only** the amount — ⛔ **not**
+        the meter, ⛔ not `isComplete`, ⛔ not a percentage. ⛔ **Never** re-derive the multiplication.
 - [ ] **Task 3 — Pagination + ordering + the anti-leaderboard invariant, written where it is read** (AC: 4)
   - [ ] ⭐ Flip the surface's `paginated` **`false` → `true`** (⛔ read it first), and update the
         `routes.ts` header **and** the `login-wall.spec.ts` allowlist entry to the control set that
@@ -695,7 +730,8 @@ surface does not need, on the surface where a per-row identifier is most expensi
 | `packages/contracts/public-pages/public-vs-private-matrix.yaml` | **UPDATE** — two fields + two exception blocks |
 | `packages/contracts/src/public-pages/matrix.ts` | **UPDATE** — two allowlist entries, ⛔ nothing else |
 | `apps/public/src/components/ContributorList.astro` (or similar) | **NEW** — the render layer |
-| `apps/public/src/lib/sahyog-vivran-render.ts` | **UPDATE** — the row adapter + the name join |
+| `apps/public/src/lib/sahyog-vivran-render.ts` | **UPDATE** — the row adapter + the name join + ⭐ the **amount-raised** consumption (D1(b)) |
+| `packages/contracts/src/public-pages/sahyog-vivran.ts` | **UPDATE** — ⭐ add `rosterSize` + `fixedAmount` for the presenter (D1(b)); 11b.3 left room deliberately |
 | `packages/i18n/locales/{en,hi}/sahyog-vivran.json` | **UPDATE** — ⛔ surface-minted copy ONLY; the ten `contributor_list.*` keys stay in `contribution.json` |
 | `packages/contracts/public-pages/public-vs-private-matrix.yaml` | **UPDATE** — also flips `paginated` `false` → `true` |
 | `apps/api/src/modules/public-pages/routes.ts` | **UPDATE** — the header defence, now paginated + PII-bearing (D11) |
@@ -734,6 +770,7 @@ _(to be filled by the dev agent)_
 
 | Date | Change |
 |---|---|
+| 2026-09-02 | ⭐ **THIS STORY GAINED AN OBLIGATION: the AMOUNT-RAISED render (new `AC3b`).** BigDev ruled **`D1(b)`** on 11b.3 (`2026-09-02-176`) — consume the shipped canonical `amountRaisedInr` — ⛔ and did ⛔ **not** lift the `@twt/ui` fence for 11b.3, so **the amount MOVES here**, to the story that adds the dependency. ⚠ A real **scope addition**, ⛔ not a clarification: the DTO gains `rosterSize` + `fixedAmount`, `daysRemaining: 0` is supplied for non-`live` pools, and ⛔ **only** `amountRaisedInr` is authorised — the presenter's progress meter is ⛔ **not** (completion framing on a settled drive needs its own decision). ⭐ Also closes the interim count-only asymmetry 11b.3 ships with — ⛔ ordering, ⛔ not a second inversion. |
 | 2026-09-02 | ⚠⭐ **`-174` cl.3 CORRECTED, Panel-ratified** (`2026-09-02-175`) — the *"progressive reduction of public exposure"* is the **NOMINEE BANK fields'** (`-160` cl.10's own subject, which already includes the *nominee's* name) and does ⛔ **not** reach a contributor's or the deceased member's name. BigDev identified it and put the correction **back to the Panel**, who ratified it. ⇒ **Q1/Q2 stand UNCONDITIONALLY**; the **STOP GATE IS LIFTED**; and **D14-order · D12-schedule · D13-maskedname · D11-order are VACATED** — ⛔ their questions ceased to exist, ⛔ they were not rejected. ⛔ `-174` is ⛔ not edited. ⭐ Caught between transcription and implementation ⇒ **zero rework**. ⚠ Still open: **D10** (AC5 depends on it) · **D9**; and the deceased-member name still will ⛔ not render until counsel's clause is pinned. |
 | 2026-09-02 | ✅ **D2 RULED by the Trustee Panel** (Dhiraj Rahul, Kalpana Bharti) — contributor name **YES**, at the **FULL NAME**; transcribed `2026-09-02-174`. ⭐ Q2 **overturned** the standing practice: three epic ACs **and** the shipped wire all assumed first-name + last-initial, and §6 of the note existed to make exactly that outcome possible. ⚠⛔ **Q3 EXTENDED `-160` cl.10's staged schedule from bank fields to a PERSON'S NAME** — full while current, then progressively reduced, then hidden. ⛔⛔ **No story builds that**, so the STOP gate **holds on the new `D14-order`**: may full names ship before the disappearance exists? Also raised: **D12-schedule** (shared substrate with 11b.3a — a policy question) and **D13-maskedname** (what "masked" means for a name; the ratified ladder is the analogue but is ⛔ not adopted). |
 | 2026-09-02 | ✅ **D3 RULED by the Trustee Panel** (Kalpana Bharti, Dhiraj Rahul) — **YES**, at the **FULL NAME**; transcribed `2026-09-02-173`. ⚠⛔ **Task 0's STOP gate HOLDS — D2 is still open**, and ⛔ one of two rulings is ⛔ not "the rulings". ⛔ **And a ruling is ⛔ not a render:** counsel confirmed the broad clause scope **in discussion** only; until the `clause_versions` row exists and is pinned the surface stays **inert by design**, and ⛔ **no placeholder row** may be seeded. New decision **D11-order** raised: may the deceased-member field land alone, ahead of the contributor field? |

@@ -14,10 +14,15 @@ Status: ready-for-dev
 
 > ⛔⛔ **AND THIS STORY IS GATED ON A PANEL RULING THAT HAS ⛔ NOT ARRIVED. ⚠ READ THIS BEFORE ANYTHING ELSE.**
 >
-> ⭐⭐ **UPDATE 2026-09-02 — ✅ BOTH D3 AND D2 ARE NOW RULED (YES · FULL NAME, both).**
-> ⚠⛔ **AND THE STOP GATE STILL HOLDS — for a ⛔ DIFFERENT reason than before.** D2's Q3 attached a
-> **CONDITION** to the permission (the staged disappearance, `2026-09-02-174` cl.3) that ⛔ **no story
-> builds**, and whether full names may ship **before** it exists is **`D14-order`** — ⛔ unruled.
+> ⭐⭐ **UPDATE 2026-09-02 — ✅ BOTH D3 AND D2 ARE RULED (YES · FULL NAME, both) AND THE STOP GATE IS
+> LIFTED.**
+> ⚠ **Read the history, because it moved twice in one day.** `2026-09-02-174` cl.3 appeared to attach a
+> **CONDITION** to D2's permission — a staged disappearance of the name. ⭐ **That was a
+> misunderstanding of the Panel's intent and was CORRECTED the same day**, Panel-ratified, at
+> `2026-09-02-175`: the staged reduction is the **NOMINEE BANK fields'** (`-160` cl.10's own subject,
+> which includes the *nominee's* name) and does ⛔ **NOT** reach a contributor's or the deceased
+> member's name. ⇒ **Q1/Q2 stand UNCONDITIONALLY**, and **D14-order · D12-schedule · D13-maskedname ·
+> D11-order are VACATED — ⛔ not rejected; their QUESTIONS ceased to exist.**
 >
 > Each subject needs a `(surface, field)` entry in
 > `matrix.ts`'s enumerated Tier-1 allowlist — *"⛔ ADDING TO THIS LIST IS A RULING, NEVER A CODE
@@ -26,7 +31,7 @@ Status: ready-for-dev
 >
 > | Subject | Basis | Declaration | Form |
 > |---|---|---|---|
-> | **contributor name** | ✅ settled (`2026-08-28-160` cl.7) | ✅ **RULED YES** (`2026-09-02-174`) | ✅ **RULED: FULL NAME** ⚠ *conditional — see below* |
+> | **contributor name** | ✅ settled (`2026-08-28-160` cl.7) | ✅ **RULED YES** (`2026-09-02-174`) | ✅ **RULED: FULL NAME**, ⭐ unconditional (`-175`) |
 > | **deceased member's name** on `sahyog-vivran` | ✅ settled (member's own T&C, cl.4) | ✅ **RULED YES** (`2026-09-02-173`) | ✅ **RULED: FULL NAME** |
 >
 > ⏳ **BOTH packets are now written, routed FILES — ⛔ and NEITHER is ratified.**
@@ -36,18 +41,20 @@ Status: ready-for-dev
 > ⚠⛔ **A ROUTED PACKET IS ⛔ NOT A RULING.** Both are **ROUTED, ⛔ nothing ratified and ⛔ nothing
 > applied** — this story's STOP gate is ⛔ **unchanged** ([[feedback_closure_language_precision]]).
 >
-> ⇒ ⛔ **Task 0 is a STOP gate here in a way it is not on the siblings.** ✅ **Both rulings have now
-> landed** — `2026-09-02-173` (deceased member) and `2026-09-02-174` (contributor).
+> ⇒ ⭐⭐ **Task 0's PANEL STOP GATE IS DISCHARGED.** Both rulings landed — `2026-09-02-173` (deceased
+> member) and `2026-09-02-174` Q1/Q2 (contributor) — each **YES at the FULL NAME**, and `-175` removed
+> the apparent condition. ⛔ **Task 0's other obligations still run** (transcription is done; the
+> `governance:` commit and the routing work are not).
 >
-> ⚠⛔⛔ **BUT ⛔ DO NOT START. D2's PERMISSION IS CONDITIONAL, AND ITS CONDITION IS UNBUILT.**
-> `2026-09-02-174` **cl.3** extends `2026-08-28-160` **cl.10's staged schedule** from bank fields to a
-> **person's name**: full while the drive is current, then **progressively reduced, then hidden**, on
-> the per-Pariwar Trust-Admin effective window. ⛔ **No story builds that** — 11b.3a's schedule covers
-> the four **bank** fields; this story has ⛔ no time dimension at all.
-> ⇒ ⛔⛔ **shipping the full names WITHOUT the disappearance publishes full legal names of living
-> members PERMANENTLY, on an authority granted CONDITIONALLY** — the cheap half of a two-part
-> commitment, which is exactly where decay concentrates
-> ([[project_mechanization_split_commitment]]). ⇒ **`D14-order` must rule before Task 1.**
+> ⚠⛔ **TWO THINGS ⛔ NOT LIFTED, and ⛔ neither is a Panel matter:**
+> 1. ⛔⛔ **A ruling is ⛔ NOT a render for the DECEASED member.** `-173`'s counsel clause is **still
+>    outstanding** — confirmed in discussion, the written rule had ⛔ not arrived. Until a real
+>    `clause_versions` row for `niy.public-disclosure.member-information` exists **and is pinned**, the
+>    basis predicate is false for every member and ⛔ **no deceased-member name renders**. That is the
+>    ruled inert state (`public-read.ts:171-175`), ⛔ not a bug — and ⛔⛔ **⛔ no placeholder row may be
+>    seeded**, a prohibition a favourable ruling makes *more* load-bearing, ⛔ not less.
+> 2. ⛔ **`D10`** (the stable per-row key) is still open and **AC5 depends on it**; **`D9`** (the
+>    inversion — carry or resolve) is open and is carry-by-recommendation.
 >
 > ⚠⛔ **AND EVEN FOR D3, A RULING IS ⛔ NOT A RENDER.** `NAME_PUBLICATION_AUTHORISED` needs a real
 > `clause_versions` row for `niy.public-disclosure.member-information`, **pinned** into an accepted
@@ -223,10 +230,12 @@ surface's **OWN Panel ruling**"*
 **And** ⛔ **if either ruling is absent → STOP and report.** ⛔ Do not ship *"first-name + last-initial
 for now"*, ⛔ do not add a matrix field, ⛔ do not add `@twt/ui` to `apps/public/package.json`
 **And** ✅ **BOTH rulings landed 2026-09-02** — `2026-09-02-173` (deceased member) and
-`2026-09-02-174` (contributor), each **YES at the FULL NAME** ⇒ this AC's ruling condition is **met**
-**And** ⛔⛔ **BUT THE STOP GATE HOLDS ON `D14-order`:** D2's permission is **conditional** on a staged
-disappearance (`-174` cl.3) that ⛔ no story builds. ⛔ **Do not read "both rulings landed" as clearance
-to start** — ⚠ the condition is part of the permission, ⛔ not a follow-up to it
+`2026-09-02-174` (contributor), each **YES at the FULL NAME** ⇒ this AC is **SATISFIED**
+**And** ⚠ `-174` cl.3's apparent **condition** was **corrected the same day, Panel-ratified**
+(`2026-09-02-175`) — the staged reduction is the **nominee bank fields'**. ⇒ **the permissions are
+UNCONDITIONAL**; ⛔ do ⛔ not carry the withdrawn condition forward into the build
+**And** ⛔ **the DECEASED-member name still will ⛔ not RENDER until counsel's clause exists and is
+pinned** — ⛔ that is ⛔ not this AC's gate, and ⛔ ⛔ no placeholder row may be seeded to hide it
 **And** ⚠⛔ **D3's ruling authorises the DECLARATION, ⛔ not the RENDER** — the basis predicate stays
 false until counsel's `clause_versions` row exists and is pinned, so a correctly-built surface renders
 **unnamed** in the interim. ⛔ That is the designed inert state, ⛔ not an incomplete implementation
@@ -242,12 +251,13 @@ subject"*)
 `RULED_TIER1_PUBLIC_EXCEPTIONS`, **each citing the ruling that authorised it** — ⭐
 `deceased_member_name` cites **`2026-09-02-173`**, `contributor_name` cites **`2026-09-02-174`**, and
 ⭐ **both are ruled at the FULL NAME**
-**And** ⚠ each `tier1_public_exception` `scope:` block states the **ruled form** — and for
-`contributor_name` it states that the permission is **CONDITIONAL on the staged disappearance**
-(`-174` cl.3), so a later reader ⛔ cannot find a bare permission with its condition missing
-**And** ⚠ **whether the two land in the same commit is `D11-order`** — ⛔ not an authoring choice.
-⛔ **Never pre-add an entry** ahead of its field: *"a pre-added entry is a standing permission with
-⛔ no subject"*
+**And** ⚠ each `tier1_public_exception` `scope:` block states the **ruled form** and fences it to
+**this surface** — ⭐ and for `contributor_name` it records that `-174` cl.3's apparent staged-reduction
+condition was **CORRECTED away by `2026-09-02-175`**, so a later reader ⛔ cannot re-derive a condition
+the Panel withdrew
+**And** ⭐ **both land in the SAME commit**, as this AC was always written — `D11-order` is **VACATED**
+now that both names are ruled at the same form. ⛔ **Never pre-add an entry** ahead of its field: *"a
+pre-added entry is a standing permission with ⛔ no subject"*
 **And** ⛔ **the render form is the FULL NAME, ⛔ not `first + lastInitial`** — ⚠ the shipped
 `ConfirmedContributorRow` (`pool-contributor-list.ts:42-51`) is the **wrong shape for this surface**
 and the three epic ACs that assume the shielded form (`epics.md:3145` · `:3238` · `:4931`) are
@@ -420,13 +430,19 @@ second one.
   - [x] ✅ **D2 ANSWERED — 2026-09-02** (Dhiraj Rahul, Kalpana Bharti): **Q1 YES · Q2 THE FULL NAME ·
         Q3 cl.10's staged schedule EXTENDED to a person's name**. Note §12; transcribed
         `.decision-log.md#decision-2026-09-02-174`. ⛔ Already transcribed — ⛔ do not re-transcribe.
-  - [ ] ⛔⛔ **THE STOP GATE STILL HOLDS — on `D14-order`, ⛔ not on a missing ruling.** D2's
-        permission is **CONDITIONAL** on a staged disappearance that ⛔ **no story builds**. ⛔ Shipping
-        full names without it publishes **full legal names of living members, permanently**, on a
-        conditional authority. ⛔ **If `D14-order` is unruled → STOP and report.**
-  - [ ] ⚠ **Read `D12-schedule` and `D13-maskedname` too** — the first decides whether the name
-        schedule shares 11b.3a's substrate (a POLICY question), the second what "masked" even means
-        for a name. ⛔ Neither is an authoring choice.
+  - [x] ⭐⭐ **THE PANEL STOP GATE IS DISCHARGED.** ⚠ `-174` cl.3 briefly appeared to attach a
+        CONDITION (a staged disappearance of the name); **that was corrected the same day and
+        Panel-ratified** at `2026-09-02-175` — the staged reduction is the **NOMINEE BANK fields'**.
+        ⇒ **Q1/Q2 stand unconditionally**, and `D14-order` / `D12-schedule` / `D13-maskedname` /
+        `D11-order` are **VACATED** (⛔ their questions ceased to exist; ⛔ they were not rejected).
+  - [ ] ⛔⛔ **BUT VERIFY THE COUNSEL CLAUSE BEFORE EXPECTING A DECEASED-MEMBER NAME TO RENDER.**
+        `-173`'s Q3 clause was confirmed **in discussion**; the written rule had ⛔ not arrived. Check
+        for a real `clause_versions` row for `niy.public-disclosure.member-information`, **pinned**
+        into an accepted T&C version. If absent, the field is **DECLARED** and the surface renders
+        **unnamed** — correct, ⛔ not a bug. ⛔⛔ **⛔ Do NOT seed a placeholder row**
+        (`public-read.ts:171-175`).
+  - [ ] ⚠ **`D10` (the row key) is still open and AC5 depends on it; `D9` (the inversion) is open.**
+        ⛔ Neither is a Panel matter.
   - [ ] Check whether **D2** has been answered (`§8`-style appendix on the 2026-08-30 note, or a new
         `.decision-log.md` entry). ⛔ Do ⛔ not infer an answer from silence.
   - [ ] ⛔ **If either is unruled → STOP and report.** ⚠ This is the one story in the family where
@@ -454,13 +470,21 @@ second one.
 
 ---
 
-## ⚖️ Decisions — ✅ **D2 + D3 BOTH RULED 2026-09-02 (YES · FULL NAME).** ⛔ **SIX OPEN: D14-order (BLOCKING) · D12-schedule · D13-maskedname · D9 · D10 · D11-order**
+## ⚖️ Decisions — ✅ **D2 + D3 BOTH RULED 2026-09-02 (YES · FULL NAME, unconditional).** ⛔ **TWO OPEN: D9 · D10.** ⭐ **FOUR VACATED by `-175`: D14-order · D12-schedule · D13-maskedname · D11-order**
 
-### ✅ D2 — **RULED by the Trustee Panel, 2026-09-02** (Dhiraj Rahul, Kalpana Bharti) — **YES, at the FULL NAME, ⚠ CONDITIONALLY**
+### ✅ D2 — **RULED by the Trustee Panel, 2026-09-02** (Dhiraj Rahul, Kalpana Bharti) — **YES, at the FULL NAME**, ⭐ **UNCONDITIONALLY**
 
 ⭐ **Transcribed at `.decision-log.md#decision-2026-09-02-174`**; the packet's **§12** carries the
-answers. **Q1 YES** · **Q2 THE FULL NAME** · **Q3 → `2026-08-28-160` cl.10's staged schedule is
-EXTENDED from bank fields to a person's name.**
+answers. **Q1 YES** · **Q2 THE FULL NAME**.
+
+⚠⭐ **Q3 MOVED TWICE IN ONE DAY — read `2026-09-02-175` with `-174`.** `-174` cl.3 recorded that cl.10's
+staged schedule was **extended to a person's name**. ⛔ **That did not reflect the Panel's intent.**
+BigDev put the correction **back to the Panel**, and the Panel **ratified it** (`-175`): the staged
+reduction is the **NOMINEE BANK fields'** — `-160` cl.10's own subject, which already includes the
+**nominee's** name — and it does ⛔ **NOT** reach a contributor's name or the deceased member's.
+⇒ ⭐ **Q1/Q2 stand unconditionally**, and the word *"conditionally"* is **withdrawn**.
+⛔ `-174` is ⛔ **not edited** — ⛔ ratified entries are never edited in place
+([[feedback_supersede_never_reinterpret]]).
 
 ⇒ **`sahyog-vivran.contributor_name`** is authorised for `RULED_TIER1_PUBLIC_EXCEPTIONS`, citing
 `2026-09-02-174`.
@@ -482,39 +506,21 @@ disclosed **three** epic ACs assuming first-name + last-initial (`epics.md:3145`
 answered in the negative ([[feedback_closure_language_precision]]). The Panel answered a different and
 more useful question.
 
-### ⛔⛔ D14-order — **BLOCKING.** May full contributor names ship BEFORE the staged disappearance exists?
+### ⛔ VACATED 2026-09-02 by `2026-09-02-175` — **D14-order · D12-schedule · D13-maskedname**
 
-⭐ **The gate that replaced D2.** `2026-09-02-174` cl.3 granted full names **together with** their
-progressive disappearance. ⛔ The permissive half is **cheap** (a matrix entry + a form change); the
-protective half is **expensive** (new substrate, an admin surface, a time predicate) and ⛔ **no story
-owns it**.
+⭐⭐ **VACATED, ⛔ NOT rejected, ⛔ NOT closed, ⛔ NOT "answered in the negative". Their QUESTIONS CEASED
+TO EXIST** — the `2026-08-24-159` precedent: *"(a) did not become wrong, its QUESTION ceased to
+exist"* ([[feedback_closure_language_precision]]).
 
-- **(a) HOLD the contributor render** until the schedule ships. ⭐ *Authoring recommendation: it is the
-  only option under which the Trust does what the Panel actually authorised.* ⚠ Then this story ships
-  the **deceased member's** name only, and the contributor list waits.
-- **(b) Ship full names now, mechanize the disappearance later.** ⛔⛔ Publishes **full legal names of
-  living members, permanently**, on a **conditional** authority — and *"decay concentrates in the
-  un-mechanized half"* ([[project_mechanization_split_commitment]]).
-- **(c) Ship at the SHIELDED form** until the schedule exists. ⚠ Contradicts Q2 in the interim, ⛔ but
-  fails **safe** rather than open. ⚠ Requires the Panel's leave, ⛔ not the author's.
+All three existed **only** because `-174` cl.3 appeared to put contributor names under a staged
+disappearance. `-175` corrected that, Panel-ratified: the staged reduction is the **nominee bank
+fields'**. ⇒ there is ⛔ no name schedule, so there is ⛔ nothing to order against (**D14-order**),
+⛔ no substrate to share (**D12-schedule**), and ⛔ no masked name state to define (**D13-maskedname**).
 
-⛔ **A ruling, ⛔ never an authoring choice.**
-
-### ⛔ D12-schedule — Does the contributor-name schedule REUSE 11b.3a's substrate, or is it its own?
-
-⚠⛔ **A POLICY question wearing a schema question's clothes.** ONE shared per-Pariwar row means a Trust
-Admin ⛔ **cannot** hide bank details quickly while letting names persist; TWO rows means they can.
-⚠ A second consumer now exists, so [[feedback_no_premature_package]] no longer argues against sharing —
-⛔ but sharing is a **policy** commitment, ⛔ not a de-duplication.
-
-### ⛔ D13-maskedname — What IS the "masked" state of a NAME?
-
-`2026-08-28-160` **cl.10(e)** defines the masked projection for **bank details** (last 4 + bank /
-branch / IFSC). ⛔ It defines **nothing** for a name, and `2026-09-02-174` supplies no definition.
-⚠ The natural analogue is the **already-ratified** per-Pariwar ladder — `full_name` → `shielded_name`
-(first name + last initial) → `''` **omitted** (a mononym ⛔ cannot be shielded, `2026-08-21-145`
-cl.3) — which is also what *"name/surname"* in the relay most naturally describes. ⛔ **That is an
-inference and is ⛔ NOT adopted here** ([[feedback_supersede_never_reinterpret]]).
+⚠ **And the ratified per-Pariwar ladder** — `full_name` → `shielded_name` → omitted — ⛔ was **never
+adopted** for this surface by `-174`, and is ⛔ **not** adopted by `-175` either. It remains what it
+always was: the **Member Directory's** presentation mode (`2026-08-19-136` cl.1-3, `2026-08-21-145`
+cl.3). ⛔ Do ⛔ not reach for it here.
 
 <details><summary>⛔ The question as originally put (kept as the record — ⛔ not deleted)</summary>
 
@@ -571,20 +577,15 @@ deceased member at all**, beside a `/sahyog` that names them in **full**.
 
 </details>
 
-### ⛔ D11-order — May the DECEASED-MEMBER field land ALONE, ahead of the contributor field? (AC2)
+### ⛔ VACATED 2026-09-02 — **D11-order**
 
-⭐ **A NEW question, created by D3 landing while D2 does not.** AC2 declares **both** fields and
-**both** entries in one commit — a shape that presumed both rulings arriving together.
+⭐ It asked whether the deceased-member field could land **alone**, ahead of the contributor field,
+**because D2 was open**. ⇒ **both** names are now ruled — unconditionally and at the **same form** — so
+they land **together** in one commit, as AC2 was always written. ⛔ **VACATED: its question ceased to
+exist**, ⛔ it was ⛔ not answered.
 
-- **(a) Hold both** until D2 rules; AC2 unchanged, the story stays fully blocked. ⭐ *Authoring
-  recommendation: it is the shape the story was written to, and it keeps ONE commit carrying ONE
-  coherent widening.*
-- **(b) Split** — declare `deceased_member_name` + its entry now, the contributor field when D2 rules.
-  ⚠ Then **AC2 splits in two**, the Tier-1-count test moves **twice**, and this story acquires a
-  partial-completion state it does ⛔ not currently have. ⛔ Not free.
-
-⚠⛔ **Whichever way: ⛔ never pre-add the contributor entry.** *"A pre-added entry is a standing
-permission with ⛔ no subject"* (routing note §11).
+⚠⛔ **The §11 timing rule survives it and still binds: field declaration and its allowlist entry land
+in the SAME commit.** *"A pre-added entry is a standing permission with ⛔ no subject."*
 
 ✅ **THE PACKET NOW EXISTS AND IS ROUTED (2026-09-02):**
 `trustee-panel-routing-note-2026-09-02-11b3b-deceased-name-form.md`. ⛔ **Written, ⛔ not answered** —
@@ -733,6 +734,7 @@ _(to be filled by the dev agent)_
 
 | Date | Change |
 |---|---|
+| 2026-09-02 | ⚠⭐ **`-174` cl.3 CORRECTED, Panel-ratified** (`2026-09-02-175`) — the *"progressive reduction of public exposure"* is the **NOMINEE BANK fields'** (`-160` cl.10's own subject, which already includes the *nominee's* name) and does ⛔ **not** reach a contributor's or the deceased member's name. BigDev identified it and put the correction **back to the Panel**, who ratified it. ⇒ **Q1/Q2 stand UNCONDITIONALLY**; the **STOP GATE IS LIFTED**; and **D14-order · D12-schedule · D13-maskedname · D11-order are VACATED** — ⛔ their questions ceased to exist, ⛔ they were not rejected. ⛔ `-174` is ⛔ not edited. ⭐ Caught between transcription and implementation ⇒ **zero rework**. ⚠ Still open: **D10** (AC5 depends on it) · **D9**; and the deceased-member name still will ⛔ not render until counsel's clause is pinned. |
 | 2026-09-02 | ✅ **D2 RULED by the Trustee Panel** (Dhiraj Rahul, Kalpana Bharti) — contributor name **YES**, at the **FULL NAME**; transcribed `2026-09-02-174`. ⭐ Q2 **overturned** the standing practice: three epic ACs **and** the shipped wire all assumed first-name + last-initial, and §6 of the note existed to make exactly that outcome possible. ⚠⛔ **Q3 EXTENDED `-160` cl.10's staged schedule from bank fields to a PERSON'S NAME** — full while current, then progressively reduced, then hidden. ⛔⛔ **No story builds that**, so the STOP gate **holds on the new `D14-order`**: may full names ship before the disappearance exists? Also raised: **D12-schedule** (shared substrate with 11b.3a — a policy question) and **D13-maskedname** (what "masked" means for a name; the ratified ladder is the analogue but is ⛔ not adopted). |
 | 2026-09-02 | ✅ **D3 RULED by the Trustee Panel** (Kalpana Bharti, Dhiraj Rahul) — **YES**, at the **FULL NAME**; transcribed `2026-09-02-173`. ⚠⛔ **Task 0's STOP gate HOLDS — D2 is still open**, and ⛔ one of two rulings is ⛔ not "the rulings". ⛔ **And a ruling is ⛔ not a render:** counsel confirmed the broad clause scope **in discussion** only; until the `clause_versions` row exists and is pinned the surface stays **inert by design**, and ⛔ **no placeholder row** may be seeded. New decision **D11-order** raised: may the deceased-member field land alone, ahead of the contributor field? |
 | 2026-09-02 | **The D3 packet is WRITTEN AND ROUTED** — `trustee-panel-routing-note-2026-09-02-11b3b-deceased-name-form.md`. ⛔ Task 0 stays a STOP gate: the packet is written, D3 is ⛔ not answered. ⭐ The packet surfaced a **third question (Q3, the CLAUSE SCOPE)**: 11b.9's basis predicate pins `niy.public-disclosure.member-information` — a **general** clause under a Sahyog-Drive-*named* constant — so whether a D3 "yes" is **buildable** turns on counsel's clause text (returned 2026-09-07), ⛔ not on the ruling alone. |

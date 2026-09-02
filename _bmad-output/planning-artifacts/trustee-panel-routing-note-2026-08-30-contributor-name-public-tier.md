@@ -9,9 +9,11 @@ requires an answer; it is raised because **Story 11b.3 cannot start without one*
 was assembled here.
 **Routed to:** Trustee Panel · **Adv. Mohit Agrawal** (engaged counsel since 2026-06-21; T&C return
 due **2026-09-07**).
-**Status:** ✅ **ANSWERED 2026-09-02** — see **§12**. Q1 **YES** · Q2 **THE FULL NAME** · Q3 **cl.10's
-staged schedule EXTENDED to a person's name**. Logged as `.decision-log.md#decision-2026-09-02-174`.
-⛔ **Nothing is APPLIED yet**, and ⚠ **Q3 opens more than it closes** (§12).
+**Status:** ✅ **ANSWERED 2026-09-02** — §12 — and ⚠ **§12's Q3 was CORRECTED the same day at §13**
+(`.decision-log.md#decision-2026-09-02-175`, **Panel-ratified**). ⭐ **The standing position is:**
+Q1 **YES** · Q2 **THE FULL NAME**, ⭐ **unconditionally** · Q3 ⛔ **the staged reduction is the NOMINEE
+BANK fields' and does ⛔ NOT reach a contributor's or the deceased member's name**.
+⚠ **Read §13 with §12 — ⛔ §12 is left exactly as relayed and is ⛔ not rewritten.**
 
 > ### 📖 **Panel members — please start at [Appendix A: In plain words](#appendix-a--in-plain-words).**
 > It is at the end of this note and it is **complete on its own** — the whole question, the options,
@@ -249,23 +251,72 @@ form are independent — is recorded **NOT ANSWERED**, ⛔ not answered in the n
 
 ---
 
+## 13. ⚠⭐ CORRECTED — 2026-09-02, **Panel-ratified**. Logged as `2026-09-02-175`
+
+⛔ **§12 is left exactly as relayed and is ⛔ NOT rewritten** ([[feedback_supersede_never_reinterpret]]).
+This section records the correction beside it.
+
+**What happened.** BigDev, who carried the Panel's answers at §12, read the transcribed ruling back and
+identified that **Q3's answer did not reflect the Panel's intent**. The correction was **put back to
+the Panel**, and **the Panel ratified it**. ⭐ ⛔ It is ⛔ **not** an author re-reading ratified words —
+that would not have been a relay's call.
+
+**The correction.** The *"progressive reduction of public exposure"* is the **NOMINEE BANK fields'** —
+which is exactly what `2026-08-28-160` **cl.10** already ruled, over `account_holder_name` ·
+`account_number` · `ifsc` · `vpa`. ⭐ **The *nominee's* name is the phrase's true referent.**
+⇒ ⛔ it does ⛔ **NOT** reach the **contributor's** name, and ⛔ **NOT** the **deceased member's**.
+
+| | Standing position after §13 |
+|---|---|
+| **Q1** — may a contributor be named? | ✅ **YES** — ⛔ unchanged |
+| **Q2** — in what form? | ✅ **THE FULL NAME** — ⛔ unchanged, ⭐ **and now UNCONDITIONAL** |
+| **Q3** | ⛔ **No staged reduction applies to a contributor's name.** cl.10 is unchanged and covers the nominee bank fields, as it always did |
+
+### ⭐ What this changes
+
+- ⭐⭐ **The word *"conditionally"* is WITHDRAWN from Q2's permission.** The condition was §12's Q3.
+- ⭐⭐ **Story 11b.3b's Task 0 STOP GATE IS LIFTED.** Both name questions are ruled, unconditionally.
+- ⛔ **Four decisions are VACATED — ⛔ not rejected, ⛔ not answered in the negative. Their questions
+  ceased to exist** (the `2026-08-24-159` precedent — *"(a) did not become wrong, its QUESTION ceased
+  to exist"*): **D14-order** (the STOP gate — ⭐ **gone**) · **D12-schedule** · **D13-maskedname** ·
+  **D11-order**.
+- ⛔ **Story 11b.3a is UNAFFECTED** — cl.10 never moved, so its masking schedule returns to a **single
+  subject**.
+
+### ⛔ What this does NOT change
+
+- ⭐ **§6 still stands, and Q2 still overturns the standing practice.** `epics.md:3145` · `:3238` ·
+  `:4931` remain **STALE** and owe **annotation**; the shipped wire is still the wrong shape here.
+- ⛔ **`2026-09-02-173` (the deceased member) is untouched** — and its **counsel clause is still
+  outstanding**, so ⛔ **no deceased-member name renders** until that written rule exists and is pinned.
+- ⚠ **§4 returns to an OPEN INFERENCE — ⛔ neither adopted nor rejected.** §12 appeared to adopt it;
+  §13 withdraws the adoption. ⛔ It is ⛔ **not** now *"rejected by the Panel"*, and ⛔ nobody may cite
+  §13 as having decided it either way ([[feedback_closure_language_precision]]).
+- ⚠ **Q3-as-asked** — whether basis and form are independent — is **STILL NOT ANSWERED**, by either
+  §12 or §13.
+
+⭐ **Caught between transcription and implementation. ⛔ Nothing had been built against §12's Q3**, so
+the correction costs **zero rework**.
+
+---
+
 # Appendix A — In plain words
 
 *Added 2026-09-02, at BigDev's direction, in the same form as the 2 September note. ⛔ Nothing here is
 new — it is §1–§11 above without the technical detail. Where the two differ, the numbered sections
 govern.*
 
-> ## ✅ **This has now been ANSWERED — 2026-09-02, by Dhiraj Rahul and Kalpana Bharti.**
-> **1. May a contributor be named? — YES.  2. In what form? — THE FULL NAME.
-> 3. And the name should fade over time**, on the same staged schedule already agreed for the family's
-> bank details: shown in full while the drive is current, then reduced, then hidden.
+> ## ✅ **This has now been ANSWERED — 2026-09-02.**
+> **1. May a contributor be named? — YES.  2. In what form? — THE FULL NAME.**
 >
-> ⚠ **Two things to know:**
-> · **The fading is ⛔ not built yet** — no part of the work currently does it, and it is a
->   substantially bigger piece than showing the name. It has to be designed and agreed separately.
-> · ⛔ **Because of that, showing full names must ⛔ NOT begin before the fading exists** — otherwise
->   the Trust would publish full names of living members **permanently**, on a permission that was
->   given **conditionally**. That question is going back to you before anything is shown.
+> ⚠ **Question 3 was corrected the same day, and the Panel approved the correction.**
+> The answer first recorded said a contributor's name should **fade over time**. That was a
+> misunderstanding: **the fading was always about the family's BANK DETAILS** — including the name on
+> the account — and ⛔ **not** about the people who contributed, or the member who died.
+>
+> ⭐ **So the position is simply: a contributor is named, in full, and the name does ⛔ not fade.**
+> Nothing else you decided changes, and nothing had been built on the mistaken version, so it cost
+> nothing to put right.
 >
 > *The rest of this appendix is kept as the record of what was asked.*
 

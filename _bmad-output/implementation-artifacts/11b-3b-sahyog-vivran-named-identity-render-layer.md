@@ -362,9 +362,12 @@ authorized export path is Story 10.7's scope-respecting, audit-logged library.
 placeholder key — **and still counted** in every confirmed aggregate
 **And** ⛔ **no per-row lifecycle-state re-check is added** as a TOCTOU mitigation — forbidden by
 `2026-08-31-170`
-**And** the row key is the one **D10** rules — ⛔ not `index`, ⛔ not `member_id` on a public wire.
-⚠ ⭐ **If D10 rules (a), the correct output is NO key at all** and this clause is discharged by the
-8.3 deferral being **re-affirmed open with a re-pointed trigger** — ⛔ never by inventing one anyway
+**And** ⭐⭐ **`D10(a)` RULED: there is ⛔ NO ROW KEY.** ⛔ Do ⛔ not add `index`, ⛔ not `member_id`,
+⛔ not a token, ⛔ not an "opaque positional key" — **nothing.** Astro SSR emits static HTML with ⛔ no
+reconciler, so a key would be an identifier with ⛔ no consumer
+**And** ⛔ **Story 8.3's `keyExtractor` deferral is RE-AFFIRMED OPEN and its trigger RE-POINTED** to
+*"the first VIRTUALIZED render of a multi-pool contributor list"* — ⛔ **explicitly and citing
+`2026-09-02-177`**, ⛔ never silently, and ⛔ **NOT discharged** by this story
 **And** the **edge-cache residual is stated in writing** on the surface's own file: an erasure keeps
 being served from every warm PoP for up to `s-maxage` seconds, and ⛔ **direct SQL is NOT the
 operational fallback**. ⛔ Recorded, ⛔ not re-derived as a new finding.
@@ -432,8 +435,11 @@ discharged only at the 2026-09-01 combined review; ⛔ **do not let a third inst
 **Then** `deferred-work.md` gains this story's section recording, each with a trigger: **11b.2 items
 (i) / (ii) / (iii)** — ⭐ **discharged if AC1–AC3 complete, ⛔ and explicitly re-affirmed OPEN if the
 rulings do not arrive** · the **public/member name INVERSION** (11b.1 item (e) — ⛔ re-affirmed, ⛔ not
-re-filed; **D9** decides whether it moves) · the **FlashList `keyExtractor`** deferral (⛔ discharged
-only if D10 supplies a stable key; otherwise **re-affirmed OPEN**, ⛔ never silently re-pointed) · the
+re-filed; **D9** decides whether it moves) · ⭐ the **FlashList `keyExtractor`** deferral — **`D10(a)` supplied NO key**, so it is
+**RE-AFFIRMED OPEN** and its trigger is **RE-POINTED** to *"the first VIRTUALIZED render of a
+multi-pool contributor list"*, ⛔ **explicitly and citing `2026-09-02-177`** · ⭐ the **public/member
+INVERSION** at its **WIDENED** size (**`D9(a)`** — ⛔ re-affirmed, ⛔ not re-filed; the public names in
+full on TWO surfaces while the member app shields on three) · the
 **Real Data Test disambiguation** question (AC6)
 **And** ⛔ **the `epics.md` annotation is 11b.3's Task 0, ⛔ not this story's** — ⛔ do not write a
 second one.
@@ -505,7 +511,7 @@ second one.
 
 ---
 
-## ⚖️ Decisions — ✅ **D2 + D3 BOTH RULED 2026-09-02 (YES · FULL NAME, unconditional).** ⛔ **TWO OPEN: D9 · D10.** ⭐ **FOUR VACATED by `-175`: D14-order · D12-schedule · D13-maskedname · D11-order**
+## ⚖️ Decisions — ✅ **ALL RULED.** D2 + D3 (Panel, 2026-09-02, YES · FULL NAME, unconditional) · **D9(a)** + **D10(a)** (BigDev, `2026-09-02-177`). ⛔ **ZERO OPEN.** ⭐ **FOUR VACATED by `-175`: D14-order · D12-schedule · D13-maskedname · D11-order**
 
 ### ✅ D2 — **RULED by the Trustee Panel, 2026-09-02** (Dhiraj Rahul, Kalpana Bharti) — **YES, at the FULL NAME**, ⭐ **UNCONDITIONALLY**
 
@@ -643,14 +649,48 @@ not.** ⇒ whether a D3 "yes" is **buildable** depends on counsel's clause TEXT,
 by pinning a second one, or by seeding a `clause_versions` row — `public-read.ts:171-175` forbids the
 placeholder in terms: *"a stand-in makes names render on an authority that does ⛔ not exist."*
 
-### ⛔ D9 — Does this story RESOLVE the public/member name inversion, or carry it? (Trap 3, AC8)
+### ✅ D9 — RULED **(a)** by BigDev, 2026-09-02 — **CARRY it**
+
+⭐ `2026-09-02-177`. ⛔ **Re-affirmed, ⛔ NOT re-filed** — it stays open at `deferred-work.md` 11b.1 item
+**(e)**. ⭐ Ground: resolving it means changing the **MEMBER** app's form (`resolvePoolIdentity`,
+`notifications/pool-identity.ts:76`), which is ⛔ not this surface's act and would change 8.6/8.7/8.8.
+
+⚠⛔ **AND IT IS CARRIED AT ITS WIDENED SIZE — ⛔ recorded, ⛔ not left implicit.** After `-173` and
+`-174` the **public** side names people **in full on TWO surfaces** (`/sahyog` and `/sahyog-vivran`,
+deceased member **and** contributor) while the **member app** shields the same family on **three**
+(My Pool card, Yogdaan Bahi, notifications). ⇒ **D7(a) carried it; D9(a) carries it BIGGER.** ⛔ Do
+⛔ not record it as unchanged.
+
+<details><summary>⛔ The question as put (kept as the record)</summary>
+
+**Does this story RESOLVE the public/member name inversion, or carry it? (Trap 3, AC8)**
 
 11b.3 ruled **D7(a) carry**, which makes this story the binder.
 - **(a) Carry** — re-affirm, ⛔ do not re-file. ⭐ *Authoring recommendation: resolving it means
   changing the **member** app's form (`resolvePoolIdentity`), which is not this surface's act.*
 - **(b) Resolve** — out of this story's natural diff, and it would change 8.6/8.7/8.8 behaviour.
 
-### ⛔ D10 — What is the stable per-row key? (Trap 4, AC5)
+</details>
+
+### ✅ D10 — RULED **(a)** by BigDev, 2026-09-02 — ⛔ **NO ROW KEY IS MINTED**
+
+⭐ `2026-09-02-177`. `keyExtractor` is a **FlashList** concern; this surface is **Astro SSR** — static
+HTML, ⛔ no virtualization, ⛔ no reconciler, ⛔ no re-render. ⇒ there is ⛔ **nothing for a row key to
+be stable FOR**, and minting one would create an identifier this surface does not need on **the
+surface where a per-row identifier is most expensive**. ⭐ **Nothing is added.**
+⇒ ⛔ not `index` · ⛔ not `member_id` · ⛔ not a new token (11b.2a's D5 vacated `rowKey`).
+
+⚠⛔ **AND STORY 8.3's `keyExtractor` DEFERRAL IS RE-AFFIRMED OPEN, WITH ITS TRIGGER RE-POINTED —
+⛔ EXPLICITLY, ⛔ never silently.** Its recorded blocker — *"the PII-shielded shape carries no stable
+per-member identifier"* — is **still true** and D10(a) supplies none. ⛔ **NOT discharged here.**
+⭐ **The trigger MOVES** from *"reused for the Epic 11b public render"* — which this surface proves is
+⛔ **not** the scale case, because SSR has no key at all — **to *"the first VIRTUALIZED render of a
+multi-pool contributor list."*** ⚠ **AC8 required this be explicit and cite its ruling; `-177` is that
+ruling** ([[feedback_closure_language_precision]]).
+
+<details><summary>⛔ The question as put (kept as the record)</summary>
+
+**What is the stable per-row key? (Trap 4, AC5)**
 
 ⛔ Not `index` (the 8.3 defect). ⛔ Not `member_id` on a public wire (an enumeration primitive, refused
 in terms by 11a.3's handler). ⚠ `rowKey` was **vacated** by 11b.2a's D5 and ships nowhere.
@@ -672,6 +712,8 @@ surface does not need, on the surface where a per-row identifier is most expensi
 - **(c)** Mint a **stable non-identifying row token** on the wire — ⚠ reopens what 11b.2a's D5 vacated,
   and a per-row stable token on a public surface is an **enumeration primitive** unless it is
   per-render salted. ⛔ Not free, and ⛔ not needed by anything on this surface.
+
+</details>
 
 ---
 
@@ -770,6 +812,7 @@ _(to be filled by the dev agent)_
 
 | Date | Change |
 |---|---|
+| 2026-09-02 | ✅ **D9(a) + D10(a) RULED by BigDev** (`2026-09-02-177`) ⇒ ⭐⭐ **THIS STORY NOW HAS ZERO OPEN DECISIONS.** **D9(a)** carries the public/member inversion — ⛔ re-affirmed, ⛔ not re-filed — ⚠ **at its WIDENED size**: the public names in full on **two** surfaces while the member app shields on **three**. **D10(a)** mints ⛔ **no row key at all** — Astro SSR has no reconciler, so a key would be an identifier with no consumer — and Story 8.3's `keyExtractor` deferral is **RE-AFFIRMED OPEN** with its trigger **RE-POINTED** to *"the first VIRTUALIZED render of a multi-pool contributor list"*, ⛔ explicitly and citing the ruling, ⛔ **not discharged**. |
 | 2026-09-02 | ⭐ **THIS STORY GAINED AN OBLIGATION: the AMOUNT-RAISED render (new `AC3b`).** BigDev ruled **`D1(b)`** on 11b.3 (`2026-09-02-176`) — consume the shipped canonical `amountRaisedInr` — ⛔ and did ⛔ **not** lift the `@twt/ui` fence for 11b.3, so **the amount MOVES here**, to the story that adds the dependency. ⚠ A real **scope addition**, ⛔ not a clarification: the DTO gains `rosterSize` + `fixedAmount`, `daysRemaining: 0` is supplied for non-`live` pools, and ⛔ **only** `amountRaisedInr` is authorised — the presenter's progress meter is ⛔ **not** (completion framing on a settled drive needs its own decision). ⭐ Also closes the interim count-only asymmetry 11b.3 ships with — ⛔ ordering, ⛔ not a second inversion. |
 | 2026-09-02 | ⚠⭐ **`-174` cl.3 CORRECTED, Panel-ratified** (`2026-09-02-175`) — the *"progressive reduction of public exposure"* is the **NOMINEE BANK fields'** (`-160` cl.10's own subject, which already includes the *nominee's* name) and does ⛔ **not** reach a contributor's or the deceased member's name. BigDev identified it and put the correction **back to the Panel**, who ratified it. ⇒ **Q1/Q2 stand UNCONDITIONALLY**; the **STOP GATE IS LIFTED**; and **D14-order · D12-schedule · D13-maskedname · D11-order are VACATED** — ⛔ their questions ceased to exist, ⛔ they were not rejected. ⛔ `-174` is ⛔ not edited. ⭐ Caught between transcription and implementation ⇒ **zero rework**. ⚠ Still open: **D10** (AC5 depends on it) · **D9**; and the deceased-member name still will ⛔ not render until counsel's clause is pinned. |
 | 2026-09-02 | ✅ **D2 RULED by the Trustee Panel** (Dhiraj Rahul, Kalpana Bharti) — contributor name **YES**, at the **FULL NAME**; transcribed `2026-09-02-174`. ⭐ Q2 **overturned** the standing practice: three epic ACs **and** the shipped wire all assumed first-name + last-initial, and §6 of the note existed to make exactly that outcome possible. ⚠⛔ **Q3 EXTENDED `-160` cl.10's staged schedule from bank fields to a PERSON'S NAME** — full while current, then progressively reduced, then hidden. ⛔⛔ **No story builds that**, so the STOP gate **holds on the new `D14-order`**: may full names ship before the disappearance exists? Also raised: **D12-schedule** (shared substrate with 11b.3a — a policy question) and **D13-maskedname** (what "masked" means for a name; the ratified ladder is the analogue but is ⛔ not adopted). |

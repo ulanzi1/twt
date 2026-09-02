@@ -98,6 +98,8 @@ stated where an operator will read it, ⛔ not only here.
 | `pool_fixed_amount_schedule` | ✅ **LIVE** — the per-Pariwar **effective-window** shape modelled 1:1 on `terms_and_conditions_versions`. ⭐ `2026-08-28-160`'s own reference list names it *"the precedent for clause 10(c)/(d)"* | `packages/domain/src/schema/pool_fixed_amount_schedule.ts` |
 | The `sahyog-vivran` matrix surface | ✅ **created by 11b.3**, with ⛔ **zero** Tier-1 fields and a test asserting that count is 0 | `public-vs-private-matrix.yaml` |
 | The fail-closed Tier-1 leg + the ruled allowlist | ✅ **LIVE, both directions**; **two** entries today | `matrix.ts:157-200`, `:376-424` |
+| ⭐ The **governed per-Pariwar presentation-config** substrate | ✅ **LIVE** (11a.1) — a config row + **required `rationale` + actor + display snapshot** + a §1.5 hash-chain **audit anchor** the module **refuses to write without**. ⭐ The accountability shape AC5 needs, ⛔ already built | `packages/domain/src/kyc/presentation-policy.ts`, `schema/pariwar_public_name_presentation.ts` |
+| ⚠ `pariwar.manage_public_name_presentation` | ✅ **LIVE**, catalog **v37** — the nearest key, and **`super_admin` ONLY**; ⛔ the `pariwar_admin` exclusion **IS a ruling**. ⇒ **D8(ii)** | `rbac/permissions.ts` (catalog now **v38**) |
 
 **⛔ What does ⛔ NOT exist:**
 
@@ -307,13 +309,21 @@ truncated string a screen reader reads digit by digit.
 ### AC5 — The Trust-Admin knob surface
 
 **Given** the schedule from AC3
-**When** a Trust Admin opens it
+**When** the authorised holder opens it — ⚠⛔ **and "Trust Admin" is `-160` cl.10's phrase, ⛔ NOT a
+role: there is ⛔ no `trust_admin` in the seeded set. WHO holds this is `D8(ii)`, ⛔ not an authoring
+choice**
 **Then** they can set and re-set **0 / N / permanent** for their Pariwar, and see what is currently in
 effect and from when
 **And** ⚠ the permission is checked against the **existing** key catalog first — ⛔ **a new permission
-key is a catalog VERSION BUMP with a scope dimension, a ratified governance act, ⛔ not a code
-change** ([[project_helpdesk_operator_surface_103]]). ⭐ If a new key is needed, that is **D8**, ⛔ not
-an authoring choice
+key is a catalog VERSION BUMP, a ratified governance act, ⛔ not a code change**
+([[project_helpdesk_operator_surface_103]]). ⚠ ⛔ And the version is ⛔ **not a key count** — 10.18 and
+6.17 both bumped with **zero** keys, so a bump is owed even when only a **holder** changes
+**And** ⛔⛔ **the closest existing key, `pariwar.manage_public_name_presentation`, is `super_admin`
+ONLY — and that exclusion IS a ruling** (`kyc/presentation-policy.ts:11-13`). ⛔ Do ⛔ **not** grant
+this knob to `pariwar_admin` *"for symmetry"*: that file calls it *"reversing a ratified ruling by way
+of a catalog edit … its own Panel decision, not a tidy-up"* → **D8(ii)**
+**And** ⛔ `district_admin` is **DEFERRED** and `state_trustee` **EXCLUDED** — either grant is **INERT**
+under scope containment ([[project_rbac_geo_scope_containment]]). ⛔ Seed neither
 **And** the change is attributed with `users.display_name` **snapshotted at action time** — ⛔ never
 email-derived, ⛔ never resolved at read time ([[project_admin_display_name_attribution]])
 **And** the change is **audit-logged via Story 1.10**
@@ -438,7 +448,13 @@ sibling that routes it back).
   - [ ] Render **nothing** for a null `vpa`.
 
 - [ ] **Task 5 — The Trust-Admin knob** (AC: 5, 6)
-  - [ ] Admin screen; permission check against the **existing** catalog first (D8 if not).
+  - [ ] ⛔ **Read `D8(i)` AND `D8(ii)` first.** ⚠ *"Trust Admin"* is ⛔ not a role — WHO holds the key
+        is a decision, and it may be the **Panel's**, ⛔ not BigDev's.
+  - [ ] Admin screen. ⚠⭐ **This is the project's FIRST self-serve presentation-toggle UI** — 11a.1
+        shipped none by design. ⛔ Not a blocker; ⛔ do say so in the story record.
+  - [ ] ⭐ **Reuse the governed-config SHAPE, ⛔ not the key:** `kyc/presentation-policy.ts` already
+        enforces required `rationale` + actor + display snapshot + a §1.5 hash-chain **audit anchor**,
+        and **refuses a write carrying neither**. ⛔ Do ⛔ not re-invent that accountability wrapper.
   - [ ] `users.display_name` snapshot at action time; audit via 1.10.
   - [ ] The non-immediacy statement, in **all three** places (AC6).
 
@@ -447,7 +463,7 @@ sibling that routes it back).
 
 ---
 
-## ⚖️ Decisions — ✅ **D5 RULED (a) 2026-09-02** (`2026-09-02-177`). ⛔ **ZERO BLOCKING.** ⚠ `D8` conditional (fires only if a new permission key is needed) · `D5-subject` open + routed, ⛔ made non-blocking by D5(a)
+## ⚖️ Decisions — ✅ **D5 RULED (a) 2026-09-02** (`2026-09-02-177`). ⛔ **ZERO BLOCKING.** ⚠ `D8` conditional + **RE-FRAMED** (⛔ the live question is the **HOLDER**, `D8(ii)`, ⛔ possibly the **Panel's**) · `D5-subject` open + routed, ⛔ made non-blocking by D5(a)
 
 ### ✅ D5 — RULED **(a)** by BigDev, 2026-09-02 — **BUILD UN-GATED**, mechanism routed, absence recorded **UN-ATTESTED**
 
@@ -581,11 +597,59 @@ cover a new class *"was on the table and was **rejected on the record**"*
 
 </details>
 
-### ⛔ D8 — Does the Trust-Admin knob need a NEW permission key? (AC5, conditional)
+### ⛔ D8 — **RE-FRAMED 2026-09-02.** ⛔ The question is ⛔ NOT *"does it need a new key?"* — it is **WHO HOLDS IT**, and cl.10 and the 11a.1 precedent point in **OPPOSITE DIRECTIONS** (AC5, conditional)
 
-Check the existing catalog first. ⚠ If a new key is needed it is a **catalog version bump with a scope
-dimension** — a **ratified governance act**, ⛔ not a code change
-([[project_helpdesk_operator_surface_103]]). ⛔ Do not mint one silently.
+⚠ **The first framing asked only whether a key must be minted. ⛔ That is the easy half and it is not
+where the risk is.** Checked live at `79ed41d`:
+
+**(1) ⛔⛔ THERE IS ⛔ NO `trust_admin` ROLE.** The seeded set is `super_admin · pariwar_admin ·
+state_trustee · district_admin · block_admin · finance_officer · it_cell · verifier · auditor ·
+field_worker · helpline_operator · trustee_panel` (`rbac/roles.ts`; `grep trust_admin` over
+`packages/` + `apps/` returns **zero hits**). ⇒ `-160` cl.10's phrase *"**Trust-Admin** controlled, per
+Pariwar"* was carried into AC5 **verbatim** and **maps to nothing**. It must resolve to
+**`pariwar_admin`** (a tenant control) or to **`super_admin` / `trustee_panel`** (a governed act) —
+⛔ **and those are opposite answers.**
+
+**(2) ⭐⛔ THE NEAREST PRECEDENT DELIBERATELY WENT THE OTHER WAY.**
+`pariwar.manage_public_name_presentation` (minted 11a.1, catalog **36 → 37**) governs the per-Pariwar
+**public presentation mode** of a **Tier-1** field — structurally the **same class** as this knob. It
+is **`super_admin` ONLY**, and `kyc/presentation-policy.ts:11-13` says the exclusion **IS** the ruling:
+
+> *"granted to super_admin ONLY — ⛔ **deliberately NOT `pariwar_admin`**, which holds every other
+> tenant-content key. **That exclusion IS the ruling, expressed in the catalog.**"*
+
+⭐ **And its stated ground transfers almost word-for-word:** *"the authority that ruled full names would
+be published is the Trustee Panel, so the authority to change that form is theirs too."* ⇒ the
+authority that ruled nominee bank details publicly displayable is **also the Panel** (`-160` cl.10) —
+so by the same reasoning the authority to decide **how long they stay visible** would be the **Panel's**.
+⚠⛔ The catalog warns about exactly this move: granting this class to `pariwar_admin` *"for symmetry"*
+would *"**reverse a ratified ruling by way of a catalog edit. It requires its own Panel decision, not a
+tidy-up.**"*
+
+**⇒ THE QUESTION, RE-POSED:**
+
+- **D8(i) — the KEY.** ⭐ *Authoring recommendation: **MINT A NEW ONE.*** The masking schedule is a
+  **distinct governed act** from the name form; overloading `manage_public_name_presentation` would
+  make one key mean two unrelated things, and its own doc-block forbids widening it *"for symmetry"*.
+  ⚠ A bump is a **ratified governance act**, ⛔ not a code change ([[project_helpdesk_operator_surface_103]]).
+  ⚠ ⛔ And note the version is **⛔ NOT a key count** — 10.18 and 6.17 both bumped with **zero** keys
+  (*"the catalog version is the version of the CAPABILITY MODEL"*), so a bump is owed even if a key is
+  reused and only a **holder** changes.
+- **D8(ii) — ⭐⭐ THE HOLDER, AND THIS IS THE ONE THAT MATTERS.** `pariwar_admin` (reading cl.10's
+  *"Trust-Admin"* as a tenant control) **or** `super_admin` / `trustee_panel` (following 11a.1's
+  reservation of this class). ⚠⛔ **This may ⛔ NOT be BigDev's to rule.** The precedent reserves the
+  class to the Panel **in terms**, and choosing `pariwar_admin` would be the *"reverse a ratified
+  ruling by way of a catalog edit"* move that file names. ⛔ **If the answer is `pariwar_admin`, it
+  needs the Panel — ⛔ not a catalog edit.**
+- ⛔ **`district_admin` DEFERRED and `state_trustee` EXCLUDED, in both directions** — a `district`
+  ceiling can ⛔ never satisfy a `pariwar`-dimension check and a `state` ceiling is broader than the
+  gate; either grant is **INERT** ([[project_rbac_geo_scope_containment]]). ⛔ Do ⛔ not seed one.
+
+⚠⭐ **AND A SEPARATE FIRST, RECORDED SO IT IS ⛔ NOT DISCOVERED MID-BUILD: AC5 WOULD BE THE PROJECT'S
+FIRST SELF-SERVE PRESENTATION-TOGGLE UI.** 11a.1 shipped ⛔ **no** admin toggle screen — deliberately,
+as a scope boundary (*"⛔ NO self-serve admin toggle UI ships in this story"*). Presentation changes
+have so far been governed by a **write path** with required rationale + actor + audit anchor and ⛔ no
+screen at all. ⛔ That is ⛔ not a reason to refuse the screen; it **is** a reason to say so out loud.
 
 ---
 
@@ -672,6 +736,7 @@ _(to be filled by the dev agent)_
 | 2026-09-02 | ✅ **PRECONDITION SATISFIED — 11b.3's `D4` ruled (b)** (`2026-09-02-176`): `live` + `closed` + `settled` all render, so **AC2's active-campaign subject has a host** and this story does ⛔ not widen the predicate. **`D11` ruled (a)** too — the route states three applicable controls, and this story's PII-bearing change owes `routes.ts` + `login-wall.spec.ts` their update at Task 4. ⚠ New open rider from D4: **`D4-linkage`** — a `live` pool's page has no inbound link today and `P-YYYY-MM-###` is sequential. |
 | 2026-09-02 | ⭐ **NO CHANGE TO THIS STORY — recorded because it was briefly in doubt.** `2026-09-02-174` cl.3 appeared to extend cl.10's staged schedule to contributor names, which would have given this schedule a second subject. ⛔ **Corrected the same day, Panel-ratified** (`2026-09-02-175`): the staged reduction is the **nominee bank fields'**, as cl.10 always said. ⇒ **`D12-schedule` VACATED**, Task 1 returns to a single subject, and ⛔ nothing here ever moved. |
 | ~~2026-09-02~~ | ~~⚠ **This story's schedule gained a POTENTIAL SECOND SUBJECT.**~~ ⛔ **SUPERSEDED by the row above** — ⛔ left as the record, ⛔ not deleted. `2026-09-02-174` cl.3 (Panel) **extended `-160` cl.10's staged schedule from bank fields to a PERSON'S NAME** — contributor names on 11b.3b. Whether the two share one per-Pariwar row is **`D12-schedule`**, a **policy** question, ⛔ not a de-duplication. Task 1 now reads that ruling before designing the table, and ⛔ must neither generalise unilaterally nor foreclose D12. |
+| 2026-09-02 | ⚠⭐ **`D8` RE-FRAMED — the question is ⛔ NOT *"new key?"* but *"WHO HOLDS IT?"*, and it may not be BigDev's to rule.** Two checked findings: **(1)** there is ⛔ **no `trust_admin` role** — `-160` cl.10's phrase was carried into AC5 verbatim and maps to nothing, so it must resolve to `pariwar_admin` **or** `super_admin`/`trustee_panel`, which are opposite answers; **(2)** the nearest key, `pariwar.manage_public_name_presentation`, is **`super_admin` ONLY** and `presentation-policy.ts:11-13` says *"that exclusion IS the ruling"*, warning that granting the class to `pariwar_admin` *"for symmetry"* would *"reverse a ratified ruling by way of a catalog edit … its own Panel decision, not a tidy-up."* ⭐ Its ground transfers: the Panel ruled the data publishable, so the authority to time-limit it is arguably theirs. ⇒ **D8(i)** mint (recommended — a distinct governed act) · **D8(ii)** the holder, ⛔ possibly the Panel's. ⚠ Also recorded: catalog version is ⛔ **not** a key count (10.18 / 6.17 bumped with zero), and **AC5 would be the project's FIRST self-serve presentation-toggle UI** (11a.1 shipped none by design). ⭐ And `presentation-policy.ts`'s accountability wrapper is **reusable as a shape** — ⛔ reuse it, ⛔ not the key. |
 | 2026-09-02 | ✅ **D5 RULED (a) by BigDev** (`2026-09-02-177`) — the nominee bank render ships **UN-GATED** on cl.10(a); the mechanism is routed. ⭐ **This story has ZERO blocking decisions** (D8 stays conditional). ⚠⛔ **And (a)'s price is carried, ⛔ not glossed:** the Claim Terms substrate is recorded **UN-ATTESTED**, and **counsel's third-party objection (11b.1 item (a)) is CARRIED AS RISK** — `-160` cl.7 lifted only the first half of its two-part trigger and this story ships without the second. ⚠ `D5-subject` is made **non-blocking**, ⛔ **not** resolved; and (a) adopts ⛔ **neither** reading of cl.10(a) — only the Panel can. ⭐ **Built is still ⛔ NOT published.** |
 | 2026-09-02 | ⚠⭐ **`D5-subject` NARROWED — its first form OVERSTATED the exposure and is WITHDRAWN.** BigDev challenged it: *isn't verifying the holder the claim approver's job?* ⭐ **It is, and the chain is real** — bank details are collected **before** the verifier decides (`errors.ts:198-203`), the post-approval window is `verifier_approved` only, admin-only, tier-2-permissioned, audited and reason-required (`:205-210`), and past the freeze it needs the emergency workflow. ⛔ The first version had ⛔ not traced it. ⭐⭐ **But the check surfaced a SHARPER finding: ⛔ nobody in that chain can SEE the holder name** — the verifier console has no bank surface, no verification handler reads it, and the only read-back is `NomineeBankStatusResponse`, a **presence view** (`holderNamePresent: boolean`), so even a tier-2 admin **corrects a name they cannot see**. ⇒ this story would publish to the internet a value ⛔ no approver can read. ⚠ `ifsc_validated` is ⛔ not corroboration (branch lookup, ⛔ not a person). ⭐ What survives for D5: the **consent-subject** point, and it **strengthens reading (i)** of cl.10(a). ⛔ Closing it is a **verifier-console** act, routed ⛔ not built here. |
 | ~~2026-09-02~~ | ~~**D5-subject recorded** (observational)~~ ⛔ **SUPERSEDED by the row above** — ⛔ left as the record, ⛔ not deleted. — arising from the 11b.3b packet's "whose name" pass. `-160` cl.3's basis is *"the **nominee's** own Claim Terms acceptance"*, but `account_holder_name` is **free text the filer types**, with ⛔ no FK and ⛔ no match rule (`claim_nominee_bank_accounts.ts:7-11`), verified reachable through the contract (`:56`) and the handler (`:155`). ⇒ a second gap **under** D5: even with an instrument, the row does ⛔ not identify its subject. ⚠ Two committed documents disagree (`nominee-accounts.ts:18` calls it *"the NOMINEE name"*); the schema is the authority and the comment is ⛔ recorded, ⛔ not swept. ⛔ Nothing ruled; both readings of cl.10(a) recorded. |

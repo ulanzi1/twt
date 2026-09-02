@@ -16,23 +16,25 @@ Status: ready-for-dev
 > ([[project_r7_fact_producer_unbuilt]]) — this names a **story key that exists in
 > `sprint-status.yaml`**.
 
-> ⛔⛔ **TASK 0 IS A STOP GATE. TWO DECISIONS ARE OPEN AND ONE OF THEM IS THE PANEL'S.**
+> ✅✅ **BOTH DECISIONS ARE RULED — TASK 0's STOP GATE IS DISCHARGED. ⭐ THIS STORY IS STARTABLE.**
 >
 > | Decision | Question | Whose |
 > |---|---|---|
-> | **`INV-scope`** | Do **all four** consumers rise, or only the in-app two? | ✅ **RULED — ALL FOUR** (`2026-09-02-180`) |
-> | **`INV-form`** | **Hard-coded full name**, or **mode-resolved** from the Pariwar's configured public mode? | ⛔ **OPEN — BigDev, BLOCKING** |
+> | **`INV-scope`** | Do **all four** consumers rise, or only the in-app two? | ✅ **ALL FOUR** (`2026-09-02-180`) |
+> | **`INV-form`** | Hard-coded, or **mode-resolved**? | ✅ **MODE-RESOLVED** (`2026-09-02-181`) |
 >
 > ⭐⭐ **`INV-scope` IS RULED: ALL FOUR** (Kalpana Bharti, Dhiraj Rahul). ⇒ the inversion **CLOSES**,
 > ⛔ it is ⛔ not narrowed; the resolver's *"one identity everywhere"* property is **PRESERVED**; and
 > ⛔ **no split is authorised** — a future story that divides the consumers is **reversing `-180`**,
 > ⛔ not optimising.
 >
-> ⛔ **`INV-form` STILL BLOCKS, and this ruling made it MATTER MORE.** Under a narrow scope a
-> hard-coded full name would have been contained to two in-app screens. ⛔ **Under all four it is
-> not:** a Pariwar that sets its public mode to `shielded_name` would still have a **full name pushed
-> to its members' handsets and printed into a forwardable PDF**. ⇒ ⭐ **the case for MODE-RESOLVED is
-> materially stronger than when it was raised.** ⛔ **No code until it is ruled.**
+> ⭐⭐ **`INV-form` RULED MODE-RESOLVED** — the member side reads the **same stored per-Pariwar mode**
+> the public side reads. ⇒ **the two forms can ⛔ NEVER diverge again BY CONSTRUCTION**, which is a
+> stronger guarantee than *"they match today"*.
+>
+> ⛔⛔ **AND IT CARRIES ONE TRAP THAT WOULD SILENTLY BREAK A MEMBER SURFACE — read Trap 5 before Task 2.**
+> ⛔ `resolvePublicMemberName` may ⛔ **NOT** be reused verbatim: it **OMITS mononyms**, and the member
+> side must ⛔ not.
 
 ---
 
@@ -148,6 +150,27 @@ this point for the directory, where the consequence was the opposite: the shield
 ⇒ ⚠ **for that class there is ⛔ no inversion today**, and this story must ⛔ not report closing one.
 ⛔ Do ⛔ not "fix" the mononym path — ⛔ it is not broken here.
 
+### Trap 5 — ⛔⛔ `resolvePublicMemberName` MAY ⛔ NOT BE REUSED VERBATIM — IT **OMITS MONONYMS**
+
+⭐ **The obvious move after `INV-form(a)` is to call the public resolver directly** — same modes, same
+shielding helper, one function. ⛔ **It would silently break a member surface.** Verified live:
+
+| | `shielded_name`, mononym (single-token name) |
+|---|---|
+| `kyc/public-name.ts` (**public**) | returns **`''`** — callers treat it as **"omit this row"** (ruled `2026-08-21-145` cl.3: *"a shorter page beats an unshielded name on a page that promises shielding"*) |
+| `notifications/pool-identity.ts` (**member**) | returns the identity **with `deceasedLastInitial: ''`** — it only bails when `firstName === ''` |
+
+⇒ ⛔⛔ **reusing the public resolver turns *"show the family's single name"* into *"OMIT THE POOL"*** on
+the My Pool card, the Yogdaan Bahi, the PDF **and** the notification. ⭐ **Mononyms are common in
+India** — ⛔ this is ⛔ not a corner case.
+
+⭐ **THE RULE:** the two surfaces need the **SAME FORM RULE** and ⛔ **DIFFERENT ABSENCE BEHAVIOUR** —
+omitting a row from a public directory is a **privacy protection**; omitting a member's own pool is a
+**functional regression**. ⇒ ⛔ **share the MODE, ⛔ never the whole function**
+(`2026-09-02-181`).
+
+⚠ ⛔ **And this is exactly the mechanism by which Trap 4 / AC4 would have been violated BY ACCIDENT.**
+
 ---
 
 ## Acceptance Criteria
@@ -168,13 +191,27 @@ authors, paraphrases or re-grounds a ruling.
 
 ### AC2 — The member-facing form matches the ruled public form, at the ruled scope
 
-**Given** ✅ **`INV-scope` RULED — ALL FOUR** (`2026-09-02-180`) and `INV-form`
+**Given** ✅ **`INV-scope` ALL FOUR** (`2026-09-02-180`) and ✅ **`INV-form` MODE-RESOLVED**
+(`2026-09-02-181`)
 **When** the resolver renders a pool's deceased-family identity
 **Then** **ALL FOUR** consumers render the name in the form **`INV-form`** rules — ① My Pool card
 · ② Yogdaan Bahi · ③ the **Contribution Note PDF** · ④ the **cycle-open push / WhatsApp / SMS** — and
 the public/member gap is **CLOSED**, ⛔ not narrowed
 **And** ⛔ **no consumer is excluded and ⛔ no split is authorised** — ⚠ a divergence here reverses
 `-180` and re-creates the *"two different pools"* defect 8.8 removed
+**And** ⭐⭐ **the form is MODE-RESOLVED from the Pariwar's stored `public_name_presentation_mode`** —
+⛔ **never hard-coded** — so the public and member forms ⛔ **cannot diverge again**
+**And** ⭐ **the mode is an INPUT to the resolver, ⛔ NOT a DB read inside it** — the **caller** reads it
+once via `kyc/presentation-policy.ts`, mirroring the pure/accessor split
+`resolvePublicMemberName(mode, storedName)` already uses (*"without dragging a database into their
+graph"*). ⚠⛔ **This is ⛔ not cosmetic:** the mode is **per-Pariwar** while the fan-out is *"one
+notification per member assigned to a pool"* ⇒ a read **inside** the resolver is an **N+1 across the
+whole fan-out**. ⛔ Read once per Pariwar per batch
+**And** ⛔⛔ **`resolvePublicMemberName` is ⛔ NOT reused verbatim** (**Trap 5**) — ⛔ share the **MODE**,
+⛔ never the whole function; the member side keeps its **own** mononym fail-soft
+**And** ⭐ **the DEFAULT carries across unchanged** — `DEFAULT_PUBLIC_NAME_PRESENTATION_MODE` is
+`full_name` and is deliberately ⛔ not fail-closed ⇒ a Pariwar with no stored row renders **full names
+on both sides**. ⛔ No new default is introduced
 **And** ⭐ **`resolvePoolIdentity` stays the ONE place the join lives** — ⛔ no consumer grows its own
 name resolution, and ⛔ the resolver is ⛔ not duplicated by value (the property 8.8 moved it to protect)
 **And** ⛔ **`splitFirstNameLastInitial` is ⛔ NOT reimplemented** — it **is** the `shielded_name`
@@ -255,19 +292,32 @@ story **merges** — a ruling authorises the work, ⛔ it does not perform it
   - [ ] `governance:` commit first ([[feedback_governance_commits_precede_implementation]]).
 - [ ] **Task 1 — The identity SHAPE** (AC: 3) — a field that says what it holds; ⛔ never widen
       `deceasedLastInitial`.
-- [ ] **Task 2 — The resolver** (AC: 2) — one join site; ⛔ no reimplementation of
-      `splitFirstNameLastInitial`; ⛔ the stored KYC name is never written.
-- [ ] **Task 3 — The consumers `INV-scope` names** (AC: 3) — My Pool card · Yogdaan Bahi · the PDF ·
-      the `apps/jobs` notification copy.
+- [ ] **Task 2 — The resolver, MODE-RESOLVED** (AC: 2) — take the mode as an **input**; one join site;
+      ⛔ no reimplementation of `splitFirstNameLastInitial`; ⛔ the stored KYC name is never written.
+  - [ ] ⛔⛔ **Read Trap 5 FIRST.** ⛔ Do ⛔ not call `resolvePublicMemberName` — it **omits mononyms**
+        and would turn *"show the single name"* into *"omit the pool"* on all four surfaces.
+  - [ ] ⚠ **Record the SEMANTIC WIDENING at the setting:** `public_name_presentation_mode` now governs
+        **member-facing** surfaces too. ⛔ **Do ⛔ NOT rename it** — a governed config table's rename is
+        a migration **and** a governance act, and its authority (`super_admin`) and scope (per-Pariwar)
+        are already correct.
+- [ ] **Task 3 — ALL FOUR consumers** (AC: 3) — My Pool card · Yogdaan Bahi · the PDF · the
+      `apps/jobs` notification copy.
+  - [ ] ⚠⛔ **Batch the mode read PER PARIWAR in the cycle-open fan-out** — ⛔ never per member
+        (AC2's N+1).
 - [ ] **Task 4 — Tests** (AC: 2) — ⭐ the **byte-identical stored name** assertion across a form change
-      and back; per-consumer render assertions; ⛔ the mononym path unchanged.
+      and back; per-consumer render assertions on **all four**.
+  - [ ] ⛔⛔ **A MONONYM TEST ON EVERY CONSUMER, in BOTH modes** — the member side must still render the
+        single name and must ⛔ **never** omit the pool (**Trap 5**). ⭐ This is the test that catches
+        the accidental `resolvePublicMemberName` reuse.
+  - [ ] ⭐ **A divergence test:** flip the Pariwar mode and assert the **public** and **member** forms
+        move **together** — the property `INV-form(a)` buys.
 - [ ] **Task 5 — a11y + microcopy** (AC: 5).
 - [ ] **Task 6 — Amend 11b.1 item (e); record CLOSED or NARROWED** (AC: 6) — ⛔ never report a partial
       fix as a closure.
 
 ---
 
-## ⚖️ Decisions — ✅ **`INV-scope` RULED ALL FOUR** (`2026-09-02-180`). ⛔ **ONE OPEN: `INV-form` (BigDev, BLOCKING)**
+## ⚖️ Decisions — ✅ **ALL RULED.** `INV-scope` **ALL FOUR** (`-180`, Panel) · `INV-form` **MODE-RESOLVED** (`-181`, BigDev). ⛔ **ZERO OPEN.**
 
 ### ⛔ `INV-scope` — **PANEL, BLOCKING.** All four consumers, or the in-app two?
 
@@ -307,7 +357,15 @@ story that divides the consumers reverses `-180`.
    production suppliers** and the Panchayat Noticeboard renders ⛔ no family name. ⇒ ⛔ **there is no
    fifth surface**, and a future reader who finds `close-of-cycle.json` should ⛔ not re-derive one.
 
-### ⛔ `INV-form` — **BigDev, BLOCKING.** Hard-coded full name, or MODE-RESOLVED?
+### ✅ `INV-form` — RULED **(a) MODE-RESOLVED** by BigDev, 2026-09-02 (`2026-09-02-181`)
+
+⭐ The member side reads the **same stored per-Pariwar mode** the public side reads ⇒ **the two forms
+can ⛔ never diverge again BY CONSTRUCTION.** ⛔ The mode is an **INPUT**, ⛔ not a DB read inside the
+resolver (AC2 — the N+1). ⛔⛔ **And `resolvePublicMemberName` is ⛔ NOT reused verbatim — Trap 5.**
+
+<details><summary>⛔ The question as put (kept as the record)</summary>
+
+**Hard-coded full name, or MODE-RESOLVED?**
 
 ⚠ **Trap 3.** The public form is **Pariwar-configured**; hard-coding `full_name` on the member side
 means a Pariwar that shields publicly ends up with the **member app showing MORE** — a **new
@@ -323,6 +381,8 @@ inversion**, pointing the other way.
 
 ⚠⛔ **Applying `-136` cl.1 to the MEMBER side is an INFERENCE** — its subject is the public directory.
 ⛔ Raised, ⛔ not assumed (the `2026-09-02-175` warning).
+
+</details>
 
 ---
 
@@ -391,6 +451,7 @@ _(to be filled by the dev agent)_
 
 | Date | Change |
 |---|---|
+| 2026-09-02 | ✅✅ **`INV-form` RULED MODE-RESOLVED** (BigDev, `2026-09-02-181`) ⇒ ⭐⭐ **TASK 0's STOP GATE IS DISCHARGED — THIS STORY IS STARTABLE.** The member side reads the **same stored per-Pariwar mode** the public side reads, so the two forms ⛔ **cannot diverge again by construction**. ⛔ The mode is an **INPUT**, ⛔ not a DB read inside the resolver — it is **per-Pariwar** while the fan-out is **per assigned member**, so an inside read is an **N+1 across the whole fan-out**. ⛔⛔ **AND THE RULING CREATED `Trap 5`:** ⛔ `resolvePublicMemberName` may ⛔ **not** be reused verbatim — it **omits mononyms** (ruled `-145` cl.3 for the *public* directory), so reusing it would turn *"show the family's single name"* into *"OMIT THE POOL"* on all four surfaces. ⭐ Share the **MODE**, ⛔ never the whole function: same form rule, ⛔ different absence behaviour. ⚠ Also recorded: the setting's **semantic widening** (⛔ record at the setting, ⛔ do not rename) and that the **default** (`full_name`, ⛔ not fail-closed) carries across unchanged. |
 | 2026-09-02 | ✅✅ **`INV-scope` RULED — ALL FOUR** (Kalpana Bharti, Dhiraj Rahul; `2026-09-02-180`). The full name renders on **every** consumer, including the **Contribution Note PDF** and the **cycle-open push / WhatsApp / SMS**. ⇒ ⭐ the inversion **CLOSES** (⛔ not narrowed — **Q2 VACATED**, so AC6's narrowed branch does not arise), ⚠ **on SHIP, ⛔ not on ruling**; and ⭐ **the resolver's *"one identity everywhere"* property is PRESERVED** — ⛔ no split, and a future divergence reverses `-180`. ⛔ **`INV-form` STILL BLOCKS, and this ruling made it matter MORE:** under all four, hard-coding the full name means a Pariwar that shields publicly still pushes a full name to handsets and into a forwardable PDF ⇒ the case for **mode-resolved** is materially stronger. ⚠ AC5's microcopy re-check is now **live, ⛔ not conditional**, and the **SMS segment length** must be measured (WA/SMS are the paid channels, reached when push fails). |
 | 2026-09-02 | ⭐ **The `INV-scope` packet is WRITTEN AND ROUTED to the Panel** — `trustee-panel-routing-note-2026-09-02-8-16-inversion-scope.md`. ⏳ Routed, ⛔ nothing ratified; Task 0 stays a STOP gate. ⭐ **Three findings of the packet-writing pass, all verified:** ① the cycle-open notification **does** carry the name (`contribution-notify-triggers.ts:251-253` joins the parts; the copy renders *"Standing with {family}'s family"*) ⇒ consumer ④ is ⛔ not hypothetical · ② the audience is **bounded** — *"per member assigned to a pool in that cycle"* ⇒ the **pool roster, dozens**, and they are the contributors who see the full name in-app anyway ⇒ the real delta is *"also on a lock screen"*, ⛔ not *"to strangers"* · ③ ⭐ **the four consumers are the COMPLETE set** — `close-of-cycle`'s `{familyName}` has **zero production suppliers** and the Noticeboard renders none, so ⛔ **no fifth surface**. |
 | 2026-09-02 | Story minted by **Panel direction** (`2026-09-02-179` cl.3 — *"the public/member inversion gap shall be closed"*), discharging **`INV-owner`**. ⭐ Against **Epic 8**, which owns `resolvePoolIdentity` and its four consumers (the **`7-11` precedent**: mint against the epic that owns the **write path**). Two decisions carried OPEN: **`INV-scope`** (⛔ the **Panel's** — two consumers leave the app, and the ruling does not distinguish push from pull) and **`INV-form`** (hard-coded vs mode-resolved — ⚠ hard-coding re-creates the inversion the moment a Pariwar shields publicly). ⚠ Two findings of the authoring pass: the resolver emits **PARTS**, so this is a **shape change** across four consumers plus a contract; and **mononyms already render in full** on the member side, so part of the "inversion" is ⛔ not real and must ⛔ not be reported as closed. |

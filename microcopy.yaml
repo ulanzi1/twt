@@ -394,11 +394,15 @@ scope:
     # ⭐ Story 8.10's `out-of-band-blame` rule NAMES Epic 11b Story 11b.3 as its RE-TRIGGER in terms,
     # and this entry is what makes that trigger bite: without it the namespace is UNSCANNED COPY
     # wearing a green check — the same defect class as a vacuous gate leg.
-    # ⭐ FOUR prohibitions bite this surface specifically:
-    #   · `donor` (→ colleague / सम्मानित साथी) and `Late Teacher` (→ Deceased Member), both
-    #     `member_only: true` — unscanned until this line exists.
-    #   · ⭐ `report` (→ Sahyog Vivran) — the register's own canonical replacement is THIS SURFACE'S
-    #     NAME, so copy that calls the page a "report" contradicts the term it is meant to establish.
+    # ⭐ FOUR prohibitions bite this surface specifically (review finding: this list previously
+    # miscounted — it named `report` as a standalone 4th item and DROPPED `out-of-band-blame`
+    # despite the paragraph above naming it as the very reason this entry exists. Corrected to
+    # match `docs/tone-review-checklist.md`'s parallel "four automated families" list):
+    #   · `member_only` vocabulary — `donor` (→ colleague / सम्मानित साथी), `Late Teacher`
+    #     (→ Deceased Member), and `report` (→ Sahyog Vivran, since the register's own canonical
+    #     replacement IS this surface's name) — all unscanned until this line exists.
+    #   · the `out-of-band-blame` rule — Story 8.10's text NAMES Story 11b.3 as its re-trigger,
+    #     which is the reason this scan entry exists at all.
     #   · the STRENGTHENED `pool-reality-comparison` tone rule — this page renders Pool-Reality #2
     #     framing, and AC3 forbids a comparison-to-target / shortfall frame. The numbers are already
     #     quarantined upstream by `classifyCycleOutcome`; ⭐ this is the second place that quarantine

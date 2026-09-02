@@ -586,7 +586,10 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
             // ⚠ `.trim() || null`, ⛔ not `=== ''`. A whitespace-only district passes the schema's
             // `.min(1)`, arrives TRUTHY so the page's fallback never fires, and renders a visually
             // BLANK cell where the design says "Not recorded" (the 11a.3 finding).
-            district: drive.district?.trim() || null,
+            // ⚠ Zero-width/invisible Unicode (U+200B–U+200F, U+FEFF) is stripped BEFORE the truthy
+            // check for the same reason — an invisible-only value survives `.trim()` and `.min(1)`
+            // and would render the identical blank cell (review finding).
+            district: drive.district?.trim().replace(/[\u200b-\u200f\ufeff]/g, '') || null,
             confirmedContributionCount: drive.confirmedContributionCount,
             fundingOutcome: drive.fundingOutcome,
             appealReversal:

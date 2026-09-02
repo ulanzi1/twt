@@ -45,6 +45,7 @@ const LABELS: SahyogVivranLabels = {
   outcomePartial: 'The cycle closed. Reconciliation is still in progress.',
   appealTitle: 'Reversed by appeal',
   appealLineage: 'This claim was first denied, went to appeal, and the denial was reversed.',
+  labelAppealStage: 'Appeal stage',
   appealStage: (stage) => `Reversed at appeal stage ${String(stage)}`,
   appealReversedOn: 'Reversed on',
   dispositionNewEvidence: 'New evidence was presented',

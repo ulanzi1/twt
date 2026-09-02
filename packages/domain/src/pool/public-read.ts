@@ -345,6 +345,20 @@ export function coerceDriveInstant(value: unknown): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+/**
+ * ⭐ THE `count(*)`-AS-STRING COERCION — same family as {@link coerceDriveInstant}: a raw `sql<string>`
+ * fragment's declared type is a claim the runtime does not enforce.
+ *
+ * ⚠ `Number("5")` is safe, but `Number(<garbage>)` is silently `NaN`, and `NaN` surviving into
+ * {@link classifyCycleOutcome}'s arithmetic or onto the public wire is worse than a loud failure —
+ * ⛔ never let it pass through un-checked. A non-finite or negative result coerces to `0`, the same
+ * "nobody confirmed / nobody assigned" answer an empty count already means.
+ */
+export function coerceCount(value: unknown): number {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) && n >= 0 ? n : 0;
+}
+
 /** The drive's close (Active) or settle (Archive) instant, from the pool's own event stream. */
 export const DRIVE_CLOSED_AT = (now: Date) => sql<Date | null>`(
     SELECT e.occurred_at

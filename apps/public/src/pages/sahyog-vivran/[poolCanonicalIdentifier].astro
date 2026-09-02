@@ -132,6 +132,7 @@ const labels: SahyogVivranLabels = {
   outcomePartial: tr('outcome.partial'),
   appealTitle: tr('appeal.title'),
   appealLineage: tr('appeal.lineage'),
+  labelAppealStage: tr('label.appeal_stage'),
   // ⚠ Interpolated THROUGH `t()`, ⛔ never by local string surgery — the 11a.2 `{{max}}` vs `{max}`
   // defect threw on EVERY request and no test caught it, because every test bypassed `t()`.
   appealStage: (stage: number) => tr('appeal.stage', { stage }),
@@ -360,7 +361,7 @@ if (!driveStatusVisible) {
             <p class="mt-2 text-sm text-gray-700">{labels.appealLineage}</p>
             <dl class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
-                <dt class="text-xs uppercase tracking-wide text-gray-500">{labels.appealTitle}</dt>
+                <dt class="text-xs uppercase tracking-wide text-gray-500">{labels.labelAppealStage}</dt>
                 <dd class="text-sm"><MatrixField surface="sahyog-vivran" field="appeal_reversal_stage" viewerContext="public" value={model.appealReversalStage} /></dd>
               </div>
               <div>

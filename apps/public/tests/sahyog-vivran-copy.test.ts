@@ -74,18 +74,20 @@ describe('/sahyog-vivran copy resolves through the REAL t() — both locales', (
   // that threw on every request at 11a.2. A test that resolved them WITHOUT the param would pass
   // while the page broke.
   for (const locale of LOCALES) {
-    it(`${locale}: "value.contributions_count" interpolates {{count}}`, () => {
+    it(`${locale}: "value.contributions_count" interpolates {count} with NO stray brace`, () => {
       const out = t('value.contributions_count', { count: 42 }, { locale, namespace: 'sahyog-vivran' });
       expect(out).toContain('42');
-      expect(out).not.toContain('{{count}}');
-      expect(out).not.toContain('{count}');
+      // ⚠ Checking for the literal token NAME (`{{count}}` / `{count}`) is not enough — a
+      // `{{count}}`-templated source resolves through the single-brace regex to `{42}`, a stray
+      // brace around the SUBSTITUTED VALUE that names neither literal (review finding: this
+      // exact shape passed the weaker assertion). Assert there is no brace of ANY kind left.
+      expect(out).not.toMatch(/[{}]/);
     });
 
-    it(`${locale}: "appeal.stage" interpolates {{stage}}`, () => {
+    it(`${locale}: "appeal.stage" interpolates {stage} with NO stray brace`, () => {
       const out = t('appeal.stage', { stage: 3 }, { locale, namespace: 'sahyog-vivran' });
       expect(out).toContain('3');
-      expect(out).not.toContain('{{stage}}');
-      expect(out).not.toContain('{stage}');
+      expect(out).not.toMatch(/[{}]/);
     });
   }
 

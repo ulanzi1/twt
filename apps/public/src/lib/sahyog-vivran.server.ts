@@ -194,7 +194,15 @@ function isSahyogVivranResponse(body: unknown): body is PublicSahyogVivranRespon
   if (r['district'] !== null && (typeof r['district'] !== 'string' || r['district'].length === 0)) {
     return false;
   }
-  if (typeof r['confirmedContributionCount'] !== 'number') return false;
+  // ⚠ Matches the wire contract's `.int().nonnegative()` — a non-integer or negative value is as
+  // malformed as a non-number, and letting it through renders a nonsense count publicly.
+  if (
+    typeof r['confirmedContributionCount'] !== 'number' ||
+    !Number.isInteger(r['confirmedContributionCount']) ||
+    r['confirmedContributionCount'] < 0
+  ) {
+    return false;
+  }
   // ⚠ `null` is VALID and load-bearing — it means the drive is still collecting, or that no
   // expectation was ever set (zero assignees). The page deliberately says nothing for it.
   if (

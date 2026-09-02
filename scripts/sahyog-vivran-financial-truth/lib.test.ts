@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   ALLOWED_EVENT_TYPES,
+  findUnscannedCandidates,
   PROHIBITED_IMPORTS,
   scanFinancialTruth,
 } from './lib.js';
@@ -148,5 +149,19 @@ describe('the scanner is PURE', () => {
     const b = scanFinancialTruth('f.ts', src, DOMAIN);
     expect(a).toEqual(b);
     expect(src).toBe(`const t = 'contribution.confirmed';`);
+  });
+});
+
+describe('findUnscannedCandidates — the SCOPE SAFEGUARD (review finding)', () => {
+  it('⛔ FLAGS a candidate with no matching SCAN_FILES entry', () => {
+    expect(findUnscannedCandidates(['a.ts', 'b.ts'], ['a.ts'])).toEqual(['b.ts']);
+  });
+
+  it('✓ finds nothing when every candidate is scanned', () => {
+    expect(findUnscannedCandidates(['a.ts', 'b.ts'], ['a.ts', 'b.ts', 'c.ts'])).toEqual([]);
+  });
+
+  it('is pure and sorted, regardless of input order', () => {
+    expect(findUnscannedCandidates(['z.ts', 'a.ts'], [])).toEqual(['a.ts', 'z.ts']);
   });
 });

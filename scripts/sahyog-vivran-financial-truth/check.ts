@@ -31,6 +31,7 @@ import { fileURLToPath } from 'node:url';
 import {
   ALLOWED_EVENT_TYPES,
   type FinancialTruthFinding,
+  findUnscannedCandidates,
   formatFinding,
   scanFinancialTruth,
 } from './lib.js';
@@ -56,7 +57,60 @@ const SCAN_FILES: readonly { readonly path: string; readonly renderPath: boolean
   // The SSR page's client + its pure render module.
   { path: 'apps/public/src/lib/sahyog-vivran.server.ts', renderPath: true },
   { path: 'apps/public/src/lib/sahyog-vivran-render.ts', renderPath: true },
+  // ⭐ review finding — was MISSING. The page itself names no amount operand today (D1(c) is
+  // refused at this story), but it is the render path and belongs on rule (3)'s watch list the
+  // moment 11b.3b lifts the `@twt/ui` fence here.
+  {
+    path: 'apps/public/src/pages/sahyog-vivran/[poolCanonicalIdentifier].astro',
+    renderPath: true,
+  },
 ];
+
+/**
+ * ⭐ THE SCOPE SAFEGUARD (review finding) — directories where a Sahyog Vivran read-path file would
+ * plausibly land, walked for anything that belongs to this surface but is NOT in
+ * {@link SCAN_FILES}. ⛔ Narrow and naming-convention-based ON PURPOSE: `sharedDirs` hold plenty of
+ * files this gate has no business scanning (the whole pool engine, every other public-pages
+ * surface), so those are filtered by "filename contains sahyog-vivran". `wholeDirs` are directories
+ * that exist ONLY for this surface (the route folder), so every file inside is a candidate
+ * regardless of its name.
+ */
+const CANDIDATE_DIRS: {
+  readonly sharedDirs: readonly string[];
+  readonly wholeDirs: readonly string[];
+} = {
+  sharedDirs: [
+    'packages/domain/src/pool',
+    'packages/contracts/src/public-pages',
+    'apps/api/src/modules/public-pages',
+    'apps/public/src/lib',
+  ],
+  wholeDirs: ['apps/public/src/pages/sahyog-vivran'],
+};
+
+function findSahyogVivranCandidates(root: string): string[] {
+  const isTest = (entry: string): boolean => /\.(test|spec)\.tsx?$/.test(entry);
+  const isCandidateExt = (entry: string): boolean => /\.(ts|tsx|astro)$/.test(entry);
+
+  const out: string[] = [];
+  for (const dir of CANDIDATE_DIRS.sharedDirs) {
+    const abs = path.join(root, dir);
+    if (!fs.existsSync(abs)) continue;
+    for (const entry of fs.readdirSync(abs)) {
+      if (!/sahyog-vivran/i.test(entry) || isTest(entry) || !isCandidateExt(entry)) continue;
+      out.push(`${dir}/${entry}`);
+    }
+  }
+  for (const dir of CANDIDATE_DIRS.wholeDirs) {
+    const abs = path.join(root, dir);
+    if (!fs.existsSync(abs)) continue;
+    for (const entry of fs.readdirSync(abs)) {
+      if (isTest(entry) || !isCandidateExt(entry)) continue;
+      out.push(`${dir}/${entry}`);
+    }
+  }
+  return out;
+}
 
 function main(): void {
   console.log(
@@ -95,6 +149,21 @@ function main(): void {
     );
     process.exit(1);
   }
+
+  console.log('▸ Scope safeguard — files named like this read path but not in SCAN_FILES');
+  const scannedRelPaths = SCAN_FILES.map((e) => e.path);
+  const unscanned = findUnscannedCandidates(findSahyogVivranCandidates(repoRoot), scannedRelPaths);
+  if (unscanned.length > 0) {
+    console.error(
+      `\n✗ sahyog-vivran-financial-truth gate FAILED — ${String(unscanned.length)} file(s) look like ` +
+        'Sahyog Vivran read-path files but are not in SCAN_FILES:\n' +
+        unscanned.map((p) => `    ✗ ${p}`).join('\n') +
+        '\n  Add each to SCAN_FILES above (with the correct renderPath flag) — see the header comment\n' +
+        '  on the per-story scope tax this gate owes its siblings.',
+    );
+    process.exit(1);
+  }
+  console.log('  ✓ none\n');
 
   if (findings.length === 0) {
     console.log('  ✓ the read path names ONLY canonical event types');

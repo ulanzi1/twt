@@ -413,7 +413,11 @@ export interface SahyogVivranRenderModel {
   readonly isCollecting: boolean;
   /** ⚠ TRUE when the claim reached this drive BY APPEAL — selects the AC5 lineage block. */
   readonly wasReversedByAppeal: boolean;
-  /** The drive's letter code (or the Pariwar's curated registry name), already resolved. */
+  /**
+   * The drive's letter code — ⛔ NEVER the Pariwar's curated registry name. `resolveCuratedPoolName`
+   * re-derives the curated name via `reserveNames`, which RESERVES rows: a write path an
+   * unauthenticated GET may not trigger. Mirrors `/sahyog` exactly.
+   */
   readonly poolLetterCode: string;
   /** `P-YYYY-MM-###` — and on this surface also the route parameter. */
   readonly poolCanonicalIdentifier: string;

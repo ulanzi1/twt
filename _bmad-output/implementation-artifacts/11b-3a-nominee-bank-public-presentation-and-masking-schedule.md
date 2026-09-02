@@ -454,9 +454,12 @@ sibling that routes it back).
         **v38** — a governed act, ⛔ not a code change. ⛔ Do ⛔ not overload
         `pariwar.manage_public_name_presentation`; ⭐ **do** cross-reference it — the two are the same
         class under the same authority now (`-178` cl.2).
-  - [ ] ⛔⛔ **`D8-default` is OPEN and this task depends on it** — what the public sees for a Pariwar
-        with **no schedule row**. ⛔ **If unruled → STOP and report.** ⛔ Do ⛔ not pick whichever the
-        schema makes easy.
+  - [x] ✅ **`D8-default` RULED FAIL-OPEN** (`-179` cl.1) — no row ⇒ details stay **visible** until the
+        Trust sets a window. ⛔ Do ⛔ **not** default to masked; that is the assumption cl.10(b) forbids.
+  - [ ] ⚠ **Amend the `sahyog-drive.deceased_member_name` exception's `rationale:`** while you are in
+        `public-vs-private-matrix.yaml` — it says D10's Panel ratification is **OWED**, which is now
+        **stale** (`-179` cl.2 ratified it). ⛔ **Amendment, ⛔ never a rewrite** of the surrounding
+        grounds ([[feedback_supersede_never_reinterpret]]).
   - [ ] Admin screen. ⚠⭐ **This is the project's FIRST self-serve presentation-toggle UI** — 11a.1
         shipped none by design. ⛔ Not a blocker; ⛔ do say so in the story record.
   - [ ] ⭐ **Reuse the governed-config SHAPE, ⛔ not the key:** `kyc/presentation-policy.ts` already
@@ -470,7 +473,7 @@ sibling that routes it back).
 
 ---
 
-## ⚖️ Decisions — ✅ **D5 RULED (a) 2026-09-02** (`2026-09-02-177`). ⛔ **ZERO BLOCKING.** ✅ **`D8(ii)` RULED 2026-09-02** (`-178`, `super_admin`). ⛔ **ONE NEW OPEN: `D8-default`** (⛔ blocking Task 1/5) · `D8(i)` now BigDev's · `D5-subject` open + routed, ⛔ made non-blocking by D5(a)
+## ⚖️ Decisions — ✅ **D5 RULED (a) 2026-09-02** (`2026-09-02-177`). ⛔ **ZERO BLOCKING.** ✅ **ALL RULED.** `D8(ii)` `super_admin` (`-178`) · `D8-default` **FAIL-OPEN** (`-179`). ⛔ **ZERO BLOCKING** — `D8(i)` is BigDev's governed act; `D5-subject` observational + routed · `D5-subject` open + routed, ⛔ made non-blocking by D5(a)
 
 ### ✅ D5 — RULED **(a)** by BigDev, 2026-09-02 — **BUILD UN-GATED**, mechanism routed, absence recorded **UN-ATTESTED**
 
@@ -676,7 +679,22 @@ same-day correction where extending a ruling past its subject had to be undone �
 warning. ⇒ it was **asked** and is now **ruled** (`-178` cl.2). ⛔ For **this control**; ⛔ nothing
 extends by analogy further.
 
-### ⛔⛔ D8-default — **NEW, OPEN.** What does the public see for a Pariwar with ⛔ NO schedule row?
+### ✅ D8-default — **RULED FAIL-OPEN by the Trustee Panel, 2026-09-02** (`2026-09-02-179` cl.1)
+
+⭐ **A Pariwar with ⛔ no schedule row keeps its nominee bank details VISIBLE after close, until the
+Trust sets a window.** ⇒ ⛔ **immediate masking is ⛔ NOT the code's assumption** — which is exactly
+what cl.10(b) forbids — and it aligns with the analogous name control's deliberate fail-open.
+
+⚠⛔⛔ **AND ITS COST IS PART OF THE RULING, ⛔ not a footnote.** `-178` put authority **centrally**, so a
+Pariwar ⛔ **cannot** set its own window ⇒ **fail-open governs EVERY Pariwar until the Trust acts**, and
+what stays exposed is a **full account number**. ⭐ The Panel ruled it with that in front of them.
+⇒ ⭐⭐ **AC6's non-immediacy statement matters MORE, ⛔ not less** — an operator flipping the knob must
+know the previous projection is served from every warm PoP for up to five minutes, and that the
+*absence* of a knob setting is itself a decision that is live today.
+
+<details><summary>⛔ The question as put (kept as the record)</summary>
+
+**What does the public see for a Pariwar with ⛔ NO schedule row?**
 
 ⭐ **Created by `-178`, and ⛔ not answered by it.** With authority held **centrally**, a Pariwar
 ⛔ **cannot** set its own window ⇒ **whatever the code does with no row governs EVERY Pariwar until the
@@ -698,6 +716,10 @@ Trust acts.** ⚠ The default now carries far more weight than it would under te
 
 ⛔ **A ruling, ⛔ not an authoring choice.** ⚠ ⛔ Do ⛔ not resolve it by picking whichever the schema
 makes easy.
+
+</details>
+
+⭐ **RULED (a) FAIL-OPEN.** ⚠ ⛔ (b) and (c) did ⛔ not become wrong — they were not chosen.
 
 - **D8(ii) — ⭐⭐ THE HOLDER, AND THIS IS THE ONE THAT MATTERS.** `pariwar_admin` (reading cl.10's
   *"Trust-Admin"* as a tenant control) **or** `super_admin` / `trustee_panel` (following 11a.1's
@@ -800,6 +822,7 @@ _(to be filled by the dev agent)_
 | 2026-09-02 | ✅ **PRECONDITION SATISFIED — 11b.3's `D4` ruled (b)** (`2026-09-02-176`): `live` + `closed` + `settled` all render, so **AC2's active-campaign subject has a host** and this story does ⛔ not widen the predicate. **`D11` ruled (a)** too — the route states three applicable controls, and this story's PII-bearing change owes `routes.ts` + `login-wall.spec.ts` their update at Task 4. ⚠ New open rider from D4: **`D4-linkage`** — a `live` pool's page has no inbound link today and `P-YYYY-MM-###` is sequential. |
 | 2026-09-02 | ⭐ **NO CHANGE TO THIS STORY — recorded because it was briefly in doubt.** `2026-09-02-174` cl.3 appeared to extend cl.10's staged schedule to contributor names, which would have given this schedule a second subject. ⛔ **Corrected the same day, Panel-ratified** (`2026-09-02-175`): the staged reduction is the **nominee bank fields'**, as cl.10 always said. ⇒ **`D12-schedule` VACATED**, Task 1 returns to a single subject, and ⛔ nothing here ever moved. |
 | ~~2026-09-02~~ | ~~⚠ **This story's schedule gained a POTENTIAL SECOND SUBJECT.**~~ ⛔ **SUPERSEDED by the row above** — ⛔ left as the record, ⛔ not deleted. `2026-09-02-174` cl.3 (Panel) **extended `-160` cl.10's staged schedule from bank fields to a PERSON'S NAME** — contributor names on 11b.3b. Whether the two share one per-Pariwar row is **`D12-schedule`**, a **policy** question, ⛔ not a de-duplication. Task 1 now reads that ruling before designing the table, and ⛔ must neither generalise unilaterally nor foreclose D12. |
+| 2026-09-02 | ✅ **`D8-default` RULED FAIL-OPEN by the Panel** (`2026-09-02-179` cl.1) ⇒ ⭐⭐ **THIS STORY IS NOW FULLY UNBLOCKED — zero blocking decisions.** No schedule row ⇒ details stay **visible** until the Trust sets a window; ⛔ immediate masking is ⛔ not the code's assumption (cl.10(b)), aligning with the name control's deliberate fail-open. ⚠⛔ **Its cost is part of the ruling:** `-178` made authority central, so a Pariwar cannot self-serve ⇒ **fail-open governs every Pariwar until the Trust acts**, and a **full account number** stays exposed. ⇒ AC6's non-immediacy statement matters **more**. ⚠ New task: amend the `sahyog-drive.deceased_member_name` exception `rationale:`, now **stale** — `-179` cl.2 **Panel-ratified D10**. |
 | 2026-09-02 | ✅ **`D8(ii)` RULED by the Trustee Panel** (Dhiraj Rahul, Kalpana Bharti; `2026-09-02-178`) — **the Trust centrally, `super_admin`.** cl.10(b)'s *"Trust-Admin controlled"* spoke to **authority** and means the Trust, ⛔ not a Pariwar Admin. ⭐ **`-136` cl.3's two-axis separation is FOLLOWED** — per-Pariwar in **scope**, central in **authority** — so this knob and the public-name control are now **aligned**. ⭐ The inference the packet declined to make was **put and adopted** (`-178` cl.2). **Q3 VACATED** (antecedent did not obtain) ⇒ the name control is untouched. ⇒ **`D8(i)` unblocked**: mint the key, `super_admin` ONLY, catalog bump from v38. ⛔⛔ **AND THE RULING CREATED `D8-default`, OPEN and BLOCKING**: with authority central, a Pariwar cannot set its own window, so **whatever happens with no row governs EVERY Pariwar until the Trust acts** — and cl.10 states no default, only what it is *not*. |
 | 2026-09-02 | ⭐ **`D8(ii)` ROUTED TO THE PANEL** — packet written: `trustee-panel-routing-note-2026-09-02-11b3a-masking-knob-authority.md`. ⏳ Routed, ⛔ nothing ratified; Task 5 now **STOPS** if it is unanswered. ⭐⭐ **Writing it found the ground already ratified:** `2026-08-19-136` **cl.3** (same two trustees) rules *"two different axes, and they must not be collapsed — **(a) SCOPE** per-Pariwar; **(b) AUTHORITY** a governed act, ⛔ not a casual Pariwar-Admin toggle."* ⇒ cl.10's *"Trust-Admin controlled, per Pariwar"* **collapses** exactly those two, and the only open question is whether it meant to **follow** cl.3 or **depart** from it. ⚠⛔ Applying cl.3 here is still an **inference** (its subject is the *name* policy, ⛔ not bank masking) — so it is **put, ⛔ not assumed**, with `-175` as the live warning against extending a ruling past its subject. |
 | 2026-09-02 | ⚠⭐ **`D8` RE-FRAMED — the question is ⛔ NOT *"new key?"* but *"WHO HOLDS IT?"*, and it may not be BigDev's to rule.** Two checked findings: **(1)** there is ⛔ **no `trust_admin` role** — `-160` cl.10's phrase was carried into AC5 verbatim and maps to nothing, so it must resolve to `pariwar_admin` **or** `super_admin`/`trustee_panel`, which are opposite answers; **(2)** the nearest key, `pariwar.manage_public_name_presentation`, is **`super_admin` ONLY** and `presentation-policy.ts:11-13` says *"that exclusion IS the ruling"*, warning that granting the class to `pariwar_admin` *"for symmetry"* would *"reverse a ratified ruling by way of a catalog edit … its own Panel decision, not a tidy-up."* ⭐ Its ground transfers: the Panel ruled the data publishable, so the authority to time-limit it is arguably theirs. ⇒ **D8(i)** mint (recommended — a distinct governed act) · **D8(ii)** the holder, ⛔ possibly the Panel's. ⚠ Also recorded: catalog version is ⛔ **not** a key count (10.18 / 6.17 bumped with zero), and **AC5 would be the project's FIRST self-serve presentation-toggle UI** (11a.1 shipped none by design). ⭐ And `presentation-policy.ts`'s accountability wrapper is **reusable as a shape** — ⛔ reuse it, ⛔ not the key. |

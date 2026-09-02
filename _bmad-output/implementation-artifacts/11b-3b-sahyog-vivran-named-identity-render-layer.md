@@ -655,6 +655,17 @@ placeholder in terms: *"a stand-in makes names render on an authority that does 
 **(e)**. ⭐ Ground: resolving it means changing the **MEMBER** app's form (`resolvePoolIdentity`,
 `notifications/pool-identity.ts:76`), which is ⛔ not this surface's act and would change 8.6/8.7/8.8.
 
+> ⭐⭐ **UPDATE 2026-09-02 — THE PANEL HAS DIRECTED THAT THE INVERSION BE CLOSED** (`2026-09-02-179`
+> cl.3). ⛔ **`D9(a)` IS ⛔ NOT REVERSED, AND THAT DISTINCTION IS LOAD-BEARING:** D9(a) ruled that **THIS
+> STORY** does ⛔ not resolve it, because resolving means changing the **MEMBER** app — ⛔ not this
+> surface's act. ⭐ The ruling gives the carry a **DESTINATION**; it does ⛔ **not** move the work here.
+> ⇒ **D9(a) STANDS**, and 11b.1 item (e) moves from *"carried"* to **DIRECTED TO CLOSE**.
+> ⚠⛔ **Two things are OPEN and ⛔ neither is this story's:** **`INV-scope`** — the shielded form is one
+> resolver with **FOUR** consumers, and **two leave the app** (the Contribution Note **PDF**, and the
+> cycle-open **push/WhatsApp/SMS**); ⛔ splitting them re-creates the *"two different pools"* divergence
+> 8.8 moved the resolver to prevent. **`INV-owner`** — ⛔ **no story owns it**; the consumers are Epic
+> 8's (8.6/8.7/8.8), and ⭐ a directive naming an **epic** expires unowned.
+
 ⚠⛔ **AND IT IS CARRIED AT ITS WIDENED SIZE — ⛔ recorded, ⛔ not left implicit.** After `-173` and
 `-174` the **public** side names people **in full on TWO surfaces** (`/sahyog` and `/sahyog-vivran`,
 deceased member **and** contributor) while the **member app** shields the same family on **three**
@@ -812,6 +823,7 @@ _(to be filled by the dev agent)_
 
 | Date | Change |
 |---|---|
+| 2026-09-02 | ⭐⭐ **THE PANEL DIRECTED THAT THE PUBLIC/MEMBER INVERSION BE CLOSED** (`2026-09-02-179` cl.3) — 11b.1 item (e) moves from *"carried"* to **DIRECTED TO CLOSE**. ⛔ **`D9(a)` is ⛔ NOT reversed:** it ruled that **this story** does not resolve it, and the ruling supplies a **destination**, ⛔ not a relocation of the work here. ⇒ **D9(a) stands.** ⚠⛔ Two OPEN and ⛔ neither this story's: **`INV-scope`** (the resolver has **four** consumers; **two leave the app** — the Contribution Note **PDF** and the cycle-open **push/WA/SMS** — and splitting them re-creates the *"two different pools"* divergence 8.8 prevented) and **`INV-owner`** (⛔ no story owns it; Epic 8 owns the consumers, and a directive naming an epic expires unowned). |
 | 2026-09-02 | ✅ **D9(a) + D10(a) RULED by BigDev** (`2026-09-02-177`) ⇒ ⭐⭐ **THIS STORY NOW HAS ZERO OPEN DECISIONS.** **D9(a)** carries the public/member inversion — ⛔ re-affirmed, ⛔ not re-filed — ⚠ **at its WIDENED size**: the public names in full on **two** surfaces while the member app shields on **three**. **D10(a)** mints ⛔ **no row key at all** — Astro SSR has no reconciler, so a key would be an identifier with no consumer — and Story 8.3's `keyExtractor` deferral is **RE-AFFIRMED OPEN** with its trigger **RE-POINTED** to *"the first VIRTUALIZED render of a multi-pool contributor list"*, ⛔ explicitly and citing the ruling, ⛔ **not discharged**. |
 | 2026-09-02 | ⭐ **THIS STORY GAINED AN OBLIGATION: the AMOUNT-RAISED render (new `AC3b`).** BigDev ruled **`D1(b)`** on 11b.3 (`2026-09-02-176`) — consume the shipped canonical `amountRaisedInr` — ⛔ and did ⛔ **not** lift the `@twt/ui` fence for 11b.3, so **the amount MOVES here**, to the story that adds the dependency. ⚠ A real **scope addition**, ⛔ not a clarification: the DTO gains `rosterSize` + `fixedAmount`, `daysRemaining: 0` is supplied for non-`live` pools, and ⛔ **only** `amountRaisedInr` is authorised — the presenter's progress meter is ⛔ **not** (completion framing on a settled drive needs its own decision). ⭐ Also closes the interim count-only asymmetry 11b.3 ships with — ⛔ ordering, ⛔ not a second inversion. |
 | 2026-09-02 | ⚠⭐ **`-174` cl.3 CORRECTED, Panel-ratified** (`2026-09-02-175`) — the *"progressive reduction of public exposure"* is the **NOMINEE BANK fields'** (`-160` cl.10's own subject, which already includes the *nominee's* name) and does ⛔ **not** reach a contributor's or the deceased member's name. BigDev identified it and put the correction **back to the Panel**, who ratified it. ⇒ **Q1/Q2 stand UNCONDITIONALLY**; the **STOP GATE IS LIFTED**; and **D14-order · D12-schedule · D13-maskedname · D11-order are VACATED** — ⛔ their questions ceased to exist, ⛔ they were not rejected. ⛔ `-174` is ⛔ not edited. ⭐ Caught between transcription and implementation ⇒ **zero rework**. ⚠ Still open: **D10** (AC5 depends on it) · **D9**; and the deceased-member name still will ⛔ not render until counsel's clause is pinned. |

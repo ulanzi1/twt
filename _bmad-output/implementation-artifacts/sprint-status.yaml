@@ -1,4 +1,46 @@
-# last_updated: 2026-09-02i (✅ **THE PANEL RULED `D8(ii)` — THE TRUST CENTRALLY, `super_admin`.**
+# last_updated: 2026-09-02j (✅✅ **THREE MORE PANEL RULINGS — `D8-default` FAIL-OPEN · **D10 IS NOW
+#   PANEL-RATIFIED** · **THE PUBLIC/MEMBER INVERSION SHALL BE CLOSED**.** Dhiraj Rahul + Kalpana
+#   Bharti; transcribed `2026-09-02-179`. ⛔ ZERO ROWS FLIP.
+#   ⭐⭐ **11b-3a IS NOW FULLY UNBLOCKED — zero blocking decisions across ALL THREE stories.**
+#
+#   1. **`D8-default` → FAIL-OPEN.** A Pariwar with NO schedule row keeps its nominee bank details
+#      VISIBLE after close, until the Trust sets a window. ⇒ ⛔ immediate masking is NOT the code's
+#      assumption — exactly what cl.10(b) forbids — and it matches the name control's deliberate
+#      fail-open. ⚠⛔ ITS COST IS PART OF THE RULING: `-178` put authority CENTRALLY, so a Pariwar
+#      CANNOT self-serve ⇒ **fail-open governs EVERY Pariwar until the Trust acts**, and what stays
+#      exposed is a FULL ACCOUNT NUMBER. The Panel ruled it with that in front of them. ⇒ 11b-3a's AC6
+#      non-immediacy statement matters MORE, ⛔ not less.
+#   2. **D10 IS PANEL-RATIFIED.** The `/sahyog` deceased-member FULL-NAME form — author-ruled at 11b.1,
+#      BUILT TO, and recorded ever since as "authorised, ⛔ NOT made" — is now RATIFIED. ⇒ `deferred-work.md`
+#      **11b.1 item (e)'s FIRST HALF is CLOSED** ("Closed by [edit]", ⛔ not "resolved via deferral"),
+#      and the instruction "⛔ Do not record it as Panel-ratified until it is" is DISCHARGED.
+#      ⚠ ⇒ the `sahyog-drive.deceased_member_name` matrix exception's `rationale:` (which says the
+#      ratification is OWED) is now STALE and owes an AMENDMENT, ⛔ never a rewrite. Trigger: the next
+#      story editing public-vs-private-matrix.yaml — ⭐ which is 11b-3a, imminently. Task added there.
+#   3. ⭐⭐ **THE INVERSION SHALL BE CLOSED** — 11b.1 item (e)'s SECOND half moves from "carried" to
+#      **DIRECTED TO CLOSE**. ⭐ DIRECTION follows BY ELIMINATION and is recorded as a DERIVATION, ⛔ not
+#      as the Panel's words: the public form is ratified full name on BOTH surfaces (`-173`, `-174`, and
+#      D10 above), so closing by lowering the public side would REVERSE THREE RULINGS MADE TODAY ⇒ the
+#      MEMBER app rises to match. ⚠⛔ If the Panel meant otherwise it must say so — ⛔ not assumed away.
+#      ⛔⛔ **BUT THE SCOPE IS NOT DETERMINED BY THE RULING, AND IT IS SHARPER THAN "the member app".**
+#      The shielded form is ONE resolver — `resolvePoolIdentity` — with FOUR consumers, TWO of which
+#      LEAVE THE APP: the My Pool card (in-app) · Yogdaan Bahi (in-app) · ⚠ the Contribution Note **PDF**
+#      (downloaded, kept, shareable) · ⚠⚠ the cycle-open **push/WhatsApp/SMS** (runs in apps/jobs, lands
+#      on a possibly-shared handset). ⇒ a public page is PULL — someone must go look; a WhatsApp message
+#      is PUSH — it delivers a deceased person's full name to every assigned member's phone. ⛔ NOT the
+#      same exposure, and the ruling's words do ⛔ not distinguish them.
+#      ⚠⛔ AND SPLITTING THE RESOLVER RE-CREATES THE DEFECT IT WAS BUILT TO PREVENT — its own header:
+#      "a divergence between the push a member receives and the card they open would read to Sushil as
+#      TWO DIFFERENT POOLS, so the resolver moves to @twt/domain rather than being duplicated by value."
+#      ⇒ there is ⛔ no cheap "in-app only" option. → **`INV-scope`, OPEN.**
+#      ⛔⛔ AND IT HAS **NO OWNER**, which is how it would silently fail: ⛔ no story in the 11b.3 family
+#      touches `resolvePoolIdentity`, and the four consumers are **Epic 8's (8.6/8.7/8.8)**. ⭐ A
+#      directive naming an EPIC expires unowned ([[project_r7_fact_producer_unbuilt]]) ⇒ it needs a
+#      STORY KEY that exists in this file, minted through sprint-planning. → **`INV-owner`, OPEN.**
+#      ⛔ **`D9(a)` (11b-3b) IS ⛔ NOT REVERSED** — it ruled that THAT STORY does not resolve it, because
+#      resolving means changing the MEMBER app. The ruling supplies a DESTINATION, ⛔ not a relocation.
+#      ⇒ D9(a) STANDS.)
+# last_updated_prior: 2026-09-02i (✅ **THE PANEL RULED `D8(ii)` — THE TRUST CENTRALLY, `super_admin`.**
 #   Dhiraj Rahul + Kalpana Bharti; transcribed `2026-09-02-178`. ⛔ ZERO ROWS FLIP.
 #   ⇒ `2026-08-28-160` cl.10(b)'s "Trust-Admin controlled" spoke to AUTHORITY and means the TRUST —
 #   ⛔ NOT a Pariwar Admin. ⭐⭐ **`2026-08-19-136` cl.3's two-axis separation is FOLLOWED**: the knob is

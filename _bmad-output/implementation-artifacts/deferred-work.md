@@ -4,6 +4,171 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred / recorded from: Story 11b.3a — Nominee Bank Public Presentation + Masking Schedule (2026-09-02)
+
+Ruled at `2026-09-02-177` (**D5(a)**), `2026-09-02-178` (**D8(ii)**), `2026-09-02-179` cl.1
+(**D8-default**) and `2026-09-02-183` (**D8(i)** + the cl.10(c) reading). ⚠ Every item below is
+**observed and ROUTED**, ⛔ not scheduled and ⛔ not built
+([[feedback_gap_analysis_observational]]). ⛔ **None is described as closed.**
+
+⛔⛔ **AND THE SURFACE IS BUILT, ⛔ NOT PUBLISHED.** What keeps it dark is **deployment plus the
+counsel/Panel process** — ⛔ never a code mechanism, and ⛔ **never** the publication kill switch, an
+EMERGENCY control that defaults to ENABLED by design
+([[project_directory_launch_gated_on_killswitch_ui]]). ⚠ Counsel **has not REVIEWED** the nominee-bank
+subject — ⛔ never *"counsel is not engaged"*, which has been false since 2026-06-21 (`2026-08-24-158`).
+
+### (a) ⭐⭐ The **Claim Terms acceptance substrate** — the mechanism `D5(a)` ROUTED, recorded **UN-ATTESTED**; and counsel's third-party objection **CARRIED AS RISK**
+
+⚠⛔ **ONE ITEM, TWO HALVES, and the second is the one most likely to be dropped.**
+
+**(i) THE INSTRUMENT DOES ⛔ NOT EXIST, and that is recorded openly rather than reconstructed**
+([[feedback_record_unattested_no_backfill]]). `2026-08-28-160` **cl.3** preserved the per-data-class
+basis expressly — *"Nominee information + bank details → **the nominee's own Claim Terms
+acceptance**"* — and the epic AC says the **mechanism** is this story's to design while *"only the
+**basis** is settled"*. ⛔ Verified by grep: there is **no Claim Terms document, no version table, no
+acceptance record, and no `consent_type` value** for one. `terms_and_conditions_versions` is the
+**MEMBER's** T&C, per-Pariwar, and reaches no nominee.
+⇒ **`D5` was RULED (a)** (`2026-09-02-177`): build **UN-GATED** on cl.10(a), which authorises public
+display during an active campaign, on the ground that what is missing is a **RECORD-KEEPING
+instrument**, ⛔ not an authorisation. ⛔ No per-subject consent gate is authored, ⛔ no
+`consentExists`-shaped gate (11b.9's D5 forbids that shape by name), and ⛔ **NO `consent_type` value
+is minted** — the three publication types were **RETIRED** (`2026-08-28-162`) and re-wording one *"was
+on the table and was rejected on the record"* ([[project_11b_consent_model_c5_superseded]]).
+⭐ **Trigger:** *any Claim Terms substrate work.* ⛔ Never back-filled.
+
+**(ii) ⛔⛔ COUNSEL'S THIRD-PARTY OBJECTION STANDS, and is ⛔ CARRIED AS RISK — ⛔ not "closed",
+⛔ not "resolved via deferral"** ([[feedback_closure_language_precision]]). `deferred-work.md`
+**11b.1 item (a)** records `2026-08-24-157` **cl.3(b)** intact, with a **TWO-PART** trigger:
+*"counsel's A3.2/A3.3 revisit (due 2026-09-07) **PLUS** a consent basis that reaches a non-member."*
+⭐ `2026-08-28-160` **cl.7** lifted the **FIRST** half. ⛔ **The second is exactly what is missing, and
+this story SHIPS WITHOUT IT.** ⚠ A nominee never joined the Trust, so no membership term reaches them;
+**Trust Deed cl.15(c) names *"nominee"* expressly**.
+⭐ **Trigger (BOTH halves, unchanged):** *the A3.2/A3.3 revisit — half LIFTED — **PLUS** a consent
+basis that reaches a non-member.* ⚠ **Both.** The revisit alone does not supply a basis, and a basis
+alone does not lift the objection.
+⚠⛔ AND `D5(a)` adopts ⛔ **NEITHER** reading of cl.10(a) — ⛔ not (i) *"about the ACCOUNT"*, ⛔ not
+(ii) *"about the NOMINEE's data"*. ⭐ **Only the Panel can decide that**, and ⛔ nobody may cite the
+ruling as having done so.
+
+### (b) ⭐ **`D5-subject`** — the account-holder subject gap. ⚠ **NON-BLOCKING after `D5(a)`, ⛔ NOT resolved by it**
+
+⚠ Un-gated means ⛔ nothing gates on identifying a subject. ⛔ It does **not** mean the row identifies
+one. ⭐ **BOTH halves are routed, with different triggers, because they close in different places.**
+
+**(i) THE CONSENT-SUBJECT GAP.** `-160` cl.3's instrument has a **subject** — the nominee — and
+`claim_nominee_bank_accounts` does ⛔ **not identify one**: ⛔ no FK to `member_nominees`, ⛔ no rank,
+⛔ no match rule. ⭐ That is **DELIBERATE** — 6.8's **D1** removed the linkage because the accounts are
+a **claim-scoped payment channel**, ⛔ not one row per declared nominee
+([[project_nominee_bank_disbursement_channel]]). ⛔ **Do ⛔ not "fix" this by adding a join or a match
+rule.**
+⚠⛔ **AND TWO COMMITTED DOCUMENTS DISAGREE, recorded because the next reader will hit one of them:**
+`packages/contracts/src/contributions/nominee-accounts.ts:18` calls it *"`accountHolderName` (**the
+NOMINEE name**)"*, **assuming** the identity; the schema at `claim_nominee_bank_accounts.ts:7-11`
+**denies** it. ⇒ ⭐ **the SCHEMA is the authority**; the comment is **recorded with a trigger**, ⛔ not
+swept as a drive-by.
+⭐ **Trigger:** *the first story that revisits nominee-bank collection, or any Claim Terms substrate
+work.*
+
+**(ii) ⭐⭐ THE UN-MECHANIZED APPROVER DUTY — ⛔ nobody in the approval chain can SEE the holder name.**
+⚠ The chain is **REAL and was traced**: bank details are collected BEFORE the verifier decides
+(`claim/errors.ts:198-203`), the post-approval window narrows to `verifier_approved` only — admin-only,
+gated on the separate tier-2 `claim.correct_nominee_bank`, audited and reason-required (`:205-210`) —
+and past the freeze it needs the emergency correction workflow (`:212-214`).
+⛔⛔ **BUT NOBODY IN IT READS THE FIELD.** The verifier console (Story 6.10, UX-DR39) has ⛔ **no bank
+surface**, ⛔ no verification handler reads it, and the only read-back is `NomineeBankStatusResponse`
+— a **PRESENCE VIEW** (`holderNamePresent: boolean`) whose own doc-block says *"never echo account
+number / holder name / raw IFSC"* (`contracts/src/claims/nominee-bank.ts:107-122`). ⇒ ⚠ even a tier-2
+admin **corrects a name they cannot see**.
+⇒ ⭐⭐ **THE INVERSION, STATED PLAINLY: this story publishes to the whole internet a value ⛔ no
+verifier, ⛔ no state trustee and ⛔ no correcting admin can read.** ⚠ `ifsc_validated` is ⛔ **NOT**
+corroboration — a format + branch lookup proves the **BRANCH** exists, ⛔ not that the **PERSON** does,
+and ⛔ not that they are a nominee.
+⭐ **What would close it is named so it is ⛔ not re-derived:** surfacing the holder name **on the
+verification console**, so the approver can exercise the duty the process already assumes. ⚠ That is a
+**verifier-console** change (Story 6.10's family), it needs its **own** PII-posture reasoning for a
+**Tier-1 decrypt at a NEW surface**, and ⛔ it is **routed, ⛔ not built here**
+([[project_mechanization_split_commitment]] — decay concentrates in the un-mechanized half).
+⭐ **Trigger:** *the next story touching Story 6.10's console, or any story that adds a Tier-1 decrypt
+to an approval surface.*
+
+### (c) ⭐⭐ **NEW, FOUND AT 11b.3a** — a **12-digit account number trips the FR-74 naked-PII AADHAAR heuristic**
+
+⚠⛔ **A REAL, REACHABLE COLLISION BETWEEN TWO RULED CONTROLS, ⛔ not a test-fixture artefact.**
+`2026-08-28-160` **cl.10(a)** rules the **complete** account number publishable during an active
+drive, and **`D8-default` is FAIL-OPEN** (`2026-09-02-179` cl.1) ⇒ it renders in **full for EVERY
+Pariwar** until the Trust sets a window. Meanwhile `detectNakedPii`
+(`packages/contracts/src/public-pages/scrape.ts`) treats **any bare 12-digit run** on a `public`
+render as an **Aadhaar** number.
+⭐ **Verified precisely:** 11-, 13- and 14-digit numbers do ⛔ **not** match; **exactly 12 does** — and
+**12 is a real Indian account-number length** (ICICI's). ⇒ the FR-74 snapshot for this surface reports
+`status: 'fail'` with **ZERO tier leaks** and one `aadhaar` PII match that is ⛔ **not** an Aadhaar
+number.
+⛔⛔ **THE DETECTOR IS ⛔ NOT WEAKENED, AND THAT IS DELIBERATE.** It is a **launch-blocking FR-74
+control** that scans a **STRING with ⛔ no field context**, so it structurally cannot tell an
+AUTHORISED account number from a naked Aadhaar number. ⚠ Narrowing it — **by length, by surface, or by
+field** — is a **governance act on a launch-blocking control**, ⛔ not a fixture fix and ⛔ **not this
+story's to make**. ⚠ Equally ⛔ do **NOT** "resolve" it by choosing an 11-digit fixture: that hides a
+live conflict behind a friendlier number.
+⭐ **What this story DID do:** made the behaviour **ASSERTED rather than latent** — three tests in
+`apps/public/tests/integration/public-pages/scrape-test.spec.ts` pin (1) the tier-leak leg passing on
+its own, (2) the PII leg failing with zero tier leaks, and (3) the **masked** projection ⛔ not
+tripping it (last-4 is four digits, not twelve). ⇒ if the detector, the ruling or the render changes,
+the collision is **re-read**, ⛔ not silently resolved.
+⭐ **Trigger:** *before this surface is deployed to any Pariwar, OR the next story that touches
+`detectNakedPii` / the FR-74 scrape gate — whichever comes first.* ⚠ It is a **question for the
+Panel/counsel about which control yields**, ⛔ not an engineering preference.
+
+### (d) ⚠ **`2026-09-02-183` cl.4's reading of cl.10(c)'s third setting** — routed for **Panel confirmation**, ⛔ not blocking
+
+⭐ *"Permanent masking"* is built as **cl.10(d)'s TERMINAL RUNG — masked in EVERY state, including
+while the drive is still `live`.** ⚠⛔ **AN AUTHORING READING, ⛔ NOT A RULING**, and ⛔ nobody may cite
+it as the Panel having decided.
+⭐ **Ground:** read as a fourth post-close offset, *"permanent masking"* and *"0 days"* are the **same
+projection** and one of the Panel's **three** settings would ship as a synonym of another. cl.10(d)'s
+ladder — *full public disclosure → shorter post-campaign exposure → immediate masking → permanent
+masked presentation* — only **TIGHTENS at its last step** if the terminal rung also covers the active
+campaign. ⚠ cl.10(a) is a **PERMISSION** (*"**may** be publicly displayed"*), ⛔ not a mandate, so it
+is ⛔ not contradicted.
+⭐ **Chosen in the MORE PROTECTIVE direction, deliberately:** if the reading is wrong the cost is a
+**reversible over-application of privacy**, ⛔ never a leak — while the opposite error publishes a
+**full account number** for a Trust that asked for the opposite. ⛔ Ambiguity in a publication clause
+is not resolved toward disclosure.
+⭐ It is **one predicate line** (`isNomineeBankMasked`) and an asserted test, so a Panel correction is
+cheap. **Trigger:** *the next Trustee Panel session that touches `2026-08-28-160` cl.10.*
+
+### (e) **VPA collection** — 8.4's deferred resolver seam, ⛔ not built here
+
+`vpa` is ruled **IN** by `2026-08-28-165` **cl.1** and is declared, allowlisted and rendered — ⚠ and
+it is **NULL for every nominee today**. `vpa_ciphertext` is nullable **by design** (*"a nominee
+without a VPA is a first-class state"*) and Story **8.4** shipped the VPA resolver seam **ABSENT**
+(`{available:false}`), deferring collection to its own story ([[project_nominee_vpa_deferred_seam]]).
+⇒ ⛔ a null is **NOT** an error, **NOT** a gap and **NOT** a reason to hold the render — the page
+renders **NOTHING** for it, ⛔ no placeholder and ⛔ no *"not provided"* marker, because an omission
+that announces itself is an enumeration signal. ⛔ **No collection surface is built here.**
+⭐ **Trigger:** *the VPA collection story.*
+
+### (f) The **post-masking AUTHENTICATED-MEMBER presentation** — ⛔ not carried, ⛔ not foreclosed
+
+`2026-08-28-164` **A2** RE-PURPOSED **SD-2** onto exactly this story's post-campaign state, and calls
+the authenticated presentation *"a separate future decision — ⛔ not carried, ⛔ not foreclosed."*
+⚠⛔ **SD-2 is RE-PURPOSED, ⛔ not dissolved** — *"the absence of an authenticated-member surface is
+⛔ NOT grounds to delete the requirement."* ⚠ And there is still ⛔ no browser surface holding a member
+token ([[project_no_browser_member_token_surface]]).
+⭐ **Trigger:** *a Panel decision on the post-masking authenticated tier, or the first story that
+gives a browser a member session.*
+
+### (g) The **edge-cache blindness** of any abuse counter on this surface — ⭐ **RE-AFFIRMED, ⛔ not re-filed**
+
+⛔ Already open, in this file, at **11b.1 item (g)**. A cached hit never reaches the origin, so
+origin-side signals see only cache **MISSES**. ⚠ It lands harder here than anywhere before it: the
+identifier is **SEQUENTIAL**, controls 2/3 are structurally N/A (**D11(a)**), `limits.search` is the
+only bound on a walk, and after this story that walk reaches **four DECRYPTED Tier-1 fields**.
+⚠⛔ **Judging `limits.search` insufficient for a Tier-1-bearing single-item GET is A DECISION**
+(`2026-09-02-183` cl.5), ⛔ **not a tuning knob** — in either direction. ⛔ Nothing in this story moved
+the tier. ⛔ **RE-AFFIRMED**, ⛔ not re-filed as a new item.
+
+---
+
 ## Deferred from: code review of 11b-3-sahyog-vivran-per-claim-story-surface, chunk 2 (2026-09-02)
 
 _Governance/copy/docs group follow-up pass — see the story's own Review Findings "Chunk 2" subsection

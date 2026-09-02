@@ -183,6 +183,11 @@ const { DegradedModeDeclareRequest, DegradedModeDeclarationResponse, DegradedMod
 const { DirectoryPublicationStatusResponse, SetDirectoryPublicationRequest } = await import(
   '../src/directory-publication/index.js'
 );
+// Story 11b.3a — the nominee-bank masking-schedule admin DTOs (super_admin-only schedule read +
+// governed change). ⛔ The setting is a discriminated union of cl.10(c)'s three, ⛔ never a boolean.
+const { NomineeBankMaskingScheduleResponse, SetNomineeBankMaskingRequest } = await import(
+  '../src/nominee-bank-masking/index.js'
+);
 // Story 3.5 — the signup medical-disclosure DTOs (submit + status + ima-list). The fourth
 // signup-wizard SURFACE; all routes are member-session-gated (no step-up at signup — 3.9 adds it).
 const { MedicalDiscloseRequest, MedicalDisclosureStatusResponse, ImaListResponse } = await import(
@@ -478,6 +483,22 @@ const directoryPublicationComponents = {
   ),
 } as const;
 for (const [name, schema] of Object.entries(directoryPublicationComponents)) {
+  registry.register(name, schema);
+}
+
+// Story 11b.3a — nominee-bank masking-schedule components (the schedule read + the governed change).
+// ⛔ The SETTING is a discriminated union of `2026-08-28-160` cl.10(c)'s three (`after_days: 0` /
+// `after_days: N` / `permanent`), ⛔ never a boolean: cl.10(d) rules a later "simplification" to one
+// a DEFECT, not a cleanup.
+const nomineeBankMaskingComponents = {
+  NomineeBankMaskingScheduleResponse: NomineeBankMaskingScheduleResponse.openapi(
+    'NomineeBankMaskingScheduleResponse',
+  ),
+  SetNomineeBankMaskingRequest: SetNomineeBankMaskingRequest.openapi(
+    'SetNomineeBankMaskingRequest',
+  ),
+} as const;
+for (const [name, schema] of Object.entries(nomineeBankMaskingComponents)) {
   registry.register(name, schema);
 }
 
@@ -1905,6 +1926,83 @@ registry.registerPath({
     400: errorResponse('Request validation failed (e.g. an empty or whitespace-only rationale)'),
     401: directoryPublicationAuth,
     403: directoryPublicationForbidden,
+    409: errorResponse("The acting admin has no users.display_name (admin.display_name_missing)"),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+// ── Story 11b.3a — the per-Pariwar NOMINEE-BANK MASKING SCHEDULE (super_admin-only; audited) ──
+// `2026-08-28-160` cl.10(b)-(d)'s knob, made operable by a human WITHOUT database access. The holder
+// is a RULING: `2026-09-02-178` (Trustee Panel) ruled cl.10(b)'s "Trust-Admin controlled, per
+// Pariwar" speaks to AUTHORITY and means the TRUST — per-Pariwar in SCOPE, central in AUTHORITY.
+// pariwar_admin is FORECLOSED. ⚠ The control is NOT immediate — /sahyog-vivran is edge_cacheable at
+// s-maxage=300, and what is served stale here is a FULL ACCOUNT NUMBER.
+const nomineeBankMaskingTags = ['nominee-bank-masking'];
+const nomineeBankMaskingParams = z.object({ pariwarId: z.string().uuid() });
+const nomineeBankMaskingAuth = errorResponse('Authentication required');
+const nomineeBankMaskingForbidden = errorResponse(
+  'Forbidden — requires pariwar.manage_nominee_bank_masking at pariwar scope (super_admin only)',
+);
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/admin/nominee-bank-masking/schedule',
+  summary: "Read the Pariwar's nominee-bank masking schedule",
+  description:
+    "Returns the masking setting in force for the Pariwar's nominee bank details on the public " +
+    'Sahyog Vivran, plus the last-changing admin display name, rationale, effective-from instant ' +
+    'and schedule version. `configured: false` means NO schedule row was ever written, which under ' +
+    'Decision 2026-09-02-179 cl.1 (D8-default) resolves FAIL-OPEN — the details stay fully visible ' +
+    'after the drive closes until the Trust sets a window. That is reported EXPLICITLY: an ' +
+    'unconfigured Pariwar and a Trust that deliberately chose a long window are different facts. ' +
+    'Requires pariwar.manage_nominee_bank_masking at pariwar scope.',
+  tags: nomineeBankMaskingTags,
+  request: { params: nomineeBankMaskingParams },
+  responses: {
+    200: {
+      description: 'The masking schedule in force',
+      content: jsonOf(nomineeBankMaskingComponents.NomineeBankMaskingScheduleResponse),
+    },
+    401: nomineeBankMaskingAuth,
+    403: nomineeBankMaskingForbidden,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'put',
+  path: '/api/v1/p/{pariwarId}/admin/nominee-bank-masking/schedule',
+  summary: "Set the Pariwar's nominee-bank masking schedule (rationale required; audited)",
+  description:
+    "Sets how long the Pariwar's nominee bank details stay publicly visible after a Sahyog Drive " +
+    'closes — 2026-08-28-160 cl.10(c)\'s three settings: 0 days (mask immediately), N days, or ' +
+    'permanent masking. Moves in EVERY direction: cl.10(c) requires the knob stay reversible and ' +
+    're-configurable, and there is no "already masked, cannot unmask" branch. The prior window is ' +
+    'CLOSED and a new one opened, so every superseded window survives as a governance trail. A ' +
+    'non-empty rationale is REQUIRED and is rejected at the contract boundary with a 400 when ' +
+    "absent. The acting admin's display name is resolved SERVER-SIDE from users.display_name and " +
+    'is never accepted from the caller, and the effective-from instant is the SERVER\'s — a ' +
+    'caller-supplied one would allow back-dating a window. Writes a §1.5 hash-chain audit line ' +
+    'covering the same transaction as the change. The effect is NOT instantaneous on the public ' +
+    'surface: /sahyog-vivran is edge-cached with s-maxage=300, so warm PoPs keep serving the ' +
+    'previous projection — which may be a full account number — until those entries expire. ' +
+    'Requires pariwar.manage_nominee_bank_masking at pariwar scope.',
+  tags: nomineeBankMaskingTags,
+  request: {
+    params: nomineeBankMaskingParams,
+    body: {
+      content: jsonOf(nomineeBankMaskingComponents.SetNomineeBankMaskingRequest),
+      required: true,
+    },
+  },
+  responses: {
+    200: {
+      description: 'The updated masking schedule',
+      content: jsonOf(nomineeBankMaskingComponents.NomineeBankMaskingScheduleResponse),
+    },
+    400: errorResponse(
+      'Request validation failed (an empty or whitespace-only rationale, or a day count outside 0…36500)',
+    ),
+    401: nomineeBankMaskingAuth,
+    403: nomineeBankMaskingForbidden,
     409: errorResponse("The acting admin has no users.display_name (admin.display_name_missing)"),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });

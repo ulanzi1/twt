@@ -1764,3 +1764,73 @@ from an estimate ([[feedback_record_unattested_no_backfill]]). The deferred `cri
 harness is the thing that would close it; ⛔ this story does not stand it up and ⛔ invents no number.
 ⭐ The baseline stays at its best-ever **3942** — ⛔ a rise is NEVER ratcheted, and there is no rise to
 ratchet ([[project_friction_budget_baseline_ratchet]]).
+
+
+---
+
+**Story 11b.3a disposition (declaration affirmed — ⛔ NO new row; ⚠ a FRESH look on the merits,
+⛔ NOT a citation of 11b.3's)** — the nominee bank public presentation + the per-Pariwar masking
+schedule + the Trust-Admin knob.
+
+⚠⛔ **11b.3's affirmation is UNAVAILABLE TO THIS STORY BY ITS OWN TERMS.** It says so in terms:
+*"11b.3a and 11b.3b EACH owe their own look and may ⛔ NOT cite this affirmation: it was written about
+a surface carrying ZERO `pii_tier: 1` fields at `public`, and that property is ⛔ NOT a ceiling."*
+⇒ this section is that look. ⛔ Nothing below leans on the earlier one.
+
+⭐ **AND THE THING THAT CHANGED IS EXACTLY WHAT 11b.3 NAMED:** this story puts **FOUR DECRYPTED
+Tier-1 fields** (`2026-08-28-165` cl.1) on that same route, behind that same **SEQUENTIAL**
+`P-YYYY-MM-###`, with **`D8-default` ruled FAIL-OPEN** (`2026-09-02-179` cl.1) so they render in
+FULL for every Pariwar until the Trust sets a window.
+
+⛔ **NO ROW IS WARRANTED, and the ground is the ONE that actually applies here — ⛔ not 11a.4's
+comment-only ground and ⛔ not an inherited affirmation:**
+
+⭐ **THE SURFACE IS STILL READ-ONLY, VERIFIED AND ⛔ NOT ASSUMED.** Friction under UX Stance #2 is
+something a **member or visitor must DO**; rendering more information is ⛔ not friction. Re-checked
+against this diff, ⛔ not carried over: `grep -E '<form|<button|client:|onClick'` over the `.astro`
+page and the pure render module returns **exactly one hit, and it is inside a COMMENT** (the AC7
+family-13 note about what a role implying interaction would require). ⛔ Zero real elements, zero
+client islands, and the manifest still reports **`js_bundle_bytes: 0`** for the route. ⚠ The new
+`sahyog-vivran-client.test.ts` cases exercise the **SERVER-SIDE** api client, ⛔ not a browser island
+— named again because the filename invites the opposite reading.
+
+⭐ **THE ADMIN KNOB IS ⛔ NOT MEMBER-FACING.** `/p/$pariwarId/nominee-bank-masking` is a `super_admin`
+console surface (`2026-09-02-178`), and this ledger governs **member-facing** friction. ⚠ It is
+recorded here rather than passed over in silence because it is the project's **FIRST self-serve
+presentation-toggle UI** and a future reader may reasonably ask why it earned no row.
+
+⭐ **THE ONE REAL COST TO REACH THE PAGE IS ALREADY DECLARED and this story adds nothing to it** —
+11b.1's *"absence as friction"* row (no name search: arrive by district + date + drive code). ⛔ The
+bank block is rendered on a page a visitor has already reached; it imposes ⛔ no additional step, ⛔ no
+additional decision and ⛔ no additional wait. Re-declaring would **double-count**.
+
+⚠⛔ **AND THE BRANCH THAT WOULD OWE A ROW IS RE-NAMED, because 11b.3a is what makes it expensive:**
+`D4-linkage` is **STILL OPEN**. `/sahyog` lists `closed` + `settled` only, a `live` pool has ⛔ no
+inbound link, and the identifier is **SEQUENTIAL** — so a live drive is reachable **BY IDENTIFIER
+ONLY**, and that walk now ends at four decrypted Tier-1 fields. ⛔ This story does ⛔ **not** rule it
+and adds ⛔ no link. ⭐ The first story that RULES it owes this section a fresh look, and it owes one
+**more** than it did before this story landed. ⚠⛔ Judging `limits.search` insufficient for that walk
+is **A DECISION** (`2026-09-02-183` cl.5), ⛔ not a tuning knob.
+
+⚠⭐ **Metric facet — the number PASSED, the pass is ⛔ NOT coverage, and this is now the FIFTH
+CONSECUTIVE STORY to record the same un-measured facet.** `page_weight_bytes` reads **9445**,
+**BYTE-IDENTICAL** to the 9445 Story 11b.1 recorded and to the 9445 Story 11b.3 recorded ⇒ ⛔ **no
+aggregate movement attributable to a story that added a whole rendered block of DECRYPTED bank
+details to a public page.** ⛔ That is not recorded as a happy result. The reason is unchanged and
+structural: the route reports **`own_bytes: 0`** — shared `PublicShell.css` and nothing else — so what
+this page actually costs a visitor is its **DYNAMIC SSR HTML**, which `friction-budget.yaml` excludes
+**BY CONSTRUCTION** (*"ATTRIBUTION of STATIC CLIENT ASSETS per route — ⛔ NOT a measurement of each
+route's DYNAMIC HTML response"*). Recorded **UN-MEASURED**
+([[feedback_record_unattested_no_backfill]]) — ⛔ no number invented, ⛔ no estimate reconstructed.
+
+⛔⛔ **AND THE COUNT IS THE FINDING NOW, ⛔ NOT THE INDIVIDUAL RECORDING.** 11b.3's own note said a
+**fourth** consecutive recording *"should be read as the gate having a standing blind spot … ⛔ not as
+three unlucky diffs"*. ⇒ **11a.5 → 11b.9 → 11b.2b → 11b.3 → 11b.3a is the FIFTH**, and the fifth lands
+on the surface with the **largest dynamic response in the project** and the **most sensitive payload**
+it has ever carried. ⚠ The deferred `critical_render_path_ms` harness is still the thing that would
+close it; ⛔ this story does ⛔ not stand it up, and ⛔ invents no number in its place. ⭐ Recording it a
+fifth time without escalating would itself be the decay this ledger exists to prevent — so it is
+stated as a **standing gate defect**, ⛔ not as a per-story footnote.
+
+⭐ The baseline stays at its best-ever **3942** — ⛔ a rise is NEVER ratcheted, and there is no rise to
+ratchet ([[project_friction_budget_baseline_ratchet]]).

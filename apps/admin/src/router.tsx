@@ -18,6 +18,7 @@ import { ChannelConfigRoute } from './routes/ChannelConfigRoute.js';
 import { CycleFreezeRoute } from './routes/CycleFreezeRoute.js';
 import { DegradedModeRoute } from './routes/DegradedModeRoute.js';
 import { DirectoryPublicationRoute } from './routes/DirectoryPublicationRoute.js';
+import { NomineeBankMaskingRoute } from './routes/NomineeBankMaskingRoute.js';
 import { GroundInspectionRoute } from './routes/GroundInspectionRoute.js';
 import { HelpdeskOperatorRoute } from './routes/HelpdeskOperatorRoute.js';
 import { HelpdeskQueueRoute } from './routes/HelpdeskQueueRoute.js';
@@ -110,6 +111,15 @@ const directoryPublicationRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/p/$pariwarId/directory-publication',
   component: DirectoryPublicationRoute,
+});
+
+// Story 11b.3a — the tenant-scoped NOMINEE-BANK MASKING SCHEDULE (super_admin only). `2026-08-28-160`
+// cl.10(b)-(d)'s knob, made operable without database access. ⚠ The project's FIRST self-serve
+// presentation-toggle UI — 11a.1 shipped none by design. Un-linked, like its siblings.
+const nomineeBankMaskingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/nominee-bank-masking',
+  component: NomineeBankMaskingRoute,
 });
 
 // Story 6.3 — the tenant-scoped helpline operator console (claim intake on a caller's behalf).
@@ -258,6 +268,7 @@ const routeTree = rootRoute.addChildren([
   channelConfigRoute,
   degradedModeRoute,
   directoryPublicationRoute,
+  nomineeBankMaskingRoute,
   helplineRoute,
   helpdeskRoute,
   helpdeskQueueRoute,

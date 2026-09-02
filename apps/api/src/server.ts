@@ -38,6 +38,7 @@ import { registerMemberValidityModule } from './modules/member-validity/index.js
 import { registerChannelConfigModule } from './modules/channel-config/index.js';
 import { registerDegradedModeModule } from './modules/degraded-mode/index.js';
 import { registerDirectoryPublicationModule } from './modules/directory-publication/index.js';
+import { registerNomineeBankMaskingModule } from './modules/nominee-bank-masking/index.js';
 import { registerChannelWebhooksModule } from './modules/channel-webhooks/index.js';
 import { registerWaOptInModule } from './modules/wa-opt-in/index.js';
 import { registerTelegramOptInModule } from './modules/telegram-opt-in/index.js';
@@ -223,6 +224,15 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // ratification (Row 17 stays `open`), NOT on this surface existing. The effect is also NOT
   // instantaneous — /members is edge-cached with s-maxage=300.
   registerDirectoryPublicationModule(app, deps);
+  // Story 11b.3a — the per-Pariwar NOMINEE-BANK MASKING SCHEDULE admin surface: read what is in
+  // force + set `0 days` / `N days` / `permanent` with a required rationale, in every direction,
+  // gated by pariwar.manage_nominee_bank_masking (super_admin ONLY — Decision 2026-09-02-178 ruled
+  // 2026-08-28-160 cl.10(b)'s "Trust-Admin controlled" speaks to AUTHORITY and means the TRUST;
+  // pariwar_admin is FORECLOSED). Makes cl.10(b)-(d)'s knob operable WITHOUT database access.
+  // ⚠ The project's FIRST self-serve presentation-toggle UI — 11a.1 shipped none by design.
+  // ⛔ NOT immediate: /sahyog-vivran is edge-cached at s-maxage=300, and what is served stale here
+  // is a FULL ACCOUNT NUMBER. Direct SQL is NOT the operational fallback.
+  registerNomineeBankMaskingModule(app, deps);
   // Story 5.4 — WhatsApp inbound-webhook ingress primitive (§3.11): per-Pariwar Meta webhook receiver
   // (GET subscription challenge + POST verify-persist-ack-within-5s). Public (Meta is unauthenticated — the
   // verify-token / X-Hub-Signature-256 IS the auth; login-wall-allowlisted). Encapsulated so its raw-body

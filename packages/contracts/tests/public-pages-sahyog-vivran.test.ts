@@ -28,6 +28,31 @@ const ENTRY = {
   confirmedContributionCount: 137,
   fundingOutcome: 'fully_funded' as const,
   appealReversal: null,
+  // ⭐ Story 11b.3a. ⚠ `[]` in the BASE fixture on purpose — a claim whose bank details were never
+  // collected is the 6.8 AC3 absence signal and must parse, and the two arms get their own cases.
+  nomineeBankAccounts: [],
+};
+
+/** A FULL (unmasked) account — cl.10(a), during an active campaign or before the window elapses. */
+const FULL_ACCOUNT = {
+  masked: false as const,
+  accountRank: 1 as const,
+  bankName: 'State Bank of India',
+  branch: 'Vaishali',
+  accountHolderName: 'A Holder',
+  accountNumber: '50100123456789',
+  ifsc: 'SBIN0001234',
+  vpa: null,
+};
+
+/** cl.10(e)'s masked projection. ⛔ Note the keys that are ABSENT, not merely null. */
+const MASKED_ACCOUNT = {
+  masked: true as const,
+  accountRank: 2 as const,
+  bankName: 'Bank of Baroda',
+  branch: null,
+  accountNumberLast4: '6789',
+  ifsc: 'BARB0VJVAIS',
 };
 
 describe('PublicSahyogVivranEntry — the happy path', () => {
@@ -247,5 +272,114 @@ describe('the response is SINGLE-ITEM', () => {
     expect(
       PublicSahyogVivranResponse.safeParse({ drive: ENTRY, page: 1, limit: 25, total: 1 }).success,
     ).toBe(false);
+  });
+});
+
+
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+// ⭐⭐ STORY 11b.3a — THE NOMINEE BANK ACCOUNTS. AC4 IS A SHAPE, ⛔ NOT A CONVENTION.
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+describe('PublicSahyogVivranNomineeAccount — the masked arm makes the full number UNREPRESENTABLE', () => {
+  it('accepts a FULL account and a MASKED one', () => {
+    expect(
+      PublicSahyogVivranEntry.safeParse({
+        ...ENTRY,
+        nomineeBankAccounts: [FULL_ACCOUNT, MASKED_ACCOUNT],
+      }).success,
+    ).toBe(true);
+  });
+
+  it('⛔⛔ REJECTS a masked account carrying `accountNumber` — the AC4 assertion', () => {
+    // ⭐ THIS is why the shape is a discriminated union rather than one object with nullable fields.
+    // AC4 requires that *"the full value never crosses the wire once masked"*; with a single shape
+    // that would be a CONVENTION a handler bug breaks silently, on the one surface where the failure
+    // is a published bank account number. `.strict()` makes it a parse error instead.
+    expect(
+      PublicSahyogVivranEntry.safeParse({
+        ...ENTRY,
+        nomineeBankAccounts: [{ ...MASKED_ACCOUNT, accountNumber: '50100123456789' }],
+      }).success,
+    ).toBe(false);
+  });
+
+  it('⛔ REJECTS a masked account carrying `accountHolderName` or `vpa`', () => {
+    // ⚠ cl.10(e) is a RETENTION list — *"retain the last 4 digits plus the bank / branch / IFSC"* —
+    // and a retention list is EXHAUSTIVE: what it does not name is not retained. ⛔ Neither field may
+    // reappear on the ground that it is "less sensitive".
+    for (const extra of [{ accountHolderName: 'A Holder' }, { vpa: 'someone@upi' }]) {
+      expect(
+        PublicSahyogVivranEntry.safeParse({
+          ...ENTRY,
+          nomineeBankAccounts: [{ ...MASKED_ACCOUNT, ...extra }],
+        }).success,
+      ).toBe(false);
+    }
+  });
+
+  it('⛔ REJECTS `accountNumberLast4` that is not EXACTLY four digits', () => {
+    // ⚠ A longer string is the REDUCTION HAVING SILENTLY NOT HAPPENED — and it would render as a
+    // perfectly plausible "ending in …" phrase.
+    for (const bad of ['501001234', '69', 'abcd', ' 6789']) {
+      expect(
+        PublicSahyogVivranEntry.safeParse({
+          ...ENTRY,
+          nomineeBankAccounts: [{ ...MASKED_ACCOUNT, accountNumberLast4: bad }],
+        }).success,
+      ).toBe(false);
+    }
+    // ⭐ `null` IS valid — the stored value carried four or fewer digits, and at exactly four "the
+    // last four" IS the complete number, which cl.10(e) forbids exposing. The page renders NOTHING.
+    expect(
+      PublicSahyogVivranEntry.safeParse({
+        ...ENTRY,
+        nomineeBankAccounts: [{ ...MASKED_ACCOUNT, accountNumberLast4: null }],
+      }).success,
+    ).toBe(true);
+  });
+
+  it('⛔ REJECTS a FULL account carrying `accountNumberLast4` — the two arms are exclusive', () => {
+    expect(
+      PublicSahyogVivranEntry.safeParse({
+        ...ENTRY,
+        nomineeBankAccounts: [{ ...FULL_ACCOUNT, accountNumberLast4: '6789' }],
+      }).success,
+    ).toBe(false);
+  });
+
+  it('⛔ REJECTS a THIRD account and an out-of-range rank — the substrate admits exactly {1, 2}', () => {
+    // ⚠ `.max(2)` is the SHAPE of a substrate whose composite PK `(claim_case_id, account_rank)` plus
+    // its `{1, 2}` CHECK make three impossible. ⛔ It is NOT a page size and does NOT make this route
+    // a collection.
+    expect(
+      PublicSahyogVivranEntry.safeParse({
+        ...ENTRY,
+        nomineeBankAccounts: [FULL_ACCOUNT, MASKED_ACCOUNT, FULL_ACCOUNT],
+      }).success,
+    ).toBe(false);
+    expect(
+      PublicSahyogVivranEntry.safeParse({
+        ...ENTRY,
+        nomineeBankAccounts: [{ ...FULL_ACCOUNT, accountRank: 3 }],
+      }).success,
+    ).toBe(false);
+  });
+
+  it('⭐ ACCEPTS an EMPTY array — bank details were never collected (the 6.8 AC3 absence signal)', () => {
+    expect(PublicSahyogVivranEntry.safeParse({ ...ENTRY, nomineeBankAccounts: [] }).success).toBe(
+      true,
+    );
+  });
+
+  it('⛔ the FULL arm still refuses an EMPTY STRING where `null` is the "absent" value', () => {
+    // ⚠ The `district` lesson, applied to every optional bank field: `''` would survive as a
+    // "present" value and render a visually BLANK row where the page's own rule is to render NOTHING.
+    for (const key of ['accountHolderName', 'accountNumber', 'ifsc', 'vpa'] as const) {
+      expect(
+        PublicSahyogVivranEntry.safeParse({
+          ...ENTRY,
+          nomineeBankAccounts: [{ ...FULL_ACCOUNT, [key]: '' }],
+        }).success,
+      ).toBe(false);
+    }
   });
 });

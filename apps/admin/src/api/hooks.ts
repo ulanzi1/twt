@@ -486,6 +486,39 @@ export function useSetDirectoryPublicationStatus(pariwarId: string) {
   });
 }
 
+// ── Nominee-bank masking schedule (Story 11b.3a) — the super_admin read + governed change. ──
+// The change writes the server's returned row into the cache SYNCHRONOUSLY and then invalidates (the
+// 10.30 review finding: relying on the async refetch alone left a real window where "Current
+// setting" and the "Saved" banner showed contradictory facts).
+// ⚠ That refreshes what the OPERATOR sees, ⛔ not what the PUBLIC sees: /sahyog-vivran is edge-cached
+// with s-maxage=300, so warm PoPs keep serving the previous projection — which may include a full
+// account number — until those entries expire. The page discloses that gap; this invalidation does
+// not close it.
+
+export const nomineeBankMaskingScheduleKey = (pariwarId: string) =>
+  ['nominee-bank-masking-schedule', pariwarId] as const;
+
+/** The Pariwar's current masking schedule. */
+export function useNomineeBankMaskingSchedule(pariwarId: string) {
+  return useQuery({
+    queryKey: nomineeBankMaskingScheduleKey(pariwarId),
+    queryFn: () => api.getNomineeBankMaskingSchedule(pariwarId),
+  });
+}
+
+/** Set the schedule (every direction), then refresh the query. */
+export function useSetNomineeBankMaskingSchedule(pariwarId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.setNomineeBankMaskingSchedule>[1]) =>
+      api.setNomineeBankMaskingSchedule(pariwarId, body),
+    onSuccess: (row) => {
+      qc.setQueryData(nomineeBankMaskingScheduleKey(pariwarId), row);
+      void qc.invalidateQueries({ queryKey: nomineeBankMaskingScheduleKey(pariwarId) });
+    },
+  });
+}
+
 // ── Verifier-console surface (Story 6.10) — the READ-ONLY bounded compound signals view. ──
 // A ₹50L-stakes strong-consistency read: cache-disabled by the createQueryClient defaults (staleTime/
 // gcTime 0, refetchOnMount 'always', no IndexedDB persister — §4.5, D7). The query key carries the

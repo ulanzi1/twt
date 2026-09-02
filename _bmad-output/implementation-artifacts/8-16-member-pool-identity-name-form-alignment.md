@@ -20,11 +20,19 @@ Status: ready-for-dev
 >
 > | Decision | Question | Whose |
 > |---|---|---|
-> | **`INV-scope`** | Do **all four** consumers rise to the public form, or **only the in-app two**? | ⛔ **PANEL** — two consumers **leave the app** |
-> | **`INV-form`** | **Hard-coded full name**, or **mode-resolved** from the Pariwar's configured public mode? | BigDev |
+> | **`INV-scope`** | Do **all four** consumers rise, or only the in-app two? | ✅ **RULED — ALL FOUR** (`2026-09-02-180`) |
+> | **`INV-form`** | **Hard-coded full name**, or **mode-resolved** from the Pariwar's configured public mode? | ⛔ **OPEN — BigDev, BLOCKING** |
 >
-> ⚠ **`INV-scope` is ⛔ not a detail.** Two of the four consumers push a deceased person's name to a
-> handset or into a shareable PDF. ⛔ **No code until it is ruled.**
+> ⭐⭐ **`INV-scope` IS RULED: ALL FOUR** (Kalpana Bharti, Dhiraj Rahul). ⇒ the inversion **CLOSES**,
+> ⛔ it is ⛔ not narrowed; the resolver's *"one identity everywhere"* property is **PRESERVED**; and
+> ⛔ **no split is authorised** — a future story that divides the consumers is **reversing `-180`**,
+> ⛔ not optimising.
+>
+> ⛔ **`INV-form` STILL BLOCKS, and this ruling made it MATTER MORE.** Under a narrow scope a
+> hard-coded full name would have been contained to two in-app screens. ⛔ **Under all four it is
+> not:** a Pariwar that sets its public mode to `shielded_name` would still have a **full name pushed
+> to its members' handsets and printed into a forwardable PDF**. ⇒ ⭐ **the case for MODE-RESOLVED is
+> materially stronger than when it was raised.** ⛔ **No code until it is ruled.**
 
 ---
 
@@ -160,10 +168,13 @@ authors, paraphrases or re-grounds a ruling.
 
 ### AC2 — The member-facing form matches the ruled public form, at the ruled scope
 
-**Given** `INV-scope` and `INV-form`
+**Given** ✅ **`INV-scope` RULED — ALL FOUR** (`2026-09-02-180`) and `INV-form`
 **When** the resolver renders a pool's deceased-family identity
-**Then** the consumers **`INV-scope` names** render the name in the form **`INV-form`** rules, and the
-public/member gap is **closed for those consumers**
+**Then** **ALL FOUR** consumers render the name in the form **`INV-form`** rules — ① My Pool card
+· ② Yogdaan Bahi · ③ the **Contribution Note PDF** · ④ the **cycle-open push / WhatsApp / SMS** — and
+the public/member gap is **CLOSED**, ⛔ not narrowed
+**And** ⛔ **no consumer is excluded and ⛔ no split is authorised** — ⚠ a divergence here reverses
+`-180` and re-creates the *"two different pools"* defect 8.8 removed
 **And** ⭐ **`resolvePoolIdentity` stays the ONE place the join lives** — ⛔ no consumer grows its own
 name resolution, and ⛔ the resolver is ⛔ not duplicated by value (the property 8.8 moved it to protect)
 **And** ⛔ **`splitFirstNameLastInitial` is ⛔ NOT reimplemented** — it **is** the `shielded_name`
@@ -202,9 +213,15 @@ story changes **what is rendered from it**, ⛔ not who may read it.
 
 **Then** every `t()` call passes an explicit `namespace` in the **third** slot — ⚠ `t()` defaults to
 `common` and **THROWS** ([[project_missed_cycle_visibility_substrate]])
-**And** ⚠ **the notification copy is re-checked against the microcopy gate** if `INV-scope` includes
-consumer ④ — a longer name changes the rendered string, and the copy globs already cover the member
-locales
+**And** ⭐ **the notification copy re-check is now LIVE, ⛔ not conditional** — `INV-scope` **includes
+consumer ④**, so the rendered string changes and re-enters the microcopy gate
+**And** ⚠ **MEASURE THE SMS SEGMENT LENGTH before shipping ④.** The dispatch cascades **push →
+WhatsApp → SMS** and WA/SMS are the **PAID** channels; a longer name may push a message past a
+**160-character segment** (cost + deliverability). ⛔ An implementation concern, ⛔ **never** a reason to
+narrow a ruled scope
+**And** ⚠⛔ **SMS is reached when PUSH FAILS** ⇒ the full name lands in an **unencrypted** SMS precisely
+for members whose app is not working. ⛔ Recorded as a **precision** — the Panel ruled with all three
+channels named — ⛔ **not** grounds to revisit
 **And** the a11y family 13 checks hold in their **React-Native** form for the in-app consumers
 (`accessible={true}` grouping, `accessibilityLabel`) — ⭐ these ARE RN surfaces, ⛔ unlike the Epic-11b
 Astro ones.
@@ -214,9 +231,11 @@ Astro ones.
 **Then** `deferred-work.md` **11b.1 item (e)** is **amended in place**: its **first half is CLOSED**
 (D10 Panel-ratified, `-179` cl.2) and its **second half is CLOSED BY THIS STORY** at the ruled scope —
 ⛔ **"Closed by [edit]"**, ⛔ never *"resolved via deferral"* ([[feedback_closure_language_precision]])
-**And** ⚠ **if `INV-scope` rules IN-APP ONLY, the residual is recorded OPEN and NAMED** — the PDF
-and/or the push/WA/SMS still shield while the public names in full, ⇒ ⛔ **the inversion is NARROWED,
-⛔ not closed**, and the item must say so. ⛔ Do ⛔ not report a partial fix as a closure.
+**And** ⭐ **`INV-scope` RULED ALL FOUR ⇒ this resolves to CLOSED** — the narrowed-vs-closed branch
+does ⛔ not arise (**Q2 VACATED**, `-180` cl.3)
+**And** ⚠⛔ **CLOSED ⛔ ON SHIP, ⛔ NOT ON RULING.** ⛔ Do ⛔ not mark 11b.1 item (e) closed until this
+story **merges** — a ruling authorises the work, ⛔ it does not perform it
+([[feedback_closure_language_precision]]).
 
 ---
 
@@ -226,8 +245,11 @@ and/or the push/WA/SMS still shield while the public names in full, ⇒ ⛔ **th
   - [x] ✅ **The `INV-scope` packet is WRITTEN AND ROUTED (2026-09-02)** —
         `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-02-8-16-inversion-scope.md`.
         ⚠⛔ **WRITTEN ⛔ IS NOT ANSWERED** — `INV-scope` stays **OPEN** and this task stays a STOP gate.
-  - [ ] ⭐ **Check whether the Panel answered it** — a `§`-appendix on that note, or a new
-        `.decision-log.md` entry. ⛔ Do ⛔ not infer an answer from silence.
+    - [x] ✅ **THE PANEL ANSWERED — ALL FOUR** (Kalpana Bharti, Dhiraj Rahul; `2026-09-02-180`, note
+        §10). ⛔ Already transcribed — ⛔ do not re-transcribe.
+  - [ ] ⛔ **`INV-form` STILL BLOCKS → if unruled, STOP and report.** ⚠ And ⛔ do ⛔ not carry the
+        *pre-ruling* weighting into it: under ALL FOUR, hard-coding ignores a Pariwar's shielding
+        choice **on handsets and in a forwardable PDF**, ⛔ not just on two screens.
   - [ ] Rule **`INV-form`** (BigDev); transcribe both. Re-read `.decision-log.md` head first.
   - [ ] ⛔ **If either is unruled → STOP and report.**
   - [ ] `governance:` commit first ([[feedback_governance_commits_precede_implementation]]).
@@ -245,7 +267,7 @@ and/or the push/WA/SMS still shield while the public names in full, ⇒ ⛔ **th
 
 ---
 
-## ⚖️ Decisions — ⛔ **TWO OPEN: `INV-scope` (PANEL, BLOCKING) · `INV-form` (BigDev, BLOCKING)**
+## ⚖️ Decisions — ✅ **`INV-scope` RULED ALL FOUR** (`2026-09-02-180`). ⛔ **ONE OPEN: `INV-form` (BigDev, BLOCKING)**
 
 ### ⛔ `INV-scope` — **PANEL, BLOCKING.** All four consumers, or the in-app two?
 
@@ -264,8 +286,12 @@ leave the app: the **Contribution Note PDF** (shareable) and the **cycle-open pu
 
 ⛔ **Only the Panel can rule this**, because the exposure it decides is ⛔ not the one they were shown.
 
-⏳ **ROUTED 2026-09-02** — `trustee-panel-routing-note-2026-09-02-8-16-inversion-scope.md`.
-⛔ **Nothing ratified.**
+✅ **RULED (a) ALL FOUR — 2026-09-02** (Kalpana Bharti, Dhiraj Rahul; `2026-09-02-180`).
+Packet: `trustee-panel-routing-note-2026-09-02-8-16-inversion-scope.md` §10.
+⇒ ⭐ **Q2 VACATED** (its antecedent did ⛔ not obtain) ⇒ **AC6 resolves to CLOSED**, ⛔ not narrowed —
+⚠ **closed ON SHIP**, ⛔ not today; 11b.1 item (e) stays OPEN until this story merges.
+⇒ ⭐ **the resolver's *"one identity everywhere"* property is PRESERVED** — ⛔ no split, and ⛔ a future
+story that divides the consumers reverses `-180`.
 
 ⭐ **THREE FINDINGS OF THE PACKET-WRITING PASS, all verified and all narrowing the question:**
 1. ⚠ **The notification DOES carry the name — ⛔ it is ⛔ not just "Pool F".**
@@ -365,5 +391,6 @@ _(to be filled by the dev agent)_
 
 | Date | Change |
 |---|---|
+| 2026-09-02 | ✅✅ **`INV-scope` RULED — ALL FOUR** (Kalpana Bharti, Dhiraj Rahul; `2026-09-02-180`). The full name renders on **every** consumer, including the **Contribution Note PDF** and the **cycle-open push / WhatsApp / SMS**. ⇒ ⭐ the inversion **CLOSES** (⛔ not narrowed — **Q2 VACATED**, so AC6's narrowed branch does not arise), ⚠ **on SHIP, ⛔ not on ruling**; and ⭐ **the resolver's *"one identity everywhere"* property is PRESERVED** — ⛔ no split, and a future divergence reverses `-180`. ⛔ **`INV-form` STILL BLOCKS, and this ruling made it matter MORE:** under all four, hard-coding the full name means a Pariwar that shields publicly still pushes a full name to handsets and into a forwardable PDF ⇒ the case for **mode-resolved** is materially stronger. ⚠ AC5's microcopy re-check is now **live, ⛔ not conditional**, and the **SMS segment length** must be measured (WA/SMS are the paid channels, reached when push fails). |
 | 2026-09-02 | ⭐ **The `INV-scope` packet is WRITTEN AND ROUTED to the Panel** — `trustee-panel-routing-note-2026-09-02-8-16-inversion-scope.md`. ⏳ Routed, ⛔ nothing ratified; Task 0 stays a STOP gate. ⭐ **Three findings of the packet-writing pass, all verified:** ① the cycle-open notification **does** carry the name (`contribution-notify-triggers.ts:251-253` joins the parts; the copy renders *"Standing with {family}'s family"*) ⇒ consumer ④ is ⛔ not hypothetical · ② the audience is **bounded** — *"per member assigned to a pool in that cycle"* ⇒ the **pool roster, dozens**, and they are the contributors who see the full name in-app anyway ⇒ the real delta is *"also on a lock screen"*, ⛔ not *"to strangers"* · ③ ⭐ **the four consumers are the COMPLETE set** — `close-of-cycle`'s `{familyName}` has **zero production suppliers** and the Noticeboard renders none, so ⛔ **no fifth surface**. |
 | 2026-09-02 | Story minted by **Panel direction** (`2026-09-02-179` cl.3 — *"the public/member inversion gap shall be closed"*), discharging **`INV-owner`**. ⭐ Against **Epic 8**, which owns `resolvePoolIdentity` and its four consumers (the **`7-11` precedent**: mint against the epic that owns the **write path**). Two decisions carried OPEN: **`INV-scope`** (⛔ the **Panel's** — two consumers leave the app, and the ruling does not distinguish push from pull) and **`INV-form`** (hard-coded vs mode-resolved — ⚠ hard-coding re-creates the inversion the moment a Pariwar shields publicly). ⚠ Two findings of the authoring pass: the resolver emits **PARTS**, so this is a **shape change** across four consumers plus a contract; and **mononyms already render in full** on the member side, so part of the "inversion" is ⛔ not real and must ⛔ not be reported as closed. |

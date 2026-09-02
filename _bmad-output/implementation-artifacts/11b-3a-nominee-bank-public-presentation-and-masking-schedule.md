@@ -1,6 +1,10 @@
+---
+baseline_commit: e16cc69073bcc951eb8f65192764d020ac66fcf9
+---
+
 # Story 11b.3a: Nominee Bank Public Presentation + Per-Pariwar Masking Schedule + Trust-Admin Knob `[SURFACE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -406,34 +410,34 @@ sibling that routes it back).
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — ⛔ TRANSCRIBE-or-STOP.** (AC: all)
-  - [ ] ⛔ **Verify `11b-3` is `done` AND MERGED** before starting. This story declares fields on a
+- [x] **Task 0 — ⛔ TRANSCRIBE-or-STOP.** (AC: all)
+  - [x] ✅ **VERIFIED LIVE 2026-09-02 — `11b-3` is `done` AND MERGED.** `git fetch origin`; `git rev-list --left-right --count origin/main...HEAD` = `0 0`; all five 11b.3 commits (`254e9fe`…`e16cc69`) are on `origin/main` ([[feedback_git_fetch_before_remote_reasoning]]). ⛔ **Verify `11b-3` is `done` AND MERGED** before starting. This story declares fields on a
         surface 11b.3 creates.
   - [x] ✅ **11b.3's `D4` RULED (b)** — `live` + `closed` + `settled`. ⇒ AC2 **has a host** and this
         story does ⛔ **not** widen the predicate. ⚠ `D4-linkage` (linked vs identifier-only) is open.
-  - [ ] ⚠⛔ **Read `D4-linkage` as an ENUMERATION question, ⛔ not only a discoverability one.** 11b.3
+  - [x] ✅ **READ AND DISPOSED (`2026-09-02-183` cl.5): STATE THE BOUND WHERE THE DECRYPT IS** — `routes.ts` header + `login-wall.spec.ts` entry + beside the handler decrypt. ⛔ The tier is ⛔ NOT tightened and ⛔ NOT loosened (AC2: that is a DECISION); ⛔ no inbound link to a `live` drive is added. ⚠⛔ **Read `D4-linkage` as an ENUMERATION question, ⛔ not only a discoverability one.** 11b.3
         raised it as *"is a `live` pool's page linked?"*; ⭐ **on this story the live question is what
         bounds someone WALKING the sequential identifier** to four decrypted Tier-1 fields (AC2).
   - [x] ✅ **11b.3's `D11` RULED (a)** — the route states **three** applicable controls, with controls
         2/3 recorded N/A. ⚠⛔ **This story makes the route PII-bearing**, so **Task 4 owes `routes.ts` +
         `login-wall.spec.ts` an update** to the set that applies then — ⛔ both stating the same count.
-  - [ ] Re-read `.decision-log.md` head; take the next free number. ⚠ **11b.3a and 11b.3b mint against
+  - [x] ✅ **Head re-read immediately before writing: `2026-09-02-182`. Next free = `2026-09-02-183`, MINTED.** ⛔ 11b.3b has minted nothing; ⛔ no renumber, ⛔ no merge into a sibling's entry. Re-read `.decision-log.md` head; take the next free number. ⚠ **11b.3a and 11b.3b mint against
         the same head** — re-read immediately before writing; ⛔ never renumber or merge into a
         sibling's entry.
   - [x] ✅ **D5 RULED (a) — 2026-09-02** (`2026-09-02-177`): build **UN-GATED** on cl.10(a); the
         mechanism is **routed**; the missing instrument is recorded **UN-ATTESTED** and counsel's
         third-party objection is **CARRIED AS RISK**. ⛔ Already transcribed — ⛔ do not re-transcribe.
-  - [ ] ⛔⛔ **CARRY (a)'s PRICE INTO THE BUILD, ⛔ do not ship only its permission.** AC8 must record
+  - [x] ✅ **CARRIED at `-183` cl.6 and written into AC8's `deferred-work.md` section (Task 6).** ⛔⛔ **CARRY (a)'s PRICE INTO THE BUILD, ⛔ do not ship only its permission.** AC8 must record
         the un-attested substrate **and** counsel's standing objection — ⛔ *"carried"*, ⛔ never
         *"closed"* or *"resolved via deferral"* ([[feedback_closure_language_precision]]).
-  - [ ] ⛔ **Transcribe D8 IF a new permission key turns out to be needed** (AC5). ⚠ Conditional — it
+  - [x] ✅ **FIRED — a new key IS needed. `D8(i)` transcribed at `-183` cl.1-3: `pariwar.manage_nominee_bank_masking`, v38 → v39, `super_admin` ONLY.** ⛔ **Transcribe D8 IF a new permission key turns out to be needed** (AC5). ⚠ Conditional — it
         fires at build time, ⛔ not before. ⛔ Never mint a key silently.
-  - [ ] ⚠ **Put `D5-subject` in front of whoever rules D5** (⚠ **narrowed 2026-09-02** — read the
+  - [x] ✅ **PUT — in its CURRENT (narrowed) form, at `-183` cl.6 + its two Open Follow-ups, and routed at AC8 in BOTH halves.** ⚠ **Put `D5-subject` in front of whoever rules D5** (⚠ **narrowed 2026-09-02** — read the
         current form, ⛔ not the withdrawn one): the row does ⛔ not identify the **nominee** the
         instrument's subject would be, **and** the approval chain that guards the account ⛔ **cannot
         see the holder name** — the only read-back is a presence boolean. ⭐ It **survives a D5(a)
         ruling** and is ⛔ not answered by one.
-  - [ ] `governance:` commit first ([[feedback_governance_commits_precede_implementation]]).
+  - [x] ✅ `governance:` commit landed FIRST, before the first line of implementation ([[feedback_governance_commits_precede_implementation]]).
 
 - [ ] **Task 1 — The masking schedule substrate** (AC: 3)
   - [ ] ⭐ **THE SCHEDULE HAS EXACTLY ONE SUBJECT: the four nominee bank fields.** ⚠ Recorded because

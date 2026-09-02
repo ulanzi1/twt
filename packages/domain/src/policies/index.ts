@@ -113,6 +113,9 @@ export * from './pariwar-appeal-config-rls.js';
 export * from './pariwar-public-name-presentation-rls.js';
 // Code review, Story 11a.3 (2026-08-21, D3) — tenant isolation for the directory-publication kill switch.
 export * from './pariwar-directory-publication-rls.js';
+// Story 11b.3a (AC3) — tenant isolation for the per-Pariwar nominee-bank masking schedule.
+// ⚠ 0 rows resolves to NOT MASKED (`D8-default` FAIL-OPEN), ⛔ not to a shield.
+export * from './pariwar-nominee-bank-masking-schedule-rls.js';
 // Story 7.1 — pools tenant-isolation policies (NOT cross-readable; mirror claims-rls). The
 // pools.current_state write-rejection trigger (migration 0071) is ORTHOGONAL — RLS isolates by
 // tenant, the trigger blocks non-projector state writes regardless of tenant; both apply.

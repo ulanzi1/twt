@@ -558,7 +558,44 @@ export function permissionKey(value: string): PermissionKey {
 // Directory ⛔ may not go live. ⛔ Direct database manipulation still MUST NOT be described as
 // normal manual operation. ⚠ This is a DIRECTIVE, ⛔ not the "ungated by UI, mirroring 11a.1's
 // posture" framing that stood here — 11a.1's posture was not ruled on; this one was.
-export const PERMISSION_CATALOG_VERSION = 38 as const;
+// ── Bumped 38 → 39 at Story 11b.3a / Decision 2026-09-02-183 cl.1-3 — added ONE key: 46 → 47 ──
+// `pariwar.manage_nominee_bank_masking` — the per-Pariwar NOMINEE-BANK MASKING SCHEDULE write key.
+// Checked at `dimension: 'pariwar'` (value = scopeTx.pariwarId — the
+// pariwar.manage_public_name_presentation / pariwar.manage_directory_publication precedent, same
+// mechanism, same reasoning).
+//
+// ⭐ Granted to `super_admin` ONLY, and that is a RULING rather than an authoring choice.
+// `2026-09-02-178` (Trustee Panel, Dhiraj Rahul + Kalpana Bharti): `2026-08-28-160` cl.10(b)'s
+// *"Trust-Admin controlled, per Pariwar"* spoke to **AUTHORITY** and means the **TRUST**, ⛔ NOT a
+// Pariwar Admin. `2026-08-19-136` cl.3's two-axis separation is FOLLOWED, ⛔ not departed from: the
+// knob is **per-Pariwar in SCOPE, central in AUTHORITY** — exactly like the public-name control, so
+// the two are now ALIGNED rather than divergent.
+// ⛔⛔ `pariwar_admin` is **FORECLOSED**. Granting it "for symmetry" with the neighbouring
+// pariwar-dimension content keys is precisely the *"reverse a ratified ruling by way of a catalog
+// edit"* move the presentation key's own note warns about — it would need its own Panel decision.
+// ⛔ NOT district_admin / state_trustee — inert in both directions (a district ceiling cannot satisfy
+// a pariwar check; a state ceiling is broader than the gate) [[project_rbac_geo_scope_containment]].
+//
+// ⚠⛔ A NEW KEY, ⛔ NOT AN OVERLOAD OF `pariwar.manage_public_name_presentation` — `2026-09-02-183`
+// cl.1. The two are the same CLASS under the same AUTHORITY (`-178` cl.2) but are DIFFERENT GOVERNED
+// ACTS: the form a member's name takes on a public page, versus how long a family's bank account
+// number stays visible after a drive closes. One key meaning two unrelated things is the drift a
+// catalog exists to prevent, and that key's doc-block forbids widening it "for symmetry".
+// ⭐ They CROSS-REFERENCE (see the note above this one) — that is the correct relationship.
+//
+// NOT step-up-gated. Accountability is the REQUIRED rationale + actor + display snapshot on the
+// schedule row + the §1.5 hash-chain audit line, which
+// `packages/domain/src/claim/nominee-bank-masking-policy.ts` refuses to skip. The UNAUTHENTICATED
+// public read (apps/public → apps/api) touches NO key: it resolves the effective window to decide a
+// projection, exactly as it reads any other public config.
+// ⭐ THE ADMIN UI SHIPS WITH THE KEY, at `/p/$pariwarId/nominee-bank-masking` (Story 11b.3a AC5) —
+// ⚠ the project's FIRST self-serve presentation-toggle UI (11a.1 shipped none, by design).
+// ⚠⛔ AND A CHANGE IS ⛔ NOT IMMEDIATE: the public page is edge-cacheable at `s-maxage=300`, so the
+// previous projection — which may be a FULL ACCOUNT NUMBER — keeps being served from every warm PoP
+// for up to five minutes. ⛔ Direct SQL is NOT the operational fallback.
+// ACCEPTANCE CONDITION for pariwar_admin: a Panel ruling superseding `2026-09-02-178`. ⛔ Never a
+// consistency argument from the neighbouring keys.
+export const PERMISSION_CATALOG_VERSION = 39 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -922,6 +959,13 @@ export const SEED_PERMISSION_KEYS = [
   // write key. Checked at `dimension: 'pariwar'`, mirroring the presentation key immediately
   // above. Granted to `super_admin` ONLY — see the version-bump note above for the ruling.
   'pariwar.manage_directory_publication',
+  // Story 11b.3a (2026-09-02, D8(i) at Decision `2026-09-02-183`) — the per-Pariwar NOMINEE-BANK
+  // MASKING SCHEDULE write key. Checked at `dimension: 'pariwar'`, mirroring the two keys immediately
+  // above. Granted to `super_admin` ONLY — `2026-09-02-178` ruled `2026-08-28-160` cl.10(b)'s
+  // "Trust-Admin controlled" speaks to AUTHORITY and means the Trust; `pariwar_admin` is FORECLOSED.
+  // ⭐ A NEW key, ⛔ not an overload of `pariwar.manage_public_name_presentation` — same class, same
+  // authority, DIFFERENT governed act. See the version-bump note above for the full reasoning.
+  'pariwar.manage_nominee_bank_masking',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

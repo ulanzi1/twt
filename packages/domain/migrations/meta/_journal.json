@@ -792,6 +792,13 @@
       "when": 1790394000000,
       "tag": "0112_consent-type-sahyog-drive",
       "breakpoints": true
+    },
+    {
+      "idx": 113,
+      "version": "7",
+      "when": 1790480400000,
+      "tag": "0113_nominee-bank-masking-schedule",
+      "breakpoints": true
     }
   ]
 }

@@ -439,8 +439,8 @@ sibling that routes it back).
         ruling** and is ⛔ not answered by one.
   - [x] ✅ `governance:` commit landed FIRST, before the first line of implementation ([[feedback_governance_commits_precede_implementation]]).
 
-- [ ] **Task 1 — The masking schedule substrate** (AC: 3)
-  - [ ] ⭐ **THE SCHEDULE HAS EXACTLY ONE SUBJECT: the four nominee bank fields.** ⚠ Recorded because
+- [x] **Task 1 — The masking schedule substrate** (AC: 3)
+  - [x] ✅ **ONE SUBJECT, written into the schema header with `-175`'s correction named.** ⭐ **THE SCHEDULE HAS EXACTLY ONE SUBJECT: the four nominee bank fields.** ⚠ Recorded because
         it was briefly in doubt: `2026-09-02-174` cl.3 appeared to extend cl.10's staged schedule to
         **contributor names**, which would have given this table a second subject. ⛔ **That was
         corrected the same day, Panel-ratified** (`2026-09-02-175`) — the staged reduction is the
@@ -448,11 +448,10 @@ sibling that routes it back).
         phrase's true referent. ⇒ **`D12-schedule` is VACATED** (⛔ its question ceased to exist) and
         ⛔ **nothing about this story ever moved.** ⛔ Do ⛔ not generalise the table to *"any masked
         field"* on the strength of a withdrawn clause.
-  - [ ] New per-Pariwar effective-window table + migration, modelled on `pool_fixed_amount_schedule`.
-  - [ ] Write the *"⛔ never a boolean"* rationale **into the schema file** (Trap 3).
-  - [ ] ⛔ Do not add any column to `claim_nominee_bank_accounts`.
-  - [ ] Live-DB tests: ⛔ never regenerate an applied migration (42P07), ⛔ never `DROP SCHEMA`
-        (42P01), assert **membership, not counts** ([[project_live_db_test_gotchas]]).
+  - [x] ✅ `pariwar_nominee_bank_masking_schedule` + migration **0113** + RLS, modelled on `pool_fixed_amount_schedule` (version / `[effective_from, effective_until)` / at-most-one open head). New per-Pariwar effective-window table + migration.
+  - [x] ✅ Written into **both** the schema file and migration 0113's header, with the three forbidden shapes named (`is_masked` column · a second masked row · a boolean/one-nullable-int collapse).
+  - [x] ✅ `claim_nominee_bank_accounts.ts` is **untouched** — verified by `git diff --stat`.
+  - [x] ✅ **7 live-DB tests green** (`tests/integration/claim/nominee-bank-masking-schedule.spec.ts`) + **14 pure tests**. ⛔ No migration regenerated, ⛔ no `DROP SCHEMA`, membership/explicit-value assertions only. ⭐ Found mid-write: a failed CHECK probe ABORTS the tx, so probes 2 and 3 returned a false-`undefined` — each now runs inside its own raw SAVEPOINT ([[project_domain_limit_clamp_and_savepoint_retry]]).
 
 - [ ] **Task 2 — The projection function + the boundary read** (AC: 2, 4)
   - [ ] Pure masking function (last-4 + bank/branch/IFSC), unit-tested at the boundaries — ⚠ including

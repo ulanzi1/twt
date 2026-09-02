@@ -1,4 +1,37 @@
-# last_updated: 2026-09-02j (✅✅ **THREE MORE PANEL RULINGS — `D8-default` FAIL-OPEN · **D10 IS NOW
+# last_updated: 2026-09-02k (⭐⭐ **STORY `8-16-member-pool-identity-name-form-alignment` MINTED BY PANEL
+#   DIRECTION and AUTHORED — ⛔ ONE ROW ADDED at `ready-for-dev`.** ⛔ No other row moves; ⛔ epic-8 stays
+#   `in-progress` (it already was — 8-15 is backlog). ⛔ NO .decision-log.md entry is minted: the ruling
+#   it implements is `2026-09-02-179` cl.3, already transcribed; an authoring pass rules nothing.
+#
+#   ⭐ **IT DISCHARGES `INV-owner`.** `-179` cl.3 directed the public/member inversion be closed and had
+#   ⛔ NO owner — and "a directive naming an EPIC expires unowned"
+#   ([[project_r7_fact_producer_unbuilt]]). This mints a STORY KEY THAT EXISTS IN THIS FILE.
+#   ⭐ **AGAINST EPIC 8, ⛔ not Epic 11b** — Epic 11b SURFACED the inversion, **Epic 8 OWNS THE CODE**
+#   (`resolvePoolIdentity` + all four consumers = 8.6/8.7/8.8). The `7-11` precedent verbatim: mint
+#   against the epic that owns the WRITE PATH, ⛔ not the one that owns the surfacing story.
+#
+#   ⛔⛔ TASK 0 IS A STOP GATE. `INV-scope` is **THE PANEL'S** — two of the four consumers LEAVE THE APP
+#   (the Contribution Note PDF; the cycle-open push/WhatsApp/SMS), a public page is PULL and a push is
+#   PUSH, and `-179` cl.3's words do ⛔ not distinguish them. ⛔ Splitting re-creates the "two different
+#   pools" divergence 8.8 moved the resolver into @twt/domain to prevent ⇒ ⛔ no cheap "in-app only".
+#   `INV-form` is BigDev's — hard-coded vs MODE-RESOLVED; ⚠ hard-coding re-creates the inversion the
+#   moment a Pariwar shields publicly, which is the defect this story exists to remove.
+#
+#   ⚠ TWO FINDINGS OF THE AUTHORING PASS, both of which change the work:
+#   · The resolver emits **PARTS** (`deceasedFirstName` + `deceasedLastInitial`, `:120-127`) and each
+#     consumer joins them ⇒ a **SHAPE CHANGE** across four consumers + `contribution-note.ts:137`,
+#     ⛔ NOT a one-line swap. ⛔ And NEVER widen `deceasedLastInitial` to hold a surname — the field
+#     would lie and every join would be right for the wrong reason.
+#   · **MONONYMS ALREADY RENDER IN FULL** on the member side (`splitFirstNameLastInitial` returns
+#     `lastInitial: ''` and the resolver returns the identity anyway). ⇒ for that class there is ⛔ NO
+#     inversion today, mononyms are common in India, and this story must ⛔ not report closing one.
+#     ⛔ Do ⛔ not "fix" that path — it is not broken here.
+#
+#   ⚠ AND AC6 CARRIES THE CLOSURE-LANGUAGE GUARD: if `INV-scope` rules IN-APP ONLY, the inversion is
+#   **NARROWED, ⛔ NOT CLOSED**, and 11b.1 item (e) must say so. ⛔ Do ⛔ not report a partial fix as a
+#   closure ([[feedback_closure_language_precision]]).
+#   ⛔ Touched no source code · ⛔ amended no epics.md · ⛔ minted no launch-gate row.)
+# last_updated_prior: 2026-09-02j (✅✅ **THREE MORE PANEL RULINGS — `D8-default` FAIL-OPEN · **D10 IS NOW
 #   PANEL-RATIFIED** · **THE PUBLIC/MEMBER INVERSION SHALL BE CLOSED**.** Dhiraj Rahul + Kalpana
 #   Bharti; transcribed `2026-09-02-179`. ⛔ ZERO ROWS FLIP.
 #   ⭐⭐ **11b-3a IS NOW FULLY UNBLOCKED — zero blocking decisions across ALL THREE stories.**
@@ -13844,6 +13877,27 @@ development_status:
   8-13-nominee-vpa-claim-time-collection-resolver-wiring-upi-intent-re-enable: done
   8-14-close-of-cycle-emitter: done
   8-15-fixed-amount-transition-staged-card: backlog
+  # ⭐⭐ 8-16 IS MINTED BY PANEL DIRECTION (`2026-09-02-179` cl.3 — "the public/member inversion gap
+  # shall be closed"), ⛔ NOT by the epic plan. It DISCHARGES `INV-owner`: a directive naming an EPIC
+  # expires unowned, so it needed a story key that exists in THIS file.
+  # ⭐ WHY EPIC 8, ⛔ not Epic 11b: Epic 11b SURFACED the inversion; **Epic 8 OWNS THE CODE** —
+  # `resolvePoolIdentity` and all four consumers are 8.6 / 8.7 / 8.8. This follows the `7-11` precedent
+  # verbatim ("minted against Epic 7, whose Story 7.5 owns the WRITE PATH — not against Epic 10, whose
+  # 10.13 owns only the setter surface").
+  # ⛔⛔ TASK 0 IS A STOP GATE — TWO decisions open, and ONE IS THE PANEL'S:
+  #   · `INV-scope` (⛔ PANEL) — do ALL FOUR consumers rise, or only the IN-APP two? ⚠ Two consumers
+  #     LEAVE THE APP: the Contribution Note PDF (shareable) and the cycle-open push/WhatsApp/SMS (a
+  #     possibly-shared handset). A public page is PULL; a push is PUSH. `-179` cl.3's words do ⛔ NOT
+  #     distinguish them. ⛔ And splitting re-creates the "two different pools" divergence 8.8 moved the
+  #     resolver to prevent ⇒ there is ⛔ no cheap "in-app only".
+  #   · `INV-form` (BigDev) — HARD-CODED full name, or MODE-RESOLVED from the Pariwar's configured
+  #     public mode? ⚠ Hard-coding RE-CREATES the inversion the moment a Pariwar shields publicly.
+  # ⚠ TWO FINDINGS OF THE AUTHORING PASS: the resolver emits **PARTS** (`deceasedFirstName` +
+  # `deceasedLastInitial`), so this is a SHAPE CHANGE across four consumers + a contract, ⛔ not a
+  # one-line swap (⛔ and NEVER widen `deceasedLastInitial` to hold a surname); and **MONONYMS ALREADY
+  # RENDER IN FULL** on the member side, so part of the "inversion" is ⛔ NOT REAL and must ⛔ not be
+  # reported as closed.
+  8-16-member-pool-identity-name-form-alignment: ready-for-dev
   epic-8-retrospective: done
 
   # ==========================================================================

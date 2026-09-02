@@ -665,6 +665,10 @@ placeholder in terms: *"a stand-in makes names render on an authority that does 
 > cycle-open **push/WhatsApp/SMS**); ⛔ splitting them re-creates the *"two different pools"* divergence
 > 8.8 moved the resolver to prevent. **`INV-owner`** — ⛔ **no story owns it**; the consumers are Epic
 > 8's (8.6/8.7/8.8), and ⭐ a directive naming an **epic** expires unowned.
+> ⇒ ✅ **`INV-owner` IS DISCHARGED (2026-09-02):** the work is owned by
+> **`8-16-member-pool-identity-name-form-alignment`** (`ready-for-dev`), minted against **Epic 8** on
+> the `7-11` precedent. ⛔ **`INV-scope` stays OPEN and is the PANEL's** — and it is **8.16's** Task 0,
+> ⛔ **not this story's**.
 
 ⚠⛔ **AND IT IS CARRIED AT ITS WIDENED SIZE — ⛔ recorded, ⛔ not left implicit.** After `-173` and
 `-174` the **public** side names people **in full on TWO surfaces** (`/sahyog` and `/sahyog-vivran`,

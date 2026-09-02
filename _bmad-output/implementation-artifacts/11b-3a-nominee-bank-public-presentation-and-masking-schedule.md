@@ -132,8 +132,9 @@ reaches a non-member."* ⭐ `-160` cl.7 **lifted the A3.2/A3.3 hold**; the secon
 ⛔ **You cannot design a mechanism over a record that does not exist.** → **D5.**
 
 ⭐⛔ **AND THERE IS A SECOND GAP UNDER IT:** even if the instrument existed, the row does ⛔ **not
-identify the subject** it would attach to — `account_holder_name` is free text with ⛔ no
-nominee linkage. → **D5-subject**, recorded under D5.
+identify the subject** it would attach to — ⛔ no FK to `member_nominees`, ⛔ no rank, ⛔ no match rule.
+⚠ **A human approval chain DOES guard the account** (verifier → state trustee → freeze), ⛔ **but it
+cannot SEE the holder name** — the only read-back is a presence boolean. → **D5-subject**, under D5.
 
 ### Trap 2 — ⭐⛔ THE ALLOWLIST ENTRIES ARE RULED, ⛔ BUT THE TIMING IS ALSO RULED
 
@@ -241,10 +242,14 @@ reason to prohibit publication, and the transparency benefit during an active Sa
 accounts**: `account_holder_name` · `account_number` · `ifsc` · `vpa`, each through `<MatrixField>` so
 `getVisibility()` is the **only** thing deciding what appears
 **And** `bank_name` / `branch` render from **Tier-3 plaintext** — ⛔ nothing is decrypted for them
-**And** ⚠⛔ **`account_holder_name` is FREE TEXT the filer typed and is ⛔ NOT verified to be a
-nominee's name** — ⛔ do ⛔ **not** join to `member_nominees`, ⛔ do not add a match rule, and ⛔ do not
-render it labelled *"Nominee"*: 6.8's D1 removed that linkage deliberately (**D5-subject**). ⭐ Label
-it for what the column holds — the **account holder** — ⛔ never for what a reader assumes it holds
+**And** ⚠⛔ **`account_holder_name` is ⛔ NOT linked to a declared nominee** — ⛔ do ⛔ **not** join to
+`member_nominees`, ⛔ do not add a match rule, and ⛔ do not render it labelled *"Nominee"*: 6.8's **D1**
+removed that linkage deliberately (**D5-subject**). ⭐ Label it for what the column holds — the
+**account holder** — ⛔ never for what a reader assumes it holds
+**And** ⚠⭐ **the value is guarded by a human approval chain that ⛔ cannot SEE it** (D5-subject): the
+verifier console has ⛔ no bank surface and the only read-back is a **presence boolean**. ⇒ ⛔ **this
+story publishes to the internet a value ⛔ no approver in that chain can read** — ⛔ state it in the
+route header beside the decrypt, ⛔ never leave it for a reviewer to find
 **And** ⛔ the two accounts are presented as **EQUAL payment destinations** — ⛔ no "primary" /
 "secondary", ⛔ no ordering that implies preference, ⛔ no routing or split. `account_rank` is composite-PK
 identity, ⛔ **not a priority and ⛔ not a nominee rank**
@@ -344,10 +349,15 @@ digit-by-digit is the exact failure AC4 names
 
 **Then** `deferred-work.md` gains this story's section recording, each with a trigger: the **Claim
 Terms acceptance substrate** (D5's mechanism — ⛔ whatever D5 rules, the *record* is still absent) ·
-⭐ **the ACCOUNT-HOLDER SUBJECT gap** (**D5-subject**) — ⚠ it **survives a D5(a) ruling**, because
-building un-gated does ⛔ not make the holder a nominee; route it with the **two-document
-contradiction** (`nominee-accounts.ts:18` vs `claim_nominee_bank_accounts.ts:7-11`) named, and its
-trigger: *the first story that revisits nominee-bank collection, or any Claim Terms substrate work* ·
+⭐ **the ACCOUNT-HOLDER SUBJECT gap** (**D5-subject**, ⚠ **narrowed 2026-09-02**) — ⚠ it **survives a
+D5(a) ruling**, because building un-gated does ⛔ not make the holder a nominee. ⭐ Route **BOTH** halves:
+**(i)** the consent-subject gap, with the **two-document contradiction** named
+(`nominee-accounts.ts:18` vs `claim_nominee_bank_accounts.ts:7-11`), trigger *the first story that
+revisits nominee-bank collection, or any Claim Terms substrate work*; and **(ii)** ⭐ **the
+UN-MECHANIZED APPROVER DUTY** — the holder name reaches ⛔ **no** approval surface
+(`NomineeBankStatusResponse` is a presence view), so the verifier cannot exercise the check the
+process assumes. ⛔ **A verifier-console change, ⛔ not this story's** — trigger: *the next story
+touching Story 6.10's console, or any story that adds a Tier-1 decrypt to an approval surface* ·
 **VPA collection** (8.4's deferred seam — ⛔ not built here) · the **post-masking
 authenticated-member presentation** (`-164` A2: *"a separate future decision — ⛔ not carried, ⛔ not
 foreclosed"*) · the **edge-cache blindness** of any abuse counter on this surface (11b.1 item (g),
@@ -375,9 +385,11 @@ sibling that routes it back).
         dev agent transcribes; it ⛔ never authors or re-grounds a ruling.
   - [ ] ⛔ **If D5 is unruled → STOP and report.** ⚠ D5 is not a preference — it decides whether AC2
         ships at all.
-  - [ ] ⚠ **Put `D5-subject` in front of whoever rules D5** — the account holder is ⛔ not verified to
-        be a nominee, so *"the nominee's own Claim Terms acceptance"* has ⛔ no identified subject on
-        the row. ⭐ It **survives a D5(a) ruling** and is ⛔ not answered by one.
+  - [ ] ⚠ **Put `D5-subject` in front of whoever rules D5** (⚠ **narrowed 2026-09-02** — read the
+        current form, ⛔ not the withdrawn one): the row does ⛔ not identify the **nominee** the
+        instrument's subject would be, **and** the approval chain that guards the account ⛔ **cannot
+        see the holder name** — the only read-back is a presence boolean. ⭐ It **survives a D5(a)
+        ruling** and is ⛔ not answered by one.
   - [ ] `governance:` commit first ([[feedback_governance_commits_precede_implementation]]).
 
 - [ ] **Task 1 — The masking schedule substrate** (AC: 3)
@@ -426,7 +438,7 @@ sibling that routes it back).
 
 ---
 
-## ⚖️ Decisions — ⛔ **TWO OPEN: D5 (blocking, and it carries D5-subject) · D8 (conditional)**
+## ⚖️ Decisions — ⛔ **TWO OPEN: D5 (blocking; carries `D5-subject`, ⚠ NARROWED 2026-09-02) · D8 (conditional)**
 
 ### ⛔ D5 — The nominee data's MECHANISM, when its BASIS has no instrument (Trap 1, AC2)
 
@@ -451,63 +463,79 @@ non-member"* — is exactly what is missing.
   this story of its subject and leaves 11b.3a as the masking substrate alone — a legitimate outcome,
   ⛔ but it must be a **ruling**, ⛔ never a drift.
 
-#### ⭐⛔ D5-subject — A SECOND GAP UNDER THE FIRST: the record does ⛔ NOT IDENTIFY THE SUBJECT the instrument would attach to
+#### ⭐⛔ D5-subject — **NARROWED 2026-09-02.** The approval chain EXISTS — ⛔ but it ⛔ CANNOT SEE the field it is assumed to verify
 
-⚠ **OBSERVATIONAL — recorded 2026-09-02, arising from the 11b.3b packet's "whose name" pass.
-⛔ It prescribes nothing and rules nothing** ([[feedback_gap_analysis_observational]]). ⛔ It is
-⛔ **not** a new decision and ⛔ not a re-filing: it is a **property of D5's option space** that ⛔ no
-document had recorded.
+⚠ **OBSERVATIONAL. ⛔ It prescribes nothing and rules nothing** ([[feedback_gap_analysis_observational]]).
 
-`-160` **cl.3**'s basis is *"the **NOMINEE's** own Claim Terms acceptance"* — an instrument whose
-subject is **the nominee**. ⚠⛔ **But `account_holder_name` is ⛔ not verified to be a nominee's name,
-and the schema says so in terms** (`claim_nominee_bank_accounts.ts:7-11`): *"there is deliberately
-**NO** `nominee_rank` column, **NO** FK to `member_nominees`, and **NO** holder-name-must-match-nominee
-linkage of any kind: **the filer types a holder name per account, full stop.**"*
+> ⭐⛔ **CORRECTED, ⛔ NOT DELETED. The first form of this finding OVERSTATED the exposure and is
+> withdrawn here** ([[feedback_closure_language_precision]] — the claim was **wrong**, ⛔ not merely
+> superseded). It quoted the schema's *"the filer types a holder name per account, full stop"* and
+> presented it as though **nothing** checked the value. ⚠ **BigDev challenged that**, asking whether
+> verifying the holder is not the claim approver's job before a drive is approved. ⭐ **It is, and a
+> real control chain exists.** ⛔ The first version had ⛔ not traced it
+> ([[feedback_trace_reachability_before_escalating]] — the same discipline applied in only one
+> direction).
 
-⭐ **Verified REACHABLE, ⛔ not inferred from the type** ([[feedback_trace_reachability_before_escalating]]):
-- the wire accepts free text — `accountHolderName: z.string().trim().min(1).max(200)`
-  (`packages/contracts/src/claims/nominee-bank.ts:56`), with ⛔ no linkage field;
-- the write path encrypts it **straight from request input** —
-  `encryptNomineeBankField(entry.accountHolderName, …)`
-  (`apps/api/src/modules/claims/claims.nominee-bank.handlers.ts:155`), with ⛔ no read of
-  `member_nominees`;
-- ⇒ a filer may type **any** name, including a person who is ⛔ not a declared nominee (a relative
-  whose account the family is using, a joint holder, an executor).
+⭐ **WHAT ACTUALLY GUARDS IT — verified live, and it is more than was first recorded:**
+- **Bank details are collected BEFORE the verifier decides.** The collectable window is
+  `intake_converged` · `documents_pending` · `verification_in_progress` · `verifier_review`
+  (`packages/domain/src/claim/errors.ts:198-203`).
+- **After that the window narrows to `verifier_approved` ONLY** — ⛔ not open to the nominee, admin-only,
+  gated on a **separate tier-2 permission** `claim.correct_nominee_bank`, and **audited +
+  reason-required** (`:205-210`).
+- **Past the claim/cycle freeze**, changes need *"the separately governed emergency correction
+  workflow"* (`:212-214`).
+- ⇒ ⭐ the details sit **inside** a multi-stage human chain — `verifier_review` → `verifier_approved`
+  → `state_trustee_freeze` → `state_trustee_approved` → `approved` (`claim/state.ts:325-336`).
 
-⚠⭐ **AND A CROSS-CHECK IS POSSIBLE AND DELIBERATELY ABSENT — ⛔ which is why this is a QUESTION and
-⛔ not a defect to fix here.** `member_nominees.name_ciphertext` exists and is `notNull()`
-(`packages/domain/src/schema/member_nominees.ts:59-60`), so a comparison *could* be written. Story 6.8
-chose not to, for a stated reason: the two accounts are a **claim-scoped payment channel**, ⛔ not one
-row per declared nominee. ⛔ **Do ⛔ not "fix" this by adding a join or a match rule** — that would
-re-impose the nominee linkage 6.8's D1 removed, and it is ⛔ not this story's act.
+⭐⭐ **AND THAT IS EXACTLY WHY THE REAL FINDING IS SHARPER THAN THE ONE IT REPLACES: ⛔ NOBODY IN THAT
+CHAIN CAN SEE THE HOLDER NAME.**
 
-⚠⛔ **AND TWO COMMITTED DOCUMENTS DISAGREE ABOUT IT** — recorded because the next reader will hit one
-of them and conclude the question is settled:
-- `packages/contracts/src/contributions/nominee-accounts.ts:18` — *"`accountHolderName` (**the NOMINEE
-  name**)"*, ⭐ **assuming** the identity;
-- `packages/domain/src/schema/claim_nominee_bank_accounts.ts:7-11` — *"⛔ **NO**
-  holder-name-must-match-nominee linkage of any kind"*, ⭐ **denying** it.
-⇒ ⛔ **The schema is the authority on what the column holds.** ⚠ ⛔ Do ⛔ **not** sweep the comment as a
-drive-by ([[project_epic9_confirmed_producer_is_live]] — the stale-comment-family discipline); it is
-recorded here with a trigger, ⛔ not fixed in passing.
+| Party | Sees `account_holder_name`? |
+|---|---|
+| The filer typing it | ✅ |
+| **Verifier** (approves the claim) | ⛔ **NO.** Story 6.10's console (UX-DR39) mandates prior verifier comments · peer-mesh responses · ground-inspection notes + photos · similar-case precedents · reason-codes · trustee audit UI · cross-Pariwar scope. ⛔ **No bank surface**, and ⛔ no verification handler reads it |
+| **State trustee** (freeze → approve) | ⛔ **NO** |
+| **Admin making a tier-2 CORRECTION** | ⛔ **NO** — the read-back is `NomineeBankStatusResponse`, a **presence view**: `rank` · `bankName` · `ifscValidated` · **`holderNamePresent: boolean`** · `vpaPresent`. Its own doc-block: *"never echo account number / holder name / raw IFSC"* (`contracts/src/claims/nominee-bank.ts:107-122`). ⚠ ⇒ **they correct a name they cannot see** |
+| Contributing member at payment | ✅ — Story 9.9's donor display, the **one** production decrypt (`apps/api/src/modules/payment/handlers.ts:305`) |
+| ⭐ **The anonymous PUBLIC** | ✅ — **once this story ships** |
 
-**⇒ WHAT IT MEANS FOR D5, stated as a property and ⛔ not as a recommendation.** Each option inherits a
-question about **whose** acceptance would authorise the render:
-- **(a) un-gated** — cl.10(a) authorises the render, so the subject question does ⛔ not block it. ⚠ But
-  it means a **third party's name** may be published at the `public` tier under a ruling framed about
-  *nominee* bank details. ⭐ **Two readings, and this note takes ⛔ neither:** *(i)* cl.10(a) is about
-  **the ACCOUNT** — the coordinates money goes to, whoever holds it — so the holder's name travels with
-  the account and nothing is stretched; *(ii)* cl.10(a) is about **the NOMINEE's data**, and a
-  non-nominee holder is outside what was ruled. ⛔ Only the Panel can say which.
-- **(b) fail-closed** — the predicate would need a subject to key on, and there is ⛔ **none on the
-  row**. ⇒ (b) is harder than it looks, ⛔ independently of the `consentExists`-shape prohibition.
-- **(c) defer** — unaffected.
+⇒ ⭐⭐ **THE INVERSION, STATED PLAINLY: this story would publish to the whole internet a value that
+⛔ no verifier, ⛔ no state trustee and ⛔ no correcting admin in the approval chain can see.**
 
-⭐ **The asymmetry worth carrying:** the **deceased member's** basis works because that subject is a
-**member** with their own accepted T&C (`claims.deceased_member_id` is `notNull()` and branded
-`MemberId`). A nominee — or a non-nominee account holder — is a **NON-MEMBER**, which is exactly the
-missing *"consent basis that reaches a non-member"* half of counsel's standing objection
-(`deferred-work.md` 11b.1 item **(a)**), ⛔ **the half `-160` cl.7 did NOT lift.**
+⚠⛔ **AND `ifsc_validated` IS ⛔ NOT CORROBORATION.** It is a **format + branch lookup** — it proves the
+**bank branch** exists, ⛔ **not** that the **person** does, and ⛔ not that they are a nominee.
+
+⭐ **THE SHAPE THIS IS:** the duty is real and the process is built for it, but it is
+**UN-MECHANIZED** — the data is ⛔ not rendered where the approval happens. ⚠ *"Decay concentrates in
+the un-mechanized half"* ([[project_mechanization_split_commitment]]).
+
+**⇒ WHAT SURVIVES FOR D5, and it is narrower and better-evidenced than the first version:**
+- ⭐ **The CONSENT-SUBJECT point stands.** Even a perfectly-verified account establishes that the
+  **account** is legitimate; it does ⛔ **not** create a record that the **named holder accepted Claim
+  Terms**. `-160` cl.3's instrument has a **subject** — the nominee — and the row still ⛔ does not
+  identify one (⛔ no FK to `member_nominees`, ⛔ no rank, ⛔ no match rule).
+- ⭐ **It STRENGTHENS reading (i) of cl.10(a)**, recorded under D5: that the ruling is about **THE
+  ACCOUNT** — an operational payment coordinate the approval chain governs — ⛔ **not** about a
+  nominee's informational PII. ⚠ ⛔ Still ⛔ not adopted here; ⛔ only the Panel can say.
+- ⛔ **WITHDRAWN:** *"a filer may type any name and nothing checks it."* ⛔ Do ⛔ not repeat it.
+
+⚠⛔ **AND TWO COMMITTED DOCUMENTS STILL DISAGREE** — ⛔ unaffected by this correction, and recorded
+because the next reader will hit one of them: `packages/contracts/src/contributions/nominee-accounts.ts:18`
+calls it *"`accountHolderName` (**the NOMINEE name**)"*, **assuming** the identity; the schema at
+`claim_nominee_bank_accounts.ts:7-11` **denies** the linkage. ⇒ ⛔ **the SCHEMA is the authority**; the
+comment is **recorded with a trigger**, ⛔ **not** swept as a drive-by.
+
+⛔ **And a cross-check is still POSSIBLE and DELIBERATELY ABSENT** — `member_nominees.name_ciphertext`
+exists and is `notNull()` — because 6.8's **D1** removed the nominee linkage on purpose (the accounts
+are a **claim-scoped payment channel**, ⛔ not one row per nominee). ⛔ **Do ⛔ not "fix" this by adding
+a join or a match rule.**
+
+⭐ **WHAT WOULD ACTUALLY CLOSE IT is ⛔ not this story's act, and is named so it is ⛔ not re-derived:**
+surfacing the holder name **on the verification console**, so the approver can exercise the duty the
+process already assumes. ⚠ That is a **verifier-console** change (Story 6.10's family), it needs its
+own PII-posture reasoning for a **Tier-1 decrypt at a new surface**, and ⛔ it is **routed, ⛔ not
+built here**.
 
 ⚠⛔ **Whichever way this goes, ⛔ do NOT resolve it by minting a `consent_type` value.** The three
 publication types were **RETIRED, ⛔ not reinterpreted** (`2026-08-28-162`), and re-wording one to
@@ -605,6 +633,7 @@ _(to be filled by the dev agent)_
 | 2026-09-02 | ✅ **PRECONDITION SATISFIED — 11b.3's `D4` ruled (b)** (`2026-09-02-176`): `live` + `closed` + `settled` all render, so **AC2's active-campaign subject has a host** and this story does ⛔ not widen the predicate. **`D11` ruled (a)** too — the route states three applicable controls, and this story's PII-bearing change owes `routes.ts` + `login-wall.spec.ts` their update at Task 4. ⚠ New open rider from D4: **`D4-linkage`** — a `live` pool's page has no inbound link today and `P-YYYY-MM-###` is sequential. |
 | 2026-09-02 | ⭐ **NO CHANGE TO THIS STORY — recorded because it was briefly in doubt.** `2026-09-02-174` cl.3 appeared to extend cl.10's staged schedule to contributor names, which would have given this schedule a second subject. ⛔ **Corrected the same day, Panel-ratified** (`2026-09-02-175`): the staged reduction is the **nominee bank fields'**, as cl.10 always said. ⇒ **`D12-schedule` VACATED**, Task 1 returns to a single subject, and ⛔ nothing here ever moved. |
 | ~~2026-09-02~~ | ~~⚠ **This story's schedule gained a POTENTIAL SECOND SUBJECT.**~~ ⛔ **SUPERSEDED by the row above** — ⛔ left as the record, ⛔ not deleted. `2026-09-02-174` cl.3 (Panel) **extended `-160` cl.10's staged schedule from bank fields to a PERSON'S NAME** — contributor names on 11b.3b. Whether the two share one per-Pariwar row is **`D12-schedule`**, a **policy** question, ⛔ not a de-duplication. Task 1 now reads that ruling before designing the table, and ⛔ must neither generalise unilaterally nor foreclose D12. |
-| 2026-09-02 | **D5-subject recorded** (observational) — arising from the 11b.3b packet's "whose name" pass. `-160` cl.3's basis is *"the **nominee's** own Claim Terms acceptance"*, but `account_holder_name` is **free text the filer types**, with ⛔ no FK and ⛔ no match rule (`claim_nominee_bank_accounts.ts:7-11`), verified reachable through the contract (`:56`) and the handler (`:155`). ⇒ a second gap **under** D5: even with an instrument, the row does ⛔ not identify its subject. ⚠ Two committed documents disagree (`nominee-accounts.ts:18` calls it *"the NOMINEE name"*); the schema is the authority and the comment is ⛔ recorded, ⛔ not swept. ⛔ Nothing ruled; both readings of cl.10(a) recorded. |
+| 2026-09-02 | ⚠⭐ **`D5-subject` NARROWED — its first form OVERSTATED the exposure and is WITHDRAWN.** BigDev challenged it: *isn't verifying the holder the claim approver's job?* ⭐ **It is, and the chain is real** — bank details are collected **before** the verifier decides (`errors.ts:198-203`), the post-approval window is `verifier_approved` only, admin-only, tier-2-permissioned, audited and reason-required (`:205-210`), and past the freeze it needs the emergency workflow. ⛔ The first version had ⛔ not traced it. ⭐⭐ **But the check surfaced a SHARPER finding: ⛔ nobody in that chain can SEE the holder name** — the verifier console has no bank surface, no verification handler reads it, and the only read-back is `NomineeBankStatusResponse`, a **presence view** (`holderNamePresent: boolean`), so even a tier-2 admin **corrects a name they cannot see**. ⇒ this story would publish to the internet a value ⛔ no approver can read. ⚠ `ifsc_validated` is ⛔ not corroboration (branch lookup, ⛔ not a person). ⭐ What survives for D5: the **consent-subject** point, and it **strengthens reading (i)** of cl.10(a). ⛔ Closing it is a **verifier-console** act, routed ⛔ not built here. |
+| ~~2026-09-02~~ | ~~**D5-subject recorded** (observational)~~ ⛔ **SUPERSEDED by the row above** — ⛔ left as the record, ⛔ not deleted. — arising from the 11b.3b packet's "whose name" pass. `-160` cl.3's basis is *"the **nominee's** own Claim Terms acceptance"*, but `account_holder_name` is **free text the filer types**, with ⛔ no FK and ⛔ no match rule (`claim_nominee_bank_accounts.ts:7-11`), verified reachable through the contract (`:56`) and the handler (`:155`). ⇒ a second gap **under** D5: even with an instrument, the row does ⛔ not identify its subject. ⚠ Two committed documents disagree (`nominee-accounts.ts:18` calls it *"the NOMINEE name"*); the schema is the authority and the comment is ⛔ recorded, ⛔ not swept. ⛔ Nothing ruled; both readings of cl.10(a) recorded. |
 | 2026-09-01 | **Combined validation of 11b.3 / 11b.3a / 11b.3b.** Three fixes: the Tier-1-count update is **+4 read from the file**, ⛔ never `0 → 4` (11b.3b runs in parallel and adds two); this story restores the route's **PII-bearing** property and now owes `routes.ts` + `login-wall.spec.ts` their update (11b.3's **D11**); and **11b.3's D4 is named as a precondition** — under D4(a) this story has no host for AC2. |
 | 2026-09-01 | Story created by the D6(b) three-way split of Story 11b.3 (ruled by BigDev, 2026-09-01). Carries `2026-08-28-160` cl.10 in its **own ACs and Tasks list**, as that decision's open-follow-up list requires ([[feedback_spec_edits_must_propagate_to_tasks]] — *"the AC-only route has failed on this epic before"*). `-165` cl.3's allowlist duty travels here with the fields. D5 (the Claim Terms basis has no instrument) is **blocking**; D8 is conditional. |

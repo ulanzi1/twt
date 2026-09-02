@@ -1,4 +1,215 @@
-# last_updated: 2026-09-01e (⭐⭐ STORIES 11b-2 + 11b-2a + 11b-2b — ONE **COMBINED** CODE-REVIEW PASS
+# last_updated: 2026-09-02a (⭐ STORY 11b-3b — THE **D3 TRUSTEE-PANEL PACKET IS WRITTEN AND ROUTED**:
+#   `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-02-11b3b-deceased-name-form.md`.
+#   ⛔⛔ **ZERO ROWS FLIP.** 11b-3b stays `ready-for-dev` and its Task 0 stays a **STOP gate** — the
+#   packet being WRITTEN discharges the writing, ⛔ NOT the question ([[feedback_closure_language_precision]]).
+#   ⛔ NO .decision-log.md entry is minted: a routing note ROUTES, it does ⛔ NOT rule.
+#
+#   ⭐ THE QUESTION: /sahyog names the deceased member IN FULL (D10), while /sahyog-vivran — the page
+#   dedicated to that one person — ⛔ CANNOT NAME THEM AT ALL. `matrix.ts:401-402` reserves the change
+#   to "each surface's OWN Panel ruling", and the gate is fail-closed REGARDLESS OF FORM: keeping a
+#   shielded form is ⛔ NOT the same act as holding an allowlist entry. ⇒ Q1 (declaration) + Q2 (form).
+#
+#   ⭐⭐ AND THE PACKET SURFACED A THIRD QUESTION NOBODY HAD ASKED — **Q3, THE CLAUSE SCOPE.** Story
+#   11b.9's shipped basis predicate (`pool/public-read.ts:283-299`) pins clause id
+#   **`niy.public-disclosure.member-information`** (`:181-183`) — a GENERAL disclosure clause carried
+#   under a constant NAMED `SAHYOG_DRIVE_PUBLICATION_CLAUSE_ID`. ⚠ The constant's name is
+#   surface-scoped; the clause id is ⛔ NOT. ⇒ whether a Q1 "yes" is BUILDABLE turns on counsel's
+#   clause TEXT (returned 2026-09-07): drafted narrowly, the entry is ruled and the predicate stays
+#   false here and the page renders unnamed anyway; drafted generally, it is live the moment it is
+#   pinned, with ⛔ no further code. ⭐ That is why the note went BEFORE the return date — the Panel can
+#   have the scope put to counsel deliberately rather than the project discovering the mismatch after.
+#
+#   ⭐ The note also honours a `scope:` block that PRE-INSTRUCTS this ruling: the `sahyog-drive`
+#   exception in public-vs-private-matrix.yaml names which of D10's three grounds a third surface may
+#   borrow — **(1) and (3) only, ⛔ NEVER (2)**, because (2) reasons FROM the /members baseline that
+#   the same pass found non-compliant with Trust Deed cl.15(c).
+#   ⭐⛔ AND THE PACKET'S "WHOSE NAME" PASS PRODUCED ONE FINDING ON A SIBLING — recorded in 11b-3a as
+#   **`D5-subject`**, OBSERVATIONAL ([[feedback_gap_analysis_observational]]), ⛔ ruling nothing.
+#   `-160` cl.3 rests nominee bank data on "the NOMINEE's own Claim Terms acceptance" — but
+#   `account_holder_name` is ⛔ NOT verified to be a nominee's name. The schema says so in terms
+#   (`claim_nominee_bank_accounts.ts:7-11`: "NO FK to member_nominees, NO holder-name-must-match-nominee
+#   linkage of any kind — the filer types a holder name per account, full stop"), and it is VERIFIED
+#   REACHABLE, ⛔ not inferred from the type: the wire is free text
+#   (`contracts/src/claims/nominee-bank.ts:56`) and the handler encrypts it straight from request input
+#   (`claims.nominee-bank.handlers.ts:155`, ⛔ no member_nominees read).
+#   ⇒ a SECOND gap UNDER D5: even once an instrument exists, the row does ⛔ NOT IDENTIFY THE SUBJECT it
+#   would attach to. ⭐ It SURVIVES a D5(a) ruling — building un-gated does ⛔ not make the holder a
+#   nominee — so 11b-3a's AC8 now routes it with a trigger.
+#   ⚠ TWO COMMITTED DOCUMENTS DISAGREE: `contracts/src/contributions/nominee-accounts.ts:18` calls it
+#   "the NOMINEE name"; the schema denies the linkage. ⛔ The SCHEMA is the authority; the comment is
+#   RECORDED with a trigger, ⛔ NOT swept as a drive-by. ⛔ And a cross-check is POSSIBLE
+#   (`member_nominees.name_ciphertext` exists) and DELIBERATELY ABSENT since 6.8 D1 — ⛔ do NOT "fix" it
+#   by adding a join; that re-imposes the linkage 6.8 removed. ⛔ Both readings of cl.10(a) recorded,
+#   ⛔ neither taken: (i) it is about the ACCOUNT, so the holder travels with it; (ii) it is about the
+#   NOMINEE's data, and a non-nominee holder is outside what was ruled. ⛔ Only the Panel can say.
+#   ⭐ The asymmetry carried: the DECEASED member's basis works because that subject IS a member
+#   (`claims.deceased_member_id`, notNull, branded MemberId); a nominee — or a non-nominee holder — is a
+#   NON-MEMBER, exactly the "consent basis that reaches a non-member" half of counsel's standing
+#   objection that `-160` cl.7 did ⛔ NOT lift.
+#
+#   ⭐ AND THE NOTE CARRIES AN **APPENDIX A — "IN PLAIN WORDS"**, added the same day on BigDev's
+#   direction: the numbered sections are engineer-facing evidence, and a Panel of community trustees
+#   should ⛔ not have to parse `pii_tier` / the matrix / fail-closed refinements to answer a question
+#   about a person's name. ⭐ Appendix A is COMPLETE ON ITS OWN — the question, the options, and what
+#   follows from each, with ⛔ zero code identifiers — and the note's head now POINTS THERE FIRST.
+#   ⛔ The body was ⛔ NOT rewritten and ⛔ NOT renumbered (the §3/§5/§6/§7 cross-references in the story
+#   files and in this ledger still resolve); where the two differ, the numbered sections GOVERN, and
+#   Appendix A says so on its face.
+#
+#   ⛔ Does not reach 11b.6 (In Memoriam is fenced by the SAME line and owes its own ruling) · ⛔ does
+#   not re-argue the CONTRIBUTOR question (the 2026-08-30 note's, still open) · ⛔ does not re-file the
+#   public/member inversion · ⛔ does not block 11b-3 or 11b-3a, which are startable today precisely
+#   because D6(b) moved this question out of them · ⛔ minted no launch-gate row · ⛔ ruled nothing.)
+# last_updated_prior: 2026-09-01h (⭐⭐ STORIES 11b-3 + 11b-3a + 11b-3b — ONE **COMBINED** VALIDATION PASS
+#   (`bmad-create-story validate 11b-3, 11b-3a, 11b-3b`), run combined ⛔ NOT three times, because
+#   [[feedback_circular_deferral_between_sibling_stories]] rules that a per-story pass structurally
+#   cannot see an obligation that falls into a split's seam. ⭐ FOUR OF THE SIX CRITICALS WERE EXACTLY
+#   THAT — invisible with one file open.
+#   ⛔⛔ **ZERO ROWS FLIP.** 11b-3, 11b-3a and 11b-3b all STAY `ready-for-dev`; ⛔ epic-11b stays
+#   in-progress. ⛔ NO .decision-log.md entry is minted here — a validation pass is ⛔ NOT a governance
+#   act; D11 and D12 below are RAISED in the story file for BigDev, ⛔ not ruled.
+#
+#   ⭐⭐ THE HEADLINE: **"AMOUNT RAISED" WAS NEVER UNBUILT.** 11b-3's D1 was posed as a choice between a
+#   count and a synthesis the story's own invariant forbids. ⛔ False: `amountRaisedInr =
+#   confirmedCount × fixedAmount` is SHIPPED and RULED — `packages/ui/src/pool-progress/presenter.ts:10`
+#   calls it "the SINGLE canonical definition of 'amount raised'" (Story 9.12 Decision 3), it is
+#   confirmed-only BY SHAPE, it renders to members today, and `packages/ui/src/index.ts:10-13` names
+#   THIS SURFACE as its next consumer in terms. ⇒ D1 is RE-POSED: the question is not "may we
+#   synthesize" but "do we consume the canonical producer, or deliberately show the public LESS than
+#   the member app shows for the same pool" — which would be a SECOND instance of the D7 inversion,
+#   pointing the other way. ⚠ And the presenter sits behind the `@twt/ui` fence this story assigns to
+#   11b-3b, so D1(b) costs either a lifted dependency or moving the amount to 11b-3b.
+#
+#   ⭐ TWO DECISIONS MINTED OPEN, both NEW FINDINGS of this pass:
+#   · **D11** (11b-3) — the THIRD public-pages route's control set. `routes.ts:52-55` rules the five
+#     controls are properties of "an unauthenticated, PAGINATED, PII-BEARING public COLLECTION" and
+#     that "a third route that CANNOT reuse them unchanged NEEDS ITS OWN RULING, not its own bullet
+#     list." ⛔ Post-split 11b-3's route is NONE of the three, so controls 2/3 have no query parameter
+#     to bind to and stating "five" makes both documents claim a control that does not exist — the
+#     defect that file records having already had. ⭐⛔ AND IT IS A PURE SPLIT ARTIFACT: pre-split the
+#     story was paginated AND PII-bearing. 11b-3a restores PII-bearing, 11b-3b restores paginated, and
+#     NEITHER listed routes.ts or login-wall.spec.ts. Now written in ALL THREE files so no pair can
+#     route it to each other.
+#   · **D12** (11b-3) — what the reversed-denial consumer DOES. ⛔ Verified by grep: there is NO Sahyog
+#     Vivran publication queue; the phrase is prose in events/src/registry.ts:351. And AC1 renders at
+#     REQUEST TIME, so the "Reversed by appeal" narrative derives at render with no consumer at all.
+#     ⇒ as written the dev builds an inert queue or skips it and reports done.
+#
+#   ⚠⛔ ONE FILED FINDING IS FALSE AND IS CORRECTED RATHER THAN REPEATED: `deferred-work.md:7137` says
+#   `listConfirmedContributorsForPool` "carries NO ORDER BY at all / row order is whatever the plan
+#   returns". ⛔ Verified false at 79ed41d — `contribution/read.ts:183` sorts, and `git log -L` puts
+#   that sort in the read's FIRST commit (8.3, afce9e0). ⭐ The real defect is narrower and worse: the
+#   order it HAS is `member_id` — the exact key the deferral and 11b-3's AC9 both PROHIBIT. ⇒ the work
+#   is to REPLACE a sort, not add a missing one, which needs `event_version` in the projection and a
+#   rule for a re-confirmed member (now ruled: EARLIEST live confirmation). ⚠ The `-01f` entry below
+#   repeats the false claim; it is SUPERSEDED here, ⛔ not edited
+#   ([[feedback_supersede_never_reinterpret]]). 11b-3's Task 8 owes the in-place amendment.
+#
+#   ⭐ THE OTHER THREE CRITICALS, all seam defects: 11b-3b's AC7 pointed the ten
+#   CONTRIBUTION_LIST_I18N_REFS at the `sahyog-vivran` namespace — they carry `namespace:
+#   'contribution'` and their file header rules "REUSE ONLY, NO NAMESPACE IS CREATED", so that would
+#   have opened a THIRD instance of the 11b.2↔11b.2b circular deferral wearing a green run ·
+#   11b-3a hard-coded the Tier-1-count update "0 → 4" while 11b-3b runs in PARALLEL and adds two, so
+#   it is now `+4` READ FROM THE FILE · 11b-3's D4(a) would leave 11b-3a with no host for its entire
+#   subject, and 11b-3a did not name D4 anywhere.
+#
+#   ⚠ SIX ENHANCEMENTS APPLIED: `paginated` value stated and its flip made explicit · D10 gains
+#   option (a) — Astro SSR needs NO row key, so the 8.3 deferral is re-affirmed open with a re-pointed
+#   trigger rather than a key invented · 11b-3b AC6 now names the BUILDABLE columns (District · Pool ·
+#   Date, + Donor Name conditional on D2), not a second negative list · `resolvePublicMemberName`
+#   corrected to `kyc/public-name.ts:73` (it is NOT in `pool/public-read.ts`) · family 13's a11y checks
+#   translated to their WEB form in all three files, since the RN example does not transfer to Astro.
+#   ⛔ Amended no epics.md · ⛔ minted no launch-gate row · ⛔ ruled nothing.)
+# last_updated_prior: 2026-09-01g (⭐⭐ STORY 11b-3 — **SPLIT THREE WAYS BY RULING**. BigDev ruled **D6(b)**
+#   on 2026-09-01, same day as the authoring pass at `-01f` below. ⭐ TWO NEW ROWS, ⛔ ZERO existing
+#   rows change value: `11b-3a-nominee-bank-public-presentation-and-masking-schedule` and
+#   `11b-3b-sahyog-vivran-named-identity-render-layer` are ADDED at `ready-for-dev`; 11b-3 STAYS
+#   `ready-for-dev` (⛔ it did not regress — it was NARROWED). ⛔ epic-11b stays in-progress.
+#   ⛔ NO .decision-log.md entry is minted here — 11b-3's Task 0 TRANSCRIBES D6(b); an authoring pass
+#   ⛔ never rules and ⛔ never writes its own ruling into the log.
+#   ⛔⛔ **THE KEY `11b-3-sahyog-vivran-per-claim-story-surface` IS UNCHANGED.** `deferred-work.md` and
+#   Decision `2026-09-01-171` cl.1 both cite it BY NAME (the `pool-contributor-list.ts:88` routing);
+#   renaming it would have silently broken every routing citation pointing at it.
+#   ⭐⭐ THE SPLIT'S LOAD-BEARING PROPERTY: **11b-3 now declares the `sahyog-vivran` surface with ZERO
+#   `pii_tier: 1` fields at `tier: public`** ⇒ ⛔ no `tier1_public_exception`, ⛔ no allowlist entry,
+#   ⛔ no Panel ruling — so it ⛔ CANNOT be blocked by one, and AC2 asserts that zero POSITIVELY (a
+#   later story adding one without its ruling fails there as well as at the gate).
+#   ⚠⭐ **AND THE SHAPE CHANGED FROM THE ONE FIRST PROPOSED — RECORDED, ⛔ NOT SLID IN.** The first
+#   sketch kept the deceased member's name in 11b-3 (fenced) and split only the contributor list out.
+#   ⇒ that would have left 11b-3 holding a Tier-1-at-`public` field it could not declare, i.e. blocked
+#   on a Panel ruling it does not otherwise need. Moving BOTH name questions to 11b-3b is what makes
+#   the "zero Tier-1" property CHECKABLE rather than aspirational.
+#   **WHO OWNS WHAT, AND WHAT GATES EACH:**
+#   · **11b-3** — public shell · the third public-pages GET (⚠ the NO SECOND ROUTE fence's THIRD
+#     route: its own written defence AND its own login-wall allowlist entry, SAME control count in
+#     both) · the `claim.reversed` publish-hook CONSUMER (⭐ the producer is LIVE since 6.16; there is
+#     ⛔ NO consumer today) · the financial-truth CI gate · the `pool-contributor-list.ts:88` fix (⭐ it
+#     is the NAMED consumer, so fixing it is the DISCHARGE, ⛔ not a violation of 11b.2b's AC9 fence)
+#     · the confirmed-read's missing deterministic ORDER BY (at the READ, on confirmation
+#     `event_version`, ⛔ never `member_id`). ⛔ GATED ON NOTHING. THREE decisions open: D1 · D4 · D7.
+#   · **11b-3a** — nominee bank PUBLIC presentation + the per-Pariwar masking schedule + the
+#     Trust-Admin knob + the FOUR ruled Tier-1 entries. ⭐ `-165` cl.3's allowlist duty TRAVELS HERE
+#     WITH THE FIELDS — the obligation MOVES, ⛔ it does not evaporate. Owns the family's ONLY
+#     migration. ⛔ **D5 BLOCKING**: the ruled basis is "the nominee's own Claim Terms clause 8" and
+#     ⛔ NO claim-terms document, version table, acceptance record or `consent_type` value EXISTS.
+#   · **11b-3b** — the named-identity render layer + the `apps/public` -> `@twt/ui` dep. ⛔⛔ **TASK 0
+#     IS A STOP GATE and stopping on a first pass is the EXPECTED outcome.** ⛔ D2 (contributor,
+#     PANEL, routed 2026-08-30, ⏳ nothing ratified) and ⛔ D3 (the deceased member's name — ⭐ a NEW
+#     FINDING of `-01f`, ⛔ NO packet exists and WRITING ONE IS ITS TASK 0) are BOTH blocking.
+#   ⛔ **A `blocked-awaiting-decisions` value was AGAIN considered and AGAIN not minted** — the
+#   `deferred-to-v2` precedent (`2026-08-17-126` cl.6) makes an enum addition a RATIFIED GOVERNANCE
+#   ACT, ⛔ not an authoring convenience. ⇒ `ready-for-dev` means what the enum says; the STOP GATE is
+#   expressed in 11b-3b's Task 0, exactly as 11b-9 expressed its counsel wait in Task 1.
+#   ⛔ WHAT THIS PASS DID NOT DO: ⛔ ruled nothing beyond relaying D6(b) · ⛔ edited no matrix entry ·
+#   ⛔ amended no epics.md (11b-3's Task 0 owes ONE annotation covering BOTH the stale ACs and the
+#   split — ⛔ and 11b-3a/11b-3b must NOT each write a second one) · ⛔ minted no launch-gate row.)
+# last_updated_prior: 2026-09-01f (⭐ STORY 11b-3 — AUTHORED (`bmad-create-story 11b.3`). ⭐ ONE ROW FLIPS:
+#   `11b-3-sahyog-vivran-per-claim-story-surface` **backlog -> ready-for-dev**. ⛔ NO other row moves;
+#   ⛔ epic-11b stays in-progress; ⛔ NO .decision-log.md entry is minted here — an authoring pass
+#   RAISES decisions, it ⛔ never rules them (the Task-0 TRANSCRIBE-or-STOP discipline).
+#   ⭐⭐ THE HEADLINE: **`epics.md` STORY 11b.3 IS STALE, AND THE STALENESS WAS ALREADY A KNOWN OPEN
+#   CARRY THAT NOBODY DISCHARGED.** Its newest annotation (2026-08-29) says the AR-48 deferral is
+#   "UNDISTURBED" — true of the AUTHENTICATED half ONLY. One day earlier `2026-08-28-160` cl.10 ruled
+#   nominee bank details PUBLIC during an active campaign, `-164` A2 RE-PURPOSED SD-2 onto POST-campaign
+#   masking, and `-165` cl.1/cl.3 ruled FOUR named (surface, field) Tier-1 pairs on `sahyog-vivran`
+#   that THIS STORY adds. The 2026-08-28 routing note §11 already lists "amend epics.md Story 11b.3"
+#   as owed. ⇒ the story file carries the reconciled scope; Task 0 owes the epics.md ANNOTATION
+#   (⛔ annotation, ⛔ never a rewrite — [[feedback_supersede_never_reinterpret]]).
+#   ⭐⭐ AND A NEW FINDING OF THIS PASS, ⛔ NOTHING HAD RECORDED IT (raised as D3): **THE DECEASED
+#   MEMBER'S NAME HAS NO TIER-1 ALLOWLIST ENTRY ON THIS SURFACE, AND THE SHIELDED FORM DOES NOT ESCAPE
+#   THE GATE.** `matrix.ts:174-199` is fail-closed BOTH ways — `pii_tier: 1` at `tier: public` without
+#   a `tier1_public_exception` FAILS — and `-165` cl.2 + the yaml's own `pii_tier` comment say masking
+#   / shielding is a PRESENTATION policy that ⛔ never changes the tier. `matrix.ts:401-402` reserves
+#   this surface's name form to "each surface's OWN Panel ruling". ⇒ as things stand 11b.3 ⛔ CANNOT
+#   NAME THE DECEASED MEMBER AT ALL, beside a `/sahyog` that names them in FULL. ⛔ Do NOT resolve it
+#   by appending to the allowlist — "the gate failing is the gate working".
+#   **SEVEN DECISIONS RAISED, ⛔ ZERO RULED.** D1 "amount raised" has ⛔ NO canonical producer
+#   (`contribution.confirmed` carries ⛔ no amount — verified `.strict()` at `contribution/events.ts:147`)
+#   and computing it is what this story's OWN invariant prohibits · **D2 = THE PANEL'S**, already routed
+#   2026-08-30 (contributor name: Q1 declaration + Q2 form, ⏳ nothing ratified) · **D3** the deceased
+#   name entry (above) · D4 which pool states render (`live` IS a pool state — `live -> closed ->
+#   settled`) · **D5** the nominee data's basis, "the nominee's own Claim Terms clause 8", has ⛔ NO
+#   SUBSTRATE — ⛔ no claim-terms document, ⛔ no version table, ⛔ no acceptance record, ⛔ no
+#   `consent_type` value — and 11b.9's D5 FORBIDS the obvious fail-closed shape · D6 split
+#   (⛔ observational, ⛔ not prescribed — four risk classes, four revert units; 11b.2 was split three
+#   ways for less) · D7 the public/member name INVERSION (⭐ carry, ⛔ do not re-file).
+#   ⚠ **AC7 + AC8 and Tasks 11-12 are FENCED** on D2/D3 and build ⛔ NOTHING until the Panel rules —
+#   ⛔ no "first-name + last-initial for now", ⛔ no speculative `@twt/ui` dependency addition. ⭐ The
+#   REST of the story is `ready-for-dev`: the 2026-08-30 note's "11b.3 cannot start without one" is
+#   read NARROWLY — it is the CONTRIBUTOR LIST that cannot start, ⛔ not the surface.
+#   ⛔ A `blocked-awaiting-decisions` value was again considered and again NOT minted — the
+#   `deferred-to-v2` precedent (`2026-08-17-126` cl.6) makes an enum addition a RATIFIED GOVERNANCE
+#   ACT. ⇒ `ready-for-dev` here means what the enum says, exactly as at 11b-2 and 11b-9.
+#   ⭐ TRIGGERS THIS STORY FIRES AND OWES: `pool-contributor-list.ts:88`'s stale doc-block (routed to
+#   11b.3 BY NAME; ⭐ this story is its named consumer, so fixing it is the DISCHARGE, ⛔ not a
+#   violation of 11b.2b's AC9 fence) · the confirmed-contributor read's missing deterministic ORDER BY
+#   (fix AT THE READ, on confirmation `event_version`, ⛔ never `member_id`) · 11b.2 item (i)'s Astro
+#   render layer (⛔ fenced on D2) · the FlashList `keyExtractor` re-trigger (⛔ NOT discharged) ·
+#   Story 8.10's `out-of-band-blame` tone rule, which names 11b.3 in terms.
+#   ⛔ WHAT THIS PASS DID NOT DO: ⛔ ruled nothing · ⛔ edited no matrix entry · ⛔ amended no epics.md
+#   (Task 0's, ⛔ not the authoring pass's) · ⛔ swept none of the stale-comment family beyond the one
+#   line routed here · ⛔ minted no launch-gate row · ⛔ advanced Row 17.)
+# last_updated_prior: 2026-09-01e (⭐⭐ STORIES 11b-2 + 11b-2a + 11b-2b — ONE **COMBINED** CODE-REVIEW PASS
 #   (`bmad-code-review 11b.2, 11b.2a, 11b.2b altogether`) over the WHOLE STACKED RANGE `80e0d12..HEAD`
 #   — all 36 commits, all three stories at once, run AFTER all three rows had closed `done` on FIVE
 #   separate single-story passes. ⛔ It is ⛔ NOT a re-run of those passes. ⭐ **ITS UNIT IS THE SEAMS
@@ -13360,7 +13571,69 @@ development_status:
   11b-2-contribution-list-components-table-mobile-row: done
   11b-2a-contributor-name-resolution-defect: done
   11b-2b-contributor-list-mobile-render-layer: done
-  11b-3-sahyog-vivran-per-claim-story-surface: backlog
+  # ⭐⛔ 11b-3 WAS SPLIT THREE WAYS ON 2026-09-01 BY RULING (D6(b), BigDev) — ⛔ NOT by the epic plan.
+  # The single story spanned FOUR risk classes and FOUR revert units: a public Astro surface; a NEW
+  # per-Pariwar configuration substrate + admin UI + the family's only migration (money-routing PII);
+  # an event consumer; and a CI gate — plus two halves that cannot start without a Panel ruling.
+  # ⭐ 11b-3a and 11b-3b are ⛔ NOT in epics.md's story list; they are recorded there as an ANNOTATION
+  # owed by 11b-3's Task 0, so a future sprint-planning run does ⛔ NOT regenerate a ghost 11b-3 or
+  # drop these two (the 11b-2a / 11b-2b precedent, exactly).
+  # ⛔ THE KEY `11b-3-sahyog-vivran-per-claim-story-surface` IS UNCHANGED — deferred-work.md and
+  # Decision 2026-09-01-171 cl.1 both cite it BY NAME; renaming it would break every routing citation.
+  # ⛔ ORDER: 11b-3 FIRST, ALONE. 11b-3a and 11b-3b run AFTER it is `done` AND MERGED, and are
+  # independent of each other ⇒ they may run in PARALLEL. ⚠ Both mint against the SAME
+  # .decision-log.md head — re-read it immediately before writing and take the next free number.
+  #
+  # ⭐⭐ THE SPLIT'S LOAD-BEARING PROPERTY: 11b-3 declares the `sahyog-vivran` surface with ZERO
+  # `pii_tier: 1` fields at `tier: public` ⇒ it needs NO `tier1_public_exception`, NO allowlist entry
+  # and NO Panel ruling, so it CANNOT be blocked by one. Every named-identity question went to 11b-3b
+  # and every money-routing-PII question to 11b-3a. ⚠ THIS CHANGED FROM THE SHAPE FIRST PROPOSED —
+  # the deceased member's name was going to stay in 11b-3 (fenced), which would have left 11b-3
+  # holding a Tier-1 field it could not declare. Recorded, ⛔ not slid in.
+  #
+  # ⚠ ITS EPIC ACs ARE STALE — `2026-08-28-160` cl.10 / `-164` A2 / `-165` cl.1+cl.3 never reached
+  # `epics.md`, and the 2026-08-28 routing note §11 records the amendment as owed. ⛔ Build to the
+  # STORY FILES, ⛔ not to the epic.
+  # ⛔ STARTABLE NOW: 11b-3 alone, at its Task 0 (TRANSCRIBE-or-STOP). FIVE decisions open on it —
+  # D1 (RE-POSED 2026-09-01h: `amount raised` DOES have a canonical producer — `amountRaisedInr =
+  # confirmedCount × fixedAmount`, Story 9.12 Decision 3, shipped in @twt/ui/pool-progress and naming
+  # this surface as its next consumer; the question is consume-vs-show-less-than-the-member-app, ⛔ NOT
+  # synthesize-vs-not), D4 (which pool states render — ⚠ under D4(a) 11b-3a has NO HOST for its
+  # subject), D7 (the public/member name inversion — carry or resolve), D11 (the third route's control
+  # set — `routes.ts:52-55` reserves it as a RULING), D12 (what the reversed-denial consumer does —
+  # there is NO publication queue in the codebase).
+  11b-3-sahyog-vivran-per-claim-story-surface: ready-for-dev
+  # ⭐ 11b-3a — the nominee bank PUBLIC presentation + the per-Pariwar masking schedule + the
+  # Trust-Admin knob. It carries `2026-08-28-160` cl.10 in its OWN ACs and Tasks list, as that
+  # decision's open-follow-up list requires ("the AC-only route has failed on this epic before").
+  # ⭐ `-165` cl.3's duty to add the FOUR ruled Tier-1 allowlist entries TRAVELS HERE WITH THE FIELDS
+  # — the obligation MOVES, it does ⛔ NOT evaporate, and 11b-3's Task 0 records the move. ⛔ The
+  # entries and the field declarations land in the SAME commit; a pre-added entry is "a standing
+  # permission with NO subject" (routing note §11).
+  # ⛔ D5 IS BLOCKING: the ruled BASIS for nominee data is "the nominee's own Claim Terms clause 8",
+  # and there is NO claim-terms document, NO version table, NO acceptance record and NO consent_type
+  # value for one. ⚠ And 11b.9's D5 FORBIDS the obvious fail-closed shape. ⛔ Do NOT resolve it by
+  # minting a consent_type — the three publication types were RETIRED, not reinterpreted (`-162`).
+  # ⚠ This story owns the family's ONLY migration, and cl.10(d) makes "configuration over ONE record"
+  # load-bearing: ⛔ never a boolean, ⛔ never a second bank-detail record. A later "simplification"
+  # to a boolean is a DEFECT, not a cleanup.
+  11b-3a-nominee-bank-public-presentation-and-masking-schedule: ready-for-dev
+  # ⭐ 11b-3b — the named-identity render layer: the deceased member's name AND the contributor list,
+  # plus the `apps/public` -> `@twt/ui` dependency addition and the Astro render layer over 11b.2's
+  # presenter (11b.2 item (i)'s named trigger).
+  # ⛔⛔ ITS TASK 0 IS A STOP GATE, AND STOPPING ON A FIRST PASS IS THE EXPECTED OUTCOME. BOTH of its
+  # subjects need a `(surface, field)` Tier-1 allowlist entry, and BOTH are UNRULED:
+  #   · D2 (contributor: DECLARATION + FORM) — with the PANEL, routed 2026-08-30, ⏳ nothing ratified.
+  #   · D3 (the deceased member's name on `sahyog-vivran`) — a NEW FINDING of the 2026-09-01 authoring
+  #     pass; ⛔ NOTHING had recorded it, and ⛔ there is NO routing packet yet. WRITING AND ROUTING
+  #     THAT PACKET IS THIS STORY'S TASK 0. ⚠ `matrix.ts:401-402` reserves it to "each surface's OWN
+  #     Panel ruling", so ⛔ BigDev may not resolve it alone.
+  # ⚠ Shielding does NOT lower the tier — `pii_tier` is "a FACT about the data; never changed to
+  # permit a render" ⇒ first-name + last-initial needs an entry just as a full name does.
+  # ⛔ Do NOT resolve either by appending to `RULED_TIER1_PUBLIC_EXCEPTIONS`: the gate failing IS the
+  # gate working (`matrix.ts:388-391`). ⛔ Do NOT ship "first-name + last-initial for now" — THREE
+  # committed epics.md lines already assume that form (`:3145` `:3238` `:4931`) and NONE is a ruling.
+  11b-3b-sahyog-vivran-named-identity-render-layer: ready-for-dev
   11b-4-memorial-authorship-surface-family-writes-the-story: backlog
   11b-5-memorial-visual-components-memorial-record-portrait-frame-kinship-lattice: backlog
   11b-6-in-memoriam-roll-consent-governed-revocable-invariant: backlog

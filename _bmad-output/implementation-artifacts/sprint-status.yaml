@@ -1,4 +1,52 @@
-# last_updated: 2026-09-02o (⭐ **STORY 11b.3 STARTS — Task 0's GOVERNANCE WRITE, before the first
+# last_updated: 2026-09-02p (⭐⭐ **STORY 11b.3 IMPLEMENTED — `in-progress` -> `review`.** ONE row
+#   flips. ⛔ epic-11b stays `in-progress`; ⛔ 11b-3a / 11b-3b stay `ready-for-dev` — both are gated on
+#   11b-3 **MERGED**, ⛔ not on it reaching review.
+#
+#   ⭐ WHAT SHIPPED: the `sahyog-vivran` matrix surface (the 10th) with ⭐ **ZERO `pii_tier: 1` fields at
+#   `tier: public`**, asserted POSITIVELY — the split's load-bearing property is now a CHECKABLE one ·
+#   the per-claim domain read (⛔ zero KMS round-trips: it selects no Tier-1 column at all) · the THIRD
+#   public-pages route, stating **THREE** applicable controls in BOTH documents with 2/3 recorded N/A
+#   **and their restoration named** (D11(a)) · the Astro page + pure render module · the
+#   `sahyog-vivran-financial-truth` CI gate · both locale files in `microcopy.yaml`.
+#   ⛔ D12(a) HONOURED LITERALLY: ⛔ no queue, ⛔ no consumer, ⛔ no publication record — the lineage is
+#   derived at request time and **6.16's publish-hook obligation is DISCHARGED BY THE READ**.
+#   ⛔ NO rupee figure (D1(b) moved it to 11b-3b; D1(c) stays REFUSED and is now MECHANIZED by the
+#   gate's render-path rule).
+#
+#   ⭐⭐ TWO FINDINGS WORTH THE LEDGER, BOTH ABOUT TESTS THAT WERE GREEN OVER GROUND THEY COULD NOT REACH:
+#   (1) ⛔⛔ **`GET /sahyog` RETURNED HTTP 500 FOR EVERY REAL CLOSED DRIVE** — a live, user-visible defect
+#       on a SHIPPED public transparency surface. `DRIVE_CLOSED_AT` is a RAW `sql` fragment, so its
+#       declared `sql<Date | null>` is a claim the runtime does ⛔ not honour: the value arrives as an
+#       ISO STRING and the handler's `.toISOString()` threw. ⛔ NOTHING CAUGHT IT because the route's own
+#       live-DB spec seeded pools but ⛔ NEVER a close/settle EVENT ⇒ `driveClosedAt` was null on every
+#       fixture row and the branch was NEVER EXECUTED — the vacuous-leg defect, arriving in a SPEC
+#       rather than in a gate. ⭐ Found because 11b-3's read SHARES the fragment; fixed at the SOURCE
+#       (`coerceDriveInstant`), fixture now seeds the event, named regression case proven to BITE.
+#       ⚠ Recorded "Closed by [edit]", ⛔ not deferred.
+#   (2) ⭐ **THE ORDER BY DEFERRAL'S GROUND WAS FALSE WHEN FILED** and is AMENDED IN PLACE, ⛔ never
+#       re-filed: the read was ⛔ not unordered — it had sorted by `member_id` since Story 8.3, which is
+#       EXACTLY the key the item's own remedy prohibits. ⇒ the work was to REPLACE a sort, ⛔ not add a
+#       missing one. Now ordered by the EARLIEST LIVE confirmation's `event_version`.
+#
+#   ⚠ TWO NEGATIVE CONTROLS RE-POINTED (`scrape-test.spec.ts`, `matrix.server.test.ts`): both used
+#   `sahyog-vivran` as their "undeclared surface" fixture, so declaring it would have made them VACUOUS
+#   — passing for the WRONG REASON. Re-pointed at `in-memoriam` (still deliberately undeclared), each
+#   carrying the instruction that the NEXT story to declare a surface owes them the same check.
+#
+#   ⚠⛔ **NOT MET, RECORDED OPENLY: AC7's NON-AUTHOR TONE-REVIEW SIGN-OFF IS UN-ATTESTED.** The copy was
+#   authored by the dev agent (disqualified by construction); ⭐ BigDev is NOT disqualified and is the
+#   available qualified reviewer, but the review HAS NOT HAPPENED. Recorded as owed in
+#   `docs/tone-review-checklist.md` with its trigger (before deployment to any Pariwar) — ⛔ not signed,
+#   ⛔ not waived, ⛔ not back-filled. ⭐ The AUTOMATED floor IS discharged; that is a different claim.
+#
+#   ⛔ STILL OPEN: **D4-linkage** (READ and DISPOSED — `live` renders by identifier, ⛔ NO inbound link
+#   added; the ENUMERATION half routed to 11b-3a's AC2 by name) · the stale publish-queue prose at
+#   `registry.ts:351` + `claim/events.ts:492` (routed with a trigger, ⛔ NOT swept — this story fixed
+#   exactly ONE named line, `pool-contributor-list.ts:88`) · counsel's written clause (`-173` Q3).
+#
+#   ⭐ VALIDATION: `ci:local` **34 jobs green WITH THE INTEGRATION LEG RUN** (33 + the new gate).)
+#
+# last_updated_prior: 2026-09-02o (⭐ **STORY 11b.3 STARTS — Task 0's GOVERNANCE WRITE, before the first
 #   line of code.** ONE row flips: development_status[11b-3-sahyog-vivran-per-claim-story-surface]
 #   `ready-for-dev` -> `in-progress`. ⛔ epic-11b stays `in-progress`; ⛔ 11b-3a / 11b-3b stay
 #   `ready-for-dev` (both gated on 11b-3 MERGED, ⛔ not on it starting).
@@ -14229,7 +14277,7 @@ development_status:
   # subject), D7 (the public/member name inversion — carry or resolve), D11 (the third route's control
   # set — `routes.ts:52-55` reserves it as a RULING), D12 (what the reversed-denial consumer does —
   # there is NO publication queue in the codebase).
-  11b-3-sahyog-vivran-per-claim-story-surface: in-progress
+  11b-3-sahyog-vivran-per-claim-story-surface: review
   # ⭐ 11b-3a — the nominee bank PUBLIC presentation + the per-Pariwar masking schedule + the
   # Trust-Admin knob. It carries `2026-08-28-160` cl.10 in its OWN ACs and Tasks list, as that
   # decision's open-follow-up list requires ("the AC-only route has failed on this epic before").

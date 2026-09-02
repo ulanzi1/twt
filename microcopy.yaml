@@ -390,6 +390,31 @@ scope:
     # ([[feedback_gate_scope_semantic_coverage]]: a green scan over newly-scanned files proves nothing).
     - packages/i18n/locales/hi/sahyog-drive.json
     - packages/i18n/locales/en/sahyog-drive.json
+    # Story 11b.3 — the `sahyog-vivran` namespace strings (the PUBLIC PER-CLAIM Sahyog Vivran).
+    # ⭐ Story 8.10's `out-of-band-blame` rule NAMES Epic 11b Story 11b.3 as its RE-TRIGGER in terms,
+    # and this entry is what makes that trigger bite: without it the namespace is UNSCANNED COPY
+    # wearing a green check — the same defect class as a vacuous gate leg.
+    # ⭐ FOUR prohibitions bite this surface specifically:
+    #   · `donor` (→ colleague / सम्मानित साथी) and `Late Teacher` (→ Deceased Member), both
+    #     `member_only: true` — unscanned until this line exists.
+    #   · ⭐ `report` (→ Sahyog Vivran) — the register's own canonical replacement is THIS SURFACE'S
+    #     NAME, so copy that calls the page a "report" contradicts the term it is meant to establish.
+    #   · the STRENGTHENED `pool-reality-comparison` tone rule — this page renders Pool-Reality #2
+    #     framing, and AC3 forbids a comparison-to-target / shortfall frame. The numbers are already
+    #     quarantined upstream by `classifyCycleOutcome`; ⭐ this is the second place that quarantine
+    #     has to hold, because COPY is where a shortfall would actually surface.
+    #   · UX-DR73 numeral discipline — an OPERATIONAL register surface (drive codes, dates, counts),
+    #     so Latin numerals + Gregorian dates, ⛔ never Devanagari digits, even under `hi`.
+    # ⚠⛔ AND ONE THIS SURFACE OWNS ALONE: the live-drive copy must promise a LATER outcome and
+    # ⛔ never an ESTIMATE, a PROJECTION or an "X% confirmed so far" frame that exposes the
+    # attested↔confirmed gap (AC3 (b)/(c)). ⛔ The regex set cannot express that in general — it is
+    # asserted directly in `apps/public/tests/sahyog-vivran-copy.test.ts` and belongs to the HUMAN
+    # tone review (tone-guide §5).
+    # Teeth proven (planted-violation fixtures in BOTH locales + revert-sanity), ⛔ not merely scanned
+    # — see scripts/microcopy/sahyog-vivran.test.ts + the Dev Agent Record
+    # ([[feedback_gate_scope_semantic_coverage]]: a green scan over newly-scanned files proves nothing).
+    - packages/i18n/locales/hi/sahyog-vivran.json
+    - packages/i18n/locales/en/sahyog-vivran.json
 
 # Allow-list — a finding is suppressed when an entry's `pattern` (regex, case-insensitive)
 # matches the finding's line AND (if `file` is set) the file path ends with it. GENUINE

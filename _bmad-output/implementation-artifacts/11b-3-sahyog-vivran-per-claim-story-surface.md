@@ -4,7 +4,7 @@ baseline_commit: 2270dc24e48ec1eeb8aa0ccb8a2af031fbdc5cb3
 
 # Story 11b.3: Sahyog Vivran Per-Claim Story Surface — Public Shell + Reversed-Denial Publish Hook Consumer + Financial-Truth-From-Canonical-Events Invariant `[SURFACE]`
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -532,76 +532,76 @@ resolve it even in principle.
         under the checked-in commitlint config and survives only because commitlint is wired to
         nothing — **convention wins**; the divergence is already filed as 11b.2 item (v).
 
-- [ ] **Task 1 — Declare the surface in the matrix, with zero Tier-1 fields** (AC: 2)
-  - [ ] Add the `sahyog-vivran` surface with **every key explicit**.
-  - [ ] Author the `FieldIdMapping`; verify the tier-leak leg is **non-vacuous** by planting an
+- [x] **Task 1 — Declare the surface in the matrix, with zero Tier-1 fields** (AC: 2)
+  - [x] Add the `sahyog-vivran` surface with **every key explicit**.
+  - [x] Author the `FieldIdMapping`; verify the tier-leak leg is **non-vacuous** by planting an
         undeclared field and watching it fail.
-  - [ ] Add the **Tier-1-count-is-zero** test, with the comment stating it is a *count for this story*,
+  - [x] Add the **Tier-1-count-is-zero** test, with the comment stating it is a *count for this story*,
         ⛔ not a permanent ceiling, and that 11b.3a/11b.3b each update it in their own commit.
-  - [ ] ⛔ **Do NOT touch `RULED_TIER1_PUBLIC_EXCEPTIONS`.**
+  - [x] ⛔ **Do NOT touch `RULED_TIER1_PUBLIC_EXCEPTIONS`.**
 
-- [ ] **Task 2 — The domain read: one pool's Sahyog Vivran, canonical-events-only** (AC: 3)
-  - [ ] Add the per-pool read in `packages/domain/src/pool/` (sibling of `public-read.ts`).
-  - [ ] ⭐ **REPLACE** the read's existing `member_id`-ascending `.sort()` (`read.ts:183` — ⛔ it is
+- [x] **Task 2 — The domain read: one pool's Sahyog Vivran, canonical-events-only** (AC: 3)
+  - [x] Add the per-pool read in `packages/domain/src/pool/` (sibling of `public-read.ts`).
+  - [x] ⭐ **REPLACE** the read's existing `member_id`-ascending `.sort()` (`read.ts:183` — ⛔ it is
         ⛔ NOT missing; see AC9) with the **earliest live confirmation's `event_version`**. Add
         `eventsLog.eventVersion` to the projection at `:136-141` and carry it through the `Map`;
         update the docstring at `:127`; check `member-pool/handlers.ts:318,612` and the mobile list.
-  - [ ] Resolve the **zero-expectation** case **before** calling `classifyCycleOutcome`; ⛔ do not
+  - [x] Resolve the **zero-expectation** case **before** calling `classifyCycleOutcome`; ⛔ do not
         modify the classifier.
-  - [ ] ⛔ Never a `.limit()` from user input without the domain limit-clamp
+  - [x] ⛔ Never a `.limit()` from user input without the domain limit-clamp
         ([[project_domain_limit_clamp_and_savepoint_retry]]).
 
-- [ ] **Task 3 — The third public-pages route + its defence in BOTH places** (AC: 6, 4)
-  - [ ] Register with `limits.search`; write the header defence.
-  - [ ] ⭐ **D11(a): write THREE.** The named `limits.search` tier · the global `X-Robots-Tag` hook ·
+- [x] **Task 3 — The third public-pages route + its defence in BOTH places** (AC: 6, 4)
+  - [x] Register with `limits.search`; write the header defence.
+  - [x] ⭐ **D11(a): write THREE.** The named `limits.search` tier · the global `X-Robots-Tag` hook ·
         the absence of a detail/export affordance. Record controls **2**/**3** as *"⛔ not applicable:
         no collection, no `limit`, no `page`"* ⭐ **and state that 11b.3b's pagination RESTORES them.**
         ⛔ Never "five" by copy.
-  - [ ] Add the `login-wall.spec.ts` allowlist entry stating the **same control count** as the header.
-  - [ ] Author the `.strict()` DTO with the shape teeth.
+  - [x] Add the `login-wall.spec.ts` allowlist entry stating the **same control count** as the header.
+  - [x] Author the `.strict()` DTO with the shape teeth.
 
-- [ ] **Task 4 — The Astro page + pure render module** (AC: 1, 3, 8)
-  - [ ] `apps/public/src/pages/sahyog-vivran/[poolCanonicalIdentifier].astro` — thin frontmatter.
-  - [ ] `apps/public/src/lib/sahyog-vivran-render.ts` — all display logic, pure.
-  - [ ] Every value through `<MatrixField>`. ⛔ No `Astro.cookies` / `Astro.request.headers` /
+- [x] **Task 4 — The Astro page + pure render module** (AC: 1, 3, 8)
+  - [x] `apps/public/src/pages/sahyog-vivran/[poolCanonicalIdentifier].astro` — thin frontmatter.
+  - [x] `apps/public/src/lib/sahyog-vivran-render.ts` — all display logic, pure.
+  - [x] Every value through `<MatrixField>`. ⛔ No `Astro.cookies` / `Astro.request.headers` /
         `Astro.session` anywhere on this surface.
-  - [ ] ⭐ **Render `live` + `closed` + `settled`** (D4(b)), the predicate declared explicitly here —
+  - [x] ⭐ **Render `live` + `closed` + `settled`** (D4(b)), the predicate declared explicitly here —
         ⛔ never imported from `SAHYOG_DRIVE_VISIBLE_POOL_STATES`. ⚠ **Read `D4-linkage` before adding
         any link to a `live` pool.**
-  - [ ] ⛔ **Render NO rupee figure** (D1(b) moved it to 11b.3b). The confirmed **count** only, and
+  - [x] ⛔ **Render NO rupee figure** (D1(b) moved it to 11b.3b). The confirmed **count** only, and
         ⛔ **never** an inline `confirmedCount × fixedAmount`.
-  - [ ] Render **nothing** for absent producers (family story, memorial components, FR-19,
+  - [x] Render **nothing** for absent producers (family story, memorial components, FR-19,
         `<StatCardStrip>`) — ⛔ no placeholder, ⛔ no "coming soon".
-  - [ ] Explicit `namespace` on every `t()`; add `sahyog-vivran.json` for **both** locales.
+  - [x] Explicit `namespace` on every `t()`; add `sahyog-vivran.json` for **both** locales.
 
-- [ ] **Task 5 — The `claim.reversed` consumer** (AC: 5)
+- [x] **Task 5 — The `claim.reversed` consumer** (AC: 5)
   - [x] ✅ **D12(a) RULED — ⛔ BUILD NO QUEUE AND NO CONSUMER.** This task is **the READ**: join the
         claim's `claim.reversed` event and derive the narrative at request time. ⛔ Do ⛔ not create a
         queue, a job, a subscription or a publication table.
-  - [ ] Derive the lineage at render from `reversed_at_stage` + `disposition_category`; audit-log via
+  - [x] Derive the lineage at render from `reversed_at_stage` + `disposition_category`; audit-log via
         1.10. ⛔ No rationale text, ⛔ no reviewer identity.
-  - [ ] Render the lineage from `reversed_at_stage` + `disposition_category` **only**. ⛔ No rationale
+  - [x] Render the lineage from `reversed_at_stage` + `disposition_category` **only**. ⛔ No rationale
         text, ⛔ no reviewer identity.
-  - [ ] ⛔ Do not add `claim.reversed` to `ACCOUNT_UNFREEZE_EVENT_TYPES`.
+  - [x] ⛔ Do not add `claim.reversed` to `ACCOUNT_UNFREEZE_EVENT_TYPES`.
 
-- [ ] **Task 6 — The financial-truth CI gate, proven with a planted violation** (AC: 4)
-  - [ ] Plant a violation; confirm it **fails**; revert; confirm it passes. ⭐ Record the revert-sanity.
+- [x] **Task 6 — The financial-truth CI gate, proven with a planted violation** (AC: 4)
+  - [x] Plant a violation; confirm it **fails**; revert; confirm it passes. ⭐ Record the revert-sanity.
 
-- [ ] **Task 7 — Microcopy scope + tone review** (AC: 7)
-  - [ ] Add both locale files to `microcopy.yaml` `scope.copy_globs`; prove teeth with a planted
+- [x] **Task 7 — Microcopy scope + tone review** (AC: 7)
+  - [x] Add both locale files to `microcopy.yaml` `scope.copy_globs`; prove teeth with a planted
         violation.
-  - [ ] Carry the tone-review Publish-routing row; ⛔ record it **un-attested** if the non-author
+  - [x] Carry the tone-review Publish-routing row; ⛔ record it **un-attested** if the non-author
         reviewer is unavailable.
 
-- [ ] **Task 8 — Discharge Trap 6's one line; route everything else** (AC: 9)
-  - [ ] Fix `packages/contracts/src/contributions/pool-contributor-list.ts:88`. ⛔ Sweep nothing else.
-  - [ ] ⭐ **Amend the item titled *"THE CONFIRMED-CONTRIBUTOR READ IS UNORDERED"* IN PLACE**
+- [x] **Task 8 — Discharge Trap 6's one line; route everything else** (AC: 9)
+  - [x] Fix `packages/contracts/src/contributions/pool-contributor-list.ts:88`. ⛔ Sweep nothing else.
+  - [x] ⭐ **Amend the item titled *"THE CONFIRMED-CONTRIBUTOR READ IS UNORDERED"* IN PLACE**
         (`deferred-work.md:7137` **today** — ⛔ find it by **TITLE**, ⛔ never by line: `:81` records a
         prior edit that pushed the 11b.1 anchors down **192 lines**) — its *"carries ⛔ NO `ORDER BY` at all"* ground is
         **false at `79ed41d`** and was false when filed (AC9). ⛔ Correct the ground and record the
         disposition; ⛔ never delete the item, ⛔ never re-file it as new.
-  - [ ] Write this story's `deferred-work.md` section (newest-first), every item with a trigger.
-  - [ ] ⛔ **Re-affirm, ⛔ do not re-file**, 11b.1 item (e) (the public/member inversion).
+  - [x] Write this story's `deferred-work.md` section (newest-first), every item with a trigger.
+  - [x] ⛔ **Re-affirm, ⛔ do not re-file**, 11b.1 item (e) (the public/member inversion).
 
 ---
 
@@ -956,12 +956,188 @@ cannot identify*, so it is ⛔ **not a disposition on its own**. `apps/public` p
   to **11b.3a's AC2 by name**, which is where the cost lands (four decrypted Tier-1 fields behind the
   same sequential `P-YYYY-MM-###`). ⛔ **Not marked closed** in `-176`'s open-follow-ups.
 
+#### Tasks 1–8 — implementation (COMPLETE)
+
+**Task 1 — the matrix surface, with ZERO Tier-1 fields.** `sahyog-vivran` declared with EVERY key
+explicit (`id · route · renders · description · search_indexing_policy · cache_policy · paginated ·
+fields`) — ⛔ none left to a schema default. Ten fields, ⭐ **all `pii_tier: 3`**, so ⛔ no
+`tier1_public_exception` is written and `RULED_TIER1_PUBLIC_EXCEPTIONS` is ⛔ untouched.
+⭐ The emptiness is asserted **POSITIVELY** (`scrape-test.spec.ts`): the Tier-1-at-`public` count is
+`0` AND ⛔ no exception block exists anywhere on the surface — the second assertion is not a
+restatement, because the parser is fail-closed in BOTH directions and a decorative block "ready for
+11b.3a" would otherwise pass. The test comment states it is a **count for this story**, ⛔ not a
+ceiling, and that 11b.3a / 11b.3b each owe it an update in their own commit.
+⚠⛔ **The yaml header at `:81-99` went FALSE and was AMENDED, ⛔ not rewritten** — it declared Sahyog
+Vivran deliberately undeclared. The **In Memoriam half stays standing**, verbatim.
+
+**Task 2 — the domain read.** `pool/sahyog-vivran-read.ts`, single-row by unique key, ⛔ no dynamic
+`.limit()` so ⛔ no `clampLimit` is owed. ⭐ The four correlated fragments (confirmed count, close
+instant, district, assignee count) are **IMPORTED from `public-read.ts`, ⛔ never re-spelled** —
+copying them would fork the definition of *"how many contributions were confirmed"*. It selects ⛔ no
+Tier-1 column, so the read costs **ZERO KMS round-trips**.
+⭐ The zero-expectation case is resolved **BEFORE** `classifyCycleOutcome`, and so is the
+still-collecting case — two `null` arms, ⛔ one classifier, ⛔ unpatched.
+
+**Task 3 — the third route, defended in BOTH places at the SAME count.** `routes.ts` and
+`login-wall.spec.ts` both state **THREE** applicable controls and both record 2 and 3 as *"⛔ not
+applicable: no collection, no `limit`, no `page`"* — ⭐ **with the expiry named**: 11b.3b's pagination
+RESTORES them, and 11b.3a makes the route PII-bearing. ⛔ Neither may restore a property and leave
+these two documents saying what they say today.
+⭐ The `.strict()` DTO's teeth are driven off an EXPORTED `SAHYOG_VIVRAN_PROHIBITED_KEYS`, so the
+prohibition and the test cannot drift. ⚠ The drive's lifecycle field is named **`driveStatus`, ⛔ not
+`status`** — a deliberate divergence from the sibling DTO, because `status` is on the prohibited list
+and a key so named on a contribution-bearing surface reads as a contribution pill.
+
+**Task 4 — the page + the pure render module.** Thin frontmatter; ALL display logic in
+`sahyog-vivran-render.ts`. Every value through `<MatrixField>`. ⛔ No `Astro.cookies`, ⛔ no
+`Astro.session`, ⛔ no auth read of headers, ⛔ no `isAuthenticated` prop.
+⭐ **`live` + `closed` + `settled` render** (D4(b)), the predicate declared on this surface and
+⛔ never imported from `SAHYOG_DRIVE_VISIBLE_POOL_STATES` — a test asserts it is STRICTLY WIDER and
+that `live` is absent from the index's.
+⛔ **NO rupee figure** — and the render-layer test asserts that over the WHOLE model (⛔ no `₹`, no
+`INR`, no `amountRaised`, no `raised`), ⛔ not over a named key a future field could dodge.
+⭐ **404 collapses four cases byte-identically** — unknown identifier · not visible at this predicate ·
+a switched-off Pariwar · a malformed identifier. ⛔ An outage is a **503 + `no-store` + `Retry-After`**
+and is ⛔ never the 404.
+
+**Task 5 — the `claim.reversed` consumer: ⛔ THERE IS NONE.** D12(a) is honoured literally — ⛔ no
+queue, ⛔ no job, ⛔ no subscription, ⛔ no publication table. The read joins the claim's own
+`claim.reversed` event at REQUEST TIME. ⭐ Story 6.16's publish-hook obligation is **DISCHARGED BY THE
+READ**. ⛔ `ACCOUNT_UNFREEZE_EVENT_TYPES` is untouched.
+⭐ The disposition tag is **BOUNDED at three layers** (domain read · fetch client · render switch) and
+is **TRANSLATED, ⛔ never echoed** — an unrecognised tag drops the WHOLE lineage rather than rendering
+half of one. ⚠ That bound is the mechanism keeping FREE TEXT off a public page, and the integration
+spec plants a sentence of free text to prove it.
+⚠ AC5's Story-1.10 line logs the **DISCLOSURE**, ⛔ not a "routing" — under D12(a) there is no routing
+act left to log. It fires ⛔ only when a lineage is actually disclosed.
+
+**Task 6 — the financial-truth gate, PROVEN.** `scripts/sahyog-vivran-financial-truth/`, a **TS-AST**
+scan (⛔ not a line scan — these files NAME the prohibited types in comments in order to forbid them,
+and a line scan's only remedy would be deleting the sentence that explains the rule). Three rules:
+event-surface allowlist · prohibited attestation imports · the render-path amount operand (**D1(c)**,
+mechanized). Registered in `package.json`, `ci-local.sh` and `ci.yml`.
+
+**Task 7 — microcopy.** Both locale files added to `scope.copy_globs`; **four** rule families bite.
+`report → Sahyog Vivran` is the sharp one here — the register's canonical replacement IS this page's
+own name. ⚠ AC3's ban on ESTIMATES / PROJECTIONS / *"X% confirmed so far"* is ⛔ **not** faked into a
+tone regex (natural language defeats that) — it is asserted directly over the resolved copy in
+`sahyog-vivran-copy.test.ts` and belongs to the human review.
+
+**Task 8 — the one line, the amended item, the section.** `pool-contributor-list.ts:88` fixed (this
+story is its named consumer); ⛔ the rest of the family NOT swept. The ORDER BY deferral **amended in
+place by TITLE** — ⛔ never deleted, ⛔ never re-filed. 11b.1 item (e) **re-affirmed, ⛔ not re-filed**.
+
+#### ⭐⭐ Planted-violation + revert-sanity runs (AC4, AC7 — ⛔ never merely scanned)
+
+| Gate | Planted violation | Result | Revert sanity |
+|---|---|---|---|
+| `sahyog-vivran-financial-truth` | `contribution.utr-attested` literal in the domain read | ✗ FAILED, `[event_surface]` at `sahyog-vivran-read.ts:117` | ✓ green |
+| `sahyog-vivran-financial-truth` | `import { hasAttestedContribution }` in the domain read | ✗ FAILED, `[prohibited_import]` at `:51` | ✓ green |
+| `sahyog-vivran-financial-truth` | `amountRaisedInr = confirmedCount * fixedAmount` in the render module | ✗ FAILED, 3× `[render_path_multiplication]` | ✓ green |
+| `sahyog-vivran-financial-truth` | a scoped read-path file **deleted** | ✗ FAILED fail-closed (*"MISSING —"*) | ✓ green |
+| `microcopy` | `"…fell short of the target, and the donor report is below."` (en) + `कुल २ बार` (hi) | ✗ FAILED with **4** findings across **all four** families (`report`, `donor`, `fell short`, Devanagari `२`) | ✓ green |
+| `listConfirmedContributorsForPool` ordering | the OLD `member_id` sort restored | ✗ **both** live-DB ordering cases FAILED | ✓ 9/9 green |
+| `/sahyog` 500 regression | `coerceDriveInstant` removed | ✗ the named regression case FAILED | ✓ green |
+
+⭐ Every ordering fixture makes `event_version` order the **EXACT REVERSE** of `member_id` order — a
+fixture where the two coincide would pass under either implementation and prove nothing.
+
+#### ⭐⭐ A LIVE 500 ON THE SHIPPED `/sahyog` ROUTE — FOUND HERE, FIXED HERE
+
+⚠⛔ **`GET /sahyog` returned HTTP 500 for every real closed drive**, and shipped green.
+`DRIVE_CLOSED_AT` is a RAW `sql` fragment, so its declared `sql<Date | null>` is a claim the runtime
+does ⛔ not honour — the value arrives as an ISO **STRING**, and the handler's `.toISOString()` threw.
+⛔⛔ **Nothing caught it because the route's own live-DB spec never seeded a close/settle EVENT** —
+`driveClosedAt` was `null` on every fixture row, so the branch was ⛔ never executed. ⭐ The suite was
+green over a branch it could not reach: the vacuous-leg defect, in a **spec** rather than a gate.
+⭐ Found because this story's read **shares the fragment** and would have inherited the identical break.
+⭐ Fixed at the **SOURCE** (`coerceDriveInstant`), the sibling fixture now seeds the event so the whole
+file exercises the shipped path, and a named regression case was proven to bite.
+⚠ Back-dating the fixture postings was then required because `DECEASED_DISTRICT` is FROZEN as of the
+close instant — ⭐ the freeze WORKING, ⛔ not a second defect.
+
+#### ⚠ What is NOT met, recorded openly
+
+- ⛔ **AC7's NON-AUTHOR tone-review sign-off is UN-ATTESTED.** The copy was authored by this agent, so
+  the agent is disqualified by construction; **BigDev is NOT disqualified** and is the available
+  qualified reviewer — but the review **has not happened**. Recorded as owed in
+  `docs/tone-review-checklist.md` with its trigger (*before this surface is deployed to any Pariwar*),
+  ⛔ not signed, ⛔ not waived, ⛔ not back-filled ([[feedback_record_unattested_no_backfill]]).
+  ⚠ It is ⛔ not a `tone_review.signoff` either, and could not be: this surface ships ⛔ no review
+  endpoint. ⭐ The AUTOMATED floor IS discharged — that is a different claim, and `tone-guide.md §5`
+  says so.
+- ⚠ **`D4-linkage` is READ and DISPOSED, ⛔ not closed** — `live` drives render by identifier and
+  ⛔ **no inbound link is added**; the enumeration half is routed to 11b.3a's AC2 by name.
+
+#### ⚠ Two negative controls RE-POINTED — the controls working, ⛔ not maintenance
+
+Both `scrape-test.spec.ts` and `matrix.server.test.ts` used `sahyog-vivran` as their *"a surface the
+matrix does not declare"* fixture. ⭐ Declaring it would have made both go **VACUOUS — passing for the
+wrong reason** (one testing the field leg instead of the surface leg). Both are re-pointed at
+`in-memoriam`, which the matrix header still records as deliberately undeclared, and both now carry
+the instruction that **the next story to declare a surface owes them the same check**.
+
+#### Validation
+
+`ci:local` with `DATABASE_URL` set — ⭐ **34 jobs green, integration leg RUN**, including the new
+`sahyog-vivran-financial-truth` gate. `pii-scrape` green with the 10th surface declared and its
+cache-policy leg reconciled.
+
 ### File List
+
+**NEW**
+
+| Path | What |
+|---|---|
+| `packages/domain/src/pool/sahyog-vivran-read.ts` | The per-claim read + the render-time `claim.reversed` derivation (D12(a)). ⛔ Returns no person, no ciphertext, no identifier. |
+| `packages/domain/tests/pool/sahyog-vivran-read.test.ts` | The predicate, the vocabulary, and the disposition-category **lockstep** against `claim/events.ts`. |
+| `packages/contracts/src/public-pages/sahyog-vivran.ts` | The `.strict()` wire DTO + `SAHYOG_VIVRAN_PROHIBITED_KEYS`. |
+| `packages/contracts/tests/public-pages-sahyog-vivran.test.ts` | The shape teeth — every prohibited key REJECTED, driven off the exported list. |
+| `apps/api/tests/integration/public-pages/sahyog-vivran.spec.ts` | The route, live-DB: the exact key set, the 404 collapse, D4(b), yellow-can-never-count, the appeal lineage. |
+| `apps/public/src/pages/sahyog-vivran/[poolCanonicalIdentifier].astro` | The page. Thin frontmatter; family-13 a11y in its **web** translation. |
+| `apps/public/src/lib/sahyog-vivran-render.ts` | The pure render module — ALL display logic. |
+| `apps/public/src/lib/sahyog-vivran.server.ts` | The SSR → API hop. ⭐ A 404 is ⛔ not an outage. |
+| `apps/public/tests/sahyog-vivran-render.test.ts` | The mapping, the null arms, and the field-id derivation's fail-closed control. |
+| `apps/public/tests/sahyog-vivran-copy.test.ts` | The REAL `t()` path, both locales — including AC3's estimate ban. |
+| `apps/public/tests/sahyog-vivran-client.test.ts` | The 404-vs-outage split + every bounded field validated against its literal set. |
+| `packages/i18n/locales/{en,hi}/sahyog-vivran.json` | The namespace. |
+| `scripts/sahyog-vivran-financial-truth/{lib,check,lib.test}.ts` + `README.md` | The AC4 gate, its teeth, and what it does ⛔ NOT prove. |
+| `scripts/microcopy/sahyog-vivran.test.ts` | The microcopy teeth — four rule families, planted + revert. |
+
+**UPDATED**
+
+| Path | What |
+|---|---|
+| `.decision-log.md` | **`2026-09-02-182`** — D6(b) transcribed; `-165` cl.3's allowlist duty relocated to 11b.3a. |
+| `_bmad-output/planning-artifacts/epics.md` | **Four annotations**, ⛔ zero rewrites: Story 11b.3's (i)+(ii)+(iii), and item (iii) at its own three anchors (Story 8.3 · the Contribution Note PDF · Story 11b.2). |
+| `_bmad-output/implementation-artifacts/deferred-work.md` | This story's section (newest-first), and the ORDER BY item **amended in place**. |
+| `_bmad-output/implementation-artifacts/sprint-status.yaml` | Row → `in-progress` → `review`; two ledger entries. |
+| `docs/tone-review-checklist.md` | The governed-surface row + the **UN-ATTESTED** sign-off record. |
+| `microcopy.yaml` | `scope.copy_globs` += both locale files. |
+| `packages/contracts/public-pages/public-vs-private-matrix.yaml` | The 10th surface; the `:81-99` header amended (⭐ the In Memoriam half stands). |
+| `packages/contracts/src/public-pages/index.ts` | Barrel. |
+| `packages/contracts/src/contributions/pool-contributor-list.ts` | **Trap 6** — `:88` only. ⛔ Nothing else swept. |
+| `packages/contracts/tests/public-pages.test.ts` | The declared-route list. |
+| `packages/contracts/tests/public-pages-matrix-schema.test.ts` | A note that its `sahyog-vivran` doc is a SYNTHETIC fixture. |
+| `packages/domain/src/contribution/read.ts` | ⭐ The ordering **REPLACED** (`member_id` → earliest live confirmation's `event_version`); `eventVersion` projected + carried. |
+| `packages/domain/src/pool/public-read.ts` | Four fragments exported for reuse; ⭐ **`coerceDriveInstant`** — the `/sahyog` 500 fix. |
+| `packages/domain/src/pool/index.ts` | Barrel. |
+| `packages/domain/tests/integration/contribution/confirmed-contributors.spec.ts` | Two live-DB ordering cases whose fixtures REVERSE `member_id` order. |
+| `packages/i18n/src/catalog.ts` | The `sahyog-vivran` namespace. |
+| `apps/api/src/modules/public-pages/{routes,handlers}.ts` | The third route + its written defence (THREE controls) + the disclosure audit line. |
+| `apps/api/tests/integration/login-wall.spec.ts` | The allowlist entry, stating the SAME count. |
+| `apps/api/tests/integration/public-pages/sahyog-drive.spec.ts` | ⭐ The fixture now seeds a real close event + the named **500 regression** case. |
+| `apps/public/src/lib/surface-fields.ts` | The render model + `FieldIdMapping` + the derivation. |
+| `apps/public/tests/integration/public-pages/scrape-test.spec.ts` | The surface's block + the Tier-1-count-is-zero assertion; one negative control re-pointed. |
+| `apps/public/tests/matrix.server.test.ts` | The unknown-surface control re-pointed. |
+| `package.json` · `scripts/ci-local.sh` · `.github/workflows/ci.yml` | The gate registered in all three. |
+
 
 ### Change Log
 
 | Date | Change |
 |---|---|
+| 2026-09-02 | **Story IMPLEMENTED (`bmad-dev-story`), Tasks 1–8.** The `sahyog-vivran` surface ships with ⭐ **ZERO `pii_tier: 1` fields at `tier: public`**, asserted POSITIVELY. The third public-pages route states **THREE** applicable controls in BOTH documents with controls 2/3 recorded N/A **and their restoration named** (D11(a)). D12(a) honoured literally — ⛔ no queue, ⛔ no consumer; 6.16's hook **discharged by the read**. `live` + `closed` + `settled` render (D4(b)); ⛔ NO rupee figure (D1(b)/D1(c)). ⭐ The confirmed-contributor read's ordering **REPLACED** (`member_id` → earliest live confirmation's `event_version`), and the deferral claiming it had *"no ORDER BY at all"* **amended in place**. ⭐⭐ **A LIVE 500 ON THE SHIPPED `/sahyog` ROUTE WAS FOUND AND FIXED** — a raw `sql` fragment returns a STRING, not the `Date` its type claims, and the sibling's own spec never seeded a close event so the branch was unreachable. Every gate proven by planted violation + revert sanity. ⚠ AC7's NON-AUTHOR tone-review sign-off is **UN-ATTESTED** and recorded as owed. `ci:local` **34 jobs green with the integration leg RUN**. |
 | 2026-09-02 | **Task 0 — governance transcription + annotation (`bmad-dev-story`).** ⭐⭐ **`D6` was the one ruling of the 2026-09-01 set `-176` never carried** — it referred to the split throughout as an existing fact but never recorded the ruling; **`2026-09-02-182` minted** to transcribe **D6(b) SPLIT THREE WAYS**, ⛔ without re-transcribing or editing `-176`. ⭐ `-165` cl.3's four-allowlist-entry duty recorded as **travelling to 11b.3a**, timing rule preserved. ⭐⭐ **Four `epics.md` annotations** — Story 11b.3's (i)+(ii)+(iii pointer), and **item (iii) at its own three anchors** (Story 8.3's `I want` · the Contribution Note PDF AC · Story 11b.2's list AC), each stating the name ruling as a **CEILING, ⛔ not a literal**. ⚠ **`D4-linkage` READ, ⛔ not closed**: `live` renders by identifier, ⛔ **no inbound link added**; the enumeration half stays routed to 11b.3a's AC2. Sprint row `ready-for-dev` → `in-progress`. |
 | 2026-09-02 | **Second combined validation of 11b.3 / 11b.3a / 11b.3b** (`bmad-create-story validate`), run as one pass. Four fixes here. ⭐⭐ **Task 0's `epics.md` annotation gains item (iii)** — the THREE ACs elsewhere in the file that assume the shielded contributor form (`:3145` Story 8.3 · `:3238` the Contribution Note PDF · `:4931` Story 11b.2), all superseded by `-174`: **11b.3b folds its annotation duty into this one and this file merges FIRST**, so without (iii) the obligation lands nowhere. ⭐ **AC3 fences the count**: it is the EVENT count, ⛔ never a row count — RTBF omits the row and still counts (`-169`), so 11b.3b's page reads *"N confirmed"* beside fewer than N rows **by design**, ⛔ not as a defect. ⭐ **`D4-linkage` re-read in BOTH directions** — discoverability here, **identifier ENUMERATION** on 11b.3a, where D11(a) left `limits.search` as the only (unstated) bound over four decrypted Tier-1 fields; routed to 11b.3a's AC2 by name. ⚠ The ORDER BY deferral is now cited by **title**, ⛔ not by line. |
 | 2026-09-01 | Story authored (`bmad-create-story 11b.3`). Scope reconciled against `2026-08-28-160` cl.10 / `-164` A2 / `-165` cl.1–cl.3, which `epics.md` had never carried. Seven decisions raised. |

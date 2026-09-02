@@ -115,6 +115,22 @@ publish):
 | **Pool-onboarding tutorial Screen 3** (the UX-DR76 out-of-band framing; `pool-onboarding` i18n namespace, en + hi) | the consumer surface's own review permission (added by **Epic 7** / **Epic 8** — no generic `copy.review` key is manufactured, per the Story 2.2 posture) | its owning consumer story (Story 7.10 tutorial; copy re-authored by Story 8.10) |
 | **Helpline out-of-band script** (operator-voiced member-register copy; `contribution` i18n namespace `out_of_band.helpline.*`, en + hi) | the consumer surface's own review permission (added by **Epic 10** when the helpdesk console lands — no generic `copy.review` key is manufactured, per the Story 2.2 posture) | its owning consumer story (**Epic 10** helpdesk console; text authored by Story 8.10) |
 | **Nominee Console copy** (Sunita's reconciliation surface; the *fursat* register; `nominee-console` i18n namespace, en + hi) | the consumer surface's own review permission (added by **Epic 9** — no generic `copy.review` key is manufactured, per the Story 2.2 posture) | its owning consumer story (**Story 9.1** shell; later Epic-9 stories that add console copy) |
+| **Sahyog Vivran page copy** (the PUBLIC per-claim drive page; `sahyog-vivran` i18n namespace, en + hi) | the consumer surface's own review permission (added by **Epic 11b** — no generic `copy.review` key is manufactured, per the Story 2.2 posture) | its owning consumer story (**Story 11b.3** shell; **11b.3a** adds the nominee-bank copy and **11b.3b** the named-identity copy, and each owes its own review) |
+
+> **Sahyog Vivran note (Story 11b.3).** The `sahyog-vivran` namespace is the PUBLIC per-claim
+> drive page — the widest-reach member-visible copy in Epic 11b, read by strangers rather than
+> members. Four automated families bite it (the `member_only` vocabulary including **`report`**,
+> whose canonical replacement *is this surface's own name*; the strengthened
+> `pool-reality-comparison` rule; the `out-of-band-blame` rule, whose Story 8.10 text names
+> **Story 11b.3** as its re-trigger; and the UX-DR73 numeral discipline), and the teeth are proven
+> by planted violation + revert sanity in `scripts/microcopy/sahyog-vivran.test.ts`.
+> ⚠ **What the automated floor CANNOT reach, and what this human review owns:** the live-drive copy
+> must promise a LATER outcome and ⛔ never an ESTIMATE, a PROJECTION, or an *"X% confirmed so far"*
+> frame that exposes the attested↔confirmed gap (Story 11b.3 AC3 (b)/(c)). ⛔ No regex expresses that
+> over natural language. The [§4 grief-context gate](#4-grief-context-gate) applies: every drive on
+> this page is a drive for someone who died.
+>
+> ⛔⛔ **AND ITS SIGN-OFF IS ⛔ UN-ATTESTED — see the un-audited human-review section below.**
 
 > **Close-of-cycle note (Story 7.8).** The `close-of-cycle` templates carry the FR-19
 > celebration framing that must **never** surface a comparison-to-target / shortfall
@@ -213,6 +229,23 @@ tracks a different, surface-specific obligation. ⛔ Do not merge the two.
 | Date | Reviewer (non-author) | Artifact reviewed | Authored by | Outcome |
 |---|---|---|---|---|
 | 2026-08-31 | BigDev (Solo Builder) | `contribution.json` (en+hi) — the four corrections in commit `bb77a53`: `amount_mismatch_over.body` (hi), `missed_cycle.section_note` (en), `personal_event.before_you_record` (en), `missed_cycle.state_a11y` (hi) | Claude (second code-review pass, Story 11b.2a session) | ✅ **Reviewed and accepted.** `reviewedBy ≠ authoredBy` holds — BigDev authored none of the four. |
+| 2026-09-02 | — **NONE** — | `sahyog-vivran.json` (en+hi) — the whole namespace, minted by Story 11b.3 | Claude (dev agent, Story 11b.3 session) | ⛔ **UN-ATTESTED.** ⛔ Not signed, ⛔ not waived, ⛔ not met — recorded as owed. See the note below. |
+
+⛔⛔ **THE 2026-09-02 ROW IS A RECORD OF AN OBLIGATION, ⛔ NOT OF A REVIEW — Story 11b.3 AC7.**
+AC7 requires a tone-review Publish-routing row whose reviewer is a **NON-AUTHOR REAL PERSON** (the
+11b.9 / 11b.2a precedent). The `sahyog-vivran` copy was authored by the dev agent, so the agent is
+disqualified by construction; **BigDev is not disqualified** (BigDev authored none of it) and is the
+available qualified reviewer — but the review **has not happened**, so ⛔ nothing may be written as
+though it had ([[feedback_record_unattested_no_backfill]]).
+⚠ It is ⛔ **not** a `tone_review.signoff` either, and ⛔ could not be: the Sahyog Vivran ships **no
+review endpoint**, so there is no publish gate to evaluate it and no audit entry to emit — the same
+structural gap this whole section exists to record.
+⭐ **What IS discharged, and is not the same thing:** the automated floor. Both locale files are in
+`microcopy.yaml` `scope.copy_globs`, four rule families bite them, and the teeth are proven by planted
+violation + revert sanity — ⛔ but `tone-guide.md §5` is explicit that the lint is the FLOOR and the
+human review is the check ABOVE it. **Trigger: before this surface is deployed to any Pariwar.**
+⚠⛔ AND IT IS ⛔ NOT A LAUNCH BLOCKER MANUFACTURED HERE — what keeps this surface dark is deployment
+plus the counsel/Panel process, ⛔ never a code mechanism.
 
 ⛔⛔ **THIS ROW DOES ⛔ NOT DISCHARGE STORY 11b.2a's AC8.** AC8 attaches to
 `contributor_list.empty` (en+hi) — a **different pair of strings**, ⛔ none of the four above —

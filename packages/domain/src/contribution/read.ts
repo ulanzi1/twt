@@ -123,7 +123,31 @@ export interface ConfirmedContributor {
  * until 9.8 emits). A member lists iff ≥1 of their confirmed event ids is NOT reversed (the per-event-id
  * chain, {@link hasLiveConfirmation}) — a re-confirmed member (a fresh event id after a reversal) re-lists;
  * a member all of whose confirmations are reversed drops off. DISTINCT by member (a re-confirmed/duplicate
- * event does not double-list). Ordered by member id ASC for a stable, replay-deterministic list.
+ * event does not double-list).
+ *
+ * ⭐⛔ ORDERED BY THE **EARLIEST LIVE CONFIRMATION'S `event_version`** — Story 11b.3 (AC9). ⚠ THIS
+ * REPLACED A SORT; IT DID ⛔ NOT ADD A MISSING ONE. From Story 8.3 (`afce9e0`) through 9.5 (`318f88b`)
+ * this read ended `liveMemberIds.sort()` — i.e. `member_id` ASCENDING — which is ⛔ EXACTLY the key a
+ * PII-shielded public surface must not order by: it leaks an arbitrary identifier ordering onto the
+ * render. ⚠ `deferred-work.md`'s *"carries ⛔ NO `ORDER BY` at all … not stable across runs"* was FALSE
+ * when it was filed; that item is amended IN PLACE, ⛔ never re-filed.
+ *
+ * ⭐ WHY THE **EARLIEST**, AND WHY `event_version`: a member may hold SEVERAL live confirmations (a
+ * re-confirmation after a reversal re-lists them), so the row needs ONE key. The earliest live
+ * confirmation is the instant that member FIRST became confirmed — the member-meaningful moment, and
+ * the one that is STABLE under a later re-confirmation. ⛔ Not the latest (which moves under a
+ * re-confirmation), and ⛔ not `occurred_at` (wall-clock, ⛔ not the append order).
+ * ⚠ `event_version` is PER-STREAM monotonic (`events_log_stream_id_event_version_uq`), and
+ * `contribution.confirmed` is appended on the ALERT stream (`contribution/events.ts`) — one alert per
+ * pool cycle ⇒ every confirmation for one pool shares ONE stream, so `event_version` IS a total order
+ * within the pool. ⛔ Do not let the next reader re-derive whether it is comparable.
+ * ⚠ `member_id` survives ONLY as the final tie-break for total determinism — ⛔ never as the primary
+ * key of the ordering.
+ *
+ * ⚠ THIS CHANGES A SHIPPED READ'S BEHAVIOUR for both existing consumers
+ * (`apps/api/src/modules/member-pool/handlers.ts` and the mobile contributor list). Both consume the
+ * result as an order-carrying sequence and neither asserts `member_id` order, so this is a
+ * RE-ORDERING, ⛔ not a contract break.
  * Legitimately `[]` today for confirmations (Epic 9's producer landed at 9.4; the reversal producer is 9.8).
  * ONE batched read (the confirmed + reversal types in a single `inArray`, reconciled in JS by event id —
  * the set is bounded by the pool roster). Tenant-scoped (RLS + the explicit `pariwar_id` predicate). No
@@ -137,6 +161,11 @@ export async function listConfirmedContributorsForPool(
     .select({
       eventType: eventsLog.eventType,
       eventId: eventsLog.eventId,
+      // ⭐ THE SORT KEY (Story 11b.3, AC9). ⛔ A `.sort()` over the previous row shape could not
+      // express the ordering at all — the version has to be PROJECTED to be carried through the
+      // `Map` reconciliation below. Per-stream monotonic, and one alert stream per pool ⇒ a total
+      // order within the pool.
+      eventVersion: eventsLog.eventVersion,
       memberId: sql<string | null>`${eventsLog.payload} ->> ${CONFIRMED_PAYLOAD_MEMBER_KEY}`,
       reversedConfirmedEventId: sql<string | null>`${eventsLog.payload} ->> ${REVERSED_CONFIRMED_EVENT_ID_KEY}`,
     })
@@ -160,7 +189,10 @@ export async function listConfirmedContributorsForPool(
   // Reconcile by the per-confirmation event-id chain (AC3), in JS — the set is bounded by the pool roster.
   // A malformed confirmed event missing the member key yields SQL NULL → filtered out (never a blank
   // contributor); a reversal missing its `reversedConfirmedEventId` cannot walk anything back.
-  const confirmedEventIdsByMember = new Map<string, string[]>();
+  // ⚠ Each confirmation is carried as `{eventId, eventVersion}`, ⛔ not a bare id — the version is the
+  // ORDER KEY (see the docstring) and is knowable only PER CONFIRMATION, so it must survive this
+  // reconciliation. ⛔ Collapsing back to `string[]` silently restores the `member_id` ordering.
+  const confirmationsByMember = new Map<string, { eventId: string; eventVersion: number }[]>();
   const reversedConfirmedEventIds = new Set<string>();
   for (const r of rows) {
     if (r.eventType === RECONCILIATION_CONFIRMATION_REVERSED_EVENT_TYPE) {
@@ -170,17 +202,36 @@ export async function listConfirmedContributorsForPool(
       continue;
     }
     if (typeof r.memberId !== 'string' || r.memberId.length === 0) continue;
-    const ids = confirmedEventIdsByMember.get(r.memberId);
-    if (ids) ids.push(r.eventId);
-    else confirmedEventIdsByMember.set(r.memberId, [r.eventId]);
+    const entry = { eventId: r.eventId, eventVersion: r.eventVersion };
+    const held = confirmationsByMember.get(r.memberId);
+    if (held) held.push(entry);
+    else confirmationsByMember.set(r.memberId, [entry]);
   }
 
-  const liveMemberIds: string[] = [];
-  for (const [memberId, eventIds] of confirmedEventIdsByMember) {
-    if (hasLiveConfirmation(eventIds, reversedConfirmedEventIds)) liveMemberIds.push(memberId);
+  // ⭐ THE EARLIEST **LIVE** CONFIRMATION, ⛔ not the earliest confirmation. A member whose first
+  // confirmation was REVERSED and who was later re-confirmed sorts by the RE-confirmation: a reversed
+  // confirmation is not a moment at which they were confirmed, so it cannot be their key.
+  const ordered: { memberId: string; sortKey: number }[] = [];
+  for (const [memberId, confirmations] of confirmationsByMember) {
+    // ⚠ The membership test is {@link hasLiveConfirmation}'s, kept as the SHARED derivation of record
+    // so the reversal backing-out is never re-implemented. This loop additionally needs the SURVIVING
+    // version, which that predicate does not return — hence the second pass, ⛔ not a second rule.
+    if (!hasLiveConfirmation(confirmations.map((c) => c.eventId), reversedConfirmedEventIds)) continue;
+    let earliestLive = Number.POSITIVE_INFINITY;
+    for (const c of confirmations) {
+      if (reversedConfirmedEventIds.has(c.eventId)) continue;
+      if (c.eventVersion < earliestLive) earliestLive = c.eventVersion;
+    }
+    ordered.push({ memberId, sortKey: earliestLive });
   }
-  // Sort ascending for a stable, replay-deterministic list.
-  return liveMemberIds.sort().map((memberId) => ({ memberId: memberId as MemberId }));
+
+  // ⭐ Earliest live confirmation ASCENDING, with `member_id` as the FINAL tie-break ONLY — ⛔ never
+  // the primary key of the ordering (it leaks an arbitrary identifier ordering onto a PII-shielded
+  // public render). Deterministic and replay-stable.
+  ordered.sort((a, b) =>
+    a.sortKey !== b.sortKey ? a.sortKey - b.sortKey : a.memberId.localeCompare(b.memberId),
+  );
+  return ordered.map(({ memberId }) => ({ memberId: memberId as MemberId }));
 }
 
 /**

@@ -81,8 +81,14 @@ async function seedDrives(
       });
       if (d.district !== undefined) {
         await scopeTx.client.query(
+          // ⚠ BACK-DATED at Story 11b.3, ⛔ and this is not cosmetic. `DECEASED_DISTRICT` is FROZEN
+          // AS OF THE DRIVE'S CLOSE INSTANT ("the Archive section is a permanent record", the
+          // 2026-08-26 review finding), so a posting created AFTER the close is correctly EXCLUDED.
+          // Once the fixture began seeding a real close event (see above), a `now()` posting fell on
+          // the wrong side of that boundary and every district assertion went null.
+          // ⭐ The freeze is the PRODUCT behaviour working; the fixture is what was wrong.
           `INSERT INTO member_postings (posting_id, member_id, pariwar_id, district, is_retirement, created_at)
-           VALUES ($1, $2, $3, $4, false, now())`,
+           VALUES ($1, $2, $3, $4, false, now() - interval '10 days')`,
           [randomUUID(), memberId, pariwarId, d.district],
         );
       }
@@ -112,6 +118,24 @@ async function seedDrives(
         ],
       );
       await scopeTx.client.query("SET LOCAL app.pool_state_writer = 'off'");
+
+      // ⭐⭐ THE CLOSE/SETTLE EVENT — ADDED AT STORY 11b.3, AND ITS ABSENCE WAS A REAL DEFECT.
+      // ⚠⛔ These fixtures previously seeded pools with ⛔ NO `pool.closed` / `pool.settled` event at
+      // all, so `driveClosedAt` was `null` on EVERY row and the handler's
+      // `row.driveClosedAt.toISOString()` branch was ⛔ NEVER EXECUTED. ⇒ the suite was green over a
+      // branch it could not reach, while `GET /sahyog` returned **HTTP 500 for every real closed
+      // drive in production** — the raw `sql` fragment hands back an ISO STRING, not the `Date` its
+      // declared type claims (`pool/public-read.ts` `coerceDriveInstant`).
+      // ⛔ Do NOT remove this insert to "simplify a fixture": it is what makes the whole suite
+      // exercise the shipped code path rather than a null-only sub-path of it.
+      const closeEventType = (d.poolState ?? 'closed') === 'settled' ? 'pool.settled' : 'pool.closed';
+      if ((d.poolState ?? 'closed') !== 'live') {
+        await scopeTx.client.query(
+          `INSERT INTO events_log (stream_id, event_type, payload, event_version, pariwar_id, occurred_at)
+           VALUES ($1, $2, '{}'::jsonb, 1, $3, now() - interval '2 days')`,
+          [poolId, closeEventType, pariwarId],
+        );
+      }
 
       if (d.authorised === true || d.revoked === true) {
         // ⭐ ONE effective T&C version PER PARIWAR, minted lazily — ⛔ not one per member.
@@ -264,6 +288,44 @@ describe.skipIf(!hasDatabase)('public Sahyog Drive route (:5433)', { timeout: 30
       expect(raw).not.toContain('claimCaseId');
       expect(raw).not.toContain('poolId');
       expect(raw).not.toContain('enc:v1:');
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════════════════════════
+  // ⭐⭐ REGRESSION — Story 11b.3. `GET /sahyog` RETURNED **HTTP 500** FOR EVERY REAL CLOSED DRIVE.
+  // ══════════════════════════════════════════════════════════════════════════════════════════════
+  // ⚠⛔ A LIVE, USER-VISIBLE DEFECT ON A PUBLIC TRANSPARENCY SURFACE, and it shipped GREEN.
+  // `pool/public-read.ts`'s `DRIVE_CLOSED_AT` is a RAW `sql` fragment, ⛔ not a mapped Drizzle
+  // column, so its declared `sql<Date | null>` is a CLAIM the runtime does not honour: the value
+  // arrives as an ISO **STRING**. This handler then calls `row.driveClosedAt.toISOString()` ⇒
+  // `TypeError: … is not a function` ⇒ 500, for ANY Pariwar whose pools carry a real `pool.closed`
+  // or `pool.settled` event — i.e. every closed drive in production.
+  //
+  // ⛔⛔ WHY NOTHING CAUGHT IT: this spec's own fixtures seeded pools but ⛔ NEVER a close/settle
+  // EVENT, so `driveClosedAt` was `null` on every row and the `.toISOString()` branch was ⛔ never
+  // executed. ⭐ The suite was green over a branch it could not reach — the vacuous-leg defect,
+  // arriving in a SPEC rather than in a gate. The fixture now seeds the event, so the whole file
+  // exercises the shipped path; this case names the property so it cannot be lost in a refactor.
+  //
+  // ⭐ FIXED AT THE SOURCE (`coerceDriveInstant`), ⛔ not per call site — the fragment is shared with
+  // the Sahyog Vivran read, which would otherwise have inherited the identical break.
+  it('⭐⭐ REGRESSION — a drive with a REAL close event serves 200 with a valid ISO `closedAt`', async () => {
+    const t = await createTestApp();
+    try {
+      const { pariwarId } = await seedDrives(t, [
+        { legalName: 'Rajesh Kumar Sharma', district: 'Lucknow', authorised: true },
+      ]);
+      const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId) });
+      // ⛔ 200, ⛔ not 500. This single assertion is the whole regression.
+      expect(res.statusCode).toBe(200);
+      const body = res.json() as { items: Array<Record<string, unknown>> };
+      const closedAt = body.items[0]?.['closedAt'];
+      expect(typeof closedAt).toBe('string');
+      // ⭐ A REAL instant, ⛔ not `null` and ⛔ not an `Invalid Date` serialised through.
+      expect(Number.isNaN(new Date(String(closedAt)).getTime())).toBe(false);
+      expect(() => PublicSahyogDriveResponse.parse(res.json())).not.toThrow();
     } finally {
       await teardown(t);
     }

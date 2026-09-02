@@ -742,6 +742,37 @@ jobs:
       - run: pnpm pool-bound-payment:test
       - run: pnpm pool-bound-payment:check
 
+  sahyog-vivran-financial-truth:
+    name: sahyog-vivran-financial-truth (Sahyog Vivran money = canonical events only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: install
+    # Story 11b.3 AC3/AC4 — the financial-truth-from-canonical-events invariant, the story's
+    # load-bearing commitment. TS-AST scan of the Sahyog Vivran read path (domain read + wire DTO +
+    # the public-pages API boundary + the SSR client and its pure render module). Three rules: the
+    # event-type surface is exactly [contribution.confirmed, reconciliation.confirmation-reversed,
+    # pool.closed, pool.settled, claim.reversed]; no attestation-derived accessor is imported; and no
+    # amount operand appears on the RENDER path (D1(c): re-deriving confirmedCount x fixedAmount
+    # locally is REFUSED, the amount lands at 11b.3b behind the @twt/ui fence). AST, not a line scan,
+    # so the files may NAME the prohibited types in comments in order to forbid them. As 11b.3a and
+    # 11b.3b extend the read path their files MUST be added to SCAN_FILES (the standing per-story
+    # scope-extension convention). Teeth: known-bad fixtures in lib.test.ts + a planted-violation and
+    # revert-sanity run recorded in the story. No DB / network. INVARIANT SCAN -> NO fetch-depth: 0.
+    # See scripts/sahyog-vivran-financial-truth/.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm sahyog-vivran-financial-truth:test
+      - run: pnpm sahyog-vivran-financial-truth:check
+
   claim-canonical-id-invariant:
     name: claim-canonical-id-invariant (downstream flows key on claim_case_id only)
     runs-on: ubuntu-latest

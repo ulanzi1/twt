@@ -448,9 +448,17 @@ describe('committed matrix — the POPULATED invariants (Story 11a.1)', () => {
         '/members',
         '/niyamavali',
         // Story 11b.1 — the first Epic 11b surface to be declared, and declared only
-        // because it SHIPPED A ROUTE. ⛔ 11b.3 (/sahyog-vivran) and 11b.6 (/in-memoriam)
-        // stay undeclared and must stay absent from this list until they ship theirs.
+        // because it SHIPPED A ROUTE.
         '/sahyog',
+        // ⭐ Story 11b.3 — the SECOND, and declared on exactly the same terms: the route
+        // shipped, so the bidirectional route-coverage leg demanded a declaration and this
+        // is it. ⚠ It is the first DYNAMIC route in this list besides `/blog/[postId]`, and
+        // the first that declares ZERO `pii_tier: 1` fields at `tier: public` — which is what
+        // let it ship with ⛔ no Panel ruling and ⛔ no `tier1_public_exception` (D6(b),
+        // `2026-09-02-182` cl.2).
+        // ⛔ 11b.6 (/in-memoriam) STAYS UNDECLARED and must stay absent from this list until
+        // it ships its own route — the omission is what the route-coverage leg makes safe.
+        '/sahyog-vivran/[poolCanonicalIdentifier]',
         '/terms',
       ].sort(),
     );

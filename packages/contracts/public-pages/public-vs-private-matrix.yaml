@@ -97,6 +97,23 @@
 # either of them, and ⛔ do not read it as reaching their name forms — 11b.1's
 # ruling (2026-08-24-159 cl.2 / D1(b)) is scoped to this surface, and each of the
 # other two must seek its own.
+#
+# ⭐⭐ AMENDED AGAIN 2026-09-02 (Story 11b.3) — ⛔ THE SAHYOG VIVRAN HALF OF THE NOTE
+# ABOVE IS NOW FALSE, AND THE IN MEMORIAM HALF STAYS STANDING. ⛔ Annotation, ⛔ not a
+# rewrite: the block above is the record of WHY the omission was safe, and the clause
+# has now done exactly what it promised for a SECOND surface — 11b.3 shipped
+# `/sahyog-vivran/[poolCanonicalIdentifier]`, the gate demanded a declaration, and the
+# `sahyog-vivran` surface below is it. Its field set is read off a route that exists.
+# ⛔ IN MEMORIAM (11b.6) REMAINS UNDECLARED on the unchanged reasoning: it does not
+# render, its field set still does not exist, and the gate will FAIL until it is
+# declared too.
+#
+# ⭐ AND THE NAME-FORM SENTENCE ABOVE IS UNCHANGED AND STILL BINDS: 11b.1's ruling is
+# scoped to `sahyog-drive`. ⚠ The `sahyog-vivran` surface below declares ⛔ ZERO
+# `pii_tier: 1` fields at `tier: public` — it renders ⛔ NO person's name at all — so it
+# neither needs nor claims a name-form ruling. ⛔ Do ⛔ not read its presence as reaching
+# a name form; **11b.3b** carries the deceased member's and the contributor's names, on
+# `2026-09-02-173` / `-174`, and adds its own allowlist entries THEN.
 
 version: 2
 
@@ -620,6 +637,184 @@ surfaces:
           cannot reach the copy path. ⛔ Do not pass a target into any render model here,
           and note the microcopy `pool-reality-comparison` tone rule bites a
           comparison-to-target frame at PR time anyway.
+
+
+  # ── Story 11b.3 — the PER-CLAIM Sahyog Vivran. ⭐ ZERO Tier-1 FIELDS AT `public` ────────────
+  #
+  # ⭐⭐ THAT EMPTINESS IS THE SPLIT'S LOAD-BEARING PROPERTY, ⛔ NOT AN OVERSIGHT
+  # (`2026-09-02-182` cl.2, D6(b)). Story 11b.3 was split three ways precisely so THIS surface
+  # could be declared with ⛔ no `pii_tier: 1` field at `tier: public` — ⇒ it needs ⛔ no
+  # `tier1_public_exception`, ⛔ no `RULED_TIER1_PUBLIC_EXCEPTIONS` entry and ⛔ no Panel ruling,
+  # so ⛔ nothing outside this repository can block it.
+  # ⚠ ⛔ IT IS ⛔ NOT A PERMANENT CEILING. **11b.3a** adds the four ruled nominee-bank pairs
+  # (`2026-08-28-165` cl.1/cl.3) and **11b.3b** adds the deceased member's name + the contributor's
+  # (`2026-09-02-173` / `-174`). ⭐ Each adds its entry IN THE COMMIT THAT DECLARES ITS FIELD, and
+  # each owes `tests/surface-fields.test.ts`'s Tier-1-count-is-zero assertion an update in the SAME
+  # commit. ⛔ Adding an allowlist entry EARLIER is a standing permission with ⛔ no subject
+  # (routing note §11) — and ⛔ a masked or shielded value is STILL Tier-1 (`-165` cl.2: `pii_tier`
+  # is a FACT about the data, ⛔ never changed to permit a render).
+  #
+  # ⭐⛔ THE VISIBLE-POOL PREDICATE IS **WIDER** THAN THE INDEX'S, DELIBERATELY (D4(b),
+  # `2026-09-02-176`): `live` + `closed` + `settled`, declared explicitly on this surface and
+  # ⛔ NEVER imported from `SAHYOG_DRIVE_VISIBLE_POOL_STATES` (`['closed','settled']`). Two
+  # surfaces, two predicates. ⭐ The reason is ORDERING: Story 11b.3a's whole subject is the
+  # ACTIVE campaign, and widening the predicate in the story that ADDS the Tier-1 bank fields
+  # would have been the worse ordering.
+  # ⚠ `D4-linkage` IS OPEN: a `live` drive's page has ⛔ NO INBOUND LINK today (`/sahyog` lists
+  # only `closed` + `settled`), so it is reachable only by constructing the SEQUENTIAL
+  # `P-YYYY-MM-###`. ⛔ Do not add a link to a `live` drive without reading that rider, and note
+  # its MIRROR lands on 11b.3a, where the same sequential identifier fronts four decrypted Tier-1
+  # fields (routed to 11b.3a's AC2 by name).
+  - id: sahyog-vivran
+    route: /sahyog-vivran/[poolCanonicalIdentifier]
+    # ⭐ DECLARED EXPLICITLY, ⛔ not left to the schema default — the 11b.1 review finding:
+    # *"a key an AC names is not optional just because a default happens to supply it."*
+    renders: true
+    description: >-
+      ONE drive's own page: which pool it is, how it closed, how many contributions were
+      CONFIRMED as money received, and — when the claim reached it by appeal — the
+      "Reversed by appeal" lineage.
+      ⭐ IT NAMES ⛔ NOBODY. ⛔ Not the deceased member, ⛔ not a contributor, ⛔ not a verifier,
+      ⛔ not a nominee. A page that names nobody is the CORRECT state here (11a.5's posture when
+      it deleted five invented deceased-member names), ⛔ not a broken one — the named-identity
+      render layer is 11b.3b's and the nominee bank presentation is 11b.3a's.
+      ⛔ AND IT RENDERS NO RUPEE FIGURE. `amountRaisedInr = confirmedCount × fixedAmount` is the
+      SHIPPED canonical definition (`packages/ui/src/pool-progress/presenter.ts`, Story 9.12 D3)
+      and D1(b) ruled it CONSUMED — ⛔ but behind the `@twt/ui` fence this story does not lift, so
+      the amount lands at 11b.3b. ⛔ Re-deriving the multiplication here is D1(c), REFUSED.
+      ⛔ REMEMBRANCE, NOT ANALYTICS — inherited from `/sahyog` unchanged: no leaderboards, no
+      rankings, no gamification, no social-performance or popularity metrics.
+    # ⭐ MIRRORS `/sahyog` AND `/members`, and it is the right posture for a surface fronted by a
+    # SEQUENTIAL identifier: `noindex` plus the global `X-Robots-Tag` hook is control 3 of the
+    # THREE this route states (D11(a)).
+    search_indexing_policy: noindex
+    # ⭐ DECLARED, ⛔ NEVER INFERRED FROM FIELD TIERS — a rendering surface with no `Cache-Control`
+    # FAILS CI (11a.2's fail-closed leg).
+    # ⚠ AND THE ACCEPTED COST IS THE SAME ONE `/sahyog` CARRIES: at `s-maxage=300` a pulled Pariwar
+    # keeps being served from every warm PoP for up to five minutes, and the origin-side abuse
+    # counter is EDGE-BLIND (a cached hit never reaches the origin). ⛔ Direct SQL is NOT the
+    # operational fallback, and ⛔ do not "fix" the blindness by making this `private_no_store` —
+    # that discards the edge for a public surface and was already REJECTED at 11a.3.
+    cache_policy: edge_cacheable   # public, max-age=60, s-maxage=300
+    # ⭐⭐ STATED, ⛔ NOT OMITTED, AND ⛔ NOT COPIED FROM `sahyog-drive`. This surface renders ONE
+    # drive and ⛔ no list, so there is nothing to page and `parsePageParams()` is ⛔ not called.
+    # ⚠⛔ IT IS A VALUE THAT MUST FLIP: **11b.3b** adds the contributor list and flips it to `true`
+    # — ⛔ not a free edit, because it also changes what `routes.ts`'s written defence and the
+    # `login-wall.spec.ts` allowlist entry must claim (D11(a) recorded controls 2 and 3 as
+    # structurally N/A *because* there is no `page` and no `limit`).
+    paginated: false
+    fields:
+      - id: pool_letter_code
+        tier: public
+        pii_tier: 3
+        description: >-
+          The drive's letter code (Story 7.2's dual identifier). Non-PII by construction — it
+          names a COLLECTION, ⛔ never a person.
+          ⚠⛔ THE CURATED REGISTRY NAME IS DELIBERATELY NOT RESOLVED, mirroring `/sahyog`:
+          `resolveCuratedPoolName` re-derives it via `reserveNames`, which RESERVES rows — ⛔ a
+          write path an unauthenticated public GET may not trigger. TWT-Bihar's registry is EMPTY
+          BY DESIGN, so the letter code is the committed launch behaviour.
+      - id: pool_canonical_identifier
+        tier: public
+        pii_tier: 3
+        description: >-
+          `P-YYYY-MM-###` (Story 7.2) — and on THIS surface it is also the ROUTE PARAMETER.
+          ⛔ NOT `pools.id`, ⛔ not `claim_case_id`, ⛔ not `deceased_member_id`: the response
+          carries ⛔ no member, claim or pool uuid and ⛔ no ciphertext.
+          ⚠⛔ IT IS SEQUENTIAL AND THEREFORE ENUMERABLE, and that is recorded rather than glossed:
+          `D4-linkage` is OPEN, D11(a) left `limits.search` the only (unstated) bound on walking it,
+          and 11b.3a puts four decrypted Tier-1 fields behind this same identifier. ⛔ Routed to
+          11b.3a's AC2 by name — ⛔ not left as a shared worry.
+      - id: drive_status
+        tier: public
+        pii_tier: 3
+        description: >-
+          Exactly `collecting` | `active` | `archive` — ⭐ THREE labels here, ⛔ not the index's
+          two, because D4(b) admits `live`. Derived from `pools.current_state`
+          (`live` → collecting, `closed` → active, `settled` → archive).
+          ⛔ THE WIRE TOKEN IS THE PUBLIC VOCABULARY, ⛔ NEVER THE INTERNAL ONE: `spawned`, `live`,
+          `closed` and `settled` must never cross this boundary (`2026-08-21-144` cl.8 — the
+          `lock-in` leak `/members` had). Derived, ⛔ never a column.
+      - id: drive_closed_at
+        tier: public
+        pii_tier: 3
+        description: >-
+          The drive's close (active) or settle (archive) instant, from the `pool.closed` /
+          `pool.settled` event stream — AC3's settlement-state source. `null` while the drive is
+          still collecting, and the page renders NOTHING for it rather than estimating.
+          ⛔ A date about a COLLECTION, ⛔ never a date about a person: this is ⛔ not a date of
+          death and must ⛔ never be sourced from one. Latin numerals + Gregorian dates (UX-DR73).
+      - id: district
+        tier: public
+        pii_tier: 3
+        description: >-
+          The deceased member's latest posting district, RAW — already `pii_tier: 3` and public on
+          `/members` and `/sahyog`, declared here because the tier-leak leg is PER-SURFACE and an
+          undeclared rendered field is a leak.
+          ⚠ `school` / `designation` are PERMANENTLY INELIGIBLE (`-133` cl.1, `-132` cl.3) and
+          `block` is gated on `2026-08-19-137` cl.7(a)+(b). ⛔ Do not add them.
+      - id: confirmed_contribution_count
+        tier: public
+        pii_tier: 3
+        description: >-
+          A COUNT of contributions confirmed as money actually received — from live
+          `contribution.confirmed` events with their `reconciliation.confirmation-reversed`
+          compensations applied (Story 9.5's canonical financial truth), and ⛔ NOTHING ELSE.
+          ⛔ NEVER yellow / attested / pending / projected / estimated, and ⛔ never a SUM.
+          ⚠ A reversal is a `reconciliation.*` event, deliberately off the 8.10 `contribution.*`
+          fence — ⛔ do not filter reversals out by prefix.
+          ⭐⛔ IT IS THE **EVENT** COUNT, ⛔ NEVER A ROW COUNT, AND THE TWO ARE DESIGNED TO
+          DISAGREE: an RTBF invocation removes a contributor from any rendered list ENTIRELY
+          (⛔ no anonymized row, ⛔ no marker, ⛔ no placeholder) while the omitted contributor
+          STILL COUNTS toward every confirmed aggregate (`2026-08-30-169`). ⇒ ⛔ never derive this
+          from the length of a contributor list — here or at 11b.3b, where the page will read
+          "N confirmed" beside FEWER than N named rows BY DESIGN.
+          ⛔ It is a count, ⛔ not a score: ⛔ no ordering by it and ⛔ no "most-supported" view.
+      - id: close_of_cycle_framing
+        tier: public
+        pii_tier: 3
+        description: >-
+          Pool-Reality #2 framing, from `classifyCycleOutcome` + `selectCloseOfCycleFraming` —
+          ⛔ never a locally authored outcome branch and ⛔ never a re-implementation (the
+          classifier is SHARED with the Panchayat Noticeboard and `/sahyog`, and its union's
+          ordering is provenance-stable).
+          ⭐⛔ NO TARGET, EXPECTED-TOTAL, PERCENTAGE, SHORTFALL OR COMPARISON FIGURE ENTERS ANY
+          RENDER MODEL ON THIS SURFACE, in any field, under any name. The classifier QUARANTINES
+          the target by construction — totals flow in, only the opaque enum flows out.
+          ⚠ `null` in TWO cases, and the page then says NOTHING: (a) the drive is still
+          COLLECTING, so there is no close to frame; (b) ZERO members were assigned, so ⛔ no
+          expectation was ever set — `0 >= 0` is VACUOUSLY TRUE and returned `fully_funded` for a
+          drive that collected nothing (the 11b.1 review finding). ⛔ `partial` was considered and
+          REJECTED: *"Reconciliation is still in progress"* is not true of a drive nobody was
+          assigned to.
+      - id: appeal_reversal_stage
+        tier: public
+        pii_tier: 3
+        description: >-
+          `1` | `2` | `3` — which appeal stage reversed a previously-denied claim, from Story
+          6.16's `claim.reversed` payload. ⭐ DERIVED AT REQUEST TIME (D12(a), `2026-09-02-176`):
+          ⛔ no queue, ⛔ no consumer, ⛔ no publication record — this surface holds ⛔ no
+          publication STATE for a queue to advance, so a queue here would be a consumer with no
+          effect. `null` when the claim was never reversed, and the whole lineage then renders
+          NOTHING.
+          ⛔ NON-PII BY CONSTRUCTION and ⛔ never widened: `claim.reversed` is the PUBLISH SIGNAL,
+          ⛔ not the decision. The rationale TEXT and the REVIEWER IDENTITY live on the
+          `claim.appeal_stageN_reviewed` decision event's Tier-1 metadata row and are ⛔ NEVER
+          public.
+      - id: appeal_disposition_category
+        tier: public
+        pii_tier: 3
+        description: >-
+          The BOUNDED, NON-PII disposition tag from `claim.reversed` —
+          `new_evidence_presented` | `procedural_correction` | `reconsideration_on_merits`.
+          ⛔ NEVER free text, ⛔ never rationale, ⛔ never a reviewer's name or role.
+      - id: appeal_reversal_at
+        tier: public
+        pii_tier: 3
+        description: >-
+          The reversal instant, from the `claim.reversed` event's own `occurred_at`. Completes
+          AC5's visible lineage — deny → appeal stage → reversal. `null` when there was no
+          reversal. Latin numerals + Gregorian dates (UX-DR73).
 
 # ── The escalation ledger (AC8) ──────────────────────────────────────────────
 # One entry per visibility ESCALATION (a field moving toward `public`), each

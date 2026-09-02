@@ -66,11 +66,17 @@ import {
   type SahyogLabels,
 } from '../../../src/lib/sahyog-render.js';
 import {
+  buildSahyogVivranView,
+  type SahyogVivranLabels,
+} from '../../../src/lib/sahyog-vivran-render.js';
+import {
   deriveFieldIds,
   membersSurfaceFieldIds,
   sahyogDriveSurfaceFieldIds,
+  sahyogVivranSurfaceFieldIds,
   MEMBER_DIRECTORY_ROW_FIELD_IDS,
   SAHYOG_DRIVE_ROW_FIELD_IDS,
+  SAHYOG_VIVRAN_FIELD_IDS,
 } from '../../../src/lib/surface-fields.js';
 import {
   buildTcRenderModel,
@@ -462,10 +468,21 @@ describe('AC10 revert-sanity — the tier-leak leg has TEETH', () => {
   it('NEGATIVE CONTROL — a snapshot for a surface the matrix does not declare fails entirely', () => {
     // The Epic 11b guarantee in miniature: an 11b surface rendering before it is
     // declared does not pass quietly — every field it renders is unclassified.
+    //
+    // ⭐⛔ THE SUBJECT MOVED AT STORY 11b.3, AND THE MOVE IS THE CONTROL WORKING, ⛔ not a
+    // maintenance chore. This case named `sahyog-vivran` while that surface was undeclared;
+    // 11b.3 DECLARED it, so the id stopped being undeclared and this control would have gone
+    // VACUOUS — passing for the wrong reason, because a declared surface's real fields are
+    // classified. ⇒ it is re-pointed at `in-memoriam` (Story 11b.6), which the matrix header
+    // still records as deliberately undeclared: *"it does not render, its field set still does
+    // not exist, and the gate will FAIL until it is declared too."*
+    // ⚠ THE NEXT STORY TO DECLARE A SURFACE OWES THIS CASE THE SAME CHECK. ⛔ Do not "fix" a
+    // failure here by deleting the control — the field names below are deliberately the ones
+    // 11b.6 would render, so the control keeps testing what it claims to test.
     const verdict = evaluateSnapshot(matrix, {
-      surfaceId: 'sahyog-vivran',
+      surfaceId: 'in-memoriam',
       viewerContext: 'public',
-      fields: ['contributor_name', 'amount'],
+      fields: ['deceased_member_name', 'memorial_story'],
     });
     expect(verdict.status).toBe('fail');
     expect(verdict.leaks).toHaveLength(2);
@@ -1027,5 +1044,191 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
     expect(verdict.status).toBe('fail');
     const leak = verdict.leaks.find((l) => l.field === 'deceased_member_name');
     expect(leak?.tier).toBe('authenticated_member');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// Story 11b.3 — `/sahyog-vivran/[poolCanonicalIdentifier]`, the PER-CLAIM Sahyog Vivran (AC2)
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+//
+// ⭐⭐ THE LOAD-BEARING ASSERTION IN THIS BLOCK IS A **NEGATIVE** ONE: this surface declares ⛔ ZERO
+// `pii_tier: 1` fields at `tier: public`, and that emptiness is asserted POSITIVELY so a later story
+// that adds one WITHOUT its ruling fails here as well as at the matrix parser.
+//
+// ⚠⛔ IT IS ⛔ NOT A CLAIM THAT THE SURFACE MAY NEVER HAVE ONE — it is a COUNT FOR THIS STORY.
+// **11b.3a** adds the four ruled nominee-bank pairs (`2026-08-28-165` cl.1/cl.3) and **11b.3b** the
+// deceased member's name and the contributor's (`2026-09-02-173` / `-174`). ⭐ Each adds its entry in
+// the commit that DECLARES its field, and each owes THIS assertion an update in the SAME commit.
+// ⛔ Do not "fix" a failure here by bumping the number: the number moving is the signal.
+
+const SAHYOG_VIVRAN_TEST_LABELS: SahyogVivranLabels = {
+  pageTitle: 'Sahyog Vivran',
+  pageIntro: 'intro',
+  factsGroupLabel: 'Drive details',
+  labelDriveCode: 'Drive code',
+  labelPoolLetter: 'Pool',
+  labelDistrict: 'District',
+  labelClosedOn: 'Closed on',
+  labelContributions: 'Contributions confirmed',
+  labelStatus: 'Standing',
+  districtUnknown: 'Not recorded',
+  statusCollecting: 'Collecting',
+  statusActive: 'Active',
+  statusArchive: 'Archive',
+  collectingTitle: 'still collecting',
+  collectingBody: 'the final outcome will appear later',
+  outcomeFullyFunded: 'The cycle closed with the support it needed.',
+  outcomeUnderFunded: 'The cycle closed. The trust met its commitment.',
+  outcomePartial: 'The cycle closed. Reconciliation continues.',
+  appealTitle: 'Reversed by appeal',
+  appealLineage: 'denied, appealed, reversed',
+  appealStage: (stage) => `Reversed at appeal stage ${String(stage)}`,
+  appealReversedOn: 'Reversed on',
+  dispositionNewEvidence: 'New evidence was presented',
+  dispositionProceduralCorrection: 'A procedural correction was made',
+  dispositionReconsideration: 'The claim was reconsidered on its merits',
+  contributionsCount: (n) => `${String(n)} confirmed`,
+  outageTitle: 'could not load',
+  outageBody: 'our side',
+};
+
+describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak leg is OPERATIVE', () => {
+  // ⭐ A drive WITH an appeal reversal on purpose: the lineage fields are classified whether or not a
+  // given drive has one, and a fixture without a reversal would let them go unexercised.
+  const { model } = buildSahyogVivranView(
+    {
+      drive: {
+        poolLetterCode: 'C',
+        poolCanonicalIdentifier: 'P-2026-09-003',
+        driveStatus: 'archive',
+        closedAt: '2026-09-01T18:45:00.000Z',
+        district: 'Lucknow',
+        confirmedContributionCount: 137,
+        fundingOutcome: 'fully_funded',
+        appealReversal: {
+          reversedAtStage: 2,
+          dispositionCategory: 'procedural_correction',
+          reversedAt: '2026-08-20T05:00:00.000Z',
+        },
+      },
+    },
+    SAHYOG_VIVRAN_TEST_LABELS,
+  );
+
+  /**
+   * ⭐ THE RENDERED HTML, BUILT THROUGH THE PRODUCTION DECISION PATH — ⛔ not hand-written and ⛔ not
+   * a concatenation of the fields this test already knows about. It walks the SAME `matrixFieldOutput`
+   * the page's `<MatrixField>` uses, over the SAME mapping, so a newly-rendered value appears here
+   * automatically. A hand-maintained string restating the render is exactly what a newly-rendered
+   * field would silently escape.
+   *
+   * ⚠ The `<dd>` is emitted UNCONDITIONALLY because the PAGE's is: `<MatrixField>` suppresses only the
+   * inner `<span>`, so an empty `<dd>` is structurally identical for every suppressed field and
+   * carries ⛔ no per-field signal a scraper could diff.
+   */
+  const SAHYOG_VIVRAN_HTML = [
+    '<dl>',
+    ...sahyogVivranSurfaceFieldIds(model).map((fieldId) => {
+      const value = (model as unknown as Record<string, string | null>)[
+        Object.entries(SAHYOG_VIVRAN_FIELD_IDS).find(([, id]) => id === fieldId)![0]
+      ];
+      const { output } = matrixFieldOutput('sahyog-vivran', fieldId, 'public', value ?? '');
+      return `<dt>${fieldId}</dt><dd>${
+        output === null ? '' : `<span data-field="${fieldId}">${output}</span>`
+      }</dd>`;
+    }),
+    '</dl>',
+  ].join('');
+
+  const snapshot: RenderSnapshot = {
+    surfaceId: 'sahyog-vivran',
+    viewerContext: 'public',
+    html: SAHYOG_VIVRAN_HTML,
+    fields: sahyogVivranSurfaceFieldIds(model),
+  };
+
+  it('⭐ the snapshot field set is NON-EMPTY, and is EXACTLY the ten classified fields', () => {
+    // ⛔ The EXACT set, ⛔ not "length > 0": a leg that only detects additions accepts a field
+    // vanishing from the render while the matrix still claims it is shown.
+    expect(snapshot.fields).toEqual([
+      'appeal_disposition_category',
+      'appeal_reversal_at',
+      'appeal_reversal_stage',
+      'close_of_cycle_framing',
+      'confirmed_contribution_count',
+      'district',
+      'drive_closed_at',
+      'drive_status',
+      'pool_canonical_identifier',
+      'pool_letter_code',
+    ]);
+  });
+
+  it('evaluateSnapshot passes — and the pass proves the per-claim page IS policed', () => {
+    const verdict = evaluateSnapshot(matrix, snapshot);
+    expect(verdict.status).toBe('pass');
+    expect(verdict.leaks).toEqual([]);
+  });
+
+  it('⭐⭐ AC2 — the surface declares ZERO Tier-1 fields at `public`, asserted POSITIVELY', () => {
+    // ⛔ NOT a permanent ceiling — see this block's header. 11b.3a and 11b.3b each add theirs WITH a
+    // cited ruling and each owes this assertion an update in the SAME commit.
+    const surface = matrix.surfaces.find((s) => s.id === 'sahyog-vivran');
+    expect(surface).toBeDefined();
+    const tier1AtPublic = surface!.fields.filter((f) => f.pii_tier === 1 && f.tier === 'public');
+    expect(tier1AtPublic).toEqual([]);
+  });
+
+  it('⭐ and therefore carries NO `tier1_public_exception` block anywhere on the surface', () => {
+    // ⚠ The parser is FAIL-CLOSED IN BOTH DIRECTIONS, so this is not a restatement of the assertion
+    // above: an exception block on a field that is NOT Tier-1-at-public also fails. Asserting the
+    // absence directly means a decorative block cannot be added "ready for" 11b.3a either.
+    const surface = matrix.surfaces.find((s) => s.id === 'sahyog-vivran');
+    expect(surface!.fields.filter((f) => f.tier1_public_exception !== undefined)).toEqual([]);
+  });
+
+  it('⭐ every field on the surface is `public` — there is no unrenderable declaration', () => {
+    const surface = matrix.surfaces.find((s) => s.id === 'sahyog-vivran');
+    expect(surface!.fields.every((f) => f.tier === 'public')).toBe(true);
+  });
+
+  it('⭐ the surface declares `paginated: false` — ⛔ 11b.3b flips it, ⛔ nothing else may', () => {
+    // ⚠ A value that MUST FLIP, and the flip is not free: it also changes what `routes.ts`'s written
+    // defence and the `login-wall.spec.ts` allowlist entry must claim (D11(a) recorded controls 2 and
+    // 3 as structurally N/A *because* there is no `page` and no `limit`).
+    const surface = matrix.surfaces.find((s) => s.id === 'sahyog-vivran');
+    expect(surface!.paginated).toBe(false);
+    expect(surface!.cache_policy).toBe('edge_cacheable');
+    expect(surface!.search_indexing_policy).toBe('noindex');
+    expect(surface!.renders).toBe(true);
+  });
+
+  it('⭐ NEGATIVE CONTROL — a planted UNDECLARED field id fails as `unclassified`', () => {
+    // ⚠ Without this the pass above proves nothing: a leg fed a set nobody could have broken is a
+    // green check certifying an invariant nobody enforces.
+    const verdict = evaluateSnapshot(matrix, {
+      ...snapshot,
+      fields: [...(snapshot.fields ?? []), 'deceased_member_name'],
+    });
+    expect(verdict.status).toBe('fail');
+    expect(verdict.leaks).toHaveLength(1);
+    expect(verdict.leaks[0]!.tier).toBe('unclassified');
+    expect(verdict.leaks[0]!.field).toBe('deceased_member_name');
+  });
+
+  it('⭐ NEGATIVE CONTROL — a REAL field moved to `authenticated_member` fails (the tier half)', () => {
+    // The control above plants an id the matrix never heard of (the UNDECLARED path). This is the
+    // TIER-CEILING path, done honestly with a REAL field and a simulated tier.
+    const planted: PublicVsPrivateMatrix = structuredClone(matrix);
+    const surface = planted.surfaces.find((s) => s.id === 'sahyog-vivran');
+    const field = surface?.fields.find((f) => f.id === 'confirmed_contribution_count');
+    if (field === undefined) throw new Error('fixture assumption broke: the count field moved');
+    field.tier = 'authenticated_member';
+
+    const verdict = evaluateSnapshot(planted, snapshot);
+    expect(verdict.status).toBe('fail');
+    expect(
+      verdict.leaks.find((l) => l.field === 'confirmed_contribution_count')?.tier,
+    ).toBe('authenticated_member');
   });
 });

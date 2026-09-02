@@ -187,6 +187,24 @@ export const SAHYOG_DRIVE_PAGE_SIZE_DEFAULT = 25;
 export const SAHYOG_DRIVE_PAGE_SIZE_CAP = 50;
 
 /**
+ * ⭐⭐ EXPORTED AT STORY 11b.3 — SHARED WITH `sahyog-vivran-read.ts`, ⛔ NEVER RE-SPELLED THERE.
+ *
+ * The four correlated fragments below (this one, {@link DRIVE_CLOSED_AT}, {@link DECEASED_DISTRICT}
+ * and {@link ASSIGNED_MEMBER_COUNT}) were module-private while this file was their only consumer.
+ * The per-claim Sahyog Vivran read needs the SAME four, and copying them would fork the definition
+ * of *"how many contributions were confirmed"* into two places that drift silently — the exact
+ * failure the *"change one, check the other"* pairings in this file exist to prevent.
+ *
+ * ⚠⛔ THEY CARRY LITERAL OUTER-TABLE QUALIFIERS (`"pools"."pariwar_id"`, `"claims"."deceased_member_id"`),
+ * so ANY consumer MUST select from `pools` INNER JOINed to `claims` under those exact aliases. That is
+ * deliberate ([[project_epic6_drizzle_correlated_subquery_bug]]): interpolating an outer `Column` into
+ * a subquery whose own FROM has a column of that name collapses the correlation into a TAUTOLOGY, and
+ * every DB-free test stays green while it does.
+ *
+ * ⛔ Exporting them is ⛔ NOT an invitation to widen them. A consumer needing different semantics needs
+ * its OWN fragment with its own name, ⛔ never a parameter bolted onto one of these.
+ */
+/**
  * ⭐ THE CONFIRMED COUNT, WITH ITS REVERSALS COMPENSATED — set-based, per row, in ONE pass.
  *
  * Counts live `contribution.confirmed` events for the pool that have NOT been walked back by a
@@ -198,7 +216,7 @@ export const SAHYOG_DRIVE_PAGE_SIZE_CAP = 50;
  * must stay observationally equivalent to it ([[project_contribution_fact_projection_substrate]]).
  * ⭐ "Change one, check the other" — `listConfirmedContributorsForPool` is the other.
  */
-const CONFIRMED_CONTRIBUTION_COUNT = (now: Date) => sql<string>`(
+export const CONFIRMED_CONTRIBUTION_COUNT = (now: Date) => sql<string>`(
     SELECT count(*)
       FROM events_log c
      WHERE c.pariwar_id = "pools"."pariwar_id"
@@ -297,8 +315,38 @@ const NAME_PUBLICATION_AUTHORISED = (now: Date) => sql<boolean>`EXISTS (
        AND cv.clause_id = ${SAHYOG_DRIVE_PUBLICATION_CLAUSE_ID}
   )`;
 
+/**
+ * ⭐⭐ THE `timestamptz`-FROM-A-RAW-`sql` COERCION — ⛔ AND IT IS ⛔ NOT DEFENSIVE TYPING.
+ *
+ * ⚠⛔ **A LIVE 500 ON A SHIPPED PUBLIC ROUTE, FOUND AT STORY 11b.3 AND FIXED HERE.**
+ * {@link DRIVE_CLOSED_AT} is a RAW `sql` fragment, ⛔ not a mapped Drizzle column, so its declared
+ * `sql<Date | null>` is a CLAIM the runtime does not honour: the value arrives as an ISO **STRING**.
+ * ⇒ every consumer calling `.toISOString()` on it threw `TypeError: … is not a function`, and
+ * `apps/api`'s `sahyogDrive` handler does exactly that — so **`GET /sahyog` returned HTTP 500 for any
+ * Pariwar with a real `pool.closed` / `pool.settled` event**, which is every closed drive in
+ * production.
+ *
+ * ⭐⛔ WHY NO TEST CAUGHT IT, RECORDED SO THE SHAPE IS NOT REPEATED: the route's own live-DB spec
+ * seeds pools but ⛔ **never seeds a close/settle EVENT**, so `driveClosedAt` was `null` on every
+ * fixture row and the `.toISOString()` branch was ⛔ never executed. ⚠ The suite was green over a
+ * branch it could not reach — the vacuous-leg defect, in a spec rather than a gate.
+ *
+ * ⭐ FIXED AT THE **SOURCE**, ⛔ not at each call site: the fragment is shared by
+ * `listPublicSahyogDrivePools` and `sahyog-vivran-read.ts`, so a per-consumer patch would leave the
+ * declared type lying and the next consumer would inherit the same break.
+ *
+ * ⛔ `new Date(<already a Date>)` is safe and total, so this is correct under EITHER driver
+ * behaviour — ⛔ do not "simplify" it to a cast. An unparseable value yields `null` rather than an
+ * `Invalid Date` that would serialize as `null` anyway but read as a Date to every type check.
+ */
+export function coerceDriveInstant(value: unknown): Date | null {
+  if (value === null || value === undefined) return null;
+  const d = value instanceof Date ? value : new Date(String(value));
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 /** The drive's close (Active) or settle (Archive) instant, from the pool's own event stream. */
-const DRIVE_CLOSED_AT = (now: Date) => sql<Date | null>`(
+export const DRIVE_CLOSED_AT = (now: Date) => sql<Date | null>`(
     SELECT e.occurred_at
       FROM events_log e
      WHERE e.stream_id = "pools"."pool_id"
@@ -318,7 +366,7 @@ const DRIVE_CLOSED_AT = (now: Date) => sql<Date | null>`(
  * whose stream carries no close/settle event yet ({@link DRIVE_CLOSED_AT}) — it is not a second
  * intended code path.
  */
-const DECEASED_DISTRICT = (now: Date) => sql<string | null>`(
+export const DECEASED_DISTRICT = (now: Date) => sql<string | null>`(
     SELECT p.district
       FROM ${memberPostings} p
      WHERE p.member_id = "claims"."deceased_member_id"
@@ -329,7 +377,7 @@ const DECEASED_DISTRICT = (now: Date) => sql<string | null>`(
   )`;
 
 /** How many members were assigned to contribute to this pool — the EXPECTED side of the outcome. */
-const ASSIGNED_MEMBER_COUNT = sql<string>`(
+export const ASSIGNED_MEMBER_COUNT = sql<string>`(
     SELECT count(*)
       FROM ${memberPoolAssignments} a
      WHERE a.pool_id = "pools"."pool_id"
@@ -556,7 +604,10 @@ export async function listPublicSahyogDrivePools(
       poolCanonicalIdentifier: r.poolCanonicalIdentifier,
       // The predicate admits only these two; the cast records that rather than re-checking it.
       status: PUBLIC_STATUS_BY_POOL_STATE[r.currentState as SahyogDriveVisiblePoolState],
-      driveClosedAt: r.driveClosedAt,
+      // ⭐ COERCED — the raw `sql` fragment hands back an ISO STRING despite its declared type.
+      // See {@link coerceDriveInstant}: without this, `apps/api`'s `.toISOString()` threw and the
+      // route 500'd for every real closed drive.
+      driveClosedAt: coerceDriveInstant(r.driveClosedAt),
       district: r.district,
       confirmedContributionCount,
       // ⭐ THE TARGET IS QUARANTINED HERE AND NOWHERE ELSE. Both totals are whole INR — the unit

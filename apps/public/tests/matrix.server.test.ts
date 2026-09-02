@@ -139,7 +139,13 @@ describe('AC1 — <MatrixField> delegates every decision to getVisibility()', ()
   });
 
   it('NEGATIVE CONTROL — an UNKNOWN surface renders NOTHING and is `unknown_surface`', () => {
-    const { verdict, output } = matrixFieldOutput('sahyog-vivran', 'amount', 'public', '5000');
+    // ⭐⛔ THE SUBJECT MOVED AT STORY 11b.3, AND THE MOVE IS THE CONTROL WORKING, ⛔ not a maintenance
+    // chore. This case named `sahyog-vivran` while that surface was undeclared; 11b.3 DECLARED it, so
+    // the verdict became `undeclared_field` and the control would have kept "passing" for the wrong
+    // reason — testing the field leg, not the surface leg it is named for.
+    // ⇒ re-pointed at `in-memoriam` (Story 11b.6), which the matrix header still records as
+    // deliberately undeclared. ⚠ THE NEXT STORY TO DECLARE A SURFACE OWES THIS CASE THE SAME CHECK.
+    const { verdict, output } = matrixFieldOutput('in-memoriam', 'memorial_story', 'public', 'x');
     expect(verdict.visible).toBe(false);
     expect(verdict.reason).toBe('unknown_surface');
     expect(output).toBeNull();

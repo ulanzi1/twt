@@ -204,3 +204,22 @@ export function scanFinancialTruth(
 export function formatFinding(f: FinancialTruthFinding): string {
   return `${f.file}:${String(f.line)} [${f.rule}] — ${f.detail}`;
 }
+
+/**
+ * ⭐ THE SCOPE SAFEGUARD (review finding) — a candidate path that LOOKS like a Sahyog Vivran
+ * read-path file but is not in the caller's scanned-files list. PURE: takes an already-resolved
+ * candidate list; `check.ts` (the impure entry point) does the fs walk.
+ *
+ * ⛔ This does NOT replace the sibling-story obligation recorded at `check.ts`'s header ("11b.3a /
+ * 11b.3b MUST add their files") — it makes FORGETTING it loud instead of silent. A new
+ * `*sahyog-vivran*`-named file landing under the read path's known directories without a matching
+ * `SCAN_FILES` entry now fails the gate, rather than shipping a green scan over a surface nobody is
+ * reading ([[feedback_gate_scope_semantic_coverage]]).
+ */
+export function findUnscannedCandidates(
+  candidatePaths: readonly string[],
+  scannedPaths: readonly string[],
+): string[] {
+  const scanned = new Set(scannedPaths);
+  return candidatePaths.filter((p) => !scanned.has(p)).sort();
+}

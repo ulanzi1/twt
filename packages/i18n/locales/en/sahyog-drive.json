@@ -15,7 +15,7 @@
   "table.col.outcome": "Close of cycle",
   "value.district_unknown": "Not recorded",
   "value.date_unknown": "Not recorded",
-  "value.contributions_count": "{{count}} confirmed",
+  "value.contributions_count": "{count} confirmed",
   "filter.legend": "Find a drive",
   "filter.district.label": "District",
   "filter.closed_from.label": "Closed on or after",

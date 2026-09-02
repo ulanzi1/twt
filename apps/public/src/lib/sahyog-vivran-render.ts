@@ -99,6 +99,8 @@ export interface SahyogVivranLabels {
   /** The AC5 appeal-lineage block. */
   readonly appealTitle: string;
   readonly appealLineage: string;
+  /** The `<dt>` term for the stage `<dd>` — ⛔ distinct from `appealTitle`, the section heading. */
+  readonly labelAppealStage: string;
   readonly appealStage: (stage: number) => string;
   readonly appealReversedOn: string;
   readonly dispositionNewEvidence: string;

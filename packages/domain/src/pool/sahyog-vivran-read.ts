@@ -1,8 +1,12 @@
 // The PER-CLAIM SAHYOG VIVRAN read — Story 11b.3 (Task 2 + Task 5; AC1, AC3, AC5).
 //
-// ONE drive's own page, resolved as of ONE instant: its public identity, its district, its
+// ONE drive's own page, bounded by ONE `now` parameter: its public identity, its district, its
 // close/settle instant, its CONFIRMED contribution count, its Pool-Reality-#2 outcome, and — when
 // the claim reached this drive BY APPEAL — the non-PII reversal lineage.
+// ⚠ THE SHARED `now` IS A BOUND, ⛔ NOT A SNAPSHOT: the drive read and the appeal-reversal read
+// (below) are two separate round trips, not one transaction — a write landing between them is
+// visible to the second query without having been reflected in the first. What `now` guarantees is
+// only that NEITHER query considers anything that occurred after it (review finding).
 //
 // ── ⭐⭐ IT RETURNS ⛔ NO PERSON, AND THAT IS THE SPLIT'S LOAD-BEARING PROPERTY ───────
 // ⛔ No name, ⛔ no ciphertext, ⛔ no `member_id`, ⛔ no `deceased_member_id`, ⛔ no `claim_case_id`,
@@ -54,6 +58,7 @@ import { pools } from '../schema/pools.js';
 import {
   ASSIGNED_MEMBER_COUNT,
   CONFIRMED_CONTRIBUTION_COUNT,
+  coerceCount,
   coerceDriveInstant,
   DECEASED_DISTRICT,
   DRIVE_CLOSED_AT,
@@ -290,8 +295,8 @@ export async function readPublicSahyogVivran(
   const row = rows[0];
   if (row === undefined) return null;
 
-  const confirmedContributionCount = Number(row.confirmedCount ?? 0);
-  const assignedCount = Number(row.assignedCount ?? 0);
+  const confirmedContributionCount = coerceCount(row.confirmedCount);
+  const assignedCount = coerceCount(row.assignedCount);
   const status = PUBLIC_STATUS_BY_POOL_STATE[row.currentState as SahyogVivranVisiblePoolState];
 
   return {

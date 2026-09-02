@@ -15,7 +15,7 @@
   "table.col.outcome": "चक्र समापन",
   "value.district_unknown": "दर्ज नहीं",
   "value.date_unknown": "दर्ज नहीं",
-  "value.contributions_count": "{{count}} पुष्ट",
+  "value.contributions_count": "{count} पुष्ट",
   "filter.legend": "अभियान खोजें",
   "filter.district.label": "जिला",
   "filter.closed_from.label": "इस तिथि या उसके बाद समाप्त",

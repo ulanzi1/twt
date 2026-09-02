@@ -4,7 +4,7 @@ baseline_commit: e16cc69073bcc951eb8f65192764d020ac66fcf9
 
 # Story 11b.3a: Nominee Bank Public Presentation + Per-Pariwar Masking Schedule + Trust-Admin Knob `[SURFACE]`
 
-Status: in-progress
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -821,18 +821,159 @@ screen at all. ⛔ That is ⛔ not a reason to refuse the screen; it **is** a re
 
 ### Agent Model Used
 
-_(to be filled by the dev agent)_
+Claude Opus 5 (`claude-opus-5`) via `bmad-dev-story`, 2026-09-02.
 
 ### Debug Log References
 
+⭐ Recorded because each was found by a control **working**, ⛔ not by reading:
+
+1. **The allowlist gate FIRED on the planted fifth field** (Testing Standards revert-sanity). Message
+   named all **six** permitted pairs and refused to be resolved by appending. Reverted → green.
+2. **The Tier-1 identity assertion FIRED on the real widening** before it was updated — `2 → 6` was
+   made deliberately, ⛔ not pre-emptively.
+3. **`deriveFieldIds` FIRED in both directions** on the render-model change (a key with no mapping,
+   and a mapping with no key), across four test files.
+4. **A failed DB CHECK probe ABORTS the transaction** ⇒ probes 2 and 3 returned a false-`undefined`
+   and were silently vacuous. Each now runs inside its own raw **SAVEPOINT**
+   ([[project_domain_limit_clamp_and_savepoint_retry]]).
+5. **`super_admin`'s bundle derives from `PERMISSION_CATALOG.keys`** ⇒ a live-DB test that
+   hand-granted the key would have passed **with the mint reverted**. The grant goes through the ROLE.
+6. **The AC6 terminology gate FIRED on this story's own comments** — quotes of cl.10(c)'s wording.
+   Paraphrased, with a note recording that the ban is on what this control CLAIMS and that a source
+   scan cannot tell a quote from a claim.
+7. **`ci:local` 31/34 → 34/34.** The three were an unused import, the contracts shape fixtures, and
+   friction-budget's AC-4 — which diffs **COMMITTED** history and passes once the disposition lands
+   ([[project_friction_budget_baseline_ratchet]]).
+
 ### Completion Notes List
 
+⭐ **`ci:local` — 34/34 GREEN with the integration leg run** (`DATABASE_URL` set, `twt-test-pg`).
+
+**AC1 — the four fields + four allowlist entries, ONE commit.** ✅ Six YAML fields (four Tier-1 + two
+Tier-3 siblings carrying ⛔ no exception and needing none), four `matrix.ts` entries citing
+`2026-08-28-165 cl.1`, and both count assertions moved — in the SAME commit as the declarations.
+⭐⭐ **The count was READ, ⛔ never assumed** (Trap 2): 11b.3b verified `ready-for-dev` and unmerged, so
+the surface assertion read **0 → 4** and the matrix-wide identity assertion **2 → 6**, both **BY
+NAME**. ⛔ Neither deleted. ⛔ No fifth entry. ⭐ Revert-sanity done.
+
+**AC2 — the complete details render.** ✅ Both equal accounts, through `<MatrixField>`, decrypted at
+`apps/api` (⛔ `apps/public` gains no KMS dependency — `no-kms-in-public.test.ts` green). ⛔ Nothing is
+labelled *"Nominee"*; ⛔ no join to `member_nominees`. ⭐ The **enumeration bound**, the **approval-chain
+inversion** and the **`limits.search`-is-a-DECISION** rule are stated in **three** places. ⭐ Both
+written defences moved together and state **FOUR**, each telling 11b.3b its count is **SIX** and to
+EXTEND, ⛔ never overwrite. ⛔ The rate-limit tier is untouched.
+
+**AC3 — the schedule.** ✅ `pariwar_nominee_bank_masking_schedule` + migration 0113 + RLS, on
+`pool_fixed_amount_schedule`'s effective-window shape. ⛔ `claim_nominee_bank_accounts` untouched.
+⛔ Never a boolean — a discriminator + payload coupled by a DB CHECK. ⭐ FAIL-OPEN on no row. ⛔ The
+predicate is never handed a member to branch on (cl.10(f)) — asserted structurally.
+
+**AC4 — the masked projection.** ✅ **STRUCTURAL, ⛔ not conventional**: the masked wire arm has ⛔ NO
+`accountNumber` / `accountHolderName` / `vpa` key, and `.strict()` makes populating one a parse error.
+Asserted against the **RAW serialized body**. ⛔ `null` at four OR FEWER digits. ⭐ Announced as one
+coherent phrase through `t()`.
+
+**AC5 — the knob.** ✅ `super_admin` only; ⭐ the denial case uses a **real `pariwar_admin` grant**, so
+`-178`'s foreclosure has teeth. ⛔ No display name and ⛔ no `effectiveFrom` on the wire.
+
+**AC6 — the cache cost.** ✅ Three places, and **MECHANIZED** by a new terminology gate covering both
+prohibitions plus the presence of the disclosure at each site.
+
+**AC7 — accessibility + microcopy.** ✅ Family 13 in its **web** form; copy in the existing
+`sahyog-vivran` namespace (⛔ no second namespace); microcopy gate green.
+
+**AC8 — routing.** ✅ Seven items, each with a trigger. ⛔ No second `epics.md` annotation.
+
+---
+
+⚠⛔⛔ **ONE FINDING WORTH BIGDEV'S ATTENTION, RECORDED RATHER THAN HIDDEN — a REAL, REACHABLE
+COLLISION BETWEEN TWO RULED CONTROLS.** A **12-digit account number trips the FR-74 naked-PII
+detector's AADHAAR pattern**. cl.10(a) rules the complete number publishable and `D8-default` is
+FAIL-OPEN, so it renders in full for every Pariwar until the Trust acts — while `detectNakedPii`
+treats any bare 12-digit run at `public` as an Aadhaar number. ⭐ Verified precisely: **11, 13 and 14
+digits do NOT match; exactly 12 does**, and 12 is a real Indian length (ICICI's). ⛔ **The detector is
+NOT weakened** — it is a launch-blocking FR-74 control scanning a string with no field context, so
+narrowing it is a **governance act**, ⛔ not a fixture fix. ⛔ Nor is it hidden behind a friendlier
+11-digit fixture. **Three tests now pin the behaviour** so it is asserted rather than latent, and it
+is routed at `deferred-work.md` item **(c)** with its trigger. ⚠ **It is a question about which
+control yields, ⛔ not an engineering preference.**
+
+⚠⛔ **AND ONE AUTHORING READING, RECORDED AS SUCH.** `2026-09-02-183` **cl.4**: cl.10(c)'s third
+setting, *"permanent masking"*, is built as cl.10(d)'s **TERMINAL RUNG** — masked in every state,
+including while the drive is `live` — because read as a fourth post-close offset it is a **synonym for
+`after_days: 0`** and one of the Panel's three settings would ship meaning nothing. ⭐ cl.10(a) is a
+**permission**, ⛔ not a mandate. ⭐ Chosen in the **more protective** direction: if wrong, the cost is
+a reversible over-application of privacy, ⛔ never a leak. ⛔ **An authoring reading, ⛔ NOT a ruling** —
+routed for Panel confirmation, and it is **one predicate line** to change.
+
+⚠ **AND A STANDING GATE DEFECT IS ESCALATED, ⛔ not footnoted:** `page_weight_bytes` reads **9445**,
+byte-identical to 11b.1's and 11b.3's, after a story that added a block of decrypted bank details to a
+public page — the **FIFTH consecutive** recording of the same un-measured facet, and 11b.3's own note
+said a fourth *"should be read as the gate having a standing blind spot"*.
+
+⭐ **AND THE PROJECT'S FIRST SELF-SERVE PRESENTATION-TOGGLE UI SHIPPED** (11a.1 shipped none by
+design). ⛔ Not a blocker; recorded in five places.
+
+⛔⛔ **BUILT IS ⛔ NOT PUBLISHED.** What keeps this dark is deployment plus the counsel/Panel process —
+⛔ never a code mechanism, ⛔ never the kill switch.
+
 ### File List
+
+**NEW**
+- `packages/domain/src/schema/pariwar_nominee_bank_masking_schedule.ts`
+- `packages/domain/migrations/0113_nominee-bank-masking-schedule.sql`
+- `packages/domain/src/policies/pariwar-nominee-bank-masking-schedule-rls.ts`
+- `packages/domain/src/claim/nominee-bank-masking.ts`
+- `packages/domain/src/claim/nominee-bank-masking-policy.ts`
+- `packages/domain/tests/claim/nominee-bank-masking.test.ts`
+- `packages/domain/tests/integration/claim/nominee-bank-masking-schedule.spec.ts`
+- `packages/contracts/src/nominee-bank-masking/masking.ts`
+- `packages/contracts/src/nominee-bank-masking/index.ts`
+- `apps/api/src/modules/nominee-bank-masking/handlers.ts`
+- `apps/api/src/modules/nominee-bank-masking/routes.ts`
+- `apps/api/src/modules/nominee-bank-masking/index.ts`
+- `apps/api/tests/integration/nominee-bank-masking/admin.spec.ts`
+- `apps/admin/src/modules/nominee-bank-masking/i18n-en.ts`
+- `apps/admin/src/modules/nominee-bank-masking/MaskingScheduleForm.tsx`
+- `apps/admin/src/modules/nominee-bank-masking/MaskingSchedulePage.tsx`
+- `apps/admin/src/routes/NomineeBankMaskingRoute.tsx`
+- `apps/admin/tests/nominee-bank-masking-page.test.tsx`
+- `apps/admin/tests/nominee-bank-masking-terminology.test.ts`
+
+**MODIFIED**
+- `.decision-log.md` · `_bmad-output/implementation-artifacts/sprint-status.yaml` ·
+  `_bmad-output/implementation-artifacts/deferred-work.md` · this story file · `friction-budget.md`
+- `packages/domain/src/rbac/permissions.ts` · `packages/domain/tests/rbac/permissions.test.ts`
+- `packages/domain/src/schema/index.ts` · `packages/domain/src/policies/index.ts` ·
+  `packages/domain/src/claim/index.ts` · `packages/domain/migrations/meta/_journal.json`
+- `packages/domain/src/pool/sahyog-vivran-read.ts`
+- `packages/contracts/public-pages/public-vs-private-matrix.yaml` ·
+  `packages/contracts/src/public-pages/matrix.ts` ·
+  `packages/contracts/src/public-pages/sahyog-vivran.ts` · `packages/contracts/src/index.ts` ·
+  `packages/contracts/scripts/emit-openapi.ts` · `openapi/v1.yaml`
+- `packages/contracts/tests/public-pages.test.ts` ·
+  `packages/contracts/tests/public-pages-sahyog-vivran.test.ts`
+- `apps/api/src/modules/public-pages/handlers.ts` · `apps/api/src/modules/public-pages/routes.ts` ·
+  `apps/api/src/server.ts`
+- `apps/api/tests/integration/login-wall.spec.ts` ·
+  `apps/api/tests/integration/public-pages/sahyog-vivran.spec.ts`
+- `apps/public/src/lib/surface-fields.ts` · `apps/public/src/lib/sahyog-vivran-render.ts` ·
+  `apps/public/src/lib/sahyog-vivran.server.ts` ·
+  `apps/public/src/pages/sahyog-vivran/[poolCanonicalIdentifier].astro`
+- `apps/public/tests/sahyog-vivran-render.test.ts` · `apps/public/tests/sahyog-vivran-client.test.ts` ·
+  `apps/public/tests/integration/public-pages/scrape-test.spec.ts`
+- `apps/admin/src/api/client.ts` · `apps/admin/src/api/hooks.ts` · `apps/admin/src/router.tsx`
+- `packages/i18n/locales/{en,hi}/sahyog-vivran.json`
+- `scripts/sahyog-vivran-financial-truth/check.ts`
+
+⛔ **NOT TOUCHED, and that is a Trap-3 requirement rather than an omission:**
+`packages/domain/src/schema/claim_nominee_bank_accounts.ts`.
 
 ### Change Log
 
 | Date | Change |
 |---|---|
+| 2026-09-02 | ⭐⭐ **STORY IMPLEMENTED — `in-progress` → `review`.** `ci:local` **34/34 green with the integration leg run**. Four commits: the `governance:` write (`2026-09-02-183` — **D8(i)**'s key minted v38→v39, cl.10(c)'s third setting read as the terminal rung, `D4-linkage` disposed, `D5(a)`'s price carried) · the schedule substrate · the presentation + the four allowlist entries in ONE commit · the knob + the routing. ⚠⛔⛔ **ONE REAL FINDING, RECORDED RATHER THAN HIDDEN:** a **12-digit account number trips the FR-74 naked-PII AADHAAR heuristic** — cl.10(a) rules the complete number publishable and `D8-default` is FAIL-OPEN, while `detectNakedPii` treats any bare 12-digit run at `public` as an Aadhaar number. Verified precisely (11/13/14 do NOT match; exactly 12 does, and 12 is a real Indian length). ⛔ The detector is **NOT weakened** — narrowing a launch-blocking FR-74 control is a **governance act** — and ⛔ not hidden behind a friendlier fixture: three tests now pin the behaviour, and it is routed with its trigger. ⚠⛔ **AND ONE AUTHORING READING recorded as such** (`-183` cl.4): *"permanent masking"* covers the ACTIVE campaign, because otherwise it is a synonym for `after_days: 0` — chosen in the more protective direction, routed for Panel confirmation, **one predicate line** to change. ⚠ **A standing gate defect escalated:** `page_weight_bytes` is byte-identical for the FIFTH consecutive story. ⭐ The project's **FIRST self-serve presentation-toggle UI** shipped. |
 | 2026-09-02 | **Second combined validation of 11b.3 / 11b.3a / 11b.3b.** Three fixes. ⭐⭐ **AC1 contradicted its own Trap 2 and Task 3** — it said the Tier-1-count test is *"updated from 0 to 4"*, which Trap 2 forbids **in terms**; 11b.3b runs in parallel and adds two, so a hard-coded `4` deletes them from the count and the control fails **OPEN**. Now `+4`, read from the file. ⭐ **The two siblings rewrite the SAME two documents in parallel** (`routes.ts` header + `login-wall.spec.ts`): 11b.3b already carried *"extend, never overwrite"*; this file did not, so whichever landed second dropped the other's control. ⭐ **The enumeration bound is named where the decrypt is** — `P-YYYY-MM-###` is sequential, D11(a) recorded controls 2/3 N/A *because* there is no `page`/`limit`, and it was option **(c)** — ⛔ not ruled — that would have obliged the route to say what bounds walking it. ⇒ this story is what makes that gap expensive: four decrypted Tier-1 fields, `D8-default` fail-open for every Pariwar. |
 | 2026-09-02 | ✅ **PRECONDITION SATISFIED — 11b.3's `D4` ruled (b)** (`2026-09-02-176`): `live` + `closed` + `settled` all render, so **AC2's active-campaign subject has a host** and this story does ⛔ not widen the predicate. **`D11` ruled (a)** too — the route states three applicable controls, and this story's PII-bearing change owes `routes.ts` + `login-wall.spec.ts` their update at Task 4. ⚠ New open rider from D4: **`D4-linkage`** — a `live` pool's page has no inbound link today and `P-YYYY-MM-###` is sequential. |
 | 2026-09-02 | ⭐ **NO CHANGE TO THIS STORY — recorded because it was briefly in doubt.** `2026-09-02-174` cl.3 appeared to extend cl.10's staged schedule to contributor names, which would have given this schedule a second subject. ⛔ **Corrected the same day, Panel-ratified** (`2026-09-02-175`): the staged reduction is the **nominee bank fields'**, as cl.10 always said. ⇒ **`D12-schedule` VACATED**, Task 1 returns to a single subject, and ⛔ nothing here ever moved. |

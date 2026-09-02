@@ -9,7 +9,9 @@ requires an answer; it is raised because **Story 11b.3 cannot start without one*
 was assembled here.
 **Routed to:** Trustee Panel · **Adv. Mohit Agrawal** (engaged counsel since 2026-06-21; T&C return
 due **2026-09-07**).
-**Status:** ⏳ **ROUTED, ⛔ NOTHING RATIFIED AND NOTHING APPLIED.**
+**Status:** ✅ **ANSWERED 2026-09-02** — see **§12**. Q1 **YES** · Q2 **THE FULL NAME** · Q3 **cl.10's
+staged schedule EXTENDED to a person's name**. Logged as `.decision-log.md#decision-2026-09-02-174`.
+⛔ **Nothing is APPLIED yet**, and ⚠ **Q3 opens more than it closes** (§12).
 
 > ### 📖 **Panel members — please start at [Appendix A: In plain words](#appendix-a--in-plain-words).**
 > It is at the end of this note and it is **complete on its own** — the whole question, the options,
@@ -196,11 +198,76 @@ and ⛔ never the publication kill switch.
 
 ---
 
+## 12. ✅ ANSWERED — 2026-09-02 (BigDev, relaying the Panel). Logged as `2026-09-02-174`
+
+**Ratifying trustees:** **Dhiraj Rahul**, **Kalpana Bharti**.
+
+| | Question | Answer |
+|---|---|---|
+| **Q1** | May a contributor's name render at `public`? | ✅ **YES** |
+| **Q2** | In what form? | ✅ **THE FULL NAME** |
+| **Q3** | *(as put: are basis and form independent?)* | ⚠ **Answered differently, and more usefully:** *"stick to full name and the progressive disappearance of name/surname as ratified earlier"* ⇒ **`2026-08-28-160` cl.10's staged schedule is EXTENDED from bank fields to a person's name** |
+
+⚠⛔ **Q3's referent was ⛔ NOT INFERRED.** The relayed phrase named a prior ratification without citing
+it; the candidates were put back to BigDev, who identified **cl.10**. ⛔ The agent transcribes; it
+⛔ never re-grounds a ruling.
+
+### ⭐ §4 IS CLOSED BY RULING — in the direction of extension
+
+§4 recorded that applying cl.10/cl.2 reasoning — whose subject was **bank account fields** — to **a
+person's name** was *"a SOUND INFERENCE … ⛔ and NOT something the ruling decided"*, and offered it
+*"so the Panel can reject it."* ⭐ **The Panel did not reject it. It adopted it.** ⇒ the inference is
+now a ruling for **cl.10's SCHEDULE**, which is what was put and answered. ⛔ Nothing is ruled on any
+other clause by analogy.
+
+### ⭐ §6 WORKED — the ruling went AGAINST the standing practice
+
+§6 disclosed that **three** committed documents assume first-name + last-initial, and that the
+**shipped wire implements it**. ⭐ **Q2 overturned all four.** ⇒ `epics.md:3145` · `:3238` · `:4931`
+are now **stale and owe annotation** (⛔ annotation, ⛔ never a rewrite), and
+`ConfirmedContributorRow = { firstName, lastInitial }` is the wrong shape for this surface.
+
+### ⚠⛔ What Q3 does ⛔ NOT settle — and it is more than it settles
+
+- ⛔⛔ **NO STORY BUILDS IT.** 11b.3a's schedule covers the **four nominee bank fields**; 11b.3b renders
+  names with ⛔ **no time dimension at all**. The ruled behaviour is owned by ⛔ **nobody today**.
+- ⛔ **What "masked" MEANS for a name is undefined.** cl.10(e) defines it for bank details (last 4 +
+  bank/branch/IFSC). ⚠ The ratified `full_name` → `shielded_name` → omitted ladder is the natural
+  analogue — ⛔ but that is an inference, ⛔ not this ruling. → **D13-maskedname**.
+- ⛔ **Whether the name schedule shares 11b.3a's substrate is a POLICY question**, ⛔ not a schema one:
+  one row means a Pariwar cannot hide bank details quickly while letting names persist. → **D12-schedule**.
+- ⛔⛔ **THE SPLIT-COMMITMENT RISK.** The Panel authorised full names **together with** their
+  disappearance. The permissive half is **cheap**; the protective half is **expensive**. ⇒ shipping the
+  first without the second publishes **full legal names of living members, permanently**, on an
+  authority granted **conditionally**. → **D14-order**, ⛔ not an authoring choice.
+
+### ⛔ Still owed after this round
+
+⛔ **D12-schedule** · ⛔ **D13-maskedname** · ⛔⛔ **D14-order** (may full names ship before the
+schedule?) · ⛔ the **three stale epic ACs** owe annotation · ⚠ **Q3-as-asked** — whether basis and
+form are independent — is recorded **NOT ANSWERED**, ⛔ not answered in the negative.
+
+---
+
 # Appendix A — In plain words
 
 *Added 2026-09-02, at BigDev's direction, in the same form as the 2 September note. ⛔ Nothing here is
 new — it is §1–§11 above without the technical detail. Where the two differ, the numbered sections
 govern.*
+
+> ## ✅ **This has now been ANSWERED — 2026-09-02, by Dhiraj Rahul and Kalpana Bharti.**
+> **1. May a contributor be named? — YES.  2. In what form? — THE FULL NAME.
+> 3. And the name should fade over time**, on the same staged schedule already agreed for the family's
+> bank details: shown in full while the drive is current, then reduced, then hidden.
+>
+> ⚠ **Two things to know:**
+> · **The fading is ⛔ not built yet** — no part of the work currently does it, and it is a
+>   substantially bigger piece than showing the name. It has to be designed and agreed separately.
+> · ⛔ **Because of that, showing full names must ⛔ NOT begin before the fading exists** — otherwise
+>   the Trust would publish full names of living members **permanently**, on a permission that was
+>   given **conditionally**. That question is going back to you before anything is shown.
+>
+> *The rest of this appendix is kept as the record of what was asked.*
 
 ## What this is about
 

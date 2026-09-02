@@ -14,7 +14,10 @@ Status: ready-for-dev
 
 > ⛔⛔ **AND THIS STORY IS GATED ON A PANEL RULING THAT HAS ⛔ NOT ARRIVED. ⚠ READ THIS BEFORE ANYTHING ELSE.**
 >
-> ⭐⭐ **UPDATE 2026-09-02 — D3 IS RULED (YES, FULL NAME). ⛔ D2 IS NOT. THE STOP GATE HOLDS.**
+> ⭐⭐ **UPDATE 2026-09-02 — ✅ BOTH D3 AND D2 ARE NOW RULED (YES · FULL NAME, both).**
+> ⚠⛔ **AND THE STOP GATE STILL HOLDS — for a ⛔ DIFFERENT reason than before.** D2's Q3 attached a
+> **CONDITION** to the permission (the staged disappearance, `2026-09-02-174` cl.3) that ⛔ **no story
+> builds**, and whether full names may ship **before** it exists is **`D14-order`** — ⛔ unruled.
 >
 > Each subject needs a `(surface, field)` entry in
 > `matrix.ts`'s enumerated Tier-1 allowlist — *"⛔ ADDING TO THIS LIST IS A RULING, NEVER A CODE
@@ -23,7 +26,7 @@ Status: ready-for-dev
 >
 > | Subject | Basis | Declaration | Form |
 > |---|---|---|---|
-> | **contributor name** | ✅ settled (`2026-08-28-160` cl.7) | ⛔ **UNRULED** (D2/Q1) | ⛔ **UNRULED** (D2/Q2) |
+> | **contributor name** | ✅ settled (`2026-08-28-160` cl.7) | ✅ **RULED YES** (`2026-09-02-174`) | ✅ **RULED: FULL NAME** ⚠ *conditional — see below* |
 > | **deceased member's name** on `sahyog-vivran` | ✅ settled (member's own T&C, cl.4) | ✅ **RULED YES** (`2026-09-02-173`) | ✅ **RULED: FULL NAME** |
 >
 > ⏳ **BOTH packets are now written, routed FILES — ⛔ and NEITHER is ratified.**
@@ -33,9 +36,18 @@ Status: ready-for-dev
 > ⚠⛔ **A ROUTED PACKET IS ⛔ NOT A RULING.** Both are **ROUTED, ⛔ nothing ratified and ⛔ nothing
 > applied** — this story's STOP gate is ⛔ **unchanged** ([[feedback_closure_language_precision]]).
 >
-> ⇒ ⛔ **Task 0 is a STOP gate here in a way it is not on the siblings.** Until both rulings land,
-> ⛔ **no code**. ⚠⛔ **ONE OF TWO HAS LANDED, AND ⛔ ONE OF TWO IS ⛔ NOT "THE RULINGS."** D2 is
-> ⏳ still open on the 2026-08-30 note ⇒ **this story is still blocked.**
+> ⇒ ⛔ **Task 0 is a STOP gate here in a way it is not on the siblings.** ✅ **Both rulings have now
+> landed** — `2026-09-02-173` (deceased member) and `2026-09-02-174` (contributor).
+>
+> ⚠⛔⛔ **BUT ⛔ DO NOT START. D2's PERMISSION IS CONDITIONAL, AND ITS CONDITION IS UNBUILT.**
+> `2026-09-02-174` **cl.3** extends `2026-08-28-160` **cl.10's staged schedule** from bank fields to a
+> **person's name**: full while the drive is current, then **progressively reduced, then hidden**, on
+> the per-Pariwar Trust-Admin effective window. ⛔ **No story builds that** — 11b.3a's schedule covers
+> the four **bank** fields; this story has ⛔ no time dimension at all.
+> ⇒ ⛔⛔ **shipping the full names WITHOUT the disappearance publishes full legal names of living
+> members PERMANENTLY, on an authority granted CONDITIONALLY** — the cheap half of a two-part
+> commitment, which is exactly where decay concentrates
+> ([[project_mechanization_split_commitment]]). ⇒ **`D14-order` must rule before Task 1.**
 >
 > ⚠⛔ **AND EVEN FOR D3, A RULING IS ⛔ NOT A RENDER.** `NAME_PUBLICATION_AUTHORISED` needs a real
 > `clause_versions` row for `niy.public-disclosure.member-information`, **pinned** into an accepted
@@ -210,8 +222,11 @@ PoP at `s-maxage=300`. ⛔ **State it; ⛔ do not re-derive it as new.**
 surface's **OWN Panel ruling**"*
 **And** ⛔ **if either ruling is absent → STOP and report.** ⛔ Do not ship *"first-name + last-initial
 for now"*, ⛔ do not add a matrix field, ⛔ do not add `@twt/ui` to `apps/public/package.json`
-**And** ⭐ **D3 LANDED 2026-09-02 (`2026-09-02-173`) — YES, at the FULL NAME.** ⛔ **D2 has ⛔ not**, so
-this AC is ⛔ **not** satisfied and the STOP gate holds. ⚠ ⛔ A single ruling is ⛔ not *"both rulings"*
+**And** ✅ **BOTH rulings landed 2026-09-02** — `2026-09-02-173` (deceased member) and
+`2026-09-02-174` (contributor), each **YES at the FULL NAME** ⇒ this AC's ruling condition is **met**
+**And** ⛔⛔ **BUT THE STOP GATE HOLDS ON `D14-order`:** D2's permission is **conditional** on a staged
+disappearance (`-174` cl.3) that ⛔ no story builds. ⛔ **Do not read "both rulings landed" as clearance
+to start** — ⚠ the condition is part of the permission, ⛔ not a follow-up to it
 **And** ⚠⛔ **D3's ruling authorises the DECLARATION, ⛔ not the RENDER** — the basis predicate stays
 false until counsel's `clause_versions` row exists and is pinned, so a correctly-built surface renders
 **unnamed** in the interim. ⛔ That is the designed inert state, ⛔ not an incomplete implementation
@@ -225,11 +240,19 @@ subject"*)
 **When** the fields are declared
 **Then** `sahyog-vivran.contributor_name` and `sahyog-vivran.deceased_member_name` are added to
 `RULED_TIER1_PUBLIC_EXCEPTIONS`, **each citing the ruling that authorised it** — ⭐
-`deceased_member_name` cites **`2026-09-02-173`** (ruled: **FULL NAME**); `contributor_name` cites
-whatever **D2** produces
-**And** ⚠ **whether the two may land in SEPARATE commits, now that only D3 is ruled, is `D11-order`** —
-⛔ not an authoring choice. ⛔ **Never pre-add the contributor entry** to keep them together: *"a
-pre-added entry is a standing permission with ⛔ no subject"*
+`deceased_member_name` cites **`2026-09-02-173`**, `contributor_name` cites **`2026-09-02-174`**, and
+⭐ **both are ruled at the FULL NAME**
+**And** ⚠ each `tier1_public_exception` `scope:` block states the **ruled form** — and for
+`contributor_name` it states that the permission is **CONDITIONAL on the staged disappearance**
+(`-174` cl.3), so a later reader ⛔ cannot find a bare permission with its condition missing
+**And** ⚠ **whether the two land in the same commit is `D11-order`** — ⛔ not an authoring choice.
+⛔ **Never pre-add an entry** ahead of its field: *"a pre-added entry is a standing permission with
+⛔ no subject"*
+**And** ⛔ **the render form is the FULL NAME, ⛔ not `first + lastInitial`** — ⚠ the shipped
+`ConfirmedContributorRow` (`pool-contributor-list.ts:42-51`) is the **wrong shape for this surface**
+and the three epic ACs that assume the shielded form (`epics.md:3145` · `:3238` · `:4931`) are
+**STALE**, superseded by `-174`. ⛔ Annotation is folded into **11b.3's** already-owed `epics.md`
+annotation — ⛔ do ⛔ not write a second one
 **And** each YAML field carries a full `tier1_public_exception: {decision, rationale, scope}` whose
 `scope` fences it to **this surface** and states the **ruled form**
 **And** ⭐ the surface's Tier-1-count test is updated **in the same commit** (⛔ never deleted) — ⚠ its
@@ -394,8 +417,16 @@ second one.
         `niy.public-disclosure.member-information`, pinned into an accepted T&C version.** If it is
         absent, the field may be **DECLARED** and the surface **still renders unnamed** — that is
         correct, ⛔ not a bug. ⛔⛔ **Do ⛔ NOT seed a placeholder row** (`public-read.ts:171-175`).
-  - [ ] ⛔ **D2 is STILL OPEN → this task is STILL A STOP GATE.** ⛔ One of two rulings is ⛔ not "the
-        rulings"; ⛔ do not read D3 landing as clearance to start.
+  - [x] ✅ **D2 ANSWERED — 2026-09-02** (Dhiraj Rahul, Kalpana Bharti): **Q1 YES · Q2 THE FULL NAME ·
+        Q3 cl.10's staged schedule EXTENDED to a person's name**. Note §12; transcribed
+        `.decision-log.md#decision-2026-09-02-174`. ⛔ Already transcribed — ⛔ do not re-transcribe.
+  - [ ] ⛔⛔ **THE STOP GATE STILL HOLDS — on `D14-order`, ⛔ not on a missing ruling.** D2's
+        permission is **CONDITIONAL** on a staged disappearance that ⛔ **no story builds**. ⛔ Shipping
+        full names without it publishes **full legal names of living members, permanently**, on a
+        conditional authority. ⛔ **If `D14-order` is unruled → STOP and report.**
+  - [ ] ⚠ **Read `D12-schedule` and `D13-maskedname` too** — the first decides whether the name
+        schedule shares 11b.3a's substrate (a POLICY question), the second what "masked" even means
+        for a name. ⛔ Neither is an authoring choice.
   - [ ] Check whether **D2** has been answered (`§8`-style appendix on the 2026-08-30 note, or a new
         `.decision-log.md` entry). ⛔ Do ⛔ not infer an answer from silence.
   - [ ] ⛔ **If either is unruled → STOP and report.** ⚠ This is the one story in the family where
@@ -423,14 +454,74 @@ second one.
 
 ---
 
-## ⚖️ Decisions — ✅ **D3 RULED 2026-09-02 (YES · FULL NAME).** ⛔ **FOUR OPEN: D2 (Panel, BLOCKING) · D9 · D10 · D11-order**
+## ⚖️ Decisions — ✅ **D2 + D3 BOTH RULED 2026-09-02 (YES · FULL NAME).** ⛔ **SIX OPEN: D14-order (BLOCKING) · D12-schedule · D13-maskedname · D9 · D10 · D11-order**
 
-### ⛔ D2 — **PANEL, BLOCKING.** May `contributor_name` be declared at `public` on `sahyog-vivran`, and in what FORM?
+### ✅ D2 — **RULED by the Trustee Panel, 2026-09-02** (Dhiraj Rahul, Kalpana Bharti) — **YES, at the FULL NAME, ⚠ CONDITIONALLY**
 
-⏳ **ALREADY ROUTED** — `trustee-panel-routing-note-2026-08-30-contributor-name-public-tier.md`, **Q1
-(declaration)** · **Q2 (form)** · **Q3 (are basis and form independent?)**. ⛔ **Nothing ratified.**
-⭐ The note's *"Story 11b.3 cannot start without one"* resolves, after the D6(b) split, to: **this
-story cannot start**; 11b.3 and 11b.3a can.
+⭐ **Transcribed at `.decision-log.md#decision-2026-09-02-174`**; the packet's **§12** carries the
+answers. **Q1 YES** · **Q2 THE FULL NAME** · **Q3 → `2026-08-28-160` cl.10's staged schedule is
+EXTENDED from bank fields to a person's name.**
+
+⇒ **`sahyog-vivran.contributor_name`** is authorised for `RULED_TIER1_PUBLIC_EXCEPTIONS`, citing
+`2026-09-02-174`.
+
+⚠⛔ **Q2 OVERTURNED THE STANDING PRACTICE, AND THAT HAS CONSEQUENCES IN THIS DIFF.** The note's §6
+disclosed **three** epic ACs assuming first-name + last-initial (`epics.md:3145` · `:3238` · `:4931`)
+**and** the shipped wire implementing it. ⭐ The Panel ruled **against all four**. ⇒
+- ⛔ **`ConfirmedContributorRow = { firstName, lastInitial }` is the WRONG SHAPE for this surface**
+  (`pool-contributor-list.ts:42-51`). ⚠ ⛔ Whether the **member** surface follows is ⛔ **not** decided —
+  and note it narrows the public/member inversion **from the other side** (**D9**).
+- ⛔ The three epic ACs are **stale** and owe **annotation** (⛔ never a rewrite) — folded into 11b.3's
+  already-owed `epics.md` Task 0 annotation, ⛔ **not** a second one
+  ([[feedback_circular_deferral_between_sibling_stories]]).
+- ⚠ **11b.2's presenter emits name PARTS and never joins them** (D9(a)) — ⭐ that design **survives
+  intact**: it kept the form question open, and the render layer still owns the join. ⛔ The join now
+  produces a **full name**, ⛔ not `first + initial`.
+
+⚠ **Q3-as-asked — whether basis and form are independent — is recorded ⛔ NOT ANSWERED**, ⛔ not
+answered in the negative ([[feedback_closure_language_precision]]). The Panel answered a different and
+more useful question.
+
+### ⛔⛔ D14-order — **BLOCKING.** May full contributor names ship BEFORE the staged disappearance exists?
+
+⭐ **The gate that replaced D2.** `2026-09-02-174` cl.3 granted full names **together with** their
+progressive disappearance. ⛔ The permissive half is **cheap** (a matrix entry + a form change); the
+protective half is **expensive** (new substrate, an admin surface, a time predicate) and ⛔ **no story
+owns it**.
+
+- **(a) HOLD the contributor render** until the schedule ships. ⭐ *Authoring recommendation: it is the
+  only option under which the Trust does what the Panel actually authorised.* ⚠ Then this story ships
+  the **deceased member's** name only, and the contributor list waits.
+- **(b) Ship full names now, mechanize the disappearance later.** ⛔⛔ Publishes **full legal names of
+  living members, permanently**, on a **conditional** authority — and *"decay concentrates in the
+  un-mechanized half"* ([[project_mechanization_split_commitment]]).
+- **(c) Ship at the SHIELDED form** until the schedule exists. ⚠ Contradicts Q2 in the interim, ⛔ but
+  fails **safe** rather than open. ⚠ Requires the Panel's leave, ⛔ not the author's.
+
+⛔ **A ruling, ⛔ never an authoring choice.**
+
+### ⛔ D12-schedule — Does the contributor-name schedule REUSE 11b.3a's substrate, or is it its own?
+
+⚠⛔ **A POLICY question wearing a schema question's clothes.** ONE shared per-Pariwar row means a Trust
+Admin ⛔ **cannot** hide bank details quickly while letting names persist; TWO rows means they can.
+⚠ A second consumer now exists, so [[feedback_no_premature_package]] no longer argues against sharing —
+⛔ but sharing is a **policy** commitment, ⛔ not a de-duplication.
+
+### ⛔ D13-maskedname — What IS the "masked" state of a NAME?
+
+`2026-08-28-160` **cl.10(e)** defines the masked projection for **bank details** (last 4 + bank /
+branch / IFSC). ⛔ It defines **nothing** for a name, and `2026-09-02-174` supplies no definition.
+⚠ The natural analogue is the **already-ratified** per-Pariwar ladder — `full_name` → `shielded_name`
+(first name + last initial) → `''` **omitted** (a mononym ⛔ cannot be shielded, `2026-08-21-145`
+cl.3) — which is also what *"name/surname"* in the relay most naturally describes. ⛔ **That is an
+inference and is ⛔ NOT adopted here** ([[feedback_supersede_never_reinterpret]]).
+
+<details><summary>⛔ The question as originally put (kept as the record — ⛔ not deleted)</summary>
+
+**May `contributor_name` be declared at `public` on `sahyog-vivran`, and in what FORM?**
+⏳ Routed 2026-08-30 — Q1 (declaration) · Q2 (form) · Q3 (are basis and form independent?).
+
+</details>
 
 ### ✅ D3 — **RULED by the Trustee Panel, 2026-09-02** (Kalpana Bharti, Dhiraj Rahul) — **(b): YES, at the FULL NAME**
 
@@ -642,6 +733,7 @@ _(to be filled by the dev agent)_
 
 | Date | Change |
 |---|---|
+| 2026-09-02 | ✅ **D2 RULED by the Trustee Panel** (Dhiraj Rahul, Kalpana Bharti) — contributor name **YES**, at the **FULL NAME**; transcribed `2026-09-02-174`. ⭐ Q2 **overturned** the standing practice: three epic ACs **and** the shipped wire all assumed first-name + last-initial, and §6 of the note existed to make exactly that outcome possible. ⚠⛔ **Q3 EXTENDED `-160` cl.10's staged schedule from bank fields to a PERSON'S NAME** — full while current, then progressively reduced, then hidden. ⛔⛔ **No story builds that**, so the STOP gate **holds on the new `D14-order`**: may full names ship before the disappearance exists? Also raised: **D12-schedule** (shared substrate with 11b.3a — a policy question) and **D13-maskedname** (what "masked" means for a name; the ratified ladder is the analogue but is ⛔ not adopted). |
 | 2026-09-02 | ✅ **D3 RULED by the Trustee Panel** (Kalpana Bharti, Dhiraj Rahul) — **YES**, at the **FULL NAME**; transcribed `2026-09-02-173`. ⚠⛔ **Task 0's STOP gate HOLDS — D2 is still open**, and ⛔ one of two rulings is ⛔ not "the rulings". ⛔ **And a ruling is ⛔ not a render:** counsel confirmed the broad clause scope **in discussion** only; until the `clause_versions` row exists and is pinned the surface stays **inert by design**, and ⛔ **no placeholder row** may be seeded. New decision **D11-order** raised: may the deceased-member field land alone, ahead of the contributor field? |
 | 2026-09-02 | **The D3 packet is WRITTEN AND ROUTED** — `trustee-panel-routing-note-2026-09-02-11b3b-deceased-name-form.md`. ⛔ Task 0 stays a STOP gate: the packet is written, D3 is ⛔ not answered. ⭐ The packet surfaced a **third question (Q3, the CLAUSE SCOPE)**: 11b.9's basis predicate pins `niy.public-disclosure.member-information` — a **general** clause under a Sahyog-Drive-*named* constant — so whether a D3 "yes" is **buildable** turns on counsel's clause text (returned 2026-09-07), ⛔ not on the ruling alone. |
 | 2026-09-01 | **Combined validation of 11b.3 / 11b.3a / 11b.3b.** Six fixes, the sharpest being AC7's namespace: all ten `CONTRIBUTION_LIST_I18N_REFS` resolve in **`contribution`**, ⛔ not `sahyog-vivran` — pointing them at this surface's namespace would have opened a **third** instance of the 11b.2↔11b.2b circular deferral wearing a green run. Also: this story flips `paginated` and makes the third route PII-bearing, so it now owes `routes.ts` + `login-wall.spec.ts` their update (11b.3's **D11**); **D10 gains option (a)** — Astro SSR needs no row key at all; AC6 now names the **buildable** columns; `resolvePublicMemberName`'s path corrected to `kyc/public-name.ts:73`. |

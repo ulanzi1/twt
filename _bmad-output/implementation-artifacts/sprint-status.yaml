@@ -1,4 +1,53 @@
-# last_updated: 2026-09-02b (⭐⭐ **THE TRUSTEE PANEL RULED `D3` — Story 11b-3b's deceased-member name.**
+# last_updated: 2026-09-02c (⭐⭐ **THE TRUSTEE PANEL RULED `D2` — the CONTRIBUTOR name.** Dhiraj Rahul
+#   + Kalpana Bharti, answering the 2026-08-30 note. **Q1 YES · Q2 THE FULL NAME · Q3 ⇒ `-160` cl.10's
+#   STAGED SCHEDULE IS EXTENDED FROM BANK FIELDS TO A PERSON'S NAME.** Transcribed `2026-09-02-174`.
+#
+#   ⛔⛔ **ZERO ROWS FLIP, AND 11b-3b IS STILL NOT STARTABLE — for a DIFFERENT reason than yesterday.**
+#   Both name rulings have now landed (-173 deceased, -174 contributor), so the STOP gate is no longer
+#   waiting on a ruling. It now holds on **`D14-order`**, and this is the headline:
+#   ⭐⭐ **THE PANEL GRANTED FULL NAMES *TOGETHER WITH* THEIR PROGRESSIVE DISAPPEARANCE — AND ⛔ NO STORY
+#   BUILDS THE DISAPPEARANCE.** 11b-3a's schedule covers the four BANK fields; 11b-3b has no time
+#   dimension at all. The permissive half is CHEAP (a matrix entry + a form change); the protective half
+#   is EXPENSIVE (new substrate, an admin surface, a time predicate). ⇒ shipping the first without the
+#   second publishes **FULL LEGAL NAMES OF LIVING MEMBERS, PERMANENTLY**, on an authority granted
+#   CONDITIONALLY — precisely where decay concentrates ([[project_mechanization_split_commitment]]).
+#   ⛔ D14-order is a RULING, ⛔ never an authoring choice.
+#
+#   ⭐ **Q2 OVERTURNED THE STANDING PRACTICE, AND THE NOTE'S §6 IS WHY IT COULD.** §6 disclosed that
+#   THREE epic ACs (`epics.md:3145` · `:3238` · `:4931`) assume first-name + last-initial AND that the
+#   shipped wire implements it (`ConfirmedContributorRow = { firstName, lastInitial }`), stating plainly
+#   that none is a ruling and that either answer costs no migration. The Panel ruled AGAINST all four.
+#   ⇒ the three ACs are STALE and owe ANNOTATION (folded into 11b-3's already-owed epics.md annotation,
+#   ⛔ NOT a second one); the shipped wire is the wrong shape for this surface; ⚠ whether the MEMBER
+#   surface follows is ⛔ NOT decided, and it narrows the public/member inversion from the other side (D9).
+#
+#   ⚠⛔ **Q3's REFERENT WAS NOT INFERRED.** The relay named a prior ratification without citing it. Two
+#   candidates fit — the per-Pariwar name-mode ladder (`-136` cl.1-3) and cl.10's staged schedule — and
+#   they imply MATERIALLY different builds. The agent put both back to BigDev rather than choosing;
+#   **BigDev identified cl.10.** ⛔ The agent transcribes, it never re-grounds a ruling.
+#   ⭐ AND THIS CLOSES THE 2026-08-30 NOTE'S OWN §4 BY RULING, IN THE DIRECTION OF EXTENSION: §4 had
+#   recorded that applying cl.10/cl.2 reasoning (subject: BANK ACCOUNT FIELDS) to A PERSON'S NAME was
+#   "a SOUND INFERENCE and NOT something the ruling decided", offered "so the Panel can reject it".
+#   ⭐ The Panel adopted it. ⛔ For cl.10's SCHEDULE only — ⛔ nothing is ruled by analogy on any other clause.
+#
+#   ⭐ THREE DECISIONS RAISED, all consequences of Q3, ⛔ none of them authorable:
+#   · **D14-order** (11b-3b, BLOCKING) — may full names ship BEFORE the disappearance exists?
+#     (a) hold the render [recommended] · (b) ship now, mechanize later = the split-commitment risk ·
+#     (c) ship at the SHIELDED form meanwhile, which contradicts Q2 in the interim but fails SAFE.
+#   · **D12-schedule** (11b-3b, touching 11b-3a) — does the name schedule REUSE 11b-3a's per-Pariwar
+#     substrate? ⚠ A POLICY question wearing a schema question's clothes: ONE row means a Trust Admin
+#     CANNOT hide bank details quickly while letting names persist. 11b-3a's Task 1 now reads this
+#     ruling before designing the table and must neither generalise unilaterally nor foreclose D12.
+#   · **D13-maskedname** (11b-3b) — what IS the "masked" state of a NAME? cl.10(e) defines it for BANK
+#     details (last 4 + bank/branch/IFSC) and defines NOTHING for a name. ⚠ The already-ratified ladder
+#     (full_name -> shielded_name -> '' omitted for mononyms, `-136` cl.1-3 / `-145` cl.3) is the
+#     natural analogue and is ⛔ NOT adopted here — that would be inferring a second ruling.
+#
+#   ⚠ **Q3-AS-ASKED IS RECORDED "NOT ANSWERED", ⛔ not "answered in the negative"** — the note asked
+#   whether basis and form are independent; the Panel answered a different and more useful question
+#   ([[feedback_closure_language_precision]]). ⛔ Amended no epics.md · ⛔ minted no launch-gate row ·
+#   ⛔ touched no source code.)
+# last_updated_prior: 2026-09-02b (⭐⭐ **THE TRUSTEE PANEL RULED `D3` — Story 11b-3b's deceased-member name.**
 #   **Kalpana Bharti + Dhiraj Rahul** (quorate, matching the Row 17 >=2-trustee posture), answering the
 #   2026-09-02 routing note. **Q1 YES · Q2 THE FULL NAME · Q3 the BROAD clause scope.**
 #   ⭐ TRANSCRIBED as `.decision-log.md#decision-2026-09-02-173` — a REAL ratified ruling, so an entry
@@ -13676,9 +13725,14 @@ development_status:
   # ⛔ Do NOT resolve either by appending to `RULED_TIER1_PUBLIC_EXCEPTIONS`: the gate failing IS the
   # gate working (`matrix.ts:388-391`). ⛔ Do NOT ship "first-name + last-initial for now" — THREE
   # committed epics.md lines already assume that form (`:3145` `:3238` `:4931`) and NONE is a ruling.
-  # ⭐ UPDATE 2026-09-02: **D3 IS RULED** (`2026-09-02-173`, Kalpana Bharti + Dhiraj Rahul) — YES, at
-  # the FULL NAME. ⛔⛔ **D2 (the CONTRIBUTOR name) IS STILL OPEN, so Task 0's STOP gate HOLDS and this
-  # story is STILL UN-STARTABLE.** ⛔ One of two rulings is ⛔ NOT "the rulings".
+  # ⭐ UPDATE 2026-09-02: **BOTH name rulings LANDED** — `2026-09-02-173` (deceased member) and
+  # `2026-09-02-174` (contributor), each YES at the FULL NAME.
+  # ⛔⛔ **AND THIS STORY IS STILL NOT STARTABLE.** The STOP gate no longer waits on a ruling; it holds
+  # on **`D14-order`**: D2's permission is CONDITIONAL on a staged disappearance of the name that
+  # ⛔ NO story builds. Shipping full names without it publishes full legal names of LIVING members
+  # PERMANENTLY on a conditional authority. ⛔ D14-order is a ruling, never an authoring choice.
+  # ⚠ Also open from the same ruling: `D12-schedule` (shared substrate with 11b-3a — a POLICY
+  # question) and `D13-maskedname` (what "masked" means for a name).
   # ⛔ And a ruling is ⛔ NOT a render: counsel's clause was confirmed IN DISCUSSION only; until a real
   # `clause_versions` row is pinned the surface renders UNNAMED by design, and ⛔ NO placeholder row
   # may be seeded. New decision `D11-order`: may the deceased-member field land alone?

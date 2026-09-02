@@ -379,6 +379,14 @@ sibling that routes it back).
   - [ ] `governance:` commit first ([[feedback_governance_commits_precede_implementation]]).
 
 - [ ] **Task 1 — The masking schedule substrate** (AC: 3)
+  - [ ] ⭐⛔ **READ `2026-09-02-174` cl.3 BEFORE DESIGNING THE TABLE.** The Panel **extended cl.10's
+        staged schedule from bank fields to a PERSON'S NAME** (contributor names, Story 11b.3b). ⇒ this
+        schedule now has a **potential SECOND SUBJECT**, and whether the two share one per-Pariwar row
+        is **`D12-schedule`** in 11b.3b — ⚠ a **POLICY** question (one row ⇒ a Trust Admin ⛔ cannot
+        hide bank details quickly while letting names persist), ⛔ **not** a de-duplication call.
+        ⛔ **Do ⛔ not unilaterally generalise the table to "any masked field", and ⛔ do not hard-code
+        it to bank-only in a way that forecloses D12.** ⚠ If D12 is unruled when this task runs, build
+        for **this story's subject** and record the seam — ⛔ never guess the shared shape.
   - [ ] New per-Pariwar effective-window table + migration, modelled on `pool_fixed_amount_schedule`.
   - [ ] Write the *"⛔ never a boolean"* rationale **into the schema file** (Trap 3).
   - [ ] ⛔ Do not add any column to `claim_nominee_bank_accounts`.
@@ -549,7 +557,7 @@ dimension** — a **ratified governance act**, ⛔ not a code change
 
 | Path | New / Update |
 |---|---|
-| `packages/domain/src/schema/<masking-schedule>.ts` + migration | **NEW** — the only migration in the 11b.3 family |
+| `packages/domain/src/schema/<masking-schedule>.ts` + migration | **NEW** — the only migration in the 11b.3 family. ⚠ Shape gated on **`D12-schedule`** (a second subject — contributor names — was added by `2026-09-02-174` cl.3) |
 | `packages/domain/src/pool/sahyog-vivran-read.ts` | **UPDATE** — join the nominee accounts + the schedule |
 | `packages/contracts/public-pages/public-vs-private-matrix.yaml` | **UPDATE** — four fields + four exception blocks |
 | `packages/contracts/src/public-pages/matrix.ts` | **UPDATE** — four allowlist entries, ⛔ nothing else |
@@ -592,6 +600,7 @@ _(to be filled by the dev agent)_
 
 | Date | Change |
 |---|---|
+| 2026-09-02 | ⚠ **This story's schedule gained a POTENTIAL SECOND SUBJECT.** `2026-09-02-174` cl.3 (Panel) **extended `-160` cl.10's staged schedule from bank fields to a PERSON'S NAME** — contributor names on 11b.3b. Whether the two share one per-Pariwar row is **`D12-schedule`**, a **policy** question, ⛔ not a de-duplication. Task 1 now reads that ruling before designing the table, and ⛔ must neither generalise unilaterally nor foreclose D12. |
 | 2026-09-02 | **D5-subject recorded** (observational) — arising from the 11b.3b packet's "whose name" pass. `-160` cl.3's basis is *"the **nominee's** own Claim Terms acceptance"*, but `account_holder_name` is **free text the filer types**, with ⛔ no FK and ⛔ no match rule (`claim_nominee_bank_accounts.ts:7-11`), verified reachable through the contract (`:56`) and the handler (`:155`). ⇒ a second gap **under** D5: even with an instrument, the row does ⛔ not identify its subject. ⚠ Two committed documents disagree (`nominee-accounts.ts:18` calls it *"the NOMINEE name"*); the schema is the authority and the comment is ⛔ recorded, ⛔ not swept. ⛔ Nothing ruled; both readings of cl.10(a) recorded. |
 | 2026-09-01 | **Combined validation of 11b.3 / 11b.3a / 11b.3b.** Three fixes: the Tier-1-count update is **+4 read from the file**, ⛔ never `0 → 4` (11b.3b runs in parallel and adds two); this story restores the route's **PII-bearing** property and now owes `routes.ts` + `login-wall.spec.ts` their update (11b.3's **D11**); and **11b.3's D4 is named as a precondition** — under D4(a) this story has no host for AC2. |
 | 2026-09-01 | Story created by the D6(b) three-way split of Story 11b.3 (ruled by BigDev, 2026-09-01). Carries `2026-08-28-160` cl.10 in its **own ACs and Tasks list**, as that decision's open-follow-up list requires ([[feedback_spec_edits_must_propagate_to_tasks]] — *"the AC-only route has failed on this epic before"*). `-165` cl.3's allowlist duty travels here with the fields. D5 (the Claim Terms basis has no instrument) is **blocking**; D8 is conditional. |

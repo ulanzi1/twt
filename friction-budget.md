@@ -1710,3 +1710,57 @@ claim, or the first EAS build wired into CI.** ⚠⛔ This is now the **THIRD co
 that same un-measured facet (11a.5 → 11b.9 → 11b.2b); ⛔ the re-trigger is not getting closer on its own,
 and a fourth consecutive recording should be read as the gate having a standing blind spot on the
 app most members actually use, ⛔ not as three unlucky diffs.
+
+
+---
+
+**Story 11b.3 disposition (declaration affirmed — ⛔ NO new row; ⚠ and ⛔ NOT on 11a.4's
+comment-only ground — this one is a whole NEW ROUTE of executable code):** AC-4 fires on ten
+`apps/public` path touches — `src/lib/sahyog-vivran-render.ts`, `src/lib/sahyog-vivran.server.ts`,
+`src/lib/surface-fields.ts`, `src/pages/sahyog-vivran/[poolCanonicalIdentifier].astro` and six test
+files. ⚠ **Stated up front so the affirmation is not read as the cheap kind:** 11a.4 affirmed on the
+ground that ⛔ not one executable line changed. ⛔ **That ground is unavailable here.** This story
+ships the project's **third public-pages route** and a real render module. The ledger was reviewed on
+the merits anyway. **No row is warranted:**
+
+1. ⭐ **The surface is READ-ONLY, and on exactly the ground 2.5 and 2.6 were affirmed on.** ⛔ No
+   forms, ⛔ no upload, ⛔ no member-initiated action, ⛔ no login wall, ⛔ no gate — a visitor
+   requests a URL and receives HTML. Verified rather than assumed: `grep` for `<form` / `<button` /
+   `client:` / `onClick` over the page and its render module returns **zero** hits, and the manifest
+   reports `js_bundle_bytes: 0` for the route. ⚠ `sahyog-vivran-client.test.ts` is the **server-side**
+   `apps/public → apps/api` HTTP client, ⛔ **not** a browser island — named because the filename
+   invites the opposite reading.
+2. ⭐ **The one real cost a person pays to reach this page is ALREADY DECLARED, by 11b.1's
+   "absence as friction" row.** A mourner cannot search by the deceased member's name and must arrive
+   via district + date + drive code. ⇒ this surface **inherits** that declared friction and ⛔ adds
+   nothing to it. ⛔ Re-declaring it here would double-count a cost the ledger already attributes.
+3. ⚠⛔ **AND THE BRANCH THAT WOULD OWE A ROW IS NAMED, so the absence reads as a finding rather than
+   an oversight — `D4-linkage`, and it is OPEN.** `/sahyog` lists **`closed` + `settled` only**, a
+   `live` pool's page has ⛔ **no inbound link**, and `P-YYYY-MM-###` is **sequential**. ⇒ today a
+   `live` drive is reachable **by identifier only**. Whether that is a deliberate, declarable friction
+   a visitor pays — or a discoverability gap to close — is ⛔ **not ruled**, and 11b.3 neither answered
+   it nor foreclosed it. ⭐ **The first story that RULES `D4-linkage` owes this section a FRESH look,
+   ⛔ not an inherited answer.**
+4. ⚠⛔ **`11b-3a` and `11b-3b` EACH owe their own look at this section, ⛔ never this one's answer.**
+   11b.3a puts **four decrypted Tier-1 fields** (account holder name · account number · IFSC · VPA) on
+   **this exact route** behind that same sequential identifier, with `D8-default` ruled **FAIL-OPEN**
+   (`2026-09-02-179` cl.1); 11b.3b flips the route to `paginated`. ⛔ Neither may cite this
+   affirmation: it was written about a surface carrying **zero** `pii_tier: 1` fields at `public`, and
+   that property is ⛔ **not a ceiling** — it is a statement about this story only.
+
+⚠⭐ **Metric facet — the number PASSED and the pass is ⛔ NOT coverage. Read what moved and what
+could not.** `member-public-web.page_weight_bytes` reads **9445** against the 512000 ceiling —
+⭐ **byte-identical to the 9445 Story 11b.1 recorded**, i.e. ⛔ **no aggregate movement is
+attributable to a story that shipped a whole new route.** ⛔ That is not a happy result and is ⛔ not
+recorded as one. The per-route block explains it exactly: `/sahyog-vivran/[poolCanonicalIdentifier]`
+reports **`own_bytes: 0`** and `page_weight_bytes: 1397` — the shared `PublicShell.css` and ⛔ nothing
+else. The route ships ⛔ zero own static client assets, so the gated metric sees ⛔ nothing.
+⇒ ⭐⭐ **what this page actually costs a visitor is its DYNAMIC SSR HTML — the most content-rich
+public response the project serves — and `friction-budget.yaml` excludes that BY CONSTRUCTION**, in
+terms: the per-route numbers are *"ATTRIBUTION of STATIC CLIENT ASSETS per route — ⛔ NOT a
+measurement of each route's DYNAMIC HTML response, which on an SSR surface is the larger part of what
+a visitor downloads."* ⚠ Recorded **UN-MEASURED**, ⛔ not reported as a pass and ⛔ not reconstructed
+from an estimate ([[feedback_record_unattested_no_backfill]]). The deferred `critical_render_path_ms`
+harness is the thing that would close it; ⛔ this story does not stand it up and ⛔ invents no number.
+⭐ The baseline stays at its best-ever **3942** — ⛔ a rise is NEVER ratcheted, and there is no rise to
+ratchet ([[project_friction_budget_baseline_ratchet]]).

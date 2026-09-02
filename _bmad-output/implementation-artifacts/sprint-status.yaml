@@ -1,4 +1,48 @@
-# last_updated: 2026-09-02n (⭐ **SECOND COMBINED VALIDATION OF `11b-3` / `11b-3a` / `11b-3b`**
+# last_updated: 2026-09-02o (⭐ **STORY 11b.3 STARTS — Task 0's GOVERNANCE WRITE, before the first
+#   line of code.** ONE row flips: development_status[11b-3-sahyog-vivran-per-claim-story-surface]
+#   `ready-for-dev` -> `in-progress`. ⛔ epic-11b stays `in-progress`; ⛔ 11b-3a / 11b-3b stay
+#   `ready-for-dev` (both gated on 11b-3 MERGED, ⛔ not on it starting).
+#
+#   ⭐⭐ **`D6` WAS THE ONE RULING OF THE 2026-09-01 SET THAT `-176` NEVER CARRIED.** `-176` transcribed
+#   D1(b) / D4(b) / D7(a) / D11(a) / D12(a) and referred to the three-way split throughout as an
+#   existing fact — ⛔ but never recorded the ruling that made it one. ⇒ **`2026-09-02-182` minted**,
+#   transcribing **D6(b) SPLIT THREE WAYS** (ruled by BigDev 2026-09-01). ⛔ `-176` is ⛔ NOT
+#   re-transcribed.
+#
+#   ⭐ THE SPLIT'S LOAD-BEARING PROPERTY, recorded as a CHANGE rather than slid in: the first sketch put
+#   the DECEASED MEMBER'S NAME in 11b-3 (fenced) — which would have left it holding a Tier-1-at-`public`
+#   field it could ⛔ not declare, ⇒ BLOCKED on a Panel ruling it does ⛔ not otherwise need. Moving BOTH
+#   name questions to 11b-3b makes "zero Tier-1 fields at public" a **CHECKABLE** property (a test
+#   asserts the count is 0), ⛔ not an aspiration. ⚠ ⛔ NOT a permanent ceiling — 11b-3a and 11b-3b each
+#   add theirs WITH a cited ruling and each owes that test an update IN THE SAME COMMIT.
+#
+#   ⭐ AND `2026-08-28-165` cl.3's FOUR ALLOWLIST ENTRIES: the duty **TRAVELS WITH THE FIELDS to
+#   11b-3a** — ⛔ it does not evaporate, and it is ⛔ NOT pre-added at 11b-3. The matrix check is
+#   ONE-DIRECTIONAL, so an entry added before its field exists is a **standing permission with ⛔ no
+#   subject** (routing note §11). ⛔ `RULED_TIER1_PUBLIC_EXCEPTIONS` is untouched by 11b-3 entirely.
+#
+#   ⭐⭐ **FOUR `epics.md` ANNOTATIONS WRITTEN — ⛔ ANNOTATION, ⛔ NEVER A REWRITE.** Story 11b.3's
+#   section gains (i) the re-purposed SD-2 (`-164` A2) + the public-tier bank fields (`-160` cl.10,
+#   `-165` cl.1/cl.3) — the carry recorded as owed at the 2026-08-28 routing note §11 — and (ii) the
+#   three-way split with all three sprint keys named, so a future `sprint-planning` run can ⛔ neither
+#   regenerate a ghost 11b-3 nor drop the siblings. ⚠⛔ AND (iii) THE THREE STALE ACs **ELSEWHERE** IN
+#   THE FILE, each annotated AT ITS OWN ANCHOR: **Story 8.3's own `I want`** (the sharpest — its
+#   audience clause names "any visitor on Sahyog Drive (Epic 11b)" IN TERMS) · the **Contribution Note
+#   PDF** AC · **Story 11b.2's** list AC — all three superseded by `-174`/`-175`, and the PDF one
+#   additionally by `-180` (ALL FOUR). ⭐⭐ 11b-3 WRITES (iii) BECAUSE IT MERGES FIRST: 11b-3b folded its
+#   annotation duty into "11b-3's already-owed annotation", but those three ACs are ⛔ NOT under Story
+#   11b.3's heading ⇒ without (iii) the obligation lands NOWHERE.
+#   ⚠⛔ Every annotation states the ruling as a **CEILING, ⛔ not a literal** — `2026-08-19-136` cl.1
+#   fails any build whose public name form cannot change without a code change, and `-181` put BOTH
+#   sides on the stored per-Pariwar mode. ⛔ Never hard-code the full name.
+#
+#   ⛔ STILL OPEN, UNAFFECTED: **D4-linkage** (is a `live` pool's Vivran page LINKED, or reachable by a
+#   SEQUENTIAL identifier only?) — ⛔ read before 11b-3's Task 4 renders a `live` pool · D5 /
+#   D5-subject / D8 (11b-3a) · D9 / D10 (11b-3b) · counsel's written clause (`-173` Q3) · the stale
+#   publish-queue prose at `events/src/registry.ts:351` + `claim/events.ts:492` (falsified by D12(a),
+#   ⛔ routed, ⛔ not swept).)
+#
+# last_updated_prior: 2026-09-02n (⭐ **SECOND COMBINED VALIDATION OF `11b-3` / `11b-3a` / `11b-3b`**
 #   (`bmad-create-story validate`), run as ONE pass — a per-story pass structurally cannot see the split
 #   seam. **ELEVEN findings applied across the three files.** ⛔ ZERO ROWS FLIP — all three stay
 #   `ready-for-dev`; every finding was a story-file defect, ⛔ none a status change and ⛔ none a new
@@ -14185,7 +14229,7 @@ development_status:
   # subject), D7 (the public/member name inversion — carry or resolve), D11 (the third route's control
   # set — `routes.ts:52-55` reserves it as a RULING), D12 (what the reversed-denial consumer does —
   # there is NO publication queue in the codebase).
-  11b-3-sahyog-vivran-per-claim-story-surface: ready-for-dev
+  11b-3-sahyog-vivran-per-claim-story-surface: in-progress
   # ⭐ 11b-3a — the nominee bank PUBLIC presentation + the per-Pariwar masking schedule + the
   # Trust-Admin knob. It carries `2026-08-28-160` cl.10 in its OWN ACs and Tasks list, as that
   # decision's open-follow-up list requires ("the AC-only route has failed on this epic before").

@@ -1,3 +1,7 @@
+---
+baseline_commit: 2270dc24e48ec1eeb8aa0ccb8a2af031fbdc5cb3
+---
+
 # Story 11b.3: Sahyog Vivran Per-Claim Story Surface — Public Shell + Reversed-Denial Publish Hook Consumer + Financial-Truth-From-Canonical-Events Invariant `[SURFACE]`
 
 Status: ready-for-dev
@@ -488,11 +492,11 @@ resolve it even in principle.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — ⛔ TRANSCRIBE-or-STOP. ⛔ Do not write code until this task is complete.** (AC: all)
-  - [ ] Re-read `.decision-log.md` **head** and take the next free number. ⛔ Never renumber, ⛔ never
+- [x] **Task 0 — ⛔ TRANSCRIBE-or-STOP. ⛔ Do not write code until this task is complete.** (AC: all)
+  - [x] Re-read `.decision-log.md` **head** and take the next free number. ⛔ Never renumber, ⛔ never
         merge into a sibling's entry. ⚠ **11b.3, 11b.3a and 11b.3b mint against the same head** — re-read
         it immediately before writing.
-  - [ ] Transcribe **BigDev's rulings** for **D1 · D4 · D6 · D7** into `.decision-log.md`, including
+  - [x] Transcribe **BigDev's rulings** for **D1 · D4 · D6 · D7** into `.decision-log.md`, including
         **D6 = (b) SPLIT, ruled 2026-09-01**. ⛔ **The dev agent transcribes; it ⛔ never authors,
         paraphrases or re-grounds a ruling.**
   - [x] ✅ **ALL FIVE RULED 2026-09-02 — the STOP condition is DISCHARGED** (`2026-09-02-176`):
@@ -501,11 +505,11 @@ resolve it even in principle.
         CARRIED · **D11(a)** the route states its APPLICABLE control set (**three**), naming the two
         N/A ones · **D12(a)** the reversed-denial hook is a **render-time derivation** — ⛔ no queue.
         ⛔ Already transcribed — ⛔ do not re-transcribe, ⛔ do not renumber.
-  - [ ] ⚠ **`D4-linkage` is a NEW open rider, ⛔ not a blocker:** is a `live` pool's page **linked**
+  - [x] ⚠ **`D4-linkage` is a NEW open rider, ⛔ not a blocker:** is a `live` pool's page **linked**
         from anywhere, or reachable **by identifier only**? ⚠ `P-YYYY-MM-###` is **sequential and
         enumerable**, and `/sahyog` lists only `closed` + `settled`. ⛔ **Read it before Task 4 renders
         a `live` pool.**
-  - [ ] Annotate `epics.md` Story 11b.3 with **(i)** the re-purposed SD-2 (`-164` A2) and the
+  - [x] Annotate `epics.md` Story 11b.3 with **(i)** the re-purposed SD-2 (`-164` A2) and the
         public-tier bank fields (`-160` cl.10, `-165` cl.1/cl.3) — the carry recorded at the 2026-08-28
         routing note **§11** — and **(ii)** the three-way split, so `sprint-planning` does ⛔ not
         regenerate a ghost 11b.3 or drop 11b.3a/11b.3b — and **(iii)** ⭐⭐ **the THREE ACs ELSEWHERE in
@@ -519,11 +523,11 @@ resolve it even in principle.
         obligation lands **nowhere** ([[feedback_circular_deferral_between_sibling_stories]]).
         ⛔ **Annotation, ⛔ never a rewrite**; ⛔ do not delete or re-word the 2026-08-23 or 2026-08-29
         blocks.
-  - [ ] ⭐ Record in the same entry that `-165` **cl.3**'s *"Story 11b.3 adds the four allowlist
+  - [x] ⭐ Record in the same entry that `-165` **cl.3**'s *"Story 11b.3 adds the four allowlist
         entries"* now lands at **11b.3a** — ⚠ the **obligation moves with the fields, it does ⛔ not
         evaporate**, and the *"⛔ not added now / a pre-added entry is a standing permission with no
         subject"* timing rule is preserved exactly.
-  - [ ] Commit governance first, with the `governance:` prefix
+  - [x] Commit governance first, with the `governance:` prefix
         ([[feedback_governance_commits_precede_implementation]]). ⚠ The prefix is formally invalid
         under the checked-in commitlint config and survives only because commitlint is wired to
         nothing — **convention wins**; the divergence is already filed as 11b.2 item (v).
@@ -921,11 +925,36 @@ cannot identify*, so it is ⛔ **not a disposition on its own**. `apps/public` p
 
 ### Agent Model Used
 
-_(to be filled by the dev agent)_
+`claude-opus-5[1m]` (Claude Opus 5, 1M context) via Claude Code `bmad-dev-story`.
 
 ### Debug Log References
 
 ### Completion Notes List
+
+#### Task 0 — governance transcription + annotation (COMPLETE)
+
+- ⭐⭐ **`D6` was the ONE ruling of the 2026-09-01 set that `2026-09-02-176` never carried.** Verified by
+  grep over `.decision-log.md` before writing: `-176` transcribes D1(b) / D4(b) / D7(a) / D11(a) /
+  D12(a) and refers to the three-way split throughout **as an existing fact**, but ⛔ never records the
+  ruling itself; *"SPLIT THREE WAYS"* returned **zero** hits outside an unrelated 11b.2 line. ⇒
+  **`2026-09-02-182` minted** (next free number; head was `-181`), transcribing **D6(b)**. ⛔ `-176` was
+  ⛔ **not** re-transcribed and ⛔ **not** edited in place ([[feedback_supersede_never_reinterpret]]).
+- ⭐ **`-165` cl.3's four-allowlist-entry duty is recorded as TRAVELLING to 11b.3a** (`-182` cl.3), with
+  the *"⛔ not added now — a pre-added entry is a standing permission with no subject"* timing rule
+  preserved verbatim. ⛔ `RULED_TIER1_PUBLIC_EXCEPTIONS` is untouched by this story.
+- ⭐⭐ **FOUR `epics.md` annotations written, ⛔ zero rewrites, ⛔ zero deletions.** Story 11b.3's section
+  gains (i) + (ii) + a pointer to (iii); and **item (iii) is written at its own three anchors**, because
+  they are ⛔ **not** under Story 11b.3's heading: **Story 8.3's `I want`** · the **Contribution Note
+  PDF** AC · **Story 11b.2's** list AC. ⚠ Each states the ruling as a **CEILING, ⛔ not a literal**
+  (`2026-08-19-136` cl.1 + `-181`'s mode-resolution). Verified after insertion that the 2026-08-23 /
+  2026-08-29 / 2026-08-30 blocks are byte-unchanged.
+- ⚠ **`D4-linkage` — READ, and its disposition for this story recorded (⛔ the rider is NOT closed).**
+  Read in **both** directions per the story's Change Log. **This story's half is discoverability**, and
+  the disposition is: `live` pools **render when requested by identifier** (D4(b)) and ⛔ **NO inbound
+  link to a `live` pool is added** — `/sahyog` continues to list `closed` + `settled` only, unchanged.
+  ⇒ ⛔ this story neither answers the rider nor forecloses it; the **enumeration** half is already routed
+  to **11b.3a's AC2 by name**, which is where the cost lands (four decrypted Tier-1 fields behind the
+  same sequential `P-YYYY-MM-###`). ⛔ **Not marked closed** in `-176`'s open-follow-ups.
 
 ### File List
 
@@ -933,6 +962,7 @@ _(to be filled by the dev agent)_
 
 | Date | Change |
 |---|---|
+| 2026-09-02 | **Task 0 — governance transcription + annotation (`bmad-dev-story`).** ⭐⭐ **`D6` was the one ruling of the 2026-09-01 set `-176` never carried** — it referred to the split throughout as an existing fact but never recorded the ruling; **`2026-09-02-182` minted** to transcribe **D6(b) SPLIT THREE WAYS**, ⛔ without re-transcribing or editing `-176`. ⭐ `-165` cl.3's four-allowlist-entry duty recorded as **travelling to 11b.3a**, timing rule preserved. ⭐⭐ **Four `epics.md` annotations** — Story 11b.3's (i)+(ii)+(iii pointer), and **item (iii) at its own three anchors** (Story 8.3's `I want` · the Contribution Note PDF AC · Story 11b.2's list AC), each stating the name ruling as a **CEILING, ⛔ not a literal**. ⚠ **`D4-linkage` READ, ⛔ not closed**: `live` renders by identifier, ⛔ **no inbound link added**; the enumeration half stays routed to 11b.3a's AC2. Sprint row `ready-for-dev` → `in-progress`. |
 | 2026-09-02 | **Second combined validation of 11b.3 / 11b.3a / 11b.3b** (`bmad-create-story validate`), run as one pass. Four fixes here. ⭐⭐ **Task 0's `epics.md` annotation gains item (iii)** — the THREE ACs elsewhere in the file that assume the shielded contributor form (`:3145` Story 8.3 · `:3238` the Contribution Note PDF · `:4931` Story 11b.2), all superseded by `-174`: **11b.3b folds its annotation duty into this one and this file merges FIRST**, so without (iii) the obligation lands nowhere. ⭐ **AC3 fences the count**: it is the EVENT count, ⛔ never a row count — RTBF omits the row and still counts (`-169`), so 11b.3b's page reads *"N confirmed"* beside fewer than N rows **by design**, ⛔ not as a defect. ⭐ **`D4-linkage` re-read in BOTH directions** — discoverability here, **identifier ENUMERATION** on 11b.3a, where D11(a) left `limits.search` as the only (unstated) bound over four decrypted Tier-1 fields; routed to 11b.3a's AC2 by name. ⚠ The ORDER BY deferral is now cited by **title**, ⛔ not by line. |
 | 2026-09-01 | Story authored (`bmad-create-story 11b.3`). Scope reconciled against `2026-08-28-160` cl.10 / `-164` A2 / `-165` cl.1–cl.3, which `epics.md` had never carried. Seven decisions raised. |
 | 2026-09-02 | ✅ **ALL FIVE OPEN DECISIONS RULED by BigDev** (`2026-09-02-176`) — **D1(b)** consume the shipped `amountRaisedInr`, ⭐ **and it MOVES to 11b.3b** because the `@twt/ui` fence stays (this surface renders the **count only**; ⛔ (c) re-deriving stays refused) · **D4(b)** `live` + `closed` + `settled`, ⭐ which gives 11b.3a's active-campaign subject a host · **D7(a)** the inversion is CARRIED, binder 11b.3b · **D11(a)** the route states **three** applicable controls and names the two N/A ones, ⚠ with the note that 11b.3b's pagination restores them · **D12(a)** the reversed-denial hook is a **render-time derivation** — ⛔ no queue, ⛔ no consumer; 6.16's obligation *"Closed by [edit]"*. ⇒ ⭐⭐ **Task 0's STOP condition is DISCHARGED and this story is STARTABLE.** ⚠ One new rider: **`D4-linkage`** (is a `live` pool's page linked, or identifier-only? `P-YYYY-MM-###` is sequential). ⚠ And the publish-queue prose at `registry.ts:351` / `claim/events.ts:492` is now **stale**, routed ⛔ not swept. |

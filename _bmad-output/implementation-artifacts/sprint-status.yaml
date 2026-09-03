@@ -1,4 +1,51 @@
-# last_updated: 2026-09-02t (⭐⭐ **STORY 11b.3a IMPLEMENTED — `in-progress` -> `review`.** ONE row
+# last_updated: 2026-09-03b (⭐⭐ **STORY 11b.3a — SECOND-PASS CODE REVIEW (bmad-code-review, 3-layer),
+#   OVER THE FIRST PASS'S OWN PATCHES. `done` -> `in-progress`.** ONE row moves:
+#   development_status[11b-3a-nominee-bank-public-presentation-and-masking-schedule] `done` ->
+#   `in-progress`. ⛔ epic-11b stays `in-progress`; ⛔ 11b-3b stays `ready-for-dev`.
+#   ⭐⭐ **WHY A SECOND PASS AT ALL:** the first pass applied NINE patches that ⛔ no reviewer had then
+#   reviewed. Reviewing them found **two of them defective** — the `window_not_inverted` CHECK it added
+#   never reached the Drizzle schema, and that same CHECK opened a new `23514` -> opaque-500 path under
+#   multi-instance clock skew.
+#   19 raw findings -> 3 merged -> **12 surviving, 4 dismissed**. 3 decision-needed (ALL RESOLVED by
+#   BigDev), **10 patch ALL APPLIED**, 2 deferred. All 8 ACs re-verified SATISFIED.
+#   ⭐ **TWO REAL GAPs** on the load-bearing-invariant checklist, both now MECHANIZED: family 5 (the
+#   table had ⛔ no policy-regression spec while both named siblings ship one — FORCE RLS, unset-scope,
+#   the RLS withCheck negative, the partial open-head unique and the window CHECK were asserted
+#   NOWHERE) and family 2 (the advisory lock was proven by ⛔ no test, so deleting it would have
+#   re-shipped the defect green).
+#   ⭐ Sharpest NEW findings: a late `pool.settled` RESET the masking clock and re-published details
+#   that were already masked (`DRIVE_CLOSED_AT` takes the LATEST event) -> fixed by a SEPARATE
+#   `DRIVE_MASKING_FROM` fragment, ⛔ the shared one untouched; a `closed` drive with no close event
+#   was NEVER masked; and the admin form always seeded `after_days`/`0`, so one save silently
+#   downgraded `permanent` and unmasked every LIVE drive.
+#   ⛔⛔ **THE ROW DOES NOT REACH `done`, AND THE BUILD IS NOT WHY.** Decision 3 was ruled BLOCKING ON
+#   DEPLOYMENT: `limits.search` is the ONLY bound on a walk of a SEQUENTIAL identifier fronting four
+#   decrypted Tier-1 fields, under `D8-default` FAIL-OPEN for every Pariwar until the Trust acts. AC2
+#   rules that judging it sufficient is a **DECISION**; ⛔ nobody has made it. ⛔ Recorded BLOCKING,
+#   ⛔ not "carried", ⛔ not "resolved via deferral".
+#   ⭐ **VERIFIED LIVE, ⛔ NOT ASSERTED:** `pnpm ci:local` on `twt-test-pg` (:5433) -> **34 jobs green**;
+#   @twt/domain 3183 pass (**+14**), @twt/api 1170, @twt/admin 406, @twt/public 447, contracts 1100.
+#   ⭐⭐ All three new guards PROVED NON-VACUOUS by reverting each fix and watching only the right test
+#   fail — removing the lock reproduced `23505` on `…_pariwar_version_uq` exactly.
+#
+# last_updated_prior: 2026-09-03 (⭐⭐ **STORY 11b.3a CODE REVIEW (bmad-code-review, 3-layer) — `review` ->
+#   `done`.** ONE row flips: development_status[11b-3a-nominee-bank-public-presentation-and-masking-schedule]
+#   `review` -> `done`. ⛔ epic-11b stays `in-progress`; ⛔ 11b-3b stays `ready-for-dev`.
+#   All 8 ACs SATISFIED. 2 decision-needed — both DISPOSED by BigDev as ROUTED FOR GOVERNANCE
+#   (`permanent` masks a live drive per `-183` cl.4; the 12-digit/Aadhaar FR-74 collision) — "built
+#   is not published" covers both, follow-up already in `deferred-work.md` items (c)/(d). 9 patches
+#   APPLIED: masked-note copy no longer asserts closure on a live drive (en+hi); flaky UUID-regex
+#   audit test → exact-locator assertion; concurrent-PUT 500→409 via `pg_advisory_xact_lock` on the
+#   `pool_fixed_amount_schedule` precedent; empty-string `branch` → null coercion in the read; SSR
+#   full-arm presence checks; `settled`+`after_days` masking test; migration 0113
+#   `window_not_inverted` CHECK; dead `.returning()` dropped + a migration↔constant sync-guard test.
+#   1 deferred (family-13 Astro `role`/`aria-label` test coverage → 11b.8); 3 dismissed.
+#   ⭐ `twt-test-pg` RECREATED FRESH + full integration leg re-run (`--concurrency=1`, 8 packages):
+#   **23/23 turbo tasks green** — @twt/domain 3169 pass / @twt/api 1169 pass, incl. the recreated
+#   0113 migration applied clean. Unit/lint/typecheck/contract/render/i18n also green. Findings in
+#   the story's `## 🔍 Review Findings` section; the deferred item is also in `deferred-work.md`.
+#
+# last_updated_prior: 2026-09-02t (⭐⭐ **STORY 11b.3a IMPLEMENTED — `in-progress` -> `review`.** ONE row
 #   flips: development_status[11b-3a-nominee-bank-public-presentation-and-masking-schedule]
 #   `in-progress` -> `review`. ⛔ epic-11b stays `in-progress`; ⛔ 11b-3b stays `ready-for-dev`
 #   (independent, may run in parallel).
@@ -14449,7 +14496,12 @@ development_status:
   # ⚠ This story owns the family's ONLY migration, and cl.10(d) makes "configuration over ONE record"
   # load-bearing: ⛔ never a boolean, ⛔ never a second bank-detail record. A later "simplification"
   # to a boolean is a DEFECT, not a cleanup.
-  11b-3a-nominee-bank-public-presentation-and-masking-schedule: review
+  # ⛔⛔ HELD AT `in-progress` ON ONE BLOCKING ITEM, ⛔ NOT ON AN UNFINISHED BUILD (2026-09-03, second
+  # pass). The build is COMPLETE and all 8 ACs are satisfied; what is outstanding is a GOVERNANCE
+  # judgement — the identifier-enumeration bound over four decrypted Tier-1 fields under D8-default
+  # FAIL-OPEN, which AC2 rules is a DECISION and which nobody has made. ⛔ Do not flip this to `done`
+  # by re-reading the build as finished; it is. Flip it when the Panel judges the bound.
+  11b-3a-nominee-bank-public-presentation-and-masking-schedule: in-progress
   # ⭐ 11b-3b — the named-identity render layer: the deceased member's name AND the contributor list,
   # plus the `apps/public` -> `@twt/ui` dependency addition and the Astro render layer over 11b.2's
   # presenter (11b.2 item (i)'s named trigger).

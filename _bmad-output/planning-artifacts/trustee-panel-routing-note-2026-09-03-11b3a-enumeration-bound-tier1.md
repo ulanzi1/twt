@@ -162,6 +162,13 @@ missed on the first drafting of this note and is the sharpest thing in it:
 > ⇒ Recorded as **`.decision-log.md#decision-2026-09-04-185`**, which corrects the premise and widens
 > the obligation. ⛔ `-184` is **NOT** edited in place — it is Trustee-ratified
 > ([[feedback_supersede_never_reinterpret]]).
+>
+> ✅⭐ **THE PANEL WAS NOTIFIED OF THIS CORRECTION — 2026-09-04 — AND ITS STANDING IS UNCHANGED.**
+> **(A) YES** and **(B) MAKE THE ADDRESS UNGUESSABLE** now rest on the **CORRECTED** premise.
+> ⭐ ⇒ the ruling is ⛔ not merely *still standing*; it has been **re-affirmed against accurate facts**,
+> which is a materially stronger record than the original ratification was.
+> ⚠⛔ Recorded as **notified-and-affirmed**, ⛔ **not** as a second ratification vote — ⛔ no new trustee
+> signatures are claimed, because none were reported.
 
 | Drive state | On the `/sahyog` index? | Navigable from it? | What a token would cost |
 |---|---|---|---|

@@ -210,9 +210,14 @@ row's accessible name identifies **which drive** it opens (family 13, in its web
 **Given** `2026-09-03-184` **(A)** — ratified **YES**
 **When** a `live` drive exists
 **Then** it is reachable by a real path, ⛔ not by URL construction
-**And** ⛔⛔ **WHICH path is `D4`, which is OPEN and BLOCKING** — ⛔ do ⛔ **not** pick a branch. ⚠ The
-*"notification **or** member-app screen"* phrasing this AC inherited from `deferred-work.md` reads like
-a free choice; ⭐ measured, it is ⛔ not one. ⇒ **build AC1–AC3, then STOP** (Task 0's stop condition)
+**And** ⭐ **[D4 RULED]** that path is a **MEMBER-APP ENTRY ON TAB 1 — "My Pool"** (`(tabs)/index.tsx`),
+sitting **beside** `<ActiveContributionCard />` in `<ViewContributorsEntry />`'s ruled shape (8.3 D8:
+beside the card, ⛔ never inside it) and **self-suppressing in lock-step** with the card
+**And** ⛔⛔ ⛔ **NOT the Shradhanjali tab**, despite its name — it renders `sample-data` and has ⛔ zero
+API wiring (D4's table); choosing it would silently re-scope this story
+**And** the token reaches the app **SERVER-RETURNED** on `useActiveContributionQuery`'s response — ⛔ the
+client ⛔ **never** builds an address from pool facts, which would re-create D2's guessability in the app
+**And** ⛔ **no notification**, ⛔ no 8th FR-71 category, ⛔ no new deep-link resource, ⛔ no new route group
 **And** ⭐ **[D1 RULED]** the page answers **200 to anyone presenting a valid address** — ⛔ **no member
 session**, ⛔ no new auth surface, and ⛔ **no branch on the reader's membership standing** of any kind
 (the Policy-meaning note above binds here: ⛔ no `members.state`, ⛔ no `is_valid`, ⛔ no moderation
@@ -243,13 +248,11 @@ close — ⛔ a partial landing is the one outcome Trap 1 forbids.
 
 ---
 
-## ⚖️ Decisions — ✅ **D1/D2/D3 RULED 2026-09-04.** ⛔⛔ **D4 IS OPEN AND BLOCKING.**
+## ⚖️ Decisions — ✅ **ALL FOUR RULED. ⛔ ZERO BLOCKING.**
 
-> ⛔⛔ **TASK 0 CARRIES A STOP CONDITION.** D1–D3 rule the **address**; ⛔ none of them rules **which
-> inbound path** a `live` drive gets, and AC4 currently offers a **choice of two** where ⛔ only one is
-> even buildable at this story's size (see **D4**). ⚠ Trap 1 forbids landing the token without the path
-> ⇒ **AC1–AC3 may be BUILT, but ⛔ NOTHING MERGES until D4 is ruled.** ⭐ Same shape as 11b.3's Task 0
-> STOP condition (`2026-09-02-176`), which was discharged by a ruling, ⛔ never by an author's guess.
+> ✅ **THE TASK 0 STOP CONDITION IS DISCHARGED.** D1–D3 ruled the **address** 2026-09-04; **D4** ruled
+> the **inbound path for `live`** 2026-09-04b. ⭐ Same shape as 11b.3's Task 0 STOP condition
+> (`2026-09-02-176`) — discharged **by a ruling**, ⛔ never by an author's guess.
 
 ### ✅ D1 — RULED by BigDev, 2026-09-04: **AN OPEN LINK — anyone holding it, ⛔ no session required**
 
@@ -308,9 +311,45 @@ sentence in the story record** so a reviewer meets it in prose, ⛔ never discov
 ⚠ ⛔ `live` drives are **STILL NOT LISTED** on `/sahyog` — `public-read.ts:84-87` excludes them
 deliberately and (A) says **reachable**, ⛔ never **listed**.
 
-### ⛔⛔ D4 — **OPEN · BLOCKING** — *WHICH* inbound path does a `live` drive get?
+### ✅ D4 — RULED by BigDev, 2026-09-04b: **A MEMBER-APP SCREEN ON AN EXISTING TAB** — ⛔ not a notification
 
-AC4 says *"the drive-opened notification carrying its link, **or** a member-app screen"*. ⛔ That
+⭐ **Ruled: branch (ii).** ⛔ No notification, ⛔ no new alert category, ⛔ no new deep-link resource,
+⛔ no SMS-template act, ⛔ no new route group.
+
+⭐⭐ **AND THE TAB IS `(tabs)/index.tsx` — "MY POOL" (Tab 1). ⛔ IT IS ⛔ NOT SHRADHANJALI.**
+⚠⛔ **THIS IS THE ONE THING HERE THAT LOOKS OBVIOUS AND IS WRONG.** Tab 2 is literally named
+`Shradhanjali` and its component is literally `ShradhanjaliSahyogVivran` — ⇒ every instinct says the
+Sahyog Vivran link belongs there. ⛔ **It does not.** ⭐ Measured 2026-09-04b:
+
+| | Tab 2 `shradhanjali.tsx` | ⭐ Tab 1 `index.tsx` — **My Pool** |
+|---|---|---|
+| Data source | ⛔ `SAMPLE_CONTRIBUTORS` / `SAMPLE_MEMORIAL` from `./sample-data` | ⭐ live — `useActiveContributionQuery` |
+| API wiring | ⛔ **NONE.** It is a **P0-5 measurement prototype** (Story 0.14 §4 FM-2: Devanagari + FlashList perf) | ⭐ shipped, Story 8.2 |
+| Can it know a `live` drive's token? | ⛔ **NO** — it would need a data layer built first | ⭐ **YES** — it is already reading that exact pool |
+
+⇒ ⛔ **choosing Tab 2 on its NAME would silently re-scope this story into building the memorial
+surface's data layer.** ⭐ Tab 1 already renders `<ActiveContributionCard />`, which self-suppresses
+unless the member is `active` **and assigned to a pool whose cycle alert is `live`** — ⭐ that is
+**precisely** the `live` drive AC4 owes a path to, and the member is **already looking at it**.
+
+⭐ **The affordance shape is ALREADY RULED and is ⛔ not a fresh design question:** `<ViewContributorsEntry />`
+(Story 8.3, **D8**) sits **beside** the card, ⛔ **not inside it**, and self-suppresses in lock-step.
+⇒ ⭐ **follow it exactly** — a sibling entry, ⛔ never a new field inside the card.
+
+⚠⛔ **THE TOKEN IS SERVER-RETURNED, ⛔ NEVER CLIENT-DERIVED.** `apps/mobile/lib/public-site.ts` already
+carries this discipline in terms — `niyamavaliClauseUrl`'s comment reads *"the clauseId is
+SERVER-returned … never hardcoded in the widget"*. ⇒ the token rides `useActiveContributionQuery`'s
+response and the app ⛔ **never** constructs an address from pool facts (which would re-create D2's
+guessability inside the client).
+
+⭐ **Why this is the cheap branch, stated so it is ⛔ not re-litigated:** it reuses a shipped card, a
+ruled affordance pattern, an existing `Linking.openURL` precedent (`(auth)/terminated.tsx:94`) and an
+existing URL-builder module. ⛔ Its only new API surface is **one field** on a query that already runs.
+
+<details>
+<summary>⛔ The rejected branch (i), kept as the record of WHY — ⛔ do not re-open it</summary>
+
+AC4 said *"the drive-opened notification carrying its link, **or** a member-app screen"*. ⛔ That
 **or** is ⛔ not a ruling, and the two branches are ⛔ not the same size. ⭐ **Measured live 2026-09-04,
 ⛔ not assumed:**
 
@@ -325,15 +364,13 @@ and an SMS-template act** — a multi-story build against a **frozen** taxonomy.
 carrier is the `cycle_open` kind (`scheduler/contribution-notify-triggers.ts:142`), which rides
 `alert_published` and lands on `announcements/:alert_id` — ⛔ **still not** a public drive URL.
 
-⚠⛔ **WHY THIS IS BLOCKING AND ⛔ NOT AN AUTHOR'S CALL:** Trap 1 forbids landing the token without a
-path, so the choice ⛔ cannot be deferred past merge; and branch (i) reaches a **ratified FR-71
+⚠⛔ **WHY THIS WAS BLOCKING AND ⛔ WAS NOT AN AUTHOR'S CALL:** Trap 1 forbids landing the token without
+a path, so the choice ⛔ could not be deferred past merge; and branch (i) reaches a **ratified FR-71
 taxonomy**, which is ⛔ not a tuning knob ([[feedback_supersede_never_reinterpret]]). ⇒ picking it
-silently would be an authoring act over a Panel-scoped artefact — the precise failure
+silently would have been an authoring act over a Panel-scoped artefact — the precise failure
 [[feedback_mechanization_split_commitment]] and Trap 5 already forbid one level down.
 
-⭐ **What D4 must settle, in one sentence each:** (a) branch (i) or (ii); (b) if (ii), whether the
-screen is reachable from an existing tab or is a new route group; (c) if (i), who authorises the
-taxonomy change and at what version.
+</details>
 
 ---
 
@@ -345,6 +382,10 @@ taxonomy change and at what version.
 - ⛔ It does ⛔ not tighten or loosen `limits.search`.
 - ⛔ It does ⛔ not build the **authenticated-member** post-masking presentation (`-164` A2 — still
   *"not carried, not foreclosed"*).
+- ⛔ It does ⛔ not touch the **Shradhanjali tab** or give it a data layer (D4) — that surface stays a
+  P0-5 measurement prototype on `sample-data`, and ⛔ wiring it is ⛔ not this story's to start.
+- ⛔ It does ⛔ not add a notification, an 8th FR-71 category, a deep-link `resource`, or an SMS
+  template (D4, branch (i) REJECTED).
 
 ---
 
@@ -360,8 +401,8 @@ taxonomy change and at what version.
       top-of-file `last_updated` COMMENT entry ([[project_sprint_status_ledger]]) — **ONE row moves**.
 - [ ] Commit with a `governance:` prefix, **separately and FIRST**
       ([[feedback_governance_commits_precede_implementation]]).
-- [ ] ⛔⛔ **STOP CONDITION — record it in the commit body:** `D4` is **OPEN and BLOCKING**. AC1–AC3 may
-      be built; ⛔ **nothing merges** until D4 is ruled, because Trap 1 forbids the token without the path.
+- [ ] ✅ **THE STOP CONDITION IS DISCHARGED** — D4 ruled 2026-09-04b (member-app entry, My Pool tab).
+      ⭐ Record the discharge in the Task 0 commit body. ⛔ There are ⛔ **no** blocking decisions left.
 
 ### Task 1 — The token column, its migration, and its BACKFILL (AC2)
 
@@ -449,10 +490,28 @@ taxonomy change and at what version.
       drive becomes ONE CLICK from four Tier-1 fields under `D8-default` FAIL-OPEN"*. ⛔ A reviewer must
       meet it in prose, ⛔ never discover it in a diff.
 
-### Task 6 — ⛔ BLOCKED ON D4 — the `live`-drive inbound path (AC4)
+### Task 6 — The `live`-drive inbound path — the My Pool entry (AC4) ✅ **D4 RULED**
 
-- [ ] ⛔⛔ **DO NOT START.** See **D4**. ⛔ Do not pick between the notification and the member-app
-      screen; ⛔ do not mint an 8th FR-71 category; ⛔ do not add a `resource` to the deep-link grammar.
+- [ ] Carry the token to the client: add it to `useActiveContributionQuery`'s response
+      (`apps/mobile/components/active-contribution/useActiveContributionQuery.ts`) and to the contract
+      backing it. ⭐ **ONE new field on a query that already runs** — that is the whole API change.
+- [ ] Add `sahyogVivranUrl(token, locale)` to `apps/mobile/lib/public-site.ts`, beside
+      `niyamavaliClauseUrl` (`:32`). ⭐ Reuse `publicSiteOrigin` (`:18`,
+      `EXPO_PUBLIC_PUBLIC_SITE_ORIGIN`) — ⛔ do ⛔ not hardcode an origin.
+- [ ] ⛔⛔ **The token is SERVER-RETURNED.** `public-site.ts:29-30` already states the discipline for
+      `clauseId`: *"never hardcoded in the widget"*. ⇒ ⛔ the app ⛔ **never** derives the address from
+      `poolId` or the canonical identifier — that would re-create D2's guessability inside the client.
+- [ ] Build the entry as a **sibling** of `<ActiveContributionCard />` in `apps/mobile/app/(tabs)/index.tsx`,
+      following `components/contributor-list/ViewContributorsEntry.tsx` **exactly**: `return null` to
+      self-suppress (`:31`), `Pressable` + `onPress` (`:42`). ⛔ **Beside the card, ⛔ NOT inside it**
+      (Story 8.3 **D8**) — ⛔ do not add a field to the card's view model.
+- [ ] Open it with `Linking.openURL`, precedent `apps/mobile/app/(auth)/terminated.tsx:94`.
+- [ ] ⛔ **Self-suppress in LOCK-STEP with the card** — the card renders only for an `active` member
+      assigned to a pool whose cycle alert is `live`. ⛔ An entry that outlives the card is a dead link.
+- [ ] ⛔ **Do ⛔ NOT touch the Shradhanjali tab** (`(tabs)/shradhanjali.tsx`). It is a P0-5 measurement
+      prototype over `components/shradhanjali/sample-data.ts` with ⛔ zero API wiring (D4).
+- [ ] ⚠ `useT()` returns a **fresh closure each render** — depend on `locale`, ⛔ never on `t`
+      ([[project_uset_fresh_closure_memo_trap]]). The entry's label is Hindi-first, ≥56pt touch target.
 
 ### Task 7 — Close out (AC5, AC6)
 
@@ -484,6 +543,10 @@ taxonomy change and at what version.
 | `apps/public/src/lib/sahyog-render.ts` (`:101`, `:308`, `:315`) | per-row drive link | AC3 |
 | `apps/public/src/lib/surface-fields.ts` (`:319`, `:344`, `:513`) | field-id mappings | AC1/AC3 |
 | `apps/public/tests/surface-fields.test.ts` | Tier-1 count unchanged | AC5 |
+| `apps/mobile/components/active-contribution/useActiveContributionQuery.ts` | + token field (server-returned) | AC4 |
+| `apps/mobile/lib/public-site.ts` (`:18`, `:32`) | + `sahyogVivranUrl(token, locale)` | AC4 |
+| `apps/mobile/components/…/SahyogVivranEntry.tsx` (new) | sibling entry, `ViewContributorsEntry`'s shape | AC4 |
+| `apps/mobile/app/(tabs)/index.tsx` | mount it beside `<ActiveContributionCard />` | AC4 |
 | `_bmad-output/planning-artifacts/epics.md` | the annotation | AC0 |
 | `_bmad-output/implementation-artifacts/deferred-work.md` (`:7932`) | "Closed by [edit]" | AC6 |
 
@@ -494,7 +557,8 @@ taxonomy change and at what version.
 2. **A backfill that is a snapshot.** Task 1 — a nullable column plus a point-in-time "zero NULLs" test
    passes today and ships a broken archive the first time a spawn path misses the mint.
 3. **A partial landing that looks like a milestone.** Trap 1 — the token alone makes the **whole**
-   Sahyog Vivran surface reachable by nobody. Task 6 is blocked precisely so this cannot happen quietly.
+   Sahyog Vivran surface reachable by nobody. ⇒ **Tasks 5 and 6 are the path, and AC6 refuses closure
+   without them** — ⛔ a branch carrying Tasks 1–4 alone is ⛔ not mergeable, however green it is.
 
 ### Substrate facts (⭐ measured live 2026-09-04)
 

@@ -1,4 +1,32 @@
-# last_updated: 2026-09-04b (⭐⭐ **STORY 11b.10 VALIDATED (`bmad-create-story validate`) — ⛔ ZERO ROWS
+# last_updated: 2026-09-04c (⭐⭐ **STORY 11b.10 — `D4` RULED BY BigDev: A MEMBER-APP ENTRY ON AN
+#   EXISTING TAB. ⛔ ZERO ROWS MOVE; ⛔ ZERO BLOCKING DECISIONS REMAIN.** ⛔ epic-11b stays
+#   `in-progress`; ⛔ 11b-10 stays `ready-for-dev`; ⛔ 11b-3a `done`; ⛔ 11b-3b `ready-for-dev`.
+#   ⭐ **RULED: branch (ii)** — ⛔ no notification, ⛔ no 8th FR-71 category, ⛔ no new deep-link
+#   `resource`, ⛔ no SMS-template act, ⛔ no new route group. ✅ **The Task 0 STOP CONDITION opened at
+#   `2026-09-04b` is DISCHARGED** — by a RULING, ⛔ never by an author's guess (11b.3's shape).
+#   ⛔⛔ **AND THE TAB IS `(tabs)/index.tsx` — "MY POOL" (Tab 1) — ⛔ NOT SHRADHANJALI. THIS IS THE ONE
+#   THING HERE THAT LOOKS OBVIOUS AND IS WRONG.** Tab 2 is literally named `Shradhanjali` and its
+#   component is literally `ShradhanjaliSahyogVivran` ⇒ every instinct puts the link there. ⭐ MEASURED:
+#   it renders `SAMPLE_CONTRIBUTORS`/`SAMPLE_MEMORIAL` from `components/shradhanjali/sample-data.ts` and
+#   has ⛔ **ZERO API wiring** — it is a **P0-5 MEASUREMENT PROTOTYPE** (Story 0.14 §4 FM-2: Devanagari +
+#   FlashList perf). ⇒ ⛔ picking it on its NAME would have silently re-scoped this story into BUILDING
+#   THE MEMORIAL SURFACE'S DATA LAYER. ⚠ Recorded loudly because the trap is the NAME, ⛔ not the code.
+#   ⭐⭐ **TAB 1 IS ALREADY LOOKING AT THE EXACT DRIVE.** `<ActiveContributionCard />` (Story 8.2)
+#   self-suppresses unless the member is `active` AND assigned to a pool whose cycle alert is `live` —
+#   ⭐ precisely the `live` drive AC4 owes a path to. ⇒ the member is ALREADY on the surface.
+#   ⭐ **THE AFFORDANCE SHAPE IS ALREADY RULED, ⛔ not a fresh design question:** `<ViewContributorsEntry />`
+#   (Story 8.3, **D8**) sits BESIDE the card, ⛔ NOT inside it, self-suppressing in lock-step. ⇒ follow
+#   it exactly — a sibling entry, ⛔ never a new field on the card's view model.
+#   ⚠⛔ **THE TOKEN IS SERVER-RETURNED, ⛔ NEVER CLIENT-DERIVED.** `apps/mobile/lib/public-site.ts:29-30`
+#   already carries the discipline in terms for `clauseId` (*"never hardcoded in the widget"*). ⇒ the
+#   token rides `useActiveContributionQuery`'s response; ⛔ the app ⛔ NEVER builds an address from
+#   `poolId` or the canonical identifier, which would RE-CREATE D2's guessability inside the client.
+#   ⭐ **WHY THIS IS THE CHEAP BRANCH:** it reuses a shipped card, a ruled affordance pattern, an
+#   existing `Linking.openURL` precedent (`(auth)/terminated.tsx:94`) and an existing URL-builder
+#   module. ⛔ Its ONLY new API surface is **ONE FIELD** on a query that already runs.
+#   ⚠ **STILL OWED, ⛔ unchanged:** the `epics.md` ANNOTATION (Task 0) is ⛔ NOT written.
+#
+# last_updated_prior: 2026-09-04b (⭐⭐ **STORY 11b.10 VALIDATED (`bmad-create-story validate`) — ⛔ ZERO ROWS
 #   MOVE, and a FOURTH DECISION IS OPENED: `D4` is BLOCKING.** ⛔ epic-11b stays `in-progress`;
 #   ⛔ 11b-10 stays `ready-for-dev`; ⛔ 11b-3a stays `done`; ⛔ 11b-3b stays `ready-for-dev`.
 #   ⛔⛔ **THE ENTRY BELOW SAID "D1/D2/D3 ALL RULED ⇒ ZERO BLOCKING". THAT WAS TRUE OF D1/D2/D3 AND IS

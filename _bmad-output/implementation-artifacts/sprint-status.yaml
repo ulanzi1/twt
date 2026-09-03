@@ -14575,6 +14575,14 @@ development_status:
   # ⚠ The story is FAIL-CLOSED until that clause is minted AND pinned: every row renders unnamed.
   # INERT, ⛔ not broken — and ⛔ do not seed a placeholder clause row to make it look alive.
   11b-9-sahyog-drive-publication-authority-switch: done
+  # ⭐ 11b-10 — created by a TRUSTEE-RATIFIED DECISION (`2026-09-03-184`, corrected by `2026-09-04-185`),
+  # ⛔ not by epic decomposition. It owes an `epics.md` ANNOTATION (its Task 0) exactly as 11b-3a did.
+  # ⛔ It is NOT a fourth child of 11b.3's ruled three-way split (`D6(b)`) — do not renumber it 11b-3c.
+  # ⛔⛔ IT IS A DEPLOYMENT BLOCKER FOR EPIC 11b: the Sahyog Vivran surface does not ship until it lands.
+  # ⚠⛔ THE TOKEN AND THE INBOUND PATH ARE ONE DELIVERABLE. Shipping the token alone makes the ENTIRE
+  # surface reachable by NOBODY (there is no link to any drive page today, in ANY state) and DEFEATS the
+  # Panel's ratified answer (A). ⛔ Do not split this story to land the token first.
+  11b-10-sahyog-vivran-unguessable-address-and-inbound-path: draft
   epic-11b-retrospective: optional
 
   # ==========================================================================

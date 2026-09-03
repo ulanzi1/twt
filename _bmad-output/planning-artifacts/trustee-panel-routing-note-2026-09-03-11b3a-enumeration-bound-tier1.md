@@ -136,10 +136,37 @@ anyone can examine becomes the set someone published a link to, which moves a **
 ⭐⭐ **BUT THE COST IS ⛔ NOT ONE COST — IT SPLITS IN TWO, AND THE HALVES POINT OPPOSITE WAYS.** This was
 missed on the first drafting of this note and is the sharpest thing in it:
 
-| Drive state | On the `/sahyog` index? | What a token would cost |
-|---|---|---|
-| `closed` / `settled` | ✅ **Yes** — listed | ⭐ **Almost nothing.** Already discoverable through a published link; the token changes the address, ⛔ not the discoverability. |
-| `live` | ⛔ **No** — deliberately absent | ⚠ **It would close the only door.** A live drive is reachable *today* by constructing the identifier and by ⛔ nothing else. |
+> ## ⛔⛔ CORRECTION — 2026-09-04. THE TABLE BELOW WAS **WRONG**, AND THE PANEL RATIFIED ON IT.
+>
+> ⚠ As written, this section told the Panel that `closed`/`settled` drives are *"already discoverable
+> through a published link"* and that a token would therefore cost *"almost nothing"* for them.
+> ⛔ **That is FALSE**, found while scoping the implementing story (2026-09-04).
+>
+> ⭐ **VERIFIED:** `/sahyog`'s render layer (`apps/public/src/lib/sahyog-render.ts`) produces **exactly
+> TWO** `href`s — `page - 1` and `page + 1`. ⛔ There is **NO link to any drive's detail page from
+> anywhere in `apps/public/src`**, for **any** drive state. The index **LISTS** drives as rows; it
+> ⛔ never **LINKS** to them.
+>
+> ⇒ ⛔ **EVERY drive page — `closed` and `settled` included — is reachable ONLY by constructing the
+> URL.** The distinction the table drew is real but far weaker than stated: `closed`/`settled` are
+> **listed as facts** (you can see a drive existed), `live` are ⛔ not listed at all — but ⛔ **neither
+> is NAVIGABLE.**
+>
+> ⚠ **WHAT THIS DOES ⛔ NOT CHANGE:** the Panel's answers stand. (A) *"a live drive should be reachable"*
+> and (B) *"make the address unguessable"* are both still coherent — ⭐ arguably **more** clearly right,
+> since the walk is the only access path for the whole surface rather than for one state.
+> ⚠⛔ **WHAT IT DOES CHANGE — THE SCOPE, AND IT GROWS:** the coupling in `2026-09-03-184` cl.4 was
+> written as though only `live` drives needed an inbound path built. ⛔ **All three states do.**
+> Tokenizing without building navigation would make **the entire Sahyog Vivran surface** reachable by
+> ⛔ nobody — ⛔ not just its live drives.
+> ⇒ Recorded as **`.decision-log.md#decision-2026-09-04-185`**, which corrects the premise and widens
+> the obligation. ⛔ `-184` is **NOT** edited in place — it is Trustee-ratified
+> ([[feedback_supersede_never_reinterpret]]).
+
+| Drive state | On the `/sahyog` index? | Navigable from it? | What a token would cost |
+|---|---|---|---|
+| `closed` / `settled` | ✅ **Listed** as rows | ⛔ **NO** — no link exists | ⚠ **It would close the only door.** ⛔ *(The original "almost nothing" was wrong — see the correction above.)* |
+| `live` | ⛔ **Not listed** — deliberately absent | ⛔ **NO** | ⚠ **It would close the only door.** |
 
 ⚠⛔ **AND THE `live` HALF INVERTS THE ARGUMENT, WHICH IS WHY IT IS PUT TO YOU RATHER THAN DECIDED.**
 `public-read.ts:84-87` excludes `live` from the index **deliberately**, and states the reason in terms:

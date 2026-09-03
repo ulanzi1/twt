@@ -136,6 +136,20 @@ is not resolved toward disclosure.
 ⭐ It is **one predicate line** (`isNomineeBankMasked`) and an asserted test, so a Panel correction is
 cheap. **Trigger:** *the next Trustee Panel session that touches `2026-08-28-160` cl.10.*
 
+⭐⭐ **A SECOND READING OF THE SAME CLAUSE FAMILY IS CARRIED IN THIS ITEM — added by the second-pass
+review, 2026-09-03.** The **masked arm drops `account_holder_name` and `vpa` entirely**, on the ground
+that *"cl.10(e) is a RETENTION list — and a retention list is **exhaustive**: what it does not name is
+not retained."* ⚠⛔ **That is an INFERENCE, ⛔ not the clause's words.** cl.10(e) states what **is**
+retained (last-4 + bank / branch / IFSC); it does ⛔ **not** say *"and nothing else"*.
+⛔ **No code change is proposed and none should be made** — like the `permanent` reading above, this
+one errs in the **more protective** direction, and un-dropping two Tier-1 fields from a masked
+projection on the strength of a review note would be the wrong direction to resolve an ambiguity in a
+publication clause.
+⭐ **What is corrected is the ASYMMETRY, and that is the whole point of recording it:** the story
+applied *"⭐ an authoring reading, ⛔ NOT a ruling"* to one inference and asserted the other as fact, in
+the same file family, on the same clause. ⇒ both are now labelled, and ⛔ neither may be cited as the
+Panel having decided. **Same trigger** as above — the two readings are confirmed or corrected together.
+
 ### (e) **VPA collection** — 8.4's deferred resolver seam, ⛔ not built here
 
 `vpa` is ruled **IN** by `2026-08-28-165` **cl.1** and is declared, allowlisted and rendered — ⚠ and
@@ -7861,3 +7875,53 @@ that is **FALSE**: `apps/mobile/tests/unit/panchayat-noticeboard-render.test.ts:
 ⇒ the item is routed as a **PATCH** on the combined pass, ⛔ not re-deferred, and item `11b.2 (vi)` above
 must be AMENDED to record that its trigger fired and what happened — ⛔ never silently re-pointed at a
 later story ([[feedback_closure_language_precision]], [[feedback_record_unattested_no_backfill]]).
+
+---
+
+## Deferred from: code review of 11b-3a-nominee-bank-public-presentation-and-masking-schedule (2026-09-03)
+
+- **Family 13 (semantic accessibility, AI-11a-3) — Astro grouping attributes are test-unasserted.** The
+  `sahyog-vivran` nominee bank block is a real grouping element (`<section role="group" aria-label=…>`
+  with nested per-account groups and `<dl>/<dt>/<dd>` pairing) in
+  `apps/public/src/pages/sahyog-vivran/[poolCanonicalIdentifier].astro` — covered-by-construction in the
+  source today. But Astro pages are tested only through the pure render module (the house carve-out),
+  so the `role` / `aria-label` attributes themselves have no test coverage: a later edit could drop
+  `role="group"` without failing CI. ⛔ Not actioned now — the load-bearing-invariant checklist rules
+  family 13 **un-mechanized by ruling** (BigDev 2026-08-23, *"checklist first"*), with mechanization
+  revisited at Story **11b.8**'s accessibility audit (UX-DR70, a launch-blocker). **Trigger:** 11b.8's
+  accessibility audit, or any earlier story that introduces an Astro-surface accessibility CI gate.
+
+- ⛔⛔ **BLOCKING ON DEPLOYMENT — the identifier-enumeration bound over four decrypted Tier-1 fields has
+  never been judged** (⭐ **SECOND-PASS** review, 2026-09-03; **RULED BLOCKING by BigDev the same day**).
+  `GET /api/v1/p/:pariwarId/public-pages/sahyog-vivran/:poolCanonicalIdentifier` is bounded **only** by
+  `limits.search`. The compounding facts: `P-YYYY-MM-###` is **sequential**; it is a single-item GET with
+  ⛔ no `page` and no `limit`, so 11b.3's `D11(a)` controls **2** and **3** are structurally N/A; the pool
+  read is `D8-default` **FAIL-OPEN** (`2026-09-02-179` cl.1), so **every Pariwar renders complete details
+  until the Trust writes a schedule row** — and `2026-09-02-178` put that authority **centrally**, so at
+  launch that is *all of them*; and behind the identifier sit **four decrypted Tier-1 fields**
+  (`account_holder_name`, `account_number`, `ifsc`, `vpa`).
+  ⭐⭐ **THE STORY ALREADY STATES ALL OF THIS IN THREE PLACES — that is ⛔ NOT what is missing.** AC2 rules
+  in terms that *"if `limits.search` is judged insufficient for a Tier-1-bearing single-item GET, that is
+  a **DECISION**, ⛔ not a tuning knob"*. ⇒ what is missing is **the judgement itself**, which nobody has
+  made. ⛔ The tier is deliberately **NOT** tightened here: doing so as an authoring act is precisely what
+  AC2 forbids.
+  ⚠ **Recorded as BLOCKING, ⛔ not "carried" and ⛔ not "resolved via deferral"**
+  ([[feedback_closure_language_precision]]) — Story 11b.3a is held at `in-progress` on this item alone;
+  its build is complete. ⭐ Consistent with `D5(a)`'s *"**built is ⛔ still not published**"*: what keeps
+  this dark is **deployment plus the counsel/Panel process**, ⛔ never a code mechanism and ⛔ never the
+  kill switch ([[project_directory_launch_gated_on_killswitch_ui]]).
+  **Trigger:** ⛔ **before Epic 11b deploys** — the Panel judges the bound, or the surface does not ship.
+
+- **An empty or whitespace `bank_name` 500s the entire Sahyog Vivran page** (⭐ **SECOND-PASS** review,
+  2026-09-03). `packages/domain/src/pool/sahyog-vivran-read.ts:547` passes `bankName` through raw while
+  its sibling `branch` was guarded with `.trim() || null` on the adjacent line 555; the column is
+  `NOT NULL` with ⛔ **no** length CHECK, and the contract requires `z.string().min(1)` on **both**
+  union arms, so an `''` fails response serialization → API 500 → `apps/public` renders the outage arm
+  at 503. One malformed row takes down a whole public transparency page — the exact failure the
+  surrounding *"FAIL-SOFT PER FIELD, ⛔ never per page"* comment forbids. ⛔ **NOT a reversal of the
+  first pass's disposition**, which considered this residual and declined it with a stated reason
+  (nulling a required field ripples through contract/OpenAPI/SSR/render). Re-recorded because **two
+  independent review layers raised it unprompted** on the second pass. ⚠ Currently unreachable **by
+  construction**: the only `bankIfscLookup` adapter is `createInMemoryBankIfscLookup`, a fixture map.
+  **Trigger:** the story that ships a live IFSC / bank-directory adapter — ⛔ do not let that story land
+  without either a `.trim() || null` projection, a DB length CHECK, or a nullable `bank_name` on the wire.

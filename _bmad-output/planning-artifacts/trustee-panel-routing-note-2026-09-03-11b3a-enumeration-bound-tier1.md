@@ -282,9 +282,27 @@ and the adding-up is what nobody has looked at.
 
 ## What we are asking you
 
-**Is a speed limit enough protection for this page?**
+⭐ **There are two questions, and we suggest taking the second one first** — because answering it may
+settle the first without your having to weigh anything difficult.
 
-## What we could do instead, if it is not
+> ### Question A — the one that may dispose of the rest
+> **Should the page for a drive that is still collecting be reachable by the public at all?**
+>
+> ⚠ Today it is reachable by **nobody in practice** — there is no link to it anywhere, and in the app
+> it cannot be opened at all. The only way in is to type an address and guess the number.
+> ⭐ **If your answer is "no, not for now"** — then making the address unguessable costs us **nothing
+> real**, and Question B becomes much easier.
+> ⚠ **If your answer is "yes, people should be able to see a running drive"** — then the right next
+> step is to **build a proper way in** (a link in the message we send when a drive opens, or a screen
+> in the app), and decide who should reach it. ⛔ We are not proposing to build that here.
+
+> ### Question B — the original question
+> **Is a speed limit enough protection for this page?**
+>
+> ⚠ This one still needs answering for drives that have **finished** — those are listed publicly and
+> will stay reachable whatever you decide on Question A.
+
+## What we could do instead, if a speed limit is not enough
 
 - **Slow it down more.** Easy. ⚠ Also makes the page slower for ordinary people — and someone patient
   still gets through eventually. It raises the **effort**, it does not close the door.
@@ -340,23 +358,31 @@ checking a running drive this way, because there is no way to get there unless y
 constructing addresses.
 
 ⭐⭐ **This changes the question in a way we think you should see plainly.** The real choice is ⛔ not
-*"protect the page, or keep a donor's ability to check."* Nobody has that ability yet. It is:
+*"protect the page, or keep a donor's ability to check."* Nobody has that ability yet.
 
-> **Do we make the address unguessable now — or do we first build a proper way in (a link in the
-> message we send when a drive opens, or a screen in the app), and then decide who should reach it?**
-
-⛔ We are not proposing to build that path here, and ⛔ we are not choosing between these. That is what
-we are asking you to decide.
+⇒ ⭐ **That is exactly why [Question A](#what-we-are-asking-you) is asked first, and why we suggest
+answering it before anything else.** ⛔ We are not proposing to build a way in here, and ⛔ we are not
+choosing between these — that is yours to decide.
 
 ## What happens either way
 
-- **If you say the speed limit is enough** — we write that down as a decision you made, and the work
-  finishes. Nothing changes in the software.
-- **If you say it is not** — you tell us which of the above to do, and we come back to you with that
-  one specific proposal.
+**On Question A — should a running drive be reachable at all?**
 
-⭐ **Either answer lets the work finish.** The only thing that does not work is leaving it unanswered,
-because then the page could go live while the question is still open.
+- **"No, not for now"** — we make the address unguessable for running drives. ⭐ Nothing is lost,
+  because nobody can reach them today anyway. This is the simplest outcome.
+- **"Yes"** — we leave things as they are for now and come back to you with a proposal for a **proper
+  way in**, together with what should bound it. ⚠ That would be its own piece of work with its own
+  note; ⛔ it is not part of the current story.
+
+**On Question B — is a speed limit enough (for drives that have finished)?**
+
+- **"Yes, it is enough"** — we write that down as a decision you made, and the work finishes. ⛔ Nothing
+  changes in the software.
+- **"No"** — you tell us which of the options above to take, and we come back with that one specific
+  proposal.
+
+⭐ **Any combination of answers lets the work finish.** ⛔ The only thing that does not work is leaving
+it unanswered, because then the page could go live while the question is still open.
 
 ## What this note is not
 

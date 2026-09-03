@@ -84,6 +84,7 @@ import {
   coerceDriveInstant,
   DECEASED_DISTRICT,
   DRIVE_CLOSED_AT,
+  DRIVE_MASKING_FROM,
 } from './public-read.js';
 
 /**
@@ -362,6 +363,12 @@ export async function readPublicSahyogVivran(
       claimCaseId: pools.claimCaseId,
       district: DECEASED_DISTRICT(now),
       driveClosedAt: DRIVE_CLOSED_AT(now),
+      // ⭐ A SECOND, DELIBERATELY DIFFERENT INSTANT — ⛔ not a duplicate of the line above. The one
+      // above is the LATEST close/settle event (what the page renders as "closed on"); this is the
+      // EARLIEST, and it is the only instant the masking window may be measured from. A late
+      // `pool.settled` moves the former forward and would UN-MASK an already-masked drive. See
+      // `DRIVE_MASKING_FROM`'s doc-block (second-pass review, 2026-09-03).
+      driveMaskingFrom: DRIVE_MASKING_FROM(now),
       // ⚠ `count(*)` is `bigint` ⇒ the driver hands back a STRING, ⛔ not a number. Coerced at this
       // accessor's boundary below — ⛔ never left to an implicit `+` somewhere downstream.
       confirmedCount: CONFIRMED_CONTRIBUTION_COUNT(now),
@@ -394,6 +401,9 @@ export async function readPublicSahyogVivran(
   // `getTime()` return NaN and every comparison false — i.e. a FULL ACCOUNT NUMBER staying public on
   // a Pariwar that configured a window. ⛔ Never re-derive it from `row.driveClosedAt` below.
   const driveClosedAt = coerceDriveInstant(row.driveClosedAt);
+  // ⭐ COERCED THE SAME WAY AND FOR THE SAME REASON, but kept SEPARATE from `driveClosedAt` — the two
+  // fragments answer different questions and collapsing them re-introduces the un-masking defect.
+  const driveMaskingFrom = coerceDriveInstant(row.driveMaskingFrom);
 
   return {
     poolIndex: row.poolIndex,
@@ -417,7 +427,16 @@ export async function readPublicSahyogVivran(
     // ⭐ STORY 11b.3a. ⚠ Reads the SAME `now` as everything above it: the masking verdict and the
     // close instant it is measured from must describe ONE instant, or a page could render a drive as
     // closed-at-T while deciding masking against T'.
-    nomineeBank: await readNomineeBank(db, pariwarId, row.claimCaseId, driveClosedAt, now),
+    nomineeBank: await readNomineeBank(
+      db,
+      pariwarId,
+      row.claimCaseId,
+      driveMaskingFrom,
+      // ⭐ THE INTERNAL STATE, ⛔ not the public `status` label computed above — the masking predicate
+      // is a domain rule and the public vocabulary is a wire concern (`-144` cl.8).
+      row.currentState as SahyogVivranVisiblePoolState,
+      now,
+    ),
   };
 }
 
@@ -526,7 +545,10 @@ async function readNomineeBank(
   db: Db,
   pariwarId: PariwarId,
   claimCaseId: string,
-  driveClosedAt: Date | null,
+  /** ⭐ `DRIVE_MASKING_FROM` — the EARLIEST close/settle instant. ⛔ NEVER `driveClosedAt`. */
+  driveMaskingFrom: Date | null,
+  /** ⭐ The drive's own INTERNAL state — a CAMPAIGN fact, ⛔ never a member handle (cl.10(f)). */
+  driveState: SahyogVivranVisiblePoolState,
   now: Date,
 ): Promise<SahyogVivranNomineeBank> {
   const [rows, setting] = await Promise.all([
@@ -545,7 +567,14 @@ async function readNomineeBank(
       {
         accountRank: r.accountRank,
         bankName: r.bankName,
-        branch: r.branch,
+        // ⚠ `.trim() || null`, ⛔ not a raw passthrough (review 2026-09-03). `branch` is Tier-3
+        // plaintext resolved from an IFSC lookup whose response contract has no `.min(1)`, and empty
+        // BRANCH strings are common in real RBI datasets — an `''` here survives to the wire as a
+        // "present" branch, fails the contract's `.min(1).nullable()` at response serialization and
+        // 500s the WHOLE transparency page. The render already omits the cell for `null`; this makes
+        // a blank branch that same first-class absence. (The `bank_name` column is `NOT NULL` and
+        // has no such nullable projection — a truly empty `bank_name` is a data-integrity fault.)
+        branch: r.branch?.trim() ? r.branch.trim() : null,
         accountHolderNameCiphertext: r.accountHolderNameCiphertext,
         accountNumberCiphertext: r.accountNumberCiphertext,
         ifscCiphertext: r.ifscCiphertext,
@@ -555,7 +584,7 @@ async function readNomineeBank(
   });
 
   return {
-    masked: isNomineeBankMasked({ setting, driveClosedAt, now }),
+    masked: isNomineeBankMasked({ setting, driveClosedAt: driveMaskingFrom, driveState, now }),
     accounts,
   };
 }

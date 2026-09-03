@@ -359,7 +359,14 @@ export function coerceCount(value: unknown): number {
   return Number.isFinite(n) && n >= 0 ? n : 0;
 }
 
-/** The drive's close (Active) or settle (Archive) instant, from the pool's own event stream. */
+/**
+ * The drive's close (Active) or settle (Archive) instant, from the pool's own event stream.
+ *
+ * ⚠⛔ **THE *LATEST* SUCH EVENT — and that is a DISPLAY semantic, ⛔ not a masking one.** This is what
+ * the Archive surfaces render as *"closed on"* and what {@link DECEASED_DISTRICT} freezes against.
+ * ⛔ **Do ⛔ not read this fragment to decide whether nominee bank details are masked** — use
+ * {@link DRIVE_MASKING_FROM}, and see its doc-block for why the two must differ.
+ */
 export const DRIVE_CLOSED_AT = (now: Date) => sql<Date | null>`(
     SELECT e.occurred_at
       FROM events_log e
@@ -367,6 +374,43 @@ export const DRIVE_CLOSED_AT = (now: Date) => sql<Date | null>`(
        AND e.event_type IN (${POOL_CLOSED_EVENT_TYPE}, ${POOL_SETTLED_EVENT_TYPE})
        AND e.occurred_at <= ${now}
      ORDER BY e.occurred_at DESC, e.event_version DESC
+     LIMIT 1
+  )`;
+
+/**
+ * The instant the nominee-bank MASKING WINDOW is measured from — the **EARLIEST** close/settle event.
+ *
+ * ⭐⭐ **WHY THIS IS A SECOND FRAGMENT AND ⛔ NOT A PARAMETER ON {@link DRIVE_CLOSED_AT}** (Story 11b.3a,
+ * second-pass review 2026-09-03; BigDev ruled option (a) the same day).
+ *
+ * `DRIVE_CLOSED_AT` takes the **LATEST** close/settle event. A pool emits `pool.closed` at T0 and, later,
+ * `pool.settled` at T0+45 — so that fragment's answer **MOVES FORWARD** when settlement lands. Read by
+ * the masking predicate on an `after_days: N` schedule, `now >= closedAt + N` then flips back to
+ * **`false`**, and a drive that had been masked since T0+N **re-publishes the complete account number,
+ * account holder name, IFSC and VPA for another N days**. cl.10(c)'s window silently becomes
+ * `(settle − close) + N`, and the ladder's documented monotonicity (*"`true` from then on"*) does not hold.
+ *
+ * ⛔ **The fix is ⛔ NOT to re-point `DRIVE_CLOSED_AT` at the earliest event.** That fragment is SHARED by
+ * `listPublicSahyogDrivePools` and the per-claim Sahyog Vivran read, and {@link DECEASED_DISTRICT} freezes
+ * the posting district against it — changing it would move `/sahyog`'s rendered `closedAt` and the district
+ * freeze instant for every already-published Archive row. ⇒ this file's own standing rule applies, and is
+ * FOLLOWED rather than bent: *"a consumer needing different semantics needs its OWN fragment with its own
+ * name, ⛔ never a parameter bolted onto one of these."*
+ *
+ * ⚠ **Latent when written, ⛔ not theoretical:** there is no producer of `pool.settled` anywhere in
+ * `packages/domain/src`, `apps/api/src` or `apps/jobs/src` today — only the state machine and the event
+ * catalog. It arms itself the day settlement ships, on the state where masking matters most.
+ *
+ * ⚠ Carries the same literal outer-table qualifier as its siblings, so any consumer MUST select from
+ * `pools` under that exact alias ([[project_epic6_drizzle_correlated_subquery_bug]]).
+ */
+export const DRIVE_MASKING_FROM = (now: Date) => sql<Date | null>`(
+    SELECT e.occurred_at
+      FROM events_log e
+     WHERE e.stream_id = "pools"."pool_id"
+       AND e.event_type IN (${POOL_CLOSED_EVENT_TYPE}, ${POOL_SETTLED_EVENT_TYPE})
+       AND e.occurred_at <= ${now}
+     ORDER BY e.occurred_at ASC, e.event_version ASC
      LIMIT 1
   )`;
 

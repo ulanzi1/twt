@@ -39,5 +39,5 @@
   "label.bank_name": "Bank",
   "label.branch": "Branch",
   "value.account_ending_in": "Account ending in {last4}",
-  "bank.masked_note": "This drive has closed, so only part of the account is shown here. The trust holds the complete details in its own records."
+  "bank.masked_note": "Only part of the account number is shown here. The trust holds the complete details in its own records."
 }

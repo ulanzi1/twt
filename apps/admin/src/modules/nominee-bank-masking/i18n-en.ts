@@ -80,6 +80,17 @@ const EN: Record<string, string> = {
   'nomineeBankMasking.error.heading': 'That change did not go through',
   'nomineeBankMasking.error.forbidden':
     'Your account does not hold the permission this control requires. It is granted to super administrators only, because the Trustee Panel ruled that this setting is held by the Trust centrally rather than by each Pariwar.',
+  // ⚠ A 409 — the acting administrator has no display name on their user record. ⛔ NOT a server
+  // fault and ⛔ NOT fixable by reloading: the name is resolved BEFORE the write, so nothing was
+  // saved, and the copy says so plainly rather than leaving the operator to retry a loop that cannot
+  // succeed. ⭐ It names WHY the name is required — a change to what the public can see of a family's
+  // bank account is attributed, and attribution nobody can read is not attribution.
+  'nomineeBankMasking.error.displayNameMissing':
+    'Your change was not saved because your user record has no display name set. Every change to this setting is recorded against the person who made it, so a name is required before you can save. Ask an administrator to add a display name to your account, then try again.',
+  // ⚠ A 400 — the submitted values were rejected at the server boundary (an over-long rationale, or a
+  // day count outside the permitted range). ⛔ Nothing was saved; the form itself is the fix.
+  'nomineeBankMasking.error.invalid':
+    'The server rejected these values, so nothing was saved. Check that the rationale is not excessively long and that the number of days is a whole number within the permitted range, then try again.',
   'nomineeBankMasking.error.unexpected':
     'Something went wrong on the server and the change may not have been saved. Reload the page to check the current setting before trying again.',
 };

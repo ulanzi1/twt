@@ -67,6 +67,16 @@ interface SeedSpec {
    * Trust acts — so the default fixture exercises the fail-open path, ⛔ not a configured one.
    */
   masking?: { mode: 'after_days'; maskAfterDays: number } | { mode: 'permanent' };
+  /** How long ago the drive emitted `pool.closed`. Default 2 days. */
+  closedDaysAgo?: number;
+  /**
+   * ⭐ Emit a `pool.settled` event this many days ago, IN ADDITION to `pool.closed`.
+   *
+   * ⚠ Exists for ONE regression (second-pass review, 2026-09-03): a drive that closed long ago and
+   * settled recently. `DRIVE_CLOSED_AT` takes the LATEST such event, so reading masking from it made
+   * a late settlement RESET the window and re-publish details that were already masked.
+   */
+  settledDaysAgo?: number;
 }
 
 async function seedDrive(t: TestApp, spec: SeedSpec): Promise<{ pariwarId: string }> {
@@ -128,9 +138,19 @@ async function seedDrive(t: TestApp, spec: SeedSpec): Promise<{ pariwarId: strin
     if ((spec.poolState ?? 'closed') !== 'live' && (spec.poolState ?? 'closed') !== 'spawned') {
       await scopeTx.client.query(
         `INSERT INTO events_log (stream_id, event_type, payload, event_version, pariwar_id, occurred_at)
-         VALUES ($1, 'pool.closed', '{}'::jsonb, 1, $2, now() - interval '2 days')`,
-        [poolId, pariwarId],
+         VALUES ($1, 'pool.closed', '{}'::jsonb, 1, $2, now() - ($3 || ' days')::interval)`,
+        [poolId, pariwarId, String(spec.closedDaysAgo ?? 2)],
       );
+      // ⭐ The LATER settle event, when the fixture asks for one. Its whole purpose is to be NEWER
+      // than the close event, so `DRIVE_CLOSED_AT` (latest) and `DRIVE_MASKING_FROM` (earliest)
+      // disagree — which is exactly the condition the un-masking defect needed.
+      if (spec.settledDaysAgo !== undefined) {
+        await scopeTx.client.query(
+          `INSERT INTO events_log (stream_id, event_type, payload, event_version, pariwar_id, occurred_at)
+           VALUES ($1, 'pool.settled', '{}'::jsonb, 2, $2, now() - ($3 || ' days')::interval)`,
+          [poolId, pariwarId, String(spec.settledDaysAgo)],
+        );
+      }
     }
 
     for (let i = 0; i < (spec.assigned ?? 0); i += 1) {
@@ -775,6 +795,76 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
           expect('accountHolderName' in account).toBe(false);
           expect('vpa' in account).toBe(false);
         }
+        expect(() => PublicSahyogVivranResponse.parse(res.json())).not.toThrow();
+      } finally {
+        await teardown(t);
+      }
+    });
+
+    it('⭐ `after_days: 0` on a SETTLED drive masks too — the post-disbursement state (review 2026-09-03)', async () => {
+      // ⚠ D4(b) admits `live` + `closed` + `settled`, and `settled` is the state where masking
+      // matters MOST (funds have moved). Every other end-to-end masking case used `live`/`closed`;
+      // this pins that `DRIVE_CLOSED_AT` resolves a close instant for a pool that reached `settled`
+      // (its subquery matches `pool.closed` OR `pool.settled`) so the `after_days` offset engages.
+      const t = await createTestApp();
+      try {
+        const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
+        const { pariwarId } = await seedDrive(t, {
+          canonicalIdentifier: id,
+          poolState: 'settled',
+          nomineeBank: ACCOUNTS,
+          masking: { mode: 'after_days', maskAfterDays: 0 },
+        });
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, id) });
+        expect(res.statusCode).toBe(200);
+        const body = res.json() as { drive: { nomineeBankAccounts: Record<string, unknown>[] } };
+        expect(body.drive.nomineeBankAccounts.every((a) => a['masked'] === true)).toBe(true);
+        for (const account of body.drive.nomineeBankAccounts) {
+          expect('accountNumber' in account).toBe(false);
+          expect('accountHolderName' in account).toBe(false);
+        }
+        expect(() => PublicSahyogVivranResponse.parse(res.json())).not.toThrow();
+      } finally {
+        await teardown(t);
+      }
+    });
+
+    it('⭐⭐ A LATE `pool.settled` does ⛔ NOT UN-MASK an already-masked drive (second-pass review 2026-09-03)', async () => {
+      // ⛔⛔ THE REGRESSION THIS PINS. `DRIVE_CLOSED_AT` selects the LATEST of `pool.closed` /
+      // `pool.settled`, so once settlement lands the instant MOVES FORWARD. Read by the masking
+      // predicate, `now >= closedAt + N` flipped back to FALSE and a drive that had been masked for
+      // ten days re-published the COMPLETE account holder name, account number, IFSC and VPA for
+      // another 30 days — cl.10(c)'s window silently becoming `(settle − close) + N`.
+      //
+      // ⭐ The fix is `DRIVE_MASKING_FROM` (EARLIEST), a SEPARATE fragment — `DRIVE_CLOSED_AT` still
+      // feeds the rendered `closedAt`, which is why this test also asserts the two DISAGREE and the
+      // masking verdict follows the earlier one.
+      const t = await createTestApp();
+      try {
+        const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
+        const { pariwarId } = await seedDrive(t, {
+          canonicalIdentifier: id,
+          poolState: 'settled',
+          nomineeBank: ACCOUNTS,
+          masking: { mode: 'after_days', maskAfterDays: 30 },
+          closedDaysAgo: 40, // masked since day 30
+          settledDaysAgo: 0, // …and settled just now
+        });
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, id) });
+        expect(res.statusCode).toBe(200);
+        const body = res.json() as {
+          drive: { closedAt: string; nomineeBankAccounts: Record<string, unknown>[] };
+        };
+        // ⭐ STILL MASKED. Before the fix every account came back `masked: false` with a full number.
+        expect(body.drive.nomineeBankAccounts.every((a) => a['masked'] === true)).toBe(true);
+        for (const account of body.drive.nomineeBankAccounts) {
+          expect('accountNumber' in account).toBe(false);
+          expect('accountHolderName' in account).toBe(false);
+        }
+        // ⚠ …while the RENDERED close instant is still the LATEST event — the two fragments are
+        // deliberately different, and this asserts the display half did ⛔ not silently change.
+        const renderedAgeDays = (Date.now() - Date.parse(body.drive.closedAt)) / 86_400_000;
+        expect(renderedAgeDays).toBeLessThan(1);
         expect(() => PublicSahyogVivranResponse.parse(res.json())).not.toThrow();
       } finally {
         await teardown(t);

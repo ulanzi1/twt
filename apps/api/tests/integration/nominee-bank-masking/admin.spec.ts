@@ -282,9 +282,15 @@ describe.skipIf(!hasDatabase)('Nominee-bank masking-schedule admin surface (Stor
         [pariwarId, AUDIT_ACTION],
       );
       expect(audit.rows).toHaveLength(1);
-      expect(String(audit.rows[0]!['resource_locator'])).toContain('nominee-bank-masking');
       // ⛔⛔ AND THE AUDIT LINE CARRIES NO BANK FIELD OF ANY KIND — this module writes a SETTING.
-      expect(String(audit.rows[0]!['resource_locator'])).not.toMatch(/\d{6,}/);
+      // ⚠ Asserted as the EXACT locator rather than a `/\d{6,}/` scan (review 2026-09-03): the
+      // pariwarId is a random UUID whose hex frequently holds 6+ consecutive digits, so the scan
+      // failed on a large fraction of runs and guarded nothing real — no account number flows
+      // through this module. An exact match proves the locator is the pariwar id + resource + mode
+      // and nothing else.
+      expect(String(audit.rows[0]!['resource_locator'])).toBe(
+        `pariwar/${pariwarId}/nominee-bank-masking;mode=permanent`,
+      );
     } finally {
       c.release();
     }

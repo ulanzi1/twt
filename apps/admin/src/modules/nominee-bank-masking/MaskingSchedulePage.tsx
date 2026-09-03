@@ -40,8 +40,17 @@ function errorMessage(error: unknown): string | undefined {
     // RULING, because "you lack a permission" invites a catalog edit and "the Panel ruled this is
     // held centrally" does not.
     if (error.status === 403) return t('nomineeBankMasking.error.forbidden');
-    // Any other status is unexpected by design (the designed list is 400/401/403/409) — curated
-    // copy, ⛔ not the raw server code/message, which may carry internal detail.
+    // ⭐ THE DESIGNED LIST IS 400/401/403/409, AND EACH NOW GETS ITS OWN ANSWER (review 2026-09-03).
+    // ⛔ Previously every non-403 fell through to `unexpected`, whose copy says the change "may not
+    // have been saved" and tells the operator to reload. For a 409 that is BOTH unhelpful and untrue:
+    // the display name is resolved BEFORE the domain write, so nothing was written and no reload will
+    // ever fix it — the fix is on the operator's own user record.
+    if (error.status === 409) return t('nomineeBankMasking.error.displayNameMissing');
+    if (error.status === 400) return t('nomineeBankMasking.error.invalid');
+    // ⚠ 401 keeps the generic copy deliberately: a session that expired mid-form IS resolved by
+    // reloading, which is exactly what `unexpected` instructs.
+    // Anything else is genuinely unexpected — curated copy, ⛔ not the raw server code/message,
+    // which may carry internal detail.
     return t('nomineeBankMasking.error.unexpected');
   }
   return error instanceof Error ? error.message : 'Something went wrong.';
@@ -177,6 +186,18 @@ export function MaskingSchedulePage({ pariwarId }: MaskingSchedulePageProps): Re
           </h2>
           <MaskingScheduleForm
             key={pariwarId}
+            // ⭐⭐ THE SETTING IN FORCE, SEEDED INTO THE FORM (review 2026-09-03).
+            //
+            // ⛔ Without this the form ALWAYS opened on `after_days` / `0` regardless of what the
+            // Pariwar had chosen. On a Pariwar set to `permanent` that is not a cosmetic mismatch: a
+            // pre-selected `after_days: 0` LOOKS like the current state, and `permanent` masks a LIVE
+            // drive where `after_days: 0` does ⛔ not. An operator re-recording a rationale would have
+            // published the complete holder name, account number, IFSC and VPA on every live drive in
+            // that Pariwar — and `s-maxage=300` means it cannot be pulled back for five minutes.
+            // ⚠ Every other guard on this path (required rationale, audit anchor, super_admin key) is
+            // SATISFIED by that mistake; none of them can catch it. The form showing the truth is what
+            // catches it.
+            currentSetting={schedule.data.setting}
             pending={change.isPending}
             submitError={errorMessage(change.error)}
             resetToken={resetToken}

@@ -4,7 +4,7 @@ baseline_commit: PENDING — set to `origin/main` at the commit this story start
 
 # Story 11b.10: Sahyog Vivran — the Unguessable Public Address + the Inbound Path `[SURFACE]`
 
-Status: draft
+Status: ready-for-dev
 
 > ⭐⛔ **THIS STORY IS ⛔ NOT IN `epics.md`'s STORY LIST.** It is created by a **Trustee-ratified
 > decision** (`2026-09-03-184`), ⛔ not by epic decomposition — exactly as `11b-3a` was. ⇒ it owes an
@@ -37,11 +37,16 @@ page becoming reachable by nobody at all.
 ⛔ **This story introduces ⛔ NO predicate that gates a member's access to a benefit.** ⭐ Stated
 explicitly rather than omitted, because an absent note is indistinguishable from an unasked question.
 
-⚠ **Nearest thing to one, and why it is ⛔ not one:** AC4 may introduce a check on **who may open a
-`live` drive's page**. ⛔ That gates access to a **public information surface**, ⛔ never to a benefit —
-⛔ no contribution, assignment, validity, coverage or claim outcome turns on it. ⚠⛔ **AND IT MUST NOT
-BECOME ONE:** if a reader is refused this page, that must ⛔ never be because of anything about the
-reader's **membership standing** — ⛔ no `members.state`, ⛔ no `is_valid`, ⛔ no moderation overlay.
+⭐ **AND `D1` REMOVED THE ONLY CANDIDATE.** An earlier draft of this note hedged that AC4 *might*
+introduce a check on who may open a `live` drive's page. ⛔ **It will not:** D1 ruled the page answers
+**200 to anyone presenting a valid address**, with ⛔ no session and ⛔ no reader-side check of any kind.
+⇒ there is ⛔ **nothing here to gate on**, which is the strongest form this note can take — the
+prohibition is **structural**, ⛔ not a rule someone must remember.
+
+⚠⛔ **THE ONE THING THAT COULD STILL GO WRONG, so it is written down:** if a future change ever refuses
+a reader this page, that must ⛔ **never** be because of the reader's **membership standing** — ⛔ no
+`members.state`, ⛔ no `is_valid`, ⛔ no moderation overlay. ⭐ A token check is a check on the
+**ADDRESS**; a membership check would be a check on the **PERSON**, and only the first is authorised.
 ⭐ `2026-08-28-160` **cl.10(f)** already rules the neighbouring masking control a
 **public-presentation** control that must ⛔ not prevent a **suspended** member from reaching what they
 need; ⛔ the same posture binds here.
@@ -148,26 +153,33 @@ appears in operator-facing surfaces and audit lines
 refused, and that the refusal is **indistinguishable** from the one for a non-existent drive — ⛔ a
 different response for "real drive, wrong token" is itself an enumeration oracle.
 
-### AC2 — ⭐ The token's shape and lifecycle are DECIDED HERE, and the decision is recorded
+### AC2 — The token is RANDOM, STORED, ROTATABLE, and BACKFILLED [D2 RULED]
 
-**Given** `2026-09-03-184`'s follow-up leaves this open **by design**
-**Then** the story records, with reasoning: **random vs. deterministically derived** · **length** ·
-whether it is **ever rotated**, and if so **what rotation does to links already shared**
-**And** ⚠ the trade is stated rather than assumed: ⭐ a **derived** token is reproducible for audit and
-needs no storage; ⛔ a **random** token needs a column but can be rotated. ⛔ Neither is obviously right
-**And** ⚠ if derived, ⛔ **the derivation input must not be guessable** — deriving from
-`(pariwar_id, canonical_identifier)` alone reproduces the walk for anyone who reads this file. A
-server-held secret is required
+**Given** **D2**, ruled random-stored-rotatable because **D1** made an open link permanent access until
+rotation
+**Then** the token is **128 bits** of CSPRNG entropy, rendered URL-safe, stored on the pool row under a
+**unique index**, and generated at pool spawn
+**And** ⛔ it is **NOT derived** from `pool_id`, the canonical identifier, or any pool fact — ⚠ pool
+spawn's UUIDv5 determinism ([[project_pool_spawn_saga_atomicity]]) is ⛔ **not** a reason to make the
+token reproducible; deriving it from pool identity re-creates the guessability this story removes
+**And** ⭐ **ROTATION EXISTS AND IS EXERCISED BY A TEST** — rotating one drive's token invalidates its
+old address and ⛔ leaves every other drive's address untouched. ⚠ Without this, D1's open-link ruling
+has ⛔ **no remedy** for a link that spread too far
+**And** ⛔⛔ **THE MIGRATION BACKFILLS EVERY EXISTING POOL**, and a test asserts **ZERO** NULL tokens
+across all visible states — ⚠ a visible pool with a NULL token is a drive whose page **404s**, so a
+nullable column left nullable ships a **broken archive**
 **And** ⛔ the token is ⛔ **never** presented as a security boundary for the DATA — it bounds
-**discovery**, ⛔ not authorisation. ⭐ Say so where it is generated.
+**discovery**, ⛔ not authorisation (D1). ⭐ Say so where it is generated.
 
 ### AC3 — The inbound path for `closed` / `settled` — the `/sahyog` per-row link
 
 **Given** `2026-09-04-185` cl.3–4: **all three states** need a path, ⛔ not only `live`
 **When** the index renders a drive row
 **Then** the row carries a link to that drive's page, built with its token
-**And** ⚠ the exposure change is **stated in the story record**: every listed drive becomes **one click**
-from four Tier-1 fields under FAIL-OPEN (Trap 2)
+**And** ⭐ **[D3 RULED]** this is the **necessary consequence** of (A)+(B), ⛔ not a fresh exposure
+decision — **but the exposure change is STATED IN THE STORY RECORD IN THESE TERMS**: *"every listed
+drive becomes ONE CLICK from four Tier-1 fields under `D8-default` FAIL-OPEN"* ⇒ ⛔ a reviewer must meet
+that sentence in **prose**, ⛔ never discover it in a diff (Trap 2)
 **And** the link is announced coherently to assistive technology — ⛔ never a bare "click here", and the
 row's accessible name identifies **which drive** it opens (family 13, in its web form).
 
@@ -177,10 +189,13 @@ row's accessible name identifies **which drive** it opens (family 13, in its web
 **When** a `live` drive exists
 **Then** it is reachable by a real path — ⭐ the **drive-opened notification** carrying its link, or a
 **member-app screen**, ⛔ not by URL construction
-**And** ⚠⛔ **WHO may reach it is RAISED, ⛔ not assumed.** `2026-09-03-184` ratified *"publicly
-reachable"* and ⛔ **expressly did not decide** open-to-anyone-with-the-link vs. member-authenticated.
-⇒ if the design forces the question, it goes back to the Panel as its **own** note — ⛔ the story does
-⛔ not settle it by picking whichever is easier to build
+**And** ⭐ **[D1 RULED]** the page answers **200 to anyone presenting a valid address** — ⛔ **no member
+session**, ⛔ no new auth surface, and ⛔ **no branch on the reader's membership standing** of any kind
+(the Policy-meaning note above binds here: ⛔ no `members.state`, ⛔ no `is_valid`, ⛔ no moderation
+overlay may ever gate this page)
+**And** ⚠ the **price of D1 is carried, ⛔ not hidden**: a forwarded link is permanent public access to
+that drive **until its token is rotated** ⇒ the rotation path AC2 requires is what makes D1 survivable,
+and ⛔ the two must not be separated
 **And** ⛔ `live` drives are **STILL NOT ADDED** to the `/sahyog` index — `public-read.ts:84-87` excludes
 them deliberately (*"an open solicitation"*), and ⛔ that ruling is untouched by (A). ⭐ (A) says a live
 drive should be **reachable**; it does ⛔ **not** say **listed**.
@@ -204,22 +219,64 @@ close — ⛔ a partial landing is the one outcome Trap 1 forbids.
 
 ---
 
-## ⚖️ Decisions needed
+## ⚖️ Decisions — ✅ **ALL THREE RULED 2026-09-04. ⛔ ZERO BLOCKING.**
 
-### D1 — ⛔ **OPEN, and it may need the Panel.** Who may reach a `live` drive?
+### ✅ D1 — RULED by BigDev, 2026-09-04: **AN OPEN LINK — anyone holding it, ⛔ no session required**
 
-`2026-09-03-184` ratified *"publicly reachable"* and ⛔ expressly left this open. ⚠ **If** the inbound
-path's design forces a choice between **anyone with the link** and **member-authenticated**, that is a
-**Panel** question, ⛔ not an authoring one. ⭐ It may not force it — a notification link to a member is
-already scoped to that member — in which case record that it did ⛔ not arise.
+`2026-09-03-184` ratified *"publicly reachable"* and ⛔ expressly left this open. ⭐ **Ruled: the token
+IS the bound, and it bounds DISCOVERY, ⛔ not AUTHORISATION.** A `live` drive's page answers **200** to
+anyone presenting a valid address — ⛔ no member session, ⛔ no new auth surface.
 
-### D2 — Token shape: derived vs. random (AC2). ⭐ **Author's, ⛔ not the Panel's** — it is a mechanism, not a policy — but it must be **recorded with its reasoning**, ⛔ not just chosen.
+⭐ **Ground:** it is the same posture `closed`/`settled` already have ⇒ **ONE surface, ONE rule.** A
+split rule would have made the page's access depend on the drive's lifecycle state, which is a second
+thing to reason about on the most sensitive surface in the epic.
+⭐ **And it dodges a known blocker rather than walking into it:** ⛔ **no browser surface holds the
+member token today** — a constraint that has defeated authenticated-tier ACs in **four stories across
+two epics** ([[project_no_browser_member_token_surface]]). Choosing member-authentication here would
+have made 11b.10 the fifth.
 
-### D3 — ⚠ Does the `/sahyog` per-row link need its own Panel visibility (Trap 2)?
+⚠⛔ **AND THE PRICE IS PART OF THE RULING, ⛔ not a footnote:** a link, once forwarded, is **permanent
+public access to that drive until the token is ROTATED.** ⇒ **that is exactly why D2 rules the token
+ROTATABLE** — the two decisions are one design, and ⛔ a non-rotatable token under D1 would leave a
+leaked link with no remedy at all.
 
-⭐ Recorded as a question rather than an answer: the Panel ratified making the address unguessable; ⛔ it
-was ⛔ not asked whether every listed drive should become **one click** from four Tier-1 fields. ⚠ That
-is arguably implied by (A) + (B) together — and arguably a separate exposure decision.
+### ✅ D2 — RULED by BigDev (author's call), 2026-09-04: **RANDOM · STORED · ROTATABLE** — ⛔ not derived
+
+| | Random + stored | Derived (HMAC over pool identity) |
+|---|---|---|
+| Storage | ⚠ a column + unique index | ⭐ none |
+| Reproducible for audit | ⚠ by reading the row | ⭐ by recomputation |
+| **Rotatable per drive** | ⭐ **YES** | ⛔ **NO** — rotating the secret invalidates **EVERY** link at once |
+
+⭐⭐ **ROTATABILITY IS WHAT DECIDES IT, AND ⛔ ONLY BECAUSE D1 WENT THE WAY IT DID.** Under an open-link
+rule the sole remedy for a link that has spread further than intended is to **invalidate that one
+drive's address**. ⛔ A derived token cannot do that without a per-pool salt — and a per-pool salt **IS**
+stored randomness, so the "no storage" advantage evaporates precisely when it is needed.
+
+**Ruled shape:** **128 bits** of CSPRNG entropy, rendered URL-safe · stored on the pool row under a
+**unique index** · generated at pool spawn · **backfilled for every existing pool** by the migration.
+
+⚠⛔ **THE BACKFILL IS ⛔ NOT OPTIONAL AND ⛔ NOT A DETAIL:** a visible pool with a NULL token is a drive
+whose page **404s** — ⇒ the migration must fill **every** existing row, and a test must assert **zero**
+NULL tokens across all visible states. ⛔ A nullable column left nullable ships a broken archive.
+⚠ Pool spawn is 7.3's **last-child-finalizes** saga with a **deterministic UUIDv5** `pool_id`
+([[project_pool_spawn_saga_atomicity]]) — ⛔ the token is **random and is NOT part of that determinism**;
+⛔ do ⛔ not derive it from `pool_id` "to keep spawn reproducible", which would re-introduce exactly the
+guessability this story exists to remove.
+
+### ✅ D3 — RULED by BigDev, 2026-09-04: **IMPLIED by (A)+(B) — build the index link, and STATE what it does**
+
+⭐ **Ruled: ⛔ not a fresh Panel question.** (A) says drives should be reachable and (B) removes the only
+current path ⇒ a link is the **necessary consequence** of two ratified answers, ⛔ not a new exposure
+decision smuggled alongside them.
+
+⚠⛔ **BUT IT IS RECORDED, ⛔ NOT WAVED THROUGH** (Trap 2). This story makes the surface **harder to
+ENUMERATE and materially easier to REACH**, and the second half is a real change: every listed drive
+becomes **ONE CLICK** from four Tier-1 fields under `D8-default` **FAIL-OPEN**. ⭐ **AC3 requires that
+sentence in the story record** so a reviewer meets it in prose, ⛔ never discovers it in a diff.
+
+⚠ ⛔ `live` drives are **STILL NOT LISTED** on `/sahyog` — `public-read.ts:84-87` excludes them
+deliberately and (A) says **reachable**, ⛔ never **listed**.
 
 ---
 

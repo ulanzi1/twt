@@ -1,4 +1,30 @@
-# last_updated: 2026-09-03c (⭐⭐ **THE PANEL ANSWERED — `2026-09-03-184`, TRUSTEE-RATIFIED (Dhiraj
+# last_updated: 2026-09-04 (⭐⭐ **STORY 11b.10 CREATED AND RULED — `draft` -> `ready-for-dev`; and a
+#   FALSE PREMISE the Panel ratified on is CORRECTED (`2026-09-04-185`).** ONE row is added and moves.
+#   ⛔ epic-11b stays `in-progress`; ⛔ 11b-3a stays `done`; ⛔ 11b-3b stays `ready-for-dev`.
+#   ⛔⛔ **THE CORRECTION FIRST, because it is the part that matters.** The routing note told the Panel
+#   that `closed`/`settled` drives were "already discoverable through a published link" and that a token
+#   would cost "almost nothing" for them. **THAT WAS FALSE.** VERIFIED: `sahyog-render.ts` produces
+#   EXACTLY TWO hrefs — `page-1` (:308) and `page+1` (:315). There is ⛔ NO link to any drive's detail
+#   page from anywhere in `apps/public/src`, in ANY state. The index LISTS drives; it ⛔ never LINKS.
+#   ⇒ the Panel's ANSWERS stand (arguably more clearly), but `-184` cl.4's coupling WIDENS from `live`
+#   drives to ALL THREE STATES. ⭐ THE PANEL WAS NOTIFIED AND ITS STANDING IS UNCHANGED ⇒ the ruling now
+#   rests on the CORRECTED premise — re-affirmed against accurate facts, ⛔ not merely still standing.
+#   ⚠ Recorded as notified-and-affirmed, ⛔ NOT as a second ratification vote (no new signatures were
+#   reported) ([[feedback_record_unattested_no_backfill]]). `-184` is ⛔ NOT edited in place.
+#   ⭐ **STORY 11b-10** — the unguessable address + the inbound path. ⛔ Numbered 11b-10 and ⛔ NOT
+#   11b-3c: 11b.3's split was a RULED three-way split (`D6(b)`) and `-184` says this belongs to NEITHER
+#   child. It owes an `epics.md` ANNOTATION (its Task 0), as 11b-3a did.
+#   ⛔⛔ **IT IS A DEPLOYMENT BLOCKER FOR EPIC 11b**, and its load-bearing property is TRAP 1: the token
+#   is the easy, satisfying half, and landing it ALONE makes the ENTIRE surface reachable by NOBODY —
+#   defeating the Panel's ratified (A) **while passing every gate and looking like a security win**.
+#   ⛔ Do not split the story to ship the token first; AC6 refuses closure on a partial landing.
+#   ✅ D1/D2/D3 ALL RULED 2026-09-04 ⇒ ZERO BLOCKING. D1 open link · D2 random/stored/ROTATABLE (D1 is
+#   what decides D2 — rotation is the only remedy for a leaked open link) · D3 index link is implied,
+#   ⛔ not a new decision, but its exposure sentence is STATED.
+#   ⭐ AC1 also closes an enumeration ORACLE the ruling did not name: "real drive, wrong token" must be
+#   INDISTINGUISHABLE from "no such drive", or the token leaks what it exists to hide.
+#
+# last_updated_prior: 2026-09-03c (⭐⭐ **THE PANEL ANSWERED — `2026-09-03-184`, TRUSTEE-RATIFIED (Dhiraj
 #   Rahul, Kalpana Bharti). STORY 11b.3a `in-progress` -> `done`.** ONE row moves. ⛔ epic-11b stays
 #   `in-progress`; ⛔ 11b-3b stays `ready-for-dev`.
 #   **(A) YES** — a `live` drive's page SHOULD be publicly reachable. The `D4-linkage` rider
@@ -14582,7 +14608,14 @@ development_status:
   # ⚠⛔ THE TOKEN AND THE INBOUND PATH ARE ONE DELIVERABLE. Shipping the token alone makes the ENTIRE
   # surface reachable by NOBODY (there is no link to any drive page today, in ANY state) and DEFEATS the
   # Panel's ratified answer (A). ⛔ Do not split this story to land the token first.
-  11b-10-sahyog-vivran-unguessable-address-and-inbound-path: draft
+  # ✅ D1/D2/D3 ALL RULED 2026-09-04 ⇒ ZERO BLOCKING ⇒ `draft` -> `ready-for-dev`.
+  # D1 OPEN LINK (token bounds DISCOVERY, ⛔ not authorisation; ⛔ no member session — which also dodges
+  # the four-story `no browser surface holds the member token` blocker rather than becoming its fifth).
+  # D2 RANDOM · STORED · ROTATABLE (⛔ not derived) — rotatability is the ONLY remedy for a leaked
+  # open link, so D1 is what decides D2; the migration MUST backfill or the archive 404s.
+  # D3 the /sahyog per-row link is the necessary consequence of (A)+(B), ⛔ not a new decision — but the
+  # exposure sentence is STATED in the story record, ⛔ never discovered in a diff.
+  11b-10-sahyog-vivran-unguessable-address-and-inbound-path: ready-for-dev
   epic-11b-retrospective: optional
 
   # ==========================================================================

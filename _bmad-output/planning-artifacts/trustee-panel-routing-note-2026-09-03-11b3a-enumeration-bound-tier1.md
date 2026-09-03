@@ -126,8 +126,34 @@ collection, it does ⛔ not prevent it.
 
 **(c) Make the address unguessable** (an opaque token alongside the human-readable identifier). ⭐ The
 only option that removes *walking* as an access method. ⚠ Cost: a drive page becomes something you must
-be **given**, which changes what "public transparency page" means — and ⛔ that is a policy change, not
-an engineering one.
+be **given** — the public could no longer *discover* a drive, only *be shown* one. ⇒ the set of drives
+anyone can examine becomes the set someone published a link to, which moves a **public record** toward a
+**disclosed document**. ⛔ That is a policy change, not an engineering one.
+
+⭐⭐ **BUT THE COST IS ⛔ NOT ONE COST — IT SPLITS IN TWO, AND THE HALVES POINT OPPOSITE WAYS.** This was
+missed on the first drafting of this note and is the sharpest thing in it:
+
+| Drive state | On the `/sahyog` index? | What a token would cost |
+|---|---|---|
+| `closed` / `settled` | ✅ **Yes** — listed | ⭐ **Almost nothing.** Already discoverable through a published link; the token changes the address, ⛔ not the discoverability. |
+| `live` | ⛔ **No** — deliberately absent | ⚠ **It would close the only door.** A live drive is reachable *today* by constructing the identifier and by ⛔ nothing else. |
+
+⚠⛔ **AND THE `live` HALF INVERTS THE ARGUMENT, WHICH IS WHY IT IS PUT TO YOU RATHER THAN DECIDED.**
+`public-read.ts:84-87` excludes `live` from the index **deliberately**, and states the reason in terms:
+
+> *"⛔ `spawned` and `live` are ABSENT deliberately: a drive still collecting is ⛔ not a transparency
+> record, **it is an open solicitation**, and publishing it would invite exactly the 'who has given so
+> far' reading this surface exists to refuse."*
+
+⇒ ⭐ **So a live drive being reachable by counting is arguably ⛔ not a transparency affordance at all —
+it is a side effect of the identifier scheme that hands a reader precisely what the index design
+declined to publish.** On that reading, tokenizing **restores** an existing decision rather than
+narrowing transparency.
+
+⚠ **The opposite reading is also available and honest:** cl.10(a)'s accepted benefit is verification
+*during* an active campaign — a donor checking that a live drive pays a real family. ⛔ If a live drive
+can only be reached by a link the Trust hands out, that check depends on the Trust. ⇒ **which reading
+governs is exactly the judgement being asked for**, and the build must ⛔ not pick.
 
 **(d) Change the fail-open default** (`2026-09-02-179` cl.1). ⭐ Would shrink the exposed population from
 *every* Pariwar to *only those the Trust configured open*. ⚠⛔ **But you ruled fail-open deliberately,
@@ -178,6 +204,11 @@ note. ⛔ It must not be flipped to `done` by re-reading the build as finished.
 - `2026-09-02-176` (`D4`/`D4-linkage`) — visible states, and the linkage rider routed here
 - Story 11b.3a **AC2** — the *"that is a DECISION, ⛔ not a tuning knob"* rule
 - `apps/api/src/modules/public-pages/routes.ts` — the route registration and its control-set header
+- `packages/domain/src/pool/public-read.ts:84-89` — `SAHYOG_DRIVE_VISIBLE_POOL_STATES = ['closed',
+  'settled']`, and the recorded reason `live` is excluded (*"an open solicitation"*) — the basis for
+  §6(c)'s split cost
+- `packages/domain/src/pool/naming.ts:185` — `sequence` as the per-(pariwar, YYYY-MM) monotonic counter
+- `apps/public/src/lib/pariwar.server.ts` — `ACTIVE_PARIWAR_ID`, the server-side tenant constant
 - `_bmad-output/implementation-artifacts/deferred-work.md` — the blocking item, second-pass section
 
 ---
@@ -221,13 +252,42 @@ and the adding-up is what nobody has looked at.
   still gets through eventually. It raises the **effort**, it does not close the door.
 - **Make the address unguessable.** Add a long random code to the address. ⭐ This is the only option
   that actually stops someone counting their way through. ⚠ But then the page is something you must be
-  **given** — it is no longer something a member of the public can simply find, which changes what we
-  mean by a transparency page.
+  **given** — someone has to send you the link. Nobody could go looking on their own; they could only
+  be shown. ⇒ what the public can check would become **what we chose to publish a link to**, and the
+  question *"is there a drive you are not telling me about?"* could no longer be answered by an
+  outsider. ⭐ **See the note below — this cost is not the same for all drives.**
 - **Change the starting position** so details are hidden until the Trust decides otherwise. ⚠ You chose
   the opposite deliberately, and we are ⛔ **not** asking you to change it. We mention it only because
   it would make the biggest difference and you should know that.
 - **Ask people to sign in** to see the bank details, keeping the rest of the page open to all. ⚠ This
   would reduce what the public can check without an account.
+
+## ⭐ One thing worth knowing before you weigh the "unguessable address" option
+
+That option costs **very different things** for two kinds of drive, and it is easy to miss.
+
+**For drives that have finished** (closed, or paid out) — ⭐ **it costs almost nothing.** Those are
+already **listed** on the public `/sahyog` page, so anyone can find them from that list. Changing the
+address would not hide them; they would still be listed.
+
+**For drives still collecting** — ⚠ **it would close the only way in.** A running drive is **not** on
+that list, so today the *only* way to reach it is by typing the number.
+
+⚠⭐ **And here is the part that may change your view.** A running drive was left off the list **on
+purpose**. The reason written down at the time was that a drive still collecting is *"not a transparency
+record, it is an open solicitation"* — the concern being that showing it invites people to read it as
+*"who has given so far,"* which we specifically did not want.
+
+⇒ ⭐ So one honest way to see it: **someone reaching a running drive by counting is getting the very
+thing we decided not to publish.** Making the address unguessable would not be taking transparency
+away — it would be restoring a decision already made.
+
+⚠ **But the other way is just as honest:** part of why you allowed bank details to show during a drive
+was so a donor could check, *while giving*, that the money goes to a real family. ⛔ If a running drive
+can only be reached through a link we hand out, that check depends on **us** — the very people being
+checked on.
+
+⇒ **We are not choosing between those two readings. That is what we are asking you to do.**
 
 ## What happens either way
 

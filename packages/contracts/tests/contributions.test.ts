@@ -49,6 +49,10 @@ const VALID_ASSIGNED = {
   poolLetterCode: 'F',
   poolName: null,
   poolCanonicalIdentifier: 'P-2026-07-001',
+  // ⭐ Story 11b.10 (AC4) — the drive's OPAQUE PUBLIC ADDRESS, SERVER-RETURNED. ⚠ Deliberately
+  // UNLIKE the identifier above: a fixture that reused `P-2026-07-001` here would model the exact
+  // client-side derivation D2 forbids.
+  sahyogVivranToken: 'aBcDeFgHiJkLmNoPqRsTuV',
   deceasedFirstName: 'Rajesh',
   deceasedLastInitial: 'S',
   fixedAmount: 500,

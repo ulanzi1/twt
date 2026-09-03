@@ -20,6 +20,8 @@
 // the `X-Forwarded-For` chain. ⛔ That is precisely why it is verified rather than assumed — no line
 // of this story's code would have to change for it to silently stop being true.
 
+import { readFileSync } from 'node:fs';
+
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createTestApp, teardown, type TestApp } from '../_setup.js';
@@ -97,5 +99,34 @@ describe('Directory rate-limit KEY (Trap 2, hermetic — no DB)', () => {
     expect(await get(t, '203.0.113.40')).not.toBe(429);
     expect(await get(t, '203.0.113.40')).not.toBe(429);
     expect(await get(t, '203.0.113.40')).toBe(429);
+  });
+
+  // ═════════════════════════════════════════════════════════════════════════════════════════════
+  // ⛔⛔ STORY 11b.10, TRAP 5 (AC5) — THE TIER IS ⛔ NOT THIS STORY'S TO TOUCH
+  // ═════════════════════════════════════════════════════════════════════════════════════════════
+  it('⛔ ALL THREE public-pages routes still carry `limits.search` — UNCHANGED, both directions', () => {
+    // ⭐ WHY THIS IS ASSERTED BY A STORY THAT DELIBERATELY CHANGED NOTHING HERE: the Panel directed
+    // option **(c)** — make the address unguessable — and ⛔ NOT option (b), which was the
+    // rate-limit change (`2026-09-03-184` cl.5). 11b.3a's **AC2** rules that tightening this tier as
+    // an authoring act is exactly what may not happen, and ⚠ that rule did ⛔ NOT expire when the
+    // routing note was answered.
+    // ⛔⛔ AND THE PULL IS REAL IN **BOTH** DIRECTIONS, which is why the assertion is a count and not
+    // a comment: once the address is a 128-bit token, LOOSENING the tier looks obviously safe ("there
+    // is nothing left to enumerate"), and TIGHTENING it looks obviously prudent ("it fronts Tier-1
+    // data"). ⭐ Either is a DECISION (`2026-09-02-183` cl.5), ⛔ never an edit.
+    const routes = readFileSync(
+      new URL('../../../src/modules/public-pages/routes.ts', import.meta.url),
+      'utf8',
+    )
+      // Strip comments — this file's header DISCUSSES the tier at length, and an un-stripped count
+      // would be satisfied by the prose rather than by the registrations.
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '');
+    const registrations = routes.match(/config: \{ rateLimit: limits\.search \}/g) ?? [];
+    expect(registrations).toHaveLength(3);
+    // ⛔ And ⛔ no other tier, ⛔ no inline ceiling, ⛔ no hand-rolled keyGenerator on this module.
+    expect(routes).not.toContain('limits.read');
+    expect(routes).not.toContain('keyGenerator');
+    expect(routes).not.toMatch(/rateLimit: \{/);
   });
 });

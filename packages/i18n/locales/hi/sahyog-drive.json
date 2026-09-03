@@ -42,5 +42,8 @@
   "status.archive": "संग्रह",
   "outcome.fully_funded": "इस चक्र को आवश्यक सहयोग मिला और यह पूर्ण हुआ।",
   "outcome.under_funded": "चक्र पूर्ण हुआ। ट्रस्ट ने परिवार के प्रति अपना दायित्व निभाया।",
-  "outcome.partial": "चक्र पूर्ण हुआ। मिलान अभी जारी है।"
+  "outcome.partial": "चक्र पूर्ण हुआ। मिलान अभी जारी है।",
+  "table.col.open": "विवरण",
+  "link.view_drive": "अभियान देखें",
+  "link.view_drive_a11y": "अभियान {code} का पूरा विवरण देखें"
 }

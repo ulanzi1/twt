@@ -18,6 +18,7 @@ import {
 import { isPoolStateDirectWriteError, projectPoolState } from '../../../src/pool/index.js';
 import * as schema from '../../../src/schema/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
+import { mintPoolPublicToken } from '../../../src/pool/public-token.js';
 import { PARIWAR_A, PARIWAR_B, enterAppScope, seedPool } from '../_helpers.js';
 
 /** Build the §1.14 audit-shape payload an emitter supplies (extra fields merged in). */
@@ -164,11 +165,16 @@ describe.skipIf(!hasDatabase)('pool lifecycle (PARIWAR_A scope)', () => {
     await enterAppScope(client, PARIWAR_A);
     const err = await client
       .query(
+        // ⚠ `public_token` is supplied (Story 11b.10) so this test keeps asserting what it means to
+        // assert: WITHOUT it the row would ALSO violate the column's NOT NULL, and the test would
+        // then be resting on Postgres running BEFORE-ROW triggers ahead of constraint checks rather
+        // than on the guard itself. ⛔ A test that passes for a second, incidental reason is not a
+        // test of the first one.
         `INSERT INTO pools (pool_id, pariwar_id, cycle_id, claim_case_id, pool_index,
            pool_canonical_identifier, support_category, benefit_mechanism, fixed_amount,
-           current_state, state_event_version)
-         VALUES ($1,$2,$3,$4,0,'P-2026-07-777','death_support','pool',500,'spawned',1)`,
-        [randomUUID(), PARIWAR_A, randomUUID(), randomUUID()],
+           current_state, state_event_version, public_token)
+         VALUES ($1,$2,$3,$4,0,'P-2026-07-777','death_support','pool',500,'spawned',1,$5)`,
+        [randomUUID(), PARIWAR_A, randomUUID(), randomUUID(), mintPoolPublicToken()],
       )
       .then(() => null)
       .catch((e: unknown) => e);

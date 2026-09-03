@@ -3,7 +3,7 @@
 // The PUBLIC per-claim Sahyog Vivran transport DTO — Story 11b.3 (Task 3; AC3, AC4, AC6).
 //
 // The wire shape for
-// `GET /api/v1/p/:pariwarId/public-pages/sahyog-vivran/:poolCanonicalIdentifier` — the THIRD route
+// `GET /api/v1/p/:pariwarId/public-pages/sahyog-vivran/:driveToken` — the THIRD route
 // in the `public-pages` module. `apps/public` SSR calls it server-side; ⛔ no browser calls it
 // directly, and ⛔ nothing about it is a member API.
 //
@@ -269,10 +269,15 @@ export const PublicSahyogVivranEntry = z
      */
     poolLetterCode: z.string().min(1),
     /**
-     * `P-YYYY-MM-###` — and on THIS surface also the route parameter.
-     * ⚠⛔ IT IS SEQUENTIAL AND THEREFORE ENUMERABLE. `D4-linkage` is OPEN, D11(a) left
-     * `limits.search` the only (unstated) bound on walking it, and **11b.3a** puts four DECRYPTED
-     * Tier-1 fields behind this same identifier — routed to that story's AC2 by name.
+     * `P-YYYY-MM-###` — ⭐⛔ **RENDERED, ⛔ NO LONGER ADDRESSABLE** (Story 11b.10, AC1).
+     *
+     * ⚠⛔ IT IS SEQUENTIAL AND THEREFORE ENUMERABLE, which is why it stopped being the route
+     * parameter: `PublicSahyogVivranParams` now takes an opaque token, and `D4-linkage`'s residual
+     * — *"`limits.search` is the only bound on walking it"* — is **CLOSED by that change**, ⛔ not by
+     * anything on this line.
+     * ⭐ It is RETAINED here deliberately (`2026-09-03-184` cl.2): it is the operational/audit key a
+     * family or an operator quotes to the helpline, and the page shows it. ⛔ Do not delete it, and
+     * ⛔ do not make it addressable again.
      */
     poolCanonicalIdentifier: z.string().min(1),
     /** ⚠ `driveStatus`, ⛔ NOT `status` — see {@link SAHYOG_VIVRAN_PROHIBITED_KEYS}. */
@@ -330,19 +335,35 @@ export const PublicSahyogVivranEntry = z
 export type PublicSahyogVivranEntry = z.output<typeof PublicSahyogVivranEntry>;
 
 /**
- * The path parameter.
+ * The path parameter — ⭐⭐ **THE OPAQUE PUBLIC ADDRESS TOKEN**, Story 11b.10 (AC1, `2026-09-03-184`
+ * **(B)**, Trustee-ratified).
  *
- * ⚠ Bounded and `.strict()` so a malformed identifier is a 400 at the schema boundary rather than a
- * database round-trip. ⛔ It is NOT pattern-matched against `P-YYYY-MM-###` here: the canonical format
- * is per-Pariwar configurable (`DEFAULT_POOL_CANONICAL_IDENTIFIER_FORMAT`), and a format regex in the
- * contract would silently 400 a legitimate Pariwar whose format differs. The read's exact-equality
- * lookup is what refuses an unknown identifier, and it refuses it as a 404 — ⛔ never as a
- * distinguishable "malformed" error, which would be an enumeration oracle.
+ * ⛔⛔ **THERE IS EXACTLY ONE PUBLIC ADDRESS FORM, AND THIS IS IT.** The route used to take
+ * `poolCanonicalIdentifier` — `P-YYYY-MM-###`, whose `sequence` is a MONOTONIC per-(pariwar, month)
+ * counter (`2026-09-04-185`) — so the entire surface could be WALKED by COUNTING, and since Story
+ * 11b.3a that walk reaches FOUR DECRYPTED TIER-1 BANK FIELDS rendered in full under `D8-default`
+ * FAIL-OPEN. `limits.search` bounded the RATE of that walk, ⛔ never its POSSIBILITY.
+ *
+ * ⛔⛔ **DO ⛔ NOT RE-ADMIT THE CANONICAL IDENTIFIER HERE**, ⛔ not as an alternative, ⛔ not as a
+ * fallback, ⛔ not "for old links". A route accepting EITHER form has ⛔ **not** closed the walk — it
+ * has added a lock beside an open door. ⭐ The identifier is RETAINED (`-184` cl.2) as the
+ * operational/audit key and is still RENDERED in the response body below; what it may not be is
+ * ADDRESSABLE.
+ *
+ * ⚠ Bounded and `.strict()` so a malformed address is a 400 at the schema boundary rather than a
+ * database round-trip. ⛔ It is ⛔ NOT pattern-matched against the token's own shape either: a regex
+ * here would split the refusal surface into *"wrong shape"* (400) and *"no such drive"* (404), and
+ * that difference is itself an ENUMERATION ORACLE — the one property AC1 exists to remove. The
+ * read's exact-equality lookup is what refuses an unknown address, and it refuses it as a **404**
+ * BYTE-IDENTICAL to every other *"nothing to show"* case.
+ *
+ * ⛔ THE TOKEN BOUNDS **DISCOVERY**, ⛔ NOT **AUTHORISATION** (D1). Presenting a valid address is
+ * enough — ⛔ no session, and ⛔ no branch on the reader's membership standing of any kind.
  */
 export const PublicSahyogVivranParams = z
   .object({
     pariwarId: z.string().uuid(),
-    poolCanonicalIdentifier: z.string().trim().min(1).max(64),
+    driveToken: z.string().trim().min(1).max(64),
   })
   .strict();
 export type PublicSahyogVivranParams = z.output<typeof PublicSahyogVivranParams>;

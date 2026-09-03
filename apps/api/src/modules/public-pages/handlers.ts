@@ -398,6 +398,14 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
             const base = {
               poolLetterCode: poolDomain.poolLetterCode(row.poolIndex),
               poolCanonicalIdentifier: row.poolCanonicalIdentifier,
+              // ⭐ Story 11b.10 (AC3) — the drive's OPAQUE PUBLIC ADDRESS. Serialized so the index's
+              // per-row link can be built from it; ⛔ the client never derives an address from
+              // `poolCanonicalIdentifier`, which is no longer addressable.
+              // ⚠⛔ SAY WHAT THIS DOES: every listed drive becomes ONE CLICK from four Tier-1 fields
+              // under `D8-default` FAIL-OPEN. That is the NECESSARY CONSEQUENCE of `2026-09-03-184`
+              // (A)+(B) (D3), ⛔ not a fresh exposure decision — and it is written here so a reviewer
+              // meets it in prose rather than discovering it in a diff.
+              publicToken: row.publicToken,
               status: row.status,
               closedAt: row.driveClosedAt === null ? null : row.driveClosedAt.toISOString(),
               // ⚠ `.trim() || null`, ⛔ not `=== ''`. A whitespace-only district passes the schema's
@@ -474,8 +482,8 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
       }
     },
     /**
-     * `GET /api/v1/p/:pariwarId/public-pages/sahyog-vivran/:poolCanonicalIdentifier` — ONE drive's
-     * Sahyog Vivran. Story 11b.3 (AC1, AC3, AC5, AC6).
+     * `GET /api/v1/p/:pariwarId/public-pages/sahyog-vivran/:driveToken` — ONE drive's Sahyog Vivran.
+     * Story 11b.3 (AC1, AC3, AC5, AC6); ⭐ re-addressed by Story 11b.10 (AC1).
      *
      * ⛔ DELIBERATELY UNAUTHENTICATED, and — ⭐ unlike the two routes above — it is ⛔ NOT defended by
      * their five controls. `routes.ts:52-55` reserved that as a RULING: *"a third route that CANNOT
@@ -493,17 +501,21 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
      * service pool), neither of which `apps/public` has — and on a route fronted by a SEQUENTIAL
      * identifier the ceiling is the load-bearing one. ⛔ Do not add a `withPublicScope` read there.
      *
-     * ⭐⛔ 404 COLLAPSES THREE CASES ON PURPOSE — *"no such drive"*, *"exists but is not visible here"*
-     * (a `spawned` pool) and *"this Pariwar's public surfaces are switched off"*. ⛔ A response that
-     * distinguishes them is an ENUMERATION ORACLE, and `P-YYYY-MM-###` is SEQUENTIAL, which is exactly
-     * when that matters. ⛔ Never a 403, ⛔ never a distinct error code, ⛔ never a different body shape.
+     * ⭐⛔ 404 COLLAPSES **FOUR** CASES ON PURPOSE — *"no such drive"*, *"exists but is not visible
+     * here"* (a `spawned` pool), *"this Pariwar's public surfaces are switched off"* and — ⭐ Story
+     * 11b.10's addition — *"a REAL drive addressed with a WRONG or ABSENT token"*. ⛔ A response that
+     * distinguishes them is an ENUMERATION ORACLE. ⛔ Never a 403, ⛔ never a distinct error code,
+     * ⛔ never a different body shape.
+     * ⚠⭐ AMENDED: this used to ground the rule on *"`P-YYYY-MM-###` is SEQUENTIAL, which is exactly
+     * when that matters"*. ⭐ The sequential identifier is ⛔ no longer the address (11b.10), so the
+     * ground is now the fourth case above — the byte-identical refusal is what stops the token itself
+     * becoming testable. ⛔ Amended rather than deleted: the next reader will look for the old claim.
      */
     async sahyogVivran(
       request: FastifyRequest,
       reply: FastifyReply,
     ): Promise<PublicSahyogVivranResponse | void> {
-      const { pariwarId: pariwarIdStr, poolCanonicalIdentifier } =
-        request.params as PublicSahyogVivranParams;
+      const { pariwarId: pariwarIdStr, driveToken } = request.params as PublicSahyogVivranParams;
       const pariwarId = ids.pariwarId(pariwarIdStr);
 
       // ⭐ ONE INSTANT FOR THE WHOLE REQUEST, ⛔ never `new Date()` per read — the same rule the two
@@ -544,12 +556,20 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
         // identifier is SEQUENTIAL, nothing else bounds a walk of it, and **11b.3a** — which puts four
         // DECRYPTED Tier-1 fields behind this same identifier — owns closing that at its AC2.
 
-        const drive = await poolDomain.readPublicSahyogVivran(
-          scopeTx.tx,
-          pariwarId,
-          poolCanonicalIdentifier,
-          { now },
-        );
+        // ⭐⭐ STORY 11b.10 — RESOLVED BY THE OPAQUE PUBLIC ADDRESS TOKEN, ⛔ never by the sequential
+        // `P-YYYY-MM-###`. ⛔ There is no second lookup and no fallback arm: a route accepting either
+        // form has ⛔ not closed the walk (Trap 3).
+        const drive = await poolDomain.readPublicSahyogVivran(scopeTx.tx, pariwarId, driveToken, {
+          now,
+        });
+        // ⭐⛔ THE **FOURTH** COLLAPSED CASE LANDS HERE — *"a REAL drive addressed with a WRONG or
+        // ABSENT token"* (Story 11b.10, AC1). ⚠ It reuses the EXISTING control rather than adding
+        // one: the token is part of the domain read's WHERE clause, so a wrong address produces the
+        // same `null` a non-existent drive does and exits through this same line, BYTE-IDENTICALLY.
+        // ⛔⛔ NEVER make it a 403, a distinct code, or a different body — a response that
+        // distinguishes *"real drive, wrong token"* from *"no such drive"* confirms which addresses
+        // name something, which is precisely the enumeration oracle the token was introduced to
+        // remove. ⚠ ⛔ And it is ⛔ NOT the 503 arm either: that is the OUTAGE path.
         if (drive === null) {
           ok = true;
           void reply.status(404).send();
@@ -575,7 +595,14 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
           await writeAppealReversalDisclosureAudit(
             deps,
             pariwarIdStr,
-            poolCanonicalIdentifier,
+            // ⭐⛔ THE AUDIT LINE KEEPS THE **CANONICAL IDENTIFIER**, ⛔ NOT THE TOKEN (Story 11b.10,
+            // AC1 / `2026-09-03-184` cl.2). `P-YYYY-MM-###` is RETAINED as the operational/audit key
+            // — it is what an operator, a trustee and every other audit line in this system name a
+            // drive by — and swapping it for the address here would make this record unjoinable to
+            // the rest of the audit trail and would additionally write a live public ADDRESS into
+            // the durable audit chain. ⭐ It is read from the drive the token resolved to, so it
+            // still describes exactly the row that was disclosed.
+            drive.poolCanonicalIdentifier,
             drive.appealReversal.reversedAtStage,
             request.requestContext.traceId ?? null,
           );

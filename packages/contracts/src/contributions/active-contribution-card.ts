@@ -94,6 +94,33 @@ export const AssignedContributionCard = z
     poolLetterCode: z.string().min(1),
     poolName: z.string().min(1).nullable(),
     poolCanonicalIdentifier: z.string().min(1),
+    /**
+     * ⭐⭐ THE DRIVE'S PUBLIC ADDRESS TOKEN — Story 11b.10 (AC4, D4).
+     *
+     * ⭐ THE **ONE** NEW FIELD ON A QUERY THAT ALREADY RUNS, and that is the whole API change this
+     * story makes to the member app. It exists so the My Pool tab can offer an entry into the
+     * drive's PUBLIC Sahyog Vivran page: `2026-09-03-184` **(A)** ratified that a `live` drive
+     * should be publicly REACHABLE, and **(B)** removed the only way there was to address one.
+     *
+     * ⛔⛔ **SERVER-RETURNED, ⛔ NEVER CLIENT-DERIVED.** `apps/mobile/lib/public-site.ts` already
+     * states this discipline for `clauseId` in terms — *"SERVER-returned … never hardcoded in the
+     * widget"* — and here it is load-bearing rather than tidy: the client building an address from
+     * `poolId` or `poolCanonicalIdentifier` would re-create D2's guessability INSIDE the client,
+     * where nothing on the server side could ever bound it.
+     *
+     * ⛔ IT IS ⛔ NOT A CREDENTIAL AND ⛔ NOT A SESSION TOKEN. It bounds DISCOVERY, ⛔ not
+     * AUTHORISATION (D1): the page it addresses answers 200 to anyone holding a valid address, with
+     * ⛔ no session and ⛔ no branch on the reader's membership standing. ⚠ Its price, carried
+     * rather than hidden: a forwarded link is permanent public access to that drive until the token
+     * is ROTATED.
+     *
+     * ⚠ REQUIRED, ⛔ not nullable — and that is a deliberate contract choice. `pools.public_token`
+     * is `NOT NULL` with every pre-existing row backfilled (migration 0114), so a `live` pool
+     * ALWAYS has one. ⇒ if the read cannot produce it, the handler fail-softs the WHOLE card to
+     * `{ assigned: false }` exactly as it does for an unresolvable identity — which keeps the entry
+     * and the card suppressing in LOCK-STEP instead of leaving a dead link behind a live card.
+     */
+    sahyogVivranToken: z.string().min(1),
     deceasedFirstName: z.string().min(1),
     // The last-name INITIAL only (PII shield — never the full surname). `.max(16)` defensively bounds a
     // single grapheme cluster (base + combining marks) — a Devanagari conjunct (e.g. क्ष, ज्ञ, त्र) plus

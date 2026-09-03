@@ -636,6 +636,31 @@ async function resolveCard(
   });
   if (identity === null) return UNASSIGNED;
 
+  // ⭐⭐ STORY 11b.10 (AC4, D4) — THE DRIVE'S PUBLIC ADDRESS, SERVER-RETURNED. The My Pool tab's
+  // Sahyog Vivran entry opens `/sahyog-vivran/[driveToken]` with this value, and the client
+  // ⛔ NEVER derives an address from `poolId` or the canonical identifier — that would re-create D2's
+  // guessability inside the client, where nothing server-side could bound it
+  // (`public-site.ts` already states the same discipline for `clauseId`).
+  //
+  // ⚠ A TARGETED SINGLE-ROW READ, ⛔ not a widening of `AssignedPoolRef` / `PoolBindingCandidate`:
+  // those types are shared across Epic 8's and Epic 9's contribution paths, and threading one
+  // public-surface field through them would push this story's concern into every consumer of the
+  // assignment binding. ⛔ Do not "optimise" it into those types.
+  //
+  // ⛔ FAIL-SOFT TO `UNASSIGNED`, and ⛔ NOT to a card with a missing link. `pools.public_token` is
+  // NOT NULL with every pre-existing row backfilled (0114), so `null` here means the pool row is
+  // gone — the same class of unresolvable state `identity === null` above already answers this way.
+  // ⭐ THIS IS WHAT KEEPS THE ENTRY AND THE CARD SUPPRESSING IN **LOCK-STEP** (D4): an entry that
+  // outlived its card would be a dead link on the member's home screen.
+  const sahyogVivranToken = await poolDomain.readPoolPublicToken(tx, pariwarId, ids.poolId(pool.poolId));
+  if (sahyogVivranToken === null) {
+    request.log.warn(
+      { poolId: pool.poolId },
+      'active-contribution: no public address token — fail-soft to unassigned',
+    );
+    return UNASSIGNED;
+  }
+
   // (9) AC6 — the NEXT scheduled fixed-amount change, surfaced gently. The card's CURRENT amount stays
   //     the SNAPSHOTTED pool.fixedAmount (D3); this is additive future context.
   const upcoming = await poolDomain.resolveUpcomingFixedAmountChange(tx, pariwarId, now);
@@ -690,6 +715,8 @@ async function resolveCard(
     poolLetterCode: identity.poolLetterCode,
     poolName: identity.poolName,
     poolCanonicalIdentifier: identity.poolCanonicalIdentifier,
+    // ⭐ Story 11b.10 — the drive's PUBLIC ADDRESS. See the read above for why it is server-returned.
+    sahyogVivranToken,
     deceasedFirstName: identity.deceasedFirstName,
     deceasedLastInitial: identity.deceasedLastInitial,
     fixedAmount: identity.fixedAmount,

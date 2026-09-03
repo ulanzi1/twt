@@ -3,6 +3,7 @@ import { YStack } from 'tamagui'
 
 import { ActiveContributionCard } from 'components/active-contribution/ActiveContributionCard'
 import { ViewContributorsEntry } from 'components/contributor-list/ViewContributorsEntry'
+import { SahyogVivranEntry } from 'components/sahyog-vivran/SahyogVivranEntry'
 import { ClaimProxyFlowEntry } from 'components/claim/ClaimProxyFlowEntry'
 import { ClaimPointOfContactEntry } from 'components/claim/ClaimPointOfContactEntry'
 import { DataExportEntry } from 'components/data-export/DataExportEntry'
@@ -52,6 +53,13 @@ export default function YogdaanTab() {
         {/* Story 8.3 — the "View contributors" affordance (just below the card, NOT inside it — D8). Navigates
             to the Live Contributor List view; self-suppresses in lock-step with the card. */}
         <ViewContributorsEntry />
+        {/* Story 11b.10 — the `live`-drive INBOUND PATH (AC4, D4). `2026-09-03-184` (A) ratified that
+            a live drive should be publicly REACHABLE and (B) made its address unguessable, which
+            removed the only way anyone HAD of getting there — so this entry is the other half of
+            ONE deliverable, not a nice-to-have. Beside the card, ⛔ NOT inside it (Story 8.3 D8);
+            self-suppresses in LOCK-STEP with the card, because an entry that outlived it would be a
+            dead link. ⛔ NOT on the Shradhanjali tab, which is a sample-data prototype (D4). */}
+        <SahyogVivranEntry />
         <LockInClockWidget />
         <RenewalStatusWidget />
         <LifeEventsEntry />

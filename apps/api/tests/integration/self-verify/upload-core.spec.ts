@@ -130,6 +130,8 @@ async function seedActiveLivePoolMember(
       fixedAmount: 500,
       currentState: 'spawned',
       stateEventVersion: 1,
+      // Story 11b.10 — the public address (NOT NULL, GLOBAL unique index). Minted per row.
+      publicToken: poolDomain.mintPoolPublicToken(),
     });
     await client.query("SET LOCAL app.pool_state_writer = 'off'");
 

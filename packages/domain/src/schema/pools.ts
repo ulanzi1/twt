@@ -149,6 +149,26 @@ export const pools = pgTable(
     // counter, the culture-rooted registry) is Story 7.2.
     poolCanonicalIdentifier: text('pool_canonical_identifier').notNull(),
 
+    // ⭐⭐ THE PUBLIC ADDRESS TOKEN — Story 11b.10 (AC1/AC2, D2, `2026-09-03-184` (B)).
+    //
+    // 128 bits of CSPRNG entropy, base64url-rendered (22 chars). It is the ONE public address form
+    // for `/sahyog-vivran/[driveToken]`, and it exists because the column ABOVE is SEQUENTIAL: a
+    // monotonic per-(pariwar, month) counter can be WALKED, and since Story 11b.3a that walk reaches
+    // FOUR DECRYPTED TIER-1 BANK FIELDS rendered in full under `D8-default` FAIL-OPEN.
+    //
+    // ⛔⛔ IT IS AN **ADDITION**, ⛔ NEVER A REPLACEMENT. `pool_canonical_identifier` is RETAINED
+    // unchanged (`-184` cl.2) as the operational/audit key — Story 7.1's unique index, every audit
+    // line, the abuse `resource_locator` and the operator vocabulary all key on it, and it is still
+    // RENDERED on the public page. ⛔ What it may not be is independently ADDRESSABLE.
+    //
+    // ⛔ RANDOM, ⛔ NEVER DERIVED (D2) — ⛔ not from `pool_id` (7.3's UUIDv5 determinism is ⛔ not a
+    // reason to make this reproducible), ⛔ not from the identifier, ⛔ not from any pool fact. See
+    // `pool/public-token.ts` for the full ground, including why ROTATABILITY is what decided it.
+    //
+    // ⚠ NOT NULL, and migration 0114 BACKFILLED every pre-existing row: a visible pool with a NULL
+    // token is a drive whose public page 404s ⇒ a nullable column here would ship a BROKEN ARCHIVE.
+    publicToken: text('public_token').notNull(),
+
     // The support-category discriminator (AC1/AC4). v1 inserts ONLY 'death_support'.
     supportCategory: poolSupportCategoryEnum('support_category').notNull(),
 
@@ -220,6 +240,15 @@ export const pools = pgTable(
     uniqueIndex('pools_pariwar_cycle_pool_index_uq').on(t.pariwarId, t.cycleId, t.poolIndex),
     // The disbursement path joins claim_nominee_bank_accounts by the originating claim.
     index('pools_claim_case_id_idx').on(t.claimCaseId),
+    // ⭐ Story 11b.10 — the PUBLIC ADDRESS lookup key, and the collision guard on a minted token.
+    // ⚠ GLOBAL, ⛔ deliberately NOT scoped by `pariwar_id` (unlike the canonical-identifier index
+    // above), and the difference is the POINT: `P-YYYY-MM-###` is a per-Pariwar operational label
+    // that only has to be unique where an operator reads it, whereas this is an ADDRESS — and an
+    // address must name at most ONE thing, without depending on a second value to disambiguate it.
+    // ⭐ 128 bits makes a natural collision vanishingly improbable; this index is what turns
+    // "improbable" into a DB FACT, and it is also the guard that fails a mint LOUDLY (23505) rather
+    // than silently re-pointing one drive's public address at another's.
+    uniqueIndex('pools_public_token_uq').on(t.publicToken),
   ],
 );
 

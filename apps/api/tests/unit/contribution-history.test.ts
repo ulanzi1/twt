@@ -30,6 +30,10 @@ const resolveAssignedPoolWithRosterForMember = vi.fn();
 const resolveUpcomingFixedAmountChange = vi.fn();
 const hasAttestedContribution = vi.fn();
 const listConfirmedContributorsForPool = vi.fn();
+// Story 11b.10 — the card path now reads the drive's PUBLIC ADDRESS server-side (AC4). ⚠ It MUST be
+// mocked here: `tx` in this suite is a bare `{}`, and the real accessor would fail-soft the whole
+// card to `{ assigned: false }`, silently turning check (5) into a test of the absence signal.
+const readPoolPublicToken = vi.fn();
 
 vi.mock('@twt/domain', async (importActual) => {
   const actual = await importActual<typeof import('@twt/domain')>();
@@ -44,6 +48,7 @@ vi.mock('@twt/domain', async (importActual) => {
       reserveNames,
       resolveAssignedPoolWithRosterForMember,
       resolveUpcomingFixedAmountChange,
+      readPoolPublicToken,
     },
     contribution: {
       ...actual.contribution,
@@ -137,6 +142,7 @@ function wireStandardPoolIdentity(): void {
   });
   getCycleFreezeCommittedAt.mockResolvedValue(new Date('2026-06-10T00:00:00.000Z'));
   getClaimCase.mockResolvedValue({ deceasedMemberId: DECEASED_ID });
+  readPoolPublicToken.mockResolvedValue('OPAQUE-DRIVE-TOKEN-1');
   getMemberKycProfile.mockResolvedValue({ nameCiphertext: 'enc:v1:fake' });
   decryptKycField.mockResolvedValue('Rajesh Sharma');
   reserveNames.mockResolvedValue([]); // opted out → letter-code fallback

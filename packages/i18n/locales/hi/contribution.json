@@ -255,5 +255,8 @@
   "missed_cycle.cycle_label": "चक्र {cycle}",
   "missed_cycle.pool_label": "पूल {pool}",
   "missed_cycle.reference_label": "संदर्भ {reference}",
-  "missed_cycle.entry_a11y": "चक्र {cycle}, पूल {pool}, संदर्भ {reference}।"
+  "missed_cycle.entry_a11y": "चक्र {cycle}, पूल {pool}, संदर्भ {reference}।",
+  "sahyog_vivran.entry_cta": "इस अभियान का सार्वजनिक विवरण देखें →",
+  "sahyog_vivran.entry_a11y": "इस अभियान का सार्वजनिक सहयोग विवरण देखें",
+  "sahyog_vivran.entry_hint": "आपके ब्राउज़र में सार्वजनिक ट्रस्ट वेबसाइट खोलता है"
 }

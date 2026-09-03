@@ -42,5 +42,8 @@
   "status.archive": "Archive",
   "outcome.fully_funded": "The cycle closed with the support it needed.",
   "outcome.under_funded": "The cycle closed. The trust met its commitment to the family.",
-  "outcome.partial": "The cycle closed. Reconciliation is still in progress."
+  "outcome.partial": "The cycle closed. Reconciliation is still in progress.",
+  "table.col.open": "Details",
+  "link.view_drive": "View drive",
+  "link.view_drive_a11y": "View the full details of drive {code}"
 }

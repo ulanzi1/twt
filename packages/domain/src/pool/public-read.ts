@@ -450,6 +450,15 @@ export interface SahyogDriveEntry {
   poolIndex: number;
   /** `P-YYYY-MM-###` (Story 7.2). Public, and one of the three searchable dimensions. */
   poolCanonicalIdentifier: string;
+  /**
+   * ⭐ THE DRIVE'S OPAQUE PUBLIC ADDRESS TOKEN — Story 11b.10 (AC3). PUBLIC and serialized, unlike
+   * `poolId` above: it is what `/sahyog-vivran/[driveToken]` is addressed by, so the index's
+   * per-row link cannot be built without it.
+   * ⛔ It is ⛔ NOT a search dimension — ⛔ do not add a filter on it. Filtering by an address you
+   * already hold answers nothing, and a token filter would turn this index into an ORACLE for
+   * testing guessed addresses at collection rates, which is the inverse of AC1.
+   */
+  publicToken: string;
   /** `active` (window closed) | `archive` (disbursed). The PUBLIC token, never the internal one. */
   status: SahyogDriveStatus;
   /** The close/settle instant. `null` when the pool's stream carries no such event yet. */
@@ -624,6 +633,8 @@ export async function listPublicSahyogDrivePools(
       poolId: pools.poolId,
       poolIndex: pools.poolIndex,
       poolCanonicalIdentifier: pools.poolCanonicalIdentifier,
+      // Story 11b.10 — the public address the row's link is built from.
+      publicToken: pools.publicToken,
       currentState: pools.currentState,
       fixedAmount: pools.fixedAmount,
       deceasedMemberId: claims.deceasedMemberId,
@@ -660,6 +671,7 @@ export async function listPublicSahyogDrivePools(
       poolId: r.poolId,
       poolIndex: r.poolIndex,
       poolCanonicalIdentifier: r.poolCanonicalIdentifier,
+      publicToken: r.publicToken,
       // The predicate admits only these two; the cast records that rather than re-checking it.
       status: PUBLIC_STATUS_BY_POOL_STATE[r.currentState as SahyogDriveVisiblePoolState],
       // ⭐ COERCED — the raw `sql` fragment hands back an ISO STRING despite its declared type.

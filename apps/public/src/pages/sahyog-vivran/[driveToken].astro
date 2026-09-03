@@ -80,7 +80,14 @@ import {
 import { buildForwardedFor, fetchSahyogVivran } from '../../lib/sahyog-vivran.server.js';
 import { ACTIVE_PARIWAR_ID } from '../../lib/pariwar.server.js';
 
-const { poolCanonicalIdentifier: rawIdentifier } = Astro.params;
+// ⭐⭐ STORY 11b.10 — THE ROUTE PARAMETER IS THE DRIVE'S **OPAQUE PUBLIC ADDRESS TOKEN**, and the
+// FILE NAME is that parameter: `[driveToken].astro`, ⛔ no longer `[poolCanonicalIdentifier].astro`.
+// `2026-09-03-184` **(B)**, Trustee-ratified — the sequential `P-YYYY-MM-###` made this whole
+// surface walkable by COUNTING, and since 11b.3a that walk reached four decrypted Tier-1 bank fields.
+// ⛔⛔ EXACTLY ONE ADDRESS FORM: ⛔ do not add a second route, a redirect, or an alias accepting the
+// bare identifier "for old links" — that is a lock beside an open door (Trap 3). ⭐ The identifier is
+// RETAINED and is still RENDERED below via `<MatrixField field="pool_canonical_identifier">`.
+const { driveToken: rawDriveToken } = Astro.params;
 
 // ── Locale + branding (cache-safe: no session, no member state) ──────────────
 const langParam = Astro.url.searchParams.get('lang');
@@ -180,16 +187,18 @@ const labels: SahyogVivranLabels = {
 Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
 Astro.response.headers.set('Vary', 'Accept-Language');
 
-// ⭐⛔ A MISSING OR BLANK IDENTIFIER IS A 404, ⛔ NOT AN ERROR AND ⛔ NOT A REDIRECT — the same answer
-// an unknown drive gets, because a distinguishable *"malformed"* answer is an enumeration signal on a
-// SEQUENTIAL identifier.
-const poolCanonicalIdentifier = (rawIdentifier ?? '').trim();
+// ⭐⛔ A MISSING OR BLANK ADDRESS IS A 404, ⛔ NOT AN ERROR AND ⛔ NOT A REDIRECT — the same answer an
+// unknown drive gets, because a distinguishable *"malformed"* answer is an enumeration signal.
+// ⚠⭐ THE GROUND MOVED AT 11b.10 AND IS RESTATED: it used to be *"…on a SEQUENTIAL identifier"*. The
+// address is no longer sequential — what makes the sameness matter now is that a distinguishable
+// refusal would let an attacker TEST guessed tokens, which is the oracle the token exists to close.
+const driveToken = (rawDriveToken ?? '').trim();
 
 const fetched =
-  poolCanonicalIdentifier === ''
+  driveToken === ''
     ? ({ ok: false, reason: 'not_found' } as const)
     : await fetchSahyogVivran({
-        poolCanonicalIdentifier,
+        driveToken,
         // ⛔ `Astro.clientAddress` ONLY, via the REUSED `buildForwardedFor`. The inbound
         // `X-Forwarded-For` header is deliberately NOT read — it is caller-supplied, and `apps/api`'s
         // `trustProxy: true` keys on the LEFTMOST chain entry, so forwarding it hands the attacker
@@ -216,7 +225,9 @@ if (!fetched.ok && (fetched.reason === 'not_found' || fetched.reason === 'reject
 const apiUnavailable = !fetched.ok;
 const view = fetched.ok
   ? buildSahyogVivranView(fetched.data, labels)
-  : buildSahyogVivranOutageView(poolCanonicalIdentifier);
+  // ⛔ NO ARGUMENT (11b.10): the URL carries an opaque ADDRESS, ⛔ not a drive code, so there is
+  // nothing to echo — and echoing the address would render it into a classified field.
+  : buildSahyogVivranOutageView();
 
 if (apiUnavailable) {
   Astro.response.status = 503;

@@ -26,7 +26,7 @@ does ⛔ not own — the one failure this field exists to prevent
 
 # Story 11b.10: Sahyog Vivran — the Unguessable Public Address + the Inbound Path `[SURFACE]`
 
-Status: in-progress
+Status: review
 
 > ⭐⛔ **THIS STORY IS ⛔ NOT IN `epics.md`'s STORY LIST.** It is created by a **Trustee-ratified
 > decision** (`2026-09-03-184`), ⛔ not by epic decomposition — exactly as `11b-3a` was. ⇒ it owes an
@@ -409,119 +409,139 @@ silently would have been an authoring act over a Panel-scoped artefact — the p
 
 ### Task 1 — The token column, its migration, and its BACKFILL (AC2)
 
-- [ ] Add the column to `packages/domain/src/schema/pools.ts` (table at `:105`) — **128 bits** of
+- [x] Add the column to `packages/domain/src/schema/pools.ts` (table at `:105`) — **128 bits** of
       CSPRNG entropy rendered URL-safe (`randomBytes(16)` → base64url ⇒ 22 chars).
-- [ ] Add a **unique index**, named to the file's own convention (`:203` is
+- [x] Add a **unique index**, named to the file's own convention (`:203` is
       `pools_pariwar_canonical_identifier_uq`) ⇒ `pools_public_token_uq`.
-- [ ] Write migration **`0114_…`** — `0113_nominee-bank-masking-schedule.sql` is the last applied.
+- [x] Write migration **`0114_…`** — `0113_nominee-bank-masking-schedule.sql` is the last applied.
       ⛔ **Never regenerate an applied migration** (42P07, [[project_live_db_test_gotchas]]).
-- [ ] ⛔⛔ **BACKFILL EVERY EXISTING ROW IN THE SAME MIGRATION, THEN `SET NOT NULL`.** ⚠ The AC demands
+- [x] ⛔⛔ **BACKFILL EVERY EXISTING ROW IN THE SAME MIGRATION, THEN `SET NOT NULL`.** ⚠ The AC demands
       *"zero NULL tokens"*; a nullable column left nullable makes that a **snapshot**, ⛔ not a
       structural truth, and a visible pool with a NULL token is a drive whose page **404s**.
-- [ ] Mint the token at spawn in `packages/domain/src/pool/spawn.ts` — the insert at `:454` uses **raw
+- [x] Mint the token at spawn in `packages/domain/src/pool/spawn.ts` — the insert at `:454` uses **raw
       snake_case** column names (`pool_canonical_identifier: …`); the token goes in the same values
       object. ⚠ Check the idempotent already-spawned returns at `:426` / `:490` stay correct.
-- [ ] ⛔ **Do ⛔ NOT derive the token from `pool_id`.** 7.3's UUIDv5 determinism
+- [x] ⛔ **Do ⛔ NOT derive the token from `pool_id`.** 7.3's UUIDv5 determinism
       ([[project_pool_spawn_saga_atomicity]]) is ⛔ not a reason to make the token reproducible.
-- [ ] State **where it is generated** that the token bounds **DISCOVERY, ⛔ not AUTHORISATION** (D1).
+- [x] State **where it is generated** that the token bounds **DISCOVERY, ⛔ not AUTHORISATION** (D1).
 
 ### Task 2 — Rotation (AC2)
 
-- [ ] Ship rotation as a **domain function** with a test that rotates ONE drive and asserts every other
+- [x] Ship rotation as a **domain function** with a test that rotates ONE drive and asserts every other
       drive's address is untouched.
-- [ ] ⛔⛔ **DECIDE-AND-STATE, ⛔ do not guess:** if rotation is given an **admin route**, it needs a
+- [x] ⛔⛔ **DECIDE-AND-STATE, ⛔ do not guess:** if rotation is given an **admin route**, it needs a
       permission key ⇒ `PERMISSION_CATALOG_VERSION` (`packages/domain/src/rbac/permissions.ts:598`)
       goes **39 → 40**, which is a **governance act** in this repo (10.3 minted `helpdesk.create`
       v22→23 as a story act, [[project_helpdesk_operator_surface_103]]). ⭐ **The cheap, in-scope shape
       is a domain-function-only seam with ⛔ NO route and ⛔ NO key** — if you take it, say so in the
       story record; if you need the route, that is a **routing note**, ⛔ not an edit.
+      ✅ **TAKEN: the DOMAIN-FUNCTION-ONLY seam. ⛔ NO route, ⛔ NO permission key,
+      `PERMISSION_CATALOG_VERSION` stays 39.** Ground: this story's Panel-ratified scope is the
+      ADDRESS and the PATH — an operator surface is neither, and minting a key for it would be a
+      governance act arriving as a side effect of a security fix. ⇒ **an operator-facing rotation
+      control is a NEW ROUTING NOTE**, ⛔ not an edit. Recorded in `deferred-work.md`'s closure entry
+      and in `pool/public-token.ts`'s own doc-block.
 
 ### Task 3 — ONE public address form (AC1)
 
-- [ ] Rename the address parameter everywhere. ⚠ **This is a breaking contract change**, ⛔ not a
+- [x] Rename the address parameter everywhere. ⚠ **This is a breaking contract change**, ⛔ not a
       rename-in-one-file:
-  - [ ] `apps/public/src/pages/sahyog-vivran/[poolCanonicalIdentifier].astro` → the **file name itself**
+  - [x] `apps/public/src/pages/sahyog-vivran/[poolCanonicalIdentifier].astro` → the **file name itself**
         is the route param (`Astro.params` at `:83`, normalised at `:186`).
-  - [ ] `apps/api/src/modules/public-pages/routes.ts:257` — the path `:poolCanonicalIdentifier`.
-  - [ ] `packages/contracts/src/public-pages/sahyog-vivran.ts` — **TWO** declarations, `:277` and `:345`.
-  - [ ] Re-emit OpenAPI (`packages/contracts/scripts/emit-openapi.ts`) — the determinism gate will fail
+  - [x] `apps/api/src/modules/public-pages/routes.ts:257` — the path `:poolCanonicalIdentifier`.
+  - [x] `packages/contracts/src/public-pages/sahyog-vivran.ts` — **TWO** declarations, `:277` and `:345`.
+  - [x] Re-emit OpenAPI (`packages/contracts/scripts/emit-openapi.ts`) — the determinism gate will fail
         if you don't.
-  - [ ] Update the specs that address the old form: `apps/api/tests/integration/public-pages/sahyog-vivran.spec.ts`,
+  - [x] Update the specs that address the old form: `apps/api/tests/integration/public-pages/sahyog-vivran.spec.ts`,
         `apps/public/tests/integration/public-pages/scrape-test.spec.ts`, `apps/api/tests/integration/login-wall.spec.ts`.
-- [ ] ⛔ The bare `P-YYYY-MM-###` must ⛔ **NOT** remain independently addressable (Trap 3) — a route
+- [x] ⛔ The bare `P-YYYY-MM-###` must ⛔ **NOT** remain independently addressable (Trap 3) — a route
       accepting **either** form has added a lock beside an open door.
-- [ ] ⭐ **The indistinguishable-refusal AC is CHEAP — reuse the existing control, ⛔ don't invent one.**
+- [x] ⭐ **The indistinguishable-refusal AC is CHEAP — reuse the existing control, ⛔ don't invent one.**
       `apps/api/src/modules/public-pages/handlers.ts:496` already documents *"404 COLLAPSES THREE CASES
       ON PURPOSE"* (`:534` / `:555`). ⇒ *"real drive, wrong token"* becomes the **fourth** collapsed
       case, byte-identical to the others. ⚠ ⛔ **Not** the 503 arm (`buildSahyogVivranOutageView`, astro
       `:219`) — that is the outage path and is a different response.
-- [ ] ⛔ Keep `pool_canonical_identifier` **RENDERED** on the page — astro `:309` shows it via
+- [x] ⛔ Keep `pool_canonical_identifier` **RENDERED** on the page — astro `:309` shows it via
       `<MatrixField>`. Trap 3 forbids it being **addressable**, ⛔ not **displayed**. ⛔ Do not delete it.
 
 ### Task 4 — ⭐⛔ The matrix declarations the token/link force (AC1, AC3, AC5)
 
 > ⛔⛔ **THIS IS THE TASK THAT WILL BREAK THE BUILD IF IT IS SKIPPED, AND AC5 WILL ⛔ NOT CATCH IT.**
 
-- [ ] `apps/public/src/lib/surface-fields.ts` derives each surface's tier-leak field set from the render
+- [x] `apps/public/src/lib/surface-fields.ts` derives each surface's tier-leak field set from the render
       model's **OWN KEYS** (`:362` index, `:590` drive page), and `:382-387` states **`deriveFieldIds`
       throws in BOTH directions** — a model key with no field id, **and** a field id with no model key.
-- [ ] ⇒ **every new key needs its matrix field declared IN THE SAME COMMIT**:
-  - [ ] an index row link ⇒ `SAHYOG_DRIVE_ROW_FIELD_IDS` (`:319`) **and** `SAHYOG_DRIVE_ROW_SHAPE` (`:344`).
-  - [ ] a token on the drive page model ⇒ `SAHYOG_VIVRAN_FIELD_IDS` (`:513`).
-  - [ ] the declaration itself in `packages/contracts/src/public-pages/sahyog-drive.ts` /
+- [x] ⇒ **every new key needs its matrix field declared IN THE SAME COMMIT**:
+  - [x] an index row link ⇒ `SAHYOG_DRIVE_ROW_FIELD_IDS` (`:319`) **and** `SAHYOG_DRIVE_ROW_SHAPE` (`:344`).
+  - [x] a token on the drive page model ⇒ `SAHYOG_VIVRAN_FIELD_IDS` (`:513`).
+  - [x] the declaration itself in `packages/contracts/src/public-pages/sahyog-drive.ts` /
         `sahyog-vivran.ts` — `tier: public`, `pii_tier: 3`.
-- [ ] ⭐ **A token/href is `pii_tier: 3`** ⇒ it needs ⛔ **no** `tier1_public_exception` and ⛔ **no**
+- [x] ⭐ **A token/href is `pii_tier: 3`** ⇒ it needs ⛔ **no** `tier1_public_exception` and ⛔ **no**
       `RULED_TIER1_PUBLIC_EXCEPTIONS` entry (`packages/contracts/src/public-pages/matrix.ts:393`, whose
       comment says adding to that list *"IS A RULING, NEVER A CODE CHANGE"*). ⛔ Do not touch that map.
-- [ ] AC5's count assertion lives in `apps/public/tests/surface-fields.test.ts` — assert the
+- [x] AC5's count assertion lives in `apps/public/tests/surface-fields.test.ts` — assert the
       `sahyog-vivran` **Tier-1-at-`public` count is UNCHANGED**. ⚠ That is necessary but is ⛔ **not**
       the constraint that breaks; the undeclared-key throw is. ⭐ Both must pass.
 
 ### Task 5 — The `/sahyog` per-row inbound link (AC3)
 
-- [ ] Build the row href in `apps/public/src/lib/sahyog-render.ts`. ⚠ Today it produces **exactly TWO**
+- [x] Build the row href in `apps/public/src/lib/sahyog-render.ts`. ⚠ Today it produces **exactly TWO**
       hrefs — `:308` (`page - 1`) and `:315` (`page + 1`); `PaginationLink` (`:101`) is the only link
       type. A drive link is a **third kind** and is ⛔ not a `PaginationLink`.
-- [ ] Accessible name identifies **WHICH drive** it opens — ⛔ never a bare "click here" (family 13).
+- [x] Accessible name identifies **WHICH drive** it opens — ⛔ never a bare "click here" (family 13).
       Copy goes through `t()`: ⚠ `t()` defaults to the `common` namespace and **throws** on a missing
       key ([[project_missed_cycle_visibility_substrate]]).
-- [ ] ⚠ **A11y test coverage may already be routed elsewhere:** 11b.3a's review **deferred family-13
+- [x] ⚠ **A11y test coverage may already be routed elsewhere:** 11b.3a's review **deferred family-13
       Astro `role`/`aria-label` test coverage to 11b.8** (sprint-status ledger, 2026-09-03). ⇒ either
       assert it here and say the deferral is **narrowed**, or route to 11b.8 and say so — ⛔ do not
       leave it ambiguous ([[feedback_closure_language_precision]]).
-- [ ] ⭐ **Write the exposure sentence into the story record in these words** (AC3, D3): *"every listed
+      ✅ **NARROWED, ⛔ not closed and ⛔ not left ambiguous.** `apps/public/tests/sahyog-drive-link-a11y.test.ts`
+      asserts the family-13 markup for **exactly one affordance** — the drive link this story adds
+      (real `<a href>`, `aria-label` present, the name built from the DRIVE CODE and ⛔ never from
+      the consent-gated `deceasedMemberName`, the value still through `<MatrixField>`, and the copy
+      keys present in BOTH locales with `{code}` intact). ⚠ **11b.8 still owes the GENERAL family-13
+      Astro sweep** across every public surface; ⛔ this file must not be cited as discharging it.
+      ⭐ Why narrow rather than defer: a deferred a11y test on an affordance that does not exist yet
+      costs nothing — one on an affordance shipping in the same commit leaves the link's accessible
+      name unchecked at the moment it goes live.
+- [x] ⭐ **Write the exposure sentence into the story record in these words** (AC3, D3): *"every listed
       drive becomes ONE CLICK from four Tier-1 fields under `D8-default` FAIL-OPEN"*. ⛔ A reviewer must
       meet it in prose, ⛔ never discover it in a diff.
+      ✅ **WRITTEN, VERBATIM, IN FIVE PLACES** — chosen so a reviewer meets it whichever door they
+      come in by: the matrix declaration (`drive_href`'s `description`), the wire contract
+      (`sahyog-drive.ts`'s `publicToken`), the render model (`surface-fields.ts`'s `driveHref`), the
+      pure builder (`sahyog-render.ts`'s `driveHref()`), and the API handler that serializes it.
+      ⭐ Plus the `deferred-work.md` closure entry and this story's Completion Notes.
 
 ### Task 6 — The `live`-drive inbound path — the My Pool entry (AC4) ✅ **D4 RULED**
 
-- [ ] Carry the token to the client: add it to `useActiveContributionQuery`'s response
+- [x] Carry the token to the client: add it to `useActiveContributionQuery`'s response
       (`apps/mobile/components/active-contribution/useActiveContributionQuery.ts`) and to the contract
       backing it. ⭐ **ONE new field on a query that already runs** — that is the whole API change.
-- [ ] Add `sahyogVivranUrl(token, locale)` to `apps/mobile/lib/public-site.ts`, beside
+- [x] Add `sahyogVivranUrl(token, locale)` to `apps/mobile/lib/public-site.ts`, beside
       `niyamavaliClauseUrl` (`:32`). ⭐ Reuse `publicSiteOrigin` (`:18`,
       `EXPO_PUBLIC_PUBLIC_SITE_ORIGIN`) — ⛔ do ⛔ not hardcode an origin.
-- [ ] ⛔⛔ **The token is SERVER-RETURNED.** `public-site.ts:29-30` already states the discipline for
+- [x] ⛔⛔ **The token is SERVER-RETURNED.** `public-site.ts:29-30` already states the discipline for
       `clauseId`: *"never hardcoded in the widget"*. ⇒ ⛔ the app ⛔ **never** derives the address from
       `poolId` or the canonical identifier — that would re-create D2's guessability inside the client.
-- [ ] Build the entry as a **sibling** of `<ActiveContributionCard />` in `apps/mobile/app/(tabs)/index.tsx`,
+- [x] Build the entry as a **sibling** of `<ActiveContributionCard />` in `apps/mobile/app/(tabs)/index.tsx`,
       following `components/contributor-list/ViewContributorsEntry.tsx` **exactly**: `return null` to
       self-suppress (`:31`), `Pressable` + `onPress` (`:42`). ⛔ **Beside the card, ⛔ NOT inside it**
       (Story 8.3 **D8**) — ⛔ do not add a field to the card's view model.
-- [ ] Open it with `Linking.openURL`, precedent `apps/mobile/app/(auth)/terminated.tsx:94`.
-- [ ] ⛔ **Self-suppress in LOCK-STEP with the card** — the card renders only for an `active` member
+- [x] Open it with `Linking.openURL`, precedent `apps/mobile/app/(auth)/terminated.tsx:94`.
+- [x] ⛔ **Self-suppress in LOCK-STEP with the card** — the card renders only for an `active` member
       assigned to a pool whose cycle alert is `live`. ⛔ An entry that outlives the card is a dead link.
-- [ ] ⛔ **Do ⛔ NOT touch the Shradhanjali tab** (`(tabs)/shradhanjali.tsx`). It is a P0-5 measurement
+- [x] ⛔ **Do ⛔ NOT touch the Shradhanjali tab** (`(tabs)/shradhanjali.tsx`). It is a P0-5 measurement
       prototype over `components/shradhanjali/sample-data.ts` with ⛔ zero API wiring (D4).
-- [ ] ⚠ `useT()` returns a **fresh closure each render** — depend on `locale`, ⛔ never on `t`
+- [x] ⚠ `useT()` returns a **fresh closure each render** — depend on `locale`, ⛔ never on `t`
       ([[project_uset_fresh_closure_memo_trap]]). The entry's label is Hindi-first, ≥56pt touch target.
 
 ### Task 7 — Close out (AC5, AC6)
 
-- [ ] Assert **nothing else moved**: `D8-default` FAIL-OPEN unchanged (Trap 4) · `limits.search`
+- [x] Assert **nothing else moved**: `D8-default` FAIL-OPEN unchanged (Trap 4) · `limits.search`
       unchanged on all three routes (Trap 5) · masking schedule/knob/predicate untouched · 11b.3a's
       Tier-1 allowlist entries and the matrix unchanged.
-- [ ] ⛔ **Only after AC1–AC4 have ALL landed together**, record the `deferred-work.md` item
+- [x] ⛔ **Only after AC1–AC4 have ALL landed together**, record the `deferred-work.md` item
       **"Closed by [edit]"** ([[feedback_closure_language_precision]]) — ⛔ never *"resolved via
       deferral"*. ⚠ If AC4 is undelivered the item **stays BLOCKING** and the story does ⛔ not close.
 
@@ -612,8 +632,219 @@ silently would have been an authoring act over a Panel-scoped artefact — the p
 
 ### Agent Model Used
 
+`claude-opus-5` (Claude Code, `bmad-dev-story`), 2026-09-04.
+
 ### Debug Log References
+
+**⚠⛔ ONE PRE-EXISTING `ci:local` FAILURE, RECORDED OPENLY AND ⛔ NOT WORKED AROUND**
+([[feedback_record_unattested_no_backfill]]).
+
+`integration-tests` fails on **3 assertions in `apps/api/tests/integration/vyawastha-shulk/vyawastha-shulk.spec.ts`**
+(`:357` `lockInEntered` false, `:391` 200 where 503 expected, `:494` `lockInEntered` false).
+
+⭐ **INNOCENCE PROVEN, ⛔ not asserted** — three independent checks:
+1. **It reproduces with THIS STORY'S ENTIRE WORKING TREE STASHED** (`git stash push -u`) — i.e. on
+   the baseline. That is the decisive one.
+2. The spec contains **ZERO** references to `pools` or `pool_id`; this story touches no membership-fee,
+   lock-in or Niyamavali-clause path.
+3. The spec **PASSES IN ISOLATION** against the same database
+   ([[project_known_livedb_test_failures]] — "confirm innocence by running a spec in isolation"),
+   and so does the **exact** `integration-tests` command (`pnpm db:migrate && turbo run test --force
+   --concurrency=1 --filter=…` over all eight packages): **domain 3194 · api 1176 · jobs 346 ·
+   validity 284 · channels 204 · niyamavali 144 · events 33 · queue 3 — all green.**
+
+⇒ the cause is the documented shared-database ACCUMULATION residual
+([[project_ci_local_double_run_pollution]] — "Residual = shared-`PARIWAR_A` counts + accumulation"):
+the failures are all "clause already provisioned / lock-in already entered", i.e. a *prior* run's rows
+making an "unprovisioned ⇒ 503" test see a 200. ⚠ A full DB drop-and-recreate would confirm it
+directly; that is a destructive action and was ⛔ **not** taken unilaterally.
+
+⛔ **NOT fixed here, and ⛔ not silently absorbed:** it is outside this story's scope, it is not
+caused by it, and "make the failing test pass" on an unrelated live-DB spec would be exactly the
+scope creep the story's own traps forbid.
+
+⭐ **EVERY OTHER `ci:local` JOB IS GREEN — 33 of 34**, including the ones this story could plausibly
+break: `lint` · `typecheck` · `build` · `test (unit)` · `db-check` · `contracts-determinism` ·
+`i18n-parity` · `pii-scrape` · `friction-budget` · `schema-diff` · `microcopy` ·
+`pool-state-invariant` · `sahyog-vivran-financial-truth` · `access-wrapper-invariants` ·
+`domain-invariants` · `ai-10-5-coverage-guard`.
+
+**⚠ TWO GATES BIT DURING THE BUILD, and both are recorded because each caught a real defect:**
+- **`microcopy`** rejected the member-app entry's a11y hint: *"Opens the public trust website **outside
+  the app**"* matched the `out-of-band-blame` tone rule's arm (3) — DEFINED-BY-THE-CHANNEL. ⭐ Fixed
+  by **changing the COPY** (*"…in your browser"*), ⛔ **not** by adding an `allow` entry over a live
+  member surface — the discipline that rule's own header states in terms ("Narrowing the PATTERN, not
+  an `allow` entry over a live surface").
+- **`deriveFieldIds`** threw in BOTH directions the moment `driveHref` / `driveLinkA11yLabel` entered
+  the render model without matrix entries — Dev Notes' failure mode #1, arriving exactly as predicted.
+  ⭐ The gate working, ⛔ not an obstacle.
+
+**⭐ THE MIGRATION WAS VERIFIED LIVE, ⛔ not assumed** (`0114`, applied to `twt-test-pg`):
+`SELECT count(*), count(public_token), count(DISTINCT public_token), min(length), max(length) FROM pools`
+⇒ **1132 / 1132 / 1132 / 22 / 22** — every pre-existing row backfilled, every token distinct, every one
+22 chars. `\d pools` confirms `public_token | text | not null` and `pools_public_token_uq UNIQUE`.
+
+**⭐ REVERT-SANITY PROVEN on the fence that matters most** (the client-derivation guard): renaming
+`sahyogVivranUrl`'s parameter to `poolCanonicalIdentifier` turned
+`sahyog-vivran-entry.test.ts` RED (1 failed / 11 passed); restoring it returned it GREEN (12 passed).
+⛔ A fence that cannot fail is not a fence.
 
 ### Completion Notes List
 
+⭐⭐ **BOTH HALVES LANDED TOGETHER — which is the story's own hardest requirement, ⛔ not a bonus.**
+Trap 1 forbids landing the token without a path: it would make the ENTIRE Sahyog Vivran surface
+reachable by NOBODY and silently invert the Panel's ratified **(A)**, *while passing every gate and
+looking like a security improvement*. This branch carries AC1–AC4 as one change set.
+
+**AC0 — governance first.** The `epics.md` annotation landed separately at `d2f11b6`; the
+sprint-status flip + its ledger entry at `a6f5ffe`, both `governance:`-prefixed and both BEFORE the
+first line of code ([[feedback_governance_commits_precede_implementation]]). The Task 0 STOP
+condition was discharged by **rulings** (D1–D3 2026-09-04, D4 2026-09-04b), ⛔ never by an author's
+guess.
+
+**AC1 — one address form.** `:driveToken` on `apps/api`, `[driveToken].astro` on `apps/public`,
+`PublicSahyogVivranParams.driveToken` in contracts, `readPublicSahyogVivran(db, pariwarId, driveToken)`
+in the domain. ⛔ There is **no** `OR` arm for the identifier anywhere, and `.strict()` makes
+`poolCanonicalIdentifier` a **400 as a param key** — asserted in both directions
+(`public-pages-sahyog-vivran.test.ts`). The identifier is **RETAINED**, still selected, still returned,
+still `<MatrixField>`-rendered, and still the **audit** key on the appeal-disclosure line — ⛔ Trap 3
+forbids it being *addressable*, ⛔ not *displayed*.
+⭐ **The indistinguishable refusal reuses the EXISTING control** rather than inventing one: the token
+is part of the read's `WHERE`, so "real drive, wrong token" becomes the **fourth** case collapsed into
+the handler's already-documented 404. Asserted as an **EQUALITY between two live responses**, ⛔ not as
+two independent "is it 404?" checks — the second form would pass even if bodies or statuses diverged.
+
+**AC2 — random, stored, rotatable, backfilled.** 128 bits of `randomBytes`, base64url (22 chars),
+minted in `pool/project.ts`'s genesis INSERT; `pools_public_token_uq` is **GLOBAL**, deliberately
+(an ADDRESS must name one thing without a second value to disambiguate it — and a colliding mint then
+fails LOUDLY at 23505 instead of silently re-pointing one drive's address at another's).
+⛔ **Not derived** — asserted structurally: the minted token shares no prefix with the `pool_id` hex,
+does not contain the canonical identifier, and two pools spawned in the SAME cycle at adjacent
+`pool_index` get different addresses. ⭐ A re-delivered spawn takes `onConflictDoUpdate`, which does
+⛔ **not** touch `publicToken` — a retry never re-addresses a published drive.
+⭐ **Rotation exists and is exercised**: rotating one drive changes its address, leaves the neighbour's
+byte-identical, makes the OLD address resolve to zero rows, returns `null` (⛔ never throws) for an
+unknown pool, and provably does ⛔ **not** engage the 0071 state-writer trigger.
+⛔ **Zero NULL tokens is STRUCTURAL, ⛔ not a snapshot**: the migration backfills then `SET NOT NULL`
+(verified live, above), and the spec asserts both the count across all four lifecycle states **and**
+that the column REFUSES a NULL (23502).
+
+**AC3 — the `/sahyog` per-row link.** ⭐ **The exposure sentence is written verbatim in FIVE places**
+so a reviewer meets it in prose whichever door they come in by: *"every listed drive becomes ONE CLICK
+from four Tier-1 fields under `D8-default` FAIL-OPEN."* `drive_href` is declared `tier: public`,
+`pii_tier: 3` — an ADDRESS, ⛔ not a person and ⛔ not derived from one ⇒ ⛔ **no**
+`tier1_public_exception`, ⛔ **no** `RULED_TIER1_PUBLIC_EXCEPTIONS` entry, and `matrix.ts` **untouched**.
+⚠ The link is a **third kind of href** on a module that had only two (both pagination), so it rides
+`visibleSahyogColumns` — which means the `<th>`/`<td>` pair still suppresses TOGETHER and an announced
+omission is still impossible. It carries **only `lang`** forward, ⛔ never the index filters: a filter
+shape on a single-drive URL would read as an onward collection affordance on the one surface whose
+control 5 is the absence of one.
+
+**AC4 — the `live`-drive path (D4).** A member-app entry on **Tab 1, "My Pool"** — ⛔ **not**
+Shradhanjali, whose name makes it the obvious-and-wrong choice (it is a `sample-data` P0-5 prototype
+with zero API wiring; picking it would have re-scoped this story into building the memorial data
+layer). `<SahyogVivranEntry />` follows `<ViewContributorsEntry />` exactly: a SIBLING of the card
+(8.3 **D8**), `return null` to self-suppress, ≥56pt, `accessibilityRole="link"`, Hindi-first copy
+through `t()` with an explicit namespace, `locale` from `useLocale()` (⛔ never a `t`-derived value —
+[[project_uset_fresh_closure_memo_trap]]).
+⭐ **ONE new field on a query that already runs** — that is the whole API change. The token is
+**SERVER-RETURNED**; the client derives nothing, fenced by a source scan asserting neither the entry
+nor the URL builder mentions `poolId` or `poolCanonicalIdentifier`.
+⛔⛔ **LOCK-STEP IS ASSERTED, ⛔ not documented**: when the token read returns `null` the handler
+fail-softs the **whole card** to `{ assigned: false }` (the same arm `identity === null` already uses),
+so an entry can never outlive its card and leave a dead link. And D1's price is carried openly — a
+forwarded link is permanent public access until rotation, which is exactly why AC2's rotation is not
+separable from it.
+
+**AC5 — nothing else moved.** `D8-default` FAIL-OPEN unchanged · `limits.search` unchanged on **all
+three** routes, now fenced by a test that counts the registrations and forbids `limits.read`, an inline
+ceiling and a `keyGenerator` (⚠ the pull is real in BOTH directions once the address is opaque, which
+is why it is a test and not a comment) · masking schedule/knob/predicate untouched (⛔ zero masking
+files in the diff) · `matrix.ts` untouched · Tier-1-at-`public` asserted **by identity** on BOTH
+surfaces: `sahyog-vivran` still exactly the four ruled nominee-bank fields, `sahyog-drive` still
+exactly `deceased_member_name`.
+
+**AC6 — the deployment gate.** `deferred-work.md` records **"Closed by [edit]"**
+([[feedback_closure_language_precision]] — ⛔ never *"resolved via deferral"*, and ⛔ not *"closed by
+ruling"*: a ruling closed the QUESTION at `-184`; what was outstanding was an IMPLEMENTATION). The
+predecessor item's note is **amended, ⛔ not rewritten** ([[feedback_supersede_never_reinterpret]]).
+⚠ The entry also states, in the same breath, what is ⛔ **not** closed: `D8-default`, the rate-limit
+tier, the DPDPA exposure, counsel's review, Row 17's posture — and that **built is still ⛔ not
+published**.
+
+**⚠ ONE THING WORTH FLAGGING TO REVIEW, stated rather than buried:** `buildSahyogVivranOutageView()`
+lost its argument. It used to echo the URL segment back into `pool_canonical_identifier` on the
+ground that *"the visitor supplied it and it is already in their URL bar"*. ⭐ That ground is GONE —
+the URL now carries an opaque ADDRESS — so echoing it would print a live public address into a
+classified field on a degraded page, a fabricated drive fact of exactly the kind that function's own
+doc-block forbids. Its test was amended to assert the empty string **with the reason**, ⛔ not silently
+flipped.
+
 ### File List
+
+⭐ **NEW (6)**
+
+| File | What |
+|---|---|
+| `packages/domain/src/pool/public-token.ts` | the mint · `rotatePoolPublicToken` · `readPoolPublicToken`, with D1/D2's grounds |
+| `packages/domain/migrations/0114_pool-public-address-token.sql` | add column · **BACKFILL every row** · `SET NOT NULL` · global unique index |
+| `packages/domain/tests/integration/pool/public-token.spec.ts` | 11 live-DB tests: mint · not-derived · rotation isolation · zero NULLs · 23502 · 23505 |
+| `apps/mobile/components/sahyog-vivran/SahyogVivranEntry.tsx` | the `live`-drive entry (D4) — sibling of the card, lock-step suppression |
+| `apps/mobile/tests/unit/sahyog-vivran-entry.test.ts` | 12 source-scan fences: on Tab 1, ⛔ not Tab 2 · server-returned · ⛔ no route group |
+| `apps/public/tests/sahyog-drive-link-a11y.test.ts` | family-13 markup for the drive link — **narrows** 11b.8's deferral, ⛔ does not close it |
+
+⭐ **MODIFIED (44)**
+
+| File | What |
+|---|---|
+| `packages/domain/src/schema/pools.ts` | `+ publicToken` (NOT NULL) · `+ pools_public_token_uq` (GLOBAL) |
+| `packages/domain/src/pool/project.ts` | mint at the genesis INSERT; ⛔ untouched by `onConflictDoUpdate` |
+| `packages/domain/src/pool/index.ts` | export the new namespace |
+| `packages/domain/src/pool/sahyog-vivran-read.ts` | resolve by token; the 404 now collapses **FOUR** cases |
+| `packages/domain/src/pool/public-read.ts` | carry `publicToken` onto the index row |
+| `packages/domain/migrations/meta/_journal.json` | `0114` entry |
+| `packages/contracts/src/public-pages/sahyog-vivran.ts` | `Params.driveToken`; the entry field amended to RENDERED-not-addressable |
+| `packages/contracts/src/public-pages/sahyog-drive.ts` | `+ publicToken` on the wire row, with the exposure sentence |
+| `packages/contracts/src/contributions/active-contribution-card.ts` | `+ sahyogVivranToken` — the ONE new field |
+| `packages/contracts/public-pages/public-vs-private-matrix.yaml` | `+ drive_href` (`public`/`pii_tier: 3`) · route → `[driveToken]` · `D4-linkage` CLOSED |
+| `apps/api/src/modules/public-pages/routes.ts` | `:driveToken` · **control 7** added (count now SEVEN) · enumeration-bound clause amended |
+| `apps/api/src/modules/public-pages/handlers.ts` | read by token · 4th collapsed 404 · `+ publicToken` on index rows · audit keeps the identifier |
+| `apps/api/src/modules/member-pool/handlers.ts` | server-side token read + fail-soft to `UNASSIGNED` (lock-step) |
+| `apps/public/src/pages/sahyog-vivran/[driveToken].astro` | **file renamed** + param |
+| `apps/public/src/pages/sahyog.astro` | the `<a href>` arm + the three new labels |
+| `apps/public/src/lib/sahyog-vivran.server.ts` | `driveToken` fetch option |
+| `apps/public/src/lib/sahyog-vivran-render.ts` | `buildSahyogVivranOutageView()` — ⛔ echoes no address |
+| `apps/public/src/lib/sahyog-render.ts` | `SAHYOG_VIVRAN_ROUTE` · `driveHref()` · the link column · 2 new labels |
+| `apps/public/src/lib/surface-fields.ts` | `+ driveHref` / `+ driveLinkA11yLabel` on the row, its mapping and its shape |
+| `apps/mobile/lib/public-site.ts` | `+ sahyogVivranUrl(token, locale)` |
+| `apps/mobile/app/(tabs)/index.tsx` | mount the entry beside the card |
+| `packages/i18n/locales/{en,hi}/sahyog-drive.json` | `table.col.open` · `link.view_drive` · `link.view_drive_a11y` |
+| `packages/i18n/locales/{en,hi}/contribution.json` | `sahyog_vivran.entry_{cta,a11y,hint}` |
+| `scripts/sahyog-vivran-financial-truth/check.ts` | the renamed astro path (⛔ or the gate goes vacuous) |
+| `packages/contracts/tests/public-pages.test.ts` · `…-matrix-schema.test.ts` | route rename |
+| `packages/contracts/tests/contributions.test.ts` | card fixture `+ sahyogVivranToken` |
+| `packages/contracts/tests/public-pages-sahyog-vivran.test.ts` | params → token; `+` the Trap-3 refusal test |
+| `apps/api/tests/integration/login-wall.spec.ts` | allowlist path + **control 5** (count now FIVE, matching `routes.ts`) |
+| `apps/api/tests/integration/public-pages/sahyog-vivran.spec.ts` | `tokenFor` + **3 new AC1 tests** |
+| `apps/api/tests/integration/public-pages/sahyog-drive.spec.ts` | seed `public_token`; `+ publicToken` in the exact key set |
+| `apps/api/tests/integration/public-pages/rate-limit-key.spec.ts` | `+` the **Trap 5** fence |
+| `apps/api/tests/unit/active-contribution-card.test.ts` | stub + **2 new AC4 tests** (server-returned · lock-step) |
+| `apps/api/tests/unit/contribution-history.test.ts` | stub the token read |
+| `apps/public/tests/sahyog-render.test.ts` | fixtures + **4 new AC3 tests**; the sort fence split in two |
+| `apps/public/tests/integration/public-pages/scrape-test.spec.ts` | field set 8→9; `+` the **AC5** Tier-1-unchanged test |
+| `apps/public/tests/sahyog-vivran-render.test.ts` · `sahyog-vivran-client.test.ts` | outage arg · `driveToken` |
+| `packages/domain/tests/integration/_helpers.ts` + 3 domain specs | seed `publicToken` |
+| `apps/api/tests/integration/{self-verify,contributions,payment}/…` (4 specs) | seed `publicToken` |
+| `packages/validity-service/tests/integration/contribution-facts.spec.ts` | seed `public_token` |
+| `_bmad-output/implementation-artifacts/deferred-work.md` | **"Closed by [edit]"** + the predecessor note amended |
+| `_bmad-output/implementation-artifacts/sprint-status.yaml` | the row + the ledger |
+| `_bmad-output/planning-artifacts/epics.md` | the annotation (`d2f11b6`) |
+
+## Change Log
+
+| Date | Change |
+|---|---|
+| 2026-09-04 | **Task 0 (AC0)** — the `epics.md` annotation (`d2f11b6`), then the sprint-status flip + ledger (`a6f5ffe`). Both `governance:`-prefixed, both BEFORE any code. |
+| 2026-09-04 | **Tasks 1–7 (AC1–AC6)** — the unguessable public address **and** the inbound path for all three drive states, as ONE change set. ⛔ A partial landing is the one outcome Trap 1 forbids. |
+| 2026-09-04 | `deferred-work.md`'s **BLOCKING ON DEPLOYMENT** item recorded **"Closed by [edit]"**, with what it does ⛔ *not* close stated alongside it. |
+

@@ -371,18 +371,26 @@ export function buildSahyogVivranView(
  * ⛔ none of the model's fields carries a value on this arm. A `labels` parameter here would be an
  * unused dependency that the next author fills in — which is how outage copy acquires a fabricated
  * drive fact.
+ *
+ * ⚠⭐ AND IT TAKES ⛔ NO ARGUMENT AT ALL SINCE STORY 11b.10 — ⛔ AN AMENDMENT, ⛔ not a tidy-up.
+ * It used to accept the `poolCanonicalIdentifier` and echo it, on the ground that *"the visitor
+ * supplied it and it is already in their URL bar"*. ⭐ THAT GROUND IS GONE: the URL now carries an
+ * OPAQUE ADDRESS TOKEN, and the drive code it names is one of the things the failed read did ⛔ not
+ * tell us. ⇒ echoing the URL segment would print an ADDRESS into the `pool_canonical_identifier`
+ * field — a fabricated drive fact of exactly the kind the paragraph above forbids, and a live public
+ * address rendered into a classified field on a degraded page. ⛔ Do ⛔ not "restore" the echo.
  */
-export function buildSahyogVivranOutageView(poolCanonicalIdentifier: string): SahyogVivranView {
+export function buildSahyogVivranOutageView(): SahyogVivranView {
   return {
     model: {
       apiUnavailable: true,
       isCollecting: false,
       wasReversedByAppeal: false,
-      // ⚠ The identifier is echoed because the VISITOR supplied it and it is already in their URL
-      // bar — it tells them which page failed. ⛔ Nothing else is invented: every other field is
-      // null or empty, because nothing is known.
+      // ⛔ NOTHING IS INVENTED — every field is null or empty, because nothing is known. ⚠ That now
+      // includes the drive code: the URL carries an opaque ADDRESS, ⛔ not an identifier, so there is
+      // no identifier to echo and printing the address here would be a fabricated drive fact.
       poolLetterCode: '',
-      poolCanonicalIdentifier,
+      poolCanonicalIdentifier: '',
       driveStatus: '',
       driveClosedAt: null,
       district: null,

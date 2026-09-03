@@ -251,6 +251,25 @@ export interface SahyogDriveRow {
   readonly poolLetterCode: string;
   /** `P-YYYY-MM-###`. */
   readonly poolCanonicalIdentifier: string;
+  /**
+   * ⭐⭐ THE LINK TO THIS DRIVE'S OWN PAGE — Story 11b.10 (AC3). Built from the drive's OPAQUE
+   * PUBLIC TOKEN, ⛔ never from `poolCanonicalIdentifier` above (which is no longer addressable).
+   *
+   * ⚠⛔ WHAT SHIPPING THIS DOES, IN PROSE SO A REVIEWER MEETS IT HERE AND ⛔ NOT IN A DIFF (D3,
+   * Trap 2): **every listed drive becomes ONE CLICK from four Tier-1 fields under `D8-default`
+   * FAIL-OPEN.** Before it, the index LISTED drives and ⛔ never LINKED to them.
+   */
+  readonly driveHref: string;
+  /**
+   * The drive link's ACCESSIBLE NAME — ⛔ never a bare "click here" (family 13). It names WHICH
+   * drive the link opens, so N rows announce N distinct destinations.
+   *
+   * ⚠ Mapped to `null` in {@link SAHYOG_DRIVE_ROW_FIELD_IDS}: it is an ACCESSIBILITY ANNOTATION on
+   * the field below it, ⛔ not a classified attribute of the drive. Its content is fixed i18n copy
+   * with the (already-classified) drive code interpolated — declaring it a second time would
+   * classify the same fact twice under two ids.
+   */
+  readonly driveLinkA11yLabel: string;
   /** `active` | `archive`, already localised. ⛔ The internal lifecycle word never reaches here. */
   readonly driveStatus: string;
   /** The close/settle instant, already formatted. `null` ⇒ the "not recorded" copy. */
@@ -320,6 +339,12 @@ export const SAHYOG_DRIVE_ROW_FIELD_IDS: FieldIdMapping<SahyogDriveRow> = {
   deceasedMemberName: 'deceased_member_name',
   poolLetterCode: 'pool_letter_code',
   poolCanonicalIdentifier: 'pool_canonical_identifier',
+  // ⭐ Story 11b.10 — the drive link. `pii_tier: 3`: an ADDRESS, ⛔ not a person and ⛔ not derived
+  // from one ⇒ it needs ⛔ no `tier1_public_exception` and ⛔ no `RULED_TIER1_PUBLIC_EXCEPTIONS`
+  // entry (adding to that map "IS A RULING, NEVER A CODE CHANGE" — ⛔ do not touch it).
+  driveHref: 'drive_href',
+  // ⛔ An a11y ANNOTATION on `drive_href`, ⛔ not a field of its own — see the interface's doc-block.
+  driveLinkA11yLabel: null,
   driveStatus: 'drive_status',
   driveClosedAt: 'drive_closed_at',
   district: 'district',
@@ -345,6 +370,8 @@ const SAHYOG_DRIVE_ROW_SHAPE: SahyogDriveRow = {
   deceasedMemberName: null,
   poolLetterCode: '',
   poolCanonicalIdentifier: '',
+  driveHref: '',
+  driveLinkA11yLabel: '',
   driveStatus: '',
   driveClosedAt: null,
   district: null,

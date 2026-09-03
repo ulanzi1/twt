@@ -74,8 +74,13 @@ export type SahyogVivranFetchResult =
     };
 
 export interface SahyogVivranFetchOptions {
-  /** The `P-YYYY-MM-###` from the route parameter, passed through UNCHANGED. */
-  poolCanonicalIdentifier: string;
+  /**
+   * ⭐⭐ THE DRIVE'S OPAQUE PUBLIC ADDRESS TOKEN, from the route parameter, passed through UNCHANGED
+   * — Story 11b.10 (AC1, `2026-09-03-184` (B)). ⚠ This used to be the `P-YYYY-MM-###`; that
+   * identifier is SEQUENTIAL, so it made the surface walkable by counting.
+   * ⛔ Do ⛔ NOT add an identifier arm beside it: there is EXACTLY ONE public address form.
+   */
+  driveToken: string;
   /**
    * The visitor's address as THIS process observed it (`Astro.clientAddress`), via
    * {@link buildForwardedFor}. ⛔ NOT the inbound chain.
@@ -94,15 +99,15 @@ export interface SahyogVivranFetchOptions {
  * ⛔ NEVER THROWS. A public page must not 500 because an upstream is slow — it renders the outage
  * state, which the caller is required to present as an OUTAGE and ⛔ never as "no such drive".
  *
- * ⚠ THE IDENTIFIER IS PATH-ENCODED, ⛔ not interpolated raw. It arrives from a URL segment, so a
- * value containing `/` or `?` would otherwise re-shape the upstream request.
+ * ⚠ THE ADDRESS IS PATH-ENCODED, ⛔ not interpolated raw. It arrives from a URL segment, so a value
+ * containing `/` or `?` would otherwise re-shape the upstream request.
  */
 export async function fetchSahyogVivran(
   opts: SahyogVivranFetchOptions,
 ): Promise<SahyogVivranFetchResult> {
   const url = new URL(
     `/api/v1/p/${ACTIVE_PARIWAR_ID}/public-pages/sahyog-vivran/${encodeURIComponent(
-      opts.poolCanonicalIdentifier,
+      opts.driveToken,
     )}`,
     API_ORIGIN,
   );
@@ -124,7 +129,9 @@ export async function fetchSahyogVivran(
     });
 
     // ⭐⛔ 404 IS ITS OWN REASON, ⛔ NOT AN OUTAGE AND ⛔ NOT A REJECTION. It is the ordinary answer
-    // for an identifier that names nothing publishable, and it is the ONE 4xx this surface expects.
+    // for an address that names nothing publishable — including a REAL drive addressed with the
+    // WRONG token, which the API collapses into this same answer BYTE-IDENTICALLY (11b.10 AC1) —
+    // and it is the ONE 4xx this surface expects.
     if (res.status === 404) return { ok: false, reason: 'not_found' };
     if (!res.ok) {
       return {

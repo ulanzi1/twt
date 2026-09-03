@@ -458,7 +458,8 @@ describe('committed matrix — the POPULATED invariants (Story 11a.1)', () => {
         // `2026-09-02-182` cl.2).
         // ⛔ 11b.6 (/in-memoriam) STAYS UNDECLARED and must stay absent from this list until
         // it ships its own route — the omission is what the route-coverage leg makes safe.
-        '/sahyog-vivran/[poolCanonicalIdentifier]',
+        // ⚠ Story 11b.10 renamed the parameter to the drive's OPAQUE PUBLIC TOKEN.
+        '/sahyog-vivran/[driveToken]',
         '/terms',
       ].sort(),
     );

@@ -271,10 +271,14 @@ describe.skipIf(!hasDatabase)(
         );
         await client.query("SET LOCAL app.pool_state_writer = 'on'");
         await client.query(
+          // `public_token` (Story 11b.10) is NOT NULL with a GLOBAL unique index — derived from the
+          // pool id HERE ONLY because this is a seed and needs to be collision-free across a suite.
+          // ⛔ The production mint is RANDOM and is ⛔ never derived from pool identity (D2).
           `INSERT INTO pools (pool_id, pariwar_id, cycle_id, claim_case_id, pool_index, pool_canonical_identifier,
-                              support_category, benefit_mechanism, fixed_amount, current_state, state_event_version)
-           VALUES ($1,$2,$3,$4,0,$5,'death_support','pool',500,'spawned',1)`,
-          [poolId, pariwarId, cycleId, claimCaseId, `P-${poolId.slice(0, 8)}`],
+                              support_category, benefit_mechanism, fixed_amount, current_state, state_event_version,
+                              public_token)
+           VALUES ($1,$2,$3,$4,0,$5,'death_support','pool',500,'spawned',1,$6)`,
+          [poolId, pariwarId, cycleId, claimCaseId, `P-${poolId.slice(0, 8)}`, `seed-${poolId}`],
         );
         await client.query('COMMIT');
       } catch (err) {

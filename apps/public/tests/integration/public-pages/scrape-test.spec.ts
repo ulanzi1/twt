@@ -804,6 +804,7 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
     columnName: 'In memory of',
     columnPool: 'Drive code',
     columnLetter: 'Pool',
+    columnOpen: 'Details',
     columnDistrict: 'District',
     columnDate: 'Closed on',
     columnContributions: 'Contributions confirmed',
@@ -829,6 +830,8 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
     outcomeUnderFunded: 'The cycle closed. The trust met its commitment.',
     outcomePartial: 'The cycle closed. Reconciliation continues.',
     contributionsCount: (n) => `${String(n)} confirmed`,
+    viewDrive: 'View drive',
+    driveLinkA11y: (code) => `View the full details of drive ${code}`,
   };
 
   const model = buildSahyogView({ page: 1, limit: 25 }, new URLSearchParams(''), SAHYOG_TEST_LABELS, {
@@ -837,6 +840,7 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
         deceasedMemberName: 'Rajesh Kumar Sharma',
         poolLetterCode: 'A',
         poolCanonicalIdentifier: 'P-2026-08-001',
+        publicToken: 'tok-P-2026-08-001',
         status: 'active',
         closedAt: '2026-08-01T00:00:00.000Z',
         district: 'Lucknow',
@@ -850,6 +854,7 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
         deceasedMemberName: null,
         poolLetterCode: 'B',
         poolCanonicalIdentifier: 'P-2026-08-002',
+        publicToken: 'tok-P-2026-08-002',
         status: 'archive',
         closedAt: null,
         district: null,
@@ -908,7 +913,7 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
     fields: sahyogDriveSurfaceFieldIds(model),
   };
 
-  it('⭐ the snapshot field set is NON-EMPTY, and is EXACTLY the eight classified fields', () => {
+  it('⭐ the snapshot field set is NON-EMPTY, and is EXACTLY the nine classified fields', () => {
     // ⛔ Asserting the EXACT set — rather than "length > 0" — is what makes a DROPPED field fail
     // here too. A leg that only detects additions accepts a field vanishing from the render while
     // the matrix still claims it is shown.
@@ -918,6 +923,9 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
       'deceased_member_name',
       'district',
       'drive_closed_at',
+      // ⭐ Story 11b.10 — the per-row inbound link. `pii_tier: 3` (an ADDRESS, ⛔ not a person and
+      // ⛔ not derived from one) ⇒ ⛔ no `tier1_public_exception` and ⛔ no allowlist entry.
+      'drive_href',
       'drive_status',
       'pool_canonical_identifier',
       'pool_letter_code',
@@ -1009,6 +1017,9 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
       deceasedMemberName: 'Rajesh Kumar Sharma',
       poolLetterCode: 'A',
       poolCanonicalIdentifier: 'P-2026-08-001',
+      // Story 11b.10 — the drive link + its a11y annotation are part of the row's real key set.
+      driveHref: '/sahyog-vivran/tok-P-2026-08-001',
+      driveLinkA11yLabel: 'View the full details of drive P-2026-08-001',
       driveStatus: 'Active',
       driveClosedAt: '01-08-2026',
       district: 'Lucknow',
@@ -1301,6 +1312,45 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
       'nominee_ifsc',
       'nominee_vpa',
     ]);
+  });
+
+  it('⭐⭐ STORY 11b.10 (AC5) — the Tier-1-at-`public` count is UNCHANGED on BOTH sahyog surfaces', () => {
+    // ⭐ 11b.10 adds an ADDRESS (`drive_href` on `sahyog-drive`) and re-addresses the drive page. An
+    // address is `pii_tier: 3` — ⛔ not a person, ⛔ not derived from one, and ⛔ not a credential for
+    // the data behind it (D1) — so it needs ⛔ no `tier1_public_exception` and ⛔ no
+    // `RULED_TIER1_PUBLIC_EXCEPTIONS` entry, and it must move ⛔ NEITHER surface's Tier-1 count.
+    //
+    // ⚠⛔ AND THIS IS THE ASSERTION THAT PASSES WHILE THE BUILD BREAKS, so it is ⛔ NOT the one that
+    // matters most. `deriveFieldIds` throws in BOTH directions on an undeclared render-model key,
+    // and `drive_href` is `pii_tier: 3` ⇒ this leg goes green whether or not the declaration landed.
+    // ⭐ The constraint that actually bites is the undeclared-key throw (see CONTROL 3 above). Both
+    // must pass; ⛔ neither substitutes for the other.
+    const tier1AtPublic = (surfaceId: string): string[] => {
+      const surface = matrix.surfaces.find((sf) => sf.id === surfaceId);
+      expect(surface).toBeDefined();
+      return surface!.fields
+        .filter((f) => f.pii_tier === 1 && f.tier === 'public')
+        .map((f) => f.id)
+        .sort();
+    };
+    expect(tier1AtPublic('sahyog-vivran')).toEqual([
+      'nominee_account_holder_name',
+      'nominee_account_number',
+      'nominee_ifsc',
+      'nominee_vpa',
+    ]);
+    // ⭐ The index's single ruled entry (`2026-08-24-159` cl.2 / D1(b)) — ⛔ and no second one.
+    expect(tier1AtPublic('sahyog-drive')).toEqual(['deceased_member_name']);
+
+    // ⛔ The new field is declared, and it is declared at Tier 3 — ⛔ never at Tier 1 "to be safe",
+    // which would demand a Panel ruling this story neither has nor needs.
+    const driveHref = matrix.surfaces
+      .find((sf) => sf.id === 'sahyog-drive')!
+      .fields.find((f) => f.id === 'drive_href');
+    expect(driveHref).toBeDefined();
+    expect(driveHref?.tier).toBe('public');
+    expect(driveHref?.pii_tier).toBe(3);
+    expect(driveHref?.tier1_public_exception).toBeUndefined();
   });
 
   it('⭐ each of the four cites `2026-08-28-165` cl.1, and its scope names THIS surface only', () => {

@@ -62,7 +62,10 @@ const SCAN_FILES: readonly { readonly path: string; readonly renderPath: boolean
   // refused at this story), but it is the render path and belongs on rule (3)'s watch list the
   // moment 11b.3b lifts the `@twt/ui` fence here.
   {
-    path: 'apps/public/src/pages/sahyog-vivran/[poolCanonicalIdentifier].astro',
+    // ⚠ RENAMED at Story 11b.10 — the route parameter is the drive's OPAQUE PUBLIC TOKEN. This
+    // gate reads the file by PATH, so the rename must land here in the SAME commit or the gate goes
+    // silently vacuous on its own render path ([[feedback_gate_scope_semantic_coverage]]).
+    path: 'apps/public/src/pages/sahyog-vivran/[driveToken].astro',
     renderPath: true,
   },
   // ⭐ STORY 11b.3a — THE SCOPE TAX THIS GATE'S HEADER NAMED, PAID. The nominee-bank presentation

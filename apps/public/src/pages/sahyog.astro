@@ -109,6 +109,14 @@ const labels: SahyogLabels = {
   sectionArchiveTitle: tr('section.archive.title'),
   columnName: tr('table.col.name'),
   columnPool: tr('table.col.pool'),
+  // ⭐ Story 11b.10 — the drive-link column's header + its cell text + its per-row accessible name.
+  columnOpen: tr('table.col.open'),
+  viewDrive: tr('link.view_drive'),
+  // ⚠ EXPLICIT NAMESPACE, and the drive CODE is interpolated — ⛔ never a person's name, which is
+  // Tier-1, consent-gated and null for any unconsented family (the a11y name would then VANISH on
+  // exactly the rows that still need one).
+  driveLinkA11y: (poolCanonicalIdentifier: string) =>
+    tr('link.view_drive_a11y', { code: poolCanonicalIdentifier }),
   columnLetter: tr('table.col.letter'),
   columnDistrict: tr('table.col.district'),
   columnDate: tr('table.col.date'),
@@ -471,12 +479,29 @@ if (!driveStatusVisible) {
                   <tr>
                     {driveColumns.map((col) => (
                       <td>
-                        <MatrixField
-                          surface="sahyog-drive"
-                          field={col.fieldId}
-                          viewerContext="public"
-                          value={col.valueOf(row) ?? ''}
-                        />
+                        {/* ⭐ Story 11b.10 (AC3) — the DRIVE LINK arm. ⚠ A REAL `<a href>`, ⛔ never
+                            a JS-dependent button: this page is server-rendered and its links must
+                            work with no client script, exactly like the pagination controls.
+                            ⛔ `aria-label` names WHICH drive it opens — ⛔ never a bare "click here"
+                            (family 13). ⛔ The value still goes through `<MatrixField>`, so
+                            `getVisibility()` remains the ONLY thing deciding what appears. */}
+                        {col.hrefOf !== undefined ? (
+                          <a href={col.hrefOf(row)} aria-label={col.a11yOf?.(row)}>
+                            <MatrixField
+                              surface="sahyog-drive"
+                              field={col.fieldId}
+                              viewerContext="public"
+                              value={col.valueOf(row) ?? ''}
+                            />
+                          </a>
+                        ) : (
+                          <MatrixField
+                            surface="sahyog-drive"
+                            field={col.fieldId}
+                            viewerContext="public"
+                            value={col.valueOf(row) ?? ''}
+                          />
+                        )}
                       </td>
                     ))}
                   </tr>
@@ -500,12 +525,29 @@ if (!driveStatusVisible) {
                   <tr>
                     {driveColumns.map((col) => (
                       <td>
-                        <MatrixField
-                          surface="sahyog-drive"
-                          field={col.fieldId}
-                          viewerContext="public"
-                          value={col.valueOf(row) ?? ''}
-                        />
+                        {/* ⭐ Story 11b.10 (AC3) — the DRIVE LINK arm. ⚠ A REAL `<a href>`, ⛔ never
+                            a JS-dependent button: this page is server-rendered and its links must
+                            work with no client script, exactly like the pagination controls.
+                            ⛔ `aria-label` names WHICH drive it opens — ⛔ never a bare "click here"
+                            (family 13). ⛔ The value still goes through `<MatrixField>`, so
+                            `getVisibility()` remains the ONLY thing deciding what appears. */}
+                        {col.hrefOf !== undefined ? (
+                          <a href={col.hrefOf(row)} aria-label={col.a11yOf?.(row)}>
+                            <MatrixField
+                              surface="sahyog-drive"
+                              field={col.fieldId}
+                              viewerContext="public"
+                              value={col.valueOf(row) ?? ''}
+                            />
+                          </a>
+                        ) : (
+                          <MatrixField
+                            surface="sahyog-drive"
+                            field={col.fieldId}
+                            viewerContext="public"
+                            value={col.valueOf(row) ?? ''}
+                          />
+                        )}
                       </td>
                     ))}
                   </tr>

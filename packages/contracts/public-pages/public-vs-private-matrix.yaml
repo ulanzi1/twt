@@ -102,7 +102,8 @@
 # ABOVE IS NOW FALSE, AND THE IN MEMORIAM HALF STAYS STANDING. ⛔ Annotation, ⛔ not a
 # rewrite: the block above is the record of WHY the omission was safe, and the clause
 # has now done exactly what it promised for a SECOND surface — 11b.3 shipped
-# `/sahyog-vivran/[poolCanonicalIdentifier]`, the gate demanded a declaration, and the
+# `/sahyog-vivran/[driveToken]` (⚠ `[poolCanonicalIdentifier]` until Story 11b.10 re-addressed it —
+# see that surface's own rider below), the gate demanded a declaration, and the
 # `sahyog-vivran` surface below is it. Its field set is read off a route that exists.
 # ⛔ IN MEMORIAM (11b.6) REMAINS UNDECLARED on the unchanged reasoning: it does not
 # render, its field set still does not exist, and the gate will FAIL until it is
@@ -590,6 +591,39 @@ surfaces:
           ⛔ no `claim_id` and ⛔ no ciphertext. A per-entity permalink is an enumeration
           primitive in its own right (11a.3, control 5), so there is ⛔ no per-pool detail
           route here — a detail surface is 11b.3's.
+      - id: drive_href
+        tier: public
+        pii_tier: 3
+        description: >-
+          ⭐⭐ THE PER-ROW LINK TO THAT DRIVE'S OWN PAGE — Story 11b.10 (AC3), under
+          `2026-09-03-184` **(A)** + **(B)** as widened by `2026-09-04-185` cl.3-4.
+          It is built from the drive's OPAQUE PUBLIC TOKEN (`pools.public_token`, 128
+          bits of CSPRNG entropy under a global unique index) and ⛔ NEVER from
+          `pool_canonical_identifier`, which stopped being addressable in the same
+          story: the identifier's `sequence` is a MONOTONIC per-(pariwar, month)
+          counter, so an address built from it could be WALKED BY COUNTING.
+          ⛔ `pii_tier: 3`, and the classification is not a judgement call — it is an
+          ADDRESS: ⛔ not a person, ⛔ not derived from one, and ⛔ not a credential for
+          the data behind it (D1 — the drive page answers 200 to ANYONE presenting a
+          valid address, with ⛔ no session and ⛔ no branch on the reader's membership
+          standing). ⇒ it needs ⛔ NO `tier1_public_exception` and ⛔ NO
+          `RULED_TIER1_PUBLIC_EXCEPTIONS` entry, and ⛔ the Tier-1-at-`public` count on
+          `sahyog-vivran` is UNCHANGED by this story.
+          ⚠⛔ WHAT DECLARING IT DOES, STATED HERE RATHER THAN LEFT IN A DIFF (D3, Trap
+          2): **every listed drive becomes ONE CLICK from four Tier-1 fields under
+          `D8-default` FAIL-OPEN.** Before it, this index LISTED drives and ⛔ never
+          LINKED to them — they were technically reachable and practically un-navigated.
+          ⇒ Story 11b.10 makes this surface simultaneously HARDER TO ENUMERATE and
+          MATERIALLY EASIER TO REACH, and the second half is a real change in exposure.
+          ⭐ It is the NECESSARY CONSEQUENCE of two ratified answers, ⛔ not a fresh
+          exposure decision.
+          ⚠ THE ACCESSIBLE NAME IS ⛔ NOT A SECOND FIELD: it interpolates the
+          already-classified `pool_canonical_identifier` into fixed i18n copy, and
+          ⛔ never a person's name — which would make the link's a11y name VANISH on
+          every unconsented row.
+          ⛔ `live` drives are STILL NOT LISTED on this index (`public-read.ts` excludes
+          them deliberately — *"an open solicitation"*). (A) says a live drive should be
+          REACHABLE, ⛔ never LISTED; its path is a member-app entry (D4).
       - id: district
         tier: public
         pii_tier: 3
@@ -670,13 +704,25 @@ surfaces:
   # surfaces, two predicates. ⭐ The reason is ORDERING: Story 11b.3a's whole subject is the
   # ACTIVE campaign, and widening the predicate in the story that ADDS the Tier-1 bank fields
   # would have been the worse ordering.
-  # ⚠ `D4-linkage` IS OPEN: a `live` drive's page has ⛔ NO INBOUND LINK today (`/sahyog` lists
-  # only `closed` + `settled`), so it is reachable only by constructing the SEQUENTIAL
-  # `P-YYYY-MM-###`. ⛔ Do not add a link to a `live` drive without reading that rider, and note
-  # its MIRROR lands on 11b.3a, where the same sequential identifier fronts four decrypted Tier-1
-  # fields (routed to 11b.3a's AC2 by name).
+  # ⚠⭐ `D4-linkage` — ⭐⭐ **CLOSED BY STORY 11b.10**, and the rider is AMENDED, ⛔ not deleted.
+  # It used to read: *"a `live` drive's page has ⛔ NO INBOUND LINK today (`/sahyog` lists only
+  # `closed` + `settled`), so it is reachable only by constructing the SEQUENTIAL `P-YYYY-MM-###`"*
+  # — with its MIRROR on 11b.3a, where that same sequential identifier fronted four decrypted
+  # Tier-1 fields.
+  # ⭐ BOTH HALVES ARE NOW ANSWERED, TOGETHER AND ⛔ NEVER SEPARATELY (`2026-09-03-184` cl.4 as
+  # widened by `2026-09-04-185` cl.3 — ONE deliverable in two parts):
+  #   (a) THE ADDRESS is an opaque 128-bit token (`pools.public_token`), so there is ⛔ no sequence
+  #       left to construct, and *"real drive, wrong token"* answers a BYTE-IDENTICAL 404;
+  #   (b) THE PATH exists for all three visible states — a per-row `drive_href` on `/sahyog` for
+  #       `closed`/`settled`, and a MEMBER-APP entry on the My Pool tab for `live` (D4).
+  # ⚠⛔ LANDING (a) WITHOUT (b) WOULD HAVE MADE THE WHOLE SURFACE REACHABLE BY NOBODY and silently
+  # inverted the Panel's ratified (A). ⛔ Do not "simplify" this pair apart.
+  # ⛔ `live` drives are STILL ⛔ NOT LISTED on `/sahyog`: (A) says REACHABLE, ⛔ never LISTED.
   - id: sahyog-vivran
-    route: /sahyog-vivran/[poolCanonicalIdentifier]
+    # ⭐ Story 11b.10 — the route parameter is the drive's OPAQUE PUBLIC TOKEN (⚠ it was
+    # `[poolCanonicalIdentifier]` until this story closed the walk). ⛔ EXACTLY ONE address form: the
+    # bare identifier is ⛔ not independently addressable, though it is RETAINED and still RENDERED.
+    route: /sahyog-vivran/[driveToken]
     # ⭐ DECLARED EXPLICITLY, ⛔ not left to the schema default — the 11b.1 review finding:
     # *"a key an AC names is not optional just because a default happens to supply it."*
     renders: true

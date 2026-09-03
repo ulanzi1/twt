@@ -25,11 +25,28 @@ import { describe, expect, it } from 'vitest';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { createTestApp, hasDatabase, teardown, type TestApp } from '../_setup.js';
 
-const ROUTE = (pariwarId: string, id: string): string =>
-  `/api/v1/p/${pariwarId}/public-pages/sahyog-vivran/${encodeURIComponent(id)}`;
+// ⭐⭐ STORY 11b.10 — THE ROUTE IS ADDRESSED BY THE DRIVE'S **OPAQUE PUBLIC TOKEN**, ⛔ never by
+// `P-YYYY-MM-###`. The parameter is named `driveToken` and there is EXACTLY ONE address form.
+const ROUTE = (pariwarId: string, driveToken: string): string =>
+  `/api/v1/p/${pariwarId}/public-pages/sahyog-vivran/${encodeURIComponent(driveToken)}`;
+
+/**
+ * The FIXTURE'S token for a seeded drive.
+ *
+ * ⛔⛔ A TEST CONVENTION AND ⛔ NOTHING ELSE — it is derived from the canonical identifier ONLY so a
+ * test can address the drive it just seeded without threading a return value through thirty call
+ * sites. ⭐ The PRODUCTION mint is 128 bits of CSPRNG entropy and is derivable from ⛔ NOTHING
+ * (D2, `pool/public-token.ts`). ⛔ Do not read this helper as evidence that tokens are derived.
+ */
+const tokenFor = (canonicalIdentifier: string): string => `tok-${canonicalIdentifier}`;
 
 interface SeedSpec {
   canonicalIdentifier: string;
+  /**
+   * ⭐ The drive's PUBLIC ADDRESS token (Story 11b.10). Defaults to {@link tokenFor} — override only
+   * when a test needs two drives whose identifiers collide, or an address it will deliberately miss.
+   */
+  publicToken?: string;
   poolState?: 'spawned' | 'live' | 'closed' | 'settled';
   district?: string;
   /** How many `contribution.confirmed` events to seed for the pool. */
@@ -126,11 +143,23 @@ async function seedDrive(t: TestApp, spec: SeedSpec): Promise<{ pariwarId: strin
 
     await scopeTx.client.query("SET LOCAL app.pool_state_writer = 'on'");
     await scopeTx.client.query(
+      // ⚠ `public_token` (Story 11b.10) is NOT NULL with a GLOBAL unique index. ⭐ It is ALSO the
+      // route parameter now — `spec.publicToken` is what the tests address the drive by, and the
+      // canonical identifier below is seeded only so the page can still RENDER it (Trap 3: retained
+      // and displayed, ⛔ never addressable).
       `INSERT INTO pools (pool_id, pariwar_id, cycle_id, claim_case_id, pool_index,
                           pool_canonical_identifier, support_category, benefit_mechanism,
-                          fixed_amount, current_state, state_event_version)
-       VALUES ($1, $2, $3, $4, 0, $5, 'death_support', 'pool', 100, $6, 1)`,
-      [poolId, pariwarId, randomUUID(), claimCaseId, spec.canonicalIdentifier, spec.poolState ?? 'closed'],
+                          fixed_amount, current_state, state_event_version, public_token)
+       VALUES ($1, $2, $3, $4, 0, $5, 'death_support', 'pool', 100, $6, 1, $7)`,
+      [
+        poolId,
+        pariwarId,
+        randomUUID(),
+        claimCaseId,
+        spec.canonicalIdentifier,
+        spec.poolState ?? 'closed',
+        spec.publicToken ?? tokenFor(spec.canonicalIdentifier),
+      ],
     );
     await scopeTx.client.query("SET LOCAL app.pool_state_writer = 'off'");
 
@@ -310,7 +339,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
         legalName: 'Rajesh Kumar Sharma',
       });
 
-      const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, id) });
+      const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
       expect(res.statusCode).toBe(200);
       const body = res.json() as { drive: Record<string, unknown> };
 
@@ -362,13 +391,89 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
   });
 
   describe('⭐⭐ 404 COLLAPSES every "nothing to show" case — ⛔ byte-identical', () => {
-    it('an UNKNOWN identifier → 404 with an EMPTY body', async () => {
+    it('an UNKNOWN address → 404 with an EMPTY body', async () => {
       const t = await createTestApp();
       try {
-        const { pariwarId } = await seedDrive(t, { canonicalIdentifier: 'P-2026-09-111' });
-        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, 'P-2026-09-999') });
+        // ⚠ BOTH identifiers are RANDOM per run (Story 11b.10): `public_token` carries a GLOBAL
+        // unique index, so a literal seed identifier would make the fixture's token collide with
+        // itself on the second run of this suite against a persistent database.
+        const seeded = `P-2026-09-${randomUUID().slice(0, 6)}`;
+        const missing = `P-2026-09-${randomUUID().slice(0, 6)}`;
+        const { pariwarId } = await seedDrive(t, { canonicalIdentifier: seeded });
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(missing)) });
         expect(res.statusCode).toBe(404);
         expect(res.body).toBe('');
+      } finally {
+        await teardown(t);
+      }
+    });
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════
+    // ⭐⭐ STORY 11b.10 (AC1) — THE **FOURTH** COLLAPSED CASE, AND THE ONE ADDRESS FORM
+    // ═══════════════════════════════════════════════════════════════════════════════════════════
+
+    it('⭐ a REAL drive with a WRONG token → a 404 BYTE-IDENTICAL to the unknown-address one', async () => {
+      // ⛔⛔ THE ENUMERATION ORACLE THIS FORBIDS: if "real drive, wrong token" answered differently
+      // from "no such drive" — a 403, a distinct code, ANY difference in body or status — an
+      // attacker could test guessed addresses and learn which ones NAME SOMETHING, which is exactly
+      // the capability the token was introduced to remove. ⭐ Asserted as an EQUALITY between two
+      // live responses, ⛔ not as two independent "is it 404?" checks: the second form would pass
+      // even if the bodies or headers diverged.
+      const t = await createTestApp();
+      try {
+        const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
+        const { pariwarId } = await seedDrive(t, { canonicalIdentifier: id });
+        // The drive is genuinely there and genuinely visible at its real address.
+        expect(
+          (await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) })).statusCode,
+        ).toBe(200);
+
+        const wrongToken = await t.app.inject({
+          method: 'GET',
+          url: ROUTE(pariwarId, `tok-${randomUUID()}`),
+        });
+        const noSuchDrive = await t.app.inject({
+          method: 'GET',
+          url: ROUTE(pariwarId, `tok-P-2026-09-${randomUUID().slice(0, 6)}`),
+        });
+
+        expect(wrongToken.statusCode).toBe(404);
+        expect(wrongToken.statusCode).toBe(noSuchDrive.statusCode);
+        expect(wrongToken.body).toBe('');
+        expect(wrongToken.body).toBe(noSuchDrive.body);
+      } finally {
+        await teardown(t);
+      }
+    });
+
+    it('⛔ the BARE `P-YYYY-MM-###` is NOT independently addressable — it 404s like anything else', async () => {
+      // ⛔⛔ TRAP 3: a route accepting EITHER the token OR the bare identifier has ⛔ not closed the
+      // walk — it has added a lock beside an open door. ⭐ This is the assertion that would fail the
+      // moment somebody adds an `OR pool_canonical_identifier = …` arm "for old links".
+      const t = await createTestApp();
+      try {
+        const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
+        const { pariwarId } = await seedDrive(t, { canonicalIdentifier: id });
+
+        const byIdentifier = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, id) });
+        expect(byIdentifier.statusCode).toBe(404);
+        expect(byIdentifier.body).toBe('');
+      } finally {
+        await teardown(t);
+      }
+    });
+
+    it('⭐ the identifier is RETAINED and RENDERED in the body — ⛔ retired as an ADDRESS, ⛔ not as a FIELD', async () => {
+      // `2026-09-03-184` cl.2: `P-YYYY-MM-###` stays the operational/audit key and the page shows it.
+      // ⛔ Trap 3 forbids it being ADDRESSABLE, ⛔ not DISPLAYED — deleting it would be a different
+      // defect, and this asserts the story did not commit it.
+      const t = await createTestApp();
+      try {
+        const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
+        const { pariwarId } = await seedDrive(t, { canonicalIdentifier: id });
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
+        expect(res.statusCode).toBe(200);
+        expect(PublicSahyogVivranResponse.parse(res.json()).drive.poolCanonicalIdentifier).toBe(id);
       } finally {
         await teardown(t);
       }
@@ -384,7 +489,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
           canonicalIdentifier: id,
           poolState: 'spawned',
         });
-        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, id) });
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
         expect(res.statusCode).toBe(404);
         expect(res.body).toBe('');
       } finally {
@@ -399,10 +504,10 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
       try {
         const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
         const { pariwarId } = await seedDrive(t, { canonicalIdentifier: id });
-        expect((await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, id) })).statusCode).toBe(200);
+        expect((await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) })).statusCode).toBe(200);
 
         await setPublicationEnabled(t, pariwarId, false);
-        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, id) });
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
         expect(res.statusCode).toBe(404);
         expect(res.body).toBe('');
       } finally {
@@ -416,7 +521,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
         const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
         await seedDrive(t, { canonicalIdentifier: id });
         const other = await seedDrive(t, { canonicalIdentifier: `P-2026-09-${randomUUID().slice(0, 6)}` });
-        const res = await t.app.inject({ method: 'GET', url: ROUTE(other.pariwarId, id) });
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(other.pariwarId, tokenFor(id)) });
         expect(res.statusCode).toBe(404);
         expect(res.body).toBe('');
       } finally {
@@ -436,7 +541,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
         try {
           const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
           const { pariwarId } = await seedDrive(t, { canonicalIdentifier: id, poolState: state });
-          const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, id) });
+          const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
           expect(res.statusCode).toBe(200);
           const body = res.json() as { drive: Record<string, unknown> };
           expect(body.drive['driveStatus']).toBe(expected);
@@ -458,7 +563,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
           confirmed: 2,
           assigned: 5,
         });
-        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, id) });
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
         const body = res.json() as { drive: Record<string, unknown> };
         expect(body.drive['closedAt']).toBeNull();
         // ⛔ NOT `under_funded` — a drive still collecting has no close to frame, and classifying it
@@ -485,7 +590,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
           attested: 5,
           assigned: 10,
         });
-        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, id) });
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
         const body = res.json() as { drive: Record<string, unknown> };
         expect(body.drive['confirmedContributionCount']).toBe(2);
       } finally {
@@ -503,7 +608,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
           reversed: 1,
           assigned: 10,
         });
-        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, id) });
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
         const body = res.json() as { drive: Record<string, unknown> };
         expect(body.drive['confirmedContributionCount']).toBe(2);
       } finally {
@@ -523,7 +628,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
           confirmed: 0,
           assigned: 0,
         });
-        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, id) });
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
         const body = res.json() as { drive: Record<string, unknown> };
         expect(body.drive['confirmedContributionCount']).toBe(0);
         expect(body.drive['fundingOutcome']).toBeNull();
@@ -541,7 +646,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
           confirmed: 4,
           assigned: 4,
         });
-        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, id) });
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
         const body = res.json() as { drive: Record<string, unknown> };
         expect(body.drive['fundingOutcome']).toBe('fully_funded');
         // ⛔ AND NO TARGET, EXPECTED TOTAL OR PERCENTAGE LEAVES WITH IT — the enum is opaque.
@@ -562,7 +667,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
           canonicalIdentifier: id,
           appeal: { stage: 2, category: 'procedural_correction' },
         });
-        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, id) });
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
         const body = res.json() as {
           drive: { appealReversal: Record<string, unknown> | null };
         };
@@ -587,7 +692,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
       try {
         const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
         const { pariwarId } = await seedDrive(t, { canonicalIdentifier: id });
-        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, id) });
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
         const body = res.json() as { drive: Record<string, unknown> };
         expect(body.drive['appealReversal']).toBeNull();
       } finally {
@@ -607,7 +712,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
           canonicalIdentifier: id,
           appeal: { stage: 2, category: 'the verifier admitted he had misread the ration card' },
         });
-        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, id) });
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
         expect(res.statusCode).toBe(200);
         const body = res.json() as { drive: Record<string, unknown> };
         expect(body.drive['appealReversal']).toBeNull();
@@ -624,7 +729,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
       try {
         const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
         const { pariwarId } = await seedDrive(t, { canonicalIdentifier: id });
-        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, id) });
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
         expect(res.statusCode).toBe(200);
       } finally {
         await teardown(t);
@@ -639,7 +744,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
         const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
         const { pariwarId } = await seedDrive(t, { canonicalIdentifier: id });
         for (const q of ['format=csv', 'page=2', 'limit=50', 'all=1', 'name=Sharma']) {
-          const res = await t.app.inject({ method: 'GET', url: `${ROUTE(pariwarId, id)}?${q}` });
+          const res = await t.app.inject({ method: 'GET', url: `${ROUTE(pariwarId, tokenFor(id))}?${q}` });
           expect(res.statusCode).toBe(400);
         }
       } finally {
@@ -665,7 +770,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
       try {
         const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
         const { pariwarId } = await seedDrive(t, { canonicalIdentifier: id });
-        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, id) });
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
         expect(String(res.headers['x-robots-tag'])).toMatch(/noindex/);
       } finally {
         await teardown(t);
@@ -707,7 +812,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
           poolState: 'live',
           nomineeBank: ACCOUNTS,
         });
-        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, id) });
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
         expect(res.statusCode).toBe(200);
         const body = res.json() as { drive: { nomineeBankAccounts: Record<string, unknown>[] } };
         const accounts = body.drive.nomineeBankAccounts;
@@ -747,7 +852,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
           poolState: 'closed',
           nomineeBank: ACCOUNTS,
         });
-        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, id) });
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
         const body = res.json() as { drive: { nomineeBankAccounts: Record<string, unknown>[] } };
         expect(body.drive.nomineeBankAccounts.every((a) => a['masked'] === false)).toBe(true);
         expect(body.drive.nomineeBankAccounts[0]!['accountNumber']).toBe('50100123456789');
@@ -770,7 +875,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
           nomineeBank: ACCOUNTS,
           masking: { mode: 'after_days', maskAfterDays: 0 },
         });
-        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, id) });
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
         expect(res.statusCode).toBe(200);
         const body = res.json() as { drive: { nomineeBankAccounts: Record<string, unknown>[] } };
 
@@ -815,7 +920,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
           nomineeBank: ACCOUNTS,
           masking: { mode: 'after_days', maskAfterDays: 0 },
         });
-        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, id) });
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
         expect(res.statusCode).toBe(200);
         const body = res.json() as { drive: { nomineeBankAccounts: Record<string, unknown>[] } };
         expect(body.drive.nomineeBankAccounts.every((a) => a['masked'] === true)).toBe(true);
@@ -850,7 +955,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
           closedDaysAgo: 40, // masked since day 30
           settledDaysAgo: 0, // …and settled just now
         });
-        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, id) });
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
         expect(res.statusCode).toBe(200);
         const body = res.json() as {
           drive: { closedAt: string; nomineeBankAccounts: Record<string, unknown>[] };
@@ -884,7 +989,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
           nomineeBank: ACCOUNTS,
           masking: { mode: 'after_days', maskAfterDays: 30 },
         });
-        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, id) });
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
         const body = res.json() as { drive: { nomineeBankAccounts: Record<string, unknown>[] } };
         expect(body.drive.nomineeBankAccounts.every((a) => a['masked'] === false)).toBe(true);
       } finally {
@@ -909,7 +1014,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
           nomineeBank: ACCOUNTS,
           masking: { mode: 'permanent' },
         });
-        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, id) });
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
         const body = res.json() as { drive: { nomineeBankAccounts: Record<string, unknown>[] } };
         expect(body.drive.nomineeBankAccounts.every((a) => a['masked'] === true)).toBe(true);
         expect(res.body).not.toContain('50100123456789');
@@ -925,7 +1030,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
       try {
         const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
         const { pariwarId } = await seedDrive(t, { canonicalIdentifier: id, poolState: 'closed' });
-        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, id) });
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
         expect(res.statusCode).toBe(200);
         const body = res.json() as { drive: { nomineeBankAccounts: unknown[] } };
         expect(body.drive.nomineeBankAccounts).toEqual([]);
@@ -953,8 +1058,8 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
           poolState: 'closed',
           nomineeBank: ACCOUNTS,
         });
-        const resA = await t.app.inject({ method: 'GET', url: ROUTE(a.pariwarId, idA) });
-        const resB = await t.app.inject({ method: 'GET', url: ROUTE(b.pariwarId, idB) });
+        const resA = await t.app.inject({ method: 'GET', url: ROUTE(a.pariwarId, tokenFor(idA)) });
+        const resB = await t.app.inject({ method: 'GET', url: ROUTE(b.pariwarId, tokenFor(idB)) });
         const bodyA = resA.json() as { drive: { nomineeBankAccounts: Record<string, unknown>[] } };
         const bodyB = resB.json() as { drive: { nomineeBankAccounts: Record<string, unknown>[] } };
         expect(bodyA.drive.nomineeBankAccounts[0]!['masked']).toBe(true);

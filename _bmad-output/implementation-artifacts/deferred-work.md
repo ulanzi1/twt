@@ -7938,9 +7938,19 @@ later story ([[feedback_closure_language_precision]], [[feedback_record_unattest
   reachable by ⛔ NOBODY, which DEFEATS answer (A).** ⛔ A story may ⛔ **not** land the token and defer
   the path: that combination silently converts a ratified *"yes, the public should see it"* into
   *"nobody can" —* ⛔ and it would look like progress while doing it.
-  **Scope:** the opaque token on the public URL (route contract · the Astro page · `/sahyog`'s generated
-  links · the SSR resolver) **plus** the `live`-drive inbound path (a link in the drive-opened
-  notification, or a member-app screen). ⚠ The human-readable `P-YYYY-MM-###` identifier is **RETAINED**
+  ⚠⛔⛔ **SCOPE WIDENED 2026-09-04 — `2026-09-04-185`.** The line below originally read as though only
+  `live` drives needed a path built, because the routing note told the Panel `closed`/`settled` were
+  *"already discoverable through a published link"*. ⛔ **That was FALSE.** `/sahyog`'s render layer
+  produces **exactly two** `href`s — `page-1` and `page+1` — and there is ⛔ **no link to any drive's
+  detail page from anywhere in `apps/public/src`, in ANY state**. The index **LISTS** drives; it ⛔ never
+  **LINKS** to them. ⇒ ⛔ **ALL THREE STATES need an inbound path built**, and tokenizing without one
+  would make the **ENTIRE** Sahyog Vivran surface reachable by ⛔ nobody.
+  **Scope:** the opaque token on the public URL (route contract · the Astro page · the SSR resolver)
+  **plus** the inbound path for **every** drive state — a **per-row link from the `/sahyog` index** for
+  `closed`/`settled` (⛔ which does **not** exist today and is ⛔ **not** a trivial addition: it puts
+  every listed drive one click from a page carrying four Tier-1 fields under FAIL-OPEN), **and** a path
+  for `live` (a link in the drive-opened notification, or a member-app screen).
+  ⚠ The human-readable `P-YYYY-MM-###` identifier is **RETAINED**
   as the operational/audit key — Story 7.1's unique index and every audit line depend on it; the token
   is an **addition to the public address**, ⛔ never a replacement for the identifier.
   ⚠ **It touches Story 11b.3's surface as well as 11b.3a's**, so it is ⛔ **neither** story's to absorb

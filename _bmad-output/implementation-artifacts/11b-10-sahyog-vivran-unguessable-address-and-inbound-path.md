@@ -393,10 +393,12 @@ silently would have been an authoring act over a Panel-scoped artefact — the p
 
 ### ⛔ Task 0 — GOVERNANCE FIRST. ⛔ No code lands before this commit. (AC0)
 
-- [ ] Write the **`epics.md` ANNOTATION** — this story exists by `2026-09-03-184` (Trustee-ratified) as
-      corrected by `2026-09-04-185`; it is ⛔ **not** a member of 11b.3's ruled three-way split
-      (`D6(b)`, `2026-09-02-182`) and ⛔ must not be renumbered `11b-3c`. ⭐ Precedent: 11b.3a's Task 0.
-      ⚠ Verified 2026-09-04: `epics.md` currently has **ZERO** references to `11b.10` / `11b-10`.
+- [x] ✅ **The `epics.md` ANNOTATION is WRITTEN** (2026-09-04c) — appended as a dated `>` block at the
+      end of the **Story 11b.3** section, in 11b.3's own Task 0 annotation shape. Seven items: why the
+      story exists · the token/path coupling · the corrected premise · ⛔ neither sibling's and ⛔ not
+      `11b-3c` · the deployment block · **D1–D4** · what it does ⛔ not touch. ⭐ The sprint-status key
+      is named in it so a future `sprint-planning` run can ⛔ neither drop it nor regenerate a ghost.
+      ⛔ **ANNOTATION ONLY** — ⛔ no AC in `epics.md` was rewritten and ⛔ no prior block re-worded.
 - [ ] Flip `sprint-status.yaml` `development_status[11b-10-…]` → `in-progress`, with a combined
       top-of-file `last_updated` COMMENT entry ([[project_sprint_status_ledger]]) — **ONE row moves**.
 - [ ] Commit with a `governance:` prefix, **separately and FIRST**
@@ -547,7 +549,7 @@ silently would have been an authoring act over a Panel-scoped artefact — the p
 | `apps/mobile/lib/public-site.ts` (`:18`, `:32`) | + `sahyogVivranUrl(token, locale)` | AC4 |
 | `apps/mobile/components/…/SahyogVivranEntry.tsx` (new) | sibling entry, `ViewContributorsEntry`'s shape | AC4 |
 | `apps/mobile/app/(tabs)/index.tsx` | mount it beside `<ActiveContributionCard />` | AC4 |
-| `_bmad-output/planning-artifacts/epics.md` | the annotation | AC0 |
+| ~~`_bmad-output/planning-artifacts/epics.md`~~ | ✅ the annotation — **DONE** 2026-09-04c | AC0 |
 | `_bmad-output/implementation-artifacts/deferred-work.md` (`:7932`) | "Closed by [edit]" | AC6 |
 
 ### ⛔ The three ways this story fails silently

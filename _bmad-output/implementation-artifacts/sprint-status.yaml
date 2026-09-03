@@ -1,4 +1,27 @@
-# last_updated: 2026-09-04c (⭐⭐ **STORY 11b.10 — `D4` RULED BY BigDev: A MEMBER-APP ENTRY ON AN
+# last_updated: 2026-09-04d (⭐⭐ **STORY 11b.10 — THE `epics.md` ANNOTATION IS WRITTEN (its Task 0's
+#   FIRST subtask, before the first line of code). ⛔ ZERO ROWS MOVE.** ⛔ epic-11b stays `in-progress`;
+#   ⛔ 11b-10 stays `ready-for-dev` — ⛔ the annotation is ⛔ NOT the story starting.
+#   ⭐ Appended as a dated `>` block at the END of the **Story 11b.3** section, in **11b.3's own Task 0
+#   annotation shape** (the precedent: annotations STACK chronologically as separate blocks).
+#   ⛔⛔ **ANNOTATION ONLY** — ⛔ no AC in `epics.md` was rewritten, and ⛔ the 2026-08-23 / 2026-08-29 /
+#   2026-09-02 blocks were neither deleted nor re-worded ([[feedback_supersede_never_reinterpret]]).
+#   ⭐ **SEVEN ITEMS:** (i) why the story exists (`-184` (A)+(B), option (c) ⇒ ⛔ the rate-limit tier is
+#   NOT changed and 11b.3a's AC2 did ⛔ not expire) · (ii) the token/path COUPLING and why a partial
+#   landing is ⛔ not a milestone · (iii) the FALSE premise `-185` corrects, with the two-`href`
+#   measurement, and the Panel recorded as NOTIFIED-AND-AFFIRMED, ⛔ NOT re-ratified · (iv) ⛔ neither
+#   11b.3's nor 11b.3a's and ⛔ NOT `11b-3c` · (v) the DEPLOYMENT BLOCK + "Closed by [edit]" ·
+#   (vi) **D1-D4, ⛔ zero blocking** · (vii) the seven things it does ⛔ NOT touch.
+#   ⭐⭐ **THE SPRINT-STATUS KEY IS NAMED INSIDE THE ANNOTATION** so a future `sprint-planning` run can
+#   ⛔ NEITHER DROP IT NOR REGENERATE A GHOST — the same mechanism 11b.3's item (ii) used for the
+#   three-way split's keys. ⚠ This story is ⛔ NOT in `epics.md`'s story list and never will be; the
+#   annotation is the ONLY thing that makes it visible to decomposition.
+#   ⭐ Verified: all five cited `.decision-log.md` anchors resolve to real headings (`-184`, `-185`,
+#   `-182`, `-179`, `-160`); `epics.md` still carries its 9 `### Story 11b.*` headings and the
+#   `### Story 11b.4` boundary is intact ⇒ ⛔ nothing was clobbered.
+#   ✅ **AC0's remaining subtasks are the DEV's** — flip 11b-10 to `in-progress`, and the `governance:`
+#   Task 0 commit that opens the implementation branch.
+#
+# last_updated_prior: 2026-09-04c (⭐⭐ **STORY 11b.10 — `D4` RULED BY BigDev: A MEMBER-APP ENTRY ON AN
 #   EXISTING TAB. ⛔ ZERO ROWS MOVE; ⛔ ZERO BLOCKING DECISIONS REMAIN.** ⛔ epic-11b stays
 #   `in-progress`; ⛔ 11b-10 stays `ready-for-dev`; ⛔ 11b-3a `done`; ⛔ 11b-3b `ready-for-dev`.
 #   ⭐ **RULED: branch (ii)** — ⛔ no notification, ⛔ no 8th FR-71 category, ⛔ no new deep-link

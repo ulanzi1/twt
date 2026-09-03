@@ -1,6 +1,24 @@
 ---
-baseline_commit: PENDING — set to `origin/main` at the commit this story starts from
+baseline_commit: 0cd615ffc580a5ff9c13be6854fa9e097422bfdc
 ---
+
+<!--
+⭐ BASELINE — set 2026-09-04. `0cd615f` is the head of `story/11b-3a-nominee-bank-masking` (PR #220),
+which is the exact tree Story 11b.10 starts from: it carries 11b.3a's shipped surface, its second-pass
+fixes, and the two Trustee decisions (`2026-09-03-184` / `2026-09-04-185`) that created this story.
+
+⚠⛔ **ONE CAVEAT, RECORDED RATHER THAN LEFT TO BE DISCOVERED.** PR #220 merges by **REBASE**
+([[project_story_automator_ops]] — ⛔ never squash for multi-commit governance stories), and a rebase
+merge **REWRITES SHAs**. ⇒ `0cd615f` will ⛔ **NOT** appear on `main`'s first-parent line after the
+merge. It stays **resolvable** (the PR ref is retained, and it exists locally), and its **tree is
+identical** to the `main` commit that supersedes it — so `git diff 0cd615f` still yields this story's
+correct diff.
+⭐ **If you prefer a `main`-line SHA**, re-point this field after #220 merges:
+`git log origin/main --oneline -1` → the rebased head → paste it here. ⛔ Do ⛔ not re-point it to
+`e16cc69` (the pre-#220 `origin/main`): that baseline would fold **all of 11b.3a's review work** into
+11b.10's diff and make its review read a change set it does not own.
+-->
+
 
 # Story 11b.10: Sahyog Vivran — the Unguessable Public Address + the Inbound Path `[SURFACE]`
 

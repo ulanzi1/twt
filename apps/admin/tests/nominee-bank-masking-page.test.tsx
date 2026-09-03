@@ -134,6 +134,42 @@ describe('MaskingSchedulePage — the state an operator is shown', () => {
     expect(el.textContent).toMatch(/still collecting/i);
   });
 
+  it('⭐⭐ THE FORM OPENS ON THE SETTING IN FORCE — `permanent` is pre-selected, ⛔ not `after_days`', async () => {
+    // ⛔⛔ THE DEFECT THIS PINS (second-pass review, 2026-09-03). The form seeded itself from
+    // CONSTANTS (`after_days` / `0`) regardless of what the Pariwar had chosen. On a `permanent`
+    // Pariwar that is not cosmetic: a pre-selected `after_days: 0` LOOKS like the current state, and
+    // the two settings differ on a LIVE drive — `permanent` masks, `after_days: 0` does ⛔ not. An
+    // operator typing a rationale to re-affirm the current setting would have published the complete
+    // holder name, account number, IFSC and VPA on every live drive in that Pariwar, un-pullable for
+    // `s-maxage=300`. ⚠ Every other guard on the path (rationale, audit anchor, super_admin key) is
+    // SATISFIED by that mistake — only the form showing the truth catches it.
+    renderPage(schedule({ setting: { mode: 'permanent' }, configured: true, version: 6 }));
+    const permanent = await screen.findByTestId('nominee-bank-masking-mode-permanent');
+    const afterDays = screen.getByTestId('nominee-bank-masking-mode-after-days');
+    expect((permanent as HTMLInputElement).checked).toBe(true);
+    expect((afterDays as HTMLInputElement).checked).toBe(false);
+  });
+
+  it('⭐ …and an `after_days: N` Pariwar opens on N, ⛔ not on 0', async () => {
+    // The same defect on the other arm: seeding `0` while the Pariwar is on 30 shows the STRICTEST
+    // day setting as if it were current. ⛔ `0` is only ever a value an admin chose (cl.10(b)).
+    renderPage(
+      schedule({ setting: { mode: 'after_days', maskAfterDays: 30 }, configured: true, version: 7 }),
+    );
+    const afterDays = await screen.findByTestId('nominee-bank-masking-mode-after-days');
+    expect((afterDays as HTMLInputElement).checked).toBe(true);
+    expect(screen.getByTestId('nominee-bank-masking-days')).toHaveValue('30');
+  });
+
+  it('⭐ an UNCONFIGURED Pariwar still opens on `after_days` / `0` — there is no truth to show', async () => {
+    // ⚠ The fail-open default has no setting in force, so the form keeps its historical starting
+    // point. ⛔ It does ⛔ not imply the Pariwar is masked — the status panel above says otherwise.
+    renderPage(schedule());
+    const afterDays = await screen.findByTestId('nominee-bank-masking-mode-after-days');
+    expect((afterDays as HTMLInputElement).checked).toBe(true);
+    expect(screen.getByTestId('nominee-bank-masking-days')).toHaveValue('0');
+  });
+
   it('shows WHO changed it, WHEN it came into force, WHY, and the version', async () => {
     renderPage(
       schedule({

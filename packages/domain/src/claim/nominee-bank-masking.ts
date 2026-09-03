@@ -130,14 +130,48 @@ export interface NomineeBankMaskingInput {
    */
   readonly setting: NomineeBankMaskingSetting | null;
   /**
-   * The drive's close/settle instant, or `null` while it is still collecting.
+   * The instant the window is measured from — the drive's **EARLIEST** close/settle event, or `null`
+   * while it is still collecting.
+   *
    * ⚠ cl.10(c) configures the window **from campaign closure/settlement**, so with no close instant
    * a `days` setting has nothing to measure from and cl.10(a) governs.
+   * ⚠⛔ **FED BY `DRIVE_MASKING_FROM`, ⛔ NEVER BY `DRIVE_CLOSED_AT`** — the latter takes the LATEST
+   * such event, so a late `pool.settled` would move this forward and UN-MASK an already-masked drive.
+   * See that fragment's doc-block (second-pass review, 2026-09-03).
    */
   readonly driveClosedAt: Date | null;
+  /**
+   * The drive's lifecycle state, as the read projected it.
+   *
+   * ⭐ A DRIVE FACT, ⛔ NOT A MEMBER HANDLE — the module header's cl.10(f) prohibition is untouched:
+   * this describes the CAMPAIGN, never a person, so no `members.state` / `is_valid` / moderation
+   * conjunct becomes reachable through it. ⛔ Do not widen it into one.
+   *
+   * ⚠ It exists for ONE anomaly: a pool whose `current_state` is `closed`/`settled` while its stream
+   * carries no close/settle event (the already-flagged data anomaly the Sahyog Vivran read names, and
+   * also how direct state writes under `app.pool_state_writer='on'` create fixtures). Without it,
+   * `driveClosedAt === null` on such a drive reads as *"still collecting"* and an ARCHIVED drive
+   * publishes complete bank details indefinitely under every `after_days` setting.
+   *
+   * ⛔ It is consulted ONLY on that anomaly branch. On every ordinary path the instant decides, so this
+   * key can ⛔ never widen the predicate into a state machine.
+   */
+  readonly driveState: NomineeBankMaskingDriveState;
   /** The request's ONE as-of instant. ⛔ Never `new Date()` inside this module. */
   readonly now: Date;
 }
+
+/**
+ * The drive states this predicate distinguishes — the INTERNAL pool vocabulary.
+ *
+ * ⭐ Only `live` is load-bearing: every other value means *"the campaign is over"*, which is the half
+ * cl.10(c)'s window turns on. ⚠⛔ **The internal token, ⛔ deliberately NOT the public one**
+ * (`collecting` / `active` / `archive`) — this is a domain predicate and the public vocabulary is a
+ * WIRE concern that `2026-08-21-144` cl.8 keeps on the other side of the boundary. ⛔ Nothing here is
+ * ever serialized, so the internal spelling is the correct one and re-spelling it in public tokens
+ * would couple a pure predicate to a render decision.
+ */
+export type NomineeBankMaskingDriveState = 'live' | 'closed' | 'settled';
 
 /**
  * Is the nominee bank detail MASKED for the public, at `now`?
@@ -148,13 +182,17 @@ export interface NomineeBankMaskingInput {
  *   · `after_days: 0`        → `true` from the close instant, inclusive
  *   · `permanent`            → `true` always (`-183` cl.4 — an authoring reading)
  *
+ * ⚠ Plus ONE anomaly answer, ⛔ not a fifth rung: a CONFIGURED Pariwar whose drive is no longer
+ * `collecting` but carries no close/settle instant masks. See the branch itself for why its position
+ * below the fail-open rung is what keeps cl.10(b) intact.
+ *
  * @throws {RangeError} on a `maskAfterDays` that is not a whole number in `0 … MAX`. ⛔ A nonsense
  *   window must fail LOUDLY rather than resolve to whichever side the arithmetic lands on — on this
  *   control the two sides are *"a full account number is public"* and *"it is not"*. The DB CHECK is
  *   the other half of the same guard; this one bites a value assembled in process.
  */
 export function isNomineeBankMasked(input: NomineeBankMaskingInput): boolean {
-  const { setting, driveClosedAt, now } = input;
+  const { setting, driveClosedAt, driveState, now } = input;
 
   // Rung 1 — the ruled default. ⛔ Never flipped to fail-closed "for safety": cl.10(b) forbids it.
   if (setting === null) return false;
@@ -176,8 +214,22 @@ export function isNomineeBankMasked(input: NomineeBankMaskingInput): boolean {
     );
   }
 
-  // Rungs 2 and 3 — measured FROM closure/settlement (cl.10(c)). No close instant ⇒ the drive is
-  // still collecting and cl.10(a) governs: complete details may be displayed.
-  if (driveClosedAt === null) return false;
+  // Rungs 2 and 3 — measured FROM closure/settlement (cl.10(c)).
+  if (driveClosedAt === null) {
+    // ⭐⭐ THE ANOMALY BRANCH, AND ⛔⛔ ITS POSITION IS LOAD-BEARING (second-pass review, 2026-09-03).
+    //
+    // A drive that is NOT collecting but has no close/settle instant is the data anomaly the Sahyog
+    // Vivran read names. Reading it as "still collecting" is FAIL-OPEN in the one direction that
+    // cannot be undone: an archived drive would publish a complete account number forever, on a
+    // Pariwar that had explicitly configured `after_days: 0`. So the campaign being over is enough.
+    //
+    // ⚠⛔ THIS BRANCH SITS *BELOW* THE `setting === null` RUNG AND MUST STAY THERE. It fires ONLY for
+    // a Pariwar that has ALREADY CHOSEN a window — the unconfigured default returned `false` above and
+    // never reaches here. That ordering is what keeps cl.10(b) intact: the code is ⛔ not assuming
+    // immediate masking, it is honouring a setting whose measuring-point is missing. ⛔ Moving this
+    // above rung 1 would make masking the default for every unconfigured Pariwar and REVERSE a
+    // ratified ruling (`2026-09-02-179` cl.1, D8-default FAIL-OPEN) by way of a line move.
+    return driveState !== 'live';
+  }
   return now.getTime() >= driveClosedAt.getTime() + maskAfterDays * MS_PER_DAY;
 }

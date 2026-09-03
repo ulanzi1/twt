@@ -486,9 +486,25 @@ if (!driveStatusVisible) {
                     </div>
                   )}
                 </dl>
-                {/* ⭐ SAYS WHY the details are reduced, so the difference is EXPLAINED rather than
-                    silently different — and it names the protected internal record (cl.10(g)). */}
-                {account.isMasked && <p class="mt-3 text-sm text-gray-700">{labels.bankMaskedNote}</p>}
+                {/* ⭐ MARKS the projection as reduced, so the difference is EXPLAINED rather than
+                    silently different — and it names the protected internal record (cl.10(g)).
+                    ⚠ STATE-NEUTRAL copy: `isMasked` is true on a still-`live` drive when the Trust
+                    chose `permanent` (cl.10(d)'s terminal rung), so this note must ⛔ not assert the
+                    drive has closed (review 2026-09-03 — it did, and said so on a collecting drive).
+
+                    ⚠⚠ AND IT IS GATED ON THE DIGITS ACTUALLY BEING THERE (second-pass review,
+                    2026-09-03). `nomineeAccountNumber` is `null` when the stored value has FOUR OR
+                    FEWER digits — cl.10(e)'s own boundary, where "the last four" would BE the whole
+                    number — or when the decrypt soft-failed. The number cell is then omitted
+                    entirely, and an ungated note read "Only part of the account number is shown
+                    here" beside NO number at all. ⛔ That is the same defect class the first pass
+                    fixed one line above (copy asserting something the page does not show), and it
+                    re-introduces in prose the announced-omission the cells above take care to avoid.
+                    ⭐ No number shown ⇒ no note: the block simply shows less, which is what every
+                    other absent value on this surface already does. */}
+                {account.isMasked && account.nomineeAccountNumber !== null && (
+                  <p class="mt-3 text-sm text-gray-700">{labels.bankMaskedNote}</p>
+                )}
               </section>
             ))}
           </section>

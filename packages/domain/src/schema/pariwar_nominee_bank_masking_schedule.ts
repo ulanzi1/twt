@@ -154,6 +154,20 @@ export const pariwarNomineeBankMaskingSchedule = pgTable(
       sql`(${t.maskingMode} = 'after_days' AND ${t.maskAfterDays} IS NOT NULL AND ${t.maskAfterDays} >= 0 AND ${t.maskAfterDays} <= ${sql.raw(String(MAX_NOMINEE_BANK_MASK_AFTER_DAYS))}) OR (${t.maskingMode} = 'permanent' AND ${t.maskAfterDays} IS NULL)`,
     ),
 
+    // ⭐ The effective window may not be INVERTED. `>=`, ⛔ not `>`: the close-head step sets
+    // `effective_until = effective_from` of the superseding row, so a zero-width `[T, T)` window is a
+    // LEGITIMATE supersession of a row created at the same instant (the resolver's
+    // `effective_until > asOf` predicate never matches it). Only a genuinely backwards `[a, a-5)`
+    // window is forbidden.
+    // ⚠ MIRRORS migration 0113's `…_window_not_inverted` — added there by the first review pass and
+    // left out of this file, which the second pass caught. ⛔ Every constraint in 0113 must have its
+    // twin here: the migrations are hand-authored and the drizzle snapshot is frozen at 0020, so this
+    // declaration is what a future reader or generator treats as the table's truth.
+    check(
+      'pariwar_nominee_bank_masking_schedule_window_not_inverted',
+      sql`${t.effectiveUntil} IS NULL OR ${t.effectiveUntil} >= ${t.effectiveFrom}`,
+    ),
+
     // Structural guard: a (pariwar_id, version) pair is allocated exactly once.
     uniqueIndex('pariwar_nominee_bank_masking_schedule_pariwar_version_uq').on(t.pariwarId, t.version),
 

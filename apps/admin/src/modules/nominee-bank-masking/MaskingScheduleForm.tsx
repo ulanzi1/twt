@@ -35,6 +35,19 @@ export interface MaskingScheduleFormProps {
   pending: boolean;
   submitError?: string;
   /**
+   * The setting CURRENTLY IN FORCE, or `null` when the Pariwar has never configured a window.
+   *
+   * ⭐⭐ THE FORM MUST OPEN ON THE TRUTH, ⛔ never on a constant. Seeding `after_days` / `0` while the
+   * Pariwar is on `permanent` shows an operator a control that looks like the current state and is
+   * not — and those two settings differ on a LIVE drive, where `permanent` masks and `after_days: 0`
+   * does ⛔ not. Saving that mistaken default publishes four Tier-1 fields to the internet.
+   * ⚠ `null` (unconfigured) keeps the historical default of `after_days` / `0` — a Pariwar with no
+   * window has no truth to show, and `0` is the SAFE end of the day scale to land on.
+   * ⛔ It is ⛔ not a "current value" display; it is the form's INITIAL state, and the operator remains
+   * free to change it. The status panel above is what states what is in force.
+   */
+  currentSetting: { mode: 'after_days'; maskAfterDays: number } | { mode: 'permanent' } | null;
+  /**
    * Bumped by the parent after every successful change. A stale rationale carried over in the
    * textarea would otherwise be silently resubmittable as the justification for a DIFFERENT setting
    * on the very next click — corrupting the one thing this control exists to get right (the 10.30
@@ -48,26 +61,52 @@ interface FormValues {
   rationale: string;
 }
 
+/**
+ * The form's initial state, derived from the setting in force.
+ *
+ * ⚠ `rationale` is ALWAYS blank — ⛔ never seeded and ⛔ never carried over. A justification belongs to
+ * ONE change; re-using it would make the previous change's reason stand as this one's (the 10.30
+ * finding). Only the SETTING is seeded.
+ */
+function seedFrom(setting: MaskingScheduleFormProps['currentSetting']): {
+  mode: 'after_days' | 'permanent';
+  days: string;
+} {
+  if (setting === null) return { mode: 'after_days', days: '0' };
+  if (setting.mode === 'permanent') return { mode: 'permanent', days: '0' };
+  return { mode: 'after_days', days: String(setting.maskAfterDays) };
+}
+
 export function MaskingScheduleForm({
   onSubmit,
   pending,
   submitError,
+  currentSetting,
   resetToken,
 }: MaskingScheduleFormProps): ReactElement {
-  const [mode, setMode] = useState<'after_days' | 'permanent'>('after_days');
+  const seed = seedFrom(currentSetting);
+  const [mode, setMode] = useState<'after_days' | 'permanent'>(seed.mode);
   const {
     register,
     handleSubmit,
     watch,
     reset,
     formState: { errors },
-  } = useForm<FormValues>({ defaultValues: { days: '0', rationale: '' }, mode: 'onChange' });
+  } = useForm<FormValues>({
+    defaultValues: { days: seed.days, rationale: '' },
+    mode: 'onChange',
+  });
 
+  // ⚠ Re-seeds on `resetToken` (after a successful save) AND whenever the setting in force changes —
+  // ⛔ the second dependency is not optional: after a save the freshly-refetched setting IS the new
+  // truth, and resetting to a stale seed would put the form back into the same lying state this
+  // component was changed to prevent.
   useEffect(() => {
-    reset({ days: '0', rationale: '' });
-    setMode('after_days');
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset() runs only when the parent bumps resetToken
-  }, [resetToken]);
+    const next = seedFrom(currentSetting);
+    reset({ days: next.days, rationale: '' });
+    setMode(next.mode);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset() runs on an explicit parent bump or a change in the setting in force
+  }, [resetToken, currentSetting?.mode, currentSetting?.mode === 'after_days' ? currentSetting.maskAfterDays : null]);
 
   const rationale = watch('rationale');
   const days = watch('days');

@@ -86,6 +86,14 @@ ALTER TABLE "pariwar_nominee_bank_masking_schedule" ADD CONSTRAINT "pariwar_nomi
 --     DATA-SANITY guard (an admin typo of 999999999 is de-facto permanence entered by accident), NOT
 --     a policy ceiling; keep it in sync with MAX_NOMINEE_BANK_MASK_AFTER_DAYS.
 ALTER TABLE "pariwar_nominee_bank_masking_schedule" ADD CONSTRAINT "pariwar_nominee_bank_masking_schedule_setting_check" CHECK ((("pariwar_nominee_bank_masking_schedule"."masking_mode" = 'after_days' AND "pariwar_nominee_bank_masking_schedule"."mask_after_days" IS NOT NULL AND "pariwar_nominee_bank_masking_schedule"."mask_after_days" >= 0 AND "pariwar_nominee_bank_masking_schedule"."mask_after_days" <= 36500) OR ("pariwar_nominee_bank_masking_schedule"."masking_mode" = 'permanent' AND "pariwar_nominee_bank_masking_schedule"."mask_after_days" IS NULL)));--> statement-breakpoint
+-- (4b) The effective window may not be INVERTED (review 2026-09-03). `>=`, not `>`: the close-head
+--      step sets `effective_until = effective_from` of the superseding row, so a zero-width window
+--      `[T, T)` is a legitimate supersession of a row created at the same instant — the resolver's
+--      `effective_until > asOf` predicate never matches it, so it is harmless. Only a genuinely
+--      backwards `[a, a-5)` window is forbidden. The HTTP write path already can't create one (the
+--      contract has no caller-supplied `effectiveFrom` and the handler uses the server clock); this
+--      is the backstop for any non-HTTP or future caller.
+ALTER TABLE "pariwar_nominee_bank_masking_schedule" ADD CONSTRAINT "pariwar_nominee_bank_masking_schedule_window_not_inverted" CHECK ("pariwar_nominee_bank_masking_schedule"."effective_until" IS NULL OR "pariwar_nominee_bank_masking_schedule"."effective_until" >= "pariwar_nominee_bank_masking_schedule"."effective_from");--> statement-breakpoint
 -- (5) A (pariwar_id, version) pair is allocated exactly once.
 CREATE UNIQUE INDEX "pariwar_nominee_bank_masking_schedule_pariwar_version_uq" ON "pariwar_nominee_bank_masking_schedule" USING btree ("pariwar_id","version");--> statement-breakpoint
 -- (6) At most ONE open-ended (currently-in-force) row per Pariwar — the T&C open-head precedent.

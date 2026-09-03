@@ -278,6 +278,11 @@ function isNomineeBankAccounts(value: unknown): boolean {
     // carrying both is a shape nobody authored.
     if ('accountNumberLast4' in a) return false;
     for (const key of ['accountHolderName', 'accountNumber', 'vpa']) {
+      // ⛔ PRESENT, ⛔ not merely well-typed-if-present (review 2026-09-03). The contract's full arm
+      // REQUIRES these keys; a boundary regression that OMITS one (rather than sending `null`) is the
+      // exact "catch it at the page rather than publish it" case this validator exists for, and a
+      // "well-typed if present" check waves it straight through.
+      if (!(key in a)) return false;
       const v = a[key];
       if (v !== null && (typeof v !== 'string' || v.length === 0)) return false;
     }

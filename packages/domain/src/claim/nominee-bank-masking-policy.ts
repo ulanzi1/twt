@@ -275,19 +275,48 @@ export async function setNomineeBankMaskingSchedule(
     );
   }
 
+  // Serialize concurrent writers to THIS Pariwar's schedule BEFORE the close-head / max-version /
+  // insert sequence (review 2026-09-03). Without it two interleaved `super_admin` PUTs both read the
+  // same `max(version)` and the loser hits `pariwar_nominee_bank_masking_schedule_pariwar_version_uq`
+  // (or `…_pariwar_current_uq`) with a bare 23505 — which is not in the error-mapping registry, so
+  // the caller sees an opaque 500 for a benign write-write race. Transaction-scoped, auto-released at
+  // COMMIT/ROLLBACK; mirrors the `pg_advisory_xact_lock(hashtext(...))` convention in
+  // `pool/fixed-amount.ts` — the `pool_fixed_amount_schedule` precedent the Panel named for this
+  // table. ⛔ Do not introduce a different hash function.
+  await db.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${input.pariwarId}))`);
+
+  // ⭐ CLAMP THE NEW WINDOW'S START TO THE OPEN HEAD'S (second-pass review, 2026-09-03).
+  //
+  // ⚠ The advisory lock above serializes writers, but it does ⛔ NOT make their CLOCKS agree. Two API
+  // instances a second apart in NTP drift can produce an `effectiveFrom` EARLIER than the open head's
+  // `effective_from` written moments before. The close step below would then set
+  // `effective_until < effective_from` on the prior row, violating migration 0113's
+  // `…_window_not_inverted` CHECK with a bare `23514` — which is ⛔ not in the error-mapping registry
+  // and therefore surfaces as an opaque 500, on a module whose header states in terms that
+  // "⛔ NONE of them is a 500". ⭐ Note the CHECK itself is correct and stays: this clamps the input
+  // that would violate it rather than relaxing the guard.
+  //
+  // ⛔ NOT a silent correction of operator intent: `effectiveFrom` is ⛔ never caller-supplied (the
+  // contract has no such field; the handler passes the server clock), so the only thing being
+  // reconciled here is clock skew between our own instances — never a human's chosen instant.
+  const head = await getNomineeBankMaskingHead(db, input.pariwarId);
+  const effectiveFrom =
+    head !== null && head.effectiveFrom.getTime() > input.effectiveFrom.getTime()
+      ? head.effectiveFrom
+      : input.effectiveFrom;
+
   // Close the prior open head AT the new row's `effective_from` — ⛔ never at a second `new Date()`.
   // The partial unique index means an unclosed head would reject the insert below, so this is the
   // ordering the constraint requires rather than a convention.
-  const closed = await db
+  await db
     .update(pariwarNomineeBankMaskingSchedule)
-    .set({ effectiveUntil: input.effectiveFrom })
+    .set({ effectiveUntil: effectiveFrom })
     .where(
       and(
         eq(pariwarNomineeBankMaskingSchedule.pariwarId, input.pariwarId),
         isNull(pariwarNomineeBankMaskingSchedule.effectiveUntil),
       ),
-    )
-    .returning({ version: pariwarNomineeBankMaskingSchedule.version });
+    );
 
   // ⚠ The next version is derived from the MAX over the Pariwar's rows, ⛔ not from the closed head:
   // a Pariwar whose only rows are already-closed (a head closed by a superseding write that then
@@ -300,7 +329,6 @@ export async function setNomineeBankMaskingSchedule(
   // the driver's typing is loose enough that a string would pass silently — coerce at this boundary.
   const rawMax = maxRows[0]?.maxVersion ?? null;
   const nextVersion = rawMax === null ? 1 : Number(rawMax) + 1;
-  void closed;
 
   const rows = await db
     .insert(pariwarNomineeBankMaskingSchedule)
@@ -309,7 +337,9 @@ export async function setNomineeBankMaskingSchedule(
       version: nextVersion,
       maskingMode: input.setting.mode,
       maskAfterDays,
-      effectiveFrom: input.effectiveFrom,
+      // ⭐ THE CLAMPED value — the new head and the close instant above must be the SAME instant, or
+      // the zero-width supersession the CHECK deliberately allows becomes a gap with no row in force.
+      effectiveFrom,
       effectiveUntil: null,
       changedByActor: input.changedByActor,
       changedByDisplay: input.changedByDisplay,

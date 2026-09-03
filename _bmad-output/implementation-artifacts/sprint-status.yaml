@@ -1,4 +1,44 @@
-# last_updated: 2026-09-04 (⭐⭐ **STORY 11b.10 CREATED AND RULED — `draft` -> `ready-for-dev`; and a
+# last_updated: 2026-09-04b (⭐⭐ **STORY 11b.10 VALIDATED (`bmad-create-story validate`) — ⛔ ZERO ROWS
+#   MOVE, and a FOURTH DECISION IS OPENED: `D4` is BLOCKING.** ⛔ epic-11b stays `in-progress`;
+#   ⛔ 11b-10 stays `ready-for-dev`; ⛔ 11b-3a stays `done`; ⛔ 11b-3b stays `ready-for-dev`.
+#   ⛔⛔ **THE ENTRY BELOW SAID "D1/D2/D3 ALL RULED ⇒ ZERO BLOCKING". THAT WAS TRUE OF D1/D2/D3 AND IS
+#   NOW INCOMPLETE — ⛔ it was NEVER WRONG.** ⭐ Recorded as a NEW entry, ⛔ NOT an edit of the prior one
+#   ([[feedback_supersede_never_reinterpret]]): the three ruled decisions settle the ADDRESS; ⛔ none of
+#   them settles WHICH INBOUND PATH a `live` drive gets. AC4 carried that as a free choice — *"the
+#   drive-opened notification carrying its link, OR a member-app screen"* — inherited verbatim from
+#   `deferred-work.md`. ⭐ MEASURED, it is ⛔ not a choice, so it is now **D4, OPEN and BLOCKING**.
+#   ⛔ **BRANCH (i) HAS NO CARRIER AND ⛔ NEVER DID:** `pool-spawn-trigger.ts:13` records the pool-spawn
+#   `dispatch()`/shepherd-hook seam as ⛔ NOT LIVE ⇒ there is ⛔ no drive-opened notification to add a
+#   link to. The alert taxonomy is **9 categories, EXHAUSTIVE** (7 FR-71 push + 2), `resource` is a
+#   **CLOSED enum** with ⛔ no `sahyog`, and `deep-link.ts:78` says in terms that a new thing is ⛔ *"NOT
+#   an 8th FR-71 category"*. ⚠⛔ AND A DEEP LINK IS A **MOBILE URI SCHEME, ⛔ NOT A PUBLIC WEB URL** —
+#   `channels/src/render.ts` composes ⛔ no URLs and SMS bodies are **pre-registered DLT templates**.
+#   ⇒ branch (i) is a new alert category + a new deep-link resource + an SMS-template act against a
+#   **RATIFIED** taxonomy — ⛔ a multi-story build, ⛔ not "a link in a message". ⇒ picking it silently
+#   would be an AUTHORING ACT over a Panel-scoped artefact, which is why D4 is ⛔ NOT the author's call.
+#   ⭐ **THE STATUS ROW STAYS `ready-for-dev` DELIBERATELY** — the block is carried by a **Task 0 STOP
+#   CONDITION** (AC1-AC3 may be BUILT; ⛔ NOTHING MERGES until D4 is ruled), the same shape 11b.3 used
+#   and discharged by a ruling. ⚠ Trap 1 is what makes the stop load-bearing: the token ⛔ cannot land
+#   without a path, so D4 ⛔ cannot be deferred past merge.
+#   ⛔⛔ **AND THE STORY FILE HAD ⛔ NO TASKS AND ⛔ NO DEV NOTES AT ALL** — `AC0` named a *"Task 0"* that
+#   ⛔ did not exist. ⇒ a `ready-for-dev` story with ⛔ zero executable steps, the exact failure
+#   [[feedback_spec_edits_must_propagate_to_tasks]] records (the dev agent works from the Tasks list).
+#   Both sections are now written, with a 15-row files-to-CHANGE table.
+#   ⭐⭐ **TWO DEFECTS THAT WOULD HAVE SHIPPED SILENTLY, both now TASKS:**
+#   (1) `surface-fields.ts:382-387` — **`deriveFieldIds` THROWS IN BOTH DIRECTIONS**. AC1's token and
+#   AC3's row link each add a render-model key, and every key needs its MATRIX FIELD DECLARED IN THE
+#   SAME COMMIT. ⚠⛔ A token is `pii_tier: 3` ⇒ **AC5's Tier-1-COUNT assertion passes GREEN while the
+#   build is RED.** ⛔ AC5 structurally cannot see this ([[feedback_gate_scope_semantic_coverage]]).
+#   (2) AC2 demands *"zero NULL tokens"* but ⛔ never says the COLUMN ends `NOT NULL` ⇒ backfill-only
+#   makes the test a **SNAPSHOT**, ⛔ not a structural truth. Now: backfill THEN `SET NOT NULL`, one
+#   migration (`0114`; `0113` is last applied — ⛔ never regenerate an applied one, 42P07).
+#   ⭐ AC1 got CHEAPER, ⛔ not harder: `handlers.ts:496` already documents *"404 COLLAPSES THREE CASES ON
+#   PURPOSE"* ⇒ "real drive, wrong token" is the FOURTH collapsed case, ⛔ not a new control. ⚠ ⛔ NOT
+#   the 503 outage arm (`buildSahyogVivranOutageView`) — that is a different door.
+#   ⚠ **STILL OWED, ⛔ unchanged by this entry:** the `epics.md` ANNOTATION (Task 0) is ⛔ NOT written —
+#   verified live, `epics.md` has ⛔ ZERO references to `11b.10`/`11b-10`.
+#
+# last_updated_prior: 2026-09-04 (⭐⭐ **STORY 11b.10 CREATED AND RULED — `draft` -> `ready-for-dev`; and a
 #   FALSE PREMISE the Panel ratified on is CORRECTED (`2026-09-04-185`).** ONE row is added and moves.
 #   ⛔ epic-11b stays `in-progress`; ⛔ 11b-3a stays `done`; ⛔ 11b-3b stays `ready-for-dev`.
 #   ⛔⛔ **THE CORRECTION FIRST, because it is the part that matters.** The routing note told the Panel

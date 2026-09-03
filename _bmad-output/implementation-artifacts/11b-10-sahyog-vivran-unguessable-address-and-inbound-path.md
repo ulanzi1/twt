@@ -209,8 +209,10 @@ row's accessible name identifies **which drive** it opens (family 13, in its web
 
 **Given** `2026-09-03-184` **(A)** — ratified **YES**
 **When** a `live` drive exists
-**Then** it is reachable by a real path — ⭐ the **drive-opened notification** carrying its link, or a
-**member-app screen**, ⛔ not by URL construction
+**Then** it is reachable by a real path, ⛔ not by URL construction
+**And** ⛔⛔ **WHICH path is `D4`, which is OPEN and BLOCKING** — ⛔ do ⛔ **not** pick a branch. ⚠ The
+*"notification **or** member-app screen"* phrasing this AC inherited from `deferred-work.md` reads like
+a free choice; ⭐ measured, it is ⛔ not one. ⇒ **build AC1–AC3, then STOP** (Task 0's stop condition)
 **And** ⭐ **[D1 RULED]** the page answers **200 to anyone presenting a valid address** — ⛔ **no member
 session**, ⛔ no new auth surface, and ⛔ **no branch on the reader's membership standing** of any kind
 (the Policy-meaning note above binds here: ⛔ no `members.state`, ⛔ no `is_valid`, ⛔ no moderation
@@ -241,7 +243,13 @@ close — ⛔ a partial landing is the one outcome Trap 1 forbids.
 
 ---
 
-## ⚖️ Decisions — ✅ **ALL THREE RULED 2026-09-04. ⛔ ZERO BLOCKING.**
+## ⚖️ Decisions — ✅ **D1/D2/D3 RULED 2026-09-04.** ⛔⛔ **D4 IS OPEN AND BLOCKING.**
+
+> ⛔⛔ **TASK 0 CARRIES A STOP CONDITION.** D1–D3 rule the **address**; ⛔ none of them rules **which
+> inbound path** a `live` drive gets, and AC4 currently offers a **choice of two** where ⛔ only one is
+> even buildable at this story's size (see **D4**). ⚠ Trap 1 forbids landing the token without the path
+> ⇒ **AC1–AC3 may be BUILT, but ⛔ NOTHING MERGES until D4 is ruled.** ⭐ Same shape as 11b.3's Task 0
+> STOP condition (`2026-09-02-176`), which was discharged by a ruling, ⛔ never by an author's guess.
 
 ### ✅ D1 — RULED by BigDev, 2026-09-04: **AN OPEN LINK — anyone holding it, ⛔ no session required**
 
@@ -300,6 +308,33 @@ sentence in the story record** so a reviewer meets it in prose, ⛔ never discov
 ⚠ ⛔ `live` drives are **STILL NOT LISTED** on `/sahyog` — `public-read.ts:84-87` excludes them
 deliberately and (A) says **reachable**, ⛔ never **listed**.
 
+### ⛔⛔ D4 — **OPEN · BLOCKING** — *WHICH* inbound path does a `live` drive get?
+
+AC4 says *"the drive-opened notification carrying its link, **or** a member-app screen"*. ⛔ That
+**or** is ⛔ not a ruling, and the two branches are ⛔ not the same size. ⭐ **Measured live 2026-09-04,
+⛔ not assumed:**
+
+| | Branch (i) — a notification carrying the link | Branch (ii) — a member-app screen |
+|---|---|---|
+| Does the carrier exist? | ⛔ **NO** — `apps/jobs/src/pool-spawn-trigger.ts:13` records the pool-spawn `dispatch()` / shepherd-hook seam as ⛔ **not live** | ⛔ **NO** — `apps/mobile/app` has ⛔ no `(sahyog)` route group |
+| Taxonomy cost | ⛔⛔ **FROZEN**: the **7 FR-71 push categories** (+2 non-push) are exhaustive, and `deep-links/deep-link.ts:78` says in terms that a new thing is ⛔ *"NOT an 8th FR-71 category"* | ⭐ none |
+| Can it even carry a **public web** URL? | ⛔ **NO.** `deepLinkTargetForAlert` returns a **mobile URI scheme** over a **closed `resource` enum** (`announcements\|renewals\|contributions\|claims\|tickets\|modules` — ⛔ no `sahyog`). `channels/src/render.ts` composes ⛔ no URLs, and SMS bodies are **pre-registered DLT templates** (`sms-dlt-registry.ts`) | ⭐ n/a — it navigates in-app |
+
+⇒ ⛔ **branch (i) is ⛔ NOT a link-in-a-message; it is a new alert category, a new deep-link resource
+and an SMS-template act** — a multi-story build against a **frozen** taxonomy. ⭐ Its nearest existing
+carrier is the `cycle_open` kind (`scheduler/contribution-notify-triggers.ts:142`), which rides
+`alert_published` and lands on `announcements/:alert_id` — ⛔ **still not** a public drive URL.
+
+⚠⛔ **WHY THIS IS BLOCKING AND ⛔ NOT AN AUTHOR'S CALL:** Trap 1 forbids landing the token without a
+path, so the choice ⛔ cannot be deferred past merge; and branch (i) reaches a **ratified FR-71
+taxonomy**, which is ⛔ not a tuning knob ([[feedback_supersede_never_reinterpret]]). ⇒ picking it
+silently would be an authoring act over a Panel-scoped artefact — the precise failure
+[[feedback_mechanization_split_commitment]] and Trap 5 already forbid one level down.
+
+⭐ **What D4 must settle, in one sentence each:** (a) branch (i) or (ii); (b) if (ii), whether the
+screen is reachable from an existing tab or is a new route group; (c) if (i), who authorises the
+taxonomy change and at what version.
+
 ---
 
 ## ⚠ What this story does ⛔ NOT do
@@ -310,3 +345,208 @@ deliberately and (A) says **reachable**, ⛔ never **listed**.
 - ⛔ It does ⛔ not tighten or loosen `limits.search`.
 - ⛔ It does ⛔ not build the **authenticated-member** post-masking presentation (`-164` A2 — still
   *"not carried, not foreclosed"*).
+
+---
+
+## Tasks / Subtasks
+
+### ⛔ Task 0 — GOVERNANCE FIRST. ⛔ No code lands before this commit. (AC0)
+
+- [ ] Write the **`epics.md` ANNOTATION** — this story exists by `2026-09-03-184` (Trustee-ratified) as
+      corrected by `2026-09-04-185`; it is ⛔ **not** a member of 11b.3's ruled three-way split
+      (`D6(b)`, `2026-09-02-182`) and ⛔ must not be renumbered `11b-3c`. ⭐ Precedent: 11b.3a's Task 0.
+      ⚠ Verified 2026-09-04: `epics.md` currently has **ZERO** references to `11b.10` / `11b-10`.
+- [ ] Flip `sprint-status.yaml` `development_status[11b-10-…]` → `in-progress`, with a combined
+      top-of-file `last_updated` COMMENT entry ([[project_sprint_status_ledger]]) — **ONE row moves**.
+- [ ] Commit with a `governance:` prefix, **separately and FIRST**
+      ([[feedback_governance_commits_precede_implementation]]).
+- [ ] ⛔⛔ **STOP CONDITION — record it in the commit body:** `D4` is **OPEN and BLOCKING**. AC1–AC3 may
+      be built; ⛔ **nothing merges** until D4 is ruled, because Trap 1 forbids the token without the path.
+
+### Task 1 — The token column, its migration, and its BACKFILL (AC2)
+
+- [ ] Add the column to `packages/domain/src/schema/pools.ts` (table at `:105`) — **128 bits** of
+      CSPRNG entropy rendered URL-safe (`randomBytes(16)` → base64url ⇒ 22 chars).
+- [ ] Add a **unique index**, named to the file's own convention (`:203` is
+      `pools_pariwar_canonical_identifier_uq`) ⇒ `pools_public_token_uq`.
+- [ ] Write migration **`0114_…`** — `0113_nominee-bank-masking-schedule.sql` is the last applied.
+      ⛔ **Never regenerate an applied migration** (42P07, [[project_live_db_test_gotchas]]).
+- [ ] ⛔⛔ **BACKFILL EVERY EXISTING ROW IN THE SAME MIGRATION, THEN `SET NOT NULL`.** ⚠ The AC demands
+      *"zero NULL tokens"*; a nullable column left nullable makes that a **snapshot**, ⛔ not a
+      structural truth, and a visible pool with a NULL token is a drive whose page **404s**.
+- [ ] Mint the token at spawn in `packages/domain/src/pool/spawn.ts` — the insert at `:454` uses **raw
+      snake_case** column names (`pool_canonical_identifier: …`); the token goes in the same values
+      object. ⚠ Check the idempotent already-spawned returns at `:426` / `:490` stay correct.
+- [ ] ⛔ **Do ⛔ NOT derive the token from `pool_id`.** 7.3's UUIDv5 determinism
+      ([[project_pool_spawn_saga_atomicity]]) is ⛔ not a reason to make the token reproducible.
+- [ ] State **where it is generated** that the token bounds **DISCOVERY, ⛔ not AUTHORISATION** (D1).
+
+### Task 2 — Rotation (AC2)
+
+- [ ] Ship rotation as a **domain function** with a test that rotates ONE drive and asserts every other
+      drive's address is untouched.
+- [ ] ⛔⛔ **DECIDE-AND-STATE, ⛔ do not guess:** if rotation is given an **admin route**, it needs a
+      permission key ⇒ `PERMISSION_CATALOG_VERSION` (`packages/domain/src/rbac/permissions.ts:598`)
+      goes **39 → 40**, which is a **governance act** in this repo (10.3 minted `helpdesk.create`
+      v22→23 as a story act, [[project_helpdesk_operator_surface_103]]). ⭐ **The cheap, in-scope shape
+      is a domain-function-only seam with ⛔ NO route and ⛔ NO key** — if you take it, say so in the
+      story record; if you need the route, that is a **routing note**, ⛔ not an edit.
+
+### Task 3 — ONE public address form (AC1)
+
+- [ ] Rename the address parameter everywhere. ⚠ **This is a breaking contract change**, ⛔ not a
+      rename-in-one-file:
+  - [ ] `apps/public/src/pages/sahyog-vivran/[poolCanonicalIdentifier].astro` → the **file name itself**
+        is the route param (`Astro.params` at `:83`, normalised at `:186`).
+  - [ ] `apps/api/src/modules/public-pages/routes.ts:257` — the path `:poolCanonicalIdentifier`.
+  - [ ] `packages/contracts/src/public-pages/sahyog-vivran.ts` — **TWO** declarations, `:277` and `:345`.
+  - [ ] Re-emit OpenAPI (`packages/contracts/scripts/emit-openapi.ts`) — the determinism gate will fail
+        if you don't.
+  - [ ] Update the specs that address the old form: `apps/api/tests/integration/public-pages/sahyog-vivran.spec.ts`,
+        `apps/public/tests/integration/public-pages/scrape-test.spec.ts`, `apps/api/tests/integration/login-wall.spec.ts`.
+- [ ] ⛔ The bare `P-YYYY-MM-###` must ⛔ **NOT** remain independently addressable (Trap 3) — a route
+      accepting **either** form has added a lock beside an open door.
+- [ ] ⭐ **The indistinguishable-refusal AC is CHEAP — reuse the existing control, ⛔ don't invent one.**
+      `apps/api/src/modules/public-pages/handlers.ts:496` already documents *"404 COLLAPSES THREE CASES
+      ON PURPOSE"* (`:534` / `:555`). ⇒ *"real drive, wrong token"* becomes the **fourth** collapsed
+      case, byte-identical to the others. ⚠ ⛔ **Not** the 503 arm (`buildSahyogVivranOutageView`, astro
+      `:219`) — that is the outage path and is a different response.
+- [ ] ⛔ Keep `pool_canonical_identifier` **RENDERED** on the page — astro `:309` shows it via
+      `<MatrixField>`. Trap 3 forbids it being **addressable**, ⛔ not **displayed**. ⛔ Do not delete it.
+
+### Task 4 — ⭐⛔ The matrix declarations the token/link force (AC1, AC3, AC5)
+
+> ⛔⛔ **THIS IS THE TASK THAT WILL BREAK THE BUILD IF IT IS SKIPPED, AND AC5 WILL ⛔ NOT CATCH IT.**
+
+- [ ] `apps/public/src/lib/surface-fields.ts` derives each surface's tier-leak field set from the render
+      model's **OWN KEYS** (`:362` index, `:590` drive page), and `:382-387` states **`deriveFieldIds`
+      throws in BOTH directions** — a model key with no field id, **and** a field id with no model key.
+- [ ] ⇒ **every new key needs its matrix field declared IN THE SAME COMMIT**:
+  - [ ] an index row link ⇒ `SAHYOG_DRIVE_ROW_FIELD_IDS` (`:319`) **and** `SAHYOG_DRIVE_ROW_SHAPE` (`:344`).
+  - [ ] a token on the drive page model ⇒ `SAHYOG_VIVRAN_FIELD_IDS` (`:513`).
+  - [ ] the declaration itself in `packages/contracts/src/public-pages/sahyog-drive.ts` /
+        `sahyog-vivran.ts` — `tier: public`, `pii_tier: 3`.
+- [ ] ⭐ **A token/href is `pii_tier: 3`** ⇒ it needs ⛔ **no** `tier1_public_exception` and ⛔ **no**
+      `RULED_TIER1_PUBLIC_EXCEPTIONS` entry (`packages/contracts/src/public-pages/matrix.ts:393`, whose
+      comment says adding to that list *"IS A RULING, NEVER A CODE CHANGE"*). ⛔ Do not touch that map.
+- [ ] AC5's count assertion lives in `apps/public/tests/surface-fields.test.ts` — assert the
+      `sahyog-vivran` **Tier-1-at-`public` count is UNCHANGED**. ⚠ That is necessary but is ⛔ **not**
+      the constraint that breaks; the undeclared-key throw is. ⭐ Both must pass.
+
+### Task 5 — The `/sahyog` per-row inbound link (AC3)
+
+- [ ] Build the row href in `apps/public/src/lib/sahyog-render.ts`. ⚠ Today it produces **exactly TWO**
+      hrefs — `:308` (`page - 1`) and `:315` (`page + 1`); `PaginationLink` (`:101`) is the only link
+      type. A drive link is a **third kind** and is ⛔ not a `PaginationLink`.
+- [ ] Accessible name identifies **WHICH drive** it opens — ⛔ never a bare "click here" (family 13).
+      Copy goes through `t()`: ⚠ `t()` defaults to the `common` namespace and **throws** on a missing
+      key ([[project_missed_cycle_visibility_substrate]]).
+- [ ] ⚠ **A11y test coverage may already be routed elsewhere:** 11b.3a's review **deferred family-13
+      Astro `role`/`aria-label` test coverage to 11b.8** (sprint-status ledger, 2026-09-03). ⇒ either
+      assert it here and say the deferral is **narrowed**, or route to 11b.8 and say so — ⛔ do not
+      leave it ambiguous ([[feedback_closure_language_precision]]).
+- [ ] ⭐ **Write the exposure sentence into the story record in these words** (AC3, D3): *"every listed
+      drive becomes ONE CLICK from four Tier-1 fields under `D8-default` FAIL-OPEN"*. ⛔ A reviewer must
+      meet it in prose, ⛔ never discover it in a diff.
+
+### Task 6 — ⛔ BLOCKED ON D4 — the `live`-drive inbound path (AC4)
+
+- [ ] ⛔⛔ **DO NOT START.** See **D4**. ⛔ Do not pick between the notification and the member-app
+      screen; ⛔ do not mint an 8th FR-71 category; ⛔ do not add a `resource` to the deep-link grammar.
+
+### Task 7 — Close out (AC5, AC6)
+
+- [ ] Assert **nothing else moved**: `D8-default` FAIL-OPEN unchanged (Trap 4) · `limits.search`
+      unchanged on all three routes (Trap 5) · masking schedule/knob/predicate untouched · 11b.3a's
+      Tier-1 allowlist entries and the matrix unchanged.
+- [ ] ⛔ **Only after AC1–AC4 have ALL landed together**, record the `deferred-work.md` item
+      **"Closed by [edit]"** ([[feedback_closure_language_precision]]) — ⛔ never *"resolved via
+      deferral"*. ⚠ If AC4 is undelivered the item **stays BLOCKING** and the story does ⛔ not close.
+
+---
+
+## Dev Notes
+
+### 🎯 Files to CHANGE (the "what EXISTS" table above is read-only context; ⭐ this is the target list)
+
+| File | Change | AC |
+|---|---|---|
+| `packages/domain/src/schema/pools.ts` (`:105`, index conv. `:203`) | + token column, + `pools_public_token_uq` | AC2 |
+| `packages/domain/migrations/0114_*.sql` | create · **backfill** · `SET NOT NULL` | AC2 |
+| `packages/domain/src/pool/spawn.ts` (`:454`, raw snake_case) | mint at spawn | AC2 |
+| `packages/domain/src/pool/` (new) | rotation domain function | AC2 |
+| `packages/contracts/src/public-pages/sahyog-vivran.ts` (`:277`, `:345`) | param rename ×2 | AC1 |
+| `packages/contracts/src/public-pages/sahyog-drive.ts` / `sahyog-vivran.ts` | + matrix field decls | AC1/AC3 |
+| `apps/api/src/modules/public-pages/routes.ts` (`:257`) | path param | AC1 |
+| `apps/api/src/modules/public-pages/handlers.ts` (`:496`, `:534`, `:555`) | 4th collapsed 404 case | AC1 |
+| `apps/public/src/pages/sahyog-vivran/[…].astro` (`:83`, `:186`) | **file rename** + param | AC1 |
+| `apps/public/src/lib/sahyog-vivran.server.ts` (`:78`, `:105`, `:182`) | SSR resolver param | AC1 |
+| `apps/public/src/lib/sahyog-render.ts` (`:101`, `:308`, `:315`) | per-row drive link | AC3 |
+| `apps/public/src/lib/surface-fields.ts` (`:319`, `:344`, `:513`) | field-id mappings | AC1/AC3 |
+| `apps/public/tests/surface-fields.test.ts` | Tier-1 count unchanged | AC5 |
+| `_bmad-output/planning-artifacts/epics.md` | the annotation | AC0 |
+| `_bmad-output/implementation-artifacts/deferred-work.md` (`:7932`) | "Closed by [edit]" | AC6 |
+
+### ⛔ The three ways this story fails silently
+
+1. **A green AC5 over a red build.** Task 4 — `deriveFieldIds` throws on an undeclared key. AC5 measures
+   the Tier-1 **count**; the token is `pii_tier: 3`, so AC5 passes while the surface-fields test throws.
+2. **A backfill that is a snapshot.** Task 1 — a nullable column plus a point-in-time "zero NULLs" test
+   passes today and ships a broken archive the first time a spawn path misses the mint.
+3. **A partial landing that looks like a milestone.** Trap 1 — the token alone makes the **whole**
+   Sahyog Vivran surface reachable by nobody. Task 6 is blocked precisely so this cannot happen quietly.
+
+### Substrate facts (⭐ measured live 2026-09-04)
+
+- `PERMISSION_CATALOG_VERSION = 39` — `packages/domain/src/rbac/permissions.ts:598`.
+- Last applied migration: `0113_nominee-bank-masking-schedule.sql`.
+- Alert taxonomy: **9** categories (7 FR-71 push + `niyamavali_amended` + `step_up_otp`);
+  `deepLinkTargetForAlert` is an **exhaustive switch**, `resource` is a **closed enum**.
+- `apps/mobile/app` route groups: no `(sahyog)`. Zero repo-wide mobile references to `sahyog-vivran`.
+- `packages/channels/src/render.ts` composes **no URLs**; SMS bodies are pre-registered DLT templates.
+- `apps/public/astro.config.mjs:21` — `site: process.env.PUBLIC_SITE_ORIGIN ?? 'https://twt.org'` is
+  the only public-origin source, ⭐ needed if any absolute drive URL is ever built.
+
+### Testing
+
+- Live-DB specs: assert **membership, ⛔ not counts**; ⛔ never `DROP SCHEMA`
+  ([[project_live_db_test_gotchas]]). `integration-tests` concurrency `=1` is **load-bearing**
+  ([[project_ci_local_concurrency_oversubscription]]).
+- `git push` runs full `ci:local` via a pre-push hook — the "hang" is expected
+  ([[project_friction_budget_baseline_ratchet]]).
+- Required new assertions: wrong/absent token ⇒ **byte-identical** 404 (AC1) · rotation isolates to one
+  drive (AC2) · **zero** NULL tokens across all visible states (AC2) · Tier-1-at-`public` count
+  unchanged (AC5).
+
+### Project Structure Notes
+
+- ⛔ **No new package.** Rotation is a domain function beside `pool/spawn.ts`
+  ([[feedback_no_premature_package]] — no second consumer exists).
+- `@twt/domain` may ⛔ not import `@twt/events` (turbo cycle) — read `events_log` directly
+  ([[project_member_lifecycle_domain_substrate]]).
+- `@twt/contracts` may ⛔ not import pg-touching `@twt/domain` namespaces
+  ([[project_contracts_domain_bundle_boundary]]) — the token type stays a plain `string` in contracts.
+
+### References
+
+- `.decision-log.md#decision-2026-09-03-184` (`:111`) — Trustee-ratified **(A)** + **(B)**, cl.2
+  (identifier RETAINED), cl.4 (the coupling), cl.5 (option (d) not directed).
+- `.decision-log.md#decision-2026-09-04-185` (`:37`) — the FALSE premise corrected; cl.3 widens the
+  coupling to **all three** states.
+- `.decision-log.md#decision-2026-09-02-179` cl.1 (`D8-default` FAIL-OPEN) · `#decision-2026-09-02-182`
+  (`D6(b)`, the three-way split this story is ⛔ **not** part of) · `#decision-2026-08-28-160` cl.10(f).
+- `_bmad-output/implementation-artifacts/deferred-work.md:7932` — the BLOCKING-ON-DEPLOYMENT item.
+- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-03-11b3a-enumeration-bound-tier1.md`
+  — ⚠ the note whose §6(c) carried the premise `-185` corrects.
+
+---
+
+## Dev Agent Record
+
+### Agent Model Used
+
+### Debug Log References
+
+### Completion Notes List
+
+### File List

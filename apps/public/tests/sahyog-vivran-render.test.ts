@@ -248,11 +248,17 @@ describe('buildSahyogVivranView — the appeal-reversal lineage (AC5, D12(a))', 
 });
 
 describe('buildSahyogVivranOutageView — ⛔ an outage is NOT a 404', () => {
-  const { model } = buildSahyogVivranOutageView('P-2026-09-003');
+  const { model } = buildSahyogVivranOutageView();
 
-  it('flags the outage and echoes ONLY the identifier the visitor already has', () => {
+  it('flags the outage', () => {
     expect(model.apiUnavailable).toBe(true);
-    expect(model.poolCanonicalIdentifier).toBe('P-2026-09-003');
+  });
+
+  it('⛔ ECHOES NO ADDRESS — Story 11b.10. The URL segment is an OPAQUE TOKEN, ⛔ not a drive code', () => {
+    // ⚠ This used to assert the identifier was echoed back. ⭐ The URL no longer CARRIES one, so an
+    // echo would print a live public ADDRESS into the `pool_canonical_identifier` classified field
+    // — a fabricated drive fact on a page whose whole contract is that it invents nothing.
+    expect(model.poolCanonicalIdentifier).toBe('');
   });
 
   it('⛔ INVENTS no drive fact — every other value is empty or null', () => {

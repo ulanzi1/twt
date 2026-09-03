@@ -47,6 +47,8 @@ interface SeedDriveSpec {
    */
   retiredConsentOnly?: boolean;
   canonicalIdentifier?: string;
+  /** Story 11b.10 — pin the drive's PUBLIC ADDRESS token (default: a fresh unique one). */
+  publicToken?: string;
 }
 
 /** Seed a Pariwar with drives, each with a real encrypted deceased-member name. */
@@ -103,10 +105,13 @@ async function seedDrives(
 
       await scopeTx.client.query("SET LOCAL app.pool_state_writer = 'on'");
       await scopeTx.client.query(
+        // ⚠ `public_token` (Story 11b.10) is NOT NULL with a GLOBAL unique index. The seed derives
+        // it from a fresh UUID purely for suite-wide collision-freedom; ⛔ the PRODUCTION mint is
+        // CSPRNG-random and is ⛔ never derived from any pool fact (D2).
         `INSERT INTO pools (pool_id, pariwar_id, cycle_id, claim_case_id, pool_index,
                             pool_canonical_identifier, support_category, benefit_mechanism,
-                            fixed_amount, current_state, state_event_version)
-         VALUES ($1, $2, $3, $4, $5, $6, 'death_support', 'pool', 100, $7, 1)`,
+                            fixed_amount, current_state, state_event_version, public_token)
+         VALUES ($1, $2, $3, $4, $5, $6, 'death_support', 'pool', 100, $7, 1, $8)`,
         [
           poolId,
           pariwarId,
@@ -115,6 +120,7 @@ async function seedDrives(
           poolIds.length,
           d.canonicalIdentifier ?? `P-2026-08-${randomUUID().slice(0, 6)}`,
           d.poolState ?? 'closed',
+          d.publicToken ?? `tok-${randomUUID()}`,
         ],
       );
       await scopeTx.client.query("SET LOCAL app.pool_state_writer = 'off'");
@@ -273,6 +279,13 @@ describe.skipIf(!hasDatabase)('public Sahyog Drive route (:5433)', { timeout: 30
         'fundingOutcome',
         'poolCanonicalIdentifier',
         'poolLetterCode',
+        // ⭐ Story 11b.10 (AC3) — the drive's OPAQUE PUBLIC ADDRESS. On the wire because the index's
+        // per-row link is built from it and from ⛔ nothing else; `poolCanonicalIdentifier` above is
+        // RETAINED and RENDERED but ⛔ no longer addressable.
+        // ⛔ It is ⛔ NOT an internal identifier: ⛔ not `pools.pool_id`, ⛔ not a member, claim or
+        // cycle id, and ⛔ not derived from any of them (D2) — the raw-body assertions below still
+        // hold unchanged.
+        'publicToken',
         'status',
       ]);
 

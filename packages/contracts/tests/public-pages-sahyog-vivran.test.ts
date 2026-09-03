@@ -230,35 +230,68 @@ describe('the query is EMPTY and strict — which is WHY controls 2 and 3 are N/
   });
 });
 
+// ⭐⭐ STORY 11b.10 (AC1) — THE PARAMS ARE THE **OPAQUE PUBLIC ADDRESS TOKEN**, ⛔ no longer the
+// sequential `P-YYYY-MM-###`. `2026-09-03-184` **(B)**, Trustee-ratified.
 describe('the params', () => {
-  it('accepts a uuid Pariwar and a bounded identifier', () => {
+  it('accepts a uuid Pariwar and a bounded drive TOKEN', () => {
+    expect(
+      PublicSahyogVivranParams.safeParse({
+        pariwarId: '00000000-0000-4000-8000-000000000000',
+        driveToken: 'aBcDeFgHiJkLmNoPqRsTuV',
+      }).success,
+    ).toBe(true);
+  });
+
+  it('⛔ rejects an unbounded address at the schema boundary', () => {
+    expect(
+      PublicSahyogVivranParams.safeParse({
+        pariwarId: '00000000-0000-4000-8000-000000000000',
+        driveToken: 'x'.repeat(200),
+      }).success,
+    ).toBe(false);
+  });
+
+  it('⭐ does NOT pattern-match the token SHAPE, deliberately', () => {
+    // ⚠⭐ THE GROUND CHANGED AT 11b.10 AND IS RESTATED RATHER THAN QUIETLY KEPT. This used to read
+    // *"the canonical FORMAT is per-Pariwar configurable, so a regex here would silently 400 a
+    // legitimate Pariwar whose format differs"*. ⭐ The parameter is no longer that identifier, so
+    // that reason is gone — but the CONCLUSION is unchanged and now rests on something stronger: a
+    // shape regex would SPLIT the refusal surface into *"wrong shape"* (400) and *"no such drive"*
+    // (404), and that difference is itself an ENUMERATION ORACLE — precisely what AC1 removes.
+    // ⇒ every malformed address must reach the read and come back as the SAME 404.
+    expect(
+      PublicSahyogVivranParams.safeParse({
+        pariwarId: '00000000-0000-4000-8000-000000000000',
+        driveToken: 'DRIVE/2026/09/003',
+      }).success,
+    ).toBe(true);
+  });
+
+  it('⛔⛔ REJECTS the bare canonical identifier as a param KEY — exactly ONE address form (Trap 3)', () => {
+    // ⛔⛔ THE ASSERTION THAT FAILS THE MOMENT SOMEBODY RE-ADMITS THE OLD PARAMETER "for old links".
+    // `.strict()` is what makes it a refusal rather than an ignored key — a route accepting EITHER
+    // form has ⛔ not closed the walk, it has added a lock beside an open door.
     expect(
       PublicSahyogVivranParams.safeParse({
         pariwarId: '00000000-0000-4000-8000-000000000000',
         poolCanonicalIdentifier: 'P-2026-09-003',
       }).success,
-    ).toBe(true);
-  });
-
-  it('⛔ rejects an unbounded identifier at the schema boundary', () => {
+    ).toBe(false);
+    // ⛔ And not as an ADDITIONAL key beside a valid token either.
     expect(
       PublicSahyogVivranParams.safeParse({
         pariwarId: '00000000-0000-4000-8000-000000000000',
-        poolCanonicalIdentifier: 'x'.repeat(200),
+        driveToken: 'aBcDeFgHiJkLmNoPqRsTuV',
+        poolCanonicalIdentifier: 'P-2026-09-003',
       }).success,
     ).toBe(false);
   });
 
-  it('⭐ does NOT pattern-match the canonical FORMAT, deliberately', () => {
-    // The format is per-Pariwar configurable, so a regex here would silently 400 a legitimate
-    // Pariwar whose format differs. The read's exact-equality lookup refuses an unknown identifier,
-    // and refuses it as a 404 — ⛔ never as a distinguishable "malformed" error.
-    expect(
-      PublicSahyogVivranParams.safeParse({
-        pariwarId: '00000000-0000-4000-8000-000000000000',
-        poolCanonicalIdentifier: 'DRIVE/2026/09/003',
-      }).success,
-    ).toBe(true);
+  it('⭐ the RESPONSE still carries `poolCanonicalIdentifier` — RETAINED and RENDERED (cl.2)', () => {
+    // ⛔ Trap 3 forbids the identifier being ADDRESSABLE, ⛔ not DISPLAYED. Deleting it would be a
+    // different defect — it is the operational/audit key a family quotes to the helpline.
+    expect(PublicSahyogVivranResponse.safeParse({ drive: ENTRY }).success).toBe(true);
+    expect(ENTRY.poolCanonicalIdentifier).toBeTruthy();
   });
 });
 

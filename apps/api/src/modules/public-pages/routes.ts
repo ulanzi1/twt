@@ -56,7 +56,8 @@
 //
 // ── ⭐⭐ THE THIRD ROUTE (Story 11b.3) — AND THE CLAUSE ABOVE FIRED EXACTLY AS WRITTEN ──────────
 // ⛔ THE FIVE ARE ⛔ NOT REUSED HERE, AND STATING FIVE WOULD BE THE DEFECT THIS FILE ALREADY HAD ONCE,
-// INVERTED. `GET …/public-pages/sahyog-vivran/:poolCanonicalIdentifier` is a SINGLE-ITEM GET on a
+// INVERTED. `GET …/public-pages/sahyog-vivran/:driveToken` (⚠ `:poolCanonicalIdentifier` until
+// Story 11b.10 closed the walk) is a SINGLE-ITEM GET on a
 // path parameter (⛔ not a collection) and declares `paginated: false` in the matrix (⛔ not
 // paginated). ⇒ controls 2 (`PUBLIC_SURFACE_PAGE_SIZE_CAP`) and 3 (`PUBLIC_DIRECTORY_PAGE_HORIZON`)
 // have ⛔ NO QUERY PARAMETER TO BIND TO and cannot be reused.
@@ -71,7 +72,11 @@
 // defect this file records having already had once."*
 //
 // ⭐ **D11(a)** (`2026-09-02-176`) RULED IT STATES ITS **APPLICABLE** SET. ⚠ 11b.3a changed which
-// controls apply, ⛔ not the rule — the set is now **FOUR**:
+// controls apply, ⛔ not the rule — and ⭐ **11b.10 added control 7** (the unguessable address; see
+// THE ENUMERATION BOUND below). ⇒ the applicable set is now **FIVE** of the numbered items — 1, 4, 5,
+// 6 and 7 — with 2 and 3 still structurally N/A and their restoration still owed by 11b.3b.
+// ⚠ The `login-wall.spec.ts` allowlist entry states the SAME set: ⛔ two authoritative documents
+// disagreeing about how many controls exist is the defect this file records having already had once.
 //   1. `config: { rateLimit: limits.search }` — the named SEARCH tier, UNMODIFIED. ⛔ Not
 //      `limits.read` (looser, and backwards for an enumeration surface), ⛔ not an inline ceiling,
 //      ⛔ not a hand-rolled `keyGenerator`. Same reasoning as control 1 above, unchanged.
@@ -91,6 +96,12 @@
 //      `2026-08-28-160` cl.10(e)'s retention list excludes the holder name and the VPA. The masked
 //      projection is applied HERE, at the boundary: the wire's masked arm carries ⛔ no
 //      `accountNumber` key at all, so the full value cannot cross once masked (AC4).
+//   7. ⭐ **NEW AT 11b.10 — THE UNGUESSABLE PUBLIC ADDRESS.** The path parameter is a 128-bit CSPRNG
+//      token (`pools.public_token`, global unique index), ⛔ not the sequential `P-YYYY-MM-###`, and
+//      there is EXACTLY ONE address form — the bare identifier is ⛔ not independently addressable.
+//      A wrong or absent token answers a **byte-identical 404**. ⛔ It bounds DISCOVERY, ⛔ NOT
+//      AUTHORISATION (D1): presenting a valid address is enough, with ⛔ no session and ⛔ no branch
+//      on the reader's membership standing. See THE ENUMERATION BOUND below for the full ground.
 //
 // ⛔ CONTROLS **2** AND **3**: ⛔ STILL NOT APPLICABLE — NO COLLECTION, NO `limit`, NO `page`.
 // ⚠⛔ THE N/A STILL HAS AN EXPIRY, ⛔ it is not a permanent exemption: **Story 11b.3b adds the
@@ -107,18 +118,33 @@
 // its `.max(2)` is the shape of a substrate whose composite PK admits exactly `{1, 2}` — there is
 // nothing to page, nothing to filter and nothing to walk.
 //
-// ⚠⛔⛔ **THE ENUMERATION BOUND, STATED HERE BECAUSE 11b.3a IS WHAT MAKES IT EXPENSIVE.**
-// `P-YYYY-MM-###` is **SEQUENTIAL** and therefore ENUMERABLE; with controls 2/3 structurally absent,
-// **`limits.search` is the ONLY thing bounding a walk of it** — and after 11b.3a that walk reaches
-// **FOUR DECRYPTED TIER-1 FIELDS**, with `D8-default` ruled **FAIL-OPEN** (`2026-09-02-179` cl.1) so
-// the details render in FULL for every Pariwar until the Trust sets a window.
+// ⚠⛔⛔ **THE ENUMERATION BOUND — ⭐⭐ AMENDED BY STORY 11b.10, AND ⛔ NOT DELETED.**
+// This clause used to read, in terms: *"`P-YYYY-MM-###` is SEQUENTIAL and therefore ENUMERABLE; with
+// controls 2/3 structurally absent, `limits.search` is the ONLY thing bounding a walk of it"* — and
+// after 11b.3a that walk reached FOUR DECRYPTED TIER-1 FIELDS under `D8-default` FAIL-OPEN.
+// ⭐⭐ **THAT WAS TRUE, AND IT IS THE REASON THIS STORY EXISTS.** `2026-09-03-184` **(B)**
+// (Trustee-ratified) ruled the public address must be UNGUESSABLE, and `2026-09-04-185` corrected the
+// premise the routing note carried: the identifier's `sequence` is a MONOTONIC per-(pariwar, month)
+// counter, so counting really did address every drive.
+// ⇒ **CONTROL 7 — ⭐ NEW AT 11b.10 — THE UNGUESSABLE ADDRESS.** The route parameter is a **128-bit
+// CSPRNG token** carried on the pool row under a global unique index. There is ⛔ no sequence left to
+// walk, and *"real drive, wrong token"* answers a **BYTE-IDENTICAL 404** to *"no such drive"* — ⛔ a
+// different answer there would itself be the enumeration oracle. ⇒ the count is now **SEVEN**.
+// ⚠⛔ **THE ADDRESS BOUNDS DISCOVERY, ⛔ NOT AUTHORISATION** (D1, 2026-09-04): the page answers 200 to
+// ANYONE presenting a valid address — ⛔ no session, and ⛔ never a branch on the reader's membership
+// standing (⛔ no `members.state`, ⛔ no `is_valid`, ⛔ no moderation overlay).
 // ⚠ D11(a) recorded controls 2 and 3 structurally N/A *precisely because there is no `page` and no
 // `limit` to bind them to*; it was option **(c)** — ⛔ NOT ruled — that would have obliged this route
-// to name what bounds identifier enumeration. ⇒ this clause names it.
-// ⚠⛔ **IF `limits.search` IS JUDGED INSUFFICIENT FOR A TIER-1-BEARING SINGLE-ITEM GET, THAT IS A
-// DECISION** (`2026-09-02-183` cl.5), ⛔ not a tuning knob. ⛔ Do ⛔ not quietly tighten or loosen the
-// tier on the route registration below. ⭐ `D4-linkage` is OPEN and ⛔ no inbound link to a `live`
-// drive is added.
+// to name what bounds identifier enumeration. ⇒ this clause names it, and 11b.10 CLOSED it.
+// ⚠⛔ **`limits.search` IS STILL ⛔ NOT A TUNING KNOB** (`2026-09-02-183` cl.5; 11b.3a AC2). The Panel
+// directed option **(c)**, ⛔ not option (b) (`-184` cl.5) ⇒ the tier is UNCHANGED by 11b.10 in BOTH
+// directions. ⛔ Do not tighten it on the registration below because the token "makes it safe", and
+// ⛔ do not loosen it either.
+// ⭐⭐ **AND `D4-linkage` IS CLOSED, ⛔ not still open.** `2026-09-04-185` cl.3–4 widened the ratified
+// answer to ALL THREE visible states: `closed`/`settled` gain a per-row link on `/sahyog`, and a
+// `live` drive gains a **member-app entry on the My Pool tab** (D4). ⚠ `live` drives are STILL ⛔ NOT
+// LISTED on `/sahyog` — `public-read.ts` excludes them deliberately (*"an open solicitation"*), and
+// (A) says a live drive should be **reachable**, ⛔ never **listed**.
 //
 // ⚠⭐ **AND THE INVERSION THIS ROUTE PUBLISHES, RECORDED HERE RATHER THAN LEFT FOR A REVIEWER**
 // (`D5-subject`): `account_holder_name` is guarded by a real multi-stage human approval chain —
@@ -254,7 +280,15 @@ export function registerPublicPagesRoutes(app: FastifyInstance, deps: AppDeps): 
   // surface to add anyway (`2026-08-23-154` disposition (c); SD-2 is RE-PURPOSED onto the
   // post-campaign masking state by `2026-08-28-164` A2, ⛔ not dissolved).
   r.get(
-    '/api/v1/p/:pariwarId/public-pages/sahyog-vivran/:poolCanonicalIdentifier',
+    // ⭐⭐ STORY 11b.10 — THE PATH PARAMETER IS THE DRIVE'S **OPAQUE PUBLIC TOKEN**, ⛔ no longer
+    // `:poolCanonicalIdentifier`. `2026-09-03-184` **(B)** (Trustee-ratified): the public address
+    // must be UNGUESSABLE, and `P-YYYY-MM-###` is a MONOTONIC per-(pariwar, month) counter ⇒ it was
+    // WALKABLE BY COUNTING, and since 11b.3a that walk reached four DECRYPTED Tier-1 bank fields.
+    // ⛔⛔ THERE IS EXACTLY ONE ADDRESS FORM. ⛔ Do ⛔ not add a second route, an alias, or an `OR`
+    // arm accepting the bare identifier "for old links" — a route accepting either form has ⛔ not
+    // closed the walk, it has added a lock beside an open door (Trap 3). The identifier is RETAINED
+    // (`-184` cl.2) as the operational/audit key and is still RENDERED in the response.
+    '/api/v1/p/:pariwarId/public-pages/sahyog-vivran/:driveToken',
     {
       schema: {
         params: PublicSahyogVivranParams,
@@ -267,12 +301,18 @@ export function registerPublicPagesRoutes(app: FastifyInstance, deps: AppDeps): 
         response: { 200: PublicSahyogVivranResponse },
         tags: [PUBLIC_PAGES_TAG],
       },
-      // ⛔ UNMODIFIED, and the SAME named tier as the two routes above. ⭐⭐ On THIS route it carries
-      // more weight than on either: with controls 2 and 3 structurally absent, it is the ONLY thing
-      // bounding a walk of the sequential `P-YYYY-MM-###` — and since Story 11b.3a that walk reaches
-      // FOUR DECRYPTED TIER-1 FIELDS, rendered in FULL for every Pariwar until the Trust sets a
-      // masking window (`D8-default` FAIL-OPEN). ⛔ Not `limits.read`, ⛔ not an inline ceiling,
-      // ⛔ not a hand-rolled `keyGenerator`.
+      // ⛔ UNMODIFIED, and the SAME named tier as the two routes above.
+      // ⚠⭐ AMENDED BY STORY 11b.10 — ⛔ AN AMENDMENT, ⛔ NOT A REWRITE. This note used to read that
+      // control 1 was *"the ONLY thing bounding a walk of the sequential `P-YYYY-MM-###`"*. ⭐ THAT
+      // IS NO LONGER TRUE, and leaving it would have a live defence overstate the work this line
+      // does: the ADDRESS itself is now unguessable (`2026-09-03-184` (B) — a 128-bit token), so
+      // there is ⛔ no sequence left to walk. Control 1 now bounds the ordinary request rate on a
+      // PII-bearing public route — still load-bearing, and no longer load-bearing ALONE.
+      // ⚠⛔ AND THE TIER IS STILL ⛔ NOT THIS STORY'S TO TOUCH. The Panel directed option **(c)**,
+      // ⛔ not option (b) (`-184` cl.5), and 11b.3a's **AC2** rules that tightening it as an
+      // authoring act is exactly what may not happen — a rule that did ⛔ NOT expire when the note
+      // was answered. ⛔ Do not tighten it here and ⛔ do not loosen it here; a different tier is a
+      // NEW ROUTING NOTE (`2026-09-02-183` cl.5), ⛔ never an edit.
       // ⚠⛔ AND CHANGING THIS TIER IS **A DECISION** (`2026-09-02-183` cl.5), ⛔ not a tuning knob —
       // in EITHER direction. ⛔ Do not tighten it here and ⛔ do not loosen it here.
       config: { rateLimit: limits.search },

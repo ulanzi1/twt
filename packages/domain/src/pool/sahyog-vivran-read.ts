@@ -319,13 +319,19 @@ export interface ReadSahyogVivranOptions {
 }
 
 /**
- * Resolve ONE drive's Sahyog Vivran, or `null` when there is nothing to show.
+ * Resolve ONE drive's Sahyog Vivran BY ITS PUBLIC ADDRESS TOKEN, or `null` when there is nothing to
+ * show.
  *
- * ⭐⛔ `null` COLLAPSES **THREE** CASES ON PURPOSE — *"does not exist"*, *"exists but is not visible
- * at this surface's predicate"* (a `spawned` pool) and *"the identifier is malformed"*. The caller
- * renders the SAME 404 for all three. ⛔ A response that distinguishes them is an ENUMERATION
- * ORACLE, and this surface is fronted by a SEQUENTIAL identifier, which is exactly when that matters
- * (AC1).
+ * ⭐⛔ `null` COLLAPSES **FOUR** CASES ON PURPOSE — *"does not exist"*, *"exists but is not visible
+ * at this surface's predicate"* (a `spawned` pool), *"the address is malformed"* and — ⭐ Story
+ * 11b.10's addition — ***"a REAL drive addressed with a WRONG or ABSENT token"***. The caller
+ * renders the SAME 404 for all four. ⛔ A response that distinguishes them is an ENUMERATION ORACLE.
+ * ⚠⛔ THE FOURTH IS THE ONE MOST LIKELY TO BE "IMPROVED" INTO A 403 OR A DISTINCT ERROR, and it is
+ * the one that must NOT be: *"real drive, wrong token"* answering differently from *"no such drive"*
+ * would confirm which addresses name something — i.e. it would hand back exactly the enumeration
+ * signal the token was introduced to remove.
+ * ⭐ Structurally guaranteed here, ⛔ not remembered: the token is part of the WHERE clause, so a
+ * wrong one returns zero rows through the very same path a non-existent drive does.
  *
  * ⚠ ⛔ NO `.limit()` FROM USER INPUT anywhere in this module, so ⛔ no `clampLimit` is owed — the
  * `domain-accessor-invariants` gate clamps every DYNAMIC limit, and there is none here: this read is
@@ -346,7 +352,7 @@ export interface ReadSahyogVivranOptions {
 export async function readPublicSahyogVivran(
   db: Db,
   pariwarId: PariwarId,
-  poolCanonicalIdentifier: string,
+  driveToken: string,
   opts: ReadSahyogVivranOptions = {},
 ): Promise<SahyogVivranEntry | null> {
   const now = opts.now ?? new Date();
@@ -379,7 +385,18 @@ export async function readPublicSahyogVivran(
     .where(
       and(
         eq(pools.pariwarId, pariwarId),
-        eq(pools.poolCanonicalIdentifier, poolCanonicalIdentifier),
+        // ⭐⭐ STORY 11b.10 — THE DRIVE IS RESOLVED BY ITS OPAQUE PUBLIC ADDRESS TOKEN, and by
+        // ⛔ NOTHING ELSE. The predicate used to be `pool_canonical_identifier = …`, and because
+        // `P-YYYY-MM-###`'s `sequence` is a MONOTONIC per-(pariwar, month) counter, that made the
+        // whole surface WALKABLE BY COUNTING — reaching, since 11b.3a, four decrypted Tier-1 bank
+        // fields (`2026-09-03-184` (B), Trustee-ratified).
+        // ⛔⛔ DO ⛔ NOT ADD AN `OR` ARM FOR THE CANONICAL IDENTIFIER, ⛔ not for old links and
+        // ⛔ not "for operators": a read that accepts EITHER form has ⛔ not closed the walk, it has
+        // added a lock beside an open door (Trap 3). ⭐ The identifier is still SELECTED and
+        // RETURNED below — RETAINED and RENDERED (`-184` cl.2), just ⛔ not addressable.
+        // ⚠ A WRONG-OR-ABSENT TOKEN LANDS IN THE SAME `null` AS A NON-EXISTENT DRIVE, by
+        // construction rather than by a branch — see this function's doc-block. ⛔ Never split them.
+        eq(pools.publicToken, driveToken),
         // ⭐ The visible-drive predicate, declared on THIS surface — ⛔ never the index's constant.
         sql`${pools.currentState} IN (${sql.join(
           SAHYOG_VIVRAN_VISIBLE_POOL_STATES.map((s) => sql`${s}`),

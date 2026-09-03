@@ -255,5 +255,8 @@
   "missed_cycle.cycle_label": "Cycle {cycle}",
   "missed_cycle.pool_label": "Pool {pool}",
   "missed_cycle.reference_label": "Reference {reference}",
-  "missed_cycle.entry_a11y": "Cycle {cycle}, Pool {pool}, Reference {reference}."
+  "missed_cycle.entry_a11y": "Cycle {cycle}, Pool {pool}, Reference {reference}.",
+  "sahyog_vivran.entry_cta": "View this drive on the public record \u2192",
+  "sahyog_vivran.entry_a11y": "View this drive's public Sahyog Vivran record",
+  "sahyog_vivran.entry_hint": "Opens the public trust website in your browser"
 }

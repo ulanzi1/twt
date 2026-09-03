@@ -175,7 +175,8 @@ const PUBLIC_ALLOWLIST = new Set<string>([
   // cl.10) and the handler DECRYPTS them ⇒ **THIS ROUTE IS PII-BEARING**. ⛔ Amended, ⛔ not
   // deleted — the previous claim is named so nobody restores it.
   // ⇒ **D11(a)** (`2026-09-02-176`) ruled it states its APPLICABLE set; 11b.3a changed WHICH
-  // controls apply, ⛔ not the rule — ⭐ **FOUR**, matching `routes.ts` exactly:
+  // controls apply, ⛔ not the rule — and ⭐ **STORY 11b.10 ADDED THE FIFTH** (the unguessable
+  // address). ⭐ **FIVE**, matching `routes.ts` exactly:
   //   · the named SEARCH rate limit, UNMODIFIED — ⛔ NOT `limits.read`, the looser tier, which is
   //     backwards for an enumeration surface. Keyed on the FORWARDED VISITOR ADDRESS via the same
   //     `perSessionKey` → `request.ip` → `trustProxy` chain.
@@ -192,6 +193,19 @@ const PUBLIC_ALLOWLIST = new Set<string>([
   //     two EQUAL accounts) — and only TWO per account once the Pariwar's masking window has
   //     elapsed, because cl.10(e)'s retention list excludes the holder name and the VPA. The masked
   //     projection is applied HERE: the wire's masked arm carries ⛔ no `accountNumber` key at all.
+  //   · ⭐⭐ NEW AT 11b.10 — THE UNGUESSABLE PUBLIC ADDRESS. The path parameter is `:driveToken`, a
+  //     128-bit CSPRNG token on the pool row under a GLOBAL unique index — ⛔ no longer the
+  //     sequential `P-YYYY-MM-###` (`2026-09-03-184` **(B)**, Trustee-ratified). There is EXACTLY
+  //     ONE address form: the bare identifier is ⛔ not independently addressable, though it is
+  //     RETAINED (`-184` cl.2) and still RENDERED. A wrong or absent token answers a
+  //     **BYTE-IDENTICAL 404** — the fourth collapsed case — because a distinguishable *"real
+  //     drive, wrong token"* would itself be the enumeration oracle.
+  //     ⛔ IT BOUNDS **DISCOVERY**, ⛔ NOT **AUTHORISATION** (D1, 2026-09-04): the page answers 200
+  //     to ANYONE presenting a valid address — ⛔ no session, ⛔ no new auth surface, and ⛔ never a
+  //     branch on the reader's membership standing (⛔ no `members.state`, ⛔ no `is_valid`, ⛔ no
+  //     moderation overlay). ⚠ ITS PRICE, carried and ⛔ not hidden: a forwarded link is permanent
+  //     public access to that drive UNTIL ITS TOKEN IS ROTATED — which is why the token is
+  //     ROTATABLE per drive (D2), and ⛔ why the two must not be separated.
   //
   // ⛔ CONTROLS 2 (`PUBLIC_SURFACE_PAGE_SIZE_CAP`) AND 3 (`PUBLIC_DIRECTORY_PAGE_HORIZON`):
   // ⛔ STILL NOT APPLICABLE — NO COLLECTION, NO `limit`, NO `page` to bind them to.
@@ -215,18 +229,24 @@ const PUBLIC_ALLOWLIST = new Set<string>([
   //
   // ⚠ ITS HONEST LIMITS, recorded rather than glossed: `trustProxy: true` makes the forwarded
   // address CALLER-SUPPLIED (`2026-08-20-143` cl.9); a cached hit never reaches the origin, so
-  // origin-side signals see only cache MISSES; and with controls 2/3 structurally absent,
-  // `limits.search` is the ONLY bound on walking the sequential identifier — ⭐ which after 11b.3a
-  // fronts FOUR DECRYPTED Tier-1 fields, rendered in FULL for every Pariwar until the Trust sets a
-  // masking window (`D8-default` FAIL-OPEN, `2026-09-02-179` cl.1). ⚠⛔ Judging `limits.search`
-  // insufficient for that is **A DECISION** (`2026-09-02-183` cl.5), ⛔ not a tuning knob.
+  // origin-side signals see only cache MISSES.
+  // ⚠⭐ AND THE THIRD LIMIT IS **AMENDED BY 11b.10, ⛔ NOT DELETED**: it read *"with controls 2/3
+  // structurally absent, `limits.search` is the ONLY bound on walking the sequential identifier —
+  // which after 11b.3a fronts FOUR DECRYPTED Tier-1 fields, rendered in FULL for every Pariwar
+  // until the Trust sets a masking window (`D8-default` FAIL-OPEN, `2026-09-02-179` cl.1)"*.
+  // ⭐ THAT WAS TRUE AND IS THE REASON 11b.10 EXISTS. ⇒ there is now ⛔ NO SEQUENCE TO WALK: the
+  // address is opaque (control 5 above). ⚠ `D8-default` FAIL-OPEN is UNCHANGED — 11b.10 changed
+  // WHO CAN FIND the page, ⛔ not WHAT IS SHOWN (`-184` cl.5: option (d) was disclosure only and the
+  // Panel did ⛔ not direct it). ⚠⛔ AND `limits.search` IS STILL ⛔ NOT A TUNING KNOB in EITHER
+  // direction: the Panel directed option **(c)**, ⛔ not option (b), so the tier is unchanged, and
+  // judging it insufficient is **A DECISION** (`2026-09-02-183` cl.5; 11b.3a AC2).
   // ⚠⛔ AND A MASKING FLIP IS ⛔ NOT IMMEDIATE: `s-maxage=300` means the previous projection — which
   // may be a FULL ACCOUNT NUMBER — keeps being served from every warm PoP for up to five minutes.
   // ⛔ Direct SQL is NOT the operational fallback.
   // ⛔⛔ AND BUILT IS ⛔ NOT PUBLISHED. What keeps this surface dark is DEPLOYMENT plus the
   // counsel/Panel process — ⛔ not a code mechanism, and ⛔ never the publication kill switch (an
   // emergency control that defaults to ENABLED). ⛔ Allowlisting the route closes nothing.
-  'GET /api/v1/p/:pariwarId/public-pages/sahyog-vivran/:poolCanonicalIdentifier',
+  'GET /api/v1/p/:pariwarId/public-pages/sahyog-vivran/:driveToken',
   // Developer-convenience OpenAPI doc (read-only, no data).
   'GET /docs/json',
   // Story 5.4 — the WhatsApp inbound-webhook ingress (§3.11) is PUBLIC by design: Meta is unauthenticated,

@@ -26,6 +26,8 @@ const getClaimCase = vi.fn();
 const getMemberKycProfile = vi.fn();
 const hasAttestedContribution = vi.fn();
 const listConfirmedContributorsForPool = vi.fn();
+// Story 11b.10 — the drive's PUBLIC ADDRESS, read server-side (AC4). ⛔ Never client-derived.
+const readPoolPublicToken = vi.fn();
 
 vi.mock('@twt/domain', async (importActual) => {
   const actual = await importActual<typeof import('@twt/domain')>();
@@ -41,6 +43,7 @@ vi.mock('@twt/domain', async (importActual) => {
       resolveUpcomingFixedAmountChange,
       deriveContributionReference,
       poolLetterCode,
+      readPoolPublicToken,
     },
     claim: { ...actual.claim, getClaimCase },
     kyc: { ...actual.kyc, getMemberKycProfile },
@@ -119,6 +122,8 @@ function wireAssignedLivePoolWithName(): void {
   // Default: no confirmed contributions yet (the pre-9.4 baseline). Individual tests override to prove
   // the meter now REFLECTS the live confirmed count rather than a hardcoded zero (Story 9.5 Task 1a).
   listConfirmedContributorsForPool.mockResolvedValue([]);
+  // Story 11b.10 — a live pool ALWAYS has a public address (`NOT NULL`, backfilled by 0114).
+  readPoolPublicToken.mockResolvedValue('OPAQUE-DRIVE-TOKEN-1');
 }
 
 function wireScopeTx(): void {
@@ -187,5 +192,41 @@ describe('activeContribution card — myContribution wiring from hasAttestedCont
     const h = createMemberPoolHandlers(deps());
     const res = await h.activeContribution(fakeRequest());
     expect(res).toMatchObject({ progress: { confirmedCount: 0, rosterSize: 48 } });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// ⭐⭐ STORY 11b.10 (AC4, D4) — THE DRIVE'S PUBLIC ADDRESS ON THE CARD'S RESPONSE
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+describe('activeContribution card — the Sahyog Vivran address (Story 11b.10, AC4)', () => {
+  it('⭐ the SERVER-RETURNED token rides the response — ⛔ the client derives nothing', async () => {
+    // ⭐ ONE new field on a query that already runs — that is the whole API change D4 costs. The
+    // member app builds `/sahyog-vivran/[driveToken]` from THIS value and from ⛔ nothing else;
+    // deriving an address from `poolId` or `poolCanonicalIdentifier` in the client would re-create
+    // D2's guessability where nothing server-side could bound it.
+    hasAttestedContribution.mockResolvedValue(false);
+    const handlers = createMemberPoolHandlers(deps());
+    const card = await handlers.activeContribution(fakeRequest());
+    if (!card.assigned) throw new Error('expected an assigned card');
+    expect(card.sahyogVivranToken).toBe('OPAQUE-DRIVE-TOKEN-1');
+    // ⛔ AND IT IS NOT THE IDENTIFIER. A regression that shipped the canonical identifier under
+    // this field name would still produce a "working" URL shape and would re-open the walk.
+    expect(card.sahyogVivranToken).not.toBe(card.poolCanonicalIdentifier);
+    expect(card.sahyogVivranToken).not.toBe(card.poolId);
+  });
+
+  it('⛔⛔ NO ADDRESS ⇒ the WHOLE card fail-softs to `{ assigned: false }` — LOCK-STEP (D4)', async () => {
+    // ⭐⭐ THIS IS THE LOCK-STEP PROPERTY, ASSERTED RATHER THAN DOCUMENTED. The My Pool entry
+    // self-suppresses on `!data.assigned`, so the ONLY way an entry can outlive its card — a DEAD
+    // LINK on the member's home screen — is if the handler returned an assigned card without an
+    // address. ⛔ It must not: `pools.public_token` is NOT NULL with every row backfilled (0114), so
+    // a null here means the pool row is gone, which is the same class of unresolvable state the
+    // `identity === null` arm already answers this way.
+    readPoolPublicToken.mockResolvedValue(null);
+    const handlers = createMemberPoolHandlers(deps());
+    const card = await handlers.activeContribution(fakeRequest());
+    expect(card.assigned).toBe(false);
+    // ⛔ And it is a fail-soft, ⛔ never a 500: a transient read must not break the home screen.
+    expect(Object.keys(card)).toEqual(['assigned']);
   });
 });

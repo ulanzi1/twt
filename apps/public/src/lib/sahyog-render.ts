@@ -46,6 +46,44 @@ import type { SahyogDriveRenderModel, SahyogDriveRow } from './surface-fields.js
 
 export const SAHYOG_ROUTE = '/sahyog';
 
+/**
+ * ⭐⭐ THE DRIVE PAGE'S ROUTE — Story 11b.10 (AC3). The segment after it is the drive's OPAQUE
+ * PUBLIC ADDRESS TOKEN, ⛔ never its `P-YYYY-MM-###` (which is no longer addressable at all).
+ */
+export const SAHYOG_VIVRAN_ROUTE = '/sahyog-vivran';
+
+/**
+ * Build ONE drive row's href.
+ *
+ * ⭐⭐ THIS IS THE INBOUND PATH THE WHOLE STORY EXISTS TO CREATE, AND ⭐ SAYING WHAT IT DOES IS PART
+ * OF SHIPPING IT (D3, Trap 2): **every listed drive becomes ONE CLICK from four Tier-1 fields under
+ * `D8-default` FAIL-OPEN.** ⚠ Until now the index LISTED drives and ⛔ never LINKED to them — this
+ * module produced exactly TWO hrefs, both pagination — so those pages were technically reachable but
+ * practically un-navigated. ⇒ this story simultaneously makes the surface HARDER TO ENUMERATE and
+ * MATERIALLY EASIER TO REACH, and the second half is a real change in exposure. ⭐ It is the
+ * NECESSARY CONSEQUENCE of `2026-09-03-184` **(A)** + **(B)** — (A) says drives should be reachable
+ * and (B) removed the only path there was — ⛔ not a fresh exposure decision smuggled alongside them.
+ *
+ * ⛔ THE TOKEN IS SERVER-RETURNED. It arrives on the wire row (`publicToken`); ⛔ nothing here
+ * derives an address from `poolCanonicalIdentifier`, which would re-create the guessability D2
+ * removed.
+ *
+ * ⚠ ONLY `lang` IS CARRIED FORWARD, ⛔ never the whole query string (unlike {@link pageHref}, which
+ * must preserve the filters that define the page it links to). The drive page's API query schema is
+ * EMPTY and `.strict()`, and dragging `district` / `from` / `to` / `poolCode` onto a single-drive URL
+ * would put a FILTER SHAPE on a route that has nothing to filter — which reads as an onward
+ * collection affordance on the one surface that must not appear to have one.
+ *
+ * ⚠ PATH-ENCODED: the token is base64url (⛔ no `+`, `/` or `=`), so this is belt-and-braces rather
+ * than load-bearing — ⛔ but it stays, because the value's ALPHABET is a property of the mint and
+ * this function must not silently depend on it.
+ */
+export function driveHref(publicToken: string, search: URLSearchParams): string {
+  const lang = search.get('lang');
+  const base = `${SAHYOG_VIVRAN_ROUTE}/${encodeURIComponent(publicToken)}`;
+  return lang === null || lang === '' ? base : `${base}?lang=${encodeURIComponent(lang)}`;
+}
+
 /** Copy the page passes in, already resolved through `t()` with an EXPLICIT namespace. */
 export interface SahyogLabels {
   readonly pageTitle: string;
@@ -62,6 +100,8 @@ export interface SahyogLabels {
   /** Header for the letter-code column. ⚠ DISTINCT from `columnPool` — two columns sharing one
    *  accessible name is announced identically by a screen reader (AC10). */
   readonly columnLetter: string;
+  /** Header for the drive-link column (Story 11b.10). ⚠ DISTINCT from every other header above. */
+  readonly columnOpen: string;
   readonly columnDistrict: string;
   readonly columnDate: string;
   readonly columnContributions: string;
@@ -96,6 +136,17 @@ export interface SahyogLabels {
   readonly outcomePartial: string;
   /** `{{count}} confirmed` — the count already interpolated by `t()`. */
   readonly contributionsCount: (count: number) => string;
+  /**
+   * ⭐ Story 11b.10 (AC3) — the drive link's VISIBLE text. Short, because it sits in a table cell;
+   * the row's accessible name below is what carries which drive it opens.
+   */
+  readonly viewDrive: string;
+  /**
+   * ⭐ The drive link's ACCESSIBLE NAME, per drive — ⛔ never a bare "click here" (family 13).
+   * `t()` interpolates the drive code, so a screen reader announces N DISTINCT destinations rather
+   * than N identical ones. ⛔ Do not pass a person's name into it.
+   */
+  readonly driveLinkA11y: (poolCanonicalIdentifier: string) => string;
 }
 
 /** One pagination control — always a REAL link, ⛔ never a JS-dependent button. */
@@ -218,11 +269,21 @@ function formatClosedAt(iso: string | null): string | null {
 function toDisplayRow(
   row: PublicSahyogDriveResponse['items'][number],
   labels: SahyogLabels,
+  search: URLSearchParams,
 ): SahyogDriveRow {
   return {
     deceasedMemberName: row.deceasedMemberName,
     poolLetterCode: row.poolLetterCode,
     poolCanonicalIdentifier: row.poolCanonicalIdentifier,
+    // ⭐ Story 11b.10 (AC3) — the drive link. See {@link driveHref} for what shipping it does.
+    driveHref: driveHref(row.publicToken, search),
+    // ⭐⛔ THE ACCESSIBLE NAME IDENTIFIES **WHICH DRIVE** IT OPENS — ⛔ never a bare "click here"
+    // (family 13). ⚠ A table of N rows whose links all announce the same string is a screen-reader
+    // list of N identical destinations; the drive code is what disambiguates them, and it is the
+    // one label on this row that is stable, operational and non-PII. ⛔ Do ⛔ NOT build it from
+    // `deceasedMemberName`: that is Tier-1, consent-gated and `null` for any unconsented family —
+    // it would make the accessible name VANISH on exactly the rows that still need one.
+    driveLinkA11yLabel: labels.driveLinkA11y(row.poolCanonicalIdentifier),
     driveStatus: row.status === 'archive' ? labels.statusArchive : labels.statusActive,
     driveClosedAt: formatClosedAt(row.closedAt),
     district: row.district,
@@ -250,7 +311,7 @@ export function buildSahyogView(
   opts: { readonly filtered: boolean } = { filtered: false },
 ): SahyogView {
   const apiUnavailable = drive === null;
-  const rows = drive === null ? [] : drive.items.map((r) => toDisplayRow(r, labels));
+  const rows = drive === null ? [] : drive.items.map((r) => toDisplayRow(r, labels, search));
   const total = drive?.total ?? 0;
 
   // ⭐ THE PARTITION IS TAKEN FROM THE WIRE ENUM, HERE, WHILE IT STILL EXISTS — see
@@ -355,6 +416,22 @@ export interface SahyogColumn {
    * The template must emit an EMPTY cell for a null, with ⛔ no placeholder text of any kind.
    */
   readonly valueOf: (row: SahyogDriveRow) => string | null;
+  /**
+   * ⭐ Story 11b.10 (AC3) — present ONLY on the drive-link column. When set, the template wraps the
+   * cell's value in an `<a href>` and gives it `aria-label={a11yOf(row)}`.
+   *
+   * ⚠⛔ IT RIDES THE COLUMN LIST DELIBERATELY, ⛔ not a bespoke branch in the template. The whole
+   * point of `visibleSahyogColumns` is that the `<th>`/`<td>` pair is suppressed TOGETHER — a link
+   * column added outside it would emit a labelled header over empty cells if the matrix ever
+   * suppressed `drive_href`, which is the announced-omission defect this function exists to prevent.
+   *
+   * ⛔ It is ⛔ NOT a general "make any column a link" seam. Exactly one column sets it; a second
+   * link on this row would be a second onward affordance on a surface whose control 5 is *"the
+   * absence of any detail or export affordance"* beyond this one.
+   */
+  readonly hrefOf?: (row: SahyogDriveRow) => string;
+  /** The link's accessible name — ⛔ never a bare "click here" (family 13). Set iff `hrefOf` is. */
+  readonly a11yOf?: (row: SahyogDriveRow) => string;
 }
 
 /**
@@ -420,6 +497,19 @@ export function visibleSahyogColumns(
       fieldId: 'close_of_cycle_framing',
       headerLabel: labels.columnOutcome,
       valueOf: (row) => row.closeOfCycleFraming,
+    },
+    {
+      // ⭐⭐ STORY 11b.10 (AC3) — THE INBOUND PATH. ⚠ LAST in render order deliberately: it is an
+      // ACTION, and a table that opens with one reads as a call to act rather than a public record
+      // to read. ⛔ "Remembrance, not analytics" governs the ordering of this table too.
+      // ⚠⛔ AND SAY WHAT IT DOES: every listed drive is now ONE CLICK from four Tier-1 fields under
+      // `D8-default` FAIL-OPEN — the NECESSARY CONSEQUENCE of `2026-09-03-184` (A)+(B) (D3), ⛔ not
+      // a fresh exposure decision, and ⛔ not something a reviewer should first meet in a diff.
+      fieldId: 'drive_href',
+      headerLabel: labels.columnOpen,
+      valueOf: () => labels.viewDrive,
+      hrefOf: (row) => row.driveHref,
+      a11yOf: (row) => row.driveLinkA11yLabel,
     },
   ];
   return all.filter((c) => isVisible(c.fieldId));

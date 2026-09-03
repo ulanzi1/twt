@@ -29,6 +29,7 @@ import {
   postingId as toPostingId,
   userId as toUserId,
 } from '../../src/ids/index.js';
+import { mintPoolPublicToken } from '../../src/pool/public-token.js';
 import type { ScopeDimension } from '../../src/rbac/scope.js';
 import * as schema from '../../src/schema/index.js';
 import type { BrandingBundle } from '../../src/schema/pariwar_passport.js';
@@ -426,6 +427,8 @@ export interface SeedPoolOptions {
   fixedAmount?: number;
   currentState?: schema.PoolLifecycleState;
   stateEventVersion?: number;
+  /** Story 11b.10 — pin the public address token (default: a freshly minted one). */
+  publicToken?: string;
 }
 
 /**
@@ -460,6 +463,10 @@ export async function seedPool(
       fixedAmount: opts.fixedAmount ?? 500,
       currentState: opts.currentState ?? 'spawned',
       stateEventVersion: opts.stateEventVersion ?? 1,
+      // Story 11b.10 — the public address. Minted per seeded pool, never a constant: the column
+      // carries a GLOBAL unique index, so a shared literal would make the SECOND seeded pool in any
+      // suite fail with 23505 for a reason that has nothing to do with the test.
+      publicToken: opts.publicToken ?? mintPoolPublicToken(),
     });
   } finally {
     try {

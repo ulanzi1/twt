@@ -1,4 +1,58 @@
-# last_updated: 2026-09-04e (⭐⭐ **STORY 11b.10 STARTS — Task 0's SPRINT-STATUS FLIP, the last governance
+# last_updated: 2026-09-04f (⭐⭐ **STORY 11b.10 IMPLEMENTED — `in-progress` -> `review`. ONE ROW
+#   MOVES.** ⛔ epic-11b stays `in-progress`; ⛔ 11b-3a `done`; ⛔ 11b-3b `ready-for-dev`.
+#   ⭐⭐ **BOTH HALVES LANDED TOGETHER — the story's own hardest requirement, ⛔ not a bonus.** Trap 1
+#   forbids shipping the token without a path: it would make the ENTIRE Sahyog Vivran surface
+#   reachable by NOBODY and silently invert the Panel's ratified **(A)**, ⚠ *while passing every gate
+#   and looking like a security improvement*. This branch carries AC1-AC4 as ONE change set.
+#   ⭐ **AC1/AC2 — THE ADDRESS.** `pools.public_token`: 128 bits of CSPRNG entropy, base64url (22
+#   chars), GLOBAL unique index, minted at the spawn INSERT, **BACKFILLED for every pre-existing row**
+#   by migration `0114` which then `SET NOT NULL` (⭐ verified LIVE: 1132 rows / 1132 filled / 1132
+#   distinct / len 22-22). Route param `:driveToken`; astro file `[driveToken].astro`. ⛔ EXACTLY ONE
+#   address form — the bare `P-YYYY-MM-###` is a **400 as a param key** (`.strict()`), asserted in
+#   both directions; and "real drive, WRONG token" answers a **BYTE-IDENTICAL 404** (the 4th collapsed
+#   case), asserted as an EQUALITY between two live responses, ⛔ not two "is it 404?" checks.
+#   ⭐ **ROTATION EXISTS AND IS EXERCISED** — rotating one drive leaves every other address
+#   byte-identical; that is the ONLY remedy D1's open-link ruling has.
+#   ⭐ **AC3/AC4 — THE PATH, all three states.** `closed`/`settled`: a per-row `drive_href` on
+#   `/sahyog` (`tier: public`, `pii_tier: 3` ⇒ ⛔ NO `tier1_public_exception`, ⛔ NO allowlist entry,
+#   `matrix.ts` UNTOUCHED). `live`: a **member-app entry on Tab 1 "My Pool"**, ⛔ NOT Shradhanjali —
+#   sibling of `<ActiveContributionCard />` (8.3 D8), self-suppressing in **LOCK-STEP**, token
+#   SERVER-RETURNED on a query that already runs (ONE new field = the whole API change).
+#   ⭐ The D3 exposure sentence — *"every listed drive becomes ONE CLICK from four Tier-1 fields under
+#   `D8-default` FAIL-OPEN"* — is written VERBATIM in FIVE code locations so a reviewer meets it in
+#   PROSE, ⛔ never discovers it in a diff.
+#   ⭐ **AC6 — `deferred-work.md` recorded "Closed by [edit]"** ([[feedback_closure_language_precision]]
+#   — ⛔ never "resolved via deferral", and ⛔ not "closed by ruling": a ruling closed the QUESTION at
+#   `-184`; what was outstanding was an IMPLEMENTATION). The predecessor note is AMENDED, ⛔ not
+#   rewritten. ⚠ The entry states in the same breath what it does ⛔ NOT close.
+#   ⛔ **AC5 — NOTHING ELSE MOVED, and it is now MECHANIZED:** `D8-default` FAIL-OPEN unchanged ·
+#   `limits.search` unchanged on all three routes (⭐ a NEW Trap-5 fence counts the registrations and
+#   forbids `limits.read` / an inline ceiling / a `keyGenerator` — the pull is real in BOTH directions
+#   once the address is opaque) · masking schedule/knob/predicate untouched · Tier-1-at-`public`
+#   asserted BY IDENTITY on BOTH surfaces (vivran: the four ruled bank fields; drive: just
+#   `deceased_member_name`).
+#   ⭐ **`D4-linkage` IS CLOSED** in the matrix rider — AMENDED, ⛔ not deleted. ⛔ `live` drives are
+#   STILL NOT LISTED on `/sahyog`: (A) says REACHABLE, ⛔ never LISTED.
+#   ⚠⛔ **ONE PRE-EXISTING `ci:local` FAILURE, RECORDED UN-ATTESTED AND ⛔ NOT WORKED AROUND**
+#   ([[feedback_record_unattested_no_backfill]]): `integration-tests` fails on 3 assertions in
+#   `vyawastha-shulk.spec.ts`. ⭐ INNOCENCE PROVEN THREE WAYS — it **reproduces with this story's
+#   entire tree STASHED** (the decisive one), the spec has ZERO `pools`/`pool_id` references, and it
+#   passes IN ISOLATION, as does the exact `integration-tests` command standalone (domain 3194 · api
+#   1176 · jobs 346 · validity 284 · channels 204 · niyamavali 144 · events 33 · queue 3, all green).
+#   ⇒ the documented shared-DB ACCUMULATION residual ([[project_ci_local_double_run_pollution]]).
+#   ⛔ NOT fixed here — out of scope, not caused here, and "make it pass" would be the scope creep the
+#   story's own traps forbid. ⭐ **33 of 34 ci:local jobs GREEN.**
+#   ⚠ TWO GATES BIT AND BOTH CAUGHT REAL DEFECTS: `microcopy` rejected *"outside the app"* in the
+#   entry's a11y hint (out-of-band-blame arm 3) — ⭐ fixed by changing the COPY, ⛔ NOT by an `allow`
+#   entry over a live member surface; and `deriveFieldIds` threw on the undeclared render-model keys,
+#   exactly the failure mode the story's Dev Notes predicted as #1.
+#   ⛔ **ROTATION SHIPPED WITH NO ROUTE AND NO PERMISSION KEY — DECIDED AND STATED**, so
+#   `PERMISSION_CATALOG_VERSION` stays **39**: a key would be a governance act arriving as a side
+#   effect of a security fix. ⇒ an operator rotation control is a **NEW ROUTING NOTE**, ⛔ not an edit.
+#   ⛔ **AND BUILT IS STILL ⛔ NOT PUBLISHED** — what keeps this surface dark is DEPLOYMENT plus the
+#   counsel/Panel process, ⛔ never a code mechanism and ⛔ never the kill switch.
+#
+# last_updated_prior: 2026-09-04e (⭐⭐ **STORY 11b.10 STARTS — Task 0's SPRINT-STATUS FLIP, the last governance
 #   subtask before the first line of code. ⭐ ONE ROW MOVES:**
 #   `11b-10-sahyog-vivran-unguessable-address-and-inbound-path`: `ready-for-dev` -> `in-progress`.
 #   ⛔ epic-11b stays `in-progress`; ⛔ 11b-3a stays `done`; ⛔ 11b-3b stays `ready-for-dev`.
@@ -14723,7 +14777,7 @@ development_status:
   # open link, so D1 is what decides D2; the migration MUST backfill or the archive 404s.
   # D3 the /sahyog per-row link is the necessary consequence of (A)+(B), ⛔ not a new decision — but the
   # exposure sentence is STATED in the story record, ⛔ never discovered in a diff.
-  11b-10-sahyog-vivran-unguessable-address-and-inbound-path: in-progress
+  11b-10-sahyog-vivran-unguessable-address-and-inbound-path: review
   epic-11b-retrospective: optional
 
   # ==========================================================================

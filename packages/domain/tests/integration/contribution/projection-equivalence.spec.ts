@@ -57,6 +57,7 @@ import { eventsLog } from '../../../src/schema/events_log.js';
 import { memberContributionLedger } from '../../../src/schema/member_contribution_ledger.js';
 import { memberPoolAssignments } from '../../../src/schema/member_pool_assignments.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
+import { mintPoolPublicToken } from '../../../src/pool/public-token.js';
 import { PARIWAR_A, enterAppScope } from '../_helpers.js';
 
 const AT = new Date('2026-07-20T00:00:00Z');
@@ -111,6 +112,9 @@ async function seedAssignmentSource(
         fixedAmount: 500,
         currentState: 'spawned',
         stateEventVersion: 1,
+        // Story 11b.10 — the public address. Minted, never a literal: the column's unique index is
+        // GLOBAL, so a shared constant would 23505 on the second seeded pool.
+        publicToken: mintPoolPublicToken(),
       })
       .onConflictDoNothing();
   } finally {

@@ -36,6 +36,7 @@ const labels: SahyogLabels = {
   columnName: 'In memory of',
   columnPool: 'Drive code',
   columnLetter: 'Pool',
+  columnOpen: 'Details',
   columnDistrict: 'District',
   columnDate: 'Closed on',
   columnContributions: 'Contributions confirmed',
@@ -61,6 +62,8 @@ const labels: SahyogLabels = {
   outcomeUnderFunded: 'The cycle closed. The trust met its commitment.',
   outcomePartial: 'The cycle closed. Reconciliation continues.',
   contributionsCount: (n) => `${String(n)} confirmed`,
+  viewDrive: 'View drive',
+  driveLinkA11y: (code) => `View the full details of drive ${code}`,
 };
 
 type WireRow = PublicSahyogDriveResponse['items'][number];
@@ -69,6 +72,7 @@ const row = (over: Partial<WireRow> = {}): WireRow => ({
   deceasedMemberName: 'Rajesh Kumar Sharma',
   poolLetterCode: 'A',
   poolCanonicalIdentifier: 'P-2026-08-001',
+  publicToken: 'tok-P-2026-08-001',
   status: 'active',
   closedAt: '2026-08-01T00:00:00.000Z',
   district: 'Lucknow',
@@ -156,6 +160,8 @@ describe('⭐ consent decides whether a row is NAMED, ⛔ never whether it EXIST
       deceasedMemberName: null,
       poolLetterCode: 'A',
       poolCanonicalIdentifier: 'P-1',
+      driveHref: '/sahyog-vivran/tok-P-1',
+      driveLinkA11yLabel: 'View the full details of drive P-1',
       driveStatus: 'Active',
       driveClosedAt: '01-08-2026',
       district: 'Kanpur',
@@ -177,6 +183,8 @@ describe('⭐ consent decides whether a row is NAMED, ⛔ never whether it EXIST
         deceasedMemberName: 'X',
         poolLetterCode: 'A',
         poolCanonicalIdentifier: 'P-1',
+        driveHref: '/sahyog-vivran/tok-P-1',
+        driveLinkA11yLabel: 'View the full details of drive P-1',
         driveStatus: 'Active',
         driveClosedAt: null,
         district: null,
@@ -238,14 +246,73 @@ describe('⛔ the target is quarantined — no comparison figure reaches the cop
 });
 
 describe('⛔ the sort order is NOT a ranking, and there is no sort affordance (AC5)', () => {
-  it('⛔ NO column exposes a sort handle, link or comparator', () => {
+  it('⛔ NO column exposes a sort handle or comparator', () => {
+    // ⚠⭐ AMENDED AT STORY 11b.10, ⛔ NOT WEAKENED. This used to assert an EXACT key set of
+    // `['fieldId','headerLabel','valueOf']`, which read as "no sort affordance" but actually said
+    // "no NEW key of any kind" — and 11b.10 legitimately adds `hrefOf`/`a11yOf` (the ruled inbound
+    // path, `2026-09-03-184` (A)). ⇒ the assertion is split into the two claims it was conflating,
+    // so BOTH stay sharp instead of one being relaxed to let the other through.
     const cols = visibleSahyogColumns(labels, allVisible);
+    const ALLOWED = ['a11yOf', 'fieldId', 'headerLabel', 'hrefOf', 'valueOf'];
+    // ⭐ THE PROHIBITION MOST LIKELY TO BE BREACHED BY ACCIDENT: "sort by contributions" reads like
+    // a harmless table affordance rather than the leaderboard it builds.
+    const SORTISH = /sort|order|rank|comparator|compare|direction|asc|desc/i;
     for (const col of cols) {
-      // ⭐ THE PROHIBITION MOST LIKELY TO BE BREACHED BY ACCIDENT: "sort by contributions" reads
-      // like a harmless table affordance rather than the leaderboard it builds. A column gaining a
-      // `sortHref` / `sortKey` / `comparator` key fails here.
-      expect(Object.keys(col).sort()).toEqual(['fieldId', 'headerLabel', 'valueOf']);
+      const keys = Object.keys(col);
+      expect(keys.filter((k) => SORTISH.test(k))).toEqual([]);
+      // ⛔ And nothing UNKNOWN either: a key nobody listed is a key nobody reasoned about.
+      expect(keys.filter((k) => !ALLOWED.includes(k))).toEqual([]);
     }
+  });
+
+  it('⭐ EXACTLY ONE column is a link — ⛔ no second onward affordance (11b.10, control 5)', () => {
+    // ⛔ This route's control 5 is *"the absence of any DETAIL or EXPORT affordance"* beyond the one
+    // ruled inbound path. A second `hrefOf` would be a second onward affordance arriving quietly.
+    const cols = visibleSahyogColumns(labels, allVisible);
+    const linked = cols.filter((c) => c.hrefOf !== undefined);
+    expect(linked.map((c) => c.fieldId)).toEqual(['drive_href']);
+    // ⛔ A link with no accessible name is a bare "click here" (family 13).
+    expect(linked[0]?.a11yOf).toBeTypeOf('function');
+  });
+
+  it('⭐ the drive link is built from the TOKEN — ⛔ never from `P-YYYY-MM-###` (11b.10 AC1/D2)', () => {
+    // ⛔⛔ THE DEFECT THIS CATCHES: reconstructing an address from the canonical identifier would
+    // re-create exactly the guessability the token was minted to remove — and it would still LOOK
+    // like a working link, so nothing else would fail.
+    const view = buildSahyogView(
+      { page: 1, limit: 25 },
+      search(),
+      labels,
+      wire([row({ poolCanonicalIdentifier: 'P-2026-08-777', publicToken: 'OPAQUE-TOKEN-XYZ' })]),
+    );
+    const first = view.model.rows[0];
+    expect(first?.driveHref).toBe('/sahyog-vivran/OPAQUE-TOKEN-XYZ');
+    expect(first?.driveHref).not.toContain('P-2026-08-777');
+  });
+
+  it('⭐ the link carries ONLY `lang` forward — ⛔ never the index filters', () => {
+    // ⛔ Dragging `district`/`from`/`to`/`poolCode` onto a single-drive URL would put a FILTER SHAPE
+    // on a route whose API query schema is EMPTY and `.strict()` — an onward collection affordance
+    // on the one surface that must not appear to have one.
+    const withFilters = new URLSearchParams('lang=hi&district=Lucknow&page=3&poolCode=P-1');
+    const view = buildSahyogView({ page: 1, limit: 25 }, withFilters, labels, wire([row()]));
+    expect(view.model.rows[0]?.driveHref).toBe('/sahyog-vivran/tok-P-2026-08-001?lang=hi');
+  });
+
+  it('⭐ the link’s accessible name identifies WHICH drive — ⛔ never a bare "click here"', () => {
+    // ⛔ And it is built from the DRIVE CODE, ⛔ never the deceased member's name: that name is
+    // Tier-1, consent-gated and `null` for any unconsented family — the accessible name would then
+    // VANISH on exactly the rows that still need one.
+    const view = buildSahyogView(
+      { page: 1, limit: 25 },
+      search(),
+      labels,
+      wire([row({ deceasedMemberName: null, poolCanonicalIdentifier: 'P-2026-08-042' })]),
+    );
+    const label = view.model.rows[0]?.driveLinkA11yLabel ?? '';
+    expect(label).toContain('P-2026-08-042');
+    expect(label).not.toMatch(/click here/i);
+    expect(label.length).toBeGreaterThan(0);
   });
 
   it('⛔ the render module does NOT reorder rows — the wire order is preserved verbatim', () => {
@@ -346,6 +413,9 @@ describe('⭐ the tier-leak field-id derivation is OPERATIVE, and drifts fail in
       'deceased_member_name',
       'district',
       'drive_closed_at',
+      // ⭐ Story 11b.10 — the per-row inbound link. `pii_tier: 3` (an ADDRESS, ⛔ not a person), so
+      // it adds ⛔ no Tier-1 field and needs ⛔ no allowlist entry.
+      'drive_href',
       'drive_status',
       'pool_canonical_identifier',
       'pool_letter_code',

@@ -100,6 +100,25 @@ export const PublicSahyogDriveEntry = z
     poolLetterCode: z.string().min(1),
     /** `P-YYYY-MM-###`. Public, and what the pool-code filter matches EXACTLY. */
     poolCanonicalIdentifier: z.string().min(1),
+    /**
+     * ⭐⭐ THE DRIVE'S OPAQUE PUBLIC ADDRESS TOKEN — Story 11b.10 (AC3, D2/D3).
+     *
+     * ⭐ THIS IS WHAT MAKES THE INDEX'S PER-ROW LINK POSSIBLE, and it is the whole reason it is on
+     * the wire: `/sahyog-vivran/[driveToken]` is addressed by this value and by ⛔ nothing else, so
+     * a row that does not carry it cannot link to the drive it is describing. ⛔ The client
+     * ⛔ NEVER derives an address from `poolCanonicalIdentifier` — that identifier is no longer
+     * addressable, and reconstructing an address from it would re-create the guessability D2 removed.
+     *
+     * ⚠⛔ AND SAY WHAT SHIPPING IT DOES, ⛔ do not let a reviewer find it in a diff (D3, Trap 2):
+     * **every listed drive becomes ONE CLICK from four Tier-1 fields under `D8-default` FAIL-OPEN.**
+     * That is the NECESSARY CONSEQUENCE of `2026-09-03-184` **(A)** + **(B)** — (A) says drives
+     * should be reachable and (B) removed the only path there was — ⛔ not a fresh exposure decision.
+     *
+     * ⛔ It is `pii_tier: 3`: an ADDRESS, ⛔ not a person, ⛔ not derived from one, and ⛔ not a
+     * credential for the DATA behind it (D1 — the page answers 200 to anyone holding a valid one).
+     * ⇒ it needs ⛔ no `tier1_public_exception` and ⛔ no `RULED_TIER1_PUBLIC_EXCEPTIONS` entry.
+     */
+    publicToken: z.string().min(1),
     status: PublicSahyogDriveStatus,
     /**
      * The drive's close/settle instant, ISO 8601. `null` when the pool's stream carries no such

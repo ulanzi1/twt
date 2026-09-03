@@ -7928,6 +7928,11 @@ later story ([[feedback_closure_language_precision]], [[feedback_record_unattest
   *"resolved via deferral"*, and ⛔ not "carried". ⚠⛔ **BUT THE ITEM STAYS BLOCKING ON DEPLOYMENT**,
   because what was missing was a judgement and what is now missing is an IMPLEMENTATION. See the
   replacement obligation immediately below — ⛔ do not read this ✅ as clearing the deployment gate.
+  ✅⭐ **AND THAT REPLACEMENT OBLIGATION IS ITSELF NOW "Closed by [edit]" — 2026-09-04, Story 11b.10**
+  (the token AND the inbound path for all three states, landed together; see the item below for what
+  shipped and, ⭐ importantly, for the list of things this does ⛔ **not** close). ⛔ This note is
+  AMENDED, ⛔ not rewritten: the sentence above was true when written and the next reader will look
+  for it ([[feedback_supersede_never_reinterpret]]).
 
 - ⛔⛔ **BLOCKING ON DEPLOYMENT — the public-URL TOKEN and the `live`-drive INBOUND PATH, as ONE
   deliverable** (created by `2026-09-03-184` cl.4; ⛔ unscoped as of 2026-09-03).
@@ -7960,6 +7965,46 @@ later story ([[feedback_closure_language_precision]], [[feedback_record_unattest
   and the token's **shape and lifecycle** (random vs. derived, ever rotated, and what rotation does to
   links already shared).
   **Trigger:** ⛔ **before Epic 11b deploys.**
+
+  ✅⭐⭐ **CLOSED BY [EDIT] — 2026-09-04, Story 11b.10** ([[feedback_closure_language_precision]] —
+  ⛔ **not** *"resolved via explicit deferral"*, ⛔ not *"closed by ruling"*: a ruling closed the
+  QUESTION at `-184`, and what was outstanding here was an **IMPLEMENTATION**, which now exists).
+  ⭐⭐ **BOTH HALVES LANDED TOGETHER, IN ONE BRANCH, AND THAT IS THE ITEM'S OWN REQUIREMENT** — the
+  coupling above forbids landing the token and deferring the path:
+  - **THE ADDRESS (AC1/AC2).** `pools.public_token` — **128 bits** of CSPRNG entropy, base64url (22
+    chars), under a **GLOBAL unique index**; minted at spawn in `pool/project.ts`'s genesis INSERT and
+    **BACKFILLED for every pre-existing row** by migration `0114`, which then `SET NOT NULL`
+    (⭐ verified live: 1132 rows, 1132 distinct tokens, zero NULLs). The route parameter is
+    `:driveToken` on `apps/api` and the Astro file is `[driveToken].astro`. ⛔ **Exactly ONE address
+    form** — the bare `P-YYYY-MM-###` is ⛔ not independently addressable, and *"real drive, wrong
+    token"* answers a **BYTE-IDENTICAL 404** (the fourth collapsed case), asserted as an equality
+    between two live responses. ⭐ **ROTATION EXISTS** (`rotatePoolPublicToken`) with a test proving it
+    isolates to ONE drive — which is what makes **D1**'s open-link ruling survivable.
+  - **THE PATH, for ALL THREE STATES (AC3/AC4).** `closed`/`settled`: a **per-row link on `/sahyog`**
+    (`drive_href`, declared in the matrix at `tier: public`, `pii_tier: 3`, with the exposure sentence
+    written in prose in four places). `live`: a **member-app entry on Tab 1, "My Pool"**
+    (`SahyogVivranEntry`), beside `<ActiveContributionCard />` in `<ViewContributorsEntry />`'s ruled
+    shape and self-suppressing in **lock-step** with it — the card's own query carries the
+    server-returned token, and the handler fail-softs the WHOLE card when it cannot read one, so an
+    entry can ⛔ never outlive its card.
+  ⭐ **Both open questions this item raised were RULED rather than assumed** — **D1** (an OPEN LINK:
+  the token bounds DISCOVERY, ⛔ not AUTHORISATION; ⛔ no session, ⛔ no branch on the reader's
+  membership standing) and **D2** (RANDOM · STORED · ROTATABLE, ⛔ never derived from pool identity).
+  ⚠⛔ **AND WHAT IS ⛔ NOT CLOSED BY THIS**, stated so nobody reads the ✅ wider than it is:
+  `D8-default` **FAIL-OPEN** is UNCHANGED (11b.10 changed **who can find** the page, ⛔ not **what is
+  shown**; `-184` cl.5 — option (d) was disclosure only and the Panel did ⛔ not direct it) ·
+  `limits.search` is UNCHANGED in BOTH directions (the Panel directed option **(c)**, ⛔ not (b);
+  11b.3a's AC2 did ⛔ not expire) · the DPDPA exposure, counsel's review of this subject and Row 17's
+  posture all still stand · and ⛔ **built is still ⛔ not published** — what keeps the surface dark is
+  **deployment plus the counsel/Panel process**, ⛔ never a code mechanism and ⛔ never the kill switch
+  ([[project_directory_launch_gated_on_killswitch_ui]]).
+  ⚠ ⛔ **ROTATION SHIPPED WITHOUT AN OPERATOR ROUTE, DELIBERATELY AND SAID SO** — a domain-function
+  seam with ⛔ no HTTP route and ⛔ no permission key, because a key would move
+  `PERMISSION_CATALOG_VERSION` 39 → 40, a **governance act** in this repo, and this story's ratified
+  scope is the ADDRESS and the PATH. ⇒ **an operator-facing rotation control is a NEW ROUTING NOTE**,
+  ⛔ not an edit. ⚠ And rotation is ⛔ **not** instantaneous: the drive page is `edge_cacheable` at
+  `s-maxage=300`, so a rotated-away page keeps being served from every warm PoP for up to five
+  minutes. ⛔ Direct SQL is NOT the operational fallback.
 
 - **An empty or whitespace `bank_name` 500s the entire Sahyog Vivran page** (⭐ **SECOND-PASS** review,
   2026-09-03). `packages/domain/src/pool/sahyog-vivran-read.ts:547` passes `bankName` through raw while

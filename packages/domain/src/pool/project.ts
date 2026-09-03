@@ -42,6 +42,7 @@ import { pools } from '../schema/pools.js';
 import type { PoolSupportCategory } from '../schema/pools.js';
 import { POOL_EVENT_PAYLOAD_SCHEMAS, type PoolEventType, type PoolSpawnedPayloadSchema } from './events.js';
 import { PoolStreamConcurrencyError, isPoolStreamVersionConflict } from './errors.js';
+import { mintPoolPublicToken } from './public-token.js';
 import { type PoolLifecycleState, replayPoolState } from './state.js';
 import type { z } from 'zod';
 
@@ -210,6 +211,24 @@ export async function projectPoolState(
         currentState: newState,
         stateEventVersion: inserted.eventVersion,
         createdByActor: input.actorId,
+        // ⭐⭐ STORY 11b.10 — THE PUBLIC ADDRESS IS MINTED AT SPAWN, and here is the only place it
+        // can be: this INSERT is the pool row's genesis (the guard at (1a) makes `pool.spawned` the
+        // only event that can create one), so a token minted anywhere else would leave a window in
+        // which a visible pool has no address.
+        //
+        // ⛔⛔ IT BOUNDS **DISCOVERY**, ⛔ NOT **AUTHORISATION** (D1, `2026-09-04`). The page it
+        // addresses answers 200 to ANYONE presenting a valid address — ⛔ no member session, and
+        // ⛔ no branch on the reader's membership standing of any kind. ⛔ Never describe this value
+        // as a security boundary for the DATA; what it removes is the ability to COLLECT four
+        // decrypted Tier-1 bank fields by COUNTING the sequential `P-YYYY-MM-###`.
+        //
+        // ⛔ RANDOM, ⛔ NEVER DERIVED FROM `input.poolId`. Story 7.3's spawn saga derives a
+        // DETERMINISTIC UUIDv5 pool id, and the pull to make this reproducible "so spawn stays
+        // deterministic" is exactly how the guessability comes back
+        // ([[project_pool_spawn_saga_atomicity]]). Spawn idempotency does ⛔ not depend on it: a
+        // re-delivered spawn takes the `onConflictDoUpdate` arm below, which does ⛔ NOT touch
+        // `publicToken` — ⇒ a retry ⛔ never re-addresses a drive that is already published.
+        publicToken: mintPoolPublicToken(),
         ...(input.auditId !== undefined ? { auditId: input.auditId } : {}),
       })
       .onConflictDoUpdate({

@@ -67,3 +67,9 @@ export * from './public-read.js';
 // index — with ⛔ NOTHING to decrypt: it returns ⛔ no name, ⛔ no ciphertext and ⛔ no member,
 // claim or pool identifier. ⛔ It decides a RENDER, never a BENEFIT.
 export * from './sahyog-vivran-read.js';
+// Story 11b.10 (Task 1 + Task 2) — the pool's PUBLIC ADDRESS TOKEN: minted at spawn (128 bits of
+// CSPRNG entropy, base64url), ROTATABLE per drive, and READ server-side for the member app. It
+// bounds DISCOVERY, ⛔ not AUTHORISATION (D1) — the page it addresses answers 200 to anyone holding
+// a valid address, with ⛔ no session and ⛔ no branch on the reader's membership standing. The
+// canonical `P-YYYY-MM-###` is RETAINED as the operational/audit key and is ⛔ not replaced.
+export * from './public-token.js';

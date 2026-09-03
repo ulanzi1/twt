@@ -10,6 +10,7 @@ import { describe, expect, it } from 'vitest';
 
 import * as schema from '../../../src/schema/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
+import { mintPoolPublicToken } from '../../../src/pool/public-token.js';
 import {
   PARIWAR_A,
   PARIWAR_B,
@@ -68,6 +69,9 @@ describe.skipIf(!hasDatabase)('pools RLS policy regression', () => {
         fixedAmount: 500,
         currentState: 'spawned',
         stateEventVersion: 1,
+        // Story 11b.10 — the public address. Minted, never a literal: the column's unique index is
+        // GLOBAL, so a shared constant would 23505 on the second seeded pool.
+        publicToken: mintPoolPublicToken(),
       })
       .catch((e: unknown) => e);
     const cause = (err as { cause?: { code?: string; message?: string } }).cause;

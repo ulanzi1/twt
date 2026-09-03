@@ -7,8 +7,11 @@ same day that it is **BLOCKING ON DEPLOYMENT** and routed it here. ⚠ It is ⛔
 the story states the property in three places. ⭐ **What is missing is the JUDGEMENT**, which AC2 rules
 only the Panel may make.
 **Routed to:** Trustee Panel.
-**Status:** ⛔ **OPEN — BLOCKING.** Story 11b.3a is held at `in-progress` on this item alone. ⚠ Its
-build is **complete** and all eight acceptance criteria pass; ⛔ nothing else is outstanding.
+**Status:** ✅ **ANSWERED 2026-09-03** — see **§10**. **(A) YES, a live drive should be publicly
+reachable · (B) MAKE THE ADDRESS UNGUESSABLE.** Ratified by **Dhiraj Rahul** and **Kalpana Bharti**.
+Logged as `.decision-log.md#decision-2026-09-03-184`. ⚠⛔ **The exposure judgement is closed; the
+SURFACE IS STILL NOT DEPLOYABLE** — the two answers are **coupled** and their implementation is
+unbuilt (§10).
 
 > ### 📖 **Panel members — please start at [Appendix A: In plain words](#appendix-a--in-plain-words).**
 > It is at the end and is **complete on its own** — the whole question, the options, and what follows
@@ -231,6 +234,55 @@ the surface deploys.
 Story 11b.3a is held at **`in-progress`**, and ⛔ **the build is not why** — it is complete, all eight
 acceptance criteria pass, and `ci:local` is green across 34 jobs. ⭐ The row is held **solely** on this
 note. ⛔ It must not be flipped to `done` by re-reading the build as finished.
+
+## 10. ✅ ANSWERED — 2026-09-03. Ratified by Dhiraj Rahul and Kalpana Bharti. Logged as `2026-09-03-184`
+
+> **Question A — should a `live` drive's page be reachable by the public at all?**
+> ✅ **YES.**
+>
+> **Question B — is a speed limit enough?**
+> ✅ **NO — option (c): MAKE THE ADDRESS UNGUESSABLE.**
+
+⭐ **What this settles.** The `D4-linkage` rider is answered in the affirmative: cl.10(a)'s transparency
+benefit is ratified as one the public must actually be **able to exercise**, ⛔ not one that exists only
+in principle. And `limits.search` is judged **insufficient on its own** behind a walkable address.
+⚠ The rate-limit tier itself is ⛔ **NOT** changed — the Panel directed **(c)**, ⛔ not (b), and AC2
+forbids tightening the tier as an authoring act.
+
+### ⚠⛔⛔ THE ONE THING THAT MUST NOT BE LOST: THE TWO ANSWERS ARE **COUPLED**
+
+**(B) removes the ONLY way a `live` drive can currently be reached.** ⇒ shipping the token **alone**
+would make a live drive reachable by ⛔ **NOBODY** — which **defeats (A)**, the very thing the Panel
+just ratified.
+
+⇒ ⭐⭐ **The token and the inbound path are ONE deliverable in two parts, and they ship TOGETHER.**
+⛔ A future story may ⛔ **not** land the token and defer the path: that combination silently converts a
+ratified *"yes, the public should see it"* into *"nobody can"* — ⛔ and it would look like progress while
+doing it.
+
+### ⚠ What the answer does NOT settle
+
+- ⛔ **`D8-default` FAIL-OPEN is UNCHANGED.** Option (d) was disclosure only and was ⛔ not directed.
+  ⇒ every Pariwar still shows complete details until the Trust configures a window. ⭐ **(B) changes who
+  can FIND the page, ⛔ not what the page SHOWS.**
+- ⛔ **WHO may reach a live drive is ⛔ not decided.** *"Publicly reachable"* was ratified; whether the
+  path is open to **anyone with the link** or is **member-authenticated** is a distinct question. ⛔ Do
+  ⛔ not read (A) as having answered it.
+- ⛔ **The token's shape and lifecycle** — length, random vs. derived, whether it is ever rotated, and
+  what rotation does to links already shared — are ⛔ unspecified and belong to the implementing story.
+- ⛔ **cl.10(a) is not reopened.** Public display during an active campaign remains ruled and built.
+
+### ⛔ What is now owed — BLOCKING ON DEPLOYMENT
+
+⭐ The **judgement** is *"Closed by ruling"* ([[feedback_closure_language_precision]]) — ⛔ not *"resolved
+via deferral"*. ⚠ What replaces it is a **specified** deployment obligation: a story owning the public-URL
+token **and** the `live`-drive inbound path **together**. ⚠ It touches **Story 11b.3's** surface as well
+as 11b.3a's, so it is ⛔ **neither** story's to absorb — ⛔ unscoped as of this section.
+
+⇒ ⛔ **The Sahyog Vivran surface does not deploy until that lands.** ⭐ Consistent with `D5(a)`'s *"built
+is ⛔ still not published"*: what keeps this dark is deployment plus process, ⛔ never a code mechanism.
+
+---
 
 ## Sources — every one read at `6706ae0`
 

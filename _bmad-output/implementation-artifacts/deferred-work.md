@@ -7910,6 +7910,13 @@ later story ([[feedback_closure_language_precision]], [[feedback_record_unattest
   its build is complete. ⭐ Consistent with `D5(a)`'s *"**built is ⛔ still not published**"*: what keeps
   this dark is **deployment plus the counsel/Panel process**, ⛔ never a code mechanism and ⛔ never the
   kill switch ([[project_directory_launch_gated_on_killswitch_ui]]).
+  ⭐ **THE INSTRUMENT EXISTS — ⛔ this is not routed into the air.**
+  `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-03-11b3a-enumeration-bound-tier1.md`
+  puts the question to the Panel with the five options and what follows from each. ⚠ It records TWO
+  facts read in the code rather than assumed: the `###` counter is monotonic per (pariwar, month)
+  (`pool/naming.ts:185`), **and** the PUBLIC address carries ⛔ no Pariwar identifier at all — the
+  tenant comes from a server-side constant (`apps/public/src/lib/pariwar.server.ts`) ⇒ the reader
+  supplies ONLY the sequence number, so the API path's UUID bounds ⛔ nothing.
   **Trigger:** ⛔ **before Epic 11b deploys** — the Panel judges the bound, or the surface does not ship.
 
 - **An empty or whitespace `bank_name` 500s the entire Sahyog Vivran page** (⭐ **SECOND-PASS** review,

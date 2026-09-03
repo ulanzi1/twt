@@ -26,7 +26,7 @@ does ⛔ not own — the one failure this field exists to prevent
 
 # Story 11b.10: Sahyog Vivran — the Unguessable Public Address + the Inbound Path `[SURFACE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 > ⭐⛔ **THIS STORY IS ⛔ NOT IN `epics.md`'s STORY LIST.** It is created by a **Trustee-ratified
 > decision** (`2026-09-03-184`), ⛔ not by epic decomposition — exactly as `11b-3a` was. ⇒ it owes an
@@ -399,11 +399,12 @@ silently would have been an authoring act over a Panel-scoped artefact — the p
       `11b-3c` · the deployment block · **D1–D4** · what it does ⛔ not touch. ⭐ The sprint-status key
       is named in it so a future `sprint-planning` run can ⛔ neither drop it nor regenerate a ghost.
       ⛔ **ANNOTATION ONLY** — ⛔ no AC in `epics.md` was rewritten and ⛔ no prior block re-worded.
-- [ ] Flip `sprint-status.yaml` `development_status[11b-10-…]` → `in-progress`, with a combined
+- [x] Flip `sprint-status.yaml` `development_status[11b-10-…]` → `in-progress`, with a combined
       top-of-file `last_updated` COMMENT entry ([[project_sprint_status_ledger]]) — **ONE row moves**.
-- [ ] Commit with a `governance:` prefix, **separately and FIRST**
+      ✅ Done 2026-09-04e — ONE row moved, no other row touched.
+- [x] Commit with a `governance:` prefix, **separately and FIRST**
       ([[feedback_governance_commits_precede_implementation]]).
-- [ ] ✅ **THE STOP CONDITION IS DISCHARGED** — D4 ruled 2026-09-04b (member-app entry, My Pool tab).
+- [x] ✅ **THE STOP CONDITION IS DISCHARGED** — D4 ruled 2026-09-04b (member-app entry, My Pool tab).
       ⭐ Record the discharge in the Task 0 commit body. ⛔ There are ⛔ **no** blocking decisions left.
 
 ### Task 1 — The token column, its migration, and its BACKFILL (AC2)

@@ -1,4 +1,21 @@
-# last_updated: 2026-09-04d (⭐⭐ **STORY 11b.10 — THE `epics.md` ANNOTATION IS WRITTEN (its Task 0's
+# last_updated: 2026-09-04e (⭐⭐ **STORY 11b.10 STARTS — Task 0's SPRINT-STATUS FLIP, the last governance
+#   subtask before the first line of code. ⭐ ONE ROW MOVES:**
+#   `11b-10-sahyog-vivran-unguessable-address-and-inbound-path`: `ready-for-dev` -> `in-progress`.
+#   ⛔ epic-11b stays `in-progress`; ⛔ 11b-3a stays `done`; ⛔ 11b-3b stays `ready-for-dev`.
+#   ✅ **THE TASK 0 STOP CONDITION IS DISCHARGED** — D1/D2/D3 ruled 2026-09-04, **D4** ruled 2026-09-04b
+#   (a member-app entry on **Tab 1 "My Pool"** `(tabs)/index.tsx`, ⛔ NOT Shradhanjali). ⛔ ZERO blocking
+#   decisions remain, and the discharge was by a RULING, ⛔ never by an author's guess (11b.3's shape).
+#   ⭐ The `epics.md` annotation landed at `2026-09-04c`/`d2f11b6` ⇒ AC0's two remaining subtasks (this
+#   flip + the `governance:` commit) are what open the implementation branch
+#   ([[feedback_governance_commits_precede_implementation]] — governance commits FIRST, separately).
+#   ⛔⛔ **TRAP 1 IS THE ONE TO HOLD ONTO ACROSS THE WHOLE BUILD:** the token and the inbound path are
+#   **ONE deliverable in two parts** (`-184` cl.4 as widened by `-185` cl.3). ⛔ A branch carrying the
+#   token alone is ⛔ NOT mergeable however green it is — it would make the ENTIRE Sahyog Vivran surface
+#   reachable by NOBODY and silently invert the Panel's ratified **(A)**.
+#   ⛔ Nothing else moves: `D8-default` FAIL-OPEN unchanged (Trap 4) · `limits.search` unchanged
+#   (Trap 5) · the masking schedule/knob/predicate untouched · 11b.3a's Tier-1 allowlist unchanged.
+#
+# last_updated_prior: 2026-09-04d (⭐⭐ **STORY 11b.10 — THE `epics.md` ANNOTATION IS WRITTEN (its Task 0's
 #   FIRST subtask, before the first line of code). ⛔ ZERO ROWS MOVE.** ⛔ epic-11b stays `in-progress`;
 #   ⛔ 11b-10 stays `ready-for-dev` — ⛔ the annotation is ⛔ NOT the story starting.
 #   ⭐ Appended as a dated `>` block at the END of the **Story 11b.3** section, in **11b.3's own Task 0
@@ -14706,7 +14723,7 @@ development_status:
   # open link, so D1 is what decides D2; the migration MUST backfill or the archive 404s.
   # D3 the /sahyog per-row link is the necessary consequence of (A)+(B), ⛔ not a new decision — but the
   # exposure sentence is STATED in the story record, ⛔ never discovered in a diff.
-  11b-10-sahyog-vivran-unguessable-address-and-inbound-path: ready-for-dev
+  11b-10-sahyog-vivran-unguessable-address-and-inbound-path: in-progress
   epic-11b-retrospective: optional
 
   # ==========================================================================

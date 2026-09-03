@@ -150,10 +150,35 @@ it is a side effect of the identifier scheme that hands a reader precisely what 
 declined to publish.** On that reading, tokenizing **restores** an existing decision rather than
 narrowing transparency.
 
-⚠ **The opposite reading is also available and honest:** cl.10(a)'s accepted benefit is verification
+⚠ **The opposite reading is available in principle:** cl.10(a)'s accepted benefit is verification
 *during* an active campaign — a donor checking that a live drive pays a real family. ⛔ If a live drive
-can only be reached by a link the Trust hands out, that check depends on the Trust. ⇒ **which reading
-governs is exactly the judgement being asked for**, and the build must ⛔ not pick.
+can only be reached by a link the Trust hands out, that check depends on the Trust.
+
+⛔⛔ **BUT AS BUILT, ⛔ NOTHING SERVES THAT READING — VERIFIED, ⛔ NOT ASSUMED (2026-09-03).** A live
+drive's page has **⛔ NO INBOUND PATH FROM ANYWHERE IN THE PRODUCT**:
+
+| Surface | Path to a `live` drive page |
+|---|---|
+| `/sahyog` public index | ⛔ **None** — lists `closed` + `settled` only |
+| **Mobile app** (`apps/mobile`) | ⛔ **None** — **zero** references to `sahyog-vivran`: no screen, no deep link, no webview |
+| Notifications (`packages/channels`, `apps/jobs`) | ⛔ **None** — no reference |
+| Any other public page | ⛔ **None** |
+
+⇒ ⭐⭐ **The only way to reach a live drive is to TYPE A CONSTRUCTED URL INTO A DESKTOP BROWSER.** ⛔ That
+is not a user journey anyone designed, and on **mobile it is not possible at all** — the app has no
+address bar and links to no such page.
+
+⇒ ⚠⛔ **SO THE DONOR-VERIFICATION READING DESCRIBES A WORKFLOW THAT DOES ⛔ NOT EXIST.** The only party
+who reaches a live drive by constructing `P-2026-09-004` is someone **deliberately constructing
+identifiers** — which describes an enumerator, ⛔ not a donor. ⇒ on the evidence, walkability of `live`
+drives serves ⛔ **no** legitimate discovered path today; it is purely an exposure.
+
+⭐⭐ **WHICH MAKES `D4-linkage` THE PRIOR QUESTION, AND IT IS ⛔ NOT ANSWERABLE BY US.** Whether a live
+drive should be reachable **at all**, and **by whom**, must be settled BEFORE anyone can judge whether
+walking is an acceptable way to reach it. ⇒ the real choice is ⛔ not *"tokenize vs preserve a live
+donor workflow"* — it is *"tokenize now, **or first build the legitimate path** (a link from the drive
+notification, or a member-app screen) and then decide what bounds it."*
+⚠ ⛔ Building that path is ⛔ NOT this story's, and ⛔ not proposed here.
 
 **(d) Change the fail-open default** (`2026-09-02-179` cl.1). ⭐ Would shrink the exposed population from
 *every* Pariwar to *only those the Trust configured open*. ⚠⛔ **But you ruled fail-open deliberately,
@@ -184,6 +209,19 @@ benefit, which is why it is yours and not ours.
 >
 > **If yes** — we record the judgement as made and Story 11b.3a closes.
 > **If no** — which of (b) / (c) / (d) / (e) do you direct, and we return with that as its own note.
+
+⭐⭐ **AND ONE SUB-QUESTION THAT MAY DISPOSE OF THE HARDEST PART — `D4-linkage`, now unavoidable:**
+
+> **Should a `live` drive's page be reachable by the public at all?**
+
+⚠ It is asked because the evidence changed the shape of the problem. A live drive has ⛔ **no inbound
+link anywhere** — not `/sahyog`, not the mobile app (⛔ zero references), not any notification. ⇒ its
+walkability is ⛔ **not** a transparency affordance anyone can currently use; it is reachable **only**
+by constructing identifiers. ⭐ **If the answer is "no, not yet"**, option (c) costs ⛔ nothing real for
+`live` drives and nearly nothing for the rest — and the hardest trade in this note dissolves.
+⚠ **If the answer is "yes"**, then the honest next step is to **build a real path in** (a link in the
+drive-opened notification, or a member-app screen) and bound *that* — ⛔ rather than leaving a guessable
+address standing in for a route nobody designed.
 
 ⚠ **Either answer unblocks the story.** ⛔ What cannot happen is the question staying unanswered while
 the surface deploys.
@@ -282,12 +320,33 @@ record, it is an open solicitation"* — the concern being that showing it invit
 thing we decided not to publish.** Making the address unguessable would not be taking transparency
 away — it would be restoring a decision already made.
 
-⚠ **But the other way is just as honest:** part of why you allowed bank details to show during a drive
-was so a donor could check, *while giving*, that the money goes to a real family. ⛔ If a running drive
-can only be reached through a link we hand out, that check depends on **us** — the very people being
-checked on.
+⚠ **The other way of seeing it would be this:** part of why you allowed bank details to show during a
+drive was so a donor could check, *while giving*, that the money goes to a real family. If a running
+drive can only be reached through a link we hand out, that check depends on **us** — the very people
+being checked on.
 
-⇒ **We are not choosing between those two readings. That is what we are asking you to do.**
+⛔⛔ **Except that we checked, and today nobody can do that anyway.**
+
+There is **no link to a running drive anywhere** — not on the public site, not in the mobile app, not
+in any message we send. ⚠ **In the app it is not even possible**: there is nowhere to type a web
+address, and no screen links to one.
+
+⇒ ⭐ **The only way anyone reaches a running drive is by typing an address into a computer's browser
+and guessing the number.** ⛔ That is not something a supporter would ever do. It is what someone
+**collecting** the pages would do.
+
+⇒ ⚠ **So the "let donors check" argument, honest as it sounds, is not actually happening.** Nobody is
+checking a running drive this way, because there is no way to get there unless you are deliberately
+constructing addresses.
+
+⭐⭐ **This changes the question in a way we think you should see plainly.** The real choice is ⛔ not
+*"protect the page, or keep a donor's ability to check."* Nobody has that ability yet. It is:
+
+> **Do we make the address unguessable now — or do we first build a proper way in (a link in the
+> message we send when a drive opens, or a screen in the app), and then decide who should reach it?**
+
+⛔ We are not proposing to build that path here, and ⛔ we are not choosing between these. That is what
+we are asking you to decide.
 
 ## What happens either way
 

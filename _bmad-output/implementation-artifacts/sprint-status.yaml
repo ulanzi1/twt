@@ -1,4 +1,28 @@
-# last_updated: 2026-09-03b (⭐⭐ **STORY 11b.3a — SECOND-PASS CODE REVIEW (bmad-code-review, 3-layer),
+# last_updated: 2026-09-03c (⭐⭐ **THE PANEL ANSWERED — `2026-09-03-184`, TRUSTEE-RATIFIED (Dhiraj
+#   Rahul, Kalpana Bharti). STORY 11b.3a `in-progress` -> `done`.** ONE row moves. ⛔ epic-11b stays
+#   `in-progress`; ⛔ 11b-3b stays `ready-for-dev`.
+#   **(A) YES** — a `live` drive's page SHOULD be publicly reachable. The `D4-linkage` rider
+#   (`2026-09-02-176`) is ANSWERED affirmatively. **(B) MAKE THE ADDRESS UNGUESSABLE** — option (c).
+#   ⛔ The rate-limit tier is **NOT** changed: the Panel directed (c) and ⛔ not (b), and AC2 forbids
+#   tightening the tier as an authoring act. ⛔ `D8-default` FAIL-OPEN is UNCHANGED — (B) changes who
+#   can FIND the page, ⛔ not what the page SHOWS.
+#   ⭐ The judgement is **"Closed by ruling"** ([[feedback_closure_language_precision]]), ⛔ not
+#   "resolved via deferral" ⇒ the row that was held ONLY on that missing judgement returns to `done`.
+#   ⚠⛔⛔ **AND THE DEPLOYMENT GATE DOES NOT LIFT WITH IT — the two answers are COUPLED.** (B) removes
+#   the ONLY way a `live` drive can currently be reached (⛔ no link on `/sahyog`, ⛔ ZERO references in
+#   `apps/mobile`, ⛔ none in any notification). ⇒ shipping the token ALONE makes a live drive reachable
+#   by ⛔ NOBODY and **DEFEATS (A)**. The token and the inbound path are ONE deliverable in two parts.
+#   ⛔ A story may NOT land the token and defer the path — it would look like progress while undoing a
+#   ratified answer.
+#   ⛔⛔ **THAT OBLIGATION IS UNSCOPED AND IS NEITHER 11b-3a's NOR 11b-3's** — it touches BOTH surfaces
+#   (route contract · Astro page · `/sahyog`'s generated links · SSR resolver · plus the live-drive
+#   path). Carried BLOCKING ON DEPLOYMENT in `deferred-work.md`. ⚠ It must RAISE, ⛔ not assume, two
+#   things: **WHO** may reach a live drive (open-link vs. member-authenticated — ⛔ NOT decided by (A)),
+#   and the token's shape/lifecycle.
+#   ⇒ ⛔ **Do NOT read 11b-3a's `done` as "the surface is shippable".** Precedent: 11a-3 closed `done`
+#   while its surface stayed deployment-gated ([[project_directory_launch_gated_on_killswitch_ui]]).
+#
+# last_updated_prior: 2026-09-03b (⭐⭐ **STORY 11b.3a — SECOND-PASS CODE REVIEW (bmad-code-review, 3-layer),
 #   OVER THE FIRST PASS'S OWN PATCHES. `done` -> `in-progress`.** ONE row moves:
 #   development_status[11b-3a-nominee-bank-public-presentation-and-masking-schedule] `done` ->
 #   `in-progress`. ⛔ epic-11b stays `in-progress`; ⛔ 11b-3b stays `ready-for-dev`.
@@ -14496,12 +14520,17 @@ development_status:
   # ⚠ This story owns the family's ONLY migration, and cl.10(d) makes "configuration over ONE record"
   # load-bearing: ⛔ never a boolean, ⛔ never a second bank-detail record. A later "simplification"
   # to a boolean is a DEFECT, not a cleanup.
-  # ⛔⛔ HELD AT `in-progress` ON ONE BLOCKING ITEM, ⛔ NOT ON AN UNFINISHED BUILD (2026-09-03, second
-  # pass). The build is COMPLETE and all 8 ACs are satisfied; what is outstanding is a GOVERNANCE
-  # judgement — the identifier-enumeration bound over four decrypted Tier-1 fields under D8-default
-  # FAIL-OPEN, which AC2 rules is a DECISION and which nobody has made. ⛔ Do not flip this to `done`
-  # by re-reading the build as finished; it is. Flip it when the Panel judges the bound.
-  11b-3a-nominee-bank-public-presentation-and-masking-schedule: in-progress
+  # ✅ `done` 2026-09-03 — the Panel JUDGED the bound (`2026-09-03-184`, Trustee-ratified: Dhiraj Rahul,
+  # Kalpana Bharti). The item that held this row was a missing GOVERNANCE JUDGEMENT, and it is now made:
+  # (A) YES a `live` drive should be publicly reachable · (B) MAKE THE ADDRESS UNGUESSABLE.
+  # ⛔⛔ THE SURFACE IS STILL NOT DEPLOYABLE, AND THAT IS NOT THIS ROW'S TO CARRY. (B) removes the ONLY
+  # way a `live` drive can be reached, so the public-URL token and the inbound path are ONE deliverable
+  # in two parts — shipping the token alone would make a live drive reachable by NOBODY and DEFEAT (A).
+  # That obligation touches Story 11b.3's surface as well as this one, so it is NEITHER story's; it is
+  # carried, still BLOCKING ON DEPLOYMENT, in `deferred-work.md` and is UNSCOPED.
+  # ⇒ ⛔ Do NOT read this `done` as "shippable". Precedent: 11a-3 closed `done` while its surface stayed
+  # deployment-gated ([[project_directory_launch_gated_on_killswitch_ui]]).
+  11b-3a-nominee-bank-public-presentation-and-masking-schedule: done
   # ⭐ 11b-3b — the named-identity render layer: the deceased member's name AND the contributor list,
   # plus the `apps/public` -> `@twt/ui` dependency addition and the Astro render layer over 11b.2's
   # presenter (11b.2 item (i)'s named trigger).

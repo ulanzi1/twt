@@ -7919,6 +7919,38 @@ later story ([[feedback_closure_language_precision]], [[feedback_record_unattest
   supplies ONLY the sequence number, so the API path's UUID bounds ⛔ nothing.
   **Trigger:** ⛔ **before Epic 11b deploys** — the Panel judges the bound, or the surface does not ship.
 
+  ✅⭐ **ANSWERED 2026-09-03 — TRUSTEE-RATIFIED (Dhiraj Rahul, Kalpana Bharti). Logged as
+  `.decision-log.md#decision-2026-09-03-184`.** **(A) YES**, a `live` drive's page should be publicly
+  reachable — the `D4-linkage` rider is answered in the affirmative. **(B) MAKE THE ADDRESS
+  UNGUESSABLE** (option (c)); ⛔ the rate-limit tier is **NOT** changed, because the Panel directed (c)
+  and ⛔ not (b).
+  ⭐ **The JUDGEMENT is "Closed by ruling"** ([[feedback_closure_language_precision]]) — ⛔ **not**
+  *"resolved via deferral"*, and ⛔ not "carried". ⚠⛔ **BUT THE ITEM STAYS BLOCKING ON DEPLOYMENT**,
+  because what was missing was a judgement and what is now missing is an IMPLEMENTATION. See the
+  replacement obligation immediately below — ⛔ do not read this ✅ as clearing the deployment gate.
+
+- ⛔⛔ **BLOCKING ON DEPLOYMENT — the public-URL TOKEN and the `live`-drive INBOUND PATH, as ONE
+  deliverable** (created by `2026-09-03-184` cl.4; ⛔ unscoped as of 2026-09-03).
+  ⚠⛔⛔ **THE COUPLING IS THE WHOLE ITEM, AND IT IS THE EASIEST THING HERE TO GET WRONG.** Answer (B)
+  removes the **ONLY** way a `live` drive can currently be reached — there is ⛔ no link to one on
+  `/sahyog` (which lists `closed` + `settled`), ⛔ none in the mobile app (**zero** references to
+  `sahyog-vivran`), ⛔ none in any notification. ⇒ **shipping the token ALONE makes a live drive
+  reachable by ⛔ NOBODY, which DEFEATS answer (A).** ⛔ A story may ⛔ **not** land the token and defer
+  the path: that combination silently converts a ratified *"yes, the public should see it"* into
+  *"nobody can" —* ⛔ and it would look like progress while doing it.
+  **Scope:** the opaque token on the public URL (route contract · the Astro page · `/sahyog`'s generated
+  links · the SSR resolver) **plus** the `live`-drive inbound path (a link in the drive-opened
+  notification, or a member-app screen). ⚠ The human-readable `P-YYYY-MM-###` identifier is **RETAINED**
+  as the operational/audit key — Story 7.1's unique index and every audit line depend on it; the token
+  is an **addition to the public address**, ⛔ never a replacement for the identifier.
+  ⚠ **It touches Story 11b.3's surface as well as 11b.3a's**, so it is ⛔ **neither** story's to absorb
+  and ⛔ must not be folded into either retrospectively.
+  ⚠ **Two questions it must raise rather than assume:** ⛔ **WHO** may reach a live drive (*"publicly
+  reachable"* was ratified; **open-to-anyone-with-the-link vs. member-authenticated** was ⛔ **not**),
+  and the token's **shape and lifecycle** (random vs. derived, ever rotated, and what rotation does to
+  links already shared).
+  **Trigger:** ⛔ **before Epic 11b deploys.**
+
 - **An empty or whitespace `bank_name` 500s the entire Sahyog Vivran page** (⭐ **SECOND-PASS** review,
   2026-09-03). `packages/domain/src/pool/sahyog-vivran-read.ts:547` passes `bankName` through raw while
   its sibling `branch` was guarded with `.trim() || null` on the adjacent line 555; the column is

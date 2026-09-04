@@ -1,4 +1,31 @@
-# last_updated: 2026-09-04l (⭐⭐ **STORY 11b.12 CREATED — `bmad-create-story`. ONE ROW APPEARS.**
+# last_updated: 2026-09-04m (⭐⭐ **STORY 11b.13 CREATED + 11b.12's D1 RULED. ONE ROW APPEARS.**
+#   ⛔ epic-11b `in-progress`; ⛔ 11b-10 `done`; ⛔ 11b-11 / 11b-12 `ready-for-dev`.
+#   ✅ **11b.12 D1 RULED (b): ALIGN THE WIRE, ALLOW-LIST THE TEST.** Wire tokens become
+#   `live` · `closed` · `verified`; `sahyog-drive.spec.ts:595-612` re-shapes from a DENY-list to an
+#   ALLOW-list — strictly stronger. ⚠ The overlap with internal state names must be EXPLAINED where the
+#   assertion lives, naming `2026-08-21-144` cl.8, or a future reader reverts it as a leak.
+#   ⛔ `spawned` stays a pure deny. ⇒ 11b.12 Tasks 2-5 UNBLOCKED.
+#   ⭐ **STORY C = 11b-13** — the per-Pariwar drive TARGET. Owns TRUSTEE-RATIFIED `-190` cl.7 + `-191`
+#   cl.4. A Pariwar Admin SETS it; ⛔ only a Super Admin may REVEAL it, separately to members and to the
+#   public; hidden is the DEFAULT and ⛔ nothing renders it (story D is the first consumer).
+#   ⛔⛔ **IT OPENS WITH A GOVERNANCE DECISION** (`-195` cl.2) — the key moves
+#   `PERMISSION_CATALOG_VERSION` from **39**, and ⛔ is NOT minted in a build task.
+#   ⚠⛔ **THE FINDING AT AUTHORING:** `pariwar.manage_nominee_bank_masking`'s own doc-block
+#   (`permissions.ts:573-576`) **FORECLOSES `pariwar_admin` IN WRITING** — *"granting it 'for symmetry'
+#   … is precisely the 'reverse a ratified ruling by way of a catalog edit' move"* — with
+#   **"a Panel ruling" as its acceptance condition**. ⭐ `-190` cl.7(a) IS a Panel ruling, so the grant
+#   is legitimate; ⛔ but the decision MUST carry the argument, or the next reader is CORRECT to read a
+#   bare `pariwar_admin` grant as a defect. ⭐ **The argument:** `-178` and `-136` cl.3 govern
+#   **DISCLOSURE**; SETTING an invisible figure discloses ⛔ nothing, and REVEALING it — which IS a
+#   disclosure act — stays **Super-Admin only** per cl.7(c). ⇒ the two-axis rule is FOLLOWED, ⛔ not
+#   departed from, and ⛔ NOTHING is superseded: `-178` and the foreclosure STAND.
+#   ⚠ **D1 IS OPEN** and blocks Task 0: ONE key (v39->40) or TWO (v39->41)? ⭐ BigDev recommends TWO —
+#   under one key the "disclosure stays central" claim rests on a role check in a route; under two it is
+#   VISIBLE IN THE CATALOG, which is where a Panel or an auditor would look.
+#   ⚠ AC7 pins that the target and a member's OBLIGATION never touch — a target that silently became an
+#   obligation is the AI-10-1 shape exactly. ⛔ AI-10-1: ⛔ no member-gating predicate.
+#
+# last_updated_prior: 2026-09-04l (⭐⭐ **STORY 11b.12 CREATED — `bmad-create-story`. ONE ROW APPEARS.**
 #   ⛔ epic-11b `in-progress`; ⛔ 11b-10 `done`; ⛔ 11b-11 `ready-for-dev`; ⛔ 11b-3b `ready-for-dev`.
 #   ⭐ **STORY B** of the `-195` cl.3 split: the stage vocabulary **Live · Closed · Verified**, ONE
 #   shared copy source, and the info affordance. Owns TRUSTEE-RATIFIED `-190` cl.5, `-191` cl.3,
@@ -14968,11 +14995,25 @@ development_status:
   # ⭐ 11b-12 — STORY **B** of the `2026-09-04-195` cl.3 split. ⛔ NOT in `epics.md` — owes an
   # ANNOTATION (its Task 0). ⚠ INDEPENDENT of 11b-11; both may proceed in parallel.
   # ⭐⭐ **STORIES D AND E DEPEND ON THIS ONE.**
-  # ⚠ Its **D1 is OPEN** and blocks Tasks 2-5: do the WIRE TOKENS adopt the ruled words, or only the
-  # DISPLAY copy? `Live` and `Closed` are simultaneously the ruled PUBLIC words and INTERNAL lifecycle
-  # names, and `sahyog-drive.spec.ts:595-612` asserts the internal names never cross as wire values.
-  # ⭐ BigDev recommends ALIGNING the wire and re-shaping that test from a deny-list to an allow-list.
+  # ✅ **D1 RULED (b) 2026-09-04 — ALIGN THE WIRE, ALLOW-LIST THE TEST.** Wire tokens become
+  # `live` · `closed` · `verified`; `sahyog-drive.spec.ts:595-612` re-shapes from a DENY-list to an
+  # ALLOW-list (status is exactly one of the ruled public set; ⛔ no OTHER internal token anywhere) —
+  # strictly stronger. ⚠ The overlap must be EXPLAINED where the assertion lives, naming
+  # `2026-08-21-144` cl.8, or a future reader reverts it as a leak. ⛔ `spawned` stays a pure deny.
+  # ⇒ Tasks 2-5 UNBLOCKED; land the rename in ONE commit — a half-renamed vocabulary is worse than
+  # either end state.
   11b-12-stage-vocabulary-and-info-affordance: ready-for-dev
+  # ⭐ 11b-13 — STORY **C** of the `2026-09-04-195` cl.3 split. ⛔ NOT in `epics.md` — owes an
+  # ANNOTATION. ⚠ INDEPENDENT of 11b-11 / 11b-12; ⭐ **STORY D DEPENDS ON IT.**
+  # ⛔⛔ **IT OPENS WITH A GOVERNANCE DECISION** (`-195` cl.2): minting a permission key moves
+  # `PERMISSION_CATALOG_VERSION` (currently **39**), a governance act. ⛔ NOT minted in a build task.
+  # ⚠⛔ **THE FINDING:** the neighbouring `pariwar.manage_nominee_bank_masking` doc-block FORECLOSES
+  # `pariwar_admin` IN WRITING, with "a Panel ruling" as its acceptance condition. ⭐ `-190` cl.7(a) IS
+  # one — but the decision MUST say why the disclosure analogy does ⛔ not apply, or the grant reads as
+  # the "reverse a ratified ruling by way of a catalog edit" move that key expressly names.
+  # ⚠ Its **D1 is OPEN** and blocks Task 0: ONE key (v39->40, authority split hidden in a handler) or
+  # TWO (v39->41, split visible in the catalog)? ⭐ BigDev recommends TWO.
+  11b-13-per-pariwar-drive-target-substrate: ready-for-dev
   epic-11b-retrospective: optional
 
   # ==========================================================================

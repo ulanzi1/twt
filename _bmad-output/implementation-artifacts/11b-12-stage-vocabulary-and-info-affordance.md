@@ -182,7 +182,21 @@ behaviour and ⛔ no bank field changes
 
 ## ⚖️ Decisions
 
-### ⚠ D1 — **OPEN, and it BLOCKS AC1/AC5.** Do the WIRE TOKENS adopt the ruled words, or only the DISPLAY copy?
+### ✅ D1 — **RULED (b) by BigDev, 2026-09-04: ALIGN THE WIRE, ALLOW-LIST THE TEST.** Do the WIRE TOKENS adopt the ruled words, or only the DISPLAY copy?
+
+> ⭐⭐ **THE RULING.** The wire tokens become **`live` · `closed` · `verified`** on both surfaces, and
+> `sahyog-drive.spec.ts:595-612` is **re-shaped from a DENY-list to an ALLOW-list**: it asserts the
+> status value is **exactly one of the ruled public set**, and that ⛔ no **other** internal token
+> appears anywhere in the body. ⭐ Strictly stronger than the current assertion — it pins what IS
+> allowed instead of enumerating four things that are not.
+>
+> ⚠⛔ **AND THE OVERLAP MUST BE EXPLAINED WHERE THE ASSERTION LIVES.** `live` and `closed` now appear
+> on the wire as **deliberate, RULED public vocabulary** that happens to coincide with internal state
+> names. ⛔ Without that note a future reader reads the overlap as **exactly the defect
+> `2026-08-21-144` cl.8 recorded** (`/members` leaking internal `lock-in`) and "fixes" it by reverting.
+> ⇒ name cl.8, name the coincidence, and state that it is ruled.
+>
+> ⚠ `spawned` remains a **pure deny** — it is ⛔ not in the public set and must ⛔ never cross.
 
 ⭐ **The collision (Trap 1):** `Live` and `Closed` are simultaneously the **ruled public words** and
 **internal lifecycle state names**, and a shipped test asserts the internal names never cross as wire
@@ -204,8 +218,9 @@ deliberate and ruled"*, ⛔ not *"these particular four strings never appear"*. 
 coincidence is **deliberate and ruled**, ⛔ not a leak — and the story must say so where the assertion
 lives, or a future reader will read the overlap as the defect `-144` cl.8 recorded.
 
-⛔ **Do ⛔ not implement either arm until this is ruled** — it changes two Zod enums, both status maps,
-the render layers, the copy keys and a live-DB test.
+⇒ **Tasks 2-5 are UNBLOCKED.** ⚠ The change still touches two Zod enums, both status maps, the render
+layers, the copy keys and a live-DB test — ⛔ land them in one commit, since a half-renamed vocabulary
+is worse than either end state.
 
 ---
 
@@ -229,8 +244,9 @@ the render layers, the copy keys and a live-DB test.
         `-192` cl.1/3, `-193` cl.1/3; records `-194` cl.1 satisfied by construction.
   - [ ] Flip `sprint-status.yaml` `11b-12-…`: `ready-for-dev` → `in-progress`, with a ledger entry.
   - [ ] Commit with a `governance:` prefix. ⛔ No code.
-- [ ] **Task 1 — RULE D1** (blocks Tasks 2-5)
-  - [ ] Put D1 to BigDev. ⛔ Do ⛔ not choose unilaterally.
+- [x] **Task 1 — RULE D1** (blocked Tasks 2-5) — ✅ **RULED (b) by BigDev, 2026-09-04: align the wire
+      (`live` · `closed` · `verified`), and re-shape the anti-leak test into an ALLOW-list.** ⇒ Tasks
+      2-5 unblocked; ⛔ `spawned` stays a pure deny.
 - [ ] **Task 2 — The shared copy source** (AC4, AC1, AC2)
   - [ ] Create ONE keyed stage set in `packages/i18n` — the three names plus one explanation each,
         `en` + `hi`. ⛔ No new package (Trap 5).
@@ -311,3 +327,4 @@ read the file, assert on its keys). ⚠ Wire-token assertions are **live-DB**
 | Date | Version | Description | Author |
 |---|---|---|---|
 | 2026-09-04 | 0.1 | Created from `2026-09-04-195` cl.3 (story **B**). ⚠ **D1 is OPEN and blocks Tasks 2-5.** ⭐ Two findings at authoring: `-194` cl.1 is **already satisfied** by the existing `.length > 0` guards, and the ruled words **collide with a shipped anti-leak test**. | BigDev + Claude |
+| 2026-09-04 | 0.2 | ✅ **D1 RULED (b) — align the wire, allow-list the test.** Task 1 closed, Tasks 2-5 unblocked. ⚠ The overlap with internal names must be EXPLAINED where the assertion lives, or it reads as the `-144` cl.8 defect. | BigDev + Claude |

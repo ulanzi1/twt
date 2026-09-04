@@ -1,4 +1,35 @@
-# last_updated: 2026-09-04s (⭐⭐ **STORY 11b.16 CREATED — the SEVENTH story. ONE ROW APPEARS.**
+# last_updated: 2026-09-04t (⭐⭐ **STORY 11b.17 CREATED — THE SPLIT IS FULLY AUTHORED. ONE ROW APPEARS.**
+#   ⛔ epic-11b `in-progress`; ⛔ 11b-10 `done`; ⛔ 11b-11…17 ALL `ready-for-dev`.
+#   ⭐ **STORY F = 11b-17**, the LAST of the seven — the member's view of ONE drive, carrying what the
+#   public page no longer does. Owns `-190` cl.3. ⛔ BLOCKED ON **A** and **E**.
+#   ⛔⛔ **D1 IS OPEN AND IT *IS* THE STORY.** Two findings make it so:
+#   **(1) ⭐⭐ `-189` cl.3 DOES ⛔ NOT FORCE THE SCOPE.** *"Member > public"* is the argument that
+#   produced `-190` cl.3 — ⚠ but story **A** removes the banking coordinates from the public surface
+#   ENTIRELY. ⇒ a member ⛔ cannot see *"less than nothing"*, so cl.3 is satisfied on banking **BY
+#   CONSTRUCTION**, whatever F does (the NAME and the DRIVE FACTS are satisfied by **G** and **E**).
+#   ⇒ ⛔⛔ **the scope of member banking access is a FREE, SEPARATE decision.** ⚠ Anyone arguing
+#   *"cl.3 requires it"* is arguing from an inversion that ⛔ NO LONGER EXISTS.
+#   **(2) ⛔⛔ THE LITERAL READING PUTS EVERY FAMILY'S ACCOUNT NUMBER IN 43,000 POCKETS.** `-190` cl.3
+#   reads unqualified — *"a logged-in member sees the complete banking information"*. Read literally
+#   (any member · any drive · any state) that is 43,000 members × every drive ever run × the full
+#   account number, IFSC and UPI ID of every bereaved family — on phones, screenshottable, forwardable.
+#   ⭐⭐ **THAT WOULD BE A LARGER EXPOSURE THAN THE ONE THIS PROGRAMME JUST REMOVED**, and it PERSISTS on
+#   43,000 devices. ⇒ removing it from the public while granting it to everyone internally could leave
+#   the trust **NET WORSE OFF**.
+#   ⭐ BigDev recommends **(b): the member's OWN ASSIGNED drives, ANY state** — the only reading that
+#   gives cl.3 real content ⛔ without handing every family's coordinates to the whole membership. It
+#   widens today's rule on the **TIME** axis (`live` -> any state), ⛔ not the **POPULATION** axis.
+#   ⚠⛔ **IF (a) IS GENUINELY WANTED IT NEEDS THE PANEL**, ⛔ not this story — `-190` was ratified on a
+#   note that ⛔ never quantified it, and the Panel ruled cl.3 to CLOSE an inversion, ⛔ not to open a
+#   directory of bank accounts.
+#   ⚠ Trap 3: `contribution-history.ts:24` excludes nominee/bank data **DELIBERATELY** ⇒ F either builds
+#   a separate detail with its own justification or **REVERSES a stated design choice** — ⛔ and a
+#   reversal must be NAMED, ⛔ not absorbed. ⚠ Trap 4: unmasked is the POINT (*"a masked account# cannot
+#   be transferred to"*) ⇒ the safety question is **WHO SEES IT**, ⛔ never HOW MUCH OF IT.
+#   ⭐ AC6 requires the member-facing sentence be written **AFTER** D1 — ⛔ an unruled scope with a
+#   confident sentence attached would be worse than none.
+#
+# last_updated_prior: 2026-09-04s (⭐⭐ **STORY 11b.16 CREATED — the SEVENTH story. ONE ROW APPEARS.**
 #   ⛔ epic-11b `in-progress`; ⛔ 11b-10 `done`; ⛔ 11b-11…16 `ready-for-dev`.
 #   ✅ **`-198` cl.1: FORM ONLY.** The member-facing name takes the Pariwar's CONFIGURED FORM and
 #   ⛔ NOT the publication BASIS gate ⇒ a member sees a name ALWAYS — **equal** to the public where the
@@ -15227,6 +15258,19 @@ development_status:
   # ⇒ a one-line change to the resolver's DEFAULT would put a FULL LEGAL NAME into an SMS/WhatsApp push.
   # ⭐ AC3 keeps the push SHIELDED and TESTS it. ⇒ thread the form from the CALL SITE, ⛔ never a default.
   11b-16-member-name-form-configured-presentation: ready-for-dev
+  # ⭐ 11b-17 — STORY **F**, the LAST of the split. ⛔ NOT in `epics.md` — owes an ANNOTATION.
+  # ⛔⛔ BLOCKED ON **A** (11b-11 — the public withdrawal must land first) AND **E** (11b-15).
+  # ⛔⛔ **D1 IS OPEN AND IT *IS* THE STORY:** WHICH member sees WHICH drive's banking coordinates?
+  # ⭐⭐ **`-189` cl.3 DOES ⛔ NOT FORCE THE SCOPE** — story A removes the public's banking coordinates
+  # ENTIRELY, so a member ⛔ cannot see "less than nothing" ⇒ cl.3 is satisfied on banking BY
+  # CONSTRUCTION, whatever F does. ⚠ Anyone arguing *"cl.3 requires it"* argues from an inversion that
+  # ⛔ NO LONGER EXISTS.
+  # ⛔⛔ **AND THE LITERAL READING OF `-190` cl.3 PUTS EVERY FAMILY'S ACCOUNT NUMBER IN 43,000 POCKETS**
+  # — a LARGER exposure than the one this programme just removed, persisting on 43,000 devices.
+  # ⭐ BigDev recommends **(b): the member's OWN ASSIGNED drives, any state** — widening today's rule on
+  # the TIME axis, ⛔ not the POPULATION axis. ⚠ If (a) is genuinely wanted it needs the **PANEL**,
+  # ⛔ not this story: `-190` was ratified on a note that ⛔ never quantified it.
+  11b-17-member-drive-detail-unredacted: ready-for-dev
   epic-11b-retrospective: optional
 
   # ==========================================================================

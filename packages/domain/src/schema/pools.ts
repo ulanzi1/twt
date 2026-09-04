@@ -58,7 +58,14 @@ import { benefitMechanismEnum } from './clause_versions.js';
  *   · `spawned` — initial; the pool exists (the spawn saga appended `pool.spawned`).
  *   · `live`    — open for contributions (`pool.opened_for_contributions`).
  *   · `closed`  — the contribution window has closed (`pool.closed`).
- *   · `settled` — disbursed to the deceased's nominee accounts (`pool.settled`; terminal).
+ *   · `settled` — ⚠⛔ **CORRECTED 2026-09-04 (`#decision-2026-09-04-192`):** this read *"**disbursed**
+ *                 to the deceased's nominee accounts"*, which describes an act the trust ⛔ NEVER
+ *                 PERFORMS — members pay the nominee's VPA DIRECTLY (`upi-intent.ts`), so there is
+ *                 ⛔ no trust-held pot and ⛔ no payout engine. ⇒ the only coherent meaning left is
+ *                 **RECONCILIATION COMPLETE** — every contribution matched against bank records
+ *                 (Story 9.3). Public label: **"Verified"**. (`pool.settled`; terminal.)
+ *                 ⚠⛔ ⛔ NO PRODUCER EXISTS IN PRODUCTION — no path in `packages/domain/src`,
+ *                 `apps/api/src` or `apps/jobs/src` fires it. Settled rows in a test DB are FIXTURES.
  *
  * The state LABELS need no delimiter (single words). Choosing the label set here
  * (not the event-name delimiter, which pool/events.ts resolves) keeps this the sole

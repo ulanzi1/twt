@@ -78,8 +78,21 @@ import { pools } from '../schema/pools.js';
 /**
  * ⭐ THE LISTING PREDICATE, HALF ONE — which pool states appear publicly.
  *
- * `closed` → **Active** (the collection window has shut; the family is not yet paid).
- * `settled` → **Archive** (disbursed; terminal).
+ * ⚠⛔ **CORRECTED 2026-09-04 (`#decision-2026-09-04-192`) — THIS GLOSS WAS WRONG, AND IT MISLED A
+ * REVIEW.** It read: *"`closed` → **Active** (the collection window has shut; **the family is not yet
+ * paid**). `settled` → **Archive** (**disbursed**; terminal)."* ⛔ Both halves describe a
+ * DISBURSEMENT the trust ⛔ never performs.
+ * ⭐⭐ **THE MONEY NEVER TOUCHES THE TRUST.** `upi-intent.ts` builds the payment SERVER-SIDE with the
+ * **nominee's own VPA as the payee** — member → nominee, DIRECTLY. The two accounts exist only
+ * because one cannot receive contributions from the whole roster under per-account limits
+ * ([[project_nominee_bank_disbursement_channel]]). ⇒ there is ⛔ no trust-held pot, ⛔ no payout
+ * engine (9.9), and the family is being paid **THROUGHOUT the drive**, ⛔ not at the end of it. By the
+ * time the window shuts they already hold essentially all of it.
+ * ⇒ the states mean:
+ * `closed`  → **Closed**   (the contribution window has shut; contributions are still being verified).
+ * `settled` → **Verified** (every contribution reconciled against bank records — ⛔ NOT "paid").
+ * ⚠⛔ **AND `settled` HAS ⛔ NO PRODUCER IN PRODUCTION** — see `DRIVE_MASKING_FROM`'s rider below.
+ * ⇒ it is ⛔ excluded from the public index until settlement ships (`-192` cl.2).
  *
  * ⛔ `spawned` and `live` are ABSENT deliberately: a drive still collecting is not a
  * transparency record, it is an open solicitation, and publishing it would invite exactly the

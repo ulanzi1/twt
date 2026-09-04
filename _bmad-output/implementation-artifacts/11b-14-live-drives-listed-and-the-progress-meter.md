@@ -163,7 +163,27 @@ comparison **between** drives · ⛔ no badge, streak or achievement.
 
 ## ⚖️ Decisions
 
-### ⚠ D1 — **OPEN, BLOCKS AC2.** What does the bar fill against, and what happens when there is no target?
+### ✅ D1 — **RULED (a) by BigDev, 2026-09-04: EXTEND THE CANONICAL PRODUCER, and render ⛔ NO BAR without a target.** What does the bar fill against?
+
+> ⭐⭐ **THE RULING.** `packages/ui/src/pool-progress` gains an **OPTIONAL rupee denominator**.
+> ⭐ **ONE canonical producer is preserved** — 9.12 Decision 3's whole point — with two modes:
+>
+> | Consumer | Denominator | Source |
+> |---|---|---|
+> | Member card (`<ActiveContributionCard>`) | `rosterSize` | ⛔ **UNCHANGED** |
+> | Public drive surfaces | the Pariwar's **rupee target** | story **C** |
+>
+> ⚠⛔ **THE THROW IS RE-SCOPED, ⛔ NOT REMOVED.** `confirmedCount > rosterSize` stays an **impossible
+> state** and keeps throwing on the roster path. ⛔ But `amountRaisedInr > target` is an **ORDINARY,
+> HAPPY** state — more members gave than the target assumed — and ⛔ must ⛔ NEVER throw. ⭐ It clamps
+> the bar at 100% (the existing `min(100, …)`) and the **headline figure stays the real amount**,
+> ⛔ never the clamped one.
+>
+> ⭐⭐ **⛔ NO TARGET ⇒ ⛔ NO BAR.** With story C's target unset — **the default for every Pariwar** —
+> the surface renders the **headline figures only**. ⛔ Never a guessed denominator, ⛔ never
+> `rosterSize` silently substituted for a target the Trust has ⛔ not set. ⚠ ⇒ on day one, after C
+> ships and before any Pariwar Admin acts, **⛔ no bar renders anywhere** — ⭐ that is correct, ⛔ not a
+> gap, and the story must ⛔ not "fix" it.
 
 ⭐ Trap 1: the shipped component divides by **`rosterSize`**; `-191` cl.4 rules a **rupee target**.
 
@@ -179,10 +199,25 @@ comparison **between** drives · ⛔ no badge, streak or achievement.
 renders?** ⭐ Recommendation: **the headline figures only, ⛔ no bar**. ⛔ Never a guessed denominator,
 ⛔ never `rosterSize` silently substituted for a target the Trust has not set.
 
-⭐ **BigDev's recommendation: (a) + no-bar-without-a-target.** It honours the 9.12 "single canonical
-producer" ruling, and the THROW is re-scoped rather than removed.
+⇒ **AC2 is UNBLOCKED.**
 
-### ⚠ D2 — **OPEN, BLOCKS AC3.** Does the amount render on the INDEX ROW, the DRIVE PAGE, or BOTH?
+### ✅ D2 — **RULED (b) by BigDev, 2026-09-04: BOTH SURFACES, and the *"never a sum"* sentence is AMENDED.** Where does the amount render?
+
+> ⭐⭐ **THE RULING.** The amount renders on **BOTH** the index row and the drive page.
+> ⇒ `packages/contracts/src/public-pages/sahyog-drive.ts:133` is **AMENDED**, and
+> `packages/domain/src/pool/public-read.ts:481` with it.
+>
+> ⚠⛔ **AMENDED AS AN AMENDMENT — ⛔ NAMED, ⛔ NEVER DELETED.** The replacement must state: what the
+> sentence said (*"⛔ never a sum of amounts"*); that it was an **AUTHOR'S EXTENSION** of 11b.1 **AC5**,
+> which prohibits **leaderboards · rankings · gamification · social-performance · popularity metrics**
+> and ⛔ does ⛔ **not** name a sum; and that `-190` cl.6 (Trustee-ratified) put the figure on the
+> surface, with `-189` cl.5 recording the rupee boundary as **newly crossed**.
+> ⭐ **This epic has logged THREE claims that outlived what they described** (`-187`, `-188`, `-192`).
+> ⛔ Silently deleting a fourth is the **same failure wearing the opposite sign.**
+>
+> ⭐⭐ **THE SURVIVING HALF OF AC5 IS ⛔ NOT TOUCHED, AND MUST STAY ENFORCED:** ⛔ nothing orders by the
+> amount or the count · ⛔ no *"most-supported"* view at any tier · ⛔ no ranking · ⛔ no comparison
+> **between** drives. ⚠ AC5 pins it; ⛔ the amendment ⛔ narrows the sentence, it does ⛔ not repeal it.
 
 ⭐ Trap 2: the index row's contract says *"⛔ never a sum of amounts"*; the Panel ruled the amount.
 
@@ -194,9 +229,8 @@ producer" ruling, and the THROW is re-scoped rather than removed.
   `-190` cl.6 + `-189` cl.5 ruled the figure. ⛔ The ordering/most-supported half of AC5 stays.
 - **(c) Index only.** ⛔ Incoherent — the drive page is where a reader who clicked wants the detail.
 
-⭐ **BigDev's recommendation: (b), with the amendment written as an amendment.** ⚠ ⛔ Do ⛔ not
-quietly delete the *"never a sum"* sentence; this epic has logged **three** claims that outlived what
-they described, and silently removing a fourth is the same failure wearing the opposite sign.
+⇒ **AC3 is UNBLOCKED.** ⚠ Story D now has **⛔ ZERO open decisions** — ⭐ but it remains **BLOCKED on
+B and C**.
 
 ---
 
@@ -213,7 +247,10 @@ cross-drive comparison · ⛔ not publish a written pitch (`-190` cl.8).
 
 - [ ] **Task 0 — GOVERNANCE FIRST** (AC0) — annotate `epics.md` (⭐ FR-76 **restored**; the `:4865` AC
       parenthetical **superseded**); flip the sprint row; ⛔ one `governance:` commit, ⛔ no code.
-- [ ] **Task 1 — RULE D1 AND D2** (blocks Tasks 3-5). ⛔ Do ⛔ not choose unilaterally.
+- [x] **Task 1 — RULE D1 AND D2** — ✅ **BOTH RULED 2026-09-04.** D1: extend the canonical producer
+      with an optional rupee denominator; re-scope (⛔ do not remove) the THROW; ⛔ **no target ⇒ no
+      bar**. D2: **both surfaces**, and `sahyog-drive.ts:133` **amended as an amendment**. ⇒ Tasks 3-5
+      unblocked; ⛔ the story stays **blocked on B and C**.
 - [ ] **Task 2 — The listing predicate** (AC1) — `SAHYOG_DRIVE_VISIBLE_POOL_STATES` gains `live`;
       amend its doc-block, which currently says `live` is *"ABSENT deliberately"* — ⭐ **amend and name
       the previous claim**, ⛔ never overwrite; ⛔ `spawned` untouched.
@@ -277,4 +314,5 @@ units. ⚠ Assert **membership and explicit values**, ⛔ never counts over the 
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-09-04 | 0.2 | ✅ **D1 + D2 RULED.** D1: extend the canonical producer (optional rupee denominator), re-scope the THROW, ⛔ **no target ⇒ no bar**. D2: **both surfaces**, `sahyog-drive.ts:133` **amended and NAMED**, AC5's ordering half untouched. ⇒ ⛔ zero open decisions; ⚠ still blocked on **B** and **C**. | BigDev + Claude |
 | 2026-09-04 | 0.1 | Created from `-195` cl.3 (story **D**). ⚠ **D1 and D2 are OPEN.** ⭐ Findings at authoring: the shipped meter divides by **`rosterSize`, ⛔ not a target**; the index contract says **"⛔ never a sum of amounts"** and that sentence is an **author's extension** of 11b.1 AC5, ⛔ not AC5 itself; and `/sahyog` is cached **5 minutes** against FR-76's *"near-real-time"*. | BigDev + Claude |

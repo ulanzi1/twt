@@ -126,9 +126,20 @@ naming the member, the drive and the instant — ⭐ the same posture the public
 disclosure already takes.
 **And** ⛔ the audit line names the **canonical identifier**, ⛔ never a token or an account number.
 
-### AC6 — The member-facing sentence is WRITTEN, once D1 is ruled
-Per the policy-meaning note: one sentence, in the member's terms, stating who can see a family's
-account details and when — ⛔ written **after** D1, ⛔ never before, and checked against the Niyamavali.
+### AC6 — The member-facing sentence is WRITTEN — ✅ **D1 is ruled, so it is written here**
+
+⭐⭐ **THE SENTENCE, in the member's terms:**
+
+> **"Any member of your Pariwar can see the bank account details of every family your Pariwar has
+> supported — ⛔ not only the drives you were asked to contribute to, and ⛔ not only while a drive is
+> still collecting."**
+
+⚠⛔ **AND THE NIYAMAVALI CHECK, REPORTED HONESTLY, ⛔ not faked.** AI-10-1 requires the sentence be
+checked against the Niyamavali **and the result stated**. ⭐ Result: **the check yields nothing
+dispositive**, because the Niyamavali is an **unexecuted, agent-drafted design reference that binds
+nothing** ([[feedback_niyamavali_rulebook_not_spec]]) — ⛔ it is ⛔ never a blocker and ⛔ must ⛔ not be
+cited as binding. ⇒ ⭐ **the authority for this sentence is `2026-09-04-190` cl.3 as ruled at `-199`,
+⛔ nothing else.** ⛔ Do ⛔ not record a Niyamavali clause as authorising it.
 
 ### AC7 — ⛔ Nothing else moves
 ⛔ No public surface · ⛔ no masking behaviour (⭐ dormant per `-190` cl.4) · ⛔ no change to the 9.9
@@ -153,10 +164,10 @@ donor path's own gate · ⛔ no contributor names · ⛔ no target · ⛔ no `sp
 > `request.requestContext.pariwarId`, and every read runs under RLS **FORCED**.
 >
 > ⚠⛔ **ONE PHRASE IS ⛔ NOT YET CONFIRMED AND IT BLOCKS THE READ — *"any Trust Pariwar drive"*:**
-> **(i)** any drive of the member's **OWN** Pariwar ⭐ (BigDev's reading; ⭐ qualifier 2 resolves it there
-> by itself), or **(ii)** ⛔⛔ any drive of **ANY** Pariwar — **CROSS-TENANT**, which ⛔ a story cannot
-> implement: it inverts the tenant boundary the substrate rests on. ⛔ **If (ii) is meant, STOP** — it
-> is a substrate change and a Panel matter.
+> ✅ **CONFIRMED 2026-09-04: (i) — the member's OWN Pariwar.** ⛔ Cross-tenant (ii) is ⛔ NOT meant.
+> ⇒ ⭐ the **session scope stands as the boundary, ⛔ unchanged**, and this story adds ⛔ NO new tenancy
+> surface. ⚠ ⇒ **AC3's cross-Pariwar test is now the ONLY remaining boundary** — and therefore the
+> load-bearing one.
 >
 > ⚠⛔ **AND WHAT (a) DISCLOSES, STATED ONCE — ⛔ not re-litigated:** every authenticated member of a
 > Pariwar can read the **full account number, IFSC, UPI ID and holder name of every family that
@@ -201,8 +212,9 @@ path's own live-pool gate · ⛔ no widening of `contribution-history` without n
 ## Tasks / Subtasks
 
 - [x] **Task 0 — RULE D1** — ✅ **RULED (a)** 2026-09-04 (`-199`).
-- [ ] **Task 0b — ⛔ BLOCKING: confirm *"any Trust Pariwar drive"* = the member's OWN Pariwar (i).**
-      ⛔ If cross-tenant (ii) is meant, ⛔ **STOP** — substrate change, Panel matter, ⛔ not this story.
+- [x] **Task 0b — CONFIRM THE SCOPE** — ✅ **CONFIRMED (i): the member's OWN Pariwar**, 2026-09-04.
+      ⛔ Cross-tenant (ii) is ⛔ NOT meant and is ⛔ not in scope. ⇒ the session scope stands as the
+      boundary, ⛔ unchanged — ⭐ this story adds ⛔ NO new tenancy surface.
 - [ ] **Task 0c — ⭐ Recommended, ⛔ not blocking:** a one-page **disclosure note to the Panel** stating
       the quantification their clause produces (`-199`). ⛔ Not asking them to re-decide.
 - [ ] **Task 1 — GOVERNANCE** (AC0) — annotate `epics.md`; flip the sprint row; ⭐ record D1's ruling
@@ -269,5 +281,6 @@ explicit values**, ⛔ never counts over the shared fixture.
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-09-04 | 0.3 | ✅ **Scope CONFIRMED (i): the member's OWN Pariwar.** ⛔ Zero open decisions. ⭐ AC6's member-facing sentence is now WRITTEN, with the Niyamavali check reported honestly as **non-dispositive** (it binds nothing). | BigDev + Claude |
 | 2026-09-04 | 0.2 | ✅ **D1 RULED (a)** (`-199`) — ⛔ recommendation (b) NOT taken. ⚠ **Task 0b BLOCKING:** confirm *"any Trust Pariwar drive"* = the member's OWN Pariwar; ⛔ cross-tenant is a substrate change, ⛔ not this story. ⚠ AC5's audit is now routine-volume; Trap 3 is now definitely a REVERSAL. | BigDev + Claude |
 | 2026-09-04 | 0.1 | Created from `-195` cl.3 (story **F**, the last). ⛔ **D1 is OPEN and IS the story.** ⭐⭐ Findings: `-189` cl.3 ⛔ does **not** force the scope (story A removes the public's banking entirely ⇒ cl.3 is satisfied by construction); the **literal** cl.3 reading would put every family's account number in **43,000 pockets** — ⭐ a LARGER exposure than the one just removed; and `contribution-history` excludes bank data **deliberately**. | BigDev + Claude |

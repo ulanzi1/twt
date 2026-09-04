@@ -138,7 +138,32 @@ donor path's own gate · ⛔ no contributor names · ⛔ no target · ⛔ no `sp
 
 ## ⚖️ Decisions
 
-### ⛔⛔ D1 — **OPEN, AND IT IS THE STORY.** WHICH member sees WHICH drive's banking coordinates?
+### ✅ D1 — **RULED (a) by BigDev, 2026-09-04** (`#decision-2026-09-04-199`). WHICH member sees WHICH drive's banking coordinates?
+
+> ⭐⭐ **THE RULING, VERBATIM:** *"Any authenticated member may access the member-facing Sahyog Vivran
+> detail for any Trust Pariwar drive, including its full nominee banking coordinates, subject to the
+> drive's lifecycle and member-surface access controls."*
+>
+> ⇒ **option (a).** ⛔ BigDev's recommendation **(b)** is ⛔ **NOT taken** — recorded plainly rather
+> than quietly narrowed.
+>
+> ⭐ **Two qualifiers, ⛔ both binding:** *"lifecycle"* ⇒ `live` · `closed` · `settled` only (⛔ never
+> `spawned`, `-196`). *"member-surface access controls"* ⇒ ⭐ **the session scope IS the control** —
+> member routes carry ⛔ **no `:pariwarId` parameter**; it comes from
+> `request.requestContext.pariwarId`, and every read runs under RLS **FORCED**.
+>
+> ⚠⛔ **ONE PHRASE IS ⛔ NOT YET CONFIRMED AND IT BLOCKS THE READ — *"any Trust Pariwar drive"*:**
+> **(i)** any drive of the member's **OWN** Pariwar ⭐ (BigDev's reading; ⭐ qualifier 2 resolves it there
+> by itself), or **(ii)** ⛔⛔ any drive of **ANY** Pariwar — **CROSS-TENANT**, which ⛔ a story cannot
+> implement: it inverts the tenant boundary the substrate rests on. ⛔ **If (ii) is meant, STOP** — it
+> is a substrate change and a Panel matter.
+>
+> ⚠⛔ **AND WHAT (a) DISCLOSES, STATED ONCE — ⛔ not re-litigated:** every authenticated member of a
+> Pariwar can read the **full account number, IFSC, UPI ID and holder name of every family that
+> Pariwar has ever supported** — on their phone, screenshottable, forwardable, persisting on ~43,000
+> devices. ⭐ **BigDev's call, and it is made.** ⚠ `-199` records that the **Panel has ⛔ never been
+> shown this quantification** (`-190` was ratified on an argument about the *inversion*), and
+> recommends — ⛔ not blocking — a one-page disclosure note stating the number their clause produces.
 
 ⭐ Trap 1: cl.3 ⛔ does not decide this. ⭐ Trap 2: the literal reading is a **larger** exposure than the
 one just removed.
@@ -154,17 +179,14 @@ one just removed.
   unchanged — ⛔ but then this story adds ⛔ nothing to `-190` cl.3 and the clause is satisfied only by
   what already shipped.
 
-⭐ **BigDev's recommendation: (b).** ⚠ It is the only reading that gives cl.3 real content ⛔ without
-handing every family's payment coordinates to the whole membership. ⛔ (a) should ⛔ not be chosen by
-default merely because the clause is phrased unqualifiedly — ⚠ **the Panel ruled cl.3 to CLOSE an
-inversion, ⛔ not to open a directory of bank accounts**, and Trap 1 shows the inversion is already
-closed without it.
-
-⚠⛔ **IF (a) IS GENUINELY WANTED, IT NEEDS THE PANEL**, ⛔ not this story — it is a disclosure of Tier-1
-data to 43,000 people, and `-190` was ratified on a note that ⛔ never quantified it.
-
-⛔ **Do ⛔ not implement until ruled.** ⇒ it decides the read, the route, the audit volume, AC3's test
-and AC6's sentence.
+⇒ **AC1-AC4 are UNBLOCKED** once the *"any Trust Pariwar drive"* phrase is confirmed as **(i)**.
+⚠ **AC5's audit changes character:** under (b) a coordinate read would have been rare; under (a) it is
+**routine browsing**, so the §1.5 chain — ⭐ **globally advisory-lock serialized** — takes a write on
+every detail open. ⛔ Not a blocker; ⚠ a **volume and contention** question the story must **size**,
+⛔ not discover.
+⚠⛔ **AND TRAP 3 IS NOW DEFINITELY A REVERSAL:** `contribution-history.ts:24` states *"DELIBERATELY …
+NO nominee/bank data"*, and (a) grants exactly that to the same member for the same drives. ⇒ it must
+be **NAMED and ARGUED**, ⛔ never absorbed.
 
 ---
 
@@ -178,8 +200,11 @@ path's own live-pool gate · ⛔ no widening of `contribution-history` without n
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — ⛔ RULE D1 FIRST** — ⛔ it is the story; ⛔ nothing else may start. ⚠ If **(a)**, ⛔ stop
-      and route to the Panel.
+- [x] **Task 0 — RULE D1** — ✅ **RULED (a)** 2026-09-04 (`-199`).
+- [ ] **Task 0b — ⛔ BLOCKING: confirm *"any Trust Pariwar drive"* = the member's OWN Pariwar (i).**
+      ⛔ If cross-tenant (ii) is meant, ⛔ **STOP** — substrate change, Panel matter, ⛔ not this story.
+- [ ] **Task 0c — ⭐ Recommended, ⛔ not blocking:** a one-page **disclosure note to the Panel** stating
+      the quantification their clause produces (`-199`). ⛔ Not asking them to re-decide.
 - [ ] **Task 1 — GOVERNANCE** (AC0) — annotate `epics.md`; flip the sprint row; ⭐ record D1's ruling
       and **AC6's sentence**; ⛔ one `governance:` commit, ⛔ no code.
 - [ ] **Task 2 — The read** (AC1, AC2, AC3) — a member-scoped per-drive read. ⚠ Per Trap 3, ⛔ do ⛔ not
@@ -193,8 +218,9 @@ path's own live-pool gate · ⛔ no widening of `contribution-history` without n
       implied; ⭐ `accessible={true}` on every labelled container.
 - [ ] **Task 6 — Tests** (AC2-AC5)
   - [ ] The `member ≥ public` **comparison** (AC2).
-  - [ ] ⛔⛔ An out-of-scope member gets the coordinate keys **ABSENT**, ⛔ not `null` (AC3) — ⭐ the
-        load-bearing guard.
+  - [ ] ⛔⛔ A member of **ANOTHER Pariwar** gets the coordinate keys **ABSENT**, ⛔ not `null` (AC3) —
+        ⭐ under (a)/(i) this is the ONLY remaining boundary, so it is the load-bearing guard.
+  - [ ] ⭐ Size the **audit write volume** under routine browsing before shipping (AC5).
   - [ ] Another Pariwar's drive is unreachable (family 12).
   - [ ] Every coordinate read writes exactly one audit line (AC5).
   - [ ] ⭐ **Execute them** against `twt-test-pg` `:5433`.
@@ -243,4 +269,5 @@ explicit values**, ⛔ never counts over the shared fixture.
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-09-04 | 0.2 | ✅ **D1 RULED (a)** (`-199`) — ⛔ recommendation (b) NOT taken. ⚠ **Task 0b BLOCKING:** confirm *"any Trust Pariwar drive"* = the member's OWN Pariwar; ⛔ cross-tenant is a substrate change, ⛔ not this story. ⚠ AC5's audit is now routine-volume; Trap 3 is now definitely a REVERSAL. | BigDev + Claude |
 | 2026-09-04 | 0.1 | Created from `-195` cl.3 (story **F**, the last). ⛔ **D1 is OPEN and IS the story.** ⭐⭐ Findings: `-189` cl.3 ⛔ does **not** force the scope (story A removes the public's banking entirely ⇒ cl.3 is satisfied by construction); the **literal** cl.3 reading would put every family's account number in **43,000 pockets** — ⭐ a LARGER exposure than the one just removed; and `contribution-history` excludes bank data **deliberately**. | BigDev + Claude |

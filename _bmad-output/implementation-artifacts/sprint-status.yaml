@@ -1,4 +1,30 @@
-# last_updated: 2026-09-04i (⭐⭐ **STORY 11b.10 CLOSES — `in-progress` -> `done`. ONE ROW MOVES.**
+# last_updated: 2026-09-04j (⭐⭐ **STORY 11b.11 CREATED — `bmad-create-story`. ONE ROW APPEARS.**
+#   ⛔ epic-11b stays `in-progress`; ⛔ 11b-10 `done`; ⛔ 11b-3b `ready-for-dev`.
+#   ⭐ **STORY A** of the `2026-09-04-195` cl.3 split: withdraw the nominee BANKING COORDINATES from the
+#   PUBLIC Sahyog Vivran surface. Owns TRUSTEE-RATIFIED `2026-09-04-190` cl.1-2 + `-191` cl.2.
+#   ⭐⭐ **SHIPS FIRST AND ALONE** — the ONLY one of A-F that REDUCES public exposure, and it depends on
+#   ⛔ nothing. ⛔ Do ⛔ not bundle it with B-F.
+#   ⭐ Removes 5 fields from `public` (`nominee_account_number` · `_ifsc` · `_bank_name` · `_branch` ·
+#   `_vpa`); RETAINS `nominee_account_holder_name`, relabelled **"Nominee Name"** in COPY ONLY (⛔ the
+#   column, field id, matrix key and wire key are UNCHANGED — 6.8's composite-PK identity and the 9.9
+#   donor path key on them). Tier-1 allowlist **4 pairs -> 1**.
+#   ⚠⛔ **FOUR TRAPS**, each recorded because each has a precedent in this epic: (1) it SUPERSEDES a
+#   Trustee-ratified decision — `-165` is ⛔ NOT edited in place, and its cl.3-4 STAND; (2) the masked
+#   arm currently DROPS `accountHolderName`, so without `-191` cl.2 a masked drive would render an
+#   EMPTY bank block — this amends the READING of `-160` cl.10(e); (3) it is a PRESENTATION ruling,
+#   ⛔ not a rename; (4) masking is RETAINED by ruling but now has ⛔ NO PUBLIC CONSUMER and ⛔ must not
+#   be described as a live safeguard anywhere.
+#   ⚠ **D1 IS OPEN AND BLOCKS TASK 2:** with the coordinates gone the wire's `masked` union has two
+#   IDENTICAL arms. Keep the inert discriminator, or collapse the wire and keep the machinery?
+#   ⭐ BigDev recommends COLLAPSE — an inert `masked: true` on the wire is exactly the
+#   "prose that outlives the thing it describes" failure this epic logged three times in one day.
+#   ⭐ **AC6 pins `member > public`** (`-189` cl.3, a DATA-CLASS invariant per `-195` cl.1) and notes it
+#   is satisfied STRUCTURALLY — by LOWERING the public, ⛔ not by widening the member — with a
+#   regression test that the 9.9 donor path still returns all four values UNMASKED. ⚠ A residual
+#   inversion remains for `closed` drives until **story F**; recorded, ⛔ not hidden.
+#   ⛔ AI-10-1: this story introduces ⛔ NO member-gating predicate — stated explicitly in the file.
+#
+# last_updated_prior: 2026-09-04i (⭐⭐ **STORY 11b.10 CLOSES — `in-progress` -> `done`. ONE ROW MOVES.**
 #   ⛔ epic-11b stays `in-progress`; ⛔ 11b-3a `done`; ⛔ 11b-3b `ready-for-dev`.
 #   ⭐ Closed on its OWN TERMS, ⛔ not by the findings going away. Its ACs hold: the opaque token,
 #   EXACTLY ONE address form, the retained-but-unaddressable identifier, the byte-identical refusal
@@ -14885,6 +14911,17 @@ development_status:
   # D3 the /sahyog per-row link is the necessary consequence of (A)+(B), ⛔ not a new decision — but the
   # exposure sentence is STATED in the story record, ⛔ never discovered in a diff.
   11b-10-sahyog-vivran-unguessable-address-and-inbound-path: done
+  # ⭐ 11b-11 — STORY **A** of the six-story split ruled at `2026-09-04-195` cl.3, which follows the
+  # TRUSTEE-RATIFIED `2026-09-04-190` (DR + KB). ⛔ NOT in `epics.md`'s story list — it owes an
+  # ANNOTATION (its Task 0), exactly as `11b-3a` and `11b-10` did. ⛔ A future `sprint-planning` run
+  # must NOT drop it or regenerate a ghost.
+  # ⭐⭐ IT SHIPS FIRST AND ALONE: of A-F it is the ONLY story that REDUCES public exposure, and it
+  # depends on NOTHING. ⛔ Do not bundle it with B-F "since they touch the same files" — that would
+  # gate a withdrawal of live PII behind feature work.
+  # ⚠ Its **D1 is OPEN** and blocks Task 2: after the coordinates go, the wire's `masked`
+  # discriminated union has two IDENTICAL arms. Keep the inert discriminator, or collapse the wire and
+  # keep the masking machinery? BigDev recommends COLLAPSE.
+  11b-11-nominee-banking-coordinates-withdrawn-from-public: ready-for-dev
   epic-11b-retrospective: optional
 
   # ==========================================================================

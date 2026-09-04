@@ -228,6 +228,47 @@ to keep a discriminator whose two arms are the same. ⇒ **Task 2 is UNBLOCKED.*
 
 ---
 
+## ⬅️ INHERITED — eight findings routed here by 11b.3a's THIRD code-review pass (2026-09-04)
+
+⭐⭐ **These are ⛔ NOT new scope.** They are findings from the third 3-layer review of **Story 11b.3a**,
+routed here rather than actioned there under BigDev's **split-by-survival** ruling (2026-09-04): 11b.3a
+is `done` and **merged**, and `2026-09-04-190` cl.1 — which **this** story implements — **deletes or
+collapses the exact code they bear on**. ⛔ Fixing them in 11b.3a would have queued work against code
+about to be removed.
+
+⚠⛔ **AND THE DEV AGENT WORKS FROM THE TASKS LIST, ⛔ NOT FROM THIS SECTION**
+([[feedback_spec_edits_must_propagate_to_tasks]]). ⇒ ⛔ **an item below that BigDev wants actioned must
+be lifted into `## Tasks / Subtasks` or into an AC.** ⛔ This section was authored by the review and
+⛔ deliberately did ⛔ **not** edit this story's Tasks — that is BigDev's call, ⛔ not the reviewer's.
+
+### ✅ Closed by this story's own ACs — verify at implementation, ⛔ do not assume
+
+- **`bank_name = ''` 500s the entire public transparency page** [`packages/domain/src/pool/sahyog-vivran-read.ts:586`] — `bankName` is passed through **raw** while `branch` on the **next line** is `.trim() || null`-guarded; the column is `text NOT NULL` with ⛔ no non-empty CHECK, is copied verbatim from the IFSC provider port (which declares `bankName: string`, no minimum), and `''` fails `z.string().min(1)` in **both** arms of the response union ⇒ serialization failure ⇒ **500** ⇒ outage page for every visitor. Latent today (the only adapter is an in-memory fixture map); it arrives with a real RBI-dataset adapter. ⭐ **AC1 closes it by deletion** — `bankName` leaves the public read entirely. ⚠⛔ **BUT VERIFY THE MEMBER PATH:** AC6 keeps all four values on the **donor** path, and that path must ⛔ not inherit the same unguarded pass-through. ⚠ The second pass dispositioned this once and **two independent layers re-raised it unprompted** in the third — signal about its visibility, ⛔ not a reversal.
+- **The read model returns `masked: boolean` ALONGSIDE the complete ciphertext of every field** [`sahyog-vivran-read.ts`, `readNomineeBank` / `SahyogVivranNomineeBank`] — `accounts` is built unconditionally and always carries `accountNumberCiphertext`, `accountHolderNameCiphertext`, `ifscCiphertext` and `vpaCiphertext`; ⛔ nothing in the returned **type** changes when `masked === true`, so the guarantee is a downstream promise rather than a structural property. ⚠ Severity reduced on verification — the leak **is** guarded at the wire by a real test (`apps/api/tests/integration/public-pages/sahyog-vivran.spec.ts:911`, *"the FULL NUMBER IS NOT ON THE WIRE"*) ⇒ hardening, ⛔ not a live defect. ⭐ **D1 collapses the union entirely** ⇒ closed by supersession. ⚠ If the collapsed shape still carries ciphertext it does not use, say so at the collapse site — D1 already owes a doc-block there.
+- **The bank block is published regardless of the drive's OUTCOME — including DENIED and APPEAL-REVERSED claims** [`apps/api/src/modules/public-pages/handlers.ts`] — the decrypt fan-out over `drive.nomineeBank.accounts` is **unconditional**, and the ⛔ only suppressor on the path is the **time-since-close** masking predicate. The same response carries `appealReversal` and `fundingOutcome`, so a **denied** claim, or one whose approval was **reversed on appeal**, still publishes the holder's name and full account number indefinitely under FAIL-OPEN. ⭐ `-160` cl.10(a) authorises publication *"during an active campaign"*; ⛔ nothing checks the campaign is **legitimate**, only that it is **recent**. ⇒ **AC1 closes it by deletion** — ⚠ same member-path caveat as above.
+
+### ⚠ CONDITIONAL — closed ⛔ ONLY IF the public read stops resolving the schedule
+
+- **One malformed schedule row throws on the UNAUTHENTICATED path and darkens EVERY drive page in the Pariwar** [`packages/domain/src/claim/nominee-bank-masking-policy.ts:71-86`, reached from `sahyog-vivran-read.ts`] — a row with `masking_mode = 'after_days'` and `mask_after_days IS NULL` (the CHECK dropped, or a snapshot restore predating it) makes `settingFromRow` throw a **bare `Error`** inside the read's `Promise.all` ⇒ the API 500s ⇒ the Astro route maps `!fetched.ok` to the **503 outage view**, for **every** Sahyog Vivran page in that tenant. ⚠⭐ **That is the OPPOSITE posture taken 12 lines away** for the same failure class, where an out-of-range `accountRank` is **dropped** explicitly because *"throwing would 500 a whole transparency page over one malformed row"* — the module is internally inconsistent about **tenant-wide vs row-local blast radius**. ⛔ **DO ⛔ NOT ASSUME THIS IS CLOSED.** If D1's collapse means the public read no longer calls `resolveEffectiveNomineeBankMasking` at all, it is closed by deletion; **if the call survives, this stands and must be fixed here.** ⚠ Its **admin-side twin is ⛔ NOT closed by this story** and stays on 11b.3a: the same `settingFromRow` sits outside any try/catch in the admin `getSchedule`, so a corrupt row **500s the console** — and the operator's only recovery path is the console that just 500'd.
+
+### ⛔ REACTIVATION PRECONDITIONS — ⛔ NOT to be fixed here, ⛔ NOT to be forgotten
+
+⭐ **Trap 4 / AC4 retain the masking machinery with ⛔ no public consumer.** These three findings are
+**dormant, ⛔ not resolved** — each becomes live again the moment the machinery is re-pointed at any
+surface. ⚠ **AC7 leaves the `D8-default` FAIL-OPEN ruling UNCHANGED**, so the fail-open semantics
+persist inside the dormant code. ⇒ record them wherever AC4 records the machinery's new status, so
+whoever reactivates it inherits the list.
+
+- **Un-masking is RETROACTIVE across every historical drive, and the blast radius of one PUT is unbounded and unpreviewable** — the schedule resolves at the **request instant**, ⛔ never at the drive's close instant. A Pariwar on `permanent` for two years that moves to `after_days: 30` **instantly re-publishes** complete details for every drive closed more than 30 days ago; `after_days: 36500` un-masks the **entire archive in one request**. ⛔ No dry-run, ⛔ no affected-drive count, ⛔ no per-drive pinning. The doc-blocks celebrate reversibility without noting the reverse direction is a **bulk disclosure event**. ⚠ Secondarily, the `s-maxage=300` staleness is disclosed in three places but **all three frame it as a schedule-change delay** — the identical delay on the **time-elapse** transition at `closedAt + N` is disclosed ⛔ nowhere.
+- **RLS scope failure is INDISTINGUISHABLE from "no window configured" — and resolves to PUBLISH** — `resolveEffectiveNomineeBankMasking` returns `null` for **every** zero-row cause: no row, unset `app.pariwar_id`, empty-string scope, wrong-tenant scope, a dropped policy. `null` means **not masked**. ⇒ a public route whose connection loses its `SET LOCAL app.pariwar_id` on a `permanent` Pariwar publishes complete details, pinned at every warm PoP for 300s. ⭐ `-179` cl.1 ruled the **POLICY** default fail-open; the code silently extends that to **INFRASTRUCTURE FAILURE**, which ⛔ no one ruled on. **Before reactivation:** distinguish *"queried successfully, no row"* from *"could not resolve"*.
+- **FAIL-OPEN by default, centrally administered, with O(N) remediation and a five-minute floor** — `configured: false` resolves FAIL-OPEN and `-178` forbids a Pariwar setting its own window ⇒ the incident path is **one Trust PUT per Pariwar**, each with a hand-written rationale, each up to **300s** to reach warm PoPs, with *"⛔ Direct SQL is NOT the operational fallback"*. ⛔ No global default, ⛔ no bulk setter, ⛔ no cache-purge hook ⇒ remediation time for an actively-abused account number is **N admin requests + 5 minutes**, N unbounded. ⭐ Documented three times, mitigated zero.
+
+### 📋 One correction this story's own AC5 already owes
+
+- **The route header's "FOUR applicable controls" overcounts what actually defends** [`apps/api/src/modules/public-pages/routes.ts`] — control **4** is `X-Robots-Tag: noindex, nofollow` (a crawler **hint**; archivers and scrapers ignore it), control **5** is *"the absence of any DETAIL or EXPORT affordance"* (irrelevant to a direct GET) and control **6** is the decrypt itself ⇒ netting out, **one** control stood between an anonymous caller and Tier-1 data. ⚠ **The enumeration half is CLOSED** — `-184` (B) ruled the address unguessable and **11b.10 shipped the opaque `publicToken`**. ⭐ What survives is that counting three non-controls as controls **manufactures a false defence-in-depth** on the document a future reviewer will trust. ⇒ **AC5 already requires every control-count statement to be corrected to ONE Tier-1 pair** — make the same edit honest about *which* of those four are controls. ⚠⛔ **AND THERE IS A THIRD DOCUMENT AC5 DOES NOT NAME:** `packages/contracts/public-pages/public-vs-private-matrix.yaml:758-760` states `noindex` is *"control 3 of the **THREE** this route states"* — a different count **and** a different ordinal from `routes.ts`. ⭐ That same file also still asserts, at `:112-117` and in its `description:` **data** at `:748-751`, that this surface *"declares ⛔ ZERO `pii_tier: 1` fields"* and *"NAMES ⛔ NOBODY … ⛔ not a nominee"* — both **false since 11b.3a**, and both squarely inside AC4's *"every doc-block describing it … is amended"* and Trap 4's *"prose that outlives the thing it describes."*
+
+---
+
 ## Tasks / Subtasks
 
 - [ ] **Task 0 — GOVERNANCE FIRST** (AC0)

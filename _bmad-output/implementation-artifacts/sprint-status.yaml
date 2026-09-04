@@ -1,4 +1,40 @@
-# last_updated: 2026-09-04u (⭐⭐⭐ **ALL SEVEN STORIES NOW CARRY ⛔ ZERO OPEN DECISIONS. ⛔ ZERO ROWS MOVE.**
+# last_updated: 2026-09-04v (⭐⭐ **11b.3a THIRD CODE-REVIEW PASS — ⛔ ZERO ROWS MOVE. 11b.3a STAYS `done`.**
+#   ⛔ epic-11b `in-progress`; ⛔ 11b-10 `done`; ⛔ 11b-3a **`done`**; ⛔ 11b-11…17 ALL `ready-for-dev`.
+#   ⭐ A third, independent 3-layer pass over `e16cc690..2c69cd5d` (13 commits). **1 decision-needed ·
+#   34 patch · 8 deferred · 8 ROUTED TO 11b-11 · 7 dismissed.** ⭐ **FOUR REAL GAPs** on the
+#   load-bearing-invariant checklist — families **10**/**11** (G1) and **8**/**10** (G2) — all triaged at
+#   AC severity per the checklist's own ruling, ⛔ none downgraded to notes.
+#   ✅ **D3 RULED (a) — STATE THE CONSTRUCTION.** The second pass marked a family-2 item `[x]` with its
+#   second clause unfixed and summarised *"both now mechanized"*. The mitigation is REAL — RLS is
+#   transaction-scoped, so a non-tx caller's INSERT is `42501` ⇒ closed BY CONSTRUCTION — it was simply
+#   ⛔ never the argument recorded. ⚠ Owes the doc-block at `nominee-bank-masking-policy.ts:221` AND its
+#   own limit (a future **BYPASSRLS** caller is outside it = the re-examination trigger).
+#   ⛔ A `Tx`-brand is REFUSED here — `pool/fixed-amount.ts:534` shares the signature ⇒ codebase-wide.
+#   ⭐ **BigDev's triage: patches LEFT AS ACTION ITEMS, story STAYS `done`** — the build is complete and
+#   its blocking question was answered by `-184`; ⛔ reopening a merged story mid-epic buys nothing.
+#   ⭐⭐ **SPLIT BY SURVIVAL** — `-190` cl.1 (which **11b-11** implements) deletes or collapses the code
+#   eight findings bear on, so they are routed to 11b-11 and are ⛔ NOT actioned on 11b.3a. ⚠⛔ **THREE OF
+#   THEM ARE REACTIVATION PRECONDITIONS, ⛔ NOT FIXES:** cl.4 RETAINS the masking machinery with ⛔ no
+#   public consumer, and AC7 leaves `D8-default` **FAIL-OPEN** UNCHANGED ⇒ retroactive bulk un-masking,
+#   RLS-failure-reads-as-unconfigured, and O(N) remediation all sit DORMANT inside retained code.
+#   ⚠⛔ **AND 11b-11 MUST LIFT WHAT IT WANTS INTO ITS TASKS** — the dev agent works from the Tasks list,
+#   ⛔ not from an inherited-findings section ([[feedback_spec_edits_must_propagate_to_tasks]]).
+#   ⚠⛔⛔ **`done` DOES ⛔ NOT MEAN REVIEW-COMPLETE.** The pass is CHUNKED: **G1** (`packages/domain`) and
+#   **G2** (`apps/api`+`contracts`+`openapi`) were reviewed; **G3** (`apps/public` + `apps/admin` +
+#   `packages/i18n` + `scripts`) and **G4** (governance docs) — **4,286 lines / 25 files** — have had
+#   ⛔ NO third-pass review, including the ENTIRE Trust-Admin console and the public Astro render layer.
+#   ⭐ G3 is where checklist family **13** (semantic accessibility) lives, **un-mechanized BY RULING**
+#   ⇒ *the half that decays*; and **11b.8** makes an accessibility audit a **LAUNCH-BLOCKER** (UX-DR70).
+#   ⛔ **NOTHING WAS EXECUTED** — `pnpm ci:local` ⛔ not run, ⛔ no fix applied ⇒ every "verified" means
+#   READ AGAINST `HEAD`, ⛔ never TESTED, and ⛔ the two prior passes' green runs are ⛔ NOT inherited
+#   ([[feedback_record_unattested_no_backfill]]).
+#   ⚠ **TWO DISMISSALS WERE CHUNKING ARTIFACTS** — a HIGH "nothing tests the wiring" (the test is in G2,
+#   named for the exact defect) and a HIGH sequential-enumeration walk (closed by `-184` (B), shipped by
+#   11b-10's `publicToken`). ⇒ **a per-chunk pass structurally cannot see cross-chunk coverage** — the
+#   review-process analogue of [[feedback_circular_deferral_between_sibling_stories]], routed to the
+#   Epic 11b retro. ⛔ Three files touched, ALL governance artifacts; ⛔ ZERO code changed.)
+#
+# last_updated_prior: 2026-09-04u (⭐⭐⭐ **ALL SEVEN STORIES NOW CARRY ⛔ ZERO OPEN DECISIONS. ⛔ ZERO ROWS MOVE.**
 #   ⛔ epic-11b `in-progress`; ⛔ 11b-10 `done`; ⛔ 11b-11…17 ALL `ready-for-dev`.
 #   ✅ **11b.17 D1 RULED (a)** (`-199`) and its scope **CONFIRMED (i) — the member's OWN Pariwar.**
 #   ⇒ any authenticated member may open the member-facing Sahyog Vivran detail for ANY drive in THEIR

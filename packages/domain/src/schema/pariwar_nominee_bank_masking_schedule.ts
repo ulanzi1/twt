@@ -82,8 +82,17 @@ import type { PariwarId, UserId } from '../ids/index.js';
 // setting with an ADVERB OF IMMEDIACY, and Story 11b.3a **AC6** forbids that adverb across this
 // control's surfaces — mechanized by `apps/admin/tests/nominee-bank-masking-terminology.test.ts`.
 // ⛔ The ban is not a disagreement with the Panel: it is about what THIS control's propagation claims,
-// and a source scan cannot tell a QUOTE from a CLAIM. ⇒ every file here paraphrases as *"masked from
-// the close instant"* and points at cl.10(c) for the verbatim. ⛔ Do not paste the adverb back in.
+// and a source scan cannot tell a QUOTE from a CLAIM. ⇒ where this control makes a CLAIM about its own
+// propagation it paraphrases as *"masked from the close instant"* and points at cl.10(c) for the
+// verbatim. ⛔ Do not paste the adverb back in as a CLAIM.
+// ⚠⭐ CORRECTED 2026-09-04 (11b.3a third code-review pass). This sentence used to read *"⇒ EVERY FILE
+// HERE paraphrases …"* — which was FALSE OF ITS OWN COMMIT: `migrations/0113_…sql` and
+// `claim/nominee-bank-masking.ts` both still carry the adverb. ⛔ Those occurrences are CORRECT and
+// were deliberately kept — each is a QUOTATION of cl.10(c), and AC6's gate covers the three sites AC6
+// names. ⇒ the defect was never the occurrences; it was a standing instruction asserting that "every
+// file here" does something two files in the same commit demonstrably do not. ⭐ The rule is about
+// CLAIMS, not about quotations, and now says so — see Story 11b.11's Trap 4, which records this exact
+// class (*"prose that outlives the thing it describes"*) three times in a single day.
 export const nomineeBankMaskingModeEnum = pgEnum(
   'nominee_bank_masking_mode',
   NOMINEE_BANK_MASKING_MODES,

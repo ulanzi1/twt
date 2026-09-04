@@ -414,9 +414,14 @@ export async function readPublicSahyogVivran(
   const status = PUBLIC_STATUS_BY_POOL_STATE[row.currentState as SahyogVivranVisiblePoolState];
   // ⭐ COERCED ONCE and reused — {@link coerceDriveInstant}. The raw `sql` fragment's declared
   // `Date | null` is a claim the runtime does not honour (the value arrives as an ISO STRING), and
-  // Story 11b.3a's masking offset is measured FROM this instant: a string here would make
-  // `getTime()` return NaN and every comparison false — i.e. a FULL ACCOUNT NUMBER staying public on
-  // a Pariwar that configured a window. ⛔ Never re-derive it from `row.driveClosedAt` below.
+  // Story 11b.3a's masking offset is measured FROM this instant, so the coercion is load-bearing.
+  // ⚠⭐ CORRECTED 2026-09-04 (11b.3a third code-review pass) — this comment used to say a string here
+  // would make *"`getTime()` return NaN and every comparison false — i.e. a FULL ACCOUNT NUMBER
+  // staying public"*. ⛔ THAT CONSEQUENCE IS WRONG: a string has no `getTime`, so the call throws
+  // `TypeError` and the page 500s — it FAILS CLOSED and publishes NOTHING. ⭐ The coercion is still
+  // correct and still required; what changes is the RISK OF REMOVING IT — a reviewer trusting the old
+  // comment would rank this as a disclosure hazard when it is an availability one. ⛔ Never re-derive
+  // it from `row.driveClosedAt` below.
   const driveClosedAt = coerceDriveInstant(row.driveClosedAt);
   // ⭐ COERCED THE SAME WAY AND FOR THE SAME REASON, but kept SEPARATE from `driveClosedAt` — the two
   // fragments answer different questions and collapsing them re-introduces the un-masking defect.

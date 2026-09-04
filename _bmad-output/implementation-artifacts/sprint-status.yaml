@@ -1,4 +1,30 @@
-# last_updated: 2026-09-04o (⭐⭐ **STORY 11b.14 CREATED — `bmad-create-story`. ONE ROW APPEARS.**
+# last_updated: 2026-09-04p (⭐ **STORY 11b.14 — D1 + D2 RULED. ⛔ ZERO ROWS MOVE.**
+#   ⛔ epic-11b `in-progress`; ⛔ 11b-10 `done`; ⛔ 11b-11/12/13/14 all `ready-for-dev`.
+#   ⭐⭐ **ALL FOUR AUTHORED STORIES NOW CARRY ⛔ ZERO OPEN DECISIONS.** ⚠ 11b-14 remains BLOCKED on
+#   11b-12 (B) and 11b-13 (C) — a dependency, ⛔ not a decision.
+#   ✅ **D1: EXTEND THE CANONICAL PRODUCER.** `pool-progress` gains an OPTIONAL rupee denominator —
+#   ⭐ ONE producer, two modes; the member card keeps `rosterSize` ⛔ unchanged (9.12 Decision 3's
+#   "single canonical producer" is HONOURED, ⛔ not forked). ⚠⛔ **THE THROW IS RE-SCOPED, ⛔ NOT
+#   REMOVED:** `confirmedCount > rosterSize` remains an impossible state and keeps throwing;
+#   `amountRaisedInr > target` is an **ORDINARY, HAPPY** state — more members gave than the target
+#   assumed — and ⛔ must NEVER throw. ⭐ It clamps the bar at 100% via the existing `min(100, …)`, and
+#   the HEADLINE figure stays the REAL amount, ⛔ never the clamped one.
+#   ⭐⭐ **⛔ NO TARGET ⇒ ⛔ NO BAR.** With C's target unset — **the DEFAULT for every Pariwar** — the
+#   surface renders headline figures only. ⛔ Never a guessed denominator; ⛔ never `rosterSize`
+#   silently substituted for a target the Trust has ⛔ not set. ⚠ ⇒ on day one, after C ships and before
+#   any Pariwar Admin acts, ⛔ NO bar renders anywhere — ⭐ that is CORRECT, ⛔ not a gap.
+#   ✅ **D2: BOTH SURFACES, AND THE SENTENCE IS AMENDED.** `sahyog-drive.ts:133` and
+#   `public-read.ts:481` are **AMENDED AND NAMED**, ⛔ never deleted. The replacement states what it
+#   said (*"⛔ never a sum of amounts"*), that it was an **AUTHOR'S EXTENSION** of 11b.1 AC5 — which
+#   prohibits leaderboards · rankings · gamification · social-performance · popularity metrics and
+#   ⛔ does NOT name a sum — and that `-190` cl.6 (Trustee-ratified) ruled the figure onto the surface.
+#   ⚠⛔ **THIS EPIC HAS LOGGED THREE CLAIMS THAT OUTLIVED WHAT THEY DESCRIBED** (`-187`, `-188`,
+#   `-192`). ⛔ Silently deleting a fourth is the SAME FAILURE WEARING THE OPPOSITE SIGN.
+#   ⭐ **AC5's surviving half STAYS ENFORCED** — ⛔ nothing orders by the figure, ⛔ no "most-supported"
+#   view at any tier, ⛔ no ranking, ⛔ no comparison BETWEEN drives. ⚠ The amendment NARROWS the
+#   sentence; ⛔ it does ⛔ NOT repeal it.
+#
+# last_updated_prior: 2026-09-04o (⭐⭐ **STORY 11b.14 CREATED — `bmad-create-story`. ONE ROW APPEARS.**
 #   ⛔ epic-11b `in-progress`; ⛔ 11b-10 `done`; ⛔ 11b-11/12/13 `ready-for-dev` (⛔ zero open decisions).
 #   ⭐ **STORY D = 11b-14** — `live` drives LISTED, the progress meter, the participation headline.
 #   ⛔⛔ **BLOCKED ON B AND C.** ⭐⭐ **IT RESTORES FR-76**, un-superseded since the PRD and cited in
@@ -15074,12 +15100,19 @@ development_status:
   # ⭐⭐ **THIS IS THE STORY THAT RESTORES FR-76** — a standing, un-superseded requirement cited in
   # ⛔ ZERO implementation records until `-187` found it. Task 0's annotation repairs that gap and
   # records `epics.md:4865`'s AC parenthetical as SUPERSEDED by `-189` cl.2.
-  # ⚠ **D1 + D2 BOTH OPEN.** D1: the shipped `pool-progress` meter divides by **`rosterSize`**, ⛔ NOT
-  # a rupee target — `-191` cl.4 requires a target. ⭐ BigDev recommends extending the one canonical
-  # producer, and rendering ⛔ NO BAR when a Pariwar has set no target. D2: the index row's contract
-  # says *"⛔ never a sum of amounts"* — ⚠ an AUTHOR'S EXTENSION of 11b.1 AC5, which prohibits
-  # RANKING, ⛔ not sums. ⭐ BigDev recommends rendering the amount on BOTH surfaces and AMENDING that
-  # sentence as an amendment — ⛔ never deleting it.
+  # ✅ **D1 + D2 BOTH RULED 2026-09-04 ⇒ ⛔ ZERO open decisions** (⚠ still BLOCKED on B and C).
+  # **D1:** `pool-progress` gains an OPTIONAL rupee denominator — ⭐ ONE canonical producer, two modes
+  # (member card keeps `rosterSize`, ⛔ unchanged). ⚠⛔ The THROW is RE-SCOPED, ⛔ not removed:
+  # `confirmedCount > rosterSize` stays impossible; `amountRaised > target` is ORDINARY and ⛔ must
+  # never throw — it clamps the bar at 100% while the HEADLINE keeps the real amount.
+  # ⭐⭐ **⛔ NO TARGET ⇒ ⛔ NO BAR** — headline figures only. ⛔ Never a guessed denominator, ⛔ never
+  # `rosterSize` substituted. ⚠ On day one (C shipped, no Pariwar Admin has acted) ⛔ NO bar renders
+  # anywhere — ⭐ correct, ⛔ not a gap, ⛔ do not "fix" it.
+  # **D2:** the amount renders on **BOTH** surfaces ⇒ `sahyog-drive.ts:133` + `public-read.ts:481` are
+  # **AMENDED AND NAMED**, ⛔ never deleted — the replacement states what the sentence said, that it was
+  # an AUTHOR'S EXTENSION of 11b.1 AC5 (which prohibits RANKING, ⛔ not sums), and that `-190` cl.6
+  # ruled the figure. ⭐ AC5's surviving half STAYS ENFORCED: ⛔ no ordering, ⛔ no "most-supported"
+  # view, ⛔ no ranking, ⛔ no cross-drive comparison. ⚠ The amendment NARROWS the sentence, ⛔ not repeals it.
   11b-14-live-drives-listed-and-the-progress-meter: ready-for-dev
   epic-11b-retrospective: optional
 

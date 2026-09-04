@@ -25,9 +25,19 @@ by reading it — the walk below was run end-to-end against a live database befo
 > ⚠⛔ **This is ⛔ NOT a defect in the code, and there is ⛔ no version of the code that fixes it.** It is
 > a consequence of the two answers being applied to the same drive. ⇒ only you can resolve it.
 >
-> ⭐⭐ **WHERE (B) *DOES* WORK, AND IT MATTERS:** `live` drives are ⛔ **not listed** on the index
-> (deliberately — *"an open solicitation"*). For those there is ⛔ no published link, so the unguessable
-> address is the **whole** protection, and it holds completely. **(B) was not wasted.**
+> ⭐⭐ **WHERE (B) *DOES* WORK, AND IT MATTERS:** `live` drives are ⛔ **not listed** on the index. For
+> those there is ⛔ no published link, so the unguessable address is the **whole** protection, and it
+> holds completely. **(B) was not wasted.**
+>
+> ⚠⛔ **AMENDED 2026-09-04 (`#decision-2026-09-04-187`) — AND THE AMENDMENT MATTERS TO THIS NOTE.** This
+> paragraph originally justified that exclusion as deliberate, quoting *"an open solicitation"*.
+> ⛔ **That phrase is ⛔ NOT a ruling of yours** — it is a code comment written at implementation time,
+> and it appears in ⛔ no planning artifact and ⛔ no decision. ⛔ **FR-76 in fact says the OPPOSITE**
+> (*"Active page near-real-time during live alert"*) and was never built. ⇒ whether collecting drives
+> are listed is now **ITS OWN OPEN QUESTION** —
+> `trustee-panel-routing-note-2026-09-04-11b10-collecting-drive-visibility.md`. ⚠⛔ **THE TWO NOTES
+> INTERLOCK: if you rule that collecting drives ARE listed, the protection this paragraph describes
+> ends for every drive.** ⭐ Please answer both in one sitting.
 
 ---
 
@@ -92,8 +102,10 @@ field removal and no filter change that makes a published link unpublished.
 ## 4. ⚖️ What (B) actually bought — stated fairly, in both directions
 
 **⭐ What it genuinely closed:**
-- **`live` drives are fully protected.** They are unlisted, so there is ⛔ no published link and the
-  address is unguessable in the full sense. This is the state you were most concerned about in (A).
+- **`live` drives are fully protected — ⚠ for as long as they stay unlisted.** They have ⛔ no
+  published link today, so the address is unguessable in the full sense. This is the state you were
+  most concerned about in (A). ⚠⛔ **But their unlisted status is ⛔ NOT a ruling of yours** and is
+  itself now open — see `…-collecting-drive-visibility.md` (`#decision-2026-09-04-187`).
 - **Direct URL construction is dead everywhere.** Before 11b.10 anyone could type
   `/sahyog-vivran/P-2026-08-001` with **zero** prior requests. That is now impossible for every state.
 - **Archived drives past the index horizon** are unreachable without a saved link.
@@ -184,6 +196,12 @@ also keep that page's address unguessable. They are the same thing.
 published link, so the unguessable address is the only way in — and it works completely. That was the
 state you were most concerned about, and it is protected.
 
+⚠ **But we must correct something we told you here.** We described that exclusion as a settled rule,
+with the reason *"a drive still asking for money is a solicitation."* **That was not your decision, and
+it is not in any plan** — it is a note written inside the source code. The trust's own written
+requirement says the opposite. That is now a separate question in front of you, in the companion note.
+⇒ **if you decide those drives should be listed, the protection described in this paragraph ends.**
+
 The change also killed something real for *every* drive: before this work, anyone could simply **type a
 guessed address** and land on a page. That no longer works anywhere.
 
@@ -207,9 +225,16 @@ who already saved the link.
 by the back door. We raise it because it is the only option that changes what is actually at stake.
 
 ⚠ **The thing worth knowing:** the drive page currently shows the family's **bank details in full**, and
-it will keep doing that **for every Pariwar until the Trust sets a time limit** — because the default,
-when nothing is configured, is to **show** rather than to hide. The unguessable address was chosen to
-protect those details. For listed drives it cannot. **A time limit can.**
+it will keep doing that **for every Pariwar until the Trust configures the setting** — because the
+default, when nothing is configured, is to **show** rather than to hide. The unguessable address was
+chosen to protect those details. For listed drives it cannot.
+
+⚠⛔ **CORRECTED 2026-09-04 — AND THE CORRECTION CHANGES WHAT THE SETTING CAN DO.** This paragraph
+originally ended *"a time limit can"*. ⭐ True for a **finished** drive. ⛔ **FALSE for one that is
+still collecting:** the time limit is counted from the day a drive **closes**, so a collecting drive
+never starts the clock and its details stay visible in full — **even where the limit is set to zero
+days.** ⇒ only the **"permanent"** setting reaches a collecting drive. If collecting drives are your
+concern, ⛔ a time limit is not the lever; **"permanent"** is.
 
 ⭐ **Our view, offered as a view:** **Option 1** is the correct answer to the question you were actually
 asked — the address work did what it could, and where it could not, that is because you also asked for

@@ -165,7 +165,26 @@ public surface touched.
 
 ## ⚖️ Decisions
 
-### ⚠ D1 — **OPEN, BLOCKS AC3.** What NAME FORM does the member's list show?
+### ✅ D1 — **RULED by BigDev, 2026-09-04 — (c), AND WIDER: the list mirrors the public form, AND My Pool adopts it too.** What NAME FORM does the member's list show?
+
+> ⭐⭐ **THE RULING** (`#decision-2026-09-04-197`): this list shows the Pariwar's **configured** name
+> form — whatever a stranger would see for that drive. ⇒ the `-189` cl.3 inversion is **closed**.
+> ⭐ **And BigDev went further than (c):** *"My Pool also adopt the same configured presentation mode
+> so the member experience is consistent across member surfaces."* ⇒ the divergence is **resolved**,
+> ⛔ not merely routed.
+>
+> ⚠⛔ **BUT THAT HALF IS ⛔ NOT THIS STORY'S WORK — see `-197` follow-up (ii).** `resolvePoolIdentity`
+> serves **THREE shipped member surfaces** (`handlers.ts:630`, `:835`,
+> `contribution-note.ts:144`). ⇒ ⭐ **story G** carries it, sequenced **before or with** this one so
+> the two surfaces ⛔ never disagree. ⛔ Do ⛔ not fold a primary-screen change into a story about a new
+> tab.
+>
+> ⚠⛔ **AND ONE SUB-QUESTION IS ⛔ BLOCKING BOTH** (`-197` follow-up (i)): does the member-facing name
+> carry the publication **BASIS** gate, or only the **FORM**? ⛔ Form-plus-basis is a **REGRESSION** —
+> a member would see ⛔ nothing on an unconsented drive, where today they always see first-name +
+> initial, and the contribution card could ⛔ not say who died. ⭐ **Form-only is recommended**, and it
+> must be recorded that on an unconsented drive a member then goes from *"Rajesh K."* to the **full
+> legal name** — ⭐ a real widening, ⛔ a decision and ⛔ not a side effect.
 
 ⭐ Trap 1: public default = **full name**; the member path hard-codes **first + initial**. ⇒ as things
 stand, building this list the obvious way **ships a `-189` cl.3 inversion**.
@@ -182,11 +201,8 @@ stand, building this list the obvious way **ships a `-189` cl.3 inversion**.
   card/list divergence as a **separate** question rather than fixing a shipped surface inside this
   story.
 
-⭐ **BigDev's recommendation: (c).** ⚠ (b) knowingly ships the inversion `-188` was raised to close;
-⭐ (a) is right but silently leaves a member seeing two different name forms in one app, which is ⛔ the
-kind of thing that becomes next month's finding. ⇒ ⭐ do the right thing **and** name the residue.
-
-⛔ **Do ⛔ not implement until ruled** — it decides the read, the contract and the test in AC3.
+⇒ **AC3 is UNBLOCKED for this story's own read** — ⚠ but the **basis-gate sub-question** must be ruled
+before either surface is built, and **story G** must be sequenced first or alongside.
 
 ---
 
@@ -204,7 +220,10 @@ here (**B** owns them), ⛔ no tab-title i18n sweep (Trap 4).
 
 - [ ] **Task 0 — GOVERNANCE FIRST** (AC0) — annotate `epics.md`; flip the sprint row; ⛔ one
       `governance:` commit, ⛔ no code.
-- [ ] **Task 1 — RULE D1** (blocks Tasks 2-5). ⛔ Do ⛔ not choose unilaterally.
+- [x] **Task 1 — RULE D1** — ✅ **RULED 2026-09-04** (`-197`): mirror the public **configured** form;
+      ⭐ My Pool adopts it too, ⚠ **via story G**, ⛔ not here.
+- [ ] **Task 1b — ⛔ BLOCKING: rule the BASIS-GATE sub-question** (`-197` follow-up (i)). ⭐ Form-only
+      recommended. ⛔ Do ⛔ not build either surface until ruled.
 - [ ] **Task 2 — The read** (AC2, AC3, AC7) — a member-scoped, **paginated** list over
       `live`+`closed`+`settled`, as this surface's **own** fragment. ⛔ Scope from the session, ⛔ never
       a client-supplied Pariwar id.
@@ -218,8 +237,8 @@ here (**B** owns them), ⛔ no tab-title i18n sweep (Trap 4).
       fields are a **superset**. Plus: `spawned` absent; another Pariwar's drives absent; empty →
       populated does ⛔ not crash; the a11y props are present **and** the containers are accessibility
       elements. ⭐ **Execute them** against `twt-test-pg` `:5433`.
-- [ ] **Task 7 — Route the residue** (per D1(c), if ruled) — record the My Pool / list name-form
-      divergence as its own question. ⛔ Do ⛔ not fix My Pool here.
+- [ ] **Task 7 — ⛔ Confirm story G has landed or is landing alongside** — ⛔ this list must ⛔ never
+      ship a name form the My Pool card contradicts. ⛔ Do ⛔ not fix My Pool here.
 
 ---
 
@@ -267,4 +286,5 @@ props. ⚠ Assert **membership and explicit values**, ⛔ never counts over the 
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-09-04 | 0.2 | ✅ **D1 RULED (`-197`)** — mirror the configured form; ⭐ My Pool adopts it too, ⚠ **via a new story G** (it reaches THREE shipped surfaces). ⛔ **Task 1b BLOCKING:** does the member name carry the publication BASIS gate, or only the FORM? ⭐ Form-only recommended — form-plus-basis is a REGRESSION. | BigDev + Claude |
 | 2026-09-04 | 0.1 | Created from `-195` cl.3 (story **E**). ⚠ **D1 is OPEN.** ⭐⭐ Finding at authoring: **the member currently sees LESS NAME than the public** — public default is `full_name`, the member path hard-codes the shielded form. ⛔ A `-189` cl.3 inversion of the same shape as `-188`, in a different field, ⛔ recorded nowhere until now. | BigDev + Claude |

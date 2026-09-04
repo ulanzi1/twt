@@ -1,4 +1,33 @@
-# last_updated: 2026-09-04r (⭐ **STORY 11b.15 — D1 RULED, AND IT SPAWNS A SEVENTH STORY. ⛔ ZERO ROWS MOVE.**
+# last_updated: 2026-09-04s (⭐⭐ **STORY 11b.16 CREATED — the SEVENTH story. ONE ROW APPEARS.**
+#   ⛔ epic-11b `in-progress`; ⛔ 11b-10 `done`; ⛔ 11b-11…16 `ready-for-dev`.
+#   ✅ **`-198` cl.1: FORM ONLY.** The member-facing name takes the Pariwar's CONFIGURED FORM and
+#   ⛔ NOT the publication BASIS gate ⇒ a member sees a name ALWAYS — **equal** to the public where the
+#   basis holds, **greater** where it does not (`-189` cl.3, both directions).
+#   ⚠⛔ **AND WHAT IT DOES IS RECORDED:** on an UNCONSENTED drive a member goes from *"Rajesh K."* to
+#   the **FULL LEGAL NAME**. ⭐ Ground: the basis governs publication to the **WORLD**, ⛔ not what a
+#   mutual-aid group is told about the family it is asked to help. ⛔ Reversing this reverses THAT
+#   SENTENCE, ⛔ not a line of code.
+#   ✅ **`-198` cl.2: STORY G CONFIRMED, SEQUENCED BEFORE E** — the name form changes FIRST, so E's new
+#   list is built into a codebase already consistent. ⛔ E must ⛔ never ship a form My Pool contradicts.
+#   ⭐⭐⭐ **THE FINDING WHILE SCOPING G — A FOURTH CONSUMER, IN A DIFFERENT RISK CLASS:**
+#   `member-pool/pool-identity.ts` **DELEGATES to `notifications.resolvePoolIdentity`**, and that
+#   resolver is ⛔ ALSO called directly by `apps/jobs/src/scheduler/contribution-notify-triggers.ts:683`
+#   — the **OUTBOUND PUSH** path. ⇒ ONE resolver, **FOUR consumers, THREE risk classes**:
+#     · in-app SCREENS (⭐ pulled) — My Pool card `handlers.ts:630`, passbook `:835`
+#     · a DURABLE ARTIFACT — the Yogdaan Pratigya Note `contribution-note.ts:144` (*"render-ready"*;
+#       404s on a null name because *"a Note with a blank family name is a DEFECTIVE ARTIFACT"*)
+#     · ⛔⛔ OUTBOUND PUSH (⛔ pushed) — a full legal name onto a LOCK SCREEN, into a telecom/WhatsApp
+#       log, forwardable.
+#   ⛔⛔ **BigDev's ruling said "member SURFACES". A PUSH IS ⛔ NOT A SURFACE.** ⇒ G ⛔ MUST NOT flip the
+#   shared resolver globally: it threads the form from the **CALL SITE**, the push keeps the SHIELDED
+#   form (AC3, with a test), and the Note is decided deliberately (AC4, ⚠ confirm at Task 1).
+#   ⚠ Trap 3: `ActiveContributionCard` encodes the shielded form IN THE CONTRACT
+#   (`deceasedFirstName` + `deceasedLastInitial`) ⇒ it cannot carry a configured name; ⛔ do NOT stuff a
+#   full name into `deceasedFirstName` — that leaves a LYING FIELD NAME, the class this epic has logged
+#   four times. ⛔ AI-10-1: ⛔ no member-gating predicate — ⚠ but it IS a disclosure change and the
+#   member-facing sentence is stated in the file.
+#
+# last_updated_prior: 2026-09-04r (⭐ **STORY 11b.15 — D1 RULED, AND IT SPAWNS A SEVENTH STORY. ⛔ ZERO ROWS MOVE.**
 #   ⛔ epic-11b `in-progress`; ⛔ 11b-10 `done`; ⛔ 11b-11…15 `ready-for-dev`.
 #   ✅ **D1 (`-197`): the member sees the Pariwar's CONFIGURED name form** — on the new drive list AND
 #   ⭐ on **My Pool**. BigDev went BEYOND the recommended (c): the divergence is **RESOLVED**, ⛔ not
@@ -15189,6 +15218,15 @@ development_status:
   # NOWHERE until now. ⭐ BigDev recommends (c): mirror the public form here, AND route the resulting
   # My Pool / list divergence as its own question rather than fixing a shipped surface inside this story.
   11b-15-member-drive-list-fourth-tab: ready-for-dev
+  # ⭐ 11b-16 — STORY **G**, the SEVENTH, added at `-197`/`-198` after E's authoring found a FOURTH
+  # `-189` cl.3 inversion. ⛔ NOT in `epics.md` — owes an ANNOTATION.
+  # ⛔⛔ **IT RUNS BEFORE E** (`-198` cl.2) — the name form changes FIRST, so E's list is built into a
+  # codebase already consistent. ⚠ ⛔ NOT blocked by A/B/C/D; ⭐ it can start immediately.
+  # ⛔⛔ **THE HAZARD:** `member-pool/pool-identity.ts` DELEGATES to `notifications.resolvePoolIdentity`,
+  # which `apps/jobs/src/scheduler/contribution-notify-triggers.ts:683` calls for the **OUTBOUND PUSH**.
+  # ⇒ a one-line change to the resolver's DEFAULT would put a FULL LEGAL NAME into an SMS/WhatsApp push.
+  # ⭐ AC3 keeps the push SHIELDED and TESTS it. ⇒ thread the form from the CALL SITE, ⛔ never a default.
+  11b-16-member-name-form-configured-presentation: ready-for-dev
   epic-11b-retrospective: optional
 
   # ==========================================================================

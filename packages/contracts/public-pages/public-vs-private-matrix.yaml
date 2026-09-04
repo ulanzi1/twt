@@ -704,7 +704,8 @@ surfaces:
   # surfaces, two predicates. ⭐ The reason is ORDERING: Story 11b.3a's whole subject is the
   # ACTIVE campaign, and widening the predicate in the story that ADDS the Tier-1 bank fields
   # would have been the worse ordering.
-  # ⚠⭐ `D4-linkage` — ⭐⭐ **CLOSED BY STORY 11b.10**, and the rider is AMENDED, ⛔ not deleted.
+  # ⚠⭐ `D4-linkage` — ⭐ **ANSWERED IN BOTH HALVES BY STORY 11b.10, ⚠ but ⛔ NOT FULLY CLOSED**
+  # (see the 2026-09-04 re-amendment at the end of this rider). AMENDED, ⛔ not deleted.
   # It used to read: *"a `live` drive's page has ⛔ NO INBOUND LINK today (`/sahyog` lists only
   # `closed` + `settled`), so it is reachable only by constructing the SEQUENTIAL `P-YYYY-MM-###`"*
   # — with its MIRROR on 11b.3a, where that same sequential identifier fronted four decrypted
@@ -718,6 +719,20 @@ surfaces:
   # ⚠⛔ LANDING (a) WITHOUT (b) WOULD HAVE MADE THE WHOLE SURFACE REACHABLE BY NOBODY and silently
   # inverted the Panel's ratified (A). ⛔ Do not "simplify" this pair apart.
   # ⛔ `live` drives are STILL ⛔ NOT LISTED on `/sahyog`: (A) says REACHABLE, ⛔ never LISTED.
+  # ⚠⛔⛔ **RE-AMENDED 2026-09-04 (`#decision-2026-09-04-186`) — (a) IS NARROWER THAN THIS RIDER SAID,
+  # AND `D4-linkage` IS ⛔ NOT FULLY CLOSED.** (a) above claims *"⛔ no sequence left to construct"*.
+  # ⭐ TRUE, and it holds completely for `live` drives — which are ⛔ NOT LISTED, so the opaque address
+  # is their whole protection. ⛔ It does ⛔ NOT protect `closed`/`settled`: (b) publishes a per-row
+  # LINK to each of them, and a published link CONTAINS the address. `/sahyog`'s PRE-EXISTING
+  # `poolCode` search box (a legitimate 11b.1 affordance) then maps the SEQUENTIAL code to that link
+  # in one unauthenticated request ⇒ identifier → token → four decrypted Tier-1 bank fields, in two.
+  # ⭐ PROVEN BY EXECUTION against a live DB 2026-09-04, ⛔ not inferred.
+  # ⛔⛔ THIS IS ⛔ NOT A DEFECT AND HAS ⛔ NO CODE FIX: (A) reachable and (B) unguessable ⛔ cannot both
+  # hold for the SAME drive — publishing a link publishes the address. ⇒ the tension is between two
+  # ratified answers, so ⛔ only the Panel can resolve it.
+  # ⏳ OPEN: `trustee-panel-routing-note-2026-09-04-11b10-listed-drive-discoverability.md`.
+  # ⛔ Do ⛔ not restore the unqualified "CLOSED BY STORY 11b.10" heading above until it is answered,
+  # and ⛔ do not resolve it by editing this file.
   - id: sahyog-vivran
     # ⭐ Story 11b.10 — the route parameter is the drive's OPAQUE PUBLIC TOKEN (⚠ it was
     # `[poolCanonicalIdentifier]` until this story closed the walk). ⛔ EXACTLY ONE address form: the

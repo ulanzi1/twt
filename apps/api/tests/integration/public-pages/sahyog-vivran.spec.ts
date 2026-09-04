@@ -1,6 +1,6 @@
 // The PUBLIC per-claim Sahyog Vivran route — live-DB integration (Story 11b.3, Task 3; AC1, AC3, AC5, AC6).
 //
-// Drives `GET /api/v1/p/:pariwarId/public-pages/sahyog-vivran/:poolCanonicalIdentifier` through
+// Drives `GET /api/v1/p/:pariwarId/public-pages/sahyog-vivran/:driveToken` through
 // `app.inject` against real Postgres.
 //
 // ⭐⭐ THE LOAD-BEARING FAMILY IS THE **NEGATIVE** ONE: this route returns ⛔ NO person, ⛔ NO
@@ -9,8 +9,11 @@
 //
 // Families:
 //   · the response shape — ⛔ NOTHING on the wire but the ten classified fields.
-//   · ⭐ 404 COLLAPSES every "nothing to show" case: unknown identifier · a `spawned` pool ·
-//     a switched-off Pariwar. ⛔ Byte-identical, because `P-YYYY-MM-###` is SEQUENTIAL.
+//   · ⭐ 404 COLLAPSES every "nothing to show" case — ⭐ FOUR of them since 11b.10: an unknown
+//     ADDRESS · a `spawned` pool · a switched-off Pariwar · and a REAL drive addressed with a WRONG
+//     or ABSENT token. ⛔ Byte-identical. ⚠ AMENDED, ⛔ not deleted: the ground used to be *"because
+//     `P-YYYY-MM-###` is SEQUENTIAL"* — the sequential identifier is ⛔ no longer the address, so the
+//     ground is now the fourth case, which is what stops the TOKEN itself becoming testable.
 //   · ⭐ D4(b): `live` + `closed` + `settled` render, and the vocabulary is the PUBLIC one.
 //   · ⭐ AC3: the confirmed count is canonical-events-only, and yellow can NEVER reach it.
 //   · ⭐ AC5: the appeal lineage is derived AT REQUEST TIME (D12(a) — ⛔ no queue, ⛔ no consumer),
@@ -428,9 +431,16 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
           (await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) })).statusCode,
         ).toBe(200);
 
+        // ⭐⛔ THE "WRONG TOKEN" ARM USES THE DRIVE'S **REAL CANONICAL IDENTIFIER** (review
+        // 2026-09-04), ⛔ not a second random string. Both arms previously carried tokens that
+        // existed NOWHERE, which made them the SAME case and the equality close to tautological.
+        // ⭐ `P-YYYY-MM-###` is the one wrong address an attacker actually has: it is the drive's
+        // real name in the operational vocabulary, it is SEQUENTIAL, and it was this route's address
+        // until 11b.10. ⇒ *"a string that names a real drive"* vs *"a string that names nothing"* is
+        // the contrast that would expose an oracle, and it is now the contrast under test.
         const wrongToken = await t.app.inject({
           method: 'GET',
-          url: ROUTE(pariwarId, `tok-${randomUUID()}`),
+          url: ROUTE(pariwarId, id),
         });
         const noSuchDrive = await t.app.inject({
           method: 'GET',
@@ -441,6 +451,43 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
         expect(wrongToken.statusCode).toBe(noSuchDrive.statusCode);
         expect(wrongToken.body).toBe('');
         expect(wrongToken.body).toBe(noSuchDrive.body);
+        // ⭐ HEADERS TOO — the comment above promises "body or headers". Compare the full header set
+        // minus the per-response volatile ones, so a future divergence (a distinct `content-type`,
+        // an `x-robots-tag` on one path but not the other, a `cache-control` split) is caught here
+        // and ⛔ not only a status/body one.
+        //
+        // ⚠⛔ `x-ratelimit-*` IS STRIPPED, AND ⛔ NOT BECAUSE IT IS UNIMPORTANT — it is stripped
+        // because it is a PER-REQUEST COUNTER. `@fastify/rate-limit` decrements
+        // `x-ratelimit-remaining` on every request against the same key (all injects here share
+        // `127.0.0.1`), so two SEQUENTIAL responses can ⛔ never carry equal values and a deep-equal
+        // over it fails for a reason that has ⛔ nothing to do with the oracle this test guards.
+        // ⭐⭐ THE SECURITY PROPERTY IT CARRIES IS ⛔ NOT DROPPED — it is asserted SEPARATELY below:
+        // if the two refusal paths consumed DIFFERENT rate-limit budget, THAT difference would
+        // itself be the enumeration oracle. Equal consumption is the real invariant; equal counter
+        // VALUES was never it. (Review 2026-09-04 — the deep-equal as first written could not pass.)
+        const stableHeaders = (h: Record<string, unknown>): Record<string, unknown> => {
+          const rest = { ...h };
+          delete rest.date;
+          delete rest['keep-alive'];
+          delete rest['request-id'];
+          delete rest['x-request-id'];
+          delete rest['x-ratelimit-limit'];
+          delete rest['x-ratelimit-remaining'];
+          delete rest['x-ratelimit-reset'];
+          return rest;
+        };
+        expect(stableHeaders(wrongToken.headers)).toEqual(stableHeaders(noSuchDrive.headers));
+        // ⭐⛔ EQUAL BUDGET CONSUMPTION — the half of the header comparison that actually bounds the
+        // oracle. Both refusals are ordinary requests on the same key, issued back to back, so the
+        // second must sit EXACTLY one unit below the first. ⛔ A path that charged a different
+        // amount for "real drive, wrong token" than for "no such drive" would leak which addresses
+        // name something, through the rate-limit headers rather than through the body.
+        const remainingOf = (h: Record<string, unknown>): number =>
+          Number(h['x-ratelimit-remaining']);
+        expect(remainingOf(wrongToken.headers) - remainingOf(noSuchDrive.headers)).toBe(1);
+        expect(wrongToken.headers['x-ratelimit-limit']).toBe(
+          noSuchDrive.headers['x-ratelimit-limit'],
+        );
       } finally {
         await teardown(t);
       }

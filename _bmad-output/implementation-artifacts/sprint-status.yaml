@@ -1,4 +1,87 @@
-# last_updated: 2026-09-04f (⭐⭐ **STORY 11b.10 IMPLEMENTED — `in-progress` -> `review`. ONE ROW
+# last_updated: 2026-09-04h (⭐⭐ **STORY 11b.10 — SECOND CODE REVIEW (different LLM). `done` ->
+#   `in-progress`. ONE ROW MOVES BACKWARD.** ⛔ epic-11b stays `in-progress`; ⛔ 11b-3a `done`;
+#   ⛔ 11b-3b `ready-for-dev`.
+#   ⭐ `bmad-code-review`, 3 parallel layers + ⭐⭐ **A LIVE-DB EXECUTION PASS THE FIRST REVIEW DID NOT RUN.**
+#   ⚠⛔ **THE `g` ENTRY BELOW CLOSED THIS STORY OVER A RED SPEC.** It recorded P4/P5/P6 honestly as
+#   *"written, ⛔ NOT EXECUTED (no database in the review session)"* — but `twt-test-pg` (:5433) WAS
+#   reachable. Executed this pass: P4 + P5 **PASS**; **P6 FAILED DETERMINISTICALLY** — `stableHeaders()`
+#   deep-equalled `x-ratelimit-remaining`, a PER-REQUEST COUNTER that can ⛔ never match across two
+#   sequential injects (99998 vs 99997). ⇒ ⛔ un-attested is ⛔ NOT the same as passing.
+#   ⛔⛔ **AC1 IS ⛔ NOT SATISFIED — AND THE GROUND IS NEW.** `/sahyog?poolCode=P-YYYY-MM-###` is a
+#   ⭐ PUBLIC SEARCH BOX ON THE RENDERED PAGE (`sahyog.astro:410`) that returns HTML carrying
+#   `<a href="/sahyog-vivran/{token}">` ⇒ an unauthenticated **identifier → token → four decrypted
+#   Tier-1 bank fields** walk in TWO requests, ⭐ PROVEN END-TO-END against the live DB. Meanwhile
+#   `routes.ts:309` + `login-wall.spec.ts:237` both assert *"there is ⛔ no sequence left to walk"*.
+#   ⭐⭐ **THE DEEPER FINDING:** for LISTED (`closed`/`settled`) drives the token ⛔ CANNOT bound
+#   discovery **BY CONSTRUCTION** — D3 *requires* publishing the link. Its real value is for `live`
+#   drives, which are ⛔ unlisted. That is a property of the RATIFIED DESIGN, ⛔ not a code defect.
+#   ⚠ BigDev first ruled *"drop `publicToken` from the wire"*; ⛔ NOT IMPLEMENTED — verifying the data
+#   path BEFORE editing showed `apps/public` has ⛔ no DB access (it `fetch`es the API) and the walk runs
+#   through the RENDERED PAGE regardless ⇒ the option was mis-framed by the reviewer and was returned.
+#   ✅ **BigDev then ruled option (d): ROUTED TO THE TRUSTEE PANEL.** ⛔ **Resolved via explicit
+#   escalation, ⛔ NOT closed** ([[feedback_closure_language_precision]]) — **AC1 stays NOT SATISFIED.**
+#   ⭐ Governance artefacts written (⛔ and they commit FIRST, `governance:` prefix,
+#   [[feedback_governance_commits_precede_implementation]]):
+#     · `trustee-panel-routing-note-2026-09-04-11b10-listed-drive-discoverability.md` — the ask, with
+#       an Appendix A the Panel can answer from alone;
+#     · `.decision-log.md#decision-2026-09-04-186` — author-committed FACTUAL correction. ⛔ It corrects
+#       a claim **11b.10 itself made**, ⛔ never a Panel answer: `-184` (A)/(B)/cl.2 stand and are ⛔ NOT
+#       edited in place ([[feedback_supersede_never_reinterpret]]).
+#   ⭐ The over-strong prose was corrected in the same pass — `routes.ts` ×3, `login-wall.spec.ts:237`,
+#   and the matrix `D4-linkage` rider (its heading no longer reads an unqualified "CLOSED BY 11b.10").
+#   ⛔ That removes a claim PROVEN FALSE and ⛔ pre-empts nothing: each corrected sentence stays true
+#   under every option the note offers.
+#   ⚠ The note SURFACES `-184` cl.5's option (d) — disclosure reduction — as the only lever that reduces
+#   the HARM rather than the FINDABILITY (`D8-default` is FAIL-OPEN), ⛔ observationally and ⛔ without
+#   requesting it ([[feedback_gap_analysis_observational]]); ⛔ cl.5 is ⛔ NOT treated as re-opened.
+#   ⛔ `limits.search` untouched in BOTH directions (Trap 5, 11b.3a AC2) and ⛔ deliberately not an option.
+#   ⭐ **15 PATCHES APPLIED**, incl. **family 8 CLOSED** (`rotatePoolPublicToken` now takes an actor and
+#   writes an `audit_log_entries` line + an explicit `updatedAt`; ⛔ NO `events_log` append — that would
+#   widen the CLOSED 4-event pool vocabulary and put an ADDRESS into replay-derived state, which 0114
+#   rules out; the *"same tx"* half is recorded as ⛔ NOT CONSTRUCTIBLE, since the audit chain is
+#   globally advisory-lock serialized); **family 13(a) CLOSED** (`SahyogVivranEntry` put role+label on a
+#   tamagui `<Button>` = `styled(View)`, and `@tamagui/web` sets `accessible` ⛔ NOWHERE ⇒ ⛔ never
+#   announced; `accessible={true}` added); **WCAG 2.5.3 label-in-name** fixed in BOTH locales + asserted.
+#   ⭐ **5 DEFERS** (rotation has no reachable caller · new-app↔old-API required field · no Pariwar
+#   segment in the public URL · stale MMKV token after rotation · 0114 rolling deploy, both directions)
+#   and ⭐ **family 5 RULED A DEFER, ⛔ NOT CLOSED** — the strict CHECK would break 1510 of 2702 rows
+#   (every `seed-*`/`tok-*` fixture); the paste-ready looser constraint is named in `deferred-work.md`.
+#   ⛔ 6 dismissed, incl. two the first pass had wrong: the FORCE-RLS backfill fear (⭐ empirically
+#   disproven — 1192 pre-existing rows backfilled with DISTINCT tokens, the InitPlan trap did ⛔ not
+#   fire) and a `card.poolId` "vacuous assertion" (⛔ false positive — `poolId` IS on the card).
+#   ⭐ **GREEN THIS PASS, EXECUTED ⛔ NOT CLAIMED:** typecheck 19/19 · lint 19/19 · 11 invariant gates ·
+#   i18n parity · domain `public-token` **14/14** · api public-pages **66/66** (incl. sahyog-vivran
+#   **32/32**, P6 now passing) · @twt/public **458** · @twt/mobile **436** · @twt/contracts **1102**.
+#   ⚠ The pre-existing `vyawastha-shulk.spec.ts` failure is UNCHANGED and still ⛔ not this story's.
+#
+# last_updated_prior: 2026-09-04g (⭐⭐ **STORY 11b.10 CODE REVIEW — `review` -> `done`. ONE ROW MOVES.**
+#   ⛔ epic-11b stays `in-progress`; ⛔ 11b-3a `done`; ⛔ 11b-3b `ready-for-dev`.
+#   ⭐ `bmad-code-review`, 3 parallel layers (Blind Hunter · Edge Case Hunter · Acceptance Auditor).
+#   ⭐⭐ **ACCEPTANCE AUDITOR: AC0-AC6 ALL SATISFIED, Traps 1-5 ALL DEFUSED, ⛔ no Critical/High.**
+#   Load-bearing-invariant families 1/2/3/4/5/6/11/12/13 covered by test or construction.
+#   ⭐ **5 PATCHES APPLIED:** (P1) `SahyogVivranEntry` now suppresses on `!data.sahyogVivranToken` too
+#   — a PERSISTED (MMKV, no `buster`) pre-11b.10 `{assigned:true}` card rehydrates with no token and
+#   would open `…/sahyog-vivran/undefined`; (P2) `isSahyogDriveResponse` (apps/public SSR guard) now
+#   validates `publicToken` — a malformed upstream body would otherwise link EVERY `/sahyog` row to
+#   `/sahyog-vivran/undefined` via `encodeURIComponent(undefined)`; (P4) the "GLOBAL unique index"
+#   test now seeds the shared token across PARIWAR_A **and** PARIWAR_B (was both in A — proved
+#   nothing); (P5) new test: a later lifecycle event does ⛔ NOT re-address a published drive (guards
+#   the `onConflictDoUpdate.set` arm); (P6) the byte-identical-404 test now also compares headers.
+#   ⚠ **1 PATCH RECLASSIFIED TO DEFER:** `mintPoolPublicToken()` runs on every pool event, not just
+#   genesis — the one-line fix (`existing.length===0 ? …`) is UNSOUND (Postgres `ExecConstraints`
+#   runs NOT NULL before the ON CONFLICT arbiter ⇒ `23502` breaks every transition). Cost of
+#   minting-then-discarding is ~4 `randomBytes(16)` per pool life; carried in `deferred-work.md`.
+#   ⭐ **4 DEFERS** recorded in `deferred-work.md` (lock-step 2nd card path · 0114 no transitional
+#   DEFAULT on rolling deploy · 400/404 split for malformed `driveToken` · the mint-on-every-event
+#   above). ⛔ 3 dismissed as noise (503 blank drive-code IS intentional & story-flagged · control
+#   -count prose · the ratified D3 one-click observation).
+#   ⚠⛔ **P4/P5/P6 ARE LIVE-DB SPECS — written, typecheck/collect clean, ⛔ NOT EXECUTED in the review
+#   session (no database). Run `integration-tests` before merge.** `lint` + `typecheck` GREEN for
+#   @twt/{public,domain,mobile,api}; @twt/public 458 unit + @twt/mobile 436 unit GREEN.
+#   ⚠ The pre-existing `vyawastha-shulk.spec.ts` `integration-tests` failure (innocence proven three
+#   ways in the prior entry) is UNCHANGED and still ⛔ not this story's.
+#
+# last_updated_prior: 2026-09-04f (⭐⭐ **STORY 11b.10 IMPLEMENTED — `in-progress` -> `review`. ONE ROW
 #   MOVES.** ⛔ epic-11b stays `in-progress`; ⛔ 11b-3a `done`; ⛔ 11b-3b `ready-for-dev`.
 #   ⭐⭐ **BOTH HALVES LANDED TOGETHER — the story's own hardest requirement, ⛔ not a bonus.** Trap 1
 #   forbids shipping the token without a path: it would make the ENTIRE Sahyog Vivran surface
@@ -14777,7 +14860,7 @@ development_status:
   # open link, so D1 is what decides D2; the migration MUST backfill or the archive 404s.
   # D3 the /sahyog per-row link is the necessary consequence of (A)+(B), ⛔ not a new decision — but the
   # exposure sentence is STATED in the story record, ⛔ never discovered in a diff.
-  11b-10-sahyog-vivran-unguessable-address-and-inbound-path: review
+  11b-10-sahyog-vivran-unguessable-address-and-inbound-path: in-progress
   epic-11b-retrospective: optional
 
   # ==========================================================================

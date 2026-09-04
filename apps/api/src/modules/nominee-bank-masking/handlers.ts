@@ -134,7 +134,7 @@ export function createNomineeBankMaskingHandlers(deps: AppDeps) {
      *
      * ⚠⛔ THE EFFECT ON THE PUBLIC SURFACE IS ⛔ NOT IMMEDIATE, and this is one of the THREE places
      * that is written down (the schema file and the public route header carry the others):
-     * `/sahyog-vivran/[poolCanonicalIdentifier]` is `edge_cacheable` at `s-maxage=300`, so the
+     * `/sahyog-vivran/[driveToken]` is `edge_cacheable` at `s-maxage=300`, so the
      * PREVIOUS projection keeps being served from every warm PoP for up to five minutes — and here
      * what is served stale is a **FULL ACCOUNT NUMBER**. ⛔ **Direct SQL is NOT the operational
      * fallback**, in this code, in the console copy, or anywhere else. The console discloses the gap;

@@ -48,7 +48,7 @@
 // Trust acts**, and what stays exposed is a FULL ACCOUNT NUMBER. The Panel ruled it knowing that.
 //
 // ── ⚠⛔ A CHANGE HERE IS ⛔ NOT IMMEDIATE ON THE PUBLIC PAGE ─────────────────────────────────────
-// `/sahyog-vivran/[poolCanonicalIdentifier]` is `edge_cacheable` at `s-maxage=300`, so the PREVIOUS
+// `/sahyog-vivran/[driveToken]` is `edge_cacheable` at `s-maxage=300`, so the PREVIOUS
 // projection keeps being served from **every warm PoP for up to five minutes** — and on this surface
 // what is served stale is a **full account number**. ⛔ **Direct SQL is NOT the operational
 // fallback.** This statement is one of THREE (the admin copy and the route header carry the others),

@@ -60,10 +60,18 @@ export function SahyogVivranEntry() {
   // ⛔ LOCK-STEP WITH THE CARD: the same `{ assigned }` discriminated union the card reads. The card
   // renders only for an `active` member assigned to a pool whose cycle alert is `live` — precisely
   // the `live` drive AC4 owes a path to — and this entry appears under exactly that condition and
-  // ⛔ no other. ⚠ The `sahyogVivranToken` guard is NOT a second precondition: the field is required
-  // by the contract and the API fail-softs the whole card to `{ assigned: false }` when it cannot be
-  // read, so this is the type-narrowing that records that ⛔ no address is ever invented here.
-  if (!data || !data.assigned) {
+  // ⛔ no other.
+  //
+  // ⚠ THE `sahyogVivranToken` CHECK — added by code review. A LIVE server response always carries it
+  // (the contract requires it and `member-pool` fail-softs the whole card to `{ assigned: false }`
+  // when the token read returns null), so on the happy path this is pure type-narrowing that records
+  // ⛔ no address is ever invented here. ⛔ BUT `useActiveContributionQuery` is PERSISTED TO MMKV and
+  // rehydrated verbatim with ⛔ no `buster` on `persistOptions` (`components/Provider.tsx`): after an
+  // app upgrade a pre-11b.10 `{ assigned: true }` card comes back with ⛔ no `sahyogVivranToken` key
+  // and ⛔ no Zod re-parse. Without this guard the entry would render and open
+  // `…/sahyog-vivran/undefined` until the refetch lands — never, on an offline cold start. ⇒ an
+  // entry that outlives a usable token is the same dead link as one that outlives the card.
+  if (!data || !data.assigned || !data.sahyogVivranToken) {
     return null
   }
 
@@ -73,13 +81,35 @@ export function SahyogVivranEntry() {
       height={56}
       chromeless
       justify="flex-start"
+      // ⭐⭐ EXPLICIT `accessible` — ⛔ WITHOUT THIS THE THREE PROPS BELOW ARE ⛔ NEVER ANNOUNCED
+      // (family 13 check (a); review 2026-09-04). Tamagui's `Button` is `styled(View, …)`
+      // (`@tamagui/button` `Button.native.js`), and `@tamagui/web`'s `createComponent.native.js`
+      // sets `accessible` ⛔ NOWHERE — so this is a plain RN `View`, and an RN `View` is ⛔ not an
+      // accessibility element unless it says so. The inner `Text` would be focused instead and the
+      // role, label and hint would ⛔ all be dropped on the floor.
+      // ⚠⛔ ⛔ DO ⛔ NOT ASSUME `Pressable` SEMANTICS HERE. The repo's worked example states the
+      // mechanism in terms: *"RN sets `accessible={true}` on `Pressable` by DEFAULT, and that is the
+      // ONLY reason …"* (`components/panchayat/PinnedItem.tsx:42`, grouping at `:107`). A tamagui
+      // `Button` is ⛔ not a `Pressable`, so ⛔ nothing supplies it for us.
+      accessible={true}
       // ⛔ `link`, ⛔ not `button`: it leaves the app for the public site, and a screen reader should
       // say so before the member commits to the tap.
       accessibilityRole="link"
       accessibilityLabel={t('sahyog_vivran.entry_a11y', undefined, NS)}
       accessibilityHint={t('sahyog_vivran.entry_hint', undefined, NS)}
       onPress={() => {
-        void Linking.openURL(sahyogVivranUrl(data.sahyogVivranToken, locale))
+        // ⚠ `Linking.openURL` REJECTS when no handler can open the URL (⛔ it does not resolve
+        // false), so a bare `void` leaves an unhandled rejection on a member's home screen.
+        // ⭐ The house shape is `LockInClockWidget.tsx`'s: await inside try/catch and fail QUIETLY —
+        // there is nothing useful to say to the member, and ⛔ never a red box on Tab 1.
+        // ⛔ Do ⛔ not copy `(auth)/terminated.tsx:94`, which is the weaker of the two precedents.
+        void (async () => {
+          try {
+            await Linking.openURL(sahyogVivranUrl(data.sahyogVivranToken, locale))
+          } catch {
+            // Intentionally silent — see above.
+          }
+        })()
       }}
     >
       {t('sahyog_vivran.entry_cta', undefined, NS)}

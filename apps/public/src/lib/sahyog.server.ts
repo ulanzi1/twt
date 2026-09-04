@@ -183,7 +183,22 @@ function isSahyogDriveResponse(body: unknown): body is PublicSahyogDriveResponse
       (r['deceasedMemberName'] === null ||
         (typeof r['deceasedMemberName'] === 'string' && r['deceasedMemberName'].length > 0)) &&
       typeof r['poolLetterCode'] === 'string' &&
+      // ⚠ LENGTH-CHECKED, ⛔ not `typeof` alone (review 2026-09-04) — for the same reason
+      // `publicToken` below is. The identifier is what builds the drive link's ACCESSIBLE NAME
+      // (`driveLinkA11y(row.poolCanonicalIdentifier)`), so an empty string renders "View drive  —
+      // full details" on every affected row ⇒ a screen-reader list of N IDENTICAL destinations,
+      // which is precisely the defect that label exists to prevent. The contract is
+      // `z.string().min(1)`, so `''` is as invalid as absent and must fall to the outage arm.
       typeof r['poolCanonicalIdentifier'] === 'string' &&
+      r['poolCanonicalIdentifier'].length > 0 &&
+      // ⚠ `publicToken` VALIDATED — ⛔ not left for `driveHref` to `encodeURIComponent`, which turns a
+      // missing value into the literal string `"undefined"` and links EVERY row to
+      // `/sahyog-vivran/undefined` (Review finding, Story 11b.10). Same class as the `status` and
+      // `fundingOutcome` literal-set checks and the empty-name check above — a MALFORMED or truncated
+      // upstream body must fall to the outage arm, ⛔ never render a table of dead links. The
+      // contract is `z.string().min(1)`, so `''` is as invalid as absent.
+      typeof r['publicToken'] === 'string' &&
+      r['publicToken'].length > 0 &&
       (r['status'] === 'active' || r['status'] === 'archive') &&
       (r['closedAt'] === null || typeof r['closedAt'] === 'string') &&
       (r['district'] === null || typeof r['district'] === 'string') &&

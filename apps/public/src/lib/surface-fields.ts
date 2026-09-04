@@ -393,11 +393,11 @@ export function sahyogDriveSurfaceFieldIds(model: SahyogDriveRenderModel): strin
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// /sahyog-vivran/[poolCanonicalIdentifier] — ONE drive's own page. Story 11b.3 (Task 1; AC2).
+// /sahyog-vivran/[driveToken] — ONE drive's own page. Story 11b.3 (Task 1; AC2).
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * The `/sahyog-vivran/[poolCanonicalIdentifier]` render model.
+ * The `/sahyog-vivran/[driveToken]` render model.
  *
  * ⭐⭐ IT NAMES ⛔ NOBODY, AND THAT IS THE SPLIT'S LOAD-BEARING PROPERTY, ⛔ not an omission
  * (`2026-09-02-182` cl.2, D6(b)). ⛔ No key below carries a person's name — ⛔ not the deceased

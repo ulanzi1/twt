@@ -45,5 +45,5 @@
   "outcome.partial": "The cycle closed. Reconciliation is still in progress.",
   "table.col.open": "Details",
   "link.view_drive": "View drive",
-  "link.view_drive_a11y": "View the full details of drive {code}"
+  "link.view_drive_a11y": "View drive {code} — full details"
 }

@@ -110,8 +110,14 @@ describe('⛔ LOCK-STEP suppression, and the a11y contract (AC4)', () => {
     // gates on `useActiveContributionQuery` — deliberately UNLIKE `ViewContributorsEntry`, which
     // gates on its destination's own query: here the destination's ADDRESS is a field on the card's
     // query, so the card's query IS the exact precondition.
+    // ⚠ THE `!data.sahyogVivranToken` ARM was added by code review: a PERSISTED (MMKV) pre-11b.10
+    // `{ assigned: true }` card rehydrates with no token key and no Zod re-parse, and without this
+    // the entry would open `…/sahyog-vivran/undefined`. An entry that outlives a usable token is the
+    // same dead link as one that outlives the card.
     expect(entrySrc).toContain('useActiveContributionQuery');
-    expect(entrySrc).toMatch(/if\s*\(!data \|\| !data\.assigned\)\s*\{\s*return null/);
+    expect(entrySrc).toMatch(
+      /if\s*\(!data \|\| !data\.assigned \|\| !data\.sahyogVivranToken\)\s*\{\s*return null/,
+    );
   });
 
   it('opens OUTBOUND with `Linking.openURL` — ⛔ no in-app route, ⛔ no WebView', () => {

@@ -1,4 +1,4 @@
-// The `/sahyog-vivran/[poolCanonicalIdentifier]` pure render module — Story 11b.3 (Task 4; AC1, AC3,
+// The `/sahyog-vivran/[driveToken]` pure render module — Story 11b.3 (Task 4; AC1, AC3,
 // AC5, AC8).
 //
 // House convention (and the thing that makes `deriveFieldIds` sound): ALL display logic lives here;

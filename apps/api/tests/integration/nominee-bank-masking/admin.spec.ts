@@ -16,7 +16,7 @@
 // ⛔ A test that only proved "the call did not error" would prove nothing.
 //
 // ⚠ WHAT IT DOES ⛔ NOT PROVE: that the public PAGE changed for a visitor.
-// `/sahyog-vivran/[poolCanonicalIdentifier]` is edge-cached with `s-maxage=300`, so warm PoPs keep
+// `/sahyog-vivran/[driveToken]` is edge-cached with `s-maxage=300`, so warm PoPs keep
 // serving the previous projection — which may be a full account number — until those entries expire.
 // ⛔ No test here may claim otherwise; that gap is a property of the surface, ⛔ not a defect here.
 //

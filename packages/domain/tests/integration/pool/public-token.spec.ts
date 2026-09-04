@@ -14,8 +14,10 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { eq, sql } from 'drizzle-orm';
-import { describe, expect, it } from 'vitest';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { and, desc, eq, sql } from 'drizzle-orm';
+import pg from 'pg';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import {
   claimId as toClaimId,
@@ -31,11 +33,40 @@ import {
   rotatePoolPublicToken,
 } from '../../../src/pool/public-token.js';
 import * as schema from '../../../src/schema/index.js';
-import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
-import { PARIWAR_A, enterAppScope, seedPool } from '../_helpers.js';
+import type { Db } from '../../../src/db.js';
+import {
+  DATABASE_URL,
+  getTx,
+  hasDatabase,
+  setupLiveDb,
+} from '../../../src/test-utils/integration-setup.js';
+import { PARIWAR_A, PARIWAR_B, enterAppScope, seedPool } from '../_helpers.js';
 
 describe.skipIf(!hasDatabase)('pools.public_token — the unguessable public address (PARIWAR_A)', () => {
   setupLiveDb();
+
+  // ⚠ MIXED COMMIT SEMANTICS, DELIBERATELY — the `pool-name-mutation.spec.ts` precedent, verbatim in
+  // shape. The pools row rides the per-test BEGIN/ROLLBACK, while `writeAuditEntry` runs on the
+  // SERVICE pool and COMMITS on its own connection: the audit chain is global + advisory-lock
+  // serialized, so it structurally ⛔ cannot join the caller's tx (see `rotatePoolPublicToken`'s
+  // header). ⇒ audit rows ACCUMULATE across runs, and every assertion below is by MEMBERSHIP on a
+  // run-unique locator, ⛔ never by absolute count ([[project_live_db_test_gotchas]]).
+  let servicePool: pg.Pool;
+  let dbAll: Db;
+  beforeAll(() => {
+    if (!hasDatabase) return;
+    servicePool = new pg.Pool({ connectionString: DATABASE_URL, max: 4, ssl: false });
+    dbAll = drizzle(servicePool, { schema }) as unknown as Db;
+  });
+  afterAll(async () => {
+    if (servicePool) await servicePool.end();
+  });
+
+  /** A rotation actor — a rotation is always somebody's act, so every call site supplies one. */
+  const actor = (): { actorId: string; actorRole: string } => ({
+    actorId: randomUUID(),
+    actorRole: 'trustee',
+  });
 
   describe('⭐ the mint (AC2, D2)', () => {
     it('is 128 bits of CSPRNG entropy rendered URL-safe — 22 base64url chars, ⛔ no padding', () => {
@@ -147,6 +178,63 @@ describe.skipIf(!hasDatabase)('pools.public_token — the unguessable public add
       expect(b).not.toBeNull();
       expect(a).not.toBe(b);
     });
+
+    it('⛔ a later lifecycle event does NOT re-address the drive — the token survives the DO UPDATE arm', async () => {
+      // ⚠ THE REGRESSION THIS PINS (Review finding): adding `publicToken` to `projectPoolState`'s
+      // `onConflictDoUpdate.set` arm would pass every OTHER test in this file — the mint, the
+      // not-derived checks and rotation all still hold — while silently re-addressing a PUBLISHED
+      // drive on its next lifecycle event. ⇒ project a spawn, read the address, drive the pool to
+      // `live` (which takes the same `.insert(pools)` down its DO UPDATE path), assert BYTE-IDENTICAL.
+      const { client, tx } = getTx();
+      await enterAppScope(client, PARIWAR_A);
+      const poolId = toPoolId(randomUUID());
+      const cycleId = randomUUID();
+      const canonical = `P-2026-07-${randomUUID().slice(0, 6)}`;
+      const identity = {
+        poolId,
+        pariwarId: toPariwarId(PARIWAR_A),
+        cycleId: toCycleId(cycleId),
+        claimCaseId: toClaimId(randomUUID()),
+        poolIndex: 0,
+        poolCanonicalIdentifier: canonical,
+        supportCategory: 'death_support' as const,
+        benefitMechanism: 'pool' as const,
+        fixedAmount: 500,
+        actorId: null,
+      };
+
+      await projectPoolState(client, {
+        ...identity,
+        eventType: 'pool.spawned',
+        payload: {
+          from_state: null,
+          to_state: 'spawned',
+          trigger: 'cycle_freeze_commit:spawn',
+          actor: 'system',
+          support_category: 'death_support',
+          benefit_mechanism: 'pool',
+          fixed_amount: 500,
+          pool_index: 0,
+          cycle_id: cycleId,
+          pool_canonical_identifier: canonical,
+        },
+      });
+      const minted = await readPoolPublicToken(tx, toPariwarId(PARIWAR_A), poolId);
+      expect(minted).not.toBeNull();
+
+      await projectPoolState(client, {
+        ...identity,
+        eventType: 'pool.opened_for_contributions',
+        payload: {
+          from_state: 'spawned',
+          to_state: 'live',
+          trigger: 'cron:window_open',
+          actor: 'system',
+        },
+      });
+
+      expect(await readPoolPublicToken(tx, toPariwarId(PARIWAR_A), poolId)).toBe(minted);
+    });
   });
 
   describe('⭐⭐ ROTATION — the ONLY remedy D1 has (AC2, D2)', () => {
@@ -167,7 +255,11 @@ describe.skipIf(!hasDatabase)('pools.public_token — the unguessable public add
       expect(before).not.toBeNull();
       expect(neighbourBefore).not.toBeNull();
 
-      const rotated = await rotatePoolPublicToken(tx, toPariwarId(PARIWAR_A), targetId);
+      const rotated = await rotatePoolPublicToken(tx, servicePool, {
+        pariwarId: toPariwarId(PARIWAR_A),
+        poolId: targetId,
+        ...actor(),
+      });
 
       expect(rotated).not.toBeNull();
       expect(rotated).not.toBe(before);
@@ -186,7 +278,11 @@ describe.skipIf(!hasDatabase)('pools.public_token — the unguessable public add
       const poolId = toPoolId(randomUUID());
       await seedPool(tx, PARIWAR_A, { poolId });
       const old = await readPoolPublicToken(tx, toPariwarId(PARIWAR_A), poolId);
-      await rotatePoolPublicToken(tx, toPariwarId(PARIWAR_A), poolId);
+      await rotatePoolPublicToken(tx, servicePool, {
+        pariwarId: toPariwarId(PARIWAR_A),
+        poolId,
+        ...actor(),
+      });
 
       const rows = await tx
         .select({ poolId: schema.pools.poolId })
@@ -198,12 +294,96 @@ describe.skipIf(!hasDatabase)('pools.public_token — the unguessable public add
     it('rotating an UNKNOWN pool returns null — ⛔ never a throw, and ⛔ nothing is written', async () => {
       const { client, tx } = getTx();
       await enterAppScope(client, PARIWAR_A);
-      const rotated = await rotatePoolPublicToken(
-        tx,
-        toPariwarId(PARIWAR_A),
-        toPoolId(randomUUID()),
-      );
+      const rotated = await rotatePoolPublicToken(tx, servicePool, {
+        pariwarId: toPariwarId(PARIWAR_A),
+        poolId: toPoolId(randomUUID()),
+        ...actor(),
+      });
       expect(rotated).toBeNull();
+    });
+
+    it('⭐⭐ a rotation WRITES AN AUDIT LINE keyed on the CANONICAL IDENTIFIER (family 8)', async () => {
+      // ⛔⛔ THE GAP THIS CLOSES (review 2026-09-04): rotation is the one mutation an incident review
+      // exists to ask about — *"who withdrew this address, and when?"* — and it previously left
+      // ⛔ NO audit line, ⛔ no event and ⛔ not even an `updated_at` bump. Every other gate was green
+      // through it, because a missing audit row is invisible to a type system and to every
+      // route test.
+      const { client, tx } = getTx();
+      await enterAppScope(client, PARIWAR_A);
+      const poolId = toPoolId(randomUUID());
+      const canonical = `P-2026-07-${randomUUID().slice(0, 8)}`;
+      await seedPool(tx, PARIWAR_A, { poolId, poolCanonicalIdentifier: canonical });
+
+      const who = actor();
+      const before = await readPoolPublicToken(tx, toPariwarId(PARIWAR_A), poolId);
+      const rotated = await rotatePoolPublicToken(tx, servicePool, {
+        pariwarId: toPariwarId(PARIWAR_A),
+        poolId,
+        ...who,
+      });
+      expect(rotated).not.toBeNull();
+      expect(rotated).not.toBe(before);
+
+      // ⚠ BY MEMBERSHIP on a run-unique locator, ⛔ never by count — the audit chain COMMITS outside
+      // this test's rolled-back tx, so rows accumulate across runs.
+      const line = await dbAll
+        .select({
+          action: schema.auditLogEntries.action,
+          actorId: schema.auditLogEntries.actorId,
+          actorRole: schema.auditLogEntries.actorRole,
+          resourceLocator: schema.auditLogEntries.resourceLocator,
+          requestPayloadHash: schema.auditLogEntries.requestPayloadHash,
+        })
+        .from(schema.auditLogEntries)
+        .where(
+          and(
+            eq(schema.auditLogEntries.action, 'pool.public_address_rotated'),
+            eq(
+              schema.auditLogEntries.resourceLocator,
+              `pariwar/${PARIWAR_A}/pools/${canonical}`,
+            ),
+          ),
+        )
+        .orderBy(desc(schema.auditLogEntries.seq))
+        .limit(1);
+
+      expect(line).toHaveLength(1);
+      expect(line[0]?.actorId).toBe(who.actorId);
+      expect(line[0]?.actorRole).toBe(who.actorRole);
+      // ⭐⛔ THE LOCATOR NAMES THE CANONICAL IDENTIFIER, ⛔ NEVER THE TOKEN (`-184` cl.2). An address
+      // is a LIVE SECRET and the audit chain is durable, replicated and exported — writing either
+      // the old or the new token into it would leak the very thing a rotation exists to withdraw,
+      // and would make this line unjoinable to every other audit record, which all key on
+      // `P-YYYY-MM-###`.
+      expect(line[0]?.resourceLocator).not.toContain(rotated!);
+      expect(line[0]?.resourceLocator).not.toContain(before!);
+      expect(line[0]?.requestPayloadHash).not.toContain(rotated!);
+    });
+
+    it('⛔ a rotation that matched NO row writes NO audit line — ⛔ never attest a non-write', async () => {
+      // ⚠ The other direction, and it is the one that rots quietly: an audit line for a mutation
+      // that did ⛔ not happen is worse than none, because it makes the chain lie.
+      const { client, tx } = getTx();
+      await enterAppScope(client, PARIWAR_A);
+      const ghost = toPoolId(randomUUID());
+      const rotated = await rotatePoolPublicToken(tx, servicePool, {
+        pariwarId: toPariwarId(PARIWAR_A),
+        poolId: ghost,
+        ...actor(),
+      });
+      expect(rotated).toBeNull();
+
+      const lines = await dbAll
+        .select({ auditId: schema.auditLogEntries.auditId })
+        .from(schema.auditLogEntries)
+        .where(
+          and(
+            eq(schema.auditLogEntries.action, 'pool.public_address_rotated'),
+            sql`${schema.auditLogEntries.requestPayloadHash} IS NOT NULL`,
+            sql`${schema.auditLogEntries.resourceLocator} LIKE ${`%${ghost}%`}`,
+          ),
+        );
+      expect(lines).toEqual([]);
     });
 
     it('⛔ rotation does NOT touch the current_state cache — the 0071 guard is not engaged', async () => {
@@ -216,7 +396,11 @@ describe.skipIf(!hasDatabase)('pools.public_token — the unguessable public add
       await enterAppScope(client, PARIWAR_A);
       const poolId = toPoolId(randomUUID());
       await seedPool(tx, PARIWAR_A, { poolId, currentState: 'live', stateEventVersion: 2 });
-      await rotatePoolPublicToken(tx, toPariwarId(PARIWAR_A), poolId);
+      await rotatePoolPublicToken(tx, servicePool, {
+        pariwarId: toPariwarId(PARIWAR_A),
+        poolId,
+        ...actor(),
+      });
       const rows = await tx
         .select({
           currentState: schema.pools.currentState,
@@ -245,8 +429,17 @@ describe.skipIf(!hasDatabase)('pools.public_token — the unguessable public add
       const nulls = await tx.execute(
         sql`SELECT count(*)::int AS n FROM pools WHERE public_token IS NULL`,
       );
-      const rows = nulls as unknown as { rows?: { n: number }[] };
-      expect((rows.rows ?? (nulls as unknown as { n: number }[]))[0]?.n ?? 0).toBe(0);
+      // ⚠⛔ THE ROW MUST BE PROVED PRESENT BEFORE ITS VALUE IS ASSERTED (review 2026-09-04). This
+      // read previously ended `[0]?.n ?? 0).toBe(0)` — which DEFAULTS TO THE PASSING VALUE whenever
+      // the result shape is not what it expects. ⇒ the assertion could ⛔ not fail for the reason it
+      // exists: a driver change, an empty result, or a renamed column all read as "zero NULLs".
+      // ⭐ `count(*)` ALWAYS returns exactly one row, so an absent row is a real defect, ⛔ never an
+      // ordinary outcome — and it is now a failure rather than a silent pass.
+      const resultRows =
+        (nulls as unknown as { rows?: { n: number }[] }).rows ??
+        (nulls as unknown as { n: number }[]);
+      expect(resultRows).toHaveLength(1);
+      expect(resultRows[0]?.n).toBe(0);
     });
 
     it('⛔ the column REFUSES a NULL — the guarantee is the DB’s, ⛔ not a convention', async () => {
@@ -271,15 +464,19 @@ describe.skipIf(!hasDatabase)('pools.public_token — the unguessable public add
       expect((err as { code?: string })?.code).toBe('23502');
     });
 
-    it('⛔ a DUPLICATE token is refused — the GLOBAL unique index, ⛔ not a per-Pariwar one', async () => {
+    it('⛔ a DUPLICATE token is refused ACROSS PARIWARS — the GLOBAL unique index, ⛔ not a per-Pariwar one', async () => {
       // ⭐ An ADDRESS must name at most ONE thing without a second value to disambiguate it. ⇒ the
       // index is global, and a colliding mint fails LOUDLY (23505) instead of silently re-pointing
       // one drive's public address at another's.
-      const { client, tx } = getTx();
-      await enterAppScope(client, PARIWAR_A);
+      // ⚠ SEEDED IN TWO DIFFERENT PARIWARS, as the Docker superuser BEFORE any app scope (RLS
+      // bypassed — the cross-tenant seed pattern the helpers document). A composite
+      // `(pariwar_id, public_token)` index would ACCEPT this pair; only a unique index on
+      // `public_token` ALONE rejects it. A same-Pariwar collision cannot tell the two designs apart
+      // (Review finding — the prior version seeded both rows in PARIWAR_A).
+      const { tx } = getTx();
       const shared = mintPoolPublicToken();
       await seedPool(tx, PARIWAR_A, { poolId: toPoolId(randomUUID()), publicToken: shared });
-      const err = await seedPool(tx, PARIWAR_A, {
+      const err = await seedPool(tx, PARIWAR_B, {
         poolId: toPoolId(randomUUID()),
         publicToken: shared,
       })

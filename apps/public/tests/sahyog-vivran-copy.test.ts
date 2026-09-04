@@ -1,4 +1,4 @@
-// ⭐ THE REAL `t()` PATH FOR `/sahyog-vivran/[poolCanonicalIdentifier]` — Story 11b.3 (Task 4; AC1, AC7).
+// ⭐ THE REAL `t()` PATH FOR `/sahyog-vivran/[driveToken]` — Story 11b.3 (Task 4; AC1, AC7).
 //
 // ── ⛔ WHY THIS FILE EXISTS, AND WHY IT IS NOT OPTIONAL ─────────────────────────────────────────
 // THE 11a.2 HEADLINE DEFECT WAS A TEST-FIXTURE BLIND SPOT, ⛔ NOT A LOGIC ERROR. `/members` threw
@@ -23,7 +23,7 @@ import { t, type Locale } from '@twt/i18n';
 import { describe, expect, it } from 'vitest';
 
 /**
- * EVERY key `[poolCanonicalIdentifier].astro` resolves. ⛔ Kept in sync by hand and asserted below,
+ * EVERY key `[driveToken].astro` resolves. ⛔ Kept in sync by hand and asserted below,
  * so a key added to the page without copy fails HERE rather than in production.
  */
 const KEYS = [

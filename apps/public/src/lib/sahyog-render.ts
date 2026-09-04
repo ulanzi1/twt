@@ -39,6 +39,7 @@
 //
 // PURE: no fs, no db, no env, no clock.
 import type { PublicSahyogDriveResponse } from '@twt/contracts';
+import { isLocale } from '@twt/i18n';
 
 import { pageHref, PUBLIC_PAGE_HORIZON } from './pagination.js';
 import type { PaginationResult } from './pagination.js';
@@ -79,9 +80,17 @@ export const SAHYOG_VIVRAN_ROUTE = '/sahyog-vivran';
  * this function must not silently depend on it.
  */
 export function driveHref(publicToken: string, search: URLSearchParams): string {
+  // ⚠ `isLocale`-GUARDED, ⛔ not the raw query value (review 2026-09-04). The page already applies
+  // this exact guard before echoing `lang` into its filter form's hidden input (`sahyog.astro:380`)
+  // — this was the one place that re-read the parameter straight from the URL and re-emitted it
+  // into all N row links. ⇒ `/sahyog?lang=<arbitrary long string>` was reflected into every link on
+  // a SHARED-CACHED page. ⛔ Not an injection (it is percent-encoded), but ⛔ nothing downstream can
+  // do anything useful with a `lang` the app does not support, so carrying it is pure noise.
+  // ⭐ An unsupported value now yields the UNSUFFIXED href, which is exactly what the drive page
+  // does with it anyway: fall back to the default locale.
   const lang = search.get('lang');
   const base = `${SAHYOG_VIVRAN_ROUTE}/${encodeURIComponent(publicToken)}`;
-  return lang === null || lang === '' ? base : `${base}?lang=${encodeURIComponent(lang)}`;
+  return isLocale(lang) ? `${base}?lang=${encodeURIComponent(lang)}` : base;
 }
 
 /** Copy the page passes in, already resolved through `t()` with an EXPLICIT namespace. */
@@ -509,7 +518,26 @@ export function visibleSahyogColumns(
       headerLabel: labels.columnOpen,
       valueOf: () => labels.viewDrive,
       hrefOf: (row) => row.driveHref,
-      a11yOf: (row) => row.driveLinkA11yLabel,
+      // ⚠⛔ THE ACCESSIBLE NAME IS MATRIX-GATED TOO (review 2026-09-04) — ⛔ it was ⛔ NOT, and that
+      // was a hole in the "⛔ EVERY value goes through `<MatrixField>`" rule. The `aria-label` is
+      // interpolated STRAIGHT INTO THE DOM by the template (it cannot be a `<MatrixField>` — it is
+      // an attribute, not a cell), and it is mapped to `null` in `SAHYOG_DRIVE_ROW_FIELD_IDS`, so
+      // ⛔ neither the surface-field derivation nor the scrape leg can see it. Its CONTENT is
+      // `poolCanonicalIdentifier` — a matrix-GOVERNED field. ⇒ if the matrix ever suppressed
+      // `pool_canonical_identifier` at `public`, the `<td>` would render empty while the
+      // `aria-label` announced the drive code anyway: the field suppressed for sighted readers and
+      // ⛔ disclosed to screen-reader users.
+      //
+      // ⭐ THE TRADE-OFF IS DELIBERATE AND STATED. Under suppression the label falls back to the
+      // plain visible text, so N links share one accessible name — the defect the code-bearing
+      // label exists to avoid. ⛔ That is accepted as the LESSER harm: an ambiguous link is a
+      // usability cost, whereas announcing a field the matrix suppressed is a DISCLOSURE. ⚠ If the
+      // matrix ever does suppress the identifier, this fallback is the thing to revisit — a
+      // per-row non-governed discriminator (the letter code) would be the better answer then.
+      // ⭐ Unreachable today: `pool_canonical_identifier` is visible at `public`.
+      a11yOf: isVisible('pool_canonical_identifier')
+        ? (row) => row.driveLinkA11yLabel
+        : () => labels.viewDrive,
     },
   ];
   return all.filter((c) => isVisible(c.fieldId));

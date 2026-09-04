@@ -7982,7 +7982,11 @@ later story ([[feedback_closure_language_precision]], [[feedback_record_unattest
     isolates to ONE drive — which is what makes **D1**'s open-link ruling survivable.
   - **THE PATH, for ALL THREE STATES (AC3/AC4).** `closed`/`settled`: a **per-row link on `/sahyog`**
     (`drive_href`, declared in the matrix at `tier: public`, `pii_tier: 3`, with the exposure sentence
-    written in prose in four places). `live`: a **member-app entry on Tab 1, "My Pool"**
+    written verbatim in **FIVE** code locations — ⚠ corrected from "four" at review 2026-09-04;
+    `public-vs-private-matrix.yaml`, `contracts/public-pages/sahyog-drive.ts`,
+    `apps/public/src/lib/surface-fields.ts`, `apps/public/src/lib/sahyog-render.ts` and
+    `apps/api/src/modules/public-pages/handlers.ts`, which is the count the story record and the
+    sprint ledger both state). `live`: a **member-app entry on Tab 1, "My Pool"**
     (`SahyogVivranEntry`), beside `<ActiveContributionCard />` in `<ViewContributorsEntry />`'s ruled
     shape and self-suppressing in **lock-step** with it — the card's own query carries the
     server-returned token, and the handler fail-softs the WHOLE card when it cannot read one, so an
@@ -8019,3 +8023,70 @@ later story ([[feedback_closure_language_precision]], [[feedback_record_unattest
   construction**: the only `bankIfscLookup` adapter is `createInMemoryBankIfscLookup`, a fixture map.
   **Trigger:** the story that ships a live IFSC / bank-directory adapter — ⛔ do not let that story land
   without either a `.trim() || null` projection, a DB length CHECK, or a nullable `bank_name` on the wire.
+
+## Deferred from: code review of 11b-10-sahyog-vivran-unguessable-address-and-inbound-path (2026-09-03)
+
+- **`mintPoolPublicToken()` runs on every pool event, not just genesis.**
+  `packages/domain/src/pool/project.ts` — the `.insert(pools).values({…})` in `projectPoolState`
+  runs for EVERY pool event (fresh INSERT on the first, `onConflictDoUpdate` DO UPDATE thereafter),
+  so a CSPRNG token is minted and then discarded on every `spawned→live→closed→settled` transition
+  (~4 per pool). A discarded value colliding on `pools_public_token_uq` (a NON-arbiter unique index)
+  would raise `23505` and abort the projection rather than take the DO UPDATE path — probability
+  ~2⁻¹²⁸. **The obvious one-liner is unsound:** gating the mint on `existing.length === 0` makes the
+  non-genesis INSERT tuple carry `public_token = NULL`, and Postgres runs `ExecConstraints` (NOT
+  NULL) on the proposed tuple BEFORE the ON CONFLICT arbiter, so it raises `23502` and breaks every
+  transition. A sound fix splits the genesis write (`.insert`) from the transition write
+  (`.update(pools).set(…).where(eq(poolId))`). **Trigger:** any refactor of `projectPoolState`'s
+  state-cache write, or a measured need to stop minting-then-discarding. Explanatory comment is at
+  the call site.
+
+- **`SahyogVivranEntry` lock-step suppression mirrors only one of the card's two paths.**
+  `apps/mobile/components/sahyog-vivran/SahyogVivranEntry.tsx` gates on `!data || !data.assigned`.
+  `ActiveContributionCard` ALSO `return null`s when `derivePoolProgressCardViewModel(...)` throws on a
+  corrupt/impossible progress read (its own comment notes a stale/racy read can trigger it). In that
+  case the entry renders with no card above it — an orphaned "view drive" affordance. The link itself
+  still resolves (the token is independent of the progress figures), so the consequence is cosmetic,
+  and the API-side `readPoolPublicToken === null` fail-soft (the story's stated lock-step mechanism)
+  does not cover this client-only branch. **Trigger:** any change that makes `SahyogVivranEntry` share
+  the card's derived view-model, or a report of the orphaned button in the field.
+
+- **Migration `0114` `SET NOT NULL` has no transitional `DEFAULT`.**
+  `packages/domain/migrations/0114_pool-public-address-token.sql` does ADD nullable → backfill →
+  `SET NOT NULL` → unique index (correct order, verified live). During a ROLLING deploy, an old
+  API/jobs instance projecting `pool.spawned` after the migration applies INSERTs into `pools` with no
+  `public_token` → `23502` → that pool's spawn fails and the saga retries forward until new code is
+  everywhere. Self-healing and bounded; harmless if migrations always run as a discrete step before
+  new code serves traffic. The migration header covers the backfill/InitPlan/ordering traps but is
+  silent on the deploy-ordering window. **Trigger:** the deploy runbook / any future NOT-NULL-column
+  migration on a table written by the spawn saga — add a transitional default or a two-phase migration.
+
+- **`driveToken` param schema gives a 400-vs-404 split for malformed addresses.**
+  `packages/contracts/src/public-pages/sahyog-vivran.ts` — `driveToken: z.string().trim().min(1).max(64)`.
+  A whitespace value (trims to empty → `.min(1)` fails) or a >64-char value returns **400** at the
+  schema boundary; an unknown well-formed 22-char token returns **404**. NOT an enumeration oracle:
+  every real token is exactly 22 chars of base64url and always passes the schema, so a wrong token on
+  a real drive is uniformly 404; and the route's doc-block only commits to not regex-matching the
+  token's own shape. Recorded because the surrounding prose is emphatic about a single refusal surface.
+  **Trigger:** any hardening pass on the public-pages refusal surface, or a decision to normalise
+  malformed-address handling to 404 across the public routes.
+
+## Deferred from: code review of 11b-10-sahyog-vivran-unguessable-address-and-inbound-path (2026-09-04)
+
+> ⭐ **Second independent code-review pass** (different LLM), 3 layers + a **live-DB execution pass the
+> first review could not run**. The first pass recorded P4/P5/P6 as *"not executed — no database"*; a
+> test Postgres was reachable. P4/P5 pass; **P6 fails deterministically**. See the story's second
+> `Review Findings` block for the full set, incl. 3 `decision-needed` items — one of which
+> (**the identifier→token→Tier-1 walk, proven live**) means **AC1 is not satisfied**.
+
+- **Rotation has no reachable operational path.** D1 accepts permanent public access to a forwarded drive link on the strength of rotation being *"the ONLY remedy"*, but the story rules out both a route and a permission key (`PERMISSION_CATALOG_VERSION` 39→40 is a governance act) and migration 0114's header rules out direct SQL as the operational fallback. AC2 is satisfied literally — `rotatePoolPublicToken` exists and its single-row isolation is tested — but nothing can call it. The gap between *"the remedy exists"* and *"the remedy is reachable"* should be named explicitly in the owed routing note, not left implicit. [`packages/domain/src/pool/public-token.ts`]
+- **Third deploy-ordering direction: new app ↔ old API.** `AssignedContributionCard.sahyogVivranToken` is a **required** `z.string().min(1)` and the mobile SDK Zod-parses the response (`packages/api-client/src/index.ts:539-546`), so a new app build against a not-yet-deployed API fails the parse and the **entire** My Pool card disappears — not just the Sahyog Vivran entry. The first pass recorded the reverse direction (P1, stale MMKV cache) and the migration direction (0114 rolling deploy); this third direction is uncovered. An `.optional()` field with the same component guard would be strictly safer for identical UX. [`packages/contracts/src/contributions/active-contribution-card.ts`]
+- **The public drive URL carries no Pariwar segment while the lookup is Pariwar-scoped.** `sahyogVivranUrl` emits `/sahyog-vivran/{token}?lang=` with no tenant segment; the Astro page resolves `ACTIVE_PARIWAR_ID` and the domain read ANDs `eq(pools.pariwarId, pariwarId)`. The token is *globally* unique so it would resolve on its own, but the Pariwar predicate 404s it ⇒ a member of any Pariwar ≠ the public site's gets a rendered card, a rendered entry, and a dead link. Unreachable under the single-Pariwar v1 posture — which nothing in the diff asserts. Either gate the entry on the member's Pariwar matching the public site's, or resolve by token alone and let the row supply the Pariwar. [`apps/mobile/lib/public-site.ts:60-62`; `packages/domain/src/pool/sahyog-vivran-read.ts:387`]
+- **A rotated token survives in the 7-day MMKV-persisted card.** P1's review patch catches a *missing* `sahyogVivranToken`; it cannot catch a *stale* one. `persistOptions` has `maxAge` 7d and **no `buster`** (`apps/mobile/components/Provider.tsx:18`), so after a rotation an offline or pre-refetch cold start opens the withdrawn address and 404s — precisely the dead link the guard exists to prevent, in the one scenario where the address was deliberately withdrawn. Not fully closable client-side; at minimum bump `persistOptions.buster` when the card shape changes and shorten `maxAge` for this key. [`apps/mobile/components/sahyog-vivran/SahyogVivranEntry.tsx`]
+- **Migration 0114 rolling-deploy window — re-confirmed, both directions.** Already carried from the first pass; this pass confirms the reverse direction too. Old code + new schema: a pre-11b.10 instance projecting `pool.spawned` INSERTs without `public_token` → `23502` → that spawn fails until new code is everywhere. New code + un-migrated schema: `readPoolPublicToken` and `listPublicSahyogDrivePools` raise `42703 undefined_column` → `/sahyog` and the member home card **500**, which is ⛔ not the fail-soft `null` arm the handler comments assume. [`packages/domain/migrations/0114_pool-public-address-token.sql`]
+- **Family 5 stays OPEN — no DB CHECK mirrors the pool public-address token's shape.** ⛔ RULED a defer by BigDev 2026-09-04, ⛔ not closed. The app pins `^[A-Za-z0-9_-]{22}$` (`POOL_PUBLIC_TOKEN_LENGTH`, `mintPoolPublicToken`) in **tests only**; the column accepts `''`, whitespace, a 5000-char value, or `+`/`/`/`=` — the last of which would need percent-encoding in a path segment, a property the mint's own doc-block says must never be silently depended on. ⚠⛔ **WHY IT IS DEFERRED RATHER THAN PATCHED, verified live 2026-09-04:** of 2702 rows in `twt-test-pg`, **1510 fail that regex** — every integration fixture seeds `seed-<uuid>` / `tok-<uuid>` tokens (`apps/api/tests/integration/public-pages/sahyog-drive.spec.ts`'s `seedDrives`, `sahyog-vivran.spec.ts`, the pool specs). The strict CHECK therefore requires migrating the whole fixture convention first. ⭐ **THE CONSTRAINT, NAMED AND PASTE-READY** — the looser form closes every real hazard and passes all 2702 current rows:
+  ```sql
+  ALTER TABLE "pools" ADD CONSTRAINT "pools_public_token_shape"
+    CHECK (length("public_token") BETWEEN 16 AND 64
+           AND "public_token" ~ '^[A-Za-z0-9_-]+$');
+  ```
+  The strict form — `CHECK ("public_token" ~ '^[A-Za-z0-9_-]{22}$')` — is the eventual target and needs the fixture sweep. **Trigger:** the next story that touches the pool test-fixture convention, or any hardening pass on `pools`. [`packages/domain/migrations/`; `packages/domain/src/schema/pools.ts`]

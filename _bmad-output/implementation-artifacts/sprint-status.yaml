@@ -1,4 +1,23 @@
-# last_updated: 2026-09-04m (⭐⭐ **STORY 11b.13 CREATED + 11b.12's D1 RULED. ONE ROW APPEARS.**
+# last_updated: 2026-09-04n (⭐ **STORY 11b.13 — D1 RULED. ⛔ ZERO ROWS MOVE.**
+#   ⛔ epic-11b `in-progress`; ⛔ 11b-10 `done`; ⛔ 11b-11 / 11b-12 / 11b-13 all `ready-for-dev`.
+#   ✅ **D1: TWO KEYS, `PERMISSION_CATALOG_VERSION` 39 -> 41** (+1 per key — the `helpdesk.create`
+#   v22->23 and `manage_nominee_bank_masking` v38->39 precedent). A **write** key
+#   (`pariwar_admin` + `super_admin`, SETS the figure — ⛔ discloses nothing) and a **reveal** key
+#   (⛔ `super_admin` ONLY, REVEALS it to members and/or the public — ⭐ a disclosure act).
+#   ⭐⭐ **TWO IS THE POINT, ⛔ not the cost:** under ONE key, Trap 1's defence — *"the DISCLOSURE half
+#   stays CENTRAL"* — would rest on a **role check inside a route**; under TWO it is **visible in the
+#   catalog**, where a Panel member or an auditor would actually look. ⭐ And the reveal key's
+#   `super_admin`-only grant is then byte-identical in SHAPE to `pariwar.manage_public_name_presentation`
+#   and `pariwar.manage_nominee_bank_masking` ⇒ the analogy Trap 1 must distinguish is HONOURED for the
+#   disclosure half and departed from ONLY for the operational half — exactly `2026-08-19-136` cl.3.
+#   ⚠ Recommended names (⛔ NOT settled here — the governance decision confirms or corrects them):
+#   `pariwar.manage_drive_target` / `pariwar.manage_drive_target_visibility`.
+#   ⚠⛔ **BOTH doc-blocks carry the argument**, ⛔ not just the write key's — a reader arriving at the
+#   REVEAL key must see why it is narrower than its sibling, or the pair looks arbitrary.
+#   ⇒ Task 0 UNBLOCKED. ⚠ It still OPENS with the governance decision (`-195` cl.2); ⛔ the keys are
+#   ⛔ NOT minted in a build task. ⛔ ALL THREE STORIES A/B/C now have ⛔ ZERO open decisions.
+#
+# last_updated_prior: 2026-09-04m (⭐⭐ **STORY 11b.13 CREATED + 11b.12's D1 RULED. ONE ROW APPEARS.**
 #   ⛔ epic-11b `in-progress`; ⛔ 11b-10 `done`; ⛔ 11b-11 / 11b-12 `ready-for-dev`.
 #   ✅ **11b.12 D1 RULED (b): ALIGN THE WIRE, ALLOW-LIST THE TEST.** Wire tokens become
 #   `live` · `closed` · `verified`; `sahyog-drive.spec.ts:595-612` re-shapes from a DENY-list to an
@@ -15011,8 +15030,14 @@ development_status:
   # `pariwar_admin` IN WRITING, with "a Panel ruling" as its acceptance condition. ⭐ `-190` cl.7(a) IS
   # one — but the decision MUST say why the disclosure analogy does ⛔ not apply, or the grant reads as
   # the "reverse a ratified ruling by way of a catalog edit" move that key expressly names.
-  # ⚠ Its **D1 is OPEN** and blocks Task 0: ONE key (v39->40, authority split hidden in a handler) or
-  # TWO (v39->41, split visible in the catalog)? ⭐ BigDev recommends TWO.
+  # ✅ **D1 RULED 2026-09-04 — TWO KEYS, `PERMISSION_CATALOG_VERSION` 39 -> 41.** A **write** key
+  # (`pariwar_admin` + `super_admin`) and a **reveal** key (⛔ `super_admin` ONLY). ⭐ The authority
+  # split is then VISIBLE IN THE CATALOG rather than resting on a role check inside a route — which is
+  # what makes Trap 1's "the disclosure half stays CENTRAL" defence readable by a Panel or an auditor.
+  # ⚠⛔ **BOTH doc-blocks carry the argument** — the write key's explains why `pariwar_admin` is granted
+  # despite the neighbouring foreclosure; the reveal key's explains why it is NARROWER than its
+  # sibling, or the pair reads as arbitrary. ⇒ Task 0 UNBLOCKED — ⚠ it still OPENS with the governance
+  # decision (`-195` cl.2); ⛔ the keys are NOT minted in a build task.
   11b-13-per-pariwar-drive-target-substrate: ready-for-dev
   epic-11b-retrospective: optional
 

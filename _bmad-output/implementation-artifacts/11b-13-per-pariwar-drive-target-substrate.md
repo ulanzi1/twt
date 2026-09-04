@@ -189,7 +189,29 @@ changed.
 
 ## ⚖️ Decisions
 
-### ⚠ D1 — **OPEN, and it BLOCKS AC0.** ONE key or TWO?
+### ✅ D1 — **RULED (b) by BigDev, 2026-09-04: TWO KEYS, `PERMISSION_CATALOG_VERSION` 39 → 41.** ONE key or TWO?
+
+> ⭐⭐ **THE RULING.** **TWO** catalog entries, ⛔ not one. **v39 → v41** (+1 per key, the
+> `helpdesk.create` v22→23 and `manage_nominee_bank_masking` v38→39 precedent).
+>
+> | Key | Grant | Governed act |
+> |---|---|---|
+> | **write** — recommended name `pariwar.manage_drive_target` | `pariwar_admin` **+** `super_admin` | SET the figure. ⛔ Discloses **nothing** (cl.7(b)). |
+> | **reveal** — recommended name `pariwar.manage_drive_target_visibility` | ⛔ **`super_admin` ONLY** | REVEAL it, to members and/or the public. ⭐ **A disclosure act.** |
+>
+> ⚠ Names are BigDev's recommendation; ⭐ the governance decision **confirms or corrects** them — ⛔ they
+> are ⛔ not settled by this ruling.
+>
+> ⭐⭐ **WHY TWO IS THE POINT, ⛔ not the cost.** Trap 1's entire defence is *"the DISCLOSURE half stays
+> CENTRAL"*. ⇒ under one key that claim would rest on a **role check inside a route**; under two it is
+> **visible in the catalog**, which is where a Panel member or an auditor would look for it. ⭐ The
+> reveal key's `super_admin`-only grant is then **byte-identical in shape** to
+> `pariwar.manage_public_name_presentation` and `pariwar.manage_nominee_bank_masking` — ⇒ the analogy
+> Trap 1 must distinguish is **honoured for the disclosure half and departed from only for the
+> operational half**, which is exactly the two-axis rule of `2026-08-19-136` cl.3.
+>
+> ⚠⛔ **AND BOTH DOC-BLOCKS CARRY THE ARGUMENT.** ⛔ Not just the write key's. A reader arriving at the
+> **reveal** key must see why it is narrower than its sibling, or the pair looks arbitrary.
 
 ⭐ **The problem (Trap 2):** cl.7 splits **setting** (Pariwar Admin) from **revealing** (Super Admin
 only). ⛔ The catalog must express that split, ⛔ not a handler.
@@ -207,8 +229,8 @@ only). ⛔ The catalog must express that split, ⛔ not a handler.
 ⚠ Under (a) that claim rests on a role check in a route; under (b) it is **visible in the catalog**,
 which is where a Panel or an auditor would look for it.
 
-⛔ **Do ⛔ not mint until this is ruled** — it decides the catalog version, the grants, and the
-governance decision's own text.
+⇒ **Task 0 is UNBLOCKED.** ⚠ It still opens with the **governance decision** (`-195` cl.2) — ⛔ the
+keys are ⛔ NOT minted in a build task, and the decision must carry Trap 1's argument in full.
 
 ---
 
@@ -226,18 +248,25 @@ governance decision's own text.
 ## Tasks / Subtasks
 
 - [ ] **Task 0 — RULE D1, THEN THE GOVERNANCE DECISION** (AC0) — ⛔ **BLOCKS EVERYTHING**
-  - [ ] Put **D1** to BigDev. ⛔ Do ⛔ not choose unilaterally.
+  - [x] Put **D1** to BigDev — ✅ **RULED: TWO keys, v39 → v41.**
   - [ ] Read `.decision-log.md` **live** for the head number — ⛔ do ⛔ not hardcode it.
-  - [ ] Write the decision: mint the key(s); bump `PERMISSION_CATALOG_VERSION` from 39; state the
-        grants; **state why the `-178` / `-136` cl.3 analogy does ⛔ not apply** (Trap 1); record that
-        it supersedes ⛔ nothing.
+  - [ ] Write the decision: mint **TWO** keys — a **write** key (`pariwar_admin` + `super_admin`) and a
+        **reveal** key (⛔ `super_admin` ONLY); bump `PERMISSION_CATALOG_VERSION` **39 → 41**; confirm
+        or correct the recommended names; **state why the `-178` / `-136` cl.3 analogy does ⛔ not
+        apply to the WRITE half and IS honoured for the REVEAL half** (Trap 1, D1); record that it
+        supersedes ⛔ nothing.
   - [ ] Annotate `epics.md`; flip `sprint-status.yaml` `11b-13-…` to `in-progress`.
   - [ ] ⛔ One `governance:` commit. ⛔ No code.
 - [ ] **Task 1 — The catalog** (AC0, AC2, AC3)
-  - [ ] Declare the key(s) in `packages/domain/src/rbac/permissions.ts` with a doc-block carrying
-        Trap 1's argument **in full** — ⛔ a bare grant here is how the foreclosure gets read as broken.
-  - [ ] Grant in `roles.ts`. ⛔ Not `district_admin`, ⛔ not `state_trustee`.
-  - [ ] Bump `PERMISSION_CATALOG_VERSION` per D1.
+  - [ ] Declare **BOTH** keys in `packages/domain/src/rbac/permissions.ts`. ⚠⛔ **EACH gets its own
+        doc-block carrying Trap 1's argument** — the write key's explains why `pariwar_admin` is
+        granted despite the neighbouring foreclosure; the **reveal** key's explains why it is
+        **NARROWER than its sibling**, or the pair reads as arbitrary.
+  - [ ] Cross-reference the two, and cross-reference `pariwar.manage_nominee_bank_masking` — ⭐ that is
+        the correct relationship between same-class keys (`2026-09-02-183` cl.1's precedent).
+  - [ ] Grant in `roles.ts`: write → `pariwar_admin` + `super_admin`; reveal → ⛔ `super_admin` ONLY.
+        ⛔ Not `district_admin`, ⛔ not `state_trustee`.
+  - [ ] `PERMISSION_CATALOG_VERSION` **39 → 41**.
 - [ ] **Task 2 — The substrate** (AC1, AC4)
   - [ ] Migration: the per-Pariwar target + the two reveal flags. ⭐ Model on
         `pariwar_nominee_bank_masking_schedule`. ⚠ Hand-authored, ⛔ never `db:generate`
@@ -315,3 +344,4 @@ the shared fixture.
 | Date | Version | Description | Author |
 |---|---|---|---|
 | 2026-09-04 | 0.1 | Created from `2026-09-04-195` cl.3 (story **C**). ⚠ **D1 is OPEN and blocks Task 0**, which itself blocks all code. ⭐ Finding at authoring: the neighbouring key **FORECLOSES `pariwar_admin` in writing**, with *"a Panel ruling"* as its acceptance condition — `-190` cl.7(a) IS one, but the decision must say why the disclosure analogy does ⛔ not apply. | BigDev + Claude |
+| 2026-09-04 | 0.2 | ✅ **D1 RULED: TWO keys, v39 → v41.** Write key `pariwar_admin` + `super_admin`; reveal key ⛔ `super_admin` ONLY. Task 0 unblocked — ⚠ it still opens with the governance decision, and **both** doc-blocks carry the argument. | BigDev + Claude |

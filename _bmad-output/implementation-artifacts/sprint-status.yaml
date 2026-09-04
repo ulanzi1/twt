@@ -1,4 +1,32 @@
-# last_updated: 2026-09-04p (⭐ **STORY 11b.14 — D1 + D2 RULED. ⛔ ZERO ROWS MOVE.**
+# last_updated: 2026-09-04q (⭐⭐ **STORY 11b.15 CREATED — `bmad-create-story`. ONE ROW APPEARS.**
+#   ⛔ epic-11b `in-progress`; ⛔ 11b-10 `done`; ⛔ 11b-11/12/13/14 `ready-for-dev`.
+#   ⭐ **STORY E = 11b-15** — the member's drive list, a FOURTH TAB over every drive in their Pariwar.
+#   Owns TRUSTEE-RATIFIED `-193` cl.2 plus `-194` cl.2 and `-196`. ⛔ BLOCKED ON B (11b-12);
+#   ⭐ story F depends on it. ⭐⭐ A **NEW SURFACE** — `(tabs)/` holds THREE tabs, ⛔ no member drive list
+#   exists, and there is ⛔ NO member drive-list route (`member-pool/routes.ts` has four, none of them).
+#   ⭐⭐⭐ **THE FINDING AT AUTHORING — A FOURTH INVERSION, IN A FIELD NOBODY CHECKED:**
+#   the PUBLIC index renders the deceased's name in the Pariwar's **CONFIGURED form, and `full_name` is
+#   the DEFAULT** (`2026-08-19-136` cl.1); the **MEMBER** path **HARD-CODES the SHIELDED form**
+#   (`sahyog-drive.ts:96` — *"⛔ NEVER through `resolvePoolIdentity()`, which hard-codes the shielded
+#   form"*). ⇒ **on any drive whose family consented to publication, a STRANGER sees the FULL NAME and a
+#   MEMBER sees an INITIAL.** ⛔ That is a `-189` cl.3 inversion — the SAME SHAPE as `-188`'s banking
+#   inversion, in a different field, and ⛔ recorded NOWHERE until now. ⚠ Building this list the obvious
+#   way (copy My Pool's shape) would SHIP it — ⭐ which is exactly how `-188` happened.
+#   ⚠ **D1 OPEN.** ⭐ BigDev recommends **(c)**: mirror the public form here (satisfying cl.3), AND
+#   ROUTE the resulting My Pool / list name-form divergence as its own question — ⛔ do the right thing
+#   AND name the residue, rather than fixing a shipped surface inside this story.
+#   ⚠ Trap 2: `spawned` is excluded (`-196`) and the predicate is this surface's OWN fragment —
+#   ⛔ NEVER the public tuple. Trap 3: New-Arch FlatList red-boxes crossing empty->populated in place,
+#   and *"loading, then rows"* is this surface's NORMAL path ⇒ those states render OUTSIDE the list.
+#   Trap 4: the tab titles are hardcoded English in a bilingual app (PRE-EXISTING, ⛔ not fixed unasked)
+#   — the fourth tab must CHOOSE. Trap 5: *"more than the public"* is a FLOOR, ⛔ not a licence —
+#   ⛔ no banking coordinates on the LIST (that is story F).
+#   ⭐ **AC3's test is the load-bearing one and it is a COMPARISON:** read the same drive as the public
+#   AND as a member, assert the member's fields are a SUPERSET. ⚠ A test over this list in ISOLATION
+#   ⛔ cannot see the violation — and that test is what would have caught `-188` in August.
+#   ⛔ AI-10-1: ⛔ no member-gating predicate — it adds a READ.
+#
+# last_updated_prior: 2026-09-04p (⭐ **STORY 11b.14 — D1 + D2 RULED. ⛔ ZERO ROWS MOVE.**
 #   ⛔ epic-11b `in-progress`; ⛔ 11b-10 `done`; ⛔ 11b-11/12/13/14 all `ready-for-dev`.
 #   ⭐⭐ **ALL FOUR AUTHORED STORIES NOW CARRY ⛔ ZERO OPEN DECISIONS.** ⚠ 11b-14 remains BLOCKED on
 #   11b-12 (B) and 11b-13 (C) — a dependency, ⛔ not a decision.
@@ -15114,6 +15142,18 @@ development_status:
   # ruled the figure. ⭐ AC5's surviving half STAYS ENFORCED: ⛔ no ordering, ⛔ no "most-supported"
   # view, ⛔ no ranking, ⛔ no cross-drive comparison. ⚠ The amendment NARROWS the sentence, ⛔ not repeals it.
   11b-14-live-drives-listed-and-the-progress-meter: ready-for-dev
+  # ⭐ 11b-15 — STORY **E** of the `2026-09-04-195` cl.3 split. ⛔ NOT in `epics.md` — owes an
+  # ANNOTATION. ⛔ BLOCKED ON B (11b-12). ⭐ **STORY F DEPENDS ON IT.**
+  # ⭐⭐ A **NEW SURFACE**, ⛔ not a filter change: `(tabs)/` holds THREE tabs and ⛔ no member drive
+  # list exists — `SahyogVivranEntry` is a single link on the My Pool card.
+  # ⚠⛔ **D1 OPEN — AND IT EXISTS BECAUSE THE MEMBER CURRENTLY SEES *LESS NAME* THAN THE PUBLIC.**
+  # The public index renders the Pariwar's CONFIGURED form (`full_name` is the DEFAULT,
+  # `2026-08-19-136` cl.1); the member path HARD-CODES the shielded first-name+initial
+  # (`sahyog-drive.ts:96`). ⇒ on any consented drive a STRANGER sees the full name and a MEMBER sees an
+  # initial — a `-189` cl.3 inversion of the SAME SHAPE as `-188`, in a different field, ⛔ recorded
+  # NOWHERE until now. ⭐ BigDev recommends (c): mirror the public form here, AND route the resulting
+  # My Pool / list divergence as its own question rather than fixing a shipped surface inside this story.
+  11b-15-member-drive-list-fourth-tab: ready-for-dev
   epic-11b-retrospective: optional
 
   # ==========================================================================

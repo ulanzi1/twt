@@ -222,8 +222,9 @@ here (**B** owns them), ⛔ no tab-title i18n sweep (Trap 4).
       `governance:` commit, ⛔ no code.
 - [x] **Task 1 — RULE D1** — ✅ **RULED 2026-09-04** (`-197`): mirror the public **configured** form;
       ⭐ My Pool adopts it too, ⚠ **via story G**, ⛔ not here.
-- [ ] **Task 1b — ⛔ BLOCKING: rule the BASIS-GATE sub-question** (`-197` follow-up (i)). ⭐ Form-only
-      recommended. ⛔ Do ⛔ not build either surface until ruled.
+- [x] **Task 1b — RULE THE BASIS-GATE SUB-QUESTION** — ✅ **RULED `-198` cl.1: FORM ONLY.** The member
+      name takes the configured **FORM** and ⛔ NOT the publication **BASIS** gate ⇒ a member sees a name
+      **always**. ⛔ Unblocked.
 - [ ] **Task 2 — The read** (AC2, AC3, AC7) — a member-scoped, **paginated** list over
       `live`+`closed`+`settled`, as this surface's **own** fragment. ⛔ Scope from the session, ⛔ never
       a client-supplied Pariwar id.
@@ -286,5 +287,6 @@ props. ⚠ Assert **membership and explicit values**, ⛔ never counts over the 
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-09-04 | 0.3 | ✅ **Task 1b CLOSED by `-198` cl.1 (FORM ONLY).** ⛔ Zero open decisions; ⚠ still blocked on **B** and **G** (⭐ G runs first, `-198` cl.2). | BigDev + Claude |
 | 2026-09-04 | 0.2 | ✅ **D1 RULED (`-197`)** — mirror the configured form; ⭐ My Pool adopts it too, ⚠ **via a new story G** (it reaches THREE shipped surfaces). ⛔ **Task 1b BLOCKING:** does the member name carry the publication BASIS gate, or only the FORM? ⭐ Form-only recommended — form-plus-basis is a REGRESSION. | BigDev + Claude |
 | 2026-09-04 | 0.1 | Created from `-195` cl.3 (story **E**). ⚠ **D1 is OPEN.** ⭐⭐ Finding at authoring: **the member currently sees LESS NAME than the public** — public default is `full_name`, the member path hard-codes the shielded form. ⛔ A `-189` cl.3 inversion of the same shape as `-188`, in a different field, ⛔ recorded nowhere until now. | BigDev + Claude |

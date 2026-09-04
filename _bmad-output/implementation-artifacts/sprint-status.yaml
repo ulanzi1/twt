@@ -1,4 +1,23 @@
-# last_updated: 2026-09-04t (⭐⭐ **STORY 11b.17 CREATED — THE SPLIT IS FULLY AUTHORED. ONE ROW APPEARS.**
+# last_updated: 2026-09-04u (⭐⭐⭐ **ALL SEVEN STORIES NOW CARRY ⛔ ZERO OPEN DECISIONS. ⛔ ZERO ROWS MOVE.**
+#   ⛔ epic-11b `in-progress`; ⛔ 11b-10 `done`; ⛔ 11b-11…17 ALL `ready-for-dev`.
+#   ✅ **11b.17 D1 RULED (a)** (`-199`) and its scope **CONFIRMED (i) — the member's OWN Pariwar.**
+#   ⇒ any authenticated member may open the member-facing Sahyog Vivran detail for ANY drive in THEIR
+#   Pariwar, including the FULL nominee banking coordinates, subject to lifecycle (⛔ never `spawned`)
+#   and the session scope. ⭐ Cross-tenant was ⛔ NOT meant ⇒ ⛔ NO new tenancy surface, ⛔ no route
+#   parameter, ⛔ no RLS change — ⚠ and the cross-Pariwar denial test is now the ONLY remaining boundary
+#   on this data, so it is the load-bearing guard (F AC3).
+#   ⚠ BigDev's recommendation (b) was ⛔ NOT taken. ⭐ Recorded plainly, ⛔ not quietly narrowed.
+#   ✅ **11b.15 Task 1b CLOSED** by `-198` cl.1 (FORM ONLY) — a loose end from when `-198` landed.
+#   ⭐ **F's AC6 SENTENCE IS NOW WRITTEN:** *"Any member of your Pariwar can see the bank account details
+#   of every family your Pariwar has supported — ⛔ not only the drives you were asked to contribute to,
+#   and ⛔ not only while a drive is still collecting."* ⚠⛔ **AND THE NIYAMAVALI CHECK IS REPORTED
+#   HONESTLY:** it yields ⛔ NOTHING DISPOSITIVE — the Niyamavali is an unexecuted, agent-drafted
+#   reference that binds ⛔ nothing ([[feedback_niyamavali_rulebook_not_spec]]). ⇒ the authority is
+#   `-190` cl.3 as ruled at `-199`, ⛔ nothing else. ⛔ Do ⛔ NOT record a Niyamavali clause as authorising it.
+#   ⭐ **READY TO START NOW, ⛔ nothing blocking:** **G** (11b-16) · **A** (11b-11) · **B** (11b-12) ·
+#   **C** (11b-13). ⚠ D waits on B+C; E waits on B+G; F waits on A+E.
+#
+# last_updated_prior: 2026-09-04t (⭐⭐ **STORY 11b.17 CREATED — THE SPLIT IS FULLY AUTHORED. ONE ROW APPEARS.**
 #   ⛔ epic-11b `in-progress`; ⛔ 11b-10 `done`; ⛔ 11b-11…17 ALL `ready-for-dev`.
 #   ⭐ **STORY F = 11b-17**, the LAST of the seven — the member's view of ONE drive, carrying what the
 #   public page no longer does. Owns `-190` cl.3. ⛔ BLOCKED ON **A** and **E**.
@@ -15260,7 +15279,19 @@ development_status:
   11b-16-member-name-form-configured-presentation: ready-for-dev
   # ⭐ 11b-17 — STORY **F**, the LAST of the split. ⛔ NOT in `epics.md` — owes an ANNOTATION.
   # ⛔⛔ BLOCKED ON **A** (11b-11 — the public withdrawal must land first) AND **E** (11b-15).
-  # ⛔⛔ **D1 IS OPEN AND IT *IS* THE STORY:** WHICH member sees WHICH drive's banking coordinates?
+  # ✅ **D1 RULED (a) 2026-09-04 (`-199`), scope CONFIRMED (i) = the member's OWN Pariwar.**
+  # ⇒ ANY authenticated member may open the member-facing detail for ANY drive in THEIR Pariwar,
+  # including the FULL nominee banking coordinates — subject to lifecycle (⛔ never `spawned`) and the
+  # session scope, which ⭐ IS the access control (member routes carry ⛔ NO `:pariwarId` param).
+  # ⛔ Cross-tenant was ⛔ NOT meant ⇒ ⛔ no new tenancy surface, ⛔ no RLS change.
+  # ⚠ BigDev's recommendation (b) was ⛔ NOT taken — recorded plainly, ⛔ not quietly narrowed.
+  # ⚠⛔ **CONSEQUENCES THE STORY MUST SIZE, ⛔ not discover:** the §1.5 audit chain is GLOBALLY
+  # advisory-lock serialized ⇒ under (a) a coordinate read is ROUTINE BROWSING, so every detail open
+  # takes a serialized write. AND Trap 3 is now definitely a REVERSAL of
+  # `contribution-history.ts:24`'s *"DELIBERATELY … NO nominee/bank data"* — ⛔ NAME it, ⛔ never absorb it.
+  # ⭐ RECOMMENDED, ⛔ not blocking: a one-page disclosure note to the Panel stating the quantification
+  # their clause produces — `-190` was ratified on the INVERSION argument and ⛔ never showed the figure.
+  # ⬇ The finding D1 existed for:
   # ⭐⭐ **`-189` cl.3 DOES ⛔ NOT FORCE THE SCOPE** — story A removes the public's banking coordinates
   # ENTIRELY, so a member ⛔ cannot see "less than nothing" ⇒ cl.3 is satisfied on banking BY
   # CONSTRUCTION, whatever F does. ⚠ Anyone arguing *"cl.3 requires it"* argues from an inversion that

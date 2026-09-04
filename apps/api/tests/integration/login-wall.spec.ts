@@ -234,8 +234,19 @@ const PUBLIC_ALLOWLIST = new Set<string>([
   // structurally absent, `limits.search` is the ONLY bound on walking the sequential identifier —
   // which after 11b.3a fronts FOUR DECRYPTED Tier-1 fields, rendered in FULL for every Pariwar
   // until the Trust sets a masking window (`D8-default` FAIL-OPEN, `2026-09-02-179` cl.1)"*.
-  // ⭐ THAT WAS TRUE AND IS THE REASON 11b.10 EXISTS. ⇒ there is now ⛔ NO SEQUENCE TO WALK: the
-  // address is opaque (control 5 above). ⚠ `D8-default` FAIL-OPEN is UNCHANGED — 11b.10 changed
+  // ⭐ THAT WAS TRUE AND IS THE REASON 11b.10 EXISTS. ⇒ the address is now opaque (control 5 above)
+  // and ⛔ nobody can CONSTRUCT a drive URL from the sequence.
+  // ⚠⛔⛔ **RE-AMENDED 2026-09-04 (`#decision-2026-09-04-186`) — THIS LINE ONCE READ *"there is now
+  // ⛔ NO SEQUENCE TO WALK"*, AND THAT WAS TOO STRONG.** It holds for `live` drives (⛔ NOT LISTED on
+  // `/sahyog`) and for archived drives past the page horizon. It does ⛔ NOT hold for
+  // `closed`/`settled`: the index publishes a per-row LINK to each (D3 — the necessary consequence
+  // of `-184` (A)), a published link CONTAINS the address, and `/sahyog`'s PRE-EXISTING `poolCode`
+  // search box turns the sequential code into that link in ONE request. ⭐ Proven by EXECUTION
+  // against a live DB, ⛔ not inferred. ⛔ There is ⛔ NO code fix — publishing a link publishes the
+  // address. ⏳ What follows is OPEN WITH THE PANEL
+  // (`trustee-panel-routing-note-2026-09-04-11b10-listed-drive-discoverability.md`); ⛔ do ⛔ not
+  // resolve it here and ⛔ do not restore the stronger sentence.
+  // ⚠ `D8-default` FAIL-OPEN is UNCHANGED — 11b.10 changed
   // WHO CAN FIND the page, ⛔ not WHAT IS SHOWN (`-184` cl.5: option (d) was disclosure only and the
   // Panel did ⛔ not direct it). ⚠⛔ AND `limits.search` IS STILL ⛔ NOT A TUNING KNOB in EITHER
   // direction: the Panel directed option **(c)**, ⛔ not option (b), so the tier is unchanged, and

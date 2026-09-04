@@ -102,6 +102,9 @@
 //      A wrong or absent token answers a **byte-identical 404**. ⛔ It bounds DISCOVERY, ⛔ NOT
 //      AUTHORISATION (D1): presenting a valid address is enough, with ⛔ no session and ⛔ no branch
 //      on the reader's membership standing. See THE ENUMERATION BOUND below for the full ground.
+//      ⚠⛔ **AND ⛔ NOT FOR EVERY STATE** (2026-09-04): it is a real bound for `live` drives, which are
+//      ⛔ not listed — for `closed`/`settled` the index publishes the address as a LINK by ruling, so
+//      control 7 does ⛔ not bound their discovery. OPEN with the Panel; see below.
 //
 // ⛔ CONTROLS **2** AND **3**: ⛔ STILL NOT APPLICABLE — NO COLLECTION, NO `limit`, NO `page`.
 // ⚠⛔ THE N/A STILL HAS AN EXPIRY, ⛔ it is not a permanent exemption: **Story 11b.3b adds the
@@ -127,15 +130,27 @@
 // premise the routing note carried: the identifier's `sequence` is a MONOTONIC per-(pariwar, month)
 // counter, so counting really did address every drive.
 // ⇒ **CONTROL 7 — ⭐ NEW AT 11b.10 — THE UNGUESSABLE ADDRESS.** The route parameter is a **128-bit
-// CSPRNG token** carried on the pool row under a global unique index. There is ⛔ no sequence left to
-// walk, and *"real drive, wrong token"* answers a **BYTE-IDENTICAL 404** to *"no such drive"* — ⛔ a
-// different answer there would itself be the enumeration oracle. ⇒ the count is now **SEVEN**.
+// CSPRNG token** carried on the pool row under a global unique index, so a drive URL can ⛔ no longer
+// be CONSTRUCTED from the sequence, and *"real drive, wrong token"* answers a **BYTE-IDENTICAL 404**
+// to *"no such drive"* — ⛔ a different answer there would itself be the enumeration oracle. ⇒ the
+// count is now **SEVEN**.
+// ⚠⛔⛔ **AND ITS REACH IS BOUNDED — RE-AMENDED 2026-09-04 (`#decision-2026-09-04-186`).** This clause
+// once said flatly *"there is ⛔ no sequence left to walk"*. ⭐ TRUE for `live` drives (⛔ NOT LISTED)
+// and for archived drives past the page horizon. ⛔ **FALSE for `closed`/`settled`:** `/sahyog`
+// publishes a per-row LINK to each of them (D3 — the necessary consequence of `-184` (A)), and a
+// published link CONTAINS the address; its pre-existing `poolCode` search box then turns the
+// SEQUENTIAL code into that link in ONE request. ⭐ Proven by execution, ⛔ not inferred.
+// ⛔ THERE IS NO CODE FIX — a page you publish a link to is a page whose address you published. ⏳ What
+// follows is **OPEN WITH THE PANEL**
+// (`trustee-panel-routing-note-2026-09-04-11b10-listed-drive-discoverability.md`). ⛔ Do ⛔ not resolve
+// it here, and ⛔ do not restore the stronger sentence.
 // ⚠⛔ **THE ADDRESS BOUNDS DISCOVERY, ⛔ NOT AUTHORISATION** (D1, 2026-09-04): the page answers 200 to
 // ANYONE presenting a valid address — ⛔ no session, and ⛔ never a branch on the reader's membership
 // standing (⛔ no `members.state`, ⛔ no `is_valid`, ⛔ no moderation overlay).
 // ⚠ D11(a) recorded controls 2 and 3 structurally N/A *precisely because there is no `page` and no
 // `limit` to bind them to*; it was option **(c)** — ⛔ NOT ruled — that would have obliged this route
-// to name what bounds identifier enumeration. ⇒ this clause names it, and 11b.10 CLOSED it.
+// to name what bounds identifier enumeration. ⇒ this clause names it, and 11b.10 closed it ⭐ FOR
+// UNLISTED DRIVES. ⚠ For listed ones it is ⛔ not closed and ⛔ not closable in code — routed.
 // ⚠⛔ **`limits.search` IS STILL ⛔ NOT A TUNING KNOB** (`2026-09-02-183` cl.5; 11b.3a AC2). The Panel
 // directed option **(c)**, ⛔ not option (b) (`-184` cl.5) ⇒ the tier is UNCHANGED by 11b.10 in BOTH
 // directions. ⛔ Do not tighten it on the registration below because the token "makes it safe", and
@@ -303,11 +318,23 @@ export function registerPublicPagesRoutes(app: FastifyInstance, deps: AppDeps): 
       },
       // ⛔ UNMODIFIED, and the SAME named tier as the two routes above.
       // ⚠⭐ AMENDED BY STORY 11b.10 — ⛔ AN AMENDMENT, ⛔ NOT A REWRITE. This note used to read that
-      // control 1 was *"the ONLY thing bounding a walk of the sequential `P-YYYY-MM-###`"*. ⭐ THAT
-      // IS NO LONGER TRUE, and leaving it would have a live defence overstate the work this line
-      // does: the ADDRESS itself is now unguessable (`2026-09-03-184` (B) — a 128-bit token), so
-      // there is ⛔ no sequence left to walk. Control 1 now bounds the ordinary request rate on a
-      // PII-bearing public route — still load-bearing, and no longer load-bearing ALONE.
+      // control 1 was *"the ONLY thing bounding a walk of the sequential `P-YYYY-MM-###`"*. The
+      // ADDRESS itself is now unguessable (`2026-09-03-184` (B) — a 128-bit token), so ⛔ nobody can
+      // CONSTRUCT a drive URL from the sequence any more.
+      // ⚠⛔⛔ RE-AMENDED 2026-09-04 (`#decision-2026-09-04-186`) — THIS NOTE ONCE SAID *"there is
+      // ⛔ no sequence left to walk"*, AND THAT WAS ⛔ TOO STRONG. It holds for `live` drives, which
+      // are ⛔ NOT LISTED, and for archived drives past the index page horizon. It does ⛔ NOT hold
+      // for `closed`/`settled`: `/sahyog` publishes a per-row LINK to each of them (D3 — the
+      // necessary consequence of (A)), and a published link CONTAINS the address. `/sahyog` also
+      // carries a public search box on the sequential code (`sahyog.astro` `poolCode`, PRE-EXISTING
+      // and legitimate) ⇒ identifier → token → this route, in two unauthenticated requests. ⭐ PROVEN
+      // BY EXECUTION against a live DB, ⛔ not inferred.
+      // ⛔ THERE IS NO CODE FIX: a page you publish a link to is a page whose address you published.
+      // ⏳ WHAT FOLLOWS IS **OPEN WITH THE PANEL** —
+      // `trustee-panel-routing-note-2026-09-04-11b10-listed-drive-discoverability.md`. ⛔ Do ⛔ not
+      // resolve it here, and ⛔ do not restore the stronger sentence.
+      // ⇒ Control 1 bounds the ordinary request rate on a PII-bearing public route, and for LISTED
+      // drives it is once again the principal bound on collecting them in bulk.
       // ⚠⛔ AND THE TIER IS STILL ⛔ NOT THIS STORY'S TO TOUCH. The Panel directed option **(c)**,
       // ⛔ not option (b) (`-184` cl.5), and 11b.3a's **AC2** rules that tightening it as an
       // authoring act is exactly what may not happen — a rule that did ⛔ NOT expire when the note

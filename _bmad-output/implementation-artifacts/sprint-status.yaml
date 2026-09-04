@@ -1,4 +1,30 @@
-# last_updated: 2026-09-04k (⭐ **STORY 11b.11 — D1 RULED. ⛔ ZERO ROWS MOVE; 11b-11 stays
+# last_updated: 2026-09-04l (⭐⭐ **STORY 11b.12 CREATED — `bmad-create-story`. ONE ROW APPEARS.**
+#   ⛔ epic-11b `in-progress`; ⛔ 11b-10 `done`; ⛔ 11b-11 `ready-for-dev`; ⛔ 11b-3b `ready-for-dev`.
+#   ⭐ **STORY B** of the `-195` cl.3 split: the stage vocabulary **Live · Closed · Verified**, ONE
+#   shared copy source, and the info affordance. Owns TRUSTEE-RATIFIED `-190` cl.5, `-191` cl.3,
+#   `-193` cl.1/3, plus `-192` cl.1/3. ⚠ INDEPENDENT of 11b-11 — different fields, either order.
+#   ⭐⭐ **STORIES D AND E DEPEND ON IT.**
+#   ⭐⭐ **TWO FINDINGS AT AUTHORING, both of which change the work:**
+#   **(1) `-194` cl.1 IS ALREADY SATISFIED.** *"The Verified section renders only when it has rows"* —
+#   `sahyog.astro:461` and `:514` ALREADY guard both sections with `.length > 0`. ⇒ the rename inherits
+#   it. ⛔ Do ⛔ not build it, ⛔ do not add a second guard, ⛔ do not report it as newly implemented —
+#   record it SATISFIED BY CONSTRUCTION and PIN it with a test so a refactor cannot drop it silently.
+#   **(2) ⛔⛔ THE RULED WORDS COLLIDE WITH A SHIPPED ANTI-LEAK TEST.**
+#   `sahyog-drive.spec.ts:595-612` asserts the internal lifecycle vocabulary never appears as a wire
+#   VALUE, looping `['spawned','live','closed','settled']` — and **two of the three ruled public words
+#   ARE internal state names**. ⇒ adopting them on the wire fails that test BY CONSTRUCTION, and the
+#   property it guards (`2026-08-21-144` cl.8 — `/members` leaked internal `lock-in` once) loses its
+#   guard. ⚠ **D1 IS OPEN** and blocks Tasks 2-5. ⭐ BigDev recommends ALIGNING the wire and re-shaping
+#   the test from a DENY-list to an ALLOW-list — strictly stronger, and it keeps cl.8's real property.
+#   ⛔ Display-only was considered and is the weaker arm: the wire would then say `active` for a drive
+#   labelled "Closed", re-creating the word-means-its-opposite trap ONE LAYER DOWN, where ⛔ no Trustee
+#   would ever see it.
+#   ⚠⛔ **AND IT DELETES TWO FACTUALLY FALSE PUBLIC STRINGS** — `section.active.help` says *"The family
+#   has not yet been paid"* and `section.archive.help` says *"Paid out to the family"*. ⛔ Both describe
+#   a payout the trust NEVER performs (`-192`). ⭐ AC2 is why this story is ⛔ not last in the split.
+#   ⛔ AI-10-1: ⛔ NO member-gating predicate — stated explicitly in the file.
+#
+# last_updated_prior: 2026-09-04k (⭐ **STORY 11b.11 — D1 RULED. ⛔ ZERO ROWS MOVE; 11b-11 stays
 #   `ready-for-dev`.** ⛔ epic-11b `in-progress`; ⛔ 11b-10 `done`; ⛔ 11b-3b `ready-for-dev`.
 #   ✅ **D1 (b): COLLAPSE THE WIRE, KEEP THE MACHINERY.** After `-190` cl.1 removes the coordinates and
 #   `-191` cl.2 keeps the nominee name in the masked arm, the public DTO's two `masked` arms become
@@ -14939,6 +14965,14 @@ development_status:
   # ⛔ otherwise the next reader concludes masking was DELETED, the mirror image of trap 4.
   # ⇒ Task 1 CLOSED, Task 2 UNBLOCKED. ⛔ `dev-story` NOT started, by instruction.
   11b-11-nominee-banking-coordinates-withdrawn-from-public: ready-for-dev
+  # ⭐ 11b-12 — STORY **B** of the `2026-09-04-195` cl.3 split. ⛔ NOT in `epics.md` — owes an
+  # ANNOTATION (its Task 0). ⚠ INDEPENDENT of 11b-11; both may proceed in parallel.
+  # ⭐⭐ **STORIES D AND E DEPEND ON THIS ONE.**
+  # ⚠ Its **D1 is OPEN** and blocks Tasks 2-5: do the WIRE TOKENS adopt the ruled words, or only the
+  # DISPLAY copy? `Live` and `Closed` are simultaneously the ruled PUBLIC words and INTERNAL lifecycle
+  # names, and `sahyog-drive.spec.ts:595-612` asserts the internal names never cross as wire values.
+  # ⭐ BigDev recommends ALIGNING the wire and re-shaping that test from a deny-list to an allow-list.
+  11b-12-stage-vocabulary-and-info-affordance: ready-for-dev
   epic-11b-retrospective: optional
 
   # ==========================================================================

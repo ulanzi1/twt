@@ -26,7 +26,7 @@ does ⛔ not own — the one failure this field exists to prevent
 
 # Story 11b.10: Sahyog Vivran — the Unguessable Public Address + the Inbound Path `[SURFACE]`
 
-Status: in-progress
+Status: done
 
 > ⭐⛔ **THIS STORY IS ⛔ NOT IN `epics.md`'s STORY LIST.** It is created by a **Trustee-ratified
 > decision** (`2026-09-03-184`), ⛔ not by epic decomposition — exactly as `11b-3a` was. ⇒ it owes an

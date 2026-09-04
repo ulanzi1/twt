@@ -1,4 +1,33 @@
-# last_updated: 2026-09-04n (⭐ **STORY 11b.13 — D1 RULED. ⛔ ZERO ROWS MOVE.**
+# last_updated: 2026-09-04o (⭐⭐ **STORY 11b.14 CREATED — `bmad-create-story`. ONE ROW APPEARS.**
+#   ⛔ epic-11b `in-progress`; ⛔ 11b-10 `done`; ⛔ 11b-11/12/13 `ready-for-dev` (⛔ zero open decisions).
+#   ⭐ **STORY D = 11b-14** — `live` drives LISTED, the progress meter, the participation headline.
+#   ⛔⛔ **BLOCKED ON B AND C.** ⭐⭐ **IT RESTORES FR-76**, un-superseded since the PRD and cited in
+#   ⛔ ZERO implementation records until `-187` found it — Task 0's annotation repairs a five-month gap.
+#   ⭐⭐ **THREE FINDINGS AT AUTHORING, all of which change the work:**
+#   **(1) ⛔ THE SHIPPED METER MEASURES THE WRONG THING.** `pool-progress` — the component `-187` found
+#   *"was built to land here"* — fills its bar with `confirmedCount / rosterSize`, a PARTICIPATION
+#   ratio. `-191` cl.4 rules it fills against a **RUPEE target**. ⇒ the component does ⛔ NOT have the
+#   ruled shape, and its `confirmedCount > rosterSize` THROW does ⛔ not translate: `amountRaised >
+#   target` is an ORDINARY state, ⛔ not an impossible one. ⚠ **D1 OPEN.**
+#   **(2) ⚠ THE INDEX CONTRACT FORBIDS A SUM — AND THAT SENTENCE IS AUTHOR PROSE.**
+#   `sahyog-drive.ts:133` says *"⛔ A count, ⛔ never a sum of amounts … (AC5)"*. ⭐ 11b.1's AC5
+#   prohibits **leaderboards · rankings · gamification · social-performance · popularity metrics** —
+#   ⛔ it does ⛔ NOT name a sum. ⇒ *"never a sum"* is an **author's extension** adjacent to the
+#   ordering clause AC5 genuinely supports. ⚠ The Panel HAS ruled the amount (`-190` cl.6; `-189` cl.5
+#   already recorded the rupee boundary as newly crossed) — what is ⛔ NOT ruled is whether it goes on
+#   the INDEX ROW. ⚠ **D2 OPEN.** ⭐ BigDev recommends BOTH surfaces, with the sentence **AMENDED and
+#   NAMED** — ⛔ never deleted: this epic has logged THREE claims that outlived what they described, and
+#   silently removing a fourth is the same failure wearing the opposite sign.
+#   **(3) ⚠ FR-76 SAYS "NEAR-REAL-TIME"; `/sahyog` IS CACHED `s-maxage=300`.** ⇒ a live meter is up to
+#   FIVE MINUTES stale at every warm PoP. ⛔ Polling cannot outrun a shared cache. ⭐ AC4 requires the
+#   staleness be STATED; ⛔ the cache policy is NOT a tuning knob and is unchanged by this story.
+#   ⚠ Trap 4: a `live` drive has ⛔ NO close date ⇒ the "Date closed" column has nothing for the whole
+#   new section; ⛔ *"not recorded"* is the announced-omission shape AC5 forbids.
+#   ⚠ Trap 5: listing a live drive PUBLISHES its address (`-186`) — ⭐ but story A already took the
+#   banking coordinates off that page, so the sting is drawn. ⛔ State it; ⛔ do not re-open it.
+#   ⛔ AI-10-1: ⛔ no member-gating predicate — it widens a LISTING predicate only.
+#
+# last_updated_prior: 2026-09-04n (⭐ **STORY 11b.13 — D1 RULED. ⛔ ZERO ROWS MOVE.**
 #   ⛔ epic-11b `in-progress`; ⛔ 11b-10 `done`; ⛔ 11b-11 / 11b-12 / 11b-13 all `ready-for-dev`.
 #   ✅ **D1: TWO KEYS, `PERMISSION_CATALOG_VERSION` 39 -> 41** (+1 per key — the `helpdesk.create`
 #   v22->23 and `manage_nominee_bank_masking` v38->39 precedent). A **write** key
@@ -15039,6 +15068,19 @@ development_status:
   # sibling, or the pair reads as arbitrary. ⇒ Task 0 UNBLOCKED — ⚠ it still OPENS with the governance
   # decision (`-195` cl.2); ⛔ the keys are NOT minted in a build task.
   11b-13-per-pariwar-drive-target-substrate: ready-for-dev
+  # ⭐ 11b-14 — STORY **D** of the `2026-09-04-195` cl.3 split. ⛔ NOT in `epics.md` — owes an
+  # ANNOTATION. ⛔⛔ **BLOCKED ON B (11b-12) AND C (11b-13)** — B owns the stage words + shared copy,
+  # C owns the rupee target this meter measures against.
+  # ⭐⭐ **THIS IS THE STORY THAT RESTORES FR-76** — a standing, un-superseded requirement cited in
+  # ⛔ ZERO implementation records until `-187` found it. Task 0's annotation repairs that gap and
+  # records `epics.md:4865`'s AC parenthetical as SUPERSEDED by `-189` cl.2.
+  # ⚠ **D1 + D2 BOTH OPEN.** D1: the shipped `pool-progress` meter divides by **`rosterSize`**, ⛔ NOT
+  # a rupee target — `-191` cl.4 requires a target. ⭐ BigDev recommends extending the one canonical
+  # producer, and rendering ⛔ NO BAR when a Pariwar has set no target. D2: the index row's contract
+  # says *"⛔ never a sum of amounts"* — ⚠ an AUTHOR'S EXTENSION of 11b.1 AC5, which prohibits
+  # RANKING, ⛔ not sums. ⭐ BigDev recommends rendering the amount on BOTH surfaces and AMENDING that
+  # sentence as an amendment — ⛔ never deleting it.
+  11b-14-live-drives-listed-and-the-progress-meter: ready-for-dev
   epic-11b-retrospective: optional
 
   # ==========================================================================

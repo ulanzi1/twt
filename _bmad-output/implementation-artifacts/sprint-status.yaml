@@ -1,4 +1,17 @@
-# last_updated: 2026-09-04j (⭐⭐ **STORY 11b.11 CREATED — `bmad-create-story`. ONE ROW APPEARS.**
+# last_updated: 2026-09-04k (⭐ **STORY 11b.11 — D1 RULED. ⛔ ZERO ROWS MOVE; 11b-11 stays
+#   `ready-for-dev`.** ⛔ epic-11b `in-progress`; ⛔ 11b-10 `done`; ⛔ 11b-3b `ready-for-dev`.
+#   ✅ **D1 (b): COLLAPSE THE WIRE, KEEP THE MACHINERY.** After `-190` cl.1 removes the coordinates and
+#   `-191` cl.2 keeps the nominee name in the masked arm, the public DTO's two `masked` arms become
+#   IDENTICAL. ⇒ the wire collapses to a SINGLE `.strict()` object; ⛔ the `masked` discriminator goes.
+#   ⭐ `-190` cl.4 retains the masking **CODE** — it does ⛔ not require the **WIRE** to keep a
+#   discriminator whose branches are the same. `isNomineeBankMasked`, the schedule table, its
+#   permission key and every existing test SURVIVE; only the CALL leaves the public read path, because
+#   ⛔ a computed-and-discarded verdict is a live-looking control with a dead output.
+#   ⚠⛔ **AND THE ABSENCE MUST BE EXPLAINED WHERE THE UNION WAS.** A reader finding ⛔ no `masked` field
+#   would otherwise conclude masking was DELETED — the mirror image of the story's own trap 4.
+#   ⇒ Task 1 CLOSED, Task 2 UNBLOCKED and made concrete. ⛔ **`dev-story` NOT started, by instruction.**
+#
+# last_updated_prior: 2026-09-04j (⭐⭐ **STORY 11b.11 CREATED — `bmad-create-story`. ONE ROW APPEARS.**
 #   ⛔ epic-11b stays `in-progress`; ⛔ 11b-10 `done`; ⛔ 11b-3b `ready-for-dev`.
 #   ⭐ **STORY A** of the `2026-09-04-195` cl.3 split: withdraw the nominee BANKING COORDINATES from the
 #   PUBLIC Sahyog Vivran surface. Owns TRUSTEE-RATIFIED `2026-09-04-190` cl.1-2 + `-191` cl.2.
@@ -14918,9 +14931,13 @@ development_status:
   # ⭐⭐ IT SHIPS FIRST AND ALONE: of A-F it is the ONLY story that REDUCES public exposure, and it
   # depends on NOTHING. ⛔ Do not bundle it with B-F "since they touch the same files" — that would
   # gate a withdrawal of live PII behind feature work.
-  # ⚠ Its **D1 is OPEN** and blocks Task 2: after the coordinates go, the wire's `masked`
-  # discriminated union has two IDENTICAL arms. Keep the inert discriminator, or collapse the wire and
-  # keep the masking machinery? BigDev recommends COLLAPSE.
+  # ✅ **D1 RULED (b) 2026-09-04 — COLLAPSE THE WIRE, KEEP THE MACHINERY.** The public DTO becomes a
+  # SINGLE `.strict()` object carrying `accountHolderName` — ⛔ no `discriminatedUnion`, ⛔ no `masked`
+  # literal on the wire. ⭐ `isNomineeBankMasked`, the schedule, the key and every test SURVIVE
+  # untouched; the masking CALL leaves the public read (⛔ never compute a verdict and discard it).
+  # ⚠ A doc-block at the collapse site must name what the union was and where the machinery lives —
+  # ⛔ otherwise the next reader concludes masking was DELETED, the mirror image of trap 4.
+  # ⇒ Task 1 CLOSED, Task 2 UNBLOCKED. ⛔ `dev-story` NOT started, by instruction.
   11b-11-nominee-banking-coordinates-withdrawn-from-public: ready-for-dev
   epic-11b-retrospective: optional
 

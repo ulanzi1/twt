@@ -178,7 +178,23 @@ B/C/D own those)
 
 ## ⚖️ Decisions
 
-### ⚠ D1 — **OPEN, and it BLOCKS AC1's shape.** Does the wire keep the `masked` discriminated union?
+### ✅ D1 — **RULED (b) by BigDev, 2026-09-04: COLLAPSE THE WIRE, KEEP THE MACHINERY.** Does the wire keep the `masked` discriminated union?
+
+> ⭐⭐ **THE RULING.** The public DTO **collapses to a single nominee-name shape** — ⛔ no
+> `z.discriminatedUnion('masked', …)`, ⛔ no `masked` literal on the wire at all. ⭐ **The masking
+> MACHINERY is untouched and stays fully live in the codebase**: `isNomineeBankMasked`, the
+> `pariwar_nominee_bank_masking_schedule` table, its permission key, its policy module and **every one
+> of its existing tests** (AC4). ⇒ *"keep the masking window code"* (`-190` cl.4) is honoured; what
+> ⛔ stops is the **wire advertising a control it no longer exercises**.
+>
+> ⚠⛔ **AND THE ABSENCE MUST BE EXPLAINED WHERE THE UNION USED TO BE.** A future reader finding ⛔ no
+> `masked` field will otherwise conclude masking was **deleted** — the mirror image of trap 4. ⇒ leave
+> a doc-block at the collapse site naming what was there, why both arms became identical, and where
+> the machinery still lives.
+>
+> ⚠ **The masking predicate is ⛔ NOT called on this path any more.** ⛔ Do ⛔ not leave a call whose
+> result is computed and discarded — that is a live-looking control with a dead output. ⭐ Remove the
+> CALL from the public read; ⛔ keep the FUNCTION.
 
 ⭐ **The problem:** after AC1 + AC3, the unmasked arm carries `accountHolderName` and the masked arm
 carries `accountHolderName`. ⇒ **the two arms become IDENTICAL** and the `masked` discriminator is
@@ -192,9 +208,8 @@ carries `accountHolderName`. ⇒ **the two arms become IDENTICAL** and the `mask
   (`isNomineeBankMasked`, the schedule, the key, the tests) fully intact per AC4. ⛔ The wire stops
   advertising a control it no longer exercises.
 
-⭐ **BigDev's recommendation: (b).** `-190` cl.4 retains *"the masking window CODE"*; it does ⛔ not
-require the **wire** to keep a discriminator whose two arms are the same. ⚠ **⛔ Do not implement
-either arm until this is ruled** — it changes the DTO, the render layer and the tests.
+⭐ **RULED (b).** `-190` cl.4 retains *"the masking window CODE"*; it does ⛔ not require the **wire**
+to keep a discriminator whose two arms are the same. ⇒ **Task 2 is UNBLOCKED.**
 
 ---
 
@@ -221,13 +236,20 @@ either arm until this is ruled** — it changes the DTO, the render layer and th
         2026-09-04 re-annotation; **append**, do not rewrite.
   - [ ] Flip `sprint-status.yaml` `11b-11-…`: `backlog` → `in-progress`, with a ledger entry.
   - [ ] Commit both with a `governance:` prefix. ⛔ No code in this commit.
-- [ ] **Task 1 — RULE D1** (blocks Task 2)
-  - [ ] Put D1 to BigDev. ⛔ Do ⛔ not choose (a) or (b) unilaterally.
+- [x] **Task 1 — RULE D1** (blocked Task 2) — ✅ **RULED (b) by BigDev, 2026-09-04: collapse the wire,
+      keep the machinery.** ⇒ Task 2 is unblocked; ⛔ nothing else in this story changes.
 - [ ] **Task 2 — The contract** (AC1, AC2, AC3; shape per D1)
-  - [ ] `packages/contracts/src/public-pages/sahyog-vivran.ts` — remove `accountNumber`,
-        `accountNumberLast4`, `ifsc`, `vpa`, `bankName`, `branch` from the public DTO. ⭐ Keys
-        **ABSENT**, ⛔ never `null`.
-  - [ ] Keep `accountHolderName` in **every** surviving arm (AC3).
+  - [ ] `packages/contracts/src/public-pages/sahyog-vivran.ts` — **per D1(b): COLLAPSE
+        `PublicSahyogVivranNomineeAccount` from a `z.discriminatedUnion('masked', […])` to a SINGLE
+        `.strict()` object carrying `accountHolderName` (+ `rank`).** ⛔ Remove `accountNumber`,
+        `accountNumberLast4`, `ifsc`, `vpa`, `bankName`, `branch` **and the `masked` literal itself**.
+        ⭐ Keys **ABSENT**, ⛔ never `null`.
+  - [ ] Leave the doc-block D1 requires at the collapse site: what the union was, why both arms became
+        identical, and that the machinery still lives in
+        `packages/domain/src/claim/nominee-bank-masking*.ts`. ⛔ Without it the next reader concludes
+        masking was deleted.
+  - [ ] ⛔ Remove the masking **CALL** from the public read path (Task 4) — ⛔ never compute a verdict
+        and discard it. ⭐ Keep the **function**, the schedule, the key and every test (AC4).
   - [ ] `matrix.ts:426-429` — four `RULED_TIER1_PUBLIC_EXCEPTIONS` entries → **one**, re-keyed
         `'2026-09-04-190 cl.2'`.
   - [ ] Amend the file's doc-blocks: the *"four ruled pairs"* prose, and cl.10(e)'s **reading** per
@@ -332,3 +354,4 @@ shared fixture ([[project_live_db_test_gotchas]]).
 | Date | Version | Description | Author |
 |---|---|---|---|
 | 2026-09-04 | 0.1 | Created from `2026-09-04-195` cl.3 (story **A**). ⚠ **D1 is OPEN and blocks Task 2.** | BigDev + Claude |
+| 2026-09-04 | 0.2 | ✅ **D1 RULED (b) — collapse the wire, keep the machinery.** Task 1 closed, Task 2 unblocked and made concrete. ⛔ `dev-story` ⛔ NOT started, by instruction. | BigDev + Claude |

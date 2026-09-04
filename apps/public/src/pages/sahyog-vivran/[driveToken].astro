@@ -315,10 +315,21 @@ if (!driveStatusVisible) {
               <dt class="text-xs uppercase tracking-wide text-gray-500">{labels.labelPoolLetter}</dt>
               <dd class="text-sm"><MatrixField surface="sahyog-vivran" field="pool_letter_code" viewerContext="public" value={model.poolLetterCode} /></dd>
             </div>
-            <div>
-              <dt class="text-xs uppercase tracking-wide text-gray-500">{labels.labelDriveCode}</dt>
-              <dd class="text-sm"><MatrixField surface="sahyog-vivran" field="pool_canonical_identifier" viewerContext="public" value={model.poolCanonicalIdentifier} /></dd>
-            </div>
+            {/* ⭐⛔ THE `<dt>`/`<dd>` PAIR IS SUPPRESSED TOGETHER (review 2026-09-04) — the same
+                rule `visibleSahyogColumns()` enforces for the index's `<th>`/`<td>`.
+                ⚠ THE CASE THAT MADE THIS REAL: `buildSahyogVivranOutageView()` sets
+                `poolCanonicalIdentifier: ''` (the 503 page deliberately does ⛔ not echo the address
+                back), `outputForVerdict` maps `''` → `null`, and `<MatrixField>` then correctly
+                emits NOTHING — leaving a "Drive code" TERM with ⛔ no DEFINITION. A screen reader
+                announces the label and then falls silent, which is worse than not announcing it.
+                ⛔ Not echoing the address on the outage page is RIGHT; the orphaned `<dt>` was the
+                unhandled consequence of it. */}
+            {model.poolCanonicalIdentifier !== '' && (
+              <div>
+                <dt class="text-xs uppercase tracking-wide text-gray-500">{labels.labelDriveCode}</dt>
+                <dd class="text-sm"><MatrixField surface="sahyog-vivran" field="pool_canonical_identifier" viewerContext="public" value={model.poolCanonicalIdentifier} /></dd>
+              </div>
+            )}
             <div>
               <dt class="text-xs uppercase tracking-wide text-gray-500">{labels.labelStatus}</dt>
               <dd class="text-sm"><MatrixField surface="sahyog-vivran" field="drive_status" viewerContext="public" value={model.driveStatus} /></dd>

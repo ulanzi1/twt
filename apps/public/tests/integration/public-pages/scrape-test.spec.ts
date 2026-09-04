@@ -1060,7 +1060,7 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════════════════════
-// Story 11b.3 — `/sahyog-vivran/[poolCanonicalIdentifier]`, the PER-CLAIM Sahyog Vivran (AC2)
+// Story 11b.3 — `/sahyog-vivran/[driveToken]`, the PER-CLAIM Sahyog Vivran (AC2)
 // ═══════════════════════════════════════════════════════════════════════════════════════════════
 //
 // ⭐⭐ THE LOAD-BEARING ASSERTION IN THIS BLOCK IS A **NEGATIVE** ONE: this surface declares ⛔ ZERO

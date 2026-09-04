@@ -1,7 +1,7 @@
 // Story 11b.3a — MECHANIZES **AC6**, both halves.
 //
 // ⭐ WHY A GATE AND NOT A CONVENTION, and why it is SHARPER here than on its 10.30 sibling.
-// This knob has a MULTI-MINUTE FLOOR by construction: `/sahyog-vivran/[poolCanonicalIdentifier]` is
+// This knob has a MULTI-MINUTE FLOOR by construction: `/sahyog-vivran/[driveToken]` is
 // declared `cache_policy: edge_cacheable` with `s-maxage=300`, so the PREVIOUS projection keeps being
 // served from every warm edge PoP until those entries expire. ⚠⛔ AND WHAT IS SERVED STALE HERE IS A
 // **FULL ACCOUNT NUMBER** — where the directory kill switch leaks a name, this leaks the account the
@@ -139,7 +139,7 @@ describe('Story 11b.3a — the masking knob is NOT described as immediate, and S
         hits,
         `'${term}' is FORBIDDEN by Story 11b.3a AC6. Found in: ${hits.join(', ')}.\n` +
           `This control is NOT immediate and cannot be made so from here: ` +
-          `/sahyog-vivran/[poolCanonicalIdentifier] is declared cache_policy: edge_cacheable with ` +
+          `/sahyog-vivran/[driveToken] is declared cache_policy: edge_cacheable with ` +
           `s-maxage=300, so the PREVIOUS projection keeps being served from every warm edge PoP ` +
           `until those entries expire — and here that projection can be a FULL ACCOUNT NUMBER.\n` +
           `And direct SQL is NOT the operational fallback: it bypasses the required rationale, the ` +

@@ -228,6 +228,15 @@ export async function projectPoolState(
         // ([[project_pool_spawn_saga_atomicity]]). Spawn idempotency does ⛔ not depend on it: a
         // re-delivered spawn takes the `onConflictDoUpdate` arm below, which does ⛔ NOT touch
         // `publicToken` — ⇒ a retry ⛔ never re-addresses a drive that is already published.
+        //
+        // ⚠ Minted UNCONDITIONALLY here even though this `.insert(pools)` also runs for later
+        // transitions (which take the DO UPDATE arm and discard the value). Gating the mint on
+        // `existing.length === 0` was tried and reverted: Postgres runs `ExecConstraints` (NOT NULL)
+        // on the proposed tuple BEFORE the ON CONFLICT arbiter, so omitting `publicToken` on a
+        // non-genesis event raises `23502` and breaks every spawned→live→closed→settled step. The
+        // cost of minting-then-discarding is one `randomBytes(16)` per transition (~4 in a pool's
+        // life); a discarded value colliding on `pools_public_token_uq` is ~2⁻¹²⁸. Not worth a
+        // split write path — see deferred-work.md (code review 2026-09-03).
         publicToken: mintPoolPublicToken(),
         ...(input.auditId !== undefined ? { auditId: input.auditId } : {}),
       })

@@ -70,13 +70,29 @@ describe('⭐ the drive link is a REAL anchor with an accessible name (AC3, fami
     expect(PAGE).not.toMatch(/driveLinkA11y[\s\S]{0,200}deceasedMemberName/);
   });
 
-  it('⛔ the value STILL goes through <MatrixField> inside the anchor', () => {
+  it('⛔ the value STILL goes through <MatrixField> inside the anchor — in ⭐ BOTH tables', () => {
     // ⭐ `getVisibility()` must remain the ONLY thing deciding what appears. Wrapping the cell in an
     // anchor must ⛔ not become an excuse to interpolate the value directly — the house rule this
     // page's own header states in terms.
-    const anchorBlock = PAGE.slice(PAGE.indexOf('<a href={col.hrefOf(row)}'));
-    expect(anchorBlock.slice(0, 400)).toContain('<MatrixField');
-    expect(anchorBlock.slice(0, 400)).toContain('surface="sahyog-drive"');
+    //
+    // ⚠⛔ **EVERY OCCURRENCE, ⛔ NOT THE FIRST** (review 2026-09-04). The anchor block is duplicated
+    // VERBATIM in the ACTIVE table and the ARCHIVE table, and this assertion previously sliced from
+    // `indexOf(...)` ⇒ it inspected only the first. A regression stripping `aria-label` or the
+    // `<MatrixField>` wrapper from the ARCHIVE table — the LARGER of the two, and the one carrying
+    // the permanent record — would have been caught by ⛔ nothing in this file.
+    const ANCHOR = '<a href={col.hrefOf(row)}';
+    const blocks: string[] = [];
+    for (let i = PAGE.indexOf(ANCHOR); i !== -1; i = PAGE.indexOf(ANCHOR, i + 1)) {
+      blocks.push(PAGE.slice(i, i + 400));
+    }
+    // ⛔ Pinned: the page has TWO drive tables. If a third is added, this fails and its author must
+    // decide deliberately whether the new one carries the same accessible anchor.
+    expect(blocks).toHaveLength(2);
+    for (const block of blocks) {
+      expect(block).toContain('<MatrixField');
+      expect(block).toContain('surface="sahyog-drive"');
+      expect(block).toContain('aria-label={col.a11yOf?.(row)}');
+    }
   });
 
   it('⭐ the copy keys exist in BOTH locales — ⛔ `t()` THROWS on a miss', () => {
@@ -94,6 +110,16 @@ describe('⭐ the drive link is a REAL anchor with an accessible name (AC3, fami
       // ⛔ The a11y string must actually INTERPOLATE the code — a translation that dropped `{code}`
       // would announce N identical destinations while every other check stayed green.
       expect(copy['link.view_drive_a11y']).toContain('{code}');
+      // ⭐⭐ WCAG 2.5.3 **LABEL IN NAME** (review 2026-09-04, family 13). An `aria-label` OVERRIDES
+      // the visible text, so the accessible name must CONTAIN that visible text — otherwise a
+      // speech-input user who says what they can SEE ("View drive" / "अभियान देखें") cannot
+      // activate the link, because the name the AT matches against does not contain those words.
+      // ⚠⛔ THIS FAILED ON BOTH LOCALES WHEN WRITTEN: en was *"View the full details of drive
+      // {code}"* and hi *"अभियान {code} का पूरा विवरण देखें"* — each contains the visible words but
+      // ⛔ not CONTIGUOUSLY, which is what 2.5.3 requires. ⇒ the a11y string is now a SUPERSET that
+      // starts with the visible label. ⛔ Do not "improve" it back into a fluent sentence that
+      // reorders those words.
+      expect(copy['link.view_drive_a11y']).toContain(copy['link.view_drive'] as string);
     }
   });
 });

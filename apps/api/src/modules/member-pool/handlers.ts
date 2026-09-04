@@ -652,6 +652,34 @@ async function resolveCard(
   // gone — the same class of unresolvable state `identity === null` above already answers this way.
   // ⭐ THIS IS WHAT KEEPS THE ENTRY AND THE CARD SUPPRESSING IN **LOCK-STEP** (D4): an entry that
   // outlived its card would be a dead link on the member's home screen.
+  //
+  // ═════════════════════════════════════════════════════════════════════════════════════════════
+  // ⭐⭐ AI-10-1 — WHAT THIS PREDICATE MEANS TO THE MEMBER, IN ONE SENTENCE (review 2026-09-04)
+  // ═════════════════════════════════════════════════════════════════════════════════════════════
+  // ⭐ **"A member whose pool has no public address cannot contribute from the app at all."**
+  //
+  // ⚠⛔ SAY IT PLAINLY BECAUSE IT IS SEVERE: this is ⛔ not a missing link — returning `UNASSIGNED`
+  // suppresses the WHOLE `<ActiveContributionCard />`, so the member loses the contribute CTA, the
+  // UPI reference, the fixed amount and the progress meter. ⇒ a COSMETIC precondition (a public
+  // address, which exists for STRANGERS to reach a memorial page) would be gating a member's access
+  // to the contribution benefit itself. ⛔ That is exactly the AI-10-1 shape — the 10.10 conjunction
+  // that turned every suspension into a de-facto permanent ban, and ⛔ no CI gate can see it.
+  //
+  // ⭐⭐ IT IS ACCEPTABLE ⛔ ONLY BECAUSE THE BRANCH IS UNREACHABLE, AND THE GROUND IS ⛔ NOT THE
+  // `NOT NULL` CONSTRAINT — that would only mean the column is never null, ⛔ not that this READ
+  // never returns null. The real ground is two facts together:
+  //   (1) the runtime role `twt_app` holds `INSERT, SELECT, UPDATE` on `pools` and ⛔ **NO DELETE**
+  //       (0071; verified live 2026-09-04) ⇒ a pool row ⛔ cannot be removed by the application; and
+  //   (2) this read runs in the **SAME scope-tx** that already resolved `pool` a few lines above,
+  //       against the same `pariwarId` ⇒ the row it needs was ALREADY VISIBLE in this transaction's
+  //       snapshot, and ⛔ nothing can make it vanish between the two reads.
+  // ⇒ `null` here is a genuine can't-happen, ⛔ not a state a real member can fall into.
+  //
+  // ⚠⛔ IF EITHER FACT CHANGES — a `DELETE` grant on `pools`, or this read moving OUT of the pool's
+  // scope-tx — this fail-soft becomes REACHABLE and ⛔ must be re-argued, ⛔ not re-derived. The
+  // safer shape then is `sahyogVivranToken` OPTIONAL on the card with the ENTRY self-suppressing,
+  // which keeps the money path alive and loses only the memorial link. ⛔ Do not make that change
+  // silently in the other direction either.
   const sahyogVivranToken = await poolDomain.readPoolPublicToken(tx, pariwarId, ids.poolId(pool.poolId));
   if (sahyogVivranToken === null) {
     request.log.warn(

@@ -45,5 +45,5 @@
   "outcome.partial": "चक्र पूर्ण हुआ। मिलान अभी जारी है।",
   "table.col.open": "विवरण",
   "link.view_drive": "अभियान देखें",
-  "link.view_drive_a11y": "अभियान {code} का पूरा विवरण देखें"
+  "link.view_drive_a11y": "अभियान देखें — {code} का पूरा विवरण"
 }

@@ -11,7 +11,7 @@
 // ⛔⛔ THE ADVERBS OF IMMEDIACY MAY NOT APPEAR IN THIS FILE, AND NEITHER MAY AN OFFER OF DIRECT SQL —
 // the gate named below holds the actual lists, and ⛔ this comment deliberately does not spell them
 // out (writing them here would make the scan find itself and read as a real violation).
-// Story 11b.3a AC6: a change here is ⛔ NOT immediate. `/sahyog-vivran/[poolCanonicalIdentifier]` is
+// Story 11b.3a AC6: a change here is ⛔ NOT immediate. `/sahyog-vivran/[driveToken]` is
 // `edge_cacheable` with `s-maxage=300`, so the PREVIOUS projection keeps being served from every warm
 // edge PoP until those entries expire — and on THIS control what is served stale is a FULL ACCOUNT
 // NUMBER, which is why the same statement is required in three places (here, the schema file and the

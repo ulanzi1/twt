@@ -236,10 +236,16 @@ is `done` and **merged**, and `2026-09-04-190` cl.1 — which **this** story imp
 collapses the exact code they bear on**. ⛔ Fixing them in 11b.3a would have queued work against code
 about to be removed.
 
-⚠⛔ **AND THE DEV AGENT WORKS FROM THE TASKS LIST, ⛔ NOT FROM THIS SECTION**
-([[feedback_spec_edits_must_propagate_to_tasks]]). ⇒ ⛔ **an item below that BigDev wants actioned must
-be lifted into `## Tasks / Subtasks` or into an AC.** ⛔ This section was authored by the review and
-⛔ deliberately did ⛔ **not** edit this story's Tasks — that is BigDev's call, ⛔ not the reviewer's.
+✅⭐ **LIFTED INTO THE TASKS — 2026-09-04, on BigDev's instruction.** The dev agent works from the
+Tasks list, ⛔ not from a findings section ([[feedback_spec_edits_must_propagate_to_tasks]]), so all
+eight items now appear as `⬅️ INHERITED` subtasks under the Task that already owns the file:
+**Task 2** (the collapse-site doc-block covers unused ciphertext) · **Task 3** (the matrix YAML's three
+false claims) · **Task 4** (`bank_name`, and the CONDITIONAL malformed-row item) · **Task 5** (the
+unconditional outcome projection) · **Task 7** (the THIRD control-count document, the honest recount,
+and mechanizing it) · **Task 8** (the member donor path must ⛔ not inherit either defect) ·
+**Task 9** (the three REACTIVATION PRECONDITIONS).
+⇒ ⭐ **This section is now the RATIONALE; the Tasks are the obligation.** ⛔ Do ⛔ not action from here
+— action from the Tasks, and read this for the evidence and the reasoning behind each.
 
 ### ✅ Closed by this story's own ACs — verify at implementation, ⛔ do not assume
 
@@ -289,6 +295,12 @@ whoever reactivates it inherits the list.
         identical, and that the machinery still lives in
         `packages/domain/src/claim/nominee-bank-masking*.ts`. ⛔ Without it the next reader concludes
         masking was deleted.
+  - [ ] ⬅️ **INHERITED (11b.3a 3rd pass)** — the doc-block also states whether the collapsed shape
+        still carries **ciphertext it no longer uses**. The old read returned `masked: boolean`
+        **alongside** `accountNumberCiphertext` / `accountHolderNameCiphertext` / `ifscCiphertext` /
+        `vpaCiphertext`, with ⛔ nothing in the TYPE changing when `masked === true` — the guarantee
+        was a downstream promise, ⛔ not a structural property. D1's collapse closes it; ⛔ say so, so
+        the next reader does ⛔ not re-introduce a flag beside the payload it is supposed to govern.
   - [ ] ⛔ Remove the masking **CALL** from the public read path (Task 4) — ⛔ never compute a verdict
         and discard it. ⭐ Keep the **function**, the schedule, the key and every test (AC4).
   - [ ] `matrix.ts:426-429` — four `RULED_TIER1_PUBLIC_EXCEPTIONS` entries → **one**, re-keyed
@@ -299,15 +311,58 @@ whoever reactivates it inherits the list.
   - [ ] `public-vs-private-matrix.yaml` — drop the five field declarations from `sahyog-vivran`;
         keep `nominee_account_holder_name`.
   - [ ] Amend the surface's rider to record the supersession and point at `-190`. ⛔ Trap 1.
+  - [ ] ⬅️⭐⭐ **INHERITED (11b.3a 3rd pass) — THIS FILE CARRIES THREE CLAIMS THAT ARE ALREADY FALSE,
+        AND 11b.3a NEVER CORRECTED THEM.** ✅ Verified live. **(i)** `:112-117` — the file header still
+        says the `sahyog-vivran` surface *"declares ⛔ **ZERO** `pii_tier: 1` fields at `tier: public`
+        — it renders ⛔ **NO person's name at all** — so it neither needs nor claims a name-form
+        ruling."* Both halves went false at 11b.3a. ⚠ **And the conclusion no longer follows on the
+        header's own logic** — with the antecedent gone, the **name FORM** for `account_holder_name`
+        is addressed ⛔ nowhere; ⭐ this story keeps that field (AC2), so ⛔ decide and record whether
+        `-190` cl.2 settles the form, or route it. **(ii)** `:748-751` — the surface's `description:`,
+        which is **YAML DATA, ⛔ not a comment**, still reads *"⭐ IT NAMES ⛔ NOBODY. … ⛔ not a
+        nominee"* and *"the nominee bank presentation **is** 11b.3a's"* — a future tense pointing at a
+        merged story. ⚠ After this story *"names nobody"* becomes **true again for the bank block but
+        FALSE overall** — `nominee_account_holder_name` **stays** (AC2) ⇒ ⛔ do ⛔ not simply restore
+        the old sentence; state what it now names. **(iii)** `:758-760` — see Task 7.
+        ⭐ This is Trap 4's *"prose that outlives the thing it describes"* and AC4's *"every doc-block
+        … is amended"*, in the file this task already opens.
 - [ ] **Task 4 — The domain read** (AC1)
   - [ ] `packages/domain/src/pool/sahyog-vivran-read.ts` — stop selecting/decrypting the five for this
         surface. ⚠ Verify the shared nominee-bank resolver is ⛔ not also feeding the 9.9 donor path
         before narrowing it; if it is, ⭐ give this surface its **own** projection rather than
         narrowing the shared one (`public-read.ts`'s standing rule: *"a consumer needing different
         semantics needs its OWN fragment"*).
+  - [ ] ⬅️ **INHERITED (11b.3a 3rd pass) — dropping `bankName` here CLOSES a latent 500; confirm it
+        rather than assume it.** `sahyog-vivran-read.ts:586` passes `bankName` through **raw** while
+        `branch` on the **next line** is `.trim() || null`-guarded. The column is `text NOT NULL` with
+        ⛔ no non-empty CHECK, is copied verbatim from the IFSC provider port (`bankName: string`, no
+        minimum), and `''` fails `z.string().min(1)` in **both** arms ⇒ serialization failure ⇒ **500**
+        ⇒ outage page for every visitor. Latent only because today's sole adapter is an in-memory
+        fixture map. ⭐ AC1's deletion closes it **for the public surface** — ⚠ the member path is
+        Task 8.
+  - [ ] ⬅️⚠⛔ **INHERITED (11b.3a 3rd pass) — CONDITIONAL, and ⛔ DO ⛔ NOT ASSUME IT IS CLOSED.** One
+        malformed schedule row (`masking_mode = 'after_days'` with `mask_after_days IS NULL` — the
+        CHECK dropped, or a snapshot restore predating it) makes `settingFromRow` throw a **bare
+        `Error`** inside this read's `Promise.all` ⇒ the API 500s ⇒ the Astro route maps `!fetched.ok`
+        to the **503 outage view**, for **EVERY** Sahyog Vivran page in that tenant. ⚠ That is the
+        **opposite posture taken 12 lines away**, where an out-of-range `accountRank` is **dropped**
+        because *"throwing would 500 a whole transparency page over one malformed row"*.
+        ⇒ **If Task 2's removal of the masking CALL means this read no longer resolves the schedule,
+        this is closed BY DELETION — say so. If the call survives in any form, it is ⛔ NOT closed and
+        MUST be fixed here** (degrade row-local, ⛔ never tenant-wide). ⚠ Its **admin-side twin stays
+        on 11b.3a** and is ⛔ not yours: the same `settingFromRow` sits outside any try/catch in the
+        admin `getSchedule`, so a corrupt row 500s the console.
 - [ ] **Task 5 — The API handler** (AC1)
   - [ ] `apps/api/src/modules/public-pages/handlers.ts` — drop the five from the response mapping,
         including the `soft(account.vpaCiphertext, 'vpa')` decrypt at `:712`.
+  - [ ] ⬅️ **INHERITED (11b.3a 3rd pass) — the decrypt fan-out is UNCONDITIONAL on the drive's
+        OUTCOME.** The map over `drive.nomineeBank.accounts` has ⛔ no outcome predicate, and the ⛔ only
+        suppressor on the path is the **time-since-close** masking verdict. The same response carries
+        `appealReversal` and `fundingOutcome`, so a **DENIED** claim — or one whose approval was
+        **REVERSED ON APPEAL** — still published the holder's name and full account number
+        indefinitely under FAIL-OPEN. ⭐ `-160` cl.10(a) authorises publication *"during an active
+        campaign"*; ⛔ nothing checked the campaign was **legitimate**, only that it was **recent**.
+        ⇒ AC1's deletion closes it **for the public surface**; ⚠ the member path is Task 8.
 - [ ] **Task 6 — The render layer + copy** (AC2)
   - [ ] `apps/public/src/lib/sahyog-vivran-render.ts`, `surface-fields.ts`,
         `pages/sahyog-vivran/[driveToken].astro` — remove the five rows from the bank block.
@@ -320,6 +375,25 @@ whoever reactivates it inherits the list.
         comment to record the third move.
   - [ ] `login-wall.spec.ts` — amend the allowlist entry's control list and its PII-bearing
         characterisation. ⛔ Amend, ⛔ do not revert to pre-11b.3a wording.
+  - [ ] ⬅️⭐ **INHERITED (11b.3a 3rd pass) — THERE IS A THIRD DOCUMENT STATING THE CONTROL COUNT, AND
+        AC5 DOES ⛔ NOT NAME IT.** `public-vs-private-matrix.yaml:758-760` says `noindex` is *"control
+        **3** of the **THREE** this route states"* — a different **count** AND a different **ordinal**
+        from `routes.ts` (which says four, with `X-Robots-Tag` as control **4**). ⇒ AC5's *"every
+        control-count statement is corrected"* reaches this line too.
+  - [ ] ⬅️⚠ **INHERITED — and make the corrected count HONEST about which of them are controls.**
+        The *"FOUR applicable controls"* overcounted: control **4** is `X-Robots-Tag` (a crawler
+        **hint** — archivers and scrapers ignore it), control **5** is *"the absence of any DETAIL or
+        EXPORT affordance"* (irrelevant to a direct GET) and control **6** is the decrypt itself
+        ⇒ netting out, **ONE** control stood between an anonymous caller and Tier-1 data.
+        ⚠ **The enumeration half is CLOSED** — `-184` (B) ruled the address unguessable and 11b-10
+        shipped the opaque `publicToken` — ⛔ do ⛔ not re-raise it. ⭐ What survives is that counting
+        three non-controls as controls **manufactures a false defence-in-depth** on the document a
+        future reviewer will trust.
+  - [ ] ⬅️ **INHERITED — mechanize the count, ⛔ or record that you chose not to.** It is prose in
+        **three** places with ⛔ no constant, ⛔ no test and ⛔ no lint rule; it is prevented solely by a
+        reviewer counting bullet points by eye, **which is exactly how it failed the first time**.
+        ⭐ Cheapest fix: one exported `SAHYOG_VIVRAN_APPLICABLE_CONTROLS` all three import, plus a
+        length assertion.
   - [ ] `packages/contracts/tests/public-pages-sahyog-vivran.test.ts` — update shape assertions.
 - [ ] **Task 8 — The tests that prove it** (AC1, AC3, AC6)
   - [ ] Live-DB: a public drive with real ciphertext returns ⛔ **no** account number / IFSC / VPA /
@@ -327,11 +401,42 @@ whoever reactivates it inherits the list.
   - [ ] Live-DB: a **MASKED** drive still returns `accountHolderName` (AC3's regression guard).
   - [ ] Live-DB: the **member** donor path still returns all four **unmasked** for the member's own
         live pool (AC6's regression guard).
+  - [ ] ⬅️⚠ **INHERITED (11b.3a 3rd pass) — AC6 KEEPS ALL FOUR VALUES ON THE DONOR PATH, SO VERIFY IT
+        DOES ⛔ NOT INHERIT THE TWO DEFECTS AC1 CLOSES BY DELETION.** ⭐ Deleting a field from the
+        public surface does ⛔ **not** fix it on a path that retains the field. **(i)** the unguarded
+        `bankName` pass-through (`''` ⇒ `min(1)` parse failure ⇒ 500) — Task 4; **(ii)** the
+        **unconditional** projection with ⛔ no outcome predicate — Task 5. ⇒ if the donor path shares
+        either code path, ⭐ **fix it there or give it its own guard** — ⛔ do ⛔ not close these on the
+        strength of the public deletion alone.
   - [ ] ⭐ **Execute them.** `twt-test-pg` on `:5433`; ⛔ *"written but not run"* is ⛔ not attested —
         that exact gap shipped a red spec at 11b.10.
 - [ ] **Task 9 — Masking status prose** (AC4)
   - [ ] Amend every doc-block that describes masking as governing a public disclosure to state it has
         ⛔ no public consumer. ⛔ Delete ⛔ nothing.
+  - [ ] ⬅️⛔⛔ **INHERITED (11b.3a 3rd pass) — RECORD THREE REACTIVATION PRECONDITIONS ALONGSIDE THE
+        NEW STATUS. These are DORMANT, ⛔ NOT RESOLVED.** cl.4 retains the machinery with ⛔ no public
+        consumer and **AC7 leaves `D8-default` FAIL-OPEN UNCHANGED**, so each of these goes live again
+        the moment the machinery is re-pointed at any surface. ⛔ Whoever reactivates it must inherit
+        this list, so it belongs **where AC4 records the status**, ⛔ not only in `deferred-work.md`:
+        **(a) UN-MASKING IS RETROACTIVE, and one PUT's blast radius is unbounded and unpreviewable** —
+        the schedule resolves at the **request instant**, ⛔ never at the drive's close instant, so a
+        Pariwar moving `permanent` → `after_days: 30` instantly re-publishes every drive closed more
+        than 30 days ago, and `after_days: 36500` un-masks the **entire archive in one request**;
+        ⛔ no dry-run, ⛔ no affected-drive count, ⛔ no per-drive pinning. ⚠ The doc-blocks celebrate
+        reversibility without noting the reverse direction is a **bulk disclosure event**, and the
+        `s-maxage=300` staleness is disclosed three times **all framed as a schedule-change delay** —
+        the identical delay on the **time-elapse** transition at `closedAt + N` is disclosed ⛔ nowhere.
+        **(b) RLS SCOPE FAILURE IS INDISTINGUISHABLE FROM "NO WINDOW CONFIGURED", AND RESOLVES TO
+        PUBLISH** — `resolveEffectiveNomineeBankMasking` returns `null` for **every** zero-row cause
+        (no row, unset `app.pariwar_id`, empty-string scope, wrong-tenant scope, a dropped policy),
+        and `null` means **not masked**. ⭐ `-179` cl.1 ruled the **POLICY** default fail-open; the
+        code silently extends that to **INFRASTRUCTURE FAILURE**, which ⛔ no one ruled on. **Before
+        reactivation:** distinguish *"queried successfully, no row"* from *"could not resolve"*.
+        **(c) FAIL-OPEN BY DEFAULT, CENTRALLY ADMINISTERED, O(N) REMEDIATION, FIVE-MINUTE FLOOR** —
+        `-178` forbids a Pariwar setting its own window ⇒ one Trust PUT **per Pariwar**, each with a
+        hand-written rationale, each up to **300s** to reach warm PoPs, with *"⛔ Direct SQL is NOT the
+        operational fallback"*; ⛔ no global default, ⛔ no bulk setter, ⛔ no cache-purge hook.
+        ⭐ Documented three times, mitigated zero.
 
 ---
 
@@ -396,3 +501,4 @@ shared fixture ([[project_live_db_test_gotchas]]).
 |---|---|---|---|
 | 2026-09-04 | 0.1 | Created from `2026-09-04-195` cl.3 (story **A**). ⚠ **D1 is OPEN and blocks Task 2.** | BigDev + Claude |
 | 2026-09-04 | 0.2 | ✅ **D1 RULED (b) — collapse the wire, keep the machinery.** Task 1 closed, Task 2 unblocked and made concrete. ⛔ `dev-story` ⛔ NOT started, by instruction. | BigDev + Claude |
+| 2026-09-04 | 0.3 | ⬅️ **EIGHT FINDINGS INHERITED from 11b.3a's THIRD code-review pass, and LIFTED INTO THE TASKS** (BigDev's split-by-survival routing: `-190` cl.1 deletes or collapses the code they bear on). New `⬅️ INHERITED` subtasks under Tasks **2, 3, 4, 5, 7, 8, 9**. ⚠ **Three are REACTIVATION PRECONDITIONS, ⛔ not fixes** — cl.4 retains the machinery and AC7 leaves `D8-default` FAIL-OPEN unchanged. ⚠ **One (Task 4's malformed-row item) is CONDITIONAL** — closed only if the public read stops resolving the schedule. ⛔ No AC changed; ⛔ no code touched; story stays `ready-for-dev`. | BigDev + Claude |

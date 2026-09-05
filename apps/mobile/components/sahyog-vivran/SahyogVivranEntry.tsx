@@ -10,6 +10,35 @@
 // every gate and looking like a security improvement. THIS is the other half of that one deliverable
 // (`-184` cl.4 as widened by `2026-09-04-185` cl.3), and ⛔ the two must not be separated.
 //
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// ⭐⭐ AND SINCE `2026-09-05-200` THIS PATH IS RATIFIED IN ITS OWN RIGHT — ⛔ NOT ONLY AS cl.4's
+//    CONSEQUENCE. ⛔ REMOVING IT REVERSES A TRUSTEE RULING; IT IS ⛔ NOT A REFACTOR.
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// The block above argues from COUPLING: the path exists because (B) removed the only way there was
+// to reach (A). ⚠ That argument is sound but it is CONDITIONAL — it would evaporate the day some
+// other inbound path existed, and a future reader could then delete this component believing (A) was
+// still served. ⛔ THAT READING IS NOW CLOSED.
+//
+// `2026-09-05-200` **cl.4** (Trustee-ratified, Dhiraj Rahul + Kalpana Bharti) states it directly:
+// **"Phone-app member should reach the page."** ⇒ the member-app path is an INDEPENDENT ratified
+// property, ⛔ not a side-effect of the coupling. ⭐ Even with a dozen other ways in, this one is
+// ruled.
+//
+// ⚠⛔ HOW THAT RULING CAME ABOUT, because the provenance is the load-bearing part. The Panel was
+// asked to ratify (A)+(B) on a routing note that told them, in the appendix it is instructed to
+// answer from ALONE, that a member on this app **COULD NOT** reach such a page — *"there is nowhere
+// to type a web address"*. ⛔ THAT WAS FALSE: `Linking.openURL` hands the URL to the SYSTEM browser,
+// which has an address bar (see `lib/public-site.ts`). A third code-review pass of Story 11b.3a
+// found it and put the corrected fact back to the Panel. ⭐⭐ THEY DID NOT MERELY SAY IT CHANGED
+// NOTHING — they ruled the reachability DESIRABLE. ⇒ what one document had described as an
+// impossibility is now a requirement, and this component is what satisfies it.
+//
+// ⛔ SO: ⛔ do not delete this entry on the ground that "the public site is reachable anyway";
+// ⛔ do not fold it into a generic outbound-links screen where it stops being the My Pool member's
+// path to THEIR pool's drive; ⛔ and do not gate it behind anything the card is not already gated
+// behind (see the lock-step note below). ⭐ Any of those needs a PANEL decision superseding
+// `-200` cl.4, ⛔ not an author's judgement. See `.decision-log.md#decision-2026-09-05-200`.
+
 // ⛔⛔ AND IT IS ⛔ NOT THE SHRADHANJALI TAB, despite that tab's name. `(tabs)/shradhanjali.tsx`
 // renders `SAMPLE_CONTRIBUTORS` / `SAMPLE_MEMORIAL` from `./sample-data` and has ZERO API wiring —
 // it is a P0-5 measurement prototype (Story 0.14 §4 FM-2). Putting the entry there would have

@@ -1,4 +1,17 @@
-# last_updated: 2026-09-05h (⭐⭐ **STORY 11b.10's FRICTION-BUDGET DECLARATION IS WRITTEN; THE AC-4 GATE IS
+# last_updated: 2026-09-05i (⭐ **STORY 11b.11 — DEV STARTED, GOVERNANCE FIRST. ONE ROW MOVES:**
+#   `11b-11-nominee-banking-coordinates-withdrawn-from-public` **`ready-for-dev` → `in-progress`**.
+#   ⛔ epic-11b `in-progress`; ⛔ 11b-3a `done`; ⛔ 11b-10 `done`; ⛔ 11b-12…17 ALL `ready-for-dev`.
+#   ⭐ **THE `epics.md` ANNOTATION LANDS IN THIS SAME COMMIT** — 11b.11 is story **A** of the
+#   `2026-09-04-195` cl.3 six-story split and is ⛔ NOT in `epics.md`'s story list, exactly as `11b-3a`
+#   and `11b-10` were not. The annotation records: why it exists (`-190` cl.1–2 + `-191` cl.1–2), that
+#   it is **A** of six and ⛔ not a fourth child of the 11b.3 split, that it **ships first and alone**
+#   (the ⛔ ONLY one of the six that REDUCES public exposure), what it supersedes (`-165` cl.1–2 IN
+#   PART — ⛔ `-165` itself is ⛔ NOT edited; its cl.3–4 STAND), that the masking machinery is
+#   **RETAINED with ⛔ no public consumer**, and what it does ⛔ not touch.
+#   ⛔ **NO CODE IN THIS COMMIT** ([[feedback_governance_commits_precede_implementation]]).
+#   ⚠ The story file's own **v0.5 validation-pass** edits ride along here — they are spec, ⛔ not code.)
+#
+# last_updated_prior: 2026-09-05h (⭐⭐ **STORY 11b.10's FRICTION-BUDGET DECLARATION IS WRITTEN; THE AC-4 GATE IS
 #   FIXED AND GREEN FOR THE RIGHT REASON. ⛔ ZERO ROWS MOVE.** ⛔ epic-11b `in-progress`; ⛔ 11b-3a `done`;
 #   ⛔ 11b-10 `done`; ⛔ 11b-11…17 ALL `ready-for-dev`.
 #   ⭐ **THE GATE FIX FIRST (`fix(1.16a)`):** `evaluateDeclaration` now inspects CONTENT — base vs head
@@ -15532,7 +15545,9 @@ development_status:
   # ⚠ A doc-block at the collapse site must name what the union was and where the machinery lives —
   # ⛔ otherwise the next reader concludes masking was DELETED, the mirror image of trap 4.
   # ⇒ Task 1 CLOSED, Task 2 UNBLOCKED. ⛔ `dev-story` NOT started, by instruction.
-  11b-11-nominee-banking-coordinates-withdrawn-from-public: ready-for-dev
+  # ⭐ **DEV STARTED 2026-09-05 (Task 0, governance-first).** `ready-for-dev` → `in-progress`.
+  # ⛔ The `epics.md` ANNOTATION lands in THIS commit — ⛔ no code before it.
+  11b-11-nominee-banking-coordinates-withdrawn-from-public: in-progress
   # ⭐ 11b-12 — STORY **B** of the `2026-09-04-195` cl.3 split. ⛔ NOT in `epics.md` — owes an
   # ANNOTATION (its Task 0). ⚠ INDEPENDENT of 11b-11; both may proceed in parallel.
   # ⭐⭐ **STORIES D AND E DEPEND ON THIS ONE.**

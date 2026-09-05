@@ -681,7 +681,7 @@ this rather than assume it.
 
 > ⚠⭐ **READ §9.6 WITH THIS SECTION.** As first written this section was **too strong** — it read as
 > though the holder↔nominee linkage were **arbitrary**. ⛔ It is ⛔ not: the **policy is established**.
-> ⭐ §9.7 corrects it and proposes the better fix.
+> ⭐ §9.6 corrects it and proposes the better fix.
 
 ⚠⛔ ***"{nominee_name}, nominee of Late {family_name}"*** / ***"स्व० {family_name} की नॉमिनी
 {nominee_name}"*** is a **sentence-level factual claim about two NAMED private individuals**: that

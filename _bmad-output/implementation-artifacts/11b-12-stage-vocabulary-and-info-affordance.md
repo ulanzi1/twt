@@ -423,7 +423,15 @@ since a half-renamed vocabulary is worse than either end state.
 
 > ⭐ **ROUTING NOTE WRITTEN:**
 > `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-05-11b12-under-funded-commitment-claim.md`
-> ⏳ **OPEN — awaiting the Panel.** ⛔ Do ⛔ not touch the string until it is answered.
+> ✅⭐ **(Q1) ANSWERED — Trustee-ratified (DR + KB), 2026-09-05: *"Trust doesn't make any commitment
+> to the family."*** ⇒ **the line GOES.**
+> ⏳ **(Q2) OPEN — five wordings proposed at the note's §7, awaiting the Panel's pick.**
+> ⛔ Do ⛔ not touch the string until a wording is ratified. ⚠ Still **NON-BLOCKING** for Tasks 2-7.
+>
+> ⚠⛔ **AND WHEN IT LANDS IT MAY REACH `outcome.fully_funded` TOO** — §7's option 5 puts the SAME line
+> on the met-in-full and fell-short branches, because three different sentences ARE the funding verdict
+> `classifyCycleOutcome` exists to quarantine. ⛔ Not this story's to assume; ⭐ recorded so it is not
+> re-derived.
 
 `locales/en/sahyog-drive.json:44` — **`outcome.under_funded`**:
 > *"The cycle closed. **The trust met its commitment to the family.**"*

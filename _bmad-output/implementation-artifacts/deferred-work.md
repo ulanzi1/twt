@@ -208,6 +208,25 @@ verification console**, so the approver can exercise the duty the process alread
 ⭐ **Trigger:** *the next story touching Story 6.10's console, or any story that adds a Tier-1 decrypt
 to an approval surface.*
 
+⭐⭐⛔ **UPDATED 2026-09-05 — ✅ COMMISSIONED, ⛔ NOT YET CLOSED.** The **trigger has FIRED** and the
+**Trustee Panel (Dhiraj Rahul + Kalpana Bharti) ruled on 2026-09-05**, on Story 11b.12's **D2**:
+*"Open a story to MECHANIZE the approver duty."* ⇒ **Story 6.18**
+(`6-18-nominee-holder-name-on-the-verification-console.md`) is authored and `ready-for-dev`.
+⚠⛔ **⛔ THIS ITEM IS ⛔ NOT CLOSED.** It closes when **6.18 SHIPS**, ⛔ not when it was commissioned
+([[feedback_closure_language_precision]] — *"commissioned"* is ⛔ neither *"closed by [edit]"* nor
+*"resolved via explicit deferral"*).
+⭐ **What 6.18 builds, so it is ⛔ not re-derived:** the holder name **and** the declared nominee
+name(s) on the verification console, under a **NEW permission key** (⛔ `claim.verify` is ⛔ not
+widened), plus a **RECORDED ATTESTATION** of the approver's verdict — ⭐ because **display alone would
+move this gap rather than close it** ([[feedback_mechanization_split_commitment]]).
+⛔⛔ **AND 6.18 IS FORBIDDEN THE OBVIOUS FIX:** ⛔ no FK, ⛔ no `nominee_rank`, ⛔ no string-match rule —
+**(i) above still governs**, and an automated comparison would be an **unruled eligibility predicate**
+producing false mismatches (initials, maiden names, transliteration, bank truncation) on exactly the
+families least able to argue. ⭐ Two strings are shown; a **human** decides; the system records **what
+they decided**.
+⚠ **6.18's own D2 is a PANEL question and blocks its Task 4** — whether a missing or negative
+attestation **BLOCKS approval**. ⛔ A hard block can halt a grieving family's claim.
+
 ### (c) ⭐⭐ **NEW, FOUND AT 11b.3a** — a **12-digit account number trips the FR-74 naked-PII AADHAAR heuristic**
 
 ⚠⛔ **A REAL, REACHABLE COLLISION BETWEEN TWO RULED CONTROLS, ⛔ not a test-fixture artefact.**

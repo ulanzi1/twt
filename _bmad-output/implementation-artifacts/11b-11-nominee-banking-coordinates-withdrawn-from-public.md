@@ -10,7 +10,7 @@ It carries decisions `2026-09-04-186` … `-196`, Story 11b.10 closed, and the s
 
 # Story 11b.11: The Nominee Banking Coordinates Are WITHDRAWN From the Public Surface `[SURFACE]`
 
-Status: in-progress
+Status: review
 
 > ⭐⛔ **THIS STORY IS ⛔ NOT IN `epics.md`'s STORY LIST.** It is **story A** of the six-story split
 > ruled at `2026-09-04-195` cl.3, which itself follows a **Trustee-ratified** decision
@@ -337,29 +337,29 @@ whoever reactivates it inherits the list.
   - [x] Commit both with a `governance:` prefix. ⛔ No code in this commit.
 - [x] **Task 1 — RULE D1** (blocked Task 2) — ✅ **RULED (b) by BigDev, 2026-09-04: collapse the wire,
       keep the machinery.** ⇒ Task 2 is unblocked; ⛔ nothing else in this story changes.
-- [ ] **Task 2 — The contract** (AC1, AC2, AC3; shape per D1)
-  - [ ] `packages/contracts/src/public-pages/sahyog-vivran.ts` — **per D1(b): COLLAPSE
+- [x] **Task 2 — The contract** (AC1, AC2, AC3; shape per D1)
+  - [x] `packages/contracts/src/public-pages/sahyog-vivran.ts` — **per D1(b): COLLAPSE
         `PublicSahyogVivranNomineeAccount` from a `z.discriminatedUnion('masked', […])` to a SINGLE
         `.strict()` object carrying `accountHolderName` (+ `rank`).** ⛔ Remove `accountNumber`,
         `accountNumberLast4`, `ifsc`, `vpa`, `bankName`, `branch` **and the `masked` literal itself**.
         ⭐ Keys **ABSENT**, ⛔ never `null`.
-  - [ ] Leave the doc-block D1 requires at the collapse site: what the union was, why both arms became
+  - [x] Leave the doc-block D1 requires at the collapse site: what the union was, why both arms became
         identical, and that the machinery still lives in
         `packages/domain/src/claim/nominee-bank-masking*.ts`. ⛔ Without it the next reader concludes
         masking was deleted.
-  - [ ] ⬅️ **INHERITED (11b.3a 3rd pass)** — the doc-block also states whether the collapsed shape
+  - [x] ⬅️ **INHERITED (11b.3a 3rd pass)** — the doc-block also states whether the collapsed shape
         still carries **ciphertext it no longer uses**. The old read returned `masked: boolean`
         **alongside** `accountNumberCiphertext` / `accountHolderNameCiphertext` / `ifscCiphertext` /
         `vpaCiphertext`, with ⛔ nothing in the TYPE changing when `masked === true` — the guarantee
         was a downstream promise, ⛔ not a structural property. D1's collapse closes it; ⛔ say so, so
         the next reader does ⛔ not re-introduce a flag beside the payload it is supposed to govern.
-  - [ ] ⛔ Remove the masking **CALL** from the public read path (Task 4) — ⛔ never compute a verdict
+  - [x] ⛔ Remove the masking **CALL** from the public read path (Task 4) — ⛔ never compute a verdict
         and discard it. ⭐ Keep the **function**, the schedule, the key and every test (AC4).
-  - [ ] `matrix.ts:426-429` — four `RULED_TIER1_PUBLIC_EXCEPTIONS` entries → **one**, re-keyed
+  - [x] `matrix.ts:426-429` — four `RULED_TIER1_PUBLIC_EXCEPTIONS` entries → **one**, re-keyed
         `'2026-09-04-190 cl.2'`.
-  - [ ] Amend the file's doc-blocks: the *"four ruled pairs"* prose, and cl.10(e)'s **reading** per
+  - [x] Amend the file's doc-blocks: the *"four ruled pairs"* prose, and cl.10(e)'s **reading** per
         Trap 2. ⛔ Amend, ⛔ do not delete — name the previous claim.
-  - [ ] ⭐⛔⛔ **`-191` cl.5 ORDERED A NAMED CORRECTION IN THIS FILE, AND IT SURVIVES THE COLLAPSE.**
+  - [x] ⭐⛔⛔ **`-191` cl.5 ORDERED A NAMED CORRECTION IN THIS FILE, AND IT SURVIVES THE COLLAPSE.**
         ✅ Verified live. `sahyog-vivran.ts:201-202` (the **shared header** above the union, ⛔ NOT the
         field doc-block) reads *"Two causes: `vpa` is null for every nominee today (**Story 8.4**
         shipped the resolver seam ABSENT)"*. ⛔ **The REASON is wrong** — `-191` cl.5, verbatim:
@@ -368,13 +368,13 @@ whoever reactivates it inherits the list.
         a pending one."* ⚠ Its twin at `:219` dies with the field; **`:201-202` does ⛔ NOT** — the
         header describes the whole shape and stays. ⇒ correct it here, ⛔ or it outlives the field it
         describes (Trap 4) in the file this task already opens.
-  - [ ] ⚠ Same header: *"EVERY VALUE IS NULLABLE"* and the two-causes framing describe a shape that no
+  - [x] ⚠ Same header: *"EVERY VALUE IS NULLABLE"* and the two-causes framing describe a shape that no
         longer exists after the collapse. ⭐ Restate for the collapsed shape; ⛔ do ⛔ not leave it.
-- [ ] **Task 3 — The matrix YAML** (AC1)
-  - [ ] `public-vs-private-matrix.yaml` — drop the five field declarations from `sahyog-vivran`;
+- [x] **Task 3 — The matrix YAML** (AC1)
+  - [x] `public-vs-private-matrix.yaml` — drop the five field declarations from `sahyog-vivran`;
         keep `nominee_account_holder_name`.
-  - [ ] Amend the surface's rider to record the supersession and point at `-190`. ⛔ Trap 1.
-  - [ ] ⬅️⭐⭐ **INHERITED (11b.3a 3rd pass) — THIS FILE CARRIES THREE CLAIMS THAT ARE ALREADY FALSE,
+  - [x] Amend the surface's rider to record the supersession and point at `-190`. ⛔ Trap 1.
+  - [x] ⬅️⭐⭐ **INHERITED (11b.3a 3rd pass) — THIS FILE CARRIES THREE CLAIMS THAT ARE ALREADY FALSE,
         AND 11b.3a NEVER CORRECTED THEM.** ✅ Verified live. **(i)** `:112-117` — the file header still
         says the `sahyog-vivran` surface *"declares ⛔ **ZERO** `pii_tier: 1` fields at `tier: public`
         — it renders ⛔ **NO person's name at all** — so it neither needs nor claims a name-form
@@ -389,17 +389,17 @@ whoever reactivates it inherits the list.
         the old sentence; state what it now names. **(iii)** `:758-760` — see Task 7.
         ⭐ This is Trap 4's *"prose that outlives the thing it describes"* and AC4's *"every doc-block
         … is amended"*, in the file this task already opens.
-- [ ] **Task 4 — The domain read** (AC1)
-  - [ ] `packages/domain/src/pool/sahyog-vivran-read.ts` — stop selecting/decrypting the five for this
+- [x] **Task 4 — The domain read** (AC1)
+  - [x] `packages/domain/src/pool/sahyog-vivran-read.ts` — stop selecting/decrypting the five for this
         surface.
-  - [ ] ⭐✅ **THE SHARED-RESOLVER QUESTION IS ALREADY ANSWERED — ⛔ do ⛔ not re-investigate it, and
+  - [x] ⭐✅ **THE SHARED-RESOLVER QUESTION IS ALREADY ANSWERED — ⛔ do ⛔ not re-investigate it, and
         ⛔ do ⛔ not draw the wrong conclusion from it.** Verified live: the 9.9 donor path reads through
         `claimDomain.getClaimNomineeBankAccountsCiphertext` (`domain/src/claim/nominee-bank-read.ts`,
         called at `payment/handlers.ts:149`) — a **separate** read. ⇒ ⛔ **NOTHING here is shared with
         9.9**, so narrowing this file ⛔ cannot strip the member's payment coordinates.
         ⚠⛔ **BUT "NOT SHARED" CUTS BOTH WAYS: it means the two defects below are ⛔ NOT closed on the
         member path by your deletion — they must be fixed THERE, separately (Task 8).**
-  - [ ] ⬅️ **INHERITED (11b.3a 3rd pass) — dropping `bankName` here CLOSES a latent 500; confirm it
+  - [x] ⬅️ **INHERITED (11b.3a 3rd pass) — dropping `bankName` here CLOSES a latent 500; confirm it
         rather than assume it.** `sahyog-vivran-read.ts:586` passes `bankName` through **raw** while
         `branch` on the **next line** is `.trim() || null`-guarded. The column is `text NOT NULL` with
         ⛔ no non-empty CHECK, is copied verbatim from the IFSC provider port (`bankName: string`, no
@@ -409,7 +409,7 @@ whoever reactivates it inherits the list.
         CONFIRMED LIVE ON THE MEMBER PATH: `contracts/src/contributions/nominee-accounts.ts:51` is
         `bankName: z.string().min(1).max(200)` — the IDENTICAL constraint `''` fails.** ⇒ ⛔ not a
         "verify whether"; it is a **fix**, at Task 8.
-  - [ ] ⚠ **READ THE COUNTER-POSITION BEFORE YOU TOUCH IT, ⛔ do ⛔ not rediscover it as undecided.**
+  - [x] ⚠ **READ THE COUNTER-POSITION BEFORE YOU TOUCH IT, ⛔ do ⛔ not rediscover it as undecided.**
         `sahyog-vivran-read.ts:~596` already argues the opposite in a committed comment: *"(The
         `bank_name` column is `NOT NULL` and has no such nullable projection — a truly empty
         `bank_name` is a **data-integrity fault**.)"* ⭐ That is a real position and it is why the guard
@@ -417,7 +417,7 @@ whoever reactivates it inherits the list.
         boundary: a data-integrity fault that **500s a whole page** is still an outage. ⇒ if you fix
         it on the member path, **name this comment and amend it** rather than silently contradicting
         it.
-  - [ ] ⬅️⚠⛔ **INHERITED (11b.3a 3rd pass) — CONDITIONAL, and ⛔ DO ⛔ NOT ASSUME IT IS CLOSED.** One
+  - [x] ⬅️⚠⛔ **INHERITED (11b.3a 3rd pass) — CONDITIONAL, and ⛔ DO ⛔ NOT ASSUME IT IS CLOSED.** One
         malformed schedule row (`masking_mode = 'after_days'` with `mask_after_days IS NULL` — the
         CHECK dropped, or a snapshot restore predating it) makes `settingFromRow` throw a **bare
         `Error`** inside this read's `Promise.all` ⇒ the API 500s ⇒ the Astro route maps `!fetched.ok`
@@ -429,10 +429,10 @@ whoever reactivates it inherits the list.
         MUST be fixed here** (degrade row-local, ⛔ never tenant-wide). ⚠ Its **admin-side twin stays
         on 11b.3a** and is ⛔ not yours: the same `settingFromRow` sits outside any try/catch in the
         admin `getSchedule`, so a corrupt row 500s the console.
-- [ ] **Task 5 — The API handler** (AC1)
-  - [ ] `apps/api/src/modules/public-pages/handlers.ts` — drop the five from the response mapping,
+- [x] **Task 5 — The API handler** (AC1)
+  - [x] `apps/api/src/modules/public-pages/handlers.ts` — drop the five from the response mapping,
         including the `soft(account.vpaCiphertext, 'vpa')` decrypt at `:712`.
-  - [ ] ⬅️ **INHERITED (11b.3a 3rd pass) — the decrypt fan-out is UNCONDITIONAL on the drive's
+  - [x] ⬅️ **INHERITED (11b.3a 3rd pass) — the decrypt fan-out is UNCONDITIONAL on the drive's
         OUTCOME.** The map over `drive.nomineeBank.accounts` has ⛔ no outcome predicate, and the ⛔ only
         suppressor on the path is the **time-since-close** masking verdict. The same response carries
         `appealReversal` and `fundingOutcome`, so a **DENIED** claim — or one whose approval was
@@ -440,10 +440,10 @@ whoever reactivates it inherits the list.
         indefinitely under FAIL-OPEN. ⭐ `-160` cl.10(a) authorises publication *"during an active
         campaign"*; ⛔ nothing checked the campaign was **legitimate**, only that it was **recent**.
         ⇒ AC1's deletion closes it **for the public surface**; ⚠ the member path is Task 8.
-- [ ] **Task 6 — The render layer + copy** (AC2)
-  - [ ] `apps/public/src/lib/sahyog-vivran-render.ts`, `surface-fields.ts`,
+- [x] **Task 6 — The render layer + copy** (AC2)
+  - [x] `apps/public/src/lib/sahyog-vivran-render.ts`, `surface-fields.ts`,
         `pages/sahyog-vivran/[driveToken].astro` — remove the five rows from the bank block.
-  - [ ] ⭐⛔ **THE BLOCK'S OWN HEADING AND GROUP LABEL DESCRIBE WHAT YOU ARE DELETING.** ✅ Verified
+  - [x] ⭐⛔ **THE BLOCK'S OWN HEADING AND GROUP LABEL DESCRIBE WHAT YOU ARE DELETING.** ✅ Verified
         live in `i18n/locales/en/sahyog-vivran.json`: `bank.title` = *"**Where the money goes**"*
         (`:31`) and `bank.group_label` = *"**Bank details for this drive**"* (`:32`). ⇒ after AC1 a
         section headed *"Bank details for this drive"* contains **one name and ⛔ no bank details**,
@@ -451,11 +451,11 @@ whoever reactivates it inherits the list.
         **rows**; these are the **frame**. ⭐ Re-word both (⛔ both locales — `t()` THROWS on a missing
         key), or state why they still hold. **Same class as the `equal_destinations` item below** —
         ⛔ do ⛔ not fix one and leave the other.
-  - [ ] ⚠ Retire `bank.masked_note` (*"Only part of the account number is shown here…"*) and
+  - [x] ⚠ Retire `bank.masked_note` (*"Only part of the account number is shown here…"*) and
         `value.account_ending_in` (*"Account ending in {last4}"*) — ⛔ both describe an
         account-number projection that ⛔ no longer exists on this surface. ⭐ Grep first; ⛔ delete
         ⛔ nothing another surface consumes.
-  - [ ] ⭐ **D1's collapse kills `isMasked` as a RENDER concept, ⛔ not just as a wire key.**
+  - [x] ⭐ **D1's collapse kills `isMasked` as a RENDER concept, ⛔ not just as a wire key.**
         `surface-fields.ts:570` maps `isMasked: null` with the comment *"Selects the masked vs. full
         copy block"*, and `SahyogVivranNomineeAccountRow` carries the field. ⇒ with ⛔ no `masked` on
         the wire there is ⛔ nothing to select between — remove the field and its mapping.
@@ -463,7 +463,7 @@ whoever reactivates it inherits the list.
         by the time a value reaches this shape the projection is already the ruled one"*) describes a
         masking step this surface no longer performs ⇒ it is squarely inside **AC4's** *"every
         doc-block … is amended"*. ⛔ Amend, ⛔ do not delete.
-  - [ ] ⬅️⭐⭐ **INHERITED (11b.3a 3rd pass, G3) — THE PER-ACCOUNT `aria-label` ANNOUNCES AN ORDINAL THE
+  - [x] ⬅️⭐⭐ **INHERITED (11b.3a 3rd pass, G3) — THE PER-ACCOUNT `aria-label` ANNOUNCES AN ORDINAL THE
         SIGHTED PAGE DELIBERATELY SUPPRESSES, AND IT ⛔ SURVIVES THIS STORY.** ✅ Verified at HEAD,
         raised independently by two layers. `[driveToken].astro:458` renders
         `aria-label={labels.bankAccountLabel(account.accountRank)}` ⇒ *"Account 1"* / *"Account 2"*,
@@ -478,7 +478,7 @@ whoever reactivates it inherits the list.
         ⛔⛔ **YOUR Task 6 REMOVES FIVE ROWS, ⛔ NOT THE BLOCK OR ITS PER-ACCOUNT GROUPING ⇒ THIS IS
         ⛔ NOT CLOSED BY THE WITHDRAWAL.** Decide here: name the group by its **bank**, or restate
         equality in the per-account label.
-  - [ ] ⬅️ **INHERITED (11b.3a 3rd pass, G3) — the "either account can be used" copy renders when the
+  - [x] ⬅️ **INHERITED (11b.3a 3rd pass, G3) — the "either account can be used" copy renders when the
         page shows exactly ONE account, and after your change it sits beside two NAMES and ⛔ no
         payment coordinates at all.** `bank.equal_destinations` is standing copy rendered whenever the
         block renders, and a one-element array is **explicitly legal** in the SSR validator ⇒ a
@@ -487,31 +487,31 @@ whoever reactivates it inherits the list.
         purpose is that nothing about the money is hidden, and reasonably infers **a second account is
         being withheld**. ✅ Length 1 is ⛔ never exercised (the suite covers `[]` and a three-account
         rejection only). ⇒ decide here whether the sentence still holds once the coordinates are gone.
-  - [ ] ⬅️ **INHERITED (11b.3a 3rd pass, G3) — the masked value restates its own label; closed by YOUR
+  - [x] ⬅️ **INHERITED (11b.3a 3rd pass, G3) — the masked value restates its own label; closed by YOUR
         deletion, but ⛔ check the member path does not inherit the shape.** The `<dt>` reads *"Account
         number"* and the `<dd>` renders *"Account ending in 1234"* ⇒ announced as *"Account number:
         Account ending in 1234"*; Hindi is the same shape. ⭐ The wrapper exists for a **good** reason
         (AC4 requires the masked value be announced as ONE coherent field, ⛔ never digit-by-digit) —
         the defect is achieving it **by duplication**. ⇒ the account-number row goes at Task 6, so this
         dies with it; recorded because **AC6 retains the field on the member donor path**.
-  - [ ] `i18n/locales/{en,hi}/sahyog-vivran.json` — `label.account_holder` → **"Nominee Name"** /
+  - [x] `i18n/locales/{en,hi}/sahyog-vivran.json` — `label.account_holder` → **"Nominee Name"** /
         the Hindi equivalent. ⚠ `t()` **THROWS** on a missing key — change both locales in the same
         commit. ⭐ Retire `label.account_number` / `label.ifsc` / `label.vpa` / `label.bank_name` /
         `label.branch` **only if** no other surface consumes them — ⛔ grep first.
-- [ ] **Task 7 — The identity gates** (AC5)
-  - [ ] `apps/public/tests/integration/public-pages/scrape-test.spec.ts:1218-1235` — the 16-entry set
+- [x] **Task 7 — The identity gates** (AC5)
+  - [x] `apps/public/tests/integration/public-pages/scrape-test.spec.ts:1218-1235` — the 16-entry set
         → **11** (drop `nominee_account_number`, `nominee_bank_name`, `nominee_branch`,
         `nominee_ifsc`, `nominee_vpa`; ⭐ **keep `nominee_account_holder_name`**); amend the
         "TEN → SIXTEEN" comment to record the third move.
-  - [ ] ⚠ **AND THE TEST'S OWN NAME.** It reads *"the snapshot field set … is EXACTLY the **sixteen**
+  - [x] ⚠ **AND THE TEST'S OWN NAME.** It reads *"the snapshot field set … is EXACTLY the **sixteen**
         classified fields"*. ⛔ A test titled *sixteen* that asserts eleven is Trap 4 inside the gate
         that exists to catch Trap 4.
-  - [ ] ⭐ `apps/api/tests/integration/login-wall.spec.ts` (⚠⛔ **`apps/api`, ⛔ NOT `apps/public`** —
+  - [x] ⭐ `apps/api/tests/integration/login-wall.spec.ts` (⚠⛔ **`apps/api`, ⛔ NOT `apps/public`** —
         it does ⛔ not sit beside `scrape-test.spec.ts`; the entry is at `:236-260`) — amend the
         allowlist entry's control list and its PII-bearing characterisation. ⛔ Amend, ⛔ do not revert
         to pre-11b.3a wording, and ⛔ do ⛔ not touch its `-186` / `s-maxage=300` / `limits.search`
         paragraphs (AC7).
-  - [ ] ⭐⛔⛔ **`apps/api/src/modules/public-pages/routes.ts` — AC5's fourth file, and the one the
+  - [x] ⭐⛔⛔ **`apps/api/src/modules/public-pages/routes.ts` — AC5's fourth file, and the one the
         control-count findings are actually about.** ✅ Verified live, **four** statements move:
         `:67` *"11b.3a declares **FOUR** ruled Tier-1 nominee-bank fields"* → **ONE** · `:116`
         *"restored **PII-BEARING** (control 6 above)"* → amend per AC5's *"⛔ no longer PII-bearing in
@@ -521,12 +521,12 @@ whoever reactivates it inherits the list.
         computes · `:286` *"the **FOUR** applicable controls"* → the honest recount below.
         ⚠ `:13`'s *"FIVE, matching `login-wall.spec.ts`'s allowlist entry exactly"* is a **different**
         list (the allowlist's controls, ⛔ not the Tier-1 pairs) — ⛔ check before touching it.
-  - [ ] ⬅️⭐ **INHERITED (11b.3a 3rd pass) — THERE IS A THIRD DOCUMENT STATING THE CONTROL COUNT, AND
+  - [x] ⬅️⭐ **INHERITED (11b.3a 3rd pass) — THERE IS A THIRD DOCUMENT STATING THE CONTROL COUNT, AND
         AC5 DOES ⛔ NOT NAME IT.** `public-vs-private-matrix.yaml:758-760` says `noindex` is *"control
         **3** of the **THREE** this route states"* — a different **count** AND a different **ordinal**
         from `routes.ts` (which says four, with `X-Robots-Tag` as control **4**). ⇒ AC5's *"every
         control-count statement is corrected"* reaches this line too.
-  - [ ] ⬅️⚠ **INHERITED — and make the corrected count HONEST about which of them are controls.**
+  - [x] ⬅️⚠ **INHERITED — and make the corrected count HONEST about which of them are controls.**
         The *"FOUR applicable controls"* overcounted: control **4** is `X-Robots-Tag` (a crawler
         **hint** — archivers and scrapers ignore it), control **5** is *"the absence of any DETAIL or
         EXPORT affordance"* (irrelevant to a direct GET) and control **6** is the decrypt itself
@@ -535,22 +535,22 @@ whoever reactivates it inherits the list.
         shipped the opaque `publicToken` — ⛔ do ⛔ not re-raise it. ⭐ What survives is that counting
         three non-controls as controls **manufactures a false defence-in-depth** on the document a
         future reviewer will trust.
-  - [ ] ⬅️ **INHERITED — mechanize the count, ⛔ or record that you chose not to.** It is prose in
+  - [x] ⬅️ **INHERITED — mechanize the count, ⛔ or record that you chose not to.** It is prose in
         **three** places with ⛔ no constant, ⛔ no test and ⛔ no lint rule; it is prevented solely by a
         reviewer counting bullet points by eye, **which is exactly how it failed the first time**.
         ⭐ Cheapest fix: one exported `SAHYOG_VIVRAN_APPLICABLE_CONTROLS` all three import, plus a
         length assertion.
-  - [ ] `packages/contracts/tests/public-pages-sahyog-vivran.test.ts` — update shape assertions.
-- [ ] **Task 8 — The tests that prove it** (AC1, AC3, AC6)
-  - [ ] Live-DB: a public drive with real ciphertext returns ⛔ **no** account number / IFSC / VPA /
+  - [x] `packages/contracts/tests/public-pages-sahyog-vivran.test.ts` — update shape assertions.
+- [x] **Task 8 — The tests that prove it** (AC1, AC3, AC6)
+  - [x] Live-DB: a public drive with real ciphertext returns ⛔ **no** account number / IFSC / VPA /
         bank / branch key at all.
-  - [ ] Live-DB: a **MASKED** drive still returns `accountHolderName` (AC3's regression guard).
-  - [ ] Live-DB: the **member** donor path still returns, **unmasked**, the **THREE** Tier-1 values it
+  - [x] Live-DB: a **MASKED** drive still returns `accountHolderName` (AC3's regression guard).
+  - [x] Live-DB: the **member** donor path still returns, **unmasked**, the **THREE** Tier-1 values it
         actually carries — `accountHolderName`, `accountNumber`, `ifsc` — plus `bankName` and
         `vpaPresent` (AC6's regression guard). ⛔ **⛔ NOT "all four": `NomineeBankAccountView` is
         `.strict()` and has ⛔ NO `vpa` key — *"the VPA itself is NEVER sent"*
         (`nominee-accounts.ts:44,60`).** ⛔ Do ⛔ not add one to make a test pass.
-  - [ ] ⬅️⚠ **INHERITED (11b.3a 3rd pass) — AC6 KEEPS ALL FOUR VALUES ON THE DONOR PATH, SO VERIFY IT
+  - [x] ⬅️⚠ **INHERITED (11b.3a 3rd pass) — AC6 KEEPS ALL FOUR VALUES ON THE DONOR PATH, SO VERIFY IT
         DOES ⛔ NOT INHERIT THE TWO DEFECTS AC1 CLOSES BY DELETION.** ⭐ Deleting a field from the
         public surface does ⛔ **not** fix it on a path that retains the field. **(i)** the unguarded
         `bankName` pass-through (`''` ⇒ `min(1)` parse failure ⇒ 500) — Task 4; **(ii)** the
@@ -565,12 +565,12 @@ whoever reactivates it inherits the list.
         comment per Task 4), and **(ii)** decide explicitly whether a **denied** or **appeal-reversed**
         claim should still hand a member payment coordinates — ⛔ record the answer either way.
         ⛔ Do ⛔ not close these on the strength of the public deletion alone.
-  - [ ] ⭐ **Execute them.** `twt-test-pg` on `:5433`; ⛔ *"written but not run"* is ⛔ not attested —
+  - [x] ⭐ **Execute them.** `twt-test-pg` on `:5433`; ⛔ *"written but not run"* is ⛔ not attested —
         that exact gap shipped a red spec at 11b.10.
-- [ ] **Task 9 — Masking status prose** (AC4)
-  - [ ] Amend every doc-block that describes masking as governing a public disclosure to state it has
+- [x] **Task 9 — Masking status prose** (AC4)
+  - [x] Amend every doc-block that describes masking as governing a public disclosure to state it has
         ⛔ no public consumer. ⛔ Delete ⛔ nothing.
-  - [ ] ⬅️⛔⛔ **INHERITED (11b.3a 3rd pass) — RECORD THREE REACTIVATION PRECONDITIONS ALONGSIDE THE
+  - [x] ⬅️⛔⛔ **INHERITED (11b.3a 3rd pass) — RECORD THREE REACTIVATION PRECONDITIONS ALONGSIDE THE
         NEW STATUS. These are DORMANT, ⛔ NOT RESOLVED.** cl.4 retains the machinery with ⛔ no public
         consumer and **AC7 leaves `D8-default` FAIL-OPEN UNCHANGED**, so each of these goes live again
         the moment the machinery is re-pointed at any surface. ⛔ Whoever reactivates it must inherit
@@ -651,16 +651,204 @@ shared fixture ([[project_live_db_test_gotchas]]).
 
 ### Agent Model Used
 
+Claude Opus 5 (`claude-opus-5`) — `bmad-dev-story`, 2026-09-05.
+
 ### Debug Log References
+
+- `pnpm ci:local` with `DATABASE_URL` pointed at `twt-test-pg` (`:5433`) — **34/34 green**, including
+  the live-DB `integration-tests` job. Run twice end-to-end; the second run is the attested one.
+- ⚠ The **first** full run failed **2 jobs**, and both are recorded rather than glossed:
+  - `sahyog-vivran-financial-truth` — its **SCOPE SAFEGUARD** fired on the new
+    `apps/api/src/modules/public-pages/sahyog-vivran-controls.ts`. ⭐ That is the gate working; the
+    file was added to `SCAN_FILES` with `renderPath: false` and an explicit note that this is a
+    **scope declaration, ⛔ not a coverage claim** ([[feedback_gate_scope_semantic_coverage]]).
+  - `test (unit)` — did ⛔ **not** reproduce on a clean re-run and passed on every subsequent
+    invocation. ⛔ Recorded as **un-diagnosed**, ⛔ not claimed fixed
+    ([[project_ci_local_concurrency_oversubscription]], [[project_ci_local_double_run_pollution]]).
+- Targeted live-DB runs during development:
+  `apps/api/tests/integration/public-pages/sahyog-vivran.spec.ts` (28 pass) ·
+  `apps/api/tests/integration/payment/nominee-accounts.spec.ts` (3 pass) ·
+  `apps/public` full suite (458 pass) · `packages/contracts` full suite (1100 pass).
+- ⭐ The gates FAILED FIRST, as the Dev Notes predicted: `apps/public`'s typecheck broke on the
+  collapsed union before any test was touched, and `scrape-test.spec.ts`'s identity assertion went red
+  on the field removal. ⛔ Neither was "fixed" by loosening an assertion.
 
 ### Completion Notes List
 
+**AC0 — governance first.** `epics.md` annotated (story **A** of the `2026-09-04-195` cl.3 six-story
+split; why it exists; ships first and alone; what it supersedes; the retained-but-consumerless masking
+machinery; what it does not touch) and `sprint-status.yaml` flipped `ready-for-dev` → `in-progress`
+with a ledger entry, in commit `4ee115c6`, prefixed `governance:`, with ⛔ **no code**
+([[feedback_governance_commits_precede_implementation]]).
+
+**AC1 — the five coordinates are gone.** Removed at **every** layer, ⛔ not just the render: the
+contract (`PublicSahyogVivranNomineeAccount`), the `RULED_TIER1_PUBLIC_EXCEPTIONS` allowlist
+(4 → 1, re-keyed `2026-09-04-190 cl.2`), the matrix YAML (five field declarations dropped), the
+domain read's **projection**, the API decrypt fan-out, the render model, the SSR validator and the
+page. ⭐ Keys are **ABSENT**, ⛔ never `null` — asserted against the RAW serialized body as well as the
+parsed fields.
+⚠⛔ **The shared row read was ⛔ NOT narrowed, deliberately.**
+`getClaimNomineeBankAccountsCiphertext` also serves the 9.9 donor path; narrowing it would have
+stripped the member's payment coordinates. The withdrawal is a **projection** taken on this surface's
+own boundary — the Dev Notes' *"prefer a separate projection"* guidance, followed.
+
+**AC2 — the name stays, relabelled.** `label.account_holder` → **"Nominee Name"** / **"नामिती का
+नाम"**. ⭐ The i18n KEY is deliberately unchanged: the key names the **DATA** (6.8 D1 — it is the
+account holder), the value is the ruled **PRESENTATION**, and that is exactly the line `-190` cl.2
+draws. Field id, matrix key, wire key and column are untouched (Trap 3).
+
+**AC3 — the masked arm retains the name.** ⭐ Satisfied **structurally** by D1(b)'s collapse, and
+pinned by a live-DB test that drives `after_days: 0` on a `closed` drive — the configuration that
+would once have emptied the block — and asserts the name is present.
+
+**AC4 — masking retained, status stated.** ⛔ Nothing deleted: `isNomineeBankMasked`,
+`resolveEffectiveNomineeBankMasking`, `DRIVE_MASKING_FROM`, `maskAccountNumberLast4`, the schedule
+table, its permission key, its admin surface and all three of its own test files survive untouched.
+⭐ The **"⛔ NO PUBLIC CONSUMER"** status is recorded at **seven** sites, and the **three REACTIVATION
+PRECONDITIONS** live on the machinery itself (`nominee-bank-masking.ts`), ⛔ not only in
+`deferred-work.md`, so whoever wakes it inherits them.
+
+**AC5 — the gates moved loudly, and the count is MECHANIZED.** Identity set **16 → 11** (and the test
+title with it); the matrix-wide exception allowlist **6 → 3**; `login-wall.spec.ts` **amended, ⛔ not
+reverted**. ⭐⭐ The control count is now `SAHYOG_VIVRAN_APPLICABLE_CONTROLS`, one exported constant
+replacing prose in three documents **that had drifted to three different answers** — `routes.ts` said
+**FIVE** in its header and **FOUR** at the route site, and the matrix YAML said `noindex` was *"control
+3 of the THREE"*, a different count **and** a different ordinal. `login-wall.spec.ts` asserts its
+length **and** its composition, and `routes.ts` **re-exports** it so the binding is real rather than a
+comment that can rot. ⚠ The recount is honest: of five entries only **TWO** are controls — `noindex`
+is a crawler hint, *"no detail/export affordance"* is irrelevant to a direct GET, and the Tier-1
+decrypt is the thing being **defended**.
+
+**AC6 — `member > public`, structurally.** ⭐ Satisfied by **LOWERING THE PUBLIC**, ⛔ never by widening
+the member: ⛔ no member surface gained a field. A live-DB regression guard asserts the donor path
+still returns the **THREE** Tier-1 values unmasked plus `bankName` and `vpaPresent`, with a
+`vpaPresent: true`/`false` pair so the assertion ⛔ cannot pass vacuously, and asserts the **VPA
+string is ⛔ not on that wire** — it never has been.
+
+**AC7 — nothing else moved.** ⛔ `limits.search`, ⛔ `D8-default` FAIL-OPEN, ⛔ the public token, ⛔ the
+index, ⛔ the stage vocabulary, ⛔ the meter, ⛔ the deceased-name basis, ⛔ every member surface.
+
+#### ⬅️ The eight INHERITED findings, dispositioned individually
+
+- ✅ **CLOSED BY DELETION** (public surface): the unguarded `bankName` 500 · the `masked: boolean`
+  returned beside complete ciphertext · the outcome-unconditional decrypt fan-out · **and the
+  CONDITIONAL one** — the malformed schedule row that threw a bare `Error` inside the read's
+  `Promise.all` and darkened **every** Sahyog Vivran page in a tenant. ⭐ The public read no longer
+  resolves the schedule at all, so the unauthenticated path can ⛔ not reach it. ⚠⛔ Its **admin-side
+  twin is ⛔ NOT closed** and stays on 11b.3a — stated at the deletion site.
+- ✅ **CLOSED BY [EDIT]** — the FR-74 **Aadhaar collision**. `-190` cl.1 removes the 12-digit account
+  number ⇒ ⛔ no 12-digit run remains on the render. ✅ Verified by execution: the snapshot now reports
+  `status: 'pass'`, `piiMatches: []`, `leaks: []`. ⛔ The detector was ⛔ **not** weakened — not by
+  length, not by surface, not by field — and the entry records that the conflict RETURNS in full if
+  any surface ever re-publishes a 12-digit value.
+- ⚠⛔ **⛔ NOT CONFIRMED, and recorded as such rather than claimed as fixed** — the routed assertion
+  that the **member** donor path carried a **LIVE 500** on an empty `bankName`. ✅ Checked at the call
+  site: `payment/handlers.ts` **already** degraded `''` to the decrypt-failed sentinel before the
+  schema saw it, and **that guard predates the finding** ⇒ the 500 was ⛔ never reachable
+  ([[feedback_trace_reachability_before_escalating]]). ⭐ What **is** real is the milder residual — a
+  **whitespace-only** value passing `.length > 0`, rendering a blank bank label on the screen where a
+  donor picks an account — and that **is fixed**, with the `district`/`branch` treatment. ⭐ The
+  committed counter-position in `sahyog-vivran-read.ts` (*"a truly empty `bank_name` is a
+  data-integrity fault"*) is **named and amended**, ⛔ not silently contradicted.
+- ⭐ **RULED** — no outcome predicate is added to the member donor path.
+  `resolveMemberLivePool` returns `null` unless the member is `active` **and** assigned in a **`live`**
+  cycle, and a drive reaches `live` only through a frozen cycle on an **approved** claim ⇒ a denied
+  claim never reaches the handler, and an appeal-reversed one reaches it only because the reversal
+  restored it. The public defect was that *"recent"* stood in for *"legitimate"*; here `live` **IS**
+  the legitimacy gate. ⚠ The residual (an approval reversed **while** its cycle is still `live`) is
+  named at the handler so it is inherited, ⛔ not rediscovered.
+- ⛔ **DORMANT, ⛔ NOT RESOLVED** — the three reactivation preconditions (retroactive un-masking as a
+  bulk disclosure event · RLS-failure indistinguishable from *"no window"* and resolving to PUBLISH ·
+  O(N) remediation with a five-minute floor), recorded on the machinery.
+- ⭐ The three **G3** render findings: the per-account `aria-label`'s ordinal is **removed** (it
+  announced *"Account 1"/"Account 2"* to screen readers only, contradicting the equality the page
+  states in copy, on a path the field gate is **structurally blind** to); the *"either account can be
+  used"* copy is **re-worded and re-gated** on `length > 1` (a one-element array is legal, and the old
+  standing sentence invited a visitor to infer a second account was being **withheld**); the
+  label-restating-value row died with its field.
+- ⭐ The **frame** moved with the rows: *"Where the money goes"* and *"Bank details for this drive"*
+  both re-worded in **both** locales, and seven now-orphaned i18n keys retired after grepping for
+  other consumers.
+
+#### ⚖️ Decided here rather than left implicit
+
+- ⭐ **ROUTED, ⛔ not ruled** — `D-nominee-name-form` (`deferred-work.md` item **(h)**). `-190` cl.2
+  rules the **LABEL**; it says ⛔ nothing about the **FORM** (full name vs first-name + last-initial).
+  The matrix YAML header's *"declares ZERO `pii_tier: 1` fields … so it neither needs nor claims a
+  name-form ruling"* went false at 11b.3a, and with the antecedent gone the conclusion no longer
+  follows on its own logic. ⛔ A subtraction story has ⛔ no authority to rule a name form, so the gap
+  is recorded with the argument on **both** sides and a trigger.
+- ✅ **CLOSED** — `deferred-work.md` item **(e)** *"VPA collection"*. Its premise was **FALSE when
+  written**: `-191` cl.5 verified 8.13 **built** the collection (migration 0080, a real optional
+  intake, 11 of 558 accounts populated). ⛔ A null VPA is a **permanent** property of an unfilled
+  optional field, ⛔ never a pending gap.
+- ⚠ **RE-AFFIRMED, ⛔ not downgraded** — item **(g)** (edge-cache blindness). Two of its premises moved
+  (the address is opaque since 11b.10; the walk would now reach ONE Tier-1 field, not four) and
+  ⛔ neither touches what the item is about.
+
+#### ⚠ Carried forward, openly
+
+- ⛔ **The `-190` cl.3 residual.** A logged-in member does ⛔ not yet see the complete banking
+  information for a **FINISHED** drive — that is **story F** (`11b-16`), which needs story **E**'s
+  list. ⇒ between this story and F, a `closed` drive's coordinates sit on ⛔ no surface. ⛔ Recorded,
+  ⛔ not hidden, and ⛔ **not** to be "fixed" by restoring the public arm.
+- ⚠ **The surviving public name is UNVERIFIED and, today, UNVERIFIABLE.** ⛔ No FK, ⛔ no match rule,
+  and per `D5-subject(ii)` ⛔ nobody in the approval chain can read it. ⭐ Sharper now that it is the
+  ⛔ only thing published — stated at four sites and in `deferred-work.md`.
+
 ### File List
+
+**Governance (commit `4ee115c6`)**
+- `_bmad-output/planning-artifacts/epics.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+
+**Contracts**
+- `packages/contracts/src/public-pages/sahyog-vivran.ts`
+- `packages/contracts/src/public-pages/matrix.ts`
+- `packages/contracts/public-pages/public-vs-private-matrix.yaml`
+- `packages/contracts/tests/public-pages-sahyog-vivran.test.ts`
+- `packages/contracts/tests/public-pages.test.ts`
+
+**Domain**
+- `packages/domain/src/pool/sahyog-vivran-read.ts`
+- `packages/domain/src/pool/public-read.ts`
+- `packages/domain/src/claim/nominee-bank-masking.ts`
+- `packages/domain/src/claim/nominee-bank-masking-policy.ts`
+
+**API**
+- `apps/api/src/modules/public-pages/sahyog-vivran-controls.ts` *(new)*
+- `apps/api/src/modules/public-pages/handlers.ts`
+- `apps/api/src/modules/public-pages/routes.ts`
+- `apps/api/src/modules/payment/handlers.ts`
+- `apps/api/src/modules/nominee-bank-masking/index.ts`
+- `apps/api/tests/integration/public-pages/sahyog-vivran.spec.ts`
+- `apps/api/tests/integration/payment/nominee-accounts.spec.ts`
+- `apps/api/tests/integration/login-wall.spec.ts`
+
+**Public web**
+- `apps/public/src/pages/sahyog-vivran/[driveToken].astro`
+- `apps/public/src/lib/sahyog-vivran-render.ts`
+- `apps/public/src/lib/sahyog-vivran.server.ts`
+- `apps/public/src/lib/surface-fields.ts`
+- `apps/public/tests/integration/public-pages/scrape-test.spec.ts`
+- `apps/public/tests/sahyog-vivran-client.test.ts`
+- `apps/public/tests/sahyog-vivran-render.test.ts`
+
+**i18n**
+- `packages/i18n/locales/en/sahyog-vivran.json`
+- `packages/i18n/locales/hi/sahyog-vivran.json`
+
+**Gates + records**
+- `scripts/sahyog-vivran-financial-truth/check.ts`
+- `friction-budget.md`
+- `_bmad-output/implementation-artifacts/deferred-work.md`
+- `_bmad-output/implementation-artifacts/11b-11-nominee-banking-coordinates-withdrawn-from-public.md`
 
 ## Change Log
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-09-05 | 1.0 | ✅ **IMPLEMENTED — all ten Tasks and all eight ACs closed; status → `review`.** ⭐ Governance first (`4ee115c6`), then the code (`a208cf23`). ⛔ The five coordinates are ABSENT (⛔ not null) at the contract, the allowlist, the matrix YAML, the domain PROJECTION, the API decrypt, the render model, the SSR validator and the page; the name stays, relabelled *"Nominee Name"* in both locales. ⭐ D1(b)'s collapse shipped with its doc-block; the masking machinery is RETAINED whole, its **⛔ no-public-consumer** status recorded at seven sites, and the three REACTIVATION PRECONDITIONS moved onto the machinery itself. ⭐ Identity set **16 → 11**, allowlist **6 → 3**, and the control count is **MECHANIZED** into `SAHYOG_VIVRAN_APPLICABLE_CONTROLS` (three documents had drifted to three different answers) with a length **and** composition assertion. ⚠⛔ **One inherited finding is recorded ⛔ NOT CONFIRMED:** the member path's `bankName` 500 was ⛔ never reachable — the guard predates the finding — while the real whitespace-only residual IS fixed. ✅ FR-74 Aadhaar collision **CLOSED BY [EDIT]**; `deferred-work.md` (e) **CLOSED**, (g) re-affirmed, and **(h) `D-nominee-name-form` ROUTED** — `-190` cl.2 rules the LABEL, ⛔ not the FORM. ✅ `ci:local` **34/34 green** incl. live DB. | BigDev + Claude |
 | 2026-09-04 | 0.1 | Created from `2026-09-04-195` cl.3 (story **A**). ⚠ **D1 is OPEN and blocks Task 2.** | BigDev + Claude |
 | 2026-09-04 | 0.2 | ✅ **D1 RULED (b) — collapse the wire, keep the machinery.** Task 1 closed, Task 2 unblocked and made concrete. ⛔ `dev-story` ⛔ NOT started, by instruction. | BigDev + Claude |
 | 2026-09-05 | 0.4 | ⬅️ **THREE MORE INHERITED from 11b.3a's third pass, chunk G3** — all on the public bank block, all lifted into **Task 6**. ⚠ **One is ⛔ NOT closed by the withdrawal:** the per-account `aria-label` announces *"Account 1"/"Account 2"*, contradicting AC2's *"no ordering that implies preference"* — Task 6 removes five **rows**, ⛔ not the per-account grouping. ⛔ No AC changed; story stays `ready-for-dev`. | BigDev + Claude |

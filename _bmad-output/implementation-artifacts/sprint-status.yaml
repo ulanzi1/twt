@@ -1,4 +1,38 @@
-# last_updated: 2026-09-05i (⭐ **STORY 11b.11 — DEV STARTED, GOVERNANCE FIRST. ONE ROW MOVES:**
+# last_updated: 2026-09-05j (✅⭐⭐ **STORY 11b.11 IMPLEMENTED — THE NOMINEE BANKING COORDINATES ARE OFF
+#   THE PUBLIC SURFACE. ONE ROW MOVES:** `11b-11-…` **`in-progress` → `review`**.
+#   ⛔ epic-11b `in-progress`; ⛔ 11b-3a `done`; ⛔ 11b-10 `done`; ⛔ 11b-12…17 ALL `ready-for-dev`.
+#   ⭐ Implements Trustee-ratified `2026-09-04-190` cl.1-2/cl.4 + `2026-09-04-191` cl.1-2/cl.5.
+#   ⛔ `nominee_account_number` · `_ifsc` · `_bank_name` · `_branch` (`-190` cl.1) and `_vpa`
+#   (`-191` cl.1 — ⛔ NOT named in `-190`) are **ABSENT from the wire, ⛔ not null**, at the contract,
+#   the allowlist, the matrix YAML, the domain PROJECTION, the API decrypt, the render model, the SSR
+#   validator and the page. ⭐ `nominee_account_holder_name` STAYS, re-keyed `2026-09-04-190 cl.2`,
+#   labelled **"Nominee Name"** in both locales; ⛔ the field id, wire key and column are UNCHANGED.
+#   ⭐⭐ **D1(b) SHIPPED:** the public wire collapsed from a `masked` discriminated union to ONE
+#   `.strict()` shape, with the doc-block D1 requires. ⛔⛔ **MASKING WAS ⛔ NOT DELETED** (`-190`
+#   cl.4) — predicate, policy, `DRIVE_MASKING_FROM`, `maskAccountNumberLast4`, the schedule table, the
+#   key, the admin surface and all three of its own test files SURVIVE. ⚠ Its **⛔ NO PUBLIC CONSUMER**
+#   status is recorded at SEVEN sites, and the THREE REACTIVATION PRECONDITIONS now live ON THE
+#   MACHINERY, ⛔ not only in `deferred-work.md`.
+#   ⭐ **GATES MOVED LOUDLY:** identity set **16 → 11** (title too); Tier-1 exception allowlist
+#   **6 → 3**; `login-wall.spec.ts` AMENDED ⛔ not reverted. ⭐⭐ The control count is **MECHANIZED** —
+#   `SAHYOG_VIVRAN_APPLICABLE_CONTROLS` replaces prose in THREE documents that had drifted to THREE
+#   different answers (`routes.ts` said FIVE in its header and FOUR at the route; the YAML said THREE
+#   with a different ordinal), asserted for LENGTH **and** COMPOSITION, and the recount is honest:
+#   of five entries ⛔ only **TWO** are controls.
+#   ⚠⛔ **ONE INHERITED FINDING IS RECORDED ⛔ NOT CONFIRMED, ⛔ not claimed fixed:** the member donor
+#   path's `bankName` 500 was ⛔ NEVER REACHABLE — the sentinel guard predates the finding. The REAL
+#   whitespace-only residual IS fixed, and the committed "data-integrity fault" counter-position is
+#   NAMED rather than silently contradicted.
+#   ✅ **CLOSED BY [EDIT]:** the FR-74 Aadhaar collision — ⛔ no 12-digit run remains; ⛔ the detector
+#   was ⛔ NOT weakened. ✅ **CLOSED:** `deferred-work.md` (e) *"VPA collection"* — its premise was
+#   FALSE when written (8.13 built it). ⚠ (g) RE-AFFIRMED. ⭐ **(h) `D-nominee-name-form` ROUTED** —
+#   `-190` cl.2 rules the LABEL and ⛔ says nothing about the FORM; a subtraction story may ⛔ not rule
+#   one. ⚠ `-190` cl.3's finished-drive residual stays OPEN and is **story F**'s.
+#   ✅ `ci:local` **34/34 green** incl. the live-DB job. ⚠ The first run failed 2 jobs — the
+#   financial-truth SCOPE SAFEGUARD (fixed: the new controls module declared) and one
+#   non-reproducing `test (unit)`, recorded UN-DIAGNOSED, ⛔ not claimed fixed.)
+#
+# last_updated_prior: 2026-09-05i (⭐ **STORY 11b.11 — DEV STARTED, GOVERNANCE FIRST. ONE ROW MOVES:**
 #   `11b-11-nominee-banking-coordinates-withdrawn-from-public` **`ready-for-dev` → `in-progress`**.
 #   ⛔ epic-11b `in-progress`; ⛔ 11b-3a `done`; ⛔ 11b-10 `done`; ⛔ 11b-12…17 ALL `ready-for-dev`.
 #   ⭐ **THE `epics.md` ANNOTATION LANDS IN THIS SAME COMMIT** — 11b.11 is story **A** of the
@@ -15546,8 +15580,14 @@ development_status:
   # ⛔ otherwise the next reader concludes masking was DELETED, the mirror image of trap 4.
   # ⇒ Task 1 CLOSED, Task 2 UNBLOCKED. ⛔ `dev-story` NOT started, by instruction.
   # ⭐ **DEV STARTED 2026-09-05 (Task 0, governance-first).** `ready-for-dev` → `in-progress`.
-  # ⛔ The `epics.md` ANNOTATION lands in THIS commit — ⛔ no code before it.
-  11b-11-nominee-banking-coordinates-withdrawn-from-public: in-progress
+  # ⛔ The `epics.md` ANNOTATION lands in THAT commit — ⛔ no code before it.
+  # ✅ **IMPLEMENTED 2026-09-05 — `in-progress` → `review`.** All ten Tasks, all eight ACs.
+  # ⛔ The five coordinates are ABSENT (⛔ not null) at every layer; the name stays, relabelled.
+  # ⭐ Masking RETAINED whole with its ⛔ no-public-consumer status recorded and its three
+  # REACTIVATION PRECONDITIONS moved onto the machinery. ⭐ Control count MECHANIZED.
+  # ⚠ ONE inherited finding recorded ⛔ NOT CONFIRMED (the member `bankName` 500 was never
+  # reachable); ONE new item ROUTED (`D-nominee-name-form`). ✅ ci:local 34/34 incl. live DB.
+  11b-11-nominee-banking-coordinates-withdrawn-from-public: review
   # ⭐ 11b-12 — STORY **B** of the `2026-09-04-195` cl.3 split. ⛔ NOT in `epics.md` — owes an
   # ANNOTATION (its Task 0). ⚠ INDEPENDENT of 11b-11; both may proceed in parallel.
   # ⭐⭐ **STORIES D AND E DEPEND ON THIS ONE.**

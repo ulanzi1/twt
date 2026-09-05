@@ -1930,3 +1930,67 @@ section · ⛔ the **enumeration bound** was answered by `-184` and is ⛔ not r
 
 ⭐ The baseline is untouched by this story — ⛔ no rise, ⛔ nothing to ratchet
 ([[project_friction_budget_baseline_ratchet]]).
+
+---
+
+**Story 11b.11 disposition (declaration affirmed — ⛔ NO new row, ⛔ no row retired, and ⛔ no row
+amended)** — the nominee banking coordinates are WITHDRAWN from the public Sahyog Vivran surface
+(`2026-09-04-190` cl.1–2 / `2026-09-04-191` cl.1–2, Trustee-ratified).
+
+⭐⭐ **THIS IS A SUBTRACTION STORY, AND ⛔ A REDUCTION IS NOT A ROW.** The public drive page rendered
+six nominee-bank values — bank, branch, account holder, account number, IFSC and UPI ID — and now
+renders **one**: the nominee's name, under the ruled label *"Nominee Name"*. ⇒ ⛔ no new step, ⛔ no
+new decision, ⛔ no new wait, ⛔ no data asked of anybody, ⛔ nothing gated. The 11b.10 precedent
+directly above applies unchanged: *"a reduction is not a row."*
+
+⛔⛔ **AND ⛔ NOBODY LOSES AN ACCESS THEY HAD, which is the check that matters and is ⛔ not assumed.**
+The surface is **"built is ⛔ not published"** — the deployment gate has ⛔ not lifted, `deferred-work.md`
+still carries the token-plus-inbound-path obligation as **BLOCKING ON DEPLOYMENT**, and ⛔ there are
+⛔ no live public links. ⇒ ⛔ **no payer ever read a coordinate off this page**, so withdrawing them
+removes ⛔ no path anyone was walking and retires ⛔ no declared friction.
+
+⭐⭐ **THE ⛔ ONE PATH BY WHICH A MEMBER ACTUALLY PAYS A FAMILY IS UNTOUCHED, and that is asserted
+rather than asserted-about.** Story 9.9's donor path
+(`GET /api/v1/member/contribution/nominee-accounts`) keeps `accountHolderName`, the **FULL**
+`accountNumber`, `ifsc`, `bankName` and `vpaPresent` — ⛔ unmasked, because a masked account number
+⛔ cannot be transferred to. ✅ Pinned by a live-DB regression test added in this story (AC6). ⚠ It
+shares ⛔ **no** code path with the public read, so the public withdrawal could ⛔ not have narrowed
+it by accident — and a well-meaning sweep that "finished the job" there is exactly what that test
+exists to fail.
+
+⚠⛔ **ONE RESIDUAL IS STATED PLAINLY RATHER THAN LEFT TO BE DISCOVERED, and it is ⛔ still not a row.**
+`2026-09-04-190` **cl.3** rules that a logged-in member sees the **complete banking information**,
+including for a **FINISHED** drive. ⭐ That is **story F**'s (`11b-16`), which needs story E's member
+drive list first. ⇒ between this story and F there is a window in which a `closed` drive's
+coordinates sit on ⛔ **no** surface at all. ⛔ It is ⛔ not friction in this ledger's sense: the
+contribution window on a `closed` drive is shut (FR-22's hard Day-15 close), so there is ⛔ no payer
+with a payment to make and ⛔ no step anyone is being asked to take. ⭐ It is an **inversion against
+`2026-09-04-189` cl.3** — recorded in the story record and closing at F — ⛔ not a friction charge.
+⛔ Do ⛔ not "fix" it by restoring the public arm.
+
+⭐ **AND THE INVARIANT THIS STORY IS MEASURED AGAINST MOVES IN THE SAFE DIRECTION.**
+`2026-09-04-189` **cl.3** — *"a member must see MORE than the public, ⛔ never less"*, scoped to a
+DATA CLASS by `2026-09-04-195` cl.1 — is satisfied **STRUCTURALLY**, by **LOWERING THE PUBLIC**,
+⛔ never by widening the member. ⇒ ⛔ nothing was added to any member surface to make a comparison
+come out right, which is the one way this could have become a friction event.
+
+⛔ **WHAT THIS DISPOSITION DOES ⛔ NOT TOUCH.**
+· **Story 11b.1's row** (*"visitor / mourner … finding a drive by DISTRICT + DATE + DRIVE CODE — ⛔
+there is no search by the deceased member's name"*) is **CONFIRMED INTACT, ⛔ not amended and ⛔ not
+retired**. It describes the **INDEX SEARCH**; this story touched ⛔ no index, ⛔ no filter and ⛔ no
+name basis. ⚠ The 11b.10 section above already withdrew an overstatement about that row — ⛔ do ⛔ not
+re-open it here.
+· **`limits.search`** is unchanged — tightening or loosening it is **A DECISION** (`2026-09-02-183`
+cl.5), ⛔ not a knob, and ⛔ nothing here moved it.
+· The **admin masking knob** is `super_admin`-only ⇒ ⛔ not member-facing. ⚠⛔ Its STATUS did change —
+after this story the masking machinery has ⛔ **NO PUBLIC CONSUMER** (`-190` cl.4 RETAINS the code) —
+but a dormant `super_admin` control is ⛔ not friction on any payer.
+· The **stage vocabulary**, the **target/meter** and the **member drive list** are stories **B**/**C**/
+**D**/**E**'s and are ⛔ not in this story's diff.
+
+⭐ **The baseline is untouched by this story — ⛔ no rise, ⛔ nothing to ratchet**
+([[project_friction_budget_baseline_ratchet]]). ⚠⛔ **AND ⛔ NO IMPROVEMENT IS CLAIMED EITHER.** The
+page unambiguously renders **less**, so `page_weight_bytes` can only have fallen — ⛔ but a
+before/after delta was ⛔ **not captured** for this change, so ⛔ no number is stated and ⛔ no ratchet
+is proposed on the strength of an inference ([[feedback_record_unattested_no_backfill]]). The gate's
+own report is the record: ceiling unchanged, ⛔ no loosening, baseline **3942**.

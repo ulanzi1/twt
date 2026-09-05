@@ -692,11 +692,77 @@ rule for `{district_name}` too, or a withheld-district drive reads *"who served 
 ⭐ **Simplest rule, ⛔ no combinatorial variants:** *omit the clause whose value is absent.* ⇒ one
 sentence, three optional clauses.
 
+### 9.7 ⚠⛔ CORRECTION TO §9.3 — **the POLICY is established; it is the VERIFICATION that is not**
+
+⭐ **BigDev is right, and §9.3 as first written was ⛔ too strong.** ⚠ It read as though the linkage
+between the account holder and the nominee were **arbitrary**. ⛔ It is ⛔ not. The record establishes
+the **intent** plainly: money may ⛔ **not** go to any person other than the nominee, and the
+decision log names the obligation in terms — the **APPROVER DUTY**.
+
+⚠⛔ **⛔ BUT THE RECORD SAYS, EQUALLY PLAINLY, THAT THE DUTY ⛔ CANNOT BE PERFORMED TODAY.** ⭐ Three
+findings, ⛔ all verified live at `054ff76a`, ⛔ none inferred:
+
+**1. ⛔ The schema — which the decision log itself designates THE AUTHORITY — denies the linkage in
+terms.** `packages/domain/src/schema/claim_nominee_bank_accounts.ts:9-11`, verbatim:
+
+> *"there is deliberately **NO `nominee_rank` column, NO FK to `member_nominees`, and NO
+> holder-name-must-match-nominee linkage of any kind: the filer types a holder name per account,
+> full stop.**"*
+
+⚠ `2026-09-04-190`'s follow-up records a **two-document contradiction** on exactly this point —
+`contracts/src/contributions/nominee-accounts.ts:18` calls it *"the NOMINEE name"* while the schema
+denies the linkage — and rules: ⭐ **"the schema is the authority."**
+
+**2. ⛔⛔ NOBODY IN THE APPROVAL CHAIN CAN SEE THE FIELD.** `D5-subject` **(ii)**, the *"UN-MECHANIZED
+APPROVER DUTY"*: *"⛔ nobody in the verifier → state-trustee → correcting-admin chain can SEE
+`account_holder_name`; the only read-back is a **presence boolean**."*
+⭐ **Verified live:** the ⛔ only decrypts of `account_holder_name` in the whole tree are the **public
+page**, the **payment path**, and the **claim-intake write**. ⛔ There is ⛔ **no approval surface among
+them.** ⇒ the duty exists and is ⛔ **structurally un-performable**.
+
+**3. ⛔ `D5-subject` IS OPEN — BOTH HALVES**, with named triggers. ⛔ It was made **NON-BLOCKING** by
+`D5(a)`; ⭐ it was ⛔ **not resolved** ([[feedback_closure_language_precision]]).
+
+⇒ ⭐ **THE ACCURATE STATEMENT OF THE FINDING, replacing §9.3's:** the sentence *"X, nominee of Late
+Y"* publishes as **established fact** a relationship that the Trust **intends and requires**, but
+which ⛔ **no system step verifies and no human in the chain can check.** ⛔ It is ⛔ not an arbitrary
+claim — ⚠ it is an **unverified** one, and the record says so in three places.
+
+### 9.7.1 ⭐⭐ AND THERE IS A BETTER FIX THAN CHANGING THE WORDS
+
+⭐ **The data to verify against ⛔ ALREADY EXISTS.** `member_nominees.name_ciphertext`
+(`schema/member_nominees.ts:60`) holds the **declared nominee's name**, Tier-1, keyed
+`(member_id, rank)`. ⇒ the match the schema declined to build at Story 6.8 is **buildable now**, from
+data already collected.
+
+⚠⛔ ⇒ **if the policy is that money reaches ⛔ only the nominee — and the Panel says it is — then the
+right answer is ⛔ NOT to soften the public sentence. It is to MECHANIZE THE DUTY**, so that the
+sentence becomes **true by construction**:
+
+- ⭐ surface `account_holder_name` on Story **6.10**'s verification console, so the approver can
+  actually perform the check they are already accountable for; and/or
+- ⭐ record the holder↔nominee match as an explicit, auditable step at approval.
+
+⭐⭐ **That is EXACTLY what `D5-subject` (ii) asks for**, and its recorded trigger is *"the next story
+touching Story 6.10's console, **or any story adding a Tier-1 decrypt to an approval surface**."*
+⇒ ⭐ this ruling is the occasion to schedule it, ⛔ not a reason to weaken the words.
+
+⚠ ⛔ **It is ⛔ not 11b.12's work** — ⛔ this story touches ⛔ no approval surface. ⭐ It is a story of
+its own, and the Panel's ruling is the strongest reason yet to open one.
+
+### 9.7.2 ⛔ §9.4 IS ⛔ UNAFFECTED BY THIS CORRECTION
+
+⚠ The **second** finding stands **whole**, ⛔ independent of the first: the nominee name is ⛔ **not on
+the index wire at all**, and the index is **paginated + district-filterable** ⇒ putting it there
+creates a **bulk-harvestable list of living private individuals** that `-190` cl.2 — a ruling about
+**one drive's page** — does ⛔ not cover. ⭐ Even a **fully verified** nominee name raises that
+question; ⛔ verification does ⛔ not answer it.
+
 ### 9.6 ⭐ What we need
 
 | # | Question | ⭐ Our recommendation |
 |---|---|---|
-| 1 | *"nominee of Late …"* — the unfounded relational claim (§9.3) | ⭐ **Adopt the surgical fix** — *"for the family of Late {family_name}"*. ⚠ If the recipient must be named, use *"who received on behalf of the family"*. |
+| 1 | *"nominee of Late …"* — an **UNVERIFIED** relational claim (§9.3, ⚠ **as corrected at §9.7**) | ⭐ **Open a story to MECHANIZE the approver duty** (`D5-subject` (ii)) — the match data already exists. ⚠ **Until it lands**, either adopt the surgical fix or ship the sentence **knowing** the check is un-performable. ⛔ Our recommendation is to mechanize, ⛔ not to soften. |
 | 2 | nominee name on the **index** — a new, bulk-harvestable exposure (§9.4) | ⭐ **⛔ Do not put it there.** ⭐ Closed automatically by the fix above. ⚠ If the Panel wants it anyway, it needs its **own ruling** — ⛔ `-190` cl.2 does not reach this surface. |
 | 3 | absent district (§9.5) | ⭐ **Omit the clause.** |
 

@@ -1,4 +1,37 @@
-# last_updated: 2026-09-05b (⭐⭐⭐ **11b.3a THIRD PASS COMPLETE — G4 REVIEWED. ⛔ ZERO ROWS MOVE. 11b.3a STAYS `done`.**
+# last_updated: 2026-09-05c (⭐⭐ **ONE QUESTION ROUTED TO THE TRUSTEE PANEL. ⛔ ZERO ROWS MOVE.**
+#   ⛔ epic-11b `in-progress`; ⛔ 11b-3a `done`; ⛔ 11b-10 `done`; ⛔ 11b-11…17 ALL `ready-for-dev`.
+#   ⭐ `trustee-panel-routing-note-2026-09-05-11b3a-appendix-a-defects-and-the-ratified-combination.md`
+#   — the ONE finding of the 65-patch third pass that is the PANEL'S to answer, ⛔ not BigDev's.
+#   ⭐⭐ **TWO DEFECTS IN THE SAME APPENDIX, BOTH BEARING ON `2026-09-03-184`'s RATIFICATION.**
+#   **(i) THE COMBINATION.** Appendix A — ⭐ the half the note tells the Panel they can answer from
+#   ALONE — binds `A="Yes"` to *"leave things as they are"* and reserves the unguessable address for
+#   `A="No"`. The ratified answer is **A=Yes PLUS the token**. cl.4 records the coupling as
+#   load-bearing, ⚠ but the record ⛔ NEVER says the answer went outside the options as put ⇒ it cannot
+#   be told whether the PANEL chose the combination or the AUTHOR reconciled it after. ⇒ a CONSENT
+#   question. **(ii) A FALSE PREMISE.** The same appendix said a phone-app member *"cannot"* reach the
+#   page — ⛔ false; `Linking.openURL` hands the URL to the SYSTEM BROWSER. ⭐ The narrow claim (nothing
+#   in the app linked to such a page) WAS true; the device-capability claim was not — and it sat under
+#   *"the donor-verification reading describes a workflow that does NOT exist."*
+#   ⭐ **OPTION (b) TAKEN, ⛔ NOT (a) OR (c):** both of those settle on the author's reading of Panel
+#   intent, and ⛔ only the Panel can say ([[feedback_supersede_never_reinterpret]]).
+#   ⚠⛔ **THE NOTE DISCLOSES ITS OWN COST:** §6 states that 11b-10 has ALREADY SHIPPED BOTH HALVES of
+#   cl.4 (✅ verified — `SahyogVivranEntry.tsx`, `public-site.ts:60`, and the read resolves by
+#   `publicToken` with ⛔ ZERO remaining canonical-identifier predicates) ⇒ merged code sits on the
+#   other side of a changed answer, and that is said plainly rather than hidden. §7 discloses that
+#   `-190` cl.1 WITHDRAWS the four Tier-1 fields anyway ⇒ this may be a SMALLER matter than it looks,
+#   ⛔ recorded so the Panel does not spend time on a stale premise.
+#   ⭐⭐ **AND THE NOTE REFUSES TO REPEAT THE DEFECT IT REPORTS** — its Appendix A lists WHOLE
+#   POSITIONS, ⛔ not a fork, including *"you have it right, add one line"* (⭐ the cheapest correct
+#   outcome, and a proper one). It also names, in plain words, that this was found by a THIRD review
+#   after two earlier ones each closed the story as finished.
+#   ⛔ **NOTHING IS BLOCKED.** 11b-11 is ⛔ NOT gated on this — it implements `-190` cl.1, untouched by
+#   the note. ⛔ Do ⛔ not treat 11b-11's withdrawal as closing the question: it removes the EXPOSURE,
+#   ⛔ not the question of how consent was obtained.
+#   ⛔ **The other 64 patches, 3 decisions and 16 deferrals of the third pass are ⛔ NOT routed here** —
+#   they are the author's. ⭐ Exactly one item was Panel-scope and exactly one was sent.
+#   ⛔ Three files touched, ALL governance artifacts; ⛔ ZERO code changed.)
+#
+# last_updated_prior: 2026-09-05b (⭐⭐⭐ **11b.3a THIRD PASS COMPLETE — G4 REVIEWED. ⛔ ZERO ROWS MOVE. 11b.3a STAYS `done`.**
 #   ⛔ epic-11b `in-progress`; ⛔ 11b-10 `done`; ⛔ 11b-3a **`done`**; ⛔ 11b-11…17 ALL `ready-for-dev`.
 #   ✅ **ALL FOUR CHUNKS REVIEWED BY ALL THREE LAYERS.** G4 = the governance documents (6 files /
 #   +1,497): **2 decision-needed · 15 patch · 4 deferred · 1 dismissed · TWO more REAL GAPs (10, 11).**

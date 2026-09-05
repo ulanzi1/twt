@@ -4,7 +4,7 @@
 
 **Story:** 11b.3a (`done`, merged) · **Bears on:** `2026-09-03-184` (Trustee-ratified — Dhiraj Rahul,
 Kalpana Bharti) · **Raised by:** the third code-review pass of Story 11b.3a, chunk G4, 2026-09-05
-**Status:** ⛔ **OPEN — put to the Panel.** ⛔ Nothing is being changed on the author's own reading.
+**Status:** ✅ **ANSWERED 2026-09-05 — Trustee-ratified by Dhiraj Rahul and Kalpana Bharti. Logged as `2026-09-05-200`. See §11.**
 
 > ⭐⭐ **PANEL MEMBERS — PLEASE START AT APPENDIX A.** The numbered sections are the engineering
 > record. ⛔ You are not expected to read them.
@@ -177,6 +177,41 @@ presenting them as a fork is what went wrong last time.
   *"you have it right"*, the whole remedy is one recorded line.
 
 ---
+
+---
+
+## 11. ✅ ANSWERED — 2026-09-05. Ratified by Dhiraj Rahul and Kalpana Bharti. Logged as `2026-09-05-200`
+
+**The answers, verbatim:**
+
+> **Q1 — the combination.** *"yes, a collecting drive's page should be reachable by the public"*
+> **Q2 — the false fact.** *"It doesn't change anything. Phone-app member should reach the page."*
+
+**What this settles:**
+
+1. ⭐⭐ **`2026-09-03-184` STANDS IN FULL.** Q1 asked whether the Panel meant **both answers together**;
+   the answer is **yes**. ⇒ cl.4's coupling is the **Panel's own position**, ⛔ not an author's
+   post-hoc reconciliation, and the **consent question is CLOSED BY RULING** — ⛔ not by deferral and
+   ⛔ not by an authoring act. ⇒ this note's **Appendix A option (1)/(2)**.
+   ⚠⛔ **One precision, recorded rather than smoothed:** the Panel's words restate **(A)** and ⛔ do
+   **not** restate **(B)**. ⭐ The question asked was *"both together?"* and *"yes"* answers it as
+   asked — ⛔ but the verbatim text is preserved above so a future reader sees **exactly what was
+   said**, ⛔ not an expansion. ⭐ Over-reading a Panel answer is the defect this note exists to report;
+   ⛔ it is not repeated here.
+2. ⭐ **The annotation `-184` was owed is made — in `-200`, ⛔ not by editing `-184`.** That entry now
+   carries a **forward pointer only**; ⛔ none of its clauses is re-read or amended.
+3. ⚠ **The false premise is recorded as false and changed nothing.** The Panel weighed the corrected
+   fact and did not move.
+4. ⭐⭐ **AND THE PANEL WENT FURTHER THAN THIS NOTE ASKED:** *"Phone-app member **should** reach the
+   page."* ⇒ the corrected fact **strengthens** their position — the mobile reachability this note had
+   described as an impossibility is **desirable**. ✅ **Already satisfied by Story 11b.10** (the
+   member-app entry and the address helper), so ⛔ **no new work is created** — ⚠ but it is now a
+   **ratified property**: removing the member-app path to the public drive page would **reverse a
+   Trustee ruling**, ⛔ not merely refactor a link.
+
+**What remains open:** ⛔ nothing on this note. ⚠ The **process** finding that produced it — that a
+routing note's own framing can present the Panel's real answer as unavailable — is a **separate item**
+carried to the **Epic 11b retrospective**, and is ⛔ **not** closed by this ruling.
 
 ## Sources — every one read at `955e3cdf`
 

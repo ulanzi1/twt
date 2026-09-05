@@ -1,4 +1,38 @@
-# last_updated: 2026-09-05c (⭐⭐ **ONE QUESTION ROUTED TO THE TRUSTEE PANEL. ⛔ ZERO ROWS MOVE.**
+# last_updated: 2026-09-05d (⭐⭐ **TRUSTEE-RATIFIED `2026-09-05-200` — THE PANEL ANSWERS. ⛔ ZERO ROWS MOVE.**
+#   ⛔ epic-11b `in-progress`; ⛔ 11b-3a `done`; ⛔ 11b-10 `done`; ⛔ 11b-11…17 ALL `ready-for-dev`.
+#   ✅ **THE ONE QUESTION ROUTED FROM THE 65-PATCH THIRD PASS IS ANSWERED**, by the SAME two trustees
+#   who ratified `-184` (Dhiraj Rahul, Kalpana Bharti).
+#   **Q1 (the combination):** *"yes, a collecting drive's page should be reachable by the public"*
+#   ⇒ the Panel confirms it meant **BOTH answers together**. **`2026-09-03-184` STANDS IN FULL**, and
+#   cl.4's coupling is the **PANEL'S OWN POSITION**, ⛔ not an author's post-hoc reconciliation.
+#   ⇒ the CONSENT question is **CLOSED BY RULING** — ⛔ not deferral, ⛔ not an authoring act.
+#   **Q2 (the false premise):** *"It doesn't change anything. Phone-app member should reach the page."*
+#   ⇒ the mobile claim is recorded **AS FALSE** and **moved nothing**.
+#   ⚠⛔ **ONE PRECISION, RECORDED RATHER THAN SMOOTHED:** the Panel's words restate **(A)** and ⛔ do
+#   NOT restate **(B)**. The question asked was *"both together?"* and *"yes"* answers it AS ASKED —
+#   ⛔ but the verbatim text is preserved in `-200` so a future reader sees EXACTLY what was said.
+#   ⭐ Over-reading a Panel answer is the very defect that produced this note; ⛔ it is not repeated in
+#   closing it.
+#   ⭐ **THE OWED ANNOTATION IS MADE IN `-200`, ⛔ NOT BY EDITING `-184`** — that entry carries a
+#   FORWARD POINTER only, and ⛔ none of its clauses is re-read ([[feedback_supersede_never_reinterpret]]).
+#   ⚠⭐⭐ **THE PANEL WENT FURTHER THAN THE NOTE ASKED** — *a phone-app member SHOULD reach the page.*
+#   ⇒ the corrected fact **STRENGTHENS** their position: what we had described to them as an
+#   impossibility is **DESIRABLE**. ✅ **ALREADY SATISFIED by 11b-10** (`SahyogVivranEntry.tsx`,
+#   `public-site.ts:60 sahyogVivranUrl`) ⇒ ⛔ **NO NEW WORK.** ⚠⛔ **BUT IT IS NOW A RATIFIED PROPERTY:**
+#   a future story that removes the member-app path to the public drive page would **REVERSE A TRUSTEE
+#   RULING**, ⛔ not merely refactor a link. ⭐ **OWED: say so at the call site** — one doc-block at
+#   `SahyogVivranEntry.tsx`, ⛔ NOT YET WRITTEN, recorded here so it is ⛔ not lost.
+#   ⛔ **NOTHING ELSE MOVES.** ⛔ `-160` cl.10(a) untouched · ⛔ `-179` cl.1 (`D8-default` FAIL-OPEN)
+#   untouched · ⛔ `-190` cl.1 untouched ⇒ **11b-11's withdrawal of the four Tier-1 fields proceeds
+#   unchanged and is ⛔ NOT affected** · ⛔ the rate-limit tier untouched (`-184` cl.3 stands).
+#   ⛔ **The third pass's OTHER 65 patches, 3 decisions and 16 deferrals are UNAFFECTED** — they were
+#   deliberately ⛔ not routed to the Panel and remain the author's.
+#   ⚠⛔ **AND THE PROCESS FINDING IS ⛔ NOT CLOSED BY THIS RULING** — that a routing note's own framing
+#   can present the Panel's real answer as unavailable is a SEPARATE item, carried to the **Epic 11b
+#   retrospective** alongside the two other patterns this pass produced.
+#   ⛔ Four files touched, ALL governance artifacts; ⛔ ZERO code changed.)
+#
+# last_updated_prior: 2026-09-05c (⭐⭐ **ONE QUESTION ROUTED TO THE TRUSTEE PANEL. ⛔ ZERO ROWS MOVE.**
 #   ⛔ epic-11b `in-progress`; ⛔ 11b-3a `done`; ⛔ 11b-10 `done`; ⛔ 11b-11…17 ALL `ready-for-dev`.
 #   ⭐ `trustee-panel-routing-note-2026-09-05-11b3a-appendix-a-defects-and-the-ratified-combination.md`
 #   — the ONE finding of the 65-patch third pass that is the PANEL'S to answer, ⛔ not BigDev's.

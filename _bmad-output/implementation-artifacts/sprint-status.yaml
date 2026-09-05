@@ -1,4 +1,30 @@
-# last_updated: 2026-09-05d (⭐⭐ **TRUSTEE-RATIFIED `2026-09-05-200` — THE PANEL ANSWERS. ⛔ ZERO ROWS MOVE.**
+# last_updated: 2026-09-05e (⭐ **`-200` cl.4's OWED DOC-BLOCK IS WRITTEN. ⛔ ZERO ROWS MOVE.**
+#   ⛔ epic-11b `in-progress`; ⛔ 11b-3a `done`; ⛔ 11b-10 `done`; ⛔ 11b-11…17 ALL `ready-for-dev`.
+#   ✅ The one obligation `2026-09-05-200` created is DISCHARGED — the entry recorded as **"OWED and
+#   ⛔ NOT YET WRITTEN"** at `2026-09-05d` is now written at BOTH call sites.
+#   ⭐ **WHAT IT ADDS, and why it was ⛔ not already covered:** the component's existing header argues
+#   from **COUPLING** — the path exists because (B) removed the only way to reach (A). ⚠ That argument
+#   is sound but **CONDITIONAL**: it would evaporate the day another inbound path existed, and a future
+#   reader could then delete the component believing (A) was still served. ⛔ `-200` cl.4 closes that
+#   reading — *"Phone-app member should reach the page"* makes the member-app path an **INDEPENDENT
+#   ratified property**, ⭐ ruled even if a dozen other ways in existed.
+#   ⭐⭐ **THE PROVENANCE IS RECORDED AT THE CALL SITE, ⛔ not only in the log** — that the Panel's
+#   ORIGINAL ruling was obtained on a note telling them a member on this app **COULD NOT** reach such a
+#   page; that this was **FALSE** (`Linking.openURL` hands the URL to the SYSTEM browser); and that when
+#   corrected they ruled the reachability **DESIRABLE**. ⇒ a future reader sees WHY the property is
+#   ratified, ⛔ not merely THAT it is.
+#   ⛔ Three prohibitions stated in terms: ⛔ do not delete on the ground that *"the public site is
+#   reachable anyway"*; ⛔ do not fold into a generic outbound-links screen; ⛔ do not gate beyond the
+#   card's own gate. ⭐ Each needs a **PANEL decision superseding `-200` cl.4**, ⛔ not an author's call.
+#   ✅⭐ **VERIFIED — MEASURED, ⛔ NOT ASSERTED:** `tsc --noEmit` @twt/mobile **clean (exit 0)** ·
+#   `eslint` both files **clean (exit 0)** · `tests/unit/sahyog-vivran-entry.test.ts` **12/12 PASS** ·
+#   banned-terminology needles **0** in both files. ⛔ Full `ci:local` ⛔ not run — these are the
+#   targeted gates a comment-only change can reach.
+#   ⚠ **THE ONLY CODE COMMIT OF THIS ENTIRE REVIEW**, and it is comments — ⛔ zero behaviour change.
+#   ⭐ Governance preceded it: `-200` landed at `a2a6541d`, this follows ⇒ history reads governance →
+#   implementation ([[feedback_governance_commits_precede_implementation]]).)
+#
+# last_updated_prior: 2026-09-05d (⭐⭐ **TRUSTEE-RATIFIED `2026-09-05-200` — THE PANEL ANSWERS. ⛔ ZERO ROWS MOVE.**
 #   ⛔ epic-11b `in-progress`; ⛔ 11b-3a `done`; ⛔ 11b-10 `done`; ⛔ 11b-11…17 ALL `ready-for-dev`.
 #   ✅ **THE ONE QUESTION ROUTED FROM THE 65-PATCH THIRD PASS IS ANSWERED**, by the SAME two trustees
 #   who ratified `-184` (Dhiraj Rahul, Kalpana Bharti).

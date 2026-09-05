@@ -52,6 +52,14 @@ export function niyamavaliClauseUrl(clauseId: string, locale: string): string {
  * works as an OUTBOUND link from an app whose browser surface holds no member token
  * ([[project_no_browser_member_token_surface]]).
  *
+ * ⭐⭐ AND THE MEMBER-APP PATH ITSELF IS RATIFIED — `2026-09-05-200` cl.4: **"Phone-app member should
+ * reach the page."** ⚠ Trustee-ratified AFTER the Panel was corrected on a FALSE claim in the note
+ * that obtained their original ruling — it had told them a member on this app *could not* reach such
+ * a page, when `Linking.openURL` (below/`(auth)/terminated.tsx:94`) hands the URL to the SYSTEM
+ * browser. ⇒ told the truth, they ruled the reachability DESIRABLE. ⛔ So this helper is ⛔ not a
+ * convenience: it is half of a ruled property, and removing the caller reverses a Trustee ruling.
+ * ⭐ The full statement lives at `components/sahyog-vivran/SahyogVivranEntry.tsx`.
+ *
  * ⚠ AND WHY AN OUTBOUND LINK RATHER THAN AN IN-APP SCREEN: the same reason stated at the top of
  * this module. Every route outside `(auth)` sits behind the root session guard, so an in-app view of
  * PUBLIC trust content would put that content back behind a gate. ⛔ Do not "improve" this into a

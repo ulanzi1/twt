@@ -439,9 +439,25 @@ since a half-renamed vocabulary is worse than either end state.
 > **(4)** `{familyName}` is consent-**nullable**, and on the drive page the deceased name is ⛔ not on
 > the wire at all (**11b.3b**'s, gated on `-173`/`-174`).
 >
+> ✅⭐ **ALL FOUR BLOCKERS ANSWERED 2026-09-05 (note §9.1):** ⭐ **B owns the COPY SOURCE, D owns the
+> AMOUNT FIELD** — the deadlock is dissolved by making the dependency explicit; the **index** gets its
+> own ratified one-line wording; **E/F consume B's copy later** (⭐ exactly Trap 5, now ruled); and a
+> **no-name variant** is supplied.
+>
+> ⚠⛔ **IMPLEMENTATION NOTE — ⛔ do ⛔ not render an empty rupee figure.** `t()` interpolates
+> `{amount}` to nothing while D is unbuilt. ⇒ ⭐ B ships the **copy and the no-amount variants**; the
+> amount-bearing line **renders only when D lands**.
+>
+> ⏳ **ONE ITEM STILL OPEN — the index line's middle clause (note §9.3/§9.4).** *"{nominee_name},
+> **nominee of** Late {family_name}"* asserts a relationship ⛔ the data cannot support (**6.8 D1**
+> removed the linkage deliberately — the holder **MAY NOT BE THE NOMINEE**, ⛔ UNVERIFIED and today
+> UNVERIFIABLE), and the nominee name is ⛔ **not on the index wire at all** ⇒ putting it there is a
+> **NEW, BULK-HARVESTABLE exposure** (paginated + district-filterable) that `-190` cl.2 ⛔ does not
+> cover. ⭐ A surgical fix is proposed. ⛔ Do ⛔ not build that clause until it is ruled.
+>
 > ⭐⭐ **WHAT THIS STORY STILL DOES, TODAY, UNCHANGED:** **AC2 deletes the falsehood.** ⛔ The false
 > sentence goes now; ⭐ the replacement does ⛔ not have to wait for it.
-> ⇒ **Tasks 2-7 remain UNBLOCKED.** ⛔ Do ⛔ not build the ratified block here.
+> ⇒ **Tasks 2-7 remain UNBLOCKED.** ⛔ Do ⛔ not build the ratified block or the held clause here.
 >
 > ⚠⛔ **AND WHEN IT LANDS IT MAY REACH `outcome.fully_funded` TOO** — §7's option 5 puts the SAME line
 > on the met-in-full and fell-short branches, because three different sentences ARE the funding verdict

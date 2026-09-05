@@ -15,10 +15,15 @@ copy: the string was traced to the branch that emits it before this note was wri
 ⭐ recorded verbatim at **§8**), **plus a two-column table — Nominee full name | District — above the
 message, on BOTH the member and public views.**
 
-⏳ **(Q3) OPEN — ⛔ BUILD IS BLOCKED ON FOUR QUESTIONS, ⭐ set out at §8.3.** ⚠ Three of the ratified
-elements ⛔ cannot be built as written today: **the rupee amount does ⛔ not exist on either public
-wire**, **the message will ⛔ not fit the surface it was written for**, and **the member views it
-names ⛔ do not exist yet.** ⛔ Nothing is applied. Logged as Story 11b.12 **D2**.
+✅⭐ **ALL FOUR BLOCKERS ANSWERED, 2026-09-05 — §9.1.** B owns the copy source, D supplies the amount
+field; the index gets its own one-line wording; E/F consume B's copy later; a no-name variant is
+supplied.
+
+⏳ **ONE ITEM OPEN — §9.3/§9.4.** The ratified **index** line says *"{nominee_name}, **nominee of**
+Late {family_name}"*. ⛔ The data ⛔ cannot support that relationship (6.8 D1 removed the linkage
+deliberately; the holder **may not be the nominee**), and the nominee name is ⛔ **not on the index
+wire at all** — putting it there is a **new, bulk-harvestable exposure** `-190` cl.2 does ⛔ not cover.
+⭐ A surgical fix is proposed that keeps everything else. Logged as Story 11b.12 **D2**.
 ⛔ **NON-BLOCKING.** Story 11b.12 proceeds without it; the string is ⛔ untouched until you answer.
 
 > ## ⚠⛔ CORRECTION — 2026-09-05, **v1 of this note contained a FALSE STATEMENT**
@@ -572,6 +577,132 @@ have ⛔ not "corrected" either; we ship exactly what was ratified once you conf
 ⭐ **What B can ship IMMEDIATELY, with ⛔ none of the above resolved:** the removal of *"The trust met
 its commitment to the family"* and the two other false payout sentences (AC2). ⭐ **The falsehood does
 ⛔ not have to wait for the replacement.**
+
+---
+
+
+
+---
+
+## 9. ✅ THE FOUR BLOCKERS ANSWERED — ⚠ and TWO findings on the new index line
+
+### 9.1 ✅ Answered 2026-09-05 (BigDev, relaying DR + KB)
+
+| # | Blocker | ✅ Resolution |
+|---|---|---|
+| **1** | the `₹{amount}` deadlock | ✅ **Dependency made EXPLICIT.** *"B defines the message structure and copy; D supplies the approved amount field."* ⇒ ⛔ no deadlock: B owns the **copy source**, D owns the **field**. |
+| **2** | where the message goes | ✅ **The index gets its own ONE-LINE wording** — ratified, §9.2. The five-paragraph block stays for the drive page. |
+| **3** | the member views | ✅ ***"B can ship the shared copy source now. E/F consume it later."*** ⇒ exactly Trap 5's shape, now ruled. |
+| **4** | the withheld name | ✅ **No-name variant supplied:** *"The family received contributions of ₹{amount} from colleagues."* / *"परिवार के लिए सहकर्मियों ने मिलकर ₹{amount} का योगदान किया।"* |
+
+⚠⛔ **ONE IMPLEMENTATION NOTE ON (1), so it is ⛔ not discovered as a bug.** `t()` **THROWS** on a
+missing key and would interpolate `{amount}` to nothing while D is unbuilt. ⇒ **B ships the copy and
+the no-amount variants; the amount-bearing line RENDERS only when D lands.** ⭐ B is ⛔ not blocked —
+⛔ but it must ⛔ not render a sentence with an empty rupee figure in the meantime.
+
+### 9.2 ✅ The ratified INDEX line (DR + KB, 2026-09-05)
+
+> **EN:** *"{amount} contributed by colleagues for {nominee_name}, nominee of Late {family_name}, who
+> served in {district_name} district."*
+>
+> **HI:** *"जनपद {district_name} में कार्यरत स्व० {family_name} की नॉमिनी {nominee_name} के लिए सहकर्मियों
+> द्वारा {amount} का योगदान।"*
+
+⭐ **VERIFIED AND CORRECT:** *"served in {district_name} district"* / *"जनपद … में कार्यरत"* is
+**accurate**. `district` on this wire is documented as *"the deceased member's latest posting
+district, RAW"* (`sahyog-drive.ts:130`) ⇒ the sentence says exactly what the field holds. ⭐ We checked
+this rather than assume it.
+
+### 9.3 ⛔⛔ FINDING 1 — THE LINE ASSERTS A RELATIONSHIP THE DATA ⛔ DOES NOT ENCODE
+
+⚠⛔ ***"{nominee_name}, nominee of Late {family_name}"*** / ***"स्व० {family_name} की नॉमिनी
+{nominee_name}"*** is a **sentence-level factual claim about two NAMED private individuals**: that
+this person **is the nominee of** that deceased member.
+
+⛔⛔ **THE DATA ⛔ CANNOT SUPPORT THAT CLAIM.** The value is
+`account_holder_name_ciphertext` — the **disbursement account holder**. Story **6.8 D1** removed the
+nominee linkage **deliberately**: ⛔ no FK to `member_nominees`, ⛔ no rank, ⛔ no match rule. The
+public-vs-private matrix records it in terms:
+
+> *"the account holder **MAY NOT BE THE NOMINEE**, and the value is guarded by a multi-stage human
+> approval chain — verifier → state trustee → freeze — that ⛔ **CANNOT SEE IT** … this publishes,
+> under the word 'Nominee', a value that is both **UNVERIFIED** and today **UNVERIFIABLE**."*
+
+⚠⛔ **WHY THIS IS DIFFERENT FROM WHAT IS ALREADY SHIPPED.** Today the claim is **one word** — a field
+labelled *"Nominee Name"* — and it is already routed as a known problem (`D5-subject`). ⭐ The new line
+promotes it to a **full sentence naming both people and stating their relationship**. ⇒ if the account
+holder is, say, a brother-in-law who received the disbursement, **the public index states — of a named
+living person — that they are the nominee of a named deceased person, and that is false.**
+
+⛔⛔ **AND IT IS THE ⛔ EXACT CLASS OF DEFECT THIS ENTIRE NOTE EXISTS TO FIX.** *"The trust met its
+commitment"* was a sentence asserting something the system does not do. ⚠ *"X, nominee of Late Y"* is
+a sentence asserting something the system **does not know**. ⭐ We would be replacing one unfounded
+public claim with another — about **named private individuals** this time.
+
+⭐ **THE SURGICAL FIX — ⭐ it keeps everything the Panel asked for except the unfounded half:**
+
+> **EN:** *"{amount} contributed by colleagues for the family of Late {family_name}, who served in
+> {district_name} district."*
+>
+> **HI:** *"जनपद {district_name} में कार्यरत स्व० {family_name} के परिवार के लिए सहकर्मियों द्वारा {amount} का
+> योगदान।"*
+
+⇒ ⭐ same warmth, same specificity, same tokens minus one — and it says **only what is true**:
+colleagues contributed, for that family. ⛔ It also removes Finding 2 entirely.
+
+⚠ **If the Panel wants the recipient named**, the accurate phrasing is what the data ⛔ does support —
+that this person **received on the family's behalf** — ⛔ never that they **are the nominee**:
+*"… for {nominee_name}, who received on behalf of the family of Late {family_name} …"*
+
+### 9.4 ⛔⛔ FINDING 2 — THE NOMINEE NAME IS ⛔ NOT ON THE INDEX TODAY, AND THE INDEX IS BULK-HARVESTABLE
+
+⭐ **Verified:** `sahyog-drive.ts` (the index contract) carries `deceasedMemberName`, `district`,
+`closedAt`, the pool codes, the token and the confirmed count. ⛔ **It carries ⛔ NO nominee field at
+all.** The nominee name lives only on the **per-drive page** (`sahyog-vivran.ts:265`).
+
+⚠⛔ **⇒ `-190` cl.2 DOES ⛔ NOT ALREADY COVER THIS.** That ruling put the name on **one drive's page**.
+Putting it on the **index** is a **different surface with a different exposure shape**:
+
+- ⛔ The index is **paginated** and returns a `total` ⇒ ⭐ Story 11b.10's Panel note already established
+  that **walking its pages harvests every row**.
+- ⛔⛔ It carries a **district filter** (`sahyog-drive.ts:189`) ⇒ *"list every nominee in Lucknow
+  district"* becomes **one request**.
+- ⇒ the result is a **bulk-downloadable list of living private individuals — name + district —**
+  ⛔ which does not exist today at any tier.
+
+⚠ ⛔ **This is ⛔ NOT us re-opening `-190` cl.2.** ⭐ That ruling stands untouched for the drive page.
+⇒ this is a **NEW exposure on a NEW surface** that the Panel has ⛔ not yet been asked about
+([[feedback_supersede_never_reinterpret]] — ⛔ a ruling for one surface does ⛔ not auto-widen to
+another).
+
+⭐ **§9.3's surgical fix closes this too** — ⛔ no nominee name on the index, ⛔ nothing to harvest.
+
+### 9.5 ⚠ ONE SMALLER ITEM — THREE NULLABLE TOKENS IN ONE SENTENCE
+
+⚠ All three interpolations can be **absent**:
+
+| Token | Null when | Today's index renders |
+|---|---|---|
+| `{family_name}` | ⭐ the family **declines to name** their relative (consent, and revocable) | the row, ⛔ without the name |
+| `{district_name}` | ⛔ no posting row | *"Not recorded"* |
+| `{nominee_name}` | ⛔ no disbursement account recorded | ⛔ n/a — ⛔ not on this wire |
+
+⇒ ⭐ **the ratified no-name variant (answer 4) covers `{family_name}`** — ⚠ but the index line needs a
+rule for `{district_name}` too, or a withheld-district drive reads *"who served in  district."*
+⭐ **Simplest rule, ⛔ no combinatorial variants:** *omit the clause whose value is absent.* ⇒ one
+sentence, three optional clauses.
+
+### 9.6 ⭐ What we need
+
+| # | Question | ⭐ Our recommendation |
+|---|---|---|
+| 1 | *"nominee of Late …"* — the unfounded relational claim (§9.3) | ⭐ **Adopt the surgical fix** — *"for the family of Late {family_name}"*. ⚠ If the recipient must be named, use *"who received on behalf of the family"*. |
+| 2 | nominee name on the **index** — a new, bulk-harvestable exposure (§9.4) | ⭐ **⛔ Do not put it there.** ⭐ Closed automatically by the fix above. ⚠ If the Panel wants it anyway, it needs its **own ruling** — ⛔ `-190` cl.2 does not reach this surface. |
+| 3 | absent district (§9.5) | ⭐ **Omit the clause.** |
+
+⭐⭐ **EVERYTHING ELSE IS SETTLED AND BUILDABLE.** ⭐ Answers 1, 3 and 4 close blockers 1, 3 and 4
+outright; the drive-page block, the tagline, the gratitude paragraphs and the joining line are ⛔ not
+affected by either finding. ⚠ Only the **one index sentence** is held, ⛔ and only on its middle clause.
 
 ---
 

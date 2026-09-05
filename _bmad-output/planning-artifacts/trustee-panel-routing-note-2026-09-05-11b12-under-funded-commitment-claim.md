@@ -51,7 +51,7 @@ wire at all** — putting it there is a **new, bulk-harvestable exposure** `-190
 > caught by a Trustee reading the note as intended. ⛔ It should have been caught before it reached you.
 
 > ### 📖 **Panel members — please start at [Appendix A: In plain words](#appendix-a--in-plain-words).**
-> It is at the end and is **complete on its own** — the whole question, the options, and what follows
+> ⭐ It is **complete on its own** — the whole question, the options, and what follows
 > from each, with ⛔ no technical detail. ⭐ **You can answer this note from Appendix A alone.**
 > The numbered sections are the engineering record. ⛔ You are not expected to read them.
 
@@ -277,6 +277,70 @@ insurer, and we have agreed before that promise-shaped language gets that check.
 **Nothing changes on the website.** The line stays exactly as it is until you answer. Story 11b.12 —
 the one that fixes the *other* wrong sentences about payment on that page — carries on without this,
 and ⛔ does ⛔ not touch this line.
+
+---
+
+## Appendix A2 — ⭐ WHERE THIS STANDS NOW (updated 2026-09-05, after your answers)
+
+⭐ **You have since answered almost everything. In plain words, here is what is settled and the ⛔ ONE
+thing still open.**
+
+### ✅ Settled
+
+- **You told us the trust makes no commitment to the family.** ⇒ the false sentence **goes**.
+- **You gave us your own wording** — the five-paragraph message and the one-line version for the
+  list page. ⭐ We have recorded both exactly as you wrote them.
+- **You settled the money figure**: we write the message now, and the rupee amount is switched on by
+  the separate piece of work that produces it. ⇒ ⛔ nothing waits on anything else.
+- **You settled the app**: we write the words once, and the member screens use them when they are
+  built.
+- **You gave us the wording for when a family has asked not to be named.** ⭐ Thank you — that case
+  is now covered.
+
+### ⏳ The one thing still open — and it is ⛔ not a wording question
+
+Your line for the list page says: ***"…for {nominee name}, **nominee of** Late {family name}…"***
+
+⭐ **You are right that the money must only ever go to the nominee. That is the rule, and it is
+written down.** ⚠⛔ **But we have checked, and ⛔ nothing in the system actually checks it:**
+
+- the person approving a claim **⛔ cannot see** the account holder's name at all — they are only
+  told whether **something** was filled in;
+- the database was **deliberately built without** any link between that name and the nominee on
+  record;
+- this gap was written down some time ago and is **still open**.
+
+⇒ so if we print *"X, nominee of Y"* on a public page, we state as **fact** something the Trust
+**requires** but ⛔ **nobody has verified.**
+
+⭐⭐ **THE GOOD NEWS — AND OUR RECOMMENDATION.** We already store the nominee's name from when the
+member first declared them. ⇒ **the check you intend can be BUILT.** We would rather **build the
+check** than water down your sentence:
+
+1. show the account holder's name to the person approving the claim, so they can actually do the
+   check they are already responsible for; and
+2. record that they did it.
+
+⇒ then *"nominee of"* becomes **true because it was checked**, ⛔ not merely intended. ⭐ That is a
+small separate piece of work, and your ruling is the best reason yet to schedule it.
+
+### ⚠ One more thing to decide, separately
+
+The nominee's name is on **one drive's page** today — ⛔ it is **not** on the **list** page. Putting
+it on the list means anyone can page through and collect **every nominee's name and district in one
+go**, and there is a district filter, so they could ask for one district at a time. ⛔ That is a
+different thing from showing one name on one family's page, and you have ⛔ not been asked about it.
+
+⚠ ⛔ **This is true even if the check above is built** — verifying a name does ⛔ not decide whether a
+list of them should be downloadable.
+
+### ⭐ What we need from you
+
+1. **Build the check** (our recommendation), or print the sentence knowing it is unverified — or use
+   *"for the family of Late {family name}"* and leave the nominee's name off the list page.
+2. **May the nominee's name go on the list page at all?**
+3. **When a district is not recorded**, we will simply leave that part of the sentence out — ⭐ tell
+   us if you would rather it said something.
 
 ---
 
@@ -613,7 +677,11 @@ the no-amount variants; the amount-bearing line RENDERS only when D lands.** ⭐
 district, RAW"* (`sahyog-drive.ts:130`) ⇒ the sentence says exactly what the field holds. ⭐ We checked
 this rather than assume it.
 
-### 9.3 ⛔⛔ FINDING 1 — THE LINE ASSERTS A RELATIONSHIP THE DATA ⛔ DOES NOT ENCODE
+### 9.3 ⛔⛔ FINDING 1 — THE LINE ASSERTS A RELATIONSHIP ⛔ NOTHING VERIFIES
+
+> ⚠⭐ **READ §9.6 WITH THIS SECTION.** As first written this section was **too strong** — it read as
+> though the holder↔nominee linkage were **arbitrary**. ⛔ It is ⛔ not: the **policy is established**.
+> ⭐ §9.7 corrects it and proposes the better fix.
 
 ⚠⛔ ***"{nominee_name}, nominee of Late {family_name}"*** / ***"स्व० {family_name} की नॉमिनी
 {nominee_name}"*** is a **sentence-level factual claim about two NAMED private individuals**: that
@@ -692,7 +760,7 @@ rule for `{district_name}` too, or a withheld-district drive reads *"who served 
 ⭐ **Simplest rule, ⛔ no combinatorial variants:** *omit the clause whose value is absent.* ⇒ one
 sentence, three optional clauses.
 
-### 9.7 ⚠⛔ CORRECTION TO §9.3 — **the POLICY is established; it is the VERIFICATION that is not**
+### 9.6 ⚠⛔ CORRECTION TO §9.3 — **the POLICY is established; it is the VERIFICATION that is not**
 
 ⭐ **BigDev is right, and §9.3 as first written was ⛔ too strong.** ⚠ It read as though the linkage
 between the account holder and the nominee were **arbitrary**. ⛔ It is ⛔ not. The record establishes
@@ -728,7 +796,7 @@ Y"* publishes as **established fact** a relationship that the Trust **intends an
 which ⛔ **no system step verifies and no human in the chain can check.** ⛔ It is ⛔ not an arbitrary
 claim — ⚠ it is an **unverified** one, and the record says so in three places.
 
-### 9.7.1 ⭐⭐ AND THERE IS A BETTER FIX THAN CHANGING THE WORDS
+### 9.6.1 ⭐⭐ AND THERE IS A BETTER FIX THAN CHANGING THE WORDS
 
 ⭐ **The data to verify against ⛔ ALREADY EXISTS.** `member_nominees.name_ciphertext`
 (`schema/member_nominees.ts:60`) holds the **declared nominee's name**, Tier-1, keyed
@@ -750,7 +818,7 @@ touching Story 6.10's console, **or any story adding a Tier-1 decrypt to an appr
 ⚠ ⛔ **It is ⛔ not 11b.12's work** — ⛔ this story touches ⛔ no approval surface. ⭐ It is a story of
 its own, and the Panel's ruling is the strongest reason yet to open one.
 
-### 9.7.2 ⛔ §9.4 IS ⛔ UNAFFECTED BY THIS CORRECTION
+### 9.6.2 ⛔ §9.4 IS ⛔ UNAFFECTED BY THIS CORRECTION
 
 ⚠ The **second** finding stands **whole**, ⛔ independent of the first: the nominee name is ⛔ **not on
 the index wire at all**, and the index is **paginated + district-filterable** ⇒ putting it there
@@ -758,11 +826,11 @@ creates a **bulk-harvestable list of living private individuals** that `-190` cl
 **one drive's page** — does ⛔ not cover. ⭐ Even a **fully verified** nominee name raises that
 question; ⛔ verification does ⛔ not answer it.
 
-### 9.6 ⭐ What we need
+### 9.7 ⭐ What we need
 
 | # | Question | ⭐ Our recommendation |
 |---|---|---|
-| 1 | *"nominee of Late …"* — an **UNVERIFIED** relational claim (§9.3, ⚠ **as corrected at §9.7**) | ⭐ **Open a story to MECHANIZE the approver duty** (`D5-subject` (ii)) — the match data already exists. ⚠ **Until it lands**, either adopt the surgical fix or ship the sentence **knowing** the check is un-performable. ⛔ Our recommendation is to mechanize, ⛔ not to soften. |
+| 1 | *"nominee of Late …"* — an **UNVERIFIED** relational claim (§9.3, ⚠ **as corrected at §9.6**) | ⭐ **Open a story to MECHANIZE the approver duty** (`D5-subject` (ii)) — the match data already exists. ⚠ **Until it lands**, either adopt the surgical fix or ship the sentence **knowing** the check is un-performable. ⛔ Our recommendation is to mechanize, ⛔ not to soften. |
 | 2 | nominee name on the **index** — a new, bulk-harvestable exposure (§9.4) | ⭐ **⛔ Do not put it there.** ⭐ Closed automatically by the fix above. ⚠ If the Panel wants it anyway, it needs its **own ruling** — ⛔ `-190` cl.2 does not reach this surface. |
 | 3 | absent district (§9.5) | ⭐ **Omit the clause.** |
 
@@ -771,7 +839,6 @@ outright; the drive-page block, the tagline, the gratitude paragraphs and the jo
 affected by either finding. ⚠ Only the **one index sentence** is held, ⛔ and only on its middle clause.
 
 ---
-
 
 ---
 

@@ -419,13 +419,31 @@ deliberate and ruled"*, ⛔ not *"these particular four strings never appear"*.
 files, the copy keys, three anti-leak sites and six shipped test files — ⛔ land them in **one commit**,
 since a half-renamed vocabulary is worse than either end state.
 
-### 🟡 D2 — **OPEN. ⛔ NON-BLOCKING (routed 2026-09-05).** Does `outcome.under_funded` violate AC2?
+### 🟡 D2 — **OPEN. ⛔ NON-BLOCKING — ROUTED TO THE PANEL 2026-09-05.** Does `outcome.under_funded` violate AC2?
+
+> ⭐ **ROUTING NOTE WRITTEN:**
+> `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-05-11b12-under-funded-commitment-claim.md`
+> ⏳ **OPEN — awaiting the Panel.** ⛔ Do ⛔ not touch the string until it is answered.
 
 `locales/en/sahyog-drive.json:44` — **`outcome.under_funded`**:
 > *"The cycle closed. **The trust met its commitment to the family.**"*
 
-⚠ In an **under-funded** context, *"met its commitment"* most naturally reads as **"the trust made up
-the shortfall"** — ⛔ i.e. the trust paid. `2026-09-04-192` established the trust **⛔ never disburses**.
+⚠⛔ **AND THE ROUTING RESEARCH MADE IT SHARPER THAN "AMBIGUOUS COPY".** ⭐ Verified at the producer,
+⛔ not read off the words: `close-of-cycle/framing.ts:159` emits `under_funded` ⟺
+**`deliveredTotal < expectedTotal`**. ⇒ the page asserts *"the trust met its commitment"* **precisely
+on the branch that means LESS than expected was delivered**, and `2026-09-04-192` establishes the trust
+**⛔ never disburses** at all.
+
+⭐ **Three further facts, all checked:**
+- ⛔ The sentence is **author-written copy from Story 11b.1** (`4598ad70`) — ⛔ **never ratified**,
+  ⛔ never routed. The phrase appears in ⛔ **no** decision, ⛔ no PRD line and ⛔ no epic
+  ([[feedback_negative_claims_checkable_in_repo]] — a checked negative, ⛔ not an assumption).
+- ⚠ **The same enum's MEMBER-facing copy tells the opposite story** —
+  `close-of-cycle.json:5`: *"{N} colleagues stood together; {amount} reached {family}'s family."*
+  ⇒ **members** deliver, and the trust is ⛔ not the actor. Two copy families, one enum.
+- ⚠ `2026-09-04-189` **consequence 6** already names this class: *"an outcome of members paying,
+  ⛔ never a guarantee the trust can make"* — insurance-shaped language, routed to counsel.
+  ⛔ This string predates that analysis and was ⛔ never checked against it.
 
 - **(a)** It means the trust **made up the shortfall** ⇒ ⛔ **FALSE** per `-192`; it must be rewritten,
   and AC2's scope widens to a fourth string.

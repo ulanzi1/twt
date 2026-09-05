@@ -840,6 +840,78 @@ affected by either finding. ⚠ Only the **one index sentence** is held, ⛔ and
 
 ---
 
+
+---
+
+## 10. ✅ ALL THREE ANSWERED — D2 IS CLOSED, and three pieces of work fall out
+
+### 10.1 ⚠⛔ ONE ATTRIBUTION QUERY BEFORE THIS IS RECORDED AS RATIFIED
+
+⚠ These rulings were relayed as **"by DR and KP."** ⛔ **Every prior ratification in this epic reads
+"Dhiraj Rahul + Kalpana Bharti" — DR + KB.** ⭐ We have ⛔ **not** silently normalised *KP* to *KB*:
+recording a Trustee ratification against the wrong person is a governance defect in its own right,
+and this note already carries one lesson about asserting what we had not checked.
+
+⇒ ⛔ **CONFIRM THE SECOND INITIALS.** ⭐ Everything below is recorded and buildable either way — only
+the attribution line waits.
+
+### 10.2 ✅ The three rulings
+
+| # | Ruling | Effect |
+|---|---|---|
+| **1** | ⭐ **Open a story to MECHANIZE the approver duty.** | ✅ `D5-subject` **(ii)** moves from *routed* to **commissioned**. ⭐ The check becomes real; *"nominee of"* becomes true **because it was checked**. |
+| **2** | ⭐ **Add the nominee name on the index.** | ✅ §9.4's finding is **ANSWERED, ⛔ not overruled** — the Panel was shown the bulk-harvest property and **accepted it**. ⇒ a **new Tier-1 public exposure on a new surface**, Trustee-ratified. |
+| **3** | ⭐ **Omit the clause.** | ✅ An absent `{district_name}` (or any absent token) **drops its clause**. ⛔ No combinatorial variants. |
+
+⇒ ⭐⭐ **D2 IS CLOSED.** The index line is settled, with the *"nominee of"* clause standing **because
+ruling 1 makes it true**, ⛔ not because the objection was waived.
+
+### 10.3 ⚠ ONE IMPLEMENTATION CONSEQUENCE OF RULING 2 — ⛔ NOT a re-litigation
+
+⭐ **What is ⛔ NOT new, stated so it is ⛔ not raised as alarm:** the public surfaces are **already**
+`edge_cacheable` at `s-maxage=300`, and the drive page **already** serves this decrypted name. ⛔ Edge
+-caching a decrypted Tier-1 value is ⛔ **not** a new posture. ⭐ We checked before saying so.
+
+⚠⛔ **What ⛔ IS new — the DECRYPT VOLUME:**
+
+| Surface | Tier-1 decrypts per request |
+|---|---|
+| Drive page (today) | **1-2** — one drive, `.max(2)` accounts |
+| Index (after ruling 2) | ⚠ **up to 100** — `PUBLIC_SURFACE_PAGE_SIZE_CAP = 50` rows × 2 accounts |
+
+⇒ a **~50× step change in per-request KMS/decrypt load on the highest-traffic public endpoint**, which
+is **unauthenticated** and **paginated**. ⚠ And `public-read.ts` currently joins ⛔ **no** nominee table
+at all, so this is a **new join per row** as well.
+
+⭐ ⛔ **Not an objection — a sizing fact.** ⇒ the story that builds it owes: a **batched** decrypt
+(⛔ never N+1 per row), a **decrypt-failure posture** for a list (the drive page's per-field sentinel
+does ⛔ not obviously scale to 50 rows), and a **measured** check against the shipped p95 tooling
+([[project_measured_validation_framework]]).
+
+### 10.4 ⭐ Where each ruling lands — ⛔ none of it is 11b.12's
+
+| Ruling | Home | Why ⛔ not 11b.12 |
+|---|---|---|
+| **1** — mechanize the duty | ⭐ **A NEW STORY** (Story 6.10's console family) | ⛔ 11b.12 touches ⛔ no approval surface. ⚠ It is a **Tier-1 decrypt at a NEW internal surface** and owes its own PII-posture reasoning — `D5-subject` (ii) says so in terms. |
+| **2** — nominee name on the index | ⭐ **ITS OWN STORY, or a NAMED addition to story D (11b-14)** | ⛔ 11b.12's **AC7** forbids touching any field tier, listing predicate or wire shape. ⚠ This is a contract + domain read + matrix + decrypt change. ⭐ D already extends the index (`live`, the meter, the amount) so it is the natural host — ⛔ but a **Tier-1 PII exposure is a different class** from D's work and needs its own AC and its own matrix row. |
+| **3** — omit the clause | ✅ **11b.12**, ⭐ in the copy source it already owns | ⭐ A rendering rule over the copy B is already authoring. |
+
+⚠⛔ **AND RULING 2 OWES A DECISION-LOG ENTRY BEFORE ANY CODE** — it is a **Trustee-ratified new public
+Tier-1 exposure on a surface `-190` cl.2 did ⛔ not reach**, plus a **new matrix row**. ⭐ Governance
+commits first, and separately ([[feedback_governance_commits_precede_implementation]]).
+
+### 10.5 ⭐ What 11b.12 does with all this
+
+⭐ **Ruling 3 only.** ⛔ Everything else is other stories' work, now named and owned.
+⇒ **11b.12's scope is unchanged**: delete the three falsehoods (AC2), fix the stage vocabulary, ship
+the shared copy source **including the ratified index line and the omit-the-clause rule** — ⚠ with the
+`{nominee_name}` token **authored but ⛔ not yet rendered**, exactly as `{amount}` is (§9.1).
+
+⭐⭐ **That is the same pattern for both pending tokens: B writes the copy; another story lights it up.**
+
+---
+
+
 ---
 
 ## References

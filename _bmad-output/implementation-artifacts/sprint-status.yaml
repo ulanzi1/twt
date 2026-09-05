@@ -1,4 +1,48 @@
-# last_updated: 2026-09-05l (✅⭐⭐ **STORY 11b.11 — SECOND CODE-REVIEW PASS, RE-REVIEWING THE FIRST
+# last_updated: 2026-09-05m (⭐⭐ **STORY 11b.12 (B) VALIDATED — SIX CRITICAL CORRECTIONS. ⛔ ZERO
+#   ROWS MOVE; 11b-12 STAYS `ready-for-dev`.** ⚠ ⛔ No code; the story file and 11b-15's AC4.
+#   ⭐ **(1) BASELINE RE-POINTED `30683cef` → `054ff76a`.** Story A LANDED between them and rewrote
+#   SIX of B's files (`sahyog-vivran.ts` +188, `sahyog-vivran-read.ts` +240, `[driveToken].astro`
+#   +193, `sahyog-vivran-render.ts` +135, both `sahyog-vivran.json`, `scrape-test.spec.ts` +239).
+#   B's banner claimed INDEPENDENCE of A — true of FIELDS, ⛔ false of FILES. `PublicSahyogVivranStatus`
+#   had already moved `:75` → `:88` ([[feedback_story_validate_footguns]], the sibling class).
+#   ⭐ **(2) THE ANTI-LEAK COLLISION IS THREE SITES, ⛔ NOT ONE.** B named only
+#   `sahyog-drive.spec.ts:595-612`. Also: `public-pages-sahyog-vivran.test.ts:155-165` (a contracts
+#   unit test asserting the Zod shape REJECTS `live`/`closed` — red under D1(b)) and ⚠⛔ a
+#   **doc-block** at `sahyog-vivran-read.ts:144-150` stating the prohibition as an INVARIANT.
+#   ⛔ The doc-block is the dangerous one: a stale RULE, ⛔ not stale vocabulary, that ⛔ NO gate catches.
+#   ⭐ **(3) D1 CONTRADICTED AC7 — RESOLVED WITH A MAPPING TABLE.** D1 said tokens change "on both
+#   surfaces"; AC7 said `live` is ⛔ NOT added to the index (story D). The index enum stays **TWO**
+#   members (`['closed','verified']`); the drive page gets three. Followed literally D1 would have
+#   minted a public token with ⛔ no producer. ⚠ Also pinned: both maps become PART-IDENTITY after
+#   the rename ⇒ a future reader deletes them as no-ops and re-fuses state to wire token.
+#   ⭐ **(4) A THIRD FALSE-PAYOUT STRING, WHICH AC2's TEST WOULD HAVE MISSED.**
+#   `sahyog-drive.json:3` `page.intro` — *"still to be paid out … already paid out"* — ⛔ matches
+#   NEITHER the literal `"not yet been paid"` NOR a case-sensitive `"Paid out"`. AC2's assertion is
+#   now case-insensitive and concept-shaped. ⭐ It also carries all THREE retired words.
+#   ⭐ **(5) TASK 5 INVERTED — B RENDERS ⛔ NOTHING IN THE APP.** `driveStatus` appears ⛔ nowhere in
+#   `apps/mobile`; `SahyogVivranEntry.tsx` is a link-out card with ⛔ no stage. And 11b-15 **AC4**
+#   already ORDERS the same render + affordance while marked BLOCKED ON B. ⇒ B ships the SOURCE,
+#   E builds the surface. ⭐ Recorded from BOTH sides — 11b-15's AC4 gains the reciprocal note,
+#   because ⛔ no per-story pass can see the loop ([[feedback_circular_deferral_between_sibling_stories]]).
+#   ⭐ **(6) THREE NEW TRAPS + THE BLAST RADIUS.** Trap 6: a NEW locale namespace needs FIVE hand-edits
+#   in `catalog.ts` and the parity gate ⛔ does NOT catch the omission — the `/members` 500 that threw
+#   on EVERY REQUEST on `main`. Trap 7: the `.astro` files ⛔ are NOT the render layer — four
+#   presenter/server files carry the vocabulary. Trap 8: SIX shipped test files pin the old copy and
+#   go red. Plus a **Files this story touches** table (19 rows) and AC8/Task 7, the friction-budget
+#   disposition B lacked while 11b.1/10/11 each carried one.
+#   ✅ **D3 RULED** — the ban is on rendered VALUES, ⛔ not key names: `collecting.title`/`.body` keep
+#   their keys, their copy is rewritten; the resulting code/word divergence is a KNOWING ruled trade,
+#   noted at the call sites so it is ⛔ not "fixed" or re-filed.
+#   🟡 **D2 OPENED and ROUTED, ⛔ NON-BLOCKING** — `outcome.under_funded`'s *"the trust met its
+#   commitment to the family"* may imply a disbursement `-192` says ⛔ never happens. ⛔ A copy story
+#   has ⛔ no authority to decide what the trust promises ([[feedback_supersede_never_reinterpret]]).
+#   ⭐ DISPOSED, ⛔ not skipped: the `sahyog-vivran-financial-truth` SCAN_FILES tax — B owes NOTHING
+#   (⛔ no new read-path file; `.json` is ⛔ not a scanned extension). Recorded because an unpaid tax
+#   and an inapplicable one look identical in a diff.
+#   ⛔ epic-11b `in-progress`; ⛔ 11b-3a `done`; ⛔ 11b-10 `done`; ⛔ 11b-11 `done`;
+#   ⛔ 11b-12…17 ALL `ready-for-dev`.)
+#
+# last_updated_prior: 2026-09-05l (✅⭐⭐ **STORY 11b.11 — SECOND CODE-REVIEW PASS, RE-REVIEWING THE FIRST
 #   PASS'S OWN PATCHES. ⛔ ZERO ROWS MOVE — 11b-11 STAYS `done`.**
 #   ⚠⭐ **HEADLINE FINDING: THE FIRST PASS'S OWN `aria-label` FIX WAS BUGGY.** `aria-labelledby`
 #   pointed at the `<dt>` (the static field LABEL, "Nominee Name" — identical for every account),
@@ -15644,8 +15688,19 @@ development_status:
   # ALLOW-list (status is exactly one of the ruled public set; ⛔ no OTHER internal token anywhere) —
   # strictly stronger. ⚠ The overlap must be EXPLAINED where the assertion lives, naming
   # `2026-08-21-144` cl.8, or a future reader reverts it as a leak. ⛔ `spawned` stays a pure deny.
-  # ⇒ Tasks 2-5 UNBLOCKED; land the rename in ONE commit — a half-renamed vocabulary is worse than
+  # ⇒ Tasks 2-6 UNBLOCKED; land the rename in ONE commit — a half-renamed vocabulary is worse than
   # either end state.
+  # ⭐⭐ **VALIDATED 2026-09-05 — SIX CRITICAL CORRECTIONS.** Baseline re-pointed to `054ff76a`
+  # (⚠ STORY A HAS LANDED and rewrote SIX of B's files; `PublicSahyogVivranStatus` moved `:75`→`:88`).
+  # The anti-leak collision is **THREE** sites, ⛔ not one — incl. a **doc-block** stating a stale RULE
+  # that ⛔ NO gate catches. D1 gains a **mapping table**: the INDEX enum stays **TWO** members,
+  # resolving its contradiction with AC7. Trap 2 gains a **third** false string (`page.intro`) that
+  # AC2's literal, case-sensitive test would have MISSED. ⛔ **Task 5 INVERTED — B renders NOTHING in
+  # `apps/mobile`** (⛔ no stage surface exists; 11b-15 AC4 already owns it — recorded from both sides).
+  # NEW: Trap 6 (`catalog.ts`'s five hand-edits), Trap 7 (the render layer), Trap 8 (six red test
+  # files), Trap 9 (one source), a 19-row **Files this story touches** table, AC8+Task 7 (friction
+  # budget). ✅ **D3 RULED** (ban is on VALUES, ⛔ not key names). 🟡 **D2 OPEN, ⛔ NON-BLOCKING**
+  # (`outcome.under_funded` — a policy question, ⛔ not a copy call).
   11b-12-stage-vocabulary-and-info-affordance: ready-for-dev
   # ⭐ 11b-13 — STORY **C** of the `2026-09-04-195` cl.3 split. ⛔ NOT in `epics.md` — owes an
   # ANNOTATION. ⚠ INDEPENDENT of 11b-11 / 11b-12; ⭐ **STORY D DEPENDS ON IT.**
@@ -15686,6 +15741,10 @@ development_status:
   11b-14-live-drives-listed-and-the-progress-meter: ready-for-dev
   # ⭐ 11b-15 — STORY **E** of the `2026-09-04-195` cl.3 split. ⛔ NOT in `epics.md` — owes an
   # ANNOTATION. ⛔ BLOCKED ON B (11b-12). ⭐ **STORY F DEPENDS ON IT.**
+  # ⚠⛔ **B SHIPS THE SOURCE ONLY — THIS STORY BUILDS THE SURFACE** (recorded 2026-09-05 in
+  # AC4). `driveStatus` appears ⛔ nowhere in `apps/mobile` today, so the fourth tab here is the
+  # FIRST place in the app a stage exists ⇒ the stage render AND the *"i"* affordance are
+  # ⭐ THIS story's Task 4, ⛔ not inherited from B. ⛔ Do ⛔ NOT mint a second key set.
   # ⭐⭐ A **NEW SURFACE**, ⛔ not a filter change: `(tabs)/` holds THREE tabs and ⛔ no member drive
   # list exists — `SahyogVivranEntry` is a single link on the My Pool card.
   # ✅ **D1 RULED 2026-09-04 (`-197`)** — the list mirrors the Pariwar's CONFIGURED form, and ⭐ My Pool

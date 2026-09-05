@@ -143,6 +143,23 @@ compares the two reads**, ⛔ not by inspection.
 present, as a **real focusable control** with a **tap** handler and an accessible name — ⛔ never
 hover-only.
 
+> ⭐⭐ **THIS SURFACE — AND ITS AFFORDANCE — IS ⛔ NOT BUILT BY B. IT IS BUILT HERE.**
+> ⚠⛔ B (`11b-12`) ships the **SOURCE ONLY**: the shared keyed stage set in `packages/i18n`, plus a
+> test that it is the only definition. ⛔ B renders **NOTHING** in `apps/mobile`, ⛔ by ruling —
+> `driveStatus` appears ⛔ nowhere in the app today and `SahyogVivranEntry.tsx` is a link-out card
+> with ⛔ no stage. ⇒ **the fourth tab this story creates is the FIRST place in the app where a stage
+> exists at all**, so the render **and** the *"i"* control are ⭐ **this story's Task 4**, ⛔ not
+> inherited work.
+>
+> ⛔⛔ **AND ⛔ DO ⛔ NOT MINT A SECOND KEY SET.** If B's key path is not recorded above by the time
+> this story starts, ⛔ **stop and read B's Dev Agent Record** — ⛔ do not define your own. Two sources
+> is exactly how *"Active"* came to mean two different things; `-193` cl.3 exists to close it, and
+> minting a parallel set here would reopen it one epic later (B's Trap 9).
+>
+> ⚠ Recorded from **both sides** deliberately. B's Task 5 writes the key path into this AC by name.
+> ⭐ B and E each read as though the other renders the stage; ⛔ no per-story pass can see that loop
+> ([[feedback_circular_deferral_between_sibling_stories]]).
+
 ### AC5 — Family 13, in full
 It is a new `[SURFACE]`. ⭐ Every row affordance is announced: a container carrying
 `accessibilityLabel` is explicitly `accessible={true}` (⚠ tamagui `<Button>` is `styled(View)` and

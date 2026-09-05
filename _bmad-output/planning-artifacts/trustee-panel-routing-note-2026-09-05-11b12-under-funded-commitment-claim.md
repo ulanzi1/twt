@@ -845,17 +845,13 @@ affected by either finding. ⚠ Only the **one index sentence** is held, ⛔ and
 
 ## 10. ✅ ALL THREE ANSWERED — D2 IS CLOSED, and three pieces of work fall out
 
-### 10.1 ⚠⛔ ONE ATTRIBUTION QUERY BEFORE THIS IS RECORDED AS RATIFIED
+### 10.1 ✅ ATTRIBUTION CONFIRMED — **Dhiraj Rahul + Kalpana Bharti (DR + KB)**
 
-⚠ These rulings were relayed as **"by DR and KP."** ⛔ **Every prior ratification in this epic reads
-"Dhiraj Rahul + Kalpana Bharti" — DR + KB.** ⭐ We have ⛔ **not** silently normalised *KP* to *KB*:
-recording a Trustee ratification against the wrong person is a governance defect in its own right,
-and this note already carries one lesson about asserting what we had not checked.
+⭐ Relayed as *"DR and KP"*; **confirmed 2026-09-05 as a typo — it is KB.** ⇒ §10.2's rulings are
+**Trustee-ratified by Dhiraj Rahul and Kalpana Bharti**, consistent with every prior ratification in
+this epic. ⭐ Recorded rather than silently normalised, because the query was raised on the record.
 
-⇒ ⛔ **CONFIRM THE SECOND INITIALS.** ⭐ Everything below is recorded and buildable either way — only
-the attribution line waits.
-
-### 10.2 ✅ The three rulings
+### 10.2 ✅ The three rulings — **Trustee-ratified, DR + KB, 2026-09-05**
 
 | # | Ruling | Effect |
 |---|---|---|

@@ -1,4 +1,54 @@
-# last_updated: 2026-09-05a (⭐⭐ **11b.3a THIRD PASS — CHUNK G3 REVIEWED. ⛔ ZERO ROWS MOVE. 11b.3a STAYS `done`.**
+# last_updated: 2026-09-05b (⭐⭐⭐ **11b.3a THIRD PASS COMPLETE — G4 REVIEWED. ⛔ ZERO ROWS MOVE. 11b.3a STAYS `done`.**
+#   ⛔ epic-11b `in-progress`; ⛔ 11b-10 `done`; ⛔ 11b-3a **`done`**; ⛔ 11b-11…17 ALL `ready-for-dev`.
+#   ✅ **ALL FOUR CHUNKS REVIEWED BY ALL THREE LAYERS.** G4 = the governance documents (6 files /
+#   +1,497): **2 decision-needed · 15 patch · 4 deferred · 1 dismissed · TWO more REAL GAPs (10, 11).**
+#   ⭐ **THIRD-PASS TOTAL: 4 decision-needed · 65 patch · 16 deferred · 11 routed to 11b-11 ·
+#   11 dismissed · NINE REAL GAPs** (families 8, 10×3, 11×2, 13).
+#   ⭐⭐ **THE LAYERS WERE RETARGETED FOR PROSE** — contradiction hunter · CLAIM VERIFIER (grep every
+#   checkable assertion) · closure-language auditor. That retarget is why G4 produced the most severe
+#   findings of the four.
+#   ⛔⛔ **TWO DECISIONS OPEN, AND THE FIRST IS ABOUT PANEL CONSENT.**
+#   **D-G4-1:** the ratified answer is a COMBINATION THE PANEL WAS TOLD WAS NOT ON OFFER. Appendix A —
+#   the half the note says they can answer from ALONE — binds A="Yes" to *"leave things as they are"*
+#   and reserves the unguessable address for A="No". The ratified outcome is **A=Yes PLUS the token**.
+#   `-184` cl.4 then spends its longest clause discovering as a COUPLING PROBLEM the thing Appendix A
+#   had structured as an either/or. ⛔ NOTHING in the record notes the departure. ⚠ AND Appendix A
+#   carries a SECOND Panel-facing error: *"on mobile it is not possible at all — there is nowhere to
+#   type a web address"* is FALSE — `apps/mobile/lib/public-site.ts` + `Linking.openURL` hand the URL
+#   to the SYSTEM BROWSER. That claim is the premise behind *"the donor-verification reading describes
+#   a workflow that does NOT exist"*, on which the Panel ratified (A)+(B).
+#   ⛔ Not an author's call to paper over ([[feedback_supersede_never_reinterpret]]).
+#   **D-G4-2:** the `page_weight_bytes` escalation rests on a COUNT THAT DOES NOT EXIST. *"11a.5 →
+#   11b.9 → 11b.2b → 11b.3 → 11b.3a is the FIFTH"* splices THREE `member-app-native` (mobile EAS
+#   build) recordings onto TWO `member-public-web` ones. ⭐ The contradiction is INSIDE ONE PARAGRAPH:
+#   `9445` appears at exactly THREE dispositions and the next sentence names all three. The precedent
+#   quote is ALSO misattributed — *"standing blind spot … not three unlucky diffs"* is 11b.2b's, about
+#   the MOBILE gate, not 11b.3's. ⇒ correct to THREE and re-decide whether "standing gate defect" holds.
+#   ⭐⭐ **REAL GAP (family 10) — THE FIRST REVIEW PASS NEVER EXISTED IN COMMITTED HISTORY.** Verified
+#   by `git show <sha>:sprint-status.yaml` at every commit: the row ran `review → review → review →
+#   in-progress → in-progress → done`. ⛔ NEVER `done` before the last commit — yet the ledger entry
+#   written BY `ee692b4f` records *"`done` -> `in-progress`"*, a transition FROM A VALUE THAT NEVER
+#   EXISTED, and `git log -S` shows the earlier `review -> done` entry was added by that SAME commit.
+#   The first pass's NINE patches first appear in `bac8dda6` — *"the second pass's TEN patches"*, 19
+#   files / +926. ⛔ NOTHING WAS FABRICATED; every patch is real and every finding disclosed in prose.
+#   ⚠ The cost is EPISTEMIC and it lands on the Panel: the routing note tells the Trustees *"the first
+#   review said 'done', and it was wrong"* — and ⛔ NO READER CAN RECONSTRUCT IT. ⇒ routed to the retro:
+#   **a ledger entry states the transition THIS commit makes, from the value the PREVIOUS commit left.**
+#   ⭐⭐ **REAL GAP (family 11) — AND IT WAS THIS PASS'S OWN.** The AI-10-1 sentence was wrong THREE
+#   ways; the pass's 2026-09-04 fix corrected one, LEFT the authority error (`-178` puts the knob with
+#   the TRUST CENTRALLY, ⛔ not the Pariwar) and INTRODUCED A SECOND INSTANCE OF IT, and never added the
+#   FAIL-OPEN default. ✅ BOTH CORRECTED 2026-09-05, recorded in place, ⛔ not quietly re-edited.
+#   ⇒ third retro pattern: **a fix authored inside one chunk needs the same scepticism as the code.**
+#   ⭐ **AND WHAT THE CHUNK DOES WELL IS RECORDED TOO, because it bears on whether the findings are
+#   systemic:** FIVE distinct closure states held across FOUR documents with ⛔ none collapsed; family 9
+#   SATISFIED with a two-part FALSIFIABLE trigger on a half-lifted condition; attestations MEASURED
+#   (the "+14" reconciled exactly, the 34-job count confirmed against `ci-local.sh`), with non-vacuity
+#   proved by naming WHICH test failed AND that nothing else did; AC0's governance-first box a FACT.
+#   ⛔ **NOTHING EXECUTED for G1–G3** (`ci:local` not run); ⭐ **G4 findings were checked against
+#   COMMITTED GIT HISTORY**, and the four doc-only fixes of 2026-09-04 WERE executed and attested.
+#   ⛔ Four files touched, ALL governance artifacts; ⛔ ZERO code changed.)
+#
+# last_updated_prior: 2026-09-05a (⭐⭐ **11b.3a THIRD PASS — CHUNK G3 REVIEWED. ⛔ ZERO ROWS MOVE. 11b.3a STAYS `done`.**
 #   ⛔ epic-11b `in-progress`; ⛔ 11b-10 `done`; ⛔ 11b-3a **`done`**; ⛔ 11b-11…17 ALL `ready-for-dev`.
 #   ⭐ G3 = `apps/public` + `apps/admin` + `packages/i18n` + `scripts` (19 files / +1,998). **1
 #   decision-needed · 16 patch · 4 deferred · 3 ROUTED TO 11b-11 · 3 dismissed.** ⭐ **THREE more REAL

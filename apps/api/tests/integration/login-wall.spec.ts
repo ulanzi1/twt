@@ -15,6 +15,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { MEMBER_SESSION_GUARD } from '../../src/modules/auth/shared/member-session-guard.js';
+import { SAHYOG_VIVRAN_APPLICABLE_CONTROLS } from '../../src/modules/public-pages/sahyog-vivran-controls.js';
 import { ADMIN_SESSION_GUARD } from '../../src/modules/auth/shared/session-guard.js';
 import type { TurnstileVerifier } from '../../src/modules/auth/shared/turnstile.js';
 import { HONEYPOT_PATHS } from '../../src/plugins/security-headers/index.js';
@@ -174,9 +175,29 @@ const PUBLIC_ALLOWLIST = new Set<string>([
   // Tier-1 nominee-bank fields on this surface (`2026-08-28-165` cl.1/cl.3, under `2026-08-28-160`
   // cl.10) and the handler DECRYPTS them ⇒ **THIS ROUTE IS PII-BEARING**. ⛔ Amended, ⛔ not
   // deleted — the previous claim is named so nobody restores it.
+  // ⭐⛔⛔ **RE-AMENDED BY STORY 11b.11 — THE ROUTE IS ⛔ NO LONGER PII-BEARING *IN THE NOMINEE-BANK
+  // SENSE*, ⚠ AND IT IS ⛔ STILL PII-BEARING.** `2026-09-04-190` cl.1 (Trustee-ratified) withdraws
+  // the account number, IFSC, bank name and branch from `public`; `2026-09-04-191` cl.1 withdraws
+  // the VPA; ⭐ `-190` cl.2 KEEPS the account-holder name, rendered as **"Nominee Name"**. ⇒ FOUR
+  // ruled Tier-1 nominee-bank fields became **ONE**, and the handler decrypts exactly that one.
+  // ⛔⛔ **DO ⛔ NOT RESTORE THE PRE-11b.3a WORDING** — this entry may ⛔ not say the route carries
+  // zero Tier-1 fields, and 11b.3b's `deceased_member_name` sibling exposure via the index is
+  // untouched by this story. ⛔ AMEND, ⛔ do not revert.
   // ⇒ **D11(a)** (`2026-09-02-176`) ruled it states its APPLICABLE set; 11b.3a changed WHICH
   // controls apply, ⛔ not the rule — and ⭐ **STORY 11b.10 ADDED THE FIFTH** (the unguessable
-  // address). ⭐ **FIVE**, matching `routes.ts` exactly:
+  // address).
+  // ⭐⭐⛔ **AND STORY 11b.11 STOPPED IT BEING A HAND-COUNTED LIST.** The set is now
+  // `SAHYOG_VIVRAN_APPLICABLE_CONTROLS` (`apps/api/src/modules/public-pages/sahyog-vivran-controls.ts`),
+  // asserted for LENGTH and COMPOSITION by the test at the foot of this file, and cited rather than
+  // restated by `routes.ts` and `public-vs-private-matrix.yaml`. ⛔ Do ⛔ not write a number here.
+  // ⚠⛔ AND THE HONEST RECOUNT IS PART OF THE AMENDMENT: of the five bullets below, `noindex` is a
+  // crawler HINT (archivers and scrapers ignore it), *"no DETAIL or EXPORT affordance"* is
+  // irrelevant to a direct GET, and the Tier-1 read is the thing being DEFENDED ⇒ before 11b.10's
+  // opaque address, exactly **ONE** control stood between an anonymous caller and Tier-1 data.
+  // ⛔ Counting three non-controls as controls manufactured a false defence-in-depth.
+  // ⛔⛔ THE ENUMERATION HALF IS **CLOSED** and ⛔ must not be re-raised: `2026-09-03-184` (B) ruled
+  // the address unguessable and 11b.10 shipped the opaque `publicToken`.
+  // ⭐ The applicable set, in the constant's own order:
   //   · the named SEARCH rate limit, UNMODIFIED — ⛔ NOT `limits.read`, the looser tier, which is
   //     backwards for an enumeration surface. Keyed on the FORWARDED VISITOR ADDRESS via the same
   //     `perSessionKey` → `request.ip` → `trustProxy` chain.
@@ -186,13 +207,19 @@ const PUBLIC_ALLOWLIST = new Set<string>([
   //     this route IS the detail view, so what is absent is any onward affordance — ⛔ no list,
   //     ⛔ no sibling links, ⛔ no `format`/`csv`, and an EMPTY `.strict()` query schema that
   //     makes every query parameter a 400.
-  //   · ⭐ NEW AT 11b.3a — the BOUNDED, PROJECTED Tier-1 read. The four fields are decrypted
-  //     SERVER-SIDE here and ⛔ never by `apps/public` (the KEK is shared across EVERY Tier-1 field
-  //     class, so granting it for ONE gives it ALL — `2026-08-20-143` cl.1). The fan-out is bounded
-  //     by `DIRECTORY_DECRYPT_CONCURRENCY` at AT MOST EIGHT values per page (four fields × at most
-  //     two EQUAL accounts) — and only TWO per account once the Pariwar's masking window has
-  //     elapsed, because cl.10(e)'s retention list excludes the holder name and the VPA. The masked
-  //     projection is applied HERE: the wire's masked arm carries ⛔ no `accountNumber` key at all.
+  //   · ⭐ NEW AT 11b.3a — the BOUNDED, PROJECTED Tier-1 read, ⭐⛔ **NARROWED AT 11b.11**. It is
+  //     decrypted SERVER-SIDE here and ⛔ never by `apps/public` (the KEK is shared across EVERY
+  //     Tier-1 field class, so granting it for ONE gives it ALL — `2026-08-20-143` cl.1). ⚠ That
+  //     boundary property is UNCHANGED and is the load-bearing half.
+  //     ⭐⛔ WHAT CHANGED: the fan-out was AT MOST EIGHT values per page (four fields × at most two
+  //     EQUAL accounts), reduced to TWO per account once a Pariwar's masking window elapsed because
+  //     cl.10(e)'s retention list excluded the holder name and the VPA. ⇒ after `2026-09-04-190`
+  //     cl.1 + `2026-09-04-191` cl.1 it is **AT MOST TWO** values per page — ONE field × at most two
+  //     accounts — and there is ⛔ NO MASKED PROJECTION APPLIED HERE AT ALL: 11b.11 **D1(b)**
+  //     collapsed the wire's `masked` discriminator because both its arms became identical.
+  //     ⛔⛔ MASKING WAS ⛔ NOT DELETED — `-190` **cl.4** RETAINS `isNomineeBankMasked`, the schedule
+  //     table, its permission key and every test. ⚠ It has ⛔ NO PUBLIC CONSUMER, and ⛔ nothing
+  //     Trustee-facing may call it a live safeguard until it has one.
   //   · ⭐⭐ NEW AT 11b.10 — THE UNGUESSABLE PUBLIC ADDRESS. The path parameter is `:driveToken`, a
   //     128-bit CSPRNG token on the pool row under a GLOBAL unique index — ⛔ no longer the
   //     sequential `P-YYYY-MM-###` (`2026-09-03-184` **(B)**, Trustee-ratified). There is EXACTLY
@@ -381,4 +408,52 @@ describe('Login-wall fails-closed guard (AC-2, hermetic — no DB)', () => {
     }
   });
 
+  // ══════════════════════════════════════════════════════════════════════════════════════════════
+  // ⭐⭐ STORY 11b.11 (AC5) — THE `sahyog-vivran` CONTROL COUNT IS MECHANIZED, ⛔ NO LONGER COUNTED
+  // ══════════════════════════════════════════════════════════════════════════════════════════════
+  it('⭐ the sahyog-vivran applicable-control set is a CONSTANT, and its composition is asserted', () => {
+    // ⛔⛔ WHY THIS TEST EXISTS. **D11(a)** (`2026-09-02-176`) requires this route to state its
+    // APPLICABLE control set, and until Story 11b.11 that set was PROSE in THREE files with ⛔ no
+    // constant, ⛔ no test and ⛔ no lint rule. It was kept in step ⛔ only by a reviewer counting
+    // bullet points by eye — **which is exactly how it failed:**
+    //   · `routes.ts`'s header said FIVE while its own route-site comment said FOUR;
+    //   · `public-vs-private-matrix.yaml` said `noindex` was "control 3 of the THREE this route
+    //     states" — a different COUNT *and* a different ORDINAL from `routes.ts`, which numbered
+    //     `X-Robots-Tag` as 4.
+    // ⇒ three authoritative documents, three answers. ⭐ The constant is now the source and this is
+    // the assertion that makes drifting from it FAIL rather than merely look untidy.
+    expect(SAHYOG_VIVRAN_APPLICABLE_CONTROLS).toHaveLength(5);
+
+    // ⛔ IDENTITY, ⛔ not just a length: a count-only assertion passes while an entry is silently
+    // swapped for a different one, which is the failure mode the matrix ordinal drift already showed.
+    expect(SAHYOG_VIVRAN_APPLICABLE_CONTROLS.map((c) => c.id)).toEqual([
+      'rate_limit_search_tier',
+      'noindex',
+      'no_detail_or_export_affordance',
+      'server_side_tier1_decrypt',
+      'unguessable_public_address',
+    ]);
+
+    // ⭐⭐ AND THE HONEST RECOUNT IS THE PART THAT MATTERS. Of the five, ⛔ only TWO stand between an
+    // anonymous caller and the data: the rate-limit tier, and (since 11b.10) the unguessable
+    // address. `X-Robots-Tag` is a crawler HINT that archivers and scrapers ignore; *"no DETAIL or
+    // EXPORT affordance"* is irrelevant to a caller who already holds the address; and the Tier-1
+    // decrypt is the thing being DEFENDED, ⛔ not a defence.
+    // ⛔⛔ THIS ASSERTION IS THE FENCE AGAINST RE-INFLATING THE COUNT: promoting a `posture` to a
+    // `control` to make the number look better fails here, which is the whole point.
+    const controls = SAHYOG_VIVRAN_APPLICABLE_CONTROLS.filter((c) => c.kind === 'control');
+    expect(controls.map((c) => c.id)).toEqual([
+      'rate_limit_search_tier',
+      'unguessable_public_address',
+    ]);
+
+    // ⛔ CONTROLS 2 (`PUBLIC_SURFACE_PAGE_SIZE_CAP`) AND 3 (`PUBLIC_DIRECTORY_PAGE_HORIZON`) ARE
+    // ABSENT BY CONSTRUCTION — a single-item GET has no `limit` and no `page` for them to bind to.
+    // ⚠⛔ THE ABSENCE HAS AN EXPIRY: **Story 11b.3b** adds the contributor list, makes this route
+    // PAGINATED and RESTORES BOTH ⇒ it adds two entries to the constant and moves the length above,
+    // in its own commit. ⛔ A bare "not applicable" with no expiry is how two controls quietly never
+    // come back — this asserts the absence so the restoration cannot be forgotten silently.
+    expect(SAHYOG_VIVRAN_APPLICABLE_CONTROLS.map((c) => c.ordinal)).not.toContain(2);
+    expect(SAHYOG_VIVRAN_APPLICABLE_CONTROLS.map((c) => c.ordinal)).not.toContain(3);
+  });
 });

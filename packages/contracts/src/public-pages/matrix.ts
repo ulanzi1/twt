@@ -385,6 +385,11 @@ export const PublicVsPrivateMatrixSchema = z
     // pass; now the permitted (surface, field) pairs are named, so an exception appearing on
     // some third field FAILS even while the COUNT is still within budget. A widening that
     // pins identity is not the same act as a widening that raises a ceiling.
+    // ⭐⛔ **AND NARROWED BACK TO **THREE** BY STORY 11b.11** — `2026-09-04-190` cl.1 (+ `-191` cl.1
+    // for `nominee_vpa`) supersedes `-165` cl.1–2 IN PART, taking this surface's four pairs to ONE.
+    // ⚠ The sentence above is kept as the record of the widening; ⛔ it is ⛔ not live arithmetic.
+    // ⭐ A NARROWING needs ⛔ no new authority beyond the ruling that ordered it — the control this
+    // list implements is a CEILING, and removing entries only ever lowers it.
     //
     // ⛔ ADDING TO THIS LIST IS A RULING, NEVER A CODE CHANGE. Each entry cites the decision
     // that authorised it; an entry without one is a relaxation wearing an allowlist's costume.
@@ -402,31 +407,49 @@ export const PublicVsPrivateMatrixSchema = z
       // ⛔ Its scope does NOT reach 11b.3 (Sahyog Vivran) or 11b.6 (In Memoriam): those keep
       // first-name + last-initial, and moving them requires each surface's OWN Panel ruling.
       ['sahyog-drive.deceased_member_name', '2026-08-24-159 cl.2 (D1(b))'],
-      // ── ⭐⭐ STORY 11b.3a — THE FOUR RULED NOMINEE-BANK PAIRS ON `sahyog-vivran` ────────────────
-      // `2026-08-28-165` **cl.1** ruled ALL FOUR in scope on this surface (⭐ `vpa` was the genuinely
-      // open one and is ruled IN), under `2026-08-28-160` **cl.10(a)**: the Panel does ⛔ not treat
-      // public bank details as an automatic reason to prohibit publication, and the transparency
-      // benefit during an active Sahyog Drive is ACCEPTED. **cl.3** ruled they are added AT SURFACE
-      // DECLARATION — ⇒ these four entries land in the SAME COMMIT as the YAML field declarations.
-      // ⛔ A pre-added entry is *"a standing permission with ⛔ no subject"* (routing note §11).
+      // ── ⭐⭐ STORY 11b.11 — THE ⛔ ONE RULED NOMINEE-BANK PAIR ON `sahyog-vivran` ─────────────────
+      // ⭐⛔ **THIS BLOCK ONCE HELD FOUR ENTRIES. IT NOW HOLDS ONE, AND THE REDUCTION IS A
+      // TRUSTEE-RATIFIED SUPERSESSION — ⛔ not a cleanup.**
       //
-      // ⭐⛔ FOUR ENTRIES, ⛔ NOT ONE, AND THAT IS THE CONTROL WORKING: the allowlist pins
-      // **(surface, field)** PAIRS, so each field is named rather than a ceiling being raised.
+      // **WHAT STOOD HERE (Story 11b.3a):** `2026-08-28-165` **cl.1** ruled ALL FOUR in scope on this
+      // surface (⭐ `vpa` was the genuinely open one and was ruled IN), under `2026-08-28-160`
+      // **cl.10(a)**: the Panel did ⛔ not treat public bank details as an automatic reason to
+      // prohibit publication, and the transparency benefit during an active Sahyog Drive was
+      // ACCEPTED. **cl.3** ruled they are added AT SURFACE DECLARATION — ⇒ those four entries landed
+      // in the SAME COMMIT as the YAML field declarations. ⛔ A pre-added entry is *"a standing
+      // permission with ⛔ no subject"* (routing note §11), and that rule ⛔ still binds.
       //
-      // ⚠⛔ MASKING DOES ⛔ NOT CREATE A SECOND TIER, so these four cover BOTH states — full during
-      // the active campaign, reduced to last-4 + bank/branch/IFSC after the per-Pariwar window
-      // elapses. `-165` **cl.2**, verbatim: *"Do not create a separate Tier-1 classification merely
-      // because the public projection is masked. The underlying account fields remain Tier-1."*
-      // ⇒ the masked projection needs ⛔ NO entry of its own, and the specific future argument —
-      // *"the masked view is only last-4, so it isn't really Tier-1"* — is FORECLOSED.
+      // ⭐⭐ **WHAT SUPERSEDED IT.** [`2026-09-04-190`](../../../../.decision-log.md#decision-2026-09-04-190)
+      // **cl.1** (Trustee-ratified — Dhiraj Rahul, Kalpana Bharti) removes `nominee_account_number`,
+      // `nominee_ifsc`, `nominee_bank_name` and `nominee_branch` from `public`, and **cl.2** keeps
+      // `nominee_account_holder_name` there under the public wording **"Nominee Name"**.
+      // ⚠⛔ **`nominee_vpa` IS ⛔ NOT NAMED IN `-190` cl.1** — it was that decision's follow-up (i), and
+      // [`2026-09-04-191`](../../../../.decision-log.md#decision-2026-09-04-191) **cl.1** (separately
+      // Trustee-ratified) closed it: the VPA is a **MEMBER** field. ⇒ `-190` cl.1's own
+      // *"FOUR pairs → ONE"* arithmetic does ⛔ **not** close without `-191`; ⛔ do ⛔ not key the
+      // `vpa` deletion to `-190`.
       //
-      // ⚠ `nominee_bank_name` and `nominee_branch` are ⛔ NOT here and must never be: they are
+      // ⛔⛔ **`-165` IS ⛔ NOT EDITED, ⛔ NOT ANNOTATED AS WRONG AND ⛔ NOT SOFTENED** — it is
+      // Trustee-ratified and the supersession lives in `-190`/`-191`. ⭐ Its **cl.3–4** — *masking is a
+      // presentation/projection policy; the underlying fields stay Tier-1 in every state* — ⛔ STAND
+      // UNCHANGED, and the surviving entry below rests on them.
+      //
+      // ⭐⛔ ONE ENTRY, AND THE CONTROL IS UNCHANGED: the allowlist pins **(surface, field)** PAIRS, so
+      // the survivor is NAMED rather than a ceiling being lowered onto a category.
+      //
+      // ⚠⛔ MASKING DOES ⛔ NOT CREATE A SECOND TIER, and that reasoning survives the withdrawal.
+      // `-165` **cl.2**, verbatim: *"Do not create a separate Tier-1 classification merely because the
+      // public projection is masked. The underlying account fields remain Tier-1."* ⇒ the masked
+      // projection needs ⛔ NO entry of its own, and *"the masked view is only last-4, so it isn't
+      // really Tier-1"* stays FORECLOSED. ⚠⛔ **BUT NOTE ITS NEW STATUS:** after 11b.11 the masking
+      // machinery has ⛔ **NO PUBLIC CONSUMER** (`-190` cl.4 RETAINS the code; the public read no
+      // longer calls it) ⇒ ⛔ do ⛔ not cite it here, or anywhere Trustee-facing, as a live control.
+      //
+      // ⚠ `nominee_bank_name` and `nominee_branch` were ⛔ never here and must never be: they are
       // Tier-3 PLAINTEXT (public, IFSC-derived, non-identifying), so an entry for either would be an
       // *"exception that does not except anything"*, which the field-level check already rejects.
-      ['sahyog-vivran.nominee_account_holder_name', '2026-08-28-165 cl.1'],
-      ['sahyog-vivran.nominee_account_number', '2026-08-28-165 cl.1'],
-      ['sahyog-vivran.nominee_ifsc', '2026-08-28-165 cl.1'],
-      ['sahyog-vivran.nominee_vpa', '2026-08-28-165 cl.1'],
+      // ⇒ their removal from `public` at `-190` cl.1 leaves ⛔ no trace in this allowlist BY DESIGN.
+      ['sahyog-vivran.nominee_account_holder_name', '2026-09-04-190 cl.2'],
     ]);
 
     const exceptions = data.surfaces.flatMap((surface) =>

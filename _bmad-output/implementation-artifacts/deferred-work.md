@@ -165,6 +165,27 @@ swept as a drive-by.
 ⭐ **Trigger:** *the first story that revisits nominee-bank collection, or any Claim Terms substrate
 work.*
 
+⭐⭐⛔ **UPDATED 2026-09-05 BY STORY 11b.11 — THE PANEL RULED THE PUBLIC *WORDING*, AND THE SCHEMA
+QUESTION IS ⛔ UNCHANGED.** [`2026-09-04-190`](../../.decision-log.md#decision-2026-09-04-190) **cl.2**
+(Trustee-ratified — Dhiraj Rahul, Kalpana Bharti) rules the public Sahyog Vivran page label
+**"Nominee Name"** and forbids *"Account holder"*. ⇒ the label **SHIPPED** at 11b.11.
+⚠⛔ **THAT IS A PRESENTATION RULING AND IT SETTLES ⛔ NOTHING HERE.** The field id
+`nominee_account_holder_name`, the wire key `accountHolderName` and the column
+`account_holder_name_ciphertext` are **UNCHANGED**; 6.8's **D1** still holds — ⛔ no FK, ⛔ no rank,
+⛔ no match rule — and *"the SCHEMA is the authority"* still stands as this item's ruling.
+⇒ ⛔ **do ⛔ NOT read the shipped label as closing (i)**, and ⛔ do ⛔ not "resolve" the contradiction
+by adding a join or a match rule.
+⭐ **Three committed passages were AMENDED at 11b.11 rather than left standing** — they said the
+*"Nominee"* wording was WRONG, which is true of the DATA and false of the shipped PAGE:
+`apps/api/src/modules/public-pages/handlers.ts`, `packages/contracts/src/public-pages/sahyog-vivran.ts`
+and this item. Each now records the split: `-190` cl.2 ⇒ the PUBLIC WORDING; 6.8 D1 ⇒ the DATA.
+⚠⛔ **AND THE RESIDUAL IS NOW SHARPER, ⛔ not softer, because the coordinates are gone and the NAME
+IS THE ⛔ ONLY THING PUBLISHED:** the account holder **may not be the nominee**, and per **(ii)** below
+⛔ nobody in the approval chain can read the value to notice. ⇒ the one field that survives the
+withdrawal is both **UNVERIFIED** and, today, **UNVERIFIABLE** — published under the word *"Nominee"*.
+⛔ Recorded, ⛔ not hidden, and ⛔ still not this story's to fix.
+⭐ **The trigger is UNCHANGED.**
+
 **(ii) ⭐⭐ THE UN-MECHANIZED APPROVER DUTY — ⛔ nobody in the approval chain can SEE the holder name.**
 ⚠ The chain is **REAL and was traced**: bank details are collected BEFORE the verifier decides
 (`claim/errors.ts:198-203`), the post-approval window narrows to `verifier_approved` only — admin-only,
@@ -214,6 +235,24 @@ the collision is **re-read**, ⛔ not silently resolved.
 `detectNakedPii` / the FR-74 scrape gate — whichever comes first.* ⚠ It is a **question for the
 Panel/counsel about which control yields**, ⛔ not an engineering preference.
 
+✅⭐⭐ **CLOSED BY [EDIT] — 2026-09-05, STORY 11b.11.** ⛔ **NOT** *"resolved via deferral"*, and ⛔ not
+stood down ([[feedback_closure_language_precision]]).
+[`2026-09-04-190`](../../.decision-log.md#decision-2026-09-04-190) **cl.1** (Trustee-ratified) removes
+the nominee **account number** from the `public` tier in **every** state ⇒ there is ⛔ **no 12-digit
+run on the render for the heuristic to match**, so the two ruled controls ⛔ no longer meet.
+⭐ ✅ **VERIFIED BY EXECUTION, ⛔ not inferred:** the surface's FR-74 snapshot now reports
+`status: 'pass'` with `piiMatches: []` and `leaks: []`
+(`apps/public/tests/integration/public-pages/scrape-test.spec.ts`), and the assertion was inverted in
+the same commit as the field removal.
+⛔⛔ **AND THE DETECTOR WAS ⛔ NOT WEAKENED — this closure gives ⛔ NOBODY a precedent for weakening
+it.** ⛔ Not narrowed by length, ⛔ not by surface, ⛔ not by field. Narrowing a launch-blocking FR-74
+control remains a **governance act**.
+⚠ **IF ANY SURFACE EVER RE-PUBLISHES A 12-DIGIT VALUE AT `public`, THE CONFLICT RETURNS IN FULL** and
+must be **re-read from this entry**, ⛔ not rediscovered as new. ⚠ The sibling assertion that the
+**masked** projection did not trip it was RETIRED with its subject — 11b.11 **D1(b)** collapsed the
+public wire's `masked` discriminator ⇒ there is no masked projection on this surface to compare
+against. ⛔ Masking itself was ⛔ **NOT** deleted (`-190` cl.4); it has ⛔ no public consumer.
+
 ### (d) ⚠ **`2026-09-02-183` cl.4's reading of cl.10(c)'s third setting** — routed for **Panel confirmation**, ⛔ not blocking
 
 ⭐ *"Permanent masking"* is built as **cl.10(d)'s TERMINAL RUNG — masked in EVERY state, including
@@ -246,16 +285,37 @@ applied *"⭐ an authoring reading, ⛔ NOT a ruling"* to one inference and asse
 the same file family, on the same clause. ⇒ both are now labelled, and ⛔ neither may be cited as the
 Panel having decided. **Same trigger** as above — the two readings are confirmed or corrected together.
 
-### (e) **VPA collection** — 8.4's deferred resolver seam, ⛔ not built here
+### (e) ✅ **VPA collection** — ⛔ **CLOSED. THE PREMISE OF THIS ITEM WAS FALSE WHEN WRITTEN**
 
-`vpa` is ruled **IN** by `2026-08-28-165` **cl.1** and is declared, allowlisted and rendered — ⚠ and
-it is **NULL for every nominee today**. `vpa_ciphertext` is nullable **by design** (*"a nominee
-without a VPA is a first-class state"*) and Story **8.4** shipped the VPA resolver seam **ABSENT**
-(`{available:false}`), deferring collection to its own story ([[project_nominee_vpa_deferred_seam]]).
-⇒ ⛔ a null is **NOT** an error, **NOT** a gap and **NOT** a reason to hold the render — the page
-renders **NOTHING** for it, ⛔ no placeholder and ⛔ no *"not provided"* marker, because an omission
-that announces itself is an enumeration signal. ⛔ **No collection surface is built here.**
-⭐ **Trigger:** *the VPA collection story.*
+⛔⛔ **WHAT THIS ITEM SAID, kept as the record:** *"`vpa` is ruled **IN** by `2026-08-28-165` cl.1 and
+is declared, allowlisted and rendered — ⚠ and it is **NULL for every nominee today**. `vpa_ciphertext`
+is nullable **by design** and Story **8.4** shipped the VPA resolver seam **ABSENT**
+(`{available:false}`), deferring collection to its own story
+([[project_nominee_vpa_deferred_seam]])."*
+
+✅⭐⭐ **CLOSED BY [VERIFICATION] — [`2026-09-04-191`](../../.decision-log.md#decision-2026-09-04-191)
+**cl.5**, a VERIFIED FINDING.** ⛔ Not deferred, ⛔ not stood down: **the collection story was already
+built.** Story **8.13** / migration **0080** added `claim_nominee_bank_accounts.vpa_ciphertext`; the
+intake is a real per-account input at `apps/mobile/app/(claim)/nominee-review.tsx` labelled *"UPI ID
+(optional)"*; validation is `.regex(NOMINEE_BANK_VPA_REGEX).optional()`; the write encrypts it with
+the other three; the read decrypts it for the member fail-soft; and **11 of 558** nominee accounts
+carry one in the test database. ⇒ ⛔ *"null for every nominee today"* was **FALSE**, and the REASON
+given for it — 8.4's absent seam — was superseded by 8.13.
+⭐⛔ **THE CORRECT STATEMENT, which is a PERMANENT property rather than a pending one:** a null VPA is
+a nominee who ⛔ **did not fill in an OPTIONAL field**, and the column will ⛔ **never** be universally
+populated. ⛔ It is ⛔ never a gap and ⛔ never a trigger.
+⚠⛔ **AND THE PUBLIC HALF OF THIS ITEM IS MOOT TWICE OVER.**
+[`2026-09-04-191`](../../.decision-log.md#decision-2026-09-04-191) **cl.1** (Trustee-ratified) rules
+`nominee_vpa` a **MEMBER** field, ⛔ not a public one, and Story **11b.11** withdrew it from the
+`public` tier ⇒ `2026-08-28-165` cl.1's ruling-IN of `vpa` is **SUPERSEDED**.
+⭐⭐ **AND cl.1's purpose is ALREADY SATISFIED, ⛔ by a path that predates it:** the plaintext VPA is
+consumed **SERVER-SIDE** into the member's UPI intent (`payment/handlers.ts`). ⛔⛔ **THE VPA STRING
+ITSELF IS ⛔ NEVER ON THE MEMBER WIRE AND NEVER HAS BEEN** — `NomineeBankAccountView` is `.strict()`
+and carries `vpaPresent: z.boolean()`. ⇒ ⛔ **do ⛔ NOT "close" anything by adding `vpa` to that wire**;
+that would be a NEW Tier-1 exposure ⛔ nobody ruled on. `-191`'s own follow-up says cl.1 is a
+**confirmation**, and the build task was to ⛔ NOT regress it — asserted at 11b.11 (AC6).
+⛔ **No trigger. This item is closed.** ⚠ [[project_nominee_vpa_deferred_seam]] records the same
+supersession.
 
 ### (f) The **post-masking AUTHENTICATED-MEMBER presentation** — ⛔ not carried, ⛔ not foreclosed
 
@@ -267,12 +327,51 @@ token ([[project_no_browser_member_token_surface]]).
 ⭐ **Trigger:** *a Panel decision on the post-masking authenticated tier, or the first story that
 gives a browser a member session.*
 
+### (h) ⭐⭐ **NEW, ROUTED AT 11b.11** — **`D-nominee-name-form`**: the surviving public name has ⛔ NO ruled FORM
+
+⚠⛔ **A GAP THAT OPENED BY SUBTRACTION, and it is recorded rather than closed by silence.**
+[`2026-09-04-190`](../../.decision-log.md#decision-2026-09-04-190) **cl.2** (Trustee-ratified) rules
+the public **LABEL** — *"Nominee Name"*, ⛔ never *"Account holder"*. ⛔ It says **NOTHING** about the
+name **FORM**: full name vs first-name + last-initial. ⇒ Story 11b.11 renders
+`nominee_account_holder_name` **as stored**, and ⛔ **that is ⛔ not a ruled choice** — it is the
+absence of one.
+⛔⛔ **11b.11 DOES ⛔ NOT RULE IT, AND MAY NOT.** It is a subtraction story implementing a Panel
+ruling; inventing a name form would be authoring policy under cover of a withdrawal.
+⭐ **The argument on BOTH sides, recorded so it is ⛔ not re-derived:**
+· **For "no form applies":** the value is **claim-scoped free text** with ⛔ no member identity behind
+it — 6.8's **D1** removed the linkage (⛔ no FK to `member_nominees`) ⇒ the per-Pariwar
+`public_name_presentation_mode` has ⛔ **no subject** here, and the account holder may not be a member
+of the Trust at all.
+· **Against:** [`2026-08-19-136`](../../.decision-log.md#decision-2026-08-19-136) **cl.1** fails any
+build whose public name form **cannot change without a code change** — and this **IS** a public name,
+now the ⛔ **only** person named in the nominee block.
+⚠⛔ **AND IT COMPOUNDS `D5-subject`:** the name is published under the word *"Nominee"*, is
+**unverified** (⛔ no FK, ⛔ no match rule) and is today **unverifiable** (⛔ nobody in the approval
+chain can read it). ⇒ an unruled FORM on an unverified value.
+⭐ **Where it was found:** `packages/contracts/public-pages/public-vs-private-matrix.yaml`'s header
+asserted this surface *"declares ⛔ ZERO `pii_tier: 1` fields … so it neither needs nor claims a
+name-form ruling."* Both halves went false at **11b.3a**; 11b.11 corrected the header and, with the
+antecedent gone, the conclusion no longer follows on the header's own logic.
+⭐ **Trigger:** *the next Trustee Panel session touching public name form (`2026-08-19-136` cl.1 /
+`2026-09-02-174`), OR any story that renders this field on a second surface — whichever comes first.*
+⚠ It is a **question for the Panel**, ⛔ not an engineering preference, and ⛔ it does ⛔ not block
+deployment on its own.
+
 ### (g) The **edge-cache blindness** of any abuse counter on this surface — ⭐ **RE-AFFIRMED, ⛔ not re-filed**
 
 ⛔ Already open, in this file, at **11b.1 item (g)**. A cached hit never reaches the origin, so
 origin-side signals see only cache **MISSES**. ⚠ It lands harder here than anywhere before it: the
 identifier is **SEQUENTIAL**, controls 2/3 are structurally N/A (**D11(a)**), `limits.search` is the
 only bound on a walk, and after this story that walk reaches **four DECRYPTED Tier-1 fields**.
+⭐⛔ **AMENDED 2026-09-05 (Story 11b.11) — ⛔ THE ITEM IS ⛔ NOT CLOSED, AND TWO OF ITS PREMISES MOVED.**
+**(1)** The identifier is ⛔ no longer the address: Story **11b.10** shipped the opaque `publicToken`
+on [`2026-09-03-184`](../../.decision-log.md#decision-2026-09-03-184) **(B)** ⇒ the surface is ⛔ not
+walkable by counting. **(2)** The walk would now reach **ONE** decrypted Tier-1 field, ⛔ not four
+([`2026-09-04-190`](../../.decision-log.md#decision-2026-09-04-190) cl.1 + `-191` cl.1).
+⚠⛔ **NEITHER CHANGE TOUCHES WHAT THIS ITEM IS ABOUT:** an origin-side abuse counter is EDGE-BLIND
+regardless of what the surface carries or how it is addressed, and `s-maxage=300` still pins a stale
+projection at every warm PoP. ⛔ **RE-AFFIRMED**, and ⛔ do ⛔ not downgrade it on the strength of a
+smaller payload.
 ⚠⛔ **Judging `limits.search` insufficient for a Tier-1-bearing single-item GET is A DECISION**
 (`2026-09-02-183` cl.5), ⛔ **not a tuning knob** — in either direction. ⛔ Nothing in this story moved
 the tier. ⛔ **RE-AFFIRMED**, ⛔ not re-filed as a new item.

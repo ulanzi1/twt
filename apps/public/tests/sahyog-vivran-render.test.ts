@@ -55,18 +55,14 @@ const LABELS: SahyogVivranLabels = {
   contributionsCount: (count) => `${String(count)} confirmed`,
   outageTitle: 'We could not load this drive just now',
   outageBody: 'This is a problem on our side.',
-  bankTitle: 'Where the money goes',
-  bankGroupLabel: 'Bank details this drive pays to',
-  bankEqualDestinations: 'Either account may be used. Neither is preferred.',
-  bankAccountLabel: (rank) => `Account ${String(rank)}`,
-  labelAccountHolder: 'Account holder',
-  labelAccountNumber: 'Account number',
-  labelIfsc: 'IFSC',
-  labelVpa: 'UPI ID',
-  labelBankName: 'Bank',
-  labelBranch: 'Branch',
-  valueAccountEndingIn: (last4) => `Account ending in ${last4}`,
-  bankMaskedNote: 'Full details were shown while the drive was collecting.',
+  // ⭐⛔ REDUCED BY STORY 11b.11 (`2026-09-04-190` cl.1-2, `2026-09-04-191` cl.1). ⛔ Seven labels
+  // went with the fields they described, and `bankAccountLabel` is a STRING — the ordinal it
+  // announced to screen readers contradicted the equality the page states in copy.
+  bankTitle: 'Who receives this support',
+  bankGroupLabel: 'Nominee recorded for this drive',
+  bankEqualNominees: 'Both names are recorded equally. Neither is preferred.',
+  bankAccountLabel: 'Recorded nominee',
+  labelAccountHolder: 'Nominee Name',
 };
 
 const SETTLED: PublicSahyogVivranResponse = {
@@ -285,15 +281,20 @@ describe('buildSahyogVivranOutageView — ⛔ an outage is NOT a 404', () => {
 describe('the field-id derivation is OPERATIVE from this surface’s first commit (AC2)', () => {
   const { model } = buildSahyogVivranView(SETTLED, LABELS);
 
-  it('⭐ returns EXACTLY the sixteen classified field ids — ⛔ not "length > 0"', () => {
+  it('⭐ returns EXACTLY the eleven classified field ids — ⛔ not "length > 0"', () => {
     // ⛔ Asserting the EXACT set — rather than non-emptiness — is what makes a DROPPED field fail here
     // too. A leg that only detects additions accepts a field vanishing from the render while the
     // matrix still claims it is shown.
     // ⭐ TEN → SIXTEEN at Story 11b.3a: the four ruled Tier-1 nominee-bank fields plus their two
-    // Tier-3 siblings. ⚠⛔ AND NOTE THE FIXTURE: `SETTLED` carries `nomineeBankAccounts: []`, so all
-    // six appear here on a drive with NO bank details at all — because the per-row ids come from a
+    // Tier-3 siblings.
+    // ⭐⛔ **SIXTEEN → ELEVEN AT STORY 11b.11** — `2026-09-04-190` cl.1 withdraws the account number,
+    // IFSC, bank name and branch from `public`; `2026-09-04-191` cl.1 withdraws the VPA; `-190` cl.2
+    // KEEPS the account-holder name.
+    // ⚠⛔ AND NOTE THE FIXTURE: `SETTLED` carries `nomineeBankAccounts: []`, so the surviving id
+    // appears here on a drive with NO bank details at all — because the per-row ids come from a
     // REPRESENTATIVE SHAPE, ⛔ never from `nomineeAccounts[0]`. A derivation keyed on the first row
-    // would go vacuous on exactly the pages nobody would check.
+    // would go vacuous on exactly the pages nobody would check. ⛔ The withdrawal does ⛔ not weaken
+    // that property; it is the reason the ⛔ ONE surviving Tier-1 declaration is still asserted here.
     expect(sahyogVivranSurfaceFieldIds(model)).toEqual([
       'appeal_disposition_category',
       'appeal_reversal_at',
@@ -304,11 +305,6 @@ describe('the field-id derivation is OPERATIVE from this surface’s first commi
       'drive_closed_at',
       'drive_status',
       'nominee_account_holder_name',
-      'nominee_account_number',
-      'nominee_bank_name',
-      'nominee_branch',
-      'nominee_ifsc',
-      'nominee_vpa',
       'pool_canonical_identifier',
       'pool_letter_code',
     ]);
@@ -331,16 +327,21 @@ describe('the field-id derivation is OPERATIVE from this surface’s first commi
     ]);
   });
 
-  it('⛔ the per-ACCOUNT mapping maps ONLY the rank + the masked flag to null', () => {
+  it('⛔ the per-ACCOUNT mapping maps ONLY the rank to null', () => {
     // ⚠ `accountRank` is row IDENTITY, ⛔ not a rendered value: rendering "Account 1" / "Account 2"
     // as a classified field would put an ordering that implies preference onto a page whose whole
-    // point is that the two accounts are EQUAL (Story 9.9). `isMasked` selects a copy block.
-    // ⛔ EVERY OTHER key is a classified field — the four Tier-1 ones and their two Tier-3 siblings.
+    // point is that the two accounts are EQUAL (Story 9.9).
+    // ⭐⛔ `isMasked` STOOD BESIDE IT UNTIL STORY 11b.11 — it selected between a masked and a full
+    // copy block. With the coordinates withdrawn (`2026-09-04-190` cl.1) both blocks reduce to the
+    // same single name, so there is ⛔ nothing left to select between and the key is gone.
+    // ⛔⛔ MASKING WAS ⛔ NOT DELETED (`-190` cl.4) — the machinery and its own tests are untouched;
+    // it has ⛔ NO PUBLIC CONSUMER.
+    // ⛔ THE ⛔ ONE remaining key is a classified field: `nominee_account_holder_name`.
     const unrendered = Object.entries(SAHYOG_VIVRAN_NOMINEE_ACCOUNT_FIELD_IDS)
       .filter(([, id]) => id === null)
       .map(([key]) => key)
       .sort();
-    expect(unrendered).toEqual(['accountRank', 'isMasked']);
+    expect(unrendered).toEqual(['accountRank']);
   });
 
   it('⭐ NEGATIVE CONTROL — an unclassified key added to the model THROWS (the fail-closed coupling)', () => {

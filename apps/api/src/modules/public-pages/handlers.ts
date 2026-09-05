@@ -43,7 +43,12 @@ import {
 } from '@twt/contracts';
 import {
   audit,
-  claim as claimDomain,
+  // ⛔ `claim as claimDomain` WAS IMPORTED HERE for `claimDomain.maskAccountNumberLast4`, the ⛔ ONLY
+  // use it had on this surface. Story 11b.11 withdrew the account number from `public`
+  // (`2026-09-04-190` cl.1) ⇒ there is nothing to truncate and the import went with the call.
+  // ⛔⛔ THE FUNCTION IS ⛔ NOT DELETED — `-190` **cl.4** RETAINS the masking machinery, including
+  // `maskAccountNumberLast4`, which is still exported from `@twt/domain` and still tested there.
+  // ⚠ It has ⛔ NO PUBLIC CONSUMER.
   encryption,
   ids,
   kyc,
@@ -609,45 +614,79 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
         }
 
         // ⭐⭐ STORY 11b.3a — THE TIER-1 DECRYPT, AND EVERY BOUND ON IT, STATED HERE.
+        // ⭐⭐ AMENDED BY STORY 11b.11 — **FIVE OF THE SIX NOMINEE-BANK VALUES ARE WITHDRAWN.**
         //
-        // ⚠⛔ THIS IS WHERE THE ROUTE BECOMES **PII-BEARING**. `routes.ts`'s header and the
+        // ⚠⛔ THIS IS WHERE THE ROUTE BECAME **PII-BEARING**. `routes.ts`'s header and the
         // `login-wall.spec.ts` allowlist entry are updated in the SAME commit to state the control
         // set that applies now — ⛔ both with the SAME count, because *"two authoritative documents
         // disagreeing on how many controls exist is the defect this file records having already had
         // once"*.
+        // ⭐⛔ **THE PROPERTY IS NARROWED, ⛔ NOT REVOKED.** `2026-09-04-190` cl.1 (Trustee-ratified)
+        // withdraws the account number, IFSC, bank name and branch; `2026-09-04-191` cl.1 withdraws
+        // the VPA; `-190` cl.2 KEEPS the account-holder name, rendered under the public label
+        // **"Nominee Name"**. ⇒ this route is ⛔ no longer PII-bearing IN THE NOMINEE-BANK SENSE,
+        // ⚠ but it still decrypts ONE Tier-1 value and still carries 11b.3b's deceased-member
+        // exposure. ⛔ Do ⛔ not restore the pre-11b.3a wording anywhere.
         //
         // ⭐ THE AMPLIFICATION, BOUNDED AND SAID IN WRITING RATHER THAN LEFT TO BE RE-DERIVED:
-        // a Sahyog Vivran page decrypts **AT MOST EIGHT** values — four fields × at most two EQUAL
+        // a Sahyog Vivran page decrypted **AT MOST EIGHT** values — four fields × at most two EQUAL
         // accounts — against the directory's FIFTY per page, which is why
-        // `DIRECTORY_DECRYPT_CONCURRENCY = 8` was introduced at 11a.3. ⭐ A **MASKED** projection
-        // costs only **TWO per account**: cl.10(e)'s retention list names the account number and the
-        // IFSC, so the holder name and the VPA are ⛔ never decrypted when masked. ⛔ Do not "simplify"
-        // that into decrypting all four and discarding two — it would spend KMS quota on plaintext
-        // this surface has been ruled not to show.
+        // `DIRECTORY_DECRYPT_CONCURRENCY = 8` was introduced at 11a.3. ⭐⛔ **IT IS NOW AT MOST
+        // TWO** — one field × at most two EQUAL accounts. The concurrency bound is retained
+        // unchanged: it is the boundary's shared discipline, ⛔ not a per-surface tuning knob.
+        // ⚠⛔ **AND THE MASKED-PROJECTION ARM IS GONE FROM THIS HANDLER.** It read cl.10(e)'s
+        // retention list and decrypted only the account number and the IFSC. With the coordinates
+        // withdrawn both arms of the old `masked` union reduce to the holder name and become
+        // IDENTICAL, so 11b.11's **D1(b)** collapsed the public wire to a single shape.
+        // ⛔⛔ **MASKING WAS ⛔ NOT DELETED.** `-190` **cl.4** RETAINS `isNomineeBankMasked`, the
+        // `pariwar_nominee_bank_masking_schedule` table, its permission key, its admin surface and
+        // every one of its tests. ⚠ Its STATUS changed: it has ⛔ **NO PUBLIC CONSUMER**, the domain
+        // read no longer resolves the schedule, and ⛔ nothing Trustee-facing may call it a live
+        // safeguard until it has a consumer again. ⛔ `2026-09-04-191` cl.2 still binds the dormant
+        // projection: it must ⛔ NOT drop the nominee name.
         //
-        // ⭐⛔ AND THE ROUTE'S ONLY ENUMERATION BOUND IS `limits.search`, STATED BESIDE THE DECRYPT
-        // BECAUSE THIS IS WHERE IT BECOMES EXPENSIVE. `P-YYYY-MM-###` is **SEQUENTIAL**, this is a
-        // single-item GET on a path parameter, and **D11(a)** recorded controls 2 and 3 structurally
-        // N/A *precisely because there is no `page` and no `limit` for them to bind to*. ⇒ with four
-        // DECRYPTED Tier-1 fields behind a walkable identifier, and `D8-default` ruled **FAIL-OPEN**
-        // for every Pariwar until the Trust sets a window (`2026-09-02-179` cl.1), `limits.search` is
-        // the ONLY thing bounding a walk. ⚠⛔ IF THAT IS JUDGED INSUFFICIENT, THAT IS **A DECISION**
-        // (`2026-09-02-183` cl.5) — ⛔ do ⛔ not quietly tighten or loosen the tier on this line.
+        // ⭐⛔ AND THE ROUTE'S ENUMERATION BOUND. `P-YYYY-MM-###` is **SEQUENTIAL**, and it is no
+        // longer the address: Story 11b.10 shipped the opaque `publicToken` on `2026-09-03-184` (B),
+        // Trustee-ratified ⇒ ⛔ the walk this paragraph used to warn about is CLOSED, and `-190`
+        // cl.1 additionally removed four of the five Tier-1 values it would have reached.
+        // ⚠ `limits.search` is UNCHANGED and ⛔ must not be tightened or loosened on this line —
+        // that is **A DECISION** (`2026-09-02-183` cl.5). ⚠ `D8-default` FAIL-OPEN
+        // (`2026-09-02-179` cl.1) is likewise UNCHANGED; what changed is that this surface no longer
+        // has a masking decision for it to govern.
         //
         // ⚠⭐ AND THE INVERSION THIS PUBLISHES, RECORDED HERE RATHER THAN LEFT FOR A REVIEWER
-        // (`D5-subject`): the value below is guarded by a real multi-stage human approval chain —
-        // verifier → state trustee → freeze — that ⛔ **CANNOT SEE IT**. The verifier console has ⛔ no
-        // bank surface, ⛔ no verification handler reads the field, and even a tier-2 admin making a
-        // correction reads back only `NomineeBankStatusResponse`, a PRESENCE view
-        // (`holderNamePresent: boolean`). ⇒ ⛔ **this route publishes to the internet a value no
-        // approver in that chain can read.** ⚠ `ifsc_validated` is ⛔ NOT corroboration — it is a
-        // format + branch lookup, proving the BRANCH exists, ⛔ not that the PERSON does. ⭐ Closing
-        // it is a **verifier-console** act (Story 6.10's family), ROUTED at `deferred-work.md` and
-        // ⛔ not built here.
+        // (`D5-subject`) — ⛔ **it SURVIVES the withdrawal and is now the ONLY thing published**:
+        // the value below is guarded by a real multi-stage human approval chain — verifier → state
+        // trustee → freeze — that ⛔ **CANNOT SEE IT**. The verifier console has ⛔ no bank surface,
+        // ⛔ no verification handler reads the field, and even a tier-2 admin making a correction
+        // reads back only `NomineeBankStatusResponse`, a PRESENCE view (`holderNamePresent:
+        // boolean`). ⇒ ⛔ **this route publishes to the internet a value no approver in that chain
+        // can read.** ⭐ Closing it is a **verifier-console** act (Story 6.10's family), ROUTED at
+        // `deferred-work.md` and ⛔ not built here.
         //
-        // ⚠⛔ AND `accountHolderName` IS ⛔ NOT LABELLED "NOMINEE" ANYWHERE DOWNSTREAM. 6.8's D1
+        // ⚠⛔ AND THE NAME IS ⛔ NOT LINKED TO A DECLARED NOMINEE BY ANYTHING IN THE DATA. 6.8's D1
         // removed the linkage deliberately — ⛔ no FK to `member_nominees`, ⛔ no rank, ⛔ no match
-        // rule ([[project_nominee_bank_disbursement_channel]]). It is the ACCOUNT HOLDER.
+        // rule ([[project_nominee_bank_disbursement_channel]]). It is the ACCOUNT HOLDER, and the
+        // column, the field id and the wire key all still say so.
+        // ⭐⛔ **THE PUBLIC LABEL IS NEVERTHELESS "Nominee Name" — `2026-09-04-190` cl.2,
+        // Trustee-ratified, and it OVERRIDES THE PRESENTATION.** ⚠ The sentence above is about the
+        // DATA and it STANDS; ⛔ do ⛔ not "reconcile" the two by adding a join or a match rule, and
+        // ⛔ do ⛔ not resolve `deferred-work.md`'s `D5-subject(i)` that way.
+        // ⚠⛔ **THE RESIDUAL, STATED PLAINLY BECAUSE THE PAGE NOW ASSERTS IT TO THE INTERNET:** the
+        // account holder **may not be the nominee**, and per `D5-subject(ii)` ⛔ nobody in the
+        // approval chain can read the value to notice. ⇒ the ⛔ one field that survives this
+        // withdrawal is both UNVERIFIED and, today, UNVERIFIABLE.
+        //
+        // ⚠⛔ **AND THE DECRYPT FAN-OUT IS STILL UNCONDITIONAL ON THE DRIVE'S OUTCOME.** The map
+        // below has ⛔ no outcome predicate, and until 11b.11 the ⛔ only suppressor on this path was
+        // the time-since-close masking verdict ⇒ a **DENIED** claim, or one whose approval was
+        // **REVERSED ON APPEAL**, still published the holder's name and full account number
+        // indefinitely under FAIL-OPEN. `2026-08-28-160` cl.10(a) authorises publication *"during an
+        // active campaign"*; ⛔ nothing checked the campaign was LEGITIMATE, only that it was RECENT.
+        // ⭐ The COORDINATES half is closed by deletion above. ⚠⛔ The **NAME** is still published
+        // unconditionally, and `-190` cl.2 keeps it there — ⛔ narrowing it by outcome would be a NEW
+        // suppression rule ⛔ nobody has ruled, so it is ⛔ RECORDED here, ⛔ not invented.
+        // ⛔ The member donor path is a DIFFERENT read and inherits ⛔ nothing from this deletion.
         const nomineeBankAccounts = await mapWithConcurrency(
           drive.nomineeBank.accounts,
           DIRECTORY_DECRYPT_CONCURRENCY,
@@ -679,48 +718,15 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
                 : value;
             };
 
-            if (drive.nomineeBank.masked) {
-              // ⭐ cl.10(e)'s DEFINED projection. ⛔ TWO decrypts, ⛔ not four: the holder name and the
-              // VPA are absent from the retention list, so they are never decrypted, never held in
-              // memory here, and — because the masked arm has ⛔ no key for either — structurally
-              // unrepresentable on the wire (AC4).
-              const [accountNumber, ifsc] = await Promise.all([
-                soft(account.accountNumberCiphertext, 'accountNumber'),
-                soft(account.ifscCiphertext, 'ifsc'),
-              ]);
-              return {
-                masked: true,
-                accountRank: account.accountRank,
-                bankName: account.bankName,
-                branch: account.branch,
-                // ⭐ THE FULL VALUE DIES ON THIS LINE. `null` for four or fewer digits — at exactly
-                // four, "the last four" IS the complete number, which cl.10(e) forbids exposing.
-                accountNumberLast4:
-                  accountNumber === null
-                    ? null
-                    : claimDomain.maskAccountNumberLast4(accountNumber),
-                ifsc,
-              };
-            }
-
-            const [accountHolderName, accountNumber, ifsc, vpa] = await Promise.all([
-              soft(account.accountHolderNameCiphertext, 'accountHolderName'),
-              soft(account.accountNumberCiphertext, 'accountNumber'),
-              soft(account.ifscCiphertext, 'ifsc'),
-              // ⚠ NULL for every nominee today — Story 8.4 shipped the VPA resolver seam ABSENT.
-              // ⛔ Not an error, ⛔ not a gap, ⛔ not a reason to hold the render.
-              soft(account.vpaCiphertext, 'vpa'),
-            ]);
-            return {
-              masked: false,
-              accountRank: account.accountRank,
-              bankName: account.bankName,
-              branch: account.branch,
-              accountHolderName,
-              accountNumber,
-              ifsc,
-              vpa,
-            };
+            // ⭐⛔ ONE DECRYPT. ⛔ There is no `accountNumber`, no `accountNumberLast4`, no `ifsc`,
+            // no `vpa`, no `bankName` and no `branch` key on this shape — ABSENT, ⛔ never `null` —
+            // and `.strict()` on the contract makes adding one a parse error rather than a silent
+            // extra field. ⛔ Do ⛔ not re-add a `soft(account.vpaCiphertext, 'vpa')` here.
+            const accountHolderName = await soft(
+              account.accountHolderNameCiphertext,
+              'accountHolderName',
+            );
+            return { accountRank: account.accountRank, accountHolderName };
           },
         );
 

@@ -31,11 +31,35 @@
 // PROJECTION applied at the API boundary — ⛔ never a deletion, ⛔ never an overwrite, ⛔ never a
 // re-encrypt, and ⛔ never a column on `claim_nominee_bank_accounts` (cl.10(d), Trap 3).
 //
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+// ⭐⭐⛔⛔ STATUS AS OF STORY 11b.11 (2026-09-05) — **RETAINED, AND WITH ⛔ NO PUBLIC CONSUMER**
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+// `2026-09-04-190` **cl.1** (Trustee-ratified) withdrew the nominee banking coordinates from the
+// public Sahyog Vivran surface and `2026-09-04-191` **cl.1** withdrew the VPA. ⇒
+// `pool/sahyog-vivran-read.ts` no longer calls `resolveEffectiveNomineeBankMasking` at all, and this
+// schedule now governs ⛔ nothing that renders.
+// ⛔⛔ **RETAINED IN TERMS** — `-190` **cl.4**, *"we may use it in future"*: this module, the
+// `pariwar_nominee_bank_masking_schedule` table, `pariwar.manage_nominee_bank_masking`, the admin
+// surface and every test SURVIVE. ⛔ Delete nothing.
+// ⚠⛔ **AND ⛔ DO ⛔ NOT DESCRIBE IT AS A LIVE SAFEGUARD** — here, in a review, or on any
+// Trustee-facing material — until it has a consumer again. ⭐ The three REACTIVATION PRECONDITIONS
+// that must be met BEFORE it is re-pointed at any surface are recorded in full at the head of
+// `nominee-bank-masking.ts`: **(a)** un-masking is RETROACTIVE and one PUT's blast radius is
+// unbounded and unpreviewable; **(b)** RLS scope failure is INDISTINGUISHABLE from *"no window
+// configured"* and resolves to PUBLISH — `2026-09-02-179` cl.1 ruled the POLICY default fail-open,
+// ⛔ not INFRASTRUCTURE FAILURE, which ⛔ nobody ruled; **(c)** remediation is O(N) admin requests
+// plus a five-minute cache floor, documented three times and mitigated zero.
+// ⛔ They are **DORMANT, ⛔ NOT RESOLVED.** `D8-default` FAIL-OPEN is UNCHANGED (11b.11 AC7).
+//
 // ── ⭐ REVERSIBILITY IS STRUCTURAL, ⛔ not a promise (cl.10(c)) ────────────────────────────────────
 // A change CLOSES the prior open head (`effective_until = effective_from` of the new row) and INSERTS
 // a new head, the `terms_and_conditions_versions` supersede mechanic. ⇒ there is ⛔ no "already
 // masked, cannot unmask" branch anywhere here and there must never be one, and every prior window
 // survives in the trail.
+// ⚠⛔ **REVERSIBILITY CUTS BOTH WAYS, AND THIS PARAGRAPH USED TO CELEBRATE ONLY ONE DIRECTION.**
+// Reversing TOWARD disclosure is a **BULK DISCLOSURE EVENT**: the schedule resolves at the REQUEST
+// instant, ⛔ never at a drive's close instant, so one PUT can re-publish an entire archive. ⭐ See
+// precondition (a). ⛔ Recorded here because this is the paragraph a reader reaches first.
 //
 // ── Transaction contract (the terms-and-conditions/write.ts precedent) ───────────────────────────
 // These accessors run their statements DIRECTLY on the passed `db` and do ⛔ NOT open their own

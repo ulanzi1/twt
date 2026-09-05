@@ -246,6 +246,36 @@ export function createPaymentHandlers(deps: AppDeps) {
      * (no live pool / no accounts collected) is a first-class `{ available: false, reason }` — never a 404.
      * `bankName` is Tier-3 plaintext (passed through, no decrypt); `vpaPresent` is computed from the presence
      * of the VPA ciphertext WITHOUT decrypting it. The decrypted values are NEVER logged / emitted / audited.
+     *
+     * ⭐⛔⛔ **UNTOUCHED BY STORY 11b.11, AND SAYING SO IS PART OF THAT STORY.** `2026-09-04-190` cl.1
+     * withdrew the banking coordinates from the PUBLIC Sahyog Vivran page; this is the MEMBER donor
+     * path and it keeps every value — `accountHolderName`, the FULL `accountNumber`, `ifsc`,
+     * `bankName` and `vpaPresent`. ⛔ A member must be able to PAY the family, and a masked account
+     * number cannot be transferred to. ⚠⛔ It shares ⛔ NO code path with `pool/sahyog-vivran-read.ts`
+     * (it reads `claim/nominee-bank-read.ts` directly) ⇒ ⛔ nothing the public withdrawal deleted was
+     * deleted here, and ⛔ no well-meaning sweep may "finish the job" by narrowing this shape.
+     * ⚠⛔ **AND THE VPA ITSELF IS ⛔ STILL NEVER SENT.** `NomineeBankAccountView` is `.strict()` and
+     * declares `vpaPresent: z.boolean()`; the plaintext is consumed SERVER-SIDE into the UPI intent
+     * (the `intent` handler above). ⭐ `2026-09-04-191` cl.1's *"shown to the logged-in member so they
+     * can make the contribution"* is ALREADY SATISFIED by that path — its own follow-up records the
+     * clause as a **confirmation**, with the build task being ⛔ NOT to regress it. ⛔ Adding `vpa` to
+     * this wire would be a NEW Tier-1 exposure ⛔ nobody ruled on.
+     *
+     * ⚠⛔ **AND ONE ROUTED QUESTION IS ANSWERED HERE RATHER THAN LEFT OPEN.** 11b.3a's third review
+     * found the PUBLIC bank block published regardless of the drive's OUTCOME — ⛔ no outcome
+     * predicate, the only suppressor being the time-since-close masking verdict — so a DENIED or
+     * APPEAL-REVERSED claim still published complete coordinates under FAIL-OPEN. It asked whether
+     * this path owes the same predicate.
+     * ⭐ **RULED: ⛔ NO PREDICATE IS ADDED, because one is already structurally present.**
+     * `resolveMemberLivePool` returns `null` unless the member is `active` AND assigned in a cycle
+     * whose alert is `live`. A drive reaches `live` only through a frozen cycle on an APPROVED claim
+     * ⇒ a denied claim never reaches this handler at all, and an appeal-reversed one reaches it only
+     * because the reversal RESTORED it — which is the direction the reversal was for. ⛔ The public
+     * defect was that *"recent"* stood in for *"legitimate"*; here `live` IS the legitimacy gate.
+     * ⚠ THE RESIDUAL, RECORDED ⛔ NOT HIDDEN: if an approval is ever reversed WHILE its cycle is
+     * still `live`, this handler would keep serving coordinates until the cycle leaves `live`. ⛔ No
+     * such path exists today, and inventing a suppression rule for it would be a NEW control ⛔ nobody
+     * has ruled. ⇒ named here so it is inherited, ⛔ not rediscovered.
      */
     async nomineeAccounts(request: FastifyRequest): Promise<NomineeAccountsResponse> {
       const { memberIdStr, pariwarIdStr } = memberCtx(request);
@@ -324,7 +354,26 @@ export function createPaymentHandlers(deps: AppDeps) {
               rank: row.accountRank,
               // `bank_name` is a NOT NULL Tier-3 column, but an empty string is not schema-impossible —
               // degrade it through the same distinct sentinel rather than ship a blank bank label.
-              bankName: row.bankName.length > 0 ? row.bankName : NOMINEE_BANK_DECRYPT_FAILED_SENTINEL,
+              //
+              // ⭐⛔ **HARDENED TO `.trim()` AT STORY 11b.11, AND THE REASON IT WAS RE-EXAMINED IS
+              // RECORDED HONESTLY.** 11b.3a's third review routed a finding here claiming the member
+              // path carried a LIVE 500: `bankName` passed through RAW against
+              // `NomineeBankAccountView`'s `z.string().min(1)`, so an `''` from a real RBI-dataset
+              // IFSC adapter would fail serialization and 500 the donor's payment screen.
+              // ⛔⛔ **CHECKED AT THE CALL SITE AND THE 500 IS ⛔ NOT REACHABLE: THIS GUARD ALREADY
+              // EXISTED AND PREDATES THE FINDING** — an `''` never reaches the schema, it becomes the
+              // sentinel. ⇒ the finding is recorded as ⛔ NOT CONFIRMED on this path rather than
+              // "fixed", because claiming a fix for a defect that was never live would misdescribe
+              // both the code and the review.
+              // ⚠⭐ **WHAT IS REAL IS THE MILDER RESIDUAL, AND IT IS FIXED HERE:** `.length > 0` lets
+              // a WHITESPACE-ONLY `bank_name` through — it satisfies `.min(1)`, so there is no 500,
+              // and it renders as a visually BLANK bank label on the screen where the donor picks
+              // which account to pay. ⭐ That is the `district` lesson (11a.3) and the same treatment
+              // `branch` already gets in `pool/sahyog-vivran-read.ts`. ⇒ trimmed before the test.
+              // ⛔ The value is ⛔ not trimmed on the way OUT — only the emptiness test is trimmed —
+              // so a bank name with real leading/trailing spacing is still shown as stored.
+              bankName:
+                row.bankName.trim().length > 0 ? row.bankName : NOMINEE_BANK_DECRYPT_FAILED_SENTINEL,
               accountHolderName,
               accountNumber,
               ifsc,

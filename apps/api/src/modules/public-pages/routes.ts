@@ -70,6 +70,14 @@
 // nobody restores it. ⚠ The `login-wall.spec.ts` allowlist entry is amended in the SAME commit and
 // states the SAME count: *"two authoritative documents disagreeing on how many controls exist is the
 // defect this file records having already had once."*
+// ⭐⛔⛔ **RE-AMENDED BY STORY 11b.11 — THE COUNT IS **ONE**, AND THE PROPERTY IS NARROWED, ⛔ NOT
+// REVOKED.** `2026-09-04-190` cl.1 (Trustee-ratified — Dhiraj Rahul, Kalpana Bharti) withdraws
+// `nominee_account_number`, `nominee_ifsc`, `nominee_bank_name` and `nominee_branch` from `public`;
+// `2026-09-04-191` cl.1 withdraws `nominee_vpa`; ⭐ `-190` cl.2 KEEPS `nominee_account_holder_name`,
+// rendered under the public label **"Nominee Name"**. ⇒ **ONE** ruled Tier-1 nominee-bank field, and
+// the handler decrypts exactly that one. ⚠⛔ **THE ROUTE IS STILL PII-BEARING** — it carries the
+// surviving nominee name and 11b.3b's deceased-member exposure is untouched — it is ⛔ no longer
+// PII-bearing **IN THE NOMINEE-BANK SENSE**. ⛔ Do ⛔ not restore the pre-11b.3a wording.
 //
 // ⭐ **D11(a)** (`2026-09-02-176`) RULED IT STATES ITS **APPLICABLE** SET. ⚠ 11b.3a changed which
 // controls apply, ⛔ not the rule — and ⭐ **11b.10 added control 7** (the unguessable address; see
@@ -116,7 +124,14 @@
 // documents: 11b.3a restored **PII-BEARING** (control 6 above), 11b.3b restores **PAGINATED**
 // (controls 2 and 3). ⛔ Replacing this set with a pagination-only one would DROP a control both
 // documents must state identically — which is the two-documents-disagreeing defect, arrived at from
-// the other side. ⇒ 11b.3b's count is **SIX**, ⛔ not five.
+// the other side.
+// ⭐⛔⛔ **AND STORY 11b.11 REMOVED THE HAND-COUNTING ENTIRELY, WHICH IS WHY NO NUMBER APPEARS HERE
+// ANY MORE.** The set is `SAHYOG_VIVRAN_APPLICABLE_CONTROLS`, imported below; `login-wall.spec.ts`
+// asserts its length and composition, and the matrix YAML cites it instead of stating a figure.
+// ⇒ 11b.3b adds its two ENTRIES to that constant, in its own commit — ⛔ it does ⛔ not bump a
+// number in prose, and there is no longer a number here to bump.
+// ⚠⛔ 11b.11 also NARROWED item 6's `PII-BEARING` justification (nominee-bank → the nominee name
+// alone) ⛔ without revoking it. ⛔ Do ⛔ not read the narrowing as 11b.3a's restoration being undone.
 // ⚠ 11b.3a's `nomineeBankAccounts` is ⛔ NOT a collection affordance and restores ⛔ neither control:
 // its `.max(2)` is the shape of a substrate whose composite PK admits exactly `{1, 2}` — there is
 // nothing to page, nothing to filter and nothing to walk.
@@ -125,6 +140,13 @@
 // This clause used to read, in terms: *"`P-YYYY-MM-###` is SEQUENTIAL and therefore ENUMERABLE; with
 // controls 2/3 structurally absent, `limits.search` is the ONLY thing bounding a walk of it"* — and
 // after 11b.3a that walk reached FOUR DECRYPTED TIER-1 FIELDS under `D8-default` FAIL-OPEN.
+// ⭐⛔ **AMENDED BY STORY 11b.11 — IT WOULD NOW REACH **ONE**** (the nominee's name, `2026-09-04-190`
+// cl.1-2 + `2026-09-04-191` cl.1), ⚠ and it is ⛔ no longer *"decrypted under FAIL-OPEN"*: the public
+// read no longer computes a masking verdict at all, so `D8-default` has ⛔ nothing to govern on this
+// surface. ⛔ The `D8-default` RULING itself (`2026-09-02-179` cl.1) is UNCHANGED (AC7).
+// ⛔⛔ AND THE REDUCTION IS ⛔ NOT A REASON TO SOFTEN CONTROL 7. The token's ground was
+// ENUMERABILITY, ⛔ never the size of the payload behind the address — ⛔ do ⛔ not re-admit the
+// canonical identifier because *"there is less behind it now"*.
 // ⭐⭐ **THAT WAS TRUE, AND IT IS THE REASON THIS STORY EXISTS.** `2026-09-03-184` **(B)**
 // (Trustee-ratified) ruled the public address must be UNGUESSABLE, and `2026-09-04-185` corrected the
 // premise the routing note carried: the identifier's `sequence` is a MONOTONIC per-(pariwar, month)
@@ -234,6 +256,18 @@ import { z } from 'zod';
 import type { AppDeps } from '../../context.js';
 import { namedRateLimits } from '../../plugins/rate-limit/index.js';
 import { createPublicPagesHandlers } from './handlers.js';
+// ⭐⭐ THE APPLICABLE CONTROL SET IS A CONSTANT, ⛔ NO LONGER A HAND-COUNTED BULLET LIST (Story
+// 11b.11, AC5). It had drifted into THREE different answers across three authoritative documents —
+// see that module's header. ⛔ Do ⛔ not restate a number in this file; cite the constant.
+// ⚠⛔ **RE-EXPORTED, ⛔ NOT MERELY REFERENCED IN PROSE, AND THAT IS DELIBERATE.** A comment pointing
+// at a module is exactly the kind of link that rots silently — the failure this whole mechanization
+// exists to stop. A re-export is a REAL binding: delete or rename the module and this route file
+// stops compiling. ⇒ the route's written defence and its control set can ⛔ not drift apart without
+// the build saying so.
+export {
+  SAHYOG_VIVRAN_APPLICABLE_CONTROLS,
+  type SahyogVivranApplicableControl,
+} from './sahyog-vivran-controls.js';
 
 const PUBLIC_PAGES_TAG = 'public-pages';
 
@@ -283,13 +317,21 @@ export function registerPublicPagesRoutes(app: FastifyInstance, deps: AppDeps): 
   );
 
   // ── Story 11b.3 — the THIRD route, and the FIRST that is not a collection (D6(b), D11(a)) ────
-  // ⭐ ITS DEFENCE IS THE HEADER'S THIRD-ROUTE CLAUSE — the **FOUR** applicable controls (⚠ THREE
-  // until Story 11b.3a added the bounded, projected Tier-1 read), with 2 and 3 recorded as
-  // structurally N/A and their RESTORATION named (11b.3b's pagination). ⛔ The five are NOT reused,
-  // because this route is neither a collection nor paginated — ⚠ but it IS **PII-BEARING** now.
-  // ⚠ Its own `login-wall.spec.ts` allowlist entry states the SAME control count — ⛔ two
-  // authoritative documents disagreeing on how many controls exist is the defect this file records
-  // having already had once.
+  // ⭐ ITS DEFENCE IS THE HEADER'S THIRD-ROUTE CLAUSE PLUS
+  // {@link SAHYOG_VIVRAN_APPLICABLE_CONTROLS}, which is now the ⛔ ONLY place the set is written.
+  // ⚠⛔ **THIS COMMENT USED TO SAY *"the FOUR applicable controls (⚠ THREE until Story 11b.3a added
+  // the bounded, projected Tier-1 read)"* WHILE THE HEADER ABOVE SAID **FIVE**.** ⛔ Two counts in
+  // ONE FILE — the same defect this file records having had once across two files, arrived at from
+  // inside. ⭐ Story 11b.11 mechanized it: ⛔ no number is stated here, in the header, or in the
+  // matrix YAML; all three cite the constant and `login-wall.spec.ts` asserts it.
+  // ⚠⛔ AND THE HONEST RECOUNT TRAVELS WITH IT: of the entries these lists called "controls",
+  // `X-Robots-Tag` is a crawler HINT, *"no DETAIL or EXPORT affordance"* is irrelevant to a direct
+  // GET, and the Tier-1 decrypt is the thing being DEFENDED. ⇒ before 11b.10's opaque address,
+  // **ONE** control stood between an anonymous caller and Tier-1 data. ⛔ Counting non-controls as
+  // controls manufactures a false defence-in-depth on the document a reviewer trusts.
+  // ⛔ Controls 2 and 3 remain structurally N/A with their RESTORATION named (11b.3b's pagination).
+  // ⛔ The directory's five are NOT reused, because this route is neither a collection nor paginated
+  // — ⚠ but it IS **PII-BEARING**: narrowed by 11b.11 to the nominee's name, ⛔ not revoked.
   // ⛔ AND IT IS ⛔ NEVER AN AUTHENTICATED ROUTE. Adding one to this module needs its own ruling, its
   // own written defence and its own allowlist entry — and there is ⛔ no member session on this
   // surface to add anyway (`2026-08-23-154` disposition (c); SD-2 is RE-PURPOSED onto the

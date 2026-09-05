@@ -39,6 +39,12 @@ async function seedLivePoolMemberWithNomineeAccounts(
   t: TestDeps,
   memberId: string,
   pariwarId: string,
+  /**
+   * ⭐ STORY 11b.11 (AC6) — per-run overrides so the SAME seed can exercise the member path's
+   * VPA-presence and `bank_name` degradation without forking a second helper.
+   * ⛔ Defaults reproduce the original fixture EXACTLY, so the pre-existing AC6 case is unchanged.
+   */
+  opts: { readonly vpa1?: string; readonly bankName1?: string } = {},
 ): Promise<{ poolId: string; cycleId: string; alertId: string; claimCaseId: string }> {
   const cycleId = randomUUID();
   const alertId = randomUUID();
@@ -136,8 +142,14 @@ async function seedLivePoolMemberWithNomineeAccounts(
           accountHolderNameCiphertext: holder1,
           accountNumberCiphertext: num1,
           ifscCiphertext: ifsc1,
-          vpaCiphertext: null,
-          bankName: 'State Bank of India',
+          // ⭐ 11b.11 (AC6): a REAL encrypted VPA when the caller asks for one. `2026-09-04-191` cl.5
+          // verified UPI-ID collection is BUILT and POPULATED (Story 8.13 / migration 0080) ⇒ a
+          // `vpaPresent` assertion against an always-null fixture would pass vacuously.
+          vpaCiphertext:
+            opts.vpa1 === undefined
+              ? null
+              : await encryptNomineeBankField(opts.vpa1, pariwarId, t.deps.encryption),
+          bankName: opts.bankName1 ?? 'State Bank of India',
           branch: 'Nariman Point, Mumbai',
           ifscValidated: true,
         },
@@ -239,6 +251,94 @@ describe.skipIf(!hasDatabase)('nominee-accounts read — real Tier-1 decrypt rou
       expect(acc2.accountHolderName).toBe('Asha Devi');
       expect(acc2.accountNumber).toBe(NOMINEE_BANK_DECRYPT_FAILED_SENTINEL);
       expect(acc2.ifsc).toBe('HDFC0000001');
+    } finally {
+      await t.pool.end().catch(() => undefined);
+    }
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════════════════════════
+  // ⭐⭐ STORY 11b.11 (AC6) — THE REGRESSION GUARD ON THE MEMBER DONOR PATH
+  // ══════════════════════════════════════════════════════════════════════════════════════════════
+  // ⛔⛔ WHAT THIS EXISTS TO PREVENT: a well-meaning sweep that "finishes" 11b.11's public withdrawal
+  // by narrowing THIS shape too. `2026-09-04-190` cl.1 removed the banking coordinates from the
+  // PUBLIC Sahyog Vivran page; ⛔ it did ⛔ NOT touch the member donor path, and `-190` **cl.3** rules
+  // the opposite direction — a logged-in member sees the COMPLETE banking information.
+  // ⚠ A member must be able to PAY the family, and a masked account number ⛔ cannot be transferred to.
+  it('⭐⭐ AC6 — the member donor path still returns the THREE Tier-1 values UNMASKED, plus bankName + vpaPresent', async () => {
+    const t = buildTestDeps({ env: { DATABASE_URL: process.env['DATABASE_URL'] } });
+    try {
+      const memberId = randomUUID();
+      await seedLivePoolMemberWithNomineeAccounts(t, memberId, PARIWAR, { vpa1: 'ravi@upi' });
+
+      const h = createPaymentHandlers(t.deps);
+      const res = await h.nomineeAccounts(fakeRequest(memberId, PARIWAR));
+      expect(res.available).toBe(true);
+      if (!res.available) throw new Error(`expected available:true, got reason=${res.reason}`);
+
+      const acc1 = res.accounts.find((a) => a.rank === 1)!;
+      // ⭐ THE THREE TIER-1 VALUES, UNMASKED AND COMPLETE. ⛔ Not last-4, ⛔ not a sentinel.
+      expect(acc1.accountHolderName).toBe('Ravi Kumar');
+      expect(acc1.accountNumber).toBe('123456789012');
+      expect(acc1.ifsc).toBe('SBIN0000001');
+      // ⭐ Tier-3 plaintext, unchanged.
+      expect(acc1.bankName).toBe('State Bank of India');
+      // ⭐ `2026-09-04-191` cl.1's purpose, satisfied the way it was ALREADY satisfied.
+      expect(acc1.vpaPresent).toBe(true);
+      // ⚠ Account #2 was seeded WITHOUT a VPA — the two must disagree, or `vpaPresent` could be a
+      // constant and this assertion would prove nothing.
+      expect(res.accounts.find((a) => a.rank === 2)!.vpaPresent).toBe(false);
+
+      // ⛔⛔ **AND THE VPA STRING ITSELF IS ⛔ NEVER ON THIS WIRE — IT NEVER HAS BEEN.**
+      // `NomineeBankAccountView` is `.strict()` and declares `vpaPresent: z.boolean()`; the plaintext
+      // is consumed SERVER-SIDE into the UPI intent. ⇒ `-191` cl.1's *"shown to the logged-in member
+      // so they can make the contribution"* is ALREADY SATISFIED by that path — its own follow-up
+      // records the clause as a **confirmation**, with the build task being ⛔ NOT to regress it.
+      // ⛔ Adding `vpa` here would be a NEW Tier-1 exposure ⛔ nobody ruled on. ⛔ Do ⛔ not "fix" a
+      // failure of this assertion by widening the contract.
+      for (const account of res.accounts) {
+        expect('vpa' in account).toBe(false);
+      }
+      expect(JSON.stringify(res)).not.toContain('ravi@upi');
+
+      // ⛔ AND EXACTLY THESE KEYS — a shape assertion, so a field silently VANISHING fails too.
+      expect(Object.keys(acc1).sort()).toEqual([
+        'accountHolderName',
+        'accountNumber',
+        'bankName',
+        'ifsc',
+        'rank',
+        'vpaPresent',
+      ]);
+    } finally {
+      await t.pool.end().catch(() => undefined);
+    }
+  });
+
+  it('⭐ a WHITESPACE-ONLY `bank_name` degrades to the sentinel — ⛔ never a blank bank label', async () => {
+    // ⚠⛔ THE HONEST VERSION OF A ROUTED FINDING. 11b.3a's third review routed a claim that this path
+    // carried a LIVE 500: `bankName` passing through RAW against `z.string().min(1)`, so an `''` from
+    // a real RBI-dataset IFSC adapter would fail serialization. ⛔ CHECKED AND ⛔ NOT CONFIRMED — the
+    // handler ALREADY degraded `''` to the decrypt-failed sentinel, and that guard predates the
+    // finding. ⇒ recorded as not-confirmed rather than claimed as fixed.
+    // ⭐ WHAT IS REAL, and what this pins: `.length > 0` let a WHITESPACE-ONLY value through. It
+    // satisfies `.min(1)`, so there is no 500 — it renders as a visually BLANK bank label on the very
+    // screen where the donor picks which account to pay. That is the `district` lesson (11a.3) and
+    // the treatment `branch` already gets in `pool/sahyog-vivran-read.ts`.
+    const t = buildTestDeps({ env: { DATABASE_URL: process.env['DATABASE_URL'] } });
+    try {
+      const memberId = randomUUID();
+      await seedLivePoolMemberWithNomineeAccounts(t, memberId, PARIWAR, { bankName1: '   ' });
+
+      const h = createPaymentHandlers(t.deps);
+      const res = await h.nomineeAccounts(fakeRequest(memberId, PARIWAR));
+      expect(res.available).toBe(true);
+      if (!res.available) throw new Error(`expected available:true, got reason=${res.reason}`);
+
+      const acc1 = res.accounts.find((a) => a.rank === 1)!;
+      expect(acc1.bankName).toBe(NOMINEE_BANK_DECRYPT_FAILED_SENTINEL);
+      // ⭐ AND THE REST OF THE ACCOUNT IS UNAFFECTED — the degradation is per FIELD, ⛔ never per
+      // account and ⛔ never per read.
+      expect(acc1.accountNumber).toBe('123456789012');
     } finally {
       await t.pool.end().catch(() => undefined);
     }

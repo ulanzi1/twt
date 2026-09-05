@@ -826,12 +826,33 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
   });
 
   // ══════════════════════════════════════════════════════════════════════════════════════════════
-  // ⭐⭐ STORY 11b.3a — THE NOMINEE BANK PRESENTATION, END TO END THROUGH THE REAL DECRYPT
+  // ⭐⭐ STORY 11b.11 — THE NOMINEE BLOCK AFTER THE WITHDRAWAL, END TO END THROUGH THE REAL DECRYPT
   // ══════════════════════════════════════════════════════════════════════════════════════════════
   // ⛔ These run through `app.inject` against real Postgres and the real KMS-backed envelope crypto,
-  // ⛔ never against a stub: the whole subject is what the WIRE carries after a decrypt and a ruled
-  // projection, and a stubbed decrypt would prove neither.
-  describe('the nominee bank presentation (`2026-08-28-160` cl.10)', () => {
+  // ⛔ never against a stub: the whole subject is what the WIRE carries after a decrypt, and a
+  // stubbed decrypt would prove nothing.
+  //
+  // ⭐⭐ **WHAT THIS BLOCK ASSERTED UNTIL 11b.11, AND WHY IT CHANGED — recorded, ⛔ not deleted.**
+  // Story 11b.3a's suite pinned the ruled MASKING LADDER on the public wire: a `live` drive rendering
+  // the complete details for both equal accounts; `D8-default` FAIL-OPEN leaving a `closed` drive in
+  // full with no schedule row; `after_days: 0` reducing a `closed` and a `settled` drive to
+  // `accountNumberLast4` + bank/branch/IFSC with the FULL NUMBER absent from the RAW BODY;
+  // `after_days: 30` not yet masking a drive closed two days ago; `permanent` masking even a `live`
+  // one (cl.10(d)'s terminal rung); a LATE `pool.settled` ⛔ NOT un-masking an already-masked drive;
+  // and one Pariwar's window ⛔ not governing another's.
+  //
+  // ⭐ `2026-09-04-190` **cl.1** (Trustee-ratified — Dhiraj Rahul, Kalpana Bharti) and
+  // `2026-09-04-191` **cl.1** withdraw ALL FIVE coordinates from `public`, and `-190` **cl.2** keeps
+  // the nominee's name. ⇒ ⛔ there is no longer a projection for the ladder to select, so assertions
+  // ABOUT that selection cannot be restated here — the thing they described is gone from this
+  // surface. ⭐ What replaces them is **STRICTLY STRONGER**: the same schedule fixtures are still
+  // seeded and driven, and every configuration must now produce the SAME response.
+  // ⛔⛔ **MASKING WAS ⛔ NOT DELETED, AND ITS OWN TESTS ARE UNTOUCHED BY THIS STORY** (`-190` cl.4):
+  // `packages/domain/tests/claim/nominee-bank-masking.test.ts`,
+  // `packages/domain/tests/integration/claim/nominee-bank-masking-schedule.spec.ts` and
+  // `apps/api/tests/integration/nominee-bank-masking/admin.spec.ts` all still exercise the predicate,
+  // the schedule and the admin knob. ⚠ What the machinery has is ⛔ NO PUBLIC CONSUMER.
+  describe('the nominee block (`2026-09-04-190` cl.1-2, `2026-09-04-191` cl.1)', () => {
     const ACCOUNTS = [
       {
         rank: 1 as const,
@@ -840,6 +861,10 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
         ifsc: 'SBIN0001234',
         bankName: 'State Bank of India',
         branch: 'Vaishali',
+        // ⭐ A REAL VPA on account #1, on purpose. `2026-09-04-191` cl.5 verified UPI-ID collection is
+        // BUILT and POPULATED (Story 8.13 / migration 0080; 11 of 558 accounts carry one) ⇒ seeding
+        // `undefined` everywhere would make "the VPA is not on the wire" pass VACUOUSLY.
+        vpa: 'sunita@upi',
       },
       {
         rank: 2 as const,
@@ -850,7 +875,47 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
       },
     ];
 
-    it('⭐⭐ AC2 — a LIVE drive renders the COMPLETE details for BOTH equal accounts', async () => {
+    /** Every coordinate seeded above, as it would appear in a leaked body. */
+    const WITHDRAWN_VALUES = [
+      '50100123456789',
+      '00987654321012',
+      'SBIN0001234',
+      'BARB0VJVAIS',
+      'State Bank of India',
+      'Bank of Baroda',
+      'Vaishali',
+      'sunita@upi',
+      '6789', // the last-4 projection the masked arm used to carry
+    ];
+
+    /** The keys the wire must ⛔ never carry again — ABSENT, ⛔ not `null`. */
+    const WITHDRAWN_KEYS = [
+      'accountNumber',
+      'accountNumberLast4',
+      'ifsc',
+      'vpa',
+      'bankName',
+      'branch',
+      'masked',
+    ];
+
+    const assertWithdrawn = (res: { body: string; json: () => unknown }): void => {
+      const body = res.json() as { drive: { nomineeBankAccounts: Record<string, unknown>[] } };
+      for (const account of body.drive.nomineeBankAccounts) {
+        // ⛔⛔ ABSENT, ⛔ NOT NULL. `.strict()` on the contract is what makes populating one of these
+        // a PARSE ERROR rather than an ignored extra field — the discipline `2026-08-28-165`
+        // established for the old masked arm, applied to the whole shape.
+        for (const key of WITHDRAWN_KEYS) expect(key in account).toBe(false);
+        expect(Object.keys(account).sort()).toEqual(['accountHolderName', 'accountRank']);
+      }
+      // ⛔⛔ AND AGAINST THE RAW SERIALIZED BODY, ⛔ not merely the parsed fields: a field-level check
+      // passes while the value sits under some other key.
+      for (const forbidden of WITHDRAWN_VALUES) expect(res.body).not.toContain(forbidden);
+      // ⭐ The response still parses through the REAL `.strict()` contract.
+      expect(() => PublicSahyogVivranResponse.parse(res.json())).not.toThrow();
+    };
+
+    it('⭐⭐ AC1/AC2 — a LIVE drive renders the NAME for both equal accounts, and ⛔ NOTHING ELSE', async () => {
       const t = await createTestApp();
       try {
         const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
@@ -866,31 +931,22 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
 
         // ⭐ EXACTLY TWO, in substrate order — an ORDER, ⛔ not a ranking.
         expect(accounts.map((a) => a['accountRank'])).toEqual([1, 2]);
-        // ⭐ THE DECRYPT ACTUALLY HAPPENED — the plaintext is on the wire, which is what cl.10(a)
-        // authorises during an active campaign, and what `D8-default` FAIL-OPEN leaves in place.
-        expect(accounts[0]).toEqual({
-          masked: false,
-          accountRank: 1,
-          bankName: 'State Bank of India',
-          branch: 'Vaishali',
-          accountHolderName: 'Sunita Devi',
-          accountNumber: '50100123456789',
-          ifsc: 'SBIN0001234',
-          // ⚠ NULL for every nominee today — Story 8.4 shipped the VPA seam ABSENT. ⛔ Not an error.
-          vpa: null,
-        });
-        expect(accounts[1]!['branch']).toBeNull();
-        // ⛔ The response still parses through the REAL `.strict()` contract.
-        expect(() => PublicSahyogVivranResponse.parse(res.json())).not.toThrow();
+        // ⭐ THE DECRYPT ACTUALLY HAPPENED — the name is real plaintext off a real envelope, which is
+        // what `-190` cl.2 keeps public. ⛔ A test that only checked absence would pass on a handler
+        // that returned nothing at all.
+        expect(accounts[0]).toEqual({ accountRank: 1, accountHolderName: 'Sunita Devi' });
+        expect(accounts[1]).toEqual({ accountRank: 2, accountHolderName: 'Sunita Devi' });
+        assertWithdrawn(res);
       } finally {
         await teardown(t);
       }
     });
 
-    it('⭐ NO SCHEDULE ROW ⇒ a CLOSED drive still renders in full — `D8-default` FAIL-OPEN', async () => {
-      // ⚠⛔ THE DEFAULT FOR EVERY PARIWAR UNTIL THE TRUST ACTS (`2026-09-02-179` cl.1), and the
-      // Panel ruled it with that cost in front of them. ⛔ Immediate masking is NOT the code's
-      // assumption — cl.10(b) forbids exactly that.
+    it('⭐⭐ AC1 — NO SCHEDULE ROW (`D8-default` FAIL-OPEN) still carries ⛔ NO coordinates', async () => {
+      // ⚠⛔ THIS IS THE CASE THE WITHDRAWAL EXISTS FOR. FAIL-OPEN is the default for EVERY Pariwar
+      // until the Trust acts (`2026-09-02-179` cl.1), so before 11b.11 a `closed` drive published the
+      // complete account number by default. ⭐ `D8-default` is UNCHANGED (AC7) — what changed is that
+      // this surface no longer has a masking decision for it to govern.
       const t = await createTestApp();
       try {
         const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
@@ -900,19 +956,24 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
           nomineeBank: ACCOUNTS,
         });
         const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
-        const body = res.json() as { drive: { nomineeBankAccounts: Record<string, unknown>[] } };
-        expect(body.drive.nomineeBankAccounts.every((a) => a['masked'] === false)).toBe(true);
-        expect(body.drive.nomineeBankAccounts[0]!['accountNumber']).toBe('50100123456789');
+        expect(res.statusCode).toBe(200);
+        assertWithdrawn(res);
       } finally {
         await teardown(t);
       }
     });
 
-    it('⭐⭐ AC4 — `after_days: 0` on a CLOSED drive masks, and the FULL NUMBER IS NOT ON THE WIRE', async () => {
-      // ⛔⛔ THE ASSERTION THIS STORY EXISTS FOR. cl.10(e): the last four digits plus bank / branch /
-      // IFSC, and *"the complete account number is NOT exposed after masking"*. ⚠ Asserted against
-      // the RAW SERIALIZED BODY, ⛔ not merely against a parsed field — AC4 says the full value never
-      // crosses the wire, and a field-level check would pass while the value sat under another key.
+    it('⭐⭐ AC3 — a MASKED drive still carries the NOMINEE NAME (`2026-09-04-191` cl.2)', async () => {
+      // ⛔⛔ **THE REGRESSION THIS TEST EXISTS TO PREVENT: an EMPTY bank block.** The masked arm used
+      // to DROP `accountHolderName`, because `2026-08-28-160` cl.10(e) is a RETENTION list and a
+      // retention list is exhaustive. ⇒ with the coordinates withdrawn, that arm would have rendered
+      // ⛔ NOTHING AT ALL. `2026-09-04-191` **cl.2** rules the masked projection RETAINS the name,
+      // which AMENDS THE READING of cl.10(e) — that list was written when the masked view still
+      // carried account coordinates and therefore had something else to retain. ⛔ cl.10(e) is ⛔ not
+      // restated as if it had always said this.
+      // ⚠ `after_days: 0` on a `closed` drive is the configuration that USED to mask; it is seeded
+      // here deliberately, so this asserts the ruled outcome holds under the very setting that would
+      // once have emptied the block.
       const t = await createTestApp();
       try {
         const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
@@ -925,146 +986,67 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
         const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
         expect(res.statusCode).toBe(200);
         const body = res.json() as { drive: { nomineeBankAccounts: Record<string, unknown>[] } };
-
-        expect(body.drive.nomineeBankAccounts[0]).toEqual({
-          masked: true,
-          accountRank: 1,
-          bankName: 'State Bank of India',
-          branch: 'Vaishali',
-          accountNumberLast4: '6789',
-          ifsc: 'SBIN0001234',
-        });
-
-        // ⛔⛔ THE RAW BODY CARRIES NEITHER FULL NUMBER, NOR THE HOLDER NAME, NOR A VPA KEY.
-        const raw = res.body;
-        for (const forbidden of ['50100123456789', '00987654321012', 'Sunita', 'Devi']) {
-          expect(raw).not.toContain(forbidden);
-        }
-        // ⛔ And the keys cl.10(e)'s retention list does not name are ABSENT, ⛔ not merely null:
-        // `.strict()` is what makes populating one a parse error rather than an ignored field.
-        for (const account of body.drive.nomineeBankAccounts) {
-          expect('accountNumber' in account).toBe(false);
-          expect('accountHolderName' in account).toBe(false);
-          expect('vpa' in account).toBe(false);
-        }
-        expect(() => PublicSahyogVivranResponse.parse(res.json())).not.toThrow();
+        // ⭐ THE NAME IS PRESENT — ⛔ not null, ⛔ not an empty block.
+        expect(body.drive.nomineeBankAccounts.map((a) => a['accountHolderName'])).toEqual([
+          'Sunita Devi',
+          'Sunita Devi',
+        ]);
+        assertWithdrawn(res);
       } finally {
         await teardown(t);
       }
     });
 
-    it('⭐ `after_days: 0` on a SETTLED drive masks too — the post-disbursement state (review 2026-09-03)', async () => {
-      // ⚠ D4(b) admits `live` + `closed` + `settled`, and `settled` is the state where masking
-      // matters MOST (funds have moved). Every other end-to-end masking case used `live`/`closed`;
-      // this pins that `DRIVE_CLOSED_AT` resolves a close instant for a pool that reached `settled`
-      // (its subquery matches `pool.closed` OR `pool.settled`) so the `after_days` offset engages.
+    it('⭐⭐ AC1 — the response is IDENTICAL under EVERY masking configuration', async () => {
+      // ⭐⭐ THE ASSERTION THAT REPLACES THE WHOLE LADDER, and it is strictly stronger than the cases
+      // it replaces: rather than pinning what each rung projects, it pins that the rung ⛔ NO LONGER
+      // SELECTS ANYTHING on this surface. ⇒ a future change that re-points the masking predicate at
+      // the public read fails HERE, loudly, instead of quietly re-introducing a projection.
+      // ⚠ Includes `permanent` on a `live` drive — cl.10(d)'s terminal rung, the one configuration
+      // that reached a still-collecting campaign — and a `settled` drive, the state where masking
+      // mattered most.
       const t = await createTestApp();
       try {
-        const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
-        const { pariwarId } = await seedDrive(t, {
-          canonicalIdentifier: id,
-          poolState: 'settled',
-          nomineeBank: ACCOUNTS,
-          masking: { mode: 'after_days', maskAfterDays: 0 },
-        });
-        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
-        expect(res.statusCode).toBe(200);
-        const body = res.json() as { drive: { nomineeBankAccounts: Record<string, unknown>[] } };
-        expect(body.drive.nomineeBankAccounts.every((a) => a['masked'] === true)).toBe(true);
-        for (const account of body.drive.nomineeBankAccounts) {
-          expect('accountNumber' in account).toBe(false);
-          expect('accountHolderName' in account).toBe(false);
+        const configs = [
+          { poolState: 'live' as const, masking: undefined },
+          { poolState: 'live' as const, masking: { mode: 'permanent' as const } },
+          { poolState: 'closed' as const, masking: undefined },
+          {
+            poolState: 'closed' as const,
+            masking: { mode: 'after_days' as const, maskAfterDays: 0 },
+          },
+          {
+            poolState: 'closed' as const,
+            masking: { mode: 'after_days' as const, maskAfterDays: 30 },
+          },
+          {
+            poolState: 'settled' as const,
+            masking: { mode: 'after_days' as const, maskAfterDays: 0 },
+          },
+        ];
+        const shapes: string[] = [];
+        for (const config of configs) {
+          const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
+          const { pariwarId } = await seedDrive(t, {
+            canonicalIdentifier: id,
+            poolState: config.poolState,
+            nomineeBank: ACCOUNTS,
+            ...(config.masking === undefined ? {} : { masking: config.masking }),
+          });
+          const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
+          expect(res.statusCode).toBe(200);
+          assertWithdrawn(res);
+          const body = res.json() as { drive: { nomineeBankAccounts: unknown[] } };
+          shapes.push(JSON.stringify(body.drive.nomineeBankAccounts));
         }
-        expect(() => PublicSahyogVivranResponse.parse(res.json())).not.toThrow();
-      } finally {
-        await teardown(t);
-      }
-    });
-
-    it('⭐⭐ A LATE `pool.settled` does ⛔ NOT UN-MASK an already-masked drive (second-pass review 2026-09-03)', async () => {
-      // ⛔⛔ THE REGRESSION THIS PINS. `DRIVE_CLOSED_AT` selects the LATEST of `pool.closed` /
-      // `pool.settled`, so once settlement lands the instant MOVES FORWARD. Read by the masking
-      // predicate, `now >= closedAt + N` flipped back to FALSE and a drive that had been masked for
-      // ten days re-published the COMPLETE account holder name, account number, IFSC and VPA for
-      // another 30 days — cl.10(c)'s window silently becoming `(settle − close) + N`.
-      //
-      // ⭐ The fix is `DRIVE_MASKING_FROM` (EARLIEST), a SEPARATE fragment — `DRIVE_CLOSED_AT` still
-      // feeds the rendered `closedAt`, which is why this test also asserts the two DISAGREE and the
-      // masking verdict follows the earlier one.
-      const t = await createTestApp();
-      try {
-        const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
-        const { pariwarId } = await seedDrive(t, {
-          canonicalIdentifier: id,
-          poolState: 'settled',
-          nomineeBank: ACCOUNTS,
-          masking: { mode: 'after_days', maskAfterDays: 30 },
-          closedDaysAgo: 40, // masked since day 30
-          settledDaysAgo: 0, // …and settled just now
-        });
-        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
-        expect(res.statusCode).toBe(200);
-        const body = res.json() as {
-          drive: { closedAt: string; nomineeBankAccounts: Record<string, unknown>[] };
-        };
-        // ⭐ STILL MASKED. Before the fix every account came back `masked: false` with a full number.
-        expect(body.drive.nomineeBankAccounts.every((a) => a['masked'] === true)).toBe(true);
-        for (const account of body.drive.nomineeBankAccounts) {
-          expect('accountNumber' in account).toBe(false);
-          expect('accountHolderName' in account).toBe(false);
-        }
-        // ⚠ …while the RENDERED close instant is still the LATEST event — the two fragments are
-        // deliberately different, and this asserts the display half did ⛔ not silently change.
-        const renderedAgeDays = (Date.now() - Date.parse(body.drive.closedAt)) / 86_400_000;
-        expect(renderedAgeDays).toBeLessThan(1);
-        expect(() => PublicSahyogVivranResponse.parse(res.json())).not.toThrow();
-      } finally {
-        await teardown(t);
-      }
-    });
-
-    it('⭐ `after_days: 30` on a drive closed 2 days ago does NOT mask yet', async () => {
-      // ⚠ The window is measured FROM the close instant (cl.10(c)), and `seedDrive` closes the pool
-      // two days ago — so a 30-day window is still open. ⛔ If this ever masks, the offset is being
-      // measured from the wrong instant, which is the failure mode that silently over-applies.
-      const t = await createTestApp();
-      try {
-        const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
-        const { pariwarId } = await seedDrive(t, {
-          canonicalIdentifier: id,
-          poolState: 'closed',
-          nomineeBank: ACCOUNTS,
-          masking: { mode: 'after_days', maskAfterDays: 30 },
-        });
-        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
-        const body = res.json() as { drive: { nomineeBankAccounts: Record<string, unknown>[] } };
-        expect(body.drive.nomineeBankAccounts.every((a) => a['masked'] === false)).toBe(true);
-      } finally {
-        await teardown(t);
-      }
-    });
-
-    it('⭐⭐ `permanent` masks a LIVE drive too — cl.10(d)\'s TERMINAL RUNG', async () => {
-      // ⚠⛔ AN AUTHORING READING (`2026-09-02-183` cl.4), ⛔ NOT A PANEL RULING, and routed for
-      // confirmation. It is what makes the ruled ladder — full disclosure → N days → immediate →
-      // permanent — tighten strictly at every step; read as a fourth post-close offset, `permanent`
-      // would be a synonym for `after_days: 0`. ⭐ cl.10(a) is a PERMISSION ("**may** be publicly
-      // displayed"), ⛔ not a mandate, so a Trust on the terminal rung has exercised (b)/(c)/(d).
-      // ⛔ If the Panel says otherwise this is ONE predicate line — the test is here so the reading
-      // is asserted rather than latent.
-      const t = await createTestApp();
-      try {
-        const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
-        const { pariwarId } = await seedDrive(t, {
-          canonicalIdentifier: id,
-          poolState: 'live',
-          nomineeBank: ACCOUNTS,
-          masking: { mode: 'permanent' },
-        });
-        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
-        const body = res.json() as { drive: { nomineeBankAccounts: Record<string, unknown>[] } };
-        expect(body.drive.nomineeBankAccounts.every((a) => a['masked'] === true)).toBe(true);
-        expect(res.body).not.toContain('50100123456789');
+        // ⛔ MEMBERSHIP AND EXPLICIT VALUES, ⛔ never a count over a shared fixture.
+        expect(new Set(shapes).size).toBe(1);
+        expect(shapes[0]).toBe(
+          JSON.stringify([
+            { accountRank: 1, accountHolderName: 'Sunita Devi' },
+            { accountRank: 2, accountHolderName: 'Sunita Devi' },
+          ]),
+        );
       } finally {
         await teardown(t);
       }
@@ -1081,37 +1063,6 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
         expect(res.statusCode).toBe(200);
         const body = res.json() as { drive: { nomineeBankAccounts: unknown[] } };
         expect(body.drive.nomineeBankAccounts).toEqual([]);
-      } finally {
-        await teardown(t);
-      }
-    });
-
-    it('⛔ ANOTHER PARIWAR\'s masking window does NOT govern this drive', async () => {
-      // ⚠ The schedule is TENANT-ISOLATED, and the failure this guards is the one that would be
-      // invisible: a resolver that ignored `pariwar_id` would mask (or unmask) every Pariwar at once
-      // on the strength of whichever row it found first.
-      const t = await createTestApp();
-      try {
-        const idA = `P-2026-09-${randomUUID().slice(0, 6)}`;
-        const idB = `P-2026-09-${randomUUID().slice(0, 6)}`;
-        const a = await seedDrive(t, {
-          canonicalIdentifier: idA,
-          poolState: 'closed',
-          nomineeBank: ACCOUNTS,
-          masking: { mode: 'permanent' },
-        });
-        const b = await seedDrive(t, {
-          canonicalIdentifier: idB,
-          poolState: 'closed',
-          nomineeBank: ACCOUNTS,
-        });
-        const resA = await t.app.inject({ method: 'GET', url: ROUTE(a.pariwarId, tokenFor(idA)) });
-        const resB = await t.app.inject({ method: 'GET', url: ROUTE(b.pariwarId, tokenFor(idB)) });
-        const bodyA = resA.json() as { drive: { nomineeBankAccounts: Record<string, unknown>[] } };
-        const bodyB = resB.json() as { drive: { nomineeBankAccounts: Record<string, unknown>[] } };
-        expect(bodyA.drive.nomineeBankAccounts[0]!['masked']).toBe(true);
-        // ⭐ B has NO schedule row of its own ⇒ FAIL-OPEN, unaffected by A's.
-        expect(bodyB.drive.nomineeBankAccounts[0]!['masked']).toBe(false);
       } finally {
         await teardown(t);
       }

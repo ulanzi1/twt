@@ -399,20 +399,27 @@ export function sahyogDriveSurfaceFieldIds(model: SahyogDriveRenderModel): strin
 /**
  * The `/sahyog-vivran/[driveToken]` render model.
  *
- * ⭐⭐ IT NAMES ⛔ NOBODY, AND THAT IS THE SPLIT'S LOAD-BEARING PROPERTY, ⛔ not an omission
- * (`2026-09-02-182` cl.2, D6(b)). ⛔ No key below carries a person's name — ⛔ not the deceased
- * member's, ⛔ not a contributor's, ⛔ not a verifier's, ⛔ not a nominee's — so every matrix field
- * this model derives is `pii_tier: 3` and the surface declares ⛔ ZERO Tier-1 fields at `public`.
- * ⇒ it needs ⛔ no `tier1_public_exception`, ⛔ no `RULED_TIER1_PUBLIC_EXCEPTIONS` entry and
- * ⛔ no Panel ruling, so ⛔ nothing outside this repository can block it.
+ * ⛔⛔ **THE PARAGRAPH BELOW WAS TRUE AT 11b.3 AND WENT FALSE AT 11b.3a. IT IS AMENDED, ⛔ NOT
+ * DELETED — the next reader will look for the claim.**
+ * *"⭐⭐ IT NAMES ⛔ NOBODY, AND THAT IS THE SPLIT'S LOAD-BEARING PROPERTY, ⛔ not an omission
+ * (`2026-09-02-182` cl.2, D6(b)). ⛔ No key below carries a person's name … so every matrix field
+ * this model derives is `pii_tier: 3` and the surface declares ⛔ ZERO Tier-1 fields at `public`
+ * ⇒ it needs ⛔ no `tier1_public_exception`, ⛔ no `RULED_TIER1_PUBLIC_EXCEPTIONS` entry and ⛔ no
+ * Panel ruling, so ⛔ nothing outside this repository can block it."*
  *
- * ⚠⛔ ADDING A KEY HERE IS A MATRIX ACT, and on THIS surface it is more than that: a key carrying
- * a person's name would make the emptiness above false and must arrive WITH its cited ruling and
- * its allowlist entry, in the SAME commit (11b.3a's four nominee-bank pairs, `2026-08-28-165`
- * cl.1/cl.3; 11b.3b's two names, `2026-09-02-173` / `-174`). `deriveFieldIds` throws in BOTH
- * directions, and `tests/surface-fields.test.ts` asserts the Tier-1-at-`public` count is 0 — ⛔ that
- * assertion is a COUNT FOR THIS STORY, ⛔ not a permanent ceiling, and each sibling owes it an
- * update.
+ * ⭐ **WHAT IS TRUE NOW.** 11b.3a added FOUR Tier-1 nominee-bank fields at `public`
+ * (`2026-08-28-165` cl.1/cl.3); Story **11b.11** withdrew three of them plus their two Tier-3 bank
+ * siblings (`2026-09-04-190` cl.1 + `2026-09-04-191` cl.1) and KEPT ⛔ **ONE** — the account-holder
+ * name, rendered under the public label *"Nominee Name"* (`-190` cl.2). ⇒ this model DOES name a
+ * person, exactly one, and the surface declares exactly **ONE** Tier-1 field at `public` with one
+ * `RULED_TIER1_PUBLIC_EXCEPTIONS` entry behind it. ⛔ The deceased member's name and the
+ * contributor's remain ABSENT and are still **11b.3b**'s (`2026-09-02-173` / `-174`).
+ *
+ * ⚠⛔ ADDING A KEY HERE IS A MATRIX ACT, and on THIS surface it is more than that: a key carrying a
+ * person's name must arrive WITH its cited ruling and its allowlist entry, in the SAME commit.
+ * `deriveFieldIds` throws in BOTH directions, and `tests/surface-fields.test.ts` asserts the
+ * Tier-1-at-`public` count — ⛔ that assertion is a COUNT FOR THE CURRENT RULINGS, ⛔ never a
+ * permanent ceiling, and it moves with them in whichever direction they move.
  *
  * ⛔ THE `authenticated_member` TIER IS NOT RENDERED HERE AND HAS NO VIEWER. Members are
  * token-bearer, no browser surface holds the member token, and SD-2 is RE-PURPOSED onto the
@@ -480,46 +487,56 @@ export interface SahyogVivranRenderModel {
 }
 
 /**
- * ⭐ ONE RENDERED NOMINEE BANK ACCOUNT — Story 11b.3a (AC2, AC4, AC7).
+ * ⭐ ONE RENDERED NOMINEE BANK ACCOUNT — Story 11b.3a (AC2, AC4, AC7),
+ * ⭐⛔ **REDUCED TO ⛔ ONE RENDERED FIELD BY STORY 11b.11.**
  *
- * The DISPLAY shape, ⛔ not the wire shape and ⛔ not a domain row. Every value has already been
- * decrypted and — when the Pariwar's window has elapsed — REDUCED at the `apps/api` boundary, so
- * ⛔ nothing here decrypts and ⛔ nothing here masks: by the time a value reaches this shape the
- * projection is already the ruled one (AC4 — *"the full value never crosses the wire once masked"*).
+ * The DISPLAY shape, ⛔ not the wire shape and ⛔ not a domain row.
+ *
+ * ⭐⛔ **WHAT THIS SHAPE CARRIED UNTIL 11b.11, kept as the record:** `isMasked`, `nomineeBankName`,
+ * `nomineeBranch`, `nomineeAccountHolderName`, `nomineeAccountNumber`, `nomineeIfsc` and
+ * `nomineeVpa`. `2026-09-04-190` cl.1 (Trustee-ratified) withdraws the account number, IFSC, bank
+ * name and branch from the public surface; `2026-09-04-191` cl.1 withdraws the VPA; `-190` cl.2
+ * KEEPS the account-holder name and rules its public label **"Nominee Name"**.
+ *
+ * ⚠⛔ **AND `isMasked` DIED AS A RENDER CONCEPT, ⛔ not merely as a wire key.** It selected between a
+ * masked and a full copy block; with the coordinates gone both blocks reduce to the same single
+ * name, so there is ⛔ nothing left to select between (11b.11 **D1(b)** collapsed the public wire
+ * accordingly). ⛔⛔ **MASKING WAS ⛔ NOT DELETED** — `-190` **cl.4** RETAINS `isNomineeBankMasked`,
+ * the `pariwar_nominee_bank_masking_schedule` table, its permission key and every test; ⚠ what
+ * changed is that it has ⛔ **NO PUBLIC CONSUMER**. ⛔ Do ⛔ not describe it as a live safeguard here
+ * or anywhere Trustee-facing until it has one.
+ *
+ * ⚠⛔ **THE PARAGRAPH THAT STOOD HERE — *"REDUCED at the `apps/api` boundary … by the time a value
+ * reaches this shape the projection is already the ruled one"* — DESCRIBED A MASKING STEP THIS
+ * SURFACE NO LONGER PERFORMS.** It is amended, ⛔ not deleted: the `apps/api` boundary still
+ * DECRYPTS the one surviving value and still fails soft per field, but it applies ⛔ no masking
+ * projection, because there is no longer a projection to apply.
  *
  * ⛔⛔ THE TWO ACCOUNTS ARE **EQUAL PAYMENT DESTINATIONS**. `accountRank` is row IDENTITY — ⛔ not a
  * priority, ⛔ not a nominee rank, ⛔ not a split, ⛔ not routing (Story 9.9's re-scope). It is
  * mapped to `null` below because it is ⛔ not a rendered field: it keys the list, and rendering
  * *"Account 1"* / *"Account 2"* as a classified value would put an ordering that implies preference
  * onto the page.
+ * ⚠⛔ **AND THAT REASONING BINDS THE `aria-label` TOO.** A per-account label announcing *"Account
+ * 1"* / *"Account 2"* puts the same ordering onto the page **for assistive-tech users only**, and
+ * because it reaches the DOM outside `<MatrixField>` the field-classification gate is STRUCTURALLY
+ * BLIND to it — ⛔ it cannot fail on a field it was told does not exist. ⇒ the group is labelled by
+ * what it IS, ⛔ never by its ordinal (see `[driveToken].astro`).
  *
- * ⚠⛔ `accountHolderName` IS ⛔ NOT LABELLED "NOMINEE" — 6.8's D1 removed that linkage deliberately
- * ([[project_nominee_bank_disbursement_channel]]). ⛔ Do not rename it or label it so in the copy.
+ * ⚠⛔ `accountHolderName` IS ⛔ NOT LINKED TO A DECLARED NOMINEE IN THE DATA — 6.8's D1 removed that
+ * linkage deliberately ([[project_nominee_bank_disbursement_channel]]), and ⛔ nothing may rename
+ * the key or add a join. ⭐ The **rendered LABEL** is nevertheless *"Nominee Name"*, ruled at
+ * `2026-09-04-190` cl.2 (Trustee-ratified): the Panel ruled the PRESENTATION, ⛔ not the schema.
  */
 export interface SahyogVivranNomineeAccountRow {
   /** ⛔ NOT a classified field — row identity only. See the doc-block. */
   readonly accountRank: number;
-  /** ⚠ TRUE when the Pariwar's masking window has elapsed — selects the reduced copy block. */
-  readonly isMasked: boolean;
-  /** Tier-3 plaintext. ⛔ Nothing was decrypted for it. */
-  readonly nomineeBankName: string;
-  /** Tier-3 plaintext. `null` ⇒ render NOTHING. */
-  readonly nomineeBranch: string | null;
-  /** ⚠ THE ACCOUNT HOLDER. `null` when masked (⛔ absent from cl.10(e)'s retention list) or on a
-   * failed decrypt. `null` ⇒ render NOTHING — ⛔ no placeholder. */
-  readonly nomineeAccountHolderName: string | null;
   /**
-   * The account number AS THE RULED PROJECTION ALREADY MADE IT — the FULL value while the drive is
-   * within its window, and the LAST FOUR DIGITS ALONE once masked (already framed by the localised
-   * copy, so assistive tech announces ONE coherent field rather than reading a truncated string
-   * digit by digit — AC4/AC7). ⛔ This module never truncates: the reduction happened at the API.
+   * ⚠ THE ACCOUNT HOLDER, rendered under the public label **"Nominee Name"** (`2026-09-04-190`
+   * cl.2). `null` on a failed decrypt ⇒ render NOTHING — ⛔ no placeholder.
+   * ⭐ It is now the ⛔ ONLY nominee-bank value this surface renders.
    */
-  readonly nomineeAccountNumber: string | null;
-  /** RETAINED in the masked projection (cl.10(e)). `null` ⇒ render NOTHING. */
-  readonly nomineeIfsc: string | null;
-  /** ⚠ NULL for every nominee today (Story 8.4's absent seam) and null whenever masked. ⛔ Render
-   * NOTHING — ⛔ no "not provided" marker, which would be an enumeration signal. */
-  readonly nomineeVpa: string | null;
+  readonly nomineeAccountHolderName: string | null;
 }
 
 /**
@@ -567,14 +584,13 @@ export const SAHYOG_VIVRAN_NOMINEE_ACCOUNT_FIELD_IDS: FieldIdMapping<SahyogVivra
   {
     // ⛔ Row identity, ⛔ not a rendered value — see the interface's doc-block.
     accountRank: null,
-    // Selects the masked vs. full copy block; the values it selects between are classified below.
-    isMasked: null,
-    nomineeBankName: 'nominee_bank_name',
-    nomineeBranch: 'nominee_branch',
+    // ⭐⛔ THE ⛔ ONLY CLASSIFIED FIELD LEFT ON THIS ROW (`2026-09-04-190` cl.2). Five entries stood
+    // beside it until 11b.11 — `nominee_bank_name`, `nominee_branch`, `nominee_account_number`,
+    // `nominee_ifsc`, `nominee_vpa` — plus the `isMasked: null` selector, and all six are gone with
+    // the values they described. ⛔ Re-adding any of them without its ruling AND its
+    // `public-vs-private-matrix.yaml` declaration makes `deriveFieldIds` throw, which is the gate
+    // working.
     nomineeAccountHolderName: 'nominee_account_holder_name',
-    nomineeAccountNumber: 'nominee_account_number',
-    nomineeIfsc: 'nominee_ifsc',
-    nomineeVpa: 'nominee_vpa',
   };
 
 /**
@@ -584,20 +600,16 @@ export const SAHYOG_VIVRAN_NOMINEE_ACCOUNT_FIELD_IDS: FieldIdMapping<SahyogVivra
  * account row renders, and it is what keeps the field set independent of whether a given drive
  * happens to have bank details collected. Its VALUES are never rendered; only its KEYS are read.
  *
- * ⭐⭐ THIS IS THE LOAD-BEARING PART ON THIS SURFACE. Deriving from `accounts[0]` would make the
- * classified set SHRINK on every drive with no bank details — and on every MASKED drive, where the
- * wire's masked arm carries no `accountHolderName` key at all. ⇒ four Tier-1 declarations would go
- * unasserted on exactly the pages nobody would check, which is the vacuous-leg defect, per request.
+ * ⭐⭐ THIS IS THE LOAD-BEARING PART ON THIS SURFACE, AND 11b.11 DOES ⛔ NOT WEAKEN IT. Deriving
+ * from `accounts[0]` would make the classified set SHRINK on every drive with no bank details ⇒ the
+ * ONE surviving Tier-1 declaration would go unasserted on exactly the pages nobody would check,
+ * which is the vacuous-leg defect. ⚠ The old rider also named the MASKED drive, whose wire arm
+ * carried no `accountHolderName` key at all — ⛔ that arm no longer exists (11b.11 D1(b)), but the
+ * empty-accounts case does, so the shape stays.
  */
 const SAHYOG_VIVRAN_NOMINEE_ACCOUNT_SHAPE: SahyogVivranNomineeAccountRow = {
   accountRank: 1,
-  isMasked: false,
-  nomineeBankName: '',
-  nomineeBranch: null,
   nomineeAccountHolderName: null,
-  nomineeAccountNumber: null,
-  nomineeIfsc: null,
-  nomineeVpa: null,
 };
 
 /**

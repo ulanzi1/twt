@@ -483,10 +483,21 @@ describe('committed matrix — the POPULATED invariants (Story 11a.1)', () => {
   // (Story 11b.3a) to **SIX**: the four nominee-bank pairs on `sahyog-vivran`. ⛔ This asserts
   // IDENTITY, not just the count — a count-only assertion would pass while an exception silently
   // migrated to some seventh field, which is the failure the enumerated allowlist exists to make
-  // impossible. ⚠⛔ AND THE FOUR ARE ⛔ NOT SIX: `nominee_bank_name` / `nominee_branch` are Tier-3
-  // PLAINTEXT and carry NO exception — an entry for either would be an "exception that does not
+  // impossible. ⚠⛔ AND THE FOUR WERE ⛔ NOT SIX: `nominee_bank_name` / `nominee_branch` were Tier-3
+  // PLAINTEXT and carried NO exception — an entry for either would be an "exception that does not
   // except anything", which the field-level check rejects in the other direction.
-  it('carries EXACTLY the six ruled Tier-1 public exceptions, each attributed to its decision', () => {
+  //
+  // ⭐⭐⛔ **NARROWED 2026-09-05 BY STORY 11b.11 — SIX → THREE, AND IT IS THE FIRST MOVE IN THIS
+  // DIRECTION.** `2026-09-04-190` cl.1 (Trustee-ratified — Dhiraj Rahul, Kalpana Bharti) supersedes
+  // `2026-08-28-165` cl.1-2 **IN PART**, withdrawing `nominee_account_number` and `nominee_ifsc`
+  // (with the two Tier-3 bank siblings) from `public`; `2026-09-04-191` cl.1 withdraws
+  // `nominee_vpa`; ⭐ `-190` cl.2 KEEPS `nominee_account_holder_name` and this entry is RE-KEYED to
+  // that clause, because a survivor must cite the ruling that KEEPS it, ⛔ never the superseded one.
+  // ⛔ `-165` itself is ⛔ NOT edited in place; its cl.3-4 STAND and the survivor rests on them.
+  // ⭐ A NARROWING needs ⛔ no new authority beyond the ruling that ordered it: this allowlist is a
+  // CEILING, and removing entries only ever lowers it. ⚠ The IDENTITY discipline is unchanged — the
+  // assertion still names every pair, so a withdrawn exception silently reappearing FAILS here.
+  it('carries EXACTLY the three ruled Tier-1 public exceptions, each attributed to its decision', () => {
     const exceptions = committed().surfaces.flatMap((s) =>
       s.fields.filter((f) => f.tier1_public_exception !== undefined).map((f) => ({ s, f })),
     );
@@ -497,10 +508,7 @@ describe('committed matrix — the POPULATED invariants (Story 11a.1)', () => {
     ).toEqual([
       'member-directory.member_name@2026-08-19-136',
       'sahyog-drive.deceased_member_name@2026-08-24-159',
-      'sahyog-vivran.nominee_account_holder_name@2026-08-28-165 cl.1',
-      'sahyog-vivran.nominee_account_number@2026-08-28-165 cl.1',
-      'sahyog-vivran.nominee_ifsc@2026-08-28-165 cl.1',
-      'sahyog-vivran.nominee_vpa@2026-08-28-165 cl.1',
+      'sahyog-vivran.nominee_account_holder_name@2026-09-04-190 cl.2',
     ]);
     for (const e of exceptions) expect(e.f.pii_tier).toBe(1);
   });

@@ -20,11 +20,38 @@
 // `apps/api`, ⛔ never by `apps/public`, which must ⛔ not gain KMS capability for ONE field class
 // when the KEK is shared across EVERY Tier-1 field class (`2026-08-20-143` cl.1, D6(a)).
 //
-// ⚠ THE COST IS BOUNDED AND SMALL, AND IT IS SAID HERE RATHER THAN LEFT TO BE RE-DERIVED: **at most
-// EIGHT values** per page — four fields × at most two EQUAL accounts — against the directory's fifty
-// per page. `DIRECTORY_DECRYPT_CONCURRENCY = 8` still bounds it at the boundary. ⭐ And a MASKED
-// projection decrypts only **two** per account: the holder name and the VPA are ⛔ not in cl.10(e)'s
-// retention list, so they are never decrypted when masked.
+// ── ⭐⭐ AMENDED AGAIN BY STORY 11b.11 — ⛔ ONE TIER-1 CIPHERTEXT COLUMN LEAVES HERE, ⛔ NOT FOUR ──
+// `2026-09-04-190` cl.1 (Trustee-ratified) withdraws `nominee_account_number`, `nominee_ifsc`,
+// `nominee_bank_name` and `nominee_branch` from the public surface, and `2026-09-04-191` cl.1
+// withdraws `nominee_vpa`. ⭐ `-190` cl.2 KEEPS `nominee_account_holder_name`, relabelled
+// **"Nominee Name"** at the render layer. ⇒ this read's nominee-bank projection now carries
+// `accountRank` + `accountHolderNameCiphertext` and ⛔ NOTHING ELSE.
+// ⚠⛔ **THE UNDERLYING ROW READ IS ⛔ NOT NARROWED, AND THAT IS DELIBERATE.**
+// `getClaimNomineeBankAccountsCiphertext` is SHARED with the Story 9.9 member donor path
+// (`apps/api/src/modules/payment/handlers.ts`), which must keep every value so a member can PAY the
+// family. ⛔ Narrowing it would silently strip the member's payment coordinates. ⇒ the withdrawal is
+// a **PROJECTION** taken here, on this surface's own boundary — the shape below is what "removed for
+// this surface" means, and ⛔ nothing removed here is removed for the member.
+// ⭐ THE COST IS NOW **at most TWO values** per page — one field × at most two EQUAL accounts —
+// against the directory's fifty. `DIRECTORY_DECRYPT_CONCURRENCY = 8` still bounds it.
+// ⚠⛔ **AND THE MASKING VERDICT IS ⛔ NO LONGER COMPUTED HERE.** `-190` cl.4 RETAINS the machinery
+// (`isNomineeBankMasked`, `resolveEffectiveNomineeBankMasking`, the schedule table, its key and its
+// tests — ⛔ none of it is deleted) ⚠ but after 11b.11 it has ⛔ **NO PUBLIC CONSUMER**, and this read
+// must ⛔ not compute a verdict it would discard. ⇒ the imports, the `DRIVE_MASKING_FROM` select and
+// the `masked` field are GONE FROM THIS FILE; the machinery lives at
+// `packages/domain/src/claim/nominee-bank-masking{,-policy}.ts`. ⛔ Do ⛔ not conclude masking was
+// deleted, and ⛔ do not describe it as a live safeguard anywhere until it has a consumer again.
+// ⭐⛔ **ONE INHERITED DEFECT IS CLOSED BY THAT DELETION, and it is named so the closure is
+// checkable:** a `pariwar_nominee_bank_masking_schedule` row with `masking_mode = 'after_days'` and
+// `mask_after_days IS NULL` (the CHECK dropped, or a snapshot restore predating it) made
+// `settingFromRow` throw a bare `Error` inside this read's `Promise.all` ⇒ the API 500s ⇒ the Astro
+// route maps `!fetched.ok` to the **503 outage view**, for EVERY Sahyog Vivran page in that tenant —
+// the opposite blast radius from the `accountRank` guard twelve lines away, which DROPS a malformed
+// row precisely because *"throwing would 500 a whole transparency page over one malformed row"*.
+// ⇒ ⭐ this read no longer resolves the schedule at all, so the unauthenticated path can ⛔ no longer
+// reach it. ⚠⛔ **ITS ADMIN-SIDE TWIN IS ⛔ NOT CLOSED** — the same `settingFromRow` sits outside any
+// try/catch in the admin `getSchedule`, so a corrupt row still 500s the console, and the operator's
+// only recovery path is the console that just 500'd. That one stays on 11b.3a.
 //
 // ── ⭐⭐ IT STILL RETURNS ⛔ NO PERSON'S NAME IN PLAINTEXT, AND ⛔ NO IDENTIFIER ──────
 // ⛔ No `member_id`, ⛔ no `deceased_member_id`, ⛔ no `claim_case_id`, ⛔ no `pool_id`. ⚠ The
@@ -68,8 +95,10 @@
 
 import { and, eq, sql } from 'drizzle-orm';
 
-import { isNomineeBankMasked } from '../claim/nominee-bank-masking.js';
-import { resolveEffectiveNomineeBankMasking } from '../claim/nominee-bank-masking-policy.js';
+// ⛔ `isNomineeBankMasking` / `resolveEffectiveNomineeBankMasking` are ⛔ DELIBERATELY NOT IMPORTED
+// — see the 11b.11 rider above. The machinery is RETAINED (`2026-09-04-190` cl.4) and lives at
+// `../claim/nominee-bank-masking.js` and `../claim/nominee-bank-masking-policy.js`; what it no
+// longer has is a PUBLIC CONSUMER. ⛔ Do not re-add these imports to "restore" masking.
 import { getClaimNomineeBankAccountsCiphertext } from '../claim/nominee-bank-read.js';
 import { classifyCycleOutcome, type CycleFundingOutcome } from '../close-of-cycle/framing.js';
 import type { Db } from '../db.js';
@@ -84,7 +113,9 @@ import {
   coerceDriveInstant,
   DECEASED_DISTRICT,
   DRIVE_CLOSED_AT,
-  DRIVE_MASKING_FROM,
+  // ⛔ `DRIVE_MASKING_FROM` is ⛔ DELIBERATELY NOT IMPORTED — see the rider at its former select
+  // site below. It is ⛔ NOT deleted; it stays exported from `public-read.ts` with the retained
+  // masking machinery (`2026-09-04-190` cl.4), which currently has ⛔ no consumer.
 } from './public-read.js';
 
 /**
@@ -192,59 +223,61 @@ export interface SahyogVivranAppealReversal {
 }
 
 /**
- * ONE of the claim's at-most-two nominee bank accounts, **as the substrate holds it** — Story 11b.3a
- * (AC2, AC4).
+ * ONE of the claim's at-most-two nominee bank accounts, **as this PUBLIC surface projects it** —
+ * Story 11b.3a (AC2, AC4), ⭐⛔ **NARROWED TO ONE FIELD BY STORY 11b.11**.
  *
- * ⭐ CIPHERTEXT AS STORED. The four Tier-1 fields leave this module encrypted; the `apps/api`
- * boundary decrypts them under `CLAIM_NOMINEE_BANK_FIELD_CLASS` and applies the masking projection.
+ * ⭐⛔ **WHAT THIS SHAPE CARRIED UNTIL 11b.11, kept as the record:** `bankName` and `branch` (Tier-3
+ * plaintext) plus FOUR Tier-1 ciphertexts — `accountHolderNameCiphertext`,
+ * `accountNumberCiphertext`, `ifscCiphertext` and `vpaCiphertext`. `2026-09-04-190` cl.1 withdraws
+ * the account number, IFSC, bank and branch from `public`; `2026-09-04-191` cl.1 withdraws the VPA;
+ * `-190` cl.2 KEEPS the account-holder name. ⇒ what remains is `accountRank` + one ciphertext.
+ *
+ * ⭐ CIPHERTEXT AS STORED. The surviving Tier-1 field leaves this module encrypted; the `apps/api`
+ * boundary decrypts it under `CLAIM_NOMINEE_BANK_FIELD_CLASS`.
  * ⛔ This module never decrypts, and ⛔ `apps/public` never may (Trap 6 / `2026-08-20-143` cl.1).
- * ⚠ The `Ciphertext` suffixes are MISUSE RESISTANCE, ⛔ not decoration — the 6.8 naming finding: a
- * shape carrying ciphertext must not be mistakable for the already-masked API view.
+ * ⚠ The `Ciphertext` suffix is MISUSE RESISTANCE, ⛔ not decoration — the 6.8 naming finding: a
+ * shape carrying ciphertext must not be mistakable for the already-decrypted API view.
+ *
+ * ⭐⛔ **AND THE FLAG THAT SAT BESIDE THE PAYLOAD IS GONE WITH IT.** The old block returned
+ * `masked: boolean` ALONGSIDE the complete ciphertext of every field, with ⛔ nothing in the TYPE
+ * changing when `masked === true` — the guarantee was a downstream promise, ⛔ not a structural
+ * property. ⇒ the withdrawal makes it structural: what is not projected here ⛔ cannot be rendered.
+ * ⛔ Do ⛔ not re-introduce a flag beside the payload it is supposed to govern.
  *
  * ⛔⛔ THE TWO ACCOUNTS ARE **EQUAL PAYMENT DESTINATIONS**. `accountRank` is composite-PK IDENTITY —
  * ⛔ **not a priority, ⛔ not a nominee rank, ⛔ not a 75/25 split**, and ⛔ not a routing instruction
  * (Story 9.9's re-scope; [[project_nominee_bank_disbursement_channel]],
  * [[project_disbursement_is_money_in_routing]]). ⛔ Nothing downstream may present one as primary.
- *
- * ⚠ `vpaCiphertext` is **NULL for every nominee today** — Story 8.4 shipped the VPA resolver seam
- * ABSENT and deferred collection to its own story ([[project_nominee_vpa_deferred_seam]]). ⇒ ⛔ a
- * null VPA is ⛔ NOT an error, ⛔ not a gap and ⛔ not a reason to hold the render: the surface renders
- * NOTHING for it — ⛔ no placeholder, ⛔ no *"not provided"* marker, because an omission that
- * announces itself is an enumeration signal.
  */
 export interface SahyogVivranNomineeBankAccount {
   /** `1` | `2` — row IDENTITY, ⛔ never a priority. */
   readonly accountRank: 1 | 2;
-  /** Tier-3 PLAINTEXT — public, IFSC-derived, non-identifying. ⛔ Nothing is decrypted for it. */
-  readonly bankName: string;
-  /** Tier-3 PLAINTEXT. `null` when the filer recorded no branch. */
-  readonly branch: string | null;
   /**
-   * ⚠⛔ THE COLUMN HOLDS **THE ACCOUNT HOLDER**, AND THIS CODE MAY ⛔ NOT CALL IT A NOMINEE.
-   * 6.8's D1 removed the linkage on purpose. ⛔ Do not label it *"Nominee"* anywhere downstream.
+   * ⚠⛔ THE COLUMN HOLDS **THE ACCOUNT HOLDER**, AND THIS CODE MAY ⛔ NOT ASSERT A NOMINEE LINKAGE.
+   * 6.8's D1 removed that linkage on purpose — ⛔ no FK, ⛔ no rank, ⛔ no match rule — and that
+   * reasoning is about the DATA and ⛔ STANDS.
+   * ⭐ `2026-09-04-190` cl.2 (Trustee-ratified) rules the PUBLIC WORDING **"Nominee Name"** for the
+   * rendered label ⇒ the render layer says *Nominee Name*; ⛔ this field id, this key and the column
+   * `account_holder_name_ciphertext` are UNCHANGED, and ⛔ nothing here may add a join to reconcile
+   * them ([[project_nominee_bank_disbursement_channel]]).
    */
   readonly accountHolderNameCiphertext: string;
-  readonly accountNumberCiphertext: string;
-  readonly ifscCiphertext: string;
-  /** ⚠ NULL by design for a nominee without a VPA — a first-class state, ⛔ never an error. */
-  readonly vpaCiphertext: string | null;
 }
 
 /**
- * The nominee bank block — the accounts plus the ONE masking verdict that governs all of them.
+ * The nominee bank block on the PUBLIC surface.
  *
- * ⭐ THE VERDICT IS PER-PARIWAR AND PER-DRIVE, ⛔ never per-account: the schedule is a Pariwar-level
- * record and the offset is measured from THIS drive's close instant, so two accounts on one drive can
- * ⛔ never disagree. ⛔ Do not move `masked` onto the account.
+ * ⭐⛔ **THE `masked: boolean` VERDICT THAT SAT HERE IS GONE — AND MASKING WAS ⛔ NOT DELETED.**
+ * `2026-09-04-190` cl.4 RETAINS `isNomineeBankMasked`, `resolveEffectiveNomineeBankMasking`, the
+ * `pariwar_nominee_bank_masking_schedule` table, its permission key, its admin surface and every one
+ * of its tests. ⚠ What changed is its STATUS: with the coordinates withdrawn it has ⛔ **NO PUBLIC
+ * CONSUMER**, so this read must ⛔ not compute a verdict it would discard. ⛔ Do ⛔ not read the
+ * absence as a deletion, and ⛔ do not describe the machinery as a live safeguard until it has a
+ * consumer again.
+ * ⚠ `2026-09-04-191` cl.2 still binds that dormant code: the masked projection must ⛔ NOT drop the
+ * nominee name — it is now the only field there would be to keep.
  */
 export interface SahyogVivranNomineeBank {
-  /**
-   * Whether the public projection is MASKED at `now` — `2026-08-28-160` cl.10(c)-(e).
-   *
-   * ⭐ `false` when the Pariwar has no schedule row: `D8-default` RULED **FAIL-OPEN**
-   * (`2026-09-02-179` cl.1). ⛔ Never a masked default — cl.10(b) forbids the code assuming it.
-   */
-  readonly masked: boolean;
   /**
    * At most TWO, ordered `#1` then `#2` — an ORDER, ⛔ not a ranking. `[]` when the claim's bank
    * details were never collected (the 6.8 AC3 absence signal), and the surface then renders NOTHING.
@@ -369,12 +402,14 @@ export async function readPublicSahyogVivran(
       claimCaseId: pools.claimCaseId,
       district: DECEASED_DISTRICT(now),
       driveClosedAt: DRIVE_CLOSED_AT(now),
-      // ⭐ A SECOND, DELIBERATELY DIFFERENT INSTANT — ⛔ not a duplicate of the line above. The one
-      // above is the LATEST close/settle event (what the page renders as "closed on"); this is the
-      // EARLIEST, and it is the only instant the masking window may be measured from. A late
-      // `pool.settled` moves the former forward and would UN-MASK an already-masked drive. See
-      // `DRIVE_MASKING_FROM`'s doc-block (second-pass review, 2026-09-03).
-      driveMaskingFrom: DRIVE_MASKING_FROM(now),
+      // ⭐⛔ **`driveMaskingFrom: DRIVE_MASKING_FROM(now)` STOOD HERE UNTIL STORY 11b.11.** It was a
+      // SECOND, deliberately different instant — the EARLIEST close/settle event, the only instant a
+      // masking window may be measured from, kept apart from `DRIVE_CLOSED_AT` (the LATEST) because
+      // a late `pool.settled` moving the latter forward would UN-MASK an already-masked drive.
+      // ⇒ it is selected ⛔ no longer: this surface no longer decides masking (`2026-09-04-190`
+      // cl.1/cl.4), and selecting an instant to feed a call that no longer happens is a computation
+      // with a dead output. ⛔ The FRAGMENT is ⛔ NOT deleted — `DRIVE_MASKING_FROM` still lives in
+      // `public-read.ts` with the masking machinery it belongs to.
       // ⚠ `count(*)` is `bigint` ⇒ the driver hands back a STRING, ⛔ not a number. Coerced at this
       // accessor's boundary below — ⛔ never left to an implicit `+` somewhere downstream.
       confirmedCount: CONFIRMED_CONTRIBUTION_COUNT(now),
@@ -423,9 +458,10 @@ export async function readPublicSahyogVivran(
   // comment would rank this as a disclosure hazard when it is an availability one. ⛔ Never re-derive
   // it from `row.driveClosedAt` below.
   const driveClosedAt = coerceDriveInstant(row.driveClosedAt);
-  // ⭐ COERCED THE SAME WAY AND FOR THE SAME REASON, but kept SEPARATE from `driveClosedAt` — the two
-  // fragments answer different questions and collapsing them re-introduces the un-masking defect.
-  const driveMaskingFrom = coerceDriveInstant(row.driveMaskingFrom);
+  // ⭐⛔ `const driveMaskingFrom = coerceDriveInstant(row.driveMaskingFrom)` STOOD HERE. It was kept
+  // SEPARATE from `driveClosedAt` on purpose — the two fragments answer different questions and
+  // collapsing them re-introduces the un-masking defect. ⇒ removed with its select at 11b.11; ⛔ if
+  // masking is ever re-pointed at this surface, restore BOTH, and ⛔ never collapse them into one.
 
   return {
     poolIndex: row.poolIndex,
@@ -446,19 +482,12 @@ export async function readPublicSahyogVivran(
             deliveredTotal: confirmedContributionCount * row.fixedAmount,
           }),
     appealReversal: await readAppealReversal(db, pariwarId, row.claimCaseId, now),
-    // ⭐ STORY 11b.3a. ⚠ Reads the SAME `now` as everything above it: the masking verdict and the
-    // close instant it is measured from must describe ONE instant, or a page could render a drive as
-    // closed-at-T while deciding masking against T'.
-    nomineeBank: await readNomineeBank(
-      db,
-      pariwarId,
-      row.claimCaseId,
-      driveMaskingFrom,
-      // ⭐ THE INTERNAL STATE, ⛔ not the public `status` label computed above — the masking predicate
-      // is a domain rule and the public vocabulary is a wire concern (`-144` cl.8).
-      row.currentState as SahyogVivranVisiblePoolState,
-      now,
-    ),
+    // ⭐ STORY 11b.3a, ⭐⛔ NARROWED BY 11b.11. ⚠ It no longer takes `now`, `driveMaskingFrom` or the
+    // drive's internal state: all three existed ⛔ ONLY to decide masking, and this surface no longer
+    // makes that decision (`2026-09-04-190` cl.1/cl.4). ⛔ The machinery is RETAINED — see the file
+    // header — and ⛔ passing these arguments to a call that discards them would be a live-looking
+    // control with a dead output, which is exactly what D1(b) forbids.
+    nomineeBank: await readNomineeBank(db, pariwarId, row.claimCaseId),
   };
 }
 
@@ -534,10 +563,12 @@ async function readAppealReversal(
 }
 
 /**
- * ⭐ THE NOMINEE BANK BOUNDARY READ — Story 11b.3a (Task 2; AC2, AC4).
+ * ⭐ THE NOMINEE BANK BOUNDARY READ — Story 11b.3a (Task 2; AC2, AC4), ⭐⛔ **NARROWED BY 11b.11**.
  *
- * Resolves the claim's at-most-two accounts (ciphertext AS STORED) plus the ONE masking verdict that
- * governs them, at `now`.
+ * Resolves the claim's at-most-two accounts and projects, for the PUBLIC surface, ⛔ **only** the
+ * account-holder name ciphertext (`2026-09-04-190` cl.1-2 + `2026-09-04-191` cl.1).
+ * ⚠⛔ **IT NO LONGER RESOLVES THE MASKING SCHEDULE.** The machinery is RETAINED (`-190` cl.4) and
+ * has ⛔ NO PUBLIC CONSUMER; ⛔ never compute a verdict this surface would discard.
  *
  * ── ⛔ WHAT IT DOES NOT DO, AND EACH IS A RULING RATHER THAN A CHOICE ────────────────────────────
  * ⛔ It does ⛔ **not decrypt**. The four fields stay Tier-1 ciphertext until `apps/api` resolves
@@ -567,17 +598,18 @@ async function readNomineeBank(
   db: Db,
   pariwarId: PariwarId,
   claimCaseId: string,
-  /** ⭐ `DRIVE_MASKING_FROM` — the EARLIEST close/settle instant. ⛔ NEVER `driveClosedAt`. */
-  driveMaskingFrom: Date | null,
-  /** ⭐ The drive's own INTERNAL state — a CAMPAIGN fact, ⛔ never a member handle (cl.10(f)). */
-  driveState: SahyogVivranVisiblePoolState,
-  now: Date,
 ): Promise<SahyogVivranNomineeBank> {
-  const [rows, setting] = await Promise.all([
-    getClaimNomineeBankAccountsCiphertext(db, pariwarId, claimCaseId as ClaimId),
-    // ⭐ `null` ⇒ FAIL-OPEN (`D8-default`, `2026-09-02-179` cl.1) — ⛔ never a masked default.
-    resolveEffectiveNomineeBankMasking(db, pariwarId, now),
-  ]);
+  // ⚠⛔ ONE ROUND TRIP, ⛔ NOT TWO. The second — `resolveEffectiveNomineeBankMasking` — is GONE
+  // (`2026-09-04-190` cl.4 retains the function; this surface no longer has a masking decision to
+  // make). ⭐ That also removes the ⛔ ONLY path by which a malformed schedule row could reach the
+  // UNAUTHENTICATED request: `settingFromRow` throws a bare `Error`, and inside a `Promise.all` here
+  // it 500'd the API ⇒ the Astro route's 503 outage view ⇒ EVERY Sahyog Vivran page in the tenant
+  // went dark over one bad row. ⛔ Its admin-side twin is ⛔ not closed by this and stays on 11b.3a.
+  //
+  // ⚠⛔ THE SHARED READ IS ⛔ NOT NARROWED — `getClaimNomineeBankAccountsCiphertext` also serves the
+  // Story 9.9 member donor path, which needs every value so a member can PAY the family. The
+  // withdrawal is the PROJECTION taken below, on this surface only.
+  const rows = await getClaimNomineeBankAccountsCiphertext(db, pariwarId, claimCaseId as ClaimId);
 
   const accounts = rows.flatMap((r): SahyogVivranNomineeBankAccount[] => {
     // ⛔ VALIDATED AGAINST THE LITERAL SET, ⛔ never coerced. The `{1, 2}` CHECK is app-enforced plus
@@ -585,28 +617,29 @@ async function readNomineeBank(
     // the only safe answer on a public page: rendering an unexpected account is worse than rendering
     // one fewer, and throwing would 500 a whole transparency page over one malformed row.
     if (r.accountRank !== 1 && r.accountRank !== 2) return [];
-    return [
-      {
-        accountRank: r.accountRank,
-        bankName: r.bankName,
-        // ⚠ `.trim() || null`, ⛔ not a raw passthrough (review 2026-09-03). `branch` is Tier-3
-        // plaintext resolved from an IFSC lookup whose response contract has no `.min(1)`, and empty
-        // BRANCH strings are common in real RBI datasets — an `''` here survives to the wire as a
-        // "present" branch, fails the contract's `.min(1).nullable()` at response serialization and
-        // 500s the WHOLE transparency page. The render already omits the cell for `null`; this makes
-        // a blank branch that same first-class absence. (The `bank_name` column is `NOT NULL` and
-        // has no such nullable projection — a truly empty `bank_name` is a data-integrity fault.)
-        branch: r.branch?.trim() ? r.branch.trim() : null,
-        accountHolderNameCiphertext: r.accountHolderNameCiphertext,
-        accountNumberCiphertext: r.accountNumberCiphertext,
-        ifscCiphertext: r.ifscCiphertext,
-        vpaCiphertext: r.vpaCiphertext,
-      },
-    ];
+    // ⭐⛔ THE PROJECTION IS THE WITHDRAWAL (`2026-09-04-190` cl.1 + `2026-09-04-191` cl.1). `r` still
+    // carries `bankName`, `branch`, `accountNumberCiphertext`, `ifscCiphertext` and `vpaCiphertext`
+    // — ⛔ NONE of them is copied out, so they can ⛔ not be rendered, logged or serialized from this
+    // surface. ⛔ Do ⛔ not "restore" any of them here; each removal is a Trustee-ratified ruling.
+    // ⚠ `bankName`'s raw pass-through went with it: the column is `text NOT NULL` with ⛔ no
+    // non-empty CHECK and is copied verbatim from the IFSC provider port (`bankName: string`, no
+    // minimum), so an `''` failed `z.string().min(1)` at response serialization and 500'd the whole
+    // transparency page. ⭐ Closed HERE by deletion.
+    // ⚠⛔ **AND A COMMITTED COUNTER-POSITION IS NAMED RATHER THAN SILENTLY CONTRADICTED.** The
+    // `branch` guard that stood beside this projection carried the parenthetical *"(The `bank_name`
+    // column is `NOT NULL` and has no such nullable projection — a truly empty `bank_name` is a
+    // **data-integrity fault**.)"* ⭐ That was a real position and it is why no guard was added here.
+    // ⛔ It does ⛔ not survive contact with `z.string().min(1)` at a response boundary: a
+    // data-integrity fault that 500s a whole page is still an outage, and the correct posture on a
+    // public page is the one the `accountRank` check takes twelve lines up — degrade ROW-LOCAL,
+    // ⛔ never page-wide. ⇒ recorded, and moot HERE only because the field is gone.
+    // ⚠⛔ **ON THE MEMBER DONOR PATH IT IS ⛔ NOT MOOT, AND THE ROUTED FINDING IS ⛔ NOT CONFIRMED
+    // THERE EITHER.** `apps/api/src/modules/payment/handlers.ts` ALREADY degraded an empty
+    // `bank_name` to the decrypt-failed sentinel BEFORE the schema saw it, so the 500 was never
+    // reachable on that path. ⭐ What WAS real is a whitespace-only value passing `.length > 0` and
+    // rendering a blank bank label; that is fixed there, with the same `district`/`branch` treatment.
+    return [{ accountRank: r.accountRank, accountHolderNameCiphertext: r.accountHolderNameCiphertext }];
   });
 
-  return {
-    masked: isNomineeBankMasked({ setting, driveClosedAt: driveMaskingFrom, driveState, now }),
-    accounts,
-  };
+  return { accounts };
 }

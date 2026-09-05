@@ -4,14 +4,16 @@
 // exists:
 //   · the AC6 propagation disclosure is STANDING — present in EVERY state, ⛔ not only after a
 //     successful change. A conditional disclosure satisfies the letter of "the page discloses it"
-//     while failing its whole purpose, which is that the operator reads it BEFORE acting — and here
-//     the thing being served stale is a FULL ACCOUNT NUMBER.
+//     while failing its whole purpose, which is that the operator reads it BEFORE acting.
+//     ⛔ [Review, 11b.11] Story 11b.11 withdrew the bank coordinates this knob used to gate from the
+//     public page structurally, in every state of this setting — the disclosure now says so rather
+//     than naming a stale-cache consequence that can no longer occur.
 //   · ALL THREE ruled settings are reachable, and `0` is ⛔ not "unset": cl.10(b) forbids treating
 //     immediate masking as the code's assumption, and a falsy check on a day count is exactly how
 //     that would happen by accident.
 //   · `configured: false` renders as its OWN explicit statement — under `D8-default` FAIL-OPEN
-//     (`2026-09-02-179` cl.1) it means the complete details stay visible, and an operator must not
-//     read silence as safety.
+//     (`2026-09-02-179` cl.1) it means the default is unmasked, and an operator must not read
+//     silence as safety, even now that this control has no public field left to affect.
 //   · `permanent` says it covers the ACTIVE campaign — the terminal rung (`2026-09-02-183` cl.4).
 //   · a 403 surfaces as a readable page error naming the RULING, and ⛔ does NOT hide the form
 //     (there is no client-side capability check, and there must not be one).
@@ -68,9 +70,11 @@ describe('MaskingSchedulePage — the AC6 non-immediacy disclosure is STANDING',
     const notice = await screen.findByTestId('nominee-bank-masking-propagation-notice');
     expect(notice.textContent).toMatch(/s-maxage=300/);
     expect(notice.textContent).toMatch(/five-minute|five minutes/i);
-    // ⭐ AND IT NAMES WHAT IS SERVED STALE. On this control that is the whole difference from the
-    // sibling kill switch: an operator must know the number itself is still going out.
-    expect(notice.textContent).toMatch(/account number/i);
+    // ⛔ [Review, 11b.11] Previously asserted the notice names "account number" — Story 11b.11
+    // withdrew that field from the public page structurally, in every state of this setting, so
+    // the notice no longer claims a consequence that cannot occur. It now says so plainly instead.
+    expect(notice.textContent).toMatch(/Story 11b\.11/i);
+    expect(notice.textContent).toMatch(/no public field/i);
   });
 
   // ⛔ The regression that matters: a disclosure rendered only inside the success branch would pass a
@@ -93,13 +97,16 @@ describe('MaskingSchedulePage — the AC6 non-immediacy disclosure is STANDING',
 });
 
 describe('MaskingSchedulePage — the state an operator is shown', () => {
-  it('⭐⭐ `configured: false` says the details STAY VISIBLE — ⛔ silence is not safety', async () => {
+  it('⭐⭐ `configured: false` states the FAIL-OPEN default honestly — ⛔ silence is not safety', async () => {
     // `D8-default` FAIL-OPEN (`2026-09-02-179` cl.1). ⚠⛔ Its cost is part of the ruling: authority is
     // CENTRAL, so a Pariwar cannot set its own window ⇒ this governs EVERY Pariwar until the Trust
     // acts. An operator must be able to read that off the page.
+    // ⛔ [Review, 11b.11] Previously asserted "stay visible" — Story 11b.11 withdrew the fields this
+    // setting used to gate, structurally, in every state, so the copy no longer claims a visible
+    // consequence that cannot occur; it now says the setting has no visible effect today, honestly.
     renderPage(schedule());
     const el = await screen.findByTestId('nominee-bank-masking-unconfigured');
-    expect(el.textContent).toMatch(/stay visible/i);
+    expect(el.textContent).toMatch(/no visible effect today/i);
     // ⛔ And it says nobody CHOSE it — an unconfigured Pariwar and a deliberate choice are different
     // facts, and conflating them is how a default gets mistaken for a decision.
     expect(el.textContent).toMatch(/Nobody has chosen this/i);

@@ -455,8 +455,8 @@ since a half-renamed vocabulary is worse than either end state.
 > and **ACCEPTED**;
 > **(3)** ⭐ **an absent token DROPS ITS CLAUSE** — ⛔ no combinatorial variants.
 >
-> ⚠ **Attribution query (§10.1):** relayed as *"DR and KP"*; ⛔ every prior ratification reads
-> **DR + KB**. ⛔ Not silently normalised — ⭐ confirm the second initials.
+> ✅ **Attribution CONFIRMED (§10.1):** relayed as *"DR and KP"*, confirmed a typo — the rulings are
+> **Trustee-ratified by Dhiraj Rahul + Kalpana Bharti (DR + KB)**.
 >
 > ⭐⭐ **ONLY RULING 3 IS THIS STORY'S.** ⛔ Ruling 1 is a new story (6.10's console family — 11b.12
 > touches ⛔ no approval surface). ⛔ Ruling 2 is its own story or a NAMED addition to **story D**

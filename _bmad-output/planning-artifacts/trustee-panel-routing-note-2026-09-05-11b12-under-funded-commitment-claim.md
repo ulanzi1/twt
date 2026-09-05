@@ -5,7 +5,12 @@
 **Occasion:** Story **11b.12**'s validation pass (D2). ⭐ Found by **reading the producer**, ⛔ not the
 copy: the string was traced to the branch that emits it before this note was written.
 **Routed to:** Trustee Panel. ⚠ **And, on one question only, to counsel** — see §6.
-**Status:** ⏳ **OPEN — awaiting the Panel.** Logged as Story 11b.12 **D2**.
+**Status:** ✅⭐ **(Q1) ANSWERED — Trustee-ratified, Dhiraj Rahul + Kalpana Bharti, 2026-09-05:**
+> **"Trust doesn't make any commitment to the family."**
+> **"We are open to suggestions on new wording and waiting."**
+
+⇒ **Option (ii) is chosen.** The line **goes**. ⏳ **(Q2) OPEN — wording proposed at §7, awaiting
+ratification.** ⛔ Nothing is applied until the Panel picks one. Logged as Story 11b.12 **D2**.
 ⛔ **NON-BLOCKING.** Story 11b.12 proceeds without it; the string is ⛔ untouched until you answer.
 
 > ## ⚠⛔ CORRECTION — 2026-09-05, **v1 of this note contained a FALSE STATEMENT**
@@ -259,6 +264,162 @@ insurer, and we have agreed before that promise-shaped language gets that check.
 **Nothing changes on the website.** The line stays exactly as it is until you answer. Story 11b.12 —
 the one that fixes the *other* wrong sentences about payment on that page — carries on without this,
 and ⛔ does ⛔ not touch this line.
+
+---
+
+## 7. ⭐ PROPOSED WORDING — five options, ⏳ awaiting the Panel's pick
+
+**Given (Q1)'s answer — the trust makes ⛔ NO commitment — every option below removes the trust as an
+actor.** ⭐ All carry the tagline **सहयोग का हाथ, हर परिवार के साथ** as directed.
+
+⭐⭐ **AND A SECOND BRIEF, ADDED BY BigDev:** the words must be **plain** — ⛔ no jargon, ⛔ nothing a
+reader has to work at — and a member of the public reading them should feel **drawn to join the
+Trust**. ⭐ **There is ⛔ NO length limit**; a longer, warmer sentence is preferred to a clipped one.
+
+### 7.1 ⚠ What any replacement must satisfy
+
+1. ⛔ **⛔ No trust actor, ⛔ no commitment, ⛔ no guarantee** — (Q1), and `-189` consequence 6.
+2. ⛔ **⛔ No payment claim about the trust** — `-192`: members pay the family **directly**.
+3. ⛔⛔ **⛔ NO VERDICT ON WHETHER THE TARGET WAS MET.** ⭐ The one most easily missed:
+   `classifyCycleOutcome` exists to **quarantine** the target so ⛔ no ratio, percentage or shortfall
+   reaches the copy (Pool-Reality #2). ⇒ the replacement must ⛔ **not** say *"less than expected"*
+   either. ⚠ Replacing one leak with a franker leak is ⛔ not a fix.
+4. ⭐ **PLAIN WORDS.** ⛔ Not *"reconciled"*, ⛔ not *"cycle funding outcome"*. ⭐ The Hindi should read
+   as naturally as speech, ⛔ not as translated English.
+5. ⭐ **IT SHOULD MAKE SOMEONE WANT TO JOIN** — by what it truthfully says, ⛔ not by selling.
+6. ⚠ **It is a public memorial page.** ⛔ It must never read as *"not enough people helped"*, and
+   ⛔ never as an advertisement placed on a family's record.
+7. ⚠ **The confirmed count is ⛔ ALREADY on the same row.** ⇒ ⛔ don't restate a number.
+
+### 7.2 ⭐ The tagline in English
+
+**सहयोग का हाथ, हर परिवार के साथ** — three renderings, ⭐ our pick first:
+
+| | English |
+|---|---|
+| ⭐ **(a)** | **"A hand of support, with every family"** |
+| (b) | "A helping hand, with every family" |
+| (c) | "Support in hand, beside every family" |
+
+⭐ **(a)** keeps *सहयोग* as **support** — the word this product already carries in its own name
+(*Sahyog*) — and mirrors the Hindi's two-beat rhythm.
+
+⚠ **Hindi note:** the public pages already call a drive **अभियान** (`page.intro`), ⛔ not *"चक्र"*.
+⭐ Every Hindi option below uses **अभियान**, so the row reads in the same voice as the page around it.
+
+### 7.3 The five options
+
+⭐ **EN** then **HI**, exactly as each would render.
+
+---
+
+**⭐ OPTION 1 — THE SIMPLEST.** Says who acted, and nothing more.
+
+> **EN:** *"This drive has closed. Fellow members stood with this family — a hand of support, with
+> every family."*
+>
+> **HI:** *"यह अभियान पूरा हुआ। साथी सदस्य इस परिवार के साथ खड़े रहे — सहयोग का हाथ, हर परिवार के साथ।"*
+
+⭐ True of **every** closed drive. ⛔ Nothing to misread. ⚠ Also the least reason to join.
+
+---
+
+**⭐⭐ OPTION 2 — WHERE THE MONEY WENT.** The single most persuasive true fact this trust has.
+
+> **EN:** *"This drive has closed. Every contribution went straight to this family — a hand of
+> support, with every family."*
+>
+> **HI:** *"यह अभियान पूरा हुआ। हर योगदान सीधे इस परिवार तक पहुँचा — सहयोग का हाथ, हर परिवार के साथ।"*
+
+⭐⭐ ***"went straight to"* is the correction ⛔ AND the invitation.** It is the verified fact
+(`-192`, `upi-intent.ts`): money moves member → family, with ⛔ **nothing held by the trust**. ⇒ it
+replaces the old falsehood with **the very truth that falsehood was hiding**, and it answers the first
+question any prospective member has: *"where does my money actually go?"*
+
+---
+
+**⭐⭐⭐ OPTION 3 — THE ONE WE RECOMMEND.** Plain, warm, and it explains what membership *is*.
+
+> **EN:** *"This drive has closed. Members from across the Pariwar stood beside this family, and every
+> contribution went straight to the family — a hand of support, with every family."*
+>
+> **HI:** *"यह अभियान पूरा हुआ। पूरे परिवार-क्षेत्र के सदस्य इस परिवार के साथ खड़े रहे, और हर योगदान सीधे परिवार
+> तक पहुँचा — सहयोग का हाथ, हर परिवार के साथ।"*
+
+⭐ Carries **both** true things at once: **people who did not know this family helped it**, and **their
+money reached it whole**. ⇒ that is the entire case for joining, told as a **record** rather than a
+pitch. ⭐ Longer, which the brief now allows.
+
+⚠ *"Members from across the Pariwar"* is chosen deliberately over *"members who never met this
+family"* — the second is warmer but ⛔ we ⛔ cannot verify it of every contributor. ⭐ Pool assignment
+**is** Pariwar-wide, so option 3 says only what is true.
+
+---
+
+**⭐ OPTION 4 — THE EXPLICIT INVITATION.** ⚠ Strongest pull, ⚠ and the one with a caveat.
+
+> **EN:** *"This drive has closed. Members stood with this family, and every contribution went
+> straight to them. This is what it means to belong to this trust — a hand of support, with every
+> family."*
+>
+> **HI:** *"यह अभियान पूरा हुआ। सदस्य इस परिवार के साथ खड़े रहे, और हर योगदान सीधे परिवार तक पहुँचा। इस ट्रस्ट
+> का सदस्य होने का यही अर्थ है — सहयोग का हाथ, हर परिवार के साथ।"*
+
+⚠⛔ **TWO CAUTIONS, ⛔ neither a refusal.**
+**(a)** *"This is what it means to belong"* is a **join-pitch**, and `-189` consequence 6 routes
+join-pitch language to **counsel** — ⛔ not because it is wrong, but because a mutual-aid trust must
+⛔ not read as an insurer promising cover. ⇒ picking 4 adds a counsel step ⛔ before it goes up.
+**(b)** ⚠ It addresses **the reader** on **a family's memorial row**. ⭐ Options 1-3 let the record
+speak and let the reader draw the conclusion; ⛔ option 4 draws it for them, next to a name.
+
+---
+
+**⭐⭐ OPTION 5 — ⛔ NOT A WORDING. A STRUCTURE. ⭐ Pick it ALONGSIDE one of the above.**
+
+⭐ **Use ONE line for BOTH the met-in-full and the fell-short case.** Whichever wording you choose,
+apply it to `fully_funded` **and** `under_funded` alike. ⛔ Only *"Reconciliation is still in
+progress"* stays separate — that is about **process**, ⛔ not a funding verdict.
+
+⚠⛔ **WHY, AND IT IS ⛔ NOT COSMETIC.** Constraint 3 forbids publishing a verdict — but **three
+different sentences ARE the verdict.** A visitor comparing two rows can read off which drive fell
+short. ⇒ the quarantine is kept in form and defeated in substance.
+
+⭐ **And the dignity point runs the same way:** today, families of under-supported drives are
+**publicly marked as such, permanently, on a memorial page.** Given (Q1) — the trust promises nothing,
+so there is ⛔ **no promise to report against** — ⛔ no public interest is served by that mark.
+
+⚠ **This answers (Q3):** yes, the ruling reaches `outcome.fully_funded` too. ⛔ Flagged, ⛔ not assumed
+— collapsing the two is **your call**.
+
+### 7.4 ⭐ The tagline goes IN EVERY ROW — as directed
+
+⭐ **BigDev has directed the tagline into the line itself, and with ⛔ no length limit that is what we
+build.** ⭐ It also serves the second brief: a visitor who scans three or four drives meets
+**सहयोग का हाथ, हर परिवार के साथ** each time, and the phrase becomes the thing they remember.
+
+⚠ **One observation, ⛔ recorded rather than argued:** on a page of twenty drives the tagline renders
+twenty times. ⭐ If it ever begins to read as filler, the remedy is to lift it to the top of the page
+**once** and keep the short half in the row — ⛔ a later adjustment, ⛔ not a reason to change course
+now. ⛔ **Nothing about it blocks a decision today.**
+
+### 7.5 ⭐ What we recommend
+
+**⭐ Wording: OPTION 3. ⭐ Structure: OPTION 5. ⭐ Tagline: in every row, as directed.**
+
+⇒ every drive that has closed reads, identically, whether it met the target or fell short:
+
+> **EN:** *"This drive has closed. Members from across the Pariwar stood beside this family, and every
+> contribution went straight to the family — a hand of support, with every family."*
+>
+> **HI:** *"यह अभियान पूरा हुआ। पूरे परिवार-क्षेत्र के सदस्य इस परिवार के साथ खड़े रहे, और हर योगदान सीधे परिवार
+> तक पहुँचा — सहयोग का हाथ, हर परिवार के साथ।"*
+
+⭐ **Why:** it is plain enough to read at a glance; it removes a falsehood **and** publishes the truth
+that falsehood concealed; it ends the verdict leak instead of rewording it; ⛔ it marks no family; and
+it makes the case for joining **by stating what happened**, ⛔ not by asking.
+
+⚠ **⛔ A recommendation, ⛔ not a decision.** Any of the five ships the day you pick one. ⚠ If you pick
+**4**, it goes to counsel first (§6).
 
 ---
 

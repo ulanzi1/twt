@@ -160,7 +160,13 @@ rank and the **verdict**
 **And** a *"does not match"* verdict **requires a reason** (the `claim.correct_nominee_bank`
 reason-required precedent)
 **And** ⛔ the attestation is ⛔ **never** inferred, defaulted or back-filled
-([[feedback_record_unattested_no_backfill]]).
+([[feedback_record_unattested_no_backfill]])
+**And** ⭐ **per D2(b):** approval is blocked when **⛔ NO attestation exists**; a ***"does not match"***
+verdict **⛔ does NOT block** — it emits **`claim.verifier_escalated`** and the claim appears in the
+existing **`escalated`** bucket for State-Trustee resolution
+**And** ⛔ the claim's **lifecycle state does ⛔ NOT move** on escalation — ⭐ `claim.verifier_escalated`
+is an **ANNOTATION** (6.11 D-D) and ⛔ this story adds ⛔ no state, ⛔ no queue and ⛔ no resolver surface
+**And** ⛔ a mismatch is ⛔ **never** auto-denied and ⛔ never dead-ends.
 
 ### AC3 — ⛔ NO automated match, ⛔ NO join
 **Given** Trap 1 and `D5-subject` (i)
@@ -198,6 +204,16 @@ event payload and ⛔ no error response.
 **And** ⛔ the public *"Nominee Name"* render (11b.11) is **untouched**
 **And** ⛔ `D5-subject` **(i)** is ⛔ **NOT** closed by this story — ⭐ recorded explicitly.
 
+### AC8 — The escalation RESOLVER inherits the view — ⛔ or the defect just MOVES
+
+**Given** D2(b) routes a name mismatch to the **State Trustee**
+**Then** that resolver sees the **same two names**, under the **same key**, with the **same PII
+posture** (AC1, AC4, AC6)
+**And** ⛔ ⛔ **routing to an actor who cannot see the names is ⛔ FORBIDDEN** — ⭐ it would reproduce
+this story's own defect one level up, which is exactly how the original inversion survived four
+stories ([[feedback_mechanization_split_commitment]])
+**And** a test asserts the resolver's read carries both names and is gated on the new key.
+
 ---
 
 ## ⚖️ Decisions
@@ -210,17 +226,38 @@ event payload and ⛔ no error response.
 ⭐ **BigDev's recommendation: (b).** ⚠ The attestation **gates the decision**; putting it anywhere else
 invites approving without it. ⛔ (a) risks reading as advisory — which is the state we are leaving.
 
-### 🟡 D2 — ⛔⛔ OPEN, ⛔ BLOCKS AC2. **Does a missing or NEGATIVE attestation BLOCK approval?**
-⚠⛔ **⛔ THE CONSTITUTIONAL ONE. ⭐ Read the Policy-meaning note first.**
-- **(a) HARD BLOCK** — ⛔ no approval without a *"matches"* attestation. ⭐ Strongest guarantee;
-  ⛔ **a grieving family's claim halts** on a name the verifier cannot resolve.
-- **(b) SOFT** — the attestation is **required to be RECORDED**, but a *"does not match"* verdict
-  routes to a **named resolver** (state trustee) instead of halting. ⭐ Nothing is silently approved,
-  ⛔ nothing dead-ends.
-- **(c) ADVISORY** — recorded, ⛔ never blocking. ⚠ Closest to today; ⛔ weakest.
+### ✅ D2 — **RULED (b) SOFT by the Trustee Panel (DR + KB), 2026-09-05.** Does a missing or NEGATIVE attestation BLOCK approval?
 
-⭐ **BigDev's recommendation: (b).** ⚠⛔ **This is a Panel question, ⛔ not an engineering preference**
-— it decides whether a clerical mismatch can stop a death claim. ⇒ **route it before building AC2.**
+> ⭐⭐ **THE RULING: (b) — SOFTEN IT.** The attestation is **required to be RECORDED** before approval;
+> a ***"does not match"*** verdict **ROUTES to the State Trustee** ⛔ instead of halting the claim.
+>
+> ⇒ ⛔ **nothing is silently approved, and ⛔ nothing dead-ends on a grieving family.**
+
+⭐⭐ **AND THE MECHANISM ALREADY EXISTS — ⛔ do ⛔ NOT invent one.** ⚠ Verified live at the baseline:
+
+- **`claim.verifier_escalated`** — Story **6.11, D-D** — is a shipped **ANNOTATION**:
+  *"Escalation is a ROUTING/reassignment concern — there is ⛔ **NO `escalated` lifecycle state and
+  this adds none**"* (`domain/src/claim/state.ts:192-198`). ⇒ ⭐ **the claim's state does ⛔ not move**,
+  which is precisely what *"⛔ does not halt"* requires.
+- The **queue already surfaces it**: `cycle-freeze-read.ts:6-8` bucket **(b) `escalated`** = the
+  *"verifier_flagged_for_state_trustee"* set — a LIVE escalated decision row on a claim still at
+  `verifier_review` / `verification_in_progress`, *"awaiting the AC4b escalation resolution."*
+- The emission guard exists too: `ClaimNotEscalatableError` (`verifier-decision-persist.ts`) restricts
+  emission to the **pre-verdict window**.
+
+⇒ ⭐ **a mismatch escalates through the path 6.11 and 6.13 already built.** ⛔ No new state, ⛔ no new
+queue, ⛔ no new resolver surface.
+
+⚠⛔ **⛔ BUT ⛔ ONE CONSEQUENCE FALLS OUT, AND IT IS LOAD-BEARING — see AC8.** ⭐ Routing a **name
+mismatch** to a State Trustee who ⛔ **cannot see the names** would ⛔ **re-create this story's own
+defect one level up** — the blind approver, moved. ⇒ **the escalation resolver MUST inherit the same
+view under the same key.**
+
+⭐ **What (a) and (c) would have cost, recorded so the ruling is not re-litigated:**
+⛔ **(a) HARD BLOCK** — strongest guarantee, ⚠ but a clerical mismatch (an initial, a bank truncation)
+**halts a death claim** and the member is already dead.
+⛔ **(c) ADVISORY** — closest to today, ⚠ and it would have left the duty **un-mechanized** after a
+story whose whole purpose was to mechanize it.
 
 ### 🟡 D3 — ⛔ OPEN, ⛔ non-blocking. **Does the TIER-2 CORRECTING ADMIN also get the name?** (Trap 5)
 - **(a)** yes — ⭐ same key, same posture; ⛔ *"corrects a name they cannot see"* is closed in the same
@@ -230,6 +267,11 @@ invites approving without it. ⛔ (a) risks reading as advisory — which is the
 ⭐ **BigDev's recommendation: (a).** ⛔ Leaving it open re-creates the exact split this story exists to
 end — ⚠ but it is a **second** surface and a **second** posture, so it is recorded as a decision
 rather than assumed.
+
+⚠⛔ **D2(b) NARROWS THIS, ⛔ but does ⛔ not decide it.** ⭐ The ruling makes the **State Trustee**'s
+view **mandatory** (AC8) — ⛔ that actor is now settled. ⚠ The **tier-2 correcting admin**
+(`claim.correct_nominee_bank`) is ⛔ **still** open, and remains the *"corrects a name they cannot
+see"* inversion. ⇒ ⭐ D3 is now **only** about that third actor.
 
 ---
 
@@ -256,7 +298,9 @@ rather than assumed.
         when this story ships ([[feedback_closure_language_precision]]).
   - [ ] `sprint-status.yaml`: add `6-18-…` and flip to `in-progress`, with a ledger entry.
   - [ ] Commit `governance:`. ⛔ No code.
-- [ ] **Task 1 — RULE D1, D2, D3** — ⛔ **D2 BLOCKS Task 4**; ⚠ route D2 to the Panel.
+- [x] **Task 1 — RULE D2** — ✅ **RULED (b) SOFT by the Panel (DR + KB), 2026-09-05** ⇒ Task 4 UNBLOCKED.
+      ⚠ **D1 and D3 remain OPEN**; ⛔ neither blocks Task 4. ⭐ D2 also SETTLES the State Trustee's
+      view (AC8) and narrows D3 to the tier-2 correcting admin alone.
 - [ ] **Task 2 — The read** (AC1, AC4, AC6)
   - [ ] Mint the new permission key; bump `PERMISSION_CATALOG_VERSION` ⚠ **coordinated with 11b.13**.
   - [ ] Extend the claim read to return the holder name **and** the declared nominee name(s),
@@ -267,11 +311,16 @@ rather than assumed.
   - [ ] Amend `nominee-bank.ts:107-122`'s *"never echo"* doc-block — ⭐ **amend and NAME**, ⛔ do not
         delete (Trap 3). ⛔ Account number + raw IFSC stay never-echoed.
   - [ ] Keep `NomineeBankAccountView` intact for every other caller.
-- [ ] **Task 4 — The attestation** (AC2; ⛔ shape per **D2**)
+- [ ] **Task 4 — The attestation + the SOFT escalation** (AC2, AC8; ⭐ D2(b))
   - [ ] The verdict control, in the surface **D1** picks.
   - [ ] The event: actor, timestamp, claim, account rank, verdict, reason-when-negative.
         ⛔ **NEITHER NAME IN THE PAYLOAD.**
-  - [ ] Wire the approval path per **D2**.
+  - [ ] Block approval when ⛔ **NO** attestation exists — ⭐ that, and ⛔ only that, is the block.
+  - [ ] ⭐ On *"does not match"*: emit the **SHIPPED `claim.verifier_escalated`** (6.11 D-D).
+        ⛔ Do ⛔ **NOT** invent a state, a queue or a resolver surface — the `escalated` bucket
+        (`cycle-freeze-read.ts:6-8`) already carries it. ⛔ The claim's state does ⛔ not move.
+  - [ ] ⭐ Give the **State-Trustee resolver the same name view under the same key** (AC8) —
+        ⛔ routing to a blind resolver just moves this story's defect.
 - [ ] **Task 5 — The console** (AC1, D1)
   - [ ] Render both names side by side; ⭐ the *"no nominee declared"* state explicitly (AC1).
   - [ ] ⛔ **No** match hint, score or highlight (AC3).
@@ -300,12 +349,20 @@ The Trust's rule is that a dead member's Pariwar money reaches **the nominee tha
 one field that survived the public withdrawal is the one field ⛔ **nobody inside the Trust can read.**
 ⭐ This story ends that.
 
-### The one genuinely hard part
+### ✅ The hardest question is ANSWERED — and it cost the story ⛔ no new machinery
 
-**D2.** Everything else is mechanical. ⚠ D2 decides whether a clerical mismatch — an initial, a maiden
-name, a bank truncation — can **stop a death claim**. ⛔ Getting it wrong in the strict direction hurts
-the exact families this Trust exists for; ⛔ getting it wrong in the loose direction leaves the duty
-un-mechanized after a story whose whole purpose was to mechanize it.
+⭐ **D2 is RULED (b) SOFT.** ⚠ It decided whether a clerical mismatch — an initial, a maiden name, a
+bank truncation — could **stop a death claim**. ⛔ It cannot: recording is mandatory, a mismatch
+**escalates**.
+
+⭐⭐ **And the happy finding: the escalation path was ⛔ already built.** `claim.verifier_escalated`
+(6.11 D-D) is an **annotation** that ⛔ does not move claim state, and `cycle-freeze-read.ts`'s
+`escalated` bucket already surfaces the flagged set to the State Trustee. ⇒ **D2(b) costs ⛔ no new
+state, ⛔ no new queue and ⛔ no new surface** — only **AC8**, which makes sure the resolver can
+actually see what it was asked to resolve.
+
+⚠ **What is left to decide is small:** **D1** (where the control lives) and **D3** (the tier-2
+correcting admin). ⛔ Neither blocks Task 4.
 
 ### ⚠ Coordinate with Story 11b.13
 
@@ -346,3 +403,4 @@ the **known-bad-string** pattern: plant a sentinel, assert it appears ⛔ nowher
 | Date | Version | Description | Author |
 |---|---|---|---|
 | 2026-09-05 | 0.1 | Created on the **Trustee ruling of 2026-09-05** (DR + KB) — *"Open a story to MECHANIZE the approver duty"* — from Story 11b.12's **D2**. ⭐ Closes `D5-subject` **(ii)**; ⛔ leaves **(i)** open by design. ⚠ **THREE decisions OPEN: D1, D2, D3 — D2 BLOCKS Task 4 and is a PANEL question**, because it decides whether a clerical name mismatch can halt a death claim. ⭐ Five traps recorded at authoring, the first two load-bearing: ⛔ **no join or match rule** (`D5-subject` (i) forbids the obvious fix, and an automated comparison would be an unruled eligibility predicate — the 10.10 shape), and ⛔ **display alone is not mechanization** (it moves the gap rather than closing it). | BigDev + Claude |
+| 2026-09-05 | 0.2 | ✅⭐ **D2 RULED (b) SOFT — Trustee Panel (Dhiraj Rahul + Kalpana Bharti).** Recording is mandatory; a *"does not match"* verdict **ROUTES to the State Trustee** ⛔ instead of halting a death claim. ⇒ **Task 4 UNBLOCKED.** ⭐⭐ **And the mechanism was already shipped** — `claim.verifier_escalated` (6.11 D-D) is an ANNOTATION that ⛔ does not move claim state, and `cycle-freeze-read.ts`'s `escalated` bucket already carries the flagged set ⇒ ⛔ **no new state, no new queue, no new resolver surface.** ⚠ **NEW AC8**, load-bearing: the escalation resolver **MUST inherit the same name view under the same key** — ⛔ routing a name mismatch to an actor who cannot see the names would reproduce this story's own defect one level up. ⭐ D2 also settles the State Trustee's access and **narrows D3** to the tier-2 correcting admin alone. ⚠ D1 and D3 stay open; ⛔ neither blocks. | BigDev + Claude |

@@ -21,9 +21,68 @@
 //
 // ⛔ It does NOT create a second PII tier. **`-165` cl.2**, BigDev verbatim: *"Do not create a
 // separate Tier-1 classification merely because the public projection is masked. The underlying
-// account fields remain Tier-1."* ⇒ the four `RULED_TIER1_PUBLIC_EXCEPTIONS` entries cover BOTH
-// states and the masked projection needs ⛔ none of its own. ⭐ And the specific future argument is
-// FORECLOSED: *"the masked view is only last-4, so it isn't really Tier-1."* ⛔ It is.
+// account fields remain Tier-1."* ⇒ the `RULED_TIER1_PUBLIC_EXCEPTIONS` entries cover BOTH states and
+// the masked projection needs ⛔ none of its own. ⭐ And the specific future argument is FORECLOSED:
+// *"the masked view is only last-4, so it isn't really Tier-1."* ⛔ It is.
+// ⚠ This clause said **FOUR** entries; ⭐ Story 11b.11 reduced `sahyog-vivran` to **ONE**
+// (`2026-09-04-190` cl.1-2 + `2026-09-04-191` cl.1). ⛔ `-165` cl.2's REASONING is unaffected and
+// STANDS — it is about tiers, ⛔ not about a count.
+//
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+// ⭐⭐⛔⛔ STATUS AS OF STORY 11b.11 (2026-09-05) — **RETAINED, AND WITH ⛔ NO PUBLIC CONSUMER**
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+// `2026-09-04-190` **cl.1** (Trustee-ratified — Dhiraj Rahul, Kalpana Bharti) withdrew the nominee
+// BANKING COORDINATES from the public Sahyog Vivran surface, and `2026-09-04-191` **cl.1** withdrew
+// the VPA. ⭐ `-190` **cl.2** keeps the nominee's NAME public. ⇒ there is nothing left on that
+// surface for this projection to reduce, and `packages/domain/src/pool/sahyog-vivran-read.ts` — its
+// ⛔ ONLY caller — no longer calls it.
+//
+// ⛔⛔ **THIS MODULE IS ⛔ NOT DELETED, AND ⛔ MUST NOT BE.** `-190` **cl.4** RETAINS it in terms —
+// *"we may use it in future"* — together with `nominee-bank-masking-policy.ts`, the
+// `pariwar_nominee_bank_masking_schedule` table, its permission key, its admin surface and every one
+// of its tests. All of them still run.
+//
+// ⚠⛔⛔ **BUT ITS STATUS CHANGED AND MUST BE STATED WHEREVER IT IS DESCRIBED:** it has ⛔ **NO PUBLIC
+// CONSUMER**. ⛔ It may ⛔ not be described as a live safeguard — in a doc-block, in a review, or on
+// any Trustee-facing material — until something consumes it again. Everything below this banner
+// describes behaviour that is CORRECT and DORMANT: correct if reactivated, defending ⛔ nothing today.
+// ⭐ This is the same class of error `2026-09-04-187` / `-188` / `-192` recorded three times in one
+// day — **prose that outlives the thing it describes.**
+//
+// ⭐ `2026-09-04-191` **cl.2** still BINDS this dormant code: the masked projection must ⛔ NOT drop
+// the nominee name. ⚠⛔ That **AMENDS THE READING** of `2026-08-28-160` cl.10(e)'s retention list,
+// which was written when the masked view still carried account coordinates and therefore had
+// something else to retain. ⛔ cl.10(e) is ⛔ NOT restated as if it had always said this, and its text
+// is ⛔ not edited — the amendment lives in `-191`.
+//
+// ⛔⛔ **THREE REACTIVATION PRECONDITIONS — DORMANT, ⛔ NOT RESOLVED.** Each was found by 11b.3a's
+// third code-review pass and each goes LIVE AGAIN the moment this machinery is re-pointed at any
+// surface. ⚠ `D8-default` FAIL-OPEN (`2026-09-02-179` cl.1) is UNCHANGED, so the fail-open semantics
+// persist inside the dormant code. ⛔ Whoever reactivates it inherits this list:
+//   **(a) UN-MASKING IS RETROACTIVE, AND ONE PUT'S BLAST RADIUS IS UNBOUNDED AND UNPREVIEWABLE.**
+//       The schedule resolves at the REQUEST instant, ⛔ never at the drive's close instant. A
+//       Pariwar on `permanent` for two years that moves to `after_days: 30` INSTANTLY RE-PUBLISHES
+//       complete details for every drive closed more than 30 days ago; `after_days: 36500` un-masks
+//       the ENTIRE ARCHIVE in one request. ⛔ No dry-run, ⛔ no affected-drive count, ⛔ no per-drive
+//       pinning. ⚠ The doc-blocks celebrate REVERSIBILITY without noting the reverse direction is a
+//       **BULK DISCLOSURE EVENT**. ⚠ Secondarily: the `s-maxage=300` staleness is disclosed in three
+//       places and all three frame it as a SCHEDULE-CHANGE delay — the identical delay on the
+//       TIME-ELAPSE transition at `closedAt + N` is disclosed ⛔ NOWHERE.
+//   **(b) RLS SCOPE FAILURE IS INDISTINGUISHABLE FROM "NO WINDOW CONFIGURED", AND RESOLVES TO
+//       PUBLISH.** `resolveEffectiveNomineeBankMasking` returns `null` for EVERY zero-row cause — no
+//       row, unset `app.pariwar_id`, empty-string scope, wrong-tenant scope, a dropped policy — and
+//       `null` means NOT MASKED. ⇒ a public route whose connection loses its `SET LOCAL
+//       app.pariwar_id` on a `permanent` Pariwar publishes complete details, pinned at every warm PoP
+//       for 300s. ⭐ `-179` cl.1 ruled the **POLICY** default fail-open; the code silently extends
+//       that to **INFRASTRUCTURE FAILURE**, which ⛔ NO ONE RULED ON. **Before reactivation:**
+//       distinguish *"queried successfully, no row"* from *"could not resolve"*.
+//   **(c) FAIL-OPEN BY DEFAULT, CENTRALLY ADMINISTERED, O(N) REMEDIATION, FIVE-MINUTE FLOOR.**
+//       `configured: false` resolves FAIL-OPEN and `2026-09-02-178` forbids a Pariwar setting its own
+//       window ⇒ the incident path is ONE TRUST PUT PER PARIWAR, each with a hand-written rationale,
+//       each up to 300s to reach warm PoPs, with *"⛔ Direct SQL is NOT the operational fallback"*.
+//       ⛔ No global default, ⛔ no bulk setter, ⛔ no cache-purge hook ⇒ remediation time for an
+//       actively-abused account number is **N admin requests + 5 minutes**, N unbounded.
+//       ⭐ Documented three times, mitigated zero.
 //
 // PURE: no db, no clock, no env, no fs. `now` is injected so a caller pins ONE instant per request.
 

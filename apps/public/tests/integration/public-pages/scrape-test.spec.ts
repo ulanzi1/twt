@@ -1063,14 +1063,16 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
 // Story 11b.3 — `/sahyog-vivran/[driveToken]`, the PER-CLAIM Sahyog Vivran (AC2)
 // ═══════════════════════════════════════════════════════════════════════════════════════════════
 //
-// ⭐⭐ THE LOAD-BEARING ASSERTION IN THIS BLOCK IS A **NEGATIVE** ONE: this surface declares ⛔ ZERO
-// `pii_tier: 1` fields at `tier: public`, and that emptiness is asserted POSITIVELY so a later story
-// that adds one WITHOUT its ruling fails here as well as at the matrix parser.
+// ⭐⭐ THE LOAD-BEARING ASSERTION IN THIS BLOCK IS AN **IDENTITY** ONE: the exact set of
+// `pii_tier: 1` fields at `tier: public` is named, so a field appearing WITHOUT its ruling — and a
+// field VANISHING while the matrix still claims it — both fail here as well as at the matrix parser.
 //
-// ⚠⛔ IT IS ⛔ NOT A CLAIM THAT THE SURFACE MAY NEVER HAVE ONE — it is a COUNT FOR THIS STORY.
-// **11b.3a** adds the four ruled nominee-bank pairs (`2026-08-28-165` cl.1/cl.3) and **11b.3b** the
-// deceased member's name and the contributor's (`2026-09-02-173` / `-174`). ⭐ Each adds its entry in
-// the commit that DECLARES its field, and each owes THIS assertion an update in the SAME commit.
+// ⚠⛔ IT IS A COUNT FOR THE CURRENT RULINGS, ⛔ never a permanent ceiling ⛔ and never a floor.
+// 11b.3 asserted **ZERO**; **11b.3a** added the four ruled nominee-bank pairs (`2026-08-28-165`
+// cl.1/cl.3) ⇒ **FOUR**; **Story 11b.11** withdrew three of them plus their two Tier-3 siblings
+// (`2026-09-04-190` cl.1 + `2026-09-04-191` cl.1) and kept one (`-190` cl.2) ⇒ **ONE**. **11b.3b**
+// still owes the deceased member's name and the contributor's (`2026-09-02-173` / `-174`).
+// ⭐ Each story moves this assertion in the commit that moves its fields.
 // ⛔ Do not "fix" a failure here by bumping the number: the number moving is the signal.
 
 const SAHYOG_VIVRAN_TEST_LABELS: SahyogVivranLabels = {
@@ -1103,18 +1105,15 @@ const SAHYOG_VIVRAN_TEST_LABELS: SahyogVivranLabels = {
   contributionsCount: (n) => `${String(n)} confirmed`,
   outageTitle: 'could not load',
   outageBody: 'our side',
-  bankTitle: 'Where the money goes',
-  bankGroupLabel: 'Bank details this drive pays to',
-  bankEqualDestinations: 'Either account may be used. Neither is preferred.',
-  bankAccountLabel: (rank) => `Account ${String(rank)}`,
-  labelAccountHolder: 'Account holder',
-  labelAccountNumber: 'Account number',
-  labelIfsc: 'IFSC',
-  labelVpa: 'UPI ID',
-  labelBankName: 'Bank',
-  labelBranch: 'Branch',
-  valueAccountEndingIn: (last4) => `Account ending in ${last4}`,
-  bankMaskedNote: 'Full details were shown while the drive was collecting.',
+  // ⭐⛔ REDUCED BY STORY 11b.11 — `2026-09-04-190` cl.1 / `2026-09-04-191` cl.1 withdrew the
+  // coordinates, and the seven labels that described them went with the fields. ⛔ `bankAccountLabel`
+  // is a STRING, ⛔ no longer `(rank) => …`: the ordinal it announced to screen readers contradicted
+  // the equality the page states in copy.
+  bankTitle: 'Who receives this support',
+  bankGroupLabel: 'Nominee recorded for this drive',
+  bankEqualNominees: 'Both names are recorded equally. Neither is preferred.',
+  bankAccountLabel: 'Recorded nominee',
+  labelAccountHolder: 'Nominee Name',
 };
 
 describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak leg is OPERATIVE', () => {
@@ -1135,28 +1134,16 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
           dispositionCategory: 'procedural_correction',
           reversedAt: '2026-08-20T05:00:00.000Z',
         },
-        // ⭐ Story 11b.3a — TWO accounts, one FULL and one MASKED, on purpose. A fixture with only
-        // one arm would leave the other's four Tier-1 declarations unexercised on the very leg that
-        // exists to catch a leak, and the masked arm is the one whose keys are ABSENT from the wire.
+        // ⭐ Story 11b.3a, ⭐⛔ COLLAPSED BY STORY 11b.11. The fixture used to carry TWO accounts —
+        // one FULL, one MASKED — because the wire was a `z.discriminatedUnion('masked', …)` and a
+        // fixture with only one arm left the other's Tier-1 declarations unexercised. ⛔ There is no
+        // discriminator any more (11b.11 **D1(b)**): both arms reduced to the nominee name and
+        // became identical, so the union collapsed to one `.strict()` shape.
+        // ⭐ TWO accounts are still carried deliberately — a one-element fixture would leave the
+        // multi-account render path, and the equality copy that gates on it, unexercised.
         nomineeBankAccounts: [
-          {
-            masked: false,
-            accountRank: 1,
-            bankName: 'State Bank of India',
-            branch: 'Vaishali',
-            accountHolderName: 'A Holder',
-            accountNumber: '123456789012',
-            ifsc: 'SBIN0001234',
-            vpa: null,
-          },
-          {
-            masked: true,
-            accountRank: 2,
-            bankName: 'Bank of Baroda',
-            branch: null,
-            accountNumberLast4: '9012',
-            ifsc: 'BARB0VJVAIS',
-          },
+          { accountRank: 1, accountHolderName: 'A Holder' },
+          { accountRank: 2, accountHolderName: 'B Holder' },
         ],
       },
     },
@@ -1179,8 +1166,8 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
     ...sahyogVivranSurfaceFieldIds(model).map((fieldId) => {
       // ⭐ TWO MAPPINGS SINCE STORY 11b.3a: the top-level fields plus the per-ACCOUNT ones, exactly
       // as the page renders them — the shell's `<dl>` and then one block per nominee bank account.
-      // ⛔ Looking only in the shell mapping would silently emit `''` for the four Tier-1 fields,
-      // making the leak leg pass over values it never actually saw.
+      // ⛔ Looking only in the shell mapping would silently emit `''` for the per-account Tier-1
+      // field, making the leak leg pass over a value it never actually saw.
       const shellKey = Object.entries(SAHYOG_VIVRAN_FIELD_IDS).find(([, id]) => id === fieldId)?.[0];
       const accountKey = Object.entries(SAHYOG_VIVRAN_NOMINEE_ACCOUNT_FIELD_IDS).find(
         ([, id]) => id === fieldId,
@@ -1208,14 +1195,19 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
     fields: sahyogVivranSurfaceFieldIds(model),
   };
 
-  it('⭐ the snapshot field set is NON-EMPTY, and is EXACTLY the sixteen classified fields', () => {
+  it('⭐ the snapshot field set is NON-EMPTY, and is EXACTLY the eleven classified fields', () => {
     // ⛔ The EXACT set, ⛔ not "length > 0": a leg that only detects additions accepts a field
     // vanishing from the render while the matrix still claims it is shown.
     // ⭐ TEN → SIXTEEN at Story 11b.3a: the four ruled Tier-1 nominee-bank fields plus their two
-    // Tier-3 siblings (`nominee_bank_name` / `nominee_branch`, which carry NO exception and need
-    // none). ⚠ They appear here even though the fixture's SECOND account is masked — the per-row
-    // ids come from a REPRESENTATIVE SHAPE, so the classified set does not shrink on a masked or
-    // bank-detail-less drive, which is the vacuous-leg defect this leg exists to avoid.
+    // Tier-3 siblings (`nominee_bank_name` / `nominee_branch`, which carried NO exception and needed
+    // none).
+    // ⭐⛔ **SIXTEEN → ELEVEN AT STORY 11b.11 — the THIRD move of this set, and the first DOWNWARD.**
+    // `2026-09-04-190` cl.1 (Trustee-ratified) withdraws `nominee_account_number`, `nominee_ifsc`,
+    // `nominee_bank_name` and `nominee_branch` from `public`; `2026-09-04-191` cl.1 withdraws
+    // `nominee_vpa`; `-190` cl.2 KEEPS `nominee_account_holder_name`.
+    // ⚠ The per-row ids still come from a REPRESENTATIVE SHAPE, ⛔ never from `accounts[0]`, so the
+    // classified set does ⛔ not shrink on a drive with no bank details — the vacuous-leg defect
+    // this leg exists to avoid. ⛔ That property is UNCHANGED by the withdrawal.
     expect(snapshot.fields).toEqual([
       'appeal_disposition_category',
       'appeal_reversal_at',
@@ -1226,11 +1218,6 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
       'drive_closed_at',
       'drive_status',
       'nominee_account_holder_name',
-      'nominee_account_number',
-      'nominee_bank_name',
-      'nominee_branch',
-      'nominee_ifsc',
-      'nominee_vpa',
       'pool_canonical_identifier',
       'pool_letter_code',
     ]);
@@ -1247,49 +1234,51 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
     expect(verdict.leaks).toEqual([]);
   });
 
-  it('⚠⛔ RECORDED, ⛔ NOT HIDDEN — a 12-digit account number trips the FR-74 AADHAAR heuristic', () => {
+  it('⭐⛔ CLOSED BY DELETION — the FR-74 AADHAAR collision is GONE with the account number', () => {
     // ══════════════════════════════════════════════════════════════════════════════════════════
-    // ⭐⭐ A REAL, REACHABLE COLLISION BETWEEN TWO RULED CONTROLS — FOUND AT 11b.3a, ⛔ NOT INVENTED
+    // ⭐⭐ WHAT STOOD HERE, AND WHY IT IS RECORDED RATHER THAN DELETED — Story 11b.3a's collision
     // ══════════════════════════════════════════════════════════════════════════════════════════
-    // `2026-08-28-160` cl.10(a) rules the COMPLETE nominee bank account number publishable during
-    // an active drive, and `D8-default` is FAIL-OPEN (`2026-09-02-179` cl.1) ⇒ it renders in full
-    // for EVERY Pariwar until the Trust sets a window. Meanwhile `detectNakedPii` treats ANY bare
-    // 12-digit run on a `public` render as an **Aadhaar** number.
+    // `2026-08-28-160` cl.10(a) ruled the COMPLETE nominee bank account number publishable during
+    // an active drive, and `D8-default` is FAIL-OPEN (`2026-09-02-179` cl.1) ⇒ it rendered in full
+    // for EVERY Pariwar until the Trust set a window. Meanwhile `detectNakedPii` treats ANY bare
+    // 12-digit run on a `public` render as an **Aadhaar** number. Indian account numbers are
+    // commonly 11-16 digits and **12 is a real length** (ICICI's), so it was ⛔ not a fixture
+    // artefact — it fired on production HTML. TWO ruled controls, in genuine conflict.
     //
-    // ⚠ Indian account numbers are commonly 11-16 digits and **12 is a real length** (ICICI's), so
-    // this is ⛔ not a fixture artefact — it fires on production HTML. ⭐ Verified precisely: 11,
-    // 13 and 14-digit numbers do ⛔ NOT match the pattern; exactly 12 does.
+    // ⭐⭐ **`2026-09-04-190` cl.1 (Trustee-ratified) CLOSES IT BY REMOVING THE SUBJECT.** The
+    // account number is no longer published at `public` in ANY state, so there is ⛔ no 12-digit run
+    // for the heuristic to match. ⇒ **"Closed by [edit]"**, ⛔ never *"resolved via deferral"* —
+    // the routing at `deferred-work.md` is discharged, ⛔ not merely stood down.
     //
-    // ⛔ THE DETECTOR IS ⛔ NOT WEAKENED HERE, AND THAT IS DELIBERATE. It is a launch-blocking FR-74
-    // control and it scans a STRING with ⛔ no field context, so it structurally cannot tell an
-    // AUTHORISED 12-digit account number from a naked Aadhaar number. Narrowing it — by length, by
-    // surface, or by field — is a **governance act on a launch-blocking control**, ⛔ not a fixture
-    // fix and ⛔ not this story's to make. ⚠ Equally, ⛔ do NOT "resolve" this by picking an
-    // 11-digit fixture: that hides a live conflict behind a friendlier number.
-    //
-    // ⇒ ROUTED at `deferred-work.md` (Story 11b.3a) with its trigger. ⭐ What this test does is make
-    // the behaviour ASSERTED rather than latent: if the detector, the ruling or the render changes,
-    // this fails and the collision is re-read instead of being silently resolved.
+    // ⛔⛔ AND THE DETECTOR IS STILL ⛔ NOT WEAKENED. It was ⛔ not narrowed by length, by surface or
+    // by field, and this closure gives ⛔ nobody a precedent for doing so: narrowing a
+    // launch-blocking FR-74 control is a **governance act**. ⚠ If any surface ever re-publishes a
+    // 12-digit value at `public`, the conflict RETURNS in full and must be re-read, ⛔ not
+    // rediscovered as new.
     const verdict = evaluateSnapshot(matrix, snapshot);
-    expect(verdict.status).toBe('fail');
-    // ⛔ ZERO tier leaks — the failure is ENTIRELY the naked-PII heuristic, which is the whole
-    // point: the field system says this render is authorised, and the string scanner cannot see it.
-    expect(verdict.leaks).toEqual([]);
-    expect(verdict.piiMatches).toEqual([{ type: 'aadhaar', value: '123456789012' }]);
-  });
-
-  it('⭐ and the MASKED projection does NOT trip it — last-4 is four digits, not twelve', () => {
-    // ⚠ The other half of the finding, and it is the reassuring half: once a Pariwar's masking
-    // window elapses the page carries only "Account ending in 9012", so the collision above is
-    // scoped to the UNMASKED state. ⛔ That is ⛔ not a reason to call the conflict theoretical —
-    // fail-open means unmasked is the DEFAULT for every Pariwar until the Trust acts.
-    const maskedOnly = SAHYOG_VIVRAN_HTML.replace('123456789012', 'Account ending in 9012');
-    const verdict = evaluateSnapshot(matrix, { ...snapshot, html: maskedOnly });
     expect(verdict.piiMatches).toEqual([]);
+    expect(verdict.leaks).toEqual([]);
     expect(verdict.status).toBe('pass');
   });
 
-  it('⭐⭐ AC2 — the surface declares EXACTLY the FOUR ruled Tier-1 fields at `public`, BY NAME', () => {
+  it('⛔ and no account-number projection remains to be tested — masked OR full', () => {
+    // ⚠⛔ A SIBLING TEST STOOD HERE: *"the MASKED projection does NOT trip it — last-4 is four
+    // digits, not twelve"*. It rewrote the fixture HTML, swapping the full number for
+    // *"Account ending in 9012"*, and asserted the collision was scoped to the UNMASKED state.
+    // ⛔ It is retired because BOTH of its subjects are gone: `2026-09-04-190` cl.1 withdrew the
+    // account number, and 11b.11 **D1(b)** collapsed the wire's `masked` discriminator, so there is
+    // ⛔ no masked projection on this surface to compare against an unmasked one.
+    // ⛔⛔ MASKING ITSELF WAS ⛔ NOT DELETED — `-190` **cl.4** RETAINS `isNomineeBankMasked`, the
+    // schedule table, its permission key and EVERY ONE OF ITS OWN TESTS, which are untouched by this
+    // story. ⚠ What it has is ⛔ NO PUBLIC CONSUMER. ⛔ Do ⛔ not read this retirement as masking
+    // having been removed.
+    // ⇒ what this asserts instead is the property that survives: the rendered HTML carries ⛔ no
+    // digit run of any bank-coordinate shape at all.
+    expect(SAHYOG_VIVRAN_HTML).not.toMatch(/\d{6,}/);
+    expect(SAHYOG_VIVRAN_HTML).not.toContain('Account ending in');
+  });
+
+  it('⭐⭐ AC2 — the surface declares EXACTLY the ONE ruled Tier-1 field at `public`, BY NAME', () => {
     // ⭐ WAS "ZERO", asserted positively, and 11b.3 said so in terms: *"⛔ NOT a permanent ceiling —
     // 11b.3a and 11b.3b each add theirs WITH a cited ruling and each owes this assertion an update
     // in the SAME commit."* This is 11b.3a paying that price: **0 → 4**.
@@ -1303,15 +1292,18 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
     //
     // ⛔ AND IT ASSERTS IDENTITY, ⛔ not just a count: a count-only assertion passes while a Tier-1
     // declaration silently migrates to some other field.
+    //
+    // ⭐⭐⛔ **AND STORY 11b.11 MOVED IT AGAIN, DOWNWARD: 4 → 1.** `2026-09-04-190` cl.1
+    // (Trustee-ratified) withdraws `nominee_account_number` and `nominee_ifsc` (and the two Tier-3
+    // bank siblings) from `public`; `2026-09-04-191` cl.1 withdraws `nominee_vpa`; `-190` cl.2 KEEPS
+    // `nominee_account_holder_name`, re-keyed to that clause. ⚠ The `+4` reading above still holds:
+    // this is `+1` from 11b.3's zero, and 11b.3b's two are still owed on top when it merges.
+    // ⭐ A NARROWING needs ⛔ no new authority beyond the ruling that ordered it — this control is a
+    // CEILING, and removing entries only lowers it.
     const surface = matrix.surfaces.find((s) => s.id === 'sahyog-vivran');
     expect(surface).toBeDefined();
     const tier1AtPublic = surface!.fields.filter((f) => f.pii_tier === 1 && f.tier === 'public');
-    expect(tier1AtPublic.map((f) => f.id).sort()).toEqual([
-      'nominee_account_holder_name',
-      'nominee_account_number',
-      'nominee_ifsc',
-      'nominee_vpa',
-    ]);
+    expect(tier1AtPublic.map((f) => f.id).sort()).toEqual(['nominee_account_holder_name']);
   });
 
   it('⭐⭐ STORY 11b.10 (AC5) — the Tier-1-at-`public` count is UNCHANGED on BOTH sahyog surfaces', () => {
@@ -1333,12 +1325,10 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
         .map((f) => f.id)
         .sort();
     };
-    expect(tier1AtPublic('sahyog-vivran')).toEqual([
-      'nominee_account_holder_name',
-      'nominee_account_number',
-      'nominee_ifsc',
-      'nominee_vpa',
-    ]);
+    // ⚠⛔ AMENDED BY STORY 11b.11 — the count on `sahyog-vivran` is now **ONE** (`2026-09-04-190`
+    // cl.1-2 + `2026-09-04-191` cl.1). ⭐ 11b.10's own property is UNAFFECTED and still asserted:
+    // its address field moved ⛔ neither surface's Tier-1 set, and it is 11b.11 that moved this one.
+    expect(tier1AtPublic('sahyog-vivran')).toEqual(['nominee_account_holder_name']);
     // ⭐ The index's single ruled entry (`2026-08-24-159` cl.2 / D1(b)) — ⛔ and no second one.
     expect(tier1AtPublic('sahyog-drive')).toEqual(['deceased_member_name']);
 
@@ -1353,43 +1343,50 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
     expect(driveHref?.tier1_public_exception).toBeUndefined();
   });
 
-  it('⭐ each of the four cites `2026-08-28-165` cl.1, and its scope names THIS surface only', () => {
+  it('⭐ the ⛔ ONE survivor cites `2026-09-04-190` cl.2, and its scope names THIS surface only', () => {
     // ⚠ The parser is FAIL-CLOSED IN BOTH DIRECTIONS, so this is not a restatement: a Tier-1 field
     // at `public` WITHOUT an exception fails, and an exception on a field that is not Tier-1-at-
-    // public fails too. What this adds is that the four are ATTRIBUTED and BOUNDED — an exception
+    // public fails too. What this adds is that the survivor is ATTRIBUTED and BOUNDED — an exception
     // block whose `scope` quietly reached another surface would parse fine.
+    // ⭐⛔ **RE-KEYED AT STORY 11b.11.** Four entries cited `2026-08-28-165 cl.1`; three are
+    // withdrawn (`2026-09-04-190` cl.1 + `2026-09-04-191` cl.1) and the survivor is re-keyed to
+    // `2026-09-04-190 cl.2`, which is the ruling that KEEPS it. ⛔ `-165` is Trustee-ratified and is
+    // ⛔ NOT edited in place — the supersession lives in `-190`/`-191`.
     const surface = matrix.surfaces.find((s) => s.id === 'sahyog-vivran');
     const withException = surface!.fields.filter((f) => f.tier1_public_exception !== undefined);
-    expect(withException.map((f) => f.id).sort()).toEqual([
-      'nominee_account_holder_name',
-      'nominee_account_number',
-      'nominee_ifsc',
-      'nominee_vpa',
-    ]);
+    expect(withException.map((f) => f.id).sort()).toEqual(['nominee_account_holder_name']);
     for (const f of withException) {
-      expect(f.tier1_public_exception?.decision).toBe('2026-08-28-165 cl.1');
+      expect(f.tier1_public_exception?.decision).toBe('2026-09-04-190 cl.2');
       expect(f.tier1_public_exception?.scope).toContain('sahyog-vivran');
-      // ⭐ `-165` cl.2 — masking does NOT change the tier, and each scope has to SAY so: the four
-      // entries cover BOTH states, and *"it is only last-4, so it isn't really Tier-1"* is foreclosed.
+      // ⭐ `-165` cl.2 STANDS — masking does NOT change the tier, and the scope has to SAY so: the
+      // entry covers BOTH states (rendered live, and RETAINED in the dormant masked projection per
+      // `2026-09-04-191` cl.2), and *"it is only last-4, so it isn't really Tier-1"* is foreclosed.
       expect(f.tier1_public_exception?.scope.toLowerCase()).toMatch(/mask/);
     }
   });
 
-  it('⛔ NO FIFTH Tier-1 entry — the two Tier-3 bank fields carry no exception and need none', () => {
-    // ⚠ The other direction of the same control. `nominee_bank_name` / `nominee_branch` are Tier-3
-    // PLAINTEXT (public, IFSC-derived, non-identifying), so nothing is decrypted for them and an
-    // exception on either would be an "exception that does not except anything".
-    // ⛔ And the deceased member's name + the contributor's belong to **11b.3b**, gated on their own
-    // Panel rulings — ⛔ not pre-added here.
+  it('⛔ NO SECOND Tier-1 entry — and the FIVE withdrawn fields are ABSENT, ⛔ not demoted', () => {
+    // ⚠ The other direction of the same control.
+    // ⭐⛔ **WHAT THIS TEST ASSERTED UNTIL 11b.11, kept as the record:** that `nominee_bank_name` and
+    // `nominee_branch` were DECLARED, at `pii_tier: 3`, and carried ⛔ no `tier1_public_exception` —
+    // they were Tier-3 PLAINTEXT (public, IFSC-derived, non-identifying), so nothing was decrypted
+    // for them and an exception on either would have been an *"exception that does not except
+    // anything"*. ⇒ `2026-09-04-190` cl.1 withdraws them from `public` ALTOGETHER, so the assertion
+    // inverts: they must now be ABSENT from the surface.
+    // ⛔⛔ ABSENT, ⛔ NOT DEMOTED TO ANOTHER TIER. A withdrawn field that lingers at some lower tier
+    // is still a declaration that something renders it, and the tier-leak leg is per-surface.
     const surface = matrix.surfaces.find((s) => s.id === 'sahyog-vivran');
-    const tier3Bank = surface!.fields.filter(
-      (f) => f.id === 'nominee_bank_name' || f.id === 'nominee_branch',
-    );
-    expect(tier3Bank).toHaveLength(2);
-    for (const f of tier3Bank) {
-      expect(f.pii_tier).toBe(3);
-      expect(f.tier1_public_exception).toBeUndefined();
+    for (const withdrawn of [
+      'nominee_bank_name',
+      'nominee_branch',
+      'nominee_account_number',
+      'nominee_ifsc',
+      'nominee_vpa',
+    ]) {
+      expect(surface!.fields.some((f) => f.id === withdrawn)).toBe(false);
     }
+    // ⛔ And the deceased member's name + the contributor's belong to **11b.3b**, gated on their own
+    // Panel rulings — ⛔ not pre-added here, and ⛔ not restored by 11b.11's reduction.
     expect(surface!.fields.some((f) => f.id === 'deceased_member_name')).toBe(false);
   });
 

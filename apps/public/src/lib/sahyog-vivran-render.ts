@@ -114,32 +114,64 @@ export interface SahyogVivranLabels {
   /** The OUTAGE state — ⛔ deliberately distinct copy from the 404 the page returns instead. */
   readonly outageTitle: string;
   readonly outageBody: string;
-  // ── ⭐ Story 11b.3a — the nominee bank block ────────────────────────────────────────────────────
-  /** The bank block's section heading. */
+  // ── ⭐ Story 11b.3a — the nominee block, ⭐⛔ REDUCED BY STORY 11b.11 ────────────────────────────
+  //
+  // ⭐⛔ **SIX LABELS AND ONE VALUE-FORMATTER STOOD HERE UNTIL 11b.11, and their i18n keys are
+  // RETIRED with them:** `labelAccountNumber` (`label.account_number`), `labelIfsc` (`label.ifsc`),
+  // `labelVpa` (`label.vpa`), `labelBankName` (`label.bank_name`), `labelBranch` (`label.branch`),
+  // `valueAccountEndingIn` (`value.account_ending_in`) and `bankMaskedNote` (`bank.masked_note`).
+  // Each described a value `2026-09-04-190` cl.1 / `2026-09-04-191` cl.1 withdrew from `public`, or
+  // a masked projection this surface no longer performs. ⛔ Copy that outlives what it describes is
+  // the exact defect `-187` / `-188` / `-192` recorded three times in one day. ✅ Grepped: the
+  // `sahyog-vivran` i18n namespace has ⛔ no other consumer.
+  //
+  /**
+   * The block's section heading. ⚠⛔ RE-WORDED at 11b.11: it read *"Where the money goes"*, which
+   * named a destination the page no longer shows. ⛔ A frame that describes deleted rows is the same
+   * defect as a deleted row that stays.
+   */
   readonly bankTitle: string;
-  /** The bank block's group accessible name (AC7 — a real `role` + `aria-label`). */
+  /**
+   * The block's group accessible name (AC7 — a real `role` + `aria-label`). ⚠⛔ RE-WORDED at
+   * 11b.11: it read *"Bank details for this drive"*, and after `-190` cl.1 that section contains
+   * ⛔ no bank details at all — one name.
+   */
   readonly bankGroupLabel: string;
   /**
-   * ⭐ THE EQUALITY STATEMENT, and it is copy rather than a comment because a reader with two
-   * accounts in front of them will otherwise infer a preference from the order. ⛔ Never "primary".
+   * ⭐ THE EQUALITY STATEMENT, and it is copy rather than a comment because a reader with two names
+   * in front of them will otherwise infer a preference from the order. ⛔ Never "primary".
+   * ⚠⛔ RE-WORDED AND RE-GATED at 11b.11. It read *"Either account can be used. Neither one is
+   * preferred over the other."* — standing copy rendered whenever the block rendered. ⛔ Both halves
+   * broke: with the coordinates withdrawn there is ⛔ no account a visitor can *use*, and a
+   * one-element array is EXPLICITLY LEGAL, so on a claim where only account #1 was collected the
+   * sentence sat beside ONE card and invited the reader to infer a second was being WITHHELD — on
+   * the page whose whole purpose is that nothing about the money is hidden.
+   * ⇒ it now speaks about the RECORD rather than about paying, and the page renders it ⛔ ONLY when
+   * there is more than one name for it to be about.
    */
-  readonly bankEqualDestinations: string;
-  /** Per-account accessible name. ⚠ Interpolated THROUGH `t()`, ⛔ never by local string surgery. */
-  readonly bankAccountLabel: (rank: number) => string;
-  readonly labelAccountHolder: string;
-  readonly labelAccountNumber: string;
-  readonly labelIfsc: string;
-  readonly labelVpa: string;
-  readonly labelBankName: string;
-  readonly labelBranch: string;
+  readonly bankEqualNominees: string;
   /**
-   * ⭐⭐ THE MASKED ACCOUNT NUMBER, AS ONE COHERENT PHRASE (AC4/AC7). The API hands the page FOUR
-   * DIGITS ALONE; this label is what makes a screen reader announce *"account ending in 1234"*
-   * rather than a bare truncated string read digit by digit. ⛔ Never render the digits unwrapped.
+   * Per-account accessible name.
+   * ⚠⛔⛔ **IT NO LONGER CARRIES THE ORDINAL, AND THAT IS THE FIX, ⛔ not a simplification.** It read
+   * `bank.account_label` = *"Account {rank}"* ⇒ a screen reader announced *"Account 1"* / *"Account
+   * 2"* while `surface-fields.ts` mapped `accountRank: null` precisely because *"rendering 'Account
+   * 1' / 'Account 2' … would put an ordering that implies preference onto the page"*. ⇒ a sighted
+   * visitor saw two identical unnumbered boxes; a screen-reader visitor heard the ordinal — the
+   * story's stated equality contradicted by its shipped output, in the direction ⛔ only
+   * assistive-tech users experience. ⚠ And because the value reached the DOM via `aria-label`
+   * rather than `<MatrixField>`, the field-classification gate was STRUCTURALLY BLIND to it.
+   * ⇒ the group is named by what it IS. ⛔ Do ⛔ not re-introduce a rank here.
    */
-  readonly valueAccountEndingIn: (last4: string) => string;
-  /** ⭐ Says WHY the details are reduced — ⛔ so the omission is explained, not silently different. */
-  readonly bankMaskedNote: string;
+  readonly bankAccountLabel: string;
+  /**
+   * ⭐ The ⛔ ONLY field label left in this block, and its wording is RULED: `2026-09-04-190` cl.2
+   * (Trustee-ratified) fixes the public wording at **"Nominee Name"** and forbids *"Account
+   * holder"*. ⚠ The KEY is still `label.account_holder` — deliberately. The key names the DATA
+   * (6.8's D1: no FK to `member_nominees`, no rank, no match rule ⇒ it IS the account holder) and
+   * the VALUE is the ruled PRESENTATION. ⛔ Renaming the key would erase the distinction the ruling
+   * itself draws.
+   */
+  readonly labelAccountHolder: string;
 }
 
 export interface SahyogVivranView {
@@ -251,19 +283,28 @@ function dispositionLabel(
 }
 
 /**
- * ⭐ MAP ONE WIRE ACCOUNT ONTO ITS RENDER ROW — Story 11b.3a (AC2, AC4, AC7).
+ * ⭐ MAP ONE WIRE ACCOUNT ONTO ITS RENDER ROW — Story 11b.3a (AC2, AC4, AC7),
+ * ⭐⛔ **REDUCED TO ONE FIELD BY STORY 11b.11.**
  *
- * ⛔⛔ THIS FUNCTION DOES ⛔ NOT MASK ANYTHING, AND IT MUST NEVER LEARN HOW. The reduction happened
- * at the `apps/api` boundary (cl.10(e)): the masked arm of the wire shape carries ⛔ no
- * `accountNumber` key at all, so the full value is structurally absent by the time it gets here.
- * ⚠⛔ *"Mask it in CSS/JS"* and *"send it and hide it"* are BOTH ruled out by AC4 — and the reason
- * they cannot be reintroduced by accident is that this module has nothing to hide.
+ * ⛔⛔ THIS FUNCTION DOES ⛔ NOT MASK ANYTHING, AND IT MUST NEVER LEARN HOW. ⭐ That was already
+ * true and it is now true for a second reason: there is nothing left on this surface to mask.
+ * `2026-09-04-190` cl.1 (Trustee-ratified) withdrew the account number, IFSC, bank name and branch
+ * from `public`; `2026-09-04-191` cl.1 withdrew the VPA; `-190` cl.2 KEPT the account-holder name.
+ * ⚠⛔ *"Mask it in CSS/JS"* and *"send it and hide it"* stay ruled out by AC4, and this module still
+ * has nothing to hide.
  *
- * ⭐ THE MASKED ACCOUNT NUMBER IS FRAMED HERE, THROUGH `t()`. The API hands over FOUR DIGITS ALONE;
- * `valueAccountEndingIn` turns them into one coherent phrase so assistive tech announces a single
- * field rather than reading a truncated string digit by digit (AC4/AC7). ⛔ Do not render the digits
- * unwrapped, and ⛔ do not interpolate them by local string surgery — the 11a.2 `{{max}}` vs `{max}`
- * defect threw on EVERY request and no test caught it, because every test bypassed `t()`.
+ * ⭐⛔ **WHAT STOOD HERE, kept as the record.** The wire was a `z.discriminatedUnion('masked', …)`
+ * and this function branched on it: the masked arm mapped `accountNumberLast4` through
+ * `labels.valueAccountEndingIn` into one coherent phrase — so assistive tech announced a single
+ * field rather than reading a truncated string digit by digit — and set `nomineeAccountHolderName`
+ * and `nomineeVpa` to `null` because cl.10(e)'s RETENTION list did not name them. ⚠ `2026-09-04-191`
+ * **cl.2** then ruled the masked projection must ⛔ NOT drop the nominee name, which AMENDS THE
+ * READING of cl.10(e)'s list — that list was written when the masked view still carried account
+ * coordinates and therefore had something else to retain. ⛔ cl.10(e) is ⛔ not restated as if it had
+ * always said this. ⇒ both arms reduced to the same single name and 11b.11's **D1(b)** collapsed the
+ * public wire; ⛔ there is no `masked` discriminator left to branch on.
+ * ⛔⛔ **MASKING WAS ⛔ NOT DELETED** (`-190` cl.4) — the machinery is intact in
+ * `packages/domain/src/claim/nominee-bank-masking*.ts`; it has ⛔ NO PUBLIC CONSUMER.
  *
  * ⛔ EVERY KEY IS PRESENT ON EVERY ROW, INCLUDING ITS NULLS. `deriveFieldIds` reads keys, and a key
  * omitted when its value is absent would shrink the classified field set on exactly the pages nobody
@@ -271,37 +312,13 @@ function dispositionLabel(
  */
 function nomineeAccountRow(
   account: PublicSahyogVivranResponse['drive']['nomineeBankAccounts'][number],
-  labels: SahyogVivranLabels,
 ): SahyogVivranNomineeAccountRow {
-  if (account.masked) {
-    return {
-      accountRank: account.accountRank,
-      isMasked: true,
-      nomineeBankName: account.bankName,
-      nomineeBranch: account.branch,
-      // ⛔ ABSENT FROM cl.10(e)'s RETENTION LIST ⇒ absent from the wire's masked arm ⇒ null here.
-      // The page renders NOTHING for them — ⛔ no placeholder, ⛔ no "not provided" marker.
-      nomineeAccountHolderName: null,
-      nomineeAccountNumber:
-        account.accountNumberLast4 === null
-          ? null
-          : labels.valueAccountEndingIn(account.accountNumberLast4),
-      nomineeIfsc: account.ifsc,
-      nomineeVpa: null,
-    };
-  }
   return {
     accountRank: account.accountRank,
-    isMasked: false,
-    nomineeBankName: account.bankName,
-    nomineeBranch: account.branch,
-    // ⚠ THE ACCOUNT HOLDER, ⛔ not "the nominee" — 6.8's D1 removed that linkage deliberately.
+    // ⚠ THE ACCOUNT HOLDER in the DATA — 6.8's D1 removed the nominee linkage deliberately and that
+    // reasoning STANDS. ⭐ The rendered LABEL is *"Nominee Name"*, ruled at `2026-09-04-190` cl.2:
+    // the Panel ruled the PRESENTATION, ⛔ not the schema. ⛔ Do not rename the key.
     nomineeAccountHolderName: account.accountHolderName,
-    nomineeAccountNumber: account.accountNumber,
-    nomineeIfsc: account.ifsc,
-    // ⚠ NULL for every nominee today (Story 8.4's absent seam). ⛔ Not an error, ⛔ not a gap, and
-    // the page renders NOTHING for it.
-    nomineeVpa: account.vpa,
   };
 }
 
@@ -349,7 +366,7 @@ export function buildSahyogVivranView(
       appealReversalAt: reversal === null ? null : formatClosedAt(reversal.reversedAt),
       // ⭐ Story 11b.3a. ⛔ The order is the substrate's (`#1` then `#2`) — ⛔ never a preference,
       // and ⛔ never re-sorted here: the two are EQUAL payment destinations (Story 9.9).
-      nomineeAccounts: drive.nomineeBankAccounts.map((a) => nomineeAccountRow(a, labels)),
+      nomineeAccounts: drive.nomineeBankAccounts.map((a) => nomineeAccountRow(a)),
     },
   };
 }

@@ -30,28 +30,13 @@ const OK_BODY = {
     confirmedContributionCount: 137,
     fundingOutcome: 'fully_funded',
     appealReversal: null,
-    // ⭐ Story 11b.3a — ONE FULL and ONE MASKED account, on purpose: the two arms of the
-    // discriminated union validate differently, and a fixture with only one leaves the other's
-    // check unexercised.
+    // ⭐ Story 11b.3a seeded ONE FULL and ONE MASKED account, because the two arms of a
+    // `z.discriminatedUnion('masked', …)` validated differently. ⭐⛔ **STORY 11b.11 COLLAPSED THE
+    // WIRE** (`2026-09-04-190` cl.1-2 + `2026-09-04-191` cl.1, D1(b)) ⇒ there is ⛔ one shape, and
+    // TWO accounts are kept only so the multi-account path stays exercised.
     nomineeBankAccounts: [
-      {
-        masked: false,
-        accountRank: 1,
-        bankName: 'State Bank of India',
-        branch: 'Vaishali',
-        accountHolderName: 'A Holder',
-        accountNumber: '50100123456789',
-        ifsc: 'SBIN0001234',
-        vpa: null,
-      },
-      {
-        masked: true,
-        accountRank: 2,
-        bankName: 'Bank of Baroda',
-        branch: null,
-        accountNumberLast4: '6789',
-        ifsc: 'BARB0VJVAIS',
-      },
+      { accountRank: 1, accountHolderName: 'A Holder' },
+      { accountRank: 2, accountHolderName: 'B Holder' },
     ],
   },
 };
@@ -185,87 +170,77 @@ describe('⭐ fetchSahyogVivran — every bounded field is validated against its
     expect(res.ok).toBe(true);
   });
 
-  it('⭐⭐ REJECTS a MASKED account that carries the full account number — the AC4 absence check', async () => {
-    // ⛔⛔ THE ASSERTION THIS MODULE EXISTS TO MAKE ON THIS STORY. AC4 requires that *"the full value
-    // never crosses the wire once masked"*, and the contract makes that structural: the masked arm
-    // has ⛔ NO `accountNumber` key. ⇒ this SSR-side check refuses a body carrying one, so a
-    // regression at the API boundary is caught AT THE PAGE rather than published.
-    // ⚠ A `typeof === 'object'` check would let it straight through — which is why the validator
-    // checks for ABSENCE, ⛔ not merely for what the arm does carry.
+  it('⭐⭐ REJECTS an account carrying ANY withdrawn key — the AC1 absence check', async () => {
+    // ⛔⛔ THE ASSERTION THIS MODULE EXISTS TO MAKE ON THIS STORY.
+    // ⭐⛔ **THREE TESTS STOOD HERE UNTIL 11b.11, and they are folded into this one because their
+    // subjects are gone, ⛔ not because the discipline relaxed.** They were: (1) a MASKED account
+    // carrying `accountNumber` is refused — AC4's *"the full value never crosses the wire once
+    // masked"*; (2) a masked account whose `accountHolderName` or `vpa` survived is refused —
+    // cl.10(e) is a RETENTION list and a retention list is EXHAUSTIVE; (3) an `accountNumberLast4`
+    // that is not exactly four digits is refused — a longer string is THE REDUCTION HAVING SILENTLY
+    // NOT HAPPENED, which would render as a plausible "ending in …" phrase.
+    // ⇒ `2026-09-04-190` cl.1 and `2026-09-04-191` cl.1 withdrew every one of those values from
+    // `public`, and 11b.11 D1(b) collapsed the `masked` discriminator ⇒ there is no masked arm to
+    // check and no last-4 to validate.
+    // ⭐ **WHAT REPLACES THEM IS STRICTLY STRONGER:** every withdrawn key is refused on EVERY
+    // account, in EVERY state — including `accountHolderName`'s old companions AND the `masked` flag
+    // itself, because the wire may ⛔ not advertise a control it no longer exercises.
+    // ⚠ A `typeof === 'object'` check would let any of these straight through, which is why the
+    // validator checks for ABSENCE, ⛔ not merely for what the shape does carry.
+    // ⛔⛔ MASKING WAS ⛔ NOT DELETED (`2026-09-04-190` cl.4) — the machinery and its own tests are
+    // untouched in `@twt/domain`; it has ⛔ NO PUBLIC CONSUMER.
+    const withdrawn: Record<string, unknown> = {
+      accountNumber: '50100123456789',
+      accountNumberLast4: '6789',
+      ifsc: 'BARB0VJVAIS',
+      vpa: 'someone@upi',
+      bankName: 'Bank of Baroda',
+      branch: 'Vaishali',
+      masked: false,
+    };
+    for (const [key, value] of Object.entries(withdrawn)) {
+      stubFetch(() =>
+        json({
+          drive: {
+            ...OK_BODY.drive,
+            nomineeBankAccounts: [
+              { accountRank: 1, accountHolderName: 'A Holder', [key]: value },
+            ],
+          },
+        }),
+      );
+      const res = await fetchSahyogVivran({ driveToken: 'P-1', forwardedFor: null });
+      expect(res, `\`${key}\` must be refused at the SSR boundary`).toEqual({
+        ok: false,
+        reason: 'bad_response',
+      });
+    }
+  });
+
+  it('⛔ REJECTS an account that OMITS `accountHolderName` — present, ⛔ not "well-typed if present"', async () => {
+    // ⚠ The contract REQUIRES the key; a boundary regression that OMITS it (rather than sending
+    // `null`) is the exact "catch it at the page rather than publish it" case this validator exists
+    // for, and a well-typed-if-present check waves it straight through (review 2026-09-03).
     stubFetch(() =>
-      json({
-        drive: {
-          ...OK_BODY.drive,
-          nomineeBankAccounts: [
-            {
-              masked: true,
-              accountRank: 1,
-              bankName: 'Bank of Baroda',
-              branch: null,
-              accountNumberLast4: '6789',
-              ifsc: 'BARB0VJVAIS',
-              accountNumber: '50100123456789',
-            },
-          ],
-        },
-      }),
+      json({ drive: { ...OK_BODY.drive, nomineeBankAccounts: [{ accountRank: 1 }] } }),
     );
     const res = await fetchSahyogVivran({ driveToken: 'P-1', forwardedFor: null });
     expect(res).toEqual({ ok: false, reason: 'bad_response' });
   });
 
-  it('⛔ REJECTS a masked account whose holder name or VPA survived the projection', async () => {
-    // ⚠ cl.10(e) is a RETENTION list and a retention list is EXHAUSTIVE: what it does not name is
-    // not retained. ⛔ Neither field may reappear on the ground that it is "less sensitive".
-    for (const extra of [{ accountHolderName: 'A Holder' }, { vpa: 'someone@upi' }]) {
-      stubFetch(() =>
-        json({
-          drive: {
-            ...OK_BODY.drive,
-            nomineeBankAccounts: [
-              {
-                masked: true,
-                accountRank: 1,
-                bankName: 'Bank of Baroda',
-                branch: null,
-                accountNumberLast4: '6789',
-                ifsc: 'BARB0VJVAIS',
-                ...extra,
-              },
-            ],
-          },
-        }),
-      );
-      const res = await fetchSahyogVivran({ driveToken: 'P-1', forwardedFor: null });
-      expect(res).toEqual({ ok: false, reason: 'bad_response' });
-    }
-  });
-
-  it('⛔ REJECTS an accountNumberLast4 that is not exactly four digits', async () => {
-    // ⚠ A longer string here is the REDUCTION HAVING SILENTLY NOT HAPPENED — the single most
-    // consequential regression this surface can have, and it would otherwise render as a plausible
-    // "ending in …" phrase.
-    for (const bad of ['501001234', '69', 'abcd', '  6789']) {
-      stubFetch(() =>
-        json({
-          drive: {
-            ...OK_BODY.drive,
-            nomineeBankAccounts: [
-              {
-                masked: true,
-                accountRank: 1,
-                bankName: 'Bank of Baroda',
-                branch: null,
-                accountNumberLast4: bad,
-                ifsc: 'BARB0VJVAIS',
-              },
-            ],
-          },
-        }),
-      );
-      const res = await fetchSahyogVivran({ driveToken: 'P-1', forwardedFor: null });
-      expect(res).toEqual({ ok: false, reason: 'bad_response' });
-    }
+  it('⭐ ACCEPTS a NULL `accountHolderName` — a soft decrypt failure renders NOTHING', async () => {
+    // ⚠ `null` is the ABSENT value on this surface, and the page renders nothing for it — ⛔ no
+    // placeholder. Treating it as a bad response would turn one failed envelope into a 503.
+    stubFetch(() =>
+      json({
+        drive: {
+          ...OK_BODY.drive,
+          nomineeBankAccounts: [{ accountRank: 1, accountHolderName: null }],
+        },
+      }),
+    );
+    const res = await fetchSahyogVivran({ driveToken: 'P-1', forwardedFor: null });
+    expect(res.ok).toBe(true);
   });
 
   it('⭐ ACCEPTS an EMPTY accounts array — bank details were never collected, ⛔ not an outage', async () => {
@@ -277,16 +252,7 @@ describe('⭐ fetchSahyogVivran — every bounded field is validated against its
   });
 
   it('⛔ REJECTS a THIRD account — the substrate admits exactly {1, 2}', async () => {
-    const account = {
-      masked: false as const,
-      accountRank: 1 as const,
-      bankName: 'B',
-      branch: null,
-      accountHolderName: null,
-      accountNumber: null,
-      ifsc: null,
-      vpa: null,
-    };
+    const account = { accountRank: 1 as const, accountHolderName: null };
     stubFetch(() =>
       json({
         drive: { ...OK_BODY.drive, nomineeBankAccounts: [account, account, account] },

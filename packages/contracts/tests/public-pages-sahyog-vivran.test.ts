@@ -33,26 +33,31 @@ const ENTRY = {
   nomineeBankAccounts: [],
 };
 
-/** A FULL (unmasked) account — cl.10(a), during an active campaign or before the window elapses. */
-const FULL_ACCOUNT = {
-  masked: false as const,
+/**
+ * ⭐ ONE PUBLIC NOMINEE ACCOUNT, as Story 11b.11 leaves it: the rank plus the name, and ⛔ nothing
+ * else. `2026-09-04-190` cl.2 keeps `nominee_account_holder_name` at `public` and rules its rendered
+ * label **"Nominee Name"**; `-190` cl.1 and `2026-09-04-191` cl.1 take everything else off.
+ *
+ * ⭐⛔ **TWO FIXTURES STOOD HERE — `FULL_ACCOUNT` AND `MASKED_ACCOUNT` — because the shape was a
+ * `z.discriminatedUnion('masked', …)`.** The full arm carried `bankName` · `branch` ·
+ * `accountHolderName` · `accountNumber` · `ifsc` · `vpa`; the masked arm carried `bankName` ·
+ * `branch` · `accountNumberLast4` · `ifsc` and deliberately DROPPED the holder name and the VPA,
+ * because `2026-08-28-160` cl.10(e) is a RETENTION list and a retention list is EXHAUSTIVE.
+ * ⇒ `2026-09-04-191` **cl.2** then ruled the masked projection must ⛔ NOT drop the nominee name —
+ * which AMENDS THE READING of cl.10(e)'s list, ⛔ it does not restate the clause as having always
+ * said so — and with the coordinates withdrawn both arms reduced to this one shape and became
+ * IDENTICAL. Story 11b.11 **D1(b)** collapsed the wire accordingly.
+ * ⛔⛔ MASKING WAS ⛔ NOT DELETED (`-190` cl.4): the machinery and its own tests are untouched in
+ * `@twt/domain`; it has ⛔ NO PUBLIC CONSUMER.
+ */
+const ACCOUNT = {
   accountRank: 1 as const,
-  bankName: 'State Bank of India',
-  branch: 'Vaishali',
   accountHolderName: 'A Holder',
-  accountNumber: '50100123456789',
-  ifsc: 'SBIN0001234',
-  vpa: null,
 };
 
-/** cl.10(e)'s masked projection. ⛔ Note the keys that are ABSENT, not merely null. */
-const MASKED_ACCOUNT = {
-  masked: true as const,
+const SECOND_ACCOUNT = {
   accountRank: 2 as const,
-  bankName: 'Bank of Baroda',
-  branch: null,
-  accountNumberLast4: '6789',
-  ifsc: 'BARB0VJVAIS',
+  accountHolderName: 'B Holder',
 };
 
 describe('PublicSahyogVivranEntry — the happy path', () => {
@@ -312,71 +317,44 @@ describe('the response is SINGLE-ITEM', () => {
 // ══════════════════════════════════════════════════════════════════════════════════════════════
 // ⭐⭐ STORY 11b.3a — THE NOMINEE BANK ACCOUNTS. AC4 IS A SHAPE, ⛔ NOT A CONVENTION.
 // ══════════════════════════════════════════════════════════════════════════════════════════════
-describe('PublicSahyogVivranNomineeAccount — the masked arm makes the full number UNREPRESENTABLE', () => {
-  it('accepts a FULL account and a MASKED one', () => {
+describe('PublicSahyogVivranNomineeAccount — ⭐⛔ the COORDINATES ARE UNREPRESENTABLE (11b.11)', () => {
+  it('accepts the two EQUAL accounts, each carrying the name and nothing else', () => {
     expect(
       PublicSahyogVivranEntry.safeParse({
         ...ENTRY,
-        nomineeBankAccounts: [FULL_ACCOUNT, MASKED_ACCOUNT],
+        nomineeBankAccounts: [ACCOUNT, SECOND_ACCOUNT],
       }).success,
     ).toBe(true);
   });
 
-  it('⛔⛔ REJECTS a masked account carrying `accountNumber` — the AC4 assertion', () => {
-    // ⭐ THIS is why the shape is a discriminated union rather than one object with nullable fields.
-    // AC4 requires that *"the full value never crosses the wire once masked"*; with a single shape
-    // that would be a CONVENTION a handler bug breaks silently, on the one surface where the failure
-    // is a published bank account number. `.strict()` makes it a parse error instead.
-    expect(
-      PublicSahyogVivranEntry.safeParse({
-        ...ENTRY,
-        nomineeBankAccounts: [{ ...MASKED_ACCOUNT, accountNumber: '50100123456789' }],
-      }).success,
-    ).toBe(false);
-  });
-
-  it('⛔ REJECTS a masked account carrying `accountHolderName` or `vpa`', () => {
-    // ⚠ cl.10(e) is a RETENTION list — *"retain the last 4 digits plus the bank / branch / IFSC"* —
-    // and a retention list is EXHAUSTIVE: what it does not name is not retained. ⛔ Neither field may
-    // reappear on the ground that it is "less sensitive".
-    for (const extra of [{ accountHolderName: 'A Holder' }, { vpa: 'someone@upi' }]) {
+  it('⛔⛔ REJECTS every withdrawn key — ABSENT, ⛔ not `null`, and `.strict()` is what enforces it', () => {
+    // ⭐⭐ THIS IS THE ASSERTION THE WHOLE STORY RESTS ON, and it is the same discipline `-165`
+    // established for the old masked arm, applied to the whole shape: *"a single shape with
+    // `accountNumber` beside `accountNumberLast4` would make that a CONVENTION — one a handler bug
+    // can violate."* ⇒ the withdrawn keys are ⛔ NOT declared nullable and ⛔ not declared optional;
+    // they do ⛔ not exist, so populating one is a PARSE ERROR rather than an ignored extra field.
+    // ⛔ Do ⛔ not "fix" a failing handler by adding a key back here — each removal is a
+    // Trustee-ratified ruling (`2026-09-04-190` cl.1, `2026-09-04-191` cl.1).
+    const withdrawn: Record<string, unknown> = {
+      accountNumber: '50100123456789',
+      accountNumberLast4: '6789',
+      ifsc: 'SBIN0001234',
+      vpa: 'someone@upi',
+      bankName: 'State Bank of India',
+      branch: 'Vaishali',
+      // ⛔ AND THE DISCRIMINATOR ITSELF (11b.11 D1(b)) — the wire may ⛔ not advertise a control it
+      // no longer exercises. ⚠ Its ABSENCE is ⛔ not evidence masking was deleted; see the fixture.
+      masked: false,
+    };
+    for (const [key, value] of Object.entries(withdrawn)) {
       expect(
         PublicSahyogVivranEntry.safeParse({
           ...ENTRY,
-          nomineeBankAccounts: [{ ...MASKED_ACCOUNT, ...extra }],
+          nomineeBankAccounts: [{ ...ACCOUNT, [key]: value }],
         }).success,
+        `\`${key}\` must be UNREPRESENTABLE on the public nominee account`,
       ).toBe(false);
     }
-  });
-
-  it('⛔ REJECTS `accountNumberLast4` that is not EXACTLY four digits', () => {
-    // ⚠ A longer string is the REDUCTION HAVING SILENTLY NOT HAPPENED — and it would render as a
-    // perfectly plausible "ending in …" phrase.
-    for (const bad of ['501001234', '69', 'abcd', ' 6789']) {
-      expect(
-        PublicSahyogVivranEntry.safeParse({
-          ...ENTRY,
-          nomineeBankAccounts: [{ ...MASKED_ACCOUNT, accountNumberLast4: bad }],
-        }).success,
-      ).toBe(false);
-    }
-    // ⭐ `null` IS valid — the stored value carried four or fewer digits, and at exactly four "the
-    // last four" IS the complete number, which cl.10(e) forbids exposing. The page renders NOTHING.
-    expect(
-      PublicSahyogVivranEntry.safeParse({
-        ...ENTRY,
-        nomineeBankAccounts: [{ ...MASKED_ACCOUNT, accountNumberLast4: null }],
-      }).success,
-    ).toBe(true);
-  });
-
-  it('⛔ REJECTS a FULL account carrying `accountNumberLast4` — the two arms are exclusive', () => {
-    expect(
-      PublicSahyogVivranEntry.safeParse({
-        ...ENTRY,
-        nomineeBankAccounts: [{ ...FULL_ACCOUNT, accountNumberLast4: '6789' }],
-      }).success,
-    ).toBe(false);
   });
 
   it('⛔ REJECTS a THIRD account and an out-of-range rank — the substrate admits exactly {1, 2}', () => {
@@ -386,13 +364,13 @@ describe('PublicSahyogVivranNomineeAccount — the masked arm makes the full num
     expect(
       PublicSahyogVivranEntry.safeParse({
         ...ENTRY,
-        nomineeBankAccounts: [FULL_ACCOUNT, MASKED_ACCOUNT, FULL_ACCOUNT],
+        nomineeBankAccounts: [ACCOUNT, SECOND_ACCOUNT, ACCOUNT],
       }).success,
     ).toBe(false);
     expect(
       PublicSahyogVivranEntry.safeParse({
         ...ENTRY,
-        nomineeBankAccounts: [{ ...FULL_ACCOUNT, accountRank: 3 }],
+        nomineeBankAccounts: [{ ...ACCOUNT, accountRank: 3 }],
       }).success,
     ).toBe(false);
   });
@@ -403,16 +381,23 @@ describe('PublicSahyogVivranNomineeAccount — the masked arm makes the full num
     );
   });
 
-  it('⛔ the FULL arm still refuses an EMPTY STRING where `null` is the "absent" value', () => {
-    // ⚠ The `district` lesson, applied to every optional bank field: `''` would survive as a
-    // "present" value and render a visually BLANK row where the page's own rule is to render NOTHING.
-    for (const key of ['accountHolderName', 'accountNumber', 'ifsc', 'vpa'] as const) {
-      expect(
-        PublicSahyogVivranEntry.safeParse({
-          ...ENTRY,
-          nomineeBankAccounts: [{ ...FULL_ACCOUNT, [key]: '' }],
-        }).success,
-      ).toBe(false);
-    }
+  it('⭐ ACCEPTS a NULL name — a soft decrypt failure renders NOTHING, ⛔ never a placeholder', () => {
+    expect(
+      PublicSahyogVivranEntry.safeParse({
+        ...ENTRY,
+        nomineeBankAccounts: [{ ...ACCOUNT, accountHolderName: null }],
+      }).success,
+    ).toBe(true);
+  });
+
+  it('⛔ still refuses an EMPTY STRING where `null` is the "absent" value', () => {
+    // ⚠ The `district` lesson: `''` would survive as a "present" value and render a visually BLANK
+    // row where the page's own rule is to render NOTHING.
+    expect(
+      PublicSahyogVivranEntry.safeParse({
+        ...ENTRY,
+        nomineeBankAccounts: [{ ...ACCOUNT, accountHolderName: '' }],
+      }).success,
+    ).toBe(false);
   });
 });

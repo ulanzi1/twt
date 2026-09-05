@@ -244,17 +244,29 @@ function isSahyogVivranResponse(body: unknown): body is PublicSahyogVivranRespon
 }
 
 /**
- * ⭐ THE NOMINEE BANK ACCOUNTS — Story 11b.3a (AC2, AC4).
+ * ⭐ THE NOMINEE ACCOUNTS — Story 11b.3a (AC2, AC4), ⭐⛔ **REDUCED TO ONE FIELD BY STORY 11b.11.**
  *
- * ⛔⛔ THE MASKED ARM IS CHECKED FOR **ABSENCE**, ⛔ not merely for what it carries, and that is the
- * point of validating it here at all. AC4 requires that *"the full value never crosses the wire once
- * masked"*; the contract makes that structural with a discriminated union whose masked arm has ⛔ no
- * `accountNumber` and ⛔ no `accountHolderName` key. ⇒ this SSR-side check refuses a body that
- * carries either on a masked account — so a regression at the API boundary is caught at the page
- * rather than published. ⚠ A `typeof === 'object'` check alone would let it straight through.
+ * ⛔⛔ **THIS CHECK IS FOR ABSENCE, ⛔ not merely for what the body carries — and 11b.11 makes it
+ * MORE of that, ⛔ not less.**
  *
- * ⭐ `accountNumberLast4` is checked against `^\d{4}$` — the SAME shape the contract states. A
- * longer string here would be the reduction having silently not happened.
+ * ⭐⛔ **WHAT IT CHECKED UNTIL 11b.11, kept as the record.** The wire was a
+ * `z.discriminatedUnion('masked', …)`, so this function branched on `masked`: on the MASKED arm it
+ * refused a body carrying `accountNumber`, `accountHolderName` or `vpa` (AC4 — *"the full value never
+ * crosses the wire once masked"*) and checked `accountNumberLast4` against `^\d{4}$`, because a
+ * longer string would be the reduction having silently not happened; on the FULL arm it required
+ * `accountHolderName`, `accountNumber` and `vpa` to be PRESENT (⛔ not merely well-typed-if-present),
+ * refused the masked arm's key, and validated `bankName` / `branch` / `ifsc`.
+ *
+ * ⭐⭐ `2026-09-04-190` **cl.1** (Trustee-ratified) and `2026-09-04-191` **cl.1** withdraw all five
+ * coordinates from `public`; `-190` **cl.2** keeps the nominee's NAME. ⇒ both arms became identical
+ * and 11b.11 **D1(b)** collapsed the wire. ⛔ There is no `masked` discriminator to branch on.
+ * ⛔⛔ **MASKING WAS ⛔ NOT DELETED** (`-190` cl.4) — the machinery lives in `@twt/domain` and has
+ * ⛔ NO PUBLIC CONSUMER. ⛔ Do ⛔ not read this simplification as masking having been removed.
+ *
+ * ⭐ **THE ABSENCE CHECK IS NOW UNCONDITIONAL, WHICH IS STRICTLY STRONGER:** every withdrawn key —
+ * and the `masked` flag itself — is refused on EVERY account, in EVERY state, rather than on one arm
+ * of a union. ⇒ a boundary regression that re-introduces any of them is caught AT THE PAGE rather
+ * than published. ⚠ A `typeof === 'object'` check alone would let it straight through.
  *
  * ⚠ AT MOST TWO, matching the substrate's composite PK `{1, 2}`. ⛔ Not a page size and ⛔ not a
  * pagination affordance — see the contract's own note.
@@ -265,34 +277,29 @@ function isNomineeBankAccounts(value: unknown): boolean {
     if (typeof item !== 'object' || item === null) return false;
     const a = item as Record<string, unknown>;
     if (a['accountRank'] !== 1 && a['accountRank'] !== 2) return false;
-    if (typeof a['bankName'] !== 'string' || a['bankName'].length === 0) return false;
-    if (a['branch'] !== null && (typeof a['branch'] !== 'string' || a['branch'].length === 0)) {
-      return false;
+    // ⛔⛔ THE WITHDRAWN KEYS, REFUSED UNCONDITIONALLY. ⛔ Absence, ⛔ not "null is fine": the
+    // contract's `.strict()` shape has no key for any of these, so a body carrying one is a boundary
+    // regression that would publish what `2026-09-04-190` cl.1 / `2026-09-04-191` cl.1 withdrew.
+    // ⚠ `masked` is in the list because the wire may ⛔ not advertise a control it no longer
+    // exercises (11b.11 D1(b)) — a body still carrying it is describing a shape nobody authored.
+    for (const withdrawn of [
+      'accountNumber',
+      'accountNumberLast4',
+      'ifsc',
+      'vpa',
+      'bankName',
+      'branch',
+      'masked',
+    ]) {
+      if (withdrawn in a) return false;
     }
-    if (a['ifsc'] !== null && (typeof a['ifsc'] !== 'string' || a['ifsc'].length === 0)) {
-      return false;
-    }
-    if (a['masked'] === true) {
-      // ⛔⛔ THE ABSENCE CHECK. A masked account carrying either key is a boundary regression that
-      // would publish what cl.10(e) says is not published.
-      if ('accountNumber' in a || 'accountHolderName' in a || 'vpa' in a) return false;
-      const last4 = a['accountNumberLast4'];
-      if (last4 !== null && (typeof last4 !== 'string' || !/^\d{4}$/.test(last4))) return false;
-      continue;
-    }
-    if (a['masked'] !== false) return false;
-    // ⛔ The FULL arm must not carry the masked arm's key either — the two are exclusive, and a body
-    // carrying both is a shape nobody authored.
-    if ('accountNumberLast4' in a) return false;
-    for (const key of ['accountHolderName', 'accountNumber', 'vpa']) {
-      // ⛔ PRESENT, ⛔ not merely well-typed-if-present (review 2026-09-03). The contract's full arm
-      // REQUIRES these keys; a boundary regression that OMITS one (rather than sending `null`) is the
-      // exact "catch it at the page rather than publish it" case this validator exists for, and a
-      // "well-typed if present" check waves it straight through.
-      if (!(key in a)) return false;
-      const v = a[key];
-      if (v !== null && (typeof v !== 'string' || v.length === 0)) return false;
-    }
+    // ⛔ PRESENT, ⛔ not merely well-typed-if-present (review 2026-09-03). The contract REQUIRES this
+    // key; a boundary regression that OMITS it (rather than sending `null`) is the exact "catch it at
+    // the page rather than publish it" case this validator exists for, and a "well-typed if present"
+    // check waves it straight through. ⭐ `null` is legal — a soft decrypt failure renders NOTHING.
+    if (!('accountHolderName' in a)) return false;
+    const holder = a['accountHolderName'];
+    if (holder !== null && (typeof holder !== 'string' || holder.length === 0)) return false;
   }
   return true;
 }

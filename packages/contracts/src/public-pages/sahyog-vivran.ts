@@ -11,11 +11,17 @@
 // `routes.ts` rules in terms that the module's five controls are properties of *"an unauthenticated,
 // PAGINATED, PII-BEARING public COLLECTION"*. ⚠ After the D6(b) split this route is a **single-item**
 // GET on a path parameter (⛔ still not a collection) and declares `paginated: false` (⛔ still not
-// paginated) — ⭐ but **Story 11b.3a MAKES IT PII-BEARING**: four ruled Tier-1 nominee-bank fields
+// paginated) — ⭐ but **Story 11b.3a MADE IT PII-BEARING**: four ruled Tier-1 nominee-bank fields
 // (`2026-08-28-165` cl.1/cl.3). ⇒ **D11(a)** (`2026-09-02-176`) ruled it states its APPLICABLE set,
 // and 11b.3a MOVED that set — see `routes.ts` and the `login-wall.spec.ts` allowlist entry, ⛔ the
 // only two places the count is written, and they must state the SAME one. ⛔ This file deliberately
 // does not restate the list, so there is no third copy to drift.
+// ⭐⛔ **AMENDED BY STORY 11b.11 — THE COUNT IS **ONE**, AND THE PROPERTY IS NARROWED, ⛔ NOT REVOKED.**
+// `2026-09-04-190` cl.1 (+ `-191` cl.1 for the VPA) withdraws the account number, IFSC, VPA, bank and
+// branch from `public`; ⭐ `nominee_account_holder_name` STAYS (`-190` cl.2). ⇒ the route is ⛔ **no
+// longer PII-bearing in the NOMINEE-BANK sense** — but it is ⛔ **still PII-bearing**: it carries the
+// surviving nominee name, and 11b.3b's `deceased_member_name` exposure is untouched. ⛔ Do ⛔ not
+// restore the pre-11b.3a wording anywhere; amend it.
 //
 // ── ⭐ WHAT THIS SHAPE DELIBERATELY DOES NOT CARRY ───────────────────────────────────────────────
 // ⛔ NO IDENTIFIER: ⛔ no `member_id`, ⛔ no `deceased_member_id`, ⛔ no `claim_id`, ⛔ no `pool_id`,
@@ -28,6 +34,13 @@
 // in the SAME commit as the fields — which is the price the split's property always named.
 // ⚠⛔ AND *"nominee anything"* WAS ITSELF THE WRONG PHRASE: `account_holder_name` is ⛔ NOT linked to
 // a declared nominee (6.8 D1 — no FK, no rank, no match rule). It is the ACCOUNT HOLDER.
+// ⭐⛔ **AMENDED AGAIN BY 11b.11 — FOUR BECAME ONE, AND ⛔ NOT BACK TO ZERO.** `2026-09-04-190` cl.1 +
+// `-191` cl.1 withdraw the **account number, IFSC, VPA, bank name and branch**; ⛔ **only the account
+// holder name remains**, and it is rendered under the ruled public label **"Nominee Name"** (`-190`
+// cl.2). ⚠ The 6.8 D1 sentence above is about the **DATA** and it STANDS — `-190` cl.2 rules the
+// **PRESENTATION** only, and ⛔ no column, field id or wire key is renamed. ⇒ the shape carries ⛔ no
+// account number, ⛔ no last-4, ⛔ no IFSC, ⛔ no VPA, ⛔ no bank and ⛔ no branch — **ABSENT keys**,
+// ⛔ never `null` ones.
 // ⚠ A public JSON route that over-returns is a leak the HTML tier-leak gate structurally CANNOT see —
 // it scans rendered HTML, ⛔ not this payload — so the discipline has to live here.
 //
@@ -156,90 +169,102 @@ export const SAHYOG_VIVRAN_PROHIBITED_KEYS = [
 
 
 /**
- * ⭐⭐ ONE NOMINEE BANK ACCOUNT, AT THE `public` TIER — Story 11b.3a (AC2, AC4).
+ * ⭐⭐ ONE NOMINEE BANK ACCOUNT, AT THE `public` TIER — ⛔ **AND AFTER STORY 11b.11 IT CARRIES THE
+ * NOMINEE'S NAME AND ⛔ NOTHING ELSE.**
  *
- * Governance: `2026-08-28-160` **cl.10(a)** (complete details MAY be publicly displayed during an
- * active campaign) · **cl.10(e)** (the masked projection, DEFINED rather than delegated) ·
- * `2026-08-28-165` **cl.1** (all four fields in scope on `sahyog-vivran`) · **cl.2** (masking is
- * presentation — the fields stay **Tier-1 in every state**).
+ * Governance: [`2026-09-04-190`](../../../../.decision-log.md#decision-2026-09-04-190) **cl.1**
+ * (Trustee-ratified — Dhiraj Rahul, Kalpana Bharti) removes `nominee_account_number`,
+ * `nominee_ifsc`, `nominee_bank_name` and `nominee_branch` from `public`; **cl.2** keeps
+ * `nominee_account_holder_name` at `public` under the wording **"Nominee Name"**.
+ * [`2026-09-04-191`](../../../../.decision-log.md#decision-2026-09-04-191) **cl.1** (separately
+ * Trustee-ratified) supplies the **FIFTH** field — `nominee_vpa` — which `-190` cl.1 does ⛔ **NOT**
+ * name. ⇒ ⛔ do ⛔ not key the `vpa` removal to `-190`; without `-191` its own *"FOUR pairs → ONE"*
+ * arithmetic does ⛔ not close.
+ *
+ * ⭐⛔ **`2026-08-28-165` cl.1–2 ARE SUPERSEDED IN PART** (four ruled `(surface, field)` Tier-1 pairs
+ * → **one**). ⛔ `-165` is Trustee-ratified and is ⛔ **NOT edited in place**; its **cl.3–4** —
+ * *masking is a presentation/projection policy; the underlying fields stay Tier-1 in every state* —
+ * ⛔ **STAND UNCHANGED**, and the surviving entry rests on them.
  *
  * ══════════════════════════════════════════════════════════════════════════════════════════════
- * ⭐⭐ A DISCRIMINATED UNION, AND THE MASKED ARM MAKES THE FULL NUMBER **UNREPRESENTABLE**
+ * ⭐⭐ WHAT WAS HERE: A `z.discriminatedUnion('masked', […])`. ⛔ MASKING WAS ⛔ NOT DELETED
  * ══════════════════════════════════════════════════════════════════════════════════════════════
- * AC4 requires that *"the full value never crosses the wire once masked"*. ⛔ A single shape with
- * `accountNumber` beside `accountNumberLast4` would make that a CONVENTION — one a handler bug
- * breaks silently, on the one surface where the failure is a published bank account number. ⇒ the
- * masked arm has ⛔ **NO `accountNumber` KEY AT ALL**, and `.strict()` is what makes populating one a
- * parse error rather than an ignored extra field.
- * ⛔ Do ⛔ **not** "simplify" this into one object with nullable fields. That is the change this
- * construct exists to forbid.
+ * Until 11b.11 this shape was a **two-arm discriminated union on a `masked` literal**. The
+ * **unmasked** arm carried `bankName` · `branch` · `accountHolderName` · `accountNumber` · `ifsc` ·
+ * `vpa`; the **masked** arm carried `bankName` · `branch` · `accountNumberLast4` · `ifsc` and
+ * deliberately **DROPPED** `accountHolderName` and `vpa`, so that *"the full value never crosses the
+ * wire once masked"* was **UNREPRESENTABLE** rather than a convention (`-165` cl.1; `2026-08-28-160`
+ * cl.10(e)).
  *
- * ⚠ **AND THE MASKED ARM ALSO DROPS `accountHolderName` AND `vpa`, deliberately.** cl.10(e) is a
- * RETENTION list — *"retain the **last 4 digits** of the account plus the **bank / branch / IFSC**
- * identification needed for verification"* — and a retention list is exhaustive: what it does not
- * name is not retained. ⛔ Do not add either back on the ground that they are "less sensitive".
+ * ⭐ **WHY IT COLLAPSED.** `-190` cl.1 + `-191` cl.1 take the five coordinates off the public surface
+ * and `-191` **cl.2** rules the masked projection must ⛔ **NOT** drop the nominee name — ⛔ otherwise
+ * a masked drive would render an **EMPTY** bank block. ⇒ both arms reduce to `accountHolderName`
+ * (+ `rank`) and become **IDENTICAL**, leaving `masked` an **INERT discriminator**. Story 11b.11
+ * **D1(b)** ruled the public wire collapses to a single `.strict()` object: ⛔ **the wire may not
+ * advertise a control it no longer exercises.**
  *
- * ⚠⛔ **AND MASKING DOES ⛔ NOT CREATE A SECOND TIER.** `-165` cl.2, verbatim: *"Do not create a
- * separate Tier-1 classification merely because the public projection is masked. The underlying
- * account fields remain Tier-1."* ⇒ the four `RULED_TIER1_PUBLIC_EXCEPTIONS` entries cover **BOTH**
- * arms and the masked arm needs ⛔ none of its own. ⭐ The argument *"the masked view is only last-4,
- * so it isn't really Tier-1"* is **FORECLOSED**.
+ * ⛔⛔ **THE MASKING MACHINERY IS ⛔ NOT DELETED — `-190` cl.4 forbids it** (*"we may use it in
+ * future"*). It lives, whole, at `packages/domain/src/claim/nominee-bank-masking-policy.ts` and
+ * `nominee-bank-masking.ts`, with the `pariwar_nominee_bank_masking_schedule` table, its permission
+ * key, its admin surface and every one of its tests. ⚠⛔ **What changed is its STATUS: after 11b.11
+ * it has ⛔ NO PUBLIC CONSUMER.** The public read no longer **CALLS** the predicate — ⛔ never compute
+ * a verdict and discard it — and ⛔ nothing Trustee-facing may describe it as a live safeguard until
+ * it has a consumer again.
+ *
+ * ⭐ **AND THE COLLAPSED SHAPE CARRIES ⛔ NO CIPHERTEXT IT DOES NOT USE.** The old read model returned
+ * `masked: boolean` **alongside** the complete `accountNumberCiphertext` / `accountHolderNameCiphertext`
+ * / `ifscCiphertext` / `vpaCiphertext` of every account, with ⛔ nothing in the **TYPE** changing when
+ * `masked === true` — the guarantee was a downstream promise, ⛔ not a structural property. ⇒ the
+ * public read now selects and decrypts **`account_holder_name_ciphertext` ONLY**. ⛔ Do ⛔ not
+ * re-introduce a flag beside the payload it is meant to govern.
  *
  * ⛔⛔ **THE TWO ACCOUNTS ARE EQUAL PAYMENT DESTINATIONS.** `accountRank` is composite-PK IDENTITY —
  * ⛔ not a priority, ⛔ not a nominee rank, ⛔ not the 75/25 split, ⛔ not a routing instruction
  * (Story 9.9's re-scope). ⛔ Nothing may present one as primary, and ⛔ no ordering here implies
  * preference.
  *
- * ⚠⛔ **AND `accountHolderName` IS ⛔ NOT LABELLED "NOMINEE".** 6.8's **D1** deliberately removed the
- * linkage: the accounts are a CLAIM-SCOPED payment channel with ⛔ no FK to `member_nominees`, ⛔ no
- * rank and ⛔ no match rule. The key is named for what the column HOLDS — the account holder — ⛔ never
- * for what a reader assumes it holds. ⚠ `contracts/src/contributions/nominee-accounts.ts:18` calls it
- * *"the NOMINEE name"* and is WRONG; the schema is the authority and that contradiction is routed,
- * ⛔ not swept (`deferred-work.md`, Story 11b.3a).
+ * ⭐⚠ **THE PUBLIC LABEL IS "NOMINEE NAME" — AND THE COLUMN IS ⛔ NOT RENAMED.** 6.8's **D1**
+ * deliberately removed the nominee linkage: the accounts are a CLAIM-SCOPED payment channel with ⛔ no
+ * FK to `member_nominees`, ⛔ no rank and ⛔ no match rule, and the key is named for what the column
+ * HOLDS — the account holder. ⚠⛔ **That reasoning is about the DATA and it STANDS.** `-190` cl.2 is
+ * Trustee-ratified and rules the **PUBLIC WORDING** only: the field id `nominee_account_holder_name`,
+ * this wire key `accountHolderName` and the column `account_holder_name_ciphertext` are **UNCHANGED**.
+ * ⇒ this file's previous claim that `contracts/src/contributions/nominee-accounts.ts:18` calling it
+ * *"the NOMINEE name"* **is WRONG** was a claim about the **schema**, ⛔ not about the page — it is
+ * amended, ⛔ not deleted, and `deferred-work.md`'s `D5-subject(i)` is ⛔ **NOT** resolved by adding a
+ * join or a match rule.
+ * ⚠⛔ **AND THE RESIDUAL IS STATED, because the page now asserts this to the internet:** the account
+ * holder **may not be the nominee**, and per `D5-subject(ii)` ⛔ no verifier, ⛔ no state trustee and
+ * ⛔ no correcting admin can **READ** this name (the only read-back is a **presence** view). ⇒ the one
+ * field that survives the withdrawal is both **unverified** and, today, **unverifiable**. ⛔ Recorded,
+ * ⛔ not hidden, and ⛔ not 11b.11's to fix — it is a Story 6.10-family change, already routed.
  *
- * ⚠ EVERY VALUE IS NULLABLE, and `null` means the page renders **NOTHING** for it — ⛔ no placeholder,
- * ⛔ no *"not provided"* marker. Two causes: `vpa` is null for every nominee today (Story 8.4 shipped
- * the resolver seam ABSENT), and a decrypt that fails degrades that ONE field rather than the page.
+ * ⚠ `accountHolderName` IS NULLABLE, and `null` means the page renders **NOTHING** for it — ⛔ no
+ * placeholder, ⛔ no *"not provided"* marker. ⭐ **ONE cause remains** — a decrypt that fails degrades
+ * that ONE field rather than the page. ⚠⛔ **The other cause named here until 11b.11 is GONE with the
+ * field it described:** *"`vpa` is null for every nominee today (Story 8.4 shipped the resolver seam
+ * ABSENT)"*. Its **REASON was wrong** and `-191` **cl.5** ordered the correction — **8.4 deferred VPA
+ * collection; ⭐ 8.13 BUILT it** (column `vpa_ciphertext`, migration 0080; a real optional input on
+ * each account; 11 of 558 accounts carry one). ⇒ a null VPA is a nominee who ⛔ did not fill in an
+ * **optional** field — a **PERMANENT** property, ⛔ never a pending one. It is recorded here because
+ * the VPA still exists on the **member** payment path; it is only the **public** arm that is gone.
  */
 const NomineeAccountRank = z.union([z.literal(1), z.literal(2)]);
 
-export const PublicSahyogVivranNomineeAccount = z.discriminatedUnion('masked', [
-  z
-    .object({
-      /** ⭐ The FULL projection — cl.10(a), during an active campaign or before the window elapses. */
-      masked: z.literal(false),
-      accountRank: NomineeAccountRank,
-      /** Tier-3 PLAINTEXT — public, IFSC-derived, non-identifying. ⛔ Nothing is decrypted for it. */
-      bankName: z.string().min(1),
-      branch: z.string().min(1).nullable(),
-      /** ⚠ THE ACCOUNT HOLDER, ⛔ not "the nominee" — see the doc-block above. */
-      accountHolderName: z.string().min(1).nullable(),
-      accountNumber: z.string().min(1).nullable(),
-      ifsc: z.string().min(1).nullable(),
-      /** ⚠ NULL for every nominee today (Story 8.4). ⛔ Not an error, ⛔ not a gap. */
-      vpa: z.string().min(1).nullable(),
-    })
-    .strict(),
-  z
-    .object({
-      /** ⭐ cl.10(e)'s DEFINED masked projection. ⛔ Note the keys that are ABSENT. */
-      masked: z.literal(true),
-      accountRank: NomineeAccountRank,
-      bankName: z.string().min(1),
-      branch: z.string().min(1).nullable(),
-      /**
-       * ⭐ EXACTLY FOUR DIGITS, or `null`. ⛔ `null` when the stored value carries four or fewer
-       * digits — at exactly four, *"the last four"* IS the complete account number, and cl.10(e)
-       * says the complete number is ⛔ NOT exposed after masking.
-       * ⚠ The DIGITS ALONE, ⛔ never a pre-formatted `••••1234`: the framing is the render layer's
-       * localised copy, which is what lets assistive tech announce it as ONE coherent field instead
-       * of reading a bare truncated string digit by digit (AC4, AC7).
-       */
-      accountNumberLast4: z.string().regex(/^\d{4}$/).nullable(),
-      ifsc: z.string().min(1).nullable(),
-    })
-    .strict(),
-]);
+export const PublicSahyogVivranNomineeAccount = z
+  .object({
+    accountRank: NomineeAccountRank,
+    /**
+     * ⭐ The ⛔ ONLY nominee-bank value at `public` — `-190` cl.2. Rendered under the label
+     * **"Nominee Name"**, ⛔ never *"Account holder"*.
+     * ⚠⛔ `.strict()` above is load-bearing: it is what makes `accountNumber`, `accountNumberLast4`,
+     * `ifsc`, `vpa`, `bankName` and `branch` **parse errors** rather than silently-ignored extras.
+     * ⛔ The keys are **ABSENT**, ⛔ never `null` — the same discipline `-165` established for the
+     * masked arm, and for the same reason.
+     */
+    accountHolderName: z.string().min(1).nullable(),
+  })
+  .strict();
 export type PublicSahyogVivranNomineeAccount = z.output<
   typeof PublicSahyogVivranNomineeAccount
 >;
@@ -248,10 +273,14 @@ export type PublicSahyogVivranNomineeAccount = z.output<
  * One drive's Sahyog Vivran.
  *
  * ⚠⭐ AMENDED BY STORY 11b.3a — the *"every one of them is `pii_tier: 3`"* claim that stood here was
- * TRUE AT 11b.3 and is ⛔ **FALSE NOW**: `nomineeBankAccounts` carries **FOUR `pii_tier: 1` fields**
- * declared at `tier: public` under `2026-08-28-165` cl.1, each with its `tier1_public_exception`
- * block and its `RULED_TIER1_PUBLIC_EXCEPTIONS` entry, added in the SAME commit as the fields.
- * ⛔ Amended rather than deleted — the next reader will look for the claim.
+ * TRUE AT 11b.3 and went FALSE at 11b.3a, which declared **FOUR `pii_tier: 1` fields** at
+ * `tier: public` under `2026-08-28-165` cl.1.
+ * ⭐⛔ **AMENDED AGAIN BY STORY 11b.11 — THE COUNT IS NOW **ONE**.** `2026-09-04-190` cl.1 (+ `-191`
+ * cl.1 for `nominee_vpa`) supersedes `-165` cl.1–2 **IN PART**: `nomineeBankAccounts` carries
+ * **ONE** `pii_tier: 1` field at `tier: public` — `nominee_account_holder_name`, with its
+ * `tier1_public_exception` block and its single `RULED_TIER1_PUBLIC_EXCEPTIONS` entry, re-keyed to
+ * `-190` cl.2.
+ * ⛔ Both prior claims are amended rather than deleted — the next reader will look for each.
  * ⭐ Every OTHER field on this shape is still matrix-classified `public` at `pii_tier: 3`.
  */
 export const PublicSahyogVivranEntry = z
@@ -341,8 +370,15 @@ export type PublicSahyogVivranEntry = z.output<typeof PublicSahyogVivranEntry>;
  * ⛔⛔ **THERE IS EXACTLY ONE PUBLIC ADDRESS FORM, AND THIS IS IT.** The route used to take
  * `poolCanonicalIdentifier` — `P-YYYY-MM-###`, whose `sequence` is a MONOTONIC per-(pariwar, month)
  * counter (`2026-09-04-185`) — so the entire surface could be WALKED by COUNTING, and since Story
- * 11b.3a that walk reaches FOUR DECRYPTED TIER-1 BANK FIELDS rendered in full under `D8-default`
+ * 11b.3a that walk reached FOUR DECRYPTED TIER-1 BANK FIELDS rendered in full under `D8-default`
  * FAIL-OPEN. `limits.search` bounded the RATE of that walk, ⛔ never its POSSIBILITY.
+ * ⭐⛔ **AMENDED BY 11b.11 — IT IS NOW **ONE** DECRYPTED TIER-1 FIELD** (the nominee's name,
+ * `2026-09-04-190` cl.1–2 + `-191` cl.1). ⚠ And it is ⛔ no longer *decrypted under a FAIL-OPEN
+ * masking verdict*: the public read no longer **CALLS** the masking predicate at all (11b.11 D1(b)).
+ * ⛔ The `D8-default` FAIL-OPEN ruling itself (`2026-09-02-179` cl.1) is **UNCHANGED** — what changed
+ * is that this surface no longer has a masking decision for it to govern. ⛔ The reduction is ⛔ not a
+ * reason to re-admit the canonical identifier: this paragraph records why the token exists, and the
+ * token's ground was ENUMERABILITY, ⛔ not the size of the payload.
  *
  * ⛔⛔ **DO ⛔ NOT RE-ADMIT THE CANONICAL IDENTIFIER HERE**, ⛔ not as an alternative, ⛔ not as a
  * fallback, ⛔ not "for old links". A route accepting EITHER form has ⛔ **not** closed the walk — it
@@ -383,6 +419,10 @@ export type PublicSahyogVivranParams = z.output<typeof PublicSahyogVivranParams>
  * nothing to filter and nothing to walk, so it restores ⛔ neither control. ⭐ What 11b.3a DOES
  * restore is the route's **PII-BEARING** property, which is a different obligation on the same two
  * documents. ⛔ Neither sibling may restore a property and leave those two saying what they said.
+ * ⭐⛔ **11b.11 NARROWS THAT PROPERTY, ⛔ IT DOES NOT REVOKE IT.** With the five coordinates withdrawn
+ * the route is ⛔ no longer PII-bearing **in the nominee-bank sense**, ⚠ but it still carries the
+ * surviving nominee name and 11b.3b's deceased-member exposure ⇒ ⛔ the property stays declared, and
+ * controls 2 and 3 stay structurally N/A **with 11b.3b's expiry intact**.
  *
  * ⛔ NO EXPORT AFFORDANCE. No `format`, no `csv`, no `all` — FR-91 forbids bulk export from the
  * public side, and `.strict()` is what makes `?format=csv` a 400 rather than an ignored parameter.

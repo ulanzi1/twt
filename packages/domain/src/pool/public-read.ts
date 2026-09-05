@@ -416,6 +416,19 @@ export const DRIVE_CLOSED_AT = (now: Date) => sql<Date | null>`(
  *
  * ⚠ Carries the same literal outer-table qualifier as its siblings, so any consumer MUST select from
  * `pools` under that exact alias ([[project_epic6_drizzle_correlated_subquery_bug]]).
+ *
+ * ⭐⛔⛔ **STATUS AS OF STORY 11b.11 — THIS FRAGMENT HAS ⛔ NO CONSUMER.** `2026-09-04-190` cl.1
+ * (Trustee-ratified) withdrew the nominee banking coordinates from the public surface, so
+ * `sahyog-vivran-read.ts` — its ⛔ only caller — stopped selecting it and stopped resolving the
+ * masking schedule at all. ⛔ It is RETAINED, ⛔ not deleted, under `-190` **cl.4** (*"we may use it
+ * in future"*), together with `isNomineeBankMasked`, `resolveEffectiveNomineeBankMasking`, the
+ * `pariwar_nominee_bank_masking_schedule` table, its permission key and every one of its tests.
+ * ⚠⛔ **⛔ DO ⛔ NOT DESCRIBE ANY OF IT AS A LIVE SAFEGUARD** — here, in a doc-block, or on any
+ * Trustee-facing material — until something consumes it again. Everything above this paragraph
+ * describes a defect this fragment PREVENTS **when a consumer exists**; today it prevents nothing,
+ * ⭐ because there is nothing to prevent.
+ * ⭐ Whoever re-points it at a surface inherits the three REACTIVATION PRECONDITIONS recorded on
+ * `resolveEffectiveNomineeBankMasking` — ⛔ they are DORMANT, ⛔ not resolved.
  */
 export const DRIVE_MASKING_FROM = (now: Date) => sql<Date | null>`(
     SELECT e.occurred_at

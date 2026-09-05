@@ -81,6 +81,17 @@ const SCAN_FILES: readonly { readonly path: string; readonly renderPath: boolean
   { path: 'packages/domain/src/claim/nominee-bank-masking.ts', renderPath: false },
   { path: 'packages/domain/src/claim/nominee-bank-masking-policy.ts', renderPath: false },
   { path: 'packages/domain/src/claim/nominee-bank-read.ts', renderPath: false },
+  // ⭐ STORY 11b.11 — THE SCOPE TAX, PAID AGAIN. The story mechanized this route's applicable
+  // control set into one constant (`SAHYOG_VIVRAN_APPLICABLE_CONTROLS`), and the module landed in
+  // `apps/api/src/modules/public-pages/` with `sahyog-vivran` in its name ⇒ the SCOPE SAFEGUARD
+  // FAILED THE RUN until it was declared here. ⭐ That is the safeguard working — it is why the
+  // gate has one ([[feedback_gate_scope_semantic_coverage]]).
+  // ⚠⛔ AND THIS IS A SCOPE DECLARATION, ⛔ NOT A COVERAGE CLAIM. The module is prose and typed
+  // constants: it carries ⛔ no event type, ⛔ no amount operand and ⛔ no read. Scanning it buys
+  // exactly one thing — a future edit ⛔ cannot introduce either unnoticed. ⛔ Do ⛔ not cite its
+  // green scan as evidence the control set is correct; `login-wall.spec.ts` asserts that.
+  // ⛔ `renderPath: false`: it renders nothing.
+  { path: 'apps/api/src/modules/public-pages/sahyog-vivran-controls.ts', renderPath: false },
 ];
 
 /**

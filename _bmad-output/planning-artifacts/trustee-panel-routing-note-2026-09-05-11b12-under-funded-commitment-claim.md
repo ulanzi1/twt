@@ -8,6 +8,30 @@ copy: the string was traced to the branch that emits it before this note was wri
 **Status:** ⏳ **OPEN — awaiting the Panel.** Logged as Story 11b.12 **D2**.
 ⛔ **NON-BLOCKING.** Story 11b.12 proceeds without it; the string is ⛔ untouched until you answer.
 
+> ## ⚠⛔ CORRECTION — 2026-09-05, **v1 of this note contained a FALSE STATEMENT**
+>
+> ⭐ **Found by Dhiraj Rahul**, who asked the exact right question of v1: *"what do you display
+> elsewhere — exact sentence?"*
+>
+> ⛔ **v1 said the alternative wording was "the message members themselves receive when a drive closes
+> short." ⛔ THAT IS FALSE. ⛔ NO MEMBER RECEIVES IT. ⛔ NOBODY HAS EVER SEEN IT.**
+>
+> The `close-of-cycle` copy was written at **Story 7.8** and has had **⛔ ZERO consumers ever since**:
+> ⛔ nothing calls `selectCloseOfCycleFraming` outside its own unit test, ⛔ nothing resolves the
+> namespace outside an i18n test, and the codebase states it in terms —
+> *"⛔ No close-of-cycle (FR-19) read model exists, and ⛔ no story owns one"*
+> (`packages/ui/src/noticeboard/presenter.ts:178`). ⇒ it is **drafted copy, ⛔ never shipped**.
+>
+> ⭐ **WHAT SURVIVES THE CORRECTION** — the finding itself is **untouched**. §3's trace, the
+> never-disburses premise, and the sentence's unratified provenance ⛔ do not depend on it.
+> ⛔ **WHAT WEAKENS** — the *"we already do this elsewhere"* argument. The honest version is: **we
+> drafted a different register for the same outcome and ⛔ never shipped it.** ⚠ Option **(ii)** is
+> re-worded accordingly, and §4 now names a register that **IS** live.
+>
+> ⚠⛔ **THIS IS RECORDED, ⛔ NOT QUIETLY PATCHED**, because it is the ⛔ exact failure Story 11b.3a
+> found: **a false fact inside the appendix the Panel is instructed to answer from ALONE**. ⭐ It was
+> caught by a Trustee reading the note as intended. ⛔ It should have been caught before it reached you.
+
 > ### 📖 **Panel members — please start at [Appendix A: In plain words](#appendix-a--in-plain-words).**
 > It is at the end and is **complete on its own** — the whole question, the options, and what follows
 > from each, with ⛔ no technical detail. ⭐ **You can answer this note from Appendix A alone.**
@@ -90,13 +114,20 @@ shortfall path**, live on the public index today, in both languages.
   failed transaction. ⛔ Whatever replaces it must keep that care.
 
 **⛔ The case that it is ⛔ NOT:**
-- ⚠ **Its own product contradicts it.** The **same outcome enum** drives the member-facing
-  close-of-cycle message, and for `under_funded` that one reads:
-  > *"{N} colleagues stood together; {amount} reached {family}'s family. Our gratitude for standing
-  > beside them."*
+- ⚠ **Its own product drafted the opposite register for the same enum.** The **same outcome enum**
+  has a second copy family, `close-of-cycle`, whose `under_funded` text reads:
+  > *"{contributorCount} colleagues stood together; {amount} reached {familyName}'s family. Our
+  > gratitude for standing beside them."*
   ⇒ **members** delivered, and the amount that **reached** the family is what is named. ⛔ The trust is
-  ⛔ not the actor. **Two copy families, one enum, opposite stories** — and the ratified register is the
-  member-facing one.
+  ⛔ not the actor. **Two copy families, one enum, opposite stories.**
+  ⚠⛔ **BUT WEIGH IT CORRECTLY: that copy has ⛔ NEVER been displayed to anyone** (see the Correction
+  above). ⇒ it is evidence of **what we judged right when we wrote it**, ⛔ **NOT** evidence of an
+  established practice. ⛔ Do ⛔ not read it as "the product already says this."
+- ⭐ **The register that IS live says nothing about a commitment.** Where the shipped product names
+  money — the progress figure on the drive page and the member app's contribution card — the label is
+  simply **"Raised so far"** (*"अब तक जुटाई गई राशि"*, `contribution.json:124`). ⛔ No actor, ⛔ no
+  promise, ⛔ no verdict. ⚠ That is the only shipped precedent, and it points away from the sentence
+  in question.
 - ⚠ **It asserts a verdict the architecture deliberately quarantines.** `classifyCycleOutcome` exists
   so that ⛔ no target, ratio or shortfall figure can reach the copy path (Pool-Reality #2). ⛔ The
   numbers are quarantined — but this sentence leaks the **verdict**, and leaks it **inverted**:
@@ -111,9 +142,12 @@ shortfall path**, live on the public index today, in both languages.
 accurately, and record it as ratified. ⚠ If the commitment is about **coverage or effort**, the line
 must ⛔ not read as a delivered **amount**.
 
-**(ii) ⭐ THE TRUST MAKES ⛔ NO SUCH COMMITMENT — THE LINE GOES.** Replaced with the register the
-product already uses: what **members' contributions** delivered, with ⛔ no comparison and ⛔ no claim
-about the trust. ⭐ Aligns the public line with the member-facing one.
+**(ii) ⭐ THE TRUST MAKES ⛔ NO SUCH COMMITMENT — THE LINE GOES.** Replaced with a statement of what
+**members' contributions** delivered, with ⛔ no comparison and ⛔ no claim about the trust.
+⚠⛔ **Stated accurately after the Correction: this is a register we DRAFTED (Story 7.8) and ⛔ NEVER
+SHIPPED — ⛔ it is NOT an existing practice we would be matching.** ⭐ The one shipped precedent is the
+neutral **"Raised so far"**. ⇒ choosing (ii) means **authoring** the replacement line, and we would
+bring you the exact wording before it goes up.
 
 **(iii) ⛔ KEEP IT AS IS.** ⚠ We record it as ratified copy, and the contradiction with the
 member-facing message stands, deliberately. ⛔ We do ⛔ not recommend this, but it is yours to take.
@@ -172,16 +206,33 @@ We also want to say plainly: we think the *instinct* behind the sentence was rig
 page should not tell a grieving family, in effect, "not enough people helped." Whatever replaces this
 line should keep that care. ⛔ The problem is the **claim**, not the kindness.
 
-### One more thing worth knowing
+### One more thing worth knowing — ⚠ and a correction to what we first told you
 
-Elsewhere in the product — in the message members themselves receive when a drive closes short — we
-already say something different, and it does not mention the trust:
+⭐ **Dhiraj asked what we display elsewhere, and the exact sentence. Here it is — and the honest
+answer is that we display it ⛔ NOWHERE.**
 
-> *"{N} colleagues stood together; {amount} reached {family}'s family. Our gratitude for standing
-> beside them."*
+Some years back, for exactly this situation, we **wrote** a different message. In full:
 
-That version credits **the members**, and names what actually **reached** the family. The two messages
-describe the same event and tell different stories.
+> **English:** *"{number} colleagues stood together; {amount} reached {family name}'s family. Our
+> gratitude for standing beside them."*
+>
+> **Hindi:** *"{number} सहयोगियों ने साथ मिलकर हाथ बढ़ाया; {family name} के परिवार को {amount} पहुँचाए गए।
+> इस साथ के लिए हम सबका आभार।"*
+
+That version credits **the members** and names what actually **reached** the family. ⛔ It never
+mentions the trust.
+
+⚠⛔ **BUT WE MUST CORRECT OURSELVES.** The first version of this note told you this was *"the message
+members themselves receive."* **That was wrong.** It was written, translated, and then **never
+connected to anything** — ⛔ no member has ever seen it, and ⛔ no part of the app sends it. We
+apologise for the error; it is corrected here rather than quietly.
+
+⇒ **Please weigh it for what it is:** evidence of **what we thought right when we wrote it**, ⛔ not
+proof that the product already speaks this way.
+
+The only place the live product actually names money, it says simply: **"Raised so far"**
+(*"अब तक जुटाई गई राशि"*). ⛔ No promise, ⛔ no mention of the trust, ⛔ no verdict on whether it was
+enough.
 
 ### What we are asking
 
@@ -191,7 +242,8 @@ describe the same event and tell different stories.
 
 - **(i)** The trust *does* commit to something — tell us what, and we will say it accurately.
 - **(ii)** The trust makes no such commitment — we remove the line and describe what members'
-  contributions delivered, as we already do elsewhere.
+  contributions delivered instead. ⚠ This would be **new wording we write for you**, ⛔ not an
+  existing sentence we copy across; we would bring you the exact words before they go up.
 - **(iii)** Keep it exactly as it is, and we record that you have approved it.
 - **(iv)** You need more time — the line stays for now, and it stays flagged as an open question on
   this note and on the story that found it, so it comes back to you rather than quietly becoming
@@ -219,5 +271,10 @@ and ⛔ does ⛔ not touch this line.
 - `packages/domain/src/pool/public-read.ts:729` — the per-row computation on the public index
 - `apps/public/src/pages/sahyog.astro:148` — where the line renders
 - `packages/i18n/locales/{en,hi}/sahyog-drive.json:44` — the string, both locales
-- `packages/i18n/locales/en/close-of-cycle.json:5` — the member-facing counterpart, same enum
+- `packages/i18n/locales/{en,hi}/close-of-cycle.json:5` — the counterpart copy for the same enum,
+  ⚠ **drafted at Story 7.8 (`3201f98e`) and ⛔ NEVER SHIPPED** — ⛔ zero consumers
+- `packages/ui/src/noticeboard/presenter.ts:178` — *"⛔ No close-of-cycle (FR-19) read model exists,
+  and ⛔ no story owns one"*
+- `packages/i18n/locales/{en,hi}/contribution.json:124` — **"Raised so far"**, the one SHIPPED
+  money register
 - Story **11b.12** **D2** — this note's home; ⛔ non-blocking

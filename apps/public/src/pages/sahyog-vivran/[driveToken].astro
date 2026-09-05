@@ -483,21 +483,38 @@ if (!driveStatusVisible) {
         {model.nomineeAccounts.length > 0 && (
           <section role="group" aria-label={labels.bankGroupLabel} class="mt-6 rounded border border-gray-300 p-4">
             <h2 class="text-lg font-semibold">{labels.bankTitle}</h2>
-            {/* ⭐ RENDERED ⛔ ONLY WHEN THERE IS MORE THAN ONE NAME — see the block comment. */}
-            {model.nomineeAccounts.length > 1 && (
+            {/* ⭐ RENDERED ⛔ ONLY WHEN THERE IS MORE THAN ONE NAME — see the block comment.
+                ⛔ Gated on accounts that actually RENDER a name, ⛔ not on the raw array length: a
+                failed decrypt on one account (`nomineeAccountHolderName: null`) means only one name
+                is visible, and "recorded equally" must not be claimed beside it. */}
+            {model.nomineeAccounts.filter((a) => a.nomineeAccountHolderName !== null).length > 1 && (
               <p class="mt-2 text-sm text-gray-700">{labels.bankEqualNominees}</p>
             )}
             {model.nomineeAccounts.map((account) => (
               <section
                 role="group"
-                aria-label={labels.bankAccountLabel}
+                aria-label={
+                  account.nomineeAccountHolderName !== null
+                    ? `${labels.labelAccountHolder}: ${account.nomineeAccountHolderName}`
+                    : labels.bankAccountLabel
+                }
                 class="mt-4 rounded border border-gray-200 p-3"
               >
                 <dl class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {/* ⭐⛔ THE ⛔ ONLY ROW LEFT. `null` on a failed decrypt ⇒ the cell is omitted
                       ENTIRELY — ⛔ never a placeholder, ⛔ never a "not provided" marker.
                       ⚠ The `<dt>` reads "Nominee Name" (`2026-09-04-190` cl.2); the matrix field id
-                      stays `nominee_account_holder_name`, which is what the DATA is. */}
+                      stays `nominee_account_holder_name`, which is what the DATA is.
+                      ⭐ [Review, corrected] The group's `aria-label` INTERPOLATES the recorded name
+                      itself when present, ⛔ not a shared static string and ⛔ not an
+                      `aria-labelledby` pointing at this `<dt>` — the `<dt>` is the field LABEL
+                      ("Nominee Name"), identical for every account, so referencing it as the
+                      accessible name (the first version of this fix) computed the SAME name for
+                      both groups and fixed nothing. Interpolating the actual value is what makes
+                      the two EQUAL accounts distinguishable by content, never by ordinal — and when
+                      the recorded name happens to be identical, or a decrypt fails, the fallback is
+                      honest: sighted and assistive-tech users get the SAME distinguishing power,
+                      never less. */}
                   {account.nomineeAccountHolderName !== null && (
                     <div>
                       <dt class="text-xs uppercase tracking-wide text-gray-500">{labels.labelAccountHolder}</dt>

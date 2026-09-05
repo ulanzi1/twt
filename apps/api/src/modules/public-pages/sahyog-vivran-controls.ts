@@ -97,7 +97,7 @@ export const SAHYOG_VIVRAN_APPLICABLE_CONTROLS: readonly SahyogVivranApplicableC
       'and `2026-09-04-191` cl.1 withdrew five of the six nominee-bank values, so the fan-out is now ' +
       'AT MOST TWO values per page (one field × at most two EQUAL accounts) and ⛔ no masking ' +
       'projection is applied — the route is ⛔ no longer PII-bearing IN THE NOMINEE-BANK SENSE, ' +
-      '⚠ though it still decrypts the nominee name and still carries 11b.3b`s deceased-member exposure.',
+      "⚠ though it still decrypts the nominee name and still carries 11b.3b's deceased-member exposure.",
   },
   {
     ordinal: 7,

@@ -21,33 +21,43 @@
 
 const EN: Record<string, string> = {
   // ── Page chrome ─────────────────────────────────────────────────────────────
+  // ⛔ [Review, 11b.11] The four strings below (header.subtitle, status.unconfigured,
+  // status.afterDaysZero, status.afterDays, status.permanent) previously described this setting as
+  // governing what a family's bank details show on the public Sahyog Vivran page — including which
+  // specific fields "remain visible". As of Story 11b.11 (`2026-09-04-190` cl.1) that page never
+  // renders the account number, IFSC, bank name, branch or VPA at all, in ANY state of this
+  // schedule — the fields themselves were withdrawn, not merely masked. This setting is retained
+  // (`-190` cl.4) but currently governs nothing an operator can observe on the public surface; the
+  // copy below says so plainly rather than describing a behaviour that no longer occurs.
   'nomineeBankMasking.header.title': 'Nominee bank details — public visibility',
   'nomineeBankMasking.header.subtitle':
-    "Controls how long a family's bank account details stay visible on this Pariwar's public Sahyog Vivran pages after a drive closes. While a drive is still collecting, the complete details are shown so that anyone can check the trust is paying a real family. This setting governs what happens afterwards.",
+    "Controls how long a family's bank account details would stay visible on this Pariwar's public Sahyog Vivran page after a drive closes — but as of Story 11b.11 that page no longer shows any bank detail at all, in any state of this setting. Changing this setting has no visible effect on the public page today; it is kept ready in case that changes.",
 
   // ── The propagation-floor disclosure (AC6) ──────────────────────────────────
-  // ⭐ STANDING copy, rendered ALWAYS — not only after a successful change. An operator has to read
-  // it BEFORE acting, because the gap between saving here and the public page reflecting it is the
-  // window in which a full account number is still being served.
+  // ⭐ STANDING copy, rendered ALWAYS — not only after a successful change. Kept even though the
+  // public page currently has nothing left for a stale edge cache to leak: the delay itself is a
+  // real property of this control, and the day this setting governs a public field again, the
+  // caching floor applies from the first change onward, not from whenever someone remembers to
+  // restore this disclosure.
   'nomineeBankMasking.propagation.heading': 'Before you change this',
   'nomineeBankMasking.propagation.body':
-    'A change here is not reflected on the public pages at once. Those pages are served through an edge cache with a five-minute lifetime (s-maxage=300), so the previous version can keep being served from warm edge locations until those cached copies expire — and until they do, that includes the full account number. Plan for a delay of up to five minutes, and longer if a page was cached moments before the change.',
+    "A change here is not reflected on the public pages at once. Those pages are served through an edge cache with a five-minute lifetime (s-maxage=300), so the previous version can keep being served from warm edge locations until those cached copies expire. As of Story 11b.11 this setting has no public field left to affect, so today that delay has no visible consequence — this disclosure is retained for whenever this setting is next wired to something the public page shows.",
 
   // ── Status region ───────────────────────────────────────────────────────────
   'nomineeBankMasking.status.heading': 'Current setting',
   'nomineeBankMasking.status.loading': 'Loading the current setting…',
-  // ⭐ The `configured: false` case, and it is the one that matters most on this control: no setting
-  // has ever been recorded, which means the details stay fully visible after a drive closes. That is
-  // a RULED default (2026-09-02-179 cl.1), not an accident — but the operator is told plainly that
-  // it is what is in force today.
+  // ⭐ The `configured: false` case: no setting has ever been recorded, which resolves FAIL-OPEN
+  // (2026-09-02-179 cl.1) — a RULED default, not an accident. As of Story 11b.11 that default has
+  // no visible consequence on the public page (see the file-level note above), so the operator is
+  // told the setting's state honestly without claiming an effect that no longer happens.
   'nomineeBankMasking.status.unconfigured':
-    'No setting has ever been recorded for this Pariwar. Until one is, the complete bank details stay visible on the public pages after a drive closes. Nobody has chosen this; it is what applies when nothing has been set.',
+    'No setting has ever been recorded for this Pariwar. Nobody has chosen this; it is what applies when nothing has been set. As of Story 11b.11 the public Sahyog Vivran page shows no bank detail regardless of this setting, so this has no visible effect today.',
   'nomineeBankMasking.status.afterDaysZero':
-    'The details are hidden as soon as a drive closes. Only the last four digits, the bank, the branch and the IFSC code remain visible.',
+    'Set to hide as soon as a drive closes. As of Story 11b.11 the public Sahyog Vivran page shows no bank detail regardless of this setting, so this has no visible effect today.',
   'nomineeBankMasking.status.afterDays':
-    'The details stay visible for {days} days after a drive closes, and are hidden after that. Only the last four digits, the bank, the branch and the IFSC code remain visible.',
+    'Set to hide {days} days after a drive closes. As of Story 11b.11 the public Sahyog Vivran page shows no bank detail regardless of this setting, so this has no visible effect today.',
   'nomineeBankMasking.status.permanent':
-    'The details are hidden on the public pages at all times, including while a drive is still collecting. Only the last four digits, the bank, the branch and the IFSC code are ever shown.',
+    'Set to hide at all times, including while a drive is still collecting. As of Story 11b.11 the public Sahyog Vivran page shows no bank detail regardless of this setting, so this has no visible effect today.',
   'nomineeBankMasking.status.lastChangedBy': 'Last changed by',
   'nomineeBankMasking.status.inForceSince': 'In force since',
   'nomineeBankMasking.status.lastRationale': 'Reason given',

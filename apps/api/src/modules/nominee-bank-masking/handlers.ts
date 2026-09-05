@@ -160,9 +160,11 @@ export function createNomineeBankMaskingHandlers(deps: AppDeps) {
       const auditId = randomUUID();
       // ⭐ ONE INSTANT for the close and the insert. `setNomineeBankMaskingSchedule` closes the prior
       // head AT this instant and opens the new one AT it, so there is ⛔ no sub-millisecond gap with
-      // no row in force — which under FAIL-OPEN would be a window in which a full account number is
-      // public. ⛔ Never let the accessor default it, and ⛔ never pass a caller-supplied instant: a
-      // back-dated window would retroactively re-characterise what the public could see, and when.
+      // no row in force. ⛔ Never let the accessor default it, and ⛔ never pass a caller-supplied
+      // instant: a back-dated window would retroactively re-characterise what this setting was in
+      // force for, and when. ⛔ [Review, 11b.11] This schedule has ⛔ NO PUBLIC CONSUMER as of Story
+      // 11b.11 — the public Sahyog Vivran read no longer resolves it, so a gap here no longer
+      // exposes an account number on that surface; it is retained dormant.
       const effectiveFrom = deps.clock();
 
       return audit.withCompensatingAudit(deps.servicePool, {

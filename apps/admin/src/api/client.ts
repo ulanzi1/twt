@@ -907,9 +907,10 @@ export function setDirectoryPublicationStatus(
 // ⛔ The request body deliberately carries NO display name and NO effective-from: the first is
 // resolved SERVER-SIDE (a browser-supplied one would let an operator lie about who made the change),
 // the second is the server's instant (a caller-supplied one would allow back-dating a window).
-// ⚠ The change is not reflected on the public pages at once — those pages are edge-cached with
-// s-maxage=300, and the previous projection can include a full account number until the cached
-// copies expire.
+// ⛔ [Review, 11b.11] This schedule has ⛔ NO PUBLIC CONSUMER as of Story 11b.11 — the public Sahyog
+// Vivran page no longer renders any bank coordinate, masked or otherwise, regardless of this
+// setting; a change here is not reflected on any public surface, retained dormant pending a future
+// consumer.
 
 const nomineeBankMaskingBase = (pariwarId: string): string =>
   `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/nominee-bank-masking`;

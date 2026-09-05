@@ -885,7 +885,11 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
       'Bank of Baroda',
       'Vaishali',
       'sunita@upi',
-      '6789', // the last-4 projection the masked arm used to carry
+      // ⛔ [Review] Quoted, ⛔ not a bare digit run: checked against the RAW body (below), so a
+      // bare '6789' risks a false failure on an unrelated 4-digit fragment elsewhere in the JSON
+      // (an id, a timestamp). Quoting pins it to "the last-4 projection surfaces as its own JSON
+      // string value", which is what the masked arm actually used to emit.
+      '"6789"', // the last-4 projection the masked arm used to carry
     ];
 
     /** The keys the wire must ⛔ never carry again — ABSENT, ⛔ not `null`. */

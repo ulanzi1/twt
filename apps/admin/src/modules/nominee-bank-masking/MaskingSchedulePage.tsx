@@ -135,8 +135,10 @@ export function MaskingSchedulePage({ pariwarId }: MaskingSchedulePageProps): Re
             {/*
               ⛔ `configured: false` is reported EXPLICITLY, ⛔ never inferred from all-null fields —
               and on this control it is the most consequential state: no setting has ever been
-              recorded, so the complete details stay visible after a drive closes (`D8-default`
-              FAIL-OPEN, `2026-09-02-179` cl.1). An operator must not read silence as safety.
+              recorded, which resolves FAIL-OPEN (`D8-default`, `2026-09-02-179` cl.1). An operator
+              must not read silence as safety. ⛔ [Review, 11b.11] As of Story 11b.11 that FAIL-OPEN
+              default has no visible consequence on the public Sahyog Vivran page — it shows no bank
+              detail at all, regardless of this setting.
             */}
             {!schedule.data.configured || schedule.data.setting === null ? (
               <p data-testid="nominee-bank-masking-unconfigured">

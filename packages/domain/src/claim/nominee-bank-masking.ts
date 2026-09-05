@@ -35,7 +35,9 @@
 // BANKING COORDINATES from the public Sahyog Vivran surface, and `2026-09-04-191` **cl.1** withdrew
 // the VPA. ⭐ `-190` **cl.2** keeps the nominee's NAME public. ⇒ there is nothing left on that
 // surface for this projection to reduce, and `packages/domain/src/pool/sahyog-vivran-read.ts` — its
-// ⛔ ONLY caller — no longer calls it.
+// ⛔ ONLY PRODUCTION caller — no longer calls it. ⛔ [Review, verified 2026-09-05] There is now ⛔ NO
+// caller of `isNomineeBankMasked` anywhere in the codebase, not merely a different one — do ⛔ not
+// read this as the predicate having moved elsewhere.
 //
 // ⛔⛔ **THIS MODULE IS ⛔ NOT DELETED, AND ⛔ MUST NOT BE.** `-190` **cl.4** RETAINS it in terms —
 // *"we may use it in future"* — together with `nominee-bank-masking-policy.ts`, the

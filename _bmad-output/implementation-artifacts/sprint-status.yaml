@@ -1,4 +1,46 @@
-# last_updated: 2026-09-05e (⭐ **`-200` cl.4's OWED DOC-BLOCK IS WRITTEN. ⛔ ZERO ROWS MOVE.**
+# last_updated: 2026-09-05f (⭐⭐ **`2026-09-05-201` — THE VERSION/CONCURRENCY SEAM RULED, BOTH HALVES
+#   TOGETHER. ⛔ ZERO ROWS MOVE.** ⛔ epic-11b `in-progress`; ⛔ 11b-3a `done`; ⛔ 11b-10 `done`;
+#   ⛔ 11b-11…17 ALL `ready-for-dev`.
+#   ⭐ G3's open decision (the console DISPLAYS a `version` and ⛔ never sends it back) and G2's
+#   idempotency DEFERRAL are ⭐ ONE SEAM, and were ruled together on instruction — ⛔ ruling them apart
+#   produces two half-answers. ⇒ **G3 decision RULED · G2 defer PROMOTED OUT OF DEFERRAL.**
+#   ⇒ third-pass decisions now **3 of 4 CLOSED**; only the `page_weight_bytes` COUNT remains open.
+#   ⭐⭐⭐ **THE INVESTIGATION FOUND WHAT NEITHER RAISING LAYER SAW — AND IT INDICTS AN EARLIER FIX OF
+#   THIS SAME STORY.** `nominee-bank-masking-policy.ts:277-286` records that the **SECOND PASS** added
+#   the advisory lock so a losing writer would stop hitting `…_pariwar_version_uq` with a bare
+#   **23505 → OPAQUE 500**. ⛔ **But that collision was the ONLY thing preventing a SILENT OVERWRITE.**
+#   The lock converts a race into a **QUEUE**: both writers now succeed as N and N+1, and the second
+#   ⛔ NEVER LEARNS the first happened — B's rationale recorded as the justification for reverting A.
+#   ⚠ Contrast `feature-flags/handlers.ts:207`, the precedent this module is modelled on: it **LETS
+#   ITS UNIQUE CONSTRAINT FIRE**, keeps the 409 seam, and so gets lost-update protection **FREE** ⇒
+#   ⭐ **feature-flags needs only the key; masking needs BOTH, because it traded its seam away.**
+#   ⭐ **RULED: BOTH, LAYERED — ⛔ and the ORDER IS LOAD-BEARING. IDEMPOTENCY FIRST.** Reversed, a
+#   legitimate retry carries the STALE version, `expectedVersion` fires, and the operator is told
+#   *"someone else changed this"* ⛔ when the someone was THEMSELVES ⇒ a FALSE SIGNAL on a governance
+#   surface that drives a re-submit, **manufacturing the very duplicate the key exists to prevent.**
+#   ⭐ `Idempotency-Key` **OPT-IN** (reuse `idempotency.createKeyedStore`, ⛔ no second store),
+#   NAMESPACED by route + scope + `pariwarId`, and the precedent's known window (result recorded
+#   BEFORE the scope tx commits) **RESTATED, ⛔ not silently adopted**.
+#   ⭐ `expectedVersion` **REQUIRED and `number | null`** — ⛔ NOT optional: the sole caller already
+#   holds and displays the version, and optional repeats G1's `actorGrants?:` defect (the 10.8 lesson).
+#   ⭐ `null` = *"I believe there is no schedule yet"* ⇒ the FIRST write is safe too. Mismatch ⇒ **409
+#   with its OWN REGISTERED code** — ⛔ this ruling must ⛔ NOT repeat G2's finding that
+#   `UngovernedNomineeBankMaskingChangeError` reaches the wire as an opaque 500.
+#   ⛔ **REFUSED: "drop the version from the UI."** It was the cheap option and it is the wrong one —
+#   it removes the operator's PROVENANCE VIEW to avoid building the guard, on the one surface whose
+#   stated purpose IS provenance. ⭐ The version stays, and now it means something.
+#   ⛔ **SCOPE:** ⛔ the advisory lock STAYS (still needed for the serialized path's 23505) · ⛔ FAIL-OPEN
+#   untouched · ⛔ G2's SEPARATE finding that the `effectiveFrom` clamp DESYNCHRONIZES the audit line's
+#   `requestPayloadHash` is ⛔ NOT fixed by this and stays open as its own patch.
+#   ⭐⭐ **FOURTH RETRO PATTERN ROUTED: *a fix that removes a collision has removed a signal.*** A 500 is
+#   loud, wrong and VISIBLE; a lost update is quiet, wrong and INVISIBLE — on a provenance surface the
+#   quiet one is worse. ⚠ `pool/fixed-amount.ts:534` takes **the same lock on the same write shape** ⇒
+#   ⛔ recorded as an OBSERVATION to examine, ⛔ not ruled and ⛔ not assumed defective.
+#   ⛔ **Author-committed** — a concurrency MECHANISM under existing rulings; ⛔ no policy, ⛔ no access
+#   change, ⛔ not Panel-scope. ⛔ ZERO code written: this is the ruling, ⛔ not the implementation.
+#   ⛔ Three files touched, ALL governance artifacts.)
+#
+# last_updated_prior: 2026-09-05e (⭐ **`-200` cl.4's OWED DOC-BLOCK IS WRITTEN. ⛔ ZERO ROWS MOVE.**
 #   ⛔ epic-11b `in-progress`; ⛔ 11b-3a `done`; ⛔ 11b-10 `done`; ⛔ 11b-11…17 ALL `ready-for-dev`.
 #   ✅ The one obligation `2026-09-05-200` created is DISCHARGED — the entry recorded as **"OWED and
 #   ⛔ NOT YET WRITTEN"** at `2026-09-05d` is now written at BOTH call sites.

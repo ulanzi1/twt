@@ -84,6 +84,15 @@ function getChangedFiles(baseRef: string | null): string[] | null {
     .filter(Boolean);
 }
 
+/**
+ * The ledger's text at the base ref, for AC-4's content check. `null` when the
+ * ref is unresolvable or the file did not exist there — AC-4 degrades loudly.
+ */
+function getBaseLedger(baseRef: string | null): string | null {
+  if (baseRef === null) return null;
+  return tryGit(['show', `${baseRef}:${MD_FILE}`]);
+}
+
 function getBaseConfig(baseRef: string | null): FrictionBudgetConfig | null {
   if (baseRef === null) return null;
   const raw = tryGit(['show', `${baseRef}:${YAML_FILE}`]);
@@ -204,7 +213,10 @@ function main(): void {
     }
     // If baseRefCiError, the failure was already emitted in the git context section.
   } else {
-    const decl = evaluateDeclaration(changedFiles);
+    const decl = evaluateDeclaration(changedFiles, {
+      base: getBaseLedger(baseRef),
+      head: read(MD_FILE),
+    });
     console.log(`  ${decl.ok ? '✓' : '✗'} ${decl.message}`);
     if (!decl.ok) failures.push(`declaration: ${decl.message}`);
   }

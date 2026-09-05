@@ -1,4 +1,41 @@
-# last_updated: 2026-09-04v (⭐⭐ **11b.3a THIRD CODE-REVIEW PASS — ⛔ ZERO ROWS MOVE. 11b.3a STAYS `done`.**
+# last_updated: 2026-09-05a (⭐⭐ **11b.3a THIRD PASS — CHUNK G3 REVIEWED. ⛔ ZERO ROWS MOVE. 11b.3a STAYS `done`.**
+#   ⛔ epic-11b `in-progress`; ⛔ 11b-10 `done`; ⛔ 11b-3a **`done`**; ⛔ 11b-11…17 ALL `ready-for-dev`.
+#   ⭐ G3 = `apps/public` + `apps/admin` + `packages/i18n` + `scripts` (19 files / +1,998). **1
+#   decision-needed · 16 patch · 4 deferred · 3 ROUTED TO 11b-11 · 3 dismissed.** ⭐ **THREE more REAL
+#   GAPs** — families **10**, **11** and **13** — at AC severity. Third-pass running total: **2
+#   decision-needed · 50 patch · 12 deferred · 11 routed · 10 dismissed · SEVEN REAL GAPs.**
+#   ⭐⭐⭐ **G3 VINDICATED THE DECISION TO REVIEW IT, AND INDICTED THIS PASS'S OWN EARLIER FIX.**
+#   On 2026-09-04 the pass raised the Policy-meaning sentence as a family-11 REAL GAP, corrected it in
+#   the SPEC, marked it `[x] APPLIED` and committed it green. ⛔ The IDENTICAL falsehood was live in the
+#   SHIPPED OPERATOR COPY (`apps/admin/.../i18n-en.ts:25-26`: *"While a drive is still collecting, the
+#   complete details are shown … This setting governs what happens afterwards"*) — FALSE under
+#   `permanent`, cl.10(d)'s terminal rung. ⇒ the fix closed the RECORD, ⛔ not the PRODUCT.
+#   ⚠ By the Auditor's count that is the **THIRD** instance of the class in this story; ⛔ the admin half
+#   was never swept by pass 1 or pass 2 either. ⭐ Routed to the Epic 11b retro as a SECOND pattern:
+#   **a chunked review's fix must state which chunks it searched for other instances, or it silently
+#   claims story-wide closure.**
+#   ⭐⭐ **AND FAMILY 13 SPLIT EXACTLY WHERE SOMEBODY WROTE THE CHECKS DOWN.** The Astro half carries a
+#   written four-check web translation (`[driveToken].astro:289-311`) and MEETS ALL FOUR — (b) held
+#   vacuously and SAID SO ⇒ `covered-by-construction`. The ADMIN console — ⭐ the half **AC7 names
+#   explicitly** — carries ⛔ NO such note and FAILS THREE CHECKS: ⛔ no `aria-invalid`/`aria-describedby`
+#   (orphaning the cl.10(b) hint from the control it explains, against a convention used 12× in 8 admin
+#   modules); the blocked-submit state — ⭐ the form's DEFAULT state — announces ⛔ NO reason; and focus
+#   is lost to `<body>` on success while the confirming region is a newly-inserted POLITE live region.
+#   ⚠ Corroborated independently: `sahyog-drive-link-a11y.test.ts` is the ⛔ ONLY a11y test in
+#   `apps/public/tests/`, written by **11b-10 for ITS OWN surface** ⇒ within one epic 11b-10 applied
+#   family 13 and left a test; **11b-3a did not**. ⛔ Family 13 is un-mechanized BY RULING ⇒ *the half
+#   that decays*, and 11b-8 makes an accessibility audit a LAUNCH-BLOCKER (UX-DR70).
+#   ⚠⛔ **ONE DECISION IS OPEN AND IT IS A CONTRACT QUESTION:** the console DISPLAYS a `version` and
+#   ⛔ NEVER SENDS IT BACK ⇒ ⛔ no optimistic concurrency on the control that publishes bank account
+#   numbers; last write wins silently and B's rationale is recorded as the justification for reverting
+#   A's change. ⭐ Rule it TOGETHER with G2's idempotency-key defer — they are the SAME seam.
+#   ⛔ **G4 STILL HAS ⛔ NO THIRD-PASS REVIEW** (governance docs, 6 files / +1,497).
+#   ⛔ **NOTHING WAS EXECUTED** — `pnpm ci:local` ⛔ not run, ⛔ no fix applied; every "verified" means
+#   READ AGAINST `HEAD`. ⭐ Staleness mattered most here: **8 of 19 G3 files changed after the story
+#   closed** (11b-10 renamed the route), so every finding was re-read at HEAD before surviving triage.
+#   ⛔ Three files touched, ALL governance artifacts; ⛔ ZERO code changed.)
+#
+# last_updated_prior: 2026-09-04v (⭐⭐ **11b.3a THIRD CODE-REVIEW PASS — ⛔ ZERO ROWS MOVE. 11b.3a STAYS `done`.**
 #   ⛔ epic-11b `in-progress`; ⛔ 11b-10 `done`; ⛔ 11b-3a **`done`**; ⛔ 11b-11…17 ALL `ready-for-dev`.
 #   ⭐ A third, independent 3-layer pass over `e16cc690..2c69cd5d` (13 commits). **1 decision-needed ·
 #   34 patch · 8 deferred · 8 ROUTED TO 11b-11 · 7 dismissed.** ⭐ **FOUR REAL GAPs** on the

@@ -366,6 +366,37 @@ whoever reactivates it inherits the list.
 - [ ] **Task 6 — The render layer + copy** (AC2)
   - [ ] `apps/public/src/lib/sahyog-vivran-render.ts`, `surface-fields.ts`,
         `pages/sahyog-vivran/[driveToken].astro` — remove the five rows from the bank block.
+  - [ ] ⬅️⭐⭐ **INHERITED (11b.3a 3rd pass, G3) — THE PER-ACCOUNT `aria-label` ANNOUNCES AN ORDINAL THE
+        SIGHTED PAGE DELIBERATELY SUPPRESSES, AND IT ⛔ SURVIVES THIS STORY.** ✅ Verified at HEAD,
+        raised independently by two layers. `[driveToken].astro:458` renders
+        `aria-label={labels.bankAccountLabel(account.accountRank)}` ⇒ *"Account 1"* / *"Account 2"*,
+        while `surface-fields.ts:569` maps `accountRank: null` and its doc-block at `:490` states
+        *"**rendering 'Account 1' / 'Account 2' … would put an ordering that implies preference onto
+        the page**."* ⇒ a sighted visitor sees two identical unnumbered boxes; a screen-reader visitor
+        hears the ordinal. ⭐ **AC2 rules the two accounts EQUAL payment destinations with ⛔ "no
+        ordering that implies preference"** ⇒ the story's stated reasoning is contradicted by its
+        shipped output, **in the direction only assistive-tech users experience**. ⚠ And because the
+        value reaches the DOM via `aria-label` rather than `<MatrixField>`, the field-classification
+        gate is **structurally blind** — ⛔ it cannot fail on a field it was told does not exist.
+        ⛔⛔ **YOUR Task 6 REMOVES FIVE ROWS, ⛔ NOT THE BLOCK OR ITS PER-ACCOUNT GROUPING ⇒ THIS IS
+        ⛔ NOT CLOSED BY THE WITHDRAWAL.** Decide here: name the group by its **bank**, or restate
+        equality in the per-account label.
+  - [ ] ⬅️ **INHERITED (11b.3a 3rd pass, G3) — the "either account can be used" copy renders when the
+        page shows exactly ONE account, and after your change it sits beside two NAMES and ⛔ no
+        payment coordinates at all.** `bank.equal_destinations` is standing copy rendered whenever the
+        block renders, and a one-element array is **explicitly legal** in the SSR validator ⇒ a
+        visitor on a claim where only account #1 was collected reads *"Either account can be used.
+        Neither one is preferred over the other."* beside **one** card, on the page whose whole
+        purpose is that nothing about the money is hidden, and reasonably infers **a second account is
+        being withheld**. ✅ Length 1 is ⛔ never exercised (the suite covers `[]` and a three-account
+        rejection only). ⇒ decide here whether the sentence still holds once the coordinates are gone.
+  - [ ] ⬅️ **INHERITED (11b.3a 3rd pass, G3) — the masked value restates its own label; closed by YOUR
+        deletion, but ⛔ check the member path does not inherit the shape.** The `<dt>` reads *"Account
+        number"* and the `<dd>` renders *"Account ending in 1234"* ⇒ announced as *"Account number:
+        Account ending in 1234"*; Hindi is the same shape. ⭐ The wrapper exists for a **good** reason
+        (AC4 requires the masked value be announced as ONE coherent field, ⛔ never digit-by-digit) —
+        the defect is achieving it **by duplication**. ⇒ the account-number row goes at Task 6, so this
+        dies with it; recorded because **AC6 retains the field on the member donor path**.
   - [ ] `i18n/locales/{en,hi}/sahyog-vivran.json` — `label.account_holder` → **"Nominee Name"** /
         the Hindi equivalent. ⚠ `t()` **THROWS** on a missing key — change both locales in the same
         commit. ⭐ Retire `label.account_number` / `label.ifsc` / `label.vpa` / `label.bank_name` /
@@ -501,4 +532,5 @@ shared fixture ([[project_live_db_test_gotchas]]).
 |---|---|---|---|
 | 2026-09-04 | 0.1 | Created from `2026-09-04-195` cl.3 (story **A**). ⚠ **D1 is OPEN and blocks Task 2.** | BigDev + Claude |
 | 2026-09-04 | 0.2 | ✅ **D1 RULED (b) — collapse the wire, keep the machinery.** Task 1 closed, Task 2 unblocked and made concrete. ⛔ `dev-story` ⛔ NOT started, by instruction. | BigDev + Claude |
+| 2026-09-05 | 0.4 | ⬅️ **THREE MORE INHERITED from 11b.3a's third pass, chunk G3** — all on the public bank block, all lifted into **Task 6**. ⚠ **One is ⛔ NOT closed by the withdrawal:** the per-account `aria-label` announces *"Account 1"/"Account 2"*, contradicting AC2's *"no ordering that implies preference"* — Task 6 removes five **rows**, ⛔ not the per-account grouping. ⛔ No AC changed; story stays `ready-for-dev`. | BigDev + Claude |
 | 2026-09-04 | 0.3 | ⬅️ **EIGHT FINDINGS INHERITED from 11b.3a's THIRD code-review pass, and LIFTED INTO THE TASKS** (BigDev's split-by-survival routing: `-190` cl.1 deletes or collapses the code they bear on). New `⬅️ INHERITED` subtasks under Tasks **2, 3, 4, 5, 7, 8, 9**. ⚠ **Three are REACTIVATION PRECONDITIONS, ⛔ not fixes** — cl.4 retains the machinery and AC7 leaves `D8-default` FAIL-OPEN unchanged. ⚠ **One (Task 4's malformed-row item) is CONDITIONAL** — closed only if the public read stops resolving the schedule. ⛔ No AC changed; ⛔ no code touched; story stays `ready-for-dev`. | BigDev + Claude |

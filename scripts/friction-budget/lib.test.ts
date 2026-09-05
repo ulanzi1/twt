@@ -225,23 +225,100 @@ describe('isMemberFacingPath', () => {
 });
 
 describe('evaluateDeclaration (diff → verdict)', () => {
+  const TABLE = [
+    '| payer | protects | event_type |',
+    '| --- | --- | --- |',
+    '| member | the pool | forced |',
+  ].join('\n');
+  const MEMBER_DIFF = ['apps/mobile/src/screens/Contribute.tsx', 'friction-budget.md'];
+
   it('fails when a member-facing path changed but the ledger did not', () => {
-    const v = evaluateDeclaration(['apps/mobile/src/screens/Contribute.tsx', 'apps/api/src/x.ts']);
+    const v = evaluateDeclaration(['apps/mobile/src/screens/Contribute.tsx', 'apps/api/src/x.ts'], {
+      base: TABLE,
+      head: TABLE,
+    });
     expect(v.ok).toBe(false);
+    expect(v.basis).toBe('unchanged');
     expect(v.touchedMemberPaths).toEqual(['apps/mobile/src/screens/Contribute.tsx']);
     expect(v.message).toMatch(/Declare the friction/);
   });
 
-  it('passes when a member-facing path changed and the ledger was updated', () => {
-    const v = evaluateDeclaration(['apps/mobile/src/screens/Contribute.tsx', 'friction-budget.md']);
+  it('passes (dormant) when no member-facing path changed', () => {
+    const v = evaluateDeclaration(['apps/api/src/x.ts', 'packages/domain/src/db.ts'], {
+      base: TABLE,
+      head: TABLE,
+    });
     expect(v.ok).toBe(true);
-    expect(v.ledgerChanged).toBe(true);
+    expect(v.basis).toBe('dormant');
+    expect(v.touchedMemberPaths).toEqual([]);
   });
 
-  it('passes (dormant) when no member-facing path changed', () => {
-    const v = evaluateDeclaration(['apps/api/src/x.ts', 'packages/domain/src/db.ts']);
+  // ⭐ THE REGRESSION THIS FACET EXISTS TO PREVENT — demonstrated live 2026-09-05:
+  // a prose correction to an unrelated paragraph flipped AC-4 red→green while the
+  // declaration it demanded stayed unwritten. `#decision-2026-09-05-202` follow-up.
+  it('⛔ FAILS when the ledger was edited but carries NO new row and NO new disposition', () => {
+    const v = evaluateDeclaration(MEMBER_DIFF, {
+      base: `Some prose.\n${TABLE}`,
+      head: `Some prose, corrected for a typo.\n${TABLE}`,
+    });
+    expect(v.ok).toBe(false);
+    expect(v.basis).toBe('no-declaration');
+    expect(v.message).toMatch(/an incidental edit does not discharge AC-4/);
+  });
+
+  it('passes when a NEW declaration row is added', () => {
+    const v = evaluateDeclaration(MEMBER_DIFF, {
+      base: TABLE,
+      head: `${TABLE}\n| member | a second thing | optional |`,
+    });
     expect(v.ok).toBe(true);
-    expect(v.touchedMemberPaths).toEqual([]);
+    expect(v.basis).toBe('row');
+    expect(v.message).toMatch(/1 added\/amended/);
+  });
+
+  it('passes when an existing row is AMENDED', () => {
+    const v = evaluateDeclaration(MEMBER_DIFF, {
+      base: TABLE,
+      head: TABLE.replace('| member | the pool | forced |', '| member | the pool | optional |'),
+    });
+    expect(v.ok).toBe(true);
+    expect(v.basis).toBe('row');
+  });
+
+  // ⭐ Story 11b.9 RETIRED Story 11b.1's row — removal is a legitimate declaration act.
+  it('passes when a row is RETIRED', () => {
+    const v = evaluateDeclaration(MEMBER_DIFF, {
+      base: `${TABLE}\n| member | a retired thing | optional |`,
+      head: TABLE,
+    });
+    expect(v.ok).toBe(true);
+    expect(v.basis).toBe('row');
+    expect(v.message).toMatch(/1 retired/);
+  });
+
+  it('passes when a NEW story disposition is recorded with no row change', () => {
+    const v = evaluateDeclaration(MEMBER_DIFF, {
+      base: TABLE,
+      head: `${TABLE}\n\n**Story 9.9 disposition (declaration affirmed, no new row):** because.`,
+    });
+    expect(v.ok).toBe(true);
+    expect(v.basis).toBe('disposition');
+    expect(v.message).toMatch(/9\.9/);
+  });
+
+  it('⛔ does NOT accept a PRE-EXISTING disposition as a new one', () => {
+    const withDisp = `${TABLE}\n\n**Story 9.9 disposition (declaration affirmed, no new row):** because.`;
+    const v = evaluateDeclaration(MEMBER_DIFF, { base: withDisp, head: `${withDisp}\n\nA typo fix.` });
+    expect(v.ok).toBe(false);
+    expect(v.basis).toBe('no-declaration');
+  });
+
+  // ⚠ Degradation is LOUD, never silent — a silent fallback would re-create the defect.
+  it('degrades to the file-touched check when the base ledger is unavailable, and SAYS SO', () => {
+    const v = evaluateDeclaration(MEMBER_DIFF, { base: null, head: TABLE });
+    expect(v.ok).toBe(true);
+    expect(v.basis).toBe('content-unavailable');
+    expect(v.message).toMatch(/DEGRADED/);
   });
 });
 

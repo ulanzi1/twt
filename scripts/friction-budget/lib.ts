@@ -464,15 +464,68 @@ export interface DeclarationVerdict {
   ok: boolean;
   touchedMemberPaths: string[];
   ledgerChanged: boolean;
+  /** What actually satisfied (or failed) AC-4. `content-unavailable` = degraded fallback. */
+  basis: 'dormant' | 'row' | 'disposition' | 'content-unavailable' | 'unchanged' | 'no-declaration';
   message: string;
 }
 
 /**
- * AC-4 attribution-on-change: when a PR's diff touches a member-facing surface
- * it MUST also touch friction-budget.md (add/affirm a declaration). A
- * member-facing diff with no ledger change fails.
+ * The ledger's text on both sides of the PR. `base` is `null` when the file did
+ * not exist at the base ref (or `git show` failed) — the one case where content
+ * cannot be compared and AC-4 degrades to the old file-touched check.
  */
-export function evaluateDeclaration(changedFiles: string[]): DeclarationVerdict {
+export interface LedgerDiffInput {
+  base: string | null;
+  head: string;
+}
+
+/** `payer|protects|event_type`, normalized — the identity of a declaration row. */
+function declarationRowKey(r: LedgerRow): string {
+  const norm = (v: string): string => v.trim().replace(/\s+/g, ' ').toLowerCase();
+  return `${norm(r.payer)}|${norm(r.protects)}|${norm(r.eventType)}`;
+}
+
+/**
+ * The per-story disposition headings, e.g. `**Story 3.4 disposition (declaration
+ * affirmed, no new row):**`. A story that legitimately owes NO new row still owes
+ * a reasoned disposition, and this is the shape 106 of them already use.
+ */
+function dispositionHeadings(markdown: string): Set<string> {
+  const out = new Set<string>();
+  for (const line of markdown.split('\n')) {
+    const m = /^\*\*Story\s+(\S+?)\s+disposition\b/.exec(line.trim());
+    if (m) out.add(m[1].toLowerCase());
+  }
+  return out;
+}
+
+/**
+ * AC-4 attribution-on-change: when a PR's diff touches a member-facing surface it
+ * must DECLARE the friction — not merely touch the file.
+ *
+ * ⚠⛔ WHY THIS INSPECTS CONTENT (corrected 2026-09-05, `#decision-2026-09-05-202`
+ * follow-up). This function used to pass whenever `friction-budget.md` appeared in
+ * the changed-file list. That is satisfiable by ANY edit for ANY reason, and it was
+ * DEMONSTRATED LIVE: a prose correction to an unrelated paragraph flipped AC-4 from
+ * red to green while the declaration it was demanding of Story 11b.10 stayed
+ * unwritten. A merge-blocking gate whose green means "something changed" rather than
+ * "the thing is true" does not block anything.
+ *
+ * ⇒ AC-4 is satisfied by EITHER of the two things a story can legitimately owe:
+ *   (1) a NEW or AMENDED declaration row — added, edited, or retired (11b.9 retired
+ *       11b.1's row, so removal counts); or
+ *   (2) a NEW per-story DISPOSITION block, which is how a story records that no row
+ *       is warranted and why.
+ * ⛔ Touching the file without either is no longer a pass.
+ *
+ * ⚠ DEGRADED, AND IT SAYS SO: when `ledger.base` is null the two sides cannot be
+ * compared, so the old file-touched check applies and the message names the
+ * fallback. ⛔ A silent degradation would re-create the defect this fixes.
+ */
+export function evaluateDeclaration(
+  changedFiles: string[],
+  ledger: LedgerDiffInput | null,
+): DeclarationVerdict {
   const touchedMemberPaths = changedFiles.filter(isMemberFacingPath);
   const ledgerChanged = changedFiles.some((f) => f.replace(/\\/g, '/') === LEDGER_FILE);
 
@@ -481,23 +534,80 @@ export function evaluateDeclaration(changedFiles: string[]): DeclarationVerdict 
       ok: true,
       touchedMemberPaths,
       ledgerChanged,
+      basis: 'dormant',
       message: 'no member-facing surface touched — declaration facet dormant',
     };
   }
-  if (ledgerChanged) {
+
+  const touched = touchedMemberPaths.join(', ');
+  const remedy =
+    `Declare the friction in ${LEDGER_FILE}: either a NEW/AMENDED declaration row ` +
+    `(payer + protects + event_type, forced|optional) per UX Stance #2 / AR-60, ` +
+    `or a new "**Story <id> disposition (...)**" block recording why no row is warranted.`;
+
+  if (!ledgerChanged) {
+    return {
+      ok: false,
+      touchedMemberPaths,
+      ledgerChanged,
+      basis: 'unchanged',
+      message: `member-facing surface touched (${touched}) but ${LEDGER_FILE} was not changed. ${remedy}`,
+    };
+  }
+
+  if (ledger === null || ledger.base === null) {
     return {
       ok: true,
       touchedMemberPaths,
       ledgerChanged,
-      message: `member-facing surface touched and ${LEDGER_FILE} updated — declaration affirmed`,
+      basis: 'content-unavailable',
+      message:
+        `member-facing surface touched and ${LEDGER_FILE} updated — declaration affirmed ` +
+        `(DEGRADED: base revision of ${LEDGER_FILE} unavailable, so the change could not be ` +
+        `inspected for a declaration row or disposition).`,
     };
   }
+
+  const baseKeys = new Set(parseAndValidateLedger(ledger.base).rows.map(declarationRowKey));
+  const headKeys = new Set(parseAndValidateLedger(ledger.head).rows.map(declarationRowKey));
+  const added = [...headKeys].filter((k) => !baseKeys.has(k));
+  const removed = [...baseKeys].filter((k) => !headKeys.has(k));
+
+  if (added.length > 0 || removed.length > 0) {
+    const parts: string[] = [];
+    if (added.length > 0) parts.push(`${String(added.length)} added/amended`);
+    if (removed.length > 0) parts.push(`${String(removed.length)} retired`);
+    return {
+      ok: true,
+      touchedMemberPaths,
+      ledgerChanged,
+      basis: 'row',
+      message: `member-facing surface touched and a declaration row changed (${parts.join(', ')}) — declaration affirmed`,
+    };
+  }
+
+  const baseDisp = dispositionHeadings(ledger.base);
+  const newDisp = [...dispositionHeadings(ledger.head)].filter((d) => !baseDisp.has(d));
+  if (newDisp.length > 0) {
+    return {
+      ok: true,
+      touchedMemberPaths,
+      ledgerChanged,
+      basis: 'disposition',
+      message:
+        `member-facing surface touched and a new story disposition was recorded ` +
+        `(${newDisp.join(', ')}) — declaration affirmed with no new row`,
+    };
+  }
+
   return {
     ok: false,
     touchedMemberPaths,
     ledgerChanged,
+    basis: 'no-declaration',
     message:
-      `member-facing surface touched (${touchedMemberPaths.join(', ')}) but ${LEDGER_FILE} was not changed. ` +
-      `Declare the friction in ${LEDGER_FILE}: payer + protects + event_type (forced|optional) per UX Stance #2 / AR-60.`,
+      `member-facing surface touched (${touched}) and ${LEDGER_FILE} WAS edited, but the edit ` +
+      `contains NO new/amended declaration row and NO new story disposition — an incidental edit ` +
+      `does not discharge AC-4. ${remedy}`,
   };
 }

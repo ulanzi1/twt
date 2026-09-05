@@ -425,8 +425,23 @@ since a half-renamed vocabulary is worse than either end state.
 > `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-05-11b12-under-funded-commitment-claim.md`
 > ✅⭐ **(Q1) ANSWERED — Trustee-ratified (DR + KB), 2026-09-05: *"Trust doesn't make any commitment
 > to the family."*** ⇒ **the line GOES.**
-> ⏳ **(Q2) OPEN — five wordings proposed at the note's §7, awaiting the Panel's pick.**
-> ⛔ Do ⛔ not touch the string until a wording is ratified. ⚠ Still **NON-BLOCKING** for Tasks 2-7.
+> ✅⭐ **(Q2) ANSWERED — the Panel supplied its OWN wording (⛔ none of our five), 2026-09-05:** a
+> five-paragraph block ending *"Join the Pariwar. Be the Movement."*, plus a **Nominee full name |
+> District** table above it, on **both** the member and public views. ⭐ Verbatim at the note's **§8.1**.
+>
+> ⛔⛔ **AND IT ⛔ CANNOT BE BUILT IN THIS STORY — four blockers, §8.3:**
+> **(1)** `₹{amount}` is on ⛔ NEITHER public wire (*"a count, ⛔ never a sum of amounts"*) — it is
+> **story D**'s, ⚠ and **D is blocked on B** ⇒ a ⛔ **circular block**.
+> **(2)** the text is **five paragraphs**; the string it replaces is a ⛔ one-line **table cell** on a
+> paginated index ⇒ it belongs on the **drive page**.
+> **(3)** *"both member and public"* — ⛔ the member drive views ⛔ do not exist; they are **E** and
+> **F**, ⛔ both blocked on B.
+> **(4)** `{familyName}` is consent-**nullable**, and on the drive page the deceased name is ⛔ not on
+> the wire at all (**11b.3b**'s, gated on `-173`/`-174`).
+>
+> ⭐⭐ **WHAT THIS STORY STILL DOES, TODAY, UNCHANGED:** **AC2 deletes the falsehood.** ⛔ The false
+> sentence goes now; ⭐ the replacement does ⛔ not have to wait for it.
+> ⇒ **Tasks 2-7 remain UNBLOCKED.** ⛔ Do ⛔ not build the ratified block here.
 >
 > ⚠⛔ **AND WHEN IT LANDS IT MAY REACH `outcome.fully_funded` TOO** — §7's option 5 puts the SAME line
 > on the met-in-full and fell-short branches, because three different sentences ARE the funding verdict

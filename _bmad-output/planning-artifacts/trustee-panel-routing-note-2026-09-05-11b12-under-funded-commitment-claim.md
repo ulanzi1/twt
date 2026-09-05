@@ -9,8 +9,16 @@ copy: the string was traced to the branch that emits it before this note was wri
 > **"Trust doesn't make any commitment to the family."**
 > **"We are open to suggestions on new wording and waiting."**
 
-⇒ **Option (ii) is chosen.** The line **goes**. ⏳ **(Q2) OPEN — wording proposed at §7, awaiting
-ratification.** ⛔ Nothing is applied until the Panel picks one. Logged as Story 11b.12 **D2**.
+⇒ **Option (ii) is chosen.** The line **goes**.
+
+✅⭐ **(Q2) ANSWERED — the Panel supplied its OWN wording, 2026-09-05** (⛔ none of our five;
+⭐ recorded verbatim at **§8**), **plus a two-column table — Nominee full name | District — above the
+message, on BOTH the member and public views.**
+
+⏳ **(Q3) OPEN — ⛔ BUILD IS BLOCKED ON FOUR QUESTIONS, ⭐ set out at §8.3.** ⚠ Three of the ratified
+elements ⛔ cannot be built as written today: **the rupee amount does ⛔ not exist on either public
+wire**, **the message will ⛔ not fit the surface it was written for**, and **the member views it
+names ⛔ do not exist yet.** ⛔ Nothing is applied. Logged as Story 11b.12 **D2**.
 ⛔ **NON-BLOCKING.** Story 11b.12 proceeds without it; the string is ⛔ untouched until you answer.
 
 > ## ⚠⛔ CORRECTION — 2026-09-05, **v1 of this note contained a FALSE STATEMENT**
@@ -420,6 +428,153 @@ it makes the case for joining **by stating what happened**, ⛔ not by asking.
 
 ⚠ **⛔ A recommendation, ⛔ not a decision.** Any of the five ships the day you pick one. ⚠ If you pick
 **4**, it goes to counsel first (§6).
+
+
+---
+
+## 8. ✅ THE PANEL'S RATIFIED WORDING — and ⛔ what stands between it and the page
+
+### 8.1 ⭐ Ratified verbatim (DR + KB, 2026-09-05)
+
+**Hindi**
+
+> **स्व. {familyName} जी के परिवार के लिए सहकर्मियों ने मिलकर ₹{amount} का योगदान किया।**
+>
+> परिवार के हर सहकर्मी का सहयोग मायने रखता है। यही हमारी ताकत है।
+>
+> परिवार के साथ खड़े होने वाले हर सहकर्मी का हम हृदय से आभार व्यक्त करते हैं।
+>
+> **सहयोग का हाथ, हर परिवार के साथ।**
+>
+> **Pariwar से आज ही जुड़ें और इस आंदोलन का हिस्सा बनें।**
+
+**English**
+
+> **Late {familyName}'s family received contributions of ₹{amount} from colleagues.**
+>
+> When one family needs support, the whole Pariwar stands with them. Because in Pariwar, we stand
+> together.
+>
+> Our heartfelt gratitude to every colleague who stood beside the family.
+>
+> **सहयोग का हाथ, हर परिवार के साथ।**
+>
+> **Join the Pariwar. Be the Movement.**
+
+**Plus:** a table above the message — **Nominee full name** (left) · **District** (right) — on **both**
+the member and the public view.
+
+### 8.2 ⭐ What is ALREADY available — ⛔ verified live, ⛔ not assumed
+
+| Element | Status |
+|---|---|
+| ⭐ **Nominee name, public tier** | ✅ **ALREADY RATIFIED AND SHIPPED.** `-190` cl.2 (DR + KB) put it at `tier: public` under the label *"Nominee Name"*; it is on the drive-page wire as `nomineeBankAccounts[].accountHolderName` and renders **un-gated** (⛔ no per-subject consent). ⇒ ⛔ **no new exposure decision is needed.** |
+| ⭐⭐ ***"FULL* name"** | ✅⭐ **THIS CLOSES AN OPEN DEFERRAL.** `deferred-work.md` **(h)** `D-nominee-name-form` was routed at 11b.11 *because `-190` cl.2 ruled the LABEL and ⛔ not the FORM*. ⭐ The Panel has now ruled the form: **full**. ⇒ item (h) can be **CLOSED BY RULING**. |
+| **District** | ✅ on the drive-page wire (`sahyog-vivran.ts:322`), ⚠ `.nullable()` — renders *"Not recorded"* today when absent. |
+| **The gratitude / tagline / joining paragraphs** | ✅ pure copy. ⛔ Nothing blocks them. |
+
+### 8.3 ⛔⛔ THE FOUR THINGS THAT BLOCK THE BUILD
+
+**⛔ (1) `₹{amount}` DOES ⛔ NOT EXIST ON EITHER PUBLIC WIRE — and fixing it is CIRCULAR.**
+
+Both contracts say it in terms:
+- `sahyog-drive.ts:133` — *"⛔ A count, ⛔ never a sum of amounts, and ⛔ never a score."*
+- `sahyog-vivran.ts:325` — the same sentence.
+
+⇒ there is **⛔ no amount to interpolate.** ⭐ Publishing one is **story D**'s ruled deliverable
+(`11b-14`, D1+D2 — *"extend the canonical producer; amount on both surfaces"*).
+
+⚠⛔ **AND STORY D IS BLOCKED ON STORY B** (`-195` cl.3). ⇒ if B must render `₹{amount}`, **B needs D
+and D needs B**. ⛔ That is a deadlock, ⛔ not a sequencing detail.
+
+⭐ **Two clean ways out — the Panel or BigDev picks:**
+**(a)** the message ships **with story D**, whole, amount included; **B** ships only the
+falsehood-removal (a short line on the index);
+**(b)** **B** ships the message **without** the first sentence, and **D** adds it.
+⭐ **We recommend (a)** — the first sentence is the message's headline, and shipping the block without
+it would read oddly and then change again weeks later.
+
+**⛔ (2) THE MESSAGE WILL ⛔ NOT FIT WHERE THE OLD SENTENCE LIVED.**
+
+The line it replaces is a **one-line cell** in the *"Close of cycle"* **column** of the index table —
+⛔ one cell per drive, on a paginated list. ⭐ The ratified text is **five paragraphs plus a table**.
+⇒ ⛔ it cannot go in a table cell, and twenty drives would render it twenty times.
+
+⭐ **It is written for a PAGE, and the page exists:** the per-drive **Sahyog Vivran** page
+(`/sahyog-vivran/{token}`) — which is also where the nominee name and district **already are**.
+
+⇒ ⚠ **we need one decision:** does the index keep a **short** line (one of §7's five, or nothing at
+all), with the **full message on the drive page**? ⭐ That is our recommendation.
+
+**⛔ (3) *"BOTH MEMBER AND PUBLIC VIEW"* — ⛔ THE MEMBER VIEWS DO ⛔ NOT EXIST YET.**
+
+⛔ There is **⛔ no member drive list and ⛔ no member drive detail** today. They are **story E**
+(`11b-15`, the fourth tab) and **story F** (`11b-17`, the member's drive detail) — ⛔ neither built,
+and **both blocked on B**. ⇒ B ⛔ **cannot** put this on a member view; ⭐ it can only ship the
+**copy** that E and F then render.
+
+⚠ ⛔ Not a refusal — a sequencing fact. ⭐ The member half lands at **E/F**, ⛔ not here.
+
+**⚠ (4) `{familyName}` CAN BE ⛔ NULL — AND ON THE DRIVE PAGE IT IS ⛔ NOT THERE AT ALL.**
+
+- ⚠ The deceased's name is **consent-gated**. `deceasedMemberName` is `.nullable()`, and the shipped
+  copy says so: *"A family may choose whether their relative is named here, and may change that
+  choice at any time."* ⇒ the message **needs a no-name variant in both locales**, or a withheld-name
+  drive renders ***"Late 's family"***.
+- ⛔⛔ **AND ON THE DRIVE PAGE THE NAME IS ⛔ NOT ON THE WIRE.** `sahyog-vivran.ts:29` states the
+  surface carries *"⛔ no deceased member's name"*; that exposure is **story 11b.3b's**, gated on its
+  own Panel rulings (`-173` / `-174`). ⇒ if the message goes on the drive page (blocker 2), ⚠ its
+  **headline sentence has no name to use** until 11b.3b ships.
+
+### 8.4 ⚠ FOUR THINGS RECORDED, ⛔ NOT BLOCKING
+
+**⚠ (i) The name published under *"Nominee"* may ⛔ NOT be the nominee — and this promotes it.**
+The matrix calls this *"the sharpest fact about this field"*: it is `account_holder_name_ciphertext`,
+the **disbursement account holder**. Story **6.8 D1** removed the nominee linkage **deliberately** —
+⛔ no FK to `member_nominees`, ⛔ no rank, ⛔ no match rule — and it is guarded by an approval chain
+that **⛔ cannot see it**. ⇒ the value is **UNVERIFIED and today UNVERIFIABLE** (routed, `D5-subject`).
+⚠⛔ **What changes:** today it is a small field label; the ruling makes it a **headline table above a
+memorial message**. ⛔ The exposure is the same, ⭐ but the PROMINENCE is not. ⚠ Recorded so the Panel
+promotes it **knowing**, ⛔ not by side-effect.
+
+**⚠ (ii) There can be TWO nominee names.** `nomineeBankAccounts` is `.max(2)` — two **equal**
+accounts (9.9: the donor picks). ⚠ If the two holder names differ, *"Nominee full name"* (singular)
+is ambiguous. ⇒ needs a rule: **first? both? neither?**
+
+**⚠ (iii) *"Join the Pariwar. Be the Movement."* is a JOIN-PITCH ⇒ counsel.**
+`-189` consequence 6 routes join-pitch language to **counsel** — a mutual-aid trust must ⛔ not read
+as an insurer promising cover. ⭐ We flagged this on §7's option 4; the ratified text is **more**
+explicit. ⇒ **counsel (Adv. Mohit Agrawal) reviews it before it goes public.** ⛔ Not a refusal,
+⛔ not a veto — a step, and it can run in parallel with everything else.
+
+**⚠ (iv) The English and Hindi second paragraphs say DIFFERENT things.**
+- **HI:** *"परिवार के हर सहकर्मी का सहयोग मायने रखता है। यही हमारी ताकत है।"* (*every colleague's support
+  matters; that is our strength*)
+- **EN:** *"When one family needs support, the whole Pariwar stands with them. Because in Pariwar, we
+  stand together."*
+
+⭐ Both are good. ⚠ They are ⛔ not translations of each other. ⇒ **is that deliberate** (each locale
+written in its own voice — ⭐ a legitimate and often better choice) **or should they match?** ⛔ We
+have ⛔ not "corrected" either; we ship exactly what was ratified once you confirm.
+
+### 8.5 ⭐ What we propose
+
+| # | Question | ⭐ Our recommendation |
+|---|---|---|
+| 1 | Where does the full message go? | ⭐ **The drive page.** The index keeps a **short** line from §7. |
+| 2 | The `₹{amount}` deadlock | ⭐ **(a)** — the whole block ships with **story D**; **B** ships only the falsehood-removal now. |
+| 3 | Member view | ⭐ **B ships the copy; E and F render it.** ⛔ Not buildable here. |
+| 4 | Withheld name | ⭐ A **no-name variant** in both locales, ⛔ authored now, ⛔ not improvised later. |
+| 5 | Two nominee names | ⭐ Panel to rule: first / both / neither. |
+| 6 | The join-pitch | ⭐ To **counsel**, in parallel. ⛔ Blocks nothing else. |
+| 7 | EN/HI divergence | ⭐ Confirm deliberate, or supply matched text. |
+
+⭐ **What B can ship IMMEDIATELY, with ⛔ none of the above resolved:** the removal of *"The trust met
+its commitment to the family"* and the two other false payout sentences (AC2). ⭐ **The falsehood does
+⛔ not have to wait for the replacement.**
+
+---
+
 
 ---
 

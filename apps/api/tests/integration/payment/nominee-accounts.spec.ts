@@ -322,8 +322,10 @@ describe.skipIf(!hasDatabase)('nominee-accounts read — real Tier-1 decrypt rou
     // finding. ⇒ recorded as not-confirmed rather than claimed as fixed.
     // ⭐ WHAT IS REAL, and what this pins: `.length > 0` let a WHITESPACE-ONLY value through. It
     // satisfies `.min(1)`, so there is no 500 — it renders as a visually BLANK bank label on the very
-    // screen where the donor picks which account to pay. That is the `district` lesson (11a.3) and
-    // the treatment `branch` already gets in `pool/sahyog-vivran-read.ts`.
+    // screen where the donor picks which account to pay. That is the `district` lesson (11a.3).
+    // ⛔ [Review, 11b.11] Previously also cited "the treatment `branch` already gets in
+    // `pool/sahyog-vivran-read.ts`" — that trimming was deleted by this story's withdrawal of
+    // `branch` from the public projection; removed rather than left as a false citation.
     const t = buildTestDeps({ env: { DATABASE_URL: process.env['DATABASE_URL'] } });
     try {
       const memberId = randomUUID();

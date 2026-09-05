@@ -10,7 +10,7 @@ It carries decisions `2026-09-04-186` … `-196`, Story 11b.10 closed, and the s
 
 # Story 11b.11: The Nominee Banking Coordinates Are WITHDRAWN From the Public Surface `[SURFACE]`
 
-Status: review
+Status: done
 
 > ⭐⛔ **THIS STORY IS ⛔ NOT IN `epics.md`'s STORY LIST.** It is **story A** of the six-story split
 > ruled at `2026-09-04-195` cl.3, which itself follows a **Trustee-ratified** decision
@@ -595,6 +595,32 @@ whoever reactivates it inherits the list.
         operational fallback"*; ⛔ no global default, ⛔ no bulk setter, ⛔ no cache-purge hook.
         ⭐ Documented three times, mitigated zero.
 
+### Review Findings
+
+- [x] [Review][Patch] Per-account `aria-label` was identical on both nominee account groups — `apps/public/src/pages/sahyog-vivran/[driveToken].astro`'s two mapped `<section role="group">` blocks shared the exact same static label, so a screen-reader user got two indistinguishable "group" landmarks even though sighted users see two separate boxes. **First attempt (2026-09-05) was ITSELF BUGGY, caught by a second review pass:** `aria-labelledby` was pointed at the `<dt>` — the static field LABEL ("Nominee Name"), identical for every account — not the `<dd>` holding the actual value, so the computed accessible name never differed and the defect was unfixed. **Corrected (2026-09-05, second pass):** dropped the id/`aria-labelledby` indirection; `aria-label` now directly interpolates the recorded name (`"Nominee Name: <value>"`) when present, generic fallback only when the name itself is `null`. When the underlying name is genuinely identical (or both decrypts fail), the two groups are still indistinguishable — but that now matches exactly what a sighted user sees, never less. [`apps/public/src/pages/sahyog-vivran/[driveToken].astro:487-508`]
+- [x] [Review][Patch] `bankEqualNominees` copy ("recorded equally") was gated on `model.nomineeAccounts.length > 1` (raw array length) rather than on how many accounts actually render a visible name. Fixed: gate now filters on `nomineeAccountHolderName !== null` before counting, so the copy never claims two names are recorded equally when only one (or zero) actually renders. [`apps/public/src/pages/sahyog-vivran/[driveToken].astro:487-491`]
+- [x] [Review][Patch] Stale cross-file documentation described the admin masking-schedule change as reaching the public Sahyog Vivran read via `resolveEffectiveNomineeBankMasking`, and warned the cached projection "may be a full account number" — both false since this story's domain read no longer calls that resolver and the coordinate fields are structurally removed from the public wire. Fixed at both sites the story's "amended at seven sites" claim (AC4) missed: the OpenAPI description (regenerated into `openapi/v1.yaml`, verified deterministic) and the admin masking-schedule integration test's header/rationale comments — both now state the schedule has NO PUBLIC CONSUMER, dormant per `2026-09-04-190` cl.4. Verified: `admin.spec.ts` 9/9 green. [`packages/contracts/scripts/emit-openapi.ts:1937-1994`, `apps/api/tests/integration/nominee-bank-masking/admin.spec.ts:13-21,184-189`]
+- [x] [Review][Patch] Stray backtick instead of an apostrophe in the ordinal-6 control `summary` string: "11b.3b\`s deceased-member exposure". Fixed. [`apps/api/src/modules/public-pages/sahyog-vivran-controls.ts:100`]
+- [x] [Review][Patch] Comment named the wrong function — "`isNomineeBankMasking`" — where the real (and only ever) exported identifier is `isNomineeBankMasked`. Fixed. [`packages/domain/src/pool/sahyog-vivran-read.ts:98`]
+- [x] [Review][Patch] `WITHDRAWN_VALUES` in the leak-regression test included the bare 4-digit substring `'6789'`, checked via `expect(res.body).not.toContain(forbidden)` against the full raw JSON response body — a coincidental unrelated 4-digit run elsewhere in the body (an id, a timestamp fragment) would have flipped this into a false failure. Fixed: quoted to `'"6789"'`, pinning the check to the value appearing as its own JSON string rather than any bare digit run. Verified: `sahyog-vivran.spec.ts` 28/28 green. [`apps/api/tests/integration/public-pages/sahyog-vivran.spec.ts:879-889`]
+- [x] [Review][Defer] The public decrypt/render of the surviving nominee name is still unconditional on the claim's outcome — a **denied** claim, or one **reversed on appeal**, on a cycle that stays `live` keeps publishing the holder's name indefinitely under `D8-default` FAIL-OPEN. [`apps/api/src/modules/public-pages/handlers.ts:~205-214`] — deferred, pre-existing: honestly disclosed and ruled by this story itself as "recorded, not invented" (no suppression-by-outcome rule has been ruled; narrowing it would be a new rule nobody has made). Not introduced or worsened by this diff, which only narrows exposure.
+
+#### SECOND PASS (2026-09-05) — re-review of the first pass's own patches
+
+- [x] [Review][Patch] **The first pass's own `aria-labelledby` fix was buggy** — see the corrected first bullet above for the full record; captured here as its own line because it was the headline finding of this pass.
+- [x] [Review][Patch] Two comments (`apps/api/src/modules/payment/handlers.ts`, `apps/api/tests/integration/payment/nominee-accounts.spec.ts`) justified a trim fix by citing "the same treatment `branch` already gets in `pool/sahyog-vivran-read.ts`" — that trimming was deleted by THIS story's own withdrawal of `branch` from the public projection, so the citation was false the moment the commit that introduced it landed. Fixed: citation removed at both sites. [`apps/api/src/modules/payment/handlers.ts:368-374`, `apps/api/tests/integration/payment/nominee-accounts.spec.ts:323-326`]
+- [x] [Review][Patch] Trustee/operator-facing admin console copy (`apps/admin/src/modules/nominee-bank-masking/i18n-en.ts`) told a Trust Admin things like "the complete bank details stay visible on the public pages" and "only the last four digits, the bank, the branch and the IFSC code remain visible" — both false since AC1 withdrew those fields structurally, in every state of this setting. This is the most consequential instance of Trap 4 ("prose that outlives the thing it describes") in the whole story: it is Trustee-facing, not a comment, and the story's own "amended at seven sites" claim (AC4) missed it entirely. Fixed: `header.subtitle` and all three `status.*` strings now state plainly that this setting has no visible effect on the public page as of Story 11b.11. Verified against the terminology gate (`nominee-bank-masking-terminology.test.ts`, 9/9 green — no banned immediacy term introduced, the `s-maxage=300` disclosure kept present in the directory). [`apps/admin/src/modules/nominee-bank-masking/i18n-en.ts:24-50`]
+- [x] [Review][Patch] Same stale claim, lower severity (dev-facing comments, not rendered copy), at three more sites: `apps/api/src/modules/nominee-bank-masking/handlers.ts:161-165`, `apps/admin/src/modules/nominee-bank-masking/MaskingScheduleForm.tsx:9-11`, `apps/admin/src/modules/nominee-bank-masking/MaskingSchedulePage.tsx:136-140`, `apps/admin/src/api/client.ts:906-911`. Fixed at all four.
+- [x] [Review][Patch] `_bmad-output/implementation-artifacts/deferred-work.md`'s `setNomineeBankMaskingSchedule` concurrency item still said a no-open-head Pariwar "publishes a full account number" under FAIL-OPEN — now structurally impossible on this surface. Fixed: reworded to "resolves as unmasked" with a note that the account-number consequence no longer applies here; the underlying serialization gap itself is unchanged and still deferred. [`_bmad-output/implementation-artifacts/deferred-work.md`]
+- [x] [Review][Patch] `packages/domain/src/claim/nominee-bank-masking.ts`'s status banner claimed `sahyog-vivran-read.ts` is `isNomineeBankMasked`'s "ONLY caller" — verified false in the OPPOSITE direction: `isNomineeBankMasked(` has ZERO call sites anywhere in the repository now (not a different caller — no caller at all). Fixed: reworded to "ONLY PRODUCTION caller" (historical) with an explicit note that there is currently no caller anywhere. [`packages/domain/src/claim/nominee-bank-masking.ts:34-39`]
+- [x] [Review][Dismiss] Import order in `login-wall.spec.ts` (re-raised by the blind layer, which has no repo access each run) — re-verified: no `import/order` lint rule is configured; `eslint` passes clean.
+- [x] [Review][Dismiss] Claimed staleness of the generated OpenAPI schema for the collapsed nominee-account shape — verified the `/public-pages/sahyog-vivran/{driveToken}` route was never registered in `emit-openapi.ts` at all (only `member-directory` is under `public-pages`); there is nothing to regenerate for an endpoint that was never documented there.
+- [x] [Review][Dismiss] Claimed flakiness of `expect(SAHYOG_VIVRAN_HTML).not.toMatch(/\d{6,}/)` via a `randomUUID().slice(0,6)`-derived `canonicalIdentifier` — verified `SAHYOG_VIVRAN_HTML` in `apps/public/tests/integration/public-pages/scrape-test.spec.ts` is built from a fixed test fixture (`poolCanonicalIdentifier: 'P-2026-09-003'`, static account holder names), not from `randomUUID()`; the claim conflated it with a different file's fixture.
+- [ ] [Review][Defer] An empty per-account `<section role="group">` still renders (with a generic fallback `aria-label`) when a decrypt fails and `nomineeAccountHolderName` is `null` — pre-existing page shape (the wrapper was never conditionally rendered on content, only the inner `<dl>` row was), not introduced by either review pass. Matches the story's own accepted "the cell is omitted entirely" design for the null case. Low severity; not actioned this round.
+- [ ] [Review][Defer] `nominee-accounts.spec.ts`'s `seedLivePoolMemberWithNomineeAccounts` helper only overrides account #1's seed fields; the AC6 test's "`vpaPresent` must differ between accounts" claim depends on account #2's un-shown, pre-existing default carrying no VPA, asserted implicitly rather than in the helper itself. Pre-existing test design, low severity; not actioned this round.
+
+All six second-pass patches verified: `typecheck`+`lint` clean across 36 packages (incl. `@twt/admin`), `openapi` regeneration deterministic, `nominee-bank-masking-terminology.test.ts` 9/9, `admin.spec.ts` 9/9, `sahyog-vivran.spec.ts` 28/28, `nominee-accounts.spec.ts` 3/3, public-app suites (`scrape-test.spec.ts` + client/render tests + domain `nominee-bank-masking.test.ts`) 119/119.
+
 ---
 
 ## Dev Notes
@@ -842,7 +868,28 @@ index, ⛔ the stage vocabulary, ⛔ the meter, ⛔ the deceased-name basis, ⛔
 - `scripts/sahyog-vivran-financial-truth/check.ts`
 - `friction-budget.md`
 - `_bmad-output/implementation-artifacts/deferred-work.md`
+
+**Code review pass (2026-09-05) — stale-doc + test-fragility patches**
+- `apps/public/src/pages/sahyog-vivran/[driveToken].astro`
+- `packages/contracts/scripts/emit-openapi.ts`
+- `openapi/v1.yaml` *(regenerated)*
+- `apps/api/tests/integration/nominee-bank-masking/admin.spec.ts`
+- `apps/api/src/modules/public-pages/sahyog-vivran-controls.ts`
+- `packages/domain/src/pool/sahyog-vivran-read.ts`
+- `apps/api/tests/integration/public-pages/sahyog-vivran.spec.ts`
 - `_bmad-output/implementation-artifacts/11b-11-nominee-banking-coordinates-withdrawn-from-public.md`
+
+**Code review — SECOND PASS (2026-09-05) — fixed a bug in the first pass's own patch, plus stale Trustee-facing copy**
+- `apps/public/src/pages/sahyog-vivran/[driveToken].astro` (aria-label fix, corrected)
+- `apps/api/src/modules/payment/handlers.ts`
+- `apps/api/tests/integration/payment/nominee-accounts.spec.ts`
+- `apps/admin/src/modules/nominee-bank-masking/i18n-en.ts`
+- `apps/admin/src/modules/nominee-bank-masking/MaskingScheduleForm.tsx`
+- `apps/admin/src/modules/nominee-bank-masking/MaskingSchedulePage.tsx`
+- `apps/admin/src/api/client.ts`
+- `apps/api/src/modules/nominee-bank-masking/handlers.ts`
+- `packages/domain/src/claim/nominee-bank-masking.ts`
+- `_bmad-output/implementation-artifacts/deferred-work.md`
 
 ## Change Log
 

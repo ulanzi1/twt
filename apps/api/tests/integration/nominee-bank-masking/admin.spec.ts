@@ -10,15 +10,16 @@
 //   · an empty/whitespace rationale, and a day count outside 0…MAX → 400 at the CONTRACT boundary.
 //     ⛔ NEVER a 500.
 //
-// ⭐ THE CHANGE IS ASSERTED THROUGH THE PUBLIC RESOLVER, ⛔ not merely against the table: 
-// `resolveEffectiveNomineeBankMasking` is the exact function the public Sahyog Vivran read calls to
-// decide the projection, so these tests prove the change reached the surface it exists to control.
-// ⛔ A test that only proved "the call did not error" would prove nothing.
+// ⭐ THE CHANGE IS ASSERTED THROUGH `resolveEffectiveNomineeBankMasking` ITSELF, ⛔ not merely
+// against the table, so these tests prove the schedule mutation reaches the resolver it exists to
+// drive. ⛔ A test that only proved "the call did not error" would prove nothing.
 //
-// ⚠ WHAT IT DOES ⛔ NOT PROVE: that the public PAGE changed for a visitor.
-// `/sahyog-vivran/[driveToken]` is edge-cached with `s-maxage=300`, so warm PoPs keep
-// serving the previous projection — which may be a full account number — until those entries expire.
-// ⛔ No test here may claim otherwise; that gap is a property of the surface, ⛔ not a defect here.
+// ⛔⛔ [Review, 11b.11] AS OF `2026-09-04-190` cl.1 THIS RESOLVER HAS NO PUBLIC CONSUMER: the public
+// Sahyog Vivran domain read no longer calls `resolveEffectiveNomineeBankMasking` at all, and the
+// coordinates this schedule used to govern are structurally absent from that wire regardless of
+// this setting. What follows below describes this endpoint's OWN behavior, ⛔ not an effect on
+// `/sahyog-vivran/[driveToken]` — that page is untouched by anything asserted here until the
+// resolver has a public consumer again.
 //
 // ⛔ NO TEST HERE MAY ASSERT A 500. Every rejection this surface can produce has a designed status:
 // 400 (contract), 401 (no session), 403 (no grant), 409 (admin.display_name_missing). A 500 means an
@@ -181,10 +182,11 @@ describe.skipIf(!hasDatabase)('Nominee-bank masking-schedule admin surface (Stor
   }
 
   /**
-   * The PUBLIC read path — `resolveEffectiveNomineeBankMasking` is the exact resolver the Sahyog
-   * Vivran domain read calls to decide the projection, called here through a REAL scope tx, the same
-   * RLS-scoped handle that route uses. ⭐ Asserting through it is what makes this end-to-end rather
-   * than a statement about one table.
+   * `resolveEffectiveNomineeBankMasking` itself, called through a REAL scope tx (the same
+   * RLS-scoped handle production call sites use). ⭐ Asserting through the resolver rather than the
+   * table is what makes this end-to-end for the schedule's OWN behavior.
+   * ⛔ [Review, 11b.11] No longer "the public read path": as of `2026-09-04-190` cl.1 the public
+   * Sahyog Vivran domain read does not call this resolver — it has no public consumer.
    */
   async function publicResolverSetting(pariwarId: string) {
     const scopeTx = await openScopeTx(deps, pariwarId);

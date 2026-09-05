@@ -368,8 +368,13 @@ export function createPaymentHandlers(deps: AppDeps) {
               // ⚠⭐ **WHAT IS REAL IS THE MILDER RESIDUAL, AND IT IS FIXED HERE:** `.length > 0` lets
               // a WHITESPACE-ONLY `bank_name` through — it satisfies `.min(1)`, so there is no 500,
               // and it renders as a visually BLANK bank label on the screen where the donor picks
-              // which account to pay. ⭐ That is the `district` lesson (11a.3) and the same treatment
-              // `branch` already gets in `pool/sahyog-vivran-read.ts`. ⇒ trimmed before the test.
+              // which account to pay. ⭐ That is the `district` lesson (11a.3). ⇒ trimmed before the
+              // test.
+              // ⛔ [Review, 11b.11] The comment here previously cited "the same treatment `branch`
+              // already gets in `pool/sahyog-vivran-read.ts`" as precedent — that trimming was
+              // deleted by THIS story's own withdrawal of `branch` from the public projection, so
+              // the citation is now false; no code anywhere else trims `branch`. Removed rather than
+              // left dangling.
               // ⛔ The value is ⛔ not trimmed on the way OUT — only the emptiness test is trimmed —
               // so a bank name with real leading/trailing spacing is still shown as stored.
               bankName:

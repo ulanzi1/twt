@@ -95,7 +95,7 @@
 
 import { and, eq, sql } from 'drizzle-orm';
 
-// ⛔ `isNomineeBankMasking` / `resolveEffectiveNomineeBankMasking` are ⛔ DELIBERATELY NOT IMPORTED
+// ⛔ `isNomineeBankMasked` / `resolveEffectiveNomineeBankMasking` are ⛔ DELIBERATELY NOT IMPORTED
 // — see the 11b.11 rider above. The machinery is RETAINED (`2026-09-04-190` cl.4) and lives at
 // `../claim/nominee-bank-masking.js` and `../claim/nominee-bank-masking-policy.js`; what it no
 // longer has is a PUBLIC CONSUMER. ⛔ Do not re-add these imports to "restore" masking.

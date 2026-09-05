@@ -1,4 +1,52 @@
-# last_updated: 2026-09-05j (✅⭐⭐ **STORY 11b.11 IMPLEMENTED — THE NOMINEE BANKING COORDINATES ARE OFF
+# last_updated: 2026-09-05l (✅⭐⭐ **STORY 11b.11 — SECOND CODE-REVIEW PASS, RE-REVIEWING THE FIRST
+#   PASS'S OWN PATCHES. ⛔ ZERO ROWS MOVE — 11b-11 STAYS `done`.**
+#   ⚠⭐ **HEADLINE FINDING: THE FIRST PASS'S OWN `aria-label` FIX WAS BUGGY.** `aria-labelledby`
+#   pointed at the `<dt>` (the static field LABEL, "Nominee Name" — identical for every account),
+#   ⛔ not the `<dd>` holding the actual value, so the computed accessible name never differed and
+#   the ordinal-implication-adjacent defect it claimed to fix was UNFIXED. ⭐ CORRECTED: dropped the
+#   id/`aria-labelledby` indirection; `aria-label` now directly interpolates the recorded name, so
+#   sighted and assistive-tech users get the SAME distinguishing power, never less, even when the
+#   underlying name is genuinely identical across both equal accounts.
+#   ⭐ FIVE MORE `patch` findings, all applied: TWO dangling comments citing a `branch`-trim
+#   precedent this same story's own diff deleted; Trustee-FACING admin console copy
+#   (`i18n-en.ts`) still telling an operator "the complete bank details stay visible... only the
+#   last four digits, the bank, the branch and the IFSC code remain visible" — false since AC1, and
+#   the single most consequential Trap-4 instance in the whole story (verified against the
+#   terminology gate, 9/9 green, no banned term introduced); the SAME stale claim at four more
+#   dev-facing comment sites; a status-banner comment claiming ONE caller when there are now ZERO.
+#   ⛔ THREE dismissed as false-positive (re-verified, not merely trusted): import order (no such
+#   lint rule); OpenAPI "staleness" for an endpoint that was never registered in `emit-openapi.ts`
+#   to begin with; a regex-flakiness claim that conflated two different test files' fixtures.
+#   ⛔ TWO deferred: an empty per-account group on a failed decrypt (pre-existing page shape); a
+#   test helper's unshown fixture-default assumption (pre-existing, low severity).
+#   ✅ Re-verified after patching: `typecheck`+`lint` clean across 36 packages incl. `@twt/admin`,
+#   `openapi` regeneration deterministic, `nominee-bank-masking-terminology.test.ts` 9/9,
+#   `admin.spec.ts` 9/9, `sahyog-vivran.spec.ts` 28/28, `nominee-accounts.spec.ts` 3/3, public-app
+#   suites 119/119.
+#   ⛔ epic-11b `in-progress`; ⛔ 11b-3a `done`; ⛔ 11b-10 `done`; ⛔ 11b-12…17 ALL `ready-for-dev`.)
+#
+# last_updated_prior: 2026-09-05k (✅⭐⭐ **STORY 11b.11 CODE-REVIEWED AND CLOSED. ONE ROW MOVES:**
+#   `11b-11-…` **`review` → `done`**.
+#   3-layer review (Blind Hunter + Edge Case Hunter + Acceptance Auditor, AI-6-5 checklist lens):
+#   1 `decision-needed` (per-account `aria-label` was IDENTICAL on both nominee groups — resolved
+#   by BigDev: `aria-labelledby` now distinguishes by the visible NAME, ⛔ never by ordinal, so the
+#   already-closed family-13 ordinal-implication defect stays closed) + 5 `patch` (all applied,
+#   verified live: `bankEqualNominees` copy was gated on raw array length ⛔ not on rendered-name
+#   count; TWO stale cross-file doc sites AC4's "seven sites" claim missed —
+#   `emit-openapi.ts`/`openapi/v1.yaml` and `admin.spec.ts` still said the public read calls
+#   `resolveEffectiveNomineeBankMasking`; a stray backtick typo; a comment naming the wrong
+#   function; a leak-regression test's bare `'6789'` substring check flaky against the raw body,
+#   now quoted) + 1 `defer` (pre-existing, honestly disclosed by the story itself: the surviving
+#   name's decrypt/render is still unconditional on claim outcome). ⛔ 5 dismissed as false-positive
+#   or out-of-scope (import order — no such lint rule; a "tautological" test — asserts the real
+#   live constant; a disclosed trim asymmetry; the ratified "Nominee Name" label; a cosmetic test
+#   idiom). `ci:local`-relevant checks re-verified after patching: `typecheck`+`lint` clean across
+#   all 34 packages, `openapi` regeneration deterministic, every touched suite green live
+#   (`admin.spec.ts` 9/9, `sahyog-vivran.spec.ts` 28/28, `login-wall.spec.ts` 5/5,
+#   `nominee-accounts.spec.ts` 3/3, public-app suites 101/101).
+#   ⛔ epic-11b `in-progress`; ⛔ 11b-3a `done`; ⛔ 11b-10 `done`; ⛔ 11b-12…17 ALL `ready-for-dev`.)
+#
+# last_updated_prior: 2026-09-05j (✅⭐⭐ **STORY 11b.11 IMPLEMENTED — THE NOMINEE BANKING COORDINATES ARE OFF
 #   THE PUBLIC SURFACE. ONE ROW MOVES:** `11b-11-…` **`in-progress` → `review`**.
 #   ⛔ epic-11b `in-progress`; ⛔ 11b-3a `done`; ⛔ 11b-10 `done`; ⛔ 11b-12…17 ALL `ready-for-dev`.
 #   ⭐ Implements Trustee-ratified `2026-09-04-190` cl.1-2/cl.4 + `2026-09-04-191` cl.1-2/cl.5.
@@ -15587,7 +15635,7 @@ development_status:
   # REACTIVATION PRECONDITIONS moved onto the machinery. ⭐ Control count MECHANIZED.
   # ⚠ ONE inherited finding recorded ⛔ NOT CONFIRMED (the member `bankName` 500 was never
   # reachable); ONE new item ROUTED (`D-nominee-name-form`). ✅ ci:local 34/34 incl. live DB.
-  11b-11-nominee-banking-coordinates-withdrawn-from-public: review
+  11b-11-nominee-banking-coordinates-withdrawn-from-public: done
   # ⭐ 11b-12 — STORY **B** of the `2026-09-04-195` cl.3 split. ⛔ NOT in `epics.md` — owes an
   # ANNOTATION (its Task 0). ⚠ INDEPENDENT of 11b-11; both may proceed in parallel.
   # ⭐⭐ **STORIES D AND E DEPEND ON THIS ONE.**

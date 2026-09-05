@@ -8,7 +8,9 @@
 // one that masks from the close instant — and
 // it is **a choice the admin makes**, ⛔ never a default the code assumes (cl.10(b) forbids that in
 // terms). ⛔ Do not treat `0` as "unset" anywhere on this path — a falsy check would silently turn the
-// strictest day setting into no setting at all, which under FAIL-OPEN publishes a full account number.
+// strictest day setting into no setting at all. ⛔ [Review, 11b.11] This schedule has ⛔ NO PUBLIC
+// CONSUMER as of Story 11b.11 — the public Sahyog Vivran page no longer renders any bank coordinate
+// regardless of this setting; it is retained dormant, not live.
 //
 // ⚠ The disable-until-valid behaviour is a COURTESY, ⛔ not the boundary. The real rejection is the
 // contract's `rationale.trim().min(1)` and `maskAfterDays` range, which answer a bad request with a

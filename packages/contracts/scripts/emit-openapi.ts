@@ -1934,8 +1934,12 @@ registry.registerPath({
 // `2026-08-28-160` cl.10(b)-(d)'s knob, made operable by a human WITHOUT database access. The holder
 // is a RULING: `2026-09-02-178` (Trustee Panel) ruled cl.10(b)'s "Trust-Admin controlled, per
 // Pariwar" speaks to AUTHORITY and means the TRUST — per-Pariwar in SCOPE, central in AUTHORITY.
-// pariwar_admin is FORECLOSED. ⚠ The control is NOT immediate — /sahyog-vivran is edge_cacheable at
-// s-maxage=300, and what is served stale here is a FULL ACCOUNT NUMBER.
+// pariwar_admin is FORECLOSED.
+// ⛔⛔ [Review, 11b.11] AS OF `2026-09-04-190` cl.1, THIS SCHEDULE HAS NO PUBLIC CONSUMER — the
+// /sahyog-vivran domain read no longer resolves it, and the coordinates it used to govern are
+// structurally absent from that wire regardless of this setting. Do not describe it as a live
+// public-surface control until it has a consumer again (`2026-09-04-190` cl.4 retains the
+// machinery dormant, not live).
 const nomineeBankMaskingTags = ['nominee-bank-masking'];
 const nomineeBankMaskingParams = z.object({ pariwarId: z.string().uuid() });
 const nomineeBankMaskingAuth = errorResponse('Authentication required');
@@ -1948,13 +1952,15 @@ registry.registerPath({
   path: '/api/v1/p/{pariwarId}/admin/nominee-bank-masking/schedule',
   summary: "Read the Pariwar's nominee-bank masking schedule",
   description:
-    "Returns the masking setting in force for the Pariwar's nominee bank details on the public " +
-    'Sahyog Vivran, plus the last-changing admin display name, rationale, effective-from instant ' +
-    'and schedule version. `configured: false` means NO schedule row was ever written, which under ' +
-    'Decision 2026-09-02-179 cl.1 (D8-default) resolves FAIL-OPEN — the details stay fully visible ' +
-    'after the drive closes until the Trust sets a window. That is reported EXPLICITLY: an ' +
+    "Returns the masking setting recorded for the Pariwar's nominee bank details, plus the " +
+    'last-changing admin display name, rationale, effective-from instant and schedule version. ' +
+    '`configured: false` means NO schedule row was ever written, which under Decision ' +
+    '2026-09-02-179 cl.1 (D8-default) resolves FAIL-OPEN. That is reported EXPLICITLY: an ' +
     'unconfigured Pariwar and a Trust that deliberately chose a long window are different facts. ' +
-    'Requires pariwar.manage_nominee_bank_masking at pariwar scope.',
+    '⚠ As of Story 11b.11 (`2026-09-04-190` cl.1) this setting has NO PUBLIC CONSUMER — the public ' +
+    'Sahyog Vivran page no longer renders nominee bank coordinates at all, so this schedule governs ' +
+    'nothing currently visible; it is retained dormant, not live. Requires ' +
+    'pariwar.manage_nominee_bank_masking at pariwar scope.',
   tags: nomineeBankMaskingTags,
   request: { params: nomineeBankMaskingParams },
   responses: {
@@ -1981,9 +1987,10 @@ registry.registerPath({
     "absent. The acting admin's display name is resolved SERVER-SIDE from users.display_name and " +
     'is never accepted from the caller, and the effective-from instant is the SERVER\'s — a ' +
     'caller-supplied one would allow back-dating a window. Writes a §1.5 hash-chain audit line ' +
-    'covering the same transaction as the change. The effect is NOT instantaneous on the public ' +
-    'surface: /sahyog-vivran is edge-cached with s-maxage=300, so warm PoPs keep serving the ' +
-    'previous projection — which may be a full account number — until those entries expire. ' +
+    'covering the same transaction as the change. ⚠ As of Story 11b.11 (`2026-09-04-190` cl.1) ' +
+    'this schedule has NO PUBLIC CONSUMER: the public Sahyog Vivran page never renders nominee ' +
+    'bank coordinates, masked or otherwise, so a change here is not reflected on any public ' +
+    'surface — it is retained dormant pending a future consumer. ' +
     'Requires pariwar.manage_nominee_bank_masking at pariwar scope.',
   tags: nomineeBankMaskingTags,
   request: {

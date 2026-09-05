@@ -448,20 +448,24 @@ since a half-renamed vocabulary is worse than either end state.
 > `{amount}` to nothing while D is unbuilt. ⇒ ⭐ B ships the **copy and the no-amount variants**; the
 > amount-bearing line **renders only when D lands**.
 >
-> ⏳ **ONE ITEM STILL OPEN — the index line's middle clause (note §9.3, ⚠ as CORRECTED at §9.7).**
-> ⭐ **The POLICY is established** — money reaches ⛔ only the nominee; the decision log names it the
-> **APPROVER DUTY**. ⛔ **But ⛔ no system step verifies it and ⛔ nobody in the verifier → state-trustee
-> → correcting-admin chain can SEE `account_holder_name`** (only a presence boolean); the schema —
-> ⭐ the **designated authority** — states *"NO holder-name-must-match-nominee linkage of any kind …
-> full stop"*; and **`D5-subject` is OPEN, both halves.** ⇒ *"X, nominee of Y"* would publish as fact
-> a relationship the Trust **requires** but ⛔ nothing **checks**.
-> ⭐⭐ **THE FIX IS TO MECHANIZE, ⛔ NOT TO SOFTEN** — `member_nominees.name_ciphertext` already holds
-> the declared name, so the match 6.8 declined is **buildable now**. ⭐ That is `D5-subject` (ii)'s own
-> ask. ⛔ **⛔ NOT this story's work** — 11b.12 touches ⛔ no approval surface.
-> ⚠ **Separately and ⛔ unaffected:** the nominee name is ⛔ **not on the index wire at all** ⇒ putting
-> it there is a **NEW, BULK-HARVESTABLE exposure** (paginated + district-filterable) that `-190` cl.2
-> — a ruling about **one drive's page** — ⛔ does not cover. ⭐ Even a fully verified name raises it.
-> ⛔ Do ⛔ not build that clause until it is ruled.
+> ✅⭐⭐ **D2 IS CLOSED, 2026-09-05 (note §10)** — three rulings:
+> **(1)** ⭐ **a story is COMMISSIONED to mechanize the approver duty** ⇒ *"nominee of"* becomes true
+> **because it is checked**, ⛔ not because the objection was waived;
+> **(2)** ⭐ **the nominee name goes ON THE INDEX** — §9.4's bulk-harvest property was put to the Panel
+> and **ACCEPTED**;
+> **(3)** ⭐ **an absent token DROPS ITS CLAUSE** — ⛔ no combinatorial variants.
+>
+> ⚠ **Attribution query (§10.1):** relayed as *"DR and KP"*; ⛔ every prior ratification reads
+> **DR + KB**. ⛔ Not silently normalised — ⭐ confirm the second initials.
+>
+> ⭐⭐ **ONLY RULING 3 IS THIS STORY'S.** ⛔ Ruling 1 is a new story (6.10's console family — 11b.12
+> touches ⛔ no approval surface). ⛔ Ruling 2 is its own story or a NAMED addition to **story D**
+> (a contract + domain read + matrix + Tier-1 decrypt change — ⛔ forbidden here by **AC7**), ⚠ and it
+> owes a **decision-log entry + a matrix row BEFORE any code**.
+>
+> ⇒ ⭐ **B authors the ratified index line and the omit-the-clause rule**, with `{nominee_name}`
+> **authored but ⛔ not rendered** — ⭐ exactly as `{amount}` is. **Two pending tokens, one pattern:
+> B writes the copy; another story lights it up.**
 >
 > ⭐⭐ **WHAT THIS STORY STILL DOES, TODAY, UNCHANGED:** **AC2 deletes the falsehood.** ⛔ The false
 > sentence goes now; ⭐ the replacement does ⛔ not have to wait for it.

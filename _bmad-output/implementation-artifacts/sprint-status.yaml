@@ -1,4 +1,42 @@
-# last_updated: 2026-09-05f (⭐⭐ **`2026-09-05-201` — THE VERSION/CONCURRENCY SEAM RULED, BOTH HALVES
+# last_updated: 2026-09-05g (⭐⭐⭐ **`2026-09-05-202` — THE LAST OPEN DECISION OF THE THIRD PASS IS RULED.
+#   ALL FOUR CLOSED. ⛔ ZERO ROWS MOVE.** ⛔ epic-11b `in-progress`; ⛔ 11b-3a `done`; ⛔ 11b-10 `done`;
+#   ⛔ 11b-11…17 ALL `ready-for-dev`.
+#   ⭐⭐ **THE SHAPE WAS CLEANER THAN "THE COUNT IS WRONG": TWO CHAINS, EACH THREE DEEP.**
+#   `11a.5 → 11b.9 → 11b.2b` = **`member-app-native`** (an EAS **build no-op** — different surface,
+#   different facet, different closing instrument). `11b.1 → 11b.3 → 11b.3a` = **`member-public-web`**.
+#   ⇒ the escalation SPLICED them into a fake "FIFTH" **and** borrowed **11b.2b's** *"a fourth reads as
+#   a standing blind spot"* threshold, which was set **FOR THE MOBILE CHAIN**. ⚠ The paragraph
+#   CONTRADICTED ITSELF — its own preceding sentence names 11b.1 and 11b.3, i.e. **three**.
+#   ⛔ **NOTHING ANYONE ACTUALLY SET HAD BEEN CROSSED:** mobile stands at **3 of its own 4**; the web
+#   chain had ⛔ **NO trigger, EVER**. ⭐⭐ **THAT ABSENCE — ⛔ not the count — IS THE REAL DEFECT, and it
+#   is what MADE the splice possible:** a chain with no threshold of its own borrowed one that had.
+#   ✅ **RULED: STOOD DOWN to a per-story footnote** (what it was in fact discharged as — three prose
+#   mentions, ⛔ no register entry, ⛔ no owner, ⛔ no trigger) **AND THE WEB CHAIN GAINS A TRIGGER:**
+#   ⇒ **a FOURTH recording of `member-public-web`'s `own_bytes: 0` / dynamic-SSR-excluded facet reads as
+#   a STANDING BLIND SPOT** — mirroring 11b.2b's deliberately and exactly, ⭐ REGISTERED in
+#   `deferred-work.md` so it is ⛔ not prose only ⇒ ⛔ neither chain can be spliced onto the other again.
+#   ⚠ The superseded paragraph is preserved **VERBATIM IN PLACE**, ⛔ not deleted.
+#   ⚠ **ONE JUSTIFICATION EXPIRES AND IS RECORDED RATHER THAN LEANED ON:** *"the most sensitive payload
+#   it has ever carried"* ceases to be true when 11b-11 lands (`-190` cl.1). ⛔ It does ⛔ NOT downgrade
+#   the item — a gate that cannot measure a surface is blind REGARDLESS of what the surface carries.
+#   ⛔ Baseline stays **3942**; ⛔ no number invented; ⛔ the mobile chain's own 4-trigger untouched.
+#   ⭐⭐⭐ **AND A SEPARATE, VERIFIED DISCOVERY WHILE CHECKING THIS — ⛔ NOT MINE AND ⛔ NOT 11b.3a's:**
+#   **THE FRICTION-BUDGET GATE IS CURRENTLY FAILING ON THIS BRANCH, AND HAS BEEN SINCE 11b-10.**
+#   ✅ MEASURED, ⛔ not inferred: `scripts/friction-budget/check.ts` exits **1** with ⛔ NONE of the
+#   third-pass changes applied (stash-tested). **AC-4 (declaration attribution-on-change)** reports
+#   *"member-facing surface touched … but friction-budget.md was not changed"*, listing 11b-10's
+#   `apps/public` and `apps/mobile` files. ⭐⭐ **THIS IS THE MECHANICAL TWIN OF G4's PROSE FINDING** —
+#   G4 found by READING that `friction-budget.md`'s owed *"fresh look"* was never taken after `-184`
+#   ruled `D4-linkage` and 11b-10 shipped the inbound path; ⛔ the GATE had been saying so the whole
+#   time and ⛔ nobody read it. ⚠⛔ **11b-10 CLOSED `done` WITH THIS GATE RED.**
+#   ⛔⛔ **AND `-202`'s EDIT MUST ⛔ NOT BE TREATED AS DISCHARGING IT.** If touching `friction-budget.md`
+#   silences AC-4, it silences it for the WRONG REASON — a **prose correction**, ⛔ not the payer /
+#   protects / event_type **declaration** the gate is asking 11b-10 for. ⭐ The obligation is **11b-10's
+#   and still owed**; it is recorded as such in `deferred-work.md` and is ⛔ NOT closed here.
+#   ⛔ Author-committed — ledger accuracy and gate hygiene; ⛔ no policy, ⛔ not Panel-scope.
+#   ⛔ Four files touched, ALL governance artifacts; ⛔ ZERO code changed.)
+#
+# last_updated_prior: 2026-09-05f (⭐⭐ **`2026-09-05-201` — THE VERSION/CONCURRENCY SEAM RULED, BOTH HALVES
 #   TOGETHER. ⛔ ZERO ROWS MOVE.** ⛔ epic-11b `in-progress`; ⛔ 11b-3a `done`; ⛔ 11b-10 `done`;
 #   ⛔ 11b-11…17 ALL `ready-for-dev`.
 #   ⭐ G3's open decision (the console DISPLAYS a `version` and ⛔ never sends it back) and G2's

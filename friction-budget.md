@@ -1812,8 +1812,8 @@ and adds ⛔ no link. ⭐ The first story that RULES it owes this section a fres
 **more** than it did before this story landed. ⚠⛔ Judging `limits.search` insufficient for that walk
 is **A DECISION** (`2026-09-02-183` cl.5), ⛔ not a tuning knob.
 
-⚠⭐ **Metric facet — the number PASSED, the pass is ⛔ NOT coverage, and this is now the FIFTH
-CONSECUTIVE STORY to record the same un-measured facet.** `page_weight_bytes` reads **9445**,
+⚠⭐ **Metric facet — the number PASSED, the pass is ⛔ NOT coverage, and this is the THIRD
+recording of this facet on THIS surface.** `page_weight_bytes` reads **9445**,
 **BYTE-IDENTICAL** to the 9445 Story 11b.1 recorded and to the 9445 Story 11b.3 recorded ⇒ ⛔ **no
 aggregate movement attributable to a story that added a whole rendered block of DECRYPTED bank
 details to a public page.** ⛔ That is not recorded as a happy result. The reason is unchanged and
@@ -1823,14 +1823,51 @@ this page actually costs a visitor is its **DYNAMIC SSR HTML**, which `friction-
 route's DYNAMIC HTML response"*). Recorded **UN-MEASURED**
 ([[feedback_record_unattested_no_backfill]]) — ⛔ no number invented, ⛔ no estimate reconstructed.
 
-⛔⛔ **AND THE COUNT IS THE FINDING NOW, ⛔ NOT THE INDIVIDUAL RECORDING.** 11b.3's own note said a
-**fourth** consecutive recording *"should be read as the gate having a standing blind spot … ⛔ not as
-three unlucky diffs"*. ⇒ **11a.5 → 11b.9 → 11b.2b → 11b.3 → 11b.3a is the FIFTH**, and the fifth lands
-on the surface with the **largest dynamic response in the project** and the **most sensitive payload**
-it has ever carried. ⚠ The deferred `critical_render_path_ms` harness is still the thing that would
-close it; ⛔ this story does ⛔ not stand it up, and ⛔ invents no number in its place. ⭐ Recording it a
-fifth time without escalating would itself be the decay this ledger exists to prevent — so it is
-stated as a **standing gate defect**, ⛔ not as a per-story footnote.
+⚠⛔⛔ **CORRECTED 2026-09-05 — `#decision-2026-09-05-202`. THE PARAGRAPH THAT STOOD HERE SPLICED TWO
+DIFFERENT CHAINS AND ESCALATED ON THE RESULT. It is recorded verbatim below, ⛔ not deleted.**
+
+> ⛔⛔ **AND THE COUNT IS THE FINDING NOW, ⛔ NOT THE INDIVIDUAL RECORDING.** 11b.3's own note said a
+> **fourth** consecutive recording *"should be read as the gate having a standing blind spot … ⛔ not
+> as three unlucky diffs"*. ⇒ **11a.5 → 11b.9 → 11b.2b → 11b.3 → 11b.3a is the FIFTH**, and the fifth
+> lands on the surface with the **largest dynamic response in the project** and the **most sensitive
+> payload** it has ever carried. ⚠ The deferred `critical_render_path_ms` harness is still the thing
+> that would close it; ⛔ this story does ⛔ not stand it up, and ⛔ invents no number in its place.
+> ⭐ Recording it a fifth time without escalating would itself be the decay this ledger exists to
+> prevent — so it is stated as a **standing gate defect**, ⛔ not as a per-story footnote.
+
+⛔ **WHAT WAS WRONG WITH IT — three things, each verified.**
+**(1) THE COUNT.** `11a.5 → 11b.9 → 11b.2b` record **`member-app-native`** — an RN/Metro **EAS build
+no-op**, whose re-trigger is *"the first EAS build wired into CI"*. `11b.1 → 11b.3 → 11b.3a` record
+**`member-public-web`**'s `own_bytes: 0`. ⇒ **TWO SEPARATE CHAINS, each THREE deep** — ⛔ not one chain
+of five. ⚠ And the paragraph **contradicted itself**: its own preceding sentence names *"the 9445
+Story 11b.1 recorded and … Story 11b.3 recorded"* — **three**, including this one.
+**(2) THE PRECEDENT.** The *"standing blind spot … not three unlucky diffs"* quote is **11b.2b's**
+(this file, the 11b.2b section), ⛔ not 11b.3's, and it is about **the MOBILE gate** — *"the app most
+members actually use"*. 11b.3's disposition contains ⛔ no "fourth", ⛔ no "standing blind spot" and
+⛔ claims no chain.
+**(3) THE THRESHOLD.** 11b.2b set its trigger at a **FOURTH** recording — **for the mobile chain**.
+⇒ mobile stands at **3 of its own 4**, and this web chain had ⛔ **NO trigger ever set**. ⛔ Nothing
+anyone actually set has been crossed.
+
+⭐ **SO THIS IS RECORDED AS A PER-STORY FOOTNOTE, ⛔ NOT A STANDING GATE DEFECT** — which is what it
+was in fact discharged as: three prose mentions, ⛔ no register entry, ⛔ no owner, ⛔ no trigger.
+
+⭐⭐ **AND THE REAL DEFECT IS FIXED HERE — THIS CHAIN NOW HAS A TRIGGER, WHICH IT NEVER HAD.**
+⇒ **A FOURTH recording of `member-public-web`'s `own_bytes: 0` / dynamic-SSR-excluded facet is to be
+read as the gate having a STANDING BLIND SPOT on the public web surface — ⛔ not as three unlucky
+diffs.** ⭐ This mirrors 11b.2b's threshold for the mobile chain **deliberately and exactly**, so the
+two chains are governed the same way and ⛔ neither can be spliced onto the other again. ⚠ The
+`critical_render_path_ms` harness (registered, `deferred-work.md:3145`, re-deferred at 11a.2 with a
+written trigger) remains the instrument that would close it; ⛔ this story does ⛔ not stand it up and
+⛔ invents no number in its place.
+
+⚠ **ONE JUSTIFICATION IN THE SUPERSEDED TEXT EXPIRES, and it is recorded rather than leaned on:**
+*"the most sensitive payload it has ever carried"* ⛔ ceases to be true when **11b.11** lands —
+`2026-09-04-190` cl.1 withdraws the bank coordinates and the page keeps the nominee's **name** alone.
+⛔ **That does ⛔ NOT downgrade this item.** A gate that cannot measure a surface is blind **regardless
+of what the surface currently carries**; the blindness is about **measurement**, ⛔ not about payload.
+⭐ Recorded so a future reader does ⛔ not resurrect the expired justification, and ⛔ does not mistake
+its expiry for a reason to drop the trigger.
 
 ⭐ The baseline stays at its best-ever **3942** — ⛔ a rise is NEVER ratcheted, and there is no rise to
 ratchet ([[project_friction_budget_baseline_ratchet]]).

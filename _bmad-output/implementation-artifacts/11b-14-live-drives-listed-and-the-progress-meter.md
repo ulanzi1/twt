@@ -19,6 +19,11 @@ Status: ready-for-dev
 > near-real-time during live alert.**"* — a standing requirement, ⛔ never superseded, ⛔ never built,
 > and cited in **⛔ ZERO** implementation records until `-187` found it.
 >
+> ⭐⭐ **SCOPE EXTENDED 2026-09-05 — this story now also lands the Panel's ruling that the NOMINEE
+> NAME goes ON THE INDEX** (11b.12 D2, ruling 2 — Trustee-ratified DR + KB). ⭐ **AC7**, with its own
+> governance-first clause, its own 50× decrypt-volume clause, and the record that the value stays
+> **unverified until Story 6.18 ships**. ⛔ It is ⛔ not 11b.12's (that story's AC7 forbids it).
+>
 > ⛔⛔ **BLOCKED ON B AND C.** B owns the three stage words and the shared copy; C owns the rupee
 > target this story's meter measures against. ⛔ Do ⛔ not start before both land.
 
@@ -156,8 +161,79 @@ comparison **between** drives · ⛔ no badge, streak or achievement.
 `-189` cl.2(c)'s hidden target delivers, and AC2 pins.
 
 ### AC6 — ⛔ Nothing else moves
-⛔ No bank field (**A**) · ⛔ no stage word invented here (**B**) · ⛔ no target authority (**C**) ·
-⛔ no member surface (**E/F**) · ⛔ no rate tier · ⛔ no cache policy · ⛔ no `spawned`.
+⛔ No stage word invented here (**B**) · ⛔ no target authority (**C**) · ⛔ no member surface (**E/F**) ·
+⛔ no rate tier · ⛔ no cache policy · ⛔ no `spawned`.
+
+⚠⛔ **AMENDED 2026-09-05 — THE *"⛔ no bank field"* CLAUSE IS NARROWED, ⛔ not deleted.** ⭐ It used to
+read *"⛔ No bank field (**A**)"*. **AC7** now orders **exactly one** — the **nominee name**, on the
+Panel's ruling of 2026-09-05. ⇒ the clause is restated with the exception **named**:
+
+> ⛔ **NO nominee-bank value crosses EXCEPT the ruled `nominee_account_holder_name` (AC7).**
+> ⛔ No account number, ⛔ no last-4, ⛔ no IFSC, ⛔ no VPA, ⛔ no bank, ⛔ no branch — ⭐ keys **ABSENT**,
+> ⛔ never `null`.
+
+⭐ Recorded as an amendment with its previous text, ⛔ not silently overwritten
+([[feedback_supersede_never_reinterpret]]) — ⚠ and because an AC that **forbids** what another AC
+**orders** ships the contradiction ([[feedback_spec_edits_must_propagate_to_tasks]]).
+
+### AC7 — ⭐⭐ THE NOMINEE NAME REACHES THE INDEX — **Trustee-ratified 2026-09-05 (DR + KB)**
+
+> ⭐⛔ **ADDED TO THIS STORY BY BigDev, 2026-09-05**, on the Panel's ruling *"add the nominee name on
+> the index"* (Story 11b.12 **D2**, note §10.2 ruling 2). ⛔ It is ⛔ **NOT** 11b.12's — that story's
+> **AC7** forbids touching any field tier, listing predicate or wire shape. ⭐ It lands **here**
+> because D already extends the index wire, the read and the matrix.
+
+**Given** the Panel was shown the **bulk-harvest** property and **ACCEPTED it** (note §9.4)
+**Then** the public index row carries the **nominee name** — the value already at `tier: public` on
+the drive page as `nomineeBankAccounts[].accountHolderName` (`-190` cl.2)
+**And** it renders under the ruled public label **"Nominee Name"** — ⛔ *"Account holder"* may ⛔ **not**
+be used (`-190` cl.2)
+**And** ⭐ **FULL name form** — `-190` cl.2 ruled the LABEL and ⛔ not the FORM; the Panel ruled the
+**form** on 2026-09-05 ⇒ ⭐ `deferred-work.md` **(h) `D-nominee-name-form`** is **CLOSED BY RULING**
+**And** ⛔ the index line's `{nominee_name}` token (11b.12's ratified copy) is **rendered** by this
+story — ⭐ 11b.12 **authored** it, ⛔ left it dark, exactly as it did `{amount}`
+**And** ⚠ an **absent** nominee name **drops its clause** — the Panel's *"omit the clause"* rule
+**And** ⛔ ⛔ **NO** other nominee-bank value crosses: ⛔ no account number, ⛔ no last-4, ⛔ no IFSC,
+⛔ no VPA, ⛔ no bank, ⛔ no branch. ⭐ The keys are **ABSENT**, ⛔ never `null` (the 11b.11 shape).
+
+#### AC7(a) — ⛔ GOVERNANCE BEFORE CODE, ⛔ and it is ⛔ NOT covered by AC0's annotation
+
+**Then** a **decision-log entry** records the ruling as a **NEW public Tier-1 exposure on a NEW
+SURFACE** — ⚠⛔ `-190` cl.2 ruled **ONE DRIVE'S PAGE** and ⛔ **does NOT auto-widen to the index**
+([[feedback_supersede_never_reinterpret]])
+**And** `public-vs-private-matrix.yaml` gains the row (or the surface scope) — ⛔ a matrix that does
+⛔ not name the surface leaves the exposure undeclared
+**And** ⛔ ⛔ **no code lands before both.**
+
+#### AC7(b) — ⚠⛔ THE DECRYPT VOLUME IS A ⛔ 50× STEP CHANGE — ⭐ engineer for it
+
+⚠ **Verified, ⛔ not estimated:**
+
+| Surface | Tier-1 decrypts per request |
+|---|---|
+| Drive page (today) | **1-2** — one drive, `.max(2)` accounts |
+| **Index (this AC)** | ⚠ **up to 100** — `PUBLIC_SURFACE_PAGE_SIZE_CAP` **50** rows × 2 accounts |
+
+**Then** the decrypt is **BATCHED** — ⛔ **never** an N+1 per row
+([[project_epic6_drizzle_correlated_subquery_bug]]'s sibling lesson: a per-row read looks fine in a
+DB-free test)
+**And** ⚠ `public-read.ts` joins ⛔ **no** nominee table today ⇒ this adds a **join per row**; it is a
+**read-shape change**, ⛔ not a field addition
+**And** the **decrypt-failure posture is LIST-SHAPED** — ⚠ the drive page's per-field sentinel does
+⛔ **not** obviously scale to 50 rows; ⛔ one bad row must ⛔ **not** 500 the page
+**And** a **measured** p95 check is run and recorded ([[project_measured_validation_framework]])
+**And** ⚠ the surface is `edge_cacheable` at `s-maxage=300` — ⭐ **⛔ NOT a new posture** (the drive
+page already serves this decrypted name cached), ⛔ but it means a masking or consent flip is ⛔ **not
+immediate** here either, and that must be **stated where the decrypt is**.
+
+#### AC7(c) — ⚠ THE VALUE IS STILL UNVERIFIED UNTIL **6.18** SHIPS
+
+**Then** the story records that the published name is **unverified today** — ⛔ no FK, ⛔ no match rule
+(6.8 **D1**), and ⛔ nobody in the approval chain can read it (`D5-subject` (ii))
+**And** it names **Story 6.18** — commissioned by the same 2026-09-05 ruling — as what closes that
+**And** ⛔ ⛔ **it does ⛔ NOT add a join or a match rule** to "fix" it here (`D5-subject` (i) forbids it)
+**And** ⛔ this story is ⛔ **not** blocked on 6.18 — ⭐ the Panel ruled the exposure **knowing** the
+value is unverified, and that is recorded, ⛔ not re-litigated.
 
 ---
 
@@ -263,6 +339,11 @@ cross-drive comparison · ⛔ not publish a written pitch (`-190` cl.8).
 - [ ] **Task 6 — The prose that must move** (AC0, AC4, Trap 2, Trap 5) — amend `sahyog-drive.ts:133`
       per D2; state the **staleness** (Trap 3); state the **address-publication** consequence
       (Trap 5). ⛔ Amend and NAME; ⛔ never delete.
+- [ ] **Task 8 — The nominee name on the index** (AC7) — ⚠ **AC7(a) FIRST: the decision-log entry and
+      the matrix row, in a `governance:` commit, ⛔ before any code.** Then: the contract field, the
+      **batched** decrypt, the **list-shaped** failure posture, the render under **"Nominee Name"**,
+      the omit-the-clause rule, and the measured p95. ⛔ **NO** other bank value crosses (keys ABSENT,
+      ⛔ never `null`). ⛔ **NO** join or match rule to `member_nominees` (AC7(c)).
 - [ ] **Task 7 — Tests** — a `live` drive appears; `spawned` does ⛔ not; the target is ⛔ NOWHERE in any
       response (AC2); headline figures are internally consistent (AC3); ⛔ no ordering parameter is
       accepted; the empty-section suppression still holds; the scrape-test identity set updated.
@@ -316,3 +397,4 @@ units. ⚠ Assert **membership and explicit values**, ⛔ never counts over the 
 |---|---|---|---|
 | 2026-09-04 | 0.2 | ✅ **D1 + D2 RULED.** D1: extend the canonical producer (optional rupee denominator), re-scope the THROW, ⛔ **no target ⇒ no bar**. D2: **both surfaces**, `sahyog-drive.ts:133` **amended and NAMED**, AC5's ordering half untouched. ⇒ ⛔ zero open decisions; ⚠ still blocked on **B** and **C**. | BigDev + Claude |
 | 2026-09-04 | 0.1 | Created from `-195` cl.3 (story **D**). ⚠ **D1 and D2 are OPEN.** ⭐ Findings at authoring: the shipped meter divides by **`rosterSize`, ⛔ not a target**; the index contract says **"⛔ never a sum of amounts"** and that sentence is an **author's extension** of 11b.1 AC5, ⛔ not AC5 itself; and `/sahyog` is cached **5 minutes** against FR-76's *"near-real-time"*. | BigDev + Claude |
+| 2026-09-05 | 0.2 | ⭐⭐ **SCOPE EXTENDED — AC7 + Task 8: the NOMINEE NAME goes ON THE INDEX**, Trustee-ratified 2026-09-05 (Dhiraj Rahul + Kalpana Bharti) on Story 11b.12's D2 (ruling 2). ⭐ Landed **here** rather than in B because 11b.12's own AC7 forbids touching any field tier, listing predicate or wire shape, and D already extends the index wire, read and matrix. ⭐ It renders 11b.12's dark `{nominee_name}` token — ⛔ the same pattern as `{amount}`. ⚠⛔ **THREE SUB-CLAUSES, all load-bearing:** **(a)** a decision-log entry **AND** a matrix row **BEFORE any code** — `-190` cl.2 ruled **ONE DRIVE'S PAGE** and ⛔ does NOT auto-widen to the index; **(b)** the decrypt volume is a **50× step change** (1-2 → up to 100 per request) ⇒ **batched** decrypt, a **list-shaped** failure posture, and a **measured** p95 — ⚠ edge-caching is ⛔ NOT a new posture, but the flip-latency must be stated at the decrypt; **(c)** the value stays **UNVERIFIED until Story 6.18 ships**, recorded ⛔ not re-litigated — the Panel ruled the exposure knowing it, and ⛔ NO join or match rule may be added here (`D5-subject` (i)). ⭐ `deferred-work.md` **(h) `D-nominee-name-form`** is **CLOSED BY RULING** — the Panel ruled the FORM (full name), which `-190` cl.2 had left open. | BigDev + Claude |

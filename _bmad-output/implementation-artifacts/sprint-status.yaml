@@ -1,4 +1,36 @@
-# last_updated: 2026-09-05n (⭐⭐ **STORY 6.18 AUTHORED — the approver duty gets MECHANIZED; and
+# last_updated: 2026-09-05o (✅⭐⭐ **BOTH REMAINING RULINGS LANDED. ⛔ ZERO rows move.**
+#   ⭐ **6.18's D2 RULED (b) SOFT — Trustee Panel (Dhiraj Rahul + Kalpana Bharti).** Recording the
+#   attestation is MANDATORY; a "does not match" verdict ROUTES to the State Trustee ⛔ INSTEAD OF
+#   HALTING a death claim. ⇒ 6.18's Task 4 UNBLOCKED.
+#   ⭐⭐ **AND THE MECHANISM WAS ALREADY SHIPPED — 6.18 costs ⛔ NO new machinery for it.**
+#   `claim.verifier_escalated` (Story 6.11, D-D) is an ANNOTATION that ⛔ does NOT move claim state
+#   (`domain/src/claim/state.ts:192-198`), and `cycle-freeze-read.ts:6-8`'s `escalated` bucket already
+#   surfaces the flagged set to the State Trustee. ⇒ ⛔ no new state, ⛔ no new queue, ⛔ no new surface.
+#   ⚠⛔ **NEW AC8, LOAD-BEARING:** the escalation RESOLVER must inherit the SAME name view under the
+#   SAME key — ⛔ routing a NAME MISMATCH to an actor who ⛔ CANNOT SEE THE NAMES would reproduce
+#   6.18's own defect ONE LEVEL UP, which is exactly how the original inversion survived four stories.
+#   ⭐ D2 also SETTLES the State Trustee's access and NARROWS 6.18's D3 to the tier-2 correcting admin
+#   alone. ⚠ 6.18's D1 + D3 stay open; ⛔ neither blocks.
+#   ⭐⭐ **RULING 2 LANDS IN STORY D (11b-14), ⛔ not in B** — BigDev's routing. **NEW AC7 + Task 8:
+#   THE NOMINEE NAME GOES ON THE PUBLIC INDEX.** ⛔ Not 11b.12's (its own AC7 forbids touching any
+#   field tier, listing predicate or wire shape); ⭐ D already extends the index wire, read and matrix,
+#   and it renders 11b.12's dark `{nominee_name}` token — the same pattern as `{amount}`.
+#   ⚠⛔ THREE SUB-CLAUSES: **(a)** a DECISION-LOG ENTRY **AND** A MATRIX ROW **BEFORE ANY CODE** —
+#   `-190` cl.2 ruled ONE DRIVE'S PAGE and ⛔ does NOT auto-widen to the index; **(b)** the decrypt
+#   volume is a **50× STEP CHANGE** (1-2 → up to 100/request, 50-row cap × 2 accounts) ⇒ BATCHED
+#   decrypt, a LIST-SHAPED failure posture (one bad row must ⛔ not 500 the page), and a MEASURED p95
+#   — ⚠ edge-caching is ⛔ NOT a new posture but the flip-latency must be stated at the decrypt;
+#   **(c)** the value stays UNVERIFIED until 6.18 ships — recorded, ⛔ not re-litigated, and ⛔ NO join
+#   or match rule may be added here (`D5-subject` (i) forbids it).
+#   ⚠⛔ **AND 11b-14's AC6 WAS AMENDED, ⛔ not silently overwritten:** it read "⛔ No bank field (A)",
+#   which AC7 now CONTRADICTS. ⭐ Narrowed to "⛔ NO nominee-bank value EXCEPT the ruled
+#   `nominee_account_holder_name`" with the previous text recorded — an AC that FORBIDS what another
+#   AC ORDERS ships the contradiction.
+#   ⭐ `deferred-work.md` **(h) `D-nominee-name-form` CLOSED BY RULING** — the Panel ruled the FORM
+#   (FULL name), which `-190` cl.2 had left open.
+#   ⛔ epic-11b `in-progress`; ⛔ 11b-11 `done`; ⛔ 11b-12…17 `ready-for-dev`; ⛔ 6-18 `ready-for-dev`.)
+#
+# last_updated_prior: 2026-09-05n (⭐⭐ **STORY 6.18 AUTHORED — the approver duty gets MECHANIZED; and
 #   11b.12's D2 is CLOSED.** ⚠ ⛔ No code; one new story row + the D2 record.
 #   ⭐⭐ **TRUSTEE-RATIFIED 2026-09-05 (Dhiraj Rahul + Kalpana Bharti)** — three rulings closing D2:
 #   **(1)** OPEN A STORY TO MECHANIZE THE APPROVER DUTY ⇒ ⭐ **6-18 authored, `ready-for-dev`**;
@@ -15372,11 +15404,13 @@ development_status:
   # `holderNamePresent: boolean`) — and then PUBLISHED to the internet under the word "Nominee"
   # (11b.11). ⇒ the one field that survived the public withdrawal is the one field nobody INSIDE
   # the Trust can read.
-  # ⚠⛔ THREE DECISIONS OPEN. **D2 BLOCKS Task 4 AND IS A PANEL QUESTION**: does a missing or
-  # NEGATIVE attestation BLOCK approval? A hard block can HALT A GRIEVING FAMILY'S CLAIM over an
-  # initial or a bank truncation; advisory-only leaves the duty un-mechanized after a story whose
-  # whole purpose was to mechanize it. ⭐ BigDev recommends (b) SOFT — recording mandatory, a
-  # mismatch ROUTES to a state trustee rather than dead-ending.
+  # ✅⭐ **D2 RULED (b) SOFT 2026-09-05 (DR + KB)** — recording MANDATORY; a "does not match" verdict
+  # ROUTES to the State Trustee ⛔ instead of halting a death claim. ⇒ Task 4 UNBLOCKED. ⭐⭐ And the
+  # mechanism was ALREADY SHIPPED: `claim.verifier_escalated` (6.11 D-D) is an ANNOTATION that ⛔ does
+  # not move claim state, and `cycle-freeze-read.ts`'s `escalated` bucket already carries the set ⇒
+  # ⛔ no new state, ⛔ no new queue, ⛔ no new resolver surface. ⚠⛔ NEW **AC8**: the resolver MUST
+  # inherit the same name view under the same key — ⛔ routing to a blind resolver moves the defect
+  # one level up. ⚠ D1 + D3 stay open; ⛔ neither blocks.
   # ⛔ TWO LOAD-BEARING TRAPS: (1) ⛔ NO join / FK / match rule — 6.8 D1 removed the linkage
   # DELIBERATELY and `D5-subject` (i) forbids "fixing" it; an automated name comparison would be an
   # UNRULED ELIGIBILITY PREDICATE producing false mismatches on exactly the families least able to

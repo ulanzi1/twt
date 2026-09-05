@@ -346,7 +346,7 @@ token ([[project_no_browser_member_token_surface]]).
 ⭐ **Trigger:** *a Panel decision on the post-masking authenticated tier, or the first story that
 gives a browser a member session.*
 
-### (h) ⭐⭐ **NEW, ROUTED AT 11b.11** — **`D-nominee-name-form`**: the surviving public name has ⛔ NO ruled FORM
+### (h) ✅⭐⭐ **CLOSED BY RULING 2026-09-05** — **`D-nominee-name-form`**: the Panel ruled the FORM — **FULL name**
 
 ⚠⛔ **A GAP THAT OPENED BY SUBTRACTION, and it is recorded rather than closed by silence.**
 [`2026-09-04-190`](../../.decision-log.md#decision-2026-09-04-190) **cl.2** (Trustee-ratified) rules
@@ -375,6 +375,18 @@ antecedent gone, the conclusion no longer follows on the header's own logic.
 `2026-09-02-174`), OR any story that renders this field on a second surface — whichever comes first.*
 ⚠ It is a **question for the Panel**, ⛔ not an engineering preference, and ⛔ it does ⛔ not block
 deployment on its own.
+
+⭐⭐ **✅ CLOSED BY RULING — Trustee Panel (Dhiraj Rahul + Kalpana Bharti), 2026-09-05.** On Story
+11b.12's **D2** the Panel ruled the index copy *"…for **{nominee_name}**, nominee of Late
+{family_name}…"* and, in the table above it, ***"Nominee full name"***. ⇒ ⭐ **the FORM is FULL NAME**
+— the half `2026-09-04-190` cl.2 left open (it ruled the **LABEL** only) is now ruled.
+⭐ **Closed by RULING**, ⛔ not by edit and ⛔ not by deferral ([[feedback_closure_language_precision]]).
+⚠ **Where it is built:** Story **11b-14** (story D) **AC7** — ⛔ not 11b.12, whose own AC7 forbids
+touching any field tier or wire shape.
+⚠⛔ **AND THE COMPOUNDING WITH `D5-subject` IS ⛔ NOT CLOSED WITH IT:** the name is still **unverified**
+(⛔ no FK, ⛔ no match rule) until Story **6.18** ships the approver attestation. ⭐ The form is ruled;
+the **verification** is commissioned. ⛔ Two different things — ⛔ do not read this closure as covering
+both.
 
 ### (g) The **edge-cache blindness** of any abuse counter on this surface — ⭐ **RE-AFFIRMED, ⛔ not re-filed**
 

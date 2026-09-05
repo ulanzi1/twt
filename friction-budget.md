@@ -1871,3 +1871,62 @@ its expiry for a reason to drop the trigger.
 
 ⭐ The baseline stays at its best-ever **3942** — ⛔ a rise is NEVER ratcheted, and there is no rise to
 ratchet ([[project_friction_budget_baseline_ratchet]]).
+
+---
+
+**Story 11b.10 disposition (declaration affirmed — ⛔ NO new row; ⭐ and Story 11b.1's row below is
+CONFIRMED INTACT, ⛔ not amended and ⛔ not retired)** — the unguessable public address and the
+`live`-drive inbound path, as one deliverable (`2026-09-03-184` cl.1/cl.2/cl.4, Trustee-ratified).
+
+⚠⛔ **THIS DISPOSITION IS OWED AND WAS LATE.** `friction-budget.md`'s **11b.3a** section stated:
+*"`D4-linkage` is STILL OPEN … ⭐ **The first story that RULES it owes this section a fresh look**."*
+`-184` (A) ruled it and **11b.10 shipped both halves** — ⛔ and no fresh look was taken. The gate said
+so mechanically the whole time (**AC-4 was RED on the branch**) and ⛔ nobody read it. ⇒ this section
+is that look, and it is ⛔ **not** a re-affirmation of an earlier one.
+
+⭐⭐ **WHAT 11b.10 ACTUALLY CHANGED: THE ADDRESS, ⛔ NOT THE ARRIVAL PATH.** A visitor reaches a drive
+record through the **`/sahyog` index**, which searches on **three dimensions — district · date ·
+drive code**. ✅ **VERIFIED AT `HEAD`, ⛔ not assumed:** `filters.poolCode` is still applied in
+`packages/domain/src/pool/public-read.ts`'s index query, and that module still declares
+`poolCanonicalIdentifier` *"Public, and **one of the three searchable dimensions**"* (`:464`).
+⇒ **all three survive 11b.10 untouched.** What changed is what the index row's **link points at**: the
+row now carries an opaque `publicToken` and the detail page is addressed by it alone.
+⇒ ⭐ **a visitor arriving the designed way experiences ⛔ ZERO change** — same search, same result,
+same click.
+
+⛔⛔ **AND A CORRECTION TO THIS LEDGER'S OWN RECORD, made here rather than left standing.** The third
+code-review pass of 11b.3a asserted that ruling **(B) "directly invalidates"** Story 11b.1's row by
+making the drive code non-constructible. ⛔ **That is an OVERSTATEMENT and it is withdrawn.** It
+conflates two different things: **(B)** removed the ability to **CONSTRUCT A URL** from a drive code;
+it did ⛔ **not** touch the ability to **SEARCH THE INDEX BY** one. ⭐ 11b.1's row describes the
+**search**, and the search is intact. ⇒ **11b.1's row stands unamended**, and any future reader who
+finds the "invalidated" claim in the third-pass record or in `deferred-work.md` should read this
+correction instead. ⚠ Recorded because the claim was repeated into three documents before it was
+checked — ⛔ exactly the failure that pass exists to catch.
+
+⛔ **THE PATH (B) REMOVED WAS NEVER A DECLARED ONE.** Typing a constructed
+`/sahyog-vivran/P-YYYY-MM-###` into a browser was, in the routing note's own words to the Panel,
+*"not a user journey anyone designed"*. ⇒ ⛔ it is not in this ledger, was never a payer's path, and
+removing it retires ⛔ no declared friction.
+
+⭐⭐ **AND 11b.10 REDUCES MEMBER-FACING FRICTION — ⛔ a reduction is not a row.**
+`apps/mobile/components/sahyog-vivran/SahyogVivranEntry.tsx` gives a member on **My Pool** a single
+tap to the public record of **their own pool's drive**, where previously there was ⛔ nothing at all.
+⛔ No new step, ⛔ no new decision, ⛔ no new wait, ⛔ no data asked of anyone. ⚠ The token it uses is
+**server-returned** on a query the card already makes ⇒ ⛔ the member does nothing to obtain it.
+⭐ Since `2026-09-05-200` cl.4 (*"Phone-app member **should** reach the page"*) that path is a
+**ratified property**, ⛔ not an incidental link.
+
+⛔ **NO MIGRATION COST, and it is checked rather than assumed.** A changed address would ordinarily
+break existing links — ⚠ but the surface is **"built is ⛔ not published"**: the deployment gate did
+⛔ not lift with `-184`, and `deferred-work.md` still carries the token-plus-inbound-path obligation as
+**BLOCKING ON DEPLOYMENT**. ⇒ there are ⛔ **no live public links to break**, and ⛔ no payer inherits a
+404.
+
+⛔ **WHAT THIS DISPOSITION DOES ⛔ NOT COVER.** ⛔ The **admin masking knob** is 11b.3a's and is
+`super_admin`-only, so it is ⛔ not member-facing · ⛔ the **`page_weight_bytes`** un-measured facet is
+governed by `#decision-2026-09-05-202` and its newly-set fourth-recording trigger, ⛔ not by this
+section · ⛔ the **enumeration bound** was answered by `-184` and is ⛔ not re-opened here.
+
+⭐ The baseline is untouched by this story — ⛔ no rise, ⛔ nothing to ratchet
+([[project_friction_budget_baseline_ratchet]]).

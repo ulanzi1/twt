@@ -1,4 +1,39 @@
-# last_updated: 2026-09-05g (⭐⭐⭐ **`2026-09-05-202` — THE LAST OPEN DECISION OF THE THIRD PASS IS RULED.
+# last_updated: 2026-09-05h (⭐⭐ **STORY 11b.10's FRICTION-BUDGET DECLARATION IS WRITTEN; THE AC-4 GATE IS
+#   FIXED AND GREEN FOR THE RIGHT REASON. ⛔ ZERO ROWS MOVE.** ⛔ epic-11b `in-progress`; ⛔ 11b-3a `done`;
+#   ⛔ 11b-10 `done`; ⛔ 11b-11…17 ALL `ready-for-dev`.
+#   ⭐ **THE GATE FIX FIRST (`fix(1.16a)`):** `evaluateDeclaration` now inspects CONTENT — base vs head
+#   ledger text — and passes only on **(1)** a NEW / AMENDED / **RETIRED** declaration row (⭐ removal
+#   counts: 11b.9 legitimately retired 11b.1's row) or **(2)** a NEW `**Story <id> disposition (…)**`
+#   block. ⛔ Touching the file is ⛔ no longer a pass. ⚠ Degradation is **LOUD** (`basis:
+#   content-unavailable`, message says `DEGRADED`) — a silent fallback would re-create the defect.
+#   ⭐ The ledger input is **REQUIRED, ⛔ not optional** — applying this pass's own G1 lesson to its own fix.
+#   ✅ **PROVED NON-VACUOUS ON THE LIVE CASE:** the branch the OLD gate passed then **FAILED** with
+#   *"…WAS edited, but the edit contains NO new/amended declaration row and NO new story disposition —
+#   an incidental edit does not discharge AC-4."* **38/38 tests** (9 new, incl. a case asserting a
+#   PRE-EXISTING disposition is ⛔ not accepted as a new one); typecheck clean.
+#   ⭐⭐ **THEN THE DECLARATION ITSELF — and the finding is that 11b.10 owed a DISPOSITION, ⛔ not a row.**
+#   **11b.10 changed the ADDRESS, ⛔ NOT THE ARRIVAL PATH.** ✅ VERIFIED AT `HEAD`: the `/sahyog` index
+#   still searches **district · date · drive code** (`filters.poolCode` still applied; `public-read.ts:464`
+#   still names the drive code *"one of the three searchable dimensions"*) ⇒ ⭐ a visitor arriving the
+#   designed way experiences ⛔ **ZERO** change. The path (B) removed — typing a CONSTRUCTED URL — was
+#   *"not a user journey anyone designed"* in the routing note's own words to the Panel ⇒ ⛔ never in this
+#   ledger. ⭐ And 11b.10 **REDUCES** member-facing friction: `SahyogVivranEntry` is one tap where there
+#   was ⛔ nothing, on a **server-returned** token the card already fetches ⇒ ⛔ **a reduction is not a row.**
+#   ⛔ **No migration cost** — the surface is *"built is ⛔ not published"*, so ⛔ no live links break.
+#   ⛔⛔ **AND A CORRECTION TO THIS PASS'S OWN RECORD — MINE, AND PROPAGATED THREE TIMES BEFORE ANYONE
+#   CHECKED IT.** The G4 layer claimed ruling **(B)** *"directly invalidates"* 11b.1's row by making the
+#   drive code non-constructible, and ⛔ **I repeated it into the story record, `deferred-work.md` and a
+#   ledger entry without verifying it.** ⛔ **IT IS AN OVERSTATEMENT AND IS WITHDRAWN:** (B) removed
+#   CONSTRUCTING A URL from a drive code; it did ⛔ **NOT** touch SEARCHING THE INDEX BY one — and 11b.1's
+#   row describes **the search**. ⇒ ⭐ **11b.1's row STANDS UNAMENDED.** ⚠ The rest of that finding — the
+#   owed *fresh look* was never taken — **STANDS and is now discharged.** ⭐ The withdrawal is appended at
+#   all three sites, ⛔ not edited away: this is precisely the failure the pass exists to catch, and it
+#   caught it in its own work for the **third** time.
+#   ✅ **GATE GREEN FOR THE RIGHT REASON:** *"a new story disposition was recorded (11b.10) — declaration
+#   affirmed with no new row."* ⛔ Not because a file was touched.
+#   ⛔ Four files; ⭐ the only code is `scripts/friction-budget/` (the gate fix, committed separately).)
+#
+# last_updated_prior: 2026-09-05g (⭐⭐⭐ **`2026-09-05-202` — THE LAST OPEN DECISION OF THE THIRD PASS IS RULED.
 #   ALL FOUR CLOSED. ⛔ ZERO ROWS MOVE.** ⛔ epic-11b `in-progress`; ⛔ 11b-3a `done`; ⛔ 11b-10 `done`;
 #   ⛔ 11b-11…17 ALL `ready-for-dev`.
 #   ⭐⭐ **THE SHAPE WAS CLEANER THAN "THE COUNT IS WRONG": TWO CHAINS, EACH THREE DEEP.**

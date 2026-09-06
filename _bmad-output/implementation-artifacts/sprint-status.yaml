@@ -1,3 +1,99 @@
+# last_updated: 2026-09-06j (⭐⭐⭐ **STORY 11b.13 (C) CODE REVIEW PASS 2 **COMPLETE** — ⛔ ONE ROW MOVES:
+#   11b-13-per-pariwar-drive-target-substrate `in-progress` -> `done`.**
+#   ⭐ ALL THREE CHUNKS REVIEWED: G1 (`packages/domain/`), G2 (`apps/api`+`openapi`+`contracts`),
+#   G3 (`apps/admin/`) — three adversarial layers each, **59 patches applied**, `ci:local` **34/34**.
+#   ⭐⭐ **WHY PASS 2 EXISTED, AND WHY IT WAS RIGHT:** Pass 1's entire output — including its **8
+#   applied patches** — sat UNCOMMITTED and ⛔ NOTHING had reviewed those patches. Each chunk's
+#   unreviewed Pass-1 patch then concealed a REAL defect: a **VACUOUS concurrency spec** (G1 — its own
+#   `23505` backstop absorbed the mutant); a **DANGLING AUDIT ANCHOR on every governance row** (G2 —
+#   `withCompensatingAudit` hands the real id to a callback both handlers DISCARDED); and an **INERT
+#   403 GUARD TEST** (G3, where **4 of 5** Pass-1 patches were defective). ⭐ Three fixes are
+#   **MUTATION-PROVEN**, ⛔ not asserted.
+#   **6 decisions RULED by BigDev** across the pass. ⛔ Three things are closed by RULING, ⛔ not code,
+#   and stay live: **D-A** (reveal record = last-write-wins; re-raised **FIVE** times, now pinned by a
+#   test), **D-D** (a no-op save IS a governed act), and the **house-wide `closeScopeTx` seam** — it
+#   swallows a failed COMMIT and ships a 200 on EVERY governed write — **ROUTED TO THE EPIC 11b RETRO**.
+#   ⚠ **Family 13 (semantic accessibility) was evaluated for the FIRST time** and fixed in code
+#   (`aria-invalid` / `aria-describedby` throughout); ⛔ it remains UN-MECHANIZED BY RULING — `scripts/`
+#   holds ~20 gates and ⛔ ZERO cover accessibility, so ⛔ nothing catches its next regression.
+#   ⚠ **The full gate caught what scoped runs could not, THREE times** (a `lint` break in G1's pass, an
+#   unused import in G2's, and **3 `microcopy` violations in G3's own new copy** — "report" is reserved
+#   for Sahyog Vivran; a tone rule bars compare-to-target framing). ⛔ All fixed by REWORDING, ⛔ never
+#   by allow-listing.
+#   ⛔ epic-11b stays `in-progress`; ⛔ 11b-11 / 11b-12 stay `done`; ⛔ 11b-14…17 and 6-18 stay
+#   `ready-for-dev`. ⚠ **6-18 STILL OWES ITS OWN LIVE CATALOG READ** — the counter is at 41 / 49.
+#   ⭐ **11b-14 (D) IS NOW UNBLOCKED** — it needed B (11b-12, `done`) and C (11b-13, `done`).)
+# last_updated_prior: 2026-09-06i (⭐⭐ **STORY 11b.13 (C) CODE REVIEW PASS 2 — CHUNK G2 COMPLETE.
+#   ⛔ ZERO ROWS MOVE; 11b-13 STAYS `in-progress`.** G2 = `apps/api` + `openapi` + `packages/contracts`
+#   (11 files / 2,617 diff lines), all three adversarial layers.
+#   ⭐⭐ **HEADLINE — EVERY GOVERNANCE ROW'S AUDIT ANCHOR POINTED AT NOTHING.** `withCompensatingAudit`
+#   hands the REAL audit id to its `mutate` callback; BOTH handlers discarded it and wrote a locally
+#   minted `randomUUID()` into `audit_id`. ⛔ No FK ⇒ nothing failed — on the surface whose sole
+#   justification is PROVENANCE, in the column the schema calls "the join back to it". ⚠ The domain
+#   guard checks only NON-NULL, so a dangling anchor satisfied the very check meant to prevent an
+#   unanchored change. Verified at source, fixed, and pinned by the assertion whose absence let it
+#   ship. ⚠ `nominee-bank-masking` has the IDENTICAL shape — a propagated precedent, ⛔ not a typo.
+#   **1 decision RULED:** Pass-1 deferral (b)'s "noisy, ⛔ not corrupting" ground is FALSE with an
+#   `Idempotency-Key` present ⇒ rationale corrected (original preserved verbatim), and the HOUSE-WIDE
+#   `closeScopeTx` seam — it swallows a failed COMMIT and ships the 200 — **ROUTED TO THE EPIC 11b
+#   RETRO**. **16 patches applied; 2 deferrals augmented; 1 dismissed** (the reveal-setter concurrency
+#   gap, raised a FOURTH time across two passes, ⛔ ruled by D-A and now pinned by a test).
+#   ⚠ The **vacuous AC6 scan** was rebuilt and RELOCATED to `public-pages/sahyog-drive.spec.ts` where a
+#   real fixture serves a real 200 — the old one injected a random-UUID Pariwar, waived the status and
+#   scanned an EMPTY body, so a real leak would have left it green.
+#   ✅ `ci:local` **34/34 GREEN** — ⚠ after a 33/34 first run whose two `@twt/admin` failures were
+#   FLAKE (187/147 ms in isolation vs 7,778/7,097 ms under the gate; ⛔ G2 touched no admin code).
+#   ⛔⛔ **STILL ⛔ NOT `done`: G3 (`apps/admin/`, ~1,399 lines) is UNREVIEWED and holds 5 of Pass 1's
+#   8 never-reviewed patches** — the same condition that hid a High-severity defect in G1 and the
+#   dangling audit anchor in G2. ⇒ G3 owes its own run.
+#   ⛔ epic-11b stays `in-progress`; ⛔ 11b-11 / 11b-12 stay `done`; ⛔ 11b-14…17 and 6-18 stay
+#   `ready-for-dev`. ⚠ 6-18 STILL OWES ITS OWN LIVE CATALOG READ — the counter is at 41 / 49.)
+# last_updated_prior: 2026-09-06h (⭐⭐ **STORY 11b.13 (C) CODE REVIEW **PASS 2** — ⛔ ONE ROW MOVES BACK:
+#   11b-13-per-pariwar-drive-target-substrate `done` -> `in-progress`.**
+#   ⚠⛔ **WHY PASS 2 EXISTED:** Pass 1's ENTIRE output — the `done` flip, its findings section, its
+#   `deferred-work.md` block AND its **8 applied patches** — sat UNCOMMITTED in the working tree, and
+#   ⛔ nothing had ever reviewed those patches. Pass 2 ran `6759efe5` -> WORKING TREE, chunked by layer
+#   (6,491 lines > threshold); this pass covered **G1** (`packages/domain/`, 23 files / 3,024 lines).
+#   ⭐⭐ **THE HEADLINE — Pass 1's patch 7(b) VOIDED patch 7(a), in the same commit.** The `23505`
+#   backstop made the new two-connection concurrency spec VACUOUS: deleting `pg_advisory_xact_lock`
+#   left every assertion green, on the file whose own header claims to be "the two-connection proof".
+#   ⭐ All three layers found it independently; **PROVEN BY MUTATION**, ⛔ not argued — the mutant now
+#   fails at the new `actualVersion` discriminator while every OTHER assertion still passes.
+#   **2 decisions** (reveal-setter concurrency posture; unbounded `effectiveFrom`) RULED by BigDev —
+#   LWW ratified + pinned by a test; skew BOUNDED (`MAX_DRIVE_TARGET_CLOCK_SKEW_MS`, new registered
+#   400). **14 patches ALL APPLIED**; **6 deferred**; **3 dismissed** (Pass 1 uncertainties the wider
+#   repo settled). ⚠ **3 Pass-1 claims SUPERSEDED, ⛔ not rewritten:** families 1/4/13 were UNTOUCHED
+#   ⛔ not "covered" (13 = the decaying family, claimed on a chunk with ZERO component code); the
+#   concurrency-proof claim was FALSE as shipped; AC6 is covered in INTENT, ⛔ not as literally written.
+#   ✅ `pnpm ci:local` **34/34 GREEN** — ⚠ the FIRST run was **33/34, `lint` RED** (an unused import
+#   from Pass 2's own patch), which is exactly what patch #5 existed to catch: Pass 1 verified with
+#   SCOPED runs and ⛔ never the full gate.
+#   ⛔⛔ **WHY ⛔ NOT `done`:** the review is INCOMPLETE — **G2** (API + contracts, ~2,120 lines) and
+#   **G3** (admin console, ~1,399 lines) are ⛔ UNREVIEWED by this pass, and ⭐ **5 of Pass 1's 8
+#   patches live in G3 where ⛔ NOTHING has reviewed them** — the same condition that hid a
+#   High-severity defect in G1. ⇒ each owes its own run before this flips to `done`.
+#   ⛔ epic-11b stays `in-progress`; ⛔ 11b-11 / 11b-12 stay `done`; ⛔ 11b-14…17 and 6-18 stay
+#   `ready-for-dev`. ⚠ **6-18 STILL OWES ITS OWN LIVE CATALOG READ** — 11b-13 took the counter to
+#   41 / 49, so 6-18 is `41 -> 42`, ⛔ not `40`.)
+# last_updated_prior: 2026-09-06g (⭐⭐ **STORY 11b.13 (C) CODE REVIEW COMPLETE — ⛔ ONE ROW MOVES:
+#   11b-13-per-pariwar-drive-target-substrate -> `done`.** Three adversarial layers; ⛔ no Critical/High.
+#   Acceptance Auditor: AC0–AC8, Traps 1–5, PREFLIGHT STOP 1/2/3, D1/D2/D3 all COVERED; invariant
+#   families 1–13 covered by test or construction. **1 decision** (the admin console sent ⛔ no
+#   `Idempotency-Key`, so `-201` control #1 was inert for the one real caller) resolved by BigDev as a
+#   patch. **8 patches applied + re-verified green:** console now sends a per-submit `Idempotency-Key`;
+#   the 409 copy branches all three registered codes; a non-403 error on the visibility read now
+#   surfaces a retryable error (⛔ not a silently missing section); both forms early-return on an
+#   invalid non-text field; the `pariwarId` effect resets the mutations so a stale error can't leak
+#   across tenants; NEW integration coverage for the clock-skew clamp + a TRUE two-connection
+#   concurrency spec (`drive-target-concurrency.spec.ts`) proving the advisory lock serialises and the
+#   loser gets the registered 409, backed by a new `23505`→`DriveTargetVersionConflictError` conversion
+#   in `setDriveTargetSchedule`; the redundant non-unique `(pariwar_id)` index dropped from `0115`.
+#   **5 deferred** (shared idempotency-store semantics ×3, background-refetch edit loss, malformed
+#   `pariwarId` copy — `deferred-work.md`); **5 dismissed** (reveal-setter lost-update ruled by D2;
+#   payload-hash `audit_id`; the doc-only `expect(true)` test; AC6 token scan — D3-routed; the
+#   intended zero-width window). ⛔ epic-11b stays `in-progress`; ⛔ 11b-11 / 11b-12 stay `done`;
+#   ⛔ 11b-14…17 and 6-18 stay `ready-for-dev`. ⚠ **6-18 STILL OWES ITS OWN LIVE CATALOG READ** —
+#   11b-13 took the counter to 41 / 49, so 6-18 is now `41 -> 42`, ⛔ not `40`.)
 # last_updated: 2026-09-06f (⭐⭐ **STORY 11b.13 (C) TASKS 1-5 COMPLETE — ROW FLIPS `in-progress` ->
 #   `review`. `pnpm ci:local` with DATABASE_URL: 34/34 JOBS GREEN**, including `test (unit)` AND
 #   `integration-tests` against twt-test-pg on :5433.
@@ -16032,7 +16128,7 @@ development_status:
   # despite the neighbouring foreclosure; the reveal key's explains why it is NARROWER than its
   # sibling, or the pair reads as arbitrary. ⇒ Task 0 UNBLOCKED — ⚠ it still OPENS with the governance
   # decision (`-195` cl.2); ⛔ the keys are NOT minted in a build task.
-  11b-13-per-pariwar-drive-target-substrate: review
+  11b-13-per-pariwar-drive-target-substrate: done
   # ⭐ 11b-14 — STORY **D** of the `2026-09-04-195` cl.3 split. ⛔ NOT in `epics.md` — owes an
   # ANNOTATION. ⛔⛔ **BLOCKED ON B (11b-12) AND C (11b-13)** — B owns the stage words + shared copy,
   # C owns the rupee target this meter measures against.

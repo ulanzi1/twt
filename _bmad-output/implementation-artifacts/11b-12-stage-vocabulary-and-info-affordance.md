@@ -21,7 +21,7 @@ the `054ff76a` verification carries forward unchanged.
 
 # Story 11b.12: The Stage Vocabulary — **Live · Closed · Verified** — and the Info Affordance `[SURFACE]`
 
-Status: in-progress
+Status: review
 
 > ⭐⛔ **⛔ NOT IN `epics.md`'s STORY LIST.** **Story B** of the six-story split (`2026-09-04-195`
 > cl.3), following **Trustee-ratified** `-190` / `-191` / `-193` (Dhiraj Rahul + Kalpana Bharti).
@@ -885,11 +885,11 @@ the key) · ⛔ any key or field NAME (D3) · ⛔ `locales/*/members.json` (AC1)
   - [x] ⭐ **Execute them** against `twt-test-pg` on `:5433` — ⛔ *"written but not run"* is ⛔ not
         attested; that exact gap shipped a red spec at 11b.10. ⭐ Run `catalog-registration.test.ts`
         and `parity.test.ts` explicitly (Trap 6).
-- [ ] **Task 7 — The friction-budget disposition** (AC8)
-  - [ ] ⚠ **AFTER** Tasks 2-6 are committed (⭐ **2b included**) — ⛔ a declaration written against an empty diff passes
+- [x] **Task 7 — The friction-budget disposition** (AC8)
+  - [x] ⚠ **AFTER** Tasks 2-6 are committed (⭐ **2b included**) — ⛔ a declaration written against an empty diff passes
         **vacuously** ([[project_friction_budget_baseline_ratchet]]; demonstrated at `57778f72`,
         fixed at `7fe540f9`).
-  - [ ] Record the disposition in `friction-budget.md`, as 11b.1 / 11b.10 / 11b.11 each did.
+  - [x] Record the disposition in `friction-budget.md`, as 11b.1 / 11b.10 / 11b.11 each did.
 
 ---
 

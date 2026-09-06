@@ -1994,3 +1994,58 @@ page unambiguously renders **less**, so `page_weight_bytes` can only have fallen
 before/after delta was ⛔ **not captured** for this change, so ⛔ no number is stated and ⛔ no ratchet
 is proposed on the strength of an inference ([[feedback_record_unattested_no_backfill]]). The gate's
 own report is the record: ceiling unchanged, ⛔ no loosening, baseline **3942**.
+
+---
+
+**Story 11b.12 disposition (declaration affirmed — ⛔ NO new row, ⛔ no row retired, and ⛔ no row
+amended)** — the public stage vocabulary becomes **Live · Closed · Verified**, from ONE shared copy
+source, plus an info affordance (`2026-09-04-190` cl.5 / `-191` cl.3 / `-192` cl.1+cl.3 / `-193`
+cl.1+cl.3, Trustee-ratified — Dhiraj Rahul + Kalpana Bharti).
+
+⭐⭐ **THIS IS A NAMING-AND-DISCLOSURE STORY, AND ⛔ NEITHER OF THOSE IS A ROW.** ⛔ No new step, ⛔ no
+new decision, ⛔ no new wait, ⛔ no data asked of anybody, ⛔ nothing gated. A visitor who could read
+a drive's standing before can read it now — ⭐ the only difference is that the word is **true**. The
+11b.10 / 11b.11 precedents above apply unchanged.
+
+⭐⭐ **AND IT REMOVES FRICTION OF THE ONLY KIND THIS LEDGER CANNOT MEASURE: A FALSE BELIEF.** Three
+strings on the live index told the public that the trust pays the family and that a family *"has not
+yet been paid"*. `2026-09-04-192` establishes the trust ⛔ **never disburses** — colleagues pay the
+nominee directly, so a family is paid **THROUGHOUT** a drive. ⇒ a reader who acted on that copy was
+waiting for a payout step that ⛔ **does not exist**. ⛔ That is ⛔ not a declarable row (⛔ no payer
+was asked for anything), ⚠ but recording it as *"copy only"* would understate what changed.
+
+⛔⛔ **THE INFO AFFORDANCE IS ⛔ NOT A GATE, AND THAT IS THE CHECK THAT MATTERS.** `-192` cl.3's *"i"*
+control ships as a native `<details>`/`<summary>` disclosure. ⭐ Every stage word remains fully
+legible **with the disclosure shut** — the explainer **adds** an optional explanation and ⛔ hides
+⛔ nothing behind a click. ⇒ ⛔ no payer must open anything to learn anything they had before.
+⚠ It is deliberately ⛔ **not** a tooltip: hover is unreachable by keyboard **and by touch**, and
+most members are on phones (family 13 check (c)).
+
+⚠⛔ **AND THE MEASURED RISE IS STATED, ⛔ NOT GLOSSED — ⭐ THIS STORY HAS A NUMBER WHERE 11b.11 HAD
+NONE.** The gate reports `member-public-web.page_weight_bytes` at **9445**, against the
+baseline-of-record **3942** (Δ **+5503**) and the ceiling **512000**. ⭐ It **PASSES**, at ~1.8% of
+ceiling. ⛔ The rise is ⛔ not disowned: it is the `<details>` explainer's CSS block — the **first**
+disclosure pattern in `apps/public`, carrying the marker reset and the focus ring that Trap 4
+requires — plus the longer honest copy that replaced the three false sentences.
+⛔⛔ **THE BASELINE IS ⛔ NOT MOVED.** `friction-budget.yaml:82` says it in terms — *"⚠ A RISE IS NEVER
+RATCHETED. Do not 'update the baseline to match'"* — and `detectRaisedBaselines` forbids an in-PR
+raise anyway. ⇒ **3942 stands** ([[project_friction_budget_baseline_ratchet]] — the baseline is a
+**best-ever ratchet**, ⛔ not a running total).
+
+⛔ **WHAT THIS DISPOSITION DOES ⛔ NOT TOUCH.**
+· **Story 11b.1's index-search row** is **CONFIRMED INTACT, ⛔ not amended and ⛔ not retired** — this
+story touched ⛔ no filter, ⛔ no search dimension and ⛔ no name basis. ⚠ The 11b.10 section above
+already withdrew one overstatement about that row; ⛔ do ⛔ not re-open it here.
+· **`limits.search`** is unchanged — moving it is **A DECISION** (`2026-09-02-183` cl.5), ⛔ not a
+knob, and ⛔ nothing here went near it.
+· ⛔ **No `apps/mobile` component changed.** The one mobile file in this diff is a **resolution
+test** — story **E** (`11b-15`) builds the app's first stage surface, and until it does there is
+⛔ nothing on a member's phone for this vocabulary to make easier or harder.
+· ⛔ **`outcome.under_funded` is untouched** (D2 closed **without** moving it), and the two dark
+copy tokens `{amount}` / `{nominee_name}` are **authored and rendered ⛔ nowhere** — ⇒ ⛔ no payer
+sees either, so ⛔ neither can be friction yet. ⭐ Story **D** lights them up and owes its own
+disposition then.
+
+⭐ **This disposition was written AFTER the implementation commit `4157b04d` existed**, ⛔ not against
+an empty diff — AC-4 diffs **COMMITTED** history, so a declaration written first passes **vacuously**
+(the defect `57778f72` demonstrated live and `7fe540f9` fixed).

@@ -28,25 +28,42 @@
 // structural back inside a handler.
 //
 // ── The rejection paths, each with a DESIGNED status ────────────────────────────────────────────
+// ⚠ THIS LIST IS AUTHORITATIVE AND IS KEPT IN SYNC WITH TWO OTHERS — `routes.ts`'s header and the
+// OpenAPI `responses` blocks in `packages/contracts/scripts/emit-openapi.ts`. Code review Pass 2 /
+// G2 found all THREE carrying DIFFERENT lists; if you change one, change all three.
 //   400 — a blank rationale, a non-integer/non-positive/absurd target, rejected at the CONTRACT
-//         boundary (`SetDriveTargetRequest`).
+//         boundary (`SetDriveTargetRequest`); an unusable `Idempotency-Key` (repeated or blank
+//         header, `pariwar.drive_target_idempotency_key_invalid`); and — ⚠ only on a multi-node
+//         deployment whose clocks disagree — `pariwar.drive_target_effective_from_skew`.
 //   401 — no admin session (`requireAdminSession`).
 //   403 — the session lacks the grant (`requirePermissionHook`). ⭐ THIS is the denial a
 //         `pariwar_admin` hits on the REVEAL routes, and it is AC3's regression guard at the wire.
+//   404 — ⭐ the acting admin has ⛔ NO grant for this Pariwar at all, so scope resolution never
+//         attaches it. ⚠ A DIFFERENT LAYER from the 403: *404 = "this Pariwar is not yours"*,
+//         *403 = "it is yours, but you lack this key"*. Tested; ⛔ was undocumented until G2.
 //   409 — `admin.display_name_missing`; `pariwar.drive_target_version_conflict` (a stale
-//         `expectedVersion`); `pariwar.drive_target_idempotency_in_progress`.
+//         `expectedVersion`); `pariwar.drive_target_idempotency_in_progress` — ⚠ the last on BOTH
+//         PUTs, ⛔ not only the target one.
 //   422 — `pariwar.drive_target_visibility_invalid` (public-revealed while members hidden).
-// ⛔ NONE of them is a 500. Every domain error class this module can raise IS REGISTERED in
-// `middleware/error-mapping/index.ts` — ⛔ this is deliberately ⛔ NOT the masking module's posture,
-// whose `UngovernedNomineeBankMaskingChangeError` is unregistered and reaches the wire as an opaque
-// 500 (Story 11b.3a chunk G2's finding). ⛔ Do not add a domain throw here without registering it.
+//         ⚠ `pariwar.drive_target_ungoverned_change` is REGISTERED at 422 but is ⛔ UNREACHABLE
+//         through HTTP: every one of its four throw conditions is pre-empted upstream (Zod, the
+//         always-minted audit anchor, the 409 display-name check, the 403 hook). It is a BACKSTOP
+//         for non-HTTP callers, ⛔ not a response this API emits.
+//   503 — the idempotency store could not record its result (`idempotency.record_failed`). ⭐ The
+//         write may well have landed; retrying WITH THE SAME KEY is the correct client action.
+// ⚠⛔ ONE 500 REMAINS AND IT IS DELIBERATE: the `!scopeTx || !actorId` guard below throws a bare
+// `Error`, because a handler reached without its own hooks is a wiring bug, ⛔ not a caller error.
+// ⛔ That is the ONLY one. Every DOMAIN error class this module can raise IS REGISTERED in
+// `middleware/error-mapping/index.ts` — ⛔ deliberately ⛔ NOT the masking module's posture, whose
+// `UngovernedNomineeBankMaskingChangeError` is unregistered and reaches the wire as an opaque 500
+// (Story 11b.3a chunk G2's finding). ⛔ Do not add a domain throw here without registering it.
 //
 // ── PII discipline ──────────────────────────────────────────────────────────────────────────────
 // ⛔ NOTHING HERE READS, DECRYPTS, LOGS OR ECHOES MEMBER DATA. This module writes a per-Pariwar
 // FIGURE and two booleans. The rows + audit lines carry ids + timestamps + the chosen values + a
 // staff-authored rationale + the acting admin's controlled `users.display_name`.
 
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 
 import type {
   DriveTargetResponse,
@@ -66,12 +83,17 @@ import {
 import type { FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
-import { AdminDisplayNameMissingError, ConflictError } from '../../http-errors.js';
+import { AdminDisplayNameMissingError, BadRequestError, ConflictError } from '../../http-errors.js';
 import { getDisplayName } from '../auth/admin/admin-auth.repo.js';
 
 /**
- * The two keys (catalog v41, Story 11b.13 / Decision `2026-09-06-203`).
+ * The two keys (Story 11b.13 / Decision `2026-09-06-203`).
  * ⛔ Sourced from the domain constants, ⛔ not re-typed: each key string lives in one place.
+ *
+ * ⚠ The catalog VERSION is deliberately ⛔ not transcribed here (it read "v41" until code review
+ * Pass 2 / G2). ⛔ No test pins a version number in this file, and Story 6.18 bumps the same
+ * counter — so a literal here goes silently stale the moment the other story lands. The live value
+ * is `PERMISSION_CATALOG_VERSION`; read it there.
  */
 const MANAGE_DRIVE_TARGET_KEY = poolDomain.DRIVE_TARGET_PERMISSION_KEY;
 const MANAGE_DRIVE_TARGET_VISIBILITY_KEY = poolDomain.DRIVE_TARGET_VISIBILITY_PERMISSION_KEY;
@@ -182,12 +204,28 @@ export function createDriveTargetHandlers(deps: AppDeps) {
     run: () => Promise<T>,
   ): Promise<T> {
     const headerKey = request.headers['idempotency-key'];
-    const idemKey =
-      typeof headerKey === 'string' && headerKey.trim() !== ''
-        ? `${namespace}:${headerKey.trim()}`
-        : null;
+    // ⚠⛔ A PRESENT-BUT-UNUSABLE KEY IS A 400, ⛔ NEVER A SILENT DOWNGRADE (code review Pass 2 / G2).
+    // Fastify surfaces a REPEATED header as `string[]`, and a proxy or SDK that appends rather than
+    // replaces will send one. Previously that failed `typeof === 'string'` and was treated as
+    // ABSENT: the request ran completely unprotected while the caller believed it was protected, so
+    // their timeout retry manufactured the second schedule version the key exists to prevent —
+    // *"a version history that reports two operator decisions where there was one"*. Same for a
+    // whitespace-only key. ⇒ refuse loudly instead.
+    if (Array.isArray(headerKey)) {
+      throw new BadRequestError(
+        'Idempotency-Key was sent more than once — send exactly one value, or none',
+        'pariwar.drive_target_idempotency_key_invalid',
+      );
+    }
+    if (typeof headerKey === 'string' && headerKey.trim() === '') {
+      throw new BadRequestError(
+        'Idempotency-Key was sent but is empty — send a non-blank value, or omit the header',
+        'pariwar.drive_target_idempotency_key_invalid',
+      );
+    }
+    const idemKey = typeof headerKey === 'string' ? `${namespace}:${headerKey.trim()}` : null;
     // ⛔ No header ⇒ previous behaviour EXACTLY (`-201` cl.3). Making the key mandatory would break
-    // a caller for a guarantee only some callers need.
+    // a caller for a guarantee only some callers need. ⚠ ABSENT is still fine; UNUSABLE is not.
     if (idemKey === null) return run();
 
     const claimOutcome = await idempotencyStore.claim(
@@ -255,7 +293,6 @@ export function createDriveTargetHandlers(deps: AppDeps) {
       // `expectedVersion` check — `-201` cl.2. ⛔ Do not move the domain call outside this wrapper.
       return withIdempotency(request, `drive-target:set:${pariwarIdStr}`, async () => {
         const actorDisplay = await requireDisplayName(actorId);
-        const auditId = randomUUID();
         // ⭐ ONE INSTANT for the close and the insert — the accessor closes the prior head AT this
         // instant and opens the new one AT it, so there is ⛔ no sub-millisecond gap with no row in
         // force. ⛔ Never let the accessor default it, and ⛔ never accept a caller-supplied instant
@@ -277,9 +314,14 @@ export function createDriveTargetHandlers(deps: AppDeps) {
                 // ⚠ `canonicalJsonStringify` (RFC 8785), ⛔ NEVER a bespoke `JSON.stringify` — the
                 // standing rule, so a digest is a function of the change's MEANING rather than of a
                 // serializer's key order.
+                // ⛔⛔ ⛔ NO `audit_id` HERE (code review Pass 2 / G2). It used to fold in a locally
+                // minted `randomUUID()`, which made the digest a function of a random number and
+                // therefore ⛔ NOT reproducible from the request it claims to record. It cannot be
+                // the REAL audit id either: this hash is part of the audit intent that
+                // `withCompensatingAudit` is about to write, so including that row's own id would
+                // be circular. ⇒ the digest records the REQUEST, which is what it is for.
                 canonicalJsonStringify({
                   pariwar_id: pariwarIdStr,
-                  audit_id: auditId,
                   target_inr: body.targetInr,
                   expected_version: body.expectedVersion,
                   effective_from: effectiveFrom.toISOString(),
@@ -290,7 +332,14 @@ export function createDriveTargetHandlers(deps: AppDeps) {
               .digest('hex'),
             traceId: request.requestContext.traceId ?? null,
           },
-          mutate: async () => {
+          // ⭐⭐ `{ auditId }` — THE ID OF THE AUDIT LINE `withCompensatingAudit` JUST WROTE (code
+          // review Pass 2 / G2). ⚠⛔ This parameter was previously DISCARDED and a locally minted
+          // `randomUUID()` written into `audit_id` instead — so every governance row's anchor
+          // pointed at a row that ⛔ DOES NOT EXIST, on the surface whose whole justification is
+          // provenance, and the column the schema calls *"the join back to it"* joined to nothing.
+          // ⛔ The column has ⛔ no FK and the domain guard checks only NON-NULL, so ⛔ nothing
+          // failed. ⛔ Do not reintroduce a locally minted anchor.
+          mutate: async ({ auditId }) => {
             const row = await poolDomain.setDriveTargetSchedule(tx, {
               pariwarId,
               targetInr: body.targetInr,
@@ -338,7 +387,6 @@ export function createDriveTargetHandlers(deps: AppDeps) {
 
       return withIdempotency(request, `drive-target:visibility:${pariwarIdStr}`, async () => {
         const actorDisplay = await requireDisplayName(actorId);
-        const auditId = randomUUID();
         const now = deps.clock();
 
         return audit.withCompensatingAudit(deps.servicePool, {
@@ -350,9 +398,9 @@ export function createDriveTargetHandlers(deps: AppDeps) {
             resourceLocator: `pariwar/${pariwarIdStr}/drive-target-visibility`,
             requestPayloadHash: createHash('sha256')
               .update(
+                // ⛔ ⛔ NO `audit_id` — see the target setter above for why (Pass 2 / G2).
                 canonicalJsonStringify({
                   pariwar_id: pariwarIdStr,
-                  audit_id: auditId,
                   reveal_to_members: body.visibility.revealToMembers,
                   reveal_to_public: body.visibility.revealToPublic,
                   updated_at: now.toISOString(),
@@ -363,7 +411,9 @@ export function createDriveTargetHandlers(deps: AppDeps) {
               .digest('hex'),
             traceId: request.requestContext.traceId ?? null,
           },
-          mutate: async () => {
+          // ⭐⭐ `{ auditId }` — the REAL audit line's id; see the target setter for the defect this
+          // closes. ⛔ Do not reintroduce a locally minted anchor.
+          mutate: async ({ auditId }) => {
             const row = await poolDomain.setDriveTargetVisibility(tx, {
               pariwarId,
               visibility: body.visibility,

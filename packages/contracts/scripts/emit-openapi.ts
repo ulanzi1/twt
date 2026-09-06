@@ -2059,6 +2059,14 @@ const driveTargetAuth = errorResponse('Authentication required');
 const driveTargetForbidden = errorResponse(
   'Forbidden — requires pariwar.manage_drive_target at pariwar scope (pariwar_admin or super_admin)',
 );
+// ⭐ 404 — code review Pass 2 / G2. A REAL, TESTED status on all four routes that was documented on
+// NONE of them. It is a DIFFERENT LAYER from the 403: scope resolution never attaches a Pariwar the
+// acting admin has no grant for at all, so the route is "not found" rather than "forbidden".
+// ⛔ Without this a generated client treats it as a transport failure or a missing endpoint.
+const driveTargetNotFound = errorResponse(
+  'No grant for this Pariwar — scope resolution did not attach it. Distinct from 403: 404 means ' +
+    '"this Pariwar is not yours", 403 means "it is yours, but you lack this key"',
+);
 const driveTargetRevealForbidden = errorResponse(
   'Forbidden — requires pariwar.manage_drive_target_visibility at pariwar scope (super_admin ONLY; ' +
     'a pariwar_admin holds the WRITE key and is denied here by ruling, 2026-09-04-190 cl.7(c))',
@@ -2087,6 +2095,7 @@ registry.registerPath({
     },
     401: driveTargetAuth,
     403: driveTargetForbidden,
+    404: driveTargetNotFound,
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 
@@ -2110,7 +2119,9 @@ registry.registerPath({
     'changed this" when the someone was itself. ' +
     "The acting admin's display name is resolved SERVER-SIDE from users.display_name and is never " +
     "accepted from the caller, and the effective-from instant is the SERVER's. Writes a §1.5 " +
-    'hash-chain audit line covering the same transaction as the change. ' +
+    'hash-chain audit line, written on a separate service connection and paired with a compensating ' +
+    'entry if the change fails — NOT in the same transaction as the change itself. The line\'s id ' +
+    'is recorded on the written row as its audit anchor. ' +
     'SETTING IS NEVER REVEALING: a newly set target stays hidden from members and the public until ' +
     'a super_admin reveals it on the separate visibility resource. ' +
     'Requires pariwar.manage_drive_target at pariwar scope.',
@@ -2126,18 +2137,36 @@ registry.registerPath({
     },
     400: errorResponse(
       'Request validation failed (an empty rationale, or a target that is not a whole number of ' +
-        'rupees strictly greater than 0 and within the ceiling)',
+        'rupees strictly greater than 0 and within the ceiling). Note the rationale is TRIMMED ' +
+        'before both length checks, so a whitespace-only value fails minLength and a maxLength ' +
+        'value with surrounding whitespace is accepted. ' +
+        'ALSO: an unusable Idempotency-Key — sent more than once, or blank ' +
+        '(pariwar.drive_target_idempotency_key_invalid); an unusable key is REFUSED rather than ' +
+        'silently ignored, because a caller that believes it is protected and is not will retry ' +
+        'into a duplicate. ' +
+        'ALSO, on a multi-node deployment only: pariwar.drive_target_effective_from_skew, when ' +
+        "this node's clock trails the open head's by more than the permitted skew. The caller " +
+        'supplies no instant, so this reflects server clock drift, not the request.',
     ),
     401: driveTargetAuth,
     403: driveTargetForbidden,
+    404: driveTargetNotFound,
     409: errorResponse(
       'The acting admin has no users.display_name (admin.display_name_missing); OR the ' +
         'expectedVersion does not match the current target (pariwar.drive_target_version_conflict) ' +
         '— re-read and re-submit; OR a change with this Idempotency-Key is already in progress',
     ),
     422: errorResponse(
-      'The change is malformed as a GOVERNANCE RECORD — a missing rationale, audit anchor, display ' +
-        'name or grant (pariwar.drive_target_ungoverned_change)',
+      'BACKSTOP ONLY — not reachable through this API. The change is malformed as a GOVERNANCE ' +
+        'RECORD (pariwar.drive_target_ungoverned_change). Every condition that raises it is ' +
+        'pre-empted upstream: a blank rationale fails contract validation (400), the audit anchor ' +
+        'is always server-minted, a missing display name returns 409, and a missing grant returns ' +
+        '403. Documented because the domain accessor can still raise it for a non-HTTP caller',
+    ),
+    503: errorResponse(
+      'The idempotency record could not be written (idempotency.record_failed). The change may ' +
+        'well have been applied — retry WITH THE SAME Idempotency-Key, which is exactly what the ' +
+        'key makes safe',
     ),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
@@ -2166,6 +2195,7 @@ registry.registerPath({
     },
     401: driveTargetAuth,
     403: driveTargetRevealForbidden,
+    404: driveTargetNotFound,
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 
@@ -2197,14 +2227,28 @@ registry.registerPath({
       description: 'The updated reveal posture',
       content: jsonOf(driveTargetComponents.DriveTargetVisibilityResponse),
     },
-    400: errorResponse('Request validation failed (an empty or whitespace-only rationale)'),
+    400: errorResponse(
+      'Request validation failed (an empty or whitespace-only rationale — the value is TRIMMED ' +
+        'before both length checks). ALSO: an unusable Idempotency-Key, sent more than once or ' +
+        'blank (pariwar.drive_target_idempotency_key_invalid)',
+    ),
     401: driveTargetAuth,
     403: driveTargetRevealForbidden,
-    409: errorResponse("The acting admin has no users.display_name (admin.display_name_missing)"),
+    404: driveTargetNotFound,
+    409: errorResponse(
+      'The acting admin has no users.display_name (admin.display_name_missing); OR a change with ' +
+        'this Idempotency-Key is already in progress ' +
+        '(pariwar.drive_target_idempotency_in_progress) — this route is idempotency-wrapped too',
+    ),
     422: errorResponse(
       'The target cannot be revealed to the public while it is hidden from members ' +
-        '(pariwar.drive_target_visibility_invalid); OR the change is malformed as a governance ' +
-        'record (pariwar.drive_target_ungoverned_change)',
+        '(pariwar.drive_target_visibility_invalid) — also refused by a database CHECK. ' +
+        '(pariwar.drive_target_ungoverned_change is registered at 422 but is BACKSTOP ONLY, not ' +
+        'reachable through this API — see the target PUT for why)',
+    ),
+    503: errorResponse(
+      'The idempotency record could not be written (idempotency.record_failed) — retry WITH THE ' +
+        'SAME Idempotency-Key',
     ),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });

@@ -108,10 +108,31 @@ export type DriveTargetResponse = z.output<typeof DriveTargetResponse>;
  * browser lie about who made the change. ⛔ AND NO `effectiveFrom` EITHER: a caller-supplied instant
  * would let an operator BACK-DATE a window. `.strict()` makes both unrepresentable on the wire.
  */
+/**
+ * The REQUIRED "why" on every drive-target governance write.
+ *
+ * ⚠⛔ **`.trim()` RUNS BEFORE BOTH LENGTH CHECKS, AND THAT WAS INVISIBLE TO GENERATED CLIENTS**
+ * (code review Pass 2 / G2). The emitted schema carried a bare `minLength: 1` / `maxLength: 2000`,
+ * so a client validating against the published spec ⛔ accepted `"   "` (length 3 ≥ 1) and was then
+ * refused with a **400 the spec said could not happen** — and a 2000-character rationale with
+ * surrounding whitespace was documented-invalid but server-valid.
+ *
+ * ⭐ `.regex(/\S/)` is the fix that TRAVELS: it emits as an OpenAPI `pattern`, so the published
+ * contract now actually refuses a whitespace-only rationale instead of merely describing that it
+ * would. ⛔ It does not make the two `maxLength` readings agree — OpenAPI has no notion of a
+ * pre-check transform — which is why the emitted descriptions say so in words.
+ */
+const GovernanceRationale = z
+  .string()
+  .trim()
+  .min(1)
+  .max(2000)
+  .regex(/\S/, 'rationale must contain at least one non-whitespace character');
+
 export const SetDriveTargetRequest = z
   .object({
     targetInr: DriveTargetInr,
-    rationale: z.string().trim().min(1).max(2000),
+    rationale: GovernanceRationale,
     /**
      * ⭐⭐ `2026-09-05-201` cl.4 — **REQUIRED, and `number | null`. ⛔ NOT `.optional()`.**
      *
@@ -186,7 +207,7 @@ export type DriveTargetVisibilityResponse = z.output<typeof DriveTargetVisibilit
 export const SetDriveTargetVisibilityRequest = z
   .object({
     visibility: DriveTargetVisibility,
-    rationale: z.string().trim().min(1).max(2000),
+    rationale: GovernanceRationale,
   })
   .strict();
 export type SetDriveTargetVisibilityRequest = z.output<typeof SetDriveTargetVisibilityRequest>;

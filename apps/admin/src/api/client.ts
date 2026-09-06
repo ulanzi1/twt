@@ -106,6 +106,8 @@ import {
   DegradedModeDeclarationResponse,
   DirectoryPublicationStatusResponse,
   NomineeBankMaskingScheduleResponse,
+  DriveTargetResponse,
+  DriveTargetVisibilityResponse,
   WaConfigResponse,
   WaTemplateDto,
   WaTemplatesResponse,
@@ -115,7 +117,11 @@ import {
   type DegradedModeDeclareRequest,
   type DirectoryPublicationStatusResponse as DirectoryPublicationStatus,
   type NomineeBankMaskingScheduleResponse as NomineeBankMaskingSchedule,
+  type DriveTargetResponse as DriveTarget,
+  type DriveTargetVisibilityResponse as DriveTargetVisibilityStatus,
   type SetDirectoryPublicationRequest,
+  type SetDriveTargetRequest,
+  type SetDriveTargetVisibilityRequest,
   type SetNomineeBankMaskingRequest,
   type WaConfigResponse as WaConfig,
   type WaConfigUpsertRequest,
@@ -935,6 +941,59 @@ export function setNomineeBankMaskingSchedule(
     NomineeBankMaskingScheduleResponse,
     { method: 'PUT', body: JSON.stringify(body) },
   );
+}
+
+// ── Per-Pariwar DRIVE TARGET (Story 11b.13) ───────────────────────────────────
+// Tenant-scoped under /p/:pariwarId/admin/drive-target. TWO resources under TWO server-side gates:
+// the TARGET (`pariwar.manage_drive_target` — pariwar_admin + super_admin) and the REVEAL SWITCHES
+// (`pariwar.manage_drive_target_visibility` — ⛔ super_admin ONLY, `2026-09-04-190` cl.7(c)).
+//
+// ⭐⭐ THE VISIBILITY CALLS 403 FOR A `pariwar_admin`, AND THAT IS THE DESIGN, ⛔ not an error state.
+// AC5 requires the reveal switches be visible only to a super_admin, and the SERVER's answer is what
+// enforces it — ⛔ never a client-side capability check, which could not work: both keys are
+// PARIWAR-dimension grants and never appear in the session's global grant set, so a gate modelled on
+// the global-scope pattern would deny every operator including super_admin. The page omits the whole
+// reveal section on a 403 rather than rendering a page error.
+//
+// ⛔ The target request body deliberately carries NO display name and NO effective-from: the first is
+// resolved SERVER-SIDE (a browser-supplied one would let an operator lie about who made the change),
+// the second is the server's instant (a caller-supplied one would allow back-dating a target).
+// ⭐⭐ IT DOES carry `expectedVersion` — REQUIRED and nullable (`2026-09-05-201` cl.4). The console
+// holds and displays the version, so it cannot legitimately omit it.
+
+const driveTargetBase = (pariwarId: string): string =>
+  `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/drive-target`;
+
+/** GET the Pariwar's current drive target (+ the version to echo back). */
+export function getDriveTarget(pariwarId: string): Promise<DriveTarget> {
+  return apiFetch(driveTargetBase(pariwarId), DriveTargetResponse);
+}
+
+/** PUT the governed target change; returns the updated target. */
+export function setDriveTarget(
+  pariwarId: string,
+  body: SetDriveTargetRequest,
+): Promise<DriveTarget> {
+  return apiFetch(driveTargetBase(pariwarId), DriveTargetResponse, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
+}
+
+/** GET the Pariwar's reveal switches. ⛔ 403 for anyone but a super_admin — an EXPECTED outcome. */
+export function getDriveTargetVisibility(pariwarId: string): Promise<DriveTargetVisibilityStatus> {
+  return apiFetch(`${driveTargetBase(pariwarId)}/visibility`, DriveTargetVisibilityResponse);
+}
+
+/** PUT the super_admin-only reveal decision; returns the updated posture. */
+export function setDriveTargetVisibility(
+  pariwarId: string,
+  body: SetDriveTargetVisibilityRequest,
+): Promise<DriveTargetVisibilityStatus> {
+  return apiFetch(`${driveTargetBase(pariwarId)}/visibility`, DriveTargetVisibilityResponse, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
 }
 
 // ── Auth surface (Story 1.9 endpoints, driven by the login page) ──────────────

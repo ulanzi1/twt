@@ -113,6 +113,15 @@ export * from './directory-publication/index.js';
 // ⛔ The SETTING is a discriminated union of cl.10(c)'s three, ⛔ never a boolean — cl.10(d) rules a
 // later "simplification" to one a DEFECT, not a cleanup.
 export * from './nominee-bank-masking/index.js';
+// Story 11b.13 — the per-Pariwar DRIVE TARGET admin DTOs. FOUR endpoints under TWO gates: the
+// target read/write (`pariwar.manage_drive_target`, `pariwar_admin`) and the reveal read/write
+// (`pariwar.manage_drive_target_visibility`, ⛔ `super_admin` ONLY, `2026-09-04-190` cl.7(c)).
+// ⭐⭐ TWO RESOURCES, ⛔ not one with a role-shaped response — a single endpoint returning the flags
+// "when the caller holds the reveal key" would put the authority boundary INSIDE A HANDLER, which is
+// what the two-key / two-record split exists to prevent.
+// ⛔⛔ ADMIN ONLY: ⛔ never re-export these from a public or member barrel — cl.7(b) makes the figure
+// invisible to both, and Story 11b.14 consumes it SERVER-SIDE.
+export * from './drive-target/index.js';
 
 // Story 7.10 — member pool-onboarding-tutorial outcome DTO (member-session-gated completion/skip event).
 // HTTP endpoint → registers in openapi/v1.yaml (the member outcome route is the EXPECTED diff for this story).

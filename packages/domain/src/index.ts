@@ -142,6 +142,23 @@ export {
   POOL_STATE_DIRECT_WRITE_CODE,
   isPoolStateDirectWriteError,
 } from './pool/errors.js';
+// Story 11b.13 — the per-Pariwar DRIVE TARGET typed errors. Surfaced at the top level for one
+// specific reason: `apps/api/src/middleware/error-mapping/index.ts` matches on the CLASS, and every
+// one of these MUST be registered there.
+// ⛔⛔ THAT IS NOT HYGIENE. `2026-09-05-201` cl.4 rules the version conflict must be a 409 with its
+// own REGISTERED code — ⛔ never a bare 23505 and ⛔ never the opaque 500 that
+// `UngovernedNomineeBankMaskingChangeError` reaches the wire as on the precedent module (Story
+// 11b.3a chunk G2's finding). ⛔ Do not add a drive-target throw without registering it.
+export {
+  DriveTargetInvalidError,
+  DriveTargetVersionConflictError,
+  DriveTargetVisibilityInvalidError,
+  UngovernedDriveTargetChangeError,
+  DRIVE_TARGET_INVALID_CODE,
+  DRIVE_TARGET_UNGOVERNED_CODE,
+  DRIVE_TARGET_VERSION_CONFLICT_CODE,
+  DRIVE_TARGET_VISIBILITY_INVALID_CODE,
+} from './pool/errors.js';
 export * as schema from './schema/index.js';
 export * as encryption from './encryption/index.js';
 export * as policies from './policies/index.js';

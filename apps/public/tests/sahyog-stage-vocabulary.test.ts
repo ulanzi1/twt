@@ -34,8 +34,8 @@ function renderedValues(locale: string, namespace: string): Array<[string, strin
 
 describe('AC1 — the RETIRED stage words render ⛔ nowhere on either sahyog surface', () => {
   // ⚠⛔ WORD-BOUNDARY, ⛔ NOT SUBSTRING — and that is load-bearing in both directions.
-  //  · Substring `collect` would false-fail on *"the contribution window closes"*-style prose and
-  //    on `empty.body`'s *"collection window"*, neither of which is a STAGE NAME.
+  //  · Substring `collect` would false-fail on `collecting.body`'s D3-ruled *"the collection window
+  //    closes"* and on `empty.body`'s *"collection window"*, neither of which is a STAGE NAME.
   //  · Bare `active` would false-fail on ordinary prose containing the word.
   // ⭐ What `-190` cl.5(b) retires is the stage VOCABULARY, on the REGISTER ground recorded
   // verbatim — *"like Trust is collector"* — ⛔ not every string containing those letters.
@@ -90,11 +90,22 @@ describe('⛔⛔ AC1 — the `hi` half is pinned POSITIVELY, because a word ban 
   it('⛔ the RETIRED Hindi stage words render nowhere on either sahyog surface', () => {
     // ⭐ The exact strings the four files carried before this story: सक्रिय (Active),
     // संग्रह / अभिलेख (Archive) and संग्रहण (Collecting) — as WHOLE stage labels.
-    const RETIRED_HI = ['सक्रिय', 'अभिलेख', 'संग्रहण'];
+    const RETIRED_HI = ['सक्रिय', 'अभिलेख', 'संग्रहण', 'संग्रह'];
+
+    // ⚠⛔ TWO KNOWN, LEGITIMATE, NON-STAGE-LABEL USES OF संग्रह ("collection") — same shape as the
+    // English `RETIRED` regex's need for word-boundary, not substring: `empty.body` ("collection
+    // window") and `collecting.body` (D3-ruled, "collection window" retained verbatim). Both use
+    // संग्रह as an ordinary noun inside a sentence, ⛔ never as the bare ARCHIVE stage-label value —
+    // a real regression would reintroduce it AS a label (e.g. at `section.archive.title` or
+    // `table.caption.archive`), which this scoped exclusion does ⛔ not shield.
+    const KNOWN_NON_LABEL_USES = new Set(['sahyog-drive:empty.body', 'sahyog-vivran:collecting.body']);
+
     const offenders: string[] = [];
     for (const ns of SAHYOG_NAMESPACES) {
       for (const [k, v] of renderedValues('hi', ns)) {
-        if (RETIRED_HI.some((w) => v.includes(w))) offenders.push(`${ns}:${k}`);
+        const id = `${ns}:${k}`;
+        if (KNOWN_NON_LABEL_USES.has(id)) continue;
+        if (RETIRED_HI.some((w) => v.includes(w))) offenders.push(id);
       }
     }
     expect(offenders).toEqual([]);

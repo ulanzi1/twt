@@ -28,7 +28,7 @@ import { describe, expect, it } from 'vitest';
   // their explanations moved to the ONE shared source, `sahyog-shared` (`2026-09-04-193` cl.3,
   // AC4), where the drive page and (at story E) the member app read the SAME keys. ⛔ Do ⛔ not
   // re-add `status.*` or `section.*.help` here — two sources is exactly how *"Active"* came to mean
-  // two different things. ⭐ The shared set has its own key test in `sahyog-shared-copy.test.ts`.
+  // two different things. ⭐ The shared set has its own key test in `sahyog-stage-vocabulary.test.ts`.
 const KEYS = [
   'page.title',
   'page.intro',

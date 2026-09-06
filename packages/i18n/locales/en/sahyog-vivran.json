@@ -13,7 +13,7 @@
   "value.district_unknown": "Not recorded",
   "value.contributions_count": "{count} confirmed",
   "collecting.title": "This drive is Live",
-  "collecting.body": "Contributions are open. The final outcome will appear here once the contribution window closes and reconciliation settles. Until then this page shows only what has already been confirmed as received.",
+  "collecting.body": "Contributions are open. The final outcome will appear here once the collection window closes and reconciliation settles. Until then this page shows only what has already been confirmed as received.",
   "outcome.fully_funded": "The cycle closed with the support it needed.",
   "outcome.under_funded": "The cycle closed. The trust met its commitment to the family.",
   "outcome.partial": "The cycle closed. Reconciliation is still in progress.",

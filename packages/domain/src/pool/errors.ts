@@ -586,6 +586,47 @@ export class DriveTargetInvalidError extends PoolDriveTargetError {
   }
 }
 
+export const DRIVE_TARGET_EFFECTIVE_FROM_SKEW_CODE = 'pariwar.drive_target_effective_from_skew';
+
+/**
+ * ⭐⭐ The incoming `effective_from` precedes the open head by MORE than
+ * {@link MAX_DRIVE_TARGET_CLOCK_SKEW_MS} — code review Pass 2, decision **D-B** (BigDev, option 2).
+ *
+ * ⭐ `setDriveTargetSchedule` clamps a backwards `effective_from` up to the open head's start, so two
+ * API instances a second apart in NTP drift cannot produce an inverted window. ⚠⛔ **But the clamp
+ * closes the head at that same instant**, so a backwards write collapses the prior head's **ENTIRE**
+ * effective window to zero width — ⛔ not merely the overlap. Within a plausible skew that is a
+ * reconciliation of our own clocks; past it, it silently rewrites the as-of history of a record whose
+ * whole justification is that every prior target survives, and the resolver then answers *"what was
+ * this Pariwar's target on day 3?"* with the NEW figure.
+ *
+ * ⇒ this refuses the write instead. ⚠ It is a **CALLER** error, ⛔ not a conflict: retrying with the
+ * same instant will fail identically, so it is ⛔ NOT a 409. Registered so it can ⛔ never surface as
+ * the opaque 500 this module exists to avoid (`2026-09-05-201` cl.4).
+ *
+ * ⚠⛔ **BOUNDS THE BACKWARDS DIRECTION ONLY** — a FUTURE `effective_from` on a Pariwar's first write
+ * has no head to compare against and ⛔ no reference clock in this layer; that gap is recorded in the
+ * story's Pass-2 findings, ⛔ not silently claimed as closed here.
+ */
+export class DriveTargetEffectiveFromSkewError extends PoolDriveTargetError {
+  public readonly name = 'DriveTargetEffectiveFromSkewError';
+  public readonly code = DRIVE_TARGET_EFFECTIVE_FROM_SKEW_CODE;
+  public constructor(
+    public readonly pariwarId: string,
+    public readonly requestedEffectiveFrom: Date,
+    public readonly headEffectiveFrom: Date,
+    public readonly maxSkewMs: number,
+  ) {
+    super(
+      `drive target effective_from ${requestedEffectiveFrom.toISOString()} precedes the open head's ` +
+        `${headEffectiveFrom.toISOString()} by more than the permitted clock skew of ${maxSkewMs}ms ` +
+        `(pariwar ${pariwarId}). Within that bound the window is clamped forward; beyond it the ` +
+        `write is refused, because clamping would close the prior version at its own start instant ` +
+        `and erase it from the as-of history.`,
+    );
+  }
+}
+
 export const DRIVE_TARGET_VERSION_CONFLICT_CODE = 'pariwar.drive_target_version_conflict';
 
 /**
@@ -619,6 +660,18 @@ export class DriveTargetVersionConflictError extends PoolDriveTargetError {
         `else changed it. Re-read the current target and re-submit if you still want your change.`,
     );
   }
+}
+
+/**
+ * True iff `err` is a Postgres unique-violation (23505) — used as a DEFENCE-IN-DEPTH backstop on
+ * `setDriveTargetSchedule`'s close-head/insert-head pair. The advisory lock + the `expectedVersion`
+ * check inside it are what normally prevent a losing writer ever reaching the insert; this converts
+ * the residual `(pariwar_id, version)` / partial-unique-open-head collision that would occur if the
+ * lock were ever removed or bypassed into the SAME registered 409 rather than a bare `23505` →
+ * opaque 500 (`2026-09-05-201` cl.4/cl.6). Mirrors {@link isFixedAmountUniqueViolation}.
+ */
+export function isDriveTargetScheduleUniqueViolation(err: unknown): boolean {
+  return extractPgError(err)?.code === '23505';
 }
 
 export const DRIVE_TARGET_VISIBILITY_INVALID_CODE = 'pariwar.drive_target_visibility_invalid';

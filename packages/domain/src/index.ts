@@ -150,10 +150,12 @@ export {
 // `UngovernedNomineeBankMaskingChangeError` reaches the wire as on the precedent module (Story
 // 11b.3a chunk G2's finding). ⛔ Do not add a drive-target throw without registering it.
 export {
+  DriveTargetEffectiveFromSkewError,
   DriveTargetInvalidError,
   DriveTargetVersionConflictError,
   DriveTargetVisibilityInvalidError,
   UngovernedDriveTargetChangeError,
+  DRIVE_TARGET_EFFECTIVE_FROM_SKEW_CODE,
   DRIVE_TARGET_INVALID_CODE,
   DRIVE_TARGET_UNGOVERNED_CODE,
   DRIVE_TARGET_VERSION_CONFLICT_CODE,

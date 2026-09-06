@@ -51,7 +51,7 @@
 // Naming discipline per architecture L3663-3677: DB columns snake_case, TS fields camelCase.
 
 import { sql } from 'drizzle-orm';
-import { boolean, check, index, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { boolean, check, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 import type { PariwarId, UserId } from '../ids/index.js';
 
@@ -96,8 +96,9 @@ export const pariwarDriveTargetVisibility = pgTable(
       sql`NOT (${t.revealToPublic} AND NOT ${t.revealToMembers})`,
     ),
 
-    index('pariwar_drive_target_visibility_pariwar_id_idx').on(t.pariwarId),
-    // ONE row per Pariwar — the pariwar_public_name_presentation precedent.
+    // ONE row per Pariwar — the pariwar_public_name_presentation precedent. This UNIQUE index also
+    // serves every `WHERE pariwar_id = $1` lookup (the RLS predicate, the resolver), so a separate
+    // non-unique `(pariwar_id)` index would be dead weight — dropped 2026-09-06 (review).
     uniqueIndex('pariwar_drive_target_visibility_pariwar_id_uq').on(t.pariwarId),
   ],
 );

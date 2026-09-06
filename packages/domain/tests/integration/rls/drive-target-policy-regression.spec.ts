@@ -29,8 +29,10 @@
 
 import { randomUUID } from 'node:crypto';
 
+import { sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
+import { MAX_DRIVE_TARGET_INR } from '../../../src/pool/drive-target.js';
 import { resolveDriveTargetVisibility } from '../../../src/pool/drive-target-policy.js';
 import * as schema from '../../../src/schema/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
@@ -239,10 +241,51 @@ describe.skipIf(!hasDatabase)('drive-target tables — RLS + DB-level backstops'
     expect(rows[0]?.effectiveUntil?.toISOString()).toBe(t.toISOString());
   });
 
+  it('⭐⭐ THE DB CEILING **IS** `MAX_DRIVE_TARGET_INR` — the "KEEP IN SYNC" obligation, MECHANIZED', async () => {
+    // ⚠⛔ THE GAP THIS CLOSES (code review Pass 2, all three layers). The ceiling lives in FOUR
+    // artifacts: this constant, the hand-authored literal in migration `0115` (which is FROZEN and
+    // deliberately never regenerated), a third literal in `@twt/contracts`, and the drizzle
+    // declaration — which alone derives it. Four comments say "keep IN SYNC" and ⛔ nothing enforced
+    // it. Every ceiling test asserted rejection ABOVE a HARD-CODED `100_000_001`, so raising
+    // `MAX_DRIVE_TARGET_INR` left the applied DB CHECK stale while every suite stayed green — and a
+    // value the app now accepts would die at Postgres as a bare `23514`, which is ⛔ not in the
+    // error-mapping registry ⇒ the opaque 500 that `2026-09-05-201` exists to prevent. ⭐ That is
+    // this story's own named failure mode, reproduced by the discipline meant to avoid it.
+    // ⇒ ask the DATABASE what its bound actually is.
+    const { tx, client } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const def = await tx.execute(sql`
+      SELECT pg_get_constraintdef(oid) AS def
+      FROM pg_constraint
+      WHERE conname = 'pariwar_drive_target_schedule_target_max'
+    `);
+    const row = (def as unknown as { rows: { def: string }[] }).rows[0];
+    expect(row?.def).toBeDefined();
+    expect(row?.def).toContain(String(MAX_DRIVE_TARGET_INR));
+  });
+
+  it('⭐ the ceiling ACCEPTS its own boundary value — the CHECK is `<=`, ⛔ not `<`', async () => {
+    // ⚠ Every other ceiling assertion tests rejection ABOVE the bound, so a DB CHECK that had been
+    // narrowed to `< MAX` (or to a lower number entirely) would pass all of them. This is the
+    // accept-at-the-boundary half.
+    const { tx, client } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const rows = await tx
+      .insert(schema.pariwarDriveTargetSchedule)
+      .values({
+        ...rawSchedule(PARIWAR_A, 1, new Date(), null),
+        targetInr: MAX_DRIVE_TARGET_INR,
+      })
+      .returning();
+    expect(Number(rows[0]?.targetInr)).toBe(MAX_DRIVE_TARGET_INR);
+  });
+
   it.each([
     ['zero', 0, '23514'],
     ['negative', -1, '23514'],
-    ['above the ceiling', 100_000_001, '23514'],
+    // ⭐ DERIVED from the constant (Pass 2) — ⛔ no longer the hard-coded `100_000_001` that stayed
+    // green against a stale DB bound.
+    ['above the ceiling', MAX_DRIVE_TARGET_INR + 1, '23514'],
   ])('⭐ the money CHECKs are REAL at the DB — a %s target is rejected', async (_l, value, code) => {
     // ⭐ Asserted DIRECTLY, ⛔ never inferred through the accessor — `pools.fixed_amount` is the
     // counter-example: a bare `integer NOT NULL` whose app-side guard is the ONLY guard.

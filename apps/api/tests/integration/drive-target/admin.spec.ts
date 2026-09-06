@@ -31,6 +31,7 @@
 // table, and each test uses a FRESH random pariwarId ([[project_live_db_test_gotchas]]).
 
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 
 import { ids, pool as poolDomain } from '@twt/domain';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -49,6 +50,9 @@ const visibilityUrl = (pariwarId: string): string =>
   `/api/v1/p/${pariwarId}/admin/drive-target/visibility`;
 
 const TARGET_AUDIT_ACTION = 'pariwar.drive_target.changed';
+/** ⭐ Pass 2 / G2 — the reveal action appeared in ⛔ NO test, so an unwritten visibility audit line
+ *  was invisible to this suite. */
+const VISIBILITY_AUDIT_ACTION = 'pariwar.drive_target_visibility.changed';
 
 interface TargetBody {
   targetInr: number | null;
@@ -167,6 +171,20 @@ describe.skipIf(!hasDatabase)('Drive-target admin surface (Story 11b.13)', () =>
   /**
    * Grant a role. `super_admin` is granted at the GLOBAL dimension (the directory-publication /
    * masking precedent) — a global super_admin grant satisfies a pariwar-dimension check.
+   *
+   * ⚠⛔ **THE COMMENT ABOVE IS TRUE BUT INCOMPLETE, AND THE MISSING HALF IS LOAD-BEARING** (code
+   * review Pass 2 / G2). A review layer flagged that this stamps `pariwar_id` with the Pariwar under
+   * test even for `dimension: 'global'`, and argued the fixture therefore ⛔ could not distinguish
+   * *"a global grant satisfies a pariwar-dimension check"* from *"the row happens to name this
+   * Pariwar"*. ⭐ **Investigated, and the row's `pariwar_id` is REQUIRED — ⛔ not incidental.**
+   * `loadActorGrants` queries `role_grants WHERE user_id = $1` with ⛔ NO Pariwar predicate, but it
+   * runs on the **RLS-scoped** `scopeTx.client`, so `role_grants` is filtered to the active Pariwar
+   * by the tenant policy. ⇒ a grant row that does ⛔ not name this Pariwar is **invisible**, whatever
+   * its dimension. ⭐ BOTH halves do work: `pariwar_id` decides whether the row is SEEN, and
+   * `scope_dimension: 'global'` + `scope_value: null` decides whether it SATISFIES a
+   * pariwar-dimension check. ⛔ Do not "fix" this by giving the global grant a different
+   * `pariwar_id` — that hides it and every reveal test 403s. The property is pinned by its own test
+   * below (*a global grant on ANOTHER Pariwar is not seen here*).
    */
   async function grantRole(
     userId: string,
@@ -181,6 +199,36 @@ describe.skipIf(!hasDatabase)('Drive-target admin surface (Story 11b.13)', () =>
            VALUES ($1, $2, $3, $4, $5)`,
         [userId, pariwarId, role, dimension, dimension === 'global' ? null : pariwarId],
       );
+    } finally {
+      c.release();
+    }
+  }
+
+  /** The audit line's own id for a Pariwar + action — the anchor a written row must carry. */
+  async function auditLineIds(pariwarId: string, action: string): Promise<string[]> {
+    const c = await td.pool.connect();
+    try {
+      const res = await c.query(
+        `SELECT audit_id::text AS id FROM audit_log_entries
+           WHERE pariwar_id = $1 AND action = $2 ORDER BY seq`,
+        [pariwarId, action],
+      );
+      return (res.rows as { id: string }[]).map((r) => r.id);
+    } finally {
+      c.release();
+    }
+  }
+
+  /** The schedule row's recorded audit anchor. */
+  async function storedTargetAuditIds(pariwarId: string): Promise<string[]> {
+    const c = await td.pool.connect();
+    try {
+      const res = await c.query(
+        `SELECT audit_id::text AS audit_id FROM pariwar_drive_target_schedule
+           WHERE pariwar_id = $1 ORDER BY version`,
+        [pariwarId],
+      );
+      return (res.rows as { audit_id: string }[]).map((r) => r.audit_id);
     } finally {
       c.release();
     }
@@ -297,6 +345,36 @@ describe.skipIf(!hasDatabase)('Drive-target admin surface (Story 11b.13)', () =>
 
     expect(await resolverTarget(pariwarId)).toBe(500_000);
     expect(await auditLines(pariwarId, TARGET_AUDIT_ACTION)).toBe(1);
+  });
+
+  it('⭐⭐ the row\'s `audit_id` IS the id of a REAL audit line — the anchor JOINS', async () => {
+    // ⚠⛔ THE ASSERTION WHOSE ABSENCE LET A DANGLING ANCHOR SHIP (code review Pass 2 / G2).
+    // `withCompensatingAudit` writes the audit line and hands ITS id to the `mutate` callback; both
+    // handlers used to DISCARD that parameter and write a locally minted `randomUUID()` instead.
+    // ⇒ every governance row's `audit_id` pointed at a row that ⛔ DOES NOT EXIST — on the surface
+    // whose whole justification is provenance, and in the column the schema calls *"the join back
+    // to it"*. ⛔ The column has no FK and the domain guard checks only NON-NULL, so ⛔ nothing
+    // failed: only this assertion can. ⛔ Do not weaken it to a shape/`toBeTruthy` check — a random
+    // UUID passes those, which is exactly how the defect survived two review passes.
+    const pariwarId = freshPariwar();
+    const { client, userId } = await authenticate();
+    await grantRole(userId, pariwarId, 'pariwar_admin');
+
+    await client.inject({ method: 'PUT', url: targetUrl(pariwarId), payload: goodBody() });
+    await client.inject({
+      method: 'PUT',
+      url: targetUrl(pariwarId),
+      payload: { ...goodBody(), targetInr: 750_000, expectedVersion: 1 },
+    });
+
+    const anchors = await storedTargetAuditIds(pariwarId);
+    const lineIds = await auditLineIds(pariwarId, TARGET_AUDIT_ACTION);
+    expect(anchors).toHaveLength(2);
+    expect(lineIds).toHaveLength(2);
+    // ⭐ Every anchor resolves to a real line, and the two versions carry DIFFERENT anchors (so a
+    // single shared or copied-forward id cannot pass either).
+    expect([...anchors].sort()).toEqual([...lineIds].sort());
+    expect(new Set(anchors).size).toBe(2);
   });
 
   it('a second change CLOSES the head and returns version 2 — the trail survives', async () => {
@@ -488,6 +566,48 @@ describe.skipIf(!hasDatabase)('Drive-target admin surface (Story 11b.13)', () =>
     expect(await storedTargets(pariwarId)).toHaveLength(0);
   });
 
+  it('⭐⭐ CROSS-PARIWAR — a `pariwar_admin` of A is REFUSED on B, and writes NOTHING to B', async () => {
+    // ⚠⛔ FAMILY 3's ACTUAL CASE, MISSING UNTIL CODE REVIEW PASS 2 / G2. The two denials above are
+    // (a) a role INSIDE the tenant that lacks the key → 403, and (b) an admin with ⛔ NO grant
+    // ANYWHERE → 404. ⛔ NEITHER is the tenancy regression this family exists for: an actor who is
+    // legitimately a `pariwar_admin` **somewhere** reaching into a Pariwar that is ⛔ not theirs.
+    // ⭐ The 404 test's own comment contrasts *"this Pariwar is not yours"* with *"it is yours, but
+    // you lack this key"* — but its actor has ⛔ no Pariwar at all, so "not yours" was ⛔ never
+    // actually contrasted against "yours". A same-tenant-non-owner check is ⛔ not a cross-tenant
+    // check ([[feedback_trace_reachability_before_escalating]] — prove the boundary, don't infer it).
+    const pariwarA = freshPariwar();
+    const pariwarB = freshPariwar();
+    const { client, userId } = await authenticate();
+    await grantRole(userId, pariwarA, 'pariwar_admin'); // ⭐ a REAL grant — but on A only.
+
+    // Sanity: the grant genuinely works on A, so a refusal on B cannot be blamed on a dud fixture.
+    const onA = await client.inject({
+      method: 'PUT',
+      url: targetUrl(pariwarA),
+      payload: goodBody(),
+    });
+    expect(onA.statusCode).toBe(200);
+
+    for (const url of [targetUrl(pariwarB), visibilityUrl(pariwarB)]) {
+      const write = await client.inject({
+        method: 'PUT',
+        url,
+        payload: url.endsWith('visibility')
+          ? { visibility: { revealToMembers: true, revealToPublic: false }, rationale: 'x' }
+          : goodBody(),
+      });
+      expect(write.statusCode).toBe(404); // ⛔ B is not theirs — never 200, never a partial write.
+      const read = await client.inject({ method: 'GET', url });
+      expect(read.statusCode).toBe(404);
+    }
+
+    // ⭐ B is UNTOUCHED, asserted at the table — ⛔ not inferred from the status codes.
+    expect(await storedTargets(pariwarB)).toHaveLength(0);
+    expect(await storedVisibility(pariwarB)).toBeNull();
+    // …and A is unharmed by the attempts on B.
+    expect(await resolverTarget(pariwarA)).toBe(500_000);
+  });
+
   it('an unauthenticated caller → 401 (⛔ never a silent write)', async () => {
     const pariwarId = freshPariwar();
     const res = await makeClient(app).inject({
@@ -654,6 +774,192 @@ describe.skipIf(!hasDatabase)('Drive-target admin surface (Story 11b.13)', () =>
     expect(res.statusCode).toBe(400);
   });
 
+  // ── Branches that shipped with ⛔ NO test at all (code review Pass 2 / G2) ────────────────────
+
+  it('⭐ the REVEAL write records its OWN audit line — the action no test had ever named', async () => {
+    const pariwarId = freshPariwar();
+    const { client, userId } = await authenticate();
+    await grantRole(userId, pariwarId, 'super_admin', 'global');
+
+    const res = await client.inject({
+      method: 'PUT',
+      url: visibilityUrl(pariwarId),
+      payload: {
+        visibility: { revealToMembers: true, revealToPublic: false },
+        rationale: 'Members may see it.',
+      },
+    });
+    expect(res.statusCode).toBe(200);
+    // ⚠ `auditLines` was only ever called with TARGET_AUDIT_ACTION, so a reveal that wrote ⛔ no
+    // audit line — on the SUPER_ADMIN-ONLY DISCLOSURE act — would have been invisible.
+    expect(await auditLines(pariwarId, VISIBILITY_AUDIT_ACTION)).toBe(1);
+  });
+
+  it('⭐ the REVEAL route is idempotency-wrapped too — a replay does ⛔ not write twice', async () => {
+    // ⚠ The whole `drive-target:visibility:${pariwarId}` namespace was untested, so the
+    // namespace-collision guarantee between the two PUTs was asserted ⛔ NOWHERE.
+    const pariwarId = freshPariwar();
+    const { client, userId } = await authenticate();
+    await grantRole(userId, pariwarId, 'super_admin', 'global');
+    const key = randomUUID();
+    const payload = {
+      visibility: { revealToMembers: true, revealToPublic: true },
+      rationale: 'Publish it.',
+    };
+
+    const first = await client.inject({
+      method: 'PUT',
+      url: visibilityUrl(pariwarId),
+      payload,
+      headers: { 'idempotency-key': key },
+    });
+    const replay = await client.inject({
+      method: 'PUT',
+      url: visibilityUrl(pariwarId),
+      payload,
+      headers: { 'idempotency-key': key },
+    });
+    expect(first.statusCode).toBe(200);
+    expect(replay.statusCode).toBe(200);
+    // ⭐ ONE audit line for two requests — the replay returned the recorded result.
+    expect(await auditLines(pariwarId, VISIBILITY_AUDIT_ACTION)).toBe(1);
+
+    // ⭐⭐ AND THE NAMESPACES DO ⛔ NOT COLLIDE: the SAME key on the TARGET route is a different
+    // idempotency identity, so it must run rather than replay the reveal's recorded response.
+    const onTarget = await client.inject({
+      method: 'PUT',
+      url: targetUrl(pariwarId),
+      payload: goodBody(),
+      headers: { 'idempotency-key': key },
+    });
+    expect(onTarget.statusCode).toBe(200);
+    expect(onTarget.json<TargetBody>().targetInr).toBe(500_000);
+    expect(await auditLines(pariwarId, TARGET_AUDIT_ACTION)).toBe(1);
+  });
+
+  it('⛔ a BLANK Idempotency-Key is a 400 — ⛔ never a silent downgrade to unprotected', async () => {
+    // ⚠⛔ A present-but-unusable key used to be treated as ABSENT, so the write ran completely
+    // UNPROTECTED while the caller believed it was protected — and their timeout retry then
+    // manufactured the second version the key exists to prevent. ⇒ refuse loudly.
+    //
+    // ⚠⛔ CLOSURE HONESTY — THE OTHER UNUSABLE SHAPE IS ⛔ NOT CONSTRUCTIBLE HERE. Real Fastify
+    // surfaces a REPEATED `Idempotency-Key` as `string[]` (a proxy or SDK that appends rather than
+    // replaces sends one), and the handler guards `Array.isArray(headerKey)` for exactly that. But
+    // `light-my-request`'s `inject` JOINS an array into ONE comma-separated string, so that arm
+    // ⛔ cannot be reached through this harness. ⇒ the guard is asserted by the blank case only, and
+    // the array case is recorded as un-attested rather than faked with a test that exercises a
+    // different code path ([[feedback_record_unattested_no_backfill]]).
+    const pariwarId = freshPariwar();
+    const { client, userId } = await authenticate();
+    await grantRole(userId, pariwarId, 'pariwar_admin');
+
+    const res = await client.inject({
+      method: 'PUT',
+      url: targetUrl(pariwarId),
+      payload: goodBody(),
+      headers: { 'idempotency-key': '   ' },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(await storedTargets(pariwarId)).toHaveLength(0);
+  });
+
+  it('⭐⭐ RLS, ⛔ not dimension alone — a GLOBAL grant on ANOTHER Pariwar is ⛔ not seen here', async () => {
+    // ⭐ Pins the half the `grantRole` doc-block explains: `loadActorGrants` has ⛔ NO Pariwar
+    // predicate, so it is the RLS-scoped client that filters `role_grants` to the active Pariwar.
+    // ⇒ `scope_dimension: 'global'` satisfies the pariwar-DIMENSION check, but the row must still
+    // NAME this Pariwar to be visible at all. ⛔ A reviewer who "corrects" the fixture to give the
+    // global grant a different `pariwar_id` breaks every reveal test — this is why.
+    const here = freshPariwar();
+    const elsewhere = freshPariwar();
+    const { client, userId } = await authenticate();
+    await grantRole(userId, here, 'pariwar_admin'); // lets scope resolve on `here`
+    await grantRole(userId, elsewhere, 'super_admin', 'global'); // global — but on ANOTHER Pariwar
+
+    // The global super_admin grant exists, and is ⛔ invisible under `here`'s scope ⇒ 403, ⛔ not 200.
+    const res = await client.inject({ method: 'GET', url: visibilityUrl(here) });
+    expect(res.statusCode).toBe(403);
+  });
+
+  it('⭐ the target ACCEPTS its ceiling exactly — the bound is `<=`, ⛔ not `<`', async () => {
+    // ⚠ Only `MAX + 1` was tested, so a contract narrowed to `< MAX` (or to a smaller number) would
+    // have passed every existing assertion.
+    const pariwarId = freshPariwar();
+    const { client, userId } = await authenticate();
+    await grantRole(userId, pariwarId, 'pariwar_admin');
+
+    const res = await client.inject({
+      method: 'PUT',
+      url: targetUrl(pariwarId),
+      payload: goodBody(100_000_000),
+    });
+    expect(res.statusCode).toBe(200);
+    expect(await resolverTarget(pariwarId)).toBe(100_000_000);
+  });
+
+  it('⛔ the TARGET request is `.strict()` too — an unknown field is a 400', async () => {
+    // ⚠ Only the visibility PUT's `.strict()` was covered (via the target-smuggling test).
+    const pariwarId = freshPariwar();
+    const { client, userId } = await authenticate();
+    await grantRole(userId, pariwarId, 'pariwar_admin');
+
+    const res = await client.inject({
+      method: 'PUT',
+      url: targetUrl(pariwarId),
+      payload: { ...goodBody(), revealToPublic: true },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(await storedTargets(pariwarId)).toHaveLength(0);
+  });
+
+  it('⛔ a non-null `expectedVersion` against an UNSET Pariwar is a 409, ⛔ never a first write', async () => {
+    // ⚠ `null`-vs-null and stale-vs-current were covered; "I believe there is a version 1" against a
+    // Pariwar that has none was ⛔ not.
+    const pariwarId = freshPariwar();
+    const { client, userId } = await authenticate();
+    await grantRole(userId, pariwarId, 'pariwar_admin');
+
+    const res = await client.inject({
+      method: 'PUT',
+      url: targetUrl(pariwarId),
+      payload: goodBody(500_000, 1),
+    });
+    expect(res.statusCode).toBe(409);
+    expect(await storedTargets(pariwarId)).toHaveLength(0);
+  });
+
+  it('⭐ BOTH GETs return the CONFIGURED shape after a write — the non-null DTO arms', async () => {
+    // ⚠ Both GET tests only read the UNSET shape, so `toTargetDto`/`toVisibilityDto`'s non-null
+    // branches were reached only incidentally through PUT responses.
+    const pariwarId = freshPariwar();
+    const { client, userId } = await authenticate();
+    await grantRole(userId, pariwarId, 'pariwar_admin');
+    await grantRole(userId, pariwarId, 'super_admin', 'global');
+
+    await client.inject({ method: 'PUT', url: targetUrl(pariwarId), payload: goodBody() });
+    await client.inject({
+      method: 'PUT',
+      url: visibilityUrl(pariwarId),
+      payload: {
+        visibility: { revealToMembers: true, revealToPublic: false },
+        rationale: 'Members only.',
+      },
+    });
+
+    const t = await client.inject({ method: 'GET', url: targetUrl(pariwarId) });
+    expect(t.statusCode).toBe(200);
+    const tb = t.json<TargetBody>();
+    expect(tb.configured).toBe(true);
+    expect(tb.targetInr).toBe(500_000);
+    expect(tb.version).toBe(1);
+    expect(tb.changedByDisplay).toBe('Asha Verma');
+
+    const v = await client.inject({ method: 'GET', url: visibilityUrl(pariwarId) });
+    expect(v.statusCode).toBe(200);
+    const vb = v.json<{ configured: boolean; visibility: Record<string, boolean> }>();
+    expect(vb.configured).toBe(true);
+    expect(vb.visibility).toEqual({ revealToMembers: true, revealToPublic: false });
+  });
+
   // ── AC6 — NOTHING RENDERS IT ──────────────────────────────────────────────────────────────────
 
   it('⛔⛔ the target appears in ⛔ NO public drive or drive-page response (AC6)', async () => {
@@ -662,23 +968,47 @@ describe.skipIf(!hasDatabase)('Drive-target admin surface (Story 11b.13)', () =>
     await grantRole(userId, pariwarId, 'pariwar_admin');
     await client.inject({ method: 'PUT', url: targetUrl(pariwarId), payload: goodBody(1_234_567) });
 
-    // The unauthenticated public drive index for this Pariwar. ⛔ A TOKEN assertion: the figure, its
-    // field names and the reveal flags must not appear anywhere in the body.
-    const index = await makeClient(app).inject({
-      method: 'GET',
-      url: `/api/v1/p/${pariwarId}/public-pages/sahyog-drive`,
-    });
-    // ⚠ The status is not the subject — an empty or absent index is a fine outcome for a fresh
-    // Pariwar. What is asserted is that the target is nowhere in whatever came back.
-    const raw = index.body;
-    expect(raw).not.toContain('1234567');
-    expect(raw).not.toContain('targetInr');
-    expect(raw).not.toContain('target_inr');
-    expect(raw).not.toContain('revealToMembers');
-    expect(raw).not.toContain('revealToPublic');
+    // ⚠⛔ THE TOKEN SCAN THAT STOOD HERE WAS VACUOUS AND HAS MOVED (code review Pass 2 / G2).
+    // It injected `GET /public-pages/sahyog-drive` for this `freshPariwar()` — a `randomUUID()` that
+    // ⛔ NO row is ever created for in this suite — then EXPLICITLY WAIVED the status code and
+    // scanned the body. For a Pariwar that does not exist the route returns 404/empty, so
+    // `expect('').not.toContain('1234567')` is a TAUTOLOGY: adding `targetInr` to the public payload
+    // would have left it GREEN. ⛔ It guarded AC6's headline invariant and asserted nothing.
+    // ⭐ IT NOW LIVES IN `apps/api/tests/integration/public-pages/sahyog-drive.spec.ts`, whose
+    // fixture seeds a REAL Pariwar with a REAL closed drive serving a REAL 200 — and which now also
+    // sets a target AND reveals it to members and the public first, so the scan runs in the state
+    // most likely to leak. ⛔ Do not re-add a fixture-less scan here; this suite cannot build a
+    // public page, and a scan that cannot fail is worse than no scan.
+    //
+    // ⭐ What IS constructible here, and is asserted instead: the admin-facing response is the ONLY
+    // place the figure appears, and it is reached through the permission gate.
+    const authedEcho = await client.inject({ method: 'GET', url: targetUrl(pariwarId) });
+    expect(authedEcho.statusCode).toBe(200);
+    expect(authedEcho.body).toContain('1234567');
   });
 
-  it('⚠⛔ …and what that assertion does ⛔ NOT cover is RECORDED, ⛔ not mistaken for covered (D3)', () => {
+  it('⛔⛔ …and ⛔ NO MEMBER-facing route carries the target or either flag (AC6, the other half)', () => {
+    // ⚠⛔ AC6 names TWO surfaces — *"⛔ no public surface **and ⛔ no member surface**"* — and the
+    // scan it shipped with covered ⛔ NEITHER (it was fixture-less) and named only the public one.
+    // ⭐ The MEMBER half is proven here the way it is actually true: **BY CONSTRUCTION**. No member
+    // contract composes these shapes and no member route reads the resolvers, so there is no member
+    // response to scan — which is a STRONGER guarantee than a token scan, and the honest way to
+    // state it. This assertion fails the moment that stops being true.
+    const memberFacingContractSources = [
+      'packages/contracts/src/index.ts',
+      'apps/api/src/server.ts',
+    ];
+    for (const rel of memberFacingContractSources) {
+      const src = readFileSync(new URL(`../../../../../${rel}`, import.meta.url), 'utf8');
+      // The barrel/registration may NAME the drive-target module (it must, to register it) but must
+      // ⛔ never re-export its field shapes into a member or public surface.
+      expect(src).not.toContain('targetInr');
+      expect(src).not.toContain('revealToMembers');
+      expect(src).not.toContain('revealToPublic');
+    }
+  });
+
+  it('⚠⛔ …and the DERIVED channel neither scan covers is RECORDED, ⛔ not mistaken for covered (D3)', () => {
     // ⭐⭐ THE TEST ABOVE IS A **TOKEN** ASSERTION, AND STORY 11b.14 SHIPS A **DERIVED** CHANNEL IT
     // WOULD PASS STRAIGHT THROUGH. D's meter is `round(amountRaisedInr / target × 100)` and D's AC3
     // DISPLAYS `amountRaisedInr` itself ⇒ a reader recovers `target ≈ amount / percentage` from TWO
@@ -691,6 +1021,19 @@ describe.skipIf(!hasDatabase)('Drive-target admin surface (Story 11b.13)', () =>
     // ⇒ **D3 is ROUTED to Story 11b.14 (AC2 + Task 3) with the question OPEN**, and the mitigation
     // lives at D's RENDER BOUNDARY. ⛔ This story renders nothing, so D3 blocks no task here.
     // ⛔ Do not "fix" it by adding an assertion to this file — there is nothing here to fix.
-    expect(true).toBe(true);
+    //
+    // ⚠⛔ THE VEHICLE WAS `expect(true).toBe(true)` UNTIL CODE REVIEW PASS 2 / G2. Pass 1 dismissed
+    // that as the closure-honesty idiom; ⭐ that dismissal became untenable once the AC6 scan
+    // directly ABOVE it turned out to be vacuous too — two adjacent always-green cases presenting
+    // as AC6's coverage. The explanation above is genuinely valuable and stays; what it must ⛔ not
+    // do is inflate the suite's pass count with a case that CANNOT fail.
+    // ⇒ the assertion below is a REAL one: it pins that D3 is still OPEN and still ROUTED, by
+    // reading the routing target. ⛔ When 11b.14 answers D3, this fails and someone must revisit
+    // this note rather than leaving a stale "routed" claim behind.
+    const storyD = readFileSync(
+      new URL('../../../../../_bmad-output/implementation-artifacts/11b-14-live-drives-listed-and-the-progress-meter.md', import.meta.url),
+      'utf8',
+    );
+    expect(storyD).toContain('D3');
   });
 });

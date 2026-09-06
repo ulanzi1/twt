@@ -324,6 +324,74 @@ describe.skipIf(!hasDatabase)('public Sahyog Drive route (:5433)', { timeout: 30
   //
   // ⭐ FIXED AT THE SOURCE (`coerceDriveInstant`), ⛔ not per call site — the fragment is shared with
   // the Sahyog Vivran read, which would otherwise have inherited the identical break.
+  it("⛔⛔ the Pariwar's DRIVE TARGET appears ⛔ NOWHERE in the public response (Story 11b.13 AC6)", async () => {
+    // ⭐⭐ MOVED HERE FROM `drive-target/admin.spec.ts` BY CODE REVIEW PASS 2 / G2, because there it
+    // was ⛔ VACUOUS. That version injected this route for a `randomUUID()` Pariwar that ⛔ no row is
+    // ever created for, then EXPLICITLY WAIVED the status (*"the status is not the subject"*) and
+    // token-scanned the body — which for a 404/empty index contains none of the tokens ⛔ WHATEVER
+    // THE CODE DOES. Adding `targetInr` to the public payload would have left it green.
+    // ⭐ THE FIX IS THE FIXTURE, ⛔ not the assertions: this file already seeds a REAL Pariwar with a
+    // REAL closed drive that serves a REAL 200, so here the scan can actually fail.
+    // ⚠ `2026-09-04-190` cl.7(b) — the figure is hidden from members AND the public in every state;
+    // only a `super_admin` reveal on the separate visibility resource may change that, and Story
+    // 11b.13 renders it nowhere at all.
+    const t = await createTestApp();
+    try {
+      const { pariwarId } = await seedDrives(t, [
+        { legalName: 'Rajesh Kumar Sharma', district: 'Lucknow', authorised: true },
+      ]);
+
+      // Set a target for THIS Pariwar, with a figure whose digits cannot occur by accident.
+      const c = await t.deps.pool.connect();
+      try {
+        await c.query(
+          `INSERT INTO pariwar_drive_target_schedule
+             (pariwar_id, version, target_inr, effective_from, effective_until, rationale,
+              changed_by_actor, changed_by_display, audit_id)
+           VALUES ($1, 1, 1234567, now(), NULL, 'AC6 fixture', NULL, NULL, gen_random_uuid())`,
+          [pariwarId],
+        );
+        // …and REVEAL it to members and the public, so the test proves the PUBLIC SURFACE carries no
+        // target even in the state most likely to leak one. ⛔ A hidden target proving absent would
+        // prove much less.
+        await c.query(
+          `INSERT INTO pariwar_drive_target_visibility
+             (pariwar_id, reveal_to_members, reveal_to_public, rationale, changed_by_actor,
+              changed_by_display, audit_id)
+           VALUES ($1, true, true, 'AC6 fixture', NULL, NULL, gen_random_uuid())`,
+          [pariwarId],
+        );
+      } finally {
+        c.release();
+      }
+
+      const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId) });
+      // ⭐⭐ THE ASSERTION THE OLD TEST WAIVED. ⛔ Without this the scan below proves nothing.
+      expect(res.statusCode).toBe(200);
+      const body = res.json() as { items: Array<Record<string, unknown>>; total: number };
+      expect(body.total).toBe(1); // ⭐ a NON-TRIVIAL body — there is something here to leak.
+
+      const raw = res.body;
+      for (const token of [
+        '1234567',
+        'targetInr',
+        'target_inr',
+        'revealToMembers',
+        'reveal_to_members',
+        'revealToPublic',
+        'reveal_to_public',
+      ]) {
+        expect(raw).not.toContain(token);
+      }
+      // ⭐ And structurally: ⛔ no item carries a target-shaped key.
+      for (const item of body.items) {
+        expect(Object.keys(item).some((k) => k.toLowerCase().includes('target'))).toBe(false);
+      }
+    } finally {
+      await teardown(t);
+    }
+  });
+
   it('⭐⭐ REGRESSION — a drive with a REAL close event serves 200 with a valid ISO `closedAt`', async () => {
     const t = await createTestApp();
     try {

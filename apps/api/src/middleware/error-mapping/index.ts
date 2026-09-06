@@ -39,6 +39,7 @@ import {
   DraftNotFoundError,
   DraftSelfReviewError,
   DraftStateError,
+  DriveTargetEffectiveFromSkewError,
   DriveTargetInvalidError,
   DriveTargetVersionConflictError,
   DriveTargetVisibilityInvalidError,
@@ -83,10 +84,12 @@ import {
   member as memberDomain,
   type ErrorResponseShape,
 } from '@twt/domain';
+// ⭐ Namespace import (Pass 2 / G2): the keyed idempotency store's own failure classes had ⛔ no arm.
+import { idempotency } from '@twt/domain';
 import type { FastifyError, FastifyReply, FastifyRequest } from 'fastify';
 import { hasZodFastifySchemaValidationErrors } from 'fastify-type-provider-zod';
 
-import { ApiError } from '../../http-errors.js';
+import { ApiError, ServiceUnavailableError } from '../../http-errors.js';
 
 /** KYC error-code → HTTP status (Story 3.3b). transport-down → 502; everything else 4xx. */
 const KYC_ERROR_STATUS: Readonly<Record<string, number>> = {
@@ -521,6 +524,7 @@ export function errorMappingHandler(
   //   DriveTargetVisibilityInvalidError  → 422 pariwar.drive_target_visibility_invalid
   //   DriveTargetInvalidError            → 400 pariwar.drive_target_invalid
   //   UngovernedDriveTargetChangeError   → 422 pariwar.drive_target_ungoverned_change
+  //   DriveTargetEffectiveFromSkewError  → 400 pariwar.drive_target_effective_from_skew
   //
   // ⛔⛔ THESE ARMS ARE ⛔ NOT OPTIONAL, and this block is the reason the classes are exported at the
   // `@twt/domain` top level. `2026-09-05-201` cl.4 rules the version conflict must reach the wire as
@@ -555,6 +559,38 @@ export function errorMappingHandler(
   }
   if (error instanceof UngovernedDriveTargetChangeError) {
     void reply.status(422).send(error.toErrorResponse(requestId));
+    return;
+  }
+  // ⭐ 400 (code review Pass 2, decision D-B; ⚠ RATIONALE CORRECTED in G2). A backwards
+  // `effective_from` beyond the permitted clock skew is a CALLER-SIDE / DEPLOYMENT error, ⛔ not a
+  // conflict between two operators — "re-read the current target and re-submit" would be the wrong
+  // instruction, since there is nothing about the caller's own view to re-read.
+  // ⚠⛔ THE ORIGINAL RATIONALE HERE WAS WRONG and is corrected rather than quietly dropped: it read
+  // *"retrying the same instant fails identically"*. ⛔ The caller supplies ⛔ NO instant — the wire
+  // contract has no `effectiveFrom` field and the handler passes `deps.clock()` — so the instant
+  // ADVANCES with wall-clock and the retry actually SUCCEEDS once the nodes' clocks converge.
+  // ⇒ the honest reading: this fires only when THIS node's clock trails the open head's by more
+  // than the bound, i.e. a multi-node NTP-skew condition, ⛔ never anything the operator typed.
+  // ⚠ Consequently it is ⛔ UNREACHABLE on a single-instance deployment.
+  if (error instanceof DriveTargetEffectiveFromSkewError) {
+    void reply.status(400).send(error.toErrorResponse(requestId));
+    return;
+  }
+  // ⭐⭐ THE IDEMPOTENCY STORE'S OWN FAILURES (code review Pass 2 / G2). ⛔ Previously UNREGISTERED,
+  // and the consequence was ⛔ not merely an ugly status: `recordResult` runs AFTER `run()` has
+  // succeeded and AFTER `withCompensatingAudit` returned, so a throw there produced a 500 while
+  // ⛔ no compensating audit line fired — leaving a committed audit line asserting a change the
+  // 500 then rolled back. ⚠ `IdempotencyKeyNotClaimedError` is the narrow case (`rowCount === 0`);
+  // ⭐ the ordinary one is any transient pool/DB error from claim/getResult/recordResult/release.
+  // 503, ⛔ not 500: the write itself may well have landed, and a retry WITH THE SAME KEY is the
+  // correct client action — which is exactly what the key exists to make safe.
+  if (error instanceof idempotency.IdempotencyKeyNotClaimedError) {
+    void reply.status(503).send(
+      new ServiceUnavailableError(
+        'The idempotency record could not be written — retry with the same Idempotency-Key',
+        'idempotency.record_failed',
+      ).toErrorResponse(requestId),
+    );
     return;
   }
 

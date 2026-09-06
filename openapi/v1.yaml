@@ -3141,6 +3141,7 @@ components:
           type: string
           minLength: 1
           maxLength: 2000
+          pattern: \S
         expectedVersion:
           type:
             - integer
@@ -3205,6 +3206,7 @@ components:
           type: string
           minLength: 1
           maxLength: 2000
+          pattern: \S
       required:
         - visibility
         - rationale
@@ -11192,9 +11194,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 'No grant for this Pariwar — scope resolution did not attach it. Distinct from 403: 404 means "this Pariwar is not yours", 403 means "it is yours, but you lack this key"'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     put:
       summary: Set the Pariwar's drive target (rationale + expectedVersion required; audited)
-      description: "Sets the whole-rupee figure the Pariwar's drives aim to raise — the SAME target for every drive in the Pariwar (Decision 2026-09-04-189 cl.2(d)); there is no per-drive override. The prior target is CLOSED and a new one opened, so every superseded target survives as a governance trail. The target must be a whole number of rupees, STRICTLY GREATER THAN ZERO (Story 11b.14 divides by it, so 0 is a division by zero — and is a different state from \"no target set\") and within the data-sanity ceiling. A non-empty rationale is REQUIRED and is rejected at the contract boundary with a 400 when absent. `expectedVersion` is REQUIRED and nullable (null = \"I believe this Pariwar has no target yet\"): a mismatch means someone else changed the target since you read it, and returns 409 rather than silently overwriting their change with your rationale attached. An optional `Idempotency-Key` header is evaluated BEFORE that version check — never after: reversed, a legitimate retry after a timeout would carry a stale version and be told \"someone else changed this\" when the someone was itself. The acting admin's display name is resolved SERVER-SIDE from users.display_name and is never accepted from the caller, and the effective-from instant is the SERVER's. Writes a §1.5 hash-chain audit line covering the same transaction as the change. SETTING IS NEVER REVEALING: a newly set target stays hidden from members and the public until a super_admin reveals it on the separate visibility resource. Requires pariwar.manage_drive_target at pariwar scope."
+      description: "Sets the whole-rupee figure the Pariwar's drives aim to raise — the SAME target for every drive in the Pariwar (Decision 2026-09-04-189 cl.2(d)); there is no per-drive override. The prior target is CLOSED and a new one opened, so every superseded target survives as a governance trail. The target must be a whole number of rupees, STRICTLY GREATER THAN ZERO (Story 11b.14 divides by it, so 0 is a division by zero — and is a different state from \"no target set\") and within the data-sanity ceiling. A non-empty rationale is REQUIRED and is rejected at the contract boundary with a 400 when absent. `expectedVersion` is REQUIRED and nullable (null = \"I believe this Pariwar has no target yet\"): a mismatch means someone else changed the target since you read it, and returns 409 rather than silently overwriting their change with your rationale attached. An optional `Idempotency-Key` header is evaluated BEFORE that version check — never after: reversed, a legitimate retry after a timeout would carry a stale version and be told \"someone else changed this\" when the someone was itself. The acting admin's display name is resolved SERVER-SIDE from users.display_name and is never accepted from the caller, and the effective-from instant is the SERVER's. Writes a §1.5 hash-chain audit line, written on a separate service connection and paired with a compensating entry if the change fails — NOT in the same transaction as the change itself. The line's id is recorded on the written row as its audit anchor. SETTING IS NEVER REVEALING: a newly set target stays hidden from members and the public until a super_admin reveals it on the separate visibility resource. Requires pariwar.manage_drive_target at pariwar scope."
       tags: *a68
       parameters:
         - schema:
@@ -11217,7 +11225,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/DriveTargetResponse"
         "400":
-          description: Request validation failed (an empty rationale, or a target that is not a whole number of rupees strictly greater than 0 and within the ceiling)
+          description: "Request validation failed (an empty rationale, or a target that is not a whole number of rupees strictly greater than 0 and within the ceiling). Note the rationale is TRIMMED before both length checks, so a whitespace-only value fails minLength and a maxLength value with surrounding whitespace is accepted. ALSO: an unusable Idempotency-Key — sent more than once, or blank (pariwar.drive_target_idempotency_key_invalid); an unusable key is REFUSED rather than silently ignored, because a caller that believes it is protected and is not will retry into a duplicate. ALSO, on a multi-node deployment only: pariwar.drive_target_effective_from_skew, when this node's clock trails the open head's by more than the permitted skew. The caller supplies no instant, so this reflects server clock drift, not the request."
           content:
             application/json:
               schema:
@@ -11234,6 +11242,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 'No grant for this Pariwar — scope resolution did not attach it. Distinct from 403: 404 means "this Pariwar is not yours", 403 means "it is yours, but you lack this key"'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "409":
           description: The acting admin has no users.display_name (admin.display_name_missing); OR the expectedVersion does not match the current target (pariwar.drive_target_version_conflict) — re-read and re-submit; OR a change with this Idempotency-Key is already in progress
           content:
@@ -11241,7 +11255,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "422":
-          description: The change is malformed as a GOVERNANCE RECORD — a missing rationale, audit anchor, display name or grant (pariwar.drive_target_ungoverned_change)
+          description: "BACKSTOP ONLY — not reachable through this API. The change is malformed as a GOVERNANCE RECORD (pariwar.drive_target_ungoverned_change). Every condition that raises it is pre-empted upstream: a blank rationale fails contract validation (400), the audit anchor is always server-minted, a missing display name returns 409, and a missing grant returns 403. Documented because the domain accessor can still raise it for a non-HTTP caller"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: The idempotency record could not be written (idempotency.record_failed). The change may well have been applied — retry WITH THE SAME Idempotency-Key, which is exactly what the key makes safe
           content:
             application/json:
               schema:
@@ -11277,6 +11297,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 'No grant for this Pariwar — scope resolution did not attach it. Distinct from 403: 404 means "this Pariwar is not yours", 403 means "it is yours, but you lack this key"'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     put:
       summary: Set the Pariwar's drive-target reveal switches (super_admin only; audited)
       description: "Decides whether the Pariwar's drive target may be shown to members and/or to the unauthenticated public — a DISCLOSURE act, reserved to the Trust by Decision 2026-09-04-190 cl.7(c). The two switches are INDEPENDENT, not levels: three of the four combinations are accepted, and revealing to members without revealing publicly is the ordinary case. THE ONE REFUSED COMBINATION is public-revealed while members are hidden, which would show the unauthenticated internet more than a member of the Pariwar the figure belongs to (Decision 2026-09-04-189 cl.3); it returns 422 and is also refused by a database CHECK. A non-empty rationale is REQUIRED. This request CANNOT carry a target — a reveal can never change what is being revealed. Writes a §1.5 hash-chain audit line. Requires pariwar.manage_drive_target_visibility at pariwar scope (super_admin ONLY)."
@@ -11302,7 +11328,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/DriveTargetVisibilityResponse"
         "400":
-          description: Request validation failed (an empty or whitespace-only rationale)
+          description: "Request validation failed (an empty or whitespace-only rationale — the value is TRIMMED before both length checks). ALSO: an unusable Idempotency-Key, sent more than once or blank (pariwar.drive_target_idempotency_key_invalid)"
           content:
             application/json:
               schema:
@@ -11319,14 +11345,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 'No grant for this Pariwar — scope resolution did not attach it. Distinct from 403: 404 means "this Pariwar is not yours", 403 means "it is yours, but you lack this key"'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "409":
-          description: The acting admin has no users.display_name (admin.display_name_missing)
+          description: The acting admin has no users.display_name (admin.display_name_missing); OR a change with this Idempotency-Key is already in progress (pariwar.drive_target_idempotency_in_progress) — this route is idempotency-wrapped too
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "422":
-          description: The target cannot be revealed to the public while it is hidden from members (pariwar.drive_target_visibility_invalid); OR the change is malformed as a governance record (pariwar.drive_target_ungoverned_change)
+          description: The target cannot be revealed to the public while it is hidden from members (pariwar.drive_target_visibility_invalid) — also refused by a database CHECK. (pariwar.drive_target_ungoverned_change is registered at 422 but is BACKSTOP ONLY, not reachable through this API — see the target PUT for why)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: The idempotency record could not be written (idempotency.record_failed) — retry WITH THE SAME Idempotency-Key
           content:
             application/json:
               schema:

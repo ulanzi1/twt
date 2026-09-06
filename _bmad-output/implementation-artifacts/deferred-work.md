@@ -8350,3 +8350,29 @@ later story ([[feedback_closure_language_precision]], [[feedback_record_unattest
 - **⭐ PASS-2 / G2 AUGMENTATION — the `Idempotency-Key` binds no ACTOR either, and the fingerprint it needs already exists.** Pass 1 deferred the missing request-body fingerprint on the key. The G2 pass adds the sharper half: the key is `${route}:${pariwarId}:${headerKey}` and carries **no actor**, so two `pariwar_admin`s in the same Pariwar reusing one key string (a fixed-key script, a shared form id) means the second write vanishes and its author is handed the **first** operator's recorded response — *including that operator's `changedByDisplay`*, an attribution they did not make, reported as `200`. ⚠ And `handlers.ts` **already computes** a canonical RFC-8785 `requestPayloadHash` twenty lines below the claim and spends it only on the audit intent — the fingerprint exists and is not used for idempotency. Still deferred on the original ground (a property of the shared `idempotency.createKeyedStore` + the "one key per user action" client contract, matched by the feature-flags / masking precedent), but the actor half raises the stakes from "a dropped edit" to "a misattributed governance decision". **Trigger:** the repo-wide review of whether the keyed store should key on payload + actor. [`apps/api/src/modules/drive-target/handlers.ts:260-299`]
 - **⭐ PASS-2 / G2 SOFTENING — the 24h claim-TTL wedge self-heals.** Pass 1 deferred this as wedging a key "for a full day" on a hard crash between `claim()` and `recordResult()`/`release()`. Evidence Pass 1 did not have: `packages/domain/src/idempotency/keyed-store.ts`'s `claim` path (b) **reclaims an expired-and-still-pending row**, so the wedge resolves at the TTL rather than persisting. The residual defect is the copy, not the lifecycle: for the duration of the window the operator is told *"already in progress — wait and retry"* about a claim that is provably dead, and the advice is false — waiting never helps inside the window; only the TTL expiry does. **Trigger:** a review of the claim lifecycle, or a report of a wedged key. [`apps/api/src/modules/drive-target/handlers.ts:168,274-298`]
 - **A reveal can be configured for a Pariwar that has no target at all.** `setDriveTargetVisibility` never reads the schedule table, the two records are deliberately independent under D2, and the tables are unFK'd to each other — so `resolveDriveTargetVisibility` can report *revealed to members and the public* while `resolveEffectiveDriveTargetInr` reports `null`. Deferred **to Story 11b.14, alongside D3**: benign today because no consumer exists (the resolvers are read only by the admin API handler), but the "no target ⇒ no bar" rule is asserted nowhere and the domain records no answer for the combination, so it becomes a live decision the first consumer must make. **Trigger:** Story 11b.14 Task 3, where D3 is already routed and open. [`packages/domain/src/pool/drive-target-policy.ts:477-546`]
+
+## Deferred from: code review of 11b-13-per-pariwar-drive-target-substrate — PASS 3, full-diff re-review (2026-09-06)
+
+⭐ One item from a **third** pass — a single un-chunked three-layer review over the whole branch diff
+(`dd233293..HEAD`, 51 files / ~10.8k lines), run **after** the story reached `done`. The pass raised
+1 Decision and 3 Patches (all in the story file's *Review Findings — PASS 3* section); this is the
+sole deferred residue. ⛔ No Critical / High; the Acceptance Auditor found no AC / decision / trap
+violation.
+
+- **⭐ PASS-3 AUGMENTATION — `withIdempotency`'s `release()` on a *post-`run()`* failure turns the
+  server's own "retry with the same Idempotency-Key" (503) advice into a re-execute, adding a second
+  governance audit line.** `handlers.ts:246-255` wraps both `run()` and `recordResult()` in one
+  `try`; the `catch` `release()`s the key on **any** failure. If `run()` succeeds (audit line
+  committed on `deps.servicePool`, schedule row on the scope tx) but `recordResult()` then throws
+  (mapped to 503), the handler rethrows → the scope tx rolls back (row gone) → `withCompensatingAudit`
+  already returned success, so **no compensating line** → an **orphan** audit line; and because the
+  key was released, the sanctioned same-key retry **re-executes** rather than replays → a **second**
+  audit line. The docblock's *"the replay is a read of the recorded response, so the worst case
+  is … noisy, ⛔ not corrupting"* reasoning assumes `recordResult` **succeeded** and does not cover
+  this branch. ⇒ **augments** the Pass-1 / Pass-2 deferred entry on the compensating-audit /
+  idempotency / scope-tx seam (the *"idempotency result and the `withCompensatingAudit` line both
+  commit before the caller's scope tx"* item, with its 2026-09-06 rationale correction) — **already
+  routed to the Epic 11b retro** by ruling. The `release()`-vs-leave-`claimed` choice (leave claimed
+  ⇒ a legit retry gets `409 idempotency_in_progress` until the TTL self-heals) is part of that same
+  question, not a new one. **Trigger:** the Epic 11b retro's `closeScopeTx` / compensating-audit
+  question. [`apps/api/src/modules/drive-target/handlers.ts:246-256`]

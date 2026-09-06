@@ -1,4 +1,56 @@
-# last_updated: 2026-09-06c (⭐⭐ **STORY 11b.12 CODE-REVIEWED AND CLOSED — `review` -> `done`.** ONE
+# last_updated: 2026-09-06d (⭐⭐ **STORY 11b.13 (C) VALIDATED — TEN FINDINGS, TWO NEW OPEN DECISIONS.
+#   ⛔ ZERO ROWS MOVE; 11b-13 STAYS `ready-for-dev`.** ⚠ ⛔ No code; the story file only.
+#   ⛔ epic-11b stays `in-progress`; ⛔ 11b-11 / 11b-12 stay `done`; ⛔ 11b-13…17 and 6-18 stay
+#   `ready-for-dev`. Every code and decision-log claim in the story re-verified LIVE against
+#   `222fb4d8..HEAD` — `PERMISSION_CATALOG_VERSION` IS still 39, the masking key's `pariwar_admin`
+#   foreclosure IS at `permissions.ts:573-576` verbatim, and `-190` cl.7(a)/(b)/(c), `-191` cl.4,
+#   `-195` cl.1/2/3 and `-189` cl.2(d) all read exactly as cited. ⭐ The story's authority argument
+#   (Trap 1) SURVIVES scrutiny unchanged.
+#   ⭐⭐ **TWO NEW OPEN DECISIONS:**
+#   **D2 (⛔ BLOCKS TASK 2) — D1 SPLIT THE KEYS; ⛔ NOTHING SPLIT THE ROW.** Under AC1's append-only
+#   shape a `pariwar_admin` target change inserts a NEW row — and if that row carries the two
+#   `super_admin`-only reveal flags, the Pariwar Admin's write RE-STATES a disclosure decision every
+#   time, with their rationale recorded as its justification. ⚠ That is `-201`'s exact failure mode
+#   with an AUTHORITY BOUNDARY crossed. Options (a) one table + app guard / (b) ⭐ TWO records /
+#   (c) un-versioned flags. **BigDev's recommendation: (b)** — D1's own reasoning, one layer down.
+#   **D3 (⛔ NON-BLOCKING, ROUTED TO STORY D / 11b-14)** — the meter is `amountRaised / target` and
+#   D's AC3 PUBLISHES `amountRaised` ⇒ the hidden target is recoverable by division from two ratified
+#   figures, and BOTH stories' "the target appears in no response" tests pass anyway. ⚠ A consequence
+#   of a RATIFIED COMBINATION (`-189` cl.2(b)+(c)), ⛔ not a defect in any one ruling — ⛔ not
+#   re-litigated, ⛔ not answered by narrowing C.
+#   ⭐ **EIGHT CORRECTIONS APPLIED:** (1) Trap 4 named `pools.fixed_amount` as the money precedent —
+#   `pools.ts:193` is a bare `integer().notNull()` with ⛔ NO CHECK at all; the real precedent is
+#   `pool_fixed_amount_schedule` (`> 0` + `<= 10000000`) + `MAX_POOL_FIXED_AMOUNT_INR`.
+#   (2) "non-negative" admitted **₹0**, which is a DIVISION BY ZERO for D's meter (D's "no target =>
+#   no bar" covers UNSET, ⛔ not zero-and-set) => strictly positive. (3) **NEW Trap 5** —
+#   `#decision-2026-09-05-201` was ruled AFTER this story's `baseline_commit` and is ⛔ STILL UNBUILT
+#   (grep confirms ⛔ no `expectedVersion` / `Idempotency-Key` in the module): "follow the masking
+#   precedent" would have copied an ALREADY-RULED-DEFECTIVE shape. (4) Task 1's `roles.ts`
+#   instruction would have produced an edit EXISTING NOWHERE in the file — `super_admin` derives
+#   `PERMISSION_CATALOG.keys` (`roles.ts:267-274`), so the reveal key needs ⛔ NO bundle edit and the
+#   write key needs `pariwar_admin` ALONE. (5) **NEW PREFLIGHT, 3 STOPs:** the `39 -> 41` collision
+#   with **6.18** — ⚠ 6.18's Dev Notes carried the warning BY NAME while this story hard-coded 41 in
+#   four places; plus `permissions.test.ts:54` (`toBe(39)`) and `:56` (`toHaveLength(47)` -> **49**,
+#   ⛔ not 48) which no task named. (6) AC1's "a per-Pariwar record" pinned to the VERSIONED
+#   effective-window shape — the cheap "UPSERT one row" reading would destroy AC2's trail and leave
+#   ⛔ no `version` for `expectedVersion`. (7) The reveal key's `dimension` stated: `pariwar`, ⛔ not
+#   `global` — both precedents are pariwar-dimension DESPITE being `super_admin`-only. (8) The
+#   header's "⛔ nothing depends on A or B" is FALSE — D depends on B, E on B, F on A (`-195` cl.3).
+#   ✅⭐⭐ **BOTH DECISIONS ANSWERED THE SAME DAY — ⛔ ZERO open decisions remain in 11b-13.**
+#   **D2 RULED (b): TWO RECORDS.** `pariwar_drive_target_schedule` (versioned, `pariwar_admin`) +
+#   `pariwar_drive_target_visibility` (⛔ `super_admin` ONLY, both flags + AC4's CHECK). ⭐ The target
+#   setter CANNOT NAME A FLAG COLUMN => AC3's "a pariwar_admin change leaves the flags byte-unchanged"
+#   is TRUE BY CONSTRUCTION, ⛔ not a test of discipline. ⇒ **Task 2 UNBLOCKED.** ⚠ `-201`'s
+#   `expectedVersion` attaches to the SCHEDULE; the reveal record's concurrency posture is its own
+#   question, ⛔ not inherited.
+#   **D3 ROUTED to story D (11b-14), question OPEN** — ⛔ not pre-ruled, ⛔ not escalated. ⚠ ⭐ **A
+#   SECOND STORY FILE MOVES: `11b-14` gains the reciprocal note BY NAME** — a new D3 block under its
+#   **AC2**, a blocking subtask under **Task 3** ("answer D3 before wiring the denominator"), the
+#   header pointer, and a Change Log row. ⛔ Its STATUS does ⛔ NOT move; it stays `ready-for-dev`.
+#   ⚠⛔ The finding D3 records is the [[feedback_gate_scope_semantic_coverage]] shape exactly: BOTH
+#   stories' "the target is nowhere in any response" tests are TOKEN assertions and BOTH PASS while
+#   the hidden figure stays derivable — a green scan proving nothing.)
+# last_updated_prior: 2026-09-06c (⭐⭐ **STORY 11b.12 CODE-REVIEWED AND CLOSED — `review` -> `done`.** ONE
 #   row flips: development_status[11b-12-stage-vocabulary-and-info-affordance] `review` -> `done`.
 #   ⛔ epic-11b stays `in-progress`; ⛔ 11b-11 stays `done`; ⛔ 11b-13…17 and 6-18 stay `ready-for-dev`.
 #   Three parallel review layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor + the

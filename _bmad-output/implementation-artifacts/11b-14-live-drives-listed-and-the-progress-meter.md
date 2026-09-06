@@ -26,6 +26,11 @@ Status: ready-for-dev
 >
 > ⛔⛔ **BLOCKED ON B AND C.** B owns the three stage words and the shared copy; C owns the rupee
 > target this story's meter measures against. ⛔ Do ⛔ not start before both land.
+>
+> ⚠⛔ **ROUTED IN FROM C, 2026-09-06 (11b.13 validation) — `D3`: THE METER RECOVERS THE HIDDEN TARGET
+> BY ARITHMETIC, AND ⛔ EVERY TEST EITHER STORY WRITES PASSES ANYWAY.** ⭐ Recorded from C's side
+> because **C mints the reveal control this channel bypasses**; ⭐ **BigDev routed the QUESTION here
+> unanswered** — ⛔ C decides nothing, ⛔ C narrows nothing. ⇒ **see AC2.**
 
 ## Story
 
@@ -139,7 +144,43 @@ vocabulary; the three sections keep the existing `.length > 0` suppression (⛔ 
 Per `-189` cl.2(b) and D1's shape. **And** ⛔ **THE TARGET IS ⛔ NOT DISPLAYED** (`-190` cl.7(b)) —
 ⛔ no number, ⛔ no "of ₹X", ⛔ no percentage label that lets it be inferred by arithmetic.
 **And** where story C's target is **unset** — the default for every Pariwar — the meter renders per
-D1's fallback, ⛔ never a guessed denominator.
+D1's fallback, ⛔ never a guessed denominator
+**And** ⭐ where story C's target is **set**, it is consumed **SERVER-SIDE ONLY** — ⛔ the value never
+reaches a response body (C's **AC6**)
+**And** ⚠⛔ **`D3` IS ANSWERED BEFORE THE METER IS WIRED** (below) — ⛔ not after.
+
+#### ⚠⛔ D3 — **OPEN, ROUTED IN FROM STORY C 2026-09-06. ⛔ ANSWER IT AT TASK 3.**
+
+⭐ **The channel.** This AC's ban is on a *"percentage **label** that lets it be inferred by
+arithmetic"*. ⛔ **The bar's own GEOMETRY is that percentage** — `pool-progress`'s view model exposes
+`confirmedPercentage` as an integer 0–100, and D1 makes its denominator C's target. ⚠ **AC3 publishes
+`amountRaisedInr`.** ⇒ any reader computes
+
+> `target ≈ amountRaisedInr ÷ (confirmedPercentage ÷ 100)`
+
+to within the rounding band, **from two figures this story publishes on purpose**.
+
+⛔⛔ **AND THE TESTS ARE BLIND TO IT BY CONSTRUCTION.** This story's Task 7 asserts *"the target is
+⛔ NOWHERE in any response"*; C's **AC6** asserts the same. ⭐ Both are **TOKEN** assertions and both
+**PASS** — while the hidden figure is publicly derivable. ⚠ ⛔ A green scan proves nothing here
+([[feedback_gate_scope_semantic_coverage]]).
+
+⚠ ⭐ **It is a consequence of a RATIFIED COMBINATION, ⛔ not a defect in any one ruling.** `-189`
+cl.2(b) ruled the bar, cl.2(c) + `-190` cl.7(b) hid the target, `-190` cl.6 published the amount —
+⛔ the Panel ruled them together. ⇒ ⛔ **do ⛔ not re-litigate any of the three.**
+
+**The three options, ⛔ none pre-ruled:**
+
+- **(i) QUANTIZE / BAND the rendered fill** so the divisor is ⛔ not recoverable (coarse buckets, or a
+  qualitative band). ⭐ Keeps the ratified bar; ⚠ costs fidelity, and the banding rule becomes copy.
+- **(ii) ACCEPT and RECORD** it as a ratified consequence, with a stated re-examination trigger.
+  ⭐ Zero build; ⚠ it makes C's reveal switches **decorative on the public axis** — ⛔ say so out loud
+  if this is chosen, ⛔ never silently.
+- **(iii) ESCALATE** to the Panel as a disclosure the combination produces and that they have ⛔ never
+  been shown as a single question.
+
+⚠⛔ **WHATEVER IS CHOSEN, C's AC3 REVEAL SWITCHES ARE ⛔ NOT THE ANSWER** — they gate the **NUMBER**,
+and this channel ⛔ never carries the number.
 
 ### AC3 — The headline is PARTICIPATION-FIRST, and it is the ruled sentence
 `-190` cl.6, option (B): *"16,750 members have stood with this family — ₹19.45 lakh, and counting"*, in
@@ -361,6 +402,8 @@ cross-drive comparison · ⛔ not publish a written pitch (`-190` cl.8).
       amend its doc-block, which currently says `live` is *"ABSENT deliberately"* — ⭐ **amend and name
       the previous claim**, ⛔ never overwrite; ⛔ `spawned` untouched.
 - [ ] **Task 3 — The meter** (AC2, per D1) — including the **no-target** path and re-scoping the THROW.
+  - [ ] ⚠⛔ **ANSWER `D3` FIRST** (AC2) — (i) quantize/band, (ii) accept-and-record, or (iii) escalate.
+        ⛔ Do ⛔ not wire the denominator before it is answered; ⛔ a token-scan test will ⛔ not catch it.
 - [ ] **Task 4 — The wire** (AC3) — the index row needs what the headline consumes. ⚠ Prefer sending
       the **derived** `amountRaisedInr` over exposing `fixedAmount` as a new public field; ⭐ ⛔ do not
       add both.
@@ -427,4 +470,5 @@ units. ⚠ Assert **membership and explicit values**, ⛔ never counts over the 
 |---|---|---|---|
 | 2026-09-04 | 0.2 | ✅ **D1 + D2 RULED.** D1: extend the canonical producer (optional rupee denominator), re-scope the THROW, ⛔ **no target ⇒ no bar**. D2: **both surfaces**, `sahyog-drive.ts:133` **amended and NAMED**, AC5's ordering half untouched. ⇒ ⛔ zero open decisions; ⚠ still blocked on **B** and **C**. | BigDev + Claude |
 | 2026-09-04 | 0.1 | Created from `-195` cl.3 (story **D**). ⚠ **D1 and D2 are OPEN.** ⭐ Findings at authoring: the shipped meter divides by **`rosterSize`, ⛔ not a target**; the index contract says **"⛔ never a sum of amounts"** and that sentence is an **author's extension** of 11b.1 AC5, ⛔ not AC5 itself; and `/sahyog` is cached **5 minutes** against FR-76's *"near-real-time"*. | BigDev + Claude |
+| 2026-09-06 | 0.3 | ⚠⛔ **`D3` ROUTED IN FROM STORY C (11b.13 validation), QUESTION OPEN — ⛔ blocks Task 3's denominator wiring.** The meter recovers C's **hidden** target by division: D1 makes `confirmedPercentage`'s denominator the target, AC3 publishes `amountRaisedInr`, ⇒ `target ≈ amount ÷ pct`. ⛔⛔ **And both stories' *"the target is nowhere in any response"* tests PASS anyway** — they are TOKEN assertions and the channel is DERIVED. ⭐ A consequence of a **ratified combination** (`-189` cl.2(b)+(c) + `-190` cl.6/cl.7(b)), ⛔ not a defect in any one ruling, ⛔ not re-litigated. Three options recorded in **AC2**, ⛔ **none pre-ruled**: quantize/band · accept-and-record · escalate. ⚠ C's reveal switches are ⛔ **not** the answer — they gate the NUMBER, and this channel never carries it. ⛔ Zero rows move; ⛔ no code. | BigDev + Claude |
 | 2026-09-05 | 0.2 | ⭐⭐ **SCOPE EXTENDED — AC7 + Task 8: the NOMINEE NAME goes ON THE INDEX**, Trustee-ratified 2026-09-05 (Dhiraj Rahul + Kalpana Bharti) on Story 11b.12's D2 (ruling 2). ⭐ Landed **here** rather than in B because 11b.12's own AC7 forbids touching any field tier, listing predicate or wire shape, and D already extends the index wire, read and matrix. ⭐ It renders 11b.12's dark `{nominee_name}` token — ⛔ the same pattern as `{amount}`. ⚠⛔ **THREE SUB-CLAUSES, all load-bearing:** **(a)** a decision-log entry **AND** a matrix row **BEFORE any code** — `-190` cl.2 ruled **ONE DRIVE'S PAGE** and ⛔ does NOT auto-widen to the index; **(b)** the decrypt volume is a **50× step change** (1-2 → up to 100 per request) ⇒ **batched** decrypt, a **list-shaped** failure posture, and a **measured** p95 — ⚠ edge-caching is ⛔ NOT a new posture, but the flip-latency must be stated at the decrypt; **(c)** the value stays **UNVERIFIED until Story 6.18 ships**, recorded ⛔ not re-litigated — the Panel ruled the exposure knowing it, and ⛔ NO join or match rule may be added here (`D5-subject` (i)). ⭐ `deferred-work.md` **(h) `D-nominee-name-form`** is **CLOSED BY RULING** — the Panel ruled the FORM (full name), which `-190` cl.2 had left open. | BigDev + Claude |

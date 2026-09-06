@@ -19,8 +19,47 @@ Status: ready-for-dev
 > minting a permission key moves `PERMISSION_CATALOG_VERSION`, which is a **governance act** in this
 > repo. ⛔ The key is ⛔ **NOT** minted inside a build task.
 >
-> ⚠ **STORY D DEPENDS ON THIS ONE.** ⛔ Nothing depends on A or B; ⭐ this story may run in parallel
-> with both.
+> ⚠ **STORY D DEPENDS ON THIS ONE** — `-195` cl.3: **D waits on B *and* C**. ⭐ **THIS STORY depends on
+> neither A nor B** ⇒ it may run in parallel with both.
+> ⚠⛔ *Corrected 2026-09-06 (validation).* This read *"⛔ Nothing depends on A or B"*, which is **false**
+> — **D** depends on **B**, **E** depends on **B**, **F** depends on **A** (`-195` cl.3's table). ⛔ The
+> independence being asserted is **THIS story's**, ⛔ never theirs.
+
+---
+
+## ⛔⛔ PREFLIGHT — ⛔ THREE STOP CONDITIONS, CHECKED BEFORE TASK 0's FIRST LINE
+
+⚠⛔ **These are ⛔ NOT mid-AC caveats. Each is a STOP: check it, then proceed.**
+
+### ⛔ STOP 1 — `PERMISSION_CATALOG_VERSION` IS ⛔ NOT 39 BY ASSUMPTION. **READ IT LIVE.**
+
+⭐ It **was** 39 at authoring and is **still 39 as of 2026-09-06** (`permissions.ts:598`, re-verified).
+⚠⛔ **BUT `39 → 41` IS ⛔ NOT A CONSTANT OF THIS STORY** — **Story 6.18** (`ready-for-dev`) bumps the
+same counter, and its own Dev Notes carry the reciprocal warning in terms:
+
+> *"⛔ Both bump `PERMISSION_CATALOG_VERSION`. 11b.13 takes it **39 → 41** … ⇒ ⭐ whichever lands
+> second takes the next number; ⛔ do ⛔ not hard-code 40 without checking."* — `6-18-…md:367-370`
+
+⇒ ⛔ **The coordination was ONE-SIDED until now: 6.18 named the collision, this story did ⛔ not.**
+⭐ **Read `permissions.ts:598` live.** `39 → 41` holds ⛔ only if this story lands first; if 6.18 landed
+first, it is **40 → 42**. ⛔ The arithmetic (**+1 per key, TWO keys**) is what D1 ruled — ⛔ never the
+literal `41`.
+
+### ⛔ STOP 2 — TWO TESTS HARD-CODE THE CATALOG NUMBERS. ⛔ THEY ARE ⛔ NOT OPTIONAL EDITS
+
+- `packages/domain/tests/rbac/permissions.test.ts:54` — `expect(PERMISSION_CATALOG_VERSION).toBe(39)`
+- `packages/domain/tests/rbac/permissions.test.ts:56` — `expect(PERMISSION_CATALOG.keys).toHaveLength(47)`
+  ⇒ ⭐ **47 → 49** (TWO keys), ⛔ not 48.
+- ⚠ `:54`'s trailing comment is a **mandatory running rationale chain** — every prior bump appended its
+  full justification there. ⛔ Bumping the number without appending this story's entry breaks the
+  file's own convention.
+- `packages/domain/tests/rbac/roles.test.ts` asserts **per-key holder sets** — the write key gains one.
+
+### ⛔ STOP 3 — THE NAMED PRECEDENT HAS AN ⛔ UNFIXED, ALREADY-RULED CONCURRENCY DEFECT
+
+⚠⛔ See **Trap 5**. `#decision-2026-09-05-201` was ruled **after this story's `baseline_commit`** and is
+⛔ **not yet in the code**. ⇒ *"follow the masking precedent"* now means **follow it PLUS `-201`**,
+⛔ never the shipped file alone.
 
 ## Story
 
@@ -97,12 +136,66 @@ the end of this story a Pariwar Admin can set a number that **⛔ nothing render
 preview. ⚠ But it means the story's own tests are the **only** proof it works: ⛔ there is nothing to
 look at.
 
-### Trap 4 — ⚠ IT IS MONEY. VALIDATE IT LIKE MONEY
+### Trap 4 — ⚠ IT IS MONEY. VALIDATE IT LIKE MONEY — ⚠⛔ AND THE PRECEDENT IS ⛔ NOT `pools.fixed_amount`
 
-`-191` cl.4 makes the target a **rupee** figure ⇒ its validation is ⛔ not a free choice. ⭐ Mirror
-`pools.fixed_amount`: **whole INR**, non-negative integer, with an upper sanity bound, rejected at the
-contract boundary ⛔ and at the DB. ⛔ No floats, ⛔ no paise, ⛔ no coercion — *"on this control the two
-outcomes are 'a wrong number is shown to 43,000 members' and 'it is not'."*
+`-191` cl.4 makes the target a **rupee** figure ⇒ its validation is ⛔ not a free choice. **whole INR**,
+rejected at the contract boundary ⛔ **and** at the DB. ⛔ No floats, ⛔ no paise, ⛔ no coercion — *"on
+this control the two outcomes are 'a wrong number is shown to 43,000 members' and 'it is not'."*
+
+⚠⛔ **CORRECTED 2026-09-06 (validation) — THIS TRAP NAMED THE WRONG FILE, AND THE WRONG BOUND.** It read
+*"mirror `pools.fixed_amount`: whole INR, **non-negative** integer, with an upper sanity bound … at the
+DB."* ⛔ **Both halves fail on inspection:**
+
+| ⛔ What the trap said | ⭐ What the code actually is | Verified |
+|---|---|---|
+| *"mirror `pools.fixed_amount` … at the DB"* | `pools.ts:193` is a **bare `integer().notNull()`** — ⛔ **NO** `CHECK`, ⛔ no positivity, ⛔ no ceiling. A dev mirroring it writes ⛔ **zero** constraints | ⭐ read |
+| *"non-negative"* | The precedent is **strictly positive**: `pool_fixed_amount_schedule_amount_positive` = `fixed_amount > 0` (`pool_fixed_amount_schedule.ts:104`) | ⭐ read |
+| *"an upper sanity bound"* | It is a **NAMED CONSTANT with a sync obligation**: `pool_fixed_amount_schedule_amount_max` = `<= 10000000`, *"keep IN SYNC with `pool/fixed-amount.ts` `MAX_POOL_FIXED_AMOUNT_INR`"* (`= 10_000_000`, `fixed-amount.ts:79`) | ⭐ read |
+| the app-side assertion | `fixed-amount.ts:405` — `!Number.isInteger(v) \|\| v <= 0 \|\| v > MAX_POOL_FIXED_AMOUNT_INR`, *"applies to every write path"* | ⭐ read |
+
+⇒ ⭐⭐ **THE PRECEDENT TO MIRROR IS `pool_fixed_amount_schedule` + `pool/fixed-amount.ts`**, ⛔ not
+`pools.fixed_amount`. ⭐ It is also the **nearer** precedent structurally — a per-Pariwar, versioned,
+effective-window **rupee** record, which is exactly this story's shape (see **AC1**), and it is the file
+`pariwar_nominee_bank_masking_schedule.ts:27-32` itself names as **its own** model.
+
+⛔⛔ **AND `0` IS ⛔ NOT A LEGAL TARGET — *"non-negative"* WOULD HAVE ADMITTED IT.** ⚠ Story **D**'s meter
+is `amountRaisedInr / target` (`-191` cl.4, D's D1) ⇒ a **₹0** target is a **division by zero**, and
+D's ruled *"⛔ no target ⇒ ⛔ no bar"* covers **UNSET**, ⛔ not **zero-and-set**. ⇒ **strictly positive**
+(`> 0`), at the contract boundary ⛔ and at the DB, ⛔ never `>= 0`.
+
+### Trap 5 — ⛔⛔ THE NAMED PRECEDENT HAS A **RULED, ⛔ UNFIXED** SILENT-OVERWRITE HOLE
+
+⚠⛔ **ADDED 2026-09-06 (validation). ⭐ `#decision-2026-09-05-201` was ruled ⛔ AFTER this story's
+`baseline_commit` (`222fb4d8`) and is ⛔ NOT in the code** — it stands as an **open PATCH** on Story
+11b.3a (`11b-3a-…md:788,846`), and a live grep finds ⛔ **no** `expectedVersion` and ⛔ **no**
+`Idempotency-Key` anywhere in `apps/api/src/modules/nominee-bank-masking/`. ⭐ Verified 2026-09-06.
+
+⇒ ⛔ **A dev told to *"follow the `/p/$pariwarId/nominee-bank-masking` precedent"* copies a shape that
+has ⛔ ALREADY been ruled defective**, on a control that is **structurally identical to this one**: a
+per-Pariwar, versioned, rationale-bearing governance write with more than one possible writer.
+
+⭐ **The finding `-201` records, and why it transfers ⛔ exactly:** the masking module's **advisory
+lock** — added by a review pass so a losing writer would stop hitting `…_pariwar_version_uq` with a
+bare `23505` → **opaque 500** — **removed the only collision that was preventing a silent overwrite**.
+⇒ it converts a race into a **QUEUE**: both writers succeed as N and N+1, and ⛔ the second never learns
+the first happened. ⚠ Contrast `feature_flags`, which **lets its unique constraint fire** and so gets
+lost-update protection **free**.
+
+⛔⛔ **`-201` RULES BOTH, LAYERED, AND THE ORDER IS LOAD-BEARING:**
+
+1. **`Idempotency-Key` — FIRST, opt-in**, reusing `idempotency.createKeyedStore(deps.pool)` (⛔ never a
+   second store), **namespaced by route + scope + `pariwarId`**. ⛔ No header ⇒ previous behaviour.
+2. **`expectedVersion` — SECOND, REQUIRED and `number | null`** (⛔ not optional; `null` = *"I believe
+   there is no record yet"*, which makes the **first** write safe too). Mismatch ⇒ **409 with its own
+   REGISTERED error code** — ⛔ never a bare `23505`.
+
+⚠⛔ **Reversed, the two fight each other:** a legitimate retry after a timeout carries the **stale**
+version, `expectedVersion` fires, and the admin is told *"someone else changed this"* — ⛔ when the
+someone was **themselves** — driving a re-submit that manufactures the very duplicate the key exists to
+prevent. ⛔ Do ⛔ not reorder them, and **say so at the call site**.
+
+⚠ ⭐ **This story does ⛔ NOT owe 11b.3a's patch** — that is 11b.3a's open item, ⛔ not scope here
+(**AC8**). ⭐ It owes ⛔ not shipping the **same defect a second time** on its own new write path.
 
 ---
 
@@ -122,21 +215,43 @@ foreclosure ⛔ stand
 ### AC1 — The target is STORED, per Pariwar, once
 
 **Given** `-190` cl.7(a) and `-191` cl.4
-**Then** a per-Pariwar record holds **one** whole-INR target
+**Then** a per-Pariwar record holds **one** whole-INR target, **strictly positive** (Trap 4)
 **And** it is the **SAME target for every drive** in that Pariwar (`-189` cl.2(d), carried forward)
 **And** ⛔ there is ⛔ no per-drive override — ⛔ not a column, ⛔ not a nullable field, ⛔ not a seam
-**And** the shape follows `pariwar_nominee_bank_masking_schedule` (the nearest precedent), ⛔ not a new
-pattern.
+**And** ⭐ the shape is the **VERSIONED EFFECTIVE-WINDOW SCHEDULE**, ⛔ not a mutable single row.
+
+⚠⛔ **AMENDED 2026-09-06 (validation) — *"a per-Pariwar record holds one target"* was ⛔ AMBIGUOUS, and
+the cheap reading is the ⛔ WRONG one.** ⛔ It reads as *"UPSERT one row per Pariwar"*, which would
+(a) destroy the change trail **AC2** requires, and (b) leave ⛔ no `version` for Trap 5's
+`expectedVersion` to compare against. ⭐ Both named precedents are **append-only**:
+
+> *"a monotonic `version` per Pariwar, a `[effective_from, effective_until)` window, at most ONE
+> open-ended row per Pariwar, and the resolver returns the row whose window contains `asOf` … a later
+> change **closes the prior head and inserts a new one**."* — `pariwar_nominee_bank_masking_schedule.ts:29-35`
+
+⇒ **one row per CHANGE; one *currently-in-force* row per Pariwar**, enforced by the partial unique
+`… WHERE effective_until IS NULL` (both precedents carry it, and a `(pariwar_id, version)` unique).
+⭐ *"One target per Pariwar"* is a **resolver** property, ⛔ not a row count.
 
 ### AC2 — A **Pariwar Admin** sets it, and every change is attributable
 
 **Given** cl.7(a)
 **Then** the write is gated by the key minted at AC0, checked at `dimension: 'pariwar'`
+**And** ⭐ the **REVEAL** key is checked at `dimension: 'pariwar'` **too** — ⛔ not `global`
 **And** every change carries a **required rationale**, the **actor**, and an **admin display-name
 snapshot**, plus a §1.5 hash-chain **audit line** — the masking-policy precedent, which *"refuses to
-skip"* them
+skip"* them (`nominee-bank-masking-policy.ts:241-260` throws on a blank rationale ⛔ and on a null
+`auditId`) — ⚠ note those four columns are **NULLABLE at the DB** on both precedents: the requirement
+is a **write-path** fact, ⛔ so it must be built, ⛔ never assumed from the schema
+**And** ⭐⭐ **the write path carries `-201`'s TWO controls, IN ORDER — `Idempotency-Key` FIRST,
+`expectedVersion` (REQUIRED, `number | null`) SECOND** (**Trap 5**), with a **registered** 409 code
 **And** ⛔ `district_admin` / `state_trustee` are ⛔ NOT granted — inert in both directions
 ([[project_rbac_geo_scope_containment]]).
+
+⚠⛔ **WHY THE REVEAL KEY'S DIMENSION IS NOW STATED (2026-09-06 validation):** it was ⛔ unstated, and
+*"`super_admin` ONLY"* invites `global`. ⛔ Both precedents are `pariwar`-dimension **despite** being
+`super_admin`-only (`permissions.ts:563-566`) — the two-axis rule again: **per-Pariwar in SCOPE**,
+central in AUTHORITY. ⭐ The narrowing is done by the **GRANT**, ⛔ never by the dimension.
 
 ### AC3 — Only a **Super Admin** may reveal it — and the two switches are INDEPENDENT
 
@@ -145,7 +260,21 @@ skip"* them
 **And** ⛔ **only `super_admin`** may change either
 **And** they are **independent**: any of the four combinations is expressible
 **And** a test asserts a `pariwar_admin` **cannot** flip either — ⛔ the regression this AC exists to
-prevent is the write key quietly carrying the reveal.
+prevent is the write key quietly carrying the reveal
+**And** ⭐⭐ **the `pariwar_admin` write path can ⛔ NOT WRITE THE FLAGS AT ALL — ⛔ not even to their
+current values.** ⚠ Per **D2 (RULED (b): TWO RECORDS)** the flags live in
+`pariwar_drive_target_visibility`, which the target setter ⛔ never touches ⇒ this is **true by
+construction**, ⛔ not by discipline. ⭐ A test still asserts it: setting the target leaves both flags
+**byte-unchanged**.
+
+⚠⛔ **ADDED 2026-09-06 (validation) — THE ⛔ ROW-LEVEL ANALOGUE OF TRAP 2, AND IT WAS ⛔ UNGUARDED.**
+⭐ **D1 split the KEYS. ⛔ Nothing in this story split the ROW.** ⇒ under AC1's ruled append-only shape,
+if the target and the two flags share one versioned record, then a **Pariwar Admin** setting the target
+closes the head and inserts a **new row that must carry the flags forward** — i.e. a `pariwar_admin`
+write becomes the thing that **re-states a `super_admin`-only disclosure decision**, and a copy-forward
+bug (or Trap 5's stale read) **silently reverts a reveal the Trust made**. ⛔ That is precisely the
+authority collapse Trap 2 forbids, moved down one layer from the key to the row. ⇒ **D2** rules the
+storage shape, ⛔ and Task 2 does ⛔ not start without it.
 
 ### AC4 — Hidden is the DEFAULT, and `member ≥ public` holds in the reveal
 
@@ -169,7 +298,18 @@ member, which `-189` cl.3 forbids for this data class (`-195` cl.1). ⚠ Enforce
 **Then** ⛔ no public surface, ⛔ no member surface and ⛔ no wire contract carries the target or either
 flag
 **And** a test asserts the target does ⛔ **not** appear in the public drive or drive-page responses
-**And** ⭐ story **D** is the first consumer.
+**And** ⭐ story **D** is the first consumer, and it consumes the target **SERVER-SIDE ONLY** — the
+value reaches the read model, ⛔ never a response body.
+
+⚠⛔ **ADDED 2026-09-06 (validation) — WHAT THIS AC DOES ⛔ NOT COVER, STATED SO IT IS ⛔ NOT MISTAKEN
+FOR COVERED.** ⭐ *"The target appears in no response"* is a **TOKEN** assertion, and story **D** ships
+a **DERIVED** channel this AC's test would pass straight through: D's meter is
+`round(amountRaisedInr / target × 100)` and D's **AC3 displays `amountRaisedInr` itself** ⇒ a reader
+recovers `target ≈ amount / percentage` from **two published numbers**, to within the rounding band.
+⇒ ⛔ **both this AC's test and D's *"the target is NOWHERE in any response"* test can pass while the
+hidden figure is publicly derivable.** ⚠ This story mints the control whose entire purpose is that
+invisibility, so it **records** the channel; ⭐ the **mitigation is D's**, at D's render boundary.
+⇒ **D3** routes it. ⛔ **D3 does ⛔ NOT block any task in this story** — this story renders nothing.
 
 ### AC7 — The target and a member's OBLIGATION never touch
 
@@ -190,6 +330,10 @@ changed.
 ## ⚖️ Decisions
 
 ### ✅ D1 — **RULED (b) by BigDev, 2026-09-04: TWO KEYS, `PERMISSION_CATALOG_VERSION` 39 → 41.** ONE key or TWO?
+
+⚠⛔ **READ WITH PREFLIGHT STOP 1 (2026-09-06).** ⭐ What D1 ruled is **TWO KEYS ⇒ +2**. ⛔ The literal
+`41` is ⛔ **not** part of the ruling — it is `39 + 2` computed at authoring, and **Story 6.18** bumps
+the same counter. ⇒ ⭐ **`+2` from the LIVE value**, ⛔ never a transcribed `41`.
 
 > ⭐⭐ **THE RULING.** **TWO** catalog entries, ⛔ not one. **v39 → v41** (+1 per key, the
 > `helpdesk.create` v22→23 and `manage_nominee_bank_masking` v38→39 precedent).
@@ -232,6 +376,82 @@ which is where a Panel or an auditor would look for it.
 ⇒ **Task 0 is UNBLOCKED.** ⚠ It still opens with the **governance decision** (`-195` cl.2) — ⛔ the
 keys are ⛔ NOT minted in a build task, and the decision must carry Trap 1's argument in full.
 
+### ✅ D2 — **RULED (b) by BigDev, 2026-09-06: TWO RECORDS. ⇒ TASK 2 IS UNBLOCKED.** D1 split the KEYS — ⛔ does the ROW split too?
+
+> ⭐⭐ **THE RULING. TWO records, ⛔ not one.** The authority split is a **DB fact**, ⛔ not a code review.
+>
+> | Record | Written by | Shape |
+> |---|---|---|
+> | **`pariwar_drive_target_schedule`** | `pariwar_admin` (+ `super_admin` auto) | ⭐ **VERSIONED** — `pariwar_id`, `version`, `target_inr`, `[effective_from, effective_until)`, `rationale`, `changed_by_actor`, `changed_by_display`, `audit_id`. The `pool_fixed_amount_schedule` shape exactly (Trap 4, AC1). |
+> | **`pariwar_drive_target_visibility`** | ⛔ **`super_admin` ONLY** | `pariwar_id`, `reveal_to_members`, `reveal_to_public`, + the same attribution columns. ⭐ **AC4's `CHECK (NOT (reveal_to_public AND NOT reveal_to_members))` lives HERE** — both flags in ⛔ one row, so the constraint is expressible without a join. |
+>
+> ⭐⭐ **WHY IT IS THE POINT, ⛔ not the cost.** The `pariwar_admin` write path **⛔ cannot name a flag
+> column** — ⛔ not to change one, ⛔ not to copy one forward, ⛔ not by accident. ⇒ **AC3's**
+> *"a `pariwar_admin` target change leaves both flags byte-unchanged"* stops being a **test of
+> discipline** and becomes **true by construction**. ⚠ That is D1's own reasoning, one layer down: if
+> the catalog earns two entries so the split is visible to an auditor, the substrate must ⛔ not
+> re-merge it underneath.
+>
+> ⚠ **The cost, stated:** two records and two resolvers. ⭐ Accepted — the reveal record has ⛔ no
+> effective-window and ⛔ no version chain to resolve; it is a plain per-Pariwar config row.
+>
+> ⚠⛔ **AND `-201`'s `expectedVersion` ATTACHES TO THE SCHEDULE, ⛔ NOT THE FLAGS** (Trap 5): the
+> versioned record is the one with a `version` to compare. ⭐ The reveal record's concurrency posture
+> is a **separate question** its own setter answers — ⛔ do ⛔ not assume it inherits.
+
+⚠⛔ **Raised 2026-09-06 (validation).** ⭐ `-190` cl.7 splits **setting** (Pariwar Admin) from
+**revealing** (Super Admin). **D1** made that split **structural in the catalog**. ⛔ **Nothing yet
+makes it structural in the SUBSTRATE** — and AC1's ruled append-only shape is what forces the question:
+
+⇒ under *"close the head, insert a new row"*, a **`pariwar_admin`** target change **writes a new row**.
+If that row also carries the two reveal flags, the Pariwar Admin's write is **the act that re-states a
+`super_admin`-only disclosure decision every time**. ⭐ A copy-forward bug — or Trap 5's stale read —
+then **silently reverts a reveal the Trust made**, with the Pariwar Admin's rationale recorded as the
+justification. ⚠ **This is `-201`'s exact failure mode with an AUTHORITY BOUNDARY crossed**, which is
+strictly worse than the one `-201` was ruled to fix.
+
+- **(a) ONE table**, target + both flags on the versioned row; the write path copies the flags forward
+  under a column-level guard. ⭐ One resolver, one `asOf` window, one row to read. ⚠⛔ But the guard is
+  **app-level discipline on a governance boundary**, which is the shape Trap 2 rejects.
+- **(b) ⭐ TWO records — RECOMMENDED.** A **target schedule** (versioned, `pariwar_admin`-written, the
+  `pool_fixed_amount_schedule` shape) **+** a **reveal config** (`super_admin`-written, holding both
+  flags). ⭐ The `pariwar_admin` write path then **cannot name a flag column at all** — the separation
+  is a **DB fact**, ⛔ not a code review. ⭐ **AC4's** *"public-revealed-while-member-hidden is refused"*
+  `CHECK` still lands cleanly: both flags live in **one** row of the reveal record.
+  ⚠ Two records instead of one; two resolvers.
+- **(c) ONE table, flags on an UN-versioned column set** mutated in place. ⭐ Cheapest. ⛔ But it gives
+  the **disclosure** half — the half `-190` cl.7(c) reserved to the Panel's authority — **⛔ no trail
+  at all**, on the one axis this story exists to govern.
+
+⭐ **BigDev's recommendation: (b).** ⚠ D1's own reasoning applies unchanged one layer down: *"under (a)
+that claim rests on a role check … under (b) it is visible where an auditor would look."* ⇒ if the
+catalog earns two entries to make the authority split readable, the substrate should ⛔ not re-merge it.
+
+### ⚠ D3 — **ROUTED 2026-09-06 by BigDev to STORY D (11b.14), QUESTION OPEN. ⛔ NON-BLOCKING; ⛔ C ships unchanged.** The meter's ARITHMETIC channel
+
+> ⭐ **THE ROUTING.** The channel is **RECORDED from this side** (this story mints the control it would
+> bypass) and the **question travels to D unanswered** — ⛔ C decides nothing and ⛔ narrows nothing.
+> ⚠ **11b-14 gains the reciprocal note by name**, so D cannot wire its meter without meeting it.
+> ⛔ ⛔ **Not** escalated, and ⛔ **not** pre-ruled: it is D's render boundary, and D is where the three
+> options are actually costed.
+
+⚠⛔ **Raised 2026-09-06 (validation). ⛔ Blocks ⛔ nothing here** — this story renders nothing (Trap 3).
+⭐ Recorded **from this side** because this story mints the reveal control the channel would bypass.
+
+⭐ **The channel:** `-189` cl.2(b) ratifies a **bar**; cl.2(c) and `-190` cl.7(b) hide the **target**;
+`-190` cl.6/D's **AC3 publishes `amountRaisedInr`**. ⇒ `target ≈ amountRaisedInr ÷ confirmedPercentage`,
+recoverable to within the rounding band from **two ratified, published figures**. ⚠ D's AC2 already
+bans *"no percentage **label** that lets it be inferred by arithmetic"* — ⛔ but the **bar's own
+geometry** is that percentage, and `pool-progress`'s view model exposes `confirmedPercentage` as an
+integer 0–100 (`view-model.ts`, verified). ⇒ ⛔ **the ban as written does ⛔ not reach the mechanism.**
+
+⚠ ⭐ **It is a consequence of a RATIFIED COMBINATION, ⛔ not a defect in any one ruling** — the Panel
+ruled bar-yes and target-no together. ⇒ ⛔ **not** re-litigated here.
+**Question for D:** does D (i) quantize/band the rendered fill so the divisor is not recoverable,
+(ii) accept and record it as a ratified consequence, or (iii) route it to the Panel as a disclosure the
+combination produces? ⚠ ⛔ Do ⛔ not answer it by narrowing this story — the answer lives at D's render
+boundary.
+
 ---
 
 ## ⚠ What this story does ⛔ NOT do
@@ -242,16 +462,28 @@ keys are ⛔ NOT minted in a build task, and the decision must carry Trap 1's ar
   foreclosure (Trap 1). ⚠ A future story wanting that still needs its own Panel ruling.
 - ⛔ It does ⛔ not add a per-drive target (AC1).
 - ⛔ It does ⛔ not touch `pools.fixed_amount`, the assignment engine, or anything a member owes (AC7).
+- ⚠ ⛔ It does ⛔ **not apply `-201`'s patch to the MASKING module** (Trap 5). ⭐ That is Story 11b.3a's
+  open item. ⇒ this story owes ⛔ only that its **own** new write path does ⛔ not ship the same defect
+  a second time. ⛔ Reaching into `nominee-bank-masking/` would be scope drift (**AC8**).
+- ⚠ ⛔ It does ⛔ not decide **D3** — the meter's arithmetic channel is **story D's** render boundary.
 
 ---
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — RULE D1, THEN THE GOVERNANCE DECISION** (AC0) — ⛔ **BLOCKS EVERYTHING**
+- [ ] **Task 0 — RULE D1 + D2, THEN THE GOVERNANCE DECISION** (AC0) — ⛔ **BLOCKS EVERYTHING**
   - [x] Put **D1** to BigDev — ✅ **RULED: TWO keys, v39 → v41.**
+  - [x] ⚠⛔ **Put D2 to BigDev** — ✅ **RULED (b) 2026-09-06: TWO RECORDS.** ⇒ Task 2 unblocked.
+  - [ ] ⭐ Carry **D2** into the governance decision alongside the keys — ⛔ it is a substrate shape
+        under existing rulings, ⛔ not a new policy, so it rides the same entry.
+  - [x] ⚠ **D3 ROUTED to story D (11b.14), question OPEN** — ✅ the reciprocal note is **written into
+        `11b-14` AC2 + Task 3 + its Change Log** (2026-09-06). ⛔ Non-blocking here.
+  - [ ] ⛔ **Run the PREFLIGHT's three STOPs** before writing the decision — the catalog number is
+        ⛔ read, ⛔ never assumed.
   - [ ] Read `.decision-log.md` **live** for the head number — ⛔ do ⛔ not hardcode it.
   - [ ] Write the decision: mint **TWO** keys — a **write** key (`pariwar_admin` + `super_admin`) and a
-        **reveal** key (⛔ `super_admin` ONLY); bump `PERMISSION_CATALOG_VERSION` **39 → 41**; confirm
+        **reveal** key (⛔ `super_admin` ONLY); bump `PERMISSION_CATALOG_VERSION` by **+2 from the
+        LIVE value** (⚠ **STOP 1** — `39 → 41` ⛔ only if this lands before **6.18**); confirm
         or correct the recommended names; **state why the `-178` / `-136` cl.3 analogy does ⛔ not
         apply to the WRITE half and IS honoured for the REVEAL half** (Trap 1, D1); record that it
         supersedes ⛔ nothing.
@@ -264,20 +496,53 @@ keys are ⛔ NOT minted in a build task, and the decision must carry Trap 1's ar
         **NARROWER than its sibling**, or the pair reads as arbitrary.
   - [ ] Cross-reference the two, and cross-reference `pariwar.manage_nominee_bank_masking` — ⭐ that is
         the correct relationship between same-class keys (`2026-09-02-183` cl.1's precedent).
-  - [ ] Grant in `roles.ts`: write → `pariwar_admin` + `super_admin`; reveal → ⛔ `super_admin` ONLY.
-        ⛔ Not `district_admin`, ⛔ not `state_trustee`.
-  - [ ] `PERMISSION_CATALOG_VERSION` **39 → 41**.
-- [ ] **Task 2 — The substrate** (AC1, AC4)
-  - [ ] Migration: the per-Pariwar target + the two reveal flags. ⭐ Model on
-        `pariwar_nominee_bank_masking_schedule`. ⚠ Hand-authored, ⛔ never `db:generate`
-        ([[project_live_db_test_gotchas]]).
-  - [ ] Whole-INR CHECK + non-negative + an upper sanity bound (Trap 4).
+  - [ ] ⭐ Declare **BOTH** at `dimension: 'pariwar'` (AC2) — ⛔ neither is `global`.
+  - [ ] ⚠⛔ **`roles.ts` — CORRECTED 2026-09-06 (validation). The instruction here was WRONG.** It read
+        *"Grant in `roles.ts`: write → `pariwar_admin` + `super_admin`; reveal → `super_admin` ONLY"*,
+        which would produce **an edit that exists nowhere in the file**: `super_admin`'s bundle is
+        `permissions: PERMISSION_CATALOG.keys` (`roles.ts:267-274`) — *"the only global role: every
+        catalog key … deriving from the catalog (not a hand-copied list)"* ⇒ ⭐ **`super_admin`
+        AUTO-DERIVES both keys the moment they are declared.** ⇒ the actual edits are:
+        - **write key** → add to the **`pariwar_admin`** bundle. ⛔ Do ⛔ NOT list `super_admin`.
+        - **reveal key** → ⛔ **NO `roles.ts` EDIT AT ALL.** ⭐ Confirmed by the precedent: a grep for
+          `manage_nominee_bank_masking` / `manage_public_name_presentation` in `roles.ts` returns
+          ⛔ **nothing** — `super_admin`-only keys appear in the catalog and ⛔ never in a bundle.
+        - ⛔ Not `district_admin`, ⛔ not `state_trustee` (inert either way).
+  - [ ] `PERMISSION_CATALOG_VERSION` — **+2 from the LIVE value** (⛔ read it; **STOP 1**). `39 → 41`
+        ⛔ only if this story lands before **6.18**.
+  - [ ] ⚠ **STOP 2's two tests, in the same commit:** `permissions.test.ts:54` (`toBe(39)` → the new
+        value, **and append this story's entry to the running rationale comment**) and `:56`
+        (`toHaveLength(47)` → **49**, ⛔ not 48). Then `roles.test.ts`'s holder-set assertion for the
+        write key.
+- [ ] **Task 2 — The substrate** (AC1, AC4) — ✅ **UNBLOCKED (D2 RULED (b): TWO RECORDS)**
+  - [ ] Migration: **TWO** records per **D2** — `pariwar_drive_target_schedule` (versioned,
+        `pariwar_admin`-written) and `pariwar_drive_target_visibility` (`super_admin`-written, both
+        flags + AC4's CHECK). ⛔ The target table carries ⛔ NO flag column. ⭐ Model on
+        **`pool_fixed_amount_schedule`** — the versioned per-Pariwar **rupee** precedent (Trap 4), which
+        is also what `pariwar_nominee_bank_masking_schedule.ts:27-32` names as **its own** model.
+        ⚠ Hand-authored, ⛔ never `db:generate` ([[project_live_db_test_gotchas]]).
+  - [ ] ⭐ The **versioned effective-window** shape (AC1): `version` monotonic per Pariwar,
+        `[effective_from, effective_until)`, `(pariwar_id, version)` unique, **and** the partial unique
+        `ON (pariwar_id) WHERE effective_until IS NULL` — the at-most-one-open-head guard.
+  - [ ] Whole-INR CHECK — **strictly positive (`> 0`)** ⛔ not `>= 0` — plus the ceiling, mirroring
+        `pool_fixed_amount_schedule_amount_positive` / `…_amount_max` and kept **IN SYNC** with a named
+        constant, the `MAX_POOL_FIXED_AMOUNT_INR` discipline (Trap 4).
   - [ ] ⭐ A DB-level guard that ⛔ refuses public-revealed-while-member-hidden (AC4) — ⛔ do ⛔ not leave
         it to the handler alone; family 5 wants the app rule mirrored by a constraint.
+  - [ ] ⭐ Every constraint declared in the **migration** has its **twin in the drizzle table file** —
+        the snapshot is frozen, so the declaration is what a future reader treats as truth
+        (`pariwar_nominee_bank_masking_schedule.ts:171-174` records this being caught by a review pass).
   - [ ] RLS + grants per the existing per-Pariwar-settings posture.
 - [ ] **Task 3 — The domain write** (AC2)
   - [ ] The setter, with required rationale + actor + display-name snapshot + audit line, following
-        `nominee-bank-masking-policy.ts`, which *"refuses to skip"* them.
+        `nominee-bank-masking-policy.ts:241-260`, which *"refuses to skip"* them (⚠ the columns are
+        NULLABLE — the refusal is the **write path's**, ⛔ not the schema's).
+  - [ ] ⭐⭐ **`-201`'s TWO controls, IN ORDER** (Trap 5): `Idempotency-Key` **FIRST** (opt-in, reusing
+        `idempotency.createKeyedStore(deps.pool)`, namespaced by route + scope + `pariwarId`), then
+        **`expectedVersion` REQUIRED and `number | null`**, mismatch ⇒ **409 with a REGISTERED code**.
+        ⛔ Do ⛔ not reorder them, and **say why at the call site**.
+  - [ ] ⚠ Under **D2(b)** the reveal write is its **own** setter — ⛔ the target setter never names a
+        flag column (AC3).
 - [ ] **Task 4 — The admin surface** (AC5)
   - [ ] Route + UI on the `/p/$pariwarId/nominee-bank-masking` precedent.
   - [ ] The reveal switches render ⛔ only for `super_admin`.
@@ -289,7 +554,14 @@ keys are ⛔ NOT minted in a build task, and the decision must carry Trap 1's ar
   - [ ] Public-revealed-while-member-hidden is **refused** — at the handler **and** at the DB (AC4).
   - [ ] The target appears in ⛔ no public response (AC6).
   - [ ] The contribution path is **identical** with the target set / unset / changed (AC7).
-  - [ ] Non-integer, negative and absurd values rejected (Trap 4).
+  - [ ] Non-integer, negative, **zero** and absurd values rejected — at the contract boundary **and**
+        at the DB (Trap 4). ⚠ **`0` is a rejection case, ⛔ not a boundary pass.**
+  - [ ] ⭐ **A `pariwar_admin` target change leaves both reveal flags byte-unchanged** (AC3 / D2).
+  - [ ] ⭐ **Trap 5's two:** a replayed `Idempotency-Key` returns the recorded response and creates
+        ⛔ **no** second version + ⛔ no second audit line; a **stale `expectedVersion`** gets the
+        registered **409**, ⛔ never a silent overwrite and ⛔ never a bare `23505`/opaque 500.
+  - [ ] ⭐ The versioned shape holds: a second change **closes the head** and inserts `version + 1`;
+        the partial unique refuses a second open head (AC1).
   - [ ] ⭐ **Execute them** against `twt-test-pg` on `:5433` — ⛔ *"written but not run"* is ⛔ not
         attested; that gap shipped a red spec at 11b.10.
 
@@ -327,7 +599,20 @@ the shared fixture.
 - `.decision-log.md#decision-2026-09-02-178` — the authority ruling this story does ⛔ NOT supersede
 - `.decision-log.md#decision-2026-08-19-136` cl.3 — the two-axis SCOPE/AUTHORITY rule
 - `packages/domain/src/rbac/permissions.ts:562-598` — the precedent key, its foreclosure, and v39
-- `packages/domain/src/claim/nominee-bank-masking-policy.ts` — the audit discipline to follow
+- `packages/domain/src/claim/nominee-bank-masking-policy.ts:241-260` — the audit discipline to follow
+
+⭐ **Added 2026-09-06 (validation):**
+
+- `.decision-log.md#decision-2026-09-05-201` — ⛔ **POST-BASELINE.** The masking PUT's ruled-but-unbuilt
+  `Idempotency-Key` + `expectedVersion` seam, and why the order is load-bearing (**Trap 5**)
+- `packages/domain/src/schema/pool_fixed_amount_schedule.ts:60-115` — ⭐ the **true** precedent: a
+  per-Pariwar **versioned rupee** record, `> 0` + ceiling CHECKs, open-head partial unique (**Trap 4**)
+- `packages/domain/src/pool/fixed-amount.ts:79,405` — `MAX_POOL_FIXED_AMOUNT_INR` + the app-side assert
+- `packages/domain/src/rbac/roles.ts:267-274` — `super_admin` derives `PERMISSION_CATALOG.keys` ⇒ ⛔ no
+  bundle edit for a `super_admin`-only key (**Task 1**)
+- `packages/domain/tests/rbac/permissions.test.ts:54,56` — the two hard-coded numbers (**STOP 2**)
+- `_bmad-output/implementation-artifacts/6-18-…md:367-370` — the reciprocal catalog-version warning
+  this story did ⛔ not carry (**STOP 1**)
 
 ## Dev Agent Record
 
@@ -344,4 +629,6 @@ the shared fixture.
 | Date | Version | Description | Author |
 |---|---|---|---|
 | 2026-09-04 | 0.1 | Created from `2026-09-04-195` cl.3 (story **C**). ⚠ **D1 is OPEN and blocks Task 0**, which itself blocks all code. ⭐ Finding at authoring: the neighbouring key **FORECLOSES `pariwar_admin` in writing**, with *"a Panel ruling"* as its acceptance condition — `-190` cl.7(a) IS one, but the decision must say why the disclosure analogy does ⛔ not apply. | BigDev + Claude |
+| 2026-09-06 | 0.4 | ✅⭐⭐ **D2 RULED (b) BY BIGDEV — TWO RECORDS; ⇒ TASK 2 UNBLOCKED, and ⛔ ZERO open decisions remain in this story.** `pariwar_drive_target_schedule` (versioned, `pariwar_admin`) + `pariwar_drive_target_visibility` (⛔ `super_admin` ONLY, both flags + AC4's CHECK). ⭐ The target setter **cannot name a flag column**, so AC3's *"a `pariwar_admin` change leaves the flags byte-unchanged"* becomes **true by construction**, ⛔ not a test of discipline. ⚠ `-201`'s `expectedVersion` attaches to the **schedule**; the reveal record's posture is its own question. ⭐ **D3 ROUTED to story D (11b.14) with the question OPEN** — the reciprocal note is written into **11b-14 AC2 + Task 3 + Change Log**, with the three options and ⛔ none pre-ruled. ⛔ C ships unchanged. | BigDev + Claude |
+| 2026-09-06 | 0.3 | ⭐⭐ **VALIDATED — TEN FINDINGS, ⛔ ZERO ROWS MOVE; stays `ready-for-dev`.** ⛔ No code. **Two NEW decisions raised:** **D2** (⛔ BLOCKED Task 2 — D1 split the keys, ⛔ nothing split the ROW: a `pariwar_admin` target write would re-state a `super_admin`-only reveal on every change) and **D3** (⛔ non-blocking, ROUTED to **D** — the meter recovers the hidden target by arithmetic from two published figures, and BOTH stories' *"target in no response"* tests pass anyway). **Corrections:** Trap 4 named `pools.fixed_amount`, which carries ⛔ **no** DB constraint at all — the real precedent is `pool_fixed_amount_schedule` + `MAX_POOL_FIXED_AMOUNT_INR`; *"non-negative"* admitted **₹0**, a division-by-zero for D's meter ⇒ **strictly positive**; **NEW Trap 5** — `-201` (ruled ⛔ AFTER the baseline, ⛔ still unbuilt) rules this exact precedent's write path needs `Idempotency-Key` **then** `expectedVersion`; Task 1's `roles.ts` instruction would have produced an edit **that exists nowhere in the file** (`super_admin` auto-derives the catalog); a **PREFLIGHT** with 3 STOPs — the `39 → 41` collision with **6.18** (whose story carried the warning while this one did ⛔ not) and the two hard-coded test numbers (`47 → 49`, ⛔ not 48); AC1's *"a per-Pariwar record"* pinned to the **versioned effective-window** shape; the reveal key's **`dimension`** stated; and the header's *"⛔ nothing depends on A or B"* corrected — **D**, **E** and **F** all do. | BigDev + Claude |
 | 2026-09-04 | 0.2 | ✅ **D1 RULED: TWO keys, v39 → v41.** Write key `pariwar_admin` + `super_admin`; reveal key ⛔ `super_admin` ONLY. Task 0 unblocked — ⚠ it still opens with the governance decision, and **both** doc-blocks carry the argument. | BigDev + Claude |

@@ -376,7 +376,8 @@ describe.skipIf(!hasDatabase)('public Sahyog Drive route (:5433)', { timeout: 30
         expect(body.items[0]?.['deceasedMemberName']).toBeNull();
         expect(body.items[0]?.['district']).toBe('Kanpur');
         expect(body.items[0]?.['poolCanonicalIdentifier']).toBeTruthy();
-        expect(body.items[0]?.['status']).toBe('active');
+        // ⚠ Story 11b.12 D1(b) — the ruled public token for `pools.current_state = 'closed'`.
+        expect(body.items[0]?.['status']).toBe('closed');
         // ⛔ And the name must not leak in any other form — not the legal name, not a fragment.
         expect(res.body).not.toContain('Sunita');
       } finally {
@@ -592,7 +593,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Drive route (:5433)', { timeout: 30
       }
     });
 
-    it('maps `settled` to the PUBLIC token `archive` — ⛔ the internal word never crosses', async () => {
+    it('maps `settled` to the RULED public token `verified`, and `status` is one of the ALLOW-LIST', async () => {
       const t = await createTestApp();
       try {
         const { pariwarId } = await seedDrives(t, [
@@ -601,16 +602,32 @@ describe.skipIf(!hasDatabase)('public Sahyog Drive route (:5433)', { timeout: 30
         const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId) });
         expect(
           (res.json() as { items: Array<Record<string, unknown>> }).items[0]?.['status'],
-        ).toBe('archive');
-        // ⛔ The internal lifecycle VOCABULARY must not appear as a VALUE anywhere on the wire.
-        // ⚠ Asserted over the parsed values, ⛔ not as a raw-body substring: `closedAt` is a
-        // legitimate FIELD NAME containing "closed", so a substring check here fails on a
-        // correctly-behaving response. The rule is about the internal tokens crossing as DATA.
-        const values = Object.values(
-          (res.json() as { items: Array<Record<string, unknown>> }).items[0] ?? {},
+        ).toBe('verified');
+        // ⭐⭐ AN **ALLOW-LIST**, ⛔ NOT A DENY-LIST — Story 11b.12 **D1(b)**, and it is STRICTLY
+        // STRONGER than the four-word deny-list it replaces: it pins what IS permitted instead of
+        // enumerating four things that are not.
+        // ⚠⛔ WHY THE SHAPE HAD TO CHANGE, so nobody "fixes" it back. `2026-08-21-144` cl.8 records
+        // `/members` having leaked the internal `lock-in` value onto a public JSON route, and this
+        // assertion used to read *"`spawned` / `live` / `closed` / `settled` never appear"*. Since
+        // D1(b) the ruled PUBLIC words are **Live · Closed · Verified** and the wire says the same
+        // ⇒ two of those four internal names now cross **DELIBERATELY**. ⭐ The coincidence is
+        // RULED, ⛔ not a leak. The property cl.8 actually protects — *no **UN-RULED** internal
+        // vocabulary crosses* — is preserved here, and `spawned` stays a **PURE DENY**.
+        // ⚠ Asserted over the PARSED VALUES, ⛔ not as a raw-body substring: `closedAt` is a
+        // legitimate FIELD NAME containing "closed", so a substring check fails on a
+        // correctly-behaving response. The rule is about tokens crossing as DATA.
+        const item = (res.json() as { items: Array<Record<string, unknown>> }).items[0] ?? {};
+        // (a) the ALLOW-LIST: `status` is EXACTLY one of the ruled public set for this surface.
+        expect(pool.SAHYOG_DRIVE_STATUSES).toContain(item['status']);
+        // (b) and ⛔ NO un-ruled internal token appears as a value ANYWHERE on the row. ⭐ Derived
+        //     from the two tuples, ⛔ never hand-listed, so minting a public word cannot silently
+        //     shrink this deny-set.
+        const unruled = pool.POOL_LIFECYCLE_STATES.filter(
+          (st) => !(pool.SAHYOG_DRIVE_STATUSES as readonly string[]).includes(st),
         );
-        for (const internal of ['spawned', 'live', 'closed', 'settled']) {
-          expect(values).not.toContain(internal);
+        expect(unruled).toContain('spawned'); // ⛔ non-vacuous: `spawned` is a PURE DENY.
+        for (const internal of unruled) {
+          expect(Object.values(item)).not.toContain(internal);
         }
       } finally {
         await teardown(t);

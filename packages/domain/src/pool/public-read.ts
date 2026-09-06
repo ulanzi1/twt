@@ -103,16 +103,40 @@ export const SAHYOG_DRIVE_VISIBLE_POOL_STATES = ['closed', 'settled'] as const;
 export type SahyogDriveVisiblePoolState = (typeof SAHYOG_DRIVE_VISIBLE_POOL_STATES)[number];
 
 /**
- * The two-label PUBLIC vocabulary. ⛔ THE WIRE TOKEN IS NEVER THE INTERNAL ONE — `2026-08-21-144`
- * cl.8 records `/members` having leaked the internal `lock-in` value onto a public JSON route,
- * and this surface is built not to repeat it.
+ * The two-label PUBLIC vocabulary — **Closed · Verified**.
+ *
+ * ⛔⛔ THE PREVIOUS RULE HERE IS SUPERSEDED, AND IT IS NAMED RATHER THAN OVERWRITTEN
+ * ([[feedback_supersede_never_reinterpret]]). It read: *"⛔ **THE WIRE TOKEN IS NEVER THE INTERNAL
+ * ONE** — `2026-08-21-144` cl.8 records `/members` having leaked the internal `lock-in` value onto a
+ * public JSON route, and this surface is built not to repeat it."*
+ *
+ * ⚠ That rule is **FALSE AS WRITTEN** from Story 11b.12 (**D1(b)**, BigDev 2026-09-04, implementing
+ * Trustee-ratified `2026-09-04-190` cl.5 / `-191` cl.3 / `-193` cl.1). The wire is ALIGNED to the
+ * ruled public words, so `closed` deliberately appears on **both** sides of the boundary.
+ *
+ * ⭐⭐ THAT COINCIDENCE IS **RULED**, ⛔ NOT A LEAK. The property cl.8 protects is *"⛔ no **UN-RULED**
+ * internal vocabulary crosses"*, ⛔ **not** *"these four particular strings never appear"*. ⇒ every
+ * anti-leak assertion over this surface is an **ALLOW-list** (exactly this tuple), ⛔ never a
+ * deny-list. ⚠⛔ ⛔ Do ⛔ NOT "fix" the overlap by reverting the wire — read D1(b) first.
+ * ⚠ `spawned` remains a **PURE DENY** — see the map below, which is what proves it.
  */
-export const SAHYOG_DRIVE_STATUSES = ['active', 'archive'] as const;
+export const SAHYOG_DRIVE_STATUSES = ['closed', 'verified'] as const;
 export type SahyogDriveStatus = (typeof SAHYOG_DRIVE_STATUSES)[number];
 
+/**
+ * ⛔⛔ THIS MAP IS **NOT** A NO-OP, AND ⛔ IT MAY NOT BE DELETED — read this before "simplifying" it.
+ *
+ * ⚠ After Story 11b.12 it is **PART-IDENTITY**: `closed → 'closed'` maps a state to itself, and only
+ * `settled → 'verified'` does not. ⇒ it now *looks* redundant, and deleting it would silently
+ * **re-fuse the internal state to the wire token** and lose the boundary it exists to hold.
+ *
+ * ⭐ `spawned` is the proof it is load-bearing: an internal pool state with ⛔ **no public token at
+ * all**. The map is a TOTAL function on `SahyogDriveVisiblePoolState` precisely so that widening the
+ * visible set without minting a public word fails to compile.
+ */
 const PUBLIC_STATUS_BY_POOL_STATE: Record<SahyogDriveVisiblePoolState, SahyogDriveStatus> = {
-  closed: 'active',
-  settled: 'archive',
+  closed: 'closed',
+  settled: 'verified',
 };
 
 /** The event types whose `occurred_at` IS the drive's close/settle instant. */
@@ -485,7 +509,13 @@ export interface SahyogDriveEntry {
    * testing guessed addresses at collection rates, which is the inverse of AC1.
    */
   publicToken: string;
-  /** `active` (window closed) | `archive` (disbursed). The PUBLIC token, never the internal one. */
+  /**
+   * `closed` (contributions finished, being checked against bank records) | `verified` (every
+   * contribution checked). The PUBLIC token — ⚠ which since Story 11b.12 **deliberately coincides**
+   * with the internal `pools.current_state` word for `closed`. ⭐ That is RULED (D1(b)), ⛔ not a
+   * leak. ⚠⛔ The previous text here read *"`active` (window closed) | `archive` (disbursed)"* —
+   * ⛔ both tokens are retired and *"disbursed"* was false (`2026-09-04-192`).
+   */
   status: SahyogDriveStatus;
   /** The close/settle instant. `null` when the pool's stream carries no such event yet. */
   driveClosedAt: Date | null;

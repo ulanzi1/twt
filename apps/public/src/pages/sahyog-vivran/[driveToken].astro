@@ -113,6 +113,12 @@ const branding = passportRow?.brandingBundle ?? null;
 const tr = (key: string, params?: Record<string, string | number>) =>
   t(key, params, { locale, namespace: 'sahyog-vivran' });
 
+// ⭐⭐ THE ONE SHARED STAGE VOCABULARY (`2026-09-04-193` cl.3, Story 11b.12 AC4). ⛔ The three stage
+// names and their explanations live in `sahyog-shared` and ⛔ NOWHERE else — the index reads these
+// same keys, and (at story E, 11b-15) so will the member app. ⛔ Do not re-add a `status.*` key to
+// `sahyog-vivran.json`: two sources is exactly how *"Active"* came to mean two different things.
+const ts = (key: string) => t(key, undefined, { locale, namespace: 'sahyog-shared' });
+
 const labels: SahyogVivranLabels = {
   pageTitle: tr('page.title'),
   pageIntro: tr('page.intro'),
@@ -124,9 +130,12 @@ const labels: SahyogVivranLabels = {
   labelContributions: tr('label.contributions'),
   labelStatus: tr('label.status'),
   districtUnknown: tr('value.district_unknown'),
-  statusCollecting: tr('status.collecting'),
-  statusActive: tr('status.active'),
-  statusArchive: tr('status.archive'),
+  // ⚠ D3 — the FIELD NAMES are historical and deliberately NOT renamed; their VALUES are the ruled
+  // **Live** / **Closed** / **Verified** words, read from the ONE shared source. ⛔ Do not "fix" the
+  // names here; a rename is a tidy-up story, ⛔ never a silent edit.
+  statusCollecting: ts('stage.live'),
+  statusActive: ts('stage.closed'),
+  statusArchive: ts('stage.verified'),
   collectingTitle: tr('collecting.title'),
   collectingBody: tr('collecting.body'),
   // ⭐ THREE DISTINCT STRINGS, one per opaque outcome token — ⛔ and NONE of them compares to a
@@ -364,6 +373,38 @@ if (!driveStatusVisible) {
             </div>
           </dl>
         </section>
+
+        {/*
+          ⭐⭐ THE STAGE EXPLAINER — `2026-09-04-192` cl.3's INFO AFFORDANCE (Story 11b.12 AC3).
+          ⛔⛔ A NATIVE `<details>`, ⛔ NOT A TOOLTIP: this page is server-rendered and carries ⛔ ZERO
+          `<script>`, and HOVER IS ⛔ NOT AN AFFORDANCE (family 13 check (c)) — unreachable by
+          keyboard AND by touch, and most members are on phones. `<summary>` is natively focusable,
+          natively tappable, and carries its own accessible name.
+          ⭐ THE MARKER RESET AND THE FOCUS RING ARE BOTH REQUIRED, ⛔ neither is decoration — this
+          page has ⛔ no `<style>` block, so they ride Tailwind utilities: `list-none` +
+          `[&::-webkit-details-marker]:hidden`, and an explicit `focus-visible:outline`. Several UA
+          stylesheets give `<summary>` ⛔ NO visible focus indicator.
+          ⚠ **Verified** is explained even though ⛔ NO drive can currently be in that stage —
+          `pool.settled` has ⛔ no production producer. A stage a visitor may never see is still one
+          the vocabulary promises to define.
+        */}
+        <details class="mt-6 rounded border border-gray-300 p-4">
+          <summary
+            class="flex cursor-pointer list-none items-center gap-2 text-sm font-semibold [&::-webkit-details-marker]:hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-700"
+            aria-label={ts('stage.explainer.a11y')}
+          >
+            <span aria-hidden="true" class="inline-flex h-5 w-5 flex-none items-center justify-center rounded-full border border-current text-xs italic leading-none">i</span>
+            <span>{ts('stage.explainer.summary')}</span>
+          </summary>
+          <dl class="mt-3">
+            <dt class="mt-2 text-sm font-semibold">{ts('stage.live')}</dt>
+            <dd class="text-sm text-gray-700">{ts('stage.live.help')}</dd>
+            <dt class="mt-2 text-sm font-semibold">{ts('stage.closed')}</dt>
+            <dd class="text-sm text-gray-700">{ts('stage.closed.help')}</dd>
+            <dt class="mt-2 text-sm font-semibold">{ts('stage.verified')}</dt>
+            <dd class="text-sm text-gray-700">{ts('stage.verified.help')}</dd>
+          </dl>
+        </details>
 
         {/*
           ⭐ AC3's HONEST LIVE-DRIVE COPY — ⛔ never an estimate, ⛔ never a projected final amount,

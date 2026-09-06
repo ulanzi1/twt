@@ -193,6 +193,36 @@ be used (`-190` cl.2)
 **And** ⛔ the index line's `{nominee_name}` token (11b.12's ratified copy) is **rendered** by this
 story — ⭐ 11b.12 **authored** it, ⛔ left it dark, exactly as it did `{amount}`
 **And** ⚠ an **absent** nominee name **drops its clause** — the Panel's *"omit the clause"* rule
+
+> ✅⭐⭐ **11b.12 HAS SHIPPED THE COPY. THE KEY PATHS, WRITTEN IN BY NAME (11b.12 Task 2b, 2026-09-06)
+> — ⛔ CONSUME THESE, ⛔ DO ⛔ NOT MINT YOUR OWN.**
+>
+> Namespace **`sahyog-shared`** (`packages/i18n/locales/{en,hi}/sahyog-shared.json`), registered in
+> `catalog.ts`. ⭐ All four variants exist in **both** locales, verbatim from routing note **§9.2**:
+>
+> | Key | Renders when |
+> |---|---|
+> | `index_line.full` | all of `{amount}` `{nominee_name}` `{family_name}` `{district_name}` present |
+> | `index_line.no_nominee` | ⛔ no nominee name |
+> | `index_line.no_family` | ⛔ no consented family name |
+> | `index_line.no_district` | ⛔ no posting row |
+>
+> ⭐ **RULING 3 (`§10.2`), IMPLEMENTED AS FOUR STRINGS, ⛔ NOT EIGHT:** an absent token drops its
+> clause — ⛔ no combinatorial cross-product. ⇒ pick the ONE variant naming the absent token.
+>
+> ⛔⛔ **AND `no_family` DROPS THE DISTRICT CLAUSE TOO — ⛔ THIS IS ⛔ NOT A BUG TO "FIX".**
+> *"who served in {district_name} district"* / *"जनपद … में कार्यरत"* modifies the **DECEASED
+> MEMBER**. Keep it while dropping `{family_name}` and the sentence attributes the posting district
+> to the **NOMINEE** — a factual claim about a named private individual that the data does ⛔ not
+> support. ⚠ Pinned by `packages/i18n/tests/sahyog-shared-dark-copy.test.ts`.
+>
+> ⚠⛔ **AND ⛔ ONE CORRECTION TO A PREMISE THIS STORY MAY HAVE INHERITED.** 11b.12's AC9 states that
+> *"`t()` interpolates an unsupplied token to nothing"* ⇒ *"an empty rupee figure"*. ⛔ **That is
+> FALSE in this codebase** — ⭐ checked at `packages/i18n/src/resolver.ts:36-42`, `t()` **THROWS**
+> `[i18n] missing interpolation param`. ⇒ rendering one of these lines before **every** token is
+> supplied is a **500 / the outage arm**, ⛔ not a silently-blank figure. ⭐ Louder, ⛔ but this
+> story must still supply `{amount}` **and** `{nominee_name}` **together with** the two nullable
+> tokens, or pick the right variant.
 **And** ⛔ ⛔ **NO** other nominee-bank value crosses: ⛔ no account number, ⛔ no last-4, ⛔ no IFSC,
 ⛔ no VPA, ⛔ no bank, ⛔ no branch. ⭐ The keys are **ABSENT**, ⛔ never `null` (the 11b.11 shape).
 

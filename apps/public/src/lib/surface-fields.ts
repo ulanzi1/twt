@@ -455,7 +455,13 @@ export interface SahyogVivranRenderModel {
   readonly poolLetterCode: string;
   /** `P-YYYY-MM-###` — and on this surface also the route parameter. */
   readonly poolCanonicalIdentifier: string;
-  /** `collecting` | `active` | `archive`, already localised. ⛔ The internal word never reaches here. */
+  /**
+   * `live` | `closed` | `verified`, ALREADY LOCALISED (Story 11b.12 — the previous text here read
+   * *"`collecting` | `active` | `archive`"*, all three retired). ⚠⛔ *"The internal word never
+   * reaches here"* was ⛔ **also** retired: the wire now speaks the ruled public words, two of which
+   * (`live`, `closed`) deliberately coincide with `pools.current_state` names. ⭐ That is RULED
+   * (D1(b), `2026-08-21-144` cl.8's real property preserved as an ALLOW-list), ⛔ not a leak.
+   */
   readonly driveStatus: string;
   /** The close/settle instant, already formatted. `null` ⇒ render NOTHING (still collecting). */
   readonly driveClosedAt: string | null;

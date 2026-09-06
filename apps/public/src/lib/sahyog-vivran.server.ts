@@ -187,10 +187,16 @@ function isSahyogVivranResponse(body: unknown): body is PublicSahyogVivranRespon
 
   if (typeof r['poolLetterCode'] !== 'string' || r['poolLetterCode'].length === 0) return false;
   if (typeof r['poolCanonicalIdentifier'] !== 'string') return false;
+  // ⛔⛔ THE LITERAL SET IS THE **PUBLIC WIRE** ENUM (`PublicSahyogVivranStatus`), AND ⛔ THE
+  // TYPECHECK ⛔ CANNOT SEE IT — `r` is a `Record<string, unknown>` off the parsed API body, so
+  // ⛔ no enum type is in scope and a literal that can NEVER match compiles clean. ⚠ The failure arm
+  // is the page's OUTAGE state. ⭐ Story 11b.12 renamed these from `'collecting'`/`'active'`/
+  // `'archive'`. ⛔ Change this set ONLY together with `PublicSahyogVivranStatus`; the twin guard is
+  // `sahyog.server.ts`'s `status` check.
   if (
-    r['driveStatus'] !== 'collecting' &&
-    r['driveStatus'] !== 'active' &&
-    r['driveStatus'] !== 'archive'
+    r['driveStatus'] !== 'live' &&
+    r['driveStatus'] !== 'closed' &&
+    r['driveStatus'] !== 'verified'
   ) {
     return false;
   }

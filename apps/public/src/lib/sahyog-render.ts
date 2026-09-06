@@ -293,7 +293,10 @@ function toDisplayRow(
     // `deceasedMemberName`: that is Tier-1, consent-gated and `null` for any unconsented family —
     // it would make the accessible name VANISH on exactly the rows that still need one.
     driveLinkA11yLabel: labels.driveLinkA11y(row.poolCanonicalIdentifier),
-    driveStatus: row.status === 'archive' ? labels.statusArchive : labels.statusActive,
+    // ⚠ Story 11b.12 — `'verified'` is the wire token, `labels.statusArchive` the FIELD NAME.
+    // ⛔ The field is deliberately NOT renamed (D3: the ban is on rendered VALUES, ⛔ not on
+    // identifiers a member never reads); its VALUE now resolves to the shared **Verified** copy.
+    driveStatus: row.status === 'verified' ? labels.statusArchive : labels.statusActive,
     driveClosedAt: formatClosedAt(row.closedAt),
     district: row.district,
     confirmedContributionCount: labels.contributionsCount(row.confirmedContributionCount),
@@ -335,7 +338,11 @@ export function buildSahyogView(
     drive.items.forEach((item, i) => {
       const displayRow = rows[i];
       if (displayRow === undefined) return;
-      if (item.status === 'archive') archiveRows.push(displayRow);
+      // ⛔⛔ THE PARTITION LITERAL. ⚠ Story 11b.12 renamed it `'archive'` → `'verified'`. Get it
+      // wrong and EVERY drive lands in one section — or, as `:178-184` records actually happening,
+      // renders TWICE under two headings making contradictory claims. ⭐ Pinned by the
+      // both-tokens-present `splitSections` test, ⛔ not by the label test.
+      if (item.status === 'verified') archiveRows.push(displayRow);
       else activeRows.push(displayRow);
     });
   }

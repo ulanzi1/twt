@@ -151,6 +151,25 @@ hover-only.
 > exists at all**, so the render **and** the *"i"* control are ⭐ **this story's Task 4**, ⛔ not
 > inherited work.
 >
+> ✅⭐⭐ **B HAS SHIPPED. THE KEY PATH, WRITTEN IN BY NAME (11b.12 Task 5, 2026-09-06):**
+>
+> | What | Key |
+> |---|---|
+> | namespace | ⭐ **`sahyog-shared`** (`packages/i18n/locales/{en,hi}/sahyog-shared.json`) |
+> | the three stage NAMES | `stage.live` · `stage.closed` · `stage.verified` |
+> | their explanations | `stage.live.help` · `stage.closed.help` · `stage.verified.help` |
+> | the affordance's visible label | `stage.explainer.summary` |
+> | the affordance's ACCESSIBLE NAME | `stage.explainer.a11y` |
+>
+> ⭐ Resolve with `t(key, undefined, { locale, namespace: 'sahyog-shared' })`. ⚠ **EXPLICIT NAMESPACE
+> ON EVERY CALL** — `t()` defaults to `common` and **THROWS** on a miss. ⭐ `packages/i18n` is
+> already a mobile dep (`apps/mobile/package.json:34`), the namespace is registered in `catalog.ts`,
+> and `apps/mobile/tests/unit/sahyog-stage-copy-resolves.test.ts` (shipped by B) already proves all
+> eight keys resolve **from this app** in both locales. ⇒ ⛔ there is ⛔ nothing left to wire.
+>
+> ⚠ The tamagui `accessible={true}` requirement (the 11b.10 review finding) is **this story's** —
+> B recorded it and ⛔ did ⛔ not discharge it.
+>
 > ⛔⛔ **AND ⛔ DO ⛔ NOT MINT A SECOND KEY SET.** If B's key path is not recorded above by the time
 > this story starts, ⛔ **stop and read B's Dev Agent Record** — ⛔ do not define your own. Two sources
 > is exactly how *"Active"* came to mean two different things; `-193` cl.3 exists to close it, and

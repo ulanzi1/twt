@@ -1,4 +1,38 @@
-# last_updated: 2026-09-06 (⭐ **STORY 11b.12 STARTS — Task 0's GOVERNANCE WRITE, before the first line
+# last_updated: 2026-09-06b (⭐⭐ **STORY 11b.12 IMPLEMENTED — `in-progress` -> `review`.** ONE row
+#   flips: development_status[11b-12-stage-vocabulary-and-info-affordance] `in-progress` -> `review`.
+#   ⛔ epic-11b stays `in-progress`; ⛔ 11b-11 stays `done`; ⛔ 11b-13…17 and 6-18 stay `ready-for-dev`.
+#   ⭐ Three stages **Live · Closed · Verified** from ONE new registered namespace `sahyog-shared`,
+#   both locales, both public surfaces; the wire ALIGNED (index TWO members, drive page THREE); all
+#   NINE Trap 1 sites re-shaped DENY -> ALLOW each naming `-144` cl.8; the `<details>` affordance
+#   establishes `apps/public`'s FIRST disclosure pattern (marker reset + focus ring).
+#   ⭐⭐ **THREE FALSE PAYOUT SENTENCES REMOVED FROM A LIVE PUBLIC PAGE** — they had been telling the
+#   public the trust pays the family, which `-192` establishes it NEVER does.
+#   ⚠⛔ **THREE CORRECTIONS TO THE STORY FILE, all CHECKED ⛔ not inferred:**
+#   **(1)** `t()` ⛔ does NOT interpolate an unsupplied token to nothing — `resolver.ts:36-42`
+#   **THROWS** ⇒ a premature dark-token render is a **500**, ⛔ not a blank rupee figure. AC9,
+#   Task 2b and D2's note all state otherwise; corrected in the test header, both locale notes and
+#   the note written into 11b-14. ⭐ Conclusion unchanged, guarantee STRONGER.
+#   **(2)** the `en` offender list is wrong in BOTH directions (nine hits, ⛔ not seven: adds
+#   `empty.body`, omits `section.archive.help`) ⇒ the AC1 ban is **word-boundary**, ⛔ not substring,
+#   because a substring `collect` **false-fails on D3's own ratified AFTER copy**.
+#   **(3)** Trap 8 is **TEN** files — `sahyog-drive.spec.ts:379` was named nowhere, is invisible to
+#   the typecheck, and went red ⛔ only on the live-DB run; plus two un-named prose lines still
+#   carrying the payout falsehood (`sahyog-vivran.ts:75-76`, `public-read.ts:488`).
+#   ⭐⭐ **AND `sahyog.server.ts:202` WAS MUTATION-TESTED, ⛔ NOT BELIEVED:** with the old literals
+#   restored the typecheck and 113 copy/render tests stay **GREEN** while the new
+#   `sahyog-serves.test.ts` goes **RED** — the story's outage warning confirmed exactly.
+#   ⭐ AC9 ruling 3 exposed a **coupling the ruling does ⛔ not cover**: dropping `{family_name}` must
+#   drop the district clause WITH it, or the sentence attributes the deceased's posting district to
+#   the **NOMINEE**. ⇒ four variants, ⛔ not eight, and the coupling is asserted.
+#   ⭐ Key paths written BY NAME into **11b-14 AC7** and **11b-15 AC4** — ⛔ so D and E consume them
+#   and ⛔ neither mints its own (Trap 9).
+#   ⛔ **UNTOUCHED, each verified:** `outcome.under_funded` (pinned) · every key and field NAME (D3) ·
+#   every `apps/mobile` component (story E — the ONE mobile file is a resolution test) ·
+#   `members.json` · `scrape-test.spec.ts:106` · the `.length > 0` guards (`-194` cl.1 SATISFIED BY
+#   CONSTRUCTION, and now pinned) · `SCAN_FILES` (⛔ nothing owed; the gate was RUN, green).
+#   ⭐ AC8 disposition written AFTER `4157b04d` — friction gate GREEN; page_weight 3942 -> 9445
+#   (Δ +5503) at ~1.8% of ceiling, ⛔ baseline NOT moved (a rise is never ratcheted).)
+# last_updated_prior: 2026-09-06 (⭐ **STORY 11b.12 STARTS — Task 0's GOVERNANCE WRITE, before the first line
 #   of code** ([[feedback_governance_commits_precede_implementation]]). **ONE ROW MOVES:**
 #   development_status[11b-12-stage-vocabulary-and-info-affordance] `ready-for-dev` -> `in-progress`.
 #   ⛔ epic-11b stays `in-progress`; ⛔ 11b-11 stays `done`; ⛔ 11b-13…17 and 6-18 stay `ready-for-dev`.
@@ -15814,7 +15848,7 @@ development_status:
   # files), Trap 9 (one source), a 19-row **Files this story touches** table, AC8+Task 7 (friction
   # budget). ✅ **D3 RULED** (ban is on VALUES, ⛔ not key names). 🟡 **D2 OPEN, ⛔ NON-BLOCKING**
   # (`outcome.under_funded` — a policy question, ⛔ not a copy call).
-  11b-12-stage-vocabulary-and-info-affordance: in-progress
+  11b-12-stage-vocabulary-and-info-affordance: review
   # ⭐ 11b-13 — STORY **C** of the `2026-09-04-195` cl.3 split. ⛔ NOT in `epics.md` — owes an
   # ANNOTATION. ⚠ INDEPENDENT of 11b-11 / 11b-12; ⭐ **STORY D DEPENDS ON IT.**
   # ⛔⛔ **IT OPENS WITH A GOVERNANCE DECISION** (`-195` cl.2): minting a permission key moves

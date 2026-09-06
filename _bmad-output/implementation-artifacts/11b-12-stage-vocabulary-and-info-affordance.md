@@ -21,7 +21,7 @@ the `054ff76a` verification carries forward unchanged.
 
 # Story 11b.12: The Stage Vocabulary — **Live · Closed · Verified** — and the Info Affordance `[SURFACE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 > ⭐⛔ **⛔ NOT IN `epics.md`'s STORY LIST.** **Story B** of the six-story split (`2026-09-04-195`
 > cl.3), following **Trustee-ratified** `-190` / `-191` / `-193` (Dhiraj Rahul + Kalpana Bharti).
@@ -766,13 +766,13 @@ the key) · ⛔ any key or field NAME (D3) · ⛔ `locales/*/members.json` (AC1)
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — GOVERNANCE FIRST** (AC0)
-  - [ ] Annotate `epics.md`: story B of the `-195` cl.3 split; implements `-190` cl.5, `-191` cl.3,
+- [x] **Task 0 — GOVERNANCE FIRST** (AC0)
+  - [x] Annotate `epics.md`: story B of the `-195` cl.3 split; implements `-190` cl.5, `-191` cl.3,
         `-192` cl.1/3, `-193` cl.1/3; records `-194` cl.1 satisfied by construction; ⭐ records **D2
         CLOSED** with its three rulings **routed** (3 ⇒ **AC9** here; 1 ⇒ **6.18**; 2 ⇒ **11b-14 AC7**);
         and ⭐ records that the **member-app render is story E's**, ⛔ not deferred work.
-  - [ ] Flip `sprint-status.yaml` `11b-12-…`: `ready-for-dev` → `in-progress`, with a ledger entry.
-  - [ ] Commit with a `governance:` prefix. ⛔ No code.
+  - [x] Flip `sprint-status.yaml` `11b-12-…`: `ready-for-dev` → `in-progress`, with a ledger entry.
+  - [x] Commit with a `governance:` prefix. ⛔ No code.
 - [x] **Task 1 — RULE D1** — ✅ **RULED (b) by BigDev, 2026-09-04: align the wire
       (`live` · `closed` · `verified`), and re-shape the anti-leak assertions into ALLOW-lists.**
       ⭐ Extended 2026-09-05 with the **mapping table** (⛔ the index enum stays **TWO** members), and

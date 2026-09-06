@@ -1,4 +1,21 @@
-# last_updated: 2026-09-06j (⭐⭐⭐ **STORY 11b.13 (C) CODE REVIEW PASS 2 **COMPLETE** — ⛔ ONE ROW MOVES:
+# last_updated: 2026-09-06k (⭐⭐ **STORY 11b.13 (C) CODE REVIEW PASS 3 COMPLETE — ⛔ ZERO ROWS MOVE;
+#   11b-13-per-pariwar-drive-target-substrate STAYS `done`.** A single un-chunked three-layer pass over
+#   the whole branch diff (`dd233293..HEAD`, 51 files / ~10.8k lines), run AFTER the story reached
+#   `done`. ⛔ NO Critical/High; the Acceptance Auditor found ⛔ NO AC / decision / trap / PREFLIGHT
+#   violation — Pass 2 held. **1 Decision + 4 Patches applied**, `ci:local` **34/34**:
+#   (1) a version-conflict 409 was UNRECOVERABLE while the admin form stayed dirty — a defect in the
+#   Pass-2 D-C fix (`seededVersionRef` never re-synced once a refetch landed mid-edit) ⇒ RULED
+#   option (2), the MINIMAL fix: re-sync on the clean-form transition only, D-C unchanged;
+#   (2) `showReveal` did not exclude `revealForbidden`/`revealNotYours`, so a mid-session 403 rendered
+#   "you don't hold the reveal control" AND the editable form together;
+#   (3) the "Saved" line still sat beside a fresh unsaved edit — the Pass-2 `targetResetToken > 0`
+#   guard was cosmetic (that token only bumps on a save) ⇒ a real `onEdit` callback now clears it;
+#   (4) an oversized `Idempotency-Key` bypassed the 400 block and hit an opaque 500 at `claim()`.
+#   **1 deferred** (the `withIdempotency` `release()`-on-post-`run()`-failure augments the already-
+#   retro-routed `closeScopeTx` seam); **5 dismissed** — all already ruled (D-A / D-B) or already
+#   deferred. ⛔ epic-11b stays `in-progress`; ⛔ 11b-11 / 11b-12 stay `done`; ⛔ 11b-14…17 and 6-18
+#   stay `ready-for-dev`; ⭐ 11b-14 (D) remains UNBLOCKED.)
+# last_updated_prior: 2026-09-06j (⭐⭐⭐ **STORY 11b.13 (C) CODE REVIEW PASS 2 **COMPLETE** — ⛔ ONE ROW MOVES:
 #   11b-13-per-pariwar-drive-target-substrate `in-progress` -> `done`.**
 #   ⭐ ALL THREE CHUNKS REVIEWED: G1 (`packages/domain/`), G2 (`apps/api`+`openapi`+`contracts`),
 #   G3 (`apps/admin/`) — three adversarial layers each, **59 patches applied**, `ci:local` **34/34**.

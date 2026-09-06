@@ -223,6 +223,18 @@ export function createDriveTargetHandlers(deps: AppDeps) {
         'pariwar.drive_target_idempotency_key_invalid',
       );
     }
+    // ⚠⛔ A KEY WE CANNOT STORE IS A 400 TOO (code review Pass 3). `idempotency_keys.key` is an
+    // unbounded `text` PRIMARY KEY, so an oversized value — past the ~2704-byte btree index-row
+    // limit, reachable inside Fastify's header budget — fails the `claim()` INSERT with `54000`,
+    // which is ⛔ NOT in the error-mapping registry and surfaces as an opaque 500: the exact outcome
+    // this block exists to prevent. A real idempotency key is a token (a UUID is 36 chars); 255 is
+    // generous.
+    if (typeof headerKey === 'string' && headerKey.trim().length > 255) {
+      throw new BadRequestError(
+        'Idempotency-Key is too long — send at most 255 characters, or omit the header',
+        'pariwar.drive_target_idempotency_key_invalid',
+      );
+    }
     const idemKey = typeof headerKey === 'string' ? `${namespace}:${headerKey.trim()}` : null;
     // ⛔ No header ⇒ previous behaviour EXACTLY (`-201` cl.3). Making the key mandatory would break
     // a caller for a guarantee only some callers need. ⚠ ABSENT is still fine; UNUSABLE is not.

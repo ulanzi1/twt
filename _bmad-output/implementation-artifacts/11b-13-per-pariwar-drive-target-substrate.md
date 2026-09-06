@@ -1259,3 +1259,127 @@ applied when the 10.30 terminology gate caught it during Tasks 1–5. Re-run: **
 ### Dismissed as noise (1)
 
 - **The reveal switches carry no optimistic-concurrency token** — raised **again**, by two of three G3 layers. That is the **FIFTH** independent raise across three chunks and two passes. ⛔ **RULED** by decision **D-A** (BigDev, 2026-09-06): `2026-09-06-203` cl.5 ratifies last-write-wins for the reveal record, matching the two sibling `super_admin`-only disclosure controls. ⭐ G1 added a test pinning the posture for exactly this reason. ⚠ That the console layer re-raises it independently of the domain layer is worth noting at the retro — five raises means the *absence* reads as an oversight to every fresh reader, and the pin lives in the domain suite where a console reviewer will not meet it.
+
+---
+
+## Review Findings — PASS 3 (2026-09-06): full-diff re-review
+
+⚠⛔ **⛔ This does NOT supersede the Pass-1 or Pass-2 sections above; it stands ALONGSIDE them**
+([[feedback_supersede_never_reinterpret]]). Run **after** the story reached `done` (Pass 2 complete),
+over the whole branch diff (`dd233293..HEAD`, 51 files / ~10.8k lines) in a **single pass** — three
+adversarial layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor + the AI-6-5 load-bearing
+lens), no chunking. Every finding below was verified at source and cross-checked against the Pass-1 /
+Pass-2 record and `deferred-work.md` before triage.
+
+⭐ **The Acceptance Auditor found no AC / decision / trap / PREFLIGHT violation** — AC0–AC8, D1/D2,
+Traps 1–5, and STOP 1–3 all hold; the two Low items it noted (AC6's literal wording vs the key-gated
+admin contract; the audit line not being in the mutation's tx) are **already reconciled / routed** in
+the Pass-2 record and are not re-raised here. ⛔ **No Critical / High.** The residue is a defect
+*introduced by the Pass-2 D-C fix*, two console state-machine gaps, and one input-validation gap.
+
+### ✅ Decision — 1, RESOLVED by BigDev 2026-09-06 → **option (2), the minimal fix** (⇒ becomes a patch)
+
+- [x] [Review][Patch] ⭐⭐ **A version-conflict 409 is UNRECOVERABLE while the form stays dirty —
+  a defect in the Pass-2 D-C fix, on the exact path `-201` exists for.** `DriveTargetForm.tsx`'s
+  `[currentTargetInr, currentVersion]` effect refreshes `seededVersionRef.current` **only when
+  `!isDirty`**; when the form is dirty it sets `changedUnderEdit` and `return`s. After a concurrent
+  change lands mid-edit (the common case — you are slow *because* you are typing), `useSetDriveTarget`'s
+  `onError` invalidates and refetches `currentVersion` → `N+1`, but the effect early-returns, so
+  `seededVersionRef` stays `N`. Neither path that advances the ref can then fire: the `[resetToken]`
+  effect needs a *successful* save (impossible — every submit sends `expectedVersion: N` and 409s), and
+  the `[currentTargetInr, currentVersion]` effect needs its deps to change *again* while the form is
+  clean. ⇒ the operator is **409-locked until they reload the page**, with a "changed under edit"
+  banner that gives no such instruction. ⚠ `hooks.ts:619-621`'s comment claims the `onError`
+  invalidation fixes *"the page held the stale version forever: every later submit re-sent it and 409'd
+  again"* — it fixes that **only for a clean form**; the dirty case (BH6's variant: revert edits →
+  form clean but deps unchanged → `seededVersionRef` stranded at `N` → re-entering the current value
+  yields a **spurious** 409, the false-conflict class `-201` cl.2 exists to prevent) still holds.
+  ⭐ **RULED (BigDev, 2026-09-06): option (2) — the MINIMAL fix. D-C is UNCHANGED.** The dirty
+  409-lock stays as documented friction (an operator with unsaved edits must clear them or reload —
+  the *"submit anyway earns an honest 409"* half of D-C stands). What is fixed is the **clean-form
+  path**: when the form returns to a clean state (`!isDirty`) after `changedUnderEdit`, re-sync
+  `seededVersionRef.current = currentVersion`, clear `changedUnderEdit`, and `reset()` — closing
+  BH6's spurious-409 path (an unambiguous bug: a clean form must never carry a stale version token).
+  ⚠ ⛔ Do **not** add an "adopt latest, keep my text" affordance (option 1) — that advances the token
+  across a live edit, which *is* the D-C amendment BigDev declined. Sources: edge + blind.
+  [`apps/admin/src/modules/drive-target/DriveTargetForm.tsx:120-137`; `apps/admin/src/api/hooks.ts:615-624`]
+
+### Patches — 3 (+ the resolved Decision above = 4), ✅ **ALL APPLIED** (2026-09-06)
+
+> **Verification.** `@twt/admin` + `@twt/api` typecheck + lint clean; `apps/admin/tests/drive-target-page.test.tsx`
+> **20/20**; `apps/api/tests/integration/drive-target/admin.spec.ts` **35/35** (against `twt-test-pg`
+> :5433); the full `@twt/admin` suite **426/426**. `pnpm ci:local` result recorded in the Change Log.
+> ⛔ No new tests were added for these four — pinning them is left as follow-up (P1's clean-form
+> re-sync and P3's `onEdit` clear are the two that most warrant a regression test).
+
+- [x] [Review][Patch] **The reveal section renders a self-contradicting UI on a mid-session 403.**
+  `DriveTargetPage.tsx:198` — `const showReveal = visibility.data !== undefined;`. A `super_admin`
+  who loaded the switches, then hits a **403 on a refetch** (grant revoked mid-session, or any 403
+  blip; `refetchOnMount: 'always'` + `staleTime: 0` make refetches routine), keeps the
+  last-successful `data`, so `revealForbidden` **and** `showReveal` are both true ⇒ the page renders
+  *"you don't hold the reveal control"* (line 392) **and** the full editable `RevealSwitchesForm`
+  with stale values (line 435) at the same time. ⚠ The Pass-2 *"a failed refetch retains data"*
+  handling (`revealStale = revealLoadError && showReveal`) has a hole exactly here — `revealLoadError`
+  **excludes** `revealForbidden`, so a 403 refetch gets no "stale" warning either. **Fix:**
+  `const showReveal = visibility.data !== undefined && !revealForbidden && !revealNotYours;` (mirrors
+  how `revealLoadError` already excludes those). Source: edge. [`apps/admin/src/modules/drive-target/DriveTargetPage.tsx:197-201,392,435`]
+- [x] [Review][Patch] ⚠ **"Saved. This is now the target of record" still sits beside a fresh unsaved
+  edit — the Pass-2 / G3 patch for this was cosmetic.** Pass 2 G3 listed *"`savedTarget` persists
+  across later edits"* in a bundled patch marked applied; the "fix" was adding `targetResetToken > 0`
+  to the guard + the comment *"Cleared by the reset-token bump on the next edit"*. But
+  `setTargetResetToken` is called **only in `onSuccess`** — never on edit — so after the first save
+  `savedTarget` is `true` (until a tenant switch) and `targetResetToken` is `1` (`> 0`) permanently;
+  typing a new value sets neither `isPending` nor `error`, so the banner keeps asserting *"Saved. This
+  is now the target of record"* above the unsaved change. `savedReveal` (`:483`) is looser still — no
+  `resetToken` guard at all. **Fix:** plumb an `onEdit` / `onDirty` callback from `DriveTargetForm` /
+  `RevealSwitchesForm` that clears `savedTarget` / `savedReveal` on the first change after seed, and
+  correct the stale comment. Source: blind. [`apps/admin/src/modules/drive-target/DriveTargetPage.tsx:352-358,483-487`]
+- [x] [Review][Patch] **An oversized / control-char `Idempotency-Key` bypasses the 400 validation and
+  reaches an opaque 500.** `handlers.ts:206-226` rejects a repeated header (array) and a
+  blank/whitespace key, then builds `idemKey = ${namespace}:${headerKey.trim()}` with no length or
+  charset check. `idempotency_keys.key` is an **unbounded `text` PRIMARY KEY**; a value past the btree
+  index-row limit (≈ 2704 bytes — reachable within Fastify's default header budget) fails the
+  `claim()` INSERT with `54000`, which is **not in the error-mapping registry** ⇒ opaque 500,
+  contradicting this module's stated *"a PRESENT-BUT-UNUSABLE KEY IS A 400"*. **Fix:** add a length
+  cap (say ≤ 255) — and optionally a `^[\x21-\x7E]+$` check — in the same block, reusing
+  `pariwar.drive_target_idempotency_key_invalid`. Source: edge. [`apps/api/src/modules/drive-target/handlers.ts:206-226`]
+
+### Deferred — 1
+
+- [x] [Review][Defer] **`withIdempotency`'s `release()` on a *post-`run()`* failure turns the
+  server's own 503 "retry with the same Idempotency-Key" advice into a re-execute, adding a second
+  governance audit line.** `handlers.ts:246-255` — the `try` wraps both `run()` and `recordResult()`;
+  the `catch` calls `idempotencyStore.release(idemKey)` on **any** failure. If `run()` succeeds (audit
+  line committed on `deps.servicePool`, schedule row on the scope tx) but `recordResult()` then throws
+  (the diff maps that to **503**), the handler rethrows → the scope tx rolls back (row gone) →
+  `withCompensatingAudit` already returned success (no compensating line) → **orphan audit line**; and
+  because the key was released, the sanctioned same-key retry **re-executes** rather than replays →
+  a **second** audit line. The docblock's *"the replay is a read of the recorded response, so the
+  worst case is … noisy, ⛔ not corrupting"* reasoning **assumes `recordResult` succeeded** and does
+  not cover this branch. ⇒ **augments** the existing `deferred-work.md` entry on the
+  compensating-audit / idempotency / scope-tx seam — **already routed to the Epic 11b retro** by
+  ruling (Pass 2 / G2), and the `release()`-vs-leave-`claimed` choice (leave claimed ⇒ a legit retry
+  is `409 idempotency_in_progress`-locked until the TTL self-heals) is part of that same question, not
+  a fresh one. Sources: blind + edge. [`apps/api/src/modules/drive-target/handlers.ts:246-256`]
+
+### Dismissed as noise (5)
+
+- **Clock-skew clamp collapses the prior version's window to zero width; the 5-min bound is generous
+  vs real NTP drift** (blind + edge) — **ruled D-B** (BigDev, Pass 2 / G1); the in-band residue is
+  explicitly recorded as an open residue in the Pass-2 / G2 self-correction (c). The "bound could be
+  tighter" observation is noted there already; no new action.
+- **First-write future `effectiveFrom` wedges the domain schedule** (edge) — **domain-surface only**
+  (HTTP passes `deps.clock()`, the contract has no such field); already recorded per **D-B option 3**
+  as an un-attested gap in `drive-target.ts` / `errors.ts`, and carried in `deferred-work.md`
+  (*"A reveal can be configured for a Pariwar that has no target"* / the D-B residue).
+- **The reveal setter has no optimistic-concurrency token** (blind + edge) — **RULED D-A**, now the
+  **sixth** raise; pinned by a G1 test.
+- **OpenAPI `driveTargetParams` is non-`.strict()` while the route param object is `.strict()`**
+  (blind) — inert for a URL path parameter (no extra keys are expressible); the reporter concedes it
+  is harmless.
+- **AC6's literal *"no wire contract carries the target or either flag"* is not literally true**
+  (auditor) — already reconciled in the Pass-2 record (correction #3: *"no **public or member**
+  surface or contract"*); the key-gated admin contract necessarily carries `targetInr` because AC5
+  requires the operator to see it.
+
+**Layers:** all three completed; no layer failed or returned empty.

@@ -69,6 +69,12 @@ export interface DriveTargetFormProps {
    * on the very next click (the 10.30 review finding, which applies unchanged here).
    */
   resetToken: number;
+  /**
+   * ⭐ Fired the instant an edit begins (code review Pass 3). The parent uses it to drop a stale
+   * "Saved" confirmation from the PREVIOUS change — `resetToken` only advances on a successful save,
+   * so it could never clear that line when a NEW unsaved edit started.
+   */
+  onEdit?: () => void;
 }
 
 interface FormValues {
@@ -83,6 +89,7 @@ export function DriveTargetForm({
   currentTargetInr,
   currentVersion,
   resetToken,
+  onEdit,
 }: DriveTargetFormProps): ReactElement {
   const seed = currentTargetInr === null ? '' : String(currentTargetInr);
   const {
@@ -135,6 +142,30 @@ export function DriveTargetForm({
     reset({ amount: currentTargetInr === null ? '' : String(currentTargetInr), rationale: '' });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reset() is stable; isDirty is read, not depended on
   }, [currentTargetInr, currentVersion]);
+
+  // ⚠⛔ WHEN THE FORM RETURNS TO A CLEAN STATE, ADOPT THE CURRENT VERSION (code review Pass 3,
+  // decision — BigDev option 2). The effect above fires only on `[currentTargetInr, currentVersion]`,
+  // so a refetch that landed WHILE the form was dirty set `changedUnderEdit` and returned with
+  // `seededVersionRef` still pinned to the pre-refetch version. If the operator then discards their
+  // edit, that effect does ⛔ NOT re-run (its deps did not change), so a CLEAN form kept carrying a
+  // STALE `expectedVersion` — and re-entering the current value earned a SPURIOUS 409, the
+  // false-conflict class `2026-09-05-201` cl.2 exists to avoid.
+  // ⛔ THIS DOES NOT TOUCH A LIVE EDIT: while `isDirty` the effect returns, so D-C's *"submit a dirty
+  // form, earn an honest 409"* is unchanged. It only re-syncs once the edit is gone.
+  useEffect(() => {
+    if (isDirty) return;
+    seededVersionRef.current = currentVersion;
+    setChangedUnderEdit(false);
+  }, [isDirty, currentVersion]);
+
+  // ⭐ Tell the parent the moment an edit begins, so a stale "Saved. This is now the target of
+  // record" line from the PREVIOUS change stops rendering above this unsaved one (code review
+  // Pass 3). `onEdit` is read through a ref so an inline parent closure does not re-fire the effect.
+  const onEditRef = useRef(onEdit);
+  onEditRef.current = onEdit;
+  useEffect(() => {
+    if (isDirty) onEditRef.current?.();
+  }, [isDirty]);
 
   const rationale = watch('rationale');
   const amount = watch('amount');

@@ -18,7 +18,7 @@
 // this covers it.
 
 import type { ReactElement } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { resolveEn as t } from './i18n-en.js';
@@ -33,6 +33,8 @@ export interface RevealSwitchesFormProps {
   /** The reveal posture currently recorded. An unconfigured Pariwar is `false` / `false`. */
   current: { revealToMembers: boolean; revealToPublic: boolean };
   resetToken: number;
+  /** ⭐ Fired the instant an edit begins — the parent drops a stale "Saved" line (code review Pass 3). */
+  onEdit?: () => void;
 }
 
 interface FormValues {
@@ -45,6 +47,7 @@ export function RevealSwitchesForm({
   submitError,
   current,
   resetToken,
+  onEdit,
 }: RevealSwitchesFormProps): ReactElement {
   const [revealToMembers, setRevealToMembers] = useState(current.revealToMembers);
   const [revealToPublic, setRevealToPublic] = useState(current.revealToPublic);
@@ -87,6 +90,15 @@ export function RevealSwitchesForm({
     reset({ rationale: '' });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `touched` is read, not depended on
   }, [current.revealToMembers, current.revealToPublic]);
+
+  // ⭐ Tell the parent the moment an edit begins, so a stale "Saved" line from the PREVIOUS
+  // disclosure change stops rendering above this unsaved one (code review Pass 3). Read through a
+  // ref so an inline parent closure does not re-fire the effect.
+  const onEditRef = useRef(onEdit);
+  onEditRef.current = onEdit;
+  useEffect(() => {
+    if (touched) onEditRef.current?.();
+  }, [touched]);
 
   // ⛔ `member ≥ public` — the ONE forbidden combination. ⚠ ONE-WAY: members-without-public is never
   // refused.

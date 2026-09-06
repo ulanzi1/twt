@@ -195,7 +195,13 @@ export function DriveTargetPage({ pariwarId }: DriveTargetPageProps): ReactEleme
   const targetPaused = target.fetchStatus === 'paused' && target.data === undefined;
   const revealPaused = visibility.fetchStatus === 'paused' && visibility.data === undefined;
   const revealLoadError = visibility.isError && !revealForbidden && !revealNotYours;
-  const showReveal = visibility.data !== undefined;
+  // ⚠⛔ `revealForbidden` / `revealNotYours` MUST gate this too (code review Pass 3). A failed refetch
+  // RETAINS `data`, so after a `super_admin` loaded the switches and a later refetch 403s (a grant
+  // revoked mid-session, or any 403 blip — `refetchOnMount: 'always'` + `staleTime: 0` make refetches
+  // routine), `visibility.data !== undefined` AND `revealForbidden` were BOTH true ⇒ the page rendered
+  // "you don't hold the reveal control" AND the full editable form together. `revealStale` did not
+  // catch it either — `revealLoadError` already excludes the 403.
+  const showReveal = visibility.data !== undefined && !revealForbidden && !revealNotYours;
   // ⭐ A FAILED REFETCH RETAINS `data`, so an error and a live form can co-exist. The operator must
   // be told the values are stale rather than shown a red alert above a Save button they can press.
   const revealStale = revealLoadError && showReveal;
@@ -316,6 +322,7 @@ export function DriveTargetPage({ pariwarId }: DriveTargetPageProps): ReactEleme
             pending={changeTarget.isPending}
             submitError={errorMessage(changeTarget.error)}
             resetToken={targetResetToken}
+            onEdit={() => setSavedTarget(false)}
             onSubmit={(payload) =>
               changeTarget.mutate(
                 {
@@ -349,8 +356,10 @@ export function DriveTargetPage({ pariwarId }: DriveTargetPageProps): ReactEleme
               )
             }
           />
-          {/* ⚠ Cleared by the reset-token bump on the next edit, so "Saved. This is now the target
-              of record" cannot sit beside an UNSAVED change (Pass 2 / G3). */}
+          {/* ⚠ Cleared by `onEdit` the instant a NEW edit begins (code review Pass 3), so "Saved.
+              This is now the target of record" cannot sit beside an UNSAVED change. The Pass-2 /
+              G3 `targetResetToken > 0` guard did NOT do this — that token only advances on a
+              successful save — it is kept only to suppress the line before the first-ever save. */}
           {savedTarget && targetResetToken > 0 && !changeTarget.isPending && !changeTarget.error && (
             <p role="status" className="mt-3 text-sm" data-testid="drive-target-saved">
               {t('driveTarget.result.saved')}
@@ -464,6 +473,7 @@ export function DriveTargetPage({ pariwarId }: DriveTargetPageProps): ReactEleme
             pending={changeVisibility.isPending}
             submitError={errorMessage(changeVisibility.error)}
             resetToken={revealResetToken}
+            onEdit={() => setSavedReveal(false)}
             onSubmit={(payload) =>
               changeVisibility.mutate(
                 {

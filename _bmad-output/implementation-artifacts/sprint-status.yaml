@@ -1,4 +1,33 @@
-# last_updated: 2026-09-05o (✅⭐⭐ **BOTH REMAINING RULINGS LANDED. ⛔ ZERO rows move.**
+# last_updated: 2026-09-06 (⭐ **STORY 11b.12 STARTS — Task 0's GOVERNANCE WRITE, before the first line
+#   of code** ([[feedback_governance_commits_precede_implementation]]). **ONE ROW MOVES:**
+#   development_status[11b-12-stage-vocabulary-and-info-affordance] `ready-for-dev` -> `in-progress`.
+#   ⛔ epic-11b stays `in-progress`; ⛔ 11b-11 stays `done`; ⛔ 11b-13…17 and 6-18 stay `ready-for-dev`.
+#   ⭐ **THE `epics.md` ANNOTATION IS WRITTEN IN THE SAME COMMIT** — story **B** of the `-195` cl.3
+#   six-story split, ⛔ absent from the epic's story list exactly as `11b-3a` / `11b-10` / `11b-11` are.
+#   It implements `-190` cl.5, `-191` cl.3, `-192` cl.1/3 and `-193` cl.1/3 ⇒ the three public stages
+#   become **Live · Closed · Verified** from **ONE** keyed source in `packages/i18n`.
+#   ⭐⭐ **AND IT DELETES THREE FALSE SENTENCES FROM A LIVE PUBLIC PAGE** — `page.intro`,
+#   `section.active.help` and `section.archive.help` each say or imply **the trust pays the family**;
+#   `-192` establishes the trust ⛔ NEVER disburses. ⚠ *"has not yet been paid"* has been public for
+#   months. ⛔ This is ⛔ not a copy pass.
+#   ⚠⛔ **D1(b) MOVES THE WIRE TOO, AND IT COLLIDES WITH `2026-08-21-144` cl.8 AT NINE SITES** — four
+#   un-gated **RULE doc-blocks** (⛔ nothing goes red when they rot) and five **assertions** that do.
+#   ⭐ Each is re-shaped DENY-list -> ALLOW-list and each **names cl.8**, so the `live`/`closed`
+#   overlap with the internal lifecycle reads as **ruled**, ⛔ never as the `/members` leak recurring.
+#   ⛔ `spawned` stays a pure deny. ⚠ The **index** enum stays **TWO** members (`['closed','verified']`)
+#   — adding `live` there is story **D** and would mint a public token with ⛔ no producer.
+#   ⭐ `-194` cl.1 is recorded **SATISFIED BY CONSTRUCTION** (`sahyog.astro:461`/`:514` already guard
+#   `.length > 0`) and **PINNED** by a test — ⛔ no second guard.
+#   ⭐⭐ **D2 IS CLOSED (DR + KB, 2026-09-05) AND ALL THREE RULINGS ARE ROUTED:** ruling **3** (an absent
+#   token DROPS ITS CLAUSE, ⛔ no combinatorial variants) is **this story's**, as **AC9 / Task 2b** —
+#   it AUTHORS the ratified index line with `{amount}` **and** `{nominee_name}` **dark** and renders
+#   ⛔ neither; ruling **1** is **Story 6.18** (`7a362471`); ruling **2** landed in **11b-14 AC7 +
+#   Task 8** (`31153962`). ⚠⛔ `outcome.under_funded` is ⛔ **NOT** touched — closing D2 settled who
+#   authors what, ⛔ not that a copy story may rewrite a statement of the trust's obligation.
+#   ⭐ **THE MEMBER-APP RENDER IS STORY E's** (`11b-15` AC4/Task 4), ⛔ not deferred work — `driveStatus`
+#   is ⛔ nowhere in `apps/mobile` and `SahyogVivranEntry.tsx` is a link-out card with ⛔ no stage.
+#   ⛔ 11b.12 changes ⛔ NO `apps/mobile` file.)
+# last_updated_prior: 2026-09-05o (✅⭐⭐ **BOTH REMAINING RULINGS LANDED. ⛔ ZERO rows move.**
 #   ⭐ **6.18's D2 RULED (b) SOFT — Trustee Panel (Dhiraj Rahul + Kalpana Bharti).** Recording the
 #   attestation is MANDATORY; a "does not match" verdict ROUTES to the State Trustee ⛔ INSTEAD OF
 #   HALTING a death claim. ⇒ 6.18's Task 4 UNBLOCKED.
@@ -15785,7 +15814,7 @@ development_status:
   # files), Trap 9 (one source), a 19-row **Files this story touches** table, AC8+Task 7 (friction
   # budget). ✅ **D3 RULED** (ban is on VALUES, ⛔ not key names). 🟡 **D2 OPEN, ⛔ NON-BLOCKING**
   # (`outcome.under_funded` — a policy question, ⛔ not a copy call).
-  11b-12-stage-vocabulary-and-info-affordance: ready-for-dev
+  11b-12-stage-vocabulary-and-info-affordance: in-progress
   # ⭐ 11b-13 — STORY **C** of the `2026-09-04-195` cl.3 split. ⛔ NOT in `epics.md` — owes an
   # ANNOTATION. ⚠ INDEPENDENT of 11b-11 / 11b-12; ⭐ **STORY D DEPENDS ON IT.**
   # ⛔⛔ **IT OPENS WITH A GOVERNANCE DECISION** (`-195` cl.2): minting a permission key moves

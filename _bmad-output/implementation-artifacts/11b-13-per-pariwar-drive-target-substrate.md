@@ -9,7 +9,7 @@ Story 11b.10 closed, the six-story split, and stories A/B `ready-for-dev`.
 
 # Story 11b.13: The Per-Pariwar Drive TARGET — Set by a Pariwar Admin, Revealed Only by a Super Admin `[SUBSTRATE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 > ⭐⛔ **⛔ NOT IN `epics.md`'s STORY LIST.** **Story C** of the six-story split (`2026-09-04-195`
 > cl.3), following **Trustee-ratified** `2026-09-04-190` cl.7 and `-191` cl.4 (Dhiraj Rahul + Kalpana
@@ -471,24 +471,32 @@ boundary.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — RULE D1 + D2, THEN THE GOVERNANCE DECISION** (AC0) — ⛔ **BLOCKS EVERYTHING**
+- [x] **Task 0 — RULE D1 + D2, THEN THE GOVERNANCE DECISION** (AC0) — ⛔ **BLOCKS EVERYTHING**
   - [x] Put **D1** to BigDev — ✅ **RULED: TWO keys, v39 → v41.**
   - [x] ⚠⛔ **Put D2 to BigDev** — ✅ **RULED (b) 2026-09-06: TWO RECORDS.** ⇒ Task 2 unblocked.
-  - [ ] ⭐ Carry **D2** into the governance decision alongside the keys — ⛔ it is a substrate shape
-        under existing rulings, ⛔ not a new policy, so it rides the same entry.
+  - [x] ⭐ Carry **D2** into the governance decision alongside the keys — ⛔ it is a substrate shape
+        under existing rulings, ⛔ not a new policy, so it rides the same entry. ✅ `-203` **cl.5**.
   - [x] ⚠ **D3 ROUTED to story D (11b.14), question OPEN** — ✅ the reciprocal note is **written into
         `11b-14` AC2 + Task 3 + its Change Log** (2026-09-06). ⛔ Non-blocking here.
-  - [ ] ⛔ **Run the PREFLIGHT's three STOPs** before writing the decision — the catalog number is
-        ⛔ read, ⛔ never assumed.
-  - [ ] Read `.decision-log.md` **live** for the head number — ⛔ do ⛔ not hardcode it.
-  - [ ] Write the decision: mint **TWO** keys — a **write** key (`pariwar_admin` + `super_admin`) and a
+  - [x] ⛔ **Run the PREFLIGHT's three STOPs** before writing the decision — the catalog number is
+        ⛔ read, ⛔ never assumed. ✅ **STOP 1**: `permissions.ts:598` read live 2026-09-06 = **39**,
+        and `git log` confirms **6.18 has NOT landed** ⇒ `39 → 41`, `47 → 49`. ✅ **STOP 2**: both
+        hard-coded numbers located at `permissions.test.ts:54,56`; `roles.test.ts` holder-set pattern
+        confirmed (`expect(holders).toEqual([...])`). ✅ **STOP 3**: `-201` read live — it exists at
+        `.decision-log.md:112`, is **post-baseline**, and a grep of
+        `apps/api/src/modules/nominee-bank-masking/` finds ⛔ **no** `expectedVersion` and ⛔ **no**
+        `Idempotency-Key` ⇒ still **unbuilt**.
+  - [x] Read `.decision-log.md` **live** for the head number — ⛔ do ⛔ not hardcode it. ✅ head was
+        **`2026-09-05-202`** (⛔ not `-201`) ⇒ this story's entry is **`2026-09-06-203`**.
+  - [x] Write the decision: mint **TWO** keys — a **write** key (`pariwar_admin` + `super_admin`) and a
         **reveal** key (⛔ `super_admin` ONLY); bump `PERMISSION_CATALOG_VERSION` by **+2 from the
         LIVE value** (⚠ **STOP 1** — `39 → 41` ⛔ only if this lands before **6.18**); confirm
         or correct the recommended names; **state why the `-178` / `-136` cl.3 analogy does ⛔ not
         apply to the WRITE half and IS honoured for the REVEAL half** (Trap 1, D1); record that it
         supersedes ⛔ nothing.
-  - [ ] Annotate `epics.md`; flip `sprint-status.yaml` `11b-13-…` to `in-progress`.
-  - [ ] ⛔ One `governance:` commit. ⛔ No code.
+  - [x] Annotate `epics.md`; flip `sprint-status.yaml` `11b-13-…` to `in-progress`. ✅ seven-item
+        annotation block under Epic 11b, **ANNOTATION ONLY**; row flipped; ledger comment prepended.
+  - [x] ⛔ One `governance:` commit. ⛔ No code.
 - [ ] **Task 1 — The catalog** (AC0, AC2, AC3)
   - [ ] Declare **BOTH** keys in `packages/domain/src/rbac/permissions.ts`. ⚠⛔ **EACH gets its own
         doc-block carrying Trap 1's argument** — the write key's explains why `pariwar_admin` is
@@ -618,16 +626,56 @@ the shared fixture.
 
 ### Agent Model Used
 
+Claude Opus 5 (`claude-opus-5`) — `bmad-dev-story`, 2026-09-06.
+
 ### Debug Log References
+
+**PREFLIGHT, run before Task 0's first line (2026-09-06):**
+
+| STOP | What was read | Result |
+|---|---|---|
+| **1** | `packages/domain/src/rbac/permissions.ts:598` | `PERMISSION_CATALOG_VERSION = 39`. `git log` shows **6.18 has NOT landed** ⇒ this story takes **39 → 41**, key count **47 → 49**. |
+| **2** | `packages/domain/tests/rbac/permissions.test.ts:54,56` | `toBe(39)` + `toHaveLength(47)` located; `:54`'s running-rationale comment confirmed present and appended to, ⛔ not replaced. `roles.test.ts` holder-set convention confirmed (`expect(holders).toEqual([...])`, sorted). |
+| **3** | `.decision-log.md:112` + `grep -rn 'expectedVersion\|Idempotency-Key' apps/api/src/modules/nominee-bank-masking/` | `-201` exists, is **post-baseline** (`222fb4d8`), and returns ⛔ **zero** matches in the masking module ⇒ **ruled but unbuilt**, exactly as Trap 5 states. |
+
+⭐ **Decision-log head read live: `2026-09-05-202`** — ⛔ not `-201`, which the story's Trap 5 cites as
+the newest relevant entry. ⇒ this story's entry is **`2026-09-06-203`**.
 
 ### Completion Notes List
 
+**Task 0 (AC0) — the governance decision, `governance:` commit, ⛔ no code.**
+
+1. ✅ **`2026-09-06-203` written** — author-committed, implementing Trustee-ratified `-190` cl.7 +
+   `-191` cl.4. Mints **TWO** keys (D1), carries **D2** as cl.5, pins the money precedent as cl.6,
+   and commits `-201`'s two controls on the **new** write path as cl.7.
+2. ✅ **Recommended names CONFIRMED unchanged** — `pariwar.manage_drive_target` /
+   `pariwar.manage_drive_target_visibility`. Both validated against `PERMISSION_KEY_REGEX`
+   (`^[a-z0-9_]+\.[a-z0-9_]+$`, exactly one dot) **before** minting — the 10.22
+   `member.moderation_appeal.decide` invalid-name class does ⛔ not recur.
+3. ✅ **Trap 1's argument is in the decision in full** (cl.3), on the narrow ground — *setting
+   discloses nothing; the disclosure half stays central* — ⛔ never a consistency argument from the
+   neighbouring keys, which is the move those keys foreclose in writing.
+4. ✅ **Supersedes NOTHING**, stated explicitly: `-178` and the masking key's `pariwar_admin`
+   foreclosure stand untouched (cl.3 closing, cl.8).
+5. ✅ **`epics.md` annotated** — a seven-item block under Epic 11b naming
+   `11b-13-per-pariwar-drive-target-substrate` so a future `sprint-planning` run can neither drop it
+   nor regenerate a ghost. **ANNOTATION ONLY**: ⛔ no AC rewritten, ⛔ no prior dated block re-worded
+   ([[feedback_supersede_never_reinterpret]]).
+6. ✅ **Sprint row flipped** `ready-for-dev` → `in-progress`, with the reverse-chron ledger comment
+   `2026-09-06e` prepended ([[project_sprint_status_ledger]]).
+
 ### File List
+
+- `.decision-log.md` — **modified** (Decision `2026-09-06-203` prepended)
+- `_bmad-output/planning-artifacts/epics.md` — **modified** (Epic 11b annotation block)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — **modified** (ledger + row flip)
+- `_bmad-output/implementation-artifacts/11b-13-per-pariwar-drive-target-substrate.md` — **modified**
 
 ## Change Log
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-09-06 | 0.5 | ⭐⭐ **TASK 0 CLOSED — `2026-09-06-203` MINTS THE TWO KEYS; ⛔ NO CODE.** PREFLIGHT run first: **STOP 1** — `permissions.ts:598` read **live** = **39** and **6.18 has not landed** ⇒ `39 → 41`, `47 → 49`; **STOP 2** — both hard-coded test numbers located, `:54`'s rationale chain to be **appended**, ⛔ not replaced; **STOP 3** — `-201` confirmed post-baseline and confirmed **unbuilt** (⛔ zero `expectedVersion` / `Idempotency-Key` matches in the masking module). ⭐ Decision-log head read live was **`-202`**, ⛔ not `-201` ⇒ the entry is **`-203`**. The decision mints `pariwar.manage_drive_target` (`pariwar_admin` + `super_admin` auto) and `pariwar.manage_drive_target_visibility` (⛔ `super_admin` ONLY), **both `dimension: 'pariwar'`** — the narrowing is the **GRANT's**, ⛔ never the dimension's. ⭐ **cl.3 carries Trap 1 in full** on the narrow ground (*setting discloses nothing; revealing does, and stays central*) ⇒ `-178` and the masking key's foreclosure **STAND UNTOUCHED**; it supersedes **nothing**. **D2 rides cl.5** (two records ⇒ the `pariwar_admin` path cannot name a flag column). **cl.6** pins `pool_fixed_amount_schedule` + strict `> 0`; **cl.7** commits `-201`'s two controls IN ORDER on the **new** path only. `epics.md` annotated (ANNOTATION ONLY); sprint row `ready-for-dev` → `in-progress`. | BigDev + Claude |
 | 2026-09-04 | 0.1 | Created from `2026-09-04-195` cl.3 (story **C**). ⚠ **D1 is OPEN and blocks Task 0**, which itself blocks all code. ⭐ Finding at authoring: the neighbouring key **FORECLOSES `pariwar_admin` in writing**, with *"a Panel ruling"* as its acceptance condition — `-190` cl.7(a) IS one, but the decision must say why the disclosure analogy does ⛔ not apply. | BigDev + Claude |
 | 2026-09-06 | 0.4 | ✅⭐⭐ **D2 RULED (b) BY BIGDEV — TWO RECORDS; ⇒ TASK 2 UNBLOCKED, and ⛔ ZERO open decisions remain in this story.** `pariwar_drive_target_schedule` (versioned, `pariwar_admin`) + `pariwar_drive_target_visibility` (⛔ `super_admin` ONLY, both flags + AC4's CHECK). ⭐ The target setter **cannot name a flag column**, so AC3's *"a `pariwar_admin` change leaves the flags byte-unchanged"* becomes **true by construction**, ⛔ not a test of discipline. ⚠ `-201`'s `expectedVersion` attaches to the **schedule**; the reveal record's posture is its own question. ⭐ **D3 ROUTED to story D (11b.14) with the question OPEN** — the reciprocal note is written into **11b-14 AC2 + Task 3 + Change Log**, with the three options and ⛔ none pre-ruled. ⛔ C ships unchanged. | BigDev + Claude |
 | 2026-09-06 | 0.3 | ⭐⭐ **VALIDATED — TEN FINDINGS, ⛔ ZERO ROWS MOVE; stays `ready-for-dev`.** ⛔ No code. **Two NEW decisions raised:** **D2** (⛔ BLOCKED Task 2 — D1 split the keys, ⛔ nothing split the ROW: a `pariwar_admin` target write would re-state a `super_admin`-only reveal on every change) and **D3** (⛔ non-blocking, ROUTED to **D** — the meter recovers the hidden target by arithmetic from two published figures, and BOTH stories' *"target in no response"* tests pass anyway). **Corrections:** Trap 4 named `pools.fixed_amount`, which carries ⛔ **no** DB constraint at all — the real precedent is `pool_fixed_amount_schedule` + `MAX_POOL_FIXED_AMOUNT_INR`; *"non-negative"* admitted **₹0**, a division-by-zero for D's meter ⇒ **strictly positive**; **NEW Trap 5** — `-201` (ruled ⛔ AFTER the baseline, ⛔ still unbuilt) rules this exact precedent's write path needs `Idempotency-Key` **then** `expectedVersion`; Task 1's `roles.ts` instruction would have produced an edit **that exists nowhere in the file** (`super_admin` auto-derives the catalog); a **PREFLIGHT** with 3 STOPs — the `39 → 41` collision with **6.18** (whose story carried the warning while this one did ⛔ not) and the two hard-coded test numbers (`47 → 49`, ⛔ not 48); AC1's *"a per-Pariwar record"* pinned to the **versioned effective-window** shape; the reveal key's **`dimension`** stated; and the header's *"⛔ nothing depends on A or B"* corrected — **D**, **E** and **F** all do. | BigDev + Claude |

@@ -18,16 +18,24 @@
 //     change was definitively NOT saved, and the advice is to reload and reconsider.
 //   · `0` is refused by the form, ⛔ not submitted: it is a division by zero for the meter.
 
-import { screen, waitFor } from '@testing-library/react';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { DriveTargetResponse, DriveTargetVisibilityResponse } from '@twt/contracts';
 import { ApiError } from '../src/api/client.js';
 import { DriveTargetPage } from '../src/modules/drive-target/DriveTargetPage.js';
+import { createQueryClient } from '../src/api/hooks.js';
 import { renderWithClient } from './_helpers.js';
 
 const PARIWAR = '11111111-1111-1111-1111-111111111111';
+
+// ⭐ `2026-09-05-201` control #1 — the hook attaches a fresh `Idempotency-Key` (a UUID) as the third
+// arg to every `setDriveTarget*` call, so a timed-out transport retry replays rather than re-applies.
+const IDEMPOTENCY_KEY = expect.stringMatching(
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+) as unknown as string;
 
 function target(over: Partial<DriveTargetResponse> = {}): DriveTargetResponse {
   return {
@@ -133,8 +141,21 @@ describe('DriveTargetPage', () => {
     });
     // ⛔⛔ AND NO PAGE ERROR. A 403 here is an ORDINARY outcome; rendering it as an error would tell
     // a Pariwar Admin the page is broken when it is working exactly as `-190` cl.7(c) rules.
+    //
+    // ⚠⛔ THE ASSERTION THAT MATTERS IS `drive-target-reveal-LOAD-error` (code review Pass 2 / G3).
+    // This test used to query only `drive-target-reveal-error` — the SUBMIT error, which lives
+    // INSIDE the section that is absent here, so it could ⛔ never render whatever the page did —
+    // and `drive-target-status-error`, which is the TARGET read. ⇒ deleting the `&& !revealForbidden`
+    // discriminator that this scenario exists to protect left ALL 16 TESTS GREEN while every Pariwar
+    // Admin saw "The reveal controls could not be loaded". ⛔ Do not drop this line.
+    expect(screen.queryByTestId('drive-target-reveal-load-error')).toBeNull();
+    expect(screen.queryByTestId('drive-target-reveal-retry')).toBeNull();
     expect(screen.queryByTestId('drive-target-reveal-error')).toBeNull();
     expect(screen.queryByTestId('drive-target-status-error')).toBeNull();
+    // ⭐ …and the page ANSWERS the question its loading line raised, rather than going silent.
+    expect((await screen.findByTestId('drive-target-reveal-not-held')).textContent).toMatch(
+      /do not hold the reveal control/i,
+    );
   });
 
   it('⭐ a `super_admin` sees BOTH switches, independently', async () => {
@@ -164,10 +185,19 @@ describe('DriveTargetPage', () => {
     expect((await screen.findByTestId('drive-target-reveal-order-error')).textContent).toMatch(
       /cannot be public while it is hidden from members/i,
     );
-    const submit = (await screen.findByTestId('drive-target-reveal-submit')) as HTMLButtonElement;
-    expect(submit.disabled).toBe(true);
-    // ⚠ The client guard is a COURTESY; the boundary is the domain refusal AND a DB CHECK. This
-    // asserts the courtesy exists, ⛔ not that it is the enforcement.
+    const submit = (await screen.findByTestId('drive-target-reveal-submit'));
+    expect(submit.getAttribute('aria-disabled')).toBe('true');
+    // ⚠⛔ AND THE GUARD IS ACTUALLY EXERCISED (code review Pass 2 / G3). This used to assert
+    // `not.toHaveBeenCalled()` ⛔ WITHOUT EVER SUBMITTING — a tautology, since nothing in the test
+    // could have called the client. ⇒ deleting the `if (orderInvalid) return;` early-return that the
+    // 2026-09-06 review added, with a paragraph explaining why it was necessary, left this GREEN.
+    // ⭐ The button is now `aria-disabled` (family 13(d)), so it is clickable and the guard is the
+    // only thing standing between this state and a request.
+    await userEvent.click(submit);
+    await userEvent.type(
+      await screen.findByTestId('drive-target-reveal-rationale'),
+      'Trying to publish while members are hidden.{Enter}',
+    );
     expect(client.setDriveTargetVisibility).not.toHaveBeenCalled();
   });
 
@@ -185,10 +215,14 @@ describe('DriveTargetPage', () => {
     await userEvent.click(await screen.findByTestId('drive-target-reveal-submit'));
 
     await waitFor(() => {
-      expect(client.setDriveTargetVisibility).toHaveBeenCalledWith(PARIWAR, {
-        visibility: { revealToMembers: true, revealToPublic: false },
-        rationale: 'Members may see it.',
-      });
+      expect(client.setDriveTargetVisibility).toHaveBeenCalledWith(
+        PARIWAR,
+        {
+          visibility: { revealToMembers: true, revealToPublic: false },
+          rationale: 'Members may see it.',
+        },
+        IDEMPOTENCY_KEY,
+      );
     });
   });
 
@@ -208,11 +242,15 @@ describe('DriveTargetPage', () => {
     await userEvent.click(await screen.findByTestId('drive-target-submit'));
 
     await waitFor(() => {
-      expect(client.setDriveTarget).toHaveBeenCalledWith(PARIWAR, {
-        targetInr: 750_000,
-        rationale: 'Board resolution.',
-        expectedVersion: 7,
-      });
+      expect(client.setDriveTarget).toHaveBeenCalledWith(
+        PARIWAR,
+        {
+          targetInr: 750_000,
+          rationale: 'Board resolution.',
+          expectedVersion: 7,
+        },
+        IDEMPOTENCY_KEY,
+      );
     });
   });
 
@@ -228,11 +266,15 @@ describe('DriveTargetPage', () => {
     await userEvent.click(await screen.findByTestId('drive-target-submit'));
 
     await waitFor(() => {
-      expect(client.setDriveTarget).toHaveBeenCalledWith(PARIWAR, {
-        targetInr: 500_000,
-        rationale: 'First target.',
-        expectedVersion: null,
-      });
+      expect(client.setDriveTarget).toHaveBeenCalledWith(
+        PARIWAR,
+        {
+          targetInr: 500_000,
+          rationale: 'First target.',
+          expectedVersion: null,
+        },
+        IDEMPOTENCY_KEY,
+      );
     });
   });
 
@@ -242,9 +284,15 @@ describe('DriveTargetPage', () => {
     await userEvent.type(await screen.findByTestId('drive-target-amount'), '0');
     await userEvent.type(await screen.findByTestId('drive-target-rationale'), 'Zero target.');
 
-    const submit = (await screen.findByTestId('drive-target-submit')) as HTMLButtonElement;
-    expect(submit.disabled).toBe(true);
+    const submit = await screen.findByTestId('drive-target-submit');
+    expect(submit.getAttribute('aria-disabled')).toBe('true');
+    // ⚠⛔ Same Pass-2 correction as the reveal form's: assert the guard by REACHING it. Deleting
+    // `if (amountInvalid) return;` used to leave this test green.
+    await userEvent.click(submit);
     expect(client.setDriveTarget).not.toHaveBeenCalled();
+    // ⭐ …and the operator is TOLD why, rather than facing a greyed-out control with no text.
+    expect((await screen.findByTestId('drive-target-submit')).getAttribute('aria-describedby'))
+      .toBe('dt-submit-blocked');
   });
 
   it('⭐ a VERSION CONFLICT gets its own copy, ⛔ not the generic "may not have been saved"', async () => {
@@ -283,6 +331,148 @@ describe('DriveTargetPage', () => {
     expect((await screen.findByTestId('drive-target-submit-error')).textContent).toMatch(
       /no display name set/i,
     );
+  });
+
+  it('⭐ the THIRD 409 (idempotency in progress) gets its OWN copy — ⛔ not the display-name one', async () => {
+    // ⚠ Before 2026-09-06 anything that was not the version conflict fell through to
+    // "your display name is missing" — misleading for a transient concurrency condition that
+    // resolves by waiting.
+    asPariwarAdmin(target({ targetInr: 500_000, configured: true, version: 1 }));
+    client.setDriveTarget.mockRejectedValue(
+      new ApiError(409, 'pariwar.drive_target_idempotency_in_progress', 'in progress'),
+    );
+    renderWithClient(<DriveTargetPage pariwarId={PARIWAR} />);
+
+    const amount = await screen.findByTestId('drive-target-amount');
+    await userEvent.clear(amount);
+    await userEvent.type(amount, '600000');
+    await userEvent.type(await screen.findByTestId('drive-target-rationale'), 'Retry.');
+    await userEvent.click(await screen.findByTestId('drive-target-submit'));
+
+    const err = await screen.findByTestId('drive-target-submit-error');
+    expect(err.textContent).toMatch(/already being processed/i);
+    expect(err.textContent).not.toMatch(/no display name set/i);
+  });
+
+  it('⭐⭐ A TENANT SWITCH clears the Saved banner and the stale mutation error (Pass-1 patch (e))', async () => {
+    // ⚠⛔ THIS PATCH WAS ENTIRELY UN-ATTESTED until code review Pass 2 / G3 — ⛔ NO test ever rendered
+    // a second Pariwar, so deleting the whole `[pariwarId]` effect left the suite green. It is the
+    // one G3 property that is a TENANT-BOUNDARY property: without it a failed submit on Pariwar A
+    // renders its error inside Pariwar B's fresh form.
+    const OTHER = '22222222-2222-2222-2222-222222222222';
+    asPariwarAdmin(target({ targetInr: 500_000, configured: true, version: 1 }));
+    client.setDriveTarget.mockRejectedValue(new ApiError(400, 'pariwar.drive_target_invalid', 'bad'));
+    // ⚠ The provider must be re-supplied on `rerender` — `renderWithClient` wraps it once, and a
+    // bare `rerender(<DriveTargetPage …/>)` would drop it ("No QueryClient set").
+    const client_ = createQueryClient();
+    const view = render(
+      <QueryClientProvider client={client_}>
+        <DriveTargetPage pariwarId={PARIWAR} />
+      </QueryClientProvider>,
+    );
+
+    const amount = await screen.findByTestId('drive-target-amount');
+    await userEvent.clear(amount);
+    await userEvent.type(amount, '600000');
+    await userEvent.type(await screen.findByTestId('drive-target-rationale'), 'Will fail.');
+    await userEvent.click(await screen.findByTestId('drive-target-submit'));
+    await screen.findByTestId('drive-target-submit-error');
+
+    // ⭐ Navigate to another Pariwar WITHOUT remounting the component — the real client-side nav.
+    view.rerender(
+      <QueryClientProvider client={client_}>
+        <DriveTargetPage pariwarId={OTHER} />
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('drive-target-submit-error')).toBeNull();
+    });
+    expect(screen.queryByTestId('drive-target-saved')).toBeNull();
+  });
+
+  it('⭐ the RETRY button actually REFETCHES — ⛔ not merely present', async () => {
+    // ⚠ The existing test asserted only that the button exists.
+    client.getDriveTarget.mockResolvedValue(
+      target({ targetInr: 500_000, configured: true, version: 1 }),
+    );
+    client.getDriveTargetVisibility.mockRejectedValue(new ApiError(500, 'internal', 'boom'));
+    renderWithClient(<DriveTargetPage pariwarId={PARIWAR} />);
+
+    const retry = await screen.findByTestId('drive-target-reveal-retry');
+    const before = client.getDriveTargetVisibility.mock.calls.length;
+    await userEvent.click(retry);
+    await waitFor(() => {
+      expect(client.getDriveTargetVisibility.mock.calls.length).toBeGreaterThan(before);
+    });
+  });
+
+  it('⭐ a SUCCESSFUL save shows "Saved" and CLEARS the rationale (the reason resetToken exists)', async () => {
+    asPariwarAdmin(target({ targetInr: 500_000, configured: true, version: 1 }));
+    client.setDriveTarget.mockResolvedValue(
+      target({ targetInr: 600_000, configured: true, version: 2 }),
+    );
+    renderWithClient(<DriveTargetPage pariwarId={PARIWAR} />);
+
+    const amount = await screen.findByTestId('drive-target-amount');
+    await userEvent.clear(amount);
+    await userEvent.type(amount, '600000');
+    const rationale = await screen.findByTestId('drive-target-rationale');
+    await userEvent.type(rationale, 'Board decision.');
+    await userEvent.click(await screen.findByTestId('drive-target-submit'));
+
+    await screen.findByTestId('drive-target-saved');
+    // ⭐ The documented reason the prop exists: a prior submit's text must ⛔ never be silently
+    // resubmittable as the justification for a DIFFERENT target.
+    await waitFor(() => {
+      expect((screen.getByTestId('drive-target-rationale') as HTMLTextAreaElement).value).toBe('');
+    });
+  });
+
+  it('⭐⭐ `expectedVersion` is the version SEEDED, ⛔ not the freshest at submit time', async () => {
+    // ⚠⛔ THE GUARD THE PAGE'S COPY PROMISES UNCONDITIONALLY. It used to read `target.data.version`
+    // at SUBMIT time, so a background refetch upgraded it silently and a change made against a stale
+    // view SUCCEEDED — overwriting the other operator, while the copy said it would be refused.
+    asPariwarAdmin(target({ targetInr: 500_000, configured: true, version: 7 }));
+    client.setDriveTarget.mockResolvedValue(
+      target({ targetInr: 600_000, configured: true, version: 9 }),
+    );
+    renderWithClient(<DriveTargetPage pariwarId={PARIWAR} />);
+
+    const amount = await screen.findByTestId('drive-target-amount');
+    await userEvent.clear(amount);
+    await userEvent.type(amount, '600000');
+    await userEvent.type(await screen.findByTestId('drive-target-rationale'), 'Board decision.');
+
+    // Someone else's change lands while the operator is mid-edit.
+    client.getDriveTarget.mockResolvedValue(
+      target({ targetInr: 750_000, configured: true, version: 8 }),
+    );
+    await userEvent.click(await screen.findByTestId('drive-target-submit'));
+
+    await waitFor(() => {
+      expect(client.setDriveTarget).toHaveBeenCalledWith(
+        PARIWAR,
+        { targetInr: 600_000, rationale: 'Board decision.', expectedVersion: 7 },
+        IDEMPOTENCY_KEY,
+      );
+    });
+  });
+
+  it('⭐ a NON-403 error on the visibility read surfaces a RETRYABLE error — ⛔ not a silently missing section', async () => {
+    // ⚠ Only the 403 is the ruled "render nothing" outcome. A super_admin whose visibility read
+    // fails transiently must be able to tell that apart from "I don't hold the reveal key".
+    client.getDriveTarget.mockResolvedValue(target({ targetInr: 500_000, configured: true, version: 1 }));
+    client.getDriveTargetVisibility.mockRejectedValue(
+      new ApiError(500, 'internal', 'boom'),
+    );
+    renderWithClient(<DriveTargetPage pariwarId={PARIWAR} />);
+
+    const err = await screen.findByTestId('drive-target-reveal-load-error');
+    expect(err.textContent).toMatch(/could not be loaded/i);
+    expect(err.textContent).toMatch(/not a permissions problem/i);
+    // ⭐ And a retry is offered — the query has `retry: false`, so nothing else recovers it.
+    expect(await screen.findByTestId('drive-target-reveal-retry')).toBeTruthy();
   });
 
   it('⭐ the reveal form says NOTHING DISPLAYS THIS YET — so a reveal that shows nothing is not read as a failure', async () => {

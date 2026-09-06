@@ -969,13 +969,23 @@ export function getDriveTarget(pariwarId: string): Promise<DriveTarget> {
   return apiFetch(driveTargetBase(pariwarId), DriveTargetResponse);
 }
 
-/** PUT the governed target change; returns the updated target. */
+/**
+ * PUT the governed target change; returns the updated target.
+ *
+ * ⭐⭐ `idempotencyKey` — `2026-09-05-201` control #1, sent as the `idempotency-key` header. It runs
+ * FIRST at the handler, BEFORE the domain's `expectedVersion` check, so a timed-out proxy/transport
+ * retry of this exact request replays the recorded result instead of falling through to a version
+ * conflict that tells the operator *"somebody else changed this"* when it was themselves (`-201`
+ * cl.2). A fresh key per user-initiated attempt (the `beginErasure` / ground-inspection precedent).
+ */
 export function setDriveTarget(
   pariwarId: string,
   body: SetDriveTargetRequest,
+  idempotencyKey: string,
 ): Promise<DriveTarget> {
   return apiFetch(driveTargetBase(pariwarId), DriveTargetResponse, {
     method: 'PUT',
+    headers: { 'idempotency-key': idempotencyKey },
     body: JSON.stringify(body),
   });
 }
@@ -985,13 +995,20 @@ export function getDriveTargetVisibility(pariwarId: string): Promise<DriveTarget
   return apiFetch(`${driveTargetBase(pariwarId)}/visibility`, DriveTargetVisibilityResponse);
 }
 
-/** PUT the super_admin-only reveal decision; returns the updated posture. */
+/**
+ * PUT the super_admin-only reveal decision; returns the updated posture.
+ *
+ * ⭐ `idempotencyKey` — the same `2026-09-05-201` control #1 seam as {@link setDriveTarget}: a fresh
+ * key per attempt so a transport retry replays rather than re-applies a disclosure change.
+ */
 export function setDriveTargetVisibility(
   pariwarId: string,
   body: SetDriveTargetVisibilityRequest,
+  idempotencyKey: string,
 ): Promise<DriveTargetVisibilityStatus> {
   return apiFetch(`${driveTargetBase(pariwarId)}/visibility`, DriveTargetVisibilityResponse, {
     method: 'PUT',
+    headers: { 'idempotency-key': idempotencyKey },
     body: JSON.stringify(body),
   });
 }

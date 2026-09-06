@@ -104,6 +104,35 @@ describe('AC7 — the drive target and a member\'s obligation never touch', () =
     }
   });
 
+  it.each([
+    ['contribution/write.ts', '../../../src/contribution/write.ts'],
+    ['contribution/facts.ts', '../../../src/contribution/facts.ts'],
+    ['contribution/read.ts', '../../../src/contribution/read.ts'],
+    ['contribution/projection-write.ts', '../../../src/contribution/projection-write.ts'],
+    ['contribution/self-verify.ts', '../../../src/contribution/self-verify.ts'],
+    ['pool/contribution-binding.ts', '../../../src/pool/contribution-binding.ts'],
+    ['pool/contribution-reference.ts', '../../../src/pool/contribution-reference.ts'],
+  ])('⭐ …and neither does the HAS-PAID path (`%s`)', (_label, rel) => {
+    // ⚠⛔ THE THIRD THING AC7 NAMES (code review Pass 2). AC7 governs what a member *owes*, *is
+    // assigned*, or **HAS PAID** — and the scan covered only the first two, so the "has paid" leg was
+    // mechanized by ⛔ nothing. ⭐ The property does hold today by a STRONGER fact, verified
+    // independently: the drive-target resolvers have ⛔ no consumer anywhere outside the admin API
+    // handler. But "holds by accident of nobody having wired it yet" is exactly what decays, and the
+    // wiring story (11b.14) is the NEXT one — it consumes the target to draw a meter, in the same
+    // epic, with these modules one import away.
+    const src = readFileSync(fileURLToPath(new URL(rel, import.meta.url)), 'utf8');
+    for (const forbidden of [
+      'driveTarget',
+      'drive-target',
+      'DriveTarget',
+      'pariwar_drive_target',
+      'targetInr',
+      'target_inr',
+    ]) {
+      expect(src).not.toContain(forbidden);
+    }
+  });
+
   // ── (b)(c) THE BEHAVIOURAL HALF ───────────────────────────────────────────────────────────────
 
   describe.skipIf(!hasDatabase)('with a live database', () => {

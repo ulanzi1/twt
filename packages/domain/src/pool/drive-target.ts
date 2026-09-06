@@ -110,8 +110,39 @@ export function isRevealCombinationAllowed(v: DriveTargetVisibility): boolean {
  * the ruled state and a reveal an affirmative act of the Trust.
  * ⇒ an absent visibility row means **hidden**, and ⛔ a scope failure that yields zero rows lands on
  * the same answer rather than on disclosure.
+ *
+ * ⭐⭐ **FROZEN, AND THE FREEZE IS LOAD-BEARING** (code review Pass 2). `resolveDriveTargetVisibility`
+ * returns **this exact object** on the zero-row path rather than a copy, and `readonly` on the
+ * interface is a COMPILE-TIME fiction — it stops `vis.revealToPublic = true` in typed code and stops
+ * ⛔ nothing at runtime. Unfrozen, a single mutating caller anywhere in the process flips the default
+ * for **every** Pariwar that has no visibility row, process-wide, until restart — turning the
+ * fail-closed property this module states ~15 times into **fail-OPEN**, silently, with ⛔ no row
+ * anywhere to explain it. `Object.freeze` makes that mutation throw in strict mode instead.
  */
-export const DEFAULT_DRIVE_TARGET_VISIBILITY: DriveTargetVisibility = {
+export const DEFAULT_DRIVE_TARGET_VISIBILITY: DriveTargetVisibility = Object.freeze({
   revealToMembers: false,
   revealToPublic: false,
-};
+});
+
+/**
+ * How far apart two API instances' clocks may be before a backwards `effective_from` stops being
+ * **skew** and starts being a **caller error** — code review Pass 2, decision D-B (BigDev, option 2).
+ *
+ * ⭐ `setDriveTargetSchedule` CLAMPS a new window's start up to the open head's when the incoming
+ * instant precedes it, so two instances a second apart in NTP drift cannot produce an inverted
+ * window. ⚠⛔ **But the clamp also CLOSES the head at that same instant** — so a backwards write
+ * collapses the prior head's **ENTIRE** effective window to zero width, ⛔ not merely the overlap.
+ * Past this bound that is ⛔ no longer a reconciliation: it silently rewrites the as-of history of a
+ * record whose whole justification is that every prior target survives.
+ *
+ * ⇒ within the bound, clamp (as before); beyond it, **REFUSE** with
+ * {@link DriveTargetEffectiveFromSkewError}. Five minutes is orders of magnitude above real drift
+ * between API instances and far below the multi-day writes the domain API otherwise accepts.
+ *
+ * ⚠⛔ **THIS BOUNDS THE BACKWARDS DIRECTION ONLY.** A **future** `effective_from` on a Pariwar's
+ * FIRST write (no head ⇒ no clamp) is ⛔ NOT checkable here: the domain layer has ⛔ no reference
+ * clock — `effectiveFrom` **is** the clock it is handed. Closing that needs an injected `now` or a
+ * `new Date()` inside the accessor; ⛔ neither is introduced here, and the gap is recorded openly in
+ * the story's Pass-2 findings rather than papered over.
+ */
+export const MAX_DRIVE_TARGET_CLOCK_SKEW_MS = 5 * 60 * 1000;

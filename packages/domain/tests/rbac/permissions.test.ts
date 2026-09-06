@@ -77,8 +77,19 @@ describe('PERMISSION_CATALOG', () => {
     // boundary inside a route handler where no catalog reader can see it — fails HERE.
     expect(isCatalogKey('pariwar.manage_drive_target')).toBe(true);
     expect(isCatalogKey('pariwar.manage_drive_target_visibility')).toBe(true);
-    // ⭐ And they are DISTINCT strings, not two spellings of one key.
-    expect('pariwar.manage_drive_target').not.toBe('pariwar.manage_drive_target_visibility');
+    // ⭐ And they are TWO SEPARATE ENTRIES in the catalog, ⛔ not two spellings of one key.
+    // ⚠⛔ Pass 2 correction: this line previously read
+    //   `expect('pariwar.manage_drive_target').not.toBe('pariwar.manage_drive_target_visibility')`
+    // — two string LITERALS compared to each other, i.e. a parse-time tautology that stayed green
+    // with the entire permission catalog deleted. The claim it was making is about the CATALOG, so
+    // it has to be asked of the catalog.
+    const driveTargetKeys = PERMISSION_CATALOG.keys.filter((k) =>
+      k.startsWith('pariwar.manage_drive_target'),
+    );
+    expect([...driveTargetKeys].sort()).toEqual([
+      'pariwar.manage_drive_target',
+      'pariwar.manage_drive_target_visibility',
+    ]);
   });
 
   it('includes the Story 6.13 cycle-freeze WRITE key (cycle.freeze — the first state_trustee surface)', () => {

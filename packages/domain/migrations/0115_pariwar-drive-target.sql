@@ -70,7 +70,7 @@
 -- Privileges: schedule gets SELECT/INSERT/UPDATE but NOT DELETE — a governance record is not
 -- discarded; a change closes the prior head and inserts a new one, so every prior target survives.
 -- The visibility record gets SELECT/INSERT/UPDATE for the same reason (it is mutated in place; its
--- trail lives in the Story 1.10 audit chain).
+-- trail lives in the §1.5 audit chain).
 
 CREATE TABLE "pariwar_drive_target_schedule" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -149,8 +149,9 @@ CREATE UNIQUE INDEX "pariwar_drive_target_schedule_pariwar_version_uq" ON "pariw
 CREATE UNIQUE INDEX "pariwar_drive_target_schedule_pariwar_current_uq" ON "pariwar_drive_target_schedule" USING btree ("pariwar_id") WHERE effective_until IS NULL;--> statement-breakpoint
 -- (10) The window resolver's driving index.
 CREATE INDEX "pariwar_drive_target_schedule_pariwar_effective_from_idx" ON "pariwar_drive_target_schedule" USING btree ("pariwar_id","effective_from");--> statement-breakpoint
--- (11) ONE visibility row per Pariwar — the pariwar_public_name_presentation precedent.
-CREATE INDEX "pariwar_drive_target_visibility_pariwar_id_idx" ON "pariwar_drive_target_visibility" USING btree ("pariwar_id");--> statement-breakpoint
+-- (11) ONE visibility row per Pariwar — the pariwar_public_name_presentation precedent. This UNIQUE
+--      index also serves every `WHERE pariwar_id = $1` lookup (the RLS predicate, the resolver), so a
+--      separate non-unique `(pariwar_id)` index would be dead weight — not created (2026-09-06 review).
 CREATE UNIQUE INDEX "pariwar_drive_target_visibility_pariwar_id_uq" ON "pariwar_drive_target_visibility" USING btree ("pariwar_id");--> statement-breakpoint
 -- (12) Per-tenant RLS policies (packages/domain/src/policies/pariwar-drive-target-*-rls.ts).
 --      SYMMETRIC read/write on pariwar_id; an unset scope yields 0 rows (Story 1.6 closed failure).

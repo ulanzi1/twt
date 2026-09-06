@@ -71,16 +71,33 @@ import {
 } from '../schema/pariwar_drive_target_visibility.js';
 import {
   DEFAULT_DRIVE_TARGET_VISIBILITY,
+  MAX_DRIVE_TARGET_CLOCK_SKEW_MS,
   type DriveTargetVisibility,
   isRevealCombinationAllowed,
   isValidDriveTargetInr,
 } from './drive-target.js';
 import {
+  DriveTargetEffectiveFromSkewError,
   DriveTargetInvalidError,
   DriveTargetVersionConflictError,
   DriveTargetVisibilityInvalidError,
   UngovernedDriveTargetChangeError,
+  isDriveTargetScheduleUniqueViolation,
 } from './errors.js';
+
+/**
+ * ⭐ Is `value` a canonical UUID? — code review Pass 2.
+ *
+ * `auditId` is the one identifier on these inputs that is ⛔ NOT branded (every sibling is a
+ * `PariwarId` / `UserId`), and the column is `uuid`. The emptiness guards below catch `null` and
+ * `''`; without this, a plausible-looking `'audit-2026-09-06-001'` passes every governance check and
+ * dies at Postgres as `22P02`, which is ⛔ not in the error-mapping registry ⇒ the opaque 500 this
+ * module is built to avoid. ⛔ A shape check, ⛔ not an existence check — nothing here asserts the
+ * anchor names a real audit row.
+ */
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
 
 /**
  * The permission key that gates SETTING the target. Held by `pariwar_admin` + `super_admin`.
@@ -252,7 +269,7 @@ export interface SetDriveTargetInput {
   changedByActor: UserId | null;
   /** The acting admin's `users.display_name`, SNAPSHOT at write time. Required and explicit. */
   changedByDisplay: string | null;
-  /** WHY. ⛔ Non-empty for any actor-attributed change. */
+  /** WHY. ⛔ Non-empty for EVERY change — system/seed writes included, ⛔ not only attributed ones. */
   rationale: string;
   /** The pre-generated §1.5 audit anchor. ⛔ The audit LINE is the caller's obligation. */
   auditId: string | null;
@@ -270,7 +287,7 @@ export interface SetDriveTargetInput {
  * ⛔⛔ **IT ⛔ CANNOT TOUCH A REVEAL FLAG** — they are not columns on this table (D2). Setting a
  * target therefore ⛔ never reveals it, and ⛔ never re-states or reverts a reveal the Trust made.
  *
- * ⛔ Refuses an actor-attributed change with no rationale, ANY change with no audit anchor, an
+ * ⛔ Refuses ANY change with no rationale (system/seed included), ANY change with no audit anchor, an
  * attributed change with no display name, a non-positive or non-integer target, and a stale
  * `expectedVersion`. All five are governance requirements, ⛔ not hygiene.
  *
@@ -293,8 +310,10 @@ export async function setDriveTargetSchedule(
   // A system/seed write (actor null) still needs an anchor — an unattributed change to the figure
   // every drive in a Pariwar is measured against is exactly the one you would want to find in the
   // audit log.
-  if (input.auditId === null || input.auditId === '') {
-    throw new UngovernedDriveTargetChangeError('an audit anchor (auditId)');
+  // ⭐ SHAPE, ⛔ not just presence (Pass 2): the column is `uuid` and `auditId` is unbranded, so a
+  // non-UUID anchor would otherwise reach Postgres as an unregistered `22P02` → opaque 500.
+  if (input.auditId === null || input.auditId === '' || !isUuid(input.auditId)) {
+    throw new UngovernedDriveTargetChangeError('an audit anchor (auditId) in canonical UUID form');
   }
   if (input.changedByActor !== null && (input.changedByDisplay ?? '').trim() === '') {
     // Attribution without a name is attribution nobody can read. Controlled staff data snapshotted
@@ -362,63 +381,107 @@ export async function setDriveTargetSchedule(
   // `…_window_not_inverted` with a bare `23514`, which is not in the error-mapping registry and
   // would surface as an opaque 500. ⭐ The CHECK is correct and stays; this clamps the input that
   // would violate it rather than relaxing the guard.
-  // ⛔ NOT a silent correction of operator intent: `effectiveFrom` is ⛔ never caller-supplied (the
-  // contract has no such field; the handler passes the server clock), so the only thing reconciled
-  // here is clock skew between our own instances — ⛔ never a human's chosen instant.
+  // ⛔ NOT a silent correction of operator intent: `effectiveFrom` is ⛔ never caller-supplied over
+  // HTTP (the contract has no such field; the handler passes the server clock), so the only thing
+  // reconciled here is clock skew between our own instances — ⛔ never a human's chosen instant.
+  //
+  // ⚠⛔ **BUT THE DOMAIN API IS WIDER THAN THE HTTP PATH** (code review Pass 2, decision **D-B** —
+  // BigDev, option 2). `SetDriveTargetInput.effectiveFrom` is a REQUIRED `Date` with ⛔ no bound, so
+  // the "only clock skew" claim above holds for the handler and ⛔ NOT for the domain surface. And
+  // the clamp is ⛔ not merely a nudge: the close step below sets `effective_until = effectiveFrom`,
+  // so clamping a backwards write UP to the head's own start collapses the head's **ENTIRE** window
+  // to zero width — ⛔ not just the overlap. A write five days backwards would therefore ERASE the
+  // prior version from the as-of history, and the resolver would answer "what was the target on day
+  // 3?" with the NEW figure, on a record whose whole justification is that every prior target
+  // survives.
+  // ⇒ BOUND IT: within `MAX_DRIVE_TARGET_CLOCK_SKEW_MS` this is our own clocks disagreeing and the
+  // clamp is right; beyond it, it is a caller error and is REFUSED with a registered typed error
+  // (⛔ not a 409 — retrying the same instant fails identically).
+  if (
+    head !== null &&
+    head.effectiveFrom.getTime() - input.effectiveFrom.getTime() > MAX_DRIVE_TARGET_CLOCK_SKEW_MS
+  ) {
+    throw new DriveTargetEffectiveFromSkewError(
+      input.pariwarId,
+      input.effectiveFrom,
+      head.effectiveFrom,
+      MAX_DRIVE_TARGET_CLOCK_SKEW_MS,
+    );
+  }
   const effectiveFrom =
     head !== null && head.effectiveFrom.getTime() > input.effectiveFrom.getTime()
       ? head.effectiveFrom
       : input.effectiveFrom;
 
-  // Close the prior open head AT the new row's `effective_from` — ⛔ never at a second `new Date()`.
-  await db
-    .update(pariwarDriveTargetSchedule)
-    .set({ effectiveUntil: effectiveFrom })
-    .where(
-      and(
-        eq(pariwarDriveTargetSchedule.pariwarId, input.pariwarId),
-        isNull(pariwarDriveTargetSchedule.effectiveUntil),
-      ),
-    );
+  // ⚠⛔ DEFENCE-IN-DEPTH (2026-09-06 review). The advisory lock above + the `expectedVersion` check
+  // inside it are what normally guarantee no losing writer ever reaches the close/insert pair. But if
+  // the lock were ever removed or bypassed, two writers past the version check would collide on
+  // `…_pariwar_version_uq` / `…_pariwar_current_uq` with a bare `23505` — which is ⛔ NOT in the
+  // error-mapping registry and would surface as an opaque 500, the exact `-201` failure mode. ⇒ the
+  // 23505 on this pair is converted to the SAME registered 409, mirroring
+  // `insertNewHead` in `pool/fixed-amount.ts`. ⛔ Not a substitute for the lock — a backstop for it.
+  try {
+    // Close the prior open head AT the new row's `effective_from` — ⛔ never at a second `new Date()`.
+    await db
+      .update(pariwarDriveTargetSchedule)
+      .set({ effectiveUntil: effectiveFrom })
+      .where(
+        and(
+          eq(pariwarDriveTargetSchedule.pariwarId, input.pariwarId),
+          isNull(pariwarDriveTargetSchedule.effectiveUntil),
+        ),
+      );
 
-  // ⚠ The next version is derived from the MAX over the Pariwar's rows, ⛔ not from the closed head:
-  // a Pariwar whose only rows are already-closed (a head closed by a superseding write that then
-  // rolled back) would otherwise re-allocate a version the unique index has already taken.
-  const maxRows = await db
-    .select({ maxVersion: sql<number | string | null>`max(${pariwarDriveTargetSchedule.version})` })
-    .from(pariwarDriveTargetSchedule)
-    .where(eq(pariwarDriveTargetSchedule.pariwarId, input.pariwarId));
-  // ⚠ `max()` over an integer column comes back as a NUMBER, but the null arm is real (no rows), and
-  // the driver's typing is loose enough that a string would pass silently — coerce at this boundary
-  // ([[project_contribution_fact_projection_substrate]]).
-  const rawMax = maxRows[0]?.maxVersion ?? null;
-  const nextVersion = rawMax === null ? 1 : Number(rawMax) + 1;
+    // ⚠ The next version is derived from the MAX over the Pariwar's rows, ⛔ not from the closed head:
+    // a Pariwar whose only rows are already-closed (a head closed by a superseding write that then
+    // rolled back) would otherwise re-allocate a version the unique index has already taken.
+    const maxRows = await db
+      .select({
+        maxVersion: sql<number | string | null>`max(${pariwarDriveTargetSchedule.version})`,
+      })
+      .from(pariwarDriveTargetSchedule)
+      .where(eq(pariwarDriveTargetSchedule.pariwarId, input.pariwarId));
+    // ⚠ `max()` over an integer column comes back as a NUMBER, but the null arm is real (no rows), and
+    // the driver's typing is loose enough that a string would pass silently — coerce at this boundary
+    // ([[project_contribution_fact_projection_substrate]]).
+    const rawMax = maxRows[0]?.maxVersion ?? null;
+    const nextVersion = rawMax === null ? 1 : Number(rawMax) + 1;
 
-  const rows = await db
-    .insert(pariwarDriveTargetSchedule)
-    .values({
-      pariwarId: input.pariwarId,
-      version: nextVersion,
-      targetInr: input.targetInr,
-      // ⭐ THE CLAMPED value — the new head and the close instant must be the SAME instant, or the
-      // zero-width supersession the CHECK deliberately allows becomes a gap with no row in force.
-      effectiveFrom,
-      effectiveUntil: null,
-      changedByActor: input.changedByActor,
-      changedByDisplay: input.changedByDisplay,
-      rationale: input.rationale,
-      auditId: input.auditId,
-      // ⛔⛔ NOTE WHAT IS ABSENT AND CANNOT BE ADDED: there is ⛔ no `revealToMembers` /
-      // `revealToPublic` here, because they are ⛔ not columns on this table. That is D2's whole
-      // point — the authority split is a DB fact, ⛔ not a code review.
-    })
-    .returning();
+    const rows = await db
+      .insert(pariwarDriveTargetSchedule)
+      .values({
+        pariwarId: input.pariwarId,
+        version: nextVersion,
+        targetInr: input.targetInr,
+        // ⭐ THE CLAMPED value — the new head and the close instant must be the SAME instant, or the
+        // zero-width supersession the CHECK deliberately allows becomes a gap with no row in force.
+        effectiveFrom,
+        effectiveUntil: null,
+        changedByActor: input.changedByActor,
+        changedByDisplay: input.changedByDisplay,
+        rationale: input.rationale,
+        auditId: input.auditId,
+        // ⛔⛔ NOTE WHAT IS ABSENT AND CANNOT BE ADDED: there is ⛔ no `revealToMembers` /
+        // `revealToPublic` here, because they are ⛔ not columns on this table. That is D2's whole
+        // point — the authority split is a DB fact, ⛔ not a code review.
+      })
+      .returning();
 
-  const row = rows[0];
-  if (row === undefined) {
-    throw new Error('drive-target schedule insert returned no row (unexpected)');
+    const row = rows[0];
+    if (row === undefined) {
+      throw new Error('drive-target schedule insert returned no row (unexpected)');
+    }
+    return row;
+  } catch (err) {
+    if (isDriveTargetScheduleUniqueViolation(err)) {
+      throw new DriveTargetVersionConflictError(
+        input.pariwarId,
+        input.expectedVersion,
+        actualVersion,
+      );
+    }
+    throw err;
   }
-  return row;
 }
 
 // ── THE GOVERNED WRITE: THE REVEAL ──────────────────────────────────────────────────────────────
@@ -429,7 +492,7 @@ export interface SetDriveTargetVisibilityInput {
   visibility: DriveTargetVisibility;
   changedByActor: UserId | null;
   changedByDisplay: string | null;
-  /** WHY. ⛔ Non-empty for any actor-attributed change — a disclosure decision is not a value swap. */
+  /** WHY. ⛔ Non-empty for EVERY change (system/seed included) — a disclosure decision is not a value swap. */
   rationale: string;
   auditId: string | null;
   /** Checked against {@link DRIVE_TARGET_VISIBILITY_PERMISSION_KEY} at `dimension: 'pariwar'`. */
@@ -463,8 +526,9 @@ export async function setDriveTargetVisibility(
   if (input.rationale.trim() === '') {
     throw new UngovernedDriveTargetChangeError('a rationale');
   }
-  if (input.auditId === null || input.auditId === '') {
-    throw new UngovernedDriveTargetChangeError('an audit anchor (auditId)');
+  // ⭐ SHAPE, ⛔ not just presence (Pass 2) — see the schedule setter's guard for why.
+  if (input.auditId === null || input.auditId === '' || !isUuid(input.auditId)) {
+    throw new UngovernedDriveTargetChangeError('an audit anchor (auditId) in canonical UUID form');
   }
   if (input.changedByActor !== null && (input.changedByDisplay ?? '').trim() === '') {
     throw new UngovernedDriveTargetChangeError("the actor's display name");

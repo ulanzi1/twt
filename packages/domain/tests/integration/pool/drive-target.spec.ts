@@ -35,8 +35,7 @@ import { describe, expect, it } from 'vitest';
 
 import { userId as toUserId } from '../../../src/ids/index.js';
 import {
-  DRIVE_TARGET_PERMISSION_KEY,
-  DRIVE_TARGET_VISIBILITY_PERMISSION_KEY,
+  DriveTargetEffectiveFromSkewError,
   DriveTargetInvalidError,
   DriveTargetVersionConflictError,
   DriveTargetVisibilityInvalidError,
@@ -236,6 +235,92 @@ describe.skipIf(!hasDatabase)('per-Pariwar drive target (PARIWAR_A scope)', () =
     expect(await resolveEffectiveDriveTargetInr(tx, PARIWAR_A, at(20))).toBe(750_000);
     // Before the first window opens there is no target in force at all.
     expect(await resolveEffectiveDriveTargetInr(tx, PARIWAR_A, at(-1))).toBeNull();
+  });
+
+  it('⭐ the clock-skew CLAMP holds — a second write whose effectiveFrom precedes the open head is pinned to the head, ⛔ never a backwards window', async () => {
+    // ⚠ Every OTHER test feeds strictly increasing instants, so the clamp branch
+    // (`head.effectiveFrom > input.effectiveFrom ? head.effectiveFrom : input.effectiveFrom`) never
+    // runs. This forces it: the accessor is never handed a caller instant (the handler passes the
+    // server clock), but two API instances a second apart in NTP drift CAN produce a second write
+    // whose `effectiveFrom` is EARLIER than the open head's — and the close step would then set
+    // `effective_until < effective_from` on the prior row, a bare `23514` on
+    // `…_window_not_inverted` → opaque 500. The clamp pins the new window's start (and therefore the
+    // prior row's close) to the head's own start, yielding the legitimate zero-width `[T, T)`
+    // supersession the CHECK deliberately allows. 2026-09-06 review.
+    //
+    // ⚠⛔ PASS-2 CORRECTION — THIS TEST USED `at(-5)`, i.e. FIVE DAYS BACKWARDS. That is ⛔ not clock
+    // skew, and asserting it as correct meant the suite CERTIFIED the destructive case: clamping
+    // closes the prior head at its own start instant, so a backwards write erases v1's ENTIRE
+    // effective window, ⛔ not merely the overlap — and the resolver then answers "what was the
+    // target on day 3?" with v2's figure. The clamp is right for SKEW; the input was never bounded.
+    // ⇒ this now exercises a REAL skew (2 seconds), and the beyond-bound case is REFUSED in the test
+    // immediately below. Decision D-B, BigDev, option 2.
+    const { tx, client } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+
+    const first = await setDriveTargetSchedule(tx, targetInput()); // effectiveFrom at(0)
+    expect(first.version).toBe(1);
+
+    const skewed = new Date(at(0).getTime() - 2_000); // 2s of NTP drift, well inside the bound
+    const second = await setDriveTargetSchedule(
+      tx,
+      // ⚠ effectiveFrom BEFORE the head's at(0) — the skew case.
+      targetInput({ targetInr: 750_000, expectedVersion: 1, effectiveFrom: skewed }),
+    );
+    expect(second.version).toBe(2);
+    // ⭐ CLAMPED to the head's start — ⛔ NOT the skewed instant that was passed in.
+    expect(second.effectiveFrom.toISOString()).toBe(at(0).toISOString());
+
+    const all = await tx
+      .select()
+      .from(schema.pariwarDriveTargetSchedule)
+      .where(eq(schema.pariwarDriveTargetSchedule.pariwarId, PARIWAR_A))
+      .orderBy(asc(schema.pariwarDriveTargetSchedule.version));
+    expect(all.map((r) => r.version)).toEqual([1, 2]);
+    // ⭐ v1 is closed at the SAME instant it opened — the zero-width `[at(0), at(0))` window, which
+    // the resolver's `effective_until > asOf` predicate never matches.
+    expect(all[0]?.effectiveFrom.toISOString()).toBe(at(0).toISOString());
+    expect(all[0]?.effectiveUntil?.toISOString()).toBe(at(0).toISOString());
+    expect(all[1]?.effectiveUntil).toBeNull();
+
+    // ⇒ there is NEVER an instant with no row in force after at(0): v2 is what resolves everywhere
+    // from at(0) onward, and nothing resolves before it.
+    expect(await resolveEffectiveDriveTargetInr(tx, PARIWAR_A, at(0))).toBe(750_000);
+    expect(await resolveEffectiveDriveTargetInr(tx, PARIWAR_A, at(5))).toBe(750_000);
+    expect(await resolveEffectiveDriveTargetInr(tx, PARIWAR_A, at(-1))).toBeNull();
+  });
+
+  it('⭐⭐ a backwards effectiveFrom BEYOND the skew bound is REFUSED — ⛔ never clamped, because clamping would ERASE the prior version from the as-of history', async () => {
+    // ⭐ Decision D-B (code review Pass 2, BigDev option 2). Inside `MAX_DRIVE_TARGET_CLOCK_SKEW_MS`
+    // a backwards instant is our own clocks disagreeing and the clamp is right (the test above).
+    // Beyond it, the clamp stops being a reconciliation: it closes the open head at the head's OWN
+    // start, collapsing its entire window to zero width, so v1 — genuinely in force for five days —
+    // vanishes from every as-of read. On a record whose whole justification is that every prior
+    // target survives, that is a silent history rewrite, so the write is REFUSED instead.
+    // ⚠ A CALLER error, ⛔ not a conflict: re-submitting the same instant fails identically, which is
+    // why it maps to 400 and ⛔ not 409.
+    const { tx, client } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+
+    const first = await setDriveTargetSchedule(tx, targetInput()); // effectiveFrom at(0)
+    expect(first.version).toBe(1);
+
+    await expect(
+      setDriveTargetSchedule(
+        tx,
+        targetInput({ targetInr: 750_000, expectedVersion: 1, effectiveFrom: at(-5) }),
+      ),
+    ).rejects.toThrow(DriveTargetEffectiveFromSkewError);
+
+    // ⭐ AND THE HISTORY IS INTACT — v1 still open, still in force, ⛔ no v2, ⛔ nothing closed.
+    const all = await tx
+      .select()
+      .from(schema.pariwarDriveTargetSchedule)
+      .where(eq(schema.pariwarDriveTargetSchedule.pariwarId, PARIWAR_A))
+      .orderBy(asc(schema.pariwarDriveTargetSchedule.version));
+    expect(all.map((r) => r.version)).toEqual([1]);
+    expect(all[0]?.effectiveUntil).toBeNull();
+    expect(await resolveEffectiveDriveTargetInr(tx, PARIWAR_A, at(3))).toBe(500_000);
   });
 
   it('the partial unique REFUSES a second open head (a raw insert bypassing the accessor)', async () => {
@@ -522,6 +607,8 @@ describe.skipIf(!hasDatabase)('per-Pariwar drive target (PARIWAR_A scope)', () =
   it.each([
     ['a blank rationale', { rationale: '   ' }],
     ['no audit anchor', { auditId: null }],
+    // ⭐ Pass 2 — see the reveal table below for why SHAPE and not merely presence.
+    ['a malformed (non-UUID) audit anchor', { auditId: 'audit-2026-09-06-001' }],
     ['an attributed change with no display name', { changedByDisplay: '' }],
     ['a system write carrying a human display name', { changedByActor: null }],
     ['grants that do not carry the key', { actorGrants: [] as EffectiveGrant[] }],
@@ -536,7 +623,17 @@ describe.skipIf(!hasDatabase)('per-Pariwar drive target (PARIWAR_A scope)', () =
   it.each([
     ['a blank rationale', { rationale: '' }],
     ['no audit anchor', { auditId: null }],
+    // ⭐ Pass 2 — a MALFORMED anchor, ⛔ not merely a missing one. The column is `uuid` and
+    // `auditId` is the one unbranded id on these inputs, so without a shape check this reached
+    // Postgres as an unregistered `22P02` ⇒ the opaque 500 this module exists to avoid.
+    ['a malformed (non-UUID) audit anchor', { auditId: 'audit-2026-09-06-001' }],
     ['an attributed change with no display name', { changedByDisplay: '' }],
+    // ⭐⭐ Pass 2 — THE ASYMMETRY WAS BACKWARDS. The TARGET table carries this case; the REVEAL table
+    // did ⛔ not, though `setDriveTargetVisibility` carries the identical guard — so deleting that
+    // guard left every test green and permitted a `super_admin`-only DISCLOSURE record attributed to
+    // no actor but bearing a human's name: a reveal that reads as made by someone who did not make
+    // it. That is worse here than on the target, ⛔ not better.
+    ['a system write carrying a human display name', { changedByActor: null }],
     ['grants that do not carry the key', { actorGrants: [] as EffectiveGrant[] }],
   ])('the REVEAL write refuses %s', async (_label, overrides) => {
     const { tx, client } = getTx();
@@ -546,10 +643,61 @@ describe.skipIf(!hasDatabase)('per-Pariwar drive target (PARIWAR_A scope)', () =
     ).rejects.toThrow(UngovernedDriveTargetChangeError);
   });
 
-  it('the permission keys are the CATALOG\'s strings, ⛔ not re-typed literals', () => {
-    expect(DRIVE_TARGET_PERMISSION_KEY).toBe('pariwar.manage_drive_target');
-    expect(DRIVE_TARGET_VISIBILITY_PERMISSION_KEY).toBe('pariwar.manage_drive_target_visibility');
+  it('⭐⭐ the REVEAL record is LAST-WRITE-WINS BY RULING (`-203` cl.5) — ⛔ no expectedVersion, and the second writer overwrites wholesale', async () => {
+    // ⚠⛔ THIS PINS AN ABSENCE, DELIBERATELY. `setDriveTargetSchedule` carries `-201` cl.4's
+    // `expectedVersion` lost-update guard; `setDriveTargetVisibility` carries ⛔ NONE — no version,
+    // no `updatedAt` precondition, no advisory lock. ⭐ That is a RULING, ⛔ not an oversight:
+    // `2026-09-06-203` cl.5 declined to have the reveal record inherit `expectedVersion`, matching
+    // the two sibling `super_admin`-only disclosure controls, whose accountability is the required
+    // rationale + actor + display snapshot + the §1.5 audit chain rather than a version compare.
+    //
+    // ⭐ WHY IT IS WRITTEN DOWN AS A TEST. Three review layers across two passes each read this
+    // absence as a defect and raised it; twice it was resolved by pointing at cl.5. An absence
+    // cannot be read off the code, so it is asserted here — BigDev, code review Pass 2, decision D-A.
+    // ⛔ If a future story ADDS a precondition, this test SHOULD fail: that is a governance change and
+    // owes its own decision entry, ⛔ not a quiet patch.
+    const { tx, client } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+
+    // Writer A: members-only.
+    await setDriveTargetVisibility(
+      tx,
+      visibilityInput({
+        visibility: { revealToMembers: true, revealToPublic: false },
+        rationale: 'A: members only, for now.',
+      }),
+    );
+
+    // Writer B read the SAME prior state A did (there is no token by which it could prove that —
+    // which is the point) and now publishes. ⭐ It is ACCEPTED.
+    await setDriveTargetVisibility(
+      tx,
+      visibilityInput({
+        visibility: { revealToMembers: true, revealToPublic: true },
+        rationale: 'B: publish it.',
+      }),
+    );
+
+    // ⭐ B WON WHOLESALE — both flags AND the rationale are B's. A's decision left ⛔ no trace in the
+    // row; its trace is in the §1.5 audit chain, which is exactly what cl.5 relies on.
+    expect(await resolveDriveTargetVisibility(tx, PARIWAR_A)).toEqual({
+      revealToMembers: true,
+      revealToPublic: true,
+    });
+    const rows = await tx
+      .select()
+      .from(schema.pariwarDriveTargetVisibility)
+      .where(eq(schema.pariwarDriveTargetVisibility.pariwarId, PARIWAR_A));
+    expect(rows).toHaveLength(1); // ⛔ upsert, ⛔ never a second row
+    expect(rows[0]?.rationale).toBe('B: publish it.');
   });
+
+  // ⚠⛔ Pass 2 — the "the permission keys are the CATALOG's strings" test that stood here MOVED to
+  // `tests/pool/drive-target.test.ts`. Two defects, one cause: it compared each constant to a
+  // HAND-TYPED LITERAL (i.e. precisely the "re-typed literal" its own title disclaimed — rename the
+  // catalog key and it stayed green while every `hasPermission` check silently denied), and being
+  // DB-free it was nonetheless trapped inside this `skipIf(!hasDatabase)` suite, so it did not run
+  // at all without a live database. ⛔ Do not re-add a literal-comparison version here.
 
   // ── (j) TENANT ISOLATION ──────────────────────────────────────────────────────────────────────
 
@@ -570,16 +718,35 @@ describe.skipIf(!hasDatabase)('per-Pariwar drive target (PARIWAR_A scope)', () =
       revealToPublic: true,
     });
 
+    // ⚠⛔ PROVE THE FIXTURE LANDED, ⛔ BEFORE entering scope (code review Pass 2). Without this the
+    // visibility half of this test is FAIL-CLOSED-TAUTOLOGICAL: the expected value below is
+    // byte-identical to `DEFAULT_DRIVE_TARGET_VISIBILITY`, which is what the resolver returns for
+    // ANY zero-row read — including "the seed silently did nothing". The schedule half already had
+    // its raw `select`; the visibility half did ⛔ not, so a dead fixture would have reported tenant
+    // isolation as PROVEN.
+    const seededB = await tx
+      .select({ revealToPublic: schema.pariwarDriveTargetVisibility.revealToPublic })
+      .from(schema.pariwarDriveTargetVisibility)
+      .where(eq(schema.pariwarDriveTargetVisibility.pariwarId, PARIWAR_B));
+    expect(seededB).toHaveLength(1);
+    expect(seededB[0]?.revealToPublic).toBe(true);
+
     await enterAppScope(client, PARIWAR_A);
 
     // ⭐ Membership assertions, ⛔ never counts over the shared fixture.
     expect(await resolveEffectiveDriveTargetInr(tx, PARIWAR_B, at(1))).toBeNull();
     // ⭐⭐ AND B'S REVEAL DOES NOT LEAK ACROSS: an out-of-scope read lands on the FAIL-CLOSED
-    // default, ⛔ never on B's `revealToPublic: true`.
+    // default, ⛔ never on B's `revealToPublic: true` — which the assertion above proved is really
+    // there to leak.
     expect(await resolveDriveTargetVisibility(tx, PARIWAR_B)).toEqual({
       revealToMembers: false,
       revealToPublic: false,
     });
+    const visibleVisibility = await tx
+      .select({ pariwarId: schema.pariwarDriveTargetVisibility.pariwarId })
+      .from(schema.pariwarDriveTargetVisibility)
+      .where(eq(schema.pariwarDriveTargetVisibility.pariwarId, PARIWAR_B));
+    expect(visibleVisibility).toEqual([]);
     const visible = await tx
       .select({ pariwarId: schema.pariwarDriveTargetSchedule.pariwarId })
       .from(schema.pariwarDriveTargetSchedule)

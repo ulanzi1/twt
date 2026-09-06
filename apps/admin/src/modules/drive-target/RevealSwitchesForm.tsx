@@ -52,24 +52,74 @@ export function RevealSwitchesForm({
     register,
     handleSubmit,
     reset,
-    formState: { errors },
+    watch,
+    formState: { errors, isDirty },
   } = useForm<FormValues>({ defaultValues: { rationale: '' }, mode: 'onChange' });
+  const [changedUnderEdit, setChangedUnderEdit] = useState(false);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
 
   // ⭐ Re-seeds from the RECORDED posture on a save and whenever it changes — the form must show the
   // truth, for the same reason the target form does. ⚠ `rationale` is always blank: a justification
   // for a disclosure decision belongs to ONE decision.
+  // ⚠⛔ RE-SEED ONLY AN UNTOUCHED FORM (Pass 2 / G3, decision D-C — BigDev option 2). ⛔ This used to
+  // reset BOTH toggles AND the rationale on every change of the recorded posture, so a background
+  // refetch wiped a disclosure decision the operator was in the middle of making. ⭐ On THIS form it
+  // was worse than on its sibling: the Save button's `disabled` omits a rationale check, so after
+  // the wipe the operator could submit a BLANK rationale on the disclosure control.
+  const touched =
+    isDirty || revealToMembers !== current.revealToMembers || revealToPublic !== current.revealToPublic;
   useEffect(() => {
     setRevealToMembers(current.revealToMembers);
     setRevealToPublic(current.revealToPublic);
+    setChangedUnderEdit(false);
+    setSubmitAttempted(false);
     reset({ rationale: '' });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset() runs on an explicit parent bump or a change in the recorded posture
-  }, [resetToken, current.revealToMembers, current.revealToPublic]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- an explicit parent bump after a save
+  }, [resetToken]);
+
+  useEffect(() => {
+    if (touched) {
+      setChangedUnderEdit(true);
+      return;
+    }
+    setRevealToMembers(current.revealToMembers);
+    setRevealToPublic(current.revealToPublic);
+    reset({ rationale: '' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `touched` is read, not depended on
+  }, [current.revealToMembers, current.revealToPublic]);
 
   // ⛔ `member ≥ public` — the ONE forbidden combination. ⚠ ONE-WAY: members-without-public is never
   // refused.
   const orderInvalid = revealToPublic && !revealToMembers;
+  // ⚠⛔ REACT-HOOK-FORM'S `required` DOES ⛔ NOT TRIM (verified in the installed 7.79.0: `isEmpty`
+  // tests `=== ''`), so `'   '` PASSED it — and this button's `disabled` omitted a rationale check
+  // entirely, unlike its sibling's. ⇒ a whitespace-only rationale was submittable on the DISCLOSURE
+  // control, and the server's 400 rendered as *"check that the AMOUNT is a whole number of rupees …
+  // and that the reason is not excessively LONG"* — on a form with no amount field, telling the
+  // operator their EMPTY reason was too LONG. (Pass 2 / G3.)
+  const rationaleIsBlank = (watch('rationale') ?? '').trim() === '';
+  const blocked = pending || orderInvalid || rationaleIsBlank;
+  const blockedReason = pending
+    ? undefined
+    : orderInvalid
+      ? t('driveTarget.reveal.orderInvalid')
+      : rationaleIsBlank
+        ? t('driveTarget.form.blockedNeedsRationale')
+        : undefined;
 
   const submit = handleSubmit((values) => {
+    setSubmitAttempted(true);
+    // ⛔ The button's `disabled` is a COURTESY, ⛔ not the guard: `handleSubmit` validates only the
+    // registered `rationale`, so an implicit Enter submit / re-enable race could still fire the ONE
+    // forbidden combination (public-revealed while members hidden) and get a generic 422 instead of
+    // the inline message. The domain refusal + DB CHECK stay the boundary. 2026-09-06 review.
+    if (orderInvalid) return;
+    if (pending) return;
+    // ⭐ Trimmed HERE too — RHF's `required` cannot see whitespace.
+    if (values.rationale.trim() === '') return;
+    // ⭐⭐ ⛔ NO DIRTY CHECK, DELIBERATELY — decision **D-D** (BigDev, 2026-09-06). Re-affirming an
+    // unchanged posture with a fresh rationale IS a governed act. ⛔ Do not add one without a
+    // decision entry. See `DriveTargetForm` for the full statement of the accepted cost.
     onSubmit({
       visibility: { revealToMembers, revealToPublic },
       rationale: values.rationale.trim(),
@@ -84,11 +134,25 @@ export function RevealSwitchesForm({
     >
       <p className="text-sm">{t('driveTarget.reveal.intro')}</p>
 
+      {/*
+        ⭐⭐ FAMILY 13(d), THE SHARPEST INSTANCE. `orderInvalid` is a state AC4 RATIFIES as reachable
+        and a test PINS — and ⛔ NEITHER checkbox the operator must change to clear it was marked
+        invalid or linked to the message. ⇒ a screen-reader user heard the alert once, then found
+        two unremarkable checkboxes with no route back to why. `aria-describedby` also finally binds
+        `orderHint` (the `member ≥ public` rule) and `noConsumerNote` — the honesty note this story
+        calls "⛔ not optional" — to the controls, so someone who tabs straight here meets them.
+      */}
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
           checked={revealToMembers}
           onChange={(e) => setRevealToMembers(e.target.checked)}
+          aria-invalid={orderInvalid}
+          aria-describedby={
+            orderInvalid
+              ? 'dt-reveal-order-hint dt-reveal-order-error dt-reveal-no-consumer'
+              : 'dt-reveal-order-hint dt-reveal-no-consumer'
+          }
           data-testid="drive-target-reveal-members"
         />
         {t('driveTarget.reveal.members')}
@@ -98,14 +162,36 @@ export function RevealSwitchesForm({
           type="checkbox"
           checked={revealToPublic}
           onChange={(e) => setRevealToPublic(e.target.checked)}
+          aria-invalid={orderInvalid}
+          aria-describedby={
+            orderInvalid
+              ? 'dt-reveal-order-hint dt-reveal-order-error dt-reveal-no-consumer'
+              : 'dt-reveal-order-hint dt-reveal-no-consumer'
+          }
           data-testid="drive-target-reveal-public"
         />
         {t('driveTarget.reveal.public')}
       </label>
-      <p className="text-xs opacity-60">{t('driveTarget.reveal.orderHint')}</p>
+      <p id="dt-reveal-order-hint" className="text-xs opacity-60">
+        {t('driveTarget.reveal.orderHint')}
+      </p>
       {orderInvalid && (
-        <p role="alert" className="text-sm text-status-fail-fg" data-testid="drive-target-reveal-order-error">
+        <p
+          id="dt-reveal-order-error"
+          role="alert"
+          className="text-sm text-status-fail-fg"
+          data-testid="drive-target-reveal-order-error"
+        >
           {t('driveTarget.reveal.orderInvalid')}
+        </p>
+      )}
+      {changedUnderEdit && (
+        <p
+          role="status"
+          className="rounded border border-status-warn-fg/40 bg-status-warn-fg/5 p-2 text-sm"
+          data-testid="drive-target-reveal-changed-under-edit"
+        >
+          {t('driveTarget.reveal.changedUnderEdit')}
         </p>
       )}
 
@@ -121,11 +207,19 @@ export function RevealSwitchesForm({
             required: t('driveTarget.form.rationaleRequired'),
             maxLength: { value: 2000, message: t('driveTarget.form.rationaleTooLong') },
           })}
+          aria-invalid={errors.rationale !== undefined || (submitAttempted && rationaleIsBlank)}
+          aria-describedby={
+            errors.rationale
+              ? 'dt-reveal-rationale-hint dt-reveal-rationale-error'
+              : 'dt-reveal-rationale-hint'
+          }
           data-testid="drive-target-reveal-rationale"
         />
-        <p className="text-xs opacity-60">{t('driveTarget.reveal.rationaleHint')}</p>
+        <p id="dt-reveal-rationale-hint" className="text-xs opacity-60">
+          {t('driveTarget.reveal.rationaleHint')}
+        </p>
         {errors.rationale && (
-          <p role="alert" className="text-sm text-status-fail-fg">
+          <p id="dt-reveal-rationale-error" role="alert" className="text-sm text-status-fail-fg">
             {errors.rationale.message}
           </p>
         )}
@@ -136,19 +230,30 @@ export function RevealSwitchesForm({
         11b.14 builds the first consumer. An operator who reveals it, goes looking for it on the
         public page and finds nothing must ⛔ not conclude the switch failed.
       */}
-      <p className="text-xs opacity-70" data-testid="drive-target-reveal-no-consumer">
+      <p
+        id="dt-reveal-no-consumer"
+        className="text-xs opacity-70"
+        data-testid="drive-target-reveal-no-consumer"
+      >
         {t('driveTarget.reveal.noConsumerNote')}
       </p>
 
+      {/* ⚠ `aria-disabled`, ⛔ not `disabled` — see `DriveTargetForm` for why. */}
       <button
         type="submit"
-        disabled={pending || orderInvalid}
+        aria-disabled={blocked}
         aria-busy={pending}
-        className="rounded bg-black px-4 py-2 text-white disabled:opacity-60"
+        aria-describedby={blockedReason ? 'dt-reveal-submit-blocked' : undefined}
+        className="rounded bg-black px-4 py-2 text-white aria-disabled:opacity-60"
         data-testid="drive-target-reveal-submit"
       >
         {pending ? t('driveTarget.reveal.submitPending') : t('driveTarget.reveal.submit')}
       </button>
+      {blockedReason && (
+        <p id="dt-reveal-submit-blocked" role="status" className="text-xs opacity-70">
+          {blockedReason}
+        </p>
+      )}
 
       {submitError && (
         <p role="alert" className="text-sm text-status-fail-fg" data-testid="drive-target-reveal-error">

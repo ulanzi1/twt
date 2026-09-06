@@ -540,6 +540,21 @@ export const driveTargetKey = (pariwarId: string) => ['drive-target', pariwarId]
 export const driveTargetVisibilityKey = (pariwarId: string) =>
   ['drive-target-visibility', pariwarId] as const;
 
+/**
+ * A fresh idempotency key, safe outside a secure context.
+ *
+ * ⚠⛔ `crypto.randomUUID` is **SECURE-CONTEXT-GATED** (code review Pass 2 / G3). Over plain
+ * `http://` on a LAN or staging host it is `undefined`, and the previous unguarded call meant the
+ * operator's Save rendered *"crypto.randomUUID is not a function"* as the submit error. ⭐ The repo
+ * already guards it elsewhere (`SurveyEditor.tsx`, `GroundInspectionPage.tsx` via `globalThis.crypto`).
+ * ⛔ The fallback is ⛔ NOT for cryptographic use — it only has to be unique per operator attempt.
+ */
+export function newIdempotencyKey(): string {
+  const c: Crypto | undefined = globalThis.crypto;
+  if (typeof c?.randomUUID === 'function') return c.randomUUID();
+  return `dt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
 /** The Pariwar's current drive target (+ the `version` the form echoes back). */
 export function useDriveTarget(pariwarId: string) {
   return useQuery({
@@ -550,8 +565,16 @@ export function useDriveTarget(pariwarId: string) {
 
 /**
  * The Pariwar's reveal switches. ⛔ 403 for anyone but a `super_admin` — EXPECTED, ⛔ not an error
- * to surface. `retry: false` so a Pariwar Admin's page settles on the ruled denial in one round
- * trip rather than three.
+ * to surface.
+ *
+ * ⚠⛔ `retry: false` is REDUNDANT and its old justification was COUNTERFACTUAL (code review Pass 2 /
+ * G3). It read *"so a Pariwar Admin's page settles on the ruled denial in one round trip rather than
+ * three"* — but `createQueryClient` sets `retry: false` **app-wide**, so there was ⛔ never a
+ * three-retry behaviour to prevent. ⭐ It is kept as a LOCAL, EXPLICIT statement of a property this
+ * page depends on (a ruled 403 must not be retried), so a future change to the global default cannot
+ * silently reintroduce one — but ⛔ do not describe it as fixing something.
+ * ⭐ The conclusion drawn from it in `DriveTargetPage` still holds, for the real reason: ⛔ no
+ * auto-recovery ⇒ the retry affordance is owed.
  */
 export function useDriveTargetVisibility(pariwarId: string) {
   return useQuery({
@@ -574,10 +597,29 @@ export function useDriveTargetVisibility(pariwarId: string) {
 export function useSetDriveTarget(pariwarId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: Parameters<typeof api.setDriveTarget>[1]) =>
-      api.setDriveTarget(pariwarId, body),
+    // ⭐⭐ `2026-09-05-201` control #1 — the `Idempotency-Key` is supplied BY THE CALLER and held
+    // across an operator's retries of ONE decision (`FeatureFlagsPage` / `CustomFieldsPage` mint it
+    // into a `useRef`). ⚠⛔ IT USED TO BE `crypto.randomUUID()` MINTED HERE, i.e. a NEW key on every
+    // attempt — which defeated the control in the only case that matters (Pass 2 / G3): the server
+    // can answer **503 `idempotency.record_failed`** saying *"retry with the same Idempotency-Key"*,
+    // and there was ⛔ no same key to retry with; and a double-submit sent two keys with one
+    // `expectedVersion`, so the second came back a version conflict blaming a colleague who did
+    // nothing. ⛔ Do not mint a key inside this hook again.
+    mutationFn: ({
+      body,
+      idempotencyKey,
+    }: {
+      body: Parameters<typeof api.setDriveTarget>[1];
+      idempotencyKey: string;
+    }) => api.setDriveTarget(pariwarId, body, idempotencyKey),
     onSuccess: (row) => {
       qc.setQueryData(driveTargetKey(pariwarId), row);
+      void qc.invalidateQueries({ queryKey: driveTargetKey(pariwarId) });
+    },
+    // ⭐ A version conflict is the ONE error whose entire purpose is to be recoverable, and without
+    // this the page held the stale version forever: every later submit re-sent it and 409'd again
+    // (Pass 2 / G3). Refetching means the operator's next attempt carries the CURRENT version.
+    onError: () => {
       void qc.invalidateQueries({ queryKey: driveTargetKey(pariwarId) });
     },
   });
@@ -591,10 +633,20 @@ export function useSetDriveTarget(pariwarId: string) {
 export function useSetDriveTargetVisibility(pariwarId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: Parameters<typeof api.setDriveTargetVisibility>[1]) =>
-      api.setDriveTargetVisibility(pariwarId, body),
+    // ⭐ Same seam as the target setter, and the same Pass-2 correction: the key is CALLER-SUPPLIED
+    // and held across retries of one decision, ⛔ never minted per attempt here.
+    mutationFn: ({
+      body,
+      idempotencyKey,
+    }: {
+      body: Parameters<typeof api.setDriveTargetVisibility>[1];
+      idempotencyKey: string;
+    }) => api.setDriveTargetVisibility(pariwarId, body, idempotencyKey),
     onSuccess: (row) => {
       qc.setQueryData(driveTargetVisibilityKey(pariwarId), row);
+      void qc.invalidateQueries({ queryKey: driveTargetVisibilityKey(pariwarId) });
+    },
+    onError: () => {
       void qc.invalidateQueries({ queryKey: driveTargetVisibilityKey(pariwarId) });
     },
   });

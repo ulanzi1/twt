@@ -21,6 +21,8 @@
 // the TRUE thing: the figure is not shown anywhere yet, and a future surface (Story 11b.14) will
 // consume it server-side. ⛔ Do not "improve" this by importing the masking copy.
 
+import { MAX_DRIVE_TARGET_INR } from '@twt/contracts';
+
 const EN: Record<string, string> = {
   // ── Page chrome ─────────────────────────────────────────────────────────────
   'driveTarget.header.title': 'Drive target — what this Pariwar aims to raise',
@@ -59,7 +61,10 @@ const EN: Record<string, string> = {
   'driveTarget.form.amountLabel': 'Target amount (₹)',
   'driveTarget.form.amountHint':
     'Whole rupees, greater than zero. Zero is not a valid target — if you want no target at all, that is a different thing and is not set from this screen.',
-  'driveTarget.form.amountInvalid': 'Enter a whole number of rupees between 1 and 100000000.',
+  // ⭐ DERIVED from the contract bound, ⛔ not a fifth hard-coded copy of the ceiling — and formatted
+  // with Indian grouping like every other figure on this page, so it can be read at a glance
+  // (code review Pass 2 / G3).
+  'driveTarget.form.amountInvalid': `Enter a whole number of rupees between 1 and ${new Intl.NumberFormat('en-IN').format(MAX_DRIVE_TARGET_INR)}.`,
   'driveTarget.form.rationaleLabel': 'Reason for this change',
   'driveTarget.form.rationaleHint':
     'Required. Recorded permanently against your name in the audit trail, alongside the change itself. The target it replaces is kept, not overwritten.',
@@ -102,12 +107,17 @@ const EN: Record<string, string> = {
   // it on the public page must not conclude the switch failed.
   'driveTarget.reveal.noConsumerNote':
     'Note: no page displays this target yet, in any state of these switches. These switches decide what a future page will be allowed to show; they do not make anything appear today.',
+  // ⚠ A NON-403 failure on the visibility read (a transient server error, a dropped connection). ⛔
+  // NOT the ordinary 403 a Pariwar Admin gets — that renders nothing. This is a super_admin whose
+  // read genuinely failed, and it must be retryable rather than a silently missing section.
+  'driveTarget.reveal.loadError':
+    'The reveal controls could not be loaded. This is not a permissions problem — the request to the server failed. Try again; if it keeps failing, reload the page.',
+  'driveTarget.reveal.retry': 'Try again',
 
   // ── Outcome copy ────────────────────────────────────────────────────────────
   'driveTarget.result.saved':
     'Saved. This is now the target of record for this Pariwar. It is still not shown to anyone.',
   'driveTarget.result.revealSaved': 'Saved. This is now the reveal decision of record.',
-  'driveTarget.error.heading': 'That change did not go through',
   'driveTarget.error.forbidden':
     'Your account does not hold the permission this control requires. Recording a target is granted to Pariwar administrators; deciding who may see it is granted to super administrators only, because the Trustee Panel ruled that revealing the figure is held by the Trust centrally.',
   // ⚠ A 409 version conflict — the ONE error whose copy has to explain a concept. ⛔ Not a server
@@ -116,14 +126,61 @@ const EN: Record<string, string> = {
     'Somebody else changed the target while this page was open, so your change was not saved — saving it would have quietly undone theirs. Reload to see the current target, then decide whether you still want your change.',
   'driveTarget.error.displayNameMissing':
     'Your change was not saved because your user record has no display name set. Every change to this setting is recorded against the person who made it, so a name is required before you can save. Ask an administrator to add a display name to your account, then try again.',
+  // ⚠ A 409 from the `Idempotency-Key` seam: a change with the same key is still being applied. ⛔
+  // Not a server fault and ⛔ not a "someone else changed this" — the someone is this same request,
+  // in flight. Waiting a moment and retrying is the correct advice.
+  'driveTarget.error.idempotencyInProgress':
+    'A change to this target with the same request key is already being processed. Wait a few seconds and try again — do not re-enter your change yet.',
   'driveTarget.error.invalid':
     'The server rejected these values, so nothing was saved. Check that the amount is a whole number of rupees greater than zero and within the permitted range, and that the reason is not excessively long.',
   'driveTarget.error.visibilityInvalid':
     'The target cannot be revealed to the public while it is hidden from members — that would show the public more than a member of this Pariwar. Nothing was saved.',
   'driveTarget.error.unexpected':
     'Something went wrong on the server and the change may not have been saved. Reload the page to check the current values before trying again.',
+
+  // ── Added by code review Pass 2 / G3 ──────────────────────────────────────────────────────────
+  'driveTarget.error.notYours':
+    'This Pariwar is not one you have access to. That is different from lacking this particular permission — check the address, or ask an administrator to grant you access to this Pariwar.',
+  'driveTarget.error.retryable':
+    'The change may well have been applied, but the server could not confirm it. Press Save again — it is safe to retry, and a repeat will not create a second change.',
+  'driveTarget.error.sessionExpired':
+    'Your session has expired, so nothing was saved. Copy anything you have typed, then sign in again — reloading this page will take you to the sign-in screen.',
+  'driveTarget.error.idempotencyKeyInvalid':
+    'The request could not be identified safely, so it was refused rather than risk applying twice. Press Save again. If it keeps happening, raise it with the platform team — this is a fault in the request, not in what you typed.',
+  'driveTarget.error.clockSkew':
+    'The servers disagree about the current time by more than is allowed, so this change was refused rather than recorded against the wrong moment. Nothing you typed is wrong — wait a minute and try again, and tell the platform team if it persists.',
+  'driveTarget.error.unreachable':
+    'The change could not be sent. Check your connection and try again — nothing has been saved.',
+  'driveTarget.status.offline':
+    'Waiting for a connection — the current target will appear as soon as you are back online.',
+  'driveTarget.status.stale':
+    'These values could not be refreshed just now, so they may be out of date. Reload before relying on them.',
+  'driveTarget.form.changedUnderEdit':
+    'Someone else changed the target while you were editing. What you have typed has been kept. If you save it, your change will be refused rather than overwrite theirs — reload to see theirs first.',
+  'driveTarget.form.blockedNeedsAmount':
+    'Enter the target amount to continue.',
+  'driveTarget.form.blockedNeedsRationale':
+    'Enter a reason for this change to continue.',
+  'driveTarget.reveal.offline':
+    'Waiting for a connection — the reveal controls will appear as soon as you are back online.',
+  'driveTarget.reveal.notHeld':
+    'You do not hold the reveal control for this Pariwar, so it is not shown here. Only the Trust can decide whether this figure is revealed. Setting the target is yours; revealing it is not.',
+  'driveTarget.reveal.stale':
+    'These switches could not be refreshed just now, so they may be out of date. Reload before changing them.',
+  'driveTarget.reveal.changedUnderEdit':
+    'Someone else changed the reveal switches while you were editing. What you have chosen has been kept — reload to see theirs before saving.',
 };
 
 export function resolveEn(key: string): string {
-  return EN[key] ?? key;
+  const copy = EN[key];
+  if (copy === undefined) {
+    // ⚠⛔ THE FALLBACK USED TO BE SILENT (`EN[key] ?? key`), and `t()` feeds SEVEN `aria-label`s —
+    // so a typo'd key became a literal accessible name announced to a screen reader as
+    // *"driveTarget.reveal.heading"*, with ⛔ no console warning and ⛔ no test that would catch it
+    // (code review Pass 2 / G3). The key is still returned so a missing string can ⛔ never crash
+    // the console, but it is ⛔ no longer silent.
+    console.warn(`[drive-target i18n] missing copy key: ${key}`);
+    return key;
+  }
+  return copy;
 }

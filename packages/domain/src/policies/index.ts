@@ -116,6 +116,13 @@ export * from './pariwar-directory-publication-rls.js';
 // Story 11b.3a (AC3) — tenant isolation for the per-Pariwar nominee-bank masking schedule.
 // ⚠ 0 rows resolves to NOT MASKED (`D8-default` FAIL-OPEN), ⛔ not to a shield.
 export * from './pariwar-nominee-bank-masking-schedule-rls.js';
+// Story 11b.13 (AC1-AC4) — tenant isolation for the per-Pariwar DRIVE TARGET pair.
+// ⭐ For the SCHEDULE, 0 rows resolves to NO TARGET ⇒ ⛔ NO BAR. ⭐⭐ For the VISIBILITY record,
+// 0 rows resolves to HIDDEN FROM EVERYONE (`-190` cl.7(b), FAIL-CLOSED) — ⚠⛔ the DELIBERATE
+// OPPOSITE of the masking schedule's `D8-default` immediately above. ⛔ Do not read the two as one
+// posture because the tables share a shape.
+export * from './pariwar-drive-target-schedule-rls.js';
+export * from './pariwar-drive-target-visibility-rls.js';
 // Story 7.1 — pools tenant-isolation policies (NOT cross-readable; mirror claims-rls). The
 // pools.current_state write-rejection trigger (migration 0071) is ORTHOGONAL — RLS isolates by
 // tenant, the trigger blocks non-projector state writes regardless of tenant; both apply.

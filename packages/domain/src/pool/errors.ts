@@ -512,3 +512,136 @@ export class ClaimNomineeBankAccountsCountIntegrityError extends PoolContributio
     return { claim_case_id: this.claimCaseId, account_count: this.accountCount };
   }
 }
+
+// ── Per-Pariwar DRIVE TARGET errors — Story 11b.13 (Task 3; AC2, AC3, AC4) ──────────────────────
+// Governance of record: `2026-09-04-190` cl.7 (Trustee-ratified) · `2026-09-04-189` cl.3 ·
+// `2026-09-05-201` (the two concurrency controls) · `2026-09-06-203` (the keys and the records).
+//
+// ⭐ They ride pool/errors.ts so they travel the pool namespace barrel, and each carries a
+// namespaced `code` + `toErrorResponse` — the `PoolFixedAmountError` precedent — so the apps/api
+// boundary maps them WITHOUT matching on a class name.
+// ⛔⛔ AND THAT MAPPING IS ⛔ NOT OPTIONAL. `2026-09-05-201` cl.4 rules the version conflict must be
+// a **409 with its own REGISTERED code**, ⛔ never a bare `23505` and ⛔ never the opaque 500 that
+// `UngovernedNomineeBankMaskingChangeError` reaches the wire as (chunk G2's finding on the
+// precedent). Every class below is registered in `apps/api/src/middleware/error-mapping/index.ts`.
+
+/** Base for the drive-target typed errors — carries a `code` + a uniform error-response body. */
+abstract class PoolDriveTargetError extends Error {
+  public abstract readonly code: string;
+  public toErrorResponse(requestId: string): ErrorResponseShape {
+    return {
+      error: {
+        code: this.code,
+        message: this.message,
+        details: {},
+        request_id: requestId,
+      },
+    };
+  }
+}
+
+export const DRIVE_TARGET_UNGOVERNED_CODE = 'pariwar.drive_target_ungoverned_change';
+
+/**
+ * A drive-target change arrived without the governance record `2026-09-04-190` cl.7 requires — a
+ * blank rationale, a missing audit anchor, an actor with no display-name snapshot, or grants that do
+ * not carry the key.
+ *
+ * ⚠ The `pariwar_drive_target_schedule` attribution columns are NULLABLE at the DB, so this class is
+ * the ONLY thing standing between a governed act and a bare value swap. ⛔ Do not relax it because
+ * the schema permits nulls — the schema permits them for the unconfigured/system-write cases, ⛔ not
+ * for an attributed change.
+ */
+export class UngovernedDriveTargetChangeError extends PoolDriveTargetError {
+  public readonly name = 'UngovernedDriveTargetChangeError';
+  public readonly code = DRIVE_TARGET_UNGOVERNED_CODE;
+  public constructor(missing: string) {
+    super(
+      `drive-target change rejected — missing ${missing}. Recording what a Pariwar's drives aim to ` +
+        `raise is a GOVERNED ACT (2026-09-04-190 cl.7), not a value swap. ⛔ Do not relax this ` +
+        `check; record the change.`,
+    );
+  }
+}
+
+export const DRIVE_TARGET_INVALID_CODE = 'pariwar.drive_target_invalid';
+
+/**
+ * The submitted target is not whole INR, is not STRICTLY POSITIVE, or exceeds the sanity ceiling.
+ *
+ * ⛔⛔ `0` LANDS HERE, and that is deliberate: Story 11b.14's meter is `amountRaisedInr / target`, so
+ * a ₹0 target is a DIVISION BY ZERO — and it is a DIFFERENT state from *"no target set"*, which is
+ * the ABSENCE of a schedule row. ⛔ Never treat `0` as unset.
+ */
+export class DriveTargetInvalidError extends PoolDriveTargetError {
+  public readonly name = 'DriveTargetInvalidError';
+  public readonly code = DRIVE_TARGET_INVALID_CODE;
+  public constructor(public readonly received: unknown) {
+    super(
+      `drive target must be a whole number of rupees, strictly greater than 0 and within the ` +
+        `sanity ceiling — received ${JSON.stringify(received)}. ⛔ 0 is NOT "unset": an unset ` +
+        `target is the absence of a schedule row, and a 0 target is a division by zero for the ` +
+        `progress meter.`,
+    );
+  }
+}
+
+export const DRIVE_TARGET_VERSION_CONFLICT_CODE = 'pariwar.drive_target_version_conflict';
+
+/**
+ * ⭐⭐ `2026-09-05-201` cl.4's LOST-UPDATE GUARD, on this story's own write path from day one.
+ *
+ * The caller's `expectedVersion` does not match the Pariwar's current open head. ⇒ somebody else
+ * changed the target since the caller last read it, and proceeding would **silently overwrite their
+ * change with the caller's rationale recorded as its justification**.
+ *
+ * ⚠⛔ WHY THIS EXISTS HERE AND ⛔ NOT ON THE PRECEDENT. `-201` records that the masking module's
+ * advisory lock — added by a review pass so a losing writer would stop hitting the unique index with
+ * a bare `23505` → opaque 500 — **removed the only collision that was preventing a silent
+ * overwrite**, converting a race into a QUEUE in which both writers succeed as N and N+1 and the
+ * second never learns the first happened. ⭐ This control takes the SAME advisory lock (it is still
+ * needed, for the serialized path's 23505) and therefore owes the SAME guard.
+ * ⇒ mapped to **409** with this REGISTERED code — ⛔ never a bare 23505, ⛔ never an opaque 500.
+ */
+export class DriveTargetVersionConflictError extends PoolDriveTargetError {
+  public readonly name = 'DriveTargetVersionConflictError';
+  public readonly code = DRIVE_TARGET_VERSION_CONFLICT_CODE;
+  public constructor(
+    public readonly pariwarId: string,
+    public readonly expectedVersion: number | null,
+    public readonly actualVersion: number | null,
+  ) {
+    super(
+      `drive-target version conflict for pariwar ${pariwarId} — you last saw version ` +
+        `${expectedVersion === null ? 'none (no schedule yet)' : String(expectedVersion)}, but the ` +
+        `current head is ` +
+        `${actualVersion === null ? 'none (no schedule yet)' : String(actualVersion)}. Somebody ` +
+        `else changed it. Re-read the current target and re-submit if you still want your change.`,
+    );
+  }
+}
+
+export const DRIVE_TARGET_VISIBILITY_INVALID_CODE = 'pariwar.drive_target_visibility_invalid';
+
+/**
+ * ⭐⭐ `2026-09-04-189` **cl.3** (*member ≥ public*), REFUSED AT THE WRITE PATH.
+ *
+ * Public-revealed while members are hidden would show the unauthenticated internet MORE than a
+ * member of the Pariwar the figure belongs to. ⚠ AC4 requires this **ENFORCED, ⛔ not documented** —
+ * so it is refused here AND by `pariwar_drive_target_visibility_member_ge_public` at the DB.
+ * ⛔ The DB CHECK is the backstop; THIS is the readable error an operator's 4xx is built from — the
+ * masking module's *"the domain throw is the backstop, the contract is the boundary"* discipline.
+ *
+ * ⚠ ONE-WAY: members-revealed-while-public-hidden is the ordinary case and is ⛔ never refused.
+ */
+export class DriveTargetVisibilityInvalidError extends PoolDriveTargetError {
+  public readonly name = 'DriveTargetVisibilityInvalidError';
+  public readonly code = DRIVE_TARGET_VISIBILITY_INVALID_CODE;
+  public constructor() {
+    super(
+      `a drive target cannot be revealed to the public while it is hidden from members — that ` +
+        `would show the public more than a member of the Pariwar the figure belongs to ` +
+        `(2026-09-04-189 cl.3). Reveal it to members first, or reveal it to neither.`,
+    );
+  }
+}

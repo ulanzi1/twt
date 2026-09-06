@@ -258,6 +258,21 @@ const PARIWAR_VIEW_CUSTOM_FIELDS = permissionKey('pariwar.view_custom_fields');
 // ACCEPTANCE CONDITION for either role: a definition gains a server-derived district AND the gate moves to
 // `dimension: 'district'` — never by widening a pariwar gate to a role that cannot satisfy it.
 const PARIWAR_MANAGE_CUSTOM_FIELDS = permissionKey('pariwar.manage_custom_fields');
+// Story 11b.13 (Decision `2026-09-06-203`) — the per-Pariwar DRIVE TARGET write key
+// (pariwar-dimension). Granted to pariwar_admin (+ super_admin auto) per `2026-09-04-190` cl.7(a).
+//
+// ⭐⭐ AND THE SIBLING KEY `pariwar.manage_drive_target_visibility` IS DELIBERATELY ABSENT FROM THIS
+// FILE. It is `super_admin` ONLY, and `super_admin`'s bundle is `PERMISSION_CATALOG.keys` — it
+// AUTO-DERIVES every catalog key the moment one is declared. ⇒ a super_admin-only key appears in
+// the catalog and NEVER in a bundle here; a grep for `manage_nominee_bank_masking` or
+// `manage_public_name_presentation` in this file returns nothing, for exactly this reason.
+// ⛔ Do not "complete the pair" by adding a const for it — there is no bundle for it to join, and
+// the only bundle that would take it is the one that already has it.
+//
+// ⛔ NOT district_admin / state_trustee — inert in both directions
+// ([[project_rbac_geo_scope_containment]]): a `district` ceiling can never satisfy a
+// pariwar-dimension check, and a `state` ceiling is broader than the gate's dimension.
+const PARIWAR_MANAGE_DRIVE_TARGET = permissionKey('pariwar.manage_drive_target');
 
 /**
  * The recommended v1 role→permission matrix (provisional pending OQ-3). Roles from
@@ -397,6 +412,15 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // view/manage split matters at auditor, which holds only the former.
       PARIWAR_VIEW_CUSTOM_FIELDS,
       PARIWAR_MANAGE_CUSTOM_FIELDS,
+      // Story 11b.13 (`2026-09-04-190` cl.7(a), minted at Decision `2026-09-06-203`) — the
+      // per-Pariwar DRIVE TARGET write key (pariwar-dimension). pariwar_admin is the role the Panel
+      // named: the person who knows what a drive in their Pariwar needs to raise. A `pariwar`
+      // scopeCeiling satisfies the pariwar-dimension check.
+      // ⭐ Holding this does NOT carry the REVEAL — `pariwar.manage_drive_target_visibility` is a
+      // SEPARATE key held by super_admin ONLY, and it is absent from this bundle BY RULING
+      // (cl.7(c)), not by omission. ⛔ Adding it here would collapse an authority split the catalog
+      // exists to make visible.
+      PARIWAR_MANAGE_DRIVE_TARGET,
     ],
     scopeCeiling: 'pariwar',
   },

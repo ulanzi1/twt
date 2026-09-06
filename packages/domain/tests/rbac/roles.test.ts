@@ -199,6 +199,46 @@ describe('defaultRoleBundles — the seeded roles (FR-46)', () => {
     }
   });
 
+  it('Story 11b.13 — pariwar.manage_drive_target is granted to pariwar_admin (+ super_admin auto)', () => {
+    const KEY = 'pariwar.manage_drive_target';
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(KEY))
+      .map((b) => b.role)
+      .sort();
+    // `2026-09-04-190` cl.7(a) (Trustee Panel) names the Pariwar Admin as the setter; super_admin
+    // auto-derives from PERMISSION_CATALOG.keys.
+    expect(holders).toEqual(['pariwar_admin', 'super_admin']);
+    // ⛔ district_admin / state_trustee are INERT in both directions on a pariwar-dimension key
+    // ([[project_rbac_geo_scope_containment]]); no other role holds it.
+    for (const role of ['district_admin', 'state_trustee', 'block_admin', 'verifier', 'auditor', 'finance_officer', 'it_cell', 'helpline_operator', 'media_comms', 'field_worker', 'trustee_panel'] as const) {
+      expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
+    }
+  });
+
+  it('Story 11b.13 — pariwar.manage_drive_target_visibility is super_admin ONLY, and pariwar_admin does NOT hold it', () => {
+    const VISIBILITY_KEY = 'pariwar.manage_drive_target_visibility';
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(VISIBILITY_KEY))
+      .map((b) => b.role)
+      .sort();
+    // ⭐⭐ THE REGRESSION THIS TEST EXISTS TO PREVENT: the WRITE key quietly carrying the REVEAL.
+    // `2026-09-04-190` cl.7(c) reserves the disclosure act to the Trust, and D1 (Decision
+    // `2026-09-06-203`) made that split STRUCTURAL — two catalog keys, not one key plus a role check
+    // inside a route handler. ⛔ `pariwar_admin` holds the setter and must NEVER hold this.
+    expect(holders).toEqual(['super_admin']);
+    expect((bundleForRole('pariwar_admin')?.permissions as readonly string[]).includes(VISIBILITY_KEY)).toBe(false);
+    // ⭐ AND super_admin holds it WITHOUT a bundle edit — `roles.ts` never names this key. Its
+    // bundle IS `PERMISSION_CATALOG.keys`, so a super_admin-only key appears in the catalog and
+    // never in a hand-written list (the manage_nominee_bank_masking /
+    // manage_public_name_presentation precedent, neither of which appears in roles.ts either).
+    expect((bundleForRole('super_admin')?.permissions as readonly string[]).includes(VISIBILITY_KEY)).toBe(true);
+    for (const role of ['pariwar_admin', 'district_admin', 'state_trustee', 'block_admin', 'verifier', 'auditor', 'finance_officer', 'it_cell', 'helpline_operator', 'media_comms', 'field_worker', 'trustee_panel'] as const) {
+      expect((bundleForRole(role)?.permissions as readonly string[]).includes(VISIBILITY_KEY)).toBe(false);
+    }
+    // ⭐ The two keys are DISTINCT holders sets — the whole point of minting two.
+    expect((bundleForRole('pariwar_admin')?.permissions as readonly string[]).includes('pariwar.manage_drive_target')).toBe(true);
+  });
+
   it('Story 10.5 — news.manage is granted ONLY to pariwar_admin (+ super_admin); media_comms + district_admin NOT granted', () => {
     const KEY = 'news.manage';
     const holders = defaultRoleBundles

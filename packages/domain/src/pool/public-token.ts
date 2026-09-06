@@ -100,10 +100,17 @@ export function mintPoolPublicToken(): string {
  *
  * ⭐⛔ **NO ROUTE AND NO PERMISSION KEY — DECIDED AND STATED, ⛔ not guessed** (Task 2). This ships
  * as a DOMAIN-FUNCTION-ONLY seam. An admin route would need a permission key, which moves
- * `PERMISSION_CATALOG_VERSION` 39 → 40 — a GOVERNANCE act in this repo (10.3 minted `helpdesk.create`
- * v22→23 as a story act, [[project_helpdesk_operator_surface_103]]) — and this story's Panel-ratified
+ * `PERMISSION_CATALOG_VERSION` **+1 from whatever it reads at the time** — a GOVERNANCE act in this
+ * repo (10.3 minted `helpdesk.create` v22→23 as a story act,
+ * [[project_helpdesk_operator_surface_103]]) — and this story's Panel-ratified
  * scope is the ADDRESS and the PATH, ⛔ not an operator surface. ⇒ ⛔ do not add a route here; that
  * is a **routing note**, ⛔ never an edit.
+ * ⚠ *Corrected 2026-09-06 (Story 11b.13).* The clause above read *"moves `PERMISSION_CATALOG_VERSION`
+ * 39 → 40"*. The **argument is unchanged**; only the literal was, and it had already been
+ * **falsified**: Story 11b.13 took the counter **39 → 41** (Decision `2026-09-06-203`, TWO keys).
+ * ⛔ A transcribed catalog number in prose goes stale the moment any story bumps it — ⭐ read
+ * `rbac/permissions.ts` live, ⛔ never quote it here. This repo's *"prose that outlives the thing it
+ * describes"* class (Story 11b.11 Trap 4).
  *
  * ═══════════════════════════════════════════════════════════════════════════════════════════════
  * ⭐⭐ IT IS AUDITED — AND THE ⛔ TWO THINGS IT DOES ⛔ NOT DO ARE STATED, ⛔ NOT OMITTED

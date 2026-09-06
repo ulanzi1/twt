@@ -171,9 +171,9 @@ describe('⛔⛔ AC9 — ⛔ NEITHER TOKEN IS RENDERED. The copy exists; the ren
     expect(
       offenders.map((f) => f.replace(repoRoot, '')),
       'these files RESOLVE a dark index-line key. ⛔ {amount} and {nominee_name} are ⛔ NOT on ' +
-        'any public wire yet (story D — 11b-14 AC7 / Task 8), and t() interpolates an unsupplied ' +
-        'token to NOTHING ⇒ this would ship an empty rupee figure or a dangling "nominee of" ' +
-        'onto a live public page.',
+        'any public wire yet (story D — 11b-14 AC7 / Task 8), and t() THROWS on an unsupplied ' +
+        'token (resolver.ts:36-42) ⇒ this would ship a 500 / outage arm onto a live public page, ' +
+        'not a silently-blank rupee figure or a dangling "nominee of".',
     ).toEqual([])
   })
 

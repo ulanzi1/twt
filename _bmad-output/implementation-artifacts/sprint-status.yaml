@@ -1,4 +1,28 @@
-# last_updated: 2026-09-06b (⭐⭐ **STORY 11b.12 IMPLEMENTED — `in-progress` -> `review`.** ONE row
+# last_updated: 2026-09-06c (⭐⭐ **STORY 11b.12 CODE-REVIEWED AND CLOSED — `review` -> `done`.** ONE
+#   row flips: development_status[11b-12-stage-vocabulary-and-info-affordance] `review` -> `done`.
+#   ⛔ epic-11b stays `in-progress`; ⛔ 11b-11 stays `done`; ⛔ 11b-13…17 and 6-18 stay `ready-for-dev`.
+#   Three parallel review layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor + the
+#   load-bearing-invariant checklist) against `git diff 31153962 HEAD`. **0 decision-needed, 5
+#   patch (all applied), 3 deferred, 7 dismissed as noise/resolved.**
+#   ⭐ **THE TWO REAL GAPS, BOTH FIXED:** (1) AC1's Hindi positive-pin (`RETIRED_HI`) omitted
+#   `संग्रह` — the actual pre-story value of `hi/sahyog-drive.json`'s `status.archive` /
+#   `section.archive.title` — so a regression reintroducing it would have passed silently; added,
+#   with an explicit documented exclusion for the two keys (`empty.body`, `collecting.body`) that
+#   legitimately use it as ordinary prose, not as the archive label.
+#   (2) D3's ruled exact wording for `collecting.body` had drifted — shipped copy read "the
+#   **contribution** window closes" (en) / "योगदान की अवधि" (hi) where D3's ruling table specifies
+#   "the **collection** window closes" verbatim; reverted both locales to D3's ruled text.
+#   ⭐ Three more patches: a dangling comment pointing at a nonexistent test file, this file's OWN
+#   Change Log table rows out of chronological order, and a test failure message that still
+#   asserted the ALREADY-CORRECTED-ELSEWHERE premise that `t()` interpolates-to-nothing rather than
+#   THROWS. All 272 tests across the 11 affected suites re-run GREEN after the fixes.
+#   ⭐ **3 DEFERRED**, written to `deferred-work.md`: the hand-listed literal-set guards in
+#   `sahyog.server.ts`/`sahyog-vivran.server.ts` stay independently duplicated from the Zod
+#   contract enums (pre-existing pattern, follow-up refactor); AC9's four dark-copy variants have
+#   no defined precedence for simultaneous multi-token absence (flagged BY NAME for story D,
+#   11b-14 AC7/Task 8, before it wires up variant selection); a stale doc comment atop `sahyog.astro`
+#   still narrating the retired payout falsehood (pre-existing, outside this diff's touched hunks).
+# last_updated_prior: 2026-09-06b (⭐⭐ **STORY 11b.12 IMPLEMENTED — `in-progress` -> `review`.** ONE row
 #   flips: development_status[11b-12-stage-vocabulary-and-info-affordance] `in-progress` -> `review`.
 #   ⛔ epic-11b stays `in-progress`; ⛔ 11b-11 stays `done`; ⛔ 11b-13…17 and 6-18 stay `ready-for-dev`.
 #   ⭐ Three stages **Live · Closed · Verified** from ONE new registered namespace `sahyog-shared`,
@@ -15848,7 +15872,11 @@ development_status:
   # files), Trap 9 (one source), a 19-row **Files this story touches** table, AC8+Task 7 (friction
   # budget). ✅ **D3 RULED** (ban is on VALUES, ⛔ not key names). 🟡 **D2 OPEN, ⛔ NON-BLOCKING**
   # (`outcome.under_funded` — a policy question, ⛔ not a copy call).
-  11b-12-stage-vocabulary-and-info-affordance: review
+  # ✅ **CODE-REVIEWED 2026-09-06 — CLOSED.** 0 decision-needed, 5 patch (all applied, 272 tests
+  # re-run green), 3 deferred (`deferred-work.md`), 7 dismissed. Two real gaps fixed: the Hindi
+  # positive-pin (`RETIRED_HI`) omitted `संग्रह`; D3's ruled `collecting.body` wording had drifted
+  # from "collection" to "contribution" — reverted to the ruled text in both locales.
+  11b-12-stage-vocabulary-and-info-affordance: done
   # ⭐ 11b-13 — STORY **C** of the `2026-09-04-195` cl.3 split. ⛔ NOT in `epics.md` — owes an
   # ANNOTATION. ⚠ INDEPENDENT of 11b-11 / 11b-12; ⭐ **STORY D DEPENDS ON IT.**
   # ⛔⛔ **IT OPENS WITH A GOVERNANCE DECISION** (`-195` cl.2): minting a permission key moves

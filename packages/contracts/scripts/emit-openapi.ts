@@ -188,6 +188,15 @@ const { DirectoryPublicationStatusResponse, SetDirectoryPublicationRequest } = a
 const { NomineeBankMaskingScheduleResponse, SetNomineeBankMaskingRequest } = await import(
   '../src/nominee-bank-masking/index.js'
 );
+// Story 11b.13 — the per-Pariwar DRIVE TARGET admin DTOs. TWO resources under TWO keys: the target
+// (`pariwar_admin`) and the reveal switches (⛔ `super_admin` ONLY). ⛔ Never one resource with a
+// role-shaped response — that would put the authority boundary inside a handler.
+const {
+  DriveTargetResponse,
+  DriveTargetVisibilityResponse,
+  SetDriveTargetRequest,
+  SetDriveTargetVisibilityRequest,
+} = await import('../src/drive-target/index.js');
 // Story 3.5 — the signup medical-disclosure DTOs (submit + status + ima-list). The fourth
 // signup-wizard SURFACE; all routes are member-session-gated (no step-up at signup — 3.9 adds it).
 const { MedicalDiscloseRequest, MedicalDisclosureStatusResponse, ImaListResponse } = await import(
@@ -499,6 +508,26 @@ const nomineeBankMaskingComponents = {
   ),
 } as const;
 for (const [name, schema] of Object.entries(nomineeBankMaskingComponents)) {
+  registry.register(name, schema);
+}
+
+// Story 11b.13 — per-Pariwar drive-target components. FOUR shapes across TWO resources, because
+// `2026-09-04-190` cl.7 splits SETTING the figure from REVEALING it and Decision `2026-09-06-203`
+// made that split structural (two keys, two DB records, two route gates).
+// ⛔⛔ The target is STRICTLY POSITIVE on the wire (`.positive()`, ⛔ never `.nonnegative()`): Story
+// 11b.14's meter divides by it, so ₹0 is a division by zero — and a different state from "no target
+// set", which is the ABSENCE of a schedule row (`configured: false`).
+const driveTargetComponents = {
+  DriveTargetResponse: DriveTargetResponse.openapi('DriveTargetResponse'),
+  SetDriveTargetRequest: SetDriveTargetRequest.openapi('SetDriveTargetRequest'),
+  DriveTargetVisibilityResponse: DriveTargetVisibilityResponse.openapi(
+    'DriveTargetVisibilityResponse',
+  ),
+  SetDriveTargetVisibilityRequest: SetDriveTargetVisibilityRequest.openapi(
+    'SetDriveTargetVisibilityRequest',
+  ),
+} as const;
+for (const [name, schema] of Object.entries(driveTargetComponents)) {
   registry.register(name, schema);
 }
 
@@ -2011,6 +2040,172 @@ registry.registerPath({
     401: nomineeBankMaskingAuth,
     403: nomineeBankMaskingForbidden,
     409: errorResponse("The acting admin has no users.display_name (admin.display_name_missing)"),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+// ── Story 11b.13 — the per-Pariwar DRIVE TARGET (`2026-09-04-190` cl.7, Trustee-ratified) ──
+// FOUR routes under TWO DIFFERENT GATES, and the split is deliberately visible in the path table:
+// a Pariwar Admin SETS the whole-INR figure; ⛔ only a Super Admin REVEALS it.
+// ⭐⭐ TWO RESOURCES, ⛔ NOT one with a role-shaped response. A single endpoint returning the reveal
+// flags "when the caller also holds the reveal key" would put an authority boundary INSIDE A
+// HANDLER — the exact shape Decision `2026-09-06-203`'s two-key (D1) and two-record (D2) splits
+// exist to keep out of handlers. A `pariwar_admin` gets a 403 on the visibility routes.
+// ⚠⛔ AND NOTHING RENDERS THE TARGET. cl.7(b) makes the figure invisible to members and the public;
+// Story 11b.14 is the first consumer and reads it SERVER-SIDE only. ⛔ It appears on NO public or
+// member path in this document, and must not.
+const driveTargetTags = ['drive-target'];
+const driveTargetParams = z.object({ pariwarId: z.string().uuid() });
+const driveTargetAuth = errorResponse('Authentication required');
+const driveTargetForbidden = errorResponse(
+  'Forbidden — requires pariwar.manage_drive_target at pariwar scope (pariwar_admin or super_admin)',
+);
+const driveTargetRevealForbidden = errorResponse(
+  'Forbidden — requires pariwar.manage_drive_target_visibility at pariwar scope (super_admin ONLY; ' +
+    'a pariwar_admin holds the WRITE key and is denied here by ruling, 2026-09-04-190 cl.7(c))',
+);
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/admin/drive-target',
+  summary: "Read the Pariwar's drive target",
+  description:
+    "Returns the whole-rupee target recorded for the Pariwar's Sahyog Drives, plus the " +
+    'last-changing admin display name, rationale, effective-from instant and schedule version. ' +
+    '`configured: false` means NO target has ever been set, which Story 11b.14 renders as NO ' +
+    'progress bar at all — a different fact from a Pariwar that set a small target, which is why ' +
+    'it is reported explicitly rather than inferred from a null. The `version` returned here MUST ' +
+    'be echoed back as `expectedVersion` on the next PUT (Decision 2026-09-05-201 cl.4/cl.5). ' +
+    'The target is NOT shown to members or the public in any state (Decision 2026-09-04-190 ' +
+    'cl.7(b)); revealing it is a separate, super_admin-only act on a separate resource. ' +
+    'Requires pariwar.manage_drive_target at pariwar scope.',
+  tags: driveTargetTags,
+  request: { params: driveTargetParams },
+  responses: {
+    200: {
+      description: 'The drive target in force',
+      content: jsonOf(driveTargetComponents.DriveTargetResponse),
+    },
+    401: driveTargetAuth,
+    403: driveTargetForbidden,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'put',
+  path: '/api/v1/p/{pariwarId}/admin/drive-target',
+  summary: "Set the Pariwar's drive target (rationale + expectedVersion required; audited)",
+  description:
+    "Sets the whole-rupee figure the Pariwar's drives aim to raise — the SAME target for every " +
+    'drive in the Pariwar (Decision 2026-09-04-189 cl.2(d)); there is no per-drive override. The ' +
+    'prior target is CLOSED and a new one opened, so every superseded target survives as a ' +
+    'governance trail. The target must be a whole number of rupees, STRICTLY GREATER THAN ZERO ' +
+    '(Story 11b.14 divides by it, so 0 is a division by zero — and is a different state from "no ' +
+    'target set") and within the data-sanity ceiling. A non-empty rationale is REQUIRED and is ' +
+    'rejected at the contract boundary with a 400 when absent. ' +
+    '`expectedVersion` is REQUIRED and nullable (null = "I believe this Pariwar has no target ' +
+    'yet"): a mismatch means someone else changed the target since you read it, and returns 409 ' +
+    'rather than silently overwriting their change with your rationale attached. An optional ' +
+    '`Idempotency-Key` header is evaluated BEFORE that version check — never after: reversed, a ' +
+    'legitimate retry after a timeout would carry a stale version and be told "someone else ' +
+    'changed this" when the someone was itself. ' +
+    "The acting admin's display name is resolved SERVER-SIDE from users.display_name and is never " +
+    "accepted from the caller, and the effective-from instant is the SERVER's. Writes a §1.5 " +
+    'hash-chain audit line covering the same transaction as the change. ' +
+    'SETTING IS NEVER REVEALING: a newly set target stays hidden from members and the public until ' +
+    'a super_admin reveals it on the separate visibility resource. ' +
+    'Requires pariwar.manage_drive_target at pariwar scope.',
+  tags: driveTargetTags,
+  request: {
+    params: driveTargetParams,
+    body: { content: jsonOf(driveTargetComponents.SetDriveTargetRequest), required: true },
+  },
+  responses: {
+    200: {
+      description: 'The updated drive target',
+      content: jsonOf(driveTargetComponents.DriveTargetResponse),
+    },
+    400: errorResponse(
+      'Request validation failed (an empty rationale, or a target that is not a whole number of ' +
+        'rupees strictly greater than 0 and within the ceiling)',
+    ),
+    401: driveTargetAuth,
+    403: driveTargetForbidden,
+    409: errorResponse(
+      'The acting admin has no users.display_name (admin.display_name_missing); OR the ' +
+        'expectedVersion does not match the current target (pariwar.drive_target_version_conflict) ' +
+        '— re-read and re-submit; OR a change with this Idempotency-Key is already in progress',
+    ),
+    422: errorResponse(
+      'The change is malformed as a GOVERNANCE RECORD — a missing rationale, audit anchor, display ' +
+        'name or grant (pariwar.drive_target_ungoverned_change)',
+    ),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/admin/drive-target/visibility',
+  summary: "Read the Pariwar's drive-target reveal switches (super_admin only)",
+  description:
+    'Returns the two INDEPENDENT reveal switches — reveal-to-members and reveal-to-public — plus ' +
+    'the last-changing admin display name, rationale and update instant. `configured: false` ' +
+    'means no reveal decision has ever been recorded, which resolves HIDDEN FROM EVERYONE ' +
+    '(Decision 2026-09-04-190 cl.7(b)) — a fail-CLOSED default, and the operator is told which ' +
+    'state they are looking at because "nobody chose this" and "the Trust decided to hide it" are ' +
+    'different facts. ' +
+    'This is a SEPARATE RESOURCE under a SEPARATE KEY on purpose: a pariwar_admin holds the target ' +
+    'write key and is denied HERE, so the switches are visible only to a super_admin without any ' +
+    'handler branching on the caller\'s role. ' +
+    'Requires pariwar.manage_drive_target_visibility at pariwar scope (super_admin ONLY).',
+  tags: driveTargetTags,
+  request: { params: driveTargetParams },
+  responses: {
+    200: {
+      description: 'The reveal posture in force',
+      content: jsonOf(driveTargetComponents.DriveTargetVisibilityResponse),
+    },
+    401: driveTargetAuth,
+    403: driveTargetRevealForbidden,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'put',
+  path: '/api/v1/p/{pariwarId}/admin/drive-target/visibility',
+  summary: "Set the Pariwar's drive-target reveal switches (super_admin only; audited)",
+  description:
+    'Decides whether the Pariwar\'s drive target may be shown to members and/or to the ' +
+    'unauthenticated public — a DISCLOSURE act, reserved to the Trust by Decision 2026-09-04-190 ' +
+    'cl.7(c). The two switches are INDEPENDENT, not levels: three of the four combinations are ' +
+    'accepted, and revealing to members without revealing publicly is the ordinary case. ' +
+    'THE ONE REFUSED COMBINATION is public-revealed while members are hidden, which would show the ' +
+    'unauthenticated internet more than a member of the Pariwar the figure belongs to (Decision ' +
+    '2026-09-04-189 cl.3); it returns 422 and is also refused by a database CHECK. ' +
+    'A non-empty rationale is REQUIRED. This request CANNOT carry a target — a reveal can never ' +
+    'change what is being revealed. Writes a §1.5 hash-chain audit line. ' +
+    'Requires pariwar.manage_drive_target_visibility at pariwar scope (super_admin ONLY).',
+  tags: driveTargetTags,
+  request: {
+    params: driveTargetParams,
+    body: {
+      content: jsonOf(driveTargetComponents.SetDriveTargetVisibilityRequest),
+      required: true,
+    },
+  },
+  responses: {
+    200: {
+      description: 'The updated reveal posture',
+      content: jsonOf(driveTargetComponents.DriveTargetVisibilityResponse),
+    },
+    400: errorResponse('Request validation failed (an empty or whitespace-only rationale)'),
+    401: driveTargetAuth,
+    403: driveTargetRevealForbidden,
+    409: errorResponse("The acting admin has no users.display_name (admin.display_name_missing)"),
+    422: errorResponse(
+      'The target cannot be revealed to the public while it is hidden from members ' +
+        '(pariwar.drive_target_visibility_invalid); OR the change is malformed as a governance ' +
+        'record (pariwar.drive_target_ungoverned_change)',
+    ),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 

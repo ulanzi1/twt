@@ -18,6 +18,7 @@ import { ChannelConfigRoute } from './routes/ChannelConfigRoute.js';
 import { CycleFreezeRoute } from './routes/CycleFreezeRoute.js';
 import { DegradedModeRoute } from './routes/DegradedModeRoute.js';
 import { DirectoryPublicationRoute } from './routes/DirectoryPublicationRoute.js';
+import { DriveTargetRoute } from './routes/DriveTargetRoute.js';
 import { NomineeBankMaskingRoute } from './routes/NomineeBankMaskingRoute.js';
 import { GroundInspectionRoute } from './routes/GroundInspectionRoute.js';
 import { HelpdeskOperatorRoute } from './routes/HelpdeskOperatorRoute.js';
@@ -120,6 +121,17 @@ const nomineeBankMaskingRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/p/$pariwarId/nominee-bank-masking',
   component: NomineeBankMaskingRoute,
+});
+
+// Story 11b.13 — the tenant-scoped DRIVE TARGET console. `2026-09-04-190` cl.7: a pariwar_admin
+// records what a drive here aims to raise; ⛔ only a super_admin decides whether anyone may see it.
+// ⭐ TWO server-side gates on ONE page — the reveal section is omitted for a pariwar_admin, on the
+// server's 403 rather than on any client-side role check. ⚠ The figure is rendered NOWHERE; Story
+// 11b.14 is the first consumer, server-side. Un-linked, like its siblings.
+const driveTargetRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/drive-target',
+  component: DriveTargetRoute,
 });
 
 // Story 6.3 — the tenant-scoped helpline operator console (claim intake on a caller's behalf).
@@ -269,6 +281,7 @@ const routeTree = rootRoute.addChildren([
   degradedModeRoute,
   directoryPublicationRoute,
   nomineeBankMaskingRoute,
+  driveTargetRoute,
   helplineRoute,
   helpdeskRoute,
   helpdeskQueueRoute,

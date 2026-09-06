@@ -519,6 +519,87 @@ export function useSetNomineeBankMaskingSchedule(pariwarId: string) {
   });
 }
 
+// ── Per-Pariwar DRIVE TARGET (Story 11b.13) ───────────────────────────────────
+// TWO queries against TWO server-gated resources. ⭐⭐ The VISIBILITY query 403s for a
+// `pariwar_admin`, and that is an ORDINARY OUTCOME (`2026-09-04-190` cl.7(c)) — the page omits the
+// reveal section rather than rendering an error. ⛔ Do NOT add `retry` to it: retrying a ruled 403
+// three times would delay the page for every Pariwar Admin to re-learn the same answer.
+//
+// ⚠⛔ A NOTE FOR WHOEVER EDITS THE PROSE IN THIS BLOCK (found 2026-09-06, Story 11b.13).
+// `apps/admin/tests/directory-publication-terminology.test.ts` scans a SLICE of THIS FILE — from
+// the `Directory-publication kill switch` marker to the `Verifier-console surface` marker — for the
+// three adverbs of immediacy `2026-08-21-147` cl.1(d) forbids. ⇒ that slice contains this block and
+// the masking block too, ⛔ not only the directory-publication one. A source scan cannot tell a
+// CLAIM about a control's propagation from an unrelated English sentence, so an innocent use of one
+// of those words here fails a gate about a DIFFERENT control.
+// ⭐ Recorded rather than "fixed" by narrowing the gate's markers: narrowing it would REDUCE
+// coverage of the control it exists to protect, on a story that has no business touching it. ⛔ Do
+// not narrow it; just avoid those three words in this slice.
+
+export const driveTargetKey = (pariwarId: string) => ['drive-target', pariwarId] as const;
+export const driveTargetVisibilityKey = (pariwarId: string) =>
+  ['drive-target-visibility', pariwarId] as const;
+
+/** The Pariwar's current drive target (+ the `version` the form echoes back). */
+export function useDriveTarget(pariwarId: string) {
+  return useQuery({
+    queryKey: driveTargetKey(pariwarId),
+    queryFn: () => api.getDriveTarget(pariwarId),
+  });
+}
+
+/**
+ * The Pariwar's reveal switches. ⛔ 403 for anyone but a `super_admin` — EXPECTED, ⛔ not an error
+ * to surface. `retry: false` so a Pariwar Admin's page settles on the ruled denial in one round
+ * trip rather than three.
+ */
+export function useDriveTargetVisibility(pariwarId: string) {
+  return useQuery({
+    queryKey: driveTargetVisibilityKey(pariwarId),
+    queryFn: () => api.getDriveTargetVisibility(pariwarId),
+    retry: false,
+  });
+}
+
+/**
+ * Set the target, then refresh the query.
+ *
+ * ⭐⭐ THE REFRESH IS LOAD-BEARING HERE, more than on a typical form: the response carries the NEW
+ * `version`, and the next change must echo it back as `expectedVersion` (`2026-09-05-201` cl.4).
+ * ⛔ Without this, a second change from the same open page would send a stale version and be refused
+ * with a conflict the operator did not cause.
+ * ⛔ AND IT DOES ⛔ NOT TOUCH THE VISIBILITY CACHE — a target change cannot alter the reveal flags
+ * (D2, true by construction), so invalidating it would imply a coupling that does not exist.
+ */
+export function useSetDriveTarget(pariwarId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.setDriveTarget>[1]) =>
+      api.setDriveTarget(pariwarId, body),
+    onSuccess: (row) => {
+      qc.setQueryData(driveTargetKey(pariwarId), row);
+      void qc.invalidateQueries({ queryKey: driveTargetKey(pariwarId) });
+    },
+  });
+}
+
+/**
+ * Set the reveal switches, then refresh the query.
+ *
+ * ⛔ Likewise does ⛔ NOT touch the TARGET cache — a reveal can never change what is being revealed.
+ */
+export function useSetDriveTargetVisibility(pariwarId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.setDriveTargetVisibility>[1]) =>
+      api.setDriveTargetVisibility(pariwarId, body),
+    onSuccess: (row) => {
+      qc.setQueryData(driveTargetVisibilityKey(pariwarId), row);
+      void qc.invalidateQueries({ queryKey: driveTargetVisibilityKey(pariwarId) });
+    },
+  });
+}
+
 // ── Verifier-console surface (Story 6.10) — the READ-ONLY bounded compound signals view. ──
 // A ₹50L-stakes strong-consistency read: cache-disabled by the createQueryClient defaults (staleTime/
 // gcTime 0, refetchOnMount 'always', no IndexedDB persister — §4.5, D7). The query key carries the

@@ -38,6 +38,7 @@ import { registerMemberValidityModule } from './modules/member-validity/index.js
 import { registerChannelConfigModule } from './modules/channel-config/index.js';
 import { registerDegradedModeModule } from './modules/degraded-mode/index.js';
 import { registerDirectoryPublicationModule } from './modules/directory-publication/index.js';
+import { registerDriveTargetModule } from './modules/drive-target/index.js';
 import { registerNomineeBankMaskingModule } from './modules/nominee-bank-masking/index.js';
 import { registerChannelWebhooksModule } from './modules/channel-webhooks/index.js';
 import { registerWaOptInModule } from './modules/wa-opt-in/index.js';
@@ -233,6 +234,16 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // ⛔ NOT immediate: /sahyog-vivran is edge-cached at s-maxage=300, and what is served stale here
   // is a FULL ACCOUNT NUMBER. Direct SQL is NOT the operational fallback.
   registerNomineeBankMaskingModule(app, deps);
+  // Story 11b.13 — the per-Pariwar DRIVE TARGET admin surface (`2026-09-04-190` cl.7, Trustee-
+  // ratified). FOUR routes under TWO gates: a `pariwar_admin` SETS the whole-INR figure
+  // (`pariwar.manage_drive_target`); ⛔ only a `super_admin` REVEALS it, to members and/or the
+  // public, on two independent switches (`pariwar.manage_drive_target_visibility`).
+  // ⚠⛔ NOTE THE CONTRAST WITH THE MODULE ABOVE, so it is not mis-filed: there `pariwar_admin` is
+  // FORECLOSED because that control governs DISCLOSURE. Here SETTING the target discloses NOTHING
+  // (cl.7(b) hides it from everyone) and only the REVEAL half is central. `2026-09-02-178` and the
+  // masking key's foreclosure are UNTOUCHED (`2026-09-06-203` cl.3).
+  // ⭐ It renders NOWHERE — Story 11b.14 is the first consumer, SERVER-SIDE only. That is intended.
+  registerDriveTargetModule(app, deps);
   // Story 5.4 — WhatsApp inbound-webhook ingress primitive (§3.11): per-Pariwar Meta webhook receiver
   // (GET subscription challenge + POST verify-persist-ack-within-5s). Public (Meta is unauthenticated — the
   // verify-token / X-Hub-Signature-256 IS the auth; login-wall-allowlisted). Encapsulated so its raw-body

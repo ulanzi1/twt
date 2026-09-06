@@ -1,3 +1,58 @@
+# last_updated: 2026-09-06f (⭐⭐ **STORY 11b.13 (C) TASKS 1-5 COMPLETE — ROW FLIPS `in-progress` ->
+#   `review`. `pnpm ci:local` with DATABASE_URL: 34/34 JOBS GREEN**, including `test (unit)` AND
+#   `integration-tests` against twt-test-pg on :5433.
+#   ⭐ **TASK 1 (the catalog):** BOTH keys declared at `dimension: 'pariwar'`, EACH with its own
+#   doc-block — the write key's carries Trap 1's argument, the REVEAL key's explains why it is
+#   NARROWER than its sibling (⛔ without it the pair reads as arbitrary). v39 -> **41**, key count
+#   47 -> **49** (⛔ not 48). ⭐ `roles.ts` gets exactly ONE edit: the WRITE key into the
+#   `pariwar_admin` bundle. ⛔ **NO bundle edit for the reveal key** — `super_admin` auto-derives
+#   `PERMISSION_CATALOG.keys`, exactly as for the two sibling super_admin-only keys, and a test pins
+#   that `roles.ts` never names it. `permissions.test.ts:54`'s running rationale chain was APPENDED
+#   to, ⛔ never overwritten.
+#   ⭐ **TASK 2 (the substrate):** migration **0115**, hand-authored (⛔ never `db:generate`), journal
+#   entry by hand, applied + verified live. **TWO RECORDS per D2** — the schedule carries ⛔ NO flag
+#   column and the visibility record ⛔ NO target column, and a policy-regression test asserts BOTH
+#   absences against `information_schema` so a future "simplification" that re-merges them fails
+#   LOUDLY. Money mirrors `pool_fixed_amount_schedule` — **strictly `> 0`** (⛔ never `>= 0`) plus a
+#   ceiling kept IN SYNC three ways — ⛔ NOT `pools.fixed_amount`, which carries no CHECK at all.
+#   AC4's `member >= public` is a DB CHECK and a test proves it bites on **UPDATE**, not only INSERT.
+#   SELECT/INSERT/UPDATE, ⛔ no DELETE. Every migration constraint has its twin in the drizzle file.
+#   ⭐ **TASK 3 (the write path):** `2026-09-05-201`'s TWO controls IN ORDER — `Idempotency-Key`
+#   FIRST at the HTTP boundary, `expectedVersion` (REQUIRED, `number | null`) SECOND, enforced INSIDE
+#   the advisory lock so the head it compares is the one the write supersedes. ⚠ The lock is
+#   RETAINED and its NON-protection is stated where it applies: it converts a race into a QUEUE, so
+#   the two are ⛔ not alternatives. A test proves a retry does ⛔ not hit a false conflict.
+#   ⭐ **TASK 4 (the surface):** FOUR routes under **TWO** gates. ⭐⭐ AC5's "the reveal switches are
+#   visible ONLY to a super_admin" is satisfied by a **403 on a SEPARATE RESOURCE** — ⛔ never by one
+#   endpoint shaping its response two ways, which would put the authority boundary back inside a
+#   handler. A 403 on the visibility read renders **NOTHING** (⛔ not an error): it is the ORDINARY
+#   outcome for a Pariwar Admin. EVERY drive-target error class is **REGISTERED** in the
+#   error-mapping registry — ⚠⛔ deliberately ⛔ NOT the masking module's posture, whose ungoverned-
+#   change error is unregistered and reaches the wire as an opaque 500 (11b.3a chunk G2).
+#   ⭐ **TASK 5: 123 TESTS, EXECUTED** (22 pure + 35 accessor + 23 RLS/migration + 5 AC7 + 24 API +
+#   14 admin UI) — ⛔ "written but not run" is not attested; that gap shipped a red spec at 11b.10.
+#   **AC7 is proven STRUCTURALLY** (a source assertion that `pool/fixed-amount.ts` and
+#   `pool/assign.ts` reference the target ⛔ NOWHERE — a behavioural test can only sample the inputs
+#   it tries) **and behaviourally**.
+#   ⚠⛔ **AC6's UNCOVERED DERIVED CHANNEL IS RECORDED IN THE TEST FILE AS ITS OWN CASE**, so it
+#   cannot be mistaken for covered: the "target in no response" assertion is a TOKEN one, and D's
+#   meter recovers the figure by arithmetic from two published numbers. ⭐ **D3 STAYS ROUTED TO
+#   11b-14, QUESTION OPEN** — ⛔ not answered by narrowing C.
+#   ⚠⛔ **ONE REAL REGRESSION FOUND AND FIXED:** `directory-publication-terminology.test.ts` scans a
+#   SLICE of `apps/admin/src/api/hooks.ts` spanning THREE modules' hooks blocks, so an innocent
+#   adverb in this story's block failed a gate about a DIFFERENT control's propagation. ⭐ Fixed by
+#   **REWORDING, ⛔ not by narrowing the gate's markers** — narrowing would REDUCE coverage of the
+#   control the gate exists to protect. The slice property is now recorded in the file.
+#   ⚠ Collateral: `pool/public-token.ts` asserted the live catalog counter as "39 -> 40", a claim
+#   THIS commit falsifies — corrected to a live-read instruction, argument intact.
+#   ⚠ Two intermediate failures during `turbo run test` were **flakes under parallel DB load**
+#   (@twt/validity-service 284/284 and @twt/api 1199/1200 in isolation, both green under the
+#   serialized `ci:local`) — neither touches anything this story changed. ⛔ Recorded, ⛔ not quietly
+#   re-run.
+#   ⛔ epic-11b stays `in-progress`; ⛔ 11b-11 / 11b-12 stay `done`; ⛔ 11b-14…17 and 6-18 stay
+#   `ready-for-dev`; ⭐ ONE row moves: 11b-13 -> `review`.
+#   ⚠⛔ **6-18 STILL OWES ITS OWN CATALOG READ** — this story took 39 -> 41, so 6-18 is now
+#   **41 -> 42**, ⛔ not 40. Its Dev Notes already carry the reciprocal warning; ⛔ do not hard-code.)
 # last_updated: 2026-09-06e (⭐⭐ **STORY 11b.13 (C) TASK 0 — THE GOVERNANCE DECISION LANDS; ROW FLIPS
 #   `ready-for-dev` -> `in-progress`.** ⛔ ⛔ NO CODE IN THIS COMMIT — `-195` cl.2 rules a permission
 #   key gets its OWN governance decision and is ⛔ never minted inside a build task
@@ -15977,7 +16032,7 @@ development_status:
   # despite the neighbouring foreclosure; the reveal key's explains why it is NARROWER than its
   # sibling, or the pair reads as arbitrary. ⇒ Task 0 UNBLOCKED — ⚠ it still OPENS with the governance
   # decision (`-195` cl.2); ⛔ the keys are NOT minted in a build task.
-  11b-13-per-pariwar-drive-target-substrate: in-progress
+  11b-13-per-pariwar-drive-target-substrate: review
   # ⭐ 11b-14 — STORY **D** of the `2026-09-04-195` cl.3 split. ⛔ NOT in `epics.md` — owes an
   # ANNOTATION. ⛔⛔ **BLOCKED ON B (11b-12) AND C (11b-13)** — B owns the stage words + shared copy,
   # C owns the rupee target this meter measures against.

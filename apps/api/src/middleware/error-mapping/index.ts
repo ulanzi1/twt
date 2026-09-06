@@ -39,6 +39,10 @@ import {
   DraftNotFoundError,
   DraftSelfReviewError,
   DraftStateError,
+  DriveTargetInvalidError,
+  DriveTargetVersionConflictError,
+  DriveTargetVisibilityInvalidError,
+  UngovernedDriveTargetChangeError,
   InvalidPariwarScopeError,
   ModerationActionNotFoundError,
   ModerationDwellNotElapsedError,
@@ -507,6 +511,49 @@ export function errorMappingHandler(
     return;
   }
   if (error instanceof TcPinnedClauseNotFoundError) {
+    void reply.status(422).send(error.toErrorResponse(requestId));
+    return;
+  }
+
+  // (3c-bis) Per-Pariwar DRIVE TARGET typed errors (Story 11b.13, AC2/AC3/AC4). Each owns its code
+  // + projector.
+  //   DriveTargetVersionConflictError    → 409 pariwar.drive_target_version_conflict
+  //   DriveTargetVisibilityInvalidError  → 422 pariwar.drive_target_visibility_invalid
+  //   DriveTargetInvalidError            → 400 pariwar.drive_target_invalid
+  //   UngovernedDriveTargetChangeError   → 422 pariwar.drive_target_ungoverned_change
+  //
+  // ⛔⛔ THESE ARMS ARE ⛔ NOT OPTIONAL, and this block is the reason the classes are exported at the
+  // `@twt/domain` top level. `2026-09-05-201` cl.4 rules the version conflict must reach the wire as
+  // a 409 with its OWN REGISTERED code — ⛔ never a bare `23505`, ⛔ never an opaque 500. The
+  // neighbouring masking module is the counter-example the ruling cites: its
+  // `UngovernedNomineeBankMaskingChangeError` `extends Error`, is NOT registered here, and therefore
+  // surfaces as a 500 on a plain governance refusal (Story 11b.3a chunk G2). ⛔ Do not add a
+  // drive-target throw without an arm here.
+  //
+  // ⚠ THE STATUSES ARE CHOSEN, ⛔ not defaulted:
+  //   · 409 for the version conflict — the request is well-formed; the world moved. The operator
+  //     re-reads and re-submits (the `TcVersionConflictError` precedent immediately above).
+  //   · 422 for the visibility refusal — the request is well-formed and the STATE is fine; the
+  //     COMBINATION is forbidden (`2026-09-04-189` cl.3, *member ≥ public*). ⛔ Not a 409: nothing
+  //     raced, and telling an operator to retry would be false.
+  //   · 400 for an invalid target — a plain input error. ⚠ The contract's `.positive()` should have
+  //     caught it first; this arm exists so a non-HTTP caller, or a contract regression, still gets
+  //     a 4xx rather than a 500.
+  //   · 422 for a missing rationale / audit anchor / display name / grant — the request is malformed
+  //     as a GOVERNANCE RECORD (the Story 10.20 moderation-record family's own reasoning).
+  if (error instanceof DriveTargetVersionConflictError) {
+    void reply.status(409).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof DriveTargetVisibilityInvalidError) {
+    void reply.status(422).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof DriveTargetInvalidError) {
+    void reply.status(400).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof UngovernedDriveTargetChangeError) {
     void reply.status(422).send(error.toErrorResponse(requestId));
     return;
   }

@@ -1,3 +1,35 @@
+# last_updated: 2026-09-06e (⭐⭐ **STORY 11b.13 (C) TASK 0 — THE GOVERNANCE DECISION LANDS; ROW FLIPS
+#   `ready-for-dev` -> `in-progress`.** ⛔ ⛔ NO CODE IN THIS COMMIT — `-195` cl.2 rules a permission
+#   key gets its OWN governance decision and is ⛔ never minted inside a build task
+#   ([[feedback_governance_commits_precede_implementation]]).
+#   ⭐⭐ **DECISION `2026-09-06-203` (author-committed) MINTS TWO KEYS:**
+#   `pariwar.manage_drive_target` (`pariwar_admin` + `super_admin` auto) — SET the figure, ⛔ discloses
+#   NOTHING — and `pariwar.manage_drive_target_visibility` (⛔ `super_admin` ONLY) — REVEAL it. ⭐ BOTH
+#   at `dimension: 'pariwar'`; ⛔ NEITHER `global` — the narrowing is done by the GRANT, ⛔ never by the
+#   dimension (the masking / public-name precedent, both pariwar-dimension despite being
+#   super_admin-only). `PERMISSION_CATALOG_VERSION` **39 -> 41** (+1 per key), key count **47 -> 49**.
+#   ⚠⛔ **THE 41 IS COMPUTED, ⛔ NOT TRANSCRIBED** — `permissions.ts:598` was READ LIVE today and stood
+#   at 39; **6-18** bumps the same counter and had ⛔ not landed. What is ruled is **+2 from the live
+#   value**; ⛔ do ⛔ not hard-code 40.
+#   ⭐⭐ **THE LOAD-BEARING CLAUSE (`-203` cl.3):** granting `pariwar_admin` on a new pariwar-dimension
+#   key is ⛔ NOT the "for symmetry" move `pariwar.manage_nominee_bank_masking` forecloses in writing.
+#   Both foreclosing precedents govern **DISCLOSURE**; **SETTING the target discloses ⛔ NOTHING**
+#   (`-190` cl.7(b) hides it from everyone), while **REVEALING it IS a disclosure act** and cl.7(c)
+#   keeps that `super_admin`-only. ⇒ `2026-08-19-136` cl.3's two-axis rule is FOLLOWED, ⛔ not departed
+#   from. ⛔⛔ `2026-09-02-178` and the masking key's foreclosure **STAND UNTOUCHED**; this entry
+#   supersedes ⛔ NOTHING and is ⛔ not a precedent for lifting that foreclosure.
+#   ⭐ **D2 RIDES THE SAME ENTRY (cl.5)** — a substrate shape under existing rulings, ⛔ not new policy:
+#   TWO records (`pariwar_drive_target_schedule` versioned + `pariwar_drive_target_visibility`), so the
+#   `pariwar_admin` write path ⛔ CANNOT NAME A FLAG COLUMN and AC3 becomes true by construction.
+#   ⭐ cl.6 pins the money precedent (`pool_fixed_amount_schedule`, **strictly `> 0`** + ceiling — ⛔ NOT
+#   `pools.fixed_amount`, which carries no CHECK at all); cl.7 commits `-201`'s two controls IN ORDER
+#   on the NEW write path (`Idempotency-Key` FIRST, `expectedVersion` SECOND) ⛔ without touching the
+#   masking module, which stays 11b.3a's open item.
+#   ⚠ **D3 stays ROUTED to `11b-14` with the question OPEN** — ⛔ not decided here, ⛔ not escalated.
+#   ⭐ `epics.md` ANNOTATED (Epic 11b, seven-item block, ANNOTATION ONLY — ⛔ no AC rewritten, ⛔ no
+#   prior block re-worded [[feedback_supersede_never_reinterpret]]).
+#   ⛔ epic-11b stays `in-progress`; ⛔ 11b-11 / 11b-12 stay `done`; ⛔ 11b-14…17 and 6-18 stay
+#   `ready-for-dev`; ⭐ ONE row moves: 11b-13 -> `in-progress`.)
 # last_updated: 2026-09-06d (⭐⭐ **STORY 11b.13 (C) VALIDATED — TEN FINDINGS, TWO NEW OPEN DECISIONS.
 #   ⛔ ZERO ROWS MOVE; 11b-13 STAYS `ready-for-dev`.** ⚠ ⛔ No code; the story file only.
 #   ⛔ epic-11b stays `in-progress`; ⛔ 11b-11 / 11b-12 stay `done`; ⛔ 11b-13…17 and 6-18 stay
@@ -15945,7 +15977,7 @@ development_status:
   # despite the neighbouring foreclosure; the reveal key's explains why it is NARROWER than its
   # sibling, or the pair reads as arbitrary. ⇒ Task 0 UNBLOCKED — ⚠ it still OPENS with the governance
   # decision (`-195` cl.2); ⛔ the keys are NOT minted in a build task.
-  11b-13-per-pariwar-drive-target-substrate: ready-for-dev
+  11b-13-per-pariwar-drive-target-substrate: in-progress
   # ⭐ 11b-14 — STORY **D** of the `2026-09-04-195` cl.3 split. ⛔ NOT in `epics.md` — owes an
   # ANNOTATION. ⛔⛔ **BLOCKED ON B (11b-12) AND C (11b-13)** — B owns the stage words + shared copy,
   # C owns the rupee target this meter measures against.

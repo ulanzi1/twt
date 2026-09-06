@@ -247,6 +247,16 @@ export * from './pariwar_directory_publication.js';
 // a column on `claim_nominee_bank_accounts` (cl.10(d): a later "simplification" to a boolean is a
 // DEFECT, not a cleanup). No row ⇒ NOT masked (`D8-default` FAIL-OPEN, `2026-09-02-179` cl.1).
 export * from './pariwar_nominee_bank_masking_schedule.js';
+// Story 11b.13 (AC1-AC4) — the per-Pariwar DRIVE TARGET, as TWO records (`2026-09-06-203` cl.5).
+// ⭐ `pariwar_drive_target_schedule` is the VERSIONED effective-window rupee record, written under
+// `pariwar.manage_drive_target` (pariwar_admin); `pariwar_drive_target_visibility` holds the two
+// reveal switches, written under `pariwar.manage_drive_target_visibility` (⛔ super_admin ONLY).
+// ⛔⛔ The schedule carries ⛔ NO flag column — that is the authority split made STRUCTURAL, so a
+// pariwar_admin target change cannot re-state a super_admin-only disclosure decision. ⛔ Do not
+// merge them. An absent visibility row ⇒ HIDDEN from everyone (`-190` cl.7(b), FAIL-CLOSED — the
+// deliberate OPPOSITE of the masking schedule's D8-default above).
+export * from './pariwar_drive_target_schedule.js';
+export * from './pariwar_drive_target_visibility.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

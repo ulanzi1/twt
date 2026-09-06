@@ -595,7 +595,59 @@ export function permissionKey(value: string): PermissionKey {
 // for up to five minutes. ⛔ Direct SQL is NOT the operational fallback.
 // ACCEPTANCE CONDITION for pariwar_admin: a Panel ruling superseding `2026-09-02-178`. ⛔ Never a
 // consistency argument from the neighbouring keys.
-export const PERMISSION_CATALOG_VERSION = 39 as const;
+// ── Bumped 39 → 41 at Story 11b.13 / Decision 2026-09-06-203 — added TWO keys: 47 → 49 ──────────
+// The per-Pariwar DRIVE TARGET pair. `2026-09-04-190` cl.7 (Trustee-ratified — Dhiraj Rahul +
+// Kalpana Bharti) splits SETTING the target (cl.7(a), the Pariwar Admin) from REVEALING it
+// (cl.7(c), the Super Admin), and `2026-09-04-191` cl.4 makes it a RUPEE figure.
+//   · `pariwar.manage_drive_target`            — pariwar-dimension. `pariwar_admin` + super_admin.
+//   · `pariwar.manage_drive_target_visibility` — pariwar-dimension. ⛔ `super_admin` ONLY.
+// +1 PER KEY (the `feature_flag.view`/`.flip` and `pariwar.view_custom_fields`/`.manage_custom_fields`
+// two-key precedent), so the count moves 47 → 49 — ⛔ not 48.
+//
+// ⚠⛔ THE `41` WAS COMPUTED FROM A LIVE READ, ⛔ NOT TRANSCRIBED. Story 6.18 (`ready-for-dev`) bumps
+// this SAME counter. `permissions.ts:598` read 39 on 2026-09-06 with 6.18 unlanded ⇒ 39 + 2 = 41.
+// ⭐ What `2026-09-06-203` cl.2 rules is **+2 from the live value**; whichever story lands second
+// takes the next numbers. ⛔ Do not hard-code 40 in either direction.
+//
+// ⛔⛔ WHY TWO KEYS AND NOT ONE (D1). cl.7 splits two DIFFERENT GOVERNED ACTS under DIFFERENT
+// AUTHORITIES. Under one key granted to both roles, with the reveal route additionally checking the
+// role, that split would live inside a HANDLER — where ⛔ no catalog reader, no Panel member and no
+// auditor can see it. Under two it is visible HERE. One key meaning two unrelated things is the
+// drift a catalog exists to prevent (`2026-09-02-183` cl.1), and the key immediately above forbids
+// widening itself "for symmetry" on exactly that ground.
+//
+// ⭐⭐ AND THE PART A READER WILL OTHERWISE MIS-FILE — WHY GRANTING `pariwar_admin` HERE IS ⛔ NOT
+// THE MOVE THE KEY IMMEDIATELY ABOVE FORECLOSES.
+// `pariwar.manage_nominee_bank_masking` says in terms that granting `pariwar_admin` "for symmetry"
+// with the neighbouring pariwar-dimension content keys is the *"reverse a ratified ruling by way of
+// a catalog edit"* move, with **a Panel ruling** as its acceptance condition.
+//   (1) That condition IS met on its own terms — `-190` cl.7(a) is a Panel ruling naming the
+//       Pariwar Admin as the setter. ⛔ This is NOT a consistency argument from the neighbours.
+//   (2) ⭐ But the real ground is NARROWER, and it is the one that matters: BOTH foreclosing
+//       precedents govern **DISCLOSURE**. The public-name mode decides WHAT a public page shows;
+//       the masking window decides HOW LONG it keeps showing it. `2026-09-02-178` correctly put
+//       that authority centrally.
+//       ⇒ **SETTING the drive target discloses ⛔ NOTHING.** `-190` cl.7(b) makes the figure
+//         invisible to members and to the public, and Story 11b.13 renders it NOWHERE. A Pariwar
+//         Admin recording what their own drive needs to raise changes nothing any reader can see.
+//       ⇒ **REVEALING it IS a disclosure act — and cl.7(c) keeps that super_admin-only**, which is
+//         why the visibility key's grant is byte-identical in shape to the two keys above.
+//   ⇒ `2026-08-19-136` cl.3's two-axis rule is FOLLOWED, ⛔ not departed from: this control is
+//     per-Pariwar in SCOPE, Pariwar-Admin in OPERATIONAL authority, and CENTRAL in DISCLOSURE
+//     authority.
+// ⛔⛔ THEREFORE `2026-09-02-178` STANDS UNTOUCHED and the masking key's `pariwar_admin` FORECLOSURE
+// STANDS UNTOUCHED. A future story wanting `pariwar_admin` on THAT key still needs its own Panel
+// ruling — ⛔ this bump is NOT a precedent for it, because the ground here is "the act discloses
+// nothing", ⛔ never "the neighbouring keys should match".
+//
+// ⛔ NOT district_admin / state_trustee on either key — inert in both directions (a district ceiling
+// cannot satisfy a pariwar check; a state ceiling is broader than the gate)
+// [[project_rbac_geo_scope_containment]]. NEITHER is step-up-gated; accountability is the required
+// rationale + actor + display snapshot + §1.5 audit line on the versioned schedule row.
+// ⚠ THE SUBSTRATE SPLITS TOO (D2, `-203` cl.5): `pariwar_drive_target_schedule` (versioned,
+// pariwar_admin-written) and `pariwar_drive_target_visibility` (super_admin-written, both flags), so
+// the pariwar_admin write path ⛔ CANNOT NAME A REVEAL-FLAG COLUMN AT ALL.
+export const PERMISSION_CATALOG_VERSION = 41 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -966,6 +1018,65 @@ export const SEED_PERMISSION_KEYS = [
   // ⭐ A NEW key, ⛔ not an overload of `pariwar.manage_public_name_presentation` — same class, same
   // authority, DIFFERENT governed act. See the version-bump note above for the full reasoning.
   'pariwar.manage_nominee_bank_masking',
+  // ── Story 11b.13 (2026-09-06, D1 at Decision `2026-09-06-203`) — the DRIVE-TARGET WRITE key ────
+  // The per-Pariwar DRIVE TARGET (whole INR) SET key. Checked at `dimension: 'pariwar'` (value =
+  // scopeTx.pariwarId — the same mechanism as the three keys above). Writes
+  // `pariwar_drive_target_schedule`, the versioned effective-window record.
+  //
+  // ⭐⭐ GRANTED TO `pariwar_admin` (+ super_admin auto) — AND THAT IS ⛔ NOT THE "SYMMETRY" MOVE THE
+  // KEY IMMEDIATELY ABOVE FORECLOSES IN WRITING. `2026-09-04-190` cl.7(a) (Trustee Panel — Dhiraj
+  // Rahul + Kalpana Bharti) names the Pariwar Admin as the setter, which meets that key's stated
+  // acceptance condition. ⛔ But the ground is NARROWER than "a ruling exists", and a reader must
+  // have it: `pariwar.manage_public_name_presentation` and `pariwar.manage_nominee_bank_masking`
+  // both govern **DISCLOSURE** — what a public page shows, and how long it keeps showing it — which
+  // is why `2026-09-02-178` put THAT authority centrally.
+  // ⇒ **SETTING THE TARGET DISCLOSES ⛔ NOTHING.** cl.7(b) makes the figure invisible to members and
+  //   to the public alike; Story 11b.13 renders it NOWHERE, and Story 11b.14 consumes it
+  //   SERVER-SIDE only. ⛔ Nothing a reader can see changes when this key is exercised.
+  // ⇒ REVEALING it is the disclosure act, and it is a SEPARATE key
+  //   (`pariwar.manage_drive_target_visibility`, immediately below) held by `super_admin` ONLY.
+  // ⇒ `2026-08-19-136` cl.3's two-axis rule is FOLLOWED: per-Pariwar in SCOPE, Pariwar-Admin in
+  //   OPERATIONAL authority, CENTRAL in DISCLOSURE authority.
+  // ⛔⛔ `2026-09-02-178` and the masking key's `pariwar_admin` foreclosure STAND UNTOUCHED. This key
+  // is ⛔ NOT a precedent for lifting that foreclosure — the ground is "this act discloses nothing",
+  // ⛔ never "the neighbouring keys should match".
+  //
+  // ⚠ THE TARGET IS A PRESENTATION DENOMINATOR, ⛔ NOT AN OBLIGATION. A member's obligation is
+  // `pools.fixed_amount` and nothing here may make the two interact (AI-10-1, Story 11b.13 AC7):
+  // this key gates ⛔ no predicate over who may contribute, how much they owe, whether they are
+  // assigned, or whether a family is paid.
+  // ⛔ NOT district_admin / state_trustee — inert in both directions
+  // [[project_rbac_geo_scope_containment]]. NOT step-up-gated; accountability is the REQUIRED
+  // rationale + actor + display snapshot + §1.5 audit line on the schedule row, which
+  // `packages/domain/src/pool/drive-target-policy.ts` refuses to skip.
+  // ⚠ It lives under `pool/` beside `fixed-amount.ts` deliberately: that IS the per-Pariwar
+  // versioned RUPEE schedule this control mirrors. ⛔ The two never interact — see AC7.
+  'pariwar.manage_drive_target',
+  // ── Story 11b.13 (2026-09-06, D1 at Decision `2026-09-06-203`) — the DRIVE-TARGET REVEAL key ───
+  // The per-Pariwar DRIVE TARGET VISIBILITY key: flips `reveal_to_members` / `reveal_to_public` on
+  // `pariwar_drive_target_visibility`. Checked at `dimension: 'pariwar'`.
+  //
+  // ⭐⭐ WHY THIS KEY IS **NARROWER THAN ITS SIBLING**, which is the question a reader arrives with.
+  // Its sibling (`pariwar.manage_drive_target`, immediately above) is held by `pariwar_admin`; this
+  // one is ⛔ `super_admin` ONLY. They are not arbitrary halves of one control: `2026-09-04-190`
+  // cl.7 splits two DIFFERENT GOVERNED ACTS under DIFFERENT AUTHORITIES, and the split is here in
+  // the catalog rather than inside a route handler precisely so THIS asymmetry is legible.
+  //   · SETTING the figure (the sibling) discloses NOTHING — cl.7(b) hides it from everyone.
+  //   · REVEALING it is a **DISCLOSURE ACT**, and cl.7(c) reserves it to the Trust.
+  // ⇒ this key's grant is therefore BYTE-IDENTICAL IN SHAPE to
+  //   `pariwar.manage_public_name_presentation` and `pariwar.manage_nominee_bank_masking`: the
+  //   disclosure analogy `2026-09-02-178` established is HONOURED here, and departed from only for
+  //   the OPERATIONAL half. ⛔ Do not "align" the pair by widening this key.
+  //
+  // ⚠ TWO INDEPENDENT FLAGS, ⛔ not one. cl.7(c) makes reveal-to-members and reveal-to-public
+  // separate switches, and `2026-09-04-189` cl.3 (member ≥ public) forbids ONE of the four
+  // combinations — public-revealed while members are not — which is REFUSED at the write path AND
+  // by a DB CHECK, ⛔ never merely documented.
+  // ⛔ NOT `pariwar_admin`, and that exclusion is the whole point of the two-key split: the write
+  // key must never quietly carry the reveal. ⛔ NOT district_admin / state_trustee — inert in both
+  // directions. NOT step-up-gated; accountability is the same rationale + actor + display snapshot
+  // + §1.5 audit line.
+  'pariwar.manage_drive_target_visibility',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

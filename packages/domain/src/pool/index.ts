@@ -42,6 +42,15 @@ export * from './fixed-amount.js';
 // (assertFixedAmountPanelAuthorized, the AC3 teeth) + the eligible-attestor DIRECTORY read the
 // picker consumes. Decision `2026-08-16-123` clauses 2-3. The typed error rides pool/errors.ts.
 export * from './fixed-amount-panel.js';
+// Story 11b.13 (Task 2/3) — the per-Pariwar DRIVE TARGET: the pure bounds + the `member ≥ public`
+// predicate (`drive-target.ts`) and the two governed write paths + resolvers
+// (`drive-target-policy.ts`).
+// ⚠⛔ IT SITS BESIDE `fixed-amount.ts` BECAUSE IT MIRRORS ITS SHAPE — ⛔ NOT because the two
+// interact. `pools.fixed_amount` is what a member OWES; the target is a **presentation
+// denominator** for Story 11b.14's meter. ⛔ Nothing reads the target when computing what a member
+// owes, is assigned, or has paid (AI-10-1, Story 11b.13 AC7).
+export * from './drive-target.js';
+export * from './drive-target-policy.js';
 // Story 7.6 (Tasks 1/2) — pool-bound payment enforcement: the member-cycle → assigned-pool +
 // collection-binding resolver (read from the PERSISTED snapshot, never a recompute — D1), the pure
 // wrong-pool classifier + its verdict/reason-code tuples (the contracts .strict() union is lockstep-

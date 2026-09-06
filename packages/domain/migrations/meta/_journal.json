@@ -806,6 +806,13 @@
       "when": 1790566800000,
       "tag": "0114_pool-public-address-token",
       "breakpoints": true
+    },
+    {
+      "idx": 115,
+      "version": "7",
+      "when": 1790653200000,
+      "tag": "0115_pariwar-drive-target",
+      "breakpoints": true
     }
   ]
 }

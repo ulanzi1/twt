@@ -29,10 +29,10 @@ import {
 const labels: SahyogLabels = {
   pageTitle: 'Sahyog Drive',
   pageIntro: 'Every drive this trust has run.',
-  tableCaptionActive: 'Active drives table',
-  tableCaptionArchive: 'Archived drives table',
-  sectionActiveTitle: 'Active drives',
-  sectionArchiveTitle: 'Archive',
+  tableCaptionActive: 'Closed drives table',
+  tableCaptionArchive: 'Verified drives table',
+  sectionActiveTitle: 'Closed drives',
+  sectionArchiveTitle: 'Verified drives',
   columnName: 'In memory of',
   columnPool: 'Drive code',
   columnLetter: 'Pool',
@@ -43,8 +43,9 @@ const labels: SahyogLabels = {
   columnOutcome: 'Close of cycle',
   districtUnknown: 'Not recorded',
   dateUnknown: 'Not recorded',
-  statusActive: 'Active',
-  statusArchive: 'Archive',
+  // ⚠ D3 — the FIELD names are historical; the VALUES are the ruled words (Story 11b.12).
+  statusActive: 'Closed',
+  statusArchive: 'Verified',
   emptyTitle: 'No drives yet',
   emptyBody: 'When a drive closes it appears here.',
   emptyFilteredTitle: 'No drives match',
@@ -73,7 +74,7 @@ const row = (over: Partial<WireRow> = {}): WireRow => ({
   poolLetterCode: 'A',
   poolCanonicalIdentifier: 'P-2026-08-001',
   publicToken: 'tok-P-2026-08-001',
-  status: 'active',
+  status: 'closed',
   closedAt: '2026-08-01T00:00:00.000Z',
   district: 'Lucknow',
   confirmedContributionCount: 12,
@@ -162,7 +163,7 @@ describe('⭐ consent decides whether a row is NAMED, ⛔ never whether it EXIST
       poolCanonicalIdentifier: 'P-1',
       driveHref: '/sahyog-vivran/tok-P-1',
       driveLinkA11yLabel: 'View the full details of drive P-1',
-      driveStatus: 'Active',
+      driveStatus: 'Closed',
       driveClosedAt: '01-08-2026',
       district: 'Kanpur',
       confirmedContributionCount: '12 confirmed',
@@ -185,7 +186,7 @@ describe('⭐ consent decides whether a row is NAMED, ⛔ never whether it EXIST
         poolCanonicalIdentifier: 'P-1',
         driveHref: '/sahyog-vivran/tok-P-1',
         driveLinkA11yLabel: 'View the full details of drive P-1',
-        driveStatus: 'Active',
+        driveStatus: 'Closed',
         driveClosedAt: null,
         district: null,
         confirmedContributionCount: '0 confirmed',
@@ -353,16 +354,24 @@ describe('pagination + section split', () => {
     expect(view.hasNext).toBe(false);
   });
 
-  it('splits ONE bounded page into Active and Archive — ⛔ not two reads', () => {
+  // ⭐⭐ THE SECTION PARTITION, WITH **BOTH** RULED TOKENS PRESENT (Story 11b.12, AC1).
+  // ⚠⛔ THIS IS WHAT PINS `sahyog-render.ts:338`, and it is ⛔ NOT a label test. The partition
+  // branches on the WIRE TOKEN (`item.status === 'verified'`), ⛔ not on the `:296` label ternary
+  // — a dev who renames only the ternary meets `:338` as a bare type error and may invert or widen
+  // it. ⭐ Feeding BOTH tokens and asserting the two section lengths is the only shape that catches
+  // that; the file's own `:178-184` records what breaking it did in production.
+  it('splits ONE bounded page on the WIRE TOKEN — `closed` and `verified` land in different sections', () => {
     const view = buildSahyogView(
       { page: 1, limit: 25 },
       search(),
       labels,
-      wire([row({ status: 'active' }), row({ status: 'archive' }), row({ status: 'active' })]),
+      wire([row({ status: 'closed' }), row({ status: 'verified' }), row({ status: 'closed' })]),
     );
     const { active, archive } = splitSections(view);
     expect(active).toHaveLength(2);
     expect(archive).toHaveLength(1);
+    // ⛔ EXHAUSTIVE AND DISJOINT: every row lands in exactly one section — ⛔ none twice, ⛔ none lost.
+    expect(active.length + archive.length).toBe(view.model.rows.length);
   });
 
   // ⭐⛔ THE PARTITION SURVIVES A LOCALE WHOSE TWO STATUS LABELS COINCIDE (Review finding,
@@ -385,7 +394,7 @@ describe('pagination + section split', () => {
       { page: 1, limit: 25 },
       search(),
       collidingLabels,
-      wire([row({ status: 'active' }), row({ status: 'archive' }), row({ status: 'active' })]),
+      wire([row({ status: 'closed' }), row({ status: 'verified' }), row({ status: 'closed' })]),
     );
     const { active, archive } = splitSections(view);
     expect(active).toHaveLength(2);

@@ -1,0 +1,16 @@
+{
+  "$comment": "⭐ THE ONE SHARED SAHYOG COPY SOURCE (Story 11b.12, `2026-09-04-193` cl.3). ⛔ There is NO second definition of the three stage words, and there may not be: two sources is exactly how 'Active' came to mean two different things. `apps/public` reads it today; `apps/mobile` resolves it and story E (11b-15) renders it. ⛔ Do NOT copy these strings into apps/mobile, into sahyog-drive.json, or into sahyog-vivran.json.",
+  "stage.live": "Live",
+  "stage.closed": "Closed",
+  "stage.verified": "Verified",
+  "stage.live.help": "Contributions are open. Colleagues contribute to the family directly, throughout the drive.",
+  "stage.closed.help": "Contributions have finished. They are now being checked against bank records.",
+  "stage.verified.help": "Every contribution has been checked against bank records. The drive stays here as a permanent record.",
+  "stage.explainer.summary": "What these stages mean",
+  "stage.explainer.a11y": "What these stages mean — opens an explanation of each stage",
+  "$comment.index_line": "⭐⭐ TRUSTEE-RATIFIED (Dhiraj Rahul + Kalpana Bharti, 2026-09-05) — routing note §9.2, ruling 3 at §10.2. ⛔ AUTHORED HERE, RENDERED NOWHERE YET: `{amount}` and `{nominee_name}` are BOTH dark until story D (11b-14 AC7 / Task 8) supplies them. ⭐ `t()` THROWS on an unsupplied token (`resolver.ts:36-42`) — ⚠ ⛔ NOT the silent empty-figure the story's AC9 assumed; CHECKED, ⛔ not assumed — so a premature render fails LOUDLY rather than shipping a blank ₹. ⛔ Render none of these until every token is supplied. ⭐ RULING 3: an absent token DROPS ITS CLAUSE — ⛔ no combinatorial variants; pick the ONE variant naming the absent token. ⚠ `no_family` drops the district clause TOO, because 'who served in … district' modifies the DECEASED MEMBER — leaving it would attribute the posting district to the NOMINEE.",
+  "index_line.full": "{amount} contributed by colleagues for {nominee_name}, nominee of Late {family_name}, who served in {district_name} district.",
+  "index_line.no_nominee": "{amount} contributed by colleagues for Late {family_name}, who served in {district_name} district.",
+  "index_line.no_family": "{amount} contributed by colleagues for {nominee_name}.",
+  "index_line.no_district": "{amount} contributed by colleagues for {nominee_name}, nominee of Late {family_name}."
+}

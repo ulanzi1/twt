@@ -72,20 +72,42 @@ import { z } from 'zod';
 /**
  * The drive's public status. ⭐ THREE labels here, ⛔ not the index's two.
  *
- * `collecting` derives from `pools.current_state = 'live'`, `active` from `'closed'` (the collection
- * window has shut; the family is not yet paid) and `archive` from `'settled'` (disbursed; terminal).
+ * `live` derives from `pools.current_state = 'live'` (contributions are open), `closed` from
+ * `'closed'` (contributions have finished; they are being checked against bank records) and
+ * `verified` from `'settled'` (every contribution checked; terminal).
+ * ⚠⛔ THE PREVIOUS TEXT HERE SAID *"the family is not yet paid"* / *"disbursed"*. ⛔ Both are FALSE:
+ * `2026-09-04-192` establishes the trust ⛔ NEVER disburses — colleagues pay the nominee directly,
+ * so a family is paid THROUGHOUT a drive, ⛔ never at a payout step (Story 11b.12, AC2).
  *
  * ⚠⛔ THE THIRD LABEL IS WHY THIS ENUM IS NOT `PublicSahyogDriveStatus`. **D4(b)** (`2026-09-02-176`)
  * ruled this surface renders `live` + `closed` + `settled`, WIDER than the index's
  * `SAHYOG_DRIVE_VISIBLE_POOL_STATES`. ⛔ Do not "unify" the two enums: two surfaces, two predicates,
  * deliberately, and collapsing them would silently widen the INDEX.
  *
- * ⚠ NOTE THE INHERITED INVERSION: the drive a visitor reads as *"active"* is the one the substrate
- * calls `closed`. ⛔ Not a mistake to tidy — the internal word describes the CONTRIBUTION WINDOW, the
- * public word the DRIVE's standing in the record. ⛔ The internal tokens `spawned`, `live`, `closed`
- * and `settled` must never cross this boundary (`2026-08-21-144` cl.8).
+ * ⛔⛔ THE PREVIOUS RULE HERE IS SUPERSEDED, AND IT IS **RETRACTED BY NAME**, ⛔ not silently
+ * overwritten ([[feedback_supersede_never_reinterpret]]). It read:
+ *
+ *   > *"NOTE THE INHERITED INVERSION: the drive a visitor reads as 'active' is the one the substrate
+ *   > calls `closed`. **⛔ Not a mistake to tidy** — the internal word describes the CONTRIBUTION
+ *   > WINDOW, the public word the DRIVE's standing in the record. ⛔ The internal tokens `spawned`,
+ *   > `live`, `closed` and `settled` must never cross this boundary."*
+ *
+ * ⚠⛔ **THE *"⛔ Not a mistake to tidy"* SENTENCE IS RETRACTED IN PARTICULAR.** It was an instruction
+ * to a future reader ⛔ **not to do the thing Story 11b.12's D1(b) rules** — and leaving it standing
+ * would be worse than leaving a stale word. Story 11b.12 (**D1(b)**, BigDev 2026-09-04, implementing
+ * Trustee-ratified `2026-09-04-190` cl.5 / `-191` cl.3 / `-193` cl.1) rules that the inversion **IS**
+ * to be aligned: the public words are **Live · Closed · Verified** and the wire says the same.
+ *
+ * ⭐⭐ SO `live` AND `closed` NOW APPEAR ON BOTH SIDES OF THE BOUNDARY, AND THAT COINCIDENCE IS
+ * **RULED**, ⛔ NOT A LEAK. `2026-08-21-144` cl.8 records `/members` having leaked the internal
+ * `lock-in` value onto a public JSON route; the property that clause protects is *"⛔ no **UN-RULED**
+ * internal vocabulary crosses"*, ⛔ **not** *"these four particular strings never appear"*. ⇒ the
+ * anti-leak tests are ALLOW-lists (this enum's members, exactly), ⛔ never deny-lists.
+ * ⚠⛔ **⛔ Do ⛔ NOT "fix" the overlap by reverting the wire** — read D1(b) first.
+ *
+ * ⚠ `spawned` remains a **PURE DENY**: it has ⛔ no public token at all and must ⛔ never cross.
  */
-export const PublicSahyogVivranStatus = z.enum(['collecting', 'active', 'archive']);
+export const PublicSahyogVivranStatus = z.enum(['live', 'closed', 'verified']);
 export type PublicSahyogVivranStatus = z.output<typeof PublicSahyogVivranStatus>;
 
 /**

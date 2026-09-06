@@ -50,18 +50,34 @@ export const PUBLIC_SAHYOG_DRIVE_PAGE_HORIZON = PUBLIC_DIRECTORY_PAGE_HORIZON;
 /**
  * The drive's public status. TWO labels, and ⛔ exactly two.
  *
- * ⭐ THIS ENUM SPEAKS THE PUBLIC VOCABULARY, ⛔ NEVER THE INTERNAL LIFECYCLE VOCABULARY.
- * `active` derives from `pools.current_state = 'closed'` (the collection window has shut; the
- * family is not yet paid) and `archive` from `'settled'` (disbursed; terminal).
+ * ⭐ THIS ENUM SPEAKS THE PUBLIC VOCABULARY. `closed` derives from `pools.current_state = 'closed'`
+ * (contributions have finished; they are being checked against bank records) and `verified` from
+ * `'settled'` (every contribution checked; terminal).
  *
- * ⚠ NOTE THE DELIBERATE INVERSION: the drive a visitor reads as *"active"* is the one the substrate
- * calls `closed`. That is not a mistake to tidy — the internal word describes the CONTRIBUTION
- * WINDOW, the public word describes the DRIVE's standing in the record. ⛔ The internal tokens
- * `spawned`, `live`, `closed` and `settled` must never cross this boundary; `2026-08-21-144` cl.8
- * records `/members` having leaked the internal `lock-in` value onto a public JSON route, and this
- * surface is built not to repeat it.
+ * ⛔⛔ THE PREVIOUS RULE HERE IS SUPERSEDED, AND IT IS NAMED RATHER THAN OVERWRITTEN
+ * ([[feedback_supersede_never_reinterpret]]). It read:
+ *
+ *   > *"NOTE THE DELIBERATE INVERSION: the drive a visitor reads as 'active' is the one the
+ *   > substrate calls `closed`. That is not a mistake to tidy … ⛔ The internal tokens `spawned`,
+ *   > `live`, `closed` and `settled` must never cross this boundary."*
+ *
+ * ⚠ That rule is **FALSE AS WRITTEN** from Story 11b.12 (**D1(b)**, BigDev 2026-09-04, implementing
+ * Trustee-ratified `2026-09-04-190` cl.5 / `-191` cl.3 / `-193` cl.1). The public words are now
+ * **Live · Closed · Verified**, and the wire is ALIGNED to them — because a wire that says `active`
+ * for a drive the page labels *"Closed"* re-creates, one layer down, the exact word-means-its-
+ * opposite trap the ruling exists to remove.
+ *
+ * ⭐⭐ SO `closed` NOW APPEARS ON BOTH SIDES OF THE BOUNDARY, AND THAT COINCIDENCE IS **RULED**,
+ * ⛔ NOT A LEAK. `2026-08-21-144` cl.8 records `/members` having leaked the internal `lock-in` value
+ * onto a public JSON route; the property that clause protects is *"⛔ no **UN-RULED** internal
+ * vocabulary crosses"*, ⛔ **not** *"these four particular strings never appear"*. ⇒ the anti-leak
+ * tests are ALLOW-lists (this enum's members, exactly), ⛔ never deny-lists.
+ * ⚠⛔ **⛔ Do ⛔ NOT "fix" the overlap by reverting the wire** — read D1(b) first.
+ *
+ * ⚠ `spawned` remains a **PURE DENY**: it has ⛔ no public token at all and must ⛔ never cross.
+ * ⛔ `live` is ⛔ **NOT** a member here — the index does ⛔ not list live drives (Story 11b-14).
  */
-export const PublicSahyogDriveStatus = z.enum(['active', 'archive']);
+export const PublicSahyogDriveStatus = z.enum(['closed', 'verified']);
 export type PublicSahyogDriveStatus = z.output<typeof PublicSahyogDriveStatus>;
 
 /**

@@ -778,111 +778,111 @@ the key) · ⛔ any key or field NAME (D3) · ⛔ `locales/*/members.json` (AC1)
       ⭐ Extended 2026-09-05 with the **mapping table** (⛔ the index enum stays **TWO** members), and
       2026-09-06 to **all NINE** Trap 1 sites — ⚠ four un-gated **RULE** doc-blocks and five
       **ASSERTIONS** that go red. ⇒ Tasks 2-6 unblocked; ⛔ `spawned` stays a pure deny.
-- [ ] **Task 2 — The shared copy source** (AC4, AC1, AC2, AC3)
-  - [ ] ⚠ **DECIDE FIRST, and record the reason in the Dev Agent Record**: does the shared stage set go
+- [x] **Task 2 — The shared copy source** (AC4, AC1, AC2, AC3)
+  - [x] ⚠ **DECIDE FIRST, and record the reason in the Dev Agent Record**: does the shared stage set go
         in a **new** namespace, or into one of the two existing registered ones? ⭐ Trap 6 prices both.
-  - [ ] Create ONE keyed stage set — three names + one explanation each + the affordance's label,
+  - [x] Create ONE keyed stage set — three names + one explanation each + the affordance's label,
         `en` + `hi`. ⛔ No new package (Trap 9).
-  - [ ] ⭐ **If a new namespace**: all five `catalog.ts` edits (`:42`, `:57`, `:66`, `:67`, `:71`) in
+  - [x] ⭐ **If a new namespace**: all five `catalog.ts` edits (`:42`, `:57`, `:66`, `:67`, `:71`) in
         **this same commit**, then **run** `packages/i18n/tests/catalog-registration.test.ts`.
         ⛔ A green parity gate proves ⛔ nothing here (Trap 6).
-  - [ ] ⚠ Rewrite **ALL SEVEN** offending `sahyog-drive.json` values, ⛔ **not four**: `:3` `page.intro`
+  - [x] ⚠ Rewrite **ALL SEVEN** offending `sahyog-drive.json` values, ⛔ **not four**: `:3` `page.intro`
         · `:4` `section.active.title` · `:5` `section.active.help` · `:6` `section.archive.title` ·
         `:7` `section.archive.help` · `:8` `table.caption.active` · `:9` `table.caption.archive`;
         delete `status.active` / `status.archive` `:41-42`. ⭐ **Both locales.**
-  - [ ] Rewrite `sahyog-vivran.json` `:13-15` `status.*`; ⭐ **rewrite the VALUES of** `:16-17`
+  - [x] Rewrite `sahyog-vivran.json` `:13-15` `status.*`; ⭐ **rewrite the VALUES of** `:16-17`
         `collecting.title` / `collecting.body` — ⛔ **keep the key names** (**D3**), and leave the
         one-line note D3 requires.
-  - [ ] ⭐ **Re-derive the offender list rather than trusting this one** —
+  - [x] ⭐ **Re-derive the offender list rather than trusting this one** —
         `python3 -c "import json;d=json.load(open(P));print([k for k,v in d.items() if any(w in v.lower() for w in ('active','collect','archiv'))])"`
         over **all four** files. ⚠ The list above has been wrong once already.
-  - [ ] ⛔⛔ **The `hi` side needs its OWN check** (AC1) — ⚠ the English word ban finds **ZERO** hits in
+  - [x] ⛔⛔ **The `hi` side needs its OWN check** (AC1) — ⚠ the English word ban finds **ZERO** hits in
         `hi/*.json` **by construction**, so it ⛔ cannot tell a translated file from an untouched one.
         ⇒ pin the ruled **Hindi** words positively at `status.*`, or state that review is the only guard.
-  - [ ] ⛔ Do ⛔ **NOT** touch `outcome.under_funded` `:44` (**D2** — closed, and it stays closed
+  - [x] ⛔ Do ⛔ **NOT** touch `outcome.under_funded` `:44` (**D2** — closed, and it stays closed
         without moving the key).
-  - [ ] ⚠ `t()` **THROWS** on a missing key — every locale changes in the **same commit**;
+  - [x] ⚠ `t()` **THROWS** on a missing key — every locale changes in the **same commit**;
         `packages/i18n/tests/parity.test.ts` backs this, ⛔ do not hand-verify. ⚠⛔ And ⛔ it compares
         **KEY SETS, ⛔ never VALUES** — ⛔ it cannot see an untranslated Hindi string.
-- [ ] **Task 2b — ⭐⭐ THE TWO DARK COPY TOKENS** (**AC9**) — ⚠ **story D is already written against this**
-  - [ ] Author, in the shared copy source, the **Panel-ratified index line** carrying `{amount}` **and**
+- [x] **Task 2b — ⭐⭐ THE TWO DARK COPY TOKENS** (**AC9**) — ⚠ **story D is already written against this**
+  - [x] Author, in the shared copy source, the **Panel-ratified index line** carrying `{amount}` **and**
         `{nominee_name}` — ⭐ **verbatim** from the routing note §8.1 / §9.1, ⛔ not paraphrased.
-  - [ ] Author the **no-token variants** the omit-the-clause rule (D2 ruling 3) requires — ⭐ **one per
+  - [x] Author the **no-token variants** the omit-the-clause rule (D2 ruling 3) requires — ⭐ **one per
         absent token**, ⛔ **NOT** the combinatorial cross-product.
-  - [ ] ⛔ ⛔ **Render NEITHER token.** ⚠ `t()` interpolates an unsupplied token to **nothing** ⇒ ⛔ no
+  - [x] ⛔ ⛔ **Render NEITHER token.** ⚠ `t()` interpolates an unsupplied token to **nothing** ⇒ ⛔ no
         empty `₹` and ⛔ no dangling *"nominee of"* may reach a page.
-  - [ ] ⭐ Record each variant's **key path** in the Dev Agent Record **and** write it into
+  - [x] ⭐ Record each variant's **key path** in the Dev Agent Record **and** write it into
         `11b-14`'s **AC7 / Task 8** by name — ⛔ so story D consumes it, ⛔ never mints its own
         (**Trap 9**; the failure mode is spelled out at AC9).
-  - [ ] ⛔ Still ⛔ **no** `outcome.under_funded` edit, ⛔ no wire change, ⛔ no tier change,
+  - [x] ⛔ Still ⛔ **no** `outcome.under_funded` edit, ⛔ no wire change, ⛔ no tier change,
         ⛔ no `apps/mobile` change. ⭐ **Strings only** — which is why this is compatible with **AC7**.
-- [ ] **Task 3 — The wire + the maps** (AC1, AC5, AC7; shape per **D1's mapping table**)
-  - [ ] `PublicSahyogDriveStatus` (`sahyog-drive.ts:64`) → **`['closed','verified']`** — ⛔ **TWO**
+- [x] **Task 3 — The wire + the maps** (AC1, AC5, AC7; shape per **D1's mapping table**)
+  - [x] `PublicSahyogDriveStatus` (`sahyog-drive.ts:64`) → **`['closed','verified']`** — ⛔ **TWO**
         members. ⛔ Do ⛔ NOT add `live` (AC7 — story D).
-  - [ ] `PublicSahyogVivranStatus` (`sahyog-vivran.ts:88` — ⚠ ⛔ **not `:75`**) →
+  - [x] `PublicSahyogVivranStatus` (`sahyog-vivran.ts:88` — ⚠ ⛔ **not `:75`**) →
         **`['live','closed','verified']`**.
-  - [ ] `SAHYOG_DRIVE_STATUSES` + map (`public-read.ts:110,113-116`);
+  - [x] `SAHYOG_DRIVE_STATUSES` + map (`public-read.ts:110,113-116`);
         `SAHYOG_VIVRAN_STATUSES` + map (`sahyog-vivran-read.ts:151,154-158`).
-  - [ ] ⚠ **`sahyog-vivran-read.ts:478`** — `status === 'collecting'` gates whether
+  - [x] ⚠ **`sahyog-vivran-read.ts:478`** — `status === 'collecting'` gates whether
         `classifyCycleOutcome` runs. ⇒ it becomes **`'live'`**. ⛔⛔ Get this wrong and a **still-collecting
         drive publishes a funding verdict mid-window** — ⭐ the exact thing `classifyCycleOutcome` exists
         to quarantine.
-  - [ ] ⭐ **Pin the part-identity** at both maps — ⛔ the map is ⛔ not a no-op; `spawned` proves it
+  - [x] ⭐ **Pin the part-identity** at both maps — ⛔ the map is ⛔ not a no-op; `spawned` proves it
         (D1's mapping table).
-  - [ ] ⭐ **Amend ALL FOUR stale RULE doc-blocks** (Trap 1 (i), AC5): `sahyog-drive.ts:57-62`,
+  - [x] ⭐ **Amend ALL FOUR stale RULE doc-blocks** (Trap 1 (i), AC5): `sahyog-drive.ts:57-62`,
         `sahyog-vivran.ts:83-86`, `public-read.ts:106-108`, `sahyog-vivran-read.ts:145-150`.
         ⚠ **Retract `sahyog-vivran.ts:83-86`'s *"⛔ Not a mistake to tidy"* BY NAME** — ⛔ it instructs
         the next reader ⛔ not to do what D1(b) rules.
-  - [ ] Amend the doc-comments that state the old vocabulary: `public-read.ts:488`,
+  - [x] Amend the doc-comments that state the old vocabulary: `public-read.ts:488`,
         `surface-fields.ts:458`. ⛔ Amend and NAME the previous value, ⛔ do not silently overwrite.
-- [ ] **Task 4 — The public render + info affordance** (AC1, AC2, AC3, AC6)
-  - [ ] ⛔⛔ **FIRST, THE TWO RUNTIME GUARDS THE TYPECHECK ⛔ CANNOT SEE** (Trap 7):
+- [x] **Task 4 — The public render + info affordance** (AC1, AC2, AC3, AC6)
+  - [x] ⛔⛔ **FIRST, THE TWO RUNTIME GUARDS THE TYPECHECK ⛔ CANNOT SEE** (Trap 7):
         ⛔⛔ **`sahyog.server.ts:202`** — `(r['status'] === 'active' || r['status'] === 'archive')` —
         and `sahyog-vivran.server.ts:191-193`. ⚠ Miss `:202` and **`/sahyog` serves its OUTAGE page to
         every visitor** with a green typecheck and a green unit suite.
-  - [ ] ⭐ **The render layer, ⛔ not just the `.astro` files** (Trap 7): `sahyog-render.ts`
+  - [x] ⭐ **The render layer, ⛔ not just the `.astro` files** (Trap 7): `sahyog-render.ts`
         `:102-105,:122-123`, ⚠ **the `:296` ternary** and ⛔⛔ **the `:338` SECTION PARTITION**;
         `sahyog-vivran-render.ts` the `statusLabel` switch `:238-252` and `isCollecting` `:348`.
         ⛔ Do ⛔ NOT rename the fields (**D3**).
-  - [ ] `sahyog.astro` section headings/help; ⚠ `[driveToken].astro` the **full** label block
+  - [x] `sahyog.astro` section headings/help; ⚠ `[driveToken].astro` the **full** label block
         `:127-131` (⛔ not `:127,130-131` — `statusActive` `:128` / `statusArchive` `:129` are in it)
         and `:373-375`.
-  - [ ] Add the `<details>`/`<summary>` stage explainer to both pages. ⛔ No client script (Trap 4).
-  - [ ] ⭐ **First `<details>` in `apps/public`** — ship the marker reset **and** a visible focus ring
+  - [x] Add the `<details>`/`<summary>` stage explainer to both pages. ⛔ No client script (Trap 4).
+  - [x] ⭐ **First `<details>` in `apps/public`** — ship the marker reset **and** a visible focus ring
         (Trap 4). ⛔ There is ⛔ no house pattern to inherit; establish one and say so.
-  - [ ] ⛔ Do ⛔ NOT touch the `.length > 0` guards at `sahyog.astro:461` / `:514` (Trap 3).
-- [ ] **Task 5 — ⛔ NO MOBILE RENDER. Hand off to story E instead.** (AC4, AC3)
-  - [ ] ⭐ **Verify** the shared set **resolves** from `apps/mobile` — ⛔ a resolution test, ⛔ **not** a
+  - [x] ⛔ Do ⛔ NOT touch the `.length > 0` guards at `sahyog.astro:461` / `:514` (Trap 3).
+- [x] **Task 5 — ⛔ NO MOBILE RENDER. Hand off to story E instead.** (AC4, AC3)
+  - [x] ⭐ **Verify** the shared set **resolves** from `apps/mobile` — ⛔ a resolution test, ⛔ **not** a
         rendered component. `packages/i18n` is already a mobile dep (`apps/mobile/package.json:34`).
-  - [ ] ⛔ ⛔ Change ⛔ **NO** `apps/mobile` component. ⛔ Do ⛔ not add a stage to
+  - [x] ⛔ ⛔ Change ⛔ **NO** `apps/mobile` component. ⛔ Do ⛔ not add a stage to
         `SahyogVivranEntry.tsx` — ⚠ it is a link-out card and the app has ⛔ no stage surface (Trap 5).
-  - [ ] ⭐ **FILL IN** the exact key path this story shipped at `11b-15`'s **AC4 / Task 4**. ⚠ The
+  - [x] ⭐ **FILL IN** the exact key path this story shipped at `11b-15`'s **AC4 / Task 4**. ⚠ The
         **reciprocal note is already there** (landed `f06bbad6`) and says *"if B's key path is not
         recorded above by the time this story starts, ⛔ stop and read B's Dev Agent Record"* — ⇒ the
         note is ⛔ not the work; ⭐ **the path is**, and it is unknowable until Task 2 picks the namespace.
-- [ ] **Task 6 — The tests** (AC1, AC2, AC5, AC6)
-  - [ ] Copy test: *"Active"* / *"Collecting"* / *"Archive"* absent from both locales of the **two
+- [x] **Task 6 — The tests** (AC1, AC2, AC5, AC6)
+  - [x] Copy test: *"Active"* / *"Collecting"* / *"Archive"* absent from both locales of the **two
         sahyog namespaces**. ⛔ Do ⛔ NOT widen it repo-wide — `members.json` would false-fail (AC1).
-  - [ ] Copy test: `/not yet been paid/i`, `/paid out/i`, `/to be paid/i` absent — ⭐ **case-insensitive
+  - [x] Copy test: `/not yet been paid/i`, `/paid out/i`, `/to be paid/i` absent — ⭐ **case-insensitive
         and concept-shaped** (AC2, Trap 2). ⛔ Not the two literal sentences.
-  - [ ] Copy test: exactly ONE definition of the stage set (AC4).
-  - [ ] ⭐ **Re-shape ALL NINE Trap 1 sites** per D1 — the **four RULE doc-blocks** (Trap 1 (i), done in
+  - [x] Copy test: exactly ONE definition of the stage set (AC4).
+  - [x] ⭐ **Re-shape ALL NINE Trap 1 sites** per D1 — the **four RULE doc-blocks** (Trap 1 (i), done in
         Task 3) and the **five ASSERTION sites**: `sahyog-drive.spec.ts:595-612`,
         `public-pages-sahyog-vivran.test.ts:155-165`, `sahyog-vivran-read.test.ts:52-64` (**two tests**),
         and `sahyog-vivran.spec.ts:580-600`. ⚠ Each preserving at least as much, each carrying the cl.8
         note (AC5). ⛔ `sahyog-vivran.spec.ts` is an **anti-leak site**, ⛔ not a fixture repair.
-  - [ ] ⭐ **Repair the NINE shipped files in Trap 8** — ⚠ ⛔ not six. ⛔ Repair the fixtures; ⛔ do ⛔ not
+  - [x] ⭐ **Repair the NINE shipped files in Trap 8** — ⚠ ⛔ not six. ⛔ Repair the fixtures; ⛔ do ⛔ not
         weaken the assertions. ⛔ Do ⛔ **NOT** touch `scrape-test.spec.ts:106` (member directory) or
         `sahyog-vivran-client.test.ts:150-158` (the `'settled'` rejection **stays green**).
-  - [ ] ⛔⛔ **New, and ⛔ NOT optional: an END-TO-END assertion that each page still SERVES.** ⚠ A
+  - [x] ⛔⛔ **New, and ⛔ NOT optional: an END-TO-END assertion that each page still SERVES.** ⚠ A
         renamed wire token must still render **rows**, ⛔ not the *"unavailable"* arm — ⭐ the only
         thing that catches `sahyog.server.ts:202` (Trap 7, AC1).
-  - [ ] ⛔⛔ **New: the SECTION PARTITION, with BOTH tokens present** — a `closed` row and a `verified`
+  - [x] ⛔⛔ **New: the SECTION PARTITION, with BOTH tokens present** — a `closed` row and a `verified`
         row land in **different** sections and the two lengths sum to the row count. ⭐ This is what
         pins `sahyog-render.ts:338`; ⚠ the shipped `:371-394` regression is the precedent, ⛔ repair it,
         ⛔ do ⛔ not delete it.
-  - [ ] New: an empty stage section renders ⛔ no heading, ⛔ no caption, ⛔ no table (AC6).
-  - [ ] ⭐ **Execute them** against `twt-test-pg` on `:5433` — ⛔ *"written but not run"* is ⛔ not
+  - [x] New: an empty stage section renders ⛔ no heading, ⛔ no caption, ⛔ no table (AC6).
+  - [x] ⭐ **Execute them** against `twt-test-pg` on `:5433` — ⛔ *"written but not run"* is ⛔ not
         attested; that exact gap shipped a red spec at 11b.10. ⭐ Run `catalog-registration.test.ts`
         and `parity.test.ts` explicitly (Trap 6).
 - [ ] **Task 7 — The friction-budget disposition** (AC8)
@@ -972,11 +972,219 @@ use the house **source-scan** pattern, and state its limitation rather than glos
 
 ### Agent Model Used
 
+`claude-opus-5` (Claude Code, bmad-dev-story).
+
 ### Debug Log References
+
+⭐ **Every coordinate in this story was re-derived before editing, ⛔ never trusted** (the file said so
+twice, and it was right twice — see the two corrections below).
+
+- Trap 1 re-derivation, exactly as the story prescribes:
+  `grep -rn "never cross" --include="*.ts" --include="*.astro" packages/*/src packages/*/tests apps/*/src apps/*/tests`
+  plus `grep -rn "2026-08-21-144"`. ⇒ the **nine** sahyog sites confirmed; the `directory.ts` /
+  `public-pages-directory-vocabulary.test.ts` hits are the **member-lifecycle** family and are ⛔ out
+  of scope (AC1's carve-out).
+- Trap 6 discharged and **executed**, ⛔ not assumed: `packages/i18n/tests/catalog-registration.test.ts`
+  and `parity.test.ts` (14 passed) plus the `i18n:check-parity` script (green, and it now lists
+  `sahyog-shared`).
+- Mutation check on the `sahyog.server.ts` guard (below) — ⛔ the one claim in this story that could
+  ⛔ not be taken on trust.
+- Live-DB specs run against `twt-test-pg` on `:5433` with `--fileParallelism=false`
+  ([[project_ci_local_concurrency_oversubscription]] — `integration-tests` concurrency is
+  load-bearing).
 
 ### Completion Notes List
 
+#### ⭐ Task 2 — the namespace decision, and WHY (Task 2 leaves this open deliberately)
+
+⭐ **A NEW namespace, `sahyog-shared`** — ⛔ not keys bolted onto one of the two existing ones.
+Trap 6 prices the new-namespace option at five `catalog.ts` hand-edits; that cost was paid and the
+mechanized guard was run. ⭐ The reason it is worth paying:
+
+1. **AC4 becomes CHECKABLE rather than conventional.** *"⛔ There is ⛔ no second definition"* is
+   asserted by scanning **every** locale file on disk for a `stage.*` key outside `sahyog-shared` —
+   a shape that is only expressible when the shared set has a home of its own.
+2. ⛔ **The cross-namespace read runs the wrong way.** Putting the stage words in `sahyog-vivran`
+   would make the **index** read a *drive page's* namespace, and would have **story E** import a
+   public **web page's** namespace to render a phone screen. ⚠ That is precisely the invitation to
+   re-mint that Trap 9 describes.
+3. ⭐ **AC9's ratified index line has no honest home in either existing namespace** — it is index
+   copy that story **D** renders, authored by **B**. It belongs with the other shared, ratified copy.
+
+⚠ **The `hi` positive pin (AC1) is a real test, ⛔ not a review promise.** The ruled Hindi words —
+**जारी · बंद · सत्यापित** — are asserted PRESENT at `stage.*`, and the four retired Devanagari labels
+(सक्रिय / अभिलेख / संग्रहण) are asserted ABSENT. ⭐ The story is right that the English ban is
+structurally blind here and that `parity.test.ts` compares key sets, ⛔ never values.
+
+#### ⚠⛔ THREE CORRECTIONS TO THE STORY, all checked ⛔ not inferred
+
+**(1) ⛔⛔ `t()` does ⛔ NOT "interpolate an unsupplied token to nothing" — it THROWS.**
+AC9, Task 2b and D2's note all state that an unrendered `{amount}` would put *"an empty rupee
+figure"* on a page. ⭐ Verified at `packages/i18n/src/resolver.ts:36-42`: an unsupplied `{token}`
+raises `[i18n] missing interpolation param`. ⇒ the real failure mode of a premature render is a
+**500 / the outage arm**, ⛔ not a silently-wrong page. ⭐ **The conclusion is unchanged and the
+guarantee is STRONGER**, but the premise is recorded correctly — in the test header, in both locale
+`$comment` notes, and in the note written into `11b-14` — so the next reader does ⛔ not hunt for a
+blank ₹ this resolver cannot produce.
+
+**(2) ⚠ The `en` offender re-derivation disagrees with the story's list, in BOTH directions.**
+Running Task 2's own script over the four files returns **nine** `sahyog-drive` hits, ⛔ not seven:
+it **adds** `empty.body` (*"collection window"*) and **omits** `section.archive.help` (*"Paid out to
+the family"* contains no banned substring — it is an **AC2** offender, ⛔ not an AC1 one).
+⇒ ⭐ **the AC1 test is WORD-BOUNDARY, ⛔ not substring**, and that is load-bearing in both
+directions: a substring `collect` would **false-fail on D3's own ratified AFTER copy**, which retains
+*"the … window closes"* prose. ⛔ `empty.body` is left untouched — *"collection window"* is ⛔ not a
+stage name, and D3's ruling keeps that phrase.
+
+**(3) ⛔ Trap 8 is TEN files, ⛔ not nine — and Trap 1's site list missed one line.**
+`apps/api/tests/integration/public-pages/sahyog-drive.spec.ts:379` asserts
+`expect(body.items[0]?.['status']).toBe('active')` inside the *publication-basis* test — ⛔ named
+nowhere in Trap 1 or Trap 8, ⛔ invisible to the typecheck (it is a string against `unknown`), and it
+went **RED only on the live-DB run**. ⭐ Found by sweeping the integration tree rather than working
+the list. ⚠ Two further stale prose lines were also un-named and carried the **payout falsehood**:
+`contracts/src/public-pages/sahyog-vivran.ts:75-76` and `domain/src/pool/public-read.ts:488`.
+
+#### ⛔⛔ The `sahyog.server.ts` guard — the claim was MUTATION-TESTED, ⛔ not asserted
+
+⚠ The story's sharpest warning is that `:202` can ship green and serve the **outage** page to 100% of
+visitors. ⭐ That is now checked rather than believed. With the old literals restored:
+
+| Suite | Through the defect |
+|---|---|
+| `tsc --noEmit` (all four packages) | ⭐ **GREEN** |
+| `sahyog-copy` + `sahyog-render` | ⭐ **GREEN** — 113 passed |
+| ⛔ `sahyog-serves.test.ts` (new) | ⛔ **RED** — 3 failures |
+
+⇒ the story's claim is **confirmed exactly**, and the new file is the only thing in the tree that
+catches it. ⭐ Its enum is **derived from the contract** (`PublicSahyogDriveStatus.options`), ⛔ never
+hand-listed — a hand-listed tuple would drift the same way the guard did and pass through the very
+defect it exists for. ⭐ It also asserts a **retired** token is still REJECTED, so the guard cannot
+pass by being merely permissive.
+
+#### ⭐ AC9 — the two dark tokens, and the coupling the ruling did ⛔ not anticipate
+
+⭐ **Key paths shipped** (namespace **`sahyog-shared`**, both locales, verbatim from routing note
+**§9.2**), and written into `11b-14`'s **AC7** and `11b-15`'s **AC4** by name:
+
+| Key | Renders when |
+|---|---|
+| `index_line.full` | `{amount}` `{nominee_name}` `{family_name}` `{district_name}` all present |
+| `index_line.no_nominee` | ⛔ no nominee name |
+| `index_line.no_family` | ⛔ no consented family name |
+| `index_line.no_district` | ⛔ no posting row |
+
+⭐ **Ruling 3 as FOUR strings, ⛔ not eight** — one variant per absent token, ⛔ no cross-product.
+
+⛔⛔ **AND A COUPLING RULING 3's WORDING DOES ⛔ NOT COVER, resolved and pinned.** Applied naively,
+*"an absent token drops its clause"* leaves the district clause standing when `{family_name}` is
+absent — but *"who served in {district_name} district"* / *"जनपद … में कार्यरत"* modifies the
+**DECEASED MEMBER**. ⇒ the sentence would attribute the posting district to the **NOMINEE**: a
+sentence-level factual claim about a named private individual that the data ⛔ cannot support — the
+same class of defect §9.3 raised about *"nominee of"* itself. ⭐ `no_family` therefore drops the
+dependent clause **with** its antecedent, and that is asserted, ⛔ not commented.
+⛔ **Neither token is rendered anywhere** — proved by a repo-wide scan for any source file resolving
+an `index_line.*` key (⭐ with the narrowing instruction for when story D lands, so the assertion is
+tightened rather than deleted).
+
+#### ⭐ Dispositions recorded, ⛔ not skipped
+
+- ⭐ **`-194` cl.1 — SATISFIED BY CONSTRUCTION, ⛔ not built.** ⛔ No second guard added; asserted
+  (`sahyog-empty-section.test.ts` pins that each guard appears **exactly once** and that the heading
+  **and** the caption sit *inside* it — a guard wrapping only the `<tbody>` would still emit a
+  heading over an empty table).
+- ⭐ **The financial-truth `SCAN_FILES` tax — ⛔ NOTHING OWED, and the gate was RUN (green).** This
+  story adds ⛔ no `.ts`/`.tsx`/`.astro` file to the Sahyog Vivran read path; its only new artifacts
+  are `.json` locale files, which `isCandidateExt` (`check.ts:121`) ⛔ does not scan.
+  ⇒ ⛔ `SCAN_FILES` **not extended** ([[project_access_wrapper_gate_pending_scope]] — *know when ⛔ NOT
+  to extend*).
+- ⚠ **D3's *"leave a one-line note in both locale files"* is discharged with a DEVIATION, stated
+  openly.** JSON admits ⛔ no comments, and a note key in a **member-facing** namespace is a string
+  the parity gate demands be translated. ⇒ the note rides a **`$comment`** key — ⭐ the convention
+  this repo already uses at `locales/classification.json` — worded to contain ⛔ none of the banned
+  words, and `$comment*` keys are excluded from the AC1 value scan **as developer notes that ⛔ never
+  reach `t()`**. The same note is also at `sahyog-vivran-render.ts:348` and both `.astro` label
+  blocks, as D3 requires.
+- ⛔ **`outcome.under_funded` untouched**, and *pinned* as untouched by an equality assertion, so its
+  survival is a recorded disposition rather than something a later pass "tidies".
+- ⛔ **`apps/mobile` renders nothing** — the only mobile file added is a **resolution** test. ⛔ No
+  component changed.
+- ⛔ **`scrape-test.spec.ts:106`** (`statusActive: 'Active'`, beside `columnStatus` / `statusLockIn`)
+  **left untouched** — verified in situ as the **member-directory** fixture AC1 carves out.
+- ⛔ **`sahyog-vivran-client.test.ts`'s `'settled'` rejection stays GREEN**, and now carries a note
+  saying why it must ⛔ not be "fixed": `settled` maps to `verified` and `spawned` to nothing, so the
+  un-ruled internal words are still refused — which is the whole property.
+
+#### ⭐ Verification actually run
+
+| Gate | Result |
+|---|---|
+| `tsc --noEmit` — contracts · domain · apps/public · apps/api | ⭐ clean |
+| `astro check` (52 files) | ⭐ 0 errors, 0 warnings, 0 hints |
+| `eslint` — i18n · contracts · domain · public · api · mobile | ⭐ clean |
+| unit — contracts 1100 · domain 1973 · public 481 · mobile 440 · i18n 80 | ⭐ all pass |
+| live-DB `:5433` — `sahyog-drive.spec` + `sahyog-vivran.spec` (47) | ⭐ pass |
+| live-DB `:5433` — `sahyog-drive-public-read.spec` (35) · `scrape-test.spec` (58) | ⭐ pass |
+| `i18n:check-parity` · `catalog-registration` · `parity` | ⭐ pass |
+| `microcopy` (308) · `sahyog-vivran-financial-truth` | ⭐ pass |
+
 ### File List
+
+**Governance (Task 0, committed first and alone)**
+- `_bmad-output/planning-artifacts/epics.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+
+**The shared copy source (new)**
+- `packages/i18n/locales/en/sahyog-shared.json`
+- `packages/i18n/locales/hi/sahyog-shared.json`
+- `packages/i18n/src/catalog.ts`
+
+**Copy**
+- `packages/i18n/locales/en/sahyog-drive.json`
+- `packages/i18n/locales/hi/sahyog-drive.json`
+- `packages/i18n/locales/en/sahyog-vivran.json`
+- `packages/i18n/locales/hi/sahyog-vivran.json`
+
+**The wire, the maps, the four RULE doc-blocks**
+- `packages/contracts/src/public-pages/sahyog-drive.ts`
+- `packages/contracts/src/public-pages/sahyog-vivran.ts`
+- `packages/domain/src/pool/public-read.ts`
+- `packages/domain/src/pool/sahyog-vivran-read.ts`
+
+**Render layer + the two runtime guards + the pages**
+- `apps/public/src/lib/sahyog.server.ts`
+- `apps/public/src/lib/sahyog-vivran.server.ts`
+- `apps/public/src/lib/sahyog-render.ts`
+- `apps/public/src/lib/sahyog-vivran-render.ts`
+- `apps/public/src/lib/surface-fields.ts`
+- `apps/public/src/pages/sahyog.astro`
+- `apps/public/src/pages/sahyog-vivran/[driveToken].astro`
+
+**Tests — new**
+- `apps/public/tests/sahyog-serves.test.ts`
+- `apps/public/tests/sahyog-stage-vocabulary.test.ts`
+- `apps/public/tests/sahyog-empty-section.test.ts`
+- `packages/i18n/tests/sahyog-shared-dark-copy.test.ts`
+- `apps/mobile/tests/unit/sahyog-stage-copy-resolves.test.ts`
+
+**Tests — re-shaped or repaired**
+- `apps/api/tests/integration/public-pages/sahyog-drive.spec.ts`
+- `apps/api/tests/integration/public-pages/sahyog-vivran.spec.ts`
+- `packages/contracts/tests/public-pages-sahyog-vivran.test.ts`
+- `packages/domain/tests/pool/sahyog-vivran-read.test.ts`
+- `packages/domain/tests/integration/pool/sahyog-drive-public-read.spec.ts`
+- `apps/public/tests/sahyog-copy.test.ts`
+- `apps/public/tests/sahyog-vivran-copy.test.ts`
+- `apps/public/tests/sahyog-render.test.ts`
+- `apps/public/tests/sahyog-vivran-render.test.ts`
+- `apps/public/tests/sahyog-vivran-client.test.ts`
+- `apps/public/tests/integration/public-pages/scrape-test.spec.ts`
+
+**Sibling-story handoffs (key paths written in BY NAME)**
+- `_bmad-output/implementation-artifacts/11b-14-live-drives-listed-and-the-progress-meter.md`
+- `_bmad-output/implementation-artifacts/11b-15-member-drive-list-fourth-tab.md`
+
+**Friction budget (Task 7, after the code commits)**
+- `_bmad-output/implementation-artifacts/friction-budget.md`
 
 ## Change Log
 
@@ -985,5 +1193,6 @@ use the house **source-scan** pattern, and state its limitation rather than glos
 | 2026-09-04 | 0.1 | Created from `2026-09-04-195` cl.3 (story **B**). ⚠ **D1 is OPEN and blocks Tasks 2-5.** ⭐ Two findings at authoring: `-194` cl.1 is **already satisfied** by the existing `.length > 0` guards, and the ruled words **collide with a shipped anti-leak test**. | BigDev + Claude |
 | 2026-09-04 | 0.2 | ✅ **D1 RULED (b) — align the wire, allow-list the test.** Task 1 closed, Tasks 2-5 unblocked. ⚠ The overlap with internal names must be EXPLAINED where the assertion lives, or it reads as the `-144` cl.8 defect. | BigDev + Claude |
 | 2026-09-05 | 0.3 | ⭐ **Validation pass — six critical corrections.** Baseline re-pointed `30683cef` → `054ff76a`: **story A has landed** and rewrote six of this story's files (`PublicSahyogVivranStatus` moved `:75` → `:88`). The anti-leak collision is **THREE** sites, ⛔ not one — including a **doc-block stating a stale RULE** that ⛔ no gate catches. **D1 gains a mapping table**: the index enum stays **TWO** members, resolving its contradiction with AC7. **Trap 2 gains a third false string** — `page.intro` — which AC2's literal, case-sensitive assertion would have **missed**. **Task 5 inverted**: `apps/mobile` has ⛔ no stage surface and **story E owns building one** — B ships the source, ⛔ renders nothing. New: Trap 6 (`catalog.ts`'s five hand-edits), Trap 7 (the render layer the `.astro` files delegate to), Trap 8 (six shipped test files that go red), AC8 + Task 7 (the friction-budget disposition), and a **Files this story touches** table. | BigDev + Claude |
+| 2026-09-06 | 1.0 | ⭐⭐ **IMPLEMENTED — Tasks 0-6.** The three stages are **Live · Closed · Verified**, from **ONE** new registered namespace `sahyog-shared`, on both locales and both public surfaces; the **three false payout sentences are GONE** from a live page; the wire is aligned (index **TWO** members, drive page **THREE**); all **nine** Trap 1 sites re-shaped DENY→ALLOW with the cl.8 note; the `<details>` affordance establishes `apps/public`'s first disclosure pattern (marker reset + focus ring); AC9's four dark index-line variants authored and rendered **nowhere**. ⚠⛔ **THREE CORRECTIONS TO THIS FILE, all checked ⛔ not inferred: (1) `t()` ⛔ does NOT interpolate an unsupplied token to nothing — `resolver.ts:36-42` THROWS**, so a premature dark-token render is a **500**, ⛔ not a blank ₹ (AC9/Task 2b/D2 all state otherwise; corrected in the test header, both locale notes and the note written into 11b-14). **(2) The `en` offender list is wrong in BOTH directions** — Task 2's own script returns **nine** hits, adding `empty.body` and omitting `section.archive.help` ⇒ the AC1 test is **word-boundary**, ⛔ not substring, because a substring `collect` **false-fails on D3's own ratified AFTER copy**. **(3) Trap 8 is TEN files** — `sahyog-drive.spec.ts:379` was named nowhere, is invisible to the typecheck, and went red only on the live-DB run; plus two un-named prose lines still carrying the payout falsehood (`sahyog-vivran.ts:75-76`, `public-read.ts:488`). ⭐⭐ **AND THE `sahyog.server.ts:202` CLAIM WAS MUTATION-TESTED, ⛔ not believed:** with the old literals restored the typecheck and 113 copy/render tests stay **GREEN** while the new `sahyog-serves.test.ts` goes **RED** — the story's warning confirmed exactly. ⭐ AC9's ruling 3 also exposed a **coupling the ruling does not cover**: dropping `{family_name}` must drop the district clause **with** it, or the sentence attributes the deceased's posting district to the **NOMINEE**. | BigDev + Claude |
 | 2026-09-06 | 0.5 | ⭐⭐ **Second validation pass — six critical corrections, and the blast radius grew again.** ⛔⛔ **`sahyog.server.ts:202`** — the **index** literal-set runtime guard — was **missing entirely**; ⚠ its failure arm is the page's **OUTAGE** state and ⛔ the typecheck ⛔ cannot see it, so the whole rename could ship green and serve *"unavailable"* to every visitor (**AC1** now demands an end-to-end serve assertion; it is Task 4's **first** subtask). ⛔⛔ **`sahyog-render.ts:338`** — the **section partition**, ⛔ not the `:296` label ternary — was missing; the file's own `:178-184` records that breaking it rendered every drive **twice under contradictory headings**. ⭐⭐ **AC9 + Task 2b ADDED:** the `{amount}` / `{nominee_name}` **dark copy tokens** existed ⛔ only inside D2's prose, in ⛔ no AC and ⛔ no task — while **`11b-14` AC7 (added `31153962`) is already written against them**; per [[feedback_spec_edits_must_propagate_to_tasks]] B would have shipped nothing and D would have minted its own, ⭐ recreating the two-source defect `-193` cl.3 closes. ⚠ **Trap 1 is NINE sites, ⛔ not three** — split into **four un-gated RULE doc-blocks** (incl. `sahyog-vivran.ts:83-86`'s *"⛔ Not a mistake to tidy"*, which ⛔ instructs the next reader not to do what D1(b) rules) and **five assertions that go RED** (two of them in `sahyog-vivran-read.test.ts`, listed nowhere before). ⚠ **Trap 8 is NINE files, ⛔ not six**, and `scrape-test.spec.ts:106` was a **mis-citation** — it is the **member-directory** fixture AC1 carves out, and editing it was an instruction to introduce a defect. ⚠ **Seven `en` locale values carry the retired words, ⛔ not four**; and **AC1's word ban is structurally blind to `hi`** (zero English hits by construction). ⭐ Also: `sahyog-vivran-read.ts:478` gates the funding verdict on the token; `[driveToken].astro` is `:127-131`; **D2 restated as CLOSED once** (it had read *open* in three places and *closed* in a fourth), with its three rulings routed; baseline re-pointed `054ff76a` → `31153962`, ⭐ **governance-only, ⛔ no code moved.** | BigDev + Claude |
 | 2026-09-05 | 0.4 | ✅ **D3 RULED — the ban is on rendered VALUES, ⛔ not key names.** `collecting.title`/`.body` keep their keys, their copy is rewritten. ⚠ The resulting code/word divergence is a **knowing, ruled trade** and is noted at the call sites so it is ⛔ not "fixed" or re-filed. 🟡 **D2 OPENED and ROUTED, ⛔ non-blocking** — `outcome.under_funded`'s *"the trust met its commitment"* may imply a disbursement `-192` says never happens; ⛔ a copy story has ⛔ no authority to decide what the trust promises. | BigDev + Claude |

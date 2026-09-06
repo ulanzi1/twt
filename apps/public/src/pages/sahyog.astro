@@ -100,6 +100,13 @@ const branding = passportRow?.brandingBundle ?? null;
 const tr = (key: string, params?: Record<string, string | number>) =>
   t(key, params, { locale, namespace: 'sahyog-drive' });
 
+// ⭐⭐ THE ONE SHARED STAGE VOCABULARY (`2026-09-04-193` cl.3, Story 11b.12 AC4). ⛔ The three stage
+// names and their explanations live in `sahyog-shared` and ⛔ NOWHERE else — ⛔ do not re-add a
+// `status.*` or a `section.*.help` key to `sahyog-drive.json`. ⚠ Two sources is exactly how
+// *"Active"* came to mean two different things; the drive page and (at story E) the member app read
+// these same keys.
+const ts = (key: string) => t(key, undefined, { locale, namespace: 'sahyog-shared' });
+
 const labels: SahyogLabels = {
   pageTitle: tr('page.title'),
   pageIntro: tr('page.intro'),
@@ -124,8 +131,10 @@ const labels: SahyogLabels = {
   columnOutcome: tr('table.col.outcome'),
   districtUnknown: tr('value.district_unknown'),
   dateUnknown: tr('value.date_unknown'),
-  statusActive: tr('status.active'),
-  statusArchive: tr('status.archive'),
+  // ⚠ D3 — the FIELD NAMES are historical and deliberately not renamed; their VALUES are the
+  // ruled **Closed** / **Verified** words, read from the ONE shared source.
+  statusActive: ts('stage.closed'),
+  statusArchive: ts('stage.verified'),
   emptyTitle: tr('empty.title'),
   emptyBody: tr('empty.body'),
   emptyFilteredTitle: tr('empty.filtered.title'),
@@ -363,6 +372,35 @@ if (!driveStatusVisible) {
       <>
         <p class="sahyog__intro">{labels.pageIntro}</p>
 
+        {/* ⭐⭐ THE STAGE EXPLAINER — `2026-09-04-192` cl.3's INFO AFFORDANCE (Story 11b.12 AC3).
+            ⛔⛔ IT IS A NATIVE `<details>`, ⛔ NOT A TOOLTIP, AND THAT IS LOAD-BEARING:
+            · this page is server-rendered and carries ⛔ ZERO `<script>` — a JS tooltip could not
+              work here at all;
+            · HOVER IS ⛔ NOT AN AFFORDANCE (family 13 check (c)) — it is unreachable by keyboard
+              AND by touch, and most members are on phones. `<summary>` is natively focusable,
+              natively clickable/tappable, and carries its own accessible name.
+            ⭐⭐ THIS IS THE FIRST `<details>` IN `apps/public` — there was ⛔ no house pattern to
+            inherit, so this ESTABLISHES one: the marker reset + an explicit `:focus-visible` ring
+            live at `.sahyog__explainer` in this file's `<style>`. ⛔ Without both, it ships a
+            browser-default triangle and an INVISIBLE focus state onto a designed page.
+            ⚠ **Verified** is explained even though ⛔ NO drive can currently be in that stage —
+            `pool.settled` still has ⛔ no production producer. A stage a visitor may never see is
+            still one the vocabulary promises to define. */}
+        <details class="sahyog__explainer">
+          <summary aria-label={ts('stage.explainer.a11y')}>
+            <span aria-hidden="true" class="sahyog__explainer-icon">i</span>
+            <span>{ts('stage.explainer.summary')}</span>
+          </summary>
+          <dl class="sahyog__explainer-body">
+            <dt>{ts('stage.live')}</dt>
+            <dd>{ts('stage.live.help')}</dd>
+            <dt>{ts('stage.closed')}</dt>
+            <dd>{ts('stage.closed.help')}</dd>
+            <dt>{ts('stage.verified')}</dt>
+            <dd>{ts('stage.verified.help')}</dd>
+          </dl>
+        </details>
+
         {/* ⭐ The three ruled filters, as PLAIN GET parameters on a REAL form — the shell's
             works-with-JS-disabled posture (Story 2.5 AC3). ⛔ No JS, no fetch, no island.
             ⛔ There is NO name field, and the note says so rather than leaving its absence to be
@@ -461,7 +499,7 @@ if (!driveStatusVisible) {
         {sections.active.length > 0 && (
           <section aria-labelledby="sahyog-active-title">
             <h2 id="sahyog-active-title">{labels.sectionActiveTitle}</h2>
-            <p>{tr('section.active.help')}</p>
+            <p>{ts('stage.closed.help')}</p>
             <table class="sahyog__table">
               <caption class="sahyog__caption">{labels.tableCaptionActive}</caption>
               <thead>
@@ -514,7 +552,7 @@ if (!driveStatusVisible) {
         {sections.archive.length > 0 && (
           <section aria-labelledby="sahyog-archive-title">
             <h2 id="sahyog-archive-title">{labels.sectionArchiveTitle}</h2>
-            <p>{tr('section.archive.help')}</p>
+            <p>{ts('stage.verified.help')}</p>
             <table class="sahyog__table">
               <caption class="sahyog__caption">{labels.tableCaptionArchive}</caption>
               <thead>
@@ -588,6 +626,21 @@ if (!driveStatusVisible) {
     margin: 0 0 var(--space-block);
   }
   .sahyog__intro { color: var(--color-rule-heavy); margin-top: 0; }
+
+  /* ⭐⭐ THE FIRST `<details>` IN `apps/public` — this block IS the house pattern (Story 11b.12 AC3).
+     ⛔ Both rules below are REQUIRED, ⛔ neither is decoration:
+     (1) the MARKER RESET — `list-style: none` + the `::-webkit-details-marker` reset — or the
+         browser's default disclosure triangle lands on a designed page;
+     (2) an explicit `:focus-visible` ring — `<summary>` is focusable, and several UA stylesheets
+         give it NO visible focus indicator, so keyboard users would have an invisible caret. */
+  .sahyog__explainer { margin: 0 0 1rem; border: 1px solid var(--color-rule); border-radius: 4px; padding: 0.5rem 0.75rem; }
+  .sahyog__explainer > summary { cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; list-style: none; }
+  .sahyog__explainer > summary::-webkit-details-marker { display: none; }
+  .sahyog__explainer > summary:focus-visible { outline: 2px solid var(--color-rule-heavy); outline-offset: 2px; }
+  .sahyog__explainer-icon { display: inline-flex; align-items: center; justify-content: center; width: 1.25rem; height: 1.25rem; border: 1px solid currentColor; border-radius: 50%; font-style: italic; font-size: 0.8rem; line-height: 1; flex: none; }
+  .sahyog__explainer-body { margin: 0.75rem 0 0.25rem; }
+  .sahyog__explainer-body dt { font-weight: 600; margin-top: 0.5rem; }
+  .sahyog__explainer-body dd { margin: 0.125rem 0 0; color: var(--color-rule-heavy); }
   .sahyog__filters { margin: var(--space-block) 0; }
   .sahyog__filters fieldset {
     border: var(--border-rule) solid var(--color-rule-hairline);

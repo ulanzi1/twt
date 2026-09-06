@@ -50,14 +50,29 @@ describe('the visible-drive predicate (D4(b), `2026-09-02-176`)', () => {
 
 describe('the PUBLIC vocabulary', () => {
   it('⭐ is THREE labels — ⛔ not the index’s two, because D4(b) admits `live`', () => {
-    expect([...SAHYOG_VIVRAN_STATUSES]).toEqual(['collecting', 'active', 'archive']);
+    // ⚠ Story 11b.12 **D1(b)**: the ruled public words are **Live · Closed · Verified** and the
+    // WIRE is aligned to them. ⛔ This tuple read `['collecting', 'active', 'archive']` before.
+    expect([...SAHYOG_VIVRAN_STATUSES]).toEqual(['live', 'closed', 'verified']);
   });
 
-  it('⛔⛔ leaks NO internal lifecycle word onto the public wire', () => {
-    // `2026-08-21-144` cl.8 records `/members` having leaked the internal `lock-in` value onto a
-    // public JSON route. ⚠ NOTE `active` and `archive` are PUBLIC words that happen to describe
-    // `closed` and `settled`; what must never appear is an INTERNAL token.
-    for (const internal of POOL_LIFECYCLE_STATES) {
+  it('⛔⛔ leaks NO ⛔ UN-RULED internal lifecycle word onto the public wire', () => {
+    // ⭐⭐ AN **ALLOW-LIST**, ⛔ NOT A DENY-LIST — Story 11b.12 **D1(b)**, and STRICTLY STRONGER than
+    // the blanket deny it replaces: it pins what IS permitted, then denies everything else.
+    //
+    // ⚠⛔ WHY THE SHAPE HAD TO CHANGE, so nobody "fixes" it back. `2026-08-21-144` cl.8 records
+    // `/members` having leaked the internal `lock-in` value onto a public JSON route, and this
+    // assertion used to read *"⛔ NO `POOL_LIFECYCLE_STATES` member appears in
+    // `SAHYOG_VIVRAN_STATUSES`"*. Since D1(b) **`live` and `closed` are in BOTH sets, deliberately**
+    // — the ruled public word and the internal state name coincide. ⭐ That coincidence is RULED,
+    // ⛔ not a leak; the property cl.8 actually protects is *no **UN-RULED** internal vocabulary
+    // crosses*, ⛔ not *"these particular strings never appear"*.
+    // ⚠⛔ ⛔ Do ⛔ NOT repair this by deleting the loop or excepting two words by hand — D1 rules the
+    // SHAPE, and it applies identically at all nine sites.
+    const ruled = new Set<string>(SAHYOG_VIVRAN_STATUSES);
+    const unruled = POOL_LIFECYCLE_STATES.filter((st) => !ruled.has(st));
+    // ⛔ NON-VACUOUS: `spawned` is a PURE DENY — an internal state with ⛔ no public token at all.
+    expect(unruled).toContain('spawned');
+    for (const internal of unruled) {
       expect([...SAHYOG_VIVRAN_STATUSES]).not.toContain(internal);
     }
   });

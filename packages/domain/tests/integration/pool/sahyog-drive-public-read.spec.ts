@@ -153,8 +153,11 @@ describe.skipIf(!hasDatabase)('Sahyog Drive public pool index (Story 11b.1)', ()
       });
 
       const byId = new Map(rows.map((r) => [r.poolId as string, r]));
-      expect(byId.get(active.poolId)?.status).toBe('active');
-      expect(byId.get(archived.poolId)?.status).toBe('archive');
+      // ⚠ Story 11b.12 D1(b) — the ruled public tokens. ⭐ `closed` here is the PUBLIC word that
+      // deliberately coincides with the internal `pools.current_state`; `settled` → `verified` is
+      // the one pair that still differs, and it is what proves the map is ⛔ not a no-op.
+      expect(byId.get(active.poolId)?.status).toBe('closed');
+      expect(byId.get(archived.poolId)?.status).toBe('verified');
     });
 
     it('⛔ EXCLUDES a `spawned` and a `live` pool — a drive still collecting is not a record', async () => {

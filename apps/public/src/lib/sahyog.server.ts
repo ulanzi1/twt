@@ -199,7 +199,15 @@ function isSahyogDriveResponse(body: unknown): body is PublicSahyogDriveResponse
       // contract is `z.string().min(1)`, so `''` is as invalid as absent.
       typeof r['publicToken'] === 'string' &&
       r['publicToken'].length > 0 &&
-      (r['status'] === 'active' || r['status'] === 'archive') &&
+      // ⛔⛔ THE LITERAL SET IS THE **PUBLIC WIRE** ENUM (`PublicSahyogDriveStatus`), AND ⛔ THE
+      // TYPECHECK ⛔ CANNOT SEE IT. `r` is a `Record<string, unknown>` off the parsed API body, so
+      // ⛔ no enum type is in scope and a literal that can NEVER match compiles clean.
+      // ⚠⛔ AND THE FAILURE ARM IS THIS PAGE'S **OUTAGE** STATE, ⛔ not a crash and ⛔ not a blank
+      // cell ⇒ a stale literal here serves *"we could not load the drives"* to **100% of visitors**
+      // with a green typecheck and a green unit suite. ⭐ Story 11b.12 renamed these from
+      // `'active'` / `'archive'`; `apps/public/tests/sahyog-serves.test.ts` is what catches the
+      // next rename. ⛔ Change this tuple ONLY together with `PublicSahyogDriveStatus`.
+      (r['status'] === 'closed' || r['status'] === 'verified') &&
       (r['closedAt'] === null || typeof r['closedAt'] === 'string') &&
       (r['district'] === null || typeof r['district'] === 'string') &&
       typeof r['confirmedContributionCount'] === 'number' &&

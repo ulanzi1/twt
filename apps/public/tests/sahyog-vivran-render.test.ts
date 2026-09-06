@@ -36,10 +36,12 @@ const LABELS: SahyogVivranLabels = {
   labelContributions: 'Contributions confirmed',
   labelStatus: 'Standing',
   districtUnknown: 'Not recorded',
-  statusCollecting: 'Collecting',
-  statusActive: 'Active',
-  statusArchive: 'Archive',
-  collectingTitle: 'This drive is still collecting',
+  // ⚠ D3 (Story 11b.12) — the FIELD NAMES are historical and deliberately NOT renamed; the VALUES
+  // are the ruled words **Live · Closed · Verified**, which is what the page actually shows.
+  statusCollecting: 'Live',
+  statusActive: 'Closed',
+  statusArchive: 'Verified',
+  collectingTitle: 'This drive is Live',
   collectingBody: 'The final outcome will appear here once reconciliation settles.',
   outcomeFullyFunded: 'The cycle closed with the support it needed.',
   outcomeUnderFunded: 'The cycle closed. The trust met its commitment to the family.',
@@ -69,7 +71,7 @@ const SETTLED: PublicSahyogVivranResponse = {
   drive: {
     poolLetterCode: 'C',
     poolCanonicalIdentifier: 'P-2026-09-003',
-    driveStatus: 'archive',
+    driveStatus: 'verified',
     closedAt: '2026-09-01T18:45:00.000Z',
     district: 'Lucknow',
     confirmedContributionCount: 137,
@@ -85,7 +87,7 @@ describe('buildSahyogVivranView — the settled drive', () => {
   it('renders the drive facts, and the count through the label function', () => {
     expect(model.poolLetterCode).toBe('C');
     expect(model.poolCanonicalIdentifier).toBe('P-2026-09-003');
-    expect(model.driveStatus).toBe('Archive');
+    expect(model.driveStatus).toBe('Verified');
     expect(model.district).toBe('Lucknow');
     expect(model.confirmedContributionCount).toBe('137 confirmed');
     expect(model.closeOfCycleFraming).toBe(LABELS.outcomeFullyFunded);
@@ -154,7 +156,7 @@ describe('buildSahyogVivranView — the LIVE (still collecting) drive (D4(b), AC
     {
       drive: {
         ...SETTLED.drive,
-        driveStatus: 'collecting',
+        driveStatus: 'live',
         closedAt: null,
         // ⚠ The domain read already nulls the outcome for a collecting drive; asserted here so the
         // render layer cannot re-introduce one from a stale wire value either.
@@ -167,7 +169,7 @@ describe('buildSahyogVivranView — the LIVE (still collecting) drive (D4(b), AC
 
   it('⭐ flags the collecting state so the page can say what is TRUE, not estimate', () => {
     expect(model.isCollecting).toBe(true);
-    expect(model.driveStatus).toBe('Collecting');
+    expect(model.driveStatus).toBe('Live');
   });
 
   it('⛔ renders NOTHING for the close date and NOTHING for the outcome', () => {
@@ -193,7 +195,7 @@ describe('buildSahyogVivranView — the ZERO-EXPECTATION drive (the 11b.1 review
       {
         drive: {
           ...SETTLED.drive,
-          driveStatus: 'active',
+          driveStatus: 'closed',
           confirmedContributionCount: 0,
           fundingOutcome: null,
         },

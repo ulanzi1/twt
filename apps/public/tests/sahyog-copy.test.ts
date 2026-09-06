@@ -24,13 +24,16 @@ import { describe, expect, it } from 'vitest';
  * EVERY key `sahyog.astro` resolves. ⛔ Kept in sync by hand and asserted below, so a key added to
  * the page without copy fails HERE rather than in production.
  */
+  // ⚠⛔ Story 11b.12 — the SIX keys removed below did ⛔ not disappear: the three stage names and
+  // their explanations moved to the ONE shared source, `sahyog-shared` (`2026-09-04-193` cl.3,
+  // AC4), where the drive page and (at story E) the member app read the SAME keys. ⛔ Do ⛔ not
+  // re-add `status.*` or `section.*.help` here — two sources is exactly how *"Active"* came to mean
+  // two different things. ⭐ The shared set has its own key test in `sahyog-shared-copy.test.ts`.
 const KEYS = [
   'page.title',
   'page.intro',
   'section.active.title',
-  'section.active.help',
   'section.archive.title',
-  'section.archive.help',
   'table.caption.active',
   'table.caption.archive',
   'table.col.name',
@@ -42,8 +45,6 @@ const KEYS = [
   'table.col.outcome',
   'value.district_unknown',
   'value.date_unknown',
-  'status.active',
-  'status.archive',
   'outcome.fully_funded',
   'outcome.under_funded',
   'outcome.partial',

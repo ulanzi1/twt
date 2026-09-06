@@ -142,19 +142,42 @@ export const SAHYOG_VIVRAN_VISIBLE_POOL_STATES = ['live', 'closed', 'settled'] a
 export type SahyogVivranVisiblePoolState = (typeof SAHYOG_VIVRAN_VISIBLE_POOL_STATES)[number];
 
 /**
- * The PUBLIC vocabulary — THREE labels here, ⛔ not the index's two, because D4(b) admits `live`.
+ * The PUBLIC vocabulary — **Live · Closed · Verified**. THREE labels here, ⛔ not the index's two,
+ * because D4(b) admits `live`.
  *
- * ⭐ THE WIRE TOKEN IS ⛔ NEVER THE INTERNAL ONE. `2026-08-21-144` cl.8 records `/members` having
- * leaked the internal `lock-in` value onto a public JSON route; `spawned` / `live` / `closed` /
- * `settled` must never cross this boundary.
+ * ⛔⛔ THE PREVIOUS RULE HERE IS SUPERSEDED, AND IT IS NAMED RATHER THAN OVERWRITTEN
+ * ([[feedback_supersede_never_reinterpret]]). It read: *"⭐ **THE WIRE TOKEN IS ⛔ NEVER THE INTERNAL
+ * ONE.** `2026-08-21-144` cl.8 records `/members` having leaked the internal `lock-in` value onto a
+ * public JSON route; `spawned` / `live` / `closed` / `settled` must never cross this boundary."*
+ *
+ * ⚠ That rule is **FALSE AS WRITTEN** from Story 11b.12 (**D1(b)**, BigDev 2026-09-04, implementing
+ * Trustee-ratified `2026-09-04-190` cl.5 / `-191` cl.3 / `-193` cl.1). The wire is ALIGNED to the
+ * ruled public words, so `live` and `closed` deliberately appear on **both** sides of the boundary.
+ *
+ * ⭐⭐ THAT COINCIDENCE IS **RULED**, ⛔ NOT A LEAK. The property cl.8 protects is *"⛔ no **UN-RULED**
+ * internal vocabulary crosses"*, ⛔ **not** *"these four particular strings never appear"*. ⇒ every
+ * anti-leak assertion over this surface is an **ALLOW-list** (exactly this tuple), ⛔ never a
+ * deny-list. ⚠⛔ ⛔ Do ⛔ NOT "fix" the overlap by reverting the wire — read D1(b) first.
+ * ⚠ `spawned` remains a **PURE DENY** — see the map below, which is what proves it.
  */
-export const SAHYOG_VIVRAN_STATUSES = ['collecting', 'active', 'archive'] as const;
+export const SAHYOG_VIVRAN_STATUSES = ['live', 'closed', 'verified'] as const;
 export type SahyogVivranStatus = (typeof SAHYOG_VIVRAN_STATUSES)[number];
 
+/**
+ * ⛔⛔ THIS MAP IS **NOT** A NO-OP, AND ⛔ IT MAY NOT BE DELETED — read this before "simplifying" it.
+ *
+ * ⚠ After Story 11b.12 it is **PART-IDENTITY**: `live → 'live'` and `closed → 'closed'` map a state
+ * to itself, and only `settled → 'verified'` does not. ⇒ it now *looks* redundant, and deleting it
+ * would silently **re-fuse the internal state to the wire token** and lose the boundary it holds.
+ *
+ * ⭐ `spawned` is the proof it is load-bearing: an internal pool state with ⛔ **no public token at
+ * all**. The map is a TOTAL function on `SahyogVivranVisiblePoolState` precisely so that widening
+ * the visible set without minting a public word fails to compile.
+ */
 const PUBLIC_STATUS_BY_POOL_STATE: Record<SahyogVivranVisiblePoolState, SahyogVivranStatus> = {
-  live: 'collecting',
-  closed: 'active',
-  settled: 'archive',
+  live: 'live',
+  closed: 'closed',
+  settled: 'verified',
 };
 
 /**
@@ -474,8 +497,12 @@ export async function readPublicSahyogVivran(
     // documents — and ⛔ only the opaque enum is returned. ⛔ Do not widen `SahyogVivranEntry` to
     // carry either of them, under any name.
     // ⭐⛔ AND BOTH `null` ARMS ARE LOAD-BEARING — see `fundingOutcome`'s own doc-block.
+    // ⚠⛔ `'live'` HERE IS THE **PUBLIC WIRE TOKEN**, ⛔ not `pools.current_state` — and since Story
+    // 11b.12 the two words coincide (D1(b)). ⛔ Get this literal wrong and a STILL-COLLECTING drive
+    // publishes a funding verdict mid-window, which is the exact thing `classifyCycleOutcome`
+    // exists to quarantine. ⚠ It read `'collecting'` before the rename.
     fundingOutcome:
-      status === 'collecting' || assignedCount === 0
+      status === 'live' || assignedCount === 0
         ? null
         : classifyCycleOutcome({
             expectedTotal: assignedCount * row.fixedAmount,

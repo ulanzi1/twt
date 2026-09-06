@@ -240,12 +240,14 @@ function statusLabel(
   status: PublicSahyogVivranResponse['drive']['driveStatus'],
   labels: SahyogVivranLabels,
 ): string {
+  // ⚠ Story 11b.12 — the CASES are the ruled wire tokens (`live`/`closed`/`verified`); the LABEL
+  // FIELDS keep their historical names by D3 (the ban is on rendered VALUES, ⛔ not identifiers).
   switch (status) {
-    case 'collecting':
+    case 'live':
       return labels.statusCollecting;
-    case 'active':
+    case 'closed':
       return labels.statusActive;
-    case 'archive':
+    case 'verified':
       return labels.statusArchive;
     default: {
       const _never: never = status;
@@ -345,7 +347,12 @@ export function buildSahyogVivranView(
   return {
     model: {
       apiUnavailable: false,
-      isCollecting: drive.driveStatus === 'collecting',
+      // ⚠⛔ D3, STATED HERE SO IT IS ⛔ NOT REDISCOVERED AS A DEFECT: the field is `isCollecting`
+      // and the token is `'live'`. ⭐ The code says one word, the wire and the page say another —
+      // a KNOWING, RULED trade (Story 11b.12 D3), ⛔ not an oversight. ⛔ Do not "fix" the name here
+      // and ⛔ do not re-file it; a rename is a tidy-up story across four render files and six test
+      // files, ⛔ never a silent edit.
+      isCollecting: drive.driveStatus === 'live',
       wasReversedByAppeal: reversal !== null,
       poolLetterCode: drive.poolLetterCode,
       poolCanonicalIdentifier: drive.poolCanonicalIdentifier,

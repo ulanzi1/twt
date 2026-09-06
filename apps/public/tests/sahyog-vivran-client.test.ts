@@ -24,7 +24,8 @@ const OK_BODY = {
     // `2026-09-03-184` cl.2). What changed is the ADDRESS, which is the `driveToken` REQUEST
     // parameter below. ⛔ Do not conflate the two.
     poolCanonicalIdentifier: 'P-2026-09-003',
-    driveStatus: 'archive',
+    // ⚠ Story 11b.12 — the ruled public token; it read `'archive'` before D1(b).
+    driveStatus: 'verified',
     closedAt: '2026-09-01T18:45:00.000Z',
     district: 'Lucknow',
     confirmedContributionCount: 137,
@@ -150,9 +151,13 @@ describe('⭐ fetchSahyogVivran — every bounded field is validated against its
   it('⛔ REJECTS an unknown driveStatus token', async () => {
     stubFetch(() => json({ drive: { ...OK_BODY.drive, driveStatus: 'settled' } }));
     const res = await fetchSahyogVivran({ driveToken: 'P-1', forwardedFor: null });
-    // ⚠ `settled` is the INTERNAL lifecycle word, and it must never cross the public boundary
-    // (`2026-08-21-144` cl.8 — the `lock-in` leak `/members` had). Refusing it here is the second
-    // place that boundary holds.
+    // ⚠ `settled` is an INTERNAL lifecycle word with ⛔ NO public token, and it must never cross the
+    // public boundary (`2026-08-21-144` cl.8 — the `lock-in` leak `/members` had). Refusing it here
+    // is the second place that boundary holds.
+    // ⭐⭐ THIS TEST STAYS GREEN THROUGH STORY 11b.12 AND ⛔ MUST NOT BE "FIXED". D1(b) aligned the
+    // wire to the ruled public words **Live · Closed · Verified**, so `live` and `closed` now cross
+    // deliberately — ⛔ but `settled` does ⛔ NOT: it maps to `verified`, and `spawned` maps to
+    // nothing at all. ⇒ the un-ruled internal words are still refused, which is the whole property.
     expect(res).toEqual({ ok: false, reason: 'bad_response' });
   });
 

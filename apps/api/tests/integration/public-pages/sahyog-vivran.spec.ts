@@ -577,13 +577,25 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
     });
   });
 
-  describe('⭐ D4(b) — `live` + `closed` + `settled` render, in the PUBLIC vocabulary', () => {
+  describe('⭐ D4(b) — `live` + `closed` + `settled` render, in the RULED PUBLIC vocabulary', () => {
+    // ⭐⭐ THIS BLOCK IS AN **ANTI-LEAK SITE**, ⛔ NOT A FIXTURE — repairing the pairs and skipping
+    // the note below would leave Story 11b.12's AC5 UNMET.
+    //
+    // ⚠⛔ WHY THE SHAPE CHANGED, so nobody "fixes" it back. `2026-08-21-144` cl.8 records `/members`
+    // having leaked the internal `lock-in` value onto a public JSON route, and this block asserted
+    // `expect(res.body).not.toContain('"<state>"')` for EVERY state. Since Story 11b.12 **D1(b)**
+    // the ruled public words are **Live · Closed · Verified** and the WIRE is aligned to them ⇒ for
+    // `live` and `closed` the internal name and the public token are **the same string, by ruling**,
+    // so that deny is no longer expressible per-state. ⭐ Replaced by something STRICTLY STRONGER:
+    // an ALLOW-list on the value, plus a body-wide deny over every ⛔ UN-RULED internal token.
+    // ⛔ `spawned` stays a PURE DENY. ⛔ Do ⛔ NOT weaken this back to a per-state substring check.
+    const RULED_PUBLIC: readonly string[] = ['live', 'closed', 'verified'];
     for (const [state, expected] of [
-      ['live', 'collecting'],
-      ['closed', 'active'],
-      ['settled', 'archive'],
+      ['live', 'live'],
+      ['closed', 'closed'],
+      ['settled', 'verified'],
     ] as const) {
-      it(`a \`${state}\` pool renders as \`${expected}\` — ⛔ never the internal word`, async () => {
+      it(`a \`${state}\` pool renders the ruled public token \`${expected}\``, async () => {
         const t = await createTestApp();
         try {
           const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
@@ -592,8 +604,19 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
           expect(res.statusCode).toBe(200);
           const body = res.json() as { drive: Record<string, unknown> };
           expect(body.drive['driveStatus']).toBe(expected);
-          // ⛔ `2026-08-21-144` cl.8 — the internal lifecycle word must never cross the boundary.
-          expect(res.body).not.toContain(`"${state}"`);
+          // (a) the ALLOW-LIST — the value is EXACTLY one of the ruled public set for this surface.
+          expect(RULED_PUBLIC).toContain(body.drive['driveStatus']);
+          // (b) and ⛔ NO UN-RULED internal token appears as a QUOTED VALUE anywhere in the body.
+          //     ⚠ `settled` is un-ruled here and IS still denied — that half stays green, which is
+          //     what keeps this a real anti-leak assertion rather than a tautology.
+          for (const internal of ['spawned', 'settled'].filter((w) => !RULED_PUBLIC.includes(w))) {
+            expect(res.body).not.toContain(`"${internal}"`);
+          }
+          // (c) and the three RETIRED public tokens are gone from the body entirely — a
+          //     half-reverted rename fails here.
+          for (const retired of ['"collecting"', '"active"', '"archive"']) {
+            expect(res.body).not.toContain(retired);
+          }
         } finally {
           await teardown(t);
         }

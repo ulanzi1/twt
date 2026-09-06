@@ -37,9 +37,10 @@ const KEYS = [
   'label.contributions',
   'label.status',
   'value.district_unknown',
-  'status.collecting',
-  'status.active',
-  'status.archive',
+  // ⚠⛔ Story 11b.12 — `status.collecting` / `status.active` / `status.archive` moved to the ONE
+  // shared source, `sahyog-shared` (`2026-09-04-193` cl.3, AC4). ⛔ Do ⛔ not re-add them here.
+  // ⚠ `collecting.*` KEEPS ITS KEY NAME by D3 while its VALUE now says **Live** — a knowing, ruled
+  // trade (the ban is on rendered values, ⛔ not on identifiers a member never reads).
   'collecting.title',
   'collecting.body',
   'outcome.fully_funded',

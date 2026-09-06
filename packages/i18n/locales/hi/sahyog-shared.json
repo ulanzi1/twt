@@ -1,0 +1,16 @@
+{
+  "$comment": "⭐ THE ONE SHARED SAHYOG COPY SOURCE (Story 11b.12, `2026-09-04-193` cl.3). ⛔ There is NO second definition of the three stage words, and there may not be. `apps/public` reads it today; `apps/mobile` resolves it and story E (11b-15) renders it. ⛔ Do NOT copy these strings into apps/mobile, into sahyog-drive.json, or into sahyog-vivran.json.",
+  "stage.live": "जारी",
+  "stage.closed": "बंद",
+  "stage.verified": "सत्यापित",
+  "stage.live.help": "योगदान जारी हैं। सहकर्मी पूरे अभियान के दौरान सीधे परिवार को सहयोग करते हैं।",
+  "stage.closed.help": "योगदान पूरे हो चुके हैं। अब उनका बैंक रिकॉर्ड से मिलान किया जा रहा है।",
+  "stage.verified.help": "हर योगदान का बैंक रिकॉर्ड से मिलान हो चुका है। यह अभियान स्थायी रिकॉर्ड के रूप में यहाँ रहेगा।",
+  "stage.explainer.summary": "इन चरणों का अर्थ",
+  "stage.explainer.a11y": "इन चरणों का अर्थ — प्रत्येक चरण की व्याख्या खोलें",
+  "$comment.index_line": "⭐⭐ TRUSTEE-RATIFIED (Dhiraj Rahul + Kalpana Bharti, 2026-09-05) — routing note §9.2, ruling 3 at §10.2. ⛔ AUTHORED HERE, RENDERED NOWHERE YET: `{amount}` and `{nominee_name}` are BOTH dark until story D (11b-14 AC7 / Task 8) supplies them. ⭐ `t()` THROWS on an unsupplied token — a premature render fails LOUDLY, ⛔ it does not ship a blank ₹. ⭐ RULING 3: an absent token DROPS ITS CLAUSE — ⛔ no combinatorial variants. ⚠ `no_family` drops the district clause TOO — 'जनपद … में कार्यरत' modifies the DECEASED MEMBER, and leaving it would attribute the posting district to the NOMINEE.",
+  "index_line.full": "जनपद {district_name} में कार्यरत स्व० {family_name} की नॉमिनी {nominee_name} के लिए सहकर्मियों द्वारा {amount} का योगदान।",
+  "index_line.no_nominee": "जनपद {district_name} में कार्यरत स्व० {family_name} के लिए सहकर्मियों द्वारा {amount} का योगदान।",
+  "index_line.no_family": "नॉमिनी {nominee_name} के लिए सहकर्मियों द्वारा {amount} का योगदान।",
+  "index_line.no_district": "स्व० {family_name} की नॉमिनी {nominee_name} के लिए सहकर्मियों द्वारा {amount} का योगदान।"
+}

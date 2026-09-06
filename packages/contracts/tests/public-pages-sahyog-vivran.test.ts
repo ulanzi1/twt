@@ -22,7 +22,7 @@ import {
 const ENTRY = {
   poolLetterCode: 'C',
   poolCanonicalIdentifier: 'P-2026-09-003',
-  driveStatus: 'archive' as const,
+  driveStatus: 'verified' as const,
   closedAt: '2026-09-01T18:45:00.000Z',
   district: 'Lucknow',
   confirmedContributionCount: 137,
@@ -65,12 +65,12 @@ describe('PublicSahyogVivranEntry — the happy path', () => {
     expect(PublicSahyogVivranEntry.safeParse(ENTRY).success).toBe(true);
   });
 
-  it('accepts a still-collecting drive: null closedAt, null outcome', () => {
+  it('accepts a LIVE drive: null closedAt, null outcome', () => {
     // ⚠ Both nulls are LOAD-BEARING, ⛔ not laxity: there is no close instant to state, and the
     // surface says NOTHING rather than estimating an outcome (AC3).
     const parsed = PublicSahyogVivranEntry.safeParse({
       ...ENTRY,
-      driveStatus: 'collecting',
+      driveStatus: 'live',
       closedAt: null,
       fundingOutcome: null,
     });
@@ -153,13 +153,32 @@ describe('⭐⭐ the shape carries NO rupee figure and NO person (D1(b), the D6(
 });
 
 describe('the bounded unions are BOUNDED', () => {
-  it('⛔ rejects an internal lifecycle token as a drive status', () => {
-    // The internal words must never cross the public boundary (`2026-08-21-144` cl.8 — the `lock-in`
-    // leak `/members` had).
-    for (const internal of ['spawned', 'live', 'closed', 'settled']) {
-      expect(PublicSahyogVivranEntry.safeParse({ ...ENTRY, driveStatus: internal }).success).toBe(
-        false,
-      );
+  it('⛔ ACCEPTS exactly the ruled public set as a drive status, and ⛔ rejects everything else', () => {
+    // ⭐⭐ AN **ALLOW-LIST**, ⛔ NOT A DENY-LIST — Story 11b.12 **D1(b)**, and STRICTLY STRONGER than
+    // the four-word deny it replaces: it pins what IS permitted rather than enumerating four things
+    // that are not.
+    //
+    // ⚠⛔ WHY THE SHAPE HAD TO CHANGE, so nobody "fixes" it back. `2026-08-21-144` cl.8 records
+    // `/members` having leaked the internal `lock-in` value onto a public JSON route, and this
+    // assertion used to read *"`spawned` / `live` / `closed` / `settled` are all REJECTED"*. Since
+    // D1(b) **two of those four must now PARSE** — `live` and `closed` are the ruled PUBLIC words
+    // and the wire is aligned to them. ⭐ The coincidence with the internal lifecycle names is
+    // RULED, ⛔ not a leak: the property cl.8 protects is *no **UN-RULED** internal vocabulary
+    // crosses*. ⛔ Do ⛔ NOT repair this by excepting two words by hand.
+    const RULED_PUBLIC = ['live', 'closed', 'verified'] as const;
+    for (const ruled of RULED_PUBLIC) {
+      expect(
+        PublicSahyogVivranEntry.safeParse({ ...ENTRY, driveStatus: ruled }).success,
+        `the ruled public word '${ruled}' must PARSE`,
+      ).toBe(true);
+    }
+    // ⛔ `spawned` and `settled` stay PURE DENIES — neither is a ruled public word. ⭐ So do the
+    // three RETIRED tokens, which is what stops a half-reverted rename from parsing.
+    for (const rejected of ['spawned', 'settled', 'collecting', 'active', 'archive', '']) {
+      expect(
+        PublicSahyogVivranEntry.safeParse({ ...ENTRY, driveStatus: rejected }).success,
+        `'${rejected}' is ⛔ not a ruled public word and must be REJECTED`,
+      ).toBe(false);
     }
   });
 

@@ -530,3 +530,83 @@ stale the figures can be.
 
 ⛔ Two things wait for you: **the meter's treatment of the reveal switch**, and **the headline's
 words and its surface**. ⛔ Nothing is being built on a guess about either.
+
+---
+
+## 11. ✅ THE PANEL'S ANSWERS — **DR + KB, 2026-09-07** — ⭐ and the four things they open
+
+### 11.1 ⭐ Answered verbatim
+
+| # | Question | The Panel's answer, verbatim |
+|---|---|---|
+| **Q1** | Does cl.7(c)'s reveal reach a screen? | *"of course the switches are meant to show the number one day."* |
+| **Q2** | The Live drive's headline | **EN:** *"19,45,000 and counting, by 43,000 colleagues—and still going strong!"* · **HI:** *"43,000 सहकर्मियों द्वारा 19,45,000 का योगदान अभी तक... योगदान जारी है!"* |
+| **Q3** | The bar's label | *"Around bar above or below do not show '412 of 500 contributions confirmed.' Instead it would show —"* **HI:** *"43 हज़ार सहकर्मियों द्वारा 19.45 लाख का योगदान अभी तक... योगदान जारी है!"* · **EN:** *"19.45 lakh and counting, by 43,000 colleagues—and still going strong!"* |
+
+### 11.2 ✅ What is now SETTLED
+
+- ⭐⭐ **Q1 — §6.1 option (ii) is REFUSED.** The reveal is ⛔ not a built-ahead authority owed no
+  surface. ⇒ **INFERENCE (A) at §3.5 was right**, and the switch is **owed a consumer**. ⭐ The shipped
+  test asserting the switch is inert is therefore **correct-until-that-consumer-ships** and owes a
+  **narrowing**, ⛔ never a deletion.
+- ⭐⭐ **Q3 — §6.3 option (i).** The bar carries a **participation sentence naming ⛔ no denominator**.
+  ⇒ ⭐ **the target-printing channel is CLOSED.** ⚠ The cost stated at §6.3(i) — the bar's **width**
+  now means something the words do not explain — is **accepted**, ⛔ not re-opened.
+- ⭐ **Q2 — §6.2 option (iii).** The Panel gave the wording rather than delegating it. ⭐ **The Hindi
+  rider is discharged**: a Hindi sentence now exists where cl.6 had English only. ⭐ And both Hindi
+  strings use **Latin numerals**, which ⭐ already complies with the **amendment-A2** contract — ⛔ no
+  further ruling needed.
+- ⭐ *"colleagues"* / *"सहकर्मियों"* matches the shipped `index_line.*` exactly ⇒ ⭐ cl.6's earlier
+  *"members"* is superseded by this wording and the two stages speak in one voice.
+
+### 11.3 ⏳ FOUR FOLLOW-UPS — ⛔ none is a re-litigation
+
+**(1) ⭐⭐ ARE Q2 AND Q3 ONE SENTENCE, OR TWO?** ⚠ They are **the same sentence in two number forms**:
+
+| | amount | count |
+|---|---|---|
+| **Q2** (headline) | `19,45,000` | `43,000` |
+| **Q3** (around the bar) | `19.45 lakh` / `19.45 लाख` | `43,000` / `43 हज़ार` |
+
+⇒ if **both** render, a Live row shows the same sentence **twice**. ⭐ Our reading is that there is
+**ONE** sentence on a Live row and it sits **around the bar** — ⛔ but we will ⛔ not assume it.
+⚠⛔ **AND IT MOVES `D3`:** if only the **coarsened** form renders, recovery-by-division is materially
+weakened; ⛔ if the **exact** figure also renders in a headline, that channel stays open.
+
+**(2) ⛔⛔ ⛔ NO `₹` APPEARS IN ANY OF THE FOUR STRINGS.** ⚠ Today the product's only money formatter
+produces **`₹ 19,45,000`** (verified by execution). ⭐ The ratified strings read *"19,45,000"* and
+*"19.45 lakh"* — **bare**. ⇒ **is the `₹` dropped deliberately, or omitted in shorthand?**
+⚠⛔ **It matters across stages:** the **Closed · Verified** sentence (`index_line.*`) begins
+*"{amount} contributed by colleagues…"*, and its `{amount}` form is ⛔ **still undecided**. ⇒ as
+written, Closed rows could show `₹ 19,45,000` beside Live rows showing `19,45,000` — ⭐ two money
+forms on one page.
+
+**(3) ⭐ THE WORD-FORMS NEED A ROUNDING RULE — ⛔ AND A FORMATTER THAT DOES ⛔ NOT EXIST.** ⚠ Verified:
+*"lakh"*, *"लाख"*, *"हज़ार"* and *"crore"* appear in **⛔ ZERO** copy or code files in this repository.
+⇒ we must be told:
+- ⚠ `19,45,000` → *"19.45 lakh"* is **two decimal places of a lakh**. What is `19,45,678`? *"19.46
+  lakh"* (rounded) or *"19.45 lakh"* (truncated)?
+- ⚠ `43,000` → *"43 हज़ार"*. What is `43,472`? *"43 हज़ार"*, or *"43.5 हज़ार"*?
+- ⚠ **The two languages abbreviate differently in the same answer** — Q3's Hindi says *"43 हज़ार"*
+  while its English keeps *"43,000"*. ⭐ Intended, or should English read *"43 thousand"*?
+- ⚠ And below what value does the word-form stop? *"0.05 lakh"* would be an odd thing to print on a
+  drive that has just opened.
+
+**(4) ⏳ *"one day"* IS ⛔ NOT A STORY — AND `D6`'s ANSWER REMOVED THE SLOT.** ⭐ Two parts:
+- ⚠ **Does THIS story build the reveal, or a named later one?** ⛔ A deferral naming an *epic* expires
+  unowned; it must name a **story key that exists**.
+- ⚠⛔⛔ **AND THE HARDER HALF:** the label the Panel just chose names ⛔ **no denominator at all**. ⭐ The
+  old label (*"412 of 500"*) was the natural place a revealed target would have appeared. ⇒ **when a
+  Superadmin turns the public switch ON, ⛔ WHERE does the number render?** A second line? Inside the
+  same sentence? ⛔ We will ⛔ not invent a slot.
+
+### 11.4 ⚠ One observation, ⭐ recorded once and ⛔ not pressed
+
+⚠ *"—and still going strong!"* / *"योगदान जारी है!"* is an **energetic** register on a page that is
+also a bereaved family's record. ⭐ `-189` cl.2(f) expressly rules the purpose — the surface should
+show what the trust does *"in such a way they get motivated to join"* — ⇒ ⭐ **this may be exactly the
+intended tone, and the Panel has ruled it.**
+⚠ We note only that the 2026-09-05 routing note's §7.1(6) set the counter-constraint in the Panel's
+own service: *"It is a public memorial page. It must never read as 'not enough people helped', and
+⛔ never as an advertisement placed on a family's record."* ⇒ ⭐ **recorded so both constraints sit in
+one place**; ⛔ we are ⛔ not asking for a change, and ⛔ nothing is blocked on it.

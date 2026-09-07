@@ -39,7 +39,7 @@
 //
 // PURE: no fs, no db, no env, no clock.
 import type { PublicSahyogDriveResponse } from '@twt/contracts';
-import { isLocale } from '@twt/i18n';
+import { formatCurrency, formatCurrencyShort, isLocale, type Locale } from '@twt/i18n';
 
 import { pageHref, PUBLIC_PAGE_HORIZON } from './pagination.js';
 import type { PaginationResult } from './pagination.js';
@@ -122,6 +122,8 @@ export interface SahyogLabels {
   readonly columnDistrict: string;
   readonly columnDate: string;
   readonly columnContributions: string;
+  /** ⭐ Story 11b.14 — the LIVE table's meter column header. ⚠ DISTINCT from every other header. */
+  readonly columnProgress: string;
   readonly columnOutcome: string;
   /** Shown in a district cell when the deceased member has no posting row. */
   readonly districtUnknown: string;
@@ -166,6 +168,20 @@ export interface SahyogLabels {
    * than N identical ones. ⛔ Do not pass a person's name into it.
    */
   readonly driveLinkA11y: (poolCanonicalIdentifier: string) => string;
+  /**
+   * ⭐⭐ THE RULED LIVE-ROW SENTENCE — Story 11b.14 (AC3), Trustee-ratified 2026-09-07.
+   *
+   * ⚠⛔ **IT TAKES THE RAW NUMBERS, ⛔ NOT PRE-FORMATTED STRINGS**, so the ruled NUMBER FORMS live in
+   * {@link formatSahyogLiveAmount} / `formatCount` where they are testable — ⛔ not in `.astro`
+   * frontmatter, which no unit test can see. ⭐ Same shape as `contributionsCount` above.
+   */
+  readonly participationLine: (amountInr: number, contributorCount: number) => string;
+  /**
+   * ⭐ लक्ष्य — *"Expected: ₹50 lakh"*. ⚠ Called ⛔ ONLY where a `super_admin` has revealed the
+   * figure for the Pariwar; ⭐ its amount follows a **DIFFERENT** rule from the contributed one
+   * (always lakh/crore) — see {@link formatSahyogTargetAmount}. ⛔ Do ⛔ not "align" the two.
+   */
+  readonly driveTargetLine: (targetInr: number) => string;
 }
 
 /** One pagination control — always a REAL link, ⛔ never a JS-dependent button. */
@@ -326,6 +342,25 @@ function toDisplayRow(
     district: row.district,
     confirmedContributionCount: labels.contributionsCount(row.confirmedContributionCount),
     closeOfCycleFraming: framingFor(row.fundingOutcome, labels),
+    // ⭐⭐ STORY 11b.14 — THE METER, ⛔ LIVE ROWS ONLY.
+    //
+    // ⚠⛔ THE STAGE GUARD IS HERE, ⛔ NOT ONLY IN THE COLUMN LIST, and both are deliberate. The
+    // column list decides what the TABLE shows; this decides what the render MODEL carries — and the
+    // tier-leak scrape reads the model. ⇒ a closed row must carry ⛔ no fill and ⛔ no sentence even
+    // if a future template rendered the meter column somewhere it should not.
+    driveProgressPercentage: row.status === 'live' ? row.confirmedPercentage : null,
+    // ⛔ ⛔ `t()` THROWS on an unsupplied token, so BOTH numbers are always supplied together.
+    driveParticipationLine:
+      row.status === 'live'
+        ? labels.participationLine(row.amountRaisedInr, row.confirmedContributionCount)
+        : null,
+    // ⚠⛔ `driveTargetInr` is ABSENT on the wire unless a `super_admin` revealed it for the Pariwar
+    // (⛔ never `null` — the 11b.11 shape) ⇒ this is `null` for every Pariwar at launch. ⭐ Read the
+    // field's doc-block before making it non-null anywhere: it re-opens Pool-Reality #2.
+    driveTargetLine:
+      row.status === 'live' && row.driveTargetInr !== undefined
+        ? labels.driveTargetLine(row.driveTargetInr)
+        : null,
   };
 }
 
@@ -462,6 +497,46 @@ export function splitSections(view: SahyogView): {
 }
 
 /**
+ * ⭐⭐ **THE CONTRIBUTED AMOUNT'S RULED FORM — exact below ₹10 lakh, CUT OFF at and above it.**
+ * Story 11b.14 (AC3), Trustee-ratified 2026-09-07: *"Begin cutting off only if amount contributed
+ * exceeds 10 lakh, till then show exact number — this applies to Live drive. For Closed, verified
+ * shows exact figure."*, amended the same day by *"Cut off at **Exactly** ten lakh"*.
+ *
+ * ⇒ ⛔ **THE TEST IS `>=`, ⛔ NOT `>`** — the later wording moved the boundary, and ₹10,00,000 renders
+ * `₹ 10 lakh` where the earlier wording would have kept it exact. ⚠ A visitor watching a drive
+ * therefore sees the figure **change form** as it crosses the line; ⭐ that is intended.
+ *
+ * ⚠⛔ **CLOSED AND VERIFIED ROWS ARE ⛔ ALWAYS EXACT** — the short form is scoped to Live. ⭐ Their
+ * `index_line.*` `{amount}` takes the exact form too.
+ *
+ * ⭐ LATIN numerals in both locales for the exact arm (`formatCurrency(…, 'en')`) — money is
+ * **OPERATIONAL** data (amendment-A2). ⛔ Never the `'hi'` Devanagari arm, which exists only for
+ * ceremonial prose.
+ */
+export function formatSahyogLiveAmount(
+  amountInr: number,
+  locale: Locale,
+  stage: SahyogSectionStage,
+): string {
+  const CUT_OFF_INR = 1_000_000;
+  if (stage === 'live' && amountInr >= CUT_OFF_INR) return formatCurrencyShort(amountInr, locale);
+  return formatCurrency(amountInr, 'en');
+}
+
+/**
+ * ⭐⭐ **लक्ष्य's RULED FORM — ⛔ ALWAYS lakh or crore.** Trustee-ratified 2026-09-07:
+ * *"Expected figure always in Lakh or Crore."*
+ *
+ * ⚠⛔⛔ **THE ₹10-LAKH CUT-OFF DOES ⛔ NOT APPLY HERE.** A ₹8,00,000 target renders **`₹ 8 lakh`**,
+ * ⛔ never `₹ 8,00,000`. ⇒ ⭐ **TWO DIFFERENT RULES ON ONE ROW, AND THAT IS DELIBERATE:** the
+ * *contributed* amount is exact below ten lakh; the *target* never is. ⛔ Do ⛔ not "align" them —
+ * the divergence is the ruling, ⛔ not an oversight.
+ */
+export function formatSahyogTargetAmount(targetInr: number, locale: Locale): string {
+  return formatCurrencyShort(targetInr, locale);
+}
+
+/**
  * ⭐ Which rendered SECTION a column list is being built for — Story 11b.14 (AC1, Trap 4).
  *
  * ⚠ It is the **PUBLIC WIRE TOKEN**, ⛔ never a display label: recovering a section's identity by
@@ -495,6 +570,31 @@ export interface SahyogColumn {
   readonly hrefOf?: (row: SahyogDriveRow) => string;
   /** The link's accessible name — ⛔ never a bare "click here" (family 13). Set iff `hrefOf` is. */
   readonly a11yOf?: (row: SahyogDriveRow) => string;
+  /**
+   * ⭐⭐ STORY 11b.14 (AC2) — THE PROGRESS-METER CELL. ⚠ **Exactly ONE column sets it, and only in
+   * the LIVE list**; it rides the column list for the same reason `hrefOf` does — so the `<th>` and
+   * the `<td>` are suppressed **TOGETHER** if the matrix ever hides the field.
+   *
+   * ⛔ It is ⛔ NOT a general "put extra markup in a cell" seam. A second meter on this row would be
+   * a second comparison affordance on a surface whose whole posture is *remembrance, not analytics*.
+   */
+  readonly meter?: {
+    /**
+     * The bar's fill, 0-100 — or `null` for a row that carries ⛔ no bar.
+     *
+     * ⚠⛔ **THE TEMPLATE RENDERS IT `aria-hidden`, AND THAT IS A RULING, ⛔ not a styling choice.**
+     * `D6` removed the shipped *"{confirmed} of {total} contributions confirmed"* label because it
+     * **names its denominator**; its screen-reader twin carries the identical shape and would name
+     * that denominator to assistive tech. ⇒ ⭐ the bar is decorative to a screen reader and the ruled
+     * sentence beside it carries the meaning — ⛔ nothing is announced twice, and ⛔ no new a11y
+     * string is minted that would name a hidden figure.
+     */
+    readonly fillOf: (row: SahyogDriveRow) => number | null;
+    /** लक्ष्य's own matrix field id — it is a SECOND governed value in the same cell. */
+    readonly targetFieldId: string;
+    /** लक्ष्य's line, or `null` — ⛔ `null` unless a `super_admin` revealed it for the Pariwar. */
+    readonly targetOf: (row: SahyogDriveRow) => string | null;
+  };
 }
 
 /**
@@ -558,6 +658,21 @@ export function visibleSahyogColumns(
       valueOf: (row) => row.confirmedContributionCount,
     },
     {
+      // ⭐⭐ STORY 11b.14 (AC2, AC3) — THE PROGRESS METER. ⚠ **LIVE ROWS ONLY** — it is filtered out
+      // of the other two stage lists below, header and cells TOGETHER.
+      // ⚠ The cell's PRIMARY governed value is the ruled SENTENCE, ⛔ not the percentage: the
+      // percentage never renders as text (it is the bar's width) and लक्ष्य is a second governed
+      // value carried by `meter.targetFieldId`. ⭐ All three are declared in the matrix.
+      fieldId: 'drive_participation_line',
+      headerLabel: labels.columnProgress,
+      valueOf: (row) => row.driveParticipationLine,
+      meter: {
+        fillOf: (row) => row.driveProgressPercentage,
+        targetFieldId: 'drive_target',
+        targetOf: (row) => row.driveTargetLine,
+      },
+    },
+    {
       fieldId: 'close_of_cycle_framing',
       headerLabel: labels.columnOutcome,
       valueOf: (row) => row.closeOfCycleFraming,
@@ -609,10 +724,14 @@ export function visibleSahyogColumns(
   //
   // ⭐ The `<th>`/`<td>` pair goes TOGETHER, exactly as it does under a matrix suppression — ⛔ the
   // Live table has one fewer column, ⛔ not a column of blanks under a labelled header.
+  //
+  // ⭐⭐ AND THE CONVERSE — **THE METER IS LIVE-ONLY.** `-189` cl.2(b) rules a progress bar for a
+  // drive that is COLLECTING; a bar on a closed drive would be a comparison against a cycle that has
+  // already ended, and its ruled sentence (*"…and counting"*) would be false in terms.
   const forStage =
     stage === 'live'
       ? all.filter((c) => c.fieldId !== 'drive_closed_at' && c.fieldId !== 'close_of_cycle_framing')
-      : all;
+      : all.filter((c) => c.meter === undefined);
   return forStage.filter((c) => isVisible(c.fieldId));
 }
 

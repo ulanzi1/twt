@@ -692,6 +692,74 @@ surfaces:
           ⛔ It is a count, ⛔ not a score: ⛔ no ordering by it, ⛔ no "most-supported"
           view at any tier, and ⛔ no contributor identity at any grain (D9(a) binds
           11b.2/11b.3, which own contributor lists; this surface satisfies it vacuously).
+      # ── Story 11b.14 — the LIVE row's progress meter. `2026-09-04-189` cl.2(b) + `-190` cl.6,
+      #    both Trustee-ratified; recorded at `2026-09-07-204`.
+      - id: drive_progress_percentage
+        tier: public
+        pii_tier: 3
+        description: >-
+          ⭐⭐ THE PROGRESS BAR'S FILL, 0-100 — `confirmedContributionCount ÷ assignedCount`,
+          computed SERVER-SIDE. ⭐ It measures CONTRIBUTORS, ⛔ not rupees: the Trustee Panel,
+          2026-09-07 — "Progress bar should show the % of contributor already contributed in
+          that pool." ⚠ This SUPERSEDES `2026-09-04-191` cl.4 ("the progress bar fills against
+          a RUPEE target"), which is NAMED here rather than forgotten.
+          ⛔ `pii_tier: 3`: it describes a COLLECTION's progress, ⛔ never a person, and it is
+          derived from two counts neither of which identifies anyone.
+          ⚠⛔ IT IS A NUMBER, ⛔ NOT COPY — the BAR'S WIDTH is the disclosure and the value never
+          renders as text. ⛔ Declaring it null-mapped would classify a real disclosure as
+          nothing. The bar is `aria-hidden` and the ruled sentence beside it carries the
+          meaning, so nothing is announced twice and no a11y string names a hidden figure.
+          ⭐⛔ THE DENOMINATOR ITSELF NEVER CROSSES THE WIRE — `assignedCount` is not a field on
+          this surface, under any name. ⚠ RECORDED, ⛔ not glossed: the confirmed count is on
+          the same row, so the assignee count is recoverable by division. That is INHERENT to
+          the ruled meter, and it is precisely what closed the arithmetic channel that used to
+          recover the hidden rupee target — the division now returns a headcount.
+          ⛔ LIVE rows only; `null` on Closed and Verified. ⛔ NOTHING ORDERS BY IT (AC5).
+      - id: drive_participation_line
+        tier: public
+        pii_tier: 3
+        description: >-
+          ⭐⭐ THE RULED LIVE-ROW SENTENCE — Trustee-ratified 2026-09-07 (Dhiraj Rahul + Kalpana
+          Bharti), who GAVE the wording in BOTH languages rather than delegating it: "{amount}
+          and counting, by {count} colleagues—and still going strong!" It lives in
+          `sahyog-shared`, the ONE shared copy source (`2026-09-04-193` cl.3), and is ⛔ never
+          minted at a render site.
+          ⛔ ONE sentence on a Live row, ⛔ never two — "One sentence on a running drive". Closed
+          and Verified rows take `index_line.*` instead, which was ratified against an index
+          listing `closed` + `settled` ONLY and occupies the CLOSE-OF-CYCLE slot.
+          ⭐ It carries the ruled public MONEY FIGURE (`-190` cl.6, with `-189` cl.5 recording
+          that rupee boundary as NEWLY CROSSED) and the CONFIRMED CONTRIBUTOR count — ⛔ never
+          the roster. The two are internally consistent by 9.12 Decision 3's identity.
+          ⛔ `pii_tier: 3`: a figure about a COLLECTION. ⛔ It names NO person — the nominee and
+          the deceased member are carried by their own fields, under their own rulings.
+          ⛔ NO WRITTEN PITCH (`-190` cl.8): ⛔ no sentence about what a member pays or what a
+          family receives, ⛔ no projection, ⛔ no "coverage". The arithmetic is SHOWN, ⛔ never
+          ASSERTED. ⛔ And ⛔ no comparison BETWEEN drives, ⛔ no ordering, ⛔ no ranking (AC5).
+      - id: drive_target
+        tier: public
+        pii_tier: 3
+        description: >-
+          ⭐⭐ लक्ष्य / "Expected: ₹50 lakh" — the drive's own EXPECTED CONTRIBUTION, rendered to
+          the right of the progress bar on a Live row. `2026-09-04-190` cl.7, Trustee-ratified;
+          the value rule at `2026-09-07-204` cl.2.
+          ⛔⛔ IT IS ABSENT UNLESS A `super_admin` HAS SWITCHED `reveal_to_public` ON FOR THE
+          PARIWAR. cl.7(b) (not visible to member or public) and cl.7(c) (only a Superadmin may
+          reveal, separately for member and for public) BOTH STAND — they were ⛔ not superseded.
+          `resolveDriveTargetVisibility`'s absent-row default is FAIL-CLOSED and ⛔ no Pariwar has
+          a visibility row ⇒ ⛔ THIS RENDERS NOWHERE AT LAUNCH.
+          ⭐ THE VALUE IS DERIVED — `assignedCount × pools.fixed_amount` ("Use the derived
+          total") ⇒ `2026-09-04-189` cl.2(d) is superseded AS TO THE VALUE and `-190` cl.7(a)
+          outright: ⛔ THERE IS NO SETTER, and `pariwar_drive_target_schedule` is ⛔ never read on
+          this path. ⛔ A zero-assignee pool renders NOTHING — silence, ⛔ never ₹0.
+          ⚠⛔⛔ AND WHOEVER FIRST TURNS A PARIWAR ON MUST READ THIS: `-189` cl.2(c) resolved
+          POOL-REALITY #2 (Story 7.8, 11b.1 AC5) precisely BY the target's invisibility — "a bar
+          with ⛔ no visible target is ⛔ not a comparison to a target". ⇒ naming लक्ष्य beside the
+          bar makes the bar a COMPARISON again, and lets a visitor read that a family is SHORT.
+          ⭐ The Panel may want exactly that (cl.2(f) — the surface should help people "get
+          motivated to join") — ⛔ but it must be RULED, ⛔ not inherited. The concern is DEFERRED
+          TO THE ACT, ⛔ never withdrawn. ⚠ Likewise `-189` cl.3 (member ≥ public): story E owes
+          members the figure on that SAME condition, ⛔ not unconditionally.
+          ⛔ `pii_tier: 3`: a figure about a COLLECTION, ⛔ never a person.
       - id: close_of_cycle_framing
         tier: public
         pii_tier: 3

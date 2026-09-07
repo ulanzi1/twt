@@ -810,7 +810,11 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
     columnDistrict: 'District',
     columnDate: 'Closed on',
     columnContributions: 'Contributions confirmed',
-    columnOutcome: 'Close of cycle',
+    // ⭐ Story 11b.14 (AC2, AC3) — the LIVE meter cell's header and its two ruled lines.
+  columnProgress: 'Progress',
+  participationLine: (amount: number, count: number) => `₹ ${amount} and counting, by ${count} colleagues`,
+  driveTargetLine: (target: number) => `Expected: ₹ ${target}`,
+  columnOutcome: 'Close of cycle',
     districtUnknown: 'Not recorded',
     dateUnknown: 'Not recorded',
     // ⚠ D3 (Story 11b.12) — historical FIELD names, ruled VALUES.
@@ -923,7 +927,7 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
     fields: sahyogDriveSurfaceFieldIds(model),
   };
 
-  it('⭐ the snapshot field set is NON-EMPTY, and is EXACTLY the nine classified fields', () => {
+  it('⭐ the snapshot field set is NON-EMPTY, and is EXACTLY the twelve classified fields', () => {
     // ⛔ Asserting the EXACT set — rather than "length > 0" — is what makes a DROPPED field fail
     // here too. A leg that only detects additions accepts a field vanishing from the render while
     // the matrix still claims it is shown.
@@ -936,7 +940,16 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
       // ⭐ Story 11b.10 — the per-row inbound link. `pii_tier: 3` (an ADDRESS, ⛔ not a person and
       // ⛔ not derived from one) ⇒ ⛔ no `tier1_public_exception` and ⛔ no allowlist entry.
       'drive_href',
+      // ⭐⭐ Story 11b.14 — the LIVE row's meter. THREE new classified fields, ⛔ not one:
+      // `drive_participation_line` (the ruled sentence, carrying the public MONEY figure),
+      // `drive_progress_percentage` (⚠ a NUMBER — the BAR'S WIDTH is the disclosure, and it never
+      // renders as text) and `drive_target` (लक्ष्य — ⛔ absent unless a `super_admin` revealed it).
+      // ⛔ All three are `pii_tier: 3`: a COLLECTION's progress, ⛔ never a person ⇒ ⛔ no
+      // `tier1_public_exception` and ⛔ no `RULED_TIER1_PUBLIC_EXCEPTIONS` entry.
+      'drive_participation_line',
+      'drive_progress_percentage',
       'drive_status',
+      'drive_target',
       'pool_canonical_identifier',
       'pool_letter_code',
     ]);
@@ -1034,6 +1047,11 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
       driveClosedAt: '01-08-2026',
       district: 'Lucknow',
       confirmedContributionCount: '12 confirmed',
+      // ⭐ Story 11b.14 — the meter's three keys. `null` is the CLOSED-row shape and is still a
+      // declared key; ⛔ what this control drops is `closeOfCycleFraming`, ⛔ not these.
+      driveProgressPercentage: null,
+      driveParticipationLine: null,
+      driveTargetLine: null,
       // ⛔ `closeOfCycleFraming` deliberately absent.
     };
     expect(() => deriveFieldIds(rowWithDroppedField, SAHYOG_DRIVE_ROW_FIELD_IDS)).toThrow(

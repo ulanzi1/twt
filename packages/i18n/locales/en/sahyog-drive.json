@@ -1,7 +1,7 @@
 {
   "$comment": "⭐ THE THREE STAGE NAMES AND THEIR EXPLANATIONS LIVE IN `sahyog-shared.json`, and ⛔ nowhere else (`2026-09-04-193` cl.3, Story 11b.12 AC4). ⛔ Do NOT re-add a stage name or a stage explanation to this file — two sources is exactly how 'Active' came to mean two different things.",
   "page.title": "Sahyog Drive",
-  "page.intro": "Every drive whose contributions have finished, with the number of contributions confirmed as received. Drives whose contributions have finished appear under Closed; those whose every contribution has been checked against bank records appear under Verified. Drives that are still Live are not listed here.",
+  "page.intro": "Every drive this Pariwar has run, with the number of contributions confirmed as received. Each drive is listed under the stage it has reached, and each stage is explained below.",
   "section.live.title": "{stage} drives",
   "table.caption.live": "{stage} drives — one row per drive, with the columns listed in the header row below",
   "section.active.title": "Closed drives",
@@ -13,6 +13,7 @@
   "table.col.district": "District",
   "table.col.date": "Closed on",
   "table.col.contributions": "Contributions confirmed",
+  "table.col.progress": "Progress",
   "table.col.outcome": "Close of cycle",
   "value.district_unknown": "Not recorded",
   "value.date_unknown": "Not recorded",

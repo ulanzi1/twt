@@ -32,6 +32,8 @@ import { describe, expect, it } from 'vitest';
 const KEYS = [
   'page.title',
   'page.intro',
+  // ⭐ Story 11b.14 (AC1) — the LIVE section. ⚠ Both COMPOSE story B's shared `stage.live` word with
+  // a section noun and are therefore INTERPOLATED — asserted with their param below, ⛔ not here.
   'section.active.title',
   'section.archive.title',
   'table.caption.active',
@@ -42,6 +44,8 @@ const KEYS = [
   'table.col.district',
   'table.col.date',
   'table.col.contributions',
+  // ⭐ Story 11b.14 (AC2) — the Live section's meter column.
+  'table.col.progress',
   'table.col.outcome',
   'value.district_unknown',
   'value.date_unknown',
@@ -90,6 +94,19 @@ describe('/sahyog copy resolves through the REAL t() — both locales', () => {
   // threw on every request at 11a.2. A test that resolved it WITHOUT the param would pass while
   // the page broke.
   for (const locale of LOCALES) {
+    it(`${locale}: "section.live.title" / "table.caption.live" COMPOSE the shared stage word`, () => {
+      // ⭐⭐ Story 11b.14 (AC1). ⚠⛔ THE STAGE WORD IS ⛔ NOT RESTATED IN THIS FILE — `-193` cl.3 and
+      // `sahyog-drive.json`'s own `$comment` forbid a second source for it (*"two sources is exactly
+      // how 'Active' came to mean two different things"*). ⇒ the heading and the caption take
+      // `{stage}` and the page interpolates `sahyog-shared:stage.live`.
+      const stage = t('stage.live', undefined, { locale, namespace: 'sahyog-shared' });
+      for (const key of ['section.live.title', 'table.caption.live'] as const) {
+        const out = t(key, { stage }, { locale, namespace: 'sahyog-drive' });
+        expect(out).toContain(stage);
+        expect(out).not.toMatch(/[{}]/);
+      }
+    });
+
     it(`${locale}: "value.contributions_count" interpolates {count} with NO stray brace`, () => {
       const out = t('value.contributions_count', { count: 42 }, { locale, namespace: 'sahyog-drive' });
       expect(out).toContain('42');
@@ -117,7 +134,17 @@ describe('/sahyog copy resolves through the REAL t() — both locales', () => {
   // ⚠ AND THE POOL-REALITY-COMPARISON RULE: no copy on this surface may compare to a target.
   for (const locale of LOCALES) {
     it(`${locale}: no prohibited term, and ⛔ no comparison-to-target framing`, () => {
-      const all = KEYS.map((k) => t(k, undefined, { locale, namespace: 'sahyog-drive' })).join(' ');
+      const all = [
+        ...KEYS.map((k) => t(k, undefined, { locale, namespace: 'sahyog-drive' })),
+        // ⭐ The interpolated keys are scanned too — a prohibited term hiding in a composed heading
+        // would otherwise be invisible to this leg.
+        ...(['section.live.title', 'table.caption.live'] as const).map((k) =>
+          t(k, { stage: t('stage.live', undefined, { locale, namespace: 'sahyog-shared' }) }, {
+            locale,
+            namespace: 'sahyog-drive',
+          }),
+        ),
+      ].join(' ');
       for (const banned of [/\bdonor/i, /late teacher/i, /\breceipt\b/i, /\bpassbook\b/i]) {
         expect(all).not.toMatch(banned);
       }

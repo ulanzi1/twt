@@ -358,7 +358,20 @@ SUPERADMIN may make it visible**, and **separately for member and for public**"*
 names **this story** as the target's *"first consumer, **server-side**"*. ⇒ **as written, AC2 forbids
 the render cl.7(c) exists to authorise.** ⛔ Not decided here. ⇒ **see `D4`.**
 
-#### ⚠⛔ D3 — **OPEN, ROUTED IN FROM STORY C 2026-09-06. ⛔ ANSWER IT AT TASK 3.**
+#### ⏳⚠⛔ D3 — **ESCALATED TO THE TRUSTEE PANEL 2026-09-07 (BigDev's direction). ⛔ STILL BLOCKS TASK 3.**
+
+> ⏳⭐ **ESCALATED, ⛔ NOT RULED.** ⇒ routing note **§15**. ⭐ Routed to BigDev from Story C on
+> 2026-09-06; ⭐ BigDev escalates it now that the Panel is available.
+> ⚠⛔ **AND THE 2026-09-07 RULINGS DO ⛔ NOT CLOSE IT — ⭐ computed, ⛔ not assumed.** Against a hidden
+> ₹50 lakh target with the bar drawn to the nearest whole percent, a reader recovers it to
+> **± 17.1%** at 3% fill · **± 3.0%** at 17% · **± 1.3%** at 39% · **± 0.6%** at 90% ⇒ ⭐⭐ **it
+> SHARPENS as the drive fills.** ⛔⛔ **And the cut-off ruling does ⛔ NOT mitigate it:** writing
+> *"₹19.45 lakh"* instead of exact rupees moves the band by **< 1/1000** ⇒ ⭐ **the band is set by the
+> BAR's rounding, ⛔ never the amount's** — ⇒ ⛔ coarsening the money is ⛔ not a lever, ⭐ only the bar is.
+> ⭐ Interlock: where `revealToPublic` is ON for a Pariwar, ⛔ nothing is hidden and `D3` does ⛔ not
+> arise for it.
+
+#### ⚠⛔ D3 — the original record, **OPEN, ROUTED IN FROM STORY C 2026-09-06.**
 
 ⭐ **The channel.** This AC's ban is on a *"percentage **label** that lets it be inferred by
 arithmetic"*. ⛔ **The bar's own GEOMETRY is that percentage** — `pool-progress`'s view model exposes

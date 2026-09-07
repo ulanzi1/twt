@@ -810,3 +810,68 @@ stand: **(i)** quantize/band the rendered fill · **(ii)** accept-and-record wit
 trigger · **(iii)** escalate. ⚠ ⛔ It is ⛔ **not** the Panel's by default — it was routed to BigDev
 from Story C — ⭐ but §13.3's finding now applies to it too: **with the switch OFF there is a hidden
 figure; with it ON for a Pariwar, ⛔ nothing about that Pariwar is hidden and `D3` does not arise.**
+
+
+---
+
+## 15. ⏳⛔⛔ `D3` IS ESCALATED TO THE PANEL — BigDev's direction, 2026-09-07
+
+⭐ `D3` was **routed to BigDev from Story C** and has stood open since 2026-09-06. ⇒ ⭐ BigDev now
+**escalates it**, the Panel being available. ⛔ It is ⛔ **not** re-opening anything the Panel ruled —
+⭐ it is the **consequence of two of their rulings being true at once**, and it is the last thing
+blocking Task 3.
+
+### 15.1 ⛔ The finding, in one line
+
+The page publishes **the amount** and **the bar**. ⭐ The bar's width **is** `amount ÷ target`.
+⇒ ⛔ **dividing one by the other returns the target** — the figure `-189` cl.2(c) and `-190` cl.7(b)
+say is not displayed.
+
+### 15.2 ⭐ How precisely — **computed, ⛔ not estimated**
+
+⚠ Against a hidden ₹50 lakh target, with the bar rendered to the nearest whole percent:
+
+| Drive shows | Bar | Reader recovers | Band |
+|---|---|---|---|
+| ₹1,50,000 | 3% | ₹42.9 – 60.0 lakh | ± 17.1% |
+| ₹8,55,000 | 17% | ₹48.9 – 51.8 lakh | ± 3.0% |
+| ₹19.45 lakh | 39% | ₹49.3 – 50.5 lakh | ± 1.3% |
+| ₹30 lakh | 60% | ₹49.6 – 50.4 lakh | ± 0.8% |
+| ₹45 lakh | 90% | ₹49.7 – 50.3 lakh | ± 0.6% |
+
+⭐⭐ **IT SHARPENS AS THE DRIVE FILLS.** ⚠ The one case where it fails is a bar **clamped at 100%**.
+
+⛔⛔ **AND THE 2026-09-07 CUT-OFF RULING DOES ⛔ NOT MITIGATE IT — ⭐ verified.** Writing *"₹19.45
+lakh"* rather than the exact rupees moves the recovered band by **less than a thousandth**
+(`₹19,45,000` → ₹49.2–50.5 L; `₹19,45,999` → ₹49.3–50.5 L). ⇒ ⭐ **the band is set by the BAR's
+rounding, ⛔ never the amount's.** ⚠ ⇒ ⛔ **coarsening the money is ⛔ not a lever; only the bar is.**
+
+### 15.3 ⚖️ Both readings are in the Panel's own record — ⛔ we take neither
+
+- ⭐ **To let it stand.** cl.2(c)'s stated purpose was **presentational**: its own consequence block
+  says hiding the target *"IS WHAT RESOLVES POOL-REALITY #2 … a bar with ⛔ no visible target is ⛔ not
+  a comparison to a target."* ⇒ ⭐ **the page still displays no comparison.** A reader who does
+  arithmetic learns a number; ⛔ the page never puts one in front of anyone.
+- ⛔ **To close it.** `-196` cl.8 and `permissions.ts:1056` call revealing the target **"a DISCLOSURE
+  ACT"**, reserved to `super_admin` alone. ⇒ ⚠ **if revealing is an act only the Trust may perform,
+  a page that gives it away to anyone who divides has performed that act with ⛔ nobody deciding to.**
+
+### 15.4 The options — ⛔ none pre-ruled
+
+- **(1) ACCEPT AND RECORD**, with a named re-examination trigger. ⭐ Zero build. ⚠ The derivability
+  is then a **known, written** property, ⛔ not a latent one.
+- **(2) COARSEN THE BAR** — e.g. ten steps rather than a smooth line. ⭐ Widens the band to **±12%**
+  at 39% fill and **±23%** early. ⚠ Costs fidelity: the bar sits still, then jumps. ⛔ And at a 0%
+  first step an early drive shows an **empty** bar, which reads badly on a family's record.
+- **(3) ⛔ NO BAR on the public surface** — the sentence alone. ⭐ Retires the question **entirely**.
+  ⚠⛔ **But it narrows `-189` cl.2(b)** (*"each carries a progress bar"*) ⇒ ⛔ a Panel act, which is
+  why it is listed rather than proposed.
+
+⭐ **Interlock, ⛔ not a steer:** where a Pariwar has switched the expected figure **ON** (§13.2),
+⛔ nothing about that Pariwar is hidden and `D3` does ⛔ not arise for it.
+
+### 15.5 ⚠ What is ⛔ NOT being asked
+
+⛔ ⛔ Not whether the target stays hidden by default — ⭐ §13.2 settled that, and it stands.
+⛔ ⛔ Not the sentence, the rupee sign, the cut-off, or the bar's motion — ⭐ all closed.
+⛔ ⛔ Not a re-run of Pool-Reality #2 — ⭐ §13.3 records it as conditional on the switch.

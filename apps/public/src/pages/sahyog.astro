@@ -331,6 +331,33 @@ if (effectiveRejection !== null) Astro.response.status = effectiveRejection.stat
 // 200 — one transient blip pinned "could not be loaded" into a shared edge for five minutes.
 // ⚠ `pastEnd` IS cacheable and deliberately so: it is a TRUE statement about a real index.
 // ⛔ `apiUnavailable` is not: it is a statement about THIS request's luck.
+//
+// ⚠⛔⛔ **STORY 11b.14 (AC4) — HOW STALE A LIVE DRIVE'S METER CAN BE, STATED HERE RATHER THAN LEFT
+// TO BE DISCOVERED.** FR-76 says the Active page is *"near-real-time during live alert"*. ⭐ This
+// line is what bounds that: **up to FIVE MINUTES** behind at every warm PoP, and up to **one
+// minute** in the visitor's own browser. ⇒ a Live row's bar, its confirmed count and its rupee
+// figure are ⛔ **not** live to the second, and the ruled sentence's *"…and counting"* is what
+// concedes it in the copy.
+// ⛔⛔ **THE CACHE POLICY IS ⛔ UNCHANGED BY STORY 11b.14, AND ⛔ MUST NOT BE "TUNED" TO CLOSE THE
+// GAP.** It is the same class of control as the rate tier (AC6), it was re-decided on the
+// `/members` precedent (`2026-08-20-143`), and shortening it silently would trade a governed
+// decision for a freshness preference. ⚠ The house reading of *"near-real-time"* is **polling,
+// ⛔ never a push socket** (8.3 D6; 9.1) — ⭐ and polling ⛔ cannot outrun a shared cache, so a
+// shorter poll interval would ⛔ not help either. ⇒ ⭐ the staleness is **ACCEPTED and STATED**.
+//
+// ⚠⛔ **AND ONE MORE CONSEQUENCE OF LISTING A LIVE DRIVE, STATED SO IT IS ⛔ NOT RE-OPENED IN
+// REVIEW (Trap 5).** Listing a drive **PUBLISHES ITS ADDRESS** — `2026-09-04-186` records that a
+// published link ends the work an unguessable address was doing, and `live` drives were the last
+// case where it did full work, precisely because ⛔ nothing linked to them.
+// ⭐⭐ **IT IS RULED, AND ITS STING IS ALREADY DRAWN.** Cite **`2026-09-05-200`**, ⛔ not `-186`
+// alone: a Trustee ratification that landed AFTER this story's baseline answers the reachability
+// question head-on — *"yes, a collecting drive's page should be reachable by the public"* (A1) and
+// *"It doesn't change anything. Phone-app member should reach the page."* (A2), with its cl.4
+// making the member-app path a **RATIFIED PROPERTY**, ⛔ not an implementation detail.
+// ⭐ And `2026-09-04-190` cl.1 took the **banking coordinates off** the public drive page (story A),
+// so what a published live address now reaches is the nominee's name and the drive facts —
+// ⛔ **not account numbers**. ⇒ Trap 5's disposition is **STRONGER**, ⛔ not weaker. ⛔ Do not
+// re-open it.
 const cacheable = effectiveRejection === null && view !== null && !view.model.apiUnavailable;
 if (cacheable) {
   Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');

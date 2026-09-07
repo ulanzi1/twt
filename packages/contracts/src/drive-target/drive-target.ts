@@ -54,10 +54,26 @@ export const MAX_DRIVE_TARGET_INR = 100_000_000;
 /**
  * ⭐⭐ THE TARGET — whole INR, **STRICTLY POSITIVE**.
  *
- * ⛔⛔ `.positive()`, ⛔ NEVER `.nonnegative()`. Story 11b.14's meter is `amountRaisedInr / target`,
- * so a **₹0** target is a **DIVISION BY ZERO** — and it is a DIFFERENT state from *"no target set"*,
- * which is the ABSENCE of a schedule row (`configured: false` below). ⇒ ⛔ do not "relax" this to
- * admit 0, and ⛔ do not treat 0 as unset anywhere on this path.
+ * ⛔⛔ `.positive()`, ⛔ NEVER `.nonnegative()`. A **₹0** target is a DIFFERENT state from *"no
+ * target set"*, which is the ABSENCE of a schedule row (`configured: false` below). ⇒ ⛔ do not
+ * "relax" this to admit 0, and ⛔ do not treat 0 as unset anywhere on this path.
+ *
+ * ⚠⛔⛔ **AMENDED 2026-09-07 — ⭐ THE BOUND STANDS; ⛔ ITS STATED GROUND IS SUPERSEDED, AND THE PRIOR
+ * TEXT IS NAMED, ⛔ NEVER DELETED** ([[feedback_supersede_never_reinterpret]]). It read:
+ *
+ * > *"Story 11b.14's meter is `amountRaisedInr / target`, so a **₹0** target is a **DIVISION BY
+ * > ZERO**."*
+ *
+ * ⛔ That is now **FALSE ABOUT STORY 11b.14 SPECIFICALLY**. The Trustee Panel ruled 2026-09-07 that
+ * the bar measures **CONTRIBUTORS** — `confirmedCount ÷ assignedCount` — superseding
+ * `2026-09-04-191` cl.4; ⇒ ⛔ **the meter never divides by this target at all**
+ * (`2026-09-07-204` cl.1). ⚠ This file shipped with Story 11b.13 while cl.4 still held, so it was
+ * ⛔ **not wrong when it shipped** — ⭐ a SUPERSESSION, ⛔ never a defect, and `11b-13` is ⛔ not
+ * amended retrospectively.
+ *
+ * ⭐⭐ **`.positive()` IS STILL RIGHT, ON ITS OWN SURVIVING GROUND:** ₹0 and *"never configured"* are
+ * two different facts, and a `>= 0` bound would collapse them into one. ⛔ ⛔ NO BEHAVIOUR CHANGES
+ * HERE — ⛔ only the sentence explaining WHY.
  *
  * ⚠ THIS IS THE 400 BOUNDARY. Without it the request reaches the domain's `DriveTargetInvalidError`
  * — the masking module's chunk-G2 finding was that an unregistered domain throw surfaces as an
@@ -72,8 +88,19 @@ export const DriveTargetInr = z.number().int().positive().max(MAX_DRIVE_TARGET_I
  *
  * ⭐ `configured` IS LOAD-BEARING and ⛔ is not inferrable from `targetInr` alone (the
  * `NomineeBankMaskingScheduleResponse` / `DirectoryPublicationStatusResponse` precedent).
- * `configured: false` means **no schedule row has ever been written**, which Story 11b.14's ruling
- * makes **⛔ NO BAR** — a different fact from a Pariwar that set a small target.
+ * `configured: false` means **no schedule row has ever been written** — a different fact from a
+ * Pariwar that set a small target.
+ *
+ * ⚠⛔ **AMENDED 2026-09-07 — ⭐ the flag STANDS; ⛔ its stated consequence is superseded, ⛔ not
+ * deleted.** It read: *"…which Story 11b.14's ruling makes **⛔ NO BAR**"*. ⛔ There is ⛔ no such
+ * rule any more: the bar's denominator is the pool's **assignee count**, so ⭐ **a roster always
+ * exists and the bar ALWAYS renders** (`2026-09-07-204` cl.1). ⭐ The successor is narrower —
+ * *"⛔ no public reveal ⇒ ⛔ no **लक्ष्य**"* — and it turns on
+ * `pariwar_drive_target_visibility`, ⛔ not on this flag.
+ * ⚠⛔ **AND THIS SCHEDULE HAS ⛔ NO CONSUMER AT ALL SINCE 2026-09-07** — लक्ष्य is DERIVED
+ * (`assignedCount × pools.fixed_amount`), so `resolveEffectiveDriveTargetInr` and this response are
+ * **RETAINED but UNCONSUMED** (the `2026-09-04-190` cl.4 precedent: ⛔ do not delete, ⭐ but ⛔ do not
+ * describe it as a live control on any Trustee-facing material until it has one).
  */
 export const DriveTargetResponse = z
   .object({

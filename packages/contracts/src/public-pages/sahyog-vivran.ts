@@ -346,6 +346,34 @@ export const PublicSahyogVivranEntry = z
      * Contributions CONFIRMED as money received, reversals compensated (Story 9.5's canonical
      * financial truth). ⛔ A count, ⛔ never a sum of amounts, and ⛔ never a score.
      *
+     * ⚠⛔⛔ **AMENDED 2026-09-07 (Story 11b.14, `D2`) — ⛔ THE SENTENCE ABOVE IS NARROWED, ⛔ NEVER
+     * DELETED, AND ITS ORIGINAL TEXT IS KEPT VERBATIM** ([[feedback_supersede_never_reinterpret]]).
+     *
+     * ⭐⭐ **WHAT MOVED:** `2026-09-04-190` **cl.6** (Trustee-ratified) puts a RUPEE FIGURE on this
+     * surface, and `-189` **cl.5** records that boundary as *"newly crossed … and recorded as
+     * such"*. ⇒ ⭐ this row now carries **`amountRaisedInr`**, which IS a sum of amounts.
+     *
+     * ⭐⭐ **AND READ THE PROVENANCE BEFORE ASSUMING THE SENTENCE WAS A RULING — IT WAS ⛔ NOT.**
+     * 11b.1's **AC5** — *"remembrance, not analytics"*, that story's own load-bearing commitment —
+     * prohibits, in terms: **leaderboards · rankings · gamification · social-performance metrics ·
+     * popularity metrics**. ⛔ It does ⛔ **not** name a sum. ⇒ *"never a sum of amounts"* was the
+     * **AUTHOR'S EXTENSION** of AC5, written adjacent to the ordering clause AC5 genuinely supports.
+     *
+     * ⭐⭐ **THE SURVIVING HALF STAYS ENFORCED, AND IT IS THE HALF AC5 ACTUALLY RULED:** ⛔ nothing
+     * orders by the count or the amount · ⛔ ⛔ no *"most-supported"* view at any tier · ⛔ no ranking
+     * · ⛔ no comparison **between** drives · ⛔ no badge, streak or achievement.
+     * ⚠ The amendment **NARROWS** the sentence; ⛔ it does ⛔ not repeal AC5.
+     *
+     * ⚠⛔⛔ **AND ⛔ NOTHING ON *THIS* SURFACE CHANGES IN STORY 11b.14 — ⭐ THE AMENDMENT REACHES THE
+     * SENTENCE, ⛔ NOT THE RENDER.** `D2` rules the amount onto **both** the index and the drive
+     * page, ⛔ but the drive page's figure belongs to **`11b-3b`** by `2026-09-02-176` **D1(b)** — a
+     * ruling three days older — whose **AC3b** consumes
+     * `derivePoolProgressCardViewModel(...).amountRaisedInr` **UNCHANGED** and lifts the `@twt/ui`
+     * fence THERE. ⇒ ⭐ 11b.14 amends this comment and renders ⛔ **nothing** here.
+     * ⛔⛔ **AND ⛔ DO ⛔ NOT COMPUTE IT LOCALLY WHEN THAT STORY LANDS** — `D1(c)` is REFUSED in code
+     * at four `apps/public` sites: *"a second multiplication **anywhere in this app** is the
+     * defect"* ([[project_amount_raised_canonical_producer]]).
+     *
      * ⭐⛔ IT IS THE **EVENT** COUNT, ⛔ NEVER A ROW COUNT, AND THE TWO ARE DESIGNED TO DISAGREE:
      * an RTBF invocation removes a contributor from any rendered list ENTIRELY while the omitted
      * contributor STILL COUNTS here (`2026-08-30-169`). ⇒ ⛔ never derive this from the LENGTH of a

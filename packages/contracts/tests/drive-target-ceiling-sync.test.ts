@@ -77,9 +77,17 @@ describe('drive-target ceiling — the contracts↔domain sync obligation (Trap 
     expect(DriveTargetInr.safeParse(DOMAIN_MAX + 1).success).toBe(false);
   });
 
-  it('⛔ REFUSES 0 — a division by zero for the meter, ⛔ not a synonym for "unset"', () => {
-    // Story 11b.14's meter is `amountRaisedInr / target`. "No target" is the ABSENCE of a schedule
-    // row, ⛔ never a zero one — a `>= 0` bound would have collapsed two different states into one.
+  it('⛔ REFUSES 0 — ⛔ NOT a synonym for "unset", which is the ABSENCE of a row', () => {
+    // ⚠⛔⛔ **THE TEST NAME AND THIS COMMENT ARE AMENDED, ⛔ THE ASSERTION IS ⛔ NOT** (Story 11b.14,
+    // Trap 9). ⭐ The prior name read *"a division by zero **for the meter**"* and the comment
+    // *"Story 11b.14's meter is `amountRaisedInr / target`"* — ⛔ both now FALSE about that story:
+    // the Trustee Panel ruled 2026-09-07 that the bar is `confirmedCount ÷ assignedCount`, so it
+    // ⛔ never divides by this target (`2026-09-07-204` cl.1, superseding `2026-09-04-191` cl.4).
+    // ⭐ Kept, ⛔ not deleted ([[feedback_supersede_never_reinterpret]]).
+    //
+    // ⭐⭐ **THE ASSERTION IS STILL CORRECT ON ITS SURVIVING GROUND:** ₹0 and *"never configured"*
+    // are two different facts, and a `>= 0` bound would collapse them into one. ⛔ Only the stated
+    // ground moved.
     expect(DriveTargetInr.safeParse(0).success).toBe(false);
   });
 });

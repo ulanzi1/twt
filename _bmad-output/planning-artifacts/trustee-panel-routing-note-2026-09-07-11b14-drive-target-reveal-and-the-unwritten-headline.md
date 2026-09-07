@@ -952,3 +952,67 @@ it on) is **money**. ⇒ ⛔ they need ⛔ not agree:
 **78%** of it. ⭐ **Three ways, ⛔ none pre-ruled:** **(i)** drop *"Expected"* — the bar no longer
 tracks it · **(ii)** keep both, ⭐ accepting they answer different questions · **(iii)** express the
 expected figure in **people** instead. ⛔ Nothing is blocked meanwhile: the switch is **off**.
+
+
+---
+
+## 17. ✅ लक्ष्य CONFIRMED · and a FACTUAL ANSWER — **does the system know what members are to contribute?**
+
+### 17.1 ✅ The Hindi word
+
+⭐ **लक्ष्य** is confirmed by the Panel (DR + KB, 2026-09-07). ⇒ §13.5's stated assumption is
+**discharged**; ⛔ it is no longer an assumption.
+
+### 17.2 ✅ **YES — and it is ⛔ not a new build. ⭐ It is ALREADY COMPUTED ON THIS EXACT READ PATH.**
+
+⚠ Asked by BigDev. ⭐ Answered from the code, ⛔ not from memory:
+
+| The figure | Where it lives | Status |
+|---|---|---|
+| **What ONE member contributes** | `pools.fixed_amount` (`schema/pools.ts:193`) — whole rupees, ⭐ **frozen at spawn** so a later change ⛔ never retro-alters a live pool | ⭐ shipped |
+| **Who sets it** | `pool_fixed_amount_schedule` — the per-Pariwar, effective-dated, **trustee-governed** schedule; ⭐ the spawn saga reads the amount in force at cycle-freeze | ⭐ shipped |
+| **How many members owe it** | `ASSIGNED_MEMBER_COUNT` (`public-read.ts:488`) — *"the **EXPECTED side** of the outcome"*, in the file's own words | ⭐ shipped |
+| ⭐⭐ **THE WHOLE DRIVE'S EXPECTED CONTRIBUTION** | **`expectedTotal = assignedCount × fixedAmount`** (`public-read.ts:760`) | ⭐⭐ **ALREADY COMPUTED — then QUARANTINED at `:739-743`** |
+
+⇒ ⭐⭐ **The system has known this figure all along.** It is computed on the very read path this story
+edits, fed to `classifyCycleOutcome`, and then deliberately discarded so ⛔ only the opaque outcome
+enum leaves. ⭐ And it is available **from the moment a pool spawns** — the roster is assigned and the
+amount frozen at spawn — so ⛔ **no configuration, ⛔ no admin action, ⛔ no waiting.**
+
+### 17.3 ⭐⭐ WHY THIS MATTERS — **it would dissolve `D7` BY IDENTITY**
+
+⚠ `D7` (§16.5) is that the bar counts **people** while *"Expected"* counts **rupees**, so the two can
+contradict. ⇒ ⭐ **that is true only of the ADMIN-TYPED target.** With the **derived** figure:
+
+```
+bar             = confirmed / roster
+amount raised   = confirmed × fixedAmount
+expected total  = roster     × fixedAmount
+⇒ amount / expected = (confirmed × fA) / (roster × fA) = confirmed / roster = bar
+```
+
+⭐ **Verified numerically** (roster 16,700 · ₹300 · 6,485 confirmed): bar **38.8323%**, money against
+expected **38.8323%** — ⭐ identical, for **every** drive and **every** value.
+⇒ ⛔ **the contradiction cannot arise.** ⛔ No ruling needed to prevent it; ⭐ it is arithmetic.
+
+### 17.4 ⚖️ ⛔ BUT IT IS A DIFFERENT FIGURE FROM THE ONE THE PANEL RULED — ⭐ stated, ⛔ not proposed
+
+⚠⛔ **`-189` cl.2(d)** ruled the target is *"a **Superadmin-settable, PER-PARIWAR** value, **the SAME
+target for every drive in that Pariwar**"*, and **`-190` cl.7(a)** gave the **Pariwar Admin** the
+setting authority. ⇒ ⭐ the derived figure is **PER-DRIVE** and moves with each pool's roster
+⇒ ⛔ **it contradicts cl.2(d)**, and ⛔ it needs ⛔ **no setter at all**.
+
+⚠⛔ **AND IT WOULD RETURN STORY C's SUBSTRATE TO HAVING NO CONSUMER** — the `D4` problem, from the
+other direction: `pariwar_drive_target_schedule`, its two keys, its RLS and its admin surface would
+again gate ⛔ nothing.
+
+⇒ ⭐ **Three ways to hold it, ⛔ none proposed here:**
+- **(i)** ⭐ Keep the **admin-set** target as ruled; ⏳ `D7` stays open and is answered when a Pariwar
+  first switches the figure on.
+- **(ii)** ⭐ Use the **derived** total as *"लक्ष्य"* ⇒ ⛔ `D7` dissolves, ⛔ no admin action, ⭐ always
+  correct — ⚠ but this **supersedes `-189` cl.2(d)** and re-strands Story C's substrate.
+- **(iii)** ⭐ Keep **both**, for different purposes — the derived total as what the drive *needs*, the
+  Pariwar's figure as what it *aims for*. ⚠ ⛔ Two "expected" numbers on one surface is the shape most
+  likely to confuse a reader; ⛔ we would ⛔ not recommend it without a clear split of meaning.
+
+⛔ **Nothing is blocked meanwhile** — the switch is **off**, so ⛔ no *"लक्ष्य"* renders at launch.

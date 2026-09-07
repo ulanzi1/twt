@@ -1,4 +1,43 @@
-# last_updated: 2026-09-07g (✅✅⭐⭐ **STORY 11b.14 (D) — `D3` ANSWERED AND CLOSED BY CONSTRUCTION;
+# last_updated: 2026-09-07h (✅ **STORY 11b.14 (D) — लक्ष्य CONFIRMED; ⭐⭐ AND A VERIFIED FINDING:
+#   THE SYSTEM ALREADY COMPUTES THE DRIVE'S EXPECTED CONTRIBUTION.** ⛔ ZERO ROWS MOVE; 11b-14 STAYS
+#   `ready-for-dev`. ⚠ ⛔ No code. ⇒ routing note **§17**.
+#
+#   ✅ **लक्ष्य CONFIRMED (DR + KB)** ⇒ §13.5's stated assumption is **DISCHARGED**; ⛔ no longer an
+#   assumption. ⭐ The Hindi label for the revealed figure is **लक्ष्य**, ⛔ not अपेक्षित.
+#
+#   ⭐⭐ **BigDev ASKED: does the system know the amount members are to contribute during a drive?**
+#   ✅ **YES — and it is ⛔ NOT a new build. ⭐ It is ALREADY COMPUTED ON THIS EXACT READ PATH:**
+#   · `pools.fixed_amount` (`schema/pools.ts:193`) — what ONE member contributes, whole rupees,
+#     ⭐ **FROZEN AT SPAWN** so a later change ⛔ never retro-alters a live pool;
+#   · `pool_fixed_amount_schedule` — the per-Pariwar, effective-dated, **TRUSTEE-GOVERNED** schedule
+#     the spawn saga reads at cycle-freeze;
+#   · `ASSIGNED_MEMBER_COUNT` (`public-read.ts:488`) — *"the **EXPECTED side** of the outcome"*, in the
+#     file's own words;
+#   · ⭐⭐ **`expectedTotal = assignedCount × fixedAmount` (`public-read.ts:760`) — COMPUTED TODAY, then
+#     QUARANTINED at `:739-743`** so only the opaque outcome enum leaves.
+#   ⇒ ⭐ available **from the moment a pool SPAWNS** (roster assigned + amount frozen) ⇒ ⛔ no
+#   configuration, ⛔ no admin action, ⛔ no waiting.
+#
+#   ⭐⭐ **AND IT WOULD DISSOLVE `D7` BY IDENTITY, ⛔ not by ruling:** bar = `confirmed/roster`;
+#   amount = `confirmed×fA`; expected = `roster×fA` ⇒ `amount/expected = confirmed/roster = bar`.
+#   ⭐ **Verified numerically** (16,700 roster · ₹300 · 6,485 confirmed): bar **38.8323%**, money
+#   against expected **38.8323%** — ⭐ IDENTICAL for every drive and every value ⇒ ⛔ the `D7`
+#   contradiction **CANNOT ARISE**.
+#
+#   ⚠⛔ **BUT IT IS A DIFFERENT FIGURE FROM THE ONE THE PANEL RULED — ⭐ stated, ⛔ NOT proposed.**
+#   `-189` cl.2(d) ruled a **PER-PARIWAR** value, *"the SAME target for every drive in that Pariwar"*,
+#   and `-190` cl.7(a) gave the **Pariwar Admin** the setting authority. ⇒ the derived figure is
+#   **PER-DRIVE**, moves with each pool's roster, and needs ⛔ NO SETTER ⇒ ⛔ it contradicts cl.2(d)
+#   ⚠⛔ **and would return Story C's substrate to having NO CONSUMER — the `D4` problem from the other
+#   direction** (`pariwar_drive_target_schedule`, its two keys, its RLS and its admin surface would
+#   again gate ⛔ nothing).
+#   ⇒ ⭐ Three ways to hold it, ⛔ none proposed: **(i)** keep the admin-set target as ruled, ⏳ `D7`
+#   answered when a Pariwar first switches on · **(ii)** use the DERIVED total as लक्ष्य ⇒ ⛔ `D7`
+#   dissolves, ⭐ always correct, ⚠ but supersedes cl.2(d) and re-strands C · **(iii)** keep BOTH for
+#   different purposes ⚠ (⛔ two "expected" numbers on one surface — ⛔ we would ⛔ not recommend it
+#   without a clear split of meaning).
+#   ⛔ **Nothing is blocked** — the switch is OFF, so ⛔ no लक्ष्य renders at launch.)
+# last_updated_prior: 2026-09-07g (✅✅⭐⭐ **STORY 11b.14 (D) — `D3` ANSWERED AND CLOSED BY CONSTRUCTION;
 #   ⚠⛔ A TRUSTEE-RATIFIED CLAUSE IS SUPERSEDED; ⏳ `D7` OPENS.** ⛔ ZERO ROWS MOVE; 11b-14 STAYS
 #   `ready-for-dev`. ⚠ ⛔ No code. ⛔ epic-11b `in-progress`; ⛔ 11b-11/12/13 `done`; ⛔ 11b-15…17 and
 #   6-18 `ready-for-dev`. ⇒ routing note **§16**.

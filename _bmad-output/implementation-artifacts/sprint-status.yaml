@@ -1,4 +1,49 @@
-# last_updated: 2026-09-07 (⭐⭐ **STORY 11b.14 (D) VALIDATED — 26 FINDINGS, TWO NEW OPEN DECISIONS.
+# last_updated: 2026-09-07b (⏳⭐⭐ **STORY 11b.14 (D) — `D4` AND `D5` ROUTED TO THE TRUSTEE PANEL.**
+#   ⛔ ZERO ROWS MOVE; 11b-14 STAYS `ready-for-dev`. ⚠ ⛔ No code; the story file + a new routing note.
+#   ⛔ epic-11b stays `in-progress`; ⛔ 11b-11 / 11b-12 / 11b-13 stay `done`; ⛔ 11b-15…17 and 6-18
+#   stay `ready-for-dev`.
+#   ⇒ `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-07-11b14-drive-target-
+#      reveal-and-the-unwritten-headline.md`
+#   ⛔ **BigDev rules NEITHER** — both turn on an intent only the Panel holds.
+#
+#   ⭐ **Q1 (`D4`) — DID `-190` cl.7(c) MEAN THE TARGET WOULD ACTUALLY APPEAR?** *"⭐ ONLY A SUPERADMIN
+#   may make it visible, and separately for member and for public."* ⭐ C built it correctly: the
+#   column, the `member_ge_public` DB CHECK, the fail-closed default, the write path, a
+#   `super_admin`-ONLY key (granted to ⛔ no role bundle in `roles.ts`), and an admin form.
+#   ⛔⛔ **AND ⛔ NOTHING READS IT.** Every non-test occurrence of `revealToPublic` / `reveal_to_public`
+#   in the repo is definition, storage, write path, admin API or OpenAPI — ⛔ **zero in any code path
+#   that decides what a member or a visitor SEES**. `resolveEffectiveDriveTargetInr` and
+#   `resolveDriveTargetVisibility` have ⛔ **ZERO production callers**. `apps/public/src` and
+#   `apps/mobile` contain ⛔ **ZERO** references to the target in any form. ⚠⛔⛔ **And a SHIPPED test
+#   already asserts the switch is inert** — `public-pages/sahyog-drive.spec.ts` writes
+#   `reveal_to_public = true` *"so the test proves the PUBLIC SURFACE carries no target even in the
+#   state most likely to leak one"*, then asserts seven target tokens are absent. ⚠ Story **E**
+#   repeats the omission on the member axis ⇒ ⛔ cl.7(c) has ⛔ NO consumer on either axis it names.
+#   ⭐ `-196` cl.8 names story D *"its first consumer, server-side"* — ⚠ and *"server-side"* is
+#   exactly the ambiguity. Options put to the Panel: build it here · built-ahead authority, recorded
+#   inert with a NAMED successor story key · members-only. ⛔ None pre-ruled.
+#
+#   ⭐ **Q2 (`D5`) — THE RATIFIED HEADLINE EXISTS IN ⛔ NO FILE.** `-190` cl.6 adopted, in the Panel's
+#   words, *"16,750 members have stood with this family — ₹19.45 lakh, and counting"*. ⭐ Both
+#   `sahyog-shared.json` files hold **14 keys** and ⛔ none is a headline; `"and counting"` / `"lakh"`
+#   / `"have stood with"` / `"members have stood"` each return ⛔ **0 files** across the WHOLE locale
+#   corpus. ⚠ Meanwhile a **SECOND** ratified money sentence — the 2026-09-05 index line — IS shipped
+#   in both locales, is **amount-first**, carries ⛔ **no member count** (so it ⛔ cannot satisfy cl.6's
+#   *"participation-first"*), and ⛔ nothing rules which surface takes which. ⛔ We will ⛔ not author
+#   or translate a Trustee-ratified sentence at a render site (`-193` cl.3). ⭐ `formatCurrency`
+#   **EXECUTED**: `"₹ 19,45,000"` (en) / `"₹ १९,४५,०००"` (hi) — ⛔ never `"₹19.45 lakh"`; a word-form
+#   needs a rounding rule nobody has ruled.
+#
+#   ⭐⭐ **EVIDENCE DISCIPLINE, AT BigDev's DIRECTION:** the note rests on **verbatim ratified text**
+#   and **verified repository state** ONLY — exhaustive searches, absent callers, a shipped test's
+#   own assertions, and a function we EXECUTED. ⛔ ⛔ **No code comment, doc-block, story-file prose
+#   or prior review summary is used as evidence anywhere in it**; §7 lists every check so each claim
+#   is re-runnable, and the two coherent readings are labelled **INFERENCE** and argued in BOTH
+#   directions (§5). ⚠ It also flags, ⛔ without asking the Panel to rule it, that Q1 and Q2 both
+#   MOVE `D3` — a public reveal leaves nothing hidden to recover; a coarsened amount weakens the
+#   division.
+#   ⇒ ⛔ **Task 3 (`D4`) and Task 5 (`D5`) BLOCKED**; ⭐ every other task proceeds.)
+# last_updated_prior: 2026-09-07 (⭐⭐ **STORY 11b.14 (D) VALIDATED — 26 FINDINGS, TWO NEW OPEN DECISIONS.
 #   ⛔ ZERO ROWS MOVE; 11b-14 STAYS `ready-for-dev`.** ⚠ ⛔ No code; the story file only.
 #   ⛔ epic-11b stays `in-progress`; ⛔ 11b-11 / 11b-12 / 11b-13 stay `done`; ⛔ 11b-15…17 and 6-18
 #   stay `ready-for-dev`.

@@ -36,6 +36,15 @@ Status: ready-for-dev
 > ⭐ **`D5`** — ⛔ AC3's ruled headline **does ⛔ not exist** in B's shared copy, and ⛔ no ruling
 > assigns it a surface. ⭐ **AC7's double-absence gap** — deferred to this story **BY NAME** by
 > 11b.12's code review. ⇒ see **⚖️ Decisions** and **AC7's open item**; ⛔ none is pre-ruled here.
+>
+> ⏳⭐⭐ **`D4` AND `D5` ARE ROUTED TO THE TRUSTEE PANEL — 2026-09-07, BigDev's direction.**
+> ⇒ `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-07-11b14-drive-target-reveal-and-the-unwritten-headline.md`
+> ⛔ **BigDev rules neither.** ⭐ Both turn on an intent only the Panel holds: whether `-190` cl.7(c)'s
+> Superadmin reveal was meant to reach a screen, and what the cl.6 headline's words are and which
+> surface carries them. ⚠ **Task 3 and Task 5 are BLOCKED until the Panel answers.** ⭐ Every other
+> task proceeds — ⛔ the escalation blocks the meter's denominator and the copy, ⛔ nothing else.
+> ⭐ The note rests **only** on ratified text and verified repository state; ⛔ it cites ⛔ no code
+> comment, ⛔ no doc-block and ⛔ no story prose as evidence (its §7 lists every check).
 > ⚠ **And every `file:line` in this story drifted** — B and C rewrote all of them. Re-anchored below.
 >
 > ⚠⛔ **ROUTED IN FROM C, 2026-09-06 (11b.13 validation) — `D3`: THE METER RECOVERS THE HIDDEN TARGET
@@ -713,7 +722,15 @@ decisions** — ⛔ the opposite posture from 2026-09-04.
 
 ---
 
-### ⚠⛔ D4 — **OPEN, 2026-09-06. ⛔ ANSWER IT AT TASK 3, BEFORE THE METER IS WIRED.** Does D honour `-190` cl.7(c), or defer it by name?
+### ⏳⚠⛔ D4 — **ROUTED TO THE TRUSTEE PANEL, 2026-09-07. ⛔ BLOCKS TASK 3.** Does `-190` cl.7(c)'s Superadmin reveal reach a screen — and is D the story that makes it so?
+
+> ⏳⭐ **ESCALATED, ⛔ NOT RULED.** ⇒ `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-07-11b14-drive-target-reveal-and-the-unwritten-headline.md` **§1 Q1, §3, §6.1.**
+> ⭐ **Why the Panel and ⛔ not BigDev:** cl.7(c) reserves the reveal to a Superadmin and `-196` cl.8
+> calls it *"a **DISCLOSURE ACT**"*. ⇒ deciding, on our own reading, either to **perform** it (put a
+> rupee target on a public page) or to **make it permanently unperformable** is exactly the class of
+> act the Panel has reserved ([[feedback_supersede_never_reinterpret]]).
+> ⚠ **The three options below go to the Panel as they stand** — ⛔ none is pre-ruled, and the note
+> states the case in both directions (its §5).
 
 ⭐⭐ **THE FINDING.** AC2 states, flatly and unconditionally, *"⛔ **THE TARGET IS ⛔ NOT DISPLAYED**
 (`-190` cl.7(b))"*. ⛔ **That is HALF of cl.7.** Verbatim:
@@ -768,7 +785,18 @@ makes it permanent.
 
 ---
 
-### ⚠⛔ D5 — **OPEN, 2026-09-06. ⛔ ANSWER IT AT TASK 5, BEFORE ANY COPY IS WRITTEN.** Where does AC3's headline come from, and which surface carries it?
+### ⏳⚠⛔ D5 — **ROUTED TO THE TRUSTEE PANEL, 2026-09-07. ⛔ BLOCKS TASK 5.** Where does AC3's headline come from, and which surface carries it?
+
+> ⏳⭐ **ESCALATED, ⛔ NOT RULED.** ⇒ `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-07-11b14-drive-target-reveal-and-the-unwritten-headline.md` **§1 Q2, §4, §6.2.**
+> ⭐ **Why the Panel and ⛔ not BigDev:** the sentence is the Panel's own ratified wording, on a public
+> page, about money and about a bereaved family. ⛔ Authoring or translating it here is the two-source
+> drift `-193` cl.3 exists to prevent, on the one string where the words are theirs. ⚠ **And a second
+> ratified money sentence now exists** (the 2026-09-05 index line), so *which surface carries which*
+> is a ruling, ⛔ not a layout choice.
+> ⚠ **The note asks for three concrete things** (§6.2 option (iv)): the **English** sentence as it
+> should render, the **Hindi** sentence, and whether the amount reads `₹ 19,45,000` — ⭐ what the
+> product actually produces, **executed and captured**, ⛔ not read off a comment — or a *"lakh"*
+> word-form, which would need a rounding rule.
 
 ⭐⭐ **THE FINDING — TWO HALVES.**
 
@@ -846,9 +874,12 @@ cross-drive comparison · ⛔ not publish a written pitch (`-190` cl.8).
       bar**. D2: **both surfaces**, and the *"never a sum"* sentence **amended as an amendment**.
       ⚠⛔ **BOTH CARRY 2026-09-06 AMENDMENTS** — D1 gains three mechanical blocks it did not know
       about; D2 gains **two more sites** (four, not two). ⭐ Re-read both before Task 3 / Task 6.
-- [ ] **Task 1b — ⚠⛔ ANSWER `D4` AND `D5`** — ⛔ **BLOCKING Task 3 and Task 5 respectively.** ⭐ Both
-      are BigDev's, ⛔ neither is the dev agent's; both may escalate. ⛔ ⛔ **No code on the meter
-      before `D4`; ⛔ no copy written before `D5`.**
+- [x] **Task 1b — ⚠⛔ ROUTE `D4` AND `D5` TO THE PANEL** — ✅ **DONE 2026-09-07.** ⇒ `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-07-11b14-drive-target-reveal-and-the-unwritten-headline.md`
+      ⭐ Built on ratified text and verified repository state **only**; ⛔ ⛔ no code comment, doc-block
+      or story prose used as evidence (§7 lists every check, re-runnable).
+- [ ] **Task 1c — ⏳ AWAIT THE PANEL** — ⛔ **BLOCKING Task 3 (`D4`) and Task 5 (`D5`).** ⛔ ⛔ **No
+      code on the meter's denominator before `D4` is answered; ⛔ no headline copy written, authored
+      or translated before `D5` is answered.** ⭐ Every other task proceeds meanwhile.
 - [ ] **Task 2 — The listing predicate** (AC1, **Trap 6**) — ⚠⛔ **FIVE artefacts, ⛔ not one:**
   - [ ] `SAHYOG_DRIVE_VISIBLE_POOL_STATES` (`public-read.ts:102`) gains `live`; amend the `:97-100`
         doc-block that calls it *"ABSENT deliberately"* — ⭐ **amend and name**, ⛔ never overwrite.
@@ -863,8 +894,9 @@ cross-drive comparison · ⛔ not publish a written pitch (`-190` cl.8).
 - [ ] **Task 3 — The meter** (AC2, per D1) — including the **no-target** path and re-scoping the THROW.
   - [ ] ⚠⛔ **ANSWER `D3` FIRST** (AC2) — (i) quantize/band, (ii) accept-and-record, or (iii) escalate.
         ⛔ Do ⛔ not wire the denominator before it is answered; ⛔ a token-scan test will ⛔ not catch it.
-  - [ ] ⚠⛔ **AND `D4`** — ⛔ whether the meter honours `-190` cl.7(c)'s public reveal, or defers it
-        **by a named successor story key**. ⛔ Not the dev agent's call.
+  - [ ] ⏳⚠⛔ **AND `D4` — ⛔ WITH THE PANEL since 2026-09-07.** Whether the meter honours
+        `-190` cl.7(c)'s public reveal, defers it **by a named successor story key**, or narrows it
+        to members. ⛔ Not the dev agent's call, ⛔ and no longer BigDev's.
   - [ ] ⛔ **Update BOTH halves of the anti-widening gate** — `presenter.test.ts:157-163` (the
         `Record<keyof …, true>` literal) **and** `:186-188` (the five-element array) — ⭐ and
         **record the relaxation as deliberate**, keeping the banned-name loop at `:189-191` intact.
@@ -883,8 +915,9 @@ cross-drive comparison · ⛔ not publish a written pitch (`-190` cl.8).
         `deriveFieldIds` throws in **both** directions.
 - [ ] **Task 5 — Render + copy** (AC1, AC3, AC5, **Traps 4 and 8**) — the Live section; the headline
       in both locales **per `D5`'s answer**; ⛔ no ordering affordance anywhere.
-  - [ ] ⚠⛔ **`D5` FIRST** — ⛔ the ruled headline does ⛔ not exist in B's shared copy, and ⛔ no
-        ruling assigns it a surface. ⛔ Do ⛔ not mint a Trustee-ratified sentence at a render site.
+  - [ ] ⏳⚠⛔ **`D5` FIRST — ⛔ WITH THE PANEL since 2026-09-07.** ⛔ The ruled headline does ⛔ not
+        exist in B's shared copy, and ⛔ no ruling assigns it a surface. ⛔ Do ⛔ not mint, author or
+        translate a Trustee-ratified sentence at a render site.
   - [ ] ⛔ **Rewrite `page.intro` in BOTH locales** — it says *"Drives that are still **Live are not
         listed here**"* / *"जो अभियान अभी जारी हैं वे यहाँ **सूचीबद्ध नहीं** हैं।"*, pinned by
         `sahyog-copy.test.ts:34`. AC1 makes it **false**.
@@ -996,6 +1029,7 @@ units. ⚠ Assert **membership and explicit values**, ⛔ never counts over the 
 - `packages/i18n/src/resolver.ts:39` · `src/currency.ts:10-15` · `locales/{en,hi}/sahyog-shared.json`
   · `tests/sahyog-shared-dark-copy.test.ts`
 - `_bmad-output/planning-artifacts/epics.md:160` (FR-76), `:4872` (the superseded parenthetical)
+- ⏳ `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-07-11b14-drive-target-reveal-and-the-unwritten-headline.md` — **the `D4` / `D5` escalation**
 
 ## Dev Agent Record
 
@@ -1011,6 +1045,7 @@ units. ⚠ Assert **membership and explicit values**, ⛔ never counts over the 
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-09-07 | 0.5 | ⏳⭐⭐ **`D4` AND `D5` ROUTED TO THE TRUSTEE PANEL — ⛔ BigDev rules neither; ⛔ zero rows move; ⛔ no code.** ⇒ `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-07-11b14-drive-target-reveal-and-the-unwritten-headline.md` ⭐ **Q1 (`D4`):** did `-190` cl.7(c)'s *"ONLY A SUPERADMIN may make it visible, separately for member and for public"* mean the figure would actually appear — and is D, which `-196` cl.8 names *"its first consumer"*, the story that makes it so? ⛔ The switch is built, governed, `super_admin`-gated and DB-constrained, and **every** non-test reference to it is definition, storage, write path or admin API — ⛔ **zero readers in any member- or public-facing render**; `resolveEffectiveDriveTargetInr` and `resolveDriveTargetVisibility` have ⛔ **zero production callers**; `apps/public/src` and `apps/mobile` contain ⛔ **zero** references to the target in any form; and a **shipped test** sets `reveal_to_public = true` and then asserts seven target tokens are absent — ⭐ the programme has already codified that the switch changes nothing. Story **E** repeats the omission on the member axis ⇒ ⛔ cl.7(c) has ⛔ no consumer on either axis it names. ⭐ **Q2 (`D5`):** cl.6 adopted a headline in the Panel's words; both `sahyog-shared.json` files hold **14 keys** and ⛔ none is a headline, and `"and counting"` / `"lakh"` / `"have stood with"` / `"members have stood"` each return ⛔ **0 files** across the entire locale corpus. ⚠ A **second** ratified money sentence (the 2026-09-05 index line) IS shipped, carries ⛔ no member count, and ⛔ nothing says which surface takes which. ⭐ `formatCurrency` **executed**: `"₹ 19,45,000"` (en) / `"₹ १९,४५,०००"` (hi) — ⛔ never `"₹19.45 lakh"`. ⭐⭐ **The note rests on ratified text and verified repository state ONLY** — ⛔ ⛔ no code comment, doc-block or story prose is used as evidence, and §7 lists every check so each claim is re-runnable; ⚠ the two coherent readings are labelled **INFERENCE** and argued in both directions (§5). ⇒ **Task 3 and Task 5 BLOCKED; every other task proceeds.** | BigDev + Claude |
 | 2026-09-06 | 0.4 | ⚠⛔⛔ **VALIDATED (`bmad-create-story validate`) — 26 FINDINGS, TWO NEW OPEN DECISIONS, ⛔ ZERO ROWS MOVE.** ⭐ Three adversarial passes over a baseline that had moved **105 non-`_bmad-output` files**. ⛔ **`D4` OPEN** — AC2 quotes `-190` cl.7(b) and **drops cl.7(c)**; C's `revealToPublic` has ⛔ **ZERO** production readers (admin write + DB + RLS + CHECK + `super_admin` key, ⛔ no render anywhere), and `-196` cl.8 names **this story** as the target's *"first consumer"*. Story **E** repeats it on the member axis ⇒ ⛔ cl.7(c) has ⛔ no consumer in the whole split. ⛔ **`D5` OPEN** — AC3's ruled headline **does ⛔ not exist** in B's shared copy (`"and counting"` / `"lakh"` appear ⛔ nowhere under `locales/`), ⛔ no ruling assigns it a surface, and ⛔ no formatter produces either figure. ⭐ **AC7 gains the double-absence open item**, routed here **BY NAME** by 11b.12's code review — two combinations have ⛔ NO variant and `t()` **throws** ⇒ a **500 for the whole page**. ⚠ **Traps 6-8 added:** widening the predicate is **five** artefacts (⛔ two fail silently — every live drive would render under *"Closed drives"*); **two matrix gates**, one of which **forbids its own remedy**; and **test-pinned copy in both locales goes FALSE**. ⚠ **D1 amended** — the anti-widening test rejects ⛔ ANY new input key, and `rosterSize`/`fixedAmount` are required. ⚠ **D2 amended** — **four** sites, ⛔ not two, including `public-read.ts:739-743`, which prohibits Task 4's preferred option **by name**. ⚠ **AC7(b) corrected** — *"batched"* ⛔ cannot be built (per-value DEKs) and the baseline was **50, not 1-2** ⇒ **3×**, ⛔ not 50×. ⭐ **Every `file:line` re-anchored**; `public-read.ts:481` was **mis-quoted**, ⛔ not merely drifted. ⭐ Header blocker **DISCHARGED** (B and C both `done`). ⛔ Zero rows move; ⛔ no code. | BigDev + Claude |
 | 2026-09-04 | 0.2 | ✅ **D1 + D2 RULED.** D1: extend the canonical producer (optional rupee denominator), re-scope the THROW, ⛔ **no target ⇒ no bar**. D2: **both surfaces**, `sahyog-drive.ts:133` **amended and NAMED**, AC5's ordering half untouched. ⇒ ⛔ zero open decisions; ⚠ still blocked on **B** and **C**. | BigDev + Claude |
 | 2026-09-04 | 0.1 | Created from `-195` cl.3 (story **D**). ⚠ **D1 and D2 are OPEN.** ⭐ Findings at authoring: the shipped meter divides by **`rosterSize`, ⛔ not a target**; the index contract says **"⛔ never a sum of amounts"** and that sentence is an **author's extension** of 11b.1 AC5, ⛔ not AC5 itself; and `/sahyog` is cached **5 minutes** against FR-76's *"near-real-time"*. | BigDev + Claude |

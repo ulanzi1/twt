@@ -497,7 +497,16 @@ describe('committed matrix — the POPULATED invariants (Story 11a.1)', () => {
   // ⭐ A NARROWING needs ⛔ no new authority beyond the ruling that ordered it: this allowlist is a
   // CEILING, and removing entries only ever lowers it. ⚠ The IDENTITY discipline is unchanged — the
   // assertion still names every pair, so a withdrawn exception silently reappearing FAILS here.
-  it('carries EXACTLY the three ruled Tier-1 public exceptions, each attributed to its decision', () => {
+  // ⚠⛔⛔ **WIDENED 2026-09-07 (Story 11b.14, AC7(a)) — THREE → FOUR, ⭐ and the fourth is the SAME
+  // FIELD ON A SECOND SURFACE.** `sahyog-drive.nominee_account_holder_name` is ⛔ **NOT** an
+  // inheritance from the `sahyog-vivran` entry beside it: `2026-09-04-190` cl.2 ruled ONE DRIVE'S
+  // PAGE, reached one drive at a time by an opaque address, while this surface is a paginated list
+  // of up to FIFTY rows. ⇒ ⭐ **the pair-pinning is what forced a second ruling**, and it is
+  // `2026-09-07-205` cl.1 (Trustee-ratified 2026-09-05, DR + KB) — ⛔ never an append.
+  // ⭐ The IDENTITY discipline is unchanged and is what matters: the assertion still names every
+  // pair with its decision id, so a withdrawn exception silently reappearing — or an entry landing
+  // with ⛔ no ruling behind it — still FAILS here.
+  it('carries EXACTLY the four ruled Tier-1 public exceptions, each attributed to its decision', () => {
     const exceptions = committed().surfaces.flatMap((s) =>
       s.fields.filter((f) => f.tier1_public_exception !== undefined).map((f) => ({ s, f })),
     );
@@ -508,6 +517,8 @@ describe('committed matrix — the POPULATED invariants (Story 11a.1)', () => {
     ).toEqual([
       'member-directory.member_name@2026-08-19-136',
       'sahyog-drive.deceased_member_name@2026-08-24-159',
+      // ⭐ Story 11b.14 — the nominee's name on the INDEX. ⛔ A SECOND ruling, ⛔ not an inheritance.
+      'sahyog-drive.nominee_account_holder_name@2026-09-07-205',
       'sahyog-vivran.nominee_account_holder_name@2026-09-04-190 cl.2',
     ]);
     for (const e of exceptions) expect(e.f.pii_tier).toBe(1);

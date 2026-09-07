@@ -450,6 +450,29 @@ export const PublicVsPrivateMatrixSchema = z
       // *"exception that does not except anything"*, which the field-level check already rejects.
       // ⇒ their removal from `public` at `-190` cl.1 leaves ⛔ no trace in this allowlist BY DESIGN.
       ['sahyog-vivran.nominee_account_holder_name', '2026-09-04-190 cl.2'],
+      // ── ⭐⭐ STORY 11b.14 — THE SAME FIELD, ON THE **INDEX**, AND IT IS A **SECOND** RULING ──────
+      // ⛔⛔ **IT IS ⛔ NOT AN INHERITANCE FROM THE ENTRY ABOVE, AND THAT IS THE WHOLE POINT OF PINNING
+      // PAIRS.** `2026-09-04-190` **cl.2** ruled **ONE DRIVE'S PAGE** — reached by an opaque 128-bit
+      // address, one drive at a time. ⚠ `sahyog-drive` is a **paginated list of up to FIFTY rows**,
+      // so one unauthenticated request yields up to fifty nominee names where the drive page yields
+      // one or two. ⇒ a surface change of that size gets its **OWN** authority
+      // ([[feedback_supersede_never_reinterpret]]).
+      //
+      // ⭐⭐ **THE BULK-HARVEST PROPERTY WAS PUT TO THE PANEL AND *ACCEPTED*** (2026-09-05 routing
+      // note §9.4) — ⛔ it was ⛔ not discovered afterwards, and ⛔ it is ⛔ not re-litigated here.
+      // ⭐ The surrounding anti-enumeration controls are UNCHANGED and still load-bearing: `noindex`,
+      // forced pagination with a page-size cap, the deep-pagination horizon, ⛔ and no bulk export.
+      //
+      // ⭐ **THE FORM IS FULL NAME**, ruled by the same 2026-09-05 pass — `-190` cl.2 had settled the
+      // **LABEL** (*"Nominee Name"*, ⛔ never *"Account holder"*) and ⛔ said nothing about the FORM.
+      // ⇒ `deferred-work.md`'s `D-nominee-name-form` is **CLOSED BY RULING**.
+      //
+      // ⚠⛔ **AND THE VALUE IS ⛔ UNVERIFIED — the Panel ruled the exposure KNOWING it.** ⛔ No FK and
+      // ⛔ no match rule to `member_nominees` (6.8 **D1** removed the linkage on purpose:
+      // [[project_nominee_bank_disbursement_channel]]), and ⛔ nobody in the approval chain can read
+      // the ciphertext to check it. ⭐ **Story 6.18** — commissioned by the SAME Panel pass — closes
+      // it. ⛔⛔ Do ⛔ NOT add a join or a match rule here to "fix" it.
+      ['sahyog-drive.nominee_account_holder_name', '2026-09-07-205 cl.1'],
     ]);
 
     const exceptions = data.surfaces.flatMap((surface) =>

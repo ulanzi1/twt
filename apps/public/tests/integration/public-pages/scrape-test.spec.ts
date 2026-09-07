@@ -1358,8 +1358,22 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
     // cl.1-2 + `2026-09-04-191` cl.1). ⭐ 11b.10's own property is UNAFFECTED and still asserted:
     // its address field moved ⛔ neither surface's Tier-1 set, and it is 11b.11 that moved this one.
     expect(tier1AtPublic('sahyog-vivran')).toEqual(['nominee_account_holder_name']);
-    // ⭐ The index's single ruled entry (`2026-08-24-159` cl.2 / D1(b)) — ⛔ and no second one.
-    expect(tier1AtPublic('sahyog-drive')).toEqual(['deceased_member_name']);
+    // ⚠⛔⛔ **AMENDED BY STORY 11b.14 (AC7) — THE INDEX'S TIER-1-AT-`public` SET IS NOW **TWO**, AND
+    // THE PRIOR ASSERTION IS NAMED, ⛔ NOT DELETED** ([[feedback_supersede_never_reinterpret]]). It
+    // read `toEqual(['deceased_member_name'])` with *"the index's single ruled entry … ⛔ and no
+    // second one"*. ⭐ There IS now a second one, and it arrived the only way it may: by a **Panel
+    // ruling of its own** — `2026-09-07-205` cl.1 (Trustee-ratified 2026-09-05, DR + KB), carrying
+    // the nominee's name onto this surface.
+    // ⛔⛔ **IT IS ⛔ NOT AN INHERITANCE FROM `sahyog-vivran` ABOVE.** `2026-09-04-190` cl.2 ruled ONE
+    // DRIVE'S PAGE; this surface is a paginated list of up to FIFTY rows, and the Panel was shown
+    // that bulk-harvest property and ACCEPTED it (routing note §9.4).
+    // ⭐⭐ **AND 11b.10's OWN PROPERTY IS STILL ASSERTED AND STILL UNAFFECTED** — `drive_href` moved
+    // ⛔ neither surface's Tier-1 set, and 11b.14's three METER fields are all `pii_tier: 3` and
+    // moved it ⛔ either. ⇒ ⭐ the ONLY thing that widened this set is a ruling that names it.
+    expect(tier1AtPublic('sahyog-drive')).toEqual([
+      'deceased_member_name',
+      'nominee_account_holder_name',
+    ]);
 
     // ⛔ The new field is declared, and it is declared at Tier 3 — ⛔ never at Tier 1 "to be safe",
     // which would demand a Panel ruling this story neither has nor needs.

@@ -137,6 +137,19 @@
 # `public_name_presentation_mode` has ⛔ no subject here; ⚠ but `2026-08-19-136` cl.1 fails
 # any build whose public name form cannot change without a code change, and this IS a
 # public name. ⛔ The gap is RECORDED, ⛔ not closed by silence.
+# ✅⭐⭐ **AMENDED 2026-09-07 (Story 11b.14, AC7(a)) — THE FORM IS ⛔ NO LONGER UNRULED, AND
+# THE PARAGRAPH ABOVE IS KEPT VERBATIM AS THE RECORD.** The Trustee Panel (Dhiraj Rahul +
+# Kalpana Bharti) ruled the FORM on **2026-09-05** — **FULL NAME** — and
+# `deferred-work.md`'s `D-nominee-name-form` already reads **CLOSED BY RULING**.
+# ⇒ ⛔ leaving *"THE NAME FORM … IS ⛔ NOT RULED"* standing in a MACHINE-READ governance
+# artifact publishes a FALSE OPEN GAP ([[feedback_supersede_never_reinterpret]]).
+# ⭐ Recorded at `2026-09-07-205` cl.1, which also carries the same field onto the
+# `sahyog-drive` INDEX as a SECOND ruled pair — ⛔ never an inheritance from this surface.
+# ⚠⛔ **WHAT IS ⛔ NOT DISCHARGED BY THIS:** `2026-08-19-136` cl.1's objection **STANDS** —
+# there is still ⛔ no per-Pariwar presentation mode with a subject here, so this name's
+# form cannot be changed without a code change. ⭐ The Panel ruled the form KNOWING that,
+# ⛔ and the tension is RECORDED, ⛔ not asserted away. ⚠ Its resolution belongs with
+# **Story 6.18**, which gives the value a verified subject in the first place.
 # ⭐ **11b.3b's half is UNTOUCHED** — the deceased member's and contributor's names remain
 # its obligation on `2026-09-02-173` / `-174`, with their own allowlist entries.
 
@@ -692,6 +705,59 @@ surfaces:
           ⛔ It is a count, ⛔ not a score: ⛔ no ordering by it, ⛔ no "most-supported"
           view at any tier, and ⛔ no contributor identity at any grain (D9(a) binds
           11b.2/11b.3, which own contributor lists; this surface satisfies it vacuously).
+      # ── ⭐⭐ Story 11b.14 (AC7) — THE NOMINEE'S NAME ON THE **INDEX**. Trustee-ratified
+      #    2026-09-05 (Dhiraj Rahul + Kalpana Bharti); recorded at `2026-09-07-205`.
+      - id: nominee_account_holder_name
+        tier: public
+        pii_tier: 1
+        tier1_public_exception:
+          decision: '2026-09-07-205'
+          rationale: >-
+            ⭐⭐ RULING 2 of the 2026-09-05 Panel pass on Story 11b.12's D2. The same value
+            already at `tier: public` on the per-drive page (`2026-09-04-190` cl.2) now also
+            renders on the INDEX row, under the ruled public label "Nominee Name" — ⛔ never
+            "Account holder".
+            ⛔⛔ IT IS A SECOND RULING, ⛔ NOT AN INHERITANCE. `-190` cl.2 ruled ONE DRIVE'S
+            PAGE, reached by an opaque 128-bit address one drive at a time. This surface is a
+            paginated list of up to FIFTY rows, so one unauthenticated request yields up to
+            fifty nominee names. ⇒ the allowlist pins (surface, field) PAIRS precisely so a
+            change of that size cannot arrive by inheritance.
+            ⭐⭐ THE BULK-HARVEST PROPERTY WAS PUT TO THE PANEL AND ACCEPTED (routing note
+            §9.4) — ⛔ not discovered afterwards, ⛔ and not re-litigated. The surrounding
+            anti-enumeration controls are UNCHANGED and still load-bearing: `noindex`, forced
+            pagination with a page-size cap, the deep-pagination horizon, and ⛔ no bulk export.
+            ⭐ THE FORM IS FULL NAME, ruled by the same pass ⇒ `deferred-work.md`'s
+            `D-nominee-name-form` is CLOSED BY RULING.
+            ⚠⛔ AND THE VALUE IS UNVERIFIED — the Panel ruled the exposure KNOWING it. There is
+            ⛔ no FK and ⛔ no match rule to `member_nominees` (6.8 D1 removed the linkage on
+            purpose: the accounts are a CLAIM-SCOPED payment channel, ⛔ not one row per declared
+            nominee), and ⛔ nobody in the approval chain can read the ciphertext to check it.
+            ⇒ the page asserts "nominee of Late X" about a name ⛔ nothing has verified. ⭐ Story
+            6.18 — commissioned by the SAME Panel pass — is what closes that. ⛔⛔ Do ⛔ NOT add a
+            join or a match rule here to "fix" it, and ⛔ do ⛔ not block on 6.18.
+          scope: >-
+            Exactly this field on exactly this surface. ⛔ It does NOT reach In Memoriam (11b.6)
+            or any third surface — each owes its OWN Panel ruling. ⛔ And it authorises ⛔ NO
+            other nominee-bank value: ⛔ no account number, ⛔ no last-4, ⛔ no IFSC, ⛔ no VPA,
+            ⛔ no bank name, ⛔ no branch. Those keys are ABSENT from the wire, ⛔ never `null`
+            (the 11b.11 shape), and `2026-09-04-190` cl.1 + `-191` cl.1 withdrew them from the
+            drive page deliberately.
+        description: >-
+          ⭐ The nominee's name, as recorded on the claim's bank accounts — decrypted per row
+          under the SAME bounded-concurrency discipline the deceased member's name already
+          uses on this handler, and rendered inside the ratified `sahyog-shared:index_line.*`
+          sentence as its `{nominee_name}` token (11b.12 authored it DARK; this story lights it).
+          ⚠⛔ THE DECRYPT-FAILURE POSTURE IS LIST-SHAPED: OMIT THE NAME, ⛔ KEEP THE ROW.
+          ⛔ Letting one bad row throw would 500 the ENTIRE page for the whole Pariwar. ⭐ It is
+          ⛔ not re-derived — it is COPIED from the precedent on this same handler.
+          ⚠ AN ABSENT NAME DROPS ITS CLAUSE (11b.12 ruling 3) — ⛔ no placeholder, ⛔ no marker,
+          ⛔ no "name withheld". And where NO ratified variant fits (nominee absent together
+          with family, or with district), the row renders ⛔ NO SENTENCE AT ALL — silence
+          (`2026-09-07-205` cl.6). ⛔ `t()` THROWS on an unsupplied token, so one such row would
+          otherwise take the whole page down.
+          ⚠ EDGE-CACHED at `s-maxage=300`, like every other value here ⇒ a consent or masking
+          flip is ⛔ NOT immediate on this surface. ⭐ ⛔ Not a new posture — the drive page
+          already serves this decrypted name cached.
       # ── Story 11b.14 — the LIVE row's progress meter. `2026-09-04-189` cl.2(b) + `-190` cl.6,
       #    both Trustee-ratified; recorded at `2026-09-07-204`.
       - id: drive_progress_percentage

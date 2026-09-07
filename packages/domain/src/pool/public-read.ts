@@ -68,6 +68,8 @@ import { classifyCycleOutcome, type CycleFundingOutcome } from '../close-of-cycl
 import type { Db } from '../db.js';
 import { type ClauseId, type MemberId, type PariwarId, type PoolId, clauseId } from '../ids/index.js';
 import { clampLimit } from '../pagination.js';
+import type { DriveTargetVisibility } from './drive-target.js';
+import { resolveDriveTargetVisibility } from './drive-target-policy.js';
 import { poolIndexFromLetterCodeOrNull } from './naming.js';
 import { claims } from '../schema/claims.js';
 import { memberKycProfiles } from '../schema/member_kyc_profiles.js';
@@ -531,6 +533,72 @@ export const ASSIGNED_MEMBER_COUNT = sql<string>`(
        AND a.pariwar_id = "pools"."pariwar_id"
   )`;
 
+/**
+ * ⭐⭐ THE PUBLIC METER'S FILL — **`confirmedCount ÷ assignedCount`**, a whole percent, Story 11b.14
+ * (AC2). Trustee-ratified 2026-09-07: *"Progress bar should show the % of contributor already
+ * contributed in that pool."* ⇒ recorded at `2026-09-07-204`.
+ *
+ * ⚠⛔ **IT MEASURES PEOPLE, ⛔ NOT RUPEES, AND THAT SUPERSEDES A RATIFIED CLAUSE.**
+ * `2026-09-04-191` **cl.4** read *"THE PROGRESS BAR FILLS AGAINST A **RUPEE** TARGET"*; the Panel
+ * took contributors three days on. ⭐ Named, ⛔ not re-read ([[feedback_supersede_never_reinterpret]]).
+ *
+ * ⭐⭐ **AND IT IS THE SAME NUMBER AS THE SHIPPED MEMBER CARD'S** (`@twt/ui` `pool-progress`,
+ * `presenter.ts` — `min(100, round(confirmedCount / rosterSize × 100))`), because
+ * **`rosterSize == assignedCount`** by construction: `member_pool_assignments`' PK is
+ * `(pool_id, member_id)` and its rows are written from the SAME `memberAssignments` value
+ * `serializePoolSnapshot` receives, ⛔ never a naive re-run of `assignMembersToPools`. ⇒ the public
+ * bar and the member card ⛔ CANNOT disagree for the same pool. ⛔ Do ⛔ not add a reconciling guard,
+ * and ⛔ do ⛔ not re-derive either side.
+ *
+ * ⚠⛔ **IT CLAMPS; IT DOES ⛔ NOT THROW — ⭐ deliberately UNLIKE the member card.** There,
+ * `confirmedCount > rosterSize` is an IMPOSSIBLE state over a roster the card owns, and throwing is
+ * right. Here the two counts are two subqueries over the same frozen assignment set, and a public,
+ * edge-cached page must ⛔ never 500 on a race. ⇒ `Math.min(100, …)`.
+ *
+ * ⚠ A **ZERO-ASSIGNEE** pool is **0%**, ⛔ not an error and ⛔ not a divide-by-zero.
+ */
+export function driveConfirmedPercentage(
+  confirmedContributionCount: number,
+  assignedCount: number,
+): number {
+  if (assignedCount <= 0) return 0;
+  return Math.min(100, Math.round((confirmedContributionCount / assignedCount) * 100));
+}
+
+/**
+ * ⭐⭐ **लक्ष्य — THE DRIVE'S OWN EXPECTED CONTRIBUTION, `assignedCount × fixedAmount`.**
+ * Trustee-ratified 2026-09-07: *"Use the derived total."* ⇒ recorded at `2026-09-07-204`.
+ *
+ * ⚠⛔ **IT IS DERIVED, AND THERE IS ⛔ NO SETTER.** `2026-09-04-189` **cl.2(d)** (*"Superadmin-
+ * settable, PER-PARIWAR … the SAME target for every drive"*) is superseded **as to the VALUE**, and
+ * `2026-09-04-190` **cl.7(a)** (*"the PARIWAR ADMIN sets the target, from day 1"*) is superseded
+ * outright. ⇒ ⛔ **do ⛔ NOT call `resolveEffectiveDriveTargetInr`, and ⛔ do ⛔ not read
+ * `pariwar_drive_target_schedule`** — both are RETAINED but have ⛔ no consumer, and calling either
+ * would re-introduce the setter the supersession removed.
+ *
+ * ⭐ **WHAT SURVIVES IS THE VISIBILITY RULE.** cl.7(b) and cl.7(c) **STAND**: the figure is hidden
+ * by default and ⛔ only a `super_admin` may reveal it, separately for member and for public. ⇒ this
+ * function is gated on {@link resolveDriveTargetVisibility}, whose absent-row default is
+ * **FAIL-CLOSED** ⇒ ⛔ **nothing at launch, for any Pariwar**.
+ *
+ * ⚠⛔ **AND IT ANSWERS `deferred-work.md`'s *"a reveal configured for a Pariwar that has ⛔ no target
+ * at all"*, routed to Story 11b.14 Task 3 BY NAME.** Under the derived rule the schedule table is
+ * ⛔ never consulted, so *"revealed with no target"* resolves to **the derived total** — ⛔ never a
+ * blank, ⛔ never `₹0`. ⭐ The ⛔ ONLY residual absence is a **ZERO-ASSIGNEE** pool, and the answer
+ * there is **SILENCE** — the same posture this module already applies to `fundingOutcome`, and for
+ * the same reason: no expectation was ever set, so the surface says nothing rather than something
+ * false. ⛔ Do ⛔ not invent a placeholder.
+ */
+export function resolveDriveTargetForPublic(
+  assignedCount: number,
+  fixedAmount: number,
+  visibility: Pick<DriveTargetVisibility, 'revealToPublic'>,
+): number | null {
+  if (!visibility.revealToPublic) return null;
+  if (assignedCount <= 0) return null;
+  return assignedCount * fixedAmount;
+}
+
 /** One Sahyog Drive row, as the substrate holds it. ⛔ The name is CIPHERTEXT, not a name. */
 export interface SahyogDriveEntry {
   /** The pool's canonical id. ⚠ INTERNAL — ⛔ never serialized onto the public wire (AC8). */
@@ -563,6 +631,42 @@ export interface SahyogDriveEntry {
   /** Confirmed contributions, reversals compensated. ⛔ A count, ⛔ never a sum, ⛔ never a score. */
   confirmedContributionCount: number;
   /**
+   * ⭐⭐ THE PUBLIC METER'S FILL, 0-100 — Story 11b.14 (AC2), `2026-09-07-204` cl.1.
+   * See {@link driveConfirmedPercentage} for the arithmetic, the `rosterSize == assignedCount`
+   * identity and why it CLAMPS rather than throws.
+   *
+   * ⚠⛔ **THE WIRE CARRIES THE PERCENTAGE, ⛔ NEVER `assignedCount`** — minimum disclosure.
+   * ⚠ ⭐ **AND THE CONSEQUENCE IS RECORDED RATHER THAN GLOSSED:** the confirmed COUNT is on the same
+   * row, so a reader can divide and recover the assignee count. ⭐ That is **inherent to the ruling**
+   * — a participation percentage cannot be shown without it — and it is what CLOSED the arithmetic
+   * channel that used to recover the *target* (`D3`): the division now returns the roster size,
+   * ⛔ not a rupee figure. ⛔ Do ⛔ not "fix" it by quantising the fill; that was considered and is moot.
+   */
+  confirmedPercentage: number;
+  /**
+   * ⭐⭐ **लक्ष्य — THE DRIVE'S EXPECTED CONTRIBUTION, REVEALED OR `null`** — Story 11b.14 (AC2, `D4`),
+   * `2026-09-07-204` cl.2-4. See {@link resolveDriveTargetForPublic}.
+   *
+   * ⭐⭐ **`resolveDriveTargetVisibility` FINALLY HAS A PRODUCTION CONSUMER, AND IT IS THIS LINE.**
+   * `2026-09-04-196` **cl.8** names this story the target's *"first consumer, **server-side**"*, and
+   * the Panel closed it on 2026-09-07: *"expected figure shows only when Trust switches on. And it
+   * should be turned off."* ⇒ ⭐ **`-190` cl.7(b) and cl.7(c) are ⛔ NOT superseded — they STAND**,
+   * and the reveal is what gates this value.
+   *
+   * ⚠⛔⛔ **`null` IS THE STATE AT LAUNCH, FOR EVERY PARIWAR, AND THAT IS CORRECT — ⛔ NOT A GAP.**
+   * No visibility row exists for any Pariwar, and the absent-row default is FAIL-CLOSED ⇒ ⛔ no
+   * expected figure renders anywhere until a `super_admin` acts. ⛔ Do ⛔ not "fix" it.
+   *
+   * ⚠⛔ **AND ONE RATIFIED CONCERN IS DEFERRED TO THE ACT THAT WOULD TRIGGER IT, ⛔ NOT WITHDRAWN.**
+   * `2026-09-04-189` **cl.2(c)**'s own consequence block records that *"a bar with ⛔ no visible
+   * target is ⛔ not a comparison to a target"* — which is how **Pool-Reality #2** (Story 7.8,
+   * 11b.1 AC5) was resolved on this surface. ⇒ ⛔ **naming लक्ष्य beside the bar makes it a
+   * comparison again.** ⭐ With the switch OFF it does ⛔ not arise; ⚠ **whoever first turns a
+   * Pariwar on meets this paragraph before they do.** ⭐ Likewise `-189` cl.3 (*member ≥ public*):
+   * story **E** owes members the figure ⛔ only on that same condition.
+   */
+  driveTargetInr: number | null;
+  /**
    * Pool-Reality #2, as an OPAQUE ENUM. ⭐ The target is QUARANTINED by construction: the totals
    * are compared inside this module and ⛔ only this enum leaves it, so no expected-total,
    * percentage, shortfall or comparison figure can reach any render model (AC4).
@@ -576,6 +680,27 @@ export interface SahyogDriveEntry {
    * ⇒ the zero-expectation case is resolved BEFORE the call and the row SAYS NOTHING.
    */
   fundingOutcome: CycleFundingOutcome | null;
+  /**
+   * ⭐⭐ **THE RULED PUBLIC MONEY FIGURE — what has reached the family so far, in whole rupees.**
+   * `2026-09-04-190` **cl.6** (Trustee-ratified), with `-189` **cl.5** recording that this
+   * *"puts a RUPEE FIGURE on a public page for the first time … the boundary is newly crossed and is
+   * recorded as such."* Story 11b.14 (AC3).
+   *
+   * ⭐ It is `confirmedContributionCount × pools.fixed_amount` — **9.12 Decision 3's canonical
+   * identity**, and the SAME binding `classifyCycleOutcome` receives as `deliveredTotal`. ⛔ It is
+   * ⛔ not a second multiplication ([[project_amount_raised_canonical_producer]]).
+   *
+   * ⚠⛔ **AND THE COUNT BESIDE IT IS THE CONFIRMED CONTRIBUTOR COUNT, ⛔ NEVER THE ROSTER** — the two
+   * figures are internally consistent by that identity, so a reader who divides gets `fixed_amount`
+   * and ⛔ nothing else.
+   *
+   * ⛔ **AC5 IS UNTOUCHED:** ⛔ nothing orders by it, ⛔ no *"most-supported"* view at any tier, ⛔ no
+   * ranking, ⛔ no comparison **between** drives. ⭐ The *"never a sum of amounts"* sentence this
+   * crosses was an **AUTHOR'S EXTENSION** of 11b.1 AC5 (which prohibits leaderboards, rankings,
+   * gamification and popularity metrics, and ⛔ does ⛔ **not** name a sum) — it is **amended and
+   * NAMED** at every site, ⛔ never deleted.
+   */
+  amountRaisedInr: number;
   /**
    * The consent subject — `claims.deceased_member_id`.
    * ⚠ INTERNAL, for the consent join and the decrypt ONLY. ⛔ NEVER serialized onto the public
@@ -723,6 +848,17 @@ export async function listPublicSahyogDrivePools(
   const now = opts.now ?? new Date();
   const offset = Math.max(0, opts.offset ?? 0);
 
+  // ⭐⭐ THE REVEAL GATE, RESOLVED ONCE PER PAGE — ⛔ never per row (it is a Pariwar-level posture,
+  // and a per-row read would be an N+1 on a constant). ⭐ Story 11b.14 (`D4`) is
+  // `resolveDriveTargetVisibility`'s FIRST production consumer: before this, a governed,
+  // disclosure-classed, `super_admin`-gated control with a table, an RLS policy, a two-layer CHECK
+  // and an admin form rendered NOTHING, anywhere.
+  // ⚠⛔ ⛔ THE SIBLING RESOLVER IS ⛔ NOT CALLED. `resolveEffectiveDriveTargetInr` reads the
+  // schedule table, and the 2026-09-07 ruling REMOVED its role — लक्ष्य is DERIVED. Calling it would
+  // re-introduce the setter `-190` cl.7(a)'s supersession took away.
+  // ⭐ Its absent-row default is FAIL-CLOSED, so an RLS scope failure lands on non-disclosure.
+  const targetVisibility = await resolveDriveTargetVisibility(db, pariwarId);
+
   const rows = await db
     .select({
       poolId: pools.poolId,
@@ -762,6 +898,16 @@ export async function listPublicSahyogDrivePools(
   return rows.map((r) => {
     const confirmedContributionCount = Number(r.confirmedCount ?? 0);
     const assignedCount = Number(r.assignedCount ?? 0);
+    // ⭐⭐ HOISTED, ⛔ NOT DUPLICATED — Story 11b.14 (AC3, Task 4). This exact product was already
+    // computed inline as `classifyCycleOutcome`'s `deliveredTotal`; the ruled public **amount** is
+    // the SAME figure, so it is lifted to a binding and USED TWICE.
+    // ⛔⛔ **A SECOND `× fixedAmount` ANYWHERE WOULD BE THE DEFECT.** Story 11b.3's **D1(c)** is
+    // REFUSED in terms — *"`confirmedCount × fixedAmount` written anywhere in this diff … forks the
+    // canonical definition of a money figure into a second site"* — and the canonical producer is
+    // `@twt/ui`'s `pool-progress` presenter (9.12 Decision 3). ⇒ ⛔ do ⛔ not re-derive this in
+    // `apps/api`, and ⛔ **NEVER** in `apps/public`, where the refusal is scoped *"anywhere in this
+    // app"* ([[project_amount_raised_canonical_producer]]).
+    const deliveredTotal = confirmedContributionCount * r.fixedAmount;
     return {
       poolId: r.poolId,
       poolIndex: r.poolIndex,
@@ -775,11 +921,33 @@ export async function listPublicSahyogDrivePools(
       driveClosedAt: coerceDriveInstant(r.driveClosedAt),
       district: r.district,
       confirmedContributionCount,
-      // ⭐ THE TARGET IS QUARANTINED HERE AND NOWHERE ELSE. Both totals are whole INR — the unit
-      // `classifyCycleOutcome` documents — and BOTH DIE ON THIS LINE: only the opaque outcome
-      // enum is returned. ⛔ Do not widen `SahyogDriveEntry` to carry either of them, under any
-      // name: `classifyCycleOutcome` quarantines the target by construction and this surface must
-      // not smuggle one past it (AC4).
+      // ⭐ The meter's fill. ⛔ `assignedCount` itself stays OFF the entry — see the field's doc.
+      confirmedPercentage: driveConfirmedPercentage(confirmedContributionCount, assignedCount),
+      // ⭐ लक्ष्य, gated. ⛔ `null` for every Pariwar until a `super_admin` reveals it, and `null`
+      // for a zero-assignee pool even then.
+      driveTargetInr: resolveDriveTargetForPublic(assignedCount, r.fixedAmount, targetVisibility),
+      // ⚠⛔⛔ **THE QUARANTINE BELOW IS SUPERSEDED, AND IT IS NAMED RATHER THAN DELETED**
+      // ([[feedback_supersede_never_reinterpret]]). It read:
+      //
+      //   > "⭐ THE TARGET IS QUARANTINED HERE AND NOWHERE ELSE. Both totals are whole INR — the
+      //   > unit `classifyCycleOutcome` documents — and BOTH DIE ON THIS LINE: only the opaque
+      //   > outcome enum is returned. ⛔ Do not widen `SahyogDriveEntry` to carry either of them,
+      //   > under any name: `classifyCycleOutcome` quarantines the target by construction and this
+      //   > surface must not smuggle one past it (AC4)."
+      //
+      // ⭐⭐ **BOTH TOTALS NOW CROSS, BY RULING, AND EACH UNDER ITS OWN NAME** (Story 11b.14):
+      //  · `expectedTotal` (`assignedCount × fixedAmount`) is **लक्ष्य** — `2026-09-07-204` cl.2,
+      //    ⛔ gated on the `super_admin` public reveal and `null` by default, and ⛔ it does ⛔ not
+      //    reach a response body (see {@link SahyogDriveEntry.driveTargetInr}).
+      //  · `deliveredTotal` (`confirmedContributionCount × fixedAmount`) is the ruled public
+      //    **amount** — `2026-09-04-190` cl.6, with `-189` cl.5 recording the rupee boundary as
+      //    NEWLY CROSSED.
+      //
+      // ⚠⛔ **WHAT THE QUARANTINE WAS ACTUALLY PROTECTING SURVIVES INTACT:** ⛔ no SHORTFALL figure,
+      // ⛔ no comparison-to-target framing and ⛔ no percentage-of-target reaches the copy path —
+      // `classifyCycleOutcome` still takes both totals and still emits ⛔ only the opaque enum, and
+      // the amount below is a FIGURE, ⛔ never a comparison. ⛔ Do ⛔ not pass a total into
+      // `framingFor` or any copy resolver.
       //
       // ⭐⛔ ZERO ASSIGNEES ⇒ NO CLASSIFICATION AT ALL, ⛔ never a vacuous one (Review finding,
       // 2026-08-27). `assignedCount === 0` makes `expectedTotal` 0, and `0 >= 0` is TRUE, so the
@@ -797,8 +965,9 @@ export async function listPublicSahyogDrivePools(
           ? null
           : classifyCycleOutcome({
               expectedTotal: assignedCount * r.fixedAmount,
-              deliveredTotal: confirmedContributionCount * r.fixedAmount,
+              deliveredTotal,
             }),
+      amountRaisedInr: deliveredTotal,
       deceasedMemberId: r.deceasedMemberId,
       deceasedNameCiphertext: r.deceasedNameCiphertext,
       namePublicationAuthorised: r.namePublicationAuthorised,

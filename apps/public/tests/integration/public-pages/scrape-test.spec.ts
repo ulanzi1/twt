@@ -849,6 +849,9 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
         closedAt: '2026-08-01T00:00:00.000Z',
         district: 'Lucknow',
         confirmedContributionCount: 12,
+        // ⭐ Story 11b.14 (AC2, AC3) — the meter's fill and the ruled money figure.
+        confirmedPercentage: 12,
+        amountRaisedInr: 1200,
         fundingOutcome: 'fully_funded',
       },
       // ⭐ AN UNCONSENTED ROW IS IN THE FIXTURE ON PURPOSE — the render must still emit the row,
@@ -863,6 +866,9 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
         closedAt: null,
         district: null,
         confirmedContributionCount: 0,
+        // ⭐ Story 11b.14 (AC2, AC3) — the meter's fill and the ruled money figure.
+        confirmedPercentage: 0,
+        amountRaisedInr: 0,
         fundingOutcome: 'under_funded',
       },
     ],

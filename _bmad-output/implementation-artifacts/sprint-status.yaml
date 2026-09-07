@@ -1,4 +1,49 @@
-# last_updated: 2026-09-07d (✅⭐⭐ **STORY 11b.14 (D) — THE PANEL ANSWERED ALL THREE (DR + KB,
+# last_updated: 2026-09-07e (✅⭐⭐ **STORY 11b.14 (D) — `D4` CLOSED, `D5` CLOSED, `D6` CLOSED; the
+#   bar's motion RULED. ⚠⛔ `D3` REMAINS OPEN.** ⛔ ZERO ROWS MOVE; 11b-14 STAYS `ready-for-dev`.
+#   ⚠ ⛔ No code. ⛔ epic-11b stays `in-progress`; ⛔ 11b-11 / 11b-12 / 11b-13 stay `done`;
+#   ⛔ 11b-15…17 and 6-18 stay `ready-for-dev`.
+#
+#   ✅⭐⭐ **`D4` CLOSES THE RIGHT WAY (DR + KB):** *"expected figure shows only when Trust switches on.
+#   And it should be turned off."* ⇒ ⛔ `-190` cl.7(b)/(c) are **NOT superseded — they STAND**, and
+#   ⭐⭐ **`revealToPublic` finally acquires a CONSUMER, built HERE.** ⭐ Default fail-closed, confirmed
+#   ⇒ ⛔ **what launches shows ⛔ NO expected figure anywhere.** ⭐ Nothing is switched on today and ⛔ no
+#   visibility row exists for any Pariwar ⇒ ⛔ no action needed to comply. ⭐ The shipped inert-switch
+#   test is **NARROWED** ("absent while OFF" + a mirror case for ON), ⛔ never deleted.
+#   ⭐ **POOL-REALITY #2 is now CONDITIONAL, ⛔ not live** — with the switch OFF the bar carries ⛔ no
+#   visible target, which IS cl.2(c)'s own resolution. ⛔ Not withdrawn: **recorded AGAINST THE SWITCH**
+#   so whoever first turns it on meets it first. ⚠ Same for `-189` cl.3 — story **E** owes members the
+#   figure ⛔ only on that same condition.
+#
+#   ⚠ **THE CUT-OFF BOUNDARY MOVED:** *"Cut off at **Exactly** ten lakh"* SUPERSEDES *"exceeds"* ⇒ the
+#   test is **`>=`**. ₹10,00,000 now renders **₹10 lakh**; under the earlier wording it was exact.
+#   ⭐ **And the TARGET follows a DIFFERENT rule** — *"always in Lakh or Crore"* ⇒ the ₹10-lakh cut-off
+#   does ⛔ NOT apply to it (a ₹8,00,000 target renders **₹8 lakh**). ⛔ Two rules, DELIBERATE — ⛔ do
+#   ⛔ not "align" them.
+#
+#   ✅⭐ **THE BAR'S MOTION — RULED (A) by BigDev:** grows from nothing on load, then **holds still**.
+#   ⛔ No ripple, ⛔ no repeating shine. ⭐ Ground: `s-maxage=300` means a continuously-moving bar would
+#   assert money is arriving while a visitor watches — ⛔ which the page cannot honour. ⭐ CSS-only,
+#   ⭐ `prefers-reduced-motion` renders it static, ⭐ Live rows only.
+#   ⚠⛔ **AND ONE CONSEQUENCE DECIDED, ⛔ not asked:** `D6` removed the visible label, but its
+#   SCREEN-READER twin (`active_contribution.progress_a11y`) carries the SAME `{confirmed} of {total}`
+#   shape and would name the denominator to assistive tech. ⇒ ⭐ **the bar is `aria-hidden`; the ruled
+#   sentence beneath carries the meaning.** ⛔ No new a11y string naming a hidden figure.
+#
+#   ⏳ **The Hindi word for *"Expected"* was asked TWICE and ⛔ not answered** ⇒ ⭐ building **लक्ष्य**
+#   as a STATED assumption, ⛔ revocable on one word. ⭐ Three further assumptions declared, ⛔ not
+#   silent: the `₹` appears on the target (answer 2's general rule, though the example omitted it);
+#   lakh→crore at ₹1 crore (reachable — the cap is ₹10 crore); trailing zeros trimmed.
+#
+#   ⚠⛔⛔ **`D3` IS ⛔ NOT CLOSED BY ANY OF THIS, AND ITS SHAPE BARELY MOVED — ⭐ traced, ⛔ not assumed.**
+#   The target stays hidden by default ⇒ there IS still a hidden figure; the bar's fill is a rendered
+#   integer percentage of `amount / target`; and ⛔ **BELOW ₹10 lakh the amount renders EXACTLY**, so
+#   `target ≈ ₹8,55,000 ÷ 0.17` recovers it to roughly **±3%** — set by the PERCENTAGE's rounding, ⛔ not
+#   the amount's. ⚠ Above ₹10 lakh the two-place cut costs only ~±0.03% ⇒ ⭐ **the cut-off barely helps.**
+#   ⇒ ⛔ **`D3` still BLOCKS Task 3's denominator wiring**; its three options stand (quantize/band ·
+#   accept-and-record · escalate). ⭐ It is BigDev's, routed from Story C — ⛔ not the Panel's by default.
+#   ⭐ Note the interlock: with the switch ON for a Pariwar, ⛔ nothing about that Pariwar is hidden and
+#   `D3` does not arise for it.)
+# last_updated_prior: 2026-09-07d (✅⭐⭐ **STORY 11b.14 (D) — THE PANEL ANSWERED ALL THREE (DR + KB,
 #   2026-09-07). `D4` ANSWERED · `D5` ANSWERED · `D6` RULED.** ⛔ ZERO ROWS MOVE; 11b-14 STAYS
 #   `ready-for-dev`. ⚠ ⛔ No code — ⭐ FOUR FOLLOW-UPS RELAYED, and Tasks 3 / 5 stay blocked on them.
 #   ⛔ epic-11b stays `in-progress`; ⛔ 11b-11 / 11b-12 / 11b-13 stay `done`; ⛔ 11b-15…17 and 6-18

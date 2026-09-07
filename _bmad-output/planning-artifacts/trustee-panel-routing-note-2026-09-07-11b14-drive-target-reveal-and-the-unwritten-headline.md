@@ -764,3 +764,49 @@ sentence's register). ⛔ One word settles it.
 - ⏳ **The Hindi word for *"Expected"*** — the Panel's.
 - ⏳ **The bar's motion** — ⭐ BigDev's, ⛔ not the Panel's. Three treatments rendered; recommendation
   **(A) fills once, then rests**, on the `s-maxage=300` honesty ground at §12.4.
+
+
+---
+
+## 14. ✅ CLOSED OUT — 2026-09-07
+
+### 14.1 ✅ The bar's motion — **RULED (A) by BigDev**
+
+⭐ **The bar grows from nothing on page load, then holds still.** ⛔ No continuous ripple, ⛔ no
+repeating shine. ⭐ Ground, recorded: `/sahyog` is edge-cached at **`s-maxage=300`**, so a
+continuously-moving bar would assert money is arriving while a visitor watches, which the page ⛔
+cannot honour (§12.4).
+⭐ CSS-only (`@keyframes` on width, `animation-fill-mode: both`) — ⛔ no JS, ⛔ no library on a static
+Astro page. ⭐ `prefers-reduced-motion: reduce` renders the finished bar with ⛔ no motion.
+⭐ **Live rows only** — Closed · Verified carry ⛔ no bar.
+
+⚠⛔ **AND ONE CONSEQUENCE WE ARE DECIDING, ⛔ not asking.** `D6` removed the visible label
+(`active_contribution.progress`); its **screen-reader twin** (`active_contribution.progress_a11y`)
+carries the **same `{confirmed} of {total}` shape** and would name the denominator to assistive tech.
+⇒ ⭐ **the bar is `aria-hidden` and the ruled sentence beneath it carries the meaning.** ⛔ Nothing is
+announced twice, and ⛔ no new a11y string is minted that would name a hidden figure.
+
+### 14.2 ⏳ The Hindi word for *"Expected"* — proceeding on the stated default
+
+⛔ Asked twice, ⛔ not answered. ⇒ ⭐ we build **लक्ष्य**, as declared at §13.5, and it stays
+**revocable on one word**. ⛔ Recorded as an assumption, ⛔ not as a ruling.
+
+### 14.3 ⚠⛔⛔ `D3` IS ⛔ **NOT** CLOSED BY ANY OF THIS — ⭐ and its shape barely moved
+
+⚠ It would be easy to read the last three days as having closed `D3`. ⛔ **They did not.** ⭐ Traced,
+⛔ not assumed:
+
+- ⭐ The **target is hidden by default** (§13.2) ⇒ ⛔ there is still a hidden figure to recover.
+- ⭐ The bar's **fill is a rendered percentage** — `amount / target`, an integer 0–100 in the markup.
+- ⚠⛔ **BELOW ₹10 lakh the amount renders EXACTLY** (`₹8,55,000`) ⇒ `target ≈ 8,55,000 ÷ 0.17`.
+  ⭐ With the percentage rounded to a whole number the band is roughly **±3%** — ⛔ recovery, ⛔ not
+  noise.
+- ⚠ **Above ₹10 lakh** the amount is cut to two places of a lakh (±₹500 on ~₹19 lakh ≈ **±0.03%**)
+  ⇒ the band is still set by the **percentage's** rounding, ⛔ not the amount's. ⭐ **The cut-off
+  barely helps.**
+
+⇒ ⛔ **`D3` remains OPEN and still blocks Task 3's denominator wiring.** ⭐ Its three recorded options
+stand: **(i)** quantize/band the rendered fill · **(ii)** accept-and-record with a re-examination
+trigger · **(iii)** escalate. ⚠ ⛔ It is ⛔ **not** the Panel's by default — it was routed to BigDev
+from Story C — ⭐ but §13.3's finding now applies to it too: **with the switch OFF there is a hidden
+figure; with it ON for a Pariwar, ⛔ nothing about that Pariwar is hidden and `D3` does not arise.**

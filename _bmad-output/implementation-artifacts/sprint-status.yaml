@@ -1,4 +1,24 @@
-# last_updated: 2026-09-07j (✅ **RULED (BigDev): RETIRE `pariwar.manage_drive_target`.** ⛔ ZERO ROWS
+# last_updated: 2026-09-07k (⭐ **THE `11b-18` ESCALATION HAS ITS VEHICLE, AND IT IS ⛔ NOT ON THIS
+#   BRANCH.** ⛔ ZERO ROWS MOVE HERE; 11b-14 STAYS `ready-for-dev`; ⛔ 11b-13 STAYS `done`;
+#   ⛔ epic-11b stays `in-progress`. ⚠ ⛔ No code. ⇒ routing note **§19.4**.
+#
+#   ⭐ **VEHICLE CHOSEN (BigDev):** a NEW story — ⛔ not a `correct-course` against 11b-13, ⛔ not a
+#   subtask of 11b-14. ⇒ **`11b-18-drive-target-write-authority-retired`**, minted, authored and
+#   `ready-for-dev` **on its OWN BRANCH `story/11b-18-drive-target-write-authority-retired`, cut from
+#   `main`** — ⛔ **NOT stacked on this one**. ⇒ ⭐ it may land **INDEPENDENTLY**; ⛔ it depends on ⛔ none
+#   of 11b.14's code.
+#   ⚠ **THE ROW AND THE STORY FILE ARE ⛔ NOT IN THIS BRANCH'S TREE** — ⭐ deliberately. Both branches
+#   edit THIS FILE, so expect a **LEDGER MERGE** when they land, ⛔ not a conflict of substance.
+#
+#   ⛔⛔ **THE TWO BOUNDARIES REMAIN BINDING AND ARE CARRIED ON 11b-18's OWN BRANCH:** ⛔ `11b-13` is
+#   ⛔ NOT amended retrospectively — ⭐ it was ⛔ not wrong when it shipped, the ruling came AFTER, so the
+#   record shows a **SUPERSESSION, ⛔ never a defect** ([[feedback_supersede_never_reinterpret]]); and
+#   ⛔ the retirement is ⛔ NOT folded into `11b-14`, whose **AC6** is *"Nothing else moves"*.
+#
+#   ⛔ **UNTIL `11b-18` LANDS, §18.4's STATUS-STATEMENT STILL APPLIES** and is ⛔ not superseded: the
+#   key `pariwar.manage_drive_target` and its substrate are described as **UNCONSUMED**, and ⛔ **NOT**
+#   as a live control on any Trustee-facing material.)
+# last_updated_prior: 2026-09-07j (✅ **RULED (BigDev): RETIRE `pariwar.manage_drive_target`.** ⛔ ZERO ROWS
 #   MOVE; 11b-14 STAYS `ready-for-dev`; ⛔ 11b-13 STAYS `done`. ⚠ ⛔ No code — ⭐ SCOPED ONLY.
 #   ⇒ routing note **§19**. ⭐ §18.4's *retain-and-state* default is **OVERRIDDEN**.
 #

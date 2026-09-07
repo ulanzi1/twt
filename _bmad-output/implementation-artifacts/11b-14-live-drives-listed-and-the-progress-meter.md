@@ -9,7 +9,7 @@ Story 11b.10 closed, the six-story split, and stories A/B/C `ready-for-dev` with
 
 # Story 11b.14: **Live Drives Are Listed**, With a Progress Meter and a Participation Headline `[SURFACE]`
 
-Status: ready-for-dev
+Status: review
 
 ---
 
@@ -1718,16 +1718,174 @@ units. ⚠ Assert **membership and explicit values**, ⛔ never counts over the 
 
 ### Agent Model Used
 
+`claude-opus-5` (Claude Code, `bmad-dev-story`). Baseline `aafc08c0`; implemented from `dac8fb58`.
+
 ### Debug Log References
+
+⭐ **Executed, ⛔ not asserted.** Live DB: `twt-test-pg` `:5433`
+(`postgresql://twt_dev_app@127.0.0.1:5433/twt_dev`).
+
+- ⭐ `bash scripts/ci-local.sh` with `DATABASE_URL` set — **`integration-tests` GREEN** (the whole
+  live-DB suite). ⚠ Two jobs failed on the first pass and both are recorded rather than quietly
+  fixed: **`lint`** (an unused `_locale` on `formatCount`) and **`friction-budget`** (AC-4, which
+  diffs **COMMITTED** history — it could ⛔ not pass until Task 9's block was committed).
+- ⚠⛔ **NINE live-DB failures under PARALLEL invocation, ⛔ ZERO serially** — `nominee-bank-masking`,
+  `member-helpdesk`, `concealment-assessment`, `member-renewal-lifecycle`, `reports-export`. ⭐ Each
+  re-run with `--fileParallelism=false` **passes**. ⇒ the known shared-`PARIWAR_A` artifact
+  ([[project_ci_local_concurrency_oversubscription]]), ⛔ **not a regression from this story**, and
+  ⛔ not re-diagnosed.
+- ⭐ `turbo run typecheck` — **20/20**. `turbo run lint` — clean after the `formatCount` fix.
+- ⭐ `contracts:check-openapi-determinism` — **✓**, after `emit-openapi.ts` was amended and
+  `openapi/v1.yaml` **re-emitted** (⛔ never hand-edited).
+- ⭐ **AC7(b)'s measured p95: `5.6ms`** (n=30, 10 consented drives; median 5.0ms, max 5.9ms).
+  ⚠ **Limit stated:** the harness uses `_setup.ts`'s local encryption provider ⇒ ⛔ **not** production
+  KMS latency ([[project_measured_validation_framework]]). ⭐ The gate is that it RUNS and the figure
+  is RECORDED (the 4.6 D3-A precedent), ⛔ not an SLO.
+- ⚠ `pools.current_state` **rejected a direct `UPDATE`** to `spawned` (projector-only, 7.1 AC5) —
+  ⭐ the guard working; the fixture SEEDS the state instead.
 
 ### Completion Notes List
 
+#### ⭐ Where the story's own record was out of date, and where I nearly built the wrong thing
+
+⚠⛔⛔ **THE STORY FILE'S `CURRENT STATE` BLOCK CARRIED FOUR *"OPEN, NOT BLOCKING"* FOLLOW-UPS THAT
+WERE ⛔ ALREADY RULED.** I began to escalate them to BigDev; ⭐ BigDev sent me back to the record, and
+all four are answered in the routing note at **§12.1/§12.2, §13.4, §13.5, §14.1 and §18.5** —
+ONE sentence per Live row · the `₹` **appears** · TRUNCATE at exactly ten lakh with trailing zeros
+trimmed · and **लक्ष्य's slot is named** (*"right top or right of progress bar"*).
+⇒ ⭐ **the file's summary had outrun its own source.** ⛔ Recorded here because the same shape will
+recur: a story file that carries seven strata of superseded record can be current in its §12 and
+stale in its header at the same time.
+
+⚠⛔ **AND ONE CONSEQUENCE I HAD TO CORRECT MID-BUILD.** On the header's reading I had written
+लक्ष्य as *"resolved server-side, ⛔ never reaching a response body"* and told the handler ⛔ not to
+serialize it. ⭐ §13.2 rules the opposite — `revealToPublic` is *"read by the public Live row"* and
+the shipped inert-switch test gains an **ON** mirror. ⇒ the doc-block and the handler were corrected
+before the commit landed.
+
+#### ⭐ What the decisions actually cost, and what they refunded
+
+- ⭐⭐ **`D1(a)`'s BUILD DISSOLVED.** The 2026-09-07 ruling makes the bar `confirmedCount ÷
+  rosterSize` — ⭐ **exactly what `pool-progress` already ships** ⇒ ⛔ **no component change**, ⛔ no new
+  input key, ⭐ the anti-widening gate **untouched**, and the `confirmedCount > rosterSize` THROW
+  **correct as shipped**. ⛔ Trap 1's three mechanical blocks were all moot.
+- ⭐⭐ **`D7` DISSOLVED BY IDENTITY, and I verified the premise it rests on rather than trusting it.**
+  `rosterSize == assignedCount` holds because `member_pool_assignments`' PK is `(pool_id, member_id)`
+  and its rows are written from the **same** `memberAssignments` value `serializePoolSnapshot`
+  receives. ⇒ ⛔ the two producers **cannot** diverge; the identity is asserted in a unit test.
+- ⚠⛔ **AC7(b)'s DECRYPT VOLUME IS WRONG A SECOND TIME, and I corrected it AGAIN.** 2026-09-04 said
+  *"50× (1-2 → 100)"* — false in both directions. 2026-09-06 corrected it to *"50 → ~150"* — ⚠ also
+  wrong: it assumed **both** accounts are decrypted, but the two are **EQUAL destinations for the
+  SAME nominee**, so the read returns **ONE** ciphertext. ⇒ ⭐ **the true step is 50 → up to 100.**
+  ⛔ Decrypting the second would be a Tier-1 decrypt with **no authorising purpose**.
+
+#### ⚠⛔ The three decisions I made that the story left to the builder
+
+1. ⭐⭐ **THE DOUBLE-ABSENCE CASE (AC7's open item) — RULED: SILENCE.** Its two offered options are
+   one **FALSE** and one **FORBIDDEN**: *"demonstrate it unreachable"* fails (a drive with no bank
+   details for a family that has not authorised publication has ⛔ no renderable line **today**), and
+   *"extend the variant set"* is a **COPY ACT on Trustee-ratified text**. ⇒ where ⛔ no ratified
+   variant fits, the row renders **⛔ NO SENTENCE** — ⛔ no placeholder, ⛔ no partial sentence, ⛔ no
+   marker. ⭐ Recorded at `2026-09-07-205` cl.6; the copy extension is left **open with a named
+   trigger**, ⛔ never *"resolved"*.
+2. ⭐ **THE `₹` SPACING.** The routing note writes `₹19.45 lakh`; the shipped `formatCurrency` writes
+   `₹ 19,45,000`. ⚠ Both forms appear on the **same page** — Closed rows exact, Live rows short — so
+   two spacings would be the *"two money formats"* defect the follow-up warned of. ⇒ ⭐ ONE house
+   form, `₹ ` with a space, stated at the formatter.
+3. ⭐ **`page.intro` NAMES ⛔ NO STAGE WORD AT ALL.** It had to be rewritten (it said *"Drives that are
+   still **Live are not listed here**"*). ⚠ Restating the three words there is exactly the two-source
+   pressure `-193` cl.3 exists to close, and the section headings + `stage.*.help` already carry them.
+   ⇒ ⭐ the redundancy that went stale is **removed**, ⛔ not re-created.
+
+#### ⭐ Assertions that reversed by ruling — ⛔ ELEVEN of them, ⛔ none deleted
+
+⭐ Every one is **NARROWED or AMENDED with its prior text kept verbatim**, and several came out
+**STRICTER**:
+`sahyog-vivran-read.test.ts` (*"strictly wider"* → the reference check, which is stronger at equal
+membership) · `sahyog-drive-link-a11y.test.ts` (⭐ its own comment demanded the author of a third
+table *"decide deliberately"* — the decision is recorded in the test) · `sahyog-render.test.ts`'s AC4
+quarantine and its sort-affordance loop (⚠ which would have gone **VACUOUS** — it scanned one stage,
+and `meter` sits only on the Live set) · the two field-set censuses (9 → 14) · the Tier-1-public
+exception ledger (3 → 4) and the index's Tier-1-at-`public` set (1 → 2) · **both**
+`sahyog-shared-dark-copy.test.ts` assertions (⭐ the first's author left the successor property **in
+writing**) · and three live-DB cases.
+
+#### ⚠⛔ What is deliberately NOT here
+
+- ⛔ **⛔ NO drive-page render.** `D2` rules the amount onto both surfaces; the drive page is
+  **`11b-3b`'s** by `2026-09-02-176` D1(b), and `D1(c)` **REFUSES** a second multiplication *"anywhere
+  in this app"*. ⇒ this story amends that page's **prose** and renders ⛔ nothing on it, and ⛔ does not
+  lift the `@twt/ui` fence.
+- ⛔ **⛔ NO `pariwar.manage_drive_target` retirement** — a **catalog act**, vehicle **`11b-18`**, on
+  its own branch. ⛔ `PERMISSION_CATALOG_VERSION` is untouched and `42` appears ⛔ nowhere here.
+- ⛔ **⛔ NO `apps/mobile` file changed**, and `@twt/ui`'s `pool-progress` is **untouched**.
+- ⏳ **The `11b-3b` `confirmedPercentage` divergence is RECORDED from this side only** — 11b.14 decides
+  ⛔ nothing for that story and ⛔ does not edit its file.
+
 ### File List
+
+#### Governance (⛔ no code)
+- `.decision-log.md` — **`2026-09-07-204`** (the meter, लक्ष्य, three superseded ratified clauses,
+  `-203`'s missing forward pointer) and **`2026-09-07-205`** (the nominee name on the index).
+- `_bmad-output/planning-artifacts/epics.md` — Story D annotated; FR-76 recorded **restored**;
+  `:4872`'s AC parenthetical recorded **superseded**.
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — row → `in-progress`; **four** stale
+  statements in its comment block amended and named; `last_updated` ledger entry.
+- `_bmad-output/implementation-artifacts/deferred-work.md` — the `deferred-work.md:8352` reveal
+  question **answered**; the double-absence item **answered**.
+- `friction-budget.md` — Story 11b.14 disposition (Task 9).
+
+#### Domain
+- `packages/domain/src/pool/public-read.ts` — predicate + vocabulary + total map (+
+  `publicStatusForPoolState`); `driveConfirmedPercentage`; `resolveDriveTargetForPublic`;
+  `NOMINEE_ACCOUNT_HOLDER_NAME_CIPHERTEXT`; `deliveredTotal` hoisted; the quarantine amended.
+
+#### Contracts
+- `packages/contracts/src/public-pages/sahyog-drive.ts` — `live` on the enum; `confirmedPercentage`,
+  `driveTargetInr` (optional), `amountRaisedInr`, `nomineeName`; the *"never a sum"* amendment.
+- `packages/contracts/src/public-pages/sahyog-vivran.ts` — the same amendment + the `11b-3b` fence.
+- `packages/contracts/src/public-pages/matrix.ts` — the fourth `RULED_TIER1_PUBLIC_EXCEPTIONS` pair.
+- `packages/contracts/public-pages/public-vs-private-matrix.yaml` — four new fields; the stale
+  *"name form NOT RULED"* paragraph amended.
+- `packages/contracts/src/drive-target/drive-target.ts` · `scripts/emit-openapi.ts` · `openapi/v1.yaml`
+  (**re-emitted**) — Trap 9.
+
+#### API
+- `apps/api/src/modules/public-pages/handlers.ts` — the nominee decrypt inside the existing bounded
+  map; the three new fields serialized; `driveTargetInr` **spread** (key ABSENT, ⛔ never `null`).
+
+#### i18n
+- `packages/i18n/src/currency.ts` (`formatCurrencyShort`, `formatCount`) · `src/index.ts` ·
+  `locales/{en,hi}/sahyog-drive.json` · `locales/{en,hi}/sahyog-shared.json`.
+
+#### Public web
+- `apps/public/src/lib/sahyog-render.ts` — three-way partition + label; `SahyogSectionStage`;
+  the two ruled amount formatters; `selectIndexLineVariant`; the meter column; Trap 4.
+- `apps/public/src/lib/surface-fields.ts` — five new model fields + their matrix ids.
+- `apps/public/src/lib/sahyog.server.ts` — the hand-typed literal-set guard.
+- `apps/public/src/pages/sahyog.astro` — the Live section, the bar + its ruled motion, लक्ष्य,
+  the index-line resolver, the staleness + address-publication statements.
+
+#### Tests (new)
+- `packages/domain/tests/pool/sahyog-drive-listing-predicate.test.ts`
+- `packages/i18n/tests/currency-short.test.ts`
+- `apps/public/tests/sahyog-live-section.test.ts`
+- `apps/public/tests/sahyog-nominee-index-line.test.ts`
+
+#### Tests (amended / narrowed — ⛔ none deleted)
+- `packages/domain/tests/pool/sahyog-vivran-read.test.ts`
+- `packages/domain/tests/integration/pool/sahyog-drive-public-read.spec.ts`
+- `packages/contracts/tests/drive-target-ceiling-sync.test.ts` · `tests/public-pages.test.ts`
+- `packages/i18n/tests/sahyog-shared-dark-copy.test.ts`
+- `apps/api/tests/integration/public-pages/sahyog-drive.spec.ts`
+- `apps/public/tests/sahyog-render.test.ts` · `sahyog-copy.test.ts` · `sahyog-empty-section.test.ts`
+  · `sahyog-drive-link-a11y.test.ts` · `tests/integration/public-pages/scrape-test.spec.ts`
 
 ## Change Log
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-09-07 | 2.0 | ✅⭐⭐ **IMPLEMENTED — ALL TASKS COMPLETE; STATUS → `review`.** ⭐ Execution order **0 → 2 → 3 → 4 → 5 → 6 → 8 → 7 → 9**, as the file required. ⚠⛔⛔ **THE FIRST THING THIS PASS FOUND WAS THAT THE FILE'S OWN `CURRENT STATE` BLOCK WAS STALE:** its four *"OPEN, ⛔ not blocking"* follow-ups were **ALREADY RULED** in the routing note (**§12.1/§12.2, §13.4, §13.5, §14.1, §18.5**) — ⭐ ONE sentence per Live row · the **`₹` appears** · **TRUNCATE** at *exactly* ten lakh, trailing zeros trimmed · and **लक्ष्य's slot is NAMED** (*"right top or right of progress bar"*). ⇒ ⛔ nothing was escalated; ⭐ everything was built from the ratified record. ⚠ **One consequence had to be corrected mid-build:** on the header's reading लक्ष्य had been written as *"server-side, ⛔ never reaching a response body"* — ⭐ **§13.2 rules the opposite** (`revealToPublic` is *"read by the public Live row"*), and the doc-block and handler were corrected before the commit landed. ⭐⭐ **GOVERNANCE FIRST, TWICE:** **`2026-09-07-204`** (the meter measures **contributors**; लक्ष्य is the **derived** total; ⛔ **THREE** Trustee-ratified clauses superseded — `-191` cl.4, `-189` cl.2(d), `-190` cl.7(a); `-203`'s missing forward pointer supplied) and **`2026-09-07-205`** (the nominee name on the **INDEX** — ⛔ a **SECOND** ruling, ⛔ never an inheritance, because the allowlist pins **(surface, field) PAIRS**). ⭐ `epics.md` annotated: **FR-76 RESTORED**, `:4872`'s parenthetical **superseded**. ⭐⭐ **`D1(a)`'s BUILD DISSOLVED** — the ruling makes the bar exactly what `pool-progress` already ships ⇒ ⛔ **no component change**, ⛔ no new input key, ⭐ the anti-widening gate **untouched**, the THROW **correct as shipped**; ⛔ Trap 1's three blocks all moot. ⭐ **`D7`'s unstated premise VERIFIED** (`rosterSize == assignedCount`, by PK and one writer) and pinned as a test. ⛔⛔ **TRAP 6's FIVE ARTEFACTS MOVED TOGETHER** — and the two that fail silently both **FIRED FIRST**: `sahyog-serves.test.ts` caught the `.server.ts` literal-set drift exactly as its comment predicts, and the three-way partition is what stops every live drive rendering under *"Closed drives", labelled "Closed"*. ⛔⛔ **TRAP 9's SIX SITES REPAIRED**, `openapi/v1.yaml` **RE-EMITTED** (⛔ never hand-edited), ⛔ **no behaviour moved** and ⛔ `11b-13` **NOT** amended retrospectively. ⛔⛔ **TRAP 10 HONOURED** — `deliveredTotal` **hoisted, ⛔ not duplicated**; ⛔ **no drive-page render**; ⛔ the `@twt/ui` fence **not lifted**; the `confirmedPercentage` divergence **RECORDED** from this side only. ⭐⭐ **THREE DECISIONS THE STORY LEFT TO THE BUILDER, ⛔ all recorded:** **(1)** the **double-absence** case — its two offered options are one **FALSE** (it is demonstrably reachable) and one **FORBIDDEN** (extending ratified copy) ⇒ ⭐ **RULED SILENCE** (`-205` cl.6), with the copy extension left **open under a named trigger**; **(2)** ⭐ **ONE house `₹` spacing**, because both money forms appear on the **same page**; **(3)** ⭐ `page.intro` now names **⛔ no stage word at all** — the redundancy that went stale is **removed**, ⛔ not re-created. ⚠⛔ **ELEVEN SHIPPED ASSERTIONS REVERSED BY RULING — ⛔ NONE DELETED**, several **stricter** afterwards; ⭐ two carried their own successor instruction in writing, and ⭐ one (the sort-affordance loop) would have gone **VACUOUS** because it scanned a single stage. ⚠ **AC7(b)'s decrypt framing corrected a SECOND time** — ⛔ not *"1-2 → 100"*, ⛔ not *"50 → 150"*, ⭐ **50 → up to 100**: the two accounts are EQUAL destinations for the SAME nominee. ⭐ **Measured p95 RECORDED: `5.6ms`**, with its local-provider limit **stated**. ✅ **`ci:local` green** — `integration-tests` included (**5,553** tests across eight packages at `--concurrency=1`); ⚠ nine parallel-run failures re-verified as the known shared-`PARIWAR_A` artifact, ⛔ not a regression. ⭐ Task 9's friction disposition: ⛔ **NO new row** — the story only ever **gives** — with the measured `page_weight_bytes` rise **3942 → 11229** stated and the baseline ⛔ **not** ratcheted. | BigDev + Claude |
 | 2026-09-07 | 1.0 | ⚠⛔⛔ **RE-VALIDATED (`bmad-create-story validate`) — 16 FINDINGS, ⛔ ZERO ROWS MOVE, ⛔ NO CODE.** ⭐ **⛔ ZERO non-`_bmad-output` files changed between `55e3eee7` and `670750c5`** ⇒ ⭐ every 2026-09-06 anchor **re-verified and still true** (⚠ two corrections). ⛔ What moved is the **record**. ⭐⭐ **A `CURRENT STATE` block now heads the file** — ⛔ a reader met *"BLOCKED, do not start"* **three times** before reaching *"RULED, build it"*; ⛔ nothing deleted, ⭐ the strata kept below it. ⛔⛔ **TRAP 9 — SIX SHIPPED SITES ASSERT THE SUPERSEDED METER RULING BY THIS STORY'S NUMBER**, and ⛔ one is the **committed client-facing spec**: `drive-target.ts:57`/`:75` · `drive-target-ceiling-sync.test.ts:80-83` (a **test NAME**) · `emit-openapi.ts:517-519`/`:2082`/`:2111` · ⛔⛔ **`openapi/v1.yaml:11168`/`:11205`**, which **also** restates the superseded `-189` cl.2(d). ⇒ ⭐ **AC6 amended and NAMED** so *"Nothing else moves"* stops forbidding the repair; **Task 6** owns it; ⭐ the emitter is amended and `v1.yaml` **re-emitted**, ⛔ never hand-edited; ⛔ **behaviour changes NOWHERE** (`.positive()` stays) and ⛔ **`11b-13` is NOT amended retrospectively** — ⭐ a supersession, ⛔ never a defect. ⛔⛔ **TRAP 10 — `11b-3b` (`ready-for-dev`) OWNS THE DRIVE-PAGE AMOUNT BY `D1(b)` (`2026-09-02-176`), AND `D1(c)` REFUSES WHAT TASK 4 REACHED FOR** — *"a second multiplication **anywhere in this app** is the defect"*, written into **four** `apps/public` sites; ⛔ this story named `11b-3b` **ZERO** times across five drafts. ⇒ ⭐ `D2`'s **drive-page half DEFERRED to `11b-3b`** (⭐ a key that **exists** in `sprint-status.yaml`); ⭐ **Task 4 RETURNS `deliveredTotal` (`:761`), ⛔ never a new multiplication**; ⛔ D does ⛔ not lift the `@twt/ui` fence (⭐ `apps/public` has **no** `@twt/ui` dep — a `package.json` fact); ⚠ and the **`confirmedPercentage` divergence** with `11b-3b` AC3b (*"⛔ not authorised … needs its own decision"*) is **RECORDED**, ⛔ not silently taken. ⛔⛔ **AC0(b) ADDED — THE 2026-09-07 RULINGS EXIST IN ⛔ NO DECISION-LOG ENTRY** (its head is `2026-09-06-203`): ⭐ three **Trustee-ratified** clauses (`-191` cl.4 · `-189` cl.2(d) · `-190` cl.7(a)) are superseded with ⛔ no entry and ⛔ no forward pointer, ⚠ while `-203` cites `-191` cl.4 as what it implements. ⇒ ⭐ **the entry lands in Task 0's `governance:` commit, before any code.** ⚠⛔ **`deferred-work.md:8352` — A THIRD DEFERRAL ROUTED HERE BY NAME WITH TASK 3 AS ITS TRIGGER**, ⛔ never picked up; ⭐ `D4` makes this story its *"first consumer"* ⇒ answered inline: लक्ष्य is **derived**, so *"revealed with no target"* resolves to the derived total, ⭐ and the ⛔ only residual absence is a **zero-assignee** pool ⇒ **silence**. ⚠⛔ **THREE CONTRADICTIONS RESOLVED, ⛔ prior text kept:** Task 3 held **both** *"`D4` RULED — build it"* **and** *"`D4` — with the Panel, not the dev agent's call"*; Task 3 ordered consuming **`resolveEffectiveDriveTargetInr`** while the Dev Notes declare it **NO CONSUMER** (⛔ v0.9 removed its role — ⭐ the visibility resolver **only**); Task 3 still said *"Expected ₹X lakh"* where AC2 says **लक्ष्य** from a **derived** source. ⚠⛔ **AC3 STILL ORDERED A HEADLINE THE PANEL REPLACED** — ⭐ a **third** wording, live beside `D5`'s ratified pair and `D6`'s lakh-form ⇒ ⭐ **`D5` is the ⛔ only normative text**; Task 5 authors it under governance and ⛔ **STOPS at the number form**. ⭐ **Task 1c DISCHARGED · *"THREE open"* DISCHARGED · the 4 follow-ups carried as ⛔ non-blocking.** ⚠⛔ **`pariwar.manage_drive_target` IS RULED RETIRED** (`4a9fd5ae`/`670750c5`, ⛔ **after** v0.9) — ⭐ the `-190` cl.4 retain-and-state default is **OVERRIDDEN**, and the vehicle is **`11b-18-drive-target-write-authority-retired`** on its **own branch**; ⛔ **not** this story (AC6). ⭐ **Sprint row: FOUR stale statements**, ⛔ not one — the discharged BLOCK, `:4865`, *"ZERO open decisions"* + D1's superseded *"optional rupee denominator"* / *"NO TARGET ⇒ NO BAR"*, and D2's wrong `:133`/`:481`. ⚠ **Anchor corrections:** `permissions.ts:1056` is the ⛔ **wrong FILE** (contracts' copy is **38 lines**) ⇒ `domain/src/rbac/permissions.ts:1054`/`:1079`, version **41** at `:650`; `sahyog-vivran.ts` is **`:346-347`**; `sahyog-shared.json` holds **TWELVE** keys (⛔ not 11, ⛔ not 14) — ⭐ the substantive *"no headline exists"* claim **re-verified**. ✅⭐ **AND `D7`'s UNSTATED PREMISE IS VERIFIED AND WRITTEN DOWN:** `rosterSize == assignedCount` holds by construction — PK `(pool_id, member_id)`, written from the **same** `memberAssignments` `serializePoolSnapshot` receives ⇒ ⛔ the two producers **cannot** diverge, ⭐ so the dissolution is sound. | BigDev + Claude |
 | 2026-09-07 | 0.9 | ✅✅⭐⭐ **RULED (DR + KB): *"Use the derived total."*** ⛔ Zero rows move; ⛔ no code. ⭐ **लक्ष्य = `assignedCount × pools.fixed_amount`** — the drive's own expected contribution, ⛔ never typed by anyone. ✅✅ **`D7` IS DISSOLVED BY IDENTITY, ⛔ not ruled away:** `amount / लक्ष्य = (confirmed × fA) / (roster × fA) = confirmed / roster` **= the bar** ⇒ ⛔ they **cannot** disagree, for any drive at any value (⭐ verified: 16,700 · ₹300 · 6,485 → both **38.8323%**). ⭐ The bar now reads correctly **both ways at once**. ⚠⛔⛔ **TWO MORE TRUSTEE-RATIFIED CLAUSES SUPERSEDED — ⭐ named, ⛔ never re-read:** **`-189` cl.2(d)** (*"Superadmin-settable, PER-PARIWAR … the SAME target for every drive"*) superseded **as to the VALUE**, ⭐ its *"enable switch"* half survives; **`-190` cl.7(a)** (*"the PARIWAR ADMIN sets the target from day 1"*) superseded — ⭐ there is ⛔ **no setter**. ⭐ **cl.7(b)/(c) STAND** — the ruling replaces the **VALUE's source**, ⛔ not the **visibility rule** ⇒ `D4`/§13.2 undisturbed: gated on `reveal_to_public`, `super_admin`-only, **default OFF** ⇒ ⛔ **nothing renders at launch**; ⚠ the switch's meaning shifts to revealing **what the drive needs**, ⛔ no longer *"the Trust's aim"*. ⛔⛔ **AND `public-read.ts:739-743`'s QUARANTINE IS NOW *FULLY* SUPERSEDED** — **both** totals cross (`deliveredTotal` as the amount, `expectedTotal` as लक्ष्य) ⇒ ⭐ amend and NAME it, ⚠ D2's discipline a **second** time on the same comment. ⭐ **⛔ No new admin surface, ⛔ no write path, ⛔ no migration** — both operands are **already selected on this query** (`:703`, `:695`). ⚠ **Zero-assignee ⇒ ⛔ NO लक्ष्य** — ⭐ silence, ⛔ never `₹0`. ⚠⛔ **COST: half of Story C is now UNCONSUMED** (`pariwar_drive_target_schedule`, `pariwar.manage_drive_target` at catalog v41, the resolver, the admin target form) ⇒ ⭐ **RETAIN and STATE**, per the `-190` cl.4 masking-window precedent; ⏳ retiring the minted key is a **catalog act** and awaits BigDev. ✅ **लक्ष्य** confirmed as the Hindi label. | BigDev + Claude |
 | 2026-09-07 | 0.8 | ✅✅⭐⭐ **`D3` ANSWERED AND CLOSED BY CONSTRUCTION; ⚠⛔ A TRUSTEE-RATIFIED CLAUSE IS SUPERSEDED; ⏳ `D7` OPENS.** ⛔ Zero rows move; ⛔ no code. ✅ **(DR + KB):** *"Progress bar should show the % of contributor already contributed in that pool."* ⚠⛔⛔ **THIS SUPERSEDES `2026-09-04-191` cl.4 — itself Trustee-ratified (DR + KB):** *"THE PROGRESS BAR FILLS AGAINST A **RUPEE** TARGET."* ⭐ `-190` follow-up (ii) framed exactly this binary (*"rupees or contributors?"*); cl.4 took rupees, ⭐ the Panel now takes contributors — ⛔ same Panel, three days later, ⭐ a legitimate change on a question the record shows was always two-sided. ⭐ **Recorded as a SUPERSESSION with the prior text named**, ⛔ never a re-reading. ⭐ cl.4's other half — the participation-first headline — is ⛔ undisturbed. ✅✅ **`D3` IS CLOSED BY CONSTRUCTION, ⛔ not mitigated** — the bar is `confirmedCount ÷ rosterSize`, so dividing amount by fill returns the **ROSTER SIZE**, ⛔ not the target ⇒ ⭐⭐ **the hidden figure is ⛔ no longer derivable at all**; ⛔ all three escalated options are MOOT. ⭐⭐ **AND `D1(a)`'s COSTS FALL AWAY** — the shipped `pool-progress` **already does this** (`presenter.ts:73-74`) ⇒ Trap 1's three blocks are ⛔ ALL MOOT: ⛔ no new input key ⇒ **the anti-widening test is UNTOUCHED** · ⭐ `rosterSize` IS the denominator · ⛔ `fixedAmount` unchanged; ⭐ **the `confirmedCount > rosterSize` THROW is CORRECT AS SHIPPED.** ⚠ `D1`'s *"no target ⇒ no bar"* is superseded — ⭐ the bar **always renders**; successor: *"no target ⇒ no **Expected** figure"*; ⚠ a zero-assignee pool renders a **0% bar**, ⛔ not an error. ⚠ **One consequence recorded ⛔ not asked:** a participation % ⛔ cannot be shown without **roster size** becoming derivable — ⭐ inherent to the ruling ⇒ ⛔ we will ⛔ not ask the Panel to re-decide it. ⭐ **Build decision: the wire carries the PERCENTAGE ONLY**, ⛔ never `rosterSize`. ⏳ **`D7` OPENS** — ⛔ the bar counts **people** while *"Expected"* counts **rupees**, set independently ⇒ a bar at **39%** can sit beside *"Expected ₹25 lakh"* on a drive that has raised **78%** of it. ⭐⭐ ⛔ **Nothing is blocked** — the switch is OFF, so ⛔ no *"Expected"* renders at launch. | BigDev + Claude |

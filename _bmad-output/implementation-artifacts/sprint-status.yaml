@@ -1,3 +1,29 @@
+# last_updated: 2026-09-07n (✅⭐⭐ **`11b-14` IMPLEMENTED — `in-progress` → `review`.** ⛔ Every other
+#   row unchanged (⛔ 11b-13 STAYS `done`; ⛔ 11b-3b and 11b-18 STAY `ready-for-dev`).
+#   ⭐ ALL tasks complete, in the required order **0 → 2 → 3 → 4 → 5 → 6 → 8 → 7 → 9**.
+#   ⚠⛔⛔ **THE STORY FILE'S OWN `CURRENT STATE` BLOCK WAS STALE** — its four *"OPEN, ⛔ not blocking"*
+#   follow-ups were ALREADY RULED in the 2026-09-07 routing note (§12.1/§12.2, §13.4, §13.5, §14.1,
+#   §18.5): ⭐ ONE sentence per Live row · the **`₹` appears** · **TRUNCATE** at *exactly* ten lakh,
+#   trailing zeros trimmed · and ⭐ **लक्ष्य's slot is NAMED** (right-top / right of the bar).
+#   ⇒ ⛔ nothing was escalated; ⭐ everything was built from the ratified record.
+#   ⭐⭐ **TWO GOVERNANCE ENTRIES LANDED BEFORE ANY CODE:** `2026-09-07-204` (the bar measures
+#   CONTRIBUTORS; लक्ष्य is DERIVED; ⛔ THREE Trustee-ratified clauses superseded) and
+#   `2026-09-07-205` (the nominee name on the INDEX — ⛔ a SECOND ruling, ⛔ never an inheritance).
+#   ⭐ `epics.md` annotated: **FR-76 RESTORED**; `:4872`'s parenthetical SUPERSEDED.
+#   ⭐⭐ **`D1(a)`'s BUILD DISSOLVED** — the ruling made `pool-progress`'s shipped arithmetic the ruled
+#   arithmetic ⇒ ⛔ NO component change, ⭐ the anti-widening gate UNTOUCHED, the THROW correct as
+#   shipped. ⛔⛔ Trap 6's FIVE artefacts moved together and **both silent ones FIRED FIRST**.
+#   ⛔⛔ Trap 9's six sites repaired + `openapi/v1.yaml` **RE-EMITTED**; ⛔ no behaviour moved and
+#   ⛔ `11b-13` is ⛔ NOT amended retrospectively. ⛔⛔ Trap 10 honoured: ⛔ no drive-page render, ⛔ the
+#   `@twt/ui` fence NOT lifted, ⭐ `deliveredTotal` HOISTED rather than re-multiplied.
+#   ⭐⭐ **THE DOUBLE-ABSENCE GAP IS CLOSED BY RULING — SILENCE** (`-205` cl.6): its two offered
+#   options were one FALSE (demonstrably reachable) and one FORBIDDEN (minting ratified copy).
+#   ⚠ **ELEVEN shipped assertions reversed by ruling — ⛔ NONE deleted**, several stricter after.
+#   ✅ `ci:local` green, `integration-tests` INCLUDED (5,553 tests, `--concurrency=1`); ⚠ nine
+#   parallel-run failures re-verified as the known shared-`PARIWAR_A` artifact, ⛔ not a regression.
+#   ⭐ AC7(b) measured p95 **RECORDED: 5.6ms**, its local-provider limit STATED.
+#   ⭐ Task 9 friction disposition: ⛔ NO new row; `page_weight_bytes` 3942 → 11229 stated, baseline
+#   ⛔ NOT ratcheted.)
 # last_updated: 2026-09-07m (⭐⭐ **`11b-14` TASK 0 — GOVERNANCE FIRST, ⛔ NO CODE.** ⇒ `11b-14`
 #   `ready-for-dev` → **`in-progress`**; ⛔ every other row unchanged (⛔ 11b-13 STAYS `done`;
 #   ⛔ 11b-3b and 11b-18 STAY `ready-for-dev`).
@@ -16742,7 +16768,7 @@ development_status:
   #   ⇒ D widens the **INDEX** row only and amends the drive page's **prose**.
   # ⛔⛔ **AND THE RETIREMENT OF `pariwar.manage_drive_target` IS ⛔ NOT THIS STORY'S** — a catalog act,
   #   vehicle **`11b-18-drive-target-write-authority-retired`** on its own branch (AC6).
-  11b-14-live-drives-listed-and-the-progress-meter: in-progress
+  11b-14-live-drives-listed-and-the-progress-meter: review
   # ⭐ 11b-15 — STORY **E** of the `2026-09-04-195` cl.3 split. ⛔ NOT in `epics.md` — owes an
   # ANNOTATION. ⛔ BLOCKED ON B (11b-12). ⭐ **STORY F DEPENDS ON IT.**
   # ⚠⛔ **B SHIPS THE SOURCE ONLY — THIS STORY BUILDS THE SURFACE** (recorded 2026-09-05 in

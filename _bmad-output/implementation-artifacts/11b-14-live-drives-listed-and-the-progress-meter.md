@@ -11,6 +11,40 @@ Story 11b.10 closed, the six-story split, and stories A/B/C `ready-for-dev` with
 
 Status: ready-for-dev
 
+---
+
+## ⭐⭐ CURRENT STATE — ⛔ READ THIS FIRST, ⛔ NOTHING ELSE, UNTIL IT IS FINISHED
+
+> ⚠ This file carries **seven strata** of superseded-then-restored record, because ⛔ nothing is ever
+> deleted here ([[feedback_supersede_never_reinterpret]]). ⭐ Read top-down and you will meet
+> *"BLOCKED, ⛔ do not start"* **three times** before you reach *"RULED, build it."*
+> ⭐⭐ **This block is the only current statement. Everything below it is the RECORD.**
+
+**✅ RULED — build these.** `D1` (superseded in part) · `D2` · `D3` (closed by construction) ·
+`D4` · `D5` · `D6` · `D7` (dissolved by identity). ⭐ **⛔ NO decision is open. ⛔ NO task is blocked.**
+⭐ The bar is **`confirmedCount ÷ rosterSize`** — ⛔ exactly what `pool-progress` ships; ⛔ **no
+component change.** ⭐ लक्ष्य is the **derived** total `assignedCount × pools.fixed_amount`, gated on
+`reveal_to_public` (**default OFF** ⇒ ⛔ nothing renders at launch).
+
+**⏳ OPEN, ⛔ but ⛔ NOT BLOCKING — ⭐ relayed 2026-09-07, ⛔ none of them the dev agent's.**
+**(1)** ⛔ ONE sentence on a Live row or **two**? (`D5`'s vs `D6`'s differ ⛔ only in number form.)
+**(2)** ⛔ ⛔ no `₹` in any of the four ratified strings. **(3)** ⭐ *"lakh"* / *"हज़ार"* needs a
+**rounding rule** and a formatter that exists ⛔ nowhere. **(4)** ⛔ **WHERE** does लक्ष्य render when a
+Superadmin switches it on? ⇒ ⭐ **Task 5 stops at the sentence boundary and asks**, ⛔ it does ⛔ not
+invent a slot.
+
+**⛔⛔ THE FOUR THINGS THIS STORY OWES THAT ⛔ NO EARLIER DRAFT NAMED — ⭐ found 2026-09-07 (§V2).**
+**(a)** ⭐ **Trap 9** — ⛔ SIX shipped sites, ⛔ one of them the **committed public API spec**, assert
+the **superseded** meter ruling **by this story's number**. **(b)** ⭐ **Trap 10** — **`11b-3b`**
+(`ready-for-dev`) owns the drive-page amount and **`D1(c)` REFUSES** what Task 4 reaches for.
+**(c)** ⭐ a **decision-log entry** for the 2026-09-07 rulings — ⛔ they exist in ⛔ **NO** entry
+(**Task 0**). **(d)** ⭐ `deferred-work.md:8352`, routed here **BY NAME** at **Task 3**.
+
+**⇒ EXECUTION ORDER: 0 → 2 → 3 → 4 → 5 → 6 → 8 → 7.** ⛔ Task numbers are ⛔ NOT the order and
+⛔ cannot be renumbered (cited from outside this file).
+
+---
+
 > ⭐⛔ **⛔ NOT IN `epics.md`'s STORY LIST.** **Story D** of the six-story split (`2026-09-04-195`
 > cl.3), following **Trustee-ratified** `-189` cl.2, `-190` cl.6 and `-193` cl.2. ⇒ owes an
 > `epics.md` **ANNOTATION** (Task 0).
@@ -37,6 +71,10 @@ Status: ready-for-dev
 > assigns it a surface. ⭐ **AC7's double-absence gap** — deferred to this story **BY NAME** by
 > 11b.12's code review. ⇒ see **⚖️ Decisions** and **AC7's open item**; ⛔ none is pre-ruled here.
 >
+> ⛔⛔ **THE THREE CLAUSES BELOW ARE THE RECORD OF A POSTURE THAT ⛔ NO LONGER HOLDS — ⭐ kept
+> verbatim, ⛔ never deleted ([[feedback_supersede_never_reinterpret]]), ⭐ and DISCHARGED by the
+> 2026-09-07 rulings recorded at `D3` … `D7`. ⇒ ⛔ **Tasks 3 and 5 are ⛔ NOT blocked.** See CURRENT STATE.**
+>
 > ⏳⭐⭐ **`D4` AND `D5` ARE ROUTED TO THE TRUSTEE PANEL — 2026-09-07, BigDev's direction.**
 > ⇒ `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-07-11b14-drive-target-reveal-and-the-unwritten-headline.md`
 > ⛔ **BigDev rules neither.** ⚠ **AMENDED 2026-09-07 — ⭐ `D5` NARROWED and ⭐ `D6` ADDED:**
@@ -48,6 +86,7 @@ Status: ready-for-dev
 > ⛔ requiring no arithmetic at all.
 > ⚠ **Tasks 3 and 5 are BLOCKED until the Panel answers `D4` / `D5` / `D6`.** ⭐ Every other task
 > proceeds — ⛔ the escalation blocks the meter's denominator, its label and the copy, ⛔ nothing else.
+> ✅⭐ **DISCHARGED 2026-09-07** — the Panel answered all three. ⛔ The sentence stands as the record.
 > ⭐ The note rests **only** on ratified text and verified repository state; ⛔ it cites ⛔ no code
 > comment, ⛔ no doc-block and ⛔ no story prose as evidence (its §7 lists every check).
 > ⚠ **And every `file:line` in this story drifted** — B and C rewrote all of them. Re-anchored below.
@@ -56,6 +95,21 @@ Status: ready-for-dev
 > BY ARITHMETIC, AND ⛔ EVERY TEST EITHER STORY WRITES PASSES ANYWAY.** ⭐ Recorded from C's side
 > because **C mints the reveal control this channel bypasses**; ⭐ **BigDev routed the QUESTION here
 > unanswered** — ⛔ C decides nothing, ⛔ C narrows nothing. ⇒ **see AC2.**
+
+> ⚠⛔⛔ **RE-VALIDATED 2026-09-07 (`§V2`) — ⭐ THE CODE BASELINE HAS ⛔ NOT MOVED; ⭐ THE GOVERNANCE HAS.**
+> ⭐ **⛔ ZERO non-`_bmad-output` files changed between `55e3eee7` and `670750c5`** ⇒ ⭐ every
+> `file:line` re-anchored on 2026-09-06 **still holds** (⚠ two corrections below). ⛔ What moved is the
+> record: **five days of Panel rulings, ⛔ and TWO governance commits that land AFTER this file's own
+> Change Log.** ⇒ ⭐ **four new obligations, ⛔ none of them drift:**
+> ⭐ **Trap 9** — ⛔ SIX shipped sites assert the **superseded** meter ruling **by this story's number**,
+> and ⛔ one of them is **`openapi/v1.yaml`**, the committed client-facing spec.
+> ⭐ **Trap 10** — **`11b-3b`** owns the drive-page amount by a **prior ruling** and **`D1(c)` REFUSES**
+> re-deriving it; ⛔ this story named it **ZERO** times across five drafts.
+> ⭐ **AC0(b)** — the 2026-09-07 rulings supersede **three Trustee-ratified clauses** and exist in
+> ⛔ **NO `.decision-log.md` entry** (its head is `2026-09-06-203`).
+> ⭐ **Task 3** — `deferred-work.md:8352` routes a decision here **BY NAME**, ⛔ never picked up.
+> ⚠ **Two anchor corrections:** `permissions.ts:1056` is ⛔ **the wrong FILE** (see the table), and
+> `sahyog-vivran.ts`'s sentence is at **`:346-347`**, ⛔ not `:345-347`.
 
 ## Story
 
@@ -74,7 +128,7 @@ what a **stranger can see**, ⛔ not what a member may do: ⛔ no eligibility, �
 obligation, ⛔ no amount owed changes. ⭐ `-189` cl.3 (*member > public*) is ⛔ not disturbed — story E
 gives the member the same three states **without** the public's redactions.
 
-## 🎯 What already EXISTS — ⭐ **RE-VERIFIED LIVE 2026-09-06**, ⛔ not assumed
+## 🎯 What already EXISTS — ⭐ **RE-VERIFIED LIVE 2026-09-06, ⭐ AND AGAIN 2026-09-07**, ⛔ not assumed
 
 > ⚠⛔ **⛔ EVERY LINE NUMBER IN THE 2026-09-04 TABLE HAD DRIFTED.** B and C rewrote all of these
 > files between `aafc08c0` and `55e3eee7` (105 non-`_bmad-output` files). ⭐ The **content** of every
@@ -111,9 +165,17 @@ gives the member the same three states **without** the public's redactions.
 | ⛔ **⛔ NO formatter produces *"₹19.45 lakh"* or *"16,750"*** | `packages/i18n/src/currency.ts` emits `"₹ 19,45,000"` (space, Indian grouping, ⛔ no word form); ⛔ no shared plain-number formatter; `apps/public/src` has **zero** currency formatting | ⭐ read |
 | ⭐ AC7's premise **HOLDS** — the nominee name survived 11b.11 at `tier: public` | `sahyog-vivran.ts:287` + `:383` `.max(2)`; matrix row `public-vs-private-matrix.yaml:970`, exception keyed `2026-09-04-190 cl.2` | ⭐ read |
 | ⭐ AC7's `t()`-THROWS correction is **TRUE** | `resolver.ts:39` — `[i18n] missing interpolation param`; pinned `packages/i18n/tests/resolver.test.ts:39-40` | ⭐ read |
+| ⛔⛔ **SIX SHIPPED SITES ASSERT THE ⛔ SUPERSEDED METER RULING, ⭐ BY THIS STORY'S NUMBER** | `drive-target.ts:57` + `:75` · `drive-target-ceiling-sync.test.ts:80-83` · `emit-openapi.ts:517-519`, `:2082`, `:2111` · ⛔⛔ **`openapi/v1.yaml:11168`, `:11205`** ⇒ **Trap 9** | ⭐ read |
+| ⛔⛔ **`11b-3b` OWNS THE DRIVE-PAGE AMOUNT, AND `D1(c)` REFUSES RE-DERIVING IT** | `11b-3b` **AC3b** (`ready-for-dev`); the refusal is in **code** at `sahyog-vivran-render.ts:40-42` · `surface-fields.ts:431-433` · `[driveToken].astro:36-38`, `:370` ⇒ **Trap 10** | ⭐ read |
+| ⛔⛔ **`apps/public` has ⛔ NO `@twt/ui` DEPENDENCY** — ⭐ the fence is a `package.json` fact, ⛔ not prose | `apps/public/package.json` deps = `@twt/contracts` · `@twt/domain` · `@twt/i18n` · `@twt/tokens` · `astro` ⛔ **only** | ⭐ read |
+| ⛔⛔ **⛔ NO `2026-09-07` DECISION-LOG ENTRY EXISTS** — ⭐ the head is `2026-09-06-203` | `.decision-log.md` — the four `2026-09-07` hits are ⛔ unrelated (counsel-return dates) ⇒ **AC0(b)** | ⭐ read |
+| ⚠⛔ **A THIRD DEFERRAL IS ROUTED HERE BY NAME, AT TASK 3** | `deferred-work.md:8352` — *"a reveal configured for a Pariwar that has ⛔ no target at all … **Trigger:** Story 11b.14 **Task 3**"* | ⭐ read |
+| ⚠⛔ **`permissions.ts:1056` IS THE ⛔ WRONG FILE** — ⭐ `contracts`' copy is **38 lines** | real: `packages/domain/src/rbac/permissions.ts:1054` (`manage_drive_target`) · `:1079` (`…_visibility`) · `:650` `PERMISSION_CATALOG_VERSION = 41` | ⭐ read |
+| ⭐ **`rosterSize` == `assignedCount` — ⭐ the premise `D7` RESTS ON, ⛔ never stated. ✅ IT HOLDS** | `member_pool_assignments` PK is `(pool_id, member_id)` and is written from the **same** `memberAssignments` `serializePoolSnapshot` receives (`schema/member_pool_assignments.ts:1-18,57`); `rosterSize` is `PoolBindingCandidate.memberIds.length` off that same snapshot (`contribution-binding.ts:388-395,426`) | ⭐ read |
+| ⚠ `sahyog-shared.json` holds **TWELVE** keys per locale — ⛔ not *"eleven"*, ⛔ not *"14"* | 3 `stage.*` + 3 `.help` + 2 `stage.explainer.*` + 4 `index_line.*`. ⭐ The **substantive** claim stands: ⛔ **NO headline string exists**, either locale | ⭐ read |
 | ⚠ The index **ALREADY** performs up to **50** Tier-1 KMS decrypts per request | `handlers.ts:399` + `:441` — the deceased member's KYC name, bounded by `mapWithConcurrency` | ⭐ read |
 
-## ⛔ THE EIGHT TRAPS
+## ⛔ THE TEN TRAPS
 
 ### Trap 1 — ⛔⛔ THE SHIPPED METER MEASURES THE **WRONG THING** FOR THIS RULING
 
@@ -302,6 +364,75 @@ locales. ⚠ **And a third section needs `section.*.title` + `table.caption.*`**
 `sahyog-drive.json`'s own `$comment` forbids re-adding a stage **NAME** to that file (*"two sources
 is exactly how 'Active' came to mean two different things"*, `-193` cl.3). ⇒ the Live section's
 heading must **compose** B's `sahyog-shared:stage.live` with a section noun, ⛔ never restate the word.
+
+### Trap 9 — ⛔⛔ SIX SHIPPED SITES ASSERT THE **SUPERSEDED** METER RULING, ⭐ BY THIS STORY'S NUMBER — AND ⛔ ONE OF THEM IS THE **COMMITTED PUBLIC API SPEC**
+
+⚠ Story **C** shipped, `done` and merged, while `D1(a)` still ruled a **rupee** denominator. ⭐ It wrote
+that ruling into its code **naming this story**, ⛔ so the 2026-09-07 supersession leaves six live
+sites asserting something false about **11b.14** specifically:
+
+| Site | What it says today | Why it is now FALSE |
+|---|---|---|
+| `packages/contracts/src/drive-target/drive-target.ts:57` | *"Story 11b.14's meter is `amountRaisedInr / target`, so a **₹0** target is a **DIVISION BY ZERO**"* | ⛔ the meter is `confirmedCount ÷ rosterSize` and ⛔ **never divides by the target** |
+| `drive-target.ts:75` | *"`configured: false` … which Story 11b.14's ruling [renders as ⛔ no bar]"* | ⛔ the bar **always renders** (`D1`'s successor) |
+| `packages/contracts/tests/drive-target-ceiling-sync.test.ts:80-83` | a **TEST NAME + comment**: *"⛔ REFUSES 0 — a division by zero **for the meter**"* | ⭐ the **assertion** stays correct (`.positive()` is right); ⛔ its **stated ground** is gone |
+| `packages/contracts/scripts/emit-openapi.ts:517-519` | *"Story 11b.14's meter divides by it"* | ⛔ it does not |
+| `emit-openapi.ts:2082`, `:2111` | *"which Story 11b.14 renders as NO progress bar at all"* · *"(Story 11b.14 divides by it …)"* | ⛔ both false |
+| ⛔⛔ **`openapi/v1.yaml:11168`, `:11205`** | ⭐ **the COMMITTED, CLIENT-FACING SPEC**, carrying both sentences verbatim | ⛔ false, ⭐ and **published** |
+
+⚠⛔⛔ **AND `v1.yaml:11205` CARRIES A THIRD SUPERSEDED STATEMENT** — *"the **SAME** target for every
+drive in the Pariwar (Decision `2026-09-04-189` cl.2(d))"*. ⭐ `D7` superseded cl.2(d) **as to the
+VALUE** on 2026-09-07: लक्ष्य is now **per-drive** (`assignedCount × fixedAmount`).
+
+⭐⭐ **THE SPEC IS GENERATED, ⛔ NOT HAND-EDITED.** `emit-openapi.ts` is the source and
+`packages/contracts/scripts/check-openapi-determinism.ts` pins the pair ⇒ ⭐ **amend the emitter, then
+REGENERATE `v1.yaml`**; ⛔ never edit the YAML directly, ⛔ never leave the two out of step.
+
+⚠⛔ **AND `AC6` — *"⛔ Nothing else moves"* — WOULD FORBID ALL SIX.** ⇒ ⭐ **AC6 is amended and NAMED**
+(see AC6), ⛔ not read around. ⇒ **Task 6 owns them.** ⭐ `11b-13` is ⛔ **NOT** amended
+retrospectively and stays `done` — ⛔ it was ⛔ not wrong when it shipped; ⭐ this is a **supersession**,
+⛔ never a defect (the `670750c5` boundary, applied a second time).
+
+### Trap 10 — ⛔⛔ `11b-3b` OWNS THE DRIVE-PAGE AMOUNT BY A **PRIOR RULING**, AND `D1(c)` **REFUSES** WHAT TASK 4 REACHES FOR
+
+⚠⛔ **⛔ THIS STORY NAMED `11b-3b` ⛔ ZERO TIMES ACROSS FIVE DRAFTS.** ⭐ It is
+`11b-3b-sahyog-vivran-named-identity-render-layer`, **`ready-for-dev`** — ⛔ authored, ⛔ **not built**.
+
+⭐ **`D1(b)`** (`2026-09-02-176`, on Story 11b.3) **MOVED the rupee amount to `11b-3b`**, whose **AC3b**
+rules the figure is `derivePoolProgressCardViewModel(...).amountRaisedInr` consumed **UNCHANGED**, and
+lifts the `@twt/ui` fence **there**. ⛔⛔ **And `D1(c)` is REFUSED, in code, at four sites:**
+
+> *"⛔⛔ `confirmedCount × fixedAmount` written anywhere in this diff is **D1(c)**, which is
+> **REFUSED** — ⛔ it forks the canonical definition of a money figure into a second site."*
+> — and, widened: *"⭐ a second multiplication **anywhere in this app** is the defect"*
+> (`surface-fields.ts:431-433`; also `sahyog-vivran-render.ts:40-42`, `[driveToken].astro:36-38`, `:370`)
+
+⚠⛔ **THREE CONSEQUENCES, ⛔ none of them optional:**
+
+1. ⛔⛔ **`D2`'s DRIVE-PAGE HALF IS ⛔ NOT THIS STORY'S TO BUILD.** `D2` rules the amount renders on
+   **BOTH** surfaces; ⭐ the **index** row is D's, ⛔ **the drive page is `11b-3b`'s**, by a ruling
+   three days older. ⇒ ⭐ **Task 6 still AMENDS the `sahyog-vivran.ts:346-347` sentence** (the
+   amendment is D2's and reaches every site), ⛔ but **Task 4/5 render ⛔ NOTHING on the drive page** —
+   ⭐ **DEFERRED TO `11b-3b`**, a story key that **exists** in `sprint-status.yaml`
+   ([[project_r7_fact_producer_unbuilt]]). ⚠ `sahyog-vivran.ts:352` already says so:
+   *"at **11b.3b** this page will read 'N confirmed' beside FEWER than N named"*.
+2. ⚠⛔ **THE INDEX AMOUNT IS ⛔ NOT A SECOND MULTIPLICATION — ⭐ SAY SO, ⛔ do not let a dev discover
+   `D1(c)` mid-diff and stop.** ⭐ `public-read.ts:761` **already computes** `deliveredTotal =
+   confirmedContributionCount × r.fixedAmount` for `classifyCycleOutcome`. ⇒ ⭐ **RETURN THAT VALUE**;
+   ⛔ do ⛔ **not** write a new `× fixedAmount` anywhere, and ⛔ **never** in `apps/public`, where the
+   refusal is scoped *"anywhere in this app"*.
+3. ⛔⛔ **`apps/public` CANNOT CONSUME THE CANONICAL PRODUCER — ⭐ the fence is a `package.json`
+   FACT.** Its deps are `@twt/contracts` · `@twt/domain` · `@twt/i18n` · `@twt/tokens` · `astro`,
+   ⛔ **no `@twt/ui`**. ⇒ ⛔ lifting it is **`11b-3b`'s act**, ⛔ not D's (AC6).
+
+⚠⛔⛔ **AND `11b-3b` HAS ALREADY RECORDED THE PERCENTAGE AS ⛔ UNAUTHORISED.** Its AC3b:
+*"⛔⛔ **ONLY `amountRaisedInr` IS AUTHORISED.** The presenter also emits **`confirmedPercentage`**,
+`isComplete`, `meterFillTokenRole` … ⛔ **not** authorised by `D1(b)` … ⛔ **It needs its own
+decision**."* ⇒ ⚠ **AC2 ships a server-computed `confirmedPercentage` on the public wire.** ⭐ On the
+**INDEX** that is squarely `-189` cl.2(b)'s ratified bar and is ⛔ not in `11b-3b`'s scope — ⭐ but the
+two stories now hold **opposite postures on adjacent contracts**, and ⛔ neither knew of the other.
+⇒ ⭐ **RECORD IT** in the story and in `11b-3b`'s Task 0 annotation; ⛔ do ⛔ not silently diverge.
+
 ---
 
 ## Acceptance Criteria
@@ -320,6 +451,40 @@ same stale `:4865`** — ⭐ fix both. ⭐ FR-76 itself is verified unmoved at *
 annotation blocks, at `:5150` / `:5168` / `:5172`).
 
 **And** ⭐ Task 0 clears the **discharged** *"BLOCKED ON B AND C"* text from the sprint row.
+
+⚠⛔⛔ **AND THE SPRINT ROW CARRIES FOUR MORE STALE STATEMENTS, ⛔ NOT ONE — ⭐ verified 2026-09-07.**
+⭐ Its comment block still publishes, as current: **(i)** *"⛔⛔ **BLOCKED ON B (11b-12) AND C
+(11b-13)**"* — ⛔ discharged; **(ii)** `epics.md:4865` — ⛔ re-anchored to **`:4872`**; **(iii)** *"✅
+**D1 + D2 BOTH RULED** ⇒ ⛔ **ZERO open decisions**"* together with D1's *"`pool-progress` gains an
+**OPTIONAL rupee denominator**"* and *"⭐⭐ **⛔ NO TARGET ⇒ ⛔ NO BAR** — headline figures only"* —
+⛔ **both SUPERSEDED 2026-09-07**; **(iv)** D2's anchors *"`sahyog-drive.ts:133` + `public-read.ts:481`"*
+— ⛔ **both wrong**, and `:481`'s quoted wording was **never** that file's text.
+⇒ ⭐ **Task 0 amends all four, ⛔ and NAMES each prior text**, ⛔ never overwrites
+([[feedback_supersede_never_reinterpret]]).
+
+### ⛔⛔ AC0(b) — THE 2026-09-07 RULINGS EXIST IN ⛔ **NO** DECISION-LOG ENTRY
+
+⚠⛔ **⛔ VERIFIED, ⛔ not assumed:** `.decision-log.md`'s head is **`2026-09-06-203`**, and a repo-wide
+scan returns **⛔ no `2026-09-07` decision** (its four `2026-09-07` hits are unrelated counsel-return
+dates). ⇒ ⭐ **five days of Panel rulings live ⛔ ONLY in this story file and the sprint ledger.**
+
+**Then** ⛔ **a `.decision-log.md` entry is written in Task 0's `governance:` commit**, recording —
+⛔ each with the **prior text NAMED** — that:
+
+- ⛔ **`2026-09-04-191` cl.4** (*Trustee-ratified*: *"THE PROGRESS BAR FILLS AGAINST A **RUPEE**
+  TARGET"*) is **SUPERSEDED**: the bar measures **contributors** (`D1` / `D3`)
+- ⛔ **`-189` cl.2(d)** (*"Superadmin-settable, **PER-PARIWAR** … the **SAME** target for every
+  drive"*) is **SUPERSEDED as to the VALUE**; ⭐ its *"enable switch"* half **survives** (`D7`)
+- ⛔ **`-190` cl.7(a)** (*"the **PARIWAR ADMIN** sets the target, from day 1"*) is **SUPERSEDED** —
+  ⭐ there is ⛔ **no setter** (`D7`)
+- ⭐ **`-190` cl.7(b) and cl.7(c) STAND**, ⛔ undisturbed — ⭐ the ruling replaced the value's
+  **SOURCE**, ⛔ never the **visibility rule**
+
+**And** ⚠ **`-203` cites `-191` cl.4 as what it implements** ⇒ ⛔ it now rests, in part, on a
+superseded clause and carries ⛔ **no forward pointer**. ⭐ The new entry supplies one.
+**And** ⛔ ⛔ **no code lands before it** — ⭐ the same discipline **AC7(a)** already imposes on the
+matrix row, applied to the ruling that reshaped the whole story
+([[feedback_governance_commits_precede_implementation]]).
 
 ### AC1 — `live` drives are LISTED
 `SAHYOG_DRIVE_VISIBLE_POOL_STATES` gains `live`; the index renders a **Live** section using story B's
@@ -374,6 +539,23 @@ shipped label needs ⛔ no arithmetic. ⇒ **see `D6`.**
 SUPERADMIN may make it visible**, and **separately for member and for public**"* — and `-196` cl.8
 names **this story** as the target's *"first consumer, **server-side**"*. ⇒ **as written, AC2 forbids
 the render cl.7(c) exists to authorise.** ⛔ Not decided here. ⇒ **see `D4`.**
+
+✅⭐⭐ **ALL THREE ARE ⛔ NO LONGER OPEN — RESOLVED 2026-09-07 (DR + KB); ⭐ the clauses above stand as
+the RECORD.** ⭐ **`D3`** closed by construction · ⭐ **`D4`** ruled (build the reveal here, gated,
+default OFF) · ⭐ **`D6`** ruled (the `{total}` label is **REMOVED**; the bar is `aria-hidden` and the
+ruled sentence beneath carries the meaning). ⇒ ⛔ **Task 3 is ⛔ NOT blocked.**
+
+⚠⛔⛔ **AND ONE POSTURE THIS AC NOW HOLDS THAT A SIBLING HAS RECORDED AS ⛔ UNAUTHORISED — ⭐ stated,
+⛔ not slid past (Trap 10).** This AC ships a **server-computed `confirmedPercentage`** on the public
+wire. ⭐ On the **INDEX** that is `-189` **cl.2(b)**'s ratified bar and is ⛔ outside `11b-3b`'s scope.
+⚠ ⛔ But `11b-3b` **AC3b** records, for the **drive page**: *"⛔⛔ **ONLY `amountRaisedInr` IS
+AUTHORISED** … the presenter also emits **`confirmedPercentage`** … ⛔ **not** authorised by `D1(b)`
+… ⛔ **It needs its own decision**."* ⇒ ⭐ **the two stories hold opposite postures on adjacent
+contracts and ⛔ neither knew of the other.** ⛔ D does ⛔ **not** decide `11b-3b`'s question; ⭐ it
+**records** the divergence here and in `11b-3b`'s Task 0 annotation.
+**And** ⭐ **the percentage is computed from `assignedCount`** (`public-read.ts:703`), ⛔ never from a
+`rosterSize` the public read does not carry — ⭐ and the two are the **same number** (see AC2's
+identity note under `D7`).
 
 #### ✅✅ D3 — **CLOSED BY CONSTRUCTION, 2026-09-07 (DR + KB).** ⛔ Not mitigated — ⭐ the channel no longer exists
 
@@ -437,6 +619,13 @@ and this channel ⛔ never carries the number.
 `-190` cl.6, option (B): *"16,750 members have stood with this family — ₹19.45 lakh, and counting"*, in
 both locales, from story B's shared copy where the stage words appear.
 
+⚠⛔⛔ **⛔ THAT SENTENCE IS ⛔ NOT THE ONE TO BUILD — ⭐ SUPERSEDED 2026-09-07, ⛔ kept as the record.**
+⭐ The Panel **gave the wording**, in **both** languages, at `D5` — ⛔ and this AC's line is a **THIRD**
+variant, differing from both. ⇒ ⭐⭐ **`D5`'s pair is the ⛔ ONLY normative text**; ⛔ this line is
+historical, and ⛔ **`D6`'s** lakh-form variant is the ⛔ open **follow-up (1)**, ⛔ not a rival.
+⚠ ⛔ Building from **this** line ships a sentence the Panel replaced
+([[feedback_spec_edits_must_propagate_to_tasks]]).
+
 ✅⭐⭐ **AND IT IS THE ⛔ LIVE-ROW SENTENCE ⛔ ONLY — RESOLVED 2026-09-07, see `D5`.**
 ⭐ **Live** rows take this headline (`-190` cl.6, adopting the wording delegated at `-189` **cl.2(e)**,
 inside *"A COLLECTING DRIVE IS LISTED"*). ⭐ **Closed** and **Verified** rows take
@@ -494,6 +683,24 @@ Panel's ruling of 2026-09-05. ⇒ the clause is restated with the exception **na
 > ⛔ **NO nominee-bank value crosses EXCEPT the ruled `nominee_account_holder_name` (AC7).**
 > ⛔ No account number, ⛔ no last-4, ⛔ no IFSC, ⛔ no VPA, ⛔ no bank, ⛔ no branch — ⭐ keys **ABSENT**,
 > ⛔ never `null`.
+
+⚠⛔⛔ **AMENDED AGAIN 2026-09-07 — ⭐ *"⛔ Nothing else moves"* WOULD FORBID THE SIX SITES TRAP 9 FOUND.**
+⭐ Those sites assert a **superseded ruling about THIS STORY, by number**, and ⛔ one is the committed
+`openapi/v1.yaml`. ⛔ Leaving them is ⛔ not neutrality — it publishes a false statement about D.
+⇒ the clause is restated with the exception **named**:
+
+> ⛔ **NOTHING ELSE MOVES, EXCEPT the SIX sites that name Story 11b.14 and describe a ruling that
+> ⛔ no longer holds** (Trap 9; **Task 6**). ⭐ Those are **amended and NAMED**, ⛔ never deleted.
+> ⛔ ⛔ **NO behaviour changes with them** — ⭐ `.positive()` **stays**, the ceiling stays, the
+> `configured` flag stays; ⛔ **only the stated GROUND moves.**
+> ⛔ **AND `11b-13` IS ⛔ NOT AMENDED RETROSPECTIVELY** and stays `done` — ⛔ it was ⛔ not wrong when
+> it shipped ⇒ ⭐ a **SUPERSESSION**, ⛔ never a defect (`670750c5`'s boundary, applied twice).
+
+⚠⛔ **AND ONE THING AC6 NOW EXPLICITLY WITHHOLDS (Trap 10):** ⛔ **⛔ NO drive-page render.**
+⭐ `D2` rules the amount onto **both** surfaces, ⛔ but the **drive page belongs to `11b-3b`** by
+`D1(b)` (`2026-09-02-176`) ⇒ ⭐ **DEFERRED TO `11b-3b`** — a story key that **exists** in
+`sprint-status.yaml`. ⛔ D amends the drive page's *prose* (Task 6) and renders ⛔ nothing there.
+⛔ **And D does ⛔ not lift the `@twt/ui` fence** — ⭐ that is `11b-3b`'s act.
 
 ⭐ Recorded as an amendment with its previous text, ⛔ not silently overwritten
 ([[feedback_supersede_never_reinterpret]]) — ⚠ and because an AC that **forbids** what another AC
@@ -850,7 +1057,7 @@ server-side**)"*.
 | `resolveDriveTargetVisibility` | `drive-target-policy.ts:233` | ⛔ **tests only** |
 | `DEFAULT_DRIVE_TARGET_VISIBILITY` (fail-closed, frozen) | `drive-target.ts:122-124` | — |
 | `pariwar_drive_target_visibility` + `…_member_ge_public` CHECK | migration `0115:104,143` | — |
-| `pariwar.manage_drive_target_visibility` — ⭐ **`super_admin` ONLY, "a disclosure act"** | `permissions.ts:1056` | — |
+| `pariwar.manage_drive_target_visibility` — ⭐ **`super_admin` ONLY, "a disclosure act"** | ⚠ **`packages/domain/src/rbac/permissions.ts:1079`** — ⛔ **⛔ NOT `permissions.ts:1056`**, which was the **wrong FILE**: `packages/contracts/src/rbac/permissions.ts` is **38 lines** and holds ⛔ no keys. ⭐ Sibling `pariwar.manage_drive_target` at `:1054`; `PERMISSION_CATALOG_VERSION = 41` at `:650` | — |
 | Admin reveal form | `apps/admin/.../RevealSwitchesForm.tsx` | writes ⛔ only |
 
 ⇒ ⛔⛔ **`revealToPublic` has ⛔ ZERO production readers.** A governed, disclosure-classed,
@@ -950,8 +1157,11 @@ makes it permanent.
 
 **(a) ⛔ THE STRING DOES ⛔ NOT EXIST.** AC3 orders the headline *"from story B's shared copy where the
 stage words appear"*. B is `done`. `sahyog-shared.json` — ⭐ **verified, both locales** — holds
-**eleven** keys: `stage.live` · `stage.closed` · `stage.verified` · three `.help` ·
+**TWELVE** keys: `stage.live` · `stage.closed` · `stage.verified` · three `.help` ·
 `stage.explainer.summary` · `stage.explainer.a11y` · the four `index_line.*`. ⛔ **No headline.**
+⚠ **⛔ The count was wrong TWICE and is corrected here** — ⛔ *"eleven"* (this line, which then
+enumerates twelve) and ⛔ *"14 keys"* (Change Log **0.5**). ⭐ **⛔ The SUBSTANTIVE claim is unaffected
+and re-verified 2026-09-07: ⛔ NO headline string exists, in EITHER locale.**
 And `"and counting"` / `"lakh"` appear **⛔ NOWHERE** under `packages/i18n/locales/`. ⚠ The nearest
 strings are `close-of-cycle.json:3,7` — *"… Every hand **stood with this family**."* — ⛔ a different
 namespace, and semantically a **CLOSED-cycle outcome**, the opposite of *"and counting"*.
@@ -1073,6 +1283,20 @@ together, ⛔ not independently.
 > are **moot**. ⭐ And the bar now reads correctly **both ways at once** — the share of colleagues who
 > have contributed **and** the share of the expected amount raised, ⭐ because they are one number.
 >
+> ⭐⭐ **THE PREMISE THE IDENTITY RESTS ON — ⛔ NEVER STATED, ✅ AND IT HOLDS (verified 2026-09-07).**
+> ⚠ The arithmetic writes *"roster"* on both sides, ⛔ but the two sides have **different producers**:
+> the bar's `rosterSize` is `PoolBindingCandidate.memberIds.length` — *"the member count in the pool's
+> **LATEST ASSIGNMENT SNAPSHOT**"* (`contribution-binding.ts:388-395`, `:426`) — while लक्ष्य's
+> `assignedCount` is a **live** `count(*)` over `member_pool_assignments` (`public-read.ts:488`,
+> `:703`). ⇒ ⛔ **if they could diverge, `D7` would ⛔ NOT be dissolved** and the public bar would
+> disagree with the member card for the same pool.
+> ✅⭐ **THEY CANNOT.** `member_pool_assignments`' PK is **`(pool_id, member_id)`** — *"ONE ROW PER
+> (member, pool) AT FREEZE"* — and its rows are written *"from the **SAME** `memberAssignments` value
+> that `serializePoolSnapshot` receives … **NEVER** a naive re-run of `assignMembersToPools`"*
+> (`schema/member_pool_assignments.ts:1-18`, `:57`). ⇒ ⭐ **one source, one count, no version fan-out.**
+> ⛔ Do ⛔ not re-derive either side, and ⛔ do ⛔ not add a reconciling guard — ⭐ **state the identity
+> in the code comment** where the percentage is computed, so the next reader does not re-open it.
+>
 > ⚠⛔⛔ **TWO MORE TRUSTEE-RATIFIED CLAUSES SUPERSEDED — ⭐ named, ⛔ never re-read:**
 > ⛔ **`-189` cl.2(d)** (*"a **Superadmin-settable, PER-PARIWAR** value, **the SAME target for every
 > drive in that Pariwar**"*) — **superseded as to the VALUE**; ⭐ its *"enable switch"* half **survives**.
@@ -1113,6 +1337,19 @@ the expected figure in **people**.
 ⚠⛔ **AND IT DOES ⛔ NOT RULE `D3`, `D4` OR `D5`** — ⭐ all three are recorded **OPEN** and are
 BigDev's (any of them may escalate). ⛔ The dev agent resolves ⛔ none of them.
 
+✅⭐⭐ **DISCHARGED 2026-09-07 — ⭐ the sentence stands as the record.** ⛔ **⛔ NO decision is open.**
+`D3` closed by construction · `D4` · `D5` · `D6` ruled by the Panel · `D7` dissolved by identity.
+⚠ **What remains for BigDev is ⛔ not a decision but FOUR FOLLOW-UPS** (CURRENT STATE) — ⛔ none blocks
+a task, ⭐ and **follow-up 4** (*where does लक्ष्य render when the switch is ON?*) is the ⛔ only one the
+dev agent can walk into: ⇒ ⭐ **Task 3 builds the GATE and ⛔ stops at the slot**; ⛔ it invents none.
+
+⚠⛔⛔ **AND TWO THINGS IT DOES ⛔ NOT BUILD THAT AN EARLIER DRAFT IMPLIED IT WOULD:**
+⛔ **⛔ NO drive-page amount render** — ⭐ `11b-3b`'s, by `D1(b)` (Trap 10, AC6). ⭐ D amends that
+page's **prose** only.
+⛔ **⛔ NO retirement of `pariwar.manage_drive_target`** — ⭐ **`11b-18-drive-target-write-authority-retired`**'s,
+ruled 2026-09-07 and cut to its **own branch** (Dev Notes). ⛔ A `PERMISSION_CATALOG_VERSION` bump is a
+**catalog act** and AC6 forbids it here.
+
 ⛔ It does ⛔ not build the target, its keys or its admin surface (**C**) · ⛔ not invent stage words
 (**B**) · ⛔ not touch bank fields (**A**) · ⛔ not build any member surface (**E/F**) · ⛔ not change
 the cache policy or the rate tier · ⛔ not list `spawned` · ⛔ not add ordering, ranking or any
@@ -1139,7 +1376,10 @@ cross-drive comparison · ⛔ not publish a written pitch (`-190` cl.8).
 - [x] **Task 1b — ⚠⛔ ROUTE `D4` AND `D5` TO THE PANEL** — ✅ **DONE 2026-09-07.** ⇒ `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-07-11b14-drive-target-reveal-and-the-unwritten-headline.md`
       ⭐ Built on ratified text and verified repository state **only**; ⛔ ⛔ no code comment, doc-block
       or story prose used as evidence (§7 lists every check, re-runnable).
-- [ ] **Task 1c — ⏳ AWAIT THE PANEL** — ⛔ **BLOCKING Task 3 (`D4`, `D6`) and Task 5 (`D5`).**
+- [x] **Task 1c — ✅ THE PANEL ANSWERED. ⛔ NOTHING IS BLOCKED.** ⭐ `D3` closed by construction ·
+      `D4` · `D5` · `D6` ruled · `D7` dissolved (2026-09-07). ⇒ ⛔ **Tasks 3 and 5 proceed.** ⚠ Four
+      follow-ups travel on (CURRENT STATE) — ⛔ none blocks a task. ⭐ The clause below is the record:
+- [x] **Task 1c — ⏳ AWAIT THE PANEL** — ⛔ **BLOCKING Task 3 (`D4`, `D6`) and Task 5 (`D5`).**
       ⛔ ⛔ **No code on the meter's denominator or its LABEL before `D4` / `D6`; ⛔ no headline copy
       written, authored or translated before `D5`.** ⭐ Every other task proceeds meanwhile.
       ⭐ ✅ **`D5`'s surface half is already RESOLVED** — Live → cl.6's headline; Closed · Verified →
@@ -1159,7 +1399,12 @@ cross-drive comparison · ⛔ not publish a written pitch (`-190` cl.8).
   - [x] ✅ **`D3` CLOSED 2026-09-07 — ⛔ the three options are MOOT.** ⭐ With a **roster** denominator
         the division returns the roster size, ⛔ not the target. ⛔ Nothing to quantize or band.
   - [x] ✅ **`D6` RULED 2026-09-07** — ⛔ the *"412 of 500"* label is REMOVED; the bar carries the ruled
-        sentence and, **⛔ only where `revealToPublic` is true**, *"Expected ₹X lakh"* to its right.
+        sentence and, **⛔ only where `revealToPublic` is true**, **लक्ष्य** to its right.
+        ⚠⛔ **⛔ *"Expected ₹X lakh"* IS THE SUPERSEDED WORDING** (v0.7, when the figure was a
+        Pariwar-Admin-set rupee target). ⭐ v0.9 replaced both the **label** (**लक्ष्य**) and the
+        **source** (the **derived** `assignedCount × fixedAmount`). ⛔ Do ⛔ not build from the old
+        phrase. ⏳ ⚠ **AND ⛔ WHERE it renders is FOLLOW-UP 4, ⛔ unanswered** ⇒ ⭐ **build the GATE,
+        ⛔ stop at the slot, ⛔ invent none.**
         ⚠⛔ **AND `active_contribution.progress_a11y` IS ⛔ NOT RENDERED EITHER** — it carries the same
         `{confirmed} of {total}` shape and would name the denominator to a screen reader. ⇒ ⭐ the bar
         is `aria-hidden`; the sentence beneath carries the meaning.
@@ -1168,18 +1413,40 @@ cross-drive comparison · ⛔ not publish a written pitch (`-190` cl.8).
         assertion in `apps/api/tests/integration/public-pages/sahyog-drive.spec.ts`, and add the ON case.
   - [ ] ⭐ **The bar's motion — RULED (A):** CSS `@keyframes` on width, `animation-fill-mode: both`,
         ⛔ no JS; `prefers-reduced-motion: reduce` renders it static; **Live rows only**.
-  - [ ] ⏳⚠⛔ **AND `D4` — ⛔ WITH THE PANEL since 2026-09-07.** Whether the meter honours
-        `-190` cl.7(c)'s public reveal, defers it **by a named successor story key**, or narrows it
-        to members. ⛔ Not the dev agent's call, ⛔ and no longer BigDev's.
+  - [x] ✅ **DISCHARGED — ⛔ the clause below CONTRADICTED the ruled subtask above it** and is kept
+        as the record only ([[feedback_supersede_never_reinterpret]]). ⇒ ⭐ **`D4` is RULED: build it.**
+        *(record)* ⏳ *"AND `D4` — ⛔ WITH THE PANEL since 2026-09-07. Whether the meter honours
+        `-190` cl.7(c)'s public reveal, defers it by a named successor story key, or narrows it to
+        members. ⛔ Not the dev agent's call, ⛔ and no longer BigDev's."*
+  - [ ] ⚠⛔⛔ **ANSWER `deferred-work.md:8352` — ⛔ ROUTED HERE BY NAME, ⭐ WITH THIS TASK AS ITS
+        TRIGGER, ⛔ and never picked up until now.** ⇒ *"**A reveal can be configured for a Pariwar
+        that has ⛔ no target at all.** `setDriveTargetVisibility` never reads the schedule table …
+        `resolveDriveTargetVisibility` can report **revealed** while `resolveEffectiveDriveTargetInr`
+        reports `null` … it becomes a live decision **the first consumer must make**. **Trigger:**
+        Story 11b.14 **Task 3**."* ⭐ **`D4` MAKES THIS STORY THAT FIRST CONSUMER** ⇒ ⛔ it can ⛔ no
+        longer be deferred. ⭐ **The 2026-09-07 answer narrows it to near-nothing and that must be
+        WRITTEN DOWN, ⛔ not left implicit:** लक्ष्य is now **DERIVED** (`assignedCount × fixedAmount`)
+        ⇒ ⛔ the schedule row is ⛔ not consulted, so *"revealed with no target"* resolves to
+        **revealed with the DERIVED total** — ⛔ never a blank, ⛔ never `₹0`. ⚠ ⭐ **The ⛔ ONLY
+        residual absence is a ZERO-ASSIGNEE pool** ⇒ ⭐ **render ⛔ NO लक्ष्य — silence** (AC2; the
+        posture `public-read.ts:756` already applies to `fundingOutcome`). ⛔ Do ⛔ not invent a
+        placeholder, and ⛔ do ⛔ not read `pariwar_drive_target_schedule` to "check".
   - [x] ✅ **The anti-widening gate is ⛔ NOT touched** — ⭐ 2026-09-07 removed the new input key.
         ⛔ Do ⛔ **not** edit `presenter.test.ts`.
   - [x] ✅ **The `rosterSize` / `fixedAmount` operand problems are MOOT** — ⭐ the shipped shape **is**
         the ruled shape. ⭐ The `confirmedCount > rosterSize` THROW is **correct as shipped**; ⛔ do
         ⛔ not re-scope it.
-  - [ ] ⭐ Consume C's resolvers **BY NAME**, for the **`Expected` figure ONLY** —
-        `resolveDriveTargetVisibility` then `resolveEffectiveDriveTargetInr`
-        (`domain/src/pool/drive-target-policy.ts:233`, `:169`). ⛔ Do ⛔ not re-read
-        `pariwar_drive_target_schedule` directly. ⚠⛔ **The BAR does ⛔ NOT consume the target at all.**
+  - [ ] ⭐ Consume **`resolveDriveTargetVisibility`** BY NAME (`drive-target-policy.ts:233`) — ⭐ the
+        **VISIBILITY GATE ONLY**. ⚠⛔ **The BAR does ⛔ NOT consume the target at all.**
+        ⛔⛔ **AND ⛔ DO ⛔ NOT CALL `resolveEffectiveDriveTargetInr` — ⭐ v0.9 REMOVED ITS ROLE.**
+        ⚠ An earlier draft of this subtask ordered *"`resolveDriveTargetVisibility` **then**
+        `resolveEffectiveDriveTargetInr`"* — ⛔ written when लक्ष्य was the Pariwar-Admin's typed figure.
+        ⭐ **लक्ष्य is now DERIVED** from two values already on this query (`assignedCount` `:703`,
+        `fixedAmount` `:695`) ⇒ ⛔ the schedule resolver has **⛔ NO CONSUMER** — ⭐ exactly as the Dev
+        Notes table says. ⚠ ⛔ Calling it would ⛔ re-introduce the setter `-190` cl.7(a)'s supersession
+        removed, ⛔ and would make this story disagree with its own Dev Notes
+        ([[feedback_spec_edits_must_propagate_to_tasks]]). ⛔ Do ⛔ not re-read
+        `pariwar_drive_target_schedule` directly either.
   - [ ] ⛔ **The wire carries the PERCENTAGE only**, ⛔ never `rosterSize` — computed server-side.
         ⚠ `assignedCount` is quarantined at `public-read.ts:703` / `:739-743`; ⛔ do ⛔ not widen it.
 - [ ] **Task 4 — The wire** (AC3, **Trap 2**) — the index row needs what the headline consumes.
@@ -1190,6 +1457,13 @@ cross-drive comparison · ⛔ not publish a written pitch (`-190` cl.8).
       ⚠ D2's discipline, applied a **second** time to the same comment. ⭐ `fixedAmount` is **already selected** at
       `:695`, so ⛔ no read-shape change is needed. ⚠ Prefer sending the **derived** amount over
       exposing `fixedAmount`; ⭐ ⛔ do not add both.
+      ⛔⛔ **AND ⛔ HOW YOU DERIVE IT IS RULED — ⭐ `D1(c)` REFUSES A SECOND MULTIPLICATION (Trap 10).**
+      ⭐ `public-read.ts:761` **already computes** `deliveredTotal = confirmedContributionCount ×
+      r.fixedAmount` for `classifyCycleOutcome`. ⇒ ⭐⭐ **RETURN THAT VALUE.** ⛔ Do ⛔ **not** write a
+      new `× fixedAmount` anywhere, ⛔ and ⛔ **NEVER** in `apps/public`, where the refusal is scoped
+      *"a second multiplication **anywhere in this app** is the defect"* (`surface-fields.ts:431-433`).
+      ⚠⛔ **AND ⛔ NO DRIVE-PAGE FIELD** — ⭐ `sahyog-vivran`'s amount is **`11b-3b`'s** by `D1(b)`;
+      ⛔ this task widens the **INDEX** row only.
   - [ ] ⛔ **The new field is a MATRIX ACT** (Trap 7) — `SAHYOG_DRIVE_ROW_FIELD_IDS`
         (`surface-fields.ts:338`) **and** `SAHYOG_DRIVE_ROW_SHAPE` (`:369`) **and** the YAML row.
         `deriveFieldIds` throws in **both** directions.
@@ -1198,9 +1472,15 @@ cross-drive comparison · ⛔ not publish a written pitch (`-190` cl.8).
   - [ ] ✅⭐ **BUILD THE STAGE SPLIT — ⛔ this half is RESOLVED, ⛔ not waiting.** **Live** rows take
         cl.6's headline; **Closed · Verified** rows take `sahyog-shared:index_line.*`. ⚠ ⛔ Do ⛔ not
         render `index_line.*` on a Live row.
-  - [ ] ⏳⚠⛔ **`D5`'s REMAINDER — ⛔ WITH THE PANEL since 2026-09-07.** ⛔ The Live sentence exists in
-        ⛔ no file, in either language, and ⛔ no Hindi was ever ratified for it. ⛔ Do ⛔ not mint,
-        author or translate a Trustee-ratified sentence at a render site until the Panel says who writes it.
+  - [ ] ✅⭐⭐ **`D5`'s REMAINDER IS ANSWERED — ⭐ THE PANEL GAVE THE WORDING, IN BOTH LANGUAGES.**
+        ⇒ ⭐ **author `D5`'s EN + HI pair into `sahyog-shared` under a `governance:` commit** (option
+        (iv)) — ⛔ never invented at the render site, ⛔ never translated by the dev agent.
+        ⚠⛔ **⛔ AC3's *"16,750 members have stood with this family…"* IS ⛔ NOT THE STRING** — ⭐ it is
+        a **third**, superseded variant (see AC3). ⛔ Build from `D5`.
+        ⏳ ⚠ **THREE FOLLOW-UPS TRAVEL WITH IT AND ARE ⛔ UNANSWERED** — **(1)** ⛔ ONE sentence on a
+        Live row or **two** (`D5`'s `19,45,000` vs `D6`'s `19.45 lakh`)? **(2)** ⛔ ⛔ no `₹` in any
+        ratified string. **(3)** ⭐ the word-forms need a **rounding rule** and a formatter that
+        exists ⛔ nowhere. ⇒ ⭐ **land the string; ⛔ STOP at the number form and ASK.**
   - [ ] ⛔ **Rewrite `page.intro` in BOTH locales** — it says *"Drives that are still **Live are not
         listed here**"* / *"जो अभियान अभी जारी हैं वे यहाँ **सूचीबद्ध नहीं** हैं।"*, pinned by
         `sahyog-copy.test.ts:34`. AC1 makes it **false**.
@@ -1214,8 +1494,22 @@ cross-drive comparison · ⛔ not publish a written pitch (`-190` cl.8).
         `currency.ts:10-15`); ⛔ never the `'hi'` Devanagari arm for a money figure.
 - [ ] **Task 6 — The prose that must move** (AC0, AC4, Traps 2, 3, 5) — ⛔ **Amend and NAME; ⛔ never
       delete.** ⚠ **FOUR sites, ⛔ not two:** `sahyog-drive.ts:149-150` · `public-read.ts:524`
-      (⚠ **the 2026-09-04 quote was never its text**) · `sahyog-vivran.ts:345-347` (the drive page) ·
-      `public-read.ts:739-743` (the quarantine). **And** state the **staleness** (Trap 3,
+      (⚠ **the 2026-09-04 quote was never its text**) · `sahyog-vivran.ts:346-347` (the drive page —
+      ⚠ **`:346-347`, ⛔ not `:345-347`**; `:345` is the doc-block opener) · `public-read.ts:739-743`
+      (the quarantine).
+  - [ ] ⛔⛔ **AND SIX MORE THAT NAME THIS STORY AND DESCRIBE A RULING THAT ⛔ NO LONGER HOLDS**
+        (**Trap 9**; AC6's named exception). ⭐ **Amend and NAME; ⛔ never delete; ⛔ change ⛔ NO
+        behaviour** — `.positive()`, the ceiling and the `configured` flag all **STAY**; ⛔ only the
+        stated **ground** moves:
+        `drive-target.ts:57` · `:75` · `drive-target-ceiling-sync.test.ts:80-83` (⭐ the **assertion**
+        is correct — ⛔ rewrite only its name/comment) · `emit-openapi.ts:517-519`, `:2082`, `:2111`.
+  - [ ] ⛔⛔ **THEN REGENERATE `openapi/v1.yaml`** — ⭐ `:11168` and `:11205` carry both sentences
+        **verbatim in the committed, client-facing spec**, and `:11205` also restates the
+        **superseded** `-189` cl.2(d) (*"the SAME target for every drive"*). ⛔ **⛔ Never hand-edit the
+        YAML**; ⭐ amend `emit-openapi.ts` and re-emit, then let
+        `packages/contracts/scripts/check-openapi-determinism.ts` prove the pair is in step.
+  - [ ] ⭐ **RECORD the divergence with `11b-3b`** (Trap 10) — ⛔ the percentage posture, and that the
+        drive-page amount stays **`11b-3b`'s**. ⛔ Do ⛔ not amend `11b-3b`'s file from here. **And** state the **staleness** (Trap 3,
       `sahyog.astro:304`); state the **address-publication** consequence (Trap 5) **citing
       `2026-09-05-200`**, ⛔ not `-186` alone.
 - [ ] **Task 8 — The nominee name on the index** (AC7) — ⚠ **AC7(a) FIRST: the decision-log entry
@@ -1250,7 +1544,10 @@ cross-drive comparison · ⛔ not publish a written pitch (`-190` cl.8).
         (⚠ its stage loop and its exactly-one-guard-each assertion) ·
         `packages/ui/tests/pool-progress/presenter.test.ts` (the anti-widening gate) ·
         `apps/mobile/tests/unit/self-verify-surface-render.test.ts` (⚠ a **source-scan** gate on the
-        member call site) · `packages/i18n/tests/sahyog-shared-dark-copy.test.ts` (narrow, ⛔ not delete).
+        member call site) · `packages/i18n/tests/sahyog-shared-dark-copy.test.ts` (narrow, ⛔ not delete) ·
+        ⭐ **`packages/contracts/tests/drive-target-ceiling-sync.test.ts`** (⚠ its **test NAME** cites
+        the superseded meter — ⭐ the assertion stays, the name moves) · ⭐ **the OpenAPI determinism
+        check** (`check-openapi-determinism.ts`), which **fails** until `v1.yaml` is re-emitted.
   - [ ] ⭐ **Execute them** against `twt-test-pg` `:5433` — ⛔ *"written but not run"* is ⛔ not attested.
 - [ ] **Task 9 — The friction-budget disposition** — ⚠ 11b.11, 11b.12 and 11b.13 each landed one and
       this story had ⛔ none. ⭐ Written **AFTER** the code commit (the 11b.12 pattern); ⛔ AC-4 diffs
@@ -1267,12 +1564,42 @@ PRD** (`epics.md:160`), cited in ⛔ zero implementation records, discovered onl
 *"who decided a collecting drive is a solicitation?"*. ⇒ Task 0's annotation is the **repair of a
 five-month gap**, and it should read that way.
 
-### ⚠⛔ The decisions are the whole story — and there are now THREE open, ⛔ not zero
+### ✅ The decisions are the whole story — ⛔ and ⛔ NONE is open (⭐ the heading below is the record)
+
+✅⭐⭐ **DISCHARGED 2026-09-07.** ⭐ `D3` closed by construction · `D4` · `D5` · `D6` ruled · `D7`
+dissolved. ⇒ ⛔ **⛔ no task is blocked.** ⚠ **Four follow-ups** travel on (CURRENT STATE) — ⛔ none
+blocks a task; ⭐ **follow-up 4** is the only one a dev can walk into ⇒ **build the gate, ⛔ stop at
+the slot.** ⚠ ⭐ **What replaced them is ⛔ not simpler:** Task 2 is still **five artefacts** across
+three packages, ⛔ two failing **silently**; ⭐ **Task 6 now also repairs SIX sites that describe this
+story falsely, ⛔ one of them the published API spec** (Trap 9); ⭐ **Task 4 must ⛔ not write the
+multiplication `D1(c)` refuses** (Trap 10); and ⭐ **Task 0 owes a decision-log entry that does
+⛔ not exist** (AC0(b)).
+
+#### ⛔ (Superseded, left as the record) *"there are now THREE open, ⛔ not zero"*
 
 ⭐ Tasks 2 and 5 look mechanical and ⛔ are not: Task 2 is **five artefacts** across three packages,
 two of which fail **silently**. **D3, D4 and D5 are ⛔ none of them the dev agent's** — one decides a
 disclosure channel, one decides whether a ratified `super_admin` authority has a consumer at all, and
 one decides where Trustee-ratified copy comes from. ⚠ ⛔ **No meter before `D4`. ⛔ No copy before `D5`.**
+
+### ⚠⛔ What the **2026-09-07** validation (`§V2`) changed — ⛔ so it is ⛔ not re-discovered
+
+⭐ **⛔ ZERO code drift** (⛔ 0 non-`_bmad-output` files between `55e3eee7` and `670750c5`) ⇒ ⛔ this
+pass found ⛔ **no** stale anchor from B or C. ⭐ What it found is **governance the file had outrun**:
+
+- ⛔⛔ **Trap 9** — six shipped sites, ⛔ one the **published spec**, describe **this story** by number
+  and describe it **falsely**. ⇒ ⭐ **AC6 amended**, **Task 6** owns the repair + the re-emit.
+- ⛔⛔ **Trap 10** — **`11b-3b`** owns the drive-page amount by `D1(b)`, and **`D1(c)` REFUSES** a
+  second multiplication *"anywhere in this app"*. ⇒ ⭐ `D2`'s drive-page half **deferred by key**;
+  ⭐ Task 4 **returns `deliveredTotal`**; ⛔ the `@twt/ui` fence is ⛔ not lifted here.
+- ⛔⛔ **AC0(b)** — ⛔ **no `2026-09-07` decision-log entry exists** while three Trustee-ratified
+  clauses stand superseded. ⇒ ⭐ Task 0 writes it **before any code**.
+- ⚠ **`deferred-work.md:8352`** — routed here **BY NAME**, **Task 3** its trigger, ⛔ never picked up.
+- ⚠ **Three self-contradictions** inside the task list, ⭐ all resolved with the prior text **kept**.
+- ⚠ **AC3 ordered a headline the Panel replaced** ⇒ ⭐ `D5`'s pair is the ⛔ only normative text.
+- ✅ **`D7`'s unstated premise verified** — `rosterSize == assignedCount`, ⭐ by construction.
+- ⚠ **Anchors corrected:** `permissions.ts:1056` (⛔ wrong FILE) · `sahyog-vivran.ts:346-347` ·
+  `sahyog-shared.json` = **12** keys.
 
 ### ⚠ What the 2026-09-06 validation changed, so it is ⛔ not re-discovered
 
@@ -1291,7 +1618,7 @@ one decides where Trustee-ratified copy comes from. ⚠ ⛔ **No meter before `D
 | `pariwar_drive_target_visibility` + its `member_ge_public` CHECK + RLS | ⭐ **LIVE** — gates लक्ष्य |
 | `pariwar.manage_drive_target_visibility` (`super_admin`) | ⭐ **LIVE** |
 | `pariwar_drive_target_schedule` (the value; versioned, ₹ ceiling, positivity CHECKs) | ⛔ **NO CONSUMER** |
-| `pariwar.manage_drive_target` (`pariwar_admin`), minted at `PERMISSION_CATALOG_VERSION` **41** | ⛔ **GATES NOTHING** |
+| `pariwar.manage_drive_target` (`pariwar_admin`), minted at `PERMISSION_CATALOG_VERSION` **41** (`domain/src/rbac/permissions.ts:1054`, version at `:650`) | ⛔ **GATES NOTHING** ⇒ ✅ **RULED RETIRED**, and the act belongs to **`11b-18`** |
 | `resolveEffectiveDriveTargetInr` · `setDriveTargetSchedule` · the admin **target** form | ⛔ **NO CONSUMER** |
 
 ⭐⭐ **THE HOUSE PRECEDENT IS EXACT AND WE FOLLOW IT** — `-190` **cl.4**, on the masking window:
@@ -1303,6 +1630,28 @@ the admin route **and** the permission catalog entry.
 ⏳ ⛔ **ONE ITEM ⛔ NOT OURS:** `pariwar.manage_drive_target` is a **minted key that now gates nothing**
 — ⛔ un-minting moves `PERMISSION_CATALOG_VERSION`, a **catalog act**. ⭐ Default applied:
 **retain-and-state**; ⛔ retire it only on BigDev's word.
+
+✅⚠⛔⛔ **BigDev GAVE THE WORD — 2026-09-07, ⛔ AFTER this file's v0.9 Change Log entry. ⭐ The default
+above is ⛔ OVERRIDDEN, ⛔ not merely satisfied** (commits `4a9fd5ae`, `670750c5`).
+
+> ⭐ **RULED: the key is RETIRED — ⛔ REMOVED, ⛔ not deprecated.** ⚠ Deprecation is **unavailable**:
+> `domain/src/rbac/permissions.ts:1150` requires *"Every deprecated key MUST name one"* successor
+> (typed `DEPRECATED_KEY_SUCCESSOR`), ⛔ and this key has **none** — ⭐ the figure now derives itself.
+> ⇒ ⭐ **the project's first removal.** ⭐ Safe by construction: `check.ts:156-159` —
+> *"Unknown / malformed key → **deny**"* ⇒ a route left gating a removed key **fails closed**.
+> ⭐ `pariwar_drive_target_schedule` is **KEPT** (the `-190` cl.4 precedent) — ⛔ no migration, ⛔ no drop.
+
+⛔⛔ **AND ⛔ IT IS ⛔ NOT THIS STORY'S — ⭐ IT HAS ITS OWN VEHICLE, ⛔ ON ANOTHER BRANCH.**
+⇒ **`11b-18-drive-target-write-authority-retired`**, minted `ready-for-dev` and cut from `main`
+**⛔ deliberately NOT stacked on this branch**, so it can land independently. ⛔ Its row and its story
+file are ⛔ **not in this tree** — ⚠ expect a **ledger merge** on `sprint-status.yaml`, ⛔ not a
+conflict of substance. ⭐ Grounds, ⛔ both binding: it un-ships ~1,000 lines across five packages of a
+**`done`, merged** story, and ⭐ **this story's AC6 is *"Nothing else moves"***.
+⚠⛔ **AND THE CATALOG-VERSION TRAP TRAVELS WITH IT, ⛔ not with us:** the next version is **READ LIVE**,
+⛔ never transcribed — Story **6.18** bumps the same counter and whichever lands second takes the next
+numbers (`permissions.test.ts:54`). ⛔ Do ⛔ not write `42` anywhere in **this** story.
+⭐ **Until `11b-18` lands, the retain-and-state STATEMENT still applies:** the key and its substrate are
+described as **unconsumed**, ⛔ never as a live control on any Trustee-facing material.
 
 ### Testing standards
 
@@ -1337,6 +1686,34 @@ units. ⚠ Assert **membership and explicit values**, ⛔ never counts over the 
 - `_bmad-output/planning-artifacts/epics.md:160` (FR-76), `:4872` (the superseded parenthetical)
 - ⏳ `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-07-11b14-drive-target-reveal-and-the-unwritten-headline.md` — **the `D4` / `D5` escalation**
 
+⚠⛔ **ADDED 2026-09-07 (`§V2`) — ⭐ the anchors ⛔ no earlier draft carried:**
+
+- ⛔⛔ **Trap 9 — the six superseded sites:** `packages/contracts/src/drive-target/drive-target.ts:57`,
+  `:75` · `packages/contracts/tests/drive-target-ceiling-sync.test.ts:80-83` ·
+  `packages/contracts/scripts/emit-openapi.ts:517-519`, `:2082`, `:2111` ·
+  ⛔⛔ **`openapi/v1.yaml:11168`, `:11205`** (the committed spec) ·
+  `packages/contracts/scripts/check-openapi-determinism.ts` (⭐ what fails until re-emitted)
+- ⛔⛔ **Trap 10 — `11b-3b`'s ownership + `D1(c)`:**
+  `_bmad-output/implementation-artifacts/11b-3b-sahyog-vivran-named-identity-render-layer.md`
+  **AC3b** (⭐ `ready-for-dev`) · the in-code refusal at
+  `apps/public/src/lib/sahyog-vivran-render.ts:40-42` · `apps/public/src/lib/surface-fields.ts:431-433`
+  · `apps/public/src/pages/sahyog-vivran/[driveToken].astro:36-38`, `:370` ·
+  `packages/contracts/src/public-pages/sahyog-vivran.ts:352` (⭐ *"at **11b.3b** …"*) ·
+  `apps/public/package.json` (⭐ **⛔ no `@twt/ui` dependency** — the fence, as a fact)
+- ⛔ **AC0(b):** `.decision-log.md` — ⭐ head is **`2026-09-06-203`**; ⛔ **⛔ NO `2026-09-07` entry**
+- ⚠ **Task 3's third deferral:** `_bmad-output/implementation-artifacts/deferred-work.md:8352`
+  (⭐ *"**Trigger:** Story 11b.14 **Task 3**"*) — ⚠ its sibling at `:8327` is AC7's, already carried
+- ⭐ **The permission catalog, CORRECTED:** `packages/domain/src/rbac/permissions.ts:1054`
+  (`manage_drive_target`), `:1079` (`…_visibility`), `:650` (`PERMISSION_CATALOG_VERSION = 41`),
+  `:1150` (⭐ the successor requirement that makes deprecation unavailable) ·
+  `packages/domain/src/rbac/check.ts:156-159` (⭐ removal is **fail-closed**)
+- ⭐ **`D7`'s identity premise, VERIFIED:** `packages/domain/src/schema/member_pool_assignments.ts:1-18`,
+  `:57` (⭐ PK `(pool_id, member_id)`, ⛔ never a re-run) ·
+  `packages/domain/src/pool/contribution-binding.ts:388-395`, `:426` (⭐ `rosterSize`'s producer) ·
+  `packages/domain/src/pool/public-read.ts:488`, `:703` (⭐ `ASSIGNED_MEMBER_COUNT`)
+- ⭐ **The retirement, ruled ⛔ AFTER v0.9:** commits **`4a9fd5ae`**, **`670750c5`** ⇒ story
+  **`11b-18-drive-target-write-authority-retired`** (⛔ **not in this tree** — its own branch)
+
 ## Dev Agent Record
 
 ### Agent Model Used
@@ -1351,6 +1728,7 @@ units. ⚠ Assert **membership and explicit values**, ⛔ never counts over the 
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-09-07 | 1.0 | ⚠⛔⛔ **RE-VALIDATED (`bmad-create-story validate`) — 16 FINDINGS, ⛔ ZERO ROWS MOVE, ⛔ NO CODE.** ⭐ **⛔ ZERO non-`_bmad-output` files changed between `55e3eee7` and `670750c5`** ⇒ ⭐ every 2026-09-06 anchor **re-verified and still true** (⚠ two corrections). ⛔ What moved is the **record**. ⭐⭐ **A `CURRENT STATE` block now heads the file** — ⛔ a reader met *"BLOCKED, do not start"* **three times** before reaching *"RULED, build it"*; ⛔ nothing deleted, ⭐ the strata kept below it. ⛔⛔ **TRAP 9 — SIX SHIPPED SITES ASSERT THE SUPERSEDED METER RULING BY THIS STORY'S NUMBER**, and ⛔ one is the **committed client-facing spec**: `drive-target.ts:57`/`:75` · `drive-target-ceiling-sync.test.ts:80-83` (a **test NAME**) · `emit-openapi.ts:517-519`/`:2082`/`:2111` · ⛔⛔ **`openapi/v1.yaml:11168`/`:11205`**, which **also** restates the superseded `-189` cl.2(d). ⇒ ⭐ **AC6 amended and NAMED** so *"Nothing else moves"* stops forbidding the repair; **Task 6** owns it; ⭐ the emitter is amended and `v1.yaml` **re-emitted**, ⛔ never hand-edited; ⛔ **behaviour changes NOWHERE** (`.positive()` stays) and ⛔ **`11b-13` is NOT amended retrospectively** — ⭐ a supersession, ⛔ never a defect. ⛔⛔ **TRAP 10 — `11b-3b` (`ready-for-dev`) OWNS THE DRIVE-PAGE AMOUNT BY `D1(b)` (`2026-09-02-176`), AND `D1(c)` REFUSES WHAT TASK 4 REACHED FOR** — *"a second multiplication **anywhere in this app** is the defect"*, written into **four** `apps/public` sites; ⛔ this story named `11b-3b` **ZERO** times across five drafts. ⇒ ⭐ `D2`'s **drive-page half DEFERRED to `11b-3b`** (⭐ a key that **exists** in `sprint-status.yaml`); ⭐ **Task 4 RETURNS `deliveredTotal` (`:761`), ⛔ never a new multiplication**; ⛔ D does ⛔ not lift the `@twt/ui` fence (⭐ `apps/public` has **no** `@twt/ui` dep — a `package.json` fact); ⚠ and the **`confirmedPercentage` divergence** with `11b-3b` AC3b (*"⛔ not authorised … needs its own decision"*) is **RECORDED**, ⛔ not silently taken. ⛔⛔ **AC0(b) ADDED — THE 2026-09-07 RULINGS EXIST IN ⛔ NO DECISION-LOG ENTRY** (its head is `2026-09-06-203`): ⭐ three **Trustee-ratified** clauses (`-191` cl.4 · `-189` cl.2(d) · `-190` cl.7(a)) are superseded with ⛔ no entry and ⛔ no forward pointer, ⚠ while `-203` cites `-191` cl.4 as what it implements. ⇒ ⭐ **the entry lands in Task 0's `governance:` commit, before any code.** ⚠⛔ **`deferred-work.md:8352` — A THIRD DEFERRAL ROUTED HERE BY NAME WITH TASK 3 AS ITS TRIGGER**, ⛔ never picked up; ⭐ `D4` makes this story its *"first consumer"* ⇒ answered inline: लक्ष्य is **derived**, so *"revealed with no target"* resolves to the derived total, ⭐ and the ⛔ only residual absence is a **zero-assignee** pool ⇒ **silence**. ⚠⛔ **THREE CONTRADICTIONS RESOLVED, ⛔ prior text kept:** Task 3 held **both** *"`D4` RULED — build it"* **and** *"`D4` — with the Panel, not the dev agent's call"*; Task 3 ordered consuming **`resolveEffectiveDriveTargetInr`** while the Dev Notes declare it **NO CONSUMER** (⛔ v0.9 removed its role — ⭐ the visibility resolver **only**); Task 3 still said *"Expected ₹X lakh"* where AC2 says **लक्ष्य** from a **derived** source. ⚠⛔ **AC3 STILL ORDERED A HEADLINE THE PANEL REPLACED** — ⭐ a **third** wording, live beside `D5`'s ratified pair and `D6`'s lakh-form ⇒ ⭐ **`D5` is the ⛔ only normative text**; Task 5 authors it under governance and ⛔ **STOPS at the number form**. ⭐ **Task 1c DISCHARGED · *"THREE open"* DISCHARGED · the 4 follow-ups carried as ⛔ non-blocking.** ⚠⛔ **`pariwar.manage_drive_target` IS RULED RETIRED** (`4a9fd5ae`/`670750c5`, ⛔ **after** v0.9) — ⭐ the `-190` cl.4 retain-and-state default is **OVERRIDDEN**, and the vehicle is **`11b-18-drive-target-write-authority-retired`** on its **own branch**; ⛔ **not** this story (AC6). ⭐ **Sprint row: FOUR stale statements**, ⛔ not one — the discharged BLOCK, `:4865`, *"ZERO open decisions"* + D1's superseded *"optional rupee denominator"* / *"NO TARGET ⇒ NO BAR"*, and D2's wrong `:133`/`:481`. ⚠ **Anchor corrections:** `permissions.ts:1056` is the ⛔ **wrong FILE** (contracts' copy is **38 lines**) ⇒ `domain/src/rbac/permissions.ts:1054`/`:1079`, version **41** at `:650`; `sahyog-vivran.ts` is **`:346-347`**; `sahyog-shared.json` holds **TWELVE** keys (⛔ not 11, ⛔ not 14) — ⭐ the substantive *"no headline exists"* claim **re-verified**. ✅⭐ **AND `D7`'s UNSTATED PREMISE IS VERIFIED AND WRITTEN DOWN:** `rosterSize == assignedCount` holds by construction — PK `(pool_id, member_id)`, written from the **same** `memberAssignments` `serializePoolSnapshot` receives ⇒ ⛔ the two producers **cannot** diverge, ⭐ so the dissolution is sound. | BigDev + Claude |
 | 2026-09-07 | 0.9 | ✅✅⭐⭐ **RULED (DR + KB): *"Use the derived total."*** ⛔ Zero rows move; ⛔ no code. ⭐ **लक्ष्य = `assignedCount × pools.fixed_amount`** — the drive's own expected contribution, ⛔ never typed by anyone. ✅✅ **`D7` IS DISSOLVED BY IDENTITY, ⛔ not ruled away:** `amount / लक्ष्य = (confirmed × fA) / (roster × fA) = confirmed / roster` **= the bar** ⇒ ⛔ they **cannot** disagree, for any drive at any value (⭐ verified: 16,700 · ₹300 · 6,485 → both **38.8323%**). ⭐ The bar now reads correctly **both ways at once**. ⚠⛔⛔ **TWO MORE TRUSTEE-RATIFIED CLAUSES SUPERSEDED — ⭐ named, ⛔ never re-read:** **`-189` cl.2(d)** (*"Superadmin-settable, PER-PARIWAR … the SAME target for every drive"*) superseded **as to the VALUE**, ⭐ its *"enable switch"* half survives; **`-190` cl.7(a)** (*"the PARIWAR ADMIN sets the target from day 1"*) superseded — ⭐ there is ⛔ **no setter**. ⭐ **cl.7(b)/(c) STAND** — the ruling replaces the **VALUE's source**, ⛔ not the **visibility rule** ⇒ `D4`/§13.2 undisturbed: gated on `reveal_to_public`, `super_admin`-only, **default OFF** ⇒ ⛔ **nothing renders at launch**; ⚠ the switch's meaning shifts to revealing **what the drive needs**, ⛔ no longer *"the Trust's aim"*. ⛔⛔ **AND `public-read.ts:739-743`'s QUARANTINE IS NOW *FULLY* SUPERSEDED** — **both** totals cross (`deliveredTotal` as the amount, `expectedTotal` as लक्ष्य) ⇒ ⭐ amend and NAME it, ⚠ D2's discipline a **second** time on the same comment. ⭐ **⛔ No new admin surface, ⛔ no write path, ⛔ no migration** — both operands are **already selected on this query** (`:703`, `:695`). ⚠ **Zero-assignee ⇒ ⛔ NO लक्ष्य** — ⭐ silence, ⛔ never `₹0`. ⚠⛔ **COST: half of Story C is now UNCONSUMED** (`pariwar_drive_target_schedule`, `pariwar.manage_drive_target` at catalog v41, the resolver, the admin target form) ⇒ ⭐ **RETAIN and STATE**, per the `-190` cl.4 masking-window precedent; ⏳ retiring the minted key is a **catalog act** and awaits BigDev. ✅ **लक्ष्य** confirmed as the Hindi label. | BigDev + Claude |
 | 2026-09-07 | 0.8 | ✅✅⭐⭐ **`D3` ANSWERED AND CLOSED BY CONSTRUCTION; ⚠⛔ A TRUSTEE-RATIFIED CLAUSE IS SUPERSEDED; ⏳ `D7` OPENS.** ⛔ Zero rows move; ⛔ no code. ✅ **(DR + KB):** *"Progress bar should show the % of contributor already contributed in that pool."* ⚠⛔⛔ **THIS SUPERSEDES `2026-09-04-191` cl.4 — itself Trustee-ratified (DR + KB):** *"THE PROGRESS BAR FILLS AGAINST A **RUPEE** TARGET."* ⭐ `-190` follow-up (ii) framed exactly this binary (*"rupees or contributors?"*); cl.4 took rupees, ⭐ the Panel now takes contributors — ⛔ same Panel, three days later, ⭐ a legitimate change on a question the record shows was always two-sided. ⭐ **Recorded as a SUPERSESSION with the prior text named**, ⛔ never a re-reading. ⭐ cl.4's other half — the participation-first headline — is ⛔ undisturbed. ✅✅ **`D3` IS CLOSED BY CONSTRUCTION, ⛔ not mitigated** — the bar is `confirmedCount ÷ rosterSize`, so dividing amount by fill returns the **ROSTER SIZE**, ⛔ not the target ⇒ ⭐⭐ **the hidden figure is ⛔ no longer derivable at all**; ⛔ all three escalated options are MOOT. ⭐⭐ **AND `D1(a)`'s COSTS FALL AWAY** — the shipped `pool-progress` **already does this** (`presenter.ts:73-74`) ⇒ Trap 1's three blocks are ⛔ ALL MOOT: ⛔ no new input key ⇒ **the anti-widening test is UNTOUCHED** · ⭐ `rosterSize` IS the denominator · ⛔ `fixedAmount` unchanged; ⭐ **the `confirmedCount > rosterSize` THROW is CORRECT AS SHIPPED.** ⚠ `D1`'s *"no target ⇒ no bar"* is superseded — ⭐ the bar **always renders**; successor: *"no target ⇒ no **Expected** figure"*; ⚠ a zero-assignee pool renders a **0% bar**, ⛔ not an error. ⚠ **One consequence recorded ⛔ not asked:** a participation % ⛔ cannot be shown without **roster size** becoming derivable — ⭐ inherent to the ruling ⇒ ⛔ we will ⛔ not ask the Panel to re-decide it. ⭐ **Build decision: the wire carries the PERCENTAGE ONLY**, ⛔ never `rosterSize`. ⏳ **`D7` OPENS** — ⛔ the bar counts **people** while *"Expected"* counts **rupees**, set independently ⇒ a bar at **39%** can sit beside *"Expected ₹25 lakh"* on a drive that has raised **78%** of it. ⭐⭐ ⛔ **Nothing is blocked** — the switch is OFF, so ⛔ no *"Expected"* renders at launch. | BigDev + Claude |
 | 2026-09-07 | 0.7 | ✅⭐⭐ **`D4` · `D5` · `D6` ALL CLOSED; the bar's motion RULED. ⚠⛔ `D3` REMAINS OPEN.** ⛔ Zero rows move; ⛔ no code. ✅ **`D4` (DR + KB):** *"expected figure shows only when Trust switches on. And it should be turned off."* ⇒ ⛔ `-190` cl.7(b)/(c) **STAND, ⛔ not superseded**, and ⭐⭐ **`revealToPublic` acquires a CONSUMER, built in THIS story**, gated, default fail-closed ⇒ ⛔ **what launches shows ⛔ no expected figure anywhere**. ⭐ The shipped inert-switch test is **NARROWED** ("absent while OFF" + a mirror for ON), ⛔ never deleted. ⭐ **Pool-Reality #2 is CONDITIONAL, ⛔ not live** — with the switch OFF the bar carries ⛔ no visible target, which IS cl.2(c)'s own resolution; ⛔ not withdrawn, ⭐ **recorded against the switch** so whoever first flips it meets it first. ⚠ `-189` cl.3 likewise: story **E** owes members the figure ⛔ only on that condition. ⚠ **THE CUT-OFF MOVED** — *"at **Exactly** ten lakh"* supersedes *"exceeds"* ⇒ the test is **`>=`**; ₹10,00,000 renders **₹10 lakh**. ⭐ **The TARGET follows a DIFFERENT rule** — *"always in Lakh or Crore"* ⇒ a ₹8,00,000 target renders **₹8 lakh**. ⛔ Two rules, DELIBERATE — ⛔ do not "align" them. ✅ **The bar's motion — RULED (A) by BigDev:** grows from nothing on load, then **holds still**; ⛔ no ripple, ⛔ no repeating shine. ⭐ Ground: `s-maxage=300` ⇒ a moving bar would assert money is arriving while a visitor watches. ⭐ CSS-only, `prefers-reduced-motion` static, **Live rows only**. ⚠⛔ **AND ONE CONSEQUENCE DECIDED, ⛔ not asked:** `active_contribution.progress_a11y` carries the SAME `{confirmed} of {total}` shape as the label `D6` removed and would name the denominator to assistive tech ⇒ ⭐ **the bar is `aria-hidden`; the ruled sentence beneath carries the meaning.** ⏳ **Hindi for *"Expected"* asked TWICE, ⛔ unanswered** ⇒ building **लक्ष्य** as a STATED assumption, ⛔ revocable. ⭐ Three more declared, ⛔ not silent: `₹` on the target · lakh→crore at ₹1 crore · trailing zeros trimmed. ⚠⛔⛔ **`D3` IS ⛔ NOT CLOSED AND ITS SHAPE BARELY MOVED** — the target stays hidden by default, the fill is a rendered integer percentage of `amount / target`, and ⛔ **below ₹10 lakh the amount renders EXACTLY** ⇒ `target ≈ ₹8,55,000 ÷ 0.17` recovers to ~**±3%**, a band set by the PERCENTAGE's rounding, ⛔ not the amount's; above ₹10 lakh the two-place cut costs only ~±0.03% ⇒ ⭐ **the cut-off barely helps.** ⇒ ⛔ **`D3` still BLOCKS Task 3.** | BigDev + Claude |

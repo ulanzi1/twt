@@ -1,6 +1,6 @@
 # Trustee Panel routing note — 2026-09-07
 
-## Story 11b.14 (**Story D** — live drives on the public index) carries two questions we will ⛔ not answer for you. **(1)** You ruled that a Superadmin may reveal the drive target *"separately for member and for public"* — ⭐ we built the switch, and ⛔ nothing anywhere reads it; the story that was named as its first consumer forbids the render. **(2)** You ratified a drive headline in your own words — ⭐ and it exists in ⛔ no file in this repository.
+## Story 11b.14 (**Story D** — live drives on the public index) carries three questions we will ⛔ not answer for you. **(1)** You ruled that a Superadmin may reveal the drive target *"separately for member and for public"* — ⭐ we built the switch, and ⛔ nothing anywhere reads it; the story named as its first consumer forbids the render. **(2)** You ratified a drive headline in your own words — ⭐ and it exists in ⛔ no file in this repository. **(3)** The progress bar's own label **names its denominator** — ⭐ so the bar built to hide the target would print it.
 
 > ⚠⛔ **A NOTE ON WHAT COUNTS AS EVIDENCE HERE.** Every factual claim below is either (a) **verbatim
 > ratified text** from `.decision-log.md`, or (b) **verified repository state** — an exhaustive
@@ -9,6 +9,59 @@
 > comment, a doc-block, or a story file's own prose**, because those are our words about the code,
 > ⛔ not the code. ⭐ §7 lists every command, so any claim here can be re-run and checked.
 > ⚠ Where something is an **inference** rather than a fact, it is labelled **INFERENCE**.
+
+---
+
+## 0. ⚠⛔ CORRECTION TO THIS NOTE — **§4 and §6.2 are NARROWED, 2026-09-07, before the Panel reads it**
+
+⭐ **BigDev supplied the reading we missed, and it is right.** We had asked *"which surface carries
+which sentence"* as an open question. ⚠ **It is answerable from your own record, and we should have
+traced it before asking.** ⭐ Recorded as a correction with the original claim named, ⛔ not silently
+rewritten.
+
+**The two sentences are ⛔ not two surfaces. They are two STAGES of the same list:**
+
+| Row stage | Sentence |
+|---|---|
+| **Live** | ⭐ *"16,750 members have stood with this family — ₹19.45 lakh, and counting"* (`-190` cl.6) |
+| **Closed · Verified** | ⭐ *"{amount} contributed by colleagues for {nominee_name}, nominee of Late {family_name}, who served in {district_name} district."* (ratified 2026-09-05) |
+
+⭐⭐ **AND THE LOAD-BEARING EVIDENCE IS PROVENANCE, ⛔ not tense.** `-190` cl.6 does not stand alone —
+it **completes** `2026-09-04-189` **cl.2(e)**, and cl.2 is titled **"(Q2) — YES: A COLLECTING DRIVE IS
+LISTED."** cl.2(e) reads:
+
+> **(e)** the surface shows **the amount raised AND the number of contributors** — the Panel's own
+> example: *"19.45 lakh and counting, by 43k members"*, with ⭐ **the exact wording delegated to
+> BigDev**.
+
+⇒ ⭐ **cl.6's headline is the wording delegated at cl.2(e), inside the ruling that lists COLLECTING
+drives.** ⛔ It was never a sentence about a finished drive. *"and counting"* is in the Panel's own
+example of a drive still running.
+
+⭐ **And the other direction is equally structural.** The 2026-09-05 index line was ratified against
+an index that listed **`closed` + `settled` only** — `live` drives are ⛔ not listed today, and this
+very story is what adds them. ⇒ ⛔ it **could not** have been ruled about a live row, because no live
+row existed on that page. ⚠ It also occupies the slot of the close-of-cycle outcome sentence, and a
+close-of-cycle classification is structurally meaningless for a drive that has not closed.
+
+⇒ ⭐⭐ **§6.2's options (i), (ii) and (iii) are WITHDRAWN. ⛔ We are ⛔ not asking you which surface
+carries which — the record answers it.** ⚠ What survives of Q2 is smaller, and stated at §6.2.
+
+### 0.1 ⚠⛔ And one claim of ours was OVER-STATED — ⭐ corrected here
+
+We wrote at §4.2 that the index line *"carries no member count at all"* and therefore *"cannot satisfy
+your participation-first ruling"*. ⚠ **That was too strong.** The 2026-09-05 routing note's own §7.1
+records the constraint the line was written under: *"**The confirmed count is ⛔ ALREADY on the same
+row.** ⇒ ⛔ don't restate a number."* ⇒ ⭐ the count is a **column** on that row; the sentence omits it
+**deliberately**, ⛔ not by oversight. ⭐ The row as a whole is participation-bearing.
+⛔ The comparison table at §4.2 stands as a description of the two **sentences**; ⚠ the conclusion we
+drew from it does ⛔ not.
+
+### 0.2 ⭐ A THIRD question has been added — **§4.4 and §6.3**
+
+⚠ BigDev then asked what appears **above and below the progress bar** to tell a reader what it
+measures. ⭐ We checked, and the answer is a finding: **the bar's shipped label names its own
+denominator.** ⇒ **Q3**, and it interlocks with Q1.
 
 ---
 
@@ -22,13 +75,20 @@ carries an acceptance criterion that forbids displaying the target **uncondition
 reference to cl.7(c). ⇒ **Did cl.7(c) mean the public figure would actually appear when a Superadmin
 turns it on — and if so, is Story D the story that must make that true?**
 
-**Q2 — the drive headline.** `2026-09-04-190` **cl.6** adopts, in your words, *"16,750 members have
-stood with this family — ₹19.45 lakh, and counting"*. ⭐ Story D was told to take that sentence from
-the shared copy source Story B owns. ⛔ **Story B shipped ⛔ no such string, and no string resembling
-it exists anywhere in this repository's copy files.** ⇒ **Who authors the ratified sentence, and —
-because a second ratified money sentence now also exists — which surface carries which?**
+**Q2 — the live drive's headline.** ⭐ **NARROWED at §0** — we now know **where** it goes (the
+**Live** rows; the 2026-09-05 index line takes **Closed** and **Verified**). ⛔ What remains is that
+`2026-09-04-190` **cl.6**'s sentence **exists in ⛔ no file in this repository**, in either language.
+⇒ **cl.2(e) delegated the exact wording to BigDev and cl.6 then adopted a specific English sentence —
+so is authoring it now BigDev's, or do you want to see the final English and Hindi first?**
 
-⛔ **Neither question re-opens a decision you have made.** ⭐ Both ask what a ratified decision
+**Q3 — what the progress bar says it is measuring.** ⚠ The bar's shipped label, rendered directly
+above it, is *"{confirmed} of {total} contributions confirmed"*. ⛔ **It names its own denominator.**
+Under the ruling that the public bar fills against the rupee target, `{total}` **is the target** —
+the figure cl.2(c) and cl.7(b) say is not to be displayed. ⇒ **What does the public bar's label say
+instead — and is a bar with no label at all acceptable on a page whose ruling is that "the UI carries
+the understanding"?**
+
+⛔ **⛔ None of the three re-opens a decision you have made.** ⭐ All ask what a ratified decision
 requires of the next build, where the record is silent and we would otherwise be guessing.
 
 ---
@@ -63,10 +123,16 @@ requires of the next build, where the record is silent and we would otherwise be
   ⛔ does not name a page, a story, or a render. `-196` cl.8 names Story D as *"its first consumer"*
   — ⚠ but qualifies that with *"**server-side**"*, which is precisely the ambiguity: a server-side
   consumer computes a bar; a **rendered figure** is a different act.
-- ⛔ **Which surface carries the cl.6 headline.** cl.6 says *"THE DRIVE HEADLINE"* — **singular**.
-  ⚠ On 2026-09-05 you separately ratified an **index line** that also carries money
-  (§3.2 below). ⛔ Nothing in the record says whether these are the same sentence, two sentences on
-  two surfaces, or two sentences on one.
+- ✅ ⭐ **WHICH ROWS CARRY WHICH SENTENCE — ⛔ NOT AN OPEN QUESTION.** ⚠ We first listed this as
+  unruled. ⭐ **It is answerable from your record** and is traced at **§0**: cl.6 completes
+  `-189` cl.2(e), inside *"A COLLECTING DRIVE IS LISTED"* ⇒ **Live** rows; the 2026-09-05 index line
+  was ratified against an index carrying **`closed` + `settled` only** ⇒ **Closed · Verified** rows.
+  ⛔ Withdrawn as a question.
+- ⛔ **Whether cl.6's sentence has a HINDI form.** ⚠ cl.6 adopted an **English** sentence. ⛔ No Hindi
+  was ever ratified for it, on a bilingual public page.
+- ⛔ **What the progress bar's LABEL says on the public surface.** ⚠ cl.2(b) rules that each drive
+  *"carries a progress bar"*; cl.2(c) and cl.7(b) rule the target is not displayed. ⛔ Nothing rules
+  what words sit beside the bar — ⭐ and the shipped ones name the target (§4.4).
 - ⛔ **Who authors the cl.6 sentence into the product.** ⚠ It is your wording; ⭐ we will ⛔ not
   invent, translate or re-phrase a Trustee-ratified sentence at a render site without being told to.
 
@@ -223,6 +289,41 @@ formatCurrency(1945000, 'hi')  =  "₹ १९,४५,०००"
 separate open question (see §6.3). ⛔ We are ⛔ not asking you to rule the formatter; ⭐ we flag it so
 that whoever authors the sentence knows a word-form does not exist yet.
 
+### 4.4 ⛔⛔ Q3 — THE BAR'S OWN LABEL NAMES THE NUMBER YOU HID
+
+⭐ We were asked what a reader sees around the bar that tells them what it is. ⚠ We read the shipped
+render rather than describing it, at
+`apps/mobile/components/active-contribution/ActiveContributionCard.tsx`. **In order down the card:**
+
+| Position | What renders | The actual string |
+|---|---|---|
+| above the bar | days label | *"{days} days remaining in this cycle"* / *"इस चक्र में {days} दिन शेष"* |
+| ⭐ **directly above the bar** | ⛔⛔ **the meter label** | ⛔ *"{confirmed} of {total} contributions confirmed"* / *"{total} में से {confirmed} अंशदान पुष्ट"* |
+| on the bar | the screen-reader label | *"{confirmed} of {total} contributions confirmed so far"* |
+| below the bar | the amount label | *"Raised so far"* / *"अब तक जुटाई गई राशि"* |
+| below that | the amount | the rupee figure |
+
+⛔⛔ **THE LABEL STATES BOTH OPERANDS, INCLUDING THE DENOMINATOR.** On the member's own card today
+`{total}` is the pool's roster — *"412 of 500 contributions confirmed"*. ⚠ **On the public drive, the
+ruling makes the denominator the rupee target.** ⇒ rendering the shipped label unchanged prints the
+hidden target, **as a number, in words, in both languages**, directly above the bar.
+
+⚠ ⭐ **This is a different channel from the one already recorded.** A separate open item (`D3`) is
+that the bar's **fill width** lets the target be *recovered by division*. ⛔ This is not a recovery —
+⭐ **it is the number itself, printed.**
+
+⚠⛔ **AND SUPPRESSING THE LABEL IS ⛔ NOT OBVIOUSLY THE ANSWER EITHER.** cl.8 rules that *"the UI
+carries the understanding"* and that *"the arithmetic is SHOWN, ⛔ never ASSERTED."* ⭐ A bar with
+⛔ no label is a coloured rectangle: it shows nothing and asserts nothing. ⇒ the public bar needs
+**copy that says what it measures without naming what it measures against** — ⛔ and no such string
+exists, in either language.
+
+⭐⭐ **AND Q3 INTERLOCKS WITH Q1.** ⚠ If you answer **Q1 as §6.1(i)** — the Superadmin's public reveal
+does reach the screen — then for a Pariwar with the switch **ON** the shipped label is ⛔ **not** a
+leak at all: it names a figure that Pariwar has chosen to publish. ⇒ **Q3 then applies only to
+Pariwars with the reveal OFF.** ⛔ We are ⛔ not using that to steer your answer to Q1; ⭐ we state it
+so the two are not answered as though independent.
+
 ---
 
 ## 5. ⚖️ Stated fairly, in both directions
@@ -275,22 +376,46 @@ that whoever authors the sentence knows a word-form does not exist yet.
 ⭐ **We recommend ⛔ nothing here.** ⚠ (i) and (ii) are both fully coherent readings of your own
 words, and the difference between them is an intent only you hold.
 
-### 6.2 Q2 — the drive headline
+### 6.2 Q2 — the live drive's headline ⚠ **NARROWED — see §0**
 
-- **(i) ⭐ THE INDEX LINE IS THE ONLY SENTENCE.** ⛔ cl.6's headline is retired as superseded by your
-  2026-09-05 ratification. ⭐ Zero copy authored; the product already has the string. ⚠ ⛔ But your
-  *"participation-first"* ruling is then ⛔ not satisfied — the index line carries no member count.
-- **(ii) ⭐ TWO SENTENCES, TWO SURFACES** — the **index row** carries the 2026-09-05 index line; the
-  **individual drive's page** carries cl.6's participation headline. ⭐ This matches cl.6's singular
-  *"drive headline"* most naturally. ⚠ Requires (iv).
-- **(iii) BOTH ON THE INDEX ROW.** ⚠ Two money sentences on one row. ⛔ We think this reads poorly
-  against cl.8's *"the UI carries the understanding"*, ⭐ but it is yours to rule, not ours.
-- **(iv) ⭐ AND IN EVERY CASE WHERE cl.6's SENTENCE SURVIVES — ⭐ YOU GIVE US THE WORDING.**
-  ⚠ Specifically: the **English** sentence as it should render, the **Hindi** sentence, and whether
-  the amount reads `₹ 19,45,000` (what the product produces today) or a *"lakh"* word-form (which
-  would need a rounding rule). ⛔ We will ⛔ not author or translate it ourselves.
+⛔ **WITHDRAWN: the three "which surface" options this section first carried.** ⭐ The record answers
+it — **Live** rows take cl.6's headline, **Closed** and **Verified** take the 2026-09-05 index line.
+⚠ We are ⛔ not asking you to rule what you have already ruled.
 
-### 6.3 ⚠ One interaction you should know about before answering
+⭐ **What actually remains is one question about authorship, and it may not even be yours:**
+
+- **(i) ⭐ BigDev AUTHORS IT — you have already delegated this.** `-189` cl.2(e) says *"the exact
+  wording delegated to BigDev"*, and cl.6 adopted option (B) as the shape. ⇒ ⭐ BigDev writes the
+  final English and the Hindi and it ships; ⛔ nothing comes back to you. ⚠ **The one caveat we owe
+  you:** ⛔ **no Hindi was ever ratified for this sentence** — cl.6's adopted wording is English only,
+  and this is a public memorial page in a bilingual product.
+- **(ii) ⭐ YOU SEE IT FIRST.** ⭐ BigDev drafts both languages; you confirm before it ships.
+  ⚠ One round, ⛔ no build blocked meanwhile.
+- **(iii) ⭐ YOU GIVE THE WORDING**, as you did for the 2026-09-05 index line.
+
+⚠ **In every case, one small thing needs a decision from whoever authors it:** the amount. ⭐ The
+product produces **`₹ 19,45,000`** (verified by execution). ⛔ It does ⛔ not produce *"₹19.45 lakh"* —
+that is a **word-form plus a rounding rule**, and neither exists. ⚠ Rounding also interacts with `D3`
+(§6.4).
+
+### 6.3 Q3 — what the public bar's label says
+
+- **(i) ⭐ A LABEL THAT NAMES ⛔ NO DENOMINATOR.** e.g. *"Contributions confirmed so far"* with the
+  count, and the amount below — ⭐ the count and the amount are already ruled public (cl.2(e), cl.6).
+  ⚠ **What is lost, stated plainly:** the bar's **width** then means something the words do not
+  explain, and a reader may read a nearly-full bar as *"nearly done"* with ⛔ no way to know
+  done-against-what.
+- **(ii) ⭐ ⛔ NO LABEL — the bar is decorative.** ⭐ Simplest, and it leaks nothing. ⚠ ⛔ But cl.8 says
+  the UI must carry the understanding; a rectangle carries none, and an unexplained bar on a page
+  about a bereaved family may read worse than no bar.
+- **(iii) ⭐ ⛔ NO BAR ON THE PUBLIC SURFACE AT ALL** — the Live row shows the headline figures only.
+  ⚠ This would **narrow `-189` cl.2(b)** (*"each carries a progress bar"*), so ⛔ we do not propose
+  it; ⭐ we list it because it is the one option that retires Q3 and `D3` together.
+- **(iv) ⭐ THE LABEL NAMES THE TARGET WHERE THE TARGET IS REVEALED** — i.e. **Q1(i)**, and the
+  shipped label is then correct as it stands for those Pariwars. ⛔ Only available if Q1 is answered
+  that way.
+
+### 6.4 ⚠ One interaction you should know about before answering
 
 ⭐ A separate open question on this story (**`D3`**, ⛔ not escalated here) is that the progress bar's
 **fill geometry** lets a reader recover the hidden target by division, from two figures the story
@@ -302,8 +427,13 @@ publishes on purpose. ⚠ **Two of your answers here move it:**
   the division becomes **less** precise — ⭐ which is one of D3's own candidate mitigations arriving
   from an unrelated direction.
 
-⛔ **We are ⛔ not asking you to rule D3.** ⭐ We flag the interaction so your answers here are not
-made in ignorance of it.
+- ⚠ **`Q3` is the same channel, only blunter.** `D3` is the target **recovered by division**; Q3 is
+  the target **printed in the label**. ⇒ ⛔ an answer to Q3 that removes the denominator from the
+  words does ⛔ **not** close `D3`, and ⭐ an answer to Q1 that reveals the target closes **both**, for
+  the Pariwars that reveal it.
+
+⛔ **We are ⛔ not asking you to rule D3.** ⭐ We flag the interactions so your answers here are not
+made in ignorance of them.
 
 ---
 
@@ -322,6 +452,9 @@ made in ignorance of it.
 | The headline does not exist | Full key dump of both `sahyog-shared.json` files (14 keys each, listed in §4.1) + a case-insensitive search of **all** files under `packages/i18n/locales/` for four distinct fragments. ⛔ Zero hits each. |
 | The formatter produces `₹ 19,45,000` | **Executed** `formatCurrency` from the built package and captured its output for `en` and `hi`. |
 | All ratified quotations | Copied verbatim from `.decision-log.md`, decisions `2026-09-04-189`, `-190`, `-196`. |
+| What renders above and below the bar | Read the render in order at `apps/mobile/components/active-contribution/ActiveContributionCard.tsx` (days label, meter label, the bar with its screen-reader label, the amount label, the amount) and resolved each key to its actual string in **both** locale files. ⛔ Not described from the component's own comments. |
+| The meter label names its denominator | The key `active_contribution.progress` resolves to *"{confirmed} of {total} contributions confirmed"* (en) and *"{total} में से {confirmed} अंशदान पुष्ट"* (hi), read from `packages/i18n/locales/{en,hi}/contribution.json`. |
+| The Live/Closed sentence split (§0) | Traced through the ratified record: `-189` cl.2 heading and cl.2(e) → `-190` cl.6; and the 2026-09-05 index line against `SAHYOG_DRIVE_VISIBLE_POOL_STATES = ['closed','settled']`, still the shipped value. |
 
 ⚠⛔ **AND WHAT WE DELIBERATELY DID ⛔ NOT USE.** ⛔ No claim above rests on a code comment, a
 doc-block, a story file's own prose, or a prior review's summary. ⭐ Where a comment is quoted (the
@@ -360,15 +493,34 @@ You approved a sentence for the top of a drive: *"16,750 members have stood with
 ⛔ **That sentence is not written down anywhere in the product.** We checked every copy file in both
 English and Hindi. The words *"and counting"* and *"lakh"* do not appear in a single one.
 
-⚠ Meanwhile, a month later, you approved a **different** money sentence — the one that goes on each
-row of the list, naming the nominee. ⭐ That one **is** built, in both languages. ⛔ So we now have
-one approved sentence that exists and one that does not, both about money, and no instruction about
-which goes where.
+⚠ We first also asked you *where* it should go, because a month later you approved a **different**
+money sentence for the list. ⭐ **We should not have asked that** — your own record answers it, and
+we have withdrawn the question. The list will have three kinds of row: drives still running, drives
+closed, and drives verified. **Your first sentence — the one with *"and counting"* — is for the
+drives still running.** **The later sentence, which speaks of contributions in the past tense, is for
+the closed and verified ones.** ⭐ That is what you ruled; ⛔ we just had not traced it.
 
-⭐ We could write the missing sentence ourselves. ⚠ **We would rather not.** These are your words on
-a public page about money and about families, and the whole reason there is a single shared copy
-source is so that nobody quietly writes a second version. ⇒ we are asking you to tell us the
-sentence, in both languages, and which page it belongs on.
+⇒ **What is left is only this:** the running-drive sentence has never actually been written into the
+product, in either language, and the English you approved has no Hindi twin. ⭐ You once told us to
+choose the wording ourselves. ⚠ We are happy to — ⛔ we would just rather ask than assume, on a
+public page about a family who has died.
+
+### The third question
+
+Under the bar, and above it, there is a small line of words telling the reader what the bar means.
+Today it reads: **"412 of 500 contributions confirmed."**
+
+⛔ **That line names the total.** On a member's own screen the total is the number of colleagues in
+their pool, which is fine. ⚠ **On the public page the total becomes the target amount** — ⭐ the very
+figure you decided should not be shown to anyone.
+
+⇒ if we leave the line as it is, the bar built to hide the target **prints it**. ⛔ If we delete the
+line, the public sees a coloured bar with no words at all, on a page about a family, filling up
+toward something nobody explains — ⚠ and you told us the page itself must carry the understanding.
+
+⭐ So we need to know what that line should say. ⚠ And it is worth knowing that **if you answer the
+first question by letting the Trust reveal the target, this third question mostly disappears** — the
+line would then be naming a number that Pariwar had chosen to publish.
 
 ### What happens meanwhile
 

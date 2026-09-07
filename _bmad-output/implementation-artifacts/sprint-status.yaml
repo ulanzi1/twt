@@ -1,4 +1,51 @@
-# last_updated: 2026-09-07b (⏳⭐⭐ **STORY 11b.14 (D) — `D4` AND `D5` ROUTED TO THE TRUSTEE PANEL.**
+# last_updated: 2026-09-07c (✅⏳⭐⭐ **STORY 11b.14 (D) — `D5` NARROWED, `D6` OPENED AND ROUTED.**
+#   ⛔ ZERO ROWS MOVE; 11b-14 STAYS `ready-for-dev`. ⚠ ⛔ No code.
+#   ⛔ epic-11b stays `in-progress`; ⛔ 11b-11 / 11b-12 / 11b-13 stay `done`; ⛔ 11b-15…17 and 6-18
+#   stay `ready-for-dev`.
+#
+#   ✅⭐⭐ **THE TWO RATIFIED MONEY SENTENCES ARE TWO STAGES, ⛔ NOT TWO SURFACES — BigDev's reading,
+#   and the record backs it.** ⭐ **Live** rows take `-190` cl.6's *"…and counting"* headline;
+#   ⭐ **Closed · Verified** rows take `sahyog-shared:index_line.*`.
+#   ⭐⭐ **THE EVIDENCE IS PROVENANCE, ⛔ NOT TENSE:** cl.6 does ⛔ not stand alone — it ADOPTS the
+#   wording **delegated at `-189` cl.2(e)**, and cl.2 is titled *"(Q2) — YES: A COLLECTING DRIVE IS
+#   LISTED"*, carrying the Panel's own example *"19.45 lakh and counting, by 43k members"*. ⭐ And the
+#   2026-09-05 index line was ratified against an index listing **`closed` + `settled` ONLY** — ⛔ `live`
+#   is unlisted TODAY and **this story is what adds it** ⇒ ⛔ it could ⛔ not have been ruled about a
+#   live row — while occupying the **close-of-cycle** sentence's slot, structurally null for an
+#   unclosed drive. ⇒ ⛔ **THE "WHICH SURFACE" QUESTION IS WITHDRAWN FROM THE PANEL.**
+#
+#   ⚠⛔ **AND ONE 2026-09-06 VALIDATION CLAIM IS WITHDRAWN AS OVER-STATED** — that the index line
+#   *"carries no member count ⇒ cannot satisfy participation-first"*. ⭐ The 11b.12 routing note
+#   §7.1(7) records the constraint it was written under: *"the confirmed count is ⛔ ALREADY on the
+#   same row ⇒ ⛔ don't restate a number"* ⇒ the omission is **deliberate**, the count is a **COLUMN**,
+#   and the row as a whole is participation-bearing. ⛔ Named, ⛔ not deleted.
+#
+#   ⚠ **OPEN CONSEQUENCE, RECORDED ⛔ NOT RESOLVED:** `index_line.*` is the sentence carrying the
+#   **NOMINEE NAME**, and it is now **Closed · Verified only**; cl.6's Live sentence has ⛔ no
+#   `{nominee_name}` slot. ⇒ **does a LIVE row carry the nominee name at all, and where?** `-190` cl.2
+#   and the 2026-09-05 ruling 2 say *"on the index"* ⛔ without qualifying a stage. ⛔ Task 8 assumes
+#   ⛔ nothing.
+#
+#   ⏳⛔⛔ **`D6` (NEW, ROUTED) — THE PROGRESS BAR'S OWN LABEL NAMES ITS DENOMINATOR.** ⭐ Asked by
+#   BigDev (*"what appears above or below the bar to tell what it is about?"*) and answered by reading
+#   the shipped render at `ActiveContributionCard.tsx:234-281`, with EVERY key resolved to its actual
+#   string in BOTH locales — ⛔ not to a doc-block. Directly above the bar sits
+#   `active_contribution.progress` = *"{confirmed} of **{total}** contributions confirmed"* /
+#   *"{total} में से {confirmed} अंशदान पुष्ट"*; below it `pool_progress.amount_raised` = *"Raised so
+#   far"* then the rupee figure. ⇒ ⛔⛔ **under `D1(a)` that `{total}` IS THE TARGET** — so the bar
+#   built to hide the target would **PRINT it, in words, in both languages, directly above itself.**
+#   ⚠ ⭐ **A DIFFERENT CHANNEL FROM `D3`** — `D3` is recovery **by division**; this needs ⛔ no
+#   arithmetic — and AC2's ban (*"no percentage label that lets it be INFERRED BY ARITHMETIC"*) ⛔ does
+#   ⛔ not reach it. ⚠⛔ **And deleting the label is ⛔ not obviously right:** `-190` cl.8 rules *"THE UI
+#   CARRIES THE UNDERSTANDING"*, and an unlabelled bar carries none. ⭐ Four options recorded, ⛔ none
+#   pre-ruled. ⭐⭐ **`D6` INTERLOCKS WITH `D4`** — if the Superadmin reveal reaches the screen, the
+#   shipped label is ⛔ not a leak for that Pariwar ⇒ ⛔ answer them TOGETHER.
+#
+#   ⇒ ⛔ **Tasks 3 and 5 stay BLOCKED** (Task 3 on `D4` + `D6`; Task 5 on `D5`'s remainder).
+#   ⭐ **Task 5 may build the stage SPLIT today** — ⛔ only the Live STRING waits, and even that may be
+#   BigDev's: `-189` cl.2(e) says *"the exact wording delegated to BigDev"*. ⚠ ⛔ No HINDI was ever
+#   ratified for cl.6.)
+# last_updated_prior: 2026-09-07b (⏳⭐⭐ **STORY 11b.14 (D) — `D4` AND `D5` ROUTED TO THE TRUSTEE PANEL.**
 #   ⛔ ZERO ROWS MOVE; 11b-14 STAYS `ready-for-dev`. ⚠ ⛔ No code; the story file + a new routing note.
 #   ⛔ epic-11b stays `in-progress`; ⛔ 11b-11 / 11b-12 / 11b-13 stay `done`; ⛔ 11b-15…17 and 6-18
 #   stay `ready-for-dev`.

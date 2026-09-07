@@ -1,4 +1,61 @@
-# last_updated: 2026-09-06k (⭐⭐ **STORY 11b.13 (C) CODE REVIEW PASS 3 COMPLETE — ⛔ ZERO ROWS MOVE;
+# last_updated: 2026-09-07 (⭐⭐ **STORY 11b.14 (D) VALIDATED — 26 FINDINGS, TWO NEW OPEN DECISIONS.
+#   ⛔ ZERO ROWS MOVE; 11b-14 STAYS `ready-for-dev`.** ⚠ ⛔ No code; the story file only.
+#   ⛔ epic-11b stays `in-progress`; ⛔ 11b-11 / 11b-12 / 11b-13 stay `done`; ⛔ 11b-15…17 and 6-18
+#   stay `ready-for-dev`.
+#   ⭐ Three adversarial passes (governance drift · code-claim re-verification · AC7 wire + copy) over
+#   a baseline (`aafc08c0`) that had moved **105 non-`_bmad-output` files**. Every headline finding
+#   re-verified by hand against HEAD before it was written down.
+#
+#   ⛔⛔ **D4 (NEW, OPEN) — `-190` cl.7(c) HAS ⛔ NO CONSUMER IN THE ENTIRE SEVEN-STORY SPLIT.**
+#   AC2 stated *"THE TARGET IS ⛔ NOT DISPLAYED"* citing cl.7(b) — the DEFAULT — and ⛔ dropped
+#   **cl.7(c)**, *"⭐ ONLY A SUPERADMIN may make it visible, and separately for member and for
+#   public."* ⭐ `-196` cl.8 names **story D** as the target's *"first consumer, server-side"*.
+#   ⚠ Grepped live: **`revealToPublic` has ⛔ ZERO production readers** — schema, RLS, a two-layer
+#   `member_ge_public` CHECK, a `super_admin`-only key ruled *"a disclosure act"*, and an admin form,
+#   ⛔ rendering nothing anywhere. ⚠ Story **E** repeats it on the member axis (`11b-15:116`).
+#   ⇒ ⛔ **as the split stands, C's whole visibility apparatus is inert.** ⛔ NOT pre-ruled: (i)
+#   honour cl.7(c) here · (ii) defer it with a **named successor story key** and say the switches are
+#   decorative OUT LOUD · (iii) escalate. ⚠ 11b.13's own review already flagged this shape once
+#   (*"123 tests for a control that renders nothing"*).
+#
+#   ⛔⛔ **D5 (NEW, OPEN) — AC3's TRUSTEE-RATIFIED HEADLINE DOES ⛔ NOT EXIST.** AC3 ordered it
+#   *"from story B's shared copy"*; B is `done` and `sahyog-shared.json` holds **eleven** keys with
+#   ⛔ no headline — `"and counting"` / `"lakh"` appear ⛔ **NOWHERE** under `packages/i18n/locales/`.
+#   ⚠ Following AC3 literally means D **mints Trustee-ratified copy at a render site** — the exact
+#   two-source defect `-193` cl.3 exists to close, and 11b.12's AC9 predicted it in terms. ⚠ **AND
+#   ⛔ NO RULING ASSIGNS IT A SURFACE:** `-190` cl.6 rules *"THE DRIVE HEADLINE"* (singular), while
+#   B shipped a ratified **amount-first index line** carrying ⛔ no member count, and D2 puts the
+#   amount on BOTH surfaces. ⚠ ⛔ And ⛔ no formatter produces *"₹19.45 lakh"* or *"16,750"*.
+#
+#   ⭐ **AC7 GAINS A DOUBLE-ABSENCE OPEN ITEM — ROUTED HERE BY NAME**, by 11b.12's own code review
+#   (`deferred-work.md`, post-baseline): *"Deferred to that story: either confirm the double-absence
+#   case is unreachable in production data, or extend the ruling/variant set before wiring the
+#   render."* ⚠ nominee+family and nominee+district have ⛔ **NO** renderable variant, and `t()`
+#   **THROWS** ⇒ ⛔ **a 500 for the whole `/sahyog` page**, ⛔ not a blank row. Both are DEFAULT-shaped.
+#
+#   ⚠⛔ **THREE NEW TRAPS.** (6) Widening the listing predicate is **FIVE** artefacts, ⛔ not one —
+#   and ⛔ **two fail SILENTLY**: `sahyog-render.ts:341-346`'s two-way partition and `:299`'s ternary
+#   would render every live drive **inside "Closed drives", labelled "Closed"**. ⭐ A third,
+#   `PublicSahyogDriveStatus`'s doc-block (`sahyog-drive.ts:78`), is a **routing note naming this
+#   story, in code**. (7) **TWO classification gates** — `matrix.ts:398` pins (surface, field) PAIRS
+#   and `:396-397` **forbids its own remedy** (*"The gate failing is the gate working"*); ⇒ AC7(a)'s
+#   decision entry supplies the id the map row must cite. (8) **Test-pinned copy goes FALSE in BOTH
+#   locales** — `page.intro` says *"Drives that are still Live are not listed here."*
+#
+#   ⚠ **D1 AMENDED** — the anti-widening test rejects ⛔ **ANY** new input key (⛔ not only
+#   yellow/pending): `presenter.test.ts:157-163` + `:186-188`. `rosterSize` and `fixedAmount` are
+#   **required** operands with ⛔ no rosterless / pre-derived-amount input. ⭐ D1(a) still stands.
+#   ⚠ **D2 AMENDED** — **FOUR** sites, ⛔ not two, including `public-read.ts:739-743`, which
+#   **prohibits Task 4's preferred option BY NAME** (`deliveredTotal` IS `amountRaisedInr`).
+#   ⚠ **AC7(b) CORRECTED** — *"batched"* ⛔ cannot be built (per-value DEKs, `handlers.ts:386-387`),
+#   and the baseline was **50, ⛔ not 1-2** (the index already decrypts the deceased name per row)
+#   ⇒ the step is **3×**, ⛔ not 50×. ⭐ The list-shaped failure posture already exists at `:449-456`.
+#
+#   ⭐ **EVERY `file:line` RE-ANCHORED**; `public-read.ts:481` was **MIS-QUOTED**, ⛔ not merely
+#   drifted. ⭐ `epics.md:4865` -> **`:4872`** (this ledger's own prior rows carry the stale one).
+#   ⭐ Header blocker **DISCHARGED** — B and C are both `done`, so D is blocked on its **own
+#   decisions**, ⛔ not its siblings.)
+# last_updated_prior: 2026-09-06k (⭐⭐ **STORY 11b.13 (C) CODE REVIEW PASS 3 COMPLETE — ⛔ ZERO ROWS MOVE;
 #   11b-13-per-pariwar-drive-target-substrate STAYS `done`.** A single un-chunked three-layer pass over
 #   the whole branch diff (`dd233293..HEAD`, 51 files / ~10.8k lines), run AFTER the story reached
 #   `done`. ⛔ NO Critical/High; the Acceptance Auditor found ⛔ NO AC / decision / trap / PREFLIGHT

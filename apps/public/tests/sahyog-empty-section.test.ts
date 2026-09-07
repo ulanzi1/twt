@@ -79,7 +79,7 @@ const labels = {
   filterNoNameSearch: 'no name search',
 } as unknown as SahyogLabels;
 
-const row = (status: 'closed' | 'verified') => ({
+const row = (status: 'live' | 'closed' | 'verified') => ({
   deceasedMemberName: 'Rajesh Kumar Sharma',
   // ⭐ Story 11b.14 (AC7) — the nominee's name, under the ruled label "Nominee Name".
   nomineeName: 'Sunita Devi Sharma',
@@ -97,6 +97,22 @@ const row = (status: 'closed' | 'verified') => ({
 });
 
 describe('⭐ layer 1 — the PRESENTER hands the page an EMPTY section, ⛔ not a stub row', () => {
+  it('⭐ a page of only `live` drives yields EMPTY closed AND verified sections', () => {
+    // ⭐ Story 11b.14 (AC1) — the third section's half of the same property. ⚠ Without it the
+    // suppression leg would be asserted for two of three sections and go partly vacuous on the
+    // exact section this story added.
+    const view = buildSahyogView(
+      { page: 1, limit: 25 },
+      new URLSearchParams(),
+      labels,
+      { items: [row('live')], page: 1, limit: 25, total: 1 },
+    );
+    const { live, active, archive } = splitSections(view);
+    expect(live).toHaveLength(1);
+    expect(active).toEqual([]);
+    expect(archive).toEqual([]);
+  });
+
   it('a page of only `closed` drives yields an empty `verified` section', () => {
     const view = buildSahyogView(
       { page: 1, limit: 25 },
@@ -130,6 +146,10 @@ describe('⭐ layer 2 — the PAGE still refuses to render an empty section at a
   const src = readFileSync(ASTRO, 'utf8');
 
   for (const [stage, guard, heading, caption] of [
+    // ⭐ Story 11b.14 (AC1) — the THIRD section. ⚠⛔ AC1's clarification of the 2026-09-04 guard
+    // clause: *"⛔ do ⛔ not add another guard"* means **ONE guard PER SECTION**, ⛔ never two on one
+    // — it does ⛔ NOT forbid the Live section's own, which AC1 REQUIRES.
+    ['live', 'sections.live.length > 0', 'sectionLiveTitle', 'tableCaptionLive'],
     ['closed', 'sections.active.length > 0', 'sectionActiveTitle', 'tableCaptionActive'],
     ['verified', 'sections.archive.length > 0', 'sectionArchiveTitle', 'tableCaptionArchive'],
   ] as const) {
@@ -146,9 +166,11 @@ describe('⭐ layer 2 — the PAGE still refuses to render an empty section at a
     });
   }
 
-  it('⛔ ⛔ NO SECOND GUARD WAS ADDED — the clause was satisfied by construction', () => {
+  it('⛔ ⛔ NO SECOND GUARD ON ANY SECTION — one each, and ⛔ exactly one', () => {
     // ⭐ `-194` cl.1 is recorded SATISFIED, ⛔ not newly implemented. Two guards for one property is
     // two things to drift, and the second would read as though the first were untrusted.
+    // ⚠ Story 11b.14 extends the property to the LIVE section — ⛔ it does ⛔ not relax it.
+    expect(src.split('sections.live.length > 0')).toHaveLength(2);
     expect(src.split('sections.active.length > 0')).toHaveLength(2);
     expect(src.split('sections.archive.length > 0')).toHaveLength(2);
   });

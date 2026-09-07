@@ -2049,3 +2049,86 @@ disposition then.
 ⭐ **This disposition was written AFTER the implementation commit `4157b04d` existed**, ⛔ not against
 an empty diff — AC-4 diffs **COMMITTED** history, so a declaration written first passes **vacuously**
 (the defect `57778f72` demonstrated live and `7fe540f9` fixed).
+
+---
+
+**Story 11b.14 disposition (declaration affirmed — ⛔ NO new row, ⛔ no row retired, and ⛔ no row
+amended)** — `live` drives are LISTED, each Live row carries a **progress bar** and the Panel's ruled
+participation sentence, and the **nominee's name** reaches the index (`2026-09-04-189` cl.2 + cl.2(b),
+`-190` cl.2 + cl.6 + cl.7, `2026-09-07-204`, `2026-09-07-205` — all Trustee-ratified).
+⭐ Story 11b.12's own disposition ends *"Story **D** lights them up and owes its own disposition
+then."* ⇒ this is that disposition.
+
+⭐⭐ **THIS STORY ONLY EVER *GIVES*, AND A DISCLOSURE IS ⛔ NOT A ROW.** ⛔ No new step, ⛔ no new
+decision, ⛔ no new wait, ⛔ no data asked of anybody, ⛔ nothing gated, ⛔ no affordance removed. A
+visitor who could read the closed drives can still read them, unchanged, and now **also** sees the
+drives that are still collecting. ⇒ the 11b.10 / 11b.11 / 11b.12 precedents apply unchanged: an
+addition that costs the payer ⛔ nothing is ⛔ not declarable friction.
+
+⭐⭐ **AND IT REPAIRS A FIVE-MONTH ABSENCE THAT THIS LEDGER COULD ⛔ NEVER HAVE MEASURED.** **FR-76**
+— *"Active page near-real-time during live alert"* — has been a standing, un-superseded requirement
+since the PRD and was cited in ⛔ **ZERO** implementation records until `2026-09-04-187` found it. The
+public index has shipped for months **excluding the very drives FR-76 named as its live case**, on the
+strength of an AC parenthetical and a code comment. ⇒ ⛔ nobody was ever *asked* for anything, so ⛔ no
+row was ever payable — ⚠ but recording this as *"a listing predicate widened"* would understate it.
+
+⛔⛔ **THE BAR IS ⛔ NOT AN AFFORDANCE, AND THAT IS THE CHECK THAT MATTERS.** It is **`aria-hidden`**
+and **inert** — ⛔ nothing to click, ⛔ nothing to open, ⛔ nothing hidden behind it. `D6` removed the
+shipped *"{confirmed} of {total} contributions confirmed"* label and its screen-reader twin, and the
+Panel's **ruled sentence** beneath carries the meaning **in text, unconditionally** ⇒ ⛔ a
+screen-reader user is asked to do ⛔ nothing a sighted reader is not, and ⛔ nothing is announced twice.
+⭐ Its motion is CSS-only, fills **once** and honours `prefers-reduced-motion: reduce` (family 13
+check (c); Story 0.10 P0-2c) — ⛔ no JS, and ⛔ no continuous animation on a page that is edge-cached
+for five minutes and therefore ⛔ cannot honour one.
+
+⛔⛔ **AND ⛔ NOBODY IS ASKED FOR THE NOMINEE'S NAME — IT IS A DISCLOSURE, ⛔ NOT A COLLECTION.** The
+value was already collected at claim intake (6.8) and already published on the per-drive page
+(`-190` cl.2). ⇒ ⛔ no consent screen, ⛔ no extra field, ⛔ no new form and ⛔ no new wait for any
+payer. ⚠ **What it IS** — a NEW Tier-1 exposure on a NEW surface, whose **bulk-harvest** property was
+put to the Panel and **ACCEPTED** — is governed at `2026-09-07-205`, ⛔ not here: this ledger measures
+what a **payer is made to do**, ⛔ not what a page reveals.
+
+⛔ **लक्ष्य COSTS ⛔ NOTHING BECAUSE IT RENDERS ⛔ NOWHERE.** `-190` cl.7(b)/(c) **STAND**: the figure
+is `super_admin`-revealed, **default OFF**, and ⛔ no Pariwar has a visibility row ⇒ ⛔ nothing renders
+at launch. ⚠ Whoever first switches it on meets `-189` cl.2(c)'s **Pool-Reality #2** concern, which is
+recorded **against the switch**, ⛔ not withdrawn — but it is a **copy/comparison** concern, ⛔ not a
+friction row.
+
+⚠⛔ **AND THE MEASURED RISE IS STATED, ⛔ NOT GLOSSED.** The gate reports
+`member-public-web.page_weight_bytes` at **11229**, against the baseline-of-record **3942**
+(Δ **+7287**) and the ceiling **512000**. ⭐ It **PASSES**, at ~2.2% of ceiling. ⛔ The rise is ⛔ not
+disowned: it is a **third table section** with its own heading, caption and stage help; the meter's
+CSS (`@keyframes` + the reduced-motion block); **two** new columns on the archive tables (the nominee
+name and the ruled sentence); and the ruled Live sentence itself. ⭐ `js_bundle_bytes` stays **0** —
+⛔ this story ships ⛔ no client script at all.
+⛔⛔ **THE BASELINE IS ⛔ NOT MOVED.** `friction-budget.yaml` says it in terms — *"⚠ A RISE IS NEVER
+RATCHETED. Do not 'update the baseline to match'"* — and `detectRaisedBaselines` forbids an in-PR
+raise anyway. ⇒ **3942 stands** ([[project_friction_budget_baseline_ratchet]] — a **best-ever
+ratchet**, ⛔ not a running total).
+
+⚠⛔ **ONE THING THIS STORY MAKES *SLOWER*, AND IT IS RECORDED RATHER THAN LEFT TO BE MEASURED LATER.**
+Each index request now performs **up to 100** Tier-1 KMS decrypts, against **50** before — the
+deceased member's name plus, now, the nominee's. ⭐ A **measured p95** harness ships with the story and
+**RECORDS** the figure (`5.6ms` at the time of writing, over 10 consented drives). ⚠ Its limit is
+stated: the harness uses a local encryption provider, so it is ⛔ **not** production KMS latency
+([[project_measured_validation_framework]]). ⇒ ⛔ **not a declarable row** — a payer is asked for
+⛔ nothing and waits on ⛔ no step of their own — ⭐ but it is the one cost this story genuinely adds,
+and it is bounded by the discipline already installed on that call path
+(`DIRECTORY_DECRYPT_CONCURRENCY = 8`, ⛔ never `Promise.all`).
+
+⛔ **WHAT THIS DISPOSITION DOES ⛔ NOT TOUCH.**
+· **Story 11b.1's index-search row** is **CONFIRMED INTACT, ⛔ not amended and ⛔ not retired** — this
+story touched ⛔ no filter, ⛔ no search dimension and ⛔ no name basis. ⚠ Two earlier sections already
+withdrew one overstatement about that row; ⛔ do ⛔ not re-open it here.
+· **`limits.search`** is unchanged — moving it is **A DECISION** (`2026-09-02-183` cl.5), ⛔ not a
+knob, and ⛔ nothing here went near it.
+· **The cache policy is unchanged** — `s-maxage=300` stands. ⚠ FR-76's *"near-real-time"* is met by
+that bound, **STATED** at the header itself (AC4), ⛔ never silently shortened: it is the same class
+of control as the rate tier.
+· ⛔ **No `apps/mobile` file changed at all.** `@twt/ui`'s `pool-progress` is **untouched** — the
+2026-09-07 ruling made the shipped component's arithmetic the ruled arithmetic, so the member card
+keeps its meter unchanged and its anti-widening gate was ⛔ never edited.
+
+⭐ **This disposition was written AFTER the implementation commits existed**, ⛔ not against an empty
+diff — AC-4 diffs **COMMITTED** history, so a declaration written first passes **vacuously** (the
+defect `57778f72` demonstrated live and `7fe540f9` fixed).

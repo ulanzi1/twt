@@ -55,10 +55,12 @@ describe('formatCount — ⭐ counts are ALWAYS exact, at every size', () => {
   it('⭐ Indian grouping, Latin digits, ⛔ no ₹ and ⛔ no short form', () => {
     // ⚠⛔ THE PANEL DROPPED THE *"43 हज़ार"* WORD-FORM: *"For colleagues shows exact number"*
     // (§12.1 answer 3) ⇒ ⭐ the EN/HI language asymmetry in the ratified strings is RESOLVED.
-    expect(formatCount(6_485, 'en')).toBe('6,485');
-    expect(formatCount(6_485, 'hi')).toBe('6,485');
-    expect(formatCount(43_000, 'en')).toBe('43,000');
-    expect(formatCount(1_670_000, 'hi')).toBe('16,70,000');
-    expect(formatCount(0, 'en')).toBe('0');
+    // ⭐⭐ AND THE FUNCTION TAKES ⛔ NO LOCALE — the contract made structural: a count renders LATIN
+    // in BOTH locales (amendment-A2), so a locale parameter would imply a difference that does
+    // ⛔ not exist. ⛔ Do ⛔ not add one back "for symmetry" with `formatCurrencyShort`.
+    expect(formatCount(6_485)).toBe('6,485');
+    expect(formatCount(43_000)).toBe('43,000');
+    expect(formatCount(1_670_000)).toBe('16,70,000');
+    expect(formatCount(0)).toBe('0');
   });
 });

@@ -36,7 +36,9 @@ const ROUTE = (pariwarId: string): string => `/api/v1/p/${pariwarId}/public-page
 interface SeedDriveSpec {
   legalName: string;
   district?: string;
-  poolState?: 'closed' | 'settled' | 'live';
+  // ⭐ Story 11b.14 — `'spawned'` added so the PURE DENY can be asserted at the READ. ⚠ It cannot
+  // be reached by UPDATE: `pools.current_state` is projector-only (7.1 AC5), so it is SEEDED.
+  poolState?: 'closed' | 'settled' | 'live' | 'spawned';
   /** Give the deceased member the full publication basis (acceptance + pinned clause). */
   authorised?: boolean;
   /** Seed the acceptance as granted-then-REVOKED (which must read exactly like never-granted). */
@@ -135,7 +137,8 @@ async function seedDrives(
       // ⛔ Do NOT remove this insert to "simplify a fixture": it is what makes the whole suite
       // exercise the shipped code path rather than a null-only sub-path of it.
       const closeEventType = (d.poolState ?? 'closed') === 'settled' ? 'pool.settled' : 'pool.closed';
-      if ((d.poolState ?? 'closed') !== 'live') {
+      // ⚠ A `live` or `spawned` pool has ⛔ no close/settle event — that is the whole point of both.
+      if ((d.poolState ?? 'closed') !== 'live' && (d.poolState ?? 'closed') !== 'spawned') {
         await scopeTx.client.query(
           `INSERT INTO events_log (stream_id, event_type, payload, event_version, pariwar_id, occurred_at)
            VALUES ($1, $2, '{}'::jsonb, 1, $3, now() - interval '2 days')`,
@@ -272,11 +275,24 @@ describe.skipIf(!hasDatabase)('public Sahyog Drive route (:5433)', { timeout: 30
       // ⭐ THE EXACT KEY SET, ⛔ not a sample. A public JSON route that over-returns is a leak the
       // HTML tier-leak gate structurally CANNOT see — it scans rendered HTML, not this payload.
       expect(Object.keys(body.items[0] ?? {}).sort()).toEqual([
+        // ⭐ Story 11b.14 (AC3) — the ruled public MONEY figure (`-190` cl.6; `-189` cl.5 records
+        // the rupee boundary as NEWLY CROSSED). ⛔ `driveTargetInr` (लक्ष्य) is deliberately ⛔ NOT
+        // in this list: the key is ABSENT unless a `super_admin` revealed it, and ⛔ no Pariwar has
+        // — that ON case is asserted in its own test below.
+        'amountRaisedInr',
         'closedAt',
         'confirmedContributionCount',
+        // ⭐ Story 11b.14 (AC2) — the meter's fill. ⛔ Its DENOMINATOR (`assignedCount`) is ⛔ NOT
+        // here, under any name: the wire carries the percentage only.
+        'confirmedPercentage',
         'deceasedMemberName',
         'district',
         'fundingOutcome',
+        // ⭐⭐ Story 11b.14 (AC7) — the NOMINEE'S NAME, Trustee-ratified 2026-09-05
+        // (`2026-09-07-205` cl.1). ⛔ ⛔ AND ⛔ NO OTHER NOMINEE-BANK VALUE CAME WITH IT — ⛔ no
+        // account number, ⛔ no last-4, ⛔ no IFSC, ⛔ no VPA, ⛔ no bank, ⛔ no branch. That this
+        // list is EXACT is what proves it.
+        'nomineeName',
         'poolCanonicalIdentifier',
         'poolLetterCode',
         // ⭐ Story 11b.10 (AC3) — the drive's OPAQUE PUBLIC ADDRESS. On the wire because the index's
@@ -719,7 +735,17 @@ describe.skipIf(!hasDatabase)('public Sahyog Drive route (:5433)', { timeout: 30
   });
 
   describe('the listing predicate + the anti-enumeration bounds', () => {
-    it('⛔ EXCLUDES a `live` pool — a drive still collecting is not a transparency record', async () => {
+    // ⚠⛔⛔ **REVERSED 2026-09-07 (Story 11b.14, AC1) — ⛔ NOT DELETED, ⭐ AND THE PRIOR PROPERTY IS
+    // NAMED** ([[feedback_supersede_never_reinterpret]]). This case read *"⛔ EXCLUDES a `live` pool
+    // — a drive still collecting is not a transparency record"*, and it asserted `total` was **1**
+    // with the live drive's name absent from the body.
+    // ⭐⭐ **THAT EXCLUSION RESTED ON AN AC PARENTHETICAL AND A CODE COMMENT, ⛔ NEVER A RULING** —
+    // which is what `2026-09-04-187` found, and what `-189` **cl.2** then ruled: *"(Q2) — **YES: A
+    // COLLECTING DRIVE IS LISTED**"* (Trustee-ratified), restoring **FR-76**, a standing requirement
+    // since the PRD that was cited in ⛔ ZERO implementation records. ⇒ recorded at `2026-09-07-204`.
+    // ⭐ `spawned` stays a **PURE DENY**, and the case below is what proves the widening did ⛔ not
+    // sweep it in.
+    it('⭐⭐ LISTS a `live` pool — `-189` cl.2, restoring FR-76 — ⛔ while `spawned` stays out', async () => {
       const t = await createTestApp();
       try {
         const { pariwarId } = await seedDrives(t, [
@@ -728,9 +754,130 @@ describe.skipIf(!hasDatabase)('public Sahyog Drive route (:5433)', { timeout: 30
         ]);
         const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId) });
         const body = res.json() as { items: Array<Record<string, unknown>>; total: number };
+        expect(body.total).toBe(2);
+        // ⭐ The live drive is present AND carries the ruled public word `live` — ⛔ never the
+        // internal state name arriving unmapped, and ⛔ never `closed` (the two-way partition's
+        // `else` arm, which would have labelled it as a drive whose window had shut).
+        const live = body.items.find((i) => i['deceasedMemberName'] === 'Live Drive');
+        expect(live).toBeDefined();
+        expect(live?.['status']).toBe('live');
+        // ⚠ A live drive has ⛔ no close event ⇒ `closedAt` is `null`. ⭐ That is why the Live
+        // section drops the "Closed on" column entirely rather than printing "Not recorded".
+        expect(live?.['closedAt']).toBeNull();
+        const closed = body.items.find((i) => i['deceasedMemberName'] === 'Closed Drive');
+        expect(closed?.['status']).toBe('closed');
+      } finally {
+        await teardown(t);
+      }
+    });
+
+    it('⛔⛔ `spawned` REMAINS EXCLUDED — a pool that never opened is ⛔ not a drive (AC6)', async () => {
+      // ⭐ The widening ADDS `live`; it does ⛔ not relax the predicate. `spawned` has ⛔ no public
+      // word at all, which is what makes the state→token map load-bearing.
+      const t = await createTestApp();
+      try {
+        // ⚠ SEEDED as `spawned`, ⛔ never UPDATEd into it: `pools.current_state` is
+        // PROJECTOR-ONLY (7.1 AC5) and a direct write is rejected by the DB — ⭐ which is the
+        // guard working, and is why the fixture builds the state rather than flipping it.
+        const { pariwarId } = await seedDrives(t, [
+          { legalName: 'Closed Drive', poolState: 'closed', authorised: true },
+          { legalName: 'Spawned Drive', poolState: 'spawned', authorised: true },
+        ]);
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId) });
+        const body = res.json() as { items: Array<Record<string, unknown>>; total: number };
         expect(body.total).toBe(1);
         expect(body.items[0]?.['deceasedMemberName']).toBe('Closed Drive');
-        expect(res.body).not.toContain('Live Drive');
+        expect(res.body).not.toContain('Spawned Drive');
+        // ⛔ And the internal word itself never crosses — `spawned` has ⛔ no public token at all.
+        expect(res.body).not.toContain('spawned');
+      } finally {
+        await teardown(t);
+      }
+    });
+
+    // ⭐⭐ STORY 11b.14 (AC2, AC3) — THE TWO PUBLISHED FIGURES, AGAINST REAL EVENTS.
+    it('⭐⭐ the amount and the percentage are INTERNALLY CONSISTENT — ⛔ never two independent numbers', async () => {
+      const t = await createTestApp();
+      try {
+        const { pariwarId, poolIds } = await seedDrives(t, [
+          { legalName: 'Live Drive', poolState: 'live', authorised: true },
+        ]);
+        const poolId = poolIds[0];
+        expect(poolId).toBeDefined();
+
+        const c = await t.deps.pool.connect();
+        try {
+          // ⭐ FOUR assignees and THREE confirmations ⇒ ⛔ a NON-VACUOUS 75%: an all-zero fixture
+          // would satisfy every identity below trivially and prove nothing.
+          for (let i = 0; i < 4; i += 1) {
+            await c.query(
+              `INSERT INTO member_pool_assignments (pool_id, member_id, pariwar_id, cycle_id, assigned_at)
+               VALUES ($1, gen_random_uuid(), $2, gen_random_uuid(), now() - interval '3 days')`,
+              [poolId, pariwarId],
+            );
+          }
+          for (let i = 0; i < 3; i += 1) {
+            await c.query(
+              `INSERT INTO events_log (stream_id, event_type, payload, event_version, pariwar_id, occurred_at)
+               VALUES (gen_random_uuid(), 'contribution.confirmed',
+                       jsonb_build_object('poolId', $1::text), 1, $2, now() - interval '1 day')`,
+              [poolId, pariwarId],
+            );
+          }
+        } finally {
+          c.release();
+        }
+
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId) });
+        expect(res.statusCode).toBe(200);
+        const body = res.json() as { items: Array<Record<string, unknown>>; total: number };
+        const item = body.items[0];
+        expect(item).toBeDefined();
+
+        // ⭐ THE COUNT is the CONFIRMED CONTRIBUTOR count, ⛔ never the roster.
+        expect(item?.['confirmedContributionCount']).toBe(3);
+        // ⭐ THE AMOUNT is `confirmedCount × pools.fixed_amount` — 9.12 Decision 3's canonical
+        // identity (the fixture's `fixed_amount` is 100). ⛔ Not a second multiplication anywhere.
+        expect(item?.['amountRaisedInr']).toBe(300);
+        // ⭐⭐ AND THE BAR MEASURES **PEOPLE**: 3 of 4 assignees ⇒ 75%. ⛔ It does ⛔ not divide by
+        // any rupee figure (`2026-09-07-204` cl.1, superseding `-191` cl.4).
+        expect(item?.['confirmedPercentage']).toBe(75);
+        // ⭐ The two published figures are consistent by construction — a reader who divides gets
+        // `fixed_amount` and ⛔ nothing else.
+        expect(item?.['amountRaisedInr']).toBe(
+          (item?.['confirmedContributionCount'] as number) * 100,
+        );
+        // ⛔⛔ AND THE DENOMINATOR ITSELF NEVER CROSSES, UNDER ANY NAME.
+        expect(Object.keys(item ?? {})).not.toContain('assignedCount');
+        expect(Object.keys(item ?? {})).not.toContain('rosterSize');
+        expect(res.body).not.toContain('rosterSize');
+      } finally {
+        await teardown(t);
+      }
+    });
+
+    it('⛔ ⛔ NO ORDERING PARAMETER IS ACCEPTED — ⭐ the sort order is ⛔ not a ranking (AC5)', async () => {
+      // ⚠⛔ 11b.1 **AC5** prohibits leaderboards, rankings and "most-supported" views. ⭐ Story
+      // 11b.14 puts a MONEY figure and a PERCENTAGE on the row — the two values a ranking would
+      // most naturally sort by — so the prohibition is re-asserted HERE, against the live route,
+      // ⛔ not left to the render layer's column list.
+      const t = await createTestApp();
+      try {
+        const { pariwarId } = await seedDrives(t, [
+          { legalName: 'Closed Drive', poolState: 'closed', authorised: true },
+        ]);
+        for (const q of [
+          'sort=amountRaisedInr',
+          'order=confirmedPercentage',
+          'orderBy=confirmed_contribution_count',
+          'sortBy=amount',
+          'direction=desc',
+        ]) {
+          const res = await t.app.inject({ method: 'GET', url: `${ROUTE(pariwarId)}?${q}` });
+          // ⭐ An unknown parameter is REFUSED, ⛔ never silently ignored — silent tolerance is what
+          // lets an ordering affordance arrive one release later without a decision.
+          expect(res.statusCode, `\`${q}\` must be refused, ⛔ not tolerated`).toBe(400);
+        }
       } finally {
         await teardown(t);
       }

@@ -123,10 +123,13 @@ export function formatCurrencyShort(amount: number, locale: Locale): string {
  * (Trustee-ratified 2026-09-07). ⇒ ⭐ the Panel's earlier Hindi *"43 हज़ार"* word-form is **DROPPED**,
  * and the EN/HI asymmetry in the two ratified strings is resolved: both render `43,000`.
  *
- * ⭐ LATIN digits in both locales — a count is operational data, exactly like an amount
- * (amendment-A2). ⛔ Do ⛔ not reach for `toHindiNumeral`.
+ * ⭐⭐ **IT TAKES ⛔ NO LOCALE, AND THAT IS THE CONTRACT MADE STRUCTURAL.** A count is OPERATIONAL
+ * data and renders **LATIN in both locales** (amendment-A2, this file's header) — ⇒ a `locale`
+ * parameter would imply a per-locale difference that does ⛔ not exist and must ⛔ not be introduced.
+ * ⛔ Do ⛔ not reach for `toHindiNumeral`, and ⛔ do ⛔ not add the parameter back "for symmetry" with
+ * {@link formatCurrencyShort}, which needs it only for the WORD (lakh / लाख).
  */
-export function formatCount(value: number, _locale: Locale): string {
+export function formatCount(value: number): string {
   if (!Number.isInteger(value) || value < 0) {
     throw new Error(`[i18n] formatCount requires a non-negative integer, received ${String(value)}`);
   }

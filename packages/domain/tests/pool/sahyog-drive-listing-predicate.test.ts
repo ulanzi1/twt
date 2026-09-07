@@ -16,7 +16,9 @@ import { describe, expect, it } from 'vitest';
 import {
   SAHYOG_DRIVE_STATUSES,
   SAHYOG_DRIVE_VISIBLE_POOL_STATES,
+  driveConfirmedPercentage,
   publicStatusForPoolState,
+  resolveDriveTargetForPublic,
 } from '../../src/pool/public-read.js';
 import { POOL_LIFECYCLE_STATES } from '../../src/pool/state.js';
 
@@ -75,5 +77,57 @@ describe('the public vocabulary and the state→token map (Trap 6, artefacts 2 a
       if ((SAHYOG_DRIVE_VISIBLE_POOL_STATES as readonly string[]).includes(s)) continue;
       expect(ruled.has(s)).toBe(false);
     }
+  });
+});
+
+describe('the meter — a PURE function of the row (AC2, Task 3)', () => {
+  // ⭐ The query itself is exercised by the live-DB spec; what is pinned here is the ARITHMETIC,
+  // which is where the ruling actually lives.
+  it('⭐⭐ the fill is `confirmedCount ÷ assignedCount`, as a whole percent', () => {
+    expect(driveConfirmedPercentage(0, 100)).toBe(0);
+    expect(driveConfirmedPercentage(50, 100)).toBe(50);
+    expect(driveConfirmedPercentage(1, 3)).toBe(33);
+    expect(driveConfirmedPercentage(2, 3)).toBe(67);
+  });
+
+  it('⛔ a ZERO-ASSIGNEE pool is 0%, ⛔ never a divide-by-zero and ⛔ never an error', () => {
+    expect(driveConfirmedPercentage(0, 0)).toBe(0);
+  });
+
+  it('⭐ it CLAMPS at 100 — ⛔ over-confirmation is an ordinary state here, ⛔ not a throw', () => {
+    // ⚠ ⛔ This is ⛔ NOT the member card's `confirmedCount > rosterSize` THROW: that guards an
+    // IMPOSSIBLE state on a roster the card owns. Here the two counts come from different queries
+    // over the same frozen assignment set, and the public surface must ⛔ never 500 on a race.
+    expect(driveConfirmedPercentage(150, 100)).toBe(100);
+  });
+});
+
+describe('लक्ष्य — the DERIVED total, gated (AC2, `D4`, `D7`)', () => {
+  it('⭐⭐ it is `assignedCount × fixedAmount` — ⛔ never a figure anyone typed', () => {
+    expect(resolveDriveTargetForPublic(6485, 300, { revealToPublic: true })).toBe(1_945_500);
+  });
+
+  it('⛔⛔ DEFAULT OFF ⇒ ⛔ NOTHING — the ruled launch posture (`-190` cl.7(b))', () => {
+    expect(resolveDriveTargetForPublic(6485, 300, { revealToPublic: false })).toBeNull();
+  });
+
+  it('⛔ a ZERO-ASSIGNEE pool yields ⛔ NOTHING even when REVEALED — ⭐ silence, ⛔ never `₹0`', () => {
+    // ⭐ The same posture the read path already applies to `fundingOutcome`: no expectation was ever
+    // set, so the surface SAYS NOTHING rather than saying something false.
+    expect(resolveDriveTargetForPublic(0, 300, { revealToPublic: true })).toBeNull();
+  });
+
+  it('⭐⭐ THE IDENTITY — the bar and लक्ष्य ⛔ CANNOT disagree, at any value', () => {
+    // `amount / लक्ष्य = (confirmed × fA) / (assigned × fA) = confirmed / assigned` = the bar.
+    // ⚠ `D7` is DISSOLVED BY IDENTITY, ⛔ not ruled away. ⛔ Do ⛔ not add a reconciling guard.
+    const assigned = 6485;
+    const confirmed = 2518;
+    const fixedAmount = 300;
+    const target = resolveDriveTargetForPublic(assigned, fixedAmount, { revealToPublic: true });
+    const amount = confirmed * fixedAmount;
+    expect(target).not.toBeNull();
+    expect(Math.round((amount / (target as number)) * 100)).toBe(
+      driveConfirmedPercentage(confirmed, assigned),
+    );
   });
 });

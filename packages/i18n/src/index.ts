@@ -31,7 +31,7 @@ export { t } from './resolver.js';
 
 // Numeral + currency utilities (amendment-A2).
 export { toHindiNumeral, toGregorianNumeral } from './number.js';
-export { formatCurrency } from './currency.js';
+export { formatCount, formatCurrency, formatCurrencyShort } from './currency.js';
 
 // Surface classification.
 export type { SurfaceClass, ClassificationConfig } from './classification.js';

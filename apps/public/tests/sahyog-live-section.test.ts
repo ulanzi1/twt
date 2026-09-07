@@ -71,6 +71,9 @@ const row = (status: 'live' | 'closed' | 'verified', closedAt: string | null) =>
   closedAt,
   district: 'Lucknow',
   confirmedContributionCount: 12,
+  // ⭐ Story 11b.14 (AC2, AC3) — the meter's fill and the ruled money figure.
+  confirmedPercentage: 12,
+  amountRaisedInr: 1200,
   fundingOutcome: null,
 });
 

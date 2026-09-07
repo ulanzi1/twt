@@ -81,6 +81,9 @@ const row = (over: Partial<WireRow> = {}): WireRow => ({
   closedAt: '2026-08-01T00:00:00.000Z',
   district: 'Lucknow',
   confirmedContributionCount: 12,
+  // ⭐ Story 11b.14 (AC2, AC3) — the meter's fill and the ruled money figure.
+  confirmedPercentage: 12,
+  amountRaisedInr: 1200,
   fundingOutcome: 'fully_funded',
   ...over,
 });

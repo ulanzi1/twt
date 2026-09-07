@@ -418,6 +418,16 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
               // BLANK cell where the design says "Not recorded" (the 11a.3 finding).
               district: row.district?.trim() || null,
               confirmedContributionCount: row.confirmedContributionCount,
+              // ⭐ Story 11b.14 (AC2) — the meter's fill, computed in the domain read.
+              confirmedPercentage: row.confirmedPercentage,
+              // ⭐⭐ लक्ष्य — Story 11b.14 (`D4`). ⚠⛔ **SPREAD, ⛔ NOT ASSIGNED**: the key is
+              // **ABSENT** when the Pariwar has not revealed the figure, ⛔ never `null` (the
+              // 11b.11 shape). ⭐ `resolveDriveTargetVisibility`'s absent-row default is
+              // FAIL-CLOSED ⇒ ⛔ absent for every Pariwar at launch.
+              ...(row.driveTargetInr === null ? {} : { driveTargetInr: row.driveTargetInr }),
+              // ⭐ Story 11b.14 (AC3) — the ruled public money figure, `-190` cl.6. ⛔ Returned from
+              // the domain read's own `deliveredTotal`; ⛔ ⛔ no second `× fixedAmount` here.
+              amountRaisedInr: row.amountRaisedInr,
               fundingOutcome: row.fundingOutcome,
             };
 

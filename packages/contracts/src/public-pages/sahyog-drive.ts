@@ -167,6 +167,74 @@ export const PublicSahyogDriveEntry = z
      */
     confirmedContributionCount: z.number().int().nonnegative(),
     /**
+     * ⭐⭐ THE PROGRESS METER'S FILL, 0-100 — Story 11b.14 (AC2), under `2026-09-04-189` **cl.2(b)**
+     * (*each listed drive carries a progress bar*) and `2026-09-07-204` **cl.1**.
+     *
+     * ⚠⛔ **IT MEASURES CONTRIBUTORS, ⛔ NOT RUPEES.** The Trustee Panel, 2026-09-07: *"Progress bar
+     * should show the % of contributor already contributed in that pool."* ⇒ it is
+     * `confirmedContributionCount ÷ assignedCount`, computed SERVER-SIDE. ⚠ This **supersedes**
+     * `2026-09-04-191` **cl.4** (*"the bar fills against a RUPEE target"*) — ⭐ named, ⛔ not re-read.
+     *
+     * ⛔⛔ **THE DENOMINATOR ITSELF ⛔ NEVER CROSSES.** `assignedCount` is ⛔ not a member of this
+     * object, under any name — minimum disclosure. ⚠ ⭐ **The consequence is RECORDED, ⛔ not
+     * glossed:** the confirmed count is on the same row, so the assignee count is recoverable by
+     * division. ⭐ That is inherent to the ruling, and it is precisely what closed the channel that
+     * used to recover the hidden rupee **target** — the division now returns a headcount.
+     *
+     * ⚠⛔ **AND ⛔ NOTHING ORDERS BY IT** (AC5, 11b.1): ⛔ no ranking, ⛔ no "most-supported" view,
+     * ⛔ no comparison between drives.
+     */
+    confirmedPercentage: z.number().int().min(0).max(100),
+    /**
+     * ⭐⭐ **लक्ष्य / *"Expected"* — THE DRIVE'S EXPECTED CONTRIBUTION, IN WHOLE RUPEES.**
+     * Story 11b.14 (AC2, `D4`), Trustee-ratified 2026-09-07; recorded at `2026-09-07-204` cl.2-4.
+     *
+     * ⚠⛔ **OPTIONAL, AND THE KEY IS *ABSENT* RATHER THAN `null` WHEN WITHHELD** — the 11b.11 shape.
+     * ⭐ It is present ⛔ ONLY when a `super_admin` has switched **`reveal_to_public`** ON for the
+     * Pariwar (`2026-09-04-190` **cl.7(c)**), and ⛔ only for a pool with at least one assignee.
+     * ⇒ ⛔⛔ **absent everywhere at launch**: no visibility row exists for any Pariwar and the
+     * absent-row default is FAIL-CLOSED (`cl.7(b)`).
+     *
+     * ⭐⭐ **IT IS DERIVED — `assignedCount × pools.fixed_amount` — ⛔ NEVER A FIGURE ANYONE TYPED.**
+     * *"Use the derived total."* ⇒ `2026-09-04-189` **cl.2(d)** (per-Pariwar, same for every drive)
+     * is superseded **as to the VALUE** and **`-190` cl.7(a)** (the Pariwar Admin sets it) outright:
+     * ⛔ **there is no setter.** ⛔ Do ⛔ not reintroduce one, and ⛔ do ⛔ not read
+     * `pariwar_drive_target_schedule` to "check" it.
+     *
+     * ⭐ **THE BAR AND THIS FIGURE ⛔ CANNOT DISAGREE** — `amount / लक्ष्य = (confirmed × fA) /
+     * (assigned × fA) = confirmed / assigned` = {@link confirmedPercentage}. ⛔ An identity, ⛔ not a
+     * guard: ⛔ do ⛔ not add a reconciling check.
+     *
+     * ⚠⛔ **A ZERO-ASSIGNEE POOL CARRIES ⛔ NOTHING — ⭐ silence, ⛔ never `0`.** The same posture
+     * `fundingOutcome` already takes: no expectation was ever set, so the surface says nothing
+     * rather than something false.
+     */
+    driveTargetInr: z.number().int().positive().optional(),
+    /**
+     * ⭐⭐ **WHAT HAS REACHED THE FAMILY SO FAR, IN WHOLE RUPEES** — Story 11b.14 (AC3), under
+     * Trustee-ratified `2026-09-04-190` **cl.6**, with `-189` **cl.5** recording that this
+     * *"puts a RUPEE FIGURE on a public page for the first time … the boundary is newly crossed and
+     * is recorded as such."*
+     *
+     * ⚠⛔⛔ **THIS CROSSES A SENTENCE THIS VERY FILE USED TO CARRY, AND THAT SENTENCE IS AMENDED, ⛔
+     * NEVER DELETED** — see {@link confirmedContributionCount} below it. ⭐ *"⛔ never a sum of
+     * amounts"* was an **AUTHOR'S EXTENSION** of 11b.1 **AC5**, which prohibits **leaderboards ·
+     * rankings · gamification · social-performance metrics · popularity metrics** and ⛔ does ⛔ not
+     * name a sum. ⭐ **AC5's surviving half stays ENFORCED:** ⛔ nothing orders by this figure, ⛔ no
+     * *"most-supported"* view at any tier, ⛔ no ranking, ⛔ no comparison **between** drives.
+     *
+     * ⭐ `confirmedContributionCount × pools.fixed_amount` — 9.12 **Decision 3**'s canonical
+     * identity, returned from the value the domain read ALREADY computes. ⛔ Do ⛔ not re-derive it
+     * anywhere, and ⛔ **never** in `apps/public` (Story 11b.3 **D1(c)**, REFUSED in code at four
+     * sites: *"a second multiplication **anywhere in this app** is the defect"*).
+     *
+     * ⚠⛔ **AND THE DRIVE PAGE IS ⛔ NOT THIS FIELD'S TWIN.** `sahyog-vivran`'s amount belongs to
+     * **`11b-3b`** by `2026-09-02-176` **D1(b)** — a ruling three days older — which consumes
+     * `derivePoolProgressCardViewModel(...).amountRaisedInr` UNCHANGED and lifts the `@twt/ui` fence
+     * THERE. ⛔ Story 11b.14 renders ⛔ nothing on that page.
+     */
+    amountRaisedInr: z.number().int().nonnegative(),
+    /**
      * ⭐ NULLABLE, AND THE NULL IS LOAD-BEARING (Review, 2026-08-27): `null` means ⛔ NO EXPECTATION
      * WAS EVER SET for this drive — the pool closed with ZERO assigned contributors, so there is
      * nothing to compare a delivery against and the surface SAYS NOTHING rather than saying

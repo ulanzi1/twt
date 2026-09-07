@@ -51,3 +51,84 @@ export function formatCurrency(amount: number, locale: Locale): string {
 
   return `${negative ? '-' : ''}₹ ${digits}`;
 }
+
+/**
+ * ⭐⭐ THE SHORT MONEY FORM — `₹ 19.45 lakh` / `₹ 19.45 लाख`. Story 11b.14, Trustee-ratified
+ * 2026-09-07 (DR + KB); recorded at `2026-09-07-204`.
+ *
+ * ⚠⛔ **IT DID ⛔ NOT EXIST BEFORE.** `"lakh"`, `"लाख"`, `"हज़ार"` and `"crore"` appeared in ⛔ ZERO
+ * copy or code files in this repository, and {@link formatCurrency} emits only the grouped form.
+ * ⇒ ⛔ the word-form and its rounding rule are BOTH new, and both are RULED — ⛔ neither is a
+ * developer's choice.
+ *
+ * ⭐ **THE RULE, verbatim:**
+ *  · *"Cut off at **Exactly** ten lakh"* ⇒ ⛔⛔ **TRUNCATE, ⛔ NEVER round up.** `₹19,45,678` is
+ *    `19.45 lakh`, ⛔ never `19.46` — the figure must ⛔ never overstate what has been contributed.
+ *  · **Trailing zeros trimmed** — `₹ 50 lakh`, ⛔ never `₹ 50.00 lakh`.
+ *  · **lakh becomes crore at ₹1 crore** — the natural join. `MAX_DRIVE_TARGET_INR` is ₹10 crore,
+ *    so crore is reachable.
+ *
+ * ⭐⭐ **THE HINDI ARM TAKES THE HINDI WORD AND ⛔ LATIN DIGITS**, and that is the **amendment-A2**
+ * contract stated at the top of this file: money is OPERATIONAL data. ⛔ It does ⛔ NOT call
+ * `toHindiNumeral`, and it is ⛔ NOT the `'hi'` arm of {@link formatCurrency} — which exists only for
+ * ceremonial prose and would emit `₹ १९.४५`. ⭐ The Panel's own ratified string writes `19.45 लाख`.
+ *
+ * ⚠ **THE SPACING MATCHES {@link formatCurrency} DELIBERATELY** (`₹ ` with a space). The routing note
+ * writes `₹19.45 lakh` in shorthand prose, ⛔ but the two forms appear on the SAME page — Closed rows
+ * carry the exact form and Live rows the short one — and two rupee spacings on one page is the
+ * *"two money formats"* defect the follow-up warned of. ⇒ ⭐ ONE house form.
+ *
+ * ⛔ Refuses a negative amount: there is no ruled short form for one, and every caller is a total.
+ */
+export function formatCurrencyShort(amount: number, locale: Locale): string {
+  if (!Number.isFinite(amount)) {
+    throw new Error(
+      `[i18n] formatCurrencyShort requires a finite amount, received ${String(amount)}`,
+    );
+  }
+  if (amount < 0) {
+    throw new Error(
+      `[i18n] formatCurrencyShort refuses a negative amount, received ${String(amount)}`,
+    );
+  }
+
+  const CRORE = 10_000_000;
+  const LAKH = 100_000;
+  const useCrore = amount >= CRORE;
+  const divisor = useCrore ? CRORE : LAKH;
+  const unit = useCrore
+    ? locale === 'hi'
+      ? 'करोड़'
+      : 'crore'
+    : locale === 'hi'
+      ? 'लाख'
+      : 'lakh';
+
+  // ⛔ TRUNCATION, ⛔ not rounding — see the rule above. `Math.floor` on the scaled value is what
+  // makes `19,45,999` render `19.45`; `toFixed(2)` alone would round it UP to `19.46`.
+  const truncatedHundredths = Math.floor((amount / divisor) * 100);
+  const whole = Math.floor(truncatedHundredths / 100);
+  const hundredths = truncatedHundredths % 100;
+  // Trailing zeros trimmed: `50` → "50", `50.10` → "50.1", `19.45` → "19.45".
+  const fraction =
+    hundredths === 0 ? '' : `.${String(hundredths).padStart(2, '0').replace(/0$/, '')}`;
+
+  return `₹ ${groupIndian(String(whole))}${fraction} ${unit}`;
+}
+
+/**
+ * ⭐ A COUNT — Indian grouping, ⛔ no `₹`, ⛔ no short form, in BOTH locales.
+ *
+ * ⚠⛔ **COUNTS ARE ALWAYS EXACT, AT EVERY SIZE** — *"For colleagues shows exact number"*
+ * (Trustee-ratified 2026-09-07). ⇒ ⭐ the Panel's earlier Hindi *"43 हज़ार"* word-form is **DROPPED**,
+ * and the EN/HI asymmetry in the two ratified strings is resolved: both render `43,000`.
+ *
+ * ⭐ LATIN digits in both locales — a count is operational data, exactly like an amount
+ * (amendment-A2). ⛔ Do ⛔ not reach for `toHindiNumeral`.
+ */
+export function formatCount(value: number, _locale: Locale): string {
+  if (!Number.isInteger(value) || value < 0) {
+    throw new Error(`[i18n] formatCount requires a non-negative integer, received ${String(value)}`);
+  }
+  return groupIndian(String(value));
+}

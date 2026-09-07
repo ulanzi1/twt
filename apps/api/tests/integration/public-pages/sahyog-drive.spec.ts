@@ -324,7 +324,16 @@ describe.skipIf(!hasDatabase)('public Sahyog Drive route (:5433)', { timeout: 30
   //
   // ⭐ FIXED AT THE SOURCE (`coerceDriveInstant`), ⛔ not per call site — the fragment is shared with
   // the Sahyog Vivran read, which would otherwise have inherited the identical break.
-  it("⛔⛔ the Pariwar's DRIVE TARGET appears ⛔ NOWHERE in the public response (Story 11b.13 AC6)", async () => {
+  // ⚠⛔⛔ **NARROWED 2026-09-07 (Story 11b.14, `D4`) — ⛔ NOT DELETED, ⭐ AND THE PRIOR PROPERTY IS
+  // NAMED** ([[feedback_supersede_never_reinterpret]]). This was ONE case that wrote
+  // `reveal_to_public = true` and then asserted seven target tokens were absent — ⭐ i.e. it codified
+  // that **the switch changes nothing**. ⚠ That was correct-until-a-consumer-shipped, and Story
+  // 11b.14 is that consumer: the Trustee Panel ruled 2026-09-07 *"of course the switches are meant to
+  // show the number one day"* and *"expected figure shows only when Trust switches on"*
+  // (`2026-09-07-204` cl.4). ⇒ ⭐ it becomes **TWO** cases — *absent while OFF* and a **mirror for
+  // ON** — and the ON case is the sharper of the pair, because it pins that what a reveal exposes is
+  // the **DERIVED** total and ⛔ never the admin-typed schedule figure.
+  it("⛔⛔ with the reveal switch OFF — the ruled default — the DRIVE TARGET appears ⛔ NOWHERE (Story 11b.13 AC6, `-190` cl.7(b))", async () => {
     // ⭐⭐ MOVED HERE FROM `drive-target/admin.spec.ts` BY CODE REVIEW PASS 2 / G2, because there it
     // was ⛔ VACUOUS. That version injected this route for a `randomUUID()` Pariwar that ⛔ no row is
     // ever created for, then EXPLICITLY WAIVED the status (*"the status is not the subject"*) and
@@ -351,16 +360,12 @@ describe.skipIf(!hasDatabase)('public Sahyog Drive route (:5433)', { timeout: 30
            VALUES ($1, 1, 1234567, now(), NULL, 'AC6 fixture', NULL, NULL, gen_random_uuid())`,
           [pariwarId],
         );
-        // …and REVEAL it to members and the public, so the test proves the PUBLIC SURFACE carries no
-        // target even in the state most likely to leak one. ⛔ A hidden target proving absent would
-        // prove much less.
-        await c.query(
-          `INSERT INTO pariwar_drive_target_visibility
-             (pariwar_id, reveal_to_members, reveal_to_public, rationale, changed_by_actor,
-              changed_by_display, audit_id)
-           VALUES ($1, true, true, 'AC6 fixture', NULL, NULL, gen_random_uuid())`,
-          [pariwarId],
-        );
+        // ⚠⛔⛔ **AND ⛔ NO VISIBILITY ROW IS WRITTEN — ⭐ THAT IS THE RULED LAUNCH STATE, ⛔ not a
+        // gap in the fixture.** `-190` cl.7(b) makes invisibility the default and
+        // `resolveDriveTargetVisibility`'s absent-row answer is FAIL-CLOSED. ⭐ The Panel confirmed
+        // it stays off: *"And it should be turned off."*
+        // ⚠ This fixture previously wrote `reveal_to_public = true` HERE and asserted absence anyway
+        // — ⛔ that assertion is now FALSE BY DESIGN and has become the ON case below.
       } finally {
         c.release();
       }
@@ -387,6 +392,76 @@ describe.skipIf(!hasDatabase)('public Sahyog Drive route (:5433)', { timeout: 30
       for (const item of body.items) {
         expect(Object.keys(item).some((k) => k.toLowerCase().includes('target'))).toBe(false);
       }
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  // ⭐⭐ THE MIRROR CASE — Story 11b.14 (`D4`), the half that did ⛔ not exist before.
+  it('⭐⭐ with the reveal switch ON, लक्ष्य crosses — ⭐ as the DERIVED total, ⛔ NEVER the admin-typed figure', async () => {
+    const t = await createTestApp();
+    try {
+      const { pariwarId, poolIds } = await seedDrives(t, [
+        { legalName: 'Rajesh Kumar Sharma', district: 'Lucknow', authorised: true, poolState: 'live' },
+      ]);
+      const poolId = poolIds[0];
+      expect(poolId).toBeDefined();
+
+      const c = await t.deps.pool.connect();
+      try {
+        // ⚠ A schedule row with a figure whose digits ⛔ cannot occur by accident. ⭐ It is here to
+        // be PROVEN ABSENT: `-190` cl.7(a) is SUPERSEDED and there is ⛔ no setter — the revealed
+        // figure is DERIVED, so `1234567` must ⛔ never appear even with the switch ON.
+        await c.query(
+          `INSERT INTO pariwar_drive_target_schedule
+             (pariwar_id, version, target_inr, effective_from, effective_until, rationale,
+              changed_by_actor, changed_by_display, audit_id)
+           VALUES ($1, 1, 1234567, now(), NULL, 'D4 ON fixture', NULL, NULL, gen_random_uuid())`,
+          [pariwarId],
+        );
+        // ⭐ THE SUPERADMIN'S REVEAL. ⚠ `reveal_to_members` must also be true — the
+        // `…_member_ge_public` CHECK REFUSES public-revealed-while-member-hidden (`-189` cl.3).
+        await c.query(
+          `INSERT INTO pariwar_drive_target_visibility
+             (pariwar_id, reveal_to_members, reveal_to_public, rationale, changed_by_actor,
+              changed_by_display, audit_id)
+           VALUES ($1, true, true, 'D4 ON fixture', NULL, NULL, gen_random_uuid())`,
+          [pariwarId],
+        );
+        // ⭐ THREE ASSIGNEES. ⚠ Without them `assignedCount` is 0 and लक्ष्य is correctly SILENT —
+        // which would make this case vacuous in exactly the way the OFF case's own header warns of.
+        for (let i = 0; i < 3; i += 1) {
+          await c.query(
+            `INSERT INTO member_pool_assignments (pool_id, member_id, pariwar_id, cycle_id, assigned_at)
+             VALUES ($1, gen_random_uuid(), $2, gen_random_uuid(), now() - interval '3 days')`,
+            [poolId, pariwarId],
+          );
+        }
+      } finally {
+        c.release();
+      }
+
+      const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId) });
+      expect(res.statusCode).toBe(200);
+      const body = res.json() as { items: Array<Record<string, unknown>>; total: number };
+      expect(body.total).toBe(1);
+      const item = body.items[0];
+      expect(item).toBeDefined();
+
+      // ⭐⭐ THE DERIVED TOTAL — `assignedCount (3) × pools.fixed_amount (100)`.
+      expect(item?.['driveTargetInr']).toBe(300);
+      // ⛔⛔ AND THE ADMIN-TYPED SCHEDULE FIGURE IS ⛔ STILL ABSENT — ⭐ this is the sharp half.
+      // `-190` cl.7(a) is superseded: there is ⛔ NO setter, and revealing does ⛔ not publish
+      // whatever a Pariwar Admin once typed into `pariwar_drive_target_schedule`.
+      expect(res.body).not.toContain('1234567');
+      // ⛔ The switch itself never crosses either — only its EFFECT does.
+      for (const token of ['revealToPublic', 'reveal_to_public', 'revealToMembers']) {
+        expect(res.body).not.toContain(token);
+      }
+      // ⭐⭐ AND THE IDENTITY HOLDS ON THE WIRE: `amount / लक्ष्य` == the bar's fill.
+      // ⚠ 0 confirmed here, so both are 0 — the assertion that MATTERS is that the denominator is
+      // the assignee count, ⛔ not a rupee target.
+      expect(item?.['confirmedPercentage']).toBe(0);
     } finally {
       await teardown(t);
     }

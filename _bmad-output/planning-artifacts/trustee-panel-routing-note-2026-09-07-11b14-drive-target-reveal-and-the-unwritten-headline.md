@@ -610,3 +610,81 @@ intended tone, and the Panel has ruled it.**
 own service: *"It is a public memorial page. It must never read as 'not enough people helped', and
 ⛔ never as an advertisement placed on a family's record."* ⇒ ⭐ **recorded so both constraints sit in
 one place**; ⛔ we are ⛔ not asking for a change, and ⛔ nothing is blocked on it.
+
+
+---
+
+## 12. ✅ THE FOUR FOLLOW-UPS ANSWERED — **DR + KB, 2026-09-07** — ⚠ and THREE new questions the answers open
+
+⚠⛔ **ATTRIBUTION.** Relayed as *"DR and KP"*. ⭐ `2026-09-05` already established the rulings are
+**DR + KB** (Kalpana Bharti) and recorded *"KP"* as a **typo**. ⇒ ⭐ recorded here as **DR + KB**;
+⛔ correct us if a third person is meant.
+
+### 12.1 ⭐ Answered verbatim
+
+| # | Answer |
+|---|---|
+| **1** | *"One sentence on a running drive"* |
+| **2** | *"Yes rupee sign should appear"* |
+| **3** | *"Cut off. Begin cutting off only if amount contibuted exceeds 10 lakh, till then show exact number - this applies to Live drive. For Closed,verified shows exact figure. For colleagues shows exact number."* |
+| **4** | *"Target is revealed in Live drive. On right top or right of progress bar 'Expected: 50 lakh' where 50 lakh is target amount."* |
+
+### 12.2 ✅ Settled
+
+- ⭐ **`D5` follow-up 1 CLOSED** — ⛔ **ONE** sentence on a Live row, at the bar. ⛔ No second headline.
+- ⭐ **`D5` follow-up 2 CLOSED** — the **`₹`** appears. ⇒ ⭐ it also settles `index_line.*`'s `{amount}`
+  form for Closed · Verified: **exact rupees with the sign**.
+- ⭐ **`D5` follow-up 3 CLOSED** — **TRUNCATE, ⛔ never round up**; the short form applies **⛔ only on
+  Live**, and **⛔ only above ₹10 lakh**. ⭐ Closed · Verified always exact. ⭐ Colleague counts always
+  exact ⇒ ⭐ **the *"43 हज़ार"* form is DROPPED** and the language asymmetry is resolved.
+- ⭐ **`D4` / `D6` follow-up 4 — the SLOT IS NAMED:** *"Expected: 50 lakh"*, right-top or right of the
+  bar. ⇒ ⭐ `D6`'s *"the bar's width means something the words do not explain"* cost is **retired** —
+  the words now explain it.
+
+### 12.3 ⚠⛔ THREE NEW QUESTIONS THE ANSWERS OPEN — ⛔ none is a re-litigation
+
+**(A) ⛔⛔ IS THE EXPECTED FIGURE ALWAYS SHOWN, OR ONLY WHERE THE SWITCH IS ON?** ⚠ `-190` **cl.7(b)**
+rules the target *"⛔ NOT visible to member or public"* and **cl.7(c)** reserves revealing it to a
+Superadmin. ⭐ Answer 4 puts it on the page. ⇒ **two readings, and they differ materially:**
+- **A1 — always shown on Live rows.** ⇒ ⛔ **cl.7(b) is SUPERSEDED**, and `revealToPublic` has ⛔
+  nothing left to gate (⚠ or inverts into a *hide* switch).
+- **A2 — shown where a Superadmin has switched it on.** ⇒ ⭐ cl.7(b)/(c) stand and the switch finally
+  has a consumer. ⚠⛔ **But the default is FAIL-CLOSED for every Pariwar** ⇒ ⛔ **on the day this
+  ships, ⛔ no expected figure renders anywhere** until someone acts.
+⛔ We will ⛔ not choose between a supersession and a switch-read on our own.
+
+⚠⛔ **AND TWO CONSEQUENCES TRAVEL WITH EITHER READING:**
+1. ⭐ **`-189` cl.3 — *member ≥ public*.** If the public sees the expected figure, **story E
+   (`11b-15`) must show it to members too** — ⛔ it currently says *"no target"*. ⭐ Recorded as a
+   change we will make, ⛔ not a question.
+2. ⚠⛔⛔ **POOL-REALITY #2 IS RE-OPENED, AND IT WAS CLOSED BY THE THING THIS CHANGES.** `-189` cl.2(c)'s
+   own consequence block reads: *"⭐⭐ **AND (c) IS WHAT RESOLVES POOL-REALITY #2** … a bar with ⛔ no
+   visible target is ⛔ not a comparison to a target."* ⇒ ⛔ **naming the target beside the bar makes
+   it a comparison again**, which Story 7.8 and 11b.1's AC5 forbid, and whose ⛔ only current
+   resolution was the target's invisibility. ⚠ *"Expected ₹50 lakh"* beside a bar at 39% lets a
+   visitor read that a family is **short** — the *"not enough people helped"* shape the 2026-09-05
+   note's §7.1(6) ruled out. ⭐ **The Panel may want exactly this** (cl.2(f): the surface should make
+   people *"get motivated to join"*) — ⛔ but it must be **ruled**, ⛔ not inherited.
+
+**(B) ⭐ HOW IS THE EXPECTED FIGURE ITSELF WRITTEN?** ⚠ Three details, ⛔ none settled:
+- ⛔ **Does it carry the `₹`?** Answer 4 writes *"Expected: 50 lakh"*; answer 2 says the sign appears.
+- ⛔ **Does the ₹10-lakh cut-off apply to it?** A target of ₹8,00,000 → *"₹8,00,000"* or *"₹8 lakh"*?
+  ⚠ Answer 3 scopes the rule to *"amount contributed"*, ⛔ not to the target.
+- ⛔ **The Hindi word.** ⛔ Not given. ⭐ We would use **लक्ष्य**; ⚠ **अपेक्षित** is the literal
+  *"expected"*. ⛔ Not ours to pick unasked.
+
+**(C) ⚠ THE CUT-OFF CHANGES SHAPE MID-DRIVE — ⭐ confirming, ⛔ not querying the rule.**
+₹9,99,900 → *"₹9,99,900"* · ₹10,00,000 → *"₹10,00,000"* (⭐ *"exceeds"* ⇒ ten lakh exactly stays
+exact) · ₹10,00,300 → *"₹10.00 lakh"*. ⇒ ⭐ a visitor watching a drive sees the figure **change form**
+as it crosses the line. ⛔ Intended, we assume — ⭐ confirm and it is closed.
+
+### 12.4 ⭐ THE BAR'S MOTION — BigDev asked for a ripple; ⚠ ONE reservation, ⛔ then it is theirs
+
+⭐ Three treatments are rendered in the preview: **(A)** fills once on load then rests · **(B)** fills,
+then a slow shine every few seconds · **(C)** the continuous rightward ripple as described.
+⚠⛔ **THE RESERVATION, STATED ONCE:** a continuously-moving bar reads as *"money is arriving right
+now"*. ⭐ `/sahyog` is edge-cached at **`s-maxage=300`** (Trap 3) ⇒ the figure can be **five minutes
+old** and ⛔ will not change while the visitor watches. ⇒ ⛔ **(C) asserts something the page cannot
+honour**; ⭐ (A) and (B) do not. ⛔ Not a refusal — ⭐ **BigDev's call**, recorded either way.
+⭐ All three respect `prefers-reduced-motion` and render the finished bar with ⛔ no motion.
+⭐ Motion applies to **Live rows only** — Closed · Verified carry ⛔ no bar.

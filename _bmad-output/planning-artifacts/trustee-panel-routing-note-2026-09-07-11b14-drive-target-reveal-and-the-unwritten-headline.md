@@ -688,3 +688,79 @@ old** and ⛔ will not change while the visitor watches. ⇒ ⛔ **(C) asserts s
 honour**; ⭐ (A) and (B) do not. ⛔ Not a refusal — ⭐ **BigDev's call**, recorded either way.
 ⭐ All three respect `prefers-reduced-motion` and render the finished bar with ⛔ no motion.
 ⭐ Motion applies to **Live rows only** — Closed · Verified carry ⛔ no bar.
+
+
+---
+
+## 13. ✅✅ §12.3 ANSWERED — **DR + KB, 2026-09-07** — ⭐ `D4` CLOSES, and cl.7(b)/(c) STAND
+
+### 13.1 ⭐ Answered verbatim
+
+> *"expected figure shows only when Trust switches on. And it should be turned off.*
+> *Expected figure always in Lakh or Crore.*
+> *Cut off at Exactly ten lakh."*
+
+### 13.2 ✅✅ **`D4` IS CLOSED — AND IT CLOSES THE RIGHT WAY**
+
+⭐⭐ **§12.3(A) is answered as A2.** ⛔ `-190` **cl.7(b)** and **cl.7(c)** are ⛔ **NOT** superseded —
+they **STAND**. ⇒ ⭐⭐ **`revealToPublic` finally acquires a CONSUMER, and Story D builds it:**
+
+| | Before | After this ruling |
+|---|---|---|
+| The switch | ⛔ **zero** production readers | ⭐ read by the public Live row |
+| Default state | fail-closed, frozen | ⭐ **unchanged — and the Panel confirms it stays OFF** |
+| What launches | — | ⛔ **⛔ no expected figure anywhere**, until a Superadmin acts |
+
+⭐ **The shipped test that asserts the switch is inert** (`public-pages/sahyog-drive.spec.ts`, which
+writes `reveal_to_public = true` then asserts seven target tokens are absent) is now **NARROWED, ⛔ not
+deleted** — it becomes *"absent while the switch is OFF"*, and gains a mirror case for ON.
+
+⚠ *"And it should be turned off"* is read as **confirming the ruled fail-closed default and directing
+that ⛔ no Pariwar be switched on at launch.** ⭐ ⛔ Nothing is switched on today — ⛔ no visibility row
+exists for any Pariwar — so ⛔ no action is required to comply; ⭐ the state is already correct.
+
+### 13.3 ✅ **POOL-REALITY #2 — the concern is CONDITIONAL, ⛔ no longer live**
+
+⭐⭐ §12.3(A)(2) raised that naming the target beside the bar re-opens what `-189` cl.2(c) closed.
+⇒ ⭐ **with the switch OFF, ⛔ it does not arise at all** — the bar carries ⛔ no visible target, which
+is exactly cl.2(c)'s own resolution. ⛔ The concern is ⛔ **not withdrawn**; ⭐ it is **deferred to the
+act that would trigger it**, and is recorded **against the switch itself** so that whoever first
+turns it on meets it before they do.
+⚠ Likewise `-189` cl.3 (*member ≥ public*): ⭐ it binds ⛔ only where a Pariwar has revealed publicly.
+⇒ story **E** must show the figure to members **on that same condition** — ⛔ not unconditionally.
+
+### 13.4 ✅ §12.3(C) ANSWERED — ⚠ **AND IT MOVES THE BOUNDARY**
+
+⛔ *"Cut off at **Exactly** ten lakh"* **supersedes** the earlier *"only if amount contributed
+**exceeds** 10 lakh"*. ⇒ the test is **`>=`**, ⛔ not `>`:
+
+| Contributed | Shown |
+|---|---|
+| ₹9,99,900 | **₹9,99,900** — exact |
+| **₹10,00,000** | ⭐ **₹10 lakh** — ⚠ the short form **begins here**, ⛔ it was exact under the earlier wording |
+| ₹19,45,678 | **₹19.45 lakh** — cut off, ⛔ never 19.46 |
+| 6,485 colleagues | **6,485** — counts exact at every size |
+
+### 13.5 ✅ §12.3(B) PARTLY ANSWERED — ⭐ the target is **always** short-form
+
+⭐ *"Expected figure always in Lakh or Crore"* ⇒ ⛔ **the ₹10-lakh cut-off does ⛔ NOT apply to the
+target** — a ₹8,00,000 target renders **₹8 lakh**, ⛔ never ₹8,00,000. ⇒ ⭐ **two different rules, and
+that is deliberate:** the *contributed* amount is exact below ten lakh; the *target* never is.
+
+⚠⛔ **THREE DETAILS REMAIN, AND WE ARE BUILDING THEM AS ASSUMPTIONS — ⭐ stated, ⛔ not silent:**
+
+| Detail | What we build | Ground |
+|---|---|---|
+| The `₹` on the target | **Expected ₹50 lakh** | ⚠ the Panel's example wrote *"50 lakh"*, ⛔ but §12.1 answer 2 rules the sign appears — ⭐ the general rule is applied |
+| Where lakh becomes crore | **₹99.99 lakh → ₹1 crore** | ⭐ the natural join; `MAX_DRIVE_TARGET_INR` is **₹10 crore**, so crore is reachable |
+| Trailing zeros | **₹50 lakh**, ⛔ not ₹50.00 lakh | ⭐ matches the Panel's own writing |
+
+⏳ **AND ONE WE WILL ⛔ NOT ASSUME — THE HINDI WORD.** ⛔ Not given, twice asked. ⭐ We would write
+**लक्ष्य** (*goal*) over **अपेक्षित** (the literal *expected*, which reads stiffly beside the ruled
+sentence's register). ⛔ One word settles it.
+
+### 13.6 ⏳ Outstanding
+
+- ⏳ **The Hindi word for *"Expected"*** — the Panel's.
+- ⏳ **The bar's motion** — ⭐ BigDev's, ⛔ not the Panel's. Three treatments rendered; recommendation
+  **(A) fills once, then rests**, on the `s-maxage=300` honesty ground at §12.4.

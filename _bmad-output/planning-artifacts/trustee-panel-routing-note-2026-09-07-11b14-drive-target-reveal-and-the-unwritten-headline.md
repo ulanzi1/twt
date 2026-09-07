@@ -1157,9 +1157,24 @@ the moment the retirement lands and take **+1** from it.
 3. ⚠ **It is the project's first key removal** and collides with 6.18's bump ⇒ ⭐ it wants its own
    change with its own review, ⛔ not a subtask.
 
-⇒ ⭐ **Recorded as ruled; ⏳ awaiting BigDev's choice of vehicle** — a `correct-course` against 11b.13,
-or a new story keyed in `sprint-status.yaml` (⚠ a deferral naming an **epic** expires unowned —
-[[project_r7_fact_producer_unbuilt]]).
-⛔ **Meanwhile the §18.4 status-statement still applies** and is ⛔ not superseded by this ruling: the
-key and its substrate are **described as unconsumed**, and ⛔ **not** as a live control on any
-Trustee-facing material.
+✅⭐ **VEHICLE CHOSEN — BigDev, 2026-09-07: A NEW STORY.**
+⇒ ⭐ **`11b-18-drive-target-write-authority-retired`**, minted `backlog` in `sprint-status.yaml`
+between `11b-17` and the epic retrospective, with the full surface, the survivors and the
+catalog-version trap recorded on its block.
+⭐ **It lives on its OWN BRANCH, `story/11b-18-drive-target-write-authority-retired`, cut from
+`main`** — ⛔ **not** stacked on this story's. ⇒ ⭐ it may land **independently**; ⛔ it depends on
+⛔ none of 11b.14's code. ⚠ Both branches edit `sprint-status.yaml`, so expect a **ledger merge**,
+⛔ not a conflict of substance. ⭐ It is a **story key that exists**, ⛔ not an epic-named
+deferral ([[project_r7_fact_producer_unbuilt]]).
+
+⛔⛔ **TWO BOUNDARIES, BigDev's words, recorded as binding:**
+1. ⛔ **⛔ Do ⛔ NOT amend 11b.13 retrospectively.** ⭐ Its story file, its record and its decision
+   entries **STAND as written**. The supersession lives in the decision log and in `11b-18`
+   ([[feedback_supersede_never_reinterpret]]) — ⛔ 11b.13 was ⛔ not wrong when it shipped, and ⛔ the
+   record must ⛔ not be made to read as though it were.
+2. ⛔ **⛔ Do ⛔ NOT fold it into 11b.14.** ⭐ That story's **AC6** is *"Nothing else moves"* and its
+   scope is a **public read surface**.
+
+⛔ **The §18.4 status-statement still applies in the meantime** and is ⛔ not superseded: until
+`11b-18` lands, the key and its substrate are **described as unconsumed**, and ⛔ **not** as a live
+control on any Trustee-facing material.

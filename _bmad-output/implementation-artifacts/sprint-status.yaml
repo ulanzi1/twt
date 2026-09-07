@@ -1,3 +1,24 @@
+# last_updated: 2026-09-07m (⭐⭐ **`11b-14` TASK 0 — GOVERNANCE FIRST, ⛔ NO CODE.** ⇒ `11b-14`
+#   `ready-for-dev` → **`in-progress`**; ⛔ every other row unchanged (⛔ 11b-13 STAYS `done`;
+#   ⛔ 11b-3b and 11b-18 STAY `ready-for-dev`).
+#   ⭐ **`epics.md` ANNOTATED** — story **D** is named so a future `sprint-planning` run can neither
+#   drop it nor regenerate a ghost; ⭐⭐ **FR-76 IS RECORDED RESTORED** (`epics.md:160`, a standing
+#   un-superseded requirement cited in ⛔ ZERO implementation records until `-187` found it); and
+#   ⚠⛔ **`epics.md:4872`'s AC parenthetical** (*"currently-live pools (closed but not yet settled)"*)
+#   is recorded **SUPERSEDED** by `-189` cl.2 — ⭐ named, ⛔ never edited in place.
+#   ⛔⛔ **AND THE 2026-09-07 PANEL RULINGS NOW HAVE AN ENTRY — they had NONE.** Verified: the log's
+#   head was `2026-09-06-203` and a repo-wide scan returned ⛔ no `2026-09-07` decision ⇒ five days of
+#   rulings lived ⛔ ONLY in a story file and this ledger, while THREE Trustee-ratified clauses stood
+#   superseded and `-203` cited one of them with ⛔ no forward pointer. ⇒ ⭐ **`2026-09-07-204`**:
+#   the bar measures **CONTRIBUTORS** (`-191` cl.4 SUPERSEDED) · लक्ष्य is the **DERIVED** total
+#   `assignedCount × fixed_amount` (`-189` cl.2(d) superseded as to the VALUE, `-190` cl.7(a)
+#   superseded — ⛔ there is **no setter**) · ⭐ cl.7(b)/(c) **STAND** ⇒ default OFF ⇒ ⛔ nothing
+#   renders at launch · `D3` **closed by construction** · `D7` **dissolved by identity**
+#   (`rosterSize == assignedCount`, verified) · the *"412 of 500"* label **REMOVED**, the bar
+#   `aria-hidden` · ⭐ the Panel **GAVE the public sentence in BOTH languages**.
+#   ⚠ **The 11b-14 sprint-row comment gains an AMENDMENT block naming FOUR stale statements** — the
+#   discharged BLOCK, `:4865`, *"ZERO open decisions"* + D1's superseded shape, and D2's wrong
+#   `:133`/`:481` anchors. ⛔ Nothing above it is deleted ([[feedback_supersede_never_reinterpret]]).)
 # last_updated: 2026-09-07l (⚠⛔⛔ **`11b-14` RE-VALIDATED (`bmad-create-story validate`) — 16
 #   FINDINGS APPLIED TO THE STORY FILE. ⛔ ZERO ROWS MOVE; 11b-14 STAYS `ready-for-dev`;
 #   ⛔ 11b-13 STAYS `done`; ⛔ 11b-3b STAYS `ready-for-dev`. ⚠ ⛔ No code.**
@@ -16690,7 +16711,38 @@ development_status:
   # an AUTHOR'S EXTENSION of 11b.1 AC5 (which prohibits RANKING, ⛔ not sums), and that `-190` cl.6
   # ruled the figure. ⭐ AC5's surviving half STAYS ENFORCED: ⛔ no ordering, ⛔ no "most-supported"
   # view, ⛔ no ranking, ⛔ no cross-drive comparison. ⚠ The amendment NARROWS the sentence, ⛔ not repeals it.
-  11b-14-live-drives-listed-and-the-progress-meter: ready-for-dev
+  # ⚠⛔⛔ **AMENDED 2026-09-07 (11b.14 Task 0) — ⭐ THE FIVE PARAGRAPHS ABOVE ARE THE RECORD, ⛔ NOT
+  # CURRENT. ⛔ Nothing above is deleted or re-worded ([[feedback_supersede_never_reinterpret]]);
+  # each stale statement is NAMED here with its successor.**
+  # **(i)** ⛔ *"**BLOCKED ON B (11b-12) AND C (11b-13)**"* — ✅ **DISCHARGED 2026-09-06.** ⭐ Both are
+  #   `done`. B shipped the three stage words + the shared copy; C shipped the target substrate.
+  # **(ii)** ⛔ *"`epics.md:4865`'s AC parenthetical"* — ⚠ **RE-ANCHORED to `epics.md:4872`.** Three
+  #   Task-0 annotation blocks (11b.11 · 11b.12 · 11b.13) landed above it; ⛔ `:4865` is now a blank
+  #   line inside the same AC block. ⭐ The annotation is WRITTEN (11b.14 Task 0) and FR-76 is
+  #   verified unmoved at `epics.md:160`.
+  # **(iii)** ⛔ *"✅ **D1 + D2 BOTH RULED 2026-09-04 ⇒ ⛔ ZERO open decisions**"*, and with it D1's
+  #   *"`pool-progress` gains an **OPTIONAL rupee denominator**"* and *"⭐⭐ **⛔ NO TARGET ⇒ ⛔ NO
+  #   BAR** — headline figures only"* — ⚠⛔ **BOTH SUPERSEDED 2026-09-07** by the Trustee Panel
+  #   (DR + KB), recorded at [`2026-09-07-204`](../../.decision-log.md#decision-2026-09-07-204).
+  #   ⭐ **The bar is `confirmedCount ÷ rosterSize`** — ⛔ exactly what `pool-progress` already ships
+  #   ⇒ ⛔ **NO component change**, ⛔ no new input key, ⭐ the THROW is correct as shipped. ⭐ **The
+  #   bar ALWAYS renders** (a roster always exists); the superseded fallback's successor is narrower:
+  #   *"⛔ no target ⇒ ⛔ no **लक्ष्य**"*. ⭐ लक्ष्य is the **DERIVED** total
+  #   `assignedCount × pools.fixed_amount`, gated on `reveal_to_public` (`super_admin`, **default
+  #   OFF**) ⇒ ⛔ **nothing renders at launch**. ⚠⛔ `-204` supersedes **THREE Trustee-ratified
+  #   clauses** — `-191` cl.4 · `-189` cl.2(d) (as to the VALUE) · `-190` cl.7(a) (⛔ there is **no
+  #   setter**); ⭐ cl.7(b)/(c) **STAND**.
+  # **(iv)** ⛔ D2's anchors *"`sahyog-drive.ts:133` + `public-read.ts:481`"* — ⚠ **BOTH WRONG.**
+  #   ⭐ Re-anchored: `sahyog-drive.ts:149-150` · `public-read.ts:524`, ⚠ whose quoted wording was
+  #   **never that file's text** (it reads *"⛔ A count, ⛔ never a sum, ⛔ never a score."* — ⛔ no
+  #   *"of amounts"*, ⛔ no ordering tail). ⭐ **And D2 reaches FOUR sites, ⛔ not two:** also
+  #   `sahyog-vivran.ts:346-347` (the drive page) and `public-read.ts:739-743` (the quarantine).
+  # ⭐ **D2's drive-page HALF is ⛔ NOT this story's to build** — `11b-3b` owns the drive-page amount
+  #   by `2026-09-02-176` D1(b), and D1(c) refuses a second `× fixedAmount` *"anywhere in this app"*.
+  #   ⇒ D widens the **INDEX** row only and amends the drive page's **prose**.
+  # ⛔⛔ **AND THE RETIREMENT OF `pariwar.manage_drive_target` IS ⛔ NOT THIS STORY'S** — a catalog act,
+  #   vehicle **`11b-18-drive-target-write-authority-retired`** on its own branch (AC6).
+  11b-14-live-drives-listed-and-the-progress-meter: in-progress
   # ⭐ 11b-15 — STORY **E** of the `2026-09-04-195` cl.3 split. ⛔ NOT in `epics.md` — owes an
   # ANNOTATION. ⛔ BLOCKED ON B (11b-12). ⭐ **STORY F DEPENDS ON IT.**
   # ⚠⛔ **B SHIPS THE SOURCE ONLY — THIS STORY BUILDS THE SURFACE** (recorded 2026-09-05 in

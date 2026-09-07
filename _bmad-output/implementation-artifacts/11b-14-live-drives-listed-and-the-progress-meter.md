@@ -347,6 +347,16 @@ rosterSize`**, ⭐ which is **exactly what `pool-progress` ships today** — ⛔
 **participation-first** headline is ⛔ undisturbed. ⇒ ⭐⭐ **`D3` is CLOSED by construction.**
 ⛔ The wire carries the **percentage only**, ⛔ never `rosterSize`.
 
+✅⭐⭐ **AND लक्ष्य IS THE DERIVED TOTAL — DR + KB, 2026-09-07: *"Use the derived total."*** ⇒
+**`assignedCount × pools.fixed_amount`**, ⛔ never a typed figure. ⇒ ⛔ **`-189` cl.2(d)** (per-Pariwar,
+same for every drive) and **`-190` cl.7(a)** (the Pariwar Admin sets it) are **SUPERSEDED**; ⭐ cl.7(b)
+and **cl.7(c) STAND** — the figure is still gated on `reveal_to_public`, `super_admin`-only,
+**default OFF** ⇒ ⛔ nothing renders at launch. ⭐ **`D7` is dissolved by identity.**
+**And** ⚠ a **zero-assignee** pool renders ⛔ **NO लक्ष्य** — ⭐ silence, ⛔ never `₹0` (the guard the read
+path already applies to `fundingOutcome` at `public-read.ts:757`).
+**And** ⛔ ⛔ **no new admin surface, ⛔ no write path, ⛔ no migration** — ⭐ the figure is a read-time
+product of two values **already selected on this query** (`assignedCount` `:703`, `fixedAmount` `:695`).
+
 Per `-189` cl.2(b) and D1's shape. **And** ⛔ **THE TARGET IS ⛔ NOT DISPLAYED** (`-190` cl.7(b)) —
 ⛔ no number, ⛔ no "of ₹X", ⛔ no percentage label that lets it be inferred by arithmetic.
 **And** where story C's target is **unset** — the default for every Pariwar — the meter renders per
@@ -1054,7 +1064,31 @@ together, ⛔ not independently.
 
 ---
 
-### ⏳⚠ D7 — **OPEN, 2026-09-07.** The bar counts PEOPLE; *"Expected"* counts RUPEES. ⛔ They need not agree
+### ✅✅ D7 — **DISSOLVED BY IDENTITY, 2026-09-07 (DR + KB): *"Use the derived total."*** ⛔ Not ruled away — ⭐ arithmetically impossible
+
+> ✅⭐⭐ **लक्ष्य = `assignedCount × pools.fixed_amount`** — the drive's **own** expected contribution,
+> ⛔ never typed by anyone. ⇒ `amount / लक्ष्य = (confirmed × fA) / (roster × fA) = confirmed / roster`
+> **= the bar**. ⭐ Verified numerically (16,700 · ₹300 · 6,485): both **38.8323%**.
+> ⇒ ⛔ **the bar and लक्ष्य CANNOT disagree**, for any drive, at any value. ⭐ The three options below
+> are **moot**. ⭐ And the bar now reads correctly **both ways at once** — the share of colleagues who
+> have contributed **and** the share of the expected amount raised, ⭐ because they are one number.
+>
+> ⚠⛔⛔ **TWO MORE TRUSTEE-RATIFIED CLAUSES SUPERSEDED — ⭐ named, ⛔ never re-read:**
+> ⛔ **`-189` cl.2(d)** (*"a **Superadmin-settable, PER-PARIWAR** value, **the SAME target for every
+> drive in that Pariwar**"*) — **superseded as to the VALUE**; ⭐ its *"enable switch"* half **survives**.
+> ⛔ **`-190` cl.7(a)** (*"the **PARIWAR ADMIN** sets the target, **from day 1**"*) — **superseded**;
+> ⭐ there is ⛔ **no setter**.
+>
+> ⭐ **WHAT SURVIVES — cl.7(b) and cl.7(c) STAND.** The ruling replaces the **VALUE's source**, ⛔ not
+> the **VISIBILITY rule**. ⇒ ⭐ `D4`/§13.2 is undisturbed: the figure is gated on
+> `reveal_to_public`, **`super_admin`-only, default OFF** ⇒ ⛔ **no लक्ष्य renders at launch**.
+> ⚠ Its meaning shifts slightly and is stated: the switch now reveals **what the drive needs**, ⛔ no
+> longer *"the Trust's aim"*.
+>
+> ⚠⛔ **AND HALF OF STORY C IS NOW UNCONSUMED** — see the story's Dev Notes. ⭐ Handled by the `-190`
+> cl.4 precedent: **RETAIN, ⛔ do not delete, ⭐ and STATE the status change.**
+
+### ⛔ D7 — the original record (superseded above)
 
 ⭐ A consequence of two rulings a day apart, ⛔ neither of them wrong: ⭐ the bar is now
 **`confirmedCount ÷ rosterSize`** (people), and **`Expected ₹X lakh`** — shown ⛔ only where a
@@ -1149,9 +1183,11 @@ cross-drive comparison · ⛔ not publish a written pitch (`-190` cl.8).
   - [ ] ⛔ **The wire carries the PERCENTAGE only**, ⛔ never `rosterSize` — computed server-side.
         ⚠ `assignedCount` is quarantined at `public-read.ts:703` / `:739-743`; ⛔ do ⛔ not widen it.
 - [ ] **Task 4 — The wire** (AC3, **Trap 2**) — the index row needs what the headline consumes.
-      ⚠⛔ **BEFORE ANYTHING: `public-read.ts:739-743` QUARANTINES BOTH RUPEE TOTALS *"under any
-      name"*, and `deliveredTotal` (`:761`) IS `amountRaisedInr`.** ⇒ D2 supersedes it — ⭐ **amend
-      and NAME that comment**, ⛔ never edit past it. ⭐ `fixedAmount` is **already selected** at
+      ⚠⛔⛔ **BEFORE ANYTHING: `public-read.ts:739-743`'s QUARANTINE IS NOW *FULLY* SUPERSEDED.** It
+      reads *"⛔ Do not widen `SahyogDriveEntry` to carry **either of them, under any name**"* — and
+      ⭐ **BOTH now cross**: `deliveredTotal` (`:761`) as the ruled **amount**, `expectedTotal`
+      (`:760`) as **लक्ष्य** (2026-09-07). ⇒ ⭐ **amend and NAME it**, ⛔ never edit past it —
+      ⚠ D2's discipline, applied a **second** time to the same comment. ⭐ `fixedAmount` is **already selected** at
       `:695`, so ⛔ no read-shape change is needed. ⚠ Prefer sending the **derived** amount over
       exposing `fixedAmount`; ⭐ ⛔ do not add both.
   - [ ] ⛔ **The new field is a MATRIX ACT** (Trap 7) — `SAHYOG_DRIVE_ROW_FIELD_IDS`
@@ -1245,6 +1281,29 @@ one decides where Trustee-ratified copy comes from. ⚠ ⛔ **No meter before `D
 *"batched"* remedy **cannot be built** and its baseline was **50, not 1-2** · Traps 6-8 are new ·
 `D4` / `D5` are new · AC7 gains the **double-absence** open item routed here by name.
 
+### ⚠⛔ Half of Story C is now UNCONSUMED — ⭐ retain and STATE, ⛔ do not delete
+
+⭐ The 2026-09-07 *"use the derived total"* ruling leaves part of `11b-13` (`done`, shipped) with
+⛔ no consumer. ⭐ Stated plainly, ⛔ not buried:
+
+| Story C artefact | Status after 2026-09-07 |
+|---|---|
+| `pariwar_drive_target_visibility` + its `member_ge_public` CHECK + RLS | ⭐ **LIVE** — gates लक्ष्य |
+| `pariwar.manage_drive_target_visibility` (`super_admin`) | ⭐ **LIVE** |
+| `pariwar_drive_target_schedule` (the value; versioned, ₹ ceiling, positivity CHECKs) | ⛔ **NO CONSUMER** |
+| `pariwar.manage_drive_target` (`pariwar_admin`), minted at `PERMISSION_CATALOG_VERSION` **41** | ⛔ **GATES NOTHING** |
+| `resolveEffectiveDriveTargetInr` · `setDriveTargetSchedule` · the admin **target** form | ⛔ **NO CONSUMER** |
+
+⭐⭐ **THE HOUSE PRECEDENT IS EXACT AND WE FOLLOW IT** — `-190` **cl.4**, on the masking window:
+*"We may use it in future. ⛔ Do ⛔ not delete … ⚠⛔ **BUT ITS STATUS CHANGES AND MUST BE STATED:** …
+it has ⛔ no public consumer. ⛔ Do ⛔ not describe it as a live control on any Trustee-facing material
+until it has one."*
+⇒ ⭐ **RETAIN; ⛔ delete nothing; ⭐ and STATE the status change** at the schedule table, the resolver,
+the admin route **and** the permission catalog entry.
+⏳ ⛔ **ONE ITEM ⛔ NOT OURS:** `pariwar.manage_drive_target` is a **minted key that now gates nothing**
+— ⛔ un-minting moves `PERMISSION_CATALOG_VERSION`, a **catalog act**. ⭐ Default applied:
+**retain-and-state**; ⛔ retire it only on BigDev's word.
+
 ### Testing standards
 
 Live-DB integration under `apps/api/tests/integration/public-pages/`; copy and presenter assertions as
@@ -1292,6 +1351,7 @@ units. ⚠ Assert **membership and explicit values**, ⛔ never counts over the 
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-09-07 | 0.9 | ✅✅⭐⭐ **RULED (DR + KB): *"Use the derived total."*** ⛔ Zero rows move; ⛔ no code. ⭐ **लक्ष्य = `assignedCount × pools.fixed_amount`** — the drive's own expected contribution, ⛔ never typed by anyone. ✅✅ **`D7` IS DISSOLVED BY IDENTITY, ⛔ not ruled away:** `amount / लक्ष्य = (confirmed × fA) / (roster × fA) = confirmed / roster` **= the bar** ⇒ ⛔ they **cannot** disagree, for any drive at any value (⭐ verified: 16,700 · ₹300 · 6,485 → both **38.8323%**). ⭐ The bar now reads correctly **both ways at once**. ⚠⛔⛔ **TWO MORE TRUSTEE-RATIFIED CLAUSES SUPERSEDED — ⭐ named, ⛔ never re-read:** **`-189` cl.2(d)** (*"Superadmin-settable, PER-PARIWAR … the SAME target for every drive"*) superseded **as to the VALUE**, ⭐ its *"enable switch"* half survives; **`-190` cl.7(a)** (*"the PARIWAR ADMIN sets the target from day 1"*) superseded — ⭐ there is ⛔ **no setter**. ⭐ **cl.7(b)/(c) STAND** — the ruling replaces the **VALUE's source**, ⛔ not the **visibility rule** ⇒ `D4`/§13.2 undisturbed: gated on `reveal_to_public`, `super_admin`-only, **default OFF** ⇒ ⛔ **nothing renders at launch**; ⚠ the switch's meaning shifts to revealing **what the drive needs**, ⛔ no longer *"the Trust's aim"*. ⛔⛔ **AND `public-read.ts:739-743`'s QUARANTINE IS NOW *FULLY* SUPERSEDED** — **both** totals cross (`deliveredTotal` as the amount, `expectedTotal` as लक्ष्य) ⇒ ⭐ amend and NAME it, ⚠ D2's discipline a **second** time on the same comment. ⭐ **⛔ No new admin surface, ⛔ no write path, ⛔ no migration** — both operands are **already selected on this query** (`:703`, `:695`). ⚠ **Zero-assignee ⇒ ⛔ NO लक्ष्य** — ⭐ silence, ⛔ never `₹0`. ⚠⛔ **COST: half of Story C is now UNCONSUMED** (`pariwar_drive_target_schedule`, `pariwar.manage_drive_target` at catalog v41, the resolver, the admin target form) ⇒ ⭐ **RETAIN and STATE**, per the `-190` cl.4 masking-window precedent; ⏳ retiring the minted key is a **catalog act** and awaits BigDev. ✅ **लक्ष्य** confirmed as the Hindi label. | BigDev + Claude |
 | 2026-09-07 | 0.8 | ✅✅⭐⭐ **`D3` ANSWERED AND CLOSED BY CONSTRUCTION; ⚠⛔ A TRUSTEE-RATIFIED CLAUSE IS SUPERSEDED; ⏳ `D7` OPENS.** ⛔ Zero rows move; ⛔ no code. ✅ **(DR + KB):** *"Progress bar should show the % of contributor already contributed in that pool."* ⚠⛔⛔ **THIS SUPERSEDES `2026-09-04-191` cl.4 — itself Trustee-ratified (DR + KB):** *"THE PROGRESS BAR FILLS AGAINST A **RUPEE** TARGET."* ⭐ `-190` follow-up (ii) framed exactly this binary (*"rupees or contributors?"*); cl.4 took rupees, ⭐ the Panel now takes contributors — ⛔ same Panel, three days later, ⭐ a legitimate change on a question the record shows was always two-sided. ⭐ **Recorded as a SUPERSESSION with the prior text named**, ⛔ never a re-reading. ⭐ cl.4's other half — the participation-first headline — is ⛔ undisturbed. ✅✅ **`D3` IS CLOSED BY CONSTRUCTION, ⛔ not mitigated** — the bar is `confirmedCount ÷ rosterSize`, so dividing amount by fill returns the **ROSTER SIZE**, ⛔ not the target ⇒ ⭐⭐ **the hidden figure is ⛔ no longer derivable at all**; ⛔ all three escalated options are MOOT. ⭐⭐ **AND `D1(a)`'s COSTS FALL AWAY** — the shipped `pool-progress` **already does this** (`presenter.ts:73-74`) ⇒ Trap 1's three blocks are ⛔ ALL MOOT: ⛔ no new input key ⇒ **the anti-widening test is UNTOUCHED** · ⭐ `rosterSize` IS the denominator · ⛔ `fixedAmount` unchanged; ⭐ **the `confirmedCount > rosterSize` THROW is CORRECT AS SHIPPED.** ⚠ `D1`'s *"no target ⇒ no bar"* is superseded — ⭐ the bar **always renders**; successor: *"no target ⇒ no **Expected** figure"*; ⚠ a zero-assignee pool renders a **0% bar**, ⛔ not an error. ⚠ **One consequence recorded ⛔ not asked:** a participation % ⛔ cannot be shown without **roster size** becoming derivable — ⭐ inherent to the ruling ⇒ ⛔ we will ⛔ not ask the Panel to re-decide it. ⭐ **Build decision: the wire carries the PERCENTAGE ONLY**, ⛔ never `rosterSize`. ⏳ **`D7` OPENS** — ⛔ the bar counts **people** while *"Expected"* counts **rupees**, set independently ⇒ a bar at **39%** can sit beside *"Expected ₹25 lakh"* on a drive that has raised **78%** of it. ⭐⭐ ⛔ **Nothing is blocked** — the switch is OFF, so ⛔ no *"Expected"* renders at launch. | BigDev + Claude |
 | 2026-09-07 | 0.7 | ✅⭐⭐ **`D4` · `D5` · `D6` ALL CLOSED; the bar's motion RULED. ⚠⛔ `D3` REMAINS OPEN.** ⛔ Zero rows move; ⛔ no code. ✅ **`D4` (DR + KB):** *"expected figure shows only when Trust switches on. And it should be turned off."* ⇒ ⛔ `-190` cl.7(b)/(c) **STAND, ⛔ not superseded**, and ⭐⭐ **`revealToPublic` acquires a CONSUMER, built in THIS story**, gated, default fail-closed ⇒ ⛔ **what launches shows ⛔ no expected figure anywhere**. ⭐ The shipped inert-switch test is **NARROWED** ("absent while OFF" + a mirror for ON), ⛔ never deleted. ⭐ **Pool-Reality #2 is CONDITIONAL, ⛔ not live** — with the switch OFF the bar carries ⛔ no visible target, which IS cl.2(c)'s own resolution; ⛔ not withdrawn, ⭐ **recorded against the switch** so whoever first flips it meets it first. ⚠ `-189` cl.3 likewise: story **E** owes members the figure ⛔ only on that condition. ⚠ **THE CUT-OFF MOVED** — *"at **Exactly** ten lakh"* supersedes *"exceeds"* ⇒ the test is **`>=`**; ₹10,00,000 renders **₹10 lakh**. ⭐ **The TARGET follows a DIFFERENT rule** — *"always in Lakh or Crore"* ⇒ a ₹8,00,000 target renders **₹8 lakh**. ⛔ Two rules, DELIBERATE — ⛔ do not "align" them. ✅ **The bar's motion — RULED (A) by BigDev:** grows from nothing on load, then **holds still**; ⛔ no ripple, ⛔ no repeating shine. ⭐ Ground: `s-maxage=300` ⇒ a moving bar would assert money is arriving while a visitor watches. ⭐ CSS-only, `prefers-reduced-motion` static, **Live rows only**. ⚠⛔ **AND ONE CONSEQUENCE DECIDED, ⛔ not asked:** `active_contribution.progress_a11y` carries the SAME `{confirmed} of {total}` shape as the label `D6` removed and would name the denominator to assistive tech ⇒ ⭐ **the bar is `aria-hidden`; the ruled sentence beneath carries the meaning.** ⏳ **Hindi for *"Expected"* asked TWICE, ⛔ unanswered** ⇒ building **लक्ष्य** as a STATED assumption, ⛔ revocable. ⭐ Three more declared, ⛔ not silent: `₹` on the target · lakh→crore at ₹1 crore · trailing zeros trimmed. ⚠⛔⛔ **`D3` IS ⛔ NOT CLOSED AND ITS SHAPE BARELY MOVED** — the target stays hidden by default, the fill is a rendered integer percentage of `amount / target`, and ⛔ **below ₹10 lakh the amount renders EXACTLY** ⇒ `target ≈ ₹8,55,000 ÷ 0.17` recovers to ~**±3%**, a band set by the PERCENTAGE's rounding, ⛔ not the amount's; above ₹10 lakh the two-place cut costs only ~±0.03% ⇒ ⭐ **the cut-off barely helps.** ⇒ ⛔ **`D3` still BLOCKS Task 3.** | BigDev + Claude |
 | 2026-09-07 | 0.6 | ✅⏳⭐⭐ **`D5` NARROWED — BigDev supplied the reading and the record backs it; and `D6` OPENED and ROUTED.** ⛔ Zero rows move; ⛔ no code. ✅ **THE TWO RATIFIED SENTENCES ARE TWO STAGES, ⛔ NOT TWO SURFACES:** **Live** rows take `-190` cl.6's *"…and counting"* headline; **Closed · Verified** rows take `sahyog-shared:index_line.*`. ⭐ **The evidence is PROVENANCE, ⛔ not tense** — cl.6 adopts the wording **delegated at `-189` cl.2(e)**, and cl.2 is titled *"(Q2) — YES: A COLLECTING DRIVE IS LISTED"*, with the Panel's own example *"19.45 lakh and counting, by 43k members"*; and the 2026-09-05 index line was ratified against an index listing **`closed` + `settled` ONLY** — ⛔ `live` is unlisted and **this story adds it** — while occupying the **close-of-cycle** slot, which is structurally null for an unclosed drive. ⇒ ⛔ **the "which surface" question is WITHDRAWN from the Panel.** ⚠⛔ **AND ONE 2026-09-06 CLAIM IS WITHDRAWN AS OVER-STATED** — that the index line *"carries no member count ⇒ cannot satisfy participation-first"*; the 11b.12 note **§7.1(7)** shows the omission was **deliberate** (*"the confirmed count is ALREADY on the same row ⇒ don't restate a number"*) and the count is a **column**. ⚠ **Open consequence recorded, ⛔ not resolved:** `index_line.*` is what carries the **nominee name**, and it is now Closed · Verified only, while cl.6's Live sentence has ⛔ no `{nominee_name}` slot ⇒ **does a Live row carry it, and where?** ⏳⛔⛔ **`D6` — THE BAR'S OWN LABEL NAMES ITS DENOMINATOR.** Read from the shipped render (`ActiveContributionCard.tsx:234-281`) with every key resolved to its **actual string in both locales**: directly above the bar sits `active_contribution.progress` = *"{confirmed} of **{total}** contributions confirmed"* / *"{total} में से {confirmed} अंशदान पुष्ट"*. ⇒ under `D1(a)` that `{total}` **IS the target** ⇒ ⛔ **the bar built to hide it would PRINT it, in words, in both languages.** ⚠ ⭐ A **different channel from `D3`** — ⛔ no arithmetic required — and AC2's ban (*"no percentage label that lets it be **inferred by arithmetic**"*) ⛔ does not reach it. ⚠ ⛔ Deleting the label is ⛔ not obviously right either: cl.8 rules *"the UI carries the understanding"*, and an unlabelled bar carries none. ⭐ Four options recorded, ⛔ none pre-ruled; ⭐ **`D6` interlocks with `D4`** — a revealed target makes the shipped label lawful for that Pariwar. ⇒ **Tasks 3 and 5 stay blocked; ⭐ Task 5 may build the stage SPLIT today — ⛔ only the Live STRING waits.** | BigDev + Claude |

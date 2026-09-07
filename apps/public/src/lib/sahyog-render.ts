@@ -185,6 +185,22 @@ export interface SahyogLabels {
    */
   readonly participationLine: (amountInr: number, contributorCount: number) => string;
   /**
+   * ⭐⭐ THE RULED **ZERO-STATE** LIVE-ROW SENTENCE — `sahyog-shared:zero_line.*`, Trustee-ratified
+   * (DR + KB) 2026-09-07, `2026-09-07-206` **cl.4**.
+   *
+   * ⚠⛔ **IT REPLACES {@link participationLine} WHEN ⛔ NO CONTRIBUTION IS YET CONFIRMED**, because
+   * at zero that sentence reads *"₹ 0 and counting, by 0 colleagues—and still going strong!"* —
+   * ⭐ the **ordinary state on day one of every drive**, ⛔ not an edge case (Review finding,
+   * 2026-09-07). ⛔ It is ⛔ not an "empty state": the Panel ruled a sentence, ⛔ not silence.
+   *
+   * ⛔⛔ **IT TAKES THE FAMILY NAME AND ⛔ MUST HANDLE ITS ABSENCE — ⭐ THAT IS THE WHOLE REASON THERE
+   * ARE TWO STRINGS.** `deceasedMemberName` is `null` wherever publication is not authorised, and
+   * `t()` **THROWS** on an unsupplied token ⇒ resolving `zero_line.full` there would **500 the whole
+   * page**, ⛔ not blank one row. ⭐ Unlike {@link indexLine} this ⛔ never returns `null`:
+   * `zero_line.no_family` covers the absence **totally**, so ⛔ there is no unrenderable case.
+   */
+  readonly zeroLine: (familyName: string | null) => string;
+  /**
    * ⭐ लक्ष्य — *"Expected: ₹50 lakh"*. ⚠ Called ⛔ ONLY where a `super_admin` has revealed the
    * figure for the Pariwar; ⭐ its amount follows a **DIFFERENT** rule from the contributed one
    * (always lakh/crore) — see {@link formatSahyogTargetAmount}. ⛔ Do ⛔ not "align" the two.
@@ -416,9 +432,18 @@ function toDisplayRow(
     // if a future template rendered the meter column somewhere it should not.
     driveProgressPercentage: row.status === 'live' ? row.confirmedPercentage : null,
     // ⛔ ⛔ `t()` THROWS on an unsupplied token, so BOTH numbers are always supplied together.
+    //
+    // ⭐⭐ AND A DRIVE WITH ⛔ NO CONFIRMED CONTRIBUTION TAKES THE **ZERO-STATE** SENTENCE INSTEAD —
+    // `2026-09-07-206` cl.4. ⚠ At zero the ruled participation line reads *"₹ 0 and counting, by 0
+    // colleagues—and still going strong!"*, which is ⛔ what **day one of every drive** would have
+    // published (Review finding, 2026-09-07). ⛔ The branch is on the COUNT, ⛔ not on the amount:
+    // the count is the sentence's own subject, and a zero amount with a nonzero count is a state
+    // this surface does ⛔ not model.
     driveParticipationLine:
       row.status === 'live'
-        ? labels.participationLine(row.amountRaisedInr, row.confirmedContributionCount)
+        ? row.confirmedContributionCount === 0
+          ? labels.zeroLine(row.deceasedMemberName)
+          : labels.participationLine(row.amountRaisedInr, row.confirmedContributionCount)
         : null,
     // ⚠⛔ `driveTargetInr` is ABSENT on the wire unless a `super_admin` revealed it for the Pariwar
     // (⛔ never `null` — the 11b.11 shape) ⇒ this is `null` for every Pariwar at launch. ⭐ Read the

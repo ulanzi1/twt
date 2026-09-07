@@ -106,7 +106,20 @@ export function formatCurrencyShort(amount: number, locale: Locale): string {
 
   // ⛔ TRUNCATION, ⛔ not rounding — see the rule above. `Math.floor` on the scaled value is what
   // makes `19,45,999` render `19.45`; `toFixed(2)` alone would round it UP to `19.46`.
-  const truncatedHundredths = Math.floor((amount / divisor) * 100);
+  //
+  // ⚠⛔⛔ **SCALE FIRST, DIVIDE SECOND — ⛔ AND THE ORDER IS THE WHOLE FIX** (Review finding,
+  // 2026-09-07). ⛔ The prior text of this line was `Math.floor((amount / divisor) * 100)`, which
+  // divides in IEEE-754 **before** scaling: the quotient lands a hair below the true value and
+  // `Math.floor` then eats a whole hundredth. ⭐ **Executed, ⛔ not reasoned — 570 mismatches in a
+  // ₹10L–₹10Cr sweep:** `₹10,03,000` rendered `₹ 10.02 lakh`, `₹10,20,000` rendered `₹ 10.19 lakh`,
+  // `₹2,01,000` rendered `₹ 2 lakh` (⛔ the fraction vanished), and `₹1,13,00,000` rendered
+  // `₹ 1.12 crore` — ⚠ an error of **₹1,00,000** in the crore band.
+  // ⭐ `amount * 100` is EXACT for every reachable input: callers pass integer paise-free rupees and
+  // `MAX_DRIVE_TARGET_INR` is ₹10 crore ⇒ ⛔ the product cannot exceed 1e9 × 100 = 1e11, far inside
+  // `Number.MAX_SAFE_INTEGER`. ⛔ Do ⛔ not "simplify" this back to dividing first.
+  // ⚠ Every value in `currency-short.test.ts` was float-exact, so the suite was **GREEN on a broken
+  // function** — ⭐ the mismatching values are now pinned there by name.
+  const truncatedHundredths = Math.floor((amount * 100) / divisor);
   const whole = Math.floor(truncatedHundredths / 100);
   const hundredths = truncatedHundredths % 100;
   // Trailing zeros trimmed: `50` → "50", `50.10` → "50.1", `19.45` → "19.45".

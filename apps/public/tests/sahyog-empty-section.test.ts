@@ -36,6 +36,10 @@ const labels = {
   columnDistrict: 'District',
   columnDate: 'Closed on',
   columnContributions: 'Contributions confirmed',
+  // ⭐ Story 11b.14 (AC2, AC3) — the LIVE meter cell's header and its two ruled lines.
+  columnProgress: 'Progress',
+  participationLine: (amount: number, count: number) => `₹ ${amount} and counting, by ${count} colleagues`,
+  driveTargetLine: (target: number) => `Expected: ₹ ${target}`,
   columnOutcome: 'Close of cycle',
   districtUnknown: 'Not recorded',
   dateUnknown: 'Not recorded',

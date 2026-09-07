@@ -16,7 +16,12 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { buildSahyogView, splitSections, type SahyogLabels } from '../src/lib/sahyog-render.js';
+import {
+  buildSahyogView,
+  splitSections,
+  visibleSahyogColumns,
+  type SahyogLabels,
+} from '../src/lib/sahyog-render.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const ASTRO = join(here, '../src/pages/sahyog.astro');
@@ -37,6 +42,10 @@ const labels = {
   columnDistrict: 'District',
   columnDate: 'Closed on',
   columnContributions: 'Contributions confirmed',
+  // ⭐ Story 11b.14 (AC2, AC3) — the LIVE meter cell's header and its two ruled lines.
+  columnProgress: 'Progress',
+  participationLine: (amount: number, count: number) => `₹ ${amount} and counting, by ${count} colleagues`,
+  driveTargetLine: (target: number) => `Expected: ₹ ${target}`,
   columnOutcome: 'Close of cycle',
   districtUnknown: 'Not recorded',
   dateUnknown: 'Not recorded',
@@ -178,5 +187,76 @@ describe('⭐ the LIVE section carries its OWN emptiness guard — ⛔ exactly o
 
   it('⛔ exactly ONE guard for the live section — ⛔ two would be two things to drift', () => {
     expect(src.split('sections.live.length > 0')).toHaveLength(2);
+  });
+});
+
+describe('⭐ Trap 4 — the LIVE table drops the two columns that have no meaning yet', () => {
+  const ids = (stage: 'live' | 'closed' | 'verified') =>
+    visibleSahyogColumns(labels, () => true, stage).map((c) => c.fieldId);
+
+  it('⛔⛔ ⛔ NO "Closed on" column on a Live row — ⭐ the shipped "Not recorded" fallback would OTHERWISE announce the omission down the whole section', () => {
+    // ⚠ `driveClosedAt` is `null` for EVERY live row by construction, and `visibleSahyogColumns`
+    // already does `?? labels.dateUnknown` ⇒ leaving the column in renders "Not recorded" /
+    // "दर्ज नहीं" in every cell under a labelled header — the announced-omission shape AC5 forbids.
+    expect(ids('live')).not.toContain('drive_closed_at');
+    expect(ids('closed')).toContain('drive_closed_at');
+    expect(ids('verified')).toContain('drive_closed_at');
+  });
+
+  it('⛔ ⛔ NO close-of-cycle sentence over a drive that has ⛔ not closed', () => {
+    expect(ids('live')).not.toContain('close_of_cycle_framing');
+    expect(ids('closed')).toContain('close_of_cycle_framing');
+  });
+
+  it('⭐⭐ and the CONVERSE — the METER is LIVE-ONLY', () => {
+    // ⭐ `-189` cl.2(b) rules a bar for a drive that is COLLECTING. A bar on a closed drive would
+    // compare against a cycle that has already ended, and the ruled sentence's *"…and counting"*
+    // would be false in terms.
+    expect(ids('live')).toContain('drive_participation_line');
+    expect(ids('closed')).not.toContain('drive_participation_line');
+    expect(ids('verified')).not.toContain('drive_participation_line');
+  });
+
+  it('⛔ the header and the cells are dropped TOGETHER — ⛔ never a blank column under a label', () => {
+    // ⭐ The same discipline `visibleSahyogColumns` applies to a matrix suppression: one column
+    // object carries BOTH the `<th>` label and the `<td>` accessor, so they cannot diverge.
+    for (const col of visibleSahyogColumns(labels, () => true, 'live')) {
+      expect(col.headerLabel).toBeTruthy();
+    }
+  });
+});
+
+describe('⭐⭐ the BAR is `aria-hidden`, and that is a RULING', () => {
+  const src = readFileSync(ASTRO, 'utf8');
+
+  it('⛔ the meter carries `aria-hidden` — the ruled sentence beneath it carries the meaning', () => {
+    // ⭐⭐ `D6` removed the shipped *"{confirmed} of {total} contributions confirmed"* label because
+    // it NAMES ITS DENOMINATOR; `active_contribution.progress_a11y` carries the identical shape and
+    // would name that denominator to assistive tech. ⇒ ⛔ neither key is rendered here, the bar is
+    // decorative to a screen reader, and ⛔ no new a11y string is minted that names a hidden figure.
+    const meter = src.indexOf('class="sahyog__meter"');
+    expect(meter).toBeGreaterThan(-1);
+    expect(src.slice(meter, meter + 300)).toContain('aria-hidden="true"');
+  });
+
+  it('⛔ ⛔ NEITHER `{confirmed} of {total}` key is RESOLVED on this surface', () => {
+    // ⚠ It scans for a RESOLUTION (a quoted key passed to `t()` / `ts()`), ⛔ not for the mere
+    // string — the page's own doc-comment NAMES `active_contribution.progress_a11y` in explaining
+    // why it is not rendered, and a substring check would fail on the explanation itself.
+    expect(src).not.toMatch(/t\w*\(\s*['"`]active_contribution\.progress/);
+  });
+
+  it('⭐ the motion is CSS-only, fills ONCE, and honours `prefers-reduced-motion`', () => {
+    // ⭐ RULED (A), BigDev: the bar grows from nothing on load, then HOLDS STILL. ⛔ No ripple and
+    // ⛔ no repeating shine — `/sahyog` is edge-cached at `s-maxage=300`, so continuous motion would
+    // assert money is arriving while a visitor watches, which this page ⛔ cannot honour.
+    expect(src).toContain('@keyframes sahyog-meter-grow');
+    // ⛔ `animation-fill-mode: both` is load-bearing — without it the bar snaps back to 0% when the
+    // animation ends, which is the exact opposite of "holds still".
+    expect(src).toMatch(/animation:\s*sahyog-meter-grow[^;]*both/);
+    expect(src).not.toMatch(/animation-iteration-count:\s*infinite/);
+    expect(src).toContain('@media (prefers-reduced-motion: reduce)');
+    // ⛔ ⛔ NO JS: a static, server-rendered page carries no script for this.
+    expect(src).not.toMatch(/requestAnimationFrame|new Animation\(|\.animate\(/);
   });
 });

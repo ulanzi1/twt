@@ -42,6 +42,10 @@ const labels: SahyogLabels = {
   columnDistrict: 'District',
   columnDate: 'Closed on',
   columnContributions: 'Contributions confirmed',
+  // ⭐ Story 11b.14 (AC2, AC3) — the LIVE meter cell's header and its two ruled lines.
+  columnProgress: 'Progress',
+  participationLine: (amount: number, count: number) => `₹ ${amount} and counting, by ${count} colleagues`,
+  driveTargetLine: (target: number) => `Expected: ₹ ${target}`,
   columnOutcome: 'Close of cycle',
   districtUnknown: 'Not recorded',
   dateUnknown: 'Not recorded',
@@ -174,6 +178,10 @@ describe('⭐ consent decides whether a row is NAMED, ⛔ never whether it EXIST
       district: 'Kanpur',
       confirmedContributionCount: '12 confirmed',
       closeOfCycleFraming: 'ok',
+      // ⭐ Story 11b.14 — a CLOSED row carries ⛔ no meter: ⛔ no fill, ⛔ no sentence, ⛔ no लक्ष्य.
+      driveProgressPercentage: null,
+      driveParticipationLine: null,
+      driveTargetLine: null,
     });
     // ⭐ `null` means "render NOTHING". An omission that announces itself is an ENUMERATION SIGNAL:
     // a scraper diffing renders learns exactly which families declined.
@@ -197,6 +205,10 @@ describe('⭐ consent decides whether a row is NAMED, ⛔ never whether it EXIST
         district: null,
         confirmedContributionCount: '0 confirmed',
         closeOfCycleFraming: 'ok',
+        // ⭐ Story 11b.14 — a CLOSED row carries ⛔ no meter: ⛔ no fill, ⛔ no sentence, ⛔ no लक्ष्य.
+        driveProgressPercentage: null,
+        driveParticipationLine: null,
+        driveTargetLine: null,
       }),
     ).toBe(labels.districtUnknown);
   });
@@ -245,10 +257,67 @@ describe('⛔ the target is quarantined — no comparison figure reaches the cop
     }
   });
 
-  it('⛔ NO key on a rendered row could carry a target, percentage or shortfall', () => {
+  it('⛔ NO UNRULED key on a rendered row could carry a target, percentage or shortfall', () => {
+    // ⚠⛔⛔ **NARROWED 2026-09-07 (Story 11b.14) — ⛔ NOT DELETED, ⭐ and the prior property is NAMED**
+    // ([[feedback_supersede_never_reinterpret]]). It was a BLANKET name ban: ⛔ no row key matching
+    // `/target|expected|shortfall|percent|…|amount|total/` at all. ⭐ That was exactly right while
+    // `classifyCycleOutcome` quarantined both totals — but `2026-09-07-204` puts THREE such values
+    // on this row by Trustee ruling, so a blanket ban would now forbid the ACs.
+    //
+    // ⭐⭐ THE HALF THAT WAS ACTUALLY LOAD-BEARING IS KEPT AND IS STRICTER: it is now an
+    // **ALLOW-LIST**, ⛔ never a deny-list. Each exception names the ruling that authorised it, so a
+    // FOURTH such key — a shortfall, a deficit, a "remaining", a percentage-of-target — still fails
+    // here, and its author must come back to this list with a decision id.
+    const RULED = new Set([
+      // `-189` cl.2(b) — each listed drive carries a progress bar. ⚠ CONTRIBUTORS, ⛔ not rupees.
+      'driveProgressPercentage',
+      // `-190` cl.6 — the ruled Live sentence, carrying the public money figure (`-189` cl.5).
+      'driveParticipationLine',
+      // `-190` cl.7(b)/(c) — लक्ष्य, ⛔ null unless a `super_admin` revealed it for the Pariwar.
+      'driveTargetLine',
+    ]);
     const view = buildSahyogView({ page: 1, limit: 25 }, search(), labels, wire([row()]));
     const forbidden = /target|expected|shortfall|percent|ratio|remaining|deficit|goal|amount|total/i;
-    expect(Object.keys(view.model.rows[0] ?? {}).filter((k) => forbidden.test(k))).toEqual([]);
+    expect(
+      Object.keys(view.model.rows[0] ?? {}).filter((k) => forbidden.test(k) && !RULED.has(k)),
+    ).toEqual([]);
+  });
+
+  it('⛔⛔ a CLOSED row carries ⛔ NO meter at all — ⛔ no fill, ⛔ no sentence, ⛔ no लक्ष्य', () => {
+    // ⭐ The three ruled keys above are LIVE-ONLY. On a closed drive a bar would compare against a
+    // cycle that has already ended, and the ruled sentence's *"…and counting"* would be false in
+    // terms. ⇒ this is what stops the allow-list above from widening the surface by accident.
+    const view = buildSahyogView({ page: 1, limit: 25 }, search(), labels, wire([row()]));
+    const r = view.model.rows[0];
+    expect(r?.driveProgressPercentage).toBeNull();
+    expect(r?.driveParticipationLine).toBeNull();
+    expect(r?.driveTargetLine).toBeNull();
+  });
+
+  it('⛔⛔ a LIVE row carries ⛔ NO लक्ष्य while the reveal switch is OFF — ⭐ the launch state', () => {
+    // ⭐⭐ `-190` cl.7(b)/(c) STAND. ⛔ `driveTargetInr` is ABSENT from the wire (⛔ never `null` —
+    // the 11b.11 shape) unless a `super_admin` revealed it, and ⛔ no Pariwar has a visibility row.
+    // ⇒ the bar and the sentence render; ⛔ लक्ष्य does not.
+    const view = buildSahyogView(
+      { page: 1, limit: 25 },
+      search(),
+      labels,
+      wire([row({ status: 'live', closedAt: null, fundingOutcome: null })]),
+    );
+    const r = view.model.rows[0];
+    expect(r?.driveProgressPercentage).toBe(12);
+    expect(r?.driveParticipationLine).toBeTruthy();
+    expect(r?.driveTargetLine).toBeNull();
+  });
+
+  it('⭐ a LIVE row carries लक्ष्य ⛔ ONLY when the wire supplies it — the revealed case', () => {
+    const view = buildSahyogView(
+      { page: 1, limit: 25 },
+      search(),
+      labels,
+      wire([row({ status: 'live', closedAt: null, fundingOutcome: null, driveTargetInr: 5_000_000 })]),
+    );
+    expect(view.model.rows[0]?.driveTargetLine).toContain('5000000');
   });
 });
 
@@ -259,16 +328,22 @@ describe('⛔ the sort order is NOT a ranking, and there is no sort affordance (
     // "no NEW key of any kind" — and 11b.10 legitimately adds `hrefOf`/`a11yOf` (the ruled inbound
     // path, `2026-09-03-184` (A)). ⇒ the assertion is split into the two claims it was conflating,
     // so BOTH stay sharp instead of one being relaxed to let the other through.
-    const cols = visibleSahyogColumns(labels, allVisible);
-    const ALLOWED = ['a11yOf', 'fieldId', 'headerLabel', 'hrefOf', 'valueOf'];
+    // ⚠⛔ **AND IT SCANS ⛔ ALL THREE STAGES — ⭐ Story 11b.14.** Scanning only the default stage
+    // would have gone VACUOUS the moment the Live list gained a column the others do not have:
+    // `meter` sits ⛔ only on the Live column set, so a stage-blind loop would never have seen it.
+    const ALLOWED = ['a11yOf', 'fieldId', 'headerLabel', 'hrefOf', 'meter', 'valueOf'];
     // ⭐ THE PROHIBITION MOST LIKELY TO BE BREACHED BY ACCIDENT: "sort by contributions" reads like
     // a harmless table affordance rather than the leaderboard it builds.
     const SORTISH = /sort|order|rank|comparator|compare|direction|asc|desc/i;
-    for (const col of cols) {
-      const keys = Object.keys(col);
-      expect(keys.filter((k) => SORTISH.test(k))).toEqual([]);
-      // ⛔ And nothing UNKNOWN either: a key nobody listed is a key nobody reasoned about.
-      expect(keys.filter((k) => !ALLOWED.includes(k))).toEqual([]);
+    for (const stage of ['live', 'closed', 'verified'] as const) {
+      for (const col of visibleSahyogColumns(labels, allVisible, stage)) {
+        const keys = Object.keys(col);
+        expect(keys.filter((k) => SORTISH.test(k))).toEqual([]);
+        // ⛔ And nothing UNKNOWN either: a key nobody listed is a key nobody reasoned about.
+        // ⭐ `meter` was added by 11b.14 and IS reasoned about — see `SahyogColumn.meter`, which
+        // scopes it to exactly one column and states why the bar is `aria-hidden`.
+        expect(keys.filter((k) => !ALLOWED.includes(k))).toEqual([]);
+      }
     }
   });
 
@@ -431,7 +506,12 @@ describe('⭐ the tier-leak field-id derivation is OPERATIVE, and drifts fail in
       // ⭐ Story 11b.10 — the per-row inbound link. `pii_tier: 3` (an ADDRESS, ⛔ not a person), so
       // it adds ⛔ no Tier-1 field and needs ⛔ no allowlist entry.
       'drive_href',
+      // ⭐⭐ Story 11b.14 — the LIVE row's meter: the ruled sentence, the bar's fill and लक्ष्य.
+      // ⛔ THREE fields, ⛔ not one, and all three `pii_tier: 3`.
+      'drive_participation_line',
+      'drive_progress_percentage',
       'drive_status',
+      'drive_target',
       'pool_canonical_identifier',
       'pool_letter_code',
     ]);

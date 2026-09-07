@@ -55,7 +55,7 @@
 // `lib/sahyog-render.ts`, explicit `namespace` on every `t()` call (⚠ `t()` defaults to `common`
 // and THROWS on a miss — the `{{max}}` vs `{max}` defect that made `/members` throw on EVERY
 // request at 11a.2 was exactly this shape, and no test caught it because every test bypassed `t()`).
-import { getLocale, isLocale, t } from '@twt/i18n';
+import { formatCount, getLocale, isLocale, t } from '@twt/i18n';
 import type { Locale } from '@twt/i18n';
 import { passport } from '@twt/domain';
 
@@ -72,6 +72,8 @@ import { ACTIVE_PARIWAR_ID } from '../lib/pariwar.server.js';
 import {
   buildSahyogRejectionView,
   buildSahyogView,
+  formatSahyogLiveAmount,
+  formatSahyogTargetAmount,
   IST_OFFSET_MS,
   splitSections,
   visibleSahyogColumns,
@@ -133,7 +135,30 @@ const labels: SahyogLabels = {
   columnDistrict: tr('table.col.district'),
   columnDate: tr('table.col.date'),
   columnContributions: tr('table.col.contributions'),
+  columnProgress: tr('table.col.progress'),
   columnOutcome: tr('table.col.outcome'),
+  // ⭐⭐ STORY 11b.14 (AC3) — THE RULED LIVE-ROW SENTENCE, from the ONE shared source. ⛔ It is
+  // Trustee-ratified copy (DR + KB, 2026-09-07) and is ⛔ never composed here.
+  // ⚠⛔ THE NUMBER FORMS ARE RULED AND LIVE IN `sahyog-render.ts`, ⛔ not in this frontmatter —
+  // a display decision written here would be untestable. ⭐ `formatSahyogLiveAmount` carries the
+  // ₹10-lakh cut-off; `formatCount` carries *"For colleagues shows exact number"*.
+  participationLine: (amountInr: number, contributorCount: number) =>
+    t(
+      'live_line',
+      {
+        amount: formatSahyogLiveAmount(amountInr, locale, 'live'),
+        count: formatCount(contributorCount, locale),
+      },
+      { locale, namespace: 'sahyog-shared' },
+    ),
+  // ⭐ लक्ष्य. ⚠⛔ ITS AMOUNT FOLLOWS A **DIFFERENT** RULE — always lakh/crore, ⛔ never the cut-off.
+  // ⛔ Do ⛔ not "align" the two: the divergence is the ruling.
+  driveTargetLine: (targetInr: number) =>
+    t(
+      'drive_target',
+      { amount: formatSahyogTargetAmount(targetInr, locale) },
+      { locale, namespace: 'sahyog-shared' },
+    ),
   districtUnknown: tr('value.district_unknown'),
   dateUnknown: tr('value.date_unknown'),
   // ⚠ D3 — the FIELD NAMES are historical and deliberately not renamed; their VALUES are the
@@ -538,6 +563,31 @@ if (!driveStatusVisible) {
                       <td>
                         {/* ⛔ EVERY value goes through <MatrixField> here too — ⛔ the new section is
                             ⛔ not a new disclosure path. */}
+                        {/* ⭐⭐ THE PROGRESS BAR — `2026-09-04-189` cl.2(b), Trustee-ratified.
+                            ⛔⛔ `aria-hidden`, AND THAT IS A RULING, ⛔ NOT A STYLING CHOICE. `D6`
+                            removed the shipped "{confirmed} of {total} contributions confirmed"
+                            label because it NAMES ITS DENOMINATOR; its screen-reader twin
+                            (`active_contribution.progress_a11y`) carries the identical shape and
+                            would name that denominator to assistive tech. ⇒ the bar is decorative
+                            to a screen reader and the ruled SENTENCE below it carries the meaning:
+                            ⛔ nothing announced twice, ⛔ no a11y string naming a hidden figure.
+                            ⭐ THE MOTION IS RULED (A), BigDev: it grows from nothing on load, then
+                            HOLDS STILL. ⛔ No continuous ripple, ⛔ no repeating shine — `/sahyog`
+                            is edge-cached at `s-maxage=300`, so a moving bar would assert money is
+                            arriving while a visitor watches, which this page ⛔ cannot honour.
+                            ⭐ CSS-ONLY — ⛔ no JS, ⛔ no library on a static Astro page. The fill is
+                            a custom property because Astro scopes `<style>` but ⛔ not inline
+                            attributes, and `prefers-reduced-motion: reduce` renders the finished
+                            bar with ⛔ no motion at all. */}
+                        {col.meter !== undefined && col.meter.fillOf(row) !== null && (
+                          <div
+                            class="sahyog__meter"
+                            aria-hidden="true"
+                            style={`--sahyog-meter-fill:${String(col.meter.fillOf(row))}%`}
+                          >
+                            <span class="sahyog__meter-fill"></span>
+                          </div>
+                        )}
                         {col.hrefOf !== undefined ? (
                           <a href={col.hrefOf(row)} aria-label={col.a11yOf?.(row)}>
                             <MatrixField
@@ -554,6 +604,25 @@ if (!driveStatusVisible) {
                             viewerContext="public"
                             value={col.valueOf(row) ?? ''}
                           />
+                        )}
+                        {/* ⭐⭐ लक्ष्य — "Expected: ₹50 lakh", to the RIGHT of the bar (the ruled
+                            slot). ⛔⛔ IT RENDERS ⛔ ONLY WHERE A `super_admin` HAS SWITCHED
+                            `reveal_to_public` ON: `-190` cl.7(b)/(c) STAND, the absent-row default
+                            is FAIL-CLOSED, and ⛔ no Pariwar has a visibility row ⇒ ⛔ THIS IS DEAD
+                            MARKUP AT LAUNCH, BY DESIGN.
+                            ⚠⛔ READ `drive_target`'s matrix entry BEFORE FLIPPING ANY SWITCH:
+                            `-189` cl.2(c) resolved Pool-Reality #2 precisely BY the target's
+                            invisibility, so naming लक्ष्य beside the bar makes the bar a COMPARISON
+                            again. ⭐ It still goes through <MatrixField>, under its OWN field id. */}
+                        {col.meter !== undefined && col.meter.targetOf(row) !== null && (
+                          <p class="sahyog__meter-target">
+                            <MatrixField
+                              surface="sahyog-drive"
+                              field={col.meter.targetFieldId}
+                              viewerContext="public"
+                              value={col.meter.targetOf(row) ?? ''}
+                            />
+                          </p>
                         )}
                       </td>
                     ))}
@@ -742,6 +811,44 @@ if (!driveStatusVisible) {
     text-align: left;
   }
   .sahyog__table th { font-family: var(--font-display-parichay); color: var(--color-rule-heavy); }
+  /* ⭐⭐ STORY 11b.14 — THE PROGRESS BAR. `2026-09-04-189` cl.2(b); its MOTION ruled (A) by BigDev.
+     ⛔ CSS-ONLY: ⛔ no JS and ⛔ no library on a static, server-rendered page. */
+  .sahyog__meter {
+    background: var(--color-rule-hairline);
+    border-radius: var(--border-rule);
+    height: 0.5rem;
+    margin-bottom: var(--space-row);
+    overflow: hidden;
+    width: 100%;
+  }
+  .sahyog__meter-fill {
+    background: var(--color-accent);
+    display: block;
+    height: 100%;
+    /* ⭐ IT GROWS FROM NOTHING ON LOAD, THEN HOLDS STILL. ⛔ No ripple, ⛔ no repeating shine:
+       `/sahyog` is edge-cached at `s-maxage=300`, so a continuously-moving bar would assert that
+       money is arriving while a visitor watches — something this page ⛔ cannot honour.
+       ⭐ `animation-fill-mode: both` is load-bearing: without it the bar snaps back to 0% the
+       instant the animation ends, which is the exact opposite of "holds still". */
+    animation: sahyog-meter-grow 900ms ease-out both;
+    width: var(--sahyog-meter-fill, 0%);
+  }
+  @keyframes sahyog-meter-grow {
+    from { width: 0%; }
+    to { width: var(--sahyog-meter-fill, 0%); }
+  }
+  /* ⭐ Story 0.10 (P0-2c) — reduced motion renders the FINISHED bar, with ⛔ no motion at all.
+     ⛔ Not a shorter animation: the ruled fallback is a static bar. */
+  @media (prefers-reduced-motion: reduce) {
+    .sahyog__meter-fill { animation: none; }
+  }
+  /* ⭐ लक्ष्य sits beside the bar and is quieter than the ruled sentence above it — it is a
+     CONDITION of the drive, ⛔ not the participation fact the sentence carries. */
+  .sahyog__meter-target {
+    color: var(--color-rule-heavy);
+    font-size: 0.9em;
+    margin: var(--space-row) 0 0;
+  }
   .sahyog__consent-note { color: var(--color-rule-heavy); font-size: 0.9em; }
   .sahyog__pagination { margin: var(--space-block) 0; }
   .sahyog__pagination-list {

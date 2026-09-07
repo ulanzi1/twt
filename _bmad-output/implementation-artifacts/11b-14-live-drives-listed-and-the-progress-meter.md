@@ -1395,7 +1395,7 @@ cross-drive comparison · ⛔ not publish a written pitch (`-190` cl.8).
         miss it and `/sahyog` serves its **OUTAGE** page to everyone. Pinned `sahyog-serves.test.ts`.
   - [x] `sahyog-render.ts:341-346` partition + `:299` label ternary — ⛔ **both are two-way today**;
         leave them and every live drive renders under **"Closed drives", labelled "Closed"**.
-- [ ] **Task 3 — The meter** (AC2, per D1) — including the **no-target** path and re-scoping the THROW.
+- [x] **Task 3 — The meter** (AC2, per D1) — including the **no-target** path and re-scoping the THROW.
   - [x] ✅ **`D3` CLOSED 2026-09-07 — ⛔ the three options are MOOT.** ⭐ With a **roster** denominator
         the division returns the roster size, ⛔ not the target. ⛔ Nothing to quantize or band.
   - [x] ✅ **`D6` RULED 2026-09-07** — ⛔ the *"412 of 500"* label is REMOVED; the bar carries the ruled
@@ -1411,14 +1411,14 @@ cross-drive comparison · ⛔ not publish a written pitch (`-190` cl.8).
   - [x] ✅ **`D4` RULED 2026-09-07** — ⭐ build the reveal HERE, gated on `resolveDriveTargetVisibility`;
         ⛔ default OFF ⇒ ⛔ nothing renders at launch. ⭐ **NARROW** (⛔ never delete) the inert-switch
         assertion in `apps/api/tests/integration/public-pages/sahyog-drive.spec.ts`, and add the ON case.
-  - [ ] ⭐ **The bar's motion — RULED (A):** CSS `@keyframes` on width, `animation-fill-mode: both`,
+  - [x] ⭐ **The bar's motion — RULED (A):** CSS `@keyframes` on width, `animation-fill-mode: both`,
         ⛔ no JS; `prefers-reduced-motion: reduce` renders it static; **Live rows only**.
   - [x] ✅ **DISCHARGED — ⛔ the clause below CONTRADICTED the ruled subtask above it** and is kept
         as the record only ([[feedback_supersede_never_reinterpret]]). ⇒ ⭐ **`D4` is RULED: build it.**
         *(record)* ⏳ *"AND `D4` — ⛔ WITH THE PANEL since 2026-09-07. Whether the meter honours
         `-190` cl.7(c)'s public reveal, defers it by a named successor story key, or narrows it to
         members. ⛔ Not the dev agent's call, ⛔ and no longer BigDev's."*
-  - [ ] ⚠⛔⛔ **ANSWER `deferred-work.md:8352` — ⛔ ROUTED HERE BY NAME, ⭐ WITH THIS TASK AS ITS
+  - [x] ⚠⛔⛔ **ANSWER `deferred-work.md:8352` — ⛔ ROUTED HERE BY NAME, ⭐ WITH THIS TASK AS ITS
         TRIGGER, ⛔ and never picked up until now.** ⇒ *"**A reveal can be configured for a Pariwar
         that has ⛔ no target at all.** `setDriveTargetVisibility` never reads the schedule table …
         `resolveDriveTargetVisibility` can report **revealed** while `resolveEffectiveDriveTargetInr`
@@ -1436,7 +1436,7 @@ cross-drive comparison · ⛔ not publish a written pitch (`-190` cl.8).
   - [x] ✅ **The `rosterSize` / `fixedAmount` operand problems are MOOT** — ⭐ the shipped shape **is**
         the ruled shape. ⭐ The `confirmedCount > rosterSize` THROW is **correct as shipped**; ⛔ do
         ⛔ not re-scope it.
-  - [ ] ⭐ Consume **`resolveDriveTargetVisibility`** BY NAME (`drive-target-policy.ts:233`) — ⭐ the
+  - [x] ⭐ Consume **`resolveDriveTargetVisibility`** BY NAME (`drive-target-policy.ts:233`) — ⭐ the
         **VISIBILITY GATE ONLY**. ⚠⛔ **The BAR does ⛔ NOT consume the target at all.**
         ⛔⛔ **AND ⛔ DO ⛔ NOT CALL `resolveEffectiveDriveTargetInr` — ⭐ v0.9 REMOVED ITS ROLE.**
         ⚠ An earlier draft of this subtask ordered *"`resolveDriveTargetVisibility` **then**
@@ -1447,9 +1447,9 @@ cross-drive comparison · ⛔ not publish a written pitch (`-190` cl.8).
         removed, ⛔ and would make this story disagree with its own Dev Notes
         ([[feedback_spec_edits_must_propagate_to_tasks]]). ⛔ Do ⛔ not re-read
         `pariwar_drive_target_schedule` directly either.
-  - [ ] ⛔ **The wire carries the PERCENTAGE only**, ⛔ never `rosterSize` — computed server-side.
+  - [x] ⛔ **The wire carries the PERCENTAGE only**, ⛔ never `rosterSize` — computed server-side.
         ⚠ `assignedCount` is quarantined at `public-read.ts:703` / `:739-743`; ⛔ do ⛔ not widen it.
-- [ ] **Task 4 — The wire** (AC3, **Trap 2**) — the index row needs what the headline consumes.
+- [x] **Task 4 — The wire** (AC3, **Trap 2**) — the index row needs what the headline consumes.
       ⚠⛔⛔ **BEFORE ANYTHING: `public-read.ts:739-743`'s QUARANTINE IS NOW *FULLY* SUPERSEDED.** It
       reads *"⛔ Do not widen `SahyogDriveEntry` to carry **either of them, under any name**"* — and
       ⭐ **BOTH now cross**: `deliveredTotal` (`:761`) as the ruled **amount**, `expectedTotal`
@@ -1464,15 +1464,15 @@ cross-drive comparison · ⛔ not publish a written pitch (`-190` cl.8).
       *"a second multiplication **anywhere in this app** is the defect"* (`surface-fields.ts:431-433`).
       ⚠⛔ **AND ⛔ NO DRIVE-PAGE FIELD** — ⭐ `sahyog-vivran`'s amount is **`11b-3b`'s** by `D1(b)`;
       ⛔ this task widens the **INDEX** row only.
-  - [ ] ⛔ **The new field is a MATRIX ACT** (Trap 7) — `SAHYOG_DRIVE_ROW_FIELD_IDS`
+  - [x] ⛔ **The new field is a MATRIX ACT** (Trap 7) — `SAHYOG_DRIVE_ROW_FIELD_IDS`
         (`surface-fields.ts:338`) **and** `SAHYOG_DRIVE_ROW_SHAPE` (`:369`) **and** the YAML row.
         `deriveFieldIds` throws in **both** directions.
-- [ ] **Task 5 — Render + copy** (AC1, AC3, AC5, **Traps 4 and 8**) — the Live section; the headline
+- [x] **Task 5 — Render + copy** (AC1, AC3, AC5, **Traps 4 and 8**) — the Live section; the headline
       in both locales **per `D5`'s answer**; ⛔ no ordering affordance anywhere.
-  - [ ] ✅⭐ **BUILD THE STAGE SPLIT — ⛔ this half is RESOLVED, ⛔ not waiting.** **Live** rows take
+  - [x] ✅⭐ **BUILD THE STAGE SPLIT — ⛔ this half is RESOLVED, ⛔ not waiting.** **Live** rows take
         cl.6's headline; **Closed · Verified** rows take `sahyog-shared:index_line.*`. ⚠ ⛔ Do ⛔ not
         render `index_line.*` on a Live row.
-  - [ ] ✅⭐⭐ **`D5`'s REMAINDER IS ANSWERED — ⭐ THE PANEL GAVE THE WORDING, IN BOTH LANGUAGES.**
+  - [x] ✅⭐⭐ **`D5`'s REMAINDER IS ANSWERED — ⭐ THE PANEL GAVE THE WORDING, IN BOTH LANGUAGES.**
         ⇒ ⭐ **author `D5`'s EN + HI pair into `sahyog-shared` under a `governance:` commit** (option
         (iv)) — ⛔ never invented at the render site, ⛔ never translated by the dev agent.
         ⚠⛔ **⛔ AC3's *"16,750 members have stood with this family…"* IS ⛔ NOT THE STRING** — ⭐ it is
@@ -1481,16 +1481,16 @@ cross-drive comparison · ⛔ not publish a written pitch (`-190` cl.8).
         Live row or **two** (`D5`'s `19,45,000` vs `D6`'s `19.45 lakh`)? **(2)** ⛔ ⛔ no `₹` in any
         ratified string. **(3)** ⭐ the word-forms need a **rounding rule** and a formatter that
         exists ⛔ nowhere. ⇒ ⭐ **land the string; ⛔ STOP at the number form and ASK.**
-  - [ ] ⛔ **Rewrite `page.intro` in BOTH locales** — it says *"Drives that are still **Live are not
+  - [x] ⛔ **Rewrite `page.intro` in BOTH locales** — it says *"Drives that are still **Live are not
         listed here**"* / *"जो अभियान अभी जारी हैं वे यहाँ **सूचीबद्ध नहीं** हैं।"*, pinned by
         `sahyog-copy.test.ts:34`. AC1 makes it **false**.
-  - [ ] ⛔ Add the Live section's `section.*.title` + `table.caption.*` — ⚠ **without re-adding a
+  - [x] ⛔ Add the Live section's `section.*.title` + `table.caption.*` — ⚠ **without re-adding a
         stage NAME to `sahyog-drive.json`** (its `$comment` forbids it, `-193` cl.3); compose
         `sahyog-shared:stage.live` instead.
-  - [ ] ⛔ **Trap 4 — the "Closed on" column.** `sahyog-render.ts:503-505` **already** renders
+  - [x] ⛔ **Trap 4 — the "Closed on" column.** `sahyog-render.ts:503-505` **already** renders
         *"Not recorded"* for a null date. ⭐ Recommendation: the Live section does ⛔ not carry the
         column. ⚠ **And decide `closeOfCycleFraming`** — a close-of-cycle sentence over a running drive.
-  - [ ] ⛔ Number/currency formatting per `D5` — ⭐ **LATIN numerals in Hindi** (amendment-A2,
+  - [x] ⛔ Number/currency formatting per `D5` — ⭐ **LATIN numerals in Hindi** (amendment-A2,
         `currency.ts:10-15`); ⛔ never the `'hi'` Devanagari arm for a money figure.
 - [ ] **Task 6 — The prose that must move** (AC0, AC4, Traps 2, 3, 5) — ⛔ **Amend and NAME; ⛔ never
       delete.** ⚠ **FOUR sites, ⛔ not two:** `sahyog-drive.ts:149-150` · `public-read.ts:524`

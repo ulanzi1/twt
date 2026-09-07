@@ -280,6 +280,38 @@ export interface SahyogDriveRow {
   readonly confirmedContributionCount: string;
   /** Pool-Reality #2 framing copy. ⛔ Contains NO target, percentage or shortfall, by construction. */
   readonly closeOfCycleFraming: string;
+  /**
+   * ⭐⭐ THE PROGRESS METER'S FILL, 0-100 — Story 11b.14 (AC2), `2026-09-04-189` **cl.2(b)**.
+   * `null` on a Closed or Verified row: ⛔ **only Live rows carry a bar.**
+   *
+   * ⚠⛔ **IT IS A NUMBER, ⛔ NOT COPY, AND IT IS STILL A CLASSIFIED FIELD.** The bar's WIDTH is the
+   * disclosure — the value never renders as text — so a reader who divides the confirmed count by it
+   * recovers the assignee count. ⭐ That is inherent to the ruled meter (*"the % of contributor
+   * already contributed"*) and is what CLOSED the channel that used to recover the hidden rupee
+   * target. ⛔ Declaring it `null` here would classify a real disclosure as nothing.
+   */
+  readonly driveProgressPercentage: number | null;
+  /**
+   * ⭐⭐ THE RULED LIVE-ROW SENTENCE, already interpolated — Story 11b.14 (AC3), Trustee-ratified
+   * 2026-09-07. `null` on a Closed or Verified row, which take `index_line.*` instead.
+   *
+   * ⚠⛔ **ONE sentence on a Live row, ⛔ never two** — *"One sentence on a running drive"*.
+   * ⭐ It carries the ruled money figure and the CONFIRMED CONTRIBUTOR count, in that stage's ruled
+   * number forms. ⛔ It is ⛔ not a pitch: `-190` cl.8 forbids any sentence about what a member pays
+   * or what a family receives — ⭐ the arithmetic is **SHOWN**, ⛔ never **ASSERTED**.
+   */
+  readonly driveParticipationLine: string | null;
+  /**
+   * ⭐⭐ लक्ष्य — *"Expected: ₹50 lakh"* — Story 11b.14 (AC2, `D4`). ⚠⛔ `null` **unless a
+   * `super_admin` has switched `reveal_to_public` ON** for the Pariwar (`2026-09-04-190` cl.7(b)/(c),
+   * which STAND) ⇒ ⛔ **`null` everywhere at launch**, and `null` on every non-Live row.
+   *
+   * ⚠⛔ **AND ⛔ NOT `null` MEANS POOL-REALITY #2 IS BACK.** `-189` cl.2(c) resolved it precisely by
+   * the target's INVISIBILITY (*"a bar with ⛔ no visible target is ⛔ not a comparison to a
+   * target"*). ⭐ The concern is **deferred to the act**, ⛔ not withdrawn — it is recorded here, at
+   * the string, and against the switch.
+   */
+  readonly driveTargetLine: string | null;
 }
 
 /**
@@ -350,6 +382,13 @@ export const SAHYOG_DRIVE_ROW_FIELD_IDS: FieldIdMapping<SahyogDriveRow> = {
   district: 'district',
   confirmedContributionCount: 'confirmed_contribution_count',
   closeOfCycleFraming: 'close_of_cycle_framing',
+  // ⭐ Story 11b.14 — the meter cell's three governed values. ⛔ Each is declared in
+  // `public-vs-private-matrix.yaml` for the `sahyog-drive` surface; ⛔ all three are `pii_tier: 3`
+  // (a COLLECTION's progress, ⛔ never a person) ⇒ ⛔ no `tier1_public_exception` and ⛔ no
+  // `RULED_TIER1_PUBLIC_EXCEPTIONS` entry (adding to that map "IS A RULING, NEVER A CODE CHANGE").
+  driveProgressPercentage: 'drive_progress_percentage',
+  driveParticipationLine: 'drive_participation_line',
+  driveTargetLine: 'drive_target',
 };
 
 /**
@@ -377,6 +416,12 @@ const SAHYOG_DRIVE_ROW_SHAPE: SahyogDriveRow = {
   district: null,
   confirmedContributionCount: '',
   closeOfCycleFraming: '',
+  // ⭐⚠ ALL THREE ARE `null` HERE FOR THE SAME REASON `deceasedMemberName` IS: the field a surface
+  // CAN render is what gets classified, ⛔ never the field it happens to be rendering right now. A
+  // page with no Live drives on it must ⛔ not declare a SMALLER field set.
+  driveProgressPercentage: null,
+  driveParticipationLine: null,
+  driveTargetLine: null,
 };
 
 /**

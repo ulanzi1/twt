@@ -39,10 +39,15 @@ Status: ready-for-dev
 >
 > ⏳⭐⭐ **`D4` AND `D5` ARE ROUTED TO THE TRUSTEE PANEL — 2026-09-07, BigDev's direction.**
 > ⇒ `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-07-11b14-drive-target-reveal-and-the-unwritten-headline.md`
-> ⛔ **BigDev rules neither.** ⭐ Both turn on an intent only the Panel holds: whether `-190` cl.7(c)'s
-> Superadmin reveal was meant to reach a screen, and what the cl.6 headline's words are and which
-> surface carries them. ⚠ **Task 3 and Task 5 are BLOCKED until the Panel answers.** ⭐ Every other
-> task proceeds — ⛔ the escalation blocks the meter's denominator and the copy, ⛔ nothing else.
+> ⛔ **BigDev rules neither.** ⚠ **AMENDED 2026-09-07 — ⭐ `D5` NARROWED and ⭐ `D6` ADDED:**
+> ✅ **which rows carry which sentence is RESOLVED** (⭐ **Live** → cl.6's headline; ⭐ **Closed ·
+> Verified** → `index_line.*`), traced to `-189` **cl.2(e)** — ⛔ withdrawn as a Panel question.
+> ⏳ **`D6`** — ⛔ the shipped meter label, rendered **directly above the bar**, is *"{confirmed} of
+> **{total}** contributions confirmed"*: ⛔ **it names its denominator**, which `D1(a)` makes the
+> target. ⇒ ⛔ **the bar built to hide the target would PRINT it** — ⭐ a different channel from `D3`,
+> ⛔ requiring no arithmetic at all.
+> ⚠ **Tasks 3 and 5 are BLOCKED until the Panel answers `D4` / `D5` / `D6`.** ⭐ Every other task
+> proceeds — ⛔ the escalation blocks the meter's denominator, its label and the copy, ⛔ nothing else.
 > ⭐ The note rests **only** on ratified text and verified repository state; ⛔ it cites ⛔ no code
 > comment, ⛔ no doc-block and ⛔ no story prose as evidence (its §7 lists every check).
 > ⚠ **And every `file:line` in this story drifted** — B and C rewrote all of them. Re-anchored below.
@@ -342,6 +347,11 @@ D1's fallback, ⛔ never a guessed denominator
 **And** ⭐ where story C's target is **set**, it is consumed **SERVER-SIDE ONLY** — ⛔ the value never
 reaches a response body (C's **AC6**)
 **And** ⚠⛔ **`D3` IS ANSWERED BEFORE THE METER IS WIRED** (below) — ⛔ not after.
+**And** ⚠⛔⛔ **`D6` IS ANSWERED BEFORE THE METER IS WIRED** — ⭐ the shipped meter's own label,
+rendered directly above the bar, is *"{confirmed} of **{total}** contributions confirmed"*: ⛔ **it
+names its denominator.** ⇒ under `D1(a)` that `{total}` **is the target**, printed, in both locales.
+⚠ This AC's ban reads *"no percentage label that lets it be **inferred by arithmetic**"* — ⛔ the
+shipped label needs ⛔ no arithmetic. ⇒ **see `D6`.**
 **And** ⚠⛔⛔ **`D4` IS ANSWERED BEFORE THE METER IS WIRED** — ⭐ **this AC quotes ⛔ HALF of
 `-190` cl.7.** cl.7(b) makes the target invisible **by default**; **cl.7(c)** rules *"⭐ **ONLY A
 SUPERADMIN may make it visible**, and **separately for member and for public**"* — and `-196` cl.8
@@ -385,7 +395,15 @@ and this channel ⛔ never carries the number.
 `-190` cl.6, option (B): *"16,750 members have stood with this family — ₹19.45 lakh, and counting"*, in
 both locales, from story B's shared copy where the stage words appear.
 
-⚠⛔⛔ **BUT B SHIPPED ⛔ NO SUCH STRING — ⭐ VERIFIED 2026-09-06. ⇒ `D5`, OPEN. ⛔ DO ⛔ NOT MINT ONE.**
+✅⭐⭐ **AND IT IS THE ⛔ LIVE-ROW SENTENCE ⛔ ONLY — RESOLVED 2026-09-07, see `D5`.**
+⭐ **Live** rows take this headline (`-190` cl.6, adopting the wording delegated at `-189` **cl.2(e)**,
+inside *"A COLLECTING DRIVE IS LISTED"*). ⭐ **Closed** and **Verified** rows take
+`sahyog-shared:index_line.*` (Trustee-ratified 2026-09-05, against an index that listed
+`closed` + `settled` **only**). ⇒ ⛔ **AC7's `index_line.*` render is ⛔ NOT a Live-row render** —
+⚠ and cl.6's sentence has ⛔ **no `{nominee_name}` slot**, so *"does a Live row carry the nominee name,
+and where?"* is an **open consequence** recorded at `D5`. ⛔ Do ⛔ not assume either way.
+
+⚠⛔⛔ **AND THE STRING ITSELF STILL DOES ⛔ NOT EXIST — ⭐ VERIFIED 2026-09-06. ⇒ `D5`, OPEN. ⛔ DO ⛔ NOT MINT ONE.**
 `sahyog-shared.json` holds **eleven** keys: three stage words, three `.help`, two explainer, and the
 four `index_line.*`. ⛔ **No participation headline of any shape**, and `"and counting"` / `"lakh"`
 appear **⛔ NOWHERE** in `packages/i18n/locales/`. ⚠ Following this AC literally means **D mints its
@@ -785,18 +803,49 @@ makes it permanent.
 
 ---
 
-### ⏳⚠⛔ D5 — **ROUTED TO THE TRUSTEE PANEL, 2026-09-07. ⛔ BLOCKS TASK 5.** Where does AC3's headline come from, and which surface carries it?
+### ⏳✅⚠ D5 — **NARROWED 2026-09-07.** ✅ Which rows carry which sentence is **RESOLVED BY PROVENANCE**; ⏳ who authors the Live sentence is **with the Panel**. ⛔ BLOCKS TASK 5
 
-> ⏳⭐ **ESCALATED, ⛔ NOT RULED.** ⇒ `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-07-11b14-drive-target-reveal-and-the-unwritten-headline.md` **§1 Q2, §4, §6.2.**
-> ⭐ **Why the Panel and ⛔ not BigDev:** the sentence is the Panel's own ratified wording, on a public
-> page, about money and about a bereaved family. ⛔ Authoring or translating it here is the two-source
-> drift `-193` cl.3 exists to prevent, on the one string where the words are theirs. ⚠ **And a second
-> ratified money sentence now exists** (the 2026-09-05 index line), so *which surface carries which*
-> is a ruling, ⛔ not a layout choice.
-> ⚠ **The note asks for three concrete things** (§6.2 option (iv)): the **English** sentence as it
-> should render, the **Hindi** sentence, and whether the amount reads `₹ 19,45,000` — ⭐ what the
-> product actually produces, **executed and captured**, ⛔ not read off a comment — or a *"lakh"*
-> word-form, which would need a rounding rule.
+> ✅⭐⭐ **THE SURFACE HALF IS ⛔ NO LONGER OPEN — BigDev supplied the reading, 2026-09-07.**
+> ⛔ The two sentences are ⛔ not two surfaces; ⭐ **they are two STAGES of the same list:**
+>
+> | Row stage | Sentence | Source |
+> |---|---|---|
+> | **Live** | *"16,750 members have stood with this family — ₹19.45 lakh, and counting"* | `-190` cl.6, completing `-189` **cl.2(e)** |
+> | **Closed · Verified** | `sahyog-shared:index_line.*` | Trustee-ratified 2026-09-05 |
+>
+> ⭐⭐ **THE EVIDENCE IS PROVENANCE, ⛔ NOT TENSE.** `-190` cl.6 does ⛔ not stand alone — it **adopts
+> the wording delegated at `-189` cl.2(e)**, and cl.2 is titled *"**(Q2) — YES: A COLLECTING DRIVE IS
+> LISTED**"*. cl.2(e): *"the surface shows the amount raised AND the number of contributors — the
+> Panel's own example: **'19.45 lakh and counting, by 43k members'**, with the exact wording
+> **delegated to BigDev**."* ⇒ ⭐ cl.6 is the **LIVE-row** sentence by construction.
+> ⭐ And the index line was ratified against an index listing **`closed` + `settled` ONLY** — ⛔ `live`
+> is ⛔ not listed today and **this story is what adds it** ⇒ ⛔ it could ⛔ not have been ruled about a
+> live row. ⚠ It also occupies the **close-of-cycle** sentence's slot, which is structurally
+> meaningless for a drive that has not closed (⭐ Trap 4's `closeOfCycleFraming` point, arrived at from
+> the other direction).
+>
+> ⚠⛔ **AND ONE 2026-09-06 CLAIM IS WITHDRAWN AS OVER-STATED** — that the index line *"carries no
+> member count ⇒ cannot satisfy participation-first"*. ⭐ The 11b.12 routing note **§7.1(7)** records
+> the constraint it was written under: *"**The confirmed count is ⛔ ALREADY on the same row.** ⇒ ⛔
+> don't restate a number."* ⇒ the omission is **deliberate**; the count is a **column**, and the row
+> as a whole is participation-bearing. ⛔ Named, ⛔ not deleted ([[feedback_supersede_never_reinterpret]]).
+>
+> ⚠⛔ **ONE CONSEQUENCE FOR AC7 — ⭐ recorded, ⛔ not resolved.** `index_line.*` is the sentence that
+> carries the **nominee name**, ⭐ and it is now **Closed · Verified only**. ⛔ cl.6's Live sentence has
+> ⛔ no `{nominee_name}` slot. ⇒ **does a LIVE row carry the nominee name at all, and if so where?**
+> ⚠ `-190` cl.2 and the 2026-09-05 ruling 2 say *"on the index"* ⛔ without qualifying a stage.
+> ⛔ Do ⛔ not assume either way at Task 8.
+>
+> ⏳⭐ **WHAT REMAINS WITH THE PANEL.** ⇒ `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-07-11b14-drive-target-reveal-and-the-unwritten-headline.md` **§0, §1 Q2, §6.2.**
+> ⛔ **The Live sentence exists in ⛔ NO file, in either language.** ⚠ ⭐ And the authorship may ⛔ not
+> be the Panel's at all: `-189` **cl.2(e)** says *"the exact wording **delegated to BigDev**"*, and
+> cl.6 then adopted option (B) as its shape. ⇒ the note asks only **who writes it** — BigDev outright,
+> BigDev drafting for confirmation, or the Panel giving the wording. ⭐ **⛔ Three narrow options,
+> ⛔ not a ruling on substance.**
+> ⚠⛔ **Two riders travel with it either way.** ⛔ **No HINDI was ever ratified** for cl.6 — the adopted
+> sentence is English only, on a bilingual public page. ⚠ And the amount: `formatCurrency` **executed**
+> gives `"₹ 19,45,000"`; ⛔ *"₹19.45 lakh"* needs a **word-form and a rounding rule**, ⛔ neither of
+> which exists — ⭐ and rounding feeds **`D3`**.
 
 ⭐⭐ **THE FINDING — TWO HALVES.**
 
@@ -846,6 +895,55 @@ surface (`currency.ts:10-15`). ⇒ **the answer to D5 carries a formatting decis
 
 ---
 
+### ⏳⚠⛔ D6 — **OPEN, ROUTED TO THE TRUSTEE PANEL 2026-09-07. ⛔ BLOCKS TASK 3.** What does the public bar's LABEL say — when the shipped one **names the denominator**?
+
+⭐⭐ **THE FINDING.** BigDev asked what renders above and below the bar to tell a reader what it is.
+⚠ We read the shipped render in order at
+`apps/mobile/components/active-contribution/ActiveContributionCard.tsx` and resolved every key to its
+**actual string in both locales** — ⛔ not to its doc-block:
+
+| Position | Line | Key | The actual string |
+|---|---|---|---|
+| above the bar | `:234-236` | `active_contribution.days_a11y` | *"{days} days remaining in this cycle"* / *"इस चक्र में {days} दिन शेष"* |
+| ⛔⛔ **directly above the bar** | `:256` | `active_contribution.progress` | ⛔ *"**{confirmed} of {total}** contributions confirmed"* / *"**{total} में से {confirmed}** अंशदान पुष्ट"* |
+| on the bar (screen reader) | `:263` | `active_contribution.progress_a11y` | *"{confirmed} of {total} contributions confirmed so far"* |
+| below the bar | `:272` | `pool_progress.amount_raised` | *"Raised so far"* / *"अब तक जुटाई गई राशि"* |
+| below that | `:281` | — | `formatInr(amountRaisedInr)` |
+
+⛔⛔ **THE LABEL STATES BOTH OPERANDS, INCLUDING THE DENOMINATOR.** On the member card `{total}` is
+`rosterSize` — *"412 of 500 contributions confirmed"*. ⚠ **`D1(a)` makes the public denominator the
+rupee TARGET**, and `progressLabelKey` is emitted by the **same presenter** as the percentage. ⇒ ⛔
+rendering the shipped label unchanged **prints the hidden target — as a number, in words, in both
+languages, directly above the bar.**
+
+⚠ ⭐ **THIS IS A DIFFERENT CHANNEL FROM `D3`.** `D3` is the target **recovered by division** from the
+fill geometry. ⛔ This is ⛔ not a recovery — ⭐ **it is the number itself, printed.** ⚠ AC2's ban is
+worded as *"⛔ no percentage **label** that lets it be inferred by arithmetic"* — ⛔ the shipped label
+does ⛔ not require arithmetic.
+
+⚠⛔ **AND DELETING THE LABEL IS ⛔ NOT OBVIOUSLY RIGHT EITHER.** `-190` cl.8 rules *"**THE UI CARRIES
+THE UNDERSTANDING**"* and *"the arithmetic is SHOWN, ⛔ never ASSERTED."* ⭐ A bar with ⛔ no label is a
+coloured rectangle — it shows nothing and asserts nothing. ⇒ the public bar needs **copy that says
+what it measures without naming what it measures against**, ⛔ and ⛔ no such string exists in either
+locale.
+
+**The four options, ⛔ none pre-ruled** (routing note **§6.3**):
+
+- **(i) A LABEL NAMING ⛔ NO DENOMINATOR** — e.g. the confirmed count and the amount only. ⚠ Cost: the
+  bar's **width** then means something the words ⛔ do not explain.
+- **(ii) ⛔ NO LABEL — the bar is decorative.** ⭐ Leaks nothing; ⚠ ⛔ carries no understanding.
+- **(iii) ⛔ NO BAR on the public surface.** ⚠ This **narrows `-189` cl.2(b)** (*"each carries a
+  progress bar"*) ⇒ ⛔ we do ⛔ not propose it; ⭐ it is listed because it retires **D6 and D3 together**.
+- **(iv) THE LABEL NAMES THE TARGET WHERE THE TARGET IS REVEALED** — ⭐ available ⛔ only if **`D4`**
+  is answered as option (i).
+
+⭐⭐ **`D6` INTERLOCKS WITH `D4`.** ⚠ If the Superadmin's public reveal reaches the screen, then for a
+Pariwar with the switch **ON** the shipped label is ⛔ **not** a leak — it names a figure that Pariwar
+chose to publish. ⇒ **`D6` then applies only to Pariwars with the reveal OFF.** ⛔ Answer them
+together, ⛔ not independently.
+
+---
+
 ## ⚠ What this story does ⛔ NOT do
 
 ⚠⛔ **AND IT DOES ⛔ NOT RULE `D3`, `D4` OR `D5`** — ⭐ all three are recorded **OPEN** and are
@@ -877,9 +975,11 @@ cross-drive comparison · ⛔ not publish a written pitch (`-190` cl.8).
 - [x] **Task 1b — ⚠⛔ ROUTE `D4` AND `D5` TO THE PANEL** — ✅ **DONE 2026-09-07.** ⇒ `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-07-11b14-drive-target-reveal-and-the-unwritten-headline.md`
       ⭐ Built on ratified text and verified repository state **only**; ⛔ ⛔ no code comment, doc-block
       or story prose used as evidence (§7 lists every check, re-runnable).
-- [ ] **Task 1c — ⏳ AWAIT THE PANEL** — ⛔ **BLOCKING Task 3 (`D4`) and Task 5 (`D5`).** ⛔ ⛔ **No
-      code on the meter's denominator before `D4` is answered; ⛔ no headline copy written, authored
-      or translated before `D5` is answered.** ⭐ Every other task proceeds meanwhile.
+- [ ] **Task 1c — ⏳ AWAIT THE PANEL** — ⛔ **BLOCKING Task 3 (`D4`, `D6`) and Task 5 (`D5`).**
+      ⛔ ⛔ **No code on the meter's denominator or its LABEL before `D4` / `D6`; ⛔ no headline copy
+      written, authored or translated before `D5`.** ⭐ Every other task proceeds meanwhile.
+      ⭐ ✅ **`D5`'s surface half is already RESOLVED** — Live → cl.6's headline; Closed · Verified →
+      `index_line.*`. ⭐ Task 5 may build **against that split** today; ⛔ only the Live **string** waits.
 - [ ] **Task 2 — The listing predicate** (AC1, **Trap 6**) — ⚠⛔ **FIVE artefacts, ⛔ not one:**
   - [ ] `SAHYOG_DRIVE_VISIBLE_POOL_STATES` (`public-read.ts:102`) gains `live`; amend the `:97-100`
         doc-block that calls it *"ABSENT deliberately"* — ⭐ **amend and name**, ⛔ never overwrite.
@@ -894,6 +994,9 @@ cross-drive comparison · ⛔ not publish a written pitch (`-190` cl.8).
 - [ ] **Task 3 — The meter** (AC2, per D1) — including the **no-target** path and re-scoping the THROW.
   - [ ] ⚠⛔ **ANSWER `D3` FIRST** (AC2) — (i) quantize/band, (ii) accept-and-record, or (iii) escalate.
         ⛔ Do ⛔ not wire the denominator before it is answered; ⛔ a token-scan test will ⛔ not catch it.
+  - [ ] ⏳⚠⛔ **AND `D6` — ⛔ WITH THE PANEL since 2026-09-07.** ⛔ The public bar's LABEL. The shipped
+        `active_contribution.progress` names `{total}`; under `D1(a)` that IS the target. ⛔ Do ⛔ not
+        render, suppress or reword it on a guess — ⭐ and answer it **together with `D4`**.
   - [ ] ⏳⚠⛔ **AND `D4` — ⛔ WITH THE PANEL since 2026-09-07.** Whether the meter honours
         `-190` cl.7(c)'s public reveal, defers it **by a named successor story key**, or narrows it
         to members. ⛔ Not the dev agent's call, ⛔ and no longer BigDev's.
@@ -915,9 +1018,12 @@ cross-drive comparison · ⛔ not publish a written pitch (`-190` cl.8).
         `deriveFieldIds` throws in **both** directions.
 - [ ] **Task 5 — Render + copy** (AC1, AC3, AC5, **Traps 4 and 8**) — the Live section; the headline
       in both locales **per `D5`'s answer**; ⛔ no ordering affordance anywhere.
-  - [ ] ⏳⚠⛔ **`D5` FIRST — ⛔ WITH THE PANEL since 2026-09-07.** ⛔ The ruled headline does ⛔ not
-        exist in B's shared copy, and ⛔ no ruling assigns it a surface. ⛔ Do ⛔ not mint, author or
-        translate a Trustee-ratified sentence at a render site.
+  - [ ] ✅⭐ **BUILD THE STAGE SPLIT — ⛔ this half is RESOLVED, ⛔ not waiting.** **Live** rows take
+        cl.6's headline; **Closed · Verified** rows take `sahyog-shared:index_line.*`. ⚠ ⛔ Do ⛔ not
+        render `index_line.*` on a Live row.
+  - [ ] ⏳⚠⛔ **`D5`'s REMAINDER — ⛔ WITH THE PANEL since 2026-09-07.** ⛔ The Live sentence exists in
+        ⛔ no file, in either language, and ⛔ no Hindi was ever ratified for it. ⛔ Do ⛔ not mint,
+        author or translate a Trustee-ratified sentence at a render site until the Panel says who writes it.
   - [ ] ⛔ **Rewrite `page.intro` in BOTH locales** — it says *"Drives that are still **Live are not
         listed here**"* / *"जो अभियान अभी जारी हैं वे यहाँ **सूचीबद्ध नहीं** हैं।"*, pinned by
         `sahyog-copy.test.ts:34`. AC1 makes it **false**.
@@ -1045,6 +1151,7 @@ units. ⚠ Assert **membership and explicit values**, ⛔ never counts over the 
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-09-07 | 0.6 | ✅⏳⭐⭐ **`D5` NARROWED — BigDev supplied the reading and the record backs it; and `D6` OPENED and ROUTED.** ⛔ Zero rows move; ⛔ no code. ✅ **THE TWO RATIFIED SENTENCES ARE TWO STAGES, ⛔ NOT TWO SURFACES:** **Live** rows take `-190` cl.6's *"…and counting"* headline; **Closed · Verified** rows take `sahyog-shared:index_line.*`. ⭐ **The evidence is PROVENANCE, ⛔ not tense** — cl.6 adopts the wording **delegated at `-189` cl.2(e)**, and cl.2 is titled *"(Q2) — YES: A COLLECTING DRIVE IS LISTED"*, with the Panel's own example *"19.45 lakh and counting, by 43k members"*; and the 2026-09-05 index line was ratified against an index listing **`closed` + `settled` ONLY** — ⛔ `live` is unlisted and **this story adds it** — while occupying the **close-of-cycle** slot, which is structurally null for an unclosed drive. ⇒ ⛔ **the "which surface" question is WITHDRAWN from the Panel.** ⚠⛔ **AND ONE 2026-09-06 CLAIM IS WITHDRAWN AS OVER-STATED** — that the index line *"carries no member count ⇒ cannot satisfy participation-first"*; the 11b.12 note **§7.1(7)** shows the omission was **deliberate** (*"the confirmed count is ALREADY on the same row ⇒ don't restate a number"*) and the count is a **column**. ⚠ **Open consequence recorded, ⛔ not resolved:** `index_line.*` is what carries the **nominee name**, and it is now Closed · Verified only, while cl.6's Live sentence has ⛔ no `{nominee_name}` slot ⇒ **does a Live row carry it, and where?** ⏳⛔⛔ **`D6` — THE BAR'S OWN LABEL NAMES ITS DENOMINATOR.** Read from the shipped render (`ActiveContributionCard.tsx:234-281`) with every key resolved to its **actual string in both locales**: directly above the bar sits `active_contribution.progress` = *"{confirmed} of **{total}** contributions confirmed"* / *"{total} में से {confirmed} अंशदान पुष्ट"*. ⇒ under `D1(a)` that `{total}` **IS the target** ⇒ ⛔ **the bar built to hide it would PRINT it, in words, in both languages.** ⚠ ⭐ A **different channel from `D3`** — ⛔ no arithmetic required — and AC2's ban (*"no percentage label that lets it be **inferred by arithmetic**"*) ⛔ does not reach it. ⚠ ⛔ Deleting the label is ⛔ not obviously right either: cl.8 rules *"the UI carries the understanding"*, and an unlabelled bar carries none. ⭐ Four options recorded, ⛔ none pre-ruled; ⭐ **`D6` interlocks with `D4`** — a revealed target makes the shipped label lawful for that Pariwar. ⇒ **Tasks 3 and 5 stay blocked; ⭐ Task 5 may build the stage SPLIT today — ⛔ only the Live STRING waits.** | BigDev + Claude |
 | 2026-09-07 | 0.5 | ⏳⭐⭐ **`D4` AND `D5` ROUTED TO THE TRUSTEE PANEL — ⛔ BigDev rules neither; ⛔ zero rows move; ⛔ no code.** ⇒ `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-07-11b14-drive-target-reveal-and-the-unwritten-headline.md` ⭐ **Q1 (`D4`):** did `-190` cl.7(c)'s *"ONLY A SUPERADMIN may make it visible, separately for member and for public"* mean the figure would actually appear — and is D, which `-196` cl.8 names *"its first consumer"*, the story that makes it so? ⛔ The switch is built, governed, `super_admin`-gated and DB-constrained, and **every** non-test reference to it is definition, storage, write path or admin API — ⛔ **zero readers in any member- or public-facing render**; `resolveEffectiveDriveTargetInr` and `resolveDriveTargetVisibility` have ⛔ **zero production callers**; `apps/public/src` and `apps/mobile` contain ⛔ **zero** references to the target in any form; and a **shipped test** sets `reveal_to_public = true` and then asserts seven target tokens are absent — ⭐ the programme has already codified that the switch changes nothing. Story **E** repeats the omission on the member axis ⇒ ⛔ cl.7(c) has ⛔ no consumer on either axis it names. ⭐ **Q2 (`D5`):** cl.6 adopted a headline in the Panel's words; both `sahyog-shared.json` files hold **14 keys** and ⛔ none is a headline, and `"and counting"` / `"lakh"` / `"have stood with"` / `"members have stood"` each return ⛔ **0 files** across the entire locale corpus. ⚠ A **second** ratified money sentence (the 2026-09-05 index line) IS shipped, carries ⛔ no member count, and ⛔ nothing says which surface takes which. ⭐ `formatCurrency` **executed**: `"₹ 19,45,000"` (en) / `"₹ १९,४५,०००"` (hi) — ⛔ never `"₹19.45 lakh"`. ⭐⭐ **The note rests on ratified text and verified repository state ONLY** — ⛔ ⛔ no code comment, doc-block or story prose is used as evidence, and §7 lists every check so each claim is re-runnable; ⚠ the two coherent readings are labelled **INFERENCE** and argued in both directions (§5). ⇒ **Task 3 and Task 5 BLOCKED; every other task proceeds.** | BigDev + Claude |
 | 2026-09-06 | 0.4 | ⚠⛔⛔ **VALIDATED (`bmad-create-story validate`) — 26 FINDINGS, TWO NEW OPEN DECISIONS, ⛔ ZERO ROWS MOVE.** ⭐ Three adversarial passes over a baseline that had moved **105 non-`_bmad-output` files**. ⛔ **`D4` OPEN** — AC2 quotes `-190` cl.7(b) and **drops cl.7(c)**; C's `revealToPublic` has ⛔ **ZERO** production readers (admin write + DB + RLS + CHECK + `super_admin` key, ⛔ no render anywhere), and `-196` cl.8 names **this story** as the target's *"first consumer"*. Story **E** repeats it on the member axis ⇒ ⛔ cl.7(c) has ⛔ no consumer in the whole split. ⛔ **`D5` OPEN** — AC3's ruled headline **does ⛔ not exist** in B's shared copy (`"and counting"` / `"lakh"` appear ⛔ nowhere under `locales/`), ⛔ no ruling assigns it a surface, and ⛔ no formatter produces either figure. ⭐ **AC7 gains the double-absence open item**, routed here **BY NAME** by 11b.12's code review — two combinations have ⛔ NO variant and `t()` **throws** ⇒ a **500 for the whole page**. ⚠ **Traps 6-8 added:** widening the predicate is **five** artefacts (⛔ two fail silently — every live drive would render under *"Closed drives"*); **two matrix gates**, one of which **forbids its own remedy**; and **test-pinned copy in both locales goes FALSE**. ⚠ **D1 amended** — the anti-widening test rejects ⛔ ANY new input key, and `rosterSize`/`fixedAmount` are required. ⚠ **D2 amended** — **four** sites, ⛔ not two, including `public-read.ts:739-743`, which prohibits Task 4's preferred option **by name**. ⚠ **AC7(b) corrected** — *"batched"* ⛔ cannot be built (per-value DEKs) and the baseline was **50, not 1-2** ⇒ **3×**, ⛔ not 50×. ⭐ **Every `file:line` re-anchored**; `public-read.ts:481` was **mis-quoted**, ⛔ not merely drifted. ⭐ Header blocker **DISCHARGED** (B and C both `done`). ⛔ Zero rows move; ⛔ no code. | BigDev + Claude |
 | 2026-09-04 | 0.2 | ✅ **D1 + D2 RULED.** D1: extend the canonical producer (optional rupee denominator), re-scope the THROW, ⛔ **no target ⇒ no bar**. D2: **both surfaces**, `sahyog-drive.ts:133` **amended and NAMED**, AC5's ordering half untouched. ⇒ ⛔ zero open decisions; ⚠ still blocked on **B** and **C**. | BigDev + Claude |

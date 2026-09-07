@@ -875,3 +875,80 @@ rounding, ⛔ never the amount's.** ⚠ ⇒ ⛔ **coarsening the money is ⛔ no
 ⛔ ⛔ Not whether the target stays hidden by default — ⭐ §13.2 settled that, and it stands.
 ⛔ ⛔ Not the sentence, the rupee sign, the cut-off, or the bar's motion — ⭐ all closed.
 ⛔ ⛔ Not a re-run of Pool-Reality #2 — ⭐ §13.3 records it as conditional on the switch.
+
+
+---
+
+## 16. ✅✅ `D3` ANSWERED — **DR + KB, 2026-09-07** — ⭐ the bar changes what it MEASURES
+
+> *"Progress bar should show the % of contributor already contributed in that pool."*
+
+### 16.1 ⚠⛔⛔ THIS SUPERSEDES A TRUSTEE-RATIFIED CLAUSE — ⭐ recorded as a SUPERSESSION, ⛔ never a re-reading
+
+⛔ `2026-09-04-191` **cl.4** — **Trustee-ratified, DR + KB** — reads, verbatim:
+
+> **4. ⭐ THE PROGRESS BAR FILLS AGAINST A **RUPEE** TARGET.** Closes `-190` follow-up (ii)/(iii)-units.
+> ⇒ the meter is `amountRaisedInr` over the Pariwar's configured rupee target … ⭐ the **headline stays
+> participation-first** — people lead, the bar tracks money.
+
+⇒ ⭐⭐ **cl.4 IS SUPERSEDED BY THIS RULING.** ⚠ `-190` **follow-up (ii)** framed exactly this binary —
+*"What does the bar FILL AGAINST — rupees or contributors?"* — and cl.4 took **rupees**. ⭐ The Panel
+now takes **contributors**. ⛔ Same Panel, ⛔ three days later, ⛔ a legitimate change of mind on a
+question the record shows was always two-sided.
+⛔ It is ⛔ **NOT** a reinterpretation of cl.4 ([[feedback_supersede_never_reinterpret]]) — ⭐ the prior
+text is preserved above and the change is named. ⚠ **⛔ The headline stays participation-first either
+way**, so cl.4's other half is undisturbed.
+
+### 16.2 ✅✅ `D3` IS CLOSED **BY CONSTRUCTION**, ⛔ not by mitigation
+
+⭐ The bar's width is now `confirmedCount ÷ rosterSize`. ⇒ dividing the published amount by the
+published fill returns the **roster size**, ⛔ **not the rupee target**. ⇒ ⭐⭐ **the hidden figure is
+⛔ no longer derivable from the page at all.** ⛔ No quantising, ⛔ no banding, ⛔ no accept-and-record.
+⭐ §15.4's three options are all **moot**.
+
+### 16.3 ⭐⭐ AND IT SIMPLIFIES THE BUILD SHARPLY — `D1`'s costs FALL AWAY
+
+⚠ `D1(a)` ruled *"extend `pool-progress` with an optional rupee denominator"*. ⇒ ⭐ **with a
+contributor denominator the shipped component ALREADY DOES EXACTLY THIS** (`presenter.ts:73-74`,
+`min(100, round(confirmedCount / rosterSize × 100))`). ⇒ **Trap 1's three mechanical blocks ⛔ all
+vanish:**
+
+| Blocker (Trap 1) | Status |
+|---|---|
+| The anti-widening test rejects any new input key | ⭐ **MOOT** — ⛔ no new key |
+| `rosterSize` is a required operand with no rosterless input | ⭐ **MOOT** — ⭐ the roster **is** the denominator |
+| `fixedAmount` required; ⛔ no pre-derived-amount input | ⭐ **MOOT** — ⛔ unchanged from the shipped path |
+| The `confirmedCount > rosterSize` **THROW** | ⭐ **CORRECT AS SHIPPED** — ⛔ ⛔ it needed re-scoping only for the rupee path, which is now gone |
+
+⭐ `D1`'s *"⛔ no target ⇒ ⛔ no bar"* fallback is likewise **superseded**: ⭐ a roster always exists, so
+**the bar always renders**. ⚠ Its successor is narrower — *"⛔ no target ⇒ ⛔ no **Expected** figure"*.
+⚠ Edge case recorded: a pool with **zero assignees** renders a **0% bar** (the presenter's
+`rosterSize > 0 ? … : 0` guard), ⛔ not an error.
+
+### 16.4 ⚠ ONE CONSEQUENCE, RECORDED ⛔ NOT ASKED
+
+⭐ A participation percentage **cannot be shown without the roster size becoming derivable**
+(`roster ≈ confirmedCount ÷ fill`). ⇒ ⛔ that is **inherent to the ruling**, ⛔ not an oversight, and
+⛔ we will ⛔ not ask the Panel to re-decide what they have just decided. ⚠ Recorded because
+`assignedCount` is presently **quarantined on this read path** (`public-read.ts:703`, `:739-743`) and
+has ⛔ never crossed the public wire.
+⭐ **Build decision, ours:** the wire carries **the percentage only** — ⛔ not `rosterSize` — computed
+server-side. ⭐ Minimum disclosure for the ruled render.
+⚠ ⭐ A roster size is an **organisational scale** figure, ⛔ not money and ⛔ not a person; ⛔ 11b.1
+AC5's bans (leaderboard · ranking · popularity) are ⛔ untouched — ⛔ nothing orders by it.
+
+### 16.5 ⏳ ONE NEW QUESTION THE RULING OPENS — ⛔ small, ⛔ but real
+
+⚠⛔ **THE BAR AND THE "EXPECTED" FIGURE NOW MEASURE DIFFERENT THINGS.**
+⭐ The bar counts **people**. ⭐ *"Expected ₹50 lakh"* (§13.2, shown only where a Superadmin switches
+it on) is **money**. ⇒ ⛔ they need ⛔ not agree:
+
+| | Pariwar sets target ≈ roster × ₹300 | Pariwar sets a **lower** target |
+|---|---|---|
+| Bar (people) | 39% | **39%** |
+| Against *"Expected"* (money) | ~39% — ⭐ they agree | ⚠ **78%** — ⛔ they contradict |
+
+⇒ ⚠ a reader sees a bar at **39%** beside *"Expected ₹25 lakh"* on a drive that has already raised
+**78%** of it. ⭐ **Three ways, ⛔ none pre-ruled:** **(i)** drop *"Expected"* — the bar no longer
+tracks it · **(ii)** keep both, ⭐ accepting they answer different questions · **(iii)** express the
+expected figure in **people** instead. ⛔ Nothing is blocked meanwhile: the switch is **off**.

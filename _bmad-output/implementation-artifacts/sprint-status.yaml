@@ -1,4 +1,46 @@
-# last_updated: 2026-09-07i (✅✅⭐⭐ **STORY 11b.14 (D) — RULED (DR + KB): *"USE THE DERIVED TOTAL."*
+# last_updated: 2026-09-07j (✅ **RULED (BigDev): RETIRE `pariwar.manage_drive_target`.** ⛔ ZERO ROWS
+#   MOVE; 11b-14 STAYS `ready-for-dev`; ⛔ 11b-13 STAYS `done`. ⚠ ⛔ No code — ⭐ SCOPED ONLY.
+#   ⇒ routing note **§19**. ⭐ §18.4's *retain-and-state* default is **OVERRIDDEN**.
+#
+#   ⛔⛔ **THE HOUSE MECHANISM IS ⛔ NOT REMOVAL, AND THIS KEY ⛔ CANNOT USE IT.** `permissions.ts:1130`:
+#   *"⛔ **DEPRECATED ≠ REMOVED.** A deprecated key stays in the catalog, stays enforceable … Deprecation
+#   forbids only NEW grants. **Removal is a separate, later catalog bump.**"* ⇒ ⭐ removal IS
+#   contemplated ⛔ but has **NEVER BEEN DONE** (`DEPRECATED_PERMISSION_KEYS` holds one entry,
+#   `member.suspend`, and it STAYED). ⚠⛔ **And deprecation is ⛔ unavailable here:** `:1150` —
+#   *"**Every deprecated key MUST name one**"* (a successor), enforced by the typed
+#   `DEPRECATED_KEY_SUCCESSOR` record — ⛔ and this key has **NO successor**, since the figure now
+#   derives itself. ⇒ ⭐⭐ **removal is the only fitting act, and it is the project's FIRST.**
+#
+#   ✅ **REMOVAL IS SAFE — ⭐ VERIFIED, ⛔ not assumed.** `check.ts:156-159`: *"Unknown / malformed key ->
+#   deny. Only enumerated catalog keys can ever allow."* ⇒ ⭐ **FAIL-CLOSED**; a route left gating a
+#   removed key DENIES. ⚠ Orphaned `role_grants` rows go **INERT** — ⭐ data hygiene, ⛔ not security.
+#
+#   ⭐ **THE SURFACE — ⛔ it is ⛔ NOT one line:** catalog entry `permissions.ts:1054` + its ~30-line
+#   doc-block + `:650` the VERSION · `roles.ts:275` + the `pariwar_admin` bundle grant ·
+#   `drive-target-policy.ts:111/278/333/343` + `setDriveTargetSchedule` · `apps/api/.../drive-target/`
+#   handlers (**445 lines**) + routes (**139**) ⚠ **the VISIBILITY half shares the module and MUST
+#   SURVIVE** · admin `DriveTargetForm.tsx` (**355**) + `DriveTargetRoute.tsx` (**46**) ⚠ **
+#   `RevealSwitchesForm.tsx` MUST SURVIVE** · contracts target-write DTOs + `openapi/v1.yaml` ·
+#   six test files. ⚠⛔ **KEEP `pariwar_drive_target_schedule`** (the `-190` cl.4 precedent) — ⛔ no
+#   migration, ⛔ no drop.
+#
+#   ⚠⛔⛔ **THE TRAP — `PERMISSION_CATALOG_VERSION` MUST BE COMPUTED LIVE, ⛔ NEVER TRANSCRIBED.**
+#   `permissions.test.ts:54` states the rule itself: *"AND THE 41 IS COMPUTED, NOT TRANSCRIBED: Story
+#   **6.18** bumps this **SAME** counter … +2 FROM THE LIVE VALUE — whichever story lands second takes
+#   the next numbers."* ⭐ **6-18 is STILL `ready-for-dev` and UNLANDED** ⇒ ⛔ do ⛔ NOT write `42`;
+#   ⭐ read the live value when the retirement lands and take **+1**.
+#
+#   ⏳⛔ **WHERE IT LANDS — ⛔ NOT IN 11b.14.** ⭐ Three grounds: **(1)** it UN-SHIPS part of a `done`,
+#   merged story (11b.13) — ~1,000 lines across five packages; **(2)** ⛔ **11b.14's own AC6 is
+#   *"Nothing else moves"*** and its scope is a PUBLIC READ SURFACE — ⛔ deleting C's admin WRITE half
+#   is ⛔ not that; **(3)** ⚠ it is the project's FIRST key removal and collides with 6.18's bump ⇒ ⭐ it
+#   wants its own change with its own review, ⛔ not a subtask.
+#   ⇒ ⏳ **AWAITING BigDev's choice of VEHICLE** — a `correct-course` against 11b-13, or a NEW story
+#   keyed in this file (⚠ a deferral naming an EPIC expires unowned).
+#   ⛔ **Meanwhile §18.4's STATUS-STATEMENT still applies** and is ⛔ NOT superseded: the key and its
+#   substrate are described as **UNCONSUMED**, and ⛔ **NOT** as a live control on any Trustee-facing
+#   material.)
+# last_updated_prior: 2026-09-07i (✅✅⭐⭐ **STORY 11b.14 (D) — RULED (DR + KB): *"USE THE DERIVED TOTAL."*
 #   `D7` DISSOLVED BY IDENTITY; ⚠⛔ TWO MORE TRUSTEE-RATIFIED CLAUSES SUPERSEDED; ⚠ HALF OF STORY C IS
 #   NOW UNCONSUMED.** ⛔ ZERO ROWS MOVE; 11b-14 STAYS `ready-for-dev`; ⛔ 11b-13 STAYS `done`.
 #   ⚠ ⛔ No code. ⇒ routing note **§18**.

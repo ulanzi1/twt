@@ -1095,3 +1095,71 @@ that now gates nothing**. ⛔ Un-minting moves `PERMISSION_CATALOG_VERSION` and 
   (`:757`) — ⭐ **silence, ⛔ never ₹0**.
 - ⭐ **Formatting is unchanged** — §13.5 stands: लक्ष्य is **always lakh or crore**, cut off, trailing
   zeros trimmed, with the `₹`. ⚠ A 16,700-member pool at ₹300 renders **लक्ष्य ₹50.1 lakh**.
+
+
+---
+
+## 19. ✅ RULED — **BigDev, 2026-09-07: RETIRE `pariwar.manage_drive_target`.** ⭐ Scoped here; ⛔ built elsewhere
+
+⭐ §18.4's default (*retain-and-state*) is **overridden**. ⇒ the key is **RETIRED**.
+⛔ This section **scopes** the act and records what it collides with; ⛔ it does ⛔ **not** perform it —
+see §19.4.
+
+### 19.1 ⛔⛔ THE HOUSE MECHANISM IS ⛔ NOT REMOVAL — ⭐ and this key ⛔ cannot use it
+
+`permissions.ts:1130-1131`, verbatim:
+
+> ⛔ **DEPRECATED ≠ REMOVED.** A deprecated key stays in the catalog, stays enforceable, and its
+> existing grants stay honoured. Deprecation forbids only NEW grants. **Removal is a separate, later
+> catalog bump.**
+
+⇒ ⭐ removal **is** contemplated — ⛔ but it has **⛔ NEVER BEEN DONE**. `DEPRECATED_PERMISSION_KEYS`
+holds exactly one entry (`member.suspend`), and it **stayed**.
+⚠⛔ **AND `pariwar.manage_drive_target` ⛔ CANNOT BE DEPRECATED EITHER:** `:1150` —
+*"**Every deprecated key MUST name one**"* (a successor), enforced by the typed
+`DEPRECATED_KEY_SUCCESSOR` record. ⛔ This key has **no successor** — the figure now derives itself,
+⇒ ⛔ nothing replaces it. ⭐ Deprecating it would require changing the **mechanism**, ⛔ not just a list.
+⇒ ⭐⭐ **removal is the only fitting act, and it is the project's FIRST.**
+
+### 19.2 ✅ REMOVAL IS SAFE — ⭐ verified, ⛔ not assumed
+
+`check.ts:156-159`: *"**Unknown / malformed key → deny.** Only enumerated catalog keys can ever
+allow."* ⇒ ⭐ **fail-closed.** ⛔ A route left gating a removed key **denies**, ⛔ it does ⛔ not fail
+open. ⚠ Orphaned `role_grants` rows in a live DB become **inert** rather than dangerous — ⭐ a
+data-hygiene item, ⛔ not a security one.
+
+### 19.3 ⭐ THE COMPLETE SURFACE — ⛔ it is ⛔ not one line
+
+| Layer | Sites |
+|---|---|
+| Catalog | `permissions.ts:1054` (the entry) + its ~30-line doc-block · `:650` **`PERMISSION_CATALOG_VERSION`** |
+| Roles | `roles.ts:275` `PARIWAR_MANAGE_DRIVE_TARGET` + the `pariwar_admin` bundle grant |
+| Domain | `drive-target-policy.ts:111` `DRIVE_TARGET_PERMISSION_KEY` · `:278` · `:333` (the `hasPermission` gate) · `:343` · `setDriveTargetSchedule` itself |
+| API | `apps/api/src/modules/drive-target/handlers.ts` (**445 lines**) · `routes.ts` (**139**) — ⚠ the **visibility** half lives in the same module and **must survive** |
+| Admin | `DriveTargetForm.tsx` (**355**) · `DriveTargetRoute.tsx` (**46**) — ⚠ `RevealSwitchesForm.tsx` **must survive** |
+| Contracts | `contracts/src/drive-target/` target-write DTOs · `openapi/v1.yaml` |
+| Tests | `rbac/roles.test.ts:203,239` · `rbac/permissions.test.ts:54,78,87,90` · `pool/drive-target.test.ts:16,119,124` · `integration/drive-target/admin.spec.ts` · `integration/pool/drive-target*.spec.ts` |
+| Schema | `pariwar_drive_target_schedule` — ⚠ ⛔ **KEEP** (`-190` cl.4 precedent); ⛔ no migration, ⛔ no drop |
+
+⚠⛔⛔ **THE TRAP: `PERMISSION_CATALOG_VERSION` MUST BE COMPUTED LIVE, ⛔ NEVER TRANSCRIBED.**
+`permissions.test.ts:54` records the rule in its own words: *"**AND THE 41 IS COMPUTED, NOT
+TRANSCRIBED:** Story **6.18** bumps this **SAME** counter … what `-203` cl.2 rules is **+2 FROM THE
+LIVE VALUE** — whichever story lands second takes the next numbers."*
+⇒ ⭐ **6.18 is still `ready-for-dev` and unlanded.** ⛔ Do ⛔ not write `42`; ⭐ read the live value at
+the moment the retirement lands and take **+1** from it.
+
+### 19.4 ⏳ WHERE IT LANDS — ⛔ NOT in Story 11b.14
+
+⭐ Three reasons, ⛔ none of them reluctance:
+1. ⛔ **It un-ships part of a `done`, merged story** (11b.13) — ~1,000 lines across five packages.
+2. ⛔ **11b.14's own AC6 is *"Nothing else moves"***; ⭐ its scope is a **public read surface**, and
+   ⛔ deleting C's admin write half is ⛔ not that ([[feedback_spec_edits_must_propagate_to_tasks]]).
+3. ⚠ **It is the project's first key removal** and collides with 6.18's bump ⇒ ⭐ it wants its own
+   change with its own review, ⛔ not a subtask.
+
+⇒ ⭐ **Recorded as ruled; ⏳ awaiting BigDev's choice of vehicle** — a `correct-course` against 11b.13,
+or a new story keyed in `sprint-status.yaml` (⚠ a deferral naming an **epic** expires unowned —
+[[project_r7_fact_producer_unbuilt]]).
+⛔ **Meanwhile the §18.4 status-statement still applies** and is ⛔ not superseded by this ruling: the
+key and its substrate are **described as unconsumed**, and ⛔ **not** as a live control on any
+Trustee-facing material.

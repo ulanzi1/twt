@@ -51,6 +51,26 @@ interface SeedDriveSpec {
   canonicalIdentifier?: string;
   /** Story 11b.10 — pin the drive's PUBLIC ADDRESS token (default: a fresh unique one). */
   publicToken?: string;
+  /**
+   * ⭐⭐ Story 11b.14 (AC7(b)) — the NOMINEE's account-holder name, stored as a REAL Tier-1
+   * ciphertext so `handlers.ts`'s decrypt branch actually EXECUTES.
+   *
+   * ⚠⛔ **IT DID ⛔ NOT EXIST UNTIL THE 2026-09-07 REVIEW.** `SeedDriveSpec` carried ⛔ no nominee
+   * option at all, so every drive in this suite had `nomineeAccountHolderNameCiphertext === null`,
+   * the `if (… !== null)` branch was ⛔ NEVER entered, and the AC7(b) p95 below measured the
+   * **PRE-STORY** index while reporting itself as the post-story figure. ⛔ Leave this unset and
+   * the decrypt is ⛔ not exercised at the API level at all.
+   *
+   * ⭐ `null` (the default) is the 6.8 **AC3** ABSENCE SIGNAL: bank details were never collected.
+   * ⭐ `'\u0000invalid'` is ⛔ not special-cased here — pass {@link nomineeCiphertextCorrupt} to
+   * exercise the *"OMIT THE NAME, ⛔ KEEP THE ROW"* arm.
+   */
+  nomineeName?: string;
+  /**
+   * ⭐ Store an UNDECRYPTABLE ciphertext, to exercise the ruled failure posture: the row SURVIVES
+   * and ⛔ only the name is omitted (`handlers.ts` — *"OMIT THE NAME, KEEP THE ROW"*).
+   */
+  nomineeCiphertextCorrupt?: boolean;
 }
 
 /** Seed a Pariwar with drives, each with a real encrypted deceased-member name. */
@@ -126,6 +146,28 @@ async function seedDrives(
         ],
       );
       await scopeTx.client.query("SET LOCAL app.pool_state_writer = 'off'");
+
+      // ⭐⭐ THE NOMINEE'S BANK ROW — Story 11b.14 (AC7). ⛔ Seeded ONLY when asked, so the default
+      // shape (no bank details) stays the 6.8 AC3 absence signal every other test in this file
+      // relies on. ⭐ The holder name is a REAL Tier-1 ciphertext (or a deliberately corrupt one),
+      // so the handler's decrypt runs for real rather than being skipped by a null.
+      if (d.nomineeName !== undefined || d.nomineeCiphertextCorrupt === true) {
+        const holderCiphertext =
+          d.nomineeCiphertextCorrupt === true
+            ? 'not-a-valid-ciphertext'
+            : await encryption.encryptKycField(
+                d.nomineeName ?? 'Sunita Devi Sharma',
+                pariwarId,
+                t.deps.encryption,
+              );
+        await scopeTx.client.query(
+          `INSERT INTO claim_nominee_bank_accounts
+             (claim_case_id, pariwar_id, account_rank, account_holder_name_ciphertext,
+              account_number_ciphertext, ifsc_ciphertext, bank_name, branch)
+           VALUES ($1, $2, 1, $3, $4, $5, 'Test Bank', 'Test Branch')`,
+          [claimCaseId, pariwarId, holderCiphertext, 'ct-acct-1', 'ct-ifsc-1'],
+        );
+      }
 
       // ⭐⭐ THE CLOSE/SETTLE EVENT — ADDED AT STORY 11b.3, AND ITS ABSENCE WAS A REAL DEFECT.
       // ⚠⛔ These fixtures previously seeded pools with ⛔ NO `pool.closed` / `pool.settled` event at
@@ -1084,14 +1126,23 @@ describe.skipIf(!hasDatabase)(
     it('runs, RECORDS the figure, and stays under the loose ceiling', async () => {
       const t = await createTestApp();
       try {
-        // ⭐ TEN drives, each with a CONSENTED (⇒ decrypting) deceased-member name. That is the
-        // shape that costs: a row with no basis costs ZERO KMS calls by construction.
+        // ⭐ TEN drives, each with a CONSENTED (⇒ decrypting) deceased-member name AND a nominee
+        // name. That is the shape that costs: a row with no basis costs ZERO KMS calls by
+        // construction, and envelope encryption gives every value its OWN DEK ⇒ TWO decrypts a row.
+        //
+        // ⚠⛔⛔ **`nomineeName` WAS MISSING UNTIL THE 2026-09-07 REVIEW, AND ITS ABSENCE MADE THIS
+        // MEASUREMENT VACUOUS.** ⛔ `SeedDriveSpec` had no nominee option, so every seeded row's
+        // `nomineeAccountHolderNameCiphertext` was `null`, the handler's decrypt branch was
+        // ⛔ NEVER entered, and the recorded p95 described the **PRE-STORY** index — i.e. exactly
+        // the volume AC7(b) exists to measure the step-up FROM. ⭐ Ten drives now cost 20 decrypts,
+        // which is the shape the AC's *"50 → up to 100"* claim is about.
         const { pariwarId } = await seedDrives(
           t,
           Array.from({ length: 10 }, (_, i) => ({
             legalName: `Rajesh Kumar Sharma ${String(i)}`,
             district: 'Lucknow',
             authorised: true,
+            nomineeName: `Sunita Devi Sharma ${String(i)}`,
           })),
         );
 
@@ -1102,6 +1153,14 @@ describe.skipIf(!hasDatabase)(
           const elapsed = performance.now() - started;
           // ⭐ NON-VACUOUS: a 404 or an empty index would make every sample meaningless.
           expect(res.statusCode).toBe(200);
+          // ⛔⛔ AND ⛔ NON-VACUOUS IN THE WAY THAT ACTUALLY MATTERS HERE — ⭐ the DECRYPT RAN.
+          // ⚠ A 200 over ten rows whose nominee ciphertext is `null` is exactly what this test
+          // used to assert: green, and measuring the wrong thing (Review finding, 2026-09-07).
+          if (i === 0) {
+            const body = res.json() as { items: { nomineeName: string | null }[] };
+            expect(body.items.length).toBe(10);
+            expect(body.items.every((it) => it.nomineeName !== null)).toBe(true);
+          }
           if (i >= WARMUP) samples.push(elapsed);
         }
         const sorted = [...samples].sort((a, b) => a - b);
@@ -1120,3 +1179,63 @@ describe.skipIf(!hasDatabase)(
     });
   },
 );
+
+// ⭐⭐ THE DECRYPT PATH ITSELF — Story 11b.14 AC7. ⚠⛔ Until the 2026-09-07 review ⛔ NO API-level
+// test exercised it: `nomineeName` appeared in the exact-key-set assertion ⛔ ONLY as a `null`, so
+// neither the happy path nor the loudly-documented failure posture was ever executed here.
+describe('⭐⭐ AC7 — the nominee name reaches the wire, and a bad ciphertext ⛔ does NOT take the row', () => {
+  it('⭐ a real Tier-1 ciphertext is DECRYPTED onto the public row', async () => {
+    const t = await createTestApp();
+    try {
+      const { pariwarId } = await seedDrives(t, [
+        { legalName: 'Rajesh Kumar Sharma', district: 'Lucknow', nomineeName: 'Sunita Devi Sharma' },
+      ]);
+      const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId) });
+      expect(res.statusCode).toBe(200);
+      const body = res.json() as { items: { nomineeName: string | null }[] };
+      expect(body.items[0]?.nomineeName).toBe('Sunita Devi Sharma');
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('⛔ a drive with ⛔ NO bank details carries `nomineeName: null` — ⭐ the 6.8 AC3 absence signal', async () => {
+    const t = await createTestApp();
+    try {
+      const { pariwarId } = await seedDrives(t, [
+        { legalName: 'Rajesh Kumar Sharma', district: 'Lucknow' },
+      ]);
+      const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId) });
+      const body = res.json() as { items: { nomineeName: string | null }[] };
+      expect(body.items[0]?.nomineeName).toBeNull();
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('⛔⛔ AN UNDECRYPTABLE CIPHERTEXT OMITS THE NAME AND ⭐ KEEPS THE ROW — ⛔ never a 500', async () => {
+    const t = await createTestApp();
+    try {
+      const { pariwarId } = await seedDrives(t, [
+        {
+          legalName: 'Rajesh Kumar Sharma',
+          district: 'Lucknow',
+          canonicalIdentifier: 'P-2026-08-777',
+          nomineeCiphertextCorrupt: true,
+        },
+      ]);
+      const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId) });
+      // ⭐⭐ THE WHOLE POINT: the page SERVES. A list-shaped surface must ⛔ not lose every drive
+      // because one nominee's ciphertext is unreadable (`handlers.ts` — the copied posture).
+      expect(res.statusCode).toBe(200);
+      const body = res.json() as {
+        items: { poolCanonicalIdentifier: string; nomineeName: string | null }[];
+      };
+      const row = body.items.find((it) => it.poolCanonicalIdentifier === 'P-2026-08-777');
+      expect(row).toBeDefined();
+      expect(row?.nomineeName).toBeNull();
+    } finally {
+      await teardown(t);
+    }
+  });
+});

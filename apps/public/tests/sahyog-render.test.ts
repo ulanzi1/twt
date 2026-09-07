@@ -14,6 +14,8 @@ import { describe, expect, it } from 'vitest';
 import {
   buildSahyogRejectionView,
   buildSahyogView,
+  formatSahyogLiveAmount,
+  formatSahyogTargetAmount,
   splitSections,
   visibleSahyogColumns,
   type SahyogLabels,
@@ -585,5 +587,71 @@ describe('column visibility — the `<th>`/`<td>` pair is suppressed TOGETHER', 
     for (const col of visibleSahyogColumns(labels, allVisible)) {
       expect(declared.has(col.fieldId)).toBe(true);
     }
+  });
+});
+
+// ⭐⭐ `2026-09-07-206` cl.3 — लक्ष्य IS EXACT BELOW ₹1 LAKH.
+describe('⭐⭐ `2026-09-07-206` cl.3 — the target below ₹1 lakh', () => {
+  it('⛔⛔ ⛔ NEVER renders `₹ 0 lakh` — ⭐ the string AC2 forbids, reached by the number form', () => {
+    // ⚠ ₹300 is ⛔ not hypothetical: it is 3 assignees × a ₹100 `fixed_amount`, which is exactly
+    // what the story's own API fixture produces (Review finding, 2026-09-07).
+    expect(formatSahyogTargetAmount(300, 'en')).toBe('₹ 300');
+    expect(formatSahyogTargetAmount(800, 'en')).toBe('₹ 800');
+    expect(formatSahyogTargetAmount(15_000, 'en')).toBe('₹ 15,000');
+    expect(formatSahyogTargetAmount(99_999, 'en')).toBe('₹ 99,999');
+  });
+
+  it('⭐ the lakh/crore form resumes EXACTLY at ₹1,00,000 — ⛔ §13.5 is narrowed, ⛔ not reversed', () => {
+    expect(formatSahyogTargetAmount(100_000, 'en')).toBe('₹ 1 lakh');
+    // ⭐ §13.5's own worked example, ⛔ undisturbed.
+    expect(formatSahyogTargetAmount(800_000, 'en')).toBe('₹ 8 lakh');
+    expect(formatSahyogTargetAmount(10_000_000, 'en')).toBe('₹ 1 crore');
+  });
+
+  it('⭐ the sub-lakh form takes LATIN digits in Hindi too — amendment-A2, money is OPERATIONAL', () => {
+    // ⛔ ⛔ NOT the Devanagari arm: `₹ ३००` would be the ceremonial-prose form.
+    expect(formatSahyogTargetAmount(300, 'hi')).toBe('₹ 300');
+    // ⭐ And above the boundary the Hindi WORD returns, with Latin digits.
+    expect(formatSahyogTargetAmount(800_000, 'hi')).toBe('₹ 8 लाख');
+  });
+
+  it('⛔⛔ the PROPERTY — ⛔ no reachable target renders a zero-valued word form', () => {
+    for (let v = 1; v <= 200_000; v += 97) {
+      expect(formatSahyogTargetAmount(v, 'en')).not.toMatch(/^₹ 0(\.\d+)? (lakh|crore)$/);
+      expect(formatSahyogTargetAmount(v, 'hi')).not.toMatch(/^₹ 0(\.\d+)? (लाख|करोड़)$/);
+    }
+  });
+});
+
+// ⭐⭐ THE ₹10-LAKH CUT-OFF — pinned by ⛔ NOTHING until the 2026-09-07 review. Its doc-block insists
+// *"THE TEST IS `>=`, ⛔ NOT `>` — the later wording moved the boundary"*, and flipping it was a
+// GREEN build.
+describe('⭐⭐ the contributed amount: the ruled ₹10-lakh cut-off', () => {
+  it('⛔⛔ the boundary is `>=`, ⛔ NOT `>` — ⭐ ₹10,00,000 EXACTLY takes the short form', () => {
+    expect(formatSahyogLiveAmount(1_000_000, 'en', 'live')).toBe('₹ 10 lakh');
+    // ⭐ ONE RUPEE BELOW takes the exact form. ⇒ flipping `>=` to `>` fails HERE.
+    expect(formatSahyogLiveAmount(999_999, 'en', 'live')).toBe('₹ 9,99,999');
+  });
+
+  it('⭐ it TRUNCATES, ⛔ never rounds up — the figure may ⛔ not overstate a contribution', () => {
+    expect(formatSahyogLiveAmount(1_945_999, 'en', 'live')).toBe('₹ 19.45 lakh');
+  });
+
+  it('⛔⛔ the cut-off is LIVE-ROW ONLY — ⭐ a closed row is EXACT at every size', () => {
+    // ⚠ Two money forms on one page is deliberate: closed rows exact, live rows short.
+    expect(formatSahyogLiveAmount(1_945_999, 'en', 'closed')).toBe('₹ 19,45,999');
+    expect(formatSahyogLiveAmount(1_945_999, 'en', 'verified')).toBe('₹ 19,45,999');
+  });
+
+  it('⭐ a closed row takes LATIN digits even in Hindi — amendment-A2', () => {
+    expect(formatSahyogLiveAmount(1_945_999, 'hi', 'closed')).toBe('₹ 19,45,999');
+    // ⭐ AND THE LIVE ROW TAKES THE HINDI WORD with Latin digits.
+    expect(formatSahyogLiveAmount(1_945_999, 'hi', 'live')).toBe('₹ 19.45 लाख');
+  });
+
+  it('⚠⛔ the target and the contributed amount DIVERGE below ₹10 lakh — ⭐ and that is the ruling', () => {
+    // ⛔ Do ⛔ not "align" these two: §13.5 says the divergence is deliberate.
+    expect(formatSahyogLiveAmount(800_000, 'en', 'live')).toBe('₹ 8,00,000');
+    expect(formatSahyogTargetAmount(800_000, 'en')).toBe('₹ 8 lakh');
   });
 });

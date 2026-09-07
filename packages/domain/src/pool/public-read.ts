@@ -601,7 +601,16 @@ export function driveConfirmedPercentage(
   assignedCount: number,
 ): number {
   if (assignedCount <= 0) return 0;
-  return Math.min(100, Math.round((confirmedContributionCount / assignedCount) * 100));
+  // ⚠⛔⛔ **`Math.floor`, ⛔ NOT `Math.round` — ⭐ THE BAR MUST ⛔ NEVER OVERSTATE.** `Math.round`
+  // reached **100** from 99.5%: 199 of 200 confirmed painted a **visually complete** bar and put
+  // `100` on the wire for a drive still collecting, beside the ruled *"and counting"* sentence
+  // (Review finding, 2026-09-07). ⭐ It is the same posture `formatCurrencyShort` is ruled to take
+  // for the money figure — *"the figure must ⛔ never overstate what has been contributed"* — and
+  // ⛔ the two must ⛔ not disagree on one row.
+  // ⭐ 100 therefore means **COMPLETE**, ⛔ nothing else: it is reachable ⛔ only when every assigned
+  // contribution is confirmed. ⚠ `Math.min` still clamps the two-subquery race the block above
+  // describes; ⛔ it is ⛔ not the thing that produces 100 on a full drive.
+  return Math.min(100, Math.floor((confirmedContributionCount / assignedCount) * 100));
 }
 
 /**
@@ -635,6 +644,13 @@ export function resolveDriveTargetForPublic(
 ): number | null {
   if (!visibility.revealToPublic) return null;
   if (assignedCount <= 0) return null;
+  // ⚠⛔ **AND A NON-POSITIVE `fixed_amount` IS SILENCE TOO — ⛔ NOT `0`.** `pools.fixed_amount`
+  // carries ⛔ no positivity CHECK (migration 0115 says so in terms), so a `0` there produced a
+  // `driveTargetInr` of `0`, which the handler then spread onto the entry (`0 !== null`) — and the
+  // contract is `z.number().int().positive().optional()` ⇒ **the response failed validation and
+  // 500'd the route** (Review finding, 2026-09-07). ⭐ The guard is the SAME silence AC2 already
+  // rules for a zero-assignee pool; ⛔ it is ⛔ not a new posture.
+  if (fixedAmount <= 0) return null;
   return assignedCount * fixedAmount;
 }
 
@@ -1025,7 +1041,18 @@ export async function listPublicSahyogDrivePools(
       confirmedPercentage: driveConfirmedPercentage(confirmedContributionCount, assignedCount),
       // ⭐ लक्ष्य, gated. ⛔ `null` for every Pariwar until a `super_admin` reveals it, and `null`
       // for a zero-assignee pool even then.
-      driveTargetInr: resolveDriveTargetForPublic(assignedCount, r.fixedAmount, targetVisibility),
+      //
+      // ⚠⛔⛔ **AND GATED ON THE STAGE TOO — ⭐ LIVE ROWS ONLY** (Review finding, 2026-09-07).
+      // ⭐ Its ruled slot is *"right of the progress bar, on a LIVE row"* (`2026-09-07-204` cl.2),
+      // and the renderer already gates on `status === 'live'` — ⛔ but the SERVER did not, so with
+      // a Pariwar revealed the figure sat in the **JSON payload of every closed and verified row**:
+      // ⛔ invisible in HTML, ⭐ present to anyone reading the API. ⚠ ⛔ Contained until now only
+      // because the switch is default-OFF everywhere, ⛔ which is ⛔ not a gate.
+      // ⇒ ⭐ the wire now matches the ruled slot, and the render gate stops being the only one.
+      driveTargetInr:
+        r.currentState === 'live'
+          ? resolveDriveTargetForPublic(assignedCount, r.fixedAmount, targetVisibility)
+          : null,
       // ⚠⛔⛔ **THE QUARANTINE BELOW IS SUPERSEDED, AND IT IS NAMED RATHER THAN DELETED**
       // ([[feedback_supersede_never_reinterpret]]). It read:
       //
@@ -1037,8 +1064,13 @@ export async function listPublicSahyogDrivePools(
       //
       // ⭐⭐ **BOTH TOTALS NOW CROSS, BY RULING, AND EACH UNDER ITS OWN NAME** (Story 11b.14):
       //  · `expectedTotal` (`assignedCount × fixedAmount`) is **लक्ष्य** — `2026-09-07-204` cl.2,
-      //    ⛔ gated on the `super_admin` public reveal and `null` by default, and ⛔ it does ⛔ not
-      //    reach a response body (see {@link SahyogDriveEntry.driveTargetInr}).
+      //    ⛔ gated on the `super_admin` public reveal and `null` by default.
+      //    ⚠⛔ **THE PRIOR TEXT OF THIS BULLET WAS FALSE AND IS AMENDED, ⛔ NOT DELETED:** it read
+      //    *"⛔ and it does ⛔ not reach a response body"*. ⭐ It DOES — as `driveTargetInr`, which
+      //    `apps/api/.../handlers.ts` spreads onto the entry whenever it is non-null. ⭐ That is
+      //    RULED and correct; ⛔ what was wrong was this sentence, a leftover of the mid-build
+      //    correction that fixed the field's own doc-block and missed this line (Review finding,
+      //    2026-09-07). ⇒ ⭐ the real quarantine is stated in the paragraph below, ⛔ not here.
       //  · `deliveredTotal` (`confirmedContributionCount × fixedAmount`) is the ruled public
       //    **amount** — `2026-09-04-190` cl.6, with `-189` cl.5 recording the rupee boundary as
       //    NEWLY CROSSED.

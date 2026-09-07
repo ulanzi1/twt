@@ -146,7 +146,19 @@ describe('⭐ the THREE-WAY partition (Task 2, artefact 5)', () => {
       },
     );
     const { live, active, archive } = splitSections(view);
-    expect(live.length + active.length + archive.length).toBe(3);
+    // ⚠⛔ **STRENGTHENED 2026-09-07 — ⭐ the PRIOR assertion was a SUM:**
+    //   > `expect(live.length + active.length + archive.length).toBe(3);`
+    // ⛔ A row duplicated into two sections while another vanished still sums to 3 — ⭐ and
+    // duplication under contradictory headings is the ⛔ EXACT defect this test claims to pin.
+    // ⇒ assert MEMBERSHIP by `publicToken` ([[project_live_db_test_gotchas]]).
+    // ⚠ The DISPLAY row carries `poolCanonicalIdentifier`, ⛔ not the wire's `publicToken` (which
+    // survives only inside `driveHref`) — ⭐ and the fixture gives the three stages distinct ones.
+    expect(live.map((r) => r.poolCanonicalIdentifier)).toEqual(['P-2026-08-004']);
+    expect(active.map((r) => r.poolCanonicalIdentifier)).toEqual(['P-2026-08-006']);
+    expect(archive.map((r) => r.poolCanonicalIdentifier)).toEqual(['P-2026-08-008']);
+    // ⛔ AND ⛔ NO ROW APPEARS TWICE ACROSS THE THREE SECTIONS.
+    const all = [...live, ...active, ...archive].map((r) => r.poolCanonicalIdentifier);
+    expect(new Set(all).size).toBe(all.length);
   });
 });
 
@@ -231,8 +243,24 @@ describe('⭐ Trap 4 — the LIVE table drops the two columns that have no meani
   it('⛔ the header and the cells are dropped TOGETHER — ⛔ never a blank column under a label', () => {
     // ⭐ The same discipline `visibleSahyogColumns` applies to a matrix suppression: one column
     // object carries BOTH the `<th>` label and the `<td>` accessor, so they cannot diverge.
-    for (const col of visibleSahyogColumns(labels, () => true, 'live')) {
+    // ⚠⛔ **STRENGTHENED 2026-09-07 — ⭐ the PRIOR body asserted the HEADER ALONE:**
+    //   > `for (const col of …) expect(col.headerLabel).toBeTruthy();`
+    // ⛔ It ⛔ never touched `valueOf`, so it would have passed unchanged if the cells and the
+    // headers HAD diverged — ⛔ i.e. it could not fail for the reason its name gives.
+    const liveCols = visibleSahyogColumns(labels, () => true, 'live');
+    const closedCols = visibleSahyogColumns(labels, () => true, 'closed');
+    for (const col of liveCols) {
       expect(col.headerLabel).toBeTruthy();
+      // ⭐ THE PAIRING: a header present means an accessor present, on the SAME object.
+      expect(typeof col.valueOf).toBe('function');
+    }
+    // ⭐⭐ AND THE DROP IS PROVEN AGAINST THE OTHER STAGE, ⛔ not asserted in the abstract: the
+    // three ids the live filter removes must be absent from BOTH the labels and the accessors.
+    const liveIds = liveCols.map((c) => c.fieldId);
+    const closedIds = closedCols.map((c) => c.fieldId);
+    for (const dropped of ['drive_closed_at', 'close_of_cycle_framing', 'drive_index_line']) {
+      expect(closedIds).toContain(dropped);
+      expect(liveIds).not.toContain(dropped);
     }
   });
 });
@@ -315,5 +343,58 @@ describe('⭐⭐ `2026-09-07-206` cl.4 — a live drive with ⛔ NO confirmed co
       total: 1,
     });
     expect(splitSections(view).live[0]!.driveParticipationLine).toMatch(/and counting/);
+  });
+});
+
+// ⭐⭐ `2026-09-07-206` cl.1 — THE BAR PRINTS ITS OWN FIGURE.
+describe('⭐⭐ `2026-09-07-206` cl.1 — the printed percentage', () => {
+  const meterCol = () => {
+    const cols = visibleSahyogColumns(labels, () => true, 'live');
+    const c = cols.find((x) => x.meter !== undefined);
+    if (c?.meter === undefined) throw new Error('the live column set must carry exactly one meter');
+    return c.meter;
+  };
+
+  it('⭐ renders the figure as TEXT — `82%`', () => {
+    expect(meterCol().percentLabelOf({ driveProgressPercentage: 82 } as never)).toBe('82%');
+  });
+
+  it('⭐ 0% and 100% are printed, ⛔ not suppressed — both are real states of a live drive', () => {
+    expect(meterCol().percentLabelOf({ driveProgressPercentage: 0 } as never)).toBe('0%');
+    expect(meterCol().percentLabelOf({ driveProgressPercentage: 100 } as never)).toBe('100%');
+  });
+
+  it('⛔ a row with NO bar prints NO figure', () => {
+    expect(meterCol().percentLabelOf({ driveProgressPercentage: null } as never)).toBeNull();
+  });
+
+  it('⛔⛔ it is governed by its OWN matrix field id — ⭐ `drive_progress_percentage` finally has a consumer', () => {
+    expect(meterCol().percentFieldId).toBe('drive_progress_percentage');
+    // ⛔ ⛔ AND IT IS ⛔ NOT the sentence's id: riding that verdict is what made the field inert.
+    const cols = visibleSahyogColumns(labels, () => true, 'live');
+    const c = cols.find((x) => x.meter !== undefined);
+    expect(meterCol().percentFieldId).not.toBe(c?.fieldId);
+  });
+
+  it('⛔⛔ the page ASKS the matrix about it — ⛔ a suppressed verdict must suppress the figure', () => {
+    const src = readFileSync(ASTRO, 'utf8');
+    // ⭐ THE PROPERTY the review found missing: before cl.1 there was ⛔ ZERO `visibilityOf` call
+    // naming this field, so flipping its tier suppressed nothing and the leak gate stayed green.
+    expect(src).toMatch(/visibilityOf\(\s*'sahyog-drive',\s*col\.meter\.percentFieldId/);
+  });
+
+  it('⛔ printing the figure mints ⛔ NO ARIA — ⭐ `-204` cl.5 is NARROWED, ⛔ not reversed', () => {
+    // ⚠ The `aria-hidden` bar and the un-resolved `{confirmed} of {total}` keys are asserted by the
+    // suite above; ⛔ this one guards the NEW surface cl.1 adds — that the printed figure is plain
+    // text and ⛔ does ⛔ not smuggle back a `progressbar` role or a value the refused label carried.
+    const src = readFileSync(ASTRO, 'utf8');
+    expect(src).not.toMatch(/role="progressbar"|aria-valuenow|aria-valuemax|aria-valuetext/);
+  });
+
+  it('⛔⛔ the fill guard is `typeof === number` — ⭐ an `undefined` fill must NOT paint a full bar', () => {
+    const src = readFileSync(ASTRO, 'utf8');
+    // ⚠ `!== null` let `undefined` through into `--sahyog-meter-fill:undefined%`, which is invalid
+    // at computed-value time ⇒ `width` fell back to `auto` = a FULL bar (Review finding).
+    expect(src).toMatch(/typeof col\.meter\.fillOf\(row\) === 'number'/);
   });
 });

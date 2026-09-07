@@ -167,3 +167,60 @@ describe('/sahyog copy resolves through the REAL t() — both locales', () => {
     });
   }
 });
+
+// ⭐⭐ THE `sahyog-shared` KEYS `/sahyog` RESOLVES ON EVERY LIVE ROW — through the REAL `t()`.
+//
+// ⚠⛔⛔ **UNTESTED UNTIL THE 2026-09-07 REVIEW.** This file enumerates the `sahyog-drive` namespace
+// only, and the i18n dark-copy suite covers `index_line.*` only ⇒ `live_line`, `drive_target` and
+// the zero-state pair — ⛔ every one of them resolved on a LIVE row — had ⛔ NO test that resolved
+// them with their params. ⭐ That is precisely the defect class this file's own header
+// memorialises: the `{{max}}` vs `{max}` token that made `/members` throw on EVERY request at
+// 11a.2, green through a labels fixture that bypassed `t()`.
+// ⛔ `t()` THROWS on an unsupplied or misnamed token ⇒ a typo here is a 500, ⛔ not a blank.
+describe('⭐⭐ the sahyog-shared LIVE-ROW keys resolve through the REAL t() — both locales', () => {
+  const LOCALES: Locale[] = ['en', 'hi'];
+
+  for (const locale of LOCALES) {
+    it(`${locale}: \`live_line\` resolves with BOTH its tokens`, () => {
+      const out = t(
+        'live_line',
+        { amount: '₹ 19.45 lakh', count: '19,456' },
+        { locale, namespace: 'sahyog-shared' },
+      );
+      expect(out.length).toBeGreaterThan(0);
+      // ⛔ ⛔ NO UNRESOLVED TOKEN SURVIVES — the failure this whole file exists to catch.
+      expect(out).not.toMatch(/\{|\}/);
+      expect(out).toContain('19,456');
+      expect(out).toContain('₹ 19.45 lakh');
+    });
+
+    it(`${locale}: \`drive_target\` resolves with its token`, () => {
+      const out = t('drive_target', { amount: '₹ 24.32 lakh' }, { locale, namespace: 'sahyog-shared' });
+      expect(out).not.toMatch(/\{|\}/);
+      expect(out).toContain('₹ 24.32 lakh');
+    });
+
+    it(`${locale}: the ZERO-STATE pair resolves — ⭐ BOTH variants (\`2026-09-07-206\` cl.4)`, () => {
+      const full = t(
+        'zero_line.full',
+        { family_name: 'Ram Prakash Verma' },
+        { locale, namespace: 'sahyog-shared' },
+      );
+      expect(full).not.toMatch(/\{|\}/);
+      expect(full).toContain('Ram Prakash Verma');
+
+      // ⛔⛔ THE NO-NAME ARM TAKES ⛔ NO PARAMS — ⭐ and that is what stops the 500: `t()` throws on
+      // an unsupplied token, so a family whose name may not be published MUST have a variant that
+      // asks for nothing.
+      const noFamily = t('zero_line.no_family', undefined, { locale, namespace: 'sahyog-shared' });
+      expect(noFamily.length).toBeGreaterThan(0);
+      expect(noFamily).not.toMatch(/\{|\}/);
+      expect(noFamily).not.toContain('Ram Prakash Verma');
+    });
+
+    it(`${locale}: ⛔ resolving \`zero_line.full\` WITHOUT its token THROWS — ⛔ it does not blank`, () => {
+      // ⭐ The property the variant split exists for, asserted rather than assumed.
+      expect(() => t('zero_line.full', undefined, { locale, namespace: 'sahyog-shared' })).toThrow();
+    });
+  }
+});

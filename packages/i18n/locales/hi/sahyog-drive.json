@@ -2,6 +2,8 @@
   "$comment": "⭐ THE THREE STAGE NAMES AND THEIR EXPLANATIONS LIVE IN `sahyog-shared.json`, and ⛔ nowhere else (`2026-09-04-193` cl.3, Story 11b.12 AC4). ⛔ Do NOT re-add a stage name or a stage explanation to this file — two sources is exactly how 'Active' came to mean two different things.",
   "page.title": "सहयोग अभियान",
   "page.intro": "वे सभी अभियान जिनके योगदान पूरे हो चुके हैं, प्राप्त के रूप में पुष्ट योगदानों की संख्या सहित। जिन अभियानों के योगदान पूरे हो चुके हैं वे बंद में हैं; जिनके हर योगदान का बैंक रिकॉर्ड से मिलान हो चुका है वे सत्यापित में हैं। जो अभियान अभी जारी हैं वे यहाँ सूचीबद्ध नहीं हैं।",
+  "section.live.title": "{stage} अभियान",
+  "table.caption.live": "{stage} अभियान — प्रत्येक अभियान के लिए एक पंक्ति; स्तंभ नीचे शीर्ष पंक्ति में दिए गए हैं",
   "section.active.title": "बंद अभियान",
   "section.archive.title": "सत्यापित अभियान",
   "table.caption.active": "बंद अभियान — प्रत्येक अभियान के लिए एक पंक्ति; स्तंभ नीचे शीर्ष पंक्ति में दिए गए हैं",

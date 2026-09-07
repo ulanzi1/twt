@@ -70,7 +70,7 @@ describe('⭐ the drive link is a REAL anchor with an accessible name (AC3, fami
     expect(PAGE).not.toMatch(/driveLinkA11y[\s\S]{0,200}deceasedMemberName/);
   });
 
-  it('⛔ the value STILL goes through <MatrixField> inside the anchor — in ⭐ BOTH tables', () => {
+  it('⛔ the value STILL goes through <MatrixField> inside the anchor — in ⭐ ALL THREE tables', () => {
     // ⭐ `getVisibility()` must remain the ONLY thing deciding what appears. Wrapping the cell in an
     // anchor must ⛔ not become an excuse to interpolate the value directly — the house rule this
     // page's own header states in terms.
@@ -85,9 +85,20 @@ describe('⭐ the drive link is a REAL anchor with an accessible name (AC3, fami
     for (let i = PAGE.indexOf(ANCHOR); i !== -1; i = PAGE.indexOf(ANCHOR, i + 1)) {
       blocks.push(PAGE.slice(i, i + 400));
     }
-    // ⛔ Pinned: the page has TWO drive tables. If a third is added, this fails and its author must
-    // decide deliberately whether the new one carries the same accessible anchor.
-    expect(blocks).toHaveLength(2);
+    // ⛔ Pinned: the page has THREE drive tables. If a fourth is added, this fails and its author
+    // must decide deliberately whether the new one carries the same accessible anchor.
+    //
+    // ⚠⛔⛔ **AMENDED 2026-09-07 (Story 11b.14, AC1) — THE GATE FIRED, AND THE DECISION IT FORCED IS
+    // RECORDED HERE RATHER THAN JUST ABSORBED.** It read `toHaveLength(2)` with *"the page has TWO
+    // drive tables. If a third is added, this fails and its author must decide deliberately whether
+    // the new one carries the same accessible anchor."* ⇒ ⭐ **the third — the LIVE section — was
+    // added, this failed, and the decision is: YES, identically.** ⭐ Ground: the accessible anchor
+    // is what makes N links announce N DISTINCT destinations instead of N identical ones (family
+    // 13); a live drive is the row a visitor is MOST likely to open, so a section that dropped it
+    // would put the weakest affordance on the strongest reason to click. ⛔ Widening the number
+    // without the loop below would have been the un-deliberate move; the loop is what proves the
+    // new table carries the same three properties, ⛔ not merely that a third exists.
+    expect(blocks).toHaveLength(3);
     for (const block of blocks) {
       expect(block).toContain('<MatrixField');
       expect(block).toContain('surface="sahyog-drive"');

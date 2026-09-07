@@ -94,16 +94,41 @@ import { pools } from '../schema/pools.js';
  * ⚠⛔ **AND `settled` HAS ⛔ NO PRODUCER IN PRODUCTION** — see `DRIVE_MASKING_FROM`'s rider below.
  * ⇒ it is ⛔ excluded from the public index until settlement ships (`-192` cl.2).
  *
- * ⛔ `spawned` and `live` are ABSENT deliberately: a drive still collecting is not a
- * transparency record, it is an open solicitation, and publishing it would invite exactly the
- * "who has given so far" reading this surface exists to refuse. ⛔ Widening this tuple is a
- * ruling change, not a tuning knob.
+ * ⚠⛔⛔ **AMENDED 2026-09-07 (Story 11b.14, AC1) — `live` IS NOW LISTED. ⭐ The prior clause is
+ * NAMED, ⛔ never deleted ([[feedback_supersede_never_reinterpret]]).** It read:
+ *
+ * > *"⛔ `spawned` and `live` are ABSENT deliberately: a drive still collecting is not a
+ * > transparency record, it is an open solicitation, and publishing it would invite exactly the
+ * > 'who has given so far' reading this surface exists to refuse. ⛔ Widening this tuple is a
+ * > ruling change, not a tuning knob."*
+ *
+ * ⭐⭐ **THE LAST SENTENCE WAS RIGHT, AND THE RULING CAME.** `2026-09-04-189` **cl.2** —
+ * *"(Q2) — **YES: A COLLECTING DRIVE IS LISTED**"* (Trustee-ratified) — and behind it **FR-76**,
+ * *"Sahyog Drive — Active + Archive. **Active page near-real-time during live alert**"*, a standing,
+ * un-superseded requirement since the PRD that was cited in ⛔ **ZERO** implementation records until
+ * `2026-09-04-187` found it. ⇒ the exclusion rested on an **AC parenthetical and this comment**,
+ * ⛔ never on a ruling. ⭐ Recorded at `2026-09-07-204`.
+ *
+ * ⛔⛔ **`spawned` REMAINS A PURE DENY** — a pool that never opened has no drive to publish, and it
+ * has ⛔ no public word at all (see the map below, which is what proves it).
+ *
+ * ⚠⛔ **AND WIDENING THIS TUPLE IS ⛔ NOT ONE EDIT — IT IS FIVE, ⛔ TWO OF WHICH FAIL SILENTLY**
+ * (Story 11b.14, Trap 6): this constant · `PublicSahyogDriveStatus` (`packages/contracts`) ·
+ * `PUBLIC_STATUS_BY_POOL_STATE` below (⭐ where the compile break is the gate **working**) ·
+ * `apps/public/src/lib/sahyog.server.ts`'s hand-typed literal-set guard (⛔ invisible to the
+ * typecheck; miss it and `/sahyog` serves its **OUTAGE** page to everyone) · and
+ * `sahyog-render.ts`'s section partition + label ternary (⛔ miss it and every live drive renders
+ * under *"Closed drives"*, labelled *"Closed"*).
  */
-export const SAHYOG_DRIVE_VISIBLE_POOL_STATES = ['closed', 'settled'] as const;
+export const SAHYOG_DRIVE_VISIBLE_POOL_STATES = ['live', 'closed', 'settled'] as const;
 export type SahyogDriveVisiblePoolState = (typeof SAHYOG_DRIVE_VISIBLE_POOL_STATES)[number];
 
 /**
- * The two-label PUBLIC vocabulary — **Closed · Verified**.
+ * The PUBLIC vocabulary — **Live · Closed · Verified**.
+ *
+ * ⚠ **AMENDED 2026-09-07 (Story 11b.14, AC1):** it was *"The two-label PUBLIC vocabulary —
+ * **Closed · Verified**"*. ⭐ `live` joins it because `-189` cl.2 lists a collecting drive; ⭐ the
+ * word itself is story B's (`-190` cl.5 / `-191` cl.3 / `-193` cl.1), ⛔ not minted here.
  *
  * ⛔⛔ THE PREVIOUS RULE HERE IS SUPERSEDED, AND IT IS NAMED RATHER THAN OVERWRITTEN
  * ([[feedback_supersede_never_reinterpret]]). It read: *"⛔ **THE WIRE TOKEN IS NEVER THE INTERNAL
@@ -120,24 +145,38 @@ export type SahyogDriveVisiblePoolState = (typeof SAHYOG_DRIVE_VISIBLE_POOL_STAT
  * deny-list. ⚠⛔ ⛔ Do ⛔ NOT "fix" the overlap by reverting the wire — read D1(b) first.
  * ⚠ `spawned` remains a **PURE DENY** — see the map below, which is what proves it.
  */
-export const SAHYOG_DRIVE_STATUSES = ['closed', 'verified'] as const;
+export const SAHYOG_DRIVE_STATUSES = ['live', 'closed', 'verified'] as const;
 export type SahyogDriveStatus = (typeof SAHYOG_DRIVE_STATUSES)[number];
 
 /**
  * ⛔⛔ THIS MAP IS **NOT** A NO-OP, AND ⛔ IT MAY NOT BE DELETED — read this before "simplifying" it.
  *
  * ⚠ After Story 11b.12 it is **PART-IDENTITY**: `closed → 'closed'` maps a state to itself, and only
- * `settled → 'verified'` does not. ⇒ it now *looks* redundant, and deleting it would silently
- * **re-fuse the internal state to the wire token** and lose the boundary it exists to hold.
+ * `settled → 'verified'` does not. ⚠ Story 11b.14 makes that **TWO** of three (`live → 'live'` too)
+ * ⇒ it looks redundant **harder**, and deleting it would silently **re-fuse the internal state to
+ * the wire token** and lose the boundary it exists to hold.
  *
  * ⭐ `spawned` is the proof it is load-bearing: an internal pool state with ⛔ **no public token at
  * all**. The map is a TOTAL function on `SahyogDriveVisiblePoolState` precisely so that widening the
  * visible set without minting a public word fails to compile.
+ * ⭐⭐ **AND THAT IS EXACTLY WHAT HAPPENED AT 11b.14** — admitting `live` above broke this line until
+ * the word was minted. ⛔ That compile break is the gate **WORKING**, ⛔ not an obstacle to route
+ * around.
  */
 const PUBLIC_STATUS_BY_POOL_STATE: Record<SahyogDriveVisiblePoolState, SahyogDriveStatus> = {
+  live: 'live',
   closed: 'closed',
   settled: 'verified',
 };
+
+/**
+ * ⭐ The map's ⛔ ONLY reader outside this module — exported so the totality property can be
+ * asserted from a test without exporting the map itself (which would invite a call site that
+ * indexes it with an unchecked string).
+ */
+export function publicStatusForPoolState(state: SahyogDriveVisiblePoolState): SahyogDriveStatus {
+  return PUBLIC_STATUS_BY_POOL_STATE[state];
+}
 
 /** The event types whose `occurred_at` IS the drive's close/settle instant. */
 const POOL_CLOSED_EVENT_TYPE = 'pool.closed' as const;

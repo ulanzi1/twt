@@ -20,21 +20,29 @@ describe('the visible-drive predicate (D4(b), `2026-09-02-176`)', () => {
     expect([...SAHYOG_VIVRAN_VISIBLE_POOL_STATES]).toEqual(['live', 'closed', 'settled']);
   });
 
-  it('⭐⛔ is STRICTLY WIDER than the INDEX’s, and ⛔ is not the same array', () => {
-    // ⛔ TWO SURFACES, TWO PREDICATES, DELIBERATELY. The index refuses a drive that is still
-    // collecting — that is an open solicitation, not a transparency record. This per-claim page
-    // admits it because Story 11b.3a's entire subject is the ACTIVE campaign, and widening the
-    // predicate in the story that ADDS the Tier-1 bank fields would have been the worse ordering.
-    // ⚠ THE NEGATIVE HALF IS THE POINT: if a future edit "unified" the two by importing the index's
-    // constant here, this fails — which is the whole reason the tuple is declared locally.
+  it('⭐⛔ COVERS the index’s predicate, and ⛔ is not the same array', () => {
+    // ⛔ TWO SURFACES, TWO PREDICATES, DELIBERATELY.
+    //
+    // ⚠⛔⛔ **NARROWED 2026-09-07 (Story 11b.14, AC1) — ⛔ NOT DELETED, and the prior property is
+    // NAMED** ([[feedback_supersede_never_reinterpret]]). This test asserted the index predicate was
+    // **STRICTLY NARROWER**: `SAHYOG_VIVRAN.length > SAHYOG_DRIVE.length` and
+    // `SAHYOG_DRIVE not.toContain('live')`. ⛔ Both went FALSE BY DESIGN when `2026-09-04-189` cl.2
+    // (Trustee-ratified, recorded at `2026-09-07-204`) ruled that a **collecting drive IS LISTED** on
+    // the index. ⇒ the two predicates now hold the SAME THREE STATES.
+    //
+    // ⭐⭐ **THE HALF THAT WAS ACTUALLY LOAD-BEARING SURVIVES INTACT AND IS WHAT STAYS PINNED:** the
+    // vivran tuple is **DECLARED LOCALLY** and is ⛔ never the index's array. Equal membership is
+    // precisely when a future edit is most tempted to "unify" them by importing one into the other —
+    // ⛔ which would re-fuse two surfaces whose predicates are ruled independently and may diverge
+    // again (`sahyog-vivran-read.ts`'s own doc-block says so). ⇒ the reference check is now the
+    // ⭐ STRONGER assertion, ⛔ not the weaker one.
     for (const s of SAHYOG_DRIVE_VISIBLE_POOL_STATES) {
       expect(SAHYOG_VIVRAN_VISIBLE_POOL_STATES).toContain(s);
     }
-    expect(SAHYOG_VIVRAN_VISIBLE_POOL_STATES.length).toBeGreaterThan(
-      SAHYOG_DRIVE_VISIBLE_POOL_STATES.length,
-    );
     expect(SAHYOG_VIVRAN_VISIBLE_POOL_STATES).toContain('live');
-    expect([...SAHYOG_DRIVE_VISIBLE_POOL_STATES]).not.toContain('live');
+    expect(SAHYOG_VIVRAN_VISIBLE_POOL_STATES as readonly string[]).not.toBe(
+      SAHYOG_DRIVE_VISIBLE_POOL_STATES as readonly string[],
+    );
   });
 
   it('⛔ EXCLUDES `spawned` — a pool that never opened has no drive to tell', () => {

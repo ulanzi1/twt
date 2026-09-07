@@ -628,7 +628,21 @@ export interface SahyogDriveEntry {
   driveClosedAt: Date | null;
   /** The deceased member's latest posting district, RAW. `null` = no posting row. */
   district: string | null;
-  /** Confirmed contributions, reversals compensated. ⛔ A count, ⛔ never a sum, ⛔ never a score. */
+  /**
+   * Confirmed contributions, reversals compensated. ⛔ A count, ⛔ never a sum, ⛔ never a score.
+   *
+   * ⚠⛔⛔ **AMENDED 2026-09-07 (Story 11b.14, `D2`) — ⭐ the sentence above is NARROWED, ⛔ never
+   * deleted** ([[feedback_supersede_never_reinterpret]]). `2026-09-04-190` **cl.6** puts a rupee
+   * figure on the public index (`-189` cl.5: the boundary is *"newly crossed"*), so this row now
+   * carries {@link SahyogDriveEntry.amountRaisedInr} — **which IS a sum**.
+   * ⭐ *"never a sum"* was an **AUTHOR'S EXTENSION** of 11b.1 **AC5**, which prohibits leaderboards,
+   * rankings, gamification and popularity metrics and ⛔ does ⛔ **not** name a sum.
+   * ⭐ **AC5's ordering half stays ENFORCED:** ⛔ nothing orders by either figure, ⛔ no
+   * *"most-supported"* view, ⛔ no ranking, ⛔ no comparison **between** drives.
+   * ⚠ ⛔ This comment's wording differs from the contract's — ⭐ deliberately, and it always has:
+   * it carries ⛔ no *"of amounts"* and ⛔ no ordering tail. ⛔ Do ⛔ not "unify" the two by editing
+   * one to match a quotation of the other.
+   */
   confirmedContributionCount: number;
   /**
    * ⭐⭐ THE PUBLIC METER'S FILL, 0-100 — Story 11b.14 (AC2), `2026-09-07-204` cl.1.

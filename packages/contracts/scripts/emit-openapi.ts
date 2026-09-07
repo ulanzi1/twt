@@ -514,9 +514,13 @@ for (const [name, schema] of Object.entries(nomineeBankMaskingComponents)) {
 // Story 11b.13 — per-Pariwar drive-target components. FOUR shapes across TWO resources, because
 // `2026-09-04-190` cl.7 splits SETTING the figure from REVEALING it and Decision `2026-09-06-203`
 // made that split structural (two keys, two DB records, two route gates).
-// ⛔⛔ The target is STRICTLY POSITIVE on the wire (`.positive()`, ⛔ never `.nonnegative()`): Story
-// 11b.14's meter divides by it, so ₹0 is a division by zero — and a different state from "no target
-// set", which is the ABSENCE of a schedule row (`configured: false`).
+// ⛔⛔ The target is STRICTLY POSITIVE on the wire (`.positive()`, ⛔ never `.nonnegative()`): ₹0 is a
+// different state from "no target set", which is the ABSENCE of a schedule row (`configured: false`).
+// ⚠⛔ AMENDED 2026-09-07 — ⭐ the bound STANDS; ⛔ its stated ground is superseded and is NAMED, ⛔ not
+// deleted. It read "Story 11b.14's meter divides by it, so ₹0 is a division by zero". ⛔ FALSE about
+// that story: the Trustee Panel ruled the bar measures CONTRIBUTORS (`confirmedCount ÷
+// assignedCount`), so it ⛔ never divides by the target (`2026-09-07-204` cl.1, superseding
+// `2026-09-04-191` cl.4). ⛔ NO behaviour moves — ⛔ only the sentence.
 const driveTargetComponents = {
   DriveTargetResponse: DriveTargetResponse.openapi('DriveTargetResponse'),
   SetDriveTargetRequest: SetDriveTargetRequest.openapi('SetDriveTargetRequest'),
@@ -2079,9 +2083,13 @@ registry.registerPath({
   description:
     "Returns the whole-rupee target recorded for the Pariwar's Sahyog Drives, plus the " +
     'last-changing admin display name, rationale, effective-from instant and schedule version. ' +
-    '`configured: false` means NO target has ever been set, which Story 11b.14 renders as NO ' +
-    'progress bar at all — a different fact from a Pariwar that set a small target, which is why ' +
-    'it is reported explicitly rather than inferred from a null. The `version` returned here MUST ' +
+    '`configured: false` means NO target has ever been set — a different fact from a Pariwar ' +
+    'that set a small target, which is why it is reported explicitly rather than inferred from a ' +
+    'null. NOTE (2026-09-07): this description previously said `configured: false` renders as NO ' +
+    'progress bar at all. That is SUPERSEDED and is recorded rather than removed — the public ' +
+    "bar's denominator is the pool's assignee count, so a roster always exists and the bar always " +
+    'renders (Decision 2026-09-07-204 cl.1). The successor rule is narrower: no public reveal ' +
+    'means no expected figure, and that turns on the visibility record, not on this flag. The `version` returned here MUST ' +
     'be echoed back as `expectedVersion` on the next PUT (Decision 2026-09-05-201 cl.4/cl.5). ' +
     'The target is NOT shown to members or the public in any state (Decision 2026-09-04-190 ' +
     'cl.7(b)); revealing it is a separate, super_admin-only act on a separate resource. ' +
@@ -2104,12 +2112,18 @@ registry.registerPath({
   path: '/api/v1/p/{pariwarId}/admin/drive-target',
   summary: "Set the Pariwar's drive target (rationale + expectedVersion required; audited)",
   description:
-    "Sets the whole-rupee figure the Pariwar's drives aim to raise — the SAME target for every " +
-    'drive in the Pariwar (Decision 2026-09-04-189 cl.2(d)); there is no per-drive override. The ' +
-    'prior target is CLOSED and a new one opened, so every superseded target survives as a ' +
-    'governance trail. The target must be a whole number of rupees, STRICTLY GREATER THAN ZERO ' +
-    '(Story 11b.14 divides by it, so 0 is a division by zero — and is a different state from "no ' +
-    'target set") and within the data-sanity ceiling. A non-empty rationale is REQUIRED and is ' +
+    "Sets the whole-rupee figure the Pariwar's drives aim to raise. The prior target is CLOSED " +
+    'and a new one opened, so every superseded target survives as a governance trail. The target ' +
+    'must be a whole number of rupees, STRICTLY GREATER THAN ZERO (0 is a different state from ' +
+    '"no target set", which is the absence of a schedule row) and within the data-sanity ceiling. ' +
+    'NOTE (2026-09-07): TWO statements previously here are SUPERSEDED and are recorded rather ' +
+    'than removed. (1) "the SAME target for every drive in the Pariwar (Decision 2026-09-04-189 ' +
+    'cl.2(d))" — the public expected figure is now DERIVED per drive from that pool\'s assignee ' +
+    'count and fixed amount, so cl.2(d) is superseded as to the VALUE (Decision 2026-09-07-204 ' +
+    'cl.2). (2) "Story 11b.14 divides by it, so 0 is a division by zero" — the public progress ' +
+    'bar measures contributors and never divides by this target (cl.1). This schedule ' +
+    'consequently has NO public consumer; it is retained, not deleted, and must not be described ' +
+    'as a live control until it has one. A non-empty rationale is REQUIRED and is ' +
     'rejected at the contract boundary with a 400 when absent. ' +
     '`expectedVersion` is REQUIRED and nullable (null = "I believe this Pariwar has no target ' +
     'yet"): a mismatch means someone else changed the target since you read it, and returns 409 ' +

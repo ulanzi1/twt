@@ -164,6 +164,24 @@ export const PublicSahyogDriveEntry = z
      * Contributions CONFIRMED as money received, reversals compensated (Story 9.5's canonical
      * financial truth). ⛔ A count, ⛔ never a sum of amounts, and ⛔ never a score: nothing orders
      * by it, and no "most-supported" view is offered at any tier (AC5).
+     *
+     * ⚠⛔⛔ **AMENDED 2026-09-07 (Story 11b.14, `D2`) — ⛔ THE SENTENCE ABOVE IS NARROWED, ⛔ NEVER
+     * DELETED, AND ITS ORIGINAL TEXT IS KEPT VERBATIM** ([[feedback_supersede_never_reinterpret]]).
+     *
+     * ⭐⭐ **WHAT MOVED:** `2026-09-04-190` **cl.6** (Trustee-ratified) puts a RUPEE FIGURE on this
+     * surface, and `-189` **cl.5** records that boundary as *"newly crossed … and recorded as
+     * such"*. ⇒ ⭐ this row now carries **`amountRaisedInr`**, which IS a sum of amounts.
+     *
+     * ⭐⭐ **AND READ THE PROVENANCE BEFORE ASSUMING THE SENTENCE WAS A RULING — IT WAS ⛔ NOT.**
+     * 11b.1's **AC5** — *"remembrance, not analytics"*, that story's own load-bearing commitment —
+     * prohibits, in terms: **leaderboards · rankings · gamification · social-performance metrics ·
+     * popularity metrics**. ⛔ It does ⛔ **not** name a sum. ⇒ *"never a sum of amounts"* was the
+     * **AUTHOR'S EXTENSION** of AC5, written adjacent to the ordering clause AC5 genuinely supports.
+     *
+     * ⭐⭐ **THE SURVIVING HALF STAYS ENFORCED, AND IT IS THE HALF AC5 ACTUALLY RULED:** ⛔ nothing
+     * orders by the count or the amount · ⛔ ⛔ no *"most-supported"* view at any tier · ⛔ no ranking
+     * · ⛔ no comparison **between** drives · ⛔ no badge, streak or achievement.
+     * ⚠ The amendment **NARROWS** the sentence; ⛔ it does ⛔ not repeal AC5.
      */
     confirmedContributionCount: z.number().int().nonnegative(),
     /**
@@ -183,6 +201,17 @@ export const PublicSahyogDriveEntry = z
      *
      * ⚠⛔ **AND ⛔ NOTHING ORDERS BY IT** (AC5, 11b.1): ⛔ no ranking, ⛔ no "most-supported" view,
      * ⛔ no comparison between drives.
+     *
+     * ⚠⛔⛔ **ONE DIVERGENCE WITH A SIBLING STORY IS RECORDED HERE, ⛔ NOT SLID PAST — ⭐ and ⛔
+     * NEITHER STORY KNEW OF THE OTHER.** `11b-3b` (`ready-for-dev`) **AC3b** records, for the
+     * **DRIVE PAGE**: *"⛔⛔ **ONLY `amountRaisedInr` IS AUTHORISED.** The presenter also emits
+     * **`confirmedPercentage`** … ⛔ **not** authorised by `D1(b)` … ⛔ **It needs its own
+     * decision**."* ⇒ ⭐ the two stories hold **opposite postures on adjacent contracts.**
+     * ⭐ **On THIS surface — the INDEX — the percentage is squarely `2026-09-04-189` cl.2(b)'s
+     * ratified bar** (*"each carries a progress bar"*) and is ⛔ outside `11b-3b`'s scope, so
+     * Story 11b.14 ships it. ⛔ It does ⛔ **not** decide `11b-3b`'s question, and ⛔ does not amend
+     * that story's file — ⭐ it names the divergence from this side so ⛔ no per-story pass can miss
+     * it ([[feedback_circular_deferral_between_sibling_stories]]).
      */
     confirmedPercentage: z.number().int().min(0).max(100),
     /**

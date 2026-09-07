@@ -1492,23 +1492,23 @@ cross-drive comparison · ⛔ not publish a written pitch (`-190` cl.8).
         column. ⚠ **And decide `closeOfCycleFraming`** — a close-of-cycle sentence over a running drive.
   - [x] ⛔ Number/currency formatting per `D5` — ⭐ **LATIN numerals in Hindi** (amendment-A2,
         `currency.ts:10-15`); ⛔ never the `'hi'` Devanagari arm for a money figure.
-- [ ] **Task 6 — The prose that must move** (AC0, AC4, Traps 2, 3, 5) — ⛔ **Amend and NAME; ⛔ never
+- [x] **Task 6 — The prose that must move** (AC0, AC4, Traps 2, 3, 5) — ⛔ **Amend and NAME; ⛔ never
       delete.** ⚠ **FOUR sites, ⛔ not two:** `sahyog-drive.ts:149-150` · `public-read.ts:524`
       (⚠ **the 2026-09-04 quote was never its text**) · `sahyog-vivran.ts:346-347` (the drive page —
       ⚠ **`:346-347`, ⛔ not `:345-347`**; `:345` is the doc-block opener) · `public-read.ts:739-743`
       (the quarantine).
-  - [ ] ⛔⛔ **AND SIX MORE THAT NAME THIS STORY AND DESCRIBE A RULING THAT ⛔ NO LONGER HOLDS**
+  - [x] ⛔⛔ **AND SIX MORE THAT NAME THIS STORY AND DESCRIBE A RULING THAT ⛔ NO LONGER HOLDS**
         (**Trap 9**; AC6's named exception). ⭐ **Amend and NAME; ⛔ never delete; ⛔ change ⛔ NO
         behaviour** — `.positive()`, the ceiling and the `configured` flag all **STAY**; ⛔ only the
         stated **ground** moves:
         `drive-target.ts:57` · `:75` · `drive-target-ceiling-sync.test.ts:80-83` (⭐ the **assertion**
         is correct — ⛔ rewrite only its name/comment) · `emit-openapi.ts:517-519`, `:2082`, `:2111`.
-  - [ ] ⛔⛔ **THEN REGENERATE `openapi/v1.yaml`** — ⭐ `:11168` and `:11205` carry both sentences
+  - [x] ⛔⛔ **THEN REGENERATE `openapi/v1.yaml`** — ⭐ `:11168` and `:11205` carry both sentences
         **verbatim in the committed, client-facing spec**, and `:11205` also restates the
         **superseded** `-189` cl.2(d) (*"the SAME target for every drive"*). ⛔ **⛔ Never hand-edit the
         YAML**; ⭐ amend `emit-openapi.ts` and re-emit, then let
         `packages/contracts/scripts/check-openapi-determinism.ts` prove the pair is in step.
-  - [ ] ⭐ **RECORD the divergence with `11b-3b`** (Trap 10) — ⛔ the percentage posture, and that the
+  - [x] ⭐ **RECORD the divergence with `11b-3b`** (Trap 10) — ⛔ the percentage posture, and that the
         drive-page amount stays **`11b-3b`'s**. ⛔ Do ⛔ not amend `11b-3b`'s file from here. **And** state the **staleness** (Trap 3,
       `sahyog.astro:304`); state the **address-publication** consequence (Trap 5) **citing
       `2026-09-05-200`**, ⛔ not `-186` alone.

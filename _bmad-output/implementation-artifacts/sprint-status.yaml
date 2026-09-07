@@ -1,3 +1,47 @@
+# last_updated: 2026-09-07l (⚠⛔⛔ **`11b-14` RE-VALIDATED (`bmad-create-story validate`) — 16
+#   FINDINGS APPLIED TO THE STORY FILE. ⛔ ZERO ROWS MOVE; 11b-14 STAYS `ready-for-dev`;
+#   ⛔ 11b-13 STAYS `done`; ⛔ 11b-3b STAYS `ready-for-dev`. ⚠ ⛔ No code.**
+#   ⭐ **⛔ ZERO non-`_bmad-output` files changed between `55e3eee7` and `670750c5`** ⇒ every
+#   2026-09-06 anchor re-verified and still true. ⛔ What moved is the RECORD.
+#   ⛔⛔ **TRAP 9 — SIX SHIPPED SITES ASSERT THE SUPERSEDED METER RULING BY 11b.14's NUMBER**, and
+#   ⛔ one is the **committed client-facing spec**: `drive-target.ts:57`/`:75` ·
+#   `drive-target-ceiling-sync.test.ts:80-83` (a test NAME) · `emit-openapi.ts:517-519`/`:2082`/`:2111`
+#   · ⛔⛔ `openapi/v1.yaml:11168`/`:11205`, which ALSO restates the superseded `-189` cl.2(d).
+#   ⇒ ⭐ **AC6 amended and NAMED** (*"Nothing else moves"* would have forbidden the repair); Task 6
+#   owns it; ⭐ the emitter is amended and `v1.yaml` RE-EMITTED, ⛔ never hand-edited; ⛔ behaviour
+#   changes NOWHERE; ⛔ **`11b-13` is NOT amended retrospectively** — ⭐ a supersession, ⛔ not a defect.
+#   ⛔⛔ **TRAP 10 — `11b-3b` OWNS THE DRIVE-PAGE AMOUNT BY `D1(b)` (`2026-09-02-176`), AND `D1(c)`
+#   REFUSES WHAT 11b.14's TASK 4 REACHED FOR** (*"a second multiplication anywhere in this app is the
+#   defect"*, in FOUR `apps/public` sites); ⛔ 11b.14 named `11b-3b` **ZERO** times across five drafts.
+#   ⇒ ⭐ `D2`'s **drive-page half DEFERRED to `11b-3b`** (a key that EXISTS here); ⭐ Task 4 RETURNS
+#   `public-read.ts:761`'s `deliveredTotal`, ⛔ never a new multiplication; ⛔ 11b.14 does ⛔ not lift
+#   the `@twt/ui` fence (⭐ `apps/public` has NO `@twt/ui` dep); ⚠ the `confirmedPercentage`
+#   divergence with `11b-3b` AC3b is RECORDED, ⛔ not silently taken.
+#   ⛔⛔ **AC0(b) ADDED — THE 2026-09-07 RULINGS EXIST IN ⛔ NO `.decision-log.md` ENTRY** (head is
+#   `2026-09-06-203`): three Trustee-ratified clauses (`-191` cl.4 · `-189` cl.2(d) · `-190` cl.7(a))
+#   superseded with ⛔ no entry and ⛔ no forward pointer, ⚠ while `-203` cites `-191` cl.4 as what it
+#   implements. ⇒ ⭐ the entry lands in Task 0's `governance:` commit, BEFORE any code.
+#   ⚠⛔ `deferred-work.md:8352` — a THIRD deferral routed to 11b.14 BY NAME with **Task 3** as its
+#   trigger, ⛔ never picked up; ⭐ `D4` makes it the *"first consumer"* ⇒ answered inline.
+#   ⚠⛔ **THREE CONTRADICTIONS RESOLVED, ⛔ prior text kept:** Task 3 held BOTH *"`D4` RULED — build
+#   it"* AND *"`D4` — not the dev agent's call"*; Task 3 ordered consuming
+#   `resolveEffectiveDriveTargetInr` while the Dev Notes declare it NO CONSUMER; Task 3 still said
+#   *"Expected ₹X lakh"* where AC2 says **लक्ष्य**, derived. ⚠ **AC3 still ordered a headline the Panel
+#   REPLACED** — a THIRD wording ⇒ ⭐ `D5`'s pair is the ONLY normative text.
+#   ⭐ **A `CURRENT STATE` block now heads the story** — ⛔ a reader met *"BLOCKED, do not start"*
+#   THREE times before *"RULED, build it"*; ⛔ nothing deleted.
+#   ⚠ **THIS ROW'S OWN COMMENT BLOCK CARRIES FOUR STALE STATEMENTS** and is ⛔ NOT edited here —
+#   ⭐ 11b.14's **Task 0** owns them, in a `governance:` commit: the discharged *"BLOCKED ON B AND C"*,
+#   `epics.md:4865` (⇒ `:4872`), *"ZERO open decisions"* + D1's superseded *"optional rupee
+#   denominator"* / *"NO TARGET ⇒ NO BAR"*, and D2's wrong `:133` / `:481`.
+#   ⚠ **Anchor corrections:** `permissions.ts:1056` was the WRONG FILE ⇒
+#   `domain/src/rbac/permissions.ts:1054`/`:1079`, version 41 at `:650`; `sahyog-vivran.ts:346-347`;
+#   `sahyog-shared.json` holds TWELVE keys (⛔ not 11, ⛔ not 14) — ⭐ *"no headline exists"* re-verified.
+#   ✅ **AND `D7`'s UNSTATED PREMISE IS VERIFIED:** `rosterSize == assignedCount` holds by
+#   construction ⇒ ⭐ the dissolution is sound.
+#   ⛔ epic-11b stays `in-progress`; ⛔ 11b-11 / 11b-12 / 11b-13 stay `done`; ⛔ 11b-3b, 11b-15…17 and
+#   6-18 stay `ready-for-dev`.)
+#
 # last_updated: 2026-09-07k (⭐ **THE `11b-18` ESCALATION HAS ITS VEHICLE, AND IT IS ⛔ NOT ON THIS
 #   BRANCH.** ⛔ ZERO ROWS MOVE HERE; 11b-14 STAYS `ready-for-dev`; ⛔ 11b-13 STAYS `done`;
 #   ⛔ epic-11b stays `in-progress`. ⚠ ⛔ No code. ⇒ routing note **§19.4**.

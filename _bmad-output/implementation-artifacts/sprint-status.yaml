@@ -1,4 +1,58 @@
-# last_updated: 2026-09-07h (✅ **STORY 11b.14 (D) — लक्ष्य CONFIRMED; ⭐⭐ AND A VERIFIED FINDING:
+# last_updated: 2026-09-07i (✅✅⭐⭐ **STORY 11b.14 (D) — RULED (DR + KB): *"USE THE DERIVED TOTAL."*
+#   `D7` DISSOLVED BY IDENTITY; ⚠⛔ TWO MORE TRUSTEE-RATIFIED CLAUSES SUPERSEDED; ⚠ HALF OF STORY C IS
+#   NOW UNCONSUMED.** ⛔ ZERO ROWS MOVE; 11b-14 STAYS `ready-for-dev`; ⛔ 11b-13 STAYS `done`.
+#   ⚠ ⛔ No code. ⇒ routing note **§18**.
+#
+#   ⭐ **लक्ष्य = `assignedCount × pools.fixed_amount`** — the drive's OWN expected contribution,
+#   ⛔ never typed by anyone.
+#   ✅✅ **`D7` IS DISSOLVED BY IDENTITY, ⛔ NOT RULED AWAY:** `amount / लक्ष्य = (confirmed × fA) /
+#   (roster × fA) = confirmed / roster` **= the bar** ⇒ ⛔ they **CANNOT** disagree, for any drive at any
+#   value (⭐ verified: 16,700 roster · ₹300 · 6,485 confirmed → both **38.8323%**). ⭐ The bar now reads
+#   correctly BOTH WAYS AT ONCE — share of colleagues, and share of the expected amount.
+#
+#   ⚠⛔⛔ **TWO MORE TRUSTEE-RATIFIED CLAUSES SUPERSEDED — ⭐ NAMED, ⛔ NEVER RE-READ** (⚠ the SECOND
+#   supersession today; §16.1 took `-191` cl.4):
+#   · **`-189` cl.2(d)** — *"a **Superadmin-settable, PER-PARIWAR** value, **the SAME target for every
+#     drive in that Pariwar**"* ⇒ ⛔ SUPERSEDED **as to the VALUE** (the derived total is PER-DRIVE);
+#     ⭐ its *"enable switch"* half **SURVIVES**.
+#   · **`-190` cl.7(a)** — *"the **PARIWAR ADMIN** sets the target, **from day 1**"* ⇒ ⛔ SUPERSEDED;
+#     ⭐ there is ⛔ **NO SETTER**.
+#
+#   ⭐ **WHAT SURVIVES — cl.7(b) AND cl.7(c) STAND.** The ruling replaces the **VALUE's SOURCE**, ⛔ not
+#   the **VISIBILITY RULE** ⇒ ⭐ `D4` / 2026-09-07d is UNDISTURBED: लक्ष्य is gated on
+#   `reveal_to_public`, **`super_admin`-only, DEFAULT OFF** ⇒ ⛔ **NOTHING renders at launch.**
+#   ⚠ The switch's MEANING shifts and is stated: it now reveals **what the drive NEEDS**, ⛔ no longer
+#   *"the Trust's aim"*. ⛔ If the Panel meant to retire the switch too, ⭐ one word reverses this —
+#   ⛔ we will ⛔ not infer it.
+#
+#   ⛔⛔ **AND `public-read.ts:739-743`'s QUARANTINE IS NOW *FULLY* SUPERSEDED** — it reads *"⛔ Do not
+#   widen `SahyogDriveEntry` to carry **either of them, under any name**"* and ⭐ **BOTH now cross**:
+#   `deliveredTotal` (`:761`) as the ruled AMOUNT, `expectedTotal` (`:760`) as **लक्ष्य**. ⇒ ⭐ amend and
+#   NAME it — ⚠ D2's discipline applied a **SECOND** time to the same comment.
+#   ⭐ **⛔ No new admin surface, ⛔ no write path, ⛔ no migration** — both operands are ALREADY selected
+#   on this query (`assignedCount` `:703`, `fixedAmount` `:695`). ⚠ **Zero-assignee pool ⇒ ⛔ NO लक्ष्य**
+#   — ⭐ silence, ⛔ never `₹0` (the guard already applied to `fundingOutcome` at `:757`).
+#
+#   ⚠⛔ **THE COST — HALF OF STORY C IS NOW UNCONSUMED, in a story marked `done`:**
+#   ⭐ LIVE: `pariwar_drive_target_visibility` + `member_ge_public` CHECK + RLS ·
+#     `pariwar.manage_drive_target_visibility` (`super_admin`).
+#   ⛔ NO CONSUMER: `pariwar_drive_target_schedule` (versioned, ₹ ceiling, positivity CHECKs) ·
+#     **`pariwar.manage_drive_target`** (`pariwar_admin`), minted at `PERMISSION_CATALOG_VERSION` **41**,
+#     which now **GATES NOTHING** · `resolveEffectiveDriveTargetInr` · `setDriveTargetSchedule` ·
+#     the admin TARGET form.
+#   ⭐⭐ **THE HOUSE PRECEDENT IS EXACT AND WE FOLLOW IT** — `-190` cl.4 on the masking window:
+#   *"We may use it in future. ⛔ Do ⛔ not delete … ⚠⛔ BUT ITS STATUS CHANGES AND MUST BE STATED …
+#   ⛔ Do ⛔ not describe it as a live control on any Trustee-facing material until it has one."*
+#   ⇒ ⭐ **RETAIN; ⛔ delete nothing; ⭐ STATE the status change** at the schedule table, the resolver,
+#   the admin route AND the permission-catalog entry.
+#   ⏳ ⛔ **ONE ITEM ⛔ NOT OURS:** un-minting `pariwar.manage_drive_target` moves
+#   `PERMISSION_CATALOG_VERSION` — a **CATALOG ACT**. ⭐ Default applied: **retain-and-state**;
+#   ⛔ retire only on BigDev's word.
+#
+#   ✅ **लक्ष्य CONFIRMED** as the Hindi label (2026-09-07h) — ⭐ formatting unchanged: always lakh or
+#   crore, cut off, trailing zeros trimmed, with the `₹`. ⚠ A 16,700-member pool at ₹300 renders
+#   **लक्ष्य ₹50.1 lakh**.)
+# last_updated_prior: 2026-09-07h (✅ **STORY 11b.14 (D) — लक्ष्य CONFIRMED; ⭐⭐ AND A VERIFIED FINDING:
 #   THE SYSTEM ALREADY COMPUTES THE DRIVE'S EXPECTED CONTRIBUTION.** ⛔ ZERO ROWS MOVE; 11b-14 STAYS
 #   `ready-for-dev`. ⚠ ⛔ No code. ⇒ routing note **§17**.
 #

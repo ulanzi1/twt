@@ -1016,3 +1016,82 @@ again gate ⛔ nothing.
   likely to confuse a reader; ⛔ we would ⛔ not recommend it without a clear split of meaning.
 
 ⛔ **Nothing is blocked meanwhile** — the switch is **off**, so ⛔ no *"लक्ष्य"* renders at launch.
+
+
+---
+
+## 18. ✅✅ **RULED — DR + KB, 2026-09-07: USE THE DERIVED TOTAL.** ⭐ `D7` dissolves; ⚠⛔ two more ratified clauses are superseded
+
+> *"Use the derived total."*
+
+⇒ ⭐ **लक्ष्य = `assignedCount × pools.fixed_amount`** — the drive's own expected contribution,
+computed per drive, ⛔ never typed by anyone.
+
+### 18.1 ✅✅ `D7` IS DISSOLVED BY IDENTITY, ⛔ not by ruling
+
+⭐ `amount / expected = (confirmed × fA) / (roster × fA) = confirmed / roster = the bar`.
+⇒ ⛔ the bar and लक्ष्य **cannot disagree**, for any drive, at any value. ⭐ §16.5's three options are
+**moot**. ⚠ ⭐ And the bar now reads correctly **both ways at once** — it is the share of colleagues
+who have contributed **and** the share of the expected amount raised, ⛔ because they are the same
+number.
+
+### 18.2 ⚠⛔⛔ TWO MORE TRUSTEE-RATIFIED CLAUSES ARE SUPERSEDED — ⭐ named, ⛔ never re-read
+
+| Clause | Verbatim | Effect |
+|---|---|---|
+| **`-189` cl.2(d)** | *"the target is **BUILT** — a **Superadmin-settable, PER-PARIWAR** value, **the SAME target for every drive in that Pariwar**, with an **enable switch** so it can be displayed later ⛔ without a rebuild"* | ⛔ **SUPERSEDED as to the VALUE.** The derived total is **PER-DRIVE** and moves with each pool's roster. ⭐ **The "enable switch" half SURVIVES** — see §18.3 |
+| **`-190` cl.7(a)** | *"the **PARIWAR ADMIN** sets the target, **from day 1**"* | ⛔ **SUPERSEDED.** ⭐ There is ⛔ **no setter** — the figure derives itself |
+
+⭐ Recorded with the prior text preserved ([[feedback_supersede_never_reinterpret]]). ⚠ This is the
+**second** supersession in one day (§16.1 took `-191` cl.4); ⛔ both are legitimate, ⭐ both are named.
+
+### 18.3 ⭐ WHAT SURVIVES — **cl.7(b) and cl.7(c) STAND.** ⛔ We are ⛔ not treating them as collateral
+
+⚠ The ruling replaces **the VALUE's source**, ⛔ not **the VISIBILITY rule**. ⇒ ⭐ §13.2's ruling —
+*"shows only when Trust switches on. And it should be turned off"* — is the **most recent word on
+visibility** and ⛔ is not disturbed. ⇒ we build:
+
+- ⭐ **The value:** derived, always available, ⛔ no configuration.
+- ⭐ **The visibility:** still gated on `pariwar_drive_target_visibility.reveal_to_public`,
+  **`super_admin`-only**, **default OFF** ⇒ ⛔ **no लक्ष्य renders at launch.**
+
+⇒ ⭐⭐ **`pariwar.manage_drive_target_visibility` KEEPS its consumer.** ⚠ Its *meaning* shifts slightly
+and should be stated: it now reveals **what the drive needs**, ⛔ no longer *"the Trust's aim"*.
+⛔ If the Panel meant to retire the switch as well, ⭐ one word reverses this — ⛔ we will ⛔ not infer it.
+
+### 18.4 ⚠⛔ THE COST — **HALF OF STORY C IS NOW UNCONSUMED**, in a story marked `done`
+
+⭐ Stated plainly, ⛔ not buried:
+
+| Story C artefact | After this ruling |
+|---|---|
+| `pariwar_drive_target_visibility` + its CHECK + RLS | ⭐ **LIVE** — gates the derived figure |
+| `pariwar.manage_drive_target_visibility` (`super_admin`) | ⭐ **LIVE** |
+| **`pariwar_drive_target_schedule`** (the value, versioned, ₹ ceiling, positivity CHECKs) | ⛔ **NO CONSUMER** |
+| **`pariwar.manage_drive_target`** (`pariwar_admin`) — minted at `PERMISSION_CATALOG_VERSION` **41** | ⛔ **GATES NOTHING** |
+| `resolveEffectiveDriveTargetInr`, `setDriveTargetSchedule`, the admin target form | ⛔ **NO CONSUMER** |
+
+⭐⭐ **THE HOUSE PRECEDENT APPLIES EXACTLY, and we are following it** — `-190` **cl.4**, on the masking
+window: *"We may use it in future. ⛔ Do ⛔ not delete … ⚠⛔ **BUT ITS STATUS CHANGES AND MUST BE
+STATED:** … it has ⛔ **no public consumer**. ⛔ Do ⛔ not describe it as a live control on any
+Trustee-facing material until it has one."*
+⇒ ⭐ **RETAIN, ⛔ do not delete; ⭐ and STATE the status change** at the schedule table, at the resolver,
+at the admin route and in the permission catalog.
+
+⏳ **ONE ITEM WE WILL ⛔ NOT DECIDE ALONE:** `pariwar.manage_drive_target` is a **minted permission key
+that now gates nothing**. ⛔ Un-minting moves `PERMISSION_CATALOG_VERSION` and is a catalog act.
+⇒ ⭐ **retain-and-state** is the default we will apply; ⛔ say the word to retire it instead.
+
+### 18.5 ⭐ CONSEQUENCES FOR THE BUILD
+
+- ⛔⛔ **`public-read.ts:739-743`'s QUARANTINE IS NOW FULLY SUPERSEDED.** It reads *"⛔ Do not widen
+  `SahyogDriveEntry` to carry **either of them, under any name**"* — and **both** totals now cross:
+  `deliveredTotal` as the ruled amount, `expectedTotal` as लक्ष्य. ⭐ **Amend and NAME it**, ⛔ never
+  edit past it (⭐ this is D2's discipline, applied a second time to the same comment).
+- ⭐ **⛔ No new admin surface, ⛔ no new write path, ⛔ no migration.** The figure is a read-time product
+  of two values already selected on this query.
+- ⚠ **Zero-assignee pool ⇒ ⛔ NO लक्ष्य.** `assignedCount === 0` makes the expected total ₹0, which is
+  ⛔ not a figure to publish. ⭐ The same guard the read path already applies to `fundingOutcome`
+  (`:757`) — ⭐ **silence, ⛔ never ₹0**.
+- ⭐ **Formatting is unchanged** — §13.5 stands: लक्ष्य is **always lakh or crore**, cut off, trailing
+  zeros trimmed, with the `₹`. ⚠ A 16,700-member pool at ₹300 renders **लक्ष्य ₹50.1 lakh**.

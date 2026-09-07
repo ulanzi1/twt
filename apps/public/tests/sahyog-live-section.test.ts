@@ -50,6 +50,10 @@ const labels = {
   indexLine: (tk: { nomineeName: string | null; familyName: string | null; districtName: string | null }) =>
     tk.nomineeName === null && tk.familyName === null ? null : `line for ${tk.nomineeName ?? tk.familyName}`,
   participationLine: (amount: number, count: number) => `₹ ${amount} and counting, by ${count} colleagues`,
+  // ⭐ Story 11b.14 (`2026-09-07-206` cl.4) — the ZERO-STATE pair. ⚠ The `null` arm is the one that
+  // stops an unconsented drive 500ing the page, so the fixture models BOTH.
+  zeroLine: (familyName: string | null) =>
+    familyName === null ? 'Family awaits your support.' : `Late ${familyName}'s family awaits your support.`,
   driveTargetLine: (target: number) => `Expected: ₹ ${target}`,
   columnOutcome: 'Close of cycle',
   districtUnknown: 'Not recorded',
@@ -265,5 +269,51 @@ describe('⭐⭐ the BAR is `aria-hidden`, and that is a RULING', () => {
     expect(src).toContain('@media (prefers-reduced-motion: reduce)');
     // ⛔ ⛔ NO JS: a static, server-rendered page carries no script for this.
     expect(src).not.toMatch(/requestAnimationFrame|new Animation\(|\.animate\(/);
+  });
+});
+
+// ⭐⭐ THE ZERO-STATE SENTENCE — Trustee-ratified (DR + KB) 2026-09-07, `2026-09-07-206` cl.4.
+// ⚠ Before this ruling a drive on its FIRST DAY published *"₹ 0 and counting, by 0 colleagues—and
+// still going strong!"* in both languages (Review finding, 2026-09-07).
+describe('⭐⭐ `2026-09-07-206` cl.4 — a live drive with ⛔ NO confirmed contribution', () => {
+  const zeroRow = (deceasedMemberName: string | null) => ({
+    ...row('live', null),
+    deceasedMemberName,
+    confirmedContributionCount: 0,
+    confirmedPercentage: 0,
+    amountRaisedInr: 0,
+  });
+
+  const lineOf = (deceasedMemberName: string | null) => {
+    const view = buildSahyogView({ page: 1, limit: 25 }, new URLSearchParams(), labels, {
+      items: [zeroRow(deceasedMemberName)],
+      page: 1,
+      limit: 25,
+      total: 1,
+    });
+    return splitSections(view).live[0]!.driveParticipationLine;
+  };
+
+  it('⭐ takes the ZERO-STATE sentence, ⛔ never the participation line', () => {
+    const cell = lineOf('Ram Prakash Verma');
+    expect(cell).toBe("Late Ram Prakash Verma's family awaits your support.");
+    // ⛔ THE PROPERTY: the zero figures must ⛔ not reach the page under ANY wording.
+    expect(cell).not.toMatch(/\bby 0\b/);
+    expect(cell).not.toMatch(/and counting/);
+  });
+
+  it('⛔⛔ falls to the NO-FAMILY variant where the name may ⛔ not be published — ⭐ this is what stops a 500', () => {
+    // ⭐ A STRING, ⛔ never null: unlike `index_line.*`, the zero pair is TOTAL over its inputs.
+    expect(lineOf(null)).toBe('Family awaits your support.');
+  });
+
+  it('⭐ the moment ONE contribution is confirmed, the participation line returns', () => {
+    const view = buildSahyogView({ page: 1, limit: 25 }, new URLSearchParams(), labels, {
+      items: [{ ...row('live', null), confirmedContributionCount: 1, amountRaisedInr: 100 }],
+      page: 1,
+      limit: 25,
+      total: 1,
+    });
+    expect(splitSections(view).live[0]!.driveParticipationLine).toMatch(/and counting/);
   });
 });

@@ -818,6 +818,8 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
   indexLine: (tk: { nomineeName: string | null; familyName: string | null; districtName: string | null }) =>
     tk.nomineeName === null && tk.familyName === null ? null : `line for ${tk.nomineeName ?? tk.familyName}`,
   participationLine: (amount: number, count: number) => `₹ ${amount} and counting, by ${count} colleagues`,
+  zeroLine: (familyName: string | null) =>
+    familyName === null ? 'Family awaits your support.' : `Late ${familyName}'s family awaits your support.`,
   driveTargetLine: (target: number) => `Expected: ₹ ${target}`,
   columnOutcome: 'Close of cycle',
     districtUnknown: 'Not recorded',

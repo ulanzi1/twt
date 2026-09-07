@@ -50,6 +50,10 @@ const labels: SahyogLabels = {
   indexLine: (tk: { nomineeName: string | null; familyName: string | null; districtName: string | null }) =>
     tk.nomineeName === null && tk.familyName === null ? null : `line for ${tk.nomineeName ?? tk.familyName}`,
   participationLine: (amount: number, count: number) => `₹ ${amount} and counting, by ${count} colleagues`,
+  // ⭐ Story 11b.14 (`2026-09-07-206` cl.4) — the ZERO-STATE pair. ⚠ The `null` arm is the one that
+  // stops an unconsented drive 500ing the page, so the fixture models BOTH.
+  zeroLine: (familyName: string | null) =>
+    familyName === null ? 'Family awaits your support.' : `Late ${familyName}'s family awaits your support.`,
   driveTargetLine: (target: number) => `Expected: ₹ ${target}`,
   columnOutcome: 'Close of cycle',
   districtUnknown: 'Not recorded',

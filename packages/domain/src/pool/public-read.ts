@@ -850,11 +850,26 @@ function sahyogDrivePredicate(pariwarId: PariwarId, now: Date, filters: SahyogDr
       sql`trim(lower(${DECEASED_DISTRICT(now)})) = lower(trim(${filters.district}))`,
     );
   }
+  // ⭐⭐ A CLOSE-DATE FILTER ⛔ NEVER HIDES A LIVE DRIVE — Trustee-ratified `2026-09-07-206` cl.5.
+  //
+  // ⚠⛔ {@link DRIVE_CLOSED_AT} is **structurally NULL** for a `live` pool (its close event has not
+  // happened), and NULL fails **BOTH** comparisons ⇒ before this exemption, ⛔ ANY `closedFrom` /
+  // `closedTo` made the **ENTIRE Live section vanish** — ⛔ silently, because the "no drives match
+  // your filter" copy never fires while archive rows still match (Review finding, 2026-09-07).
+  //
+  // ⭐ The exemption tests **`current_state = 'live'`**, ⛔ NOT `IS NULL`. ⚠ The two are ⛔ not the
+  // same: a pool whose close event is **after** the injected `now` also reads NULL here, and that
+  // row is a `closed` drive being viewed as-of an earlier instant — ⛔ it is ⛔ not exempt. ⭐ The
+  // ruling is about **live drives**, ⛔ not about missing dates.
   if (filters.closedFrom !== undefined) {
-    conjuncts.push(sql`${DRIVE_CLOSED_AT(now)} >= ${filters.closedFrom}`);
+    conjuncts.push(
+      sql`(${pools.currentState} = 'live' OR ${DRIVE_CLOSED_AT(now)} >= ${filters.closedFrom})`,
+    );
   }
   if (filters.closedTo !== undefined) {
-    conjuncts.push(sql`${DRIVE_CLOSED_AT(now)} <= ${filters.closedTo}`);
+    conjuncts.push(
+      sql`(${pools.currentState} = 'live' OR ${DRIVE_CLOSED_AT(now)} <= ${filters.closedTo})`,
+    );
   }
   if (filters.poolCode !== undefined) {
     // Matched against the canonical identifier OR the letter code the pool index yields.
@@ -948,11 +963,30 @@ export async function listPublicSahyogDrivePools(
     .innerJoin(claims, eq(claims.claimCaseId, pools.claimCaseId))
     .leftJoin(memberKycProfiles, eq(memberKycProfiles.memberId, claims.deceasedMemberId))
     .where(sahyogDrivePredicate(pariwarId, now, opts))
-    // ⚠ EXPLICIT `NULLS LAST` — the predicate already restricts to closed/settled pools, so a
-    // null `driveClosedAt` here is a data anomaly, not a legitimate "not yet closed" row. `DESC`
-    // defaults to `NULLS FIRST` in Postgres, which would sort that anomaly to the very top ahead
-    // of genuinely-recent closures (Review finding, 2026-08-26).
-    .orderBy(sql`${DRIVE_CLOSED_AT(now)} DESC NULLS LAST`, desc(pools.poolId))
+    // ⚠⛔⛔ **LIVE DRIVES SORT FIRST — ⭐ AND WITHOUT THIS KEY THEY SORT DEAD LAST** (Review finding,
+    // 2026-09-07). ⭐ Story 11b.14 widened the predicate to admit `live`, and ⛔ every live row's
+    // `driveClosedAt` is **structurally NULL** ⇒ under `NULLS LAST` alone they sorted **behind every
+    // closed and settled drive**. ⚠ With any Pariwar past one page of history the Live section was
+    // therefore **EMPTY on page 1**, while the template places it **first, deliberately** — ⛔ which
+    // defeats **FR-76**, the requirement this whole story exists to land.
+    //
+    // ⛔⛔ **THE PRIOR COMMENT IS AMENDED, ⛔ NOT DELETED — ⭐ and it had gone FALSE:**
+    //   > "⚠ EXPLICIT `NULLS LAST` — the predicate already restricts to closed/settled pools, so a
+    //   > null `driveClosedAt` here is a data anomaly, not a legitimate 'not yet closed' row."
+    // ⭐ That was exactly right when it was written (Review finding, 2026-08-26) and `NULLS LAST`
+    // still earns its place — ⚠ but a null is ⛔ no longer an anomaly: it is now **precisely** the
+    // legitimate "not yet closed" row the old text said could not exist.
+    //
+    // ⭐ Postgres orders `false < true`, so `(… IS NULL) DESC` puts the NULL-dated (live) rows first;
+    // the second key then orders the archive by recency exactly as before.
+    // ⚠ Among live rows the tie-break stays `poolId DESC` — a UUIDv5, so **arbitrary but stable**.
+    // ⛔ Do ⛔ not "improve" that into a recency or amount order without a ruling: ordering drives
+    // against each other is what **11b.1 AC5** forbids.
+    .orderBy(
+      sql`(${DRIVE_CLOSED_AT(now)} IS NULL) DESC`,
+      sql`${DRIVE_CLOSED_AT(now)} DESC NULLS LAST`,
+      desc(pools.poolId),
+    )
     .limit(
       clampLimit(opts.limit, {
         default: SAHYOG_DRIVE_PAGE_SIZE_DEFAULT,

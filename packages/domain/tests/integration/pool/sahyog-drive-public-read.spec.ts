@@ -853,6 +853,85 @@ describe.skipIf(!hasDatabase)('Sahyog Drive public pool index (Story 11b.1)', ()
     });
   });
 
+  // ⭐⭐ TWO RULINGS FROM THE 2026-09-07 CODE REVIEW — `2026-09-07-206` cl.5, and the ORDERING
+  // finding that had no ruling because it was never a question: a live drive that sorts behind the
+  // archive is ⛔ not a policy choice, it is FR-76 defeated.
+  describe('⭐⭐ live drives: ordering + the close-date exemption (`2026-09-07-206` cl.5)', () => {
+    it('⛔⛔ a live drive sorts FIRST — ⛔ never behind the archive, which is what hid it on page 1', async () => {
+      const { client, tx } = getTx();
+      const now = new Date();
+      // ⚠ The archive rows close in the RECENT past, so under the old single-key sort they outranked
+      // a live row whose `closedAt` is structurally NULL and therefore sorted LAST.
+      const older = await seedDrive(tx, PARIWAR_A, {
+        closedAt: new Date(now.getTime() - 3 * 86_400_000),
+      });
+      const newer = await seedDrive(tx, PARIWAR_A, {
+        closedAt: new Date(now.getTime() - 1 * 86_400_000),
+      });
+      const live = await seedDrive(tx, PARIWAR_A, { currentState: 'live' });
+
+      await enterAppScope(client, PARIWAR_A);
+      const ordered = (
+        await poolDomain.listPublicSahyogDrivePools(tx, ids.pariwarId(PARIWAR_A), { limit: 50, now })
+      ).map((r) => r.poolId as string);
+
+      // ⭐ MEMBERSHIP + RELATIVE POSITION, ⛔ never a count over the shared fixture.
+      expect(ordered).toContain(live.poolId);
+      expect(ordered.indexOf(live.poolId)).toBeLessThan(ordered.indexOf(newer.poolId));
+      expect(ordered.indexOf(live.poolId)).toBeLessThan(ordered.indexOf(older.poolId));
+      // ⭐ AND THE ARCHIVE KEEPS ITS OWN RECENCY ORDER — the second sort key is undisturbed.
+      expect(ordered.indexOf(newer.poolId)).toBeLessThan(ordered.indexOf(older.poolId));
+    });
+
+    it('⭐⭐ a close-date filter ⛔ NEVER hides a live drive, and still narrows the archive', async () => {
+      const { client, tx } = getTx();
+      const now = new Date();
+      const old = await seedDrive(tx, PARIWAR_A, {
+        closedAt: new Date(now.getTime() - 30 * 86_400_000),
+      });
+      const recent = await seedDrive(tx, PARIWAR_A, {
+        closedAt: new Date(now.getTime() - 1 * 86_400_000),
+      });
+      const live = await seedDrive(tx, PARIWAR_A, { currentState: 'live' });
+
+      await enterAppScope(client, PARIWAR_A);
+      const filtered = (
+        await poolDomain.listPublicSahyogDrivePools(tx, ids.pariwarId(PARIWAR_A), {
+          limit: 50,
+          now,
+          closedFrom: new Date(now.getTime() - 2 * 86_400_000),
+        })
+      ).map((r) => r.poolId as string);
+
+      // ⭐ THE RULING: the live drive survives a filter it can never satisfy.
+      expect(filtered).toContain(live.poolId);
+      // ⛔ AND THE FILTER STILL DOES ITS JOB on rows that DO carry a close date.
+      expect(filtered).toContain(recent.poolId);
+      expect(filtered).not.toContain(old.poolId);
+    });
+
+    it('⭐ the exemption holds on `closedTo` as well — ⛔ both conjuncts, ⛔ not just the one', async () => {
+      const { client, tx } = getTx();
+      const now = new Date();
+      const recent = await seedDrive(tx, PARIWAR_A, {
+        closedAt: new Date(now.getTime() - 1 * 86_400_000),
+      });
+      const live = await seedDrive(tx, PARIWAR_A, { currentState: 'live' });
+
+      await enterAppScope(client, PARIWAR_A);
+      const filtered = (
+        await poolDomain.listPublicSahyogDrivePools(tx, ids.pariwarId(PARIWAR_A), {
+          limit: 50,
+          now,
+          closedTo: new Date(now.getTime() - 10 * 86_400_000),
+        })
+      ).map((r) => r.poolId as string);
+
+      expect(filtered).toContain(live.poolId);
+      expect(filtered).not.toContain(recent.poolId);
+    });
+  });
+
   describe('paging stability + the count accessor', () => {
     it('⭐ pages do not overlap or drop rows — the ORDER BY carries a PK tie-break', async () => {
       const { client, tx } = getTx();

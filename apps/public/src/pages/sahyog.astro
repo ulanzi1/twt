@@ -156,6 +156,17 @@ const labels: SahyogLabels = {
       },
       { locale, namespace: 'sahyog-shared' },
     ),
+  // ⭐⭐ STORY 11b.14 — THE RULED **ZERO-STATE** SENTENCE (`2026-09-07-206` cl.4). Trustee-ratified
+  // copy (DR + KB, 2026-09-07) in BOTH languages; ⛔ never composed here, ⛔ never translated here.
+  // ⛔⛔ THE VARIANT CHOICE IS THE SAFETY PROPERTY, ⛔ not a nicety: `t()` THROWS on an unsupplied
+  // token, so resolving `zero_line.full` for a family whose name may not be published would 500
+  // `/sahyog` for everyone. ⭐ `no_family` covers that TOTALLY ⇒ ⛔ there is no unrenderable case
+  // here, and ⛔ this function never returns `null` (unlike `indexLine`, whose four variants are
+  // ⛔ not total). ⛔ Do ⛔ not add a third variant at this site.
+  zeroLine: (familyName: string | null) =>
+    familyName === null
+      ? t('zero_line.no_family', {}, { locale, namespace: 'sahyog-shared' })
+      : t('zero_line.full', { family_name: familyName }, { locale, namespace: 'sahyog-shared' }),
   // ⭐ लक्ष्य. ⚠⛔ ITS AMOUNT FOLLOWS A **DIFFERENT** RULE — always lakh/crore, ⛔ never the cut-off.
   // ⛔ Do ⛔ not "align" the two: the divergence is the ruling.
   driveTargetLine: (targetInr: number) =>

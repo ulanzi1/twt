@@ -312,6 +312,30 @@ export interface SahyogDriveRow {
    * the string, and against the switch.
    */
   readonly driveTargetLine: string | null;
+  /**
+   * ⭐⭐ THE NOMINEE'S NAME — Story 11b.14 (AC7), `2026-09-07-205` cl.1. `null` when the claim's bank
+   * details were never collected (6.8 **AC3**'s absence signal) or the decrypt failed.
+   *
+   * ⛔⛔ **IT RENDERS UNDER THE RULED PUBLIC LABEL "Nominee Name" — ⛔ *"Account holder"* MAY ⛔ NOT
+   * BE USED** (`2026-09-04-190` cl.2). ⭐ **FULL name form**, ruled 2026-09-05.
+   * ⚠ A `null` renders **NOTHING** — ⛔ no placeholder, ⛔ no marker, ⛔ no "withheld". ⛔ It ⛔ never
+   * removes the row: the drive's facts are all still true and all still public.
+   * ⚠⛔ **THE VALUE IS UNVERIFIED** — ⛔ no FK, ⛔ no match rule (6.8 D1). ⭐ Story **6.18** closes it;
+   * ⛔ ⛔ do ⛔ NOT add a join here.
+   */
+  readonly nomineeName: string | null;
+  /**
+   * ⭐⭐ THE RULED **CLOSED · VERIFIED** ROW SENTENCE — `sahyog-shared:index_line.*`, Trustee-ratified
+   * 2026-09-05, authored DARK by 11b.12 and lit by this story. `null` on a **Live** row, which takes
+   * the participation sentence instead (`D5`'s stage split).
+   *
+   * ⚠⛔⛔ **AND `null` ALSO WHERE ⛔ NO RATIFIED VARIANT FITS — ⭐ SILENCE, and that is RULED**
+   * (`2026-09-07-205` cl.6). The four variants each name **ONE** absent token; **nominee + family**
+   * and **nominee + district** have ⛔ NO variant at all, and both are DEFAULT-SHAPED. ⛔ `t()`
+   * **THROWS** on an unsupplied token, so rendering one anyway would 500 the whole page.
+   * ⇒ ⛔ no placeholder, ⛔ no partial sentence, ⛔ no marker — the row keeps every column it had.
+   */
+  readonly driveIndexLine: string | null;
 }
 
 /**
@@ -389,6 +413,11 @@ export const SAHYOG_DRIVE_ROW_FIELD_IDS: FieldIdMapping<SahyogDriveRow> = {
   driveProgressPercentage: 'drive_progress_percentage',
   driveParticipationLine: 'drive_participation_line',
   driveTargetLine: 'drive_target',
+  // ⭐⭐ Story 11b.14 (AC7) — the ⛔ ONLY `pii_tier: 1` field this story adds, and it carries its own
+  // Trustee ruling (`2026-09-07-205` cl.1) and its own `RULED_TIER1_PUBLIC_EXCEPTIONS` pair.
+  // ⛔ It is ⛔ NOT an inheritance from `sahyog-vivran`'s identically-named field.
+  nomineeName: 'nominee_account_holder_name',
+  driveIndexLine: 'drive_index_line',
 };
 
 /**
@@ -422,6 +451,8 @@ const SAHYOG_DRIVE_ROW_SHAPE: SahyogDriveRow = {
   driveProgressPercentage: null,
   driveParticipationLine: null,
   driveTargetLine: null,
+  nomineeName: null,
+  driveIndexLine: null,
 };
 
 /**

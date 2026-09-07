@@ -892,3 +892,84 @@ describe.skipIf(!hasDatabase)('public Sahyog Drive route (:5433)', { timeout: 30
     });
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+// ⭐⭐ STORY 11b.14 AC7(b) — THE **MEASURED** p95, WITH THE NOMINEE DECRYPT IN THE PATH
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+//
+// ⚠⛔ **WHY THIS EXISTS, AND WHY IT IS MEASURED RATHER THAN ARGUED.** AC7 puts a SECOND Tier-1
+// decrypt on every row of this index. ⭐ The framing has now been corrected TWICE, and each
+// correction is recorded rather than overwritten ([[feedback_supersede_never_reinterpret]]):
+//   · the 2026-09-04 clause read *"a **50×** step change (1-2 → up to 100)"* — ⛔ FALSE in BOTH
+//     directions: this index ALREADY performed up to **50** Tier-1 decrypts per request (the
+//     deceased member's KYC name), so the baseline was never 1-2;
+//   · the 2026-09-06 correction read **50 → ~150** (50 names + 50 rows × TWO accounts) — ⚠ also
+//     wrong, because the two accounts are EQUAL destinations for the SAME nominee and the domain
+//     read returns exactly ONE ciphertext per row.
+// ⇒ ⭐ **the true step is 50 → up to 100 per request, a 2×.**
+//
+// ⭐ THE REMEDY IS THE DISCIPLINE ALREADY INSTALLED ON THIS EXACT CALL PATH —
+// `mapWithConcurrency(rows, DIRECTORY_DECRYPT_CONCURRENCY = 8, …)`, ⛔ never `Promise.all`.
+// ⛔⛔ AND IT IS ⛔ NOT "BATCHED": envelope encryption gives every stored value its OWN DEK, so there
+// is ⛔ no shared secret to decrypt once and reuse. A batch does ⛔ not exist to be built.
+//
+// ⚠⛔ **WHAT THIS HARNESS DOES AND DOES ⛔ NOT PROVE — stated, ⛔ not glossed**
+// ([[project_measured_validation_framework]]): it measures the REAL route against real Postgres with
+// the REAL decrypt path, over a seeded page — so the query shape and the fan-out are genuinely
+// exercised. ⛔ It does ⛔ NOT measure production KMS latency: `_setup.ts` supplies a local
+// encryption provider, so the per-value round-trip is faster here than against Cloud KMS. ⇒ ⭐ the
+// gate is that the harness **RUNS and the figure is RECORDED**, under a LOOSE sanity ceiling —
+// the 4.6 D3-A precedent, ⛔ not a performance SLO.
+describe.skipIf(!hasDatabase)(
+  '⭐ AC7(b) — the index p95 with the nominee decrypt (:5433)',
+  { timeout: 60000 },
+  () => {
+    const ITERATIONS = 30;
+    const WARMUP = 3;
+    /** ⚠ A LOOSE sanity ceiling, ⛔ not an SLO — it catches an N+1 or an unbounded fan-out. */
+    const SANITY_CEILING_MS = 5000;
+
+    function percentile(sorted: number[], p: number): number {
+      const idx = Math.min(sorted.length - 1, Math.floor((p / 100) * sorted.length));
+      return sorted[idx]!;
+    }
+
+    it('runs, RECORDS the figure, and stays under the loose ceiling', async () => {
+      const t = await createTestApp();
+      try {
+        // ⭐ TEN drives, each with a CONSENTED (⇒ decrypting) deceased-member name. That is the
+        // shape that costs: a row with no basis costs ZERO KMS calls by construction.
+        const { pariwarId } = await seedDrives(
+          t,
+          Array.from({ length: 10 }, (_, i) => ({
+            legalName: `Rajesh Kumar Sharma ${String(i)}`,
+            district: 'Lucknow',
+            authorised: true,
+          })),
+        );
+
+        const samples: number[] = [];
+        for (let i = 0; i < WARMUP + ITERATIONS; i += 1) {
+          const started = performance.now();
+          const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId) });
+          const elapsed = performance.now() - started;
+          // ⭐ NON-VACUOUS: a 404 or an empty index would make every sample meaningless.
+          expect(res.statusCode).toBe(200);
+          if (i >= WARMUP) samples.push(elapsed);
+        }
+        const sorted = [...samples].sort((a, b) => a - b);
+        const p95 = percentile(sorted, 95);
+
+        // ⭐ RECORDED — the figure is the deliverable, ⛔ not merely the assertion.
+        console.info(
+          `[11b.14 AC7(b)] /sahyog index p95 = ${p95.toFixed(1)}ms ` +
+            `(n=${String(ITERATIONS)}, 10 consented drives, median ${percentile(sorted, 50).toFixed(1)}ms, ` +
+            `max ${sorted[sorted.length - 1]!.toFixed(1)}ms; local encryption provider, ⛔ NOT Cloud KMS)`,
+        );
+        expect(p95).toBeLessThan(SANITY_CEILING_MS);
+      } finally {
+        await teardown(t);
+      }
+    });
+  },
+);

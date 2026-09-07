@@ -157,33 +157,74 @@ describe('⛔⛔ AC9 — ⛔ NEITHER TOKEN IS RENDERED. The copy exists; the ren
     )
   })
 
-  it('⛔ ⛔ NO source file resolves an `index_line.*` key', () => {
-    // ⭐ WHEN STORY D LANDS: D renders these keys and this assertion becomes false BY DESIGN.
-    // ⛔ Do ⛔ not delete it then — NARROW it to *"⛔ never rendered without both tokens supplied"*,
-    // which is the property that actually protects the page.
-    const offenders = files.filter((f) => {
-      const src = readFileSync(f, 'utf8')
-      // ⚠ Skip THIS file and the locale-scanning tests, which name the keys as DATA, ⛔ not as a
-      // resolved call.
+  it('⛔ an `index_line.*` key is resolved ⛔ ONLY where EVERY token is supplied', () => {
+    // ⚠⛔⛔ **NARROWED 2026-09-07 (Story 11b.14, AC7) — ⛔ NOT DELETED, ⭐ and its AUTHOR left this
+    // instruction in writing** ([[feedback_supersede_never_reinterpret]]). It read *"⛔ ⛔ NO source
+    // file resolves an `index_line.*` key"*, with: *"⭐ WHEN STORY D LANDS: D renders these keys and
+    // this assertion becomes false BY DESIGN. ⛔ Do ⛔ not delete it then — **NARROW it** to *'⛔ never
+    // rendered without both tokens supplied'*, which is the property that actually protects the
+    // page."* ⭐ Story D has landed; that is exactly what this now asserts.
+    //
+    // ⭐⭐ **THE SURVIVING PROPERTY IS THE ONE THAT MATTERS**: `t()` **THROWS** on an unsupplied
+    // interpolation param, so a resolution that does ⛔ not supply every token its string names is a
+    // **500 / outage arm on a live public page**, ⛔ not a blank figure. ⇒ every resolver must sit
+    // behind {@link selectIndexLineVariant}'s decision — including its `null`, which means
+    // ⛔ **NO ratified variant fits** and the row renders ⛔ nothing (`2026-09-07-205` cl.6).
+    const RESOLVER = /['"`]index_line\.[a-z_]+['"`]/
+    const resolvers = files.filter((f) => {
       if (f.endsWith('sahyog-shared-dark-copy.test.ts')) return false
-      return /['"`]index_line\.[a-z_]+['"`]/.test(src)
+      return RESOLVER.test(readFileSync(f, 'utf8'))
     })
+
+    // ⭐ THE ALLOW-LIST IS ⛔ NOT A WAIVER — it names the ONE render site story D authorised, so a
+    // SECOND one (another package, another surface) still fails here and must come back with its
+    // own ruling. ⛔ Do ⛔ not append to it to make a build green.
+    const AUTHORISED = ['/apps/public/src/pages/sahyog.astro']
     expect(
-      offenders.map((f) => f.replace(repoRoot, '')),
-      'these files RESOLVE a dark index-line key. ⛔ {amount} and {nominee_name} are ⛔ NOT on ' +
-        'any public wire yet (story D — 11b-14 AC7 / Task 8), and t() THROWS on an unsupplied ' +
-        'token (resolver.ts:36-42) ⇒ this would ship a 500 / outage arm onto a live public page, ' +
-        'not a silently-blank rupee figure or a dangling "nominee of".',
-    ).toEqual([])
+      resolvers.map((f) => f.replace(repoRoot, '')).sort(),
+      'a file RESOLVES a ratified index-line key. ⛔ t() THROWS on an unsupplied token ' +
+        '(resolver.ts:36-42) ⇒ an unguarded resolution ships a 500 / outage arm onto a live ' +
+        'public page. ⭐ Only Story 11b.14 (AC7) authorised a render, and only behind ' +
+        'selectIndexLineVariant.',
+    ).toEqual(AUTHORISED)
+
+    // ⭐⭐ AND THE GUARD IS ASSERTED, ⛔ not assumed: the authorised site consults the selector, and
+    // ⛔ returns early on its `null` rather than resolving a key anyway.
+    const authorised = readFileSync(join(repoRoot, AUTHORISED[0]!), 'utf8')
+    expect(authorised).toContain('selectIndexLineVariant')
+    expect(authorised).toMatch(/variant === null\)\s*return null/)
   })
 
-  it('⚠ the tokens are ⛔ not on any public wire yet — the reason the lines stay dark', () => {
-    // ⭐ Checked rather than asserted in prose: if `nomineeName` ever appears on the INDEX contract,
-    // ruling 2 has landed and this file's guidance needs re-reading, ⛔ not silently outliving it.
+  it('⭐ the tokens ARE on the public index wire now — ⭐ and that is ruling 2 landing, ⛔ not drift', () => {
+    // ⚠⛔⛔ **NARROWED 2026-09-07 (Story 11b.14, AC7) — ⛔ NOT DELETED.** It asserted the INDEX
+    // contract does ⛔ NOT match `/nomineeName|nominee_name/`, with: *"if `nomineeName` ever appears
+    // on the INDEX contract, ruling 2 has landed and this file's guidance needs re-reading, ⛔ not
+    // silently outliving it."* ⭐ It landed — `2026-09-07-205` cl.1, Trustee-ratified 2026-09-05 —
+    // and this file's guidance IS re-read above.
+    //
+    // ⭐⭐ **THE SUCCESSOR PROPERTY, AND IT IS STRICTER THAN A NAME SCAN:** the field is present AND
+    // it is **NULLABLE**. A non-nullable `nomineeName` would mean a drive whose claim carried no
+    // bank details (6.8 AC3's absence signal) fails response serialization and 500s the page —
+    // exactly the outage arm this whole file exists to keep off a public surface.
     const indexContract = readFileSync(
       join(repoRoot, 'packages/contracts/src/public-pages/sahyog-drive.ts'),
       'utf8',
     )
-    expect(indexContract).not.toMatch(/nomineeName|nominee_name/)
+    expect(indexContract).toMatch(/nomineeName:\s*z\.string\(\)\.min\(1\)\.nullable\(\)/)
+    // ⛔ AND ⛔ NO OTHER NOMINEE-BANK VALUE CAME WITH IT — `-190` cl.1 + `-191` cl.1 withdrew them,
+    // and `-205` cl.9 authorises the NAME and ⛔ nothing else. Keys ABSENT, ⛔ never `null`.
+    // ⚠ It matches a Zod FIELD DECLARATION (`name: z.…`), ⛔ not the bare word — the file's own
+    // doc-blocks NAME these values in explaining that they may ⛔ not cross, and a substring scan
+    // would fail on the prohibition itself.
+    for (const banned of [
+      /accountNumber\s*:\s*z\./,
+      /accountNumberLast4\s*:\s*z\./,
+      /ifsc\s*:\s*z\./i,
+      /vpa\s*:\s*z\./i,
+      /bankName\s*:\s*z\./,
+      /branch\s*:\s*z\./,
+    ]) {
+      expect(indexContract).not.toMatch(banned)
+    }
   })
 })

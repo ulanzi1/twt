@@ -14,6 +14,8 @@
   "table.col.date": "Closed on",
   "table.col.contributions": "Contributions confirmed",
   "table.col.progress": "Progress",
+  "table.col.nominee": "Nominee Name",
+  "table.col.summary": "About this drive",
   "table.col.outcome": "Close of cycle",
   "value.district_unknown": "Not recorded",
   "value.date_unknown": "Not recorded",

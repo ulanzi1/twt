@@ -1512,25 +1512,25 @@ cross-drive comparison · ⛔ not publish a written pitch (`-190` cl.8).
         drive-page amount stays **`11b-3b`'s**. ⛔ Do ⛔ not amend `11b-3b`'s file from here. **And** state the **staleness** (Trap 3,
       `sahyog.astro:304`); state the **address-publication** consequence (Trap 5) **citing
       `2026-09-05-200`**, ⛔ not `-186` alone.
-- [ ] **Task 8 — The nominee name on the index** (AC7) — ⚠ **AC7(a) FIRST: the decision-log entry
+- [x] **Task 8 — The nominee name on the index** (AC7) — ⚠ **AC7(a) FIRST: the decision-log entry
       and the matrix row, in a `governance:` commit, ⛔ before any code.**
-  - [ ] ⛔ **THREE matrix artefacts, ⛔ not one** (Trap 7) — the YAML row; **`matrix.ts:398-453`
+  - [x] ⛔ **THREE matrix artefacts, ⛔ not one** (Trap 7) — the YAML row; **`matrix.ts:398-453`
         `RULED_TIER1_PUBLIC_EXCEPTIONS`** (⚠ it pins **(surface, field) PAIRS**, and `:396-397`
         forbids appending **without a ruling** — ⭐ the decision entry supplies the id it cites);
         and `surface-fields.ts:338` + `:369`.
-  - [ ] ⛔ **Amend and NAME `public-vs-private-matrix.yaml:127-136`** — it still says the name FORM
+  - [x] ⛔ **Amend and NAME `public-vs-private-matrix.yaml:127-136`** — it still says the name FORM
         is *"⛔ NOT RULED"*; the Panel ruled it 2026-09-05.
-  - [ ] ⚠⛔ **ANSWER THE DOUBLE-ABSENCE OPEN ITEM** — ⛔ deferred to this story **by name**. Either
+  - [x] ⚠⛔ **ANSWER THE DOUBLE-ABSENCE OPEN ITEM** — ⛔ deferred to this story **by name**. Either
         demonstrate it unreachable in production data, or extend the variant set. ⛔ `t()` throws ⇒
         **one bad row 500s the whole page**.
-  - [ ] ⭐ **BOUNDED-CONCURRENCY** decrypt (`mapWithConcurrency` + `DIRECTORY_DECRYPT_CONCURRENCY`),
+  - [x] ⭐ **BOUNDED-CONCURRENCY** decrypt (`mapWithConcurrency` + `DIRECTORY_DECRYPT_CONCURRENCY`),
         ⛔ **NOT "batched"** — ⚠ per-value DEKs mean ⛔ no batch exists (`handlers.ts:386-387`).
-  - [ ] ⭐ **Copy the list-shaped failure posture** from `handlers.ts:449-456` — *"OMIT THE NAME,
+  - [x] ⭐ **Copy the list-shaped failure posture** from `handlers.ts:449-456` — *"OMIT THE NAME,
         ⛔ KEEP THE ROW"*. ⛔ Do ⛔ not re-derive one.
-  - [ ] ⛔ **NARROW, ⛔ never delete**, the two assertions in
+  - [x] ⛔ **NARROW, ⛔ never delete**, the two assertions in
         `packages/i18n/tests/sahyog-shared-dark-copy.test.ts` this AC falsifies — ⭐ the test's own
         author left the successor property in writing.
-  - [ ] Then: the contract field, the render under **"Nominee Name"**, the omit-the-clause rule, and
+  - [x] Then: the contract field, the render under **"Nominee Name"**, the omit-the-clause rule, and
         the **measured** p95. ⛔ **NO** other bank value crosses (keys ABSENT, ⛔ never `null`).
         ⛔ **NO** join or match rule to `member_nominees` (AC7(c)).
 - [ ] **Task 7 — Tests** — ⭐ **RUNS LAST**, despite the number. A `live` drive appears **in the Live

@@ -400,6 +400,49 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
           rows,
           DIRECTORY_DECRYPT_CONCURRENCY,
           async (row): Promise<PublicSahyogDriveEntry> => {
+            // ⭐⭐ STORY 11b.14 (AC7) — THE NOMINEE'S NAME. Trustee-ratified 2026-09-05;
+            // `2026-09-07-205` cl.1.
+            //
+            // ⚠⛔ IT RIDES THE **SAME** BOUNDED MAP, ⛔ never a second pass and ⛔ never
+            // `Promise.all`. ⭐ ONE extra `decryptDek` round-trip per row that has an account —
+            // ⛔ not two: the two accounts are EQUAL destinations for the SAME nominee (an RBI
+            // per-account-cap workaround, ⛔ not one row per declared nominee), so the domain read
+            // returns exactly ONE ciphertext and decrypting the second would be a Tier-1 decrypt
+            // with ⛔ no authorising purpose.
+            // ⭐ ⇒ the step is 50 → up to 100 per request, ⛔ not the "up to 150" an earlier framing
+            // estimated — ⚠ and ⛔ neither is it the "1-2 → 100" a framing before THAT recorded:
+            // this index ALREADY performed up to 50 Tier-1 decrypts (the deceased member's name).
+            //
+            // ⛔⛔ THERE IS ⛔ NO SECOND GATE ON IT, AND THAT IS RULED, ⛔ not an omission. The
+            // deceased member's name is gated on the MEMBER'S OWN accepted T&C clause; the nominee
+            // name has ⛔ no such basis and needs none — `2026-09-04-190` cl.2 published it, and
+            // `-205` cl.9 records that narrowing it by claim OUTCOME would be a NEW suppression
+            // rule ⛔ nobody has ruled. ⛔ Do ⛔ not invent one here.
+            //
+            // ⭐ OMIT THE NAME, ⛔ KEEP THE ROW — the list-shaped posture COPIED from the deceased
+            // member's decrypt below, ⛔ not re-derived. Letting one bad envelope throw would 500
+            // the ENTIRE page for the whole Pariwar.
+            // ⛔ The decrypted value ⛔ NEVER leaves this closure except as `nomineeName`, and is
+            // ⛔ never logged.
+            let nomineeName: string | null = null;
+            if (row.nomineeAccountHolderNameCiphertext !== null) {
+              try {
+                const decrypted = await encryption.decryptKycField(
+                  row.nomineeAccountHolderNameCiphertext,
+                  pariwarId,
+                  deps.encryption,
+                );
+                // ⛔ An empty or whitespace-only value renders NOTHING — the contract's `.min(1)`
+                // would 500 the whole page on `''`, and a blank name is not a name.
+                nomineeName = decrypted.trim() || null;
+              } catch (err) {
+                console.error(
+                  '[public-pages] sahyog-drive: nominee name decrypt failed — omitting the NAME, keeping the row',
+                  err,
+                );
+              }
+            }
+
             const base = {
               poolLetterCode: poolDomain.poolLetterCode(row.poolIndex),
               poolCanonicalIdentifier: row.poolCanonicalIdentifier,
@@ -428,6 +471,9 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
               // ⭐ Story 11b.14 (AC3) — the ruled public money figure, `-190` cl.6. ⛔ Returned from
               // the domain read's own `deliveredTotal`; ⛔ ⛔ no second `× fixedAmount` here.
               amountRaisedInr: row.amountRaisedInr,
+              // ⭐ Story 11b.14 (AC7) — resolved just below the base object; `null` when the claim
+              // carried no bank details or the decrypt failed. ⛔ NULL NEVER OMITS THE ROW.
+              nomineeName,
               fundingOutcome: row.fundingOutcome,
             };
 

@@ -515,10 +515,24 @@ export function buildSahyogView(
       // — a two-way split whose `else` swept **everything non-`verified`** into "Closed drives".
       // ⇒ admitting `live` upstream without this edit renders every collecting drive under the
       // Closed heading, labelled Closed, with ⛔ a green typecheck and ⛔ a green suite.
-      // ⭐ It is now an explicit three-arm switch: ⛔ no `else` catch-all, so a FOURTH token added
-      // to the wire enum lands nowhere and is visible, ⛔ rather than being absorbed.
+      // ⚠⛔ **AND THE PRIOR TEXT OF THIS PARAGRAPH OVERSTATED WHAT THE SHAPE BELOW GUARANTEES**
+      // (Review finding, 2026-09-07). ⭐ It read: *"It is now an explicit three-arm switch: ⛔ no
+      // `else` catch-all, so a FOURTH token added to the wire enum lands nowhere and is visible."*
+      // ⛔ There WAS an `else` catch-all — `else activeRows.push(…)` — so a fourth token would have
+      // been absorbed into **Closed**, ⛔ the exact outcome the paragraph above says must not happen.
+      // ⭐ The arms are now explicit on all three ruled tokens, and the residual arm is NAMED.
+      //
+      // ⭐⭐ **WHERE THE REAL PROTECTION LIVES, ⛔ so the next reader does not look for it here:**
+      // `sahyog.server.ts`'s hand-typed literal set REJECTS an unknown token before this function
+      // ever sees it, and the whole body falls to the page's OUTAGE arm. ⚠ That guard is ⛔ invisible
+      // to the typecheck and is pinned by `apps/public/tests/sahyog-serves.test.ts`, which derives
+      // from `PublicSahyogDriveStatus.options` ⇒ ⭐ widening the enum FAILS THERE FIRST.
+      // ⛔ This module may ⛔ not throw (the `.astro` frontmatter calls it unguarded), so the
+      // residual arm keeps the row rather than dropping it — ⭐ a visible row under a possibly-wrong
+      // heading beats a silently vanished drive, and the guard above is what stops it arising.
       if (item.status === 'live') liveRows.push(displayRow);
       else if (item.status === 'verified') archiveRows.push(displayRow);
+      else if (item.status === 'closed') activeRows.push(displayRow);
       else activeRows.push(displayRow);
     });
   }
@@ -641,6 +655,19 @@ export function formatSahyogLiveAmount(
  * the divergence is the ruling, ⛔ not an oversight.
  */
 export function formatSahyogTargetAmount(targetInr: number, locale: Locale): string {
+  // ⭐⭐ AND IT IS EXACT BELOW ₹1 LAKH — Trustee-ratified `2026-09-07-206` cl.3.
+  //
+  // ⚠⛔ **§13.5's *"always Lakh or Crore"* IS NARROWED, ⛔ NOT REVERSED.** ⭐ Its worked example
+  // (*"a ₹8,00,000 target renders ₹8 lakh, ⛔ never ₹8,00,000"*) STANDS, and so does its
+  // *"⛔ do ⛔ not align the two rules"* warning — ⭐ both hold **at and above** this boundary.
+  //
+  // ⛔⛔ WHAT IT COULD ⛔ NOT COVER: the short form has ⛔ no sub-lakh floor, so a small drive's
+  // DERIVED target rendered the words **`₹ 0 lakh`** — ⭐ executed: ₹300 and ₹800 both did, and
+  // ₹300 is exactly what 3 assignees × a ₹100 `fixed_amount` produces (Review finding,
+  // 2026-09-07). ⚠ AC2 already rules that a zero-shaped target is **SILENCE, ⛔ never `₹0`**; the
+  // read path enforces that for a ZERO-assignee pool, ⛔ but a NONZERO target was reaching the
+  // page as a zero STRING by way of the number form. ⇒ ⭐ this closes that door.
+  if (targetInr < 100_000) return formatCurrency(targetInr, 'en');
   return formatCurrencyShort(targetInr, locale);
 }
 
@@ -690,14 +717,39 @@ export interface SahyogColumn {
     /**
      * The bar's fill, 0-100 — or `null` for a row that carries ⛔ no bar.
      *
-     * ⚠⛔ **THE TEMPLATE RENDERS IT `aria-hidden`, AND THAT IS A RULING, ⛔ not a styling choice.**
+     * ⚠⛔ **THE BAR ITSELF STAYS `aria-hidden`, AND THAT IS A RULING, ⛔ not a styling choice.**
      * `D6` removed the shipped *"{confirmed} of {total} contributions confirmed"* label because it
      * **names its denominator**; its screen-reader twin carries the identical shape and would name
-     * that denominator to assistive tech. ⇒ ⭐ the bar is decorative to a screen reader and the ruled
-     * sentence beside it carries the meaning — ⛔ nothing is announced twice, and ⛔ no new a11y
-     * string is minted that would name a hidden figure.
+     * that denominator to assistive tech. ⇒ ⭐ the `<div>` is decorative and ⛔ no `progressbar` role
+     * or a11y string is minted for it.
+     *
+     * ⭐⭐ **BUT THE FIGURE IS NOW PRINTED BESIDE IT — `2026-09-07-206` cl.1**, as **visible text**
+     * through {@link percentLabelOf}. ⚠⛔ **⛔ THIS IS ⛔ NOT A REVERSAL OF `-204` cl.5** — ⭐ that
+     * clause's refusal of *"412 of 500"* stands verbatim, because that string **names its
+     * denominator**; ⭐ a bare `82%` names ⛔ none. ⇒ ⭐ what cl.5's `aria-hidden` consequence was
+     * protecting is intact, and the cost cl.5 **recorded** (*"the bar's width now means something
+     * the words do ⛔ not explain"*) is discharged — ⭐ for the **sighted** visitor too, ⛔ which a
+     * screen-reader-only announcement would ⛔ not have done.
      */
     readonly fillOf: (row: SahyogDriveRow) => number | null;
+    /**
+     * ⭐⭐ THE PRINTED PERCENTAGE — `"82%"` — or `null` for a row carrying ⛔ no bar.
+     * Trustee-ratified `2026-09-07-206` **cl.1**.
+     *
+     * ⭐⭐ **ONE STRING, READ BY BOTH SENSES.** ⛔ There is ⛔ no hidden twin: a second definition of
+     * a fact the bar already carries is the ⛔ exact two-source defect `sahyog-shared.json`'s own
+     * `$comment` records (*"two sources is how 'Active' came to mean two different things"*).
+     *
+     * ⭐ **LATIN NUMERALS IN BOTH LOCALES, AND ⛔ NO i18n KEY.** A percentage is `formatCount`-class
+     * **OPERATIONAL data** under amendment-A2 ⇒ `"82%"` is identical in English and Hindi. ⛔ Do
+     * ⛔ not add a locale parameter, ⛔ do not mint a string, and ⛔ do not reach for `toHindiNumeral`.
+     *
+     * ⚠ It is governed by its **OWN** matrix field id ({@link percentFieldId}), ⛔ not by the
+     * sentence's — ⭐ which is what finally gives `drive_progress_percentage` a consumer.
+     */
+    readonly percentLabelOf: (row: SahyogDriveRow) => string | null;
+    /** The matrix field id governing {@link percentLabelOf}. ⛔ Distinct from the column's own. */
+    readonly percentFieldId: string;
     /** लक्ष्य's own matrix field id — it is a SECOND governed value in the same cell. */
     readonly targetFieldId: string;
     /** लक्ष्य's line, or `null` — ⛔ `null` unless a `super_admin` revealed it for the Pariwar. */
@@ -786,14 +838,24 @@ export function visibleSahyogColumns(
     {
       // ⭐⭐ STORY 11b.14 (AC2, AC3) — THE PROGRESS METER. ⚠ **LIVE ROWS ONLY** — it is filtered out
       // of the other two stage lists below, header and cells TOGETHER.
-      // ⚠ The cell's PRIMARY governed value is the ruled SENTENCE, ⛔ not the percentage: the
-      // percentage never renders as text (it is the bar's width) and लक्ष्य is a second governed
-      // value carried by `meter.targetFieldId`. ⭐ All three are declared in the matrix.
+      // ⚠ The cell carries THREE governed values, each under its OWN matrix field id: the ruled
+      // SENTENCE (this column's `fieldId`), the PERCENTAGE (`meter.percentFieldId` — printed as
+      // text since `2026-09-07-206` cl.1, ⛔ no longer only the bar's width), and लक्ष्य
+      // (`meter.targetFieldId`). ⭐ All three are declared in the matrix.
       fieldId: 'drive_participation_line',
       headerLabel: labels.columnProgress,
       valueOf: (row) => row.driveParticipationLine,
       meter: {
         fillOf: (row) => row.driveProgressPercentage,
+        // ⭐⭐ `2026-09-07-206` cl.1 — the figure, PRINTED. ⛔ No i18n key: `"82%"` is operational
+        // data and is byte-identical in both locales (amendment-A2). ⛔ Do ⛔ not localise it.
+        percentLabelOf: (row) =>
+          row.driveProgressPercentage === null ? null : `${String(row.driveProgressPercentage)}%`,
+        // ⭐⭐ AND THIS IS THE FIELD'S FIRST CONSUMER. Until cl.1 it was declared in the matrix and
+        // in `SAHYOG_DRIVE_ROW_FIELD_IDS` but asked about NOWHERE, so flipping its tier suppressed
+        // ⛔ nothing and the tier-leak gate stayed GREEN — the same inert-field defect the page
+        // guards for `drive_status` with an explicit throw (Review finding, 2026-09-07).
+        percentFieldId: 'drive_progress_percentage',
         targetFieldId: 'drive_target',
         targetOf: (row) => row.driveTargetLine,
       },

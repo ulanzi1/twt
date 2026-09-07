@@ -211,8 +211,30 @@ function isSahyogDriveResponse(body: unknown): body is PublicSahyogDriveResponse
       // this comment predicts, because the enum widened before the literal set did.
       (r['status'] === 'live' || r['status'] === 'closed' || r['status'] === 'verified') &&
       (r['closedAt'] === null || typeof r['closedAt'] === 'string') &&
-      (r['district'] === null || typeof r['district'] === 'string') &&
+      // ⚠ LENGTH-CHECKED like `publicToken` above: the contract is `z.string().min(1).nullable()`,
+      // so `''` is as invalid as absent — and an empty district renders *"who served in  district"*
+      // inside a ratified sentence (Review finding, 2026-09-07).
+      (r['district'] === null || (typeof r['district'] === 'string' && r['district'].length > 0)) &&
       typeof r['confirmedContributionCount'] === 'number' &&
+      // ⭐⭐ STORY 11b.14's FOUR NEW REQUIRED FIELDS — ⛔ THE TYPECHECK CANNOT SEE THESE EITHER, and
+      // ⛔ they were NOT added when the story widened the status tuple above (Review finding,
+      // 2026-09-07). ⚠ Each has a named failure mode reached by a body this API did not produce —
+      // a rolling deploy where `apps/public` ships ahead of `apps/api`, or a rewritten body:
+      //   · `amountRaisedInr` absent → `formatCurrency(undefined)` THROWS inside `buildSahyogView`,
+      //     which the `.astro` frontmatter calls unguarded ⇒ a **500 for the whole page**, ⛔ not
+      //     the outage arm this module promises.
+      //   · `confirmedPercentage` absent → `--sahyog-meter-fill:undefined%`, invalid at
+      //     computed-value time ⇒ `width` falls back to `auto` and paints a **FULL** bar.
+      //   · `nomineeName` absent (⛔ as opposed to `null`) → `selectIndexLineVariant` reads
+      //     `undefined !== null` as PRESENT and picks a variant whose token is never supplied.
+      //   · `driveTargetInr` `null` (⛔ as opposed to ABSENT — the 11b.11 shape) → the render guard
+      //     is `!== undefined`, so `null` passes into `formatCurrencyShort(null)`, which THROWS.
+      // ⇒ ⭐ all four fall to the OUTAGE arm here instead, which is what this module exists to do.
+      typeof r['amountRaisedInr'] === 'number' &&
+      typeof r['confirmedPercentage'] === 'number' &&
+      (r['nomineeName'] === null ||
+        (typeof r['nomineeName'] === 'string' && r['nomineeName'].length > 0)) &&
+      (r['driveTargetInr'] === undefined || typeof r['driveTargetInr'] === 'number') &&
       // ⚠ VALIDATED AGAINST THE LITERAL SET, ⛔ not `typeof === 'string'` (Review finding,
       // 2026-08-27). `framingFor` switches on this value and its `default:` branch THROWS, inside
       // `buildSahyogView`, which the `.astro` frontmatter calls unguarded — so a bare `string`

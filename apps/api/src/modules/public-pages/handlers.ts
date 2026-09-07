@@ -471,7 +471,8 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
               // ⭐ Story 11b.14 (AC3) — the ruled public money figure, `-190` cl.6. ⛔ Returned from
               // the domain read's own `deliveredTotal`; ⛔ ⛔ no second `× fixedAmount` here.
               amountRaisedInr: row.amountRaisedInr,
-              // ⭐ Story 11b.14 (AC7) — resolved just below the base object; `null` when the claim
+              // ⭐ Story 11b.14 (AC7) — resolved ABOVE the base object (⚠ the prior text of this
+              // comment said *"just below"*, which it never was); `null` when the claim
               // carried no bank details or the decrypt failed. ⛔ NULL NEVER OMITS THE ROW.
               nomineeName,
               fundingOutcome: row.fundingOutcome,

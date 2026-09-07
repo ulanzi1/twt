@@ -41,6 +41,14 @@ const driveRow = (status: string) => ({
   closedAt: '2026-08-01T00:00:00.000Z',
   district: 'Lucknow',
   confirmedContributionCount: 12,
+  // ⭐⭐ STORY 11b.14's REQUIRED FIELDS — ⛔ the fixture must model a REAL API row, or this suite
+  // asserts the guard against a body the API could never send. ⚠ These were missing until the
+  // 2026-09-07 review widened `isSahyogDriveResponse` to check them; ⭐ the suite FAILED FIRST,
+  // exactly as `sahyog.server.ts`'s own comment predicts.
+  // ⛔ `driveTargetInr` is deliberately ABSENT, ⛔ never `null` — the 11b.11 shape.
+  amountRaisedInr: 1200,
+  confirmedPercentage: 12,
+  nomineeName: 'Sunita Devi Sharma',
   fundingOutcome: 'fully_funded',
 });
 

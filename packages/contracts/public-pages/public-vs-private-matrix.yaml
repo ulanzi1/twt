@@ -745,8 +745,17 @@ surfaces:
         description: >-
           ⭐ The nominee's name, as recorded on the claim's bank accounts — decrypted per row
           under the SAME bounded-concurrency discipline the deceased member's name already
-          uses on this handler, and rendered inside the ratified `sahyog-shared:index_line.*`
-          sentence as its `{nominee_name}` token (11b.12 authored it DARK; this story lights it).
+          uses on this handler.
+          ⚠⛔⛔ IT RENDERS ON ALL THREE STAGES, AND BY TWO DIFFERENT VEHICLES — Trustee-ratified
+          `2026-09-07-206` cl.2. ⭐ The PRIOR text of this sentence read: "and rendered inside the
+          ratified `sahyog-shared:index_line.*` sentence as its `{nominee_name}` token (11b.12
+          authored it DARK; this story lights it)." ⛔ That describes CLOSED and VERIFIED rows only.
+          ⚠ A LIVE row does ⛔ not render `index_line.*` at all — `2026-09-07-204` cl.6 gives it the
+          participation sentence instead, and that sentence has ⛔ NO `{nominee_name}` slot ⇒ on a
+          live row the name renders as its OWN CELL under the ruled label "Nominee Name".
+          ⭐ `2026-09-07-205` cl.1's RULING is undisturbed; ⛔ only its description of the vehicle
+          moved. ⚠ The review found the code had already settled this and that the reasoning
+          survived ⛔ only in a test's title — the Panel then ruled it (2026-09-07).
           ⚠⛔ THE DECRYPT-FAILURE POSTURE IS LIST-SHAPED: OMIT THE NAME, ⛔ KEEP THE ROW.
           ⛔ Letting one bad row throw would 500 the ENTIRE page for the whole Pariwar. ⭐ It is
           ⛔ not re-derived — it is COPIED from the precedent on this same handler.

@@ -87,7 +87,13 @@ describe('the meter — a PURE function of the row (AC2, Task 3)', () => {
     expect(driveConfirmedPercentage(0, 100)).toBe(0);
     expect(driveConfirmedPercentage(50, 100)).toBe(50);
     expect(driveConfirmedPercentage(1, 3)).toBe(33);
-    expect(driveConfirmedPercentage(2, 3)).toBe(67);
+    // ⚠⛔ **REVERSED BY THE NEVER-OVERSTATE FIX, 2026-09-07 — ⭐ the PRIOR text, kept:**
+    //   > `expect(driveConfirmedPercentage(2, 3)).toBe(67);`
+    // ⭐ 66.67% now TRUNCATES to 66. ⛔ The old value was `Math.round`, which also reached **100**
+    // from 99.5% ⇒ a visually COMPLETE bar on a drive still collecting. ⛔ The bar must ⛔ never
+    // overstate — the same posture `formatCurrencyShort` is ruled to take for the money figure,
+    // and ⛔ the two may ⛔ not disagree on one row.
+    expect(driveConfirmedPercentage(2, 3)).toBe(66);
   });
 
   it('⛔ a ZERO-ASSIGNEE pool is 0%, ⛔ never a divide-by-zero and ⛔ never an error', () => {
@@ -126,8 +132,39 @@ describe('लक्ष्य — the DERIVED total, gated (AC2, `D4`, `D7`)', ()
     const target = resolveDriveTargetForPublic(assigned, fixedAmount, { revealToPublic: true });
     const amount = confirmed * fixedAmount;
     expect(target).not.toBeNull();
-    expect(Math.round((amount / (target as number)) * 100)).toBe(
+    // ⚠ **AMENDED 2026-09-07 — ⭐ the PRIOR line used `Math.round`:**
+    //   > `expect(Math.round((amount / (target as number)) * 100)).toBe(`
+    // ⛔ That is ⛔ not a change to the IDENTITY, which holds at every value and is what this test
+    // exists to pin. ⭐ It is that the test's own arithmetic must use the **same truncation as the
+    // function it checks** — with the two modes mixed, the test compared `round(38.8)` against
+    // `floor(38.8)` and failed on a property that was never in doubt.
+    expect(Math.floor((amount / (target as number)) * 100)).toBe(
       driveConfirmedPercentage(confirmed, assigned),
     );
+  });
+});
+
+// ⭐⭐ TWO REVIEW FIXES ON THE SAME TWO FUNCTIONS — 2026-09-07.
+describe('⭐⭐ the bar must ⛔ NEVER overstate, and लक्ष्य must ⛔ never be a zero', () => {
+  it('⛔⛔ 199 of 200 is 99%, ⛔ NOT 100 — ⭐ `Math.round` painted a COMPLETE bar on a collecting drive', () => {
+    expect(driveConfirmedPercentage(199, 200)).toBe(99);
+    // ⭐ AND THE WHOLE ROUNDING BAND, ⛔ not one sample: everything from 99.5% up had reached 100.
+    expect(driveConfirmedPercentage(999, 1000)).toBe(99);
+    expect(driveConfirmedPercentage(1999, 2000)).toBe(99);
+  });
+
+  it('⭐⭐ 100 means COMPLETE and ⛔ nothing else — ⭐ reachable only when every assignment is confirmed', () => {
+    expect(driveConfirmedPercentage(200, 200)).toBe(100);
+    // ⚠ The clamp still covers the two-subquery race; ⛔ it is ⛔ not what produces 100 on a full drive.
+    expect(driveConfirmedPercentage(201, 200)).toBe(100);
+  });
+
+  it('⛔ a NON-POSITIVE `fixed_amount` yields SILENCE — ⛔ never `0`, which fails `z.positive()` and 500s the route', () => {
+    const revealed = { revealToPublic: true } as const;
+    // ⚠ `pools.fixed_amount` carries ⛔ no positivity CHECK (migration 0115), so `0` is reachable.
+    expect(resolveDriveTargetForPublic(3, 0, revealed)).toBeNull();
+    expect(resolveDriveTargetForPublic(3, -1, revealed)).toBeNull();
+    // ⭐ AND THE ORDINARY PATH IS UNTOUCHED.
+    expect(resolveDriveTargetForPublic(3, 100, revealed)).toBe(300);
   });
 });

@@ -187,42 +187,57 @@ const labels: SahyogLabels = {
     const amount = formatSahyogLiveAmount(tokens.amountInr, locale, 'closed');
     // ⛔ `t()` THROWS on an unsupplied token, so each variant is given EXACTLY the params its
     // string names — ⛔ never a superset, which would hide a future copy edit that added one.
+    //
+    // ⚠⛔⛔ **THE `?? ''` FALLBACKS ARE GONE — ⭐ THEY INVERTED THE RULED FAILURE MODE** (Review
+    // finding, 2026-09-07). ⭐ Each was DEAD today, because `selectIndexLineVariant` guarantees a
+    // non-null value for every token the chosen variant names. ⚠ ⛔ But if that selector were ever
+    // edited, `?? ''` would have converted a LOUD `t()` throw into a rendered sentence with a hole
+    // in it — *"₹ 12,000 contributed by colleagues for , nominee of Late …"* — ⭐ which is exactly
+    // the *"⛔ no partial sentence"* outcome `2026-09-07-205` cl.6 rules out.
+    // ⇒ ⭐ an unexpectedly-absent token now returns `null` and the row renders **NOTHING**, the same
+    // silence the selector itself returns. ⛔ Do ⛔ not reintroduce a string fallback here.
     if (variant === 'no_family') {
+      if (tokens.nomineeName === null) return null;
       return t(
         'index_line.no_family',
-        { amount, nominee_name: tokens.nomineeName ?? '' },
+        { amount, nominee_name: tokens.nomineeName },
         { locale, namespace: 'sahyog-shared' },
       );
     }
     if (variant === 'no_nominee') {
+      if (tokens.familyName === null || tokens.districtName === null) return null;
       return t(
         'index_line.no_nominee',
         {
           amount,
-          family_name: tokens.familyName ?? '',
-          district_name: tokens.districtName ?? '',
+          family_name: tokens.familyName,
+          district_name: tokens.districtName,
         },
         { locale, namespace: 'sahyog-shared' },
       );
     }
     if (variant === 'no_district') {
+      if (tokens.nomineeName === null || tokens.familyName === null) return null;
       return t(
         'index_line.no_district',
         {
           amount,
-          nominee_name: tokens.nomineeName ?? '',
-          family_name: tokens.familyName ?? '',
+          nominee_name: tokens.nomineeName,
+          family_name: tokens.familyName,
         },
         { locale, namespace: 'sahyog-shared' },
       );
+    }
+    if (tokens.nomineeName === null || tokens.familyName === null || tokens.districtName === null) {
+      return null;
     }
     return t(
       'index_line.full',
       {
         amount,
-        nominee_name: tokens.nomineeName ?? '',
-        family_name: tokens.familyName ?? '',
-        district_name: tokens.districtName ?? '',
+        nominee_name: tokens.nomineeName,
+        family_name: tokens.familyName,
+        district_name: tokens.districtName,
       },
       { locale, namespace: 'sahyog-shared' },
     );
@@ -674,15 +689,37 @@ if (!driveStatusVisible) {
                             a custom property because Astro scopes `<style>` but ⛔ not inline
                             attributes, and `prefers-reduced-motion: reduce` renders the finished
                             bar with ⛔ no motion at all. */}
-                        {col.meter !== undefined && col.meter.fillOf(row) !== null && (
-                          <div
-                            class="sahyog__meter"
-                            aria-hidden="true"
-                            style={`--sahyog-meter-fill:${String(col.meter.fillOf(row))}%`}
-                          >
-                            <span class="sahyog__meter-fill"></span>
-                          </div>
-                        )}
+                        {/* ⭐⭐ `2026-09-07-206` cl.1 — THE BAR AND ITS PRINTED FIGURE, one row.
+                            ⚠⛔ THE GUARD IS `typeof … === 'number'`, ⛔ NOT `!== null`: an
+                            `undefined` fill passed the old check and emitted
+                            `--sahyog-meter-fill:undefined%`, which is invalid at computed-value
+                            time ⇒ `width` fell back to `auto` and painted a FULL bar, ⛔ not the
+                            `0%` the `var()` fallback suggests (Review finding, 2026-09-07).
+                            ⭐ The FIGURE goes through <MatrixField> under its OWN field id, so a
+                            matrix verdict on `drive_progress_percentage` finally suppresses
+                            something — ⛔ before cl.1 that field had no consumer at all. */}
+                        {col.meter !== undefined &&
+                          typeof col.meter.fillOf(row) === 'number' &&
+                          visibilityOf('sahyog-drive', col.meter.percentFieldId, 'public')
+                            .visible && (
+                            <div class="sahyog__meter-row">
+                              <div
+                                class="sahyog__meter"
+                                aria-hidden="true"
+                                style={`--sahyog-meter-fill:${String(col.meter.fillOf(row))}%`}
+                              >
+                                <span class="sahyog__meter-fill"></span>
+                              </div>
+                              <b class="sahyog__meter-pct">
+                                <MatrixField
+                                  surface="sahyog-drive"
+                                  field={col.meter.percentFieldId}
+                                  viewerContext="public"
+                                  value={col.meter.percentLabelOf(row) ?? ''}
+                                />
+                              </b>
+                            </div>
+                          )}
                         {col.hrefOf !== undefined ? (
                           <a href={col.hrefOf(row)} aria-label={col.a11yOf?.(row)}>
                             <MatrixField
@@ -709,16 +746,24 @@ if (!driveStatusVisible) {
                             `-189` cl.2(c) resolved Pool-Reality #2 precisely BY the target's
                             invisibility, so naming लक्ष्य beside the bar makes the bar a COMPARISON
                             again. ⭐ It still goes through <MatrixField>, under its OWN field id. */}
-                        {col.meter !== undefined && col.meter.targetOf(row) !== null && (
-                          <p class="sahyog__meter-target">
-                            <MatrixField
-                              surface="sahyog-drive"
-                              field={col.meter.targetFieldId}
-                              viewerContext="public"
-                              value={col.meter.targetOf(row) ?? ''}
-                            />
-                          </p>
-                        )}
+                        {/* ⚠⛔ THE WRAPPER IS INSIDE THE MATRIX VERDICT, ⛔ NOT OUTSIDE IT (Review
+                            finding, 2026-09-07). ⭐ Before this, a matrix suppression of
+                            `drive_target` emptied the <MatrixField> but still emitted the <p> ⇒ an
+                            empty wrapper a scraper can DIFF — ⛔ the exact "announced omission" shape
+                            `visibleSahyogColumns` exists to prevent, where the absence of a value
+                            is itself the signal. ⇒ ⭐ suppressed now means ⛔ NO markup at all. */}
+                        {col.meter !== undefined &&
+                          col.meter.targetOf(row) !== null &&
+                          visibilityOf('sahyog-drive', col.meter.targetFieldId, 'public').visible && (
+                            <p class="sahyog__meter-target">
+                              <MatrixField
+                                surface="sahyog-drive"
+                                field={col.meter.targetFieldId}
+                                viewerContext="public"
+                                value={col.meter.targetOf(row) ?? ''}
+                              />
+                            </p>
+                          )}
                       </td>
                     ))}
                   </tr>
@@ -908,11 +953,26 @@ if (!driveStatusVisible) {
   .sahyog__table th { font-family: var(--font-display-parichay); color: var(--color-rule-heavy); }
   /* ⭐⭐ STORY 11b.14 — THE PROGRESS BAR. `2026-09-04-189` cl.2(b); its MOTION ruled (A) by BigDev.
      ⛔ CSS-ONLY: ⛔ no JS and ⛔ no library on a static, server-rendered page. */
+  /* ⭐ `2026-09-07-206` cl.1 — the bar and its printed figure share one row; the figure keeps a
+     fixed track so a column of them lines up, and tabular digits stop it shifting per row. */
+  .sahyog__meter-row {
+    align-items: center;
+    display: flex;
+    gap: var(--space-row);
+    margin-bottom: var(--space-row);
+  }
+  .sahyog__meter-pct {
+    flex-shrink: 0;
+    font-size: 0.9em;
+    font-variant-numeric: tabular-nums;
+    min-width: 4ch;
+    text-align: right;
+  }
   .sahyog__meter {
     background: var(--color-rule-hairline);
     border-radius: var(--border-rule);
+    flex: 1;
     height: 0.5rem;
-    margin-bottom: var(--space-row);
     overflow: hidden;
     width: 100%;
   }

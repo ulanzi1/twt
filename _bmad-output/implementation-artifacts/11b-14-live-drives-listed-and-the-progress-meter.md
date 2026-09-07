@@ -1364,7 +1364,7 @@ cross-drive comparison · ⛔ not publish a written pitch (`-190` cl.8).
 > *"Story D (`11b-14` **AC7/Task 8**)"* — and `D3` / `-203` cl.8 cite **Task 7**. ⇒ ⭐ **execution
 > order is 0 → 2 → 3 → 4 → 5 → 6 → 8 → 7**, with **Task 7 (Tests) LAST**. ⛔ Do not renumber.
 
-- [ ] **Task 0 — GOVERNANCE FIRST** (AC0) — annotate `epics.md` (⭐ FR-76 **restored**, verified at
+- [x] **Task 0 — GOVERNANCE FIRST** (AC0) — annotate `epics.md` (⭐ FR-76 **restored**, verified at
       `epics.md:160`; the **`:4872`** AC parenthetical **superseded** — ⚠ ⛔ **not `:4865`**, which is
       now a blank line); flip the sprint row **and clear its discharged *"BLOCKED ON B AND C"* text
       and its stale `:4865`**; ⛔ one `governance:` commit, ⛔ no code.

@@ -340,6 +340,13 @@ AC1 **requires**. ⚠ And the third `.length > 0` at `sahyog.astro:602` is **pag
 a section guard, ⛔ do not count it.
 
 ### AC2 — Each drive carries a PROGRESS METER
+✅⭐⭐ **THE DENOMINATOR IS THE ROSTER, ⛔ NOT THE RUPEE TARGET — DR + KB, 2026-09-07.** *"Progress bar
+should show the % of contributor already contributed in that pool."* ⇒ **`confirmedCount ÷
+rosterSize`**, ⭐ which is **exactly what `pool-progress` ships today** — ⛔ no component change.
+⇒ ⛔ **`2026-09-04-191` cl.4 is SUPERSEDED** (it ruled a rupee target); ⭐ `-190` cl.6's
+**participation-first** headline is ⛔ undisturbed. ⇒ ⭐⭐ **`D3` is CLOSED by construction.**
+⛔ The wire carries the **percentage only**, ⛔ never `rosterSize`.
+
 Per `-189` cl.2(b) and D1's shape. **And** ⛔ **THE TARGET IS ⛔ NOT DISPLAYED** (`-190` cl.7(b)) —
 ⛔ no number, ⛔ no "of ₹X", ⛔ no percentage label that lets it be inferred by arithmetic.
 **And** where story C's target is **unset** — the default for every Pariwar — the meter renders per
@@ -358,7 +365,19 @@ SUPERADMIN may make it visible**, and **separately for member and for public**"*
 names **this story** as the target's *"first consumer, **server-side**"*. ⇒ **as written, AC2 forbids
 the render cl.7(c) exists to authorise.** ⛔ Not decided here. ⇒ **see `D4`.**
 
-#### ⏳⚠⛔ D3 — **ESCALATED TO THE TRUSTEE PANEL 2026-09-07 (BigDev's direction). ⛔ STILL BLOCKS TASK 3.**
+#### ✅✅ D3 — **CLOSED BY CONSTRUCTION, 2026-09-07 (DR + KB).** ⛔ Not mitigated — ⭐ the channel no longer exists
+
+> ✅⭐⭐ **THE PANEL'S ANSWER:** *"Progress bar should show the % of contributor already contributed in
+> that pool."* ⇒ the bar's width is **`confirmedCount ÷ rosterSize`**. ⇒ dividing the published amount
+> by the published fill now returns the **ROSTER SIZE**, ⛔ **not the rupee target**. ⇒ ⭐⭐ **the hidden
+> figure is ⛔ no longer derivable from the page at all.** ⛔ No quantising, ⛔ no banding, ⛔ no
+> accept-and-record — ⭐ all three options are **moot**.
+> ⚠ **Consequence, recorded ⛔ not asked:** a participation percentage ⛔ cannot be shown without the
+> **roster size** becoming derivable — ⭐ inherent to the ruling. ⛔ Build decision: **the wire carries
+> the PERCENTAGE only**, ⛔ never `rosterSize`, computed server-side (minimum disclosure).
+> ⛔ 11b.1 AC5 is untouched — ⛔ nothing orders by it.
+
+#### ⏳⚠⛔ D3 — the escalation record (superseded by the answer above)
 
 > ⏳⭐ **ESCALATED, ⛔ NOT RULED.** ⇒ routing note **§15**. ⭐ Routed to BigDev from Story C on
 > 2026-09-06; ⭐ BigDev escalates it now that the Panel is available.
@@ -675,6 +694,27 @@ value is unverified, and that is recorded, ⛔ not re-litigated.
 > ships and before any Pariwar Admin acts, **⛔ no bar renders anywhere** — ⭐ that is correct, ⛔ not a
 > gap, and the story must ⛔ not "fix" it.
 
+> ✅⚠⛔⛔ **SUPERSEDED IN PART 2026-09-07 (DR + KB) — ⭐ THE DENOMINATOR IS ⛔ NOT A RUPEE TARGET.**
+> *"Progress bar should show the % of contributor already contributed in that pool."* ⇒ ⛔ this
+> **supersedes `2026-09-04-191` cl.4** (*Trustee-ratified*: *"THE PROGRESS BAR FILLS AGAINST A RUPEE
+> TARGET"*), which itself closed `-190` follow-up (ii)'s *"rupees or contributors?"*. ⭐ The Panel now
+> takes **contributors**. ⭐ Recorded as a **SUPERSESSION with the prior text named**, ⛔ never a
+> re-reading ([[feedback_supersede_never_reinterpret]]).
+>
+> ⭐⭐ **⇒ `D1(a)`'s BUILD IS ⛔ NO LONGER NEEDED. THE SHIPPED COMPONENT ALREADY DOES THIS**
+> (`presenter.ts:73-74` — `min(100, round(confirmedCount / rosterSize × 100))`). ⇒ **Trap 1's three
+> mechanical blocks are ⛔ ALL MOOT:** ⛔ no new input key ⇒ the **anti-widening test is untouched** ·
+> ⭐ `rosterSize` **is** the denominator ⇒ ⛔ no rosterless-input problem · ⛔ `fixedAmount` unchanged
+> from the shipped path. ⭐ **And the `confirmedCount > rosterSize` THROW is CORRECT AS SHIPPED** —
+> ⛔ it needed re-scoping only for the rupee path, which is gone.
+> ⚠ **`D1`'s *"⛔ no target ⇒ ⛔ no bar"* is superseded too** — ⭐ a roster always exists, so **the bar
+> always renders**. ⭐ Its successor is narrower: *"⛔ no target ⇒ ⛔ no **Expected** figure"*.
+> ⚠ Edge case: a pool with **zero assignees** renders a **0% bar** (`rosterSize > 0 ? … : 0`), ⛔ not
+> an error.
+>
+> ⚠⛔ **THE 2026-09-06 AMENDMENT BELOW IS NOW HISTORICAL** — ⭐ kept because it records what the rupee
+> path would have cost, ⛔ not deleted:
+>
 > ⚠⛔⛔ **AMENDED 2026-09-06 — THE RULING STANDS; ⛔ THREE MECHANICAL BLOCKS WERE ⛔ NOT KNOWN WHEN IT
 > WAS MADE** (Trap 1, verified): **(1)** the anti-widening test rejects **ANY** new input key, ⛔ not
 > only a yellow/pending operand — `presenter.test.ts:157-163` + `:186-188` — so `targetInr?` fails
@@ -1014,6 +1054,26 @@ together, ⛔ not independently.
 
 ---
 
+### ⏳⚠ D7 — **OPEN, 2026-09-07.** The bar counts PEOPLE; *"Expected"* counts RUPEES. ⛔ They need not agree
+
+⭐ A consequence of two rulings a day apart, ⛔ neither of them wrong: ⭐ the bar is now
+**`confirmedCount ÷ rosterSize`** (people), and **`Expected ₹X lakh`** — shown ⛔ only where a
+Superadmin has switched it on — is a **rupee** figure the Pariwar Admin sets **independently**.
+
+| | Target ≈ roster × `fixedAmount` | Target set **LOWER** |
+|---|---|---|
+| Bar (people) | 39% | **39%** |
+| Progress against *"Expected"* (money) | ~39% — ⭐ they agree | ⚠ **78%** — ⛔ they contradict |
+
+⇒ ⚠ a reader could see a bar at **39%** beside *"Expected ₹25 lakh"* on a drive that has already
+raised **78%** of it. ⭐ **Three options, ⛔ none pre-ruled:** **(i)** drop *"Expected"* — the bar ⛔ no
+longer tracks it · **(ii)** keep both, ⭐ accepting they answer different questions · **(iii)** express
+the expected figure in **people**.
+⭐⭐ **⛔ NOTHING IS BLOCKED:** the switch is **OFF** (`D4`) ⇒ ⛔ no *"Expected"* renders at launch.
+⇒ **Task 8 may ship without it**; ⛔ answer `D7` before any Pariwar switches on.
+
+---
+
 ## ⚠ What this story does ⛔ NOT do
 
 ⚠⛔ **AND IT DOES ⛔ NOT RULE `D3`, `D4` OR `D5`** — ⭐ all three are recorded **OPEN** and are
@@ -1062,8 +1122,8 @@ cross-drive comparison · ⛔ not publish a written pitch (`-190` cl.8).
   - [ ] `sahyog-render.ts:341-346` partition + `:299` label ternary — ⛔ **both are two-way today**;
         leave them and every live drive renders under **"Closed drives", labelled "Closed"**.
 - [ ] **Task 3 — The meter** (AC2, per D1) — including the **no-target** path and re-scoping the THROW.
-  - [ ] ⚠⛔ **ANSWER `D3` FIRST** (AC2) — (i) quantize/band, (ii) accept-and-record, or (iii) escalate.
-        ⛔ Do ⛔ not wire the denominator before it is answered; ⛔ a token-scan test will ⛔ not catch it.
+  - [x] ✅ **`D3` CLOSED 2026-09-07 — ⛔ the three options are MOOT.** ⭐ With a **roster** denominator
+        the division returns the roster size, ⛔ not the target. ⛔ Nothing to quantize or band.
   - [x] ✅ **`D6` RULED 2026-09-07** — ⛔ the *"412 of 500"* label is REMOVED; the bar carries the ruled
         sentence and, **⛔ only where `revealToPublic` is true**, *"Expected ₹X lakh"* to its right.
         ⚠⛔ **AND `active_contribution.progress_a11y` IS ⛔ NOT RENDERED EITHER** — it carries the same
@@ -1077,13 +1137,17 @@ cross-drive comparison · ⛔ not publish a written pitch (`-190` cl.8).
   - [ ] ⏳⚠⛔ **AND `D4` — ⛔ WITH THE PANEL since 2026-09-07.** Whether the meter honours
         `-190` cl.7(c)'s public reveal, defers it **by a named successor story key**, or narrows it
         to members. ⛔ Not the dev agent's call, ⛔ and no longer BigDev's.
-  - [ ] ⛔ **Update BOTH halves of the anti-widening gate** — `presenter.test.ts:157-163` (the
-        `Record<keyof …, true>` literal) **and** `:186-188` (the five-element array) — ⭐ and
-        **record the relaxation as deliberate**, keeping the banned-name loop at `:189-191` intact.
-  - [ ] ⛔ Resolve `rosterSize` **and** `fixedAmount` being **required** operands (Trap 1 (2)/(3)).
-  - [ ] ⭐ Consume C's resolver **BY NAME** — `resolveEffectiveDriveTargetInr` /
-        `resolveDriveTargetVisibility` (`domain/src/pool/drive-target-policy.ts:169`, `:233`).
-        ⛔ Do ⛔ not re-read `pariwar_drive_target_schedule` directly.
+  - [x] ✅ **The anti-widening gate is ⛔ NOT touched** — ⭐ 2026-09-07 removed the new input key.
+        ⛔ Do ⛔ **not** edit `presenter.test.ts`.
+  - [x] ✅ **The `rosterSize` / `fixedAmount` operand problems are MOOT** — ⭐ the shipped shape **is**
+        the ruled shape. ⭐ The `confirmedCount > rosterSize` THROW is **correct as shipped**; ⛔ do
+        ⛔ not re-scope it.
+  - [ ] ⭐ Consume C's resolvers **BY NAME**, for the **`Expected` figure ONLY** —
+        `resolveDriveTargetVisibility` then `resolveEffectiveDriveTargetInr`
+        (`domain/src/pool/drive-target-policy.ts:233`, `:169`). ⛔ Do ⛔ not re-read
+        `pariwar_drive_target_schedule` directly. ⚠⛔ **The BAR does ⛔ NOT consume the target at all.**
+  - [ ] ⛔ **The wire carries the PERCENTAGE only**, ⛔ never `rosterSize` — computed server-side.
+        ⚠ `assignedCount` is quarantined at `public-read.ts:703` / `:739-743`; ⛔ do ⛔ not widen it.
 - [ ] **Task 4 — The wire** (AC3, **Trap 2**) — the index row needs what the headline consumes.
       ⚠⛔ **BEFORE ANYTHING: `public-read.ts:739-743` QUARANTINES BOTH RUPEE TOTALS *"under any
       name"*, and `deliveredTotal` (`:761`) IS `amountRaisedInr`.** ⇒ D2 supersedes it — ⭐ **amend
@@ -1228,6 +1292,7 @@ units. ⚠ Assert **membership and explicit values**, ⛔ never counts over the 
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-09-07 | 0.8 | ✅✅⭐⭐ **`D3` ANSWERED AND CLOSED BY CONSTRUCTION; ⚠⛔ A TRUSTEE-RATIFIED CLAUSE IS SUPERSEDED; ⏳ `D7` OPENS.** ⛔ Zero rows move; ⛔ no code. ✅ **(DR + KB):** *"Progress bar should show the % of contributor already contributed in that pool."* ⚠⛔⛔ **THIS SUPERSEDES `2026-09-04-191` cl.4 — itself Trustee-ratified (DR + KB):** *"THE PROGRESS BAR FILLS AGAINST A **RUPEE** TARGET."* ⭐ `-190` follow-up (ii) framed exactly this binary (*"rupees or contributors?"*); cl.4 took rupees, ⭐ the Panel now takes contributors — ⛔ same Panel, three days later, ⭐ a legitimate change on a question the record shows was always two-sided. ⭐ **Recorded as a SUPERSESSION with the prior text named**, ⛔ never a re-reading. ⭐ cl.4's other half — the participation-first headline — is ⛔ undisturbed. ✅✅ **`D3` IS CLOSED BY CONSTRUCTION, ⛔ not mitigated** — the bar is `confirmedCount ÷ rosterSize`, so dividing amount by fill returns the **ROSTER SIZE**, ⛔ not the target ⇒ ⭐⭐ **the hidden figure is ⛔ no longer derivable at all**; ⛔ all three escalated options are MOOT. ⭐⭐ **AND `D1(a)`'s COSTS FALL AWAY** — the shipped `pool-progress` **already does this** (`presenter.ts:73-74`) ⇒ Trap 1's three blocks are ⛔ ALL MOOT: ⛔ no new input key ⇒ **the anti-widening test is UNTOUCHED** · ⭐ `rosterSize` IS the denominator · ⛔ `fixedAmount` unchanged; ⭐ **the `confirmedCount > rosterSize` THROW is CORRECT AS SHIPPED.** ⚠ `D1`'s *"no target ⇒ no bar"* is superseded — ⭐ the bar **always renders**; successor: *"no target ⇒ no **Expected** figure"*; ⚠ a zero-assignee pool renders a **0% bar**, ⛔ not an error. ⚠ **One consequence recorded ⛔ not asked:** a participation % ⛔ cannot be shown without **roster size** becoming derivable — ⭐ inherent to the ruling ⇒ ⛔ we will ⛔ not ask the Panel to re-decide it. ⭐ **Build decision: the wire carries the PERCENTAGE ONLY**, ⛔ never `rosterSize`. ⏳ **`D7` OPENS** — ⛔ the bar counts **people** while *"Expected"* counts **rupees**, set independently ⇒ a bar at **39%** can sit beside *"Expected ₹25 lakh"* on a drive that has raised **78%** of it. ⭐⭐ ⛔ **Nothing is blocked** — the switch is OFF, so ⛔ no *"Expected"* renders at launch. | BigDev + Claude |
 | 2026-09-07 | 0.7 | ✅⭐⭐ **`D4` · `D5` · `D6` ALL CLOSED; the bar's motion RULED. ⚠⛔ `D3` REMAINS OPEN.** ⛔ Zero rows move; ⛔ no code. ✅ **`D4` (DR + KB):** *"expected figure shows only when Trust switches on. And it should be turned off."* ⇒ ⛔ `-190` cl.7(b)/(c) **STAND, ⛔ not superseded**, and ⭐⭐ **`revealToPublic` acquires a CONSUMER, built in THIS story**, gated, default fail-closed ⇒ ⛔ **what launches shows ⛔ no expected figure anywhere**. ⭐ The shipped inert-switch test is **NARROWED** ("absent while OFF" + a mirror for ON), ⛔ never deleted. ⭐ **Pool-Reality #2 is CONDITIONAL, ⛔ not live** — with the switch OFF the bar carries ⛔ no visible target, which IS cl.2(c)'s own resolution; ⛔ not withdrawn, ⭐ **recorded against the switch** so whoever first flips it meets it first. ⚠ `-189` cl.3 likewise: story **E** owes members the figure ⛔ only on that condition. ⚠ **THE CUT-OFF MOVED** — *"at **Exactly** ten lakh"* supersedes *"exceeds"* ⇒ the test is **`>=`**; ₹10,00,000 renders **₹10 lakh**. ⭐ **The TARGET follows a DIFFERENT rule** — *"always in Lakh or Crore"* ⇒ a ₹8,00,000 target renders **₹8 lakh**. ⛔ Two rules, DELIBERATE — ⛔ do not "align" them. ✅ **The bar's motion — RULED (A) by BigDev:** grows from nothing on load, then **holds still**; ⛔ no ripple, ⛔ no repeating shine. ⭐ Ground: `s-maxage=300` ⇒ a moving bar would assert money is arriving while a visitor watches. ⭐ CSS-only, `prefers-reduced-motion` static, **Live rows only**. ⚠⛔ **AND ONE CONSEQUENCE DECIDED, ⛔ not asked:** `active_contribution.progress_a11y` carries the SAME `{confirmed} of {total}` shape as the label `D6` removed and would name the denominator to assistive tech ⇒ ⭐ **the bar is `aria-hidden`; the ruled sentence beneath carries the meaning.** ⏳ **Hindi for *"Expected"* asked TWICE, ⛔ unanswered** ⇒ building **लक्ष्य** as a STATED assumption, ⛔ revocable. ⭐ Three more declared, ⛔ not silent: `₹` on the target · lakh→crore at ₹1 crore · trailing zeros trimmed. ⚠⛔⛔ **`D3` IS ⛔ NOT CLOSED AND ITS SHAPE BARELY MOVED** — the target stays hidden by default, the fill is a rendered integer percentage of `amount / target`, and ⛔ **below ₹10 lakh the amount renders EXACTLY** ⇒ `target ≈ ₹8,55,000 ÷ 0.17` recovers to ~**±3%**, a band set by the PERCENTAGE's rounding, ⛔ not the amount's; above ₹10 lakh the two-place cut costs only ~±0.03% ⇒ ⭐ **the cut-off barely helps.** ⇒ ⛔ **`D3` still BLOCKS Task 3.** | BigDev + Claude |
 | 2026-09-07 | 0.6 | ✅⏳⭐⭐ **`D5` NARROWED — BigDev supplied the reading and the record backs it; and `D6` OPENED and ROUTED.** ⛔ Zero rows move; ⛔ no code. ✅ **THE TWO RATIFIED SENTENCES ARE TWO STAGES, ⛔ NOT TWO SURFACES:** **Live** rows take `-190` cl.6's *"…and counting"* headline; **Closed · Verified** rows take `sahyog-shared:index_line.*`. ⭐ **The evidence is PROVENANCE, ⛔ not tense** — cl.6 adopts the wording **delegated at `-189` cl.2(e)**, and cl.2 is titled *"(Q2) — YES: A COLLECTING DRIVE IS LISTED"*, with the Panel's own example *"19.45 lakh and counting, by 43k members"*; and the 2026-09-05 index line was ratified against an index listing **`closed` + `settled` ONLY** — ⛔ `live` is unlisted and **this story adds it** — while occupying the **close-of-cycle** slot, which is structurally null for an unclosed drive. ⇒ ⛔ **the "which surface" question is WITHDRAWN from the Panel.** ⚠⛔ **AND ONE 2026-09-06 CLAIM IS WITHDRAWN AS OVER-STATED** — that the index line *"carries no member count ⇒ cannot satisfy participation-first"*; the 11b.12 note **§7.1(7)** shows the omission was **deliberate** (*"the confirmed count is ALREADY on the same row ⇒ don't restate a number"*) and the count is a **column**. ⚠ **Open consequence recorded, ⛔ not resolved:** `index_line.*` is what carries the **nominee name**, and it is now Closed · Verified only, while cl.6's Live sentence has ⛔ no `{nominee_name}` slot ⇒ **does a Live row carry it, and where?** ⏳⛔⛔ **`D6` — THE BAR'S OWN LABEL NAMES ITS DENOMINATOR.** Read from the shipped render (`ActiveContributionCard.tsx:234-281`) with every key resolved to its **actual string in both locales**: directly above the bar sits `active_contribution.progress` = *"{confirmed} of **{total}** contributions confirmed"* / *"{total} में से {confirmed} अंशदान पुष्ट"*. ⇒ under `D1(a)` that `{total}` **IS the target** ⇒ ⛔ **the bar built to hide it would PRINT it, in words, in both languages.** ⚠ ⭐ A **different channel from `D3`** — ⛔ no arithmetic required — and AC2's ban (*"no percentage label that lets it be **inferred by arithmetic**"*) ⛔ does not reach it. ⚠ ⛔ Deleting the label is ⛔ not obviously right either: cl.8 rules *"the UI carries the understanding"*, and an unlabelled bar carries none. ⭐ Four options recorded, ⛔ none pre-ruled; ⭐ **`D6` interlocks with `D4`** — a revealed target makes the shipped label lawful for that Pariwar. ⇒ **Tasks 3 and 5 stay blocked; ⭐ Task 5 may build the stage SPLIT today — ⛔ only the Live STRING waits.** | BigDev + Claude |
 | 2026-09-07 | 0.5 | ⏳⭐⭐ **`D4` AND `D5` ROUTED TO THE TRUSTEE PANEL — ⛔ BigDev rules neither; ⛔ zero rows move; ⛔ no code.** ⇒ `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-07-11b14-drive-target-reveal-and-the-unwritten-headline.md` ⭐ **Q1 (`D4`):** did `-190` cl.7(c)'s *"ONLY A SUPERADMIN may make it visible, separately for member and for public"* mean the figure would actually appear — and is D, which `-196` cl.8 names *"its first consumer"*, the story that makes it so? ⛔ The switch is built, governed, `super_admin`-gated and DB-constrained, and **every** non-test reference to it is definition, storage, write path or admin API — ⛔ **zero readers in any member- or public-facing render**; `resolveEffectiveDriveTargetInr` and `resolveDriveTargetVisibility` have ⛔ **zero production callers**; `apps/public/src` and `apps/mobile` contain ⛔ **zero** references to the target in any form; and a **shipped test** sets `reveal_to_public = true` and then asserts seven target tokens are absent — ⭐ the programme has already codified that the switch changes nothing. Story **E** repeats the omission on the member axis ⇒ ⛔ cl.7(c) has ⛔ no consumer on either axis it names. ⭐ **Q2 (`D5`):** cl.6 adopted a headline in the Panel's words; both `sahyog-shared.json` files hold **14 keys** and ⛔ none is a headline, and `"and counting"` / `"lakh"` / `"have stood with"` / `"members have stood"` each return ⛔ **0 files** across the entire locale corpus. ⚠ A **second** ratified money sentence (the 2026-09-05 index line) IS shipped, carries ⛔ no member count, and ⛔ nothing says which surface takes which. ⭐ `formatCurrency` **executed**: `"₹ 19,45,000"` (en) / `"₹ १९,४५,०००"` (hi) — ⛔ never `"₹19.45 lakh"`. ⭐⭐ **The note rests on ratified text and verified repository state ONLY** — ⛔ ⛔ no code comment, doc-block or story prose is used as evidence, and §7 lists every check so each claim is re-runnable; ⚠ the two coherent readings are labelled **INFERENCE** and argued in both directions (§5). ⇒ **Task 3 and Task 5 BLOCKED; every other task proceeds.** | BigDev + Claude |

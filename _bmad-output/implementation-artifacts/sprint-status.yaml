@@ -1,4 +1,47 @@
-# last_updated: 2026-09-07f (⏳⛔⛔ **STORY 11b.14 (D) — `D3` ESCALATED TO THE TRUSTEE PANEL**
+# last_updated: 2026-09-07g (✅✅⭐⭐ **STORY 11b.14 (D) — `D3` ANSWERED AND CLOSED BY CONSTRUCTION;
+#   ⚠⛔ A TRUSTEE-RATIFIED CLAUSE IS SUPERSEDED; ⏳ `D7` OPENS.** ⛔ ZERO ROWS MOVE; 11b-14 STAYS
+#   `ready-for-dev`. ⚠ ⛔ No code. ⛔ epic-11b `in-progress`; ⛔ 11b-11/12/13 `done`; ⛔ 11b-15…17 and
+#   6-18 `ready-for-dev`. ⇒ routing note **§16**.
+#
+#   ✅ **THE ANSWER (DR + KB):** *"Progress bar should show the % of contributor already contributed in
+#   that pool."*
+#
+#   ⚠⛔⛔ **THIS SUPERSEDES `2026-09-04-191` cl.4 — ⭐ ITSELF TRUSTEE-RATIFIED (DR + KB):** *"THE PROGRESS
+#   BAR FILLS AGAINST A **RUPEE** TARGET."* ⭐ `-190` follow-up (ii) framed exactly this binary
+#   (*"rupees or contributors?"*); cl.4 took rupees, ⭐ the Panel now takes contributors. ⛔ Same Panel,
+#   three days later — ⭐ a legitimate change on a question the record shows was always two-sided.
+#   ⭐ **RECORDED AS A SUPERSESSION WITH THE PRIOR TEXT NAMED**, ⛔ never a re-reading
+#   ([[feedback_supersede_never_reinterpret]]). ⭐ cl.4's other half — the **participation-first
+#   headline** — is ⛔ UNDISTURBED.
+#
+#   ✅✅ **`D3` IS CLOSED BY CONSTRUCTION, ⛔ NOT MITIGATED.** The bar is now `confirmedCount ÷
+#   rosterSize` ⇒ dividing the published amount by the published fill returns the **ROSTER SIZE**,
+#   ⛔ not the rupee target ⇒ ⭐⭐ **the hidden figure is ⛔ NO LONGER DERIVABLE FROM THE PAGE AT ALL.**
+#   ⛔ No quantising, ⛔ no banding, ⛔ no accept-and-record — ⭐ all three escalated options are MOOT.
+#
+#   ⭐⭐ **AND IT SIMPLIFIES THE BUILD SHARPLY — `D1(a)`'s COSTS FALL AWAY.** ⭐ With a contributor
+#   denominator **the shipped `pool-progress` ALREADY DOES THIS** (`presenter.ts:73-74`). ⇒ Trap 1's
+#   three mechanical blocks are ⛔ ALL MOOT: ⛔ no new input key ⇒ **the anti-widening test is UNTOUCHED**
+#   (⛔ do ⛔ not edit `presenter.test.ts`) · ⭐ `rosterSize` IS the denominator ⇒ ⛔ no rosterless-input
+#   problem · ⛔ `fixedAmount` unchanged. ⭐ **The `confirmedCount > rosterSize` THROW is CORRECT AS
+#   SHIPPED** — ⛔ it needed re-scoping only for the rupee path, which is gone.
+#   ⚠ `D1`'s *"no target ⇒ no bar"* is superseded too — ⭐ a roster always exists ⇒ **the bar always
+#   renders**; successor: *"⛔ no target ⇒ ⛔ no **Expected** figure"*. ⚠ Zero-assignee pool ⇒ **0% bar**,
+#   ⛔ not an error.
+#
+#   ⚠ **ONE CONSEQUENCE, RECORDED ⛔ NOT ASKED:** a participation % ⛔ cannot be shown without the
+#   **roster size** becoming derivable — ⭐ inherent to the ruling, ⛔ we will ⛔ not ask the Panel to
+#   re-decide what they just decided. ⭐ **BUILD DECISION (ours): the wire carries the PERCENTAGE ONLY**,
+#   ⛔ never `rosterSize`, computed server-side — minimum disclosure. ⚠ `assignedCount` stays quarantined
+#   (`public-read.ts:703`, `:739-743`). ⛔ 11b.1 AC5 untouched — ⛔ nothing orders by it.
+#
+#   ⏳ **`D7` OPENS (small, real):** ⛔ **THE BAR COUNTS PEOPLE; *"Expected ₹X lakh"* COUNTS RUPEES**, and
+#   the Pariwar Admin sets the target INDEPENDENTLY ⇒ ⛔ they need ⛔ not agree. A bar at **39%** can sit
+#   beside *"Expected ₹25 lakh"* on a drive that has raised **78%** of it. ⭐ Options, ⛔ none pre-ruled:
+#   drop *"Expected"* · keep both as different questions · express the expected figure in PEOPLE.
+#   ⭐⭐ ⛔ **NOTHING IS BLOCKED** — the switch is OFF (`D4`) ⇒ ⛔ no *"Expected"* renders at launch;
+#   ⭐ Task 8 may ship without it. ⛔ Answer `D7` before any Pariwar switches on.)
+# last_updated_prior: 2026-09-07f (⏳⛔⛔ **STORY 11b.14 (D) — `D3` ESCALATED TO THE TRUSTEE PANEL**
 #   (BigDev's direction; the Panel is available). ⛔ ZERO ROWS MOVE; 11b-14 STAYS `ready-for-dev`.
 #   ⚠ ⛔ No code. ⛔ epic-11b stays `in-progress`; ⛔ 11b-11 / 11b-12 / 11b-13 stay `done`;
 #   ⛔ 11b-15…17 and 6-18 stay `ready-for-dev`. ⇒ routing note **§15**.

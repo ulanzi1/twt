@@ -740,7 +740,25 @@ decisions** — ⛔ the opposite posture from 2026-09-04.
 
 ---
 
-### ⏳⚠⛔ D4 — **ROUTED TO THE TRUSTEE PANEL, 2026-09-07. ⛔ BLOCKS TASK 3.** Does `-190` cl.7(c)'s Superadmin reveal reach a screen — and is D the story that makes it so?
+### ✅⚠ D4 — **ANSWERED by the Trustee Panel (DR + KB), 2026-09-07** — ⭐ the switches ARE meant to show the number. ⏳ **ONE FOLLOW-UP OPEN: *when*, and *where*
+
+> ✅⭐⭐ **THE PANEL'S ANSWER, VERBATIM:** *"of course the switches are meant to show the number one
+> day."*
+>
+> ⇒ ⭐⭐ **§6.1 option (ii) — *"a built-ahead authority owed no surface"* — IS REFUSED.** The reveal is
+> ⛔ not decorative and ⛔ not reserved; it is intended to reach a screen. ⭐ The 2026-09-07 note's
+> **INFERENCE (A)** (*"it is a gap"*) is the correct reading, and **(B)** is closed.
+> ⭐ ⇒ `revealToPublic` / `revealToMembers` are **owed a consumer**, and the shipped test that asserts
+> the switch is inert (`public-pages/sahyog-drive.spec.ts`) is ⛔ **not** a permanent property — it is
+> **correct-until-that-consumer-ships**, and owes a **narrowing** when it does, ⛔ never a deletion.
+>
+> ⏳⚠⛔ **WHAT IS ⛔ NOT YET ANSWERED — ⭐ *"one day"* is ⛔ not a story.** ⛔ Does **THIS** story build
+> it, or a named later one? ⚠ A deferral naming an epic expires unowned; it must name a **story key
+> that exists in `sprint-status.yaml`** ([[project_r7_fact_producer_unbuilt]]).
+> ⚠⛔⛔ **AND `D6`'s ANSWER REMOVED THE SLOT THE NUMBER WOULD HAVE APPEARED IN.** The old label named
+> `{total}`; ⭐ the Panel's new label names ⛔ **no denominator at all**. ⇒ **when a Superadmin turns
+> the public switch ON, ⛔ WHERE does the target render?** ⛔ Not decided; ⛔ do not invent a slot.
+> ⇒ **follow-up 4, relayed 2026-09-07.**
 
 > ⏳⭐ **ESCALATED, ⛔ NOT RULED.** ⇒ `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-07-11b14-drive-target-reveal-and-the-unwritten-headline.md` **§1 Q1, §3, §6.1.**
 > ⭐ **Why the Panel and ⛔ not BigDev:** cl.7(c) reserves the reveal to a Superadmin and `-196` cl.8
@@ -803,7 +821,7 @@ makes it permanent.
 
 ---
 
-### ⏳✅⚠ D5 — **NARROWED 2026-09-07.** ✅ Which rows carry which sentence is **RESOLVED BY PROVENANCE**; ⏳ who authors the Live sentence is **with the Panel**. ⛔ BLOCKS TASK 5
+### ✅ D5 — **ANSWERED 2026-09-07.** ✅ The stage split is **RESOLVED BY PROVENANCE**; ✅ the Panel **GAVE THE LIVE SENTENCE**, in both languages. ⏳ Three follow-ups open
 
 > ✅⭐⭐ **THE SURFACE HALF IS ⛔ NO LONGER OPEN — BigDev supplied the reading, 2026-09-07.**
 > ⛔ The two sentences are ⛔ not two surfaces; ⭐ **they are two STAGES of the same list:**
@@ -836,7 +854,25 @@ makes it permanent.
 > ⚠ `-190` cl.2 and the 2026-09-05 ruling 2 say *"on the index"* ⛔ without qualifying a stage.
 > ⛔ Do ⛔ not assume either way at Task 8.
 >
-> ⏳⭐ **WHAT REMAINS WITH THE PANEL.** ⇒ `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-07-11b14-drive-target-reveal-and-the-unwritten-headline.md` **§0, §1 Q2, §6.2.**
+> ✅⭐⭐ **THE REMAINDER IS ANSWERED — the Trustee Panel (DR + KB) GAVE THE WORDING, 2026-09-07,
+> in BOTH languages.** ⇒ ⭐ §6.2 option **(iii)**; ⛔ the *"delegated to BigDev"* route was ⛔ not taken,
+> and ⭐ **the Hindi rider is discharged — a Hindi sentence now exists where cl.6 had English only.**
+>
+> > **EN:** *19,45,000 and counting, by 43,000 colleagues—and still going strong!*
+> > **HI:** *43,000 सहकर्मियों द्वारा 19,45,000 का योगदान अभी तक... योगदान जारी है!*
+>
+> ⭐ **Both use LATIN numerals in the Hindi** — ⭐ consistent with the **amendment-A2** contract
+> (`currency.ts:10-15`: money is OPERATIONAL data and renders Latin). ⛔ No ruling needed; ⭐ the
+> Panel's own wording already complies.
+> ⭐ **And *"colleagues"* / *"सहकर्मियों"* matches the shipped `index_line.*` exactly** — ⛔ cl.6's
+> earlier *"members"* is superseded by this wording, and the two stages now speak in one voice.
+>
+> ⏳⚠⛔ **THREE FOLLOW-UPS TRAVEL WITH IT** — ⭐ see `D6`: **(1)** ⛔ this sentence is the **same
+> sentence** as `D6`'s bar label, differing ⛔ only in number form (`19,45,000` vs `19.45 lakh`;
+> `43,000` vs `43 हज़ार`) ⇒ **ONE sentence on a Live row, or two?** **(2)** ⛔ ⛔ no `₹`.
+> **(3)** ⭐ the word-forms need a rounding rule and a formatter that ⛔ does not exist.
+>
+> ⏳ **The 2026-09-07 note's Q2 record.** ⇒ `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-07-11b14-drive-target-reveal-and-the-unwritten-headline.md` **§0, §1 Q2, §6.2.**
 > ⛔ **The Live sentence exists in ⛔ NO file, in either language.** ⚠ ⭐ And the authorship may ⛔ not
 > be the Panel's at all: `-189` **cl.2(e)** says *"the exact wording **delegated to BigDev**"*, and
 > cl.6 then adopted option (B) as its shape. ⇒ the note asks only **who writes it** — BigDev outright,
@@ -895,7 +931,28 @@ surface (`currency.ts:10-15`). ⇒ **the answer to D5 carries a formatting decis
 
 ---
 
-### ⏳⚠⛔ D6 — **OPEN, ROUTED TO THE TRUSTEE PANEL 2026-09-07. ⛔ BLOCKS TASK 3.** What does the public bar's LABEL say — when the shipped one **names the denominator**?
+### ✅⚠ D6 — **RULED by the Trustee Panel (DR + KB), 2026-09-07** — ⛔ the *"412 of 500"* label is **REMOVED**; ⭐ the bar carries a **participation sentence** instead
+
+> ✅⭐⭐ **THE PANEL'S ANSWER, VERBATIM:** *"Around bar above or below do not show '412 of 500
+> contributions confirmed.' Instead it would show —"*
+>
+> > **HI:** *43 हज़ार सहकर्मियों द्वारा 19.45 लाख का योगदान अभी तक... योगदान जारी है!*
+> > **EN:** *19.45 lakh and counting, by 43,000 colleagues—and still going strong!*
+>
+> ⇒ ⭐⭐ **§6.3 option (i) — a label naming ⛔ NO denominator.** ⛔ `active_contribution.progress` and
+> `active_contribution.progress_a11y` are ⛔ **NOT** rendered on the public surface. ⭐ The
+> target-printing channel `D6` found is **CLOSED** — ⛔ the label no longer names `{total}`.
+> ⚠ **The cost the Panel accepted, recorded:** the bar's **width** now means something the words do
+> ⛔ not explain (§6.3(i)). ⛔ Not re-opened.
+> ⚠ ⭐ **`D3` is MOVED, ⛔ not closed** — a **coarsened** *"19.45 lakh"* weakens recovery by division
+> materially, ⛔ but only if the **exact** figure does ⛔ not also render on the same row. ⇒ that
+> depends on **follow-up 1**.
+>
+> ⏳⚠⛔ **THREE FOLLOW-UPS, ⛔ none of them a re-litigation** — ⭐ all relayed 2026-09-07:
+> **(1)** this sentence and `D5`'s are the **same sentence in two number forms** ⇒ is there ⛔ ONE
+> sentence on a Live row (around the bar), or **two**? **(2)** ⛔ ⛔ **⛔ NO `₹` APPEARS IN ANY OF THE
+> FOUR RATIFIED STRINGS.** **(3)** ⭐ *"lakh"* / *"हज़ार"* is a **word-form that exists ⛔ NOWHERE** in
+> this product and needs a **rounding rule**.
 
 ⭐⭐ **THE FINDING.** BigDev asked what renders above and below the bar to tell a reader what it is.
 ⚠ We read the shipped render in order at

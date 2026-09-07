@@ -1384,16 +1384,16 @@ cross-drive comparison · ⛔ not publish a written pitch (`-190` cl.8).
       written, authored or translated before `D5`.** ⭐ Every other task proceeds meanwhile.
       ⭐ ✅ **`D5`'s surface half is already RESOLVED** — Live → cl.6's headline; Closed · Verified →
       `index_line.*`. ⭐ Task 5 may build **against that split** today; ⛔ only the Live **string** waits.
-- [ ] **Task 2 — The listing predicate** (AC1, **Trap 6**) — ⚠⛔ **FIVE artefacts, ⛔ not one:**
-  - [ ] `SAHYOG_DRIVE_VISIBLE_POOL_STATES` (`public-read.ts:102`) gains `live`; amend the `:97-100`
+- [x] **Task 2 — The listing predicate** (AC1, **Trap 6**) — ⚠⛔ **FIVE artefacts, ⛔ not one:**
+  - [x] `SAHYOG_DRIVE_VISIBLE_POOL_STATES` (`public-read.ts:102`) gains `live`; amend the `:97-100`
         doc-block that calls it *"ABSENT deliberately"* — ⭐ **amend and name**, ⛔ never overwrite.
-  - [ ] `PublicSahyogDriveStatus` (`sahyog-drive.ts:80`) gains `'live'`; ⭐ **amend `:78`, which is a
+  - [x] `PublicSahyogDriveStatus` (`sahyog-drive.ts:80`) gains `'live'`; ⭐ **amend `:78`, which is a
         routing note naming this story.** ⛔ `spawned` stays a PURE DENY.
-  - [ ] `PUBLIC_STATUS_BY_POOL_STATE` (`public-read.ts:137-140`) gains the mapping — ⭐ **the compile
+  - [x] `PUBLIC_STATUS_BY_POOL_STATE` (`public-read.ts:137-140`) gains the mapping — ⭐ **the compile
         break is the gate WORKING** (`:134-135`), ⛔ not an obstacle.
-  - [ ] `sahyog.server.ts:210`'s hand-typed literal-set guard — ⚠ ⛔ **the typecheck cannot see it**;
+  - [x] `sahyog.server.ts:210`'s hand-typed literal-set guard — ⚠ ⛔ **the typecheck cannot see it**;
         miss it and `/sahyog` serves its **OUTAGE** page to everyone. Pinned `sahyog-serves.test.ts`.
-  - [ ] `sahyog-render.ts:341-346` partition + `:299` label ternary — ⛔ **both are two-way today**;
+  - [x] `sahyog-render.ts:341-346` partition + `:299` label ternary — ⛔ **both are two-way today**;
         leave them and every live drive renders under **"Closed drives", labelled "Closed"**.
 - [ ] **Task 3 — The meter** (AC2, per D1) — including the **no-target** path and re-scoping the THROW.
   - [x] ✅ **`D3` CLOSED 2026-09-07 — ⛔ the three options are MOOT.** ⭐ With a **roster** denominator

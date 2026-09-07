@@ -29,8 +29,10 @@ import {
 const labels: SahyogLabels = {
   pageTitle: 'Sahyog Drive',
   pageIntro: 'Every drive this trust has run.',
+  tableCaptionLive: 'Live drives table',
   tableCaptionActive: 'Closed drives table',
   tableCaptionArchive: 'Verified drives table',
+  sectionLiveTitle: 'Live drives',
   sectionActiveTitle: 'Closed drives',
   sectionArchiveTitle: 'Verified drives',
   columnName: 'In memory of',
@@ -44,6 +46,7 @@ const labels: SahyogLabels = {
   districtUnknown: 'Not recorded',
   dateUnknown: 'Not recorded',
   // ⚠ D3 — the FIELD names are historical; the VALUES are the ruled words (Story 11b.12).
+  statusLive: 'Live',
   statusActive: 'Closed',
   statusArchive: 'Verified',
   emptyTitle: 'No drives yet',

@@ -75,9 +75,25 @@ export const PUBLIC_SAHYOG_DRIVE_PAGE_HORIZON = PUBLIC_DIRECTORY_PAGE_HORIZON;
  * ⚠⛔ **⛔ Do ⛔ NOT "fix" the overlap by reverting the wire** — read D1(b) first.
  *
  * ⚠ `spawned` remains a **PURE DENY**: it has ⛔ no public token at all and must ⛔ never cross.
- * ⛔ `live` is ⛔ **NOT** a member here — the index does ⛔ not list live drives (Story 11b-14).
+ *
+ * ⚠⛔⛔ **AMENDED 2026-09-07 (Story 11b.14, AC1) — `live` IS NOW A MEMBER. ⭐ The prior clause was a
+ * ROUTING NOTE TO THAT STORY and it is NAMED, ⛔ never deleted**
+ * ([[feedback_supersede_never_reinterpret]]). It read:
+ *
+ * > *"⛔ `live` is ⛔ **NOT** a member here — the index does ⛔ not list live drives (Story 11b-14)."*
+ *
+ * ⭐⭐ **STORY 11b-14 IS HERE.** `2026-09-04-189` **cl.2** (Trustee-ratified) rules that a collecting
+ * drive **IS LISTED**, restoring **FR-76**; recorded at `2026-09-07-204`. ⚠ 11b.12 left the token out
+ * deliberately (its own **AC7**: *"⛔ `live` is ⛔ NOT added to the public index enum — ⭐ that is
+ * **story D**"*), so this is the ⭐ handover being taken, ⛔ not a fence being crossed.
+ *
+ * ⚠⛔ **AND THIS ENUM IS ⛔ NOT THE ONLY ARTEFACT** — `apps/public/src/lib/sahyog.server.ts` carries a
+ * **hand-typed literal set** of these same tokens that the typecheck ⛔ CANNOT see, and getting it
+ * wrong serves `/sahyog`'s **OUTAGE** page to every visitor. ⛔ Change this tuple ONLY together with
+ * that guard (`apps/public/tests/sahyog-serves.test.ts` derives from `.options` and is what catches
+ * the drift).
  */
-export const PublicSahyogDriveStatus = z.enum(['closed', 'verified']);
+export const PublicSahyogDriveStatus = z.enum(['live', 'closed', 'verified']);
 export type PublicSahyogDriveStatus = z.output<typeof PublicSahyogDriveStatus>;
 
 /**

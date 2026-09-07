@@ -99,8 +99,16 @@ export interface SahyogLabels {
   readonly pageIntro: string;
   /** The table's accessible name. ⚠ MUST BE DISTINCT from `pageIntro` — a screen reader announces
    *  a repeat consecutively, which is noise where a caption should orient (AC10). */
+  /**
+   * ⭐ Story 11b.14 (AC1) — the LIVE section's caption and heading. ⚠ Its copy **COMPOSES** story
+   * B's `sahyog-shared:stage.live` with a section noun; ⛔ the stage WORD is never restated in
+   * `sahyog-drive.json` (`-193` cl.3 — *"two sources is exactly how 'Active' came to mean two
+   * different things"*).
+   */
+  readonly tableCaptionLive: string;
   readonly tableCaptionActive: string;
   readonly tableCaptionArchive: string;
+  readonly sectionLiveTitle: string;
   readonly sectionActiveTitle: string;
   readonly sectionArchiveTitle: string;
   readonly columnName: string;
@@ -119,6 +127,8 @@ export interface SahyogLabels {
   readonly districtUnknown: string;
   /** Shown in a date cell when the pool's stream carries no close/settle event. */
   readonly dateUnknown: string;
+  /** ⭐ Story 11b.14 — story B's ruled **Live** word, for the status cell of a collecting drive. */
+  readonly statusLive: string;
   readonly statusActive: string;
   readonly statusArchive: string;
   /** The EMPTY state — ⛔ deliberately distinct copy from the outage and past-end states. */
@@ -188,6 +198,11 @@ export interface SahyogView {
    * routing fact, ⛔ not a rendered field.
    */
   readonly sections: {
+    /**
+     * ⭐ Story 11b.14 (AC1) — drives still COLLECTING. ⛔ Empty until `2026-09-04-189` cl.2's
+     * widening reaches production data; ⛔ never merged into `active`.
+     */
+    readonly live: readonly SahyogDriveRow[];
     readonly active: readonly SahyogDriveRow[];
     readonly archive: readonly SahyogDriveRow[];
   };
@@ -296,7 +311,17 @@ function toDisplayRow(
     // ⚠ Story 11b.12 — `'verified'` is the wire token, `labels.statusArchive` the FIELD NAME.
     // ⛔ The field is deliberately NOT renamed (D3: the ban is on rendered VALUES, ⛔ not on
     // identifiers a member never reads); its VALUE now resolves to the shared **Verified** copy.
-    driveStatus: row.status === 'verified' ? labels.statusArchive : labels.statusActive,
+    // ⚠⛔⛔ **Story 11b.14 (AC1) ADDED THE THIRD ARM, AND IT IS THE HALF THAT FAILS SILENTLY.** This
+    // was a TWO-WAY ternary whose `else` swept everything non-`verified` into **Closed** — so a
+    // `live` row admitted by the widened predicate would have rendered under the ruled word for a
+    // drive whose window has SHUT. ⛔ There was ⛔ no typecheck and ⛔ no test standing between that
+    // and production. ⭐ Pinned now by `sahyog-live-section.test.ts`.
+    driveStatus:
+      row.status === 'live'
+        ? labels.statusLive
+        : row.status === 'verified'
+          ? labels.statusArchive
+          : labels.statusActive,
     driveClosedAt: formatClosedAt(row.closedAt),
     district: row.district,
     confirmedContributionCount: labels.contributionsCount(row.confirmedContributionCount),
@@ -332,6 +357,7 @@ export function buildSahyogView(
   // string-comparing display labels.
   // ⚠ Indices are zipped against `drive.items` rather than re-mapping, so a row appears in EXACTLY
   // one section by construction — ⛔ not by two independent filters that could both match.
+  const liveRows: SahyogDriveRow[] = [];
   const activeRows: SahyogDriveRow[] = [];
   const archiveRows: SahyogDriveRow[] = [];
   if (drive !== null) {
@@ -342,7 +368,14 @@ export function buildSahyogView(
       // wrong and EVERY drive lands in one section — or, as `:178-184` records actually happening,
       // renders TWICE under two headings making contradictory claims. ⭐ Pinned by the
       // both-tokens-present `splitSections` test, ⛔ not by the label test.
-      if (item.status === 'verified') archiveRows.push(displayRow);
+      // ⚠⛔⛔ **Story 11b.14 (AC1) MADE IT THREE-WAY.** It was `if (verified) archive; else active;`
+      // — a two-way split whose `else` swept **everything non-`verified`** into "Closed drives".
+      // ⇒ admitting `live` upstream without this edit renders every collecting drive under the
+      // Closed heading, labelled Closed, with ⛔ a green typecheck and ⛔ a green suite.
+      // ⭐ It is now an explicit three-arm switch: ⛔ no `else` catch-all, so a FOURTH token added
+      // to the wire enum lands nowhere and is visible, ⛔ rather than being absorbed.
+      if (item.status === 'live') liveRows.push(displayRow);
+      else if (item.status === 'verified') archiveRows.push(displayRow);
       else activeRows.push(displayRow);
     });
   }
@@ -400,17 +433,19 @@ export function buildSahyogView(
     links,
     hasPrevious,
     hasNext,
-    sections: { active: activeRows, archive: archiveRows },
+    sections: { live: liveRows, active: activeRows, archive: archiveRows },
   };
 }
 
 /**
- * Split the page's rows into the two rendered sections.
+ * Split the page's rows into the three rendered sections.
  *
- * ⚠ ONE bounded page read feeds BOTH sections — ⛔ not two requests and ⛔ not two paginations.
- * The page is the unit of bounding; Active/Archive is a presentation split within it.
+ * ⚠ ONE bounded page read feeds ALL THREE sections — ⛔ not three requests and ⛔ not three
+ * paginations. The page is the unit of bounding; Live/Closed/Verified is a presentation split
+ * within it. ⚠ Story 11b.14 (AC1) added the third; it was *"the two rendered sections"*.
  */
 export function splitSections(view: SahyogView): {
+  live: readonly SahyogDriveRow[];
   active: readonly SahyogDriveRow[];
   archive: readonly SahyogDriveRow[];
 } {
@@ -419,8 +454,20 @@ export function splitSections(view: SahyogView): {
   // display strings: that destroys the discriminant and reconstructs it from copy, and a locale
   // in which the two status labels coincide renders every drive TWICE under contradictory
   // headings (Review finding, 2026-08-27).
-  return { active: view.sections.active, archive: view.sections.archive };
+  return {
+    live: view.sections.live,
+    active: view.sections.active,
+    archive: view.sections.archive,
+  };
 }
+
+/**
+ * ⭐ Which rendered SECTION a column list is being built for — Story 11b.14 (AC1, Trap 4).
+ *
+ * ⚠ It is the **PUBLIC WIRE TOKEN**, ⛔ never a display label: recovering a section's identity by
+ * comparing localised strings is the defect `SahyogView.sections` exists to prevent.
+ */
+export type SahyogSectionStage = 'live' | 'closed' | 'verified';
 
 /** One rendered drive column: its matrix field id, its header, and how to read its value. */
 export interface SahyogColumn {
@@ -470,6 +517,7 @@ export interface SahyogColumn {
 export function visibleSahyogColumns(
   labels: SahyogLabels,
   isVisible: (fieldId: string) => boolean,
+  stage: SahyogSectionStage = 'closed',
 ): SahyogColumn[] {
   const all: SahyogColumn[] = [
     {
@@ -547,7 +595,25 @@ export function visibleSahyogColumns(
         : () => labels.viewDrive,
     },
   ];
-  return all.filter((c) => isVisible(c.fieldId));
+  // ⛔⛔ TWO COLUMNS HAVE ⛔ NO MEANING FOR A DRIVE THAT HAS ⛔ NOT CLOSED — Story 11b.14, Trap 4.
+  //
+  // ⚠ `drive_closed_at` is NULLABLE and means *"⛔ no close event yet"*, which is true of EVERY
+  // `live` row by construction. ⚠ And the fallback above (`?? labels.dateUnknown`) is the SHIPPED
+  // DEFAULT — so leaving the column in would render **"Not recorded" / "दर्ज नहीं"** down the whole
+  // Live section: ⛔ precisely the *announced-omission* shape AC5 forbids and that this very
+  // function exists to prevent. ⛔ It is ⛔ not a missing record; there is nothing to record yet.
+  //
+  // ⚠ `close_of_cycle_framing` is Pool-Reality #2's **CLOSE-OF-CYCLE** sentence. Its producer is
+  // `fundingOutcome`, which is `null` mid-drive ⇒ it would render a closing statement over a
+  // running one. ⛔ Decided WITH the date column, ⛔ not separately.
+  //
+  // ⭐ The `<th>`/`<td>` pair goes TOGETHER, exactly as it does under a matrix suppression — ⛔ the
+  // Live table has one fewer column, ⛔ not a column of blanks under a labelled header.
+  const forStage =
+    stage === 'live'
+      ? all.filter((c) => c.fieldId !== 'drive_closed_at' && c.fieldId !== 'close_of_cycle_framing')
+      : all;
+  return forStage.filter((c) => isVisible(c.fieldId));
 }
 
 /**

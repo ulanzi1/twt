@@ -797,8 +797,10 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
   const SAHYOG_TEST_LABELS: SahyogLabels = {
     pageTitle: 'Sahyog Drive',
     pageIntro: 'intro',
+    tableCaptionLive: 'live caption',
     tableCaptionActive: 'closed caption',
     tableCaptionArchive: 'verified caption',
+    sectionLiveTitle: 'Live',
     sectionActiveTitle: 'Closed',
     sectionArchiveTitle: 'Verified',
     columnName: 'In memory of',
@@ -812,6 +814,7 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
     districtUnknown: 'Not recorded',
     dateUnknown: 'Not recorded',
     // ⚠ D3 (Story 11b.12) — historical FIELD names, ruled VALUES.
+    statusLive: 'Live',
     statusActive: 'Closed',
     statusArchive: 'Verified',
     emptyTitle: 'none yet',

@@ -207,7 +207,9 @@ function isSahyogDriveResponse(body: unknown): body is PublicSahyogDriveResponse
       // with a green typecheck and a green unit suite. ⭐ Story 11b.12 renamed these from
       // `'active'` / `'archive'`; `apps/public/tests/sahyog-serves.test.ts` is what catches the
       // next rename. ⛔ Change this tuple ONLY together with `PublicSahyogDriveStatus`.
-      (r['status'] === 'closed' || r['status'] === 'verified') &&
+      // ⚠ Story 11b.14 (AC1) added `'live'` — ⭐ and `sahyog-serves.test.ts` FAILED FIRST, exactly as
+      // this comment predicts, because the enum widened before the literal set did.
+      (r['status'] === 'live' || r['status'] === 'closed' || r['status'] === 'verified') &&
       (r['closedAt'] === null || typeof r['closedAt'] === 'string') &&
       (r['district'] === null || typeof r['district'] === 'string') &&
       typeof r['confirmedContributionCount'] === 'number' &&

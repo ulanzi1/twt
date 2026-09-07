@@ -124,6 +124,14 @@ export interface SahyogLabels {
   readonly columnContributions: string;
   /** ⭐ Story 11b.14 — the LIVE table's meter column header. ⚠ DISTINCT from every other header. */
   readonly columnProgress: string;
+  /**
+   * ⭐⭐ Story 11b.14 (AC7) — THE RULED PUBLIC LABEL for the nominee's name.
+   * ⛔⛔ It must resolve to **"Nominee Name"** / **"नॉमिनी का नाम"** — ⛔ *"Account holder"* MAY ⛔ NOT
+   * BE USED (`2026-09-04-190` cl.2, Trustee-ratified).
+   */
+  readonly columnNominee: string;
+  /** ⭐ Story 11b.14 (AC7) — the header over the Closed · Verified row's ruled sentence. */
+  readonly columnSummary: string;
   readonly columnOutcome: string;
   /** Shown in a district cell when the deceased member has no posting row. */
   readonly districtUnknown: string;
@@ -182,6 +190,64 @@ export interface SahyogLabels {
    * (always lakh/crore) — see {@link formatSahyogTargetAmount}. ⛔ Do ⛔ not "align" the two.
    */
   readonly driveTargetLine: (targetInr: number) => string;
+  /**
+   * ⭐⭐ THE RULED **CLOSED · VERIFIED** ROW SENTENCE — `sahyog-shared:index_line.*` (Story 11b.14
+   * AC7). ⚠⛔ **IT RETURNS `null` WHERE ⛔ NO RATIFIED VARIANT FITS**, and the caller renders
+   * nothing — ⛔ never a placeholder. See {@link selectIndexLineVariant}.
+   */
+  readonly indexLine: (tokens: {
+    amountInr: number;
+    nomineeName: string | null;
+    familyName: string | null;
+    districtName: string | null;
+  }) => string | null;
+}
+
+/**
+ * ⭐⭐ **WHICH `index_line.*` VARIANT A ROW TAKES — or `null` for NONE.** Story 11b.14 (AC7);
+ * `2026-09-07-205` **cl.6**.
+ *
+ * ⭐ 11b.12's ruling **3**: *"an absent token **DROPS ITS CLAUSE** — ⛔ no combinatorial
+ * cross-product"*, shipped as **FOUR** strings, each naming **ONE** absent token.
+ *
+ * ⚠⛔⛔ **TWO COMBINATIONS HAVE ⛔ NO VARIANT AT ALL, AND BOTH ARE DEFAULT-SHAPED:**
+ *
+ * | Absent together | Why nothing fits |
+ * |---|---|
+ * | **nominee + family**   | `no_nominee` needs `{family_name}`; `no_family` needs `{nominee_name}` |
+ * | **nominee + district** | `no_nominee` needs `{district_name}`; `no_family`/`no_district` need the nominee |
+ *
+ * ⇒ `family_name` is `null` whenever publication is not authorised (the fail-closed day-one
+ * posture) and `nominee_name` is `null` when bank details were never collected (6.8 **AC3**'s
+ * absence signal) — so **a drive with no bank details for a family that has not authorised
+ * publication has ⛔ no renderable line today.**
+ *
+ * ⛔⛔ **AND THE FAILURE MODE IS A 500 FOR THE WHOLE PAGE, ⛔ NOT A BLANK ROW** — `t()` **THROWS** on
+ * an unsupplied interpolation param, so one such row would take `/sahyog` down for everyone.
+ *
+ * ⭐⭐ **RULED: RETURN `null` AND RENDER ⛔ NOTHING — SILENCE.** ⛔ No placeholder, ⛔ no partial
+ * sentence, ⛔ no marker naming what is missing — the posture this surface already takes for a
+ * withheld deceased-member name, and for the same reason: *an omission that announces itself is an
+ * **ENUMERATION SIGNAL***. ⭐ The row keeps every column it had.
+ * ⛔⛔ **DO ⛔ NOT "FIX" THIS BY MINTING A FIFTH STRING HERE.** Extending the variant set is a **COPY
+ * ACT on Trustee-ratified text** and needs a Panel ruling; inventing one at a render site is the
+ * exact two-source defect `2026-09-04-193` cl.3 exists to close.
+ */
+export function selectIndexLineVariant(tokens: {
+  nomineeName: string | null;
+  familyName: string | null;
+  districtName: string | null;
+}): 'full' | 'no_nominee' | 'no_family' | 'no_district' | null {
+  const { nomineeName, familyName, districtName } = tokens;
+  if (nomineeName !== null && familyName !== null && districtName !== null) return 'full';
+  // ⚠ `no_family` DROPS THE DISTRICT CLAUSE TOO, and that is ⛔ NOT a bug: *"who served in
+  // {district_name} district"* modifies the DECEASED MEMBER, so keeping it while dropping the
+  // family name would attribute the posting district to the NOMINEE — a factual claim about a
+  // named private individual the data does ⛔ not support. ⇒ it needs the nominee ONLY.
+  if (nomineeName !== null && familyName === null) return 'no_family';
+  if (nomineeName !== null && familyName !== null && districtName === null) return 'no_district';
+  if (nomineeName === null && familyName !== null && districtName !== null) return 'no_nominee';
+  return null;
 }
 
 /** One pagination control — always a REAL link, ⛔ never a JS-dependent button. */
@@ -361,6 +427,23 @@ function toDisplayRow(
       row.status === 'live' && row.driveTargetInr !== undefined
         ? labels.driveTargetLine(row.driveTargetInr)
         : null,
+    // ⭐⭐ STORY 11b.14 (AC7) — THE NOMINEE'S NAME, under the ruled label "Nominee Name".
+    // ⛔ ⛔ *"Account holder"* may ⛔ NOT be used (`2026-09-04-190` cl.2). ⚠ A `null` renders NOTHING.
+    nomineeName: row.nomineeName,
+    // ⭐⭐ THE CLOSED · VERIFIED SENTENCE (`D5`'s stage split) — ⛔ never on a Live row, which takes
+    // the participation sentence instead. ⚠⛔ `null` ALSO where ⛔ no ratified variant fits: ⭐ the
+    // row renders no sentence at all, ⛔ never a placeholder (`2026-09-07-205` cl.6).
+    driveIndexLine:
+      row.status === 'live'
+        ? null
+        : labels.indexLine({
+            amountInr: row.amountRaisedInr,
+            nomineeName: row.nomineeName,
+            // ⭐ `{family_name}` IS the deceased member's name — the same consent-gated value the
+            // row already carries. ⛔ Do ⛔ not source it from anywhere else.
+            familyName: row.deceasedMemberName,
+            districtName: row.district,
+          }),
   };
 }
 
@@ -658,6 +741,24 @@ export function visibleSahyogColumns(
       valueOf: (row) => row.confirmedContributionCount,
     },
     {
+      // ⭐⭐ STORY 11b.14 (AC7) — THE NOMINEE'S NAME, under its RULED public label.
+      // ⛔⛔ `labels.columnNominee` must resolve to "Nominee Name" / "नॉमिनी का नाम" — ⛔ *"Account
+      // holder"* may ⛔ NOT be used (`2026-09-04-190` cl.2, Trustee-ratified).
+      // ⚠ A `null` renders NOTHING — ⛔ no placeholder, ⛔ no marker, ⛔ no "withheld" — and ⛔ never
+      // removes the row. Same discipline as `deceased_member_name` above, for the same reason:
+      // *an omission that announces itself is an ENUMERATION SIGNAL.*
+      fieldId: 'nominee_account_holder_name',
+      headerLabel: labels.columnNominee,
+      valueOf: (row) => row.nomineeName,
+    },
+    {
+      // ⭐⭐ STORY 11b.14 (AC7) — THE RULED CLOSED · VERIFIED SENTENCE. ⚠ Filtered OUT of the Live
+      // column set below, which carries the participation sentence in the meter cell instead.
+      fieldId: 'drive_index_line',
+      headerLabel: labels.columnSummary,
+      valueOf: (row) => row.driveIndexLine,
+    },
+    {
       // ⭐⭐ STORY 11b.14 (AC2, AC3) — THE PROGRESS METER. ⚠ **LIVE ROWS ONLY** — it is filtered out
       // of the other two stage lists below, header and cells TOGETHER.
       // ⚠ The cell's PRIMARY governed value is the ruled SENTENCE, ⛔ not the percentage: the
@@ -728,9 +829,17 @@ export function visibleSahyogColumns(
   // ⭐⭐ AND THE CONVERSE — **THE METER IS LIVE-ONLY.** `-189` cl.2(b) rules a progress bar for a
   // drive that is COLLECTING; a bar on a closed drive would be a comparison against a cycle that has
   // already ended, and its ruled sentence (*"…and counting"*) would be false in terms.
+  // ⭐ And `drive_index_line` is the CONVERSE of the meter — Closed · Verified only (`D5`'s stage
+  // split): the index line was ratified against an index listing `closed` + `settled` ONLY, and it
+  // occupies the CLOSE-OF-CYCLE slot, which is structurally null for a drive that has not closed.
   const forStage =
     stage === 'live'
-      ? all.filter((c) => c.fieldId !== 'drive_closed_at' && c.fieldId !== 'close_of_cycle_framing')
+      ? all.filter(
+          (c) =>
+            c.fieldId !== 'drive_closed_at' &&
+            c.fieldId !== 'close_of_cycle_framing' &&
+            c.fieldId !== 'drive_index_line',
+        )
       : all.filter((c) => c.meter === undefined);
   return forStage.filter((c) => isVisible(c.fieldId));
 }

@@ -812,6 +812,11 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
     columnContributions: 'Contributions confirmed',
     // ⭐ Story 11b.14 (AC2, AC3) — the LIVE meter cell's header and its two ruled lines.
   columnProgress: 'Progress',
+  // ⭐ Story 11b.14 (AC7) — the RULED label. ⛔ *"Account holder"* may ⛔ NOT be used.
+  columnNominee: 'Nominee Name',
+  columnSummary: 'About this drive',
+  indexLine: (tk: { nomineeName: string | null; familyName: string | null; districtName: string | null }) =>
+    tk.nomineeName === null && tk.familyName === null ? null : `line for ${tk.nomineeName ?? tk.familyName}`,
   participationLine: (amount: number, count: number) => `₹ ${amount} and counting, by ${count} colleagues`,
   driveTargetLine: (target: number) => `Expected: ₹ ${target}`,
   columnOutcome: 'Close of cycle',
@@ -846,6 +851,8 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
     items: [
       {
         deceasedMemberName: 'Rajesh Kumar Sharma',
+        // ⭐ Story 11b.14 (AC7) — the nominee's name, under the ruled label "Nominee Name".
+        nomineeName: 'Sunita Devi Sharma',
         poolLetterCode: 'A',
         poolCanonicalIdentifier: 'P-2026-08-001',
         publicToken: 'tok-P-2026-08-001',
@@ -863,6 +870,8 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
       // a placeholder ("—", "withheld") ship without any test noticing.
       {
         deceasedMemberName: null,
+        // ⭐ Story 11b.14 (AC7) — the nominee's name, under the ruled label "Nominee Name".
+        nomineeName: 'Sunita Devi Sharma',
         poolLetterCode: 'B',
         poolCanonicalIdentifier: 'P-2026-08-002',
         publicToken: 'tok-P-2026-08-002',
@@ -927,7 +936,7 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
     fields: sahyogDriveSurfaceFieldIds(model),
   };
 
-  it('⭐ the snapshot field set is NON-EMPTY, and is EXACTLY the twelve classified fields', () => {
+  it('⭐ the snapshot field set is NON-EMPTY, and is EXACTLY the fourteen classified fields', () => {
     // ⛔ Asserting the EXACT set — rather than "length > 0" — is what makes a DROPPED field fail
     // here too. A leg that only detects additions accepts a field vanishing from the render while
     // the matrix still claims it is shown.
@@ -940,6 +949,9 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
       // ⭐ Story 11b.10 — the per-row inbound link. `pii_tier: 3` (an ADDRESS, ⛔ not a person and
       // ⛔ not derived from one) ⇒ ⛔ no `tier1_public_exception` and ⛔ no allowlist entry.
       'drive_href',
+      // ⭐⭐ Story 11b.14 (AC7) — the ruled Closed · Verified sentence (`pii_tier: 3`; the NAMES it
+      // frames are classified under their own ids) and, below, the nominee's name itself.
+      'drive_index_line',
       // ⭐⭐ Story 11b.14 — the LIVE row's meter. THREE new classified fields, ⛔ not one:
       // `drive_participation_line` (the ruled sentence, carrying the public MONEY figure),
       // `drive_progress_percentage` (⚠ a NUMBER — the BAR'S WIDTH is the disclosure, and it never
@@ -950,6 +962,10 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
       'drive_progress_percentage',
       'drive_status',
       'drive_target',
+      // ⭐⭐ Story 11b.14 (AC7) — the ⛔ ONLY `pii_tier: 1` field this story adds, and it carries its
+      // OWN Trustee ruling (`2026-09-07-205` cl.1) and its own allowlist pair. ⛔ NOT an
+      // inheritance from `sahyog-vivran`'s identically-named field.
+      'nominee_account_holder_name',
       'pool_canonical_identifier',
       'pool_letter_code',
     ]);
@@ -1038,6 +1054,7 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
     // is `deriveFieldIds`, which throws in BOTH directions — plant a STALE MAPPING and require it.
     const rowWithDroppedField = {
       deceasedMemberName: 'Rajesh Kumar Sharma',
+      // ⭐ Story 11b.14 (AC7) — the nominee's name, under the ruled label "Nominee Name".
       poolLetterCode: 'A',
       poolCanonicalIdentifier: 'P-2026-08-001',
       // Story 11b.10 — the drive link + its a11y annotation are part of the row's real key set.
@@ -1052,6 +1069,8 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
       driveProgressPercentage: null,
       driveParticipationLine: null,
       driveTargetLine: null,
+      nomineeName: 'Sunita Devi Sharma',
+      driveIndexLine: 'line for Sunita Devi Sharma',
       // ⛔ `closeOfCycleFraming` deliberately absent.
     };
     expect(() => deriveFieldIds(rowWithDroppedField, SAHYOG_DRIVE_ROW_FIELD_IDS)).toThrow(

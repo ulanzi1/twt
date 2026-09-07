@@ -75,6 +75,7 @@ import { claims } from '../schema/claims.js';
 import { memberKycProfiles } from '../schema/member_kyc_profiles.js';
 import { memberPostings } from '../schema/member_postings.js';
 import { memberPoolAssignments } from '../schema/member_pool_assignments.js';
+import { claimNomineeBankAccounts } from '../schema/claim_nominee_bank_accounts.js';
 import { pools } from '../schema/pools.js';
 
 /**
@@ -525,6 +526,44 @@ export const DECEASED_DISTRICT = (now: Date) => sql<string | null>`(
      LIMIT 1
   )`;
 
+/**
+ * ⭐⭐ THE NOMINEE'S NAME, AS CIPHERTEXT — Story 11b.14 (AC7), Trustee-ratified 2026-09-05;
+ * recorded at `2026-09-07-205`.
+ *
+ * ⛔⛔ **THIS MODULE DOES ⛔ NOT DECRYPT, AND ⛔ MUST NEVER GAIN THE CAPABILITY.** The KEK is shared
+ * across EVERY Tier-1 field class, so granting it for ONE field grants it for ALL
+ * (`2026-08-20-143` cl.1, D6(a)). The value stays ciphertext until `apps/api` resolves it, exactly
+ * as `deceasedNameCiphertext` does on this same row.
+ *
+ * ⭐⭐ **ONE ACCOUNT, ⛔ NOT TWO — AND THE REASON IS A RULING, ⛔ not an optimisation.** The two
+ * accounts are **EQUAL PAYMENT DESTINATIONS for the SAME nominee** — an RBI per-account-cap
+ * workaround, ⛔ not one row per declared nominee ([[project_nominee_bank_disbursement_channel]];
+ * 6.8 **D1**). ⇒ there is ⛔ ONE name to publish, and decrypting the second would be a Tier-1
+ * decrypt **with no authorising purpose**, which this handler's own basis-before-decrypt rule
+ * forbids. ⭐ `ORDER BY account_rank` makes the choice **deterministic**, so *"page N is the same
+ * page N on every request"* survives.
+ * ⚠ ⭐ **THIS CORRECTS AC7(b)'s VOLUME FRAMING A SECOND TIME, ⛔ measured, ⛔ not assumed:** the step
+ * is **50 → up to 100** (one name + one nominee per row), ⛔ not the *"up to 150"* an earlier
+ * estimate carried on the assumption that both accounts would be decrypted.
+ *
+ * ⚠⛔ **AND ⛔ NO `member_nominees` JOIN.** 6.8 **D1** removed that linkage on purpose. ⛔ Do ⛔ not
+ * "fix" the unverified value here — `2026-09-07-205` cl.4 forbids it by name and routes it to
+ * **Story 6.18**.
+ *
+ * ⚠ It is a CORRELATED SUBQUERY over quoted outer identifiers, ⛔ never a Drizzle `Column` object
+ * inside a same-named subquery — that shape collapses correlation into a tautology
+ * ([[project_epic6_drizzle_correlated_subquery_bug]]). ⭐ Same construction as
+ * {@link DECEASED_DISTRICT} above.
+ */
+export const NOMINEE_ACCOUNT_HOLDER_NAME_CIPHERTEXT = sql<string | null>`(
+    SELECT n.account_holder_name_ciphertext
+      FROM ${claimNomineeBankAccounts} n
+     WHERE n.claim_case_id = "pools"."claim_case_id"
+       AND n.pariwar_id = "pools"."pariwar_id"
+     ORDER BY n.account_rank ASC
+     LIMIT 1
+  )`;
+
 /** How many members were assigned to contribute to this pool — the EXPECTED side of the outcome. */
 export const ASSIGNED_MEMBER_COUNT = sql<string>`(
     SELECT count(*)
@@ -716,6 +755,17 @@ export interface SahyogDriveEntry {
    */
   amountRaisedInr: number;
   /**
+   * ⭐⭐ THE NOMINEE'S NAME, **CIPHERTEXT** — Story 11b.14 (AC7), `2026-09-07-205` cl.1.
+   * `null` when the claim's bank details were ⛔ never collected (6.8 **AC3**'s absence signal).
+   *
+   * ⛔ ⛔ **THE NAME IS CIPHERTEXT, ⛔ NOT A NAME** — see {@link NOMINEE_ACCOUNT_HOLDER_NAME_CIPHERTEXT}
+   * for why exactly ONE account is read and why this module must ⛔ never decrypt.
+   * ⚠⛔ **AND ⛔ NO OTHER NOMINEE-BANK VALUE IS ON THIS ROW, UNDER ANY NAME** — ⛔ no account number,
+   * ⛔ no last-4, ⛔ no IFSC, ⛔ no VPA, ⛔ no bank, ⛔ no branch. `2026-09-04-190` cl.1 + `-191` cl.1
+   * withdrew them from the public surface; ⛔ do ⛔ not "restore" one here.
+   */
+  nomineeAccountHolderNameCiphertext: string | null;
+  /**
    * The consent subject — `claims.deceased_member_id`.
    * ⚠ INTERNAL, for the consent join and the decrypt ONLY. ⛔ NEVER serialized onto the public
    * wire: a per-member permalink is an enumeration primitive in its own right (11a.3, control 5).
@@ -890,6 +940,8 @@ export async function listPublicSahyogDrivePools(
       // accessor boundary below — ⛔ never left to an implicit `+` somewhere downstream.
       confirmedCount: CONFIRMED_CONTRIBUTION_COUNT(now),
       assignedCount: ASSIGNED_MEMBER_COUNT,
+      // ⭐ Story 11b.14 (AC7) — CIPHERTEXT. ⛔ This module never decrypts.
+      nomineeAccountHolderNameCiphertext: NOMINEE_ACCOUNT_HOLDER_NAME_CIPHERTEXT,
       namePublicationAuthorised: NAME_PUBLICATION_AUTHORISED(now),
     })
     .from(pools)
@@ -984,6 +1036,7 @@ export async function listPublicSahyogDrivePools(
       amountRaisedInr: deliveredTotal,
       deceasedMemberId: r.deceasedMemberId,
       deceasedNameCiphertext: r.deceasedNameCiphertext,
+      nomineeAccountHolderNameCiphertext: r.nomineeAccountHolderNameCiphertext,
       namePublicationAuthorised: r.namePublicationAuthorised,
     };
   });

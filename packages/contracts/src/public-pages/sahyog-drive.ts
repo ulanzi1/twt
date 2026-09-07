@@ -128,6 +128,35 @@ export const PublicSahyogDriveEntry = z
      * ⛔ NEVER through `resolvePoolIdentity()`, which hard-codes the shielded form.
      */
     deceasedMemberName: z.string().min(1).nullable(),
+    /**
+     * ⭐⭐ **THE NOMINEE'S NAME** — Story 11b.14 (AC7), Trustee-ratified 2026-09-05 (Dhiraj Rahul +
+     * Kalpana Bharti), recorded at `2026-09-07-205` cl.1.
+     *
+     * ⛔⛔ **IT RENDERS UNDER THE RULED PUBLIC LABEL "Nominee Name" — ⛔ *"Account holder"* MAY ⛔ NOT
+     * BE USED** (`2026-09-04-190` **cl.2**). ⭐ **FULL name form**, ruled by the same 2026-09-05 pass
+     * (cl.2 had settled the LABEL and ⛔ said nothing about the FORM) ⇒ `deferred-work.md`'s
+     * `D-nominee-name-form` is **CLOSED BY RULING**.
+     *
+     * ⛔⛔ **THIS IS A SECOND RULING, ⛔ NOT AN INHERITANCE FROM THE DRIVE PAGE.** `-190` cl.2 ruled
+     * ONE DRIVE'S PAGE, reached one drive at a time by an opaque address; this surface is a
+     * paginated list of up to FIFTY rows. ⭐ The Panel was shown that **bulk-harvest** property and
+     * **ACCEPTED** it (routing note §9.4) — ⛔ do ⛔ not re-litigate it, and ⛔ do ⛔ not "soften" it
+     * with a name form the Panel did not rule.
+     *
+     * ⚠ `null` means the name is **not available** — the claim's bank details were never collected
+     * (6.8 **AC3**'s absence signal), or the decrypt failed. ⛔ **NULL NEVER OMITS THE ROW**, and the
+     * absence ⛔ never announces itself: ⛔ no placeholder, ⛔ no marker, ⛔ no "withheld".
+     *
+     * ⚠⛔ **THE VALUE IS UNVERIFIED TODAY** — ⛔ no FK and ⛔ no match rule to `member_nominees` (6.8
+     * **D1** removed the linkage on purpose), and ⛔ nobody in the approval chain can read the
+     * ciphertext to check it. ⭐ **Story 6.18** closes that. ⛔⛔ Do ⛔ NOT add a join or a match rule
+     * here, and ⛔ do ⛔ not block on 6.18: the Panel ruled the exposure KNOWING it.
+     *
+     * ⛔ ⛔ **NO OTHER NOMINEE-BANK VALUE CROSSES** — ⛔ no account number, ⛔ no last-4, ⛔ no IFSC,
+     * ⛔ no VPA, ⛔ no bank, ⛔ no branch. Those keys are **ABSENT**, ⛔ never `null` (the 11b.11
+     * shape), and `.strict()` makes adding one a parse error rather than a silent extra field.
+     */
+    nomineeName: z.string().min(1).nullable(),
     /** The pool's letter code (Story 7.2's dual identifier) — a label for a COLLECTION. */
     poolLetterCode: z.string().min(1),
     /** `P-YYYY-MM-###`. Public, and what the pool-code filter matches EXACTLY. */

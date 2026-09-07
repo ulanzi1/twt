@@ -14,6 +14,8 @@
   "table.col.date": "समाप्ति तिथि",
   "table.col.contributions": "पुष्ट योगदान",
   "table.col.progress": "प्रगति",
+  "table.col.nominee": "नॉमिनी का नाम",
+  "table.col.summary": "इस अभियान के बारे में",
   "table.col.outcome": "चक्र समापन",
   "value.district_unknown": "दर्ज नहीं",
   "value.date_unknown": "दर्ज नहीं",

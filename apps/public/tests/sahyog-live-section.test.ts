@@ -44,6 +44,11 @@ const labels = {
   columnContributions: 'Contributions confirmed',
   // ⭐ Story 11b.14 (AC2, AC3) — the LIVE meter cell's header and its two ruled lines.
   columnProgress: 'Progress',
+  // ⭐ Story 11b.14 (AC7) — the RULED label. ⛔ *"Account holder"* may ⛔ NOT be used.
+  columnNominee: 'Nominee Name',
+  columnSummary: 'About this drive',
+  indexLine: (tk: { nomineeName: string | null; familyName: string | null; districtName: string | null }) =>
+    tk.nomineeName === null && tk.familyName === null ? null : `line for ${tk.nomineeName ?? tk.familyName}`,
   participationLine: (amount: number, count: number) => `₹ ${amount} and counting, by ${count} colleagues`,
   driveTargetLine: (target: number) => `Expected: ₹ ${target}`,
   columnOutcome: 'Close of cycle',
@@ -73,6 +78,8 @@ const labels = {
 
 const row = (status: 'live' | 'closed' | 'verified', closedAt: string | null) => ({
   deceasedMemberName: 'Rajesh Kumar Sharma',
+  // ⭐ Story 11b.14 (AC7) — the nominee's name, under the ruled label "Nominee Name".
+  nomineeName: 'Sunita Devi Sharma',
   poolLetterCode: 'A',
   poolCanonicalIdentifier: `P-2026-08-00${status.length}`,
   publicToken: `tok-${status}`,

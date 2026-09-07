@@ -46,6 +46,10 @@ const KEYS = [
   'table.col.contributions',
   // ⭐ Story 11b.14 (AC2) — the Live section's meter column.
   'table.col.progress',
+  // ⭐⭐ Story 11b.14 (AC7) — the nominee's RULED public label, and the Closed · Verified sentence's
+  // column header. ⛔ *"Account holder"* may ⛔ NOT be used — asserted below.
+  'table.col.nominee',
+  'table.col.summary',
   'table.col.outcome',
   'value.district_unknown',
   'value.date_unknown',
@@ -151,6 +155,15 @@ describe('/sahyog copy resolves through the REAL t() — both locales', () => {
       for (const comparison of [/fell short/i, /shortfall/i, /\d+% of the target/i, /लक्ष्य से कम/]) {
         expect(all).not.toMatch(comparison);
       }
+      // ⭐⭐ STORY 11b.14 (AC7) — THE RULED LABEL, AND ITS RULED PROHIBITION.
+      // `2026-09-04-190` cl.2 (Trustee-ratified) names the public wording **"Nominee Name"** and
+      // rules that ⛔ *"Account holder"* may ⛔ NOT be used. ⚠ It is asserted in BOTH directions: the
+      // ruled words must be PRESENT, and the banned one must appear ⛔ nowhere on this surface.
+      expect(all).not.toMatch(/account holder/i);
+      expect(all).not.toMatch(/खाता ?धारक/);
+      expect(t('table.col.nominee', undefined, { locale, namespace: 'sahyog-drive' })).toBe(
+        locale === 'hi' ? 'नॉमिनी का नाम' : 'Nominee Name',
+      );
     });
   }
 });

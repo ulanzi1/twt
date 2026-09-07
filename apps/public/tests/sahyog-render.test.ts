@@ -44,6 +44,11 @@ const labels: SahyogLabels = {
   columnContributions: 'Contributions confirmed',
   // ⭐ Story 11b.14 (AC2, AC3) — the LIVE meter cell's header and its two ruled lines.
   columnProgress: 'Progress',
+  // ⭐ Story 11b.14 (AC7) — the RULED label. ⛔ *"Account holder"* may ⛔ NOT be used.
+  columnNominee: 'Nominee Name',
+  columnSummary: 'About this drive',
+  indexLine: (tk: { nomineeName: string | null; familyName: string | null; districtName: string | null }) =>
+    tk.nomineeName === null && tk.familyName === null ? null : `line for ${tk.nomineeName ?? tk.familyName}`,
   participationLine: (amount: number, count: number) => `₹ ${amount} and counting, by ${count} colleagues`,
   driveTargetLine: (target: number) => `Expected: ₹ ${target}`,
   columnOutcome: 'Close of cycle',
@@ -78,6 +83,8 @@ type WireRow = PublicSahyogDriveResponse['items'][number];
 
 const row = (over: Partial<WireRow> = {}): WireRow => ({
   deceasedMemberName: 'Rajesh Kumar Sharma',
+  // ⭐ Story 11b.14 (AC7) — the nominee's name, under the ruled label "Nominee Name".
+  nomineeName: 'Sunita Devi Sharma',
   poolLetterCode: 'A',
   poolCanonicalIdentifier: 'P-2026-08-001',
   publicToken: 'tok-P-2026-08-001',
@@ -182,6 +189,8 @@ describe('⭐ consent decides whether a row is NAMED, ⛔ never whether it EXIST
       driveProgressPercentage: null,
       driveParticipationLine: null,
       driveTargetLine: null,
+      nomineeName: 'Sunita Devi Sharma',
+      driveIndexLine: 'line for Sunita Devi Sharma',
     });
     // ⭐ `null` means "render NOTHING". An omission that announces itself is an ENUMERATION SIGNAL:
     // a scraper diffing renders learns exactly which families declined.
@@ -209,6 +218,8 @@ describe('⭐ consent decides whether a row is NAMED, ⛔ never whether it EXIST
         driveProgressPercentage: null,
         driveParticipationLine: null,
         driveTargetLine: null,
+        nomineeName: 'Sunita Devi Sharma',
+        driveIndexLine: 'line for Sunita Devi Sharma',
       }),
     ).toBe(labels.districtUnknown);
   });
@@ -506,12 +517,19 @@ describe('⭐ the tier-leak field-id derivation is OPERATIVE, and drifts fail in
       // ⭐ Story 11b.10 — the per-row inbound link. `pii_tier: 3` (an ADDRESS, ⛔ not a person), so
       // it adds ⛔ no Tier-1 field and needs ⛔ no allowlist entry.
       'drive_href',
+      // ⭐⭐ Story 11b.14 (AC7) — the ruled Closed · Verified sentence (`pii_tier: 3`; the NAMES it
+      // frames are classified under their own ids) and, below, the nominee's name itself.
+      'drive_index_line',
       // ⭐⭐ Story 11b.14 — the LIVE row's meter: the ruled sentence, the bar's fill and लक्ष्य.
       // ⛔ THREE fields, ⛔ not one, and all three `pii_tier: 3`.
       'drive_participation_line',
       'drive_progress_percentage',
       'drive_status',
       'drive_target',
+      // ⭐⭐ Story 11b.14 (AC7) — the ⛔ ONLY `pii_tier: 1` field this story adds, and it carries its
+      // OWN Trustee ruling (`2026-09-07-205` cl.1) and its own allowlist pair. ⛔ NOT an
+      // inheritance from `sahyog-vivran`'s identically-named field.
+      'nominee_account_holder_name',
       'pool_canonical_identifier',
       'pool_letter_code',
     ]);

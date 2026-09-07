@@ -758,6 +758,32 @@ surfaces:
           ⚠ EDGE-CACHED at `s-maxage=300`, like every other value here ⇒ a consent or masking
           flip is ⛔ NOT immediate on this surface. ⭐ ⛔ Not a new posture — the drive page
           already serves this decrypted name cached.
+      - id: drive_index_line
+        tier: public
+        pii_tier: 3
+        description: >-
+          ⭐⭐ THE RULED **CLOSED · VERIFIED** ROW SENTENCE — `sahyog-shared:index_line.*`,
+          Trustee-ratified 2026-09-05 (Dhiraj Rahul + Kalpana Bharti), authored DARK by Story
+          11b.12 (its AC9) and lit by Story 11b.14 (AC7).
+          ⭐ LIVE rows take the participation sentence instead (`drive_participation_line`) —
+          the index line was ratified against an index listing `closed` + `settled` ONLY and
+          occupies the CLOSE-OF-CYCLE slot, which is structurally null for an unclosed drive.
+          ⛔ `pii_tier: 3` on the SENTENCE, and that is ⛔ not a downgrade of what it carries:
+          the nominee's name is classified under its OWN id (`nominee_account_holder_name`,
+          `pii_tier: 1`, with its own ruled exception), and the deceased member's under
+          `deceased_member_name`. This id classifies the ratified COPY that frames them.
+          ⚠⛔ AN ABSENT TOKEN DROPS ITS CLAUSE — 11b.12's ruling 3, implemented as FOUR strings,
+          ⛔ never a combinatorial cross-product. ⚠ `no_family` drops the DISTRICT clause too,
+          and that is ⛔ NOT a bug to "fix": "who served in {district_name} district" modifies
+          the DECEASED MEMBER, so keeping it while dropping the family name would attribute the
+          posting district to the NOMINEE — a factual claim about a named private individual
+          that the data does ⛔ not support.
+          ⛔⛔ AND WHERE ⛔ NO RATIFIED VARIANT FITS — nominee absent together with family, or
+          with district — THE ROW RENDERS ⛔ NO SENTENCE AT ALL. Silence: ⛔ no placeholder, ⛔ no
+          partial sentence, ⛔ no marker naming what is missing (`2026-09-07-205` cl.6). Both
+          combinations are DEFAULT-SHAPED, and `t()` THROWS on an unsupplied token, so one such
+          row would otherwise 500 the whole page for the Pariwar.
+          ⛔ NO WRITTEN PITCH (`2026-09-04-190` cl.8) and ⛔ no comparison between drives (AC5).
       # ── Story 11b.14 — the LIVE row's progress meter. `2026-09-04-189` cl.2(b) + `-190` cl.6,
       #    both Trustee-ratified; recorded at `2026-09-07-204`.
       - id: drive_progress_percentage

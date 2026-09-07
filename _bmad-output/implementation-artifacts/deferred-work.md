@@ -8385,3 +8385,28 @@ violation.
   ⇒ a legit retry gets `409 idempotency_in_progress` until the TTL self-heals) is part of that same
   question, not a new one. **Trigger:** the Epic 11b retro's `closeScopeTx` / compensating-audit
   question. [`apps/api/src/modules/drive-target/handlers.ts:246-256`]
+
+## Deferred from: code review of 11b-14-live-drives-listed-and-the-progress-meter (2026-09-07)
+
+- **(a) The Trap-10 divergence with `11b-3b` is recorded ONE-SIDEDLY.** Story D ships a server-computed
+  `confirmedPercentage` on the public **INDEX** wire — ratified there by `2026-09-04-189` cl.2(b) and
+  outside `11b-3b`'s scope. ⚠ But `11b-3b` **AC3b** records, for the adjacent **drive page**, that the
+  presenter's `confirmedPercentage` is *"⛔ **not** authorised by `D1(b)` … ⛔ **It needs its own
+  decision**."* ⇒ the two stories hold **opposite postures on adjacent contracts**. ⭐ D's **AC2**
+  orders the divergence recorded *"here **and in `11b-3b`'s Task 0 annotation"*, while D's **Task 6**
+  forbids it (*"⛔ Do ⛔ not amend `11b-3b`'s file from here"*) — ⭐ the dev correctly followed the
+  **Task** ([[feedback_spec_edits_must_propagate_to_tasks]]), so the record landed on D's side only.
+  ⇒ a reader of `11b-3b` meets AC3b's open question with ⛔ **no pointer back**. ⛔ This is ⛔ not a
+  defect in D. **Trigger:** `11b-3b`'s Task 0 annotation, which owes the back-reference
+  ([[feedback_circular_deferral_between_sibling_stories]]).
+  [`packages/contracts/src/public-pages/sahyog-drive.ts`]
+
+- **(b) `amountRaisedInr` has ⛔ no matrix field id of its own.** `SAHYOG_DRIVE_ROW_FIELD_IDS`
+  (`apps/public/src/lib/surface-fields.ts`) gained five ids for Story D; ⛔ **none names the rupee
+  figure**. It is disclosed ⛔ only *inside* `drive_participation_line` and `drive_index_line`, both
+  declared `pii_tier: 3` in `public-vs-private-matrix.yaml`. ⭐ **Defensible as shipped** — the display
+  row ⛔ never carries the raw number, so `deriveFieldIds` cannot throw in either direction and the
+  classification gate is ⛔ not evaded. ⚠ The residual is that the tier-leak scan classifies **the
+  sentence**, ⛔ not the figure the sentence contains ⇒ a future story that renders the amount in its
+  own cell inherits an ungoverned field. **Trigger:** the first story to render a rupee figure in a
+  standalone Sahyog index cell. [`apps/public/src/lib/surface-fields.ts`]

@@ -1533,12 +1533,12 @@ cross-drive comparison · ⛔ not publish a written pitch (`-190` cl.8).
   - [x] Then: the contract field, the render under **"Nominee Name"**, the omit-the-clause rule, and
         the **measured** p95. ⛔ **NO** other bank value crosses (keys ABSENT, ⛔ never `null`).
         ⛔ **NO** join or match rule to `member_nominees` (AC7(c)).
-- [ ] **Task 7 — Tests** — ⭐ **RUNS LAST**, despite the number. A `live` drive appears **in the Live
+- [x] **Task 7 — Tests** — ⭐ **RUNS LAST**, despite the number. A `live` drive appears **in the Live
       section, labelled with B's word**; `spawned` does ⛔ not; the target is ⛔ NOWHERE in any
       response (AC2 — ⚠ ⛔ **and a green token scan proves nothing here; see `D3`**); headline figures
       are internally consistent (AC3); ⛔ no ordering parameter is accepted; the empty-section
       suppression still holds **for three sections**; the scrape-test identity set updated.
-  - [ ] ⛔ **Also on the list, ⛔ none named at authoring:** `apps/public/tests/sahyog-copy.test.ts`
+  - [x] ⛔ **Also on the list, ⛔ none named at authoring:** `apps/public/tests/sahyog-copy.test.ts`
         (page.intro + the third section's keys) · `apps/public/tests/sahyog-serves.test.ts` (derives
         from `PublicSahyogDriveStatus.options`) · `apps/public/tests/sahyog-empty-section.test.ts`
         (⚠ its stage loop and its exactly-one-guard-each assertion) ·
@@ -1548,8 +1548,8 @@ cross-drive comparison · ⛔ not publish a written pitch (`-190` cl.8).
         ⭐ **`packages/contracts/tests/drive-target-ceiling-sync.test.ts`** (⚠ its **test NAME** cites
         the superseded meter — ⭐ the assertion stays, the name moves) · ⭐ **the OpenAPI determinism
         check** (`check-openapi-determinism.ts`), which **fails** until `v1.yaml` is re-emitted.
-  - [ ] ⭐ **Execute them** against `twt-test-pg` `:5433` — ⛔ *"written but not run"* is ⛔ not attested.
-- [ ] **Task 9 — The friction-budget disposition** — ⚠ 11b.11, 11b.12 and 11b.13 each landed one and
+  - [x] ⭐ **Execute them** against `twt-test-pg` `:5433` — ⛔ *"written but not run"* is ⛔ not attested.
+- [x] **Task 9 — The friction-budget disposition** — ⚠ 11b.11, 11b.12 and 11b.13 each landed one and
       this story had ⛔ none. ⭐ Written **AFTER** the code commit (the 11b.12 pattern); ⛔ AC-4 diffs
       **COMMITTED** history ([[project_friction_budget_baseline_ratchet]]).
 

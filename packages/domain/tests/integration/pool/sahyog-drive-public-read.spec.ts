@@ -60,6 +60,14 @@ async function seedDrive(
      * nothing.
      */
     assignedMembers?: number;
+    /**
+     * ⭐ Story 11b.14 (AC7) — how many `claim_nominee_bank_accounts` rows the CLAIM carries.
+     * ⚠ Two is the composite-PK ceiling and they are **EQUAL destinations for the SAME nominee** —
+     * an RBI per-account-cap workaround, ⛔ not one row per declared nominee (6.8 D1). ⇒ the read
+     * must return exactly ONE ciphertext however many rows exist.
+     * ⭐ `0` (the default) is the 6.8 **AC3** ABSENCE SIGNAL: bank details were never collected.
+     */
+    nomineeAccounts?: number;
   } = {},
 ): Promise<{ poolId: string; claimCaseId: string; deceasedMemberId: string }> {
   const deceasedMemberId = await seedMember(tx, pariwarId);
@@ -107,6 +115,21 @@ async function seedDrive(
         assignedAt: new Date('2026-08-01T00:00:00.000Z'),
       });
     }
+  }
+  // ⭐ Story 11b.14 (AC7) — the claim's nominee bank accounts. ⛔ CIPHERTEXT: the domain read never
+  // decrypts, so the fixture stores a marker the assertions can identify by rank.
+  const nomineeAccounts = opts.nomineeAccounts ?? 0;
+  for (let rank = 1; rank <= nomineeAccounts; rank += 1) {
+    await tx.insert(schema.claimNomineeBankAccounts).values({
+      claimCaseId: ids.claimId(claimCaseId),
+      pariwarId: ids.pariwarId(pariwarId),
+      accountRank: rank,
+      accountHolderNameCiphertext: `ct-nominee-rank-${String(rank)}-${poolId}`,
+      accountNumberCiphertext: `ct-acct-${String(rank)}`,
+      ifscCiphertext: `ct-ifsc-${String(rank)}`,
+      bankName: 'Test Bank',
+      branch: 'Test Branch',
+    });
   }
   return { poolId, claimCaseId, deceasedMemberId };
 }
@@ -160,20 +183,97 @@ describe.skipIf(!hasDatabase)('Sahyog Drive public pool index (Story 11b.1)', ()
       expect(byId.get(archived.poolId)?.status).toBe('verified');
     });
 
-    it('⛔ EXCLUDES a `spawned` and a `live` pool — a drive still collecting is not a record', async () => {
+    // ⚠⛔⛔ **NARROWED 2026-09-07 (Story 11b.14, AC1) — ⛔ NOT DELETED, ⭐ AND THE PRIOR PROPERTY IS
+    // NAMED** ([[feedback_supersede_never_reinterpret]]). It read *"⛔ EXCLUDES a `spawned` **and a
+    // `live`** pool — a drive still collecting is not a record"* and asserted BOTH were absent.
+    // ⭐⭐ **THE `live` HALF IS REVERSED BY RULING.** `2026-09-04-189` **cl.2** (Trustee-ratified) —
+    // *"(Q2) — YES: A COLLECTING DRIVE IS LISTED"* — restoring **FR-76**, a standing requirement
+    // since the PRD that had been excluded on the strength of an AC parenthetical and a code
+    // comment, ⛔ never a ruling (`2026-09-04-187`). ⇒ recorded at `2026-09-07-204`.
+    // ⭐ **THE `spawned` HALF IS UNTOUCHED AND IS NOW THE WHOLE POINT:** the widening ADDS one
+    // state; ⛔ it does ⛔ not relax the predicate, and `spawned` has ⛔ no public word at all.
+    it('⭐ LISTS `live` (`-189` cl.2) — ⛔ while `spawned` stays a PURE DENY', async () => {
       const { client, tx } = getTx();
       const spawned = await seedDrive(tx, PARIWAR_A, { currentState: 'spawned' });
       const live = await seedDrive(tx, PARIWAR_A, { currentState: 'live' });
       const closed = await seedDrive(tx, PARIWAR_A, { currentState: 'closed' });
 
       await enterAppScope(client, PARIWAR_A);
-      const ids_ = (
-        await poolDomain.listPublicSahyogDrivePools(tx, ids.pariwarId(PARIWAR_A), { limit: 50 })
-      ).map((r) => r.poolId as string);
+      const rows = await poolDomain.listPublicSahyogDrivePools(tx, ids.pariwarId(PARIWAR_A), {
+        limit: 50,
+      });
+      const ids_ = rows.map((r) => r.poolId as string);
 
       expect(ids_).toContain(closed.poolId);
+      expect(ids_).toContain(live.poolId);
       expect(ids_).not.toContain(spawned.poolId);
-      expect(ids_).not.toContain(live.poolId);
+      // ⭐ And the live row carries the ruled public WORD — ⛔ never the two-way partition's `else`
+      // arm, which would have labelled a collecting drive as one whose window had shut.
+      expect(rows.find((r) => (r.poolId as string) === live.poolId)?.status).toBe('live');
+    });
+
+    // ─────────────────────────────────────────────────────────────────────────────────────────
+    // ⭐⭐ STORY 11b.14 (AC7) — THE NOMINEE'S NAME. Trustee-ratified 2026-09-05; `2026-09-07-205`.
+    // ⚠⛔ IT IS A **READ-SHAPE CHANGE**, ⛔ NOT A FIELD ADDITION — this read joined ⛔ NO nominee
+    // table before, so it is exercised against the LIVE DB rather than asserted in a unit.
+    // ─────────────────────────────────────────────────────────────────────────────────────────
+    it('⭐⭐ returns the nominee ciphertext — ⭐ EXACTLY ONE, from the LOWEST rank', async () => {
+      const { client, tx } = getTx();
+      // ⚠ TWO accounts — the composite-PK ceiling. ⭐ They are EQUAL destinations for the SAME
+      // nominee (an RBI per-account-cap workaround, ⛔ not one row per declared nominee — 6.8 D1),
+      // so there is ⛔ ONE name to publish and decrypting the second would be a Tier-1 decrypt with
+      // ⛔ no authorising purpose.
+      const drive = await seedDrive(tx, PARIWAR_A, { nomineeAccounts: 2 });
+
+      await enterAppScope(client, PARIWAR_A);
+      const row = (
+        await poolDomain.listPublicSahyogDrivePools(tx, ids.pariwarId(PARIWAR_A), { limit: 50 })
+      ).find((r) => r.poolId === drive.poolId);
+
+      // ⭐ RANK 1, DETERMINISTICALLY — *"page N is the same page N on every request"* depends on it.
+      expect(row?.nomineeAccountHolderNameCiphertext).toBe(`ct-nominee-rank-1-${drive.poolId}`);
+      // ⛔⛔ AND THE JOIN DID ⛔ NOT FAN THE ROW OUT. Two account rows must yield ONE drive row —
+      // a naive join would have duplicated the drive and silently doubled `total`.
+      expect(
+        (await poolDomain.listPublicSahyogDrivePools(tx, ids.pariwarId(PARIWAR_A), { limit: 50 }))
+          .filter((r) => r.poolId === drive.poolId),
+      ).toHaveLength(1);
+    });
+
+    it('⭐ `null` when the claim carried ⛔ NO bank details — the 6.8 AC3 absence signal', async () => {
+      // ⚠⛔ DEFAULT-SHAPED, ⛔ not exotic — and it is HALF of the double-absence case that would
+      // otherwise 500 the page (`2026-09-07-205` cl.6). ⛔ NULL NEVER OMITS THE ROW.
+      const { client, tx } = getTx();
+      const drive = await seedDrive(tx, PARIWAR_A, { nomineeAccounts: 0 });
+
+      await enterAppScope(client, PARIWAR_A);
+      const rows = await poolDomain.listPublicSahyogDrivePools(tx, ids.pariwarId(PARIWAR_A), {
+        limit: 50,
+      });
+      const row = rows.find((r) => r.poolId === drive.poolId);
+      expect(row).toBeDefined();
+      expect(row?.nomineeAccountHolderNameCiphertext).toBeNull();
+    });
+
+    it('⛔⛔ it reads ⛔ ONLY the holder name — ⛔ no account number, ⛔ no IFSC, ⛔ no bank, ⛔ no branch', async () => {
+      // ⭐ `2026-09-04-190` cl.1 + `-191` cl.1 withdrew every other nominee-bank value from the
+      // public surface, and `-205` cl.9 authorises the NAME and ⛔ nothing else. ⚠ The fixture
+      // seeds all of them, so this fails if a future edit widens the select.
+      const { client, tx } = getTx();
+      const drive = await seedDrive(tx, PARIWAR_A, { nomineeAccounts: 2 });
+
+      await enterAppScope(client, PARIWAR_A);
+      const row = (
+        await poolDomain.listPublicSahyogDrivePools(tx, ids.pariwarId(PARIWAR_A), { limit: 50 })
+      ).find((r) => r.poolId === drive.poolId);
+
+      const serialized = JSON.stringify(row ?? {});
+      for (const banned of ['ct-acct-', 'ct-ifsc-', 'Test Bank', 'Test Branch']) {
+        expect(serialized).not.toContain(banned);
+      }
+      // ⛔ And ⛔ no key that could carry one exists on the shape, under any name.
+      const bankish = /account_?number|ifsc|vpa|bank_?name|branch|last4/i;
+      expect(Object.keys(row ?? {}).filter((k) => bankish.test(k))).toEqual([]);
     });
 
     it('⛔ EXCLUDES another tenant’s drive (RLS + the explicit pariwar_id predicate)', async () => {
@@ -801,8 +901,14 @@ describe.skipIf(!hasDatabase)('Sahyog Drive public pool index (Story 11b.1)', ()
       for (let i = 0; i < 3; i += 1) {
         await seedDrive(tx, PARIWAR_A, { closedAt: instant });
       }
-      // A `live` pool in the same window must be counted by NEITHER.
-      await seedDrive(tx, PARIWAR_A, { currentState: 'live', closedAt: instant });
+      // ⚠⛔ **AMENDED 2026-09-07 (Story 11b.14, AC1) — ⭐ THE PROPERTY UNDER TEST IS UNCHANGED, ⛔ the
+      // fixture's decoy is.** It read *"A `live` pool in the same window must be counted by
+      // NEITHER"*, and `live` is now LISTED (`-189` cl.2) ⇒ that pool would be counted by BOTH and
+      // the case would still pass — ⭐ vacuously, proving nothing about agreement.
+      // ⇒ the decoy becomes `spawned`, which remains a **PURE DENY**. ⭐ What this asserts is that
+      // the LIST and the COUNT share ONE predicate, and it needs a row **outside** that predicate
+      // to mean anything.
+      await seedDrive(tx, PARIWAR_A, { currentState: 'spawned', closedAt: instant });
 
       await enterAppScope(client, PARIWAR_A);
       const filters = { now, closedFrom: instant, closedTo: instant };
@@ -855,12 +961,33 @@ describe.skipIf(!hasDatabase)('Sahyog Drive public pool index (Story 11b.1)', ()
       // vacuous classification, so it asserted nothing at all (Review finding, 2026-08-27).
       // 3 assigned × 100 expected vs 0 confirmed ⇒ genuinely under-funded.
       expect(row?.fundingOutcome).toBe('under_funded');
-      // ⛔ Not "no target is CURRENTLY set" — no key that could carry one EXISTS on the shape.
-      // A future edit adding `expectedTotal`, `shortfall`, `percentFunded` or a renamed cousin
-      // fails here, which is the point: `classifyCycleOutcome` quarantines the target by
-      // construction and this surface must not smuggle one past it.
+      // ⚠⛔⛔ **NARROWED 2026-09-07 (Story 11b.14) — FROM A DENY-LIST TO AN ALLOW-LIST, ⛔ NOT
+      // DELETED, ⭐ AND IT COMES OUT STRICTER** ([[feedback_supersede_never_reinterpret]]).
+      // It was a BLANKET name ban with: *"⛔ Not 'no target is CURRENTLY set' — no key that could
+      // carry one EXISTS on the shape. A future edit adding `expectedTotal`, `shortfall`,
+      // `percentFunded` or a renamed cousin fails here … `classifyCycleOutcome` quarantines the
+      // target by construction and this surface must not smuggle one past it."*
+      //
+      // ⭐⭐ **THREE SUCH KEYS NOW EXIST, EACH BY A TRUSTEE RULING** (`2026-09-07-204`), so a blanket
+      // ban would forbid the ACs. ⇒ each exception NAMES its ruling, and a FOURTH — a shortfall, a
+      // deficit, a `percentFunded`, a renamed cousin — still FAILS here and must come back to this
+      // list with a decision id. ⭐ That is the property the original was protecting, kept intact.
+      const RULED = new Set([
+        // `-189` cl.2(b) — the ratified bar. ⚠ CONTRIBUTORS, ⛔ not rupees.
+        'confirmedPercentage',
+        // `-190` cl.6 — the ruled public money figure (`-189` cl.5: the boundary is newly crossed).
+        'amountRaisedInr',
+        // `-190` cl.7(b)/(c) — लक्ष्य, ⛔ `null` unless a `super_admin` revealed it for the Pariwar.
+        'driveTargetInr',
+      ]);
       const forbidden = /target|expected|shortfall|percent|ratio|remaining|deficit|goal/i;
-      expect(Object.keys(row ?? {}).filter((k) => forbidden.test(k))).toEqual([]);
+      expect(
+        Object.keys(row ?? {}).filter((k) => forbidden.test(k) && !RULED.has(k)),
+      ).toEqual([]);
+      // ⭐⭐ AND THE HALF THAT MATTERS MOST IS ASSERTED POSITIVELY: with ⛔ no visibility row for this
+      // Pariwar — the ruled, fail-closed launch state — लक्ष्य is `null`. ⇒ ⛔ the quarantine still
+      // holds for the figure it was actually protecting.
+      expect(row?.driveTargetInr).toBeNull();
     });
 
     // ⭐⛔ THE ZERO-EXPECTATION DRIVE SAYS NOTHING (Review finding, 2026-08-27; ✅ RULED BigDev

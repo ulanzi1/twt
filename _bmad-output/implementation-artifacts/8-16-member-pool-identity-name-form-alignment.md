@@ -21,7 +21,7 @@ citation-precision and AC-scope only — applied in v0.8; see the Change Log.
 
 # Story 8.16: Member-Facing Pool Identity — Name-Form Alignment (closing the public/member INVERSION) `[SURFACE]`
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -619,8 +619,8 @@ one ([[feedback_record_unattested_no_backfill]]).
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — GOVERNANCE FIRST** (AC1, AC8) — ⛔ one `governance:` commit, ⛔ no code.
-  - [ ] ⛔⛔ **Read the PREFLIGHT. If either STOP is unanswered → ⛔ STOP and report.**
+- [x] **Task 0 — GOVERNANCE FIRST** (AC1, AC8) — ⛔ one `governance:` commit, ⛔ no code.
+  - [x] ⛔⛔ **Read the PREFLIGHT. If either STOP is unanswered → ⛔ STOP and report.**
   - [x] ✅ The `INV-scope` packet was written and routed (2026-09-02).
     - [x] ✅ **THE PANEL ANSWERED — ALL FOUR** (Kalpana Bharti, Dhiraj Rahul; `2026-09-02-180`,
           note §10). ⛔ Already transcribed — ⛔ do ⛔ not re-transcribe.
@@ -628,79 +628,85 @@ one ([[feedback_record_unattested_no_backfill]]).
         ⛔ do ⛔ not re-transcribe, ⛔ do ⛔ not re-author. ⚠ Read `-181` before Task 2: it names the
         forbidden move (**Trap 5**).
   - [x] ✅ Both are in `.decision-log.md`. ⛔ Neither is re-opened by this story.
-  - [ ] **CREATE** the `### Story 8.16` section in `epics.md` (⭐ the `7-11` precedent,
+  - [x] **CREATE** the `### Story 8.16` section in `epics.md` (⭐ the `7-11` precedent,
         `epics.md:3048`); record `-179` cl.3 + `-180` + `-181`; supersede **FR-21**'s form by name.
         ⚠ ⛔ **The `epics.md:5128` six-story-split range + the `11b-11:818` F/G mis-keying are ⛔ NOT
         this Task's work** — both landed in `949a01ea`.
-- [ ] **Task 1 — The identity SHAPE** (AC3) — ⭐ ONE resolved display field `deceasedDisplayName:
+- [x] **Task 1 — The identity SHAPE** (AC3) — ⭐ ONE resolved display field `deceasedDisplayName:
       string` on `ResolvedPoolIdentity`, replacing the `deceasedFirstName` / `deceasedLastInitial`
       pair; ⛔ never widen `deceasedLastInitial`; ⛔ the parts are ⛔ not kept alongside it.
-  - [ ] ⚠⛔ **`apps/api/tests/unit/_pool-identity-fake.ts` is a POSITIONAL mirror** of the domain
+  - [x] ⚠⛔ **`apps/api/tests/unit/_pool-identity-fake.ts` is a POSITIONAL mirror** of the domain
         signature, read by three suites. ⛔ It moves in the **same commit**, or three suites go green
         on the wrong shape.
-- [ ] **Task 2 — The resolver, MODE-RESOLVED** (AC2, AC2b)
-  - [ ] ⛔⛔ **Read Trap 5 FIRST.** ⛔ Do ⛔ not call `resolvePublicMemberName`.
-  - [ ] ⚠ **Two signatures, ⛔ different shapes** — say where the mode goes in each:
+- [x] **Task 2 — The resolver, MODE-RESOLVED** (AC2, AC2b)
+  - [x] ⛔⛔ **Read Trap 5 FIRST.** ⛔ Do ⛔ not call `resolvePublicMemberName`.
+  - [x] ⚠ **Two signatures, ⛔ different shapes** — say where the mode goes in each:
         `notifications/pool-identity.ts:76` `(db, encryption, pariwarId, input, log)` vs
         `member-pool/pool-identity.ts:60` `(deps, tx, request, pariwarId, input)`.
         ⛔⛔ **The wrapper is ⛔ NOT a pass-through, and it does ⛔ NOT "keep its signature"** — it
         **gains** the mode and forwards it. ⚠ Three of the four consumers reach the resolver through it.
-  - [ ] ⚠ Record the **SEMANTIC WIDENING** at the setting: `public_name_presentation_mode` now governs
+  - [x] ⚠ Record the **SEMANTIC WIDENING** at the setting: `public_name_presentation_mode` now governs
         **member-facing** surfaces too (`-181`). ⛔ **Do ⛔ NOT rename it.**
-  - [ ] ⭐ **Carry the two confirmed sentences VERBATIM into the resolver's header comment block**
+  - [x] ⭐ **Carry the two confirmed sentences VERBATIM into the resolver's header comment block**
         (AC9, `-209` cl.1) — ⛔ all three parts; ⛔ a locale key is ⛔ NOT minted (⛔ not rendered copy);
         ⚠ `//` lines, ⛔ not a `/** */` doc-block.
-  - [ ] ⚠⛔ **CORRECT the stale sentence in that SAME header** — `pool-identity.ts:12-13` claims the
+  - [x] ⚠⛔ **CORRECT the stale sentence in that SAME header** — `pool-identity.ts:12-13` claims the
         `apps/api` wrapper *"keeps its exact exported signature"* and *"no apps/api call site
         changed"*. ⛔ Both are false once the mode parameter lands. ⛔ Correct it; ⛔ do ⛔ not leave it
         standing beside the new text.
-- [ ] **Task 3 — ALL FOUR consumers, ⭐ FIVE render sites** (AC2, AC3)
-  - [ ] ⚠⛔ **THE FIFTH RENDER SITE.** `familyLabel` (`contribution-notify-triggers.ts:250`) is called
+- [x] **Task 3 — ALL FOUR consumers, ⭐ FIVE render sites** (AC2, AC3)
+  - [x] ⚠⛔ **THE FIFTH RENDER SITE.** `familyLabel` (`contribution-notify-triggers.ts:250`) is called
         at **`:304` (cycle-open) ⭐ AND `:340` (deadline-reminder)**, and
         `notify.deadline.day_14.subject` interpolates `{family}`. ⇒ ⭐ **four resolver CALL sites,
         five RENDER sites.** ⛔ The old *"complete set"* finding was about call sites and was being
         read as render sites.
-  - [ ] ⚠ Add `kyc` to the existing `@twt/domain` import at `contribution-notify-triggers.ts:55` —
+  - [x] ⚠ Add `kyc` to the existing `@twt/domain` import at `contribution-notify-triggers.ts:55` —
         ⭐ a value import, ⛔ no cycle.
-  - [ ] ⛔ **Trap 6** — ⛔ do ⛔ not change `note-template.ts:82` `familyDisplay` in place.
-  - [ ] Re-emit `openapi/v1.yaml` (`pnpm contracts:emit-openapi`) and **COMMIT** it.
-  - [ ] Amend the three `.strict()` PII guards (`contributions.test.ts:102`, `:478`, `:716`) — add
+  - [x] ⛔ **Trap 6** — ⛔ do ⛔ not change `note-template.ts:82` `familyDisplay` in place.
+  - [x] Re-emit `openapi/v1.yaml` (`pnpm contracts:emit-openapi`) and **COMMIT** it.
+  - [x] Amend the three `.strict()` PII guards (`contributions.test.ts:102`, `:478`, `:716`) — add
         `deceasedDisplayName` to each `VALID_*` fixture. ⛔ `memberFullName` stays forbidden in the
         `:478` / `:716` guards that carry it; ⛔ do ⛔ not add it to the `:102` card guard (no such
         field there).
-- [ ] **Task 4 — Tests** (AC2, AC2b, AC3, AC4, AC4b) — ⭐ paths in *Testing standards*.
-  - [ ] ⭐ The **byte-identical stored-name** assertion (AC2's load-bearing test).
-  - [ ] ⛔⛔ **A MONONYM TEST ON EVERY CONSUMER, in BOTH modes** (Trap 5).
-  - [ ] ⭐ **The MODE-FLIP / divergence test** — flip the Pariwar mode, assert public and member move
+- [x] **Task 4 — Tests** (AC2, AC2b, AC3, AC4, AC4b) — ⭐ paths in *Testing standards*.
+  - [x] ⭐ The **byte-identical stored-name** assertion (AC2's load-bearing test).
+  - [x] ⛔⛔ **A MONONYM TEST ON EVERY CONSUMER, in BOTH modes** (Trap 5).
+  - [x] ⭐ **The MODE-FLIP / divergence test** — flip the Pariwar mode, assert public and member move
         **together**. ⚠ Per **Trap 7**, seed the basis or it compares against `null`.
-  - [ ] ⭐ **`-189` cl.3 in BOTH directions** (AC4b) — ⛔ `tc_acceptance` fixtures only.
-  - [ ] ⛔ The AC2b fences (no inside read · one read per pool · one join site).
-  - [ ] ⚠ Extend `apps/mobile/tests/unit/missed-cycle-section.test.ts:171`'s `forbidden` list with
+  - [x] ⭐ **`-189` cl.3 in BOTH directions** (AC4b) — ⛔ `tc_acceptance` fixtures only.
+  - [x] ⛔ The AC2b fences (no inside read · one read per pool · one join site).
+  - [x] ⚠ Extend `apps/mobile/tests/unit/missed-cycle-section.test.ts:171`'s `forbidden` list with
         `deceasedDisplayName` — ⛔ the rename leaves its existing `deceasedFirstName` /
         `deceasedLastInitial` entries asserting the absence of fields that ⛔ no longer exist, so they
         **pass vacuously**.
-  - [ ] ⭐ Cite `sahyog-drive.spec.ts:558` as AC4's existing public-surface fence.
-  - [ ] ⭐ **The policy-sentence assertion** (AC9) — read `notifications/pool-identity.ts`'s **source**
+  - [x] ⭐ Cite `sahyog-drive.spec.ts:558` as AC4's existing public-surface fence.
+  - [x] ⭐ **The policy-sentence assertion** (AC9) — read `notifications/pool-identity.ts`'s **source**
         and assert **both** confirmed sentences, **whitespace-normalised** and **exact**.
         ⛔ Not a keyword scan: ⭐ a reworded header must **FAIL**.
-- [ ] **Task 5 — a11y + i18n + the paid-channel cost** (AC5)
-  - [ ] The `t()` namespace (⚠ **third arg, an options object**) across the six `{family}` keys.
-  - [ ] The RN `accessible={true}` check on **both** mobile components.
-  - [ ] ⚠⛔ **MEASURE the SMS segments** — both locales × both alert kinds; GSM-7 160/153, UCS-2
+- [x] **Task 5 — a11y + i18n + the paid-channel cost** (AC5)
+  - [x] The `t()` namespace (⚠ **third arg, an options object**) across the six `{family}` keys.
+  - [x] The RN `accessible={true}` check on **both** mobile components.
+  - [x] ⚠⛔ **MEASURE the SMS segments** — both locales × both alert kinds; GSM-7 160/153, UCS-2
         70/67. ⭐ Record *"before → after"* in **Completion Notes**. ⛔ Route a >1-segment rise.
-  - [ ] The microcopy gate re-check (⭐ now **live**, ⛔ not conditional).
-- [ ] **Task 6a — `deferred-work.md`, IN-RUN** (AC6) — ⛔ **ALL THREE item (e) sites** (the `### (e)`
+  - [x] The microcopy gate re-check (⭐ now **live**, ⛔ not conditional).
+- [x] **Task 6a — `deferred-work.md`, IN-RUN** (AC6) — ⛔ **ALL THREE item (e) sites** (the `### (e)`
       body · the `- 11b.1 ITEM (e)` bullet at `:601` · the `### 11b.2 (vii)` stub at `:~854`): the
       body's second half → **⏳ CLOSING** and both other sites re-pointed/annotated to bind `8-16`
       (⛔ not `11b.3b`, ⛔ not `11b.2 and 11b.3`); the body's first half → CLOSED (`-179` cl.2).
       **item (d)** annotated against `-160` cl.6.
-- [ ] **Task 6b — POST-MERGE** (AC6) — record item (e) **CLOSED by [edit]** at all three sites.
+- [ ] ⏳ **Task 6b — POST-MERGE** (AC6) — ⛔ **DELIBERATELY UNCHECKED, ⛔ not forgotten.** ⚠ It is
+      **UNREACHABLE from a `dev-story` run, BY DESIGN**: AC6 splits the closure precisely because a
+      run ends at `review`, ⛔ before merge, and *"an AC satisfiable only at merge, with nobody
+      assigned, is how item (e) stays open forever."* ⭐ Ticking it here would record a closure that
+      ⛔ has not happened ([[feedback_closure_language_precision]]). ⇒ carried as a **forward
+      commitment** in Completion Notes **and** the Change Log, so it survives this run.
+      Record item (e) **CLOSED by [edit]** at all three sites.
       ⚠ **Reconcile with `11b-3b` AC8** (`11b-3b:544-549`), the co-writer: if `11b-3b` has already
       merged, its branch left item (e) *"re-affirmed open, binder `8-16`"* → close it; if it has
       ⛔ not, `8-16`'s closure stands and `11b-3b`'s "if merged → record closure" arm becomes a no-op.
       ⛔ Neither story re-affirms open nor re-closes. ⭐ Carried as a forward commitment in Completion
       Notes **and** the Change Log, so it survives the run.
-- [ ] **Task 7 — The friction-budget disposition** (AC7) — ⚠ written **AFTER** the code commit
+- [x] **Task 7 — The friction-budget disposition** (AC7) — ⚠ written **AFTER** the code commit
       ([[project_friction_budget_baseline_ratchet]]).
 
 ---
@@ -902,18 +908,204 @@ distinguishes *"ran"* from *"skipped"*.
 
 ### Agent Model Used
 
-_(to be filled by the dev agent)_
+Claude Opus 5 (`claude-opus-5`) — `bmad-dev-story`, 2026-09-08.
 
 ### Debug Log References
 
+- **Live-DB suite, the four load-bearing packages** (the story's own command, `--concurrency=1`):
+  `@twt/domain` **3338 passed | 1 skipped** (269 files) · `@twt/api` **1227 passed | 1 skipped**
+  (130 files) · `@twt/jobs` **356 passed** (37 files) · `@twt/contracts` **1106 passed** (64 files).
+  ⭐ **The counts are the artefact** — `ci-local.sh:137` skips the whole `integration-tests` job
+  silently when `DATABASE_URL` is unset and still reports PASSED, and every package's `test` is
+  `--passWithNoTests`, so a new spec in a skipped path is indistinguishable from no spec at all. These
+  ran **with** `DATABASE_URL` set.
+- Also green: `@twt/mobile` **454** (31 files) · `@twt/ui` **254** (13 files).
+- Gates run individually: `contracts-determinism` · `pii-scrape` · `i18n-parity` · `microcopy`
+  (308 tests + check) · `domain-invariants` · `access-wrapper` · `governance-boundary` ·
+  `pool-state` · `alert-state` · `pool-bound-payment` · `friction-budget` — all green.
+- ⚠ The `friction-budget` gate **FAILED first, as designed**, then passed once the disposition was
+  **committed** — AC-4 diffs COMMITTED history, so an uncommitted declaration is invisible to it.
+
 ### Completion Notes List
 
+**Commits (governance first — [[feedback_governance_commits_precede_implementation]]):**
+`0082a2fc` `governance(8.16)` → `f5df1fae` `feat(8.16)` → `863a1123` `docs(8.16)` (the disposition,
+written **after** the code commit existed).
+
+⭐ **THE SHAPE, AS RULED (AC3).** `ResolvedPoolIdentity` sheds the `deceasedFirstName` /
+`deceasedLastInitial` pair for one `deceasedDisplayName: string`; all **three** carrying contracts move
+with it, and `openapi/v1.yaml` was **re-emitted** (only `ContributionHistoryResponse` moved, exactly as
+AC3 predicted). ⛔ The parts are not kept alongside it and the mode is not handed to consumers.
+
+⭐ **WHERE THE MODE GOES, in both signatures.** Domain: `(db, encryption, pariwarId, **mode**, input,
+log)` — positional, immediately after the `pariwarId` it is scoped to, and deliberately **not** folded
+into `input`, which is strictly per-POOL context while the mode is per-PARIWAR. apps/api wrapper:
+`(deps, tx, request, pariwarId, **mode**, input)`. ⚠ Making it **required** is what turned every call
+site into a compile error rather than a silent default.
+
+⭐ **A NEW SEAM, named so the read stays with the caller:**
+`resolvePoolNamePresentationModeForRequest(tx, pariwarId)` in the apps/api wrapper. Its name carries
+the discipline ("for a request"), and the setting's **semantic widening** is recorded there — the one
+place the member side reads it. ⛔ `public_name_presentation_mode` is **not** renamed.
+
+⭐ **THE MEMBER-SIDE FORM RESOLVER IS ITS OWN FUNCTION** — `resolveMemberFacingDeceasedName(mode,
+storedName)`, exported from the resolver module. ⛔ **Not** `resolvePublicMemberName`, and ⛔ **not** a
+fallback through it either: that function returns `''` for BOTH *"unresolvable name"* and *"mononym
+that cannot be shielded"*, and those two must not be conflated — the first fail-softs the pool away,
+the second renders the name. It uses `splitFirstNameLastInitial` (which **IS** the `shielded_name`
+implementation, `-136` cl.2), so no second shielding implementation exists.
+
+⚠⭐ **ONE JUDGEMENT CALL, STATED: the `shielded_name` arm now emits the PUBLIC form's trailing period**
+(`"Rajesh S."`, not the old `"Rajesh S"`). `INV-form` rules that the two sides share the **FORM RULE**
+and differ only in **ABSENCE BEHAVIOUR**; a differing period would be a form divergence, and AC4b's
+string-equality assertion would fail in `shielded_name` mode. ⛔ No Pariwar is on that mode today (the
+ruled default is `full_name`), so nothing visible changes at launch.
+
+⛔⛔ **TRAP 6 HELD, and the helper was renamed to make it hold.** `note-template.ts`'s `familyDisplay`
+rendered the **living contributing member's** name through the same helper as the deceased's. It is now
+`shieldedPartsDisplay` with exactly **one** caller — the member's own name — and the deceased's name
+does not pass through it at all. `memberFullName` stays forbidden in the two guards that carry it, and
+was **not** added to the `:102` card guard (which has no member-own-name field).
+
+⭐ **THE AC2b FENCES, all four built with real provers:** a source scan asserting the mode accessor's
+name appears nowhere in the resolver (reachable — the module already imports the whole `kyc`
+namespace, so the accessor is one property access away) · a **call-count spy** in the jobs suite
+proving one mode read per pool at roster sizes 2 and 4 · the `packages/ui` forbidden-bindings list
+extended with `resolveMemberFacingDeceasedName` · a new mobile source-scan suite asserting neither
+component binds a form decider, receives the mode, or re-joins parts.
+
+⚠⛔ **FOUR VACUOUS-PASS TRAPS CLOSED, not one.** The story named the mobile
+`missed-cycle-section.test.ts:171` list. Three MORE lists had the identical defect once the parts
+ceased to exist anywhere: the `MissedCycleEntry` guard and the history/note PII guards in
+`packages/contracts/tests/contributions.test.ts`. Each gained `deceasedDisplayName`; the old entries
+stay as teeth against the pair returning.
+
+⭐ **SMS SEGMENTS — MEASURED, both locales × both alert kinds, against the CORRECT ceiling.**
+⚠⛔ **Every one of these messages is UCS-2, including ENGLISH** — `formatCurrency` emits **₹**
+(U+20B9), which is outside both the GSM-7 basic set and its extension table. ⇒ 70 / 67 throughout;
+there is no "cheap" locale.
+
+| locale | kind | before | after | Δ seg |
+|---|---|---|---|---|
+| `hi` | cycle-open | 98u / **2 seg** | 100u / **2 seg** | **0** |
+| `hi` | day-14 subject | 101u / **2 seg** | 103u / **2 seg** | **0** |
+| `en` | cycle-open | 96u / **2 seg** | 106u / **2 seg** | **0** |
+| `en` | day-14 subject | 110u / **2 seg** | 120u / **2 seg** | **0** |
+
+⇒ ⭐ **MAX RISE: ZERO SEGMENTS. ⛔ Nothing is routed.** ⚠ The Hindi body is **already multi-segment at
+any name length** (94-unit template before interpolation — the story's figure, verified exactly), which
+is why the artefact is *"before → after"* and never *"does it fit"*. ⭐ Made a **test**
+(`apps/jobs/tests/sms-segment-cost.test.ts`), not a one-off measurement: a later copy edit that pushes
+a message past a segment now fails the suite.
+
+⭐ **i18n: ⛔ NO NEW LOCALE KEY.** All six `{family}` keys verified present and parallel in **both**
+locales; the name rides the existing interpolation param. The `t()` namespace is the third argument's
+`namespace` field (`{ locale, ...NS }`) at every call site.
+
+⚠⛔ **AN A11Y DEFECT FOUND AND FIXED (AC5).** Four tamagui `<Button>`s across the two components
+carried an `accessibilityLabel` and **no** `accessible` prop. A tamagui Button is `styled(View, …)`;
+an RN `View` is not an accessibility element without it, so the inner `<Text>` took focus and the
+label was **never announced**. ⭐ This is the failure mode AC5 names — it reads correctly in source and
+does not reach the screen reader, so review passes and only an assertion catches it. Fixed on both,
+and asserted per-Button.
+
+⭐ **AC9 — the two sentences are verbatim in the resolver header, all three parts**, as `//` lines
+(matching the existing style, not converted to a doc-block). The proving test reads the **source file**
+and matches both **whitespace-normalised and EXACTLY**, so a reworded header fails. ⭐ The same header's
+now-false *"keeps its exact exported signature … no apps/api call site changed"* is **CORRECTED**, not
+left standing beside the new text — and the same correction is written into the apps/api wrapper,
+which is where a reader would actually look for it.
+
+⭐ **TRAP 7 HANDLED — the parity spec seeds the real basis** and asserts the public name **explicitly**
+(`toBe('Rajesh Kumar Sharma')`) *before* comparing it to the member's, so a broken fixture fails loudly
+instead of comparing `null` to `null`. ⚠ The run's own log confirms the inert state is real: the
+no-basis case emitted the shipped `PROVISIONING-INERT` diagnostic.
+
+⭐ **AC4b COMPLIANCE IS STATED** (`-195` cl.1): `-189` cl.3 holds in both directions —
+no-basis (member sees the configured name, public sees none) and basis-satisfied (string equality).
+⚠ And its **scope is stated too**: cl.3 is Trustee-scoped by `-195` cl.1 to the drive data class and
+the six 11b split stories, and reaches `8-16` only through **author-committed** `-208` cl.5(b). ⛔ Not
+a universal invariant; ⛔ not generalised.
+
+⚠ **AC4 — the public fence is CITED, not duplicated:** `sahyog-drive.spec.ts:558` already fails the
+moment anyone reaches for `resolvePoolIdentity` on that surface. ⛔ No public file was touched.
+
+⭐ **TRAP 4 RESPECTED:** the mononym class is asserted **unchanged** — both modes agree, as they did
+before this story. ⛔ No inversion is reported closed for that class.
+
+⚠⛔ **RECORDED, ⛔ NOT SWEPT (two pre-existing drifts found in passing):**
+① `epics.md`'s Epic-8 summary said **"12 stories"** and was already stale at 13 — it was not updated
+when Story 8.13 was added by correct-course 2026-07-21. Recounted to **14** with the staleness named
+in place, rather than silently corrected.
+② The friction gate reports `member-public-web.page_weight_bytes` at **11471** where 11b.14's
+disposition recorded **11229**. ⭐ **Verified not attributable here** — this diff touches no file under
+`apps/public/`, and the metric measures **identically at HEAD and at HEAD~1's public-surface state**.
+⛔ Neither claimed nor disowned ([[feedback_record_unattested_no_backfill]]).
+
+⏳⛔ **FORWARD COMMITMENT — TASK 6b IS OPEN BY DESIGN, AND IS THE ONE THING THIS RUN CANNOT DO.**
+A `dev-story` run ends at `review`, **before merge**. `deferred-work.md` item (e) is therefore left at
+**⏳ CLOSING** at all three sites, ⛔ not CLOSED. **On merge**, item (e) must be recorded
+**"CLOSED by [edit]"** at all three: the `### (e)` body, the 11b.3a bullet, and the `11b.2 (vii)` stub.
+⚠⛔ **RECONCILE WITH SIBLING `11b-3b` AC8** (`11b-3b:544-549`), which rewrites item (e) *conditionally
+on `8-16`'s merge state*: if `11b-3b` merged first it left the item *"re-affirmed open, binder
+`8-16`"* → close it; if it has not, `8-16`'s closure stands and `11b-3b`'s "if merged → record
+closure" arm becomes a **no-op**. ⛔ **Whichever merges SECOND must neither re-affirm the item open nor
+re-record its closure** — one obligation, one record
+([[feedback_circular_deferral_between_sibling_stories]]).
+
+⚠ **ALSO CARRIED FORWARD (⛔ not this story's to do):** `epics.md` must not lose the `### Story 8.16`
+section in a future `sprint-planning` run — that section is now what stops it, and the story is in
+`sprint-status.yaml` under `8-16-member-pool-identity-name-form-alignment`.
+
 ### File List
+
+**Production code (6)**
+- `packages/domain/src/notifications/pool-identity.ts`
+- `packages/contracts/src/contributions/active-contribution-card.ts`
+- `packages/contracts/src/contributions/contribution-history.ts`
+- `packages/contracts/src/contributions/contribution-note.ts`
+- `apps/api/src/modules/member-pool/pool-identity.ts`
+- `apps/api/src/modules/member-pool/handlers.ts`
+- `apps/api/src/modules/member-pool/contribution-note.ts`
+- `apps/api/src/modules/member-pool/note-template.ts`
+- `apps/jobs/src/scheduler/contribution-notify-triggers.ts`
+- `apps/mobile/components/active-contribution/ActiveContributionCard.tsx`
+- `apps/mobile/components/yogdaan-bahi/YogdaanBahiRow.tsx`
+- `apps/mobile/components/yogdaan-bahi/sample-data.ts`
+
+**Generated (⛔ never hand-edited)**
+- `openapi/v1.yaml` — re-emitted via `pnpm contracts:emit-openapi`
+
+**Tests — NEW (3)**
+- `apps/api/tests/integration/contributions/member-name-form-parity.spec.ts`
+- `apps/jobs/tests/sms-segment-cost.test.ts`
+- `apps/mobile/tests/unit/pool-name-form.test.ts`
+
+**Tests — UPDATED (9)**
+- `packages/domain/tests/notifications/pool-identity.test.ts`
+- `packages/domain/tests/integration/kyc/kyc-substrate.spec.ts`
+- `packages/contracts/tests/contributions.test.ts`
+- `packages/ui/tests/contribution-list/forbidden-imports.test.ts`
+- `apps/api/tests/unit/_pool-identity-fake.ts` (⚠ the positional mirror — moved in the same commit)
+- `apps/api/tests/unit/active-contribution-card.test.ts`
+- `apps/api/tests/unit/contribution-history.test.ts`
+- `apps/api/tests/unit/contribution-note.test.ts`
+- `apps/api/tests/unit/contribution-note-render.test.ts`
+- `apps/jobs/tests/contribution-notify-triggers.test.ts`
+- `apps/mobile/tests/unit/missed-cycle-section.test.ts`
+
+**Governance / records (5)**
+- `_bmad-output/planning-artifacts/epics.md` (⭐ the `### Story 8.16` section CREATED)
+- `_bmad-output/implementation-artifacts/deferred-work.md` (item (e) × 3 sites; item (d) annotated)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `friction-budget.md`
+- `_bmad-output/implementation-artifacts/8-16-member-pool-identity-name-form-alignment.md` (this file)
 
 ### Change Log
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-09-08 | 1.0 | ✅⭐⭐ **IMPLEMENTED — `dev-story`. Status → `review`.** Three commits, governance first: `0082a2fc` (`epics.md` §Story 8.16 CREATED; FR-21 superseded BY NAME, ⛔ not edited) → `f5df1fae` (the code) → `863a1123` (the friction disposition, written AFTER the code commit — AC-4 diffs COMMITTED history). ⭐ `ResolvedPoolIdentity` + all THREE contracts shed the shielded PAIR for one `deceasedDisplayName`; `openapi/v1.yaml` re-emitted (only `ContributionHistoryResponse` moved, exactly as AC3 predicted). ⭐ The mode is an INPUT at both signatures — positional after `pariwarId`, ⛔ never folded into the per-POOL `input`; a new `resolvePoolNamePresentationModeForRequest` seam keeps the read with the caller. ⛔ **Trap 5 held**: a purpose-built `resolveMemberFacingDeceasedName`, ⛔ not `resolvePublicMemberName` and ⛔ not a fallback through it (its `''` conflates *unresolvable* with *unshieldable mononym*). ⛔ **Trap 6 held**: `familyDisplay` → `shieldedPartsDisplay` with ONE caller — the living member's own name — and the deceased no longer passes through it. ⭐ **SMS measured: ZERO segment rise** on all four (locale, kind) pairs; ⛔ nothing routed. ⚠⭐ **Every message is UCS-2, English included** — `formatCurrency` emits **₹**, which is outside GSM-7 and its extension table; ⇒ 70/67 throughout, and the Hindi body was already multi-segment at ANY name length. Made a TEST, ⛔ not a one-off measurement. ⚠⛔ **An a11y defect found and fixed**: four tamagui `<Button>`s carried an `accessibilityLabel` and ⛔ no `accessible` prop ⇒ the label was ⛔ never announced. ⚠⛔ **FOUR vacuous-pass traps closed, ⛔ not the one the story named** — the `MissedCycleEntry` guard and the history/note PII guards had the identical defect. ⭐ Trap 7 handled: the parity spec seeds the real basis and asserts the public name EXPLICITLY before comparing. ⚠ **ONE JUDGEMENT CALL STATED**: the `shielded_name` arm now emits the public form's trailing period (`"Rajesh S."`), because `INV-form` shares the FORM RULE and only ABSENCE may differ; ⛔ no Pariwar is on that mode today. ⚠⛔ **RECORDED, ⛔ NOT SWEPT**: `epics.md`'s Epic-8 summary was already stale at *"12 stories"* (Story 8.13 never updated it) — recounted to 14 with the staleness NAMED; and the friction gate's 11471 vs 11b.14's 11229 is ⭐ **verified not attributable here** (⛔ no `apps/public/` file touched; identical at HEAD and HEAD~1's public state). ⏳⛔ **TASK 6b IS OPEN BY DESIGN** — a run ends at `review`, ⛔ before merge, so item (e) is ⏳ **CLOSING** at all THREE sites, ⛔ not CLOSED; ⛔ ticking it would record a closure that has ⛔ not happened. **On merge**: record **CLOSED by [edit]** at all three, and reconcile with sibling `11b-3b` AC8 — ⛔ whichever merges SECOND neither re-affirms it open nor re-closes it. Tests (live DB :5433): domain **3338**/1 skipped · api **1227**/1 skipped · jobs **356** · contracts **1106** · mobile **454** · ui **254**. Gates: contracts-determinism · pii-scrape · i18n-parity · microcopy · domain-invariants · access-wrapper · governance-boundary · pool-state · alert-state · pool-bound-payment · friction-budget — ⭐ all green. | BigDev + Claude |
 | 2026-09-08 | 0.8 | ⛔⛔ **RE-VALIDATED (`bmad-create-story validate`) — three independent verifiers, HEAD `c73887fe` (4 governance/doc commits past the v0.5 re-anchor at `091c3bfe`; ⛔ zero production code). ⛔ NO CRITICAL BLOCKER — the story stays `ready-for-dev` and STARTABLE.** ⭐ **The inverted-premise finding (Preflight STOP 2), the AC2 "+1 per pool not per member" re-justification and the AC5 SMS/i18n figures all RE-VERIFIED TRUE at HEAD** — `niy.public-disclosure.member-information` still has exactly one repo site (its own definition), ⛔ no seed / migration flipped the inert basis, so the app still shows MORE than the empty public page. **ONE structural gap fixed:** ⛔⛔ **AC6 closed `deferred-work.md` item (e) at only ONE of its THREE reference sites** — the `### (e)` body, ⛔ not the `:601` bullet (which stated a *different* binder, `11b.3b`) ⛔ nor the `### 11b.2 (vii)` "already open under item (e)" stub; and ⛔ it never acknowledged that sibling **`11b-3b` AC8 (`11b-3b:544-549`) is a co-writer** that rewrites item (e) conditionally on `8-16`'s merge state. AC6 + Task 6a/6b now enumerate all three sites (all binding `8-16`) and carry the co-writer reconciliation ([[feedback_circular_deferral_between_sibling_stories]], [[feedback_closure_language_precision]]). **Other applied:** ⭐ AC3's "SHAPE RULED HERE, NOT LEFT TO THE DEV" left the field **unnamed** — the validate pass names it **`deceasedDisplayName: string`** (⛔ not a `.strict()`-guarded token; `deceased*` per the sibling parts / the public `deceasedMemberName`) and threads it through AC3 / AC4 / Task 1 / Task 3 / Task 4 / the Project-Structure table — ⚠ **BigDev may rename**, but the identifier is now single-sourced · ⛔ AC3's *"`memberFullName` stays forbidden in **all three** guards"* was **false** — the `:102` card guard has ⛔ no member-own-name field (`deceasedNameCiphertext` / `deceasedFullName` / `nomineeName` / `nomineeBankAccount` only); corrected to `:478`/`:716` only · ⛔ Preflight STOP 1 said the `epics.md:5128` + `11b-11:818` corrections were routed to **Task 0** — they already **landed in `949a01ea`**; Task 0's scope narrowed to the new `### Story 8.16` section + FR-21 · ⚠ AC4b now records that `-189` cl.3 is **scoped by `-195` cl.1** to the drive data class + the six 11b split stories and reaches `8-16` only via **author-committed `-208` cl.5(b)** — ⛔ not a universal invariant · ⭐ the `pool-identity.ts:120-127` anchor (stale at **three** sites despite the drift table saying "corrected in place") → `:40-41` shape / `:122-123` producer; `:1-14` → `:1-15`; the brittle *"all 43 `8-16` matches are the date"* count dropped for the verified conclusion. ⚠ **Deliberately NOT swept:** a cluster of ±1–2-line anchor drifts (`formatCurrency` `:305`, the once-per-pool doc-block `:636-637`, `NAME_PUBLICATION_AUTHORISED` `:380-397`, the `7-11` precedent `epics.md:3048`) — verifiers disagreed by a line or two, every behavioural claim re-verified TRUE, and a half-accurate re-date adds error (the story's own instruction). ⛔ Zero code. ⛔ Zero sprint-status rows flipped. | BigDev + Claude |
 | 2026-09-08 | 0.7 | ✅⭐⭐ **FRAMING CONFIRMED — `#decision-2026-09-08-209`. PREFLIGHT STOP 2 DISCHARGED ⇒ ⭐ BOTH STOPS CLEAR; THE STORY IS STARTABLE.** ⭐ **BigDev supplied the wording** (`-209` cl.1), giving a clean **three-part logic: what you see → why your Pariwar sees it → ⛔ why that does NOT imply public disclosure.** ⭐⭐ And it **dropped the word "full"**, which had made the sentence contradict itself — a `shielded_name` Pariwar sees ⛔ no full name. ⚠⛔ **The consequence is STATED, ⛔ not softened** (`-209` cl.2): on ship a contributing member on a **default `full_name`** Pariwar sees a **full legal name that ⛔ NOBODY can see publicly** — ⭐ a real widening of disclosure, and ⭐ **the decision**, ⛔ not a side effect of "matching the public page", which shows nothing. ⛔ The old justification (*"the same name anyone can already see on the public page"* / *"the app showed you less"*) is ⛔ **NOT available and must ⛔ not return** (cl.3). ⚠ A **third instance** of that same false comparison was found and corrected in the same edit — the **"I want" clause** still read *"the same way a stranger sees them named"*; ⛔ recorded, ⛔ not silently edited. ⭐ ⛔ NOT confirmed by `-209`: the basis is still ⛔ not adopted (AC4b) · the inert basis is ⛔ not "fixed" here · ⛔ no public surface moves · ⭐ and the **STRUCTURAL** inversion remains real — the moment the basis is provisioned, an unfixed member path sits **below** the public one, which is what `-179` cl.3 directed closed. ⚠ Task 0's governance-first STOP still binds. | BigDev + Claude |
 | 2026-09-08 | 0.6 | ✅⭐ **PREFLIGHT STOP 1 DISCHARGED — `#decision-2026-09-08-208`.** ⭐ `11b-16` is **WITHDRAWN** (cl.1): it ordered the same edits at a narrower scope, and `8-16` — minted **two days earlier** by Panel direction — owns the work. ⇒ ⛔ the two-story collision is closed. ⭐⭐ **AND THE CLAUSE THIS STORY DEPENDED ON LANDED (cl.2): `-198`'s push carve-out is ⛔ VOID, ⛔ not superseded** — an author-committed entry never held authority to narrow Trustee-ratified `-180` cl.1 ⇒ **AC2's ALL-FOUR scope now stands unopposed**, and the repo no longer holds a live sentence telling a dev the opposite. ⭐ Routed IN by `-208` cl.3/cl.5/cl.6 and already applied: `-198` cl.1 (FORM ONLY) → **AC4b** · `-189` cl.3 both directions → **AC4b** + Task 4 · `-195` cl.1 → **AC4b** · the `epics.md:5128` range + `11b-11:818` mis-keying → **Task 0** · sequencing ⇒ **`8-16` before `11b-15`** (E's Task 7 re-pointed; it named `8-16` nowhere and would have dangled). ⚠ `sprint-status.yaml` still reads `11b-16: ready-for-dev` — ⛔ knowingly (`-208` cl.7): no `withdrawn` enum exists and minting one is a **ratified governance act**, routed to the Panel. ⛔⛔ **STOP 2 STANDS — the inverted premise is BigDev's to confirm; this story is still ⛔ not startable.** | BigDev + Claude |

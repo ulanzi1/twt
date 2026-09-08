@@ -309,7 +309,7 @@ async function storedCiphertext(t: TestApp, f: Fixture): Promise<string> {
 
 // ⚠ Suite-level `{ timeout: 30000 }` — the seeds drive the real projector, real KMS envelope
 // encryption and several round trips per case ([[project_known_livedb_test_failures]]).
-const describeDb = (name: string, fn: () => void): void =>
+const describeDb = (name: string, fn: () => void): ReturnType<typeof describe> =>
   describe.skipIf(!hasDatabase)(name, { timeout: 30000 }, fn);
 
 describeDb('Story 8.16 AC4b — `-189` cl.3 holds in BOTH directions', () => {

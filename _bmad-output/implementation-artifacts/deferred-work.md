@@ -8410,3 +8410,57 @@ violation.
   sentence**, ⛔ not the figure the sentence contains ⇒ a future story that renders the amount in its
   own cell inherits an ungoverned field. **Trigger:** the first story to render a rupee figure in a
   standalone Sahyog index cell. [`apps/public/src/lib/surface-fields.ts`]
+
+## Deferred from: code review of 11b-14-live-drives-listed-and-the-progress-meter — Chunk A (2026-09-08)
+
+- **Offset pagination + live-first ordering can duplicate or drop rows across pages.** Once the
+  public list widens to `live` pools, live rows sort first (`(DRIVE_CLOSED_AT IS NULL) DESC`) and are
+  the volatile part of the list. A drive transitioning to `live` between a client's page-1 and page-2
+  fetch shifts every subsequent row down one ⇒ the last row of page 1 reappears on page 2, or a row
+  between pages is skipped. Before the `live` widening the visible set was closed/settled only —
+  effectively append-at-bottom and stable. ⭐ Inherent to offset pagination and shared with the
+  directory surfaces; the real fix is cursor pagination. **Trigger:** a cursor-pagination pass on the
+  public list surfaces. [`packages/domain/src/pool/public-read.ts:1007`, `:1059`]
+
+- **Contract `nomineeName: z.string().min(1).nullable()` 500s on a decrypted-but-empty name.** The
+  documented decrypt-failure posture is "omit the name, keep the row" = emit `null`. A ciphertext that
+  decrypts to `""` or whitespace is neither `null` nor a throw — it reaches the contract as `""`,
+  fails `.min(1)`, and 500s the whole page. The decrypt lives in `apps/api`
+  (`handlers.ts`), outside Chunk A; nothing in Chunk A normalizes `"" → null`. **Trigger:** the
+  Chunk B (`apps/api` + `apps/public`) code review. [`packages/contracts/src/public-pages/sahyog-drive.ts`]
+
+- **`sahyog-drive.json` `section.active.title` / `section.archive.title` / `table.caption.*` hardcode
+  stage names beside the new compliant `section.live.title`.** The new `section.live.title` sources
+  `{stage}` from `sahyog-shared` (the one shared copy source); its pre-existing siblings still spell
+  "Closed drives" / "Verified drives" inline — the exact "two sources is how 'Active' came to mean two
+  different things" pattern the file's own `$comment` warns against. Pre-existing; not introduced by
+  this story. **Trigger:** any story that touches the Sahyog section-title copy.
+  [`packages/i18n/locales/en/sahyog-drive.json`, `hi` mirror]
+
+## Deferred from: code review of 11b-14-live-drives-listed-and-the-progress-meter — Chunk B (2026-09-08)
+
+- **`nominee✗ family✓ district✗` → an empty "About this drive" cell on a row whose name cell IS
+  populated.** `selectIndexLineVariant` returns `null` for both double-absence combinations
+  (nominee+family, nominee+district) — ruled silence, `2026-09-07-205` cl.6, made knowing the cases
+  are reachable. Residual concern: cl.6's stated rationale is about a *withheld name* being an
+  enumeration signal; in `n✗ f✓ d✗` the deceased member's name IS shown, so the empty summary cell
+  correlates with two data-absence facts (no nominee bank row + no posting district) rather than a
+  suppressed name. Ruled behaviour stands. **Trigger:** a render-level test of the populated-name +
+  empty-summary-cell row, or a Panel revisit of cl.6. [`apps/public/src/lib/sahyog-render.ts:263-266`]
+
+- **Shared `indexLine` test stubs model only one of the two double-absence combinations as `null`.**
+  Four render tests (`scrape-test.spec.ts`, `sahyog-empty-section.test.ts`, `sahyog-render.test.ts`,
+  `sahyog-live-section.test.ts`) share a stub `nomineeName === null && familyName === null ? null :
+  <string>`. The real `selectIndexLineVariant` also returns `null` for nominee+district. A test
+  relying on the stub to model the nominee+district "render nothing" path exercises a stub that
+  returns a string. Production code is correct. **Trigger:** any test that needs the nominee+district
+  silence path. [`apps/public/tests/*` shared `indexLine` stub]
+
+- **AC7(b) perf test threshold and percentile index.** `SANITY_CEILING_MS = 5000` for a 10-row page
+  against the local (non-KMS) encryption provider is loose enough that a genuine N+1 or a serial
+  20-decrypt regression still passes, so the doc-comment's "catches an N+1 or unbounded fan-out" claim
+  is not substantiated. Separately, `percentile(sorted, 95)` with `ITERATIONS = 30` computes
+  `Math.floor(0.95 × 30) = 28` — the 29th of 30 samples — a mild off-by-one that inflates the reported
+  p95. Harmless in tandem (the ceiling is already loose). The Chunk-A pass re-measured this test
+  (7.2ms, n=30). **Trigger:** a real perf-regression scare on this route, or a KMS-latency harness.
+  [`apps/api/tests/integration/public-pages/sahyog-drive.spec.ts` AC7(b)]

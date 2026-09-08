@@ -1,3 +1,53 @@
+# last_updated: 2026-09-08d (✅✅⭐⭐ **`11b-14` → `done`. `ci:local` PASSED — 34 jobs green,
+#   `integration-tests` included.** ⚠ One fix on the way: `sahyog-drive.spec.ts`'s `AC7 — nominee
+#   name reaches the wire` describe (3 tests added by the 2026-09-08 first-review pass) was a bare
+#   `describe` — ⛔ missing `.skipIf(!hasDatabase)` like every other integration block in the file —
+#   so it hit a placeholder KMS (`127.0.0.1:1`) and FAILED the DB-less `test (unit)` job on the
+#   first full `ci:local`. Gated like its siblings; re-run green. ⭐ File List + Change Log (`2.1`)
+#   closed out. ⛔ Every other row unchanged (⛔ 11b-13 STAYS `done`; ⛔ 11b-3b / 11b-18 STAY
+#   `ready-for-dev` — 11b-3b still owns the drive-PAGE `confirmedPercentage` question).)
+# last_updated: 2026-09-08c (✅⭐⭐ **`11b-14` — THE PANEL RULED THE TWO ESCALATED QUESTIONS
+#   (Decision `2026-09-08-207`), AND BOTH ARE APPLIED.** ⭐ **Q1 → (A)** `confirmedPercentage` leaves
+#   the public wire for `closed` / `verified` rows — a Live-row datum end to end (contract nullable,
+#   read path stage-gated, validator accepts null). ⛔ `2026-09-07-206` cl.1 NOT reversed. ⭐ **Q2 →
+#   (B)** a `closed` / `verified` drive with `amountRaisedInr === 0` renders ⛔ no `index_line.*`
+#   sentence — silence, matching `2026-09-07-205` cl.6. ⛔ No new copy, ⛔ no migration, ⛔ no key.
+#   Decision entry + routing-note outcome + story bullets recorded FIRST
+#   ([[feedback_governance_commits_precede_implementation]]). Verified: `@twt/contracts` 1104 ·
+#   `@twt/domain` 3333 · `@twt/public` 547 · `@twt/api` 1219 (live DB `:5433`) · typecheck + lint
+#   clean · `openapi/v1.yaml` deterministic, ⛔ no drift. ⚠ Story STAYS `in-progress` — a final
+#   `ci:local` green + File List / Change Log close-out is owed before `done`. ⛔ Every other row
+#   unchanged.)
+# last_updated: 2026-09-08b (⚠⭐ **`11b-14` CODE REVIEW — CHUNK B (public/API surface).** Stays
+#   `in-progress`. Second half of the 2026-09-08 review — `apps/api/.../public-pages/handlers.ts` +
+#   spec, `apps/public/src/**` (`sahyog-render.ts`, `sahyog.server.ts`, `surface-fields.ts`,
+#   `sahyog.astro`), `apps/public/tests/**` (14 files). ⭐ Auditor: *"a careful, heavily-tested
+#   implementation — every headline AC obligation is met."* ⭐ **8 patches applied · 3 deferred ·
+#   2 decisions ESCALATED to the Trustee Panel** (routing note
+#   `trustee-panel-routing-note-2026-09-08-11b14-code-review-two-questions.md`): **(1)**
+#   `confirmedPercentage` is on the JSON wire for Closed/Verified rows while the matrix rules it
+#   "null on Closed and Verified" (roster size recoverable via the JSON route) — gate the wire, or
+#   amend the matrix; **(2)** a Closed/Verified drive that raised ₹0 renders "₹ 0 contributed by
+#   colleagues for [named nominee], nominee of Late [named family]" — the live path has a
+#   Panel-authored zero-state (`-206` cl.4), the closed path has none. ⭐ Patches: `isSahyogDriveResponse`
+#   integer+range hardening (a malformed body now falls to the OUTAGE arm, ⛔ not a 500), `.trim()`
+#   name/district checks, a real live-row fixture in two tests, the AC5 copy scan extended to the four
+#   new `sahyog-shared` strings, two stale "never renders as text" comments, a one-directional
+#   governance-coupling note, and a redundant section-split arm. Verified: `@twt/public` 546,
+#   `@twt/api` 1219 (live DB `:5433`), typecheck + lint clean. ⛔ Every other row unchanged.)
+# last_updated: 2026-09-08 (⚠⭐ **`11b-14` CODE REVIEW — CHUNK A (data & logic layer).** `review` →
+#   `in-progress`. Second 3-layer pass, narrowed to `packages/domain/pool/public-read.ts` + specs,
+#   `packages/contracts/**`, `openapi/v1.yaml`, `packages/i18n/**`, the public-vs-private matrix (21
+#   files). ⭐ **10 patches applied · 3 deferred · 7 dismissed.** Theme: the 2026-09-07 pass fixed a
+#   bug in one file and left the twin in another — `driveConfirmedPercentage` still divided-before-
+#   scaling (fixed); `amountRaisedInr`/`expectedTotal` unguarded for `fixed_amount <= 0` (fixed);
+#   the matrix YAML `drive_progress_percentage` description and both `sahyog-shared` `$comment.drive_target`
+#   strings still carried the `-206`-superseded text (amended-and-named). Also: derived `driveTargetInr`
+#   ceiling clamp, `formatCurrencyShort` sub-lakh + integer guards, a decision-id `cl.1` alignment, and
+#   a test that under-asserted the rank-2 ciphertext. ⚠⛔ **CHUNK B (`apps/public` + `apps/api`) IS
+#   NOT YET REVIEWED** — the story stays `in-progress` until it is. ⛔ Every other row unchanged
+#   (⛔ 11b-13 STAYS `done`; ⛔ 11b-3b and 11b-18 STAY `ready-for-dev`). Verified: `@twt/i18n` 95,
+#   `@twt/contracts` 1104, `@twt/domain` 3333 (live DB `:5433`), typecheck + lint clean on all three.)
 # last_updated: 2026-09-07n (✅⭐⭐ **`11b-14` IMPLEMENTED — `in-progress` → `review`.** ⛔ Every other
 #   row unchanged (⛔ 11b-13 STAYS `done`; ⛔ 11b-3b and 11b-18 STAY `ready-for-dev`).
 #   ⭐ ALL tasks complete, in the required order **0 → 2 → 3 → 4 → 5 → 6 → 8 → 7 → 9**.
@@ -16768,7 +16818,7 @@ development_status:
   #   ⇒ D widens the **INDEX** row only and amends the drive page's **prose**.
   # ⛔⛔ **AND THE RETIREMENT OF `pariwar.manage_drive_target` IS ⛔ NOT THIS STORY'S** — a catalog act,
   #   vehicle **`11b-18-drive-target-write-authority-retired`** on its own branch (AC6).
-  11b-14-live-drives-listed-and-the-progress-meter: review
+  11b-14-live-drives-listed-and-the-progress-meter: done
   # ⭐ 11b-15 — STORY **E** of the `2026-09-04-195` cl.3 split. ⛔ NOT in `epics.md` — owes an
   # ANNOTATION. ⛔ BLOCKED ON B (11b-12). ⭐ **STORY F DEPENDS ON IT.**
   # ⚠⛔ **B SHIPS THE SOURCE ONLY — THIS STORY BUILDS THE SURFACE** (recorded 2026-09-05 in

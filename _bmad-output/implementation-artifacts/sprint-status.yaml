@@ -1,3 +1,34 @@
+# last_updated: 2026-09-08l (✅⭐⭐ **TRUSTEE-RATIFIED (Kalpana Bharti + Dhiraj Rahul, 2026-09-08) —
+#   `withdrawn` IS MINTED, AND AUTHORITY OVER THIS CLASS OF ENUM ADDITION IS DELEGATED TO BigDev.**
+#   Decision `2026-09-08-210`. ⭐⭐ **ONE ROW MOVES — the first in this whole thread:**
+#   development_status[11b-16-member-name-form-configured-presentation] `ready-for-dev` -> **`withdrawn`**.
+#   ⚠ ⛔ NO CODE. ⛔ Every other row unchanged.
+#   ⭐ **Q1 → Option A.** The `STATUS DEFINITIONS` block gains `withdrawn` in the ⛔ VERBATIM text the
+#   packet put to the Panel: *"Story closed WITHOUT implementation because ANOTHER STORY owns the
+#   work … the work DOES ship, under a different key, and that key MUST be named in the ledger entry
+#   that sets this value … ⛔ A `withdrawn` story is NEVER picked up by `dev-story`."* ⛔ Options B
+#   (widen `deferred-to-v2`), C (decline + CI guard) and D (delete the row) ⛔ NOT taken.
+#   ⇒ ⭐⭐ **THE GUARD MOVES FROM PROSE INTO THE ROW.** `-208` cl.7's knowingly-false row is **CLOSED BY
+#   EDIT**, ⛔ not by deferral: the automation reads the ROW, and the row is now true. ⛔ Option C's CI
+#   guard is ⛔ NOT needed and ⛔ NOT built.
+#   ⭐⭐ **Q2 → GRANTED — and the BOUNDARY is recorded so it cannot widen.** The relay said *"for these
+#   kind of thing"*, which is ⛔ NOT self-delimiting. ⇒ the delegated class is the packet's **Q2 as
+#   put**: enum additions that change ⛔ NO member-facing behaviour and ⛔ NO governance authority,
+#   ⭐ EACH recorded in `.decision-log.md` (a mint not recorded is ⛔ NOT authorised).
+#   ⛔⛔ **⛔ NOT DELEGATED, stated so it is never inferred:** ⛔ amending an EXISTING value's definition
+#   (⭐ `deferred-to-v2` stays the Panel's, `2026-08-17-126` cl.6) · ⛔ `PERMISSION_CATALOG_VERSION`,
+#   any role, any permission key · ⛔ the closure-language vocabulary (*"Closed by [edit]"* /
+#   *"Resolved via explicit deferral"* / *"Not addressed"*) · ⛔ any status whose meaning reaches a
+#   MEMBER.
+#   ⚠⭐ **cl.3 — the `blocked-awaiting-decisions` refusal (`:16819`) is ANNOTATED, ⛔ NOT REVERSED.**
+#   That sentence was TRUE WHEN WRITTEN and its GROUND HAS MOVED: the act is now delegated for this
+#   class, so the value is no longer blocked by AUTHORITY and would be decided on its MERITS.
+#   ⛔ Nothing has minted it.
+#   ⭐ Also aligned: the routing note gains its ✅ PANEL RULING header · `11b-16`'s Status block drops
+#   the "knowingly false" caveat (⭐ the ledger now agrees with it) · `8-16`'s Preflight STOP 1 records
+#   the inconsistency RESOLVED.
+#   ⛔ Rows unchanged: 8-16 / 11b-15 / 11b-17 / 11b-3b / 6-18 `ready-for-dev`; epic-8 + epic-11b
+#   `in-progress`; 11b-11…14 `done`. ⭐ `8-16` remains STARTABLE and never waited on this.)
 # last_updated: 2026-09-08k (⏳⭐ **THE `withdrawn` ENUM MINT IS ROUTED TO THE TRUSTEE PANEL** —
 #   `trustee-panel-routing-note-2026-09-08-sprint-status-withdrawn-enum-mint.md`, discharging `-208`
 #   cl.7. ⛔ ZERO ROWS MOVE; ⛔ NOTHING RATIFIED; ⚠ ⛔ NO CODE. ⛔ Written ⛔ IS NOT answered.
@@ -16403,6 +16434,17 @@
 #       open warning W-01 (deferred-work.md:2185), whose scope is the reconciliation enum with a
 #       per-decision suffix (`deferred-to-v2-per-decision-YYYY-MM-DD-012`) and whose owner is that
 #       story's Task 10, still _AWAITING EXTERNAL ACTION_.
+#   - withdrawn: Story closed WITHOUT implementation because ANOTHER STORY owns the work. ⛔ This is
+#       a TERMINAL state. ⭐ It is distinct from `deferred-to-v2` (whose work does ⛔ NOT ship at all)
+#       and from `done` (built by THIS story): the work DOES ship, under a different key, and that key
+#       MUST be named in the `last_updated` ledger entry that sets this value, together with the
+#       decision that withdrew the story. ⛔ The story file is KEPT, ⛔ never deleted, and its own
+#       `Status:` line carries the same word. ⛔ A `withdrawn` story is NEVER picked up by `dev-story`.
+#       Minted 2026-09-08 by Trustee Panel ruling (Kalpana Bharti, Dhiraj Rahul — Decision
+#       2026-09-08-210 cl.1; routing note
+#       `trustee-panel-routing-note-2026-09-08-sprint-status-withdrawn-enum-mint.md`) for
+#       `11b-16-member-name-form-configured-presentation`, whose work is owned by
+#       `8-16-member-pool-identity-name-form-alignment`.
 #
 # Retrospective Status:
 #   - optional: Can be completed but not required
@@ -16850,6 +16892,10 @@ development_status:
   # ⛔ A `blocked-awaiting-decisions` value was considered and deliberately NOT minted — per the
   # `deferred-to-v2` precedent (Decision 2026-08-17-126 cl.6) an enum addition is a RATIFIED
   # GOVERNANCE ACT, not an authoring convenience. ⇒ `ready-for-dev` here means what the enum says.
+  # ⚠⭐ ANNOTATED 2026-09-08 (Decision 2026-09-08-210 cl.3), ⛔ NOT reversed: the sentence above was
+  # TRUE WHEN WRITTEN and its GROUND HAS MOVED. The Panel delegated this CLASS of enum addition to
+  # BigDev (cl.2), so `blocked-awaiting-decisions` is no longer blocked by AUTHORITY — it would now be
+  # decided on its MERITS. ⛔ Nothing has minted it, and this annotation does not.
   11b-2-contribution-list-components-table-mobile-row: done
   11b-2a-contributor-name-resolution-defect: done
   11b-2b-contributor-list-mobile-render-layer: done
@@ -17123,7 +17169,7 @@ development_status:
   # which `apps/jobs/src/scheduler/contribution-notify-triggers.ts:683` calls for the **OUTBOUND PUSH**.
   # ⇒ a one-line change to the resolver's DEFAULT would put a FULL LEGAL NAME into an SMS/WhatsApp push.
   # ⭐ AC3 keeps the push SHIELDED and TESTS it. ⇒ thread the form from the CALL SITE, ⛔ never a default.
-  11b-16-member-name-form-configured-presentation: ready-for-dev
+  11b-16-member-name-form-configured-presentation: withdrawn
   # ⭐ 11b-17 — STORY **F**, the LAST of the split. ⛔ NOT in `epics.md` — owes an ANNOTATION.
   # ⛔⛔ BLOCKED ON **A** (11b-11 — the public withdrawal must land first) AND **E** (11b-15).
   # ✅ **D1 RULED (a) 2026-09-04 (`-199`), scope CONFIRMED (i) = the member's OWN Pariwar.**

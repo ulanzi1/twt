@@ -1,7 +1,20 @@
 # Trustee Panel routing note — 2026-09-08
 
-> ⏳ **ROUTED, ⛔ NOTHING RATIFIED.** This note is the escalation as it is being put to the Panel.
-> ⭐ The ruling, when made, is transcribed into `.decision-log.md` and this header is replaced by it.
+> ## ✅ PANEL RULING — recorded 2026-09-08 (Kalpana Bharti + Dhiraj Rahul)
+>
+> **Q1 → Option A.** `withdrawn` is **MINTED** as a terminal `development_status` value, in the
+> ⛔ verbatim text of §5. ⛔ Option B (widen `deferred-to-v2`), ⛔ Option C (decline + a CI guard) and
+> ⛔ Option D (delete the row) are ⛔ not taken. ⇒ `11b-16` is flipped to `withdrawn`, and the row
+> **stops being knowingly false**.
+>
+> **Q2 → GRANTED.** Authority over **this class** of enum addition is **delegated to BigDev**.
+> ⚠⛔ The relay's words were *"for these kind of thing"*, which is ⛔ **not self-delimiting** — ⭐ the
+> boundary is **this note's Q2 as put**: enum additions that change ⛔ no member-facing behaviour and
+> ⛔ no governance authority, ⭐ each recorded in `.decision-log.md`. ⛔ Amending an **existing**
+> value's definition is ⛔ **not** delegated.
+>
+> Recorded as **Decision `2026-09-08-210`** (cl.1 = Q1, cl.2 = Q2, cl.3 = the `blocked-awaiting-decisions`
+> refusal annotated, ⛔ not reversed). The sections below are the escalation as it was put to the Panel.
 
 ---
 

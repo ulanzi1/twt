@@ -81,10 +81,10 @@ a dev the opposite.
 `-195` **cl.1** compliance → **AC4b** · the `epics.md:5128` range + the `11b-11:818` F/G mis-keying →
 **Task 0** · the sequencing → ⭐ **`8-16` runs before `11b-15`**.
 
-⚠ **One inconsistency is knowingly carried** (`-208` cl.7): `sprint-status.yaml` still reads
-`11b-16: ready-for-dev`, because there is no `withdrawn` enum value and minting one is a **ratified
-governance act**. ⭐ Routed to the Panel; ⛔ the withdrawn story's own `Status:` line is the true
-record until then.
+✅ **AND THE ONE INCONSISTENCY IS RESOLVED.** `-208` cl.7 carried a knowingly-false row
+(`11b-16: ready-for-dev`) because no `withdrawn` value existed and minting one is a **ratified
+governance act**. ⭐ The Panel **minted it** on 2026-09-08 (`#decision-2026-09-08-210` cl.1) ⇒
+`11b-16` now reads **`withdrawn`**, and ⛔ nothing about this story rests on prose any more.
 
 ### ✅ STOP 2 — ⭐ **DISCHARGED 2026-09-08 by `#decision-2026-09-08-209`. ⛔ THE FINDING BELOW STANDS.**
 

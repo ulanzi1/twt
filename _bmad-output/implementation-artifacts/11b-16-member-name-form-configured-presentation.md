@@ -17,11 +17,12 @@ carry off-main-line pins — recorded here, ⛔ not fixed here.
 
 Status: ⛔ **WITHDRAWN** (Decision `2026-09-08-208` cl.1) — ⛔ terminal. The work is owned by
 `8-16-member-pool-identity-name-form-alignment`, which came FIRST and is ruled WIDER.
-⚠⛔ **⛔ DO ⛔ NOT RUN `dev-story` AGAINST THIS FILE.** ⚠ `sprint-status.yaml` still reads
-`ready-for-dev` — ⛔ knowingly, ⛔ not by oversight: there is no `withdrawn` enum value and minting one
-is a **ratified governance act** (`-208` cl.7). ⭐ This line is the true record.
-⏳ **ROUTED 2026-09-08** —
-`_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-08-sprint-status-withdrawn-enum-mint.md`.
+⚠⛔ **⛔ DO ⛔ NOT RUN `dev-story` AGAINST THIS FILE.**
+✅ **AND THE LEDGER NOW AGREES.** `development_status[11b-16-…]` = **`withdrawn`** — the value was
+**minted by Trustee Panel ruling** on 2026-09-08 (Kalpana Bharti, Dhiraj Rahul;
+`#decision-2026-09-08-210` cl.1), discharging `-208` cl.7.
+⭐ ⇒ the guard has moved **from this prose into the ROW**, which is what the automation actually
+reads. ⛔ The knowingly-false row recorded at `-208` cl.7 is **closed by edit**, ⛔ not by deferral.
 
 > ⛔⛔ **WITHDRAWN 2026-09-08 — KEPT AS THE RECORD, ⛔ NOT DELETED.**
 >

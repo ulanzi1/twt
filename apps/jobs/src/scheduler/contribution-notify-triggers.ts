@@ -698,11 +698,30 @@ export async function runContributionNotifyChild(
   //
   // ⚠⛔ THE ONE THING NOT TO "OPTIMISE": do not move the mode read below the member chunking loop.
   // It is per-PARIWAR, and a read down there would multiply by the roster.
+  // ⭐ REVIEW FIX (8.16, round 2) — tracked OUTSIDE the callback so the generic "pool identity
+  // unresolvable" alarm below fires at most ONCE per failure, never twice for the SAME cause. A bare
+  // `return null` from the catch below is indistinguishable, at the `if (!identity)` check, from
+  // `resolvePoolIdentity` itself returning null — without this flag both alarms fire, and the SECOND
+  // (generic) one overwrites the specific "presentation-mode read failed" cause with a misleading one.
+  let presentationModeFailed = false;
   const identity = await withPariwarScope(deps.pool, pariwarId, async (db: Db) => {
-    const presentationMode = await kycDomain.resolvePublicNamePresentationMode(
-      db,
-      ids.pariwarId(pariwarId),
-    );
+    // ⭐ REVIEW FIX (8.16) — this read must degrade the SAME way `resolvePoolIdentity` degrades every
+    // OTHER unresolvable input on this path (decrypt, letter code, curated name): skip THIS pool's
+    // notification, never let a transient read throw the whole child job. Without this, a DB blip on
+    // the presentation-mode row would break the exact fail-soft contract the resolver's own header
+    // documents for everything else it touches.
+    let presentationMode;
+    try {
+      presentationMode = await kycDomain.resolvePublicNamePresentationMode(db, ids.pariwarId(pariwarId));
+    } catch (err) {
+      presentationModeFailed = true;
+      alarm(
+        `[jobs] contribution-notify-child: presentation-mode read failed for pool ${p.poolId} ` +
+          `(alert ${p.alertId}) — skipping this pool's notification rather than guessing the name ` +
+          `form; operator action required: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      return null;
+    }
     return notifications.resolvePoolIdentity(
       db,
       deps.encryption,
@@ -718,11 +737,13 @@ export async function runContributionNotifyChild(
     );
   });
   if (!identity) {
-    alarm(
-      `[jobs] contribution-notify-child: pool identity unresolvable for pool ${p.poolId} ` +
-        `(alert ${p.alertId}) — skipping this pool's notification rather than sending copy with no ` +
-        `family named; operator action required`,
-    );
+    if (!presentationModeFailed) {
+      alarm(
+        `[jobs] contribution-notify-child: pool identity unresolvable for pool ${p.poolId} ` +
+          `(alert ${p.alertId}) — skipping this pool's notification rather than sending copy with no ` +
+          `family named; operator action required`,
+      );
+    }
     return { alertId: p.alertId, poolId: p.poolId, kind: p.kind, attempted: 0, delivered: 0, suppressed: 0, alreadySent: 0 };
   }
 

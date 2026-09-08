@@ -64,7 +64,7 @@ vi.mock('@twt/domain', async (importActual) => {
         decryptKycField,
         reserveNames,
         poolLetterCode,
-        splitFirstNameLastInitial: actual.kyc.splitFirstNameLastInitial,
+        resolveMemberFacingDeceasedName: actual.notifications.resolveMemberFacingDeceasedName,
       }),
     },
   };
@@ -160,6 +160,17 @@ describe('activeContribution card — myContribution wiring from hasAttestedCont
     const h = createMemberPoolHandlers(deps());
     const res = await h.activeContribution(fakeRequest());
     expect(res).toMatchObject({ assigned: true, myContribution: 'attested' });
+  });
+
+  it('[Review] AC2b — reads the presentation mode ONCE PER REQUEST (`2026-09-02-181` cl.2)', async () => {
+    vi.clearAllMocks();
+    wireScopeTx();
+    wireAssignedLivePoolWithName();
+    hasAttestedContribution.mockResolvedValue(false);
+
+    const h = createMemberPoolHandlers(deps());
+    await h.activeContribution(fakeRequest());
+    expect(resolvePublicNamePresentationMode).toHaveBeenCalledTimes(1);
   });
 
   it('the confirmed-only meter REFLECTS the live confirmed count — wired to listConfirmedContributorsForPool (Story 9.5 Task 1a)', async () => {

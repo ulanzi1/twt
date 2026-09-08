@@ -18,6 +18,10 @@
 // load-bearing ones: the member side must NOT inherit the public directory's omit-the-row behaviour
 // (Trap 5), because omitting a member's own pool is a functional regression, not a privacy protection.
 
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const getClaimCase = vi.fn();
@@ -36,6 +40,18 @@ vi.mock('../../src/encryption/member-fields.js', () => ({ decryptKycField }));
 
 const { resolvePoolIdentity } = await import('../../src/notifications/pool-identity.js');
 const { ids } = await import('../../src/index.js');
+
+// AC9 / AC2b fence 1 — read the resolver's own SOURCE file (DB-free; runs in the unit job, never the
+// live-DB-gated one). Both proving tests below read this once, rather than each re-reading the file.
+const RESOLVER_SOURCE_PATH = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../../src/notifications/pool-identity.ts',
+);
+const RESOLVER_SOURCE = readFileSync(RESOLVER_SOURCE_PATH, 'utf-8');
+
+/** Collapse all whitespace runs to a single space and trim — matches a `//`-commented, line-wrapped
+ *  sentence against its prose form regardless of where the wrap points fall. */
+const normaliseWhitespace = (s: string): string => s.replace(/\s+/g, ' ').trim();
 
 const PARIWAR = ids.pariwarId('11111111-1111-1111-1111-111111111111');
 const CLAIM = ids.claimId('22222222-2222-2222-2222-222222222222');
@@ -188,5 +204,48 @@ describe('resolveCuratedPoolName — the letter-code fallback never suppresses t
     const identity = await resolvePoolIdentity(DB, ENC, PARIWAR, FULL, INPUT, log);
     expect(identity!.poolName).toBeNull();
     expect(log.warn).toHaveBeenCalled();
+  });
+});
+
+describe('the resolver header — the member-facing meaning is STATED where a code reader meets it (AC9)', () => {
+  // Not a keyword scan: the sentences are read from source and matched EXACT (modulo whitespace), so a
+  // paraphrase or a dropped clause fails loudly rather than drifting. `#decision-2026-09-08-209` cl.1 —
+  // BigDev's own words, quoted verbatim in exactly three places (here, the story's Policy-meaning
+  // section, and the decision entry) — must stay byte-identical across all three.
+  // ⭐ REVIEW FIX (round 2) — strips BOTH comment styles (`//` line comments AND `/** … */` JSDoc
+  // blocks, leading `*` included), not `//` alone. The header today is written entirely in `//`
+  // style, but a future edit to JSDoc would otherwise leave stray `*` markers in the normalised text
+  // and could silently break the `.toContain` match this test exists to make reliable.
+  const decommentedSource = normaliseWhitespace(
+    RESOLVER_SOURCE.split('\n')
+      .map((line) => line.replace(/^\s*(\/\/|\/\*\*?|\*\/|\*)/, ''))
+      .join(' '),
+  );
+
+  it('states WHAT the member sees, in the member’s own terms — instead of a first name and an initial', () => {
+    const sentence = normaliseWhitespace(
+      `"When you open your pool, you will see the name of the colleague whose family you are
+       supporting, in whatever form your Pariwar has chosen for that name — instead of a first name and
+       an initial."`,
+    );
+    expect(decommentedSource).toContain(sentence);
+  });
+
+  it('states WHY the Pariwar sees it AND that this does not imply public disclosure — the load-bearing third part', () => {
+    const sentence = normaliseWhitespace(
+      `"Your Pariwar can see this name because you are contributing to this drive. Public display is a
+       separate decision governed by the applicable publication basis."`,
+    );
+    expect(decommentedSource).toContain(sentence);
+  });
+});
+
+describe('the resolver reads the presentation MODE from nowhere but its own INPUT (AC2b fence 1)', () => {
+  // `2026-09-02-181` cl.2 rules the mode an INPUT: the caller reads it once (per request, or once per
+  // pool in the fan-out) and passes it down — the resolver itself must never read it. The whole `kyc`
+  // namespace is already imported here for the mode's TYPE, so the accessor is one property access
+  // away; this is the fence that keeps it from being reached for.
+  it('never references `resolvePublicNamePresentationMode` — the mode-read accessor — anywhere in this file', () => {
+    expect(RESOLVER_SOURCE).not.toContain('resolvePublicNamePresentationMode');
   });
 });

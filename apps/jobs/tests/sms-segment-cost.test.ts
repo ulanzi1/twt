@@ -67,8 +67,16 @@ function measure(message: string): Measured {
   return { encoding: 'UCS-2', units, segments: units <= 70 ? 1 : Math.ceil(units / 67) };
 }
 
-/** The SAME family, in the two forms this story moves between. */
-const BEFORE: Record<Locale, string> = { hi: 'रामेश्वर प्र.', en: 'Rajesh K.' };
+/**
+ * The SAME family, in the two forms this story moves between.
+ *
+ * ⭐ REVIEW FIX (8.16) — `BEFORE` must be what pre-story code actually rendered, not this story's OWN
+ * new shielded-mode trailing period. The old `familyLabel`/`familyDisplay` joins were
+ * `` `${firstName} ${lastInitial}` `` — NO period; the period is `resolveMemberFacingDeceasedName`'s
+ * own addition (to match the public form's trailing period, `2026-09-02-181`). Measuring a before
+ * that already carries the new period would understate the true before → after delta.
+ */
+const BEFORE: Record<Locale, string> = { hi: 'रामेश्वर प्र', en: 'Rajesh K' };
 const AFTER: Record<Locale, string> = { hi: 'रामेश्वर प्रसाद', en: 'Rajesh Kumar Sharma' };
 
 const POOL: Record<Locale, string> = { hi: 'युधिष्ठिर', en: 'Pool A' };

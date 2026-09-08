@@ -1,3 +1,151 @@
+# last_updated: 2026-09-08i (⭐⭐ **`11b-16` IS WITHDRAWN — Decision `2026-09-08-208` (author-committed,
+#   BigDev). ⚠⛔ AND ⛔ ZERO ROWS MOVE, ⛔ DELIBERATELY — SEE THE ENUM NOTE BELOW.**
+#   ⭐ **THE RULING.** `8-16-member-pool-identity-name-form-alignment` was minted **2026-09-02** by
+#   Panel direction (`-179` cl.3) and owns `resolvePoolIdentity` + all four consumers; `11b-16` was
+#   authored **2026-09-04** and ordered the same edits at a NARROWER scope. ⇒ ⭐ **withdrawn in favour
+#   of** `8-16` — ⛔ NOT "superseded" (8.16 came FIRST) and ⛔ NOT "deferred" (the work ships).
+#   ⭐ Nothing is lost: **seven of nine ACs dissolve into `8-16` at equal or wider scope**; **AC3**
+#   (the shielded push) dies CORRECTLY — it reversed Trustee-ratified `-180` cl.1; **AC9** was already
+#   `8-16` Task 6 under `-180` cl.2.
+#   ⭐⭐ **`-198`'s PUSH CARVE-OUT IS ⛔ VOID, ⛔ NOT SUPERSEDED** (`-208` cl.2) — follow-up (i) AND the
+#   body sentence *"story G MUST NOT flip the shared resolver globally … the push keeps the shielded
+#   form UNTIL RULED OTHERWISE"*. ⛔ An author-committed entry never held authority to narrow a
+#   Trustee-ratified scope ⇒ there was ⛔ nothing to supersede; it was void when written.
+#   ⭐ What `-198` KEEPS: **cl.1 (FORM ONLY)** → `8-16` **AC4b**; **cl.2 sequencing** → **`8-16` before
+#   `11b-15`**; follow-up (ii) (the Note) **DISSOLVES** — `-180` already ruled consumer ③.
+#   ⭐ **ROUTED INTO `8-16`** (`-208` cl.5): `-198` cl.1 · `-189` cl.3 proven BOTH directions
+#   (⛔ `tc_acceptance` fixtures only — a `sahyog_drive_publication` fixture proves NOTHING) ·
+#   `-195` cl.1's compliance statement. ⛔ All three already applied to the story file.
+#   ⭐ **FILES CHANGED:** `.decision-log.md` (**-208**) · `11b-16` → `Status: WITHDRAWN` + a banner
+#   (⛔ KEPT, ⛔ not deleted) · `11b-15` D1 + **Task 7** re-pointed from *"story G"* to **`8-16`**
+#   (⚠ E's pointer would otherwise have DANGLED — `11b-15`/`11b-17` named `8-16` NOWHERE) ·
+#   `11b-17` gains two corrections (⛔ "story G" is gone; ⛔⛔ **the NOMINEE's name form was NEVER G's**
+#   — ruled FULL NAME at `-205` cl.1, built in story **D**; the mode has ⛔ no subject there) ·
+#   `epics.md:5128`'s range corrected (the six are `11b-11`…`11b-15` PLUS `11b-17`; **F is `11b-17`**)
+#   · `8-16` **Preflight STOP 1 DISCHARGED**.
+#   ⛔⛔ **WHY NO ROW MOVED — AND IT IS AN ADMITTED INCONSISTENCY, ⛔ NOT AN OVERSIGHT** (`-208` cl.7).
+#   There is ⛔ **no `withdrawn` value** in `development_status`, and this file already records the
+#   rule in terms: *"⛔ A `blocked-awaiting-decisions` value was considered and DELIBERATELY NOT
+#   MINTED — per the `deferred-to-v2` precedent (`2026-08-17-126` cl.6) **an enum addition is a
+#   RATIFIED GOVERNANCE ACT**, not an authoring convenience."* ⇒ ⛔ BigDev's author-committed ruling
+#   can withdraw the STORY; it ⛔ cannot mint the VALUE. ⛔ The three available values are each false in
+#   a different direction — `backlog` (*"exists only in the epic file"* — it does not), `deferred-to-v2`
+#   (*"ruled OUT of v1"* — it is not; the work ships in `8-16`), and deletion (invites a
+#   `sprint-planning` ghost). ⇒ ⭐ **`11b-16` STAYS `ready-for-dev` and the row is KNOWINGLY FALSE**;
+#   the story file's own `Status:` line is the true record, and it says ⛔ DO NOT RUN `dev-story`.
+#   ⏳ **ROUTED TO THE TRUSTEE PANEL: mint `withdrawn` as a terminal status** — *"closed WITHOUT
+#   implementation because another story owns the work; ⛔ distinct from `deferred-to-v2`, whose work
+#   does ⛔ not ship at all."*
+#   ⚠⛔ **AND `8-16` IS ⛔ STILL NOT STARTABLE.** `-208` discharges its Preflight STOP 1 ⛔ ONLY.
+#   **STOP 2 STANDS**: the story's premise is INVERTED on every drive — the basis clause
+#   `niy.public-disclosure.member-information` has ONE site in the repo (its own definition), so the
+#   public page names ⛔ NOBODY and the app already shows MORE. ⭐ That framing is BigDev's to confirm.
+#   ⛔ Rows unchanged: 8-16 / 11b-15 / 11b-17 / 11b-3b / 6-18 `ready-for-dev`; 11b-16 `ready-for-dev`
+#   (⚠ knowingly false, above); epic-8 + epic-11b `in-progress`; 11b-11…14 `done`.)
+# last_updated: 2026-09-08h (⚠⛔⛔ **`8-16` RE-VALIDATED (`bmad-create-story validate`) — 25 FINDINGS
+#   APPLIED TO THE STORY FILE. ⛔ ZERO ROWS MOVE; 8-16 STAYS `ready-for-dev`; ⛔ 11b-16 STAYS
+#   `ready-for-dev` (the withdrawal is RULED but ⛔ NOT YET RECORDED); ⛔ epic-8 stays `in-progress`;
+#   ⛔ epic-11b stays `in-progress`; ⛔ 11b-15/11b-17 stay `ready-for-dev`. ⚠ ⛔ NO CODE.**
+#   ⭐ **CONTEXT: BigDev ruled WITHDRAW `11b-16` in favour of `8-16`** (2026-09-08). ⭐ E's dependency
+#   TRANSFERS — `11b-15` D1/Task 7 needs the My Pool card MODE-RESOLVED, which `8-16` AC2 delivers at a
+#   SUPERSET scope (ALL FOUR vs three). ⛔ But `11b-15`/`11b-17` name `8-16` ⛔ NOWHERE, so E's pointer
+#   dangles until the withdrawal entry re-points it.
+#   ⛔⛔ **`8-16` IS ⛔ NOT STARTABLE AS WRITTEN — IT NOW CARRIES A PREFLIGHT WITH TWO STOPS.**
+#   ⭐⭐ **STOP 1 — THE WITHDRAWAL ENTRY OWES A CLAUSE `8-16` DEPENDS ON.** `-198` holds a LIVE
+#   directive — *"story G MUST NOT flip the shared resolver globally … the push path keeps the shielded
+#   form UNTIL RULED OTHERWISE"* — which is ⛔ **VOID** as against Trustee-ratified `-180` cl.1, ⛔ not
+#   superseded (an author-committed entry never had authority to narrow a ratified scope). ⛔ Until the
+#   entry says so BY NAME, the repo tells a dev to do the opposite of AC2.
+#   ⭐⭐⭐ **STOP 2 — THE STORY'S PREMISE IS ⛔ INVERTED ON ⛔ EVERY DRIVE IN THE SYSTEM.** Its member
+#   sentence read *"the same name anyone can already see on the public page; until now the app showed
+#   you LESS."* ⛔ **FALSE, universally.** The basis clause `niy.public-disclosure.member-information`
+#   appears at **ONE site in the whole repo — its own definition** (`public-read.ts:261`); ⛔ no
+#   migration, ⛔ no seed, ⛔ no writer pins it. The code says it: *"`false` FOR EVERY ROW IS THE
+#   EXPECTED DAY-ONE STATE … nothing can satisfy the basis. The surface is INERT."* ⇒ ⭐ the public
+#   names ⛔ NOBODY today and the app already shows **MORE**. ⭐ The story's STRUCTURAL purpose survives;
+#   ⛔ the sentence a MEMBER would be shown does not. Rewritten to `-198` cl.1's ground.
+#   ⭐⭐ **AC2's N+1 JUSTIFICATION WAS FACTUALLY WRONG.** It grounded "mode as INPUT" on *"the fan-out is
+#   one notification per member"*; `contribution-notify-triggers.ts:636-637` says the opposite in terms:
+#   *"Resolves the pool's identity ONCE (⛔ not per member — the join is per pool)."* ⇒ the true cost is
+#   +1 query per POOL. Replaced with the shipped precedent (`public-pages/handlers.ts:362-364`).
+#   ⭐⭐ **A FIFTH RENDER SITE.** `familyLabel` feeds `:304` (cycle-open) **AND `:340`
+#   (deadline-reminder)**, and `notify.deadline.day_14.subject` interpolates `{family}`. ⇒ *"the four
+#   consumers are the COMPLETE set"* is true of **CALL sites** and was being read as **render sites** —
+#   so Task 3's batching and AC5's SMS measurement both missed the second alert kind.
+#   ⭐⭐ **TRAP 6 (new) — `familyDisplay` (`note-template.ts:82`) IS SHARED WITH THE LIVING MEMBER'S OWN
+#   NAME** (`:145`). Changing it in place un-shields a member's own name on a forwardable PDF, with ⛔ no
+#   ruling. `-180` ruled the DECEASED family's name, ⛔ nothing else. ⭐ **TRAP 7 (new)** — a parity test
+#   compares against `null` and passes VACUOUSLY unless the `tc_acceptance` basis is seeded.
+#   ⭐ **TASK 0 WOULD HAVE HALTED OR FORGED.** Its subtasks still read, UNCHECKED: *"INV-form STILL
+#   BLOCKS → if unruled, STOP and report"* and *"Rule INV-form (BigDev)"* — six days after `-181` ruled
+#   it, and against AC1's own *"the dev agent NEVER authors a ruling."* Boxes ticked.
+#   ⭐ Also applied: contracts **1 → 3** (the Yogdaan Bahi's own contract was unnamed) · the obvious
+#   field name `deceasedFullName` is **FORBIDDEN by three `.strict()` PII guards** (`memberFullName`
+#   stays forbidden) · `openapi/v1.yaml` re-emit (`contracts-determinism` fails the push) · two ruled-in
+#   consumers were still marked *"⚠ only if INV-scope includes it"* · the Dev-Notes *"wrapper keeps its
+#   signature"* CONTRADICTED AC2 for three of four consumers · `baseline_commit` frontmatter added
+#   (`79ed41dc`; ⛔ absent entirely, and a dev run would have stamped HEAD over a 150-commit-old table —
+#   3 anchors had drifted) · **AC2b** fences-with-provers · **AC4b** the FORM-ONLY carrier + `-189` cl.3
+#   proven BOTH directions · **AC7 friction-budget** (`MEMBER_FACING_PREFIXES` includes `apps/mobile/`;
+#   ⛔ the story had none, every shipped sibling did) · **AC8** creates the `epics.md` section — ⭐ the
+#   dropped SECOND HALF of the very `7-11` precedent the story invokes · real test paths + the
+#   `DATABASE_URL` **silent-skip** trap · the six `{family}` i18n keys, ⛔ mint none · the SMS ceiling is
+#   **UCS-2 70/67** for Hindi, ⛔ not 160 — the Hindi body is ALREADY multi-segment · `deferred-work.md`
+#   item **(d)** carries the stale *"declinable and revocable"*, ⛔ not (e), and the file names `8-16`
+#   ⛔ nowhere · PRD **FR-21** superseded BY NAME, FR-33's trust-legal duty, FR-74 untouched.)
+# last_updated: 2026-09-08g (⚠⛔⛔ **`11b-16` RE-VALIDATED (`bmad-create-story validate`) — 17 FINDINGS
+#   APPLIED TO THE STORY FILE. ⛔ ZERO ROWS MOVE; 11b-16 STAYS `ready-for-dev`; ⛔ 8-16 STAYS
+#   `ready-for-dev`; ⛔ epic-11b stays `in-progress`; ⛔ 11b-11…14 stay `done`; ⛔ 11b-3b, 11b-15,
+#   11b-17 and 6-18 stay `ready-for-dev`. ⚠ ⛔ NO CODE — the story file only.**
+#   ⛔⛔ **THE STORY IS ⛔ NOT STARTABLE AS WRITTEN. IT NOW CARRIES A PREFLIGHT WITH TWO STOP
+#   CONDITIONS**, and its *"⛔ NONE OPEN"* Decisions section is ⛔ FALSE — `-198`'s own heading reads
+#   *"Open follow-ups — ⛔ both BLOCKING story G's scope"*.
+#   ⭐⭐ **STOP 1 — `8-16-member-pool-identity-name-form-alignment` IS `ready-for-dev` AND OWNS THIS
+#   WORK.** 457 lines, *"closing the public/member INVERSION"*, Decisions *"✅ ALL RULED … ⛔ ZERO
+#   OPEN"* (`INV-scope` ALL FOUR `-180`; `INV-form` MODE-RESOLVED `-181`), stop gate DISCHARGED. It
+#   owns `resolvePoolIdentity`, the same four consumers, the same contract shape. ⇒ **TWO
+#   `ready-for-dev` stories mutate the same call sites with OPPOSITE answers on consumer ④.** ⚠⛔
+#   `-197`, `-198`, story G and story E contain **ZERO** references to `8.16`/`-179`/`-180`/`-181` —
+#   ⭐ the 11b split was authored in ignorance of an already-ratified programme. ⇒ **BigDev rules:
+#   supersede / absorb / withdraw.** ⛔ A decision entry + a row flip, ⛔ never a story note.
+#   ⭐⭐ **STOP 2 — AC3 REVERSES TRUSTEE-RATIFIED `2026-09-02-180` cl.1** (Kalpana Bharti, Dhiraj
+#   Rahul): *"⛔ no consumer is excluded, and ⛔ no split is authorised"*, Context *"a future story
+#   that splits them is REVERSING this entry, ⛔ not optimising."* ⚠⛔ The Panel was shown **this exact
+#   option** — routing-note option (c) *"all except the push (④)"*, lock-screen argument in Appendix A
+#   — **and DECLINED it.** 11b.16's only authority, `-198`, is self-labelled *"Author-committed
+#   (BigDev). ⛔ Not Trustee-ratified"* and ⛔ never names `-180`. ⇒ AC3 is a STOP gate, ⛔ not an AC —
+#   and Task 6's push assertion would have **PINNED THE REVERSAL IN A TEST**.
+#   ⭐ **TRAP 5 ADDED — THE MONONYM.** `-181`: *"⛔⛔ `resolvePublicMemberName` MAY ⛔ NOT BE REUSED
+#   VERBATIM ON THE MEMBER SIDE … ⇒ share the MODE, ⛔ never the whole function."* AC1's word
+#   *"identical"* was **ordering that exact forbidden move**: `public-name.ts:98` returns `''` for a
+#   mononym under `shielded_name` ⇒ the My Pool card VANISHES (`handlers.ts:637`) and the Note **404s**
+#   (`contribution-note.ts:151`) — ⛔ with every test green, because ⭐ no fixture is a mononym.
+#   ⭐ **THE POLICY-MEANING NOTE NAMED A SUPERSEDED BASIS.** *"the family did not consent"* was
+#   de-authorised by `-160` cl.5/cl.6 (`public-read.ts:202-204`, `:323` *"THE FAMILY'S DECLINE PATH IS
+#   GONE ON PURPOSE"*); the live basis is `tc_acceptance` → pinned clause. ⚠ `-197`, `-198` and
+#   `deferred-work.md:984` all repeat the stale phrase ⇒ **three sources agreeing with each other and
+#   disagreeing with the code.** AC2's fixtures now name the live mechanism — ⛔ a
+#   `sahyog_drive_publication` fixture proves nothing. ⭐ The AI-10-1 note also gained its **Niyamavali
+#   check** (result: ⛔ not contradicted, ⛔ nothing binding — the §4.4 draft is ⛔ NOT RATIFIED and
+#   governs the PUBLIC record).
+#   ⭐ **CONTRACTS 1 → 3** — the shielded pair is in `active-contribution-card.ts:124,130`,
+#   `contribution-history.ts:73,77` (**the passbook AC1 requires**) and `contribution-note.ts:118,120`;
+#   the real bottleneck is `ResolvedPoolIdentity` upstream of all three. ⛔ Changing one and satisfying
+#   AC1 ships the **lying field name Trap 3 forbids by name**.
+#   ⭐ **BASELINE RE-PINNED `2b2beb5e` → `4b5e83b3`** — the old pin was ⛔ NOT an ancestor of HEAD
+#   (rebased branch); identical tree `36efae74…` ⇒ ⛔ no content baseline moved. ⚠ **ALL SEVEN 11b
+#   split stories carry off-main-line pins** — recorded, ⛔ not fixed.
+#   ⭐ Also applied: `epics.md:5128` still says **six** stories `11b-11 … 11b-16` ⇒ it keys `11b-16` as
+#   **F** (a `done` story, `11b-11:818`, repeats it) — **F is `11b-17`, G is `11b-16`**; Task 0 must
+#   **CREATE** its `epics.md` section (headings stop at 11b.9) and correct the range · a **file table**
+#   (4 packages, 19 rows incl. ⛔ NOT-TOUCHED) · **real test paths** + `DATABASE_URL` (⛔ integration
+#   suites SKIP SILENTLY without it) · the **MODE-FLIP test** (`-136` cl.1's *"must not hard-code"* is
+#   **testable**; without it every other test passes against a hard-coded `full_name`) · `-136` cl.2/cl.3
+#   restored · **AC8 i18n** (the `{family}` param — ⛔ mint no key) · **AC9** item (e) in `-180` cl.2's
+#   ruled language (**NARROWED**, ⛔ never CLOSED) · the Note's **SECOND** name (`resolveOwnName` stays
+#   shielded) · `missed-cycle-section.test.ts:171` (a rename makes it **pass vacuously**) · AC6/AC7 made
+#   falsifiable · and the **nominee's** form is story **D**'s (`-205` cl.1), ⛔ not G's — `11b-17:107`
+#   attributes it here in error.)
 # last_updated: 2026-09-08f (✅⭐⭐ **`11b-14` — FOURTH CODE-REVIEW PASS (the THIRD pass's own patches,
 #   reviewed before commit). Story STAYS `done`.** ⭐ Scope: `git diff HEAD`, 12 files / 759 lines.
 #   ⛔⛔ **IT FOUND A BLOCKER IN THE REVIEWER'S OWN WORK.** The `status`⇄`confirmedPercentage`

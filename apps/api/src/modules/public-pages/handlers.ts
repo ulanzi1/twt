@@ -527,7 +527,11 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
 
             // An unresolvable name omits the NAME, ⛔ never the row — same rule as the decrypt
             // failure above, and the same inverse of the directory.
-            return { ...base, deceasedMemberName: name === '' ? null : name };
+            // ⚠ `.trim() || null`, ⛔ not `=== ''` (Review finding, 2026-09-08) — a whitespace-only
+            // name would otherwise survive as "present" into `zero_line.*` / `index_line.*` and
+            // render "Late    's family awaits your support." This matches the `.trim() || null`
+            // posture the `district` and `nomineeName` normalisations above already use.
+            return { ...base, deceasedMemberName: name.trim() || null };
           },
         );
 

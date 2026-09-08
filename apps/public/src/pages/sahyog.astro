@@ -703,10 +703,15 @@ if (!driveStatusVisible) {
                           visibilityOf('sahyog-drive', col.meter.percentFieldId, 'public')
                             .visible && (
                             <div class="sahyog__meter-row">
+                              {/* ⭐ `--sahyog-meter-fill` is CLAMPED 0–100 below — defense-in-depth
+                                  behind `isSahyogDriveResponse` (Review finding, 2026-09-08). A `-5%`
+                                  fill from a version-skewed body is invalid at computed-value time ⇒
+                                  `width:auto` ⇒ a FULL bar; `150%` overflows the track. The validator
+                                  now rejects such a body; this keeps the CSS honest regardless. */}
                               <div
                                 class="sahyog__meter"
                                 aria-hidden="true"
-                                style={`--sahyog-meter-fill:${String(col.meter.fillOf(row))}%`}
+                                style={`--sahyog-meter-fill:${String(Math.max(0, Math.min(100, Number(col.meter.fillOf(row)))))}%`}
                               >
                                 <span class="sahyog__meter-fill"></span>
                               </div>

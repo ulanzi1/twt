@@ -86,14 +86,39 @@ export function formatCurrencyShort(amount: number, locale: Locale): string {
       `[i18n] formatCurrencyShort requires a finite amount, received ${String(amount)}`,
     );
   }
+  // ⛔ INTEGER RUPEES ONLY — the `amount * 100` truncation math below is EXACT only for integers,
+  // and every caller passes a whole-rupee total. Its sibling `formatCount` guards the same way.
+  if (!Number.isInteger(amount)) {
+    throw new Error(
+      `[i18n] formatCurrencyShort requires an integer amount (whole INR), received ${String(amount)}`,
+    );
+  }
   if (amount < 0) {
     throw new Error(
       `[i18n] formatCurrencyShort refuses a negative amount, received ${String(amount)}`,
     );
   }
+  // ⛔ UPPER BOUND, like {@link formatCurrency} — past this, `amount * 100` leaves the safe-integer
+  // range and the truncation silently corrupts.
+  if (amount >= 1e15) {
+    throw new Error(
+      `[i18n] formatCurrencyShort: amount exceeds supported range (1e15), received ${String(amount)}`,
+    );
+  }
 
   const CRORE = 10_000_000;
   const LAKH = 100_000;
+  // ⚠⛔ **THE SHORT FORM STARTS AT ₹1 LAKH — ⛔ never below** (Review finding, 2026-09-08).
+  // `formatCurrencyShort(300)` used to return `₹ 0 lakh` — a false zero for a real figure. The
+  // ruled sub-lakh form is EXACT (`2026-09-07-206` cl.3: `Expected: ₹ 300`) and is the caller's job
+  // (`formatSahyogTargetAmount`); this primitive refuses the input rather than mis-state it, the
+  // same way it already refuses a negative. `0` is left alone deliberately — `₹ 0 lakh` for `0` is
+  // not a false statement, and the zero-state copy (`-206` cl.4) never routes through here.
+  if (amount > 0 && amount < LAKH) {
+    throw new Error(
+      `[i18n] formatCurrencyShort has no sub-₹1-lakh form; the caller must use the exact form below ₹1,00,000, received ${String(amount)}`,
+    );
+  }
   const useCrore = amount >= CRORE;
   const divisor = useCrore ? CRORE : LAKH;
   const unit = useCrore

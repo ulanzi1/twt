@@ -228,6 +228,15 @@ export const PublicSahyogDriveEntry = z
      * division. ⭐ That is inherent to the ruling, and it is precisely what closed the channel that
      * used to recover the hidden rupee **target** — the division now returns a headcount.
      *
+     * ⚠⛔⛔ **`null` ON `closed` AND `verified` ROWS — Trustee-ratified `2026-09-08-207` cl.1
+     * (Dhiraj Rahul + Kalpana Bharti), routing note §3, RULING (A).** The figure is a **Live-row
+     * datum**: the read path returns `null` unless the drive is `live`, so a visitor reading the
+     * JSON route can ⛔ no longer recover an **archived** drive's roster size by division. ⭐ The
+     * Live-row `82%` and its accepted recoverability (`2026-09-07-204` cl.1) are **undisturbed**;
+     * ⛔ `2026-09-07-206` cl.1 is ⛔ NOT reversed. This matches
+     * `public-vs-private-matrix.yaml`'s `drive_progress_percentage` description
+     * (*"LIVE rows only; `null` on Closed and Verified"*), which is the ruling.
+     *
      * ⚠⛔ **AND ⛔ NOTHING ORDERS BY IT** (AC5, 11b.1): ⛔ no ranking, ⛔ no "most-supported" view,
      * ⛔ no comparison between drives.
      *
@@ -242,7 +251,7 @@ export const PublicSahyogDriveEntry = z
      * that story's file — ⭐ it names the divergence from this side so ⛔ no per-story pass can miss
      * it ([[feedback_circular_deferral_between_sibling_stories]]).
      */
-    confirmedPercentage: z.number().int().min(0).max(100),
+    confirmedPercentage: z.number().int().min(0).max(100).nullable(),
     /**
      * ⭐⭐ **लक्ष्य / *"Expected"* — THE DRIVE'S EXPECTED CONTRIBUTION, IN WHOLE RUPEES.**
      * Story 11b.14 (AC2, `D4`), Trustee-ratified 2026-09-07; recorded at `2026-09-07-204` cl.2-4.

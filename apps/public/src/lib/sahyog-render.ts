@@ -430,6 +430,9 @@ function toDisplayRow(
     // column list decides what the TABLE shows; this decides what the render MODEL carries — and the
     // tier-leak scrape reads the model. ⇒ a closed row must carry ⛔ no fill and ⛔ no sentence even
     // if a future template rendered the meter column somewhere it should not.
+    // ⭐ Since `2026-09-08-207` cl.1 the WIRE is also stage-gated (`row.confirmedPercentage` is
+    // `null` off-Live), so this guard is now belt-and-suspenders — kept because this line, ⛔ not the
+    // wire, is what the scrape test reads.
     driveProgressPercentage: row.status === 'live' ? row.confirmedPercentage : null,
     // ⛔ ⛔ `t()` THROWS on an unsupplied token, so BOTH numbers are always supplied together.
     //
@@ -458,8 +461,15 @@ function toDisplayRow(
     // ⭐⭐ THE CLOSED · VERIFIED SENTENCE (`D5`'s stage split) — ⛔ never on a Live row, which takes
     // the participation sentence instead. ⚠⛔ `null` ALSO where ⛔ no ratified variant fits: ⭐ the
     // row renders no sentence at all, ⛔ never a placeholder (`2026-09-07-205` cl.6).
+    //
+    // ⚠⛔⛔ **AND `null` WHERE THE DRIVE RAISED ₹0 — Trustee-ratified `2026-09-08-207` cl.2 (DR + KB),
+    // routing note §4, RULING (B).** `index_line.*` at `amountRaisedInr === 0` reads *"₹ 0
+    // contributed by colleagues for {nominee}, nominee of Late {family}…"* — a `₹ 0` beside two
+    // named private individuals. The Panel ruled SILENCE, ⛔ not a bespoke zero-state string: the
+    // same posture `2026-09-07-205` cl.6 already gives this sentence, reached by a second trigger.
+    // (The Live path has its own zero-state — `zero_line.*`, `2026-09-07-206` cl.4 — on the COUNT.)
     driveIndexLine:
-      row.status === 'live'
+      row.status === 'live' || row.amountRaisedInr === 0
         ? null
         : labels.indexLine({
             amountInr: row.amountRaisedInr,
@@ -520,7 +530,10 @@ export function buildSahyogView(
       // `else` catch-all, so a FOURTH token added to the wire enum lands nowhere and is visible."*
       // ⛔ There WAS an `else` catch-all — `else activeRows.push(…)` — so a fourth token would have
       // been absorbed into **Closed**, ⛔ the exact outcome the paragraph above says must not happen.
-      // ⭐ The arms are now explicit on all three ruled tokens, and the residual arm is NAMED.
+      // ⭐ `live` and `verified` now have explicit arms; `closed` AND any residual token share the
+      // Closed section, and that residual is NAMED rather than incidental (amended 2026-09-08 —
+      // the prior text claimed "explicit on all three ruled tokens" while the code had two
+      // byte-identical trailing arms).
       //
       // ⭐⭐ **WHERE THE REAL PROTECTION LIVES, ⛔ so the next reader does not look for it here:**
       // `sahyog.server.ts`'s hand-typed literal set REJECTS an unknown token before this function
@@ -532,7 +545,7 @@ export function buildSahyogView(
       // heading beats a silently vanished drive, and the guard above is what stops it arising.
       if (item.status === 'live') liveRows.push(displayRow);
       else if (item.status === 'verified') archiveRows.push(displayRow);
-      else if (item.status === 'closed') activeRows.push(displayRow);
+      // `closed` + any token the `sahyog.server.ts` guard somehow admitted → the Closed section.
       else activeRows.push(displayRow);
     });
   }
@@ -746,6 +759,13 @@ export interface SahyogColumn {
      *
      * ⚠ It is governed by its **OWN** matrix field id ({@link percentFieldId}), ⛔ not by the
      * sentence's — ⭐ which is what finally gives `drive_progress_percentage` a consumer.
+     *
+     * ⚠⛔ **THE GOVERNANCE COUPLING IS ONE-DIRECTIONAL** (Review finding, 2026-09-08). A suppressed
+     * `drive_progress_percentage` verdict hides the bar and this figure — ⭐ that is the new part.
+     * But `meter` rides the `drive_participation_line` COLUMN, and {@link visibleSahyogColumns}
+     * drops the whole column (bar + figure) when `drive_participation_line` is not visible,
+     * regardless of the `drive_progress_percentage` verdict. Fail-safe (a stricter sentence
+     * verdict can only ever hide MORE), ⛔ but the two are ⛔ not independent in both directions.
      */
     readonly percentLabelOf: (row: SahyogDriveRow) => string | null;
     /** The matrix field id governing {@link percentLabelOf}. ⛔ Distinct from the column's own. */

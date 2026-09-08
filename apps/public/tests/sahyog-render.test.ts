@@ -311,6 +311,38 @@ describe('⛔ the target is quarantined — no comparison figure reaches the cop
     expect(r?.driveTargetLine).toBeNull();
   });
 
+  it('⛔⛔ a CLOSED / VERIFIED row that raised ₹0 renders ⛔ NO index-line sentence — silence', () => {
+    // ⭐⭐ `2026-09-08-207` cl.2 (DR + KB) — `index_line.*` at `amountRaisedInr === 0` reads
+    // *"₹ 0 contributed by colleagues for {nominee}, nominee of Late {family}…"*, a `₹ 0` beside two
+    // named people. The Panel ruled SILENCE, ⛔ not a bespoke string — the same posture
+    // `2026-09-07-205` cl.6 already gives this sentence. All three name tokens are present here, so
+    // a variant WOULD have matched; the ₹0 guard is what suppresses it.
+    const closed = buildSahyogView(
+      { page: 1, limit: 25 },
+      search(),
+      labels,
+      wire([row({ status: 'closed', amountRaisedInr: 0, confirmedContributionCount: 0 })]),
+    );
+    expect(closed.model.rows[0]?.driveIndexLine).toBeNull();
+
+    const verified = buildSahyogView(
+      { page: 1, limit: 25 },
+      search(),
+      labels,
+      wire([row({ status: 'verified', amountRaisedInr: 0, confirmedContributionCount: 0 })]),
+    );
+    expect(verified.model.rows[0]?.driveIndexLine).toBeNull();
+
+    // ⛔ Control: the SAME row with a non-zero amount still renders its sentence.
+    const funded = buildSahyogView(
+      { page: 1, limit: 25 },
+      search(),
+      labels,
+      wire([row({ status: 'closed', amountRaisedInr: 1200 })]),
+    );
+    expect(funded.model.rows[0]?.driveIndexLine).toBeTruthy();
+  });
+
   it('⛔⛔ a LIVE row carries ⛔ NO लक्ष्य while the reveal switch is OFF — ⭐ the launch state', () => {
     // ⭐⭐ `-190` cl.7(b)/(c) STAND. ⛔ `driveTargetInr` is ABSENT from the wire (⛔ never `null` —
     // the 11b.11 shape) unless a `super_admin` revealed it, and ⛔ no Pariwar has a visibility row.

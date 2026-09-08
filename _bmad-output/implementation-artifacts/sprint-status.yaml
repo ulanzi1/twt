@@ -1,3 +1,34 @@
+# last_updated: 2026-09-08k (⏳⭐ **THE `withdrawn` ENUM MINT IS ROUTED TO THE TRUSTEE PANEL** —
+#   `trustee-panel-routing-note-2026-09-08-sprint-status-withdrawn-enum-mint.md`, discharging `-208`
+#   cl.7. ⛔ ZERO ROWS MOVE; ⛔ NOTHING RATIFIED; ⚠ ⛔ NO CODE. ⛔ Written ⛔ IS NOT answered.
+#   ⭐ **THE ASK (Q1):** may `withdrawn` be minted as a TERMINAL status — *"closed WITHOUT
+#   implementation because ANOTHER STORY owns the work"* — ⛔ distinct from `deferred-to-v2`, whose
+#   work does ⛔ not ship AT ALL? ⭐ **(Q2, optional):** delegate enum additions of this class — ones
+#   changing ⛔ no member-facing behaviour and ⛔ no governance authority — to the Solo Builder, on
+#   condition each mint is recorded in `.decision-log.md`.
+#   ⭐ **WHY IT IS THE PANEL'S AND ⛔ NOT BigDev'S:** this file already refused itself a value on
+#   exactly this ground — *"a `blocked-awaiting-decisions` value was considered and DELIBERATELY NOT
+#   MINTED — an enum addition is a RATIFIED GOVERNANCE ACT, not an authoring convenience"*
+#   (`:16819-16821`). ⇒ ⛔ we will ⛔ not mint on author-committed authority and leave that sentence
+#   standing three screens above it. ⭐ BigDev COULD withdraw the story (scoping is his, `-208` cl.1);
+#   ⛔ he cannot add a word to the vocabulary the ledger is WRITTEN IN.
+#   ⚠⛔ **THE COST, STATED:** `11b-16`'s row stays `ready-for-dev` and is KNOWINGLY FALSE while its
+#   story file reads `WITHDRAWN`. ⛔⛔ **The automation reads the ROW; the protection is PROSE in a
+#   file the automation does ⛔ NOT consult.** ⇒ this holds because a human is in the loop — ⛔ it is
+#   ⛔ NOT a mechanism. ⭐ Option C in the note offers a CI guard as the second-best if the mint is
+#   declined.
+#   ⛔ **Each existing value is false in a DIFFERENT direction:** `ready-for-dev` implies startable
+#   (⇒ a `dev-story` run would build a reversal of a Trustee-ratified clause) · `backlog` claims it
+#   exists in `epics.md` (it does ⛔ not) and that it will start (it will ⛔ never) · `deferred-to-v2`
+#   says the work is OUT of v1 (⛔ it ships, in `8-16`) and its own definition REQUIRES a
+#   trustee-ratified decision — the very question being asked · deletion invites a `sprint-planning`
+#   GHOST.
+#   ⭐ The note carries the **verbatim `STATUS DEFINITIONS` paragraph to ratify**, four options with
+#   costs, five re-verification commands (⭐ all five run clean), and a plain-English appendix.
+#   ⚠⛔ **⛔ NOTHING SHIPS ON THIS RULING.** ⭐ `8-16` is startable TODAY — its two Preflight STOPs were
+#   discharged by `-208` and `-209`, and it does ⛔ not wait on the Panel. ⛔ Only the RECORD waits.
+#   ⛔ Rows unchanged: 11b-16 `ready-for-dev` (⚠ knowingly false); 8-16 / 11b-15 / 11b-17 / 11b-3b /
+#   6-18 `ready-for-dev`; epic-8 + epic-11b `in-progress`; 11b-11…14 `done`.)
 # last_updated: 2026-09-08j (✅⭐⭐ **`8-16` FRAMING CONFIRMED — Decision `2026-09-08-209`.
 #   PREFLIGHT STOP 2 DISCHARGED ⇒ ⭐⭐ BOTH STOPS CLEAR AND `8-16` IS STARTABLE.**
 #   ⛔ ZERO ROWS MOVE — `8-16` was ALREADY `ready-for-dev`, which is what "startable" reads as; ⭐ the

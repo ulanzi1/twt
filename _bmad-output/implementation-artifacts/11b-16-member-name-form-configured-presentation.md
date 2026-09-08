@@ -19,7 +19,9 @@ Status: ⛔ **WITHDRAWN** (Decision `2026-09-08-208` cl.1) — ⛔ terminal. The
 `8-16-member-pool-identity-name-form-alignment`, which came FIRST and is ruled WIDER.
 ⚠⛔ **⛔ DO ⛔ NOT RUN `dev-story` AGAINST THIS FILE.** ⚠ `sprint-status.yaml` still reads
 `ready-for-dev` — ⛔ knowingly, ⛔ not by oversight: there is no `withdrawn` enum value and minting one
-is a **ratified governance act** (`-208` cl.7, routed to the Panel). ⭐ This line is the true record.
+is a **ratified governance act** (`-208` cl.7). ⭐ This line is the true record.
+⏳ **ROUTED 2026-09-08** —
+`_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-08-sprint-status-withdrawn-enum-mint.md`.
 
 > ⛔⛔ **WITHDRAWN 2026-09-08 — KEPT AS THE RECORD, ⛔ NOT DELETED.**
 >

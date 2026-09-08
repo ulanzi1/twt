@@ -1,3 +1,39 @@
+# last_updated: 2026-09-08j (✅⭐⭐ **`8-16` FRAMING CONFIRMED — Decision `2026-09-08-209`.
+#   PREFLIGHT STOP 2 DISCHARGED ⇒ ⭐⭐ BOTH STOPS CLEAR AND `8-16` IS STARTABLE.**
+#   ⛔ ZERO ROWS MOVE — `8-16` was ALREADY `ready-for-dev`, which is what "startable" reads as; ⭐ the
+#   Preflight was the gate, ⛔ never the row. ⚠ ⛔ NO CODE.
+#   ⭐⭐ **BigDev SUPPLIED THE WORDING** (`-209` cl.1) — ⛔ verbatim, and identical in the story file and
+#   the decision log. **What it means to the member:** *"When you open your pool, you will see the name
+#   of the colleague whose family you are supporting, in whatever form your Pariwar has chosen for that
+#   name — instead of a first name and an initial."* **The ground:** *"Your Pariwar can see this name
+#   because you are contributing to this drive. Public display is a separate decision governed by the
+#   applicable publication basis."*
+#   ⭐ **THREE-PART LOGIC:** what you see → why your Pariwar sees it → ⛔ why that does NOT imply public
+#   disclosure. ⚠⛔ The third part is LOAD-BEARING — without it a member, or a later reader, infers a
+#   public exposure that ⛔ does not exist.
+#   ⭐⭐ **AND THE WORD "FULL" WAS DROPPED — a CORRECTION, ⛔ not a softening.** The validate pass's
+#   draft read *"the FULL name … in whatever form your Pariwar has chosen"*, which ⛔ contradicted
+#   itself: a `shielded_name` Pariwar sees ⛔ no full name. ⇒ the confirmed wording is true in BOTH
+#   modes.
+#   ⚠⛔⛔ **THE CONSEQUENCE IS STATED, ⛔ NOT SOFTENED** (`-209` cl.2): on ship a contributing member
+#   sees a **FULL LEGAL NAME THAT ⛔ NOBODY CAN SEE PUBLICLY** — the basis is unsatisfiable on every
+#   drive (`niy.public-disclosure.member-information` has ONE site in the repo, its own definition).
+#   ⭐ That is a REAL WIDENING OF DISCLOSURE and it IS the decision — ⛔ not a side effect of "matching
+#   the public page", which shows nothing.
+#   ⛔ **THE OLD JUSTIFICATION IS ⛔ NOT AVAILABLE AND MUST ⛔ NOT RETURN** (`-209` cl.3) — *"the same
+#   name anyone can already see on the public page"* / *"until now the app showed you less"* were FALSE
+#   for every drive. ⚠ A **THIRD INSTANCE** of that comparison was found in the same edit — the story's
+#   **"I want" clause** still read *"the same way a stranger sees them named"*; ⛔ recorded, ⛔ not
+#   silently edited.
+#   ⭐ **⛔ NOT confirmed by `-209`:** the publication basis is ⛔ still NOT adopted on the member path
+#   (AC4b) · the inert basis is ⛔ NOT "fixed" here · ⛔ no public surface moves · ⭐ and the STRUCTURAL
+#   inversion remains REAL — the moment the basis is provisioned, an unfixed member path sits BELOW the
+#   public one, which is what `-179` cl.3 directed closed. ⇒ ⭐ the reason to build is intact.
+#   ⚠ **Task 0's governance-first STOP still binds** — ⛔ no code before the `governance:` commit.
+#   ⛔ Rows unchanged: 8-16 `ready-for-dev` (⭐ now genuinely startable); 11b-16 `ready-for-dev`
+#   (⚠ KNOWINGLY FALSE — withdrawn per `-208`; the `withdrawn` enum mint is still routed to the Panel,
+#   `-208` cl.7); 11b-15 / 11b-17 / 11b-3b / 6-18 `ready-for-dev`; epic-8 + epic-11b `in-progress`;
+#   11b-11…14 `done`.)
 # last_updated: 2026-09-08i (⭐⭐ **`11b-16` IS WITHDRAWN — Decision `2026-09-08-208` (author-committed,
 #   BigDev). ⚠⛔ AND ⛔ ZERO ROWS MOVE, ⛔ DELIBERATELY — SEE THE ENUM NOTE BELOW.**
 #   ⭐ **THE RULING.** `8-16-member-pool-identity-name-form-alignment` was minted **2026-09-02** by

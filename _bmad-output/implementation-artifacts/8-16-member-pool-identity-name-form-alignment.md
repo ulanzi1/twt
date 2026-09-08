@@ -53,11 +53,15 @@ Status: ready-for-dev
 
 ---
 
-## ⛔ PREFLIGHT — ✅ ONE DISCHARGED, ⛔ **ONE STANDING**
+## ✅ PREFLIGHT — **BOTH STOPS DISCHARGED. ⭐ THIS STORY IS STARTABLE.**
 
-⚠⛔ **⛔ NOT mid-AC caveats. A STOP is a STOP.** ⭐ Both found at the 2026-09-08 `validate` pass
-(three independent verifiers); **STOP 1 was discharged the same day** by `-208`.
-⇒ ⛔ **STOP 2 alone now stands between this story and its first line of code.**
+⭐ Both were found at the 2026-09-08 `validate` pass (three independent verifiers) and **both were
+discharged the same day** — **STOP 1** by `#decision-2026-09-08-208`, **STOP 2** by
+`#decision-2026-09-08-209`.
+⚠⛔ **⛔ KEPT AS THE RECORD, ⛔ not deleted** — they are why the story's scope and its member-facing
+sentence read as they do. ⛔ A later reader must ⛔ not "restore" what either of them removed.
+⚠ The story's own **Task 0 STOP** (governance first, ⛔ no code before the `governance:` commit) is
+⛔ unaffected and still binds.
 
 ### ✅ STOP 1 — ⭐ **DISCHARGED 2026-09-08 by `#decision-2026-09-08-208`.**
 
@@ -82,7 +86,20 @@ a dev the opposite.
 governance act**. ⭐ Routed to the Panel; ⛔ the withdrawn story's own `Status:` line is the true
 record until then.
 
-### ⛔ STOP 2 — ⛔⛔ THIS STORY'S PREMISE IS ⛔ INVERTED ON ⛔ EVERY DRIVE IN THE SYSTEM TODAY
+### ✅ STOP 2 — ⭐ **DISCHARGED 2026-09-08 by `#decision-2026-09-08-209`. ⛔ THE FINDING BELOW STANDS.**
+
+⭐ **BigDev confirmed the re-grounded framing, and supplied the wording** (`-209` cl.1). ⇒ ⭐ the
+three-part logic: **what you see** → **why your Pariwar sees it** → **why that does ⛔ not imply
+public disclosure.**
+⚠⛔ **And the consequence is ⛔ not softened** (`-209` cl.2): on ship, a contributing member on a
+Pariwar in the **default `full_name`** mode will see a **full legal name that ⛔ NOBODY can see
+publicly**. ⭐ That is the decision, ⛔ not a side effect.
+⛔ The old justification (*"the same name anyone can already see on the public page"*) is ⛔ **NOT
+available and must ⛔ not return** (`-209` cl.3).
+
+⇒ ⭐ **the finding that follows is retained verbatim as the RECORD of why** — ⛔ it is no longer a gate.
+
+#### ⛔ The finding (retained): the ORIGINAL premise was inverted on every drive
 
 ⛔ The Story statement and the Policy-meaning sentence both say the app shows the member **LESS**
 than the public page. ⭐ **Verified live at HEAD: the opposite is true, universally.**
@@ -118,10 +135,14 @@ the family it is being asked to help."*
 ## Story
 
 As a **contributing member** opening my pool,
-I want to see the family I am supporting named **the same way a stranger sees them named** on the
-public Sahyog Drive page,
+I want to see the family I am supporting named in **the form my Pariwar has chosen** for that name,
 so that the Trust is not in the position of shielding a name from the people who are paying for the
 funeral while publishing it to everyone else.
+
+⚠⛔ **⛔ THE "I WANT" CLAUSE CARRIED THE SAME FALSE COMPARISON, ⛔ ONE LINE UP** — it read *"named the
+**same way a stranger sees them named** on the public Sahyog Drive page"*. ⭐ Re-grounded
+(`-209` cl.2 context): ⛔ a stranger sees **nothing** today. ⚠ Third instance of one defect —
+⛔ recorded, ⛔ not silently edited.
 
 ⚠⛔ **⛔ THE OLD BENEFIT CLAUSE WAS FALSE AND IS REMOVED.** It read *"the app never tells me less about
 my own Pariwar's drive than it tells the internet"* — ⛔ but **today the app tells the member MORE**
@@ -139,9 +160,8 @@ assignability, ⛔ no contribution duty, ⛔ no `members.state`, ⛔ no `is_vali
 overlay. ⚠ Stated explicitly because *"an absent note is indistinguishable from an unasked question."*
 
 **What it means to the member, in their terms:**
-*"When you open your pool, you will see the full name of the colleague whose family you are
-supporting, in whatever form your Pariwar has chosen for that name — instead of a first name and an
-initial."*
+*"When you open your pool, you will see the name of the colleague whose family you are supporting,
+in whatever form your Pariwar has chosen for that name — instead of a first name and an initial."*
 
 ⚠⛔ **⛔ THE PREVIOUS SENTENCE WAS FALSE FOR EVERY DRIVE IN THE SYSTEM AND IS ⛔ NOT RESTORED.** It
 read *"the same name anyone can already see on the public page. Until now the app showed you less
@@ -150,10 +170,21 @@ is unsatisfiable today (Preflight STOP 2, `public-read.ts:855-858`), so the publ
 at all and the app already shows **more**. ⭐ This is the sentence a member would be shown; ⛔ it may
 ⛔ not claim a public disclosure that does not exist.
 
-⭐ **THE GROUND, and it is the RIGHT one** (`2026-09-04-198` cl.1): the publication basis governs
+**The ground, in the member's terms:**
+*"Your Pariwar can see this name because you are contributing to this drive. Public display is a
+separate decision governed by the applicable publication basis."*
+
+⭐ **THREE-PART LOGIC, and it is why the wording holds:** ⇒ **what you see** → **why your Pariwar
+sees it** → **why that does ⛔ not imply public disclosure.** ⚠⛔ The third part is load-bearing: it
+is what stops a member — or a later reader — inferring a public exposure that ⛔ does not exist.
+⭐ The governing clause behind it (`2026-09-04-198` cl.1): the publication basis governs
 **publication to the WORLD**, ⛔ not what a mutual-aid group is told about the family it is being
-asked to help. ⇒ ⭐ the member sees a name **because they are contributing to this drive**, ⛔ not
-because a stranger could.
+asked to help.
+
+⚠⛔ **⛔ AND ⛔ NOT "the FULL name" — the word was DROPPED, deliberately.** ⭐ A Pariwar on
+`shielded_name` will ⛔ **not** see a full name, so *"the full name … in whatever form your Pariwar
+has chosen"* ⛔ contradicted itself. ⇒ ⭐ **"the name … in whatever form your Pariwar has chosen"** is
+true in **both** modes.
 
 ✅ **Checked against the Niyamavali:** it governs eligibility, contribution duty and adjudication —
 ⛔ **it says nothing about the FORM of a name on a member surface.** Per
@@ -496,6 +527,49 @@ precedent for **where to mint** and drops its annotation duty. ⇒ the header's 
 **And** **FR-21**'s specified name form is **superseded BY NAME** — ⛔ the FR is ⛔ not edited
 ([[feedback_supersede_never_reinterpret]]).
 
+### AC9 — The member's meaning is STATED **where a code reader meets it**
+⭐ The two confirmed sentences (`#decision-2026-09-08-209` cl.1) are carried **verbatim** into the
+**header comment block** of **`packages/domain/src/notifications/pool-identity.ts`** (`:1-15`) — the
+⭐ ONE module all four consumers delegate to. ⚠ That header is `//` line comments, ⛔ **not** a
+`/** */` doc-block — ⭐ match the existing style; ⛔ do ⛔ not convert it.
+
+> *"When you open your pool, you will see the name of the colleague whose family you are supporting,
+> in whatever form your Pariwar has chosen for that name — instead of a first name and an initial."*
+>
+> *"Your Pariwar can see this name because you are contributing to this drive. Public display is a
+> separate decision governed by the applicable publication basis."*
+
+**And** ⛔⛔ **THIS IS ⛔ NOT USER-FACING COPY — ⛔ DO ⛔ NOT MINT A LOCALE KEY FOR IT.** ⭐ It is a
+**doc-block for developers**, ⛔ never a rendered string; AC5's *"⛔ no new locale key is minted"*
+stands unchanged and this AC does ⛔ not create an exception to it.
+
+**And** ⛔ the **third part is ⛔ not droppable** — *"Public display is a separate decision governed by
+the applicable publication basis"* is what stops a later reader inferring a public exposure that
+⛔ does not exist. ⚠ A header carrying only the first sentence ⛔ **fails this AC**.
+
+**And** ⭐ **WHAT PROVES IT** — ⛔ not a reviewer's eye:
+a test in `packages/domain/tests/notifications/pool-identity.test.ts` reads the resolver's **source
+file** and asserts **both** sentences are present, compared **whitespace-normalised** (collapse all
+runs of whitespace and comment markers to single spaces) so the assertion survives re-wrapping but
+⛔ **not** paraphrase. ⚠⛔ ⛔ Assert the **exact** normalised strings — ⭐ a substring/keyword scan
+would pass on a reworded header, which is the failure this AC exists to prevent.
+
+**And** ⚠ the sentences are quoted in **three** places — this header, `8-16`'s Policy-meaning section,
+and `-209` cl.1. ⛔ They must stay **byte-identical**; ⭐ the test is what makes drift in the code copy
+fail loudly ([[feedback_spec_edits_must_propagate_to_tasks]]).
+
+**And** ⚠⛔ **THE SAME HEADER ALREADY CARRIES A SENTENCE THIS STORY MAKES FALSE — ⛔ FIX IT IN THE SAME
+EDIT.** `pool-identity.ts:12-13` reads:
+
+> *"`apps/api/src/modules/member-pool/pool-identity.ts` **keeps its exact exported signature** and
+> delegates here, so **no apps/api call site changed**."*
+
+⛔ Both halves stop being true the moment the **mode** parameter lands (Task 2 — the wrapper **gains**
+it, and its three call sites pass it). ⭐ Found at the final preflight, 2026-09-08. ⇒ ⛔ the header is
+⛔ not merely appended to; the stale sentence is **corrected**, ⛔ never left standing beside the new
+one ([[feedback_record_unattested_no_backfill]]).
+
+
 ---
 
 ## Tasks / Subtasks
@@ -526,6 +600,13 @@ precedent for **where to mint** and drops its annotation duty. ⇒ the header's 
         **gains** the mode and forwards it. ⚠ Three of the four consumers reach the resolver through it.
   - [ ] ⚠ Record the **SEMANTIC WIDENING** at the setting: `public_name_presentation_mode` now governs
         **member-facing** surfaces too (`-181`). ⛔ **Do ⛔ NOT rename it.**
+  - [ ] ⭐ **Carry the two confirmed sentences VERBATIM into the resolver's header comment block**
+        (AC9, `-209` cl.1) — ⛔ all three parts; ⛔ a locale key is ⛔ NOT minted (⛔ not rendered copy);
+        ⚠ `//` lines, ⛔ not a `/** */` doc-block.
+  - [ ] ⚠⛔ **CORRECT the stale sentence in that SAME header** — `pool-identity.ts:12-13` claims the
+        `apps/api` wrapper *"keeps its exact exported signature"* and *"no apps/api call site
+        changed"*. ⛔ Both are false once the mode parameter lands. ⛔ Correct it; ⛔ do ⛔ not leave it
+        standing beside the new text.
 - [ ] **Task 3 — ALL FOUR consumers, ⭐ FIVE render sites** (AC2, AC3)
   - [ ] ⚠⛔ **THE FIFTH RENDER SITE.** `familyLabel` (`contribution-notify-triggers.ts:250`) is called
         at **`:304` (cycle-open) ⭐ AND `:340` (deadline-reminder)**, and
@@ -548,6 +629,9 @@ precedent for **where to mint** and drops its annotation duty. ⇒ the header's 
   - [ ] ⚠ Extend `apps/mobile/tests/unit/missed-cycle-section.test.ts:171`'s `forbidden` list with the
         new field name — ⛔ a rename makes that guard **pass vacuously**.
   - [ ] ⭐ Cite `sahyog-drive.spec.ts:558` as AC4's existing public-surface fence.
+  - [ ] ⭐ **The policy-sentence assertion** (AC9) — read `notifications/pool-identity.ts`'s **source**
+        and assert **both** confirmed sentences, **whitespace-normalised** and **exact**.
+        ⛔ Not a keyword scan: ⭐ a reworded header must **FAIL**.
 - [ ] **Task 5 — a11y + i18n + the paid-channel cost** (AC5)
   - [ ] The `t()` namespace (⚠ **third arg, an options object**) across the six `{family}` keys.
   - [ ] The RN `accessible={true}` check on **both** mobile components.
@@ -565,11 +649,12 @@ precedent for **where to mint** and drops its annotation duty. ⇒ the header's 
 
 ## ⚖️ Decisions — ✅ **BOTH RULED.** `INV-scope` **ALL FOUR** (`-180`, Panel) · `INV-form` **MODE-RESOLVED** (`-181`, BigDev)
 
-⚠⛔ **⛔ "ZERO OPEN" IS ⛔ NOT THE SAME AS "STARTABLE".** ⭐ This story's **own two decisions** are ruled
-and ⛔ neither is re-opened. ⛔ But a **PREFLIGHT STOP** stands above them.
-✅ **STOP 1 is DISCHARGED** — `11b-16` is withdrawn and `-198`'s carve-out is **void**
-(`#decision-2026-09-08-208` cl.1, cl.2).
-⛔ **STOP 2 STANDS** — the **inverted premise**. ⇒ ⛔ read the Preflight first.
+✅ **AND NOW IT ⛔ IS STARTABLE.** ⭐ This story's own two decisions are ruled and ⛔ neither is
+re-opened; **both Preflight STOPs are discharged** — STOP 1 by `#decision-2026-09-08-208` (cl.1,
+cl.2: `11b-16` withdrawn, `-198`'s carve-out **void**) and STOP 2 by `#decision-2026-09-08-209`
+(the framing confirmed and re-grounded).
+⚠ ⛔ Task 0's governance-first STOP still binds. ⇒ ⭐ read the Preflight for **why the scope and the
+member sentence read as they do** — ⛔ not for a gate.
 
 ### ⛔ `INV-scope` — **PANEL, BLOCKING.** All four consumers, or the in-app two?
 
@@ -687,6 +772,7 @@ distinguishes *"ran"* from *"skipped"*.
 | The three contracts reject the old shape (AC3) | `packages/contracts/tests/contributions.test.ts` — **extend** |
 | AC2b fences (no inside read · once per pool · one join site) | source-scan + call-count spy, as AC2b names |
 | ⭐ AC4's public fence | `apps/api/tests/integration/public-pages/sahyog-drive.spec.ts:558` — ⭐ **already exists**; cite it |
+| ⭐ **AC9 — the policy sentences in the resolver header** | `packages/domain/tests/notifications/pool-identity.test.ts` — **extend**. ⭐ Source read + whitespace-normalised **exact** match on both sentences; ⛔ DB-free, so it runs in the **unit** job and ⛔ is ⛔ not subject to the `DATABASE_URL` skip |
 
 - **Live-DB:** ⛔ never regenerate an applied migration (42P07), ⛔ never `DROP SCHEMA` (42P01), assert
   **membership, not counts** ([[project_live_db_test_gotchas]]).
@@ -700,7 +786,8 @@ distinguishes *"ran"* from *"skipped"*.
 
 | Path | Disposition |
 |---|---|
-| `packages/domain/src/notifications/pool-identity.ts` | **UPDATE** — shape `:40-41` · signature `:76` · absence guard `:99` · producer `:122-123` · header ← the policy sentence |
+| `packages/domain/src/notifications/pool-identity.ts` | **UPDATE** — shape `:40-41` · signature `:76` · absence guard `:99` · producer `:122-123` · ⭐ **header ← the two confirmed sentences, verbatim (AC9)** |
+| `packages/domain/tests/notifications/pool-identity.test.ts` | **UPDATE** — the mononym cases **+ ⭐ the AC9 policy-sentence assertion** |
 | `packages/contracts/src/contributions/active-contribution-card.ts` | **UPDATE** — `:79` doc · `:124`, `:130` |
 | `packages/contracts/src/contributions/contribution-history.ts` | **UPDATE** — `:55` doc · `:73`, `:77` ⭐ the Yogdaan Bahi |
 | `packages/contracts/src/contributions/contribution-note.ts` | **UPDATE** — `:118`, `:120` ⛔ **only**; `:123-124` (the member's own) ⛔ **NOT TOUCHED** |
@@ -769,6 +856,7 @@ _(to be filled by the dev agent)_
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-09-08 | 0.7 | ✅⭐⭐ **FRAMING CONFIRMED — `#decision-2026-09-08-209`. PREFLIGHT STOP 2 DISCHARGED ⇒ ⭐ BOTH STOPS CLEAR; THE STORY IS STARTABLE.** ⭐ **BigDev supplied the wording** (`-209` cl.1), giving a clean **three-part logic: what you see → why your Pariwar sees it → ⛔ why that does NOT imply public disclosure.** ⭐⭐ And it **dropped the word "full"**, which had made the sentence contradict itself — a `shielded_name` Pariwar sees ⛔ no full name. ⚠⛔ **The consequence is STATED, ⛔ not softened** (`-209` cl.2): on ship a contributing member on a **default `full_name`** Pariwar sees a **full legal name that ⛔ NOBODY can see publicly** — ⭐ a real widening of disclosure, and ⭐ **the decision**, ⛔ not a side effect of "matching the public page", which shows nothing. ⛔ The old justification (*"the same name anyone can already see on the public page"* / *"the app showed you less"*) is ⛔ **NOT available and must ⛔ not return** (cl.3). ⚠ A **third instance** of that same false comparison was found and corrected in the same edit — the **"I want" clause** still read *"the same way a stranger sees them named"*; ⛔ recorded, ⛔ not silently edited. ⭐ ⛔ NOT confirmed by `-209`: the basis is still ⛔ not adopted (AC4b) · the inert basis is ⛔ not "fixed" here · ⛔ no public surface moves · ⭐ and the **STRUCTURAL** inversion remains real — the moment the basis is provisioned, an unfixed member path sits **below** the public one, which is what `-179` cl.3 directed closed. ⚠ Task 0's governance-first STOP still binds. | BigDev + Claude |
 | 2026-09-08 | 0.6 | ✅⭐ **PREFLIGHT STOP 1 DISCHARGED — `#decision-2026-09-08-208`.** ⭐ `11b-16` is **WITHDRAWN** (cl.1): it ordered the same edits at a narrower scope, and `8-16` — minted **two days earlier** by Panel direction — owns the work. ⇒ ⛔ the two-story collision is closed. ⭐⭐ **AND THE CLAUSE THIS STORY DEPENDED ON LANDED (cl.2): `-198`'s push carve-out is ⛔ VOID, ⛔ not superseded** — an author-committed entry never held authority to narrow Trustee-ratified `-180` cl.1 ⇒ **AC2's ALL-FOUR scope now stands unopposed**, and the repo no longer holds a live sentence telling a dev the opposite. ⭐ Routed IN by `-208` cl.3/cl.5/cl.6 and already applied: `-198` cl.1 (FORM ONLY) → **AC4b** · `-189` cl.3 both directions → **AC4b** + Task 4 · `-195` cl.1 → **AC4b** · the `epics.md:5128` range + `11b-11:818` mis-keying → **Task 0** · sequencing ⇒ **`8-16` before `11b-15`** (E's Task 7 re-pointed; it named `8-16` nowhere and would have dangled). ⚠ `sprint-status.yaml` still reads `11b-16: ready-for-dev` — ⛔ knowingly (`-208` cl.7): no `withdrawn` enum exists and minting one is a **ratified governance act**, routed to the Panel. ⛔⛔ **STOP 2 STANDS — the inverted premise is BigDev's to confirm; this story is still ⛔ not startable.** | BigDev + Claude |
 | 2026-09-08 | 0.5 | ⛔⛔ **RE-VALIDATED (`bmad-create-story validate`) — 25 findings, three independent verifiers, ALL APPLIED. ⛔ THE STORY IS NO LONGER STARTABLE AS WRITTEN.** ⭐ **TWO PREFLIGHT STOPS**: (1) the duplicate `11b-16` is withdrawn by ruling but the **decision entry does not exist yet**, and that entry owes a clause **voiding** `-198`'s live *"the push keeps the shielded form"* directive; (2) ⛔⛔ **the story's PREMISE IS INVERTED ON EVERY DRIVE TODAY** — the publication-basis clause id has **one site in the repo, its own definition**, so the public page names ⛔ nobody and the app already shows **more**. The member-facing policy sentence was **false** and is rewritten. ⭐ **AC2's N+1 justification was FACTUALLY WRONG** — the resolver is called **once per POOL** (`contribution-notify-triggers.ts:636-637` says so); replaced with the real precedent. ⭐ **A FIFTH RENDER SITE** — `familyLabel` feeds `:304` **and `:340`** (deadline reminders); *"four consumers"* is true of CALL sites only. ⭐ **Trap 6** — `familyDisplay` is shared with the **living** member's name (`note-template.ts:145`); changing it in place un-shields PII with no ruling. ⭐ **Trap 7** — a parity test passes vacuously against `null` unless the basis is seeded. ⭐ Contracts **1 → 3**, and the obvious field name `deceasedFullName` is **forbidden by three PII guards**. ⭐ `openapi/v1.yaml` re-emit — the determinism gate fails the push. ⭐ **Task 0's unchecked subtasks ordered a STOP and a re-ruling of `-181`** — boxes ticked. ⭐ Two ruled-in consumers were still marked *"only if `INV-scope` includes it"*. ⭐ Added: `baseline_commit` frontmatter, AC2b (fences with provers), AC4b (the FORM-ONLY carrier + `-189` cl.3 both directions), **AC7 friction-budget**, **AC8 `epics.md` creation** (the `7-11` precedent's dropped second half), real test paths + the `DATABASE_URL` silent-skip trap, the six `{family}` i18n keys, the **UCS-2 70/67** SMS ceiling (160 is the wrong figure for Hindi), the wrapper-signature contradiction, `deferred-work.md` item **(d)** vs **(e)**, and the PRD FR-21/33/74 traceability. ⛔ Zero code. ⛔ Zero rows flipped. | BigDev + Claude |
 | 2026-09-02 | 0.4 | ✅✅ **`INV-form` RULED MODE-RESOLVED** (BigDev, `2026-09-02-181`) ⇒ ⭐⭐ **TASK 0's STOP GATE IS DISCHARGED — THIS STORY IS STARTABLE.** The member side reads the **same stored per-Pariwar mode** the public side reads, so the two forms ⛔ **cannot diverge again by construction**. ⛔ The mode is an **INPUT**, ⛔ not a DB read inside the resolver — it is **per-Pariwar** while the fan-out is **per assigned member**, so an inside read is an **N+1 across the whole fan-out**. ⛔⛔ **AND THE RULING CREATED `Trap 5`:** ⛔ `resolvePublicMemberName` may ⛔ **not** be reused verbatim — it **omits mononyms** (ruled `-145` cl.3 for the *public* directory), so reusing it would turn *"show the family's single name"* into *"OMIT THE POOL"* on all four surfaces. ⭐ Share the **MODE**, ⛔ never the whole function: same form rule, ⛔ different absence behaviour. ⚠ Also recorded: the setting's **semantic widening** (⛔ record at the setting, ⛔ do not rename) and that the **default** (`full_name`, ⛔ not fail-closed) carries across unchanged. | BigDev + Claude |

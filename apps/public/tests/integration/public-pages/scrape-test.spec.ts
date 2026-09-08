@@ -62,6 +62,7 @@ import {
 import { matrixFieldOutput, visibilityOf } from '../../../src/lib/matrix.server.js';
 import {
   buildSahyogView,
+  clampMeterFill,
   visibleSahyogColumns,
   type SahyogLabels,
 } from '../../../src/lib/sahyog-render.js';
@@ -849,7 +850,7 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
     driveLinkA11y: (code) => `View the full details of drive ${code}`,
   };
 
-  const model = buildSahyogView({ page: 1, limit: 25 }, new URLSearchParams(''), SAHYOG_TEST_LABELS, {
+  const view = buildSahyogView({ page: 1, limit: 25 }, new URLSearchParams(''), SAHYOG_TEST_LABELS, {
     items: [
       {
         deceasedMemberName: 'Rajesh Kumar Sharma',
@@ -863,7 +864,9 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
         district: 'Lucknow',
         confirmedContributionCount: 12,
         // ⭐ Story 11b.14 (AC2, AC3) — the meter's fill and the ruled money figure.
-        confirmedPercentage: 12,
+        // ⚠⛔ `null` — `2026-09-08-207` cl.1 makes the figure a LIVE-ROW datum, so a number on a
+        // `closed` row is a shape the API can ⛔ no longer emit (Review finding, FOURTH pass).
+        confirmedPercentage: null,
         amountRaisedInr: 1200,
         fundingOutcome: 'fully_funded',
       },
@@ -882,7 +885,8 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
         district: null,
         confirmedContributionCount: 0,
         // ⭐ Story 11b.14 (AC2, AC3) — the meter's fill and the ruled money figure.
-        confirmedPercentage: 0,
+        // ⚠⛔ `null` on a `verified` row — `2026-09-08-207` cl.1 (FOURTH pass).
+        confirmedPercentage: null,
         amountRaisedInr: 0,
         fundingOutcome: 'under_funded',
       },
@@ -910,7 +914,12 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
     page: 1,
     limit: 25,
     total: 3,
-  }).model;
+  });
+  const model = view.model;
+  // ⭐ The LIVE partition, taken from the view exactly as `sahyog.astro` takes it via
+  // `splitSections` — ⛔ never re-derived by comparing display strings, and ⛔ never by reading a
+  // `status` the DISPLAY row does not carry (it is a wire-row field, dropped by `toDisplayRow`).
+  const liveSet = new Set(view.sections.live);
 
   /**
    * ⭐ THE RENDERED HTML, BUILT THROUGH THE PRODUCTION PATH — ⛔ not hand-written, and ⛔ not a
@@ -919,19 +928,60 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
    * appears here automatically. A hand-maintained string restating the render is exactly what a
    * newly-rendered field would silently escape.
    */
-  const columns = visibleSahyogColumns(
-    SAHYOG_TEST_LABELS,
-    (fieldId) => visibilityOf('sahyog-drive', fieldId, 'public').visible,
-  );
+  const isVisible = (fieldId: string) => visibilityOf('sahyog-drive', fieldId, 'public').visible;
+  // ⚠⛔⛔ **STAGE-AWARE — ⛔ NOT a single default-`'closed'` column set** (Review finding, THIRD pass
+  // 2026-09-08). ⭐ `visibleSahyogColumns(labels, isVisible)` takes `stage = 'closed'` by DEFAULT,
+  // whose arm is `all.filter((c) => c.meter === undefined)` — it strips the ONLY column carrying
+  // `meter`. ⇒ the `status: 'live'` row added on 2026-09-08, and the comment claiming it made this
+  // builder *"produce the live-section markup"*, were rendering through the CLOSED column set: ⛔ no
+  // bar, ⛔ no `--sahyog-meter-fill`, ⛔ no printed `%`, ⛔ no target `<p>` could appear under ANY
+  // fixture, and `detectNakedPii` still ⛔ never scanned a live participation sentence — the one
+  // live-row string that can carry the deceased member's name (`zero_line.full`).
+  // ⭐ The page renders THREE sections from three column sets; this mirrors the two that differ.
+  const liveColumns = visibleSahyogColumns(SAHYOG_TEST_LABELS, isVisible, 'live');
+  const columns = visibleSahyogColumns(SAHYOG_TEST_LABELS, isVisible);
+  const columnsFor = (row: (typeof model.rows)[number]) =>
+    liveSet.has(row) ? liveColumns : columns;
   const SAHYOG_HTML = [
     '<table>',
     `<thead><tr>${columns.map((c) => `<th scope="col">${c.headerLabel}</th>`).join('')}</tr></thead>`,
+    `<thead><tr>${liveColumns.map((c) => `<th scope="col">${c.headerLabel}</th>`).join('')}</tr></thead>`,
     '<tbody>',
     ...model.rows.map(
       (row) =>
-        `<tr>${columns
+        `<tr>${columnsFor(row)
           .map((c) => {
             const { output } = matrixFieldOutput('sahyog-drive', c.fieldId, 'public', c.valueOf(row) ?? '');
+            // ⭐⭐ THE METER BLOCK — mirrored from `sahyog.astro`'s `<div class="sahyog__meter-row">`
+            // (bar + printed `%` + लक्ष्य `<p>`), under the SAME three guards. ⛔ Without this the
+            // builder emitted only `c.valueOf(row)` and the whole live-section markup escaped the
+            // tier-leak scan. ⚠ Each of the three sub-elements carries its OWN matrix verdict, and
+            // the target's wrapper is INSIDE its verdict (an empty wrapper is a diffable signal).
+            const meter =
+              c.meter !== undefined && liveSet.has(row)
+                ? [
+                    typeof c.meter.fillOf(row) === 'number' && isVisible(c.meter.percentFieldId)
+                      ? `<div class="sahyog__meter-row"><div class="sahyog__meter" aria-hidden="true" style="--sahyog-meter-fill:${String(clampMeterFill(c.meter.fillOf(row)))}%"><span class="sahyog__meter-fill"></span></div><b class="sahyog__meter-pct">${
+                          matrixFieldOutput(
+                            'sahyog-drive',
+                            c.meter.percentFieldId,
+                            'public',
+                            c.meter.percentLabelOf(row) ?? '',
+                          ).output ?? ''
+                        }</b></div>`
+                      : '',
+                    c.meter.targetOf(row) !== null && isVisible(c.meter.targetFieldId)
+                      ? `<p class="sahyog__meter-target">${
+                          matrixFieldOutput(
+                            'sahyog-drive',
+                            c.meter.targetFieldId,
+                            'public',
+                            c.meter.targetOf(row) ?? '',
+                          ).output ?? ''
+                        }</p>`
+                      : '',
+                  ].join('')
+                : '';
             // ⭐⛔ THE `<td>` IS UNCONDITIONAL, BECAUSE THE PAGE'S IS (Review finding,
             // 2026-08-27). `sahyog.astro` renders `<td><MatrixField … value={col.valueOf(row) ??
             // ''} /></td>` — the CELL always exists and only its CONTENT disappears. This builder
@@ -943,8 +993,8 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
             // cell: an empty `<td>` is structurally identical for every suppressed column and
             // carries ⛔ no per-row signal a scraper could diff.
             return output === null
-              ? '<td></td>'
-              : `<td><span data-field="${c.fieldId}">${output}</span></td>`;
+              ? `<td>${meter}</td>`
+              : `<td>${meter}<span data-field="${c.fieldId}">${output}</span></td>`;
           })
           .join('')}</tr>`,
     ),
@@ -1006,6 +1056,33 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
     // is absent: `matrix.ts:176-197` is biconditional.
     expect(getVisibility(matrix, 'sahyog-drive', 'deceased_member_name', 'public').visible).toBe(true);
     expect(snapshot.fields).toContain('deceased_member_name');
+  });
+
+  it('⭐⭐ THE LIVE-SECTION MARKUP IS ACTUALLY IN THE SCANNED STRING — ⛔ not merely claimed', () => {
+    // ⚠⛔⛔ **THIS TEST EXISTS BECAUSE THE CLAIM WAS FALSE** (Review finding, THIRD pass 2026-09-08).
+    // The 2026-09-08 pass added a `status: 'live'` fixture row and recorded that it made the
+    // render-and-scrape path *"produce the live-section markup"*. ⛔ It did not: the builder called
+    // `visibleSahyogColumns` with TWO arguments, defaulting `stage` to `'closed'`, whose arm filters
+    // out every column carrying `meter`. ⇒ ⭐ pin the markup itself, so the claim cannot rot again.
+    expect(SAHYOG_HTML).toContain('class="sahyog__meter"');
+    expect(SAHYOG_HTML).toContain('aria-hidden="true"');
+    // ⭐ The fill is the CLAMPED figure, and 82 is the live fixture's `confirmedPercentage`.
+    expect(SAHYOG_HTML).toContain('--sahyog-meter-fill:82%');
+    // ⭐ `-206` cl.1 — the figure ALSO renders as visible text beside the bar, LATIN in both locales.
+    // ⚠⛔⛔ **ASSERTED AS THE `<b>`'s CONTENT — ⛔ NOT as a bare `toContain('82%')`** (Review finding,
+    // FOURTH pass 2026-09-08). ⭐ Executed: `'--sahyog-meter-fill:82%'.includes('82%')` is `true`, so
+    // the bare form was a **TAUTOLOGY** satisfied by the style attribute one line above; and the
+    // `class="sahyog__meter-pct"` check passes over an EMPTY `<b>`, because the builder emits the
+    // wrapper OUTSIDE the output. ⇒ make `percentLabelOf` return `null` and all three prior
+    // assertions still passed — the one live-row string cl.1 is ABOUT was unpinned.
+    expect(SAHYOG_HTML).toContain('<b class="sahyog__meter-pct">');
+    expect(SAHYOG_HTML).toMatch(/<b class="sahyog__meter-pct">[^<]*\b82%/);
+    // ⛔ And the wrapper is ⛔ never emitted EMPTY — an empty labelled element is the announced
+    // omission the whole surface is built to avoid.
+    expect(SAHYOG_HTML).not.toContain('<b class="sahyog__meter-pct"></b>');
+    // ⛔⛔ AND लक्ष्य IS ABSENT — `-190` cl.7(b)/(c) STAND, `reveal_to_public` is default-OFF, and the
+    // wrapper is INSIDE the matrix verdict ⇒ ⛔ NO markup at all, ⛔ not an empty diffable `<p>`.
+    expect(SAHYOG_HTML).not.toContain('sahyog__meter-target');
   });
 
   it('⭐⛔ AN UNCONSENTED ROW RENDERS, AND ITS NAME CELL IS ABSENT — ⛔ no placeholder', () => {

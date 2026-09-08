@@ -55,6 +55,41 @@
 export const MAX_DRIVE_TARGET_INR = 100_000_000;
 
 /**
+ * Guard-rail ceiling on a **DERIVED** drive target (1,000 crore INR) — Story 11b.14, third code
+ * review (BigDev, 2026-09-08).
+ *
+ * ⚠⛔⛔ **IT IS ⛔ NOT {@link MAX_DRIVE_TARGET_INR}, AND THE TWO MUST ⛔ NOT BE "ALIGNED".** That one
+ * bounds a figure a **human TYPED** into the admin setter, where an extra zero is the failure mode.
+ * This one bounds `assignedCount × pools.fixed_amount` — a **product of two independently
+ * legitimate values**, neither of which anyone typed as a target. The per-member cap is
+ * `MAX_POOL_FIXED_AMOUNT_INR` (₹1 crore) and assignee counts are **unbounded**, so ordinary
+ * configurations cross ₹10 crore easily: 6,485 assignees × ₹20,000 is ₹12.97 crore, and
+ * 100,001 × ₹1,000 is ₹10.0001 crore — ⭐ just over, which is the point.
+ * ⚠ (Corrected 2026-09-08, FOURTH review pass: this read *"₹10 crore **exactly**"*, which is the
+ * product of 100,**000** × ₹1,000. The figure asserted in the test — `100_001_000` — was right.)
+ *
+ * ⛔⛔ **THE BUG THIS EXISTS TO UNDO:** `resolveDriveTargetForPublic` briefly clamped the derived
+ * figure at `MAX_DRIVE_TARGET_INR`, so a legitimately large Pariwar's लक्ष्य rendered **NOTHING**
+ * after a `super_admin` switched `reveal_to_public` ON — and the render was **byte-identical to the
+ * fail-closed default**, with ⛔ no log and ⛔ no way to tell *"not revealed"* from *"revealed but
+ * over ceiling"* (Review finding, 2026-09-08).
+ *
+ * ⭐ **IT IS STILL A DATA-SANITY BOUND, ⛔ not a policy ceiling** — ⛔ no ruling caps what a Pariwar
+ * may expect to raise. Past this the product is an anomaly (an implausible roster × amount), and the
+ * ruled silence applies.
+ *
+ * ⭐⭐ **AND IT IS THE ANCHOR FOR `formatCurrencyShort`'s OVERFLOW ARGUMENT.** That primitive's
+ * `amount * 100` must stay inside `Number.MAX_SAFE_INTEGER` (≈9.007e15) ⇒ the amount must stay under
+ * ≈9.007e13. ₹1,000 crore is `1e10` — **four orders of magnitude** inside it. ⚠ ⛔ Do ⛔ not raise
+ * this without re-checking that bound, which `packages/i18n/src/currency.ts` names by this
+ * constant's own name.
+ *
+ * ⛔ **THERE IS ⛔ NO DB CHECK BEHIND THIS**, and there cannot be: the product is computed at read
+ * time from two tables. It is an app-layer sanity bound only — recorded, ⛔ not implied.
+ */
+export const MAX_DERIVED_DRIVE_TARGET_INR = 10_000_000_000;
+
+/**
  * Is `value` a legal drive target? Whole INR, **strictly positive**, within the ceiling.
  *
  * ⭐ Total over `unknown` so a caller cannot skip the integer check by pre-narrowing to `number`.

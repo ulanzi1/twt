@@ -327,6 +327,33 @@ export const PublicSahyogDriveEntry = z
 export type PublicSahyogDriveEntry = z.output<typeof PublicSahyogDriveEntry>;
 
 /**
+ * ⭐⭐ **cl.1's CONDITIONAL HALF, SAID ONCE — Story 11b.14, FOURTH review pass (2026-09-08).**
+ *
+ * ⚠⛔⛔ **THE GAP THIS CLOSES (AI-6-5 family 4).** `2026-09-08-207` cl.1 is a **conditional**
+ * invariant — *"`null` **unless** the drive is `live`"* — but the field above can only express its
+ * UNCONDITIONAL half (`.nullable()`, *"a number or null"*). ⇒ the producer enforced the condition
+ * (`public-read.ts`, gated on `currentState === 'live'`), the public consumer enforced it again by
+ * hand (`apps/public/src/lib/sahyog.server.ts`), and ⛔ **nothing shared expressed it** — so the two
+ * enforcements drifted apart within one commit and the drift was a 100%-visitor outage.
+ *
+ * ⭐⭐ **IT IS A PREDICATE, ⛔ NOT A `superRefine` ON THE ENTRY — and that is deliberate.** Attaching
+ * it to {@link PublicSahyogDriveEntry} would make an archived row carrying a number a **contract
+ * violation**, which is exactly the strictness BigDev ruled OUT: a pre-cl.1 `apps/api` emits that
+ * shape, and rejecting it breaks the *"unless the public consumer handles BOTH shapes"* escape the
+ * deploy ruling turns on. ⇒ ⭐ the contract stays TOLERANT (both shapes parse), and this predicate
+ * names the invariant for the one side that must GUARANTEE it — the producer — plus any test that
+ * wants to assert the pairing without restating it.
+ *
+ * ⛔ **DO ⛔ NOT use this to gate an inbound body.** Its only correct uses are (a) asserting a
+ * producer's output and (b) documenting the pairing in one place instead of three.
+ */
+export function satisfiesLiveRowPercentagePairing(entry: PublicSahyogDriveEntry): boolean {
+  return entry.status === 'live'
+    ? typeof entry.confirmedPercentage === 'number'
+    : entry.confirmedPercentage === null;
+}
+
+/**
  * The query. ⛔ `.strict()` — an unknown parameter is a 400, ⛔ not an ignored one. That is what
  * makes `?format=csv`, `?all=1` and `?name=…` refusals rather than no-ops.
  *

@@ -37,8 +37,18 @@ export function formatCurrency(amount: number, locale: Locale): string {
   if (!Number.isFinite(amount)) {
     throw new Error(`[i18n] formatCurrency requires a finite amount, received ${String(amount)}`);
   }
-  if (Math.abs(amount) >= 1e15) {
-    throw new Error(`[i18n] formatCurrency: amount exceeds supported range (±1e15), received ${String(amount)}`);
+  // ⚠⛔⛔ **`9e13`, ⛔ NOT `1e15` — the SIBLING FIX, propagated (FOURTH review pass, 2026-09-08).**
+  // ⭐ This function has the IDENTICAL `Math.abs(amount) * 100` idiom below, and the third pass fixed
+  // the bound in {@link formatCurrencyShort} while **deleting the *"like `formatCurrency`"*
+  // cross-reference** rather than propagating it — leaving the sibling silently corrupting across
+  // `[9.007e13, 1e15)`, with the one line that pointed a reader at it gone.
+  // ⭐ `Number.MAX_SAFE_INTEGER` is `9.007e15` ⇒ the amount must stay under `≈9.007e13`; `9e13` is
+  // that, rounded down to a legible figure. ⚠ This is a LIVE path — `formatSahyogLiveAmount`'s
+  // exact-below-₹10-lakh arm routes here — and every real caller is orders of magnitude inside it.
+  if (Math.abs(amount) >= 9e13) {
+    throw new Error(
+      `[i18n] formatCurrency: amount exceeds supported range (±9e13, the safe-integer bound for amount * 100), received ${String(amount)}`,
+    );
   }
 
   const negative = amount < 0;
@@ -98,11 +108,18 @@ export function formatCurrencyShort(amount: number, locale: Locale): string {
       `[i18n] formatCurrencyShort refuses a negative amount, received ${String(amount)}`,
     );
   }
-  // ⛔ UPPER BOUND, like {@link formatCurrency} — past this, `amount * 100` leaves the safe-integer
-  // range and the truncation silently corrupts.
-  if (amount >= 1e15) {
+  // ⛔ UPPER BOUND — past this, `amount * 100` leaves the safe-integer range and the truncation
+  // silently corrupts.
+  //
+  // ⚠⛔⛔ **`9e13`, ⛔ NOT `1e15` — CORRECTED in Story 11b.14's THIRD review pass (2026-09-08).** The
+  // first version copied {@link formatCurrency}'s `1e15` and inherited its looseness while asserting
+  // a property that threshold does ⛔ not deliver: **`1e14 × 100 = 1e16` ALREADY EXCEEDS
+  // `Number.MAX_SAFE_INTEGER` (9.007e15)** — executed, ⛔ not reasoned. ⇒ the sound bound is
+  // `MAX_SAFE_INTEGER / 100 ≈ 9.007e13`; `9e13` is that, rounded down to a legible figure.
+  // ⭐ Every real caller is orders of magnitude inside it — see the scale-first note below.
+  if (amount >= 9e13) {
     throw new Error(
-      `[i18n] formatCurrencyShort: amount exceeds supported range (1e15), received ${String(amount)}`,
+      `[i18n] formatCurrencyShort: amount exceeds supported range (9e13, the safe-integer bound for amount * 100), received ${String(amount)}`,
     );
   }
 
@@ -139,9 +156,24 @@ export function formatCurrencyShort(amount: number, locale: Locale): string {
   // ₹10L–₹10Cr sweep:** `₹10,03,000` rendered `₹ 10.02 lakh`, `₹10,20,000` rendered `₹ 10.19 lakh`,
   // `₹2,01,000` rendered `₹ 2 lakh` (⛔ the fraction vanished), and `₹1,13,00,000` rendered
   // `₹ 1.12 crore` — ⚠ an error of **₹1,00,000** in the crore band.
-  // ⭐ `amount * 100` is EXACT for every reachable input: callers pass integer paise-free rupees and
-  // `MAX_DRIVE_TARGET_INR` is ₹10 crore ⇒ ⛔ the product cannot exceed 1e9 × 100 = 1e11, far inside
-  // `Number.MAX_SAFE_INTEGER`. ⛔ Do ⛔ not "simplify" this back to dividing first.
+  // ⭐ `amount * 100` is EXACT for every reachable input: callers pass integer paise-free rupees.
+  //
+  // ⚠⛔ **AMENDED 2026-09-08 (third review pass) — ⛔ the prior justification covered only ONE of the
+  // two callers** ([[feedback_supersede_never_reinterpret]]).
+  // It read: *"`MAX_DRIVE_TARGET_INR` is ₹10 crore ⇒ ⛔ the product cannot exceed 1e9 × 100 = 1e11"*.
+  // ⚠⛔ **TWO CORRECTIONS TO THAT SENTENCE, ⭐ both named rather than silently dropped (FOURTH pass):**
+  // ⭐ (i) the CONSTANT was ⛔ not wrong — `MAX_DRIVE_TARGET_INR` was the correct bound for the target
+  // path when the line was written; the third pass's amend overstated the charge. ⭐ (ii) its
+  // ARITHMETIC is wrong and is carried forward here **flagged**: ₹10 crore is `1e8`, ⛔ not `1e9`, so
+  // the product it describes is `1e10`, ⛔ not `1e11`. ⛔ Do ⛔ not inherit that figure.
+  // ⛔ What IS the defect: that bound covers the **target** path only; the other live caller is
+  // `formatSahyogLiveAmount`
+  // (`apps/public/src/lib/sahyog-render.ts`), which passes `amountRaisedInr`, whose contract is
+  // `z.number().int().nonnegative()` — **unbounded**. ⇒ ⭐ **the real guarantee is the `9e13` guard
+  // above**, which every caller passes through unconditionally, and the two known ceilings sit far
+  // inside it: `MAX_DERIVED_DRIVE_TARGET_INR` is ₹1,000 crore (`1e10`) for the derived लक्ष्य, and
+  // `MAX_DRIVE_TARGET_INR` ₹10 crore for the admin-typed one.
+  // ⛔ Do ⛔ not "simplify" this back to dividing first.
   // ⚠ Every value in `currency-short.test.ts` was float-exact, so the suite was **GREEN on a broken
   // function** — ⭐ the mismatching values are now pinned there by name.
   const truncatedHundredths = Math.floor((amount * 100) / divisor);

@@ -216,8 +216,18 @@ function isSahyogDriveResponse(body: unknown): body is PublicSahyogDriveResponse
       // inside a ratified sentence (Review finding, 2026-09-07).
       (r['district'] === null ||
         (typeof r['district'] === 'string' && r['district'].trim().length > 0)) &&
+      // ⚠⛔⛔ **UPPER-BOUNDED TOO — added in the FOURTH pass (2026-09-08). ⭐ THIS ONE DOES ⛔ NOT
+      // THROW, IT RENDERS.** The third pass made both MONEY fields two-sided and left the COUNT
+      // one-sided, on the reasoning that *"every out-of-contract number falls to the OUTAGE arm"* —
+      // ⛔ but `formatCount` → `groupIndian(String(value))` has ⛔ no upper guard and ⛔ never throws.
+      // ⭐ **Executed, ⛔ not reasoned:** `confirmedContributionCount: 1e21` passes `Number.isInteger`,
+      // and `groupIndian(String(1e21))` returns **`"1e,+21"`** — interpolated into the ratified
+      // `live_line` sentence as the drive's confirmed-contributor count. ⇒ ⚠ **worse than the OUTAGE
+      // arm this block promises, because it renders SILENTLY.** ⭐ `1e9` is far above any real roster
+      // (the largest Pariwar is orders of magnitude smaller) and far below `String()`'s exponent form.
       Number.isInteger(r['confirmedContributionCount']) &&
       (r['confirmedContributionCount'] as number) >= 0 &&
+      (r['confirmedContributionCount'] as number) < 1e9 &&
       // ⭐⭐ STORY 11b.14's FOUR NEW REQUIRED FIELDS — ⛔ THE TYPECHECK CANNOT SEE THESE EITHER, and
       // ⛔ they were NOT added when the story widened the status tuple above (Review finding,
       // 2026-09-07). ⚠ Each has a named failure mode reached by a body this API did not produce —
@@ -237,18 +247,70 @@ function isSahyogDriveResponse(body: unknown): body is PublicSahyogDriveResponse
       // 1200.5` now 500s the page here too unless the shape is rejected; and `confirmedPercentage:
       // -5` → `--sahyog-meter-fill:-5%` → `width:auto` → a FULL bar (the twin of the `undefined`
       // case). ⇒ ⭐ every out-of-contract number falls to the OUTAGE arm.
+      // ⚠⛔ **AMENDED 2026-09-08 (third review pass) — ⭐ the claim above was TRUE of non-integers
+      // and FALSE of large ones** ([[feedback_supersede_never_reinterpret]]). The bounds below were
+      // one-sided (`>= 0`, `> 0`) while both formatters THROW at an upper limit, so `1e15` passed
+      // here and 500'd the page. ⇒ ⭐ the bounds are now two-sided and the sentence holds.
+      // ⚠⛔⛔ **UPPER-BOUNDED TOO — added in the THIRD review pass (2026-09-08).** The prior version
+      // checked only `Number.isInteger` + `>= 0` while its own comment concluded *"every
+      // out-of-contract number falls to the OUTAGE arm"*. ⛔ It did not: `amountRaisedInr: 1e15`
+      // passed both checks and then **THREW inside `formatCurrencyShort`** (`@twt/i18n`, which
+      // refuses `>= 9e13`), inside `buildSahyogView`, which the `.astro` frontmatter calls
+      // unguarded ⇒ a **500 for the whole page** — ⭐ the exact outcome this module exists to
+      // convert into an OUTAGE render. The bound mirrors the formatter's, ⛔ it does not invent one.
       Number.isInteger(r['amountRaisedInr']) &&
       (r['amountRaisedInr'] as number) >= 0 &&
+      (r['amountRaisedInr'] as number) < 9e13 &&
       // ⭐ `null` on `closed` / `verified` rows — `2026-09-08-207` cl.1 (the figure is a Live-row
       // datum). A number, when present, is still an integer 0–100.
-      (r['confirmedPercentage'] === null ||
-        (Number.isInteger(r['confirmedPercentage']) &&
+      //
+      // ⚠⛔⛔ **THE `live` HALF IS CROSS-CHECKED AGAINST `status`; ⛔ THE ARCHIVED HALF IS DELIBERATELY
+      // TOLERANT** (third review pass 2026-09-08, tightened; **FOURTH pass 2026-09-08, RELAXED by
+      // BigDev's ruling**).
+      //
+      // ⭐ **WHY `live` IS STRICT.** cl.1 is a CONDITIONAL invariant — *"`null` **unless** the drive
+      // is `live`"* — and a `live` row carrying `null` is ⛔ not an outage, it is worse: `fillOf`
+      // returns `null`, the bar and the printed figure vanish, and the लक्ष्य `<p>` — an
+      // independently-gated SIBLING in the same `<td>` — survives, rendering *"Expected: ₹ 8 lakh"*
+      // with ⛔ no bar beside it. ⭐ That bare target is what `2026-09-04-189` cl.2(c) resolved
+      // POOL-REALITY #2 **by making invisible**. ⚠ ⛔ No API version has ever produced that shape.
+      //
+      // ⛔⛔ **WHY THE ARCHIVED HALF MUST ⛔ NOT BE STRICT — ⭐ THE FOURTH PASS FOUND THIS AS A
+      // BLOCKER, IN THE THIRD PASS'S OWN PATCH.** A strict `=== null` here REJECTS an archived row
+      // carrying a NUMBER — and ⭐ that is exactly what a **pre-cl.1 `apps/api`** serves
+      // (`64510a7b:packages/domain/src/pool/public-read.ts:1041` emits `confirmedPercentage`
+      // UNCONDITIONALLY). ⇒ a newer `apps/public` against an older API failed `.every()` and served
+      // the OUTAGE page to **100% of visitors** of every Pariwar holding a closed drive — ⛔ on a
+      // body that renders perfectly, because `toDisplayRow` ALREADY blanks the figure off-Live.
+      // ⚠ The surface is edge-cached `s-maxage=300`, so a cached pre-cl.1 body outlives the API
+      // deploy by up to five minutes even under an atomic rollout.
+      // ⭐⭐ **IT IS ALSO WHAT THE RULING ACTUALLY SAYS.** `2026-09-08-207` cl.1's *"WHAT MOVES,
+      // precisely"* authorises *"the never-throw response validator **accepts the `null`**"* — ⛔ it
+      // does ⛔ NOT authorise rejecting the number. ⇒ tolerance here is cl.1's letter, ⛔ not a
+      // weakening of it, and it is what keeps BigDev's deploy escape clause (*"unless the public
+      // consumer handles BOTH shapes"*) TRUE. ⛔ Do ⛔ not "tighten" this back.
+      // ⚠ Nothing is rendered either way: `toDisplayRow` gates the display value on `status`, so a
+      // stray archived number is DROPPED at the render, ⛔ never shown.
+      (r['status'] === 'live'
+        ? Number.isInteger(r['confirmedPercentage']) &&
           (r['confirmedPercentage'] as number) >= 0 &&
-          (r['confirmedPercentage'] as number) <= 100)) &&
+          (r['confirmedPercentage'] as number) <= 100
+        : r['confirmedPercentage'] === null ||
+          (Number.isInteger(r['confirmedPercentage']) &&
+            (r['confirmedPercentage'] as number) >= 0 &&
+            (r['confirmedPercentage'] as number) <= 100)) &&
       (r['nomineeName'] === null ||
         (typeof r['nomineeName'] === 'string' && r['nomineeName'].trim().length > 0)) &&
+      // ⚠ UPPER-BOUNDED for the same reason `amountRaisedInr` is (third review pass, 2026-09-08):
+      // `formatSahyogTargetAmount` hands anything `>= ₹1 lakh` to `formatCurrencyShort`, which
+      // THROWS past `9e13`. ⛔ The domain's own `MAX_DERIVED_DRIVE_TARGET_INR` (₹1,000 crore) is
+      // ⛔ deliberately NOT imported here — `apps/public` must ⛔ not pull `@twt/domain` into its
+      // bundle ([[project_contracts_domain_bundle_boundary]]) — so this mirrors the FORMATTER's
+      // bound, which is the one that actually throws on this path.
       (r['driveTargetInr'] === undefined ||
-        (Number.isInteger(r['driveTargetInr']) && (r['driveTargetInr'] as number) > 0)) &&
+        (Number.isInteger(r['driveTargetInr']) &&
+          (r['driveTargetInr'] as number) > 0 &&
+          (r['driveTargetInr'] as number) < 9e13)) &&
       // ⚠ VALIDATED AGAINST THE LITERAL SET, ⛔ not `typeof === 'string'` (Review finding,
       // 2026-08-27). `framingFor` switches on this value and its `default:` branch THROWS, inside
       // `buildSahyogView`, which the `.astro` frontmatter calls unguarded — so a bare `string`

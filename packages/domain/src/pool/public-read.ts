@@ -68,7 +68,7 @@ import { classifyCycleOutcome, type CycleFundingOutcome } from '../close-of-cycl
 import type { Db } from '../db.js';
 import { type ClauseId, type MemberId, type PariwarId, type PoolId, clauseId } from '../ids/index.js';
 import { clampLimit } from '../pagination.js';
-import { MAX_DRIVE_TARGET_INR, type DriveTargetVisibility } from './drive-target.js';
+import { MAX_DERIVED_DRIVE_TARGET_INR, type DriveTargetVisibility } from './drive-target.js';
 import { resolveDriveTargetVisibility } from './drive-target-policy.js';
 import { poolIndexFromLetterCodeOrNull } from './naming.js';
 import { claims } from '../schema/claims.js';
@@ -664,13 +664,19 @@ export function resolveDriveTargetForPublic(
   // rules for a zero-assignee pool; ⛔ it is ⛔ not a new posture.
   if (fixedAmount <= 0) return null;
   const derived = assignedCount * fixedAmount;
-  // ⚠⛔ **ABOVE THE DATA-SANITY CEILING IS SILENCE TOO** (Review finding, 2026-09-08). The admin
-  // setter clamps at `MAX_DRIVE_TARGET_INR` (₹10 crore); the DERIVED figure had ⛔ no such bound,
-  // and `formatCurrencyShort`'s `amount * 100` overflow-safety argument rests on that ceiling. A
-  // product past it is a data anomaly (an implausible assignee count × fixed amount), ⛔ not a real
-  // target ⇒ the same silence a zero-assignee pool gets, ⛔ never an over-ceiling figure on a public
-  // page.
-  if (derived > MAX_DRIVE_TARGET_INR) return null;
+  // ⚠⛔ **ABOVE THE DATA-SANITY CEILING IS SILENCE TOO** (Review finding, 2026-09-08). A product
+  // past it is a data anomaly (an implausible assignee count × fixed amount), ⛔ not a real target
+  // ⇒ the same silence a zero-assignee pool gets, ⛔ never an over-ceiling figure on a public page.
+  //
+  // ⚠⛔⛔ **AND THE CEILING IS `MAX_DERIVED_DRIVE_TARGET_INR`, ⛔ NOT `MAX_DRIVE_TARGET_INR`** —
+  // corrected in the THIRD review pass (BigDev, 2026-09-08), which found the first version clamping
+  // at the **admin setter's** ₹10-crore bound. ⛔ That bound is for a figure a human TYPED; this one
+  // is a PRODUCT of two independently legitimate values, and ordinary configurations cross ₹10 crore
+  // (6,485 assignees × ₹20,000 = ₹12.97 crore). ⇒ a legitimately large Pariwar's लक्ष्य rendered
+  // NOTHING once a `super_admin` switched the reveal ON, **byte-identical to the fail-closed
+  // default**. ⭐ See the constant's own doc-block — the two bound different quantities and ⛔ must
+  // ⛔ not be aligned.
+  if (derived > MAX_DERIVED_DRIVE_TARGET_INR) return null;
   return derived;
 }
 
@@ -735,7 +741,21 @@ export interface SahyogDriveEntry {
    * routing note §3, RULING (A).** The recoverable-roster-size property above is accepted **for
    * `live` rows** (where the `82%` is printed); ⛔ it is deliberately made unavailable for `closed`
    * and `verified` rows, so an **archived** drive's roster size can ⛔ no longer be recovered from
-   * the JSON route. ⭐ The renderer already blanked this off-Live; the wire now matches.
+   * the JSON route **BY DIVISION**. ⭐ The renderer already blanked this off-Live; the wire now
+   * matches.
+   *
+   * ⚠⛔⛔ **AND THE CHANNEL IS ⛔ NOT FULLY CLOSED — ⭐ RECORDED OPENLY, ⛔ never glossed**
+   * ([[feedback_record_unattested_no_backfill]]). Third review pass, 2026-09-08; **accepted as a
+   * known channel by BigDev**, ⛔ not escalated and ⛔ not patched. `fundingOutcome` still crosses on
+   * every archived row, and `classifyCycleOutcome` is `deliveredTotal >= expectedTotal` ⟺
+   * `confirmedCount >= assignedCount`. Since `confirmedCount <= assignedCount` in non-racing data,
+   * **`fundingOutcome: 'fully_funded'` on an archived row means `assignedCount ===
+   * confirmedContributionCount` EXACTLY** — and that count is on the same row. ⇒ the roster size of
+   * every fully-funded archived drive remains recoverable **without dividing**.
+   * ⭐ **WHY IT STANDS:** roster size is a headcount naming ⛔ no individual — the same argument the
+   * Panel weighed in ruling (A) — and gating `fundingOutcome` off-Live would strip the archived
+   * funding outcome from the public page, which ⛔ no ruling authorises. ⚠ It was ⛔ never put to the
+   * Panel; ⭐ if cl.1's channel-closure is ever revisited, **this is the other half.**
    */
   confirmedPercentage: number | null;
   /**

@@ -99,7 +99,14 @@ const row = (over: Partial<WireRow> = {}): WireRow => ({
   district: 'Lucknow',
   confirmedContributionCount: 12,
   // ⭐ Story 11b.14 (AC2, AC3) — the meter's fill and the ruled money figure.
-  confirmedPercentage: 12,
+  // ⚠⛔⛔ **STATUS-DERIVED — `2026-09-08-207` cl.1** (Review finding, FOURTH pass 2026-09-08). A
+  // hardcoded number here models a wire shape the API can ⛔ no longer emit: the figure is a
+  // LIVE-ROW datum and is `null` on every `closed` / `verified` row. ⭐ An explicit override still
+  // wins, so a test that wants a specific fill just passes one.
+  confirmedPercentage:
+    'confirmedPercentage' in over
+      ? (over.confirmedPercentage as number | null)
+      : ((over.status ?? 'closed') === 'live' ? 12 : null),
   amountRaisedInr: 1200,
   fundingOutcome: 'fully_funded',
   ...over,
@@ -341,6 +348,66 @@ describe('⛔ the target is quarantined — no comparison figure reaches the cop
       wire([row({ status: 'closed', amountRaisedInr: 1200 })]),
     );
     expect(funded.model.rows[0]?.driveIndexLine).toBeTruthy();
+
+    // ⚠⛔⛔ **THE ISOLATING CASE — ⛔ the three above do ⛔ NOT pin the PREDICATE** (Review finding,
+    // THIRD pass 2026-09-08). Both null-cases passed `confirmedContributionCount: 0` alongside the
+    // zero amount, and the control varied BOTH fields ⇒ rewriting the guard as
+    // `row.confirmedContributionCount === 0` left all three green — while that predicate renders
+    // *"₹ 0 contributed by colleagues for {nominee}, nominee of Late {family}"* for a closed drive
+    // WITH confirmations and a corrupt `fixed_amount`, ⛔ the exact sentence cl.2 forbids.
+    // ⇒ ⭐ zero AMOUNT, NONZERO count: only the amount-keyed guard suppresses this.
+    const zeroAmountRealCount = buildSahyogView(
+      { page: 1, limit: 25 },
+      search(),
+      labels,
+      wire([row({ status: 'closed', amountRaisedInr: 0, confirmedContributionCount: 12 })]),
+    );
+    expect(zeroAmountRealCount.model.rows[0]?.driveIndexLine).toBeNull();
+
+    // ⭐ And the mirror: a NONZERO amount with a zero count still renders — the count is ⛔ not the
+    // subject of this guard.
+    const realAmountZeroCount = buildSahyogView(
+      { page: 1, limit: 25 },
+      search(),
+      labels,
+      wire([row({ status: 'closed', amountRaisedInr: 1200, confirmedContributionCount: 0 })]),
+    );
+    expect(realAmountZeroCount.model.rows[0]?.driveIndexLine).toBeTruthy();
+  });
+
+  it('⛔⛔ a LIVE row that raised ₹0 with a REAL count renders ⛔ NO participation sentence — silence', () => {
+    // ⭐⭐ BigDev, 2026-09-08 (third review pass) — recorded as EXTENDING `2026-09-08-207` cl.2 by
+    // the same reasoning, ⛔ NOT as a new ruling. The `Math.max(0, …)` clamp added to
+    // `public-read.ts` made "₹0 raised with N > 0 confirmed" REACHABLE (a non-positive
+    // `pools.fixed_amount`, which carries ⛔ no DB CHECK), and `live_line` then published
+    // *"₹ 0 and counting, by 41 colleagues—and still going strong!"* — a false statement about money.
+    // ⛔ `zero_line.*` is ⛔ NOT the fallback: it reads *"Late X's family awaits your support"*,
+    // false for a drive with 41 contributors.
+    const live = buildSahyogView(
+      { page: 1, limit: 25 },
+      search(),
+      labels,
+      wire([row({ status: 'live', amountRaisedInr: 0, confirmedContributionCount: 41 })]),
+    );
+    expect(live.model.rows[0]?.driveParticipationLine).toBeNull();
+
+    // ⭐ ⛔ THE COUNT-ZERO ZERO-STATE IS UNTOUCHED — `-206` cl.4 still owns day one.
+    const dayOne = buildSahyogView(
+      { page: 1, limit: 25 },
+      search(),
+      labels,
+      wire([row({ status: 'live', amountRaisedInr: 0, confirmedContributionCount: 0 })]),
+    );
+    expect(dayOne.model.rows[0]?.driveParticipationLine).toBeTruthy();
+
+    // ⭐ And the ordinary live row is untouched.
+    const ordinary = buildSahyogView(
+      { page: 1, limit: 25 },
+      search(),
+      labels,
+      wire([row({ status: 'live', amountRaisedInr: 41000, confirmedContributionCount: 41 })]),
+    );
+    expect(ordinary.model.rows[0]?.driveParticipationLine).toBeTruthy();
   });
 
   it('⛔⛔ a LIVE row carries ⛔ NO लक्ष्य while the reveal switch is OFF — ⭐ the launch state', () => {

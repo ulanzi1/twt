@@ -518,7 +518,7 @@ describe('committed matrix — the POPULATED invariants (Story 11a.1)', () => {
       'member-directory.member_name@2026-08-19-136',
       'sahyog-drive.deceased_member_name@2026-08-24-159',
       // ⭐ Story 11b.14 — the nominee's name on the INDEX. ⛔ A SECOND ruling, ⛔ not an inheritance.
-      'sahyog-drive.nominee_account_holder_name@2026-09-07-205',
+      'sahyog-drive.nominee_account_holder_name@2026-09-07-205 cl.1',
       'sahyog-vivran.nominee_account_holder_name@2026-09-04-190 cl.2',
     ]);
     for (const e of exceptions) expect(e.f.pii_tier).toBe(1);

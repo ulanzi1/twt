@@ -1183,7 +1183,10 @@ describe.skipIf(!hasDatabase)(
 // ⭐⭐ THE DECRYPT PATH ITSELF — Story 11b.14 AC7. ⚠⛔ Until the 2026-09-07 review ⛔ NO API-level
 // test exercised it: `nomineeName` appeared in the exact-key-set assertion ⛔ ONLY as a `null`, so
 // neither the happy path nor the loudly-documented failure posture was ever executed here.
-describe('⭐⭐ AC7 — the nominee name reaches the wire, and a bad ciphertext ⛔ does NOT take the row', () => {
+// ⚠⛔ `skipIf(!hasDatabase)` LIKE EVERY OTHER INTEGRATION BLOCK IN THIS FILE (2026-09-08 `ci:local`
+// finding) — these seed drives, hit the route and DECRYPT, so without the live DB + encryption
+// provider they hit a placeholder KMS at `127.0.0.1:1` and fail the DB-less `test (unit)` job.
+describe.skipIf(!hasDatabase)('⭐⭐ AC7 — the nominee name reaches the wire, and a bad ciphertext ⛔ does NOT take the row', () => {
   it('⭐ a real Tier-1 ciphertext is DECRYPTED onto the public row', async () => {
     const t = await createTestApp();
     try {

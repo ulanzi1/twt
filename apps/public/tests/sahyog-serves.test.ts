@@ -38,7 +38,11 @@ const driveRow = (status: string) => ({
   poolCanonicalIdentifier: 'P-2026-08-001',
   publicToken: 'tok-P-2026-08-001',
   status,
-  closedAt: '2026-08-01T00:00:00.000Z',
+  // ⚠⛔ SHAPE VARIES BY STATUS — ⛔ not hardcoded (Review finding, 2026-09-08). A real `live` row
+  // has `closedAt: null` AND `fundingOutcome: null` (asserted in the domain + API specs); a fixture
+  // that hardcodes a closed shape for every status never runs a REAL live row through
+  // `isSahyogDriveResponse`, which is exactly the shape Story 11b.14 added to this surface.
+  closedAt: status === 'live' ? null : '2026-08-01T00:00:00.000Z',
   district: 'Lucknow',
   confirmedContributionCount: 12,
   // ⭐⭐ STORY 11b.14's REQUIRED FIELDS — ⛔ the fixture must model a REAL API row, or this suite
@@ -49,7 +53,7 @@ const driveRow = (status: string) => ({
   amountRaisedInr: 1200,
   confirmedPercentage: 12,
   nomineeName: 'Sunita Devi Sharma',
-  fundingOutcome: 'fully_funded',
+  fundingOutcome: status === 'live' ? null : 'fully_funded',
 });
 
 const vivranDrive = (driveStatus: string) => ({

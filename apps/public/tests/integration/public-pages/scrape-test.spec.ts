@@ -886,10 +886,30 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
         amountRaisedInr: 0,
         fundingOutcome: 'under_funded',
       },
+      // ⭐⭐ A REAL `live` ROW (Review finding, 2026-09-08) — so the render-and-scrape path actually
+      // produces the live-section markup: the `aria-hidden` `sahyog__meter` bar, its
+      // `--sahyog-meter-fill` style attribute, the printed `%`, the participation sentence and the
+      // (absent-by-default) `sahyog__meter-target` `<p>`. Before this, the live section was
+      // verified only by string-reading `sahyog.astro`. `closedAt`/`fundingOutcome` are `null`
+      // (the real live shape); `driveTargetInr` is ABSENT (no `super_admin` reveal at launch).
+      {
+        deceasedMemberName: 'Meera Bai Yadav',
+        nomineeName: 'Anil Kumar Yadav',
+        poolLetterCode: 'C',
+        poolCanonicalIdentifier: 'P-2026-09-003',
+        publicToken: 'tok-P-2026-09-003',
+        status: 'live',
+        closedAt: null,
+        district: 'Kanpur',
+        confirmedContributionCount: 41,
+        confirmedPercentage: 82,
+        amountRaisedInr: 41000,
+        fundingOutcome: null,
+      },
     ],
     page: 1,
     limit: 25,
-    total: 2,
+    total: 3,
   }).model;
 
   /**
@@ -956,8 +976,9 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
       'drive_index_line',
       // ⭐⭐ Story 11b.14 — the LIVE row's meter. THREE new classified fields, ⛔ not one:
       // `drive_participation_line` (the ruled sentence, carrying the public MONEY figure),
-      // `drive_progress_percentage` (⚠ a NUMBER — the BAR'S WIDTH is the disclosure, and it never
-      // renders as text) and `drive_target` (लक्ष्य — ⛔ absent unless a `super_admin` revealed it).
+      // `drive_progress_percentage` (⚠ a NUMBER — the BAR'S WIDTH is a disclosure, and per
+      // `2026-09-07-206` cl.1 the figure ALSO renders as visible text beside the bar) and
+      // `drive_target` (लक्ष्य — ⛔ absent unless a `super_admin` revealed it).
       // ⛔ All three are `pii_tier: 3`: a COLLECTION's progress, ⛔ never a person ⇒ ⛔ no
       // `tier1_public_exception` and ⛔ no `RULED_TIER1_PUBLIC_EXCEPTIONS` entry.
       'drive_participation_line',
@@ -988,16 +1009,18 @@ describe('PII scrape — Sahyog Drive (/sahyog, Story 11b.1)', () => {
   });
 
   it('⭐⛔ AN UNCONSENTED ROW RENDERS, AND ITS NAME CELL IS ABSENT — ⛔ no placeholder', () => {
-    // ⭐ THE WHOLE OF AC2 AT THE RENDER LAYER. Both rows are present, and the unconsented one
+    // ⭐ THE WHOLE OF AC2 AT THE RENDER LAYER. Every row is present, and the unconsented one
     // carries NO name text of any kind: no "—", no "withheld", no empty labelled span.
     // ⛔ An omission that announces itself is an ENUMERATION SIGNAL — a scraper diffing renders
     // would learn exactly which families declined.
-    expect(model.rows).toHaveLength(2);
+    // ⚠ Three rows since 2026-09-08: one closed (consented), one verified (unconsented), one live
+    // (consented) — the live row added so the render-and-scrape path produces the live section.
+    expect(model.rows).toHaveLength(3);
     expect(SAHYOG_HTML).toContain('P-2026-08-002'); // the unconsented drive is on the page
-    expect(SAHYOG_HTML).toContain('Rajesh Kumar Sharma'); // the consented one is named
-    // The name cell for the second row emits nothing at all.
+    expect(SAHYOG_HTML).toContain('Rajesh Kumar Sharma'); // a consented one is named
+    // A name cell per CONSENTED row (2); the unconsented row emits nothing at all.
     const nameCells = SAHYOG_HTML.match(/data-field="deceased_member_name"/g) ?? [];
-    expect(nameCells).toHaveLength(1);
+    expect(nameCells).toHaveLength(2);
     for (const marker of ['withheld', 'Withheld', '&mdash;', 'N/A', 'Not recorded—']) {
       expect(SAHYOG_HTML).not.toContain(marker);
     }

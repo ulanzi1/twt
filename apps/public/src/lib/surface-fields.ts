@@ -284,11 +284,18 @@ export interface SahyogDriveRow {
    * ⭐⭐ THE PROGRESS METER'S FILL, 0-100 — Story 11b.14 (AC2), `2026-09-04-189` **cl.2(b)**.
    * `null` on a Closed or Verified row: ⛔ **only Live rows carry a bar.**
    *
-   * ⚠⛔ **IT IS A NUMBER, ⛔ NOT COPY, AND IT IS STILL A CLASSIFIED FIELD.** The bar's WIDTH is the
-   * disclosure — the value never renders as text — so a reader who divides the confirmed count by it
-   * recovers the assignee count. ⭐ That is inherent to the ruled meter (*"the % of contributor
-   * already contributed"*) and is what CLOSED the channel that used to recover the hidden rupee
-   * target. ⛔ Declaring it `null` here would classify a real disclosure as nothing.
+   * ⚠⛔ **IT IS A NUMBER, ⛔ NOT COPY, AND IT IS STILL A CLASSIFIED FIELD.** The bar's WIDTH is a
+   * disclosure, and a reader who divides the confirmed count by it recovers the assignee count.
+   * ⭐ That is inherent to the ruled meter (*"the % of contributor already contributed"*) and is what
+   * CLOSED the channel that used to recover the hidden rupee target. ⛔ Declaring it `null` here would
+   * classify a real disclosure as nothing.
+   *
+   * ⚠⛔ **AMENDED 2026-09-08 (Review finding) — ⭐ the classification STANDS; ⛔ the "never renders as
+   * text" claim is SUPERSEDED and NAMED, ⛔ not deleted** ([[feedback_supersede_never_reinterpret]]).
+   * The prior text read *"…the value never renders as text — so a reader who divides…"*.
+   * `2026-09-07-206` cl.1 renders the figure as VISIBLE TEXT beside the bar (via `percentLabelOf`,
+   * LATIN both locales, no i18n key); the bar's `aria-hidden` still stands. The recoverable-assignee
+   * property is unchanged.
    */
   readonly driveProgressPercentage: number | null;
   /**

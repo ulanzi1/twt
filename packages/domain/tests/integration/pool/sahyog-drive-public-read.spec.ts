@@ -210,6 +210,14 @@ describe.skipIf(!hasDatabase)('Sahyog Drive public pool index (Story 11b.1)', ()
       // ⭐ And the live row carries the ruled public WORD — ⛔ never the two-way partition's `else`
       // arm, which would have labelled a collecting drive as one whose window had shut.
       expect(rows.find((r) => (r.poolId as string) === live.poolId)?.status).toBe('live');
+
+      // ⭐⭐ `2026-09-08-207` cl.1 — `confirmedPercentage` is a LIVE-ROW datum. A number on the
+      // `live` row; `null` on `closed` and `verified` ⇒ an archived drive's roster size can ⛔ no
+      // longer be recovered from the JSON route by `count ÷ percentage`.
+      expect(typeof rows.find((r) => (r.poolId as string) === live.poolId)?.confirmedPercentage).toBe(
+        'number',
+      );
+      expect(rows.find((r) => (r.poolId as string) === closed.poolId)?.confirmedPercentage).toBeNull();
     });
 
     // ─────────────────────────────────────────────────────────────────────────────────────────
@@ -268,7 +276,16 @@ describe.skipIf(!hasDatabase)('Sahyog Drive public pool index (Story 11b.1)', ()
       ).find((r) => r.poolId === drive.poolId);
 
       const serialized = JSON.stringify(row ?? {});
-      for (const banned of ['ct-acct-', 'ct-ifsc-', 'Test Bank', 'Test Branch']) {
+      // ⭐ `ct-nominee-rank-2-` — the SECOND account's holder-name ciphertext. The read is
+      // `ORDER BY account_rank ASC LIMIT 1`, so only rank-1 may appear; a regression that returned
+      // rank-2, or both concatenated, must fail here (Review finding, 2026-09-08).
+      for (const banned of [
+        'ct-acct-',
+        'ct-ifsc-',
+        'Test Bank',
+        'Test Branch',
+        'ct-nominee-rank-2-',
+      ]) {
         expect(serialized).not.toContain(banned);
       }
       // ⛔ And ⛔ no key that could carry one exists on the shape, under any name.

@@ -371,6 +371,9 @@ describe('⭐⭐ `2026-09-07-206` cl.1 — the printed percentage', () => {
   it('⛔⛔ it is governed by its OWN matrix field id — ⭐ `drive_progress_percentage` finally has a consumer', () => {
     expect(meterCol().percentFieldId).toBe('drive_progress_percentage');
     // ⛔ ⛔ AND IT IS ⛔ NOT the sentence's id: riding that verdict is what made the field inert.
+    // ⚠ The coupling is ONE-DIRECTIONAL (Review finding, 2026-09-08): its own verdict can suppress
+    // the figure, but a suppressed `drive_participation_line` column still takes the bar + figure
+    // with it via `visibleSahyogColumns`. Fail-safe, ⛔ not independent both ways.
     const cols = visibleSahyogColumns(labels, () => true, 'live');
     const c = cols.find((x) => x.meter !== undefined);
     expect(meterCol().percentFieldId).not.toBe(c?.fieldId);

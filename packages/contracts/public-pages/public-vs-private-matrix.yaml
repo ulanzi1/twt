@@ -711,7 +711,10 @@ surfaces:
         tier: public
         pii_tier: 1
         tier1_public_exception:
-          decision: '2026-09-07-205'
+          # ⭐ `cl.1` is carried explicitly — the sibling `sahyog-vivran` entry names its clause
+          # (`2026-09-04-190 cl.2`) and `matrix.ts`'s allowlist value is `2026-09-07-205 cl.1`;
+          # this was `2026-09-07-205` bare (Review finding, 2026-09-08).
+          decision: '2026-09-07-205 cl.1'
           rationale: >-
             ⭐⭐ RULING 2 of the 2026-09-05 Panel pass on Story 11b.12's D2. The same value
             already at `tier: public` on the per-drive page (`2026-09-04-190` cl.2) now also
@@ -806,10 +809,18 @@ surfaces:
           a RUPEE target"), which is NAMED here rather than forgotten.
           ⛔ `pii_tier: 3`: it describes a COLLECTION's progress, ⛔ never a person, and it is
           derived from two counts neither of which identifies anyone.
-          ⚠⛔ IT IS A NUMBER, ⛔ NOT COPY — the BAR'S WIDTH is the disclosure and the value never
-          renders as text. ⛔ Declaring it null-mapped would classify a real disclosure as
-          nothing. The bar is `aria-hidden` and the ruled sentence beside it carries the
-          meaning, so nothing is announced twice and no a11y string names a hidden figure.
+          ⚠⛔ IT IS A NUMBER, ⛔ NOT COPY — the BAR'S WIDTH is a disclosure. ⛔ Declaring it
+          null-mapped would classify a real disclosure as nothing.
+          ⚠⛔⛔ AMENDED 2026-09-08 (Review finding) — ⭐ the classification STANDS; ⛔ the "renders
+          nowhere as text" claim is SUPERSEDED and is NAMED, ⛔ not deleted
+          ([[feedback_supersede_never_reinterpret]]). The prior text read: "the BAR'S WIDTH is the
+          disclosure and the value never renders as text … The bar is `aria-hidden` and the ruled
+          sentence beside it carries the meaning, so nothing is announced twice and no a11y string
+          names a hidden figure." `2026-09-07-206` cl.1 SUPERSEDED that — the percentage now renders
+          as VISIBLE TEXT beside the bar (LATIN in both locales, `formatCount`-class operational
+          data, ⛔ no i18n key). ⭐ The bar's `aria-hidden` still STANDS (it is the decorative div);
+          the figure sits OUTSIDE it as real text, so one string serves both senses. ⛔ `-204` cl.5's
+          refusal of a `{confirmed} of {total}` label is UNCHANGED.
           ⭐⛔ THE DENOMINATOR ITSELF NEVER CROSSES THE WIRE — `assignedCount` is not a field on
           this surface, under any name. ⚠ RECORDED, ⛔ not glossed: the confirmed count is on
           the same row, so the assignee count is recoverable by division. That is INHERENT to

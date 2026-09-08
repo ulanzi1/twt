@@ -181,7 +181,7 @@ function isSahyogDriveResponse(body: unknown): body is PublicSahyogDriveResponse
       // the announced-omission signal AC2 forbids, arriving through the one field it matters most
       // for. Accept `null` or a NON-EMPTY string, nothing between.
       (r['deceasedMemberName'] === null ||
-        (typeof r['deceasedMemberName'] === 'string' && r['deceasedMemberName'].length > 0)) &&
+        (typeof r['deceasedMemberName'] === 'string' && r['deceasedMemberName'].trim().length > 0)) &&
       typeof r['poolLetterCode'] === 'string' &&
       // ⚠ LENGTH-CHECKED, ⛔ not `typeof` alone (review 2026-09-04) — for the same reason
       // `publicToken` below is. The identifier is what builds the drive link's ACCESSIBLE NAME
@@ -214,8 +214,10 @@ function isSahyogDriveResponse(body: unknown): body is PublicSahyogDriveResponse
       // ⚠ LENGTH-CHECKED like `publicToken` above: the contract is `z.string().min(1).nullable()`,
       // so `''` is as invalid as absent — and an empty district renders *"who served in  district"*
       // inside a ratified sentence (Review finding, 2026-09-07).
-      (r['district'] === null || (typeof r['district'] === 'string' && r['district'].length > 0)) &&
-      typeof r['confirmedContributionCount'] === 'number' &&
+      (r['district'] === null ||
+        (typeof r['district'] === 'string' && r['district'].trim().length > 0)) &&
+      Number.isInteger(r['confirmedContributionCount']) &&
+      (r['confirmedContributionCount'] as number) >= 0 &&
       // ⭐⭐ STORY 11b.14's FOUR NEW REQUIRED FIELDS — ⛔ THE TYPECHECK CANNOT SEE THESE EITHER, and
       // ⛔ they were NOT added when the story widened the status tuple above (Review finding,
       // 2026-09-07). ⚠ Each has a named failure mode reached by a body this API did not produce —
@@ -229,12 +231,24 @@ function isSahyogDriveResponse(body: unknown): body is PublicSahyogDriveResponse
       //     `undefined !== null` as PRESENT and picks a variant whose token is never supplied.
       //   · `driveTargetInr` `null` (⛔ as opposed to ABSENT — the 11b.11 shape) → the render guard
       //     is `!== undefined`, so `null` passes into `formatCurrencyShort(null)`, which THROWS.
-      // ⇒ ⭐ all four fall to the OUTAGE arm here instead, which is what this module exists to do.
-      typeof r['amountRaisedInr'] === 'number' &&
-      typeof r['confirmedPercentage'] === 'number' &&
+      // ⚠⛔ AND — INTEGER + RANGE, ⛔ not bare `typeof` (Review finding, 2026-09-08). Chunk A hardened
+      // `formatCount` / `formatCurrencyShort` to THROW on a non-integer, on `>= 1e15`, and on a
+      // sub-₹1-lakh amount ⇒ a body carrying `confirmedContributionCount: 12.5` or `amountRaisedInr:
+      // 1200.5` now 500s the page here too unless the shape is rejected; and `confirmedPercentage:
+      // -5` → `--sahyog-meter-fill:-5%` → `width:auto` → a FULL bar (the twin of the `undefined`
+      // case). ⇒ ⭐ every out-of-contract number falls to the OUTAGE arm.
+      Number.isInteger(r['amountRaisedInr']) &&
+      (r['amountRaisedInr'] as number) >= 0 &&
+      // ⭐ `null` on `closed` / `verified` rows — `2026-09-08-207` cl.1 (the figure is a Live-row
+      // datum). A number, when present, is still an integer 0–100.
+      (r['confirmedPercentage'] === null ||
+        (Number.isInteger(r['confirmedPercentage']) &&
+          (r['confirmedPercentage'] as number) >= 0 &&
+          (r['confirmedPercentage'] as number) <= 100)) &&
       (r['nomineeName'] === null ||
-        (typeof r['nomineeName'] === 'string' && r['nomineeName'].length > 0)) &&
-      (r['driveTargetInr'] === undefined || typeof r['driveTargetInr'] === 'number') &&
+        (typeof r['nomineeName'] === 'string' && r['nomineeName'].trim().length > 0)) &&
+      (r['driveTargetInr'] === undefined ||
+        (Number.isInteger(r['driveTargetInr']) && (r['driveTargetInr'] as number) > 0)) &&
       // ⚠ VALIDATED AGAINST THE LITERAL SET, ⛔ not `typeof === 'string'` (Review finding,
       // 2026-08-27). `framingFor` switches on this value and its `default:` branch THROWS, inside
       // `buildSahyogView`, which the `.astro` frontmatter calls unguarded — so a bare `string`

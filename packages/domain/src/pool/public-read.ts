@@ -68,7 +68,7 @@ import { classifyCycleOutcome, type CycleFundingOutcome } from '../close-of-cycl
 import type { Db } from '../db.js';
 import { type ClauseId, type MemberId, type PariwarId, type PoolId, clauseId } from '../ids/index.js';
 import { clampLimit } from '../pagination.js';
-import type { DriveTargetVisibility } from './drive-target.js';
+import { MAX_DRIVE_TARGET_INR, type DriveTargetVisibility } from './drive-target.js';
 import { resolveDriveTargetVisibility } from './drive-target-policy.js';
 import { poolIndexFromLetterCodeOrNull } from './naming.js';
 import { claims } from '../schema/claims.js';
@@ -586,8 +586,14 @@ export const ASSIGNED_MEMBER_COUNT = sql<string>`(
  * **`rosterSize == assignedCount`** by construction: `member_pool_assignments`' PK is
  * `(pool_id, member_id)` and its rows are written from the SAME `memberAssignments` value
  * `serializePoolSnapshot` receives, ⛔ never a naive re-run of `assignMembersToPools`. ⇒ the public
- * bar and the member card ⛔ CANNOT disagree for the same pool. ⛔ Do ⛔ not add a reconciling guard,
- * and ⛔ do ⛔ not re-derive either side.
+ * bar and the member card share a DENOMINATOR and cannot drift on the underlying ratio. ⛔ Do ⛔ not
+ * add a reconciling guard, and ⛔ do ⛔ not re-derive either side.
+ *
+ * ⚠⛔ **THEY CAN STILL DIFFER BY ONE POINT, AND THAT IS BY RULING** (Review finding, 2026-09-08).
+ * The prior text here read *"⇒ the public bar and the member card ⛔ CANNOT disagree for the same
+ * pool"* — kept as the intent, ⛔ its overclaim of exact equality corrected. The card `round`s; this
+ * bar `Math.floor`s (the *"⛔ never overstate"* posture below), so `(2, 3)` is `67` on the card and
+ * `66` here. That is the accepted cost of the floor, ⛔ not a defect to reconcile.
  *
  * ⚠⛔ **IT CLAMPS; IT DOES ⛔ NOT THROW — ⭐ deliberately UNLIKE the member card.** There,
  * `confirmedCount > rosterSize` is an IMPOSSIBLE state over a roster the card owns, and throwing is
@@ -610,7 +616,13 @@ export function driveConfirmedPercentage(
   // ⭐ 100 therefore means **COMPLETE**, ⛔ nothing else: it is reachable ⛔ only when every assigned
   // contribution is confirmed. ⚠ `Math.min` still clamps the two-subquery race the block above
   // describes; ⛔ it is ⛔ not the thing that produces 100 on a full drive.
-  return Math.min(100, Math.floor((confirmedContributionCount / assignedCount) * 100));
+  //
+  // ⚠⛔⛔ **SCALE FIRST, DIVIDE SECOND** (Review finding, 2026-09-08). The prior text of this line
+  // was `Math.floor((confirmedContributionCount / assignedCount) * 100)`, which divides in IEEE-754
+  // BEFORE scaling: `29 / 100` is `0.28999…`, `× 100` is `28.999…`, and `Math.floor` eats the point
+  // ⇒ a drive at 29% painted **28%**. ⭐ Same fix `formatCurrencyShort` took two files over; the
+  // ordering was ⛔ never applied here. Integer-first is exact for every reachable count pair.
+  return Math.min(100, Math.floor((confirmedContributionCount * 100) / assignedCount));
 }
 
 /**
@@ -651,7 +663,15 @@ export function resolveDriveTargetForPublic(
   // 500'd the route** (Review finding, 2026-09-07). ⭐ The guard is the SAME silence AC2 already
   // rules for a zero-assignee pool; ⛔ it is ⛔ not a new posture.
   if (fixedAmount <= 0) return null;
-  return assignedCount * fixedAmount;
+  const derived = assignedCount * fixedAmount;
+  // ⚠⛔ **ABOVE THE DATA-SANITY CEILING IS SILENCE TOO** (Review finding, 2026-09-08). The admin
+  // setter clamps at `MAX_DRIVE_TARGET_INR` (₹10 crore); the DERIVED figure had ⛔ no such bound,
+  // and `formatCurrencyShort`'s `amount * 100` overflow-safety argument rests on that ceiling. A
+  // product past it is a data anomaly (an implausible assignee count × fixed amount), ⛔ not a real
+  // target ⇒ the same silence a zero-assignee pool gets, ⛔ never an over-ceiling figure on a public
+  // page.
+  if (derived > MAX_DRIVE_TARGET_INR) return null;
+  return derived;
 }
 
 /** One Sahyog Drive row, as the substrate holds it. ⛔ The name is CIPHERTEXT, not a name. */
@@ -710,8 +730,14 @@ export interface SahyogDriveEntry {
    * — a participation percentage cannot be shown without it — and it is what CLOSED the arithmetic
    * channel that used to recover the *target* (`D3`): the division now returns the roster size,
    * ⛔ not a rupee figure. ⛔ Do ⛔ not "fix" it by quantising the fill; that was considered and is moot.
+   *
+   * ⚠⛔⛔ **`null` UNLESS THE DRIVE IS `live` — Trustee-ratified `2026-09-08-207` cl.1 (DR + KB),
+   * routing note §3, RULING (A).** The recoverable-roster-size property above is accepted **for
+   * `live` rows** (where the `82%` is printed); ⛔ it is deliberately made unavailable for `closed`
+   * and `verified` rows, so an **archived** drive's roster size can ⛔ no longer be recovered from
+   * the JSON route. ⭐ The renderer already blanked this off-Live; the wire now matches.
    */
-  confirmedPercentage: number;
+  confirmedPercentage: number | null;
   /**
    * ⭐⭐ **लक्ष्य — THE DRIVE'S EXPECTED CONTRIBUTION, REVEALED OR `null`** — Story 11b.14 (AC2, `D4`),
    * `2026-09-07-204` cl.2-4. See {@link resolveDriveTargetForPublic}.
@@ -1023,7 +1049,13 @@ export async function listPublicSahyogDrivePools(
     // `@twt/ui`'s `pool-progress` presenter (9.12 Decision 3). ⇒ ⛔ do ⛔ not re-derive this in
     // `apps/api`, and ⛔ **NEVER** in `apps/public`, where the refusal is scoped *"anywhere in this
     // app"* ([[project_amount_raised_canonical_producer]]).
-    const deliveredTotal = confirmedContributionCount * r.fixedAmount;
+    // ⚠⛔ **CLAMPED AT 0 FOR A NON-POSITIVE `fixed_amount`** (Review finding, 2026-09-08).
+    // `pools.fixed_amount` has ⛔ no DB positivity CHECK (migration 0115); a negative value here
+    // makes `amountRaisedInr` negative, which the contract's `.nonnegative()` rejects ⇒ a 500 for
+    // the whole Pariwar index — the exact failure `resolveDriveTargetForPublic` was hardened
+    // against, on the sibling path the 2026-09-07 pass missed. `0` and negatives both resolve to
+    // the same silence a zero-assignee pool already gets.
+    const deliveredTotal = Math.max(0, confirmedContributionCount * r.fixedAmount);
     return {
       poolId: r.poolId,
       poolIndex: r.poolIndex,
@@ -1038,7 +1070,16 @@ export async function listPublicSahyogDrivePools(
       district: r.district,
       confirmedContributionCount,
       // ⭐ The meter's fill. ⛔ `assignedCount` itself stays OFF the entry — see the field's doc.
-      confirmedPercentage: driveConfirmedPercentage(confirmedContributionCount, assignedCount),
+      // ⚠⛔⛔ **STAGE-GATED — `null` UNLESS `live`. Trustee-ratified `2026-09-08-207` cl.1 (DR + KB),
+      // routing note §3, RULING (A).** With the figure on the wire for `closed`/`verified` rows too,
+      // `confirmedContributionCount ÷ confirmedPercentage` recovered the roster size of every
+      // ARCHIVED drive from the JSON route. The Panel ruled that channel closed for archived rows —
+      // the render layer already blanked it off-Live; the wire now matches. ⛔ `2026-09-07-206` cl.1
+      // is NOT reversed: on a `live` row the figure still crosses and still prints as `82%`.
+      confirmedPercentage:
+        r.currentState === 'live'
+          ? driveConfirmedPercentage(confirmedContributionCount, assignedCount)
+          : null,
       // ⭐ लक्ष्य, gated. ⛔ `null` for every Pariwar until a `super_admin` reveals it, and `null`
       // for a zero-assignee pool even then.
       //
@@ -1092,8 +1133,12 @@ export async function listPublicSahyogDrivePools(
       // Sahyog Vivran and its union's ordering is provenance-stable. ⛔ `partial` is NOT reused
       // either — its copy says "Reconciliation is still in progress", which is not true of a drive
       // that had nobody assigned. The honest render for "no expectation was ever set" is SILENCE.
+      // ⚠⛔ **AND A NON-POSITIVE `fixed_amount` TAKES THE SAME BRANCH** (Review finding, 2026-09-08):
+      // `expectedTotal` would be `assignedCount × 0 = 0`, and `0 >= 0` hands back a vacuous
+      // `fully_funded` for a drive that set no per-member figure. ⇒ skip the classification rather
+      // than classify against a zero expectation — the mirror of the `assignedCount === 0` guard.
       fundingOutcome:
-        assignedCount === 0
+        assignedCount === 0 || r.fixedAmount <= 0
           ? null
           : classifyCycleOutcome({
               expectedTotal: assignedCount * r.fixedAmount,

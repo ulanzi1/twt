@@ -148,6 +148,14 @@ describe('/sahyog copy resolves through the REAL t() — both locales', () => {
             namespace: 'sahyog-drive',
           }),
         ),
+        // ⭐⭐ STORY 11b.14 — the four `sahyog-shared` strings this surface RENDERS every request
+        // (Review finding, 2026-09-08). The token-resolution describe below checks they resolve;
+        // this leg checks their WORDING against the same Pool-Reality-#2 comparison ban — "Expected:
+        // ₹50 lakh" beside a progress bar is precisely the framing the rest of this file guards.
+        t('live_line', { amount: '₹ 19.45 lakh', count: '19,456' }, { locale, namespace: 'sahyog-shared' }),
+        t('drive_target', { amount: '₹ 24.32 lakh' }, { locale, namespace: 'sahyog-shared' }),
+        t('zero_line.full', { family_name: 'Ram Prakash Verma' }, { locale, namespace: 'sahyog-shared' }),
+        t('zero_line.no_family', undefined, { locale, namespace: 'sahyog-shared' }),
       ].join(' ');
       for (const banned of [/\bdonor/i, /late teacher/i, /\breceipt\b/i, /\bpassbook\b/i]) {
         expect(all).not.toMatch(banned);

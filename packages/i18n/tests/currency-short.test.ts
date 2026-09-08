@@ -49,6 +49,18 @@ describe('formatCurrencyShort — ⭐ always lakh or crore', () => {
     expect(() => formatCurrencyShort(Number.NaN, 'en')).toThrow(/finite/);
     expect(() => formatCurrencyShort(-1, 'en')).toThrow(/negative/);
   });
+
+  // ⭐⭐ Review finding 2026-09-08 — the primitive must not mis-state an input it has no form for.
+  it('⛔ refuses a non-integer amount (the truncation math is exact only for integers)', () => {
+    expect(() => formatCurrencyShort(1_945_000.5, 'en')).toThrow(/integer/);
+  });
+
+  it('⛔ refuses a sub-₹1-lakh amount — ⛔ never renders `₹ 0 lakh` for a real figure', () => {
+    expect(() => formatCurrencyShort(300, 'en')).toThrow(/sub-₹1-lakh/);
+    expect(() => formatCurrencyShort(99_999, 'en')).toThrow(/sub-₹1-lakh/);
+    // ⭐ the boundary itself is IN — ₹1,00,000 renders `₹ 1 lakh`.
+    expect(formatCurrencyShort(100_000, 'en')).toBe('₹ 1 lakh');
+  });
 });
 
 describe('formatCount — ⭐ counts are ALWAYS exact, at every size', () => {

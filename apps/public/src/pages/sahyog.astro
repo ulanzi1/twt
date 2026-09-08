@@ -72,6 +72,7 @@ import { ACTIVE_PARIWAR_ID } from '../lib/pariwar.server.js';
 import {
   buildSahyogRejectionView,
   buildSahyogView,
+  clampMeterFill,
   formatSahyogLiveAmount,
   formatSahyogTargetAmount,
   IST_OFFSET_MS,
@@ -707,11 +708,22 @@ if (!driveStatusVisible) {
                                   behind `isSahyogDriveResponse` (Review finding, 2026-09-08). A `-5%`
                                   fill from a version-skewed body is invalid at computed-value time ⇒
                                   `width:auto` ⇒ a FULL bar; `150%` overflows the track. The validator
-                                  now rejects such a body; this keeps the CSS honest regardless. */}
+                                  now rejects such a body; this keeps the CSS honest regardless.
+
+                                  ⚠⛔⛔ `Number.isFinite`, ⛔ NOT a bare `Math.max/min` — corrected in
+                                  the THIRD review pass (2026-09-08). `Math` propagates `NaN`
+                                  (`Math.max(0, Math.min(100, NaN))` is `NaN`), and `NaN` is the ONE
+                                  value that passes the `typeof === 'number'` guard above ⇒
+                                  `--sahyog-meter-fill:NaN%`. ⛔ The `var(…, 0%)` fallback at the CSS
+                                  rule does ⛔ NOT rescue it: a custom property accepts any token at
+                                  PARSE time, so the fallback never fires and `width:NaN%` is invalid
+                                  at COMPUTED-VALUE time ⇒ `width:auto` ⇒ ⛔ exactly the FULL bar this
+                                  clamp exists to prevent. ⭐ The `Number(...)` wrapper it replaces was
+                                  DEAD — the `typeof === 'number'` guard already precedes it. */}
                               <div
                                 class="sahyog__meter"
                                 aria-hidden="true"
-                                style={`--sahyog-meter-fill:${String(Math.max(0, Math.min(100, Number(col.meter.fillOf(row)))))}%`}
+                                style={`--sahyog-meter-fill:${String(clampMeterFill(col.meter.fillOf(row)))}%`}
                               >
                                 <span class="sahyog__meter-fill"></span>
                               </div>

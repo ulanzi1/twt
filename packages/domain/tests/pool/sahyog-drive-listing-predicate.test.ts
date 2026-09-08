@@ -13,6 +13,7 @@
 
 import { describe, expect, it } from 'vitest';
 
+import { MAX_DERIVED_DRIVE_TARGET_INR } from '../../src/pool/drive-target.js';
 import {
   SAHYOG_DRIVE_STATUSES,
   SAHYOG_DRIVE_VISIBLE_POOL_STATES,
@@ -138,9 +139,23 @@ describe('लक्ष्य — the DERIVED total, gated (AC2, `D4`, `D7`)', ()
     // exists to pin. ⭐ It is that the test's own arithmetic must use the **same truncation as the
     // function it checks** — with the two modes mixed, the test compared `round(38.8)` against
     // `floor(38.8)` and failed on a property that was never in doubt.
-    expect(Math.floor((amount / (target as number)) * 100)).toBe(
-      driveConfirmedPercentage(confirmed, assigned),
-    );
+    // ⚠⛔⛔ **AN INDEPENDENT ORACLE, ⛔ NOT A RESTATEMENT — corrected 2026-09-08 (FOURTH pass).**
+    // ⭐ The line has now been wrong TWICE, in opposite directions, and both are recorded:
+    //   · originally `Math.floor((amount / target) * 100)` — divide-first, which stopped matching the
+    //     function when the THIRD pass made it multiply-first (it held only because this triple does
+    //     ⛔ not straddle a float boundary);
+    //   · then `Math.floor((amount * 100) / target)` — which fixed that by **recomputing the
+    //     function's own formula**, so it could ⛔ no longer detect an ordering error, a
+    //     truncation-mode error, or a shared misconception. ⛔ Mirroring the implementation is ⛔ not
+    //     a test. ⚠ The divide-first form it replaced was at least INDEPENDENT — ⭐ which is exactly
+    //     how the original bug was caught.
+    // ⇒ ⭐ assert the EXPECTED VALUE, computed by hand from the fixture: 2518 of 6485 is 38.82…%,
+    //    which TRUNCATES to 38. ⛔ No formula, in either ordering, appears on this line.
+    expect(driveConfirmedPercentage(confirmed, assigned)).toBe(38);
+    // ⭐ And the identity the test is named for still holds — the money figure and the headcount
+    // percentage describe the SAME ratio, so the derived amount over the derived target agrees.
+    expect(amount).toBe(confirmed * 300);
+    expect(target).toBe(assigned * 300);
   });
 });
 
@@ -166,5 +181,40 @@ describe('⭐⭐ the bar must ⛔ NEVER overstate, and लक्ष्य must �
     expect(resolveDriveTargetForPublic(3, -1, revealed)).toBeNull();
     // ⭐ AND THE ORDINARY PATH IS UNTOUCHED.
     expect(resolveDriveTargetForPublic(3, 100, revealed)).toBe(300);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+// ⭐⭐ THE THIRD REVIEW PASS, 2026-09-08 — ⛔ THREE BEHAVIOUR CHANGES THAT SHIPPED WITH ⛔ NO TEST
+// THAT WOULD FAIL IF THEY WERE REVERTED. ⚠ *"Domain suite 3333 green"* was true and proved ⛔ nothing
+// about any of them.
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+describe('⭐⭐ the fixes the suite could ⛔ not see — pinned by the value that DIFFERS', () => {
+  it('⛔⛔ SCALE FIRST, DIVIDE SECOND — ⭐ the pairs where the two orderings DISAGREE', () => {
+    // ⚠⛔⛔ **EVERY ONE OF THE ELEVEN PAIRS PINNED ABOVE IS FLOAT-EXACT**, so all eleven return the
+    // SAME value under the OLD `Math.floor((c / a) * 100)` — ⭐ executed, ⛔ not reasoned. ⇒ the
+    // 2026-09-08 fix could be reverted and this file stayed GREEN, which is the exact failure the
+    // sibling fix in `formatCurrencyShort` named and then closed by pinning its mismatching values.
+    // ⭐ These three are the cases the finding itself cited. `29 / 100` is `0.28999…` in IEEE-754,
+    // `× 100` is `28.999…`, and `Math.floor` eats the point ⇒ the OLD code painted **28**.
+    expect(driveConfirmedPercentage(29, 100)).toBe(29);
+    expect(driveConfirmedPercentage(57, 100)).toBe(57);
+    expect(driveConfirmedPercentage(29, 50)).toBe(58);
+  });
+
+  it('⭐⭐ लक्ष्य ABOVE THE DERIVED CEILING IS SILENCE — ⛔ and the ceiling is ⛔ NOT the admin setter’s', () => {
+    const revealed = { revealToPublic: true } as const;
+    // ⭐ AT the ceiling renders (`>` is exclusive): ₹1,000 crore exactly.
+    expect(resolveDriveTargetForPublic(1_000_000, 10_000, revealed)).toBe(
+      MAX_DERIVED_DRIVE_TARGET_INR,
+    );
+    // ⛔ One rupee past it is a data anomaly ⇒ silence.
+    expect(resolveDriveTargetForPublic(1_000_001, 10_000, revealed)).toBeNull();
+    // ⚠⛔⛔ **AND THE REGRESSION THE THIRD PASS FOUND:** the first version of this guard clamped at
+    // `MAX_DRIVE_TARGET_INR` (₹10 crore), the **admin-typed** bound — so a legitimately large
+    // Pariwar's लक्ष्य vanished, byte-identical to the fail-closed default. ⭐ 6,485 assignees ×
+    // ₹20,000 is ₹12.97 crore: over the OLD ceiling, far under the correct one, and it MUST render.
+    expect(resolveDriveTargetForPublic(6_485, 20_000, revealed)).toBe(129_700_000);
+    expect(resolveDriveTargetForPublic(100_001, 1_000, revealed)).toBe(100_001_000);
   });
 });

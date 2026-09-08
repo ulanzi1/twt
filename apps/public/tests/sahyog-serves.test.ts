@@ -51,7 +51,15 @@ const driveRow = (status: string) => ({
   // exactly as `sahyog.server.ts`'s own comment predicts.
   // ⛔ `driveTargetInr` is deliberately ABSENT, ⛔ never `null` — the 11b.11 shape.
   amountRaisedInr: 1200,
-  confirmedPercentage: 12,
+  // ⚠⛔⛔ **STATUS-DEPENDENT — `2026-09-08-207` cl.1** (Review finding, THIRD pass 2026-09-08). The
+  // 2026-09-08 hunk taught this fixture to vary `closedAt` and `fundingOutcome` by status under the
+  // banner *"the fixture must model a REAL API row"* — and left `confirmedPercentage: 12` hardcoded
+  // ONE LINE ABOVE, in the same commit that made a number on a `closed`/`verified` row IMPOSSIBLE.
+  // ⇒ ⛔ NOTHING in the repository passed `confirmedPercentage: null` through
+  // `isSahyogDriveResponse`, which is the value EVERY archived row now carries. Had the guard been
+  // written without its `=== null` arm, `/sahyog` would have served the OUTAGE page to every visitor
+  // of every Pariwar holding a closed drive — with a green typecheck and three green suites.
+  confirmedPercentage: status === 'live' ? 12 : null,
   nomineeName: 'Sunita Devi Sharma',
   fundingOutcome: status === 'live' ? null : 'fully_funded',
 });
@@ -99,6 +107,101 @@ describe('⛔⛔ /sahyog SERVES ROWS for every ruled wire token — ⛔ never it
     // ⭐ Without this the test above would pass against a guard that accepted anything at all.
     vi.stubGlobal('fetch', async () =>
       json({ items: [driveRow('active')], page: 1, limit: 25, total: 1 }),
+    );
+    expect((await fetchSahyogDrive({ page: 1, limit: 25, forwardedFor: null })).ok).toBe(false);
+  });
+
+  // ────────────────────────────────────────────────────────────────────────────────────────────
+  // ⭐⭐ `2026-09-08-207` cl.1 — THE STAGE⇄NULLABILITY PAIRING, BOTH DIRECTIONS.
+  // ⚠⛔ Added in the THIRD review pass (2026-09-08): the cl.1 patch landed with ⛔ NO test anywhere
+  // in the repository passing `confirmedPercentage: null` through this guard, on a ruling whose
+  // failure arm is `/sahyog` serving its OUTAGE page to 100% of visitors.
+  // ────────────────────────────────────────────────────────────────────────────────────────────
+  it('⭐ an ARCHIVED row carrying `confirmedPercentage: null` SERVES — ⛔ never the outage arm', async () => {
+    for (const status of ['closed', 'verified']) {
+      vi.stubGlobal('fetch', async () =>
+        json({ items: [driveRow(status)], page: 1, limit: 25, total: 1 }),
+      );
+      const res = await fetchSahyogDrive({ page: 1, limit: 25, forwardedFor: null });
+      expect(res.ok).toBe(true);
+      if (res.ok) expect(res.data.items[0]?.confirmedPercentage).toBeNull();
+    }
+  });
+
+  it('⛔⛔ a `live` row with a NULL percentage is REJECTED — the ruling is CONDITIONAL', async () => {
+    // ⚠⛔ cl.1 reads *"`null` UNLESS the drive is `live`"*. A guard implementing only the
+    // unconditional half accepted a live row with `null`, and that row is ⛔ not an outage — it is
+    // worse: the bar and the printed figure vanish while the लक्ष्य `<p>`, an independently-gated
+    // SIBLING in the same `<td>`, survives ⇒ *"Expected: ₹ 8 lakh"* with ⛔ no bar beside it, the
+    // bare-target framing `2026-09-04-189` cl.2(c) resolved POOL-REALITY #2 by making INVISIBLE.
+    vi.stubGlobal('fetch', async () =>
+      json({
+        items: [{ ...driveRow('live'), confirmedPercentage: null }],
+        page: 1,
+        limit: 25,
+        total: 1,
+      }),
+    );
+    expect((await fetchSahyogDrive({ page: 1, limit: 25, forwardedFor: null })).ok).toBe(false);
+  });
+
+  it('⭐⭐ an ARCHIVED row carrying a NUMBER is TOLERATED — ⛔ THE DEPLOY ESCAPE CLAUSE', async () => {
+    // ⛔⛔ **THIS TEST WAS INVERTED ON 2026-09-08 (FOURTH review pass), AND THE INVERSION IS THE
+    // POINT.** ⭐ It previously asserted REJECTION, and that assertion was the disproof of the
+    // deploy-order record written in the same commit.
+    // ⚠ A **pre-cl.1 `apps/api`** emits `confirmedPercentage` UNCONDITIONALLY
+    // (`64510a7b:packages/domain/src/pool/public-read.ts:1041`) ⇒ a strict `=== null` here sent a
+    // newer `apps/public` running against an older API to the OUTAGE page for **100% of visitors**
+    // of every Pariwar holding a closed drive — ⛔ on a body that renders perfectly, because
+    // `toDisplayRow` already blanks the figure off-Live.
+    // ⭐ BigDev's ruling turns on exactly this: *"…unless the public consumer handles BOTH shapes."*
+    // ⇒ tolerance here is what keeps that escape TRUE, and it is also `-207` cl.1's own letter —
+    // *"the validator **accepts the `null`**"*, ⛔ never *"rejects the number"*.
+    // ⛔ DO ⛔ NOT "tighten" this back to a rejection.
+    for (const status of ['closed', 'verified']) {
+      vi.stubGlobal('fetch', async () =>
+        json({
+          items: [{ ...driveRow(status), confirmedPercentage: 82 }],
+          page: 1,
+          limit: 25,
+          total: 1,
+        }),
+      );
+      const res = await fetchSahyogDrive({ page: 1, limit: 25, forwardedFor: null });
+      expect(res.ok).toBe(true);
+    }
+  });
+
+  // ────────────────────────────────────────────────────────────────────────────────────────────
+  // ⭐⭐ THE NUMERIC BOUNDS.
+  // ⚠⛔ **HEADER CORRECTED 2026-09-08 (FOURTH pass) — the prior text overstated its own coverage 4×.**
+  // It read *"⛔ every one of these previously PASSED the guard and then THREW inside
+  // `buildSahyogView`"*. ⭐ Checked against the pre-image: the non-integers, the out-of-range
+  // percentages, the zero target and the whitespace district were **ALL already rejected** by guards
+  // predating the third pass (`driveTargetInr: 0` by the pre-existing `> 0`, ⛔ not by any new bound).
+  // ⇒ ⭐ this table is a REGRESSION FENCE over the whole numeric surface, ⛔ not a list of newly
+  // closed holes; the genuinely new arms are the two upper bounds and the count ceiling, and those
+  // are pinned by the DISCRIMINATING cases below rather than here.
+  // ────────────────────────────────────────────────────────────────────────────────────────────
+  it.each([
+    ['a non-integer count', { confirmedContributionCount: 12.5 }],
+    ['a non-integer amount', { amountRaisedInr: 1200.5 }],
+    ['an amount past the formatter’s safe-integer bound', { amountRaisedInr: 1e15 }],
+    ['a negative percentage', { status: 'live', confirmedPercentage: -5 }],
+    ['a percentage over 100', { status: 'live', confirmedPercentage: 101 }],
+    ['a zero target', { driveTargetInr: 0 }],
+    ['a target past the formatter’s safe-integer bound', { driveTargetInr: 1e15 }],
+    ['a whitespace-only district', { district: '   ' }],
+    // ⭐⭐ THE DISCRIMINATING VALUES — ⛔ these are the ones that pin the bounds' VALUE, ⛔ not merely
+    // their existence. `1e15` above is rejected by the OLD `1e15` bound too; `1e14` is ⛔ NOT.
+    ['an amount at 1e14 — ⭐ the value the OLD `1e15` bound ACCEPTED', { amountRaisedInr: 1e14 }],
+    ['a target at 1e14 — ⭐ same discriminator, target side', { driveTargetInr: 1e14 }],
+    // ⭐ The count ceiling: `1e21` passed `Number.isInteger` and rendered `"1e,+21"` through
+    // `formatCount` — ⛔ garbage in ratified copy, ⛔ never a throw.
+    ['a count past the render ceiling', { confirmedContributionCount: 1e21 }],
+  ])('⛔ %s falls to the OUTAGE arm', async (_label, patch) => {
+    vi.stubGlobal('fetch', async () =>
+      json({ items: [{ ...driveRow('live'), ...patch }], page: 1, limit: 25, total: 1 }),
     );
     expect((await fetchSahyogDrive({ page: 1, limit: 25, forwardedFor: null })).ok).toBe(false);
   });

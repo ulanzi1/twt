@@ -18,6 +18,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildSahyogView,
+  clampMeterFill,
   splitSections,
   visibleSahyogColumns,
   type SahyogLabels,
@@ -92,7 +93,11 @@ const row = (status: 'live' | 'closed' | 'verified', closedAt: string | null) =>
   district: 'Lucknow',
   confirmedContributionCount: 12,
   // ⭐ Story 11b.14 (AC2, AC3) — the meter's fill and the ruled money figure.
-  confirmedPercentage: 12,
+  // ⚠⛔⛔ **STATUS-DERIVED — `2026-09-08-207` cl.1** (Review finding, FOURTH pass 2026-09-08). A
+  // hardcoded number here models a wire shape the API can ⛔ no longer emit: the figure is a
+  // LIVE-ROW datum and is `null` on every `closed` / `verified` row. ⭐ An explicit override still
+  // wins, so a test that wants a specific fill just passes one.
+  confirmedPercentage: status === 'live' ? 12 : null,
   amountRaisedInr: 1200,
   fundingOutcome: null,
 });
@@ -399,5 +404,51 @@ describe('⭐⭐ `2026-09-07-206` cl.1 — the printed percentage', () => {
     // ⚠ `!== null` let `undefined` through into `--sahyog-meter-fill:undefined%`, which is invalid
     // at computed-value time ⇒ `width` fell back to `auto` = a FULL bar (Review finding).
     expect(src).toMatch(/typeof col\.meter\.fillOf\(row\) === 'number'/);
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────────────────────
+  // ⭐⭐ THE CLAMP — Review finding, THIRD pass 2026-09-08.
+  // ⚠⛔ It was added to `sahyog.astro` on 2026-09-08 as an INLINE expression and pinned by ⛔ nothing,
+  // in a describe that pins every sibling property by source regex. ⭐ It is now a NAMED EXPORT, so
+  // the behaviour is tested directly rather than string-matched — and the markup is pinned to USE it.
+  // ───────────────────────────────────────────────────────────────────────────────────────────
+  it('⛔⛔ a NON-FINITE fill renders 0%, ⛔ NEVER a full bar — ⭐ `Math` propagates NaN', () => {
+    // ⚠⛔ `NaN` is the ONE value that passes the `typeof === 'number'` guard above, and
+    // `Math.max(0, Math.min(100, NaN))` is `NaN` ⇒ `--sahyog-meter-fill:NaN%`. ⛔ The CSS
+    // `var(…, 0%)` fallback does ⛔ NOT rescue it — a custom property accepts any token at PARSE
+    // time — so `width:NaN%` is invalid at COMPUTED-VALUE time ⇒ `auto` ⇒ ⛔ exactly the FULL bar
+    // the clamp exists to prevent. ⭐ Same mechanism as the `undefined%` case pinned above.
+    expect(clampMeterFill(Number.NaN)).toBe(0);
+    expect(clampMeterFill(Number.POSITIVE_INFINITY)).toBe(0);
+    expect(clampMeterFill(null)).toBe(0);
+    expect(clampMeterFill(undefined)).toBe(0);
+    expect(clampMeterFill('82')).toBe(0);
+  });
+
+  it('⭐ it CLAMPS the out-of-range fills a version-skewed body can carry', () => {
+    expect(clampMeterFill(-5)).toBe(0);
+    expect(clampMeterFill(150)).toBe(100);
+    // ⭐ AND THE ORDINARY VALUES ARE UNTOUCHED — the bar still paints what the wire says.
+    expect(clampMeterFill(0)).toBe(0);
+    expect(clampMeterFill(82)).toBe(82);
+    expect(clampMeterFill(100)).toBe(100);
+  });
+
+  it('⛔ the page uses the SHARED clamp — ⛔ not a re-inlined `Math.max/min`', () => {
+    const src = readFileSync(ASTRO, 'utf8');
+    expect(src).toMatch(/clampMeterFill\(col\.meter\.fillOf\(row\)\)/);
+    // ⛔⛔ And ⛔ NO arithmetic is inlined into the fill INTERPOLATION, in ANY spelling (Review
+    // finding, FOURTH pass 2026-09-08). ⚠ The prior regex was `/Math\.min\(100,\s*Number\(/` — it
+    // forbade only the EXACT prior text, so re-inlining
+    // `Math.max(0, Math.min(100, col.meter.fillOf(row)))` — ⭐ the NaN-propagating form the whole fix
+    // exists to eliminate — matched neither it nor broke the positive assertion above.
+    // ⚠⛔ It is scoped to the INTERPOLATION, ⛔ not the whole file: a blanket `/Math\.min\(100/`
+    // matches the explanatory COMMENT beside the clamp, which is exactly the sort of false failure
+    // that gets a guard deleted rather than fixed.
+    const fill = /--sahyog-meter-fill:\$\{([^}]*)\}/.exec(src);
+    expect(fill).not.toBeNull();
+    expect(fill?.[1]).toContain('clampMeterFill');
+    expect(fill?.[1]).not.toContain('Math.');
+    expect(fill?.[1]).not.toContain('Number(');
   });
 });

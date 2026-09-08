@@ -11,7 +11,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { formatCount, formatCurrencyShort } from '../src/currency.js';
+import { formatCount, formatCurrency, formatCurrencyShort } from '../src/currency.js';
 
 describe('formatCurrencyShort — ⭐ always lakh or crore', () => {
   it('⭐ renders lakh with the ₹ sign, in the house spacing', () => {
@@ -53,6 +53,25 @@ describe('formatCurrencyShort — ⭐ always lakh or crore', () => {
   // ⭐⭐ Review finding 2026-09-08 — the primitive must not mis-state an input it has no form for.
   it('⛔ refuses a non-integer amount (the truncation math is exact only for integers)', () => {
     expect(() => formatCurrencyShort(1_945_000.5, 'en')).toThrow(/integer/);
+  });
+
+  // ⭐⭐ THE UPPER BOUND — Review finding, FOURTH pass 2026-09-08.
+  // ⚠⛔ Until now this file asserted only `NaN` and `-1`; the upper bound was exercised by ⛔ NOTHING,
+  // so reverting `9e13 → 1e15` left the whole i18n suite GREEN. ⭐ `1e14` is the DISCRIMINATING value
+  // — rejected by `9e13`, ACCEPTED by the old `1e15` — and `1e15` (which the public suite used) is
+  // rejected by BOTH, so it pinned the bound's EXISTENCE and ⛔ never its VALUE.
+  it('⛔⛔ refuses `1e14` — ⭐ the value that DISCRIMINATES the `9e13` bound from the old `1e15`', () => {
+    // ⭐ Executed, ⛔ not reasoned: `1e14 * 100` is `1e16`, and `Number.MAX_SAFE_INTEGER` is 9.007e15.
+    expect(1e14 * 100).toBeGreaterThan(Number.MAX_SAFE_INTEGER);
+    expect(() => formatCurrencyShort(1e14, 'en')).toThrow(/supported range/);
+    expect(() => formatCurrency(1e14, 'en')).toThrow(/supported range/);
+  });
+
+  it('⭐ ACCEPTS just under the bound — ⛔ the guard must not swallow the legal range', () => {
+    // ⛔ Without an accepting case the bound could be tightened to 0 and every rejection test passes.
+    expect(9e13 * 100).toBeLessThan(Number.MAX_SAFE_INTEGER);
+    expect(formatCurrencyShort(9e13 - 100, 'en')).toMatch(/crore$/);
+    expect(() => formatCurrency(9e13 - 1, 'en')).not.toThrow();
   });
 
   it('⛔ refuses a sub-₹1-lakh amount — ⛔ never renders `₹ 0 lakh` for a real figure', () => {

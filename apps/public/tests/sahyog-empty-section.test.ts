@@ -95,7 +95,11 @@ const row = (status: 'live' | 'closed' | 'verified') => ({
   district: 'Lucknow',
   confirmedContributionCount: 12,
   // ⭐ Story 11b.14 (AC2, AC3) — the meter's fill and the ruled money figure.
-  confirmedPercentage: 12,
+  // ⚠⛔⛔ **STATUS-DERIVED — `2026-09-08-207` cl.1** (Review finding, FOURTH pass 2026-09-08). A
+  // hardcoded number here models a wire shape the API can ⛔ no longer emit: the figure is a
+  // LIVE-ROW datum and is `null` on every `closed` / `verified` row. ⭐ An explicit override still
+  // wins, so a test that wants a specific fill just passes one.
+  confirmedPercentage: status === 'live' ? 12 : null,
   amountRaisedInr: 1200,
   fundingOutcome: 'fully_funded' as const,
 });

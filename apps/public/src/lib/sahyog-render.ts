@@ -442,11 +442,27 @@ function toDisplayRow(
     // published (Review finding, 2026-09-07). ⛔ The branch is on the COUNT, ⛔ not on the amount:
     // the count is the sentence's own subject, and a zero amount with a nonzero count is a state
     // this surface does ⛔ not model.
+    //
+    // ⚠⛔⛔ **AND `null` WHERE THE AMOUNT IS ₹0 WITH A NONZERO COUNT** — BigDev, 2026-09-08, third
+    // review pass. ⭐ Recorded as **EXTENDING `2026-09-08-207` cl.2 by the same reasoning** (a ₹0
+    // money sentence beside named people is SILENCE), ⛔ **not** as a new ruling and ⛔ **not** as a
+    // reinterpretation of `-206` cl.4, whose count-keyed `zero_line.*` is untouched
+    // ([[feedback_supersede_never_reinterpret]]).
+    // ⛔⛔ **THE STATE THE COMMENT ABOVE SAYS IS ⛔ NOT MODELLED BECAME REACHABLE**, by the
+    // `Math.max(0, …)` clamp added to `public-read.ts` on 2026-09-08: a `live` drive whose
+    // `pools.fixed_amount` is non-positive (⛔ no DB CHECK — see that file) yields
+    // `amountRaisedInr: 0` with a real confirmed count, and `live_line` then published
+    // *"**₹ 0** and counting, by 41 colleagues—and still going strong!"* — a false statement about
+    // money, on the surface built to make checkable ones.
+    // ⛔ ⛔ `zero_line.*` is ⛔ NOT the fallback here: it reads *"Late X's family awaits your
+    // support"*, which is false for a drive with 41 contributors. ⇒ SILENCE, the cl.2 posture.
     driveParticipationLine:
       row.status === 'live'
         ? row.confirmedContributionCount === 0
           ? labels.zeroLine(row.deceasedMemberName)
-          : labels.participationLine(row.amountRaisedInr, row.confirmedContributionCount)
+          : row.amountRaisedInr === 0
+            ? null
+            : labels.participationLine(row.amountRaisedInr, row.confirmedContributionCount)
         : null,
     // ⚠⛔ `driveTargetInr` is ABSENT on the wire unless a `super_admin` revealed it for the Pariwar
     // (⛔ never `null` — the 11b.11 shape) ⇒ this is `null` for every Pariwar at launch. ⭐ Read the
@@ -656,6 +672,38 @@ export function formatSahyogLiveAmount(
   const CUT_OFF_INR = 1_000_000;
   if (stage === 'live' && amountInr >= CUT_OFF_INR) return formatCurrencyShort(amountInr, locale);
   return formatCurrency(amountInr, 'en');
+}
+
+/**
+ * ⭐⭐ **THE PROGRESS BAR'S FILL, CLAMPED TO A RENDERABLE 0–100** — Story 11b.14, third review pass
+ * (2026-09-08). ⛔ Extracted from `sahyog.astro` so it can be TESTED: the live-section suite reads
+ * that file as a STRING, so an expression inlined in the markup is pinned by regex at best.
+ *
+ * ⚠⛔⛔ **`Number.isFinite` FIRST — ⛔ a bare `Math.max(0, Math.min(100, v))` IS ⛔ NOT ENOUGH.**
+ * `Math` propagates `NaN`, and `NaN` is the one value that passes an upstream `typeof v === 'number'`
+ * guard. An unclamped `NaN` reaches the style attribute as `--sahyog-meter-fill:NaN%`, and ⛔ the
+ * CSS `var(--sahyog-meter-fill, 0%)` fallback does ⛔ **NOT** rescue it — a custom property accepts
+ * any token at PARSE time, so the fallback never fires; `width:NaN%` is then invalid at
+ * COMPUTED-VALUE time and falls back to `width:auto` ⇒ **a FULL bar on a drive at any real
+ * percentage**. ⭐ That is the identical mechanism the `-5%` / `undefined%` cases take.
+ *
+ * ⇒ ⭐ **a NON-FINITE fill renders `0`** — the *"⛔ never overstate"* posture `driveConfirmedPercentage`
+ * is ruled to take, carried to the last place the number can be corrupted.
+ *
+ * ⚠⛔ **⛔ THAT IS ⛔ NOT *"never a full bar"* — ⭐ the posture is stated precisely here because the
+ * FOURTH review pass found the prior wording overclaiming it.** `Math.min(100, 150)` is `100`, a
+ * **full bar**, and that is correct: an out-of-range NUMBER is clamped into range (the reading is
+ * *"at least this much"*), whereas an UNKNOWN value (`NaN`, a non-number) has no reading at all and
+ * must show nothing. ⇒ the two "too large" inputs deliberately diverge: `150 → 100`, `Infinity → 0`.
+ *
+ * ⭐⭐ **BOTH RENDERINGS OF THE FIGURE GO THROUGH HERE** — the bar's `--sahyog-meter-fill` AND the
+ * visible `"82%"` text (`percentLabelOf`, `2026-09-07-206` cl.1). ⛔ Clamping only one made the cell
+ * internally contradictory (a 0% bar beside the words `-5%`). ⛔ Do ⛔ not add a third rendering
+ * without routing it here.
+ */
+export function clampMeterFill(fill: unknown): number {
+  if (typeof fill !== 'number' || !Number.isFinite(fill)) return 0;
+  return Math.max(0, Math.min(100, fill));
 }
 
 /**
@@ -869,8 +917,18 @@ export function visibleSahyogColumns(
         fillOf: (row) => row.driveProgressPercentage,
         // ⭐⭐ `2026-09-07-206` cl.1 — the figure, PRINTED. ⛔ No i18n key: `"82%"` is operational
         // data and is byte-identical in both locales (amendment-A2). ⛔ Do ⛔ not localise it.
+        // ⚠⛔⛔ **CLAMPED THROUGH THE SAME FUNCTION AS THE BAR — FOURTH review pass, 2026-09-08.**
+        // ⛔ The prior text was `` `${String(row.driveProgressPercentage)}%` `` — UNCLAMPED, while the
+        // bar beside it went through {@link clampMeterFill}. ⇒ the clamp converted a *consistently*
+        // wrong cell into an **internally CONTRADICTORY** one: `-5` rendered a **0% bar beside the
+        // words "-5%"**, `150` a **full bar beside "150%"**. ⭐ The *"⛔ never overstate"* posture was
+        // being enforced on the DECORATIVE half and ⛔ not on the half a reader actually reads.
+        // ⚠ ⛔ `clampMeterFill` is ⛔ not a formatter — it is the single place the fill is made
+        // renderable, and BOTH renderings of that number must go through it or they can disagree.
         percentLabelOf: (row) =>
-          row.driveProgressPercentage === null ? null : `${String(row.driveProgressPercentage)}%`,
+          row.driveProgressPercentage === null
+            ? null
+            : `${String(clampMeterFill(row.driveProgressPercentage))}%`,
         // ⭐⭐ AND THIS IS THE FIELD'S FIRST CONSUMER. Until cl.1 it was declared in the matrix and
         // in `SAHYOG_DRIVE_ROW_FIELD_IDS` but asked about NOWHERE, so flipping its tier suppressed
         // ⛔ nothing and the tier-leak gate stayed GREEN — the same inert-field defect the page

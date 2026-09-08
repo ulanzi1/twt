@@ -197,6 +197,9 @@ describe.skipIf(!hasDatabase)('Sahyog Drive public pool index (Story 11b.1)', ()
       const spawned = await seedDrive(tx, PARIWAR_A, { currentState: 'spawned' });
       const live = await seedDrive(tx, PARIWAR_A, { currentState: 'live' });
       const closed = await seedDrive(tx, PARIWAR_A, { currentState: 'closed' });
+      // ⭐ `settled` → the public word `verified`, seeded so cl.1's third stage is ASSERTED rather
+      // than merely claimed in a comment (Review finding, THIRD pass 2026-09-08).
+      const settled = await seedDrive(tx, PARIWAR_A, { currentState: 'settled' });
 
       await enterAppScope(client, PARIWAR_A);
       const rows = await poolDomain.listPublicSahyogDrivePools(tx, ids.pariwarId(PARIWAR_A), {
@@ -218,6 +221,13 @@ describe.skipIf(!hasDatabase)('Sahyog Drive public pool index (Story 11b.1)', ()
         'number',
       );
       expect(rows.find((r) => (r.poolId as string) === closed.poolId)?.confirmedPercentage).toBeNull();
+      // ⚠⛔ **AND `verified` TOO — ⭐ the comment above claimed it and ⛔ nothing asserted it**
+      // (Review finding, THIRD pass 2026-09-08). It holds by construction (`=== 'live'`), but a
+      // comment that names a case the test never reaches is the defect class this file exists to
+      // stop. `verified` is the public token for the `settled` pool state.
+      expect(
+        rows.find((r) => (r.poolId as string) === settled.poolId)?.confirmedPercentage,
+      ).toBeNull();
     });
 
     // ─────────────────────────────────────────────────────────────────────────────────────────

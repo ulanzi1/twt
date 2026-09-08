@@ -10,6 +10,13 @@
 // every caller (`null`), and each caller decides what absence means (the card omits, the Note 404s, the
 // 8.8 fan-out skips the pool). A resolver that threw, or that returned a blank name, would take that
 // decision away from them — so the fail-soft paths are asserted individually, not sampled.
+//
+// ── Story 8.16 (AC2, AC2b, AC9) ──────────────────────────────────────────────────────────────────────
+// The identity now carries ONE resolved `deceasedDisplayName` instead of the first-name/last-initial
+// PAIR, and the FORM is resolved from the Pariwar's stored presentation mode, passed IN by the caller
+// (`2026-09-02-181` cl.2 — never a DB read inside the resolver). The mononym cases below are the
+// load-bearing ones: the member side must NOT inherit the public directory's omit-the-row behaviour
+// (Trap 5), because omitting a member's own pool is a functional regression, not a privacy protection.
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -46,6 +53,9 @@ const INPUT = {
 
 const silentLog = { warn: vi.fn(), error: vi.fn() };
 
+const FULL = 'full_name' as const;
+const SHIELDED = 'shielded_name' as const;
+
 function happyPath(): void {
   getClaimCase.mockResolvedValue({ deceasedMemberId: DECEASED });
   getMemberKycProfile.mockResolvedValue({ nameCiphertext: 'enc:v1:name' });
@@ -60,27 +70,39 @@ describe('resolvePoolIdentity — the resolved identity (D6)', () => {
     happyPath();
   });
 
-  it('returns the PII-SHIELDED family name — first name + last INITIAL, never the surname', async () => {
-    const identity = await resolvePoolIdentity(DB, ENC, PARIWAR, INPUT, silentLog);
+  it('in `full_name` mode returns the whole stored name, whitespace-collapsed (Story 8.16 AC2)', async () => {
+    const identity = await resolvePoolIdentity(DB, ENC, PARIWAR, FULL, INPUT, silentLog);
     expect(identity).not.toBeNull();
-    expect(identity!.deceasedFirstName).toBe('रामेश्वर');
+    // The stored name carries a double space; a stored name is a RECORD value, not a display string,
+    // so the collapse happens here and the record is untouched.
+    expect(identity!.deceasedDisplayName).toBe('रामेश्वर प्रसाद');
+  });
+
+  it('in `shielded_name` mode returns first name + last INITIAL, never the surname', async () => {
+    const identity = await resolvePoolIdentity(DB, ENC, PARIWAR, SHIELDED, INPUT, silentLog);
     // ONE GRAPHEME, not one code point: `प्र` is a Devanagari conjunct (प + virama + र) that
     // `Intl.Segmenter` keeps together. Splitting it would render a broken half-letter as someone's
     // initial — which is exactly why the split uses Segmenter rather than `[...token][0]`.
-    expect(identity!.deceasedLastInitial).toBe('प्र');
-    // The full surname must never survive the join.
+    expect(identity!.deceasedDisplayName).toBe('रामेश्वर प्र.');
+    // The full surname must never survive the join in this mode.
     expect(JSON.stringify(identity)).not.toContain('प्रसाद');
   });
 
+  it('sheds the PARTS — no consumer can re-join a form the mode did not rule (AC3)', async () => {
+    const identity = await resolvePoolIdentity(DB, ENC, PARIWAR, SHIELDED, INPUT, silentLog);
+    expect(identity).not.toHaveProperty('deceasedFirstName');
+    expect(identity).not.toHaveProperty('deceasedLastInitial');
+  });
+
   it('prefers the curated Mahabharata name for this pool INDEX, and echoes the snapshotted amount', async () => {
-    const identity = await resolvePoolIdentity(DB, ENC, PARIWAR, { ...INPUT, poolIndex: 1 }, silentLog);
+    const identity = await resolvePoolIdentity(DB, ENC, PARIWAR, FULL, { ...INPUT, poolIndex: 1 }, silentLog);
     expect(identity!.poolName).toBe('भीम');
     expect(identity!.fixedAmount).toBe(1100);
     expect(identity!.poolCanonicalIdentifier).toBe('TWT-BIH-2026-07-A');
   });
 
   it('decrypts under the pool-identity caller`s Pariwar scope, from the claim`s DECEASED member', async () => {
-    await resolvePoolIdentity(DB, ENC, PARIWAR, INPUT, silentLog);
+    await resolvePoolIdentity(DB, ENC, PARIWAR, FULL, INPUT, silentLog);
     expect(getMemberKycProfile).toHaveBeenCalledWith(DB, PARIWAR, DECEASED);
     expect(decryptKycField).toHaveBeenCalledWith('enc:v1:name', PARIWAR, ENC);
   });
@@ -94,29 +116,29 @@ describe('resolvePoolIdentity — absence is reported identically to every calle
 
   it('no claim case → null', async () => {
     getClaimCase.mockResolvedValue(undefined);
-    expect(await resolvePoolIdentity(DB, ENC, PARIWAR, INPUT, silentLog)).toBeNull();
+    expect(await resolvePoolIdentity(DB, ENC, PARIWAR, FULL, INPUT, silentLog)).toBeNull();
   });
 
   it('no KYC profile → null', async () => {
     getMemberKycProfile.mockResolvedValue(null);
-    expect(await resolvePoolIdentity(DB, ENC, PARIWAR, INPUT, silentLog)).toBeNull();
+    expect(await resolvePoolIdentity(DB, ENC, PARIWAR, FULL, INPUT, silentLog)).toBeNull();
   });
 
   it('a KYC profile with no name ciphertext → null (never a blank name)', async () => {
     getMemberKycProfile.mockResolvedValue({ nameCiphertext: null });
-    expect(await resolvePoolIdentity(DB, ENC, PARIWAR, INPUT, silentLog)).toBeNull();
+    expect(await resolvePoolIdentity(DB, ENC, PARIWAR, FULL, INPUT, silentLog)).toBeNull();
   });
 
   it('a DECRYPT FAILURE degrades to null + a warn — it never propagates out', async () => {
     const log = { warn: vi.fn(), error: vi.fn() };
     decryptKycField.mockRejectedValue(new Error('KMS blip'));
-    await expect(resolvePoolIdentity(DB, ENC, PARIWAR, INPUT, log)).resolves.toBeNull();
+    await expect(resolvePoolIdentity(DB, ENC, PARIWAR, FULL, INPUT, log)).resolves.toBeNull();
     expect(log.warn).toHaveBeenCalled();
   });
 
   it('a whitespace-only decrypted name → null (no undignified blank)', async () => {
     decryptKycField.mockResolvedValue('   ');
-    expect(await resolvePoolIdentity(DB, ENC, PARIWAR, INPUT, silentLog)).toBeNull();
+    expect(await resolvePoolIdentity(DB, ENC, PARIWAR, FULL, INPUT, silentLog)).toBeNull();
   });
 
   it('poolLetterCode throwing degrades to null + a logged error — it never propagates out', async () => {
@@ -126,7 +148,7 @@ describe('resolvePoolIdentity — absence is reported identically to every calle
     poolLetterCode.mockImplementation(() => {
       throw new Error('PoolLetterCodeRangeError: poolIndex must be a non-negative integer');
     });
-    await expect(resolvePoolIdentity(DB, ENC, PARIWAR, INPUT, log)).resolves.toBeNull();
+    await expect(resolvePoolIdentity(DB, ENC, PARIWAR, FULL, INPUT, log)).resolves.toBeNull();
     expect(log.error).toHaveBeenCalled();
   });
 });
@@ -139,21 +161,21 @@ describe('resolveCuratedPoolName — the letter-code fallback never suppresses t
 
   it('an OPTED-OUT Pariwar (empty registry) → poolName null, letter code still resolved', async () => {
     reserveNames.mockResolvedValue([]);
-    const identity = await resolvePoolIdentity(DB, ENC, PARIWAR, INPUT, silentLog);
+    const identity = await resolvePoolIdentity(DB, ENC, PARIWAR, FULL, INPUT, silentLog);
     expect(identity!.poolName).toBeNull();
     expect(identity!.poolLetterCode).toBe('A');
   });
 
   it('a registry with fewer names than pools → null for the out-of-range index, not a crash', async () => {
     reserveNames.mockResolvedValue([{ displayNameHi: 'युधिष्ठिर' }]);
-    const identity = await resolvePoolIdentity(DB, ENC, PARIWAR, { ...INPUT, poolIndex: 2 }, silentLog);
+    const identity = await resolvePoolIdentity(DB, ENC, PARIWAR, FULL, { ...INPUT, poolIndex: 2 }, silentLog);
     expect(identity!.poolName).toBeNull();
   });
 
   it('an EXHAUSTED registry alarms as a config gap but still resolves the identity', async () => {
     const log = { warn: vi.fn(), error: vi.fn() };
     reserveNames.mockRejectedValue(new PoolNameListExhaustedError('exhausted'));
-    const identity = await resolvePoolIdentity(DB, ENC, PARIWAR, INPUT, log);
+    const identity = await resolvePoolIdentity(DB, ENC, PARIWAR, FULL, INPUT, log);
     expect(identity).not.toBeNull();
     expect(identity!.poolName).toBeNull();
     expect(log.error).toHaveBeenCalled(); // loud: a trustee must extend the curated list
@@ -163,7 +185,7 @@ describe('resolveCuratedPoolName — the letter-code fallback never suppresses t
   it('any OTHER registry read error warns and falls back — it never sinks the identity', async () => {
     const log = { warn: vi.fn(), error: vi.fn() };
     reserveNames.mockRejectedValue(new Error('transient read error'));
-    const identity = await resolvePoolIdentity(DB, ENC, PARIWAR, INPUT, log);
+    const identity = await resolvePoolIdentity(DB, ENC, PARIWAR, FULL, INPUT, log);
     expect(identity!.poolName).toBeNull();
     expect(log.warn).toHaveBeenCalled();
   });

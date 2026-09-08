@@ -56,6 +56,10 @@ import {
   contribution as contributionDomain,
   idempotency,
   ids,
+  // Story 8.16 — the presentation-mode accessor. A VALUE import into the existing `@twt/domain`
+  // import, adding no package edge (this module already imports four other namespaces from it) and no
+  // module-init cycle.
+  kyc as kycDomain,
   notifications,
   pool as poolDomain,
   withPariwarScope,
@@ -244,13 +248,20 @@ function poolLabel(identity: notifications.ResolvedPoolIdentity): string {
   return identity.poolName ?? identity.poolLetterCode;
 }
 
-/** The PII-SHIELDED family label — first name + last INITIAL, never the full surname. Assembled
- *  IDENTICALLY to `ActiveContributionCard`'s `family`, so a push and the card name the same family the
- *  same way. */
+/**
+ * The family label — the deceased family's name in the Pariwar's chosen form.
+ *
+ * ⭐ STORY 8.16 — THERE IS NO JOIN LEFT HERE. The label used to assemble first-name + last-initial and
+ * relied on assembling it "identically to `ActiveContributionCard`'s `family`" so a push and the card
+ * would name the same family the same way. That identity was a CONVENTION four call sites had to keep;
+ * it is now a property of the resolver, which decides the form once under the ruled mode.
+ *
+ * ⚠ Kept as a named function rather than inlined because it feeds TWO render sites — the cycle-open
+ * body and the deadline-reminder subject — and a reader looking for "where the push names the family"
+ * should find one place, not two field accesses.
+ */
 function familyLabel(identity: notifications.ResolvedPoolIdentity): string {
-  return identity.deceasedLastInitial
-    ? `${identity.deceasedFirstName} ${identity.deceasedLastInitial}`
-    : identity.deceasedFirstName;
+  return identity.deceasedDisplayName;
 }
 
 /** The operational-numeral date string (Gregorian + Latin, amendment-A2) the reminder copy formats the
@@ -284,7 +295,7 @@ function envelope(input: {
 
 /**
  * Build the cycle-open notification for ONE member (AC1). `payload_data` carries the pool letter code /
- * curated name, the deceased family's first-name + last-initial, and the formatted fixed amount,
+ * curated name, the deceased family's name in the Pariwar's chosen form, and the formatted fixed amount,
  * rendered into the `{title, body}` announcement shape — the producer resolves every locale-, clock-
  * and tone-dependent string so the Epic 5 renderers stay pure (AC5).
  */
@@ -679,11 +690,24 @@ export async function runContributionNotifyChild(
   // The pool's member-facing identity — resolved ONCE per pool. `null` means the claim / KYC profile /
   // name is unresolvable: a push naming no family is a DEFECTIVE artifact and inventing a placeholder
   // would be worse, so this pool is skipped LOUDLY rather than sent blank.
-  const identity = await withPariwarScope(deps.pool, pariwarId, (db: Db) =>
-    notifications.resolvePoolIdentity(
+  //
+  // ⭐ STORY 8.16 — THE PRESENTATION MODE IS READ HERE, ONCE PER POOL, AND PASSED IN. It is NEVER read
+  // inside the resolver (`2026-09-02-181` cl.2). Both reads share this ONE `withPariwarScope` round
+  // trip, and both alert builders below close over the single resolved `identity` — so the mode read
+  // count tracks POOLS, never the per-assigned-member fan-out this worker then performs.
+  //
+  // ⚠⛔ THE ONE THING NOT TO "OPTIMISE": do not move the mode read below the member chunking loop.
+  // It is per-PARIWAR, and a read down there would multiply by the roster.
+  const identity = await withPariwarScope(deps.pool, pariwarId, async (db: Db) => {
+    const presentationMode = await kycDomain.resolvePublicNamePresentationMode(
+      db,
+      ids.pariwarId(pariwarId),
+    );
+    return notifications.resolvePoolIdentity(
       db,
       deps.encryption,
       ids.pariwarId(pariwarId),
+      presentationMode,
       {
         claimCaseId: ids.claimId(p.claimCaseId),
         poolIndex: p.poolIndex,
@@ -691,8 +715,8 @@ export async function runContributionNotifyChild(
         fixedAmount: p.fixedAmount,
         poolCount: p.poolCount,
       },
-    ),
-  );
+    );
+  });
   if (!identity) {
     alarm(
       `[jobs] contribution-notify-child: pool identity unresolvable for pool ${p.poolId} ` +

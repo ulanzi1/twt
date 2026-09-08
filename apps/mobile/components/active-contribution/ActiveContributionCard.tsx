@@ -1,6 +1,7 @@
 // <ActiveContributionCard> — the My Pool home-screen card (Story 8.2; the FIRST Epic-8 SURFACE).
 // The topmost home element: for an `active` member assigned to a pool whose cycle alert is `live` it
-// renders the pool shortform + the DECEASED member's family (the family being supported) + the
+// renders the pool shortform + the DECEASED member's family (the family being supported, named in the
+// form the Pariwar has chosen — Story 8.16) + the
 // snapshotted fixed amount + a days-remaining countdown + a confirmed-only progress meter + a 15-day
 // tone-gradient nudge + a ≥56pt contribute CTA. For every other case it self-suppresses (renders null).
 //
@@ -96,11 +97,14 @@ export function ActiveContributionCard() {
     return null
   }
 
-  // The deceased member's family label (PII-shielded first-name + last-initial) — the family being
-  // supported (AC2). Used in the parichay line + the tone copy interpolation.
-  const family = data.deceasedLastInitial
-    ? `${data.deceasedFirstName} ${data.deceasedLastInitial}`
-    : data.deceasedFirstName
+  // The deceased member's family label — the family being supported (AC2). Used in the parichay line
+  // and the tone copy interpolation.
+  //
+  // ⭐ STORY 8.16 — SERVER-RESOLVED, and the client does NOT re-join or re-form it. The card used to
+  // assemble first-name + last-initial here, which made this one of four places a name form was
+  // decided. The form is now decided once, server-side, from the Pariwar's stored presentation mode,
+  // so the card, the Yogdaan Bahi, the Contribution Note PDF and the push cannot drift apart.
+  const family = data.deceasedDisplayName
 
   // Tone gradient (AC3) — a PURE function of the server's days-remaining (via day-of-cycle).
   const toneKey = selectToneGradientKey(cycleDayFromDaysRemaining(data.daysRemaining))
@@ -302,6 +306,10 @@ export function ActiveContributionCard() {
             height={56}
             theme="red"
             justify="flex-start"
+            // ⚠⛔ `accessible` on a tamagui <Button>: it is `styled(View, …)` and supplies the prop
+            // NOWHERE, and an RN View is not an accessibility element without it — the inner <Text>
+            // takes focus and the label below is never announced (Story 8.16 AC5).
+            accessible={true}
             accessibilityRole="button"
             accessibilityLabel={t('selfVerify.fix_this_a11y', undefined, NS)}
             accessibilityState={{ expanded: showSelfVerify }}
@@ -321,6 +329,10 @@ export function ActiveContributionCard() {
             height={56}
             chromeless
             justify="flex-start"
+            // ⚠⛔ `accessible` on a tamagui <Button>: it is `styled(View, …)` and supplies the prop
+            // NOWHERE, and an RN View is not an accessibility element without it — the inner <Text>
+            // takes focus and the label below is never announced (Story 8.16 AC5).
+            accessible={true}
             accessibilityRole="button"
             accessibilityLabel={t('selfVerify.trouble_with_utr_a11y', undefined, NS)}
             accessibilityState={{ expanded: showSelfVerify }}
@@ -337,6 +349,10 @@ export function ActiveContributionCard() {
           height={56}
           theme="red"
           justify="flex-start"
+          // ⚠⛔ `accessible` on a tamagui <Button>: it is `styled(View, …)` and supplies the prop
+          // NOWHERE, and an RN View is not an accessibility element without it — the inner <Text>
+          // takes focus and the label below is never announced (Story 8.16 AC5).
+          accessible={true}
           accessibilityRole="button"
           accessibilityLabel={t('active_contribution.contribute_cta_a11y', undefined, NS)}
           accessibilityHint={t('active_contribution.contribute_cta_hint', undefined, NS)}

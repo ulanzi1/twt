@@ -52,8 +52,9 @@ export type ContributionStatus = z.output<typeof ContributionStatus>;
  *
  *   · `contributionId`         — the stable row identity (the `contribution.utr-attested` event id).
  *   · `date`                   — the contribution instant (the attestation's `occurred_at`; Gregorian).
- *   · `deceasedFirstName` / `deceasedLastInitial` — the DECEASED member whose family the pool supports
- *                                 (PII-shielded, the SAME subject the My Pool card shows — D6). NOT the nominee.
+ *   · `deceasedDisplayName`    — the DECEASED member whose family the pool supports, in the Pariwar's
+ *                                 chosen name form (the SAME subject AND the SAME string the My Pool
+ *                                 card shows — D6; Story 8.16). NOT the nominee.
  *   · `poolLetterCode`         — the member-facing shortform letter ("F" → "Pool F"); the launch fallback.
  *   · `poolName`               — the curated Mahabharata-rooted name when configured; `null` otherwise.
  *   · `poolCanonicalIdentifier`— the audit/system identifier `P-YYYY-MM-###` (a11y / support reference).
@@ -70,11 +71,12 @@ export const ContributionHistoryRow = z
   .object({
     contributionId: z.string().min(1),
     date: Iso8601Datetime,
-    deceasedFirstName: z.string().min(1),
-    // The last-name INITIAL only (PII shield — never the full surname). `.max(16)` defensively bounds a
-    // single grapheme cluster (a Devanagari conjunct + vowel signs can exceed a few UTF-16 code units);
-    // empty when the name is a single token. Mirrors the 8.2 `deceasedLastInitial` bound (same producer).
-    deceasedLastInitial: z.string().max(16),
+    // ⭐ STORY 8.16 (AC2/AC3) — ONE RESOLVED DISPLAY FIELD, replacing the `deceasedFirstName` /
+    // `deceasedLastInitial` PAIR. The Yogdaan Bahi is consumer ②: it must carry the same shape as the
+    // card, or a passbook row and the card for the same pool could name the family differently — the
+    // "two different pools" divergence the shared resolver exists to prevent. Bound and discipline are
+    // the card contract's; see `active-contribution-card.ts` for the full reasoning.
+    deceasedDisplayName: z.string().min(1).max(128),
     poolLetterCode: z.string().min(1),
     poolName: z.string().min(1).nullable(),
     poolCanonicalIdentifier: z.string().min(1),

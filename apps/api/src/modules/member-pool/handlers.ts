@@ -71,6 +71,7 @@ import {
   cycleRefFromCommittedAt,
   resolveCuratedPoolName,
   resolvePoolIdentity,
+  resolvePoolNamePresentationModeForRequest,
   type ResolvedPoolIdentity,
 } from './pool-identity.js';
 
@@ -622,12 +623,17 @@ async function resolveCard(
   }
   const clampedConfirmedCount = Math.min(confirmed.length, pool.rosterSize);
 
-  // (7)-(8) The per-pool IDENTITY — the deceased family name (PII-shielded first-name+last-initial, AC2 —
-  //     NOT the nominee) + the letter code + the curated Mahabharata name (else null → letter-code fallback).
+  // (7)-(8) The per-pool IDENTITY — the deceased family name in the Pariwar's chosen form (AC2 — NOT
+  //     the nominee) + the letter code + the curated Mahabharata name (else null → letter-code fallback).
   //     Resolved by the SHARED resolver reused by the Yogdaan Bahi history handler (D6), so a pool renders
   //     card-identical family/letter/name in the card and the passbook. `null` (unresolvable claim/KYC/name)
   //     → fail-soft to `{ assigned:false }` (no undignified blank card).
-  const identity = await resolvePoolIdentity(deps, tx, request, pariwarId, {
+  //
+  //     ⭐ Story 8.16 — the presentation MODE is read ONCE HERE and passed IN, never read inside the
+  //     resolver (`2026-09-02-181` cl.2). One card, one pool, one read: the "RESOLVED ONCE PER REQUEST,
+  //     NEVER PER ROW" discipline the public-pages handlers already state.
+  const presentationMode = await resolvePoolNamePresentationModeForRequest(tx, pariwarId);
+  const identity = await resolvePoolIdentity(deps, tx, request, pariwarId, presentationMode, {
     claimCaseId: pool.claimCaseId,
     poolIndex: pool.poolIndex,
     poolCanonicalIdentifier: pool.poolCanonicalIdentifier,
@@ -745,8 +751,7 @@ async function resolveCard(
     poolCanonicalIdentifier: identity.poolCanonicalIdentifier,
     // ⭐ Story 11b.10 — the drive's PUBLIC ADDRESS. See the read above for why it is server-returned.
     sahyogVivranToken,
-    deceasedFirstName: identity.deceasedFirstName,
-    deceasedLastInitial: identity.deceasedLastInitial,
+    deceasedDisplayName: identity.deceasedDisplayName,
     fixedAmount: identity.fixedAmount,
     daysRemaining,
     // (AC4) confirmed-only meter: numerator is `contribution.confirmed`-derived (live confirmations, minus
@@ -819,6 +824,13 @@ async function resolveHistory(
     // PRIMARY population; returning the constant here would silently defeat the whole surface for them.
     if (entries.length === 0) return { rows: [], totalInr: 0, missedCycles };
 
+    // ⭐ Story 8.16 — the presentation MODE, read ONCE for the whole passbook and closed over by
+    // `resolveRowIdentity` below. The mode is per-PARIWAR and this request serves exactly one Pariwar,
+    // so a read per pool (let alone per row) could only ever return the same answer. This is STRICTER
+    // than the resolver's own "not inside" fence and is the right place for it: the memo below is
+    // per-pool, and hanging the mode read off it would make the read count track the pool count.
+    const presentationMode = await resolvePoolNamePresentationModeForRequest(tx, pariwarId);
+
     // Per-DISTINCT-pool memo: one identity decrypt + one pool-context load per pool (D5/D6). `null` marks a
     // pool whose identity is unresolvable (its rows are omitted) — cached so we do not re-attempt per row.
     const identityByPool = new Map<string, (ResolvedPoolIdentity & { cycleRef: string }) | null>();
@@ -832,7 +844,7 @@ async function resolveHistory(
         identityByPool.set(poolId, null);
         return null;
       }
-      const identity = await resolvePoolIdentity(deps, tx, request, pariwarId, {
+      const identity = await resolvePoolIdentity(deps, tx, request, pariwarId, presentationMode, {
         claimCaseId: poolCtx.claimCaseId,
         poolIndex: poolCtx.poolIndex,
         poolCanonicalIdentifier: poolCtx.poolCanonicalIdentifier,
@@ -863,8 +875,7 @@ async function resolveHistory(
       rows.push({
         contributionId: entry.contributionId,
         date: entry.attestedAt.toISOString(),
-        deceasedFirstName: identity.deceasedFirstName,
-        deceasedLastInitial: identity.deceasedLastInitial,
+        deceasedDisplayName: identity.deceasedDisplayName,
         poolLetterCode: identity.poolLetterCode,
         poolName: identity.poolName,
         poolCanonicalIdentifier: identity.poolCanonicalIdentifier,

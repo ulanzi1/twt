@@ -12,6 +12,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const listCycleBindingCandidates = vi.fn();
 const getCycleFreezeCommittedAt = vi.fn();
 const resolvePoolIdentity = vi.fn();
+const resolvePublicNamePresentationMode = vi.fn();
 const listActedMemberIdsForPool = vi.fn();
 const listPendingMatchMembersForPool = vi.fn();
 const claim = vi.fn();
@@ -28,6 +29,7 @@ vi.mock('@twt/domain', async (importActual) => {
     withPariwarScope,
     pool: { ...actual.pool, listCycleBindingCandidates, getCycleFreezeCommittedAt },
     notifications: { ...actual.notifications, resolvePoolIdentity },
+    kyc: { ...actual.kyc, resolvePublicNamePresentationMode },
     contribution: { ...actual.contribution, listActedMemberIdsForPool, listPendingMatchMembersForPool },
     idempotency: {
       ...actual.idempotency,
@@ -69,14 +71,22 @@ const M1 = 'aaaaaaaa-0000-0000-0000-000000000001';
 const M2 = 'aaaaaaaa-0000-0000-0000-000000000002';
 const M3 = 'aaaaaaaa-0000-0000-0000-000000000003';
 
+// Story 8.16 — the identity carries ONE resolved display field. The default fixture is in the
+// `shielded_name` form (the string the old part-pair produced, plus the form's trailing period), so the
+// existing copy assertions keep their original meaning; `FULL_NAME_IDENTITY` below is the default
+// `full_name` mode this story makes reachable on the member side.
 const IDENTITY = {
-  deceasedFirstName: 'रामेश्वर',
-  deceasedLastInitial: 'प्र',
+  deceasedDisplayName: 'रामेश्वर प्र.',
   poolLetterCode: 'A',
   poolName: 'युधिष्ठिर',
   poolCanonicalIdentifier: 'TWT-BIH-2026-07-A',
   fixedAmount: 1100,
 };
+
+/** The SAME family, resolved under the DEFAULT `full_name` mode — the form Story 8.16 makes reachable
+ *  on this consumer. `2026-09-02-180` cl.1 ruled it in; the SMS/WhatsApp exposure was named in the
+ *  packet and is the decision, not a side effect. */
+const FULL_NAME_IDENTITY = { ...IDENTITY, deceasedDisplayName: 'रामेश्वर प्रसाद' };
 
 const NOW = new Date('2026-07-23T00:00:00.000Z');
 
@@ -132,6 +142,7 @@ beforeEach(() => {
       Promise.resolve(fn({ marker: 'db' }, { marker: 'client' })),
   );
   resolvePoolIdentity.mockResolvedValue(IDENTITY);
+  resolvePublicNamePresentationMode.mockResolvedValue('full_name');
   listActedMemberIdsForPool.mockResolvedValue({ confirmed: [], attested: [] });
   listPendingMatchMembersForPool.mockResolvedValue([]);
   claim.mockResolvedValue('acquired');
@@ -211,6 +222,35 @@ describe('AC1 — the cycle-open parent fans out ONE child per pool (D6 batching
         { ...envelope({ alertId: ALERT, cycleId: CYCLE, timeCritical: false }), pariwarId: null },
       ),
     ).rejects.toThrow(/missing pariwarId/);
+  });
+});
+
+// ─── Story 8.16 (AC2b) — the presentation-mode read is PER POOL, never per member ──────────────────
+
+describe('AC2b — the mode is an INPUT, read ONCE PER POOL', () => {
+  it('reads the presentation mode exactly ONCE for a pool with a multi-member roster', async () => {
+    // `2026-09-02-181` cl.2. The fan-out is one notification PER MEMBER ASSIGNED TO THE POOL, so the
+    // failure this guards is a read that drifted into the per-member path — where it would multiply by
+    // the roster. The roster below is 2 members; the mode read must still be 1.
+    await runContributionNotifyChild(deps(), envelope(childPayload()) as never);
+    expect(resolvePublicNamePresentationMode).toHaveBeenCalledTimes(1);
+  });
+
+  it('the mode it read is the one PASSED IN to the resolver — not defaulted, not re-read', async () => {
+    resolvePublicNamePresentationMode.mockResolvedValue('shielded_name');
+    await runContributionNotifyChild(deps(), envelope(childPayload()) as never);
+    // The domain signature is (db, encryption, pariwarId, MODE, input, log) — the mode is positional
+    // argument 4, immediately after the pariwarId it is scoped to.
+    expect(resolvePoolIdentity.mock.calls[0]![3]).toBe('shielded_name');
+  });
+
+  it('a roster four times the size still reads the mode ONCE (the count tracks pools, not members)', async () => {
+    await runContributionNotifyChild(
+      deps(),
+      envelope(childPayload({ memberIds: [M1, M2, M3, 'aaaaaaaa-0000-0000-0000-000000000004'] })) as never,
+    );
+    expect(resolvePublicNamePresentationMode).toHaveBeenCalledTimes(1);
+    expect(resolvePoolIdentity).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -928,18 +968,59 @@ describe('AC4/AC5 — the producer resolves every member-facing string INTO the 
     expect((alert.payload_data as { title: string }).title).toContain('A');
   });
 
-  it('a single-token family name yields no trailing initial (never "Rameshwar .")', () => {
+  it('a MONONYM family name renders in full and is never omitted (Story 8.16, Trap 5)', () => {
+    // The PUBLIC directory omits a row it cannot shield. The push must NOT: a member assigned to this
+    // pool is being asked to contribute to this family's funeral, and a notification naming nobody is
+    // not a shorter page — it is a defective artifact. The resolver hands this consumer the whole
+    // stored name for a single-token record, in BOTH modes.
     const alert = buildCycleOpenAlert({
       alertId: ALERT,
       pariwarId: PARIWAR,
       memberId: M1,
       poolId: POOL_A,
-      identity: { ...IDENTITY, deceasedLastInitial: '' },
+      identity: { ...IDENTITY, deceasedDisplayName: 'रामेश्वर' },
       timeCritical: false,
       locale: 'hi',
       now: NOW,
     });
     expect((alert.payload_data as { body: string }).body).toContain('रामेश्वर के');
+  });
+
+  it('⭐ Story 8.16 — the cycle-open body carries the FULL name when the Pariwar is in `full_name` mode', () => {
+    // Consumer ④, ruled in by `2026-09-02-180` cl.1 (ALL FOUR). This is the push/WhatsApp/SMS copy:
+    // the deceased family's full legal name reaches every assigned member's handset. The Panel ruled
+    // with all three channels named in the packet, so this assertion IS the ruling, not a regression.
+    const alert = buildCycleOpenAlert({
+      alertId: ALERT,
+      pariwarId: PARIWAR,
+      memberId: M1,
+      poolId: POOL_A,
+      identity: FULL_NAME_IDENTITY,
+      timeCritical: false,
+      locale: 'hi',
+      now: NOW,
+    });
+    expect((alert.payload_data as { body: string }).body).toContain('रामेश्वर प्रसाद');
+  });
+
+  it('⭐ Story 8.16 — the DEADLINE-REMINDER subject is the FIFTH render site and rises with it', () => {
+    // `familyLabel` feeds `notify.cycle_open.body` AND `notify.deadline.day_14.subject`. Four resolver
+    // CALL sites, FIVE render sites — a set that named only the call sites would leave the day-14
+    // subject naming a family in the old form while the body next to it used the new one.
+    const alert = buildDeadlineReminderAlert({
+      alertId: ALERT,
+      pariwarId: PARIWAR,
+      memberId: M1,
+      poolId: POOL_A,
+      identity: FULL_NAME_IDENTITY,
+      cycleDay: 14,
+      deadlineAt: new Date('2026-08-05T00:00:00.000Z'),
+      timeCritical: true,
+      locale: 'hi',
+      now: NOW,
+    });
+    const data = alert.payload_data as { subject: string };
+    expect(data.subject).toContain('रामेश्वर प्रसाद');
   });
 
   it('each send day resolves its OWN subject + display, and the payload carries the machine instant', () => {

@@ -6,7 +6,7 @@
 // (2) `SAMPLE_YOGDAAN_ROWS`, a Devanagari conjunct/ligature stress-set retained for P1 render validation
 // (a test/prototype fixture only), now shaped to the REAL `ContributionHistoryRow` contract so it stays
 // type-valid. Hindi-numerals discipline (UX line 1127): operational columns render Gregorian + Latin
-// numerals ONLY; the `deceasedFirstName`/`deceasedLastInitial` (family) column carries Devanagari.
+// numerals ONLY; the `deceasedDisplayName` (family) column carries Devanagari.
 
 import type { ContributionHistoryRow } from '@twt/contracts'
 
@@ -54,8 +54,11 @@ function generateRows(): YogdaanRow[] {
     rows.push({
       contributionId: `fixture-${i.toString().padStart(3, '0')}`,
       date: date.toISOString(),
-      deceasedFirstName: first,
-      deceasedLastInitial: lastInitial,
+      // Story 8.16 — ONE server-resolved display field. The fixture joins the pair itself because the
+      // stress set is authored as name PARTS; the RUNTIME path never does (the server resolves the form
+      // from the Pariwar's mode). Rendered in the `shielded_name` form so the fixture exercises the
+      // narrower column width, which is what a layout stress set is for.
+      deceasedDisplayName: lastInitial ? `${first} ${lastInitial}.` : first,
       poolLetterCode: letter,
       poolName: null,
       poolCanonicalIdentifier: `P-2026-${month}-001`,

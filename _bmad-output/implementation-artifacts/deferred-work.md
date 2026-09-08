@@ -600,10 +600,16 @@ recorded here rather than left for a future reader to re-derive._
 
 - **⭐⛔ 11b.1 ITEM (e) — THE PUBLIC/MEMBER NAME INVERSION IS **RE-AFFIRMED**, ⛔ NOT RE-FILED.**
   **D7(a)** (`2026-09-02-176`) carried it: *"two records of one obligation is its own failure."* It stays
-  open at its own item under **Story 11b.1**, and its **binder is 11b.3b** (**D9**). ⭐ The ground is
+  open at its own item under **Story 11b.1**. ⭐ The ground is
   unchanged and now stronger: resolving it means changing the **MEMBER** app's form, which is ⛔ not this
   surface's act — and this story renders ⛔ no name at all, so it ⛔ could not resolve it even in
   principle. ⛔ **Do not open a second item for it here.**
+  ⭐⭐ **⚠ BINDER RE-POINTED (Story `8-16`, 2026-09-08): the binder is `8-16`, ⛔ NOT `11b.3b`.**
+  `#decision-2026-09-02-179` **cl.3** directed the closure and `#decision-2026-09-02-180` (Trustee-ratified)
+  scoped it to **ALL FOUR** consumers of `resolvePoolIdentity` — which Epic 8 owns.
+  ⚠⛔ **The binder was stated INCONSISTENTLY across this file**: this bullet said `11b.3b`, while item
+  (e)'s own body said *"binds 11b.2 and 11b.3"*. ⛔ Neither was right after `-179` cl.3; ⭐ both collapse
+  to `8-16`. The item **closes on `8-16`'s merge**, ⛔ not on its `review`.
 
 - **⚠ `ci-local.sh`'s HEADER UNDERSTATES ITS OWN JOB COUNT — ⛔ pre-existing, ⛔ not swept.**
   Its header says *"18 jobs"* while the file has run **32** for some time; this story's gate makes it 33.
@@ -862,6 +868,16 @@ ruling makes the **public** page show **MORE** than the **member app** does for 
 ⚠ The stub is written **here, at the destination**, because a future reader of `deferred-work.md`
 sees only what is in `deferred-work.md`.
 
+⭐⭐ **ANNOTATED (Story `8-16`, 2026-09-08) — ⛔ ANNOTATED, ⛔ NOT DELETED. THIS POINTER IS SPENT.**
+Item (e) is **discharged by `8-16`**, whose Task 6a made the ⏳ CLOSING edit and whose Task 6b records
+the closure post-merge. ⇒ the *"already open"* pointer above has served its purpose and a reader
+following it now lands on an item that is closing, ⛔ not one awaiting an owner.
+⚠ The *"binds 11b.2 and 11b.3"* language it quotes is itself **superseded**: `#decision-2026-09-02-179`
+cl.3 + `#decision-2026-09-02-180` bind the obligation to **`8-16`**. ⛔ The quotation is kept as the
+record of what this stub was written against — ⛔ it is not a live pointer.
+⛔ **Do not delete this stub**: its whole function is to stop a future reader re-filing the inversion
+as a NEW item, and that function outlives the obligation it points at.
+
 ### ⛔ 11b.2 (viii) — INTENTIONALLY NOT RECORDED
 
 **The un-linked `member.anonymousMember` duplicate.** ⛔ **Its subject ceased to exist**: Story
@@ -970,6 +986,18 @@ whether the tier had a viewer. *"A reconciliation answers the question it was po
 minted, captured at claim intake, declinable and revocable). ⛔ Do not read this item as the gate
 being outstanding.
 
+⚠⛔ **ANNOTATED (Story `8-16`, 2026-09-08) — ⛔ ANNOTATED, ⛔ NOT EDITED AWAY. THE SENTENCE ABOVE IS
+STALE IN TWO WAYS, AND BOTH MATTER.**
+① **"declinable and revocable" WAS REVERSED.** `#decision-2026-08-28-160` **cl.6**: *"**NO FAMILY
+VETO** … the decline path for the member's own name is deliberately removed. ⛔ A later reader must not
+restore it as a 'missing feature'."* ⇒ ⛔ the decline path's absence is a **RULING**, ⛔ not a gap.
+② **`sahyog_drive_publication` IS DE-AUTHORISED** (`-160` cl.5) and is **read-never**. The live basis
+is the deceased member's **own valid `tc_acceptance`** whose accepted T&C version PINS
+`niy.public-disclosure.member-information`.
+⛔ The original sentence is **kept verbatim** because it is the record of what was built and why this
+item was filed; ⛔ editing it away would erase the ground of a ruling that reversed it
+([[feedback_supersede_never_reinterpret]], [[feedback_record_unattested_no_backfill]]).
+
 What is routed is whether a **term of membership** supplies an **ADDITIONAL** basis. D1(b)'s ground —
 that publication of the beneficiary is **constitutive** of the mutual-aid model — is an argument that
 **consent is the wrong INSTRUMENT**: the right one is a term the member accepted *themselves*, in
@@ -981,20 +1009,46 @@ each forbid. *A consent that cannot be refused is not consent.*
 `niyamavali-amendment-draft-2026-08-24-drive-record-consent.md` and its routing note
 `trustee-panel-routing-note-2026-08-24-drive-record-publication-basis.md`.
 
-### (e) **D10's Trustee Panel ratification** — ⚠ *authorised, ⛔ NOT made*
+### (e) **D10's Trustee Panel ratification** — ✅ **CLOSED** (first half) · ⏳ **CLOSING by `8-16`** (second half)
 
-The deceased member's **FULL NAME** renders (⛔ not first-name + last-initial). ⭐ **Two committed
-records reserve a public name-form change to the Trustee Panel**, in terms: the matrix exception's own
-`scope:` (*"changing those requires its own Panel ruling"*) and the 2026-08-19 `RECONCILED` block on
-this story. ⇒ D10 is **ruled by the author and built to**, and **routed** — the `2026-08-21-144`
-precedent governs the form. ⛔ **Do not record it as Panel-ratified until it is.**
+⚠⛔ **THIS ITEM HAS TWO HALVES AND THEY RESOLVE SEPARATELY.** ⛔ Do not read either as answering the
+other, and ⛔ do not collapse them into one line.
 
-⚠ **An INVERSION it creates, recorded observationally and ⛔ not resolved here:** `resolvePoolIdentity`
-shields the same family's name on the **member-facing** My Pool card, passbook and notifications
-(8.6/8.7/8.8). ⇒ after D10 the **public** page shows **MORE** than the **member app** does for the same
-pool. ⛔ Not this story's to resolve — it binds **11b.2** and **11b.3**.
+**FIRST HALF — ✅ CLOSED by [edit].** D10 (the public `/sahyog` full-name form) is **PANEL-RATIFIED**:
+`#decision-2026-09-02-179` **cl.2**. ⛔ The *"authorised, not made"* posture below was true when
+written and is ⛔ no longer; ⭐ recorded as **closed**, ⛔ never *"resolved via deferral"*
+([[feedback_closure_language_precision]]).
 
-⭐ **Trigger: the Panel's ruling on the routing note.**
+> *(the record, kept)* The deceased member's **FULL NAME** renders (⛔ not first-name + last-initial).
+> Two committed records reserved a public name-form change to the Trustee Panel, in terms: the matrix
+> exception's own `scope:` and the 2026-08-19 `RECONCILED` block. ⇒ D10 was **ruled by the author,
+> built to, and routed** — the `2026-08-21-144` precedent governs the form.
+
+**SECOND HALF — ⏳ CLOSING. The closing edit is made by `8-16`, at `review`. ⛔ Not closed until it
+merges.**
+
+⚠ **The INVERSION D10 creates:** `resolvePoolIdentity` shielded the same family's name on the
+**member-facing** My Pool card, passbook, Contribution Note PDF and notifications (8.6/8.7/8.8). ⇒ once
+the publication basis becomes satisfiable, the **public** page would show **MORE** than the **member
+app** for the same pool.
+
+⭐⭐ **ITS BINDER IS STORY `8-16`** (`#decision-2026-09-02-179` **cl.3** directed the closure;
+`#decision-2026-09-02-180` scoped it to **ALL FOUR** consumers, Trustee-ratified). ⚠⛔ **⛔ NOT
+"11b.2 and 11b.3"**, which this paragraph used to say, and ⛔ **not `11b.3b`**, which the 11b.3a
+section said — the two sites disagreed, and ⭐ both collapse to `8-16`, which owns the code.
+
+⚠ **`2026-09-02-180` cl.2 rules the CLOSURE LANGUAGE in advance:** this resolves to **CLOSED**, ⛔ never
+*"narrowed"* and ⛔ never *"resolved via deferral"* — Q2 (the narrowed-remainder question) is
+**VACATED** by cl.3, its antecedent having failed.
+
+⚠⛔ **CLOSED ON SHIP, ⛔ NOT ON RULING.** A `dev-story` run ends at `review`, before merge. The item
+therefore stays **OPEN** until `8-16` merges; the post-merge closure is `8-16`'s **Task 6b**.
+
+⚠⛔ **SIBLING `11b-3b` IS A CO-WRITER OF THIS ITEM.** Its **AC8 + Task** rewrite it *conditionally on
+`8-16`'s merge state*. ⇒ ⭐ **whichever of `8-16` / `11b-3b` merges SECOND must ⛔ neither re-affirm
+this item open ⛔ nor re-record its closure** — one obligation, one record.
+
+⭐ **Trigger: `8-16`'s merge.**
 
 ### (f) The **UX-spec Sahyog List column inventory** owes an amendment (D5(a))
 

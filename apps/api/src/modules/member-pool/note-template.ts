@@ -78,8 +78,20 @@ function formatInr(amount: number): string {
   return `₹${amount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 }
 
-/** The family display form the card and the Yogdaan Bahi use — first name + last initial only. */
-function familyDisplay(first: string, lastInitial: string): string {
+/**
+ * The shielded display form for a name carried as first-name + last-INITIAL PARTS.
+ *
+ * ⛔⛔ STORY 8.16, TRAP 6 — THIS HELPER IS NOT CHANGED IN PLACE, and the reason is the second call
+ * site below. It renders the CONTRIBUTING MEMBER'S OWN name as well as (formerly) the deceased
+ * family's, so a one-line edit here to "make the family name full" would silently un-shield a LIVING
+ * member's own name on a PDF they can forward — a PII widening with no ruling behind it.
+ * `2026-09-02-180` ruled the DECEASED FAMILY's name and nothing else.
+ *
+ * ⇒ the deceased's name now arrives ALREADY RESOLVED as `facts.deceasedDisplayName` (the form decided
+ * once, under the Pariwar's mode, in the shared resolver) and does not pass through here at all. This
+ * helper now has exactly ONE caller: the member's own name, which stays shielded.
+ */
+function shieldedPartsDisplay(first: string, lastInitial: string): string {
   return lastInitial ? `${first} ${lastInitial}` : first;
 }
 
@@ -141,8 +153,10 @@ export function renderContributionNoteHtml(
   const fonts = devanagariFontDataUris();
   const isGreen = facts.status === 'green';
   const statusInk = STATUS_INK[facts.status];
-  const family = familyDisplay(facts.deceasedFirstName, facts.deceasedLastInitial);
-  const member = familyDisplay(facts.memberFirstName, facts.memberLastInitial);
+  // The deceased family — ALREADY in the Pariwar's chosen form (Story 8.16); no join happens here.
+  const family = facts.deceasedDisplayName;
+  // The LIVING contributing member — still shielded to first name + last initial (Trap 6).
+  const member = shieldedPartsDisplay(facts.memberFirstName, facts.memberLastInitial);
   const pool = facts.poolName ?? facts.poolLetterCode;
 
   // The Niyamavali provenance (AC4) — the version in force AT THE CONTRIBUTION INSTANT, or an HONEST

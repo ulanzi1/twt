@@ -1,8 +1,8 @@
 // Test-only stand-in for `@twt/domain`'s `notifications.resolvePoolIdentity` — Story 8.8 (Task 1).
 //
 // ── Why this exists ────────────────────────────────────────────────────────────────────────────────
-// Story 8.8 relocated the shared per-pool identity join (deceased family first-name + last-initial +
-// letter code + curated name) from `apps/api/src/modules/member-pool/pool-identity.ts` down into
+// Story 8.8 relocated the shared per-pool identity join (the deceased family's name in the Pariwar's
+// chosen form + letter code + curated name) from `apps/api/src/modules/member-pool/pool-identity.ts` into
 // `@twt/domain` (`notifications/pool-identity.ts`), because the cycle-open notification payload AC1
 // needs it from `apps/jobs`, which cannot import `apps/api`.
 //
@@ -17,6 +17,12 @@
 // The REAL resolver's own behaviour is covered where it now lives:
 // `packages/domain/tests/notifications/pool-identity.test.ts`. This file is a test double, never
 // production code — it must stay a faithful mirror of the domain implementation.
+//
+// ⚠⛔ IT IS A POSITIONAL MIRROR OF THE DOMAIN SIGNATURE, read by THREE suites. When that signature
+// moves, this file moves in the SAME COMMIT — otherwise all three go green against the wrong shape,
+// which is the one failure mode a test double can have that is worse than no double at all.
+// Story 8.16 inserted the presentation `mode` between `pariwarId` and `input`, and swapped the
+// first-name/last-initial PAIR for one resolved `deceasedDisplayName`.
 
 interface ResolvePoolIdentityFakeDeps {
   readonly getClaimCase: (...args: never[]) => Promise<{ deceasedMemberId: string } | undefined>;
@@ -38,6 +44,8 @@ export function createResolvePoolIdentityFake(deps: ResolvePoolIdentityFakeDeps)
     db: unknown,
     encryption: unknown,
     pariwarId: string,
+    /** Story 8.16 — the Pariwar's stored presentation mode, resolved by the CALLER and passed in. */
+    mode: 'full_name' | 'shielded_name',
     input: {
       claimCaseId: string;
       poolIndex: number;
@@ -72,8 +80,19 @@ export function createResolvePoolIdentityFake(deps: ResolvePoolIdentityFakeDeps)
     } catch {
       return null; // decrypt failure degrades exactly like an unresolvable profile
     }
+    // Story 8.16 — the same form decision the domain resolver makes, mirrored exactly. NOTE the
+    // MONONYM arm: `shielded_name` with no surname renders the whole stored name here, where the
+    // PUBLIC resolver would return `''` and its callers would omit the row (Trap 5).
     const { firstName, lastInitial } = deps.splitFirstNameLastInitial(fullName);
-    if (firstName === '') return null;
+    const deceasedDisplayName =
+      mode === 'shielded_name'
+        ? firstName === ''
+          ? ''
+          : lastInitial === ''
+            ? firstName
+            : `${firstName} ${lastInitial}.`
+        : fullName.trim().split(/\s+/).filter((t) => t.length > 0).join(' ');
+    if (deceasedDisplayName === '') return null;
 
     let poolLetterCode: string;
     try {
@@ -94,8 +113,7 @@ export function createResolvePoolIdentityFake(deps: ResolvePoolIdentityFakeDeps)
     }
 
     return {
-      deceasedFirstName: firstName,
-      deceasedLastInitial: lastInitial,
+      deceasedDisplayName,
       poolLetterCode,
       poolName,
       poolCanonicalIdentifier: input.poolCanonicalIdentifier,

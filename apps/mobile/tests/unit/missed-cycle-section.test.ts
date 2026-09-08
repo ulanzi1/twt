@@ -168,7 +168,17 @@ describe('AC2/AC6 — the section’s anatomy', () => {
     // The causes are structurally unrecorded and out-of-band is fenced against ever being recorded;
     // and naming a bereaved family beside "no matched contribution recorded" pairs a person with an
     // absence. Neither may reappear "helpfully".
-    for (const forbidden of ['deceasedFirstName', 'deceasedLastInitial', 'reasonCode', 'cause']) {
+    // ⚠ STORY 8.16 — `deceasedDisplayName` IS THE LOAD-BEARING ENTRY NOW. The rename left the two
+    // part-names below asserting the absence of fields that no longer exist ANYWHERE, so they passed
+    // vacuously: the section could have started naming the family through the new field and this test
+    // would still have been green. They are kept as teeth against the old shape returning.
+    for (const forbidden of [
+      'deceasedDisplayName',
+      'deceasedFirstName',
+      'deceasedLastInitial',
+      'reasonCode',
+      'cause',
+    ]) {
       expect(src, `the section must not reference ${forbidden}`).not.toContain(forbidden)
     }
   })

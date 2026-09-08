@@ -36,7 +36,10 @@ function YogdaanBahiRowComponent({ row, rowIndex }: Props) {
   // Every 5th row (1-indexed) gets a heavier bottom rule per UX spec (0-indexed: rowIndex % 5 === 4).
   const isFifthRow = (rowIndex + 1) % 5 === 0
 
-  const family = row.deceasedLastInitial ? `${row.deceasedFirstName} ${row.deceasedLastInitial}` : row.deceasedFirstName
+  // ⭐ STORY 8.16 — SERVER-RESOLVED, in the Pariwar's chosen form; the row does NOT re-join parts. This
+  // is consumer ②, and it feeds both the visible family column and the row's single a11y announcement,
+  // so a client-side join here would be two more places a name form could drift from the card's.
+  const family = row.deceasedDisplayName
   const poolDisplay = row.poolName ?? row.poolLetterCode
   const dateDisplay = row.date.slice(0, 10) // YYYY-MM-DD (Gregorian, Latin)
   // The status LABEL is still needed for the composite line-1 row announcement (the pill itself is line-2
@@ -113,6 +116,11 @@ function YogdaanBahiRowComponent({ row, rowIndex }: Props) {
           chromeless
           height={24}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          // ⚠⛔ `accessible` IS LOAD-BEARING ON A TAMAGUI <Button>, and its absence is silent. A tamagui
+          // Button is `styled(View, …)` and supplies `accessible` NOWHERE, and an RN View is NOT an
+          // accessibility element without it — so the inner <Text> takes focus and the label below is
+          // never announced. The label reads correctly in code and does not reach the screen reader.
+          accessible={true}
           accessibilityRole="button"
           accessibilityLabel={t('yogdaan.note.link_a11y', undefined, NS)}
           onPress={onNotePress}

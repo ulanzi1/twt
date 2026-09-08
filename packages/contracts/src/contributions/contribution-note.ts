@@ -114,12 +114,23 @@ export const ContributionNoteFacts = z
     /** The member-facing cycle reference (the cycle's freeze month, `YYYY-MM`) — 8.6's `cycleRef`. */
     cycleRef: z.string().min(1),
 
-    // ── The deceased member whose family the pool supports (PII-shielded — NOT the nominee) ──────────
-    deceasedFirstName: z.string().min(1),
-    /** Last-name INITIAL only. `.max(16)` bounds one Devanagari grapheme cluster (the 8.6 bound). */
-    deceasedLastInitial: z.string().max(16),
+    // ── The deceased member whose family the pool supports (NOT the nominee) ─────────────────────────
+    /**
+     * ⭐ STORY 8.16 (AC2/AC3) — ONE RESOLVED DISPLAY FIELD, replacing the `deceasedFirstName` /
+     * `deceasedLastInitial` PAIR, in the Pariwar's chosen name form. See `active-contribution-card.ts`.
+     *
+     * ⚠ The PDF is a consumer that LEAVES THE APP — a member downloads it, keeps it, and can forward
+     * it. `2026-09-02-180` cl.1 ruled ALL FOUR consumers with that exposure named in the packet, so
+     * this field rising is the ruling, not an oversight.
+     */
+    deceasedDisplayName: z.string().min(1).max(128),
 
     // ── The contributing member — this is THEIR artifact, so they are named on it (PII-shielded) ─────
+    //
+    // ⛔⛔ THESE TWO DO NOT MOVE (Story 8.16, Trap 6). `2026-09-02-180` ruled the DECEASED FAMILY's
+    // name and nothing else. Widening the LIVING contributing member's own name on a forwardable PDF
+    // would be a PII widening with no ruling behind it — and it is one edit away, because
+    // `note-template.ts` renders both through the same helper.
     memberFirstName: z.string().min(1),
     memberLastInitial: z.string().max(16),
     /**

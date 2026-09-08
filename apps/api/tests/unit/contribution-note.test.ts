@@ -36,6 +36,7 @@ const getCycleFreezeCommittedAt = vi.fn();
 const reserveNames = vi.fn();
 const getClaimCase = vi.fn();
 const getMemberKycProfile = vi.fn();
+const resolvePublicNamePresentationMode = vi.fn().mockResolvedValue('full_name');
 const resolveByClauseId = vi.fn();
 const getPariwarPassport = vi.fn();
 
@@ -46,7 +47,10 @@ vi.mock('@twt/domain', async (importActual) => {
     pool: { ...actual.pool, getPoolContributionContext, getCycleFreezeCommittedAt, reserveNames },
     contribution: { ...actual.contribution, getMemberAttestedContribution },
     claim: { ...actual.claim, getClaimCase },
-    kyc: { ...actual.kyc, getMemberKycProfile },
+    // Story 8.16 — the presentation-mode accessor is a real DB read; these suites drive a mocked `tx`,
+    // so it is stubbed here. `full_name` is the RULED default an absent config row resolves to, which
+    // is what the launch tenant has, so the suites exercise the shipping form.
+    kyc: { ...actual.kyc, getMemberKycProfile, resolvePublicNamePresentationMode },
     niyamavali: { ...actual.niyamavali, resolveByClauseId },
     passport: { ...actual.passport, getPariwarPassport },
     // Story 8.8 (Task 1) relocated the shared pool-identity join into @twt/domain, where it reaches
@@ -437,13 +441,47 @@ describe('AC1/AC5 — the artifact’s naming, watermark and PII discipline', ()
     expect(html.includes(MEMBER_ID), 'the raw member id must never appear on the artifact').toBe(false);
   });
 
-  it('only first-name + last-initial appear — no full surname for either the member or the family', async () => {
+  it('⭐ Story 8.16 — the DECEASED family is named in the Pariwar`s form; the LIVING member stays shielded', async () => {
+    // ⚠⛔ THE ASYMMETRY IS THE POINT, AND IT IS TRAP 6. `2026-09-02-180` cl.1 ruled the DECEASED
+    // family's name onto all four consumers — including this PDF, which a member downloads, keeps and
+    // can forward. It ruled NOTHING about the contributing member's own name, so that stays shielded
+    // to first-name + last-initial. `note-template.ts` used to render both through ONE helper; a
+    // one-line edit there would have widened both, with a ruling behind only one.
+    wireOwnHistory('yellow');
+    const { html } = await generateNote();
+    // The Pariwar has no stored presentation row ⇒ the RULED default `full_name` (never fail-closed).
+    expect(html).toContain('Rajesh Sharma');
+    // ⛔ The LIVING contributing member — first name + last initial, and NOT their surname.
+    expect(html).toContain('Sushil K');
+    expect(html.includes('Kumar')).toBe(false);
+  });
+
+  it('⛔ Story 8.16 — in `shielded_name` mode the DECEASED family surname does NOT reach the PDF', async () => {
+    // The other half of mode-resolution: a Pariwar that shields publicly also shields here, so the
+    // fix cannot re-create the inversion pointing the other way (Trap 3). Both names shielded.
+    resolvePublicNamePresentationMode.mockResolvedValue('shielded_name');
     wireOwnHistory('yellow');
     const { html } = await generateNote();
     expect(html).toContain('Rajesh S');
-    expect(html).toContain('Sushil K');
     expect(html.includes('Sharma')).toBe(false);
+    expect(html).toContain('Sushil K');
     expect(html.includes('Kumar')).toBe(false);
+    resolvePublicNamePresentationMode.mockResolvedValue('full_name');
+  });
+
+  it('⛔ Story 8.16 (Trap 5) — a MONONYM deceased renders in FULL in both modes, never omitted', async () => {
+    // The public directory would omit this row; a Note that names no family is a defective artifact,
+    // which is the very thing 8.7 D6 made a 404 rather than a blank.
+    decryptKycField.mockImplementation(async (ciphertext: string) =>
+      ciphertext === 'enc:v1:deceased' ? 'Sunita' : 'Sushil Kumar',
+    );
+    for (const mode of ['full_name', 'shielded_name'] as const) {
+      resolvePublicNamePresentationMode.mockResolvedValue(mode);
+      wireOwnHistory('yellow');
+      const { html } = await generateNote();
+      expect(html, `mononym must render in ${mode}`).toContain('Sunita');
+    }
+    resolvePublicNamePresentationMode.mockResolvedValue('full_name');
   });
 
   it('branding degrades PER FIELD — an unset logo does not cost the Pariwar its colours', async () => {

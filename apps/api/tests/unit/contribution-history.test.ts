@@ -23,6 +23,7 @@ const getCycleFreezeCommittedAt = vi.fn();
 const reserveNames = vi.fn();
 const getClaimCase = vi.fn();
 const getMemberKycProfile = vi.fn();
+const resolvePublicNamePresentationMode = vi.fn().mockResolvedValue('full_name');
 // Card-path mocks (for the card-identical comparison test).
 const getMemberStateAt = vi.fn();
 const listLiveAlertsForPariwar = vi.fn();
@@ -58,7 +59,10 @@ vi.mock('@twt/domain', async (importActual) => {
       listConfirmedContributorsForPool,
     },
     claim: { ...actual.claim, getClaimCase },
-    kyc: { ...actual.kyc, getMemberKycProfile },
+    // Story 8.16 — the presentation-mode accessor is a real DB read; these suites drive a mocked `tx`,
+    // so it is stubbed here. `full_name` is the RULED default an absent config row resolves to, which
+    // is what the launch tenant has, so the suites exercise the shipping form.
+    kyc: { ...actual.kyc, getMemberKycProfile, resolvePublicNamePresentationMode },
     // Story 8.8 (Task 1) relocated the shared pool-identity join into @twt/domain, where it reaches
     // its collaborators through domain-internal paths this barrel mock cannot intercept. The double
     // re-composes the join over the SAME mocked collaborators configured above, so check (5) below
@@ -164,8 +168,7 @@ describe('contributionHistory — wiring (AC1/AC2/AC3)', () => {
     expect(result.rows[0]).toEqual({
       contributionId: 'evt-1',
       date: '2026-06-20T10:15:00.000Z',
-      deceasedFirstName: 'Rajesh',
-      deceasedLastInitial: 'S',
+      deceasedDisplayName: 'Rajesh Sharma',
       poolLetterCode: 'A',
       poolName: null,
       poolCanonicalIdentifier: 'P-2026-06-001',
@@ -455,8 +458,10 @@ describe('D6 — the passbook and the My Pool card render a pool IDENTICALLY (sh
     const card = await handlers.activeContribution(fakeRequest());
     if (!card.assigned) throw new Error('expected an assigned card');
 
-    expect(card.deceasedFirstName).toBe(historyRow.deceasedFirstName);
-    expect(card.deceasedLastInitial).toBe(historyRow.deceasedLastInitial);
+    // ⭐ Story 8.16 — ONE field, and the D6 property is STRONGER than it was: the card and the passbook
+    // no longer merely agree on two parts they each join themselves; they carry the same resolved
+    // string, decided once under the Pariwar's mode.
+    expect(card.deceasedDisplayName).toBe(historyRow.deceasedDisplayName);
     expect(card.poolLetterCode).toBe(historyRow.poolLetterCode);
     expect(card.poolName).toBe(historyRow.poolName);
     expect(card.poolCanonicalIdentifier).toBe(historyRow.poolCanonicalIdentifier);

@@ -63,11 +63,16 @@ const imports = moduleFiles.flatMap(parseImports);
 const FORBIDDEN_PACKAGES = ['@twt/domain', 'react', 'react-native', 'astro', '@twt/tokens'] as const;
 
 // ⛔ Symbols that, if BOUND here, would mean this module had taken over a decision that is not its own:
-// the name FORM (`splitFirstNameLastInitial`, `resolvePublicMemberName`), the pool identity shielding
+// the name FORM (`splitFirstNameLastInitial`, `resolvePublicMemberName`,
+// `resolveMemberFacingDeceasedName`), the pool identity shielding
 // (`resolvePoolIdentity`), or the status pill D2(a) rejected (`deriveStatusPillViewModel`).
 const FORBIDDEN_BINDINGS = [
   'splitFirstNameLastInitial',
   'resolvePublicMemberName',
+  // Story 8.16 — the MEMBER-side form decider. It joins under the Pariwar's ruled mode inside the
+  // shared resolver; a presenter that bound it would be a SECOND place the member-facing name form is
+  // decided, which is the whole defect `2026-09-02-180`'s "one identity everywhere" property forbids.
+  'resolveMemberFacingDeceasedName',
   'resolvePoolIdentity',
   'deriveStatusPillViewModel',
 ] as const;

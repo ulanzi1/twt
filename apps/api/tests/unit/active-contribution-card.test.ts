@@ -24,6 +24,7 @@ const deriveContributionReference = vi.fn();
 const poolLetterCode = vi.fn();
 const getClaimCase = vi.fn();
 const getMemberKycProfile = vi.fn();
+const resolvePublicNamePresentationMode = vi.fn().mockResolvedValue('full_name');
 const hasAttestedContribution = vi.fn();
 const listConfirmedContributorsForPool = vi.fn();
 // Story 11b.10 — the drive's PUBLIC ADDRESS, read server-side (AC4). ⛔ Never client-derived.
@@ -46,7 +47,10 @@ vi.mock('@twt/domain', async (importActual) => {
       readPoolPublicToken,
     },
     claim: { ...actual.claim, getClaimCase },
-    kyc: { ...actual.kyc, getMemberKycProfile },
+    // Story 8.16 — the presentation-mode accessor is a real DB read; these suites drive a mocked `tx`,
+    // so it is stubbed here. `full_name` is the RULED default an absent config row resolves to, which
+    // is what the launch tenant has, so the suites exercise the shipping form.
+    kyc: { ...actual.kyc, getMemberKycProfile, resolvePublicNamePresentationMode },
     contribution: { ...actual.contribution, hasAttestedContribution, listConfirmedContributorsForPool },
     // Story 8.8 (Task 1) relocated the shared pool-identity join into @twt/domain, where it reaches
     // its collaborators through domain-internal paths this barrel mock cannot intercept. The double

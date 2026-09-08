@@ -2525,12 +2525,10 @@ components:
               date:
                 type: string
                 format: date-time
-              deceasedFirstName:
+              deceasedDisplayName:
                 type: string
                 minLength: 1
-              deceasedLastInitial:
-                type: string
-                maxLength: 16
+                maxLength: 128
               poolLetterCode:
                 type: string
                 minLength: 1
@@ -2561,8 +2559,7 @@ components:
             required:
               - contributionId
               - date
-              - deceasedFirstName
-              - deceasedLastInitial
+              - deceasedDisplayName
               - poolLetterCode
               - poolName
               - poolCanonicalIdentifier

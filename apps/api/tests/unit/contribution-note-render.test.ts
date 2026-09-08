@@ -79,8 +79,8 @@ const FACTS = {
   attestedAt: '2026-06-20T10:15:00.000Z',
   generatedAt: '2026-07-23T09:00:00.000Z',
   cycleRef: '2026-06',
-  deceasedFirstName: 'राजेश',
-  deceasedLastInitial: 'श',
+  // Story 8.16 — the deceased family, ALREADY resolved into the Pariwar's chosen form.
+  deceasedDisplayName: 'राजेश शर्मा',
   memberFirstName: 'सुशील',
   memberLastInitial: 'कु',
   memberRef: 'TWT-4F2A9C1B',

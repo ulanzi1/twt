@@ -48,7 +48,11 @@ import type { FastifyRequest } from 'fastify';
 import type { AppDeps } from '../../context.js';
 import { decryptKycField } from '../kyc/kyc-crypto.js';
 import { splitFirstNameLastInitial } from './name.js';
-import { cycleRefFromCommittedAt, resolvePoolIdentity } from './pool-identity.js';
+import {
+  cycleRefFromCommittedAt,
+  resolvePoolIdentity,
+  resolvePoolNamePresentationModeForRequest,
+} from './pool-identity.js';
 
 /**
  * The Niyamavali clause whose version the Note cites (AC4 / D4).
@@ -141,7 +145,12 @@ export async function resolveContributionNoteFacts(
   //     card and the Yogdaan Bahi render. Unresolvable → no Note (404), NOT a blank field.
   const poolCtx = await poolDomain.getPoolContributionContext(tx, pariwarId, entry.poolId);
   if (poolCtx === null) return null;
-  const identity = await resolvePoolIdentity(deps, tx, request, pariwarId, {
+  // ⭐ Story 8.16 — the presentation MODE, read ONCE for this Note and passed IN (`2026-09-02-181`
+  //     cl.2). ⚠ The Note is the consumer that LEAVES THE APP: a member downloads it, keeps it and can
+  //     forward it. `2026-09-02-180` cl.1 ruled all four consumers with that exposure named in the
+  //     packet, so the family's name rising here is the ruling, not an oversight.
+  const presentationMode = await resolvePoolNamePresentationModeForRequest(tx, pariwarId);
+  const identity = await resolvePoolIdentity(deps, tx, request, pariwarId, presentationMode, {
     claimCaseId: poolCtx.claimCaseId,
     poolIndex: poolCtx.poolIndex,
     poolCanonicalIdentifier: poolCtx.poolCanonicalIdentifier,
@@ -182,8 +191,11 @@ export async function resolveContributionNoteFacts(
     attestedAt: entry.attestedAt.toISOString(),
     generatedAt: ctx.now.toISOString(),
     cycleRef,
-    deceasedFirstName: identity.deceasedFirstName,
-    deceasedLastInitial: identity.deceasedLastInitial,
+    deceasedDisplayName: identity.deceasedDisplayName,
+    // ⛔⛔ THE CONTRIBUTING MEMBER'S OWN NAME STAYS SHIELDED (Story 8.16, Trap 6). `resolveOwnName`
+    // below is UNTOUCHED: `2026-09-02-180` ruled the DECEASED FAMILY's name and nothing else, and
+    // widening a LIVING member's own name on a forwardable PDF would be a PII widening with no ruling
+    // behind it.
     memberFirstName: memberName.firstName,
     memberLastInitial: memberName.lastInitial,
     memberRef: deriveMemberNoteRef(pariwarId, memberId),

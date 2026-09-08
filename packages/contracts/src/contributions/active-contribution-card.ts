@@ -76,8 +76,9 @@ export type UpcomingAmountChange = z.output<typeof UpcomingAmountChange>;
  *                                 its registry; `null` otherwise (TWT-Bihar launch → letter code).
  *   · `poolCanonicalIdentifier` — the audit/system identifier `P-YYYY-MM-###` (surfaced for a11y /
  *                                 support reference; the shortform is what the card headlines).
- *   · `deceasedFirstName` / `deceasedLastInitial` — the DECEASED member whose family is supported
- *                                 (AC2 UX-spec resolution: the family-parichay subject, NOT the nominee).
+ *   · `deceasedDisplayName`    — the DECEASED member whose family is supported (AC2 UX-spec
+ *                                 resolution: the family-parichay subject, NOT the nominee), ALREADY
+ *                                 RESOLVED into the Pariwar's chosen name form (Story 8.16).
  *   · `fixedAmount`             — the SNAPSHOTTED `pools.fixed_amount` (whole INR; D3 — never a live
  *                                 recompute).
  *   · `daysRemaining`           — the server-computed 15-day window count (D5 seam; int ≥0).
@@ -121,13 +122,21 @@ export const AssignedContributionCard = z
      * and the card suppressing in LOCK-STEP instead of leaving a dead link behind a live card.
      */
     sahyogVivranToken: z.string().min(1),
-    deceasedFirstName: z.string().min(1),
-    // The last-name INITIAL only (PII shield — never the full surname). `.max(16)` defensively bounds a
-    // single grapheme cluster (base + combining marks) — a Devanagari conjunct (e.g. क्ष, ज्ञ, त्र) plus
-    // vowel signs can exceed a few UTF-16 code units, so the bound must not be tighter than the widest
-    // real single-grapheme output of `firstGrapheme()` (name.ts); empty when the name is a single token
-    // (no surname to initialize) so the card shows just the first name — never a full-name leak.
-    deceasedLastInitial: z.string().max(16),
+    // ⭐ STORY 8.16 (AC2/AC3) — ONE RESOLVED DISPLAY FIELD, replacing the `deceasedFirstName` /
+    // `deceasedLastInitial` PAIR this contract used to carry.
+    //
+    // The form is resolved SERVER-SIDE from the Pariwar's stored `public_name_presentation_mode`
+    // (`2026-09-02-181`), so the card, the Yogdaan Bahi, the Contribution Note PDF and the push all
+    // render the same string for the same pool — "one identity everywhere" (`2026-09-02-180` cl.1) as
+    // a property of the contract rather than four call sites joining parts consistently by convention.
+    //
+    // ⛔ The client NEVER re-joins or re-forms this value, and the parts are NOT carried alongside it.
+    // ⚠ In the DEFAULT `full_name` mode this is a full legal name — a real widening of what the member
+    // app shows, and the decision of `2026-09-02-180`, not a side effect.
+    //
+    // `.max(128)` bounds a stored legal name defensively; the old `.max(16)` bounded ONE Devanagari
+    // grapheme cluster and would now reject the very values this field exists to carry.
+    deceasedDisplayName: z.string().min(1).max(128),
     fixedAmount: z.number().int().positive(),
     daysRemaining: z.number().int().nonnegative(),
     progress: ActiveContributionProgress,

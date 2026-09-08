@@ -53,8 +53,10 @@ const VALID_ASSIGNED = {
   // UNLIKE the identifier above: a fixture that reused `P-2026-07-001` here would model the exact
   // client-side derivation D2 forbids.
   sahyogVivranToken: 'aBcDeFgHiJkLmNoPqRsTuV',
-  deceasedFirstName: 'Rajesh',
-  deceasedLastInitial: 'S',
+  // Story 8.16 (AC3) — the ONE resolved display field, added to each `VALID_*` fixture in place of
+  // the shielded pair. `deceasedDisplayName` is NOT a guarded token: the three `.strict()` guards
+  // reject `deceasedFullName` / `deceasedNameCiphertext` / `deceasedName`, and it is none of them.
+  deceasedDisplayName: 'Rajesh Kumar',
   fixedAmount: 500,
   daysRemaining: 12,
   progress: { confirmedCount: 0, rosterSize: 48 },
@@ -92,9 +94,17 @@ describe('AC2 — PII shielding (only first-name + last-initial of the deceased 
     expect(AssignedContributionCard.safeParse(VALID_ASSIGNED).success).toBe(true);
   });
 
-  it('an empty last-initial is allowed (single-token name — no surname to leak)', () => {
-    expect(AssignedContributionCard.safeParse({ ...VALID_ASSIGNED, deceasedLastInitial: '' }).success).toBe(
+  it('a MONONYM is a first-class value — a single-token display name is accepted (Trap 5)', () => {
+    // The PUBLIC directory omits a row it cannot shield; a member's own pool must never be omitted for
+    // that reason, so the contract has to be able to carry a one-token name.
+    expect(AssignedContributionCard.safeParse({ ...VALID_ASSIGNED, deceasedDisplayName: 'सुनीता' }).success).toBe(
       true,
+    );
+  });
+
+  it('an EMPTY display name is rejected — absence is `{ assigned:false }`, never a blank where a name goes', () => {
+    expect(AssignedContributionCard.safeParse({ ...VALID_ASSIGNED, deceasedDisplayName: '' }).success).toBe(
+      false,
     );
   });
 
@@ -105,13 +115,23 @@ describe('AC2 — PII shielding (only first-name + last-initial of the deceased 
     }
   });
 
-  it('REJECTS an over-long last-initial (the .max shield — never a full surname)', () => {
-    // `.max(16)` is sized to accommodate a real single grapheme cluster (a Devanagari conjunct + vowel
-    // signs), so the rejection fixture must clearly exceed that — a full multi-syllable surname, not a
-    // short one that could pass as a wide grapheme cluster.
+  it('REJECTS an absurdly long display name (the .max bound — a name field, not a free-text channel)', () => {
+    // Story 8.16 widened this field from ONE grapheme cluster (`.max(16)`) to a whole stored legal name
+    // (`.max(128)`), so the bound is no longer a PII shield — it is a shape bound. A full surname now
+    // legitimately passes, which is the ruling; what must not pass is a payload using a name field as
+    // an unbounded string channel.
     expect(
-      AssignedContributionCard.safeParse({ ...VALID_ASSIGNED, deceasedLastInitial: 'Ramalingeswararao' }).success,
+      AssignedContributionCard.safeParse({ ...VALID_ASSIGNED, deceasedDisplayName: 'र'.repeat(129) }).success,
     ).toBe(false);
+  });
+
+  it('STILL REJECTS the OLD shielded PAIR — the parts are not kept alongside the resolved field (AC3)', () => {
+    // Two sources of truth for one name is exactly what the shape change removes. `.strict()` is what
+    // makes this hold; without the assertion a consumer could quietly re-add the parts and re-join them.
+    for (const field of ['deceasedFirstName', 'deceasedLastInitial']) {
+      const leaky = { ...VALID_ASSIGNED, [field]: 'Rajesh' };
+      expect(AssignedContributionCard.safeParse(leaky).success, `card must reject ${field}`).toBe(false);
+    }
   });
 });
 
@@ -426,8 +446,10 @@ describe('Story 8.5 — the failure-report shape carries NO free-text / PII fiel
 const VALID_HISTORY_ROW = {
   contributionId: '11111111-1111-1111-1111-111111111111',
   date: '2026-06-20T10:15:00.000Z',
-  deceasedFirstName: 'Rajesh',
-  deceasedLastInitial: 'S',
+  // Story 8.16 (AC3) — the ONE resolved display field, added to each `VALID_*` fixture in place of
+  // the shielded pair. `deceasedDisplayName` is NOT a guarded token: the three `.strict()` guards
+  // reject `deceasedFullName` / `deceasedNameCiphertext` / `deceasedName`, and it is none of them.
+  deceasedDisplayName: 'Rajesh Kumar',
   poolLetterCode: 'F',
   poolName: null,
   poolCanonicalIdentifier: 'P-2026-06-001',
@@ -476,7 +498,13 @@ describe('Story 8.6 — the Yogdaan Bahi contribution-history read model (AC1/AC
       'tr',
       'fullName',
       'deceasedFullName',
+      // Story 8.16 (AC3) — the OLD shielded pair is now an unknown key too. Kept as teeth against the
+      // parts being re-added alongside the resolved `deceasedDisplayName` (two sources of truth).
+      'deceasedFirstName',
+      'deceasedLastInitial',
       'memberId',
+      // ⛔ `memberFullName` STAYS FORBIDDEN here. Story 8.16 moved the DECEASED family's name only;
+      // the contributing member's own name is out of its scope (Trap 6).
       'memberFullName',
       'contributorName',
       'nomineeName',
@@ -603,6 +631,10 @@ describe('Story 10.27 — the missed-cycle collection (AC1/AC2/AC4/AC6)', () => 
       'memberFullName',
       'deceasedFirstName',
       'deceasedLastInitial',
+      // ⚠ Story 8.16 — WITHOUT THIS LINE the two entries above became VACUOUS: they assert the absence
+      // of fields that no longer exist anywhere, so they pass whatever this shape does. The live name
+      // field is `deceasedDisplayName`, and a missed cycle names no family at all.
+      'deceasedDisplayName',
       'deceasedFullName',
       'contributorName',
       'nomineeName',
@@ -653,8 +685,10 @@ const VALID_NOTE_FACTS = {
   attestedAt: '2026-06-20T10:15:00.000Z',
   generatedAt: '2026-07-23T09:00:00.000Z',
   cycleRef: '2026-06',
-  deceasedFirstName: 'Rajesh',
-  deceasedLastInitial: 'S',
+  // Story 8.16 (AC3) — the ONE resolved display field, added to each `VALID_*` fixture in place of
+  // the shielded pair. `deceasedDisplayName` is NOT a guarded token: the three `.strict()` guards
+  // reject `deceasedFullName` / `deceasedNameCiphertext` / `deceasedName`, and it is none of them.
+  deceasedDisplayName: 'Rajesh Kumar',
   memberFirstName: 'Sushil',
   memberLastInitial: 'K',
   memberRef: 'TWT-4F2A9C1B',
@@ -712,8 +746,14 @@ describe('Story 8.7 — ContributionNoteFacts: PII discipline + strictness (AC5)
       'ifsc',
       'vpa',
       'nomineeName',
+      // ⛔ `memberFullName` STAYS FORBIDDEN here. Story 8.16 moved the DECEASED family's name only —
+      // `note-template.ts` renders both through one helper, so this guard is what stops the living
+      // contributing member's own name widening on a forwardable PDF by accident (Trap 6).
       'memberFullName',
       'deceasedFullName',
+      // Story 8.16 (AC3) — the OLD shielded pair, now unknown keys on this artifact too.
+      'deceasedFirstName',
+      'deceasedLastInitial',
       'nameCiphertext',
       'memberId',
       'memberNumber',

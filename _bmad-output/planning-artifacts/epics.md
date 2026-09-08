@@ -643,7 +643,7 @@ Channel primitive only — structured `alert` payload + dispatcher + per-Pariwar
 
 ### Epic 8: Sushil's Contribution Loop (Yogdaan Bahi + My Pool + UPI Intent + Contribution Note)
 
-**The defining experience SM-1 measures.** Sushil's surface. Yogdaan Bahi (passbook), My Pool card (home-screen anchor), UPI Intent (90-second loop), Contribution Note PDF (never "receipt"). FR-23 nudge seam *consumer*. Epic 8 closes at yellow pill — green-flip is Epic 9. **12 stories** spanning `[CONSUMER]` (alert state machine, contributor list, notification triggers, calendar timing), `[SURFACE]` (My Pool card, UPI flow, Yogdaan Bahi, PDF, helpline CTA, failure coach), `[GOVERNANCE]` (out-of-band contribution policy, 90s measurement instrumentation). Full body and stories in §Epic 8 below.
+**The defining experience SM-1 measures.** Sushil's surface. Yogdaan Bahi (passbook), My Pool card (home-screen anchor), UPI Intent (90-second loop), Contribution Note PDF (never "receipt"). FR-23 nudge seam *consumer*. Epic 8 closes at yellow pill — green-flip is Epic 9. **14 stories** spanning `[CONSUMER]` (alert state machine, contributor list, notification triggers, calendar timing), `[SURFACE]` (My Pool card, UPI flow, Yogdaan Bahi, PDF, helpline CTA, failure coach, nominee-VPA collection, member-facing name-form alignment), `[GOVERNANCE]` (out-of-band contribution policy, 90s measurement instrumentation). ⚠ **The count was stale at 12 before Story 8.16** — it was not updated when Story 8.13 was added by correct-course 2026-07-21; recounted here as 8.1–8.13 **plus 8.16** (there is no 8.14 or 8.15). Full body and stories in §Epic 8 below.
 
 ---
 
@@ -3394,6 +3394,67 @@ So that the assigned pool's `<UPIIntentButton>` fires a real `upi://pay` and Epi
 - **PRD/architecture amended alongside (correct-course 2026-07-21):** FR-37 (collects optional VPA), FR-16/FR-27/FR-31 (source + fail-soft + per-account notes), AR-12 (Tier-1 list += nominee VPA).
 
 **FRs:** FR-16 (pool-bound VPA pre-fill), FR-27 (`pa=` source), FR-37 (claim-time collection), FR-31 (per-account / switch). **Depends on:** Story 6.8 (`<NomineeDetailEditor>`), Story 7.1/7.6 (pool→nominee linkage + enforcement), Story 8.4 (`resolveNomineeVpa` seam + `{available:false}` contract).
+
+---
+
+### Story 8.16: Member-Facing Pool Identity — Name-Form Alignment (closing the public/member INVERSION) `[SURFACE]`
+
+> **Minted by Panel direction — Decision `2026-09-02-179` clause 3** (*"the public/member inversion gap shall be closed"*). ⚠ This story had **no `epics.md` entry** until it created its own; it existed only in `sprint-status.yaml` and its own story file — the **Story 7.11 precedent** (`epics.md:3041`), whose second half is discharged here so a future `sprint-planning` run cannot drop it. Minted against **Epic 8** — not Epic 11b, which only *surfaced* the inversion — because Epic 8 owns `resolvePoolIdentity` and all four of its consumers (Stories 8.6 / 8.7 / 8.8). Numbered 8.16 (deliberately **not** 8.14) to match the `sprint-status.yaml` key that already existed.
+>
+> **Supersedes `11b-16-member-name-form-configured-presentation`**, which ordered the same edits at a **narrower** scope (three of four consumers) and is **`withdrawn`** — Decision `2026-09-08-208` cl.1, with the `withdrawn` status value itself minted by `2026-09-08-210` cl.1. 8.16 came **first** (2026-09-02); this is a withdrawal of the duplicate, not a supersession of 8.16.
+
+As a **contributing member** opening my pool,
+I want to see the family I am supporting named in **the form my Pariwar has chosen** for that name,
+So that the Trust is not in the position of shielding a name from the people who are paying for the funeral while publishing it to everyone else.
+
+**Depends on:** Story 8.6 (My Pool card + Yogdaan Bahi), Story 8.7 (Contribution Note PDF), Story 8.8 (owns `resolvePoolIdentity` and moved it into `@twt/domain`), Story 11b.1 (the public form whose mode this story reads). **Sequencing:** runs **before `11b-15`** (`2026-09-08-208` cl.5).
+
+**The two decisions, both RULED — neither is re-opened by this story:**
+
+| Decision | Question | Ruling |
+|---|---|---|
+| `INV-scope` | Do **all four** consumers rise, or only the in-app two? | **ALL FOUR** — `2026-09-02-180` cl.1, **Trustee-ratified** (Kalpana Bharti, Dhiraj Rahul) |
+| `INV-form` | Hard-coded full name, or **mode-resolved**? | **MODE-RESOLVED** — `2026-09-02-181` cl.1, author-committed (BigDev) |
+
+**FR-21's specified name form is SUPERSEDED BY NAME.** FR-21 (`prd.md:520-522`) specifies the My Pool card shows *"nominee first-name + last-initial"*. That form is superseded for the **member-facing** surfaces by `2026-09-02-180` (all four consumers) and `2026-09-02-181` (mode-resolved from the Pariwar's stored `public_name_presentation_mode`). ⚠ **The FR is not edited** — a ratified requirement is superseded, never re-read ([[feedback_supersede_never_reinterpret]]). FR-21's other elements (pool name, amount, days remaining, Pay-via-UPI CTA) are **unchanged**. The glossary's `first-name + last-initial` (`prd.md:179`) describes the **public** form and is likewise untouched.
+
+**Acceptance Criteria:**
+
+**Given** `2026-09-02-180` ruled ALL FOUR and `2026-09-02-181` ruled MODE-RESOLVED
+**When** a contributing member reaches any consumer of `resolvePoolIdentity`
+**Then** the deceased family's name renders in the form resolved from the Pariwar's stored `public_name_presentation_mode` on **all four** consumers — ① the My Pool card, ② the Yogdaan Bahi, ③ the Contribution Note PDF, and ④ the cycle-open **and** deadline-reminder push / WhatsApp / SMS copy
+**And** the mode is an **INPUT** to the resolver, never a DB read inside it — read once per pool via `kyc.resolvePublicNamePresentationMode`
+**And** no consumer is excluded and no split is authorised; a future story that divides them reverses `2026-09-02-180`
+
+**Given** the resolver emits name **PARTS** (`deceasedFirstName` + `deceasedLastInitial`), each consumer joining them
+**When** the form becomes mode-resolved
+**Then** `ResolvedPoolIdentity` and all **three** carrying contracts (`active-contribution-card`, `contribution-history`, `contribution-note`) shed the pair for one resolved `deceasedDisplayName: string` — the parts are not kept alongside it, and the surname is never widened into a field called *last initial*
+**And** `openapi/v1.yaml` is **re-emitted**, never hand-edited
+
+**Given** `resolvePublicMemberName` returns `''` for a mononym in `shielded_name` mode — a **deliberate omit-this-row** behaviour ruled at `2026-08-21-145` cl.3 for the public directory
+**When** the member side resolves the same mode
+**Then** the public resolver is **not reused verbatim** — the mode is shared, never the whole function; the member side keeps its own mononym fail-soft, because omitting a row from a public directory is a privacy protection while omitting a member's own pool is a functional regression
+
+**Given** `2026-09-04-198` cl.1 (FORM ONLY) and `2026-09-04-189` cl.3 (*"a member must see MORE than the public, and never less"*), both routed here as the withdrawn `11b-16`'s residue by `2026-09-08-208` cl.5
+**Then** the member path takes the configured **FORM** and **not** the publication **BASIS** gate — a member sees a name always, including on a drive where the basis is unsatisfied and the public page names nobody
+
+**Given** the public surfaces render through `resolvePublicMemberName`, never `resolvePoolIdentity`
+**Then** `/sahyog` and `/sahyog-vivran` are **not touched**; no Tier-1 tier change, no `public-vs-private-matrix.yaml` row, no `RULED_TIER1_PUBLIC_EXCEPTIONS` entry — these are **authenticated** surfaces
+**And** `public_name_presentation_mode` is **not renamed**; its semantic widening (it now governs member-facing surfaces too) is recorded at the setting
+**And** the stored KYC name is never written by this path — one stored name, N presentation modes (`2026-08-19-136` cl.2)
+
+**And** i18n: the name reaches copy through the **existing `{family}` interpolation param** across six keys in both locales — **no new locale key is minted**; two of the six are a11y strings, so the a11y and i18n obligations are the same keys
+**And** the **SMS segment count** is measured and recorded for both locales × both alert kinds against the correct ceiling (GSM-7 160/153; **UCS-2 70/67** for Devanagari); a rise beyond one segment is **routed**, never absorbed, and never a reason to narrow a ruled scope
+**And** `deferred-work.md` **11b.1 item (e)** is recorded **CLOSED by [edit]** on ship — never *"resolved via deferral"* (`2026-09-02-180` cl.2; Q2 **VACATED** by cl.3)
+
+**Dev Notes / guardrails:**
+- `resolvePoolIdentity` stays in `@twt/domain` — `apps/jobs` cannot import `apps/api`. The `apps/api` wrapper keeps delegating but **gains** the mode parameter; it is not a pass-through.
+- `note-template.ts`'s `familyDisplay` helper is shared with the **living contributing member's own** name. Only the deceased's name moves — changing the helper in place would un-shield a living member's PII on a forwardable PDF, which `2026-09-02-180` did not rule.
+- **Mononyms already render in full** on the member side, so for that class there is no inversion to close and none is reported (`2026-09-02-180` context; `2026-08-21-145` cl.3).
+- The publication basis is **inert today** — `niy.public-disclosure.member-information` has exactly one repo site, its own definition — so a parity test that does not seed the basis compares against `null` and passes vacuously.
+- This story introduces **no predicate** gating a member's access to a benefit: it changes a presentation form only, and touches no eligibility, assignability, contribution duty, `members.state`, `is_valid` or moderation overlay.
+
+**FRs:** FR-21 (**form superseded by name**, not edited), FR-33 (the Contribution Note copy — carries a standing trust-legal review duty), FR-74 (untouched). **Decisions:** `2026-09-02-179` cl.3 (the direction) · `2026-09-02-180` (ALL FOUR, Trustee-ratified) · `2026-09-02-181` (MODE-RESOLVED) · `2026-09-08-208` (the `11b-16` withdrawal + the routed residue) · `2026-09-08-209` (the member-facing framing).
 
 ---
 

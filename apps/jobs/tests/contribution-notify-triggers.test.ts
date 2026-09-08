@@ -252,6 +252,24 @@ describe('AC2b — the mode is an INPUT, read ONCE PER POOL', () => {
     expect(resolvePublicNamePresentationMode).toHaveBeenCalledTimes(1);
     expect(resolvePoolIdentity).toHaveBeenCalledTimes(1);
   });
+
+  it('a presentation-mode READ FAILURE skips the pool LOUDLY — it never throws the whole child job (review fix)', async () => {
+    // Every OTHER unresolvable input on this path (decrypt, letter code, curated name) degrades to
+    // alarm+skip inside `resolvePoolIdentity` itself; this read sits just outside it, so the fail-soft
+    // contract has to be reproduced at the call site instead.
+    resolvePublicNamePresentationMode.mockRejectedValue(new Error('KMS blip'));
+    const onAlarm = vi.fn();
+    const result = await runContributionNotifyChild(deps({ onAlarm }), envelope(childPayload()) as never);
+
+    expect(resolvePoolIdentity).not.toHaveBeenCalled();
+    expect(fanOutAlertToMembers).not.toHaveBeenCalled();
+    expect(claim).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ attempted: 0, delivered: 0 });
+    // EXACTLY once — a second, generic "pool identity unresolvable" alarm for the SAME failure would
+    // overwrite the true cause (review-fix regression: round 1 fired both).
+    expect(onAlarm).toHaveBeenCalledTimes(1);
+    expect(onAlarm).toHaveBeenCalledWith(expect.stringContaining('presentation-mode read failed'));
+  });
 });
 
 // ─── The shared child worker (AC1) ─────────────────────────────────────────────────────────────────

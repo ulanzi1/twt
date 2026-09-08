@@ -75,7 +75,7 @@ vi.mock('@twt/domain', async (importActual) => {
         decryptKycField,
         reserveNames,
         poolLetterCode: actual.pool.poolLetterCode,
-        splitFirstNameLastInitial: actual.kyc.splitFirstNameLastInitial,
+        resolveMemberFacingDeceasedName: actual.notifications.resolveMemberFacingDeceasedName,
       }),
     },
   };
@@ -184,6 +184,26 @@ describe('contributionHistory — wiring (AC1/AC2/AC3)', () => {
     // D5 memoization: two rows on the same pool → ONE identity decrypt, ONE pool-context load.
     expect(decryptKycField).toHaveBeenCalledTimes(1);
     expect(getPoolContributionContext).toHaveBeenCalledTimes(1);
+  });
+
+  it('[Review] AC2b — reads the presentation mode ONCE PER REQUEST, even across DISTINCT pools', async () => {
+    // `2026-09-02-181` cl.2 / AC2b's table names a call-count prover for `apps/jobs` only; this is the
+    // apps/api-side equivalent the review found untested. The per-pool `resolveRowIdentity` memo means
+    // a naive "once per pool" read would already look right on the single-pool test above — this needs
+    // TWO distinct pools to catch a read that drifted inside the per-pool path.
+    wireScopeTx();
+    wireStandardPoolIdentity();
+    listMemberContributionHistory.mockResolvedValue([
+      { contributionId: 'evt-1', alertId: ALERT_ID, poolId: POOL_ID, attestedAt: new Date('2026-06-20T10:15:00.000Z'), utr: '123456789012', status: 'yellow' },
+      { contributionId: 'evt-2', alertId: ALERT_ID, poolId: POOL_ID_2, attestedAt: new Date('2026-06-21T10:15:00.000Z'), utr: '123456789014', status: 'yellow' },
+    ]);
+
+    const handlers = createMemberPoolHandlers(baseDeps());
+    const result = await handlers.contributionHistory(fakeRequest());
+
+    expect(result.rows).toHaveLength(2);
+    expect(getPoolContributionContext).toHaveBeenCalledTimes(2); // two DISTINCT pools, not memoized away
+    expect(resolvePublicNamePresentationMode).toHaveBeenCalledTimes(1); // the mode read still is not
   });
 
   it('empty history → the dignified empty passbook `{ rows: [], totalInr: 0, missedCycles: [] }`', async () => {

@@ -23,6 +23,19 @@
 // which is the one failure mode a test double can have that is worse than no double at all.
 // Story 8.16 inserted the presentation `mode` between `pariwarId` and `input`, and swapped the
 // first-name/last-initial PAIR for one resolved `deceasedDisplayName`.
+//
+// ⭐ REVIEW FIX (8.16) — the FORM decision itself is no longer duplicated here. It used to re-derive
+// `splitFirstNameLastInitial` and re-branch on `mode` by hand; that is now delegated to the REAL
+// `resolveMemberFacingDeceasedName` (injected from `actual.notifications`, the same "pass the real
+// pure function through" pattern this file already used for `poolLetterCode`'s siblings), so this
+// double can drift on everything EXCEPT the one piece of logic a silent drift would be most dangerous
+// in — the string a member is actually shown.
+//
+// ⭐ REVIEW FIX (round 2) — the MODE'S TYPE is imported (type-only; erased at compile time, so it
+// cannot affect module resolution or any `vi.mock` in the three suites that use this fake) rather
+// than re-declared as a local `'full_name' | 'shielded_name'` literal union — the same duplication
+// risk the round-1 fix removed for the form-decision LOGIC, reintroduced for its TYPE.
+import type { kyc } from '@twt/domain';
 
 interface ResolvePoolIdentityFakeDeps {
   readonly getClaimCase: (...args: never[]) => Promise<{ deceasedMemberId: string } | undefined>;
@@ -32,10 +45,12 @@ interface ResolvePoolIdentityFakeDeps {
   readonly decryptKycField: (...args: never[]) => Promise<string>;
   readonly reserveNames: (...args: never[]) => Promise<{ displayNameHi: string }[]>;
   readonly poolLetterCode: (poolIndex: number) => string;
-  readonly splitFirstNameLastInitial: (fullName: string) => {
-    firstName: string;
-    lastInitial: string;
-  };
+  /** The REAL form decision (`@twt/domain`'s `notifications.resolveMemberFacingDeceasedName`) — never
+   *  reimplemented here, so a change to the form rule cannot drift silently between the two. */
+  readonly resolveMemberFacingDeceasedName: (
+    mode: kyc.PublicNamePresentationMode,
+    storedName: string,
+  ) => string;
 }
 
 /** Build a `resolvePoolIdentity` double with the domain implementation's exact control flow. */
@@ -45,7 +60,7 @@ export function createResolvePoolIdentityFake(deps: ResolvePoolIdentityFakeDeps)
     encryption: unknown,
     pariwarId: string,
     /** Story 8.16 — the Pariwar's stored presentation mode, resolved by the CALLER and passed in. */
-    mode: 'full_name' | 'shielded_name',
+    mode: kyc.PublicNamePresentationMode,
     input: {
       claimCaseId: string;
       poolIndex: number;
@@ -80,18 +95,8 @@ export function createResolvePoolIdentityFake(deps: ResolvePoolIdentityFakeDeps)
     } catch {
       return null; // decrypt failure degrades exactly like an unresolvable profile
     }
-    // Story 8.16 — the same form decision the domain resolver makes, mirrored exactly. NOTE the
-    // MONONYM arm: `shielded_name` with no surname renders the whole stored name here, where the
-    // PUBLIC resolver would return `''` and its callers would omit the row (Trap 5).
-    const { firstName, lastInitial } = deps.splitFirstNameLastInitial(fullName);
-    const deceasedDisplayName =
-      mode === 'shielded_name'
-        ? firstName === ''
-          ? ''
-          : lastInitial === ''
-            ? firstName
-            : `${firstName} ${lastInitial}.`
-        : fullName.trim().split(/\s+/).filter((t) => t.length > 0).join(' ');
+    // Story 8.16 — the REAL form decision, not a mirror of it (review fix: see the file header).
+    const deceasedDisplayName = deps.resolveMemberFacingDeceasedName(mode, fullName);
     if (deceasedDisplayName === '') return null;
 
     let poolLetterCode: string;

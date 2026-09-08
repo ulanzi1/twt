@@ -869,9 +869,11 @@ ruling makes the **public** page show **MORE** than the **member app** does for 
 sees only what is in `deferred-work.md`.
 
 ⭐⭐ **ANNOTATED (Story `8-16`, 2026-09-08) — ⛔ ANNOTATED, ⛔ NOT DELETED. THIS POINTER IS SPENT.**
-Item (e) is **discharged by `8-16`**, whose Task 6a made the ⏳ CLOSING edit and whose Task 6b records
-the closure post-merge. ⇒ the *"already open"* pointer above has served its purpose and a reader
-following it now lands on an item that is closing, ⛔ not one awaiting an owner.
+Item (e)'s discharge is **owned by `8-16`** (⚠ REVIEW-FIX WORDING — ⛔ not "discharged by", which reads
+as already complete: [[feedback_closure_language_precision]]): Task 6a made the ⏳ CLOSING edit
+IN-RUN; Task 6b **records the closure post-merge — ⛔ not yet done**. ⇒ the *"already open"* pointer
+above has served its purpose and a reader following it now lands on an item that is closing, ⛔ not
+one awaiting an owner — but ⛔ not one already closed, either.
 ⚠ The *"binds 11b.2 and 11b.3"* language it quotes is itself **superseded**: `#decision-2026-09-02-179`
 cl.3 + `#decision-2026-09-02-180` bind the obligation to **`8-16`**. ⛔ The quotation is kept as the
 record of what this stub was written against — ⛔ it is not a live pointer.

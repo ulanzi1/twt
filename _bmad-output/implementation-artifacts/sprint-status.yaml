@@ -1,3 +1,15 @@
+# last_updated: 2026-09-08o (✅⭐⭐ **`8-16` CODE-REVIEWED — Status `done`.** ONE row flips:
+#   development_status[8-16-member-pool-identity-name-form-alignment] `review` -> `done`.
+#   ⭐ `bmad-code-review` (Blind Hunter + Edge Case Hunter + Acceptance Auditor) found 7 `patch`
+#   findings and 0 `decision-needed` — all 7 applied, all resolved, no unresolved issues remain.
+#   ⭐⭐ Two false "done" claims corrected: AC9's policy-sentence test and AC2b's first fence
+#   (a source scan) were checked `[x]` but did not exist — both now exist. ⭐ A fail-soft gap closed
+#   in `runContributionNotifyChild` (the presentation-mode read now degrades like every other read on
+#   that path). ⭐ The AC5 SMS `BEFORE` baseline corrected to the true pre-story string — segment rise
+#   still ZERO, units revised (see the story's Change Log v1.1). ⛔ No product behaviour changed beyond
+#   the fail-soft fix; the story's own scope/decisions are unchanged. Full detail: the story file's
+#   `### Review Findings` section and Change Log v1.1 row.
+#   ⛔ Every other row unchanged.)
 # last_updated: 2026-09-08n (✅⭐⭐ **`8-16` IMPLEMENTED — Status `review`.** ONE row flips:
 #   development_status[8-16-member-pool-identity-name-form-alignment] `in-progress` -> `review`.
 #   ⭐ Three commits, governance FIRST: `0082a2fc` (`epics.md` §Story 8.16 CREATED — the `7-11`
@@ -16774,7 +16786,7 @@ development_status:
   # one-line swap (⛔ and NEVER widen `deceasedLastInitial` to hold a surname); and **MONONYMS ALREADY
   # RENDER IN FULL** on the member side, so part of the "inversion" is ⛔ NOT REAL and must ⛔ not be
   # reported as closed.
-  8-16-member-pool-identity-name-form-alignment: review
+  8-16-member-pool-identity-name-form-alignment: done
   epic-8-retrospective: done
 
   # ==========================================================================

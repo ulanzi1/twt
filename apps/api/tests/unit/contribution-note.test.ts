@@ -65,7 +65,7 @@ vi.mock('@twt/domain', async (importActual) => {
         decryptKycField,
         reserveNames,
         poolLetterCode: actual.pool.poolLetterCode,
-        splitFirstNameLastInitial: actual.kyc.splitFirstNameLastInitial,
+        resolveMemberFacingDeceasedName: actual.notifications.resolveMemberFacingDeceasedName,
       }),
     },
   };
@@ -454,6 +454,12 @@ describe('AC1/AC5 — the artifact’s naming, watermark and PII discipline', ()
     // ⛔ The LIVING contributing member — first name + last initial, and NOT their surname.
     expect(html).toContain('Sushil K');
     expect(html.includes('Kumar')).toBe(false);
+  });
+
+  it('[Review] AC2b — reads the presentation mode ONCE PER NOTE (`2026-09-02-181` cl.2)', async () => {
+    wireOwnHistory('yellow');
+    await generateNote();
+    expect(resolvePublicNamePresentationMode).toHaveBeenCalledTimes(1);
   });
 
   it('⛔ Story 8.16 — in `shielded_name` mode the DECEASED family surname does NOT reach the PDF', async () => {

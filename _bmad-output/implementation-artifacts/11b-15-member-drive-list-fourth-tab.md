@@ -209,6 +209,11 @@ public surface touched.
 > so the member experience is consistent across member surfaces."* ⇒ the divergence is **resolved**,
 > ⛔ not merely routed.
 >
+> ⚠⛔ **⛔ RE-POINTED 2026-09-08 (`#decision-2026-09-08-208` cl.4):** the half below was routed to
+> *"story **G**"* (`11b-16`), which is now **WITHDRAWN**. ⭐ It is owned by **`8-16`**, ruled **WIDER**
+> — **ALL FOUR** consumers (`-180`, Trustee-ratified), ⛔ not three. ⇒ ⭐ read every *"story G"* in
+> this section as **`8-16`**.
+>
 > ⚠⛔ **BUT THAT HALF IS ⛔ NOT THIS STORY'S WORK — see `-197` follow-up (ii).** `resolvePoolIdentity`
 > serves **THREE shipped member surfaces** (`handlers.ts:630`, `:835`,
 > `contribution-note.ts:144`). ⇒ ⭐ **story G** carries it, sequenced **before or with** this one so
@@ -274,8 +279,14 @@ here (**B** owns them), ⛔ no tab-title i18n sweep (Trap 4).
       fields are a **superset**. Plus: `spawned` absent; another Pariwar's drives absent; empty →
       populated does ⛔ not crash; the a11y props are present **and** the containers are accessibility
       elements. ⭐ **Execute them** against `twt-test-pg` `:5433`.
-- [ ] **Task 7 — ⛔ Confirm story G has landed or is landing alongside** — ⛔ this list must ⛔ never
+- [ ] **Task 7 — ⛔ Confirm `8-16` has landed or is landing alongside** — ⛔ this list must ⛔ never
       ship a name form the My Pool card contradicts. ⛔ Do ⛔ not fix My Pool here.
+  - [ ] ⚠⛔ **⛔ THE DEPENDENCY IS ⛔ NO LONGER "STORY G".** `11b-16` is **WITHDRAWN**
+        (`#decision-2026-09-08-208` cl.1) — ⭐ the work is owned by
+        **`8-16-member-pool-identity-name-form-alignment`**, which came FIRST and is ruled **WIDER**
+        (ALL FOUR consumers, `-180`; MODE-RESOLVED, `-181`). ⇒ ⭐ E's dependency **transfers upward**
+        and is satisfied by `8-16` **AC2** (`-208` cl.4).
+  - [ ] ⚠ `-198` cl.2's *"G before E"* now reads **`8-16` before `11b-15`** (`-208` cl.3).
 
 ---
 

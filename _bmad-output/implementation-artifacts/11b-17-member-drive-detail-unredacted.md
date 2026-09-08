@@ -11,6 +11,18 @@ Story 11b.10 closed, and stories A–E + G `ready-for-dev`.
 
 Status: ready-for-dev
 
+> ⚠⛔ **TWO CORRECTIONS, 2026-09-08 — ⛔ recorded, ⛔ nothing here is built yet.**
+>
+> **(1) ⛔ "STORY G" NO LONGER EXISTS.** `11b-16` is **WITHDRAWN** (`#decision-2026-09-08-208` cl.1);
+> the member name form is owned by **`8-16-member-pool-identity-name-form-alignment`**, ruled at a
+> **wider** scope (ALL FOUR consumers, `-180`).
+>
+> **(2) ⛔⛔ THE NOMINEE'S NAME FORM WAS ⛔ NEVER G's TO GIVE.** This file attributed it to G twice
+> (`:60`, `:107`). ⭐ It was ruled **FULL NAME** at `#decision-2026-09-07-205` **cl.1** and built in
+> story **D** (`11b-14`, AC7). ⛔ The per-Pariwar `public_name_presentation_mode` has ⛔ **no subject**
+> here — the nominee value is claim-scoped free text with *"⛔ no member identity behind it"*
+> (`deferred-work.md:349`). ⇒ ⛔ do ⛔ not wait on `8-16` for it, and ⛔ do ⛔ not build it here.
+
 > ⭐⛔ **⛔ NOT IN `epics.md`'s STORY LIST.** **Story F** of the split (`2026-09-04-195` cl.3) — the
 > **last** of the seven. ⇒ owes an `epics.md` **ANNOTATION** (Task 0).
 >
@@ -57,7 +69,7 @@ would be worse than none.
 
 ⇒ after A, the public has **⛔ NOTHING** in that field. ⭐ **A member ⛔ cannot see "less than nothing."**
 ⇒ **cl.3 is satisfied on banking by construction**, whatever this story does. ⛔ It is satisfied on the
-**name** and the **drive facts** by stories **G** and **E**.
+**name** and the **drive facts** by stories **`8-16`** (⚠ ⛔ not "G" — withdrawn) and **E**.
 
 ⇒ ⛔⛔ **THE SCOPE OF MEMBER BANKING ACCESS IS A FREE, SEPARATE DECISION** — ⛔ not something cl.3
 compels. ⚠ Anyone arguing *"cl.3 requires it"* is arguing from an inversion that ⛔ no longer exists.
@@ -104,7 +116,7 @@ A detail view, reached from story **E**'s fourth tab, for any drive **E** lists 
 `settled`; ⛔ never `spawned`).
 
 ### AC2 — It shows at least everything the public drive page shows
-For the same drive: the nominee's name (⭐ story **G**'s configured form), the drive facts, the stage
+For the same drive: the nominee's name (⚠⛔ **⛔ NOT story G's — see the correction under `Status:`**), the drive facts, the stage
 (⭐ story **B**'s vocabulary), the contributor count and the appeal outcome.
 **And** a **comparison test** proves the superset — ⛔ the same relational assertion story **E** owes,
 ⭐ because a per-surface test ⛔ cannot see a `-189` cl.3 violation.

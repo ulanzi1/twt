@@ -1,3 +1,62 @@
+# last_updated: 2026-09-08f (✅⭐⭐ **`11b-14` — FOURTH CODE-REVIEW PASS (the THIRD pass's own patches,
+#   reviewed before commit). Story STAYS `done`.** ⭐ Scope: `git diff HEAD`, 12 files / 759 lines.
+#   ⛔⛔ **IT FOUND A BLOCKER IN THE REVIEWER'S OWN WORK.** The `status`⇄`confirmedPercentage`
+#   cross-check and the deploy-order record were applied in the SAME fix-set without being reconciled:
+#   a strict `=== null` on archived rows REJECTS what a **pre-cl.1 `apps/api`** serves
+#   (`64510a7b:public-read.ts:1041` emits the field UNCONDITIONALLY) ⇒ a newer `apps/public` against
+#   an older API served the OUTAGE page to **100% of visitors** of every Pariwar holding a closed
+#   drive — ⛔ on a body that renders perfectly. ⚠ The record nonetheless claimed the opposite in TWO
+#   places, and the fix-set's OWN green test was the disproof.
+#   ⭐⭐ **BigDev ruled option (a): RELAX THE ARCHIVED ARM.** A `closed`/`verified` row now tolerates
+#   `null` OR an integer 0-100; `live` stays STRICT (that half closes the bare-लक्ष्य framing and ⛔ no
+#   API version ever produced it). ⇒ ⭐ the escape clause holds, the deploy record is TRUE as written,
+#   ⛔ only API-first stays prohibited, and the patch is back inside `-207` cl.1's letter (*"the
+#   validator ACCEPTS the null"* — ⛔ never *"rejects the number"*).
+#   ⇒ **16 patches applied · 1 decision ruled · 4 deferred · 4 dismissed.** Also closed: the printed
+#   `%` now clamps through the same function as the bar (they could render `-5%` beside a 0% bar);
+#   `formatCurrency` got the `9e13` fix its sibling took (the third pass DELETED the cross-reference
+#   instead of propagating it); `confirmedContributionCount` bounded (`1e21` rendered `"1e,+21"` in
+#   ratified copy — ⛔ garbage, ⛔ never a throw); a TAUTOLOGICAL `toContain('82%')` (the style
+#   attribute already contains it); both `9e13` bounds pinned by `1e14`, the value the OLD `1e15`
+#   accepted; an identity test that had been rewritten to MIRROR its implementation restored to a
+#   hand-computed oracle; and a ratified लक्ष्य doc-block un-orphaned (the third pass inserted a
+#   function between it and `formatSahyogTargetAmount`).
+#   ⭐ **AI-6-5 family 4** closed with `satisfiesLiveRowPercentagePairing` — ⛔ deliberately a
+#   PREDICATE, ⛔ not a `superRefine`, so the contract stays TOLERANT.
+#   Verified: `@twt/i18n` 97 · `@twt/public` 566 · `@twt/contracts` 1104 · `@twt/domain` 3335 ·
+#   `@twt/api` 1219 (live DB `:5433`) · typecheck + lint clean · `openapi/v1.yaml` ⛔ no drift.
+#   ⚠ `ci:local` owed on push. ⛔ NOTHING IS COMMITTED — 17 files modified in the working tree.
+#   ⛔ Every other row unchanged (⛔ 11b-13 STAYS `done`; ⛔ 11b-3b / 11b-18 STAY `ready-for-dev`).)
+# last_updated: 2026-09-08e (✅⭐⭐ **`11b-14` — THIRD CODE-REVIEW PASS. Story STAYS `done`.** ⭐ Scoped to
+#   the POST-RULING DELTA `64510a7b..587c3bf5` (20 code files, 714 lines) — the only code on the
+#   branch the two prior passes could ⛔ not have seen. Three adversarial layers.
+#   ⭐⭐ **THE RULINGS THEMSELVES ARE CORRECT** — cl.1 agrees across all seven artefacts, cl.2 catches
+#   exactly the ruled case, `-206` cl.1 is ⛔ NOT reversed, and ⛔ none of the four prohibitions was
+#   breached. 13 of the 18 Chunk A/B findings landed; all six deferrals honestly carried.
+#   ⚠⛔⛔ **WHAT IT FOUND WAS A SHORTFALL OF EVIDENCE, AND ONE FALSE CLOSURE.** ⭐ **Chunk B's B5 was
+#   recorded ✅ APPLIED and was FALSE** — `scrape-test.spec.ts` called `visibleSahyogColumns` with TWO
+#   args, defaulting `stage` to `'closed'`, whose arm strips every column carrying `meter` ⇒ ⛔ no bar,
+#   ⛔ no fill, ⛔ no `%`, ⛔ no target `<p>` could render under ANY fixture. ⭐ And **all eleven pinned
+#   percentage pairs return identically under the OLD divide-first code** (executed) ⇒ the scale-first
+#   fix, the ₹10-crore ceiling and the whole validator hardening — **including cl.1's own `null`
+#   branch, which ⛔ NO test in the repo exercised** — could each be reverted with the suite green.
+#   ⇒ **15 patches applied · 4 decisions ruled by BigDev · 3 deferred · 6 dismissed as false
+#   positives** (the `assignedCount <= 0` guard exists; both `formatCurrencyShort` callers are gated;
+#   `nomineeAccounts: 2` IS seeded; `drive-target.ts` has ⛔ zero imports ⇒ ⛔ no cycle).
+#   ⭐ **THE FOUR RULINGS:** (1) the live ₹0-with-real-count sentence is SUPPRESSED — recorded as
+#   EXTENDING `-207` cl.2, ⛔ NOT a new ruling; (2) the `fundingOutcome` roster-size channel
+#   (`fully_funded` ⟺ `assignedCount === confirmedCount` exactly) is **ACCEPTED AND RECORDED**, ⛔ not
+#   escalated and ⛔ not gated; (3) a **NEW `MAX_DERIVED_DRIVE_TARGET_INR`** (₹1,000 crore) — the old
+#   guard clamped the DERIVED figure at the ADMIN-TYPED ₹10-crore bound and silently erased लक्ष्य for
+#   any Pariwar past 6,485 × ₹20,000; (4) a **DEPLOY-ORDER CONSTRAINT** — cl.1 is a breaking wire
+#   widening and API-first rollout is PROHIBITED (the failure arm is a 100% public outage).
+#   ⭐ Also closed: an AI-6-5 **family-5 REAL GAP** (three guards standing in for an undisclosed
+#   missing `pools.fixed_amount` CHECK) and a **`deferred-work.md` entry publishing a gap that never
+#   existed** (`64510a7b:handlers.ts:437` already had the `.trim() || null`).
+#   Verified: `@twt/i18n` 95 · `@twt/public` 563 · `@twt/contracts` 1104 · `@twt/domain` 3335 ·
+#   `@twt/api` 1219 (live DB `:5433`) · typecheck + lint clean · `openapi/v1.yaml` ⛔ no drift.
+#   ⚠ `ci:local` is owed on push — five patches change runtime behaviour.
+#   ⛔ Every other row unchanged (⛔ 11b-13 STAYS `done`; ⛔ 11b-3b / 11b-18 STAY `ready-for-dev`).)
 # last_updated: 2026-09-08d (✅✅⭐⭐ **`11b-14` → `done`. `ci:local` PASSED — 34 jobs green,
 #   `integration-tests` included.** ⚠ One fix on the way: `sahyog-drive.spec.ts`'s `AC7 — nominee
 #   name reaches the wire` describe (3 tests added by the 2026-09-08 first-review pass) was a bare

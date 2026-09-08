@@ -2132,3 +2132,85 @@ keeps its meter unchanged and its anti-widening gate was ⛔ never edited.
 ⭐ **This disposition was written AFTER the implementation commits existed**, ⛔ not against an empty
 diff — AC-4 diffs **COMMITTED** history, so a declaration written first passes **vacuously** (the
 defect `57778f72` demonstrated live and `7fe540f9` fixed).
+
+---
+
+**Story 8.16 disposition (declaration affirmed — ⛔ NO new row, ⛔ no row retired, and ⛔ no row
+amended)** — the member-facing pool identity becomes **mode-resolved** on all four consumers of
+`resolvePoolIdentity` (`2026-09-02-180` cl.1, Trustee-ratified; `2026-09-02-181`). ⚠ **AC-4's
+attribution-on-change FIRED** — `MEMBER_FACING_PREFIXES` includes `apps/mobile/`, and this story edits
+two mobile components — so the disposition is **owed and written**, ⛔ not skipped.
+
+⭐⭐ **A NAME FORM IS ⛔ NOT FRICTION, AND THAT IS THE WHOLE OF IT.** This story changes **which string
+is rendered** where a family is already named. ⛔ No new step, ⛔ no new decision, ⛔ no new wait, ⛔ no
+data asked of anybody, ⛔ nothing gated, ⛔ no affordance added and ⛔ none removed. Sushil opens the
+same card, in the same place, with the same CTA, and reads a fuller name than before. ⇒ the 11b.10 /
+11b.11 / 11b.12 / 11b.14 precedent applies unchanged: **an addition that costs the payer ⛔ nothing is
+⛔ not declarable friction.** ⛔ There is nothing here for a payer to pay.
+
+⭐ **AND IT REMOVES A JOIN FROM THE CLIENT, ⛔ rather than adding one.** `ActiveContributionCard.tsx`
+and `YogdaanBahiRow.tsx` each assembled the family label from a first-name/last-initial pair; both now
+read one server-resolved field. ⇒ **less** client work on the member's device, ⛔ not more — and
+`js_bundle_bytes` for the mobile facet is a **no-op** in this gate anyway (⛔ no measurable build
+output for `member-app-native.*` yet), so this is recorded as a **direction**, ⛔ not a measured win.
+
+⛔⛔ **THE PUBLIC-WEB FIGURE IS ⛔ NOT THIS STORY'S, AND IT IS ⛔ NOT SILENTLY ADOPTED.** The gate
+reports `member-public-web.page_weight_bytes` at **11471** against the baseline-of-record **3942**
+(Δ **+7529**), ceiling **512000** — ⭐ it **PASSES**, at ~2.2% of ceiling. ⚠ Story 11b.14's disposition
+above recorded **11229**. ⇒ the **+242** difference arose **between** these two stories and is ⛔ **not
+attributable here** — ⭐ **verified**: this story's diff touches ⛔ **no** file under `apps/public/`, and
+the metric measures **byte-identical at HEAD and at HEAD~1's public-surface state (11471 both times)**.
+⛔ Recorded as an observation, ⛔ not claimed and ⛔ not disowned; ⛔ and ⛔ **not** swept — attributing
+it would need the story that produced it, ⛔ not this one
+([[feedback_record_unattested_no_backfill]]).
+⛔⛔ **THE BASELINE IS ⛔ NOT MOVED.** `friction-budget.yaml` says it in terms — *"⚠ A RISE IS NEVER
+RATCHETED. Do not 'update the baseline to match'"* — and `detectRaisedBaselines` forbids an in-PR
+raise anyway. ⇒ **3942 stands** ([[project_friction_budget_baseline_ratchet]] — a **best-ever
+ratchet**, ⛔ not a running total).
+
+⚠⛔ **THE ONE REAL COST THIS STORY ADDS, STATED RATHER THAN LEFT TO BE FOUND — AND IT IS ⛔ NOT A
+FRICTION ROW.** Each member-facing read now performs **one additional query**: the Pariwar's stored
+presentation mode. ⭐ It is bounded **by construction**, ⛔ not by hope: **+1 per REQUEST** on the API
+side (the card and the whole passbook each read it once — ⛔ never per row, and ⛔ never per pool) and
+**+1 per POOL** in the `apps/jobs` fan-out, sharing the round trip the identity join already opens.
+⛔ It is ⛔ **not** per member: the cycle-open fan-out is *"one notification per member assigned to a
+pool in that cycle"*, and the mode read sits **above** that loop. ⚠ A call-count spy asserts exactly
+this at any roster size, so a future edit that drifts the read into the per-member path **fails**
+rather than shows up on a bill. ⇒ a server-side query the member ⛔ never waits on as a step of their
+own — ⛔ this ledger measures **what a payer is made to do**, ⛔ not what a server does for them.
+
+⚠⛔ **AND THE PAID-CHANNEL COST WAS ⛔ MEASURED, ⛔ NOT ASSUMED — IT IS ZERO.** Consumer ④ is the
+push → WhatsApp → **SMS** cascade, and SMS is reached **when push fails**. Segments, both locales ×
+both alert kinds, against the **correct** ceiling (⭐ every one of these messages is **UCS-2** — Hindi
+by script, English by the **₹** sign — so **70 / 67**, ⛔ **not** 160/153):
+`hi` cycle-open **98u → 100u**, 2 → **2** seg · `hi` day-14 **101u → 103u**, 2 → **2** ·
+`en` cycle-open **96u → 106u**, 2 → **2** · `en` day-14 **110u → 120u**, 2 → **2**.
+⇒ ⭐ **MAX RISE: ZERO SEGMENTS.** ⛔ Nothing is routed. ⚠ The Hindi body was **already multi-segment at
+any name length** (a 94-unit template before interpolation), which is why the artefact is *"before →
+after"* and ⛔ never *"does it fit"*. ⭐ Guarded by a test (`apps/jobs/tests/sms-segment-cost.test.ts`),
+⛔ not left as a one-off measurement — a later copy edit that pushes a message past a segment **fails
+the suite**. ⛔ And exceeding would be **ROUTED**, ⛔ never absorbed, and ⛔ never a reason to narrow a
+ruled scope.
+
+⭐ **A11Y GOT *BETTER*, and it is worth naming because it was silently broken.** Four tamagui
+`<Button>`s on these two components carried an `accessibilityLabel` and ⛔ **no** `accessible` prop. A
+tamagui Button is `styled(View, …)`; an RN `View` is ⛔ not an accessibility element without it, so the
+inner `<Text>` took focus and the label was ⛔ **never announced**. ⇒ ⭐ a screen-reader user is now
+asked to do **less**, ⛔ not more.
+
+⛔ **WHAT THIS DISPOSITION DOES ⛔ NOT TOUCH.**
+· ⛔ **No public surface** — `/sahyog` and `/sahyog-vivran` render through `resolvePublicMemberName`,
+⛔ never `resolvePoolIdentity`; `apps/public/**` is untouched.
+· ⛔ **`limits.search`** and every rate tier are unchanged — ⛔ nothing here went near them.
+· ⛔ **`public_name_presentation_mode` is ⛔ NOT renamed** and its **authority is unchanged**
+(`super_admin` only, `2026-08-19-136` cl.3). ⛔ This story adds ⛔ no key, ⛔ no toggle and ⛔ no admin
+UI — ⚠ so ⛔ **nobody's workflow gains a step**, which is the other way a governed setting could have
+become friction.
+· ⛔ **Story 11b.1's index-search row** is **CONFIRMED INTACT** — ⛔ not amended, ⛔ not retired; this
+story touched ⛔ no filter, ⛔ no search dimension and ⛔ no name **basis** (only the name **form**).
+· ⛔ **The publication BASIS is ⛔ not adopted** (`2026-09-04-198` cl.1) ⇒ ⛔ a member is ⛔ never made
+to wait on, or qualify for, anything to see who died. ⭐ The opposite of a friction row.
+
+⭐ **This disposition was written AFTER the implementation commit `f5df1fae` existed**, ⛔ not against
+an empty diff — AC-4 diffs **COMMITTED** history, so a declaration written first passes **vacuously**
+(the defect `57778f72` demonstrated live and `7fe540f9` fixed).

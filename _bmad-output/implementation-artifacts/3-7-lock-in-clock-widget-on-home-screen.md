@@ -1,11 +1,23 @@
 ---
-baseline_commit: f055e408ee59d4e2e624d459aaa8d1af423059d4
+baseline_commit: 78fe76d8
 ---
 # Story 3.7: Lock-In Clock Widget on Home Screen (WI-13)
 
 Status: done
 
-<!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
+<!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. 
+⚠⛔⛔ **RE-PINNED 2026-09-09 (orphaned-pin sweep) — `f055e408` → `78fe76d8`, ⛔ AND THE TREE IS
+⛔ NOT IDENTICAL. ⭐ Recorded, ⛔ not papered over.**
+⭐ The old SHA was **DANGLING** — reachable from ⛔ no branch and ⛔ no reflog, alive only until the
+next `gc`; its tree (`d6258e44`) exists at ⛔ NO other commit in the repository. ⇒ the original
+baseline is **UNRECOVERABLE**, and doing nothing would have lost it entirely.
+⚠ `78fe76d8` is the main-line twin by subject (`chore: upgrade BMad 6.7.1 → 6.9.0`, 2026-06-29).
+It differs from the original in **two test files** — `apps/jobs/tests/audit/integrity-check.test.ts`
+and `packages/domain/tests/integration/terms-and-conditions/tc-registry.spec.ts` (+5 / −29).
+⇒ ⛔ this pin is an APPROXIMATION, ⛔ not the recorded baseline
+([[feedback_record_unattested_no_backfill]]). ⭐ Tolerable ONLY because this story is **`done`**:
+⛔ no pending work reasons from it. ⛔ Do ⛔ NOT treat a diff from this pin as authoritative.
+-->
 
 ## Story
 

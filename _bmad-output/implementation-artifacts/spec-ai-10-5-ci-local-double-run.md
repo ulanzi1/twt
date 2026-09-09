@@ -3,7 +3,7 @@ title: 'AI-10-5 — ci:local double-run: restore `test (unit)` parity with ci.ym
 type: 'bugfix'
 created: '2026-08-23'
 status: 'done' # draft | ready-for-dev | in-progress | in-review | done
-baseline_commit: 'c44c042b5e4205eacd60bd55bf8f207a3803765d'
+baseline_commit: c44c042b5e4205eacd60bd55bf8f207a3803765d
 context:
   - '{project-root}/docs/adr/ADR-0017-local-ci-mirror-merge-gate.md'
 ---

@@ -1,10 +1,17 @@
 ---
-baseline_commit: b9beb2c6
+baseline_commit: 55912d83
 ---
 
 <!--
 ⭐ BASELINE — `governance(11b.12): attribution CONFIRMED`. Carries decisions `2026-09-04-186` … `-196`,
 Story 11b.11 `done`, and the D2 arc that COMMISSIONED this story.
+
+⚠⛔ **RE-PINNED 2026-09-09 (orphaned-pin sweep) — `b9beb2c6` → `55912d83`.** The old SHA survived only
+on `governance/11b-12-d2-routing-and-validation`; its main-line twin `55912d83` carries a **BYTE-IDENTICAL tree** (`418dd99d`).
+⇒ ⭐ the recorded baseline CONTENT is ⛔ unchanged — this fixes only its **reachability**, before
+the old branch is pruned and the pin stops resolving entirely.
+⛔⛔ **THIS IS ⛔ NOT A RE-VALIDATION.** ⛔ No claim in this file was re-verified; ⛔ no line number
+was re-checked. ⭐ Staleness against HEAD is still OWED at this story's next `validate` pass.
 -->
 
 # Story 6.18: The Nominee **Holder Name** Reaches the Verification Console — and the Approver **ATTESTS** the Match `[SURFACE]`

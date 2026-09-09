@@ -1,12 +1,19 @@
 ---
-baseline_commit: 2270dc24e48ec1eeb8aa0ccb8a2af031fbdc5cb3
+baseline_commit: d0b07828
 ---
 
 # Story 11b.3: Sahyog Vivran Per-Claim Story Surface — Public Shell + Reversed-Denial Publish Hook Consumer + Financial-Truth-From-Canonical-Events Invariant `[SURFACE]`
 
 Status: done
 
-<!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
+<!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. 
+⚠⛔ **RE-PINNED 2026-09-09 (orphaned-pin sweep) — `2270dc24` → `d0b07828`.** The old SHA survived only
+on `governance/11b-3-split-validate-and-d3-packet`; its main-line twin `d0b07828` carries a **BYTE-IDENTICAL tree** (`7a0b59f1`).
+⇒ ⭐ the recorded baseline CONTENT is ⛔ unchanged — this fixes only its **reachability**, before
+the old branch is pruned and the pin stops resolving entirely.
+⛔⛔ **THIS IS ⛔ NOT A RE-VALIDATION.** ⛔ No claim in this file was re-verified; ⛔ no line number
+was re-checked. ⭐ Staleness against HEAD is still OWED at this story's next `validate` pass.
+-->
 
 > ⭐⛔ **THIS STORY WAS SPLIT THREE WAYS ON 2026-09-01 (D6 RULED **(b)** BY BIGDEV). ⛔ THE KEY IS UNCHANGED.**
 >

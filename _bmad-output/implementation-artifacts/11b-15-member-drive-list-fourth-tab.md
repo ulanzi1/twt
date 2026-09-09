@@ -1,16 +1,32 @@
 ---
-baseline_commit: 1b7fa9f3
+baseline_commit: c2dd787c
 ---
 
 <!--
-⭐ BASELINE RE-POINTED 2026-09-09 (`validate` pass). The prior pin `e578eb16` was ⛔ ORPHANED — it
-survives only on `story/11b-10-unguessable-address-and-inbound-path`; its main-line twin is
-`4a763430` with a BYTE-IDENTICAL tree (`667443d5…`), so the CONTENT baseline was sound and only the
-SHA was unreachable. ⚠ 94 commits and 138 non-governance files landed between that twin and this pin.
+⭐ BASELINE ADVANCED 2026-09-09 (SECOND `validate` pass, same day). The prior pin `1b7fa9f3` was
+⛔ NOT orphaned and needed no rescue — `git diff 1b7fa9f3..c2dd787c -- packages/ apps/` is EMPTY.
+The three commits between them are `2ac7ca64`/`489b2913`/`cc4486f4` (THIS story's own first validate
+pass + the `-211` decision + the STOP discharge) plus `c2dd787c` (a repo-wide orphaned-pin sweep that
+touched 13 OTHER files and confirmed — ⛔ did not change — that `11b-15`'s own pin already resolved
+from HEAD). ⇒ this advance is bookkeeping, not a rescue: it records that the pass below re-checked
+every citation at the new HEAD rather than trusting the old pin's clean `--name-only` diff.
 
-⭐ THIS baseline carries decisions `2026-09-04-186` … `2026-09-08-210`; stories A · B · C · D all
-`done`; `8-16` `done`; `11b-16` `withdrawn`; and the public Sahyog index re-shaped by `-204` · `-205`
-· `-206` · `-207`. ⛔ Every line number below was re-verified at this pin, ⛔ not carried forward.
+⭐ THIS pass re-verified: the AC3 13-field enumeration against `surface-fields.ts:401-428` (exact
+match, order and all); `revealToMembers`'s reader count (still zero outside schema/policy/write/admin);
+`resolvePoolIdentity`'s positional-`mode` signature (`pool-identity.ts:201-208`); the load-bearing
+`member-name-form-parity.spec.ts` basis-seeding chain (`:212-243`); every routing note dated after
+2026-09-07 and every decision after `-211` (none name this story); and Task 0's two open checkboxes
+(the `epics.md` section, the sprint-row rewrite — confirmed still genuinely undone, not stale claims).
+⛔ ZERO FINDINGS. ⛔ Zero rows move. ⛔ No code.
+
+⭐ THE PRIOR (2026-09-09, first pass) BASELINE NOTE, kept for provenance: the pin `e578eb16` was
+⛔ ORPHANED — it survived only on `story/11b-10-unguessable-address-and-inbound-path`; its main-line
+twin was `4a763430` with a BYTE-IDENTICAL tree (`667443d5…`), so the CONTENT baseline was sound and
+only the SHA was unreachable. 94 commits and 138 non-governance files had landed between that twin
+and `1b7fa9f3`. That baseline carried decisions `2026-09-04-186` … `2026-09-08-210`; stories A · B ·
+C · D all `done`; `8-16` `done`; `11b-16` `withdrawn`; and the public Sahyog index re-shaped by `-204`
+· `-205` · `-206` · `-207`. ⛔ Every line number in this file was re-verified at that pin, and again
+at this one.
 -->
 
 # Story 11b.15: The Member's Drive List — a **FOURTH TAB** Over Every Drive in Their Pariwar `[SURFACE]`
@@ -96,7 +112,7 @@ paraphrase, or offer a member *"the same name anyone can already see on the publ
 now the app showed you less than the public page did"*. ⭐ Both were **false for every drive**, and
 `8-16` was re-grounded away from them. This list inherits the re-grounded sentence, ⛔ not the old one.
 
-## 🎯 What already EXISTS — ⭐ re-verified live 2026-09-09 at HEAD `1b7fa9f3`, ⛔ not assumed
+## 🎯 What already EXISTS — ⭐ re-verified live 2026-09-09 at HEAD `c2dd787c`, ⛔ not assumed
 
 | Fact | Where | Verified |
 |---|---|---|
@@ -600,6 +616,7 @@ props. ⚠ Assert **membership and explicit values**, ⛔ never counts over the 
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-09-09 | 0.6 | ⛔ **SECOND `validate` pass, same day — ZERO FINDINGS. Baseline advanced `1b7fa9f3`→`c2dd787c` (bookkeeping, not a rescue: `git diff --name-only` over `packages/`/`apps/` between them is EMPTY).** ⭐ Re-checked against the new HEAD: AC3's 13-field enumeration (exact match, `surface-fields.ts:401-428`); `revealToMembers`'s reader count (still zero production consumers outside schema/policy/write-handler/admin-form); `resolvePoolIdentity`'s live signature; the `member-name-form-parity.spec.ts` basis-seeding chain; every `.decision-log.md` entry and routing note dated after `-211`/2026-09-07 (none name this story); Task 0's two remaining checkboxes (confirmed genuinely open, not stale). ⚠ Also confirmed: the concurrent repo-wide orphaned-pin sweep (`c2dd787c`) checked `11b-15`'s own pin and found it healthy — it changed 13 other files, not this one. ⛔ No duplicate `ready-for-dev` story found elsewhere owning this work (footgun 10 check: grepped `implementation-artifacts/` for "fourth tab" / "drive list" / `resolveDriveTargetForMembers` — no hit outside the known 11b siblings). | BigDev + Claude |
 | 2026-09-09 | 0.5 | ✅⭐⭐ **PREFLIGHT ALL CLEAR — `#decision-2026-09-09-211` LANDED** (`489b2913`), ⛔ before any code. AC8b is **UNBLOCKED**; the F2 STOP is ⛔ kept as the record, ⛔ not deleted. ⚠⛔ **`-211` cl.2 DEPARTS from the routing note's literal *"same condition"*:** the gate is **`reveal_to_members`**, ⛔ not `reveal_to_public` — cl.7(c) authorises the axes separately, the DB CHECK makes public-on imply member-on so `-189` cl.3 holds either way, and the public axis would have left the member switch **inert**. ⭐ Task 0's remaining two sub-items (the `epics.md` section, the sprint row) still bind. | BigDev + Claude |
 | 2026-09-09 | 0.4 | ⛔⛔ **RE-VALIDATED (`bmad-create-story validate`, three independent verifiers) — 29 FINDINGS APPLIED. ⛔ ZERO ROWS MOVE.** ⭐ Baseline **RE-PINNED** `e578eb16` → `1b7fa9f3` (the old pin was ORPHANED; twin `4a763430`, byte-identical tree; **94** commits of drift). ⛔⛔ **Trap 1 is VOID** — `-209` cl.3 rules its premise false for every drive and forbids the paraphrase; the public name gate is INERT (one repo site) and `8-16` (`done`) made all four consumers MODE-RESOLVED, replacing `deceasedFirstName`/`deceasedLastInitial` with ONE `deceasedDisplayName`. ⭐ **AC8b ADDED** — the 2026-09-07 routing note §12.3(A)(1)/§13.3 rules story E **must** render the target on `revealToMembers`; *"no target"* is retired at all three sites, and the missing decision entry is a **Preflight STOP**. ⭐ **AC3 floor ENUMERATED** (13 field ids incl. the nominee's Trustee-ratified FULL name) and its test re-pointed to the **existing** `member-name-form-parity.spec.ts` **with basis-seeding mandated** (else vacuous). ⭐ Trap 2 corrected (the public tuple **already** reads `live`+`closed`+`settled`). ⭐ **AC9 friction budget** + **Preflight** added; AC1 names 10.15's superseded rejection; AC7 switched to **FlashList** and made `clampLimit` mandatory. ⚠ Citations re-anchored: `sahyog-drive.ts:94-96`→`:125-128`; `handlers.ts:630/:835`→`:636/:847`; `contribution-note.ts:144`→`:153`; THREE consumers→**FOUR**; `epics.md:504`→`:509`. ⛔ **NO CODE.** | BigDev + Claude |
 | 2026-09-04 | 0.3 | ✅ **Task 1b CLOSED by `-198` cl.1 (FORM ONLY).** ⛔ Zero open decisions; ⚠ still blocked on **B** and **G** (⭐ G runs first, `-198` cl.2). | BigDev + Claude |

@@ -1,3 +1,10 @@
+# last_updated: 2026-09-09d (`11b-15`'s SECOND `validate` pass, same day — ⛔ ZERO FINDINGS,
+#   ⛔ ZERO ROWS MOVE. Baseline advanced `1b7fa9f3`→`c2dd787c` (the orphaned-pin sweep commit, item
+#   `c` below) as BOOKKEEPING — `git diff --name-only` over `packages/`/`apps/` between the two is
+#   EMPTY, so nothing this pass re-checked could have moved. ⭐ Re-confirmed: AC3's 13-field
+#   enumeration, `revealToMembers`'s zero-reader count, every routing note/decision after `-211`
+#   names nobody new, and Task 0's two open checkboxes are genuinely still open. `11b-15` stays
+#   `ready-for-dev`.)
 # last_updated: 2026-09-09c (⭐⭐ **THE ORPHANED-PIN SWEEP — REPO-WIDE. 11 story files re-pinned or
 #   corrected; ⛔ ZERO ROWS MOVE; ⛔ NO CODE; ⛔ ⛔ NOT A RE-VALIDATION OF ANY OF THEM.**
 #   ⭐ **AFTER: 142 pins, ⛔ 0 orphaned, ⛔ 0 quoted.** All FOUR `ready-for-dev` stories (`11b-15`,

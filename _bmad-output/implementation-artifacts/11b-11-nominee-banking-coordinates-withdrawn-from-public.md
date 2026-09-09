@@ -1,11 +1,18 @@
 ---
-baseline_commit: 9e81000b
+baseline_commit: a4bbcd70
 ---
 
 <!--
 ⭐ BASELINE — the last governance commit before this story opens
 (`governance(11b): spawned excluded from the member drive list — story E unblocked`).
 It carries decisions `2026-09-04-186` … `-196`, Story 11b.10 closed, and the six-story split.
+
+⚠⛔ **RE-PINNED 2026-09-09 (orphaned-pin sweep) — `9e81000b` → `a4bbcd70`.** The old SHA survived only
+on `story/11b-10-unguessable-address-and-inbound-path`; its main-line twin `a4bbcd70` carries a **BYTE-IDENTICAL tree** (`a75ea6c0`).
+⇒ ⭐ the recorded baseline CONTENT is ⛔ unchanged — this fixes only its **reachability**, before
+the old branch is pruned and the pin stops resolving entirely.
+⛔⛔ **THIS IS ⛔ NOT A RE-VALIDATION.** ⛔ No claim in this file was re-verified; ⛔ no line number
+was re-checked. ⭐ Staleness against HEAD is still OWED at this story's next `validate` pass.
 -->
 
 # Story 11b.11: The Nominee Banking Coordinates Are WITHDRAWN From the Public Surface `[SURFACE]`

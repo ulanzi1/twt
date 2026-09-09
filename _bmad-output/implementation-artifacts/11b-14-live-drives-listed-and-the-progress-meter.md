@@ -1,10 +1,17 @@
 ---
-baseline_commit: aafc08c0
+baseline_commit: e33f1924
 ---
 
 <!--
 ⭐ BASELINE — `governance(11b.13): D1 RULED`. Carries decisions `2026-09-04-186` … `-196`,
 Story 11b.10 closed, the six-story split, and stories A/B/C `ready-for-dev` with zero open decisions.
+
+⚠⛔ **RE-PINNED 2026-09-09 (orphaned-pin sweep) — `aafc08c0` → `e33f1924`.** The old SHA survived only
+on `story/11b-10-unguessable-address-and-inbound-path`; its main-line twin `e33f1924` carries a **BYTE-IDENTICAL tree** (`3e4cdaa8`).
+⇒ ⭐ the recorded baseline CONTENT is ⛔ unchanged — this fixes only its **reachability**, before
+the old branch is pruned and the pin stops resolving entirely.
+⛔⛔ **THIS IS ⛔ NOT A RE-VALIDATION.** ⛔ No claim in this file was re-verified; ⛔ no line number
+was re-checked. ⭐ Staleness against HEAD is still OWED at this story's next `validate` pass.
 -->
 
 # Story 11b.14: **Live Drives Are Listed**, With a Progress Meter and a Participation Headline `[SURFACE]`

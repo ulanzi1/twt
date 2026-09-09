@@ -1,5 +1,5 @@
 ---
-baseline_commit: 31153962
+baseline_commit: d3d67710
 ---
 
 <!--
@@ -17,6 +17,13 @@ the `054ff76a` verification carries forward unchanged.
 ⚠⛔ BUT TWO SIBLING STORY FILES MOVED IN THAT WINDOW, AND ONE NOW DEPENDS ON THIS STORY:
 `11b-14` (+86 — a **new AC7 + Task 8** that renders this story's `{nominee_name}` token) and
 `11b-15` (+17 — the reciprocal note). ⇒ see **AC9** and **Task 2b**.
+
+⚠⛔ **RE-PINNED 2026-09-09 (orphaned-pin sweep) — `31153962` → `d3d67710`.** The old SHA survived only
+on `governance/11b-12-d2-routing-and-validation`; its main-line twin `d3d67710` carries a **BYTE-IDENTICAL tree** (`e3c39724`).
+⇒ ⭐ the recorded baseline CONTENT is ⛔ unchanged — this fixes only its **reachability**, before
+the old branch is pruned and the pin stops resolving entirely.
+⛔⛔ **THIS IS ⛔ NOT A RE-VALIDATION.** ⛔ No claim in this file was re-verified; ⛔ no line number
+was re-checked. ⭐ Staleness against HEAD is still OWED at this story's next `validate` pass.
 -->
 
 # Story 11b.12: The Stage Vocabulary — **Live · Closed · Verified** — and the Info Affordance `[SURFACE]`

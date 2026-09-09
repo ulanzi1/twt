@@ -1,3 +1,37 @@
+# last_updated: 2026-09-09c (⭐⭐ **THE ORPHANED-PIN SWEEP — REPO-WIDE. 11 story files re-pinned or
+#   corrected; ⛔ ZERO ROWS MOVE; ⛔ NO CODE; ⛔ ⛔ NOT A RE-VALIDATION OF ANY OF THEM.**
+#   ⭐ **AFTER: 142 pins, ⛔ 0 orphaned, ⛔ 0 quoted.** All FOUR `ready-for-dev` stories (`11b-15`,
+#   `11b-17`, `11b-3b`, `6-18`) now carry a pin that RESOLVES from HEAD.
+#   ⭐ **THE DISCIPLINE APPLIED** ([[feedback_story_validate_footguns]] item 11): for each orphan, find
+#   the main-line twin BY SUBJECT and compare `rev-parse <sha>^{tree}` — ⭐ an identical tree means the
+#   recorded baseline CONTENT never moved and only its REACHABILITY was lost, so the re-pin is safe.
+#   ⛔⛔ **EVERY re-pinned file carries an explicit *"⛔ NOT A RE-VALIDATION"* note** — ⛔ no claim in any
+#   of them was re-verified, and staleness against HEAD is still OWED at each one's next `validate`.
+#   ⭐ **EIGHT tree-IDENTICAL re-pins:** `11b-17` `0b4d368b`→`66ef4dce` · `6-18` `b9beb2c6`→`55912d83` ·
+#   `11b-11` `9e81000b`→`a4bbcd70` · `11b-12` `31153962`→`d3d67710` · `11b-13` `222fb4d8`→`579890b8` ·
+#   `11b-14` `aafc08c0`→`e33f1924` · `11b-3` `2270dc24`→`d0b07828` · `4-4` `f80db74a`→`6db32bc3` ·
+#   `8-14` `d3d8e92`→`41df1d26`. ⚠ Two branches held ALL of them — `story/11b-10-…` and
+#   `governance/11b-12-…`; ⛔ pruning either would have silently voided every staleness check that
+#   depends on those pins.
+#   ⚠⛔ **ONE IS ⛔ NOT TREE-IDENTICAL, AND IS RECORDED AS SUCH: `3-7`.** Its pin `f055e408` was
+#   **DANGLING** — reachable from ⛔ no branch and ⛔ no reflog, its tree (`d6258e44`) at ⛔ NO commit in
+#   the repo ⇒ the original baseline is **UNRECOVERABLE** and doing nothing would have lost it. ⭐ Pinned
+#   to the twin `78fe76d8`, which differs in **two test files** (+5/−29), with the delta written into
+#   the file. ⛔ It is an APPROXIMATION, ⛔ not the recorded baseline — tolerable ONLY because `3-7` is
+#   `done` ([[feedback_record_unattested_no_backfill]]).
+#   ⚠⛔ **ONE WAS ⛔ NEVER AN ORPHAN — `spec-ai-10-5`'s pin was YAML-QUOTED** (`'c44c042b…'`), and the
+#   quotes fooled the ancestry check itself. ⭐ Quotes stripped. ⛔ Any future automated staleness gate
+#   must strip quotes before resolving, or it will report a healthy pin as broken.
+#   ⭐ **`11b-3b` HAD ⛔ NO PIN AT ALL** — ⛔ not one that was lost, one that was ⛔ never written.
+#   Given `ae24a9e1` (the commit that ADDED the file), labelled **DERIVED, ⛔ not attested**, with the
+#   weaker provenance carried as a RISK in the file. ⛔ ⛔ Nothing was reconstructed to look attested.
+#   ⭐ **68 files carry no pin and that is CORRECT, ⛔ not a defect** — the convention begins at `3-7`
+#   (2026-06-29); stories `0.x`–`3.6` and the retros predate it. ⛔ No pin was invented for them.
+#   ⚠ **ONE GENUINE OUTLIER, ⛔ left alone deliberately:** `10-2` is the only unpinned epic-10 story
+#   (29 of 30 are pinned). Its file landed inside the feature PR `26c140c1` rather than through the
+#   create-story flow, so it never entered the convention. ⛔ It is `done` ⇒ ⛔ no pending work reasons
+#   from it, and ⛔ inventing a pin would be a backfill. ⭐ Recorded here so it is not re-discovered.
+#   ⛔ Every row unchanged.)
 # last_updated: 2026-09-09b (✅⭐⭐ **`11b-15` PREFLIGHT ALL CLEAR — `#decision-2026-09-09-211`
 #   LANDED (`489b2913`), ⛔ BEFORE ANY CODE. ⛔ ZERO ROWS MOVE; `11b-15` STAYS `ready-for-dev`
 #   (⭐ now genuinely STARTABLE). ⚠ ⛔ NO CODE.**

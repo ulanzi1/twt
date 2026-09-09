@@ -1,12 +1,17 @@
 ---
-baseline_commit: f80db74a2d47f7b69ca76c7d234d2e27c6297548
+baseline_commit: 6db32bc3
 ---
 
 # Story 4.4: R5/R9 Special Death Rules + R14 Concealment-Flagged Evaluation (SM-1 C7) `[CONSUMER]`
 
 Status: done
 
-<!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
+<!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. 
+⚠⛔ **RE-PINNED 2026-09-09 (orphaned-pin sweep) — `f80db74a` → `6db32bc3`.** The old SHA was
+unreachable from HEAD; its main-line twin `6db32bc3` carries a **BYTE-IDENTICAL tree** (`433067f3`).
+⇒ ⭐ the recorded baseline CONTENT is ⛔ unchanged — this fixes only its **reachability**.
+⛔⛔ **⛔ NOT A RE-VALIDATION** — ⛔ no claim in this file was re-verified.
+-->
 
 ## Story
 

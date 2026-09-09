@@ -1,10 +1,17 @@
 ---
-baseline_commit: 0b4d368b
+baseline_commit: 66ef4dce
 ---
 
 <!--
 ⭐ BASELINE — `story(11b.16): create story G`. Carries decisions `2026-09-04-186` … `-198`,
 Story 11b.10 closed, and stories A–E + G `ready-for-dev`.
+
+⚠⛔ **RE-PINNED 2026-09-09 (orphaned-pin sweep) — `0b4d368b` → `66ef4dce`.** The old SHA survived only
+on `story/11b-10-unguessable-address-and-inbound-path`; its main-line twin `66ef4dce` carries a **BYTE-IDENTICAL tree** (`28fde216`).
+⇒ ⭐ the recorded baseline CONTENT is ⛔ unchanged — this fixes only its **reachability**, before
+the old branch is pruned and the pin stops resolving entirely.
+⛔⛔ **THIS IS ⛔ NOT A RE-VALIDATION.** ⛔ No claim in this file was re-verified; ⛔ no line number
+was re-checked. ⭐ Staleness against HEAD is still OWED at this story's next `validate` pass.
 -->
 
 # Story 11b.17: The Member's View of ONE Drive — Carrying What the Public Page No Longer Does `[SURFACE]`

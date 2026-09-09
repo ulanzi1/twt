@@ -1,12 +1,17 @@
 ---
-baseline_commit: d3d8e92
+baseline_commit: 41df1d26
 ---
 
 # Story 8.14: Close-of-Cycle Emitter — `alert.closed` `[SUBSTRATE / CORRECTIVE]`
 
 Status: done
 
-<!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
+<!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. 
+⚠⛔ **RE-PINNED 2026-09-09 (orphaned-pin sweep) — `d3d8e92` → `41df1d26`.** The old SHA was
+unreachable from HEAD; its main-line twin `41df1d26` carries a **BYTE-IDENTICAL tree** (`ae10ab65`).
+⇒ ⭐ the recorded baseline CONTENT is ⛔ unchanged — this fixes only its **reachability**.
+⛔⛔ **⛔ NOT A RE-VALIDATION** — ⛔ no claim in this file was re-verified.
+-->
 
 ## Story
 

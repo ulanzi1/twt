@@ -1,3 +1,20 @@
+---
+baseline_commit: ae24a9e1
+---
+
+<!--
+⚠⛔⛔ **⛔ NO `baseline_commit` WAS EVER RECORDED FOR THIS STORY.** ⭐ Stated openly at the 2026-09-09
+orphaned-pin sweep — ⛔ it is ⛔ not a pin that was lost, it is a pin that was ⛔ never written
+([[feedback_record_unattested_no_backfill]]).
+⭐ `ae24a9e1` is **DERIVED, ⛔ not attested**: it is the commit that ADDED this file
+(`git log --diff-filter=A`), `governance(11b.3/3a/3b): the combined validation pass + the D3 Panel
+packet`, 2026-09-02 — ⭐ verified an ancestor of HEAD. ⇒ it is a usable staleness ANCHOR, ⛔ not a
+record of what any claim in this file was checked against.
+⛔⛔ **THIS IS ⛔ NOT A RE-VALIDATION.** ⛔ No claim here was re-verified. ⚠ Carry the weaker
+provenance as a RISK at this story's next `validate` pass: a diff from this anchor may understate
+the drift, because the anchor was chosen after the fact.
+-->
+
 # Story 11b.3b: Sahyog Vivran Named-Identity Render Layer — Deceased Member Name + Contributor List `[SURFACE]`
 
 Status: ready-for-dev

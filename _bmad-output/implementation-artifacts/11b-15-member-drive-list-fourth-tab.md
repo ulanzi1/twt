@@ -31,7 +31,7 @@ at this one.
 
 # Story 11b.15: The Member's Drive List — a **FOURTH TAB** Over Every Drive in Their Pariwar `[SURFACE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 > ⭐⛔ **⛔ NO `### Story 11b.15` SECTION EXISTS IN `epics.md`.** **Story E** of the six-story split
 > (`2026-09-04-195` cl.3), following **Trustee-ratified** `-193` cl.2 and BigDev's `-194` cl.2 /
@@ -484,15 +484,41 @@ the name-form work; ⛔ this story does ⛔ not revisit it).
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — GOVERNANCE FIRST** (AC0) — ⛔ one `governance:` commit, ⛔ no code.
-  - [ ] Write the **`### Story 11b.15`** section in `epics.md`, on the `8-16` precedent
+- [x] **Task 0 — GOVERNANCE FIRST** (AC0) — ⛔ one `governance:` commit, ⛔ no code.
+  - [x] Write the **`### Story 11b.15`** section in `epics.md`, on the `8-16` precedent
         (`epics.md:3400`). ⚠ The key is ⛔ already named at `:3410` (`8-16` sequencing), `:5189` (the
         corrected six-story range) and `:5213` (11b.12's annotation assigning the member-app render
         here) — ⇒ this owes the **section**, ⛔ not a first mention.
+        ✅ **WRITTEN** at `epics.md:5439-5518`, at the END of Epic 11b's story list (after 11b.9,
+        before `## Epic 12`) — the 8.16 placement. ⭐ It records **why a SECTION and ⛔ not an
+        annotation**: A–D each annotated Story 11b.3 because each **amended** the public Sahyog
+        surface that story owns; ⛔ E amends nothing there. ⚠ Every decision anchor in it was
+        resolved against `.decision-log.md` before commit — ⭐ `-207` is **`2026-09-08-207`**, ⛔ not
+        `-09-07`, and the two anchors written that way were corrected.
   - [x] ✅ **THE PREFLIGHT STOP — DISCHARGED.** `#decision-2026-09-09-211` landed 2026-09-09
         (commit `489b2913`), ⛔ before any code. ⚠ ⛔ Read its **cl.2** before building AC8b.
-  - [ ] Flip the sprint row **and rewrite its comment block** — `sprint-status.yaml:17173-17193` is
+        ✅ **READ END TO END before this commit** — cl.2 (the member axis, on three grounds), cl.3
+        (fail-closed ⇒ ⛔ nothing renders at launch), cl.4 (⛔ its OWN resolver), cl.5 (`-206` cl.3's
+        number form), cl.6 (Pool-Reality #2 travels with the switch).
+  - [x] Flip the sprint row **and rewrite its comment block** — `sprint-status.yaml:17173-17193` is
         stale three ways (*"BLOCKED ON B"*, *"Task 1b is BLOCKING BOTH"*, *"⇒ STORY G"*).
+        ⚠⛔ **THE ROW IS FLIPPED (`ready-for-dev` → `in-progress`). THE REWRITE WAS ⛔ NOT MADE,
+        BECAUSE IT WAS ⛔ ALREADY DISCHARGED — ⛔ recorded, ⛔ not claimed as an edit**
+        ([[feedback_closure_language_precision]]). ⭐ Checked live: ⛔ **none** of the three named
+        phrases is in this story's row block — the 2026-09-09 `validate` rewrite already removed
+        them (the block now reads *"BOTH BLOCKERS ARE GONE"*). ⚠ The cited line range
+        `:17173-17193` is itself stale and now points into **`11b-11`**'s block; this story's block
+        is `:17278-17329`. ⚠ The three phrases **do** survive at `:2034`/`:2041` — ⛔ those are
+        HISTORICAL `last_updated` ledger rows and are ⛔ **not** rewritten
+        ([[project_sprint_status_ledger]]: the ledger is a reverse-chron RECORD; ⛔ editing it would
+        be a backfill, [[feedback_record_unattested_no_backfill]]).
+  - [x] ⭐ **TRAP 4 / AC1 — THE TAB-TITLE DECISION IS MADE AND RECORDED** (BigDev, 2026-09-09).
+        **`t()`-RESOLVED**, label **Sahyog Drives / सहयोग अभियान** ⇒ the fourth tab is **the one
+        translated title among four**. ⭐ Ground: ⛔ new member-facing copy is ⛔ never minted
+        untranslated in a bilingual app; the three existing literals are **pre-existing debt**,
+        ⛔ **not swept here** (Trap 4). ⚠ Checked first: the repo's i18n CI gate
+        (`i18n:check-parity`, `ci.yml:223`) is an **en/hi key-parity** gate and would ⛔ **not** have
+        caught a hardcoded title — ⇒ this was a genuine choice, ⛔ not a gate-forced one.
 - [x] **Task 1 — RULE D1** — ✅ **RULED 2026-09-04** (`-197`) and ✅ **SHIPPED by `8-16`** 2026-09-08.
 - [x] **Task 1b — RULE THE BASIS-GATE SUB-QUESTION** — ✅ **RULED `-198` cl.1: FORM ONLY**, and live
       in code at `packages/domain/src/notifications/pool-identity.ts:63-66`.
@@ -606,16 +632,75 @@ props. ⚠ Assert **membership and explicit values**, ⛔ never counts over the 
 
 ### Agent Model Used
 
+`claude-opus-5` (Claude Opus 5) — `bmad-dev-story`, 2026-09-09.
+
 ### Debug Log References
+
+**Task 0 — live verification before the `governance:` commit** ([[feedback_verify_before_committing_governance_claims]] — a report is not proof):
+
+| Claim written into `epics.md` | Verified how | Result |
+|---|---|---|
+| `#decision-2026-09-09-211` exists and is readable | `.decision-log.md:37`, read END TO END incl. cl.2's three grounds | ✅ live |
+| ⭐ **`-207` is `2026-09-08`, ⛔ not `-09-07`** | enumerated all 16 cited anchors against `^### Decision` headers | ⚠ **2 anchors corrected** |
+| AC3 floor = **13** mapped field ids | `apps/public/src/lib/surface-fields.ts:401-428` | ✅ exact, incl. `driveLinkA11yLabel: null` |
+| `revealToMembers` has ⛔ zero read paths | grep over `packages/domain/src`, `apps/api/src`, `apps/mobile`, `apps/public/src`, `apps/admin/src` | ✅ schema + policy + write handler + admin form ONLY |
+| THREE tabs, hardcoded English, ⛔ no `@twt/i18n` import | `apps/mobile/app/(tabs)/_layout.tsx` read in full | ✅ confirmed |
+| ⛔ No member drive-list route | `apps/api/src/modules/member-pool/routes.ts` read in full (4 routes) | ✅ confirmed |
+| `SAHYOG_DRIVE_VISIBLE_POOL_STATES` == the member tuple | `packages/domain/src/pool/public-read.ts:126` | ✅ `['live','closed','settled']` — Trap 2's coincidence is **real** |
+| `PUBLIC_STATUS_BY_POOL_STATE` total + `publicStatusForPoolState` | `public-read.ts:169-180` | ✅ |
+| `POOL_LIFECYCLE_STATES` is exactly four, linear | `packages/domain/src/schema/pools.ts:78` | ✅ `spawned·live·closed·settled` |
+| `resolveDriveTargetVisibility` fail-closed on absent row | `packages/domain/src/pool/drive-target-policy.ts:233-240` | ✅ |
+| `clampLimit` shape | `packages/domain/src/pagination.ts:34` | ✅ `Math.max(1, Math.min(limit ?? default, cap))` |
+| 10.15's superseded rejection, quoted verbatim | `10-15-survey-poll.md:134` | ✅ exact |
+| ⭐ 10.15's ground is **negative evidence only** | `ux-design-specification.md` — its ONE *"tab bar"* hit is `:481` | ✅ ⛔ fixes no tab count |
+| B's `sahyog-shared` key path, both locales | `packages/i18n/locales/{en,hi}/sahyog-shared.json` read in full | ✅ all 8 stage keys + `drive_target` |
+
+⚠⛔ **ONE FINDING RAISED FOR A LATER TASK, ⛔ not silently absorbed:** `sahyog-shared.json`'s
+`$comment.drive_target` states the figure is *"RENDERED ONLY WHERE A `super_admin` HAS SWITCHED
+`reveal_to_public` ON"* — ⭐ **true when written, and SUPERSEDED for the member surface by `-211`
+cl.2.** ⇒ that `$comment` is **amended by name** when AC8b is built ([[feedback_supersede_never_reinterpret]]);
+⛔ leaving it would tell the next reader the member axis does not exist. ⛔ **Not** a new key — the
+existing `drive_target` key is reused, per the live assertion at
+`sahyog-stage-copy-resolves.test.ts:66-73`.
 
 ### Completion Notes List
 
+**Task 0 — GOVERNANCE FIRST (AC0). ⛔ Zero code in this commit.**
+
+- ⭐ Wrote the **`### Story 11b.15` SECTION** in `epics.md`, at the end of Epic 11b's story list — the
+  **8.16 precedent** (`epics.md:3400`), itself following **7.11** (`:3041`). ⭐ The section records
+  **why a section and ⛔ not an annotation**: siblings A–D each annotated Story 11b.3 because each
+  **amended** the public Sahyog surface that story owns; ⛔ E amends nothing there and has ⛔ no parent
+  in the file.
+- ⭐ **AC1's supersession is written by name**, ⛔ not overwritten: 10.15's recorded rejection
+  (*"the tab bar is at three"*) is quoted, `-194` cl.2 named as the ruling that changes it, and its
+  ground identified as **negative evidence only** ([[feedback_supersede_never_reinterpret]]).
+- ⭐ **AC8b is stated on the MEMBER axis**, with `-211` cl.2's three grounds carried into `epics.md`
+  so a future reader cannot "correct" it back to the public switch.
+- ⚠ **`-207`'s date was wrong in my first draft** (`2026-09-07` → `2026-09-08`). ⭐ Caught by
+  enumerating every cited anchor against the log rather than trusting the story file's undated
+  shorthand ([[feedback_negative_claims_checkable_in_repo]]).
+- ⚠⛔ **Task 0's *"rewrite the stale comment block"* sub-item is recorded ALREADY DISCHARGED, ⛔ not
+  claimed as an edit** — its three named phrases are absent from this story's row block (the
+  2026-09-09 `validate` rewrite removed them); only the **flip** was genuinely owed
+  ([[feedback_closure_language_precision]]). ⛔ The historical ledger rows that still carry them are
+  ⛔ **not** rewritten ([[project_sprint_status_ledger]]).
+- ⭐ **Trap 4 ruled** (BigDev): the tab title is **`t()`-resolved** — **Sahyog Drives / सहयोग अभियान**.
+  ⚠ Checked first that the repo's i18n gate is **key-parity only** and would ⛔ not have forced it.
+
 ### File List
+
+**Task 0 (`governance:`) — ⛔ no code:**
+
+- `_bmad-output/planning-artifacts/epics.md` — **modified** (new `### Story 11b.15` section)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — **modified** (row → `in-progress`; ledger entry `2026-09-09e`)
+- `_bmad-output/implementation-artifacts/11b-15-member-drive-list-fourth-tab.md` — **modified** (Task 0 checkboxes, Dev Agent Record, Change Log)
 
 ## Change Log
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-09-09 | 0.7 | ⭐⭐ **DEV STARTED — TASK 0 (GOVERNANCE FIRST) COMPLETE. `ready-for-dev` → `in-progress`. ⛔ ZERO CODE.** ⭐ The **`### Story 11b.15` SECTION** is written in `epics.md` (end of Epic 11b's story list, the **8.16 precedent** `:3400`), recording why a **SECTION** and ⛔ not an annotation — A–D each annotated Story 11b.3 because each **amended** the public Sahyog surface it owns; ⛔ E amends nothing there. ⭐ AC1's supersession of **10.15**'s recorded *"the tab bar is at three"* rejection is written **by name** (its ground verified to be **negative evidence only** — `ux-design-specification.md` fixes ⛔ no tab count). ⭐ AC8b is stated on the **MEMBER** axis with `-211` cl.2's three grounds carried in, so it cannot be silently "corrected" back to `reveal_to_public`. ⭐ **TRAP 4 RULED (BigDev): the tab title is `t()`-RESOLVED — Sahyog Drives / सहयोग अभियान**, the one translated title among four; ⚠ verified first that the repo's i18n gate is **key-parity only** and would ⛔ not have forced it. ⚠ **`-207`'s anchor date was wrong in the first draft** (`-09-07` → **`-09-08`**) — caught by enumerating all 16 cited anchors against `.decision-log.md` rather than trusting undated shorthand. ⚠⛔ **Task 0's *"rewrite the stale comment block"* sub-item is recorded ALREADY DISCHARGED, ⛔ not claimed as an edit** — its three named phrases are ⛔ absent from this story's row block (the 2026-09-09 `validate` rewrite removed them) and survive only in HISTORICAL ledger rows, which are ⛔ not rewritten. ⭐ **ONE FINDING RAISED FOR AC8b:** `sahyog-shared.json`'s `$comment.drive_target` still says the figure renders only on `reveal_to_public` — **superseded for the member surface by `-211` cl.2**, and it is amended **by name** when AC8b is built. | BigDev + Claude |
 | 2026-09-09 | 0.6 | ⛔ **SECOND `validate` pass, same day — ZERO FINDINGS. Baseline advanced `1b7fa9f3`→`c2dd787c` (bookkeeping, not a rescue: `git diff --name-only` over `packages/`/`apps/` between them is EMPTY).** ⭐ Re-checked against the new HEAD: AC3's 13-field enumeration (exact match, `surface-fields.ts:401-428`); `revealToMembers`'s reader count (still zero production consumers outside schema/policy/write-handler/admin-form); `resolvePoolIdentity`'s live signature; the `member-name-form-parity.spec.ts` basis-seeding chain; every `.decision-log.md` entry and routing note dated after `-211`/2026-09-07 (none name this story); Task 0's two remaining checkboxes (confirmed genuinely open, not stale). ⚠ Also confirmed: the concurrent repo-wide orphaned-pin sweep (`c2dd787c`) checked `11b-15`'s own pin and found it healthy — it changed 13 other files, not this one. ⛔ No duplicate `ready-for-dev` story found elsewhere owning this work (footgun 10 check: grepped `implementation-artifacts/` for "fourth tab" / "drive list" / `resolveDriveTargetForMembers` — no hit outside the known 11b siblings). | BigDev + Claude |
 | 2026-09-09 | 0.5 | ✅⭐⭐ **PREFLIGHT ALL CLEAR — `#decision-2026-09-09-211` LANDED** (`489b2913`), ⛔ before any code. AC8b is **UNBLOCKED**; the F2 STOP is ⛔ kept as the record, ⛔ not deleted. ⚠⛔ **`-211` cl.2 DEPARTS from the routing note's literal *"same condition"*:** the gate is **`reveal_to_members`**, ⛔ not `reveal_to_public` — cl.7(c) authorises the axes separately, the DB CHECK makes public-on imply member-on so `-189` cl.3 holds either way, and the public axis would have left the member switch **inert**. ⭐ Task 0's remaining two sub-items (the `epics.md` section, the sprint row) still bind. | BigDev + Claude |
 | 2026-09-09 | 0.4 | ⛔⛔ **RE-VALIDATED (`bmad-create-story validate`, three independent verifiers) — 29 FINDINGS APPLIED. ⛔ ZERO ROWS MOVE.** ⭐ Baseline **RE-PINNED** `e578eb16` → `1b7fa9f3` (the old pin was ORPHANED; twin `4a763430`, byte-identical tree; **94** commits of drift). ⛔⛔ **Trap 1 is VOID** — `-209` cl.3 rules its premise false for every drive and forbids the paraphrase; the public name gate is INERT (one repo site) and `8-16` (`done`) made all four consumers MODE-RESOLVED, replacing `deceasedFirstName`/`deceasedLastInitial` with ONE `deceasedDisplayName`. ⭐ **AC8b ADDED** — the 2026-09-07 routing note §12.3(A)(1)/§13.3 rules story E **must** render the target on `revealToMembers`; *"no target"* is retired at all three sites, and the missing decision entry is a **Preflight STOP**. ⭐ **AC3 floor ENUMERATED** (13 field ids incl. the nominee's Trustee-ratified FULL name) and its test re-pointed to the **existing** `member-name-form-parity.spec.ts` **with basis-seeding mandated** (else vacuous). ⭐ Trap 2 corrected (the public tuple **already** reads `live`+`closed`+`settled`). ⭐ **AC9 friction budget** + **Preflight** added; AC1 names 10.15's superseded rejection; AC7 switched to **FlashList** and made `clampLimit` mandatory. ⚠ Citations re-anchored: `sahyog-drive.ts:94-96`→`:125-128`; `handlers.ts:630/:835`→`:636/:847`; `contribution-note.ts:144`→`:153`; THREE consumers→**FOUR**; `epics.md:504`→`:509`. ⛔ **NO CODE.** | BigDev + Claude |

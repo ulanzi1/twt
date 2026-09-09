@@ -31,7 +31,17 @@ export { t } from './resolver.js';
 
 // Numeral + currency utilities (amendment-A2).
 export { toHindiNumeral, toGregorianNumeral } from './number.js';
-export { formatCount, formatCurrency, formatCurrencyShort } from './currency.js';
+export {
+  formatCount,
+  formatCurrency,
+  formatCurrencyShort,
+  // ⭐ Story 11b.15 — the two RULED Sahyog money forms, relocated here from
+  // `apps/public/src/lib/sahyog-render.ts` so the member's drive list and the public index share ONE
+  // definition. ⛔ `apps/mobile` cannot import from `apps/public`, and a second copy of a
+  // Trustee-ratified number form is a fork, not a convenience.
+  formatSahyogContributedAmount,
+  formatSahyogTargetAmount,
+} from './currency.js';
 
 // Surface classification.
 export type { SurfaceClass, ClassificationConfig } from './classification.js';

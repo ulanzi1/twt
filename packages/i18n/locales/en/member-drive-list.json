@@ -1,0 +1,35 @@
+{
+  "$comment": "⭐ THE MEMBER'S DRIVE LIST — the fourth tab's OWN chrome (Story 11b.15). ⛔ THE THREE STAGE WORDS AND THE ROW SENTENCES ARE NOT HERE AND MAY NOT BE ADDED: `stage.*`, `stage.*.help`, `stage.explainer.*`, `live_line`, `zero_line.*`, `index_line.*` and `drive_target` all live in `sahyog-shared.json`, the ONE shared source (`2026-09-04-193` cl.3), and this surface CONSUMES them by name. A live assertion says so — `apps/mobile/tests/unit/sahyog-stage-copy-resolves.test.ts:66-73`: 'story E consumes THESE keys, by name — it may NOT mint its own'. Two sources is exactly how 'Active' came to mean two different things. ⛔ Do NOT copy a sahyog-shared string into this file.",
+  "$comment.numerals": "⭐ EVERY figure this surface renders is OPERATIONAL — counts, money, dates — so it takes LATIN numerals in BOTH locales (amendment-A2, UX-DR73). ⛔ Never the Devanagari arm. The tokens below arrive ALREADY FORMATTED from the render layer; ⛔ do not format inside a string.",
+
+  "tab.title": "Sahyog Drives",
+  "$comment.tab": "⚠⛔ THE ONE TRANSLATED TAB TITLE AMONG FOUR — a deliberate, RECORDED departure (BigDev, 2026-09-09; Story 11b.15 Trap 4 / AC1). Its three siblings ('My Pool', 'Shradhanjali', 'Panchayat') are HARDCODED ENGLISH LITERALS in `app/(tabs)/_layout.tsx` and that file imports no `@twt/i18n` at all. ⛔ That is PRE-EXISTING and is NOT swept by this story; ⭐ but new member-facing copy is never minted untranslated, so the fourth tab resolves through `t()`. ⚠ Keep it SHORT — four tabs share one bar and a long title truncates on a small device.",
+
+  "screen.title": "Sahyog Drives",
+  "screen.subtitle": "Every drive your Pariwar has run",
+
+  "loading": "Loading your Pariwar's drives",
+  "$comment.loading": "⭐ DISTINCT FROM THE EMPTY COPY, AND THE DISTINCTION IS LOAD-BEARING (AC6). Showing 'your Pariwar has not run a drive yet' while the first read is still in flight would assert something FALSE about the member's own Pariwar. The three states — loading, empty, error — are separately reachable and separately announced.",
+
+  "empty": "Your Pariwar has not run a drive yet. When one opens, it will appear here.",
+  "$comment.empty": "⭐ It REPORTS STATE and never attributes responsibility — the `contributor_list.empty` register. ⛔ An empty list is not a failure and must not read as one.",
+
+  "error": "We could not load the drives just now. Please try again in a moment.",
+  "$comment.error": "⚠⛔ THIS STATE IS REACHABLE, AND KEEPING IT REACHABLE IS A DESIGN DECISION. The read route is deliberately NOT fail-soft: were it to degrade to an empty list, this copy would be unreachable and the member would be told their Pariwar has run no drives when the truth is that we could not load them. ⛔ Never blame the member or their connection — we could not load it.",
+  "error.retry": "Try again",
+
+  "district.absent": "District not recorded",
+  "$comment.district": "⭐ An honest absence, ⛔ never a blank cell. `district` is null when the deceased member has no posting row.",
+
+  "row.a11y": "{family}, {stage}. {count} contributions confirmed. {amount} contributed so far.",
+  "$comment.row_a11y": "⭐ THE ROW'S ACCESSIBLE NAME (AC5, family 13). ⚠ It states the SAME facts the row renders visually — it is a grouping label, ⛔ never extra information a sighted member cannot reach. ⛔ `t()` THROWS on an unsupplied token: supply ALL FOUR.",
+  "row.a11y.no_family": "{stage}. {count} contributions confirmed. {amount} contributed so far.",
+  "$comment.row_a11y_no_family": "⚠⛔ THE VARIANT IS WHAT STOPS A CRASH, ⛔ not a nicety. `deceasedMemberName` is nullable on the wire (a drive whose family name is unresolvable), and `t()` THROWS on an unsupplied token ⇒ resolving `row.a11y` there would take down the WHOLE list, not one row. ⭐ Same structural reason `sahyog-shared` ships `zero_line.no_family`.",
+
+  "row.contributions": "{count} confirmed",
+  "row.amount": "{amount} contributed",
+  "row.closed_on": "Closed {date}",
+
+  "nominee.label": "Nominee",
+  "$comment.nominee": "⭐ The public wording ruled at `2026-09-04-190` cl.2 ('Nominee Name'), carried onto the member surface so the two agree. ⛔ The nominee's NAME only — no account number, no IFSC, no VPA, no bank, no branch. Those are story F's per-drive view (`-190` cl.3)."
+}

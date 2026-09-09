@@ -205,3 +205,67 @@ export function formatCount(value: number): string {
   }
   return groupIndian(String(value));
 }
+
+/**
+ * ⭐⭐ **लक्ष्य's RULED FORM — the drive's EXPECTED figure.** Trustee-ratified 2026-09-07
+ * (*"Expected figure always in Lakh or Crore."*), narrowed the same day by `2026-09-07-206` **cl.3**.
+ *
+ * ⭐ **THE RULE:** exact **below** ₹1,00,000; the short lakh/crore form **at and above** it.
+ *
+ * ⚠⛔⛔ **THE ₹10-LAKH CUT-OFF DOES ⛔ NOT APPLY HERE.** A ₹8,00,000 target renders **`₹ 8 lakh`**,
+ * ⛔ never `₹ 8,00,000`. ⇒ ⭐ **TWO DIFFERENT RULES ON ONE ROW, AND THAT IS DELIBERATE:** the
+ * *contributed* amount ({@link formatSahyogContributedAmount}) is exact below TEN lakh; the *target*
+ * is exact only below ONE. ⛔ Do ⛔ not "align" them — the divergence is the ruling, ⛔ not an
+ * oversight.
+ *
+ * ⛔⛔ **WHY THE SUB-LAKH FLOOR EXISTS:** the short form has ⛔ no sub-lakh behaviour, so a small
+ * drive's DERIVED target rendered the words **`₹ 0 lakh`** — ⭐ executed: ₹300 and ₹800 both did, and
+ * ₹300 is exactly what 3 assignees × a ₹100 `fixed_amount` produces (Review finding, 2026-09-07).
+ * ⚠ A zero-shaped target is **SILENCE, ⛔ never `₹0`**, and the read path enforces that for a
+ * ZERO-assignee pool — ⛔ but a NONZERO target was reaching the page as a zero STRING by way of the
+ * number form.
+ *
+ * ⚠⛔ **RELOCATED HERE FROM `apps/public/src/lib/sahyog-render.ts` BY STORY 11b.15, AND ⛔ NOT
+ * RE-IMPLEMENTED.** The member's drive list renders the same ruled figure and `apps/mobile` cannot
+ * import from `apps/public` ⇒ the alternative was a SECOND copy of a Trustee-ratified number form,
+ * which is the fork this codebase refuses everywhere else. ⭐ A second consumer now exists, so this
+ * is shared tooling in the package the primitives already live in — ⛔ not a new package
+ * ([[project_no_premature_package]]). `sahyog-render.ts` re-exports it, so ⛔ every existing
+ * `apps/public` call site and test is unchanged.
+ */
+export function formatSahyogTargetAmount(targetInr: number, locale: Locale): string {
+  if (targetInr < 100_000) return formatCurrency(targetInr, 'en');
+  return formatCurrencyShort(targetInr, locale);
+}
+
+/**
+ * ⭐⭐ **THE CONTRIBUTED AMOUNT'S RULED FORM — exact below ₹10 lakh, CUT OFF at and above it, and
+ * ⛔ ONLY on a LIVE drive.** Trustee-ratified 2026-09-07: *"Begin cutting off only if amount
+ * contributed exceeds 10 lakh, till then show exact number — this applies to Live drive. For Closed,
+ * verified shows exact figure."*, amended the same day by *"Cut off at **Exactly** ten lakh"*.
+ *
+ * ⇒ ⛔ **THE TEST IS `>=`, ⛔ NOT `>`** — the later wording moved the boundary, and ₹10,00,000
+ * renders `₹ 10 lakh` where the earlier wording would have kept it exact. ⚠ A reader watching a
+ * drive therefore sees the figure **change form** as it crosses the line; ⭐ that is intended.
+ *
+ * ⚠⛔ **CLOSED AND VERIFIED ROWS ARE ⛔ ALWAYS EXACT** — the short form is scoped to Live. That is
+ * what `isLive` carries, and ⛔ why it is a parameter rather than an assumption.
+ *
+ * ⭐ LATIN numerals in both locales for the exact arm (`formatCurrency(…, 'en')`) — money is
+ * **OPERATIONAL** data (amendment-A2). ⛔ Never the `'hi'` Devanagari arm, which exists only for
+ * ceremonial prose.
+ *
+ * ⚠⛔ **RELOCATED HERE BY STORY 11b.15** — same reason as {@link formatSahyogTargetAmount}. ⭐ The
+ * STAGE→boolean mapping stays at each call site (the public index speaks
+ * `live`/`active`/`archive`, the member list speaks `live`/`closed`/`verified`); ⛔ only the RULE
+ * moved, so there is exactly one place the ₹10-lakh boundary is written.
+ */
+export function formatSahyogContributedAmount(
+  amountInr: number,
+  locale: Locale,
+  isLive: boolean,
+): string {
+  const CUT_OFF_INR = 1_000_000;
+  if (isLive && amountInr >= CUT_OFF_INR) return formatCurrencyShort(amountInr, locale);
+  return formatCurrency(amountInr, 'en');
+}

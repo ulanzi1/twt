@@ -428,3 +428,280 @@ describeDb('Story 8.16 Trap 5 — a MONONYM renders on the member side in BOTH m
     }
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// ⭐⭐ STORY 11b.15 — THE MEMBER'S DRIVE LIST JOINS THIS COMPARISON AS THE **THIRD SURFACE**.
+//
+// ⚠⛔ **THIS FILE IS EXTENDED, ⛔ NOT REINVENTED — and that is the story's own instruction.** The
+// harness above already drives BOTH real routes over live Postgres and already carries the ONE thing
+// that makes a `member ≥ public` assertion non-vacuous: the REAL basis-seeding chain (Trap 7).
+// ⇒ ⛔ a second parity file would have had to rebuild `seedSharedPool`, and the copy that drifts is
+// always the one whose basis chain is subtly wrong — which is exactly the failure that passes green.
+//
+// ⭐ WHAT THE THIRD SURFACE ADDS THAT THE CARD CANNOT: the My Pool card shows the member's ONE
+// assigned pool. The drive list shows EVERY drive in the Pariwar, so it is the first member surface
+// on which `-189` cl.3 can be violated for a drive the member is ⛔ not assigned to.
+//
+// ⛔ THE SCOPE NOTE IS INHERITED VERBATIM, ⛔ not re-derived: `2026-09-04-189` cl.3 is Trustee-scoped
+// by `2026-09-04-195` **cl.1** to the **drive data class** and the six 11b split stories. ⛔ It is
+// ⛔ NOT a universal invariant and must ⛔ not be generalised from these assertions.
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+
+const MEMBER_DRIVE_LIST = '/api/v1/member/drive-list';
+
+/** One row of the member's drive list, as the wire carries it. */
+interface DriveListRow {
+  readonly deceasedMemberName: string | null;
+  readonly nomineeName: string | null;
+  readonly poolLetterCode: string;
+  readonly poolCanonicalIdentifier: string;
+  readonly publicToken: string;
+  readonly status: 'live' | 'closed' | 'verified';
+  readonly closedAt: string | null;
+  readonly district: string | null;
+  readonly confirmedContributionCount: number;
+  readonly confirmedPercentage: number | null;
+  readonly driveTargetInr?: number;
+  readonly amountRaisedInr: number;
+  readonly fundingOutcome: string | null;
+}
+
+/** Fetch the member's whole drive list. ⛔ Never a count assertion — membership and explicit values. */
+async function driveList(t: TestApp, f: Fixture): Promise<DriveListRow[]> {
+  const res = await t.app.inject({
+    method: 'GET',
+    url: MEMBER_DRIVE_LIST,
+    headers: {
+      authorization: `Bearer ${signAccessToken(t.app, { memberId: f.requester, pariwarId: f.pariwarId, deviceId: 'test-device' }, ACCESS_TTL_MS)}`,
+    },
+  });
+  // ⛔ NOT a fail-soft surface — a non-200 here is a real failure and must not be swallowed into an
+  // empty array, which is the very degradation the route refuses to perform.
+  expect(res.statusCode, `drive-list returned ${res.statusCode}: ${res.body}`).toBe(200);
+  return (res.json() as { items: DriveListRow[] }).items;
+}
+
+/** The row for the fixture's own pool, by its canonical identifier. ⛔ Never `items[0]`. */
+function rowForPool(rows: DriveListRow[], f: Fixture): DriveListRow | undefined {
+  return rows.find((r) => r.poolCanonicalIdentifier.endsWith(f.poolId.slice(0, 6)));
+}
+
+/**
+ * Write the pool's FROZEN ROSTER row — the EXPECTED side of every derived figure.
+ *
+ * ⚠⛔⛔ **THE SHARED FIXTURE DOES ⛔ NOT SEED THIS, AND THAT IS WHY IT IS HERE.** `seedSharedPool`
+ * writes the roster into `pool_snapshots.memberAssignments` (which is what the member CARD reads),
+ * ⛔ but `ASSIGNED_MEMBER_COUNT` — the denominator of BOTH the progress meter and लक्ष्य — counts
+ * rows in `member_pool_assignments`. ⇒ without this the derived target is `20 × 0 = 0`, and
+ * `resolveDriveTargetForMembers` correctly resolves a zero-assignee pool to **SILENCE**.
+ * ⭐ **FOUND BY THIS TEST FAILING, ⛔ not assumed** — and it is worth recording that the failure was
+ * the read behaving CORRECTLY on a fixture that had not set an expectation.
+ *
+ * ⛔ It is deliberately ⛔ NOT folded into `seedSharedPool`: Story 8.16's cases above assert names
+ * only, and giving every one of them a non-null meter would widen their blast radius for no gain.
+ */
+async function seedAssignment(t: TestApp, f: Fixture): Promise<void> {
+  const scopeTx = await openScopeTx(t.deps, f.pariwarId);
+  try {
+    await scopeTx.client.query(
+      `INSERT INTO member_pool_assignments (pool_id, member_id, pariwar_id, cycle_id, assigned_at)
+       SELECT $1, $2, $3, cycle_id, now() FROM pools WHERE pool_id = $1`,
+      [f.poolId, f.requester, f.pariwarId],
+    );
+    await closeScopeTx(scopeTx, true);
+  } catch (err) {
+    await closeScopeTx(scopeTx, false);
+    throw err;
+  }
+}
+
+/** Reveal the drive target on one or both axes, through the GOVERNED write path. */
+async function setReveal(
+  t: TestApp,
+  pariwarId: string,
+  visibility: { revealToMembers: boolean; revealToPublic: boolean },
+): Promise<void> {
+  const scopeTx = await openScopeTx(t.deps, pariwarId);
+  try {
+    await poolDomain.setDriveTargetVisibility(scopeTx.tx, {
+      pariwarId: ids.pariwarId(pariwarId),
+      visibility,
+      // ⭐ A SYSTEM/SEED write — `changedByActor: null` skips the permission check, which is why the
+      // display name must ALSO be null (the accessor refuses the mismatched pair).
+      changedByActor: null,
+      changedByDisplay: null,
+      actorGrants: [],
+      rationale: 'test fixture — the member arm of -190 cl.7(c), first consumed by 11b.15',
+      auditId: randomUUID(),
+      now: new Date(),
+    });
+    await closeScopeTx(scopeTx, true);
+  } catch (err) {
+    await closeScopeTx(scopeTx, false);
+    throw err;
+  }
+}
+
+describeDb('Story 11b.15 AC3 — `-189` cl.3 on the THIRD surface, in BOTH directions', () => {
+  it('⭐ NO BASIS: the drive list names the family while the public index names NOBODY', async () => {
+    const t = await createTestApp();
+    try {
+      const f = await seedSharedPool(t, { basis: false });
+      // ⭐ This is EVERY REAL DRIVE TODAY — the publication clause has exactly one site in the repo.
+      expect(await publicName(t, f)).toBeNull();
+
+      const row = rowForPool(await driveList(t, f), f);
+      expect(row, 'the fixture pool is missing from the member drive list').toBeDefined();
+      // ⭐ `2026-09-04-198` cl.1 — the member path takes the configured FORM and ⛔ NOT the
+      // publication BASIS gate. A member sees a name ALWAYS.
+      expect(row?.deceasedMemberName).toBe('Rajesh Kumar Sharma');
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('⭐ BASIS SATISFIED: the drive list and the public index render the SAME STRING (Trap 7)', async () => {
+    const t = await createTestApp();
+    try {
+      const f = await seedSharedPool(t, { basis: true });
+      const pub = await publicName(t, f);
+      // ⛔ THE GUARD AGAINST A VACUOUS PASS — if the basis chain were wrong this is `null` and the
+      // comparison below would degrade to a null-check. ⛔ Never delete it.
+      expect(pub).toBe('Rajesh Kumar Sharma');
+
+      const row = rowForPool(await driveList(t, f), f);
+      expect(row?.deceasedMemberName).toBe(pub);
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('⭐ THE MODE FLIP MOVES THE DRIVE LIST TOO — it reads the SAME stored row', async () => {
+    const t = await createTestApp();
+    try {
+      const f = await seedSharedPool(t, { basis: true });
+      // ⚠ NON-VACUOUS BY CONSTRUCTION: `Rajesh Kumar Sharma` and `Rajesh S.` are unmistakably
+      // different strings, so a surface that ignored the mode would fail loudly here.
+      expect(rowForPool(await driveList(t, f), f)?.deceasedMemberName).toBe('Rajesh Kumar Sharma');
+      await setMode(t, f.pariwarId, 'shielded_name');
+      const shielded = rowForPool(await driveList(t, f), f)?.deceasedMemberName;
+      expect(shielded).not.toBe('Rajesh Kumar Sharma');
+      expect(shielded).toBe(await publicName(t, f));
+    } finally {
+      await teardown(t);
+    }
+  });
+});
+
+describeDb('Story 11b.15 AC2 — WHICH drives appear, and whose', () => {
+  it("⛔ ANOTHER PARIWAR'S DRIVES ARE ABSENT — the scope is the SESSION's (family 12)", async () => {
+    const t = await createTestApp();
+    try {
+      const mine = await seedSharedPool(t, { basis: false });
+      const theirs = await seedSharedPool(t, { basis: false });
+      const rows = await driveList(t, mine);
+
+      // ⭐ MEMBERSHIP, ⛔ never a count over the shared fixture ([[project_live_db_test_gotchas]]).
+      expect(rowForPool(rows, mine), "the caller's own drive is missing").toBeDefined();
+      expect(
+        rowForPool(rows, theirs),
+        "another Pariwar's drive leaked into the member's list",
+      ).toBeUndefined();
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('⛔ A `spawned` DRIVE IS ABSENT — a disclosure rule, ⛔ not a filter preference (Trap 2)', async () => {
+    const t = await createTestApp();
+    try {
+      const f = await seedSharedPool(t, { basis: false });
+
+      // Drive the fixture's own pool back to `spawned` — the state a pool holds after an APPROVED
+      // CLAIM and BEFORE contributions open. ⛔ Listing it would disclose a death and its claim
+      // approval to the whole Pariwar earlier than any surface does today.
+      const scopeTx = await openScopeTx(t.deps, f.pariwarId);
+      try {
+        await scopeTx.client.query("SET LOCAL app.pool_state_writer = 'on'");
+        await scopeTx.client.query(
+          `UPDATE pools SET current_state = 'spawned' WHERE pool_id = $1`,
+          [f.poolId],
+        );
+        await scopeTx.client.query("SET LOCAL app.pool_state_writer = 'off'");
+        await closeScopeTx(scopeTx, true);
+      } catch (err) {
+        await closeScopeTx(scopeTx, false);
+        throw err;
+      }
+
+      expect(
+        rowForPool(await driveList(t, f), f),
+        'a `spawned` drive reached the member list — a DISCLOSURE regression, not a filter bug',
+      ).toBeUndefined();
+    } finally {
+      await teardown(t);
+    }
+  });
+});
+
+describeDb('Story 11b.15 AC8b — लक्ष्य renders ⛔ ONLY on `revealToMembers`', () => {
+  it('⛔ ABSENT with NO visibility row — fail-closed, and this is the state at launch', async () => {
+    const t = await createTestApp();
+    try {
+      const f = await seedSharedPool(t, { basis: false });
+      // ⚠⛔ SEEDED DELIBERATELY: without a roster the target would be `null` because the pool has NO
+      // EXPECTATION, ⛔ not because the switch is off — and the test would pass for the wrong reason.
+      // ⭐ With it, the ONLY thing withholding the figure is the fail-closed default.
+      await seedAssignment(t, f);
+      const row = rowForPool(await driveList(t, f), f);
+      expect(row).toBeDefined();
+      // ⭐ ABSENT, ⛔ not `null` — the 11b.11 wire shape. `2026-09-04-190` cl.7(b): an absent row is
+      // hidden from EVERYONE, so ⛔ no expected figure renders to any member on the day this ships.
+      expect(row).not.toHaveProperty('driveTargetInr');
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('⛔ STILL ABSENT with BOTH switches OFF — a row exists, and it still says no', async () => {
+    const t = await createTestApp();
+    try {
+      const f = await seedSharedPool(t, { basis: false });
+      await seedAssignment(t, f);
+      await setReveal(t, f.pariwarId, { revealToMembers: false, revealToPublic: false });
+      // ⚠ NON-VACUOUS: this distinguishes "no row" from "a row that says no". Without it the test
+      // above alone could pass against a read that never consulted the table at all.
+      expect(rowForPool(await driveList(t, f), f)).not.toHaveProperty('driveTargetInr');
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('⭐⭐ PRESENT once `revealToMembers` is ON — the FIRST consumer that arm has ever had', async () => {
+    const t = await createTestApp();
+    try {
+      const f = await seedSharedPool(t, { basis: false });
+      // ⭐ THE EXPECTATION MUST EXIST BEFORE IT CAN BE REVEALED — see `seedAssignment`.
+      await seedAssignment(t, f);
+      // ⭐ MEMBER-ONLY, public OFF. The DB CHECK permits this direction and refuses the inverse —
+      // which is precisely why `-211` cl.2 reads the MEMBER axis: reading `revealToPublic` here
+      // would leave this switch INERT.
+      await setReveal(t, f.pariwarId, { revealToMembers: true, revealToPublic: false });
+
+      const row = rowForPool(await driveList(t, f), f);
+      // ⭐ DERIVED — `assignedCount × fixed_amount` = 1 assignee × ₹500. ⛔ There is no setter
+      // (`-204` cl.2), so an EXPLICIT value here also proves the figure was DERIVED rather than read
+      // from the retired schedule table — a `null`/absent would prove the gate, but only an exact
+      // number proves the arithmetic.
+      expect(row?.driveTargetInr).toBe(500);
+
+      // ⛔ AND THE PUBLIC INDEX STILL SHOWS NOTHING — the two axes are independent, and this story
+      // moves ⛔ no public surface (AC8).
+      const pubRes = await t.app.inject({ method: 'GET', url: PUBLIC_DRIVE(f.pariwarId) });
+      const pubRow = (pubRes.json() as { items: Array<Record<string, unknown>> }).items[0];
+      expect(pubRow).not.toHaveProperty('driveTargetInr');
+    } finally {
+      await teardown(t);
+    }
+  });
+});

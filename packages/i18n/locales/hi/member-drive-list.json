@@ -1,0 +1,35 @@
+{
+  "$comment": "⭐ THE MEMBER'S DRIVE LIST — the fourth tab's OWN chrome (Story 11b.15). ⛔ THE THREE STAGE WORDS AND THE ROW SENTENCES ARE NOT HERE AND MAY NOT BE ADDED: `stage.*`, `stage.*.help`, `stage.explainer.*`, `live_line`, `zero_line.*`, `index_line.*` and `drive_target` all live in `sahyog-shared.json`, the ONE shared source (`2026-09-04-193` cl.3), and this surface CONSUMES them by name. ⛔ Do NOT copy a sahyog-shared string into this file.",
+  "$comment.numerals": "⭐ EVERY figure this surface renders is OPERATIONAL — counts, money, dates — so it takes LATIN numerals in BOTH locales (amendment-A2, UX-DR73). ⛔ Never the Devanagari arm. The tokens arrive ALREADY FORMATTED from the render layer.",
+
+  "tab.title": "सहयोग अभियान",
+  "$comment.tab": "⚠⛔ THE ONE TRANSLATED TAB TITLE AMONG FOUR — deliberate and RECORDED (BigDev, 2026-09-09; Trap 4 / AC1). Its three siblings are hardcoded English literals; ⛔ that is pre-existing and is NOT swept here. ⚠ Keep it SHORT — four tabs share one bar.",
+
+  "screen.title": "सहयोग अभियान",
+  "screen.subtitle": "आपके परिवार के सभी अभियान",
+
+  "loading": "आपके परिवार के अभियान लाए जा रहे हैं",
+  "$comment.loading": "⭐ DISTINCT FROM THE EMPTY COPY (AC6) — showing the absence sentence while the first read is still in flight would assert something false about the member's own Pariwar.",
+
+  "empty": "आपके परिवार ने अभी तक कोई अभियान नहीं चलाया है। जब कोई शुरू होगा, वह यहाँ दिखेगा।",
+  "$comment.empty": "⭐ It REPORTS STATE and never attributes responsibility. ⛔ An empty list is not a failure.",
+
+  "error": "अभी अभियान नहीं लाए जा सके। कृपया थोड़ी देर बाद फिर कोशिश करें।",
+  "$comment.error": "⚠⛔ REACHABLE BY DESIGN — the read route is deliberately not fail-soft, so this copy is never a dead branch. ⛔ Never blame the member or their connection.",
+  "error.retry": "फिर कोशिश करें",
+
+  "district.absent": "जनपद दर्ज नहीं है",
+  "$comment.district": "⭐ An honest absence, ⛔ never a blank cell.",
+
+  "row.a11y": "{family}, {stage}। {count} योगदान पुष्ट। अब तक {amount} का योगदान।",
+  "$comment.row_a11y": "⭐ THE ROW'S ACCESSIBLE NAME (AC5, family 13) — the SAME facts the row shows visually, ⛔ never extra information. ⛔ `t()` THROWS on an unsupplied token: supply ALL FOUR.",
+  "row.a11y.no_family": "{stage}। {count} योगदान पुष्ट। अब तक {amount} का योगदान।",
+  "$comment.row_a11y_no_family": "⚠⛔ THE VARIANT IS WHAT STOPS A CRASH — `deceasedMemberName` is nullable and `t()` THROWS on an unsupplied token, so resolving `row.a11y` on such a row would take down the WHOLE list.",
+
+  "row.contributions": "{count} पुष्ट",
+  "row.amount": "{amount} का योगदान",
+  "row.closed_on": "{date} को बंद",
+
+  "nominee.label": "नॉमिनी",
+  "$comment.nominee": "⭐ The public wording ruled at `2026-09-04-190` cl.2, carried onto the member surface so the two agree. ⛔ The nominee's NAME only — no banking coordinates (story F's)."
+}

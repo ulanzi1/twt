@@ -31,7 +31,7 @@ Status: ready-for-dev
 
 ---
 
-## ✅ PREFLIGHT — ⛔ **ONE STOP REMAINS, AND IT IS TASK 0's.**
+## ✅ PREFLIGHT — ✅ **ALL CLEAR. ⭐ THIS STORY IS STARTABLE.**
 
 ⭐ Five findings of the 2026-09-09 `validate` pass (three independent verifiers) reshaped this story.
 ⚠⛔ **⛔ KEPT AS THE RECORD, ⛔ not deleted** — they are why the scope reads as it does. ⛔ A later
@@ -40,19 +40,26 @@ reader must ⛔ not "restore" what any of them removed.
 | | Found | Disposition |
 |---|---|---|
 | **F1** | Trap 1's premise (*"the member sees LESS NAME than the public"*) | ✅ **VOID** — `-209` cl.3. See Trap 1. |
-| **F2** | *"⛔ no target"* contradicts a ratified routing-note ruling naming this story | ⚠ **AC8b WRITTEN; the decision entry is OWED — Task 0.** |
+| **F2** | *"⛔ no target"* contradicts a ratified routing-note ruling naming this story | ✅ **AC8b WRITTEN; the decision entry LANDED — `#decision-2026-09-09-211`.** |
 | **F3** | AC3's `member ≥ public` floor grew by five public fields | ✅ **ENUMERATED** — AC3. |
 | **F4** | AC3 ordered a comparison harness that already exists | ✅ **RE-POINTED** — AC3 / Task 6. |
 | **F5** | Trap 2's *"the public tuple is `closed`+`settled`"* | ✅ **CORRECTED** — Trap 2. |
 
-### ⛔ STOP — **F2's DECISION ENTRY IS ⛔ NOT WRITTEN.** (Task 0, ⛔ before any code.)
+### ✅ STOP — **DISCHARGED 2026-09-09 by `#decision-2026-09-09-211`.**
 
-⭐ The obligation in **AC8b** is **ruled** — the 2026-09-07 routing note §12.3(A)(1) records it as
-*"a change we will make, ⛔ not a question"*, and §13.3 fixes its condition. ⚠⛔ **But it lives ⛔ ONLY
-in that note: `.decision-log.md` never recorded it.** ⇒ that is the exact failure `-204`'s own
-Occasion block names (*"five days of Panel rulings lived ⛔ ONLY in a story file and a sprint-status
-comment"*), and [[feedback_governance_commits_precede_implementation]] says the entry comes **first**.
-⛔ Do ⛔ not mint it unilaterally — ⭐ route it, land it, then build AC8b.
+⚠⛔ **⛔ KEPT AS THE RECORD, ⛔ not deleted.** The obligation in **AC8b** had been **ruled** on
+2026-09-07 and then lived ⛔ ONLY in the routing note — `.decision-log.md` never recorded it, the
+exact failure `-204`'s own Occasion block names (*"five days of Panel rulings lived ⛔ ONLY in a story
+file and a sprint-status comment"*). ⭐ `-211` records it, and
+[[feedback_governance_commits_precede_implementation]] is satisfied: the entry landed **before** any
+code.
+
+⚠ **ONE THING `-211` DECIDED THAT THE NOTE DID ⛔ NOT SAY — ⛔ read cl.2 before building AC8b.**
+§13.3's *"on that same condition"* read literally means `reveal_to_public`; `-211` cl.2 reads the
+**MEMBER** axis instead, and records why. ⛔ Do ⛔ not "correct" AC8b back to the public switch.
+
+⭐ The story's own **Task 0 STOP** (governance first, ⛔ no code before the `governance:` commit) is
+⛔ unaffected and still binds.
 
 ---
 
@@ -356,9 +363,14 @@ See [[project_domain_limit_clamp_and_savepoint_retry]].
 (⛔ including the two stale comments — record them, ⛔ do not edit them).
 
 ### AC8b — ⭐⭐ THE EXPECTED FIGURE (लक्ष्य) RENDERS TO MEMBERS, ⛔ ON THE PARIWAR'S SWITCH ONLY
-⚠⛔ **⛔ BLOCKED ON THE PREFLIGHT STOP — the decision entry lands first.**
+✅ **UNBLOCKED — `#decision-2026-09-09-211` (author-committed, 2026-09-09).**
 
-⭐ **THE AUTHORITY:** routing note `trustee-panel-routing-note-2026-09-07-11b14-drive-target-reveal-and-the-unwritten-headline.md`
+⚠⛔ **⛔ READ `-211` cl.2 FIRST.** It is the clause that chose the **member** axis over the routing
+note's literal *"same condition"*, on three recorded grounds — cl.7(c) authorises the axes
+**separately**; the DB CHECK makes public-on imply member-on so `-189` cl.3 holds either way; and
+reading the public axis would ship an **inert** member switch. ⛔ Do ⛔ not reverse it silently.
+
+⭐ **THE UNDERLYING AUTHORITY:** routing note `trustee-panel-routing-note-2026-09-07-11b14-drive-target-reveal-and-the-unwritten-headline.md`
 **§12.3(A)(1)** — *"If the public sees the expected figure, **story E (`11b-15`) must show it to
 members too** — ⛔ it currently says 'no target'. ⭐ Recorded as a change we will make, ⛔ not a
 question"* — and **§13.3** (the Panel's answer, DR+KB 2026-09-07) — *"story **E** must show the figure
@@ -461,8 +473,8 @@ the name-form work; ⛔ this story does ⛔ not revisit it).
         (`epics.md:3400`). ⚠ The key is ⛔ already named at `:3410` (`8-16` sequencing), `:5189` (the
         corrected six-story range) and `:5213` (11b.12's annotation assigning the member-app render
         here) — ⇒ this owes the **section**, ⛔ not a first mention.
-  - [ ] ⛔ **THE PREFLIGHT STOP — route and land the AC8b decision entry.** ⛔ Do ⛔ not mint it
-        unilaterally; ⛔ do ⛔ not start Task 2 before it exists.
+  - [x] ✅ **THE PREFLIGHT STOP — DISCHARGED.** `#decision-2026-09-09-211` landed 2026-09-09
+        (commit `489b2913`), ⛔ before any code. ⚠ ⛔ Read its **cl.2** before building AC8b.
   - [ ] Flip the sprint row **and rewrite its comment block** — `sprint-status.yaml:17173-17193` is
         stale three ways (*"BLOCKED ON B"*, *"Task 1b is BLOCKING BOTH"*, *"⇒ STORY G"*).
 - [x] **Task 1 — RULE D1** — ✅ **RULED 2026-09-04** (`-197`) and ✅ **SHIPPED by `8-16`** 2026-09-08.
@@ -588,6 +600,7 @@ props. ⚠ Assert **membership and explicit values**, ⛔ never counts over the 
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-09-09 | 0.5 | ✅⭐⭐ **PREFLIGHT ALL CLEAR — `#decision-2026-09-09-211` LANDED** (`489b2913`), ⛔ before any code. AC8b is **UNBLOCKED**; the F2 STOP is ⛔ kept as the record, ⛔ not deleted. ⚠⛔ **`-211` cl.2 DEPARTS from the routing note's literal *"same condition"*:** the gate is **`reveal_to_members`**, ⛔ not `reveal_to_public` — cl.7(c) authorises the axes separately, the DB CHECK makes public-on imply member-on so `-189` cl.3 holds either way, and the public axis would have left the member switch **inert**. ⭐ Task 0's remaining two sub-items (the `epics.md` section, the sprint row) still bind. | BigDev + Claude |
 | 2026-09-09 | 0.4 | ⛔⛔ **RE-VALIDATED (`bmad-create-story validate`, three independent verifiers) — 29 FINDINGS APPLIED. ⛔ ZERO ROWS MOVE.** ⭐ Baseline **RE-PINNED** `e578eb16` → `1b7fa9f3` (the old pin was ORPHANED; twin `4a763430`, byte-identical tree; **94** commits of drift). ⛔⛔ **Trap 1 is VOID** — `-209` cl.3 rules its premise false for every drive and forbids the paraphrase; the public name gate is INERT (one repo site) and `8-16` (`done`) made all four consumers MODE-RESOLVED, replacing `deceasedFirstName`/`deceasedLastInitial` with ONE `deceasedDisplayName`. ⭐ **AC8b ADDED** — the 2026-09-07 routing note §12.3(A)(1)/§13.3 rules story E **must** render the target on `revealToMembers`; *"no target"* is retired at all three sites, and the missing decision entry is a **Preflight STOP**. ⭐ **AC3 floor ENUMERATED** (13 field ids incl. the nominee's Trustee-ratified FULL name) and its test re-pointed to the **existing** `member-name-form-parity.spec.ts` **with basis-seeding mandated** (else vacuous). ⭐ Trap 2 corrected (the public tuple **already** reads `live`+`closed`+`settled`). ⭐ **AC9 friction budget** + **Preflight** added; AC1 names 10.15's superseded rejection; AC7 switched to **FlashList** and made `clampLimit` mandatory. ⚠ Citations re-anchored: `sahyog-drive.ts:94-96`→`:125-128`; `handlers.ts:630/:835`→`:636/:847`; `contribution-note.ts:144`→`:153`; THREE consumers→**FOUR**; `epics.md:504`→`:509`. ⛔ **NO CODE.** | BigDev + Claude |
 | 2026-09-04 | 0.3 | ✅ **Task 1b CLOSED by `-198` cl.1 (FORM ONLY).** ⛔ Zero open decisions; ⚠ still blocked on **B** and **G** (⭐ G runs first, `-198` cl.2). | BigDev + Claude |
 | 2026-09-04 | 0.2 | ✅ **D1 RULED (`-197`)** — mirror the configured form; ⭐ My Pool adopts it too, ⚠ **via a new story G** (it reaches THREE shipped surfaces). ⛔ **Task 1b BLOCKING:** does the member name carry the publication BASIS gate, or only the FORM? ⭐ Form-only recommended — form-plus-basis is a REGRESSION. | BigDev + Claude |

@@ -1,3 +1,26 @@
+# last_updated: 2026-09-09b (✅⭐⭐ **`11b-15` PREFLIGHT ALL CLEAR — `#decision-2026-09-09-211`
+#   LANDED (`489b2913`), ⛔ BEFORE ANY CODE. ⛔ ZERO ROWS MOVE; `11b-15` STAYS `ready-for-dev`
+#   (⭐ now genuinely STARTABLE). ⚠ ⛔ NO CODE.**
+#   ⭐ `-211` RECORDS, ⛔ it does ⛔ not rule. The 2026-09-07 routing note §12.3(A)(2)(1) had already
+#   settled that story E must show लक्ष्य to members — *"a change we will make, ⛔ not a question"* —
+#   and then it lived ⛔ ONLY in that note. ⇒ typed **Author-committed**, ⛔ NOT Trustee-ratified: the
+#   Panel's verbatim answer was about the PUBLIC figure; the consequence for E was drawn by the note's
+#   authors. ⭐ This is the FIRST production consumer `-190` cl.7(c)'s MEMBER arm has ever had.
+#   ⚠⛔ **`-211` cl.2 DEPARTS FROM THE NOTE'S LITERAL WORDS, AND SAYS SO.** §13.3 wrote *"on that same
+#   condition"*, which read literally is `reveal_to_public`. `-211` reads **`reveal_to_members`** on
+#   three recorded grounds: cl.7(c) authorises the reveal *"separately for member and for public"*;
+#   the DB CHECK `NOT (reveal_to_public AND NOT reveal_to_members)` makes public-on imply member-on,
+#   so `-189` cl.3 holds in both directions either way; and reading the public axis would have left
+#   the member switch **INERT** — ⛔ the precise defect the note was written to surface.
+#   ⭐ Default stays FAIL-CLOSED (cl.7(b)): ⛔ no Pariwar has a visibility row ⇒ ⛔ no expected figure
+#   renders to any member on the day this ships, and ⛔ no action is required to comply.
+#   ⭐ Story-file propagation: PREFLIGHT `ONE STOP REMAINS` → **ALL CLEAR**; F2 → `✅ LANDED`; AC8b
+#   unblocked with a ⛔ do-not-reverse note on cl.2; Task 0's STOP sub-item `[x]`; Change Log **v0.5**.
+#   ⛔ The STOP block itself is KEPT as the record, ⛔ not deleted.
+#   ⛔⛔ **TASK 0 STILL BINDS** — the `epics.md` §Story 11b.15 section and this row's flip are ⛔ NOT
+#   done; ⛔ no code before that `governance:` commit.
+#   ⛔ Every other row unchanged (⛔ `11b-17` / `11b-3b` / `6-18` stay `ready-for-dev`; ⛔ `11b-16`
+#   stays `withdrawn`; ⛔ `8-16` + `11b-11…14` stay `done`; ⛔ epic-8 + epic-11b stay `in-progress`).)
 # last_updated: 2026-09-09 (⚠⛔⛔ **`11b-15` RE-VALIDATED (`bmad-create-story validate`, three
 #   independent verifiers) — 29 FINDINGS APPLIED TO THE STORY FILE. ⛔ ZERO ROWS MOVE; `11b-15`
 #   STAYS `ready-for-dev`; ⛔ `11b-17` / `11b-3b` / `6-18` stay `ready-for-dev`; ⛔ `11b-16` stays

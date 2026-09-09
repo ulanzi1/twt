@@ -31,7 +31,7 @@ at this one.
 
 # Story 11b.15: The Member's Drive List — a **FOURTH TAB** Over Every Drive in Their Pariwar `[SURFACE]`
 
-Status: in-progress
+Status: review
 
 > ⭐⛔ **⛔ NO `### Story 11b.15` SECTION EXISTS IN `epics.md`.** **Story E** of the six-story split
 > (`2026-09-04-195` cl.3), following **Trustee-ratified** `-193` cl.2 and BigDev's `-194` cl.2 /
@@ -522,31 +522,76 @@ the name-form work; ⛔ this story does ⛔ not revisit it).
 - [x] **Task 1 — RULE D1** — ✅ **RULED 2026-09-04** (`-197`) and ✅ **SHIPPED by `8-16`** 2026-09-08.
 - [x] **Task 1b — RULE THE BASIS-GATE SUB-QUESTION** — ✅ **RULED `-198` cl.1: FORM ONLY**, and live
       in code at `packages/domain/src/notifications/pool-identity.ts:63-66`.
-- [ ] **Task 2 — The read** (AC2, AC3, AC7, AC8b) — a member-scoped, **paginated** list over
+- [x] **Task 2 — The read** (AC2, AC3, AC7, AC8b) — a member-scoped, **paginated** list over
       `live`+`closed`+`settled`, as this surface's **own** fragment; ⛔ scope from the session, ⛔ never
       a client-supplied Pariwar id; ⛔ every dynamic `.limit()` through `clampLimit`. ⭐ Add
       `resolveDriveTargetForMembers` beside `resolveDriveTargetForPublic`.
-- [ ] **Task 3 — The route + contract** (AC2, AC3) — a new `/api/v1/member/…` route beside the four
+      ✅ `packages/domain/src/pool/member-drive-list.ts`. ⭐ `MEMBER_DRIVE_LIST_VISIBLE_POOL_STATES`
+      is DECLARED there and ⛔ never imported from the public tuple (Trap 2), with the `spawned`
+      disclosure ground in its doc-block — ⚠ reworded CATEGORY-AGNOSTICALLY after
+      `pool-support-category-invariant` caught it (that gate scans COMMENTS). ⭐ The STAGE MAPPING is
+      REUSED via `publicStatusForPoolState` — Trap 2 forbids a second mapping and AC4 requires
+      agreement. ⭐ `resolveDriveTargetForMembers` sits BESIDE its public sibling in `public-read.ts`
+      per `-211` cl.4. ⛔ `domain-invariants` green (`clampLimit`).
+      ⚠⛔ **ONE DELIBERATE DIVERGENCE, RECORDED IN THE HEADER:** the claim/KYC joins are **SET-BASED**,
+      ⛔ not the Yogdaan Bahi's per-pool `resolvePoolIdentity` memo — that shape costs 2 point reads
+      per pool and would be a 100-round-trip N+1 on a 50-row page (11b.1 **D7(a)**, AR-65). ⭐ `8-16`
+      **AC2b** forbids RE-DERIVING A NAME FORM, and that is honoured exactly: the form is decided by
+      `resolveMemberFacingDeceasedName`, the ⛔ one site `resolvePoolIdentity` itself decides it.
+- [x] **Task 3 — The route + contract** (AC2, AC3) — a new `/api/v1/member/…` route beside the four
       existing member-pool routes (`routes.ts:46,57,68,87`). ⚠ Its field set is the AC3 floor.
-- [ ] **Task 4 — The tab** (AC1, AC4, AC5) — the fourth `Tabs.Screen`; Trap 4's title decision;
+      ✅ `GET /api/v1/member/drive-list` + `MemberDriveListEntry/Query/Response` (`.strict()`).
+      ⭐ Scope from the SESSION — there is ⛔ **no `pariwarId` parameter**, so family 12 holds by
+      construction. ⭐ TWO independent page bounds: the schema `.max()` (what Story 1.14's
+      forced-pagination guard SEES on the live swagger doc) and `clampLimit` (what bounds the SQL).
+      ⭐ `openapi/v1.yaml` **RE-EMITTED**, ⛔ never hand-edited; determinism check green.
+      ⚠⛔ **DELIBERATELY ⛔ NOT FAIL-SOFT — the ⛔ only read in this module that isn't.** AC6 ratifies
+      empty · loading · error as three DISTINCT states; degrading to `items: []` would make the error
+      branch **unreachable by construction** and would tell a member their Pariwar has run no drives
+      when the truth is that we could not load them.
+- [x] **Task 4 — The tab** (AC1, AC4, AC5) — the fourth `Tabs.Screen`; Trap 4's title decision;
       ⭐ the 10.15 supersession recorded by name in the `_layout.tsx` doc-block; B's shared stage copy
       via bound `useT()` + `NS`; the info affordance; ⭐ `accessible={true}` on every labelled
       container.
-- [ ] **Task 5 — The list** (AC6, AC7) — **FlashList**, ⛔ not `FlatList`; ⭐ empty / loading / error
+      ✅ All five. ⭐ Title **`t()`-RESOLVED** (Trap 4 ruled): *Sahyog Drives / सहयोग अभियान*.
+      ⭐ 10.15's rejection quoted BY NAME in the doc-block, with its ground verified to be **negative
+      evidence only**. ⭐ Stage words + the *"i"* affordance read `sahyog-shared` by name via bound
+      `useT()`; ⛔ **no second key set** — and the affordance is a REAL focusable control with a tap
+      handler, ⛔ never hover-only.
+      ⚠ **B's own live assertion carried a fence that had gone misleading** — its header said *"⛔ do
+      ⛔ NOT add a stage to a mobile component"*, which was **B's scope fence** and correct for B.
+      ⇒ recorded **DISCHARGED, ⛔ not deleted** ([[feedback_supersede_never_reinterpret]]): a mobile
+      stage render is now EXPECTED; a second key set stays forbidden.
+- [x] **Task 5 — The list** (AC6, AC7) — **FlashList**, ⛔ not `FlatList`; ⭐ empty / loading / error
       render **OUTSIDE** it, on `PoolContributorList.tsx`'s shape.
-- [ ] **Task 6 — Tests** (AC2, AC3, AC5, AC6, AC8b) — ⭐ **the `member ≥ public` comparison is the
+      ✅ Two early returns (loading, error) + the empty branch as a **SIBLING**; the list mounts ⛔ only
+      in the `else`. ⛔ No `ListEmptyComponent`, ⛔ no `estimatedItemSize` riding the `as any` cast.
+      ⭐ Rows keyed by `publicToken` (stable, unique, `pii_tier: 3`), ⛔ not an index.
+      ⭐⭐ **AND TWO RULED MONEY FORMS WERE LIFTED INTO `@twt/i18n` RATHER THAN FORKED** —
+      `apps/mobile` cannot import from `apps/public`, so rendering लक्ष्य here meant either sharing
+      `formatSahyogTargetAmount` / the contributed-amount rule or writing a **second copy of a
+      Trustee-ratified number form**. ⭐ `sahyog-render.ts` re-exports one and delegates the other, so
+      ⛔ every existing `apps/public` call site and its **44 tests** are unchanged and the rendered
+      output is byte-identical.
+- [x] **Task 6 — Tests** (AC2, AC3, AC5, AC6, AC8b) — ⭐ **the `member ≥ public` comparison is the
       load-bearing one, and ⛔ IT ALREADY EXISTS:**
-  - [ ] ⭐⭐ **EXTEND `apps/api/tests/integration/contributions/member-name-form-parity.spec.ts`**
+  - [x] ⭐⭐ **EXTEND `apps/api/tests/integration/contributions/member-name-form-parity.spec.ts`**
         (Story `8-16`, live at HEAD) — it already drives **both real routes** over live Postgres and
         proves `-189` cl.3 in **both directions** (`:21-23`; no-basis `:316`, basis-satisfied string
         equality `:333`). ⛔ Do ⛔ **not** reinvent the harness. This story adds the fourth-tab list as
         the **THIRD** surface in that comparison, and reuses its basis-seeding block (`:212-243`).
-  - [ ] ⛔ Inherit its scope note **verbatim** (`:24-27`): cl.3 is Trustee-scoped by `-195` cl.1 to
-        the drive data class — ⛔ not a universal invariant.
-  - [ ] Plus: `spawned` absent; another Pariwar's drives absent; the target renders **only** with
+  - [x] ⛔ Inherit its scope note **verbatim** (`:24-27`): cl.3 is Trustee-scoped by `-195` cl.1 to
+        the drive data class — ⛔ not a universal invariant. ✅ Carried into the appended block's
+        header **and** into the AC3 field-floor test's header.
+  - [x] Plus: `spawned` absent; another Pariwar's drives absent; the target renders **only** with
         `revealToMembers` and ⛔ not with an absent row; empty → populated does ⛔ not crash; the a11y
-        props are present **and** the containers are accessibility elements.
-  - [ ] ⭐ **WHERE:** route-level live-DB → `apps/api/tests/integration/contributions/`;
+        props are present **and** the containers are accessibility elements. ✅ **All present.**
+        ⚠⛔ **AND ONE FIXTURE GAP WAS FOUND BY A TEST FAILING, ⛔ not assumed:** `seedSharedPool`
+        writes the roster into `pool_snapshots` only, ⛔ never `member_pool_assignments` — which is
+        what `ASSIGNED_MEMBER_COUNT` counts. ⇒ the derived target was `20 × 0 = 0` and the read
+        correctly resolved a zero-assignee pool to **SILENCE**. ⭐ `seedAssignment` added LOCALLY,
+        ⛔ not folded into the shared fixture (8.16's cases assert names only).
+  - [x] ⭐ **WHERE:** route-level live-DB → `apps/api/tests/integration/contributions/`;
         accessor-level → `packages/domain/tests/integration/pool/*.spec.ts` beside
         `sahyog-drive-public-read.spec.ts`; RN state/a11y → `apps/mobile/tests/unit/*.test.ts`.
         ⛔ Guard every live-DB suite with `describe.skipIf(!hasDatabase)`
@@ -555,7 +600,13 @@ the name-form work; ⛔ this story does ⛔ not revisit it).
 - [x] **Task 7 — ✅ `8-16` HAS LANDED.** Status `done` (`sprint-status.yaml:16789`); verified at HEAD
       `1b7fa9f3`. ⇒ `-208` cl.3's *"`8-16` before `11b-15`"* is **met**, and this list cannot
       contradict the My Pool card — both call the **same** resolver. ⛔ Do ⛔ not fix My Pool here.
-- [ ] **Task 8 — The friction budget** (AC9) — ⛔ **after** the implementation commits exist.
+- [x] **Task 8 — The friction budget** (AC9) — ⛔ **after** the implementation commits exist.
+      ✅ **Declaration affirmed — ⛔ NO new row, ⛔ none retired, ⛔ none amended.** A read is ⛔ not
+      friction, and this surface **REMOVES** a step: before it the ⛔ only member-app path to a drive
+      was a link-out that leaves the app and shows the member's **own live pool only**.
+      ⭐ **Written AFTER `e9e5adcb` + `33409cba` existed, and PROVEN so:** `pnpm friction:check`
+      **FAILED** on this story's file list before the block was written — ⛔ it did ⛔ not pass
+      vacuously against an empty diff ([[project_friction_budget_baseline_ratchet]]).
 
 ---
 
@@ -665,6 +716,100 @@ existing `drive_target` key is reused, per the live assertion at
 
 ### Completion Notes List
 
+⭐⭐ **STORY COMPLETE — all nine ACs satisfied, all Tasks closed. `ci:local` **34/34 GREEN**, including
+live-DB `integration-tests` against `twt-test-pg` `:5433`.**
+
+#### ⚠⛔ FINDINGS RAISED DURING IMPLEMENTATION — ⛔ recorded, ⛔ none silently absorbed
+
+1. ⭐⭐ **THE AC3 FLOOR IS `14` MAPPED FIELD IDS, ⛔ NOT THE `13` THIS STORY'S PROSE STATES.** The
+   story's **enumeration** lists 14 and is **CORRECT**; only its count WORD is wrong — which is why
+   **two `validate` passes** re-checking *"the enumeration, exact match, order and all"* both passed.
+   ⛔ The AC prose is ⛔ **not editable by `dev-story`**, so it is **recorded here** rather than
+   rewritten. ⭐ **The build does ⛔ not depend on the number:** the test reads
+   `SAHYOG_DRIVE_ROW_FIELD_IDS` **programmatically** and asserts ⛔ no count — ⚠ a transcribed count
+   is the same defect class as the hand-listed subset `-188` survived.
+   ⭐ **SWEPT:** `11b-17` (story F) does ⛔ **not** carry the claim; it is confined to this file
+   ([[feedback_story_validate_footguns]] — a premise defect never swept to the sibling). ⚠ The
+   `epics.md` section I authored **propagated it once** and was corrected in the same pass.
+2. ⚠⛔ **`-207` IS DATED `2026-09-08`, ⛔ NOT `2026-09-07`.** The story cites it undated; my first
+   `epics.md` draft guessed `-09-07` twice. ⭐ Caught by enumerating **all 16** cited anchors against
+   `.decision-log.md` rather than trusting shorthand.
+3. ⚠⛔ **TASK 0's *"rewrite the stale sprint comment block"* WAS ⛔ ALREADY DISCHARGED.** Its three
+   named phrases are **absent** from this story's row block (the 2026-09-09 `validate` rewrite removed
+   them); ⛔ only the FLIP was owed, and only the flip was made
+   ([[feedback_closure_language_precision]]). ⚠ The cited range `:17173-17193` is itself stale and now
+   points into `11b-11`. ⛔ The phrases survive only in HISTORICAL ledger rows, which are ⛔ not
+   rewritten ([[project_sprint_status_ledger]]).
+4. ⚠⛔ **`sahyog-shared.json`'s `$comment.drive_target` HAD GONE MISLEADING** — it said the figure
+   renders ⛔ ONLY where `reveal_to_public` is on. True when written (ONE consumer); ⛔ false as scope
+   now that this surface reads the **MEMBER** axis. ⇒ **AMENDED AND NAMED, ⛔ not deleted**
+   ([[feedback_supersede_never_reinterpret]]). ⛔ **No new key was minted** — the existing
+   `drive_target` key is reused, per the live assertion aimed at this story.
+5. ⚠⛔ **B's LIVE ASSERTION CARRIED A FENCE THAT NOW READS AS A PROHIBITION** —
+   `sahyog-stage-copy-resolves.test.ts`'s header says *"⛔ do ⛔ NOT add a stage to a mobile
+   component"*. ⭐ That was **B's scope fence**, correct for B, and the same header names story E as
+   the builder. ⇒ recorded **DISCHARGED**, ⛔ not deleted.
+6. ⚠⛔ **THE SHARED TEST FIXTURE NEVER SEEDED `member_pool_assignments`** — `ASSIGNED_MEMBER_COUNT`
+   counts that table, and `seedSharedPool` writes the roster only into `pool_snapshots`. ⇒ the derived
+   target was `20 × 0 = 0` and the read **correctly** resolved a zero-assignee pool to SILENCE.
+   ⭐ **Found by the test failing**, ⛔ not assumed; `seedAssignment` added locally so 8.16's cases keep
+   their blast radius.
+7. ⚠⛔ **`pool-support-category-invariant` CAUGHT THE TRAP 2 DOC-BLOCK, TWICE.** It scans **COMMENTS**,
+   on the ground that *"a pool-engine comment thinking in category-specific terms is itself the
+   smell"* (7.1 AC4). ⭐ The story's own Trap 2 phrases the disclosure ground in one
+   `support_category`'s vocabulary; the code says it **category-agnostically** — which is **stronger**,
+   because the argument holds for **every** category.
+8. ⚠⛔ **A RAW-SOURCE TEST SCAN PUNISHES THE HOUSE DISCIPLINE.** Three mobile assertions forbid a token
+   outright (`ListEmptyComponent`, `FlatList`, `estimatedItemSize`) and **all three failed** — because
+   the component's doc-blocks NAME those tokens in order to forbid them. ⛔ The wrong fix is rewording
+   comments until a regex is happy; ⭐ the right one is a comment-stripper, so the test scans **code**.
+9. ⚠ **A MICROCOPY FIXTURE OF MINE WAS WRONG, ⛔ NOT THE RULE:** a bare *"hurry"* is **deliberately
+   unmatched** — the fursat register's own shipped reassurance is *"there is no hurry"*. ⭐ The pattern
+   was read; the fixture became `hurry up`.
+
+#### ⭐ DELIBERATE DIVERGENCES, EACH RECORDED IN CODE
+
+- **Set-based joins, ⛔ not the passbook's per-pool `resolvePoolIdentity` memo** (Task 2) — a
+  performance decision, ⛔ not a policy one, and the **name FORM** still routes through the ⛔ one
+  shared site. ⛔ Recorded in the module header so nobody "restores" the N+1 believing AC2b requires it.
+- **⛔ Not fail-soft** (Task 3) — the ⛔ only read in `member-pool` that isn't, so AC6's error state is
+  a real branch rather than a dead one.
+- **`resolveDriveTargetForMembers` lives in `public-read.ts`** — `-211` cl.4 says *"beside it"*, and
+  adjacency is the point: a member-axis resolver in a member module would leave the public one looking
+  like *the* target resolver. ⛔ It adds ⛔ no public behaviour.
+- **`confirmedPercentage` and `driveTargetInr` mirror the public LIVE-only gating** — AC3 is a
+  **FLOOR**, so matching the public `null` satisfies it exactly. ⛔ Carrying a number instead would
+  show a member MORE than the Panel ruled (Trap 5) and would re-open on the member wire the
+  roster-recovery channel `-207` cl.1 closed.
+- **AC3's floor is discharged at the DATA layer**, ⛔ not the rendered-STRING layer — three public ids
+  are **composed sentences**; the member row carries every INPUT each is composed from. ⭐ Stated in
+  the test's header so it is ⛔ not re-argued in review.
+
+#### ⭐ TEETH PROVEN, ⛔ NOT MERELY GREEN ([[feedback_gate_scope_semantic_coverage]])
+
+| Guard | Planted violation | Result |
+|---|---|---|
+| AC3 field floor | a NEW public field id with no member counterpart | ✗ **FAILS**, naming the id |
+| AC3 field floor | a declared counterpart REMOVED from the contract | ✗ **FAILS**, naming both mappings |
+| **AC8b gate** | the resolver switched to `revealToPublic` | ✗ **FAILS** — ⭐ i.e. it fails on **exactly the literal reading `-211` cl.2 departed from** |
+| microcopy namespace | vocabulary · tone · numeral, BOTH locales | ✗ **FAILS** each; revert-sanity included |
+| friction budget | (no plant needed) | ✗ **FAILED** on this story's file list before the disposition was written |
+
+#### ⛔ WHAT WAS ⛔ NOT DONE, AND WHY
+
+- ⛔ **No public surface edited.** ⚠ `apps/public/src/lib/sahyog-render.ts` is in the diff and is a
+  **refactor with ⛔ no behaviour change** — its own 44 tests pass unchanged, output byte-identical.
+- ⛔ **The two stale comments are RECORDED in `deferred-work.md`, ⛔ not edited** (AC8, in terms). ⚠ The
+  FENCE they express still holds and is pinned by a live test; ⛔ only their stated REASON is false ⇒
+  the owed fix is to **re-ground** them, ⛔ never to delete them.
+- ⛔ **No tab-title i18n sweep** (Trap 4) · ⛔ no `spawned` · ⛔ no banking coordinates (story **F**) ·
+  ⛔ no contributor names · ⛔ no per-member amounts · ⛔ no change to `active-contribution`.
+- ⚠ **RED-GREEN WAS ⛔ NOT FOLLOWED STRICTLY, and it is stated rather than glossed.** The story's Task
+  sequence puts ⛔ all tests in **Task 6**, after Tasks 2-5 — and the workflow makes the Task sequence
+  authoritative. ⇒ implementation preceded its tests for those tasks. ⭐ The load-bearing guards were
+  nonetheless proven to FAIL against planted defects (table above), which is what red-green exists to
+  establish.
+
 **Task 0 — GOVERNANCE FIRST (AC0). ⛔ Zero code in this commit.**
 
 - ⭐ Wrote the **`### Story 11b.15` SECTION** in `epics.md`, at the end of Epic 11b's story list — the
@@ -690,16 +835,72 @@ existing `drive_target` key is reused, per the live assertion at
 
 ### File List
 
-**Task 0 (`governance:`) — ⛔ no code:**
+⭐ Paths relative to repo root. ⚠ Scoped to **`afd0e3e2..HEAD`** — this story's own four commits
+(`fdc2d964` · `e9e5adcb` · `33409cba` · the Task-8 docs commit). ⛔ The other
+`implementation-artifacts/*.md` files that appear in a `merge-base..HEAD` diff belong to the **prior**
+repo-wide orphaned-pin sweep (`c2dd787c`), ⛔ not to this story.
 
-- `_bmad-output/planning-artifacts/epics.md` — **modified** (new `### Story 11b.15` section)
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` — **modified** (row → `in-progress`; ledger entry `2026-09-09e`)
-- `_bmad-output/implementation-artifacts/11b-15-member-drive-list-fourth-tab.md` — **modified** (Task 0 checkboxes, Dev Agent Record, Change Log)
+**Governance / docs**
+
+- `_bmad-output/planning-artifacts/epics.md` — **modified** (the new `### Story 11b.15` **section**)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — **modified** (row → `in-progress` → `review`; ledger entries)
+- `_bmad-output/implementation-artifacts/11b-15-member-drive-list-fourth-tab.md` — **modified** (checkboxes, Dev Agent Record, File List, Change Log, Status)
+- `_bmad-output/implementation-artifacts/deferred-work.md` — **modified** (the two stale post-`8-16` comments RECORDED, ⛔ not edited)
+- `friction-budget.md` — **modified** (the AC9 disposition — written AFTER the implementation commits)
+- `microcopy.yaml` — **modified** (the `member-drive-list` namespace added to `scope.copy_globs`)
+
+**Domain**
+
+- `packages/domain/src/pool/member-drive-list.ts` — **NEW** (the read + its OWN visible-state fragment)
+- `packages/domain/src/pool/public-read.ts` — **modified** (`resolveDriveTargetForMembers`, beside its public sibling)
+- `packages/domain/src/pool/index.ts` — **modified** (barrel)
+- `packages/domain/tests/pool/member-drive-list.test.ts` — **NEW** (the tuple fence + the member-axis resolver)
+
+**Contracts / SDK / OpenAPI**
+
+- `packages/contracts/src/contributions/member-drive-list.ts` — **NEW** (`.strict()` entry/query/response)
+- `packages/contracts/src/contributions/index.ts` — **modified** (barrel)
+- `packages/contracts/scripts/emit-openapi.ts` — **modified** (components + path)
+- `openapi/v1.yaml` — **modified** (⭐ **RE-EMITTED**, ⛔ never hand-edited)
+- `packages/api-client/src/index.ts` — **modified** (`memberDriveList` — ⛔ no `pariwarId` argument)
+
+**API**
+
+- `apps/api/src/modules/member-pool/handlers.ts` — **modified** (`driveList` + `resolveDriveList`)
+- `apps/api/src/modules/member-pool/routes.ts` — **modified** (`GET /api/v1/member/drive-list`)
+- `apps/api/tests/integration/contributions/member-name-form-parity.spec.ts` — **modified** (⭐ **EXTENDED** — the drive list as the THIRD surface; 8 new live-DB cases)
+
+**Mobile**
+
+- `apps/mobile/app/(tabs)/sahyog.tsx` — **NEW** (the fourth tab's screen)
+- `apps/mobile/app/(tabs)/_layout.tsx` — **modified** (the fourth `Tabs.Screen`; the `t()` title; the 10.15 supersession by name)
+- `apps/mobile/components/drive-list/MemberDriveList.tsx` — **NEW** (the list, its three states, the stage explainer)
+- `apps/mobile/components/drive-list/useMemberDriveListQuery.ts` — **NEW**
+- `apps/mobile/tests/unit/drive-list-render.test.ts` — **NEW** (20 assertions)
+- `apps/mobile/tests/unit/sahyog-stage-copy-resolves.test.ts` — **modified** (B's fence recorded **DISCHARGED**, ⛔ not deleted)
+
+**i18n**
+
+- `packages/i18n/locales/{en,hi}/member-drive-list.json` — **NEW** (this surface's OWN chrome)
+- `packages/i18n/locales/{en,hi}/sahyog-shared.json` — **modified** (⭐ `$comment.drive_target` AMENDED + NAMED; ⛔ **no key added, no string changed**)
+- `packages/i18n/src/catalog.ts` — **modified** (namespace registration — all five edits)
+- `packages/i18n/src/currency.ts` — **modified** (the two RULED Sahyog money forms, relocated here)
+- `packages/i18n/src/index.ts` — **modified** (exports)
+
+**Public (⛔ NO behaviour change)**
+
+- `apps/public/src/lib/sahyog-render.ts` — **modified** (re-export + delegate; ⭐ its 44 tests pass unchanged, output byte-identical)
+- `apps/public/tests/member-drive-list-field-floor.test.ts` — **NEW** (AC3's floor, enumerated from the live map)
+
+**Gates**
+
+- `scripts/microcopy/member-drive-list.test.ts` — **NEW** (teeth for the new copy namespace)
 
 ## Change Log
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-09-09 | 1.0 | ✅⭐⭐ **IMPLEMENTED — `in-progress` → `review`. ALL NINE ACs SATISFIED; ALL TASKS CLOSED. `ci:local` 34/34 GREEN incl. live-DB integration.** ⭐ Four commits: `fdc2d964` (governance-first, ⛔ no code) · `e9e5adcb` (the read + route) · `33409cba` (the tab, the list, the tests) · the Task-8 docs commit. ⭐ **The surface:** a fourth tab with its OWN visible-state fragment (⛔ never the public tuple, Trap 2), a paginated member-scoped read (scope from the SESSION — there is ⛔ no `pariwarId` parameter), the three ruled stage words consumed from story B by name, and लक्ष्य on the **MEMBER** axis (`-211` cl.2), fail-closed ⇒ ⛔ nothing renders at launch. ⭐ **Trap 4 RULED:** the title is `t()`-resolved — *Sahyog Drives / सहयोग अभियान* — the one translated title among four; ⛔ the three pre-existing literals are ⛔ NOT swept. ⚠⛔⛔ **NINE FINDINGS RAISED, ⛔ none silently absorbed** — ⭐ chief among them: **the AC3 floor is 14 mapped field ids, ⛔ NOT the `13` this story's prose states** (the ENUMERATION is right; the count WORD is wrong, which is why two `validate` passes checking *"the enumeration, exact match"* both passed). ⛔ AC prose is ⛔ not `dev-story`-editable ⇒ RECORDED, and the test reads the map **programmatically** and asserts ⛔ no count. ⭐ Swept: `11b-17` does ⛔ not carry it. Also: `-207` is `2026-09-08` ⛔ not `-09-07`; Task 0's comment-block rewrite was ⛔ ALREADY discharged (flip only); `sahyog-shared`'s `$comment.drive_target` AMENDED + NAMED (⛔ no key minted); B's stage fence recorded **DISCHARGED**; the shared fixture never seeded `member_pool_assignments` (found by a test FAILING); `pool-support-category-invariant` caught the Trap 2 doc-block **twice** (it scans COMMENTS) ⇒ reworded category-agnostically. ⭐ **TEETH PROVEN on four guards** — ⭐⭐ the AC8b gate **FAILS when switched to `revealToPublic`**, i.e. on exactly the literal reading `-211` cl.2 departed from. ⚠ **Two ruled money forms were LIFTED into `@twt/i18n` rather than forked** (mobile cannot import `apps/public`); `sahyog-render.ts` re-exports/delegates and its **44 tests pass unchanged**. ⚠ **RED-GREEN was ⛔ not followed strictly** — the story's Task order puts all tests in Task 6 — ⛔ stated rather than glossed. ⛔ No public surface, ⛔ no `spawned`, ⛔ no banking coordinates, ⛔ no contributor names, ⛔ no change to `active-contribution`; the two stale comments RECORDED in `deferred-work.md`, ⛔ not edited. | BigDev + Claude |
 | 2026-09-09 | 0.7 | ⭐⭐ **DEV STARTED — TASK 0 (GOVERNANCE FIRST) COMPLETE. `ready-for-dev` → `in-progress`. ⛔ ZERO CODE.** ⭐ The **`### Story 11b.15` SECTION** is written in `epics.md` (end of Epic 11b's story list, the **8.16 precedent** `:3400`), recording why a **SECTION** and ⛔ not an annotation — A–D each annotated Story 11b.3 because each **amended** the public Sahyog surface it owns; ⛔ E amends nothing there. ⭐ AC1's supersession of **10.15**'s recorded *"the tab bar is at three"* rejection is written **by name** (its ground verified to be **negative evidence only** — `ux-design-specification.md` fixes ⛔ no tab count). ⭐ AC8b is stated on the **MEMBER** axis with `-211` cl.2's three grounds carried in, so it cannot be silently "corrected" back to `reveal_to_public`. ⭐ **TRAP 4 RULED (BigDev): the tab title is `t()`-RESOLVED — Sahyog Drives / सहयोग अभियान**, the one translated title among four; ⚠ verified first that the repo's i18n gate is **key-parity only** and would ⛔ not have forced it. ⚠ **`-207`'s anchor date was wrong in the first draft** (`-09-07` → **`-09-08`**) — caught by enumerating all 16 cited anchors against `.decision-log.md` rather than trusting undated shorthand. ⚠⛔ **Task 0's *"rewrite the stale comment block"* sub-item is recorded ALREADY DISCHARGED, ⛔ not claimed as an edit** — its three named phrases are ⛔ absent from this story's row block (the 2026-09-09 `validate` rewrite removed them) and survive only in HISTORICAL ledger rows, which are ⛔ not rewritten. ⭐ **ONE FINDING RAISED FOR AC8b:** `sahyog-shared.json`'s `$comment.drive_target` still says the figure renders only on `reveal_to_public` — **superseded for the member surface by `-211` cl.2**, and it is amended **by name** when AC8b is built. | BigDev + Claude |
 | 2026-09-09 | 0.6 | ⛔ **SECOND `validate` pass, same day — ZERO FINDINGS. Baseline advanced `1b7fa9f3`→`c2dd787c` (bookkeeping, not a rescue: `git diff --name-only` over `packages/`/`apps/` between them is EMPTY).** ⭐ Re-checked against the new HEAD: AC3's 13-field enumeration (exact match, `surface-fields.ts:401-428`); `revealToMembers`'s reader count (still zero production consumers outside schema/policy/write-handler/admin-form); `resolvePoolIdentity`'s live signature; the `member-name-form-parity.spec.ts` basis-seeding chain; every `.decision-log.md` entry and routing note dated after `-211`/2026-09-07 (none name this story); Task 0's two remaining checkboxes (confirmed genuinely open, not stale). ⚠ Also confirmed: the concurrent repo-wide orphaned-pin sweep (`c2dd787c`) checked `11b-15`'s own pin and found it healthy — it changed 13 other files, not this one. ⛔ No duplicate `ready-for-dev` story found elsewhere owning this work (footgun 10 check: grepped `implementation-artifacts/` for "fourth tab" / "drive list" / `resolveDriveTargetForMembers` — no hit outside the known 11b siblings). | BigDev + Claude |
 | 2026-09-09 | 0.5 | ✅⭐⭐ **PREFLIGHT ALL CLEAR — `#decision-2026-09-09-211` LANDED** (`489b2913`), ⛔ before any code. AC8b is **UNBLOCKED**; the F2 STOP is ⛔ kept as the record, ⛔ not deleted. ⚠⛔ **`-211` cl.2 DEPARTS from the routing note's literal *"same condition"*:** the gate is **`reveal_to_members`**, ⛔ not `reveal_to_public` — cl.7(c) authorises the axes separately, the DB CHECK makes public-on imply member-on so `-189` cl.3 holds either way, and the public axis would have left the member switch **inert**. ⭐ Task 0's remaining two sub-items (the `epics.md` section, the sprint row) still bind. | BigDev + Claude |

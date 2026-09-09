@@ -4,6 +4,18 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Recorded from: implementation of 11b-15-member-drive-list-fourth-tab (2026-09-09)
+
+⭐ Recorded by the story's **AC8**, which fences these two out of its own diff in terms: *"⛔ no public
+surface touched (⛔ including the two stale comments — **record them, ⛔ do not edit them**)"*.
+⚠⛔ **NEITHER IS A FUNCTIONAL DEFECT.** The FENCE both comments express still holds and is pinned by a
+live test; what has gone false is the stated REASON for it. ⛔ Recording a comment as stale is ⛔ not
+the same as recording a bug, and these must ⛔ not be triaged as one.
+
+- **Two shipped comments still say `resolvePoolIdentity` *"hard-codes"* the shielded name form — ⛔ FALSE at HEAD since Story `8-16`.** `packages/contracts/src/public-pages/sahyog-drive.ts:128` and `apps/api/src/modules/public-pages/handlers.ts:518-520`. Both blame to `13f6af79b` (2026-08-26), when the claim was **true**: the resolver did hard-code `splitFirstNameLastInitial`. ⭐ `8-16` (`done`) made all **four** consumers **MODE-RESOLVED** from the Pariwar's stored `public_name_presentation_mode`, so the resolver can now return either form — ⇒ the sentence describes a property the code no longer has. ⚠⛔ **THE FENCE ITSELF IS STILL RIGHT AND MUST ⛔ NOT BE REMOVED WITH THE SENTENCE:** the public surfaces render through `resolvePublicMemberName` and ⛔ never `resolvePoolIdentity`, because the two differ in **ABSENCE** behaviour (the public omits a mononym under `shielded_name`; the member shows it — `8-16` Trap 5). That fence is pinned by `apps/api/tests/integration/public-pages/sahyog-drive.spec.ts:558`. ⇒ ⭐ the fix is to **re-ground the comments on the absence-behaviour reason**, ⛔ never to delete them. ⛔ Story 11b.15 did ⛔ not edit them: it touches ⛔ no public-surface file (AC8), and an edit there would have been scope it was explicitly fenced out of. **Trigger:** the next story that legitimately edits either public-surface file, or the Epic 11b retro — whichever comes first.
+
+---
+
 ## Deferred from: code review of 11b-3a-nominee-bank-public-presentation-and-masking-schedule — **THIRD PASS** (2026-09-04)
 
 ⭐ Eight items from the third 3-layer pass over `e16cc690..2c69cd5d`. ⚠⛔ **The pass is CHUNKED and

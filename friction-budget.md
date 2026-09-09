@@ -2214,3 +2214,70 @@ to wait on, or qualify for, anything to see who died. ⭐ The opposite of a fric
 ⭐ **This disposition was written AFTER the implementation commit `f5df1fae` existed**, ⛔ not against
 an empty diff — AC-4 diffs **COMMITTED** history, so a declaration written first passes **vacuously**
 (the defect `57778f72` demonstrated live and `7fe540f9` fixed).
+
+---
+
+**Story 11b.15 disposition (declaration affirmed — ⛔ NO new row, ⛔ no row retired, and ⛔ no row
+amended):** the member's drive list — a **FOURTH TAB** over every Sahyog Drive in the member's own
+Pariwar (`apps/mobile/app/(tabs)/sahyog.tsx` + `components/drive-list/**`, its
+`/api/v1/member/drive-list` read, and the `member-drive-list` i18n namespace).
+
+⭐⭐ **IT ADDS A READ, AND A READ IS ⛔ NOT FRICTION.** UX Stance #2 / AR-60 declare **friction** — a
+step a member is **made to take**. This surface asks a member for ⛔ **nothing**: ⛔ no field, ⛔ no
+confirmation, ⛔ no OTP, ⛔ no step-up, ⛔ no acknowledgement, ⛔ no wait-state a member must clear.
+It is reached by a **tab tap** on a bar the member already uses, and it renders. ⇒ ⛔ there is no
+payer, so there is no row to write.
+
+⭐ **AND IT REMOVES A STEP THAT DID EXIST.** Before it, the ⛔ only member-app path to a drive was
+`SahyogVivranEntry` — a **link-out** on the My Pool card that hands a URL to
+`Linking.openURL` and leaves the app for the public site, ⭐ and which shows the member's **own live
+pool only**. A member wanting to see what their Pariwar's earlier drives came to had ⛔ **no path at
+all**. ⇒ the fourth tab is strictly **fewer** steps to strictly **more** of the record.
+
+⭐ **THE PAGINATION IS ⛔ NOT FRICTION EITHER, AND THE DISTINCTION MATTERS.** `page` + `limit` bound
+what ⛔ **the server** returns; ⛔ they impose ⛔ no action on the member. ⚠ It is the same posture the
+Story 11b.1 public-index row already covers for the public side — ⭐ and that row is **CONFIRMED
+INTACT**: ⛔ not amended, ⛔ not retired. This story touched ⛔ no filter, ⛔ no search dimension and
+⛔ no rate tier (there is ⛔ no search box on this surface at all — `2026-09-04-196` gives it three
+states and ⛔ nothing else).
+
+⭐ **A11Y IS NET-POSITIVE, BY CONSTRUCTION.** Every labelled container on the new surface declares
+`accessible` **explicitly** — the tamagui `styled(View)` mechanism that silently dropped four labels
+on the 11b.10/8.16 surfaces is ⛔ not repeated here, it is discharged at authoring. The three ruled
+states (loading · empty · error) are each **ANNOUNCED**, ⛔ not merely reflected in a prop, and the
+row's accessible name carries a **no-family variant** so an unresolvable name ⛔ cannot take the list
+down. ⇒ ⭐ a screen-reader member is asked to do **less**, ⛔ not more.
+
+⛔ **WHAT THIS DISPOSITION DOES ⛔ NOT TOUCH.**
+· ⛔ **No public surface.** `apps/public/src/lib/sahyog-render.ts` appears in the AC-4 file list, and
+⚠ that edit is a **REFACTOR WITH ⛔ NO BEHAVIOUR CHANGE**: two ruled money forms moved into
+`@twt/i18n` so `apps/mobile` could share them rather than fork a Trustee-ratified number form, and
+the file **re-exports** one and delegates the other. ⭐ Its own 44 tests pass unchanged, ⛔ and the
+rendered output is byte-identical. ⛔ Nothing on `/sahyog` moved.
+· ⛔ **No banking coordinate, ⛔ no contributor name, ⛔ no per-member amount, ⛔ no `spawned` row** —
+⛔ so nothing here can become a disclosure the member must be walked through.
+· ⛔ **`active-contribution` and everything a member OWES are untouched.** ⇒ ⛔ no member's obligation,
+amount, deadline or eligibility changed, which is the other way a read surface could have created a
+duty ([[project_friction_budget_baseline_ratchet]]).
+· ⛔ **लक्ष्य adds ⛔ no step and ⛔ no gate for a MEMBER.** It renders where a `super_admin` has
+switched `reveal_to_members` ON, and is **fail-closed** ⇒ ⛔ nothing renders for any Pariwar at launch.
+⚠ The switch is an **admin** control that already exists (`2026-09-04-190` cl.7(c), shipped by
+`11b-13`); ⭐ this story gives it its first **reader** and adds ⛔ no new admin UI, ⛔ no new key and
+⛔ no new toggle — ⇒ ⛔ **nobody's workflow gains a step**.
+· ⛔ **The tab-title i18n sweep is ⛔ NOT performed** (Trap 4). The fourth tab's title is `t()`-resolved;
+the three pre-existing English literals are left as recorded debt. ⇒ ⛔ no member is made to re-learn a
+bar they already navigate.
+
+⚠ **THE ONE MEASURABLE COST, STATED RATHER THAN OMITTED:** the native bundle grows by one screen, one
+component pair, one query hook and one i18n namespace. ⭐ `member-app-native.js_bundle_bytes` and
+`page_weight_bytes` are both **`no-op — no measurable build output yet`** in the metric facet above, so
+there is ⛔ **nothing to attest** against them and ⛔ no number is claimed here
+([[feedback_record_unattested_no_backfill]]). ⚠ The list is **virtualized** (`@shopify/flash-list`,
+UX-DR80's 10k-mobile contract) precisely so the cost is bounded by the **viewport**, ⛔ not by a
+Pariwar's history. ⛔ Exceeding a ceiling, once one is measurable, is **ROUTED**, ⛔ never absorbed.
+
+⭐ **This disposition was written AFTER the implementation commits `e9e5adcb` and `33409cba` existed**,
+⛔ not against an empty diff — AC-4 diffs **COMMITTED** history, so a declaration written first passes
+**vacuously** (the defect `57778f72` demonstrated live and `7fe540f9` fixed). ⚠ Verified in the
+strongest available way: `pnpm friction:check` **FAILED** on this story's file list before this block
+was written, and the failure is what this block answers.

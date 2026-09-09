@@ -8,6 +8,8 @@
 import {
   ActiveContributionCardResponse,
   ContributionHistoryResponse,
+  MemberDriveListQuery,
+  MemberDriveListResponse,
   PoolContributorListResponse,
 } from '@twt/contracts';
 import type { FastifyInstance } from 'fastify';
@@ -94,5 +96,32 @@ export function registerMemberPoolRoutes(app: FastifyInstance, deps: AppDeps): v
       config: { rateLimit: CONTRIBUTION_NOTE_RATE },
     },
     h.contributionNote,
+  );
+
+  // ⭐⭐ Story 11b.15 — the MEMBER'S DRIVE LIST, the fourth tab's read. Every Sahyog Drive in the
+  // member's OWN Pariwar at `live` · `closed` · `settled`, paginated. Session-guarded → auto-covered
+  // by the Story 1.14 login-wall CI gate; ⛔ NOT public (Epic 11b owns the public Sahyog index, and
+  // this list deliberately shows a member MORE than that index does — `2026-09-04-189` cl.3).
+  //
+  // ⚠⛔⛔ **IT IS THE FIRST MEMBER ROUTE IN THIS MODULE THAT PAGINATES, AND THERE WAS ⛔ NO
+  // MEMBER-SIDE PRECEDENT TO COPY.** Its four siblings above take ⛔ no user-controlled limit —
+  // `contribution/read.ts:154,325` say so in terms. ⇒ the shape is copied from the **PUBLIC Sahyog
+  // Drive** route (⭐ the same surface AC3 measures this one against): `page` + `limit` on the
+  // query contract here, and `.limit(clampLimit(...)).offset(...)` in the domain accessor.
+  // ⭐ TWO INDEPENDENT ENFORCEMENTS, deliberately: the schema's `.max()` is what Story 1.14's
+  // forced-pagination guard SEES on the live in-process swagger document; `clampLimit` is what
+  // actually bounds the SQL. ⛔ Neither alone is sufficient — a schema bound is invisible to the
+  // `domain-accessor-invariants` gate, and a domain clamp is invisible to the FR-91 guard.
+  r.get(
+    '/api/v1/member/drive-list',
+    {
+      schema: {
+        querystring: MemberDriveListQuery,
+        response: { 200: MemberDriveListResponse },
+        tags: [MEMBER_POOL_TAG],
+      },
+      preHandler: [memberSession],
+    },
+    h.driveList,
   );
 }

@@ -56,6 +56,12 @@ describe('⭐⭐ AC2 / Trap 2 — this surface owns its visible-state tuple', ()
     expect(MEMBER_DRIVE_LIST_PAGE_SIZE_DEFAULT).toBeLessThanOrEqual(MEMBER_DRIVE_LIST_PAGE_SIZE_CAP);
     expect(MEMBER_DRIVE_LIST_PAGE_SIZE_DEFAULT).toBeGreaterThan(0);
   });
+
+  // ⚠⛔ [Review][Patch] code review of 11b-15 (2026-09-09) — the LOCKSTEP TEST this cap and the
+  // contract's `MEMBER_DRIVE_LIST_LIMIT_MAX` need does ⛔ NOT live here: `@twt/domain` may ⛔ not
+  // import `@twt/contracts` (a turbo dependency cycle — see the identical constraint recorded in
+  // `tests/claim/nominee-bank-masking.test.ts:223-224`). ⭐ It lives in `apps/api`, the one place that
+  // already imports both. See `apps/api/tests/unit/member-drive-list-handler.test.ts`.
 });
 
 describe('⭐⭐ AC8b — `resolveDriveTargetForMembers` reads the MEMBER axis (`-211` cl.2)', () => {

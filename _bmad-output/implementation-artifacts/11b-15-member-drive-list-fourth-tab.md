@@ -31,7 +31,7 @@ at this one.
 
 # Story 11b.15: The Member's Drive List — a **FOURTH TAB** Over Every Drive in Their Pariwar `[SURFACE]`
 
-Status: review
+Status: done
 
 > ⭐⛔ **⛔ NO `### Story 11b.15` SECTION EXISTS IN `epics.md`.** **Story E** of the six-story split
 > (`2026-09-04-195` cl.3), following **Trustee-ratified** `-193` cl.2 and BigDev's `-194` cl.2 /
@@ -353,6 +353,17 @@ Per Trap 3, following `PoolContributorList.tsx:184-203,236-251`. **And** a test 
 populated** and asserts ⛔ no crash, on the shape of `helpdesk-screens-render.test.ts:77-82` — ⭐ the
 regression this AC exists to prevent has a name in this repo.
 
+> ⚠⛔ **[Review][Decision] EXTENDED 2026-09-09, code review SECOND pass — a FOURTH, ACCEPTED
+> combined state: populated list + an inline background-refetch-error banner, simultaneously.** The
+> three states above stay MUTUALLY EXCLUSIVE for a member's FIRST read of a page (loading → either
+> empty or the populated list, or the full-screen error if nothing ever loaded). ⭐ What's new: once
+> the list is populated, a LATER failed background attempt to get more data (a manual retry, or
+> `fetchNextPage` scrolling for the next page) shows an inline banner ABOVE the still-showing,
+> already-loaded list, rather than replacing it with the full-screen error state. ⛔ This is a
+> refresh-failure OVERLAY on the populated state, ⛔ not a fifth primary state and ⛔ not a violation
+> of "three DISTINCT states" — the member is never shown something FALSE (the list stays what it
+> genuinely is), which is the invariant this AC actually protects.
+
 ### AC7 — It is virtualized, and the read is paginated
 UX-DR80 (`epics.md:509`), whose *"10k mobile / 50k desktop virtualization contracts on **Sahyog List
 components**"* clause routes this surface to **`@shopify/flash-list`** (`apps/mobile/package.json:25`),
@@ -545,10 +556,18 @@ the name-form work; ⛔ this story does ⛔ not revisit it).
       construction. ⭐ TWO independent page bounds: the schema `.max()` (what Story 1.14's
       forced-pagination guard SEES on the live swagger doc) and `clampLimit` (what bounds the SQL).
       ⭐ `openapi/v1.yaml` **RE-EMITTED**, ⛔ never hand-edited; determinism check green.
-      ⚠⛔ **DELIBERATELY ⛔ NOT FAIL-SOFT — the ⛔ only read in this module that isn't.** AC6 ratifies
-      empty · loading · error as three DISTINCT states; degrading to `items: []` would make the error
-      branch **unreachable by construction** and would tell a member their Pariwar has run no drives
-      when the truth is that we could not load them.
+      ⚠⛔ **DELIBERATELY ⛔ NOT FAIL-SOFT AT THE ROUTE LEVEL — the ⛔ only read in this module that
+      isn't.** AC6 ratifies empty · loading · error as three DISTINCT states; degrading to `items: []`
+      would make the error branch **unreachable by construction** and would tell a member their
+      Pariwar has run no drives when the truth is that we could not load them. ⇒ a failure in the
+      list/count queries, the presentation-mode read, or the transaction itself propagates and 5xxs.
+      ⚠⛔ **[Review][Decision] RESOLVED 2026-09-09, code review — THE EXCEPTION IS NAMED, ⛔ NOT LEFT
+      IMPLICIT.** A single KYC field's decrypt (the deceased name, the nominee name) is caught
+      INDIVIDUALLY and downgraded to `null` for that ONE field, with a warn log — the row SURVIVES.
+      This is the deliberate, NARROWER fail-soft exception to the rule above, ⛔ not a contradiction of
+      it: an external system's transient fault (self-heals on retry, carries no Panel-ruled-sensitive
+      information) is categorically different from a structural domain fault, and dropping the whole
+      page over one bad ciphertext envelope would take working rows down with a broken one.
 - [x] **Task 4 — The tab** (AC1, AC4, AC5) — the fourth `Tabs.Screen`; Trap 4's title decision;
       ⭐ the 10.15 supersession recorded by name in the `_layout.tsx` doc-block; B's shared stage copy
       via bound `useT()` + `NS`; the info affordance; ⭐ `accessible={true}` on every labelled
@@ -607,6 +626,179 @@ the name-form work; ⛔ this story does ⛔ not revisit it).
       ⭐ **Written AFTER `e9e5adcb` + `33409cba` existed, and PROVEN so:** `pnpm friction:check`
       **FAILED** on this story's file list before the block was written — ⛔ it did ⛔ not pass
       vacuously against an empty diff ([[project_friction_budget_baseline_ratchet]]).
+
+### Review Findings
+
+_bmad-code-review, 2026-09-09 — three parallel layers (Blind Hunter, Edge Case Hunter, Acceptance
+Auditor) against the diff `c2dd787c..HEAD` (excl. generated `openapi/v1.yaml`)._
+
+✅ **ALL 14 `[Review][Patch]` ITEMS APPLIED, 2026-09-09** (the 4 `[Review][Decision]` items resolved
+first — 2 became patches, checked off below; 2 resolved with no code change, marked `[Review][Resolved]`).
+Touched: `apps/api/src/modules/member-pool/handlers.ts` (concurrent per-row decrypts, sequential
+list/count queries off the same tx, the `satisfiesMemberDriveLiveRowPairing` runtime guard, the
+tightened fail-loud/fail-soft doc-block); `apps/mobile/components/drive-list/{MemberDriveList.tsx,
+useMemberDriveListQuery.ts}` (paginated via `useInfiniteQuery` + `onEndReached`, the inline
+background-refetch-failure banner, `closedAt`/`confirmedPercentage`/`fundingOutcome` wired into
+`DriveRow`, the `useCallback` dep fix, the no-family a11y `{code}` token, `row.summary` replacing the
+hardcoded `·`); `packages/i18n/locales/{en,hi}/member-drive-list.json` (new `row.summary`,
+`row.progress`, `outcome.*` keys, the `{code}` token); new test coverage in
+`apps/api/tests/unit/member-drive-list-handler.test.ts` (the forced-failure path, the per-field
+fail-soft exception, the pairing guard, the lockstep constant test — `@twt/domain` may not import
+`@twt/contracts`, so the lockstep test lives here, not in `packages/domain`),
+`apps/mobile/tests/unit/drive-list-render.test.ts` (pagination, the AC3-floor renders, the a11y fix,
+the `codeOnly` regex fix), `scripts/microcopy/member-drive-list.test.ts` (the real-string numeral
+check). ⛔ `friction-budget.md` untouched — decision 3 kept both entry points, no disposition change.
+Full suites re-run green: domain (135 files / 2039 tests), api (44 / 375), mobile (32 / 482), public
+(24 / 513), the i18n parity gate, and the microcopy gate.
+
+- [x] [Review][Patch] Fail-loud/fail-soft distinction needs to be made EXPLICIT in the story and in
+      code — **RESOLVED 2026-09-09: the per-field null fallback is KEPT.** Route/read failures stay
+      fail-loud (5xx); an individual protected field's decrypt failure is the deliberate, narrower
+      fail-soft exception and yields `null` for that field only, with a warning log. Task 3's
+      "DELIBERATELY NOT FAIL-SOFT" note and the matching in-code doc-block in `handlers.ts` both
+      currently state the route-level claim without naming this field-level exception — tighten both so
+      the distinction is explicit and this can't be misread as a contradiction again.
+      [`apps/api/src/modules/member-pool/handlers.ts`; this story file, Task 3]
+- [x] [Review][Patch] Wire AC3's three unrendered floor fields into `DriveRow` — **RESOLVED
+      2026-09-09: render all three.** `closedAt` (the already-defined but dead `row.closed_on` i18n
+      key), `confirmedPercentage` (a progress percentage/meter for `live` rows, reusing the public
+      side's meter logic rather than forking it — Task 5's precedent), and `fundingOutcome` (a
+      close-of-cycle framing sentence for `closed`/`settled` rows, reusing `apps/public`'s framing
+      logic the same way). Extend the `MEMBER_COUNTERPART` field-floor test to assert render, not just
+      contract-key presence, and to assert the populate-condition matches the public side.
+      [`apps/mobile/components/drive-list/MemberDriveList.tsx`;
+      `packages/contracts/src/contributions/member-drive-list.ts`;
+      `apps/public/tests/member-drive-list-field-floor.test.ts`;
+      `apps/public/src/lib/sahyog-render.ts` (reuse source)]
+- [x] [Review][Resolved] Friction-budget duplicate entry point — **RESOLVED 2026-09-09: leave both,
+      intentionally.** `SahyogVivranEntry.tsx`'s external link-out and this story's new in-app tab both
+      stay; no retirement of the old path. [`friction-budget.md`;
+      `apps/mobile/components/sahyog-vivran/SahyogVivranEntry.tsx`]
+- [x] [Review][Resolved] Nominee full name enumerable across a member's Pariwar drive history —
+      **RESOLVED 2026-09-09: `-190` cl.2 already covers this; no fresh Panel ruling.** Existing
+      authority, not new disclosure — the field is already authorized at public tier, and the member
+      surface is bound by the existing `member ≥ public` invariant. This story creates no new
+      nominee-name disclosure ruling. [`packages/domain/src/pool/member-drive-list.ts`;
+      `apps/api/src/modules/member-pool/handlers.ts`]
+- [x] [Review][Patch] Client never advances past page 1 despite contract/route/domain all being
+      paginated — `useMemberDriveListQuery` has no `page` param, no `onEndReached`, and never reads
+      `data.total`; a Pariwar with more drives than one page never shows the remainder.
+      [`apps/mobile/components/drive-list/useMemberDriveListQuery.ts:39-44`]
+- [x] [Review][Patch] Per-row KYC decrypts run sequentially instead of concurrently, roughly doubling
+      per-row decrypt latency across a page — await the deceased-name and nominee-name decrypts via
+      `Promise.all` instead of two sequential `await`s.
+      [`apps/api/src/modules/member-pool/handlers.ts`]
+- [x] [Review][Patch] `listMemberPariwarDrives`/`countMemberPariwarDrives` run via `Promise.all`
+      against the same transaction handle — a connection/protocol-multiplexing footgun, and pool state
+      can change between the two statements so `total` can disagree with `items` with no snapshot
+      pinning. Combine into one query or pin an explicit snapshot for the tx.
+      [`apps/api/src/modules/member-pool/handlers.ts:346-349`]
+- [x] [Review][Patch] No test exercises the claimed "must 5xx, never silently degrade" failure path —
+      every integration test asserts `res.statusCode === 200`; add a test that forces a genuine
+      failure and asserts the 500 response / the client's `isError` render.
+      [`apps/api/tests/integration/contributions/member-name-form-parity.spec.ts`]
+- [x] [Review][Patch] `useCallback(renderItem, [t, locale])` provides no memoization benefit — `t` from
+      `useT()` is a fresh closure every render ([[project_uset_fresh_closure_memo_trap]]), so the
+      callback is recreated regardless. Depend on `locale`, not `t`.
+      [`apps/mobile/components/drive-list/MemberDriveList.tsx`]
+- [x] [Review][Patch] Nameless-row accessibility label carries no identifying token — the visible
+      fallback uses `poolLetterCode` so a sighted user can distinguish rows, but the `row.a11y.no_family`
+      label doesn't, so a screen-reader user cannot distinguish two nameless rows.
+      [`apps/mobile/components/drive-list/MemberDriveList.tsx`]
+- [x] [Review][Patch] Comment-stripping regex used to derive "code-only" text for microcopy assertions
+      doesn't guard against `/*`-like sequences inside string literals (unlike its acknowledged handling
+      of line comments) — could misparse and corrupt downstream assertions on this file.
+      [`scripts/microcopy/member-drive-list.test.ts`]
+- [x] [Review][Patch] AC7's claimed "lockstep test" for the two page-size-cap constants doesn't exist —
+      `MEMBER_DRIVE_LIST_LIMIT_MAX` (contracts, `50`) and `MEMBER_DRIVE_LIST_PAGE_SIZE_CAP` (domain,
+      `50`) are asserted by the in-code comment to be pinned together by a test, but no test in the diff
+      asserts their equality. Add the cross-package equality test the comment claims exists.
+      [`packages/contracts/src/contributions/member-drive-list.ts`;
+      `packages/domain/src/pool/member-drive-list.ts`]
+- [x] [Review][Patch] Hardcoded `·` punctuation separator between amount and contribution count is
+      written directly in JSX rather than composed through the i18n layer — inconsistent with how
+      strictly every other punctuation/format decision in this diff is treated.
+      [`apps/mobile/components/drive-list/MemberDriveList.tsx`]
+- [x] [Review][Patch] Hindi numeral-discipline test (`checkNumerals`) is only exercised against
+      synthetic planted strings — every real committed `hi/member-drive-list.json` value is a
+      placeholder (`{count}`/`{amount}`) with no literal digit, so numeral discipline is never checked
+      against copy that will actually ship.
+      [`scripts/microcopy/member-drive-list.test.ts`; `packages/i18n/locales/hi/member-drive-list.json`]
+- [x] [Review][Patch] A background refetch failure hides previously-loaded cached data behind the full
+      error screen even when cached `data` from a prior successful fetch is still available — show the
+      cached list with an inline error banner instead when `isError && data` both hold.
+      [`apps/mobile/components/drive-list/MemberDriveList.tsx:107-151`]
+- [x] [Review][Patch] No runtime guard checks the live-only row-pairing invariant
+      (`confirmedPercentage`/`driveTargetInr` populated only on live rows) before a row reaches the
+      wire — add an assertion so a malformed domain row is caught rather than silently shipped, given
+      this exact pairing is what AC3's floor claim rests on.
+      [`apps/api/src/modules/member-pool/handlers.ts:420-445`]
+- [x] [Review][Defer] The `-211` cl.2 three-grounds rationale is copy-pasted near-verbatim across five
+      files (`epics.md`, `sprint-status.yaml` comments, the contract file, `public-read.ts`,
+      `handlers.ts`) — a future amendment or clarification of `-211` requires finding and updating every
+      copy by hand or they silently diverge. [`epics.md`; `sprint-status.yaml`;
+      `packages/contracts/src/contributions/member-drive-list.ts`;
+      `packages/domain/src/pool/public-read.ts`;
+      `apps/api/src/modules/member-pool/handlers.ts`] — deferred, pre-existing documentation pattern in
+      this codebase, not a defect introduced by this diff.
+
+### Review Findings — SECOND PASS
+
+_bmad-code-review, 2026-09-09, re-run on the FIRST pass's own patches — three parallel layers against
+the uncommitted diff of the fixes above. ⛔ This section does ⛔ NOT edit the first pass's checkboxes
+above (the record of what pass 1 delivered stays as written,
+[[feedback_supersede_never_reinterpret]]) — it records what pass 2 found IN THOSE PATCHES and fixed._
+
+⚠⛔ **TWO GENUINE DESIGN QUESTIONS WERE RAISED AND RESOLVED BY BigDev:**
+
+- **The `satisfiesMemberDriveLiveRowPairing` guard 5xxs the WHOLE page over one malformed row —
+  seemingly the exact failure mode the per-field KYC fail-soft exception exists to avoid.**
+  **RESOLVED: KEEP FAIL-LOUD.** A pairing violation is a STRUCTURAL domain-layer fault, categorically
+  unlike a transient KMS decrypt failure — it signals the domain itself produced a row that could leak
+  the roster-size-recovery channel `2026-09-08-207` cl.1 closed (`confirmedPercentage` present off a
+  `live` row). Silently dropping just the bad row would hide that channel reopening rather than surface
+  it. [`apps/api/src/modules/member-pool/handlers.ts`]
+- **The inline background-refetch error banner renders the POPULATED list and an error indicator
+  SIMULTANEOUSLY — a fourth on-screen state AC6's "empty · loading · error, three DISTINCT states"
+  language didn't explicitly contemplate.**
+  **RESOLVED: ACCEPT, RECORD.** This is a refresh-failure OVERLAY on the populated state (data already
+  showing, a background attempt to get more/fresher data failed), ⛔ not a new PRIMARY state
+  competing with the ratified three — the member always sees a coherent list; the banner adds
+  information, it never replaces the list with something false. AC6 stands as ratified; this is a
+  documented extension, ⛔ not a violation. [`apps/mobile/components/drive-list/MemberDriveList.tsx`]
+
+✅ **THE FOLLOWING WERE FOUND AND FIXED IN THIS PASS** (bugs and gaps in the FIRST pass's own patches):
+
+- [x] Per-row `Promise.all` KYC decrypts could push concurrent KMS calls to `DIRECTORY_DECRYPT_CONCURRENCY × 2` (verified the constant is `8` — worst case 16 against an intended cap of 8) — the row-level concurrency passed to `mapWithConcurrency` is now halved. [`apps/api/src/modules/member-pool/handlers.ts`]
+- [x] The structural pairing guard ran AFTER paying for two KMS decrypts it might then discard — moved before the decrypt `Promise.all`, checked against the raw domain row's own fields (available pre-decrypt). [`apps/api/src/modules/member-pool/handlers.ts`]
+- [x] The `Promise.all`→sequential comment for `listMemberPariwarDrives`/`countMemberPariwarDrives` asserted an unverified "connection/protocol-multiplexing footgun" — checked: `pg`'s `Client` already serializes queries on one connection regardless, so this was never actually unsafe and the change bought no consistency. Comment rewritten to be honest; the REAL, still-open gap (`total` can disagree with `items` under READ COMMITTED, no snapshot pinning) recorded in `deferred-work.md` rather than left implied-fixed. [`apps/api/src/modules/member-pool/handlers.ts`; `deferred-work.md`]
+- [x] `formatClosedAtIst` had no guard against an unparseable instant — unlike the public `formatClosedAt` it copies, a malformed date would have rendered the literal "NaN-NaN-NaN". Guard added; the function now returns `string | null` and the call site checks it. [`apps/mobile/components/drive-list/format.ts` (extracted, see below); `MemberDriveList.tsx`]
+- [x] The `fundingOutcome` → i18n key mapping used template-string interpolation off the wire enum with NO compile-time exhaustiveness tie — a future enum value with no matching key would throw and crash the WHOLE row's render. Replaced with an explicit switch + `never` guard, mirroring the public `framingFor` pattern exactly. [`apps/mobile/components/drive-list/format.ts`]
+- [x] The inline banner's retry button called `refetch()` unconditionally — `refetch()` on an infinite query only re-fetches pages already in `data.pages`; a page that FAILED via `fetchNextPage` was never added there, so tapping retry after a failed pagination attempt cleared the error without actually retrying the missing page. Now retries `fetchNextPage()` when `hasNextPage` is true, `refetch()` otherwise. [`apps/mobile/components/drive-list/MemberDriveList.tsx`]
+- [x] Task 3's "DELIBERATELY NOT FAIL-SOFT" story text was never tightened to name the per-field exception — only the matching `handlers.ts` doc-block was, in the FIRST pass. Fixed above, in Task 3.
+- [x] `formatClosedAtIst`/`outcomeFramingKey` had ZERO real unit tests (only source-scans proving they're referenced, never that they compute the right answer) — extracted both into a new plain-`.ts` module (`format.ts`, no `react`/`tamagui` imports) specifically so they CAN be imported and called directly by a test; `MemberDriveList.tsx` itself cannot be `import`ed in this repo's pure-Vitest harness (confirmed by trying — a transitive React Native dependency's Flow syntax throws). Added: an ordinary case, the IST date-rollover boundary (the classic UTC+5:30 bug class), the malformed-input `null` case, exhaustive enum-to-key mapping, and the runtime throw for an out-of-enum value. [`apps/mobile/components/drive-list/format.ts` (new); `apps/mobile/tests/unit/drive-list-render.test.ts`]
+- [x] The pairing-guard test only covered ONE direction of the two-way invariant (a non-live row with a live-only value) — added the mirror case (a `live` row with a `null` `confirmedPercentage`), plus a test proving the guard now runs BEFORE any decrypt (`decryptKycField` not called). [`apps/api/tests/unit/member-drive-list-handler.test.ts`]
+- [x] Only the deceased-name decrypt-failure path was tested, despite the code's claim that both names "ride the SAME bounded map" identically — added the mirror nominee-name-failure case. [`apps/api/tests/unit/member-drive-list-handler.test.ts`]
+- [x] The comment-stripper regex fix shipped with no test proving either half of its own claim (a real comment still stripped; a string-literal `/*` now survives) — added both, plus a JSX-curly-comment case. [`apps/mobile/tests/unit/drive-list-render.test.ts`]
+- [x] The microcopy "plant a real digit" test picked its target string via `.find(v => v.length > 0)` — the first string in whatever order `Object.entries` yields, unnamed and unlogged; a future content reorder could silently change the test's semantics. Now targets the named `error` key directly. [`scripts/microcopy/member-drive-list.test.ts`]
+- [x] The "5xx" handler test proved the resolver's promise REJECTS, not that the route returns an actual HTTP 500 — accurate for this codebase's own unit-test tier (`active-contribution-card.test.ts` and siblings test the resolver function directly, never through Fastify's HTTP layer; the reject→500 translation is Fastify's own well-tested framework behavior, and no live Postgres was available in this session to add a true HTTP-level integration assertion). Recorded here for precision rather than silently left implying more than the test proves.
+
+⛔ **VERIFIED AND DISMISSED (checked against the actual code, not assumed):**
+- A raw `Error` from the pairing guard leaking internal detail (`poolId`, the function name) to the
+  client — checked `apps/api/src/middleware/error-mapping/index.ts`: every uncaught error already
+  returns a generic `internal.error` envelope; `err.message`/stack are never serialized to a response.
+- An `onEndReached` retry-storm on a bad connection — the app's global `QueryClient`
+  (`apps/mobile/lib/query-client.ts`) already sets `retry: 1`, and the pattern matches this app's own
+  existing `usePollsQuery`/`onEndReached` precedent verbatim.
+- `poolLetterCode` returning empty/non-unique — a bijective base-26 encoding of `poolIndex + 1 ≥ 1` is
+  always non-empty by construction; the domain's own tests already cover this.
+- Pagination drift under concurrent writes (rows created/closed between page fetches) — the SAME
+  pre-existing, disclosed READ COMMITTED gap as the `total`-vs-`items` item above, not novel to this
+  patch, and not fixable without the deferred single-query rework.
+
+⭐ Full suites re-run GREEN after this second pass: domain, api, mobile (+9 tests in
+`drive-list-render.test.ts`), public; `i18n:check-parity`; the microcopy gate. Typecheck clean across
+all five touched packages.
 
 ---
 
@@ -896,10 +1088,34 @@ repo-wide orphaned-pin sweep (`c2dd787c`), ⛔ not to this story.
 
 - `scripts/microcopy/member-drive-list.test.ts` — **NEW** (teeth for the new copy namespace)
 
+**Code-review patch pass, 2026-09-09 (⭐ addendum to the file list above, ⛔ not a rescope of it)**
+
+- `apps/api/src/modules/member-pool/handlers.ts` — **modified** (concurrent decrypts, sequential list/count, the pairing guard, the tightened doc-block)
+- `apps/api/tests/unit/member-drive-list-handler.test.ts` — **NEW** (the forced-failure path, the fail-soft exception, the pairing guard, the lockstep constant)
+- `apps/mobile/components/drive-list/MemberDriveList.tsx` — **modified** (AC3's three floor fields, pagination wiring, the inline error banner, the a11y/`useCallback`/punctuation fixes)
+- `apps/mobile/components/drive-list/useMemberDriveListQuery.ts` — **modified** (`useInfiniteQuery` + `flattenDriveList`)
+- `apps/mobile/tests/unit/drive-list-render.test.ts` — **modified** (pagination/banner/AC3-floor/a11y coverage; the `codeOnly` regex fix)
+- `apps/public/tests/member-drive-list-field-floor.test.ts` — **modified** (header note only — records the render-side fix lives in the mobile test)
+- `packages/domain/tests/pool/member-drive-list.test.ts` — **modified** (header note only — records why the lockstep test moved to `apps/api`)
+- `packages/i18n/locales/{en,hi}/member-drive-list.json` — **modified** (`row.summary`, `row.progress`, `outcome.*`, the no-family `{code}` token)
+- `scripts/microcopy/member-drive-list.test.ts` — **modified** (the real-committed-string numeral check)
+
+**Code-review patch pass, SECOND (2026-09-09) — further changes on top of the first pass's own patches**
+
+- `apps/api/src/modules/member-pool/handlers.ts` — **modified** (halved decrypt concurrency; the pairing guard moved before the decrypts; the `Promise.all`→sequential comment corrected)
+- `apps/api/tests/unit/member-drive-list-handler.test.ts` — **modified** (the mirror pairing case, the nominee-decrypt-failure case, `toHaveBeenCalled` assertions)
+- `apps/mobile/components/drive-list/format.ts` — **NEW** (`formatClosedAtIst`/`outcomeFramingKey` extracted so they're directly unit-testable; the NaN guard; the exhaustiveness switch)
+- `apps/mobile/components/drive-list/MemberDriveList.tsx` — **modified** (imports from `format.ts`; the inline-banner retry fix)
+- `apps/mobile/tests/unit/drive-list-render.test.ts` — **modified** (real `format.ts` unit tests incl. the IST rollover boundary; the `codeOnly` regression tests; updated `fundingOutcome` assertion)
+- `scripts/microcopy/member-drive-list.test.ts` — **modified** (the numeral-plant target named by key, not `.find()`)
+- `_bmad-output/implementation-artifacts/deferred-work.md` — **modified** (the still-open `total`-vs-`items` consistency gap recorded)
+
 ## Change Log
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-09-09 | 1.2 | ✅ **CODE REVIEW, SECOND PASS APPLIED — re-reviewed the first pass's own patches; 2 design questions resolved by BigDev (pairing guard stays fail-loud; the inline banner's fourth combined state accepted and recorded against AC6), 12 bugs/gaps found and fixed, 4 claims verified and dismissed.** See `### Review Findings — SECOND PASS` above. Full suites re-run green. | BigDev + Claude |
+| 2026-09-09 | 1.1 | ✅ **CODE REVIEW APPLIED — all 14 `[Review][Patch]` findings fixed, all 4 `[Review][Decision]` findings resolved by BigDev** (2 → patch, 2 → resolved with no code change). See `### Review Findings` above for the full list and `git log` for the commit. Full suites re-run green: domain 135/135 files (2039 tests), api 44/44 (375), mobile 32/32 (482), public 24/24 (513); i18n parity gate and microcopy gate both green. | BigDev + Claude |
 | 2026-09-09 | 1.0 | ✅⭐⭐ **IMPLEMENTED — `in-progress` → `review`. ALL NINE ACs SATISFIED; ALL TASKS CLOSED. `ci:local` 34/34 GREEN incl. live-DB integration.** ⭐ Four commits: `fdc2d964` (governance-first, ⛔ no code) · `e9e5adcb` (the read + route) · `33409cba` (the tab, the list, the tests) · the Task-8 docs commit. ⭐ **The surface:** a fourth tab with its OWN visible-state fragment (⛔ never the public tuple, Trap 2), a paginated member-scoped read (scope from the SESSION — there is ⛔ no `pariwarId` parameter), the three ruled stage words consumed from story B by name, and लक्ष्य on the **MEMBER** axis (`-211` cl.2), fail-closed ⇒ ⛔ nothing renders at launch. ⭐ **Trap 4 RULED:** the title is `t()`-resolved — *Sahyog Drives / सहयोग अभियान* — the one translated title among four; ⛔ the three pre-existing literals are ⛔ NOT swept. ⚠⛔⛔ **NINE FINDINGS RAISED, ⛔ none silently absorbed** — ⭐ chief among them: **the AC3 floor is 14 mapped field ids, ⛔ NOT the `13` this story's prose states** (the ENUMERATION is right; the count WORD is wrong, which is why two `validate` passes checking *"the enumeration, exact match"* both passed). ⛔ AC prose is ⛔ not `dev-story`-editable ⇒ RECORDED, and the test reads the map **programmatically** and asserts ⛔ no count. ⭐ Swept: `11b-17` does ⛔ not carry it. Also: `-207` is `2026-09-08` ⛔ not `-09-07`; Task 0's comment-block rewrite was ⛔ ALREADY discharged (flip only); `sahyog-shared`'s `$comment.drive_target` AMENDED + NAMED (⛔ no key minted); B's stage fence recorded **DISCHARGED**; the shared fixture never seeded `member_pool_assignments` (found by a test FAILING); `pool-support-category-invariant` caught the Trap 2 doc-block **twice** (it scans COMMENTS) ⇒ reworded category-agnostically. ⭐ **TEETH PROVEN on four guards** — ⭐⭐ the AC8b gate **FAILS when switched to `revealToPublic`**, i.e. on exactly the literal reading `-211` cl.2 departed from. ⚠ **Two ruled money forms were LIFTED into `@twt/i18n` rather than forked** (mobile cannot import `apps/public`); `sahyog-render.ts` re-exports/delegates and its **44 tests pass unchanged**. ⚠ **RED-GREEN was ⛔ not followed strictly** — the story's Task order puts all tests in Task 6 — ⛔ stated rather than glossed. ⛔ No public surface, ⛔ no `spawned`, ⛔ no banking coordinates, ⛔ no contributor names, ⛔ no change to `active-contribution`; the two stale comments RECORDED in `deferred-work.md`, ⛔ not edited. | BigDev + Claude |
 | 2026-09-09 | 0.7 | ⭐⭐ **DEV STARTED — TASK 0 (GOVERNANCE FIRST) COMPLETE. `ready-for-dev` → `in-progress`. ⛔ ZERO CODE.** ⭐ The **`### Story 11b.15` SECTION** is written in `epics.md` (end of Epic 11b's story list, the **8.16 precedent** `:3400`), recording why a **SECTION** and ⛔ not an annotation — A–D each annotated Story 11b.3 because each **amended** the public Sahyog surface it owns; ⛔ E amends nothing there. ⭐ AC1's supersession of **10.15**'s recorded *"the tab bar is at three"* rejection is written **by name** (its ground verified to be **negative evidence only** — `ux-design-specification.md` fixes ⛔ no tab count). ⭐ AC8b is stated on the **MEMBER** axis with `-211` cl.2's three grounds carried in, so it cannot be silently "corrected" back to `reveal_to_public`. ⭐ **TRAP 4 RULED (BigDev): the tab title is `t()`-RESOLVED — Sahyog Drives / सहयोग अभियान**, the one translated title among four; ⚠ verified first that the repo's i18n gate is **key-parity only** and would ⛔ not have forced it. ⚠ **`-207`'s anchor date was wrong in the first draft** (`-09-07` → **`-09-08`**) — caught by enumerating all 16 cited anchors against `.decision-log.md` rather than trusting undated shorthand. ⚠⛔ **Task 0's *"rewrite the stale comment block"* sub-item is recorded ALREADY DISCHARGED, ⛔ not claimed as an edit** — its three named phrases are ⛔ absent from this story's row block (the 2026-09-09 `validate` rewrite removed them) and survive only in HISTORICAL ledger rows, which are ⛔ not rewritten. ⭐ **ONE FINDING RAISED FOR AC8b:** `sahyog-shared.json`'s `$comment.drive_target` still says the figure renders only on `reveal_to_public` — **superseded for the member surface by `-211` cl.2**, and it is amended **by name** when AC8b is built. | BigDev + Claude |
 | 2026-09-09 | 0.6 | ⛔ **SECOND `validate` pass, same day — ZERO FINDINGS. Baseline advanced `1b7fa9f3`→`c2dd787c` (bookkeeping, not a rescue: `git diff --name-only` over `packages/`/`apps/` between them is EMPTY).** ⭐ Re-checked against the new HEAD: AC3's 13-field enumeration (exact match, `surface-fields.ts:401-428`); `revealToMembers`'s reader count (still zero production consumers outside schema/policy/write-handler/admin-form); `resolvePoolIdentity`'s live signature; the `member-name-form-parity.spec.ts` basis-seeding chain; every `.decision-log.md` entry and routing note dated after `-211`/2026-09-07 (none name this story); Task 0's two remaining checkboxes (confirmed genuinely open, not stale). ⚠ Also confirmed: the concurrent repo-wide orphaned-pin sweep (`c2dd787c`) checked `11b-15`'s own pin and found it healthy — it changed 13 other files, not this one. ⛔ No duplicate `ready-for-dev` story found elsewhere owning this work (footgun 10 check: grepped `implementation-artifacts/` for "fourth tab" / "drive list" / `resolveDriveTargetForMembers` — no hit outside the known 11b siblings). | BigDev + Claude |

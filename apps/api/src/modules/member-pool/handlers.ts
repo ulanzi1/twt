@@ -52,9 +52,11 @@ import type {
   ContributionHistoryRow,
   ContributionNoteFacts,
   MemberDriveListResponse,
+  MemberDriveListEntry,
   MissedCycleEntry,
   PoolContributorListResponse,
 } from '@twt/contracts';
+import { satisfiesMemberDriveLiveRowPairing } from '@twt/contracts';
 // Story 8.8 (Task 6; D5) — the cycle-window arithmetic now lives beside the tone gradient in
 // @twt/contracts so the card and the deadline-reminder sweep cannot drift. Re-exported below.
 import { computeDaysRemaining as contributionLoopComputeDaysRemaining } from '@twt/contracts';
@@ -281,17 +283,29 @@ export function createMemberPoolHandlers(deps: AppDeps) {
      * value is read from `request.requestContext` here. ⛔ Do ⛔ not add one "for admin reuse": an
      * admin view of another Pariwar's drives is a different surface with a different authority.
      *
-     * ⚠⛔⛔ **DELIBERATELY ⛔ NOT FAIL-SOFT — AND THIS IS THE ONE READ IN THIS MODULE THAT ISN'T.**
-     * Its three siblings degrade to a self-suppressing shape (`{ assigned:false }`, the empty
-     * passbook), which is right for a widget that can honestly render nothing. ⛔ It is wrong here,
-     * for a reason **AC6 makes structural**: this surface ratifies **empty**, **loading** and
-     * **error** as three DISTINCT reachable states and requires each to be ANNOUNCED. ⇒ if a read
-     * failure degraded to `items: []`, the error state would be **unreachable by construction** — a
-     * dead branch no test could enter — and the member would be told *"your Pariwar has run no
+     * ⚠⛔⛔ **DELIBERATELY ⛔ NOT FAIL-SOFT AT THE ROUTE LEVEL — AND THIS IS THE ONE READ IN THIS
+     * MODULE THAT ISN'T.** Its three siblings degrade to a self-suppressing shape (`{ assigned:false
+     * }`, the empty passbook), which is right for a widget that can honestly render nothing. ⛔ It is
+     * wrong here, for a reason **AC6 makes structural**: this surface ratifies **empty**, **loading**
+     * and **error** as three DISTINCT reachable states and requires each to be ANNOUNCED. ⇒ if a
+     * read failure degraded to `items: []`, the error state would be **unreachable by construction**
+     * — a dead branch no test could enter — and the member would be told *"your Pariwar has run no
      * drives"* when the truth is *"we could not load them"*. ⭐ That is a FALSE statement to a
      * member about their own Pariwar, and this codebase already refuses the shape elsewhere (*"the
      * honest render for 'no expectation was ever set' is SILENCE"*, ⛔ never something false).
-     * ⇒ the error propagates, the route 5xxs, and the client renders its ruled error state.
+     * ⇒ a failure at THIS level (the scope tx, either domain read, the presentation-mode read)
+     * propagates, the route 5xxs, and the client renders its ruled error state.
+     *
+     * ⚠⛔ **AND THE EXCEPTION IS NAMED, ⛔ NOT LEFT IMPLICIT — [Review][Decision] resolved 2026-09-09,
+     * code review of this story.** A single KYC field's decrypt (the deceased name, the nominee name)
+     * is caught INDIVIDUALLY inside `resolveDriveList`'s bounded map and downgraded to `null` for
+     * that ONE field, with a warn log — the row SURVIVES. ⭐ **This is the deliberate, narrower
+     * fail-soft exception to the rule above, ⛔ not a contradiction of it**: the route/read failure
+     * this doc-block promises 5xxs stays fail-loud (a failed list/count query, a failed
+     * presentation-mode read, or the transaction aborting); an individual field's decrypt failure
+     * never widens into a page-level failure, because the AC3 floor is about which DRIVES a member
+     * can see, and dropping the whole page over one bad ciphertext envelope would take working rows
+     * down with a broken one. See the matching per-field `catch` blocks below.
      */
     async driveList(request: FastifyRequest): Promise<MemberDriveListResponse> {
       const { pariwarIdStr } = memberCtx(request);
@@ -343,81 +357,155 @@ async function resolveDriveList(
   const { pariwarId, page, limit, now } = ctx;
   const offset = (page - 1) * limit;
 
-  const [rows, total] = await Promise.all([
-    poolDomain.listMemberPariwarDrives(tx, pariwarId, { limit, offset, now }),
-    poolDomain.countMemberPariwarDrives(tx, pariwarId),
-  ]);
+  // [Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab (2026-09-09), AMENDED in the
+  // SECOND review pass: this was `Promise.all`. ⚠⛔ **THE FIRST PASS'S "protocol-multiplexing footgun"
+  // FRAMING WAS UNVERIFIED, AND IS CORRECTED HERE** ([[feedback_negative_claims_checkable_in_repo]] —
+  // checked, not assumed): `pg`'s `Client` queues queries issued on one connection and executes them
+  // in ORDER regardless of how they're invoked, so two queries fired via `Promise.all` on the SAME
+  // client were never actually unsafe or truly concurrent — `Promise.all` here bought no real latency
+  // win in the first place, and this change is not a correctness fix. ⭐ Kept sequential anyway
+  // because it says plainly what `pg` was already doing, rather than implying a parallelism this
+  // client can't provide. ⛔⛔ **THE REAL, STILL-OPEN GAP:** pool state can change BETWEEN the two
+  // statements under READ COMMITTED (this tx opens no stronger isolation level, matching every other
+  // multi-statement read in this module), so `total` can disagree with `rows` with no snapshot
+  // pinning — sequential execution does ⛔ NOT close this, and neither did `Promise.all`. ⭐ Recorded
+  // as a disclosed, pre-existing, NOT-fixed-by-this-patch gap in `deferred-work.md`, ⛔ not silently
+  // absorbed — the finding's own remediation text ("combine into one query or pin an explicit
+  // snapshot") was not applied here; that is real follow-up work, not done in this pass.
+  const rows = await poolDomain.listMemberPariwarDrives(tx, pariwarId, { limit, offset, now });
+  const total = await poolDomain.countMemberPariwarDrives(tx, pariwarId);
 
   // ⭐ Story 8.16 — the presentation MODE, read ONCE for the whole page. The mode is per-PARIWAR and
   // this request serves exactly one Pariwar, so a read per row could only ever return the same
   // answer. `2026-09-02-181` cl.2 rules it an INPUT, ⛔ never a read inside a resolver.
   const presentationMode = await resolvePoolNamePresentationModeForRequest(tx, pariwarId);
 
-  // ⭐ ONE bounded fan-out for BOTH Tier-1 decrypts, ⛔ never two passes and ⛔ never `Promise.all`.
-  // `DIRECTORY_DECRYPT_CONCURRENCY` caps in-flight KMS round-trips; the helper preserves INPUT
-  // ORDER, which is what makes "page N is the same page N on every request" true.
-  const items = await mapWithConcurrency(rows, DIRECTORY_DECRYPT_CONCURRENCY, async (row) => {
-    // ── The DECEASED family's name ────────────────────────────────────────────────────────────
-    // ⚠⛔⛔ **⛔ NO PUBLICATION-BASIS GATE HERE, AND ITS ABSENCE IS RULED** — `2026-09-04-198`
-    // **cl.1**: the member path takes the configured **FORM** and ⛔ NOT the publication **BASIS**.
-    // ⇒ ⭐ a member sees a name ALWAYS, including on a drive where the basis is unsatisfied and the
-    // public page names nobody. ⛔ Do ⛔ not "harden" this by conjoining `NAME_PUBLICATION_AUTHORISED`
-    // — that would be a REGRESSION, and it is the exact question Task 1b ruled.
-    let deceasedMemberName: string | null = null;
-    if (row.deceasedNameCiphertext !== null) {
-      try {
-        const storedName = await decryptKycField(row.deceasedNameCiphertext, pariwarId, deps.encryption);
-        // ⭐⛔ `resolveMemberFacingDeceasedName`, ⛔ NEVER `resolvePublicMemberName`. The two share
-        // the stored mode and the form rule and differ ⛔ only in ABSENCE behaviour: the public
-        // omits a mononym under `shielded_name` (a privacy protection on a directory), the member
-        // SHOWS it (omitting a member's own drive row would be a functional regression — `8-16`
-        // Trap 5). ⛔ And ⛔ never a literal name form: `2026-08-19-136` cl.1 fails any build whose
-        // name form cannot be changed without a code change.
-        const resolved = notifications.resolveMemberFacingDeceasedName(presentationMode, storedName);
-        // ⚠ `.trim() || null`, ⛔ not `=== ''` — a whitespace-only name passes the contract's
-        // `.min(1)`, arrives TRUTHY so the client's fallback never fires, and renders a visually
-        // BLANK row where the design says otherwise (the 11a.3 finding).
-        deceasedMemberName = resolved.trim() || null;
-      } catch (err) {
-        // ⭐ OMIT THE NAME, ⛔ KEEP THE ROW. ⚠⛔ This is AC3's floor in the fail-soft: the PUBLIC
-        // index keeps a nameless row, so dropping one here would show a member LESS than a
-        // stranger — the `-189` cl.3 inversion this story exists to prevent. ⛔ It is also the
-        // deliberate INVERSE of the Yogdaan Bahi, which omits such a row (there a row with no name
-        // has no purpose; here it still carries the drive).
-        // ⛔ Letting this throw would 5xx the WHOLE page over one bad envelope.
-        request.log.warn(
-          { err, poolId: row.poolId },
-          'drive-list: deceased name decrypt failed — omitting the NAME, keeping the row',
-        );
-      }
+  // ⭐ ONE bounded fan-out for BOTH Tier-1 decrypts, ⛔ never two passes and ⛔ never `Promise.all`
+  // across ROWS. `DIRECTORY_DECRYPT_CONCURRENCY` caps in-flight KMS round-trips; the helper preserves
+  // INPUT ORDER, which is what makes "page N is the same page N on every request" true.
+  //
+  // [Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab (2026-09-09): the row
+  // callback below runs up to TWO KMS decrypts concurrently via its own `Promise.all` (see below) —
+  // ⇒ with `mapWithConcurrency` bounding ROWS at the full `DIRECTORY_DECRYPT_CONCURRENCY`, the
+  // WORST-CASE in-flight KMS call count is `DIRECTORY_DECRYPT_CONCURRENCY × 2`, not
+  // `DIRECTORY_DECRYPT_CONCURRENCY` — a cap this constant exists to enforce. ⭐ Halved here so the cap
+  // holds even when every row on the page carries both ciphertexts; a row with only one (the common
+  // case — many drives have no nominee bank account yet) still gets full parallelism between rows.
+  const items = await mapWithConcurrency(
+    rows,
+    Math.max(1, Math.floor(DIRECTORY_DECRYPT_CONCURRENCY / 2)),
+    async (row) => {
+    // [Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab (2026-09-09): AC3's floor
+    // rests on `confirmedPercentage`/`driveTargetInr` being populated on a `live` row and absent/null
+    // everywhere else — `satisfiesMemberDriveLiveRowPairing` NAMES that invariant, and nothing
+    // enforced it before a row reached the wire. ⭐ Checked HERE, before either KYC decrypt, using the
+    // raw domain row's own fields — the fields this predicate reads are already on `row`, so there is
+    // no reason to pay for two KMS round-trips on a row this check is about to reject anyway.
+    //
+    // ⚠⛔ **FAIL-LOUD, ⛔ NOT THE NARROWER PER-FIELD EXCEPTION** — [Review][Decision] resolved
+    // 2026-09-09 (SECOND review pass): this is a STRUCTURAL fault (a domain-layer defect shipping a
+    // malformed row), categorically different from a KYC decrypt failure. A decrypt failure is an
+    // external system's transient fault that self-heals on retry and carries no information the
+    // Panel has ruled sensitive; a pairing violation means the DOMAIN itself produced a row
+    // `confirmedPercentage`/`driveTargetInr` gating was supposed to prevent — e.g. a `closed` row
+    // leaking a live-only percentage, which is EXACTLY the roster-size-recovery channel
+    // `2026-09-08-207` cl.1 closed. ⛔ Dropping just the bad row (the per-field pattern) would hide
+    // that channel reopening rather than surface it — 5xx-ing the request is what gets it into
+    // monitoring/alerts immediately, rather than silently shipping degraded-but-plausible data.
+    if (
+      !satisfiesMemberDriveLiveRowPairing({
+        status: row.status,
+        confirmedPercentage: row.confirmedPercentage,
+        driveTargetInr: row.driveTargetInr === null ? undefined : row.driveTargetInr,
+      } as MemberDriveListEntry)
+    ) {
+      request.log.error(
+        { poolId: row.poolId, status: row.status },
+        'drive-list: row violates the live-only confirmedPercentage/driveTargetInr pairing',
+      );
+      throw new Error(
+        `member-drive-list: row for pool ${row.poolId} violates satisfiesMemberDriveLiveRowPairing`,
+      );
     }
 
-    // ── The NOMINEE's name (Trustee-ratified `2026-09-07-205` cl.1, `pii_tier: 1`) ────────────
-    // ⚠⛔ IT RIDES THE **SAME** BOUNDED MAP, ⛔ never a second pass. ⭐ ONE extra `decryptDek` per
-    // row that has an account — ⛔ not two: the claim's two accounts are EQUAL destinations for the
-    // SAME nominee (an RBI per-account-cap workaround), so the domain read returns exactly ONE
-    // ciphertext and decrypting the second would be a Tier-1 decrypt with ⛔ no authorising purpose.
-    // ⛔⛔ THERE IS ⛔ NO SECOND GATE ON IT, AND THAT IS RULED: `-190` cl.2 published the nominee
-    // name and `-205` cl.9 records that narrowing it by claim OUTCOME would be a NEW suppression
-    // rule ⛔ nobody has ruled. ⛔ Do ⛔ not invent one here.
-    let nomineeName: string | null = null;
-    if (row.nomineeAccountHolderNameCiphertext !== null) {
-      try {
-        const decrypted = await decryptKycField(
-          row.nomineeAccountHolderNameCiphertext,
-          pariwarId,
-          deps.encryption,
-        );
-        nomineeName = decrypted.trim() || null;
-      } catch (err) {
-        request.log.warn(
-          { err, poolId: row.poolId },
-          'drive-list: nominee name decrypt failed — omitting the NAME, keeping the row',
-        );
-      }
-    }
+    // ── The DECEASED family's name AND the NOMINEE's name ─────────────────────────────────────
+    // [Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab (2026-09-09): the two
+    // decrypts below used to `await` sequentially — one full KMS round-trip, THEN the second —
+    // roughly doubling the per-row decrypt latency across a page for no reason: the two ciphertexts
+    // are independent and neither result depends on the other. ⭐ `Promise.all` here is the SAME
+    // bounded-fan-out discipline the surrounding `mapWithConcurrency` call already applies across
+    // ROWS, now applied across the two independent decrypts WITHIN one row — halved above so the two
+    // levels of fan-out together stay inside the ONE global cap.
+    const [deceasedMemberName, nomineeName] = await Promise.all([
+      (async (): Promise<string | null> => {
+        // ⚠⛔⛔ **⛔ NO PUBLICATION-BASIS GATE HERE, AND ITS ABSENCE IS RULED** — `2026-09-04-198`
+        // **cl.1**: the member path takes the configured **FORM** and ⛔ NOT the publication
+        // **BASIS**. ⇒ ⭐ a member sees a name ALWAYS, including on a drive where the basis is
+        // unsatisfied and the public page names nobody. ⛔ Do ⛔ not "harden" this by conjoining
+        // `NAME_PUBLICATION_AUTHORISED` — that would be a REGRESSION, and it is the exact question
+        // Task 1b ruled.
+        if (row.deceasedNameCiphertext === null) return null;
+        try {
+          const storedName = await decryptKycField(
+            row.deceasedNameCiphertext,
+            pariwarId,
+            deps.encryption,
+          );
+          // ⭐⛔ `resolveMemberFacingDeceasedName`, ⛔ NEVER `resolvePublicMemberName`. The two share
+          // the stored mode and the form rule and differ ⛔ only in ABSENCE behaviour: the public
+          // omits a mononym under `shielded_name` (a privacy protection on a directory), the member
+          // SHOWS it (omitting a member's own drive row would be a functional regression — `8-16`
+          // Trap 5). ⛔ And ⛔ never a literal name form: `2026-08-19-136` cl.1 fails any build
+          // whose name form cannot be changed without a code change.
+          const resolved = notifications.resolveMemberFacingDeceasedName(presentationMode, storedName);
+          // ⚠ `.trim() || null`, ⛔ not `=== ''` — a whitespace-only name passes the contract's
+          // `.min(1)`, arrives TRUTHY so the client's fallback never fires, and renders a visually
+          // BLANK row where the design says otherwise (the 11a.3 finding).
+          return resolved.trim() || null;
+        } catch (err) {
+          // ⭐ OMIT THE NAME, ⛔ KEEP THE ROW. ⚠⛔ This is AC3's floor in the fail-soft: the PUBLIC
+          // index keeps a nameless row, so dropping one here would show a member LESS than a
+          // stranger — the `-189` cl.3 inversion this story exists to prevent. ⛔ It is also the
+          // deliberate INVERSE of the Yogdaan Bahi, which omits such a row (there a row with no
+          // name has no purpose; here it still carries the drive). ⭐ THE DELIBERATE, NARROWER
+          // fail-soft EXCEPTION named in this function's own doc-block above: ONE field degrades,
+          // ⛔ never the page.
+          request.log.warn(
+            { err, poolId: row.poolId },
+            'drive-list: deceased name decrypt failed — omitting the NAME, keeping the row',
+          );
+          return null;
+        }
+      })(),
+      (async (): Promise<string | null> => {
+        // ── The NOMINEE's name (Trustee-ratified `2026-09-07-205` cl.1, `pii_tier: 1`) ─────────
+        // ⚠⛔ IT RIDES THE **SAME** BOUNDED MAP, ⛔ never a second pass. ⭐ ONE extra `decryptDek`
+        // per row that has an account — ⛔ not two: the claim's two accounts are EQUAL
+        // destinations for the SAME nominee (an RBI per-account-cap workaround), so the domain
+        // read returns exactly ONE ciphertext and decrypting the second would be a Tier-1 decrypt
+        // with ⛔ no authorising purpose. ⛔⛔ THERE IS ⛔ NO SECOND GATE ON IT, AND THAT IS RULED:
+        // `-190` cl.2 published the nominee name and `-205` cl.9 records that narrowing it by
+        // claim OUTCOME would be a NEW suppression rule ⛔ nobody has ruled. ⛔ Do ⛔ not invent one
+        // here.
+        if (row.nomineeAccountHolderNameCiphertext === null) return null;
+        try {
+          const decrypted = await decryptKycField(
+            row.nomineeAccountHolderNameCiphertext,
+            pariwarId,
+            deps.encryption,
+          );
+          return decrypted.trim() || null;
+        } catch (err) {
+          request.log.warn(
+            { err, poolId: row.poolId },
+            'drive-list: nominee name decrypt failed — omitting the NAME, keeping the row',
+          );
+          return null;
+        }
+      })(),
+    ]);
 
-    return {
+    const entry = {
       deceasedMemberName,
       nomineeName,
       poolLetterCode: poolDomain.poolLetterCode(row.poolIndex),
@@ -439,7 +527,10 @@ async function resolveDriveList(
       amountRaisedInr: row.amountRaisedInr,
       fundingOutcome: row.fundingOutcome,
     };
-  });
+
+    return entry;
+    },
+  );
 
   return { items, page, limit, total };
 }

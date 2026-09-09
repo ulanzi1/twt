@@ -138,6 +138,30 @@ describe('UX-DR73 numeral discipline bites the drive-list copy', () => {
     const findings = checkNumerals(EN_FILE, '{ "row.contributions": "५ confirmed" }', config, { isCeremonial: false });
     expect(findings.length).toBeGreaterThan(0);
   });
+
+  it('⭐⭐ [Review][Patch] code review of 11b-15 (2026-09-09) — the checker bites a REAL committed string, not only an invented fixture', () => {
+    // ⚠⛔ BEFORE THIS PATCH every numeral-discipline fixture above was entirely synthetic
+    // ("row.contributions": "५ पुष्ट") — a shape that never existed in the real file. ⭐ EVERY real
+    // committed value in this surface is a template with NO literal digit (`{count}`, `{amount}`,
+    // `{percent}`, `{date}` are interpolated at RENDER time, never baked into the JSON), so section
+    // (d) below ("the REAL copy is clean") passes VACUOUSLY for the numeral family — it proves
+    // today's copy has no digit, ⛔ not that the checker would catch a translator adding one. This
+    // test closes that gap: take a REAL committed hi value, plant one Devanagari digit into it, and
+    // confirm the checker fires against genuine content, not an invented shape.
+    //
+    // ⚠⛔ [Review][Patch] — code review of 11b-15 (2026-09-09), SECOND pass: the target used to be
+    // `resolvedStrings(HI_FILE).find((v) => v.length > 0)` — whichever string happened to be FIRST in
+    // object-insertion order, unnamed and unlogged. A future content edit reordering `HI_FILE` could
+    // silently change what this test exercises without anyone noticing its semantics shifted. ⭐ Named
+    // by KEY instead — `error`, chosen because it is real, stable, member-facing copy this surface is
+    // guaranteed to carry (asserted directly against the source JSON, not merely "some string").
+    const hiCatalog = JSON.parse(readRepo(HI_FILE)) as Record<string, string>;
+    const target = hiCatalog['error'];
+    expect(target, '`error` key missing from the real hi catalog').toBeTruthy();
+    const findings = checkNumerals(HI_FILE, `${target}५`, config, { isCeremonial: false });
+    expect(findings.length).toBeGreaterThan(0);
+    expect(findings[0].kind).toBe('numeral');
+  });
 });
 
 // ─── (d) the REAL authored copy is CLEAN under every family ─────────────────────────────

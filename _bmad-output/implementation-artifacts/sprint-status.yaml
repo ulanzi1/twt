@@ -1,3 +1,80 @@
+# last_updated: 2026-09-09h (✅⭐⭐ **`11b-15` CODE REVIEW, SECOND PASS — re-reviewed the FIRST
+#   pass's own patches (still `done`, status unchanged; this is a re-review, not a re-open).**
+#   ⭐ Two design questions surfaced and RESOLVED BY BigDev: (1) the new
+#   `satisfiesMemberDriveLiveRowPairing` guard 5xxs the whole page over one malformed row — kept
+#   FAIL-LOUD (a structural domain fault, not a transient KYC-decrypt-class failure, and dropping just
+#   the bad row would hide a roster-size-leak channel reopening rather than surface it); (2) the new
+#   inline background-refetch-error banner renders the populated list AND an error indicator
+#   simultaneously — a state AC6's "three DISTINCT states" language didn't explicitly contemplate.
+#   ACCEPTED and RECORDED against AC6 as a refresh-failure overlay, ⛔ not a new primary state.
+#   ⭐ 12 real bugs/gaps FOUND AND FIXED in the first pass's own patches: per-row KYC decrypts could
+#   push concurrent KMS calls to 2× the intended cap (verified `DIRECTORY_DECRYPT_CONCURRENCY = 8`,
+#   worst case was 16) — halved; the pairing guard ran AFTER paying for two KMS decrypts it might
+#   discard — moved before them; the `Promise.all`→sequential comment asserted an UNVERIFIED
+#   "protocol-multiplexing footgun" — checked (`pg` already serializes queries on one connection
+#   regardless), comment corrected, the REAL still-open gap (`total` vs `items` under READ COMMITTED)
+#   recorded in `deferred-work.md` rather than left implied-fixed; `formatClosedAtIst` had no
+#   malformed-input guard (would have rendered literal "NaN-NaN-NaN"); `fundingOutcome`'s i18n-key
+#   lookup used template-string interpolation with NO compile-time exhaustiveness — replaced with an
+#   explicit switch + `never` guard (mirroring the public `framingFor`); the inline banner's retry
+#   button called `refetch()` unconditionally, which does NOT retry a page that failed via
+#   `fetchNextPage` (only re-fetches already-cached pages) — fixed to call the right one; Task 3's
+#   story text was never tightened to name the fail-soft exception (only the code doc-block was) —
+#   fixed; `formatClosedAtIst`/`outcomeFramingKey` had ZERO real unit tests (source-scans only) —
+#   extracted into a new plain-`.ts` module (`format.ts`) specifically so they're callable directly
+#   (`MemberDriveList.tsx` itself cannot be imported in this repo's pure-Vitest harness — confirmed by
+#   trying), and added the IST date-rollover boundary case, the malformed-input case, exhaustive
+#   enum-mapping and the out-of-enum throw; the pairing-guard test covered only ONE direction of the
+#   two-way invariant — added the mirror; only the deceased-name decrypt-failure path was tested, not
+#   the nominee path — added; the comment-stripper fix shipped with no regression test for either
+#   half of its own claim — added both; the microcopy numeral-plant test picked its target via
+#   `.find(v => v.length > 0)` (unnamed, order-dependent) — now targets the named `error` key.
+#   ⛔ 4 claims VERIFIED AND DISMISSED, not assumed: a raw `Error` leaking to the client (checked
+#   `error-mapping/index.ts` — every uncaught error already returns a generic envelope); an
+#   `onEndReached` retry-storm (the app's global `QueryClient` already sets `retry: 1`, matching the
+#   existing `usePollsQuery` precedent); `poolLetterCode` emptiness (a bijective base-26 encoding of
+#   `poolIndex + 1 ≥ 1` is always non-empty by construction); pagination drift under concurrent
+#   writes (the same pre-existing, disclosed READ COMMITTED gap, not novel to this patch).
+#   ⭐ Full suites re-run GREEN again. ⛔ Rows unchanged: `11b-17` / `11b-3b` / `6-18` `ready-for-dev`;
+#   `11b-16` `withdrawn`; epic-8 + epic-11b `in-progress`.)
+# last_updated: 2026-09-09g (✅⭐⭐ **`11b-15` CODE REVIEW APPLIED — `review` → `done`.**
+#   `bmad-code-review`, three parallel layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor)
+#   against `c2dd787c..HEAD` (excl. generated `openapi/v1.yaml`). ⭐ **19 findings, triaged: 4
+#   `decision-needed` (all resolved by BigDev — 2 became patches, 2 resolved with NO code change), 12
+#   `patch`, 1 `defer`, 2 dismissed as noise.** ⭐ ALL 14 `[Review][Patch]` items applied in one pass.
+#   ⚠⛔ **THE TWO REAL DEFECTS:** (1) AC3's `member ≥ public` floor was unmet AT RENDER TIME —
+#   `closedAt`, `confirmedPercentage`, `fundingOutcome` existed on the contract but `DriveRow` never
+#   referenced them, so a member saw no close date/outcome framing on a closed drive and no progress
+#   percentage on a live one, both of which the public index shows for the same drive; the
+#   `MEMBER_COUNTERPART` field-floor test only checked the contract KEY exists, not that it renders.
+#   ⭐ RESOLVED: wire all three in (BigDev's call) — now rendered in `DriveRow`, reusing the SAME
+#   Trustee-ratified `outcome.*` text the public index's `close_of_cycle_framing` composes. (2) AC7's
+#   read was paginated end to end (contract/route/domain) but the CLIENT never asked for page 2 —
+#   `useMemberDriveListQuery` took no `page` argument and never read `total`. ⭐ FIXED: `useInfiniteQuery`
+#   + `onEndReached`, mirroring this app's own prior `usePollsQuery` code-review patch.
+#   ⭐ Also fixed: sequential (now concurrent) per-row KYC decrypts; `listMemberPariwarDrives`/
+#   `countMemberPariwarDrives` off `Promise.all` on the same tx handle (a connection-multiplexing
+#   footgun); a NEW runtime guard (`satisfiesMemberDriveLiveRowPairing`) before a row reaches the
+#   wire; the fail-loud/fail-soft doc-block tightened to name the per-field decrypt exception
+#   explicitly; a forced-failure test finally proving the route's own "must 5xx" claim (none existed
+#   before — every test asserted `200`); a background-refetch failure no longer hides already-loaded
+#   drives behind the full error screen; the no-family a11y label gained a distinguishing `{code}`
+#   token; the `useCallback([t, locale])` memoization no-op fixed to `[locale]`
+#   ([[project_uset_fresh_closure_memo_trap]]); a hardcoded `·` moved into the i18n layer; the
+#   microcopy `codeOnly` comment-stripper anchored to line-start (a `/*`-like sequence inside a string
+#   literal could have corrupted it); the Hindi numeral-discipline test now also checked against a
+#   REAL committed string, not only an invented fixture; and the AC7 "lockstep test" the contract's own
+#   doc-block claimed existed was actually written — ⚠⛔ **`@twt/domain` may ⛔ NOT import
+#   `@twt/contracts`** (a turbo cycle, the SAME constraint `nominee-bank-masking.test.ts:223-224`
+#   already records) ⇒ the lockstep test lives in `apps/api`, ⛔ not `packages/domain`.
+#   ⭐ **TWO DECISIONS RESOLVED WITH NO CODE CHANGE:** the old `SahyogVivranEntry` external link-out
+#   stays alongside the new in-app tab, INTENTIONALLY (BigDev's call — friction-budget.md untouched);
+#   and the nominee-name exposure across a Pariwar's whole drive history needs NO fresh Panel ruling —
+#   `-190` cl.2 already covers it (existing authority, ⛔ not new disclosure).
+#   ⭐ Full suites re-run GREEN: domain 135/135 files (2039 tests) · api 44/44 (375) · mobile 32/32
+#   (482) · public 24/24 (513) · the i18n parity gate · the microcopy gate. ⛔ Rows unchanged:
+#   `11b-17` / `11b-3b` / `6-18` `ready-for-dev`; `11b-16` `withdrawn`; epic-8 + epic-11b
+#   `in-progress`.)
 # last_updated: 2026-09-09f (✅⭐⭐ **`11b-15` IMPLEMENTED — `in-progress` → `review`. ALL NINE ACs
 #   SATISFIED; ALL TASKS CLOSED. `ci:local` 34/34 GREEN incl. live-DB `integration-tests`.**
 #   ⭐ Four commits: `fdc2d964` (governance-first, ⛔ no code) · `e9e5adcb` (the read + route) ·
@@ -17411,7 +17488,7 @@ development_status:
   # reading `-211` cl.2 departed from. ⚠ Two ruled money forms LIFTED into `@twt/i18n` (⛔ not forked);
   # `apps/public`'s 44 render tests pass unchanged ⇒ ⛔ no public behaviour change.
   # ⚠ RED-GREEN ⛔ not strictly followed (Task 6 holds all tests) — ⛔ stated, ⛔ not glossed.
-  11b-15-member-drive-list-fourth-tab: review
+  11b-15-member-drive-list-fourth-tab: done
   # ⭐ 11b-16 — STORY **G**, the SEVENTH, added at `-197`/`-198` after E's authoring found a FOURTH
   # `-189` cl.3 inversion. ⛔ NOT in `epics.md` — owes an ANNOTATION.
   # ⛔⛔ **IT RUNS BEFORE E** (`-198` cl.2) — the name form changes FIRST, so E's list is built into a

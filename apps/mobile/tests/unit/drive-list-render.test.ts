@@ -28,6 +28,8 @@ import { MemberDriveListEntry } from '@twt/contracts'
 import { getCatalog, t } from '@twt/i18n'
 import { describe, expect, it } from 'vitest'
 
+import { IST_OFFSET_MS, formatClosedAtIst, outcomeFramingKey } from '../../components/drive-list/format'
+
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..')
 const read = (rel: string): string => readFileSync(path.join(repoRoot, rel), 'utf8')
 
@@ -50,10 +52,21 @@ const layout = read('apps/mobile/app/(tabs)/_layout.tsx')
  * the assertions using it are token-presence checks, and `codeOnly` only has to be right about
  * comments. ⭐ Assertions ABOUT the doc-blocks (the 10.15 supersession) deliberately read the RAW
  * source instead.
+ *
+ * [Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab (2026-09-09): the BLOCK
+ * comment strip used to match a block-comment OPENER anywhere in the source, so a string literal
+ * containing that same two-character sequence would be misread as a comment opener and everything up
+ * to the next comment-closer (including real code) would vanish from `codeOnly`. ⭐ Every block
+ * comment in this codebase's own style — plain JSDoc-style AND JSX's curly-braced form — starts at
+ * the beginning of a line (after only whitespace, and for the JSX form one optional `{`) — the SAME
+ * constraint line comments already carry, one line below — so anchoring the opener there closes the
+ * gap without becoming a parser: an opener appearing mid-line, after real code, can no longer be
+ * mistaken for one. The optional trailing `}` swallows the JSX form's closer the same way the
+ * un-anchored version always did.
  */
 const codeOnly = (src: string): string =>
   src
-    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, '')
     .replace(/^[ \t]*\/\/.*$/gm, '');
 
 const listCode = codeOnly(list)
@@ -61,6 +74,41 @@ const layoutCode = codeOnly(layout)
 
 const NS = 'member-drive-list'
 const SHARED = 'sahyog-shared'
+
+describe('⭐⭐ [Review][Patch] code review of 11b-15 (2026-09-09), SECOND pass — `codeOnly` itself, both directions', () => {
+  // ⚠⛔ BEFORE THIS TEST the anchored-opener fix (above) shipped with reasoning in a comment but no
+  // test locking in EITHER of the two properties it claims: that a real block comment is still
+  // stripped, and that a `/*`-like sequence inside a string literal NOT at line-start now survives.
+  it('⭐ a real, line-anchored block comment is still stripped', () => {
+    const src = [
+      'const x = 1',
+      '/**',
+      ' * a real doc comment',
+      ' */',
+      'const y = 2',
+    ].join('\n')
+    const result = codeOnly(src)
+    expect(result).not.toContain('a real doc comment')
+    expect(result).toContain('const x = 1')
+    expect(result).toContain('const y = 2')
+  })
+
+  it('⭐ the JSX curly form `{/* ... */}` is still stripped when it opens a line', () => {
+    const src = ['const a = 1', '{/* a jsx comment */}', 'const b = 2'].join('\n')
+    const result = codeOnly(src)
+    expect(result).not.toContain('a jsx comment')
+  })
+
+  it('⛔⛔ a `/*`-like sequence INSIDE A STRING LITERAL, not at line-start, now SURVIVES — the bug this fix closes', () => {
+    // ⚠ Before the anchored fix, this line's `/*` (mid-line, after `const url = `) was misread as a
+    // comment opener, and everything up to the NEXT real `*/` in the file — including subsequent real
+    // code — would have vanished from `codeOnly`.
+    const src = ['const url = "example.com/*not-a-comment*/path"', 'const z = 3'].join('\n')
+    const result = codeOnly(src)
+    expect(result).toContain('example.com/*not-a-comment*/path')
+    expect(result).toContain('const z = 3')
+  })
+})
 
 describe('⭐⭐ AC6 / Trap 3 — empty · loading · error render OUTSIDE the list', () => {
   it('⛔ the FlashList mounts ONLY in the populated branch — never as a ListEmptyComponent', () => {
@@ -196,11 +244,35 @@ describe('⭐ AC5 / family 13 — every labelled container is an accessibility e
     expect(list).toContain("t('row.a11y.no_family'")
     for (const locale of ['en', 'hi'] as const) {
       const full = t('row.a11y', { family: 'X', stage: 'S', count: '1', amount: 'A' }, { locale, namespace: NS })
-      const noFamily = t('row.a11y.no_family', { stage: 'S', count: '1', amount: 'A' }, { locale, namespace: NS })
+      const noFamily = t(
+        'row.a11y.no_family',
+        { code: 'Z', stage: 'S', count: '1', amount: 'A' },
+        { locale, namespace: NS },
+      )
       expect(full).toContain('X')
       expect(noFamily).not.toContain('X')
       // ⛔ The no-family arm must carry NO `{family}` token left to throw on.
       expect(getCatalog(locale, NS)?.['row.a11y.no_family']).not.toContain('{family}')
+    }
+  })
+
+  it('⭐⭐ [Review][Patch] code review of 11b-15 (2026-09-09) — the NO-FAMILY variant carries an IDENTIFYING token, so two nameless rows are distinguishable', () => {
+    // ⚠⛔ BEFORE THIS PATCH the no-family sentence carried NO token distinguishing one nameless row
+    // from another, even though the VISIBLE fallback (`entry.deceasedMemberName ?? entry.poolLetterCode`)
+    // already could. A screen-reader user could not tell two nameless drives apart.
+    expect(list).toContain('code: entry.poolLetterCode')
+    for (const locale of ['en', 'hi'] as const) {
+      const rowA = t(
+        'row.a11y.no_family',
+        { code: 'A-01', stage: 'S', count: '1', amount: 'A' },
+        { locale, namespace: NS },
+      )
+      const rowB = t(
+        'row.a11y.no_family',
+        { code: 'A-02', stage: 'S', count: '1', amount: 'A' },
+        { locale, namespace: NS },
+      )
+      expect(rowA).not.toBe(rowB)
     }
   })
 
@@ -210,6 +282,37 @@ describe('⭐ AC5 / family 13 — every labelled container is an accessibility e
     const row = listCode.slice(listCode.indexOf('function DriveRow'))
     expect(row).toContain('entry.deceasedMemberName ?? entry.poolLetterCode')
     expect(row).not.toMatch(/if \(entry\.deceasedMemberName === null\) return null/)
+  })
+})
+
+describe('⭐⭐ [Review][Patch] code review of 11b-15 (2026-09-09) — the read is genuinely paginated, and a background refetch failure does not hide cached data', () => {
+  it('⛔ the client asks for a NEXT page — `onEndReached` wired to `fetchNextPage`', () => {
+    // ⚠⛔ BEFORE THIS PATCH the hook fetched exactly one page and never read `total`; a Pariwar with
+    // more drives than one page could never see the remainder despite AC7's read being paginated
+    // end to end (contract, route, domain). ⭐ Mirrors this app's own `usePollsQuery` shape.
+    expect(listCode).toContain('onEndReached')
+    expect(listCode).toMatch(/if \(hasNextPage && !isFetchingNextPage\) void fetchNextPage\(\)/)
+  })
+
+  it('⭐ a background refetch failure keeps rendering cached data, with an inline banner — ⛔ never the full error screen', () => {
+    // ⚠⛔ THE FULL-SCREEN error state is now gated on `data === undefined` (nothing cached), ⛔ not on
+    // `isError` alone — a failed retry/next-page fetch with ALREADY-LOADED pages falls through to an
+    // inline banner instead of hiding a Pariwar's own drive list.
+    expect(listCode).toMatch(/if \(isError && data === undefined\)/)
+    expect(listCode).not.toMatch(/if \(isError \|\| !data\)/)
+  })
+})
+
+const hookSrc = read('apps/mobile/components/drive-list/useMemberDriveListQuery.ts')
+
+describe('⭐⭐ [Review][Patch] code review of 11b-15 (2026-09-09) — the hook is `useInfiniteQuery`, page-keyed', () => {
+  it('⛔ `useQuery` (a single, unpaginated page) is GONE', () => {
+    expect(hookSrc).toContain('useInfiniteQuery')
+    expect(hookSrc).not.toMatch(/\buseQuery\(/)
+  })
+
+  it('⭐ the next-page test is the SAME "more rows exist past this window" shape the public index uses', () => {
+    expect(hookSrc).toMatch(/lastPage\.page \* lastPage\.limit < lastPage\.total/)
   })
 })
 
@@ -234,6 +337,97 @@ describe('⭐⭐ AC8b — लक्ष्य renders only when the key is PRESEN
     for (const locale of ['en', 'hi'] as const) {
       expect(t('drive_target', { amount: '₹ 8 lakh' }, { locale, namespace: SHARED })).toContain('₹ 8 lakh')
     }
+  })
+})
+
+describe('⭐⭐ [Review][Patch] code review of 11b-15 (2026-09-09) — AC3\'s floor, WIRED into the render', () => {
+  // ⚠⛔ RESOLVED [Review][Decision], 2026-09-09: the Acceptance Auditor found `closedAt`,
+  // `confirmedPercentage` and `fundingOutcome` present on the contract but never referenced by
+  // `DriveRow` — a member saw no close date/outcome framing on a closed drive and no progress
+  // percentage on a live one, both of which the public index shows for the same drive. This block
+  // pins that the three are now referenced.
+  it('⛔ `closedAt` is rendered', () => {
+    expect(listCode).toContain('entry.closedAt === null')
+    expect(listCode).toContain("t('row.closed_on'")
+  })
+
+  it('⛔ `confirmedPercentage` is rendered', () => {
+    expect(listCode).toContain('entry.confirmedPercentage === null')
+    expect(listCode).toContain("t('row.progress'")
+  })
+
+  it('⛔ `fundingOutcome` is rendered, and ⛔ NEVER on a `live` row', () => {
+    expect(listCode).toContain('entry.fundingOutcome === null || isLive')
+    expect(listCode).toContain('outcomeFramingKey(entry.fundingOutcome)')
+    // ⭐ Every value the enum admits resolves in both locales — driven by the REAL contract enum.
+    for (const outcome of MemberDriveListEntry.shape.fundingOutcome.unwrap().options) {
+      for (const locale of ['en', 'hi'] as const) {
+        expect(
+          t(`outcome.${outcome}`, undefined, { locale, namespace: NS }).trim().length,
+        ).toBeGreaterThan(0)
+      }
+    }
+  })
+})
+
+describe('⭐⭐ [Review][Patch] code review of 11b-15 (2026-09-09), SECOND pass — `format.ts` REAL unit tests', () => {
+  // ⚠⛔ THESE ARE REAL CALLS, ⛔ NOT source-scans. `MemberDriveList.tsx` cannot be `import`ed in this
+  // pure-Vitest (no `@testing-library/react-native`) harness — confirmed by trying: importing it
+  // throws `SyntaxError: Unexpected token 'typeof'` from a transitive React Native dependency's Flow
+  // syntax. `format.ts` was extracted specifically because it has NO such imports, so it CAN be
+  // called directly and its OUTPUT checked — not merely its presence in source text.
+
+  it('⭐ `formatClosedAtIst`\'s offset matches the public index\'s own, TEXTUALLY pinned', () => {
+    // ⚠ `apps/mobile` cannot `import` from `apps/public` (a separate app, not a shared package) any
+    // more than it could call its NOT-exported `formatClosedAt` directly — so this reads the public
+    // source as TEXT (this file's own established `read()` pattern, used for `list`/`layout` above)
+    // and confirms the two files declare the IDENTICAL offset expression, rather than merely trusting
+    // the doc-comment's claim of parity.
+    const publicSource = read('apps/public/src/lib/sahyog-render.ts')
+    expect(publicSource).toContain('export const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;')
+    expect(IST_OFFSET_MS).toBe(5.5 * 60 * 60 * 1000)
+  })
+
+  it('⭐ formats an ordinary IST-same-day instant correctly', () => {
+    // 00:00 UTC on 1 Jan 2026 + 5:30 = 05:30 IST, same calendar day.
+    expect(formatClosedAtIst('2026-01-01T00:00:00.000Z')).toBe('01-01-2026')
+  })
+
+  it('⭐⭐ the IST date-ROLLOVER boundary — the classic UTC+5:30 bug class', () => {
+    // 18:29 UTC + 5:30 = 23:59 IST — still the SAME day.
+    expect(formatClosedAtIst('2026-01-01T18:29:00.000Z')).toBe('01-01-2026')
+    // 18:30 UTC + 5:30 = 00:00:00 IST the NEXT day — exactly on the boundary.
+    expect(formatClosedAtIst('2026-01-01T18:30:00.000Z')).toBe('02-01-2026')
+    // 20:00 UTC (a late-evening close, the case most likely to be gotten wrong) + 5:30 = 01:30 IST
+    // the next day.
+    expect(formatClosedAtIst('2026-01-01T20:00:00.000Z')).toBe('02-01-2026')
+  })
+
+  it('⛔⛔ [Review][Patch] an unparseable instant returns `null`, ⛔ NEVER the literal "NaN-NaN-NaN"', () => {
+    expect(formatClosedAtIst('not-a-real-date')).toBeNull()
+    expect(formatClosedAtIst('')).toBeNull()
+  })
+
+  it('⭐ `outcomeFramingKey` maps every enum member to its key, EXHAUSTIVELY — driven by the REAL contract enum', () => {
+    const expected: Record<string, string> = {
+      fully_funded: 'outcome.fully_funded',
+      partial: 'outcome.partial',
+      under_funded: 'outcome.under_funded',
+    }
+    for (const outcome of MemberDriveListEntry.shape.fundingOutcome.unwrap().options) {
+      expect(outcomeFramingKey(outcome as 'fully_funded' | 'partial' | 'under_funded')).toBe(
+        expected[outcome],
+      )
+    }
+  })
+
+  it('⛔⛔ [Review][Patch] a value OUTSIDE the enum throws, rather than resolving to an unmapped `t()` key', () => {
+    // ⚠ Simulates what a WIDENED wire enum would do before its i18n key existed — the exhaustiveness
+    // guard's whole reason to exist. `as any` is deliberate: this is the one place that must bypass
+    // the type system to prove the RUNTIME guard, not just the compile-time one.
+    expect(() => outcomeFramingKey('some_future_outcome' as any)).toThrow(
+      /unhandled funding outcome/,
+    )
   })
 })
 

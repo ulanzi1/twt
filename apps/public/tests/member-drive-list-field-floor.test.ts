@@ -27,6 +27,17 @@
 // ⚠ A future story that gives the member list ITS OWN composed sentence does ⛔ not weaken this —
 // but it must ⛔ not remove an input from the mapping below to do it.
 //
+// ⚠⛔ **[Review][Decision] RESOLVED 2026-09-09, code review of this story — THREE OF THESE INPUTS
+// ARE NOW ALSO RENDERED, ⛔ NOT ONLY CARRIED AS DATA.** `closedAt`, `confirmedPercentage` and
+// `fundingOutcome` were present on the contract from the start but `DriveRow` never referenced them
+// — the Acceptance Auditor found a member saw no close date/outcome framing on a closed drive and
+// no progress percentage on a live one, both of which the public index shows for the same drive.
+// ⭐ Fixed in `MemberDriveList.tsx`'s `DriveRow` — its own composed sentence for `fundingOutcome`
+// (`outcome.*`, `member-drive-list.json`), reusing the SAME Trustee-ratified text the public index's
+// `close_of_cycle_framing` composes. ⛔ Pinned by SOURCE-SCAN in
+// `apps/mobile/tests/unit/drive-list-render.test.ts`, ⛔ not here — this file has no reason to
+// import a mobile component, and the render-side assertion belongs beside the component it checks.
+//
 // ── ⚠ SCOPE, INHERITED VERBATIM ────────────────────────────────────────────────────────────────
 // cl.3 is Trustee-scoped by `2026-09-04-195` **cl.1** to the **drive data class** and the six 11b
 // split stories. ⛔ It is ⛔ NOT a universal invariant and must ⛔ not be generalised from this file.

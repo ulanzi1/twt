@@ -23,12 +23,19 @@
 
   "row.a11y": "{family}, {stage}। {count} योगदान पुष्ट। अब तक {amount} का योगदान।",
   "$comment.row_a11y": "⭐ THE ROW'S ACCESSIBLE NAME (AC5, family 13) — the SAME facts the row shows visually, ⛔ never extra information. ⛔ `t()` THROWS on an unsupplied token: supply ALL FOUR.",
-  "row.a11y.no_family": "{stage}। {count} योगदान पुष्ट। अब तक {amount} का योगदान।",
-  "$comment.row_a11y_no_family": "⚠⛔ THE VARIANT IS WHAT STOPS A CRASH — `deceasedMemberName` is nullable and `t()` THROWS on an unsupplied token, so resolving `row.a11y` on such a row would take down the WHOLE list.",
+  "row.a11y.no_family": "{code}, {stage}। {count} योगदान पुष्ट। अब तक {amount} का योगदान।",
+  "$comment.row_a11y_no_family": "⚠⛔ THE VARIANT IS WHAT STOPS A CRASH — `deceasedMemberName` is nullable and `t()` THROWS on an unsupplied token, so resolving `row.a11y` on such a row would take down the WHOLE list. [Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab (2026-09-09): `{code}` added so a screen reader can distinguish two nameless rows.",
 
-  "row.contributions": "{count} पुष्ट",
-  "row.amount": "{amount} का योगदान",
+  "row.summary": "{amount} का योगदान · {count} पुष्ट",
+  "$comment.row_summary": "[Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab (2026-09-09): replaces the separate `row.amount` / `row.contributions` calls, which joined with a bare `·` written directly in the component's JSX rather than composed through this layer.",
   "row.closed_on": "{date} को बंद",
+  "row.progress": "{percent}% पुष्ट",
+  "$comment.row_progress": "[Review][Patch] — AC3's floor: the public index shows a Live row's confirmed percentage (the meter's printed figure); the member row carries the same `confirmedPercentage` but this surface did not render it. Bare LATIN digits + `%`, same register as the public `percentLabelOf` (amendment-A2).",
+
+  "outcome.fully_funded": "इस चक्र को आवश्यक सहयोग मिला और यह पूर्ण हुआ।",
+  "outcome.under_funded": "चक्र पूर्ण हुआ। ट्रस्ट ने परिवार के प्रति अपना दायित्व निभाया।",
+  "outcome.partial": "चक्र पूर्ण हुआ। मिलान अभी जारी है।",
+  "$comment.outcome": "[Review][Patch] — AC3's floor: the public index's `close_of_cycle_framing` composes this SAME Trustee-ratified text (verbatim in `sahyog-drive.json` / `sahyog-vivran.json`) from the `fundingOutcome` enum the member row already carries; the member surface did not render it. Rendered ONLY for a non-live row.",
 
   "nominee.label": "नॉमिनी",
   "$comment.nominee": "⭐ The public wording ruled at `2026-09-04-190` cl.2, carried onto the member surface so the two agree. ⛔ The nominee's NAME only — no banking coordinates (story F's)."

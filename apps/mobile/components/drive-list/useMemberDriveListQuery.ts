@@ -1,4 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery } from '@tanstack/react-query'
+
+import type { MemberDriveListEntry, MemberDriveListResponse } from '@twt/contracts'
 
 import { memberAuth } from '../../lib/member-api'
 
@@ -36,9 +38,33 @@ import { memberAuth } from '../../lib/member-api'
  */
 const PAGE_SIZE = 20
 
+/**
+ * [Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab (2026-09-09): this was a
+ * single non-infinite query (`{ limit: PAGE_SIZE }`, no `page` argument) with a query key that never
+ * varied by page — despite the contract, route and domain layer all being built around `page`+`limit`+
+ * `total` (AC7), a Pariwar with more than one page of drives could never see the remainder. ⭐ The
+ * fix follows this app's own `usePollsQuery` precedent (`components/polls/usePollQueries.ts`, itself
+ * a code-review patch for the identical gap): `useInfiniteQuery` + the server's own `page`/`limit`/
+ * `total` triple, with `flattenDriveList` giving callers the same flat `MemberDriveListEntry[]` shape
+ * as before and `MemberDriveList.tsx` wiring `fetchNextPage`/`hasNextPage` to the list's
+ * `onEndReached`.
+ */
 export function useMemberDriveListQuery() {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['member', 'drive-list', PAGE_SIZE],
-    queryFn: () => memberAuth.memberDriveList({ limit: PAGE_SIZE }),
+    queryFn: ({ pageParam }) => memberAuth.memberDriveList({ page: pageParam, limit: PAGE_SIZE }),
+    initialPageParam: 1,
+    // ⭐ `page * limit < total` is the same "more rows exist past this window" test the public index's
+    // `hasNext` uses (`apps/public/src/lib/sahyog-render.ts`) — the request's OWN `page`/`limit`,
+    // never a locally-recomputed offset.
+    getNextPageParam: (lastPage: MemberDriveListResponse) =>
+      lastPage.page * lastPage.limit < lastPage.total ? lastPage.page + 1 : undefined,
   })
+}
+
+/** Flattens every loaded page into one list, in fetch order — the shape every screen consumes. */
+export function flattenDriveList(
+  data: { pages: MemberDriveListResponse[] } | undefined,
+): MemberDriveListEntry[] {
+  return data?.pages.flatMap((page) => page.items) ?? []
 }

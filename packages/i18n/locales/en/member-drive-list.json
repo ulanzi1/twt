@@ -23,12 +23,19 @@
 
   "row.a11y": "{family}, {stage}. {count} contributions confirmed. {amount} contributed so far.",
   "$comment.row_a11y": "⭐ THE ROW'S ACCESSIBLE NAME (AC5, family 13). ⚠ It states the SAME facts the row renders visually — it is a grouping label, ⛔ never extra information a sighted member cannot reach. ⛔ `t()` THROWS on an unsupplied token: supply ALL FOUR.",
-  "row.a11y.no_family": "{stage}. {count} contributions confirmed. {amount} contributed so far.",
-  "$comment.row_a11y_no_family": "⚠⛔ THE VARIANT IS WHAT STOPS A CRASH, ⛔ not a nicety. `deceasedMemberName` is nullable on the wire (a drive whose family name is unresolvable), and `t()` THROWS on an unsupplied token ⇒ resolving `row.a11y` there would take down the WHOLE list, not one row. ⭐ Same structural reason `sahyog-shared` ships `zero_line.no_family`.",
+  "row.a11y.no_family": "{code}, {stage}. {count} contributions confirmed. {amount} contributed so far.",
+  "$comment.row_a11y_no_family": "⚠⛔ THE VARIANT IS WHAT STOPS A CRASH, ⛔ not a nicety. `deceasedMemberName` is nullable on the wire (a drive whose family name is unresolvable), and `t()` THROWS on an unsupplied token ⇒ resolving `row.a11y` there would take down the WHOLE list, not one row. ⭐ Same structural reason `sahyog-shared` ships `zero_line.no_family`. [Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab (2026-09-09): `{code}` (the pool letter code) was ADDED so a screen-reader user can distinguish two nameless rows, matching the visible fallback (`entry.deceasedMemberName ?? entry.poolLetterCode`) which already could.",
 
-  "row.contributions": "{count} confirmed",
-  "row.amount": "{amount} contributed",
+  "row.summary": "{amount} contributed · {count} confirmed",
+  "$comment.row_summary": "[Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab (2026-09-09): replaces the separate `row.amount` / `row.contributions` calls, which joined with a bare `·` written directly in the component's JSX rather than composed through this layer.",
   "row.closed_on": "Closed {date}",
+  "row.progress": "{percent}% confirmed",
+  "$comment.row_progress": "[Review][Patch] — AC3's floor: the public index shows a Live row's confirmed percentage (the meter's printed figure); the member row carries the same `confirmedPercentage` but this surface did not render it. ⭐ Bare LATIN digits + `%`, same register as the public `percentLabelOf` (amendment-A2 — a percentage is OPERATIONAL data, identical in both locales' numerals; only the surrounding word is translated).",
+
+  "outcome.fully_funded": "The cycle closed with the support it needed.",
+  "outcome.under_funded": "The cycle closed. The trust met its commitment to the family.",
+  "outcome.partial": "The cycle closed. Reconciliation is still in progress.",
+  "$comment.outcome": "[Review][Patch] — AC3's floor: the public index's `close_of_cycle_framing` composes this SAME Trustee-ratified text (`2026-09-04-190` cl.2 lineage; verbatim in `sahyog-drive.json` / `sahyog-vivran.json`) from the `fundingOutcome` enum the member row already carries; the member surface did not render it. ⭐ Reusing the ratified strings rather than minting new ones — the same text already lives in two public namespaces for the same reason. ⛔ Rendered ONLY for a non-live row (`status !== 'live'`): the domain computes `fundingOutcome` without a live gate, but a 'the cycle closed' sentence on a still-collecting drive would be false.",
 
   "nominee.label": "Nominee",
   "$comment.nominee": "⭐ The public wording ruled at `2026-09-04-190` cl.2 ('Nominee Name'), carried onto the member surface so the two agree. ⛔ The nominee's NAME only — no account number, no IFSC, no VPA, no bank, no branch. Those are story F's per-drive view (`-190` cl.3)."

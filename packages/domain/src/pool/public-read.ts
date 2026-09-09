@@ -680,6 +680,63 @@ export function resolveDriveTargetForPublic(
   return derived;
 }
 
+/**
+ * ⭐⭐ **लक्ष्य ON THE MEMBER AXIS — the SAME derived figure, gated on `revealToMembers`.**
+ * Story 11b.15 (AC8b), `#decision-2026-09-09-211`.
+ *
+ * ⛔⛔ **WHY THIS EXISTS AS ITS OWN FUNCTION RATHER THAN A PARAMETER ON THE ONE ABOVE.**
+ * `-211` **cl.4** rules it in terms: {@link resolveDriveTargetForPublic} *"is named for its axis and
+ * takes `{ revealToPublic }`"* ⇒ add a member analogue **beside it**, ⛔ never a parameter bolted
+ * onto the public one. That is `public-read.ts:283-284`'s standing rule applied to a resolver
+ * instead of a SQL fragment: *"a consumer needing different semantics needs its OWN fragment with
+ * its own name."*
+ * ⭐ **AND IT LIVES IN THIS FILE ON PURPOSE.** The two axes are ⛔ not interchangeable and the ⛔ only
+ * way a reader can see that is to find them adjacent. ⚠ A member-axis resolver in a member module
+ * would leave `resolveDriveTargetForPublic` looking like *the* target resolver, which is the
+ * misreading cl.4 exists to prevent. ⛔ This adds ⛔ NO public behaviour — ⛔ nothing on any public
+ * surface calls it (Story 11b.15 AC8).
+ *
+ * ⚠⛔⛔ **THE GATE IS `reveal_to_members`, ⛔ NOT `reveal_to_public` — ⭐ A CHOICE, ⛔ NOT A
+ * TRANSCRIPTION** (`-211` **cl.2**). The 2026-09-07 routing note's **§13.3** said story E must show
+ * the figure *"on that same condition"*, and read literally *"that same condition"* is the **public**
+ * switch. `-211` cl.2 reads the **MEMBER** axis instead, on three recorded grounds:
+ *   · ⭐ `2026-09-04-190` **cl.7(c)** already reserves the reveal to a Superadmin *"separately for
+ *     member and for public"* ⇒ a member-only reveal is an **already-ruled-legitimate** state,
+ *     ⛔ not a new disclosure class.
+ *   · ⭐ `-189` **cl.3** (*member ≥ public*) holds in **BOTH** directions anyway, because the DB
+ *     enforces the one-way order: `NOT (reveal_to_public AND NOT reveal_to_members)` is a CHECK
+ *     constraint (`schema/pariwar_drive_target_visibility.ts:96`; mirrored at `drive-target.ts:135`
+ *     and in the admin form at `RevealSwitchesForm.tsx:105`). ⇒ public-on **implies** member-on, so
+ *     reading the member axis can ⛔ never show a member LESS than the public, and may show more.
+ *   · ⚠⛔ reading `reveal_to_public` here would leave the member switch **INERT** — shipping a
+ *     Superadmin control that changes ⛔ nothing on any screen, the precise defect the routing note
+ *     was written to surface.
+ * ⛔ **Do ⛔ not "align" this with the public resolver by reversing it.**
+ *
+ * ⭐ Every OTHER rule is deliberately identical to the public arm, and each is load-bearing there
+ * for a reason that holds here too — a zero-assignee pool, a non-positive `fixed_amount` and a
+ * product past {@link MAX_DERIVED_DRIVE_TARGET_INR} all resolve to **SILENCE**, ⛔ never `0` and
+ * ⛔ never an over-ceiling figure. ⚠ ⛔ The ceiling is `MAX_DERIVED_DRIVE_TARGET_INR`, ⛔ NOT
+ * `MAX_DRIVE_TARGET_INR`: the latter bounds a figure a human TYPED, this one a PRODUCT of two
+ * legitimate values, and ordinary configurations cross ₹10 crore.
+ *
+ * ⚠⛔ **`null` IS THE STATE AT LAUNCH, FOR EVERY PARIWAR, AND IT IS CORRECT — ⛔ NOT A GAP.** No
+ * `pariwar_drive_target_visibility` row exists for any Pariwar and the absent-row default is
+ * FAIL-CLOSED (`-190` cl.7(b)) ⇒ ⛔ no expected figure renders to any member on the day this ships.
+ */
+export function resolveDriveTargetForMembers(
+  assignedCount: number,
+  fixedAmount: number,
+  visibility: Pick<DriveTargetVisibility, 'revealToMembers'>,
+): number | null {
+  if (!visibility.revealToMembers) return null;
+  if (assignedCount <= 0) return null;
+  if (fixedAmount <= 0) return null;
+  const derived = assignedCount * fixedAmount;
+  if (derived > MAX_DERIVED_DRIVE_TARGET_INR) return null;
+  return derived;
+}
+
 /** One Sahyog Drive row, as the substrate holds it. ⛔ The name is CIPHERTEXT, not a name. */
 export interface SahyogDriveEntry {
   /** The pool's canonical id. ⚠ INTERNAL — ⛔ never serialized onto the public wire (AC8). */

@@ -36,3 +36,9 @@ export * from './self-verify.js';
 // Niyamavali §3.1 says the assertion "grants no restoration relief and carries no consequence of its
 // own", so an approval-shaped API would make a false promise STRUCTURAL (AC1).
 export * from './personal-event.js';
+// Story 11b.15 — the MEMBER'S DRIVE LIST read model: every drive in the member's OWN Pariwar at
+// `live` · `closed` · `settled`, paginated. ⭐ Its field set is a FLOOR set by the PUBLIC Sahyog
+// Drive index (`2026-09-04-189` cl.3 — *member ≥ public*, scoped by `-195` cl.1 to the drive data
+// class). ⛔ NO banking coordinates (story F's), ⛔ no contributor names, ⛔ no per-member amounts,
+// ⛔ no `spawned` rows, and ⛔ no `pariwarId` query parameter — the scope comes from the SESSION.
+export * from './member-drive-list.js';

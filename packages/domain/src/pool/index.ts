@@ -76,6 +76,14 @@ export * from './public-read.js';
 // index — with ⛔ NOTHING to decrypt: it returns ⛔ no name, ⛔ no ciphertext and ⛔ no member,
 // claim or pool identifier. ⛔ It decides a RENDER, never a BENEFIT.
 export * from './sahyog-vivran-read.js';
+// Story 11b.15 (Task 2) — the MEMBER'S DRIVE LIST read: one bounded, paginated page of every drive
+// in the member's OWN Pariwar at `live` + `closed` + `settled`, resolved in ONE set-based query.
+// ⛔⛔ Its visible-state tuple is DECLARED THERE and ⛔ NEVER imported from
+// `SAHYOG_DRIVE_VISIBLE_POOL_STATES` — the two now read identically by accident of two separate
+// rulings (`-189` cl.2(a) and `-196`), and either may move alone. Transport-free, audit-free and
+// DECRYPT-FREE by rule; the boundary at apps/api/src/modules/member-pool/ decrypts and decides the
+// name FORM. ⛔ It decides a RENDER, never a BENEFIT.
+export * from './member-drive-list.js';
 // Story 11b.10 (Task 1 + Task 2) — the pool's PUBLIC ADDRESS TOKEN: minted at spawn (128 bits of
 // CSPRNG entropy, base64url), ROTATABLE per drive, and READ server-side for the member app. It
 // bounds DISCOVERY, ⛔ not AUTHORISATION (D1) — the page it addresses answers 200 to anyone holding

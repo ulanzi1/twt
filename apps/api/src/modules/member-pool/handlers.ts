@@ -41,6 +41,7 @@ import {
   ids,
   kyc as kycDomain,
   member as memberDomain,
+  notifications,
   pool as poolDomain,
   type Db,
 } from '@twt/domain';
@@ -50,6 +51,7 @@ import type {
   ContributionHistoryResponse,
   ContributionHistoryRow,
   ContributionNoteFacts,
+  MemberDriveListResponse,
   MissedCycleEntry,
   PoolContributorListResponse,
 } from '@twt/contracts';
@@ -267,7 +269,179 @@ export function createMemberPoolHandlers(deps: AppDeps) {
         .header('cache-control', 'no-store')
         .send(Buffer.from(bytes));
     },
+
+    /**
+     * `GET /api/v1/member/drive-list` — the MEMBER'S DRIVE LIST (Story 11b.15; AC2, AC3, AC7, AC8b).
+     * Every Sahyog Drive in the member's OWN Pariwar at `live` · `closed` · `settled`, paginated,
+     * newest-first with the live drive at the top.
+     *
+     * ⭐⭐ **THE SCOPE COMES FROM THE SESSION, AND THERE IS ⛔ NO `pariwarId` PARAMETER TO PASS.**
+     * `2026-09-04-196` scopes this list to the member's own Pariwar and **family 12** forbids
+     * scoping a member read by a client-supplied id — so the contract has no such field and the
+     * value is read from `request.requestContext` here. ⛔ Do ⛔ not add one "for admin reuse": an
+     * admin view of another Pariwar's drives is a different surface with a different authority.
+     *
+     * ⚠⛔⛔ **DELIBERATELY ⛔ NOT FAIL-SOFT — AND THIS IS THE ONE READ IN THIS MODULE THAT ISN'T.**
+     * Its three siblings degrade to a self-suppressing shape (`{ assigned:false }`, the empty
+     * passbook), which is right for a widget that can honestly render nothing. ⛔ It is wrong here,
+     * for a reason **AC6 makes structural**: this surface ratifies **empty**, **loading** and
+     * **error** as three DISTINCT reachable states and requires each to be ANNOUNCED. ⇒ if a read
+     * failure degraded to `items: []`, the error state would be **unreachable by construction** — a
+     * dead branch no test could enter — and the member would be told *"your Pariwar has run no
+     * drives"* when the truth is *"we could not load them"*. ⭐ That is a FALSE statement to a
+     * member about their own Pariwar, and this codebase already refuses the shape elsewhere (*"the
+     * honest render for 'no expectation was ever set' is SILENCE"*, ⛔ never something false).
+     * ⇒ the error propagates, the route 5xxs, and the client renders its ruled error state.
+     */
+    async driveList(request: FastifyRequest): Promise<MemberDriveListResponse> {
+      const { pariwarIdStr } = memberCtx(request);
+      const pariwarId = ids.pariwarId(pariwarIdStr);
+      const now = deps.clock();
+
+      const query = request.query as { page?: number; limit?: number };
+      const page = query.page ?? 1;
+      const limit = query.limit ?? poolDomain.MEMBER_DRIVE_LIST_PAGE_SIZE_DEFAULT;
+
+      const scopeTx = await openScopeTx(deps, pariwarIdStr);
+      let ok = false;
+      try {
+        const result = await resolveDriveList(deps, scopeTx.tx, request, {
+          pariwarId,
+          page,
+          limit,
+          now,
+        });
+        ok = true;
+        return result;
+      } finally {
+        // ⚠ `ok` stays false on a throw ⇒ the scope tx rolls back. This read performs ⛔ no writes,
+        // so either close is correct for the DATA; the difference is only that a rollback records
+        // the request as failed, which is what we want when the caller is about to get a 5xx.
+        await closeScopeTx(scopeTx, ok);
+      }
+    },
   };
+}
+
+/**
+ * Resolve ONE page of the member's drive list.
+ *
+ * ⭐ The domain read returns CIPHERTEXT for both names; the FORM decision and the decrypt happen
+ * here, at the member-session-gated boundary, and ⛔ nowhere else.
+ */
+async function resolveDriveList(
+  deps: AppDeps,
+  tx: Db,
+  request: FastifyRequest,
+  ctx: {
+    readonly pariwarId: ReturnType<typeof ids.pariwarId>;
+    readonly page: number;
+    readonly limit: number;
+    readonly now: Date;
+  },
+): Promise<MemberDriveListResponse> {
+  const { pariwarId, page, limit, now } = ctx;
+  const offset = (page - 1) * limit;
+
+  const [rows, total] = await Promise.all([
+    poolDomain.listMemberPariwarDrives(tx, pariwarId, { limit, offset, now }),
+    poolDomain.countMemberPariwarDrives(tx, pariwarId),
+  ]);
+
+  // ⭐ Story 8.16 — the presentation MODE, read ONCE for the whole page. The mode is per-PARIWAR and
+  // this request serves exactly one Pariwar, so a read per row could only ever return the same
+  // answer. `2026-09-02-181` cl.2 rules it an INPUT, ⛔ never a read inside a resolver.
+  const presentationMode = await resolvePoolNamePresentationModeForRequest(tx, pariwarId);
+
+  // ⭐ ONE bounded fan-out for BOTH Tier-1 decrypts, ⛔ never two passes and ⛔ never `Promise.all`.
+  // `DIRECTORY_DECRYPT_CONCURRENCY` caps in-flight KMS round-trips; the helper preserves INPUT
+  // ORDER, which is what makes "page N is the same page N on every request" true.
+  const items = await mapWithConcurrency(rows, DIRECTORY_DECRYPT_CONCURRENCY, async (row) => {
+    // ── The DECEASED family's name ────────────────────────────────────────────────────────────
+    // ⚠⛔⛔ **⛔ NO PUBLICATION-BASIS GATE HERE, AND ITS ABSENCE IS RULED** — `2026-09-04-198`
+    // **cl.1**: the member path takes the configured **FORM** and ⛔ NOT the publication **BASIS**.
+    // ⇒ ⭐ a member sees a name ALWAYS, including on a drive where the basis is unsatisfied and the
+    // public page names nobody. ⛔ Do ⛔ not "harden" this by conjoining `NAME_PUBLICATION_AUTHORISED`
+    // — that would be a REGRESSION, and it is the exact question Task 1b ruled.
+    let deceasedMemberName: string | null = null;
+    if (row.deceasedNameCiphertext !== null) {
+      try {
+        const storedName = await decryptKycField(row.deceasedNameCiphertext, pariwarId, deps.encryption);
+        // ⭐⛔ `resolveMemberFacingDeceasedName`, ⛔ NEVER `resolvePublicMemberName`. The two share
+        // the stored mode and the form rule and differ ⛔ only in ABSENCE behaviour: the public
+        // omits a mononym under `shielded_name` (a privacy protection on a directory), the member
+        // SHOWS it (omitting a member's own drive row would be a functional regression — `8-16`
+        // Trap 5). ⛔ And ⛔ never a literal name form: `2026-08-19-136` cl.1 fails any build whose
+        // name form cannot be changed without a code change.
+        const resolved = notifications.resolveMemberFacingDeceasedName(presentationMode, storedName);
+        // ⚠ `.trim() || null`, ⛔ not `=== ''` — a whitespace-only name passes the contract's
+        // `.min(1)`, arrives TRUTHY so the client's fallback never fires, and renders a visually
+        // BLANK row where the design says otherwise (the 11a.3 finding).
+        deceasedMemberName = resolved.trim() || null;
+      } catch (err) {
+        // ⭐ OMIT THE NAME, ⛔ KEEP THE ROW. ⚠⛔ This is AC3's floor in the fail-soft: the PUBLIC
+        // index keeps a nameless row, so dropping one here would show a member LESS than a
+        // stranger — the `-189` cl.3 inversion this story exists to prevent. ⛔ It is also the
+        // deliberate INVERSE of the Yogdaan Bahi, which omits such a row (there a row with no name
+        // has no purpose; here it still carries the drive).
+        // ⛔ Letting this throw would 5xx the WHOLE page over one bad envelope.
+        request.log.warn(
+          { err, poolId: row.poolId },
+          'drive-list: deceased name decrypt failed — omitting the NAME, keeping the row',
+        );
+      }
+    }
+
+    // ── The NOMINEE's name (Trustee-ratified `2026-09-07-205` cl.1, `pii_tier: 1`) ────────────
+    // ⚠⛔ IT RIDES THE **SAME** BOUNDED MAP, ⛔ never a second pass. ⭐ ONE extra `decryptDek` per
+    // row that has an account — ⛔ not two: the claim's two accounts are EQUAL destinations for the
+    // SAME nominee (an RBI per-account-cap workaround), so the domain read returns exactly ONE
+    // ciphertext and decrypting the second would be a Tier-1 decrypt with ⛔ no authorising purpose.
+    // ⛔⛔ THERE IS ⛔ NO SECOND GATE ON IT, AND THAT IS RULED: `-190` cl.2 published the nominee
+    // name and `-205` cl.9 records that narrowing it by claim OUTCOME would be a NEW suppression
+    // rule ⛔ nobody has ruled. ⛔ Do ⛔ not invent one here.
+    let nomineeName: string | null = null;
+    if (row.nomineeAccountHolderNameCiphertext !== null) {
+      try {
+        const decrypted = await decryptKycField(
+          row.nomineeAccountHolderNameCiphertext,
+          pariwarId,
+          deps.encryption,
+        );
+        nomineeName = decrypted.trim() || null;
+      } catch (err) {
+        request.log.warn(
+          { err, poolId: row.poolId },
+          'drive-list: nominee name decrypt failed — omitting the NAME, keeping the row',
+        );
+      }
+    }
+
+    return {
+      deceasedMemberName,
+      nomineeName,
+      poolLetterCode: poolDomain.poolLetterCode(row.poolIndex),
+      poolCanonicalIdentifier: row.poolCanonicalIdentifier,
+      publicToken: row.publicToken,
+      status: row.status,
+      closedAt: row.driveClosedAt === null ? null : row.driveClosedAt.toISOString(),
+      // ⚠ `.trim() || null`, ⛔ not `=== ''` — same reason as the names above.
+      district: row.district?.trim() || null,
+      confirmedContributionCount: row.confirmedContributionCount,
+      confirmedPercentage: row.confirmedPercentage,
+      // ⭐⭐ लक्ष्य — ⚠⛔ **SPREAD, ⛔ NOT ASSIGNED**: the key is **ABSENT** when the Pariwar has not
+      // revealed the figure to MEMBERS, ⛔ never `null` (the 11b.11 shape, mirroring the public
+      // index exactly). ⭐ `resolveDriveTargetVisibility`'s absent-row default is FAIL-CLOSED ⇒
+      // ⛔ absent for every Pariwar at launch, and ⛔ that is correct rather than a gap.
+      ...(row.driveTargetInr === null ? {} : { driveTargetInr: row.driveTargetInr }),
+      // ⭐ Returned from the domain read's own `deliveredTotal`; ⛔⛔ no second `× fixedAmount` here
+      // ([[project_amount_raised_canonical_producer]]).
+      amountRaisedInr: row.amountRaisedInr,
+      fundingOutcome: row.fundingOutcome,
+    };
+  });
+
+  return { items, page, limit, total };
 }
 
 /**

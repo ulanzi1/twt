@@ -176,6 +176,10 @@ const { PoolOnboardingOutcomeRequest } = await import('../src/pool-onboarding/in
 const { ContributionFailureReportRequest } = await import('../src/contributions/index.js');
 // Story 8.6 — the Yogdaan Bahi contribution-history read model (a member's OWN self-view).
 const { ContributionHistoryResponse } = await import('../src/contributions/index.js');
+// ⭐ Story 11b.15 — the member's drive list (the fourth tab's read).
+const { MemberDriveListEntry, MemberDriveListQuery, MemberDriveListResponse } = await import(
+  '../src/contributions/index.js'
+);
 // Story 5.8 — the trustee degraded-mode declare/revoke/read DTOs (admin-session + declare_degraded_mode).
 const { DegradedModeDeclareRequest, DegradedModeDeclarationResponse, DegradedModeActiveResponse } =
   await import('../src/degraded-mode/index.js');
@@ -455,6 +459,18 @@ const contributionHistoryComponents = {
   ContributionHistoryResponse: ContributionHistoryResponse.openapi('ContributionHistoryResponse'),
 } as const;
 for (const [name, schema] of Object.entries(contributionHistoryComponents)) {
+  registry.register(name, schema);
+}
+
+// ⭐ Story 11b.15 — the MEMBER'S DRIVE LIST read component: every drive in the member's OWN Pariwar
+// at `live` · `closed` · `settled`, paginated. Its field set is a FLOOR set by the PUBLIC Sahyog
+// Drive index (`2026-09-04-189` cl.3 — *member ≥ public*). ⛔ NO banking coordinates (story F's),
+// ⛔ no contributor names, ⛔ no per-member amounts, ⛔ no `spawned` rows.
+const memberDriveListComponents = {
+  MemberDriveListEntry: MemberDriveListEntry.openapi('MemberDriveListEntry'),
+  MemberDriveListResponse: MemberDriveListResponse.openapi('MemberDriveListResponse'),
+} as const;
+for (const [name, schema] of Object.entries(memberDriveListComponents)) {
   registry.register(name, schema);
 }
 
@@ -1708,6 +1724,48 @@ registry.registerPath({
     404: errorResponse('No Contribution Note for this contribution id and caller (unknown, or not theirs)'),
     429: errorResponse('Rate limit exceeded (per-member render limit)'),
     500: errorResponse('Render failed — never a blank or partial PDF'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+// ── ⭐⭐ Story 11b.15 — the MEMBER'S DRIVE LIST (member-session-gated, the fourth tab's read) ──
+//
+// ⚠⛔ THE SCOPE IS THE SESSION'S, AND THERE IS ⛔ NO `pariwarId` PARAMETER — `2026-09-04-196` scopes
+// this list to the member's OWN Pariwar and family 12 forbids scoping a member read by a
+// client-supplied id, so the scope is ⛔ not expressible in the query by construction.
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/member/drive-list',
+  summary: 'The member’s drive list — every Sahyog Drive their Pariwar has run',
+  description:
+    'Returns every Sahyog Drive in the AUTHENTICATED member’s OWN Pariwar — the one collecting now, ' +
+    'the ones finished, and the ones fully checked (pool states live · closed · settled). A `spawned` ' +
+    'pool is EXCLUDED: it follows an approved claim before contributions open, so listing it would ' +
+    'disclose a death and its claim approval to the whole Pariwar earlier than any surface does today ' +
+    '— a disclosure change, not a filter widening.\n\n' +
+    'Each row carries at least as much as the PUBLIC Sahyog Drive index shows for the same drive ' +
+    '(Decision 2026-09-04-189 cl.3, "a member must see MORE than the public, and never less", scoped ' +
+    'by -195 cl.1 to the drive data class): the deceased family’s name in the Pariwar’s CONFIGURED ' +
+    'presentation form, the nominee’s name, the pool letter code + canonical identifier, the drive’s ' +
+    'opaque public address token, the stage (Live · Closed · Verified), the close/settle instant, the ' +
+    'posting district, the confirmed-contribution count, the money raised so far, and the ' +
+    'close-of-cycle framing.\n\n' +
+    'Two values are stage-gated to LIVE rows, mirroring the public wire exactly: the progress ' +
+    'percentage (Trustee-ratified 2026-09-08-207 cl.1 — closing the roster-size-by-division channel ' +
+    'on archived rows) and the expected figure (लक्ष्य). The expected figure is present ONLY where a ' +
+    'super_admin has switched `reveal_to_members` ON for the Pariwar (2026-09-04-190 cl.7(c); ' +
+    'Decision 2026-09-09-211) — the absent-row default is FAIL-CLOSED, so it is absent for every ' +
+    'Pariwar at launch, and the key is ABSENT rather than null when withheld.\n\n' +
+    'Deliberately NOT fail-soft, unlike its member-pool siblings: a read failure 5xxs rather than ' +
+    'degrading to an empty list, because this surface ratifies empty / loading / error as three ' +
+    'DISTINCT states and an empty list would tell a member their Pariwar has run no drives when the ' +
+    'truth is that we could not load them. Paginated (page + limit); requires a member session.',
+  tags: ['member-pool'],
+  request: { query: MemberDriveListQuery },
+  responses: {
+    200: { description: 'One page of the member’s drive list', content: jsonOf(memberDriveListComponents.MemberDriveListResponse) },
+    400: errorResponse('Validation failed (unknown query parameter, or page/limit out of bounds)'),
+    401: errorResponse('Authentication required'),
+    500: errorResponse('The drive list could not be resolved — never a silently empty list'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 

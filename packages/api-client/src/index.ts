@@ -92,6 +92,9 @@ import {
   type SelfVerifyScreenshotUploadResponse as SelfVerifyScreenshotUploadResult,
   ContributionHistoryResponse,
   type ContributionHistoryResponse as ContributionHistoryResult,
+  // ⭐ Story 11b.15 — the member's drive list (the fourth tab's read).
+  MemberDriveListResponse,
+  type MemberDriveListResponse as MemberDriveListResult,
   type ContributionIntentRequest,
   type ContributionIntentResponse as ContributionIntentResult,
   type ContributionAttestRequest,
@@ -662,6 +665,51 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
       return call(
         `${MEMBER_HOME_BASE}/contribution-history`,
         ContributionHistoryResponse,
+        undefined,
+        true,
+        'GET',
+      );
+    },
+
+    // ── ⭐⭐ The MEMBER'S DRIVE LIST (Story 11b.15 — the fourth tab's read) ─────────────────────────────
+    /**
+     * Read every Sahyog Drive in the member's OWN Pariwar — the one collecting now, the ones finished,
+     * and the ones fully checked (pool states `live` · `closed` · `settled`). One bounded page,
+     * newest-first with the live drive at the top.
+     *
+     * ⚠⛔ **THERE IS ⛔ NO `pariwarId` ARGUMENT, AND ADDING ONE WOULD BE THE DEFECT.** The scope comes
+     * from the SESSION, server-side (`2026-09-04-196`; family 12 forbids scoping a member read by a
+     * client-supplied id). ⛔ A caller cannot ask for another Pariwar's drives, by construction.
+     *
+     * ⭐ Each row carries **at least as much** as the PUBLIC Sahyog Drive index shows for the same
+     * drive (`2026-09-04-189` cl.3 — *a member must see MORE than the public, and never less*, scoped
+     * by `-195` cl.1 to the drive data class). ⛔ `spawned` drives are EXCLUDED: a spawned pool follows
+     * an approved claim before contributions open, so listing it would disclose a death and its claim
+     * approval to the whole Pariwar earlier than any surface does today.
+     *
+     * ⚠ Two values are stage-gated to **LIVE** rows, mirroring the public wire exactly:
+     * `confirmedPercentage` (Trustee-ratified `2026-09-08-207` cl.1) and `driveTargetInr` (लक्ष्य,
+     * `-204` cl.2's ruled slot). ⭐ `driveTargetInr` is present ⛔ ONLY where a `super_admin` has
+     * switched **`reveal_to_members`** ON for the Pariwar (`#decision-2026-09-09-211`), and the key is
+     * **ABSENT** rather than `null` when withheld — ⇒ ⛔ absent for every Pariwar at launch, which is
+     * correct rather than a gap.
+     *
+     * ⚠⛔ **IT IS ⛔ NOT FAIL-SOFT.** Unlike its member-pool siblings, a read failure throws rather than
+     * resolving to an empty list: the surface ratifies empty · loading · error as three DISTINCT
+     * states, and a silently empty list would tell a member their Pariwar has run no drives when the
+     * truth is that we could not load them.
+     *
+     * The 5th `'GET'` arg is REQUIRED (`call` defaults to POST, which would misfire against the
+     * `r.get(...)`-registered route) (auth).
+     */
+    memberDriveList(params?: { page?: number; limit?: number }): Promise<MemberDriveListResult> {
+      const search = new URLSearchParams();
+      if (params?.page !== undefined) search.set('page', String(params.page));
+      if (params?.limit !== undefined) search.set('limit', String(params.limit));
+      const qs = search.toString();
+      return call(
+        `${MEMBER_HOME_BASE}/drive-list${qs === '' ? '' : `?${qs}`}`,
+        MemberDriveListResponse,
         undefined,
         true,
         'GET',

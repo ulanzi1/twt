@@ -16,6 +16,17 @@
 // ([[feedback_circular_deferral_between_sibling_stories]]) — the split is resolved, and THIS is B's
 // half of it: *"consumed by both"* is satisfied by **RESOLVABILITY**, ⛔ not by a render.
 //
+// ── ✅⭐⭐ **STORY E HAS LANDED (2026-09-09) — THE FENCE ABOVE IS DISCHARGED, ⛔ NOT DELETED** ────
+// ⚠⛔ **READ THIS BEFORE ACTING ON THE PARAGRAPH ABOVE.** *"⛔ Do ⛔ NOT add a stage to a mobile
+// component"* was **B's scope fence**, and it was correct for B ⇒ ⭐ it is ⛔ NOT a standing
+// prohibition, and it is kept as the record rather than rewritten
+// ([[feedback_supersede_never_reinterpret]]).
+// ⭐ E built exactly the surface this header names: `components/drive-list/MemberDriveList.tsx` —
+// the fourth tab — renders the three stage words and the *"i"* explainer, consuming **THESE keys by
+// name** from **THIS namespace**, with the tamagui `accessible={true}` requirement discharged.
+// ⇒ ⛔ a mobile stage render is now EXPECTED; what remains forbidden — permanently — is a **SECOND
+// KEY SET**, which is what the third assertion below actually pins.
+//
 // ⭐ WHY A TEST AND NOT A NOTE: the `members.json` defect (`packages/i18n/tests/catalog-registration
 // .test.ts`) shipped a namespace whose file existed but whose `catalog.ts` lines were forgotten —
 // the parity gate stayed GREEN while every `t()` call THREW in production, because every test

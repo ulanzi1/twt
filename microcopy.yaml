@@ -419,6 +419,28 @@ scope:
     # ([[feedback_gate_scope_semantic_coverage]]: a green scan over newly-scanned files proves nothing).
     - packages/i18n/locales/hi/sahyog-vivran.json
     - packages/i18n/locales/en/sahyog-vivran.json
+    # Story 11b.15 — the `member-drive-list` namespace (the member app's FOURTH TAB: every Sahyog
+    # Drive the member's Pariwar has run). ⛔ NOT a forward-compat widening: this story LANDS real
+    # member-facing copy in a NEW namespace, and every other member-copy namespace in this repo is
+    # already scanned — leaving this one out would make it the ONLY member surface whose vocabulary,
+    # tone and numeral discipline nothing checks.
+    # Four rule families bite here, and each has a surface to bite:
+    #   · the member REGISTER — the copy addresses a contributing member about their Pariwar's
+    #     drives (user/customer/donor → canonical).
+    #   · the scarcity / panic tone rules — this list shows a LIVE drive collecting now, which is
+    #     exactly where an "only N left!" frame would be tempting.
+    #   · the blame rules — the EMPTY and ERROR states are the two most natural places to write
+    #     "you have no drives" or "check your connection". ⛔ The copy reports state and never
+    #     attributes responsibility.
+    #   · UX-DR73 numeral discipline — an OPERATIONAL register surface (counts, money, dates), so
+    #     Latin numerals, ⛔ never Devanagari digits, even under `hi`.
+    # ⚠ The three STAGE words and the ratified row sentences are ⛔ NOT in this namespace — they live
+    # in `sahyog-shared` (`2026-09-04-193` cl.3, ONE shared source) and this surface consumes them.
+    # Teeth proven (planted-violation fixtures in BOTH locales + revert-sanity), ⛔ not merely
+    # scanned — see scripts/microcopy/member-drive-list.test.ts + the Dev Agent Record
+    # ([[feedback_gate_scope_semantic_coverage]]: a green scan over newly-scanned files proves nothing).
+    - packages/i18n/locales/hi/member-drive-list.json
+    - packages/i18n/locales/en/member-drive-list.json
 
 # Allow-list — a finding is suppressed when an entry's `pattern` (regex, case-insensitive)
 # matches the finding's line AND (if `file` is set) the file path ends with it. GENUINE

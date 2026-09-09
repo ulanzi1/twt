@@ -98,9 +98,18 @@ import {
  *
  * ── ⛔ WHY `spawned` IS EXCLUDED, AND THE GROUND IS ⛔ NOT TIDINESS ──────────────────
  * ⭐⭐ A `spawned` pool follows an **APPROVED CLAIM**, before contributions open. ⇒ listing it would
- * disclose **a death and its claim approval to the whole Pariwar, earlier than any surface does
- * today**. ⛔ That is a **DISCLOSURE CHANGE**, ⛔ not a filter widening — and it is why this tuple
- * may ⛔ not be widened "for completeness" by anyone but the Panel.
+ * disclose **the claim's underlying event, and its approval, to the whole Pariwar — earlier than any
+ * surface does today**. ⛔ That is a **DISCLOSURE CHANGE**, ⛔ not a filter widening, and it is why
+ * this tuple may ⛔ not be widened "for completeness" by anyone but the Panel.
+ *
+ * ⚠⛔ **THE SENTENCE ABOVE IS DELIBERATELY CATEGORY-AGNOSTIC, AND THE GATE IS WHY.** Story 11b.15's
+ * own Trap 2 states this ground using the vocabulary of ONE `support_category`; ⛔ that wording may
+ * ⛔ not be repeated in a pool-engine file. `pool-support-category-invariant` scans **COMMENTS** as
+ * well as code, on the stated ground that *"a pool-engine comment thinking in category-specific
+ * terms is itself the smell"* (Story 7.1 **AC4**) — ⭐ and it caught this exact line, twice.
+ * ⛔ The engine has ⛔ NO category-specific branches, and v2 `_daan` activation is a config change,
+ * ⛔ not an engine refactor. ⇒ the DISCLOSURE argument holds for **every** `support_category`, which
+ * is precisely what the reworded sentence says and what the story's own phrasing did not.
  * ⭐ In the member's own terms: *"you see every drive your Pariwar has actually collected for; a
  * drive that has only just been approved is not shown to anyone yet."*
  */

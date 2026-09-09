@@ -39,7 +39,16 @@
 //
 // PURE: no fs, no db, no env, no clock.
 import type { PublicSahyogDriveResponse } from '@twt/contracts';
-import { formatCurrency, formatCurrencyShort, isLocale, type Locale } from '@twt/i18n';
+// ⚠ `formatCurrency` / `formatCurrencyShort` are ⛔ no longer imported here: Story 11b.15 moved the
+// two composite Sahyog money RULES into `@twt/i18n` (so `apps/mobile` could share them rather than
+// fork a Trustee-ratified number form), and those rules were this file's ⛔ only callers of the two
+// primitives. ⭐ The primitives are unchanged and still live beside the rules.
+import {
+  formatSahyogContributedAmount,
+  formatSahyogTargetAmount,
+  isLocale,
+  type Locale,
+} from '@twt/i18n';
 
 import { pageHref, PUBLIC_PAGE_HORIZON } from './pagination.js';
 import type { PaginationResult } from './pagination.js';
@@ -669,9 +678,13 @@ export function formatSahyogLiveAmount(
   locale: Locale,
   stage: SahyogSectionStage,
 ): string {
-  const CUT_OFF_INR = 1_000_000;
-  if (stage === 'live' && amountInr >= CUT_OFF_INR) return formatCurrencyShort(amountInr, locale);
-  return formatCurrency(amountInr, 'en');
+  // ⚠⛔ **THE RULE MOVED TO `@twt/i18n`; ⛔ THIS DID ⛔ NOT BECOME A PASS-THROUGH.** Story 11b.15
+  // needed the SAME ruled form on `apps/mobile`, which cannot import from `apps/public` — and a
+  // second copy of a Trustee-ratified number form is the fork this file refuses everywhere else.
+  // ⭐ What stayed HERE is the STAGE mapping, because the two surfaces name their stages
+  // differently: this index speaks `live`/`active`/`archive`, the member's list speaks
+  // `live`/`closed`/`verified`. ⛔ The ₹10-lakh boundary is now written in exactly ONE place.
+  return formatSahyogContributedAmount(amountInr, locale, stage === 'live');
 }
 
 /**
@@ -712,25 +725,18 @@ export function clampMeterFill(fill: unknown): number {
  *
  * ⚠⛔⛔ **THE ₹10-LAKH CUT-OFF DOES ⛔ NOT APPLY HERE.** A ₹8,00,000 target renders **`₹ 8 lakh`**,
  * ⛔ never `₹ 8,00,000`. ⇒ ⭐ **TWO DIFFERENT RULES ON ONE ROW, AND THAT IS DELIBERATE:** the
- * *contributed* amount is exact below ten lakh; the *target* never is. ⛔ Do ⛔ not "align" them —
- * the divergence is the ruling, ⛔ not an oversight.
+ * *contributed* amount is exact below ten lakh; the *target* is exact only below ONE.
+ * ⛔ Do ⛔ not "align" them — the divergence is the ruling, ⛔ not an oversight.
+ *
+ * ⚠⛔ **RELOCATED TO `@twt/i18n` BY STORY 11b.15 AND RE-EXPORTED HERE — ⛔ the body is ⛔ NOT
+ * deleted, it MOVED.** The member's drive list renders the same ruled figure and `apps/mobile`
+ * cannot import from `apps/public`, so the alternative was a SECOND copy of a Trustee-ratified
+ * number form. ⭐ The re-export keeps ⛔ every existing call site and test in this app unchanged —
+ * `sahyog.astro` and `sahyog-render.test.ts` still import it from here. ⚠ Its full rationale — the
+ * sub-lakh floor and the executed `₹ 0 lakh` finding — travelled WITH the body; read it there
+ * before changing the boundary.
  */
-export function formatSahyogTargetAmount(targetInr: number, locale: Locale): string {
-  // ⭐⭐ AND IT IS EXACT BELOW ₹1 LAKH — Trustee-ratified `2026-09-07-206` cl.3.
-  //
-  // ⚠⛔ **§13.5's *"always Lakh or Crore"* IS NARROWED, ⛔ NOT REVERSED.** ⭐ Its worked example
-  // (*"a ₹8,00,000 target renders ₹8 lakh, ⛔ never ₹8,00,000"*) STANDS, and so does its
-  // *"⛔ do ⛔ not align the two rules"* warning — ⭐ both hold **at and above** this boundary.
-  //
-  // ⛔⛔ WHAT IT COULD ⛔ NOT COVER: the short form has ⛔ no sub-lakh floor, so a small drive's
-  // DERIVED target rendered the words **`₹ 0 lakh`** — ⭐ executed: ₹300 and ₹800 both did, and
-  // ₹300 is exactly what 3 assignees × a ₹100 `fixed_amount` produces (Review finding,
-  // 2026-09-07). ⚠ AC2 already rules that a zero-shaped target is **SILENCE, ⛔ never `₹0`**; the
-  // read path enforces that for a ZERO-assignee pool, ⛔ but a NONZERO target was reaching the
-  // page as a zero STRING by way of the number form. ⇒ ⭐ this closes that door.
-  if (targetInr < 100_000) return formatCurrency(targetInr, 'en');
-  return formatCurrencyShort(targetInr, locale);
-}
+export { formatSahyogTargetAmount };
 
 /**
  * ⭐ Which rendered SECTION a column list is being built for — Story 11b.14 (AC1, Trap 4).

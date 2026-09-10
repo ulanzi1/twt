@@ -221,8 +221,20 @@ export type MemberDriveListEntry = z.output<typeof MemberDriveListEntry>;
  * bar, on a LIVE row"*). ⛔ Do ⛔ not collapse those two grounds into one comment elsewhere.
  *
  * ⛔ **DO ⛔ NOT use this to gate an inbound body.**
+ *
+ * [Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab (2026-09-09), THIRD pass.
+ * ⚠⛔ **THE PARAMETER IS NARROWED TO THE THREE FIELDS THIS PREDICATE ACTUALLY READS**, and that is a
+ * safety property, ⛔ not tidiness. It used to take a whole `MemberDriveListEntry`, so its ⛔ only
+ * producer-side caller had to build a 3-field literal and cast it `as MemberDriveListEntry` — which
+ * defeated the ⛔ ONE type check tying the guard to the shape it guards. ⇒ if this predicate ever
+ * reads a FOURTH field, that cast would have silently supplied `undefined` and the guard would
+ * mis-fire with ⛔ no compile error — on a guard whose whole purpose is catching the
+ * `2026-09-08-207` cl.1 roster-size-recovery channel reopening. ⭐ With `Pick`, adding a field here
+ * BREAKS THE BUILD at every call site instead. ⛔ Do ⛔ not widen it back to the full entry.
  */
-export function satisfiesMemberDriveLiveRowPairing(entry: MemberDriveListEntry): boolean {
+export function satisfiesMemberDriveLiveRowPairing(
+  entry: Pick<MemberDriveListEntry, 'status' | 'confirmedPercentage' | 'driveTargetInr'>,
+): boolean {
   const percentageOk =
     entry.status === 'live'
       ? typeof entry.confirmedPercentage === 'number'

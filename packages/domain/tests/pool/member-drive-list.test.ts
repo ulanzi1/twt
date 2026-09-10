@@ -48,7 +48,19 @@ describe('⭐⭐ AC2 / Trap 2 — this surface owns its visible-state tuple', ()
     // ⭐ THIS ASSERTION IS WHAT SURVIVES THE COINCIDENCE: the contents may match, but the two must
     // never be the SAME reference — an `export { X as Y }` or a re-export would make a future
     // public-only widening silently change what a member sees.
-    expect([...MEMBER_DRIVE_LIST_VISIBLE_POOL_STATES]).toEqual([...SAHYOG_DRIVE_VISIBLE_POOL_STATES]);
+    // [Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab (2026-09-09), THIRD pass.
+    // ⚠⛔ **A `toEqual` AGAINST THE PUBLIC TUPLE USED TO STAND HERE, AND IT WAS TRAP 2 ARRIVING
+    // THROUGH A TEST INSTEAD OF AN IMPORT.** It made a Panel-ruled **public-only** change to
+    // `SAHYOG_DRIVE_VISIBLE_POOL_STATES` fail THIS suite — pressuring the next author to "fix" the
+    // MEMBER tuple to match, which is precisely the silent coupling the comment above forbids.
+    // ⛔ The two agree TODAY by accident of two separate rulings; ⭐ either may move alone, and this
+    // file must ⛔ not be what stops one of them moving.
+    // ⇒ ⭐ what is asserted instead is this surface's OWN ruled contents (`2026-09-04-196`), stated
+    // literally, plus the reference-identity check that was always the load-bearing half.
+    expect([...MEMBER_DRIVE_LIST_VISIBLE_POOL_STATES]).toEqual(['live', 'closed', 'settled']);
+    // ⭐ THE ASSERTION THAT SURVIVES THE COINCIDENCE: the contents may match, but the two must never
+    // be the SAME reference — an `export { X as Y }` or a re-export would make a future public-only
+    // widening silently change what a MEMBER sees.
     expect(MEMBER_DRIVE_LIST_VISIBLE_POOL_STATES).not.toBe(SAHYOG_DRIVE_VISIBLE_POOL_STATES);
   });
 

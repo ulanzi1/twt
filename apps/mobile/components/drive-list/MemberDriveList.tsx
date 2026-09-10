@@ -39,6 +39,7 @@ import type { MemberDriveListEntry } from '@twt/contracts'
 import { formatCount, formatSahyogContributedAmount, formatSahyogTargetAmount } from '@twt/i18n'
 import { useLocale, useT } from '@twt/i18n/react'
 import { useCallback, useState } from 'react'
+import { RefreshControl } from 'react-native'
 import { Button, Paragraph, Text, View, YStack, XStack } from 'tamagui'
 
 import { formatClosedAtIst, outcomeFramingKey } from './format'
@@ -73,8 +74,19 @@ export function MemberDriveList() {
   // CLOSURE on every render, so depending on `t` for anything but calling it defeats memoization
   // ([[project_uset_fresh_closure_memo_trap]]).
   const { locale } = useLocale()
-  const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useMemberDriveListQuery()
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    // [Review][Patch] — code review, THIRD pass. `isRefetching` drives the pull-to-refresh spinner;
+    // `isFetchNextPageError` is what stops `onEndReached` re-firing a page fetch that just FAILED.
+    isRefetching,
+    isFetchNextPageError,
+  } = useMemberDriveListQuery()
   const [explainerOpen, setExplainerOpen] = useState(false)
 
   // [Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab (2026-09-09): deps were
@@ -126,6 +138,18 @@ export function MemberDriveList() {
       }
     })()
   }, [hasNextPage, fetchNextPage, refetch])
+
+  // [Review][Decision→Patch] — code review of 11b-15-member-drive-list-fourth-tab (2026-09-09),
+  // THIRD pass, ruled by BigDev: ⚠⛔ THE TAB HAD ⛔ NO REFRESH AFFORDANCE OF ANY KIND. `staleTime` is
+  // 1 h, `refetchOnWindowFocus`/`refetchOnReconnect` are BOTH `false` (`lib/query-client.ts:15-22`),
+  // and Expo Router keeps a tab screen MOUNTED after its first visit ⇒ `refetchOnMount` never fires
+  // either. ⇒ a drive that CLOSED kept reading **Live** with a stale percentage indefinitely, and the
+  // member had no way to update it short of killing the app. ⭐ The app already has this pattern one
+  // directory over — `app/(polls)/index.tsx:167` — and `refetch` was ALREADY destructured here,
+  // used only by the two error handlers.
+  // ⚠⛔ ⛔ NOT a bare `void refetch()`: `handleRetry`'s own comment above declares that unsafe, so the
+  // refresh rides the SAME try/catch rather than minting a second, weaker discipline in one file.
+  const handleRefresh = handleRetry
 
   // ── STATE 1: LOADING — an early return, OUTSIDE any list (Trap 3) ───────────────────────────────
   // ⭐ Distinct from absence, deliberately: the empty copy asserts that the Pariwar has run no
@@ -205,11 +229,23 @@ export function MemberDriveList() {
           gap="$2"
           borderBottomWidth={1}
           borderColor="$borderColor"
-          accessible
-          accessibilityRole="text"
-          accessibilityLiveRegion="polite"
         >
-          <Text fontFamily="$body" fontSize="$3" color="$colorPress">
+          {/* [Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab (2026-09-09),
+              THIRD pass, family 13(a)/(c). ⚠⛔ `accessible` USED TO SIT ON THE `<YStack>` ABOVE, which
+              COLLAPSES THE WHOLE SUBTREE INTO ONE ELEMENT ⇒ the retry `<Button>`'s own
+              `accessible={true}`, role, label and handler were ⛔ UNREACHABLE, and a member whose
+              pagination fetch failed was left with an announced error and ⛔ no announced way out.
+              ⭐ The FULL-SCREEN error branch above already gets this right — `accessible` on the
+              `<Text>`, the `<Button>` a SIBLING — and this banner had copied the wrong half of its
+              own precedent. ⛔ Do ⛔ not move `accessible` back onto the container. */}
+          <Text
+            fontFamily="$body"
+            fontSize="$3"
+            color="$colorPress"
+            accessible
+            accessibilityRole="text"
+            accessibilityLiveRegion="polite"
+          >
             {t('error', undefined, NS)}
           </Text>
           <Button
@@ -273,8 +309,21 @@ export function MemberDriveList() {
           populated IN PLACE. ⭐ The copy REPORTS STATE and never attributes responsibility: an
           empty list is ⛔ not a failure and must not read as one. */}
       {drives.length === 0 ? (
-        <YStack px="$5" py="$6" accessible accessibilityRole="text">
-          <Text fontFamily="$body" fontSize="$4" color="$colorPress">
+        <YStack px="$5" py="$6">
+          {/* [Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab (2026-09-09),
+              THIRD pass, family 13(d). ⚠ This was the ⛔ ONLY one of the three ratified states
+              carrying ⛔ no `accessibilityLiveRegion` — loading and error both have it — so the
+              loading → empty transition produced ⛔ NO announcement and a screen-reader member heard
+              SILENCE exactly where a sighted member sees the empty copy. ⚠ `friction-budget.md`'s
+              claim that *"the three ruled states are each ANNOUNCED"* was false for this one. */}
+          <Text
+            fontFamily="$body"
+            fontSize="$4"
+            color="$colorPress"
+            accessible
+            accessibilityRole="text"
+            accessibilityLiveRegion="polite"
+          >
             {t('empty', undefined, NS)}
           </Text>
         </YStack>
@@ -301,10 +350,54 @@ export function MemberDriveList() {
                 // `useMemberDriveListQuery.ts`. This is the app's own `usePollsQuery`/`onEndReached`
                 // shape (`app/(polls)/index.tsx`, itself a prior code-review patch for the identical
                 // gap).
+                // [Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab
+                // (2026-09-09), THIRD pass, TWO defects in the guard above:
+                // ⚠⛔ (1) IT RE-FIRED A **FAILED** PAGE FETCH ON EVERY SCROLL. `hasNextPage` is
+                // computed from the last SUCCESSFUL page, so a failed `fetchNextPage` leaves it
+                // TRUE; every subsequent gesture crossing the threshold fired the same failing
+                // request again, indefinitely, with no backoff and no visible change. ⛔ The pass-2
+                // dismissal cited the client's `retry: 1` — that bounds react-query's INTERNAL
+                // retries PER CALL, ⛔ not repeated `onEndReached` invocations. ⇒ `isFetchNextPageError`
+                // stops the automatic path; `handleInlineRetry` is the DELIBERATE one and stays.
+                // ⚠⛔ (2) A BARE `void`, which `handleRetry`'s own comment in this file declares
+                // unsafe. ⇒ the same try/catch shape, rather than two disciplines in one file.
                 onEndReached={() => {
-                  if (hasNextPage && !isFetchingNextPage) void fetchNextPage()
+                  if (!hasNextPage || isFetchingNextPage || isFetchNextPageError) return
+                  void (async () => {
+                    try {
+                      await fetchNextPage()
+                    } catch {
+                      // The inline banner above already reports it; ⛔ never a red box.
+                    }
+                  })()
                 }}
                 onEndReachedThreshold={0.5}
+                // [Review][Decision→Patch] — THIRD pass, ruled by BigDev: the tab's ONLY refresh
+                // affordance. See `handleRefresh` above for why it exists at all.
+                refreshControl={
+                  <RefreshControl refreshing={isRefetching} onRefresh={handleRefresh} />
+                }
+                // [Review][Patch] — THIRD pass, family 13(d): a page-2+ fetch was an INVISIBLE,
+                // UNANNOUNCED state. `isFetchingNextPage` was destructured and used ONLY as the
+                // re-entrancy guard above — no spinner, no footer, no live region — so a member on a
+                // slow connection saw nothing change and a screen-reader member reaching the last
+                // row heard NOTHING at all.
+                ListFooterComponent={
+                  isFetchingNextPage ? (
+                    <YStack px="$5" py="$4">
+                      <Text
+                        fontFamily="$body"
+                        fontSize="$2"
+                        color="$colorPress"
+                        accessible
+                        accessibilityRole="text"
+                        accessibilityLiveRegion="polite"
+                      >
+                        {t('loading_more', undefined, NS)}
+                      </Text>
+                    </YStack>
+                  ) : null
+                }
               />
             )
           })()}
@@ -346,27 +439,133 @@ function DriveRow({
   const amount = formatSahyogContributedAmount(entry.amountRaisedInr, locale, isLive)
   const stageWord = t(STAGE_KEY[entry.status], undefined, SHARED_NS)
 
-  // ⭐⭐ THE ROW'S ACCESSIBLE NAME — and the VARIANT is what stops a crash, ⛔ not a nicety.
-  // `deceasedMemberName` is nullable on the wire (an unresolvable family name) and `t()` THROWS on
-  // an unsupplied token ⇒ resolving `row.a11y` on such a row would take down the WHOLE list, ⛔ not
-  // one row. ⭐ Same structural reason `sahyog-shared` ships `zero_line.no_family`.
-  // [Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab (2026-09-09): `{code}`
-  // ADDED to the no-family variant. The visible fallback below already distinguishes two nameless
-  // rows by `poolLetterCode`; the accessible name did not, so a screen-reader user could not tell
-  // two nameless rows apart even though a sighted member could.
-  const rowA11y =
-    entry.deceasedMemberName === null
-      ? t('row.a11y.no_family', { code: entry.poolLetterCode, stage: stageWord, count: confirmedCount, amount }, NS)
+  // ── ⭐⭐ EVERY VISIBLE LINE IS COMPUTED AS A STRING FIRST, AND THE ACCESSIBLE NAME IS BUILT FROM
+  //    THE SAME STRINGS ───────────────────────────────────────────────────────────────────────────
+  // [Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab (2026-09-09), THIRD pass,
+  // family 13(d). ⚠⛔ **THE ROW ANNOUNCED FOUR FACTS AND RENDERED TEN.** The container below is an
+  // accessibility element with an explicit label, which by construction REPLACES its children's
+  // announcements — so लक्ष्य (AC8b), the percentage, the outcome framing, the close date, the
+  // district and the nominee were all rendered visually and ⛔ NEVER announced. ⭐ It was the INVERSE
+  // of the defect the FIRST review pass fixed: that pass added three AC3 floor fields to the VISUAL
+  // render and ⛔ never extended `row.a11y` to match, so the screen-reader member LOST ground in the
+  // very patch that gained it for everyone else — and this file's own `$comment.row_a11y` ("*states
+  // the SAME facts the row renders visually*") became false in that same commit.
+  // ⇒ ⭐⭐ **THE PARITY IS NOW STRUCTURAL, ⛔ NOT A PROMISE:** each line is computed ONCE, rendered,
+  // and joined into the label. ⛔ A future field cannot be rendered without being announced unless a
+  // later author deliberately breaks this shape. ⛔ Do ⛔ not go back to interpolating a fixed
+  // sentence.
+
+  // ⭐⭐ THE ZERO-DAY LINE — [Review][Decision→Patch], THIRD pass, ruled by BigDev.
+  // ⚠⛔ A `live` drive with ZERO confirmed contributions used to render `row.summary` unconditionally
+  // ⇒ **"₹ 0 contributed · 0 confirmed"**, on DAY ONE of every drive. ⛔ The public index does ⛔ not:
+  // it renders `zero_line.*` INSTEAD of its live line (`apps/public/src/pages/sahyog.astro:167-170`),
+  // because **the Panel GAVE that wording, in BOTH languages, when a code review showed them what a
+  // drive renders on its first day** (`2026-09-07-206` cl.4). ⇒ `member ≥ public` (AC3) read as
+  // violated by the member getting the very string the Panel replaced.
+  // ⭐ The keys already existed in both locales and this surface already imports `sahyog-shared`;
+  // ⛔ nothing is minted here — AC4's ONE shared source, consumed by name.
+  // ⚠⛔ THE VARIANT CHOICE IS THE SAFETY PROPERTY, ⛔ not a nicety: `deceasedMemberName` is nullable
+  // and `t()` THROWS on an unsupplied token, so `.full` on a nameless drive would 500 the WHOLE list.
+  const isZeroDayLive = isLive && entry.confirmedContributionCount === 0
+  const summaryLine = isZeroDayLive
+    ? entry.deceasedMemberName === null
+      ? t('zero_line.no_family', undefined, SHARED_NS)
+      : t('zero_line.full', { family_name: entry.deceasedMemberName }, SHARED_NS)
+    : t('row.summary', { amount, count: confirmedCount }, NS)
+
+  // ⭐⭐ लक्ष्य — present where, and ⛔ ONLY where, the Pariwar has revealed it TO MEMBERS
+  // (`#decision-2026-09-09-211` cl.2). ⚠ The key is ABSENT rather than null when withheld, so
+  // `=== undefined` is the correct test. ⛔ Fail-closed ⇒ ⛔ nothing at launch, for any Pariwar.
+  // ⚠⛔ ITS NUMBER FORM IS ⛔ NOT THE AMOUNT'S — the target is exact only below ₹1 lakh, the
+  // contributed amount below ₹10 lakh. ⛔ TWO RULES ON ONE ROW, deliberately (`-206` cl.3).
+  const targetLine =
+    entry.driveTargetInr === undefined
+      ? null
       : t(
-          'row.a11y',
+          'drive_target',
+          { amount: formatSahyogTargetAmount(entry.driveTargetInr, locale) },
+          SHARED_NS,
+        )
+
+  // AC3's floor: the public index shows a LIVE row's confirmed percentage. ⭐ `null` off-Live BY
+  // CONTRACT (`2026-09-08-207` cl.1), so the null check alone is an equivalent guard to `isLive`.
+  // ⚠⛔ ⛔ NOT suppressed on a zero-day row: the public meter and its printed figure render at 0 too
+  // (`sahyog.astro:703-737` gates on `typeof fill === 'number'`, ⛔ not on a non-zero count), so
+  // hiding it here would put the member BELOW the public and break AC3 in the other direction.
+  const progressLine =
+    entry.confirmedPercentage === null
+      ? null
+      : t('row.progress', { percent: String(entry.confirmedPercentage) }, NS)
+
+  // AC3's floor: the public index's `close_of_cycle_framing`, composed from the SAME Trustee-ratified
+  // text. ⚠⛔ GATED ON `!isLive`, ⛔ NOT on `fundingOutcome === null` alone — the domain computes the
+  // outcome without a live gate, and "the cycle closed" on a still-collecting drive would be false.
+  const outcomeLine =
+    entry.fundingOutcome === null || isLive
+      ? null
+      : t(outcomeFramingKey(entry.fundingOutcome), undefined, NS)
+
+  // AC3's floor: the drive's close/settle date, IST-formatted the way the public index does.
+  // ⚠ `formatClosedAtIst` returns `null` for an unparseable instant (SECOND pass) — checked HERE too,
+  // ⛔ not only inside the formatter, so a malformed date renders NOTHING rather than the literal
+  // word "null" interpolated into `row.closed_on`.
+  const closedIst = entry.closedAt === null ? null : formatClosedAtIst(entry.closedAt)
+  const closedLine = closedIst === null ? null : t('row.closed_on', { date: closedIst }, NS)
+
+  // ⭐ An honest absence, ⛔ never a blank cell.
+  // [Review][Patch] — THIRD pass: the separator, the colon AND the label/value word order used to be
+  // composed directly in this JSX — ⛔ the exact defect `row.summary` was minted to fix a few lines
+  // above, shipped in the SAME commit. ⇒ composed through the i18n layer, so a locale can render the
+  // JOIN and not merely the two operands. ⭐ `nominee.label` stays a TOKEN so the label keeps ONE
+  // definition and story F (`11b-17`) reuses it rather than re-minting it.
+  const districtText = entry.district ?? t('district.absent', undefined, NS)
+  const districtLine =
+    entry.nomineeName === null
+      ? districtText
+      : t(
+          'row.district_nominee',
           {
-            family: entry.deceasedMemberName,
-            stage: stageWord,
-            count: confirmedCount,
-            amount,
+            district: districtText,
+            nominee_label: t('nominee.label', undefined, NS),
+            nominee: entry.nomineeName,
           },
           NS,
         )
+
+  // ⭐⭐ THE ROW'S ACCESSIBLE NAME — the VARIANT is what stops a crash, ⛔ not a nicety.
+  // `deceasedMemberName` is nullable on the wire and `t()` THROWS on an unsupplied token ⇒ resolving
+  // `row.a11y` on such a row would take down the WHOLE list, ⛔ not one row. ⭐ Same structural reason
+  // `sahyog-shared` ships `zero_line.no_family`.
+  // [Review][Patch] — SECOND pass: `{code}` ADDED to the no-family variant so a screen-reader user
+  // can tell two nameless rows apart, matching the visible fallback which already could.
+  const headA11y =
+    entry.deceasedMemberName === null
+      ? t(
+          'row.a11y.no_family',
+          { code: entry.poolLetterCode, stage: stageWord, count: confirmedCount, amount },
+          NS,
+        )
+      : t(
+          'row.a11y',
+          { family: entry.deceasedMemberName, stage: stageWord, count: confirmedCount, amount },
+          NS,
+        )
+
+  // ⚠ `summaryLine` joins the announcement ⛔ ONLY on a zero-day row: off that path its two facts
+  // (count, amount) are ALREADY in `headA11y`, and repeating them would make the row announce itself
+  // twice. On a zero-day row the visible line is the Panel's sentence instead, so it is genuinely
+  // absent from the head and must be added.
+  const rowA11y = [
+    headA11y,
+    isZeroDayLive ? summaryLine : null,
+    targetLine,
+    progressLine,
+    outcomeLine,
+    closedLine,
+    districtLine,
+  ]
+    .filter((line): line is string => line !== null)
+    .join(' ')
 
   return (
     <YStack
@@ -376,8 +575,10 @@ function DriveRow({
       borderBottomWidth={1}
       borderColor="$borderColor"
       // ⭐⭐ EXPLICIT `accessible` — it GROUPS the child text into ONE announcement under the label
-      // below. ⛔ Without it a screen reader walks six separate fragments and the row's meaning is
+      // below. ⛔ Without it a screen reader walks the fragments separately and the row's meaning is
       // lost (the `PoolContributorList.tsx:246` / `panchayat/PinnedItem.tsx:107` precedent).
+      // ⚠⛔ AND BECAUSE IT GROUPS, THE LABEL IS THE ⛔ ONLY THING ANNOUNCED — which is why `rowA11y`
+      // is BUILT FROM the same strings rendered below rather than written as a fixed sentence.
       accessible
       accessibilityRole="text"
       accessibilityLabel={rowA11y}
@@ -395,76 +596,35 @@ function DriveRow({
       </XStack>
 
       <Text fontFamily="$body" fontSize="$3" color="$colorPress">
-        {/* [Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab (2026-09-09): the
-            `·` separator used to be written directly in this JSX between two separate `t()` calls —
-            moved into the composed `row.summary` string so a locale can render the join, not just
-            the two operands. */}
-        {t('row.summary', { amount, count: confirmedCount }, NS)}
+        {summaryLine}
       </Text>
 
-      {/* ⭐⭐ लक्ष्य — rendered where, and ⛔ ONLY where, the Pariwar has revealed it TO MEMBERS
-          (`#decision-2026-09-09-211` cl.2). ⚠ The key is ABSENT rather than null when withheld, so
-          `=== undefined` is the correct test. ⛔ Fail-closed ⇒ ⛔ nothing renders at launch, for any
-          Pariwar, and ⭐ that is correct rather than a gap.
-          ⚠⛔ ITS NUMBER FORM IS ⛔ NOT THE AMOUNT'S — the target is exact only below ₹1 lakh, the
-          contributed amount below ₹10 lakh. ⛔ TWO RULES ON ONE ROW, deliberately (`-206` cl.3). */}
-      {entry.driveTargetInr === undefined ? null : (
+      {targetLine === null ? null : (
         <Text fontFamily="$body" fontSize="$3" color="$colorPress">
-          {t('drive_target', { amount: formatSahyogTargetAmount(entry.driveTargetInr, locale) }, SHARED_NS)}
+          {targetLine}
         </Text>
       )}
 
-      {/* [Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab (2026-09-09), AC3's
-          floor: the public index shows a LIVE row's confirmed percentage (the meter's printed
-          figure); `confirmedPercentage` was on this row all along but was never rendered. ⭐ `null`
-          off-Live BY CONTRACT (mirroring the public wire, `2026-09-08-207` cl.1) — the null check
-          alone is therefore an equivalent guard to a `status === 'live'` one, and needs no second
-          condition. */}
-      {entry.confirmedPercentage === null ? null : (
+      {progressLine === null ? null : (
         <Text fontFamily="$body" fontSize="$2" color="$colorPress">
-          {t('row.progress', { percent: String(entry.confirmedPercentage) }, NS)}
+          {progressLine}
         </Text>
       )}
 
-      {/* [Review][Patch] — AC3's floor: the public index's `close_of_cycle_framing` composes this
-          SAME Trustee-ratified text from the `fundingOutcome` enum; the member row carries the enum
-          but never rendered it. ⚠⛔ GATED ON `status !== 'live'`, ⛔ NOT on `fundingOutcome === null`
-          alone — the domain computes `fundingOutcome` without a live gate (it can already hold a
-          value mid-cycle), and a "the cycle closed" sentence on a still-collecting drive would be
-          false. */}
-      {entry.fundingOutcome === null || isLive ? null : (
+      {outcomeLine === null ? null : (
         <Text fontFamily="$body" fontSize="$2" color="$colorPress">
-          {t(outcomeFramingKey(entry.fundingOutcome), undefined, NS)}
+          {outcomeLine}
         </Text>
       )}
 
-      {/* [Review][Patch] — AC3's floor: the public index shows the drive's close/settle date; the
-          member row carries `closedAt` (non-null exactly when a close/settle event exists — the
-          same condition a `live` row fails by construction) but never rendered it. ⭐ IST-formatted
-          the same way the public index does (`apps/public/src/lib/sahyog-render.ts`'s
-          `formatClosedAt`) — DUPLICATED rather than lifted into `@twt/i18n`: unlike the two Sahyog
-          money forms this story relocated there, this is a plain mechanical date format with no
-          Trustee ruling behind it, so a second small copy is not the fork that a second copy of a
-          RULED number form would be. */}
-      {(() => {
-        // [Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab (2026-09-09), SECOND
-        // pass: `formatClosedAtIst` now returns `null` for an unparseable instant — checked here too,
-        // ⛔ not only inside the formatter, so a malformed date renders NOTHING rather than the
-        // literal word "null" interpolated into `row.closed_on`.
-        if (entry.closedAt === null) return null
-        const formatted = formatClosedAtIst(entry.closedAt)
-        if (formatted === null) return null
-        return (
-          <Text fontFamily="$body" fontSize="$2" color="$colorPress">
-            {t('row.closed_on', { date: formatted }, NS)}
-          </Text>
-        )
-      })()}
+      {closedLine === null ? null : (
+        <Text fontFamily="$body" fontSize="$2" color="$colorPress">
+          {closedLine}
+        </Text>
+      )}
 
       <Text fontFamily="$body" fontSize="$2" color="$colorPress">
-        {/* ⭐ An honest absence, ⛔ never a blank cell. */}
-        {entry.district ?? t('district.absent', undefined, NS)}
-        {entry.nomineeName === null ? '' : ` · ${t('nominee.label', undefined, NS)}: ${entry.nomineeName}`}
+        {districtLine}
       </Text>
     </YStack>
   )

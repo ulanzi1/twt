@@ -32,6 +32,11 @@
   "row.progress": "{percent}% पुष्ट",
   "$comment.row_progress": "[Review][Patch] — AC3's floor: the public index shows a Live row's confirmed percentage (the meter's printed figure); the member row carries the same `confirmedPercentage` but this surface did not render it. Bare LATIN digits + `%`, same register as the public `percentLabelOf` (amendment-A2).",
 
+  "row.district_nominee": "{district} \u00b7 {nominee_label}: {nominee}",
+  "$comment.row_district_nominee": "[Review][Patch] \u2014 code review of 11b-15-member-drive-list-fourth-tab (2026-09-09), THIRD pass: the separator, the colon and the label/value order were composed in the component's JSX, so this locale could not influence any of the three. \u2b50 `nominee.label` stays a TOKEN so the label keeps ONE definition.",
+  "loading_more": "\u0914\u0930 \u0905\u092d\u093f\u092f\u093e\u0928 \u0932\u093e\u090f \u091c\u093e \u0930\u0939\u0947 \u0939\u0948\u0902",
+  "$comment.loading_more": "[Review][Patch] \u2014 code review of 11b-15-member-drive-list-fourth-tab (2026-09-09), THIRD pass, family 13(d) \u2014 a page-2+ fetch was invisible and unannounced. Same register as `loading`.",
+
   "outcome.fully_funded": "इस चक्र को आवश्यक सहयोग मिला और यह पूर्ण हुआ।",
   "outcome.under_funded": "चक्र पूर्ण हुआ। ट्रस्ट ने परिवार के प्रति अपना दायित्व निभाया।",
   "outcome.partial": "चक्र पूर्ण हुआ। मिलान अभी जारी है।",

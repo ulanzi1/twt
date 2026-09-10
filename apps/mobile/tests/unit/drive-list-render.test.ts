@@ -115,11 +115,29 @@ describe('⭐⭐ AC6 / Trap 3 — empty · loading · error render OUTSIDE the l
     // ⭐ The empty branch is an early-`?` sibling on `drives.length === 0`; the list mounts in the
     // `else`. ⇒ the component never crosses empty → populated IN PLACE, which is the crash.
     expect(listCode).toMatch(/drives\.length === 0/)
-    const emptyBranch = listCode.slice(
-      listCode.indexOf('drives.length === 0'),
-      listCode.lastIndexOf('FlashListAny'),
+
+    // [Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab (2026-09-09), THIRD pass.
+    // ⚠⛔⛔ **THIS ASSERTION USED TO BE A TAUTOLOGY.** It sliced
+    // `[indexOf('drives.length === 0'), lastIndexOf('FlashListAny'))` and then asserted the slice
+    // did ⛔ not contain `<FlashListAny` — but `FlashListAny` occurs EXACTLY TWICE in the source (the
+    // `as any` binding and the element), so `lastIndexOf` returned the element's own offset and the
+    // slice was DEFINED to end immediately before the string being searched for. ⇒ it could ⛔ not
+    // fail — ⛔ not even if the list were moved INSIDE the empty branch, which is the ⛔ one regression
+    // this test exists to catch ([[project_fabric_flatlist_empty_populated_crash]]).
+    // ⇒ ⭐ the slice now ends at the ternary's OWN `else` marker, and the test proves it is
+    // non-vacuous: the list must genuinely exist, and exist AFTER that marker.
+    const emptyStart = listCode.indexOf('drives.length === 0')
+    const elseMarker = listCode.indexOf(') : (', emptyStart)
+    expect(elseMarker, 'the empty/populated ternary lost its `) : (` else marker').toBeGreaterThan(
+      emptyStart,
     )
-    expect(emptyBranch).not.toContain('<FlashListAny')
+    const emptyBranch = listCode.slice(emptyStart, elseMarker)
+    expect(emptyBranch.length, 'the empty branch sliced to nothing — the shape moved').toBeGreaterThan(
+      0,
+    )
+    expect(emptyBranch).not.toContain('FlashList')
+    // ⭐ NON-VACUITY: the list exists at all, and mounts only after the else marker.
+    expect(listCode.indexOf('<FlashListAny')).toBeGreaterThan(elseMarker)
 
     // ⛔⛔ AND THE FORBIDDEN SHAPE IS NAMED, not merely avoided: `ListEmptyComponent` swaps the empty
     // state IN PLACE inside the list, which is precisely the remount the guard exists to prevent.
@@ -218,13 +236,37 @@ describe('⭐ AC5 / family 13 — every labelled container is an accessibility e
     // ⚠⛔ THE MECHANISM, not a style rule: a tamagui `<Button>` is `styled(View)` and `@tamagui/web`
     // sets `accessible` NOWHERE (verified at the installed 2.1.0) ⇒ an RN `View` is not an
     // accessibility element unless it says so, and the label/role/hint are dropped on the floor.
-    const labelCount = (listCode.match(/accessibilityLabel=/g) ?? []).length
-    const accessibleCount = (listCode.match(/accessible(\s|=\{true\})/g) ?? []).length
-    expect(labelCount).toBeGreaterThan(0)
-    expect(
-      accessibleCount,
-      'an accessibilityLabel exists without a matching explicit `accessible` — the label will never be announced',
-    ).toBeGreaterThanOrEqual(labelCount)
+    // [Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab (2026-09-09), THIRD pass.
+    // ⚠⛔ **IT USED TO COUNT THE TWO TOKENS ACROSS THE WHOLE FILE AND ASSERT `>=`.** The defect it
+    // claims to detect is PER-ELEMENT, so any element carrying `accessible` WITHOUT a label offset
+    // an element carrying a label WITHOUT `accessible` and the check passed regardless. ⇒ it could
+    // ⛔ never have caught the inline-banner defect this same pass found (a retry `<Button>` whose
+    // own `accessible={true}` was swallowed by an `accessible` PARENT) — a shape a global count is
+    // blind to by construction.
+    // ⇒ ⭐ PAIRED PER ELEMENT. This file writes one attribute per line, so each
+    // `accessibilityLabel=` is walked back to its own opening tag and the attribute block between
+    // them must carry an explicit `accessible`.
+    const lines = listCode.split('\n')
+    const labelLines = lines
+      .map((line, i) => ({ line, i }))
+      .filter(({ line }) => line.includes('accessibilityLabel='))
+    expect(labelLines.length, 'no accessibilityLabel found at all — the scan is looking at the wrong file').toBeGreaterThan(0)
+
+    for (const { i } of labelLines) {
+      let open = -1
+      for (let j = i; j >= 0; j -= 1) {
+        if (/^\s*<[A-Z][A-Za-z]*/.test(lines[j] as string)) {
+          open = j
+          break
+        }
+      }
+      expect(open, `no opening tag found above line ${String(i + 1)}`).toBeGreaterThanOrEqual(0)
+      const attrBlock = lines.slice(open, i + 1).join('\n')
+      expect(
+        /\baccessible\b(\s*=\s*\{true\})?/.test(attrBlock),
+        `line ${String(i + 1)} carries accessibilityLabel on an element with no explicit \`accessible\` — the label will never be announced`,
+      ).toBe(true)
+    }
   })
 
   it('⛔ the ROW declares `text`, ⛔ never `button`/`link` — it has no handler (story F owns detail)', () => {
@@ -241,7 +283,10 @@ describe('⭐ AC5 / family 13 — every labelled container is an accessibility e
     // ⚠⛔ THE VARIANT STOPS A CRASH, ⛔ it is not a nicety: `deceasedMemberName` is nullable on the
     // wire, and resolving `row.a11y` without `{family}` would take down the WHOLE list, not one row.
     expect(MemberDriveListEntry.shape.deceasedMemberName.isNullable()).toBe(true)
-    expect(list).toContain("t('row.a11y.no_family'")
+    // ⚠ Asserted on the KEY, ⛔ not on a one-line `t('…'` spelling — THIRD pass reformatted these
+    // calls across lines when the row's a11y label became a COMPOSITION, and a format-coupled scan
+    // fails on a change that alters ⛔ nothing it is meant to protect.
+    expect(listCode).toContain("'row.a11y.no_family'")
     for (const locale of ['en', 'hi'] as const) {
       const full = t('row.a11y', { family: 'X', stage: 'S', count: '1', amount: 'A' }, { locale, namespace: NS })
       const noFamily = t(
@@ -291,7 +336,16 @@ describe('⭐⭐ [Review][Patch] code review of 11b-15 (2026-09-09) — the read
     // more drives than one page could never see the remainder despite AC7's read being paginated
     // end to end (contract, route, domain). ⭐ Mirrors this app's own `usePollsQuery` shape.
     expect(listCode).toContain('onEndReached')
-    expect(listCode).toMatch(/if \(hasNextPage && !isFetchingNextPage\) void fetchNextPage\(\)/)
+    expect(listCode).toContain('fetchNextPage()')
+    // [Review][Patch] — THIRD pass: the guard USED TO BE `if (hasNextPage && !isFetchingNextPage)`,
+    // which re-fired a page fetch that had just FAILED on every subsequent scroll — `hasNextPage` is
+    // computed from the last SUCCESSFUL page, so it stays true. ⇒ the failure condition is now part
+    // of the guard, and this test asserts THAT rather than the shape it replaced.
+    expect(listCode).toContain('isFetchNextPageError')
+    expect(
+      listCode,
+      'onEndReached must not re-fire a failed page fetch — the failure flag left the guard',
+    ).toMatch(/if \(!hasNextPage \|\| isFetchingNextPage \|\| isFetchNextPageError\) return/)
   })
 
   it('⭐ a background refetch failure keeps rendering cached data, with an inline banner — ⛔ never the full error screen', () => {
@@ -333,7 +387,10 @@ describe('⭐⭐ AC8b — लक्ष्य renders only when the key is PRESEN
   })
 
   it('⭐ it renders story B’s ratified `drive_target` line — ⛔ no locally-minted sentence', () => {
-    expect(list).toContain("t('drive_target', { amount:")
+    // ⚠ Asserted on the KEY + its ruled amount producer, ⛔ not on a one-line spelling — see the
+    // no-family note above; THIRD pass wrapped this call across lines.
+    expect(listCode).toContain("'drive_target'")
+    expect(listCode).toContain('formatSahyogTargetAmount(entry.driveTargetInr, locale)')
     for (const locale of ['en', 'hi'] as const) {
       expect(t('drive_target', { amount: '₹ 8 lakh' }, { locale, namespace: SHARED })).toContain('₹ 8 lakh')
     }

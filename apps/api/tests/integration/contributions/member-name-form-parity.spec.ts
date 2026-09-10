@@ -63,6 +63,19 @@ const STORED_LEGAL_NAME = 'Rajesh Kumar Sharma';
 /** A single-token stored name — the Trap 5 class. `shielded_name` cannot shield it. */
 const STORED_MONONYM = 'Sunita';
 
+/**
+ * ⭐ THE ⛔ ONE DEFINITION of a fixture pool's canonical identifier.
+ *
+ * [Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab (2026-09-09), THIRD pass:
+ * `rowForPool` used to match with `poolCanonicalIdentifier.endsWith(f.poolId.slice(0, 6))` — the
+ * FIRST six characters of a UUID compared against the END of an identifier the contract documents as
+ * `P-YYYY-MM-###`. It worked only by coincidence of how this file happens to seed the column, and a
+ * SUFFIX match can collide across two fixtures. ⚠⛔ That matters because the SAME matcher decides the
+ * NEGATIVE half of the cross-Pariwar leak assertion (`expect(rowForPool(rows, theirs)).toBeUndefined()`),
+ * which is only meaningful if the matcher is EXACT.
+ */
+const canonicalIdentifierOf = (poolId: string): string => `P-2026-08-${poolId.slice(0, 6)}`;
+
 interface Fixture {
   readonly pariwarId: string;
   /** The CONTRIBUTING member — holds the session and is on the pool roster. */
@@ -165,7 +178,7 @@ async function seedSharedPool(
       cycleId: ids.cycleFreezeCommitId(cycleId),
       claimCaseId: ids.claimId(claimCaseId),
       poolIndex: 0,
-      poolCanonicalIdentifier: `P-2026-08-${poolId.slice(0, 6)}`,
+      poolCanonicalIdentifier: canonicalIdentifierOf(poolId),
       supportCategory: 'death_support',
       benefitMechanism: 'pool',
       fixedAmount: 500,
@@ -481,9 +494,9 @@ async function driveList(t: TestApp, f: Fixture): Promise<DriveListRow[]> {
   return (res.json() as { items: DriveListRow[] }).items;
 }
 
-/** The row for the fixture's own pool, by its canonical identifier. ⛔ Never `items[0]`. */
+/** The row for the fixture's own pool, by its canonical identifier — EXACT. ⛔ Never `items[0]`. */
 function rowForPool(rows: DriveListRow[], f: Fixture): DriveListRow | undefined {
-  return rows.find((r) => r.poolCanonicalIdentifier.endsWith(f.poolId.slice(0, 6)));
+  return rows.find((r) => r.poolCanonicalIdentifier === canonicalIdentifierOf(f.poolId));
 }
 
 /**
@@ -503,11 +516,22 @@ function rowForPool(rows: DriveListRow[], f: Fixture): DriveListRow | undefined 
 async function seedAssignment(t: TestApp, f: Fixture): Promise<void> {
   const scopeTx = await openScopeTx(t.deps, f.pariwarId);
   try {
-    await scopeTx.client.query(
+    const inserted = await scopeTx.client.query(
       `INSERT INTO member_pool_assignments (pool_id, member_id, pariwar_id, cycle_id, assigned_at)
        SELECT $1, $2, $3, cycle_id, now() FROM pools WHERE pool_id = $1`,
       [f.poolId, f.requester, f.pariwarId],
     );
+    // [Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab (2026-09-09), THIRD pass.
+    // ⚠⛔ `INSERT … SELECT … WHERE` inserts NOTHING and reports ⛔ NO ERROR when the SELECT matches
+    // nothing (an RLS scope miss, a null `cycle_id`, a renamed column). ⭐ This seed exists precisely
+    // to make the two "target still absent" tests NON-VACUOUS — *"without a roster the target would
+    // be null because the pool has NO EXPECTATION, ⛔ not because the switch is off"* — so an
+    // anti-vacuity guard that is itself unguarded proves nothing. ⇒ assert it actually wrote.
+    if (inserted.rowCount !== 1) {
+      throw new Error(
+        `seedAssignment wrote ${String(inserted.rowCount)} rows, expected 1 — the roster seed is vacuous and every assertion resting on it is meaningless`,
+      );
+    }
     await closeScopeTx(scopeTx, true);
   } catch (err) {
     await closeScopeTx(scopeTx, false);
@@ -698,7 +722,17 @@ describeDb('Story 11b.15 AC8b — लक्ष्य renders ⛔ ONLY on `reveal
       // ⛔ AND THE PUBLIC INDEX STILL SHOWS NOTHING — the two axes are independent, and this story
       // moves ⛔ no public surface (AC8).
       const pubRes = await t.app.inject({ method: 'GET', url: PUBLIC_DRIVE(f.pariwarId) });
-      const pubRow = (pubRes.json() as { items: Array<Record<string, unknown>> }).items[0];
+      // [Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab (2026-09-09), THIRD
+      // pass. ⚠⛔⛔ **THIS HALF USED TO PASS VACUOUSLY.** `pubRes.statusCode` was ⛔ never asserted and
+      // `items[0]` was ⛔ never asserted to EXIST, so a public route that 500'd — or simply returned
+      // `items: []` — made `pubRow` `undefined`, and `expect(undefined).not.toHaveProperty(…)`
+      // PASSES. ⇒ the load-bearing *"the two axes are independent"* claim proved ⛔ nothing in exactly
+      // the cases where it mattered most.
+      expect(pubRes.statusCode, `public drive index returned ${String(pubRes.statusCode)}: ${pubRes.body}`).toBe(200);
+      const pubItems = (pubRes.json() as { items: Array<Record<string, unknown>> }).items;
+      expect(pubItems.length, 'the public index returned no rows — the negative assertion below would be vacuous').toBeGreaterThan(0);
+      const pubRow = pubItems[0];
+      expect(pubRow).toBeDefined();
       expect(pubRow).not.toHaveProperty('driveTargetInr');
     } finally {
       await teardown(t);

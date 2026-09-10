@@ -55,7 +55,7 @@
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
-import type { MemberId, PariwarId, PoolId } from '../ids/index.js';
+import type { PariwarId, PoolId } from '../ids/index.js';
 import { clampLimit } from '../pagination.js';
 import { claims } from '../schema/claims.js';
 import { memberKycProfiles } from '../schema/member_kyc_profiles.js';
@@ -116,6 +116,39 @@ import {
 export const MEMBER_DRIVE_LIST_VISIBLE_POOL_STATES = ['live', 'closed', 'settled'] as const;
 export type MemberDriveListVisiblePoolState =
   (typeof MEMBER_DRIVE_LIST_VISIBLE_POOL_STATES)[number];
+
+/**
+ * ⭐⭐ A TOTAL WIDENING from THIS surface's tuple into the public one — a **compile-time proof**,
+ * ⛔ not a cast and ⛔ not a second stage mapping.
+ *
+ * ⚠⛔ **TRAP 2 FORBIDS A SECOND STAGE MAPPING, AND THIS IS ⛔ NOT ONE.** It mints ⛔ no stage word:
+ * `PUBLIC_STATUS_BY_POOL_STATE` remains the ⛔ ONE place `live`/`closed`/`settled` become
+ * `Live`/`Closed`/`Verified`. All this does is carry a member-tuple value into the public tuple's
+ * type ⭐ WITH THE COMPILER WATCHING.
+ *
+ * ⇒ if a later story widens {@link MEMBER_DRIVE_LIST_VISIBLE_POOL_STATES} alone — which this file's
+ * own doc-block explicitly contemplates (*"either may move alone"*) — the `never` arm stops
+ * compiling and the author is forced to decide what the new state means PUBLICLY, which is exactly
+ * what the erased `as` cast let them skip. ⛔ Do ⛔ not replace this with a cast again.
+ */
+function asPublicVisiblePoolState(
+  state: MemberDriveListVisiblePoolState,
+): SahyogDriveVisiblePoolState {
+  switch (state) {
+    case 'live':
+      return 'live';
+    case 'closed':
+      return 'closed';
+    case 'settled':
+      return 'settled';
+    default: {
+      const unreachable: never = state;
+      throw new Error(
+        `member drive list: pool state ${String(unreachable)} is visible to members but has no public counterpart — mint one deliberately`,
+      );
+    }
+  }
+}
 
 /**
  * ⭐ The page bounds. ⚠ Deliberately this surface's OWN pair rather than the public index's —
@@ -184,8 +217,6 @@ export interface MemberDriveListEntry {
   amountRaisedInr: number;
   /** The nominee's name, CIPHERTEXT. `null` when bank details were never collected. */
   nomineeAccountHolderNameCiphertext: string | null;
-  /** The consent subject — `claims.deceased_member_id`. ⚠ INTERNAL, for the decrypt only. */
-  deceasedMemberId: MemberId;
   /** Tier-1 `member_kyc_profiles.name_ciphertext` AS STORED, or `null` when there is no profile. */
   deceasedNameCiphertext: string | null;
 }
@@ -265,7 +296,6 @@ export async function listMemberPariwarDrives(
       publicToken: pools.publicToken,
       currentState: pools.currentState,
       fixedAmount: pools.fixedAmount,
-      deceasedMemberId: claims.deceasedMemberId,
       deceasedNameCiphertext: memberKycProfiles.nameCiphertext,
       district: DECEASED_DISTRICT(now),
       driveClosedAt: DRIVE_CLOSED_AT(now),
@@ -311,10 +341,17 @@ export async function listMemberPariwarDrives(
       poolIndex: r.poolIndex,
       poolCanonicalIdentifier: r.poolCanonicalIdentifier,
       publicToken: r.publicToken,
-      // ⭐ The predicate admits only the three; the cast records that rather than re-checking it.
-      // ⚠ The two tuples are structurally identical, so this cast is safe by construction — see
-      // {@link MEMBER_DRIVE_LIST_VISIBLE_POOL_STATES} for why they are still declared apart.
-      status: publicStatusForPoolState(currentState as SahyogDriveVisiblePoolState),
+      // [Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab (2026-09-09), THIRD
+      // pass. ⚠⛔ THIS USED TO BE `currentState as SahyogDriveVisiblePoolState`, justified as *"the
+      // two tuples are structurally identical, so this cast is safe by construction"* — ⛔ a claim
+      // about TODAY'S VALUES, ⛔ not about the invariant. ⚠ This file's own doc-block says the two
+      // tuples *"may move alone"*, and `PUBLIC_STATUS_BY_POOL_STATE` is deliberately typed
+      // `Record<SahyogDriveVisiblePoolState, …>` *"precisely so that widening the visible set
+      // without minting a public word FAILS TO COMPILE"* — a gate that ⭐ actually FIRED at 11b.14.
+      // ⇒ the cast was the ⛔ one call site routing around it: widen the MEMBER tuple alone and the
+      // lookup silently yields `undefined`, `status: undefined` fails response serialization, and
+      // ⛔ EVERY page of the list 5xxs for that Pariwar — ⛔ not just the new rows.
+      status: publicStatusForPoolState(asPublicVisiblePoolState(currentState)),
       // ⭐ COERCED — the raw `sql` fragment hands back an ISO STRING despite its declared type.
       driveClosedAt: coerceDriveInstant(r.driveClosedAt),
       district: r.district,
@@ -339,7 +376,6 @@ export async function listMemberPariwarDrives(
             }),
       amountRaisedInr: deliveredTotal,
       nomineeAccountHolderNameCiphertext: r.nomineeAccountHolderNameCiphertext,
-      deceasedMemberId: r.deceasedMemberId,
       deceasedNameCiphertext: r.deceasedNameCiphertext,
     };
   });

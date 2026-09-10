@@ -53,7 +53,6 @@ import type {
   ContributionNoteFacts,
   MemberDriveListQuery,
   MemberDriveListResponse,
-  MemberDriveListEntry,
   MissedCycleEntry,
   PoolContributorListResponse,
 } from '@twt/contracts';

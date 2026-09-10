@@ -389,8 +389,15 @@ async function resolveDriveList(
   // ⇒ with `mapWithConcurrency` bounding ROWS at the full `DIRECTORY_DECRYPT_CONCURRENCY`, the
   // WORST-CASE in-flight KMS call count is `DIRECTORY_DECRYPT_CONCURRENCY × 2`, not
   // `DIRECTORY_DECRYPT_CONCURRENCY` — a cap this constant exists to enforce. ⭐ Halved here so the cap
-  // holds even when every row on the page carries both ciphertexts; a row with only one (the common
-  // case — many drives have no nominee bank account yet) still gets full parallelism between rows.
+  // holds even when every row on the page carries both ciphertexts.
+  // ⚠⛔ [Review][Patch] — THIRD pass: this comment used to end *"a row with only one [ciphertext]
+  // (the common case — many drives have no nominee bank account yet) still gets full parallelism
+  // between rows"*. ⛔ THAT WAS FALSE — the halving is UNCONDITIONAL, so the common case runs at HALF
+  // the row concurrency (4 of 8) and the sentence described a bound ⛔ nobody wrote. ⭐ The honest
+  // trade is stated instead: a fixed, predictable ceiling is preferred to a per-row dynamic bound,
+  // because the cap protects a SHARED external system and a bound that varies with page content is
+  // one nobody can reason about at the KMS. ⛔ Do ⛔ not "restore" the lost parallelism without
+  // raising the global cap deliberately.
   const items = await mapWithConcurrency(
     rows,
     Math.max(1, Math.floor(DIRECTORY_DECRYPT_CONCURRENCY / 2)),
@@ -412,12 +419,19 @@ async function resolveDriveList(
     // `2026-09-08-207` cl.1 closed. ⛔ Dropping just the bad row (the per-field pattern) would hide
     // that channel reopening rather than surface it — 5xx-ing the request is what gets it into
     // monitoring/alerts immediately, rather than silently shipping degraded-but-plausible data.
+    // [Review][Patch] — THIRD pass: `driveTargetInr`'s null → ABSENT translation is written ⛔ ONCE
+    // and reused by the wire entry below. ⚠ It used to appear TWICE — here and at the spread — so
+    // changing one would have made the guard validate a shape the wire does ⛔ not carry.
+    // ⭐ AND THE `as MemberDriveListEntry` CAST IS GONE: the predicate now takes a `Pick` of exactly
+    // the three fields it reads, so this literal type-checks on its own merits and a fourth field
+    // added to the predicate BREAKS THE BUILD here instead of silently arriving `undefined`.
+    const driveTargetForWire = row.driveTargetInr === null ? undefined : row.driveTargetInr;
     if (
       !satisfiesMemberDriveLiveRowPairing({
         status: row.status,
         confirmedPercentage: row.confirmedPercentage,
-        driveTargetInr: row.driveTargetInr === null ? undefined : row.driveTargetInr,
-      } as MemberDriveListEntry)
+        driveTargetInr: driveTargetForWire,
+      })
     ) {
       request.log.error(
         { poolId: row.poolId, status: row.status },
@@ -457,6 +471,36 @@ async function resolveDriveList(
           // SHOWS it (omitting a member's own drive row would be a functional regression — `8-16`
           // Trap 5). ⛔ And ⛔ never a literal name form: `2026-08-19-136` cl.1 fails any build
           // whose name form cannot be changed without a code change.
+          // ⭐⭐ THE ERASURE BACKSTOP — [Review][Decision→Patch], code review of
+          // 11b-15-member-drive-list-fourth-tab (2026-09-09), THIRD pass, ruled by BigDev.
+          // ⚠⛔⛔ **`anonymizeMember` OVERWRITES `name_ciphertext` IN PLACE WITH AN *ENCRYPTED*
+          // `[anonymized]` SENTINEL** (`member/anonymize.ts:70,107`) and RETAINS the row ⇒ the
+          // decrypt SUCCEEDS and the sentinel would render VERBATIM where a family name belongs.
+          // ⛔ ⛔ NEITHER arm of `resolveMemberFacingDeceasedName` filters it: `full_name` returns it
+          // as-is, and `shielded_name`'s MONONYM arm returns it too (`splitFirstNameLastInitial`
+          // yields a NON-EMPTY `firstName`) ⇒ the `.trim() || null` guard below does ⛔ not catch it
+          // either, and the ratified a11y sentence would read *"[anonymized], Closed. 12
+          // contributions confirmed."*
+          // ⭐⭐ **THIS IS ⛔ NOT A NEW RULE — IT IS AN UNSWEPT ONE.** `pool-contributors`, ⭐ IN THIS
+          // SAME FILE, has carried this exact backstop all along (`fullName ===
+          // memberDomain.ANONYMIZED_SENTINEL`, further down), under a doc-block calling it *"the
+          // ONLY check in this path that is snapshot-independent"*. ⇒ reachability is ⛔ not
+          // hypothetical: the codebase already defends it unconditionally, TOCTOU-style, *"whatever
+          // the batched state read decided"*.
+          // ⚠⛔ **THE REMEDY DIVERGES FROM THAT SIBLING DELIBERATELY, AND ⛔ MUST NOT BE "ALIGNED".**
+          // `pool-contributors` OMITS the row — a contributor can be dropped. Here the erased member
+          // ⭐ IS the drive: omitting the row would hide a WHOLE DRIVE from every member of the
+          // Pariwar and put `total` at odds with what is shown. ⇒ the drive stays, the NAME goes —
+          // the row falls through this surface's existing, already-tested nameless path
+          // (`poolLetterCode` visible, `row.a11y.no_family` announced).
+          // ⛔ And ⛔ do ⛔ not "repair" this by rendering a marker row — the sibling's own warning.
+          if (storedName === memberDomain.ANONYMIZED_SENTINEL) {
+            request.log.warn(
+              { poolId: row.poolId },
+              'drive-list: erasure sentinel reached the decrypt — rendering the drive NAMELESS (state read was stale)',
+            );
+            return null;
+          }
           const resolved = notifications.resolveMemberFacingDeceasedName(presentationMode, storedName);
           // ⚠ `.trim() || null`, ⛔ not `=== ''` — a whitespace-only name passes the contract's
           // `.min(1)`, arrives TRUTHY so the client's fallback never fires, and renders a visually
@@ -521,7 +565,7 @@ async function resolveDriveList(
       // revealed the figure to MEMBERS, ⛔ never `null` (the 11b.11 shape, mirroring the public
       // index exactly). ⭐ `resolveDriveTargetVisibility`'s absent-row default is FAIL-CLOSED ⇒
       // ⛔ absent for every Pariwar at launch, and ⛔ that is correct rather than a gap.
-      ...(row.driveTargetInr === null ? {} : { driveTargetInr: row.driveTargetInr }),
+      ...(driveTargetForWire === undefined ? {} : { driveTargetInr: driveTargetForWire }),
       // ⭐ Returned from the domain read's own `deliveredTotal`; ⛔⛔ no second `× fixedAmount` here
       // ([[project_amount_raised_canonical_producer]]).
       amountRaisedInr: row.amountRaisedInr,

@@ -88,7 +88,6 @@ function liveRow(overrides: Partial<Record<string, unknown>> = {}): Record<strin
     amountRaisedInr: 1500,
     fundingOutcome: null,
     nomineeAccountHolderNameCiphertext: null,
-    deceasedMemberId: 'dm-1',
     deceasedNameCiphertext: 'ct-name',
     ...overrides,
   }

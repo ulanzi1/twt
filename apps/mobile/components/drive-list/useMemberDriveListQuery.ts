@@ -1,6 +1,10 @@
 import { useInfiniteQuery } from '@tanstack/react-query'
 
-import type { MemberDriveListEntry, MemberDriveListResponse } from '@twt/contracts'
+import {
+  MEMBER_DRIVE_LIST_PAGE_HORIZON,
+  type MemberDriveListEntry,
+  type MemberDriveListResponse,
+} from '@twt/contracts'
 
 import { memberAuth } from '../../lib/member-api'
 
@@ -57,14 +61,57 @@ export function useMemberDriveListQuery() {
     // ⭐ `page * limit < total` is the same "more rows exist past this window" test the public index's
     // `hasNext` uses (`apps/public/src/lib/sahyog-render.ts`) — the request's OWN `page`/`limit`,
     // never a locally-recomputed offset.
-    getNextPageParam: (lastPage: MemberDriveListResponse) =>
-      lastPage.page * lastPage.limit < lastPage.total ? lastPage.page + 1 : undefined,
+    //
+    // [Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab (2026-09-09), THIRD pass.
+    // ⚠⛔ **TWO WAYS THAT TEST ALONE FAILED TO TERMINATE**, both ending in a banner the member could
+    // ⛔ never dismiss:
+    // ⚠⛔ (1) **THE CONTRACT'S PAGE HORIZON WAS INVISIBLE HERE.** `MemberDriveListQuery.page` is
+    // `.max(MEMBER_DRIVE_LIST_PAGE_HORIZON)` (200). Past that the hook returned `page + 1` anyway,
+    // the route 400s, `isError` goes true WITH `data` present ⇒ the inline banner renders,
+    // `hasNextPage` is STILL true, and `handleInlineRetry` takes its `hasNextPage` branch and
+    // re-requests the SAME rejected page forever. ⭐ The public sibling bounds this already
+    // (`PUBLIC_PAGE_HORIZON`, used by `sahyog-render.ts`'s pagination builder); ⛔ nothing on the
+    // member path did. ⇒ the horizon is now READ FROM THE CONTRACT, ⛔ never re-stated as a literal.
+    // ⚠⛔ (2) **AN EMPTY PAGE NEVER TERMINATED.** `total` and `items` are read WITHOUT snapshot
+    // pinning (this story's own disclosed READ COMMITTED gap, `deferred-work.md`), so a `total` that
+    // exceeds what the list query can return left `hasNextPage` true and fetched EMPTY pages
+    // indefinitely. ⇒ a page that came back with ⛔ no rows is the end of the list, whatever `total`
+    // claims.
+    getNextPageParam: (lastPage: MemberDriveListResponse) => {
+      if (lastPage.items.length === 0) return undefined
+      if (lastPage.page >= MEMBER_DRIVE_LIST_PAGE_HORIZON) return undefined
+      return lastPage.page * lastPage.limit < lastPage.total ? lastPage.page + 1 : undefined
+    },
   })
 }
 
-/** Flattens every loaded page into one list, in fetch order — the shape every screen consumes. */
+/**
+ * Flattens every loaded page into one list, in fetch order — the shape every screen consumes.
+ *
+ * [Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab (2026-09-09), THIRD pass.
+ * ⚠⛔ **OFFSET PAGINATION OVER A MUTABLE SET RETURNS THE SAME ROW TWICE.** The order key puts
+ * `driveClosedAt IS NULL` first, so a pool reaching `live` between two page fetches sorts to index 0
+ * and shifts every row down one ⇒ `page=2`'s `offset 20` re-returns what was index 19, the same
+ * `publicToken` lands in the flat list twice, and `keyExtractor` hands FlashList a DUPLICATE KEY
+ * ("*Encountered two children with the same key*") plus recycling artefacts.
+ * ⇒ ⭐ dedupe on `publicToken`, keeping the FIRST occurrence so the member's scroll position does not
+ * jump under them.
+ * ⚠⛔ **THIS DOES ⛔ NOT FIX THE SYMMETRIC CASE, AND ⛔ MUST NOT BE READ AS DOING SO:** a drive that
+ * CLOSES between two fetches shifts rows the other way and a row is SKIPPED — silently never shown.
+ * ⛔ No client-side dedupe can recover a row the server never sent. That remains the disclosed
+ * cursor-rework gap in `deferred-work.md`; ⛔ do ⛔ not mark it closed on the strength of this.
+ */
 export function flattenDriveList(
   data: { pages: MemberDriveListResponse[] } | undefined,
 ): MemberDriveListEntry[] {
-  return data?.pages.flatMap((page) => page.items) ?? []
+  const seen = new Set<string>()
+  const rows: MemberDriveListEntry[] = []
+  for (const page of data?.pages ?? []) {
+    for (const item of page.items) {
+      if (seen.has(item.publicToken)) continue
+      seen.add(item.publicToken)
+      rows.push(item)
+    }
+  }
+  return rows
 }

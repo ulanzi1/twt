@@ -112,6 +112,37 @@ field exists for. ⚠ The safety question is **WHO SEES IT** (D1), ⛔ never **h
 
 ---
 
+## ⚠⛔⛔ ROUTED HERE BY STORY E's CODE REVIEW — ⛔ TWO OBLIGATIONS, ⛔ NOT SUGGESTIONS
+
+⭐⭐ **`11b-15` (story E) is `done`; its THIRD code-review pass (2026-09-09) ruled TWO items into THIS
+story BY NAME (BigDev).** ⛔ Neither is a nice-to-have, and ⛔ neither may be silently dropped
+([[feedback_spec_edits_must_propagate_to_tasks]] — a reader who works only from the Tasks below will
+⛔ not see these unless they are carried into an AC and a Task when this story is next validated).
+
+1. ⚠⛔ **AC3's FLOOR IS ⛔ NOT FULLY DISCHARGED BY E — `drive_href` AND `pool_canonical_identifier`
+   RENDER HERE.** E carries BOTH on the member wire (`publicToken`, `poolCanonicalIdentifier`) and
+   renders ⛔ NEITHER: `publicToken`'s ⛔ only use there is `keyExtractor`. ⇒ E amended AC3 to record
+   the floor as **data-layer-discharged** and routed the RENDER to this story.
+   ⚠⛔ **THE GROUND MATTERS:** E's AC5 rules its row `accessibilityRole="text"`, ⛔ never
+   `button`/`link`, because *"a row that LOOKED tappable and did nothing"* is the family-13(c) failure
+   — so E ⛔ could ⛔ not render a link without reopening its own AC. ⭐ **THIS** story owns the
+   per-drive view, so the affordance belongs here, ⛔ and it must be a REAL focusable control with a
+   real handler and an accessible name.
+
+2. ⚠⛔ **THE ZERO-DAY ROW HAS RATIFIED COPY, AND ⛔ DO ⛔ NOT RE-DERIVE IT.** A `live` drive with ZERO
+   confirmed contributions must ⛔ NOT render a *"₹ 0 contributed · 0 confirmed"*-shaped sentence.
+   ⭐ The Panel **GAVE** the replacement wording, in BOTH languages, when a code review showed them
+   what a drive renders on its first day (`2026-09-07-206` cl.4): `zero_line.full` /
+   `zero_line.no_family` in `sahyog-shared`. ⛔ Consume them BY NAME — ⛔ never mint a second set
+   (`2026-09-04-193` cl.3), and ⛔ never translate one.
+   ⚠⛔ **THE VARIANT CHOICE IS A SAFETY PROPERTY:** `deceasedMemberName` is nullable and `t()` THROWS
+   on an unsupplied token ⇒ `.full` on a nameless drive would take down the WHOLE page.
+   ⚠ **AND THE PERCENTAGE IS ⛔ NOT SUPPRESSED AT ZERO** — the public meter renders at 0 too, so
+   hiding it would put the member BELOW the public and break the `member ≥ public` floor in the other
+   direction. E made exactly this mistake in draft and corrected it; ⛔ do ⛔ not repeat it.
+
+---
+
 ## Acceptance Criteria
 
 ### AC0 — Governance first

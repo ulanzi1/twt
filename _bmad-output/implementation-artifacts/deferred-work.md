@@ -8585,3 +8585,41 @@ violation.
   against a live Postgres this pass had no access to. **Trigger:** any report of a member's drive-list
   page count disagreeing with its item count, or a hardening pass over this route's consistency
   guarantees.
+
+## Deferred from: code review of 11b-15-member-drive-list-fourth-tab, THIRD pass (2026-09-09)
+
+- **The persisted TanStack query cache is not scoped to the member or the Pariwar, and `signOut`
+  purges neither the query cache nor the MMKV blob.** [`apps/mobile/components/drive-list/useMemberDriveListQuery.ts:54`;
+  `apps/mobile/lib/session-context.tsx:80-89`; `apps/mobile/lib/query-client.ts`]
+  The new hook's key is `['member','drive-list', PAGE_SIZE]` — no `memberId`, no `pariwarId`. The
+  response carries DECRYPTED Tier-1 deceased-family names and nominee names for a Pariwar's whole
+  drive history, and it is persisted to MMKV (`key: 'twt-p0-5-cache'`, `gcTime` 7 d, `staleTime` 1 h).
+  ⇒ on a shared handset, member A signs out and member B of ANOTHER Pariwar signs in, the same key
+  rehydrates, the query is not stale so no refetch is issued, and B can be shown A's Pariwar's
+  Tier-1 names with no network call.
+  ⚠⛔ **DEFERRED BECAUSE IT IS ⛔ NOT THIS DIFF'S DEFECT — it is repo-wide and pre-existing.**
+  `['member','active-contribution']`, `['member','pool-contributors']` (which also carries names),
+  `['member','validity']`, `['member','renewal-status']` and `['yogdaan-bahi','summary']` are ALL
+  equally unscoped, and `grep` for `queryClient.clear` / `removeQueries` / `resetQueries` /
+  `persister.removeClient` across `apps/mobile` returns ⛔ **ZERO** hits — no sign-out path in the app
+  clears the cache at all. Only `polls`, `helpdesk` and `banners` scope their keys by `pariwarId`.
+  ⭐ What this story DOES change is the blast radius: it is the largest Tier-1 payload yet placed in
+  that cache. **Trigger:** any multi-account or device-sharing requirement, any DPDPA review of
+  at-rest cached personal data on the handset, or the first report of one member seeing another's
+  data after a sign-out. ⚠ Fixing it properly is one repo-wide change (scope every member key by
+  `memberId`/`pariwarId` AND purge on `signOut`), ⛔ not a per-surface patch.
+
+- **`.strict()` response parsing turns any ADDITIVE server field into a total blank-out of the tab on
+  older mobile builds.** [`packages/contracts/src/contributions/member-drive-list.ts`;
+  `packages/api-client/src/index.ts:261`]
+  `MemberDriveListEntry` is `.strict()` and `api-client`'s `call` uses a throwing `schema.parse`. When
+  story F (`11b-17`) or any later story adds one field to the entry and the API ships, every INSTALLED
+  app build older than that release rejects the unknown key, `call` throws, `data` stays `undefined`,
+  and `MemberDriveList.tsx:163` takes the FULL-SCREEN error branch — the whole tab, for every member
+  on an older build, until they update. Strictly worse than degrading the one new field.
+  ⚠⛔ **DEFERRED BECAUSE THE PATTERN IS `api-client`-WIDE AND PRE-EXISTING**, ⛔ not introduced here.
+  ⭐ The repo has already recorded this class for the WEB surface (`2026-09-08-207` cl.1, *"API-first
+  deployment is PROHIBITED…"*), but that entry reasons about `apps/public`, which redeploys in
+  minutes; nothing records the equivalent constraint for `apps/mobile`, where old builds persist
+  indefinitely. **Trigger:** the first additive change to any member-facing contract entry — story F
+  is the next candidate — or a mobile forward-compatibility hardening pass.

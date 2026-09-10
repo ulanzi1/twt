@@ -198,9 +198,17 @@ them but that single one — another family's drive, a `closed` drive, a `settle
 
 ⭐ **THE FAIR COUNTER, STATED SO IT IS ⛔ NOT BURIED:** on those other drives there is ⛔ **no payment
 purpose** — the member is ⛔ not being asked to pay them. ⇒ ⭐ excluding the VPA there is **principled,
-⛔ not a gap** — and it points at an answer we ⛔ had not offered you: ⭐ **that the VPA simply does
-⛔ not belong on story F's surface at all**, because F's surface has ⛔ no payment purpose. ⚠ That is
-⛔ neither of the two readings we first described, which is why we are adding it as **option (D)**.
+⛔ not a gap** — and it points at an answer we ⛔ had not offered you: ⭐ **that the VPA belongs on the
+PAYMENT screen — ⛔ ADDED there — and ⛔ not on story F's surface**, which has ⛔ no payment purpose.
+⚠ That is ⛔ neither of the two readings we first described, which is why we are adding it as
+**option (D)**.
+
+⚠⛔⛔ **AND (D) IS A REAL CHANGE, ⛔ NOT A RESTATEMENT OF (A) — ⭐ traced, because our first wording
+implied the pay screen ALREADY carries it.** `apps/mobile/app/(contribution)/pay.tsx:473-480` renders
+`FieldRow`s for **account holder**, **bank**, the **FULL account number** and the **IFSC** — ⛔ and
+**⛔ NO VPA row**; only the `vpaPresent` boolean drives the button. ⇒ ⭐ the member is **already shown
+unmasked coordinates there** for their own live assigned drive, and (D) would add the VPA **beside
+them**. ⛔ Under (A) the ID is on ⛔ NO screen anywhere; under (D) it is on **one**.
 
 ⚠ **AND THE ASYMMETRY THAT ARGUES THE OTHER WAY:** under `-199` the other **five** coordinates —
 account number, IFSC, bank, branch, holder name — go onto that page for **every** drive. ⇒ singling
@@ -287,7 +295,7 @@ unless a `super_admin` has switched **`reveal_to_members`** ON for that Pariwar 
 | | Option |
 |---|---|
 | **(A)** | ⭐ **Confirm the narrow reading — the button is enough.** ⛔ The ID stays off every screen; `vpaPresent` remains a boolean. ⚠⛔ **But see §4.2b: on story F's page that button exists for ⛔ ONE drive out of every drive shown**, so on this surface (A) is close to indistinguishable from (D). |
-| **(D)** ⭐ **new — added after tracing the pay path** | ⭐ **The VPA belongs on the PAYMENT surface, ⛔ not on story F's.** cl.1 is satisfied where a member is actually **asked to pay** — their own live assigned drive — and the drive-detail page carries the other five coordinates ⛔ without it. ⭐ This states a **boundary** rather than a reading, and it is the option our own tracing suggests. |
+| **(D)** ⭐ **new — added after tracing the pay path** | ⭐ **ADD the VPA to the PAYMENT screen; ⛔ not to story F's page.** cl.1 is satisfied where a member is actually **asked to pay** — their own live assigned drive — and the drive-detail page carries the other five coordinates ⛔ without it. ⚠⛔ **THIS IS A CHANGE, ⛔ NOT THE STATUS QUO:** `pay.tsx:473-480` today renders account holder, bank, **full account number** and **IFSC** — ⛔ but **no VPA row** (only the `vpaPresent` boolean). ⇒ ⛔ (D) is ⛔ **not** the same as (A); it puts the ID on screen, ⛔ just not on this one. |
 | **(B)** | ⭐ **Confirm the plain reading — show the ID.** ⭐ cl.1 is applied as written; Story F renders it beside the other coordinates. ⚠ A new Tier-1 field reaches the member surface, and we would record the exposure the way `-199` was recorded. |
 | **(C)** | ⭐ **Show it, but narrower than `-199`** — e.g. ⛔ only while a drive is still collecting, or ⛔ only for the drives that member was asked to pay into. ⚠ This would make the VPA the **one** coordinate scoped differently from the rest, which we would need to build and test separately. |
 | **(D)** | ⭐ Something else. |
@@ -325,6 +333,7 @@ note **disagreed**, and ⛔ nobody noticed.
 | C17 | The handler decrypts the VPA server-side and returns a `upi://pay` URL | `sed -n '155,192p' apps/api/src/modules/payment/handlers.ts` |
 | C18 | ⛔ The pay path resolves to ONE pool — active + live cycle + assigned + soonest-closing | `sed -n '849,900p' apps/api/src/modules/member-pool/handlers.ts` |
 | C19 | The VPA column has a live writer; the "no VPA in the substrate" comment is STALE | `grep -n "vpaCiphertext" packages/domain/src/claim/nominee-bank-persist.ts` · `sed -n '21,22p' apps/api/src/modules/payment/handlers.ts` |
+| C20 | The pay screen EXISTS and renders holder/bank/**full account number**/IFSC — ⛔ but ⛔ no VPA row | `sed -n '473,481p' "apps/mobile/app/(contribution)/pay.tsx"` |
 
 ---
 

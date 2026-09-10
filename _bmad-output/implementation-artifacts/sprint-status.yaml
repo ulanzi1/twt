@@ -1,3 +1,35 @@
+# last_updated: 2026-09-10g (⭐⭐ **STORY `8-17` CREATED — `11b-17`'s Task 0e is DISCHARGED.**
+#   ⭐ ONE ROW ADDED: development_status[8-17-nominee-vpa-on-the-payment-screen] = **`ready-for-dev`**.
+#   ⛔ Every other row unchanged; `11b-17` stays `ready-for-dev`; epic-8 already `in-progress`.
+#   ⭐ **WHY EPIC 8, ⛔ not 11b:** the surface is `apps/mobile/app/(contribution)/pay.tsx` (Epic 8's
+#   payment screen) — ⭐ the `8-16` precedent, an Epic-8 story minted by the 11b programme because it
+#   owns the member surface, ⛔ not because 11b raised it.
+#   ⭐ **AUTHORITY IS ALREADY RULED ⇒ ⛔ ZERO OPEN DECISIONS:** `-212` cl.2 (Trustee-ratified, DR + KB)
+#   applying `-191` cl.1. ⛔ Nothing waits on the Panel.
+#   ⭐⭐ **FOUR TRAPS FOUND BY LIVE VERIFICATION WHILE AUTHORING:**
+#   **(1) ⛔ THERE ARE TWO TYPES NAMED `NomineeBankAccountView`** — the **exported** donor view
+#   (`contributions/nominee-accounts.ts:46`, the pay screen's) is the target; the **module-private**
+#   claims presence view (`claims/nominee-bank.ts:112`, staff/nominee) is ⛔ NOT. ⚠ **BOTH already carry
+#   `vpaPresent`**, so a grep for that field lands in both — and putting the plaintext on the claims
+#   view would be a NEW disclosure ⛔ nobody ruled. ⚠⛔ Story `8-13`'s own Task text attributes the
+#   symbol to `claims/nominee-bank.ts` while the export it edited lives in `contributions/` ⇒ ⛔ do
+#   ⛔ not navigate by that story's file names.
+#   **(2)** The `.strict()` additive-field blank-out **DETONATES HERE** — `api-client` `call` throws on
+#   an unknown key ⇒ shipping `vpa` blanks the WHOLE screen on every installed older build. ⇒ Task 4
+#   owes a **stated deployment order**, ⛔ not a discovery in production.
+#   **(3)** A null VPA is a **FIRST-CLASS STATE** (`claim_nominee_bank_accounts.ts:65-67`) ⇒ ⛔ omit the
+#   row; ⛔ no placeholder, ⛔ no error copy.
+#   **(4)** The decrypt **ALREADY HAPPENS** (`payment/handlers.ts:155-164`) ⇒ ⛔ add NO KMS call — every
+#   extra `decryptDek` is an audit line on the global advisory-lock chain.
+#   ⭐ **VERIFIED ⛔ NOT AN INERT GATE:** a VPA is genuinely collectable — `apps/mobile/app/(claim)/nominee-review.tsx`
+#   is an optional, `VPA_RE`-validated nominee-filled field. ⚠⛔ **How many rows are actually populated
+#   is a DATA question ⛔ code cannot answer** ⇒ recorded **un-attested**, ⛔ not implied
+#   ([[feedback_record_unattested_no_backfill]]).
+#   ⚠ **TWO QUESTIONS CARRIED AS RECORDED, ⛔ NOT AS GATES** (AC6): `-190` cl.2 rules *"Account holder"*
+#   ⛔ not to be used while this screen uses it — ⛔ whether cl.2 binds only the PUBLIC surface is
+#   **UNRESOLVED**; and **§8.4(ii)** (`-213` cl.2) — the code asserts ONE nominee across both accounts
+#   while the schema permits TWO names. ⛔ Neither is to be answered at a render site.
+#   ⛔ **NO CODE.**)
 # last_updated: 2026-09-10f (✅⭐ **`11b-17`'s LAST CONDITIONAL IS CLOSED — `#decision-2026-09-10-213`
 #   (author-committed, BigDev). ⭐ THE STORY IS NOW GENUINELY READY FOR DEV.** ⛔ ZERO ROWS MOVE;
 #   `11b-17` stays `ready-for-dev`.
@@ -17222,6 +17254,7 @@ development_status:
   # RENDER IN FULL** on the member side, so part of the "inversion" is ⛔ NOT REAL and must ⛔ not be
   # reported as closed.
   8-16-member-pool-identity-name-form-alignment: done
+  8-17-nominee-vpa-on-the-payment-screen: ready-for-dev
   epic-8-retrospective: done
 
   # ==========================================================================

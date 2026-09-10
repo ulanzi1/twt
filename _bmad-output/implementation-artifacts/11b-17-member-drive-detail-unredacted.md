@@ -456,7 +456,8 @@ a defect to "fix".
 - [x] ✅ **Task 0d — THE PREFLIGHT STOP — DISCHARGED.** `#decision-2026-09-10-212` landed 2026-09-10,
       ⛔ before any code. **D2 → (B)** `live` only; **D3 → (D)** the UPI ID goes on the payment screen.
       ⚠ Read its **Consequences 3-6** before Task 2.
-- [ ] ⚠⛔ **Task 0e — GIVE THE PAY-SCREEN WORK A NAMED HOME** (`-212` Consequence 3) — ⛔ NOT built
+- [x] ✅ **Task 0e — DISCHARGED: the pay-screen work has a NAMED HOME — story `8-17-nominee-vpa-on-the-payment-screen`** (`ready-for-dev`, ⛔ zero open decisions), which also carries §8.4(ii) and `-190` cl.2's *"Account holder"* conflict as recorded questions. ⭐ `-191` cl.1 will ⛔ not lapse twice.
+- [x] ~~**Task 0e (original wording) — GIVE THE PAY-SCREEN WORK A NAMED HOME**~~ (`-212` Consequence 3) — ⛔ NOT built
       here. ⭐ A story of its own, or an explicit `deferred-work.md` entry with a trigger, recorded
       **before this story ships**. ⛔ A ratified instruction must ⛔ not lapse twice.
       ⭐ **AND THE SAME PACKET CARRIES §8.4(ii)** (`-213` cl.2): the code asserts ONE nominee across

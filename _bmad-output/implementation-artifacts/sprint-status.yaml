@@ -1,3 +1,27 @@
+# last_updated: 2026-09-10f (✅⭐ **`11b-17`'s LAST CONDITIONAL IS CLOSED — `#decision-2026-09-10-213`
+#   (author-committed, BigDev). ⭐ THE STORY IS NOW GENUINELY READY FOR DEV.** ⛔ ZERO ROWS MOVE;
+#   `11b-17` stays `ready-for-dev`.
+#   ⚠⛔ **WHY THIS WAS OWED:** the `validate` pass recorded AC4's *"both equal accounts"* as **a reversal
+#   to NAME**, and Task 5's final sub-item was conditional on that naming — which ⛔ nobody had done.
+#   `-212` ⛔ did ⛔ not answer it because it was ⛔ never asked ⇒ a dev reaching Task 5 would have hit an
+#   **unsatisfiable instruction**.
+#   ⭐⭐ **RULED: BOTH ACCOUNTS RENDER — ⛔ and it is ⛔ NOT a reversal.** The list's one-decrypt rule
+#   (`member-pool/handlers.ts:536-550`) governs the **HOLDER NAME**, which is *"the SAME nominee"* twice
+#   ⇒ a second decrypt buys ⛔ nothing THERE. ⚠ Story F renders **`account_number` + `ifsc`, which DIFFER
+#   per account** ⇒ the second decrypt returns information the first does ⛔ not carry, under the purpose
+#   `-199` already granted. ⭐ And the money **can have gone to BOTH** — `nominee-accounts.ts:11` rules
+#   them *"EQUAL payment destinations, the **donor's choice**"* ⇒ rendering one would be **incomplete by
+#   construction**. ⇒ ⛔ the list's and the pay screen's behaviour **STANDS UNTOUCHED**; Task 5's
+#   condition is discharged **by showing there is no reversal**, ⛔ not by naming one.
+#   ⚠⛔⛔ **AND THE DIFFERING-HOLDER-NAME CASE IS ⛔ STILL UNRULED — SHARPER THAN §8.4(ii) PUT IT:** the
+#   **CODE asserts one nominee** across both accounts (`handlers.ts:537`) while the **SCHEMA permits a
+#   different name per account** (`claim_nominee_bank_accounts.ts:61`) ⇒ ⛔ one of the two is wrong and
+#   ⛔ nobody has said which. ⇒ ⭐ routed with **Task 0e**'s Panel packet; AC4 **surfaces both, picks
+#   neither**, and encodes ⛔ no assumption.
+#   ⚠ AC5's sizing PINS to the **≈8** global-lock acquisitions per detail open now both accounts are
+#   ruled in (⛔ not ≈5) — ⭐ Task 6 measures it.
+#   ⛔ **NO CODE.** ⛔ Rows unchanged: `11b-17` / `11b-3b` / `6-18` `ready-for-dev`; `11b-16` `withdrawn`;
+#   epic-8 + epic-11b `in-progress`.)
 # last_updated: 2026-09-10e (✅⭐⭐ **TRUSTEE PANEL RULED BOTH OF `11b-17`'s OPEN DECISIONS —
 #   `#decision-2026-09-10-212`, Trustee-ratified (Dhiraj Rahul + Kalpana Bharti).** ⛔ ZERO ROWS MOVE;
 #   `11b-17` stays `ready-for-dev` — ⭐ but its **PREFLIGHT STOP IS DISCHARGED** and the story is now

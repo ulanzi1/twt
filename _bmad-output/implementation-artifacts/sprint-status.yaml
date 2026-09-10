@@ -1,3 +1,47 @@
+# last_updated: 2026-09-11a (⛔⛔ **`11b-17` RE-VALIDATED (`bmad-create-story validate`, three
+#   independent verifiers) — 34 FINDINGS, ALL APPLIED. ⛔ ZERO ROWS MOVE; ⛔ NO CODE.**
+#   ⭐ Baseline `a2617869` **NOT re-pinned** — still an ancestor, and every commit since is
+#   governance-only ⇒ ⛔ no code moved. ⚠ What moved is the GOVERNANCE state, which is exactly what a
+#   `--name-only` staleness check cannot see.
+#   ⛔⛔ **THE PREFLIGHT IS RE-OPENED — STOP 1.** The 2026-09-05 routing note
+#   `…-11b12-under-funded-commitment-claim` **§8.3(3)** names the consumers by key (*"story E
+#   (`11b-15`) and story F (`11b-17`)"*) and **§8.5 row 3** rules *"B ships the copy; E and F render
+#   it"* — a `Nominee full name` | `District` table above B's five-paragraph block, §8.3(2) *"written
+#   for a PAGE"*. ⛔ It NEVER reached `.decision-log.md`; `11b-12:583-600` (a `done` story) records the
+#   same routing. ⇒ **AC10 + Task 5d WRITTEN**, gated on the decision entry landing in Task 1's
+#   `governance:` commit FIRST. ⚠ E already renders `district` per row ⇒ ⛔ F would have been the
+#   surface that DROPPED it.
+#   ⛔⛔ **D2(B) WAS SHIPPING UNGATED:** `reveal_to_members` appeared ⛔ ONCE in the whole file, in
+#   prose ⇒ **AC2 / Task 2 / Task 6 now carry the fail-closed gate + `resolveDriveTargetVisibility`**
+#   (`-211` cl.3 — *"a caller interpreting it is exactly how a fail-closed default becomes
+#   fail-open"*; a miss is a **DISCLOSURE** defect, ⛔ not a UI one).
+#   ⭐ **AND लक्ष्य's RATIFIED NUMBER FORM WAS ABSENT** — `-206` **cl.3** (the clause that exists
+#   because **₹300 rendered as `₹ 0 lakh`**), `-204` **cl.2**'s derivation, and the shared
+#   **`drive_target`** key F is the **THIRD** consumer of.
+#   ⚠⛔ **AC4's *"reuse `nominee.label`"* SHIPPED THE FORBIDDEN STRING** — the token renders
+#   **"Nominee"**, ⛔ not the ruled *"Nominee Name"*, and its own `$comment` claims otherwise and is
+#   FALSE ⇒ re-pointed to `label.account_holder`. ⚠⛔ **The `bank_name` hazard was INVERTED** — closed
+#   by DELETION ⇒ the projection yields ⛔ NEITHER `bankName` NOR `branch`, leaving AC4 **two fields
+#   short**. ⚠⛔ **§8.4(ii)'s *"nobody has said which"* was FALSE** — `D5-subject (i)` rules *"the
+#   SCHEMA is the authority"* (the story's own Dev Notes quoted it) and **`6-18` is `ready-for-dev` on
+#   that ground, ⛔ never named** ⇒ re-grounded; the Panel routing is DROPPED from Task 0e.
+#   ⭐ **AUDIT UNIT PINNED: ONE line per DETAIL OPEN** (Tasks 4/6 said *"per coordinate read"* ⇒ 5 × 2
+#   = ten ⇒ ≈17, ⛔ not ≈8); and the flake trap was pinned to an **awaited** writer — the real
+#   fire-and-forget one is `createKmsAuditHook`, ⛔ i.e. the seven INVISIBLE KMS lines.
+#   ⚠ Swept: **every** `.decision-log.md:NNN` (stale ~**+152** since `-212`/`-213` were prepended);
+#   six `deferred-work.md` cites, **two swapped**, now given as ITEM ADDRESSES per that file's own
+#   rule; `D3(a)`→**(D)**; *"AC4 needs six"*→**five**; `upi_intent.account_holder_label` (literally
+#   *"Account holder"*, the forbidden string) STRUCK; the `-207` cl.1 carve-out STRUCK (⛔ that field
+#   is in NEITHER floor map); the enumeration bound restated as **CLOSED by ruling + edit** (the
+#   rate-limit remedy was **DECLINED** by the Panel); AC0 → **Task 1**; pool-state vs wire-token
+#   vocabularies separated. ⭐ Added: the MMKV trigger as a TASK (prose only before), four stale
+#   artefacts F makes wronger, and family 13(a)'s carve-out.
+#   ⚠⛔ **AND THIS ROW'S OWN BLOCK WAS STALE FIVE WAYS** — annotation/SECTION, "BLOCKED ON A AND E"
+#   (both `done`), Task 0c "recommended" (discharged), **"43,000" TWICE**, and BigDev's
+#   recommendation **(b)** published as live guidance after D1 ruled **(a)**. ⛔ Rewritten with the
+#   superseded text KEPT STRUCK.
+#   ⛔ **NO CODE.** ⛔ Rows unchanged: `11b-17` / `11b-3b` / `6-18` / `8-17` `ready-for-dev`;
+#   `11b-16` `withdrawn`.)
 # last_updated: 2026-09-10g (⭐⭐ **STORY `8-17` CREATED — `11b-17`'s Task 0e is DISCHARGED.**
 #   ⭐ ONE ROW ADDED: development_status[8-17-nominee-vpa-on-the-payment-screen] = **`ready-for-dev`**.
 #   ⛔ Every other row unchanged; `11b-17` stays `ready-for-dev`; epic-8 already `in-progress`.
@@ -17724,8 +17768,21 @@ development_status:
   # ⇒ a one-line change to the resolver's DEFAULT would put a FULL LEGAL NAME into an SMS/WhatsApp push.
   # ⭐ AC3 keeps the push SHIELDED and TESTS it. ⇒ thread the form from the CALL SITE, ⛔ never a default.
   11b-16-member-name-form-configured-presentation: withdrawn
-  # ⭐ 11b-17 — STORY **F**, the LAST of the split. ⛔ NOT in `epics.md` — owes an ANNOTATION.
-  # ⛔⛔ BLOCKED ON **A** (11b-11 — the public withdrawal must land first) AND **E** (11b-15).
+  # ⭐ 11b-17 — STORY **F** of the SIX-story split (`-208` cl.6). ⛔ NOT in `epics.md` — owes a
+  # ⭐ **SECTION** (Task 1), ⛔ NOT an annotation — ⭐ the precedent is stated in the **`11b-15` row
+  # block** above (*"⛔ No `### Story 11b.15` SECTION … owes one"* / *"A SECTION, ⛔ NOT AN
+  # ANNOTATION"*). ⚠⛔ **⛔ Navigate by that BLOCK, ⛔ not by a line number** — this file is prepended
+  # newest-first, so any number here rots. ⚠⛔ CORRECTED 2026-09-11; the row previously read
+  # ~~"owes an ANNOTATION"~~ and ~~"the LAST of the split"~~; both were wrong.
+  # ✅⭐ **⛔ NO LONGER BLOCKED.** ~~BLOCKED ON A (11b-11) AND E (11b-15).~~ Both are `done`
+  # (2026-09-11 correction); the only thing holding this story is its own Preflight.
+  # ⛔⛔ **AND ITS PREFLIGHT IS RE-OPENED — STOP 1 (2026-09-11 `validate` pass).** The 2026-09-05
+  # routing note `…-11b12-under-funded-commitment-claim` §8.3(3)/§8.5 row 3 ruled *"B ships the copy;
+  # **E and F** render it"* — a `Nominee full name` | `District` table + B's five-paragraph block,
+  # *"written for a PAGE"* — routing to F BY NAME, and it ⛔ NEVER reached `.decision-log.md`.
+  # ⇒ AC10 + Task 5d written; the DECISION ENTRY lands in Task 1's `governance:` commit FIRST.
+  # ⭐ The row STAYS `ready-for-dev` — it is TRUE (the file exists and is contexted); the STOP is
+  # recorded in the story, which is where the dev agent reads it.
   # ✅ **D1 RULED (a) 2026-09-04 (`-199`), scope CONFIRMED (i) = the member's OWN Pariwar.**
   # ⇒ ANY authenticated member may open the member-facing detail for ANY drive in THEIR Pariwar,
   # including the FULL nominee banking coordinates — subject to lifecycle (⛔ never `spawned`) and the
@@ -17736,18 +17793,25 @@ development_status:
   # advisory-lock serialized ⇒ under (a) a coordinate read is ROUTINE BROWSING, so every detail open
   # takes a serialized write. AND Trap 3 is now definitely a REVERSAL of
   # `contribution-history.ts:24`'s *"DELIBERATELY … NO nominee/bank data"* — ⛔ NAME it, ⛔ never absorb it.
-  # ⭐ RECOMMENDED, ⛔ not blocking: a one-page disclosure note to the Panel stating the quantification
-  # their clause produces — `-190` was ratified on the INVERSION argument and ⛔ never showed the figure.
+  # ✅ ~~RECOMMENDED, ⛔ not blocking: a one-page disclosure note to the Panel.~~ ⭐ **DISCHARGED**
+  # 2026-09-04 — WRITTEN AND COMMITTED (`468d43c1`, Task 0c). ⛔ For information; ⛔ nothing waits on it.
   # ⬇ The finding D1 existed for:
   # ⭐⭐ **`-189` cl.3 DOES ⛔ NOT FORCE THE SCOPE** — story A removes the public's banking coordinates
   # ENTIRELY, so a member ⛔ cannot see "less than nothing" ⇒ cl.3 is satisfied on banking BY
   # CONSTRUCTION, whatever F does. ⚠ Anyone arguing *"cl.3 requires it"* argues from an inversion that
   # ⛔ NO LONGER EXISTS.
-  # ⛔⛔ **AND THE LITERAL READING OF `-190` cl.3 PUTS EVERY FAMILY'S ACCOUNT NUMBER IN 43,000 POCKETS**
-  # — a LARGER exposure than the one this programme just removed, persisting on 43,000 devices.
-  # ⭐ BigDev recommends **(b): the member's OWN ASSIGNED drives, any state** — widening today's rule on
-  # the TIME axis, ⛔ not the POPULATION axis. ⚠ If (a) is genuinely wanted it needs the **PANEL**,
-  # ⛔ not this story: `-190` was ratified on a note that ⛔ never quantified it.
+  # ⛔⛔ **AND THE LITERAL READING OF `-190` cl.3 PUTS EVERY FAMILY'S ACCOUNT NUMBER IN EVERY POCKET IN
+  # THE PARIWAR** — a LARGER exposure than the one this programme just removed, persisting on devices.
+  # ⚠⛔ **CORRECTED 2026-09-11: ~~"43,000 POCKETS"~~ / ~~"43,000 devices"~~.** `-199` ruled the 43,000
+  # the Panel's own ILLUSTRATIVE number and said to ignore its arithmetic; the sourced figure is
+  # **4 lakh trust-wide**, and the operative multiplier is **PER PARIWAR**, for which ⛔ NO ratified
+  # figure exists. ⛔ Invent none. ⭐ The story swept this at 7 of its own sites on 2026-09-10; ⛔ the
+  # sweep never reached THIS row — the sibling-not-swept footgun, caught by the second pass.
+  # ✅⭐ **D1 WAS RULED (a) — SEE FIVE LINES ABOVE.** ⚠⛔ **CORRECTED 2026-09-11:**
+  # ~~BigDev recommends (b): the member's OWN ASSIGNED drives, any state.~~
+  # ~~If (a) is genuinely wanted it needs the PANEL, ⛔ not this story.~~
+  # ⛔ Both were TRUE WHEN WRITTEN and FALSE from 2026-09-04 onward: (a) was RULED that day and (b) is
+  # recorded as ⛔ NOT taken. ⛔ Kept struck as the record, ⛔ not deleted.
   11b-17-member-drive-detail-unredacted: ready-for-dev
   epic-11b-retrospective: optional
 

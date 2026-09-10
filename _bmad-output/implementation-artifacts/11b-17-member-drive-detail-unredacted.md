@@ -264,10 +264,39 @@ axes (attributed, and high-volume) and must **argue** it rather than claim inher
 **And** ⛔ the audit line names the **canonical identifier**, ⛔ never a token or an account number
 (⭐ this half DOES match the precedent — `handlers.ts:665-670`: a token *"would additionally write a
 live public ADDRESS into the durable audit chain"*).
-**And** ⭐ the **write volume is SIZED before shipping** (`-199` Consequence 2): `writeAuditEntry`
-serializes **every** writer on ONE **global, cross-tenant** advisory lock
-(`packages/domain/src/audit/write.ts:62,128`) and commits its own transaction. ⛔ Not a blocker; ⚠ a
-contention question to **size, ⛔ not discover**.
+**And** ⭐ the **write volume is SIZED before shipping** (`-199` Consequence 2).
+
+⚠⛔⛔ **AND THE SIZING PREMISE IS WRONG IN THE STORY'S FAVOUR — ⭐ TRACED 2026-09-10, ⛔ not assumed.**
+`-199` Consequence 2 says the chain *"takes a write on every detail open"* — **singular**. ⛔ It is
+⛔ not one. The real shape:
+
+- ⭐ **ONE audit line per ENCRYPTED FIELD DECRYPTED, ⛔ not per request and ⛔ not per row.**
+  `envelope.ts:92-93` calls `kms.decryptDek(...)` then fires `auditHook('decryptDek', …)` on **every**
+  `decryptTier1`, and ⛔ **there is ⛔ NO DEK cache** — each ciphertext embeds its own DEK.
+  `createKmsAuditHook` (`audit/audit-log-sink.ts:196-205`) routes each one into the **same**
+  global-chain writer.
+- ⚠ This surface's encrypted fields (`claim_nominee_bank_accounts.ts:61-67`): `account_holder_name`,
+  `account_number`, `ifsc` (+ optional `vpa`). ⭐ `bank_name` / `branch` are **Tier-3 plaintext** and
+  cost nothing.
+- ⇒ **per detail open: 1 (deceased name) + 3 × (accounts rendered) + AC5's own line ≈ 5 with one
+  account, ≈ 8 with two** — ⚠ and ⛔ **seven of those eight are INVISIBLE**, emitted by the crypto
+  layer, ⛔ not by AC5's code.
+
+⚠⛔ **WHAT EACH ONE COSTS.** `writeAuditEntry` (`audit/write.ts:118-175`) holds
+`pg_advisory_xact_lock(AUDIT_CHAIN_LOCK_KEY)` — ⛔ **ONE fixed key, deployment-wide, cross-tenant** —
+across `BEGIN` → lock → tail read → `SELECT now()` → `INSERT` → `COMMIT`: **5-6 sequential round trips
+per line**, committing its own transaction. ⭐ The tail read itself is cheap (`audit_log_entries_seq_uq`
+serves `ORDER BY seq DESC LIMIT 1`); ⚠ **the cost is the SERIALIZATION, ⛔ not the query.**
+
+⭐⭐ **AND IT IS ⛔ NOT NEW — story E ALREADY DOES THIS, SHIPPED.** Its list decrypts two names **per
+row** under `DIRECTORY_DECRYPT_CONCURRENCY = 8` ⇒ routine browsing **already** takes the global lock,
+today. ⇒ ⛔ this is a **PRE-EXISTING condition F AMPLIFIES**, ⛔ not a defect F introduces — ⭐ and
+⛔ neither AC5 nor `-199` had noticed it. ⚠ Every other writer in the repo is a low-frequency
+**administrative WRITE**; ⭐ **F is the first surface where a Tier-1 READ is the ordinary path.**
+
+⇒ ⭐ Task 6 sizes the **real** number, ⛔ not AC5's assumed one. ⛔ Not a blocker; ⚠ ⛔ do ⛔ not
+"optimise" it by dropping the KMS hook — that hook is the FR-47 record of **which key opened which
+field**, and removing it to buy throughput would trade a **crypto audit obligation** for latency.
 
 ### AC6 — The member-facing sentence is WRITTEN
 ⭐ It is the sentence in **📜 Policy meaning** above, verbatim. ⛔ The two ⛔ must ⛔ not drift apart.
@@ -509,7 +538,15 @@ a defect to "fix".
   - [ ] Every coordinate read writes exactly one audit line (AC5). ⚠⛔ **The precedent's write is
         FIRE-AND-FORGET** (`public-pages/handlers.ts:867`) — ⛔ a naive assertion is a flake trap
         unless the test drains it.
-  - [ ] ⭐ **Size the audit write volume** under routine browsing before shipping (AC5).
+  - [ ] ⭐ **Size the audit write volume** under routine browsing before shipping (AC5) — ⚠⛔ **the
+        unit is ≈5-8 global-lock acquisitions per detail open, ⛔ not 1** (see AC5). ⭐ Measure: the
+        lines actually emitted for one open (assert the COUNT, which also pins the decrypt count), and
+        the wall-clock cost of the serialized chain under concurrent opens. ⚠ Compare against story
+        **E**'s already-shipped per-row decrypts — ⭐ the baseline is ⛔ not zero.
+  - [ ] ⚠ **Record the amplification** in `deferred-work.md` if the measured number is
+        uncomfortable — ⭐ it is **repo-wide and pre-existing** (the KMS hook + the single global
+        chain), ⛔ **not** a per-surface patch, and ⛔ not F's to fix alone
+        ([[feedback_closure_language_precision]]).
   - [ ] ⭐ **Execute them** against `twt-test-pg` `:5433`.
 
 ---
@@ -607,6 +644,7 @@ counts over the shared fixture ([[project_live_db_test_gotchas]]).
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-09-10 | 0.8 | ⭐⭐ **THREE PREMISES TRACED TO CODE AT BigDev's DIRECTION — ⛔ none had been.** (1) ⭐ **The `super_admin` reveal switch is BUILT AND OPERABLE** — table + CHECK, key, grant (test-asserted), module MOUNTED, route, write, admin page, form guard. ⇒ `-211` cl.3 holds in the STRONG sense: off because ⛔ nobody has switched it, ⛔ not because nobody can. (2) ⭐ **The UPI intent path is real but reaches ⛔ ONE drive** — `resolveMemberLivePool` needs active + `live` cycle + ASSIGNED, and returns the soonest-closing pool ⇒ on F's page there is ⛔ no pay path for any other drive, so D3's narrow reading is **EMPTY here**; ⭐ a new **option (D)** (the VPA belongs on the PAYMENT surface) was added to the Panel note. (3) ⚠⛔ **AC5's SIZING PREMISE WAS WRONG IN THE STORY'S FAVOUR** — `-199` says *"a write on every detail open"* (singular); it is **one line per ENCRYPTED FIELD DECRYPTED** (`envelope.ts:92-93`, ⛔ no DEK cache) ⇒ **≈5-8 global-lock acquisitions per open, seven of them INVISIBLE** (emitted by the crypto layer). ⭐ Each holds ONE deployment-wide key across 5-6 sequential round trips. ⭐⭐ **⛔ NOT NEW — story E already does it, shipped** (per-row decrypts at concurrency 8) ⇒ a **PRE-EXISTING condition F AMPLIFIES**; ⭐ F is the first surface where a Tier-1 READ is the ordinary path. ⛔ **NO CODE.** | BigDev + Claude |
 | 2026-09-10 | 0.7 | ⭐⭐ **BOTH OPEN DECISIONS ROUTED TO THE PANEL** — `trustee-panel-routing-note-2026-09-10-11b17-member-drive-detail-two-questions.md` (Q1 = D2, Q2 = D3). ⚠⛔⛔ **AND D3's FRAMING IN v0.6 WAS ⛔ WRONG AND IS CORRECTED HERE.** v0.6 read D3 as *"a standing prohibition vs an author-committed enumeration"*, with AC4 held to (a) as the safe default. ⛔ That inverted the authority: **`-191` cl.1 is TRUSTEE-RATIFIED** (DR + KB) and rules the VPA *"a MEMBER field … **shown to the logged-in member** … carried on the member surface as a payment coordinate"*; ⛔ only cl.4 was ever superseded. ⇒ ⭐ the *"prohibition"* is **ours** — a narrow reading taken in `deferred-work.md` item (e) and ⛔ never put back to the Panel — and its phrase *"a NEW Tier-1 exposure ⛔ nobody ruled on"* is **⛔ inaccurate**. ⭐ AC4's five-field render is now stated as a **HOLD, ⛔ not a finding that (a) won**. ⭐ D2 also gains its **second axis**: the list carries लक्ष्य on **`live` rows ONLY** (`member-drive-list.ts:236-244`, `-204` cl.2's *"on a LIVE row"*), while the detail covers three stages ⇒ the finished-drive case is unruled. ⛔ **NO CODE.** | BigDev + Claude |
 | 2026-09-10 | 0.6 | ⛔⛔ **RE-VALIDATED (`bmad-create-story validate`, three independent verifiers) — 32 FINDINGS APPLIED. ⛔ ZERO ROWS MOVE.** ⭐ Baseline **RE-PINNED** `66ef4dce` → `a2617869` (**106** commits of drift; the 2026-09-09 re-pin fixed reachability only and disclaimed re-verification — that debt is now DISCHARGED). ⛔⛔ **TWO DECISIONS OPENED AND A PREFLIGHT STOP ADDED: D2** (`-211` Consequence 2 hands the लक्ष्य question to F **by name**; `-211` cl.1 RETIRED *"no target"*, struck at both sites) and **D3** (AC4's UPI ID contradicts a thrice-stated prohibition; `-199` is **author-committed**, ⛔ not ratified, and supersession must be NAMED). ⭐ **AC8 + AC9 WRITTEN** — E's two routed obligations lived in prose only, ⛔ no AC, ⛔ no Task. ⭐ **AC5 RE-GROUNDED** as a named DEPARTURE: the cited precedent writes `actorId: null` and says *"⛔ Do not widen this to log every request."* ⭐ **AC2 re-pointed** to `SAHYOG_VIVRAN_FIELD_IDS` + the nominee map (E's is the **index** map) with `-207` cl.1 and the inert public name gate carved out. ⭐ **Task 5's a11y instruction INVERTED** — *"`accessible` on every labelled container"* is the defect E's third pass fixed and would have made AC8's control unreachable. ⚠ **AC4 narrowed** (VPA ⇒ D3; the second decrypt named as a reversal; §8.4(ii) surfaced; `Nominee Name` per `-190` cl.2) and its **missing labels** recorded (A deleted five; ⛔ no branch or UPI-ID label exists). ⭐ Added: the `.strict()` blank-out naming F twice, the MMKV at-rest trigger, the `ANONYMIZED_SENTINEL` backstop, `-200` cl.4's untouchable entry, the three-subject resolver split, `clampLimit`, and the **⛔ no-RN-mount-harness** correction. ⚠ Swept: *"43,000"* (7 sites) — `-199` itself corrected it to **per-Pariwar, no ratified figure**; the stale blocked-on chain (**story is UNBLOCKED**); Task 0c (**discharged**); *"last of seven"* → **six**; `-165` → `-205` cl.9; `:804-830` → `:840-905`; Task 0 annotation → **SECTION**. ⛔ **NO CODE.** | BigDev + Claude |
 | 2026-09-04 | 0.3 | ✅ **Scope CONFIRMED (i): the member's OWN Pariwar.** ⭐ AC6's member-facing sentence is now WRITTEN, with the Niyamavali check reported honestly as **non-dispositive** (it binds nothing). ⚠⛔ **The "⛔ Zero open decisions" claim in this row was TRUE WHEN WRITTEN and is ⛔ FALSE at HEAD** — `-211` (2026-09-09) opened D2 and the 2026-09-10 validate pass opened D3. ⛔ Kept as the record, ⛔ not rewritten ([[feedback_record_unattested_no_backfill]]). | BigDev + Claude |

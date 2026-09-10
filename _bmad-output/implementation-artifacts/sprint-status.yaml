@@ -1,3 +1,66 @@
+# last_updated: 2026-09-10d (⭐⭐ **`11b-17`'s TWO OPEN DECISIONS ROUTED TO THE TRUSTEE PANEL** —
+#   `trustee-panel-routing-note-2026-09-10-11b17-member-drive-detail-two-questions.md` (**Q1** = D2,
+#   the लक्ष्य question `-211` handed to F by name; **Q2** = D3, the VPA). ⛔ ZERO ROWS MOVE; `11b-17`
+#   stays `ready-for-dev` behind its Preflight STOP.
+#   ⚠⛔⛔ **AND ONE CORRECTION TO THE 2026-09-10c PASS, MADE WHILE DRAFTING THE NOTE — D3 WAS FRAMED
+#   BACKWARDS.** That pass read D3 as *"a standing prohibition vs an author-committed enumeration"*
+#   and held AC4 to five fields as the SAFE DEFAULT. ⛔ The authority runs the other way:
+#   **`2026-09-04-191` cl.1 is TRUSTEE-RATIFIED** (Dhiraj Rahul + Kalpana Bharti) and rules
+#   `nominee_vpa` *"a MEMBER field … **shown to the logged-in member so they can make the
+#   contribution** … carried on the member surface as a payment coordinate"* — ⭐ and ⛔ only cl.4 was
+#   ever superseded (`-204`), so **cl.1 STANDS**.
+#   ⇒ ⭐⭐ **THE "PROHIBITION" IS OURS, ⛔ NOT THE PANEL'S:** `deferred-work.md` item (e) declared cl.1
+#   *"ALREADY SATISFIED"* by the server-side UPI-intent path, closed the item, and added *"that would
+#   be a NEW Tier-1 exposure ⛔ nobody ruled on"* — ⛔⛔ **which is INACCURATE.** ⭐ The Panel ruled and
+#   ratified; what is genuinely unruled is what *"shown"* requires ON SCREEN. ⚠ A narrow reading was
+#   taken in a working note and ⛔ never put back — [[feedback_supersede_never_reinterpret]].
+#   ⭐ AC4's five-field render is now stated as a **HOLD**, ⛔ not a finding that (a) won; item (e)'s
+#   wording needs amending under EITHER answer, ⛔ because the closure rests on a false ground even if
+#   its conclusion survives ([[feedback_closure_language_precision]]).
+#   ⭐ **D2 ALSO GAINED A SECOND AXIS:** the member list carries लक्ष्य on **`live` rows ONLY**
+#   (`member-drive-list.ts:236-244`; `-204` cl.2's *"right of the progress bar, on a LIVE row"*), while
+#   the detail covers THREE stages ⇒ ⛔ the finished-drive case is unruled and ⛔ must not be inferred
+#   from a slot description.
+#   ⛔ **NO CODE.** ⛔ Rows unchanged: `11b-17` / `11b-3b` / `6-18` `ready-for-dev`; `11b-16` `withdrawn`;
+#   epic-8 + epic-11b `in-progress`.)
+# last_updated: 2026-09-10c (⚠⛔⛔ **`11b-17` RE-VALIDATED (`bmad-create-story validate`, three
+#   independent verifiers) — 32 FINDINGS APPLIED TO THE STORY FILE. ⛔ ZERO ROWS MOVE.**
+#   ⛔ `11b-17` STAYS `ready-for-dev` — ⚠ the row is TRUE (the file exists) and ⛔ that is all the value
+#   means. ⭐⭐ **THE HOLD IS A PREFLIGHT STOP IN THE STORY FILE, ⛔ not a status flip** — story E's
+#   precedent (its F2 STOP gated AC8b until `-211` landed). ⛔ A `blocked-awaiting-decisions` value was
+#   ⛔ NOT minted: `-208` cl.3 records that refusal, and `-210` cl.2's delegation ⛔ does ⛔ not extend
+#   to a status whose meaning reaches the dev workflow.
+#   ⭐ Baseline RE-PINNED `66ef4dce` → `a2617869` — **106 commits** of drift. ⚠ The 2026-09-09 sweep
+#   fixed only the pin's REACHABILITY and explicitly disclaimed re-verification; ⭐ that debt is now
+#   DISCHARGED, every claim re-checked at HEAD.
+#   ⛔⛔ **TWO DECISIONS OPENED — both gate code, and the story's "⛔ Zero open decisions" is now FALSE:**
+#   **D2** — `#decision-2026-09-09-211` **Consequence 2** hands the लक्ष्य question to F **BY NAME**
+#   (*"Whether the per-drive view shows लक्ष्य … is F's question — ⛔ it does ⛔ not inherit this by
+#   symmetry"*), while cl.1 **RETIRED** *"⛔ no target"* from E at all three sites. `11b-17` carried the
+#   retired sentence VERBATIM at two sites, which would have put the DETAIL below both the member LIST
+#   and the public page — breaking its own AC2. ⇒ struck; D2 opened.
+#   **D3** — AC4 ordered the **UPI ID (VPA) plaintext** onto a member wire, which `nominee-accounts.ts:59`,
+#   `deferred-work.md:341-347` and `11b-11` (`done`) all say has ⛔ NEVER been there (*"a NEW Tier-1
+#   exposure ⛔ nobody ruled on"*). ⚠ `-199` enumerates it but is **author-committed, ⛔ not ratified**,
+#   and ⛔ never cites the prohibition ⇒ ⭐ a supersession must be NAMED, ⛔ not inferred.
+#   ⭐⭐ **AC8 + AC9 WRITTEN — E's two routed obligations lived in PROSE ONLY** (⛔ no AC, ⛔ no Task),
+#   the exact failure the story's own text warned its next `validate` must fix.
+#   ⭐ **AC5 RE-GROUNDED as a NAMED DEPARTURE:** its cited precedent writes `actorId: null, actorRole:
+#   null` and its doc-block says *"⛔ Do not widen this to log every request"* — the opposite of what
+#   AC5 orders. ⭐ **AC2 re-pointed** to `SAHYOG_VIVRAN_FIELD_IDS` + the nominee map (E's is the INDEX
+#   map). ⭐ **Task 5's a11y instruction INVERTED** — *"`accessible` on every labelled container"* is
+#   the defect E's third pass fixed and would have made AC8's own control UNREACHABLE.
+#   ⭐ **Trap 1 RE-VERIFIED SOUND** — story A's withdrawal SHIPPED (`45547a7b`) and is a DELETION, ⛔ not
+#   a gate ⇒ ⛔ nothing can be provisioning-inert and the comparison ⛔ cannot be vacuous.
+#   ⚠ Swept: *"43,000"* at 7 sites (⭐ `-199` itself corrected it — illustrative, and the operative axis
+#   is **per-Pariwar**, with ⛔ NO ratified figure); the stale blocked-on chain (⭐ **the story is
+#   UNBLOCKED** — A/E `done`, G `withdrawn`); Task 0c (⭐ **discharged**, `468d43c1`); *"last of seven"*
+#   → **six** (`-208` cl.6); `-165` → `-205` cl.9; `:804-830` → `:840-905`; annotation → **SECTION**.
+#   ⭐ Also recorded: `.strict()` blank-out (names F **twice** by key), the MMKV at-rest trigger FIRING,
+#   the `ANONYMIZED_SENTINEL` backstop, `-200` cl.4's untouchable `SahyogVivranEntry`, the three-subject
+#   resolver split, `clampLimit`, and ⛔ **no RN mount harness exists** (source-scan + `format.ts`).
+#   ⛔ **NO CODE.** ⛔ Rows unchanged: `11b-17` / `11b-3b` / `6-18` `ready-for-dev`; `11b-16` `withdrawn`;
+#   epic-8 + epic-11b `in-progress`.)
 # last_updated: 2026-09-10b (✅⭐⭐ **`11b-15` CODE REVIEW, FOURTH PASS — 5 patches applied, 0
 #   decisions needed, 3 deferred (all already on record). ⛔ STATUS UNCHANGED: `11b-15` STAYS `done`**
 #   — a re-review, ⛔ not a re-open. ⛔ ZERO OTHER ROWS MOVE. Same `c2dd787c..HEAD` range the third

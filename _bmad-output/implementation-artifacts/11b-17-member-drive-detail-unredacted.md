@@ -13,22 +13,20 @@ fix only and explicitly disclaimed re-verification; that debt is now DISCHARGED.
 
 Status: ready-for-dev
 
-## ⛔⛔ PREFLIGHT — ⛔ **STOP. TWO DECISIONS ARE OPEN AND BOTH GATE CODE.**
+## ✅ PREFLIGHT — ✅ **ALL CLEAR. ⭐ THIS STORY IS STARTABLE.**
 
-⚠⛔ **The row reads `ready-for-dev` because the file EXISTS — ⛔ that is all that value means.** ⭐ The
-hold lives HERE, on story **E**'s precedent (`11b-15`, whose F2 STOP gated AC8b until `-211` landed).
+⭐⭐ **BOTH OPEN DECISIONS ARE RULED — `#decision-2026-09-10-212`, TRUSTEE-RATIFIED (DR + KB, 2026-09-10).**
 
-| | Open decision | What it blocks |
+| | Was open | ✅ Ruled |
 |---|---|---|
-| **D2** | Does the per-drive DETAIL render **लक्ष्य**, and for **which stages**? | AC2, AC7, Task 2, Task 5 |
-| **D3** | *"Shown to the logged-in member"* (`-191` cl.1, **ratified**) — the **ID itself**, or a pay button? | AC4, Task 2, Task 5 |
+| **D2** | Does the DETAIL render **लक्ष्य**, and for which stages? | ✅ **(B) — `live` drives ONLY** (cl.1) |
+| **D3** | *"Shown to the logged-in member"* — the ID, or a pay button? | ✅ **(D) — the UPI ID goes on the PAYMENT screen, ⛔ not here** (cl.2) |
 
-⭐ **BOTH ARE ROUTED TO THE PANEL, 2026-09-10** —
-`_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-10-11b17-member-drive-detail-two-questions.md`
-(**Q1** = D2, **Q2** = D3). ⛔ Nothing is built until they answer.
+⭐ Answered from `trustee-panel-routing-note-2026-09-10-11b17-member-drive-detail-two-questions.md`
+(**Q1**/**Q2**). ⚠ **Read `-212`'s Consequences 3-6 before Task 2** — cl.2 creates work **outside this
+story** and ⛔ none of it is F's to absorb silently.
 
-⛔⛔ **⛔ NO CODE UNTIL BOTH ARE RULED AND THEIR DECISION ENTRIES HAVE LANDED**
-([[feedback_governance_commits_precede_implementation]]). ⭐ Task 1's `governance:` commit carries them.
+⛔ Task 1's `governance:` commit still binds ([[feedback_governance_commits_precede_implementation]]).
 
 ### ⭐ The 2026-09-10 `validate` pass — ⛔ KEPT AS THE RECORD, ⛔ not deleted
 
@@ -224,6 +222,9 @@ contributor count and the appeal outcome.
 `SAHYOG_DRIVE_ROW_FIELD_IDS` — the **index** map; copying it proves nothing about this surface.
 **And** ⚠ two fields are **⛔ NOT floor fields for archived rows**: `-207` cl.1 makes
 `confirmedPercentage` `null` on the public wire for `closed`/`verified`. ⛔ Do ⛔ not assert it there.
+**And** ⭐ **लक्ष्य per D2(B):** it renders on a `live` drive and ⛔ is ABSENT on `closed`/`settled`
+— ⛔ never `null` — mirroring the list's own producer guard. ⚠ ⛔ This is ⛔ NOT a `member < public`
+breach: the public index is **live-only** too (`-212` cl.1).
 **And** ⚠ the public **name** gate is **PROVISIONING-INERT** (`handlers.ts:934-955`), so on a default
 `full_name` Pariwar a member already sees a name **nobody can see publicly** (`-209` cl.2). ⛔ That
 asymmetry is ⛔ NOT a defect and the comparison must ⛔ not flag it.
@@ -238,12 +239,11 @@ keys **ABSENT** (⛔ not `null`) — ⭐ the discipline **story A** shipped, rul
 
 ### AC4 — Where they appear, they are UNMASKED and COMPLETE
 Per Trap 4 — **full account number, IFSC, holder name, bank and branch.**
-⚠⛔ **THE UPI ID IS ⛔ NOT IN THIS LIST — it is D3, and D3 IS OPEN.** ⛔ Do ⛔ not add `vpa` to any wire
-until D3 rules.
-⚠⛔⛔ **AND ⛔ DO ⛔ NOT READ THAT AS "the prohibition wins."** `-191` **cl.1 is TRUSTEE-RATIFIED** and
-says the VPA *"is **shown to the logged-in member so they can make the contribution**"*, ⭐ *"carried
-on the member surface as a payment coordinate."* ⇒ ⚠ **the ratified text leans the OTHER way**, and
-`deferred-work.md`'s *"a NEW Tier-1 exposure ⛔ nobody ruled on"* is **⛔ inaccurate** — see **D3**.
+✅⛔ **THE UPI ID IS ⛔ NOT IN THIS LIST, AND THAT IS NOW RULED — `-212` cl.2, option (D).**
+⛔ Do ⛔ not add `vpa` to this story's wire, on ⛔ any drive, in ⛔ any stage.
+⭐ The VPA is satisfied **on the PAYMENT screen** instead — ⚠⛔ **which is NEW WORK on ANOTHER surface
+and is ⛔ NOT this story's** (`-212` Consequence 3). ⛔ Do ⛔ not absorb it here, and ⛔ do ⛔ not let it
+lapse: `-191` cl.1 already lapsed once.
 ⚠⛔ **AND "both accounts" IS A REVERSAL TO NAME.** `member-pool/handlers.ts:539-547` decrypts **ONE**
 today, on the stated ground that the second has *"⛔ no authorising purpose"*. ⇒ ⛔ do ⛔ not decrypt the
 second silently — name the reversal, as Trap 3 requires for `contribution-history`.
@@ -304,9 +304,9 @@ field**, and removing it to buy throughput would trade a **crypto audit obligati
 ### AC7 — ⛔ Nothing else moves
 ⛔ No public surface · ⛔ no masking behaviour (⭐ dormant per `-190` cl.4) · ⛔ no change to the 9.9
 donor path's own gate · ⛔ no contributor names · ⛔ no `spawned`.
-⚠⛔ **⛔ "no target" IS ⛔ GONE FROM THIS LIST — it is D2.** `-211` cl.1 RETIRED that sentence from
-story E *"at all three sites it appeared"*, and `-211` Consequence 2 hands the question to F by name.
-⛔ Do ⛔ not re-add it as an exclusion.
+✅ **THE TARGET IS RULED, ⛔ not excluded — `-212` cl.1: `live` ONLY.** ⚠ ⛔ Do ⛔ not restore the
+retired *"⛔ no target"* sentence (`-211` cl.1 struck it at all three sites in story E); ⛔ and ⛔ do
+⛔ not read D2(B) as that sentence returning — the figure **renders**, on one stage.
 **And** ⭐ AC7 is discharged by a **fence test**, ⛔ not by assertion — the shape E's AC8 uses.
 
 ### AC8 — ⭐ The drive is REACHABLE: `drive_href` + `pool_canonical_identifier` RENDER here
@@ -374,91 +374,59 @@ sentence renders **NOTHING** — ⛔ no placeholder, ⛔ no marker, ⛔ no parti
 > ⭐ **BigDev's call, and it is made.** ✅ The Panel disclosure note `-199` recommended was **WRITTEN**
 > (Task 0c).
 
-### ⛔ D2 — **OPEN.** Does the per-drive DETAIL render **लक्ष्य**, and on which axis?
+### ✅ D2 — **RULED (B) by the TRUSTEE PANEL, 2026-09-10** (`#decision-2026-09-10-212` cl.1)
 
-⚠⛔ **OPENED BY `#decision-2026-09-09-211`, WHICH NAMES THIS STORY.** Consequence 2, verbatim
-(`.decision-log.md:113-115`):
+> ⭐⭐ **THE RULING:** the detail page renders **"Expected" / लक्ष्य** on a **`live`** drive ⛔ ONLY —
+> ⛔ not on `closed`, ⛔ not on `settled`. ⭐ **Trustee-ratified, DR + KB.**
 
-> ⚠ Story `11b-17` (**F**, the member's drive **detail**) is ⛔ **not** ruled here. ⭐ Whether the
-> per-drive view shows लक्ष्य, and on which axis, is F's question — ⛔ it does ⛔ not inherit this by
-> symmetry.
+⭐ **WHY IT LANDS THERE:** it mirrors the member LIST exactly (`-211` cl.1, whose producer guard already
+enforces `status === 'live' ? true : driveTargetInr === undefined`) and `-204` cl.2's ruled slot
+(*"right of the progress bar, on a LIVE row"*).
 
-⭐ **WHY IT CANNOT BE LEFT AS *"no target"*:** `-211` cl.1 **RETIRED** that sentence from story E *"at
-all three sites it appeared"*, on `-189` cl.3 grounds — story **D** shipped `drive_target` on the
-public index (`-204` cl.4), and the member **list** now renders it (`member-drive-list.ts:187`).
-⇒ ⛔ a detail that hid it would show **less than the list of the same drives AND less than the public
-page**, which is the inversion cl.3 exists to forbid — and would break this story's own **AC2**.
+⭐ **AND `-189` cl.3 HOLDS:** the public index is **live-only** too ⇒ a member opening a `closed` drive
+sees ⛔ no less than a stranger. ⚠ ⛔ The earlier worry that (B) would put the detail below the list is
+⛔ answered — under (B) the two agree **by construction**.
 
-- **(a) Render it on `reveal_to_members`** — ⭐ the axis `-211` cl.2 chose for E; the DB CHECK makes
-  public-on imply member-on, so cl.3 holds either way. ⭐ Consistent with the sibling by construction.
-- **(b) Render it on `reveal_to_public`** — ⚠ would leave the member switch inert on this surface,
-  the defect `-211` cl.2 explicitly avoided.
-- **(c) ⛔ Do not render it** — ⚠ requires stating **why the detail may show less than the list**, and
-  ⛔ cannot be reconciled with AC2 as written.
+⛔ **THE GATE IS UNCHANGED** and was never in question: ⛔ only where a `super_admin` has switched
+`reveal_to_members` ON; fail-closed; ⛔ no Pariwar has a row ⇒ ⛔ nothing renders on the day this ships.
 
-⚠ **AND A SECOND AXIS THE LIST NEVER FACED.** The member list carries लक्ष्य on **`live` rows ONLY** —
-the producer's own guard enforces it (`member-drive-list.ts:236-244`:
-`entry.status === 'live' ? true : entry.driveTargetInr === undefined`), on `-204` **cl.2**'s slot
-*"right of the progress bar, **on a LIVE row**"*. ⚠⛔ The **detail covers three stages** ⇒ **does a
-member looking at a FINISHED drive see what it had been aiming for?** ⛔ Unruled; ⛔ do ⛔ not infer it
-from a slot description.
+⚠ **Task 2 owes its OWN named live-only fragment** — `-196` Consequence 2 and `public-read.ts:283-284`
+forbid sharing or parameterising the list's tuple (`-212` Consequence 2).
 
-⇒ ⭐ **ROUTED TO THE PANEL 2026-09-10** (same note, **Q1**), with (A) all three stages · (B) live-only,
-mirroring the list · (C) not at all — ⚠ which ⛔ cannot be reconciled with AC2 and would need a stated
-reason.
+### ✅ D3 — **RULED (D) by the TRUSTEE PANEL, 2026-09-10** (`#decision-2026-09-10-212` cl.2)
 
-⇒ ⛔ **Task 2 / Task 5 ⛔ do ⛔ not start until this is ruled and its entry has landed.**
+> ⭐⭐ **THE RULING:** the nominee's **UPI ID is ⛔ NOT on this page**. ⭐ It is **ADDED to the PAYMENT
+> screen**, where a member is actually asked to pay. ⭐ **Trustee-ratified, DR + KB.**
 
-### ⛔ D3 — **OPEN.** Does the **UPI ID (VPA) plaintext** go on the member wire?
+⇒ ⭐ **AC4 renders FIVE coordinates** — account number, IFSC, holder name, bank, branch. ⛔ No `vpa`.
 
-⚠⛔⛔ **⛔ THIS IS ⛔ NOT "a prohibition vs an author-committed enumeration." THE RATIFIED TEXT IS ON
-THE OTHER SIDE, AND THE PROHIBITION IS OURS.**
+⚠⛔⛔ **AND THE OTHER HALF IS ⛔ NOT THIS STORY'S — ⛔ do ⛔ not absorb it, ⛔ do ⛔ not drop it.**
+`-212` Consequence 3: the payment-screen change touches `NomineeBankAccountView`
+(`nominee-accounts.ts`), the `nominee-accounts` handler's decrypt, and `pay.tsx:473-480` — ⭐ which
+today renders account holder, bank, **full account number** and IFSC, and ⛔ **no VPA row**. ⇒ it needs
+a **named home** recorded **before F ships**. ⚠ `-191` cl.1 already lapsed once for want of one.
 
-⭐ **`2026-09-04-191` cl.1 — TRUSTEE-RATIFIED** (Dhiraj Rahul + Kalpana Bharti), `.decision-log.md:2031-2036`,
-verbatim:
+⚠⛔ **THREE THINGS THAT WORK CARRIES, RECORDED HERE SO THEY TRAVEL:**
+⭐ (a) the `.strict()` additive-field trigger **FIRES** — adding `vpa` blanks that screen on installed
+older builds until they update (`-212` Consequence 4); ⭐ (b) **a UPI-ID label must be MINTED** — story A
+deleted `label.vpa` and ⛔ none exists on any member surface (Consequence 5); ⭐ (c) the pay screen
+labels the nominee *"Account holder"*, which `-190` cl.2 rules ⛔ not to be used — ⚠ whether cl.2 binds
+⛔ only the public surface is **⛔ unresolved** and is ⛔ **not** to be fixed by side effect (Consequence 6).
 
-> **`nominee_vpa` — A MEMBER FIELD, ⛔ NOT A PUBLIC ONE.** … the VPA goes with them, and is **shown to
-> the logged-in member so they can make the contribution**. … ⚠ **with the purpose stated**: it is
-> ⛔ not merely withheld from the public, it is **carried on the member surface as a payment coordinate**.
-
-⭐ ⛔ Only `-191` **cl.4** was ever superseded (`-204`). **cl.1 STANDS.**
-
-⚠⛔ **WHAT THE CODE ACTUALLY DOES, AND WHY THE RECORD DISAGREES WITH ITSELF.** The member wire carries
-`vpaPresent: z.boolean()` (`nominee-accounts.ts:44`, `:61`) and the plaintext is consumed
-**server-side** into the UPI intent ⇒ the member can **tap and pay** but ⛔ cannot **read** the ID.
-`deferred-work.md:341-347` then declares cl.1 *"ALREADY SATISFIED"* by that path and closes the item —
-⛔⛔ **adding *"that would be a NEW Tier-1 exposure ⛔ nobody ruled on."***
-
-⇒ ⚠⛔ **THAT PHRASE IS ⛔ INACCURATE AND MUST ⛔ NOT BE RELIED ON.** ⭐ The Panel **did** rule, and
-ratified. ⛔ What is genuinely unruled is ⛔ not *whether* the member gets the VPA — it is **what
-*"shown"* requires on screen**. ⚠ A narrow reading was taken **in a working note, ⛔ never put back to
-the Panel** ([[feedback_supersede_never_reinterpret]] — a ratified clause is superseded, ⛔ never
-re-read).
-
-⇒ ⭐ **ROUTED TO THE PANEL 2026-09-10** —
-`trustee-panel-routing-note-2026-09-10-11b17-member-drive-detail-two-questions.md` **Q2**.
-
-- **(a) The narrow reading — the button is enough.** ⛔ The ID stays off screen; `vpaPresent` stands.
-  ⚠ Then `deferred-work.md` item (e)'s **wording** must still be amended (*"nobody ruled on"* →
-  *"cl.1 confirmed as satisfied by the payment path"*), ⛔ because the closure was recorded on a
-  false ground even if the conclusion survives.
-- **(b) The plain reading — render it.** ⭐ cl.1 applied as written; the VPA joins the other five
-  coordinates. ⚠ Record the exposure the way `-199` was recorded.
-- **(c) Render it, but narrower than `-199`** — ⚠ makes the VPA the ⛔ only coordinate scoped
-  differently from the rest ⇒ its own read path, its own test.
-
-⚠⛔ **AC4 renders FIVE fields until this is ruled — ⛔ that is a HOLD, ⛔ not a finding that (a) won.**
-
----
+⭐⭐ **WHAT cl.2 SUPERSEDED, NAMED:** `deferred-work.md` item **(e)**'s *"do ⛔ NOT … add `vpa` to that
+wire; that would be a NEW Tier-1 exposure ⛔ nobody ruled on."* ⚠ Its ground was **⛔ false when
+written** — `-191` cl.1 had ruled, and item (e) quotes it in the same paragraph. ⇒ item (e) is amended
+to record the supersession **and** the wrong ground ([[feedback_closure_language_precision]]).
 
 ## ⚠ What this story does ⛔ NOT do
 
 ⛔ No public surface · ⛔ no masking change (⭐ dormant, `-190` cl.4) · ⛔ no change to the 9.9 donor
 path's own live-pool gate · ⛔ no widening of `contribution-history` without naming Trap 3's reversal ·
-⛔ no contributor names · ⛔ no `spawned` · ⛔ no masked display of a coordinate (Trap 4) · ⛔ no `vpa`
-on any wire (**D3**).
+⛔ no contributor names · ⛔ no `spawned` · ⛔ no masked display of a coordinate (Trap 4) · ⛔ **no `vpa`
+on any wire** (✅ **D3(D)** — it goes on the PAYMENT screen, ⛔ a different surface, ⛔ not this story) ·
+⛔ **no लक्ष्य on a `closed` or `settled` drive** (✅ **D2(B)**).
 
-⚠⛔ **⛔ "no target" IS ⛔ NOT ON THIS LIST ANY MORE** — see **D2**.
+⚠⛔ **⛔ AND ⛔ NOT the payment-screen work itself** — ruled, ⛔ but ⛔ NOT F's (`-212` Consequence 3).
 
 ⚠⛔ **AND ⛔ DO ⛔ NOT TOUCH `SahyogVivranEntry`.** `apps/mobile/components/sahyog-vivran/SahyogVivranEntry.tsx:22-41`
 is a **Trustee-ratified** member-app path to the same drive's public page (`-200` cl.4, *"Phone-app
@@ -477,14 +445,20 @@ a defect to "fix".
 - [x] **Task 0c — the Panel disclosure note** — ✅ **WRITTEN AND COMMITTED** 2026-09-04:
       `trustee-panel-disclosure-note-2026-09-04-member-banking-access-quantification.md` (commit
       `468d43c1`). ⛔ FOR INFORMATION; ⛔ no reply required and ⛔ nothing waits on it.
-- [ ] ⛔⛔ **Task 0d — THE PREFLIGHT STOP: RULE D2 AND D3** and land their decision entries **before
-      any code** ([[feedback_governance_commits_precede_implementation]]).
+- [x] ✅ **Task 0d — THE PREFLIGHT STOP — DISCHARGED.** `#decision-2026-09-10-212` landed 2026-09-10,
+      ⛔ before any code. **D2 → (B)** `live` only; **D3 → (D)** the UPI ID goes on the payment screen.
+      ⚠ Read its **Consequences 3-6** before Task 2.
+- [ ] ⚠⛔ **Task 0e — GIVE THE PAY-SCREEN WORK A NAMED HOME** (`-212` Consequence 3) — ⛔ NOT built
+      here. ⭐ A story of its own, or an explicit `deferred-work.md` entry with a trigger, recorded
+      **before this story ships**. ⛔ A ratified instruction must ⛔ not lapse twice.
 - [ ] **Task 1 — GOVERNANCE** (AC0) — ⭐ a **SECTION** in `epics.md`, ⛔ not an annotation (this is a
       new member-app surface with ⛔ no parent there — the `8-16` / `11b-15` precedent,
       `sprint-status.yaml:17545-17548`); flip the sprint row; record D2/D3 and **AC6's sentence**;
       ⛔ one `governance:` commit, ⛔ no code.
 - [ ] **Task 2 — The read** (AC1, AC2, AC3) — a member-scoped per-drive read with its **OWN** named
-      visible-state fragment. ⚠ Per Trap 3, ⛔ do ⛔ not widen `contribution-history`; ⭐ build the
+      visible-state fragment.
+      ⭐ **AND its OWN named `live`-only target fragment** (D2(B); `-212` Consequence 2) — ⛔ do ⛔ not
+      share or parameterise the list's tuple. ⚠ On `closed`/`settled` the key is **ABSENT**, ⛔ not `null`. ⚠ Per Trap 3, ⛔ do ⛔ not widen `contribution-history`; ⭐ build the
       detail with its own justification, or **name the reversal**.
       ⚠⛔ **FORWARD-COMPAT — `deferred-work.md:8610-8626` NAMES THIS STORY TWICE:** `MemberDriveListEntry`
       is `.strict()` and `api-client`'s `call` throws ⇒ *"When **story F (`11b-17`)** … adds one field
@@ -533,7 +507,8 @@ a defect to "fix".
         nominee map, ⛔ not E's index map.
   - [ ] ⛔⛔ A member of **ANOTHER Pariwar** gets the coordinate keys **ABSENT**, ⛔ not `null` (AC3) —
         ⭐ the load-bearing guard.
-  - [ ] A **fence test** for AC7.
+  - [ ] A **fence test** for AC7 — ⭐ including that ⛔ **no `vpa` key** reaches this wire (D3(D)), and
+        that **लक्ष्य is ABSENT on `closed`/`settled`** (D2(B)).
   - [ ] Another Pariwar's drive is unreachable (family 12).
   - [ ] Every coordinate read writes exactly one audit line (AC5). ⚠⛔ **The precedent's write is
         FIRE-AND-FORGET** (`public-pages/handlers.ts:867`) — ⛔ a naive assertion is a flake trap
@@ -644,6 +619,7 @@ counts over the shared fixture ([[project_live_db_test_gotchas]]).
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-09-10 | 0.9 | ✅⭐⭐ **BOTH DECISIONS RULED BY THE TRUSTEE PANEL — `#decision-2026-09-10-212` (DR + KB). PREFLIGHT DISCHARGED; ⭐ THE STORY IS STARTABLE.** **D2 → (B):** लक्ष्य renders on **`live` drives ONLY**, mirroring the list and `-204` cl.2's slot; ⭐ `-189` cl.3 holds because the public index is live-only too, so (B) puts the detail **level with** the list, ⛔ not below it. **D3 → (D):** the UPI ID is ⛔ **NOT** on this page — it is **ADDED to the PAYMENT screen**. ⇒ AC4 renders **five** coordinates; AC2 gains the live-only target rule; AC7's target exclusion is replaced by the ruling. ⚠⛔ **Task 0e ADDED — the pay-screen work needs a NAMED HOME and is ⛔ NOT this story's** (`-212` Consequence 3), carrying three things with it: the `.strict()` additive-field trigger now FIRES, a UPI-ID label must be MINTED (story A deleted `label.vpa`), and the pay screen's *"Account holder"* label sits against `-190` cl.2 — ⛔ unresolved, ⛔ not to be fixed by side effect. ⭐ cl.2 **SUPERSEDES** `deferred-work.md` item (e), whose ground was **false when written**. ⛔ **NO CODE.** | Trustee Panel + BigDev |
 | 2026-09-10 | 0.8 | ⭐⭐ **THREE PREMISES TRACED TO CODE AT BigDev's DIRECTION — ⛔ none had been.** (1) ⭐ **The `super_admin` reveal switch is BUILT AND OPERABLE** — table + CHECK, key, grant (test-asserted), module MOUNTED, route, write, admin page, form guard. ⇒ `-211` cl.3 holds in the STRONG sense: off because ⛔ nobody has switched it, ⛔ not because nobody can. (2) ⭐ **The UPI intent path is real but reaches ⛔ ONE drive** — `resolveMemberLivePool` needs active + `live` cycle + ASSIGNED, and returns the soonest-closing pool ⇒ on F's page there is ⛔ no pay path for any other drive, so D3's narrow reading is **EMPTY here**; ⭐ a new **option (D)** (the VPA belongs on the PAYMENT surface) was added to the Panel note. (3) ⚠⛔ **AC5's SIZING PREMISE WAS WRONG IN THE STORY'S FAVOUR** — `-199` says *"a write on every detail open"* (singular); it is **one line per ENCRYPTED FIELD DECRYPTED** (`envelope.ts:92-93`, ⛔ no DEK cache) ⇒ **≈5-8 global-lock acquisitions per open, seven of them INVISIBLE** (emitted by the crypto layer). ⭐ Each holds ONE deployment-wide key across 5-6 sequential round trips. ⭐⭐ **⛔ NOT NEW — story E already does it, shipped** (per-row decrypts at concurrency 8) ⇒ a **PRE-EXISTING condition F AMPLIFIES**; ⭐ F is the first surface where a Tier-1 READ is the ordinary path. ⛔ **NO CODE.** | BigDev + Claude |
 | 2026-09-10 | 0.7 | ⭐⭐ **BOTH OPEN DECISIONS ROUTED TO THE PANEL** — `trustee-panel-routing-note-2026-09-10-11b17-member-drive-detail-two-questions.md` (Q1 = D2, Q2 = D3). ⚠⛔⛔ **AND D3's FRAMING IN v0.6 WAS ⛔ WRONG AND IS CORRECTED HERE.** v0.6 read D3 as *"a standing prohibition vs an author-committed enumeration"*, with AC4 held to (a) as the safe default. ⛔ That inverted the authority: **`-191` cl.1 is TRUSTEE-RATIFIED** (DR + KB) and rules the VPA *"a MEMBER field … **shown to the logged-in member** … carried on the member surface as a payment coordinate"*; ⛔ only cl.4 was ever superseded. ⇒ ⭐ the *"prohibition"* is **ours** — a narrow reading taken in `deferred-work.md` item (e) and ⛔ never put back to the Panel — and its phrase *"a NEW Tier-1 exposure ⛔ nobody ruled on"* is **⛔ inaccurate**. ⭐ AC4's five-field render is now stated as a **HOLD, ⛔ not a finding that (a) won**. ⭐ D2 also gains its **second axis**: the list carries लक्ष्य on **`live` rows ONLY** (`member-drive-list.ts:236-244`, `-204` cl.2's *"on a LIVE row"*), while the detail covers three stages ⇒ the finished-drive case is unruled. ⛔ **NO CODE.** | BigDev + Claude |
 | 2026-09-10 | 0.6 | ⛔⛔ **RE-VALIDATED (`bmad-create-story validate`, three independent verifiers) — 32 FINDINGS APPLIED. ⛔ ZERO ROWS MOVE.** ⭐ Baseline **RE-PINNED** `66ef4dce` → `a2617869` (**106** commits of drift; the 2026-09-09 re-pin fixed reachability only and disclaimed re-verification — that debt is now DISCHARGED). ⛔⛔ **TWO DECISIONS OPENED AND A PREFLIGHT STOP ADDED: D2** (`-211` Consequence 2 hands the लक्ष्य question to F **by name**; `-211` cl.1 RETIRED *"no target"*, struck at both sites) and **D3** (AC4's UPI ID contradicts a thrice-stated prohibition; `-199` is **author-committed**, ⛔ not ratified, and supersession must be NAMED). ⭐ **AC8 + AC9 WRITTEN** — E's two routed obligations lived in prose only, ⛔ no AC, ⛔ no Task. ⭐ **AC5 RE-GROUNDED** as a named DEPARTURE: the cited precedent writes `actorId: null` and says *"⛔ Do not widen this to log every request."* ⭐ **AC2 re-pointed** to `SAHYOG_VIVRAN_FIELD_IDS` + the nominee map (E's is the **index** map) with `-207` cl.1 and the inert public name gate carved out. ⭐ **Task 5's a11y instruction INVERTED** — *"`accessible` on every labelled container"* is the defect E's third pass fixed and would have made AC8's control unreachable. ⚠ **AC4 narrowed** (VPA ⇒ D3; the second decrypt named as a reversal; §8.4(ii) surfaced; `Nominee Name` per `-190` cl.2) and its **missing labels** recorded (A deleted five; ⛔ no branch or UPI-ID label exists). ⭐ Added: the `.strict()` blank-out naming F twice, the MMKV at-rest trigger, the `ANONYMIZED_SENTINEL` backstop, `-200` cl.4's untouchable entry, the three-subject resolver split, `clampLimit`, and the **⛔ no-RN-mount-harness** correction. ⚠ Swept: *"43,000"* (7 sites) — `-199` itself corrected it to **per-Pariwar, no ratified figure**; the stale blocked-on chain (**story is UNBLOCKED**); Task 0c (**discharged**); *"last of seven"* → **six**; `-165` → `-205` cl.9; `:804-830` → `:840-905`; Task 0 annotation → **SECTION**. ⛔ **NO CODE.** | BigDev + Claude |

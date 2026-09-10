@@ -1,3 +1,32 @@
+# last_updated: 2026-09-10e (✅⭐⭐ **TRUSTEE PANEL RULED BOTH OF `11b-17`'s OPEN DECISIONS —
+#   `#decision-2026-09-10-212`, Trustee-ratified (Dhiraj Rahul + Kalpana Bharti).** ⛔ ZERO ROWS MOVE;
+#   `11b-17` stays `ready-for-dev` — ⭐ but its **PREFLIGHT STOP IS DISCHARGED** and the story is now
+#   genuinely **STARTABLE** (Task 1's `governance:` commit still binds).
+#   ⭐ **D2 → (B): लक्ष्य renders on `live` drives ONLY** — mirrors the member list (`-211` cl.1) and
+#   `-204` cl.2's ruled slot. ⭐ `-189` cl.3 HOLDS: the public index is live-only too, so (B) puts the
+#   detail **level with** the list, ⛔ not below it. ⛔ The `reveal_to_members` gate is UNCHANGED and was
+#   never in question — fail-closed, ⛔ no Pariwar has a row ⇒ ⛔ nothing renders the day F ships.
+#   ⭐ **D3 → (D): the nominee's UPI ID is ⛔ NOT on the drive page — it is ADDED to the PAYMENT screen.**
+#   ⇒ AC4 renders FIVE coordinates (account number, IFSC, holder name, bank, branch), ⛔ no `vpa`.
+#   ⚠⛔⛔ **AND cl.2 CREATES WORK OUTSIDE `11b-17`, WHICH IS ⛔ NOT F's TO ABSORB** (`-212` Consequence 3):
+#   the pay-screen change touches `NomineeBankAccountView`, the `nominee-accounts` decrypt and
+#   `pay.tsx:473-480` — ⭐ which today renders account holder, bank, FULL account number and IFSC, and
+#   ⛔ NO VPA row. ⇒ **Task 0e ADDED to `11b-17`: give it a NAMED HOME before F ships.** ⚠ `-191` cl.1
+#   already lapsed once for want of one — ⛔ it must ⛔ not lapse twice.
+#   ⚠ That work carries THREE things: the `.strict()` additive-field blank-out fires on installed older
+#   builds (C4); a **UPI-ID label must be MINTED** — story A deleted `label.vpa` and ⛔ none exists on
+#   any member surface (C5); and the pay screen labels the nominee *"Account holder"*, which `-190`
+#   cl.2 rules ⛔ not to be used — ⚠ whether cl.2 binds ⛔ only the public surface is **UNRESOLVED** and
+#   is ⛔ **not** to be fixed by side effect (C6).
+#   ⭐⭐ **SUPERSESSION NAMED, ⛔ not tidied:** `deferred-work.md` item (e)'s *"do ⛔ NOT add `vpa` to that
+#   wire; that would be a NEW Tier-1 exposure ⛔ nobody ruled on"* is **SUPERSEDED** — ⚠ and its stated
+#   ground was **⛔ FALSE WHEN WRITTEN**: `-191` cl.1 had ruled, and item (e) quotes that clause three
+#   lines above its own prohibition. ⭐ Recorded as a false ground, ⛔ not rewritten
+#   ([[feedback_closure_language_precision]]). The item is RE-OPENED as a build obligation with its
+#   trigger FIRED.
+#   ⭐ The 2026-09-10 routing note gains its ✅ ANSWERED header; ⛔ its body is kept AS PUT.
+#   ⛔ **NO CODE.** ⛔ Rows unchanged: `11b-17` / `11b-3b` / `6-18` `ready-for-dev`; `11b-16` `withdrawn`;
+#   epic-8 + epic-11b `in-progress`.)
 # last_updated: 2026-09-10d (⭐⭐ **`11b-17`'s TWO OPEN DECISIONS ROUTED TO THE TRUSTEE PANEL** —
 #   `trustee-panel-routing-note-2026-09-10-11b17-member-drive-detail-two-questions.md` (**Q1** = D2,
 #   the लक्ष्य question `-211` handed to F by name; **Q2** = D3, the VPA). ⛔ ZERO ROWS MOVE; `11b-17`

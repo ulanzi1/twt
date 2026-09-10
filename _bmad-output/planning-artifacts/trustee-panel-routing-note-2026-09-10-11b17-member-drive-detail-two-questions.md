@@ -100,6 +100,31 @@ appears on the **detail page** *once the switch is on*.
 - ⭐ **There is ⛔ no detail page yet.** `apps/mobile/app/(tabs)/` contains `index`, `panchayat`,
   `sahyog`, `shradhanjali` — ⛔ no per-drive route. Story F would build the first one.
 
+### 3.1b ⭐⭐ THE SWITCH ITSELF IS **BUILT AND OPERABLE** — ⭐ traced end to end, ⛔ not taken on trust
+
+⚠⛔ **We checked this because we had ⛔ not.** Our statement that the figure is *"off until a
+Superadmin turns it on"* rested on the **decision text**, ⛔ not on the code — and this programme has
+already been bitten once by a governed control that was ratified, documented and **⛔ unwritable**
+(the public name-publication basis, still provisioning-inert today). ⇒ ⭐ the chain, each link
+verified:
+
+| Link | Where |
+|---|---|
+| The table + the one-way CHECK (public-on **implies** member-on) | `0115_pariwar-drive-target.sql:103`, `:143` |
+| The permission key, ⛔ `super_admin` only | `rbac/permissions.ts:1079` |
+| ⭐ `super_admin` **holds** it — its bundle **IS** the catalog, so the key auto-derives | `rbac/roles.ts:264-266` |
+| ⭐ Asserted by a test, ⛔ not assumed — `expect(holders).toEqual(['super_admin'])`, `pariwar_admin` excluded | `tests/rbac/roles.test.ts:218-240` |
+| The API module is **mounted**, ⛔ not merely imported | `apps/api/src/server.ts:246` |
+| The routes gate on the key | `modules/drive-target/routes.ts:11` |
+| The write **reaches the column** | `modules/drive-target/handlers.ts:416` |
+| The admin route is in the tree | `apps/admin/src/router.tsx:131-134`, `:284` |
+| The form, and its refusal of the forbidden combination | `RevealSwitchesForm.tsx:105` |
+
+⇒ ⭐⭐ **`-211` cl.3 is true in the STRONG sense: the figure is off because ⛔ nobody has switched it,
+⛔ not because nobody CAN.** ⚠ There is ⛔ no navigation link to the page — ⭐ but that is how **all 29**
+per-Pariwar admin pages work (`nominee-bank-masking`, `directory-publication` and the rest are
+URL-reached too), ⛔ so it is ⛔ not a defect in this control.
+
 ### 3.2 ⛔⛔ THE FINDING
 
 Story F was written to say *"⛔ no target"*. ⚠⛔ **That is the exact sentence `-211` cl.1 retired from
@@ -247,6 +272,10 @@ note **disagreed**, and ⛔ nobody noticed.
 | C9 | Our working note called it *"a NEW Tier-1 exposure ⛔ nobody ruled on"* | `sed -n '336,352p' _bmad-output/implementation-artifacts/deferred-work.md` |
 | C10 | The reveal is fail-closed and ⛔ no Pariwar has a row | `sed -n '83,90p' .decision-log.md` |
 | C11 | ⛔ No per-drive route exists today | `ls "apps/mobile/app/(tabs)/"` |
+| C12 | The reveal **permission key** exists, `super_admin` only | `grep -n "manage_drive_target_visibility" packages/domain/src/rbac/permissions.ts` |
+| C13 | `super_admin` **holds** it (bundle = the catalog); a test asserts the holder set | `sed -n '218,240p' packages/domain/tests/rbac/roles.test.ts` |
+| C14 | The API module is **mounted**, and the write reaches the column | `grep -n "registerDriveTargetModule" apps/api/src/server.ts` · `sed -n '410,420p' apps/api/src/modules/drive-target/handlers.ts` |
+| C15 | The admin page is routed, and the form refuses public-on-without-member-on | `grep -n "drive-target" apps/admin/src/router.tsx` · `sed -n '105p' apps/admin/src/modules/drive-target/RevealSwitchesForm.tsx` |
 
 ---
 

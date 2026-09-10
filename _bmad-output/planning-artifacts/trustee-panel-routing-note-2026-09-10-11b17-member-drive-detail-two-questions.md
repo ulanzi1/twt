@@ -169,6 +169,50 @@ receives a **boolean**, ⛔ never the ID:
 The ID itself is read **server-side** and folded into a UPI payment link, so a member can **tap and
 pay** ⛔ without ever seeing the string.
 
+### 4.2b ⛔⛔ **AND THE PAY PATH REACHES ⛔ EXACTLY ONE DRIVE** — ⭐ traced, ⛔ not assumed
+
+⚠⛔ **This is the fact that changes Q2, and we ⛔ had not checked it when we first drafted this note.**
+
+⭐ The payment path is **real and complete**: `api-client:746` posts to
+`POST /api/v1/member/contribution/intent` (mounted at `server.ts:207`), the handler decrypts
+`vpa_ciphertext` at the API boundary (`payment/handlers.ts:155-164`) and returns a `upi://pay` URL,
+which `UPIIntentButton.tsx` launches. ⛔ Nothing here is stubbed.
+
+⛔⛔ **BUT ITS SCOPE IS ⛔ ONE POOL.** Every call runs through `resolveMemberLivePool`
+(`member-pool/handlers.ts:849-900`), which returns `null` unless **all** of these hold, and otherwise
+returns **exactly one** pool:
+
+1. the member is **`active`**;
+2. the Pariwar has a **`live`** contribution cycle;
+3. the member is **assigned** in it;
+4. of several, it takes the **soonest-closing** one.
+
+⇒ ⭐⭐ **the member can tap-and-pay on ⛔ ONE drive: their OWN, currently-assigned, LIVE one.**
+
+⚠⛔⛔ **STORY F's PAGE SHOWS ⛔ EVERY DRIVE THE PARIWAR HAS EVER RUN, IN THREE STATES.** For ⛔ all of
+them but that single one — another family's drive, a `closed` drive, a `settled` drive — ⛔ **there is
+⛔ no intent, ⛔ no button and ⛔ no pay path of any kind.**
+
+⇒ ⚠⛔ **SO OPTION (A) — *"the button is enough"* — IS ⛔ EMPTY ON THIS SURFACE.** On story F's page a
+`vpaPresent` boolean would light up a control that ⛔ leads nowhere, for ⛔ every drive but one.
+
+⭐ **THE FAIR COUNTER, STATED SO IT IS ⛔ NOT BURIED:** on those other drives there is ⛔ **no payment
+purpose** — the member is ⛔ not being asked to pay them. ⇒ ⭐ excluding the VPA there is **principled,
+⛔ not a gap** — and it points at an answer we ⛔ had not offered you: ⭐ **that the VPA simply does
+⛔ not belong on story F's surface at all**, because F's surface has ⛔ no payment purpose. ⚠ That is
+⛔ neither of the two readings we first described, which is why we are adding it as **option (D)**.
+
+⚠ **AND THE ASYMMETRY THAT ARGUES THE OTHER WAY:** under `-199` the other **five** coordinates —
+account number, IFSC, bank, branch, holder name — go onto that page for **every** drive. ⇒ singling
+out the VPA gives the member five coordinates and withholds the **sixth** — ⭐ the one that exists to
+be handed out.
+
+> ⭐ **One thing we can and cannot tell you.** The VPA **column and its intake exist** and a writer is
+> live (`claim/nominee-bank-persist.ts:195`). ⛔ We ⛔ cannot say from code **how many nominees have
+> actually supplied one** — it is an **optional** field. ⚠ A code comment at `payment/handlers.ts:21-22`
+> still claims *"There is NO VPA in the substrate today"*; ⭐ that comment is **STALE** and we are
+> recording it as a defect to fix, ⛔ not relying on it here.
+
 ### 4.3 ⛔⛔ THE FINDING — ⚠ **and it is ours, ⛔ not yours**
 
 Our own working record (`deferred-work.md`, item (e)) reasons as follows, verbatim:
@@ -242,7 +286,8 @@ unless a `super_admin` has switched **`reveal_to_members`** ON for that Pariwar 
 
 | | Option |
 |---|---|
-| **(A)** | ⭐ **Confirm the narrow reading — the button is enough.** ⛔ The ID stays off every screen; `vpaPresent` remains a boolean. ⭐ Our record becomes correct as written, ⚠ and we amend its wording (*"nobody ruled on"* → *"cl.1 confirmed as satisfied by the payment path"*). |
+| **(A)** | ⭐ **Confirm the narrow reading — the button is enough.** ⛔ The ID stays off every screen; `vpaPresent` remains a boolean. ⚠⛔ **But see §4.2b: on story F's page that button exists for ⛔ ONE drive out of every drive shown**, so on this surface (A) is close to indistinguishable from (D). |
+| **(D)** ⭐ **new — added after tracing the pay path** | ⭐ **The VPA belongs on the PAYMENT surface, ⛔ not on story F's.** cl.1 is satisfied where a member is actually **asked to pay** — their own live assigned drive — and the drive-detail page carries the other five coordinates ⛔ without it. ⭐ This states a **boundary** rather than a reading, and it is the option our own tracing suggests. |
 | **(B)** | ⭐ **Confirm the plain reading — show the ID.** ⭐ cl.1 is applied as written; Story F renders it beside the other coordinates. ⚠ A new Tier-1 field reaches the member surface, and we would record the exposure the way `-199` was recorded. |
 | **(C)** | ⭐ **Show it, but narrower than `-199`** — e.g. ⛔ only while a drive is still collecting, or ⛔ only for the drives that member was asked to pay into. ⚠ This would make the VPA the **one** coordinate scoped differently from the rest, which we would need to build and test separately. |
 | **(D)** | ⭐ Something else. |
@@ -276,6 +321,10 @@ note **disagreed**, and ⛔ nobody noticed.
 | C13 | `super_admin` **holds** it (bundle = the catalog); a test asserts the holder set | `sed -n '218,240p' packages/domain/tests/rbac/roles.test.ts` |
 | C14 | The API module is **mounted**, and the write reaches the column | `grep -n "registerDriveTargetModule" apps/api/src/server.ts` · `sed -n '410,420p' apps/api/src/modules/drive-target/handlers.ts` |
 | C15 | The admin page is routed, and the form refuses public-on-without-member-on | `grep -n "drive-target" apps/admin/src/router.tsx` · `sed -n '105p' apps/admin/src/modules/drive-target/RevealSwitchesForm.tsx` |
+| C16 | The intent route is mounted and the client posts to it | `grep -n "registerPaymentModule" apps/api/src/server.ts` · `sed -n '746p' packages/api-client/src/index.ts` |
+| C17 | The handler decrypts the VPA server-side and returns a `upi://pay` URL | `sed -n '155,192p' apps/api/src/modules/payment/handlers.ts` |
+| C18 | ⛔ The pay path resolves to ONE pool — active + live cycle + assigned + soonest-closing | `sed -n '849,900p' apps/api/src/modules/member-pool/handlers.ts` |
+| C19 | The VPA column has a live writer; the "no VPA in the substrate" comment is STALE | `grep -n "vpaCiphertext" packages/domain/src/claim/nominee-bank-persist.ts` · `sed -n '21,22p' apps/api/src/modules/payment/handlers.ts` |
 
 ---
 
@@ -335,7 +384,23 @@ this one belongs to a **bereaved family**, and the plan is to show it to **every
 Pariwar, for every drive, from now on** — on phones, where anything on screen can be photographed and
 passed along.
 
-⛔ **We are not arguing for either answer.** ⭐ We are saying that we chose one quietly, and that was
+### ⭐⭐ And one more thing we found only by checking — it may make the question simpler
+
+⚠⛔ **That "pay" button works on ⛔ exactly ONE drive: the member's own, currently open, the one they
+have actually been asked to contribute to.** ⛔ For every other drive on the new page — another
+family's, or one that has already finished — ⛔ there is ⛔ no button, and ⛔ no way to pay, because
+⛔ nobody is asking them to.
+
+⇒ ⭐ So on this new page, *"the button is enough"* is ⛔ **not really an answer** — for almost every
+drive shown there ⛔ **is no button.**
+
+⭐ Which points at a third possibility we had ⛔ not offered you: **that the UPI ID simply belongs on
+the *payment* screen — where a member is being asked to pay — and ⛔ not on this new page at all.**
+⚠ The new page would then show the family's bank account number, IFSC, bank and branch, ⛔ but not the
+UPI ID. ⚠ That is a little odd — ⭐ the UPI ID is the one detail *designed* to be handed out, and it
+would be the one we hold back.
+
+⛔ **We are not arguing for any of the three.** ⭐ We are saying that we chose one quietly, and that was
 not ours to choose.
 
 ## What happens now

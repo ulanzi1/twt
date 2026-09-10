@@ -1,5 +1,19 @@
 # Trustee Panel routing note — 2026-09-10
 
+> # ✅✅ ANSWERED — 2026-09-10, **Dhiraj Rahul** and **Kalpana Bharti**
+>
+> | | Question | ✅ Ruling |
+> |---|---|---|
+> | **Q1** | लक्ष्य on the member's per-drive detail | ✅ **(B)** — shown on **still-collecting (`live`) drives ONLY** |
+> | **Q2** | *"Shown to the logged-in member"* — the UPI ID | ✅ **(D)** — **ADD it to the PAYMENT screen**; ⛔ not on the drive page |
+>
+> ⭐ Recorded as **`#decision-2026-09-10-212`**, Trustee-ratified, both clauses.
+> ⚠⛔ **cl.2 SUPERSEDES `deferred-work.md` item (e)'s prohibition** — whose stated ground
+> (*"nobody ruled on"*) was **⛔ false when written**, since `-191` cl.1 had ruled.
+> ⚠ **The pay-screen change is ⛔ NOT story F's** — see `-212` Consequence 3.
+>
+> ⛔ **The body below is kept AS PUT, ⛔ not rewritten** ([[feedback_record_unattested_no_backfill]]).
+
 ## Story 11b.17 (**Story F** — the member's view of ONE drive) is **written and ⛔ not yet built.** Two questions block it. **(1)** You ruled **"Expected" / लक्ष्य** onto the member's drive *list* last week — ⭐ **and ⛔ only where a `super_admin` has switched it on for that Pariwar, which is ⛔ nowhere today** — and told us the *detail* page was **⛔ not decided by that ruling**, so we are asking. **(2)** ⚠⛔ **A clause you ratified says the family's UPI ID is *"shown to the logged-in member"* — and we recorded it as *satisfied* by a payment button that ⛔ never shows it.** We think that reading may be wrong, and we would rather ask than keep it.
 
 > ⚠⛔ **A NOTE ON WHAT COUNTS AS EVIDENCE HERE.** Every factual claim below is either (a) **verbatim

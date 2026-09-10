@@ -345,8 +345,26 @@ ITSELF IS ⛔ NEVER ON THE MEMBER WIRE AND NEVER HAS BEEN** — `NomineeBankAcco
 and carries `vpaPresent: z.boolean()`. ⇒ ⛔ **do ⛔ NOT "close" anything by adding `vpa` to that wire**;
 that would be a NEW Tier-1 exposure ⛔ nobody ruled on. `-191`'s own follow-up says cl.1 is a
 **confirmation**, and the build task was to ⛔ NOT regress it — asserted at 11b.11 (AC6).
-⛔ **No trigger. This item is closed.** ⚠ [[project_nominee_vpa_deferred_seam]] records the same
-supersession.
+⚠⛔⛔ **AMENDED 2026-09-10 — THIS ITEM'S PROHIBITION IS ⛔ SUPERSEDED, AND ITS GROUND WAS ⛔ FALSE
+WHEN WRITTEN.** [`2026-09-10-212`](../../.decision-log.md#decision-2026-09-10-212) **cl.2**
+(Trustee-ratified, DR + KB) rules the nominee's **VPA ONTO the PAYMENT screen** — option (D) of the
+2026-09-10 routing note. ⇒ ⭐ *"do ⛔ NOT add `vpa` to that wire"* ⛔ **no longer holds**:
+`NomineeBankAccountView` gains `vpa`, and `pay.tsx:473-480` gains a row beside the account number and
+IFSC it **already renders**.
+⛔⛔ **AND THE SENTENCE *"a NEW Tier-1 exposure ⛔ nobody ruled on"* WAS ⛔ WRONG ON THE DAY IT WAS
+WRITTEN** — `-191` **cl.1** (Trustee-ratified) had already ruled the VPA *"shown to the logged-in
+member … carried on the member surface as a payment coordinate"*, ⚠ and **this item quotes that clause
+three lines above**. ⇒ ⭐ the closure was recorded on a **false ground**, and that is recorded here
+rather than tidied away ([[feedback_closure_language_precision]]) — ⛔ the conclusion (*"not on the
+9.9 wire as it stood"*) happened to survive; ⛔ the reasoning did not.
+⭐⭐ **RE-OPENED AS A BUILD OBLIGATION, ⛔ not as a question.** **Trigger: FIRED** — `-212` cl.2.
+⚠⛔ It needs a **NAMED HOME** (`-212` Consequence 3): ⛔ **not** story `11b-17`, whose D3 ruling
+excludes the VPA from the drive-detail page. ⭐ It carries three things with it — the `.strict()`
+additive-field blank-out on installed older builds (Consequence 4), a **UPI-ID label to MINT**
+(⛔ none exists on any member surface; story A deleted `label.vpa`, Consequence 5), and the pay
+screen's *"Account holder"* label sitting against `-190` cl.2 (⛔ unresolved, Consequence 6).
+⚠ [[project_nominee_vpa_deferred_seam]] records the earlier supersession and is now itself stale on
+this point.
 
 ### (f) The **post-masking AUTHENTICATED-MEMBER presentation** — ⛔ not carried, ⛔ not foreclosed
 

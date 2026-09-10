@@ -445,6 +445,46 @@ describe('⭐⭐ [Review][Patch] code review of 11b-15 (2026-09-09), SECOND pass
     expect(IST_OFFSET_MS).toBe(5.5 * 60 * 60 * 1000)
   })
 
+  it('⭐⭐ [Review][Patch] code review of 11b-15, FOURTH pass — `formatClosedAtIst` matches a REAL reference implementation of `apps/public`\'s `formatClosedAt`, not just its offset constant', () => {
+    // ⚠⛔ THE PRIOR TEST ABOVE ONLY PINS THE OFFSET CONSTANT BY TEXT-MATCH — it cannot catch the two
+    // copies drifting in rounding/format behaviour, which is exactly what the doc-block's "safe to
+    // fork, mechanical format" claim needs covered. `apps/public/src/lib/sahyog-render.ts`'s
+    // `formatClosedAt` is NOT exported (module-local) and `apps/mobile` cannot import across apps
+    // anyway, so this reference implementation is a byte-for-byte copy of its body
+    // (`apps/public/src/lib/sahyog-render.ts:378-388`), kept honest by asserting it PRODUCES THE
+    // PUBLIC SOURCE'S OWN LOGIC TEXT below, not by trusting the copy silently.
+    const referenceFormatClosedAt = (iso: string | null): string | null => {
+      if (iso === null) return null
+      const d = new Date(iso)
+      if (Number.isNaN(d.getTime())) return null
+      const ist = new Date(d.getTime() + IST_OFFSET_MS)
+      const yyyy = String(ist.getUTCFullYear()).padStart(4, '0')
+      const mm = String(ist.getUTCMonth() + 1).padStart(2, '0')
+      const dd = String(ist.getUTCDate()).padStart(2, '0')
+      return `${dd}-${mm}-${yyyy}`
+    }
+    const publicSource = read('apps/public/src/lib/sahyog-render.ts')
+    // ⭐ Pins the reference copy's SHAPE against the real source's exact lines, so an edit to
+    // `formatClosedAt` there that this reference implementation misses fails HERE, not silently.
+    expect(publicSource).toContain('const ist = new Date(d.getTime() + IST_OFFSET_MS);')
+    expect(publicSource).toContain("return `${dd}-${mm}-${yyyy}`;")
+
+    // A broad instant table, not just the rollover boundary already covered below — every whole UTC
+    // hour across two representative calendar days, which is enough range to catch a rounding or
+    // padding divergence anywhere in the month/day/year arms.
+    const instants: string[] = []
+    for (const day of ['2026-01-01', '2026-06-30']) {
+      for (let hour = 0; hour < 24; hour += 1) {
+        instants.push(`${day}T${String(hour).padStart(2, '0')}:00:00.000Z`)
+      }
+    }
+    for (const iso of instants) {
+      expect(formatClosedAtIst(iso)).toBe(referenceFormatClosedAt(iso))
+    }
+    // The `null`/unparseable arms agree too.
+    expect(formatClosedAtIst('not-a-real-date')).toBe(referenceFormatClosedAt('not-a-real-date'))
+  })
+
   it('⭐ formats an ordinary IST-same-day instant correctly', () => {
     // 00:00 UTC on 1 Jan 2026 + 5:30 = 05:30 IST, same calendar day.
     expect(formatClosedAtIst('2026-01-01T00:00:00.000Z')).toBe('01-01-2026')

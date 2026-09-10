@@ -25,6 +25,9 @@
   "$comment.row_a11y": "⭐ THE ROW'S ACCESSIBLE NAME (AC5, family 13) — the SAME facts the row shows visually, ⛔ never extra information. ⛔ `t()` THROWS on an unsupplied token: supply ALL FOUR.",
   "row.a11y.no_family": "{code}, {stage}। {count} योगदान पुष्ट। अब तक {amount} का योगदान।",
   "$comment.row_a11y_no_family": "⚠⛔ THE VARIANT IS WHAT STOPS A CRASH — `deceasedMemberName` is nullable and `t()` THROWS on an unsupplied token, so resolving `row.a11y` on such a row would take down the WHOLE list. [Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab (2026-09-09): `{code}` added so a screen reader can distinguish two nameless rows.",
+  "row.a11y.zero": "{family}, {stage}।",
+  "row.a11y.zero_no_family": "{code}, {stage}।",
+  "$comment.row_a11y_zero": "[Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab, FOURTH pass (2026-09-10): the zero-day-live variant, mirroring the English locale — see its $comment for the reachability reasoning. Truncated from the existing ratified `row.a11y`/`row.a11y.no_family` sentences' own opening clause, so no new vocabulary is minted.",
 
   "row.summary": "{amount} का योगदान · {count} पुष्ट",
   "$comment.row_summary": "[Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab (2026-09-09): replaces the separate `row.amount` / `row.contributions` calls, which joined with a bare `·` written directly in the component's JSX rather than composed through this layer.",

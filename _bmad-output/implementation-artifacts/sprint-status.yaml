@@ -1,3 +1,38 @@
+# last_updated: 2026-09-10b (✅⭐⭐ **`11b-15` CODE REVIEW, FOURTH PASS — 5 patches applied, 0
+#   decisions needed, 3 deferred (all already on record). ⛔ STATUS UNCHANGED: `11b-15` STAYS `done`**
+#   — a re-review, ⛔ not a re-open. ⛔ ZERO OTHER ROWS MOVE. Same `c2dd787c..HEAD` range the third
+#   pass covered (8,171 raw diff lines / 37 files — over the workflow's chunking threshold; reviewed
+#   whole, on BigDev's choice).
+#   ⭐⭐ THE HEADLINE — TWO INDEPENDENT LAYERS CONVERGED on a defect the THIRD pass's OWN two fixes
+#   left behind: the zero-day copy fix (softens the VISIBLE summary) and the row-a11y-parity fix
+#   (folds every visible fact into the accessible name) were never cross-checked against each other.
+#   `headA11y` stated the raw pre-ratified "0 contributions confirmed. ₹0 contributed so far."
+#   UNCONDITIONALLY, so a screen-reader member heard it even on a zero-day row whose sighted summary
+#   the Panel had already softened — precisely what `$comment.row_a11y`'s own "SAME facts, ⛔ never
+#   extra information" rule forbids. Family 13(d). ⭐ FIXED: two new zero-day a11y variants
+#   (name/code + stage only, no `count`/`amount`) in both locales, consumed by name — no new
+#   vocabulary minted.
+#   ⭐ FOUR OTHER PATCHES: a per-field decrypt `catch` narrowed to the decrypt call only (was wide
+#   enough to swallow a genuine bug as a transient decrypt failure); the handler's ad hoc query type
+#   replaced with the contract's own `MemberDriveListQuery`; the domain's silent negative-`fixed_amount`
+#   clamp now `console.warn`s (matching `notifications/pool-identity.ts`'s existing idiom); and
+#   `formatClosedAtIst`'s test suite gained a real algorithmic-equivalence check against a pinned
+#   reference copy of `apps/public`'s `formatClosedAt`, not just the offset constant.
+#   ⭐ FIVE claims checked against the code and DISMISSED, ⛔ not accepted on a layer's say-so — incl.
+#   an unreachable one (nominee-name "missing anonymization backstop": that column has NO
+#   anonymization path anywhere in the codebase) and a deliberate one mistaken for an oversight
+#   (pull-to-refresh's full-page refetch is the code's own documented, intentional choice).
+#   ⚠ THREE re-confirmed live but ⛔ NOT new findings, all already in `deferred-work.md`: the
+#   `total`/`items` READ COMMITTED race (SECOND pass) plus its row-skip/duplicate manifestation under
+#   pagination reordering (new detail, same root cause); and the unscoped persisted-cache /
+#   no-sign-out-purge gap (THIRD pass, repo-wide by ruling — no per-surface patch applied here, on
+#   purpose).
+#   ⭐ VERIFIED GREEN: `pnpm typecheck` (`@twt/i18n`, `@twt/domain`, `@twt/api`, `@twt/mobile`);
+#   `apps/mobile/tests/unit/drive-list-render.test.ts` 38/38; `packages/domain/tests/pool/member-drive-list.test.ts`
+#   11/11; `apps/api/tests/unit/member-drive-list-handler.test.ts` 6/6;
+#   `scripts/microcopy/member-drive-list.test.ts` 16/16; `i18n:check`; `microcopy:check`.
+#   ⛔ Rows unchanged: `11b-17` / `11b-3b` / `6-18` `ready-for-dev`; `11b-16` `withdrawn`; epic-8 +
+#   epic-11b `in-progress`.)
 # last_updated: 2026-09-10 (✅⭐⭐ **`11b-15` CODE REVIEW, THIRD PASS — 22 patches applied, 5 decisions
 #   ruled by BigDev, 2 deferred. ⛔ STATUS UNCHANGED: `11b-15` STAYS `done`** — a re-review, ⛔ not a
 #   re-open. ⛔ ZERO OTHER ROWS MOVE.

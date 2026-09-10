@@ -925,6 +925,111 @@ which broke when the row's label became a COMPOSITION and the calls wrapped acro
 assert the KEY and the ruled producer rather than a layout, and the `onEndReached` assertion was made
 STRONGER — it now requires the `isFetchNextPageError` arm the patch added.
 
+### Review Findings — FOURTH PASS
+
+_bmad-code-review, 2026-09-10 — three parallel layers (Blind Hunter, Edge Case Hunter, Acceptance
+Auditor) against `git diff c2dd787c..HEAD`, the same full range the THIRD pass covered
+([[feedback_supersede_never_reinterpret]] — this section does not edit any prior pass's checkboxes).
+The diff was 8,171 raw lines / 37 files, over the workflow's chunking threshold; reviewed as a single
+pass on BigDev's choice rather than split._
+
+⚠⛔ **FIVE CLAIMS WERE CHECKED AGAINST THE CODE AND DISMISSED, ⛔ not accepted on a layer's say-so** —
+recorded so a fifth pass does ⛔ not re-raise them:
+- ⛔ *"the nominee-name decrypt has no anonymization-sentinel backstop, unlike the deceased-name
+  decrypt it claims to mirror"* — **FALSE reachability**: `claim_nominee_bank_accounts.account_holder_name_ciphertext`
+  (the column `NOMINEE_ACCOUNT_HOLDER_NAME_CIPHERTEXT` reads) has ⛔ **no** anonymization/RTBF write
+  path anywhere in the codebase — `anonymizeMember` (`packages/domain/src/member/anonymize.ts`)
+  overwrites `member_nominees`, a **different table** (nominee declarations, not the claim-scoped bank
+  account). The asymmetry with the deceased-name backstop is correct, ⛔ not a gap.
+- ⛔ *"pull-to-refresh refetches every previously-loaded page, not just page 1, an uncosted regression
+  from the third pass"* — **FALSE**: this is the code's own documented, deliberate choice
+  (`MemberDriveList.tsx:121-127`) — `refetch()` re-fetching all currently-shown pages is what makes it
+  a *refresh of what the member is looking at*, exactly the polls precedent it was ruled on.
+- ⛔ *"the district/nominee i18n join doesn't demonstrate the flexibility it was built for, since `en`
+  and `hi` use the same word order"* — the mechanism for per-locale control is genuinely present
+  (`row.district_nominee` is composed through `t()`, not JSX); two locales choosing the same
+  separator/order is not evidence the mechanism failed.
+- ⛔ *"the zero-day live row also shows a literal 0% beneath the softened summary, undercutting the
+  Panel's ratified copy"* — already **deliberate and reasoned**, on the opposite side of the same AC3
+  tension the zero-day decision itself sits on (`MemberDriveList.tsx:490-494`: suppressing it would put
+  the member BELOW the public parity floor). Two sound, opposing-direction rulings meeting at the same
+  row is not a fresh defect to relitigate.
+- Blind Hunter's meta-observation that two "green"/"fully proven" claims elsewhere in this diff's own
+  review history (SECOND pass's microcopy-gate claim; the inline-banner "three states" framing) were
+  each later shown false by a subsequent pass — true, and worth remembering as a reason to re-verify
+  rather than trust self-certification, but names no new locatable defect of its own.
+
+⭐⭐ **THE HEADLINE: THE ZERO-DAY FIX AND THE ROW-A11Y-PARITY FIX (BOTH THIRD PASS, SAME COMMIT) WERE
+⛔ NEVER CROSS-CHECKED AGAINST EACH OTHER.** `headA11y` is built unconditionally from the RAW
+`confirmedCount`/`amount` (`MemberDriveList.tsx:541-552`) regardless of `isZeroDayLive`, and
+`rowA11y` only ever *appends* the Panel's softened `summaryLine` after it
+(`MemberDriveList.tsx:558-568`) rather than substituting for it. ⇒ on a live drive's first day, a
+sighted member sees only *"Family awaits your support"*; a screen-reader member additionally hears
+*"0 contributions confirmed. ₹0 contributed so far."* first — the exact ₹0/0-confirmed framing the
+Trustee ruling (`2026-09-07-206` cl.4) exists to hide, and precisely what `$comment.row_a11y`
+(`packages/i18n/locales/en/member-drive-list.json:25`) forbids: *"it states the SAME facts the row
+renders visually — ⛔ never extra information a sighted member cannot reach."* Family 13(d).
+
+- [x] [Review][Patch] The zero-day live row's accessible name announces the raw pre-ratified figures
+  before the Panel's softened sentence, reintroducing for screen-reader members only the exact framing
+  the zero-day fix removed for sighted members (family 13(d); see headline above)
+  [`apps/mobile/components/drive-list/MemberDriveList.tsx:541-568`] — **FIXED**: `headA11y` gates on
+  `isZeroDayLive` and, on that path, uses two new minimal variants (`row.a11y.zero` /
+  `row.a11y.zero_no_family`, name/code + stage only, no `count`/`amount`) so the Panel's `zero_line.*`
+  sentence — already appended right after — is stated once, not zero times and not twice. New keys
+  added to both locales, consumed by name, no new vocabulary minted (Hindi truncates the existing
+  ratified sentence's own opening clause). `i18n:check` and `microcopy:check` both green.
+- [x] [Review][Patch] `resolveDriveList`'s per-field decrypt `catch` is broad enough to swallow a
+  genuine bug (e.g. a `TypeError` inside `resolveMemberFacingDeceasedName`) and log it as a transient
+  decrypt failure, contradicting the route's own fail-loud doc-block
+  [`apps/api/src/modules/member-pool/handlers.ts`] — **FIXED**: both the deceased-name and
+  nominee-name IIFEs narrow the `catch` to the `decryptKycField` call only; the sentinel check,
+  `resolveMemberFacingDeceasedName`, and `.trim()` now run outside it and a bug there throws.
+- [x] [Review][Patch] The handler declares an ad hoc `{ page?: number; limit?: number }` query type
+  instead of importing the inferred `MemberDriveListQuery` contract type — a future query-shape change
+  would not be caught at compile time [`apps/api/src/modules/member-pool/handlers.ts`] — **FIXED**:
+  casts to `MemberDriveListQuery` (imported from `@twt/contracts`), matching the established
+  `apps/api/src/modules/public-pages/handlers.ts` convention for its own paginated routes.
+- [x] [Review][Patch] The silent clamp `Math.max(0, confirmedContributionCount * r.fixedAmount)` logs
+  nothing when it actually fires, unlike sibling defensive branches in the same file — a
+  negative-`fixed_amount` anomaly (no DB positivity check backs it) would be invisible in production
+  [`packages/domain/src/pool/member-drive-list.ts:336`] — **FIXED**: `console.warn` on the negative
+  branch, matching `notifications/pool-identity.ts`'s existing `[module-tag]` idiom for a
+  domain-layer anomaly (this accessor is pure and takes no injected logger).
+- [x] [Review][Patch] `formatClosedAtIst`'s added test pins only an offset constant by text-match, not
+  a round-trip equivalence against `apps/public`'s `formatClosedAt` — doesn't substantiate the
+  doc-block's "safe to fork, mechanical format" claim with real coverage
+  [`apps/mobile/components/drive-list/format.ts`; `apps/mobile/tests/unit/drive-list-render.test.ts`]
+  — **FIXED**: a new test runs a reference-implementation copy of `apps/public`'s `formatClosedAt`
+  (pinned against the real source's exact lines, so an unmirrored edit there fails here) against
+  `formatClosedAtIst` across every whole UTC hour on two representative calendar days, plus the
+  unparseable arm — genuine algorithmic equivalence, not just the offset constant. `apps/public` is
+  still untouched (AC8's fence holds).
+- [x] [Review][Defer] The `total`-vs-`items` READ COMMITTED race (no snapshot pinning) is still open
+  [`apps/api/src/modules/member-pool/handlers.ts`] — deferred, pre-existing (already disclosed in
+  `deferred-work.md`, SECOND pass; confirmed still live by two independent layers this pass)
+- [x] [Review][Defer] Offset pagination can skip or duplicate a row when a drive closes/reorders
+  between two `fetchNextPage` calls — same root cause as the race above, a manifestation worth folding
+  into that same deferred-work.md entry [`apps/mobile/components/drive-list/useMemberDriveListQuery.ts:104-115`]
+  — deferred, pre-existing
+- [x] [Review][Defer] The persisted query cache key is unscoped by member/Pariwar with no sign-out
+  purge [`apps/mobile/components/drive-list/useMemberDriveListQuery.ts:58`] — deferred, pre-existing
+  (already disclosed in `deferred-work.md`, THIRD pass, which explicitly ruled out a per-surface patch
+  in favor of a repo-wide fix; confirmed still live by two independent layers this pass, which is what
+  this story's own entry already named as the reason the blast radius matters)
+
+✅ **ALL 5 `[Review][Patch]` FINDINGS APPLIED, 3 `[Review][Defer]` items (already on record,
+reconfirmed live), 5 claims checked and dismissed, 0 `[Review][Decision]`.** ⭐ The headline
+(row-a11y/zero-day cross-check gap) was new; nothing else survived verification as a fresh defect.
+⭐ Touched: `apps/mobile/components/drive-list/{MemberDriveList.tsx,format.ts}` ·
+`apps/mobile/tests/unit/drive-list-render.test.ts` · `packages/i18n/locales/{en,hi}/member-drive-list.json`
+(2 new keys each) · `apps/api/src/modules/member-pool/handlers.ts` (both decrypt catches narrowed,
+the query cast) · `packages/domain/src/pool/member-drive-list.ts` (the clamp now warns).
+⭐ `pnpm typecheck` clean across `@twt/i18n`, `@twt/domain`, `@twt/api`, `@twt/mobile`.
+`apps/mobile/tests/unit/drive-list-render.test.ts` 38/38, `packages/domain/tests/pool/member-drive-list.test.ts`
+11/11, `apps/api/tests/unit/member-drive-list-handler.test.ts` 6/6, `scripts/microcopy/member-drive-list.test.ts`
+16/16 — all green. `i18n:check` and `microcopy:check` both green.
+
 ---
 
 ## Dev Notes

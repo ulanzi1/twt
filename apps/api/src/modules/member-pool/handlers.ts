@@ -51,6 +51,7 @@ import type {
   ContributionHistoryResponse,
   ContributionHistoryRow,
   ContributionNoteFacts,
+  MemberDriveListQuery,
   MemberDriveListResponse,
   MemberDriveListEntry,
   MissedCycleEntry,
@@ -312,7 +313,12 @@ export function createMemberPoolHandlers(deps: AppDeps) {
       const pariwarId = ids.pariwarId(pariwarIdStr);
       const now = deps.clock();
 
-      const query = request.query as { page?: number; limit?: number };
+      // [Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab, FOURTH pass
+      // (2026-09-10): was a hand-declared `{ page?: number; limit?: number }`, drifting silently
+      // from the actual route schema if it ever changes shape. ⭐ Cast to the CONTRACT's own
+      // inferred type instead — the same convention `apps/api/src/modules/public-pages/handlers.ts`
+      // already uses for its two paginated routes (`request.query as PublicSahyogDriveQuery` etc.).
+      const query = request.query as MemberDriveListQuery;
       const page = query.page ?? 1;
       const limit = query.limit ?? poolDomain.MEMBER_DRIVE_LIST_PAGE_SIZE_DEFAULT;
 
@@ -459,53 +465,17 @@ async function resolveDriveList(
         // `NAME_PUBLICATION_AUTHORISED` — that would be a REGRESSION, and it is the exact question
         // Task 1b ruled.
         if (row.deceasedNameCiphertext === null) return null;
+        // [Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab, FOURTH pass
+        // (2026-09-10): the `catch` below used to wrap the decrypt call AND every line after it
+        // (the sentinel check, `resolveMemberFacingDeceasedName`, `.trim()`). A genuine bug in any
+        // of THOSE — not the decrypt — would be swallowed here and logged as a "decrypt failed"
+        // warning, contradicting this very function's own fail-loud doc-block for structural
+        // faults. ⇒ the `catch` is narrowed to the decrypt call ONLY; everything downstream of a
+        // successful decrypt runs outside it and a bug there throws, same as it does everywhere
+        // else in this handler.
+        let storedName: string;
         try {
-          const storedName = await decryptKycField(
-            row.deceasedNameCiphertext,
-            pariwarId,
-            deps.encryption,
-          );
-          // ⭐⛔ `resolveMemberFacingDeceasedName`, ⛔ NEVER `resolvePublicMemberName`. The two share
-          // the stored mode and the form rule and differ ⛔ only in ABSENCE behaviour: the public
-          // omits a mononym under `shielded_name` (a privacy protection on a directory), the member
-          // SHOWS it (omitting a member's own drive row would be a functional regression — `8-16`
-          // Trap 5). ⛔ And ⛔ never a literal name form: `2026-08-19-136` cl.1 fails any build
-          // whose name form cannot be changed without a code change.
-          // ⭐⭐ THE ERASURE BACKSTOP — [Review][Decision→Patch], code review of
-          // 11b-15-member-drive-list-fourth-tab (2026-09-09), THIRD pass, ruled by BigDev.
-          // ⚠⛔⛔ **`anonymizeMember` OVERWRITES `name_ciphertext` IN PLACE WITH AN *ENCRYPTED*
-          // `[anonymized]` SENTINEL** (`member/anonymize.ts:70,107`) and RETAINS the row ⇒ the
-          // decrypt SUCCEEDS and the sentinel would render VERBATIM where a family name belongs.
-          // ⛔ ⛔ NEITHER arm of `resolveMemberFacingDeceasedName` filters it: `full_name` returns it
-          // as-is, and `shielded_name`'s MONONYM arm returns it too (`splitFirstNameLastInitial`
-          // yields a NON-EMPTY `firstName`) ⇒ the `.trim() || null` guard below does ⛔ not catch it
-          // either, and the ratified a11y sentence would read *"[anonymized], Closed. 12
-          // contributions confirmed."*
-          // ⭐⭐ **THIS IS ⛔ NOT A NEW RULE — IT IS AN UNSWEPT ONE.** `pool-contributors`, ⭐ IN THIS
-          // SAME FILE, has carried this exact backstop all along (`fullName ===
-          // memberDomain.ANONYMIZED_SENTINEL`, further down), under a doc-block calling it *"the
-          // ONLY check in this path that is snapshot-independent"*. ⇒ reachability is ⛔ not
-          // hypothetical: the codebase already defends it unconditionally, TOCTOU-style, *"whatever
-          // the batched state read decided"*.
-          // ⚠⛔ **THE REMEDY DIVERGES FROM THAT SIBLING DELIBERATELY, AND ⛔ MUST NOT BE "ALIGNED".**
-          // `pool-contributors` OMITS the row — a contributor can be dropped. Here the erased member
-          // ⭐ IS the drive: omitting the row would hide a WHOLE DRIVE from every member of the
-          // Pariwar and put `total` at odds with what is shown. ⇒ the drive stays, the NAME goes —
-          // the row falls through this surface's existing, already-tested nameless path
-          // (`poolLetterCode` visible, `row.a11y.no_family` announced).
-          // ⛔ And ⛔ do ⛔ not "repair" this by rendering a marker row — the sibling's own warning.
-          if (storedName === memberDomain.ANONYMIZED_SENTINEL) {
-            request.log.warn(
-              { poolId: row.poolId },
-              'drive-list: erasure sentinel reached the decrypt — rendering the drive NAMELESS (state read was stale)',
-            );
-            return null;
-          }
-          const resolved = notifications.resolveMemberFacingDeceasedName(presentationMode, storedName);
-          // ⚠ `.trim() || null`, ⛔ not `=== ''` — a whitespace-only name passes the contract's
-          // `.min(1)`, arrives TRUTHY so the client's fallback never fires, and renders a visually
-          // BLANK row where the design says otherwise (the 11a.3 finding).
-          return resolved.trim() || null;
+          storedName = await decryptKycField(row.deceasedNameCiphertext, pariwarId, deps.encryption);
         } catch (err) {
           // ⭐ OMIT THE NAME, ⛔ KEEP THE ROW. ⚠⛔ This is AC3's floor in the fail-soft: the PUBLIC
           // index keeps a nameless row, so dropping one here would show a member LESS than a
@@ -520,6 +490,47 @@ async function resolveDriveList(
           );
           return null;
         }
+        // ⭐⛔ `resolveMemberFacingDeceasedName`, ⛔ NEVER `resolvePublicMemberName`. The two share
+        // the stored mode and the form rule and differ ⛔ only in ABSENCE behaviour: the public
+        // omits a mononym under `shielded_name` (a privacy protection on a directory), the member
+        // SHOWS it (omitting a member's own drive row would be a functional regression — `8-16`
+        // Trap 5). ⛔ And ⛔ never a literal name form: `2026-08-19-136` cl.1 fails any build
+        // whose name form cannot be changed without a code change.
+        // ⭐⭐ THE ERASURE BACKSTOP — [Review][Decision→Patch], code review of
+        // 11b-15-member-drive-list-fourth-tab (2026-09-09), THIRD pass, ruled by BigDev.
+        // ⚠⛔⛔ **`anonymizeMember` OVERWRITES `name_ciphertext` IN PLACE WITH AN *ENCRYPTED*
+        // `[anonymized]` SENTINEL** (`member/anonymize.ts:70,107`) and RETAINS the row ⇒ the
+        // decrypt SUCCEEDS and the sentinel would render VERBATIM where a family name belongs.
+        // ⛔ ⛔ NEITHER arm of `resolveMemberFacingDeceasedName` filters it: `full_name` returns it
+        // as-is, and `shielded_name`'s MONONYM arm returns it too (`splitFirstNameLastInitial`
+        // yields a NON-EMPTY `firstName`) ⇒ the `.trim() || null` guard below does ⛔ not catch it
+        // either, and the ratified a11y sentence would read *"[anonymized], Closed. 12
+        // contributions confirmed."*
+        // ⭐⭐ **THIS IS ⛔ NOT A NEW RULE — IT IS AN UNSWEPT ONE.** `pool-contributors`, ⭐ IN THIS
+        // SAME FILE, has carried this exact backstop all along (`fullName ===
+        // memberDomain.ANONYMIZED_SENTINEL`, further down), under a doc-block calling it *"the
+        // ONLY check in this path that is snapshot-independent"*. ⇒ reachability is ⛔ not
+        // hypothetical: the codebase already defends it unconditionally, TOCTOU-style, *"whatever
+        // the batched state read decided"*.
+        // ⚠⛔ **THE REMEDY DIVERGES FROM THAT SIBLING DELIBERATELY, AND ⛔ MUST NOT BE "ALIGNED".**
+        // `pool-contributors` OMITS the row — a contributor can be dropped. Here the erased member
+        // ⭐ IS the drive: omitting the row would hide a WHOLE DRIVE from every member of the
+        // Pariwar and put `total` at odds with what is shown. ⇒ the drive stays, the NAME goes —
+        // the row falls through this surface's existing, already-tested nameless path
+        // (`poolLetterCode` visible, `row.a11y.no_family` announced).
+        // ⛔ And ⛔ do ⛔ not "repair" this by rendering a marker row — the sibling's own warning.
+        if (storedName === memberDomain.ANONYMIZED_SENTINEL) {
+          request.log.warn(
+            { poolId: row.poolId },
+            'drive-list: erasure sentinel reached the decrypt — rendering the drive NAMELESS (state read was stale)',
+          );
+          return null;
+        }
+        const resolved = notifications.resolveMemberFacingDeceasedName(presentationMode, storedName);
+        // ⚠ `.trim() || null`, ⛔ not `=== ''` — a whitespace-only name passes the contract's
+        // `.min(1)`, arrives TRUTHY so the client's fallback never fires, and renders a visually
+        // BLANK row where the design says otherwise (the 11a.3 finding).
+        return resolved.trim() || null;
       })(),
       (async (): Promise<string | null> => {
         // ── The NOMINEE's name (Trustee-ratified `2026-09-07-205` cl.1, `pii_tier: 1`) ─────────
@@ -532,13 +543,16 @@ async function resolveDriveList(
         // claim OUTCOME would be a NEW suppression rule ⛔ nobody has ruled. ⛔ Do ⛔ not invent one
         // here.
         if (row.nomineeAccountHolderNameCiphertext === null) return null;
+        // [Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab, FOURTH pass
+        // (2026-09-10): narrowed to match the deceased-name IIFE above — the `catch` covers ONLY
+        // the decrypt call, not `.trim()`.
+        let decrypted: string;
         try {
-          const decrypted = await decryptKycField(
+          decrypted = await decryptKycField(
             row.nomineeAccountHolderNameCiphertext,
             pariwarId,
             deps.encryption,
           );
-          return decrypted.trim() || null;
         } catch (err) {
           request.log.warn(
             { err, poolId: row.poolId },
@@ -546,6 +560,7 @@ async function resolveDriveList(
           );
           return null;
         }
+        return decrypted.trim() || null;
       })(),
     ]);
 

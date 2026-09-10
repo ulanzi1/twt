@@ -333,7 +333,17 @@ export async function listMemberPariwarDrives(
     // ⚠⛔ CLAMPED AT 0 for a non-positive `fixed_amount` — `pools.fixed_amount` carries ⛔ no DB
     // positivity CHECK, and a negative product would fail the contract's `.nonnegative()` and 500
     // the whole page.
-    const deliveredTotal = Math.max(0, confirmedContributionCount * r.fixedAmount);
+    // [Review][Patch] — code review of 11b-15-member-drive-list-fourth-tab, FOURTH pass
+    // (2026-09-10): the clamp used to fire silently. `console.warn`, ⛔ not a logger param — this
+    // accessor is pure and takes none, matching `notifications/pool-identity.ts`'s existing
+    // `[module-tag]` idiom for a domain-layer anomaly that should be visible without one.
+    const rawDeliveredTotal = confirmedContributionCount * r.fixedAmount;
+    if (rawDeliveredTotal < 0) {
+      console.warn(
+        `[member-drive-list] negative deliveredTotal clamped to 0 (pool=${r.poolId}, fixedAmount=${r.fixedAmount}, confirmedCount=${confirmedContributionCount})`,
+      );
+    }
+    const deliveredTotal = Math.max(0, rawDeliveredTotal);
     const currentState = r.currentState as MemberDriveListVisiblePoolState;
     const isLive = currentState === 'live';
     return {

@@ -538,8 +538,18 @@ function DriveRow({
   // `sahyog-shared` ships `zero_line.no_family`.
   // [Review][Patch] — SECOND pass: `{code}` ADDED to the no-family variant so a screen-reader user
   // can tell two nameless rows apart, matching the visible fallback which already could.
-  const headA11y =
-    entry.deceasedMemberName === null
+  // [Review][Patch] — FOURTH pass: `isZeroDayLive` gates a THIRD/FOURTH variant carrying NO
+  // `count`/`amount` tokens. Before this, `headA11y` announced the raw pre-ratified
+  // "0 contributions confirmed. ₹0 contributed so far." UNCONDITIONALLY, even on a zero-day row whose
+  // VISIBLE summary the Panel replaced with softer copy (`zero_line.*`, below) — a screen-reader
+  // member heard the exact figures `2026-09-07-206` cl.4 exists to hide, which `$comment.row_a11y`'s
+  // own "SAME facts, ⛔ never extra information" invariant forbids. The zero-day variant states only
+  // name/code + stage; `rowA11y` below already appends the softened `summaryLine` right after it.
+  const headA11y = isZeroDayLive
+    ? entry.deceasedMemberName === null
+      ? t('row.a11y.zero_no_family', { code: entry.poolLetterCode, stage: stageWord }, NS)
+      : t('row.a11y.zero', { family: entry.deceasedMemberName, stage: stageWord }, NS)
+    : entry.deceasedMemberName === null
       ? t(
           'row.a11y.no_family',
           { code: entry.poolLetterCode, stage: stageWord, count: confirmedCount, amount },
@@ -553,8 +563,8 @@ function DriveRow({
 
   // ⚠ `summaryLine` joins the announcement ⛔ ONLY on a zero-day row: off that path its two facts
   // (count, amount) are ALREADY in `headA11y`, and repeating them would make the row announce itself
-  // twice. On a zero-day row the visible line is the Panel's sentence instead, so it is genuinely
-  // absent from the head and must be added.
+  // twice. On a zero-day row `headA11y` carries neither (see above), so the Panel's sentence is
+  // genuinely absent from the head and must be added.
   const rowA11y = [
     headA11y,
     isZeroDayLive ? summaryLine : null,

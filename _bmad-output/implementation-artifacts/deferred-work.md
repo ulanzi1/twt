@@ -8623,3 +8623,31 @@ violation.
   minutes; nothing records the equivalent constraint for `apps/mobile`, where old builds persist
   indefinitely. **Trigger:** the first additive change to any member-facing contract entry — story F
   is the next candidate — or a mobile forward-compatibility hardening pass.
+
+## Deferred from: code review of 11b-15-member-drive-list-fourth-tab, FOURTH PASS (2026-09-10)
+
+- **`resolveDriveList`'s `total`-vs-`items` READ COMMITTED race is still open — reconfirmed live, not
+  a new finding.** [`apps/api/src/modules/member-pool/handlers.ts`] Two independent review layers
+  (Blind Hunter, Edge Case Hunter) converged on this pass on the exact gap the SECOND pass already
+  recorded above; no new information, kept here only so a fifth pass sees it was re-checked rather than
+  missed. **Trigger:** unchanged — any report of a member's drive-list page count disagreeing with its
+  item count, or a hardening pass over this route's consistency guarantees.
+
+- **The same root cause also skips or duplicates a row, not just the total count, when a drive
+  closes/reorders between two `fetchNextPage` calls.** [`apps/mobile/components/drive-list/useMemberDriveListQuery.ts:104-115`]
+  A manifestation of the entry directly above, named explicitly by the Edge Case Hunter this pass:
+  offset-based pagination over a mutable set means a member scrolling through pages while a drive
+  transitions state can either miss that drive's row entirely or see it twice with a duplicate
+  FlashList key. Not a new root cause — folded into the same trigger as the entry above rather than
+  filed as a second open item.
+
+- **The persisted TanStack query cache's member/Pariwar scoping gap is still open — reconfirmed live,
+  not a new finding.** [`apps/mobile/components/drive-list/useMemberDriveListQuery.ts:58`] Two
+  independent review layers (Blind Hunter, Edge Case Hunter) converged on this pass on the exact gap
+  the THIRD pass already recorded above, including the same shared-handset mechanism (member A signs
+  out, member B of another Pariwar signs in, the stale cache rehydrates with no network call). The
+  THIRD pass's disposition stands: this is repo-wide and pre-existing, and the correct fix is one
+  repo-wide change (scope every member key by `memberId`/`pariwarId` AND purge on `signOut`), not a
+  per-surface patch on this story alone. **Trigger:** unchanged — any multi-account or device-sharing
+  requirement, any DPDPA review of at-rest cached personal data on the handset, or the first report of
+  one member seeing another's data after a sign-out.

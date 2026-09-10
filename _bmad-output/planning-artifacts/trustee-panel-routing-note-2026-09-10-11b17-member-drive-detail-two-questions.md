@@ -1,6 +1,6 @@
 # Trustee Panel routing note — 2026-09-10
 
-## Story 11b.17 (**Story F** — the member's view of ONE drive) is **written and ⛔ not yet built.** Two questions block it. **(1)** You ruled the **expected figure (लक्ष्य)** onto the member's drive *list* last week and told us the *detail* page was **⛔ not decided by that ruling** — so we are asking. **(2)** ⚠⛔ **A clause you ratified says the family's UPI ID is *"shown to the logged-in member"* — and we recorded it as *satisfied* by a payment button that ⛔ never shows it.** We think that reading may be wrong, and we would rather ask than keep it.
+## Story 11b.17 (**Story F** — the member's view of ONE drive) is **written and ⛔ not yet built.** Two questions block it. **(1)** You ruled **"Expected" / लक्ष्य** onto the member's drive *list* last week — ⭐ **and ⛔ only where a `super_admin` has switched it on for that Pariwar, which is ⛔ nowhere today** — and told us the *detail* page was **⛔ not decided by that ruling**, so we are asking. **(2)** ⚠⛔ **A clause you ratified says the family's UPI ID is *"shown to the logged-in member"* — and we recorded it as *satisfied* by a payment button that ⛔ never shows it.** We think that reading may be wrong, and we would rather ask than keep it.
 
 > ⚠⛔ **A NOTE ON WHAT COUNTS AS EVIDENCE HERE.** Every factual claim below is either (a) **verbatim
 > ratified text** from `.decision-log.md`, or (b) **verified repository state** — a shipped file's
@@ -19,7 +19,7 @@
 
 | # | Question | What is blocked |
 |---|---|---|
-| **Q1** | Does the member's **per-drive detail** show the **expected figure (लक्ष्य)** — and for **which** drives? | ⛔ Story F cannot start. Its own "shows at least what the public shows" test ⛔ cannot be written either way. |
+| **Q1** | Where a `super_admin` **has** switched the member reveal on, does the member's **per-drive detail** show **"Expected" / लक्ष्य** — and for **which** drives? ⭐ The switch itself is ⛔ not in question. | ⛔ Story F cannot start. Its own "shows at least what the public shows" test ⛔ cannot be written either way. |
 | **Q2** | Does *"the UPI ID is shown to the logged-in member"* mean the **ID itself is displayed**, or is a **"Pay by UPI" button** enough? | ⛔ Story F cannot start. ⚠ And a **standing record of ours is wrong** in one reading or the other. |
 
 ⭐ **Q2 is the one we would most like answered**, because a wrong answer there is not a missing
@@ -45,6 +45,21 @@ about to be put on screen on a reading you never gave.**
 > **THE MEMBER'S DRIVE LIST RENDERS THE EXPECTED FIGURE.** Story `11b-15`'s fourth-tab list shows
 > लक्ष्य per drive. ⛔ Its previous scope sentence — *"⛔ no target (story **C** keeps it hidden)"* — is
 > **RETIRED**, at all three sites it appeared.
+
+### 2.3b ⭐⭐ Verbatim — `2026-09-09-211` **cl.2 and cl.3** — ⛔ THE GATE, WHICH IS ⛔ NOT IN QUESTION
+
+> **cl.2** … ⭐ **`-190` cl.7(c) already authorises it** — the reveal is reserved to a Superadmin
+> *"separately for member and for public"*. A member-only reveal is therefore an
+> **already-ruled-legitimate** state, ⛔ not a new disclosure class.
+>
+> **cl.3. ⭐ THE DEFAULT IS FAIL-CLOSED, AND ⛔ NOTHING RENDERS AT LAUNCH.** An absent
+> `pariwar_drive_target_visibility` row is **HIDDEN FROM EVERYONE** (`-190` cl.7(b)). ⛔ No Pariwar has
+> a row today. ⇒ ⛔ **no expected figure renders to any member on the day this ships**, and ⛔ no action
+> is required to comply — ⭐ the state is already correct.
+
+⇒ ⭐⭐ **SO THE RULE IS, AND STAYS: a member sees this figure ⛔ ONLY where a `super_admin` has switched
+`reveal_to_members` ON for that Pariwar.** ⛔ Q1 does ⛔ **not** touch that. ⭐ Q1 asks ⛔ only what
+appears on the **detail page** *once the switch is on*.
 
 ### 2.4 Verbatim — `2026-09-04-190` **cl.7** (Trustee-ratified)
 
@@ -172,7 +187,7 @@ sees more than the public, never less* — points this way on every axis.
 
 **For showing less (Q1 live-only; Q2 the button only):**
 ⚠ Everything on a member's phone is **screenshottable, forwardable, and ⛔ not revocable** — a page can
-be taken down; a screenshot cannot. ⚠ The expected figure on a **closed** drive is a fact about a
+be taken down; a screenshot cannot. ⚠ **"Expected"** on a **closed** drive is a fact about a
 family's shortfall that serves ⛔ no payment purpose once the drive is over. ⚠ And the UPI ID's purpose
 — **paying** — is already fully served without displaying it.
 
@@ -187,9 +202,15 @@ that is the part we are correcting.
 
 | | Option |
 |---|---|
-| **(A)** | ⭐ **Show it, on `reveal_to_members`, on ALL THREE stages** (`live` · `closed` · `settled`). ⭐ Consistent with the list by construction; ⭐ satisfies cl.3 on every stage; ⚠ discloses a finished drive's shortfall. |
-| **(B)** | ⭐ **Show it, on `reveal_to_members`, on LIVE drives only** — ⭐ exactly mirrors the list and `-204` cl.2's slot. ⚠ A member opening a **closed** drive sees no target, which is ⛔ not less than the public (the public index is live-only too). |
-| **(C)** | ⛔ **Do not show it on the detail at all.** ⚠⛔ We must say plainly: this would put the **detail below the list** for the same drive, and we ⛔ cannot reconcile it with cl.3 or with F's own acceptance criteria. ⇒ if you choose it, ⭐ it needs a stated reason we can record. |
+⭐⭐ **ALL THREE OPTIONS SIT ⛔ BEHIND THE SWITCH.** In every one of them a member sees **nothing**
+unless a `super_admin` has switched **`reveal_to_members`** ON for that Pariwar (`-190` cl.7(b)/(c);
+`-211` cl.2). ⛔ That gate is ⛔ **not** what is being asked and is ⛔ not on the table.
+
+| | Option — ⭐ each applies ⛔ ONLY where the member reveal is ON |
+|---|---|
+| **(A)** | ⭐ **Show it on ALL THREE stages** (`live` · `closed` · `settled`). ⭐ Consistent with the list by construction; ⭐ satisfies cl.3 on every stage; ⚠ discloses a finished drive's shortfall. |
+| **(B)** | ⭐ **Show it on LIVE drives only** — ⭐ exactly mirrors the list and `-204` cl.2's slot. ⚠ A member opening a **closed** drive sees no figure, which is ⛔ not less than the public (the public index is live-only too). |
+| **(C)** | ⛔ **Do not show it on the detail at all**, even with the switch on. ⚠⛔ We must say plainly: this would put the **detail below the list** for the same drive, and we ⛔ cannot reconcile it with cl.3 or with F's own acceptance criteria. ⇒ if you choose it, ⭐ it needs a stated reason we can record. |
 | **(D)** | ⭐ Something else. |
 
 ### 6.2 Q2 — the UPI ID on the member's drive detail
@@ -233,13 +254,21 @@ note **disagreed**, and ⛔ nobody noticed.
 
 ## The first question
 
-Last week you decided that when a member opens the list of drives in their Pariwar, they should see
-**the expected figure** — लक्ष्य — for each one. ⭐ You also said, in the same decision, that this did
-**not** automatically settle what happens on the **detail page** for a single drive, and that we should
-come back and ask. ⭐ This is us asking.
+Last week you decided that when a member opens the list of drives in their Pariwar, they can see the
+figure you named **"Expected"** — लक्ष्य — for each one.
+
+⭐⭐ **But ⛔ only if it has been switched on for that Pariwar.** You ruled that this figure stays
+**hidden from everyone** unless a **Superadmin** deliberately turns it on, and that they can turn it on
+for **members** and for the **public** separately. ⭐ ⛔ Nobody has turned it on anywhere, so ⛔ **no
+member sees it today, and none will until someone does.** ⛔ **None of that is in question here** — we
+are ⛔ not asking you to revisit the switch.
+
+⭐ What you also said, in the same decision, is that this did **not** automatically settle what happens
+on the **detail page** for a single drive, and that we should come back and ask. ⭐ This is us asking:
+**when the switch IS on, what should the detail page show?**
 
 There is a reason it matters. A member taps a drive in the list and opens its page. ⚠ If the list shows
-the expected figure and the page does not, then **going in for more detail gives you less** — which is
+the figure and the page does not, then **going in for more detail gives you less** — which is
 the opposite of how it should work, and the opposite of a rule you have already given us: *a member
 should see more than a stranger, never less.*
 

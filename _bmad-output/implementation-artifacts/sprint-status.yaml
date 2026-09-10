@@ -1,3 +1,45 @@
+# last_updated: 2026-09-10 (✅⭐⭐ **`11b-15` CODE REVIEW, THIRD PASS — 22 patches applied, 5 decisions
+#   ruled by BigDev, 2 deferred. ⛔ STATUS UNCHANGED: `11b-15` STAYS `done`** — a re-review, ⛔ not a
+#   re-open. ⛔ ZERO OTHER ROWS MOVE.
+#   ⭐⭐ THE HEADLINE — TWO INDEPENDENT LAYERS CONVERGED: the row's ACCESSIBLE NAME announced FOUR
+#   facts while the row rendered TEN. ⚠ It was the INVERSE of the defect pass 1 fixed — pass 1 wired
+#   three AC3 floor fields into the VISUAL render and never extended `row.a11y`, so लक्ष्य (AC8b), the
+#   percentage, the outcome framing, the close date, the district and the nominee were visible to a
+#   sighted member and SILENT to a screen-reader one. ⇒ family 13(d). ⭐ FIXED STRUCTURALLY: every line
+#   is now computed ONCE, rendered, and JOINED into the label, so a future field ⛔ cannot be rendered
+#   without being announced.
+#   ⭐ FIVE DECISIONS RULED BY BigDev: (1) the zero-day `live` row renders the Trustee-ratified
+#   `zero_line.*` (`-206` cl.4) instead of "₹ 0 contributed · 0 confirmed" — the string the Panel
+#   REPLACED when a review showed them a drive's first day — ⭐ swept to `11b-17`; (2) `drive_href` /
+#   `pool_canonical_identifier` render in story F, and ⭐ **AC3's floor is AMENDED BY NAME** (AC3 wants
+#   a link, AC5 rules the row `text` never `link` — the two ACs pulled opposite ways on one row);
+#   (3) the RTBF `[anonymized]` sentinel now falls to the nameless-row path — ⚠ `pool-contributors`
+#   IN THE SAME FILE already carried that backstop, so this was an UNSWEPT precedent, ⛔ not a new
+#   rule; (4) pull-to-refresh added (the tab had ⛔ NO refresh affordance at all — a closed drive read
+#   "Live" indefinitely); (5) ⭐ **AC8's fence NARROWED BY NAME** — `apps/public/.../sahyog-render.ts`
+#   WAS edited, and the record's "⛔ No public surface edited" bullet (self-contradicting in one
+#   breath) is rewritten (family 10).
+#   ⚠⛔⛔ **FOUND WHILE VERIFYING, ⛔ NOT BY A REVIEW LAYER — THE MICROCOPY GATE WAS ⛔ ALREADY RED AT
+#   `HEAD`**, on a string the SECOND pass itself added, while that pass's record claims the gate was
+#   re-run GREEN. ⭐ Proven not to be this pass's collateral (stashed this pass's i18n files; still
+#   red). ⇒ family 10. FIXED; gate now GREEN.
+#   ⚠⛔ **AND A SECOND MEASUREMENT LESSON:** a bare `pnpm test` skips **80 of 131** api files without
+#   `DATABASE_URL` ⇒ passes 1-2's "full suites green" covered ⛔ none of this story's integration
+#   surface. ⭐ With BigDev's explicit authorisation the dev DB was migrated (it was 6 behind;
+#   `0114` adds `pools.public_token`) and the api suite re-run LIVE: ⭐ **131/131 files, 1244 tests.**
+#   ⭐ VERIFIED GREEN: `typecheck` 20/20 packages · `pnpm test` 37/37 tasks · api LIVE 131/131 ·
+#   `i18n:check` · `microcopy:check` (⭐ red before this pass).
+#   ⭐ SIX layer claims DISMISSED after checking the code, ⛔ not accepted on say-so — incl. two FALSE
+#   ones (a zero-assignee `live` pool 5xxing the page: `driveConfirmedPercentage` returns `0`, never
+#   `null`; a `toISOString` `RangeError`: `coerceDriveInstant` already returns `null`).
+#   ⚠ TWO DEFERRED to `deferred-work.md`, both REPO-WIDE and PRE-EXISTING, ⛔ not this diff's defects:
+#   the persisted query cache is unscoped by member/Pariwar and ⛔ NO sign-out path clears it (⭐ this
+#   story merely puts the largest Tier-1 payload yet into it); and `.strict()` response parsing blanks
+#   the whole tab on older mobile builds for any ADDITIVE server field.
+#   ⭐ `11b-17` (story F) TOUCHED — a routing note carrying the TWO obligations above; ⛔ its row does
+#   ⛔ NOT move (stays `ready-for-dev`).
+#   ⛔ Rows unchanged: `11b-17` / `11b-3b` / `6-18` `ready-for-dev`; `11b-16` `withdrawn`; epic-8 +
+#   epic-11b `in-progress`.)
 # last_updated: 2026-09-09h (✅⭐⭐ **`11b-15` CODE REVIEW, SECOND PASS — re-reviewed the FIRST
 #   pass's own patches (still `done`, status unchanged; this is a re-review, not a re-open).**
 #   ⭐ Two design questions surfaced and RESOLVED BY BigDev: (1) the new

@@ -39,15 +39,36 @@ story** and ⛔ none of it is F's to absorb silently.
 2026-09-05.** It was never lifted into the log, so ⛔ no decision grep finds it
 ([[feedback_story_validate_footguns]] #15).
 
-⭐ `trustee-panel-routing-note-2026-09-05-11b12-under-funded-commitment-claim.md` **§8.3(3)** names the
-consumers by key — *"They are **story E** (`11b-15`, the fourth tab) and **story F** (`11b-17`, the
-member's drive detail)"* — and **§8.5 row 3** rules ***"B ships the copy; E and F render it."***
-⚠ **§8.3(2)** adds that the five-paragraph text *"is written for a **PAGE**"* — ⭐ which is **this**
-surface, ⛔ not E's row. The Panel supplied its **OWN wording**, plus a **two-column table —
-`Nominee full name` | `District` — above the message, on BOTH the member and the public views.**
+⚠⛔ **CITE THESE TWO SECTIONS, ⛔ NOT §8.3(3)/§8.5 — corrected 2026-09-11.** ⭐ §8.5 is titled
+*"What we **propose**"* and §8.3(3) is the note authors' **sequencing statement**; ⛔ neither is a ruling.
+⛔ The earlier wording of this STOP cited them and was **wrong about the authority**, though right about
+the obligation. ⭐ The load-bearing sources are:
 
-⭐ Corroborated in a `done` story: `11b-12:583-600` records the same ruling and the same routing.
-⛔ `grep -n -e 'E/F consume' -e 'five-paragraph' .decision-log.md` returns **ZERO**.
+⭐ **§8.1 — "Ratified verbatim (DR + KB, 2026-09-05)"**: a five-paragraph block in **both locales**,
+***"Plus: a table above the message — `Nominee full name` (left) · `District` (right) — on **both** the
+member and the public view."*** ⚠⛔ **That scope phrase is the operative half** — it is what routes this
+off the public surface, ⛔ not a rendering hint.
+⭐ **§9.1 row 3 — answered 2026-09-05, relaying DR + KB**: ***"B can ship the shared copy source now.
+E/F consume it later."***
+⚠ **§8.3(2)** supplies the shape constraint only: the block *"is written for a **PAGE**"* ⇒ ⛔ it cannot
+sit in a one-line index cell.
+
+⭐ **AND §10 WAS READ TO THE END** ([[feedback_story_summary_can_lag_its_routing_note]]): **§10.4**
+re-homes **three OTHER rulings** (mechanize the approver duty → a new story; the nominee name on the
+**index** → its own story or **D**; omit-the-clause → **B**) and ⛔ **leaves this one standing**.
+⛔ Do ⛔ not read §10.4 as having moved it.
+
+⭐ Corroborated in a `done` story: `11b-12:583-600`.
+⛔ `grep -c "Join the Pariwar\|E/F consume" .decision-log.md` ⇒ **ZERO**.
+
+⛔⛔ **AND IT IS WORSE THAN "F OWES A RENDER" — ⛔ TRACED LIVE 2026-09-11.**
+⚠⛔ **B ⛔ NEVER SHIPPED THE COPY SOURCE.** `sahyog-shared` holds `index_line.*` (§9.2's one-line index
+wording, ✅ shipped) and ⛔ **no message-block key**; `grep "Be the Movement"` / `"सहयोग का हाथ"` across
+`packages/i18n/locales/` returns **ZERO**. ⚠ `11b-12` is **`done`**.
+⚠⛔ **AND STORY E (`11b-15`) CLOSED `done` OWING THE IDENTICAL OBLIGATION** — ⛔ it renders neither the
+block nor the table. ⇒ ⛔ **this is ⛔ not F's omission; F is where it was CAUGHT.**
+⇒ ⭐⭐ **AC10 IS UNSATISFIABLE UNTIL B's KEYS EXIST**, and a dev must ⛔ **NEVER** close that by authoring
+ratified copy at a render site ([[feedback_story_validate_footguns]] #8). ⛔ That is a **STOP**.
 
 ⇒ ⛔⛔ **TASK 1's `governance:` COMMIT MUST CARRY THE DECISION ENTRY FIRST**
 ([[feedback_governance_commits_precede_implementation]]) — ⛔ an AC alone is ⛔ not enough, and this is
@@ -463,10 +484,13 @@ by name).
 sentence renders **NOTHING** — ⛔ no placeholder, ⛔ no marker, ⛔ no partial sentence.
 
 ### AC10 — ⭐ The Panel's own message block and the `Nominee full name` | `District` table RENDER here
-⛔⛔ **GATED ON STOP 1 — ⛔ do ⛔ not build this until the decision entry lands.**
-⭐ Ruled 2026-09-05 (`…-11b12-under-funded-commitment-claim.md` **§8.3(3)**, **§8.5 row 3**):
-***"B ships the copy; E and F render it."*** ⚠ §8.3(2): the five-paragraph text *"is written for a
-**PAGE**"* ⇒ ⭐ **this** surface carries the full block; E's row does ⛔ not.
+⛔⛔ **GATED ON STOP 1 — ⛔ do ⛔ not build this until the decision entry lands AND B's keys exist.**
+⭐ Ratified 2026-09-05, DR + KB (`…-11b12-under-funded-commitment-claim.md` **§8.1**, routed at
+**§9.1 row 3**): ***"B can ship the shared copy source now. E/F consume it later."*** ⚠ §8.3(2): the
+five-paragraph text *"is written for a **PAGE**"* ⇒ ⭐ **this** surface carries the full block; E's row
+does ⛔ not.
+⚠⛔⛔ **B's KEYS DO ⛔ NOT EXIST TODAY** (`sahyog-shared` carries `index_line.*` ⛔ ONLY) and `11b-12` is
+**`done`** ⇒ ⛔ **the source needs a named home BEFORE this AC can be built.**
 **And** ⭐ a **two-column table — `Nominee full name` | `District` — sits ABOVE the message**, on the
 member view (the public view is ⛔ not this story's).
 **And** ⛔⛔ **CONSUME THE PANEL'S OWN WORDING FROM `sahyog-shared` BY NAME** — ⛔ never re-derive it,
@@ -922,6 +946,7 @@ counts over the shared fixture ([[project_live_db_test_gotchas]]).
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-09-11 | 1.2 | ⚠⛔ **STOP 1's AUTHORITY CITATION WAS WRONG AND IS CORRECTED — ⛔ the obligation is UNCHANGED.** v1.1 cited **§8.3(3)** and **§8.5 row 3**; ⛔ §8.5 is *"What we **propose**"* and §8.3(3) is a **sequencing statement**, ⛔ neither a ruling. ⭐ The ratification is **§8.1** (*"Ratified verbatim (DR + KB, 2026-09-05)"* — the block **plus** the `Nominee full name` \| `District` table, ***"on both the member and the public view"***) and the routing is **§9.1 row 3** (*"B can ship the shared copy source now. **E/F consume it later**"*). ⭐ **§10 READ TO THE END:** §10.4 re-homes **three OTHER rulings** and ⛔ leaves this one standing. ⛔⛔ **AND TWO THINGS TRACED LIVE MAKE IT WORSE: B ⛔ NEVER SHIPPED THE COPY** (`sahyog-shared` has `index_line.*` only; the tagline is ⛔ nowhere in `packages/i18n/locales/`) while `11b-12` is `done`; **and story E (`11b-15`) closed `done` owing the IDENTICAL render.** ⇒ ⭐ **AC10 is UNSATISFIABLE until B's source has a named home** — ⛔ and that is a STOP, ⛔ never a licence to author ratified copy at a render site. ⛔ **NO CODE.** | BigDev + Claude |
 | 2026-09-11 | 1.1 | ⛔⛔ **RE-VALIDATED (`bmad-create-story validate`, three independent verifiers) — 34 FINDINGS, ALL APPLIED. ⛔ ZERO ROWS MOVE; ⛔ NO CODE.** ⭐ Baseline **NOT re-pinned** — `a2617869` is still an ancestor and every commit since is governance-only, so ⛔ no code moved. ⛔⛔ **THE PREFLIGHT IS RE-OPENED: STOP 1.** ⭐ `trustee-panel-routing-note-2026-09-05-11b12` **§8.3(3)/§8.5 row 3** ruled ***"B ships the copy; E and F render it"*** — a **`Nominee full name` \| `District`** table plus B's five-paragraph block, *"written for a **PAGE**"* — routing to F **BY NAME**, and it ⛔ **never reached `.decision-log.md`** ([[feedback_story_validate_footguns]] #15). ⇒ **AC10 + Task 5d WRITTEN**, gated on the decision entry landing FIRST ([[feedback_governance_commits_precede_implementation]]). ⛔⛔ **D2(B) SHIPPED UNGATED:** `reveal_to_members` appeared ⛔ ONCE, in prose — ⇒ **AC2 / Task 2 / Task 6 now carry the fail-closed gate and `resolveDriveTargetVisibility`** (`-211` cl.3; a miss is a **DISCLOSURE** defect). ⭐ **AND ITS RATIFIED NUMBER FORM WAS ABSENT** — `-206` **cl.3** (the clause that exists because **₹300 rendered as `₹ 0 lakh`**), `-204` **cl.2**'s derivation, and the shared **`drive_target`** key F is the **THIRD** consumer of. ⚠⛔ **AC4's *"reuse `nominee.label`"* SHIPPED THE FORBIDDEN STRING** — that token renders **`"Nominee"`**, ⛔ not the ruled *"Nominee Name"*, and its own `$comment` says otherwise and is **false** ⇒ re-pointed to `label.account_holder`. ⚠⛔ **THE `bank_name` HAZARD WAS INVERTED** — it shipped **CLOSED BY DELETION**, so the projection yields ⛔ **NEITHER** `bankName` **NOR** `branch` and AC4 was **two fields short**. ⚠⛔ **§8.4(ii)'s *"nobody has said which"* WAS FALSE** — `D5-subject (i)` ruled *"the SCHEMA is the authority"* (this story's own Dev Notes quoted it), and **`6-18` is `ready-for-dev` on that ground and was ⛔ never named** ⇒ re-grounded, Panel routing **DROPPED** from Task 0e. ⭐ **THE AUDIT UNIT PINNED: ONE line per DETAIL OPEN** — Task 4/Task 6 said *"per coordinate read"* (5 × 2 = ten ⇒ ≈17, ⛔ not ≈8); and the flake trap was pinned to an **awaited** writer while the real fire-and-forget one is `createKmsAuditHook`, ⛔ i.e. the seven invisible KMS lines. ⚠ Swept: **every** `.decision-log.md:NNN` (stale ~**+152**), six `deferred-work.md` cites (**two swapped**) now given as **ITEM ADDRESSES** per that file's own rule; `D3(a)`→**(D)**; *"AC4 needs six"*→**five**; `upi_intent.account_holder_label` (= literally *"Account holder"*) **struck**; the vacuous `-207` cl.1 carve-out (⛔ that field is in **neither** floor map) **struck**; the enumeration bound restated as **CLOSED by ruling + edit** (the rate-limit remedy was **DECLINED**); AC0 → **Task 1**; the pool-state/wire-token vocabularies **separated**. ⭐ Added: the MMKV trigger as a **Task** (it was prose only), four stale artefacts F makes wronger (the admin form that says the switch does nothing, the stale VPA doc-block, `-165` in the shipped contract, `11b-14`'s retired sentence), and family 13(a)'s carve-out. ⛔ **NO CODE.** | BigDev + Claude |
 | 2026-09-10 | 1.0 | ✅⭐ **THE LAST CONDITIONAL IN AC4 IS CLOSED — `#decision-2026-09-10-213` (author-committed).** ⭐⭐ **BOTH ACCOUNTS RENDER, and it is ⛔ NOT the "reversal" the validate pass called it:** the list's one-decrypt rule governs the **HOLDER NAME** (*"the SAME nominee"* twice ⇒ a second decrypt buys nothing), while this surface renders **`account_number` + `ifsc`, which DIFFER per account** — and the money can have gone to **both**, the two being *"EQUAL destinations, the donor's choice"*. ⇒ the list's and pay screen's behaviour **STANDS UNTOUCHED**, and Task 5's *"only if the reversal is named"* sub-item is discharged **by showing there is none**. ⚠⛔ **The differing-holder-name case is ⛔ STILL UNRULED and is SHARPER than §8.4(ii) stated:** the **code asserts one nominee** across both accounts while the **schema permits two names** ⇒ one is wrong and nobody has said which ⇒ **routed with Task 0e**; AC4 surfaces both and picks neither. ⚠ AC5's sizing pins to the **≈8** end now both accounts are in. ⛔ **NO CODE.** | BigDev + Claude |
 | 2026-09-10 | 0.9 | ✅⭐⭐ **BOTH DECISIONS RULED BY THE TRUSTEE PANEL — `#decision-2026-09-10-212` (DR + KB). PREFLIGHT DISCHARGED; ⭐ THE STORY IS STARTABLE.** **D2 → (B):** लक्ष्य renders on **`live` drives ONLY**, mirroring the list and `-204` cl.2's slot; ⭐ `-189` cl.3 holds because the public index is live-only too, so (B) puts the detail **level with** the list, ⛔ not below it. **D3 → (D):** the UPI ID is ⛔ **NOT** on this page — it is **ADDED to the PAYMENT screen**. ⇒ AC4 renders **five** coordinates; AC2 gains the live-only target rule; AC7's target exclusion is replaced by the ruling. ⚠⛔ **Task 0e ADDED — the pay-screen work needs a NAMED HOME and is ⛔ NOT this story's** (`-212` Consequence 3), carrying three things with it: the `.strict()` additive-field trigger now FIRES, a UPI-ID label must be MINTED (story A deleted `label.vpa`), and the pay screen's *"Account holder"* label sits against `-190` cl.2 — ⛔ unresolved, ⛔ not to be fixed by side effect. ⭐ cl.2 **SUPERSEDES** `deferred-work.md` item (e), whose ground was **false when written**. ⛔ **NO CODE.** | Trustee Panel + BigDev |

@@ -1,3 +1,22 @@
+# last_updated: 2026-09-11c (⭐⭐ **STORY `11b-19` CREATED — `#decision-2026-09-11-214` Consequence 2
+#   is DISCHARGED and `11b-17`'s STOP 2 has a NAMED HOME.** ⭐ ONE ROW ADDED:
+#   development_status[11b-19-ratified-message-block-copy-source] = **`ready-for-dev`**.
+#   ⚠⛔ **WHAT IT IS: B's UNSHIPPED HALF.** B (`11b-12`, `done`) was told on 2026-09-05 to ship the
+#   shared copy source; it shipped `index_line.*` (§9.2) and ⛔ NEVER the §8.1 five-paragraph MESSAGE
+#   BLOCK or its `Nominee full name` | `District` table. ⛔ ZERO OPEN DECISIONS — the wording is
+#   already Trustee-ratified (DR + KB) ⇒ the story AUTHORS and ⛔ decides nothing.
+#   ⭐ It clears **STOP 2** on `11b-17` ⇒ **AC10 / Task 5d become buildable once it lands.**
+#   ⛔ It does ⛔ NOT clear `-214` **Consequence 3** — the PUBLIC render remains unhomed.
+#   ⭐⭐ **FIVE TRAPS, ALL FROM LIVE VERIFICATION:** the ratified `₹{amount}` would ship **`₹₹`**
+#   (the token arrives formatted WITH its ₹; B's `index_line.full` proves the convention) ·
+#   `{familyName}` vs this namespace's snake_case · `t()` THROWS ⇒ AUTHOR, ⛔ DO ⛔ NOT RENDER ·
+#   omit-the-clause has ⛔ NO combinatorial variants and the DISTRICT clause follows the DECEASED,
+#   ⛔ not the nominee · and the *"Nominee"* column sits over a value `D5-subject (i)` rules the
+#   SCHEMA denies ⇒ a LABEL, ⛔ never the claim.
+#   ⚠⛔ **`11b-18` SKIPPED, ⛔ not taken:** the ledger names it and twice calls it `ready-for-dev`,
+#   ⛔ but it is ABSENT from `development_status` and has ⛔ no file. ⛔ Recorded, ⛔ not resolved.
+#   ⛔ **NO CODE.** ⛔ Rows unchanged: `11b-17` / `11b-3b` / `6-18` / `8-17` `ready-for-dev`;
+#   `11b-16` `withdrawn`.)
 # last_updated: 2026-09-11b (✅⭐⭐ **`#decision-2026-09-11-214` COMMITTED — a TRUSTEE-RATIFIED
 #   (DR + KB, 2026-09-05) message block and its `Nominee full name` | `District` table, ruled for
 #   ⭐ BOTH the member and the public view, are ON THE RECORD at last.** ⚠⛔ **RECORDED LATE — the entry
@@ -17835,6 +17854,24 @@ development_status:
   # ⛔ Both were TRUE WHEN WRITTEN and FALSE from 2026-09-04 onward: (a) was RULED that day and (b) is
   # recorded as ⛔ NOT taken. ⛔ Kept struck as the record, ⛔ not deleted.
   11b-17-member-drive-detail-unredacted: ready-for-dev
+  # ⭐⭐ 11b-19 — MINTED 2026-09-11 BY `#decision-2026-09-11-214` **Consequence 2**: B's UNSHIPPED
+  # copy source, given a NAMED HOME before story F ships. ⛔ ZERO OPEN DECISIONS — the authority is
+  # already Trustee-ratified (DR + KB, 2026-09-05); this story AUTHORS and ⛔ decides nothing.
+  # ⚠⛔ **B (`11b-12`, `done`) shipped `index_line.*` (§9.2) and ⛔ NEVER the §8.1 MESSAGE BLOCK.**
+  # ⭐ It clears **STOP 2** on `11b-17` ⇒ AC10 / Task 5d become buildable. ⛔ It does ⛔ NOT clear
+  # `-214` Consequence 3 — the PUBLIC render is still unhomed.
+  # ⭐⭐ FIVE TRAPS FOUND WHILE AUTHORING: (1) §8.1's literal `₹{amount}` would ship **`₹₹`** —
+  # `{amount}` arrives ALREADY FORMATTED WITH its ₹, and B's own `index_line.full` carries ⛔ none;
+  # (2) §8.1 writes `{familyName}` where this namespace is snake_case throughout; (3) `t()` THROWS ⇒
+  # AUTHOR, ⛔ do ⛔ NOT RENDER (B's `$comment.index_line` already names the pattern); (4) ruling 3
+  # has ⛔ NO combinatorial variants, and B's `no_family` drops the DISTRICT clause too because
+  # *"who served in … district"* modifies the DECEASED ⇒ ⭐ the same logic governs the TABLE;
+  # (5) the column says *"Nominee"* over `account_holder_name_ciphertext`, which `D5-subject (i)`
+  # rules the SCHEMA denies ⇒ author a LABEL, ⛔ never the claim *"is the nominee of"*.
+  # ⚠⛔ **KEY `11b-18` SKIPPED** — the ledger names `11b-18-drive-target-write-authority-retired` and
+  # twice says it *"STAYS `ready-for-dev`"*, ⛔ but it is ⛔ ABSENT from `development_status` and has
+  # ⛔ no file. ⛔ Recorded, ⛔ not resolved.
+  11b-19-ratified-message-block-copy-source: ready-for-dev
   epic-11b-retrospective: optional
 
   # ==========================================================================

@@ -39,10 +39,15 @@ story** and ⛔ none of it is F's to absorb silently.
 ratification (DR + KB) that had lived ⛔ only in a routing note. ⇒ ⭐ **Task 1 may now proceed**, and
 Tasks 2-6 with it.
 
-⛔⛔ **BUT AC10 / Task 5d STAY BLOCKED — ⛔ STOP 2.** ⚠ `-214` cl.4(d): **B ⛔ never shipped the copy
-source** and `11b-12` is **`done`** ⇒ there is ⛔ nothing to consume by name. ⭐ `-214` **Consequence 2**
-requires that source a **named home** (a story, or a `deferred-work.md` entry **with a trigger**)
-**before F ships**. ⛔ A dev must ⛔ **NEVER** close this by authoring ratified copy at a render site.
+⚠ **AC10 / Task 5d REMAIN GATED — ⛔ STOP 2 — ⭐ but it now has a NAMED HOME.**
+⚠ `-214` cl.4(d): **B ⛔ never shipped the copy source** and `11b-12` is **`done`** ⇒ there is ⛔ nothing
+to consume by name.
+✅⭐ **`-214` Consequence 2 IS DISCHARGED 2026-09-11 — story
+`11b-19-ratified-message-block-copy-source`** (`ready-for-dev`, ⛔ zero open decisions) authors the
+§8.1 block, the two table labels, the no-name variant and the omit-the-clause variants into
+`sahyog-shared`. ⇒ ⭐ **AC10 becomes buildable the moment `11b-19` lands; ⛔ not before.**
+⛔ A dev must ⛔ **NEVER** close this by authoring ratified copy at a render site.
+⚠ ⛔ `-214` **Consequence 3** (the **PUBLIC** render) is ⛔ still unhomed and is ⛔ not F's.
 
 ⇒ ⭐ **Build AC0-AC9. ⛔ Leave AC10 / Task 5d until STOP 2 clears.**
 

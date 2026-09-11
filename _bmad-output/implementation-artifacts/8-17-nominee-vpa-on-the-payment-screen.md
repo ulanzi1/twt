@@ -28,7 +28,7 @@ applying `#decision-2026-09-04-191` **cl.1**. ⛔ Nothing here waits on the Pane
 | **`-212` Consequence 4** | The `.strict()` additive-field blank-out **FIRES** | AC8 / Task 4 — a deployment-ordering constraint |
 | **`-212` Consequence 5** | A UPI-ID label must be minted in `contribution.json` | AC6 / Task 3 |
 | **`-212` Consequence 6** | The screen labels the nominee *"Account holder"*, against `-190` cl.2 — ⛔ **STILL UNRESOLVED** | AC6(a) — ⛔ record, ⛔ do ⛔ not fix by side effect |
-| **§8.4(ii)** | ✅ **RESOLVED 2026-09-11** — ⛔ **no longer a Panel question** | AC6(b) — ⭐ align with `6-18`, ⛔ do ⛔ not re-litigate |
+| **§8.4(ii)** | ⚠ **DE-ROUTED, ⛔ NOT LOGGED** — ⛔ not a Panel question, ⛔ and ⛔ not a ruling | AC6(b) / D2 — ⭐ align with `6-18`, ⛔ touch nothing |
 | **Three governance records** | Item (e)'s named home; three stale comments | AC0 / Task 0 — owed **before `11b-17` ships** |
 | **T — topology** | `-212` and `-213` are ⛔ **NOT on `main`**; the governance branch is ⛔ unpushed | ⚠ recorded risk — this story's authority must merge **with or before** its code |
 
@@ -157,7 +157,7 @@ story ⛔ does ⛔ not pretend it is.
 
 | # | Artefact | What it asserts |
 |---|---|---|
-| 1 | `packages/contracts/tests/contributions-nominee-accounts.test.ts:35` | a test named ***"REJECTS a raw `vpa` field"*** — `safeParse({…, vpa})` must be `false` |
+| 1 | `packages/contracts/tests/contributions-nominee-accounts.test.ts:36` | a test named ***"REJECTS a raw `vpa` field"*** — `safeParse({…, vpa})` must be `false` |
 | 2 | `apps/api/tests/integration/payment/nominee-accounts.spec.ts:298-309` | `expect('vpa' in account).toBe(false)` · `not.toContain('ravi@upi')` · an **exact-SIX-keys** `Object.keys(acc1).sort()` equality |
 | 3 | `apps/api/src/modules/payment/handlers.ts:257-263` | *"`-191` cl.1 … is **ALREADY SATISFIED** by that path … ⛔ Adding `vpa` to this wire would be a NEW Tier-1 exposure ⛔ nobody ruled on"* |
 | 4 | `friction-budget.md:1952-1959` | records the donor path's shape as the **six** fields, *"pinned by a live-DB regression test"* |
@@ -201,8 +201,9 @@ sprint-row flip;
 still reads `✅ CLOSED` while its body reads *"RE-OPENED AS A BUILD OBLIGATION — **Trigger: FIRED**"*
 and *"it needs a **NAMED HOME**"*. ⭐ `-212` **Consequence 3** owes that record **before `11b-17`
 ships**, and `11b-17` is in active work ⇒ ⛔ this ⛔ cannot wait for the code;
-**(c)** ⭐ the §8.4(ii) correction (AC6(b)) is reflected in the sprint-row ledger, which still carries
-the retired *"nobody has said which"* framing.
+**(c)** ⭐ the sprint-row ledger records §8.4(ii) as **DE-ROUTED but ⛔ NOT LOGGED** (AC6(b)/D2).
+⚠⛔ **Do ⛔ NOT write "closed" or "resolved" there** — ⛔ no decision entry exists, and `-213` still
+reads *"UNRULED"*. ⭐ Record the **disagreement**, ⛔ not a closure.
 
 ### AC1 — The member can READ the family's UPI ID on the payment screen
 On `apps/mobile/app/(contribution)/pay.tsx`, the selected account's **UPI ID renders as text the
@@ -270,15 +271,24 @@ and the member drive list already carries `nominee.label` on that ground. ⚠ **
 different string, a different decision (§8.1) and a different surface (the drive-detail message
 block). ⛔ Its *"both the member and the public view"* scope ⛔ does ⛔ not reach the payment screen.
 
-✅ **(b) — §8.4(ii) is ⛔ NO LONGER OPEN. ⛔ Do ⛔ not route it.** `-213` cl.2's *"nobody has said
-which"* was **found FALSE on 2026-09-11**: `deferred-work.md`'s **`D5-subject (i)`** rules that
-***the SCHEMA is the authority*** ⇒ ⭐ two differing holder names are a **LEGITIMATE state**, and the
-artefact that is wrong is the **code comment at `member-pool/handlers.ts:534-542`**, ⛔ not the
-schema. ⚠⛔ **`-213`'s own entry was never amended**, so the decision log still reads the old way ⇒
-⛔ do ⛔ not "restore" it from there.
-⭐ **A SIBLING IS ALREADY BUILDING ON THE ANSWER:** `6-18-nominee-holder-name-on-the-verification-console`
-is `ready-for-dev` on this exact ground. ⇒ ⭐ **align with `6-18`; ⛔ do ⛔ not re-litigate, and ⛔ do
-⛔ not fix that comment here** — it is ⛔ not this story's file.
+⚠ **(b) — §8.4(ii) is ⛔ NOT a Panel question ⛔ AND ⛔ NOT a ruling. ⭐ This story touches it ⛔ not
+at all.** ⛔ Do ⛔ not route it; ⛔ do ⛔ not act on it; ⛔ do ⛔ not record it as closed.
+⭐ **THE GROUND, and its exact status — ⛔ traced, ⛔ not taken from prose**
+([[feedback_trace_internal_state_never_cite_decision_text]]): `deferred-work.md` item **(b)
+`D5-subject` (i)** contains the sentence *"⇒ ⭐ **the SCHEMA is the authority**"* — ⭐ it is real and
+it is quoted correctly. ⚠⛔ **But that item is an OPEN deferred item WITH A TRIGGER** (*"the first
+story that revisits nominee-bank collection"*), ⛔ **not a ruling**, and its subject is the
+**consent-subject gap** (does the row identify a nominee at all), ⛔ not the two-accounts case
+directly.
+⚠⛔ **AND THE RE-GROUNDING THAT APPLIES IT TO §8.4(ii) IS AN *AUTHOR-COMMITTED CORRECTION INSIDE A
+SIBLING STORY* — `11b-17`'s AC4 and its Change Log v1.1, on an ⛔ UNMERGED branch. ⛔ It has ⛔ NEVER
+REACHED `.decision-log.md`.** ⚠ `-213`'s own entry is **unamended** and still reads *"the
+differing-holder-name case is ⛔ still UNRULED and is ROUTED"* ⇒ ⛔ the log and the sibling **disagree**,
+and ⛔ **this story is ⛔ not the instrument that settles them.**
+⇒ ⭐ **WHAT THE DEV DOES: ⛔ NOTHING.** ⛔ No edit to `member-pool/handlers.ts` · ⛔ no Panel routing ·
+⛔ no closure written anywhere. ⭐ Align with `6-18-nominee-holder-name-on-the-verification-console`
+(`ready-for-dev`), which ⭐ **explicitly records that it does ⛔ NOT close `D5-subject` (i)** — ⚠ so
+⛔ do ⛔ not read `6-18` as having closed it either.
 
 ### AC7 — The superseded positions are RE-STATED as superseded, ⛔ not quietly edited
 Each of Trap 5's four artefacts and Trap 6's three comments is updated to say **what changed and
@@ -287,6 +297,9 @@ under what authority** (`-212` cl.2; `-191` cl.5 for the substrate claims) —
 ([[feedback_supersede_never_reinterpret]], [[feedback_closure_language_precision]]).
 ⚠ ⭐ **Trap 6 item 3 (`member-drive-list.json`) is a PARTIAL supersession** — *"⛔ no VPA"* remains
 **true of story F's surface**; ⛔ only the substrate half is stale. ⛔ Do ⛔ not over-correct it.
+**And** the **friction-budget disposition is recorded** (Task 6) — ⭐ per Story 8.13's precedent
+(`friction-budget.md:646`) the expected outcome is *declaration affirmed, ⛔ no new row*, ⚠ but an
+**unrecorded** disposition fails this AC.
 
 ### AC8 — The deployment order is STATED, ⛔ not discovered in production
 Per Trap 2: the story record names the order — the **API ships the additive field ⛔ only alongside
@@ -323,15 +336,23 @@ by cl.2 — ⚠ **and its stated ground was ⛔ FALSE when written**: `-191` cl.
 item (e) quotes that clause three lines above its own prohibition
 ([[feedback_closure_language_precision]]).
 
-### ✅ D2 — **§8.4(ii) CLOSED on a ground that predates this story** (2026-09-11)
+### ⚠ D2 — **§8.4(ii) is DE-ROUTED, ⛔ and the governance record for that is OWED**
 
-⭐ `D5-subject (i)` — *"the **SCHEMA** is the authority"* — resolves the differing-holder-name case.
-⛔ It is ⛔ not a Panel question, ⛔ not routed with Task 0e, and ⛔ not this story's to fix (it lives
-in `member-pool/handlers.ts`, which ⛔ no Task here touches). ⭐ `6-18` owns the alignment.
-⚠⛔ **This CLOSES a question this story's v0.1 carried as OPEN** — ⛔ the record of that is kept in
-the Change Log, ⛔ not tidied away ([[feedback_record_unattested_no_backfill]]).
+⭐ v0.1 routed §8.4(ii) to the Panel. ⭐ That routing was **DROPPED** — correctly — because
+`11b-17`'s own validate pass re-grounded it on `D5-subject (i)`'s *"the SCHEMA is the authority"*.
+⚠⛔ **But "de-routed" is ⛔ NOT "ruled".** The chain is: an **OPEN deferred item** (⛔ not a ruling)
+→ applied by an **author-committed correction in a sibling story** (⛔ not a decision entry)
+→ on an **unmerged branch** (⛔ not on `main`) → while **`-213`'s entry still says UNRULED**.
+⇒ ⭐ **the honest status is: ⛔ nobody should ACT on it, and ⛔ nobody should cite it as settled.**
+⛔ **THE RECORD IS OWED, ⛔ and it is ⛔ NOT this story's to write** — it belongs with `11b-17`'s
+correction ([[feedback_governance_commits_precede_implementation]]). ⭐ 8.17 names the gap and
+⛔ steps around it; ⛔ it does ⛔ not fill it.
+⚠⛔ **v0.2 of this file overstated this as *"✅ CLOSED"*** — ⛔ that was wrong, and the record of it
+stays in the Change Log rather than being tidied away ([[feedback_record_unattested_no_backfill]],
+[[feedback_closure_language_precision]]).
 
-⛔ **ZERO OPEN DECISIONS.** AC6(a) is a **recorded question**, ⛔ not a gate on this build.
+⛔ **ZERO BLOCKING DECISIONS.** AC6(a) is a **recorded question** and AC6(b) is a **de-routed,
+un-logged** one — ⛔ neither is a gate on this build, ⭐ and ⛔ neither is closed.
 
 ---
 
@@ -375,14 +396,14 @@ affordance.
 - [ ] **Task 5 — Supersessions** (AC7) — re-state Trap 5's four artefacts and Trap 6's three comments
       **as superseded, with the authority named**. ⚠ Trap 6 item 3 is **partial** — ⛔ do ⛔ not
       over-correct it.
-- [ ] **Task 6 — Friction-budget disposition** — ⭐ record it, per Story 8.13's precedent
+- [ ] **Task 6 — Friction-budget disposition** (AC7) — ⭐ record it, per Story 8.13's precedent
       (`friction-budget.md:646`, *"declaration affirmed, ⛔ no new row"*). ⚠ This story adds a
       **read-only row** and ⛔ **zero** new deliberate steps ⇒ the expected disposition is
       *declaration affirmed, ⛔ no new row* — ⭐ but it must be **recorded**, ⛔ not assumed.
       ⚠ `friction-budget.md:1952-1959` also carries Trap 5 artefact 4 and moves with Task 5.
 - [ ] **Task 7 — Tests** (AC1-AC5, AC6)
   - [ ] Contract: `vpa` optional; absent ⇒ parses; `vpaPresent` retained; ⛔ **claims** view still has
-        ⛔ no `vpa`. ⚠⛔ **And supersede `contributions-nominee-accounts.test.ts:35`** — a test named
+        ⛔ no `vpa`. ⚠⛔ **And supersede `contributions-nominee-accounts.test.ts:36`** — a test named
         *"REJECTS a raw `vpa` field"* now asserts the opposite of the ruling.
   - [ ] Handler: an account **with** a VPA returns it; **without** ⇒ the key is **ABSENT**, ⛔ not
         `null`; a decrypt failure ⇒ omitted, ⛔ not a 500.
@@ -395,8 +416,12 @@ affordance.
         ⛔ there is ⛔ no RN mount harness (`apps/mobile/components/drive-list/format.ts:1-11` records
         why); put any checkable logic in a plain `.ts`.
   - [ ] `i18n:check` parity green for the new key in **both** locales.
-        ⚠⛔ **`microcopy:check` proves ⛔ NOTHING here** — its `copy_globs` are empty and its
-        `code_globs` are an `apps/admin` slice ⇒ ⛔ do ⛔ not cite its green as coverage
+        ⚠⛔ **`microcopy:check` HAS REAL TEETH ON THIS KEY — ⛔ do ⛔ not skip it.**
+        `microcopy.yaml`'s `copy_globs` lists **`packages/i18n/locales/{hi,en}/contribution.json`**
+        by name — ⭐ the exact file Task 3 mints into — and the config says those two are **tested**,
+        ⛔ not merely scanned (`scripts/microcopy/contribution.test.ts`).
+        ⚠ ⛔ **Do ⛔ not believe that file's own HEADER**, which still says *"`scope.copy_globs` is
+        empty until Epic 2+"* — ⭐ **it is STALE**; read the list, ⛔ not the preamble
         ([[feedback_gate_scope_semantic_coverage]]).
   - [ ] ⭐ **Execute against `twt-test-pg` `:5433`.**
 
@@ -433,16 +458,18 @@ values**, ⛔ never counts over the shared fixture ([[project_live_db_test_gotch
   `#decision-2026-09-04-191` **cl.1** (the clause it applies) **and cl.5** (⭐ the verified finding:
   the collection path, the **11/558** test-DB figure, and two stale claims corrected) ·
   `#decision-2026-09-04-190` **cl.2** (the *"Nominee Name"* wording — ⛔ unresolved here)
-- ⚠ `#decision-2026-09-10-213` **cl.2** — ⛔ **cite only as the SUPERSEDED framing of §8.4(ii)**; its
-  entry was never amended (AC6(b), D2)
+- ⚠ `#decision-2026-09-10-213` **cl.2** — ⛔ **still the LIVE text of §8.4(ii)** (*"still UNRULED and
+  is ROUTED"*); it was ⛔ never amended, and ⛔ nothing in this story supersedes it (AC6(b), D2)
 - `_bmad-output/implementation-artifacts/deferred-work.md` — **11b.3a third-pass item (e)** *(VPA
-  collection; SUPERSEDED by `-212` cl.2; ⭐ still says it needs a named home)* and **`D5-subject (i)`**
-  *(the schema is the authority — AC6(b))*. ⚠ ⛔ **Never cite a bare item letter in that file.**
+  collection; SUPERSEDED by `-212` cl.2; ⭐ still says it needs a named home)* and **item (b) `D5-subject` (i)**
+  *(⭐ the "SCHEMA is the authority" sentence — ⚠ an **OPEN** deferred item with a trigger, ⛔ not a
+  ruling; AC6(b)/D2)*. ⚠ ⛔ **Never cite a bare item letter in that file.**
 - `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-10-11b17-member-drive-detail-two-questions.md`
   **Q2** / **§4.2b** — the traced pay-path evidence the Panel ruled on, ⭐ **and the stale-comment
   defect it recorded** (Trap 6 item 1)
 - `_bmad-output/implementation-artifacts/6-18-nominee-holder-name-on-the-verification-console.md`
-  (`ready-for-dev`) — ⭐ the sibling that owns the §8.4(ii) alignment
+  (`ready-for-dev`) — ⭐ the sibling to align with; ⚠ it **explicitly records that it does ⛔ NOT close
+  `D5-subject` (i)**
 - `apps/mobile/app/(contribution)/pay.tsx:448`, `:473-480`, `:263-267` — the ternary, the four
   `FieldRow`s this joins, the three-field sentinel check
 - `apps/mobile/app/(claim)/nominee-review.tsx:232-239`, `:146` — where a VPA is actually collected
@@ -474,4 +501,5 @@ values**, ⛔ never counts over the shared fixture ([[project_live_db_test_gotch
 | Date | Version | Description | Author |
 |---|---|---|---|
 | 2026-09-10 | 0.1 | Created to discharge Story `11b-17` **Task 0e** / `-212` **Consequence 3** — the work cl.2 created, which is ⛔ NOT story F's. ⭐ **ZERO open decisions**: the authority is Trustee-ratified (`-212` cl.2 applying `-191` cl.1). ⭐⭐ Four traps recorded from live verification: **(1)** ⛔ TWO types named `NomineeBankAccountView` — the exported donor view (`contributions/nominee-accounts.ts:46`) is the target; the module-private claims view (`claims/nominee-bank.ts:112`) is ⛔ NOT, and **both already carry `vpaPresent`** so a grep lands in both — ⚠ 8.13's own Task text names the wrong file for the symbol it edited; **(2)** the `.strict()` additive-field blank-out **detonates here** ⇒ Task 4 owes a stated deployment order; **(3)** a null VPA is a **first-class state**, ⛔ never an error ⇒ omit the row; **(4)** the decrypt **already happens** at `handlers.ts:155-164` ⇒ ⛔ add no KMS call, since each one is an audit line on a global lock. ⭐ Verified the VPA is **genuinely collectable** (`nominee-review.tsx` — an optional nominee-filled field) ⇒ ⛔ not an inert gate; ⚠ how many rows are populated is a **DATA question code cannot answer** and is recorded un-attested. ⚠ AC6 carries `-190` cl.2's *"Account holder"* conflict and §8.4(ii) as **recorded questions, ⛔ not gates**. | BigDev + Claude |
-| 2026-09-11 | 0.2 | ⭐⭐ **VALIDATE PASS — 27 findings, all applied.** ⛔ The pin held (ancestor of HEAD, ⛔ nothing moved under it) ⇒ ⛔ **every defect below was wrong WHEN WRITTEN.** ⚠⛔ **THE LOAD-BEARING ONE: v0.1's Trap 4 was FALSE.** `handlers.ts:153-170` is the **intent POST**'s decrypt (route `:98`) — a different function, response type and request — and is ⛔ **unreachable** from the **nominee-accounts GET** (`:240`) that feeds `pay.tsx`, whose own doc-block says `vpaPresent` is computed *"WITHOUT decrypting"*. ⇒ v0.1's AC1 was **unshippable under its own AC4**. ⭐ **RESOLVED: `-212` Consequence 3 — ⛔ never quoted in v0.1 — names *"the `nominee-accounts` handler's decrypt"* as touched scope** ⇒ AC4 now authorises **exactly ONE** new soft decrypt and forbids any second, and ⭐ **the cost is SIZED** (`550a7acd`'s unit: `envelope.ts:92-93` fires one audit line per encrypted FIELD with ⛔ no DEK cache, on a deployment-wide `pg_advisory_xact_lock` ⇒ **+1 per VPA-bearing account, `0`/`1`/`2` per load, ≤6→≤8**) where v0.1 claimed *"adding none is the point."* ⚠⛔ **§8.4(ii) IS CLOSED, ⛔ not open** — `D5-subject (i)` rules *"the SCHEMA is the authority"*; the wrong artefact is `member-pool/handlers.ts:534-542`, ⛔ not the schema; `-213`'s entry was never amended and sibling **`6-18`** (`ready-for-dev`) already builds on the answer. ⭐ AC6(a) is **genuinely still open** — ⛔ no change. ⭐ **New Traps 5-7:** four live artefacts forbid exactly what AC3 orders (incl. a test named *"REJECTS a raw `vpa` field"* and `handlers.ts:257-263` — ⭐ **the narrow reading `-212` cl.2 overturned**); three stale comments deny the VPA exists, one of them the **header of the file Task 2 edits**, ⭐ routed here **by name** by §4.2b and `11b-17`; and `selectedAccountAllFieldsUnavailable` is **three fields by design**. ⭐ **`-191` cl.5 now cited** — it **attests** the population v0.1 called *"un-attested"* (**11 of 558, TEST database**, ⛔ no seed writer ⇒ ⛔ says nothing about production). ⚠⛔ **v0.1's Trap 1 accusation against 8.13 was FALSE** — `git log -S` shows 8.13 edited exactly the file it named (`e7862103`); the donor view's `vpaPresent` came from **9.9** (`974894da`) ⇒ struck, ⭐ provenance recorded instead. ⚠ **`-212` C5's ground was over-broad** — `claim.json:60-62` already ships *"UPI ID (optional)"* in both locales ⇒ ⭐ match it, and **keep "UPI ID" LATIN in Hindi**. ⭐ New **AC7** (supersessions), **AC8** (the deployment order Task 4 had no AC for), **Task 6** (friction-budget disposition, per 8.13's precedent). ⚠ Cites corrected: `:390`→`:391-395`; `nominee-bank-persist.ts` → `packages/domain/src/claim/`; `:537` is a comment ⛔ not an assert; intake `:232-239`; the `:448` ternary branch; **flat** i18n keys; `microcopy:check` is **vacuous** here. ⚠⛔ **Bare `item (e)` (3 sites) violated `deferred-work.md`'s own addressing rule** — ⛔ a bare `(e)` means 11b.1's ⇒ qualified throughout. ⚠ **Topology recorded as a risk (Preflight row T):** `-212`/`-213` are ⛔ not on `main` and the governance branch is ⛔ unpushed. ✅ **Confirmed clean:** ⛔ no rival story, ⛔ no file collision with `11b-17`, ⛔ no double-owned or orphaned `-212` Consequence, and `-214`/AC10's scope ⛔ does ⛔ not reach this screen. | BigDev + Claude |
+| 2026-09-11 | 0.2 | ⭐⭐ **VALIDATE PASS — 27 findings, all applied.** ⛔ The pin held (ancestor of HEAD, ⛔ nothing moved under it) ⇒ ⛔ **every defect below was wrong WHEN WRITTEN.** ⚠⛔ **THE LOAD-BEARING ONE: v0.1's Trap 4 was FALSE.** `handlers.ts:153-170` is the **intent POST**'s decrypt (route `:98`) — a different function, response type and request — and is ⛔ **unreachable** from the **nominee-accounts GET** (`:240`) that feeds `pay.tsx`, whose own doc-block says `vpaPresent` is computed *"WITHOUT decrypting"*. ⇒ v0.1's AC1 was **unshippable under its own AC4**. ⭐ **RESOLVED: `-212` Consequence 3 — ⛔ never quoted in v0.1 — names *"the `nominee-accounts` handler's decrypt"* as touched scope** ⇒ AC4 now authorises **exactly ONE** new soft decrypt and forbids any second, and ⭐ **the cost is SIZED** (`550a7acd`'s unit: `envelope.ts:92-93` fires one audit line per encrypted FIELD with ⛔ no DEK cache, on a deployment-wide `pg_advisory_xact_lock` ⇒ **+1 per VPA-bearing account, `0`/`1`/`2` per load, ≤6→≤8**) where v0.1 claimed *"adding none is the point."* ⚠⛔ **§8.4(ii) IS CLOSED, ⛔ not open** ⛔⛔ **← THIS SENTENCE IS FALSE; CORRECTED AT v0.3 — kept as the record, ⛔ not tidied away** — `D5-subject (i)` rules *"the SCHEMA is the authority"*; the wrong artefact is `member-pool/handlers.ts:534-542`, ⛔ not the schema; `-213`'s entry was never amended and sibling **`6-18`** (`ready-for-dev`) already builds on the answer. ⭐ AC6(a) is **genuinely still open** — ⛔ no change. ⭐ **New Traps 5-7:** four live artefacts forbid exactly what AC3 orders (incl. a test named *"REJECTS a raw `vpa` field"* and `handlers.ts:257-263` — ⭐ **the narrow reading `-212` cl.2 overturned**); three stale comments deny the VPA exists, one of them the **header of the file Task 2 edits**, ⭐ routed here **by name** by §4.2b and `11b-17`; and `selectedAccountAllFieldsUnavailable` is **three fields by design**. ⭐ **`-191` cl.5 now cited** — it **attests** the population v0.1 called *"un-attested"* (**11 of 558, TEST database**, ⛔ no seed writer ⇒ ⛔ says nothing about production). ⚠⛔ **v0.1's Trap 1 accusation against 8.13 was FALSE** — `git log -S` shows 8.13 edited exactly the file it named (`e7862103`); the donor view's `vpaPresent` came from **9.9** (`974894da`) ⇒ struck, ⭐ provenance recorded instead. ⚠ **`-212` Consequence 5's ground was over-broad** — `claim.json:60-62` already ships *"UPI ID (optional)"* in both locales ⇒ ⭐ match it, and **keep "UPI ID" LATIN in Hindi**. ⭐ New **AC7** (supersessions), **AC8** (the deployment order Task 4 had no AC for), **Task 6** (friction-budget disposition, per 8.13's precedent). ⚠ Cites corrected: `:390`→`:391-395`; `nominee-bank-persist.ts` → `packages/domain/src/claim/`; `:537` is a comment ⛔ not an assert; intake `:232-239`; the `:448` ternary branch; **flat** i18n keys; `microcopy:check` is **vacuous** here. ⚠⛔ **Bare `item (e)` (3 sites) violated `deferred-work.md`'s own addressing rule** — ⛔ a bare `(e)` means 11b.1's ⇒ qualified throughout. ⚠ **Topology recorded as a risk (Preflight row T):** `-212`/`-213` are ⛔ not on `main` and the governance branch is ⛔ unpushed. ✅ **Confirmed clean:** ⛔ no rival story, ⛔ no file collision with `11b-17`, ⛔ no double-owned or orphaned `-212` Consequence, and `-214`/AC10's scope ⛔ does ⛔ not reach this screen. | BigDev + Claude |
+| 2026-09-11 | 0.3 | ⚠⛔ **SECOND VALIDATE PASS (a re-run on v0.2 itself) — 4 corrections, ⛔ 3 of them defects THIS FILE's own v0.2 introduced.** ⭐ Recorded because a validate pass that rewrites a story ⛔ can ⛔ not be assumed to have rewritten it correctly. ⚠⛔⛔ **THE SERIOUS ONE — v0.2 OVERSTATED §8.4(ii) AS *"✅ CLOSED"*, AND IT IS ⛔ NOT.** ⭐ The underlying text is **real** (`deferred-work.md` item (b) `D5-subject` (i) does say *"the SCHEMA is the authority"*, and `11b-17`'s post-validate AC4 + Change Log v1.1 do re-ground §8.4(ii) on it and drop the Panel routing) — ⛔ but the **STATUS** was traced wrong: it is an **OPEN deferred item with a trigger** (⛔ not a ruling), applied by an **author-committed correction inside a SIBLING story** (⛔ not a decision entry), on an **UNMERGED branch**, while **`-213`'s entry is unamended and still reads *"still UNRULED and is ROUTED"*** — and **`6-18` explicitly records that it does ⛔ NOT close `D5-subject` (i)**. ⇒ ⭐ **re-stated as DE-ROUTED but ⛔ NOT LOGGED**; **D2** now names the owed governance record as ⛔ **not this story's**; **AC0(c)** no longer orders a false closure into the ledger; the References stop calling `-213` *"superseded"*. ⚠ This is [[feedback_story_validate_footguns]] **#18** (a control asserted from decision text — ⭐ BUILT?/SCOPE?/**COST?** — here **SCOPE** and **status** both failed) and **#20(a)** (an author-committed note elevated to a ruling), committed by the pass that exists to catch exactly that. ⚠⛔ **AND ⛔ `microcopy:check` WAS INVERTED** — v0.2 told the dev the gate was *"vacuous"* with *"empty `copy_globs`"*; `microcopy.yaml` lists **`packages/i18n/locales/{hi,en}/contribution.json`** BY NAME — ⭐ the exact file Task 3 mints into — and calls them **tested**, ⛔ not merely scanned. ⚠ The false claim came from that file's own **STALE HEADER** (*"`copy_globs` is empty until Epic 2+"*) ⇒ ⭐ **read the list, ⛔ never the preamble** — ⚠ and note the header's comment cites [[feedback_gate_scope_semantic_coverage]], the very rule v0.2 invoked to reach the opposite, wrong conclusion. ⚠ **Task 6 was a NEW ORPHAN** — v0.2 fixed Task 4's missing AC and created the same defect one task later ⇒ tagged to **AC7**, which now carries the disposition. ⚠ Cite fixed: the contracts test is at **`:36`**, ⛔ not `:35` (`:35` is `});`) — two sites. ⭐ **Everything else in v0.2 re-verified and HELD**, including the Trap 4 handler-boundary finding, the audit sizing, the Trap 1 provenance correction, `-212` Consequence 3 verbatim, `-191` cl.5's *"11 of 558 … test database"*, the two `deferred-work.md` addressing quotes, the two `### (e)` headings, the unfiltered `ciphertextRows.map`, and every remaining `file:line` pointer. ⚠⛔ **Recorded separately, ⛔ because this pass caused it:** the sprint-ledger prepend (+86 lines) will **rot `11b-17:654`'s `sprint-status.yaml:17685`/`:17739` cites on merge** — ⛔ not fixed here (that file's authoritative copy is on another branch); ⭐ they should become **block addresses**, per that same footgun **#19**. | BigDev + Claude |

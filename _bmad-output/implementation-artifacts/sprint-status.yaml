@@ -1,3 +1,22 @@
+# last_updated: 2026-09-11d (⭐⭐ **STORY `11b-20` CREATED — `#decision-2026-09-11-214` Consequence 3
+#   is DISCHARGED, and the 2026-09-05 ratification is now CLOSED END TO END.** ⭐ ONE ROW ADDED:
+#   development_status[11b-20-public-sahyog-vivran-message-block] = **`ready-for-dev`**.
+#   ⭐ The three halves now all have homes: **Consequence 2 = `11b-19`** (B's copy source) ·
+#   **cl.4(b) = `11b-17` AC10 / Task 5d** (the member render) · **Consequence 3 = `11b-20`** (the
+#   public render). ⚠ `11b-15`'s omission stays RECORDED against `11b-15`, ⛔ never back-filled.
+#   ⛔⛔ **`11b-20` IS BLOCKED, ⛔ NOT OPEN** — ⛔ zero open decisions; it needs `11b-19` AND `11b-3b`.
+#   ⭐⭐ **THE FINDING THAT SHAPED IT: the `11b-3b` dependency is ⛔ NOT just the deceased NAME — it is
+#   ALSO the AMOUNT.** `packages/contracts/src/public-pages/sahyog-vivran.ts:48-56` rules ⛔ NO rupee
+#   figure on the public detail wire and says it *"MOVES to 11b.3b, which adds that dependency …
+#   11b.3b will need `rosterSize` and `fixedAmount`"* ⇒ ⭐ BOTH of the headline's tokens are 11b-3b's.
+#   ⛔⛔ **AND THE TRAP WORTH THE ROW:** the `no_family` variant `11b-19` ships exists for a family who
+#   WITHHELD CONSENT — ⛔ reaching for it because `11b-3b` has not landed would render EVERY public
+#   drive as though the family had DECLINED TO BE NAMED. ⭐ A silent falsehood at scale, about a
+#   bereaved family's own choice, that would ⛔ look correct in every test.
+#   ⭐ Also recorded: ⛔ NO second multiplication (9.12 D3 / D1(c) REFUSED) · ⛔ do ⛔ not pre-add wire
+#   fields · Task 2 rules the table's relationship to what the page ALREADY renders, IN WRITING.
+#   ⛔ **NO CODE.** ⛔ Rows unchanged: `11b-17` / `11b-19` / `11b-3b` / `6-18` / `8-17` `ready-for-dev`;
+#   `11b-16` `withdrawn`.)
 # last_updated: 2026-09-11c (⭐⭐ **STORY `11b-19` CREATED — `#decision-2026-09-11-214` Consequence 2
 #   is DISCHARGED and `11b-17`'s STOP 2 has a NAMED HOME.** ⭐ ONE ROW ADDED:
 #   development_status[11b-19-ratified-message-block-copy-source] = **`ready-for-dev`**.
@@ -17872,6 +17891,25 @@ development_status:
   # twice says it *"STAYS `ready-for-dev`"*, ⛔ but it is ⛔ ABSENT from `development_status` and has
   # ⛔ no file. ⛔ Recorded, ⛔ not resolved.
   11b-19-ratified-message-block-copy-source: ready-for-dev
+  # ⭐⭐ 11b-20 — MINTED 2026-09-11 BY `#decision-2026-09-11-214` **Consequence 3**: the PUBLIC render
+  # of the same ratified block — ⭐ the LAST unhomed half of the 2026-09-05 ratification.
+  # ⛔⛔ **BLOCKED, ⛔ not open. ⛔ ZERO OPEN DECISIONS.** It needs **`11b-19`** (the copy) AND
+  # **`11b-3b`** — ⚠⛔ and the `11b-3b` dependency is ⛔ NOT just the deceased NAME: `sahyog-vivran.ts`
+  # `:48-56` rules ⛔ NO rupee figure on this wire and says the AMOUNT *"MOVES to 11b.3b, which adds
+  # that dependency"* ⇒ ⭐ **BOTH of the headline's two tokens are `11b-3b`'s.**
+  # ⭐⭐ FIVE TRAPS: (1) ⛔⛔ the `no_family` variant is ⛔ NOT a workaround for the unbuilt dependency —
+  # reaching for it renders EVERY public drive as though the family had DECLINED TO BE NAMED, a
+  # silent falsehood at scale that would ⛔ pass every test; (2) ⛔ NO second multiplication —
+  # `confirmedCount × fixedAmount` is 9.12 D3's ONE definition and re-deriving is **D1(c), REFUSED**;
+  # (3) ⛔ do ⛔ NOT pre-add `fixedAmount`/`rosterSize` (*"a field with no render is the vacuous-leg
+  # defect wearing a forward-compatibility costume"*); (4) ⚠ the page may ALREADY show the table's
+  # two values (§8.3(2)) ⇒ Task 2 rules replace-or-above IN WRITING; (5) ⚠ the *"Nominee"* column
+  # over `account_holder_name_ciphertext` on a PUBLIC bulk-harvestable surface — the EXPOSURE is
+  # ruled (§10.2 ruling 2), ⛔ the CLAIM *"is the nominee of"* is ⛔ still forbidden.
+  # ⭐ The count-vs-amount asymmetry until `11b-3b` merges is ORDERING, ⛔ NOT a defect to file.
+  # ⇒ ⭐⭐ **WITH THIS ROW, `-214` IS CLOSED END TO END:** Consequence 2 = `11b-19`; cl.4(b) =
+  # `11b-17` AC10; Consequence 3 = `11b-20`. ⚠ `11b-15`'s omission stays RECORDED against `11b-15`.
+  11b-20-public-sahyog-vivran-message-block: ready-for-dev
   epic-11b-retrospective: optional
 
   # ==========================================================================

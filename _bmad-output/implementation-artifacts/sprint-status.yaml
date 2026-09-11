@@ -138,6 +138,92 @@
 #   superseded text KEPT STRUCK.
 #   ⛔ **NO CODE.** ⛔ Rows unchanged: `11b-17` / `11b-3b` / `6-18` / `8-17` `ready-for-dev`;
 #   `11b-16` `withdrawn`.)
+# last_updated: 2026-09-11a (⭐⭐ **STORY `8-17` VALIDATED — 27 findings, ALL APPLIED. ⛔ ZERO ROWS FLIP.**
+#   ⛔ `development_status[8-17-nominee-vpa-on-the-payment-screen]` STAYS **`ready-for-dev`**; ⛔ every
+#   other row unchanged. ⭐ The story file goes to **v0.2**; ⛔ no code.
+#   ⭐ **THE PIN HELD** — `19ff4109` is an ancestor of HEAD and ⛔ nothing moved under it ⇒ ⛔ **every
+#   defect below was wrong WHEN WRITTEN**, ⛔ not rotted since.
+#   ⚠⛔⛔ **THE LOAD-BEARING FINDING — v0.1's Trap 4 WAS FALSE, AND IT MADE AC1 UNSHIPPABLE UNDER AC4.**
+#   `payment/handlers.ts:153-170` is the **intent POST**'s decrypt (route `:98`) — a different function,
+#   a different response type, a separate request — and is ⛔ **UNREACHABLE** from the **nominee-accounts
+#   GET** (`:240`) that actually feeds `pay.tsx:473-480`. That handler's own doc-block says `vpaPresent`
+#   is computed *"WITHOUT decrypting it"*. ⇒ v0.1 ordered a render it then forbade the means of.
+#   ⭐ **RESOLVED — AND ⛔ NOT BY WIDENING ANYTHING:** `-212` **Consequence 3**, ⛔ never quoted in v0.1,
+#   names *"the **`nominee-accounts` handler's decrypt**"* as touched scope ⇒ **AC4 now authorises
+#   EXACTLY ONE** new `decryptNomineeBankFieldSoft` and ⛔ forbids a second. ⭐ Decided by BigDev.
+#   ⭐ **AND THE COST IS SIZED**, in `550a7acd`'s own unit: `envelope.ts:92-93` fires `auditHook('decryptDek')`
+#   per `decryptTier1` with ⛔ **NO DEK cache** ⇒ ONE audit line per encrypted **FIELD**; `audit/write.ts`
+#   holds a deployment-wide cross-tenant `pg_advisory_xact_lock` across 5-6 round trips ⇒ ⭐ the cost is
+#   **SERIALIZATION**. ⇒ **+1 line per VPA-bearing account, `0`/`1`/`2` per screen load, ≤6 → ≤8** — and
+#   the VPA is decrypted for **BOTH** accounts (the GET maps ALL rows), i.e. for one the member may never
+#   open, with ⛔ no lazy path. ⚠ v0.1 said *"adding none is the point."*
+#   ⚠⛔ **§8.4(ii) IS CLOSED, ⛔ NOT OPEN — v0.1 routed a question that had been answered.**
+#   `deferred-work.md` **`D5-subject (i)`** rules ***"the SCHEMA is the authority"*** ⇒ two differing
+#   holder names are a **LEGITIMATE state**, and the wrong artefact is the **code comment** at
+#   `member-pool/handlers.ts:534-542`, ⛔ not the schema. ⚠⛔ **`-213`'s own entry was NEVER amended**, so
+#   the log still reads the old way ⇒ ⛔ do ⛔ not restore it from there. ⭐ Sibling **`6-18`**
+#   (`ready-for-dev`) already builds on the answer and was named ⛔ nowhere in v0.1.
+#   ⭐ **AC6(a) IS BY CONTRAST GENUINELY OPEN** — `-212` Consequence 6 is still the last word on whether
+#   `-190` cl.2 binds only the public surface; ⛔ `-213`/`-214` do ⛔ not revisit it. ⛔ NO CHANGE.
+#   ⭐⭐ **THREE NEW TRAPS, each a thing that would have failed the build:**
+#   **(5) ⛔ FOUR LIVE ARTEFACTS FORBID EXACTLY WHAT AC3 ORDERS** — a contracts test literally named
+#   *"REJECTS a raw `vpa` field"*; an integration spec with `expect('vpa' in account).toBe(false)`, a
+#   `not.toContain('ravi@upi')` and an **exact-SIX-keys** equality; `friction-budget.md:1952-1959`; and
+#   ⭐⭐ `handlers.ts:257-263` — **the narrow reading `-212` cl.2 overturned**, still in the codebase, the
+#   very one v0.1's Dev Notes complained about without ever locating. ⇒ new **AC7**: re-state them as
+#   SUPERSEDED, ⛔ never quietly edit. ⚠ And `not.toContain('ravi@upi')` **MOVES** to the audit sink — ⛔ it
+#   is ⛔ not deleted.
+#   **(6) ⛔ THREE STALE COMMENTS DENY THE VPA EXISTS** — one is the **module HEADER of the file Task 2
+#   edits** (`handlers.ts:20-23`, *"There is NO VPA in the substrate today"*). ⭐ It was routed to `8-17`
+#   **BY NAME** — twice — by routing-note **§4.2b** (*"a defect to fix"*) and `11b-17`'s Dev Notes
+#   (*"it belongs in `8-17`'s packet"*), and v0.1 carried ⛔ neither.
+#   **(7) ⛔ `selectedAccountAllFieldsUnavailable` IS THREE FIELDS BY DESIGN** (`pay.tsx:263-267`) — a dev
+#   "completing the pattern" with `vpa` would let a missing UPI ID blank the whole coordinates block.
+#   ⭐ **`-191` cl.5 IS NOW CITED — v0.1 quoted cl.1 and dropped the half with three consumers.** cl.5
+#   **ATTESTS** the population v0.1 declared *"un-attested, ⛔ not backfilled"*: **11 of 558** nominee
+#   accounts — ⚠⛔ **in the TEST database**, with ⛔ **NO seed writer** (migration 0080 is a bare
+#   `ADD COLUMN`) ⇒ ⛔ it says **nothing** about production. ⭐ Recorded with that limit stated, ⛔ not
+#   laundered into a production figure. cl.5 also supplied the corrected intake/read cites and named two
+#   of Trap 6's three stale comments.
+#   ⚠⛔ **AND v0.1's TRAP 1 ACCUSED STORY `8-13` FALSELY.** `git log -S vpaPresent` shows `8-13`
+#   (`e7862103`) edited **exactly the file its own Task named**; the donor view's `vpaPresent` came from
+#   **`9-9`** (`974894da`). ⇒ the accusation is STRUCK and the provenance recorded instead — ⭐ the trap's
+#   core (two same-named types, one exported) survives untouched.
+#   ⚠ **`-212` Consequence 5's ground was OVER-BROAD** — it says ⛔ no UPI-ID label exists *"on any member
+#   surface"*; `claim.json:60-62` already ships `nominee.bank.vpa` = *"UPI ID (optional)"* in **both**
+#   locales. ⭐ The conclusion (mint one) stands; ⭐ the dev now MATCHES that treatment — and ⭐⭐ **keeps
+#   "UPI ID" in LATIN script in Hindi**, as `IFSC` is kept.
+#   ⭐ **NEW: AC8** (the deployment order — Task 4 produced a record ⛔ no AC gated) and **Task 6**
+#   (friction-budget disposition, per `8-13`'s precedent at `friction-budget.md:646`).
+#   ⚠ **CITES CORRECTED:** `:390`→`:391-395` (`:390` is the comment) · `nominee-bank-persist.ts` is
+#   `packages/domain/src/claim/`, ⛔ not `apps/api/src/modules/claim/` · `member-pool/handlers.ts:537` is a
+#   **comment**, ⛔ not an assert · intake is `:232-239` · the render goes in the **`:448` ternary's
+#   else-branch** · i18n keys are **FLAT dotted strings** · ⛔ **`microcopy:check` is VACUOUS here** (empty
+#   `copy_globs`, an `apps/admin` `code_globs` slice) ⇒ ⛔ its green proves nothing.
+#   ⚠⛔ **BARE `item (e)` (3 sites) VIOLATED `deferred-work.md`'s OWN ADDRESSING RULE** — *"The ITEM
+#   LETTERS are the stable address"*, and a **bare `(e)` means Story `11b.1`'s**. There are two. ⭐ Qualified
+#   to *"11b.3a third-pass item (e)"* throughout — the same sweep `11b-17` ran on itself and never
+#   propagated.
+#   ⭐ **AC0 NOW CARRIES THREE GOVERNANCE RECORDS, ⛔ not one.** Item (e) still reads `✅ CLOSED` in its
+#   heading while its body says *"RE-OPENED AS A BUILD OBLIGATION — Trigger: FIRED"* and *"it needs a
+#   **NAMED HOME**"* — ⭐ `8-17` **IS** that home and item (e) ⛔ never names it. `-212` Consequence 3 owes
+#   that record **BEFORE `11b-17` ships**, and `11b-17` is in active work.
+#   ⚠⛔ **TOPOLOGY RECORDED AS A CARRIED RISK (Preflight row T), ⛔ not a blocker:** `-212` and `-213` are
+#   ⛔ **NOT on `main`**, the `governance/11b-17-…` branch is ⛔ **unpushed**, and `-214` is absent from
+#   this story's branch entirely. ⇒ ⭐ this story's authority must merge **with or before** its code.
+#   ✅ **CONFIRMED CLEAN, so the next reader ⛔ need not re-run it:** ⛔ NO rival/duplicate story · ⛔ NO
+#   file-level collision with `11b-17` (disjoint Task file sets ⇒ ⛔ no landing order) · ⛔ NO double-owned
+#   and ⛔ NO orphaned `-212` Consequence (`8-17` owns 4/5/6; `11b-17` explicitly disclaims them) ·
+#   `-214`/AC10's *"both the member and the public view"* scope ⛔ does ⛔ NOT reach the pay screen, and its
+#   *"Nominee full name"* is a ⛔ DIFFERENT string from `-190` cl.2's *"Nominee Name"* ⇒ ⛔ do ⛔ not
+#   conflate · ⛔ nothing improperly dropped from `a415ad9f`'s 32 findings · `§4.2b`/Q2, `8-13:62`,
+#   `8-13:250`, `-190` cl.2 and the `pay.tsx`/contract line cites all verified **exact**.
+#   ⚠ **Method:** five parallel read-only verifiers (code-claim re-verification · governance staleness ·
+#   premise-and-spec · `11b-17` sibling cross-read · governance-commit-chain audit), per
+#   [[feedback_story_validate_footguns]]. ⭐ Footguns that FIRED here: **7** (half a ruling — Consequence 3),
+#   **15/19a** (an obligation living only in a routing note and a sibling's prose), **16** (a premise fixed
+#   in one story, never swept to the sibling), **18** (a control asserted from decision text — BUILT?/SCOPE?/
+#   COST? all three failed on Trap 4), **19** (bare item letters as addresses).
 # last_updated: 2026-09-10g (⭐⭐ **STORY `8-17` CREATED — `11b-17`'s Task 0e is DISCHARGED.**
 #   ⭐ ONE ROW ADDED: development_status[8-17-nominee-vpa-on-the-payment-screen] = **`ready-for-dev`**.
 #   ⛔ Every other row unchanged; `11b-17` stays `ready-for-dev`; epic-8 already `in-progress`.

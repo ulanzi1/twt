@@ -1,3 +1,39 @@
+# last_updated: 2026-09-11e (⛔⛔ **`11b-3b` VALIDATED FOR THE FIRST TIME AND REWRITTEN — v2.0.**
+#   ⭐ Three independent verifiers; **~45 findings, 12 BLOCKING**; **188 commits** of drift against a
+#   baseline that was DERIVED after the fact and against which ⛔ NO claim had ever been checked.
+#   ⭐ Baseline RE-PINNED `ae24a9e1` → `491a0fac`; the old second anchor `79ed41d` RETIRED.
+#   ⭐⭐ **THE SUBJECT SURVIVED INTACT** — `-173`/`-174`/`-175` are live, un-superseded, and the work is
+#   genuinely undone. ⛔ **What rotted was the MECHANISM**, and two findings would have shipped harm:
+#   ⛔⛔ **(1) AC3b ordered `rosterSize` + `fixedAmount` onto a PUBLIC, unauthenticated wire.** Their
+#   product **IS लक्ष्य** — `-204` **cl.3** reserves it to a `super_admin` reveal and **cl.8** closed the
+#   recovery channel *"BY CONSTRUCTION"* with *"the wire carries the PERCENTAGE only, ⛔ never
+#   `rosterSize`"*. ⛔ No gate would have caught it. ⭐ AC3b now hoists **`deliveredTotal`**
+#   (`sahyog-vivran-read.ts:509`, already computed server-side — the shape 11b.14 used).
+#   ⛔⛔ **(2) AC5 ruled RTBF omission and named NO mechanism.** `anonymizeMember` overwrites in place
+#   with an ENCRYPTED `[anonymized]` sentinel and KEEPS the row ⇒ the decrypt SUCCEEDS and
+#   `splitFirstNameLastInitial` returns a NON-EMPTY firstName, so the empty-name guard misses it.
+#   ⇒ the **`ANONYMIZED_SENTINEL` check on the DECRYPTED PLAINTEXT** is now ordered.
+#   ⭐⭐ **AND THE STORY'S DAY-ONE OUTPUT IS THE INVERSE OF ITS TITLE** — the inert clause gates the
+#   DECEASED name only; the contributor list has ⛔ NO clause gate ⇒ this ships **50 living members'
+#   FULL LEGAL NAMES** on an edge-cached public page while the member it is named for renders
+#   **NOTHING**. ⛔ Stated nowhere in v1. ⭐ It is RULED and intended (`-174`/`-175`) — ⛔ but nobody
+#   should ship it believing the page is dark.
+#   ⚠ Further: `-179` **cl.2** had PANEL-RATIFIED the D10 Trap 3 called unratified · item (e)'s binder
+#   was RE-POINTED to `8-16`, which merged FIRST, so v1's *"record the CLOSURE"* branch is WITHDRAWN ·
+#   `-195` cl.1's compliance statement was owed and uncited (**AC10**) · *"ZERO OPEN"* was FALSE
+#   (`-207`'s follow-up ⇒ **`D-percentage`**, a Preflight STOP, ⛔ not a Panel matter) · the allowlist is
+#   FOUR entries with **identity-array** assertions · AC4's control set was mechanized away by 11b.11
+#   (count **SEVEN**) · **five shipped tests invert** and a negative control plants this story's own
+#   field id · `D9`/`D10` RENAMED `D9-inversion`/`D10-rowkey` per `-168` cl.9 (a THREE-WAY `D9(a)`
+#   collision existed).
+#   ⭐ **`-177` vs `-182` RESOLVED:** `-177` is authoritative; `-182` transcribes a 2026-09-01 ruling and
+#   disclaims superseding anything ⇒ a FORWARD POINTER is owed, ⛔ not a correction.
+#   ⚠⛔ **AND `11b-20`'s DEPENDENCY WAS MIS-STATED BY THIS SESSION YESTERDAY — CORRECTED (v0.2).**
+#   `11b-3b` discharges the **AMOUNT unconditionally** and the **NAME only conditionally**: merging
+#   supplies the DECLARATION; the RENDER waits on counsel's pinned clause (**OVERDUE since
+#   2026-09-07**). ⇒ clearing `11b-20`'s Preflight on the merge alone walks into its own Trap 1.
+#   ⛔ **NO CODE.** ⛔ Rows unchanged: `11b-3b` / `11b-17` / `11b-19` / `11b-20` / `6-18` / `8-17`
+#   `ready-for-dev`; `11b-16` `withdrawn`.)
 # last_updated: 2026-09-11d (⭐⭐ **STORY `11b-20` CREATED — `#decision-2026-09-11-214` Consequence 3
 #   is DISCHARGED, and the 2026-09-05 ratification is now CLOSED END TO END.** ⭐ ONE ROW ADDED:
 #   development_status[11b-20-public-sahyog-vivran-message-block] = **`ready-for-dev`**.
@@ -17587,12 +17623,45 @@ development_status:
   # the staged reduction is the NOMINEE BANK fields', not a contributor's or the deceased member's
   # name. ⇒ **Q1/Q2 stand UNCONDITIONALLY and the PANEL STOP GATE IS DISCHARGED.**
   # ⭐ VACATED (⛔ not rejected): D14-order · D12-schedule · D13-maskedname · D11-order.
-  # ⚠ STILL OPEN, ⛔ neither a Panel matter: **D10** (the row key — AC5 depends on it) and **D9** (the
-  # inversion). ⛔ AND the DECEASED-member name still will ⛔ NOT RENDER until counsel's written clause
-  # exists and is PINNED — ⛔ no placeholder `clause_versions` row may be seeded.
-  # ⛔ And a ruling is ⛔ NOT a render: counsel's clause was confirmed IN DISCUSSION only; until a real
-  # `clause_versions` row is pinned the surface renders UNNAMED by design, and ⛔ NO placeholder row
-  # may be seeded. New decision `D11-order`: may the deceased-member field land alone?
+  # ✅ ~~STILL OPEN: **D10** (the row key) and **D9** (the inversion).~~ ⛔ **BOTH RULED** by `-177`
+  # (cl.2 / cl.3) on 2026-09-02 — ⚠⛔ this line was stale for nine days and Task 0 repeated it as a
+  # STOP. ⭐ RENAMED `D9-inversion` / `D10-rowkey` per `-168` cl.9 (a THREE-WAY `D9(a)` collision
+  # existed across 11b.1 / 11b.2 / this story).
+  # ⛔ The DECEASED-member name still will ⛔ NOT RENDER until counsel's written clause exists and is
+  # PINNED — ⛔ no placeholder `clause_versions` row may be seeded. ⚠ **OVERDUE since 2026-09-07;
+  # re-verified absent 2026-09-11** (ONE repo site, its own definition at `public-read.ts:261`).
+  # ⭐ ~~New decision `D11-order`~~ — **VACATED by `-175`.**
+  #
+  # ⛔⛔ **v2.0 — REWRITTEN 2026-09-11 AGAINST HEAD. ⛔ THIS STORY HAD NEVER BEEN VALIDATED.**
+  # ⭐ Three independent verifiers, **~45 findings, 12 BLOCKING**, over **188 commits** of drift from a
+  # baseline that was DERIVED after the fact and against which ⛔ no claim had ever been checked.
+  # ⭐ **THE SUBJECT SURVIVED INTACT** — `-173`/`-174`/`-175` are live and the work is genuinely undone.
+  # ⛔ **What rotted was the MECHANISM.** The sharpest:
+  #   (1) ⛔⛔ AC3b ordered **`rosterSize` + `fixedAmount`** onto a PUBLIC wire — their product **IS
+  #       लक्ष्य**, which `-204` cl.3 reserves to a `super_admin` reveal and cl.8 closed *"BY
+  #       CONSTRUCTION"* ⇒ AC3b now hoists **`deliveredTotal`** (already computed, the 11b.14 shape).
+  #   (2) ⭐⭐ **THE DAY-ONE OUTPUT IS THE INVERSE OF THE TITLE** — the clause gates the DECEASED name
+  #       only, so this ships **50 living members' FULL LEGAL NAMES** on an unauthenticated,
+  #       edge-cached page while the member it is named for renders **NOTHING**. ⛔ v1 said this nowhere.
+  #   (3) AC5 ruled RTBF omission but named ⛔ no mechanism — `anonymizeMember` KEEPS the row and the
+  #       decrypt SUCCEEDS ⇒ the **`ANONYMIZED_SENTINEL` plaintext check** is now ordered.
+  #   (4) Trap 3's ground was FALSE — `-179` **cl.2** Panel-ratified D10 ⇒ re-grounded on `-205` cl.2.
+  #   (5) item (e)'s binder was **RE-POINTED to `8-16`**, which merged FIRST ⇒ v1's *"record the
+  #       CLOSURE"* branch is WITHDRAWN (the co-writer rule forbids the second merger doing either).
+  #   (6) v1 transcribed `-175` cl.4's *"⛔ do not reach for the ladder here"* and ordered that reach
+  #       80 lines later.
+  #   (7) **`-195` cl.1's compliance statement** was owed and uncited ⇒ **AC10**.
+  #   (8) *"ZERO OPEN DECISIONS"* was FALSE — `-207`'s follow-up re-opened one ⇒ **`D-percentage`**,
+  #       now a **PREFLIGHT STOP**. ⛔ NOT a Panel matter; BigDev may author-commit it.
+  # ⚠ Also: the allowlist is **FOUR** entries and its assertions are **identity arrays, ⛔ not counts**
+  # (so *"update by +2"* was unexecutable) · AC4's control set was **mechanized away by 11b.11** and the
+  # count is **SEVEN** · **five shipped tests invert** and a negative control **plants this story's own
+  # field id** · `sahyog-render.ts:213` was the **WRONG FILE** · every log/matrix/epics/UX anchor
+  # re-derived · **item (iii) DISCHARGED**, ⛔ not re-done · three **retired-sentence** sites struck
+  # under `-209` cl.3, which **AC8 itself banned**.
+  # ⭐ **`-177` vs `-182` RESOLVED:** `-177` is authoritative; `-182` transcribes a **2026-09-01**
+  # ruling and disclaims superseding anything ⇒ it owes a FORWARD POINTER, ⛔ not a correction.
+  # ⭐ Row STAYS `ready-for-dev` — the file exists and is contexted; the STOP lives in the story.
   11b-3b-sahyog-vivran-named-identity-render-layer: ready-for-dev
   11b-4-memorial-authorship-surface-family-writes-the-story: backlog
   11b-5-memorial-visual-components-memorial-record-portrait-frame-kinship-lattice: backlog

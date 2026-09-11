@@ -18,7 +18,7 @@ footgun #4 warns is invisible to a `--name-only` check, and is where this pass's
 
 Status: ready-for-dev
 
-## ⛔ PREFLIGHT — ⛔⛔ **ONE STOP IS OPEN. ⛔ THIS STORY IS ⛔ NOT STARTABLE.**
+## ⛔ PREFLIGHT — ⚠ **STOP 1 IS HALF DISCHARGED. ⭐ THE STORY IS STARTABLE ⛔ EXCEPT AC10 / Task 5d.**
 
 ⭐⭐ **BOTH ORIGINAL DECISIONS ARE RULED — `#decision-2026-09-10-212`, TRUSTEE-RATIFIED (DR + KB, 2026-09-10).**
 
@@ -33,7 +33,22 @@ story** and ⛔ none of it is F's to absorb silently.
 
 ⛔ Task 1's `governance:` commit still binds ([[feedback_governance_commits_precede_implementation]]).
 
-### ⛔⛔ STOP 1 — A RATIFIED OBLIGATION ROUTES TO F **BY NAME** AND ⛔ NEVER REACHED `.decision-log.md`
+### ⚠ STOP 1 — ✅ **RECORDED (`#decision-2026-09-11-214`)** · ⛔ **STOP 2 REMAINS: B's COPY HAS NO HOME**
+
+✅⭐ **THE DECISION ENTRY LANDED 2026-09-11** — `#decision-2026-09-11-214` transcribes the 2026-09-05
+ratification (DR + KB) that had lived ⛔ only in a routing note. ⇒ ⭐ **Task 1 may now proceed**, and
+Tasks 2-6 with it.
+
+⛔⛔ **BUT AC10 / Task 5d STAY BLOCKED — ⛔ STOP 2.** ⚠ `-214` cl.4(d): **B ⛔ never shipped the copy
+source** and `11b-12` is **`done`** ⇒ there is ⛔ nothing to consume by name. ⭐ `-214` **Consequence 2**
+requires that source a **named home** (a story, or a `deferred-work.md` entry **with a trigger**)
+**before F ships**. ⛔ A dev must ⛔ **NEVER** close this by authoring ratified copy at a render site.
+
+⇒ ⭐ **Build AC0-AC9. ⛔ Leave AC10 / Task 5d until STOP 2 clears.**
+
+---
+
+#### ⭐ The record of what STOP 1 was (⛔ kept, ⛔ not deleted)
 
 ⚠⛔ **FOUND BY THE 2026-09-11 `validate` pass. ⛔ This is ⛔ not a new question — the Panel ANSWERED it on
 2026-09-05.** It was never lifted into the log, so ⛔ no decision grep finds it

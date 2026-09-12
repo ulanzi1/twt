@@ -1,3 +1,23 @@
+# last_updated: 2026-09-12b (⭐⭐ **`11b-19` TASK 1 — GOVERNANCE, ⛔ BEFORE THE FIRST KEY.** ⭐ ONE row
+#   moves: `11b-19-ratified-message-block-copy-source` **`ready-for-dev` → `in-progress`**.
+#   ⭐ **AC0's OUTSTANDING HALF IS DISCHARGED** — Epic 11b gains a **`### Story 11b.19:` SECTION** in
+#   `epics.md` (placed at the END of Epic 11b, after 11b.15, before `## Epic 12`), naming
+#   [`2026-09-11-214`](.decision-log.md#decision-2026-09-11-214) **Consequence 2** as the commissioning
+#   authority — ⭐ on the **Story 11b.15 precedent** (`epics.md:5496`, itself following 8.16 / 7.11), so a
+#   future `sprint-planning` run can ⛔ **neither drop it nor regenerate a ghost**.
+#   ⚠⛔ **THE SPRINT ROW WAS ⛔ NOT RE-ADDED — ✅ it already existed** (`7d12a4ce`); ⛔ only its VALUE moved.
+#   ⭐ **THE PREMISE WAS RE-VERIFIED LIVE, ⛔ not taken from the story file:** `grep` for *"Be the Movement"*
+#   / *"सहयोग का हाथ"* / `message_block` across `packages/i18n/locales`, `apps/` and `packages/` ⇒ **ZERO**
+#   ⇒ ⭐ B's half is genuinely unshipped and this is ⛔ not duplicate work.
+#   ⭐ **AND THE BASELINE PIN WAS RE-CHECKED:** `0d0a03ab` ✅ **IS** an ancestor of HEAD (`f408ca28`) ⇒ the
+#   `2026-09-12a` re-pin holds; ⛔ nothing re-argued ([[feedback_story_validate_footguns]] #11).
+#   ⚠ **`11b-18` STAYS SKIPPED and the CORRECTED reason is now in `epics.md` too** — ⛔ no
+#   `development_status` row, ⚠ **but the FILE EXISTS** on the unmerged local branch `story/11b-18-…`
+#   (`99e18142`) and the `2026-09-07k` block calls the omission **deliberate**, with a **LEDGER MERGE**
+#   expected. ⇒ ⭐ the key is **CLAIMED**, ⛔ not orphaned. ⭐ Recorded, ⛔ not resolved.
+#   ⛔ **NO KEYS, ⛔ NO TESTS, ⛔ NO CODE in this commit** ([[feedback_governance_commits_precede_implementation]]).
+#   ⛔ Rows unchanged: `11b-20` / `11b-17` / `11b-3b` / `6-18` / `8-17` `ready-for-dev`.)
+#
 # last_updated: 2026-09-12a (⚠⛔ **`11b-19` VALIDATED — 8 FINDINGS, ALL APPLIED; and TWO CLAIMS THIS
 #   LEDGER ITSELF CARRIES ARE ⛔ FALSE.** ⛔ ZERO ROWS MOVE; ⛔ NO CODE. ⭐ This is a **SUCCESSOR**
 #   entry — the `2026-09-11c` block below is left **UNTOUCHED**, per the `-128`/`-129` precedent
@@ -18219,7 +18239,7 @@ development_status:
   # ⚠⛔ **KEY `11b-18` SKIPPED** — the ledger names `11b-18-drive-target-write-authority-retired` and
   # twice says it *"STAYS `ready-for-dev`"*, ⛔ but it is ⛔ ABSENT from `development_status` and has
   # ⛔ no file. ⛔ Recorded, ⛔ not resolved.
-  11b-19-ratified-message-block-copy-source: ready-for-dev
+  11b-19-ratified-message-block-copy-source: in-progress
   # ⭐⭐ 11b-20 — MINTED 2026-09-11 BY `#decision-2026-09-11-214` **Consequence 3**: the PUBLIC render
   # of the same ratified block — ⭐ the LAST unhomed half of the 2026-09-05 ratification.
   # ⛔⛔ **BLOCKED, ⛔ not open. ⛔ ZERO OPEN DECISIONS.** It needs **`11b-19`** (the copy) AND

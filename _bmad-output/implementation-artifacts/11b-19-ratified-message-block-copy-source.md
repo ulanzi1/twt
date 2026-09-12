@@ -259,11 +259,11 @@ HI value too ⇒ ⛔ a placeholder is ⛔ not a way past it.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — GOVERNANCE** (AC0) — ⭐ an `epics.md` entry under Epic 11b naming `-214` Consequence 2
+- [x] **Task 1 — GOVERNANCE** (AC0) — ⭐ an `epics.md` entry under Epic 11b naming `-214` Consequence 2
       as the commissioning authority; ⛔ one `governance:` commit, ⛔ no keys.
-  - [ ] ⚠⛔ **⛔ DO ⛔ NOT ADD THE SPRINT ROW — ✅ IT ALREADY EXISTS** (`7d12a4ce`). ⭐ Only the
+  - [x] ⚠⛔ **⛔ DO ⛔ NOT ADD THE SPRINT ROW — ✅ IT ALREADY EXISTS** (`7d12a4ce`). ⭐ Only the
         `epics.md` entry is owed (AC0).
-  - [ ] ⚠ Record that **`11b-18` is skipped** and why — ⭐ **the CORRECTED reason** (header comment):
+  - [x] ⚠ Record that **`11b-18` is skipped** and why — ⭐ **the CORRECTED reason** (header comment):
         ⛔ no `development_status` row, ⚠ **but the FILE EXISTS** on the unmerged local branch
         `story/11b-18-…` and the ledger's `2026-09-07k` block says the omission is **deliberate**,
         with a **LEDGER MERGE** expected. ⛔ Recorded, ⛔ not resolved here.

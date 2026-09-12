@@ -1,3 +1,43 @@
+# last_updated: 2026-09-12a (⚠⛔ **`11b-19` VALIDATED — 8 FINDINGS, ALL APPLIED; and TWO CLAIMS THIS
+#   LEDGER ITSELF CARRIES ARE ⛔ FALSE.** ⛔ ZERO ROWS MOVE; ⛔ NO CODE. ⭐ This is a **SUCCESSOR**
+#   entry — the `2026-09-11c` block below is left **UNTOUCHED**, per the `-128`/`-129` precedent
+#   ([[feedback_supersede_never_reinterpret]], [[feedback_record_unattested_no_backfill]]).
+#
+#   ⛔⛔ **(1) *"`11b-18` … has ⛔ no file"* IS ⛔ FALSE.** ✅ The *"ABSENT from `development_status`"*
+#   half is TRUE (verified — the 11b rows run `…-17`, `-19`, `-20`). ⛔ The *"no file"* half is not:
+#   `11b-18-drive-target-write-authority-retired.md` **EXISTS** on the local, unpushed branch
+#   `story/11b-18-…` (`99e18142`, 2026-09-07) — ⭐ and the `2026-09-07k` block below **says so
+#   deliberately** (*"THE ROW AND THE STORY FILE ARE ⛔ NOT IN THIS BRANCH'S TREE — deliberately …
+#   expect a LEDGER MERGE"*). ⇒ ⭐ the skip CONCLUSION is unchanged and **stronger**: the key is
+#   ⛔ not an orphaned name, it is **CLAIMED** by an authored `ready-for-dev` story awaiting merge.
+#
+#   ⛔⛔ **(2) *"It does ⛔ NOT clear `-214` Consequence 3 — the PUBLIC render remains unhomed"* WAS
+#   TRUE WHEN WRITTEN AND IS ⛔ NOW FALSE.** ⭐ `11b-20-public-sahyog-vivran-message-block` was minted
+#   the same day FROM Consequence 3, is `ready-for-dev` with its own row, and ⛔ **blocks on `11b-19`**.
+#   ⇒ ⭐ `-214` is **HOMED END TO END** (Cons. 2 = `11b-19` · cl.4(b) = `11b-17` AC10 · Cons. 3 =
+#   `11b-20`) — ⚠ ⛔ **NOT "closed"**: all three are `ready-for-dev`, ⛔ none is built, and each still
+#   owes its `epics.md` entry ([[feedback_closure_language_precision]]).
+#   ⚠ The same retired sentence still stands in `11b-17`'s STOP 2 block — ⭐ recorded for F's next
+#   pass, ⛔ not edited here ([[feedback_story_validate_footguns]] #16).
+#
+#   ⭐ **THE OTHER SIX, all applied to the story file:** ⚠ the pin `ff92cb00` was ⛔ **NOT AN ANCESTOR
+#   OF HEAD** (it survives only on `governance/11b-17-…`) ⇒ re-pinned to its **tree-identical** twin
+#   `0d0a03ab`; ⚠ `11b-20`'s `738bb3ea` is orphaned the same way (twin `7d12a4ce`) — ⭐ `11b-17`'s
+#   `a2617869` ✅ IS an ancestor. ⭐⭐ **AC6 named the WRONG fence** (*"story E's AC8"* — a *"nothing
+#   else moves"* SEMANTIC fence that scans ⛔ nothing); ⭐ the right one is **shipped**:
+#   `packages/i18n/tests/sahyog-shared-dark-copy.test.ts`, already carrying the repo walk, the
+#   self-exclusion, a **non-vacuity** assertion, an `AUTHORISED` allow-list and a `t()`-throws proof
+#   of darkness. ⭐⭐ **Trap 3's model is STALE ABOUT ITSELF** — `$comment.index_line` says *"RENDERED
+#   NOWHERE YET"* but story D landed and `index_line.*` IS resolved live at `sahyog.astro` ⇒ mirror
+#   its SHAPE and its **narrowed** surviving property, ⛔ not its present tense. ⚠ §9.1's note on
+#   blocker (1) also ordered *"the **no-amount** variants"* — ⭐ moot (D is `done`) and now stated.
+#   ⚠ **AC0 is HALF-DISCHARGED: the `11b-19` sprint row ALREADY EXISTS** (`7d12a4ce`) ⇒ only the
+#   `epics.md` entry is owed. ⭐ AC7's gate named with its passing state (CI `i18n-parity` →
+#   `pnpm turbo run i18n:check-parity`; `sahyog-shared` is 21 ⇄ 21 keys today).
+#   ⭐ **The story's CORE held:** AC1 EN+HI match §8.1 **verbatim**, AC3 matches §9.1 row 4, and the
+#   premise is live-true — `grep "Be the Movement"` across `packages/i18n/locales/` ⇒ **ZERO**.
+#   ⛔ Rows unchanged: `11b-19` / `11b-20` / `11b-17` / `11b-3b` / `6-18` / `8-17` `ready-for-dev`;
+#   `11b-16` `withdrawn`.)
 # last_updated: 2026-09-11e (⛔⛔ **`11b-3b` VALIDATED FOR THE FIRST TIME AND REWRITTEN — v2.0.**
 #   ⭐ Three independent verifiers; **~45 findings, 12 BLOCKING**; **188 commits** of drift against a
 #   baseline that was DERIVED after the fact and against which ⛔ NO claim had ever been checked.

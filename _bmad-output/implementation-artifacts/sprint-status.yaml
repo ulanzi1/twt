@@ -138,6 +138,26 @@
 #   superseded text KEPT STRUCK.
 #   ⛔ **NO CODE.** ⛔ Rows unchanged: `11b-17` / `11b-3b` / `6-18` / `8-17` `ready-for-dev`;
 #   `11b-16` `withdrawn`.)
+# last_updated: 2026-09-12e (⭐ **STORY `8-17` CODE-REVIEWED — 3-layer review, 2 patches applied. `review`
+#   → `done`.** Story file → **v1.1**. Acceptance Auditor independently re-ran every gate (contract tests,
+#   the render-fence test, `microcopy:check`, `i18n:check`, `typecheck`) and found ⛔ **zero** AC/Trap/
+#   checklist-family violations. ⭐ **Two real, confirmed gaps survived triage and were FIXED:**
+#   **(1)** the new `vpa` field's `.max(255)` was narrower than `NOMINEE_BANK_VPA_REGEX`'s actual
+#   collectible max (**321** chars — a 256-char handle + `@` + a 64-char PSP token), so a legitimately-
+#   collected long VPA would have failed response serialization on this exact route
+#   (`fastify-type-provider-zod`'s `response: { 200: NomineeAccountsResponse }`) — a live 500
+#   contradicting AC2/Trap3's own *"never a 500"* guarantee. ⭐ Fixed: raised to `.max(321)`, rationale
+#   recorded inline in the contract. **(2)** `pay-screen-vpa-render.test.ts`'s "no hand-written label"
+#   regex only matched the string adjacent to a quote or `>`/`<`, missing a template-literal form. ⭐
+#   Fixed: the character classes now also match a backtick.
+#   ⚠ **Six other raised findings were DISMISSED as noise after verification, ⛔ not waved through:** an
+#   empty-string decrypt path that cannot occur (`decryptNomineeBankFieldSoft` converts empty plaintext
+#   to the sentinel before it ever reaches this field); both-accounts-decrypted and the audit-lock
+#   serialization cost, which are Trap 4's explicitly ratified, disclosed price of AC4 rather than
+#   defects; a cosmetic double-checked task box in the sibling `11b-17` doc; a stylistic `== null` check;
+#   and a speculative `vpaPresent`/`vpa` cross-field schema refinement already covered by construction
+#   today. ⛔ **Row T's topology risk (`-212`/`-213`/`-214` off `main`) is UNCHANGED by this pass** — it
+#   remains load-bearing on merge, ⭐ not something a code review can discharge.
 # last_updated: 2026-09-12d (⭐⭐ **STORY `8-17` IMPLEMENTED — all 8 ACs satisfied. `in-progress` → `review`.**
 #   Story file → **v1.0**. ⭐ Task 0's governance commit (`a8097a16`) landed FIRST, ⛔ before any code.
 #   ⭐ **THE BUILD:** optional `vpa` on the **donor** `NomineeBankAccountView` only (`.strict()` kept,
@@ -17594,7 +17614,7 @@ development_status:
   # RENDER IN FULL** on the member side, so part of the "inversion" is ⛔ NOT REAL and must ⛔ not be
   # reported as closed.
   8-16-member-pool-identity-name-form-alignment: done
-  8-17-nominee-vpa-on-the-payment-screen: review
+  8-17-nominee-vpa-on-the-payment-screen: done
   epic-8-retrospective: done
 
   # ==========================================================================

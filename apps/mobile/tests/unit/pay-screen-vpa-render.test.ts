@@ -42,8 +42,10 @@ describe('pay screen — the nominee UPI-ID row (`-212` cl.2)', () => {
 
   it('renders the UPI ID through a minted i18n key — ⛔ never an inlined literal', () => {
     expect(src).toContain("t('upi_intent.vpa_label', undefined, NS)")
-    // ⛔ No hand-written English label anywhere in the component.
-    expect(src).not.toMatch(/["'>]\s*UPI ID\s*["'<]/)
+    // ⛔ No hand-written English label anywhere in the component — any quoting style (single/double/
+    // backtick-template, or bare inside a JSX text node) is checked, not just a quote-adjacent literal
+    // (code review, Story 8.17: the original regex missed a template literal or JSX-text form).
+    expect(src).not.toMatch(/["'`>]\s*UPI ID\s*["'`<]/)
   })
 
   it('reads the VPA from the SELECTED account — the one the member chose to pay', () => {

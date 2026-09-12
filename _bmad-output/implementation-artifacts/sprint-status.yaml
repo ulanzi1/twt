@@ -138,6 +138,30 @@
 #   superseded text KEPT STRUCK.
 #   ⛔ **NO CODE.** ⛔ Rows unchanged: `11b-17` / `11b-3b` / `6-18` / `8-17` `ready-for-dev`;
 #   `11b-16` `withdrawn`.)
+# last_updated: 2026-09-12c (⭐ **STORY `8-17` — DEV BEGINS. Task 0 GOVERNANCE lands; ⛔ no code in this commit.**
+#   `8-17-nominee-vpa-on-the-payment-screen`: **`ready-for-dev`** → **`in-progress`**.
+#   ⭐ **AC0(a) — the `epics.md` entry is MINTED.** Epic 8's entries stopped at **8.16**; `8-17` had
+#   ⛔ no entry at all, existing only in this ledger and its own story file. ⭐ Minted under Epic 8 (which
+#   owns `pay.tsx` and the UPI-Intent path), per the **7.11 / 8.16 precedent**, so a future
+#   `sprint-planning` run cannot drop it.
+#   ⭐ **AC0(b) — `deferred-work.md` 11b.3a third-pass item (e) NOW NAMES ITS HOME.** That item's body
+#   read *"**RE-OPENED AS A BUILD OBLIGATION** — Trigger: **FIRED**"* and *"it needs a **NAMED HOME**"*
+#   while its own heading read a bare *"✅ CLOSED"*. ⚠⛔ That contradiction was live. ⭐ **Reconciled by
+#   [edit]**: the heading now carries **both halves separately** — the COLLECTION question stays
+#   **CLOSED BY [VERIFICATION]** (`-191` cl.5; its *"null for every nominee"* premise was false when
+#   written), while the **PROHIBITION half is SUPERSEDED** by `-212` cl.2 and its build is **homed at
+#   `8-17`**. ⛔ The body is left standing as the record, ⛔ not tidied away. ⭐ Owed **before `11b-17`
+#   ships** (`-212` Consequence 3), and `11b-17` is in active work ⇒ ⛔ it could not wait for the code.
+#   ⚠⛔ **AC0(c) — §8.4(ii) IS RECORDED AS *DE-ROUTED BUT ⛔ NOT LOGGED*, ⛔ NOT AS CLOSED.**
+#   ⭐ This is the status `2026-09-12a` corrected `2026-09-11a` to, and the dev has now **written it
+#   into no artefact that claims otherwise**. ⛔ **Nothing in this commit closes it**, ⛔ routes it, or
+#   acts on it: ⛔ no edit to `member-pool/handlers.ts`, ⛔ no Panel routing, ⛔ no closure language
+#   anywhere. ⭐ `-213`'s entry remains **unamended** (*"still UNRULED and is ROUTED"*), and the owed
+#   governance record belongs with **`11b-17`'s** correction — ⛔ **not this story's to write**
+#   ([[feedback_governance_commits_precede_implementation]]).
+#   ⚠ **Row T topology unchanged and still carried:** `-212`/`-213` are ⛔ not on `main`, the governance
+#   branch is ⛔ unpushed, and `-214` is ⛔ absent from `.decision-log.md` on this branch entirely.
+#   ⇒ ⭐ this story's **authority must merge with or before its code**. ⚠ A recorded risk, ⛔ not a blocker.
 # last_updated: 2026-09-12b (⚠ **STORY `8-17` — FOURTH VALIDATE PASS. ⛔ ZERO ROWS FLIP; story file → v0.4.**
 #   `8-17-nominee-vpa-on-the-payment-screen` stays **`ready-for-dev`**. ⛔ No code.
 #   ⭐ Every `file:line` and decision citation re-traced against live source, ⛔ not from any prior
@@ -17537,7 +17561,7 @@ development_status:
   # RENDER IN FULL** on the member side, so part of the "inversion" is ⛔ NOT REAL and must ⛔ not be
   # reported as closed.
   8-16-member-pool-identity-name-form-alignment: done
-  8-17-nominee-vpa-on-the-payment-screen: ready-for-dev
+  8-17-nominee-vpa-on-the-payment-screen: in-progress
   epic-8-retrospective: done
 
   # ==========================================================================

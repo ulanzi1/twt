@@ -3458,6 +3458,61 @@ So that the Trust is not in the position of shielding a name from the people who
 
 ---
 
+### Story 8.17: The Nominee's UPI ID Reaches the Member — On the Payment Screen `[SURFACE]`
+
+> **Minted by Panel direction — Decision `2026-09-10-212` clause 2** (Trustee-ratified, DR + KB): the nominee's UPI ID is **NOT** on the member's drive-detail page; it is **ADDED to the PAYMENT screen**, where a member is actually asked to pay. This story had **no `epics.md` entry** until it created its own — the **Story 7.11 / 8.16 precedent** (`epics.md:3041`, `:3400`), discharged here so a future `sprint-planning` run cannot drop it. Minted against **Epic 8** because Epic 8 owns the payment screen (`pay.tsx`, Story 8.4) and the donor-facing nominee-accounts contract's consumer.
+>
+> **Discharges `-212` Consequence 3** — *"cl.2 CREATES WORK OUTSIDE STORY F, AND IT IS NOT F's TO ABSORB"* — and is the **NAMED HOME** that `deferred-work.md` **11b.3a third-pass item (e)** asks for. It is **not** `11b-17`, whose D3 ruling excludes the VPA from the drive-detail page.
+
+As a **member who has been asked to contribute** to a colleague's Sahyog drive,
+I want to see the family's **UPI ID**, not just a button that pays for me,
+So that I can pay from whichever app or device I actually use — instead of being locked to one screen at one moment.
+
+**Depends on:** Story 8.4 (the payment screen + the UPI Intent path), Story 8.13 (claim-time optional VPA collection, persistence and decrypt), Story 9.9 (the donor-facing `NomineeBankAccountView` this widens).
+
+**The authority, RULED before this story existed — it is not re-opened:** `2026-09-04-191` cl.1 (Trustee-ratified) ruled the VPA *"shown to the logged-in member so they can make the contribution"*. That clause was then read **narrowly**, recorded as *"already satisfied"* by the pay button, and never put back to the Panel — a ratified instruction that lapsed for six days. `2026-09-10-212` cl.2 applies it. ⚠ The narrow reading is **superseded, never quietly edited** ([[feedback_supersede_never_reinterpret]]).
+
+**Acceptance Criteria:**
+
+**Given** `-212` cl.2 rules the VPA onto the payment screen
+**When** a member opens `/pay` for their assigned live drive
+**Then** the selected account's UPI ID renders as **readable, UNMASKED, complete text** beside the account number and IFSC already shown — never in the decrypt-failure branch
+**And** the unmasked form follows the account-number precedent (*"no masking; a masked account# cannot be transferred to"*) — ⚠ an **inference**, not something cl.2 states
+
+**Given** `vpa_ciphertext` is **nullable by design** — a nominee without a VPA is a first-class state
+**When** the selected account carries no VPA
+**Then** **no row renders at all** — no placeholder, no error, no *"not collected"* copy — and the pay button's existing behaviour is **unchanged**
+**And** the total-decrypt-failure sentinel check stays a **three-field** test; a missing UPI ID must never become capable of blanking the coordinates block
+
+**Given** two exported types share the name `NomineeBankAccountView`
+**Then** `vpa` is added as **optional** to the **donor** view (`contracts/contributions/nominee-accounts.ts`) and **NOT** to the module-private **claims** presence view — putting the plaintext on the claims view would be a NEW disclosure nobody has ruled
+**And** `vpaPresent` **stays** (non-PII; 8.13 records a live reason to keep it)
+
+**Given** `-212` **Consequence 3** names *"the `nominee-accounts` handler's decrypt"* as touched scope
+**Then** **exactly ONE** new `decryptNomineeBankFieldSoft` is added, inside the existing `ciphertextRows.map(...)` of the **nominee-accounts GET** — and no second decrypt, no new KMS call outside that map, no change to the **intent** handler, the `upi://pay` URL, `tr`, or the attest path
+**And** the audit cost is **stated in the unit `550a7acd` established** — one audit line per encrypted FIELD on a deployment-wide advisory lock, so **+1 per VPA-bearing account** (0/1/2 per load, taking the route from ≤6 to ≤8). A **silent** cost is the defect this criterion exists to prevent.
+
+**Given** the VPA is Tier-1
+**Then** it reaches **no audit line, no event payload and no log** — the existing `nominee_accounts_viewed` audit stays **count-only**
+
+**And** a UPI-ID label is **minted** in `contribution.json` in **both locales**, matching the treatment `claim.json` already ships (*"UPI ID"*, with **"UPI ID" kept in LATIN script in Hindi**, exactly as `IFSC` is) — never inlined
+**And** the **deployment order is STATED**: the additive `.strict()` field blanks the **whole screen** on every installed older build, so the API ships it only alongside/after a tolerant mobile build, or the window is **accepted and recorded** with its user-visible symptom
+**And** every superseded artefact is **re-stated as superseded with its authority named** — never silently deleted, never reworded as though it had always said so
+
+**Two questions are carried as RECORDED, and neither is closed here:**
+- The screen labels the nominee *"Account holder"*, against `2026-09-04-190` cl.2 (*"the public wording is **Nominee Name**"*). Whether cl.2 binds **only** the public surface is **UNRESOLVED** — `-212` Consequence 6 is the last word. **No relabelling.**
+- Niyamavali **§8.4(ii)** is **DE-ROUTED but NOT LOGGED** — an open deferred item applied by an author-committed correction in a sibling story on an unmerged branch, while `-213`'s entry still reads *"UNRULED"*. This story **touches it not at all**.
+
+**Dev Notes / guardrails:**
+- This story introduces **no predicate** gating a member's access to a benefit — no eligibility, assignment, obligation or amount owed. It widens **nothing**: no drive, no member and no state beyond what the payment screen already serves.
+- **No copy-to-clipboard and no share affordance** — neither is prescribed in the UX spec, and the four coordinates the screen renders today carry none. A pre-existing gap this story neither closes nor widens.
+- The VPA is decrypted for **both** accounts while the member reads **one** — the contract is a list built in a single pass and there is no lazy path. That asymmetry is the accepted price of cl.2, stated rather than hidden.
+- **No RN mount harness exists** — source-scan plus plain-`.ts` extraction is the shipped idiom.
+
+**FRs:** FR-16 (pool-bound VPA pre-fill), FR-27 (`pa=` UPI-Intent pre-fill source), FR-31 (dual nominee accounts), FR-37 / Story 8.13 (claim-time optional VPA collection), `-190` cl.3 (*a logged-in member sees the **complete** banking information*) — none in tension; all corroborate the unmasked render. **Decisions:** `2026-09-10-212` cl.2 + Consequences 3-6 (the ruling and its scope) · `2026-09-04-191` cl.1 (the clause it applies) **and cl.5** (the verified finding) · `2026-09-04-190` cl.2 (the *"Nominee Name"* wording — **unresolved here**) · `2026-09-10-213` cl.2 (§8.4(ii) — **still UNRULED**, untouched).
+
+---
+
 ## Epic 9: Reconciliation Engine (Nominee Console + Statement Intake + Matcher + Mismatch Triage)
 
 **Anita and Sunita's world** (per Sally). Reconciliation pipeline of PRD §9.1's uncompromisable subsystems. Cron-driven matcher runs 6×/day during live alerts. Sunita pushes daily bank statements (5-bank allowlist: SBI/PNB/BoB/BoI/Bihar coop; 50 golden files/bank). UTR primary match; amount + sender-VPA + timestamp secondary. Mismatches force screenshot upload and route to trustee review queue. **Yellow → green flip is the only path to confirmed status — Epic 9 is the canonical financial-truth authority.**

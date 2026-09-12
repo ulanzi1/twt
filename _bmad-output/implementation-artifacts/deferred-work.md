@@ -316,7 +316,25 @@ applied *"⭐ an authoring reading, ⛔ NOT a ruling"* to one inference and asse
 the same file family, on the same clause. ⇒ both are now labelled, and ⛔ neither may be cited as the
 Panel having decided. **Same trigger** as above — the two readings are confirmed or corrected together.
 
-### (e) ✅ **VPA collection** — ⛔ **CLOSED. THE PREMISE OF THIS ITEM WAS FALSE WHEN WRITTEN**
+### (e) ⏳ **VPA collection** — ✅ **CLOSED as a QUESTION** (its premise was false when written) · ⛔ **RE-OPENED as a BUILD OBLIGATION, and now HOMED at `8-17`**
+
+⚠⛔ **THE HEADING HAS TWO HALVES AND THEY RESOLVE SEPARATELY** — ⛔ do ⛔ not collapse them.
+⭐ **(i) The COLLECTION question is CLOSED BY [VERIFICATION]** (`-191` cl.5) — the substrate was
+already built at 8.13, and the item's *"null for every nominee today"* premise was **FALSE when
+written**. ⛔ Nothing re-opens that half.
+⛔ **(ii) The PROHIBITION half is SUPERSEDED and its work is LIVE** — `-212` cl.2 rules the VPA onto
+the payment screen, so *"do ⛔ NOT add `vpa` to that wire"* ⛔ no longer holds, and the build it
+creates was ⛔ **unhomed** until now.
+⭐⭐ **THE NAMED HOME `-212` Consequence 3 ASKED FOR IS
+[`8-17-nominee-vpa-on-the-payment-screen`](8-17-nominee-vpa-on-the-payment-screen.md)** — minted
+2026-09-10 for exactly this, and ⛔ **not** `11b-17`, whose D3 ruling excludes the VPA from the
+drive-detail page. ⇒ ⭐ the *"it needs a **NAMED HOME**"* sentence below is **discharged by [edit]**,
+⛔ not by deferral ([[feedback_closure_language_precision]]). ⚠ The three things it carries travel
+**with** `8-17` — Consequence 4 → its AC8, Consequence 5 → its AC6, Consequence 6 → its AC6(a),
+⛔ where the *"Account holder"* question stays ⛔ **open** and is ⛔ not fixed by side effect.
+⚠ This heading previously read a bare *"✅ **CLOSED**"* while the body below read *"**RE-OPENED AS A
+BUILD OBLIGATION** — Trigger: **FIRED**"*. ⭐ That contradiction is corrected **here**, in place, and
+the body is left standing as the record ([[feedback_record_unattested_no_backfill]]).
 
 ⛔⛔ **WHAT THIS ITEM SAID, kept as the record:** *"`vpa` is ruled **IN** by `2026-08-28-165` cl.1 and
 is declared, allowlisted and rendered — ⚠ and it is **NULL for every nominee today**. `vpa_ciphertext`
@@ -359,7 +377,9 @@ rather than tidied away ([[feedback_closure_language_precision]]) — ⛔ the co
 9.9 wire as it stood"*) happened to survive; ⛔ the reasoning did not.
 ⭐⭐ **RE-OPENED AS A BUILD OBLIGATION, ⛔ not as a question.** **Trigger: FIRED** — `-212` cl.2.
 ⚠⛔ It needs a **NAMED HOME** (`-212` Consequence 3): ⛔ **not** story `11b-17`, whose D3 ruling
-excludes the VPA from the drive-detail page. ⭐ It carries three things with it — the `.strict()`
+excludes the VPA from the drive-detail page.
+⭐ **[2026-09-12 — HOME NAMED: `8-17-nominee-vpa-on-the-payment-screen`.** ⛔ This sentence is
+**discharged by [edit]**; see this item's heading. ⛔ The text above is left as written.] ⭐ It carries three things with it — the `.strict()`
 additive-field blank-out on installed older builds (Consequence 4), a **UPI-ID label to MINT**
 (⛔ none exists on any member surface; story A deleted `label.vpa`, Consequence 5), and the pay
 screen's *"Account holder"* label sitting against `-190` cl.2 (⛔ unresolved, Consequence 6).

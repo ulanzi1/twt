@@ -31,7 +31,7 @@ merge.** ⛔ Taking it would collide with a story that exists. ⭐ Recorded, ⛔
 
 # Story 11b.19: B's Unshipped Half — the Ratified Message Block and its `Nominee full name` | `District` Table `[COPY SOURCE]`
 
-Status: review
+Status: done
 
 ## ✅ PREFLIGHT — ✅ **ALL CLEAR. ⭐ THIS STORY IS STARTABLE.**
 
@@ -155,7 +155,28 @@ string anywhere in `epics.md`). ⭐ The precedent for a story minting its own se
 `epics.md:5496` (Story 11b.15, itself following **8.16** and **7.11**) — ⭐ so a future
 `sprint-planning` run can ⛔ neither drop it nor regenerate a ghost.
 
-### AC1 — The five-paragraph block exists in `sahyog-shared`, BOTH locales, VERBATIM
+⚠⛔ [Review][Patch] **RECORDED 2026-09-12 — AC0's OWN RULE WAS NOT FULLY HONORED BY ITS LANDING.** AC0
+requires the sprint row **and** the `epics.md` entry to land in a `governance:` commit. The sprint row
+actually landed in `7d12a4ce`, tagged `story(11b.19): ...` — ⛔ not `governance:`-prefixed. Only the
+`epics.md` entry (`8303d92b`, `governance(11b.19): Task 1 ...`) satisfied the rule. ⛔ The published
+commits are ⛔ **not** rewritten to fix this retroactively ([[project_story_automator_ops]] — commit
+manually, never rebase/squash a shipped governance story). ⭐ Recorded here as the historical fact,
+⛔ not corrected by amendment, so a future validate pass does not re-discover it as new.
+⚠⛔ **CORRECTED 2026-09-12 (third pass) — "DISCHARGED" OVERSTATED WHAT ONE STORY CAN RULE ON ITS OWN
+BREACH.** A prior pass here asserted AC0 "discharged," self-issued in the same document that recorded
+the breach, with no cited decision authorising a waiver — precisely the reinterpret-a-ratified-rule
+pattern this story elsewhere refuses to allow itself
+([[feedback_supersede_never_reinterpret]]). ⭐ **RESTATED IN THIS STORY'S OWN REGISTER, matching
+`11b-18`'s skip and `11b-15`'s render debt**: the sprint row landing outside a `governance:` commit
+is ⛔ **recorded, ⛔ not resolved here.** ⭐ The observation that its substantive effect was narrow —
+the row carried zero keys and zero code, only a ledger fact — is offered as **context for a future
+reader**, ⛔ not as this story's own verdict on whether its rule was satisfied.
+
+### AC1 — The five-paragraph block exists in `sahyog-shared`, BOTH locales, VERBATIM MODULO TWO DECLARED DEVIATIONS
+⚠⛔ [Review][Patch] **RETITLED 2026-09-12 — "VERBATIM" ALONE OVERSTATED THIS AC.** The text below carries
+two deliberate deviations from §8.1's literal typography (Trap 1's dropped ₹, Trap 2's snake_case
+token) — declaring them here, in the title, rather than asserting an unqualified "verbatim" that the
+body immediately contradicts.
 ⭐ Namespace **`sahyog-shared`** — ⛔ never a second source (`-193` cl.3, `-206` cl.1).
 ⭐ **EN**, per §8.1, headline first:
 > **Late {family_name}'s family received contributions of {amount} from colleagues.**
@@ -184,6 +205,14 @@ has ⛔ **no subject** here. ⚠ Per Trap 5 these are **labels**, ⛔ not claims
 ⭐ Supplied by the Panel at routing note **§9.1 row 4** — ⛔ do ⛔ not derive one:
 > **EN:** *The family received contributions of {amount} from colleagues.*
 > **HI:** *परिवार के लिए सहकर्मियों ने मिलकर {amount} का योगदान किया।*
+
+⚠⛔ [Review][Patch] **DISCLOSED 2026-09-12 — THIS QUOTE CARRIES TRAP 1's SAME DEVIATION, UNDECLARED
+UNTIL NOW.** §9.1 row 4's own text writes ***"₹{amount}"***, exactly like §8.1's headline. Trap 1's
+reasoning (`{amount}` arrives already formatted, carrying its own ₹) applies identically here, so the
+literal ₹ is **dropped from this variant too** — the shipped `message_block.headline.no_family` key
+carries no literal ₹, same as `.full`. This is the SAME edit Trap 1 names for the `.full` headline;
+it was applied to this variant without a matching disclosure. Recorded here now so no future reader
+mistakes this quote for one left untouched.
 
 ⚠ It replaces the **HEADLINE only**; ⭐ the remaining four paragraphs are name-free and unchanged.
 ⚠⛔ **THIS IS A SAFETY PROPERTY, ⛔ not a nicety** — `deceased_member_name` is nullable and `t()`
@@ -286,6 +315,46 @@ HI value too ⇒ ⛔ a placeholder is ⛔ not a way past it.
         locally; ⭐ PASS = zero findings (AC7).
   - [x] ⚠ ⛔ Do ⛔ not write a render test — ⭐ there is ⛔ nothing to render. ⛔ This is a pure catalog
         change; ⚠ a render test here would be **vacuous by construction**.
+
+### Review Findings
+
+- [x] [Review][Patch] Zero-consumer fence's `RESOLVER` regex only matches a fully bare-quoted literal (`` /['"`]message_block\.[a-z_.]+['"`]/ ``) and misses a dynamically-constructed key (e.g. a template literal a future render site could plausibly write) — the `AUTHORISED = []` guarantee can go silently stale [`packages/i18n/tests/sahyog-shared-dark-copy.test.ts:492`] — **fixed:** dropped the required closing quote/backtick, so `` `message_block.headline.${variant}` `` is caught too. ⚠ **CORRECTED 2026-09-12 (third pass):** this bullet originally said the class "runs to the first character a real key cannot contain (`$`/`{`)" — ⛔ WRONG, `$` is *included* in `[\w.$]`, not excluded; `{` alone is what actually stops the match. See the in-code comment, corrected in the second pass, which this bullet had been left contradicting.
+- [x] [Review][Patch] AC1's heading asserts the block exists "VERBATIM" while the same section documents two applied deviations (dropped literal ₹, `{familyName}`→`{family_name}`) — retitle to acknowledge the declared deviations rather than an unqualified "verbatim" [`11b-19-ratified-message-block-copy-source.md:158`] — **fixed:** retitled to "VERBATIM MODULO TWO DECLARED DEVIATIONS" with an inline note
+- [x] [Review][Patch] The "no `no_amount` variant" check (`/^message_block\..*no_amount/`) only asserts a naming convention, not the structural guarantee that `{amount}` can never be omitted — a future variant omitting `{amount}` under a different name would pass unnoticed [`packages/i18n/tests/sahyog-shared-dark-copy.test.ts:386`] — **fixed:** added a structural walk over every `message_block.headline.*` key that exists, asserting `{amount}` on each, independent of its name
+- [x] [Review][Patch] The EN copy is tested to keep the Devanagari tagline untranslated (`:283`), but there is no mirror assertion protecting the Latin "Pariwar" inside the HI `message_block.join` string from a future localization pass [`packages/i18n/locales/hi/sahyog-shared.json:29`] — ⚠⛔ **CORRECTED 2026-09-12 (re-review): the finding's premise was false.** The pre-existing `.toBe()` exact-match on the same key already fully pins the string — any transliteration fails it on its own — and the EN tagline check is likewise a bare `.toBe()` with no companion `.toContain()`. The `toContain('Pariwar')` line first added here was a no-op and has been **removed** rather than left in as redundant scaffolding.
+- [x] [Review][Patch] Self-exclusion carve-out matches by bare filename (`f.endsWith('sahyog-shared-dark-copy.test.ts')`) rather than by path — a same-named file elsewhere would be wrongly excluded, and a rename of this file would make the fence self-fail [`packages/i18n/tests/sahyog-shared-dark-copy.test.ts:194,494`] — **fixed:** both call sites now compare `f === OWN_FILE`, an exact path computed from `import.meta.url`
+- [x] [Review][Patch] AC3's "do not derive one" no-name variant silently drops the ₹ from the Panel's literal §9.1 row-4 text with no Trap-1-style disclosure — the `.full` headline's ₹-drop is explicitly flagged as a deviation, but the `.no_family` headline's identical ₹-drop is presented as an unaltered quote [`11b-19-ratified-message-block-copy-source.md:183-186`] — **fixed:** added an explicit disclosure note under AC3 naming the same Trap-1 deviation
+- [x] [Review][Patch] AC0 requires "the `epics.md` entry AND the sprint row land in a `governance:` commit" but the sprint row actually landed in the story-creation commit (`7d12a4ce`, `story(11b.19):...`), not a `governance:`-prefixed one — only the `epics.md` entry (`8303d92b`, later) satisfied the rule [`11b-19-ratified-message-block-copy-source.md:143-144`] — **fixed:** recorded the fact under AC0 rather than rewriting the shipped commits
+- [x] [Review][Defer] "Nothing else moved" test regexes an unrelated package's exact chained-method spelling (`` district:\s*z\.string\(\)\.min\(1\)\.nullable\(\) ``) in `packages/contracts/src/public-pages/sahyog-vivran.ts` — a semantically-equivalent refactor there would break this i18n test for reasons unrelated to copy [`packages/i18n/tests/sahyog-shared-dark-copy.test.ts:522`] — deferred, pre-existing (same technique already used for `nomineeName` at `:232`; redesigning the verification method is out of scope for a copy-only story)
+- [x] [Review][Defer] Trap 5's "no relationship claim" guarantee is enforced by a narrow keyword blacklist (`/nominee of|की नॉमिनी|के नॉमिनी/`), trivially defeated by rephrasing [`packages/i18n/tests/sahyog-shared-dark-copy.test.ts:341`] — deferred, pre-existing (a semantic guarantee a regex test can't fully close; same limitation as B's earlier fence)
+- [x] [Review][Defer] The claim that `$comment.*` keys are excluded from the production parity script / resolver's resolvable surface is never verified against production code in this diff, only by the test file's own filter (`!k.startsWith('$comment')`) — deferred, pre-existing (convention inherited from B's `$comment.index_line`, not introduced here)
+- [x] [Review][Defer] The "five traps" governance narrative is duplicated near-verbatim across the Change Log, four sprint-status ledger blocks, `epics.md`, and two locale `$comment` blocks — this diff's own finding (that `$comment.index_line` went stale about its own render state) shows this duplication pattern reliably rots, yet more copies were added — deferred, pre-existing (systemic governance-process pattern, not a defect introduced by this diff)
+- [x] [Review][Defer] The darkness proof pins the exact thrown-error wording from `resolver.ts` (`/missing interpolation param '...'/`) — couples a "pure catalog change" story's tests to an implementation detail of the resolver's error message [`packages/i18n/tests/sahyog-shared-dark-copy.test.ts`] — deferred, pre-existing (pattern inherited from B's `index_line` tests)
+- [x] [Review][Defer] `baseline_commit` pins going stale mid-review is a recurring cross-story process gap (this story's `ff92cb00`, sibling `11b-20`'s `738bb3ea`, both orphaned the same way) — deferred, pre-existing (a tooling/process fix, not a patch to this diff)
+- [x] [Review][Defer] Both locale JSON files ship a multi-hundred-word `$comment.message_block` governance narrative that would bloat any client-side runtime payload loading these files [`packages/i18n/locales/en/sahyog-shared.json`, `packages/i18n/locales/hi/sahyog-shared.json`] — deferred, pre-existing (same convention as B's `$comment.index_line`; a fix needs build-time `$comment.*` stripping across the whole i18n package)
+- [x] [Review][Defer] AC4's district-drop behavior is asserted only vacuously (`not.toMatch(/not recorded/i)`), trivially true regardless of any future column-dropping logic — deferred, pre-existing (AC6 forbids a render test here; the real guarantee can only be enforced once a render site exists, which is `11b-17`/`11b-20`'s job)
+
+### Re-review Findings (2026-09-12, second pass — reviewing the 7 patches above)
+
+- [x] [Review][Patch] The "Pariwar" fix above was itself a no-op (see the corrected bullet above) — **fixed:** retracted, recorded, and explained rather than left in place
+- [x] [Review][Patch] Self-exclusion's `f === OWN_FILE` compares two path forms (a directory-walk `join()` path and a `fileURLToPath` path) with no normalization, leaving a theoretical symlink/separator/case mismatch open [`packages/i18n/tests/sahyog-shared-dark-copy.test.ts:39-40,200,522`] — **fixed:** both sides now compared through `resolve()`
+- [x] [Review][Patch] The sibling `index_line.*` zero-consumer fence (AC9) was left with the old fully-quoted-literal `RESOLVER` regex while the `message_block.*` fence (AC6) was widened to catch a dynamically-built key — same bypass class, same file, left inconsistent [`packages/i18n/tests/sahyog-shared-dark-copy.test.ts:198`] — **fixed:** widened to the same `[\w.$]+` shape; verified the one authorised consumer (`sahyog.astro`) uses only bare literals, so the fence still names exactly that one file
+- [x] [Review][Patch] The widened `message_block.*` `RESOLVER`'s own inline comment misdescribed the regex, claiming `$` "ends" the match when `$` is included in, not excluded from, the character class [`packages/i18n/tests/sahyog-shared-dark-copy.test.ts:522-527`] — **fixed:** corrected the comment to name `{` as the actual terminator and explain why `$` is deliberately included
+- [x] [Review][Patch] AC0's new note records a rule breach (sprint row landed outside a `governance:` commit) without stating whether AC0 is considered satisfied, waived, or still failing, while the story is marked `done` immediately alongside it [`11b-19-ratified-message-block-copy-source.md:158-164`] — **fixed, then corrected 2026-09-12 (third pass):** the second pass's fix over-reached, unilaterally declaring AC0 "discharged" with no cited authorising decision — exactly the reinterpret-a-ratified-rule pattern this story elsewhere forbids itself. Third pass restated it in the story's own established register: recorded, not resolved, matching `11b-18`'s skip and `11b-15`'s render debt
+- [x] [Review][Patch] The legacy naming-only `no_amount` grep was kept alongside the new structural per-key check with no stated rationale for keeping both [`packages/i18n/tests/sahyog-shared-dark-copy.test.ts:409`] — **fixed:** added a comment explaining the naming check still names the offending key directly, which the structural walk cannot do
+- [x] [Review][Defer] A render site could resolve a `message_block.*` key by string concatenation (`'message_block' + '.' + key`) rather than a template literal or bare literal, bypassing the widened `RESOLVER` regex — deferred, same class as Trap 5's regex-based relationship blacklist already deferred above (a semantic "no resolver anywhere" guarantee that no finite regex can fully close); folded into `deferred-work.md` under the existing entry for that limitation class
+
+### Third-pass Findings (2026-09-12 — reviewing the fixes above, cumulatively)
+
+- [x] [Review][Patch] AC0's "discharged" resolution (added in the second pass) was self-issued with no cited authorising decision, more conclusive than this story's own "recorded, not resolved" convention for other admitted historical facts (`11b-18`, `11b-15`) — **fixed:** restated in the story's established register (see the corrected AC0 note above)
+- [x] [Review][Patch] The self-exclusion `resolve()` fix (second pass) claimed to close a "symlink/case mismatch" risk that `resolve()` cannot actually close (it normalises separators/relative segments only, not symlinks or case) — **fixed:** switched to `realpathSync` on both sides of the comparison, which does canonicalise through symlinks; re-verified 19/19 green
+- [x] [Review][Patch] The sibling `index_line.*` fence's widening (second pass) was asserted "verified" by reasoning alone, with no equivalent probe evidence to the one already run for `message_block.*` — **fixed:** planted a live template-literal probe against the `index_line.*` fence too; it failed naming the probe by path, confirming parity of rigor; probe removed, tree verified clean
+- [x] [Review][Patch] The rationale for keeping the legacy `no_amount` naming grep alongside the new structural walk (second pass) was factually wrong — it claimed only the naming grep names the offending key, but the structural walk's own assertion message already does that too — **fixed:** rewrote the rationale to the real reason (the naming grep also covers `message_block.*` keys outside `.headline.*`, which the structural walk never examines)
+- [x] [Review][Patch] The structural `{amount}` walk (second pass) derived `headlineKeys` from the EN locale file only and reused them for HI — a headline variant existing only in HI would never be checked; and the filter required a `.` after `headline`, silently skipping a bare `message_block.headline` key with no variant suffix — **fixed:** `headlineKeys` now unions both locales' key sets, and the filter also matches the bare key
+- [x] [Review][Patch] The `deferred-work.md` entries added in the first pass cited `:522` for two different pieces of code, both now stale after later passes shifted the file — the same brittleness this test file's own comments warn against for `sahyog-vivran.ts` — **fixed:** re-expressed both citations by what they point at, not a line number
+- [x] [Review][Patch] The concatenation-bypass deferred item (second pass) inherited the Trap 5 bullet's "Trigger: unchanged," which describes a copy-wording change and has no bearing on a render site's key-construction style — **fixed:** wrote a trigger specific to the actual risk (the first `11b-17`/`11b-20` render landing)
+- [x] [Review][Patch] The concatenation-bypass deferred item (second pass) used single-backtick code spans around a regex literal containing a literal backtick character, breaking Markdown rendering — **fixed:** switched to double-backtick delimiters, matching the convention used elsewhere in the same file
+- [x] [Review][Patch] The first pass's own "fixed:" note for the `RESOLVER` widening claimed the character class "runs to the first character a real key cannot contain (`$`/`{`)," directly contradicted by the second pass's correction that `$` is included, not excluded — **fixed:** corrected the first-pass bullet's own wording for consistency
 
 ## Dev Notes
 

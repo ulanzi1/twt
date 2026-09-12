@@ -1,3 +1,62 @@
+# last_updated: 2026-09-12f (⭐⭐ **`11b-19` THIRD REVIEW PASS — 9 MORE PATCHES, ⛔ ZERO ROW MOVES.**
+#   ⭐⭐ **CAUGHT A SELF-ISSUED OVER-REACH FROM THE PRIOR PASS:** the 2026-09-12e note declaring AC0
+#   "discharged" was UNILATERAL, with no cited authorising decision — exactly the
+#   reinterpret-a-ratified-rule pattern this story elsewhere refuses itself. **RESTATED** in the
+#   story's own established register (recorded, ⛔ not resolved — matching `11b-18` and `11b-15`).
+#   ⭐ **A SECOND OVERCLAIMED FIX FOUND:** `resolve()` (2026-09-12e) does ⛔ NOT resolve symlinks or
+#   normalise case despite being sold as fixing exactly that — swapped for `realpathSync`, which
+#   does. ⭐ **THE `index_line.*` FENCE WAS WIDENED BUT ⛔ NEVER PROBE-TESTED** the way `message_block.*`
+#   was — a live template-literal probe was planted against it too; it FAILED naming the probe by
+#   path, closing the rigor gap; probe removed, tree verified clean. ⭐ **THE `no_amount` DUAL-CHECK
+#   RATIONALE WAS FACTUALLY WRONG** (claimed only the naming grep names the failing key; the
+#   structural walk's own message does too) — corrected to the REAL reason (the naming grep also
+#   covers non-`.headline.*` keys the structural walk never sees). ⭐ **THE STRUCTURAL `{amount}` WALK
+#   WAS LOCALE-ASYMMETRIC** (read `headlineKeys` from EN only, reused for HI) and missed a bare
+#   `message_block.headline` key with no variant suffix — both closed. ⭐ **TWO `deferred-work.md`
+#   LINE-NUMBER CITATIONS HAD ALREADY GONE STALE** after the prior pass shifted the file — the exact
+#   lesson this test file teaches about `sahyog-vivran.ts`, now applied to itself; re-expressed by
+#   content, ⛔ not line number. ⭐ A mismatched trigger and a Markdown backtick-rendering bug in the
+#   same deferred entry were fixed; a contradicted "$/{ end it" phrase left over from the FIRST pass's
+#   own bullet was corrected to match the second pass's in-code fix. ⭐ Re-verified after: `@twt/i18n`
+#   **108/108**, parity zero findings, typecheck clean, tree clean.)
+#
+# last_updated: 2026-09-12e (⭐⭐ **`11b-19` RE-REVIEW OF THE REVIEW — 6 MORE PATCHES, 1 MORE
+#   DEFERRAL, ⛔ ZERO ROW MOVES (row already `done` from 2026-09-12d).** Re-running the review against
+#   its OWN patch set caught: **the "Pariwar" fix was a no-op** (a pre-existing `.toBe()` exact-match
+#   already fully pinned the string; the redundant `.toContain()` was RETRACTED, ⛔ not left in) ·
+#   **the sibling `index_line.*` fence was left with the OLD narrower regex** while `message_block.*`
+#   was widened, the exact drift this file's own doc-block warns the walker against — widened to
+#   match, verified the one authorised site (`sahyog.astro`) uses only bare literals so nothing
+#   changed for it · **the widened regex's own comment misdescribed itself** (claimed `$` "ends" the
+#   match when it is INCLUDED in the class; `{` is the actual terminator) — corrected · **the
+#   self-exclusion `===` compared two path forms with no normalization** — both sides now run through
+#   `resolve()` · **AC0's breach note left "satisfied or not" unstated** next to a `done` status —
+#   now states AC0 is discharged (ordering held; the miss was a commit-PREFIX label) · **the legacy
+#   `no_amount` naming grep looked like leftover scaffolding** beside the new structural check — a
+#   comment now says why both stay. ⭐ ONE MORE DEFERRAL: a `message_block.*` key built by STRING
+#   CONCATENATION bypasses the widened regex the same way rephrasing bypasses Trap 5's blacklist —
+#   same no-finite-regex-closes-a-semantic-guarantee class, folded into that existing entry. ⭐
+#   Re-verified after: `@twt/i18n` **108/108**, parity zero findings, typecheck clean, tree clean.)
+#
+# last_updated: 2026-09-12d (⭐⭐ **`11b-19` CODE REVIEW — 7 PATCHES APPLIED, 8 DEFERRED, ZERO
+#   decision-needed.** ⭐ ONE row moves: `11b-19-ratified-message-block-copy-source` **`review` →
+#   `done`**. ⛔ NO key content changed — all 7 patches hardened the TEST SUITE and the STORY DOC, not
+#   the ratified copy: the zero-consumer fence's `RESOLVER` regex now catches a dynamically-built key
+#   (proven live with a planted template-literal probe, ⛔ not assumed), the `no_amount` check walks
+#   every `message_block.headline.*` key structurally instead of by name, a mirror assertion protects
+#   "Pariwar" staying untranslated in the HI `join` string, the self-exclusion carve-out now compares
+#   an exact path (`f === OWN_FILE`) instead of a bare filename, AC1's title now names its two
+#   declared deviations instead of asserting bare "verbatim", AC3's undisclosed second ₹-drop
+#   (the `.no_family` variant) is now disclosed alongside Trap 1's `.full` disclosure, and AC0's
+#   partial miss (the sprint row landed in the `story:` commit `7d12a4ce`, ⛔ not a `governance:` one)
+#   is RECORDED, ⛔ not fixed by rewriting a shipped commit ([[project_story_automator_ops]]).
+#   ⭐ Verified after: `@twt/i18n` **108/108**, `i18n:check-parity` zero findings, typecheck clean.
+#   ⭐ 8 items deferred to `deferred-work.md` (pre-existing patterns this copy-only story should not
+#   redesign — cross-package regex coupling, a regex-based relationship blacklist, `$comment`
+#   exclusion unverified against prod code, governance-narrative duplication, resolver error-message
+#   coupling, `baseline_commit` pin staleness, `$comment` payload bloat, AC4's vacuous district test).
+#   ⛔ Rows unchanged: `11b-20` / `11b-17` / `11b-3b` / `6-18` / `8-17`.)
+#
 # last_updated: 2026-09-12c (⭐⭐ **`11b-19` IMPLEMENTED — B's UNSHIPPED HALF SHIPS.** ⭐ ONE row moves:
 #   `11b-19-ratified-message-block-copy-source` **`in-progress` → `review`**. ⭐ `sahyog-shared` grows
 #   **21 ⇄ 21 → 30 ⇄ 30** — `$comment.message_block` + **8 keys** per locale. ⛔ **ZERO renders, ⛔ zero
@@ -18262,7 +18321,7 @@ development_status:
   # ⚠⛔ **KEY `11b-18` SKIPPED** — the ledger names `11b-18-drive-target-write-authority-retired` and
   # twice says it *"STAYS `ready-for-dev`"*, ⛔ but it is ⛔ ABSENT from `development_status` and has
   # ⛔ no file. ⛔ Recorded, ⛔ not resolved.
-  11b-19-ratified-message-block-copy-source: review
+  11b-19-ratified-message-block-copy-source: done
   # ⭐⭐ 11b-20 — MINTED 2026-09-11 BY `#decision-2026-09-11-214` **Consequence 3**: the PUBLIC render
   # of the same ratified block — ⭐ the LAST unhomed half of the 2026-09-05 ratification.
   # ⛔⛔ **BLOCKED, ⛔ not open. ⛔ ZERO OPEN DECISIONS.** It needs **`11b-19`** (the copy) AND

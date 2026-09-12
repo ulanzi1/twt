@@ -13,7 +13,7 @@ moved — ⚠ but ⛔ several claims below were **wrong when written**, ⛔ not 
 
 # Story 8.17: The Nominee's UPI ID Reaches the Member — On the Payment Screen, Where They Are Asked to Pay `[SURFACE]`
 
-Status: ready-for-dev
+Status: review
 
 ## ✅ PREFLIGHT — ✅ **STARTABLE. ⛔ ZERO BLOCKING DECISIONS.**
 
@@ -380,47 +380,47 @@ affordance.
   - [x] ⭐ correct the sprint-row ledger's stale §8.4(ii) framing (AC6(b))
   - ⚠ **Cite item (e) as *"11b.3a third-pass item (e)"*, ⛔ never a bare `(e)`** — that file's own rule
     is *"The ITEM LETTERS are the stable address"*, and a **bare `(e)` means Story 11b.1's**.
-- [ ] **Task 1 — The contract** (AC3) — add optional `vpa` to `NomineeBankAccountView` in
+- [x] **Task 1 — The contract** (AC3) — add optional `vpa` to `NomineeBankAccountView` in
       **`contributions/nominee-accounts.ts`**. ⚠⛔ **Re-read Trap 1 first.** ⭐ Keep `.strict()`; keep
       `vpaPresent`; ⛔ do ⛔ not touch `claims/nominee-bank.ts:112`.
-- [ ] **Task 2 — The handler** (AC1, AC4, AC5) — ⚠⛔ **Re-read Trap 4 first: the decrypt at `:153-170`
+- [x] **Task 2 — The handler** (AC1, AC4, AC5) — ⚠⛔ **Re-read Trap 4 first: the decrypt at `:153-170`
       is the INTENT handler's and is ⛔ unreachable from here.** Add **ONE**
       `decryptNomineeBankFieldSoft` for `vpaCiphertext` inside the existing `ciphertextRows.map(...)`
       in the **nominee-accounts GET** (`:328-386`), beside the three already there.
       ⭐ Fail-soft to **omitted**, ⛔ never a 500, ⛔ never the sentinel string in the VPA's place.
       ⛔ The audit line at `:391-395` stays **count-only**.
       ⚠ While in this file, discharge **Trap 6 item 1** — its module header (`:20-23`) is false.
-- [ ] **Task 3 — The screen + the label** (AC1, AC2, AC6) — a `FieldRow` beside `ifsc_label` at
+- [x] **Task 3 — The screen + the label** (AC1, AC2, AC6) — a `FieldRow` beside `ifsc_label` at
       `pay.tsx:473-480`, ⭐ **inside the `:447` ternary's else-branch**; ⛔ omit the row when absent;
       ⛔ leave `selectedAccountAllFieldsUnavailable` at **three** fields (Trap 7).
       ⭐ Mint the **flat** key `"upi_intent.vpa_label"` in **both** locales, matching `claim.json`'s
       treatment — ⭐ **"UPI ID" stays LATIN in Hindi.**
       ⚠ Follow the file's existing `FieldRow` idiom and `tabular` usage — ⛔ do ⛔ not invent a variant.
-- [ ] **Task 4 — The deployment order** (AC8, Trap 2) — state it explicitly in the story record.
+- [x] **Task 4 — The deployment order** (AC8, Trap 2) — state it explicitly in the story record.
       ⛔ Do ⛔ not discover this in production.
-- [ ] **Task 5 — Supersessions** (AC7) — re-state Trap 5's four artefacts and Trap 6's three comments
+- [x] **Task 5 — Supersessions** (AC7) — re-state Trap 5's four artefacts and Trap 6's three comments
       **as superseded, with the authority named**. ⚠ Trap 6 item 3 is **partial** — ⛔ do ⛔ not
       over-correct it.
-- [ ] **Task 6 — Friction-budget disposition** (AC7) — ⭐ record it, per Story 8.13's precedent
+- [x] **Task 6 — Friction-budget disposition** (AC7) — ⭐ record it, per Story 8.13's precedent
       (`friction-budget.md:646`, *"declaration affirmed, ⛔ no new row"*). ⚠ This story adds a
       **read-only row** and ⛔ **zero** new deliberate steps ⇒ the expected disposition is
       *declaration affirmed, ⛔ no new row* — ⭐ but it must be **recorded**, ⛔ not assumed.
       ⚠ `friction-budget.md:1952-1959` also carries Trap 5 artefact 4 and moves with Task 5.
-- [ ] **Task 7 — Tests** (AC1-AC5, AC6)
-  - [ ] Contract: `vpa` optional; absent ⇒ parses; `vpaPresent` retained; ⛔ **claims** view still has
+- [x] **Task 7 — Tests** (AC1-AC5, AC6)
+  - [x] Contract: `vpa` optional; absent ⇒ parses; `vpaPresent` retained; ⛔ **claims** view still has
         ⛔ no `vpa`. ⚠⛔ **And supersede `contributions-nominee-accounts.test.ts:36`** — a test named
         *"REJECTS a raw `vpa` field"* now asserts the opposite of the ruling.
-  - [ ] Handler: an account **with** a VPA returns it; **without** ⇒ the key is **ABSENT**, ⛔ not
+  - [x] Handler: an account **with** a VPA returns it; **without** ⇒ the key is **ABSENT**, ⛔ not
         `null`; a decrypt failure ⇒ omitted, ⛔ not a 500.
-  - [ ] ⚠⛔ **`nominee-accounts.spec.ts:298-309`** — invert `'vpa' in account`, extend the exact-key
+  - [x] ⚠⛔ **`nominee-accounts.spec.ts:298-309`** — invert `'vpa' in account`, extend the exact-key
         list from **six to seven**, and ⭐ **MOVE** `not.toContain('ravi@upi')` to the audit sink
         (AC5) — ⛔ do ⛔ not delete it.
-  - [ ] ⛔⛔ **The VPA appears in ⛔ NO audit line, ⛔ NO event payload and ⛔ NO log** (AC5), following
+  - [x] ⛔⛔ **The VPA appears in ⛔ NO audit line, ⛔ NO event payload and ⛔ NO log** (AC5), following
         `nominee-declare.spec.ts:193-207`.
-  - [ ] The screen renders the row when present and ⛔ omits it when absent — ⚠ **source-scan idiom**:
+  - [x] The screen renders the row when present and ⛔ omits it when absent — ⚠ **source-scan idiom**:
         ⛔ there is ⛔ no RN mount harness (`apps/mobile/components/drive-list/format.ts:1-11` records
         why); put any checkable logic in a plain `.ts`.
-  - [ ] `i18n:check` parity green for the new key in **both** locales.
+  - [x] `i18n:check` parity green for the new key in **both** locales.
         ⚠⛔ **`microcopy:check` HAS REAL TEETH ON THIS KEY — ⛔ do ⛔ not skip it.**
         `microcopy.yaml`'s `copy_globs` lists **`packages/i18n/locales/{hi,en}/contribution.json`**
         by name — ⭐ the exact file Task 3 mints into — and the config says those two are **tested**,
@@ -433,7 +433,7 @@ affordance.
         rules fires. ⚠ ⭐ **Follow AC6's wording rule and it stays passing** — drop *"(optional)"*,
         keep *"UPI ID"* Latin. ⛔ A failure here means the WORDING drifted, ⛔ not that the gate is
         wrong.
-  - [ ] ⭐ **Execute against `twt-test-pg` `:5433`.**
+  - [x] ⭐ **Execute against `twt-test-pg` `:5433`.**
 
 ---
 
@@ -500,11 +500,133 @@ values**, ⛔ never counts over the shared fixture ([[project_live_db_test_gotch
 
 ### Agent Model Used
 
+Claude Opus 5 (`claude-opus-5`) — BMAD `dev-story`, 2026-09-12.
+
 ### Debug Log References
+
+- Live-DB suites executed against `twt-test-pg` on **`:5433`** (`DATABASE_URL=postgresql://twt_dev_app:…@127.0.0.1:5433/twt_dev`).
+  ⚠ The container was **stopped** (`Exited (255)`) and the Docker daemon was down at session start; both were started. ⛔ No schema change, ⛔ no migration, ⛔ nothing regenerated ([[project_live_db_test_gotchas]]).
+- `npx turbo run typecheck lint` — **40/40 tasks green**.
+- `apps/api` unit suite — 44 files, 377 passed / 1 pre-existing skip.
+- `apps/api` `tests/integration/payment` — 7 passed (both specs).
+- `@twt/contracts` + `@twt/mobile` suites — green (mobile: 33 files / 499 tests).
+- `i18n:check` ✅ · `microcopy:check` ✅ · `scripts/microcopy/contribution.test.ts` ✅ (27) · `friction:check` ✅.
 
 ### Completion Notes List
 
+**AC0 ✅** — Task 0 landed as its own `governance:` commit (`a8097a16`) **before any code**. Three records:
+the minted `epics.md` entry under Epic 8 (⛔ none existed — Epic 8 stopped at 8.16); `deferred-work.md`
+**11b.3a third-pass item (e)** reconciled and **homed at this story**; and the sprint ledger recording
+§8.4(ii) as **DE-ROUTED but ⛔ NOT LOGGED**. ⛔ No closure language was written anywhere.
+
+**AC1 ✅ / AC2 ✅** — `pay.tsx` renders the selected account's UPI ID as a `FieldRow` beside `ifsc_label`,
+**inside the `:447` ternary's else-branch**, unmasked and complete. Absent ⇒ **no row**; `vpaPresent`,
+the pay button and `selectedAccountAllFieldsUnavailable` (**three** fields) are untouched.
+
+**AC3 ✅** — optional `vpa` on the **donor** view only. `vpaPresent` retained; `.strict()` kept;
+`claims/nominee-bank.ts:112` ⛔ untouched, and now **fenced by a test in the donor file itself** so a
+future sweep that "harmonizes" the two same-named types goes red.
+
+**AC4 ✅ — exactly ONE new decrypt, and the cost is MECHANIZED rather than merely stated.** One
+`decryptNomineeBankFieldSoft` inside the existing `ciphertextRows.map(...)`, skipped entirely when there
+is no ciphertext. ⭐ The unit suite now pins `toHaveBeenCalledTimes(7)` on a fixture with **one**
+VPA-bearing account of two — i.e. **6 + 1**, confirming *"+1 per VPA-bearing account"* exactly. ⚠ A
+future unconditional decrypt would return identical values and pass every other assertion; it shows up
+**only** as that number moving to 8.
+
+**AC5 ✅** — the audit stays count-only. ⭐ Per Trap 5, `not.toContain('ravi@upi')` **MOVED** to the audit
+sink; ⛔ it was not deleted. Extended with an `events_log` payload scan and two more coordinates.
+
+**AC6 ✅** — `"upi_intent.vpa_label"` minted **flat**, both locales, `"UPI ID"` **Latin in Hindi** (the
+`IFSC`/`claim.json` treatment), `"(optional)"` dropped. ⭐ `microcopy:check` **PASSED**, as predicted.
+**(a)** *"Account holder"* ⛔ **NOT relabelled** — recorded, untouched. **(b)** §8.4(ii) — ⛔ **nothing done**.
+
+**AC7 ✅ — and the artefact count was FIVE, ⛔ not four.** Trap 5's four + Trap 6's three were all
+re-stated as superseded with the authority named. ⚠⛔ **A FIFTH Trap-5-class artefact the story did not
+enumerate was found by running the tests:** `apps/api/tests/unit/payment-nominee-accounts.test.ts` pinned
+*"The VPA ciphertext is NEVER decrypted … (6 field decrypts, not 7)"* plus
+`expect(acc).not.toHaveProperty('vpa')`. ⛔ It would have failed silently against AC4 had it not been run.
+⭐ Inverted under `-212` cl.2 with its prior text kept verbatim, ⛔ not deleted.
+⚠ **Trap 6 item 2 needed LESS than the story expected** — `sahyog-vivran.ts`'s stale claim was already
+corrected by `-191` cl.5; only its *"member payment path"* characterisation had gone stale (the VPA is now
+on the **wire**, not just server-side). ⛔ Not over-corrected, and the public withdrawal is re-affirmed.
+⚠ **Trap 6 item 3 is PARTIAL, exactly as warned** — the drive-list row genuinely still carries no VPA;
+only the **attribution** to *"story F's per-drive view"* was wrong. ⛔ Only that half was corrected.
+⚠⛔ **A near-miss worth recording:** editing the two `member-drive-list.json` files via `json.dump`
+reformatted **both files wholesale** (blank-line grouping stripped, every `\uXXXX` escape rewritten) —
+a 32-line diff for a 1-line change. ⭐ Reverted and redone as a surgical string replace
+([[project_sprint_status_safe_prepend]]'s lesson, and it applies to locale JSON too).
+
+**AC7 (friction) ✅** — disposition **RECORDED** at `friction-budget.md`: *declaration affirmed, ⛔ no new
+row*, matching 8.13's precedent. Gate re-run: **19 rows, no ceiling loosening.** ⭐ Recorded as friction
+**REMOVED** (a member who could not pay from the session handset previously had **no way to obtain the
+payee coordinate at all**), with the audit-serialization cost noted as **not** member-visible friction.
+Trap 5 artefact 4 (the *"six fields"* record) moved with it.
+
+**AC8 ✅ — THE DEPLOYMENT ORDER, STATED. ⛔ Not to be discovered in production.**
+⭐ **Verified first-hand, ⛔ not taken from the story:** `packages/api-client/src/index.ts:261` is a
+**throwing** `schema.parse` — ⛔ no `safeParse`, ⛔ no `.passthrough()`, ⛔ no tolerance layer — and `:758`
+is this exact call. ⇒ the moment the API returns `vpa`, **every installed app build older than this
+release rejects the unknown key**, `call` throws, `pay.tsx:185-187` sets `accountsLoadFailed`, and
+`:359` early-returns **the ENTIRE payment screen** as `upi_intent.load_failed`.
+⚠⛔ **THE SYMPTOM IS THE WHOLE SCREEN, ⛔ NOT A MISSING ROW** — an affected member cannot pay at all, and
+the copy they see (*"We couldn't load your payment details"*) ⛔ does not tell them to update.
+
+> **REQUIRED ORDER — ship in this sequence:**
+> **1.** Release the **mobile build** carrying this contract (`vpa` optional on `NomineeBankAccountView`)
+>     and let it reach installed devices.
+> **2.** **Only then** deploy the **API** change that populates `vpa`.
+>
+> ⭐ The two halves are **independently safe**: the mobile build tolerates a response **without** `vpa`
+> (it is `.optional()`, and the row simply omits), so step 1 may ship arbitrarily far ahead. ⛔ The
+> reverse is **not** true.
+> ⚠ **IF THEY SHIP TOGETHER OR API-FIRST**, the blank-out window is **ACCEPTED AND RECORDED** here as a
+> known window whose symptom is the **whole screen**, lasting until each member updates — ⛔ not silently
+> absorbed. ⭐ There is ⛔ **no server-side mitigation available within this story's scope**: AC4 forbids
+> touching anything beyond the one decrypt, and a tolerance layer in `api-client` is
+> `deferred-work.md` **11b.3a third-pass item (e)**'s repo-wide hazard — ⛔ **not this story's to solve**,
+> though ⭐ this story is the one that **detonates** it.
+
+**What was deliberately NOT done:** ⛔ no drive-detail page · ⛔ no public surface · ⛔ no second decrypt ·
+⛔ no change to `vpaPresent`, the pay button, the `upi://pay` URL, `tr` or the attest path · ⛔ no
+relabelling of *"Account holder"* · ⛔ no edit to `member-pool/handlers.ts` · ⛔ no VPA on the claims
+presence view · ⛔ no copy-to-clipboard or share affordance · ⛔ no masking of any coordinate.
+
+**⚠ Carried forward, ⛔ neither closed by this story:** AC6(a)'s *"Account holder"* vs `-190` cl.2
+question, and §8.4(ii)'s **de-routed but un-logged** status (the owed record belongs with `11b-17`'s
+correction). ⭐ **Preflight Row T's topology risk is UNCHANGED and is now load-bearing on merge:**
+`-212`/`-213` are ⛔ not on `main`, the governance branch is ⛔ unpushed, and `-214` is ⛔ absent from
+`.decision-log.md` on this branch ⇒ **this story's authority must merge with or before its code.**
+
 ### File List
+
+**Governance (commit `a8097a16`, no code):**
+- `_bmad-output/planning-artifacts/epics.md` *(modified — Story 8.17 entry minted under Epic 8)*
+- `_bmad-output/implementation-artifacts/deferred-work.md` *(modified — 11b.3a third-pass item (e): heading reconciled, home named)*
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` *(modified — row → `in-progress`; `2026-09-12c` ledger entry)*
+
+**Contract:**
+- `packages/contracts/src/contributions/nominee-accounts.ts` *(modified — optional `vpa`; module header)*
+- `packages/contracts/src/public-pages/sahyog-vivran.ts` *(modified — Trap 6 item 2, narrowed)*
+- `packages/contracts/tests/contributions-nominee-accounts.test.ts` *(modified — Trap 5 artefact 1 inverted; Trap 1 claims-view fence added)*
+
+**API:**
+- `apps/api/src/modules/payment/handlers.ts` *(modified — the fourth soft decrypt; Trap 6 item 1; Trap 5 artefact 3; route doc-block; audit comment)*
+- `apps/api/tests/integration/payment/nominee-accounts.spec.ts` *(modified — Trap 5 artefact 2 inverted; leak assertion MOVED to the audit sink; `corruptVpa1` fixture; omission test added)*
+- `apps/api/tests/unit/payment-nominee-accounts.test.ts` *(modified — the FIFTH artefact inverted; decrypt-count cost pin)*
+
+**Mobile:**
+- `apps/mobile/app/(contribution)/pay.tsx` *(modified — the UPI-ID `FieldRow`)*
+- `apps/mobile/tests/unit/pay-screen-vpa-render.test.ts` *(**new** — source-scan render fence + label assertions)*
+
+**i18n:**
+- `packages/i18n/locales/en/contribution.json` *(modified — `upi_intent.vpa_label` minted)*
+- `packages/i18n/locales/hi/contribution.json` *(modified — `upi_intent.vpa_label` minted, Latin)*
+- `packages/i18n/locales/en/member-drive-list.json` *(modified — Trap 6 item 3, partial)*
+- `packages/i18n/locales/hi/member-drive-list.json` *(modified — Trap 6 item 3, partial)*
+
+**Ledger:**
+- `friction-budget.md` *(modified — Trap 5 artefact 4; Story 8.17 disposition recorded)*
 
 ## Change Log
 
@@ -515,3 +637,4 @@ values**, ⛔ never counts over the shared fixture ([[project_live_db_test_gotch
 | 2026-09-11 | 0.3 | ⚠⛔ **SECOND VALIDATE PASS (a re-run on v0.2 itself) — 4 corrections, ⛔ 3 of them defects THIS FILE's own v0.2 introduced.** ⭐ Recorded because a validate pass that rewrites a story ⛔ can ⛔ not be assumed to have rewritten it correctly. ⚠⛔⛔ **THE SERIOUS ONE — v0.2 OVERSTATED §8.4(ii) AS *"✅ CLOSED"*, AND IT IS ⛔ NOT.** ⭐ The underlying text is **real** (`deferred-work.md` item (b) `D5-subject` (i) does say *"the SCHEMA is the authority"*, and `11b-17`'s post-validate AC4 + Change Log v1.1 do re-ground §8.4(ii) on it and drop the Panel routing) — ⛔ but the **STATUS** was traced wrong: it is an **OPEN deferred item with a trigger** (⛔ not a ruling), applied by an **author-committed correction inside a SIBLING story** (⛔ not a decision entry), on an **UNMERGED branch**, while **`-213`'s entry is unamended and still reads *"still UNRULED and is ROUTED"*** — and **`6-18` explicitly records that it does ⛔ NOT close `D5-subject` (i)**. ⇒ ⭐ **re-stated as DE-ROUTED but ⛔ NOT LOGGED**; **D2** now names the owed governance record as ⛔ **not this story's**; **AC0(c)** no longer orders a false closure into the ledger; the References stop calling `-213` *"superseded"*. ⚠ This is [[feedback_story_validate_footguns]] **#18** (a control asserted from decision text — ⭐ BUILT?/SCOPE?/**COST?** — here **SCOPE** and **status** both failed) and **#20(a)** (an author-committed note elevated to a ruling), committed by the pass that exists to catch exactly that. ⚠⛔ **AND ⛔ `microcopy:check` WAS INVERTED** — v0.2 told the dev the gate was *"vacuous"* with *"empty `copy_globs`"*; `microcopy.yaml` lists **`packages/i18n/locales/{hi,en}/contribution.json`** BY NAME — ⭐ the exact file Task 3 mints into — and calls them **tested**, ⛔ not merely scanned. ⚠ The false claim came from that file's own **STALE HEADER** (*"`copy_globs` is empty until Epic 2+"*) ⇒ ⭐ **read the list, ⛔ never the preamble** — ⚠ and note the header's comment cites [[feedback_gate_scope_semantic_coverage]], the very rule v0.2 invoked to reach the opposite, wrong conclusion. ⚠ **Task 6 was a NEW ORPHAN** — v0.2 fixed Task 4's missing AC and created the same defect one task later ⇒ tagged to **AC7**, which now carries the disposition. ⚠ Cite fixed: the contracts test is at **`:36`**, ⛔ not `:35` (`:35` is `});`) — two sites. ⭐ **Everything else in v0.2 re-verified and HELD**, including the Trap 4 handler-boundary finding, the audit sizing, the Trap 1 provenance correction, `-212` Consequence 3 verbatim, `-191` cl.5's *"11 of 558 … test database"*, the two `deferred-work.md` addressing quotes, the two `### (e)` headings, the unfiltered `ciphertextRows.map`, and every remaining `file:line` pointer ⚠ **except one, caught at v0.4: the ternary is at `:447`, ⛔ not `:448`.** ⚠⛔ **Recorded separately, ⛔ because this pass caused it:** the sprint-ledger prepend (+86 lines) will **rot `11b-17:654`'s `sprint-status.yaml:17685`/`:17739` cites on merge** — ⛔ not fixed here (that file's authoritative copy is on another branch); ⭐ they should become **block addresses**, per that same footgun **#19**. | BigDev + Claude |
 | 2026-09-12 | 0.4 | ⭐ **THIRD PASS (governance + sibling cross-check against v0.3) — ⛔ ZERO CRITICAL findings; v0.3's central correction HELD under every source.** ⭐ The *"de-routed but ⛔ NOT LOGGED"* status for §8.4(ii) was re-verified clause by clause and is **precisely calibrated** — ⛔ neither over- nor under-stated: `D5-subject (i)` is confirmed *"NON-BLOCKING … ⛔ NOT resolved"* with a live **Trigger** line; `11b-17`'s AC4 sentence carries ⛔ **no** `#decision-` citation behind it; `11b-17`'s Task 0e literally **struck its own routing** (*"WITHDRAWN 2026-09-11: THERE IS ⛔ NOTHING FOR THE PANEL TO NAME"*) ⇒ ⭐ *"de-routed"* is the correct word; `-213` is unamended; `6-18:29`/`:212` confirm it does ⛔ not close `(i)`. ⭐ **Four fixes applied.** ⚠ **(1) `pay.tsx`'s ternary is at `:447`, ⛔ not `:448`** — one line off at **three** sites, carried unflagged from v0.1 through v0.3, ⚠⛔ **and v0.3's Change Log had claimed *"every remaining `file:line` pointer"* held** ⇒ that sentence is now corrected in place rather than left standing. ⭐ **(2)** AC7's **title** now names the friction-budget obligation its own body added at v0.3 — ⚠ v0.3 tagged Task 6 to AC7 without widening AC7's heading, so the AC described less than it required. ⭐ **(3)** Task 7's `microcopy:check` bullet now states the **EXPECTED RESULT: PASS** and why (⛔ no digits, ⛔ no prohibited vocabulary, ⛔ no scarcity/blame framing) — ⚠ v0.3 established the gate **has** teeth but ⛔ never told the dev what passing looks like, which invites a false alarm. ⭐ **(4)** ⚠⛔ **A FALSE CLAIM THIS STORY'S OWN VALIDATE PASS WROTE INTO `sprint-status.yaml` IS CORRECTED BY A SUCCESSOR LEDGER ENTRY** — the `2026-09-11a` block still asserted *"§8.4(ii) IS CLOSED, ⛔ NOT OPEN"*. ⛔ That was ⛔ not the dev's to clean up under AC0(c); ⭐ it was **ours**. ⚠ Corrected by **`2026-09-12a`**, a SUCCESSOR entry — ⛔ `11a`'s text is left **untouched**, per the `-128`/`-129` precedent ([[feedback_supersede_never_reinterpret]], [[feedback_record_unattested_no_backfill]]). ⭐ **Two observations carried, ⛔ neither actionable here:** ⚠ `11b-17`'s own AC4 **unconditionally relabels** its member-facing field to *"Nominee Name"* on `-190` cl.2 + `-206` cl.2 — ⭐ both **public**-scoped — i.e. the sibling **acts on** the very member-vs-public scope question `8-17`'s AC6(a) refuses to act on; ⇒ ⭐ `8-17` is the **more conservative** of the two and ⛔ that asymmetry is the governance record's, ⛔ not this story's to resolve. ⚠ The governance branch has moved three commits further (`11b.19`, `11b.20`, `11b.3b`) — ⭐ re-swept, ⛔ none touches the VPA, the payment screen or `8-17`. | BigDev + Claude |
 | 2026-09-12 | 0.5 | ⚠ **FOURTH PASS — every `file:line` and decision citation re-traced against live source, ⛔ not from any prior pass's summary; ⛔ ZERO CRITICAL findings; v0.4's central correction HELD.** ⭐ Re-verified from scratch: baseline ancestry, all `pay.tsx`/`handlers.ts`/contracts/schema/i18n/microcopy/friction-budget citations, `-212`/`-191`/`-190`/`-213` verbatim text, `deferred-work.md` item (b) `D5-subject` (i) and item (e)'s heading/body split, the `sprint-status.yaml` `2026-09-11a`→`2026-09-12a` successor block, and `6-18`'s AC7/`:212` non-closure. ⭐ **Everything HELD**, including the `:447` ternary fix. ⚠ **Two corrections, both precision gaps rather than build-blocking.** ⚠⛔ **(1) v0.4's "governance branch moved THREE commits further" undercounted it — the actual number is SIX** (`116cb116`, `0080acfa`, `ff92cb00` were never named, alongside the three v0.4 did name — `738bb3ea`/`491a0fac`/`53efccd4`). ⭐ Diff-stat re-checked on all six against `pay.tsx`, the contracts/handlers/schema files this story touches: v0.4's CONCLUSION holds — ⛔ **none** touches the VPA, the payment screen or `8-17` — but the count itself was wrong, and a count is checked, ⛔ not estimated. ⚠⛔ **(2) `-214` was cited (AC6(a)) as a ratified decision without the same topology caveat Row T gives `-212`/`-213`** — `.decision-log.md` on THIS branch carries ⛔ **zero** trace of `-214`; it exists only on `governance/11b-17-validate-and-panel-routing` (`ff92cb00`, unpushed). ⭐ The **sprint-status.yaml** ledger already caught this at the FIRST validate pass (*"`-214` is absent from this story's branch entirely"*) — ⛔ but that caveat never reached the **story file itself**, so a dev reading only this document had no warning of it. ⭐ Fixed in place at Row T and at the AC6(a) citation, ⛔ not Change-Log-only, since the story file is what a dev actually reads. ⚠ **Substance unaffected:** `-214`'s content (§8.1, the `Nominee full name`/`District` table, *"both the member and the public view"*) was independently re-verified against `ff92cb00`'s commit message and does ⛔ **not** reach the payment screen — the citation's CONTENT was always right; only its **branch-presence caveat** was missing. ⛔ **NO CODE, ⛔ zero rows flip.** | BigDev + Claude |
+| 2026-09-12 | 1.0 | ⭐⭐ **IMPLEMENTED — all 8 ACs satisfied, all tasks complete; status → `review`.** ⭐ Task 0 landed FIRST as its own `governance:` commit (`a8097a16`), ⛔ no code: the `epics.md` entry minted under Epic 8 (⛔ none existed — Epic 8 stopped at 8.16), `deferred-work.md` **11b.3a third-pass item (e)** reconciled (its bare `✅ CLOSED` heading split into the two halves its own body required) and **homed at this story**, and the sprint ledger recording §8.4(ii) as **DE-ROUTED but ⛔ NOT LOGGED** — ⛔ no closure language written anywhere. ⭐ **The build:** optional `vpa` on the **donor** view only (`.strict()` kept, `vpaPresent` retained); **ONE** new `decryptNomineeBankFieldSoft` in the nominee-accounts GET, **skipped entirely** when there is no ciphertext; a `FieldRow` beside `ifsc_label` inside the `:447` else-branch, **omitted** when absent; `"upi_intent.vpa_label"` minted flat in both locales as *"UPI ID"*, **Latin in Hindi**. ⚠⛔⛔ **A FIFTH TRAP-5-CLASS ARTEFACT WAS FOUND BY RUNNING THE TESTS, ⛔ not by reading the story** — `apps/api/tests/unit/payment-nominee-accounts.test.ts` pinned *"The VPA ciphertext is NEVER decrypted … (6 field decrypts, not 7)"* and `not.toHaveProperty('vpa')`; the story enumerated **four**. ⭐ Inverted under `-212` cl.2 with its prior text kept verbatim. ⭐⭐ **AND IT BECAME THE INSTRUMENT THAT MECHANIZES AC4's COST CLAIM:** the suite now pins `toHaveBeenCalledTimes(7)` on a fixture with **one** VPA-bearing account of two — **6 + 1**, confirming *"+1 per VPA-bearing account"* exactly. ⚠ A future unconditional decrypt would return identical values and pass every other assertion; it shows up **only** as that number moving to 8. ⚠ **Trap 6 item 2 needed LESS than expected** — `-191` cl.5 had already corrected the stale claim; only its *"member payment path"* wording had gone stale (the VPA is now on the **wire**). ⚠ **Trap 6 item 3 was PARTIAL exactly as warned** — only the **attribution** to *"story F's per-drive view"* was wrong; the row genuinely still carries no VPA. ⚠⛔ **A NEAR-MISS RECORDED RATHER THAN TIDIED:** the first attempt at those two locale files used `json.dump` and reformatted **both wholesale** (blank-line grouping stripped, every `\uXXXX` escape rewritten) — a 32-line diff for a 1-line change; ⭐ reverted and redone surgically. ⭐ **AC8's deployment order is STATED in the Dev Agent Record and was verified first-hand**, ⛔ not taken from the story: `api-client/src/index.ts:261` is a **throwing** `schema.parse` and `:758` is this call ⇒ **mobile build FIRST, API second**; the two halves are independently safe in that direction ⛔ and only that direction, and the alternative is recorded as an accepted window whose symptom is **the whole screen**. ⚠ **AC6(a) and §8.4(ii) remain OPEN and untouched**, and ⭐ **Row T's topology risk is now load-bearing on merge** — this story's authority must merge **with or before** its code. ✅ Gates: typecheck+lint **40/40**, api unit **377**, payment integration **7**, mobile **499**, contracts green, `i18n:check` ✅, `microcopy:check` ✅ (**PASS**, as predicted), `friction:check` ✅ (**19 rows, no new row**). | BigDev + Claude |

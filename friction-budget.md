@@ -674,6 +674,45 @@ stays a no-op) + `apps/api`/`packages/contracts`/`packages/domain` (excluded fro
 ledger) — the page-weight ceilings the gate has teeth on cover the PUBLIC
 `apps/public` Astro surface, which this story does not touch.
 
+**Story 8.17 disposition (declaration affirmed, no new row):** the nominee's UPI ID on
+the payment screen (`packages/contracts/src/contributions/nominee-accounts.ts`,
+`apps/api/src/modules/payment/handlers.ts`,
+`apps/mobile/app/(contribution)/pay.tsx` + one minted `upi_intent.vpa_label` in both
+locales) introduces **zero new deliberate friction**, and is in fact the rare change
+that REMOVES some:
+
+(1) **It is a read-only ROW, not a step.** The screen already renders four unmasked
+coordinates (`accountHolderName`, `accountNumber`, `ifsc`, `bankName`) in the same
+block; this adds a fifth. No form, no gate, no upload, no forced step, no
+member-initiated action the member must complete — a `<FieldRow>` identical in
+character to the four already affirmed at Story 9.9.
+
+(2) **It REMOVES a real friction the ledger never had a row for.** Before this, a
+member who could not or did not want to pay from the handset holding the session had
+**no way to obtain the payee coordinate at all** — the UPI ID existed only inside a
+server-built `upi://pay` URL. They were locked to one screen at one moment. That is
+precisely what `2026-09-10-212` cl.2 ruled on. ⚠ It is recorded as friction REMOVED
+rather than as a negative row, per the ledger's existing convention.
+
+(3) **And what it deliberately does NOT add, stated so a later reader does not
+misread the gap as an oversight:** there is ⛔ **no copy-to-clipboard and no share
+affordance**. Neither is prescribed in the UX spec, and none of the four existing
+coordinates carries one either. ⇒ a **pre-existing** gap this story neither closes nor
+widens; if one is wanted it is a separate story, ⛔ not an inference from this row.
+
+Zero gratuitous friction introduced; ledger reviewed, **no new row warranted**. The
+**page-weight baseline is unchanged**: every changed file is in the authenticated
+mobile app (`apps/mobile`, EAS build a no-op) + `apps/api`/`packages/contracts`/
+`packages/i18n` (excluded from the ledger) — the page-weight ceilings the gate has
+teeth on cover the PUBLIC `apps/public` Astro surface, which this story does not
+touch. Do NOT ratchet (`[[project_friction_budget_baseline_ratchet]]`).
+⚠ **One NON-friction cost is recorded here rather than left silent, because it is
+real:** the handler now performs a fourth Tier-1 decrypt, costing **+1 audit line per
+VPA-bearing account** (0/1/2 per screen load, taking this route from ≤6 to ≤8) on a
+deployment-wide advisory lock. ⛔ That is a SERIALIZATION cost, ⛔ not member-visible
+friction, so it warrants no row here — but it is the accepted price of cl.2 and it is
+⛔ not free.
+
 **Story 8.6 disposition (declaration affirmed, no new row):** the Yogdaan Bahi
 contribution passbook (`apps/mobile/components/yogdaan-bahi/*`, its dedicated screen
 `apps/mobile/app/(contribution)/yogdaan.tsx`, and the home-stack `<YogdaanBahiEntry>`)
@@ -1953,7 +1992,14 @@ removes ⛔ no path anyone was walking and retires ⛔ no declared friction.
 rather than asserted-about.** Story 9.9's donor path
 (`GET /api/v1/member/contribution/nominee-accounts`) keeps `accountHolderName`, the **FULL**
 `accountNumber`, `ifsc`, `bankName` and `vpaPresent` — ⛔ unmasked, because a masked account number
-⛔ cannot be transferred to. ✅ Pinned by a live-DB regression test added in this story (AC6). ⚠ It
+⛔ cannot be transferred to. ✅ Pinned by a live-DB regression test added in this story (AC6).
+⚠ **WIDENED AT STORY 8.17 — this list is now SIX, ⛔ not five.** `#decision-2026-09-10-212` cl.2
+(Trustee-ratified, DR + KB), applying `-191` cl.1, adds the nominee's **`vpa`** (the UPI ID itself) to
+this same donor path and renders it on the payment screen — ⛔ unmasked on the **same** ground stated
+above: a masked UPI ID cannot be paid to either. ⭐ The regression test moved with it (six keys → seven
+where a VPA exists, ⛔ still six where none does). ⛔ **The direction of travel is unchanged:** this is
+the MEMBER path widening, ⛔ never the public one — the public arm stays withdrawn under `-190` cl.1.
+⚠ It
 shares ⛔ **no** code path with the public read, so the public withdrawal could ⛔ not have narrowed
 it by accident — and a well-meaning sweep that "finished the job" there is exactly what that test
 exists to fail.

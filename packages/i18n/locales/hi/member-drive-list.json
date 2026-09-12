@@ -46,5 +46,5 @@
   "$comment.outcome": "[Review][Patch] — AC3's floor: the public index's `close_of_cycle_framing` composes this SAME Trustee-ratified text (verbatim in `sahyog-drive.json` / `sahyog-vivran.json`) from the `fundingOutcome` enum the member row already carries; the member surface did not render it. Rendered ONLY for a non-live row.",
 
   "nominee.label": "नॉमिनी",
-  "$comment.nominee": "⭐ The public wording ruled at `2026-09-04-190` cl.2, carried onto the member surface so the two agree. ⛔ The nominee's NAME only — no banking coordinates (story F's)."
+  "$comment.nominee": "⭐ The public wording ruled at `2026-09-04-190` cl.2, carried onto the member surface so the two agree. ⛔ The nominee's NAME only — no banking coordinates (story F's). ⚠ PARTIALLY SUPERSEDED at Story 8.17 — ⛔ the ATTRIBUTION half only. ⭐ STILL TRUE: this row carries the NAME only. ⛔ NOW WRONG for the VPA alone: `2026-09-10-212` cl.2 ruled the UPI ID ⛔ OFF the drive-detail page and ONTO the PAYMENT screen. ⛔ The rest remain story F's."
 }

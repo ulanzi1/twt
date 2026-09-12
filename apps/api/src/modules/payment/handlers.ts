@@ -17,12 +17,23 @@
 // deliberately stayed OUT of it). It REUSES the `member-pool/` READ seam (`resolveMemberLivePool`) — it does
 // NOT re-implement pool resolution and does NOT put a write in the read-only module.
 //
-// ── The nominee-VPA gap (D1) ────────────────────────────────────────────────────────────────────────
-// There is NO VPA in the substrate today (BigDev SETTLED path (b) — defer VPA collection to a dedicated
-// story). So the intent path resolves to `{ available: false, reason: 'vpa_not_collected' }` as the
-// EXPECTED shipped v1 state — the calm "not available yet — Get help" surface, never a `pa=undefined` URL.
-// The ATTESTATION half is fully live (an out-of-band payer can still attest — 8.10). Everything is WIRED so
-// the intent lights up with zero changes here once the VPA-collection substrate lands.
+// ── The nominee-VPA gap (D1) — ⛔ CLOSED. THIS PARAGRAPH IS STALE AND IS KEPT ONLY AS THE RECORD ─────
+// ⛔⛔ **WHAT IT SAID, AND IT IS NO LONGER TRUE:** *"There is NO VPA in the substrate today (BigDev SETTLED
+// path (b) — defer VPA collection to a dedicated story). So the intent path resolves to
+// `{ available: false, reason: 'vpa_not_collected' }` as the EXPECTED shipped v1 state … Everything is
+// WIRED so the intent lights up with zero changes here once the VPA-collection substrate lands."*
+//
+// ⭐ **THE DEDICATED STORY SHIPPED: Story 8.13 / migration 0080.** `claim_nominee_bank_accounts.vpa_ciphertext`
+// exists; the intake is a real per-account optional input at `apps/mobile/app/(claim)/nominee-review.tsx`
+// labelled *"UPI ID (optional)"*, regex-validated and encrypted with the other three coordinates. The seam
+// did light up with zero changes here, exactly as predicted. ⇒ `vpa_not_collected` is now the ORDINARY
+// state for a nominee who left an OPTIONAL field blank — ⛔ not a substrate gap, ⛔ not a pending story, and
+// ⛔ never a trigger: that column will never be universally populated, BY DESIGN.
+// ⚠ Corrected on the authority of `2026-09-04-191` **cl.5** (a VERIFIED FINDING, which names this comment's
+// class of claim as one of the stale ones) and routed to Story **8.17** by name (routing note §4.2b:
+// *"that comment is STALE and we are recording it as a defect to fix"*). ⛔ Recorded as superseded rather
+// than silently deleted ([[feedback_supersede_never_reinterpret]]).
+// ⚠ The ATTESTATION half was and remains fully live (an out-of-band payer can still attest — 8.10).
 
 import {
   claim as claimDomain,
@@ -244,8 +255,13 @@ export function createPaymentHandlers(deps: AppDeps) {
      * boundary (FAIL-SOFT to a distinct sentinel — never a 500, never a blank), and returns them as a STABLE
      * list ordered by `rank` (identity, NOT a priority — both accounts are EQUAL, the donor chooses). Absence
      * (no live pool / no accounts collected) is a first-class `{ available: false, reason }` — never a 404.
-     * `bankName` is Tier-3 plaintext (passed through, no decrypt); `vpaPresent` is computed from the presence
-     * of the VPA ciphertext WITHOUT decrypting it. The decrypted values are NEVER logged / emitted / audited.
+     * `bankName` is Tier-3 plaintext (passed through, no decrypt). The decrypted values are NEVER logged /
+     * emitted / audited.
+     * ⚠ **CHANGED AT STORY 8.17:** this line read *"`vpaPresent` is computed from the presence of the VPA
+     * ciphertext WITHOUT decrypting it."* Under `2026-09-10-212` cl.2 this handler now performs a FOURTH
+     * soft decrypt for the VPA (see the map below) and returns the plaintext as an OPTIONAL `vpa`.
+     * `vpaPresent` is still computed from ciphertext presence — but the "without decrypting" half no longer
+     * holds, and a reader must not rely on it.
      *
      * ⭐⛔⛔ **UNTOUCHED BY STORY 11b.11, AND SAYING SO IS PART OF THAT STORY.** `2026-09-04-190` cl.1
      * withdrew the banking coordinates from the PUBLIC Sahyog Vivran page; this is the MEMBER donor
@@ -254,12 +270,24 @@ export function createPaymentHandlers(deps: AppDeps) {
      * number cannot be transferred to. ⚠⛔ It shares ⛔ NO code path with `pool/sahyog-vivran-read.ts`
      * (it reads `claim/nominee-bank-read.ts` directly) ⇒ ⛔ nothing the public withdrawal deleted was
      * deleted here, and ⛔ no well-meaning sweep may "finish the job" by narrowing this shape.
-     * ⚠⛔ **AND THE VPA ITSELF IS ⛔ STILL NEVER SENT.** `NomineeBankAccountView` is `.strict()` and
-     * declares `vpaPresent: z.boolean()`; the plaintext is consumed SERVER-SIDE into the UPI intent
-     * (the `intent` handler above). ⭐ `2026-09-04-191` cl.1's *"shown to the logged-in member so they
-     * can make the contribution"* is ALREADY SATISFIED by that path — its own follow-up records the
-     * clause as a **confirmation**, with the build task being ⛔ NOT to regress it. ⛔ Adding `vpa` to
-     * this wire would be a NEW Tier-1 exposure ⛔ nobody ruled on.
+     * ⚠⛔⛔ **THE PARAGRAPH THAT STOOD HERE IS THE NARROW READING `2026-09-10-212` cl.2 OVERTURNED.**
+     * ⛔ **WHAT IT ASSERTED, kept verbatim as the record:** *"AND THE VPA ITSELF IS STILL NEVER SENT.
+     * `NomineeBankAccountView` is `.strict()` and declares `vpaPresent: z.boolean()`; the plaintext is
+     * consumed SERVER-SIDE into the UPI intent (the `intent` handler above). `2026-09-04-191` cl.1's
+     * 'shown to the logged-in member so they can make the contribution' is ALREADY SATISFIED by that
+     * path — its own follow-up records the clause as a confirmation, with the build task being NOT to
+     * regress it. Adding `vpa` to this wire would be a NEW Tier-1 exposure nobody ruled on."*
+     *
+     * ⭐⭐ **SUPERSEDED BY `#decision-2026-09-10-212` cl.2 (Trustee-ratified, DR + KB), Story 8.17:** the
+     * nominee's UPI ID is ADDED to this wire and rendered on the payment screen. ⚠ And the reading above
+     * was not merely overtaken — it was **too narrow on the day it was written**. `-191` cl.1 had ALREADY
+     * ruled the VPA a member-facing payment coordinate; treating a BUTTON as discharging *"shown to the
+     * logged-in member"* left the member unable to pay from any other app or device, and it took six days
+     * and a trace of this very path (during Story 11b-17's validate pass) to catch it.
+     * ⛔ **NOT a "stale comment tidied away"** — a superseded position, re-stated as superseded
+     * ([[feedback_supersede_never_reinterpret]], [[feedback_closure_language_precision]]).
+     * ⭐ **WHAT DID NOT CHANGE:** the VPA still reaches NO audit line, event payload or log; the audit
+     * below stays COUNT-ONLY; and the **claims** presence view still carries no `vpa` at all.
      *
      * ⚠⛔ **AND ONE ROUTED QUESTION IS ANSWERED HERE RATHER THAN LEFT OPEN.** 11b.3a's third review
      * found the PUBLIC bank block published regardless of the drive's OUTCOME — ⛔ no outcome
@@ -330,7 +358,24 @@ export function createPaymentHandlers(deps: AppDeps) {
             if (row.accountRank !== 1 && row.accountRank !== 2) {
               throw new Error(`Unexpected nominee bank account_rank: ${String(row.accountRank)}`);
             }
-            const [accountHolderName, accountNumber, ifsc] = await Promise.all([
+            // ⭐⛔ **THE FOURTH DECRYPT — STORY 8.17, AND EXACTLY ONE IS AUTHORISED.**
+            // `2026-09-10-212` cl.2 (Trustee-ratified) rules the nominee's UPI ID onto the PAYMENT screen,
+            // and its **Consequence 3** names the touched scope verbatim: *"The payment-screen change
+            // touches `NomineeBankAccountView`, **the `nominee-accounts` handler's decrypt**, and
+            // `pay.tsx`."* ⇒ this is the scope cl.2 already stated, NOT a widening.
+            // ⛔ The decrypt in the **intent** POST above is a DIFFERENT function on a DIFFERENT request
+            // whose plaintext is folded into the `upi://pay` URL — it is UNREACHABLE from this response,
+            // which is why this handler's own doc-block used to say `vpaPresent` is computed *"WITHOUT
+            // decrypting"*. That sentence is superseded HERE and nowhere else.
+            // ⚠⛔ **THE COST, SIZED RATHER THAN HAND-WAVED** (the unit `550a7acd` established):
+            // `envelope.ts` fires `auditHook('decryptDek')` on EVERY `decryptTier1` and there is NO DEK
+            // cache ⇒ one audit line per encrypted FIELD, each taking the deployment-wide
+            // `pg_advisory_xact_lock(AUDIT_CHAIN_LOCK_KEY)`. The cost is SERIALIZATION, not query volume.
+            // ⇒ **+1 audit line per VPA-bearing account — 0, 1 or 2 per screen load**, taking this route
+            // from ≤6 to ≤8. ⚠ And the part worth saying out loud: this map covers BOTH accounts, so the
+            // VPA is decrypted for an account the member may never open. There is no lazy path — the
+            // contract is a list built in a single pass. That is the accepted price of cl.2, not a free lunch.
+            const [accountHolderName, accountNumber, ifsc, vpaSoft] = await Promise.all([
               decryptNomineeBankFieldSoft(
                 row.accountHolderNameCiphertext,
                 pariwarIdStr,
@@ -349,7 +394,24 @@ export function createPaymentHandlers(deps: AppDeps) {
                 deps.encryption,
                 fieldLog(row.accountRank, 'ifsc'),
               ),
+              // OPTIONAL by design — a nominee who left the claim-time UPI-ID field blank is a first-class
+              // state, so there is nothing to decrypt and nothing to report.
+              row.vpaCiphertext == null
+                ? Promise.resolve(null)
+                : decryptNomineeBankFieldSoft(
+                    row.vpaCiphertext,
+                    pariwarIdStr,
+                    deps.encryption,
+                    fieldLog(row.accountRank, 'vpa'),
+                  ),
             ]);
+            // ⛔⛔ **THE VPA IS THE ONE FIELD THAT MUST NEVER CARRY THE SENTINEL.** The other three degrade
+            // to a distinct `[unavailable — could not be shown]` string the screen renders in place; a
+            // member reading that in a UPI-ID slot might TRY TO PAY IT. So a failed VPA decrypt degrades to
+            // OMISSION — the key is absent, the row is absent, and `vpaPresent` stays true so the pay
+            // button is unaffected. ⛔ It is never a 500 and never a placeholder (Trap 3 / AC2).
+            const vpa =
+              vpaSoft === null || vpaSoft === NOMINEE_BANK_DECRYPT_FAILED_SENTINEL ? undefined : vpaSoft;
             return {
               rank: row.accountRank,
               // `bank_name` is a NOT NULL Tier-3 column, but an empty string is not schema-impossible —
@@ -382,12 +444,22 @@ export function createPaymentHandlers(deps: AppDeps) {
               accountHolderName,
               accountNumber,
               ifsc,
+              // RETAINED beside `vpa` (Story 8.17) — non-PII, it is what the pay button reads, and it is
+              // NOT redundant with the plaintext: `vpaPresent: true` with `vpa` absent is exactly the
+              // decrypt-failure state, and it keeps the button's behaviour unchanged there.
               vpaPresent: row.vpaCiphertext != null,
+              // Spread, so the key is genuinely ABSENT rather than present-and-`undefined` — absence is the
+              // contract (`vpa?: string`), and `null` is explicitly NOT it.
+              ...(vpa === undefined ? {} : { vpa }),
             };
           }),
         );
 
         // Audit the READ occurred — the account COUNT only, NEVER the decrypted PII (AC6).
+        // ⛔⛔ **UNCHANGED BY STORY 8.17, AND THAT IS DELIBERATE.** The wire gained the nominee's UPI ID;
+        // this audit line did NOT. A VPA is a Tier-1 payment coordinate — it belongs in the RESPONSE the
+        // member reads and in NO audit line, event payload or log, ever. ⛔ Do not "enrich" this context
+        // with the accounts' contents; the read stays attributable by actor + count.
         emitAuthAudit(deps, request, 'member_contribution.nominee_accounts_viewed', {
           actorId: memberIdStr,
           pariwarId: pariwarIdStr,

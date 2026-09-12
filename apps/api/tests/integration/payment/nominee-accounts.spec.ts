@@ -44,7 +44,7 @@ async function seedLivePoolMemberWithNomineeAccounts(
    * VPA-presence and `bank_name` degradation without forking a second helper.
    * ⛔ Defaults reproduce the original fixture EXACTLY, so the pre-existing AC6 case is unchanged.
    */
-  opts: { readonly vpa1?: string; readonly bankName1?: string } = {},
+  opts: { readonly vpa1?: string; readonly bankName1?: string; readonly corruptVpa1?: boolean } = {},
 ): Promise<{ poolId: string; cycleId: string; alertId: string; claimCaseId: string }> {
   const cycleId = randomUUID();
   const alertId = randomUUID();
@@ -145,8 +145,11 @@ async function seedLivePoolMemberWithNomineeAccounts(
           // ⭐ 11b.11 (AC6): a REAL encrypted VPA when the caller asks for one. `2026-09-04-191` cl.5
           // verified UPI-ID collection is BUILT and POPULATED (Story 8.13 / migration 0080) ⇒ a
           // `vpaPresent` assertion against an always-null fixture would pass vacuously.
-          vpaCiphertext:
-            opts.vpa1 === undefined
+          // ⭐ 8.17: `corruptVpa1` seeds an UNPARSEABLE envelope — the genuine decrypt-failure path for
+          // the VPA, which must degrade to OMISSION rather than the sentinel the other three fields use.
+          vpaCiphertext: opts.corruptVpa1 === true
+            ? 'not-a-parseable-envelope'
+            : opts.vpa1 === undefined
               ? null
               : await encryptNomineeBankField(opts.vpa1, pariwarId, t.deps.encryption),
           bankName: opts.bankName1 ?? 'State Bank of India',
@@ -264,7 +267,7 @@ describe.skipIf(!hasDatabase)('nominee-accounts read — real Tier-1 decrypt rou
   // PUBLIC Sahyog Vivran page; ⛔ it did ⛔ NOT touch the member donor path, and `-190` **cl.3** rules
   // the opposite direction — a logged-in member sees the COMPLETE banking information.
   // ⚠ A member must be able to PAY the family, and a masked account number ⛔ cannot be transferred to.
-  it('⭐⭐ AC6 — the member donor path still returns the THREE Tier-1 values UNMASKED, plus bankName + vpaPresent', async () => {
+  it('⭐⭐ AC6 + 8.17 — the donor path returns the THREE Tier-1 values UNMASKED, plus bankName, vpaPresent AND the VPA', async () => {
     const t = buildTestDeps({ env: { DATABASE_URL: process.env['DATABASE_URL'] } });
     try {
       const memberId = randomUUID();
@@ -288,20 +291,35 @@ describe.skipIf(!hasDatabase)('nominee-accounts read — real Tier-1 decrypt rou
       // constant and this assertion would prove nothing.
       expect(res.accounts.find((a) => a.rank === 2)!.vpaPresent).toBe(false);
 
-      // ⛔⛔ **AND THE VPA STRING ITSELF IS ⛔ NEVER ON THIS WIRE — IT NEVER HAS BEEN.**
-      // `NomineeBankAccountView` is `.strict()` and declares `vpaPresent: z.boolean()`; the plaintext
-      // is consumed SERVER-SIDE into the UPI intent. ⇒ `-191` cl.1's *"shown to the logged-in member
-      // so they can make the contribution"* is ALREADY SATISFIED by that path — its own follow-up
-      // records the clause as a **confirmation**, with the build task being ⛔ NOT to regress it.
-      // ⛔ Adding `vpa` here would be a NEW Tier-1 exposure ⛔ nobody ruled on. ⛔ Do ⛔ not "fix" a
-      // failure of this assertion by widening the contract.
-      for (const account of res.accounts) {
-        expect('vpa' in account).toBe(false);
-      }
-      expect(JSON.stringify(res)).not.toContain('ravi@upi');
+      // ⚠⛔⛔ **INVERTED AT STORY 8.17 — `#decision-2026-09-10-212` cl.2 (Trustee-ratified, DR + KB).**
+      // ⛔ **WHAT THIS BLOCK ASSERTED, kept as the record:** *"AND THE VPA STRING ITSELF IS NEVER ON THIS
+      // WIRE — IT NEVER HAS BEEN. `NomineeBankAccountView` is `.strict()` and declares
+      // `vpaPresent: z.boolean()`; the plaintext is consumed SERVER-SIDE into the UPI intent. ⇒ `-191`
+      // cl.1's 'shown to the logged-in member so they can make the contribution' is ALREADY SATISFIED by
+      // that path … Adding `vpa` here would be a NEW Tier-1 exposure nobody ruled on."*
+      // ⭐ cl.2 rules the UPI ID ONTO this wire and onto the payment screen — the narrow reading above is
+      // **SUPERSEDED**, and it was too narrow when written (a BUTTON does not discharge *"shown to the
+      // logged-in member"* for someone who pays from another device). ⛔ Inverted under authority, ⛔ not
+      // deleted ([[feedback_supersede_never_reinterpret]]).
+      expect(acc1.vpa).toBe('ravi@upi');
+      // ⛔ AND THE ABSENCE HALF STILL HOLDS: account #2 has no VPA, and the key is ABSENT — ⛔ not `null`,
+      // ⛔ not a placeholder. A nominee who left the optional field blank is a FIRST-CLASS state.
+      const acc2 = res.accounts.find((a) => a.rank === 2)!;
+      expect('vpa' in acc2).toBe(false);
 
       // ⛔ AND EXACTLY THESE KEYS — a shape assertion, so a field silently VANISHING fails too.
+      // ⚠ SEVEN on the VPA-bearing account (was six; `vpa` joined at 8.17) …
       expect(Object.keys(acc1).sort()).toEqual([
+        'accountHolderName',
+        'accountNumber',
+        'bankName',
+        'ifsc',
+        'rank',
+        'vpa',
+        'vpaPresent',
+      ]);
+      // … and still SIX where there is no VPA — the optional key is omitted, never emitted as null.
+      expect(Object.keys(acc2).sort()).toEqual([
         'accountHolderName',
         'accountNumber',
         'bankName',
@@ -309,6 +327,21 @@ describe.skipIf(!hasDatabase)('nominee-accounts read — real Tier-1 decrypt rou
         'rank',
         'vpaPresent',
       ]);
+
+      // ⭐⭐ **AC5 — THE LEAK ASSERTION MOVED HERE; ⛔ IT WAS NOT DELETED.** `expect(JSON.stringify(res))
+      // .not.toContain('ravi@upi')` used to sit above, guarding the RESPONSE. After `-212` cl.2 the VPA
+      // *belongs* in the response — and still belongs in ⛔ NO audit line, ⛔ NO event payload and ⛔ NO
+      // log. ⇒ the same assertion now guards the sinks where it is still true. Idiom follows
+      // `nominee/nominee-declare.spec.ts`.
+      expect(t.auditSink.ofType('member_contribution.nominee_accounts_viewed').length).toBeGreaterThanOrEqual(1);
+      expect(JSON.stringify(t.auditSink.events)).not.toContain('ravi@upi');
+      // ⛔ And the audit context stays COUNT-ONLY — the decrypted coordinates never join it either.
+      expect(JSON.stringify(t.auditSink.events)).not.toContain('123456789012');
+      expect(JSON.stringify(t.auditSink.events)).not.toContain('Ravi Kumar');
+      const vpaEvents = await t.pool.query<{ payload: unknown }>(
+        `SELECT payload FROM events_log WHERE payload::text LIKE '%ravi@upi%'`,
+      );
+      expect(vpaEvents.rows).toEqual([]);
     } finally {
       await t.pool.end().catch(() => undefined);
     }
@@ -341,6 +374,43 @@ describe.skipIf(!hasDatabase)('nominee-accounts read — real Tier-1 decrypt rou
       // ⭐ AND THE REST OF THE ACCOUNT IS UNAFFECTED — the degradation is per FIELD, ⛔ never per
       // account and ⛔ never per read.
       expect(acc1.accountNumber).toBe('123456789012');
+    } finally {
+      await t.pool.end().catch(() => undefined);
+    }
+  });
+
+  it('⭐⭐ 8.17 — a CORRUPTED VPA envelope degrades to OMISSION, ⛔ never the sentinel and ⛔ never a 500', async () => {
+    // ⚠⛔⛔ **THE ASYMMETRY THIS PINS, AND WHY IT IS NOT AN OVERSIGHT.** The three coordinate fields
+    // degrade to the DISTINCT sentinel `[unavailable — could not be shown]` — a value the screen shows
+    // in place, so the member can see that something failed rather than read a blank as real data.
+    // ⛔ The VPA must ⛔ NOT do that: a member who sees sentinel text in a UPI-ID slot might TRY TO PAY
+    // IT. A UPI ID is an ACTIONABLE coordinate, not a label. ⇒ its only safe degrade is ABSENCE, which
+    // is indistinguishable from the ordinary "this nominee left the optional field blank" case — and
+    // that is exactly right, because in both cases there is no UPI ID the member can use.
+    // ⭐ `vpaPresent` stays TRUE throughout, so the pay button's behaviour is unchanged (AC2).
+    const t = buildTestDeps({ env: { DATABASE_URL: process.env['DATABASE_URL'] } });
+    try {
+      const memberId = randomUUID();
+      await seedLivePoolMemberWithNomineeAccounts(t, memberId, PARIWAR, { corruptVpa1: true });
+
+      const h = createPaymentHandlers(t.deps);
+      const res = await h.nomineeAccounts(fakeRequest(memberId, PARIWAR));
+      // ⛔ NOT a 500 — the read succeeds.
+      expect(res.available).toBe(true);
+      if (!res.available) throw new Error(`expected available:true, got reason=${res.reason}`);
+
+      const acc1 = res.accounts.find((a) => a.rank === 1)!;
+      // ⛔ The key is ABSENT …
+      expect('vpa' in acc1).toBe(false);
+      // … and specifically it is ⛔ NOT the sentinel the sibling fields use.
+      expect(acc1.vpa).not.toBe(NOMINEE_BANK_DECRYPT_FAILED_SENTINEL);
+      // ⭐ Presence still reports TRUE — a ciphertext IS on file; only reading it failed. This is the
+      // state that proves `vpaPresent` and `vpa` are NOT redundant.
+      expect(acc1.vpaPresent).toBe(true);
+      // ⭐ AND THE REST OF THE ACCOUNT IS UNAFFECTED — per-FIELD degradation, exactly like the sentinel path.
+      expect(acc1.accountNumber).toBe('123456789012');
+      expect(acc1.accountHolderName).toBe('Ravi Kumar');
+      expect(acc1.ifsc).toBe('SBIN0000001');
     } finally {
       await t.pool.end().catch(() => undefined);
     }

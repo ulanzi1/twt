@@ -1,3 +1,26 @@
+# last_updated: 2026-09-12c (⭐⭐ **`11b-19` IMPLEMENTED — B's UNSHIPPED HALF SHIPS.** ⭐ ONE row moves:
+#   `11b-19-ratified-message-block-copy-source` **`in-progress` → `review`**. ⭐ `sahyog-shared` grows
+#   **21 ⇄ 21 → 30 ⇄ 30** — `$comment.message_block` + **8 keys** per locale. ⛔ **ZERO renders, ⛔ zero
+#   routes, ⛔ zero contracts, ⛔ zero DB** — ⭐ a pure catalog change, fenced at `AUTHORISED = []`.
+#   ⭐⭐ **THE FENCE WAS PROVEN TO BITE, ⛔ not assumed green** — a planted probe file made the
+#   zero-consumer test FAIL naming it by path; probe deleted, tree verified clean, suite re-run 19/19
+#   ([[feedback_gate_scope_semantic_coverage]]).
+#   ⚠⛔ **TWO THINGS FOUND WHILE BUILDING, ⛔ BOTH RECORDED RATHER THAN PAPERED OVER:**
+#   **(a) §8.1 GIVES THE TABLE LABELS IN ENGLISH ONLY**, but the parity gate requires an HI value (an
+#   absent key is a THROW at render, ⛔ not a fallback). ⭐ The two Hindi labels are ⛔ **NOT** a dev
+#   translation — **जनपद** / **नॉमिनी** are the **Panel's own Hindi words for these exact fields**,
+#   lifted from **§9.2's ratified HI index line** (same note, same ratification, same day), plus
+#   *"पूरा नाम"* for `-205` cl.1's ruled FULL form; ⭐ asserted in the test against B's shipped HI key.
+#   ⚠ ⭐ **Worth a future routing note's confirmation** — flagged in both `$comment`s.
+#   **(b) `स्व.` (§8.1) vs `स्व०` (B's shipped convention) DIVERGE.** ⭐ §8.1's spelling is KEPT —
+#   normalising it is exactly the *"re-punctuat[ing]"* the story forbids. ⭐ CHECKED, ⛔ not missed.
+#   ⭐ AC7 gate RUN, ⛔ not read off a comment: `pnpm turbo run i18n:check-parity` ⇒ **zero findings**.
+#   ⭐ Regressions: `@twt/i18n` 108/108 · `apps/public` copy suites 179/179 · `apps/mobile` 42/42 ·
+#   typecheck + lint clean.
+#   ⛔ Rows unchanged: `11b-20` / `11b-17` / `11b-3b` / `6-18` / `8-17` `ready-for-dev`.
+#   ⭐ **`11b-20` IS NOW UNBLOCKED FOR ITS COPY** — ⚠ ⛔ but ⛔ NOT started, and it still needs `11b-3b`
+#   for both headline tokens. ⭐ `11b-17`'s **STOP 2** is likewise discharged ([[feedback_closure_language_precision]]).)
+#
 # last_updated: 2026-09-12b (⭐⭐ **`11b-19` TASK 1 — GOVERNANCE, ⛔ BEFORE THE FIRST KEY.** ⭐ ONE row
 #   moves: `11b-19-ratified-message-block-copy-source` **`ready-for-dev` → `in-progress`**.
 #   ⭐ **AC0's OUTSTANDING HALF IS DISCHARGED** — Epic 11b gains a **`### Story 11b.19:` SECTION** in
@@ -18239,7 +18262,7 @@ development_status:
   # ⚠⛔ **KEY `11b-18` SKIPPED** — the ledger names `11b-18-drive-target-write-authority-retired` and
   # twice says it *"STAYS `ready-for-dev`"*, ⛔ but it is ⛔ ABSENT from `development_status` and has
   # ⛔ no file. ⛔ Recorded, ⛔ not resolved.
-  11b-19-ratified-message-block-copy-source: in-progress
+  11b-19-ratified-message-block-copy-source: review
   # ⭐⭐ 11b-20 — MINTED 2026-09-11 BY `#decision-2026-09-11-214` **Consequence 3**: the PUBLIC render
   # of the same ratified block — ⭐ the LAST unhomed half of the 2026-09-05 ratification.
   # ⛔⛔ **BLOCKED, ⛔ not open. ⛔ ZERO OPEN DECISIONS.** It needs **`11b-19`** (the copy) AND

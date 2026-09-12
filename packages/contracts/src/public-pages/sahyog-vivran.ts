@@ -270,6 +270,11 @@ export const SAHYOG_VIVRAN_PROHIBITED_KEYS = [
  * each account; 11 of 558 accounts carry one). ⇒ a null VPA is a nominee who ⛔ did not fill in an
  * **optional** field — a **PERMANENT** property, ⛔ never a pending one. It is recorded here because
  * the VPA still exists on the **member** payment path; it is only the **public** arm that is gone.
+ * ⚠ **NARROWED AT STORY 8.17, and ⛔ only on the member side:** `#decision-2026-09-10-212` cl.2
+ * (Trustee-ratified) now carries the VPA on the member payment **WIRE** and renders it on the payment
+ * screen — where, until 8.17, it was consumed server-side only. ⛔ **NOTHING HERE CHANGES:** the public
+ * arm stays withdrawn under `-190` cl.1 / `-191` cl.1 (a **MEMBER** field, ⛔ not a public one), and cl.2
+ * rules the payment screen ⛔ ONLY. ⛔ No sweep may read 8.17 as re-opening the public projection.
  */
 const NomineeAccountRank = z.union([z.literal(1), z.literal(2)]);
 

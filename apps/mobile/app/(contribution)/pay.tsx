@@ -478,6 +478,25 @@ export default function ContributionPayScreen() {
               tabular
             />
             <FieldRow label={t('upi_intent.ifsc_label', undefined, NS)} value={selectedAccount.ifsc} tabular />
+            {/* ⭐⭐ Story 8.17 — THE NOMINEE'S UPI ID, where the member is actually asked to pay.
+                `#decision-2026-09-10-212` cl.2 (Trustee-ratified, DR + KB) applying `2026-09-04-191` cl.1:
+                a member can now PAY FROM WHICHEVER APP OR DEVICE THEY ACTUALLY USE — or hand the ID to
+                whoever in the family does the paying — instead of being locked to this one screen at this
+                one moment. Unmasked and complete, on the same ground as the account number above.
+                ⛔ **ABSENT MEANS NO ROW — and that is the ORDINARY case, not the edge case.** The UPI ID is
+                an OPTIONAL field at claim-time intake, so for most nominees there is simply none. ⛔ No
+                placeholder, ⛔ no error, ⛔ no "not collected" copy — the row just is not there. The same
+                omission covers a failed decrypt (the server omits rather than sentinel-ing it, so a member
+                is never shown sentinel text they might try to pay).
+                ⛔ `selectedAccountAllFieldsUnavailable` above stays a THREE-field test on purpose — adding
+                `vpa` to it would let a missing UPI ID blank the whole coordinates block. */}
+            {selectedAccount.vpa === undefined ? null : (
+              <FieldRow
+                label={t('upi_intent.vpa_label', undefined, NS)}
+                value={selectedAccount.vpa}
+                tabular
+              />
+            )}
           </YStack>
         ) : null}
 

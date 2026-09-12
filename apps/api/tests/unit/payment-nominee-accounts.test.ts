@@ -184,6 +184,7 @@ describe('nominee-accounts read — the lit-up EQUAL list (AC1/AC6)', () => {
           accountNumber: 'PLAIN(CT_NUM_1)',
           ifsc: 'PLAIN(CT_IFSC_1)',
           vpaPresent: false, // account #1 has no VPA ciphertext
+          // ⛔ and NO `vpa` key — absent, never null (it has no ciphertext to decrypt).
         },
         {
           rank: 2,
@@ -192,18 +193,42 @@ describe('nominee-accounts read — the lit-up EQUAL list (AC1/AC6)', () => {
           accountNumber: 'PLAIN(CT_NUM_2)',
           ifsc: 'PLAIN(CT_IFSC_2)',
           vpaPresent: true, // account #2 HAS a VPA ciphertext
+          vpa: 'PLAIN(CT_VPA_2)', // ⭐ and it is now DECRYPTED and returned — Story 8.17
         },
       ],
     });
-    // The VPA ciphertext is NEVER decrypted — vpaPresent is a presence check only (6 field decrypts, not 7).
-    expect(decryptNomineeBankFieldSoft).toHaveBeenCalledTimes(6);
+
+    // ⚠⛔⛔ **SUPERSEDED AT STORY 8.17 — `#decision-2026-09-10-212` cl.2 (Trustee-ratified, DR + KB).**
+    // ⛔ **WHAT THIS BLOCK ASSERTED, kept as the record:** *"The VPA ciphertext is NEVER decrypted —
+    // vpaPresent is a presence check only (6 field decrypts, not 7)"*, plus
+    // `expect(decryptedTokens).not.toContain('CT_VPA_2')` and `expect(acc).not.toHaveProperty('vpa')`.
+    // ⭐ cl.2 rules the UPI ID onto the payment screen, and its **Consequence 3** names *"the
+    // `nominee-accounts` handler's decrypt"* as touched scope ⇒ the FOURTH decrypt is authorised, and
+    // these assertions are INVERTED under that authority rather than deleted
+    // ([[feedback_supersede_never_reinterpret]]).
+    //
+    // ⭐⭐ **AND THIS IS WHERE AC4's COST CLAIM IS MECHANIZED RATHER THAN MERELY ASSERTED.** The story
+    // sizes the price as *"+1 audit line per VPA-BEARING account — 0, 1 or 2 per screen load"* (one
+    // audit line per encrypted FIELD: `envelope.ts` fires `auditHook('decryptDek')` on every
+    // `decryptTier1` with NO DEK cache, each taking the deployment-wide advisory lock). This fixture
+    // has exactly ONE VPA-bearing account of two ⇒ the count must be 6 + 1 = **7**, ⛔ not 8. A future
+    // change that decrypts unconditionally would still return the right VALUES and would still pass
+    // every other assertion here — it would only show up as this number moving to 8.
+    expect(decryptNomineeBankFieldSoft).toHaveBeenCalledTimes(7);
     const decryptedTokens = decryptNomineeBankFieldSoft.mock.calls.map((c) => c[0]);
-    expect(decryptedTokens).not.toContain('CT_VPA_2');
-    // No priority/primary field leaked onto any account.
+    expect(decryptedTokens).toContain('CT_VPA_2');
+    // ⛔ EXACTLY ONE new decrypt is authorised (AC4) — the VPA-less account must cost nothing at all.
+    expect(decryptedTokens.filter((tok: string) => String(tok).startsWith('CT_VPA_'))).toEqual([
+      'CT_VPA_2',
+    ]);
+
+    // No priority/primary field leaked onto any account — the EQUAL-destinations invariant, unchanged.
     for (const acc of res.available ? res.accounts : []) {
       expect(acc).not.toHaveProperty('primary');
-      expect(acc).not.toHaveProperty('vpa');
     }
+    // ⛔ And the ABSENCE half still holds on the account that has no VPA: the key is omitted entirely.
+    const [first] = res.available ? res.accounts : [];
+    expect(first && 'vpa' in first).toBe(false);
   });
 
   it('one account → a single-entry list (no needless second choice)', async () => {

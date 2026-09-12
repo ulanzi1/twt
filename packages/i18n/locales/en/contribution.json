@@ -213,6 +213,7 @@
   "upi_intent.account_holder_label": "Account holder",
   "upi_intent.account_number_label": "Account number",
   "upi_intent.ifsc_label": "IFSC",
+  "upi_intent.vpa_label": "UPI ID",
   "upi_intent.bank_label": "Bank",
   "upi_intent.choose_other_account": "Choose the other account",
   "upi_intent.choose_other_account_a11y": "Go back and choose the nominee's other bank account",

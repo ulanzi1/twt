@@ -8689,3 +8689,77 @@ violation.
   per-surface patch on this story alone. **Trigger:** unchanged — any multi-account or device-sharing
   requirement, any DPDPA review of at-rest cached personal data on the handset, or the first report of
   one member seeing another's data after a sign-out.
+
+## Deferred from: code review of 11b-19-ratified-message-block-copy-source (2026-09-12)
+
+- **"Nothing else moved" test regexes an unrelated package's exact chained-method spelling.**
+  [`packages/i18n/tests/sahyog-shared-dark-copy.test.ts` — ⚠ navigate by the assertion text below,
+  ⛔ not by line number: two later review passes already shifted this file, exactly the reason this
+  same file tells its OWN readers to navigate `sahyog-vivran.ts` by field declaration instead of a
+  line address.] The AC4 district-nullability check
+  asserts `` district:\s*z\.string\(\)\.min\(1\)\.nullable\(\) `` against
+  `packages/contracts/src/public-pages/sahyog-vivran.ts` verbatim — a semantically-equivalent refactor
+  there (e.g. reordering `.min(1)`/`.nullable()`) breaks this i18n test for reasons unrelated to copy.
+  Pre-existing pattern (the same technique already guards `nomineeName` at `:232`, from B's earlier
+  `index_line` fence); redesigning the verification method (schema introspection instead of source
+  regex) is out of scope for a copy-only story. **Trigger:** the next edit to
+  `sahyog-vivran.ts`'s `district` or `nomineeName` field declarations, or a hardening pass over this
+  test file's verification technique.
+
+- **Trap 5's "no relationship claim" guarantee is a narrow keyword blacklist, trivially defeated by
+  rephrasing.** [`packages/i18n/tests/sahyog-shared-dark-copy.test.ts:341`] The assertion
+  `not.toMatch(/nominee of|की नॉमिनी|के नॉमिनी/)` only catches these exact phrasings; a different
+  English paraphrase or a Hindi construction like "…नामित है" would pass while still asserting the
+  same schema-unsupported relationship. **Trigger:** any future edit to this key family's copy, or a
+  routing note that ratifies additional relationship-adjacent wording.
+  ⚠⛔ **SAME LIMITATION CLASS, FOUND AGAIN 2026-09-12 (re-review of the review): the widened
+  zero-consumer `RESOLVER` regex** (`` /['"`]message_block\.[\w.$]+/ `` — navigate by the `const
+  RESOLVER` declaration in the `⛔ ZERO CONSUMERS` test, ⛔ not by line number) catches a bare literal
+  and a template-literal-constructed key, but ⛔ **not** a key built by string concatenation
+  (`'message_block' + '.' + key`) — no finite regex closes a "no resolver exists anywhere" guarantee
+  the same way no finite blacklist closes "no relationship claim exists anywhere." Both are the
+  copy-catalog-fence version of the same regex-vs-semantic-guarantee gap, ⛔ **not the same trigger**
+  as the Trap 5 bullet above (that one fires on a copy-wording change; this one fires on a render
+  site's *key-construction style*). **Trigger:** the first `11b-17`/`11b-20` render site landing —
+  its code review should specifically check whether it builds any `message_block.*` key by anything
+  other than a bare literal or a simple `` `prefix.${variant}` `` template.
+
+- **`$comment.*` key exclusion from the production parity/resolver surface is asserted only by the
+  test file's own filter, never verified against production code.** The convention
+  (`!k.startsWith('$comment')`) is inherited from B's earlier `$comment.index_line` and not
+  demonstrated against `packages/i18n/scripts/check-parity.ts` or `resolver.ts` in this diff.
+  **Trigger:** a hardening pass on the i18n package, or any report of a `$comment` key surfacing at
+  runtime.
+
+- **The "five traps" governance narrative is duplicated near-verbatim across the Change Log, four
+  `sprint-status.yaml` ledger blocks, `epics.md`, and two locale `$comment` blocks.** This diff's own
+  finding — that `$comment.index_line` had gone stale about its own render state — demonstrates this
+  duplication pattern reliably rots, yet this diff adds more copies rather than fewer.
+  **Trigger:** the next story that must correct a fact already stated in one of these five places and
+  finds the others still say the old thing.
+
+- **The darkness proof pins the exact thrown-error wording from `resolver.ts`.**
+  [`packages/i18n/tests/sahyog-shared-dark-copy.test.ts`] Both the `index_line.*` and `message_block.*`
+  assertions match `/missing interpolation param '...'/` literally, coupling a "pure catalog change"
+  story's tests to `resolver.ts`'s error-message implementation detail. A future wording tweak to that
+  message (unrelated to copy darkness) breaks these tests. **Trigger:** any edit to
+  `packages/i18n/src/resolver.ts`'s thrown error message.
+
+- **`baseline_commit` pins going stale mid-review is a recurring cross-story process gap.** This
+  story's `ff92cb00` and sibling `11b-20`'s `738bb3ea` were both pinned to commits that turned out to
+  live only on short-lived branches, caught and re-pinned reactively during each story's own validate
+  pass rather than prevented at story-creation time. **Trigger:** the next story-creation workflow
+  revision, or a third story minted the same way.
+
+- **Both locale JSON files ship a multi-hundred-word `$comment.message_block` governance narrative.**
+  [`packages/i18n/locales/en/sahyog-shared.json`, `packages/i18n/locales/hi/sahyog-shared.json`] If
+  these locale files are loaded client-side at runtime (mobile app / public site), this bloats the
+  payload with internal deliberation prose that serves no rendering purpose. Same convention as B's
+  pre-existing `$comment.index_line`. **Trigger:** an i18n bundle-size audit, or a build-time
+  `$comment.*`-stripping pass across the package.
+
+- **AC4's district-drop behavior is asserted only vacuously.** The test checks
+  `not.toMatch(/not recorded/i)` on the static label string, which is trivially true regardless of any
+  future column-dropping logic — AC6 forbids a render test here, so the actual drop-when-absent
+  guarantee is unenforceable until a render site exists. **Trigger:** `11b-17` AC10 / Task 5d or
+  `11b-20` landing — the first real render site should carry its own drop-when-absent assertion.

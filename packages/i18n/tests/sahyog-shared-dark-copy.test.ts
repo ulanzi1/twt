@@ -26,7 +26,7 @@
 // two-source defect `-193` cl.3 exists to close, on a **Trustee-ratified** line
 // ([[feedback_circular_deferral_between_sibling_stories]], re-forming AFTER the split was resolved).
 
-import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { readFileSync, readdirSync, realpathSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -36,7 +36,12 @@ import { t } from '../src/index.js'
 
 const NAMESPACE = 'sahyog-shared'
 const LOCALES = ['en', 'hi'] as const
-const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../../..')
+// ⚠⛔ [Review][Patch] CORRECTED 2026-09-12 (third pass) — A PRIOR FIX HERE USED `resolve()`, WHICH
+// ⛔ DOES NOT RESOLVE SYMLINKS OR NORMALISE CASE, WHILE CLAIMING TO CLOSE EXACTLY THAT GAP. ⭐
+// `realpathSync` DOES: both `OWN_FILE` and every walked `f` are canonicalised through it below, so
+// the `===` comparison compares real filesystem identity, ⛔ not just two string spellings of a path.
+const OWN_FILE = realpathSync(fileURLToPath(import.meta.url))
+const repoRoot = join(dirname(OWN_FILE), '../../..')
 
 /**
  * ⭐ Read a variant's RAW TEMPLATE, ⛔ never through `t()`.
@@ -189,9 +194,17 @@ describe('⛔⛔ AC9 — ⛔ NEITHER TOKEN IS RENDERED. The copy exists; the ren
     // **500 / outage arm on a live public page**, ⛔ not a blank figure. ⇒ every resolver must sit
     // behind {@link selectIndexLineVariant}'s decision — including its `null`, which means
     // ⛔ **NO ratified variant fits** and the row renders ⛔ nothing (`2026-09-07-205` cl.6).
-    const RESOLVER = /['"`]index_line\.[a-z_]+['"`]/
+    //
+    // ⚠⛔ [Review][Patch] WIDENED 2026-09-12 (re-review) to the SAME shape as the `message_block.*`
+    // RESOLVER below — ⭐ two copies of this fence drifting is exactly what this file's own doc-block
+    // warns against for the walker (`SCAN_ROOTS`/`SKIP`). A dynamically-built key
+    // (`` `index_line.${variant}` ``) would have slipped past the old fully-quoted-literal form
+    // just as it would have for `message_block.*`; the one authorised site (`sahyog.astro`) uses
+    // only bare literals, so this change is a no-op for it (verified: the fence still names exactly
+    // that one file).
+    const RESOLVER = /['"`]index_line\.[\w.$]+/
     const resolvers = files.filter((f) => {
-      if (f.endsWith('sahyog-shared-dark-copy.test.ts')) return false
+      if (realpathSync(f) === OWN_FILE) return false
       return RESOLVER.test(readFileSync(f, 'utf8'))
     })
 
@@ -302,6 +315,15 @@ describe('⭐ AC1/AC2/AC3 — the ratified §8.1 message block is AUTHORED, verb
       'परिवार के साथ खड़े होने वाले हर सहकर्मी का हम हृदय से आभार व्यक्त करते हैं।',
     )
     expect(template('hi', 'message_block.tagline')).toBe('सहयोग का हाथ, हर परिवार के साथ।')
+    // ⚠⛔ [Review][Patch] CORRECTED 2026-09-12 (re-review) — A PRIOR PASS ADDED A REDUNDANT
+    // `toContain('Pariwar')` HERE, REASONING IT WAS A MISSING "MIRROR" OF THE EN TAGLINE CHECK.
+    // ⛔ THAT WAS A NO-OP: the exact-match `.toBe()` two lines below ALREADY fully pins this string
+    // — any transliteration of "Pariwar" to परिवार changes the string and fails `.toBe()` on its
+    // own, so a second `.toContain()` assertion on the same value adds zero detection power. ⭐ THE
+    // ASYMMETRY THE ORIGINAL FINDING FLAGGED NEVER EXISTED: the EN tagline check above (`:283`) is
+    // likewise a bare `.toBe()` exact match, with no additional `.toContain()` beside it either.
+    // ⭐ Removed the no-op line rather than leave a redundant assertion in place
+    // ([[feedback_supersede_never_reinterpret]] — the correction is recorded, not silently dropped).
     expect(template('hi', 'message_block.join')).toBe(
       'Pariwar से आज ही जुड़ें और इस आंदोलन का हिस्सा बनें।',
     )
@@ -383,17 +405,43 @@ describe('⭐ AC1/AC2/AC3 — the ratified §8.1 message block is AUTHORED, verb
     const raw = JSON.parse(
       readFileSync(join(repoRoot, `packages/i18n/locales/en/${NAMESPACE}.json`), 'utf8'),
     ) as Record<string, string>
+    // ⚠⛔ [Review][Patch] CORRECTED 2026-09-12 (third pass) — THE RATIONALE FOR KEEPING THIS CHECK
+    // WAS WRONG. It is ⛔ NOT the only one that names the offending key (the structural walk below's
+    // own assertion message does that too). ⭐ THE REAL REASON: this grep runs over the WHOLE
+    // `message_block.*` family, ⛔ not just `.headline.*` — it would catch a `no_amount` variant
+    // minted under an ENTIRELY DIFFERENT key path (e.g. `message_block.table.no_amount`), which the
+    // structural walk below cannot see because it only ever looks at `.headline.*` keys.
     expect(Object.keys(raw).filter((k) => /^message_block\..*no_amount/.test(k))).toEqual([])
 
+    // ⚠⛔ [Review][Patch] THE NAMING CHECK ABOVE ONLY CATCHES A VARIANT SPELLED `no_amount` — ⭐ THE
+    // STRUCTURAL GUARANTEE IS THE ONE THAT MATTERS. Walk every `message_block.headline.*` key that
+    // EXISTS, however it is named, and require `{amount}` on every one of them. A future variant
+    // that dropped `{amount}` under a different name (e.g. `.pending`) would pass the naming grep
+    // above but fails HERE.
+    //
+    // ⚠⛔ [Review][Patch] CORRECTED 2026-09-12 (third pass) — TWO GAPS IN THE FIRST VERSION OF THIS
+    // WALK, BOTH CLOSED: (1) it read `headlineKeys` from the EN file only and reused them for HI too
+    // — a headline variant that existed in HI but not EN would never be walked at all; the two
+    // locales' key sets are now UNIONED. (2) the filter required a `.` after `headline`, so a
+    // (structurally wrong, but not impossible) bare `message_block.headline` key with no variant
+    // suffix would silently skip this check; the filter now also matches that exact key.
+    const hiRaw = JSON.parse(
+      readFileSync(join(repoRoot, `packages/i18n/locales/hi/${NAMESPACE}.json`), 'utf8'),
+    ) as Record<string, string>
+    const isHeadlineKey = (k: string) =>
+      k.startsWith('message_block.headline.') || k === 'message_block.headline'
+    const headlineKeys = [
+      ...new Set([...Object.keys(raw), ...Object.keys(hiRaw)].filter(isHeadlineKey)),
+    ]
     for (const locale of LOCALES) {
-      for (const key of ['message_block.headline.full', 'message_block.headline.no_family']) {
+      for (const key of headlineKeys) {
         expect(template(locale, key), `${locale}/${key} must carry {amount}`).toContain('{amount}')
       }
     }
 
     // ⚠⛔ AND ⛔ NO COMBINATORIAL FAMILY CREPT IN: the headline has exactly TWO variants, ⛔ never one
     // per combination of absent tokens (§10.2 ruling 3, `-214` Consequence 6).
-    expect(Object.keys(raw).filter((k) => k.startsWith('message_block.headline.'))).toHaveLength(2)
+    expect(headlineKeys).toHaveLength(2)
   })
 
   it('⛔⛔ ⛔ NO LITERAL ₹ ANYWHERE IN THE FAMILY — ⭐ `{amount}` carries its own (Trap 1)', () => {
@@ -489,9 +537,19 @@ describe('⛔⛔ AC6 — ⛔ NOTHING RENDERS THE MESSAGE BLOCK. The copy exists;
     // supplied"*, naming each authorised site, which is the property that actually protects the page
     // ([[feedback_supersede_never_reinterpret]]). ⚠ That is this fence's OWN author leaving the
     // instruction in writing, exactly as B's did above.
-    const RESOLVER = /['"`]message_block\.[a-z_.]+['"`]/
+    //
+    // ⚠⛔ [Review][Patch] THE CLOSING QUOTE WAS DROPPED ON PURPOSE (2026-09-12). A render site is
+    // ⛔ NOT obligated to spell the key as one bare literal — `` `message_block.headline.${variant}` ``
+    // is exactly the shape `11b-17`/`11b-20` will plausibly write once they pick a variant at
+    // runtime. Requiring a matched closing quote/backtick would let that consumer slip past
+    // `AUTHORISED = []` undetected, so the pattern no longer demands the literal be fully closed —
+    // ⚠ CORRECTED 2026-09-12 (re-review): `$` is deliberately INCLUDED in `[\w.$]`, ⛔ not a
+    // terminator — it is what lets the match run up to and through the `$` of a `${` interpolation
+    // opener; it is the UNQUOTED `{` immediately after that the character class excludes, which is
+    // what actually stops the match there.
+    const RESOLVER = /['"`]message_block\.[\w.$]+/
     const resolvers = files.filter((f) => {
-      if (f.endsWith('sahyog-shared-dark-copy.test.ts')) return false
+      if (realpathSync(f) === OWN_FILE) return false
       return RESOLVER.test(readFileSync(f, 'utf8'))
     })
 

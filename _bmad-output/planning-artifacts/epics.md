@@ -5575,6 +5575,70 @@ So that I can see what my contributions have added up to, in one place inside th
 
 ---
 
+### Story 11b.19: B's Unshipped Half — the Ratified Message Block and its `Nominee full name` | `District` Table `[COPY SOURCE]`
+
+> ⭐⛔ **SECTIONED 2026-09-12 (Story 11b.19 Task 1, before the first key was written).** This story had **no `epics.md` entry** until it created its own — the **Story 11b.15 precedent** (its `SECTIONED 2026-09-09` annotation, `epics.md:5496`, itself following **8.16** and **7.11**) — so a future `sprint-planning` run can ⛔ **neither drop it nor regenerate a ghost**. ⚠ The sprint key `11b-19-ratified-message-block-copy-source` was already *named* in `sprint-status.yaml` (row + ledger, `7d12a4ce`); ⇒ this discharges the missing **section**, ⛔ not a first mention.
+>
+> ⭐ **COMMISSIONING AUTHORITY: [`2026-09-11-214`](../../.decision-log.md#decision-2026-09-11-214) Consequence 2** — *"B's COPY SOURCE NEEDS A NAMED HOME … recorded **before F ships**."* ⚠ `-191` cl.1 already lapsed once for want of exactly this ([[feedback_closure_language_precision]]).
+>
+> ⚠⛔ **IT IS ⛔ NOT NEW SCOPE — ⭐ IT IS B's UNSHIPPED HALF.** Story **B** (`11b-12`, **`done`**) was routed the §8.1 message block **and** the §9.2 index line on 2026-09-05 and shipped **only the index line** (`index_line.*`, ✅ live). ⭐ Verified live at authoring: `grep "Be the Movement"` / `"सहयोग का हाथ"` / `message_block` across `packages/i18n/locales`, `apps/` and `packages/` ⇒ **ZERO**. ⚠ Story **E** (`11b-15`) also closed `done` owing the **render** half — ⭐ that debt stays **RECORDED against E** and is ⛔ never back-filled here (`-214` Consequence 4, [[feedback_record_unattested_no_backfill]]).
+>
+> ⭐⭐ **THE AUTHORITY IS ALREADY RATIFIED ⇒ ⛔ THIS STORY AUTHORS; IT ⛔ DECIDES NOTHING.** Every sentence of the copy is the Panel's own (DR + KB, 2026-09-05). ⛔ It may ⛔ not be improved, shortened, re-punctuated or translated — ⚠ a wording change is a **new routing note**, ⛔ never a render- or authoring-site act.
+
+As **the trust**,
+I want the message the Panel ratified for a bereaved family's drive to exist in **ONE** place, in **both** languages,
+So that the member app and the public page each render the **SAME** words — ⛔ instead of two surfaces inventing their own, or a dev writing the trust's condolence copy at a render site.
+
+**Depends on:** ⛔ **Nothing blocking.** Story 11b.14 (**D**) is `done` ⇒ `{amount}` exists as a field; ⚠ but the block is **dark** regardless until a render site supplies every token. **Blocks:** Story 11b.17 (**F**) **AC10 / Task 5d** (its **STOP 2**), and Story 11b.20 (the public render, `-214` Consequence 3).
+
+**Acceptance Criteria:**
+
+**Given** `-214` Consequence 2 and the routing note **§8.1**, Trustee-ratified DR + KB 2026-09-05
+**When** the copy source ships
+**Then** the **five-paragraph block** exists in **`sahyog-shared`**, in **both** locales, **verbatim** — ⛔ never a second namespace (`-193` cl.3, `-206` cl.1)
+**And** ⚠⛔ the **Devanagari tagline stays Devanagari in the ENGLISH copy** — ⭐ that is the Panel's own text, ⛔ not an oversight
+**And** ⚠⛔ **the literal `₹` is DROPPED from `₹{amount}`** — ⭐ `{amount}` arrives **ALREADY FORMATTED** and carries its own ₹ (`$comment.live_line`: *"Yes rupee sign should appear"*; `$comment.drive_target`: *"`Expected: ₹ 300`"*) ⇒ a literal ₹ ships **`₹₹ 19,45,000`**. ⭐ B's own `index_line.full`, from the **same ratification on the same day**, carries ⛔ no literal ₹ — ⇒ follow the **shipped key**, ⛔ not the note's typography
+**And** ⚠ §8.1's **`{familyName}`** is normalised to **`{family_name}`** — ⭐ every shipped key in this namespace is snake_case ⇒ the **same token**, spelled the way `t()` resolves it here, ⛔ not an edit to ratified text
+
+**Given** §8.1's *"Plus: a table above the message"* and `-214` Consequences 7 + 8
+**When** the two column labels are authored
+**Then** they are **`Nominee full name`** (left) · **`District`** (right) — ⭐ the **FULL** form is the ruled form (`-205` cl.1) ⇒ the per-Pariwar `public_name_presentation_mode` has ⛔ **no subject** here
+**And** ⚠⛔ **they are LABELS, ⛔ NOT ASSERTIONS.** The value behind *"Nominee"* is `account_holder_name_ciphertext` — 6.8's **D1** removed the nominee linkage deliberately (⛔ no FK, ⛔ no rank, ⛔ no match rule) and `deferred-work.md` **`D5-subject (i)`** rules *"the **SCHEMA** is the authority"* ⇒ ⛔ ⛔ **no copy anywhere may say the person *"is the nominee of"* anyone** — ⭐ that sentence-level claim is §9.3's finding and `D5-subject (ii)`'s **commissioned** work to make true, ⛔ not ours to assume
+
+**Given** `-214` Consequence 5 — `deceased_member_name` is **nullable** and `t()` **THROWS** (`packages/i18n/src/resolver.ts:36-42`, the throw at `:39` inside `interpolate`)
+**When** a drive has no publishable family name
+**Then** the **no-name variant supplied by the Panel at §9.1 row 4** is used — ⛔ ⛔ **never one derived by a dev**
+**And** it replaces the **HEADLINE only**; ⭐ the remaining four paragraphs are name-free and unchanged
+**And** ⚠⛔ **this is a SAFETY property, ⛔ not a nicety** — resolving the full variant on a nameless drive takes down the **whole page**, ⛔ not one row. ⭐ Exactly why B shipped **four** `index_line.*` variants
+
+**Given** **§10.2 ruling 3** (Trustee-ratified) — *"an absent `{district_name}` (or any absent token) **drops its clause**. ⛔ No combinatorial variants."*
+**When** a token is absent
+**Then** its **clause is OMITTED** — ⛔ not a placeholder, ⛔ not *"Not recorded"*, ⛔ not a marker; and **one variant per absent token**, ⛔ never one per **combination**
+**And** ⭐⭐ **B's ONE NON-OBVIOUS CALL IS COPIED, ⛔ not re-derived:** its `no_family` variant drops the **district** clause **TOO** — *"who served in … district"* / *"जनपद … में कार्यरत"* modifies the **DECEASED MEMBER**, so leaving it attributes the posting district to the **NOMINEE**. ⚠ ⇒ the **same reasoning governs the TABLE**: a `District` column beside a nominee's name, with the deceased absent, **mis-attributes the posting**. ⚠ `District` is `.nullable()` on the wire (`sahyog-vivran.ts`, the `district:` field declaration — ⛔ **not** a line number: it has moved `:322`→`:344`→`:349`)
+**And** ⚠⛔ **there is ⛔ NO `no_amount` VARIANT AND THERE MUST ⛔ NOT BE ONE.** §9.1's implementation note on blocker (1) did order B *"the copy and the **no-amount variants**"* — ⚠ that was **ORDERING against an unbuilt story D**, and ⭐ **D (`11b-14`) is `done`** ⇒ the condition it guarded is **gone**. ⭐ B's own shipped precedent settles it and is **ASSERTED**, ⛔ not assumed: all four `index_line.*` variants carry `{amount}` and `sahyog-shared-dark-copy.test.ts` pins exactly that (*"`{amount}` is on EVERY variant — it is pending-on-D, ⛔ not nullable"*) ⇒ **`{family_name}` is the ONLY omittable token**
+
+**Given** `-214` cl.4(b)/(c)/(d) — ⭐ the renders are **elsewhere** and ⛔ **not this story's**
+**When** the keys land
+**Then** ⛔ **NOTHING RENDERS**: ⛔ no component · ⛔ no route · ⛔ no contract · ⛔ no DB · ⛔ no public surface · ⛔ no member surface
+**And** ⭐ a **zero-consumer fence** proves it — ⛔ ⛔ **do ⛔ not invent one:** `packages/i18n/tests/sahyog-shared-dark-copy.test.ts` is B's own shipped, reviewed dark-copy fence and already carries all five properties — a repo-wide `apps/` + `packages/` walk over `.ts|.tsx|.astro`, **self-exclusion**, a **non-vacuity** assertion (`files.length > 200`), an **`AUTHORISED` allow-list** compared with `toEqual` (⭐ **`[]`** for this family), and a `t()`-**throws** proof of darkness plus a supply-every-token round-trip (⛔ so *"dark"* ⛔ never excuses a broken string)
+**And** ⚠⛔ **the `$comment` mirrors `$comment.index_line`'s SHAPE, ⛔ NOT its present tense.** ⭐ That comment's *"RENDERED NOWHERE YET"* half is **stale about itself** — story **D** landed and `index_line.*` **IS resolved live** at `apps/public/src/pages/sahyog.astro:186-236` behind `selectIndexLineVariant`. ⇒ the new `$comment` states the property that **survives the render arriving** — *the key is resolved ⛔ **ONLY** where **EVERY** token is supplied* — ⭐ so when `11b-17`/`11b-20` light it up the comment **NARROWS**, ⛔ it does ⛔ not become false ([[feedback_supersede_never_reinterpret]]). ⛔ B's stale comment is ⛔ **not edited here**
+
+**Given** the bilingual surface contract
+**When** the new key family lands
+**Then** both locales stay **structurally identical** — same key set, same token set per key, ⛔ no key in one locale absent from the other
+**And** ⭐ the gate is **real and named**: CI job **`i18n-parity`** (`.github/workflows/ci.yml:223`) runs **`pnpm turbo run i18n:check-parity`** → `packages/i18n/scripts/check-parity.ts`; ⭐ **PASS = zero findings**, a miss prints `locales/hi/sahyog-shared.json :: key '<k>'` and fails the job. ⚠ It flags an **empty / whitespace-only** HI value too ⇒ ⛔ a placeholder is ⛔ not a way past it. ⭐ `sahyog-shared` stands at **21 ⇄ 21 keys, ⛔ zero asymmetry** — that is the state to preserve
+
+**Dev Notes / guardrails:**
+- ⛔ **NO PREDICATE THAT GATES A MEMBER'S ACCESS TO A BENEFIT** is introduced or changed (AI-10-1): ⛔ no eligibility, ⛔ no assignment, ⛔ no obligation, ⛔ no amount owed, ⛔ no visibility rule. ⭐ This story adds **i18n KEYS and ⛔ nothing else** ⇒ ⭐ there is ⛔ **no member-facing predicate to state**, recorded here rather than left as an unasked question.
+- ⭐ **AUTHOR IT; ⛔ DO ⛔ NOT RENDER IT.** `t()` throws on an unsupplied token ⇒ a premature render fails **LOUDLY**, and on a **page-shaped** block that is the **whole page** (§8.3(2): the block *"is written for a **PAGE**"*).
+- ⚠ ⛔ **No render test** — ⭐ there is ⛔ nothing to render; a render test here would be **vacuous by construction**.
+- ⚠⛔ **KEY `11b-18` IS DELIBERATELY SKIPPED.** `11b-18-drive-target-write-authority-retired` is ⛔ **not a row in `development_status`** (the 11b rows run `…-17`, `-19`, `-20`) — ⚠ **but its story FILE EXISTS**, on the unmerged local branch `story/11b-18-…` (`99e18142`, 2026-09-07), and the ledger's `2026-09-07k` block says the omission is **DELIBERATE**, with a **LEDGER MERGE** expected. ⇒ ⭐ the key is ⛔ not an orphaned name; it is **CLAIMED by an authored `ready-for-dev` story awaiting merge**. ⭐ Recorded, ⛔ not resolved here.
+- ⭐ **`-214` IS NOW HOMED END TO END** — Consequence 2 = **this story** · cl.4(b) = `11b-17` **AC10 / Task 5d** · Consequence 3 = **`11b-20`**. ⚠ ⛔ **NOT *"closed"*** — ⭐ all three are `ready-for-dev`, ⛔ none is built ([[feedback_closure_language_precision]]). ⚠ **SWEEP NOTE, ⛔ not this story's to edit:** `11b-17` still carries the retired *"Consequence 3 … is ⛔ still unhomed"* sentence — ⭐ the **last line of its STOP 2 block** — for F's next pass.
+
+**FRs:** ⛔ **None amended.** This story introduces no FR and edits none — ⭐ it is a **copy source**, ⛔ not a surface. **UX-DR anchors:** ⛔ none — the block is ratified **copy**, ⛔ not a pattern. **Decisions:** **[`2026-09-11-214`](../../.decision-log.md#decision-2026-09-11-214)** (⭐ the commissioning authority — **Consequence 2**, plus cl.4(d) and Consequences 5, 6, 7, 8) · [`2026-09-04-193`](../../.decision-log.md#decision-2026-09-04-193) cl.3 + [`-206`](../../.decision-log.md#decision-2026-09-07-206) cl.1 (⭐ **ONE** shared copy source) · [`-205`](../../.decision-log.md#decision-2026-09-07-205) cl.1 (the **FULL** name form). **Routing note:** `trustee-panel-routing-note-2026-09-05-11b12-under-funded-commitment-claim.md` **§8.1** (the text) · **§9.1 row 3** (the routing) · **§9.1 row 4** (the no-name variant) · **§10.2 ruling 3** (omit the clause).
+
+---
+
 ## Epic 12: Module Marketplace
 
 Members see their eligible-modules shelf below My Pool. Admin targets modules by Pariwar/scope/cohort with validity windows + slot caps. Time-bombed auto-archive. First partners: HDFC home loan, LIC term plan, health-camp pilot. **Suppressed in all account-frozen states (UX-DR1, Stance #1) — structurally absent on a deceased member's phone, not "empty" or "hidden".**

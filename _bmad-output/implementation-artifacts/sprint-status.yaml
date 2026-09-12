@@ -138,6 +138,45 @@
 #   superseded text KEPT STRUCK.
 #   ⛔ **NO CODE.** ⛔ Rows unchanged: `11b-17` / `11b-3b` / `6-18` / `8-17` `ready-for-dev`;
 #   `11b-16` `withdrawn`.)
+# last_updated: 2026-09-12a (⚠⛔ **CORRECTION TO `2026-09-11a` — A CLAIM THAT BLOCK ASSERTED IS FALSE.**
+#   ⛔ ZERO ROWS FLIP. `8-17-nominee-vpa-on-the-payment-screen` stays **`ready-for-dev`**; the story
+#   file goes to **v0.4**. ⛔ No code.
+#   ⚠⛔⛔ **WHAT `2026-09-11a` GOT WRONG:** that block asserts ***"§8.4(ii) IS CLOSED, ⛔ NOT OPEN"***.
+#   ⛔ **IT IS NOT CLOSED.** ⭐ Its underlying text is **real** — `deferred-work.md` item **(b)
+#   `D5-subject` (i)** does contain *"⇒ ⭐ the SCHEMA is the authority"*, and `11b-17`'s post-validate
+#   **AC4** and **Task 0e** do re-ground §8.4(ii) on it and withdraw the Panel routing. ⛔ But the
+#   **STATUS** was traced wrong, on all four legs:
+#   ⛔ (1) `D5-subject (i)` is an **OPEN deferred item WITH A LIVE TRIGGER** (*"NON-BLOCKING after
+#   `D5(a)`, ⛔ NOT resolved by it"*) — ⛔ **not a ruling**, and its subject is the **consent-subject
+#   gap**, ⛔ not the two-accounts case.
+#   ⛔ (2) The application to §8.4(ii) is an **AUTHOR-COMMITTED CORRECTION INSIDE A SIBLING STORY**,
+#   carrying ⛔ **no** `#decision-` citation — ⛔ not a decision entry.
+#   ⛔ (3) It lives on an **UNMERGED, UNPUSHED branch** and has ⛔ **NEVER reached `.decision-log.md`**.
+#   ⛔ (4) **`-213`'s entry is UNAMENDED** and still reads *"the differing-holder-name case is ⛔ still
+#   UNRULED and is ROUTED"* ⇒ ⭐ **the log and the sibling DISAGREE**, and ⛔ nothing has settled them.
+#   ⚠ And `6-18` **explicitly records that it does ⛔ NOT close `D5-subject` (i)** — ⛔ so it cannot be
+#   cited as having done so.
+#   ⭐⭐ **THE CORRECT STATUS, for anyone reading either block: §8.4(ii) is DE-ROUTED but ⛔ NOT LOGGED.**
+#   ⛔ ⛔ Nobody should ACT on it; ⛔ nobody should cite it as settled; ⛔ nobody should route it to the
+#   Panel. ⭐ The governance record is **OWED**, and it belongs with **`11b-17`'s** correction —
+#   ⛔ **NOT** with `8-17` ([[feedback_governance_commits_precede_implementation]]).
+#   ⚠⛔ **`2026-09-11a`'s TEXT IS LEFT UNTOUCHED.** ⭐ This is a **SUCCESSOR ENTRY**, per the
+#   `-128`/`-129` precedent — ⛔ a ledger block is corrected by the next block, ⛔ never edited in place
+#   ([[feedback_supersede_never_reinterpret]], [[feedback_record_unattested_no_backfill]]).
+#   ⚠ **HOW IT HAPPENED, recorded because the mechanism matters more than the slip:** the validate pass
+#   traced the **TEXT** and ⛔ not the **STATUS** — [[feedback_story_validate_footguns]] **#18**
+#   (a control asserted from decision text; ⭐ BUILT? / **SCOPE?** / COST? — SCOPE failed) compounded by
+#   **#20(a)** (an author-committed note **elevated to a ruling**). ⚠⛔ Committed by the very pass that
+#   exists to catch that class ⇒ ⭐ **a validate pass's own output needs validating.**
+#   ⭐ **ALSO AT v0.4 (story file only, ⛔ no ledger consequence):** `pay.tsx`'s ternary is at **`:447`**,
+#   ⛔ not `:448` (three sites, carried from v0.1 through v0.3, ⚠ while v0.3's Change Log claimed *"every
+#   remaining pointer"* held) · **AC7's title** now names the friction-budget obligation its body already
+#   required · Task 7's `microcopy:check` bullet now states **EXPECTED RESULT: PASS** and why.
+#   ⚠⛔ **AND THE COST OF THIS ENTRY, STATED:** prepending here shifts every line below by its own length
+#   and so rots **every** `sprint-status.yaml:NNN` cite in the repo a little further — including
+#   `11b-17:654`'s `:17685`/`:17739`, already owed a rewrite to **BLOCK ADDRESSES**
+#   ([[feedback_story_validate_footguns]] **#19**). ⭐ Correctness beats line-stability; ⛔ the fix is
+#   block addresses, ⛔ not silence.
 # last_updated: 2026-09-11a (⭐⭐ **STORY `8-17` VALIDATED — 27 findings, ALL APPLIED. ⛔ ZERO ROWS FLIP.**
 #   ⛔ `development_status[8-17-nominee-vpa-on-the-payment-screen]` STAYS **`ready-for-dev`**; ⛔ every
 #   other row unchanged. ⭐ The story file goes to **v0.2**; ⛔ no code.

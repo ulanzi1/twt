@@ -138,6 +138,24 @@
 #   superseded text KEPT STRUCK.
 #   ⛔ **NO CODE.** ⛔ Rows unchanged: `11b-17` / `11b-3b` / `6-18` / `8-17` `ready-for-dev`;
 #   `11b-16` `withdrawn`.)
+# last_updated: 2026-09-12b (⚠ **STORY `8-17` — FOURTH VALIDATE PASS. ⛔ ZERO ROWS FLIP; story file → v0.4.**
+#   `8-17-nominee-vpa-on-the-payment-screen` stays **`ready-for-dev`**. ⛔ No code.
+#   ⭐ Every `file:line` and decision citation re-traced against live source, ⛔ not from any prior
+#   pass's summary — v0.4's central correction (§8.4(ii) DE-ROUTED but ⛔ NOT LOGGED) HELD.
+#   ⚠⛔ **TWO PRECISION-GAP CORRECTIONS, ⛔ neither build-blocking:**
+#   ⛔ (1) v0.4 claimed the sibling governance branch moved *"three commits further"* — it is **SIX**
+#   (`116cb116`/`0080acfa`/`ff92cb00` were never named alongside `738bb3ea`/`491a0fac`/`53efccd4`).
+#   ⭐ Diff-stat re-checked on all six: v0.4's CONCLUSION holds — ⛔ none touches the VPA, the payment
+#   screen or `8-17` — but the COUNT was wrong.
+#   ⛔ (2) `-214` was cited in the story file (AC6(a)) as a ratified decision **without** the topology
+#   caveat Row T already gives `-212`/`-213`. `.decision-log.md` on this branch carries ⛔ **zero**
+#   trace of `-214` — it lives only on `governance/11b-17-validate-and-panel-routing` (`ff92cb00`,
+#   unpushed). ⭐ **This ledger already caught it at the FIRST validate pass** (see `2026-09-10g`
+#   below: *"`-214` is absent from this story's branch entirely"*) — ⛔ but that caveat never reached
+#   the **story file**, so a dev reading only the story had no warning. ⭐ Fixed in the story file
+#   itself (Row T + the AC6(a) citation), ⛔ not ledger-only. `-214`'s CONTENT was independently
+#   re-verified against `ff92cb00` and does ⛔ not reach the payment screen — only the branch-presence
+#   caveat was missing.
 # last_updated: 2026-09-12a (⚠⛔ **CORRECTION TO `2026-09-11a` — A CLAIM THAT BLOCK ASSERTED IS FALSE.**
 #   ⛔ ZERO ROWS FLIP. `8-17-nominee-vpa-on-the-payment-screen` stays **`ready-for-dev`**; the story
 #   file goes to **v0.4**. ⛔ No code.

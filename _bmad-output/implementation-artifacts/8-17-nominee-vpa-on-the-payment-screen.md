@@ -373,11 +373,11 @@ affordance.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — GOVERNANCE** (AC0) — ⛔ one `governance:` commit, ⛔ no code:
-  - [ ] an `epics.md` entry under Epic 8 (⛔ none exists today) + the sprint-row flip
-  - [ ] ⭐ `deferred-work.md` **11b.3a third-pass item (e)** — name **this story** as the home its own
+- [x] **Task 0 — GOVERNANCE** (AC0) — ⛔ one `governance:` commit, ⛔ no code:
+  - [x] an `epics.md` entry under Epic 8 (⛔ none exists today) + the sprint-row flip
+  - [x] ⭐ `deferred-work.md` **11b.3a third-pass item (e)** — name **this story** as the home its own
         body asks for, and reconcile its `✅ CLOSED` heading with its `RE-OPENED` body
-  - [ ] ⭐ correct the sprint-row ledger's stale §8.4(ii) framing (AC6(b))
+  - [x] ⭐ correct the sprint-row ledger's stale §8.4(ii) framing (AC6(b))
   - ⚠ **Cite item (e) as *"11b.3a third-pass item (e)"*, ⛔ never a bare `(e)`** — that file's own rule
     is *"The ITEM LETTERS are the stable address"*, and a **bare `(e)` means Story 11b.1's**.
 - [ ] **Task 1 — The contract** (AC3) — add optional `vpa` to `NomineeBankAccountView` in

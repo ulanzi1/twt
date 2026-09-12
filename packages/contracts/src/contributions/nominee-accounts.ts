@@ -93,8 +93,14 @@ export const NomineeBankAccountView = z
      * `claims/nominee-bank.ts` — staff/nominee eyes at claim time — carries NO `vpa`; cl.2 does not reach
      * it, and adding one there would be a NEW disclosure nobody has ruled.
      * ⛔ Like every decrypted value in this shape: NEVER logged, NEVER in an event or audit payload.
+     *
+     * ⚠ **`max(321)`, not `max(255)`** (code review, Story 8.17) — `NOMINEE_BANK_VPA_REGEX`
+     * (`claims/nominee-bank.ts`) permits a 256-char handle + `@` + a 64-char PSP token = 321 chars at
+     * collection time, and nothing else bounds it. A tighter cap here would fail response
+     * serialization for a legitimately-collected VPA — a live 500 this field's own doc-block promises
+     * never happens.
      */
-    vpa: z.string().min(1).max(255).optional(),
+    vpa: z.string().min(1).max(321).optional(),
   })
   .strict();
 export type NomineeBankAccountView = z.output<typeof NomineeBankAccountView>;

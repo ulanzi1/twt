@@ -62,6 +62,37 @@ const VARIANTS = [
   'index_line.no_district',
 ] as const
 
+// ⭐⭐ STORY 11b.19 — B's UNSHIPPED HALF. The §8.1 **MESSAGE BLOCK** and its table labels, added to
+// THIS file rather than a sibling because the repo walk below must stay **ONE** walker: two copies
+// drift the moment one gains a `SKIP` entry the other lacks, and the self-exclusion carve-out here
+// already names this filename. ⛔ Nothing above is weakened — ⭐ the helpers are HOISTED, ⛔ not edited.
+const MESSAGE_BLOCK_KEYS = [
+  'message_block.headline.full',
+  'message_block.headline.no_family',
+  'message_block.solidarity',
+  'message_block.gratitude',
+  'message_block.tagline',
+  'message_block.join',
+  'message_block.table.nominee_name',
+  'message_block.table.district',
+] as const
+
+// ⭐ HOISTED (Story 11b.19) from the second describe, unchanged, so BOTH families scan one walker.
+const SCAN_ROOTS = ['apps', 'packages'].map((d) => join(repoRoot, d))
+const SKIP = new Set(['node_modules', 'dist', '.turbo', 'ios', 'android', '.astro'])
+
+function sources(dir: string, acc: string[] = []): string[] {
+  for (const entry of readdirSync(dir)) {
+    if (SKIP.has(entry)) continue
+    const full = join(dir, entry)
+    if (statSync(full).isDirectory()) sources(full, acc)
+    else if (/\.(ts|tsx|astro)$/.test(entry)) acc.push(full)
+  }
+  return acc
+}
+
+const files = SCAN_ROOTS.flatMap((r) => sources(r))
+
 describe('⭐ AC9 — the ratified index line is AUTHORED, verbatim, in both locales', () => {
   it('the FULL line carries BOTH pending tokens — ⛔ verbatim from routing note §9.2', () => {
     expect(template('en', 'index_line.full')).toBe(
@@ -122,20 +153,8 @@ describe('⭐ AC9 — the ratified index line is AUTHORED, verbatim, in both loc
 describe('⛔⛔ AC9 — ⛔ NEITHER TOKEN IS RENDERED. The copy exists; the render may ⛔ not.', () => {
   // ⚠ A repo scan, because the failure is not local: the defect would be a NEW call site in another
   // package, added by a story that read "the copy is ready" and stopped there.
-  const SCAN_ROOTS = ['apps', 'packages'].map((d) => join(repoRoot, d))
-  const SKIP = new Set(['node_modules', 'dist', '.turbo', 'ios', 'android', '.astro'])
-
-  function sources(dir: string, acc: string[] = []): string[] {
-    for (const entry of readdirSync(dir)) {
-      if (SKIP.has(entry)) continue
-      const full = join(dir, entry)
-      if (statSync(full).isDirectory()) sources(full, acc)
-      else if (/\.(ts|tsx|astro)$/.test(entry)) acc.push(full)
-    }
-    return acc
-  }
-
-  const files = SCAN_ROOTS.flatMap((r) => sources(r))
+  // ⭐ HOISTED to module scope by Story 11b.19 so the `message_block.*` fence shares ONE walker —
+  // ⛔ the roots, the SKIP set and the extensions are byte-identical to what shipped here.
 
   it('⛔ NON-VACUOUS — the scan reaches a real body of source', () => {
     expect(files.length).toBeGreaterThan(200)
@@ -226,5 +245,285 @@ describe('⛔⛔ AC9 — ⛔ NEITHER TOKEN IS RENDERED. The copy exists; the ren
     ]) {
       expect(indexContract).not.toMatch(banned)
     }
+  })
+})
+
+// ────────────────────────────────────────────────────────────────────────────────────────────────
+// ⭐⭐ STORY 11b.19 — **B's UNSHIPPED HALF**: the §8.1 FIVE-PARAGRAPH MESSAGE BLOCK.
+//
+// ⚠⛔ **WHY A SECOND FAMILY EXISTS IN THIS NAMESPACE AT ALL.** B (`11b-12`, `done`) was routed BOTH
+// the §9.2 **index line** and the §8.1 **message block** on 2026-09-05 and shipped ⛔ only the first.
+// `2026-09-11-214` **Consequence 2** gave the unshipped half a named home ⇒ this is **B's work
+// completing**, ⛔ not new scope ([[feedback_record_unattested_no_backfill]] — E's separate RENDER
+// debt stays recorded against `11b-15` and is ⛔ NOT back-filled here).
+//
+// ⭐ The block is **PAGE-shaped** (§8.3(2)) — ⛔ it cannot sit in a one-line index cell. Its renders
+// are `11b-17` **AC10 / Task 5d** (member) and `11b-20` (public); ⛔ NEITHER exists today.
+// ────────────────────────────────────────────────────────────────────────────────────────────────
+
+describe('⭐ AC1/AC2/AC3 — the ratified §8.1 message block is AUTHORED, verbatim, in both locales', () => {
+  it('⭐ EN — the five paragraphs, §8.1 verbatim', () => {
+    // ⚠⛔ TRAP 1 IS ASSERTED HERE, ⛔ not merely commented: §8.1 writes *"₹{amount}"*, but `{amount}`
+    // arrives ALREADY FORMATTED and carries its own ₹ (`$comment.live_line`: *"Yes rupee sign should
+    // appear"*; `$comment.drive_target`: *"Expected: ₹ 300"*) ⇒ a literal ₹ here ships **₹₹**.
+    // ⭐ B's own `index_line.full`, same ratification, same day, carries ⛔ no literal ₹ either.
+    expect(template('en', 'message_block.headline.full')).toBe(
+      "Late {family_name}'s family received contributions of {amount} from colleagues.",
+    )
+    expect(template('en', 'message_block.solidarity')).toBe(
+      'When one family needs support, the whole Pariwar stands with them. ' +
+        'Because in Pariwar, we stand together.',
+    )
+    expect(template('en', 'message_block.gratitude')).toBe(
+      'Our heartfelt gratitude to every colleague who stood beside the family.',
+    )
+    // ⚠⛔ THE DEVANAGARI TAGLINE STAYS DEVANAGARI IN THE ENGLISH COPY — ⭐ the Panel's own text,
+    // ⛔ NOT an oversight, and ⛔ not ours to translate or transliterate. Asserted so a later
+    // "consistency" pass cannot quietly anglicise it.
+    expect(template('en', 'message_block.tagline')).toBe('सहयोग का हाथ, हर परिवार के साथ।')
+    expect(template('en', 'message_block.join')).toBe('Join the Pariwar. Be the Movement.')
+  })
+
+  it('⭐ HI — the five paragraphs, §8.1 verbatim', () => {
+    // ⚠⛔ `स्व.` (FULL STOP) IS §8.1's OWN SPELLING AND IS KEPT — ⭐ CHECKED, ⛔ not missed. B's
+    // shipped `index_line.*` / `zero_line.*` use `स्व०` (the Devanagari abbreviation sign), and
+    // `$comment.zero_line` calls that "the `index_line.*` convention". ⇒ the two DIVERGE, and the
+    // story's own instruction settles which wins: *"⛔ do ⛔ not improve it, shorten it, **re-punctuate
+    // it** or translate it"*. ⛔ Normalising `स्व.` → `स्व०` is precisely re-punctuating ratified text.
+    // ⭐ RECORDED as a divergence for a future routing note, ⛔ never silently harmonised here
+    // ([[feedback_supersede_never_reinterpret]]).
+    expect(template('hi', 'message_block.headline.full')).toBe(
+      'स्व. {family_name} जी के परिवार के लिए सहकर्मियों ने मिलकर {amount} का योगदान किया।',
+    )
+    expect(template('hi', 'message_block.solidarity')).toBe(
+      'परिवार के हर सहकर्मी का सहयोग मायने रखता है। यही हमारी ताकत है।',
+    )
+    expect(template('hi', 'message_block.gratitude')).toBe(
+      'परिवार के साथ खड़े होने वाले हर सहकर्मी का हम हृदय से आभार व्यक्त करते हैं।',
+    )
+    expect(template('hi', 'message_block.tagline')).toBe('सहयोग का हाथ, हर परिवार के साथ।')
+    expect(template('hi', 'message_block.join')).toBe(
+      'Pariwar से आज ही जुड़ें और इस आंदोलन का हिस्सा बनें।',
+    )
+  })
+
+  it('⭐ AC2 — the table labels are `Nominee full name` | `District`, and they are LABELS', () => {
+    // ⭐ §8.1: *"a table above the message — **Nominee full name** (left) · **District** (right)"*.
+    // ⭐ The FULL form is ruled (`-205` cl.1) ⇒ the per-Pariwar `public_name_presentation_mode` has
+    // ⛔ NO SUBJECT here.
+    expect(template('en', 'message_block.table.nominee_name')).toBe('Nominee full name')
+    expect(template('en', 'message_block.table.district')).toBe('District')
+
+    // ⚠⛔⛔ **THE HINDI LABELS ARE THE ONE PLACE THE PANEL GAVE ⛔ NO HINDI — RECORDED, ⛔ NOT HIDDEN.**
+    // §8.1 states the table in an English sentence only. ⚠ But the parity gate REQUIRES an HI key
+    // (an absent one is a THROW at render, ⛔ not a fallback) ⇒ a value must exist.
+    // ⭐ IT IS ⛔ NOT A DEV TRANSLATION: both nouns are the **Panel's own Hindi words for these exact
+    // fields**, taken from §9.2's ratified HI index line — *"**जनपद** {district_name} में कार्यरत …
+    // की **नॉमिनी** {nominee_name}"* — same routing note, same ratification, same day, same data.
+    // ⇒ the only word not lifted from §9.2 is *"पूरा नाम"* (full name), which renders `-205` cl.1's
+    // ruled FORM. ⭐ Asserted against B's shipped HI key below so the provenance cannot rot.
+    expect(template('hi', 'message_block.table.nominee_name')).toBe('नॉमिनी का पूरा नाम')
+    expect(template('hi', 'message_block.table.district')).toBe('जनपद')
+    expect(template('hi', 'index_line.full'), 'the HI labels borrow §9.2s own two nouns').toContain(
+      'नॉमिनी',
+    )
+    expect(template('hi', 'index_line.full')).toContain('जनपद')
+
+    // ⚠⛔ TRAP 5 — THE COLUMN SAYS *"Nominee"* AND THE DATA ⛔ CANNOT PROMISE IT. The value behind it
+    // is `account_holder_name_ciphertext`; 6.8's D1 removed the nominee linkage deliberately and
+    // `D5-subject (i)` rules *"the SCHEMA is the authority"*. ⇒ ⛔ NO key in this family may assert a
+    // RELATIONSHIP. A label names a column; a sentence makes a claim about a named private person.
+    for (const locale of LOCALES) {
+      for (const key of MESSAGE_BLOCK_KEYS) {
+        expect(
+          template(locale, key),
+          `${locale}/${key} must ⛔ not assert the nominee RELATIONSHIP (Trap 5, §9.3, D5-subject)`,
+        ).not.toMatch(/nominee of|की नॉमिनी|के नॉमिनी/)
+      }
+    }
+  })
+
+  it('⭐ AC3 — the no-name variant is §9.1 row 4 VERBATIM, and replaces the HEADLINE only', () => {
+    // ⚠⛔ A SAFETY PROPERTY, ⛔ NOT A NICETY. `deceased_member_name` is nullable and `t()` THROWS ⇒
+    // resolving `.full` on a drive with no publishable name 500s the WHOLE PAGE — and this block is
+    // PAGE-shaped, so "the row" and "the page" are the same thing here. ⭐ Same structural reason B
+    // shipped four `index_line.*` variants (`-214` Consequence 5).
+    expect(template('en', 'message_block.headline.no_family')).toBe(
+      'The family received contributions of {amount} from colleagues.',
+    )
+    expect(template('hi', 'message_block.headline.no_family')).toBe(
+      'परिवार के लिए सहकर्मियों ने मिलकर {amount} का योगदान किया।',
+    )
+
+    // ⭐ AND THE OTHER FOUR PARAGRAPHS ARE NAME-FREE — which is WHY only the headline varies. If any
+    // of them carried `{family_name}`, a nameless drive would need four more variants (or would
+    // throw), and §10.2 ruling 3's "⛔ no combinatorial variants" would be unsatisfiable.
+    for (const locale of LOCALES) {
+      for (const key of [
+        'message_block.solidarity',
+        'message_block.gratitude',
+        'message_block.tagline',
+        'message_block.join',
+      ]) {
+        expect(template(locale, key)).not.toContain('{family_name}')
+        expect(template(locale, key)).not.toContain('{')
+      }
+      expect(template(locale, 'message_block.headline.no_family')).not.toContain('{family_name}')
+    }
+  })
+
+  it('⛔⛔ `{family_name}` is the ONLY omittable token — ⛔ there is ⛔ NO `no_amount` variant', () => {
+    // ⚠⛔ THE QUESTION §10.2 RULING 3 INVITES, ANSWERED SO IT IS ⛔ NOT DISCOVERED. §9.1's
+    // implementation note on blocker (1) did order B *"the copy and the **no-amount variants**"* —
+    // ⚠ that was ORDERING AGAINST AN UNBUILT STORY D, and ⭐ D (`11b-14`) is `done` ⇒ the condition
+    // it guarded is GONE. ⭐ B's own shipped precedent settles it and is ASSERTED, ⛔ not assumed:
+    // every `index_line.*` variant carries `{amount}` (pinned above) — *"it is pending-on-D, ⛔ not
+    // nullable"*. ⇒ an absent `{amount}` is ⛔ not a copy case; it is a render site that must ⛔ not
+    // resolve at all.
+    const raw = JSON.parse(
+      readFileSync(join(repoRoot, `packages/i18n/locales/en/${NAMESPACE}.json`), 'utf8'),
+    ) as Record<string, string>
+    expect(Object.keys(raw).filter((k) => /^message_block\..*no_amount/.test(k))).toEqual([])
+
+    for (const locale of LOCALES) {
+      for (const key of ['message_block.headline.full', 'message_block.headline.no_family']) {
+        expect(template(locale, key), `${locale}/${key} must carry {amount}`).toContain('{amount}')
+      }
+    }
+
+    // ⚠⛔ AND ⛔ NO COMBINATORIAL FAMILY CREPT IN: the headline has exactly TWO variants, ⛔ never one
+    // per combination of absent tokens (§10.2 ruling 3, `-214` Consequence 6).
+    expect(Object.keys(raw).filter((k) => k.startsWith('message_block.headline.'))).toHaveLength(2)
+  })
+
+  it('⛔⛔ ⛔ NO LITERAL ₹ ANYWHERE IN THE FAMILY — ⭐ `{amount}` carries its own (Trap 1)', () => {
+    // ⭐ THE WHOLE TRAP, AS ONE ASSERTION. §8.1's typography would ship `₹₹ 19,45,000`.
+    for (const locale of LOCALES) {
+      for (const key of MESSAGE_BLOCK_KEYS) {
+        expect(template(locale, key), `${locale}/${key} must ⛔ not carry a literal ₹`).not.toContain(
+          '₹',
+        )
+      }
+    }
+  })
+
+  it('⭐ AC7 — both locales carry the SAME key set and the SAME tokens per key', () => {
+    // ⚠ A missing HI key is a THROW at render, ⛔ not a fallback. ⭐ This is the local half of CI's
+    // `i18n-parity` job (`ci.yml:223` → `pnpm turbo run i18n:check-parity`), scoped to this family.
+    const keysOf = (locale: string) =>
+      Object.keys(
+        JSON.parse(
+          readFileSync(join(repoRoot, `packages/i18n/locales/${locale}/${NAMESPACE}.json`), 'utf8'),
+        ) as Record<string, string>,
+      )
+        .filter((k) => k.startsWith('message_block.') && !k.startsWith('$comment'))
+        .sort()
+
+    expect(keysOf('hi')).toEqual(keysOf('en'))
+    expect(keysOf('en')).toEqual([...MESSAGE_BLOCK_KEYS].sort())
+
+    const tokensOf = (locale: string, key: string) =>
+      (template(locale, key).match(/\{(\w+)\}/g) ?? []).sort()
+    for (const key of MESSAGE_BLOCK_KEYS) {
+      expect(tokensOf('hi', key), `token set must match across locales for ${key}`).toEqual(
+        tokensOf('en', key),
+      )
+    }
+
+    // ⚠ AND ⛔ NO EMPTY / WHITESPACE-ONLY VALUE — the parity script flags those too, so a placeholder
+    // is ⛔ not a way past the gate.
+    for (const locale of LOCALES) {
+      for (const key of MESSAGE_BLOCK_KEYS) {
+        expect(template(locale, key).trim().length).toBeGreaterThan(0)
+      }
+    }
+  })
+})
+
+describe('⛔⛔ AC6 — ⛔ NOTHING RENDERS THE MESSAGE BLOCK. The copy exists; the render may ⛔ not.', () => {
+  it('⛔ NON-VACUOUS — the scan reaches a real body of source', () => {
+    // ⛔ WITHOUT THIS, A GREEN SCAN PROVES NOTHING ([[feedback_gate_scope_semantic_coverage]]).
+    expect(files.length).toBeGreaterThan(200)
+  })
+
+  it('⭐ `t()` THROWS on the dark block — the render is ⛔ structurally unavailable', () => {
+    // ⭐⭐ THE PROOF OF DARKNESS, and it is POSITIVE: a story that renders the ratified block before
+    // its tokens exist gets a LOUD failure (`resolver.ts:36-42`, the throw at `:39`), ⛔ never a page
+    // with an empty ₹. ⚠ And on a PAGE-shaped block that failure IS the whole page.
+    expect(() =>
+      t('message_block.headline.full', undefined, { locale: 'en', namespace: NAMESPACE }),
+    ).toThrow(/missing interpolation param 'family_name'/)
+    expect(() =>
+      t('message_block.headline.no_family', undefined, { locale: 'hi', namespace: NAMESPACE }),
+    ).toThrow(/missing interpolation param 'amount'/)
+
+    // ⭐ AND IT RESOLVES CLEANLY ONCE EVERY TOKEN IS SUPPLIED — so the copy itself is sound and
+    // ⛔ "dark" ⛔ never excuses a broken string. ⚠ Note the output carries EXACTLY ONE ₹, which is
+    // Trap 1 proven end-to-end rather than asserted about the template alone.
+    const rendered = t(
+      'message_block.headline.full',
+      { family_name: 'R K Sharma', amount: '₹19,45,000' },
+      { locale: 'en', namespace: NAMESPACE },
+    )
+    expect(rendered).toBe(
+      "Late R K Sharma's family received contributions of ₹19,45,000 from colleagues.",
+    )
+    expect(rendered.match(/₹/g)).toHaveLength(1)
+
+    expect(
+      t(
+        'message_block.headline.no_family',
+        { amount: '₹19,45,000' },
+        { locale: 'hi', namespace: NAMESPACE },
+      ),
+    ).toBe('परिवार के लिए सहकर्मियों ने मिलकर ₹19,45,000 का योगदान किया।')
+  })
+
+  it('⛔ ⛔ ZERO CONSUMERS — ⛔ no source file resolves a `message_block.*` key', () => {
+    // ⭐⭐ THE FAMILY BEGINS EXACTLY WHERE `index_line.*` BEGAN — with an EMPTY authorised list. ⚠ The
+    // fence above was later NARROWED (⛔ not deleted) when story D shipped the one authorised render;
+    // ⭐ this one will be narrowed the same way, ⛔ never widened to make a build green.
+    //
+    // ⭐ WHEN `11b-17` / `11b-20` LAND: they render these keys and this assertion becomes false BY
+    // DESIGN. ⛔ Do ⛔ NOT delete it then — **NARROW it** to *"⛔ never resolved without every token
+    // supplied"*, naming each authorised site, which is the property that actually protects the page
+    // ([[feedback_supersede_never_reinterpret]]). ⚠ That is this fence's OWN author leaving the
+    // instruction in writing, exactly as B's did above.
+    const RESOLVER = /['"`]message_block\.[a-z_.]+['"`]/
+    const resolvers = files.filter((f) => {
+      if (f.endsWith('sahyog-shared-dark-copy.test.ts')) return false
+      return RESOLVER.test(readFileSync(f, 'utf8'))
+    })
+
+    // ⛔ THE ALLOW-LIST IS ⛔ NOT A WAIVER. ⭐ It is `[]` because `-214` authorised ⛔ NO render yet:
+    // cl.4(b) routes the MEMBER render to `11b-17` AC10 / Task 5d and Consequence 3 routes the
+    // PUBLIC one to `11b-20` — ⛔ NEITHER is built. ⛔ Do ⛔ not append to it to make a build green;
+    // a render arriving without its story is the exact defect this file exists to catch.
+    const AUTHORISED: string[] = []
+    expect(
+      resolvers.map((f) => f.replace(repoRoot, '')).sort(),
+      'a file RESOLVES a ratified message-block key. ⛔ t() THROWS on an unsupplied token ' +
+        '(resolver.ts:36-42) ⇒ an unguarded resolution ships a 500 / outage arm onto a PAGE-shaped ' +
+        'block. ⭐ `2026-09-11-214` authorised NO render site yet — the member half is 11b-17 AC10, ' +
+        'the public half is 11b-20, and ⛔ neither is built.',
+    ).toEqual(AUTHORISED)
+  })
+
+  it('⛔ AC6 — ⛔ nothing else moved: this story ships KEYS and ⛔ no contract field', () => {
+    // ⚠⛔ THE TABLE IS ⛔ NOT A WIRE CHANGE. Its two values already exist on the drive-page contract —
+    // the nominee's name (`-205` cl.1, shipped by D) and `district`, which is `.nullable()`. ⇒ this
+    // story adds ⛔ NO field, and asserting that keeps a later pass from "completing" the table by
+    // widening a public contract without a ruling.
+    const vivran = readFileSync(
+      join(repoRoot, 'packages/contracts/src/public-pages/sahyog-vivran.ts'),
+      'utf8',
+    )
+    // ⭐ Navigate by the FIELD DECLARATION, ⛔ never by a line number — it has moved :322 → :344 → :349.
+    expect(vivran).toMatch(/district:\s*z\.string\(\)\.min\(1\)\.nullable\(\)/)
+    // ⇒ ⭐ AC4's consequence: an absent District DROPS ITS COLUMN. ⛔ Never "Not recorded", ⛔ never a
+    // placeholder — and ⭐ never left attached to a nominee when the DECEASED is absent, because
+    // *"who served in … district"* modifies the DECEASED MEMBER (B's own `no_family` reasoning,
+    // asserted for `index_line.*` above and governing this table by the SAME logic).
+    expect(template('en', 'message_block.table.district')).not.toMatch(/not recorded/i)
   })
 })

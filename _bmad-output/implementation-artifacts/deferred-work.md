@@ -8893,16 +8893,16 @@ violation.
 
 ## Deferred from: code review of 11b-17-member-drive-detail-unredacted (2026-09-13)
 
-- **AC10's message-block ₹0-silence may be over-scoped to `live` zero-day drives — needs Panel ruling.**
+- **AC10's message-block ₹0-silence may be over-scoped to `live` zero-day drives** — ✅ **CLOSED BY
+  TRUSTEE RULING, 2026-09-13 (Dhiraj Rahul + Kalpana Bharti), `#decision-2026-09-13-216`, Option A.**
   [`apps/mobile/components/drive-detail/format.ts:129`] `selectMessageBlockHeadline` returns `null`
   whenever `amountRaisedInr <= 0` regardless of stage. AC9's own text scopes `-207` cl.2's silence rule to
-  the WIRE TOKENS `closed`/`verified` only; the function's doc-comment justifies suppressing it on `live`
-  too via its own reasoning ("AC9's ratified zero-day line covers it"), not a cited ruling — net effect,
-  the Panel's message block + nominee/district table never renders on a `live` drive's first day. Deferred
-  because this is a scoping question about a Trustee-ratified rule, not a dev call to make unilaterally.
-  **Routed 2026-09-13:** `trustee-panel-routing-note-2026-09-13-11b17-message-block-zero-day-scope.md`.
-  **Trigger:** the Panel's ruling on that note, or a member-visible complaint about the message block
-  "flickering in" after the first contribution — whichever comes first.
+  the WIRE TOKENS `closed`/`verified` only; the function's doc-comment justified suppressing it on `live`
+  too via its own reasoning ("AC9's ratified zero-day line covers it"), not a cited ruling at the time
+  this was found. Routed to the Panel 2026-09-13
+  (`trustee-panel-routing-note-2026-09-13-11b17-message-block-zero-day-scope.md`, now ✅ ANSWERED) — the
+  Panel confirmed the shipped reading is correct: `-207` cl.2's ₹0-silence is EXTENDED to the message
+  block on both stages, `live` included. ⛔ No code change follows.
 - **AC5's audit line carries no per-account hash/snapshot, only a bare count.**
   [`apps/api/src/modules/member-pool/handlers.ts:844-849`] `context.nominee_accounts` records only
   `nomineeAccounts.length` — if a bank account is later disputed, the audit chain cannot establish

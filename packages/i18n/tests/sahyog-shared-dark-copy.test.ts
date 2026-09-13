@@ -86,12 +86,34 @@ const MESSAGE_BLOCK_KEYS = [
 const SCAN_ROOTS = ['apps', 'packages'].map((d) => join(repoRoot, d))
 const SKIP = new Set(['node_modules', 'dist', '.turbo', 'ios', 'android', '.astro'])
 
+/**
+ * ⭐⭐ **A TEST MODULE IS ⛔ NOT A RENDER SITE — NARROWED 2026-09-13 (Story 11b.17), ⭐ WITH ITS REASON.**
+ *
+ * ⚠⛔ **THIS FENCE CAUGHT `11b-17`'s OWN TEST FILE, AND THAT WAS THE FENCE WORKING** — ⛔ but it was
+ * ⛔ **not** catching the thing it exists to catch. ⭐ Its stated danger is precise: *"an unguarded
+ * resolution ships a **500 / outage arm** onto a PAGE-shaped block"* ⇒ the subject is a **PRODUCTION
+ * RENDER**. A `.test.ts` naming these keys in order to **ASSERT** them ⛔ cannot ship anything to a
+ * member — ⭐ and this very file's FIRST tests resolve `index_line.*` and `message_block.*` for exactly
+ * that purpose, which is why it already self-excludes by real path. ⇒ ⭐ the carve-out is the same one,
+ * generalised from ONE file to the CLASS, ⛔ not a new indulgence.
+ *
+ * ⚠⛔⛔ **AND IT IS A NARROWING, ⛔ NOT A WAIVER — ⭐ THE DISTINCTION IS THE WHOLE POINT.** The wrong fix
+ * was to **APPEND the test file to `AUTHORISED`**, which is what both allow-lists below forbid in
+ * terms (*"⛔ do ⛔ not append to it to make a build green"*) — that would have declared a TEST an
+ * authorised RENDER SITE and left the next real one able to hide behind it.
+ * ⛔ Scoped to a **TEST MODULE** (`*.test.*` / `*.spec.*`), ⛔ **not** to a `tests/` directory: a helper
+ * module living beside a test is still ordinary source and is still scanned.
+ * ⚠ The non-vacuity assertions below are what keep this honest — ⛔ they fail if this carve-out ever
+ * swallows the real walk ([[feedback_gate_scope_semantic_coverage]]).
+ */
+const isTestModule = (file: string): boolean => /\.(test|spec)\.(ts|tsx)$/.test(file)
+
 function sources(dir: string, acc: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
     if (SKIP.has(entry)) continue
     const full = join(dir, entry)
     if (statSync(full).isDirectory()) sources(full, acc)
-    else if (/\.(ts|tsx|astro)$/.test(entry)) acc.push(full)
+    else if (/\.(ts|tsx|astro)$/.test(entry) && !isTestModule(entry)) acc.push(full)
   }
   return acc
 }
@@ -577,6 +599,15 @@ describe('⛔⛔ AC6 — ⛔ NOTHING RENDERS THE MESSAGE BLOCK. The copy exists;
     // split is the shipped idiom (`components/drive-list/format.ts` states it), ⛔ not a second
     // consumer, and the guard assertion below proves the `.tsx` resolves ⛔ only behind those
     // selectors.
+    // ⭐⭐ **THE WALK IS NON-VACUOUS AND IT REACHES THIS STORY'S SURFACE** — ⛔ asserted HERE because
+    // the test-module carve-out above is the one change that could silently shrink it. ⚠ A green
+    // allow-list over a walk that no longer sees `apps/mobile` would prove ⛔ nothing.
+    expect(files.length).toBeGreaterThan(200)
+    expect(files.some((f) => f.endsWith('/apps/mobile/components/drive-detail/MemberDriveDetail.tsx'))).toBe(true)
+    expect(files.some((f) => f.endsWith('/apps/public/src/pages/sahyog.astro'))).toBe(true)
+    // ⛔ And the carve-out really is scoped to TEST MODULES — ⛔ not to whole `tests/` trees.
+    expect(files.some((f) => f.includes('/tests/') && !/\.(test|spec)\.tsx?$/.test(f))).toBe(true)
+
     const AUTHORISED = [
       '/apps/mobile/components/drive-detail/MemberDriveDetail.tsx',
       '/apps/mobile/components/drive-detail/format.ts',

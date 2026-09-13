@@ -1,3 +1,33 @@
+# last_updated: 2026-09-13e (✅⭐⭐ **`11b-17` IMPLEMENTED — `in-progress` → `review`. ALL TWELVE ACs;
+#   ALL TASKS. ci:local green incl. the live DB.** ⭐ The `governance:` commit landed FIRST with ⛔ NO
+#   CODE. ⭐ A **NEW contract + a NEW route** (⛔ not an additive field on `MemberDriveListEntry`, which
+#   is `.strict()` and would blank the whole fourth tab on older builds); the domain read carries its
+#   OWN visible-state tuple, its OWN `live`-only लक्ष्य fragment and **its own nominee projection**
+#   (⚠ reusing the public one would have left AC4 TWO FIELDS SHORT); `vpaCiphertext` is ⛔ NOT
+#   PROJECTED so D3(D) is STRUCTURAL. ⭐ AC3 resolves to a **404** collapsing FIVE cases — ⛔ never a
+#   403, which IS the oracle.
+#   ⭐⭐ **AC5 SIZED, ⛔ NOT ESTIMATED: 7 decrypts + 1 line = 8 global-lock acquisitions per open** —
+#   exactly the ≈8 end, ⛔ SEVEN INVISIBLE. `-199` Consequence 2's *"a write"* (singular) was wrong in
+#   the story's favour. ⛔ Not a blocker; ⛔ the FR-47 KMS hook stays.
+#   ⭐⭐ **EVERY FENCE PROVEN TO BITE WITH A PLANTED PROBE — 13 of 14 RED.**
+#   ⚠⛔⛔ **THREE UNPREDICTED FINDINGS, ⭐ ALL RECORDED, ⛔ NONE ABSORBED:**
+#   **(F1)** ⛔ **THIS PASS'S OWN family-13 fence was VACUOUS** — JSX attributes span multiple lines so
+#   its depth tracker never fired; a planted `<Button>` inside a labelled container PASSED. Rewritten
+#   by element extent, re-probed RED twice ([[feedback_gate_scope_semantic_coverage]]).
+#   **(F2)** ⛔ **A THIRD green test went red and the story predicted only TWO** —
+#   `sahyog-vivran-entry.test.ts` pins **11b.10's D4** (*"⛔ no new route group"*). ⛔⛔ Renaming the
+#   group would have been the DISHONEST fix (the assertion names the string) ⇒ ⭐ **re-homed into the
+#   EXISTING `(contribution)` group**, meeting D4 as written — ⛔ no supersession, ⛔ no reinterpretation.
+#   **(F3)** ⚠ **A REAL `-189` cl.3 SHORTFALL** — the public DETAIL renders an **appeal lineage** the
+#   member surface carries ⛔ none of. ⛔ NOT one of AC2's three authorised exclusions ⇒ the honest word
+#   is **SHORTFALL**, ⛔ not "excluded". ⛔ Not built — it is an unruled DISCLOSURE question that
+#   `-199`/`-212`/`-213` ⛔ none of them reach ⇒ **DECLARED in the test** (pinned at exactly three ids,
+#   so a fourth fails loudly) and **ROUTED** to `deferred-work.md` with a Panel trigger.
+#   ⚠ RED-GREEN ⛔ not strictly followed (Task 6 holds all tests, per the story's own sequence) —
+#   ⛔ stated, ⛔ not glossed.
+#   ⚠ Also recorded: the MMKV/DPDPA trigger **FIRED** (⛔ the item stays OPEN — `gcTime: 0` is a
+#   surface-local mitigation, ⛔ NOT the repo-wide fix), and the `.strict()` item's trigger re-pointed
+#   to **`8-17`**, which fired it FIRST — ⛔ not to F, which avoided it entirely.)
 # last_updated: 2026-09-13d (⭐⭐ **`11b-17` — IMPLEMENTATION STARTED. `ready-for-dev` → `in-progress`.**
 #   ⭐ **Task 1's `governance:` commit lands FIRST, before a line of code**
 #   ([[feedback_governance_commits_precede_implementation]]) and carries FOUR things:
@@ -18435,7 +18465,7 @@ development_status:
   # ~~If (a) is genuinely wanted it needs the PANEL, ⛔ not this story.~~
   # ⛔ Both were TRUE WHEN WRITTEN and FALSE from 2026-09-04 onward: (a) was RULED that day and (b) is
   # recorded as ⛔ NOT taken. ⛔ Kept struck as the record, ⛔ not deleted.
-  11b-17-member-drive-detail-unredacted: in-progress
+  11b-17-member-drive-detail-unredacted: review
   # ⭐⭐ 11b-19 — MINTED 2026-09-11 BY `#decision-2026-09-11-214` **Consequence 2**: B's UNSHIPPED
   # copy source, given a NAMED HOME before story F ships. ⛔ ZERO OPEN DECISIONS — the authority is
   # already Trustee-ratified (DR + KB, 2026-09-05); this story AUTHORS and ⛔ decides nothing.

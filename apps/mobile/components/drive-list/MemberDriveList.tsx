@@ -99,12 +99,15 @@ export function MemberDriveList() {
   // determined by `locale`, which IS the dep), and a locale change recreates `renderItem` (and so
   // captures a fresh `t`) exactly when it needs to.
   // ⭐⭐ STORY 11b.17 (AC8) — the row opens the member's per-drive DETAIL. ⚠ Story E shipped ⛔ no
-  // navigation because the destination did ⛔ not exist; `11b-17` built it at `/(sahyog)/[driveToken]`.
+  // navigation because the destination did ⛔ not exist; `11b-17` built it at
+  // `/(contribution)/drive/[driveToken]` — ⛔ INSIDE an existing route group, because Story
+  // 11b.10's **D4** rules *"⛔ no new route group"* and a live assertion pins it
+  // (`tests/unit/sahyog-vivran-entry.test.ts`).
   // ⛔ The address is the SERVER-RETURNED `publicToken` and ⛔ never anything derived from
   // `poolCanonicalIdentifier` (11b.10 D2).
   const handleOpenDrive = useCallback(
     (publicToken: string) => {
-      router.push(`/(sahyog)/${encodeURIComponent(publicToken)}`)
+      router.push(`/(contribution)/drive/${encodeURIComponent(publicToken)}`)
     },
     [router],
   )
@@ -432,7 +435,8 @@ export function MemberDriveList() {
  *
  * ⭐⭐ **THE GROUND IS GONE, ⛔ NOT THE RULE.** Story E's AC5 declared the row `text` because there was
  * **nowhere to go** — the detail view did ⛔ not exist. ⭐ Story `11b-17` **built it**
- * (`/(sahyog)/[driveToken]`), and its **AC8** carries the routed obligation from E's own THIRD
+ * (`/(contribution)/drive/[driveToken]` — ⛔ inside an EXISTING group, per 11b.10's **D4**), and
+ * its **AC8** carries the routed obligation from E's own THIRD
  * code-review pass (2026-09-09, BigDev, `11b-15:860-861`): *"⭐ **THIS** story owns the per-drive
  * view, so the affordance belongs here — and it must be a REAL focusable control with a real handler
  * and an accessible name."*

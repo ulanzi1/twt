@@ -28,6 +28,68 @@ that story routes what it finds. ⛔ Recording a comment as stale is ⛔ not the
 
 ---
 
+## Recorded from: implementation of 11b-17-member-drive-detail-unredacted — Task 6 (2026-09-13)
+
+⭐ Two items the story's **Task 6** orders recorded, plus ⭐ **one genuinely NEW finding the comparison
+test surfaced**. ⚠⛔ ⛔ None is a functional defect, and ⛔ none is fixed here.
+
+- **⭐⭐ THE AUDIT-CHAIN AMPLIFICATION, MEASURED — ⭐ RECORDED, ⛔ NOT FIXED, AND ⛔ NOT A BLOCKER.**
+  [`packages/domain/src/encryption/envelope.ts` (`auditHook('decryptDek', …)`, ⛔ **no DEK cache**);
+  `apps/api/src/audit/audit-log-sink.ts` (`createKmsAuditHook` → the same global-chain writer);
+  `packages/domain/src/audit/write.ts` (`writeAuditEntry`, holding
+  `pg_advisory_xact_lock(AUDIT_CHAIN_LOCK_KEY)` — ⛔ **ONE fixed key, deployment-wide, cross-tenant**)]
+  ⭐ **MEASURED, ⛔ not estimated** — `apps/api/tests/integration/contributions/member-drive-detail.spec.ts`
+  installs a counting `auditHook` over a real open and asserts the figure exactly: **7 Tier-1 decrypts
+  + 1 AC5 line = 8 global-lock acquisitions per detail open**. ⚠⛔ **SEVEN OF THE EIGHT ARE INVISIBLE**
+  — emitted by the crypto layer, ⛔ not by this story's code — which is exactly why they had to be
+  measured. ⭐ Each line costs **5-6 sequential round trips**; the cost is the **SERIALIZATION**, ⛔ not
+  the query (`audit_log_entries_seq_uq` serves the tail read cheaply).
+  ⚠⛔ **`-199` Consequence 2 SAID *"a write on every detail open"* — SINGULAR — AND THAT WAS WRONG IN
+  THE STORY'S FAVOUR.** ⛔ Neither AC5 nor `-199` had noticed it.
+  ⭐⭐ **AND IT IS ⛔ NOT NEW — story E ALREADY DOES THIS, SHIPPED.** `11b-15`'s list decrypts TWO names
+  **PER ROW** under a halved `DIRECTORY_DECRYPT_CONCURRENCY`, so routine browsing **already** takes the
+  deployment-wide lock today ⇒ ⭐ a **PRE-EXISTING condition `11b-17` AMPLIFIES**, ⛔ not one it
+  introduces. ⚠ What IS new is that this is the **first surface where a Tier-1 READ is the ordinary
+  path**; every other writer in the repo is a low-frequency administrative WRITE.
+  ⛔⛔ **THE DISPOSITION IS FIXED IN ADVANCE, ⛔ NOT LEFT TO TASTE:** whatever the number, it is ⛔ **NOT**
+  a blocker and ⛔ **NOT** a reason to drop a decrypt or the KMS hook — ⭐ that hook is the **FR-47**
+  record of *which key opened which field*, and removing it to buy throughput would trade a **crypto
+  audit obligation** for latency. ⭐ It is **repo-wide and pre-existing** (the KMS hook + the single
+  global chain), ⛔ **not** a per-surface patch. **Trigger:** the first observed audit-chain contention
+  under load, or a hardening pass over the global-chain writer (a per-tenant chain, a batched writer,
+  or a DEK cache — ⚠ each of which is its own ruling).
+
+- **⚠⛔⛔ NEW 2026-09-13 — THE PUBLIC DRIVE PAGE RENDERS AN **APPEAL LINEAGE** THAT THE MEMBER DETAIL
+  DOES ⛔ NOT: A REAL `-189` cl.3 SHORTFALL, ⭐ RECORDED, ⛔ NOT ABSORBED AND ⛔ NOT CARVED OUT.**
+  [`apps/public/src/lib/surface-fields.ts` — `SAHYOG_VIVRAN_FIELD_IDS`'s `appeal_reversal_stage` ·
+  `appeal_disposition_category` · `appeal_reversal_at`; producer
+  `packages/domain/src/pool/sahyog-vivran-read.ts`'s `readAppealReversal`]
+  ⭐ **FOUND BY WRITING AC2's COMPARISON TEST**, which reads the floor **programmatically from the live
+  maps** — ⛔ it would ⛔ never have surfaced from a transcribed list
+  ([[feedback_negative_claims_checkable_in_repo]]).
+  ⚠⛔ **IT IS ⛔ NOT ONE OF AC2's THREE AUTHORISED EXCLUSIONS.** AC2 names exactly three — लक्ष्य (a
+  member-side ADDITION), the DECEASED member's name (its public gate is provisioning-inert), and
+  ⛔ *"NOTHING ELSE"*. ⇒ ⛔ the honest word is **SHORTFALL**, ⛔ not *"excluded"* and ⛔ not *"closed"*
+  ([[feedback_closure_language_precision]]). ⭐ It is **DECLARED IN THE TEST** — the three ids map to an
+  explicit empty counterpart and a dedicated assertion pins the gap at **exactly three**, so a FOURTH
+  appearing fails loudly rather than widening it silently.
+  ⛔⛔ **WHY IT WAS ⛔ NOT BUILT HERE, AND ⛔ NOT "JUST ADDED":** the lineage is derived at REQUEST TIME by
+  a SEPARATE single-row query over the claim's own `claim.reversed` stream. Adding it is a new read, a
+  contract widening, **and a live DISCLOSURE QUESTION** — *may every member of a Pariwar see that a
+  particular family's claim was DENIED and then reversed on appeal, and at which stage?* ⚠⛔ ⛔ **NOBODY
+  HAS RULED THAT.** `-199` granted the **BANKING COORDINATES**; `-212` ruled लक्ष्य and the VPA; `-213`
+  ruled both accounts. ⛔ **NONE of them reaches the appeal lineage**, and the public page publishes it
+  to strangers under a DIFFERENT authority (11b.3's D12(a)) — ⭐ which is ⛔ **not** transitive to a
+  member surface. ⇒ inventing that scope inside an implementation pass would be exactly the
+  *"absorbed rather than NAMED"* failure this story's own **Trap 3** forbids.
+  ⚠ **THE RESIDUAL, STATED PLAINLY:** on a drive that reached its pool BY APPEAL, a member currently
+  sees **LESS** than a stranger on that one axis. ⭐ It is **BOUNDED** (three ids, one block, ⛔ only on
+  reversed claims) and it is ⛔ **NOT** a disclosure leak — the error runs toward saying LESS.
+  **Trigger:** ⭐ **a Trustee Panel ruling on whether the appeal lineage is member-visible** — or the
+  Epic 11b retrospective, whichever comes first. ⛔ Do ⛔ not close it by adding the fields.
+
+---
+
 ## Recorded from: implementation of 11b-15-member-drive-list-fourth-tab (2026-09-09)
 
 ⭐ Recorded by the story's **AC8**, which fences these two out of its own diff in terms: *"⛔ no public
@@ -8671,6 +8733,28 @@ violation.
   data after a sign-out. ⚠ Fixing it properly is one repo-wide change (scope every member key by
   `memberId`/`pariwarId` AND purge on `signOut`), ⛔ not a per-surface patch.
 
+  ⭐⭐ **AMENDED 2026-09-13 (Story 11b.17, Task 6) — THE TRIGGER HAS ⭐ FIRED, AND THE ITEM IS ⛔ STILL
+  OPEN.** ⚠⛔ Its stated trigger *"any DPDPA review of at-rest cached personal data on the handset"* is
+  met by `11b-17`'s own shipping: that surface hands a member the nominee's **FULL account number,
+  IFSC, holder name, bank and branch — DECRYPTED, for BOTH accounts** (`2026-09-04-190` cl.3 as scoped
+  by `-199`), on **any** drive in their Pariwar. ⇒ ⭐ **that is the largest Tier-1 payload this app has
+  ever put on a member wire**, and ⛔ it is categorically different from a NAME: an account number is a
+  **payment coordinate**, ⛔ not an identifier, and it is **UNMASKED BY RULING** (*"a masked account#
+  cannot be transferred to"*).
+  ⭐ **HOW MUCH IS AT REST, STATED:** ⛔ none from this surface. `useMemberDriveDetailQuery` sets
+  **`gcTime: 0`**, so the detail response is ⛔ **NOT RETAINED** after the screen unmounts and ⛔ never
+  reaches the MMKV blob. ⚠⛔⛔ **THAT IS A NARROW, SURFACE-LOCAL MITIGATION AND ⛔ IT DOES ⛔ NOT CLOSE
+  THIS ITEM** ([[feedback_closure_language_precision]]): the drive **LIST** still caches decrypted
+  deceased-family and nominee NAMES for a Pariwar's whole drive history under an unscoped key, with
+  `gcTime` 7 d and ⛔ no sign-out purge, and so do `active-contribution`, `pool-contributors`,
+  `validity`, `renewal-status` and `yogdaan-bahi`.
+  ⚠⛔ **AND PATCHING ONE KEY WOULD BE WORSE THAN LEAVING IT**, because it would LOOK closed. ⭐ The fix
+  is unchanged and remains **ONE REPO-WIDE CHANGE** — scope every member key by `memberId`/`pariwarId`
+  **AND** purge on `signOut`. ⛔ Still ⛔ not a per-surface patch, and ⛔ **still ⛔ not `11b-17`'s**.
+  **Trigger (RESTATED, ⛔ not replaced):** ⭐ **FIRED** — the DPDPA-review arm is now met. The remaining
+  arms stand: any multi-account or device-sharing requirement, or the first report of one member seeing
+  another's data after a sign-out.
+
 - **`.strict()` response parsing turns any ADDITIVE server field into a total blank-out of the tab on
   older mobile builds.** [`packages/contracts/src/contributions/member-drive-list.ts`;
   `packages/api-client/src/index.ts:261`]
@@ -8685,6 +8769,25 @@ violation.
   minutes; nothing records the equivalent constraint for `apps/mobile`, where old builds persist
   indefinitely. **Trigger:** the first additive change to any member-facing contract entry — story F
   is the next candidate — or a mobile forward-compatibility hardening pass.
+
+  ⭐⭐ **AMENDED 2026-09-13 — THE TRIGGER FIRED AT `8-17`, ⛔ NOT AT STORY F, AND THE ITEM IS ⛔ STILL
+  OPEN** ([[feedback_closure_language_precision]]). ⚠⛔ This item names story **F** (`11b-17`) TWICE as
+  *"the next candidate"*; ⛔ **it was overtaken**. Story **`8-17`** (`done`, 2026-09-12) fired it FIRST
+  by adding `vpa` to `NomineeBankAccountView` under Trustee-ratified `2026-09-10-212` cl.2, and
+  discharged it with its own **AC8**: a written **DEPLOYMENT ORDER** — ⭐ the **mobile build reaches
+  devices FIRST, the API deploys SECOND** — grounded on `packages/api-client/src/index.ts:261`'s
+  throwing `schema.parse`. ⇒ ⭐ **that is the worked precedent, and it exists**.
+  ⭐ **AND STORY F DID ⛔ NOT FIRE IT.** `11b-17` followed this item's OWN stated remediation —
+  *"prefer a NEW contract"* — shipping `MemberDriveDetailResponse` on a **NEW ROUTE**
+  (`/api/v1/member/drive-detail/:driveToken`) and adding ⛔ **ZERO** fields to `MemberDriveListEntry`.
+  ⇒ ⚠ an installed build older than that release simply ⛔ never calls the new route: a new route is
+  **INVISIBLE** to it, so there is ⛔ no unknown key to reject and ⛔ no tab to blank.
+  ⚠⛔ **THE UNDERLYING GAP IS UNCHANGED AND STILL OPEN:** the `api-client`-wide throwing `schema.parse`
+  against `.strict()` member contracts, with ⛔ nothing in the repo recording the `apps/mobile`
+  equivalent of `2026-09-08-207` cl.1's API-first prohibition — ⭐ and old mobile builds persist
+  indefinitely, unlike `apps/public`, which redeploys in minutes.
+  **Trigger (RESTATED):** the next additive change to an EXISTING member-facing contract entry, or a
+  mobile forward-compatibility hardening pass. ⭐ When it comes, follow **`8-17` AC8**'s shape.
 
 ## Deferred from: code review of 11b-15-member-drive-list-fourth-tab, FOURTH PASS (2026-09-10)
 

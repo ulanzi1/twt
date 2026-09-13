@@ -278,7 +278,8 @@ describe('⭐ AC5 / family 13 — every labelled container is an accessibility e
     //
     // ⭐⭐ **THE GROUND IS GONE, ⛔ NOT THE RULE.** E declared the row `text` because there was
     // **NOWHERE TO GO** — the detail view did ⛔ not exist. ⭐ Story `11b-17` **BUILT IT**
-    // (`apps/mobile/app/(sahyog)/[driveToken].tsx`), under the obligation **E's own THIRD code-review
+    // (`apps/mobile/app/(contribution)/drive/[driveToken].tsx` — ⛔ inside an EXISTING route group,
+    // because Story 11b.10's **D4** rules *"⛔ no new route group"*), under the obligation **E's own THIRD code-review
     // pass routed to it BY NAME** (2026-09-09, BigDev — `11b-15:860-861`, `[x] [Review][Decision] ✅
     // RULED`): *"⭐ **THIS** story owns the per-drive view, so the affordance belongs here — and it must
     // be a REAL focusable control with a real handler and an accessible name."*
@@ -304,14 +305,15 @@ describe('⭐ AC5 / family 13 — every labelled container is an accessibility e
         'interaction has a real handler" failure story E\'s AC5 named, now reachable from the ' +
         'opposite direction',
     ).toContain('onPress')
-    // ⭐ AND THE HANDLER GOES SOMEWHERE REAL: the detail route story 11b.17 built, addressed by the
+    // ⭐ AND THE HANDLER GOES SOMEWHERE REAL: the detail route story 11b.17 built INSIDE the existing
+    // `(contribution)` group (⛔ NOT a new one — 11b.10's D4), addressed by the
     // SERVER-RETURNED opaque token. ⛔⛔ ⛔ NEVER an address derived from `poolCanonicalIdentifier` —
     // that counter is MONOTONIC per (pariwar, month) and rebuilding an address from it would
     // re-create inside the client the guessability Story 11b.10's D2 removed, on a path that now
     // reaches FIVE decrypted Tier-1 fields per account.
-    expect(listCode).toContain('/(sahyog)/')
+    expect(listCode).toContain('/(contribution)/drive/')
     expect(listCode).toContain('entry.publicToken')
-    expect(listCode).not.toMatch(/\(sahyog\)\/\$\{[^}]*poolCanonicalIdentifier/)
+    expect(listCode).not.toMatch(/drive\/\$\{[^}]*poolCanonicalIdentifier/)
     // ⭐ AND THE ACCESSIBLE NAME SURVIVES THE ROLE CHANGE — the row still announces its facts under
     // ONE grouped label, and now also announces what the tap DOES.
     expect(row).toContain('accessibilityLabel={rowA11y}')

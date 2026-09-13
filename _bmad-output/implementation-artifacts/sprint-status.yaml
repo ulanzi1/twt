@@ -1,3 +1,86 @@
+# last_updated: 2026-09-13c (⭐ **`11b-17` — FOURTH `validate` PASS. ⛔ ZERO ROW MOVES; ⛔ NO CODE; ⛔ NO
+#   CRITICAL FINDING.** Baseline re-checked (`a2617869` still an ancestor; same **15** drifted files);
+#   four parallel verification lanes plus direct spot-checks re-traced ~70 citations against HEAD,
+#   `.decision-log.md`, this ledger, `epics.md`, every named sibling story, and both i18n locales —
+#   ⛔ **nothing found FALSE**, no Stop reopened, no governance-state claim contradicted.
+#   ⭐ **Two mis-cites corrected, both citing a passage about a DIFFERENT structure than the one being
+#   ruled:** `public-read.ts:283-284` (the SQL count-fragments' doc-comment, ⛔ not the pool-state
+#   tuple's — `-196` Consequence 2 already carries the rule on its own) and `-206` cl.1 (the progress
+#   bar's own `82%`, ⛔ not "no double-mint" — `-193` cl.3 already covers it, and the References block
+#   had already omitted cl.1 there).
+#   ⚠ **One class of single-digit line drift recorded, deliberately NOT swept** (the
+#   `ANONYMIZED_SENTINEL` backstop, `PublicSahyogVivranNomineeAccount`'s span, the
+#   `DIRECTORY_DECRYPT_CONCURRENCY` halving site) — following the `8-16` v0.8 precedent for exactly
+#   this call.
+#   ⭐ **One stale artefact found OUTSIDE this story's own files, routed as Task 1 item (f):**
+#   `apps/mobile/app/(contribution)/pay.tsx:16-18`'s flow comment still calls VPA collection "still
+#   deferred" though `8-17` (`done`) shipped it — ⛔ not F's file, found incidentally while
+#   re-verifying `-212` Consequence 3.
+#   ⚠ Row stays **`ready-for-dev`**. ⛔ **NO CODE.**)
+# last_updated: 2026-09-13b (⭐⭐ **`11b-17` — THE 2026-09-13a PASS RE-RUN AGAINST ITS OWN OUTPUT, AFTER
+#   BigDev CAUGHT A DEFECT IT HAD CERTIFIED. ⛔ ZERO ROW MOVES; ⛔ NO CODE.** ⭐⭐ The majority of findings
+#   were **that pass's OWN** ([[feedback_story_validate_footguns]] #22).
+#   ⛔⛔ **THE WORST: IT BROKE A CORRECT CITATION AND FABRICATED THE JUSTIFICATION** —
+#   `public-read.ts:169-173` was RIGHT; it was "corrected" to `:171-175` on the ground that the old
+#   range *"excludes `settled: 'verified'` at `:174`"* — ⛔ `:174` is **BLANK**, the mapping is at `:172`,
+#   and `:171-175` drops the declaration line. ⛔ Reverted. ⇒ ⭐⭐ **A "CORRECTION" IS A CLAIM; TRACE IT
+#   LIKE ONE.** ⛔⛔ **AND ITS *"three ranges … unified"* SWEEP CLAIM WAS FALSE** — three of FOUR named,
+#   ⛔ none of the other sites swept.
+#   ⚠⛔⛔ **THE `⛔` GLYPH WAS INVERTING MEANING AT FOURTEEN SITES** — four **imperatives**
+#   (*"⛔ Route it"*), **AC0's own commit-ordering rule** (*"⛔ one `governance:` commit, ⛔ before any
+#   code"* = *not one, not before*), and the **RECORD header's own disarming sentence**
+#   (*"⛔ KEPT, ⛔ NOT DELETED"* = *not kept*). ⭐ **A REGISTER BLOCK IS NOW DECLARED UNDER THE STATUS
+#   LINE**; all fourteen corrected.
+#   ⛔⛔ **AC4's `branch` WAS ORDERED, FORBIDDEN AND UNHOMED AT ONCE** — *"Branch"* is ⛔ NOT ratified copy
+#   (⛔ no clause names it) and `8-17` already minted `upi_intent.vpa_label` at its OWN render site ⇒
+#   ⭐ mint `label.branch` HERE. ⛔⛔ **6.8's D1 IS ⛔ NOT TRUSTEE-RATIFIED** (*"APPROVED (BigDev)"*) — and
+#   that sentence was the story's ENTIRE licence to drop a Panel routing ⇒ ⭐ re-grounded on the
+#   **SHIPPED SCHEMA**. ⛔⛔ **`D5-subject (i)` WAS PROMOTED TO A RULING** while the log records it OPEN at
+#   four sites ⇒ swept to **records**. ⚠⛔ **`6-18` WAS CITED AS PROOF THE QUESTION IS SETTLED** — its own
+#   header says it does ⛔ NOT close (i), and **its D1 is OPEN and BLOCKS its AC1**, the very AC quoted.
+#   ⭐ Added: **Task 5a** (⛔ no task named the screen file to create), the two **Hindi divergences**
+#   `11b-19` recorded, per-paragraph **SUPERSEDED sentinels** in the RECORD, `-212` **Cons. 6** finally
+#   ROUTED, and the hoist block reordered to NINE with the ⛔ **two DISCLOSURE-class items FIRST**.
+#   ⭐ **CONFIRMED SOUND by an independent lane:** the §8.4(ii) headline, *"DE-ROUTED but ⛔ NOT LOGGED"*,
+#   the **successor-entry-never-edit-`-213`** remedy (house pattern at FIVE sites), `-212` Cons. 6
+#   **unhomed**, `-214` Cons. 3 **HOMED not closed**, both STOP discharges, and ⭐ **ZERO governance
+#   content lost in the restructure**. ⚠ Row stays **`ready-for-dev`**. ⛔ **NO CODE.**)
+# last_updated: 2026-09-13a (⭐⭐ **`11b-17` THIRD `validate` PASS — 38 FINDINGS, ALL APPLIED. ⛔ ZERO
+#   ROW MOVES; ⛔ NO CODE.** ⭐ Baseline `a2617869` IS still an ancestor and is ⛔ NOT re-pinned.
+#   ⚠⛔⛔ **BUT ITS *"no code moved"* CLAIM WAS FALSE** — `8-17` and `11b-19` shipped **15 code files**
+#   since the pin, including four the story cited by line. ✅⭐⭐ **BOTH STOPS DISCHARGED; THE STORY IS
+#   STARTABLE IN FULL (AC0-AC11):** STOP 1 by `-214`, **STOP 2 by `11b-19` (`done`)**, whose eight
+#   `message_block.*` keys now ship in both locales ⇒ the v1.2 findings *"B never shipped the copy"*
+#   and *"AC10 is UNSATISFIABLE"* are FALSIFIED and **marked, ⛔ not rewritten**.
+#   ⛔⛔ **AND THAT DISCHARGE CREATED AN OBLIGATION THE FILE CARRIED NOWHERE:**
+#   `packages/i18n/tests/sahyog-shared-dark-copy.test.ts` holds `AUTHORISED: string[] = []` with a
+#   regex hardened to catch a DYNAMIC key ⇒ AC10 fails it BY PATH. ⭐ **NARROW it** per its own
+#   author's written instruction — ⛔ never delete, ⛔ never append to go green.
+#   ⛔⛔ **§8.4(ii) IS ⛔ NOT SETTLED: `8-17` (`done`) DEFERRED THE OWED RECORD TO `11b-17` BY NAME**
+#   (`8-17:352`) while `-213` still reads *"nobody has said which"* ⇒ the log and the story DISAGREE.
+#   ⭐ Task 1 now owes a **SUCCESSOR entry** (⛔ never an edit to `-213`); the honest prior status was
+#   **"DE-ROUTED but ⛔ NOT LOGGED"** ([[feedback_closure_language_precision]]).
+#   ⭐ **AC7's fence model was WRONG** (*"the shape E's AC8 uses"* scans ⛔ nothing) — ⚠ the correction
+#   was already made against `11b-19` on 2026-09-12 and ⛔ **never swept to the story carrying the
+#   sentence verbatim** ([[feedback_story_validate_footguns]] #16). ⛔⛔ **AC2's inert-gate carve-out
+#   resolved ⛔ ONE of TWO subjects** — the DECEASED name's gate is inert (its clause id has ⛔ ONE repo
+#   occurrence, its own definition) but the **NOMINEE's name carries ⛔ NO gate and that is RULED**
+#   ⇒ the carve-out would have SUPPRESSED A REAL FAILURE (#20).
+#   ⭐ **WRITTEN: AC11** (family 13 + the `ANONYMIZED_SENTINEL` backstop — a whole a11y surface that had
+#   ⛔ no AC), **Task 6 subtasks for AC4/AC8/AC9/AC10/AC11** (⛔ AC4, the highest-disclosure AC, was
+#   shipping UNTESTED), a Task for the three-resolver rule, a Task that ROUTES the stale artefacts,
+#   and AC2's comparison assertion stated in full. ⚠⛔ **Task 1 ordered a decision entry that ALREADY
+#   EXISTS** (a dev would have minted a duplicate) and **Task 6 carried two MUTUALLY UNSATISFIABLE
+#   AC3 tests** on the AC the story calls load-bearing — both fixed.
+#   ⚠ **Swept again:** all four `.decision-log.md:NNN` (stale a SECOND time — ⛔ broken by `11b-17`'s
+#   OWN `-214` governance commit) now **DELETED** for clause addresses; all three `sprint-status.yaml`
+#   numbers (⛔ ~570-610 lines off) ⇒ **ROW-KEY addressing**; eleven `deferred-work.md` numbers (two
+#   SWAPPED, one on the WRONG ITEM) ⇒ **item addresses**. ⭐⭐ **`11b-17` NOW CARRIES ZERO NUMERIC
+#   POINTERS INTO EITHER PREPEND-STRUCTURED FILE** — ⇒ this ledger entry breaks ⛔ nothing of its own,
+#   which is the *"check yourself on the way out"* half of footgun #19.
+#   ⭐ **RESTRUCTURED:** ~99 lines of pass archaeology moved under a `## 📚 RECORD` heading, ⛔ **zero
+#   bytes deleted**, and a **SEVEN THINGS THAT WILL BITE YOU** block hoisted after the Tasks.
+#   ⚠ Row stays **`ready-for-dev`**. ⛔ **NO CODE.**)
 # last_updated: 2026-09-12f (⭐⭐ **`11b-19` THIRD REVIEW PASS — 9 MORE PATCHES, ⛔ ZERO ROW MOVES.**
 #   ⭐⭐ **CAUGHT A SELF-ISSUED OVER-REACH FROM THE PRIOR PASS:** the 2026-09-12e note declaring AC0
 #   "discharged" was UNILATERAL, with no cited authorising decision — exactly the

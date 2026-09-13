@@ -84,6 +84,21 @@ export function selectZeroDayLine(
 }
 
 /**
+ * ⭐⭐ **THE "ABOUT THIS DRIVE" SENTENCE'S ₹0-SILENCE, ARCHIVED ONLY (AC9, `-207` cl.2).**
+ *
+ * ⚠⛔ Where a drive's amount is ₹0 on the WIRE TOKENS `closed`/`verified` (POOL STATES
+ * `closed`/`settled`), the sentence renders **NOTHING** — ⛔ no placeholder, ⛔ no marker, ⛔ no partial
+ * sentence — exactly the text AC9 quotes verbatim. ⭐ The `live` zero-day case is a DIFFERENT rule
+ * ({@link selectZeroDayLine}, `-206` cl.4's ratified replacement copy) and is ⛔ **NOT** this
+ * function's scope — a `live` drive is never silenced here.
+ */
+export function isArchivedZeroAmountDrive(
+  detail: Pick<MemberDriveDetailResponse, 'status' | 'amountRaisedInr'>,
+): boolean {
+  return detail.status !== 'live' && detail.amountRaisedInr <= 0
+}
+
+/**
  * ⭐⭐ **THE PANEL'S MESSAGE BLOCK (AC10) — WHAT RENDERS, AND WHETHER ANYTHING DOES.**
  *
  * ⭐ Ratified 2026-09-05, DR + KB (routing note **§8.1**, routed at **§9.1 row 3**), recorded at

@@ -52,6 +52,7 @@ import {
   accountHasUnavailableField,
   detailOutcomeFramingKey,
   formatClosedAtIst,
+  isArchivedZeroAmountDrive,
   selectMessageBlockHeadline,
   selectMessageBlockTableColumns,
   selectZeroDayLine,
@@ -238,8 +239,13 @@ function DriveDetailBody({
   // ⚠⛔ `t()` THROWS on an unsupplied token ⇒ `.full` on a nameless drive would take down the WHOLE
   // PAGE. ⭐ The selector is a pure function so a test can CALL it (`./format`).
   const zeroDay = selectZeroDayLine(detail)
-  const summaryLine =
-    zeroDay === null
+  // ⚠⛔ ARCHIVED ₹0-SILENCE (AC9, `-207` cl.2) — ⛔ NOT the `live` zero-day case above, a DIFFERENT
+  // rule: a `closed`/`verified` drive with a ₹0 figure renders NOTHING here, matching
+  // `selectMessageBlockHeadline`'s own (3) and the property's own quoted text: *"no placeholder, no
+  // marker, no partial sentence."* Review finding, 2026-09-13 — this branch was previously missing.
+  const summaryLine = isArchivedZeroAmountDrive(detail)
+    ? null
+    : zeroDay === null
       ? t('raised', { amount }, NS)
       : zeroDay.key === 'zero_line.full'
         ? t('zero_line.full', { family_name: zeroDay.familyName }, SHARED_NS)
@@ -347,9 +353,13 @@ function DriveDetailBody({
               </Text>
             </XStack>
 
-            <Text fontFamily="$body" fontSize="$4" color="$colorPress">
-              {summaryLine}
-            </Text>
+            {/* ⚠⛔ `null` RENDERS NOTHING, ⛔ NOT AN EMPTY LINE — the archived ₹0-silence rule (AC9,
+                `-207` cl.2) forbids "no placeholder, no marker, no partial sentence." */}
+            {summaryLine === null ? null : (
+              <Text fontFamily="$body" fontSize="$4" color="$colorPress">
+                {summaryLine}
+              </Text>
+            )}
 
             {/* ⚠ On a zero-day drive the Panel's softened line REPLACES the figures; repeating the
                 count beneath it would put back exactly what `-206` cl.4 removed. */}

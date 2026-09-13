@@ -1,15 +1,26 @@
 # Trustee Panel routing note — 2026-09-13
 ## Does the Panel's message block (AC10) render on a `live` drive's first day — zero confirmed contributions — or does it wait for the first contribution?
 
+> ## ✅ ANSWERED — 2026-09-13, **Dhiraj Rahul** and **Kalpana Bharti**
+>
+> **Q1 → Option A.** The message block renders **nothing** on any ₹0 drive, `live` included, until
+> the first confirmed contribution lands. AC9's `zero_line.*` line is the only day-one copy. ⛔
+> Option B (new zero-day message-block copy) and ⛔ Option C (render the completed-past-tense copy
+> as-is on day one) are both declined.
+>
+> ⭐ Recorded as **`#decision-2026-09-13-216`**, Trustee-ratified, extending `-207` cl.2's ₹0-silence
+> to the message block on both stages. ⛔ No code change follows — the shipped
+> `selectMessageBlockHeadline` already implements exactly this.
+>
+> ⛔ **The body below is kept AS PUT, ⛔ not rewritten** ([[feedback_record_unattested_no_backfill]]).
+
 **Author:** BigDev, Solo Builder — 2026-09-13
 **Occasion:** Story 11b.17 (the member's per-drive detail) code review, post-implementation. One
 finding was triaged as a **decision**, not a patch, because the code's own justification for its
 behaviour is the developer's reasoning, not a cited ruling — and the two readings genuinely diverge.
 **Routed to:** Trustee Panel.
-**Status:** ⚠ **OPEN.** Logged as a **deferred** item in `deferred-work.md` (code review of
-`11b-17-member-drive-detail-unredacted`, 2026-09-13) and in the story's own Review Findings section.
-⛔ It blocks nothing shipped today — the story is `done` on the reading currently in the code. It is
-raised so the reading is **on the record**, not merely implied by an un-ratified comment.
+**Status:** ✅ **ANSWERED 2026-09-13** — see the ruling above. ⛔ It blocked nothing shipped — the
+story was already `done` on the reading currently in the code, and the ruling confirms that reading.
 
 > ⭐⛔ **THE ONE THING TO KNOW FIRST.** ⛔ **This is not a defect in anything you ruled.** `-207` cl.2
 > (2026-09-08) rules ₹0-silence for the **public index page's** "About this drive" sentence, scoped

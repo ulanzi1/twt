@@ -129,6 +129,22 @@ export type AuthAuditEventType =
   // Story 9.9 — the donor-facing nominee-accounts read occurred. Context: the account COUNT only,
   // NEVER the decrypted holder-name/account#/IFSC (AC6).
   | 'member_contribution.nominee_accounts_viewed'
+  // ⭐⭐ Story 11b.17 (AC5) — a member OPENED one drive's member-facing detail and was handed the
+  // nominee's COMPLETE, UNMASKED Tier-1 banking coordinates (`2026-09-04-190` cl.3 as scoped by
+  // `-199`). ⭐ EXACTLY ONE line per DETAIL OPEN — ⛔ NOT one per coordinate read: AC4 renders FIVE
+  // coordinates × TWO accounts = TEN of those, and a per-coordinate rule would multiply the
+  // deployment-wide `pg_advisory_xact_lock(AUDIT_CHAIN_LOCK_KEY)` by ten on the ORDINARY browsing path.
+  //
+  // ⚠⛔⛔ **A NAMED DEPARTURE, ⛔ NOT INHERITED POSTURE.** The nearest precedent —
+  // `writeAppealReversalDisclosureAudit` (`public-pages/handlers.ts`) — writes `actorId: null,
+  // actorRole: null` (*"the caller is an anonymous visitor"*) and its own doc-block says *"⛔ Do not
+  // widen this to log every request."* ⇒ this line departs on BOTH axes (ATTRIBUTED, and
+  // HIGH-VOLUME) and the departure is argued at the story's AC5 rather than claimed as inheritance.
+  //
+  // ⭐ Context: the drive's CANONICAL IDENTIFIER and the account COUNT — ⛔ NEVER the public token
+  // (which would write a live public ADDRESS into the durable audit chain — the `handlers.ts` rule
+  // this half DOES follow), and ⛔ NEVER a decrypted coordinate, in any field, ever.
+  | 'member_drive_detail.coordinates_viewed'
   // Story 8.5 — the UPI Failure Coach anonymous failure-report. The member's SELF-CLASSIFIED failure mode
   // is the diagnostic signal, encoded ENTIRELY in the action NAME (one action per mode) — there is NO
   // context payload, NO free-text, NO UTR/tr/amount/VPA anywhere. `actorId = memberId` is the audit

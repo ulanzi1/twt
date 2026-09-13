@@ -42,3 +42,14 @@ export * from './personal-event.js';
 // class). ⛔ NO banking coordinates (story F's), ⛔ no contributor names, ⛔ no per-member amounts,
 // ⛔ no `spawned` rows, and ⛔ no `pariwarId` query parameter — the scope comes from the SESSION.
 export * from './member-drive-list.js';
+// ⭐⭐ Story 11b.17 — the MEMBER'S VIEW OF **ONE** DRIVE: everything the PUBLIC Sahyog Vivran page
+// carries for that drive, ⭐ PLUS the nominee's complete, UNMASKED banking coordinates — which the
+// public page, since story A (`11b-11`), carries ⛔ NONE of (`2026-09-04-190` cl.3 as scoped by
+// `-199`: **any authenticated member, any drive in their OWN Pariwar**).
+// ⚠⛔ A **NEW CONTRACT** and ⛔ NOT a field added to `MemberDriveListEntry` — that entry is `.strict()`
+// and `api-client`'s `call` throws, so one additive field BLANKS THE WHOLE TAB for every member on an
+// installed build older than the API release (`deferred-work.md`, the 11b-15 THIRD-pass `.strict()`
+// item, which names this story twice and whose own remediation is *"prefer a NEW contract"*).
+// ⛔ NO `vpa` on this wire, on ⛔ any drive, in ⛔ any stage — `2026-09-10-212` cl.2 ruled the UPI ID
+// onto the PAYMENT screen, and `8-17` (`done`) shipped that half.
+export * from './member-drive-detail.js';

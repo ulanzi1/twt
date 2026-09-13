@@ -38,6 +38,7 @@ import { FlashList } from '@shopify/flash-list'
 import type { MemberDriveListEntry } from '@twt/contracts'
 import { formatCount, formatSahyogContributedAmount, formatSahyogTargetAmount } from '@twt/i18n'
 import { useLocale, useT } from '@twt/i18n/react'
+import { useRouter } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { RefreshControl } from 'react-native'
 import { Button, Paragraph, Text, View, YStack, XStack } from 'tamagui'
@@ -74,6 +75,7 @@ export function MemberDriveList() {
   // CLOSURE on every render, so depending on `t` for anything but calling it defeats memoization
   // ([[project_uset_fresh_closure_memo_trap]]).
   const { locale } = useLocale()
+  const router = useRouter()
   const {
     data,
     isLoading,
@@ -96,11 +98,22 @@ export function MemberDriveList() {
   // locale-stable renders that stale-captured `t` behaves identically to a fresh one (its output is
   // determined by `locale`, which IS the dep), and a locale change recreates `renderItem` (and so
   // captures a fresh `t`) exactly when it needs to.
+  // ⭐⭐ STORY 11b.17 (AC8) — the row opens the member's per-drive DETAIL. ⚠ Story E shipped ⛔ no
+  // navigation because the destination did ⛔ not exist; `11b-17` built it at `/(sahyog)/[driveToken]`.
+  // ⛔ The address is the SERVER-RETURNED `publicToken` and ⛔ never anything derived from
+  // `poolCanonicalIdentifier` (11b.10 D2).
+  const handleOpenDrive = useCallback(
+    (publicToken: string) => {
+      router.push(`/(sahyog)/${encodeURIComponent(publicToken)}`)
+    },
+    [router],
+  )
+
   const renderItem = useCallback(
     ({ item }: { item: MemberDriveListEntry }) => (
-      <DriveRow entry={item} t={t} locale={locale} />
+      <DriveRow entry={item} t={t} locale={locale} onOpen={handleOpenDrive} />
     ),
-    [locale],
+    [locale, handleOpenDrive],
   )
 
   const handleRetry = useCallback(() => {
@@ -410,19 +423,39 @@ export function MemberDriveList() {
 /**
  * ONE drive row.
  *
- * ⚠⛔ **THE WHOLE ROW IS ⛔ NOT PRESSABLE, AND THAT IS DELIBERATE.** Story **F** (`11b-17`) owns the
+ * ⚠⛔⛔ **SUPERSEDED AT STORY 11b.17 (AC8) — ⭐ NAMED, ⛔ NOT OVERWRITTEN**
+ * ([[feedback_supersede_never_reinterpret]]). ⛔ **WHAT IT SAID, kept verbatim as the record:**
+ * *"**THE WHOLE ROW IS ⛔ NOT PRESSABLE, AND THAT IS DELIBERATE.** Story **F** (`11b-17`) owns the
  * member's per-drive DETAIL view; ⛔ this story ships ⛔ no navigation into one. A row that LOOKED
- * tappable and did nothing would be the *"a role implying interaction has a real handler"* failure
- * AC5 forbids ⇒ ⭐ the row declares `accessibilityRole="text"`, ⛔ never `button`/`link`.
+ * tappable and did nothing would be the *'a role implying interaction has a real handler'* failure
+ * AC5 forbids ⇒ ⭐ the row declares `accessibilityRole="text"`, ⛔ never `button`/`link`."*
+ *
+ * ⭐⭐ **THE GROUND IS GONE, ⛔ NOT THE RULE.** Story E's AC5 declared the row `text` because there was
+ * **nowhere to go** — the detail view did ⛔ not exist. ⭐ Story `11b-17` **built it**
+ * (`/(sahyog)/[driveToken]`), and its **AC8** carries the routed obligation from E's own THIRD
+ * code-review pass (2026-09-09, BigDev, `11b-15:860-861`): *"⭐ **THIS** story owns the per-drive
+ * view, so the affordance belongs here — and it must be a REAL focusable control with a real handler
+ * and an accessible name."*
+ * ⇒ ⭐⭐ **THE RULE E WAS ENFORCING IS NOW SATISFIED THE OTHER WAY:** the row carries
+ * `accessibilityRole="button"` **AND** a real `onPress` that navigates. ⚠⛔ ⛔ The failure E named — *a
+ * role implying interaction with ⛔ no handler* — is still forbidden, and it is what a reviewer must
+ * check: ⛔ **never** re-declare `button`/`link` without a working handler, and ⛔ never strip the
+ * handler while leaving the role.
+ *
+ * ⚠⛔ **`button`, ⛔ NOT `link`** — ⭐ deliberately the opposite of `SahyogVivranEntry` and of the
+ * detail screen's own public-page CTA, which are `link` because they **LEAVE THE APP** for the public
+ * site. ⛔ This row navigates **IN-APP**, to a session-guarded screen.
  */
 function DriveRow({
   entry,
   t,
   locale,
+  onOpen,
 }: {
   entry: MemberDriveListEntry
   t: ReturnType<typeof useT>
   locale: 'en' | 'hi'
+  onOpen: (publicToken: string) => void
 }) {
   const isLive = entry.status === 'live'
 
@@ -516,8 +549,20 @@ function DriveRow({
   // [Review][Patch] — THIRD pass: the separator, the colon AND the label/value word order used to be
   // composed directly in this JSX — ⛔ the exact defect `row.summary` was minted to fix a few lines
   // above, shipped in the SAME commit. ⇒ composed through the i18n layer, so a locale can render the
-  // JOIN and not merely the two operands. ⭐ `nominee.label` stays a TOKEN so the label keeps ONE
-  // definition and story F (`11b-17`) reuses it rather than re-minting it.
+  // JOIN and not merely the two operands.
+  // ⚠⛔⛔ **ITS LAST SENTENCE IS SUPERSEDED AT STORY 11b.17 — ⭐ NAMED, ⛔ NOT DELETED**
+  // ([[feedback_supersede_never_reinterpret]]). ⛔ **WHAT IT SAID:** *"`nominee.label` stays a TOKEN so
+  // the label keeps ONE definition and story F (`11b-17`) reuses it rather than re-minting it."*
+  // ⛔⛔ **STORY F DOES ⛔ NOT REUSE IT, AND ⛔ MUST NOT.** `nominee.label` resolves to **`"Nominee"`**
+  // (hi: `"नॉमिनी"`) — ⛔ **not** the Trustee-ratified *"Nominee Name"* (`2026-09-04-190` **cl.2**) —
+  // so following this instruction would have shipped a label that FAILS `11b-17` AC4's own first
+  // sentence. ⭐ The token that DOES render the ruled string is **`sahyog-vivran`'s
+  // `label.account_holder`** (whose KEY name says `account_holder` and whose VALUE is *"Nominee
+  // Name"* — ⛔ do ⛔ not "fix" the key).
+  // ⭐ **WHAT SURVIVES, AND IT IS THE POINT THE SENTENCE WAS MAKING:** the label keeps **ONE**
+  // definition and is composed through the i18n layer. ⚠ This row's own label is a **ROW-LOCAL**
+  // string for a one-line list cell, and it is ⛔ not the ruled per-field label — ⛔ two keys,
+  // ⛔ deliberately, and ⛔ not a double-mint.
   const districtText = entry.district ?? t('district.absent', undefined, NS)
   const districtLine =
     entry.nomineeName === null
@@ -590,8 +635,19 @@ function DriveRow({
       // ⚠⛔ AND BECAUSE IT GROUPS, THE LABEL IS THE ⛔ ONLY THING ANNOUNCED — which is why `rowA11y`
       // is BUILT FROM the same strings rendered below rather than written as a fixed sentence.
       accessible
-      accessibilityRole="text"
+      // ⭐⭐ STORY 11b.17 (AC8) — `button` + a REAL handler. ⚠⛔ The two travel TOGETHER: E declared
+      // `text` because the detail view did ⛔ not exist, and *"a role implying interaction has a real
+      // handler"* is the rule BOTH stories enforce. ⛔ Never one without the other.
+      // ⭐ THE ROW GROUPS ITS OWN LEAVES AND WRAPS ⛔ NO NESTED CONTROL, so `accessible` here does
+      // ⛔ not collapse anything reachable — the 13(a) hazard (`:233-240`) is about a container
+      // wrapping a Button, which this is not.
+      accessibilityRole="button"
       accessibilityLabel={rowA11y}
+      accessibilityHint={t('row.open_hint', undefined, NS)}
+      // ⭐ The address is the SERVER-RETURNED opaque token and ⛔ nothing derived from
+      // `poolCanonicalIdentifier` — that counter is monotonic per (pariwar, month), and rebuilding an
+      // address from it would re-create inside the client the guessability 11b.10 D2 removed.
+      onPress={() => onOpen(entry.publicToken)}
     >
       <XStack gap="$2" items="center">
         <Text fontFamily="$body" fontSize="$5" color="$color">

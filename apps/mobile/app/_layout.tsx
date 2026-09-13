@@ -222,6 +222,19 @@ function RootLayoutNav() {
           }}
         />
 
+        {/* ⭐⭐ Story 11b.17 — the member's per-drive DETAIL route group: ONE drive in their own
+            Pariwar, with the nominee's complete UNMASKED banking coordinates. Reached by
+            `router.push` from the fourth tab's drive row (`/(sahyog)/[driveToken]`).
+            ⚠⛔ IN-APP BY NECESSITY, ⛔ not by preference: it carries Tier-1 payment coordinates and
+            must stay behind the root session guard. ⛔ It is ⛔ NOT `SahyogVivranEntry`, which opens
+            the drive's PUBLIC page outbound and is Trustee-ratified (`2026-09-05-200` cl.4). */}
+        <Stack.Screen
+          name="(sahyog)"
+          options={{
+            headerShown: false,
+          }}
+        />
+
         <Stack.Screen
           name="modal"
           options={{

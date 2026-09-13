@@ -31,5 +31,7 @@
   "bank.group_label": "Nominee recorded for this drive",
   "bank.account_label": "Recorded nominee",
   "bank.equal_nominees": "Both names are recorded equally. Neither one is preferred over the other.",
-  "label.account_holder": "Nominee Name"
+  "label.account_holder": "Nominee Name",
+  "$comment.label_branch": "⭐⭐ MINTED AT STORY 11b.17 (Task 5), AT ITS OWN RENDER SITE — and it is ⛔ NOT ratified copy. ⚠⛔ RECORDED PRECISELY BECAUSE AN EARLIER DRAFT CALLED IT RATIFIED, which left AC4 ORDERED, FORBIDDEN and UNHOMED at once — the one shape a dev cannot act on. ⭐ Traced live 2026-09-13: ⛔ NO clause names `branch`. `2026-09-04-190` cl.2 ratifies 'Nominee Name' (which is `label.account_holder`'s VALUE, ⛔ not this key), and `-193` cl.3 fences the SHARED STAGE/LINE VOCABULARY in `sahyog-shared` — ⛔ not every field label. ⭐ `label.branch` ('Branch' / 'शाखा') was an ORDINARY label DELETED AS COLLATERAL at `45547a7b`, when story A (`11b-11`) withdrew the public banking tier under `2026-09-04-190` cl.1 — so this restores a label, ⛔ it does ⛔ not author trust copy. ⭐ THE PRECEDENT IS `8-17`, which minted `upi_intent.vpa_label` = 'UPI ID' at ITS OWN render site (`5ffb366a`) under `-212` Consequence 5. ⚠⛔ The ⛔ non-render-site rule governs the PANEL'S MESSAGE BLOCK ⛔ ONLY (AC10 / Task 5d), which is ratified text and is consumed from `sahyog-shared` BY NAME. ⚠ `branch` is GENUINELY NULLABLE on the substrate ⇒ an absent branch OMITS THE ROW — ⛔ never a placeholder, ⛔ never 'Not recorded'. ⛔ It is ⛔ NOT `bank_name`'s twin: that column is NOT NULL with no non-empty CHECK, so its empty value is a FAULT and degrades to the decrypt sentinel. ⛔ Do ⛔ not write one guard for both.",
+  "label.branch": "Branch"
 }

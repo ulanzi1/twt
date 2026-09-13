@@ -269,14 +269,56 @@ describe('⭐ AC5 / family 13 — every labelled container is an accessibility e
     }
   })
 
-  it('⛔ the ROW declares `text`, ⛔ never `button`/`link` — it has no handler (story F owns detail)', () => {
-    // ⚠ A row that LOOKED tappable and did nothing would be the *"a role implying interaction has a
-    // real handler"* failure AC5 forbids. The per-drive DETAIL view is story F (`11b-17`).
+  it('⛔ the ROW\'s interactive role has a REAL handler — ⛔ never a role without one', () => {
+    // ⚠⛔⛔ **AMENDED 2026-09-13 (Story 11b.17, AC8) — ⛔ NOT DELETED, AND ⛔ NOT WEAKENED.**
+    // ⛔ **WHAT IT ASSERTED, kept verbatim as the record** ([[feedback_supersede_never_reinterpret]]):
+    // *"⛔ the ROW declares `text`, ⛔ never `button`/`link` — it has no handler (story F owns detail)"*,
+    // with: *"⚠ A row that LOOKED tappable and did nothing would be the 'a role implying interaction
+    // has a real handler' failure AC5 forbids. The per-drive DETAIL view is story F (`11b-17`)."*
+    //
+    // ⭐⭐ **THE GROUND IS GONE, ⛔ NOT THE RULE.** E declared the row `text` because there was
+    // **NOWHERE TO GO** — the detail view did ⛔ not exist. ⭐ Story `11b-17` **BUILT IT**
+    // (`apps/mobile/app/(sahyog)/[driveToken].tsx`), under the obligation **E's own THIRD code-review
+    // pass routed to it BY NAME** (2026-09-09, BigDev — `11b-15:860-861`, `[x] [Review][Decision] ✅
+    // RULED`): *"⭐ **THIS** story owns the per-drive view, so the affordance belongs here — and it must
+    // be a REAL focusable control with a real handler and an accessible name."*
+    //
+    // ⇒ ⭐⭐ **THE INVARIANT E WAS ENFORCING IS ASSERTED THE OTHER WAY ROUND, AND IT IS STRICTER:**
+    // ⛔ a role implying interaction may ⛔ NEVER appear without a handler, **in either direction** — so
+    // this now catches BOTH the original defect (a `button` role with nothing behind it) AND the new
+    // one a later refactor could introduce (the handler stripped while the role stays). ⚠ The OLD
+    // assertion could ⛔ not catch the second, because it forbade the role outright.
+    //
+    // ⚠⛔ **`button`, ⛔ NOT `link`** — this row navigates **IN-APP** to a session-guarded screen.
+    // ⭐ `link` is reserved for the two affordances that **LEAVE THE APP** for the public site
+    // (`SahyogVivranEntry`, Trustee-ratified `2026-09-05-200` cl.4; and the detail screen's own
+    // public-page CTA), where a screen reader should say so before the member commits to the tap.
     const row = listCode.slice(listCode.indexOf('function DriveRow'))
-    expect(row).toContain('accessibilityRole="text"')
-    expect(row).not.toContain('accessibilityRole="button"')
+    expect(row).toContain('accessibilityRole="button"')
+    // ⛔ Still forbidden here — see above.
     expect(row).not.toContain('accessibilityRole="link"')
-    expect(row).not.toContain('onPress')
+    // ⭐⭐ THE ROLE AND THE HANDLER TRAVEL TOGETHER. ⛔ Neither half alone is acceptable.
+    expect(
+      row,
+      'the row declares an interactive role with ⛔ NO onPress — the exact "a role implying ' +
+        'interaction has a real handler" failure story E\'s AC5 named, now reachable from the ' +
+        'opposite direction',
+    ).toContain('onPress')
+    // ⭐ AND THE HANDLER GOES SOMEWHERE REAL: the detail route story 11b.17 built, addressed by the
+    // SERVER-RETURNED opaque token. ⛔⛔ ⛔ NEVER an address derived from `poolCanonicalIdentifier` —
+    // that counter is MONOTONIC per (pariwar, month) and rebuilding an address from it would
+    // re-create inside the client the guessability Story 11b.10's D2 removed, on a path that now
+    // reaches FIVE decrypted Tier-1 fields per account.
+    expect(listCode).toContain('/(sahyog)/')
+    expect(listCode).toContain('entry.publicToken')
+    expect(listCode).not.toMatch(/\(sahyog\)\/\$\{[^}]*poolCanonicalIdentifier/)
+    // ⭐ AND THE ACCESSIBLE NAME SURVIVES THE ROLE CHANGE — the row still announces its facts under
+    // ONE grouped label, and now also announces what the tap DOES.
+    expect(row).toContain('accessibilityLabel={rowA11y}')
+    expect(row).toContain("'row.open_hint'")
+    for (const locale of ['en', 'hi'] as const) {
+      expect(getCatalog(locale, NS)?.['row.open_hint']).toBeTruthy()
+    }
   })
 
   it('⭐ the row a11y label has a NO-FAMILY variant — ⛔ `t()` THROWS on an unsupplied token', () => {

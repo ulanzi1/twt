@@ -51,12 +51,19 @@ import type {
   ContributionHistoryResponse,
   ContributionHistoryRow,
   ContributionNoteFacts,
+  MemberDriveDetailParams,
+  MemberDriveDetailResponse,
   MemberDriveListQuery,
   MemberDriveListResponse,
+  MemberDriveNomineeAccountView,
   MissedCycleEntry,
   PoolContributorListResponse,
 } from '@twt/contracts';
-import { satisfiesMemberDriveLiveRowPairing } from '@twt/contracts';
+import {
+  NOMINEE_BANK_DECRYPT_FAILED_SENTINEL,
+  satisfiesMemberDriveDetailLivePairing,
+  satisfiesMemberDriveLiveRowPairing,
+} from '@twt/contracts';
 // Story 8.8 (Task 6; D5) — the cycle-window arithmetic now lives beside the tone gradient in
 // @twt/contracts so the card and the deadline-reminder sweep cannot drift. Re-exported below.
 import { computeDaysRemaining as contributionLoopComputeDaysRemaining } from '@twt/contracts';
@@ -65,6 +72,8 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
 import { NotFoundError, UnauthorizedError } from '../../http-errors.js';
+import { emitAuthAudit } from '../auth/shared/audit.js';
+import { decryptNomineeBankFieldSoft } from '../claims/nominee-bank-crypto.js';
 import { decryptKycField } from '../kyc/kyc-crypto.js';
 import { DIRECTORY_DECRYPT_CONCURRENCY, mapWithConcurrency } from '../kyc/bounded-decrypt.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
@@ -339,6 +348,87 @@ export function createMemberPoolHandlers(deps: AppDeps) {
         await closeScopeTx(scopeTx, ok);
       }
     },
+
+    /**
+     * ⭐⭐ GET /api/v1/member/drive-detail/:driveToken — **THE MEMBER'S VIEW OF ONE DRIVE**
+     * (Story 11b.17; AC1–AC5, AC8). ⭐ This is the route that makes `2026-09-04-190` **cl.3** true:
+     * *"a logged-in member sees the complete banking information."*
+     *
+     * ⚠⛔⛔ **IT IS ⛔ NOT FAIL-SOFT AT THE ROUTE LEVEL, AND ⛔ NOT A 404-FOR-ANYTHING-THAT-BROKE.**
+     * ⭐ `null` from the domain read — which collapses *"no such drive"* / *"not visible at this
+     * surface's predicate"* / *"malformed token"* / *"real drive, wrong token"* / *"another Pariwar's
+     * drive"* — is a **404**, deliberately indistinguishable. ⛔⛔ **A RESPONSE THAT DISTINGUISHES
+     * THEM IS AN ENUMERATION ORACLE**, and *"real drive, wrong token"* answering differently from
+     * *"no such drive"* is the one most likely to be "improved" into a 403.
+     * ⚠ Anything else that throws **5xxs**, loudly — a failed read, a failed presentation-mode read,
+     * an aborted transaction. ⭐ The deliberate, NARROWER fail-soft exception is per-FIELD (below).
+     *
+     * ⛔⛔ **THE SCOPE BOUNDARY IS ENFORCED SERVER-SIDE (AC3), ⛔ NEVER BY HIDING A FIELD THE RESPONSE
+     * ALREADY CARRIED.** ⭐ Three layers, and the first is structural: this route carries ⛔ **NO
+     * `:pariwarId` parameter** — the scope comes from `request.requestContext.pariwarId`
+     * (family 12) — the domain read carries `pariwar_id` as an **EXPLICIT PREDICATE**, and
+     * `claim_nominee_bank_accounts` runs RLS **FORCE**d under `SET LOCAL app.pariwar_id`. ⇒ another
+     * Pariwar's drive is ⛔ **not addressable at all**, so AC3's boundary lands on a **404**, ⛔ not a
+     * 200 with absent keys ([[feedback_trace_reachability_before_escalating]]).
+     *
+     * ⭐⭐ **AC5 — EXACTLY ONE AUDIT LINE, PER DETAIL OPEN. ⛔ NOT ONE PER COORDINATE READ.**
+     * ⚠⛔ **A NAMED DEPARTURE from the anonymous public precedent** (`writeAppealReversalDisclosureAudit`
+     * writes `actorId: null` and says *"⛔ Do not widen this to log every request"*): this line is
+     * **ATTRIBUTED** and it is on a **HIGH-VOLUME** browsing path, and both are argued at AC5 rather
+     * than claimed as inheritance. ⭐ It names the member, the drive (by its **CANONICAL IDENTIFIER**
+     * — ⛔ **never** the public token, which would write a live public ADDRESS into the durable audit
+     * chain) and the instant.
+     *
+     * ⚠⛔⛔ **THE REAL WRITE VOLUME, SIZED RATHER THAN ASSUMED — `-199` Consequence 2 SAYS *"a write
+     * on every detail open"*, SINGULAR, AND THAT IS WRONG IN THE STORY'S FAVOUR.**
+     * `packages/domain/src/encryption/envelope.ts` fires `auditHook('decryptDek', …)` on **EVERY**
+     * `decryptTier1` and there is ⛔ **NO DEK cache** (each ciphertext embeds its own DEK);
+     * `createKmsAuditHook` (`apps/api/src/audit/audit-log-sink.ts`) routes each into the **SAME**
+     * global-chain writer. ⇒ per detail open: **1** (deceased name) + **3 × accounts rendered** +
+     * AC5's own line = **≈8** with both accounts (`-213` cl.1 rules both in) — and ⛔ **SEVEN of those
+     * eight are INVISIBLE**, emitted by the crypto layer, ⛔ not by this function.
+     * ⭐⭐ **AND IT IS ⛔ NOT NEW — story E ALREADY DOES THIS, SHIPPED**: its list decrypts two names
+     * PER ROW, so routine browsing already takes the deployment-wide
+     * `pg_advisory_xact_lock(AUDIT_CHAIN_LOCK_KEY)` today. ⇒ a **PRE-EXISTING condition this surface
+     * AMPLIFIES**, ⛔ not a defect it introduces — ⭐ though it IS the first surface where a Tier-1
+     * READ is the ordinary path. ⚠⛔ ⛔ Do ⛔ not "optimise" it by dropping the KMS hook: that hook is
+     * the **FR-47** record of *which key opened which field*, and removing it to buy throughput trades
+     * a **crypto audit obligation** for latency.
+     *
+     * ⛔⛔ **NOTHING DECRYPTED IS EVER LOGGED, AUDITED OR PUT IN AN EVENT PAYLOAD** — ⛔ not a holder
+     * name, ⛔ not an account number, ⛔ not an IFSC. The audit context is the canonical identifier and
+     * a COUNT.
+     */
+    async driveDetail(request: FastifyRequest): Promise<MemberDriveDetailResponse> {
+      const { memberIdStr, pariwarIdStr } = memberCtx(request);
+      const pariwarId = ids.pariwarId(pariwarIdStr);
+      const now = deps.clock();
+      // ⭐ The route's `params` schema has already parsed this — cast to the CONTRACT's own inferred
+      // type rather than a hand-declared shape, the convention `public-pages/handlers.ts` uses for its
+      // paginated routes and the member LIST adopted at its fourth review pass. ⛔ A hand-declared
+      // `{ driveToken: string }` drifts silently if the route schema ever changes shape.
+      const { driveToken } = request.params as MemberDriveDetailParams;
+
+      const scopeTx = await openScopeTx(deps, pariwarIdStr);
+      let ok = false;
+      try {
+        const result = await resolveDriveDetail(deps, scopeTx.tx, request, {
+          memberIdStr,
+          pariwarId,
+          pariwarIdStr,
+          driveToken,
+          now,
+        });
+        ok = true;
+        return result;
+      } finally {
+        // ⚠ `ok` stays false on a throw ⇒ the scope tx rolls back. This read performs ⛔ no writes, so
+        // either close is correct for the DATA; a rollback simply records the request as failed.
+        // ⭐ The AC5 audit line rides `deps.auditSink`, ⛔ not this transaction, so it is ⛔ not lost
+        // by the rollback of a request that DID hand coordinates to a human before failing later.
+        await closeScopeTx(scopeTx, ok);
+      }
+    },
   };
 }
 
@@ -591,6 +681,298 @@ async function resolveDriveList(
   );
 
   return { items, page, limit, total };
+}
+
+/**
+ * ⭐⭐ Resolve ONE drive's member-facing detail — Story 11b.17.
+ *
+ * ⭐ The domain read returns **CIPHERTEXT** for the deceased name and for all three Tier-1 coordinates
+ * on each account; the FORM decision, the decrypt and the AUDIT LINE happen **HERE**, at the
+ * member-session-gated boundary, and ⛔ nowhere else.
+ */
+async function resolveDriveDetail(
+  deps: AppDeps,
+  tx: Db,
+  request: FastifyRequest,
+  ctx: {
+    readonly memberIdStr: string;
+    readonly pariwarId: ReturnType<typeof ids.pariwarId>;
+    readonly pariwarIdStr: string;
+    readonly driveToken: string;
+    readonly now: Date;
+  },
+): Promise<MemberDriveDetailResponse> {
+  const { memberIdStr, pariwarId, pariwarIdStr, driveToken, now } = ctx;
+
+  const row = await poolDomain.readMemberDriveDetail(tx, pariwarId, driveToken, { now });
+  // ⭐⭐ FIVE CASES, ⛔ ONE ANSWER — see the accessor's doc-block. ⛔⛔ Do ⛔ NOT split them into
+  // distinguishable responses: *"real drive, wrong token"* answering differently from *"no such
+  // drive"* would confirm which addresses name something, i.e. it would hand back exactly the
+  // enumeration signal Story 11b.10's token was introduced to remove. ⛔ And ⛔ NOT a 403 for the
+  // cross-Pariwar case — a 403 is itself the oracle (family 12; the helpdesk 404-not-403 precedent,
+  // [[project_helpdesk_member_surface_102]]).
+  if (row === null) {
+    throw new NotFoundError('Drive not found', 'member_drive_detail.not_found');
+  }
+
+  // ⭐ Story 8.16 — the presentation MODE, read ONCE. The mode is per-PARIWAR and this request serves
+  // exactly one drive in one Pariwar. `2026-09-02-181` cl.2 rules it an INPUT, ⛔ never a read inside
+  // a resolver.
+  const presentationMode = await resolvePoolNamePresentationModeForRequest(tx, pariwarId);
+
+  // ⚠⛔ **THE PAIRING IS CHECKED BEFORE ANY KMS ROUND TRIP**, on the raw domain row's own fields — the
+  // member LIST's own third-pass shape. ⛔ There is no reason to pay for eight decrypts on a payload
+  // this check is about to reject.
+  // ⚠⛔ **FAIL-LOUD, ⛔ NOT THE NARROWER PER-FIELD EXCEPTION.** A pairing violation means the DOMAIN
+  // produced a payload `confirmedPercentage`/`driveTargetInr` gating was supposed to prevent — a
+  // `closed` drive leaking a live-only percentage is EXACTLY the roster-size-recovery channel
+  // `2026-09-08-207` cl.1 closed, and a `closed` drive leaking लक्ष्य is the DISCLOSURE defect
+  // `-211` Consequence 4 names. ⛔ Degrading silently would HIDE that channel reopening rather than
+  // surface it.
+  // ⭐ The `null → ABSENT` translation is written ⛔ ONCE and reused by the response below; it used to
+  // appear twice on the sibling surface, so changing one made the guard validate a shape the wire did
+  // ⛔ not carry.
+  const driveTargetForWire = row.driveTargetInr === null ? undefined : row.driveTargetInr;
+  if (
+    !satisfiesMemberDriveDetailLivePairing({
+      status: row.status,
+      confirmedPercentage: row.confirmedPercentage,
+      driveTargetInr: driveTargetForWire,
+    })
+  ) {
+    request.log.error(
+      { poolId: row.poolId, status: row.status },
+      'drive-detail: payload violates the live-only confirmedPercentage/driveTargetInr pairing',
+    );
+    throw new Error(
+      `member-drive-detail: pool ${row.poolId} violates satisfiesMemberDriveDetailLivePairing`,
+    );
+  }
+
+  // ── The DECEASED family's name ────────────────────────────────────────────────────────────────
+  const deceasedMemberName = await resolveDetailDeceasedName(deps, request, {
+    pariwarId,
+    poolId: row.poolId,
+    presentationMode,
+    ciphertext: row.deceasedNameCiphertext,
+  });
+
+  // ── ⭐⭐ THE NOMINEE'S COMPLETE, UNMASKED BANKING COORDINATES ─────────────────────────────────
+  // ⚠⛔ **BOTH ACCOUNTS, AND IT IS ⛔ NOT A REVERSAL OF THE LIST'S ONE-DECRYPT RULE** (`-213` cl.1):
+  // that rule governs the HOLDER NAME, which is *"the SAME nominee"* twice ⇒ a second decrypt buys
+  // ⛔ nothing THERE. ⭐ Here `accountNumber` and `ifsc` **DIFFER** per account ⇒ the second decrypt
+  // returns information the first does ⛔ not carry, under the purpose `-199` already granted — and
+  // the money **can have gone to both** (*"EQUAL payment destinations, the donor's choice"*), so
+  // rendering one would be **incomplete by construction**.
+  // ⛔⛔ The list's and the pay screen's one-decrypt behaviour is CORRECT and is ⛔ not touched.
+  //
+  // ⚠ `Promise.all` across at most TWO accounts × THREE fields — ⛔ no `mapWithConcurrency` cap is
+  // owed: `DIRECTORY_DECRYPT_CONCURRENCY` exists to bound a PAGE of rows, and this surface's bound is
+  // structural (the composite PK admits at most two accounts), ⛔ not a policy number.
+  const fieldLog = (rank: number, field: string) => (err: unknown) =>
+    request.log.error(
+      { err, account_rank: rank, field, poolId: row.poolId },
+      'drive-detail: nominee-account field decrypt failed — sentinel',
+    );
+
+  const nomineeAccounts: MemberDriveNomineeAccountView[] = await Promise.all(
+    row.nomineeAccounts.map(async (account): Promise<MemberDriveNomineeAccountView> => {
+      const [accountHolderName, accountNumber, ifsc] = await Promise.all([
+        decryptNomineeBankFieldSoft(
+          account.accountHolderNameCiphertext,
+          pariwarIdStr,
+          deps.encryption,
+          fieldLog(account.accountRank, 'accountHolderName'),
+        ),
+        decryptNomineeBankFieldSoft(
+          account.accountNumberCiphertext,
+          pariwarIdStr,
+          deps.encryption,
+          fieldLog(account.accountRank, 'accountNumber'),
+        ),
+        decryptNomineeBankFieldSoft(
+          account.ifscCiphertext,
+          pariwarIdStr,
+          deps.encryption,
+          fieldLog(account.accountRank, 'ifsc'),
+        ),
+        // ⛔⛔ **THERE IS ⛔ NO FOURTH DECRYPT HERE, AND THAT IS RULED.** The `nominee-accounts`
+        // handler performs one for the VPA under `2026-09-10-212` **cl.2** — ⭐ that clause put the
+        // UPI ID on the **PAYMENT screen**, option (D), and ⛔ explicitly ⛔ NOT on this page, on
+        // ⛔ any drive, in ⛔ any stage. ⭐ The domain read does ⛔ not even project `vpaCiphertext`,
+        // so there is ⛔ nothing here to decrypt — the exclusion is STRUCTURAL, ⛔ not remembered.
+      ]);
+      return {
+        rank: account.accountRank,
+        accountHolderName,
+        accountNumber,
+        ifsc,
+        // ⚠⛔ **`bank_name` IS `text NOT NULL` WITH ⛔ NO NON-EMPTY CHECK ⇒ `''` IS REACHABLE**, and
+        // `''` is the exact value that once 500'd the whole public transparency page against a
+        // `z.string().min(1)`. ⭐ Degrade it through the SAME distinct sentinel — ROW-LOCAL, ⛔ never
+        // page-wide — rather than ship a blank bank label. ⚠ `.trim()` is the EMPTINESS TEST only:
+        // a whitespace-only value satisfies `.min(1)`, so there is no 500, but it renders VISUALLY
+        // BLANK (the 11a.3 `district` lesson). ⛔ The value is ⛔ not trimmed on the way OUT, so a
+        // bank name with real leading/trailing spacing is shown as stored.
+        bankName:
+          account.bankName.trim().length > 0
+            ? account.bankName
+            : NOMINEE_BANK_DECRYPT_FAILED_SENTINEL,
+        // ⚠⛔⛔ **`branch` IS ⛔ NOT `bankName`'s TWIN — ⛔ DO ⛔ NOT WRITE ONE GUARD FOR BOTH.** The
+        // column is GENUINELY NULLABLE ⇒ a `null` is an **ORDINARY ABSENT OPTIONAL**, ⛔ not a fault
+        // and ⛔ not a decrypt failure. ⭐ The surface **OMITS THE ROW**; a sentinel here would report
+        // a failure that did not happen. ⚠ `.trim() || null` (⛔ not `=== ''`) for the same reason
+        // the names take it: a whitespace-only branch passes `.min(1)` and renders blank.
+        branch: account.branch === null ? null : account.branch.trim() || null,
+      };
+    }),
+  );
+
+  // ── ⭐⭐ AC5 — EXACTLY ONE AUDIT LINE, PER DETAIL OPEN ───────────────────────────────────────
+  // ⛔ **NOT one per coordinate read** — AC4 renders FIVE coordinates × TWO accounts = TEN of those,
+  // and a per-coordinate rule would take the deployment-wide advisory lock ten times on the ordinary
+  // browsing path (≈17 lines per open instead of ≈8). ⭐ ONE line, ONE open.
+  // ⚠⛔ **A NAMED DEPARTURE** from `writeAppealReversalDisclosureAudit`'s anonymous posture — see the
+  // handler's doc-block; this is ATTRIBUTED and HIGH-VOLUME, and both halves are argued rather than
+  // inherited.
+  // ⛔⛔ **THE CONTEXT NAMES THE CANONICAL IDENTIFIER, ⛔ NEVER THE PUBLIC TOKEN** — a token in the
+  // durable audit chain *"would additionally write a live public ADDRESS"* there. ⚠ AC8 deliberately
+  // puts that same token on a member's SCREEN; the rule fenced here is *"⛔ not in the DURABLE AUDIT
+  // CHAIN"*, ⛔ not *"⛔ nowhere"*, and the asymmetry is survivable because `rotatePoolPublicToken`
+  // exists. ⛔ Do ⛔ not "reconcile" the two.
+  // ⛔ And ⛔ NEVER a decrypted coordinate, in any field, ever.
+  emitAuthAudit(deps, request, 'member_drive_detail.coordinates_viewed', {
+    actorId: memberIdStr,
+    pariwarId: pariwarIdStr,
+    context: {
+      pool_canonical_identifier: row.poolCanonicalIdentifier,
+      nominee_accounts: nomineeAccounts.length,
+    },
+  });
+
+  return {
+    poolLetterCode: poolDomain.poolLetterCode(row.poolIndex),
+    poolCanonicalIdentifier: row.poolCanonicalIdentifier,
+    publicToken: row.publicToken,
+    deceasedMemberName,
+    // ⚠ `.trim() || null`, ⛔ not `=== ''` — a whitespace-only name passes the contract's `.min(1)`,
+    // arrives TRUTHY so the client's fallback never fires, and renders a visually BLANK line (11a.3).
+    // ⭐ The NOMINEE name on this surface is the account holder's, decrypted above; the wire field is
+    // the FIRST account's, matching the member list's own `nomineeName` semantics and the public
+    // page's single `nominee_account_holder_name`. ⛔ It carries ⛔ NO gate, and that is RULED
+    // (`-190` cl.2 published it; `-205` cl.9 records that narrowing it by claim OUTCOME would be a
+    // NEW suppression rule ⛔ nobody has ruled). ⇒ ⭐ the two surfaces are SYMMETRIC on this field and
+    // the `member ≥ public` comparison MUST compare it.
+    // ⚠⛔ A decrypt-failure SENTINEL is ⛔ NOT a name — it is surfaced per-account above, and the
+    // summary field reports ABSENCE rather than shipping the sentinel where a name belongs.
+    nomineeName: resolveSummaryNomineeName(nomineeAccounts),
+    status: row.status,
+    closedAt: row.driveClosedAt === null ? null : row.driveClosedAt.toISOString(),
+    district: row.district?.trim() || null,
+    confirmedContributionCount: row.confirmedContributionCount,
+    confirmedPercentage: row.confirmedPercentage,
+    // ⭐⭐ लक्ष्य — ⚠⛔ **SPREAD, ⛔ NOT ASSIGNED**: the key is **ABSENT** when withheld, ⛔ never
+    // `null` (the 11b.11 shape, `-205` cl.9). ⭐ `resolveDriveTargetVisibility`'s absent-row default is
+    // FAIL-CLOSED ⇒ ⛔ absent for every Pariwar at launch, and ⛔ that is CORRECT rather than a gap.
+    ...(driveTargetForWire === undefined ? {} : { driveTargetInr: driveTargetForWire }),
+    // ⭐ Returned from the domain read's own `deliveredTotal`; ⛔⛔ no second `× fixedAmount` here
+    // ([[project_amount_raised_canonical_producer]]).
+    amountRaisedInr: row.amountRaisedInr,
+    fundingOutcome: row.fundingOutcome,
+    nomineeAccounts,
+  };
+}
+
+/**
+ * ⭐ The drive's summary nominee name — the FIRST account's holder name, or `null`.
+ *
+ * ⚠⛔ **A DECRYPT SENTINEL IS ⛔ NOT A NAME.** `decryptNomineeBankFieldSoft` returns a DISTINCT
+ * `[unavailable — could not be shown]` string rather than throwing, which is right for the per-account
+ * block (the member is choosing between two accounts and needs to know which field failed) — ⛔ but
+ * shipping it in the drive's summary *name* slot would put a bracketed error string where the
+ * bereaved family's nominee belongs, and the `member ≥ public` comparison would then compare a
+ * sentinel against a real public name. ⇒ ⭐ the summary reports **ABSENCE**, which is a state this
+ * field already has (`null` = the claim's bank details were ⛔ never collected, 6.8 AC3).
+ *
+ * ⚠ `.trim() || null` — a whitespace-only plaintext passes `.min(1)` and renders visually BLANK.
+ */
+function resolveSummaryNomineeName(
+  accounts: readonly MemberDriveNomineeAccountView[],
+): string | null {
+  const first = accounts[0];
+  if (first === undefined) return null;
+  if (first.accountHolderName === NOMINEE_BANK_DECRYPT_FAILED_SENTINEL) return null;
+  return first.accountHolderName.trim() || null;
+}
+
+/**
+ * ⭐ The DECEASED family's name for the detail — decrypted, form-resolved, erasure-backstopped.
+ *
+ * ⛔⛔ **`resolveMemberFacingDeceasedName`, ⛔ NEVER `resolvePublicMemberName`.** The two share the
+ * stored mode and the form rule and differ ⛔ only in **ABSENCE** behaviour: the public **OMITS** a
+ * mononym under `shielded_name` (a privacy protection on a directory, failing CLOSED to `''`), the
+ * member **SHOWS** it. ⇒ reusing the public one would **DROP A MEMBER'S OWN DRIVE** (`8-16` Trap 5).
+ * ⚠ The warning lives in the DOMAIN file `packages/domain/src/pool/member-drive-list.ts`, ⛔ **not**
+ * the contracts file of the same basename — footgun #1 sitting inside the very rule that warns about
+ * it.
+ *
+ * ⚠⛔⛔ **⛔ NO PUBLICATION-BASIS GATE, AND ITS ABSENCE IS RULED** — `2026-09-04-198` **cl.1**: the
+ * member path takes the configured **FORM** and ⛔ **NOT** the publication **BASIS**. ⇒ a member sees
+ * a name ALWAYS, including on a drive where the basis is unsatisfied and the public page names
+ * nobody. ⛔ Do ⛔ not "harden" this by conjoining `NAME_PUBLICATION_AUTHORISED` — that would be a
+ * REGRESSION.
+ *
+ * ⭐⭐ **THE ERASURE BACKSTOP (AC11).** `anonymizeMember` overwrites `name_ciphertext` **IN PLACE**
+ * with an *encrypted* `[anonymized]` sentinel and **RETAINS** the row ⇒ the decrypt **SUCCEEDS** and
+ * the sentinel would render **VERBATIM** where a family name belongs. ⛔ ⛔ NEITHER arm of
+ * `resolveMemberFacingDeceasedName` filters it, and the `.trim() || null` guard does ⛔ not catch it
+ * either. ⚠⛔ **THE REMEDY DIVERGES BY SURFACE AND ⛔ MUST NOT BE "ALIGNED"**: `pool-contributors`
+ * OMITS the row, because a contributor can be dropped; here the erased member ⭐ **IS** the drive, so
+ * the **DRIVE STAYS and the NAME GOES** — the drive-list's remedy, ⛔ not the contributor list's.
+ * ⛔ And ⛔ do ⛔ not "repair" it by rendering a marker.
+ *
+ * ⭐ **THE NARROWER FAIL-SOFT EXCEPTION, DELIBERATELY:** a failed decrypt omits the NAME and ⛔ keeps
+ * the DRIVE. ⚠ The `catch` wraps the **decrypt call ONLY** — a bug downstream of a successful decrypt
+ * throws, same as everywhere else in this module (the member list's fourth-pass narrowing).
+ */
+async function resolveDetailDeceasedName(
+  deps: AppDeps,
+  request: FastifyRequest,
+  args: {
+    readonly pariwarId: ReturnType<typeof ids.pariwarId>;
+    readonly poolId: string;
+    readonly presentationMode: Parameters<
+      typeof notifications.resolveMemberFacingDeceasedName
+    >[0];
+    readonly ciphertext: string | null;
+  },
+): Promise<string | null> {
+  const { pariwarId, poolId, presentationMode, ciphertext } = args;
+  if (ciphertext === null) return null;
+
+  let storedName: string;
+  try {
+    storedName = await decryptKycField(ciphertext, pariwarId, deps.encryption);
+  } catch (err) {
+    request.log.warn(
+      { err, poolId },
+      'drive-detail: deceased name decrypt failed — omitting the NAME, keeping the DRIVE',
+    );
+    return null;
+  }
+
+  if (storedName === memberDomain.ANONYMIZED_SENTINEL) {
+    request.log.warn(
+      { poolId },
+      'drive-detail: erasure sentinel reached the decrypt — rendering the drive NAMELESS (state read was stale)',
+    );
+    return null;
+  }
+
+  const resolved = notifications.resolveMemberFacingDeceasedName(presentationMode, storedName);
+  // ⚠ `.trim() || null`, ⛔ not `=== ''` — a whitespace-only name passes the contract's `.min(1)`,
+  // arrives TRUTHY so the client's fallback never fires, and renders a visually BLANK line (11a.3).
+  return resolved.trim() || null;
 }
 
 /**

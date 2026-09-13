@@ -35,7 +35,7 @@ still ⛔ not re-pinned, still ⛔ not a clean CODE baseline. ⛔ Nothing new to
 
 # Story 11b.17: The Member's View of ONE Drive — Carrying What the Public Page No Longer Does `[SURFACE]`
 
-Status: review
+Status: done
 
 > ⭐⭐ **REGISTER — READ THIS FIRST.** `⛔` **NEGATES the words that follow it** (`⛔ NOT X`, `⛔ never X`,
 > `⛔ no X`). `⭐` marks an **ACTION or a fact to rely on**. `⚠` marks a **hazard**. Doubling (`⛔⛔`,
@@ -1218,6 +1218,77 @@ a defect to "fix".
         ⚠ It is **repo-wide and pre-existing** (the KMS hook + the single global chain), ⛔ **not** a
         per-surface patch, and ⛔ not F's to fix alone ([[feedback_closure_language_precision]]).
   - [x] ⭐ **Execute them** against `twt-test-pg` `:5433`.
+
+---
+
+### Review Findings — `bmad-code-review` pass (2026-09-13), code-only diff (`main..HEAD`, 30 files)
+
+Three parallel layers (Blind Hunter — diff only; Edge Case Hunter — diff + repo read access; Acceptance
+Auditor — diff + this spec) produced 20 raw findings. Nine dismissed as false positives or already-ruled
+design after tracing against the actual code (fire-and-forget audit write matches the codebase-wide
+`writeAuditEntry` contract; the `currentState as …` narrowing cast matches the sibling list's own
+precedent; `nomineeName` resolving to account #1 is `-190` cl.2's ruled, symmetric convention; rate
+limiting was expressly refused by the Panel; etc.) — full reasoning kept in the review transcript, not
+duplicated here.
+
+- [x] **[Review][Defer]** AC10's message-block ₹0-silence may be over-scoped to `live` zero-day drives
+      [`apps/mobile/components/drive-detail/format.ts:129`] — deferred, needs Panel ruling. `selectMessageBlockHeadline`
+      returns `null` whenever `amountRaisedInr <= 0` regardless of stage. AC9's own text scopes `-207`
+      cl.2's silence rule to the WIRE TOKENS `closed`/`verified` only; the function's doc-comment
+      justifies suppressing it on `live` too via its own reasoning ("AC9's ratified zero-day line covers
+      it"), not a cited ruling. Net effect: the Panel's message block + nominee/district table never
+      renders on a `live` drive's first day, appearing only after the first confirmed contribution. ⚠
+      This is a scoping question about a Trustee-ratified rule (`-207` cl.2 / AC9-AC10 interaction), not
+      a dev call to make unilaterally — resolved as deferred rather than patched. ⭐ **Routed:**
+      `trustee-panel-routing-note-2026-09-13-11b17-message-block-zero-day-scope.md`.
+- [x] **[Review][Patch]** Archived (`closed`/`verified`) zero-amount drive renders `"₹0 contributed"`
+      instead of AC9's required silence — FIXED. `apps/mobile/components/drive-detail/MemberDriveDetail.tsx`'s
+      `summaryLine` only special-cased the `live` zero-day case via `selectZeroDayLine` (which returns
+      `null` off-`live`); for an archived drive with `amountRaisedInr === 0` it fell through to
+      `t('raised', { amount }, NS)`, rendering the exact `"₹0 contributed"`-shaped sentence AC9
+      explicitly forbids for `closed`/`settled` pool states (`-207` cl.2, quoted verbatim in AC9's own
+      text: *"the 'About this drive' sentence renders NOTHING — no placeholder, no marker, no partial
+      sentence"*). Confirmed reachable: a drive can close/settle with zero confirmed contributions
+      (under-funded outcome). ⭐ **Fix:** added `isArchivedZeroAmountDrive` (`format.ts`), wired into
+      `summaryLine` and the render site (`summaryLine === null ? null : …`, ⛔ never an empty `<Text>`);
+      covered by a new `drive-detail-render.test.ts` assertion. All 31 render-fence tests pass.
+- [x] **[Review][Patch]** Stale/incorrect route cited in shipped i18n comments — FIXED.
+      `packages/i18n/locales/{en,hi}/member-drive-list.json`'s `$comment.row_open_hint` stated the
+      destination was `` `/(sahyog)/[driveToken]` ``. The actual shipped route (and the one this diff's
+      own `MemberDriveList.tsx` / `[driveToken].tsx` doc-blocks explicitly document, having reverted an
+      earlier `(sahyog)` attempt as a violation of 11b.10's D4) is `/(contribution)/drive/[driveToken]`.
+      ⭐ **Fix:** corrected the route string in both locale comments (comment-only change, no key/copy
+      touched).
+
+Findings dismissed after tracing against the code (no action): fire-and-forget `emitAuthAudit` call
+(matches the documented codebase-wide `writeAuditEntry` fire-and-forget contract, `audit-log-sink.ts:11-17`);
+`row.currentState as MemberDriveDetailVisiblePoolState` narrowing cast (matches
+`member-drive-list.ts:347`'s identical, WHERE-IN-guarded precedent — conflated with a different,
+correctly-gated widening cast); `nomineeName` resolving to account #1 only (ruled, symmetric with the
+member list and public page per `-190` cl.2 / `-205` cl.9 — a different field from AC4's both-accounts
+render, not a "surface both, pick neither" breach); `.max(200)` with no overflow degrade on Tier-1 fields
+(pre-existing pattern copied from `packages/contracts/src/contributions/nominee-accounts.ts`, not new
+here); no rate limiting on the decrypt-heavy endpoint (the Panel expressly refused a rate-limit remedy per
+this story's own doc-comments); `router.back()` with no `canGoBack()` guard (established convention across
+9+ other mobile screens); a non-existent `coerceCount` guard cited by one reviewer (no such function exists
+anywhere in the repo — the shipped `Number(row.confirmedCount ?? 0)` matches `member-drive-list.ts:328`'s
+identical precedent verbatim); an empty/malformed `driveToken` reaching the API client unvalidated (by
+design — the route's own doc-comment collapses a malformed token into the same 404 as four other cases,
+deliberately, to avoid an enumeration oracle); a self-referential "BigDev approved this" claim living only
+in a source comment (a process/governance observation, not a code defect).
+
+Findings deferred as real-but-pre-existing or test-quality observations, not blocking this story (recorded
+in `deferred-work.md`): no per-field hash/snapshot in the AC5 audit line beyond a bare count; `gcTime: 0`'s
+sufficiency against MMKV persisted-cache exposure is asserted, not tested; the AC5 sizing test hard-asserts
+a magic decrypt count (`toBe(7)`) coupled to crypto-layer internals; cross-`it()` mutable state coupling in
+the same test; three independently-maintained `SKIP` directory sets across sibling fence tests with no
+shared constant; no defensive cap in the API handler on the nominee-accounts decrypt loop (trusts the
+domain layer's `{1,2}` rank check, matching the `sahyog-vivran-read.ts` precedent it cites).
+
+Also noted, not a fresh finding: AC2's required "appeal outcome" field is not carried by the response —
+already self-identified in this story's own Dev Agent Record (finding F3) and routed to `deferred-work.md`,
+pending a Trustee Panel ruling on whether the appeal lineage is member-visible at all. No action needed
+from this review pass.
 
 ---
 

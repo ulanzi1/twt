@@ -1,3 +1,30 @@
+# last_updated: 2026-09-13f (✅⭐⭐ **`11b-17` CODE REVIEW COMPLETE — `review` → `done`.**
+#   `bmad-code-review` pass (Blind Hunter + Edge Case Hunter + Acceptance Auditor, code-only diff
+#   `main..HEAD`, 30 files) produced 20 raw findings; 11 dismissed after tracing against the actual code
+#   (fire-and-forget audit write, `currentState as …` narrowing cast, `nomineeName` single-account
+#   resolution, `.max(200)` field length, no rate limiting, `router.back()` w/o `canGoBack`, a
+#   fabricated `coerceCount` guard, unvalidated empty `driveToken`, a comment-only "approved" claim —
+#   each traced to an established, ruled, or pre-existing codebase pattern, ⛔ not a defect this story
+#   introduced). ⭐⭐ **TWO PATCHES APPLIED AND VERIFIED:**
+#   **(1)** an archived (`closed`/`verified`) zero-amount drive rendered *"₹0 contributed"* instead of
+#   AC9's required silence (`-207` cl.2) — `MemberDriveDetail.tsx`'s `summaryLine` only special-cased
+#   the `live` zero-day path; **fixed** with a new `isArchivedZeroAmountDrive` selector (`format.ts`),
+#   wired into `summaryLine` and the render site so `null` renders NOTHING (⛔ not an empty `<Text>`),
+#   covered by a new render-fence assertion (31/31 pass).
+#   **(2)** `packages/i18n/locales/{en,hi}/member-drive-list.json`'s `$comment.row_open_hint` cited the
+#   wrong route (`/(sahyog)/[driveToken]`, an abandoned attempt this diff's OWN doc-blocks record as
+#   reverted); **fixed** to `/(contribution)/drive/[driveToken]` (comment-only, no key/copy touched).
+#   ⭐ **ONE DECISION-NEEDED ITEM DEFERRED, NOT PATCHED:** AC10's message-block ₹0-silence
+#   (`selectMessageBlockHeadline`) suppresses on **every** zero-amount drive including `live`, but AC9's
+#   own text scopes `-207` cl.2 to `closed`/`verified` only — the `live` extension rests on the
+#   developer's own reasoning, ⛔ not a cited ruling. ⛔ NOT a dev call to make unilaterally ⇒ logged to
+#   `deferred-work.md` with a Panel-ruling trigger, ⛔ NOT fixed in code.
+#   ⭐ SIX further real-but-pre-existing/test-quality findings also DEFERRED to `deferred-work.md`
+#   (thin AC5 audit forensic trail; `gcTime: 0`'s MMKV-eviction sufficiency asserted not tested; a
+#   magic-number decrypt-count test coupled to crypto internals; cross-`it()` mutable test-state
+#   coupling; three independently-maintained `SKIP` sets; no defensive cap on the handler's
+#   nominee-accounts decrypt loop). ⛔ AC2's known appeal-outcome shortfall (this story's own F3,
+#   already routed pending a Trustee Panel ruling) — re-confirmed, ⛔ no new action.
 # last_updated: 2026-09-13e (✅⭐⭐ **`11b-17` IMPLEMENTED — `in-progress` → `review`. ALL TWELVE ACs;
 #   ALL TASKS. ci:local green incl. the live DB.** ⭐ The `governance:` commit landed FIRST with ⛔ NO
 #   CODE. ⭐ A **NEW contract + a NEW route** (⛔ not an additive field on `MemberDriveListEntry`, which
@@ -18465,7 +18492,7 @@ development_status:
   # ~~If (a) is genuinely wanted it needs the PANEL, ⛔ not this story.~~
   # ⛔ Both were TRUE WHEN WRITTEN and FALSE from 2026-09-04 onward: (a) was RULED that day and (b) is
   # recorded as ⛔ NOT taken. ⛔ Kept struck as the record, ⛔ not deleted.
-  11b-17-member-drive-detail-unredacted: review
+  11b-17-member-drive-detail-unredacted: done
   # ⭐⭐ 11b-19 — MINTED 2026-09-11 BY `#decision-2026-09-11-214` **Consequence 2**: B's UNSHIPPED
   # copy source, given a NAMED HOME before story F ships. ⛔ ZERO OPEN DECISIONS — the authority is
   # already Trustee-ratified (DR + KB, 2026-09-05); this story AUTHORS and ⛔ decides nothing.

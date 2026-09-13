@@ -8890,3 +8890,46 @@ violation.
   future column-dropping logic — AC6 forbids a render test here, so the actual drop-when-absent
   guarantee is unenforceable until a render site exists. **Trigger:** `11b-17` AC10 / Task 5d or
   `11b-20` landing — the first real render site should carry its own drop-when-absent assertion.
+
+## Deferred from: code review of 11b-17-member-drive-detail-unredacted (2026-09-13)
+
+- **AC10's message-block ₹0-silence may be over-scoped to `live` zero-day drives — needs Panel ruling.**
+  [`apps/mobile/components/drive-detail/format.ts:129`] `selectMessageBlockHeadline` returns `null`
+  whenever `amountRaisedInr <= 0` regardless of stage. AC9's own text scopes `-207` cl.2's silence rule to
+  the WIRE TOKENS `closed`/`verified` only; the function's doc-comment justifies suppressing it on `live`
+  too via its own reasoning ("AC9's ratified zero-day line covers it"), not a cited ruling — net effect,
+  the Panel's message block + nominee/district table never renders on a `live` drive's first day. Deferred
+  because this is a scoping question about a Trustee-ratified rule, not a dev call to make unilaterally.
+  **Routed 2026-09-13:** `trustee-panel-routing-note-2026-09-13-11b17-message-block-zero-day-scope.md`.
+  **Trigger:** the Panel's ruling on that note, or a member-visible complaint about the message block
+  "flickering in" after the first contribution — whichever comes first.
+- **AC5's audit line carries no per-account hash/snapshot, only a bare count.**
+  [`apps/api/src/modules/member-pool/handlers.ts:844-849`] `context.nominee_accounts` records only
+  `nomineeAccounts.length` — if a bank account is later disputed, the audit chain cannot establish
+  which specific coordinates (or how many distinct nominee identities) were shown at that instant
+  beyond "some number between 0 and 2." **Trigger:** a forensic/dispute review of a specific disclosed
+  drive-detail open needing to reconstruct exactly what was shown.
+- **`gcTime: 0`'s sufficiency against the MMKV persisted-cache exposure is asserted in a comment, not
+  demonstrated.** If `PersistQueryClientProvider` persists cache state on every query settle rather than
+  only on eviction, the largest Tier-1 payload in the app could still reach the on-device MMKV blob
+  during the window before `gcTime: 0` evicts it. **Trigger:** the next DPDPA/at-rest review of mobile
+  cache behavior, or an integration test that inspects the actual MMKV blob after a drive-detail open.
+- **AC5's write-volume sizing test hard-asserts a magic decrypt count (`expect(measuredDecrypts).toBe(7)`),
+  coupled to crypto-layer internals (no DEK cache) unrelated to drive-detail correctness.**
+  [`packages/contracts/tests/member-drive-detail.test.ts`] A future unrelated change to envelope-encryption
+  internals (e.g. adding a DEK cache) breaks this test for reasons orthogonal to this story.
+  **Trigger:** any change to the KMS/envelope-encryption decrypt path.
+- **The same test file couples `measuredDecrypts`/`measuredAuditLines` across separate `it()` blocks via
+  `describe`-scoped mutable `let` bindings**, making the sizing assertion silently order-dependent.
+  **Trigger:** a `test.only`, reordering, or test-runner change that could split these blocks apart.
+- **Three independently-maintained `SKIP` directory sets exist across sibling fence tests** (this story's
+  `member-drive-detail.test.ts`, `sahyog-shared-dark-copy.test.ts`, and `drive-detail-render.test.ts`'s
+  render-fence), each with a comment asking future authors to keep them in sync by hand, with no shared
+  constant extracted despite three copies touched in one story. **Trigger:** the next SKIP-set drift
+  incident, or a fourth copy being added.
+- **No defensive cap in the API handler on the nominee-accounts decrypt loop** —
+  [`apps/api/src/modules/member-pool/handlers.ts`] `Promise.all(row.nomineeAccounts.map(...))` trusts the
+  domain layer's `{1,2}`-rank filtering implicitly, with no assertion/truncation at the handler boundary
+  where the Tier-1 decrypts and the audit-relevant field actually happen (matches the
+  `sahyog-vivran-read.ts` precedent it cites, which has the same property). **Trigger:** a future change
+  to `getClaimNomineeBankAccountsCiphertext` or its DB constraint that could widen beyond two rows.

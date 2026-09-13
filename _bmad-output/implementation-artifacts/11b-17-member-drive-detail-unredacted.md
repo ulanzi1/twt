@@ -866,7 +866,7 @@ a defect to "fix".
       wrong artefact is the **code comment** (`member-pool/handlers.ts:534-543`). ⚠ `6-18` is
       **`ready-for-dev`** on that same ground. ⇒ ⭐ amending a doc-block is ⛔ **not** a governance act;
       see **AC4**. ⛔ Row kept as the record ([[feedback_record_unattested_no_backfill]]).
-- [ ] **Task 1 — GOVERNANCE** (AC0, **AC6**, **AC10**) — ⭐ a **SECTION** in `epics.md`, ⛔ not an
+- [x] **Task 1 — GOVERNANCE** (AC0, **AC6**, **AC10**) — ⭐ a **SECTION** in `epics.md`, ⛔ not an
       annotation (this is a new member-app surface with ⛔ no parent there).
       ⚠⛔⛔ **⛔ NAVIGATE `sprint-status.yaml` BY ROW KEY, ⛔ NEVER BY LINE NUMBER.** ⭐ It is a
       **newest-first PREPEND ledger** — one new entry rots every older anchor at once, silently
@@ -885,7 +885,7 @@ a defect to "fix".
         ENTRY … for the 2026-09-05 **§8.3(3)/§8.5** ruling"* until 2026-09-13 — ⛔ **twice wrong**: the
         entry exists, and that authority cite was already corrected to **§8.1 / §9.1 row 3** by this
         story's own v1.2. ⭐ Row kept as the record ([[feedback_record_unattested_no_backfill]]).
-  - [ ] ⛔⛔ **WRITE THE §8.4(ii) SUCCESSOR ENTRY — ⭐ `8-17` DEFERRED IT HERE BY NAME.**
+  - [x] ⛔⛔ **WRITE THE §8.4(ii) SUCCESSOR ENTRY — ⭐ `8-17` DEFERRED IT HERE BY NAME.**
         (`8-17:348-354` — ⚠ the chain's third step, *"→ on an **unmerged branch** (⛔ not on `main`)"*, is part of the quote; and its Completion Notes: *"the owed record belongs with `11b-17`'s correction"*.)
         ⚠ `-213` is **UNAMENDED** — it still reads *"nobody has said which"* and *"carried with **Task 0e**'s
         packet to the Panel"*, and records §8.4(ii) as *"⛔ still open"*. ⇒ ⛔⛔ **the log and this story
@@ -896,7 +896,7 @@ a defect to "fix".
         it; and that the honest prior status was ***"DE-ROUTED but ⛔ NOT LOGGED"***, ⛔ not *"closed"*
         ([[feedback_closure_language_precision]]). ⚠⛔ **Until it lands, §8.4(ii) may ⛔ NOT be cited as
         settled — ⛔ not by AC4 of this story, ⛔ not by anything else.**
-  - [ ] ⚠⛔ **REWRITE THIS STORY'S OWN `sprint-status.yaml` ROW BLOCK — ⛔ navigate by the literal key
+  - [x] ⚠⛔ **REWRITE THIS STORY'S OWN `sprint-status.yaml` ROW BLOCK — ⛔ navigate by the literal key
         `11b-17-member-drive-detail-unredacted:` and read the comment block IMMEDIATELY ABOVE it.**
         ⭐⭐ **THE FIVE 2026-09-11 STALENESSES ARE ⛔ ALREADY DISCHARGED** as dated strikes (annotation⇒SECTION,
         blocked-on-A-and-E, the disclosure note, *"43,000"* twice, *"recommends (b)"*) — ⛔ **do ⛔ not
@@ -906,7 +906,7 @@ a defect to "fix".
         [[feedback_story_validate_footguns]] #16 committed by the pass that flagged it); (c) **STOP 2
         DISCHARGED** by `11b-19` (`done`); (d) `-214` **Consequence 3 HOMED** at `11b-20`.
         ⭐ Keep every superseded line as a **dated, struck line**, ⛔ never delete it.
-  - [ ] ⚠⛔ **ROUTE THE SURVIVING STALE ARTEFACTS — ⭐ "ROUTE" IS AN ACTION, ⛔ NOT A NOTE.**
+  - [x] ⚠⛔ **ROUTE THE SURVIVING STALE ARTEFACTS — ⭐ "ROUTE" IS AN ACTION, ⛔ NOT A NOTE.**
         ⛔ Until 2026-09-13 all four lived in Dev Notes prose with ⛔ no AC and ⛔ no Task — ⭐ the precise
         defect this story credits itself with fixing for E's two obligations
         ([[feedback_spec_edits_must_propagate_to_tasks]]). ⛔ **Do ⛔ not FIX them here** — write each into

@@ -35,7 +35,7 @@ still ⛔ not re-pinned, still ⛔ not a clean CODE baseline. ⛔ Nothing new to
 
 # Story 11b.17: The Member's View of ONE Drive — Carrying What the Public Page No Longer Does `[SURFACE]`
 
-Status: ready-for-dev
+Status: review
 
 > ⭐⭐ **REGISTER — READ THIS FIRST.** `⛔` **NEGATES the words that follow it** (`⛔ NOT X`, `⛔ never X`,
 > `⛔ no X`). `⭐` marks an **ACTION or a fact to rely on**. `⚠` marks a **hazard**. Doubling (`⛔⛔`,
@@ -939,7 +939,7 @@ a defect to "fix".
         this story's `-212` Consequence 3 citations, ⛔ not by design. ⛔ Not F's file, ⛔ not F's to fix
         — ⭐ **Trigger:** the next story touching `pay.tsx`'s flow comment or the
         `vpa_not_collected`/`accounts_not_collected` branch.
-  - [ ] ⚠ **AMEND THE TWO DOC-BLOCKS THIS STORY SUPERSEDES, BY NAME** — `$comment.drive_target`
+  - [x] ⚠ **AMEND THE TWO DOC-BLOCKS THIS STORY SUPERSEDES, BY NAME** — `$comment.drive_target`
         (*"It now has TWO"* ⇒ three) and `$comment.nominee` + `MemberDriveList.tsx:519-520` (which route
         `nominee.label` here, and whose ruled-wording claim is **false**; see AC4). ⚠⛔ `$comment.nominee`
         **already carries an `8-17` supersession clause — ⛔ APPEND a second dated clause, ⛔ do ⛔ not
@@ -947,7 +947,7 @@ a defect to "fix".
         ⚠⛔⛔ **THESE ARE EDITS TO CODE FILES (`.json`, `.tsx`) ⇒ ⛔ THEY DO ⛔ NOT RIDE IN THE
         `governance:` COMMIT** ([[feedback_governance_commits_precede_implementation]]). ⭐ Comment-only
         or not, they ship with **Task 5**.
-- [ ] **Task 2 — The read** (AC1, AC2, AC3) — a member-scoped per-drive read with its **OWN** named
+- [x] **Task 2 — The read** (AC1, AC2, AC3) — a member-scoped per-drive read with its **OWN** named
       visible-state fragment.
       ⭐ **AND its OWN named `live`-only target fragment** (D2(B); `-212` Consequence 2) — ⛔ do ⛔ not
       share or parameterise the list's tuple. ⚠ On the **POOL STATES** `closed`/`settled` (⛔ wire
@@ -980,18 +980,18 @@ a defect to "fix".
       ⚠⛔ **AND IF ANY NEW `packages/domain` ACCESSOR TAKES A CALLER-SUPPLIED LIMIT** — route it through
       `clampLimit` (`packages/domain/src/pagination.ts`); the `domain-accessor-invariants` gate scans
       all of `packages/domain/src` and `Math.min` does ⛔ NOT satisfy it.
-- [ ] **Task 3 — The scope boundary** (AC3) — enforced **server-side**; out-of-scope responses omit the
+- [x] **Task 3 — The scope boundary** (AC3) — enforced **server-side**; out-of-scope responses omit the
       keys **entirely**.
-- [ ] **Task 4 — The audit** (AC5) — ⭐⭐ **EXACTLY ONE line per DETAIL OPEN** (⛔ **not** one per
+- [x] **Task 4 — The audit** (AC5) — ⭐⭐ **EXACTLY ONE line per DETAIL OPEN** (⛔ **not** one per
       coordinate read — AC4 renders 5 × 2 = **ten** of those, which would make the real figure ≈17 and
       take the deployment-wide lock ten times on the ordinary path). ⭐ Keyed on the **canonical
       identifier**; names the member, the drive and the instant; ⭐ written as a **named departure**
       from the anonymous public precedent.
-- [ ] **Task 5 — The screen** (AC1, AC4, **AC11**) — family 13 in full
+- [x] **Task 5 — The screen** (AC1, AC4, **AC11**) — family 13 in full
       (`_bmad/custom/load-bearing-invariant-checklist.md:72`). ⭐ **AC11 is the acceptance criterion
       for everything in this task's a11y subtasks** — ⛔ written 2026-09-13; ⛔ until then this task had
       ⛔ none.
-  - [ ] ⛔⛔ **THE DECEASED NAME RESOLVES THROUGH `resolveMemberFacingDeceasedName`
+  - [x] ⛔⛔ **THE DECEASED NAME RESOLVES THROUGH `resolveMemberFacingDeceasedName`
         (`packages/domain/src/notifications/pool-identity.ts:141`) — ⛔ NEVER `resolvePublicMemberName`**
         (AC2). ⚠⛔ ⛔ Carried as a **TASK** from 2026-09-13; ⛔ it lived in Dev Notes prose only, and it
         is **disclosure-class** ([[feedback_spec_edits_must_propagate_to_tasks]]).
@@ -1005,7 +1005,7 @@ a defect to "fix".
         **#1** (domain/contracts drift) sitting inside the very rule that warns about it.
         ⚠⛔ **AND THE ACCOUNT-HOLDER VALUE ROUTES THROUGH ⛔ NEITHER** — it is claim-scoped free text and
         **the SCHEMA is the authority** (`D5-subject (i)`) ⇒ ⛔ do ⛔ not assert it names the nominee.
-  - [ ] ⚠⛔ **THE `accessible` IDIOM IS TWO-TIER — ⛔ NOT "on every labelled container."** (**AC11**)
+  - [x] ⚠⛔ **THE `accessible` IDIOM IS TWO-TIER — ⛔ NOT "on every labelled container."** (**AC11**)
         ⛔⛔ **⇒ READ FAMILY 13(a) WITH THIS CARVE-OUT.** The checklist's own **13(a)** still reads,
         unqualified, *"a container carrying `accessibilityLabel` is explicitly `accessible={true}`"* —
         ⚠ **that is the wording E's THIRD pass disproved**, and it has ⛔ not been swept there. ⭐ The
@@ -1017,7 +1017,7 @@ a defect to "fix".
         container."* ⇒ `accessible` on **leaf text / leaf-only groups**; every **control** carries
         `accessible={true}` + role + label and is a **SIBLING**, ⛔ never a descendant, of a labelled
         container. ⭐ Following the old wording would have made **AC8's control unreachable**.
-  - [ ] ⚠ The **labels**: AC4 needs **FIVE** (⛔ not six — D3(D) removed the VPA) and **four** survive on
+  - [x] ⚠ The **labels**: AC4 needs **FIVE** (⛔ not six — D3(D) removed the VPA) and **four** survive on
         a member surface. Story A (`45547a7b`) **DELETED** `label.account_number` / `label.ifsc` /
         `label.vpa` / `label.bank_name` / `label.branch` from `sahyog-vivran.json` — ⚠ which still holds
         eight `label.*` keys in total; ⭐ **only its BANKING labels are down to `label.account_holder`.**
@@ -1041,7 +1041,7 @@ a defect to "fix".
         **Consequence 5** rules one **MUST be minted** — ⭐ it simply is ⛔ not F's; it travels with
         **`8-17`**. (⚠ A UPI-ID string already exists at `claim.json:60-62` — ⛔ check before minting a
         second.)
-  - [ ] ⚠⛔⛔ **`bank_name` / `branch` — THE HAZARD SHIPPED **CLOSED BY DELETION**, AND THE RISK IS THE
+  - [x] ⚠⛔⛔ **`bank_name` / `branch` — THE HAZARD SHIPPED **CLOSED BY DELETION**, AND THE RISK IS THE
         ⛔ OPPOSITE OF WHAT THIS STORY USED TO SAY.** ⭐ Traced live 2026-09-11:
         `packages/domain/src/pool/sahyog-vivran-read.ts:647-668` now returns
         `{ accountRank, accountHolderNameCiphertext }` **only** — *"Closed HERE by deletion"* — and the
@@ -1060,12 +1060,12 @@ a defect to "fix".
         ⛔ never page-wide.
         ⭐ `branch` is **genuinely nullable** ⇒ a `null` is an **ordinary absent optional**, ⛔ not a
         fault — **omit the row**, ⛔ never a placeholder.
-  - [ ] ⚠⛔ **THE ERASURE BACKSTOP** (**AC11**). `anonymizeMember` overwrites `name_ciphertext` **in place** with
+  - [x] ⚠⛔ **THE ERASURE BACKSTOP** (**AC11**). `anonymizeMember` overwrites `name_ciphertext` **in place** with
         an *encrypted* `[anonymized]` sentinel and RETAINS the row ⇒ the decrypt **SUCCEEDS** and the
         sentinel would render verbatim where a family name belongs (`member-pool/handlers.ts:497-524`).
         ⭐ ⛔ NOT a new rule — an **unswept** one. ⚠ The remedy **diverges by surface** (contributors
         omit the row; the drive list keeps the drive and drops the name) ⇒ ⛔ do ⛔ not copy mechanically.
-  - [ ] ✅ **Both accounts, ⛔ no ordering implied** — ⭐ unconditional (`-213` cl.1). ⚠ The two holder
+  - [x] ✅ **Both accounts, ⛔ no ordering implied** — ⭐ unconditional (`-213` cl.1). ⚠ The two holder
         names may differ, and **the SCHEMA PERMITS IT** — 6.8 **D1**, ⭐ **SHIPPED** (⛔ no FK, ⛔ no
         rank, ⛔ no match rule). ⇒ **surface both, ⛔ pick neither**, exactly as **`-213` cl.2** orders
         **for the period while §8.4(ii) is unruled**.
@@ -1078,19 +1078,19 @@ a defect to "fix".
         cited here. ⚠ `migrations/0056_claim-nominee-bank.sql:3` still calls them
         *"#1 (primary) / #2"*; ⛔ that header is **stale** (`9.9` D3 / `-213` cl.1 — the two are EQUAL)
         and the schema file is the correct one. ⛔ Do ⛔ not read an ordering out of the migration.
-- [ ] ⛔⛔ **Task 5a — NAME THE ROUTE BEFORE YOU BUILD IT** (AC1, AC8). ⚠⛔ **⛔ NO TASK NAMED THE FILE TO
+- [x] ⛔⛔ **Task 5a — NAME THE ROUTE BEFORE YOU BUILD IT** (AC1, AC8). ⚠⛔ **⛔ NO TASK NAMED THE FILE TO
       CREATE** until 2026-09-13, and ⭐ **AC8's test disposition DEPENDS ON IT.** There is ⛔ no detail
       route today; the tab is `apps/mobile/app/(tabs)/sahyog.tsx`. ⇒ ⭐ choose the Expo-router path
       (e.g. `apps/mobile/app/(tabs)/sahyog/[publicToken].tsx`), ⭐ **RECORD IT IN THE COMPLETION NOTES**,
       and ⚠⛔ **re-read AC8 before concluding the `drive-list-render.test.ts` amendment is unnecessary** —
       ⭐ that fence is scoped to `DriveRow`, so it stays GREEN unless E's row itself becomes tappable.
-- [ ] **Task 5b — AC8: the drive-detail affordance** — render `pool_canonical_identifier`; make
+- [x] **Task 5b — AC8: the drive-detail affordance** — render `pool_canonical_identifier`; make
       `publicToken` a **real focusable control**; ⭐ amend E's AC5 record and
       `drive-list-render.test.ts:272` **by name**. ⚠ There is ⛔ no detail route today — the tab is
       `apps/mobile/app/(tabs)/sahyog.tsx`.
-- [ ] **Task 5c — AC9: the zero-day copy** — consume `zero_line.*` by name; variant on nullability;
+- [x] **Task 5c — AC9: the zero-day copy** — consume `zero_line.*` by name; variant on nullability;
       ⛔ do ⛔ not suppress the percentage; carry the a11y invariant; honour `-207` cl.2's ₹0 silence.
-- [ ] ⭐ **Task 5d — AC10: the Panel's message block + the `Nominee full name` | `District` table**
+- [x] ⭐ **Task 5d — AC10: the Panel's message block + the `Nominee full name` | `District` table**
       — ✅ **UNGATED. ⛔ Both STOPs discharged; `11b-19` is `done` and the keys are live.**
       ⭐ **CONSUME THESE EIGHT BY NAME** from `packages/i18n/locales/{en,hi}/sahyog-shared.json`:
       `message_block.headline.full` · `message_block.headline.no_family` · `message_block.solidarity` ·
@@ -1105,7 +1105,7 @@ a defect to "fix".
       one ships ₹₹); there is ⛔ **no `no_amount` variant** — where the amount is unavailable the block
       renders **NOTHING**; an absent `district` **drops its COLUMN**. ⚠⛔ `t()` **THROWS** and the block
       is **PAGE-shaped** ⇒ a missed token is the **whole page**, ⛔ not one line. (See AC10.)
-  - [ ] ⛔⛔ **NARROW THE DARK-COPY FENCE BY NAME** (AC10) — `packages/i18n/tests/sahyog-shared-dark-copy.test.ts`,
+  - [x] ⛔⛔ **NARROW THE DARK-COPY FENCE BY NAME** (AC10) — `packages/i18n/tests/sahyog-shared-dark-copy.test.ts`,
         the *"⛔ ZERO CONSUMERS"* test (`:530`, `AUTHORISED: string[] = []` at `:560`). ⚠ Its `RESOLVER`
         regex was hardened on 2026-09-12 to match through a `${` interpolation opener ⇒ ⛔ a
         runtime-built `` `message_block.headline.${variant}` `` is caught too. ⭐ **Add this render site
@@ -1118,10 +1118,10 @@ a defect to "fix".
       `public_name_presentation_mode` subject. ⚠ `district` already ships on the member wire.
       ⚠⛔ **AND ⛔ NO KEY ASSERTS THE NOMINEE RELATIONSHIP** — they are **LABELS** over
       `account_holder_name_ciphertext`; **the SCHEMA is the authority** (`D5-subject (i)`).
-- [ ] **Task 6 — Tests** (**AC2-AC5, AC7-AC11**) — ⚠⛔ ⛔ the old tag read *"AC2-AC5, AC7-AC9"* while
+- [x] **Task 6 — Tests** (**AC2-AC5, AC7-AC11**) — ⚠⛔ ⛔ the old tag read *"AC2-AC5, AC7-AC9"* while
       **AC4, AC8, AC9 and AC10 had ⛔ NO subtask at all**; ⭐ corrected 2026-09-13, and the missing ones
       are written below. ⛔ **AC4 is the highest-disclosure AC in this story and was shipping untested.**
-  - [ ] **The `member ≥ public` comparison (AC2)** — ⭐⭐ **THE ASSERTION, STATED** (⛔ it was ⛔ never
+  - [x] **The `member ≥ public` comparison (AC2)** — ⭐⭐ **THE ASSERTION, STATED** (⛔ it was ⛔ never
         written down; AC2 gave only four things it must *not* do):
         every field id in **`SAHYOG_VIVRAN_FIELD_IDS`** (`apps/public/src/lib/surface-fields.ts:646-661`)
         **∪** **`SAHYOG_VIVRAN_NOMINEE_ACCOUNT_FIELD_IDS`** (`:672-683`) that the public **detail** page
@@ -1142,7 +1142,7 @@ a defect to "fix".
         a carve-out there would **suppress a real failure**.
         ⛔ **⛔ NOT E's `SAHYOG_DRIVE_ROW_FIELD_IDS`** — the index map; copying it proves ⛔ nothing about
         this surface.
-  - [ ] ⛔⛔ **AC3 — ⛔ RESOLVE THE RESPONSE SHAPE FIRST, ⛔ THEN WRITE THE TEST.**
+  - [x] ⛔⛔ **AC3 — ⛔ RESOLVE THE RESPONSE SHAPE FIRST, ⛔ THEN WRITE THE TEST.**
         ⚠⛔ ⛔ Until 2026-09-13 this task carried **TWO MUTUALLY UNSATISFIABLE subtasks** — *"the
         coordinate keys are ABSENT"* (which needs a **200 body**) and *"another Pariwar's drive is
         **unreachable**"* (which means there is **no body**) — ⛔ on the AC this story itself calls
@@ -1158,14 +1158,14 @@ a defect to "fix".
         ⚠⛔⛔ **⛔ Do ⛔ NOT write `expect(body).not.toHaveProperty('accountNumber')` against a 404** —
         ⭐ that passes **vacuously** on a 500, an empty body, or a typo'd id
         ([[feedback_gate_scope_semantic_coverage]]).
-  - [ ] A **fence test** for AC7 — ⭐ including that ⛔ **no `vpa` key** reaches this wire (D3(D)), and
+  - [x] A **fence test** for AC7 — ⭐ including that ⛔ **no `vpa` key** reaches this wire (D3(D)), and
         that **लक्ष्य is ABSENT on the archived stages** (D2(B)). ⚠⛔ **SAY WHICH VOCABULARY THE
         ASSERTION IS IN:** pool states are `closed`/**`settled`**, the wire tokens are
         `closed`/**`verified`** — ⛔ a wire assertion written against `settled` matches ⛔ nothing.
-  - [ ] ⛔⛔ **THE TARGET GATE FENCE (AC2)** — with ⛔ no `reveal_to_members` row, the target key is
+  - [x] ⛔⛔ **THE TARGET GATE FENCE (AC2)** — with ⛔ no `reveal_to_members` row, the target key is
         **ABSENT**; with the row ON, it is present on `live` only. ⭐ Assert the read goes through
         `resolveDriveTargetVisibility`, ⛔ never `getDriveTargetVisibilityRow`.
-  - [ ] ⭐ **AC4 — THE COORDINATE RENDER, ⛔ PREVIOUSLY UNTESTED.** Both accounts render; **five**
+  - [x] ⭐ **AC4 — THE COORDINATE RENDER, ⛔ PREVIOUSLY UNTESTED.** Both accounts render; **five**
         coordinates each (account number, IFSC, holder name, bank, branch) — ⛔ **no `vpa` on this
         wire**, in ⛔ any stage (D3(D)); the values are **UNMASKED** (Trap 4); the holder label resolves
         to the ruled *"Nominee Name"* via **`label.account_holder`**, ⛔ **never** `nominee.label` (which
@@ -1173,20 +1173,20 @@ a defect to "fix".
         the string `-190` cl.2 forbids). ⚠ Assert **explicit values and membership**, ⛔ never counts
         ([[project_live_db_test_gotchas]]). ⚠ Two **differing** holder names are a **legitimate state**
         — assert both **surface**, ⛔ that neither is picked.
-  - [ ] ⭐ **AC8 — the affordance is REAL** — a focusable control with a real handler, an accessible
+  - [x] ⭐ **AC8 — the affordance is REAL** — a focusable control with a real handler, an accessible
         name, and an `accessibilityRole` matching what it does; `pool_canonical_identifier` renders.
         ⚠ Per the **no-RN-mount-harness** rule below, this is a **source scan** driven by the real
         catalog + real contract, ⛔ plus any checkable logic extracted into a plain `.ts`.
-  - [ ] ⭐ **AC9 — the zero-day copy** — `zero_line.full` vs `.no_family` selected on **nullability**;
+  - [x] ⭐ **AC9 — the zero-day copy** — `zero_line.full` vs `.no_family` selected on **nullability**;
         the percentage is ⛔ **not** suppressed at zero; the **accessible name** carries the same
         softening; and `-207` cl.2's **₹0 silence** on the **WIRE TOKENS** `closed`/`verified`.
-  - [ ] ⭐ **AC10 — the message block** — the eight keys resolve **in both locales**; the headline
+  - [x] ⭐ **AC10 — the message block** — the eight keys resolve **in both locales**; the headline
         variant is chosen on `family_name` nullability; an absent `district` **drops its column**;
         ⛔ **no literal ₹** is added to `{amount}`. ⚠⛔ **AND THE DARK-COPY FENCE IS NARROWED, ⛔ not
         appended to** — see Task 5d.
-  - [ ] ⭐ **AC11 — family 13** — every control is `accessible={true}` + role + name and is a **SIBLING**
+  - [x] ⭐ **AC11 — family 13** — every control is `accessible={true}` + role + name and is a **SIBLING**
         of any labelled container, ⛔ never a descendant; and the `ANONYMIZED_SENTINEL` ⛔ never renders.
-  - [ ] ⭐ **ONE AC5 audit line per DETAIL OPEN** (AC5) — ⛔ **not** one per coordinate read.
+  - [x] ⭐ **ONE AC5 audit line per DETAIL OPEN** (AC5) — ⛔ **not** one per coordinate read.
         ⚠⛔⛔ **THE FLAKE TRAP IS REAL BUT WAS POINTED AT THE WRONG WRITER.** ⭐ Traced 2026-09-11: the
         cited precedent **IS awaited** (`public-pages/handlers.ts:661` — `await
         writeAppealReversalDisclosureAudit(…)`, which awaits `writeAuditEntry` inside a try/catch) ⇒
@@ -1194,12 +1194,12 @@ a defect to "fix".
         (`apps/api/src/audit/audit-log-sink.ts:206` — `void writeAuditEntry(…).catch(…)`, doc-block:
         *"fire-and-forget on the service pool"*) — ⛔ i.e. **the seven INVISIBLE KMS lines AC5 counts**.
         ⇒ ⚠ any test asserting a **total** line count per open must **drain the KMS half**, or it flakes.
-  - [ ] ⭐ **Size the audit write volume** under routine browsing before shipping (AC5) — ⚠⛔ **the
+  - [x] ⭐ **Size the audit write volume** under routine browsing before shipping (AC5) — ⚠⛔ **the
         unit is ≈5-8 global-lock acquisitions per detail open, ⛔ not 1** (see AC5). ⭐ Measure: the
         lines actually emitted for one open (assert the COUNT, which also pins the decrypt count), and
         the wall-clock cost of the serialized chain under concurrent opens. ⚠ Compare against story
         **E**'s already-shipped per-row decrypts — ⭐ the baseline is ⛔ not zero.
-  - [ ] ⭐⭐ **RECORD THE MMKV TRIGGER AS FIRED** — ⚠ it lived in **Dev Notes prose ONLY**,
+  - [x] ⭐⭐ **RECORD THE MMKV TRIGGER AS FIRED** — ⚠ it lived in **Dev Notes prose ONLY**,
         with ⛔ no AC and ⛔ no Task; ⭐ the exact defect this story credits itself with fixing for E's two
         obligations ([[feedback_spec_edits_must_propagate_to_tasks]]). ⚠ Amend `deferred-work.md`'s
         **persisted-query-cache item** in the **11b-15 THIRD-pass section** (⭐ **by ITEM, ⛔ never by line —
@@ -1208,7 +1208,7 @@ a defect to "fix".
         trigger — *"any DPDPA review of at-rest cached personal data on the handset"* — **FIRED at F**,
         and **how much Tier-1 is now at rest** ([[feedback_closure_language_precision]]). ⛔ The fix
         itself is **one repo-wide change**, ⛔ not F's.
-  - [ ] ⭐⭐ **RECORD THE AMPLIFICATION — ⛔ AND THE DISPOSITION IS FIXED IN ADVANCE, ⛔ NOT LEFT TO
+  - [x] ⭐⭐ **RECORD THE AMPLIFICATION — ⛔ AND THE DISPOSITION IS FIXED IN ADVANCE, ⛔ NOT LEFT TO
         TASTE.** ⚠⛔ ⛔ The old wording read *"if the measured number is uncomfortable"* — ⛔ a condition
         with **no threshold and no action**, which a dev cannot fail. ⭐ Corrected 2026-09-13:
         **whatever the number**, it is ⛔ **NOT** a blocker and ⛔ **NOT** a reason to drop a decrypt or
@@ -1217,7 +1217,7 @@ a defect to "fix".
         figure** in `deferred-work.md` against the existing repo-wide item, ⛔ **and ship.**
         ⚠ It is **repo-wide and pre-existing** (the KMS hook + the single global chain), ⛔ **not** a
         per-surface patch, and ⛔ not F's to fix alone ([[feedback_closure_language_precision]]).
-  - [ ] ⭐ **Execute them** against `twt-test-pg` `:5433`.
+  - [x] ⭐ **Execute them** against `twt-test-pg` `:5433`.
 
 ---
 
@@ -1607,16 +1607,221 @@ re-derived: ⛔ **never write a line number into a newest-first file, ⛔ not ev
 
 ### Agent Model Used
 
+Claude Opus 5 (`claude-opus-5`) — `bmad-dev-story`, 2026-09-13.
+
 ### Debug Log References
+
+⭐ **EVERY FENCE IN THIS STORY WAS PROVEN TO BITE WITH A PLANTED PROBE, ⛔ NOT READ OFF A GREEN RUN.**
+⚠ Recorded because one of them was **VACUOUS** and only the probe found it (see finding **F1**).
+
+| Probe | Target | Result |
+|---|---|---|
+| A third, unauthorised `message_block.*` resolver | the NARROWED dark-copy fence | ⛔ **RED** ✅ |
+| `amountRaisedInr <= 0` guard removed | AC10(3) — the ₹0 silence, ⛔ no `no_amount` variant | ⛔ **RED** ✅ |
+| `deceasedMemberName === null` variant removed | AC10(2) — a `.full` on a nameless drive = a WHOLE-PAGE 500 | ⛔ **RED** ✅ |
+| a literal `₹` prepended to `{amount}` | AC10(1) — ships **₹₹** | ⛔ **RED** ✅ |
+| the district column left attached to the nominee | AC10(4) — `-214` Consequence 6 | ⛔ **RED** ✅ |
+| `onPress` stripped, `button` role kept | E's AMENDED row fence — ⭐ the direction the OLD assertion could ⛔ not catch | ⛔ **RED** ✅ |
+| the push address rebuilt from `poolCanonicalIdentifier` | 11b.10 D2's guessability | ⛔ **RED** ✅ |
+| the AC5 audit line moved inside the per-account map | AC5 — ⛔ ONE line per DETAIL OPEN, ⛔ not per account | ⛔ **RED** ✅ |
+| the cross-Pariwar 404 "improved" into a 403 | AC3(a) — a 403 IS the enumeration oracle | ⛔ **RED** ✅ |
+| `vpa` added to the wire + decrypted | D3(D) / `-212` cl.2 | ⛔ **RED** ✅ |
+| the account number masked (`.slice(-4)`) | Trap 4 — *"a masked account# cannot be transferred to"* | ⛔ **RED** ✅ |
+| the percentage suppressed at zero | AC9 — member would drop BELOW public | ⛔ **RED** ✅ |
+| the table moved BELOW the message | AC10 / §8.1 — *"a table **above** the message"* | ⛔ **RED** ✅ |
+| a `<Button>` nested inside a labelled container | AC11 / family 13 | ⚠⛔ **GREEN — ⛔ THE FENCE WAS VACUOUS.** See **F1** |
 
 ### Completion Notes List
 
+⭐ **ALL TWELVE ACs (AC0-AC11) SATISFIED. ALL TASKS COMPLETE.** Two commits: the `governance:` commit
+FIRST and with ⛔ **NO CODE** ([[feedback_governance_commits_precede_implementation]]), then the build.
+
+#### ⭐ Task 1 — GOVERNANCE (AC0), ⛔ before a line of code
+- **`epics.md`** gained a `### Story 11b.17` **SECTION** — ⛔ not an annotation (a NEW member-app
+  surface with ⛔ no parent there; the `11b-19` / `11b-15` / `8-16` / `7-11` precedent).
+- **`#decision-2026-09-13-215`** — the **§8.4(ii) SUCCESSOR** entry `8-17` deferred here **BY NAME**.
+  ⛔ `-213` is ⛔ **NOT edited**. ⭐ The honest prior status is recorded as ***"DE-ROUTED but ⛔ NOT
+  LOGGED"*** — ⛔ not *"closed"*, ⛔ not *"ruled"*, ⛔ not *"still routed"*
+  ([[feedback_closure_language_precision]]). ⚠⛔ The ground is the **SHIPPED SCHEMA** (migration `0056`
+  — ⛔ no FK, ⛔ no `nominee_rank`, ⛔ no match rule) and ⛔ **NOT** 6.8's D1 *as a decision*: that is
+  author-committed (*"APPROVED (BigDev)"*) and was this story's **entire licence to drop a Panel
+  routing** ([[feedback_trace_internal_state_never_cite_decision_text]]).
+  ⛔ It does ⛔ **NOT** close `deferred-work.md`'s `D5-subject (i)`, which stays **OPEN**.
+- **SIX stale artefacts ROUTED** into `deferred-work.md` with addresses and triggers, including the two
+  the story itself had diagnosed and then routed ⛔ nowhere.
+- **This story's own `sprint-status.yaml` row block REWRITTEN** — superseded text kept as **dated,
+  struck lines**; the **§8.3(3)/§8.5** cite corrected to **§8.1 / §9.1 row 3** (the story body fixed it
+  at v1.2 and ⛔ never swept the ledger — five days, [[feedback_story_validate_footguns]] #16).
+
+#### ⭐ Tasks 2-4 — the read, the boundary, the audit
+- ⭐⭐ **A NEW CONTRACT + A NEW ROUTE, ⛔ NOT AN ADDITIVE FIELD.** `MemberDriveListEntry` is `.strict()`
+  and `api-client`'s `call` throws ⇒ one added field **BLANKS THE WHOLE FOURTH TAB** for every member
+  on an older installed build. ⭐ This is `deferred-work.md`'s own stated remediation (*"prefer a NEW
+  contract"*), and a new route is **INVISIBLE** to an older build ⇒ ⛔ no deployment order is owed here.
+- ⭐ The domain accessor declares its **OWN** visible-state tuple **and** its **OWN** `live`-only लक्ष्य
+  fragment (`-196` / `-212` Consequence 2), and **its own nominee projection**: reusing
+  `sahyog-vivran-read.ts`'s would have yielded ⛔ **NEITHER `bankName` NOR `branch`** (it was narrowed
+  to two fields — *"Closed HERE by deletion"*) and AC4's five-field render would have come up **TWO
+  FIELDS SHORT**.
+- ⭐ लक्ष्य resolves through **`resolveDriveTargetVisibility`**, ⛔ never `getDriveTargetVisibilityRow`.
+  ⭐ **Proven live**: ⛔ no reveal row ⇒ the key is **ABSENT**; the switch ON ⇒ **₹5,000** (10 × ₹500).
+- ⭐ `vpaCiphertext` is **⛔ NOT PROJECTED** — the exclusion is **STRUCTURAL**, ⛔ not remembered.
+- ⭐ **AC3's shape RESOLVED: a 404**, collapsing FIVE cases (no such drive · not visible at this
+  predicate · malformed token · real drive wrong token · **another Pariwar's drive**). ⛔ Never a 403 —
+  a 403 **IS** the enumeration oracle. ⚠⛔ The vacuous
+  `expect(body).not.toHaveProperty(…)`-against-a-404 was ⛔ **NOT** written.
+- ⭐⭐ **AC5: EXACTLY ONE audit line per DETAIL OPEN**, attributed, naming the **canonical identifier** —
+  ⛔ never the public token, ⛔ never a decrypted value. A **NAMED DEPARTURE** from the anonymous public
+  precedent, on **both** axes.
+
+#### ⭐⭐ AC5's SIZING — ⭐ MEASURED, ⛔ NOT ESTIMATED
+⭐ A counting `auditHook` over a real open: **7 Tier-1 decrypts + 1 AC5 line = 8 global-lock
+acquisitions per detail open** — ⭐ exactly the **≈8** end AC5 predicted, and ⛔ **SEVEN OF THE EIGHT
+ARE INVISIBLE** (emitted by the crypto layer). ⚠⛔ `-199` Consequence 2's *"a write on every detail
+open"* — **singular** — was **wrong in the story's favour**. ⭐ Asserted as an EXACT count, so a future
+decrypt fails there and is sized deliberately. ⛔ **NOT a blocker**; ⛔ the KMS hook is **NOT** dropped
+(it is the **FR-47** record of which key opened which field). ⭐ A **PRE-EXISTING** condition this
+surface AMPLIFIES — story **E** already decrypts two names per row, so the baseline is ⛔ **not zero**.
+
+#### ⭐ Task 5 — the screen
+- ⭐ **AC4**: both accounts, **FIVE** fields each, **UNMASKED**. The holder label is the ruled
+  *"Nominee Name"* via `label.account_holder` — ⛔ never `nominee.label` (renders *"Nominee"*), ⛔ never
+  `upi_intent.account_holder_label` (literally the forbidden string). Two **DIFFERING** holder names
+  **SURFACE BOTH, PICK NEITHER** — proven live with deliberately differing fixtures.
+- ⭐ **`label.branch` MINTED HERE**, at its own render site (the `8-17` `upi_intent.vpa_label`
+  precedent). ⛔ It is **NOT** ratified copy: ⛔ no clause names `branch`.
+- ⭐ **AC8**: E's row became a **REAL** control; its fence went RED **by design** and was **AMENDED BY
+  NAME** — and the amendment is **STRICTER** (it now catches a handler stripped from a role, which the
+  old assertion could ⛔ not).
+- ⭐ **AC10**: the eight keys consumed BY NAME; the dark-copy fence **NARROWED** per its own author's
+  written instruction — ⛔ never deleted, ⛔ never appended to.
+
+#### ⚠⛔ THREE THINGS FOUND THAT THE STORY DID ⛔ NOT PREDICT — ⭐ RECORDED, ⛔ NOT ABSORBED
+
+**F1 — ⛔⛔ MY OWN FAMILY-13 FENCE WAS VACUOUS, AND ⛔ ONLY A PLANTED PROBE FOUND IT.**
+The first version tracked a running JSX `depth` and recorded the labelled depth at the **LINE**
+carrying `accessibilityLabel`; ⛔ this codebase formats JSX attributes across **MULTIPLE LINES**, so
+the container's own `<YStack` had already incremented `depth` ⇒ a nested `<Button>` sat at the *same*
+depth and `depth > labelledDepth` was ⛔ **never true**. ⭐ A planted `<Button>` inside a labelled
+container **PASSED**. ⇒ rewritten to bound each element by its **matching close at the same
+indentation**, and **re-probed in two places** — both now RED.
+⚠⛔ Recorded rather than quietly rewritten ([[feedback_record_unattested_no_backfill]]): it is the exact
+defect [[feedback_gate_scope_semantic_coverage]] names — **a green scan that asserts nothing** — found
+in the pass that was writing the fences.
+
+**F2 — ⛔⛔ A THIRD GREEN TEST WENT RED, AND THE STORY PREDICTED ⛔ ONLY TWO.**
+`apps/mobile/tests/unit/sahyog-vivran-entry.test.ts` — *"⛔ no `(sahyog)` route group was added to the
+app"* — is Story **11b.10's D4** pinned in code (*"⛔ no new route group"*, author-committed BigDev
+2026-09-04b), and it `readdirSync`s the route root, ⭐ *"the DIRECT reading of that — ⛔ not a proxy"*.
+⚠ My first build added `app/(sahyog)/` and turned it red.
+⛔⛔ **RENAMING THE GROUP WOULD HAVE BEEN THE DISHONEST FIX** — the assertion names `(sahyog)` by
+string, so `(drive-detail)` would have gone GREEN while adding **exactly the new route group D4
+forbids**. ⇒ ⭐ the screen was **RE-HOMED INSIDE THE EXISTING `(contribution)` GROUP**
+(`/(contribution)/drive/[driveToken]`), which **MEETS** D4 as written and needs ⛔ **no supersession
+and ⛔ no reinterpretation** ([[feedback_supersede_never_reinterpret]]). ⭐ It is also the right home on
+its merits: its sibling `contributors.tsx` is the same shape (a read-only member view of a pool,
+reached by `router.push` from a card affordance) and `note/[id].tsx` already nests a dynamic route
+there. ⚠ The story's **Task 5a** ordered *"NAME THE ROUTE BEFORE YOU BUILD IT"* and its own example
+(`(tabs)/sahyog/[publicToken].tsx`) would ⛔ not have tripped D4 either — ⭐ the deviation was mine, and
+a **shipped fence caught it**.
+
+**F3 — ⚠⛔ A REAL `-189` cl.3 SHORTFALL: THE APPEAL LINEAGE. ⭐ ROUTED, ⛔ NOT CARVED OUT.**
+⭐ **Found by writing AC2's comparison test**, which reads the floor **PROGRAMMATICALLY from the live
+maps** — ⛔ it would ⛔ never have surfaced from a transcribed list. The public Sahyog Vivran **DETAIL**
+renders a *"Reversed by appeal"* lineage (`appeal_reversal_stage` · `appeal_disposition_category` ·
+`appeal_reversal_at`); ⛔ this member surface carries **none of them**.
+⚠⛔ It is ⛔ **NOT** one of AC2's three authorised exclusions — AC2 names exactly three and then
+*"⛔ NOTHING ELSE"* ⇒ ⭐ the honest word is **SHORTFALL**. ⛔ It was ⛔ **not** built here: the lineage is
+a separate request-time read over the claim's `claim.reversed` stream, and putting it on a member
+surface is a live **DISCLOSURE question** — *may every member see that a family's claim was DENIED and
+then reversed, and at which stage?* — that `-199`, `-212` and `-213` ⛔ **none of them reach**, and the
+public page publishes it under a **different** authority (11b.3 D12(a)) which is ⛔ **not transitive**.
+⇒ ⭐ **DECLARED in the test** (the three ids carry an explicit empty counterpart, and an assertion pins
+the gap at **exactly three** so a fourth fails loudly) and **ROUTED** to `deferred-work.md`.
+⚠ The residual, plainly: on an appeal-reversed drive a member sees **LESS** than a stranger on that one
+axis. ⭐ Bounded, and the error runs toward saying **LESS** — ⛔ it is not a disclosure leak.
+
+#### ⚠ HONEST NOTES ON PROCESS
+- ⚠⛔ **RED-GREEN WAS ⛔ NOT STRICTLY FOLLOWED** — the story's own **Task 6** holds all tests, and the
+  task sequence is authoritative. ⭐ Stated, ⛔ not glossed (story **E** recorded the same).
+- ⭐ The **dark-copy fence's SCOPE was NARROWED** to exclude **test modules** (`*.test.*` / `*.spec.*`),
+  with its reason written in: it caught this story's own test file, and ⭐ its stated danger is a
+  **production 500** — a test asserting the keys ⛔ cannot ship one, which is why the file already
+  self-excluded itself by real path. ⚠⛔ The **WRONG** fix would have been appending the test to
+  `AUTHORISED`, which both allow-lists forbid in terms. ⭐ Re-probed after the narrowing: an
+  unauthorised **PRODUCTION** resolver still fails, and the `index_line.*` fence still names exactly
+  `sahyog.astro`.
+
+#### ⛔ WHAT THIS STORY DID ⛔ NOT DO (⭐ each deliberate)
+⛔ No public surface · ⛔ no masking change · ⛔ no change to the 9.9 donor path or the member list's
+one-decrypt behaviour · ⛔ no contributor names · ⛔ no `spawned` · ⛔ **no `vpa` on any wire** · ⛔ no
+widening of `contribution-history` · ⛔ `SahyogVivranEntry` **untouched** (Trustee-ratified `-200`
+cl.4 — ⚠ a member now has **TWO** views of one drive, and ⭐ that divergence is **expected and
+recorded**) · ⛔ `-212` Consequence 6 (*"Account holder"*) **not fixed by side effect** — routed, and
+⛔ still **unhomed** · ⛔ `deferred-work.md`'s `D5-subject (i)` **not closed**.
+
 ### File List
+
+**Governance (the `governance:` commit — ⛔ NO CODE)**
+- `_bmad-output/planning-artifacts/epics.md` — the `### Story 11b.17` SECTION
+- `.decision-log.md` — `#decision-2026-09-13-215` (the §8.4(ii) successor entry)
+- `_bmad-output/implementation-artifacts/deferred-work.md` — six routed artefacts
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — the row flip + the row-block rewrite
+
+**Contracts**
+- `packages/contracts/src/contributions/member-drive-detail.ts` — **NEW**
+- `packages/contracts/src/contributions/index.ts` — barrel
+- `packages/contracts/scripts/emit-openapi.ts` — components + the path
+- `openapi/v1.yaml` — regenerated (determinism gate green)
+
+**Domain**
+- `packages/domain/src/pool/member-drive-detail.ts` — **NEW**
+- `packages/domain/src/pool/index.ts` — barrel
+
+**API**
+- `apps/api/src/modules/member-pool/handlers.ts` — `driveDetail` + `resolveDriveDetail`
+- `apps/api/src/modules/member-pool/routes.ts` — the route
+- `apps/api/src/audit/audit-sink.ts` — `member_drive_detail.coordinates_viewed`
+
+**API client**
+- `packages/api-client/src/index.ts` — `memberDriveDetail`
+
+**Mobile**
+- `apps/mobile/app/(contribution)/drive/[driveToken].tsx` — **NEW** (⛔ **not** a new route group)
+- `apps/mobile/components/drive-detail/MemberDriveDetail.tsx` — **NEW**
+- `apps/mobile/components/drive-detail/format.ts` — **NEW** (the pure, testable selectors)
+- `apps/mobile/components/drive-detail/useMemberDriveDetailQuery.ts` — **NEW**
+- `apps/mobile/components/drive-list/MemberDriveList.tsx` — AC8: the row is a REAL control; two
+  doc-blocks SUPERSEDED BY NAME
+- `apps/mobile/app/_layout.tsx` — ⛔ reverted to unchanged (the `(sahyog)` registration was removed
+  with the group)
+
+**i18n**
+- `packages/i18n/locales/{en,hi}/member-drive-detail.json` — **NEW**
+- `packages/i18n/locales/{en,hi}/sahyog-vivran.json` — `label.branch` MINTED
+- `packages/i18n/locales/{en,hi}/member-drive-list.json` — `row.open_hint`; `$comment.nominee` APPENDED
+- `packages/i18n/locales/{en,hi}/sahyog-shared.json` — `$comment.drive_target` AMENDED (TWO ⇒ three)
+- `packages/i18n/src/catalog.ts` — the namespace registered (⭐ **BOTH** registry lines + a test that
+  resolves a real key — the 11a.2 trap)
+
+**Tests**
+- `apps/api/tests/integration/contributions/member-drive-detail.spec.ts` — **NEW** (live DB)
+- `packages/contracts/tests/member-drive-detail.test.ts` — **NEW** (AC3(b) + AC7's fence)
+- `apps/public/tests/member-drive-detail-field-floor.test.ts` — **NEW** (AC2's comparison)
+- `apps/mobile/tests/unit/drive-detail-render.test.ts` — **NEW**
+- `apps/mobile/tests/unit/drive-list-render.test.ts` — E's row fence AMENDED BY NAME
+- `packages/i18n/tests/sahyog-shared-dark-copy.test.ts` — the `message_block.*` fence NARROWED
+
+**Deferred work (Task 6)**
+- `_bmad-output/implementation-artifacts/deferred-work.md` — the MMKV/DPDPA trigger recorded **FIRED**;
+  the `.strict()` item's trigger re-pointed to `8-17`; the measured amplification; ⭐ the **NEW**
+  appeal-lineage shortfall (**F3**)
 
 ## Change Log
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-09-13 | 2.0 | ✅⭐⭐ **IMPLEMENTED — `ready-for-dev` → `review`. ALL TWELVE ACs (AC0-AC11); ALL TASKS.** ⭐ **Task 1's `governance:` commit landed FIRST, with ⛔ NO CODE** ([[feedback_governance_commits_precede_implementation]]): the `epics.md` **SECTION**, **`#decision-2026-09-13-215`** (the §8.4(ii) SUCCESSOR entry `8-17` deferred here BY NAME — ⭐ status recorded as ***"DE-ROUTED but ⛔ NOT LOGGED"***, grounded on the **SHIPPED SCHEMA** and ⛔ **not** on 6.8's D1 *as a decision*, which is author-committed and could ⛔ not carry the licence to drop a Panel routing), **SIX routed artefacts**, and this story's own ledger row block rewritten with the **§8.1 / §9.1 row 3** correction the body made five days earlier and ⛔ never swept. ⭐ **A NEW CONTRACT + A NEW ROUTE, ⛔ not an additive field** — `MemberDriveListEntry` is `.strict()` and `api-client` throws, so one added field blanks the whole fourth tab on older builds; a new route is **INVISIBLE** to them ⇒ ⛔ no deployment order owed. ⭐ The domain read carries its **OWN** visible-state tuple, its **OWN** `live`-only लक्ष्य fragment **and its own nominee projection** — ⚠ reusing `sahyog-vivran-read.ts`'s (narrowed to two fields, *"Closed HERE by deletion"*) would have left AC4 **TWO FIELDS SHORT**. ⛔ `vpaCiphertext` is **NOT PROJECTED** ⇒ D3(D) is **STRUCTURAL**. ⭐ **AC3's shape RESOLVED: a 404** collapsing FIVE cases (incl. the cross-Pariwar one) — ⛔ never a 403, which IS the oracle. ⭐⭐ **AC5 SIZED, ⛔ not estimated: 7 Tier-1 decrypts + 1 line = 8 global-lock acquisitions per open**, exactly the ≈8 end; ⛔ SEVEN ARE INVISIBLE. `-199` Consequence 2's *"a write"* — singular — was **wrong in the story's favour**. ⛔ Not a blocker; ⛔ the FR-47 KMS hook is NOT dropped. ⭐ **AC8**: E's row became a REAL control; its fence went RED by design and was **AMENDED BY NAME** — and is now **STRICTER** (it catches a handler stripped from a role, which the old assertion could ⛔ not). ⭐ **AC10**: the dark-copy fence **NARROWED**, ⛔ never appended to. ⭐ `label.branch` **MINTED at its own render site** (⛔ it is NOT ratified copy). ⭐⭐ **EVERY FENCE PROVEN TO BITE WITH A PLANTED PROBE — 13 of 14 RED.** ⚠⛔⛔ **THREE THINGS THE STORY DID ⛔ NOT PREDICT, ⭐ ALL RECORDED: (F1) MY OWN FAMILY-13 FENCE WAS VACUOUS** — JSX attributes span multiple lines, so its depth tracker never fired; ⭐ a planted `<Button>` inside a labelled container **PASSED**; rewritten by element extent and re-probed RED twice ([[feedback_gate_scope_semantic_coverage]]). **(F2) A THIRD GREEN TEST WENT RED** — `sahyog-vivran-entry.test.ts` pins **11b.10's D4** (*"⛔ no new route group"*); my first build added `app/(sahyog)/`. ⛔⛔ **Renaming would have been the DISHONEST fix** (the assertion names the string) ⇒ ⭐ **re-homed into the EXISTING `(contribution)` group**, which MEETS D4 as written with ⛔ no supersession and ⛔ no reinterpretation. **(F3) A REAL `-189` cl.3 SHORTFALL** — the public DETAIL renders an **appeal lineage** this surface carries ⛔ none of; ⛔ it is **NOT** one of AC2's three authorised exclusions, so the honest word is **SHORTFALL**. ⛔ Not built (it is an unruled DISCLOSURE question `-199`/`-212`/`-213` ⛔ none of them reach) ⇒ ⭐ **DECLARED in the test** (pinned at exactly three ids) and **ROUTED**. ⚠ **RED-GREEN ⛔ not strictly followed** (Task 6 holds all tests, per the story's own sequence) — ⛔ stated, ⛔ not glossed. ✅ **Typecheck 20/20 · lint 20/20 · i18n parity green · openapi determinism green · full unit suite green · live-DB suite green** (`@twt/api` 1255, `@twt/domain` 3352, exit 0). | BigDev + Claude |
 | 2026-09-13 | 1.5 | ⭐ **FOURTH `validate` PASS — ⛔ ZERO ROWS MOVE; ⛔ NO CODE; ⛔ NO CRITICAL FINDING.** Baseline drift re-checked (`a2617869` still an ancestor; the same 15 files still the full code-drift set); four parallel verification lanes plus direct spot-checks re-traced ~70 of this file's citations against HEAD, `.decision-log.md`, `sprint-status.yaml`, `epics.md`, every named sibling story, and both i18n locales — **nothing found FALSE**, no Stop reopened, no governance-state claim contradicted. **Two mis-cites corrected, both citing a passage about a DIFFERENT structure than the one being ruled:** AC1/D2's *"`public-read.ts:283-284` forbids sharing the tuple"* — that passage is the four SQL count fragments' doc-comment, ⛔ not the pool-state tuple's; `-196` Consequence 2 borrows its wording **by analogy** (the decision log's own move, ⛔ not this story inventing one) and remains sufficient authority alone. AC2/AC10's *"never mint a second key (`-193` cl.3, `-206` cl.1)"* — `-206` cl.1's subject is the progress bar's own `82%`; its *"ONE SOURCE, ⛔ NOT TWO"* sub-point is about that percentage's format, ⛔ not `drive_target`/`message_block`; `-193` cl.3 alone was already the References block's citation, just never swept to the ACs. **One class of citation drift recorded, deliberately NOT swept** (single-digit lines, no behavioural change — see the new Dev Notes subsection): the `ANONYMIZED_SENTINEL` backstop, `PublicSahyogVivranNomineeAccount`'s span, and the `DIRECTORY_DECRYPT_CONCURRENCY` halving site. **One stale artefact found OUTSIDE this story's own files, routed as Task 1 item (f):** `apps/mobile/app/(contribution)/pay.tsx:16-18`'s flow comment still calls VPA collection *"still deferred"* though `8-17` (`done`) shipped it — not F's file, found incidentally while re-verifying `-212` Consequence 3. ⛔ **NO CODE.** | BigDev + Claude |
 | 2026-09-13 | 1.4 | ⛔⛔ **RE-RUN OF THE VALIDATE CHECKLIST AGAINST v1.3's OWN OUTPUT — ⭐ PROMPTED BY BigDev CATCHING A DEFECT v1.3 HAD CERTIFIED. ⛔ ZERO ROW MOVES; ⛔ NO CODE.** ⭐ Three verifiers; ⭐⭐ **the majority of findings were v1.3's OWN** ([[feedback_story_validate_footguns]] #22). ⛔⛔ **THE WORST: v1.3 BROKE A CORRECT CITATION AND INVENTED ITS JUSTIFICATION** — `public-read.ts:169-173` was **right**; v1.3 "corrected" it to `:171-175` (which drops the declaration and `live: 'live'` and runs two lines past the closing brace) on the ground that *"`:169-173` excludes `settled: 'verified'` at `:174`"* — ⛔ **fabricated**: `:174` is BLANK and the mapping is at `:172`. ⛔ Reverted. ⛔⛔ **AND v1.3's *"three ranges … unified"* SWEEP CLAIM WAS FALSE** — it named three of **four** and swept ⛔ none of the other sites; ⭐ actually unified now. ⚠⛔⛔ **THE `⛔` GLYPH WAS INVERTING MEANING AT FOURTEEN SITES** — four of them **imperatives** (*"⛔ Route it"*, *"⛔ record the trigger as fired"*), one of them **AC0's own commit-ordering rule** (*"⛔ one `governance:` commit, ⛔ before any code"* = *not one, not before*), and one of them the **RECORD header's own disarming sentence** (*"⛔ KEPT, ⛔ NOT DELETED"* = *not kept*). ⭐ **A REGISTER BLOCK IS NOW DECLARED UNDER THE STATUS LINE** and all fourteen are corrected. ⛔⛔ **AC4's `branch` WAS ORDERED, FORBIDDEN AND UNHOMED AT ONCE** — v1.3 called *"Branch"* **ratified copy**; ⛔ no clause names it, and `8-17` already minted `upi_intent.vpa_label` **at its own render site** ⇒ ⭐ **mint `label.branch` HERE**. ⛔⛔ **6.8's D1 IS ⛔ NOT TRUSTEE-RATIFIED** (*"APPROVED (BigDev)"*) — ⛔ v1.3 called it ratified, and that sentence was the story's **entire licence to drop a Panel routing**; ⭐ re-grounded on the **SHIPPED SCHEMA**, which is stronger. ⛔⛔ **`D5-subject (i)` WAS PROMOTED TO A RULING** at three sites while this story's own AC0/AC4/References call it OPEN (the log records it OPEN at **four** sites) ⇒ swept to **records**. ⚠⛔ **`6-18` WAS CITED AS PROOF THE QUESTION IS SETTLED** — its own header says it does ⛔ NOT close `D5-subject` **(i)**, and **its D1 is OPEN and BLOCKS its AC1** — the very AC quoted; ⭐ and that quote was an **ellipsis splice of two separate bullets**. ⭐ Added: **Task 5a** (⛔ no task named the screen file to create, while AC8's test disposition depends on it), the **two Hindi divergences `11b-19` recorded** (`स्व.` vs `स्व०` — ⛔ normalising it re-punctuates ratified text), **per-paragraph SUPERSEDED sentinels** inside the RECORD (a grep lands mid-block on live-looking orders), and the hoist block reordered to **NINE**, with the ⛔ **two DISCLOSURE-class items first** — v1.3 had hoisted two CI-level items and omitted both. ⚠ Swept: `-214` Cons. 5→**Cons. 6** on AC10(4) and `-207` cl.2 onto AC10(3); *"ELEVEN ACs"*→**TWELVE**; *"~175 lines"*→**~99**; four cite drifts (`:558`→`:559`, `:558-560`→`:556-560`, `:274`→`:275`, `:246-250`→inside `:245-251`); the `8-17` quote restored to `:348-354`. ⭐ **CONFIRMED SOUND by an independent lane:** the §8.4(ii) headline, the *"DE-ROUTED but ⛔ NOT LOGGED"* word, the **successor-entry-never-edit-`-213`** remedy (the house pattern, verified at **five** sites), `-212` Cons. 6 as **unhomed**, `-214` Cons. 3 as **HOMED not closed**, both STOP discharges, and ⭐ **ZERO governance content lost in the v1.3 restructure**. ⛔ **NO CODE.** | BigDev + Claude |
 | 2026-09-13 | 1.3 | ⛔⛔ **RE-VALIDATED (`bmad-create-story validate`, three independent verifiers) — 38 FINDINGS, ALL APPLIED. ⛔ ZERO ROWS MOVE; ⛔ NO CODE.** ⭐ Baseline **NOT re-pinned** — `a2617869` IS still an ancestor. ⚠⛔⛔ **BUT THE v1.1 CLAIM *"⛔ no code moved"* IS ⛔ FALSE AND IS THE PREMISE EVERY OTHER CLAIM RESTED ON:** `story(8.17)` and `story(11b.19)` **SHIPPED 15 CODE FILES** since the pin — `payment/handlers.ts`, `pay.tsx`, `nominee-accounts.ts`, `public-pages/sahyog-vivran.ts`, four locale catalogs and a NEW i18n fence — ⛔ every one of them cited here by line. ✅⭐⭐ **BOTH STOPS ARE DISCHARGED AND THE STORY IS STARTABLE IN FULL:** STOP 1 by `-214` (2026-09-11), **STOP 2 by `11b-19` (`done`)**, which shipped all **eight** `message_block.*` keys in **both** locales ⇒ the v1.2 findings *"B ⛔ NEVER SHIPPED THE COPY"* and *"AC10 is UNSATISFIABLE"* are **FALSIFIED** (marked below, ⛔ not rewritten). ⛔⛔ **AND THAT DISCHARGE CREATED AN OBLIGATION THE FILE CARRIED ⛔ NOWHERE: `packages/i18n/tests/sahyog-shared-dark-copy.test.ts` holds `AUTHORISED: string[] = []` with a regex HARDENED to catch a dynamic key ⇒ AC10 fails it BY PATH** — ⭐ **NARROW it** per its own author's written instruction, ⛔ never delete, ⛔ never append. ⛔⛔ **§8.4(ii) IS ⛔ NOT SETTLED — `8-17` (`done`) DEFERRED THE RECORD HERE BY NAME** (`8-17:352`) while `-213` still reads *"nobody has said which"* ⇒ the log and this story **DISAGREE** and ⭐ **Task 1 now owes a SUCCESSOR entry** ([[feedback_closure_language_precision]], [[feedback_supersede_never_reinterpret]]). ⭐ **AC7's fence model was WRONG** — *"the shape E's AC8 uses"* scans ⛔ nothing and was breached by E's own dev; ⚠ the correction was already made against `11b-19` and ⛔ **never swept to the story carrying the sentence verbatim** ([[feedback_story_validate_footguns]] #16). ⛔⛔ **AC2's inert-gate carve-out resolved ⛔ ONE of TWO subjects** — the **deceased** name's gate is inert (clause id: ⛔ ONE repo occurrence, its own definition) but the **NOMINEE's name carries ⛔ NO gate and that is RULED** ⇒ the carve-out would have **suppressed a real failure** (#20). ⭐ **WRITTEN: AC11** (family 13 + the `ANONYMIZED_SENTINEL` backstop — a whole a11y surface that had ⛔ no AC), **Task 6 subtasks for AC4/AC8/AC9/AC10/AC11** (⛔ AC4, the highest-disclosure AC, was shipping **untested**), a **Task** for the three-resolver rule, a **Task** that ROUTES the stale artefacts, and AC2's comparison **assertion stated in full**. ⚠⛔ **Task 1 ordered a decision entry that ALREADY EXISTS** (a dev would have minted a duplicate) and **Task 6 carried two MUTUALLY UNSATISFIABLE AC3 tests** on the AC this story calls load-bearing — ⭐ both fixed. ⚠ **Swept again:** all four `.decision-log.md:NNN` (stale a SECOND time — ⛔ **broken by this story's OWN `-214` governance commit**, ⭐ now DELETED in favour of clause addresses), all three `sprint-status.yaml` numbers (⛔ ~570-610 lines off ⇒ **row-key addressing**), eleven `deferred-work.md` numbers (two **swapped**, one pointing at the **wrong item**) ⇒ **item addresses**; `8-17`/`11b-19` statuses ⇒ **`done`**; `-214` Cons. 3 ⇒ **HOMED at `11b-20`**, ⛔ not unhomed; the *"stale VPA doc-block"* ⇒ **CLOSED BY [EDIT]**; `-211` and `D5-subject (i)` **labelled author-committed**; the `bank_name`/`branch` asymmetry **named** (⛔ one guard cannot serve both); five unlabelled pool-state/wire-token assertions **labelled**; `public-read.ts:169-173` ⇒ `:171-175` (⛔ the old range **excluded** the mapping it was cited for). ⭐ **RESTRUCTURED:** ~99 lines of pass archaeology moved under **`## 📚 RECORD`** — ⛔ nothing deleted from the moved block — and a **SEVEN THINGS THAT WILL BITE YOU** block hoisted after the Tasks. ⚠⛔ **AND ONE DELETION IS OWNED, ⛔ not hidden:** v1.2's 18-line PREFLIGHT status block was **superseded and removed** (its substance survives in the v1.2/v1.3 rows) ⇒ ⛔ the phrase *"zero bytes deleted"* held for the MOVE and ⛔ not for the rewrite. ⛔ **NO CODE.** | BigDev + Claude |

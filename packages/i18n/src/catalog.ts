@@ -31,6 +31,7 @@ import enCloseOfCycle from '../locales/en/close-of-cycle.json';
 import enCommon from '../locales/en/common.json';
 import enContribution from '../locales/en/contribution.json';
 import enHelpdesk from '../locales/en/helpdesk.json';
+import enMemberDriveDetail from '../locales/en/member-drive-detail.json';
 import enMemberDriveList from '../locales/en/member-drive-list.json';
 import enMembers from '../locales/en/members.json';
 import enBanners from '../locales/en/banners.json';
@@ -48,6 +49,7 @@ import hiCloseOfCycle from '../locales/hi/close-of-cycle.json';
 import hiCommon from '../locales/hi/common.json';
 import hiContribution from '../locales/hi/contribution.json';
 import hiHelpdesk from '../locales/hi/helpdesk.json';
+import hiMemberDriveDetail from '../locales/hi/member-drive-detail.json';
 import hiMemberDriveList from '../locales/hi/member-drive-list.json';
 import hiMembers from '../locales/hi/members.json';
 import hiBanners from '../locales/hi/banners.json';
@@ -67,12 +69,12 @@ import type { Locale } from './locale.js';
 export type Catalog = Record<string, string>;
 
 const catalogs: Record<Locale, Record<string, Catalog>> = {
-  en: { common: enCommon, niyamavali: enNiyamavali, terms: enTerms, claim: enClaim, contribution: enContribution, 'close-of-cycle': enCloseOfCycle, 'pool-onboarding': enPoolOnboarding, 'nominee-console': enNomineeConsole, helpdesk: enHelpdesk, banners: enBanners, polls: enPolls, members: enMembers, noticeboard: enNoticeboard, 'sahyog-drive': enSahyogDrive, 'sahyog-shared': enSahyogShared, 'sahyog-vivran': enSahyogVivran, 'member-drive-list': enMemberDriveList },
-  hi: { common: hiCommon, niyamavali: hiNiyamavali, terms: hiTerms, claim: hiClaim, contribution: hiContribution, 'close-of-cycle': hiCloseOfCycle, 'pool-onboarding': hiPoolOnboarding, 'nominee-console': hiNomineeConsole, helpdesk: hiHelpdesk, banners: hiBanners, polls: hiPolls, members: hiMembers, noticeboard: hiNoticeboard, 'sahyog-drive': hiSahyogDrive, 'sahyog-shared': hiSahyogShared, 'sahyog-vivran': hiSahyogVivran, 'member-drive-list': hiMemberDriveList },
+  en: { common: enCommon, niyamavali: enNiyamavali, terms: enTerms, claim: enClaim, contribution: enContribution, 'close-of-cycle': enCloseOfCycle, 'pool-onboarding': enPoolOnboarding, 'nominee-console': enNomineeConsole, helpdesk: enHelpdesk, banners: enBanners, polls: enPolls, members: enMembers, noticeboard: enNoticeboard, 'sahyog-drive': enSahyogDrive, 'sahyog-shared': enSahyogShared, 'sahyog-vivran': enSahyogVivran, 'member-drive-list': enMemberDriveList, 'member-drive-detail': enMemberDriveDetail },
+  hi: { common: hiCommon, niyamavali: hiNiyamavali, terms: hiTerms, claim: hiClaim, contribution: hiContribution, 'close-of-cycle': hiCloseOfCycle, 'pool-onboarding': hiPoolOnboarding, 'nominee-console': hiNomineeConsole, helpdesk: hiHelpdesk, banners: hiBanners, polls: hiPolls, members: hiMembers, noticeboard: hiNoticeboard, 'sahyog-drive': hiSahyogDrive, 'sahyog-shared': hiSahyogShared, 'sahyog-vivran': hiSahyogVivran, 'member-drive-list': hiMemberDriveList, 'member-drive-detail': hiMemberDriveDetail },
 };
 
 /** The domain (namespace) names that have at least one locale catalog. */
-export const KNOWN_NAMESPACES: readonly string[] = ['common', 'niyamavali', 'terms', 'claim', 'contribution', 'close-of-cycle', 'pool-onboarding', 'nominee-console', 'helpdesk', 'banners', 'polls', 'members', 'noticeboard', 'sahyog-drive', 'sahyog-shared', 'sahyog-vivran', 'member-drive-list'];
+export const KNOWN_NAMESPACES: readonly string[] = ['common', 'niyamavali', 'terms', 'claim', 'contribution', 'close-of-cycle', 'pool-onboarding', 'nominee-console', 'helpdesk', 'banners', 'polls', 'members', 'noticeboard', 'sahyog-drive', 'sahyog-shared', 'sahyog-vivran', 'member-drive-list', 'member-drive-detail'];
 
 /** Look up a `{locale}/{namespace}` catalog, or `undefined` if it is not registered. */
 export function getCatalog(locale: Locale, namespace: string): Catalog | undefined {

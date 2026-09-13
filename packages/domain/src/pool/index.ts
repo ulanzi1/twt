@@ -90,3 +90,10 @@ export * from './member-drive-list.js';
 // a valid address, with ⛔ no session and ⛔ no branch on the reader's membership standing. The
 // canonical `P-YYYY-MM-###` is RETAINED as the operational/audit key and is ⛔ not replaced.
 export * from './public-token.js';
+// ⭐⭐ Story 11b.17 — the MEMBER'S VIEW OF **ONE** DRIVE (`member-drive-detail.ts`). Resolved by the
+// OPAQUE PUBLIC ADDRESS TOKEN (`-184` (B)), scoped to the member's OWN Pariwar by an EXPLICIT
+// predicate alongside RLS (`-199` scope (i)), carrying the claim's nominee bank accounts as
+// CIPHERTEXT — ⛔ with `vpaCiphertext` DELIBERATELY NOT PROJECTED (`-212` cl.2: the UPI ID went to the
+// PAYMENT screen, ⛔ not here). ⚠ It declares its OWN visible-state tuple and its OWN `live`-only
+// लक्ष्य fragment; ⛔ neither is shared with the list's (`-196` / `-212` Consequence 2).
+export * from './member-drive-detail.js';

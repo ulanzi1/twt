@@ -527,16 +527,30 @@ describe('⛔⛔ AC6 — ⛔ NOTHING RENDERS THE MESSAGE BLOCK. The copy exists;
     ).toBe('परिवार के लिए सहकर्मियों ने मिलकर ₹19,45,000 का योगदान किया।')
   })
 
-  it('⛔ ⛔ ZERO CONSUMERS — ⛔ no source file resolves a `message_block.*` key', () => {
-    // ⭐⭐ THE FAMILY BEGINS EXACTLY WHERE `index_line.*` BEGAN — with an EMPTY authorised list. ⚠ The
-    // fence above was later NARROWED (⛔ not deleted) when story D shipped the one authorised render;
-    // ⭐ this one will be narrowed the same way, ⛔ never widened to make a build green.
+  it('⛔ a `message_block.*` key is resolved ⛔ ONLY where EVERY token is supplied', () => {
+    // ⚠⛔⛔ **NARROWED 2026-09-13 (Story 11b.17, AC10 / Task 5d) — ⛔ NOT DELETED, ⛔ NOT WAIVED, AND
+    // ⛔ NOT APPENDED TO ON THE STRENGTH OF A GREEN BUILD** ([[feedback_supersede_never_reinterpret]]).
+    // ⭐ **ITS AUTHOR LEFT THE INSTRUCTION IN WRITING AND THIS IS IT, CARRIED OUT.** It read
+    // *"⛔ ⛔ ZERO CONSUMERS — ⛔ no source file resolves a `message_block.*` key"*, with:
+    // *"⭐ WHEN `11b-17` / `11b-20` LAND: they render these keys and this assertion becomes false BY
+    // DESIGN. ⛔ Do ⛔ NOT delete it then — **NARROW it** to *'⛔ never resolved without every token
+    // supplied'*, naming each authorised site, which is the property that actually protects the page."*
     //
-    // ⭐ WHEN `11b-17` / `11b-20` LAND: they render these keys and this assertion becomes false BY
-    // DESIGN. ⛔ Do ⛔ NOT delete it then — **NARROW it** to *"⛔ never resolved without every token
-    // supplied"*, naming each authorised site, which is the property that actually protects the page
-    // ([[feedback_supersede_never_reinterpret]]). ⚠ That is this fence's OWN author leaving the
-    // instruction in writing, exactly as B's did above.
+    // ⭐⭐ **`11b-17` HAS LANDED — the MEMBER render (`-214` cl.4(b): *"`11b-17` carries the MEMBER
+    // render — AC10 / Task 5d — and ⛔ nothing more"*). ⚠⛔ **`11b-20` (the PUBLIC render,
+    // `-214` Consequence 3) HAS ⛔ NOT** — it is `ready-for-dev` and **HOMED, ⛔ not built**
+    // ([[feedback_closure_language_precision]]) ⇒ ⛔ its render site is ⛔ **NOT** pre-authorised here,
+    // and a second entry appearing in this list without its story is the exact defect this file exists
+    // to catch.
+    //
+    // ⭐⭐ **THE SURVIVING PROPERTY IS THE ONE THAT MATTERS**: `t()` **THROWS** on an unsupplied
+    // interpolation param (`resolver.ts:36-42`), and this block is **PAGE-shaped** (§8.3(2)) ⇒ a
+    // resolution that does ⛔ not supply every token its string names is a **500 / outage arm on a
+    // WHOLE PAGE**, ⛔ not a blank figure and ⛔ not one line. ⇒ every resolver must sit behind a
+    // variant selector that **RETURNS EARLY** rather than resolving a key it cannot fill — including
+    // its `null`, which means ⛔ **NO ratified variant fits** and the block renders ⛔ **NOTHING**
+    // (`2026-09-08-207` cl.2's ₹0 silence; ⛔ there is ⛔ NO `no_amount` variant and ⛔ there must ⛔ not
+    // be one).
     //
     // ⚠⛔ [Review][Patch] THE CLOSING QUOTE WAS DROPPED ON PURPOSE (2026-09-12). A render site is
     // ⛔ NOT obligated to spell the key as one bare literal — `` `message_block.headline.${variant}` ``
@@ -553,18 +567,61 @@ describe('⛔⛔ AC6 — ⛔ NOTHING RENDERS THE MESSAGE BLOCK. The copy exists;
       return RESOLVER.test(readFileSync(f, 'utf8'))
     })
 
-    // ⛔ THE ALLOW-LIST IS ⛔ NOT A WAIVER. ⭐ It is `[]` because `-214` authorised ⛔ NO render yet:
-    // cl.4(b) routes the MEMBER render to `11b-17` AC10 / Task 5d and Consequence 3 routes the
-    // PUBLIC one to `11b-20` — ⛔ NEITHER is built. ⛔ Do ⛔ not append to it to make a build green;
-    // a render arriving without its story is the exact defect this file exists to catch.
-    const AUTHORISED: string[] = []
+    // ⛔⛔ **THE ALLOW-LIST IS ⛔ NOT A WAIVER.** ⭐ It names the ⛔ ONE render site `-214` **cl.4(b)**
+    // authorised — the MEMBER half, Story `11b-17` AC10 / Task 5d — so a **SECOND** one (another
+    // package, another surface, or `11b-20`'s public render arriving early) still **FAILS here** and
+    // must come back with its own ruling. ⛔ Do ⛔ not append to it to make a build green.
+    // ⚠⛔ **TWO SOURCE FILES, ⛔ NOT ONE, AND BOTH ARE THE SAME RENDER SITE.** The variant SELECTORS
+    // live in a plain `.ts` module because this repo has ⛔ **no RN mount harness** — the `.tsx`
+    // cannot be imported by a test — so the pure logic was extracted where a test can CALL it. ⭐ That
+    // split is the shipped idiom (`components/drive-list/format.ts` states it), ⛔ not a second
+    // consumer, and the guard assertion below proves the `.tsx` resolves ⛔ only behind those
+    // selectors.
+    const AUTHORISED = [
+      '/apps/mobile/components/drive-detail/MemberDriveDetail.tsx',
+      '/apps/mobile/components/drive-detail/format.ts',
+    ]
     expect(
       resolvers.map((f) => f.replace(repoRoot, '')).sort(),
       'a file RESOLVES a ratified message-block key. ⛔ t() THROWS on an unsupplied token ' +
         '(resolver.ts:36-42) ⇒ an unguarded resolution ships a 500 / outage arm onto a PAGE-shaped ' +
-        'block. ⭐ `2026-09-11-214` authorised NO render site yet — the member half is 11b-17 AC10, ' +
-        'the public half is 11b-20, and ⛔ neither is built.',
+        'block — the WHOLE page, ⛔ not one line. ⭐ `2026-09-11-214` cl.4(b) authorised exactly ONE ' +
+        'render site: the MEMBER half, Story 11b-17 AC10 / Task 5d. ⚠⛔ The PUBLIC half is 11b-20 ' +
+        '(Consequence 3) and it is HOMED, ⛔ NOT built — ⛔ its site is ⛔ not pre-authorised here.',
     ).toEqual(AUTHORISED)
+
+    // ⭐⭐ **AND THE GUARD IS ASSERTED, ⛔ NOT ASSUMED** — the shape story D's narrowing of the
+    // `index_line.*` fence set above, applied to this family.
+    // ⚠⛔ A green allow-list proves ⛔ only WHERE the keys are resolved; it proves ⛔ nothing about
+    // whether the render can supply their tokens ([[feedback_gate_scope_semantic_coverage]] — a scan
+    // that asserts nothing about MEANING is a scan that passes while the page 500s).
+    const selectors = readFileSync(
+      join(repoRoot, '/apps/mobile/components/drive-detail/format.ts'.slice(1)),
+      'utf8',
+    )
+    const render = readFileSync(
+      join(repoRoot, '/apps/mobile/components/drive-detail/MemberDriveDetail.tsx'.slice(1)),
+      'utf8',
+    )
+    // ⭐ (2) THE VARIANT IS CHOSEN ON NULLABILITY, and the selector RETURNS EARLY rather than
+    // resolving a key with an unsupplied `{family_name}`.
+    expect(selectors).toMatch(/deceasedMemberName === null\)\s*return \{ key: 'message_block\.headline\.no_family' \}/)
+    // ⭐ (3) THERE IS ⛔ NO `no_amount` VARIANT — where the amount is unavailable the block renders
+    // NOTHING (`2026-09-08-207` cl.2). ⛔ The selector's `null` IS that rule.
+    expect(selectors).toMatch(/amountRaisedInr <= 0\)\s*return null/)
+    expect(template('en', 'message_block.headline.no_family')).not.toContain('{family_name}')
+    // ⭐ The render site consults the selector and returns early on its `null` — ⛔ it never resolves a
+    // headline it cannot fill.
+    expect(render).toContain('selectMessageBlockHeadline')
+    expect(render).toMatch(/messageHeadline === null \? null :/)
+    // ⭐ (1) `{amount}` ARRIVES ALREADY FORMATTED AND CARRIES ITS OWN ₹ ⇒ ⛔ the render site adds ⛔ no
+    // literal one. ⚠ Asserted on the render source because the TEMPLATE is already pinned above.
+    expect(render).not.toMatch(/['"`]₹\{?\s*\$\{?\s*amount/)
+    // ⭐ (4) AN ABSENT `district` DROPS ITS COLUMN — ⛔ never a placeholder, and ⛔ never left attached
+    // to the nominee when the DECEASED is absent (`-214` Consequence 6; B's own `no_family` coupling).
+    expect(selectors).toMatch(
+      /district !== null && detail\.deceasedMemberName !== null/,
+    )
   })
 
   it('⛔ AC6 — ⛔ nothing else moved: this story ships KEYS and ⛔ no contract field', () => {

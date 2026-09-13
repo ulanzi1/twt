@@ -8,6 +8,8 @@
 import {
   ActiveContributionCardResponse,
   ContributionHistoryResponse,
+  MemberDriveDetailParams,
+  MemberDriveDetailResponse,
   MemberDriveListQuery,
   MemberDriveListResponse,
   PoolContributorListResponse,
@@ -123,5 +125,46 @@ export function registerMemberPoolRoutes(app: FastifyInstance, deps: AppDeps): v
       preHandler: [memberSession],
     },
     h.driveList,
+  );
+
+  // ⭐⭐ Story 11b.17 — **THE MEMBER'S VIEW OF ONE DRIVE.** Everything the PUBLIC Sahyog Vivran page
+  // carries for that drive, ⭐ PLUS the nominee's complete, UNMASKED banking coordinates — which the
+  // public page, since story A (`11b-11`), carries ⛔ NONE of. `2026-09-04-190` **cl.3** as scoped by
+  // **`-199`**: any authenticated member, any drive in their **OWN** Pariwar. Session-guarded →
+  // auto-covered by the Story 1.14 login-wall CI gate; ⛔ NOT public.
+  //
+  // ⚠⛔⛔ **ADDRESSED BY THE OPAQUE PUBLIC TOKEN AND BY ⛔ NOTHING ELSE** (`2026-09-03-184` **(B)**,
+  // Trustee-ratified). ⛔⛔ DO ⛔ NOT ADD AN `OR` ARM FOR `pool_canonical_identifier`, ⛔ not for old
+  // links and ⛔ not "for operators": `P-YYYY-MM-###`'s sequence is a MONOTONIC per-(pariwar, month)
+  // counter, so a read accepting EITHER form has ⛔ not closed the walk — it has added a lock beside an
+  // open door. ⚠ On THIS surface the walk would reach FIVE decrypted Tier-1 fields × TWO accounts.
+  // ⚠ The rate-limit remedy this surface was once criticised for lacking was **EXPRESSLY REFUSED** by
+  // the Panel (*"the rate-limit tier is NOT changed"*, `-184`) ⇒ ⛔ do ⛔ not add one on that ground;
+  // ⭐ what protects it is **authentication + session scope**, and enumeration BY A MEMBER is what
+  // **D1(a) GRANTS**.
+  //
+  // ⚠⛔⛔ **THERE IS DELIBERATELY ⛔ NO `:pariwarId` PARAMETER, AND ADDING ONE WOULD BE THE DEFECT**
+  // (family 12). ⭐ The scope comes from `request.requestContext.pariwarId` — the SESSION **IS** the
+  // access control (`-199`'s *"member-surface access controls"* qualifier) — and it rides alongside
+  // an explicit `pariwar_id` predicate in the domain read plus RLS **FORCE** on
+  // `claim_nominee_bank_accounts`. ⇒ another Pariwar's drive is ⛔ **not addressable** and lands on a
+  // **404**, ⛔ never a 403 (which is itself an enumeration oracle) and ⛔ never a 200 with absent keys.
+  //
+  // ⚠ `params` is the CONTRACT's own schema — the enforced route then matches the documented contract
+  // instead of relying on the handler's unchecked `request.params as {…}` cast to reject a malformed
+  // address (the `contribution-note/:contributionId` precedent above).
+  // ⚠ ⛔ NO pagination and ⛔ no `limit` — this read is SINGLE-ROW by a unique key, so Story 1.14's
+  // forced-pagination guard has nothing to see and the domain accessor owes ⛔ no `clampLimit`.
+  r.get(
+    '/api/v1/member/drive-detail/:driveToken',
+    {
+      schema: {
+        params: MemberDriveDetailParams,
+        response: { 200: MemberDriveDetailResponse },
+        tags: [MEMBER_POOL_TAG],
+      },
+      preHandler: [memberSession],
+    },
+    h.driveDetail,
   );
 }

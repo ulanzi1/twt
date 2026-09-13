@@ -95,6 +95,9 @@ import {
   // ⭐ Story 11b.15 — the member's drive list (the fourth tab's read).
   MemberDriveListResponse,
   type MemberDriveListResponse as MemberDriveListResult,
+  // ⭐⭐ Story 11b.17 — the member's view of ONE drive (the per-drive detail).
+  MemberDriveDetailResponse,
+  type MemberDriveDetailResponse as MemberDriveDetailResult,
   type ContributionIntentRequest,
   type ContributionIntentResponse as ContributionIntentResult,
   type ContributionAttestRequest,
@@ -710,6 +713,42 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
       return call(
         `${MEMBER_HOME_BASE}/drive-list${qs === '' ? '' : `?${qs}`}`,
         MemberDriveListResponse,
+        undefined,
+        true,
+        'GET',
+      );
+    },
+
+    /**
+     * ⭐⭐ **THE MEMBER'S VIEW OF ONE DRIVE** — Story 11b.17. Everything the PUBLIC Sahyog Vivran page
+     * shows for that drive, ⭐ **PLUS the nominee's complete, UNMASKED banking coordinates**, which the
+     * public page has carried ⛔ NONE of since story A (`11b-11`) withdrew them. `2026-09-04-190`
+     * **cl.3** as scoped by **`-199`**: ⭐ **any authenticated member, any drive in their OWN Pariwar.**
+     *
+     * ⚠⛔⛔ **ADDRESSED BY THE DRIVE'S OPAQUE PUBLIC TOKEN AND BY ⛔ NOTHING ELSE** (`2026-09-03-184`
+     * **(B)**, Trustee-ratified). ⛔⛔ The client ⛔ **NEVER** derives this address from
+     * `poolCanonicalIdentifier` — that identifier is a MONOTONIC per-(pariwar, month) counter and
+     * reconstructing an address from it would re-create the guessability 11b.10 D2 removed, on the one
+     * surface where the walk reaches five decrypted Tier-1 fields per account.
+     *
+     * ⚠⛔ **A NEW METHOD ON A NEW ROUTE, AND ⛔ NOT A WIDER `memberDriveList`.** `MemberDriveListEntry`
+     * is `.strict()` and `call` below uses a throwing `schema.parse`, so ⛔ one field added to the LIST
+     * entry would blank the whole fourth tab for every member on an installed build older than the API
+     * release. ⭐ A new route is invisible to an older build.
+     *
+     * ⚠ **404 COLLAPSES FIVE CASES DELIBERATELY** — no such drive · not visible at this surface's
+     * predicate (a `spawned` pool) · a malformed token · a REAL drive addressed with a WRONG token ·
+     * **another Pariwar's drive**. ⛔ A caller must ⛔ not try to distinguish them and must ⛔ not report
+     * them differently to the member: a response that separated them would be an **enumeration
+     * oracle**, and that is exactly what the token exists to close.
+     *
+     * The 5th `'GET'` arg is REQUIRED (`call` defaults to POST, which would misfire against the
+     * `r.get(...)`-registered route) (auth).
+     */
+    memberDriveDetail(driveToken: string): Promise<MemberDriveDetailResult> {
+      return call(
+        `${MEMBER_HOME_BASE}/drive-detail/${encodeURIComponent(driveToken)}`,
+        MemberDriveDetailResponse,
         undefined,
         true,
         'GET',

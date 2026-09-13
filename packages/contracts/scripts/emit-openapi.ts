@@ -180,6 +180,13 @@ const { ContributionHistoryResponse } = await import('../src/contributions/index
 const { MemberDriveListEntry, MemberDriveListQuery, MemberDriveListResponse } = await import(
   '../src/contributions/index.js'
 );
+// ⭐⭐ Story 11b.17 — the MEMBER'S VIEW OF ONE DRIVE (the per-drive detail, with the nominee's
+// complete UNMASKED banking coordinates — which the PUBLIC page carries NONE of since story A).
+const {
+  MemberDriveDetailParams,
+  MemberDriveDetailResponse,
+  MemberDriveNomineeAccountView,
+} = await import('../src/contributions/index.js');
 // Story 5.8 — the trustee degraded-mode declare/revoke/read DTOs (admin-session + declare_degraded_mode).
 const { DegradedModeDeclareRequest, DegradedModeDeclarationResponse, DegradedModeActiveResponse } =
   await import('../src/degraded-mode/index.js');
@@ -471,6 +478,19 @@ const memberDriveListComponents = {
   MemberDriveListResponse: MemberDriveListResponse.openapi('MemberDriveListResponse'),
 } as const;
 for (const [name, schema] of Object.entries(memberDriveListComponents)) {
+  registry.register(name, schema);
+}
+
+// ⭐⭐ Story 11b.17 — the MEMBER'S DRIVE DETAIL components. ⚠⛔ A **NEW CONTRACT** and ⛔ NOT a field
+// added to `MemberDriveListEntry`: that entry is `.strict()` and `api-client`'s `call` throws, so one
+// additive field BLANKS THE WHOLE TAB for every member on an installed build older than the API
+// release. ⛔ NO `vpa` on this wire, on ⛔ any drive, in ⛔ any stage (`2026-09-10-212` cl.2 ruled the
+// UPI ID onto the PAYMENT screen; story `8-17` shipped that half).
+const memberDriveDetailComponents = {
+  MemberDriveNomineeAccountView: MemberDriveNomineeAccountView.openapi('MemberDriveNomineeAccountView'),
+  MemberDriveDetailResponse: MemberDriveDetailResponse.openapi('MemberDriveDetailResponse'),
+} as const;
+for (const [name, schema] of Object.entries(memberDriveDetailComponents)) {
   registry.register(name, schema);
 }
 
@@ -1766,6 +1786,62 @@ registry.registerPath({
     400: errorResponse('Validation failed (unknown query parameter, or page/limit out of bounds)'),
     401: errorResponse('Authentication required'),
     500: errorResponse('The drive list could not be resolved — never a silently empty list'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+// ── ⭐⭐ Story 11b.17 — THE MEMBER'S VIEW OF **ONE** DRIVE (member-session-gated) ──
+//
+// ⚠⛔⛔ ADDRESSED BY THE OPAQUE PUBLIC TOKEN AND BY ⛔ NOTHING ELSE (`2026-09-03-184` (B),
+// Trustee-ratified). ⛔ There is DELIBERATELY ⛔ no `pariwarId` parameter — family 12 forbids scoping a
+// member read by a client-supplied id, so the scope comes from the SESSION and a cross-Pariwar drive
+// is ⛔ not addressable at all.
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/member/drive-detail/{driveToken}',
+  summary: 'The member’s view of ONE drive — including the nominee’s complete banking coordinates',
+  description:
+    'Returns everything the PUBLIC Sahyog Vivran page shows for one drive in the AUTHENTICATED ' +
+    'member’s OWN Pariwar, PLUS the nominee’s complete, UNMASKED banking coordinates — which the ' +
+    'public page carries NONE of since Story 11b.11 withdrew them (Decision 2026-09-04-190 cl.1). ' +
+    'This is the route that makes cl.3 ("a logged-in member sees the complete banking information") ' +
+    'true, at the scope Decision 2026-09-04-199 ruled: option (a) — ANY authenticated member, ANY ' +
+    'drive in their OWN Pariwar (scope (i); cross-tenant was NOT meant), subject to the drive’s ' +
+    'lifecycle and the member-surface access controls.\n\n' +
+    'The drive is addressed by its OPAQUE PUBLIC TOKEN and by nothing else (Trustee-ratified ' +
+    '2026-09-03-184 (B)): the canonical identifier P-YYYY-MM-### is a monotonic per-(pariwar, month) ' +
+    'counter, so accepting it here would make this surface walkable by counting — reaching five ' +
+    'decrypted Tier-1 fields per account, two accounts per drive. Pool states live · closed · ' +
+    'settled; `spawned` is EXCLUDED (a claim approved before contributions open).\n\n' +
+    'Each of the claim’s (at most two) nominee accounts carries the account holder name, the FULL ' +
+    'account number, the IFSC, the bank and the branch. The two accounts are EQUAL payment ' +
+    'destinations — `rank` is row identity, NEVER a priority, and both render (Decision ' +
+    '2026-09-10-213 cl.1) because the account number and IFSC DIFFER between them and the money can ' +
+    'have gone to either. Values are UNMASKED deliberately: a masked account number cannot be ' +
+    'transferred to. The nominee’s UPI ID is NOT on this wire, on any drive, in any stage — ' +
+    'Trustee-ratified 2026-09-10-212 cl.2 ruled it onto the PAYMENT screen instead. A per-field ' +
+    'Tier-1 decrypt failure degrades to a DISTINCT sentinel string, never a blank and never a 500; ' +
+    'an absent branch OMITS the row rather than rendering a placeholder. An empty account list is a ' +
+    'first-class state (the claim’s bank details were never collected).\n\n' +
+    'The expected figure (लक्ष्य) is present ONLY on a `live` drive (Trustee-ratified 2026-09-10-212 ' +
+    'cl.1) AND ONLY where a super_admin has switched `reveal_to_members` ON for the Pariwar ' +
+    '(2026-09-04-190 cl.7(c); Decision 2026-09-09-211 cl.2) — the absent-row default is FAIL-CLOSED, ' +
+    'so it is absent for every Pariwar at launch, and the key is ABSENT rather than null when ' +
+    'withheld. The progress percentage is null off-live (Trustee-ratified 2026-09-08-207 cl.1) and is ' +
+    'NOT suppressed at zero.\n\n' +
+    'Every read of the coordinates writes EXACTLY ONE attributed audit line per detail open — naming ' +
+    'the member, the drive’s canonical identifier and the instant; never the public token, never a ' +
+    'decrypted value. A drive that does not exist, is not visible at this surface’s predicate, is ' +
+    'addressed with a wrong or absent token, or belongs to ANOTHER Pariwar all return the SAME 404 — ' +
+    'a response that distinguished them would be an enumeration oracle, and a 403 for the ' +
+    'cross-Pariwar case would be one too. Requires a member session.',
+  tags: ['member-pool'],
+  request: { params: MemberDriveDetailParams },
+  responses: {
+    200: { description: 'The member’s view of one drive', content: jsonOf(memberDriveDetailComponents.MemberDriveDetailResponse) },
+    400: errorResponse('Validation failed (malformed drive token)'),
+    401: errorResponse('Authentication required'),
+    404: errorResponse('No such drive for this address and caller — indistinguishable from a wrong token, a non-visible drive, or another Pariwar’s drive'),
+    500: errorResponse('The drive detail could not be resolved — never a partial or silently degraded payload'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 

@@ -2763,6 +2763,161 @@ components:
         - limit
         - total
       additionalProperties: false
+    MemberDriveNomineeAccountView:
+      type: object
+      properties:
+        rank:
+          anyOf:
+            - type: number
+              enum:
+                - 1
+            - type: number
+              enum:
+                - 2
+        accountHolderName:
+          type: string
+          minLength: 1
+          maxLength: 200
+        accountNumber:
+          type: string
+          minLength: 1
+          maxLength: 200
+        ifsc:
+          type: string
+          minLength: 1
+          maxLength: 200
+        bankName:
+          type: string
+          minLength: 1
+          maxLength: 200
+        branch:
+          type:
+            - string
+            - "null"
+          minLength: 1
+          maxLength: 200
+      required:
+        - rank
+        - accountHolderName
+        - accountNumber
+        - ifsc
+        - bankName
+        - branch
+      additionalProperties: false
+    MemberDriveDetailResponse:
+      type: object
+      properties:
+        poolLetterCode:
+          type: string
+          minLength: 1
+        poolCanonicalIdentifier:
+          type: string
+          minLength: 1
+        publicToken:
+          type: string
+          minLength: 1
+        deceasedMemberName:
+          type:
+            - string
+            - "null"
+          minLength: 1
+        nomineeName:
+          type:
+            - string
+            - "null"
+          minLength: 1
+        status:
+          type: string
+          enum: *a11
+        closedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        district:
+          type:
+            - string
+            - "null"
+          minLength: 1
+        confirmedContributionCount:
+          type: integer
+          minimum: 0
+        confirmedPercentage:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+          maximum: 100
+        driveTargetInr:
+          type: integer
+          exclusiveMinimum: 0
+        amountRaisedInr:
+          type: integer
+          minimum: 0
+        fundingOutcome:
+          type:
+            - string
+            - "null"
+          enum: *a12
+        nomineeAccounts:
+          type: array
+          items:
+            type: object
+            properties:
+              rank:
+                anyOf:
+                  - type: number
+                    enum:
+                      - 1
+                  - type: number
+                    enum:
+                      - 2
+              accountHolderName:
+                type: string
+                minLength: 1
+                maxLength: 200
+              accountNumber:
+                type: string
+                minLength: 1
+                maxLength: 200
+              ifsc:
+                type: string
+                minLength: 1
+                maxLength: 200
+              bankName:
+                type: string
+                minLength: 1
+                maxLength: 200
+              branch:
+                type:
+                  - string
+                  - "null"
+                minLength: 1
+                maxLength: 200
+            required:
+              - rank
+              - accountHolderName
+              - accountNumber
+              - ifsc
+              - bankName
+              - branch
+            additionalProperties: false
+          maxItems: 2
+      required:
+        - poolLetterCode
+        - poolCanonicalIdentifier
+        - publicToken
+        - deceasedMemberName
+        - nomineeName
+        - status
+        - closedAt
+        - district
+        - confirmedContributionCount
+        - confirmedPercentage
+        - amountRaisedInr
+        - fundingOutcome
+        - nomineeAccounts
+      additionalProperties: false
     WaConfigDto:
       type: object
       properties:
@@ -10874,6 +11029,60 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "500":
           description: The drive list could not be resolved — never a silently empty list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/member/drive-detail/{driveToken}:
+    get:
+      summary: The member’s view of ONE drive — including the nominee’s complete banking coordinates
+      description: |-
+        Returns everything the PUBLIC Sahyog Vivran page shows for one drive in the AUTHENTICATED member’s OWN Pariwar, PLUS the nominee’s complete, UNMASKED banking coordinates — which the public page carries NONE of since Story 11b.11 withdrew them (Decision 2026-09-04-190 cl.1). This is the route that makes cl.3 ("a logged-in member sees the complete banking information") true, at the scope Decision 2026-09-04-199 ruled: option (a) — ANY authenticated member, ANY drive in their OWN Pariwar (scope (i); cross-tenant was NOT meant), subject to the drive’s lifecycle and the member-surface access controls.
+
+        The drive is addressed by its OPAQUE PUBLIC TOKEN and by nothing else (Trustee-ratified 2026-09-03-184 (B)): the canonical identifier P-YYYY-MM-### is a monotonic per-(pariwar, month) counter, so accepting it here would make this surface walkable by counting — reaching five decrypted Tier-1 fields per account, two accounts per drive. Pool states live · closed · settled; `spawned` is EXCLUDED (a claim approved before contributions open).
+
+        Each of the claim’s (at most two) nominee accounts carries the account holder name, the FULL account number, the IFSC, the bank and the branch. The two accounts are EQUAL payment destinations — `rank` is row identity, NEVER a priority, and both render (Decision 2026-09-10-213 cl.1) because the account number and IFSC DIFFER between them and the money can have gone to either. Values are UNMASKED deliberately: a masked account number cannot be transferred to. The nominee’s UPI ID is NOT on this wire, on any drive, in any stage — Trustee-ratified 2026-09-10-212 cl.2 ruled it onto the PAYMENT screen instead. A per-field Tier-1 decrypt failure degrades to a DISTINCT sentinel string, never a blank and never a 500; an absent branch OMITS the row rather than rendering a placeholder. An empty account list is a first-class state (the claim’s bank details were never collected).
+
+        The expected figure (लक्ष्य) is present ONLY on a `live` drive (Trustee-ratified 2026-09-10-212 cl.1) AND ONLY where a super_admin has switched `reveal_to_members` ON for the Pariwar (2026-09-04-190 cl.7(c); Decision 2026-09-09-211 cl.2) — the absent-row default is FAIL-CLOSED, so it is absent for every Pariwar at launch, and the key is ABSENT rather than null when withheld. The progress percentage is null off-live (Trustee-ratified 2026-09-08-207 cl.1) and is NOT suppressed at zero.
+
+        Every read of the coordinates writes EXACTLY ONE attributed audit line per detail open — naming the member, the drive’s canonical identifier and the instant; never the public token, never a decrypted value. A drive that does not exist, is not visible at this surface’s predicate, is addressed with a wrong or absent token, or belongs to ANOTHER Pariwar all return the SAME 404 — a response that distinguished them would be an enumeration oracle, and a 403 for the cross-Pariwar case would be one too. Requires a member session.
+      tags:
+        - member-pool
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+            maxLength: 200
+          required: true
+          name: driveToken
+          in: path
+      responses:
+        "200":
+          description: The member’s view of one drive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberDriveDetailResponse"
+        "400":
+          description: Validation failed (malformed drive token)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: No such drive for this address and caller — indistinguishable from a wrong token, a non-visible drive, or another Pariwar’s drive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: The drive detail could not be resolved — never a partial or silently degraded payload
           content:
             application/json:
               schema:

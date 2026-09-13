@@ -22,6 +22,7 @@ import { describe, expect, it } from 'vitest'
 import {
   accountHasUnavailableField,
   detailOutcomeFramingKey,
+  isArchivedZeroAmountDrive,
   selectMessageBlockHeadline,
   selectMessageBlockTableColumns,
   selectZeroDayLine,
@@ -256,6 +257,21 @@ describe('⭐ AC9 — the ZERO-DAY drive renders the RATIFIED copy, ⛔ not a de
     // ⛔ ONLY off the zero-day path — so the softened copy is what a screen reader hears too.
     expect(screenCode).toContain('const screenA11y = [')
     expect(screenCode).toContain("zeroDay === null ? t('value.contributions_count'")
+  })
+
+  it('⭐⭐ Review finding, 2026-09-13 — an ARCHIVED ₹0 drive renders NOTHING, ⛔ never "₹0 contributed"', () => {
+    // ⚠⛔ `-207` cl.2, quoted in AC9's own text: the "About this drive" sentence renders NOTHING on a
+    // `closed`/`verified` drive with a ₹0 figure — ⛔ no placeholder, ⛔ no marker, ⛔ no partial
+    // sentence. ⭐ Distinct from the `live` zero-day case above, which `selectZeroDayLine` covers.
+    expect(isArchivedZeroAmountDrive({ status: 'closed', amountRaisedInr: 0 })).toBe(true)
+    expect(isArchivedZeroAmountDrive({ status: 'verified', amountRaisedInr: 0 })).toBe(true)
+    // ⭐ Never for `live` — that is `-206` cl.4's replacement copy's territory, ⛔ not this rule's.
+    expect(isArchivedZeroAmountDrive({ status: 'live', amountRaisedInr: 0 })).toBe(false)
+    // ⭐ A nonzero archived amount renders the ordinary exact sentence — ⛔ not silenced.
+    expect(isArchivedZeroAmountDrive({ status: 'closed', amountRaisedInr: 500 })).toBe(false)
+    // ⭐ The screen wires the selector into `summaryLine` and renders NOTHING (⛔ not an empty `<Text>`).
+    expect(screenCode).toContain('isArchivedZeroAmountDrive(detail)')
+    expect(screenCode).toContain('summaryLine === null ? null : (')
   })
 })
 

@@ -1,3 +1,28 @@
+# last_updated: 2026-09-13d (⭐⭐ **`11b-17` — IMPLEMENTATION STARTED. `ready-for-dev` → `in-progress`.**
+#   ⭐ **Task 1's `governance:` commit lands FIRST, before a line of code**
+#   ([[feedback_governance_commits_precede_implementation]]) and carries FOUR things:
+#   (1) a **`### Story 11b.17` SECTION in `epics.md`** — ⛔ NOT an annotation: like E it is a NEW
+#   member-app surface with ⛔ no parent there (the `11b-19` / `11b-15` / `8-16` / `7-11` precedent);
+#   (2) **`#decision-2026-09-13-215`** — the §8.4(ii) **SUCCESSOR** entry `8-17` (`done`) deferred here
+#   BY NAME. ⭐ Its honest prior status was ***"DE-ROUTED but ⛔ NOT LOGGED"*** — ⛔ not "closed",
+#   ⛔ not "ruled", ⛔ not "still routed". ⭐ The ground is the **SHIPPED SCHEMA** (`0056` — ⛔ no FK,
+#   ⛔ no `nominee_rank`, ⛔ no match rule), ⛔ NOT 6.8's D1 *as a decision* (that is author-committed,
+#   *"APPROVED (BigDev)"*, and ⛔ was the story's entire licence to drop a Panel routing)
+#   ([[feedback_trace_internal_state_never_cite_decision_text]]). ⛔ `-213` is ⛔ NOT edited;
+#   ⛔ `deferred-work.md`'s `D5-subject (i)` stays **OPEN**;
+#   (3) **SIX stale artefacts ROUTED into `deferred-work.md`** with addresses and triggers —
+#   ⭐ *"route" IS an ACTION, ⛔ never a note*: the admin form that tells a `super_admin` the reveal
+#   switch does nothing (⭐ trigger **FIRED** — F is its THIRD consumer), `-165`'s wrong ground in the
+#   shipped public contract, `11b-14`'s retired *"no target"* sentence + the superseded count of seven,
+#   `-212` cl.1's OWN mis-cite of `-204` cl.2 where the ruled slot is **cl.12**, `-212` Consequence 6
+#   (*"Account holder"*) which `8-17` **DECLINED** ⇒ ⛔ **no live home**, and `pay.tsx`'s stale
+#   *"VPA still deferred"* flow comment. ⛔ NONE is F's to FIX;
+#   (4) **this row block, REWRITTEN** — its 2026-09-11 *"PREFLIGHT IS RE-OPENED"* paragraph and its
+#   **§8.3(3)/§8.5** authority cite are **STRUCK, ⛔ not deleted**; the correct pair is **§8.1 / §9.1
+#   row 3** (the story body fixed it at v1.2 and ⛔ never swept here — five days,
+#   [[feedback_story_validate_footguns]] #16).
+#   ⚠⛔ **NAVIGATE THIS FILE BY ROW KEY, ⛔ NEVER BY LINE** — it is a newest-first PREPEND ledger and
+#   one entry rots every older anchor at once. ⛔ **NO CODE in that commit.**)
 # last_updated: 2026-09-13c (⭐ **`11b-17` — FOURTH `validate` PASS. ⛔ ZERO ROW MOVES; ⛔ NO CODE; ⛔ NO
 #   CRITICAL FINDING.** Baseline re-checked (`a2617869` still an ancestor; same **15** drifted files);
 #   four parallel verification lanes plus direct spot-checks re-traced ~70 citations against HEAD,
@@ -18350,13 +18375,37 @@ development_status:
   # ~~"owes an ANNOTATION"~~ and ~~"the LAST of the split"~~; both were wrong.
   # ✅⭐ **⛔ NO LONGER BLOCKED.** ~~BLOCKED ON A (11b-11) AND E (11b-15).~~ Both are `done`
   # (2026-09-11 correction); the only thing holding this story is its own Preflight.
-  # ⛔⛔ **AND ITS PREFLIGHT IS RE-OPENED — STOP 1 (2026-09-11 `validate` pass).** The 2026-09-05
-  # routing note `…-11b12-under-funded-commitment-claim` §8.3(3)/§8.5 row 3 ruled *"B ships the copy;
-  # **E and F** render it"* — a `Nominee full name` | `District` table + B's five-paragraph block,
-  # *"written for a PAGE"* — routing to F BY NAME, and it ⛔ NEVER reached `.decision-log.md`.
-  # ⇒ AC10 + Task 5d written; the DECISION ENTRY lands in Task 1's `governance:` commit FIRST.
-  # ⭐ The row STAYS `ready-for-dev` — it is TRUE (the file exists and is contexted); the STOP is
-  # recorded in the story, which is where the dev agent reads it.
+  # ✅⭐⭐ **BOTH PREFLIGHT STOPS ARE DISCHARGED — CORRECTED 2026-09-13 (Task 1's `governance:` commit).**
+  # ⛔ The paragraph below is KEPT as dated, STRUCK lines, ⛔ not deleted
+  # ([[feedback_record_unattested_no_backfill]]).
+  # ~~⛔⛔ **AND ITS PREFLIGHT IS RE-OPENED — STOP 1 (2026-09-11 `validate` pass).** The 2026-09-05~~
+  # ~~routing note `…-11b12-under-funded-commitment-claim` §8.3(3)/§8.5 row 3 ruled *"B ships the copy;~~
+  # ~~**E and F** render it"* — a `Nominee full name` | `District` table + B's five-paragraph block,~~
+  # ~~*"written for a PAGE"* — routing to F BY NAME, and it ⛔ NEVER reached `.decision-log.md`.~~
+  # ~~⇒ AC10 + Task 5d written; the DECISION ENTRY lands in Task 1's `governance:` commit FIRST.~~
+  # ~~⭐ The row STAYS `ready-for-dev` …the STOP is recorded in the story…~~
+  # ⭐ **(a) STOP 1 — DISCHARGED 2026-09-11 by `#decision-2026-09-11-214`**, which transcribes the
+  #     2026-09-05 Trustee ratification (DR + KB) that had lived ⛔ only in a routing note.
+  #     ⛔⛔ Do ⛔ NOT write a second entry.
+  # ⚠⛔ **(b) THE AUTHORITY CITE ABOVE WAS WRONG AND IS CORRECTED: it is §8.1 + §9.1 row 3**, ⛔ NOT
+  #     ~~§8.3(3)/§8.5 row 3~~ — ⭐ §8.5 is *"What we **propose**"* and §8.3(3) is a **sequencing
+  #     statement**; ⛔ neither is a ruling. ⚠ The story body corrected this at its v1.2 on 2026-09-11
+  #     and ⛔ NEVER swept the ledger — five days ([[feedback_story_validate_footguns]] #16).
+  #     ⭐ §8.3(2) supplies the PAGE-shape constraint only.
+  # ⭐ **(c) STOP 2 — DISCHARGED 2026-09-12** by `11b-19-ratified-message-block-copy-source` (`done`):
+  #     all EIGHT `message_block.*` keys ship in BOTH locales ⇒ **AC10 / Task 5d are BUILDABLE**.
+  #     ⚠⛔ AND AC10 INHERITS ONE NEW OBLIGATION FROM THAT DISCHARGE:
+  #     `packages/i18n/tests/sahyog-shared-dark-copy.test.ts` holds `AUTHORISED: string[] = []` with a
+  #     resolver regex HARDENED 2026-09-12 to catch a runtime-built key ⇒ the render FAILS IT BY PATH.
+  #     ⭐ **NARROW it**; ⛔ never delete it, ⛔ never append to `AUTHORISED` to go green.
+  # ⭐ **(d) `-214` Consequence 3 (the PUBLIC render) is HOMED at `11b-20-public-sahyog-vivran-message-block`**
+  #     (`ready-for-dev`) — ⚠⛔ **HOMED, ⛔ NOT closed**: its home is itself unbuilt
+  #     ([[feedback_closure_language_precision]]). ⛔ Still ⛔ not F's.
+  # ⭐ **AND ⛔ NOTHING ELSE HOLDS THIS STORY.** A (`11b-11`) `done`; E (`11b-15`) `done`; both
+  #     decisions ruled (`-212`, Trustee-ratified DR + KB). ⇒ ⛔ the Preflight is CLEAR.
+  # ⚠⛔ **ONE GOVERNANCE ENTRY WAS OWED FIRST AND IS NOW WRITTEN: `#decision-2026-09-13-215`** —
+  #     §8.4(ii)'s SUCCESSOR entry, deferred here BY NAME by `8-17` (`done`). ⛔ `-213` is ⛔ NOT
+  #     edited ([[feedback_supersede_never_reinterpret]]).
   # ✅ **D1 RULED (a) 2026-09-04 (`-199`), scope CONFIRMED (i) = the member's OWN Pariwar.**
   # ⇒ ANY authenticated member may open the member-facing detail for ANY drive in THEIR Pariwar,
   # including the FULL nominee banking coordinates — subject to lifecycle (⛔ never `spawned`) and the
@@ -18386,7 +18435,7 @@ development_status:
   # ~~If (a) is genuinely wanted it needs the PANEL, ⛔ not this story.~~
   # ⛔ Both were TRUE WHEN WRITTEN and FALSE from 2026-09-04 onward: (a) was RULED that day and (b) is
   # recorded as ⛔ NOT taken. ⛔ Kept struck as the record, ⛔ not deleted.
-  11b-17-member-drive-detail-unredacted: ready-for-dev
+  11b-17-member-drive-detail-unredacted: in-progress
   # ⭐⭐ 11b-19 — MINTED 2026-09-11 BY `#decision-2026-09-11-214` **Consequence 2**: B's UNSHIPPED
   # copy source, given a NAMED HOME before story F ships. ⛔ ZERO OPEN DECISIONS — the authority is
   # already Trustee-ratified (DR + KB, 2026-09-05); this story AUTHORS and ⛔ decides nothing.

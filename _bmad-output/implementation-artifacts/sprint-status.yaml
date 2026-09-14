@@ -1,3 +1,187 @@
+# last_updated: 2026-09-14d (✅⭐⭐ **`11b-17` GROUP-D RE-REVIEWED — the CHUNKED RE-REVIEW IS COMPLETE
+#   (A · B · C · D). ALL FOUR GROUPS OF THE 4.4k-LINE DIFF HAVE NOW BEEN RE-REVIEWED.** ⭐ Row: `done`.
+#   ⭐ Group D = i18n + field floor (11 files). **MECHANICAL PARITY CLEAN, VERIFIED DIRECTLY:** en/hi
+#   key-set parity exact across all four namespaces; placeholder parity exact; ⛔ zero used-but-undefined
+#   keys; all 40 keys the drive-detail components reference resolve in BOTH locales.
+#   **11 dismissed**, incl. ⛔ the *"Nominee Name"* label (RULED, `-190` cl.2 / `-215`), ⛔ a "missing"
+#   `no_family` key (⭐ correctly consumed from `sahyog-shared`, ⛔ never re-minted), and ⛔ the ₹0-ORDER
+#   LIVE bug (⭐ traced: the amount check PRECEDES the name check ⇒ `-216` HOLDS — only the FENCE was weak).
+#   ⭐⭐ **SIX PATCHES APPLIED.** Headline:
+#   **(1)** ⛔⛔ **`$comment.label_branch` SHIPPED THE PREMISE `-217` cl.2 OVERTURNED — IN BOTH LOCALES —
+#   AND PRESCRIBED THE REMEDY THE RULING FORBIDS.** ⚠⛔ **THIS WAS THE RULING'S OWN UNSWEPT HALF AND IT
+#   WAS THIS SESSION'S MISS**: the cl.2 sweep amended the contract, API, mobile render, a11y string,
+#   `accountHasUnavailableField`, `v1.yaml` and two fences — and ⛔ NOT the i18n catalogs. ⛔ ZERO files
+#   under `packages/i18n/` mentioned `2026-09-14-217`. ⭐ The lesson is the SWEEP SHAPE: a per-file sweep
+#   enumerating CODE artefacts and forgetting the COPY layer leaves the repo stating the premise BOTH WAYS
+#   BY LAYER ([[feedback_mechanization_split_commitment]]).
+#   **(2)** ⭐⭐ **THE MICROCOPY CI GATE WAS NEVER EXTENDED TO `member-drive-detail`** — `grep -c` = **0**
+#   while every sibling member namespace was in scope, and `grep -c microcopy` over the story file = **0**
+#   (⛔ not an AC, ⛔ not a Task, ⛔ not a deferral). ⭐ The ground is the sentence Story E wrote INTO the
+#   config: *"leaving this one out would make it the ONLY member surface whose vocabulary, tone and numeral
+#   discipline nothing checks."* ⇒ scope extended (24→**26** copy files, gate GREEN) **+ a teeth-proving
+#   `scripts/microcopy/member-drive-detail.test.ts` (16/16)** — planted violations in BOTH locales across
+#   all four rule families plus a real-committed-string probe. ⛔ A coverage gap, ⛔ not a shipped violation.
+#   **(3)** THREE DEAD KEYS wired: `bank.group_label` (⚠ the PUBLIC page rendered its counterpart ⇒ the
+#   member sat **BELOW the public on an ACCESSIBILITY affordance**) and `screen.title`/`screen.title_a11y`
+#   (⇒ the screen had **NO TITLE**; a screen-reader member heard a bare PERSON'S NAME as the sole header).
+#   **(4)** the ₹0 fence pinned two lines and ⛔ NOT THEIR ORDER — a swap would have let the Panel's message
+#   block render on a ₹0 unconsented drive with BOTH assertions still green. **(5)** *"THE THREE EXCLUSIONS
+#   ARE EXACTLY THREE"* enumerated **TWO** — ⭐ the exact count-word defect the file's OWN header forbids —
+#   and the appeal record rested on it; ⚠ AC2 names NO exclusions, it states a FLOOR that **EXPRESSLY
+#   REQUIRES the appeal outcome** ⇒ conclusion RIGHT, ground WRONG, true ground STRONGER.
+#   **(6)** `$comment.outcome`'s *"SAME text"* claim NARROWED — false for Hindi against the public DETAIL.
+#   ⭐⭐ **AND THE FAMILY-13(a) FENCE CAUGHT A WRONG FIX BY THE REVIEWER**: the first `bank.group_label`
+#   patch put the label on a non-`accessible` container — ⛔ never announced in RN, the exact defect (a)
+#   names — and `accessible={true}` would have COLLAPSED the subtree. ⇒ the label now rides the HEADING.
+#   ⚠ That fence is the one this session REPAIRED one group earlier — ⭐ it went from selectively blind to
+#   catching a reviewer's own mistake inside a single session.
+#   ⭐ Verified: `tsc` clean ×6; **eslint exit 0 ×7**; i18n 108; contracts 1126; mobile 531; public 581;
+#   domain **3352/1 skipped** (live DB); api **486/1 skipped** (live DB); microcopy gate GREEN + 340/340.
+#   ⭐ FIVE items deferred. ⛔ Rows unchanged.)
+# last_updated: 2026-09-14c (✅⭐⭐ **`11b-17`'s TWO ROUTED PANEL QUESTIONS ARE ANSWERED —
+#   `#decision-2026-09-14-217`, Dhiraj Rahul + Kalpana Bharti.** ⭐ Row UNCHANGED: `done`.
+#   ⭐ The governance commits landed FIRST — decision entry + the note's ANSWERED block — ⛔ before code
+#   ([[feedback_governance_commits_precede_implementation]]).
+#   **Q1 → Option A. ⛔ NO CODE CHANGE.** A SUSPENDED member sees the nominee's UNMASKED coordinates like
+#   any other — ⭐ the existing D5 req.3/AC7 ruling's own rationale (*"they are curing … they need the
+#   contribution surface"*) reaches this page: access was preserved so a member can TAKE PART, and
+#   contributing is taking part. ⇒ the shipped behaviour is CONFIRMED, ⛔ not amended.
+#   ⚠⛔⛔ **SCOPE FENCE:** cl.1 rules on SUSPENSION and ⛔ NOTHING ELSE. ⛔ It does ⛔ NOT close
+#   `deferred-work.md`'s *"⛔ RTBF revokes NO live member session"* — terminated/withdrawn/anonymized are
+#   blocked at login AND refresh, and the ≤15-min token residual is THAT item's subject, still **OPEN**
+#   with an immediate trigger. ⛔ Do ⛔ not cite `-217` as having settled session revocation.
+#   **Q2 → Option B. ⭐ A CROSS-LAYER CHANGE, APPLIED IN ALL THREE LAYERS.** An unrecorded (empty or
+#   whitespace-only) Tier-3 PLAINTEXT `bank_name` now **OMITS ITS ROW**, exactly as `branch` does, and
+#   ⛔ NEVER renders `NOMINEE_BANK_DECRYPT_FAILED_SENTINEL`. ⚠⛔ **THE GROUND IS THAT THE SENTINEL MADE A
+#   FALSE STATEMENT** — that column is ⛔ never encrypted, so it reported a CRYPTO FAILURE THAT DID ⛔ NOT
+#   HAPPEN, and `fieldLog` ⛔ never fired on that branch ⇒ a data-quality gap was indistinguishable from a
+#   KMS fault in the UI **and** the logs. ⭐ The rule restored was already written for the field beside it.
+#   ⭐ Applied: contract `bankName` → `.nullable()` (⚠ the change `z.string().min(1)` FORECLOSED, which is
+#   why Task 5's own `.trim() || null` instruction could ⛔ not be followed when the story shipped); the API
+#   boundary returns `null`; the mobile row is OMITTED and dropped from the spoken a11y name;
+#   `accountHasUnavailableField` NARROWED to the three Tier-1 fields (⭐ a `bankName` arm is now DEAD CODE
+#   ASSERTING A FALSE PREMISE — ⛔ and that premise is how the false statement survived review);
+#   `openapi/v1.yaml` regenerated + deterministic.
+#   ⛔⛔ **UNMOVED:** `branch` unchanged; the THREE Tier-1 coordinates KEEP the sentinel — ⭐ for them the
+#   failure is REAL — and ⛔ must ⛔ not be "aligned" to cl.2.
+#   ⭐⭐ **TWO FENCES WENT RED ON THE RULING AND WERE AMENDED BY NAME, ⛔ not rewritten quietly** — the
+#   contract's `bankName …isNullable()).toBe(false)` and the render test's *"⛔ and `bankName` is ⛔ NOT its
+#   twin"*. ⭐ **THAT IS THE FENCE WORKING.**
+#   ⭐ Verified: `tsc` clean ×4; **eslint exit 0 in all SEVEN packages**; contracts **1126/1126**; mobile
+#   **531/531**; public **581/581**; domain **3352 passed/1 skipped** (live DB); api unit + contributions +
+#   public-pages **486 passed/1 skipped** (live DB); `member-drive-detail.spec.ts` **13/13** (was 12).
+#   ⭐⭐ **PROVEN TO BITE AT BOTH LAYERS THAT CAN BREAK IT** — reverting the MOBILE omission ⇒ render fence
+#   RED; reverting the API boundary to the sentinel ⇒ the NEW live test RED. ⚠⛔ **THE EMPTY-`bank_name`
+#   PATH HAD ⛔ NO LIVE COVERAGE AT ALL BEFORE THIS** — every fixture seeded a real bank name, ⭐ which is
+#   exactly how the false statement shipped unobserved. ⛔ Rows unchanged.)
+# last_updated: 2026-09-14b (⭐⭐ **`11b-17` GROUP-C RE-REVIEWED — `bmad-code-review`, mobile surface (7 files,
+#   +1660/−14). ⛔ Group D (i18n + field floor) still ⛔ NOT re-reviewed** ⇒ ⛔ still ⛔ NOT a clean bill.
+#   ⭐ Row UNCHANGED: `done`. 24 raw findings → **4 dismissed**, incl. ⛔ hiding the AC10 nominee/district
+#   table on a ₹0 drive, which is **RULED** — `#decision-2026-09-13-216`'s Q1 EXPLICITLY enumerated *"the
+#   nominee/district table"* and the Panel answered Option A (⭐ a false positive only the governance record
+#   could settle). ⭐ Also dismissed: `error.status` (correct), `branch` sentinel (Tier-3 plaintext),
+#   `confirmedPercentage` formatting (contract is `.int().min(0).max(100)`).
+#   ⭐⭐ **EIGHT PATCHES APPLIED; THREE PROVEN TO BITE.** Headline:
+#   **(1)** ⭐⭐ **AC9's ₹0-SILENCE HAD A *THIRD* REACHABLE STATE** — `live` + a REAL confirmed count + ₹0
+#   rendered *"₹ 0 contributed"*. The two gates keyed off DIFFERENT fields (count vs amount) and left a hole.
+#   ⛔⛔ **THE PUBLIC SURFACE FIXED THIS EXACT DEFECT ON 2026-09-08 AND IT WAS ⛔ NEVER SWEPT** —
+#   `sahyog-render.ts` carries the arm, added after the page published *"₹ 0 and counting, by 41
+#   colleagues—and still going strong!"*. ⚠ The screen even contradicted itself: the message block went
+#   SILENT (ratified by `-216`) while the summary line stated the same ₹0 figure.
+#   **(2)** ⭐⭐ **AC11's family-13(a) FENCE WAS VACUOUS ON EXACTLY THE AC8 CONTROL** — it scanned RAW source,
+#   and a doc-comment carrying the word `accessible` satisfied it. ⭐ PROBE-VERIFIED BEFORE **and** AFTER:
+#   deleting `accessible={true}` from the public-page-link Button was **31/31 GREEN** before the patch and
+#   **RED** after. ⚠⛔ Family 13 is un-mechanized BY RULING ⇒ that fence ⛔ IS the coverage.
+#   **(3)** a **DISABLED** query rendered the **ERROR** screen (`isLoading = isPending && isFetching`), and
+#   its Retry fired `/drive-detail/undefined` (`refetch` ⛔ ignores `enabled`) — ⭐ both verified from the
+#   INSTALLED `query-core` source. **(4)** ⛔ **`gcTime: 0` DID ⛔ NOT keep the Tier-1 payload out of MMKV**
+#   (`defaultShouldDehydrateQuery` is `status === 'success'` and ⛔ ignores `gcTime`; and `hydrate()` rebuilt
+#   it with the **7-day** default) ⇒ ⭐ FIXED FOR REAL, ⛔ not just admitted: `Provider.tsx` now treats
+#   `gcTime === 0` as an explicit ⛔ NEVER-PERSIST marker (⚠ verified it is the ONLY such query).
+#   **(5)** `router.back()` was a **NO-OP** on a cold-start deep link (bare `<Stack />`, `headerShown: false`,
+#   retry suppressed on 404 ⇒ a DEAD SCREEN) — ⚠⛔ the PRIOR review dismissed this as *"an established
+#   pattern"*; ⛔ that dismissal was WRONG, the app's only `canGoBack` IS a guard. **(6)** the account a11y
+#   name READ the bracketed sentinel FOUR times while its comment claimed it announced the degrade ONCE.
+#   **(7)** `not.toMatch(/nomineeAccounts\[0\]\s*[^.]/)` PERMITTED `[0].accountNumber` — ⭐ the exact
+#   single-account render it forbade. **(8)** ⭐⭐ **AC8 WAS DISCHARGED BY HALF** — it ordered *"amend E's AC5
+#   record AND that test BY NAME"*; the TEST shipped, the **RECORD did ⛔ NOT** and was ⛔ not routed (grep:
+#   ZERO hits in both the story file and `deferred-work.md`) ⇒ **`11b-15`'s record is now amended by name**,
+#   the false sentence KEPT ⛔ not deleted.
+#   ⭐ Verified: `tsc` clean ×3; mobile **531/531**; contracts **1126/1126**; api unit + contributions
+#   integration **414 passed/1 skipped** (live DB, ⛔ no Group A/B regression); eslint **exit 0 in all SEVEN
+#   packages**. ⭐ SIX items deferred. ⛔ Rows unchanged.)
+# last_updated: 2026-09-14a (⭐⭐ **`11b-17` GROUP-B RE-REVIEWED — `bmad-code-review`, API boundary (4 files,
+#   +1114/−5). ⛔ Groups C/D still ⛔ NOT re-reviewed** ⇒ ⛔ still ⛔ NOT a clean bill. ⭐ Row UNCHANGED: `done`.
+#   ⚠ Diffed the WORKING TREE, ⛔ not `main..HEAD` — Group A's patches had already edited
+#   `member-pool/handlers.ts`, so a committed-only diff would have shown reviewers a STALE copy
+#   ([[feedback_concurrent_review_agents_mutate_tree]]).
+#   ⭐ 25 raw findings → **8 dismissed**, incl. THREE the layers got materially WRONG (⛔ the 500 does ⛔ not
+#   leak `poolId` — `error-mapping/index.ts:691` scrubs; ⛔ `accounts[0]` is ⛔ not order-dependent —
+#   `orderBy(asc(accountRank))`; ⛔ `emitAuthAudit` is ⛔ not a crash vector — try/catch + `.catch()`).
+#   ⭐⭐ **EIGHT PATCHES APPLIED; FIVE FENCES PROVEN TO BITE.** Headline:
+#   **(1)** ⛔⛔ **AC5 WAS ⛔ NOT BUILT — the durable audit line ⛔ NEVER NAMED THE DRIVE.** `audit_log_entries`
+#   has ⛔ NO context column; `authEventToAuditInput` SHA-256-HASHES `context` into `request_payload_hash`
+#   and `resourceLocator` defaulted to `user:<memberId>` ⇒ two opens by the SAME member of TWO DIFFERENT
+#   FAMILIES' drives wrote **BYTE-IDENTICAL** rows. ⚠ The rule was ALREADY in the file the diff edits
+#   (`audit-sink.ts:43-46`: *"⛔ Never describe this event as carrying the query context"*), and the test
+#   asserted the IN-MEMORY `CapturingAuditSink`. ⭐ Fixed: `resourceLocator` threaded through
+#   `emitAuthAudit` + a **LOWERCASED** `pool:<canonical>` (⚠ `RESOURCE_LOCATOR_PATTERN` is lowercase-only —
+#   a bare `P-…` is SILENTLY DISCARDED, so the fix would LOOK applied and ⛔ not be; ⭐ both halves pinned).
+#   **(2)** a `%00` token **500'd** instead of 404ing (⭐ verified live: PG `22021`) — ⛔ fixed at the handler,
+#   ⛔ NOT by a tighter param regex (that would make malformed → 400, the distinction AC3 forbids).
+#   **(3)** the integration `vpa` fence was **BLIND**: `'"vpa"'` is quote-delimited so it ⛔ cannot match
+#   `"vpaCiphertext"` ⇒ ⭐ D3(D) had TWO fences and ⛔ BOTH were blind to the same spelling.
+#   **(4)** AC3's `spawned` arm — the ⛔ ONE case that is ⛔ not row-absence — had ⛔ NO behavioural test.
+#   **(5)** a false *"the surfaces are SYMMETRIC"* claim; **(6)** the unswept 400/404 doc-block (Group A's own
+#   patch, half-applied); **(7)** a shared `auditHook` leak; **(8)** a PK-vs-CHECK miscitation.
+#   ⭐⭐ **TWO `[Decision]` ITEMS ROUTED TO THE TRUSTEE PANEL** (`…routing-note-2026-09-14-11b17-…`): **Q1**
+#   does a SUSPENDED member (who retains access BY RULING, D5 req.3/AC7) see UNMASKED nominee coordinates on
+#   this NEW surface? **Q2** what does a member see when a bank NAME was never recorded (an empty Tier-3
+#   PLAINTEXT renders the ⛔ DECRYPT-FAILED sentinel)? ⛔ Neither blocks; ⛔ neither is a defect in anything
+#   ratified. ⚠⛔ Q1 was **NARROWED TWICE** — ⛔ suspension is ⛔ NOT a hole (ruled); terminated/withdrawn/
+#   anonymized is an **already-owned** deferred item; mid-signup is **unreachable** (`typ === 'access'`).
+#   ⭐ SIX further items deferred, headed by ⛔⛔ a **PRE-EXISTING P0-shaped** defect this pass UNCOVERED:
+#   **the member LIST and the PUBLIC INDEX decrypt the nominee holder name under the ⛔ WRONG FIELD CLASS**
+#   (`decryptKycField`/`member_kyc` vs the writer's `claim_nominee_bank`; `fieldClass` is in the GCM AAD)
+#   ⇒ **`nomineeName` is ALWAYS `null` on real data** on BOTH shipped surfaces — and their suites are GREEN
+#   because the FIXTURES encrypt in the READER'S WRONG CLASS. ⭐⭐ `11b-17` is the surface that got it RIGHT.
+#   ⚠⛔ **A CORRECTION TO 2026-09-13g's OWN RECORD:** that entry's *"eslint clean"* was **FALSE** — the check
+#   was `&&`-chained after an eslint run that had already failed to load its config (⭐ per-package cwd).
+#   Run correctly, Group A's patch had TWO real `no-unused-vars` errors; ⭐ **FIXED**, and ⭐ **all SEVEN
+#   packages now lint exit 0**. ⛔ Rows unchanged.)
+# last_updated: 2026-09-13h (⭐⭐ **`11b-17` RE-REVIEWED — `bmad-code-review`, ⛔ GROUP A ONLY (7 files,
+#   1283 diff lines): domain read + contracts + api-client. ⛔ Groups B/C/D were ⛔ NOT re-reviewed** (the
+#   4.4k-line code diff was CHUNKED) ⇒ ⛔ this is ⛔ NOT a clean bill for the story. ⭐ Row UNCHANGED: `done`.
+#   ⭐ Baseline = `main` (`47063fde`), ⛔ **not** the frontmatter pin `a2617869` — the pin is reachable but
+#   ⛔ not a clean CODE baseline (siblings `8-17`/`11b-19` shipped 15 files after it), exactly as the story's
+#   own frontmatter records; `main` is a descendant already containing that work.
+#   ⭐ 25 raw findings → **14 dismissed** against the actual code (`fixedAmount` is `integer`;
+#   `member_kyc_profiles.member_id` is the PK ⇒ ⛔ no join fan-out; composite PK + `CHECK rank IN (1,2)`
+#   ⇒ `.max(2)` structural; `driveConfirmedPercentage` already guards `assignedCount <= 0`).
+#   ⭐⭐ **EIGHT PATCHES APPLIED + VERIFIED, and EACH NEW FENCE PROVEN TO BITE** (probe applied → named test
+#   observed RED → tree restored), ⛔ not merely observed green:
+#   **(1)** ⭐⭐ **`#decision-2026-09-13-215`'s OWED CODE CORRECTION ⛔ NEVER SHIPPED.** `-215` §4 assigned the
+#   stale *"the SAME nominee"* equality premise to *"`11b-17`'s code"*; it survived in FOUR owned artefacts —
+#   incl. `member-drive-detail.ts:83` asserting it **EIGHT LINES** above `:91` citing `-215` for the OPPOSITE.
+#   ⛔ The one-decrypt BEHAVIOUR is ⛔ NOT touched (`-215` §4 rules it correct) — ⭐ ⛔ only the justification.
+#   **(2)** AC7's fence **walked the whole repo and ⛔ never scanned it** — `files` fed ⛔ nothing but its own
+#   non-vacuity guard ⇒ the guard guarded a scan that ⛔ did ⛔ not exist. ⭐ A real masking scan now consumes it.
+#   **(3)** the `vpaCiphertext` fence was a KEY-LITERAL regex — a `{ ...r }` spread over the shared accessor's
+#   `SELECT *` re-introduced the Tier-1 VPA and stayed **GREEN**. ⭐ Now token-wide + a spread fence.
+#   **(4)** ⭐⭐ **`coerceCount` EXISTS** (`public-read.ts:436`, used by the sibling detail read) — the PRIOR
+#   pass closed that finding on *"no such function exists anywhere in the repo"*, a **FALSE** negative claim
+#   ([[feedback_negative_claims_checkable_in_repo]]). Now imported and used.
+#   **(5)** the contract's *"EACH absence IS A RULING"* register omitted the ⛔ ONE absence that is ⛔ NOT
+#   ruled — the appeal lineage (F3, Panel-triggered). **(6)** AC3(b)'s block was NAMED for the five coordinate
+#   keys and asserted ⛔ NONE of them. **(7)** the OpenAPI registered a `400` *"malformed drive token"* while
+#   its own description ruled that case a `404`. **(8)** the fence's `statSync` threw at MODULE scope.
+#   ⭐ Verified: `tsc` clean ×3; contracts **1126/1126**; domain **2040 passed/1 skipped**; domain pool
+#   integration **199/199** (live DB); `member-drive-detail.spec.ts` **10/10** (live DB); `v1.yaml`
+#   regenerated (2 lines) + determinism green; eslint clean.
+#   ⚠⛔ **ONE PATCH IS DELIBERATELY PARTIAL AND ROUTED:** `-215`'s correction landed at the four MEMBER-path
+#   sites; the **four PUBLIC-path sites** are pre-existing + out of group ⇒ `deferred-work.md` w/ a trigger.
+#   ⭐ THREE items deferred total. ⛔ AC2's appeal shortfall re-confirmed as an EXPLICIT deferral, ⛔ not a gap.
+#   ⛔ Rows unchanged.)
 # last_updated: 2026-09-13g (✅⭐⭐ **`11b-17`'s ONE ROUTED PANEL QUESTION IS ANSWERED — `#decision-2026-09-13-216`,
 #   Dhiraj Rahul + Kalpana Bharti. Option A.** AC10's message block stays silent on a `live` drive's
 #   zero-contribution first day, exactly as shipped — `-207` cl.2's ₹0-silence is EXTENDED to the

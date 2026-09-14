@@ -8933,3 +8933,289 @@ violation.
   where the Tier-1 decrypts and the audit-relevant field actually happen (matches the
   `sahyog-vivran-read.ts` precedent it cites, which has the same property). **Trigger:** a future change
   to `getClaimNomineeBankAccountsCiphertext` or its DB constraint that could widen beyond two rows.
+
+## Deferred from: code review of 11b-17-member-drive-detail-unredacted (2026-09-13) — ⭐ GROUP A re-review
+
+⚠ Recorded by the `bmad-code-review` **re-review** pass of 2026-09-13, which re-reviewed ⛔ **ONLY Group A**
+(domain read + contracts + api-client, 7 files). ⛔ Groups B / C / D were ⛔ not re-reviewed in that pass.
+
+- **`fundingOutcome` is `live`-gated on the member DETAIL and ⛔ NOT on the member LIST.**
+  [`packages/domain/src/pool/member-drive-detail.ts:435-441` vs `packages/domain/src/pool/member-drive-list.ts:380-386`]
+  The detail's guard is `isLive || assignedCount === 0 || row.fixedAmount <= 0`; the list's omits the `live`
+  arm, so a `live` drive with assignees and a positive `fixed_amount` classifies as `under_funded` on the
+  list and `null` on its own detail page. ⭐⭐ **THE DETAIL'S ARM IS THE CORRECT ONE** (*"the cycle closed"*
+  is false mid-window) and it matches the PUBLIC detail (`sahyog-vivran-read.ts:504`) ⇒ ⛔ do ⛔ **NOT**
+  "align" the detail down to the list. ⚠ The divergence is **pre-existing on both axes** (the list AND the
+  public index carry the un-gated shape) and is currently masked at the render layer
+  (`MemberDriveList.tsx:538-543`) ⇒ ⛔ nothing member-visible disagrees today.
+  **Trigger:** ⭐ any change to `MemberDriveList.tsx`'s render-layer gate, or a new consumer reading
+  `fundingOutcome` off the LIST contract without that gate — at which point the list's domain arm must be
+  tightened to match the detail's.
+
+- **`encodeURIComponent` does ⛔ not encode dot-segments, so a few `driveToken` values answer with a
+  DIFFERENT error code than the method documents.**
+  [`packages/api-client/src/index.ts:749-756`]
+  `call(\`${MEMBER_HOME_BASE}/drive-detail/${encodeURIComponent(driveToken)}\`, …)` — WHATWG URL parsing
+  resolves dot-segments away, so `''` → `/api/v1/member/drive-detail/`, `'..'` → `/api/v1/member/`. Those
+  hit `app.setNotFoundHandler` (`apps/api/src/server.ts:110-115`) and return `ApiError(404,
+  'request.not_found')`, ⛔ **not** `member_drive_detail.not_found` — while the method's own doc-block states
+  five cases collapse into ONE 404. ⚠ A caller keying on `error.code` falls through to a generic error
+  branch instead of the drive-not-found branch. ⛔ **Not a disclosure defect** (the status code is 404 either
+  way; ⛔ no enumeration signal is added). ⚠ Pre-existing house style — the same shape at `:623`, `:1012`,
+  `:1035` — ⭐ but `driveToken` is the ⛔ **one** path segment sourced from a **LINK** rather than an
+  internal id, which is what makes it worth recording here.
+  **Trigger:** ⭐ a client that branches on `error.code` for this route, or the first deep-link/paste entry
+  point that can hand a user-supplied string to `memberDriveDetail()`.
+
+- **⭐⭐ `#decision-2026-09-13-215`'s correction is landed in the MEMBER path and ⛔ NOT in the PUBLIC one — ⚠ the premise is now HALF-CORRECTED.**
+  [`packages/domain/src/pool/public-read.ts:539` · `apps/api/src/modules/public-pages/handlers.ts:408` ·
+  `packages/domain/tests/integration/pool/sahyog-drive-public-read.spec.ts:65` ·
+  `apps/api/tests/integration/public-pages/sahyog-drive.spec.ts:1096`]
+  The 2026-09-13 Group-A re-review of `11b-17` corrected the stale *"EQUAL destinations for the **SAME
+  nominee**"* justification at the **four** sites that story owns (`contracts/src/contributions/member-drive-detail.ts`,
+  `member-pool/handlers.ts` ×2, `contracts/tests/member-drive-detail.test.ts`) — discharging the obligation
+  `-215` §4 assigned to *"`11b-17`'s code"*. ⚠⛔ **The four sites above were ⛔ NOT touched**: they are
+  **pre-existing**, they sit in the **PUBLIC** path, and reaching into them from a member-surface review
+  would be scope drift. ⇒ ⭐ the repo now states the premise **both ways** depending on which surface you
+  read, which is the decay pattern [[feedback_mechanization_split_commitment]] names — ⛔ the un-mechanized
+  half is where it concentrates, and ⛔ **no gate covers this premise at all**.
+  ⛔ **The one-decrypt BEHAVIOUR at every one of these sites is CORRECT** (`-215` §4: *"correct for what
+  those surfaces render"*) — ⭐ ⛔ ONLY the justification is wrong. ⛔ Do ⛔ not "fix" behaviour here.
+  **Trigger:** ⭐ the next story touching `public-read.ts`'s nominee projection or `public-pages/handlers.ts`'s
+  nominee decrypt — or, sooner, any story that mechanizes this premise as an invariant gate (⭐ the durable
+  fix: ⛔ nothing today catches a re-introduction at any of the eight sites).
+
+## Deferred from: code review of 11b-17-member-drive-detail-unredacted (2026-09-14) — ⭐ GROUP B re-review
+
+⚠ Recorded by the `bmad-code-review` re-review of **Group B** (API boundary, 4 files). ⛔ Groups C / D remain ⛔ not re-reviewed.
+
+- **⛔⛔ P0-SHAPED, PRE-EXISTING: THE MEMBER DRIVE LIST AND THE PUBLIC SAHYOG INDEX DECRYPT THE NOMINEE HOLDER
+  NAME UNDER THE ⛔ WRONG FIELD CLASS ⇒ `nomineeName` IS **ALWAYS `null`** ON REAL DATA — and ⛔ the tests are
+  GREEN because the FIXTURES ENCRYPT IN THE READER'S WRONG CLASS.**
+  [`apps/api/src/modules/member-pool/handlers.ts:640-655` · `apps/api/src/modules/public-pages/handlers.ts:428-444`]
+  ⭐ **TRACED END TO END AND VERIFIED STRUCTURALLY:**
+  · the ⛔ ONLY writer is `encryptNomineeBankField` (`claims/nominee-bank-crypto.ts`) → `fieldClass:
+    'claim_nominee_bank'` (`apps/api/src/context.ts:195`);
+  · both readers call `decryptKycField` → `kycContext()` → `fieldClass: MEMBER_KYC_FIELD_CLASS = 'member_kyc'`
+    (`packages/domain/src/encryption/member-fields.ts:145`, `encryption/field-classes.ts:43`);
+  · `fieldClass` is bound into the **GCM AAD** (`encryption/envelope.ts:56-59, 90-97` — `setAAD` on BOTH sides)
+    ⇒ a class mismatch **FAILS THE AUTH TAG AND THROWS**, every time, on every row.
+  ⇒ the `catch` logs *"nominee name decrypt failed"* and returns `null` ⇒ ⭐ the member's fourth tab and the
+  public index show **NO nominee name, EVER** — silently, since the fail-soft path is indistinguishable from
+  *"no bank details collected"*.
+  ⚠⛔⛔ **WHY ⛔ NOTHING CAUGHT IT — ⭐ THIS IS THE PART WORTH KEEPING.** The public index spec seeds the column
+  with **`encryption.encryptKycField`** (`apps/api/tests/integration/public-pages/sahyog-drive.spec.ts:158`) —
+  i.e. the fixture is encrypted in the **READER'S WRONG CLASS** ⇒ the suite is green on a value the real writer
+  **⛔ CAN NEVER PRODUCE**. ⭐ By contrast **`11b-17`'s OWN detail spec seeds `fieldClass:
+  'claim_nominee_bank'`** (`member-drive-detail.spec.ts:255-259`) — the CORRECT class — which is precisely why
+  the detail works and why this divergence became visible at all.
+  ⭐⭐ **`11b-17` IS ⛔ NOT THE DEFECT — IT IS THE SURFACE THAT GOT IT RIGHT** (`decryptNomineeBankFieldSoft`,
+  correct class). ⛔ Do ⛔ **NOT** "align" the detail to the list: the LIST and the PUBLIC INDEX are the broken
+  halves. ⚠ `payment/handlers.ts:380` and the public Vivran DETAIL (`public-pages/handlers.ts:768`) already use
+  the correct helper, which is why ⛔ only these two surfaces are affected.
+  ⚠ A ratified claim rests on this: `11b-17`'s own handler comment asserts the member and public surfaces are
+  *"SYMMETRIC"* on `nomineeName` and that the `member ≥ public` comparison MUST compare it — ⛔ **false in
+  production**, and in the OPPOSITE direction.
+  **Trigger:** ⭐ **IMMEDIATE** — this is a live, member-visible data defect on two shipped surfaces, ⛔ not a
+  latent one. ⚠ The fix is two-part and ⛔ NEITHER half is optional: **(a)** switch both readers to
+  `decryptNomineeBankField(Soft)`; **(b)** ⛔⛔ **re-seed the fixtures in the CORRECT class** — ⭐ (b) is the half
+  that makes the bug catchable, and ⛔ without it a corrected reader turns those suites RED and invites a
+  revert of the correct change. ⚠⛔ Field-class/reader agreement is ⛔ un-mechanized across the repo
+  ([[feedback_mechanization_split_commitment]]): ⭐ a gate asserting *every* reader of a ciphertext column uses
+  the writer's class is the durable fix.
+
+- **A per-field Tier-1 decrypt failure yields a HALF-RENDERED, actionable-looking PAYMENT INSTRUCTION.**
+  [`apps/api/src/modules/member-pool/handlers.ts:790-814`]
+  The three Tier-1 coordinates degrade **INDEPENDENTLY** to the sentinel; ⛔ no rule degrades the ACCOUNT as a
+  unit. ⚠ For a display field fail-soft is right; for a **transfer instruction**, holder + number + IFSC are an
+  **ATOMIC** unit — one sentinel makes the other two **dangerous rather than merely incomplete** (a bereaved
+  member could read a complete-looking account and look up or guess the missing IFSC). ⚠⛔ ⛔ **ZERO tests in
+  the 658-line spec exercise ANY decrypt-failure path**, though the sentinel is load-bearing in
+  `resolveSummaryNomineeName`. **Trigger:** the first real KMS incident, or any story making the sentinel
+  member-visible in a payment flow.
+
+- **⛔ Nothing distinguishes RLS FORCE from the explicit `pariwar_id` predicate on this surface.**
+  [`apps/api/tests/integration/contributions/member-drive-detail.spec.ts:417-419`]
+  Dropping the RLS policy on `claim_nominee_bank_accounts` entirely would leave **every** assertion green,
+  because the app-level predicate alone yields the same 404 ⇒ the test proves the **OUTCOME** while the file
+  header claims it proves the **MECHANISM** (*"three layers that only exist together at runtime… a mocked test
+  cannot see RLS"*). ⚠ Checklist family **5** prescribes a **migration-level policy-regression spec** asserting
+  RLS positive/negative/fail-closed/FORCE directly; ⭐ **VERIFIED: ⛔ none exists for this table.**
+  **Trigger:** the next migration touching `claim_nominee_bank_accounts`' policies — or sooner, since this is
+  the only route returning unmasked Tier-1 banking data.
+
+- **`bankName` / `branch` are guarded against the response schema's `.min(1)` but ⛔ NOT its `.max(200)`.**
+  [`apps/api/src/modules/member-pool/handlers.ts:827-836`]
+  Both are `text` with ⛔ no length constraint (`migrations/0056:46-47`) and the intake contract types them as
+  bare `z.string()`; the values come from `deps.bankIfscLookup.lookup()`, an **injectable vendor seam**. A
+  >200-char label fails the response schema and 500s the **WHOLE drive page** — ⛔ exactly the page-wide failure
+  the row-local sentinel beside it was written to prevent. ⭐ **UNREACHABLE TODAY**: the shipped adapter is a
+  curated 8-entry fixture whose own header says *"the stub is not the product"*.
+  **Trigger:** ⭐ wiring a REAL IFSC vendor adapter (or any `seed()` supplying a long label).
+
+- **The `coordinates_viewed` audit line is written even when ⛔ ZERO coordinates were viewed.**
+  [`apps/api/src/modules/member-pool/handlers.ts:854`]
+  On a claim with no bank details `nomineeAccounts` is `[]` and the response carries ⛔ no coordinates, yet a
+  line typed `member_drive_detail.coordinates_viewed` is appended with `nominee_accounts: 0`. ⚠ The sink's own
+  doc-block describes the event as *"a member OPENED one drive's detail **and was handed** the nominee's
+  COMPLETE, UNMASKED Tier-1 banking coordinates"* — **false for this record** ⇒ any compliance count of Tier-1
+  disclosures **OVER-REPORTS** by every open of a bank-details-less drive. ⚠ It also takes the deployment-wide
+  advisory lock the surrounding comments argue hard to conserve. **Trigger:** the first compliance/DPDPA query
+  counting Tier-1 disclosures per member — ⛔ resolve BEFORE such a count is relied on.
+
+- **The 11a.3 whitespace lesson is applied to FIVE response strings and skipped on the THREE that matter most.**
+  [`apps/api/src/modules/member-pool/handlers.ts:816-818`]
+  `district`, `branch`, `deceasedMemberName`, the summary `nomineeName` and `bankName` each take an emptiness
+  test; the three decrypted coordinates take ⛔ none (`decryptNomineeBankFieldSoft` maps ⛔ only `length === 0`
+  to the sentinel, so a whitespace-only plaintext passes, satisfies `.min(1)`, and renders VISUALLY BLANK).
+  ⚠ **Intake guards it** (`.trim().min(1).max(200)`, digits-only, IFSC regex) ⇒ defense-in-depth, ⛔ not a
+  reachable break today. ⭐ The normalisation asymmetry stands regardless: the SUMMARY name is `.trim()`ed and
+  the PER-ACCOUNT name beside it is ⛔ not, so one response can carry the same datum in two normalisations.
+  **Trigger:** any new writer of `claim_nominee_bank_accounts` that bypasses the intake contract.
+
+### ✅ ANSWERED BY THE TRUSTEE PANEL 2026-09-14 — two questions from `11b-17`'s Group-B code review
+
+> ✅ **CLOSED — `#decision-2026-09-14-217` (Dhiraj Rahul + Kalpana Bharti, 2026-09-14).**
+> **Q1 → Option A:** suspension does ⛔ not narrow what a member sees; ⛔ NO code change, the shipped
+> behaviour is CONFIRMED. **Q2 → Option B:** an unrecorded bank name OMITS ITS ROW, ⛔ never the decrypt
+> sentinel — ⭐ APPLIED across contract + API boundary + mobile render, with a NEW live integration test.
+> ⛔ **Neither item is re-opened as a defect.**
+> ⚠⛔⛔ **AND cl.1 does ⛔ NOT close the item it sits beside** — *"⛔ RTBF revokes NO live member session"*
+> stays **OPEN** with its immediate trigger: terminated / withdrawn / anonymized principals are blocked at
+> login and refresh, and the ≤15-min access-token residual is **that** item's subject, ⛔ not this one's
+> ([[feedback_closure_language_precision]]).
+> ⛔ The body below is kept AS PUT, ⛔ not rewritten ([[feedback_record_unattested_no_backfill]]).
+
+#### (routed, as put on 2026-09-14)
+
+**Note:** `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-14-11b17-suspended-member-coordinates-and-bankname-sentinel.md`
+⛔ **Neither blocks `11b-17`**, which stays `done`. ⛔ Neither is a defect in anything ratified.
+
+- **Q1 — Does a SUSPENDED member see the nominee's UNMASKED banking coordinates?**
+  [`apps/api/src/modules/member-pool/routes.ts:158-169`]
+  ⭐ *"A suspended member MUST retain access — they are curing"* is **RULED** (D5 req. 3 / AC7,
+  `member-auth.handlers.ts:93-97`) and names **the CONTRIBUTION surface**. ⚠ Story `11b-17`'s drive-detail
+  page is NEW and is the ⛔ only surface handing a member a bereaved family's **full, unmasked account
+  number + IFSC**. ⛔ Nobody has ruled whether *"retains access"* reaches it; today the code answers
+  *"all member surfaces"* **by inheritance from a shared session guard**, ⛔ not by a decision.
+  ⚠⛔ **SCOPE, CORRECTED TWICE — ⛔ do ⛔ not re-widen it:** ⛔ suspension is ⛔ NOT a hole (ruled);
+  ⛔ terminated/withdrawn/anonymized is the **already-owned** item above (*"⛔ RTBF revokes NO live member
+  session"*) and is ⛔ NOT re-raised here; ⛔ mid-signup is **unreachable** (`typ === 'access'`).
+  **Trigger:** a Panel ruling — or, sooner, `11b-20` (the public render) or any new surface inheriting
+  this session guard, each of which inherits the same unruled meaning.
+
+- **Q2 — What does a member see when a bank's NAME was never recorded?**
+  [`apps/api/src/modules/member-pool/handlers.ts:827-830`]
+  An empty Tier-3 **plaintext** `bank_name` renders `NOMINEE_BANK_DECRYPT_FAILED_SENTINEL`
+  (*"[unavailable — could not be shown]"*) — ⛔ reporting a **crypto failure that did not happen**, with
+  ⛔ no log line, on a field that is ⛔ **never encrypted**. ⚠ The `branch` arm six lines below states the
+  rule it breaks (*"a sentinel here would report a failure that did not happen"*), and the constant's own
+  definition scopes it to *"**decrypted** fields"* while the same file calls `bankName` *"Tier-3 plaintext
+  (no decrypt)"*. ⛔ **The obvious fix is FORECLOSED:** `MemberDriveDetailResponse.bankName` is
+  `z.string().min(1)` non-nullable, so Task 5's own `.trim() || null` cannot be applied ⇒ every remedy is
+  a **contract change** (Group A) or **member-facing copy** (Group D), ⛔ neither reviewed in this pass.
+  **Trigger:** a Panel ruling on the wording — or the first observed empty `bank_name` in production.
+
+## Deferred from: code review of 11b-17-member-drive-detail-unredacted (2026-09-14) — ⭐ GROUP C re-review
+
+⚠ Recorded by the `bmad-code-review` re-review of **Group C** (mobile surface, 7 files). ⛔ Group D (i18n +
+field floor) remains ⛔ not re-reviewed. ⛔ None of these blocks `11b-17`, which stays `done`.
+
+- **`MemberDriveList.tsx`'s `summaryLine` carries the ⛔ IDENTICAL ₹0 gap the detail just closed.**
+  A `live` row with a REAL confirmed count and `amountRaisedInr === 0` renders the ₹0 money sentence, the
+  same state `apps/public/src/lib/sahyog-render.ts` has silenced since 2026-09-08 and the member DETAIL now
+  silences via `isLiveZeroAmountWithContributors` (`components/drive-detail/format.ts`). ⛔ **PRE-EXISTING in
+  story E** and out of `11b-17`'s blast radius, ⚠ though this diff edits that file.
+  **Trigger:** ⭐ the next story touching `MemberDriveList`'s summary — or sooner, since the selector now
+  exists and the sweep is a two-line consumption. ⚠⛔ The durable fix is ⛔ **not** a third copy: promote the
+  predicate to a shared selector so a fourth surface ⛔ cannot re-open it ([[feedback_mechanization_split_commitment]]).
+
+- **The `DriveRow` fence slices to END OF FILE — one appended declaration from vacuous.**
+  [`apps/mobile/tests/unit/drive-list-render.test.ts:297,371`] `listCode.slice(listCode.indexOf('function
+  DriveRow'))` has ⛔ no end bound, so two independent `toContain`s over that span ⛔ cannot establish that the
+  role and the handler sit on the SAME element — the invariant the test's own prose asserts (*"THE ROLE AND
+  THE HANDLER TRAVEL TOGETHER. ⛔ Neither half alone is acceptable"*). ⭐ **VERIFIED HARMLESS TODAY:**
+  `DriveRow` (`:453`) IS the last declaration in `MemberDriveList.tsx`.
+  **Trigger:** ⭐ the first declaration added below `DriveRow`.
+
+- **The sibling-control a11y gate recognises ⛔ ONLY `<Button>`.**
+  [`apps/mobile/tests/unit/drive-detail-render.test.ts`] `if (/<Button\b/.test(lines[j]))` while the prose
+  says *"every CONTROL"*. ⚠ A `<Pressable>`, `<TouchableOpacity>` or a tamagui stack carrying `onPress`
+  — ⭐ **exactly what `DriveRow` now is**, in this same diff — would sit inside a labelled container
+  undetected. ⭐ The file's own header states that tamagui elements become controls **by props, ⛔ not by
+  tag** ⇒ a tag-based gate is structurally the wrong instrument for the invariant asserted.
+  **Trigger:** the first non-`Button` pressable on this surface.
+
+- **`code()`'s block-comment strip is UN-ANCHORED.**
+  [`apps/mobile/tests/unit/drive-detail-render.test.ts:45-51`] `/\/\*[\s\S]*?\*\//g` re-introduces the exact
+  defect story E's review patched out of `codeOnly`, whose sibling anchors the opener at line start with a
+  `[Review][Patch]` note saying why. ⭐ ⛔ Not reachable in today's `MemberDriveDetail.tsx`.
+  **Trigger:** any `/*` appearing mid-line in a scanned file. ⚠ Now MORE load-bearing than before: the
+  family-13(a) fence was switched to `screenCode` in this pass, so `code()`'s correctness is on its path.
+
+- **`useLocalSearchParams<{ driveToken: string }>()` type-asserts away the `string[]` case.**
+  [`apps/mobile/app/(contribution)/drive/[driveToken].tsx`] The param is `string | string[] | undefined`; the
+  generic declares it `string`. ⭐ The runtime is now SAFE — the `addressPending` guard added in this pass
+  renders the LOADING state for any non-string — ⚠ but the type declaration still makes the hazard invisible
+  to the next reader. **Trigger:** any catch-all or repeated-param route added to this group.
+
+- **`flex={1}` on the direct child of a `ScrollView`.**
+  [`apps/mobile/components/drive-detail/MemberDriveDetail.tsx`] The classic RN/Yoga footgun (auto-height
+  content container vs `flexBasis: 0`). ⚠ The three early-return states use it on a NON-scrolling root where
+  it is correct; the success state copies the pattern into a scroll context where it is at best a no-op.
+  ⛔ **UNPROVEN** — ⛔ no deterministic repro without running the app on both platforms, and ⛔ this repo has
+  ⛔ no RN mount harness. **Trigger:** any report of clipped or short-rendering detail content.
+
+## Deferred from: code review of 11b-17-member-drive-detail-unredacted (2026-09-14) — ⭐ GROUP D re-review (the LAST group)
+
+⭐ Completes the chunked re-review (A · B · C · D). ⛔ None of these blocks `11b-17`, which stays `done`.
+
+- **`apps/public/tests/sahyog-vivran-copy.test.ts`'s hand-maintained `KEYS` array does ⛔ NOT include `label.branch`.**
+  ⭐ **PRE-EXISTING hole WIDENED, ⛔ not created:** `bank.title`, `bank.group_label`, `bank.account_label`,
+  `bank.equal_nominees` and `label.account_holder` are **already** absent from it. The prohibited-vocabulary and
+  comparison-to-target scans build their subject as `KEYS.map(t).join(' ')` ⇒ the new key's values are scanned in
+  ⛔ **neither** locale. ⚠ The file's own comment concedes it is *"kept in sync by hand"*.
+  ⭐ The durable fix is to DERIVE `KEYS` from the namespace's actual key set (or from the Astro page's `tr()` calls),
+  ⛔ not to append one more line — a hand-list that drifts is how five keys went unscanned.
+  **Trigger:** ⭐ the next key added to `sahyog-vivran`.
+
+- **The Hindi `sahyog-vivran` close-of-cycle strings DIVERGE from all three member namespaces.**
+  `outcome.fully_funded` (hi) reads `चक्र उस सहयोग के साथ पूरा हुआ जिसकी आवश्यकता थी।` on the PUBLIC DETAIL, where
+  `member-drive-detail`, `member-drive-list` and `sahyog-drive` all read `इस चक्र को आवश्यक सहयोग मिला और यह पूर्ण हुआ।`;
+  same split on `partial` and `under_funded`. **English is identical across all four.**
+  ⚠⛔ **PRE-EXISTING** (present at `main`) and ⛔ **NOT this story's to fix** — it is **ratified copy**, and re-wording
+  either side is a **Panel matter**, ⛔ not a dev edit ([[feedback_supersede_never_reinterpret]]). ⭐ The copy `11b-17`
+  shipped is the RIGHT one (it matches the member list). ⚠ A Hindi-locale member reads one sentence on the member
+  detail and a DIFFERENT sentence on the public detail **for the same drive** — the surface AC2 measures against.
+  ⛔ Nothing asserts cross-namespace equality of these three keys ⇒ ⛔ nothing will catch the next divergence.
+  **Trigger:** ⭐ a Panel ruling on the Hindi wording — or the first cross-namespace copy-equality gate (the durable fix).
+  ⚠ `$comment.outcome` in both locales was NARROWED in this pass so it no longer claims the false same-text property.
+
+- **The field-floor mapping proves a key EXISTS, ⛔ not that it CARRIES anything.**
+  [`apps/public/tests/member-drive-detail-field-floor.test.ts`]
+  The completeness test iterates `MEMBER_COUNTERPART` and checks `MEMBER_KEYS.has(key)` ⇒ **ANY** existing member key
+  satisfies **ANY** public field id. The jsdoc's stronger claim — *"it can ⛔ not be satisfied by editing one side"* —
+  is **false as written**: mapping a new public id to an existing key such as `status` satisfies both the completeness
+  and existence tests with **ZERO** contract change. ⭐ The `declaredGaps` assertion DOES close the `[]` escape hatch;
+  ⛔ it does ⛔ not close this one. ⭐ A type/semantic assertion per row is the real fix.
+  **Trigger:** ⭐ the next field added to the public Sahyog Vivran detail.
+
+- **The gated लक्ष्य is DERIVABLE on a `live` drive from two ungated figures.**
+  `raised = confirmedCount × fixedAmount` and `percent = confirmedCount ÷ assignedCount` ⇒
+  `target = raised ÷ (percent/100)` — and the member detail renders **both** with ⛔ no visibility gate, while
+  `driveTargetInr` is fail-closed behind `reveal_to_members` (`-211` cl.2).
+  ⚠⛔ **⛔ NOT RAISED AS A DEFECT, AND THE REASON MATTERS:** `2026-09-08-207` **cl.1**'s own text shows the Panel
+  **CONSIDERED THIS EXACT DIVISION CHANNEL** (*"`confirmedContributionCount ÷ confirmedPercentage` recovers the
+  roster"*) and **SCOPED ITS CLOSURE TO ARCHIVED ROWS**, leaving it open on `live` deliberately ⇒ ⭐ a
+  **ruled-acceptable consequence**, ⛔ not an unnoticed leak ([[feedback_trace_reachability_before_escalating]]).
+  **Trigger:** ⭐ any proposal to widen `-207` cl.1 to `live` rows — or a Panel question on whether the ₹ TARGET
+  deserves a stronger gate than the ROSTER, which is a different quantity with a different audience.
+
+- **The `isTestModule` carve-out narrows the SHARED walker, silently changing story D's `index_line.*` fence too.**
+  [`packages/i18n/tests/sahyog-shared-dark-copy.test.ts`]
+  `isTestModule` is applied inside `sources()`, whose single result feeds **BOTH** the `message_block.*` fence **and**
+  story D's `index_line.*` fence — and the new doc block argues the carve-out **entirely** in message-block terms,
+  naming no other fence. ⭐ The narrowing is **CORRECT in substance** (without it `AUTHORISED` would have had to name a
+  test file, which the fence forbids), and ⭐ **traced: a NO-OP for `index_line.*` today** — only `sahyog.astro` and the
+  file's own self-exclusion match. ⚠ A latent blind spot, ⛔ not a live one. ⭐ The fix is **one sentence** naming the
+  second fence in the `sources()` doc block, ⛔ not a code change. **Trigger:** the next `index_line.*` consumer.

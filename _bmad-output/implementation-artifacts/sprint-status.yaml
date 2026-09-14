@@ -1,3 +1,21 @@
+# last_updated: 2026-09-14e (✅⭐⭐ **`11b-17` — `bmad-code-review` RAN AGAINST THE 29-PATCH FIX COMMIT
+#   ITSELF (`9b407522`, 22 files), ⛔ NOT the feature diff Groups A-D already covered.** ⭐ Row: `done`
+#   (unchanged — it was already `done`). **No AC/ruling violation, no cross-patch contradiction found.**
+#   4 patches applied: a debunked "composite PK" claim reintroduced verbatim one file over from where
+#   this same commit corrected it (now cites `claim_nominee_bank_accounts_account_rank_check`); dead
+#   code (`const base = {...}; void base;`) removed; the openapi "only non-404 rejection" sentence
+#   narrowed (ignored 401/500) + `openapi/v1.yaml` regenerated; a `statSync` catch narrowed to
+#   EPERM/ELOOP, matching its own comment's claim instead of swallowing everything. **1 finding
+#   RECLASSIFIED from patch to defer after tracing**: `resourceLocator`'s pattern guard has no
+#   pre-check at the `handlers.ts:918` call site, but the per-Pariwar canonical-identifier format
+#   override it depends on is supplied by NO production call site (`spawn.ts` always uses the
+#   default) — real in shape, ⛔ not reachable in v1 ([[feedback_trace_reachability_before_escalating]]).
+#   **9 dismissed** after tracing against the tree, incl. an established Story 7.1 AC5 invariant a
+#   layer mistook for an unverified assumption, and an order-pinning test proven sound because its
+#   guarded function is flat sequential early-returns (textual order = execution order there).
+#   ⭐ Verified: `tsc` clean; contracts **1126/1126**; eslint exit 0 on both touched files.
+#   ⭐ 4 items deferred (3 carried from Group D unchanged + 1 new, above). Findings + deferrals written
+#   to the story file and `deferred-work.md`.
 # last_updated: 2026-09-14d (✅⭐⭐ **`11b-17` GROUP-D RE-REVIEWED — the CHUNKED RE-REVIEW IS COMPLETE
 #   (A · B · C · D). ALL FOUR GROUPS OF THE 4.4k-LINE DIFF HAVE NOW BEEN RE-REVIEWED.** ⭐ Row: `done`.
 #   ⭐ Group D = i18n + field floor (11 files). **MECHANICAL PARITY CLEAN, VERIFIED DIRECTLY:** en/hi

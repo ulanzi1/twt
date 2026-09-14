@@ -1673,6 +1673,40 @@ the label now rides the block's **HEADING**, which is already an accessibility e
 caught it is the one this session had **repaired one group earlier** — ⭐ it went from *selectively blind* to
 *catching a reviewer's own mistake* inside a single session.
 
+---
+
+### Review Findings — `bmad-code-review` RE-REVIEW (2026-09-14), the 29-PATCH FIX COMMIT itself (`9b407522`, 22 files)
+
+⭐ **Scope: a review of the review.** Groups A-D re-reviewed the ORIGINAL story diff and their findings were
+applied as 29 patches in a single commit (`9b407522`). This pass reviews THAT commit — the fixes, not the
+feature — against the diff alone (Blind Hunter), exhaustive path enumeration (Edge Case Hunter), and this
+story's own ACs/rulings (Acceptance Auditor). **No AC/ruling violation found** and **no cross-patch
+contradiction found** — every -217 cl.1/cl.2 and AC5 patch traced correctly across all touched layers. Five
+findings survive; nine raised by the layers were checked against the tree and dismissed (an established
+Story 7.1 AC5 invariant mistaken for an unverified assumption; a pre-existing, negligible-collision sentinel
+constant; three deliberately different "omit field" idioms justified by genuine nullable-column vs.
+decrypt-failure-sentinel distinctions; a well-reasoned single-entry-point fallback route; an `addressPending`
+state that Expo Router's dynamic-segment matching makes unreachable in the "permanently malformed" shape
+claimed; a harmless redundant test assertion; a non-vacuity threshold whose exact-coverage job is already
+done by a separate parity assertion; and an order-pinning test that — traced against `format.ts` — is
+provably sound because the guarded function is flat sequential early-returns, so textual order **is**
+execution order here).
+
+- [x] [Review][Patch] **A debunked claim from THIS SAME diff is reintroduced verbatim, one file over** [packages/contracts/tests/member-drive-detail.test.ts:250] — `apps/api/src/modules/member-pool/handlers.ts:810` corrects *"the composite PK admits at most two accounts"* as ⛔ FALSE in this same commit, naming the real bound as `claim_nominee_bank_accounts_account_rank_check` (a CHECK constraint, migration 0056). The new "FIVE COORDINATE KEYS" test added by this same commit stated the identical debunked claim as its own comment. ⭐ **APPLIED**: the comment now cites the CHECK constraint by name and records why the PK doesn't bound it.
+- [x] [Review][Patch] **Dead code in the new coordinate-keys test** [packages/contracts/tests/member-drive-detail.test.ts:199] — `const base = { driveToken: 'tok' }; void base;` was declared and immediately voided; nothing downstream referenced it. ⭐ **APPLIED**: removed.
+- [x] [Review][Patch] **"The only non-404 rejection" overclaims — 401 and 500 are also non-404** [openapi/v1.yaml:11052, packages/contracts/scripts/emit-openapi.ts:1836] — the sentence was scoped to the identity/existence-disclosure enumeration-oracle concern (404 vs 400-shape) but read as a blanket claim about the whole endpoint. ⭐ **APPLIED**: narrowed to "Among these identity-disclosure outcomes, the only non-404 rejection is..." in `emit-openapi.ts`, then `openapi/v1.yaml` regenerated via `pnpm contracts:emit-openapi` (diff confirmed as exactly this one line).
+- [x] [Review][Patch] **`statSync` catch swallows every exception though its own comment claims a narrower scope** [packages/contracts/tests/member-drive-detail.test.ts:71] — the comment said *"the `catch` covers EPERM/ELOOP"* but the code was a bare `catch { continue }` with no `err.code` check. ⭐ **APPLIED**: the catch now checks `err.code` and only swallows `EPERM`/`ELOOP`, re-throwing anything else — matching the stated intent.
+- [x] [Review][Defer] **`resourceLocator` has no validation against its own pattern at the call site — but the path that could break it is NOT reachable in v1** [apps/api/src/modules/member-pool/handlers.ts:918] (Edge Case Hunter, reclassified after tracing). `pool:${row.poolCanonicalIdentifier.toLowerCase()}` is fed straight into `RESOURCE_LOCATOR_PATTERN` (`audit-log-sink.ts:70`) with no pre-check at the call site — but `authEventToAuditInput` (`audit-log-sink.ts:104-116`) already validates any `resourceLocator` against that pattern and falls back to `user:<actorId>` with a `console.error` on mismatch, so the "no signal" claim in the original finding was itself overstated: there IS a log line, just a console-only one. ⚠⛔ **AND THE PREMISE THAT MADE THIS URGENT DOESN'T HOLD TODAY**: `formatPoolCanonicalIdentifier` (`packages/domain/src/pool/naming.ts:220`) accepts a per-Pariwar override `format` string, validated only to contain `YYYY`/`MM`/`###` exactly once with no charset restriction on the surrounding literal — but ⭐ **traced: no production call site ever supplies one.** `spawn.ts:324` is the only caller of `allocateCanonicalIdentifierRange` and never passes a `format`; the file's own doc comment confirms *"v1 implements only this default and TWT-Bihar passes it."* ⇒ the gap is real in the code's SHAPE, ⛔ not reachable today ([[feedback_trace_reachability_before_escalating]]) — reclassified from patch to defer rather than hardening a path nothing exercises. **Trigger:** the story that wires the per-Pariwar canonical-identifier format override to an actual admin setting — that story should either restrict the override's charset at the source (`assertValidCanonicalIdentifierFormat`) or upgrade the mapper's `console.error` to a structured alert before the override ships live.
+
+- [x] [Review][Defer] **`gcTime === 0` repurposed as a global "never persist" signal** [apps/mobile/components/Provider.tsx] — deferred, disclosed and narrow-by-design in the diff's own comment ("a NARROW, opt-in exclusion... does NOT close the repo-wide item"), not a misrepresentation. Latent hazard: any future unrelated screen that sets `gcTime: 0` for a different reason would also be silently excluded from persistence app-wide. **Trigger:** a second, unrelated use of `gcTime: 0` anywhere else in the app, or the repo-wide persisted-cache item this comment already tracks as open.
+- [x] [Review][Defer] **The NUL-byte fix covers only the one verified-live Postgres trigger, not the broader invalid-UTF-8 class** [apps/mobile/components/drive-detail/useMemberDriveDetailQuery.ts] — deferred, pre-existing and consistent with the route's already-documented "NO charset guard" scope (`openapi/v1.yaml`); other invalid byte sequences (unpaired surrogates, overlong encodings) could plausibly hit the same unhandled-throw path. **Trigger:** a second live-verified 500 from a different invalid-encoding shape, or a decision to add a general charset guard to the route.
+- [x] [Review][Defer] **The story file's Change Log table has no row for any 2026-09-14 work** [11b-17-member-drive-detail-unredacted.md, Change Log section] — deferred, out of this diff's scope (governance commits `403d53c0`/`58341e37`/`7b1551cd`, not `9b407522`). The newest row is still `2.0`/2026-09-13 (`ready-for-dev → review`) despite `Status: done`, the Group A-D re-reviews, `#decision-2026-09-14-217`, and this 29-patch commit all having landed since. **Trigger:** the next status/ownership change to this story, or a documentation pass across the epic.
+
+⭐⭐ **CHECKLIST VERDICT:** no `decision-needed` findings. 4 applied as patches; 4 deferred (one of the original 5 patch candidates — the `resourceLocator` finding — was reclassified to defer after tracing showed its trigger condition is unreachable in v1). **9 dismissed** after tracing against the tree (see scope note above).
+⭐⭐ **ALL FOUR PATCHES APPLIED AND VERIFIED, 2026-09-14** — see Change Log / Dev Agent Record for the verification run.
+
+---
+
 ## ⛔⛔ NINE THINGS THAT WILL BITE YOU — ⭐ read these after the Tasks, ⛔ before the first line of code
 
 ⭐ Each is load-bearing and each lived buried in a Trap, a Dev Note or the fifth paragraph of a Task.

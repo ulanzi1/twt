@@ -1833,9 +1833,9 @@ registry.registerPath({
     'decrypted value. A drive that does not exist, is not visible at this surface’s predicate, is ' +
     'addressed with a wrong or absent token, or belongs to ANOTHER Pariwar all return the SAME 404 — ' +
     'a response that distinguished them would be an enumeration oracle, and a 403 for the ' +
-    'cross-Pariwar case would be one too. The only non-404 rejection is a 400 for a token that ' +
-    'exceeds the 200-character length bound — a shape rejection that discloses nothing about which ' +
-    'drives exist. Requires a member session.',
+    'cross-Pariwar case would be one too. Among these identity-disclosure outcomes, the only non-404 ' +
+    'rejection is a 400 for a token that exceeds the 200-character length bound — a shape rejection ' +
+    'that discloses nothing about which drives exist. Requires a member session.',
   tags: ['member-pool'],
   request: { params: MemberDriveDetailParams },
   responses: {

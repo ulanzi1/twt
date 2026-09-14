@@ -2327,3 +2327,61 @@ Pariwar's history. ⛔ Exceeding a ceiling, once one is measurable, is **ROUTED*
 **vacuously** (the defect `57778f72` demonstrated live and `7fe540f9` fixed). ⚠ Verified in the
 strongest available way: `pnpm friction:check` **FAILED** on this story's file list before this block
 was written, and the failure is what this block answers.
+
+---
+
+**Story 11b.17 disposition (declaration affirmed — ⛔ NO new row, ⛔ no row retired, and ⛔ no row
+amended):** the member's per-drive DETAIL — one drive in the member's own Pariwar, opened from the
+11b.15 list by tapping a row (`apps/mobile/app/(contribution)/drive/[driveToken].tsx` +
+`components/drive-detail/**`, its `/api/v1/member/drive-detail/:driveToken` read, the
+`member-drive-detail` i18n namespace, and the navigation wiring on `components/drive-list/MemberDriveList.tsx`
+that turns that row's `accessibilityRole` from `text` into a real `button` with a real handler).
+
+⭐⭐ **IT ADDS A READ AND A TAP-THROUGH, AND NEITHER IS FRICTION.** UX Stance #2 / AR-60 declare
+**friction** — a step a member is **made to take**. This surface asks a member for ⛔ **nothing**: ⛔ no
+field, ⛔ no confirmation, ⛔ no OTP, ⛔ no step-up beyond the member session the list screen already
+requires, ⛔ no acknowledgement, ⛔ no wait-state a member must clear. It is reached by a **row tap** on
+a list the member already navigates (11b.15's own "declaration affirmed" surface), and it renders. ⇒ ⛔
+there is no payer, so there is no row to write. The row's role change (`text` → `button`) is the FIX to
+a defect the 11b.15 disposition never claimed as a virtue — a role implying interaction with no handler
+— ⛔ not a new interaction being introduced.
+
+⭐ **UNMASKED BANKING COORDINATES ARE A DISCLOSURE, ⛔ NOT A FRICTION.** AC3/AC4 render the claim's
+nominee bank accounts unmasked (`accountHolderName`, `accountNumber`, `ifsc`, `bankName`, `branch`) —
+strictly MORE sensitive than anything 11b.15 shows. ⚠ **The distinction the friction-budget framework
+draws is about STEPS, ⛔ not about SENSITIVITY**: showing more does ⛔ not make a member DO more. ⛔ No
+consent screen, ⛔ no re-authentication, ⛔ no "are you sure" gates the render — AC5's attributed audit
+line is a SERVER-SIDE control (`emitAuthAudit`, this session's own 29-patch pass), invisible to the
+member and imposing ⛔ zero interaction cost. ⚠ This is the SAME posture Story 3.3b's disposition takes
+for manual-KYC review: a heavier DATA obligation on the system is ⛔ not automatically a heavier STEP
+obligation on the member.
+
+⛔ **WHAT THIS DISPOSITION DOES ⛔ NOT TOUCH.**
+· ⛔ **No new admin UI, ⛔ no new toggle.** The लक्ष्य gate this screen also reads
+(`reveal_to_members`) is the SAME admin control 11b.15's disposition already covers — this story adds a
+second reader, ⛔ not a second control.
+· ⛔ **No public surface.** `apps/public/tests/member-drive-detail-field-floor.test.ts` appears in the
+AC-4 file list because it PINS a cross-namespace field-parity contract against the existing public
+Sahyog Vivran detail page; ⛔ no `apps/public/src/**` page or route is touched, ⛔ no public-facing
+behaviour changed.
+· ⛔ **No payment, no obligation.** This screen is READ-ONLY (Task 2's own rule: "⛔ THIS MODULE DECIDES
+A RENDER, ⛔ NEVER A BENEFIT") — the UPI ID that WOULD let a member act on what they see is
+deliberately kept off this wire and lives on the payment screen instead (`#decision-2026-09-10-212`
+cl.2, D3(D)) ⇒ ⛔ nothing here can become a step toward a payment obligation.
+· ⛔ **A11Y is net-positive, by construction, for the same reason as 11b.15**: the row now carries a
+real accessible role/handler pair instead of a dead `text` role, and this pass's own review closed a
+dead-key title/a11y-label gap the original implementation shipped with (Group D findings above) — ⇒ a
+screen-reader member is asked to do **less**, ⛔ not more, to reach the same information.
+
+⚠ **THE ONE MEASURABLE COST, STATED RATHER THAN OMITTED:** the native bundle grows by one screen, one
+large component (`MemberDriveDetail.tsx`), one formatting module, one query hook and one i18n
+namespace. ⭐ `member-app-native.js_bundle_bytes` and `page_weight_bytes` are both
+**`no-op — no measurable build output yet`** in the metric facet above, so there is ⛔ **nothing to
+attest** against them and ⛔ no number is claimed here ([[feedback_record_unattested_no_backfill]]).
+⛔ Exceeding a ceiling, once one is measurable, is **ROUTED**, ⛔ never absorbed.
+
+⭐ **This disposition was written AFTER the implementation commits existed** (`ad65903f` through
+`2e594f6b`), ⛔ not against an empty diff — AC-4 diffs **COMMITTED** history, so a declaration written
+first passes **vacuously**. ⚠ Verified in the strongest available way: `ci:local`'s `friction-budget`
+job **FAILED** on this story's file list (this branch's first push) before this block was written, and
+the failure is what this block answers.

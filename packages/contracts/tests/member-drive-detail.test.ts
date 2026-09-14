@@ -65,11 +65,15 @@ function walk(dir: string, out: string[]): string[] {
     // (`ios`/`android` were added after this exact failure on `React-jsinspector/.../Base64.h`), and
     // `.expo` / `.tamagui` / `coverage` / `.next` are ⛔ not in it. ⇒ SKIP what we can NAME, and
     // SURVIVE what we cannot ([[feedback_gate_scope_semantic_coverage]]).
-    // ⚠ `throwIfNoEntry: false` covers the dangling-link and race cases; the `catch` covers EPERM/ELOOP.
+    // ⚠ `throwIfNoEntry: false` covers the dangling-link and race cases; the `catch` covers EPERM/ELOOP —
+    // ⛔ and ONLY those (review finding, 2026-09-14): a bare `catch` would also swallow a real bug or an
+    // unrelated I/O fault as "skip this entry," which is ⛔ not what the comment above claims.
     let st;
     try {
       st = statSync(full, { throwIfNoEntry: false });
-    } catch {
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code !== 'EPERM' && code !== 'ELOOP') throw err;
       continue;
     }
     if (st === undefined) continue;
@@ -196,8 +200,6 @@ describe('⭐⭐ AC3(b) — the coordinate keys are structurally ABSENT, ⛔ nev
     // exactly how *"a masked account# cannot be transferred to"* becomes *"a null account# cannot be
     // transferred to"* — the SAME failure `-190` cl.3 exists to prevent, arriving through the type
     // rather than through a mask. ⛔ `[]` stays a FIRST-CLASS state; ⛔ a `null` ARRAY is ⛔ not.
-    const base = { driveToken: 'tok' };
-    void base;
     const acct = {
       rank: 1 as const,
       accountHolderName: 'Sunita Devi',
@@ -247,7 +249,9 @@ describe('⭐⭐ AC3(b) — the coordinate keys are structurally ABSENT, ⛔ nev
     expect(MemberDriveDetailResponse.safeParse(noAccounts).success).toBe(false);
     // ⭐ `[]` IS valid — the claim's bank details were ⛔ never collected (6.8 AC3's absence signal).
     expect(MemberDriveDetailResponse.safeParse({ ...resp, nomineeAccounts: [] }).success).toBe(true);
-    // ⛔ THREE accounts are ⛔ not representable — the composite PK's ceiling, mirrored on the wire.
+    // ⛔ THREE accounts are ⛔ not representable — bounded by `claim_nominee_bank_accounts_account_rank_check`
+    // (`CHECK (account_rank IN (1, 2))`, migration 0056), ⛔ NOT the composite PK (review finding, 2026-09-14:
+    // that PK admits one row per distinct rank and does ⛔ not itself cap the rank's range), mirrored on the wire.
     expect(
       MemberDriveDetailResponse.safeParse({ ...resp, nomineeAccounts: [acct, acct, acct] }).success,
     ).toBe(false);

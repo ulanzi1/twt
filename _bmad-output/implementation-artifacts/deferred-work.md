@@ -9219,3 +9219,52 @@ field floor) remains ⛔ not re-reviewed. ⛔ None of these blocks `11b-17`, whi
   test file, which the fence forbids), and ⭐ **traced: a NO-OP for `index_line.*` today** — only `sahyog.astro` and the
   file's own self-exclusion match. ⚠ A latent blind spot, ⛔ not a live one. ⭐ The fix is **one sentence** naming the
   second fence in the `sources()` doc block, ⛔ not a code change. **Trigger:** the next `index_line.*` consumer.
+
+---
+
+## Deferred from: code review of 11b-17-member-drive-detail-unredacted (2026-09-14) — the 29-PATCH FIX COMMIT itself (`9b407522`)
+
+⭐ Scope: not the feature diff (already reviewed in the four groups above) but the FIX commit those groups produced.
+No AC/ruling violation and no cross-patch contradiction found; three items deferred, all pre-existing or
+explicitly disclosed by the commit's own comments — ⛔ none blocks `11b-17`, which stays `done`.
+
+- **`gcTime === 0` repurposed as a global "never persist" signal.** [`apps/mobile/components/Provider.tsx`]
+  `shouldDehydrateQuery` now treats `gcTime === 0` as an app-wide "exclude from persistence" marker, not just a
+  cache-lifetime knob for this one screen. ⭐ Disclosed and narrow-by-design in the diff's own comment ("a NARROW,
+  opt-in exclusion... does NOT close the repo-wide item"), ⛔ not a misrepresentation. ⚠ Latent hazard: any future
+  unrelated screen that sets `gcTime: 0` for a different reason is silently excluded from persistence too, with no
+  test covering that interaction. **Trigger:** a second, unrelated use of `gcTime: 0` elsewhere in the app, or the
+  repo-wide persisted-cache item this comment already tracks as open.
+
+- **The NUL-byte fix covers only the one verified-live Postgres trigger, not the broader invalid-UTF-8 class.**
+  [`apps/mobile/components/drive-detail/useMemberDriveDetailQuery.ts`] The fix targets `driveToken.includes(' ')`
+  specifically — the one sequence verified live to raise Postgres `22021`. ⚠ **PRE-EXISTING and consistent with the
+  route's own documented scope**: `openapi/v1.yaml` already states the route has "NO charset guard," and other
+  invalid byte sequences (unpaired surrogates, overlong encodings) could plausibly hit the same unhandled-throw path
+  without being verified live yet. ⛔ Not this commit's job to close the whole class — it closes the one case it
+  proved. **Trigger:** a second live-verified 500 from a different invalid-encoding shape, or a decision to add a
+  general charset guard to the route.
+
+- **The story file's Change Log table has no row for any 2026-09-14 work.**
+  [`11b-17-member-drive-detail-unredacted.md`, Change Log section] ⛔ Out of THIS commit's scope — the gap is in the
+  governance commits around it (`403d53c0`/`58341e37`/`7b1551cd`), not in `9b407522`. The newest row is still
+  `2.0`/2026-09-13 (`ready-for-dev → review`) despite `Status: done`, the four re-review groups, the Trustee ruling
+  `#decision-2026-09-14-217`, and this 29-patch commit all having landed since. **Trigger:** the next status or
+  ownership change to this story, or a documentation pass across the epic.
+
+- **`resourceLocator` has no validation against its own pattern at the call site — but the path that could break
+  it is NOT reachable in v1.** [`apps/api/src/modules/member-pool/handlers.ts:918`] (Edge Case Hunter finding,
+  reclassified from patch to defer after tracing.) `pool:${row.poolCanonicalIdentifier.toLowerCase()}` is fed
+  straight into `RESOURCE_LOCATOR_PATTERN` with no pre-check at the call site — but `authEventToAuditInput`
+  (`audit-log-sink.ts:104-116`) already validates any `resourceLocator` against that pattern and falls back to
+  `user:<actorId>` with a `console.error` on mismatch, so "no signal" was itself an overstatement: there IS a log
+  line, a console-only one. ⚠⛔ **THE PREMISE THAT MADE THIS URGENT DOESN'T HOLD TODAY:**
+  `formatPoolCanonicalIdentifier` (`packages/domain/src/pool/naming.ts:220`) accepts a per-Pariwar override
+  `format` string validated only to contain `YYYY`/`MM`/`###` exactly once, with no charset restriction on the
+  surrounding literal — but ⭐ **traced: no production call site ever supplies one.** `spawn.ts:324` is the only
+  caller of `allocateCanonicalIdentifierRange` and never passes a `format`; the file's own doc comment confirms
+  *"v1 implements only this default and TWT-Bihar passes it."* ⇒ real in the code's SHAPE, ⛔ not reachable today
+  ([[feedback_trace_reachability_before_escalating]]). **Trigger:** the story that wires the per-Pariwar
+  canonical-identifier format override to an actual admin setting — that story should either restrict the
+  override's charset at the source (`assertValidCanonicalIdentifierFormat`) or upgrade the mapper's
+  `console.error` to a structured alert before the override ships live.

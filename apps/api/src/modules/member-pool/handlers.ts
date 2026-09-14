@@ -360,6 +360,16 @@ export function createMemberPoolHandlers(deps: AppDeps) {
      * drive"* — is a **404**, deliberately indistinguishable. ⛔⛔ **A RESPONSE THAT DISTINGUISHES
      * THEM IS AN ENUMERATION ORACLE**, and *"real drive, wrong token"* answering differently from
      * *"no such drive"* is the one most likely to be "improved" into a 403.
+     *
+     * ⚠⛔ **ONE PRECISION ON *"malformed token"*, ⛔ SO THE SENTENCE ABOVE IS ⛔ NOT READ AS ABSOLUTE**
+     * (2026-09-14; the twin of the `emit-openapi.ts` correction). ⭐ A token of **VALID LENGTH** that
+     * names nothing reaches the domain read and 404s through this very path — ⭐ that is the oracle
+     * property and it HOLDS. ⚠ A token **OVER 200 characters** is rejected by the route's `params`
+     * schema (`MemberDriveDetailParams`) with a **400**, ⛔ before this handler runs. ⇒ ⭐ that 400 is
+     * a **SHAPE rejection** disclosing ⛔ nothing about which drives exist, ⛔ not an oracle — but it
+     * is a real, reachable non-404, so ⛔ do ⛔ not claim *"every malformed token is a 404"*.
+     * ⛔⛔ **AND DO ⛔ NOT "FIX" IT BY TIGHTENING THE PARAM SCHEMA** — a charset/format regex would make
+     * every malformed token a **400** and re-introduce exactly the shape distinction AC3 forbids.
      * ⚠ Anything else that throws **5xxs**, loudly — a failed read, a failed presentation-mode read,
      * an aborted transaction. ⭐ The deliberate, NARROWER fail-soft exception is per-FIELD (below).
      *
@@ -624,10 +634,16 @@ async function resolveDriveList(
       (async (): Promise<string | null> => {
         // ── The NOMINEE's name (Trustee-ratified `2026-09-07-205` cl.1, `pii_tier: 1`) ─────────
         // ⚠⛔ IT RIDES THE **SAME** BOUNDED MAP, ⛔ never a second pass. ⭐ ONE extra `decryptDek`
-        // per row that has an account — ⛔ not two: the claim's two accounts are EQUAL
-        // destinations for the SAME nominee (an RBI per-account-cap workaround), so the domain
-        // read returns exactly ONE ciphertext and decrypting the second would be a Tier-1 decrypt
-        // with ⛔ no authorising purpose. ⛔⛔ THERE IS ⛔ NO SECOND GATE ON IT, AND THAT IS RULED:
+        // per row that has an account — ⛔ not two: this LIST row renders the holder name in a
+        // SUMMARY slot with room for ⛔ no second value, so the domain read returns exactly ONE
+        // ciphertext and decrypting the second would be a Tier-1 decrypt with ⛔ no authorising
+        // purpose ON THIS SURFACE.
+        // ⚠⛔⛔ **THE OLD GROUND — *"EQUAL destinations for the SAME nominee"* — IS ⛔ FALSE AND IS
+        // SUPERSEDED** (`#decision-2026-09-13-215`): `claim_nominee_bank_accounts` carries ⛔ no FK to
+        // `member_nominees`, ⛔ no `nominee_rank` and ⛔ no holder-name-must-match rule (DDL `0056`)
+        // ⇒ the accounts are a **claim-scoped payment channel** and two DIFFERING holder names are a
+        // **LEGITIMATE STATE**. ⭐ The one-decrypt BEHAVIOUR here stays CORRECT (`-215` §4) — ⛔ only
+        // its justification changes. ⚠ The DETAIL surface decrypts both, and that is ⛔ not a reversal. ⛔⛔ THERE IS ⛔ NO SECOND GATE ON IT, AND THAT IS RULED:
         // `-190` cl.2 published the nominee name and `-205` cl.9 records that narrowing it by
         // claim OUTCOME would be a NEW suppression rule ⛔ nobody has ruled. ⛔ Do ⛔ not invent one
         // here.
@@ -704,6 +720,23 @@ async function resolveDriveDetail(
 ): Promise<MemberDriveDetailResponse> {
   const { memberIdStr, pariwarId, pariwarIdStr, driveToken, now } = ctx;
 
+  // ⚠⛔⛔ **A NUL BYTE IN THE TOKEN IS A 404, ⛔ NOT A 500 — AND THIS GUARD IS ⛔ NOT DECORATION.**
+  // ⭐ VERIFIED LIVE (2026-09-14 Group-B review): `MemberDriveDetailParams` is `.min(1).max(200)` with
+  // ⛔ NO charset guard, so a percent-encoded NUL decodes to a 1-character string that PASSES the route
+  // schema and is bound into `eq(pools.publicToken, …)`. Postgres then raises
+  // `22021 invalid byte sequence for encoding "UTF8": 0x00` — a THROW, ⛔ not a `null` return — so it
+  // escapes the `row === null` mapping below, rolls the scope tx back and 500s. ⚠ ⛔ Any authenticated
+  // member could fire it at will, on the path whose own doc-block promises a 404 for a malformed token.
+  // ⛔⛔ **THE FIX IS DELIBERATELY ⛔ NOT A TIGHTER PARAM REGEX.** A charset/format constraint on
+  // `MemberDriveDetailParams` would turn every malformed token into a **400** and re-introduce the
+  // shape distinction AC3 forbids ⇒ ⭐ the guard belongs HERE, answering the SAME 404 as every other
+  // unresolvable address ([[feedback_closure_language_precision]] — ⛔ a 404 for a different reason is
+  // still the same answer, and that is the point).
+  // ⚠ A public token is 22 chars of base64url (`public-token.ts`) ⇒ ⛔ nothing legitimate carries a NUL.
+  if (driveToken.includes('\u0000')) {
+    throw new NotFoundError('Drive not found', 'member_drive_detail.not_found');
+  }
+
   const row = await poolDomain.readMemberDriveDetail(tx, pariwarId, driveToken, { now });
   // ⭐⭐ FIVE CASES, ⛔ ONE ANSWER — see the accessor's doc-block. ⛔⛔ Do ⛔ NOT split them into
   // distinguishable responses: *"real drive, wrong token"* answering differently from *"no such
@@ -759,8 +792,12 @@ async function resolveDriveDetail(
 
   // ── ⭐⭐ THE NOMINEE'S COMPLETE, UNMASKED BANKING COORDINATES ─────────────────────────────────
   // ⚠⛔ **BOTH ACCOUNTS, AND IT IS ⛔ NOT A REVERSAL OF THE LIST'S ONE-DECRYPT RULE** (`-213` cl.1):
-  // that rule governs the HOLDER NAME, which is *"the SAME nominee"* twice ⇒ a second decrypt buys
-  // ⛔ nothing THERE. ⭐ Here `accountNumber` and `ifsc` **DIFFER** per account ⇒ the second decrypt
+  // that rule governs the HOLDER NAME, which the list renders in a SUMMARY slot with room for ⛔ no
+  // second value ⇒ a second decrypt buys ⛔ nothing THERE.
+  // ⚠⛔⛔ **⛔ NOT because it is *"the SAME nominee"* twice — that ground is FALSE**
+  // (`#decision-2026-09-13-215`: ⛔ no FK, ⛔ no `nominee_rank`, ⛔ no match rule ⇒ two DIFFERING holder
+  // names are a LEGITIMATE state). ⛔ Do ⛔ not restore the equality reading.
+  // ⭐ Here `accountNumber` and `ifsc` **DIFFER** per account ⇒ the second decrypt
   // returns information the first does ⛔ not carry, under the purpose `-199` already granted — and
   // the money **can have gone to both** (*"EQUAL payment destinations, the donor's choice"*), so
   // rendering one would be **incomplete by construction**.
@@ -768,7 +805,14 @@ async function resolveDriveDetail(
   //
   // ⚠ `Promise.all` across at most TWO accounts × THREE fields — ⛔ no `mapWithConcurrency` cap is
   // owed: `DIRECTORY_DECRYPT_CONCURRENCY` exists to bound a PAGE of rows, and this surface's bound is
-  // structural (the composite PK admits at most two accounts), ⛔ not a policy number.
+  // structural, ⛔ not a policy number.
+  // ⚠⛔ **THE BOUND IS THE `CHECK`, ⛔ NOT THE COMPOSITE PK** (corrected 2026-09-14). This comment read
+  // *"the composite PK admits at most two accounts"* — ⛔ FALSE: a PK on `(claim_case_id, account_rank)`
+  // admits **one row per distinct rank**, i.e. as many rows as the column's domain allows. ⭐ What
+  // actually bounds it is `claim_nominee_bank_accounts_account_rank_check` —
+  // `CHECK (account_rank IN (1, 2))` (`migrations/0056`) — a **DIFFERENT OBJECT**, and the one a future
+  // widening would touch. ⚠ The conclusion (⛔ no cap owed) is unchanged; ⛔ the cited reason was wrong,
+  // and a reader widening the CHECK would have found the PK sentence still literally true.
   const fieldLog = (rank: number, field: string) => (err: unknown) =>
     request.log.error(
       { err, account_rank: rank, field, poolId: row.poolId },
@@ -809,15 +853,21 @@ async function resolveDriveDetail(
         ifsc,
         // ⚠⛔ **`bank_name` IS `text NOT NULL` WITH ⛔ NO NON-EMPTY CHECK ⇒ `''` IS REACHABLE**, and
         // `''` is the exact value that once 500'd the whole public transparency page against a
-        // `z.string().min(1)`. ⭐ Degrade it through the SAME distinct sentinel — ROW-LOCAL, ⛔ never
-        // page-wide — rather than ship a blank bank label. ⚠ `.trim()` is the EMPTINESS TEST only:
-        // a whitespace-only value satisfies `.min(1)`, so there is no 500, but it renders VISUALLY
-        // BLANK (the 11a.3 `district` lesson). ⛔ The value is ⛔ not trimmed on the way OUT, so a
-        // bank name with real leading/trailing spacing is shown as stored.
-        bankName:
-          account.bankName.trim().length > 0
-            ? account.bankName
-            : NOMINEE_BANK_DECRYPT_FAILED_SENTINEL,
+        // `z.string().min(1)`. ⚠ `.trim()` is the EMPTINESS TEST only: a whitespace-only value satisfies
+        // `.min(1)`, so there is no 500, but it renders VISUALLY BLANK (the 11a.3 `district` lesson).
+        // ⛔ The value is ⛔ not trimmed on the way OUT, so a bank name with real leading/trailing
+        // spacing is shown as stored.
+        //
+        // ⭐⭐ **`null`, ⛔ NOT THE SENTINEL — `#decision-2026-09-14-217` cl.2 (Trustee-ratified, DR + KB),
+        // option (B).** An unrecorded bank name OMITS ITS ROW, exactly as `branch` below already does.
+        // ⚠⛔⛔ **THIS LINE USED TO SHIP `NOMINEE_BANK_DECRYPT_FAILED_SENTINEL` AND THAT WAS A FALSE
+        // STATEMENT** (Group-B review finding, 2026-09-14): `bank_name` is ⛔ **never encrypted**, so the
+        // sentinel reported a **crypto failure that did not happen** — and `fieldLog` ⛔ never fires on
+        // this branch, so a blank data-entry field was **indistinguishable from a KMS fault in the UI
+        // AND in the logs**. ⭐ The `branch` arm eight lines below stated the governing rule all along:
+        // *"a sentinel here would report a failure that did not happen."*
+        // ⛔⛔ The three Tier-1 coordinates ABOVE keep the sentinel — ⭐ for them the failure is REAL.
+        bankName: account.bankName.trim().length > 0 ? account.bankName : null,
         // ⚠⛔⛔ **`branch` IS ⛔ NOT `bankName`'s TWIN — ⛔ DO ⛔ NOT WRITE ONE GUARD FOR BOTH.** The
         // column is GENUINELY NULLABLE ⇒ a `null` is an **ORDINARY ABSENT OPTIONAL**, ⛔ not a fault
         // and ⛔ not a decrypt failure. ⭐ The surface **OMITS THE ROW**; a sentinel here would report
@@ -841,9 +891,31 @@ async function resolveDriveDetail(
   // CHAIN"*, ⛔ not *"⛔ nowhere"*, and the asymmetry is survivable because `rotatePoolPublicToken`
   // exists. ⛔ Do ⛔ not "reconcile" the two.
   // ⛔ And ⛔ NEVER a decrypted coordinate, in any field, ever.
+  // ⚠⛔⛔ **`resourceLocator` IS WHAT MAKES AC5 TRUE — ⛔ `context` ALONE DOES ⛔ NOT.**
+  // ⭐ `audit_log_entries` has ⛔ **NO context column**: `authEventToAuditInput` SHA-256-HASHES
+  // `event.context` into `request_payload_hash` (`audit-log-sink.ts`), and the locator otherwise
+  // defaults to the constant `user:<actorId>`. ⇒ ⛔ **WITHOUT THE LINE BELOW, TWO OPENS BY THE SAME
+  // MEMBER OF TWO DIFFERENT FAMILIES' DRIVES PRODUCE BYTE-IDENTICAL DURABLE ROWS** and the chain
+  // cannot answer *"which family's coordinates did this member read"* — the ⛔ one question AC5 and
+  // Trap 2 exist to make answerable. ⚠ That is exactly how this shipped, and the covering test could
+  // ⛔ not see it because it asserts the IN-MEMORY `CapturingAuditSink`, which retains `context`
+  // (2026-09-14 Group-B review finding).
+  // ⚠ The file already stated the mechanism 100 lines above the new sink entry — *"THE LINE IS A
+  // COUNTER, ⛔ NOT A FORENSIC RECORD … ⛔ Never describe this event as carrying the query context"*
+  // (`audit-sink.ts`) — ⭐ the claim, ⛔ not the sink, was the thing that was wrong.
+  // ⭐ `writeAppealReversalDisclosureAudit` (`public-pages/handlers.ts`) is the precedent AC5 itself
+  // names, and IT uses a real locator; this line adopts the same half it had dropped.
+  //
+  // ⛔⛔ **LOWERCASED DELIBERATELY, ⛔ NOT COSMETICALLY.** `RESOURCE_LOCATOR_PATTERN` is
+  // `/^[a-z0-9][a-z0-9:_.-]{0,127}$/` — a bare `P-2026-09-001` **FAILS the guard** and is DISCARDED
+  // back to `user:<actorId>` **with only a console line** ⇒ the fix would look applied and ⛔ not be.
+  // ⚠⛔ ⛔ NEVER the public token here — a live public ADDRESS in the durable chain is what AC5
+  // forbids; ⭐ the CANONICAL IDENTIFIER is the operational key and carries ⛔ no address.
+  // ⛔ And ⛔ NEVER a decrypted coordinate, in any field, ever.
   emitAuthAudit(deps, request, 'member_drive_detail.coordinates_viewed', {
     actorId: memberIdStr,
     pariwarId: pariwarIdStr,
+    resourceLocator: `pool:${row.poolCanonicalIdentifier.toLowerCase()}`,
     context: {
       pool_canonical_identifier: row.poolCanonicalIdentifier,
       nominee_accounts: nomineeAccounts.length,
@@ -861,8 +933,19 @@ async function resolveDriveDetail(
     // the FIRST account's, matching the member list's own `nomineeName` semantics and the public
     // page's single `nominee_account_holder_name`. ⛔ It carries ⛔ NO gate, and that is RULED
     // (`-190` cl.2 published it; `-205` cl.9 records that narrowing it by claim OUTCOME would be a
-    // NEW suppression rule ⛔ nobody has ruled). ⇒ ⭐ the two surfaces are SYMMETRIC on this field and
-    // the `member ≥ public` comparison MUST compare it.
+    // NEW suppression rule ⛔ nobody has ruled).
+    // ⚠⛔⛔ **THE SURFACES ARE ⛔ NOT SYMMETRIC TODAY, AND THE ASYMMETRY RUNS THE ⛔ OPPOSITE WAY TO
+    // WHAT THIS COMMENT ONCE CLAIMED** (2026-09-14 Group-B review). ⭐ BY RULE they are symmetric and
+    // the `member ≥ public` comparison MUST compare this field. ⛔ **In PRODUCTION the public index
+    // and the member LIST return `null` here on EVERY drive**: both decrypt
+    // `account_holder_name_ciphertext` with `decryptKycField` (`fieldClass: 'member_kyc'`) while the
+    // ⛔ only writer encrypts it as `'claim_nominee_bank'`, and `fieldClass` is bound into the GCM AAD
+    // ⇒ the auth tag fails and the fail-soft `catch` yields `null`, indistinguishable from *"no bank
+    // details collected"*. ⚠ Their suites are GREEN because their FIXTURES encrypt in the reader's
+    // WRONG class — a value the real writer ⛔ can never produce.
+    // ⭐⭐ **THIS surface is the one that is CORRECT** (`decryptNomineeBankFieldSoft`, right class) ⇒
+    // ⛔ do ⛔ NOT "align" it to the others. Routed in `deferred-work.md` with an IMMEDIATE trigger;
+    // ⛔ the fix is theirs, ⛔ not this file's.
     // ⚠⛔ A decrypt-failure SENTINEL is ⛔ NOT a name — it is surfaced per-account above, and the
     // summary field reports ABSENCE rather than shipping the sentinel where a name belongs.
     nomineeName: resolveSummaryNomineeName(nomineeAccounts),

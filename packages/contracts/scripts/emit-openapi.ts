@@ -1833,12 +1833,20 @@ registry.registerPath({
     'decrypted value. A drive that does not exist, is not visible at this surface’s predicate, is ' +
     'addressed with a wrong or absent token, or belongs to ANOTHER Pariwar all return the SAME 404 — ' +
     'a response that distinguished them would be an enumeration oracle, and a 403 for the ' +
-    'cross-Pariwar case would be one too. Requires a member session.',
+    'cross-Pariwar case would be one too. The only non-404 rejection is a 400 for a token that ' +
+    'exceeds the 200-character length bound — a shape rejection that discloses nothing about which ' +
+    'drives exist. Requires a member session.',
   tags: ['member-pool'],
   request: { params: MemberDriveDetailParams },
   responses: {
     200: { description: 'The member’s view of one drive', content: jsonOf(memberDriveDetailComponents.MemberDriveDetailResponse) },
-    400: errorResponse('Validation failed (malformed drive token)'),
+    // ⚠⛔⛔ **⛔ NOT "malformed token" — that case returns a 404, and saying otherwise CONTRADICTS the
+    // description above and three doc-blocks.** A path segment that is merely WRONG (any length up to
+    // 200) parses fine, reaches the WHERE clause, returns zero rows and 404s through the very same
+    // path as a non-existent drive — which is the enumeration-oracle property this surface is built on.
+    // ⭐ The ⛔ ONLY thing this 400 reports is a token exceeding `MemberDriveDetailParams`'s `.max(200)`
+    // bound — a SHAPE rejection that discloses ⛔ nothing about which drives exist.
+    400: errorResponse('Validation failed — the drive token exceeds the 200-character bound. A token of valid length that names no visible drive returns 404, never 400.'),
     401: errorResponse('Authentication required'),
     404: errorResponse('No such drive for this address and caller — indistinguishable from a wrong token, a non-visible drive, or another Pariwar’s drive'),
     500: errorResponse('The drive detail could not be resolved — never a partial or silently degraded payload'),

@@ -21,10 +21,24 @@ import { memberAuth } from '../../lib/member-api'
 // `pool-contributors`, `validity`, `renewal-status` and `yogdaan-bahi` while LOOKING closed.
 // ⭐ The trigger is RECORDED AS FIRED against that item ([[feedback_closure_language_precision]]).
 //
-// ⭐ WHAT THIS HOOK DOES DO ABOUT IT: `gcTime: 0` — ⛔ this response is ⛔ NOT retained after the
-// screen unmounts, so it never reaches the MMKV blob in the first place. ⚠ That is a NARROW,
-// surface-local mitigation and ⛔ it is ⛔ NOT the repo-wide fix; ⛔ do ⛔ not read it as closing the
-// deferred item.
+// ⭐ WHAT THIS HOOK DOES DO ABOUT IT: `gcTime: 0`, ⭐ **AND — SINCE 2026-09-14 — THE PERSISTER
+// EXCLUSION THAT MAKES IT MEAN ANYTHING.**
+// ⚠⛔⛔ **THE ORIGINAL CLAIM HERE WAS FALSE, AND IS KEPT AS THE RECORD RATHER THAN REWRITTEN**
+// ([[feedback_record_unattested_no_backfill]]). It read: *"`gcTime: 0` — this response is ⛔ NOT
+// retained after the screen unmounts, so **it never reaches the MMKV blob in the first place**."*
+// ⛔ **The second half was ⛔ NOT TRUE.** `defaultShouldDehydrateQuery` is `status === 'success'` and
+// consults `gcTime` ⛔ NOWHERE, so while this screen was MOUNTED and SUCCESSFUL the decrypted payload —
+// holder name, FULL account number, IFSC, bank, branch, ×2 accounts — WAS written to MMKV inside the
+// 1s throttle window. `gcTime: 0` evicts ⛔ only on unmount ⇒ it shortened the window, it ⛔ never
+// closed it. ⚠⛔ And on relaunch `hydrate()` rebuilt the query WITHOUT this hook's options, so the
+// restored copy inherited the **7-day** client default — ⛔ strictly worse than the original.
+// ⭐⭐ **NOW IT IS TRUE, AND ⛔ NOT BY THIS LINE ALONE:** `components/Provider.tsx` passes a
+// `dehydrateOptions.shouldDehydrateQuery` that treats `gcTime === 0` as an explicit
+// *"⛔ NEVER PERSIST THIS"* marker. ⇒ ⛔ do ⛔ not remove `gcTime: 0` here thinking it is only an
+// eviction hint, and ⛔ do ⛔ not remove the Provider exclusion thinking this line still covers it —
+// ⭐ **the two are ONE control in two files.**
+// ⚠ It remains a NARROW mitigation and ⛔ it is ⛔ NOT the repo-wide fix; ⛔ do ⛔ not read it as
+// closing the deferred item.
 //
 // ── ⚠⛔ THE ERROR STATE IS REACHABLE HERE, AND KEEPING IT SO IS THE POINT ────────────────────────
 // The route is deliberately NOT fail-soft (see `member-pool/handlers.ts`'s `driveDetail`), so a read

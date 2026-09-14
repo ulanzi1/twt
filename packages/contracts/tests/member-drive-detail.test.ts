@@ -58,7 +58,21 @@ function walk(dir: string, out: string[]): string[] {
   for (const entry of readdirSync(dir)) {
     if (SKIP.has(entry)) continue;
     const full = join(dir, entry);
-    const st = statSync(full);
+    // ⚠⛔⛔ **`statSync` FOLLOWS SYMLINKS AND THROWS ON A BROKEN ONE — AND THIS WALK RUNS AT MODULE
+    // SCOPE**, so ⛔ ONE dangling link anywhere under `apps/`/`packages/` failed COLLECTION of this
+    // whole file, taking down the six AC3(b) contract-shape assertions that ⛔ never touch the disk.
+    // ⭐ The `SKIP` set is ⛔ not a fix for that — it is a list of places we happen to know about
+    // (`ios`/`android` were added after this exact failure on `React-jsinspector/.../Base64.h`), and
+    // `.expo` / `.tamagui` / `coverage` / `.next` are ⛔ not in it. ⇒ SKIP what we can NAME, and
+    // SURVIVE what we cannot ([[feedback_gate_scope_semantic_coverage]]).
+    // ⚠ `throwIfNoEntry: false` covers the dangling-link and race cases; the `catch` covers EPERM/ELOOP.
+    let st;
+    try {
+      st = statSync(full, { throwIfNoEntry: false });
+    } catch {
+      continue;
+    }
+    if (st === undefined) continue;
     if (st.isDirectory()) walk(full, out);
     else if (EXTS.some((e) => entry.endsWith(e))) out.push(full);
   }
@@ -140,9 +154,23 @@ describe('⭐⭐ AC3(b) — the coordinate keys are structurally ABSENT, ⛔ nev
     expect(MemberDriveNomineeAccountView.safeParse(one).success).toBe(true);
     // ⛔ `vpa` is ⛔ NOT on this view — `2026-09-10-212` cl.2 ruled the UPI ID onto the PAYMENT screen.
     expect(MemberDriveNomineeAccountView.safeParse({ ...one, vpa: 'x@upi' }).success).toBe(false);
-    // ⚠ `branch` is GENUINELY NULLABLE; `bankName` is ⛔ NOT. ⛔ Do ⛔ not write one guard for both.
+    // ⭐⭐ **BOTH `branch` AND `bankName` ARE NULLABLE — `#decision-2026-09-14-217` cl.2 (Trustee-ratified,
+    // DR + KB), option (B).** An unrecorded bank name OMITS ITS ROW, exactly as an absent branch does.
+    // ⚠⛔⛔ **THIS ASSERTION PREVIOUSLY READ `bankName …isNullable()).toBe(false)` AND IT WENT RED ON THE
+    // RULING — ⭐ THAT IS THE FENCE WORKING, ⛔ not a test to "fix" quietly.** It is amended BY NAME
+    // ([[feedback_supersede_never_reinterpret]]): the prior shape forced an empty plaintext `bank_name`
+    // to ship `NOMINEE_BANK_DECRYPT_FAILED_SENTINEL`, which reported a **crypto failure that did ⛔ not
+    // happen** on a column that is ⛔ never encrypted.
+    // ⚠⛔ **THE TWO ARE STILL ⛔ NOT TWINS, AND ⛔ ONE GUARD MUST ⛔ NOT SERVE BOTH:** `branch` is a
+    // NULLABLE COLUMN; `bankName` is `NOT NULL` with no non-empty CHECK, so its `null` is MINTED AT THE
+    // API BOUNDARY from an empty/whitespace value. ⭐ Same posture, ⛔ different provenance.
     expect(MemberDriveNomineeAccountView.shape.branch.isNullable()).toBe(true);
-    expect(MemberDriveNomineeAccountView.shape.bankName.isNullable()).toBe(false);
+    expect(MemberDriveNomineeAccountView.shape.bankName.isNullable()).toBe(true);
+    // ⛔⛔ **AND THE THREE TIER-1 COORDINATES ARE STILL ⛔ NOT NULLABLE** — ⭐ the ruling moved `bankName`
+    // and ⛔ NOTHING ELSE. A null account number cannot be transferred to, exactly as a masked one cannot.
+    expect(MemberDriveNomineeAccountView.shape.accountHolderName.isNullable()).toBe(false);
+    expect(MemberDriveNomineeAccountView.shape.accountNumber.isNullable()).toBe(false);
+    expect(MemberDriveNomineeAccountView.shape.ifsc.isNullable()).toBe(false);
   });
 
   it('⛔ the route params are `.strict()` — ⛔ no `pariwarId` may be smuggled in (family 12)', () => {
@@ -153,6 +181,75 @@ describe('⭐⭐ AC3(b) — the coordinate keys are structurally ABSENT, ⛔ nev
     expect(
       MemberDriveDetailParams.safeParse({ driveToken: 'tok', pariwarId: 'x' }).success,
       'a `pariwarId` route parameter would let a client choose the tenant — family 12',
+    ).toBe(false);
+  });
+
+  it('⭐⭐ THE FIVE COORDINATE KEYS ARE REQUIRED AND NON-NULLABLE — ⭐ the keys this block is NAMED for', () => {
+    // ⚠⛔⛔ **THIS BLOCK IS TITLED *"the coordinate keys are structurally ABSENT, ⛔ never `null`"* AND
+    // ⛔ ASSERTED ⛔ NONE OF THEM.** Its six `it()`s covered `driveTargetInr` (AC2's subject, correctly
+    // fenced three ways), `confirmedPercentage`, `.strict()`, the `bankName`/`branch` asymmetry, the
+    // params, and the pairing — ⛔ but ⛔ nothing pinned `accountNumber`, `ifsc` or `accountHolderName`,
+    // and ⛔ nothing pinned `nomineeAccounts` itself as required. ⇒ AC3's OWN subject was ASSUMED while
+    // AC2's was asserted ([[feedback_gate_scope_semantic_coverage]]).
+    //
+    // ⭐⭐ WHY IT MATTERS ⛔ EVEN THOUGH IT HOLDS TODAY: a later `.nullable()` on `accountNumber` is
+    // exactly how *"a masked account# cannot be transferred to"* becomes *"a null account# cannot be
+    // transferred to"* — the SAME failure `-190` cl.3 exists to prevent, arriving through the type
+    // rather than through a mask. ⛔ `[]` stays a FIRST-CLASS state; ⛔ a `null` ARRAY is ⛔ not.
+    const base = { driveToken: 'tok' };
+    void base;
+    const acct = {
+      rank: 1 as const,
+      accountHolderName: 'Sunita Devi',
+      accountNumber: '123456789012',
+      ifsc: 'SBIN0001234',
+      bankName: 'State Bank of India',
+      branch: 'Ranchi Main',
+    };
+    // ⭐ The three Tier-1 coordinates: ⛔ never `null`, ⛔ never absent.
+    for (const key of ['accountHolderName', 'accountNumber', 'ifsc'] as const) {
+      expect(
+        MemberDriveNomineeAccountView.safeParse({ ...acct, [key]: null }).success,
+        `${key} must ⛔ NOT be nullable — a null coordinate cannot be transferred to`,
+      ).toBe(false);
+      const without: Record<string, unknown> = { ...acct };
+      delete without[key];
+      expect(
+        MemberDriveNomineeAccountView.safeParse(without).success,
+        `${key} must be REQUIRED — an absent coordinate is an incomplete payment instruction`,
+      ).toBe(false);
+      // ⛔ And ⛔ never a BLANK, which could masquerade as real data (the `.min(1)` floor).
+      expect(MemberDriveNomineeAccountView.safeParse({ ...acct, [key]: '' }).success).toBe(false);
+    }
+    // ⭐ `nomineeAccounts` itself — REQUIRED and ⛔ NOT nullable; `[]` is the absence signal.
+    const resp = {
+      poolLetterCode: 'A',
+      poolCanonicalIdentifier: 'P-2026-09-001',
+      publicToken: 'tok',
+      deceasedMemberName: 'Late Ram Prasad',
+      nomineeName: 'Sunita Devi',
+      status: 'live' as const,
+      closedAt: null,
+      district: 'Ranchi',
+      confirmedContributionCount: 3,
+      confirmedPercentage: 30,
+      amountRaisedInr: 3000,
+      fundingOutcome: null,
+      nomineeAccounts: [acct],
+    };
+    expect(MemberDriveDetailResponse.safeParse(resp).success).toBe(true);
+    expect(
+      MemberDriveDetailResponse.safeParse({ ...resp, nomineeAccounts: null }).success,
+      '`nomineeAccounts` must ⛔ NOT be nullable — `[]` is the first-class absence signal',
+    ).toBe(false);
+    const noAccounts: Record<string, unknown> = { ...resp };
+    delete noAccounts['nomineeAccounts'];
+    expect(MemberDriveDetailResponse.safeParse(noAccounts).success).toBe(false);
+    // ⭐ `[]` IS valid — the claim's bank details were ⛔ never collected (6.8 AC3's absence signal).
+    expect(MemberDriveDetailResponse.safeParse({ ...resp, nomineeAccounts: [] }).success).toBe(true);
+    // ⛔ THREE accounts are ⛔ not representable — the composite PK's ceiling, mirrored on the wire.
+    expect(
+      MemberDriveDetailResponse.safeParse({ ...resp, nomineeAccounts: [acct, acct, acct] }).success,
     ).toBe(false);
   });
 
@@ -185,6 +282,33 @@ describe('⭐⭐ AC7 — ⛔ NOTHING ELSE MOVES. A fence that SCANS, ⛔ not a p
     expect(files.some((f) => f.includes('/apps/mobile/components/drive-detail/'))).toBe(true);
   });
 
+  it('⛔⛔ ⛔ NO MASKING BEHAVIOUR ANYWHERE ON THIS SURFACE — ⭐ and the walk is what proves it', () => {
+    // ⚠⛔⛔ **THIS IS THE ASSERTION THE FENCE WAS MISSING, AND ITS ABSENCE MADE THE WALK DEAD WEIGHT.**
+    // `files` was built over the whole repo and then consumed by ⛔ NOTHING but the non-vacuity guard
+    // above — every other assertion in this file opens ONE of six hard-coded paths. ⇒ the anti-vacuity
+    // guard guarded a scan that ⛔ did ⛔ not exist, which is structurally the *"PROSE ENUMERATION that
+    // scans ⛔ NOTHING"* model AC7 calls the worst available ([[feedback_gate_scope_semantic_coverage]]).
+    //
+    // ⭐ AC7's named non-move: *"⛔ no masking behaviour (dormant per `-190` cl.4)"*. ⛔ Unmasked is the
+    // POINT — *"a masked account# cannot be transferred to"* — and the safety question is WHO SEES IT
+    // (`-199`), ⛔ never how much of it. ⇒ a well-meaning `.slice(-4)` "for safety" on any of this
+    // surface's files would BREAK the one thing the field exists for.
+    const surfaceFiles = files.filter(
+      (f) =>
+        f.includes('/components/drive-detail/') ||
+        f.endsWith('/contributions/member-drive-detail.ts') ||
+        f.endsWith('/pool/member-drive-detail.ts'),
+    );
+    // ⭐ Non-vacuity for THIS scan specifically — ⛔ never inherited from the guard above.
+    expect(surfaceFiles.length).toBeGreaterThanOrEqual(3);
+    for (const f of surfaceFiles) {
+      const src = code(readFileSync(f, 'utf8'));
+      expect(src).not.toMatch(/\.slice\(\s*-\d/);
+      expect(src).not.toMatch(/\bmask(ed|ing)?\b/i);
+      expect(src).not.toMatch(/\u2022{2,}|\bXXXX\b/);
+    }
+  });
+
   it('⛔⛔ ⛔ NO `vpa` REACHES THIS WIRE — on ⛔ any drive, in ⛔ any stage (D3(D), `-212` cl.2)', () => {
     const contract = readFileSync(
       join(repoRoot, 'packages/contracts/src/contributions/member-drive-detail.ts'),
@@ -202,7 +326,16 @@ describe('⭐⭐ AC7 — ⛔ NOTHING ELSE MOVES. A fence that SCANS, ⛔ not a p
     // so there is ⛔ nothing downstream to decrypt. ⚠ The shared accessor still RETURNS it (it serves
     // the 9.9 donor path, which needs it) — ⭐ the projection is the withdrawal, exactly as story A's
     // public one was.
-    expect(code(domain)).not.toMatch(/vpaCiphertext:/);
+    // ⚠⛔⛔ **TOKEN-WIDE, ⛔ NOT `/vpaCiphertext:/`.** The key-literal form fenced ⛔ only the
+    // `vpaCiphertext:` PROPERTY-ASSIGNMENT spelling — and the regression that actually threatens this
+    // projection is the one family 6 exists to name: collapsing the `flatMap`'s explicit object literal
+    // to `{ ...r }` (or `const { vpaCiphertext, ...rest } = r`) over a row the shared accessor
+    // `SELECT *`s. Either carries the Tier-1 VPA onto `MemberDriveDetailEntry` and matched ⛔ NOTHING.
+    // ⭐ Matching the contract half's own `\bvpa\b` posture closes it.
+    expect(code(domain)).not.toMatch(/vpaCiphertext/);
+    // ⭐⭐ AND THE SPREAD ITSELF IS FENCED — the projection must stay an EXPLICIT field-pick, which is
+    // the property *"THE PROJECTION IS THE EXCLUSION"* actually rests on (checklist family 6).
+    expect(code(domain)).not.toMatch(/\.\.\.r\b/);
   });
 
   it('⛔⛔ the PUBLIC Sahyog Vivran contract is UNTOUCHED — ⛔ no coordinate returns to it', () => {
@@ -249,7 +382,11 @@ describe('⭐⭐ AC7 — ⛔ NOTHING ELSE MOVES. A fence that SCANS, ⛔ not a p
 
   it('⛔⛔ the 9.9 DONOR PATH and the member LIST keep their ONE-DECRYPT behaviour — ⛔ untouched', () => {
     // ⭐ `2026-09-10-213` cl.1: *"the list's and the pay screen's one-decrypt behaviour is CORRECT and
-    // is ⛔ NOT to be touched."* ⚠ The rule there governs the HOLDER NAME (*"the SAME nominee"* twice);
+    // is ⛔ NOT to be touched."* ⚠ The rule there governs the HOLDER NAME, which those surfaces render
+    // in a SUMMARY slot with room for ⛔ no second value.
+    // ⚠⛔⛔ **⛔ NOT because it is *"the SAME nominee"* twice — that ground is FALSE and SUPERSEDED**
+    // (`#decision-2026-09-13-215`: ⛔ no FK, ⛔ no `nominee_rank`, ⛔ no match rule ⇒ two DIFFERING
+    // holder names are a LEGITIMATE state). ⛔ Do ⛔ not restore the equality reading.
     // ⭐ THIS surface renders `accountNumber`/`ifsc`, which DIFFER, which is why both accounts render
     // here and ⛔ nothing changes there.
     const listDomain = readFileSync(
@@ -258,12 +395,23 @@ describe('⭐⭐ AC7 — ⛔ NOTHING ELSE MOVES. A fence that SCANS, ⛔ not a p
     );
     // ⭐ The member LIST still selects exactly ONE nominee ciphertext (the correlated `LIMIT 1`
     // fragment), ⛔ not an array of accounts.
-    expect(listDomain).toContain('NOMINEE_ACCOUNT_HOLDER_NAME_CIPHERTEXT');
-    expect(listDomain).not.toContain('getClaimNomineeBankAccountsCiphertext');
-    // ⭐ And the pay screen's handler is untouched by this story — it still performs its own decrypts
-    // under `-212` cl.2, including the FOURTH one `8-17` added for the VPA.
+    expect(code(listDomain)).toContain('NOMINEE_ACCOUNT_HOLDER_NAME_CIPHERTEXT');
+    // ⚠⛔ **SCANNED AS CODE.** A doc-comment in this repo's own style (*"⛔ never call
+    // `getClaimNomineeBankAccountsCiphertext` here — the list decrypts ONE"*) is exactly the sentence a
+    // future author SHOULD write, and against RAW source it would turn this fence red for a purely
+    // documentary edit — the false-positive class this file's own header documents.
+    expect(code(listDomain)).not.toContain('getClaimNomineeBankAccountsCiphertext');
+    // ⭐ And the 9.9 DONOR PATH's own gate is untouched by this story.
+    // ⚠⛔⛔ **THE GATE IS `resolveMemberLivePool` + the `unassigned` refusal — ⛔ NOT `vpaPresent`.**
+    // This assertion previously read `expect(payment).toContain('vpaPresent')`, which fenced ⛔ the
+    // WRONG THING twice over: `vpaPresent` is `8-17`'s VPA decrypt, ⛔ not the donor gate, so deleting
+    // the gate outright left it GREEN — and it scanned RAW source, so the word survives in a
+    // doc-comment even if every line of gate CODE is removed. ⭐ Both halves are fixed here.
     const payment = readFileSync(join(repoRoot, 'apps/api/src/modules/payment/handlers.ts'), 'utf8');
-    expect(payment).toContain('vpaPresent');
+    expect(code(payment)).toContain('resolveMemberLivePool');
+    expect(code(payment)).toContain("reason: 'unassigned'");
+    // ⭐ And `8-17`'s VPA decrypt is still there — a SEPARATE property, asserted separately.
+    expect(code(payment)).toContain('vpaPresent');
   });
 
   it('⛔ ⛔ NO `spawned` DRIVE IS VISIBLE — ⛔ a DISCLOSURE change, ⛔ not a filter widening', () => {

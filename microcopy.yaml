@@ -441,6 +441,31 @@ scope:
     # ([[feedback_gate_scope_semantic_coverage]]: a green scan over newly-scanned files proves nothing).
     - packages/i18n/locales/hi/member-drive-list.json
     - packages/i18n/locales/en/member-drive-list.json
+    # Story 11b.17 — the `member-drive-detail` namespace (the member's view of ONE drive: its facts,
+    # its stage, the money figures, and the nominee's COMPLETE, UNMASKED banking coordinates).
+    # ⚠⛔⛔ ADDED BY THE 2026-09-14 GROUP-D CODE REVIEW, ⛔ NOT BY THE STORY — and the ground is the
+    # sentence Story 11b.15 wrote twenty lines above: *"leaving this one out would make it the ONLY
+    # member surface whose vocabulary, tone and numeral discipline nothing checks."* ⭐ That was true
+    # of `member-drive-detail` verbatim: `grep -c member-drive-detail microcopy.yaml` returned 0 while
+    # every sibling member namespace was in scope, and the story record mentioned the gate NOWHERE —
+    # ⛔ not an AC, ⛔ not a Task, ⛔ not a deferral ([[feedback_closure_language_precision]]).
+    # ⭐ The same four families bite here as on the list, and each has a LIVE surface in this file:
+    #   · member_only VOCABULARY — this copy addresses a CONTRIBUTING MEMBER about a bereaved family's
+    #     banking details; `donor` / `customer` / `user` / `receipt` are the words a well-meaning
+    #     author reaches for on a screen about money that has been given.
+    #   · SCARCITY / PANIC tone — the surface renders a drive collecting NOW, with a progress figure.
+    #   · BLAME tone — `error`, `not_found` and `bank.none` are the three most natural places to write
+    #     *"you did something wrong"*. ⛔ The copy reports STATE and ⛔ never attributes responsibility.
+    #   · UX-DR73 NUMERAL discipline — an OPERATIONAL register surface (counts, money, a close date),
+    #     so LATIN numerals in BOTH locales, ⛔ never Devanagari digits, even under `hi`.
+    # ⚠ The STAGE words and the ratified ₹0 / message-block sentences are ⛔ NOT in this namespace —
+    # they live in `sahyog-shared` (`2026-09-04-193` cl.3, the ⛔ ONE shared source) and this surface
+    # consumes them BY NAME.
+    # ⭐ Teeth proven (planted-violation fixtures in BOTH locales + a real-committed-string probe),
+    # ⛔ not merely scanned — see scripts/microcopy/member-drive-detail.test.ts
+    # ([[feedback_gate_scope_semantic_coverage]]: a green scan over newly-scanned files proves nothing).
+    - packages/i18n/locales/hi/member-drive-detail.json
+    - packages/i18n/locales/en/member-drive-detail.json
 
 # Allow-list — a finding is suppressed when an entry's `pattern` (regex, case-insensitive)
 # matches the finding's line AND (if `file` is set) the file path ends with it. GENUINE

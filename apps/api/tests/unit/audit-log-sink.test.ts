@@ -183,6 +183,53 @@ describe('authEventToAuditInput — the resourceLocator override (Story 11a.3)',
     }
   });
 
+  it('⭐⭐ AC5 (11b.17) — the drive-detail line NAMES THE DRIVE in the DURABLE row, ⛔ not only in `context`', () => {
+    // ⚠⛔⛔ **THE REGRESSION THIS PINS ACTUALLY SHIPPED** (2026-09-14 Group-B review). The handler
+    // passed the canonical identifier in `context` ALONE. `audit_log_entries` has ⛔ NO context column
+    // — `context` is SHA-256'd into `request_payload_hash` — and the locator defaulted to
+    // `user:<actorId>` ⇒ ⛔ two opens by the SAME member of TWO DIFFERENT FAMILIES' drives produced
+    // **BYTE-IDENTICAL** durable rows. ⛔ The integration test could ⛔ not see it: it asserts the
+    // in-memory `CapturingAuditSink`, which RETAINS `context`.
+    // ⇒ ⭐ this assertion is deliberately at the MAPPER, the ⛔ only layer where the durable shape is
+    // observable without a live DB ([[feedback_gate_scope_semantic_coverage]] — a gate is complete
+    // only when it covers the surface that can violate it).
+    const ctx = { pool_canonical_identifier: 'P-2026-09-001', nominee_accounts: 2 };
+
+    // ⛔ THE BROKEN SHAPE — `context` only. The row does ⛔ NOT name the drive.
+    const contextOnly = authEventToAuditInput(
+      evt({ type: 'member_drive_detail.coordinates_viewed', context: ctx }),
+    );
+    expect(contextOnly.resourceLocator).toBe(`user:${ACTOR}`);
+
+    // ⭐ THE SHIPPED SHAPE — a lowercased, guard-valid locator naming the drive.
+    const named = authEventToAuditInput(
+      evt({
+        type: 'member_drive_detail.coordinates_viewed',
+        context: ctx,
+        resourceLocator: 'pool:p-2026-09-001',
+      }),
+    );
+    expect(named.resourceLocator).toBe('pool:p-2026-09-001');
+    // ⭐⭐ AND THE PROPERTY THAT MATTERS: two DIFFERENT drives are DISTINGUISHABLE in the durable row.
+    const other = authEventToAuditInput(
+      evt({
+        type: 'member_drive_detail.coordinates_viewed',
+        context: { pool_canonical_identifier: 'P-2026-09-002', nominee_accounts: 2 },
+        resourceLocator: 'pool:p-2026-09-002',
+      }),
+    );
+    expect(named.resourceLocator).not.toBe(other.resourceLocator);
+
+    // ⚠⛔ **THE LOWERCASING IS LOAD-BEARING, ⛔ NOT COSMETIC.** A bare `P-2026-09-001` FAILS
+    // `RESOURCE_LOCATOR_PATTERN` and is DISCARDED back to the default — ⛔ the fix would LOOK applied
+    // and ⛔ not be, with only a console line to say so.
+    expect(
+      authEventToAuditInput(
+        evt({ type: 'member_drive_detail.coordinates_viewed', resourceLocator: 'P-2026-09-001' }),
+      ).resourceLocator,
+    ).toBe(`user:${ACTOR}`);
+  });
+
   it('⛔ existing emitters are BYTE-IDENTICAL — the widening changed nothing for them', () => {
     // The override is opt-in; an event that does not set it must produce exactly what it did before.
     const before = authEventToAuditInput(evt({ type: 'rate_limit.exceeded', actorId: null }));

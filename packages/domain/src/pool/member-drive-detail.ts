@@ -47,6 +47,7 @@ import {
   CONFIRMED_CONTRIBUTION_COUNT,
   DECEASED_DISTRICT,
   DRIVE_CLOSED_AT,
+  coerceCount,
   coerceDriveInstant,
   driveConfirmedPercentage,
   publicStatusForPoolState,
@@ -349,8 +350,22 @@ export async function readMemberDriveDetail(
   const row = rows[0];
   if (row === undefined) return null;
 
-  const confirmedContributionCount = Number(row.confirmedCount ?? 0);
-  const assignedCount = Number(row.assignedCount ?? 0);
+  // ⭐⭐ `coerceCount`, ⛔ NOT `Number(… ?? 0)` — the SAME family as `coerceDriveInstant` imported
+  // above, and what the other single-drive read (`sahyog-vivran-read.ts:470-471`) already uses.
+  // ⚠⛔⛔ **`??` CATCHES ⛔ ONLY `null`/`undefined`.** A non-numeric value yields `NaN`, and `NaN`
+  // defeats EVERY guard below it: `NaN < 0` is `false` (the clamp's warn never fires),
+  // `Math.max(0, NaN)` is **`NaN`** (the clamp passes it through), `assignedCount === 0` is `false`
+  // (the `fundingOutcome` guard is bypassed and `classifyCycleOutcome` THROWS), and
+  // `assignedCount <= 0` is `false` (`driveConfirmedPercentage` returns `NaN`, which the contract's
+  // `.int()` rejects) ⇒ a 500 on the whole drive page instead of a row-local degrade.
+  // ⚠ Reachability, stated honestly: both fragments are `count(*)`, which always renders as a digit
+  // string, so ⛔ no live `NaN` was demonstrated — ⭐ this is the ruled coercion being used where the
+  // module family says it must be, ⛔ not a fix for an observed break.
+  // ⚠⛔ A prior review pass closed this finding on the ground that *"no such function exists anywhere
+  // in the repo"* — ⛔ that negative claim was FALSE (`public-read.ts:436`)
+  // ([[feedback_negative_claims_checkable_in_repo]]).
+  const confirmedContributionCount = coerceCount(row.confirmedCount);
+  const assignedCount = coerceCount(row.assignedCount);
   const currentState = row.currentState as MemberDriveDetailVisiblePoolState;
   const isLive = currentState === 'live';
 

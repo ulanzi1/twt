@@ -154,7 +154,17 @@ describe('⭐⭐ Story 11b.17 AC2 — the member drive DETAIL meets the PUBLIC S
     expect(ACCOUNT_KEYS.has('vpaPresent')).toBe(false);
   });
 
-  it('⚠⛔ THE THREE EXCLUSIONS ARE EXACTLY THREE — and ⛔ `confirmedPercentage` is ⛔ NOT one of them', () => {
+  it('⚠⛔ THE EXCLUSIONS ARE EXACTLY TWO — and ⛔ `confirmedPercentage` is ⛔ NOT one of them', () => {
+    // ⚠⛔⛔ **THIS TEST WAS NAMED *"THE THREE EXCLUSIONS ARE EXACTLY THREE"* AND ENUMERATED **TWO** —
+    // (a), (b), and a **(c) that is a NEGATION, ⛔ not an exclusion**** (review finding, 2026-09-14).
+    // ⭐ That is the ⛔ exact defect class this file's own header forbids BY NAME: *"⛔ never by
+    // asserting a COUNT (story E's '13 vs 14' defect — the ENUMERATION was right and the count WORD
+    // was wrong)"* ⇒ the file reproduced the defect it opens by prohibiting.
+    // ⛔⛔ **AND THE COUNT WAS LOAD-BEARING**: the appeal-lineage test below reasoned *"AC2 names
+    // exactly THREE, and this is ⛔ not one of them."* ⚠ Traced 2026-09-14: **AC2 names ⛔ NO
+    // EXCLUSIONS AT ALL** — it states a FLOOR (*"the nominee's name, the drive facts, the stage, the
+    // contributor count **and the appeal outcome**"*). ⇒ ⭐ the conclusion there is RIGHT and its
+    // stated ground was WRONG — and the TRUE ground is STRONGER. Corrected below.
     // ⭐ **(a) लक्ष्य** — a member-side **ADDITION** (D2(B)). The public **DETAIL** renders ⛔ no target
     // in ⛔ ANY stage ⇒ it is in ⛔ NEITHER floor map, and the superset claim ⛔ cannot cover it. ⛔ Do
     // ⛔ not write it as one.
@@ -185,8 +195,13 @@ describe('⭐⭐ Story 11b.17 AC2 — the member drive DETAIL meets the PUBLIC S
     // ⚠⛔ **STATED HONESTLY RATHER THAN CARVED OUT** ([[feedback_record_unattested_no_backfill]]). The
     // public Sahyog Vivran DETAIL renders a *"Reversed by appeal"* lineage — three field ids — and
     // ⭐ this member surface does ⛔ **NOT** carry them.
-    // ⛔ It is ⛔ **NOT** an exclusion AC2 authorises: AC2 names exactly THREE, and this is ⛔ not one
-    // of them. ⇒ ⭐ it is a **`-189` cl.3 SHORTFALL**, and the honest word is that it is **RECORDED**,
+    // ⛔ It is ⛔ **NOT** an exclusion AC2 authorises.
+    // ⚠⛔⛔ **AND THE GROUND IS ⛔ NOT A COUNT** (corrected 2026-09-14). This previously read *"AC2
+    // names exactly THREE, and this is ⛔ not one of them"* — ⛔ **AC2 names ⛔ NO exclusions at all**,
+    // so that argument rested on a number AC2 never states ([[feedback_negative_claims_checkable_in_repo]]).
+    // ⭐⭐ **THE REAL GROUND IS STRONGER AND IS AC2'S OWN TEXT:** the floor is *"the nominee's name,
+    // the drive facts, the stage, the contributor count **and the appeal outcome**"* ⇒ AC2 does ⛔ not
+    // merely fail to authorise this exclusion — it **EXPRESSLY REQUIRES THE FIELD**. ⇒ ⭐ it is a **`-189` cl.3 SHORTFALL**, and the honest word is that it is **RECORDED**,
     // ⛔ not *"resolved"* and ⛔ not *"closed"* ([[feedback_closure_language_precision]]).
     // ⭐ **WHY IT IS RECORDED RATHER THAN BUILT HERE:** the lineage is derived at request time by
     // `readAppealReversal`, a SEPARATE single-row query over the claim's own `claim.reversed` event

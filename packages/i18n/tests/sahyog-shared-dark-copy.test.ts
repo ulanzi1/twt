@@ -640,6 +640,22 @@ describe('⛔⛔ AC6 — ⛔ NOTHING RENDERS THE MESSAGE BLOCK. The copy exists;
     // ⭐ (3) THERE IS ⛔ NO `no_amount` VARIANT — where the amount is unavailable the block renders
     // NOTHING (`2026-09-08-207` cl.2). ⛔ The selector's `null` IS that rule.
     expect(selectors).toMatch(/amountRaisedInr <= 0\)\s*return null/)
+    // ⭐⭐ **AND THE ₹0 CHECK MUST COME *FIRST* — ⛔ THE TWO ASSERTIONS ABOVE PIN PRESENCE, ⛔ NOT ORDER**
+    // (review finding, 2026-09-14). Each proves its line EXISTS; ⛔ neither constrains which runs.
+    // ⚠⛔⛔ If they are ever swapped, a ₹0 drive whose family has ⛔ not authorised name publication
+    // resolves the `no_family` HEADLINE instead of returning `null` ⇒ ⭐ the Panel's ratified message
+    // block RENDERS on a day-one drive where `#decision-2026-09-13-216` cl.1 says it must render
+    // **NOTHING** — and ⛔ **both assertions above still pass**. ⇒ the fence would guard the PRESENCE
+    // of the rule and ⛔ not the rule ([[feedback_gate_scope_semantic_coverage]]).
+    // ⭐ Traced 2026-09-14: the order is CORRECT today — this pins it.
+    const amountIdx = selectors.search(/amountRaisedInr <= 0\)\s*return null/)
+    const nameIdx = selectors.search(/deceasedMemberName === null\)\s*return \{ key: 'message_block\.headline\.no_family' \}/)
+    expect(amountIdx).toBeGreaterThan(-1)
+    expect(nameIdx).toBeGreaterThan(-1)
+    expect(
+      amountIdx,
+      'the ₹0 silence must be decided BEFORE the name variant — otherwise a ₹0 unconsented drive renders the block `-216` silences',
+    ).toBeLessThan(nameIdx)
     expect(template('en', 'message_block.headline.no_family')).not.toContain('{family_name}')
     // ⭐ The render site consults the selector and returns early on its `null` — ⛔ it never resolves a
     // headline it cannot fill.

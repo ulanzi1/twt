@@ -99,6 +99,46 @@ export function isArchivedZeroAmountDrive(
 }
 
 /**
+ * ⭐⭐ **THE THIRD ₹0 STATE — A `live` DRIVE WITH A REAL CONFIRMED COUNT AND ₹0 RAISED.**
+ *
+ * ⚠⛔⛔ **THIS EXISTS BECAUSE THE OTHER TWO GATES KEY OFF DIFFERENT FIELDS AND LEAVE A HOLE BETWEEN
+ * THEM** (review finding, 2026-09-14). {@link selectZeroDayLine} gates on the **COUNT**
+ * (`live && confirmedContributionCount === 0`); {@link isArchivedZeroAmountDrive} gates on the
+ * **AMOUNT** (`!live && amountRaisedInr <= 0`). ⇒ `live` + `count > 0` + `amount === 0` fell through
+ * **BOTH** and rendered `t('raised', …)` = ⛔ **"₹ 0 contributed"**, announced to screen readers too.
+ *
+ * ⭐⭐ **REACHABLE, AND ⛔ NOT HYPOTHETICAL.** `pools.fixed_amount` is *"a bare `integer NOT NULL` with
+ * ⛔ NO CHECK of any kind"* (`migrations/0115`), and the domain read CLAMPS + WARNS for a non-positive
+ * value (`Math.max(0, count × fixedAmount)`) ⇒ **₹0 with a real confirmed count**.
+ *
+ * ⚠⛔⛔ **THE PUBLIC SURFACE ALREADY CARRIES THIS ARM — THIS IS A SWEEP, ⛔ NOT A NEW RULE.**
+ * `apps/public/src/lib/sahyog-render.ts` renders `driveParticipationLine: null` for exactly this state,
+ * added 2026-09-08 after the public page published *"**₹ 0** and counting, by 41 colleagues—and still
+ * going strong!"* — recorded there as **EXTENDING `2026-09-08-207` cl.2 by the same reasoning** (*"a ₹0
+ * money sentence beside named people is SILENCE"*), ⛔ **not** as a new ruling and ⛔ not as a
+ * reinterpretation of `-206` cl.4 ([[feedback_supersede_never_reinterpret]]). ⭐ The defect was found
+ * and fixed **once**, on the sibling, and ⛔ never swept here.
+ *
+ * ⛔⛔ **`zero_line.*` IS ⛔ NOT THE FALLBACK.** It reads *"Late X's family awaits your support"*, which
+ * is **FALSE** for a drive that already has contributors. ⇒ **SILENCE**, the cl.2 posture.
+ * ⚠ And the screen otherwise contradicts itself here: `selectMessageBlockHeadline` already returns
+ * `null` on `amountRaisedInr <= 0` **regardless of stage** (the behaviour `-216` ratified), so the
+ * message block goes silent while the summary sentence states the same ₹0 figure.
+ */
+export function isLiveZeroAmountWithContributors(
+  detail: Pick<
+    MemberDriveDetailResponse,
+    'status' | 'amountRaisedInr' | 'confirmedContributionCount'
+  >,
+): boolean {
+  return (
+    detail.status === 'live' &&
+    detail.confirmedContributionCount > 0 &&
+    detail.amountRaisedInr <= 0
+  )
+}
+
+/**
  * ⭐⭐ **THE PANEL'S MESSAGE BLOCK (AC10) — WHAT RENDERS, AND WHETHER ANYTHING DOES.**
  *
  * ⭐ Ratified 2026-09-05, DR + KB (routing note **§8.1**, routed at **§9.1 row 3**), recorded at
@@ -200,14 +240,19 @@ export function selectMessageBlockTableColumns(
 export function accountHasUnavailableField(
   account: Pick<
     MemberDriveDetailResponse['nomineeAccounts'][number],
-    'accountHolderName' | 'accountNumber' | 'ifsc' | 'bankName'
+    'accountHolderName' | 'accountNumber' | 'ifsc'
   >,
   sentinel: string,
 ): boolean {
+  // ⚠⛔⛔ **THE THREE TIER-1 FIELDS ⛔ ONLY — `bankName` WAS REMOVED BY `#decision-2026-09-14-217`
+  // cl.2.** That column is Tier-3 **PLAINTEXT** and is ⛔ never decrypted, so it ⛔ **cannot** carry a
+  // decrypt-failure sentinel: an unrecorded bank name now arrives as `null` and OMITS ITS ROW. ⇒ ⭐ a
+  // `bankName === sentinel` arm here would be **DEAD CODE asserting a false premise**, which is how the
+  // false statement survived review in the first place.
+  // ⛔ `branch` was ⛔ never in this set and still is not — same reason, ⭐ arrived at earlier.
   return (
     account.accountHolderName === sentinel ||
     account.accountNumber === sentinel ||
-    account.ifsc === sentinel ||
-    account.bankName === sentinel
+    account.ifsc === sentinel
   )
 }

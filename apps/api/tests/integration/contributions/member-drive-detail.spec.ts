@@ -113,7 +113,9 @@ const audit = (
 async function seedDrive(
   t: TestApp,
   opts: {
-    poolState: 'live' | 'closed' | 'settled';
+    // ⚠⛔ `spawned` is admitted ⛔ ONLY so AC3's state-predicate arm can be PROVEN to 404. ⛔ It is
+    // ⛔ never a visible drive — see the `spawned` test below.
+    poolState: 'live' | 'closed' | 'settled' | 'spawned';
     confirmed: number;
     assigned: number;
     accounts?: typeof ACCOUNTS;
@@ -332,7 +334,8 @@ interface DetailBody {
     accountHolderName: string;
     accountNumber: string;
     ifsc: string;
-    bankName: string;
+    // ⭐ NULLABLE since `#decision-2026-09-14-217` cl.2 — an unrecorded bank name OMITS ITS ROW.
+    bankName: string | null;
     branch: string | null;
   }>;
 }
@@ -387,10 +390,21 @@ describe.skipIf(!hasDatabase)('⭐⭐ 11b.17 — the member drive DETAIL, live',
 
     // ⛔⛔ AND ⛔ NO `vpa` REACHES THIS WIRE, ON ⛔ ANY DRIVE, IN ⛔ ANY STAGE (D3(D), `-212` cl.2).
     // ⭐ NON-VACUOUS: account #1's VPA IS seeded above, so this would FAIL the moment the key appeared.
+    // ⚠⛔⛔ **THE PREVIOUS NEEDLES WERE BLIND TO THE ⛔ ONE SPELLING THAT MATTERS** (2026-09-14 review).
+    // They were `'sunita@upi'`, `'"vpa"'` and `'vpapresent'`, and ⛔ NONE can catch the realistic
+    // regression — the domain read projecting `vpaCiphertext` and a spread carrying it onto the wire:
+    //   · the VPA is stored as **CIPHERTEXT** ⇒ the PLAINTEXT `'sunita@upi'` ⛔ never appears;
+    //   · `'"vpa"'` is **QUOTE-DELIMITED** ⇒ it does ⛔ NOT match `"vpaCiphertext"` (⭐ verified);
+    //   · `'vpapresent'` is `8-17`'s PAY-screen key and is ⛔ not this surface's.
+    // ⇒ ⛔ all three stayed GREEN while the comment above claimed *"NON-VACUOUS … this would FAIL the
+    // moment the key appeared."* ⚠ D3(D) had TWO independent fences — this one and the contracts
+    // suite's `/vpaCiphertext:/` — and ⛔ **BOTH** were blind to the same spelling.
     const raw = res.body;
+    // ⭐ The plaintext, kept: it still proves a DECRYPTED VPA never lands.
     expect(raw).not.toContain('sunita@upi');
-    expect(raw.toLowerCase()).not.toContain('"vpa"');
-    expect(raw.toLowerCase()).not.toContain('vpapresent');
+    // ⭐⭐ TOKEN-WIDE, and this is the assertion that actually bites: ANY key or value whose name
+    // contains `vpa` — `vpaCiphertext`, `vpa`, `vpaPresent`, `nomineeVpa` — fails here.
+    expect(raw.toLowerCase()).not.toContain('vpa');
   });
 
   it('⛔⛔ AC3(a) — a member of ANOTHER Pariwar gets 404, ⛔ not 403 and ⛔ not a 200 with absent keys', async () => {
@@ -449,6 +463,123 @@ describe.skipIf(!hasDatabase)('⭐⭐ 11b.17 — the member drive DETAIL, live',
       headers: { authorization: bearer(t, f.requester, f.pariwarId) },
     });
     expect(byIdentifier.statusCode).toBe(404);
+  });
+
+  it('⭐⭐ cl.2 — an UNRECORDED bank name arrives as `null`, ⛔ NEVER the decrypt sentinel', async () => {
+    // ⚠⛔⛔ **`#decision-2026-09-14-217` cl.2 (Trustee-ratified, DR + KB), option (B).** `bank_name` is
+    // `text NOT NULL` with ⛔ NO non-empty CHECK, so `''` is **storable today** — and it used to ship
+    // `NOMINEE_BANK_DECRYPT_FAILED_SENTINEL`, telling the member a **cryptographic operation failed** on
+    // a column that is ⛔ **never encrypted**, with ⛔ no log line to tell the two apart afterwards.
+    // ⭐ This is the ⛔ ONLY test that exercises the empty value against a LIVE row — the fixtures above
+    // all seed real bank names, which is how the false statement shipped unobserved.
+    const f = await seedDrive(t, { poolState: 'live', confirmed: 1, assigned: 5 });
+    const blank = await openScopeTx(t.deps, f.pariwarId);
+    try {
+      await blank.client.query(
+        // ⭐ Resolved THROUGH the pool's own FK — `seedDrive` does ⛔ not return `claimCaseId`, and
+        // widening its return shape for one test would couple every other caller to it.
+        `UPDATE claim_nominee_bank_accounts SET bank_name = '   '
+           WHERE claim_case_id = (SELECT claim_case_id FROM pools WHERE pool_id = $1)
+             AND account_rank = 1`,
+        [f.poolId],
+      );
+      await closeScopeTx(blank, true);
+    } catch (err) {
+      await closeScopeTx(blank, false);
+      throw err;
+    }
+
+    const res = await t.app.inject({
+      method: 'GET',
+      url: DETAIL(f.publicToken),
+      headers: { authorization: bearer(t, f.requester, f.pariwarId) },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body) as DetailBody;
+    const acct = body.nomineeAccounts.find((a) => a.rank === 1);
+    expect(acct).toBeDefined();
+    // ⭐⭐ `null` — the ABSENT-ROW signal, ⛔ not a fault.
+    expect(acct!.bankName).toBeNull();
+    // ⛔⛔ AND ⛔ NOT THE SENTINEL, anywhere in the payload — ⭐ whitespace-only is an EMPTINESS TEST,
+    // ⛔ not a decrypt outcome.
+    expect(res.body).not.toContain('could not be shown');
+    // ⭐ NON-VACUITY: account #2's bank name was ⛔ not blanked and MUST still render.
+    const other = body.nomineeAccounts.find((a) => a.rank === 2);
+    expect(other!.bankName).toBe(ACCOUNTS[1]!.bankName);
+    // ⛔⛔ AND THE TIER-1 COORDINATES ARE UNTOUCHED — ⭐ the ruling moved `bankName` and ⛔ NOTHING ELSE.
+    expect(acct!.accountNumber).toBe(ACCOUNTS[0]!.account);
+    expect(acct!.ifsc).toBe(ACCOUNTS[0]!.ifsc);
+  });
+
+  it('⛔⛔ AC3 — a NUL byte in the token is a 404, ⛔ NOT the 500 it used to be', async () => {
+    // ⚠⛔⛔ **THIS 500 WAS REAL, REACHABLE BY ANY AUTHENTICATED MEMBER, AND VERIFIED LIVE**
+    // (2026-09-14 Group-B review). `MemberDriveDetailParams` is `.min(1).max(200)` with ⛔ NO charset
+    // guard, so a percent-encoded NUL decodes to a 1-character string that PASSES the route schema and
+    // is bound into `eq(pools.publicToken, …)`. Postgres then raises `22021 invalid byte sequence for
+    // encoding "UTF8": 0x00` — a **THROW**, ⛔ not a `null` return — so it escaped the `row === null`
+    // mapping entirely and 500'd, on the ⛔ one path whose doc-block promises a 404 for a malformed
+    // address.
+    // ⛔⛔ **AND THE FIX IS DELIBERATELY ⛔ NOT A TIGHTER PARAM REGEX** — a charset constraint would turn
+    // every malformed token into a **400** and re-introduce the shape distinction AC3 forbids. ⭐ The
+    // guard lives at the handler and answers the SAME 404 as every other unresolvable address.
+    const f = await seedDrive(t, { poolState: 'live', confirmed: 1, assigned: 5 });
+    const res = await t.app.inject({
+      method: 'GET',
+      url: `/api/v1/member/drive-detail/%00`,
+      headers: { authorization: bearer(t, f.requester, f.pariwarId) },
+    });
+    expect(res.statusCode).toBe(404);
+    // ⭐ The SAME code as every other miss — ⛔ not a distinct error, ⛔ not a 500, ⛔ not a 400.
+    expect(JSON.parse(res.body).error.code).toBe('member_drive_detail.not_found');
+
+    // ⭐ And a NUL EMBEDDED in an otherwise well-formed token takes the same path.
+    const embedded = await t.app.inject({
+      method: 'GET',
+      url: `/api/v1/member/drive-detail/${f.publicToken.slice(0, 8)}%00${f.publicToken.slice(8)}`,
+      headers: { authorization: bearer(t, f.requester, f.pariwarId) },
+    });
+    expect(embedded.statusCode).toBe(404);
+  });
+
+  it('⛔⛔ AC3 — a `spawned` drive 404s: ⭐ the ⛔ ONE case that is ⛔ NOT row-absence', async () => {
+    // ⚠⛔⛔ **THIS CASE IS DIFFERENT IN KIND FROM THE OTHER FOUR, WHICH IS WHY IT OWES ITS OWN TEST.**
+    // *"No such drive"*, *"wrong token"*, *"malformed"* and *"another Pariwar's"* all 404 because the
+    // WHERE matches **ZERO ROWS** — ⭐ ONE mechanism, already proven three ways above. Here the row
+    // **EXISTS**, the token is **VALID and MINTED**, the caller is **in the right Pariwar**, and the 404
+    // comes from the **STATE PREDICATE** (`MEMBER_DRIVE_DETAIL_VISIBLE_POOL_STATES`) alone.
+    // ⭐⭐ It is also the ⛔ only one of the five with a **DISCLOSURE consequence**: `-196` rules that
+    // surfacing a `spawned` pool would disclose **an APPROVED CLAIM, and its approval, to the whole
+    // Pariwar** before contributions open — and on THIS surface it would additionally expose a bereaved
+    // family's banking coordinates before a single contribution had been asked for.
+    // ⚠⛔ Until now its ⛔ ONLY coverage was a SOURCE-LITERAL scan in the contracts suite
+    // (`not.toContain("'spawned'")`) — ⭐ *"a green scan proves nothing"*
+    // ([[feedback_gate_scope_semantic_coverage]]): that assertion cannot observe the PREDICATE, and
+    // stays green if the tuple is later built from a shared constant or a second read path is added.
+    const hidden = await seedDrive(t, { poolState: 'spawned', confirmed: 0, assigned: 5 });
+    const res = await t.app.inject({
+      method: 'GET',
+      url: DETAIL(hidden.publicToken),
+      headers: { authorization: bearer(t, hidden.requester, hidden.pariwarId) },
+    });
+    expect(res.statusCode).toBe(404);
+    // ⛔ And ⛔ NOT a 200 with absent keys, ⛔ not a 403 — the SAME answer as every other unresolvable
+    // address, byte for byte.
+    expect(JSON.parse(res.body).error.code).toBe('member_drive_detail.not_found');
+
+    // ⚠⛔⛔ **NON-VACUITY — ⛔ WITHOUT THIS THE TEST PASSES ON ANY UNRELATED 404** (a broken seed, a bad
+    // token, a mis-scoped caller). ⭐ A fixture identical in EVERY respect but `poolState` MUST resolve
+    // ⇒ the 404 above is the **STATE PREDICATE** and ⛔ nothing else.
+    // ⚠⛔ The control is a SECOND FIXTURE and ⛔ **NOT** an `UPDATE pools SET current_state` on the
+    // first: a DB trigger REJECTS direct writes to that column — *"only the event-replay projector may
+    // change pool state (Story 7.1 AC5)"* — ⭐ which is itself the guarantee that makes `spawned` here a
+    // genuine projector-produced state rather than a fixture artefact.
+    const visible = await seedDrive(t, { poolState: 'live', confirmed: 0, assigned: 5 });
+    const control = await t.app.inject({
+      method: 'GET',
+      url: DETAIL(visible.publicToken),
+      headers: { authorization: bearer(t, visible.requester, visible.pariwarId) },
+    });
+    expect(control.statusCode).toBe(200);
   });
 
   it('⛔⛔ AC2 — the लक्ष्य GATE is FAIL-CLOSED: ⛔ no reveal row ⇒ the key is ABSENT, ⛔ not null', async () => {
@@ -518,12 +649,20 @@ describe.skipIf(!hasDatabase)('⭐⭐ 11b.17 — the member drive DETAIL, live',
       priorHook?.(op, kekRef, ctx);
     };
 
-    const res = await t.app.inject({
-      method: 'GET',
-      url: DETAIL(f.publicToken),
-      headers: { authorization: bearer(t, f.requester, f.pariwarId) },
-    });
-    t.deps.encryption.kms.auditHook = priorHook;
+    // ⚠⛔⛔ **`try/finally` — ⛔ NOT a bare restore after `inject`.** `t` is built ONCE in `beforeAll`
+    // and SHARED by every test in this file. If `inject` rejects (a handler throw, a reset connection),
+    // a trailing assignment ⛔ never runs and EVERY later test executes with this counting closure still
+    // installed on the shared KMS — silently, since the leak changes no behaviour, only the counter.
+    let res;
+    try {
+      res = await t.app.inject({
+        method: 'GET',
+        url: DETAIL(f.publicToken),
+        headers: { authorization: bearer(t, f.requester, f.pariwarId) },
+      });
+    } finally {
+      t.deps.encryption.kms.auditHook = priorHook;
+    }
     expect(res.statusCode).toBe(200);
 
     const written = t.auditSink.ofType(AUDIT_TYPE).slice(before);
@@ -531,6 +670,14 @@ describe.skipIf(!hasDatabase)('⭐⭐ 11b.17 — the member drive DETAIL, live',
     // ⚠ A per-coordinate rule would take the deployment-wide `pg_advisory_xact_lock` ten times on the
     // ordinary browsing path.
     expect(written).toHaveLength(1);
+    // ⚠⛔⛔ **AND THE LINE MUST NAME THE DRIVE IN THE ⛔ DURABLE ROW, ⛔ NOT ONLY IN `context`.**
+    // ⭐ `t.auditSink` is `CapturingAuditSink` — an IN-MEMORY list that RETAINS the whole event — so an
+    // assertion on `context` alone is **structurally incapable** of observing what is persisted:
+    // `audit_log_entries` has ⛔ NO context column and `authEventToAuditInput` SHA-256-HASHES `context`
+    // into `request_payload_hash`. ⇒ ⛔ that is exactly how a line naming ⛔ NO drive shipped green.
+    // ⭐ `resourceLocator` is the ⛔ only field that survives to the durable row, so it is asserted here
+    // and the mapper's own behaviour is pinned in `tests/unit/audit-log-sink.test.ts`.
+    expect(written[0]!.resourceLocator).toBe(`pool:${f.canonicalIdentifier.toLowerCase()}`);
 
     const line = written[0]!;
     // ⭐ ATTRIBUTED — ⚠⛔ a **NAMED DEPARTURE** from the anonymous public precedent

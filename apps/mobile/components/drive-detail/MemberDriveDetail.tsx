@@ -53,6 +53,7 @@ import {
   detailOutcomeFramingKey,
   formatClosedAtIst,
   isArchivedZeroAmountDrive,
+  isLiveZeroAmountWithContributors,
   selectMessageBlockHeadline,
   selectMessageBlockTableColumns,
   selectZeroDayLine,
@@ -125,11 +126,43 @@ export function MemberDriveDetail({ driveToken }: { driveToken: string | undefin
   }, [refetch])
 
   const handleBack = useCallback(() => {
-    router.back()
+    // ⚠⛔⛔ **`router.back()` ALONE IS A **NO-OP** ON A COLD-START DEEP LINK** (review finding,
+    // 2026-09-14). The `(contribution)` group is a bare `<Stack />` with ⛔ no `initialRouteName`, so
+    // opening `…/drive/<token>` directly leaves **exactly one screen** on the stack and `goBack()` pops
+    // nothing. ⚠ This screen sets `headerShown: false`, so there is ⛔ no system affordance either —
+    // and on the **404** branch the retry button is deliberately suppressed ⇒ the control labelled
+    // *"Go back to your Pariwar's drives"* was the ⛔ ONLY control on the screen **and it did nothing**.
+    // ⭐ Family 13(c) satisfied in FORM but ⛔ not in EFFECT: a role implying interaction over a handler
+    // that cannot act promises an affordance that does ⛔ not exist.
+    // ⭐ The house precedent is `components/pool-onboarding/PoolOnboardingTutorial.tsx` — ⛔ the only
+    // other `canGoBack` in the app. ⚠⛔ A prior review dismissed this as *"an established pattern"*;
+    // ⛔ that dismissal was WRONG — the precedent GUARDS.
+    if (router.canGoBack()) {
+      router.back()
+      return
+    }
+    // ⭐ `/(tabs)/sahyog` is this surface's ORIGIN — `MemberDriveList` is mounted there
+    // (`app/(tabs)/sahyog.tsx`) and `DriveRow` is what pushes this screen — so it is the correct
+    // fallback. ⚠ `replace`, ⛔ not `push`, so the dead screen does ⛔ not remain on the stack behind it.
+    router.replace('/(tabs)/sahyog')
   }, [router])
 
+  // ⚠⛔⛔ **A DISABLED QUERY IS ⛔ NOT `isLoading`, AND WITHOUT THIS IT RENDERED THE *ERROR* SCREEN**
+  // (review finding, 2026-09-14). `isLoading = isPending && isFetching` (`query-core`), and a query
+  // with `enabled: false` is `pending` with `fetchStatus: 'idle'` ⇒ `isLoading` is **FALSE**. Control
+  // skipped STATE 1 and fell into STATE 2's `isError || data === undefined` with `error === null`, so a
+  // member deep-linking here saw ⛔ **the generic failure copy and a Retry button for a drive that was
+  // ⛔ never requested** — on a screen whose route file says Expo Router hands it an `undefined` on the
+  // FIRST render of every deep link.
+  // ⚠⛔⛔ **AND RETRY MADE IT WORSE:** `refetch()` routes to `#executeFetch` with ⛔ **NO `enabled`
+  // check**, so tapping it issued `GET /api/v1/member/drive-detail/undefined` — ⭐ precisely the request
+  // the hook's `enabled` guard exists to prevent.
+  // ⇒ ⭐ **AN ABSENT ADDRESS IS A *WAITING* STATE, ⛔ NEVER A FAILURE**: nothing has been asked for yet,
+  // so ⛔ nothing has failed. This is also what keeps `handleRetry` unreachable while the token is absent.
+  const addressPending = typeof driveToken !== 'string' || driveToken.length === 0
+
   // ── STATE 1: LOADING — an early return ─────────────────────────────────────────────────────────
-  if (isLoading) {
+  if (addressPending || isLoading) {
     return (
       <YStack flex={1} bg="$background" px="$5" py="$6" gap="$2">
         <Text
@@ -243,7 +276,12 @@ function DriveDetailBody({
   // rule: a `closed`/`verified` drive with a ₹0 figure renders NOTHING here, matching
   // `selectMessageBlockHeadline`'s own (3) and the property's own quoted text: *"no placeholder, no
   // marker, no partial sentence."* Review finding, 2026-09-13 — this branch was previously missing.
-  const summaryLine = isArchivedZeroAmountDrive(detail)
+  // ⚠⛔ **TWO SILENCE GATES, ⛔ NOT ONE — AND A THIRD ARM ADDED 2026-09-14.** `isArchivedZeroAmountDrive`
+  // covers `closed`/`verified` at ₹0; `isLiveZeroAmountWithContributors` covers the state BOTH original
+  // gates fell through — `live` + a REAL confirmed count + ₹0 raised — which rendered ⛔ "₹ 0 contributed".
+  // ⭐ The public surface has carried this arm since 2026-09-08; this is the SWEEP
+  // ([[feedback_story_validate_footguns]] — a premise defect found in ONE place and never swept).
+  const summaryLine = isArchivedZeroAmountDrive(detail) || isLiveZeroAmountWithContributors(detail)
     ? null
     : zeroDay === null
       ? t('raised', { amount }, NS)
@@ -335,6 +373,28 @@ function DriveDetailBody({
               {t('back', undefined, NS)}
             </Text>
           </Button>
+
+          {/* ⭐⭐ THE SCREEN'S OWN TITLE — `screen.title` and `screen.title_a11y` were MINTED IN BOTH
+              LOCALES AND CONSUMED ⛔ NOWHERE until the 2026-09-14 Group-D review, so this screen
+              shipped with ⛔ **NO TITLE AT ALL**: the route sets `headerShown: false` precisely
+              because *"the screen renders its own chrome"*, and the ⛔ only `accessibilityRole="header"`
+              element below renders `deceasedMemberName ?? poolLetterCode` ⇒ a screen-reader member
+              entering the screen heard **a bare person's name** as the sole header.
+              ⚠ The sibling surface wired its equivalent all along (`MemberDriveList.tsx` renders
+              `t('screen.title', …)`) ⇒ ⛔ the pattern existed and was ⛔ not carried over.
+              ⭐ `title_a11y` ("Drive details") is the ACCESSIBLE name and `title` ("This drive") the
+              VISIBLE one — ⚠ they differ deliberately, so the accessible name says WHAT the screen is
+              while the visible line stays short. */}
+          <Text
+            fontFamily="$body"
+            fontSize="$3"
+            color="$colorPress"
+            accessible
+            accessibilityRole="text"
+            accessibilityLabel={t('screen.title_a11y', undefined, NS)}
+          >
+            {t('screen.title', undefined, NS)}
+          </Text>
 
           <Text fontFamily="$body" fontSize="$7" color="$color" accessibilityRole="header">
             {/* ⭐ `deceasedMemberName` is `null` when unresolvable — the screen still carries the DRIVE.
@@ -510,9 +570,16 @@ function FactRow({ label, value }: { label: string; value: string }) {
  *
  * ⚠ **FIVE fields per account** — holder name · account number · IFSC · bank · branch — and ⭐ an
  * absent `branch` **OMITS ITS ROW**: the column is genuinely nullable, so a `null` is an ORDINARY
- * ABSENT OPTIONAL, ⛔ not a fault and ⛔ never a placeholder. ⚠⛔ `bankName` is ⛔ **NOT** its twin: that
- * column is `NOT NULL` with no non-empty CHECK, so an empty value is a FAULT and arrives as the
- * DISTINCT sentinel. ⛔ Do ⛔ not write one guard for both.
+ * ABSENT OPTIONAL, ⛔ not a fault and ⛔ never a placeholder.
+ * ⭐⭐ **AND SINCE `#decision-2026-09-14-217` cl.2, `bankName` OMITS ITS ROW TOO** (Trustee-ratified,
+ * DR + KB, option (B)) — ⭐ the two now take the SAME posture, for ⛔ **DIFFERENT REASONS**, and the
+ * distinction still matters: `branch` is a **nullable column**; `bankName` is `NOT NULL` with no
+ * non-empty CHECK, so its `null` is minted at the API boundary from an empty/whitespace value.
+ * ⚠⛔⛔ **THE PRIOR TEXT HERE SAID `bankName` *"arrives as the DISTINCT sentinel"* — ⛔ THAT IS NO
+ * LONGER TRUE, and it was a FALSE STATEMENT while it was**: the column is Tier-3 PLAINTEXT and is
+ * ⛔ never decrypted, so the sentinel reported a crypto failure that did ⛔ not happen.
+ * ⛔⛔ The THREE Tier-1 coordinates still arrive as the sentinel on a real decrypt failure — ⭐ do
+ * ⛔ not write one guard for all five.
  */
 function NomineeAccountsSection({
   detail,
@@ -522,8 +589,32 @@ function NomineeAccountsSection({
   t: ReturnType<typeof useT>
 }) {
   return (
+    // ⭐⭐ `bank.group_label` was MINTED IN BOTH LOCALES AND WIRED TO ⛔ NOTHING until the 2026-09-14
+    // Group-D review: this block shipped with ⛔ **no group name at all**, while the PUBLIC page
+    // rendered its counterpart (`sahyog-vivran/[driveToken].astro` → `bankGroupLabel`, documented
+    // there as *"the block's group accessible name (AC7 — a real `role` + `aria-label`)"*).
+    // ⇒ ⛔ the member sat **BELOW the public** on an ACCESSIBILITY affordance, on the ⛔ one surface
+    // carrying unmasked banking coordinates. ⚠ The sibling `facts.group_label` WAS wired all along.
+    //
+    // ⚠⛔⛔ **AND IT RIDES THE HEADING, ⛔ NOT THE CONTAINER — THE FIRST FIX ATTEMPT WAS WRONG AND
+    // THIS FILE'S OWN FENCE CAUGHT IT.** Putting `accessibilityLabel` on the `<YStack>` turned the
+    // family-13(a) test RED, correctly: in React Native a label on a container that is ⛔ not
+    // `accessible={true}` is ⛔ **NEVER ANNOUNCED** — the exact defect (a) names. And
+    // `accessible={true}` on this container is ⛔ **NOT** the alternative: it would COLLAPSE the whole
+    // subtree into ONE element and destroy the per-account grouping below.
+    // ⇒ ⭐ the public page's `role` + `aria-label` has ⛔ **no RN equivalent on a container**; the RN
+    // idiom is to name the group on its HEADING, which is already an accessibility element.
+    // ⚠ The heading's VISIBLE text stays `bank.title`; its ACCESSIBLE name is the fuller group label —
+    // the same deliberate split `screen.title` / `screen.title_a11y` uses above.
     <YStack px="$5" py="$5" gap="$4">
-      <Text fontFamily="$body" fontSize="$5" color="$color" accessible accessibilityRole="text">
+      <Text
+        fontFamily="$body"
+        fontSize="$5"
+        color="$color"
+        accessible
+        accessibilityRole="header"
+        accessibilityLabel={t('bank.group_label', undefined, NS)}
+      >
         {t('bank.title', undefined, NS)}
       </Text>
 
@@ -538,14 +629,26 @@ function NomineeAccountsSection({
           {detail.nomineeAccounts.map((account) => {
             const unavailable = accountHasUnavailableField(account, NOMINEE_BANK_DECRYPT_FAILED_SENTINEL)
             // ⭐ The account's accessible name is built from the SAME strings rendered below — the
-            // structural parity the header uses. ⚠ It announces the DEGRADE once rather than reading
-            // the bracketed sentinel three times.
+            // structural parity the header uses.
+            // ⚠⛔⛔ **AND A FIELD WHOSE VALUE *IS* THE SENTINEL IS **OMITTED FROM THE SPOKEN NAME**,
+            // ⛔ NOT READ ALOUD** (review finding, 2026-09-14). This block previously claimed it
+            // *"announces the DEGRADE once rather than reading the bracketed sentinel three times"* —
+            // ⛔ **it did the opposite**: each line interpolated the field's VALUE, so a total row
+            // failure was spoken as *"[unavailable — could not be shown]"* **FOUR TIMES** and then the
+            // summary sentence on top. ⇒ ⭐ drop the failed lines and let `bank.unavailable_a11y` say it
+            // ONCE — which is what the comment always claimed and ⛔ never did.
+            // ⚠ The VISUAL render is deliberately unchanged: a sighted user still sees the sentinel in
+            // its own row, which is the row-local degrade AC4 rules. ⛔ This is ⛔ not a masking change.
+            const spoken = (label: string, value: string): string | null =>
+              value === NOMINEE_BANK_DECRYPT_FAILED_SENTINEL ? null : `${label}: ${value}`
             const accountA11y = [
               t('bank.account_label', { rank: String(account.rank) }, NS),
-              `${t('label.account_holder', undefined, VIVRAN_NS)}: ${account.accountHolderName}`,
-              `${t('label.account_number', undefined, NS)}: ${account.accountNumber}`,
-              `${t('label.ifsc', undefined, NS)}: ${account.ifsc}`,
-              `${t('label.bank_name', undefined, NS)}: ${account.bankName}`,
+              spoken(t('label.account_holder', undefined, VIVRAN_NS), account.accountHolderName),
+              spoken(t('label.account_number', undefined, NS), account.accountNumber),
+              spoken(t('label.ifsc', undefined, NS), account.ifsc),
+              account.bankName === null
+                ? null
+                : spoken(t('label.bank_name', undefined, NS), account.bankName),
               account.branch === null ? null : `${t('label.branch', undefined, VIVRAN_NS)}: ${account.branch}`,
               unavailable ? t('bank.unavailable_a11y', undefined, NS) : null,
             ]
@@ -578,7 +681,13 @@ function NomineeAccountsSection({
                   value={account.accountNumber}
                 />
                 <FactRow label={t('label.ifsc', undefined, NS)} value={account.ifsc} />
-                <FactRow label={t('label.bank_name', undefined, NS)} value={account.bankName} />
+                {/* ⚠⛔ AN UNRECORDED BANK NAME **OMITS ITS ROW** — `#decision-2026-09-14-217` cl.2
+                    (Trustee-ratified, DR + KB), option (B). ⛔ Never "Not recorded", ⛔ never a
+                    placeholder, and ⛔ **NEVER the decrypt sentinel**: `bank_name` is Tier-3 PLAINTEXT,
+                    so a sentinel here would report a crypto failure that did ⛔ not happen. */}
+                {account.bankName === null ? null : (
+                  <FactRow label={t('label.bank_name', undefined, NS)} value={account.bankName} />
+                )}
                 {/* ⚠⛔ AN ABSENT BRANCH **OMITS THE ROW** — ⛔ never "Not recorded", ⛔ never a
                     placeholder. It is a nullable column, so `null` is an ordinary absent optional. */}
                 {account.branch === null ? null : (

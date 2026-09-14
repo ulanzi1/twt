@@ -39,6 +39,19 @@
 //   · ⛔ **NO masked coordinate.** ⭐ Unmasked is the POINT, ⛔ not an oversight — *"a masked account#
 //     cannot be transferred to"*. ⚠ The safety question is **WHO SEES IT** (`-199`), ⛔ never **how
 //     much of it**.
+//
+// ⚠⛔⛔ **AND ⛔ ONE ABSENCE ON THIS WIRE IS ⛔ NOT A RULING — ⭐ THE HEADING ABOVE IS TRUE OF THE FOUR
+// ITEMS LISTED, AND ⛔ NOT OF THIS FIFTH.** Read the heading as *"each absence LISTED above"*.
+//   · ⚠ **NO APPEAL LINEAGE** — ⛔ no `appealReversal`, ⛔ no `appeal_reversal_stage`, ⛔ no
+//     `appeal_disposition_category`, ⛔ no `appeal_reversal_at`. ⭐ The PUBLIC Sahyog Vivran detail
+//     page **DOES** carry them (`PublicSahyogVivranAppealReversal`, `sahyog-vivran-read.ts`'s
+//     `readAppealReversal`) ⇒ on these three field ids the member surface sits **BELOW** the public
+//     one, which is the ⛔ one axis this whole story exists to invert.
+//   · ⛔⛔ **THIS IS AN OPEN, ROUTED QUESTION — ⛔ NOT a ruled exclusion and ⛔ NOT an oversight.** It is
+//     this story's **F3**, recorded with a live trigger in `deferred-work.md` (*"a Trustee Panel ruling
+//     on whether the appeal lineage is member-visible"*). ⛔ Do ⛔ NOT read the register above as
+//     licence to treat the response as complete-by-ruling, and ⛔ do ⛔ not add the fields until that
+//     ruling lands ([[feedback_closure_language_precision]]).
 
 import { z } from 'zod';
 
@@ -80,8 +93,12 @@ export type MemberDriveDetailParams = z.output<typeof MemberDriveDetailParams>;
  * there is DELIBERATELY no `primary` / `default` / `isPreferred` field.
  *
  * ⚠⛔⛔ **WHY BOTH RENDER HERE WHILE THE LIST DECRYPTS ONE — AND IT IS ⛔ NOT A REVERSAL**
- * (`-213` cl.1). The list's one-decrypt rule governs the **HOLDER NAME**, which is *"the SAME nominee"*
- * twice ⇒ a second decrypt buys ⛔ nothing there. ⚠ This surface renders `accountNumber` and `ifsc`,
+ * (`-213` cl.1). The list's one-decrypt rule governs the **HOLDER NAME**, and the list renders that name
+ * in a SUMMARY slot for which ⛔ no second value has a place ⇒ a second decrypt buys ⛔ nothing THERE.
+ * ⚠⛔⛔ **THE GROUND IS THE SUMMARY SLOT, AND IT IS ⛔ NOT *"the SAME nominee twice"*** — that older
+ * justification is **FALSE** and is superseded by `#decision-2026-09-13-215` eight lines below: the
+ * schema permits a DIFFERENT holder name per account. ⛔ Do ⛔ not restore the equality reading.
+ * ⚠ This surface renders `accountNumber` and `ifsc`,
  * which ⛔ **DIFFER** per account ⇒ the second decrypt returns information the first does ⛔ not carry,
  * under the purpose `-199` already granted. ⭐ And the money **can have gone to both** — the two are
  * *"EQUAL payment destinations, the **donor's choice**"* ⇒ rendering one would be **incomplete by
@@ -121,10 +138,24 @@ export const MemberDriveNomineeAccountView = z
      * ⭐ Tier-3 plaintext, IFSC-derived, non-identifying — ⛔ never decrypted.
      * ⚠⛔ `bank_name` is `text NOT NULL` with ⛔ **no non-empty CHECK**, so `''` is **REACHABLE** — and
      * `''` is the exact value that once **500'd the whole public transparency page** against a
-     * `z.string().min(1)`. ⇒ the producer degrades it to the sentinel; ⛔ the degrade is ROW-LOCAL,
-     * ⛔ never page-wide.
+     * `z.string().min(1)`.
+     *
+     * ⭐⭐ **NULLABLE SINCE `#decision-2026-09-14-217` cl.2 (Trustee-ratified, DR + KB) — option (B).**
+     * An unrecorded bank name **OMITS ITS ROW**, exactly as {@link branch} already does, and the surface
+     * renders ⛔ **NOTHING** for it.
+     * ⚠⛔⛔ **IT USED TO DEGRADE TO `NOMINEE_BANK_DECRYPT_FAILED_SENTINEL`, AND THAT WAS A FALSE
+     * STATEMENT.** `bank_name` is ⛔ **never encrypted** — there is ⛔ nothing to decrypt — so the
+     * sentinel told the member a **cryptographic operation failed** when a data-entry box was simply
+     * left empty, with ⛔ no log line to tell the two apart afterwards. ⭐ The rule restored here was
+     * already written for the field beside it: *"a sentinel here would report a failure that did not
+     * happen."*
+     * ⛔⛔ **DO ⛔ NOT "RESTORE" THE SENTINEL HERE.** The shared constant's own definition scopes it to
+     * *"the DISTINCT sentinel a **Tier-1 decrypt failure** renders on any of `NomineeBankAccountView`'s
+     * **decrypted** fields"* ⇒ using it for a plaintext absence was outside the constant's own contract.
+     * ⚠ The three Tier-1 coordinates KEEP the sentinel — ⭐ for them it reports a failure that DID
+     * happen, and ⛔ that must ⛔ not be "aligned" to this field.
      */
-    bankName: z.string().min(1).max(200),
+    bankName: z.string().min(1).max(200).nullable(),
     /**
      * ⭐ Tier-3 plaintext branch. ⚠⛔ **GENUINELY NULLABLE, AND ⛔ NOT SYMMETRIC WITH `bankName`** —
      * ⛔ do ⛔ not write one guard for both. `branch` is a nullable column ⇒ a `null` is an **ORDINARY

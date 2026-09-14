@@ -23,6 +23,7 @@ import {
   accountHasUnavailableField,
   detailOutcomeFramingKey,
   isArchivedZeroAmountDrive,
+  isLiveZeroAmountWithContributors,
   selectMessageBlockHeadline,
   selectMessageBlockTableColumns,
   selectZeroDayLine,
@@ -111,7 +112,7 @@ describe('⭐ AC4 — the coordinates: UNMASKED, COMPLETE, and the RULED label',
   it('⭐ BOTH accounts render, EQUALLY — ⛔ no primary/secondary, ⛔ no ordering implied', () => {
     // ⭐ `2026-09-10-213` **cl.1**. ⚠ `rank` is composite-PK IDENTITY, ⛔ never a priority.
     expect(screenCode).toContain('detail.nomineeAccounts.map')
-    expect(screenCode).not.toMatch(/nomineeAccounts\[0\]\s*[^.]/)
+    expect(screenCode).not.toMatch(/nomineeAccounts\[0\]/)
     expect(screenCode).not.toMatch(/\bprimary\b|\bisPreferred\b|\bdefaultAccount\b/i)
     // ⭐ The equality COPY renders — ⛔ and ⛔ only when there ARE two, because with one account the
     // sentence would describe a choice the member does not have.
@@ -122,14 +123,32 @@ describe('⭐ AC4 — the coordinates: UNMASKED, COMPLETE, and the RULED label',
     }
   })
 
-  it('⚠⛔ `branch` ABSENT OMITS ITS ROW — ⛔ and `bankName` is ⛔ NOT its twin', () => {
+  it('⚠⛔ `branch` AND `bankName` BOTH OMIT THEIR ROW — ⭐ same posture, ⛔ DIFFERENT provenance', () => {
     // ⭐ `branch` is GENUINELY NULLABLE ⇒ a `null` is an **ORDINARY ABSENT OPTIONAL**, ⛔ not a fault:
-    // **OMIT THE ROW**, ⛔ never a placeholder. ⚠⛔ `bank_name` is `text NOT NULL` with ⛔ NO non-empty
-    // CHECK ⇒ `''` is REACHABLE and is the value that once **500'd the whole public transparency
-    // page** ⇒ it degrades to the DISTINCT sentinel. ⛔⛔ **ONE GUARD CANNOT SERVE BOTH.**
+    // **OMIT THE ROW**, ⛔ never a placeholder.
     expect(screenCode).toContain('account.branch === null ? null :')
     expect(screenCode).not.toMatch(/branch[^\n]*NOMINEE_BANK_DECRYPT_FAILED_SENTINEL/)
     expect(screenCode).not.toMatch(/branch[^\n]*value\.district_unknown|branch[^\n]*not_recorded/i)
+
+    // ⭐⭐ **AND `bankName` NOW OMITS ITS ROW TOO — `#decision-2026-09-14-217` cl.2 (Trustee-ratified,
+    // DR + KB), option (B).** ⚠⛔⛔ **THIS TEST'S OWN TITLE USED TO READ *"⛔ and `bankName` is ⛔ NOT its
+    // twin"*, AND ITS BODY ASSERTED THE SENTINEL DEGRADE — ⭐ amended BY NAME, ⛔ not rewritten silently**
+    // ([[feedback_supersede_never_reinterpret]]). The old behaviour reported a **crypto failure that did
+    // ⛔ not happen**: `bank_name` is Tier-3 PLAINTEXT and is ⛔ never decrypted.
+    expect(screenCode).toContain('account.bankName === null ? null :')
+    // ⛔⛔ AND THE SENTINEL IS ⛔ NEVER REACHABLE FROM THIS FIELD AGAIN.
+    expect(screenCode).not.toMatch(/bankName[^\n]*NOMINEE_BANK_DECRYPT_FAILED_SENTINEL/)
+    expect(screenCode).not.toMatch(/bankName[^\n]*not_recorded/i)
+
+    // ⚠⛔ **THEY ARE STILL ⛔ NOT TWINS, AND ⛔ ONE GUARD MUST ⛔ NOT SERVE BOTH:** `branch` is a NULLABLE
+    // COLUMN; `bankName` is `NOT NULL` with no non-empty CHECK, so its `null` is MINTED AT THE API
+    // BOUNDARY from an empty/whitespace value. ⇒ ⭐ TWO separate guards, asserted separately above.
+    expect(screenCode).not.toMatch(/account\.(branch|bankName)\s*===\s*null\s*\|\|/)
+
+    // ⛔⛔ **AND THE THREE TIER-1 COORDINATES ARE ⛔ NOT OMITTED** — ⭐ they keep the sentinel, because for
+    // them the failure is REAL. A missing account number must ⛔ never look like an absent optional.
+    expect(screenCode).not.toMatch(/account\.accountNumber === null/)
+    expect(screenCode).not.toMatch(/account\.ifsc === null/)
   })
 
   it('⭐ a per-field decrypt failure is ANNOUNCED once — ⛔ never read out three times', () => {
@@ -173,10 +192,22 @@ describe('⭐⭐ AC8 — the drive is REACHABLE, and the affordance is REAL', ()
     expect(screenCode).not.toContain("'drive_href'")
     expect(screenCode).toContain('sahyogVivranUrl(detail.publicToken')
     // ⭐ A REAL control: a real handler, an accessible name, and a role MATCHING WHAT IT DOES.
-    expect(screenCode).toContain('accessible={true}')
-    expect(screenCode).toContain('accessibilityRole="link"')
-    expect(screenCode).toContain("'public_page.cta_a11y'")
-    expect(screenCode).toContain('Linking.openURL')
+    // ⚠⛔⛔ **SCOPED TO `PublicPageLink`, ⛔ NOT SEARCHED OVER THE WHOLE FILE** (review finding,
+    // 2026-09-14). These four were unanchored `screenCode` substring checks, and `accessible={true}`
+    // also appears on the error-state retry and back Buttons ⇒ ⛔ deleting it from THIS control left all
+    // four **GREEN** while the link went silent to VoiceOver/TalkBack — the exact omission this file's
+    // header says makes role and label *"⛔ NEVER announced"*
+    // ([[feedback_gate_scope_semantic_coverage]] — a gate is complete only when it covers the surface
+    // that can violate it).
+    const linkStart = screenCode.indexOf('function PublicPageLink')
+    // ⭐ NON-VACUITY: if the function is renamed away, `slice(-1)` would silently scan one character and
+    // every assertion below would fail for the WRONG reason. ⛔ Fail here instead, loudly.
+    expect(linkStart, 'PublicPageLink not found — rename the anchor, ⛔ never delete the scope').toBeGreaterThan(-1)
+    const linkFn = screenCode.slice(linkStart)
+    expect(linkFn).toContain('accessible={true}')
+    expect(linkFn).toContain('accessibilityRole="link"')
+    expect(linkFn).toContain("'public_page.cta_a11y'")
+    expect(linkFn).toContain('Linking.openURL')
     // ⛔⛔ `link`, ⛔ NOT `button` — it LEAVES THE APP for the public site, and a screen reader should
     // say so BEFORE the member commits to the tap (the `SahyogVivranEntry` precedent).
     for (const locale of LOCALES) {
@@ -386,12 +417,45 @@ describe('⭐⭐ AC10 — the Panel\'s message block and its table', () => {
   })
 })
 
+describe('⭐⭐ AC9 — the THIRD ₹0 state (review finding, 2026-09-14)', () => {
+  it('⛔⛔ `live` + a REAL confirmed count + ₹0 raised is SILENCE — ⛔ never "₹ 0 contributed"', () => {
+    // ⚠⛔⛔ **THE TWO ORIGINAL GATES KEYED OFF DIFFERENT FIELDS AND LEFT A HOLE BETWEEN THEM.**
+    // `selectZeroDayLine` gates on the COUNT (`live && count === 0`); `isArchivedZeroAmountDrive` on the
+    // AMOUNT (`!live && amount <= 0`). ⇒ `live` + `count > 0` + `amount === 0` fell through BOTH.
+    // ⭐ REACHABLE: `pools.fixed_amount` carries ⛔ NO CHECK, and the domain clamps `Math.max(0, …)`.
+    // ⭐ The PUBLIC surface has carried this arm since 2026-09-08 — this asserts the SWEEP.
+    const base = { status: 'live' as const, confirmedContributionCount: 41, amountRaisedInr: 0 }
+    expect(isLiveZeroAmountWithContributors(base)).toBe(true)
+    // ⛔ NON-VACUITY — the ordinary live drive is ⛔ NOT silenced.
+    expect(isLiveZeroAmountWithContributors({ ...base, amountRaisedInr: 20500 })).toBe(false)
+    // ⛔ The zero-DAY drive is ⛔ NOT this rule's subject — `zero_line.*` still owns it.
+    expect(isLiveZeroAmountWithContributors({ ...base, confirmedContributionCount: 0 })).toBe(false)
+    // ⛔ An archived ₹0 drive belongs to the OTHER gate, ⛔ not this one.
+    expect(isLiveZeroAmountWithContributors({ ...base, status: 'verified' })).toBe(false)
+    // ⭐⭐ AND THE SCREEN CONSUMES IT — ⛔ a selector nothing calls is not a fix.
+    expect(screenCode).toContain('isLiveZeroAmountWithContributors(detail)')
+  })
+})
+
 describe('⭐ AC11 — family 13, in full', () => {
   it('⛔⛔ every `accessibilityLabel` sits on an element that is EXPLICITLY `accessible`', () => {
     // ⚠ A tamagui `<Button>` is `styled(View, …)` and `@tamagui/web`'s `createComponent.native.js`
     // sets `accessible` ⛔ NOWHERE ⇒ it is a plain RN `View`, and an RN `View` is ⛔ not an
     // accessibility element unless it says so. ⛔ Do ⛔ not assume `Pressable` semantics.
-    const lines = screen.split('\n')
+    // ⚠⛔⛔ **`screenCode`, ⛔ NOT `screen` — THIS SCAN WAS VACUOUS ON EXACTLY THE AC8 CONTROL**
+    // (review finding, 2026-09-14, ⭐ PROBE-VERIFIED). Run over the RAW source, the AC8
+    // public-page-link `<Button>`'s attribute block contains a doc-comment carrying the standalone word
+    // `accessible` (*"`@tamagui/web` sets `accessible` ⛔ NOWHERE"*), which SATISFIED the regex below.
+    // ⭐ Probe: deleting `accessible={true}` from that Button left the suite **31/31 GREEN**, while
+    // deleting it from the account `YStack` went **RED** ⇒ the fence was **SELECTIVELY BLIND** to the
+    // one element AC8 ratifies as *"a REAL focusable control"*, whose own comment says *"WITHOUT THIS
+    // THE THREE PROPS BELOW ARE ⛔ NEVER ANNOUNCED."*
+    // ⚠⛔ **FAMILY 13 IS UN-MECHANIZED BY RULING ⇒ THIS FENCE ⛔ IS THE COVERAGE** — *"a missed check
+    // here leaves ⛔ no trace"*. ⭐ This file states the lesson at the top (*"a raw-source scan makes the
+    // repo's discipline indistinguishable from breaking it — the `codeOnly` lesson, PAID FOR ONCE
+    // ALREADY"*) and then broke it in this one assertion
+    // ([[feedback_gate_scope_semantic_coverage]]).
+    const lines = screenCode.split('\n')
     const labelLines = lines
       .map((l, i) => ({ l, i }))
       .filter(({ l }) => /accessibilityLabel=/.test(l) && !/^\s*(\/\/|\*)/.test(l))

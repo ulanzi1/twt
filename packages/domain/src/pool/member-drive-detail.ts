@@ -16,8 +16,12 @@
 // ── ⛔ THE CLAIM'S SUBJECT COMES FROM THE CLAIM, ⛔ NEVER FROM A LIFECYCLE STATE ────────────────
 // `pools.claim_case_id` → `claims.deceased_member_id` IS the subject fact. ⛔ No predicate here may
 // re-derive that subject from `members.state`: the condition is an OVERLAY, ⛔ never a lifecycle
-// label, so such a predicate is blind to it BY CONSTRUCTION
-// ([[project_death_is_an_overlay_not_a_state]]).
+// label, so such a predicate is blind to it BY CONSTRUCTION — the same overlay-vs-lifecycle-label
+// discipline `member/read.ts` documents by name (review finding, 2026-09-14: cited there rather
+// than here, because spelling that note's own name in THIS file trips the
+// pool-support-category-invariant scan — which deliberately treats even a comment mentioning the
+// forbidden word as a smell in pool-engine prose, Story 7.1 AC4 — and the point survives fine
+// without repeating the literal citation in a second, scanned file).
 //
 // ── TRANSPORT-FREE AND ⛔ DECRYPT-FREE BY RULE ─────────────────────────────────────────────────
 // ⛔ NO HTTP, ⛔ no audit, ⛔ no decryption, ⛔ no permission check. This module returns ciphertext

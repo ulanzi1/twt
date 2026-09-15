@@ -4,6 +4,88 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Recorded from: implementation of 11b-3b-sahyog-vivran-named-identity-render-layer — Task 7 (AC8), 2026-09-15
+
+### ⚠⛔⛔ `/sahyog-vivran` IS NOW AN UNAUTHENTICATED **PAGINATED COLLECTION** WITH ⛔ NO ABUSE COUNTER — and the Panel's exposure judgement was made about a **SINGLE-ITEM GET**
+
+⭐ **OBSERVATIONAL, ⛔ NOT FIXED HERE, and Story `11b-3b` does ⛔ NOT claim to have discharged it**
+([[feedback_gap_analysis_observational]]). ⛔ The counter is ⛔ not wired under cover of a render story.
+
+⚠⛔ **THE SKIP COMMENT'S PREMISE EXPIRED, AND IT IS THE REASON THIS IS BEING RE-EXAMINED AT ALL.**
+`public-pages/handlers.ts` recorded the omission as *"a decision rather than an oversight"* on the
+ground that *"`evaluateDirectoryAbuse` keys on `(page, limit)` — a COLLECTION-walk shape — and this
+route has neither"*, adding that *"feeding it synthetic values would put fabricated query shapes into
+a governance counter."* ⛔ **Both halves are FALSE at HEAD:** Task 3 shipped bounded `page` and `limit`
+(controls 2 and 3, RESTORED), so the values are **real**. ⭐ The comment is **amended in place as a
+record, ⛔ not deleted**; the omission SURVIVES on different and better grounds, below.
+
+⭐⭐ **APPLICABILITY — DETERMINED FROM THE RULES FILE'S OWN SCOPE, ⛔ not from the stale comment:**
+· ⭐ **THE FILE ALREADY REACHES THIS ROUTE.** `directory-abuse-rules.yaml`'s two-surfaces block says
+  the rules describe ***"an unauthenticated, paginated public collection"***, ⛔ *"not the Member
+  Directory specifically"*. ⇒ ⛔ this is ⛔ not a question of whether the rules COULD apply.
+· ⭐ **ALL FOUR ACTIVE RULES HAVE A SUBJECT IN THE DATA** the evaluator would receive — ⚠ and the
+  depth rules are reachable for a ⛔ **non-obvious** reason worth writing down: `limit` is
+  caller-controlled down to **1**, so a 50-contributor drive is **50 pages**. ⇒ `deep_crawl` (25
+  distinct pages), `deep_page_access` (page 40) and `rapid_pagination` (20 transitions) are ⛔ **not**
+  structurally vacuous here, even though a cost-minimising scraper would ⛔ never page that way.
+· ⭐ **THE COUNTER IS ALREADY PARTITIONED BY SURFACE** — the window key is the pair
+  *(surface, visitor)*, and `DirectorySurface` is a **CLOSED UNION** of
+  `'member-directory' | 'sahyog-drive'`. ⇒ a third surface is a deliberate widening of a governed
+  type, ⛔ not an incidental call-site edit.
+
+⛔⛔ **WHY IT IS STILL ⛔ NOT WIRED — TWO GROUNDS, BOTH GOVERNANCE, ⛔ NEITHER A SHAPE PROBLEM:**
+
+**(1) ⭐ THE FILE ITSELF RULES THAT THIS KIND OF CHANGE IS ⛔ NOT A CALL-SITE ADDITION.** Its
+`district_query_volume` annotation — written by **Story 11b.1** about the last rule whose
+applicability changed when a second surface arrived — is the governing precedent and it is exact:
+activation is *"a REAL change — a new evaluator input, a threshold chosen against real filter shapes,
+and its own planted control — ⛔ **not a status flip**"*, and thresholds must be **per SURFACE**,
+*"because `/members` and `/sahyog` have different legitimate query shapes and one shared threshold
+would either miss a crawl on the busier one or flag ordinary use on the quieter."*
+⚠⛔⛔ **HERE IT LANDS IN THE *MISS* DIRECTION, AND ⛔ NOT NARROWLY.** `high_volume_lookups` is **60
+requests / 60 s**, calibrated for a reader paging a roster. ⭐ Legitimate use of a DRIVE page is **one
+to three requests**. ⇒ a harvester walking the index for tokens and pulling **one drive per request**
+at 59 requests/minute takes up to **~2,950 FULL LEGAL NAMES A MINUTE** — each request decrypting up
+to 50 Tier-1 values — and ⛔ **never fires a rule**. ⇒ ⛔ wiring the evaluator with the directory's
+thresholds would ship a counter that **reports green through exactly the abuse it is named for** —
+the vacuous-green defect this file exists to refuse ([[feedback_gate_scope_semantic_coverage]]).
+
+**(2) ⭐⭐ AND THE EXPOSURE JUDGEMENT IS THE PANEL'S, ON A PREMISE THIS STORY CHANGED.**
+[`2026-09-02-183`](../../.decision-log.md#decision-2026-09-02-183) is **Trustee-ratified** (Dhiraj
+Rahul, Kalpana Bharti), and its own **Decision type** line records its subject: *"a public-surface
+exposure judgement that Story 11b.3a's **AC2** rules only the Panel may make — **if `limits.search` is
+judged insufficient for a Tier-1-bearing SINGLE-ITEM GET, that is a DECISION, ⛔ not a tuning knob**"*.
+⚠⛔ **THIS ROUTE IS ⛔ NO LONGER A SINGLE-ITEM GET.** It serves a bounded page of **up to 50 decrypted
+Tier-1 names** per request. ⇒ ⭐ **the ratified judgement STANDS and is ⛔ not reopened here** — ⛔ but
+the thing it was made ABOUT has changed shape, and re-posing it is a **Panel act**
+([[feedback_supersede_never_reinterpret]]). ⛔ A dev choosing an abuse threshold for a Tier-1-bearing
+public surface would be making that judgement by side effect.
+
+⚠ **RELATED, AND ⛔ NOT THE SAME ITEM:** 11b.3a's item **(g)** (*the edge-cache blindness of any abuse
+counter on this surface*) is **RE-AFFIRMED and ⛔ not re-filed**. ⭐ Note the two compound rather than
+overlap: (g) says an origin-side counter sees only cache MISSES; **this** item says there is ⛔ no
+origin-side counter here at all. ⇒ ⛔ do ⛔ not read (g) as evidence that one exists.
+
+⭐ **WHAT BOUNDS THE ROUTE TODAY, STATED SO ⛔ NOTHING READS AS UNPROTECTED:** `limits.search`
+(control 1, UNCHANGED), the page-size **CAP** and the deep-page **HORIZON** (controls 2 and 3,
+restored by Task 3), and the opaque `publicToken` (control 7) — which bounds DISCOVERY of `live`
+drives but ⛔ **not** of `closed`/`settled` ones, whose addresses the index publishes by ruling
+([`2026-09-04-186`](../../.decision-log.md#decision-2026-09-04-186)).
+
+⭐⭐ **TRIGGER — the FIRST of these, whichever comes first:**
+· ⭐ **A Trustee-Panel routing note re-posing `-183`'s question against the route's NEW shape** — a
+  Tier-1-bearing **paginated collection**, ⛔ no longer a single-item GET. ⚠ That note is the natural
+  home for the threshold too, since both are the same class of judgement.
+· ⭐ **Any story that threads a new dimension into `evaluateDirectoryAbuse`'s input** (the
+  `district_query_volume` trigger already names this shape) — ⇒ ⭐ it widens `DirectorySurface`,
+  picks a **per-surface** threshold, and adds its **own planted negative control**, for ⛔ all
+  surfaces it touches.
+· ⭐ **Edge configuration** — which fires 11b.3a's item (g) and makes the whole question concrete at
+  once, since an origin counter's blindness and its absence would then be measured together.
+⛔ **NOT a trigger:** a reviewer noticing the route is uninstrumented. ⭐ That is this item.
+
+---
+
 ## Recorded from: implementation of 11b-3b-sahyog-vivran-named-identity-render-layer — Task 5 (AC6), 2026-09-15
 
 ✅⛔ **11b.1's item (f) — *"Naming the BUILDABLE inventory is 11b.3's, at the point it has a host"* — is

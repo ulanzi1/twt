@@ -1,3 +1,41 @@
+# last_updated: 2026-09-15b (⭐⭐ **`11b-3b` — v2.1 SECOND VALIDATE PASS, AND `D-percentage` RULED.
+#   ⛔ NO CODE. ⛔ ZERO ROWS MOVE.** ⭐ Two governance acts, one commit.
+#   ⭐ **(1) `#decision-2026-09-15-218` — `D-percentage` RULED, BigDev author-commit:** a `closed` or
+#   `settled` Sahyog Vivran drive PAGE renders ⛔ NO completion percentage. ⇒ ⭐ `11b-3b`'s Preflight
+#   STOP is LIFTED, Task 2 is unblocked, and the story carries ⛔ **ZERO open decisions**.
+#   ⚠⛔ **THE TRACE CHANGED WHAT THE RULING IS** — the page carries ⛔ no percentage field in ⛔ ANY
+#   state; `sahyog-vivran.ts:60-61` forbids one *"in any field, under any name"* and
+#   `public-pages-sahyog-vivran.test.ts:146-152` ALREADY rejects it. The percentage that exists is the
+#   **INDEX's** (`sahyog-drive.ts:254`, `live`-gated at `sahyog-render.ts:445` under `-207` cl.1) —
+#   ⛔ a DIFFERENT surface. ⇒ **cl.2: the entry makes an ABSENCE INTENTIONAL and changes ⛔ NO CODE.**
+#   ⛔ Nobody implements it; a reviewer finding ⛔ no diff for `-218` is seeing cl.2 working.
+#   ⚠⛔ **cl.3: the `live` arm is ⛔ NOT ruled and ⛔ must not auto-widen** — carried as an Open
+#   follow-up, unrouted, blocking ⛔ nothing. ⚠ **cl.4 binds AC3b:** the amount may ⛔ never be paired
+#   with a target/expected-total/roster-size. ⭐ `-207`'s Open follow-up naming `11b-3b` is
+#   **DISCHARGED**; ⛔ `-207` is ⛔ not edited.
+#   ⭐ **(2) v2.1 — the SECOND validate pass** (the first was 2026-09-11). ⭐ The pin `05094a68` is
+#   **UNCHANGED and re-confirmed an ancestor of HEAD and `origin/main`**; ⛔ the two facts are now
+#   stated SEPARATELY (pin-ancestry = durable; code-claims-re-derived-at-`be0037cc` = perishable).
+#   ⭐ **The drift v2.0 recorded as RISK is DISCHARGED**: 42 files re-read. **16 findings, 6 BLOCKING** —
+#   AC3b was **RED ON WRITE** against `scripts/sahyog-vivran-financial-truth` (rule (3) forbids an
+#   amount operand being NAMED in the DTO file it targeted; wired into ci.yml AND ci-local.sh) ⇒
+#   **AC11 minted**; AC3b's source was an argument field inside a ternary, `null` on every LIVE drive,
+#   under a fence forbidding the widening ⇒ rewritten to the shipped index shape (clamped binding,
+#   used twice, wire name `amountRaisedInr`, `-190` cl.6 / `-189` cl.5); AC3 ordered the shared
+#   presenter AND `resolvePublicMemberName` — ⛔ mutually unsatisfiable (⛔ no full-name arm) ⇒ it
+#   would have shipped the SHIELDED form on the surface ruled FULL NAME; Trap 5's mononym claim was
+#   FALSE at its own cited call site; **all NINE** `file:NNN` pointers into prepend-structured files
+#   had ROTTED (the Preflight's own included) ⇒ **DELETED, ⛔ not re-derived**; every
+#   `member-pool/handlers.ts` cite was in the WRONG FUNCTION.
+#   ⚠⛔ **TWO OF THE PASS'S OWN CALLS WERE CORRECTED BY BigDev:** (a) a *"`D-stageword`"* STOP it raised
+#   was ⛔ NOT a decision — `-191` cl.3 is SUPERSEDED by `-192` cl.1 / `-193` ⇒ a **stale citation**,
+#   settled by READING; the branch it offered would have BROKEN correct ratified copy. ⇒ ⭐ the test is
+#   *"is the answer FOUND or DECIDED?"*. (b) it deferred the **UX spec** as *"outside my diff scope"*;
+#   re-verified on challenge — all three pointers HOLD, ⛔ but the read found the block is `:1311-1335`,
+#   four other restatement anchors are owed, `:1334` is STALE (*"the name form is UNRULED"*) and
+#   `:1335` assigns the work to `11b-3`, which is `done`. ⇒ ⭐ **a scope carve-out is a HAZARD, ⛔ never
+#   a discharge.**
+#   ⛔ `11b-3b` stays **ready-for-dev**. ⛔ No other row is touched.)
 # last_updated: 2026-09-15a (⚠⛔ **BASELINE-PIN SWEEP ACROSS THE THREE STORIES THE 2026-09-09
 #   `11b-15` BLOCK FLAGGED. ⛔ NO CODE. ⛔ ZERO ROWS MOVE. ⛔ NOTHING RE-ARGUED.** Each pin was checked
 #   LIVE against `origin/main` after `git fetch` ([[feedback_git_fetch_before_remote_reasoning]]),

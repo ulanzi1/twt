@@ -131,11 +131,10 @@ export const PROHIBITED_IMPORTS: readonly string[] = [
  */
 const TARGET_OPERANDS = /^(fixedAmount|rosterSize|expectedTotal|deliveredTotal)$/;
 
-/**
- * ⭐ The RULED public rupee figure. ⛔ Permitted to be NAMED on the render path — that is the whole
- * point of the narrowing — ⛔ but ⛔ never locally DERIVED (see {@link isAmountDerivation}).
- */
-const RULED_AMOUNT_FIELD = /^(amountRaised|amountRaisedInr)$/;
+// ⚠ Review finding, 2026-09-15: a `RULED_AMOUNT_FIELD` regex stood here, documented as what
+// "permits" `amountRaisedInr` on the render path. It was never referenced anywhere — the actual
+// permission is just `amountRaisedInr` not being a member of {@link TARGET_OPERANDS} above.
+// ⛔ Removed rather than wired in: there is no check left for it to gate.
 
 /** Operand halves of the refused product `confirmedCount × fixedAmount`. */
 const COUNT_OPERAND = /^(confirmedCount|confirmedContributionCount|assignedCount|rosterSize)$/;

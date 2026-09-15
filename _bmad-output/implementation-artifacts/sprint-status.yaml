@@ -1,3 +1,21 @@
+# last_updated: 2026-09-15e (✅ **`11b-3b` — CODE REVIEW COMPLETE ACROSS ALL 5 CHUNKED GROUPS
+#   (`packages/contracts`+`domain`+`api-client`+`ui`, `apps/api`, `apps/public`,
+#   `packages/i18n`+`scripts`+`openapi`+`microcopy.yaml`; `apps/mobile` skipped — zero 11b.3b
+#   commits touch it); the row moves `review` → `done`.** ⛔ No other row is touched.
+#   ⭐ Every finding was checked against `git log --grep="11b.3b" -- <path>` before being charged to
+#   this story — the diff range also carries stories 11b.17/11b.19/8.17 interleaved in the same
+#   linear history, each already reviewed under its own commits.
+#   ⭐⭐ **3 PATCHES FOUND AND FIXED:** a missing erasure-sentinel backstop on the deceased-member
+#   name decrypt (`apps/api/.../public-pages/handlers.ts` — Trap 4/AC5, would have rendered the
+#   literal `[anonymized]` as a name once the publication clause is pinned); an unvalidated response
+#   boundary in `apps/public/.../sahyog-vivran.server.ts` that could crash the public render on a
+#   degraded upstream body instead of falling into the outage state; a dead/misleading constant in
+#   `scripts/sahyog-vivran-financial-truth/lib.ts`. All three verified: each new regression test
+#   fails against the pre-patch code and passes with the fix; full suites + `tsc --noEmit` green.
+#   ⭐ **0 decision-needed. 5 items deferred** (documented in the story file's Review Findings and in
+#   `deferred-work.md`) — copy/product calls outside a reviewer's authority, test-coverage gaps, and
+#   one low-severity non-exploitable gate-precision note. ⭐ **Acceptance Auditor: 0 AC violations**
+#   found against AC1–AC11 across every file 11b.3b's own commits touched.
 # last_updated: 2026-09-15d (✅ **`11b-3b` — ALL EIGHT TASKS COMPLETE; the row moves
 #   `in-progress` → `review`.** ⛔ No other row is touched.
 #   ⭐ **SHIPPED:** the ruled rupee figure · the deceased member's name · the confirmed CONTRIBUTOR
@@ -18556,7 +18574,7 @@ development_status:
   # sweep ⇒ ⭐ the next `validate` pass owes a `packages apps` re-diff before trusting any row.
   # ⭐ Siblings in the same sweep: `11b-17` (`a2617869`) + `6-18` (`55912d83`) re-checked LIVE ⇒
   # ⭐ BOTH SOUND ⇒ the 2026-09-09 *"they still carry ORPHANED pins"* note is SUPERSEDED, ⛔ not edited.
-  11b-3b-sahyog-vivran-named-identity-render-layer: review
+  11b-3b-sahyog-vivran-named-identity-render-layer: done
   11b-4-memorial-authorship-surface-family-writes-the-story: backlog
   11b-5-memorial-visual-components-memorial-record-portrait-frame-kinship-lattice: backlog
   11b-6-in-memoriam-roll-consent-governed-revocable-invariant: backlog

@@ -39,7 +39,18 @@ const OK_BODY = {
       { accountRank: 1, accountHolderName: 'A Holder' },
       { accountRank: 2, accountHolderName: 'B Holder' },
     ],
+    // ⭐⭐ Story 11b.3b (Task 2 unit 2, AC3b) — the two fields this story added to the DRIVE object.
+    // ⚠⛔ Review finding, 2026-09-15: this fixture had NOT been updated for either, which masked
+    // `isSahyogVivranResponse` never checking them at all. ⛔ Do not drop them again.
+    deceasedMemberName: 'Rajesh Kumar Sharma',
+    amountRaisedInr: 13700,
   },
+  // ⭐⭐ Story 11b.3b (Task 3, AC4) — the paginated contributor envelope, ALONGSIDE `drive`,
+  // ⛔ never inside it.
+  items: [{ name: 'Sunita Devi' }],
+  page: 1,
+  limit: 50,
+  total: 1,
 };
 
 afterEach(() => {
@@ -170,7 +181,7 @@ describe('⭐ fetchSahyogVivran — every bounded field is validated against its
   it('⭐ ACCEPTS a null fundingOutcome — it is VALID and load-bearing', async () => {
     // `null` means the drive is still collecting, or that ⛔ no expectation was ever set. Treating it
     // as a bad response would turn every live drive into an outage.
-    stubFetch(() => json({ drive: { ...OK_BODY.drive, fundingOutcome: null } }));
+    stubFetch(() => json({ ...OK_BODY, drive: { ...OK_BODY.drive, fundingOutcome: null } }));
     const res = await fetchSahyogVivran({ driveToken: 'P-1', forwardedFor: null });
     expect(res.ok).toBe(true);
   });
@@ -238,6 +249,7 @@ describe('⭐ fetchSahyogVivran — every bounded field is validated against its
     // placeholder. Treating it as a bad response would turn one failed envelope into a 503.
     stubFetch(() =>
       json({
+        ...OK_BODY,
         drive: {
           ...OK_BODY.drive,
           nomineeBankAccounts: [{ accountRank: 1, accountHolderName: null }],
@@ -251,7 +263,7 @@ describe('⭐ fetchSahyogVivran — every bounded field is validated against its
   it('⭐ ACCEPTS an EMPTY accounts array — bank details were never collected, ⛔ not an outage', async () => {
     // ⚠ 6.8's AC3 absence signal. Treating `[]` as a bad response would turn every drive whose bank
     // details were not collected into a 503 — a statement about the trust that is not true.
-    stubFetch(() => json({ drive: { ...OK_BODY.drive, nomineeBankAccounts: [] } }));
+    stubFetch(() => json({ ...OK_BODY, drive: { ...OK_BODY.drive, nomineeBankAccounts: [] } }));
     const res = await fetchSahyogVivran({ driveToken: 'P-1', forwardedFor: null });
     expect(res.ok).toBe(true);
   });
@@ -313,6 +325,65 @@ describe('⭐ fetchSahyogVivran — every bounded field is validated against its
 
   it('⛔ REJECTS an HTML proxy error page served with a 200', async () => {
     vi.stubGlobal('fetch', async () => new Response('<html>502</html>', { status: 200 }));
+    const res = await fetchSahyogVivran({ driveToken: 'P-1', forwardedFor: null });
+    expect(res).toEqual({ ok: false, reason: 'bad_response' });
+  });
+
+  // ⭐⭐ Story 11b.3b's SIX WIRE FIELDS (Review finding, 2026-09-15) — the render layer calls
+  // `formatCurrency` on `amountRaisedInr` and `.map`s over `items`; either throwing on a
+  // malformed/degraded body would crash `buildSahyogVivranView` rather than fall into the outage
+  // state this validator exists to produce. ⛔ None of these had a REJECTS leg before this pass.
+
+  it('⛔ REJECTS a non-integer `amountRaisedInr`', async () => {
+    stubFetch(() => json({ ...OK_BODY, drive: { ...OK_BODY.drive, amountRaisedInr: 137.5 } }));
+    const res = await fetchSahyogVivran({ driveToken: 'P-1', forwardedFor: null });
+    expect(res).toEqual({ ok: false, reason: 'bad_response' });
+  });
+
+  it('⛔ REJECTS a negative `amountRaisedInr`', async () => {
+    stubFetch(() => json({ ...OK_BODY, drive: { ...OK_BODY.drive, amountRaisedInr: -1 } }));
+    const res = await fetchSahyogVivran({ driveToken: 'P-1', forwardedFor: null });
+    expect(res).toEqual({ ok: false, reason: 'bad_response' });
+  });
+
+  it('⛔ REJECTS an EMPTY-STRING `deceasedMemberName` — `null` is valid, `""` is not', async () => {
+    stubFetch(() => json({ ...OK_BODY, drive: { ...OK_BODY.drive, deceasedMemberName: '' } }));
+    const res = await fetchSahyogVivran({ driveToken: 'P-1', forwardedFor: null });
+    expect(res).toEqual({ ok: false, reason: 'bad_response' });
+  });
+
+  it('⭐ ACCEPTS a null `deceasedMemberName` — the DESIGNED day-one state', async () => {
+    stubFetch(() => json({ ...OK_BODY, drive: { ...OK_BODY.drive, deceasedMemberName: null } }));
+    const res = await fetchSahyogVivran({ driveToken: 'P-1', forwardedFor: null });
+    expect(res.ok).toBe(true);
+  });
+
+  it('⛔ REJECTS `items` that is not an array', async () => {
+    stubFetch(() => json({ ...OK_BODY, items: 'not-an-array' }));
+    const res = await fetchSahyogVivran({ driveToken: 'P-1', forwardedFor: null });
+    expect(res).toEqual({ ok: false, reason: 'bad_response' });
+  });
+
+  it('⛔ REJECTS a contributor row missing `name`', async () => {
+    stubFetch(() => json({ ...OK_BODY, items: [{}] }));
+    const res = await fetchSahyogVivran({ driveToken: 'P-1', forwardedFor: null });
+    expect(res).toEqual({ ok: false, reason: 'bad_response' });
+  });
+
+  it('⛔ REJECTS a non-positive `page`', async () => {
+    stubFetch(() => json({ ...OK_BODY, page: 0 }));
+    const res = await fetchSahyogVivran({ driveToken: 'P-1', forwardedFor: null });
+    expect(res).toEqual({ ok: false, reason: 'bad_response' });
+  });
+
+  it('⛔ REJECTS a non-positive `limit`', async () => {
+    stubFetch(() => json({ ...OK_BODY, limit: 0 }));
+    const res = await fetchSahyogVivran({ driveToken: 'P-1', forwardedFor: null });
+    expect(res).toEqual({ ok: false, reason: 'bad_response' });
+  });
+
+  it('⛔ REJECTS a negative `total`', async () => {
+    stubFetch(() => json({ ...OK_BODY, total: -1 }));
     const res = await fetchSahyogVivran({ driveToken: 'P-1', forwardedFor: null });
     expect(res).toEqual({ ok: false, reason: 'bad_response' });
   });

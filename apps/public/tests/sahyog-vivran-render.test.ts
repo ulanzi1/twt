@@ -31,6 +31,7 @@ const LABELS: SahyogVivranLabels = {
   pageTitle: 'Sahyog Vivran',
   pageIntro: 'intro',
   factsGroupLabel: 'Drive details',
+  labelDeceasedMember: 'Deceased Member',
   labelDriveCode: 'Drive code',
   labelPoolLetter: 'Pool',
   labelDistrict: 'District',
@@ -87,6 +88,12 @@ const SETTLED: PublicSahyogVivranResponse = {
     poolCanonicalIdentifier: 'P-2026-09-003',
     driveStatus: 'verified',
     closedAt: '2026-09-01T18:45:00.000Z',
+    // ⭐ Story 11b.3b (Task 2 unit 2) — a REAL name in the primary fixture, so the render path and
+    // the Tier-1 leak leg are actually exercised. ⚠⛔ It is ⛔ NOT the day-one state: the publication
+    // basis is fail-closed for every member, so a live drive carries `null` here. ⭐ That arm has its
+    // own leg below — ⛔ a fixture that only ever carried `null` would leave the ruled render
+    // unexercised, which is the vacuous-leg defect this surface names everywhere else.
+    deceasedMemberName: 'Rajesh Kumar Sharma',
     district: 'Lucknow',
     confirmedContributionCount: 137,
     amountRaisedInr: 137000,
@@ -166,15 +173,30 @@ describe('buildSahyogVivranView — the settled drive', () => {
     // `2026-09-02-173` / `-174`, and ⛔ this story adds neither.
     // ⚠⛔ AND `nominee` IS ⛔ NOT SIMPLY REMOVED FROM THE LIST: the shell model carries only the
     // CONTAINER key `nomineeAccounts`; the per-account attributes are asserted separately below.
+    //
+    // ⚠⛔⛔ **NARROWED AGAIN 2026-09-15 (Story 11b.3b, Task 2 unit 2 / AC9) — ⛔ THE TEXT ABOVE IS
+    // KEPT AS THE RECORD AND ⛔ NOT REWRITTEN** ([[feedback_supersede_never_reinterpret]]). ⭐ **11b.3b
+    // IS that story**, and it adds ⛔ not "neither" but **ONE**: `2026-09-02-173` (Trustee Panel)
+    // ruled the **DECEASED MEMBER's FULL NAME** onto this surface, declared in the matrix with its
+    // own `tier1_public_exception` in the same commit as the field. ⇒ `/deceased/i` leaves the
+    // forbidden list, and the key is asserted PRESENT below rather than merely un-forbidden — ⛔ a
+    // leg that only stopped forbidding it would go vacuous.
+    // ⛔⛔ **THE CONTRIBUTOR AND THE VERIFIER STAY FORBIDDEN, AND THEY ARE THE HALF THAT MATTERED:**
+    // the contributor's render is this story's **Task 3** (which owns the pagination, ordering and
+    // bounded decrypt that list requires), and ⛔ NOBODY has ruled a verifier identity at any tier.
     const keys = Object.keys(model);
-    for (const forbidden of [/contributor/i, /verifier/i, /deceased/i]) {
+    for (const forbidden of [/contributor/i, /verifier/i]) {
       expect(keys.filter((k) => forbidden.test(k))).toEqual([]);
     }
+    // ⭐ THE ONE RULED PERSON KEY ON THE SHELL — present, and EXACTLY one.
+    expect(keys.filter((k) => /deceased/i.test(k))).toEqual(['deceasedMemberName']);
     // ⛔ The ONLY nominee-shaped key on the shell is the container. A second one would be a field
     // nobody declared.
     expect(keys.filter((k) => /nominee/i.test(k))).toEqual(['nomineeAccounts']);
-    // ⛔ And no NAME key on the shell at all — the account holder's name lives on the account row.
-    expect(keys.filter((k) => /name/i.test(k))).toEqual([]);
+    // ⚠⛔ **AMENDED, ⛔ NOT DELETED** — this read `toEqual([])` on the ground that the account
+    // holder's name lives on the account row. ⭐ The ruled deceased name is now a shell key, so the
+    // leg asserts the EXACT set rather than emptiness: ⛔ a second, undeclared name key still fails.
+    expect(keys.filter((k) => /name/i.test(k))).toEqual(['deceasedMemberName']);
   });
 
   it('⭐⛔ carries NO prohibited financial key — the AC4 shape, at the render layer too', () => {
@@ -220,6 +242,48 @@ describe('buildSahyogVivranView — the LIVE (still collecting) drive (D4(b), AC
 
   it('⭐ STILL renders the confirmed count — the one figure that is true mid-drive', () => {
     expect(model.confirmedContributionCount).toBe('4 confirmed');
+  });
+});
+
+describe('buildSahyogVivranView — ⭐⭐ THE UNNAMED DRIVE: the DAY-ONE state of every drive', () => {
+  // ⚠⛔⛔ **THIS IS ⛔ NOT AN EDGE CASE — IT IS WHAT EVERY DRIVE RENDERS ON THE DAY 11b.3b SHIPS.**
+  // `NAME_PUBLICATION_AUTHORISED` requires a pinned `clause_versions` row for
+  // `niy.public-disclosure.member-information`; counsel's written clause is still owed (OVERDUE
+  // since 2026-09-07) and there is ⛔ no migration, ⛔ no seed and ⛔ no writer for it anywhere in the
+  // repo ⇒ the gate is FALSE for every member. ⭐ Fail-closed and therefore CORRECT (`-209` cl.2).
+  // ⇒ ⭐ the fixture above, which CARRIES a name, is the POST-CLAUSE state; this one is TODAY.
+  // ⛔⛔ ⛔ Do ⛔ not "fix" a blank name by seeding a placeholder clause row — `public-read.ts`
+  // forbids it in terms: *"a stand-in makes names render on an authority that does ⛔ not exist."*
+  const { model } = buildSahyogVivranView(
+    { drive: { ...SETTLED.drive, deceasedMemberName: null } },
+    LABELS,
+  );
+
+  it('⛔ renders NOTHING for the name — ⛔ no placeholder and ⛔ no withheld marker', () => {
+    // ⚠ `null`, ⛔ not "Not recorded", ⛔ not "name withheld", ⛔ not an em dash. A per-drive marker
+    // announces WHICH members have a publication basis, which is the enumeration signal an absent
+    // basis must ⛔ not emit. ⚠ ⛔ NOT the `district` posture, which DOES have fallback copy: an
+    // unrecorded posting is an ordinary data gap, an unnamed member is a governance state.
+    expect(model.deceasedMemberName).toBeNull();
+  });
+
+  it('⭐⭐ OMITS THE NAME, ⛔ NEVER THE PAGE — every other fact still renders', () => {
+    // ⭐ The deceased member's arm of AC3's PER-SUBJECT omission ruling, and the sibling index's
+    // shipped rule. ⚠⛔ The CONTRIBUTOR arm (Task 3) is the OPPOSITE — an unrenderable name omits
+    // the ROW, which exists only to carry it. ⛔ Do ⛔ not apply one rule to both subjects.
+    expect(model.apiUnavailable).toBe(false);
+    expect(model.poolCanonicalIdentifier).toBe('P-2026-09-003');
+    expect(model.district).toBe('Lucknow');
+    expect(model.confirmedContributionCount).toBe('137 confirmed');
+    expect(model.amountRaisedInr).toBe(`${formatCurrency(137000, 'en')} raised`);
+    expect(model.closeOfCycleFraming).not.toBeNull();
+  });
+
+  it('⭐ the field id STAYS CLASSIFIED even while the value is null — ⛔ not a vanishing field', () => {
+    // ⛔ The id set describes what this surface DECLARES, ⛔ not what one drive happens to carry. A
+    // field that dropped out of the classified set when unnamed would make the leak leg go vacuous
+    // on exactly the drives nobody would check ([[feedback_gate_scope_semantic_coverage]]).
+    expect(sahyogVivranSurfaceFieldIds(model)).toContain('deceased_member_name');
   });
 });
 
@@ -323,7 +387,7 @@ describe('buildSahyogVivranOutageView — ⛔ an outage is NOT a 404', () => {
 describe('the field-id derivation is OPERATIVE from this surface’s first commit (AC2)', () => {
   const { model } = buildSahyogVivranView(SETTLED, LABELS);
 
-  it('⭐ returns EXACTLY the twelve classified field ids — ⛔ not "length > 0"', () => {
+  it('⭐ returns EXACTLY the thirteen classified field ids — ⛔ not "length > 0"', () => {
     // ⛔ Asserting the EXACT set — rather than non-emptiness — is what makes a DROPPED field fail here
     // too. A leg that only detects additions accepts a field vanishing from the render while the
     // matrix still claims it is shown.
@@ -344,6 +408,11 @@ describe('the field-id derivation is OPERATIVE from this surface’s first commi
       'appeal_reversal_stage',
       'close_of_cycle_framing',
       'confirmed_contribution_count',
+      // ⭐ Story 11b.3b (Task 2 unit 2) — `2026-09-02-173`, the deceased member's FULL NAME.
+      // ⚠ Its VALUE is `null` on every drive today (the publication basis is fail-closed), but the
+      // field id is CLASSIFIED regardless: the id set describes what this surface DECLARES, ⛔ not
+      // what one fixture happens to carry — the same reason the Tier-1 nominee id stays listed.
+      'deceased_member_name',
       'district',
       'drive_closed_at',
       'drive_status',
@@ -390,9 +459,18 @@ describe('the field-id derivation is OPERATIVE from this surface’s first commi
   it('⭐ NEGATIVE CONTROL — an unclassified key added to the model THROWS (the fail-closed coupling)', () => {
     // ⚠ This is the control that makes the assertion above mean something: without it, a green run
     // over a set nobody could have broken proves nothing.
-    const leaky = { ...model, deceasedMemberName: 'Rajesh Kumar Sharma' };
+    //
+    // ⚠⛔⛔ **RE-PLANTED 2026-09-15 (Story 11b.3b, Task 2 unit 2 / AC9) — ⛔ THE LEG IS ⛔ NOT DELETED
+    // AND ⛔ NOT WEAKENED.** It planted **`deceasedMemberName`** as its undeclared key; ⭐ this story
+    // **DECLARES** that field (`2026-09-02-173`), so the control lost its subject and would have
+    // passed for the wrong reason — ⛔ or, worse, been "fixed" by deleting the leg.
+    // ⭐ **`verifierName` IS THE REPLACEMENT, AND THE CHOICE IS DELIBERATE:** it is one of the
+    // person keys the wire shape forbids by name, and ⛔ NOBODY has ruled a verifier identity at
+    // ANY tier — so ⛔ no future story can declare it out from under this control without a Panel
+    // ruling first. ⛔ Do ⛔ not re-plant a key some story already has a route to declaring.
+    const leaky = { ...model, verifierName: 'V Verifier' };
     expect(() => sahyogVivranSurfaceFieldIds(leaky as unknown as typeof model)).toThrow(
-      /deceasedMemberName/,
+      /verifierName/,
     );
   });
 });

@@ -84,6 +84,15 @@ export interface SahyogVivranLabels {
   readonly factsGroupLabel: string;
   readonly labelDriveCode: string;
   readonly labelPoolLetter: string;
+  /**
+   * ⭐ Story 11b.3b (Task 2 unit 2) — the `<dt>` for the deceased member's name.
+   * ⚠⛔ **"Deceased Member", ⛔ NEVER "Late Teacher"** — `microcopy.yaml` rules the canonical term
+   * and the copy test asserts the prohibited one is absent. ⭐ An ORDINARY FIELD LABEL minted at its
+   * own render site, the precedent `label.branch` (11b.17) and `upi_intent.vpa_label` (8-17) set;
+   * ⛔ the non-render-site rule governs the Panel's RATIFIED message block only, which is consumed
+   * from `sahyog-shared` BY NAME and is ⛔ not this.
+   */
+  readonly labelDeceasedMember: string;
   readonly labelDistrict: string;
   readonly labelClosedOn: string;
   readonly labelContributions: string;
@@ -366,6 +375,15 @@ export function buildSahyogVivranView(
       poolCanonicalIdentifier: drive.poolCanonicalIdentifier,
       driveStatus: statusLabel(drive.driveStatus, labels),
       driveClosedAt: formatClosedAt(drive.closedAt),
+      // ⭐⭐ Story 11b.3b (Task 2 unit 2) — THE DECEASED MEMBER'S NAME, `2026-09-02-173`, FULL NAME.
+      // ⭐ PASSED THROUGH, ⛔ never re-formed: the API boundary already resolved it to ONE string via
+      // `resolvePublicMemberName` under the Pariwar's stored mode. ⛔ This layer does ⛔ NOT split it,
+      // ⛔ not title-case it, ⛔ not abbreviate it and ⛔ never calls `splitFirstNameLastInitial` —
+      // any of those produces a name FORM nobody ruled, on the one surface ruled FULL NAME.
+      // ⚠⛔ `null` ON EVERY DRIVE TODAY (the publication basis is fail-closed for every member) ⇒ the
+      // page's `<dt>`/`<dd>` pair is SUPPRESSED TOGETHER and the page renders on. ⛔ ⛔ No
+      // placeholder and ⛔ no "withheld" marker — see the field's doc-block in `surface-fields.ts`.
+      deceasedMemberName: drive.deceasedMemberName,
       district: drive.district,
       // ⛔ A COUNT, ⛔ never a sum and ⛔ never a score. ⭐ And it is the EVENT count, ⛔ never a row
       // count: RTBF omits a contributor's ROW entirely while the omitted contributor STILL COUNTS
@@ -432,6 +450,10 @@ export function buildSahyogVivranOutageView(): SahyogVivranView {
       poolCanonicalIdentifier: '',
       driveStatus: '',
       driveClosedAt: null,
+      // ⭐ The OUTAGE view names nobody — ⛔ there is no drive resolved to name. ⚠ Structurally the
+      // same `null` a live drive with no publication basis produces, and deliberately so: the outage
+      // page must ⛔ not be distinguishable from an unnamed drive by what it omits.
+      deceasedMemberName: null,
       district: null,
       confirmedContributionCount: '',
       amountRaisedInr: '',

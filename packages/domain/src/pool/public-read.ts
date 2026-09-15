@@ -376,8 +376,21 @@ export const CONFIRMED_CONTRIBUTION_COUNT = (now: Date) => sql<string>`(
  *      `consent_artifact_ref`, THIS PREDICATE RETURNS FALSE FOR EVERY MEMBER — silently, with ⛔ no
  *      error anywhere and ⛔ no failing test. That coupling is invisible from either file alone,
  *      which is exactly why it is written down in both.
+ *
+ * ⭐⭐ **EXPORTED AT STORY 11b.3b (Task 2) — ⛔ ONE PREDICATE, TWO SURFACES, ⛔ NEVER TWO COPIES.**
+ * The per-claim Sahyog Vivran page (`sahyog-vivran-read.ts`) names the deceased member under the
+ * SAME authority (`2026-09-02-173`), so it imports this expression rather than re-typing it.
+ * ⚠⛔ **A SECOND COPY WOULD BE THE DEFECT, ⛔ not a convenience:** this is a FAIL-CLOSED
+ * authorisation gate with four independently subtle legs (the one-directional `uuid → text` cast,
+ * the three explicit `pariwar_id` scopes, the validity window, and the clause-id match). A fork
+ * would drift silently — ⛔ no error, ⛔ no failing test, and the failure mode is a name rendering on
+ * an authority that does ⛔ not exist, which is the exact defect `2026-09-02-173`'s build exists to
+ * prevent. ⇒ ⭐ change it HERE and both surfaces change together.
+ * ⚠ **IT CORRELATES TO `"pools"` AND `"claims"` BY BARE TABLE NAME** ⇒ ⛔ every consumer must select
+ * `.from(pools).innerJoin(claims, …)` UNALIASED, as both do today. ⛔ Aliasing either table in a
+ * consumer silently breaks the correlation; ⛔ do ⛔ not "tidy" this into aliases at one call site.
  */
-const NAME_PUBLICATION_AUTHORISED = (now: Date) => sql<boolean>`EXISTS (
+export const NAME_PUBLICATION_AUTHORISED = (now: Date) => sql<boolean>`EXISTS (
     SELECT 1
       FROM consent_records cr
       JOIN terms_and_conditions_pinned_clauses tcpc

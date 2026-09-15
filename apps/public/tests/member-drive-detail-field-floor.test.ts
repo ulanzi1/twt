@@ -47,6 +47,16 @@ const MEMBER_COUNTERPART: Record<string, readonly string[]> = {
   // detail ALREADY carries it under the same key (`member-drive-detail.ts`). ⇒ ⭐ the `-189` cl.3 /
   // `-195` cl.1 floor holds for this field with ⛔ nothing to build: member ⩾ public, same figure.
   amount_raised_inr: ['amountRaisedInr'],
+  // ⭐⭐ Story 11b.3b (Task 2 unit 2) — THE DECEASED MEMBER'S NAME REACHES THE PUBLIC DETAIL, so it
+  // ENTERS this floor for the first time. ⭐ The member side already carries it and carries MORE:
+  // the member's name is gated on the FORM only (`2026-09-04-198` cl.1) while the public one is
+  // additionally gated on the publication BASIS, which is PROVISIONING-INERT (`-209` cl.2) ⇒ on a
+  // default `full_name` Pariwar a member sees a name nobody can see publicly.
+  // ⇒ ⭐ member **>** public, in the direction `2026-09-04-189` cl.3 / `2026-09-05-195` cl.1 require.
+  // ⚠⛔ THE TWO RESOLVERS ⛔ MUST ⛔ NOT BE "ALIGNED": the member side uses
+  // `resolveMemberFacingDeceasedName` because `resolvePublicMemberName` fails CLOSED on a mononym
+  // under `shielded_name` — reusing it there would DROP A MEMBER'S OWN DRIVE.
+  deceased_member_name: ['deceasedMemberName'],
   // ⭐ A COMPOSED SENTENCE on the public side, from the close-of-cycle outcome enum. The member
   // response carries the enum ITSELF — the input, un-narrowed. ⇒ strictly MORE.
   close_of_cycle_framing: ['fundingOutcome'],
@@ -158,7 +168,7 @@ describe('⭐⭐ Story 11b.17 AC2 — the member drive DETAIL meets the PUBLIC S
     expect(ACCOUNT_KEYS.has('vpaPresent')).toBe(false);
   });
 
-  it('⚠⛔ THE EXCLUSIONS ARE EXACTLY TWO — and ⛔ `confirmedPercentage` is ⛔ NOT one of them', () => {
+  it('⚠⛔ THE EXCLUSIONS ARE EXACTLY ONE — and ⛔ `confirmedPercentage` is ⛔ NOT one of them', () => {
     // ⚠⛔⛔ **THIS TEST WAS NAMED *"THE THREE EXCLUSIONS ARE EXACTLY THREE"* AND ENUMERATED **TWO** —
     // (a), (b), and a **(c) that is a NEGATION, ⛔ not an exclusion**** (review finding, 2026-09-14).
     // ⭐ That is the ⛔ exact defect class this file's own header forbids BY NAME: *"⛔ never by
@@ -175,13 +185,23 @@ describe('⭐⭐ Story 11b.17 AC2 — the member drive DETAIL meets the PUBLIC S
     expect(PUBLIC_DETAIL_FIELD_IDS).not.toContain('drive_target');
     expect(MEMBER_KEYS.has('driveTargetInr')).toBe(true);
 
-    // ⭐ **(b) the DECEASED member's name** — its public gate is **PROVISIONING-INERT**
+    // ⚠⛔⛔ **(b) IS SPENT — SUPERSEDED 2026-09-15 BY STORY 11b.3b (Task 2 unit 2). ⛔ THE PRIOR LEG
+    // IS KEPT HERE AS THE RECORD AND ⛔ NOT REWRITTEN** ([[feedback_supersede_never_reinterpret]]).
+    // It read: *"**(b) the DECEASED member's name** — its public gate is PROVISIONING-INERT
     // (`SAHYOG_DRIVE_PUBLICATION_CLAUSE_ID` occurs at exactly ONE site in the repo: its own
     // definition — ⛔ no migration, ⛔ no seed, ⛔ no admin mint path ⇒ ⛔ no writer), so on a default
-    // `full_name` Pariwar a member already sees a name ⛔ nobody can see publicly (`-209` cl.2).
-    // ⚠⛔ **THAT ASYMMETRY IS ⛔ NOT A DEFECT AND THE COMPARISON MUST ⛔ NOT FLAG IT** — ⭐ and the
-    // public DETAIL does ⛔ not carry the field at all, which is why it is absent from the floor.
-    expect(PUBLIC_DETAIL_FIELD_IDS).not.toContain('deceased_member_name');
+    // `full_name` Pariwar a member already sees a name ⛔ nobody can see publicly (`-209` cl.2) …
+    // and the public DETAIL does ⛔ not carry the field at all, which is why it is absent from the
+    // floor"*, asserting `PUBLIC_DETAIL_FIELD_IDS` did ⛔ NOT contain it.
+    // ⛔⛔ **THAT LAST HALF IS THE HALF THAT EXPIRED, ⛔ not the reasoning.** `2026-09-02-173`
+    // (Trustee Panel) ruled the name onto the public drive page and 11b.3b renders it ⇒ the field IS
+    // in the floor now, and it is SATISFIED by the member's own `deceasedMemberName` (see the
+    // counterpart map). ⛔ It is ⛔ no longer an exclusion, so it must ⛔ not be asserted as one.
+    // ⭐⭐ **AND THE INERT-GATE ASYMMETRY SURVIVES UNCHANGED AND NOW RUNS *THROUGH* THE FLOOR RATHER
+    // THAN AROUND IT** — the public name is gated on the publication BASIS as well as the form, so
+    // the member sees **strictly more**, which is the direction `-189` cl.3 / `-195` cl.1 require.
+    // ⇒ ⭐ the comparison passing is the invariant HOLDING, ⛔ not a carve-out hiding a shortfall.
+    expect(PUBLIC_DETAIL_FIELD_IDS).toContain('deceased_member_name');
     expect(MEMBER_KEYS.has('deceasedMemberName')).toBe(true);
 
     // ⭐ **(c) ⛔ NOTHING ELSE.** ⚠⛔⛔ `confirmedPercentage` / `driveProgressPercentage` is in

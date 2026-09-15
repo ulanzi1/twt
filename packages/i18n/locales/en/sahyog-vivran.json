@@ -6,6 +6,7 @@
   "facts.group_label": "Drive details",
   "label.drive_code": "Drive code",
   "label.pool_letter": "Pool",
+  "label.deceased_member": "Deceased Member",
   "label.district": "District",
   "label.closed_on": "Closed on",
   "label.contributions": "Contributions confirmed",

@@ -748,6 +748,81 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
         // unconditionally, and `-190` cl.2 keeps it there — ⛔ narrowing it by outcome would be a NEW
         // suppression rule ⛔ nobody has ruled, so it is ⛔ RECORDED here, ⛔ not invented.
         // ⛔ The member donor path is a DIFFERENT read and inherits ⛔ nothing from this deletion.
+        // ⭐⭐ STORY 11b.3b (Task 2 unit 2) — THE DECEASED MEMBER'S NAME, `2026-09-02-173`
+        // (Trustee Panel), **FULL NAME**, unconditional per `-175`.
+        //
+        // ⚠⛔⛔ **IT RENDERS ⛔ NOTHING ON THE DAY THIS SHIPS, AND THAT IS THE DESIGNED STATE.**
+        // `namePublicationAuthorised` is FALSE for every member until counsel's clause exists and is
+        // pinned — ⛔ no migration, ⛔ no seed, ⛔ no writer anywhere in the repo, OVERDUE since
+        // 2026-09-07. ⇒ this block costs ZERO KMS calls today and returns `null`. ⭐ Fail-closed and
+        // therefore CORRECT (`2026-09-08-209` cl.2); ⛔ ⛔ do ⛔ not "fix" it by seeding a placeholder
+        // `clause_versions` row — *"a stand-in makes names render on an authority that does ⛔ not
+        // exist"* (`public-read.ts`).
+        //
+        // ⭐⛔ **THE BASIS IS EVALUATED *BEFORE* THE DECRYPT, ⛔ NEVER AFTER** — the shipped rule on
+        // the sibling index, copied rather than re-derived. A page with no basis must cost ZERO KMS
+        // calls: decrypting a name the gate is about to discard is a wasted round-trip on a
+        // quota-limited service AND a Tier-1 decrypt with ⛔ no authorising basis, and the second
+        // half is the one that matters (11b.9 AC6).
+        // ⚠ A MISSING `tc_acceptance`, a REVOKED one, one against a T&C version that does ⛔ not pin
+        // the publication clause, and a deceased member with ⛔ no KYC profile row all reach this
+        // `null` IDENTICALLY. ⛔ That is intended: ⛔ none of them authorises a render, and a
+        // per-cause signal on the wire would be an enumeration oracle over T&C acceptance.
+        //
+        // ⚠⛔ **ONE DECRYPT FOR THE WHOLE PAGE, ⛔ not per row** — so it rides ⛔ NO bounded map and
+        // needs none. ⭐ `mapWithConcurrency` exists for the LIST shapes (the index's 50 rows, and
+        // this story's own contributor list at Task 3); ⛔ wrapping a single await in it would be
+        // ceremony that asserts a bound nothing needs.
+        let deceasedMemberName: string | null = null;
+        if (drive.namePublicationAuthorised && drive.deceasedNameCiphertext !== null) {
+          // ⭐ The per-Pariwar STORED mode — resolved ONCE, beside the decrypt it governs.
+          // ⛔ ⛔ Never a literal `'full_name'`: `2026-08-19-136` cl.1 — *"a build in which the public
+          // name form cannot be changed without a code change FAILS this clause"*.
+          const mode = await kyc.resolvePublicNamePresentationMode(scopeTx.tx, pariwarId);
+
+          // ⭐ THE TIER-1 DECRYPT — the EXISTING helper, the EXISTING field class, the member's real
+          // pariwarId. ⛔ No new field class, ⛔ no new namespace, ⛔ no second crypto helper. The
+          // decrypted value ⛔ NEVER leaves this block except through `resolvePublicMemberName`, and
+          // is ⛔ never logged.
+          let storedName: string | null = null;
+          try {
+            storedName = await encryption.decryptKycField(
+              drive.deceasedNameCiphertext,
+              pariwarId,
+              deps.encryption,
+            );
+          } catch (err) {
+            // ⭐⭐ OMIT THE NAME, ⛔ KEEP THE **PAGE** — the deceased member's arm of AC3's
+            // per-subject omission ruling, and the sibling's shipped rule (*"an unresolvable name
+            // omits the NAME, ⛔ never the row"*). ⛔ Letting this throw would 503 an entire public
+            // transparency page over one bad envelope, turning a crypto fault into an availability
+            // fault on the surface whose whole purpose is being checkable.
+            // ⚠⛔ The CONTRIBUTOR arm at Task 3 is the OPPOSITE (omit the ROW, which exists only to
+            // carry the name) — ⛔ do ⛔ not collapse the two.
+            request.log.error(
+              { err },
+              'sahyog-vivran: deceased-member name decrypt failed — omitting the NAME, keeping the page',
+            );
+          }
+
+          if (storedName !== null) {
+            // ⭐⛔ `resolvePublicMemberName`, ⛔ NEVER `resolvePoolIdentity()` — the sharpest build
+            // consequence of the ruling and *"the easiest thing to get wrong on a POOL surface"*:
+            // `resolvePoolIdentity()` HARD-CODES `splitFirstNameLastInitial`, so it can ⛔ only ever
+            // return the SHIELDED form on the one surface ruled FULL NAME, with every test green.
+            // ⛔ And ⛔ never `splitFirstNameLastInitial` directly, for the same reason.
+            const name = kyc.resolvePublicMemberName(mode, storedName);
+            // ⚠⛔ **`.trim() || null`, ⛔ NEVER `=== ''`** (Review finding 2026-09-08, already fixed
+            // on the sibling) — a whitespace-only stored name survives `=== ''` and the contract's
+            // `.min(1)`, arrives TRUTHY, and renders a BLANK where a person's name belongs.
+            // ⚠ Under `shielded_name` a MONONYM resolves to `''` (`2026-08-21-145` cl.3) and lands
+            // here as `null`. ⛔ Do ⛔ NOT "fix" that by falling through to `firstName`:
+            // `public-name.ts` records that exact bug — for a mononym it returns the ENTIRE stored
+            // legal name, byte-identical to `full_name`.
+            deceasedMemberName = name.trim() || null;
+          }
+        }
+
         const nomineeBankAccounts = await mapWithConcurrency(
           drive.nomineeBank.accounts,
           DIRECTORY_DECRYPT_CONCURRENCY,
@@ -811,6 +886,10 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
             // check for the same reason — an invisible-only value survives `.trim()` and `.min(1)`
             // and would render the identical blank cell (review finding).
             district: drive.district?.trim().replace(/[\u200b-\u200f\ufeff]/g, '') || null,
+            // ⭐ Story 11b.3b (Task 2 unit 2) — resolved above; `null` on every drive today because
+            // the publication basis is fail-closed for every member (the DESIGNED inert state).
+            // ⛔ `null` OMITS THE NAME, ⛔ never the page.
+            deceasedMemberName,
             confirmedContributionCount: drive.confirmedContributionCount,
             // ⭐ Story 11b.3b (AC3b) — returned from the domain read's own clamped binding;
             // ⛔⛔ ⛔ no second `× fixedAmount` here, and ⛔ no target/expected-total companion

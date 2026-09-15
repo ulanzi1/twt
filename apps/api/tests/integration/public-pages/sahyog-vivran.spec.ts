@@ -22,7 +22,15 @@
 import { randomUUID } from 'node:crypto';
 
 import { PublicSahyogVivranResponse } from '@twt/contracts';
-import { claim as claimDomain, encryption, ids, member as memberDomain, schema } from '@twt/domain';
+import {
+  claim as claimDomain,
+  encryption,
+  ids,
+  kyc,
+  member as memberDomain,
+  pool as poolDomain,
+  schema,
+} from '@twt/domain';
 import { describe, expect, it } from 'vitest';
 
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
@@ -97,6 +105,19 @@ interface SeedSpec {
    * a late settlement RESET the window and re-publish details that were already masked.
    */
   settledDaysAgo?: number;
+  /**
+   * ⭐⭐ Story 11b.3b (Task 2 unit 2) — GRANT THE NAME-PUBLICATION BASIS for this drive's subject.
+   *
+   * ⚠⛔⛔ **OMITTED IS THE PRODUCTION STATE, AND ⛔ NOT A LAZY DEFAULT.** `NAME_PUBLICATION_AUTHORISED`
+   * needs a `clause_versions` row for `SAHYOG_DRIVE_PUBLICATION_CLAUSE_ID` pinned into an accepted
+   * T&C version; counsel's clause is still owed and there is ⛔ no migration, ⛔ no seed and ⛔ no
+   * writer for it ⇒ every real drive today has ⛔ no basis. ⭐ So the DEFAULT fixture exercises the
+   * INERT path, which is what actually ships.
+   * ⭐ Setting it seeds the POST-CLAUSE world, so the ruled render is proven rather than assumed —
+   * ⛔ without it the gate's positive arm would be untested and *"the name never renders"* would
+   * pass for a surface that could ⛔ never render one ([[feedback_gate_scope_semantic_coverage]]).
+   */
+  authorised?: boolean;
 }
 
 async function seedDrive(t: TestApp, spec: SeedSpec): Promise<{ pariwarId: string }> {
@@ -165,6 +186,43 @@ async function seedDrive(t: TestApp, spec: SeedSpec): Promise<{ pariwarId: strin
       ],
     );
     await scopeTx.client.query("SET LOCAL app.pool_state_writer = 'off'");
+
+    if (spec.authorised === true) {
+      // ⭐ The basis, seeded EXACTLY as `member-terms.handlers.ts` writes it — the SERVER-resolved
+      // `tc_version_id` goes in `consent_artifact_ref`. ⚠⛔ If that writer ever stores anything else
+      // there, the predicate returns FALSE for every member, silently and with ⛔ no failing test;
+      // that coupling is why both files say so. ⭐ Mirrors the sibling index's fixture rather than
+      // inventing a second shape — ⛔ one basis, one way to satisfy it.
+      const tcVersionId = randomUUID();
+      const clauseVersionId = randomUUID();
+      await scopeTx.client.query(
+        `INSERT INTO terms_and_conditions_versions
+           (tc_version_id, pariwar_id, version, body_markdown, body_html_rendered,
+            effective_from, legal_review_status)
+         VALUES ($1, $2, 1, '# Terms', '<h1>Terms</h1>', now() - interval '1 day', 'approved')`,
+        [tcVersionId, pariwarId],
+      );
+      await scopeTx.client.query(
+        `INSERT INTO clause_versions
+           (clause_version_id, clause_id, pariwar_id, version, effective_date, payload,
+            benefit_mechanism)
+         VALUES ($1, $2, $3, 1, now() - interval '1 day', '{}'::jsonb, 'pool')`,
+        [clauseVersionId, poolDomain.SAHYOG_DRIVE_PUBLICATION_CLAUSE_ID, pariwarId],
+      );
+      await scopeTx.client.query(
+        `INSERT INTO terms_and_conditions_pinned_clauses
+           (tc_version_id, clause_version_id, pariwar_id)
+         VALUES ($1, $2, $3)`,
+        [tcVersionId, clauseVersionId, pariwarId],
+      );
+      await scopeTx.client.query(
+        `INSERT INTO consent_records (pariwar_id, subject_id, consent_type, consent_artifact_ref,
+                                      granted_via_actor, consent_payload, granted_at, revoked_at)
+         VALUES ($1, $2, 'tc_acceptance', $3, 'member_self', '{}'::jsonb,
+                 now() - interval '1 day', NULL)`,
+        [pariwarId, memberId, tcVersionId],
+      );
+    }
 
     // The close/settle instant the surface reads (AC3's settlement-state source).
     if ((spec.poolState ?? 'closed') !== 'live' && (spec.poolState ?? 'closed') !== 'spawned') {
@@ -327,8 +385,39 @@ async function setPublicationEnabled(t: TestApp, pariwarId: string, enabled: boo
   }
 }
 
+/**
+ * ⭐ Set the Pariwar's public-name presentation mode THROUGH THE GOVERNED WRITE PATH — Story 11b.3b.
+ *
+ * ⛔ ⛔ Not a direct `UPDATE`: `2026-08-19-136` cl.3 makes changing how every member's name appears on
+ * an unauthenticated public page a GOVERNED ACT, and `setPublicNamePresentationMode` throws
+ * `UngovernedPresentationChangeError` without the record. ⭐ A fixture that bypassed it would test a
+ * state the product cannot reach. ⚠ Mirrors the sibling index's helper rather than inventing a
+ * second shape.
+ */
+async function setMode(
+  t: TestApp,
+  pariwarId: string,
+  mode: 'full_name' | 'shielded_name',
+): Promise<void> {
+  const scopeTx = await openScopeTx(t.deps, pariwarId);
+  try {
+    await kyc.setPublicNamePresentationMode(scopeTx.tx, {
+      pariwarId: ids.pariwarId(pariwarId),
+      mode,
+      changedByActor: null,
+      changedByDisplay: null,
+      rationale: 'test fixture — the public name form must be changeable with NO code change',
+      auditId: randomUUID(),
+    });
+    await closeScopeTx(scopeTx, true);
+  } catch (err) {
+    await closeScopeTx(scopeTx, false);
+    throw err;
+  }
+}
+
 describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 30000 }, () => {
-  it('⭐⭐ returns ONLY the ten classified fields — ⛔ no person, no ciphertext, no internal id', async () => {
+  it('⭐⭐ returns ONLY the twelve classified fields — ⛔ no ciphertext, no internal id', async () => {
     const t = await createTestApp();
     try {
       const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
@@ -348,9 +437,15 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
 
       // ⭐ THE EXACT KEY SET, ⛔ not a sample.
       expect(Object.keys(body.drive).sort()).toEqual([
+        // ⭐ Story 11b.3b (AC3b) — the ruled public rupee figure, `2026-09-04-190` cl.6.
+        'amountRaisedInr',
         'appealReversal',
         'closedAt',
         'confirmedContributionCount',
+        // ⭐ Story 11b.3b (Task 2 unit 2) — `2026-09-02-173`. ⚠ Present on EVERY response and `null`
+        // on every drive today (⛔ no publication basis) — ⛔ NEVER conditionally omitted, which
+        // would make the key set vary by fixture and let a missing field pass unnoticed.
+        'deceasedMemberName',
         'district',
         'driveStatus',
         'fundingOutcome',
@@ -366,7 +461,16 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
       // `.strict()` contract, which fails on ANY extra or renamed field anywhere in the shape.
       expect(() => PublicSahyogVivranResponse.parse(res.json())).not.toThrow();
 
-      // ⛔⛔ AND THE RAW BODY CARRIES NO PERSON AND NO INTERNAL IDENTIFIER, under ANY key.
+      // ⛔⛔ AND THE RAW BODY CARRIES NO UNNAMED PERSON AND NO INTERNAL IDENTIFIER, under ANY key.
+      //
+      // ⭐⭐ **THE `Rajesh` / `Sharma` LEGS ARE ⛔ NOT STALE AFTER 11b.3b — THEY BECAME THE STORY'S
+      // SHARPEST ASSERTION, AND THE FIXTURE IS WHY.** `seedDrive` plants a REAL Tier-1 ciphertext
+      // for this claim's subject (`legalName` above), the route now SELECTS that column, and
+      // `2026-09-02-173` AUTHORISES rendering it — ⭐ and the name STILL does not appear, because
+      // `NAME_PUBLICATION_AUTHORISED` has no pinned `clause_versions` row to satisfy it.
+      // ⇒ ⭐ this is the DESIGNED INERT STATE proven END TO END, ⛔ not an absence of capability.
+      // ⛔⛔ IF EITHER LEG EVER GOES RED, ⛔ DO ⛔ NOT DELETE IT: it means a publication basis became
+      // satisfiable, which is a GOVERNANCE event (counsel's clause landing) — ⛔ never a test fix.
       const raw = res.body;
       for (const forbidden of [
         'Rajesh',
@@ -382,8 +486,22 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
       ]) {
         expect(raw).not.toContain(forbidden);
       }
-      // ⛔ AND NO RUPEE FIGURE — D1(b) moved the amount to 11b.3b; D1(c) is REFUSED.
-      for (const forbidden of ['amountRaised', 'fixedAmount', 'rosterSize', '₹']) {
+      // ⚠⛔⛔ **NARROWED 2026-09-15 (Story 11b.3b, AC3b / AC9) — ⛔ THE LEG IS ⛔ NOT DELETED AND ITS
+      // PRIOR FORM IS KEPT HERE** ([[feedback_supersede_never_reinterpret]]). It read
+      // *"⛔ AND NO RUPEE FIGURE — D1(b) moved the amount to 11b.3b; D1(c) is REFUSED"* and forbade
+      // `amountRaised` · `fixedAmount` · `rosterSize` · `₹`.
+      // ⭐ **11b.3b IS THAT STORY** ⇒ `amountRaisedInr` is RULED onto this wire (`-190` cl.6) and its
+      // key is asserted in the set above. ⛔ THE FACTORS STAY BANNED, and they are what the leg was
+      // really protecting: their PRODUCT is लक्ष्य, reserved by `2026-09-07-204` cl.3 and closed
+      // *"BY CONSTRUCTION"* by cl.8. ⚠ `₹` stays banned too — the wire carries a NUMBER; formatting
+      // is the render layer's, and a symbol here would mean a second money format was minted.
+      for (const forbidden of ['fixedAmount', 'rosterSize', 'expectedTotal', 'deliveredTotal', '₹']) {
+        expect(raw).not.toContain(forbidden);
+      }
+      // ⛔⛔ AND ⛔ NO COMPARISON COMPANION (`2026-09-15-218` cl.4) — the amount may ⛔ never be paired
+      // with a target, an expected total or a roster size: their ratio IS the percentage cl.1
+      // refuses, reconstructed by hand.
+      for (const forbidden of ['targetAmount', 'driveTarget', 'confirmedPercentage', 'shortfall']) {
         expect(raw).not.toContain(forbidden);
       }
       // ⛔ AND NO CONTRIBUTION STATUS KEY — the AC4 shape, on the wire.
@@ -391,6 +509,221 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
     } finally {
       await teardown(t);
     }
+  });
+
+  describe('⭐⭐ Story 11b.3b (Task 2 unit 2) — THE DECEASED MEMBER\'S NAME, `2026-09-02-173`', () => {
+    it('⛔⛔ RENDERS NOTHING WITHOUT A PUBLICATION BASIS — ⭐ the DAY-ONE state of every drive', async () => {
+      const t = await createTestApp();
+      try {
+        const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
+        // ⭐ A REAL Tier-1 ciphertext EXISTS for this subject and the read now SELECTS it. ⛔ The
+        // fixture grants ⛔ NO basis, which is what every production drive looks like today.
+        const { pariwarId } = await seedDrive(t, {
+          canonicalIdentifier: id,
+          district: 'Lucknow',
+          confirmed: 3,
+          assigned: 4,
+          legalName: 'Rajesh Kumar Sharma',
+        });
+
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
+        expect(res.statusCode).toBe(200);
+        const body = res.json() as { drive: Record<string, unknown> };
+
+        // ⭐ FAIL-CLOSED AND THEREFORE CORRECT (`2026-09-08-209` cl.2) — ⛔ not an unfinished render.
+        expect(body.drive.deceasedMemberName).toBeNull();
+        expect(res.body).not.toContain('Rajesh');
+        expect(res.body).not.toContain('Sharma');
+
+        // ⭐⭐ AND THE PAGE STILL RENDERS EVERYTHING ELSE — **omit the NAME, ⛔ never the page.**
+        // ⚠⛔ The CONTRIBUTOR arm (Task 3) is the OPPOSITE: an unrenderable name omits the ROW,
+        // which exists only to carry it. ⛔ Do ⛔ not collapse the two rules.
+        expect(body.drive.poolCanonicalIdentifier).toBe(id);
+        expect(body.drive.district).toBe('Lucknow');
+        expect(body.drive.confirmedContributionCount).toBe(3);
+
+        // ⛔⛔ AND ⛔ NO PLACEHOLDER AND ⛔ NO WITHHELD MARKER, under any key. A per-drive marker would
+        // announce WHICH members have a publication basis — the enumeration signal the absent basis
+        // must ⛔ not emit.
+        for (const marker of ['withheld', 'Not recorded', 'unavailable', 'redacted', 'anonymous']) {
+          expect(res.body).not.toContain(marker);
+        }
+      } finally {
+        await teardown(t);
+      }
+    });
+
+    it('⭐⭐ RENDERS THE FULL NAME once the basis exists — ⛔ the gate is ⛔ not vacuous', async () => {
+      // ⛔⛔ WITHOUT THIS LEG THE ONE ABOVE PROVES ⛔ NOTHING: *"the name never renders"* passes
+      // identically for a surface that could ⛔ NEVER render one — a gate with no positive arm is a
+      // green scan over an unreachable branch ([[feedback_gate_scope_semantic_coverage]]).
+      // ⚠⛔ THIS SEEDS THE POST-CLAUSE WORLD IN A TEST TRANSACTION. ⛔ It is ⛔ NOT a licence to seed
+      // a `clause_versions` row anywhere else: `public-read.ts` forbids a placeholder in terms —
+      // *"a stand-in makes names render on an authority that does ⛔ not exist."*
+      const t = await createTestApp();
+      try {
+        const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
+        const { pariwarId } = await seedDrive(t, {
+          canonicalIdentifier: id,
+          district: 'Lucknow',
+          confirmed: 3,
+          assigned: 4,
+          legalName: 'Rajesh Kumar Sharma',
+          authorised: true,
+        });
+
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
+        expect(res.statusCode).toBe(200);
+        const body = res.json() as { drive: Record<string, unknown> };
+
+        // ⭐⭐ **THE FULL NAME, WHOLE** — `2026-09-02-173`, unconditional per `-175`. ⛔ NOT
+        // `Rajesh K.`: the SHIELDED form is what `resolvePoolIdentity` /
+        // `splitFirstNameLastInitial` would produce, and shipping it here would satisfy every other
+        // test while quietly rendering the one form the Panel did ⛔ not rule.
+        expect(body.drive.deceasedMemberName).toBe('Rajesh Kumar Sharma');
+        // ⛔ AND ⛔ NO CIPHERTEXT CAME WITH IT — the boundary decrypts, and only the resolved string
+        // crosses.
+        expect(res.body).not.toContain('enc:v1:');
+        // ⛔ AND STILL ⛔ NO IDENTIFIER FOR THE PERSON NOW NAMED — a name plus a per-member id is a
+        // permalink, which is an enumeration primitive in its own right (11a.3, control 5).
+        for (const forbidden of ['deceasedMemberId', 'memberId', 'member_id']) {
+          expect(res.body).not.toContain(forbidden);
+        }
+        // ⭐ AND THE SHAPE STILL PARSES — `.min(1).nullable()`, through the REAL contract.
+        expect(() => PublicSahyogVivranResponse.parse(res.json())).not.toThrow();
+      } finally {
+        await teardown(t);
+      }
+    });
+
+    it('⭐⛔ THE FORM FOLLOWS THE PARIWAR\'S STORED MODE — ⛔ never a hard-coded `full_name`', async () => {
+      // ⛔⛔ `2026-08-19-136` **cl.1**: *"a build in which the public name form cannot be changed
+      // without a code change FAILS this clause."* ⇒ ⭐ the SAME fixture must render differently
+      // under a different stored mode, and that is asserted rather than assumed.
+      // ⚠⛔ A hard-coded literal would pass EVERY other test in this file — this is the only leg
+      // that catches it, and Trap 5 names it *"the last remaining way to re-open the divergence."*
+      const t = await createTestApp();
+      try {
+        const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
+        const { pariwarId } = await seedDrive(t, {
+          canonicalIdentifier: id,
+          district: 'Lucknow',
+          confirmed: 3,
+          assigned: 4,
+          legalName: 'Rajesh Kumar Sharma',
+          authorised: true,
+        });
+
+        const full = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
+        expect((full.json() as { drive: Record<string, unknown> }).drive.deceasedMemberName).toBe(
+          'Rajesh Kumar Sharma',
+        );
+
+        await setMode(t, pariwarId, 'shielded_name');
+
+        const shielded = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
+        // ⚠ `Rajesh S.` — the **LAST** token's initial (`Sharma`), ⛔ not the middle name's. ⭐ Written
+        // from what `splitFirstNameLastInitial` actually does, ⛔ not from what a three-token name
+        // looks like it should do: the first draft of this leg asserted `Rajesh K.` and the
+        // implementation was right.
+        expect(
+          (shielded.json() as { drive: Record<string, unknown> }).drive.deceasedMemberName,
+        ).toBe('Rajesh S.');
+      } finally {
+        await teardown(t);
+      }
+    });
+
+    it('⭐⭐ A MONONYM UNDER `shielded_name` OMITS THE NAME — ⛔ and ⛔ NEVER the page', async () => {
+      // ⚠⛔⛔ **MONONYMS ARE COMMON IN INDIA; ⛔ THIS IS ⛔ NOT A CORNER CASE** (Trap 5).
+      // `resolvePublicMemberName` returns `''` for a single-token name under `shielded_name`
+      // (`2026-08-21-145` cl.3) ⇒ the boundary's **`.trim() || null`** turns it into an omission.
+      // ⛔⛔ AND ⛔ DO ⛔ NOT "FIX" IT BY FALLING THROUGH TO `firstName`: `public-name.ts` records that
+      // exact bug — for a mononym that returns the ENTIRE stored legal name, byte-identical to
+      // `full_name`, i.e. it publishes MORE than the shielded mode was chosen to publish.
+      const t = await createTestApp();
+      try {
+        const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
+        const { pariwarId } = await seedDrive(t, {
+          canonicalIdentifier: id,
+          district: 'Lucknow',
+          confirmed: 3,
+          assigned: 4,
+          legalName: 'Meenakshi',
+          authorised: true,
+        });
+        await setMode(t, pariwarId, 'shielded_name');
+
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
+        expect(res.statusCode).toBe(200);
+        const body = res.json() as { drive: Record<string, unknown> };
+
+        // ⭐ OMITTED — and `null`, ⛔ never `''`: the contract is `.min(1)`, so an empty string would
+        // 500 the whole page rather than omit a name.
+        expect(body.drive.deceasedMemberName).toBeNull();
+        expect(res.body).not.toContain('Meenakshi');
+        // ⭐⭐ AND THE PAGE STANDS — the deceased member's arm of the per-subject omission rule.
+        expect(body.drive.poolCanonicalIdentifier).toBe(id);
+        expect(() => PublicSahyogVivranResponse.parse(res.json())).not.toThrow();
+      } finally {
+        await teardown(t);
+      }
+    });
+
+    it('⛔ A WHITESPACE-ONLY STORED NAME OMITS THE NAME — `.trim() || null`, ⛔ not `=== \'\'`', async () => {
+      // ⚠⛔ THE EXACT NARROWING THAT WAS ALREADY FOUND AND FIXED ON THE SIBLING SURFACE
+      // (Review finding, 2026-09-08). ⛔ Writing `=== \'\'` here re-introduces a CLOSED defect: a
+      // whitespace-only stored name slips the guard, passes the contract\'s `.min(1)`, arrives
+      // TRUTHY at the render layer so no fallback fires, and renders a visually BLANK cell where a
+      // person\'s name belongs. ⭐ Asserted so the narrowing cannot come back.
+      const t = await createTestApp();
+      try {
+        const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
+        const { pariwarId } = await seedDrive(t, {
+          canonicalIdentifier: id,
+          district: 'Lucknow',
+          confirmed: 3,
+          assigned: 4,
+          legalName: '   ',
+          authorised: true,
+        });
+
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
+        expect(res.statusCode).toBe(200);
+        const body = res.json() as { drive: Record<string, unknown> };
+        expect(body.drive.deceasedMemberName).toBeNull();
+        expect(() => PublicSahyogVivranResponse.parse(res.json())).not.toThrow();
+      } finally {
+        await teardown(t);
+      }
+    });
+
+    it('⛔ a subject with NO KYC PROFILE ROW still publishes its DRIVE — ⛔ the join is LEFT', async () => {
+      // ⚠⛔ An INNER join would make an absent profile delete the whole page, turning a missing NAME
+      // into a missing RECORD. ⭐ Asserted, ⛔ not left to the join keyword to imply.
+      const t = await createTestApp();
+      try {
+        const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
+        // ⛔ `legalName` omitted ⇒ ⛔ NO `member_kyc_profiles` row at all. ⭐ And the basis IS granted,
+        // so the `null` here is the CIPHERTEXT arm, ⛔ not the gate arm — the two causes are proven
+        // separately rather than both hiding behind the same default.
+        const { pariwarId } = await seedDrive(t, {
+          canonicalIdentifier: id,
+          district: 'Lucknow',
+          confirmed: 3,
+          assigned: 4,
+          authorised: true,
+        });
+
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
+        expect(res.statusCode).toBe(200);
+        const body = res.json() as { drive: Record<string, unknown> };
+        expect(body.drive.deceasedMemberName).toBeNull();
+        expect(body.drive.poolCanonicalIdentifier).toBe(id);
+      } finally {
+        await teardown(t);
+      }
+    });
   });
 
   describe('⭐⭐ 404 COLLAPSES every "nothing to show" case — ⛔ byte-identical', () => {

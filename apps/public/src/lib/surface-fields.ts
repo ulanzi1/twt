@@ -548,6 +548,20 @@ export interface SahyogVivranRenderModel {
   readonly driveStatus: string;
   /** The close/settle instant, already formatted. `null` ⇒ render NOTHING (still collecting). */
   readonly driveClosedAt: string | null;
+  /**
+   * ⭐⭐ Story 11b.3b (Task 2 unit 2) — THE DECEASED MEMBER'S NAME, already resolved to ONE string
+   * by the API boundary (`resolvePublicMemberName` under the Pariwar's stored mode).
+   *
+   * ⚠⛔⛔ **`null` ON EVERY DRIVE TODAY, AND THAT IS THE DESIGNED STATE** — the publication basis is
+   * fail-closed for every member until counsel's clause is pinned (Trap 1). ⛔ Do ⛔ not read the
+   * absent name as an unfinished render.
+   * ⭐ `null` ⇒ **THE `<dt>`/`<dd>` PAIR IS SUPPRESSED TOGETHER** and the page renders on — omit the
+   * NAME, ⛔ never the page. ⛔ ⛔ No placeholder, ⛔ no "Not recorded", ⛔ no "name withheld": a
+   * per-drive withheld marker is exactly the enumeration signal an absent basis must ⛔ not announce.
+   * ⚠ ⛔ NOT the `district` posture below, which DOES have fallback copy — an unrecorded posting is
+   * an ordinary data gap; an unnamed member is a governance state, and they must ⛔ not look alike.
+   */
+  readonly deceasedMemberName: string | null;
   /** The deceased member's latest posting district, RAW. `null` ⇒ the "not recorded" copy. */
   readonly district: string | null;
   /** Confirmed contributions, already formatted. ⛔ A count, ⛔ never a sum and ⛔ never a score. */
@@ -653,6 +667,9 @@ export const SAHYOG_VIVRAN_FIELD_IDS: FieldIdMapping<SahyogVivranRenderModel> = 
   apiUnavailable: null,
   isCollecting: null,
   wasReversedByAppeal: null,
+  // ⭐ Story 11b.3b (Task 2 unit 2) — FIRST, mirroring `SAHYOG_DRIVE_ROW_FIELD_IDS` above: on both
+  // surfaces the deceased member is the SUBJECT, ⛔ not one fact among many.
+  deceasedMemberName: 'deceased_member_name',
   poolLetterCode: 'pool_letter_code',
   poolCanonicalIdentifier: 'pool_canonical_identifier',
   driveStatus: 'drive_status',

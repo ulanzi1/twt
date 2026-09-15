@@ -105,6 +105,7 @@ import type { Db } from '../db.js';
 import type { ClaimId, PariwarId } from '../ids/index.js';
 import { claims } from '../schema/claims.js';
 import { eventsLog } from '../schema/events_log.js';
+import { memberKycProfiles } from '../schema/member_kyc_profiles.js';
 import { pools } from '../schema/pools.js';
 import {
   ASSIGNED_MEMBER_COUNT,
@@ -113,6 +114,10 @@ import {
   coerceDriveInstant,
   DECEASED_DISTRICT,
   DRIVE_CLOSED_AT,
+  // ⭐⭐ Story 11b.3b (Task 2 unit 2) — THE SHARED AUTHORISATION GATE, IMPORTED AND ⛔ NEVER COPIED.
+  // ⛔ One predicate, two surfaces: a forked authorisation expression drifts silently and its
+  // failure mode is a name rendering on an authority that does ⛔ not exist. See its doc-block.
+  NAME_PUBLICATION_AUTHORISED,
   // ⛔ `DRIVE_MASKING_FROM` is ⛔ DELIBERATELY NOT IMPORTED — see the rider at its former select
   // site below. It is ⛔ NOT deleted; it stays exported from `public-read.ts` with the retained
   // masking machinery (`2026-09-04-190` cl.4), which currently has ⛔ no consumer.
@@ -358,6 +363,43 @@ export interface SahyogVivranEntry {
    */
   readonly amountRaisedInr: number;
   /**
+   * ⭐⭐ THE DECEASED MEMBER'S NAME, AS TIER-1 CIPHERTEXT — Story 11b.3b, `2026-09-02-173`
+   * (Trustee Panel: Kalpana Bharti, Dhiraj Rahul), **YES at the FULL NAME**, made UNCONDITIONAL by
+   * `2026-09-02-175`.
+   *
+   * `member_kyc_profiles.name_ciphertext` AS STORED, or `null` when the deceased member has ⛔ no
+   * KYC profile row. ⛔ **THE BOUNDARY DECRYPTS, ⛔ NOT THIS MODULE** — and it resolves the FORM
+   * through `resolvePublicMemberName`, ⛔ never a literal and ⛔ never `resolvePoolIdentity`
+   * (`2026-08-19-136` cl.1: a build whose public name form cannot change without a code change
+   * FAILS that clause).
+   */
+  readonly deceasedNameCiphertext: string | null;
+  /**
+   * ⭐ WHETHER THE DRIVE MAY BE *NAMED* — ⛔ NEVER WHETHER IT MAY *EXIST*.
+   *
+   * `false` ⇒ the boundary skips the decrypt entirely (⛔ zero KMS calls, and ⛔ ⛔ no decrypt without
+   * an authorising basis) and renders the page WITHOUT the name. Everything else — letter code,
+   * canonical identifier, district, close date, confirmed count, the ruled rupee figure, the
+   * framing, the nominee block — renders regardless. ⇒ ⭐ **an absent basis removes a NAME, ⛔ never
+   * a DRIVE from the public record**, and ⛔ never the page.
+   *
+   * ⚠⭐⭐ **`false` FOR EVERY DRIVE IS THE EXPECTED DAY-ONE STATE, ⛔ NOT A FAULT — AND IT IS THE
+   * WHOLE OF THIS STORY'S DECEASED-NAME OUTPUT.** Until a `clause_versions` row for
+   * {@link SAHYOG_DRIVE_PUBLICATION_CLAUSE_ID} exists AND is pinned into a T&C version, ⛔ nothing
+   * can satisfy the basis: counsel's written clause is still owed (OVERDUE since 2026-09-07) and
+   * there is ⛔ no migration, ⛔ no seed and ⛔ no writer for it anywhere in the repo.
+   * ⇒ ⭐ the surface is **INERT, ⛔ not broken** — fail-closed and therefore CORRECT (`-209` cl.2).
+   * ⛔⛔ **⛔ DO ⛔ NOT SEED A PLACEHOLDER `clause_versions` ROW TO MAKE IT LOOK ALIVE.**
+   * `public-read.ts` forbids it in terms: *"a stand-in makes names render on an authority that does
+   * ⛔ not exist."* ⭐ A favourable ruling is exactly when that shortcut stops looking like a lie.
+   *
+   * ⚠⛔ **THE CONTRIBUTOR LIST IS ⛔ NOT GATED BY THIS, AND THE ASYMMETRY IS RULED, ⛔ NOT A BUG.**
+   * This predicate keys on `claims.deceased_member_id`; the contributor predicate's basis is
+   * `2026-08-28-160` cl.7 and has ⛔ no clause gate anywhere in the code. ⇒ ⛔ do ⛔ not read an
+   * inert deceased name as "the page is dark".
+   */
+  readonly namePublicationAuthorised: boolean;
+  /**
    * Pool-Reality #2, as an OPAQUE ENUM. ⭐ The target is QUARANTINED by construction: the totals are
    * compared inside this module and ⛔ only this enum leaves it, so ⛔ no expected-total, percentage,
    * shortfall or comparison figure can reach any render model (AC3).
@@ -422,6 +464,22 @@ export interface ReadSahyogVivranOptions {
  * ⛔ There is NO join to `member_kyc_profiles` — ⛔ deliberately, and ⛔ do not add one: this surface
  * renders no name, so it must not so much as SELECT a ciphertext column.
  *
+ * ⚠⛔⛔ **SPENT 2026-09-15 (Story 11b.3b, Task 2 unit 2) — ⛔ THE SENTENCE ABOVE IS KEPT AS THE
+ * RECORD AND IS ⛔ NOT REWRITTEN** ([[feedback_supersede_never_reinterpret]]). Its PREMISE — *"this
+ * surface renders no name"* — is what expired: `2026-09-02-173` (Trustee Panel) ruled the deceased
+ * member's **FULL NAME** onto this exact page. ⇒ ⭐ the `member_kyc_profiles` LEFT join and the
+ * `name_ciphertext` select are now CORRECT here, and the field is declared in the matrix with its
+ * own `tier1_public_exception` pinned in the same commit as the declaration (`-165` cl.3, AC2).
+ * ⚠⛔ **WHAT THE SENTENCE WAS REALLY PROTECTING SURVIVES INTACT, AND IS ⛔ NOT RELAXED:**
+ *   · ⛔ **LEFT, ⛔ never INNER** — a deceased member with no KYC row must still publish a DRIVE.
+ *     An inner join would make an absent profile delete the whole page.
+ *   · ⛔ **THIS MODULE ⛔ NEVER DECRYPTS.** The ciphertext is carried as STORED and the boundary
+ *     decrypts — the same division `public-read.ts` keeps.
+ *   · ⛔ **⛔ NO OTHER ciphertext column joins on this back** — ⛔ not mobile, ⛔ not a contributor's
+ *     name (Task 3's, and it arrives by its own read), ⛔ not a second profile field.
+ *   · ⭐ **AND THE DECRYPT STAYS GATED** — see {@link SahyogVivranEntry.namePublicationAuthorised};
+ *     a row with no basis costs ⛔ ZERO KMS calls because the boundary checks before it decrypts.
+ *
  * `pariwar_id` rides ALONGSIDE RLS as an explicit predicate — defense-in-depth, and what keeps the
  * read correct if a caller ever passes a BYPASSRLS pool.
  */
@@ -457,9 +515,20 @@ export async function readPublicSahyogVivran(
       // accessor's boundary below — ⛔ never left to an implicit `+` somewhere downstream.
       confirmedCount: CONFIRMED_CONTRIBUTION_COUNT(now),
       assignedCount: ASSIGNED_MEMBER_COUNT,
+      // ⭐⭐ STORY 11b.3b (Task 2 unit 2) — THE DECEASED MEMBER'S NAME, `2026-09-02-173`.
+      // ⚠⛔ CIPHERTEXT AS STORED. ⛔ This module ⛔ NEVER decrypts — the boundary does, and ⛔ only
+      // after {@link SahyogVivranEntry.namePublicationAuthorised} says it may.
+      deceasedNameCiphertext: memberKycProfiles.nameCiphertext,
+      // ⭐ The authorising basis — the MEMBER'S OWN accepted T&C, ⛔ never a family tick-box.
+      // ⚠⛔ `false` FOR EVERY DRIVE TODAY, and that is the DESIGNED INERT STATE (Trap 1 / AC1).
+      namePublicationAuthorised: NAME_PUBLICATION_AUTHORISED(now),
     })
     .from(pools)
     .innerJoin(claims, eq(claims.claimCaseId, pools.claimCaseId))
+    // ⭐⛔ **LEFT, ⛔ NEVER INNER** (Story 11b.3b) — a deceased member with ⛔ no KYC profile row must
+    // still publish a DRIVE. ⛔ An inner join would make an absent profile delete the whole page,
+    // turning a missing NAME into a missing RECORD. ⚠ The same shape `public-read.ts` uses.
+    .leftJoin(memberKycProfiles, eq(memberKycProfiles.memberId, claims.deceasedMemberId))
     .where(
       and(
         eq(pools.pariwarId, pariwarId),
@@ -551,6 +620,11 @@ export async function readPublicSahyogVivran(
     // publishes a funding verdict mid-window, which is the exact thing `classifyCycleOutcome`
     // exists to quarantine. ⚠ It read `'collecting'` before the rename.
     amountRaisedInr: deliveredTotal,
+    // ⭐ Story 11b.3b (Task 2 unit 2) — CIPHERTEXT + BASIS, carried to the boundary UNRESOLVED.
+    // ⛔ ⛔ No decrypt here, ⛔ no name here, and ⛔ the basis is ⛔ never collapsed into the
+    // ciphertext's nullability: they answer different questions and the boundary needs both.
+    deceasedNameCiphertext: row.deceasedNameCiphertext,
+    namePublicationAuthorised: row.namePublicationAuthorised,
     fundingOutcome:
       status === 'live' || assignedCount === 0
         ? null

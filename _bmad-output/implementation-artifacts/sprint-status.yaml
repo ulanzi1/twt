@@ -1,3 +1,57 @@
+# last_updated: 2026-09-15a (⚠⛔ **BASELINE-PIN SWEEP ACROSS THE THREE STORIES THE 2026-09-09
+#   `11b-15` BLOCK FLAGGED. ⛔ NO CODE. ⛔ ZERO ROWS MOVE. ⛔ NOTHING RE-ARGUED.** Each pin was checked
+#   LIVE against `origin/main` after `git fetch` ([[feedback_git_fetch_before_remote_reasoning]]),
+#   ⛔ not read off a prior report ([[feedback_verify_before_committing_governance_claims]]).
+#   ⭐⭐ **THE 2026-09-09 NOTE IS SUPERSEDED ON ALL THREE COUNTS — AND IT WAS WRONG IN BOTH
+#   DIRECTIONS.** It said *"`11b-17` and `6-18` still carry ORPHANED pins; `11b-3b` has ⛔ NO pin at
+#   all"*. At HEAD: **(1) `11b-17` (`a2617869`) is an ANCESTOR of `origin/main` — SOUND**;
+#   **(2) `6-18` (`55912d83`) is an ANCESTOR of `origin/main` — SOUND** (both were repaired at their
+#   own validate passes, exactly as that note predicted they would be); **(3) `11b-3b` DOES carry a
+#   pin — and it is THE BROKEN ONE.** ⇒ ⛔ the one story the note excused by absence is the only one
+#   that actually owed a repair. ⭐ The 2026-09-09 blocks are KEPT VERBATIM
+#   ([[feedback_supersede_never_reinterpret]]).
+#   ⭐ **REPAIRED — `11b-3b`: `491a0fac` → `05094a68`.** `491a0fac` survives ⛔ only on
+#   `governance/11b-17-validate-and-panel-routing` and is ⛔ NOT an ancestor of `main`/`origin/main`
+#   (it was minted by that story's own 2026-09-11 v2.0 re-pin, off a branch SHA). Its main-line twin
+#   `05094a68` is **patch-identical** (`65228ba4…`) **and tree-identical** (`9c3d21ab…`) ⇒ ⭐ the
+#   CONTENT baseline was sound and only the SHA was unreachable; ⛔ every v2.0 finding stands
+#   verbatim and un-reopened. Story file → header note + §*What already EXISTS* anchor + a Change Log
+#   row; ⛔ the prior re-pin note is KEPT as the record.
+#   ⚠⚠ **WHAT THIS SWEEP DID ⛔ NOT DO — RECORDED, ⛔ NOT BACKFILLED**
+#   ([[feedback_record_unattested_no_backfill]]): it did ⛔ **not** re-verify `11b-3b`'s
+#   §*What already EXISTS*. **24** commits and **42 files / +6039 lines** across `packages`+`apps`
+#   have landed since `05094a68`, hitting **this story's own surface** —
+#   `packages/contracts/src/public-pages/sahyog-vivran.ts`, both `sahyog-vivran.json` locales, both
+#   `sahyog-shared.json` locales, `packages/i18n/src/catalog.ts`, and
+#   `packages/i18n/tests/sahyog-shared-dark-copy.test.ts` (**+497**). ⛔⛔ **A SOUND PIN IS ⛔ NOT A
+#   FRESH BASELINE** — `11b-3b` is `ready-for-dev`, so its next `validate` pass MUST re-diff
+#   `packages apps` against the pin before trusting any *"already EXISTS"* row
+#   ([[feedback_story_validate_footguns]]).
+#   ⭐ **ALSO CONFIRMED IN THE SAME SWEEP (branch topology, ⛔ no action owed):** the stale local refs
+#   read *"unmerged"* by ancestry but are **REBASE-MERGED** — `story/11b-19-…` (4 commits, each
+#   patch-identical to `1d8385db`/`b5b07949`/`7fb431fa`/`47063fde`, tip tree `1c7fd618…` == main's)
+#   and `governance/11b-17-fourth-validate-pass` (`e1d3dd11` ≡ main's `9dcee25c`, patch-id
+#   `6dfc45c1…`, tree `92335aa9…`). ⇒ ⭐ the WORK is on `main`; only the refs are leftovers
+#   ([[project_story_automator_ops]] — governance stories REBASE-merge, so ancestry alone
+#   ⛔ never proves un-merged). ⚠ `11b-3b`'s broken pin came from exactly this: a SHA read off a
+#   branch before its rebase.
+#   ⛔⛔ **AND THE OBVIOUS CONTAINMENT TEST IS THE WRONG ONE — IT MIS-CALLED BOTH REFS.**
+#   `git rev-list --count origin/main..<ref>` counts by **ANCESTRY**, and a rebase-merged commit is a
+#   ⛔ DISTINCT OBJECT ⇒ it reported *"holds 4 / 1 unique commits — KEEP"* for two branches whose
+#   content is **entirely on `main`**. ⭐ The test that actually holds is **patch-id containment +
+#   tip-tree identity**; both refs pass it commit-by-commit. ⇒ ⭐ ⛔ **never prune on `rev-list` count
+#   alone in this repo** — `git branch --merged` is wrong here for the same reason.
+#   ⭐ **REFS PRUNED 2026-09-15 (proven contained, ⛔ nothing unique lost) — RECOVERY SHAs RECORDED
+#   HERE SO THE ACT IS REVERSIBLE FROM THIS LEDGER ALONE:**
+#     · `story/11b-19-ratified-message-block-copy-source` — tip **`15f446c9`** (local + `origin/`);
+#       4 commits `15f446c9`/`fe688bfe`/`8303d92b`/`f408ca28` ≡ main's
+#       `47063fde`/`7fb431fa`/`b5b07949`/`1d8385db`. Restore: `git branch <name> 15f446c9`.
+#     · `governance/11b-17-fourth-validate-pass` — tip **`e1d3dd11`** (local only, ⛔ no `origin/`
+#       counterpart); `e1d3dd11` ≡ main's `9dcee25c`. Restore: `git branch <name> e1d3dd11`.
+#   ⛔⛔ **EXPLICITLY ⛔ NOT PRUNED — `governance/11b-17-validate-and-panel-routing` (15 unique
+#   commits, local + `origin/`).** ⭐ It is the ⛔ ONLY home of `491a0fac`, the orphaned SHA this very
+#   block supersedes; deleting it would destroy the evidence for the repair. ⚠ ~90 other refs read
+#   `0 ahead` in the same audit and were ⛔ LEFT ALONE — ⛔ out of scope, ⛔ not swept.)
 # last_updated: 2026-09-14e (✅⭐⭐ **`11b-17` — `bmad-code-review` RAN AGAINST THE 29-PATCH FIX COMMIT
 #   ITSELF (`9b407522`, 22 files), ⛔ NOT the feature diff Groups A-D already covered.** ⭐ Row: `done`
 #   (unchanged — it was already `done`). **No AC/ruling violation, no cross-patch contradiction found.**
@@ -18397,6 +18451,17 @@ development_status:
   # ⭐ **`-177` vs `-182` RESOLVED:** `-177` is authoritative; `-182` transcribes a **2026-09-01**
   # ruling and disclaims superseding anything ⇒ it owes a FORWARD POINTER, ⛔ not a correction.
   # ⭐ Row STAYS `ready-for-dev` — the file exists and is contexted; the STOP lives in the story.
+  # ⚠⛔ **PIN REPAIRED 2026-09-15 — `491a0fac` → `05094a68` (see `last_updated: 2026-09-15a`).** The
+  # 2026-09-11 v2.0 re-pin was ⛔ ITSELF ORPHANED (a branch SHA off
+  # `governance/11b-17-validate-and-panel-routing`). ⭐ The twin is patch- AND tree-identical
+  # (`9c3d21ab…`) ⇒ ⛔ nothing re-argued, ⛔ no row moves.
+  # ⚠⚠ ⛔ **THE PIN IS SOUND; THE BASELINE IS ⛔ NOT FRESH.** **24** commits / **42 files / +6039**
+  # in `packages`+`apps` since — ON THIS STORY'S OWN SURFACE (`sahyog-vivran.ts`, both
+  # `sahyog-vivran.json` + `sahyog-shared.json` locales, `i18n/src/catalog.ts`,
+  # `sahyog-shared-dark-copy.test.ts` +497). ⛔ §*What already EXISTS* was ⛔ NOT re-verified by that
+  # sweep ⇒ ⭐ the next `validate` pass owes a `packages apps` re-diff before trusting any row.
+  # ⭐ Siblings in the same sweep: `11b-17` (`a2617869`) + `6-18` (`55912d83`) re-checked LIVE ⇒
+  # ⭐ BOTH SOUND ⇒ the 2026-09-09 *"they still carry ORPHANED pins"* note is SUPERSEDED, ⛔ not edited.
   11b-3b-sahyog-vivran-named-identity-render-layer: ready-for-dev
   11b-4-memorial-authorship-surface-family-writes-the-story: backlog
   11b-5-memorial-visual-components-memorial-record-portrait-frame-kinship-lattice: backlog

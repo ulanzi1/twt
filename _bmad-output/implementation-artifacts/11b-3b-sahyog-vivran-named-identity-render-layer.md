@@ -911,27 +911,40 @@ AC10→T0 · **AC11→T1b** (and T1b gates T2).
       act is caught **BY SHAPE** (`isAmountDerivation`). ⭐ Four artefacts amended **by name**.
       ⚠⛔ **AC11(a) is ⛔ NOT part of this task** — it lands with **Task 2** (ordering correction above).
 
-- [~] **Task 2 — ⭐ THE AMOUNT SHIPS; the NAME half is the next unit** (AC3b done; AC1/AC3 partial)
-      ✅ **UNIT 1 of 2 DONE 2026-09-15 — the RUPEE FIGURE, end to end.** Domain binding (clamped,
+- [x] **Task 2 — ⭐ THE AMOUNT AND THE DECEASED NAME BOTH SHIP** (AC3b ✅, AC1 ✅; AC3 **deceased arm
+      ✅ / contributor arm → Task 3**) — ✅ **COMPLETE 2026-09-15, in TWO units.**
+      ✅ **UNIT 1 of 2 — the RUPEE FIGURE, end to end.** Domain binding (clamped,
       hoisted above the ternary, used twice) → `SahyogVivranEntry.amountRaisedInr` → the wire DTO →
       the API handler → the matrix declaration → the Astro render.
+      ⚠⛔⛔ **UNIT 1 WAS RE-REVIEWED BEFORE UNIT 2 STARTED AND A SHIPPED DEFECT WAS FOUND AND FIXED**
+      — the rupee sign rendered **TWICE** (`₹₹ 1,37,000 raised`) in **BOTH** locales. ⛔ Recorded, ⛔ not
+      quietly repaired: see the Dev Agent Record and the Change Log.
+      ✅ **UNIT 2 of 2 — the DECEASED MEMBER'S NAME, `2026-09-02-173`, FULL NAME.** The shared
+      `NAME_PUBLICATION_AUTHORISED` predicate **EXPORTED, ⛔ not copied** → a **LEFT** join to
+      `member_kyc_profiles` → ciphertext + basis carried UNRESOLVED to the boundary → the gated
+      decrypt (⛔ basis BEFORE decrypt ⇒ ⛔ zero KMS calls today) → `resolvePublicMemberName(mode, …)`
+      → `.trim() || null` → the wire → the Astro `<dt>`/`<dd>` pair, **SUPPRESSED TOGETHER**.
+      ⭐ **AC1's designed INERT STATE is preserved AND PROVEN END TO END** — the fixture plants a real
+      Tier-1 ciphertext, the read selects it, the ruling authorises it, and the name still does ⛔ not
+      render, because ⛔ no `clause_versions` row satisfies the basis. ⛔ ⛔ No placeholder was seeded.
       ⚠⛔ **SCOPE STATED, ⛔ NOT SILENTLY NARROWED:** the **contributor LIST** stays in **Task 3**,
       where **AC4** owns its pagination, ordering, bounded decrypt and control-set changes — ⛔ shipping
       rows without those is an unbounded unauthenticated decrypt fan-out. ⇒ AC3's per-row `try/catch`
       and its **contributor** omission arm land with Task 3.
-      ⛔ **STILL OPEN in Task 2:** the **deceased member name** (SQL select + `NAME_PUBLICATION_AUTHORISED`
-      + decrypt + `resolvePublicMemberName` + the `.trim() || null` omission arm).
-  - [ ] ⚠⛔ **`-218` cl.4:** ⛔ ⛔ no target / expected-total / roster-size companion to the amount.
+  - [x] ⚠⛔ **`-218` cl.4:** ⛔ ⛔ no target / expected-total / roster-size companion to the amount.
         ✅ **ASSERTED** — the render fence now scans for `rosterSize` / `fixedAmount` / `expectedTotal`
-        / `deliveredTotal` / `shortfall` / `percent` / `target` / an `"of ₹"` framing.
-  - [ ] ⭐ **AC11(a):** ⛔ **NO new file was added** — the render layer edited only files already in
+        / `deliveredTotal` / `shortfall` / `percent` / `target` / an `"of ₹"` framing, ⭐ and the API
+        spec asserts the same absence on the RAW WIRE BODY (unit 2).
+  - [x] ⭐ **AC11(a):** ⛔ **NO new file was added** by EITHER unit — both edited only files already in
         `SCAN_FILES`. ⇒ a verified no-op, and the gate's scope safeguard is green.
-  - [ ] ⚠⛔ **`@twt/ui` IS ⛔ NOT ADDED YET, AND THAT IS DELIBERATE.** AC3 orders the dependency, ⛔ but
-        the AMOUNT does ⛔ not use the presenter (Trap 2c: it takes `rosterSize` + `fixedAmount` as
-        INPUTS, which `-204` cl.3/cl.8 reserve). ⇒ adding it now would be a dependency with ⛔ no
-        consumer — *"a field with no render is the vacuous-leg defect wearing a forward-compatibility
-        costume"*, this surface's own words ([[feedback_no_premature_package]]). ⭐ It lands with the
-        **contributor list**, its first real consumer, at Task 3.
+  - [x] ⚠⛔ **`@twt/ui` IS ⛔ NOT ADDED YET, AND THAT IS DELIBERATE.** AC3 orders the dependency, ⛔ but
+        ⛔ NEITHER half of Task 2 uses the presenter: the AMOUNT cannot (Trap 2c: it takes `rosterSize`
+        + `fixedAmount` as INPUTS, which `-204` cl.3/cl.8 reserve) and the NAME must ⛔ not (the
+        presenter's input type has ⛔ no full-name arm — AC3's own blocking finding). ⇒ adding it now
+        would be a dependency with ⛔ no consumer — *"a field with no render is the vacuous-leg defect
+        wearing a forward-compatibility costume"*, this surface's own words
+        ([[feedback_no_premature_package]]). ⭐ It lands with the **contributor list**, its first real
+        consumer, at Task 3.
 - [ ] **Task 3 — Pagination, ordering, the anti-leaderboard fence, the control set** (AC4) — ⭐ edit
       `sahyog-vivran-controls.ts`; amend the three `login-wall.spec.ts` assertions **by name**; the
       count is **SEVEN**. ⭐ Full `DIRECTORY_DECRYPT_CONCURRENCY` (⛔ not the halved bound at
@@ -1046,6 +1059,24 @@ Claude Opus 5 (`claude-opus-5`) — Task 0 (governance) and Task 1b (AC11 b/c/d/
    arms of the narrowed rule are live.
 4. ⭐ Reverted the plant ⇒ gate **passes** again; ⛔ working tree clean of it.
 
+⭐⭐ **THE `₹₹` DEFECT — HOW IT WAS FOUND, AND THE REVERT-SANITY ON ITS FIX (2026-09-15, unit 1
+re-review).** ⛔ It was ⛔ NOT found by a failing test; every test was green.
+1. ⛔ Read `value.amount_raised` (`"₹{amount} raised"`) beside the render site's
+   `formatCurrency(amountInr, 'en')`, and `currency.ts:65` returns `` `₹ ${digits}` `` ⇒ the symbol
+   is in the value ALREADY.
+2. ⭐ **EXECUTED, ⛔ not reasoned** — a throwaway probe through the REAL `t()` and the REAL catalog:
+   `en: "₹₹ 1,37,000 raised"` · `hi: "₹₹ 1,37,000 एकत्र"`. ⛔ Probe deleted; tree clean.
+3. ⭐ **TEETH PROVEN ON THE FIX:** re-planted `"₹{amount} raised"` in the en locale ⇒ the new
+   `sahyog-vivran-copy.test.ts` leg goes **RED**; reverted ⇒ **59/59 green**.
+
+⭐⭐ **UNIT 2 — A STALE ASSERTION THAT WAS ALREADY RED AND NOBODY KNEW.**
+⚠⛔ `apps/api/tests/integration/public-pages/sahyog-vivran.spec.ts` is `describe.skipIf(!hasDatabase)`
+⇒ it **SKIPS SILENTLY** in a `turbo test` run with ⛔ no `DATABASE_URL`, which is how unit 1 shipped a
+key-set assertion that ⛔ did ⛔ not list `amountRaisedInr`. ⭐ Run against the live DB at `:5433` it
+failed on the FIRST try. ⇒ ⭐ **a DB-gated spec is ⛔ NOT covered by the green `turbo test` line** —
+⛔ do ⛔ not read one as evidence for the other ([[project_known_livedb_test_failures]]).
+⭐ Amended for BOTH units and re-run with the live DB: **34/34**.
+
 ### Completion Notes List
 
 - ✅ **Task 0 (AC0, AC10)** — one `governance:` commit, ⛔ no code: `#decision-2026-09-15-218`
@@ -1087,8 +1118,71 @@ Claude Opus 5 (`claude-opus-5`) — Task 0 (governance) and Task 1b (AC11 b/c/d/
   ⚠⛔ **A non-obvious interaction, recorded:** Indian digit grouping is what keeps a rupee figure
   structurally unable to trip the anti-account-number control (`/\d{6,}/`). ⛔ A future trip there is
   ⛔ never fixed by weakening that control.
-- ⛔ **Tasks 2 (name half), 3-8 remain OPEN.** ⚠ AC9 is **PARTLY** discharged (the two negative controls); its other
-  four legs depend on Task 2's render.
+- ⚠⛔⛔ **UNIT 1 WAS RE-REVIEWED BEFORE UNIT 2 BEGAN, AND IT CARRIED A SHIPPED DEFECT — ⛔ RECORDED,
+  ⛔ NOT QUIETLY REPAIRED.** `value.amount_raised` was minted as **`"₹{amount} raised"`** while the
+  render site passes `formatCurrency(amountInr, 'en')`, whose output ALREADY carries the symbol, the
+  house space and the Indian grouping ⇒ the page rendered **`₹₹ 1,37,000 raised`**, in **BOTH**
+  locales, from the first commit of the figure.
+  ⭐ **IT IS ⛔ NOT A NEW CLASS:** `sahyog-shared`'s `$comment.message_block` records it in terms —
+  *"the literal ₹ is DROPPED because `{amount}` arrives ALREADY FORMATTED and carries its own ⇒ a
+  literal ₹ would ship `₹₹`"* — and its `index_line.*` variants, same ratification and same day, carry
+  ⛔ no literal ₹ for exactly this reason. ⇒ the figure now takes that shipped form.
+  ⚠⛔⛔ **AND THE MORE USEFUL HALF IS WHY ⛔ NOTHING CAUGHT IT.** Both suites stubbed
+  `labels.amountRaised` with a HAND-WRITTEN `` `₹${a.toLocaleString('en-IN')} raised` ``, bypassing
+  `t()` **and** `formatCurrency` at once — ⭐ the same fixture blind spot as the 11a.2 `{{max}}` vs
+  `{max}` defect that threw on every `/members` request, re-run on a new key. ⚠ And
+  `sahyog-vivran-copy.test.ts` — the file that exists **precisely** to close that gap (*"the 11a.2
+  defect lived in the gap between those two files, so both must exist"*) — was ⛔ never given the key.
+  ⇒ ⭐ **the durable half of the fix is the third part:** both stubs now **CALL** `formatCurrency`
+  rather than transcribing it (the transcription was wrong TWICE — it also dropped the house space),
+  and the copy test gained the real-`t()` leg for both locales. ⛔ AC7 still owns the full a11y+i18n
+  obligation at **Task 6**; this is the regression leg for a shipped defect, ⛔ not that AC's discharge.
+- ⭐ **Task 2, unit 2 of 2 (AC1, AC3 deceased arm)** — the deceased member's name, end to end.
+  ⭐ `NAME_PUBLICATION_AUTHORISED` is **EXPORTED from `public-read.ts`, ⛔ never copied**: it is a
+  fail-closed authorisation gate with four independently subtle legs (the one-directional
+  `uuid → text` cast, three explicit `pariwar_id` scopes, the validity window, the clause-id match),
+  and a fork would drift **silently** — ⛔ no error, ⛔ no failing test, and the failure mode is a name
+  rendering on an authority that does ⛔ not exist. ⚠ It correlates by BARE table name ⇒ ⛔ neither
+  consumer may alias `pools` or `claims`; recorded at the export.
+  ⭐ The `member_kyc_profiles` join is **LEFT, ⛔ never INNER** — an absent profile must remove a NAME,
+  ⛔ never a DRIVE. ⭐ The basis is checked **BEFORE** the decrypt ⇒ a drive with ⛔ no basis costs
+  **ZERO** KMS calls, which is every drive today. ⭐ ONE decrypt for the whole page ⇒ it rides ⛔ no
+  bounded map and needs none (the list shapes are the index's and Task 3's).
+  ⭐ **THE FORM RESOLVES THROUGH `resolvePublicMemberName(mode, storedName)`** under the Pariwar's
+  STORED mode — ⛔ never a literal (`-136` cl.1), ⛔ never `resolvePoolIdentity` and ⛔ never
+  `splitFirstNameLastInitial` (both hard-code the SHIELDED form, on the one surface ruled FULL NAME,
+  ⛔ with every other test still green). ⭐ Proven by a leg that flips the stored mode and asserts the
+  rendered form CHANGES — ⛔ the only leg that catches a hard-coded literal.
+  ⭐ **THE OMISSION ARM IS THE DECEASED MEMBER'S, ⛔ not the contributor's:** an unrenderable name
+  **omits the NAME, ⛔ never the page**, via **`.trim() || null`, ⛔ never `=== ''`** (the 2026-09-08
+  narrowing already fixed on the sibling — ⛔ re-introducing it is a CLOSED defect). ⚠ A **MONONYM**
+  under `shielded_name` lands in that same `null`, and ⛔ there is ⛔ no fall-through to `firstName`:
+  `public-name.ts` records that for a mononym it returns the ENTIRE stored legal name.
+  ⭐ **AC1's INERT STATE IS PRESERVED AND ⭐ PROVEN END TO END, ⛔ not asserted:** the fixture plants a
+  REAL Tier-1 ciphertext, the read SELECTS it, `-173` AUTHORISES it — and the name still does ⛔ not
+  render, because ⛔ no `clause_versions` row satisfies the basis. ⛔⛔ ⛔ No placeholder row was seeded
+  anywhere. ⚠ The positive arm is proven in a test transaction so the gate is ⛔ not vacuous —
+  ⛔ *"the name never renders"* passes identically for a surface that could ⛔ never render one.
+- ⚠⛔ **A STALE ASSERTION FROM UNIT 1, FOUND AND FIXED AT UNIT 2 — ⛔ RECORDED, ⛔ not absorbed.** The
+  API integration spec's EXACT-key-set leg never gained `amountRaisedInr`, and it went unnoticed
+  because the whole `describe` is `skipIf(!hasDatabase)` ⇒ **it skips silently in `turbo test`.**
+  ⇒ ⭐ **a DB-gated spec is ⛔ NOT covered by the green `turbo test` line.** Amended for both units
+  (the key set, the rupee fence narrowed to the FACTORS, and a new `-218` cl.4 comparison fence on the
+  raw body) and re-run against the live DB: **34/34**.
+  ⭐⭐ **AND ITS `Rajesh` / `Sharma` LEGS DID ⛔ NOT GO STALE — THEY BECAME THE SHARPEST ASSERTION IN
+  THE STORY.** They now prove the inert state end to end, and the comment says so: ⛔ if either ever
+  goes red it means a publication basis became satisfiable — a GOVERNANCE event, ⛔ never a test fix.
+- ⚠⛔ **ONE EXPECTATION I WROTE WAS WRONG AND THE CODE WAS RIGHT** — the shielded-form leg first
+  asserted `Rajesh K.`; `splitFirstNameLastInitial` takes the **LAST** token's initial, so it is
+  `Rajesh S.`. ⭐ Corrected against what the function DOES, ⛔ not what a three-token name looks like
+  it should do, and the reason is recorded at the leg.
+- ⛔ **Tasks 3-8 remain OPEN.** ⚠ AC9 is **PARTLY** discharged — ⭐ **three** of its five inverted
+  tests plus **both** negative controls are now amended BY NAME (the render layer's rupee fence at
+  unit 1; the contracts person leg, the `member-drive-detail-field-floor` exclusion (b) and the
+  render test's UN-RULED-person leg at unit 2; and the render test's own negative control
+  **re-planted onto `verifierName`**, which ⛔ nobody has ruled at any tier so ⛔ no future story can
+  declare it out from under the control). ⛔ `scrape-test.spec.ts`'s `paginated: false → true` leg
+  stays OPEN — it depends on **Task 3**'s contributor list.
 
 ### File List
 
@@ -1100,6 +1194,32 @@ Claude Opus 5 (`claude-opus-5`) — Task 0 (governance) and Task 1b (AC11 b/c/d/
 - `packages/ui/src/contribution-list/view-model.ts` — stale *"form is UNRULED"* doc-block amended
 - `_bmad-output/implementation-artifacts/deferred-work.md` — amount-raised item amended
 - `_bmad-output/planning-artifacts/ux-design-specification.md` — `:1334`/`:1335` amended
+- **Task 2 unit 1 (the `₹₹` repair):** `packages/i18n/locales/{en,hi}/sahyog-vivran.json`
+  (the literal ₹ dropped from `value.amount_raised`, + a `$comment.amount_raised` recording why) ·
+  `apps/public/tests/sahyog-vivran-copy.test.ts` (the real-`t()` regression leg) ·
+  `apps/public/tests/sahyog-vivran-render.test.ts` and
+  `apps/public/tests/integration/public-pages/scrape-test.spec.ts` (both stubs now CALL
+  `formatCurrency` instead of transcribing it)
+- **Task 2 unit 2 (the deceased member's name):**
+  `packages/domain/src/pool/public-read.ts` (`NAME_PUBLICATION_AUTHORISED` **exported**, with the
+  one-predicate-two-surfaces and no-aliasing riders) ·
+  `packages/domain/src/pool/sahyog-vivran-read.ts` (the no-join fence **narrowed**; LEFT join;
+  `deceasedNameCiphertext` + `namePublicationAuthorised` selected and carried) ·
+  `packages/contracts/src/public-pages/sahyog-vivran.ts` (the *"no person the Panel has not named"*
+  clause **amended**; `deceasedMemberName` declared) ·
+  `apps/api/src/modules/public-pages/handlers.ts` (basis-before-decrypt, the gated Tier-1 decrypt,
+  `resolvePublicMemberName`, `.trim() || null`) ·
+  `apps/public/src/lib/surface-fields.ts` · `apps/public/src/lib/sahyog-vivran-render.ts` ·
+  `apps/public/src/pages/sahyog-vivran/[driveToken].astro` (the `<dt>`/`<dd>` pair, suppressed
+  together) · `packages/i18n/locales/{en,hi}/sahyog-vivran.json` (`label.deceased_member`) ·
+  `packages/contracts/tests/public-pages-sahyog-vivran.test.ts` ·
+  `apps/public/tests/sahyog-vivran-render.test.ts` (the UNNAMED-drive describe; the UN-RULED-person
+  leg narrowed; the negative control **re-planted onto `verifierName`**) ·
+  `apps/public/tests/sahyog-vivran-copy.test.ts` · `apps/public/tests/member-drive-detail-field-floor.test.ts`
+  (exclusion (b) **spent**; the counterpart row added) ·
+  `apps/public/tests/integration/public-pages/scrape-test.spec.ts` ·
+  `apps/api/tests/integration/public-pages/sahyog-vivran.spec.ts` (the `authorised` fixture, the
+  governed `setMode` helper, and six new legs)
 - **Task 1:** `packages/contracts/public-pages/public-vs-private-matrix.yaml` (two field blocks +
   the discharged routing note) · `packages/contracts/src/public-pages/matrix.ts` (two allowlist pairs
   + the half-spent fence) · `packages/contracts/tests/public-pages.test.ts` ·

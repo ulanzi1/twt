@@ -1230,6 +1230,7 @@ const SAHYOG_VIVRAN_TEST_LABELS: SahyogVivranLabels = {
   pageTitle: 'Sahyog Vivran',
   pageIntro: 'intro',
   factsGroupLabel: 'Drive details',
+  labelDeceasedMember: 'Deceased Member',
   labelDriveCode: 'Drive code',
   labelPoolLetter: 'Pool',
   labelDistrict: 'District',
@@ -1290,6 +1291,12 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
         poolCanonicalIdentifier: 'P-2026-09-003',
         driveStatus: 'verified',
         closedAt: '2026-09-01T18:45:00.000Z',
+        // ⭐ Story 11b.3b (Task 2 unit 2) — a REAL name in the primary fixture, so the render path and
+        // the Tier-1 leak leg are actually exercised. ⚠⛔ It is ⛔ NOT the day-one state: the publication
+        // basis is fail-closed for every member, so a live drive carries `null` here. ⭐ That arm has its
+        // own leg below — ⛔ a fixture that only ever carried `null` would leave the ruled render
+        // unexercised, which is the vacuous-leg defect this surface names everywhere else.
+        deceasedMemberName: 'Rajesh Kumar Sharma',
         district: 'Lucknow',
         confirmedContributionCount: 137,
         amountRaisedInr: 137000,
@@ -1360,7 +1367,7 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
     fields: sahyogVivranSurfaceFieldIds(model),
   };
 
-  it('⭐ the snapshot field set is NON-EMPTY, and is EXACTLY the twelve classified fields', () => {
+  it('⭐ the snapshot field set is NON-EMPTY, and is EXACTLY the thirteen classified fields', () => {
     // ⛔ The EXACT set, ⛔ not "length > 0": a leg that only detects additions accepts a field
     // vanishing from the render while the matrix still claims it is shown.
     // ⭐ TEN → SIXTEEN at Story 11b.3a: the four ruled Tier-1 nominee-bank fields plus their two
@@ -1380,6 +1387,11 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
       'appeal_reversal_stage',
       'close_of_cycle_framing',
       'confirmed_contribution_count',
+      // ⭐ Story 11b.3b (Task 2 unit 2) — `2026-09-02-173`, the deceased member's FULL NAME.
+      // ⚠ Its VALUE is `null` on every drive today (the publication basis is fail-closed), but the
+      // field id is CLASSIFIED regardless: the id set describes what this surface DECLARES, ⛔ not
+      // what one fixture happens to carry — the same reason the Tier-1 nominee id stays listed.
+      'deceased_member_name',
       'district',
       'drive_closed_at',
       'drive_status',

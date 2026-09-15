@@ -132,6 +132,7 @@ const labels: SahyogVivranLabels = {
   pageTitle: tr('page.title'),
   pageIntro: tr('page.intro'),
   factsGroupLabel: tr('facts.group_label'),
+  labelDeceasedMember: tr('label.deceased_member'),
   labelDriveCode: tr('label.drive_code'),
   labelPoolLetter: tr('label.pool_letter'),
   labelDistrict: tr('label.district'),
@@ -335,6 +336,38 @@ if (!driveStatusVisible) {
         */}
         <section role="group" aria-label={labels.factsGroupLabel} class="rounded border border-gray-300 p-4">
           <dl class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {/*
+              ⭐⭐ STORY 11b.3b (Task 2 unit 2) — THE DECEASED MEMBER'S NAME, `2026-09-02-173`
+              (Trustee Panel), at the **FULL NAME**, unconditional per `-175`. ⭐ FIRST in the group:
+              on this surface the deceased member is the SUBJECT, ⛔ not one fact among many — the
+              same placement `sahyog-drive`'s row mapping takes.
+
+              ⚠⛔⛔ **IT RENDERS NOTHING TODAY, AND THAT IS THE DESIGNED STATE, ⛔ NOT AN UNFINISHED
+              RENDER.** `NAME_PUBLICATION_AUTHORISED` is FALSE for every member until counsel's
+              written clause exists and is pinned (OVERDUE since 2026-09-07; ⛔ no migration, ⛔ no
+              seed, ⛔ no writer). ⭐ Fail-closed and therefore CORRECT. ⛔⛔ ⛔ Do ⛔ not seed a
+              placeholder `clause_versions` row to make this look alive.
+
+              ⭐⛔ **THE `<dt>`/`<dd>` PAIR IS SUPPRESSED TOGETHER** — the rule this page already
+              enforces for the drive code, and for the same reason: `<MatrixField>` suppresses only
+              the inner `<span>`, so a lone `<dt>` leaves a screen reader announcing "Deceased
+              Member" and then falling silent, which is worse than not announcing it.
+              ⛔⛔ AND ⛔ NO PLACEHOLDER IN ITS PLACE — ⛔ not "Not recorded", ⛔ not "name withheld",
+              ⛔ not an em dash. A per-drive withheld marker announces WHICH members have a
+              publication basis, which is the enumeration signal the absent basis must not emit.
+              ⚠ ⛔ NOT the `district` posture below, which DOES have fallback copy: an unrecorded
+              posting is an ordinary data gap, an unnamed member is a governance state.
+
+              ⚠⛔ AND THE PAGE STILL RENDERS — omit the NAME, ⛔ never the page. ⚠ The CONTRIBUTOR
+              arm (Task 3) is the OPPOSITE: an unrenderable name omits the ROW, which exists only to
+              carry it. ⛔ Do ⛔ not apply one rule to both subjects.
+            */}
+            {model.deceasedMemberName !== null && (
+              <div>
+                <dt class="text-xs uppercase tracking-wide text-gray-500">{labels.labelDeceasedMember}</dt>
+                <dd class="text-sm"><MatrixField surface="sahyog-vivran" field="deceased_member_name" viewerContext="public" value={model.deceasedMemberName} /></dd>
+              </div>
+            )}
             <div>
               <dt class="text-xs uppercase tracking-wide text-gray-500">{labels.labelPoolLetter}</dt>
               <dd class="text-sm"><MatrixField surface="sahyog-vivran" field="pool_letter_code" viewerContext="public" value={model.poolLetterCode} /></dd>

@@ -30,6 +30,11 @@ const KEYS = [
   'page.title',
   'page.intro',
   'facts.group_label',
+  // ⭐ Story 11b.3b (Task 2 unit 2) — the `<dt>` for the deceased member's name. ⚠ The VALUE is
+  // inert today (⛔ no publication basis), ⛔ but the LABEL still has to resolve: `t()` THROWS on a
+  // missing key, so an unresolvable `<dt>` is a 500 on the whole page the moment the first Pariwar
+  // pins the clause — ⛔ not a blank label.
+  'label.deceased_member',
   'label.drive_code',
   'label.pool_letter',
   'label.district',

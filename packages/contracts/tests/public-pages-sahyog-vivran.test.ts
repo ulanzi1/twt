@@ -25,6 +25,7 @@ const ENTRY = {
   driveStatus: 'verified' as const,
   closedAt: '2026-09-01T18:45:00.000Z',
   district: 'Lucknow',
+  deceasedMemberName: 'Rajesh Kumar Sharma',
   confirmedContributionCount: 137,
   amountRaisedInr: 137000,
   fundingOutcome: 'fully_funded' as const,
@@ -138,9 +139,17 @@ describe('⭐⭐ the shape carries NO rupee figure and NO person (D1(b), the D6(
     expect(PublicSahyogVivranEntry.safeParse({ ...ENTRY, amountRaisedInr: -1 }).success).toBe(false);
   });
 
-  it('⛔ rejects any person-bearing field', () => {
+  // ⚠⛔⛔ **NARROWED 2026-09-15 (Story 11b.3b, Task 2 unit 2 / AC9) — ⛔ THE LEG IS ⛔ NOT DELETED AND
+  // ITS PRIOR FORM IS KEPT HERE** ([[feedback_supersede_never_reinterpret]]). It rejected **ten**
+  // keys, `deceasedMemberName` among them, on the ground that the named people *"are 11b.3b's"*.
+  // ⭐ **11b.3b IS HERE**, and `2026-09-02-173` (Trustee Panel) rules the deceased member's FULL
+  // NAME onto this surface ⇒ that key moves to the happy path and the other NINE stay rejected.
+  // ⛔⛔ **THE SURVIVORS ARE THE ONES THAT MATTERED:** the CONTRIBUTOR (`-174`'s render is Task 3,
+  // which owns the pagination, ordering and bounded decrypt that list requires), the VERIFIER (⛔ no
+  // ruling at any tier), and every IDENTIFIER — a per-entity id on a public wire is an enumeration
+  // primitive in its own right, and ⛔ no ruling touches that.
+  it('⛔ rejects every person-bearing field EXCEPT the one the Panel named', () => {
     for (const key of [
-      'deceasedMemberName',
       'contributorName',
       'contributors',
       'verifierName',
@@ -153,6 +162,23 @@ describe('⭐⭐ the shape carries NO rupee figure and NO person (D1(b), the D6(
     ]) {
       expect(PublicSahyogVivranEntry.safeParse({ ...ENTRY, [key]: 'x' }).success).toBe(false);
     }
+    // ⭐ AND THE RULED ONE PARSES — ⛔ so the leg above is ⛔ not passing merely because `.strict()`
+    // rejects everything unknown, which would make it vacuous the day a ruled name landed.
+    expect(
+      PublicSahyogVivranEntry.safeParse({ ...ENTRY, deceasedMemberName: 'Rajesh Kumar Sharma' })
+        .success,
+    ).toBe(true);
+    // ⭐⭐ AND `null` PARSES — the DAY-ONE state of every drive (⛔ no publication basis). ⛔ A shape
+    // that accepted only a present name would 500 the page on the state it actually ships in.
+    expect(
+      PublicSahyogVivranEntry.safeParse({ ...ENTRY, deceasedMemberName: null }).success,
+    ).toBe(true);
+    // ⛔⛔ AND `.min(1)` IS LOAD-BEARING — the boundary normalises with `.trim() || null`, ⛔ never
+    // `=== ''`. An empty or whitespace-only name is ⛔ not a name, and must ⛔ not reach the render
+    // as "present" (Review finding 2026-09-08, already fixed on the sibling surface).
+    expect(PublicSahyogVivranEntry.safeParse({ ...ENTRY, deceasedMemberName: '' }).success).toBe(
+      false,
+    );
   });
 
   it('⛔ rejects a target / expected-total / percentage / shortfall companion to the outcome', () => {

@@ -28,6 +28,20 @@
 // ⛔ no ciphertext, ⛔ no raw lifecycle value.
 // ⛔ NO PERSON THE PANEL HAS NOT NAMED: ⛔ no deceased member's name, ⛔ no contributor name or
 // count-of-named-rows, ⛔ no verifier identity. Those are **11b.3b**'s (`2026-09-02-173` / `-174`).
+// ⚠⛔⛔ **AMENDED 2026-09-15 (Story 11b.3b, Task 2 unit 2) — ⛔ THE SENTENCE ABOVE IS KEPT AND ⛔ NOT
+// REWRITTEN** ([[feedback_supersede_never_reinterpret]]). ⭐ **11b.3b IS HERE, AND THE PANEL HAS NOW
+// NAMED ONE OF THEM:** `2026-09-02-173` rules the **deceased member's FULL NAME** onto this surface
+// (unconditional per `-175`), declared in the matrix with its own `tier1_public_exception` in the
+// same commit as the field (`2026-08-28-165` cl.3). ⇒ `deceasedMemberName` is CARRIED.
+// ⛔⛔ **THE CLAUSE'S OTHER THREE SUBJECTS STAY FORBIDDEN AND THAT IS THE HALF THAT MATTERED:**
+// ⛔ no **contributor** name and ⛔ no count-of-named-rows (`-174`'s render is 11b.3b's **Task 3**,
+// which owns the pagination, ordering and bounded decrypt that list requires — ⛔ shipping rows
+// without them is an unbounded unauthenticated decrypt fan-out), and ⛔ ⛔ no verifier identity,
+// which ⛔ nobody has ruled at any tier.
+// ⚠⭐ **AND THE NAME IS INERT ON THE DAY IT SHIPS** — `NAME_PUBLICATION_AUTHORISED` is `false` for
+// every member until counsel's clause exists and is pinned (OVERDUE since 2026-09-07), so this key
+// is `null` on every drive today. ⭐ That is the DESIGNED state, ⛔ not an unfinished render, and
+// ⛔⛔ ⛔ no placeholder `clause_versions` row may be seeded to change it.
 // ⚠⭐ AMENDED BY 11b.3a — the *"⛔ no nominee anything"* clause that stood here is now ⛔ FALSE and is
 // corrected rather than deleted: the **account holder name, account number, IFSC and VPA** are
 // carried, under `2026-08-28-160` cl.10 + `-165` cl.1/cl.3, WITH their four allowlist entries added
@@ -355,6 +369,39 @@ export const PublicSahyogVivranEntry = z
     closedAt: z.string().datetime().nullable(),
     /** The claim subject's latest posting district, RAW. `null` when there is no posting row. */
     district: z.string().min(1).nullable(),
+    /**
+     * ⭐⭐ THE DECEASED MEMBER'S NAME — Story 11b.3b, `2026-09-02-173` (Trustee Panel: Kalpana
+     * Bharti, Dhiraj Rahul), **YES at the FULL NAME**, unconditional per `2026-09-02-175`.
+     *
+     * ⭐ **ONE RESOLVED STRING**, the output of `resolvePublicMemberName(mode, storedName)` under the
+     * Pariwar's STORED presentation mode. ⛔ It is ⛔ never decomposed, and the boundary ⛔ never calls
+     * `splitFirstNameLastInitial` — that produces the **SHIELDED** form, on the one surface the
+     * Panel ruled **FULL NAME**, with every test still green. ⛔ And ⛔ never a literal `full_name`:
+     * `2026-08-19-136` cl.1 — *"a build in which the public name form cannot be changed without a
+     * code change FAILS this clause"*.
+     *
+     * ⚠⛔⛔ **`null` ON EVERY DRIVE TODAY, BY DESIGN.** `NAME_PUBLICATION_AUTHORISED` requires a
+     * pinned `clause_versions` row for `niy.public-disclosure.member-information`; counsel's written
+     * clause is still owed and there is ⛔ no migration, ⛔ no seed and ⛔ no writer for it. ⇒ the
+     * gate is FAIL-CLOSED for every member and the page renders ⛔ no name — ⭐ INERT, ⛔ not broken
+     * (`2026-09-08-209` cl.2). ⛔⛔ ⛔ Do ⛔ not seed a placeholder row to make it look alive.
+     *
+     * ⭐ **`null` OMITS THE NAME, ⛔ NEVER THE PAGE** — the sibling index's shipped rule
+     * (`public-pages/handlers.ts`), and the deceased member's arm of AC3's per-subject omission
+     * ruling. ⚠⛔ The CONTRIBUTOR arm is the opposite (an unrenderable name omits the ROW, which
+     * exists only to carry it) — ⛔ do ⛔ not apply one rule to both subjects.
+     *
+     * ⚠ FOUR CAUSES REACH THIS `null` IDENTICALLY and that is intended, because ⛔ none of them
+     * authorises a render: ⛔ no authorising basis · ⛔ no KYC profile row · a failed decrypt · an
+     * unresolvable name (a **MONONYM** under `shielded_name`, which `resolvePublicMemberName`
+     * returns `''` for — `2026-08-21-145` cl.3). ⛔ There is ⛔ no per-cause signal on the wire: one
+     * would be an enumeration oracle over which members have accepted which T&C version.
+     *
+     * ⚠⛔ `.min(1)` IS LOAD-BEARING — the boundary normalises with **`.trim() || null`, ⛔ never
+     * `=== ''`** (Review finding 2026-09-08, already fixed on the sibling). A whitespace-only stored
+     * name would otherwise arrive TRUTHY and render a blank where a person's name belongs.
+     */
+    deceasedMemberName: z.string().min(1).nullable(),
     /**
      * Contributions CONFIRMED as money received, reversals compensated (Story 9.5's canonical
      * financial truth). ⛔ A count, ⛔ never a sum of amounts, and ⛔ never a score.

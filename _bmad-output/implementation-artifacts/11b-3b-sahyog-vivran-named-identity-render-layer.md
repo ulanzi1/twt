@@ -1,5 +1,5 @@
 ---
-baseline_commit: 491a0fac
+baseline_commit: 05094a68
 ---
 
 <!--
@@ -8,6 +8,21 @@ baseline_commit: 491a0fac
 verifiers; ⛔ the previous anchor was DERIVED after the fact and **⛔ no claim had ever been checked**.
 ⚠ That debt is now DISCHARGED — and it was large: see **§ v2.0** below.
 ⛔ The old *"verified live at `79ed41d`"* second anchor is RETIRED — ⭐ one story, ⛔ one pin.
+
+⚠⛔ **RE-PINNED AGAIN 2026-09-15 — `491a0fac` → `05094a68`. ⛔ THE 2026-09-11 PIN WAS ITSELF
+ORPHANED.** `491a0fac` lives ⛔ only on `governance/11b-17-validate-and-panel-routing`; it is ⛔ NOT
+an ancestor of `main`/`origin/main`. ⭐ Its main-line twin `05094a68` is **patch-identical**
+(`65228ba4…`) **and tree-identical** (`9c3d21ab…`) ⇒ ⭐ **the CONTENT baseline was sound and only
+the SHA was unreachable — ⛔ nothing below is re-argued, ⛔ no claim is re-opened.** ⛔ The note
+above is KEPT as the record; this supersedes only its SHA.
+⚠⚠ **BUT THE DRIFT IS REAL AND UNVERIFIED:** **24** commits and **42 files / +6039 lines** across
+`packages`+`apps` have landed since `05094a68` — including
+`packages/contracts/src/public-pages/sahyog-vivran.ts`, both `sahyog-vivran.json` locales,
+both `sahyog-shared.json` locales,
+`packages/i18n/src/catalog.ts` and `packages/i18n/tests/sahyog-shared-dark-copy.test.ts` (+497) —
+⛔ i.e. THIS STORY'S OWN SURFACE. ⭐ This pass fixed the **SHA only**; it did ⛔ **NOT** re-verify
+§*What already EXISTS*. ⛔⛔ **The next `validate` pass MUST re-diff `packages apps` against the
+pin before trusting any "already EXISTS" row** ([[feedback_story_validate_footguns]]).
 -->
 
 # Story 11b.3b: Sahyog Vivran Named-Identity Render Layer — Deceased Member Name + Contributor List `[SURFACE]`
@@ -90,7 +105,10 @@ each name appearing on **that person's own instrument**, in **the form the Trust
 moderation overlay. A contributor's name is ⛔ **never** removed because they died (11b.1 D9(a));
 ⛔ RTBF is a separate rule and is ⛔ NOT collapsed into it (Trap 4).
 
-## 🎯 What already EXISTS — ⭐ re-verified live at `491a0fac`, ⛔ not assumed
+## 🎯 What already EXISTS — ⭐ re-verified live at `491a0fac` ≡ `05094a68` (tree-identical), ⛔ not assumed
+
+⚠⛔ **STALE-RISK, ⛔ not a re-verification:** these rows were checked at the pin. **24** commits have
+landed on `main` since, touching this story's own surface (see the header note) ⇒ ⭐ re-diff before use.
 
 | Fact | Where | ✓ |
 |---|---|---|
@@ -462,8 +480,9 @@ a public, edge-cached page. ⇒ ⛔ do ⛔ not size, review or announce this sto
 
 ## Change Log
 
-| Date | Change |
-|---|---|
+| Date | Description | Author |
+|---|---|---|
+| 2026-09-15 | ⚠⛔ **PIN REPAIR ONLY — `491a0fac` → `05094a68`. ⛔ NO CODE, ⛔ NO ROWS MOVE, ⛔ NOTHING RE-ARGUED.** The 2026-09-11 v2.0 re-pin was ⛔ **itself orphaned** — `491a0fac` survives only on `governance/11b-17-validate-and-panel-routing` and is ⛔ NOT an ancestor of `origin/main`. ⭐ Re-pinned to its main-line twin `05094a68`: **patch-identical** (`65228ba4…`) **and tree-identical** (`9c3d21ab…`) ⇒ ⭐ the CONTENT baseline was sound; only the SHA was unreachable. ⭐ Every v2.0 finding stands **verbatim and unre-opened**. ⚠⚠ **What this pass did ⛔ NOT do:** re-verify §*What already EXISTS*. **24** commits / **42 files / +6039 lines** in `packages`+`apps` have landed since the pin, hitting this story's own surface (`contracts/src/public-pages/sahyog-vivran.ts`, both `sahyog-vivran.json` + `sahyog-shared.json` locales, `i18n/src/catalog.ts`, `sahyog-shared-dark-copy.test.ts` +497) ⇒ ⛔ the drift is **RECORDED AND CARRIED AS RISK**, ⛔ **not backfilled** ([[feedback_record_unattested_no_backfill]]). ⭐ Sibling check in the same sweep: `11b-17` (`a2617869`) and `6-18` (`55912d83`) pins re-checked LIVE ⇒ ⭐ **both are ancestors of `origin/main` — SOUND**, ⇒ the 2026-09-09 *"`11b-17` and `6-18` still carry ORPHANED pins; `11b-3b` has NO pin"* note is **superseded on all three counts** (the first two were repaired at their own validate passes; `11b-3b` had a pin, and it was the broken one). ⛔ Row stays `ready-for-dev`. | BigDev + Claude |
 | 2026-09-11 | ⛔⛔ **v2.0 — REWRITTEN AGAINST HEAD after the story's FIRST `validate` pass (three independent verifiers, ~45 findings, 12 BLOCKING). ⛔ NO CODE.** ⭐ Baseline **RE-PINNED** `ae24a9e1` → `491a0fac` (**188 commits**; the old anchor was DERIVED and ⛔ no claim had ever been verified). ⭐ **THE SUBJECT SURVIVED INTACT** — `-173`/`-174`/`-175` are live, un-superseded, and the work is genuinely undone. ⛔ **What rotted was the MECHANISM.** ⛔⛔ **BLOCKING, in the order they would have bitten:** (1) AC3b ordered **`rosterSize` + `fixedAmount`** onto a public wire — ⭐ their product **IS लक्ष्य**, which `-204` **cl.3** reserves to a `super_admin` reveal and **cl.8** closed *"BY CONSTRUCTION"* with *"the wire carries the PERCENTAGE only, ⛔ never `rosterSize`"* ⇒ **AC3b now hoists `deliveredTotal`** (already computed at `sahyog-vivran-read.ts:509`, the shape 11b.14 used); (2) ⭐⭐ **the day-one output is the INVERSE of the title** — the clause gates the DECEASED name only, so this ships **50 living members' FULL LEGAL NAMES** on an unauthenticated edge-cached page while the member it is named for renders **nothing**; ⛔ v1 said this nowhere; (3) AC5 ruled RTBF omission but ⛔ never named the mechanism — `anonymizeMember` keeps the row and the decrypt **SUCCEEDS** ⇒ the **`ANONYMIZED_SENTINEL` plaintext check** is now ordered; (4) Trap 3's ground was **FALSE** — `-179` **cl.2** Panel-ratified D10 ⇒ re-grounded on `-205` cl.2's pair-pinning; (5) item (e)'s binder was **RE-POINTED to `8-16`**, which merged FIRST ⇒ v1's *"record the CLOSURE"* branch is **WITHDRAWN** as the co-writer rule forbids it; (6) v1 transcribed `-175` cl.4's *"⛔ do ⛔ not reach for the ladder here"* and **ordered that reach 80 lines later** ⇒ Trap 6 now names the distinction; (7) **`-195` cl.1's compliance statement** was owed and uncited ⇒ **AC10**; (8) *"ZERO OPEN DECISIONS"* was **FALSE** — `-207`'s follow-up re-opened one ⇒ **`D-percentage`**, a Preflight STOP; (9) the allowlist is **FOUR** entries and the assertions are **identity arrays**, ⛔ so *"update it by +2"* was unexecutable; (10) AC4's control-set mechanism was **mechanized away by 11b.11** and the count is **SEVEN**; (11) AC4's *"11b.3a in parallel"* — it is `done`; (12) three **header self-contradictions** and a Task 0 STOP on decisions `-177` had ruled. ⚠ Also: **five shipped tests invert** and a **negative control plants this story's own field id** (**AC9**) · `-191` **cl.3**'s ruled vocabulary (**Live/Closed/Completed**) added · the *"⛔ never claim the list is complete"* prohibition, live in two doc-blocks and ⛔ no AC, added to **AC7** · `sahyog-render.ts:213` was the **WRONG FILE** (the quote is `members-render.ts:101`) · **every** `public-read.ts`, `matrix.ts`, `epics.md` and UX-spec anchor re-derived · **item (iii) DISCHARGED**, ⛔ not re-done · `D9`/`D10` **RENAMED** `D9-inversion`/`D10-rowkey` per `-168` **cl.9** (a three-way `D9(a)` collision existed) · three **retired-sentence** sites struck under `-209` cl.3, which **AC8 itself banned** · and the `11b-20` dependency corrected: ⭐ **this story discharges the AMOUNT unconditionally and the NAME only conditionally.** ⭐ **`-177` vs `-182` RESOLVED:** `-177` is authoritative; `-182` transcribes a **2026-09-01** ruling and disclaims superseding anything ⇒ it owes a forward pointer, ⛔ not a correction. ⛔ **Rows unchanged.** | BigDev + Claude |
 | 2026-09-02 | **Second combined validation of 11b.3 / 11b.3a / 11b.3b.** Six fixes, and ⭐⭐ the two shared-presenter findings. ⚠⛔ **KEPT AS THE RECORD** — ⛔ much of what this row and the rows below assert was **FALSIFIED by 2026-09-11's pass**; see **§ v2.0**. ⛔ Not rewritten ([[feedback_record_unattested_no_backfill]]). | BigDev + Claude |
 | 2026-09-02 | ⭐⭐ **THE PANEL DIRECTED THAT THE PUBLIC/MEMBER INVERSION BE CLOSED** (`-179` cl.3). ⚠ Its sibling **cl.2** — which Panel-ratified 11b.1's D10 — was ⛔ **not** carried, and Trap 3 rested on its absence for nine days. | BigDev + Claude |

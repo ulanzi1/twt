@@ -642,6 +642,42 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
         // both written defences rather than implied. ⚠ `D4-linkage` records the residual openly: the
         // identifier is SEQUENTIAL, nothing else bounds a walk of it, and **11b.3a** — which puts four
         // DECRYPTED Tier-1 fields behind this same identifier — owns closing that at its AC2.
+        //
+        // ⚠⛔⛔ **THE PARAGRAPH ABOVE IS SPENT — ITS PREMISE EXPIRED WHEN STORY 11b.3b SHIPPED THE
+        // CONTRIBUTOR LIST (2026-09-15). ⛔ IT IS KEPT AS THE RECORD AND ⛔ NOT REWRITTEN**
+        // ([[feedback_supersede_never_reinterpret]]). ⛔ The counter is STILL not called — ⭐ but ⛔ no
+        // longer for the reason given, and the real reason is a governance one, ⛔ not a shape one.
+        //   · ⛔ *"this route has neither"* — **FALSE**: it now takes a bounded `page` and `limit`
+        //     (controls 2 and 3, RESTORED). ⇒ ⭐ all four ACTIVE rules have a SUBJECT in the data the
+        //     evaluator would receive; ⚠ `deep_crawl` / `deep_page_access` / `rapid_pagination` are
+        //     reachable because `limit` goes down to **1**, so a 50-contributor drive is 50 pages.
+        //   · ⛔ *"feeding it synthetic values"* — **FALSE**: the values are real now, ⛔ not fabricated.
+        //   · ⭐ AND THE RULES FILE'S OWN SCOPE ALREADY REACHES THIS ROUTE — it describes
+        //     *"an unauthenticated, paginated public collection"*, ⛔ **not** the Member Directory
+        //     specifically (`directory-abuse-rules.yaml`, the TWO-SURFACES block).
+        //
+        // ⛔⛔ **SO WHY IT IS STILL NOT CALLED — AND THIS IS ROUTED, ⛔ NOT DECIDED HERE.**
+        // ⭐ **(1) WIRING IT IS A REAL CHANGE, ⛔ NOT A CALL-SITE ADDITION — the file says so in its own
+        //     words**, about the last rule whose applicability changed: activation needs *"a threshold
+        //     chosen against real … shapes, and its own planted negative control"*, ⛔ *"not a status
+        //     flip"* — and thresholds must be **per SURFACE**, *"because one shared threshold would
+        //     either miss a crawl on the busier one or flag ordinary use on the quieter."*
+        //     ⚠ Here that lands in the **MISS** direction and it is not close: `high_volume_lookups`
+        //     is **60 requests / 60 s**, calibrated for a reader paging a roster. Legitimate use of a
+        //     DRIVE page is one to three requests — and at 59 requests/minute a harvester pulling one
+        //     drive per request takes up to **~2,950 full legal names a minute** and ⛔ never fires.
+        //     ⇒ ⛔ calling the evaluator with the directory's thresholds would ship a counter that
+        //     reports green through exactly the abuse it is named for — the vacuous-green defect this
+        //     whole file exists to refuse.
+        // ⭐ **(2) AND THE EXPOSURE JUDGEMENT IS THE PANEL'S, ON A PREMISE THIS STORY CHANGED.**
+        //     `2026-09-02-183` is **Trustee-ratified** and its subject is *"a Tier-1-bearing
+        //     **SINGLE-ITEM GET**"* — 11b.3a's AC2 reserves that judgement to the Panel, *"⛔ not a
+        //     tuning knob — in either direction."* ⚠⛔ This route is ⛔ **no longer a single-item GET**:
+        //     it serves up to **50 decrypted Tier-1 names per request**. ⇒ ⭐ the ratified judgement
+        //     stands, ⛔ but the thing it was made about has changed shape, and re-posing it is a
+        //     **Panel** act ([[feedback_gap_analysis_observational]]).
+        // ⇒ ⭐ **ROUTED in `deferred-work.md` with its trigger. ⛔ Story 11b.3b does ⛔ NOT claim to have
+        // discharged it, and ⛔ does ⛔ not wire the counter under cover of a render story.**
 
         // ⭐⭐ STORY 11b.10 — RESOLVED BY THE OPAQUE PUBLIC ADDRESS TOKEN, ⛔ never by the sequential
         // `P-YYYY-MM-###`. ⛔ There is no second lookup and no fallback arm: a route accepting either

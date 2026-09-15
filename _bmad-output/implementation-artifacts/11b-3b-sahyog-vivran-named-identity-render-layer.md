@@ -1348,7 +1348,31 @@ failed on the FIRST try. ⇒ ⭐ **a DB-gated spec is ⛔ NOT covered by the gre
   dark-copy fence; ⭐ I **verified its walker already covers this file** (`SCAN_ROOTS =
   ['apps','packages']`) rather than adding a local copy — a second scanner over the same ground proves
   nothing and rots independently ([[feedback_gate_scope_semantic_coverage]]).
-- ⛔ **Tasks 7-8 remain OPEN.** ⚠ AC9 is **PARTLY** discharged — ⭐ **three** of its five inverted
+- ⚠⛔⛔ **PARTIAL ON TASK 7 (AC8) — THE `evaluateDirectoryAbuse` QUESTION IS INVESTIGATED AND ROUTED.**
+  ⭐ Determined from the evaluator's **actual semantics and the rules file's own scope**, ⛔ not from the
+  stale skip comment — which was found **FALSE ON BOTH HALVES** and is amended in place as a record.
+  ⭐ **THE RULES FILE ALREADY REACHES THIS ROUTE:** it describes *"an unauthenticated, paginated public
+  collection"*, ⛔ *"not the Member Directory specifically"* — and after Task 3 that is exactly what
+  this is. ⭐ **All four ACTIVE rules have a subject**, the depth ones for a ⛔ non-obvious reason:
+  `limit` goes down to **1**, so a 50-contributor drive is **50 pages**. ⚠⛔ **I had first reasoned they
+  were structurally vacuous and that was WRONG** — caught by checking the bound rather than assuming it.
+  ⛔⛔ **BUT IT IS STILL ⛔ NOT WIRED, ON TWO GOVERNANCE GROUNDS, ⛔ neither a shape problem:**
+  **(1)** the file's own `district_query_volume` precedent — written by 11b.1 about the last rule whose
+  applicability changed — rules that this is *"a REAL change … ⛔ not a status flip"* needing a
+  **per-SURFACE** threshold and its **own planted control**. ⚠ And here the directory's threshold misses
+  by a mile in the **wrong direction**: `high_volume_lookups` is 60 req/60 s, while a harvester pulling
+  **one drive per request** at 59/min takes **~2,950 full legal names a minute** and ⛔ never fires ⇒
+  wiring it as-is would ship a counter that **reports green through the abuse it is named for**.
+  **(2)** ⭐⭐ **THE SHARPER HALF: `2026-09-02-183` is TRUSTEE-RATIFIED, and its subject is *"a
+  Tier-1-bearing SINGLE-ITEM GET"*** — a judgement 11b.3a's AC2 reserves to the **Panel**, *"⛔ not a
+  tuning knob — in either direction."* ⚠⛔ **This route is ⛔ no longer a single-item GET.** ⇒ the ruling
+  **STANDS and is ⛔ not reopened**, ⛔ but the thing it was made about changed shape, and re-posing it is
+  a **Panel act** — ⛔ a dev picking a threshold would be making it by side effect.
+  ⭐ **ROUTED with a three-way trigger** (a Panel routing note re-posing `-183`; any story threading a
+  new dimension into the evaluator; edge configuration), and ⛔ explicitly **⛔ NOT** *"a reviewer
+  noticing the route is uninstrumented"* — ⭐ that is the item.
+  ⛔ **Task 7's other obligations remain OPEN.**
+- ⛔ **Tasks 7 (remainder) and 8 remain OPEN.** ⚠ AC9 is **PARTLY** discharged — ⭐ **three** of its five inverted
   tests plus **both** negative controls are now amended BY NAME (the render layer's rupee fence at
   unit 1; the contracts person leg, the `member-drive-detail-field-floor` exclusion (b) and the
   render test's UN-RULED-person leg at unit 2; and the render test's own negative control
@@ -1366,6 +1390,10 @@ failed on the FIRST try. ⇒ ⭐ **a DB-gated spec is ⛔ NOT covered by the gre
 - `packages/ui/src/contribution-list/view-model.ts` — stale *"form is UNRULED"* doc-block amended
 - `_bmad-output/implementation-artifacts/deferred-work.md` — amount-raised item amended
 - `_bmad-output/planning-artifacts/ux-design-specification.md` — `:1334`/`:1335` amended
+- **Task 7 (AC8, partial — the abuse-counter investigation):**
+  `_bmad-output/implementation-artifacts/deferred-work.md` (the routed observation + trigger) ·
+  `apps/api/src/modules/public-pages/handlers.ts` (the expired skip comment amended in place — ⛔ a
+  comment correction, ⛔ **no** counter wired)
 - **Task 6 (AC7):** `apps/public/tests/sahyog-vivran-a11y.test.ts` (**new** — family 13, web form) ·
   `apps/public/tests/sahyog-vivran-copy.test.ts` (the `pagination.*` keys; the cross-namespace
   `contributor_list.*` legs + their negative half; the completeness fence; the stage-word fence) ·

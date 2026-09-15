@@ -85,6 +85,27 @@
 // 6 and 7 — with 2 and 3 still structurally N/A and their restoration still owed by 11b.3b.
 // ⚠ The `login-wall.spec.ts` allowlist entry states the SAME set: ⛔ two authoritative documents
 // disagreeing about how many controls exist is the defect this file records having already had once.
+//
+// ⭐⭐ **RE-AMENDED BY STORY 11b.3b (Task 3, AC4) — THE RESTORATION OWED ABOVE HAS LANDED. ⛔ THE
+// TEXT ABOVE IS KEPT AS THE RECORD** ([[feedback_supersede_never_reinterpret]]).
+// ⛔⛔ **TWO OF THE THREE PROPERTIES IN THE "THIRD ROUTE" CLAUSE ARE NOW FALSE, AND THE THIRD WAS
+// ALREADY AMENDED BY 11b.3a.** This route serves a PAGINATED contributor list under
+// `2026-09-02-174` (Trustee Panel): its `.strict()` query schema takes `page` and `limit`, both
+// `.max()`-bounded by the SHARED constants. ⇒ ⭐ **controls 2 (`PUBLIC_SURFACE_PAGE_SIZE_CAP`) and 3
+// (`PUBLIC_DIRECTORY_PAGE_HORIZON`) NOW HAVE QUERY PARAMETERS TO BIND TO AND ARE RESTORED**, and
+// `paginated: false` in the matrix moves with them.
+// ⇒ ⭐ **THE APPLICABLE SET IS SEVEN — the full, gapless 1..7.** ⚠⛔ **SEVEN, ⛔ not the "SIX" the
+// sibling documents predicted:** that arithmetic was written when the set held FOUR and 11b.10 then
+// added ordinal 7 without re-doing it. ⭐ The count is DERIVED from
+// `SAHYOG_VIVRAN_APPLICABLE_CONTROLS` — ⛔ never carried forward as a word, which is the defect this
+// file records having already had once.
+// ⚠⛔ **AND THE "no onward parameter" HALF OF CONTROL 5 IS AMENDED, ⛔ NOT REVOKED:** the schema is
+// ⛔ no longer EMPTY, ⭐ but it is still `.strict()` ⇒ `?format=csv`, `?all=1` and `?sort=amount` are
+// still a **400**, and ⛔ two BOUNDED paging parameters are ⛔ not an export affordance (FR-91).
+// ⛔ ⛔ There is ⛔ no `sort` and ⛔ no `filter`: the contributor ordering is RULED (earliest live
+// confirmation), and a caller-chosen ordering over a list of names is a leaderboard control in the
+// query string. ⚠ The `login-wall.spec.ts` entry and `sahyog-vivran-controls.ts` move in this SAME
+// commit and state the SAME seven.
 //   1. `config: { rateLimit: limits.search }` — the named SEARCH tier, UNMODIFIED. ⛔ Not
 //      `limits.read` (looser, and backwards for an enumeration surface), ⛔ not an inline ceiling,
 //      ⛔ not a hand-rolled `keyGenerator`. Same reasoning as control 1 above, unchanged.

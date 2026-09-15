@@ -86,6 +86,9 @@ import {
   buildSahyogVivranView,
   type SahyogVivranLabels,
 } from '../../lib/sahyog-vivran-render.js';
+// ⭐⭐ Story 11b.3b (Task 3, AC4) — ⛔ THE SHARED PARSER, ⛔ never a second one. ⛔ NO SILENT CLAMP: an
+// over-cap or out-of-horizon request is REFUSED with a decidable reason, exactly as `/sahyog` does.
+import { pageHref, parsePageParams } from '../../lib/pagination.js';
 import { buildForwardedFor, fetchSahyogVivran } from '../../lib/sahyog-vivran.server.js';
 import { ACTIVE_PARIWAR_ID } from '../../lib/pariwar.server.js';
 
@@ -133,6 +136,29 @@ const labels: SahyogVivranLabels = {
   pageIntro: tr('page.intro'),
   factsGroupLabel: tr('facts.group_label'),
   labelDeceasedMember: tr('label.deceased_member'),
+  // ⭐⭐ Story 11b.3b (Task 3) — the contributor section's copy. ⚠⛔ **REUSED FROM THE `contribution`
+  // NAMESPACE, ⛔ NOT MINTED HERE.** These are the shipped `contributor_list.*` keys the `@twt/ui`
+  // module already declares; ⛔ copying them into `sahyog-vivran.json` would be a second home for
+  // ratified copy, which AC7 forbids in terms. ⚠ The prefix is **`contributor_list.`** — the MODULE
+  // is `contribution-list`, the KEYS are not, and `contribution_list.*` matches ⛔ ZERO keys.
+  // ⚠⛔ The namespace is the THIRD argument to `t()`; passing it second lands it in the params slot,
+  // falls back to `common` and THROWS on every call.
+  contributorsHeader: t('contributor_list.confirmed_header', undefined, {
+    locale,
+    namespace: 'contribution',
+  }),
+  contributorsEmpty: t('contributor_list.empty', undefined, {
+    locale,
+    namespace: 'contribution',
+  }),
+  // ⚠ A COUNT of the confirmed-contributor SET — ⛔ never a sum, ⛔ never a score. Interpolated
+  // THROUGH `t()`, ⛔ never by local string surgery.
+  contributorTotal: (count: number) => tr('value.contributions_count', { count }),
+  // ⭐ Ordinary UI labels minted in THIS surface's namespace — ⛔ deliberately NOT reached for from
+  // `sahyog-drive`'s identical pair: that is the INDEX's namespace, and coupling two SURFACES' copy
+  // means re-wording one silently re-words the other. See `$comment.pagination`.
+  paginationPrevious: tr('pagination.previous'),
+  paginationNext: tr('pagination.next'),
   labelDriveCode: tr('label.drive_code'),
   labelPoolLetter: tr('label.pool_letter'),
   labelDistrict: tr('label.district'),
@@ -219,11 +245,45 @@ Astro.response.headers.set('Vary', 'Accept-Language');
 // refusal would let an attacker TEST guessed tokens, which is the oracle the token exists to close.
 const driveToken = (rawDriveToken ?? '').trim();
 
+// ⭐⭐ STORY 11b.3b (Task 3, AC4) — THE CONTRIBUTOR LIST MAKES THIS ROUTE PAGINATED.
+// ⭐ `parsePageParams()` REUSED UNCHANGED — ⛔ do ⛔ not write a second parser, and ⛔ NO SILENT CLAMP:
+// an over-cap or out-of-horizon request is REFUSED, ⛔ not quietly trimmed to a value the caller did
+// not ask for. ⚠ Story 1.14's guard walks the live in-process swagger document and Astro routes emit
+// none — ⛔ do ⛔ not cite it as coverage HERE (it DOES cover the `apps/api` route behind this page,
+// which is a different claim).
+//
+// ⛔⛔ **AN UNRECOGNISED QUERY PARAMETER IS A REFUSAL, AND IT IS REFUSED *HERE*.** `parsePageParams`
+// examines only `page`/`limit`, so anything else would otherwise fall through unexamined and render a
+// normal 200 — and on THIS surface that is more than a correctness nick: the page is
+// `edge_cacheable` at `s-maxage=300`, so an arbitrary `?x=<n>` mints an UNBOUNDED space of distinct
+// SHARED-cache keys, each a fresh origin miss re-serving Tier-1 PII into a new PoP entry. ⭐ Same
+// control `/sahyog` states, for the same reason.
+// ⛔ `lang` is allowed: it is the locale selector `PublicShell` reads, ⛔ not a filter.
+// ⛔⛔ ⛔ NO `sort`, ⛔ no `order`, ⛔ no `filter`: the contributor ordering is RULED (earliest live
+// confirmation) and a caller may ⛔ not choose it — a sort parameter over a list of names is a
+// leaderboard control in the query string, and 11b.1 AC5 forbids ranking outright.
+const SAHYOG_VIVRAN_ALLOWED_QUERY_PARAMS = new Set(['page', 'limit', 'lang']);
+const hasUnknownParam = [...Astro.url.searchParams.keys()].some(
+  (k) => !SAHYOG_VIVRAN_ALLOWED_QUERY_PARAMS.has(k),
+);
+const paging = parsePageParams(Astro.url.searchParams);
+
+// ⭐⛔ **A REFUSED PAGE COLLAPSES INTO THE SAME 404 EVERYTHING ELSE DOES** — ⛔ not a 400, and ⛔ not a
+// distinct body. ⚠ This surface has ⛔ no rejection view to render (unlike `/sahyog`, which is a
+// listing with a shaped empty state), and inventing one here would hand a prober an oracle that
+// distinguishes *"this token names a real drive, your page was bad"* from *"no such drive"* — the
+// exact signal `2026-09-03-184` (B)'s opaque token exists to close.
+const pagingRefused = !paging.ok || hasUnknownParam;
+
 const fetched =
-  driveToken === ''
+  driveToken === '' || pagingRefused
     ? ({ ok: false, reason: 'not_found' } as const)
     : await fetchSahyogVivran({
         driveToken,
+        // ⭐ ALREADY BOUNDED by `parsePageParams` above ⇒ the upstream `.max()` is a second,
+        // independent check, ⛔ not the only one.
+        page: paging.page,
+        limit: paging.limit,
         // ⛔ `Astro.clientAddress` ONLY, via the REUSED `buildForwardedFor`. The inbound
         // `X-Forwarded-For` header is deliberately NOT read — it is caller-supplied, and `apps/api`'s
         // `trustProxy: true` keys on the LEFTMOST chain entry, so forwarding it hands the attacker
@@ -263,6 +323,29 @@ if (apiUnavailable) {
 }
 
 const model = view.model;
+
+// ⭐⭐ STORY 11b.3b (Task 3, AC4) — THE PAGING LINKS, COMPUTED HERE AND ⛔ NOT IN THE RENDER MODEL.
+// ⚠⛔ `buildSahyogVivranView` is PURE and takes ⛔ no URL — putting an href in the model would make
+// the render module depend on the request, and would put two non-field keys into the surface's
+// field-id derivation, which classifies every top-level model key. ⭐ Same split `/sahyog` uses.
+// ⚠ Derived from the RESPONSE's own `page`/`limit`/`total`, ⛔ never re-parsed from the query: the
+// upstream applies its own defaults, so the query string alone does ⛔ not know what page was served.
+// ⛔ `total` is the SET SIZE, so the last page is computed from it — ⛔ not from `items.length`, which
+// is smaller whenever a row was omitted and would invent a phantom "next page".
+const contributorPage = fetched.ok ? fetched.data.page : 1;
+const contributorLimit = fetched.ok ? fetched.data.limit : 0;
+const contributorTotalCount = fetched.ok ? fetched.data.total : 0;
+const hasPreviousPage = contributorPage > 1;
+const hasNextPage = contributorLimit > 0 && contributorPage * contributorLimit < contributorTotalCount;
+// ⭐ THE SHARED `pageHref`, ⛔ never hand-built query strings — it preserves `lang` and DROPS `page`
+// at page 1 rather than minting a SECOND URL for identical content, which on an `edge_cacheable`
+// surface would be a wasted PoP entry re-serving Tier-1 PII under a different key.
+const previousPageHref = hasPreviousPage
+  ? pageHref(Astro.url.pathname, Astro.url.searchParams, contributorPage - 1)
+  : null;
+const nextPageHref = hasNextPage
+  ? pageHref(Astro.url.pathname, Astro.url.searchParams, contributorPage + 1)
+  : null;
 
 // ⭐ RESOLVED ONCE PER RENDER. The matrix cannot vary within a page, and asking `getVisibility()`
 // repeatedly would be an N+1 on a constant. ⛔ `visibilityOf` is the ONLY thing consulted — ⛔ no
@@ -487,6 +570,85 @@ if (!driveStatusVisible) {
             <p class="text-sm"><MatrixField surface="sahyog-vivran" field="close_of_cycle_framing" viewerContext="public" value={model.closeOfCycleFraming} /></p>
           </section>
         )}
+
+        {/*
+          ⭐⭐ STORY 11b.3b (Task 3, AC3/AC4) — THE CONFIRMED CONTRIBUTORS, `2026-09-02-174`
+          (Trustee Panel), at the **FULL NAME**, unconditional per `2026-09-02-175`.
+
+          ⚠⛔⛔ **SAY WHAT THIS RENDERS, BECAUSE THE PAGE TITLE HIDES IT:** up to FIFTY LIVING
+          MEMBERS' FULL LEGAL NAMES, on an UNAUTHENTICATED, EDGE-CACHED page — while the deceased
+          member the drive is named for renders NOTHING (its basis is inert). ⭐ That asymmetry is
+          RULED AND INTENDED, ⛔ it is not a defect — ⛔ but ⛔ do ⛔ not review this page as "mostly
+          dark".
+
+          ⛔⛔ **⛔ NOT A LEADERBOARD, AND THE SHAPE IS THE FENCE.** ⛔ ⛔ No amount, ⛔ no rank, ⛔ no
+          ordinal, ⛔ no "top contributor", ⛔ no sort control — 11b.1 **AC5** forbids leaderboards,
+          rankings, gamification and social-performance metrics. ⭐ The ORDER is RULED (the earliest
+          LIVE confirmation's `event_version`, ⛔ never `member_id`) and is ⛔ NOT a ranking: it is the
+          order in which support arrived.
+          ⛔⛔ **AND ⛔ NO ROW KEY** — `D10-rowkey`(a), `2026-09-02-177` cl.3. Astro SSR emits static
+          HTML with ⛔ no reconciler, so a key would serve nothing, and a per-member identifier beside
+          a name is a PERMALINK — an enumeration primitive in its own right.
+
+          ⚠⛔⛔ **FEWER ROWS THAN THE COUNT IS THE ORDINARY CASE, ⛔ NOT A BUG.** RTBF erasure
+          (`2026-08-30-169`), the erasure sentinel, an unresolvable name and a MONONYM under
+          `shielded_name` each OMIT THE ROW, after paging. ⇒ this page reads "N confirmed" beside
+          FEWER than N named rows BY DESIGN, and ⛔⛔ ⛔ NO copy here may claim the list is complete,
+          ⛔ no placeholder stands in for an omitted row, and ⛔ NO OMISSION COUNT is ever published —
+          a tally of omissions is an enumeration signal over which members were erased.
+        */}
+        <section class="mt-6 rounded border border-gray-300 p-4">
+          <h2 class="text-lg font-semibold">{labels.contributorsHeader}</h2>
+          {/*
+            ⭐ THE SET SIZE, ⛔ not the rendered row count — the two differ by design (above).
+            ⛔ A COUNT, ⛔ never a sum and ⛔ never a score.
+          */}
+          <p class="mt-1 text-sm text-gray-700">{model.contributorTotal}</p>
+
+          {model.contributors.length === 0 ? (
+            /*
+              ⭐ THE EMPTY STATE — reused copy, and it is deliberately NON-COMMITTAL: "no contributor
+              names to show right now" is true whether the drive is still collecting, every row was
+              omitted, or this page is past the end. ⛔ It must ⛔ never say the list is complete, and
+              ⛔ never disclose WHICH of those it is — that distinction is the enumeration signal.
+            */
+            <p class="mt-3 text-sm text-gray-700">{labels.contributorsEmpty}</p>
+          ) : (
+            <ul class="mt-3 space-y-1">
+              {model.contributors.map((contributor) => (
+                /*
+                  ⛔⛔ ⛔ NO `key` PROP — `D10-rowkey`(a) ruled there is none, and Astro SSR has no
+                  reconciler to use one. ⛔ Do ⛔ not add `key={index}` "for React parity": this is
+                  ⛔ not React, and an index key here would be a row identity nobody ruled.
+                */
+                <li class="text-sm">
+                  <MatrixField surface="sahyog-vivran" field="contributor_name" viewerContext="public" value={contributor.contributorName} />
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/*
+            ⭐ PAGING LINKS — plain `<a>`s, ⛔ no script: this page carries ZERO `<script>`.
+            ⚠⛔ RENDERED ⛔ ONLY when there is another page, and built with the SHARED `pageHref`, which
+            preserves `lang` and DROPS `page` at page 1 rather than minting a second URL for the same
+            content — ⛔ a distinct cache key for an identical page is a wasted PoP entry re-serving
+            Tier-1 PII.
+            ⛔⛔ ⛔ NO "show all", ⛔ no `?limit=` affordance and ⛔ no page-size selector — FR-91
+            forbids bulk export from the public side, and a link that offers a bigger page is the
+            export affordance wearing a pagination costume.
+          */}
+          {hasPreviousPage || hasNextPage ? (
+            <nav class="mt-4 flex gap-4 text-sm" aria-label={labels.contributorsHeader}>
+              {previousPageHref !== null && (
+                <a class="underline" rel="prev" href={previousPageHref}>{labels.paginationPrevious}</a>
+              )}
+              {nextPageHref !== null && (
+                <a class="underline" rel="next" href={nextPageHref}>{labels.paginationNext}</a>
+              )}
+            </nav>
+          ) : null}
+        </section>
 
         {/*
           ⭐ AC5 — THE "REVERSED BY APPEAL" LINEAGE, DERIVED AT REQUEST TIME (D12(a): ⛔ no queue,

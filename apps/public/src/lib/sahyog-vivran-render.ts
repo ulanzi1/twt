@@ -128,6 +128,28 @@ export interface SahyogVivranLabels {
    * ⛔ no shortfall and ⛔ no "of X" framing may join it.
    */
   readonly amountRaised: (amountInr: number) => string;
+  /**
+   * ⭐ Story 11b.3b (Task 3) — the contributor section's heading and its empty state.
+   * ⚠⛔ **REUSED, ⛔ NOT MINTED.** Both are existing `contributor_list.*` keys in namespace
+   * `contribution` (`packages/ui/src/contribution-list/i18n-keys.ts`) — ⛔ copying them into a second
+   * home is exactly what AC7 forbids. ⚠ The prefix is **`contributor_list.`**, ⛔ not
+   * `contribution_list.`: the MODULE is `contribution-list`, the KEYS are not.
+   * ⛔⛔ AND ⛔ NO COPY HERE MAY CLAIM THE LIST IS COMPLETE — this page reads *"N confirmed"* beside
+   * FEWER than N named rows BY DESIGN (`2026-08-30-169`).
+   */
+  readonly contributorsHeader: string;
+  readonly contributorsEmpty: string;
+  /** `{{count}} confirmed` for the contributor SET SIZE — ⛔ a count, ⛔ never a sum. */
+  readonly contributorTotal: (count: number) => string;
+  /**
+   * ⭐ Story 11b.3b (Task 3, AC4) — the paging links' copy. ⚠ The HREFs are built at the PAGE, ⛔ not
+   * here: this module is PURE and takes ⛔ no URL, and a top-level href on the model would enter the
+   * surface's field-id derivation as a field nobody declared.
+   * ⛔⛔ AND THERE IS ⛔ NO "show all" AND ⛔ NO PAGE-SIZE LABEL, EVER — FR-91 forbids bulk export from
+   * the public side, and a control offering a bigger page is that affordance in a pagination costume.
+   */
+  readonly paginationPrevious: string;
+  readonly paginationNext: string;
   /** The OUTAGE state — ⛔ deliberately distinct copy from the 404 the page returns instead. */
   readonly outageTitle: string;
   readonly outageBody: string;
@@ -360,6 +382,11 @@ export function buildSahyogVivranView(
 ): SahyogVivranView {
   const drive = response.drive;
   const reversal = drive.appealReversal;
+  // ⭐ Story 11b.3b (Task 3) — the contributor PAGE and the SET SIZE, read from the envelope beside
+  // the drive. ⚠⛔ `total` is ⛔ NOT `items.length`: rows are omitted AFTER paging, so the page can
+  // hold fewer than it counts, BY DESIGN.
+  const contributors = response.items;
+  const total = response.total;
 
   return {
     model: {
@@ -399,6 +426,14 @@ export function buildSahyogVivranView(
       // shortfall, and there is ⛔ NO completion percentage on a `closed`/`settled` drive
       // (`2026-09-15-218` cl.1).
       amountRaisedInr: labels.amountRaised(drive.amountRaisedInr),
+      // ⭐⭐ Story 11b.3b (Task 3) — the contributor rows, PASSED THROUGH.
+      // ⛔ The API boundary already resolved each name to ONE string under the Pariwar's stored mode;
+      // this layer does ⛔ NOT split, abbreviate, re-case, re-order or de-duplicate them. ⛔ The
+      // ordering is RULED (earliest live confirmation) and ⛔ nothing here may re-sort it.
+      // ⚠⛔ The rows already arrive OMITTED where a name was unrenderable ⇒ ⛔ this layer must ⛔ not
+      // "restore" a placeholder for the gap, and ⛔ must not pad the page back to `limit`.
+      contributors: contributors.map((c) => ({ contributorName: c.name })),
+      contributorTotal: labels.contributorTotal(total),
       closeOfCycleFraming: framingFor(drive.fundingOutcome, labels),
       appealReversalStage: reversal === null ? null : labels.appealStage(reversal.reversedAtStage),
       appealDispositionCategory:
@@ -457,6 +492,11 @@ export function buildSahyogVivranOutageView(): SahyogVivranView {
       district: null,
       confirmedContributionCount: '',
       amountRaisedInr: '',
+      // ⭐ The OUTAGE view names nobody and counts nothing — there is no drive resolved to have
+      // contributors. ⚠ Structurally identical to a drive whose every row was omitted, deliberately:
+      // the outage page must ⛔ not be distinguishable from an empty list by what it omits.
+      contributors: [],
+      contributorTotal: '',
       closeOfCycleFraming: null,
       appealReversalStage: null,
       appealDispositionCategory: null,

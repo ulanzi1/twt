@@ -275,14 +275,38 @@ describe('the bounded unions are BOUNDED', () => {
   });
 });
 
-describe('the query is EMPTY and strict — which is WHY controls 2 and 3 are N/A (D11(a))', () => {
+// ⚠⛔⛔ **AMENDED 2026-09-15 (Story 11b.3b, Task 3, AC4) — ⛔ THE PRIOR DESCRIBE IS KEPT HERE**
+// ([[feedback_supersede_never_reinterpret]]): it read *"the query is EMPTY and strict — which is WHY
+// controls 2 and 3 are N/A (D11(a))"* and asserted that `page` and `limit` were REJECTED *"there is
+// no collection to page"*. ⭐ **11b.3b ADDS THE COLLECTION** (`2026-09-02-174`) ⇒ the route is
+// PAGINATED, both controls are RESTORED, and the two parameters are ACCEPTED — bounded.
+// ⛔⛔ **THE EXPORT HALF IS UNCHANGED AND IT IS THE HALF THAT MATTERED**: the shape is still
+// `.strict()`, so `?format=csv`, `?all=1` and `?name=` are still rejected. ⛔ Two BOUNDED paging
+// parameters are ⛔ not an export affordance.
+describe('the query is BOUNDED and strict — which is WHY controls 2 and 3 are BACK (D11(a))', () => {
   it('accepts nothing at all', () => {
     expect(PublicSahyogVivranQuery.safeParse({}).success).toBe(true);
   });
 
-  it('⛔ rejects `page` and `limit` — there is no collection to page', () => {
-    expect(PublicSahyogVivranQuery.safeParse({ page: 1 }).success).toBe(false);
-    expect(PublicSahyogVivranQuery.safeParse({ limit: 50 }).success).toBe(false);
+  it('⭐ accepts `page` and `limit` — and ⛔ REFUSES them out of range, ⛔ never clamps', () => {
+    expect(PublicSahyogVivranQuery.safeParse({ page: 1 }).success).toBe(true);
+    expect(PublicSahyogVivranQuery.safeParse({ limit: 50 }).success).toBe(true);
+    // ⛔⛔ THE BOUNDS ARE THE CONTROLS, ⛔ not decoration — control 2 is the page-size cap and
+    // control 3 the deep-page horizon. ⚠ An over-range request is a **400**, ⛔ never silently
+    // trimmed to a value the caller did not ask for.
+    expect(PublicSahyogVivranQuery.safeParse({ limit: 51 }).success).toBe(false);
+    expect(PublicSahyogVivranQuery.safeParse({ page: 201 }).success).toBe(false);
+    expect(PublicSahyogVivranQuery.safeParse({ page: 0 }).success).toBe(false);
+    expect(PublicSahyogVivranQuery.safeParse({ limit: -1 }).success).toBe(false);
+  });
+
+  it('⛔⛔ rejects a SORT or FILTER parameter — ⛔ the ordering is RULED, ⛔ not chosen', () => {
+    // ⚠ The contributor order is the EARLIEST LIVE CONFIRMATION's event version. A caller-chosen
+    // ordering over a list of names is a leaderboard control in the query string, and 11b.1 **AC5**
+    // forbids ranking outright.
+    for (const q of [{ sort: 'amount' }, { order: 'desc' }, { orderBy: 'name' }]) {
+      expect(PublicSahyogVivranQuery.safeParse(q).success).toBe(false);
+    }
   });
 
   it('⛔ rejects every export affordance — `?format=csv` is a 400, ⛔ not an ignored parameter', () => {
@@ -352,21 +376,86 @@ describe('the params', () => {
   it('⭐ the RESPONSE still carries `poolCanonicalIdentifier` — RETAINED and RENDERED (cl.2)', () => {
     // ⛔ Trap 3 forbids the identifier being ADDRESSABLE, ⛔ not DISPLAYED. Deleting it would be a
     // different defect — it is the operational/audit key a family quotes to the helpline.
-    expect(PublicSahyogVivranResponse.safeParse({ drive: ENTRY }).success).toBe(true);
+    // ⚠ Parsed through the FULL envelope since Story 11b.3b (Task 3) — the bare `{ drive }` no
+    // longer satisfies the shape. ⭐ The CLAIM is unchanged: the identifier is RETAINED and RENDERED.
+    expect(
+      PublicSahyogVivranResponse.safeParse({ drive: ENTRY, items: [], page: 1, limit: 50, total: 0 })
+        .success,
+    ).toBe(true);
     expect(ENTRY.poolCanonicalIdentifier).toBeTruthy();
   });
 });
 
-describe('the response is SINGLE-ITEM', () => {
-  it('accepts `{ drive }` and ⛔ rejects a collection shape', () => {
-    expect(PublicSahyogVivranResponse.safeParse({ drive: ENTRY }).success).toBe(true);
-    // ⚠⛔ THERE IS DELIBERATELY NO `items` KEY: Story 1.14's forced-pagination guard recognises a
-    // collection GET by a top-level array OR that literal key, so naming anything here `items` would
-    // make an UNPAGINATED single-item route look like an unbounded collection to the guard.
-    expect(PublicSahyogVivranResponse.safeParse({ items: [ENTRY] }).success).toBe(false);
-    expect(
-      PublicSahyogVivranResponse.safeParse({ drive: ENTRY, page: 1, limit: 25, total: 1 }).success,
-    ).toBe(false);
+// ⚠⛔⛔ **AMENDED 2026-09-15 (Story 11b.3b, Task 3, AC4) — ⛔ THE PRIOR LEG IS KEPT HERE VERBATIM**
+// ([[feedback_supersede_never_reinterpret]]). It read *"the response is SINGLE-ITEM"* and asserted:
+//   · `{ drive }` alone PARSES;
+//   · `{ items: [ENTRY] }` is REJECTED, because *"Story 1.14's forced-pagination guard recognises a
+//     collection GET by a top-level array OR that literal key, so naming anything here `items` would
+//     make an UNPAGINATED single-item route look like an unbounded collection to the guard"*;
+//   · `{ drive, page, limit, total }` is REJECTED.
+// ⭐⭐ **ITS REASONING IS EXACTLY WHAT INVERTS IT.** The premise is *"an UNPAGINATED single-item
+// route"*, and 11b.3b makes the route PAGINATED with both bounds declared on the query ⇒ `items` is
+// now the CORRECT name and the guard becomes an ASSET: it SEES a collection here, demands a bounded
+// `limit`, and finds one. ⛔ Naming the array `contributors` would make this route INVISIBLE to the
+// guard — the very mistake the old comment warns about, committed in the other direction.
+// ⭐ `drive` stays SINGULAR beside it: ONE drive plus a page of ITS contributors, ⛔ never a
+// collection of drives.
+describe('the response is ONE DRIVE + a BOUNDED PAGE of its contributors', () => {
+  const PAGED = { drive: ENTRY, items: [{ name: 'Rajesh Kumar Sharma' }], page: 1, limit: 50, total: 1 };
+
+  it('⭐ accepts the paged envelope, and ⛔ REJECTS the bare `{ drive }` it replaced', () => {
+    expect(PublicSahyogVivranResponse.safeParse(PAGED).success).toBe(true);
+    // ⛔ THE ENVELOPE IS REQUIRED, ⛔ not optional: a response that could omit `total` would let a
+    // caller render a page with no idea whether more exist — and would make the guard's bound
+    // unverifiable from the body.
+    expect(PublicSahyogVivranResponse.safeParse({ drive: ENTRY }).success).toBe(false);
+  });
+
+  it('⛔ still rejects a COLLECTION OF DRIVES — `items` is contributors, ⛔ not entries', () => {
+    // ⚠ The half of the old leg that SURVIVES: this route serves ONE drive. An `items` of DRIVE
+    // entries would make it the index, which is a different surface with a different ruling.
+    expect(PublicSahyogVivranResponse.safeParse({ ...PAGED, items: [ENTRY] }).success).toBe(false);
+  });
+
+  it('⛔⛔ rejects a contributor carrying an AMOUNT, a RANK or a ROW KEY', () => {
+    // ⭐ 11b.1 **AC5** forbids leaderboards, rankings, gamification and social-performance metrics;
+    // `D10-rowkey`(a) (`2026-09-02-177` cl.3) rules there is ⛔ NO row key. ⇒ `.strict()` over a
+    // single `name` makes all of it a PARSE ERROR rather than a convention somebody may relax.
+    for (const extra of [
+      { amountInr: 1000 },
+      { amount: 1000 },
+      { rank: 1 },
+      { position: 1 },
+      { index: 0 },
+      { memberId: '00000000-0000-4000-8000-000000000000' },
+      { id: 'x' },
+      { key: 'x' },
+    ]) {
+      expect(
+        PublicSahyogVivranResponse.safeParse({
+          ...PAGED,
+          items: [{ name: 'Rajesh Kumar Sharma', ...extra }],
+        }).success,
+      ).toBe(false);
+    }
+  });
+
+  it('⛔ rejects an EMPTY contributor name — `.min(1)`, the omit-the-ROW rule\'s shape half', () => {
+    // ⚠ The boundary normalises with `.trim() || null` and OMITS THE ROW. A blank row would render
+    // an empty `<li>` where a person belongs — ⛔ and an omission that announces itself is exactly
+    // what `2026-08-30-169` forbids.
+    expect(PublicSahyogVivranResponse.safeParse({ ...PAGED, items: [{ name: '' }] }).success).toBe(
+      false,
+    );
+  });
+
+  it('⭐ accepts an EMPTY page — ⛔ a drive with no renderable contributors is ORDINARY', () => {
+    // ⚠ Every row can be omitted (RTBF, the sentinel, a mononym), and a still-collecting drive has
+    // none yet. ⛔ A shape that required at least one row would 500 the page on the ordinary case.
+    expect(PublicSahyogVivranResponse.safeParse({ ...PAGED, items: [], total: 0 }).success).toBe(true);
+    // ⭐ AND `items.length` MAY BE FEWER THAN `total` — the *"N confirmed beside FEWER than N rows"*
+    // property, as a shape. ⛔ Do ⛔ not add a reconciling refinement between them.
+    expect(PublicSahyogVivranResponse.safeParse({ ...PAGED, total: 137 }).success).toBe(true);
   });
 });
 

@@ -91,6 +91,13 @@
 
 import { z } from 'zod';
 
+// ⭐⭐ Story 11b.3b (Task 3, AC4) — THE TWO SHARED BOUNDS, ⛔ IMPORTED AND ⛔ NEVER RE-DECLARED.
+// ⛔ A second literal `50`/`200` here would let the two public surfaces drift into two different
+// *"the FR-91 cap"* — the exact defect the 11a.2 review found in a *"shared cap"* claim whose
+// comment named a constant that did not exist. ⛔ Raising either is a ruling, ⛔ not a tuning knob.
+import { PUBLIC_SURFACE_PAGE_SIZE_CAP } from '../_common/pagination.js';
+import { PUBLIC_DIRECTORY_PAGE_HORIZON } from './directory.js';
+
 /**
  * The drive's public status. ⭐ THREE labels here, ⛔ not the index's two.
  *
@@ -504,6 +511,45 @@ export const PublicSahyogVivranEntry = z
 export type PublicSahyogVivranEntry = z.output<typeof PublicSahyogVivranEntry>;
 
 /**
+ * ⭐⭐ ONE CONFIRMED CONTRIBUTOR, AT THE `public` TIER — Story 11b.3b (Task 3, AC3/AC4).
+ *
+ * Governance: [`2026-09-02-174`](../../../../.decision-log.md#decision-2026-09-02-174) (Trustee
+ * Panel) — the contributor's name MAY appear on this page, at the **FULL NAME**; made
+ * **UNCONDITIONAL** by `2026-09-02-175` (cl.3's apparent condition was CORRECTED away, ⛔ not met).
+ * ⚠ The basis is the member's OWN acceptance of the membership T&C (`2026-08-28-160` cl.7).
+ *
+ * ⛔⛔ **ONE FIELD, AND THE SHAPE IS THE FENCE.** `.strict()` over a single `name` makes every
+ * anti-leaderboard prohibition a PARSE ERROR rather than a convention:
+ *   · ⛔ ⛔ no per-contributor AMOUNT — ⛔ not a sum, ⛔ not a share, ⛔ not a count. 11b.1 **AC5**
+ *     forbids leaderboards, rankings, gamification and social-performance metrics, and a
+ *     per-person figure is the shortest path to all four.
+ *   · ⛔ ⛔ no RANK, ⛔ no position, ⛔ no ordinal, ⛔ no "top contributor" anything.
+ *   · ⛔⛔ **⛔ NO ROW KEY** — `D10-rowkey`(a), RULED at `2026-09-02-177` cl.3: ⛔ not an `index`,
+ *     ⛔ not a `member_id`, ⛔ not a token. Astro SSR emits static HTML with ⛔ no reconciler, so
+ *     there is nothing for a key to serve — and a per-member identifier beside a name is a
+ *     PERMALINK, which is an enumeration primitive in its own right (11a.3, control 5).
+ *
+ * ⭐ **ONE RESOLVED STRING** — the output of `resolvePublicMemberName(mode, storedName)` under the
+ * Pariwar's stored mode. ⛔ It is ⛔ never decomposed and the boundary ⛔ never calls
+ * `splitFirstNameLastInitial`: that is the SHIELDED form, which is what the MEMBER surface renders
+ * and is ⛔ NOT what `-174` ruled here.
+ * ⚠⛔ **THAT DIVERGENCE IS THE `-195` cl.1 INVERSION, AND IT IS CARRIED BY RULING, ⛔ not by
+ * accident** — `2026-09-02-177` **cl.2** (`D9-inversion`(a)) rules **CARRY**. On merge the PUBLIC
+ * sees MORE of a contributor's name than a MEMBER does. ⛔ Do ⛔ not "fix" it here: raising the
+ * member side is a member-surface change this story puts out of scope, and it would REVERSE `-177`
+ * cl.2. See the story's AC10, which STATES the non-compliance rather than curing it.
+ *
+ * ⚠ `.min(1)` IS LOAD-BEARING — the boundary normalises with **`.trim() || null`, ⛔ never `=== ''`**
+ * and OMITS THE ROW. An empty or whitespace-only name is ⛔ not a name.
+ */
+export const PublicSahyogVivranContributor = z
+  .object({
+    name: z.string().min(1),
+  })
+  .strict();
+export type PublicSahyogVivranContributor = z.output<typeof PublicSahyogVivranContributor>;
+
+/**
  * The path parameter — ⭐⭐ **THE OPAQUE PUBLIC ADDRESS TOKEN**, Story 11b.10 (AC1, `2026-09-03-184`
  * **(B)**, Trustee-ratified).
  *
@@ -567,7 +613,34 @@ export type PublicSahyogVivranParams = z.output<typeof PublicSahyogVivranParams>
  * ⛔ NO EXPORT AFFORDANCE. No `format`, no `csv`, no `all` — FR-91 forbids bulk export from the
  * public side, and `.strict()` is what makes `?format=csv` a 400 rather than an ignored parameter.
  */
-export const PublicSahyogVivranQuery = z.object({}).strict();
+/**
+ * ⚠⛔⛔ **AMENDED 2026-09-15 (Story 11b.3b, Task 3, AC4) — ⛔ THE EMPTY SHAPE ABOVE IS SPENT AND ITS
+ * TEXT IS KEPT AS THE RECORD** ([[feedback_supersede_never_reinterpret]]). The paragraphs above
+ * describe an UNPAGINATED single-item GET and record controls 2 and 3 as structurally N/A **with
+ * 11b.3b's expiry intact**. ⭐ **THE EXPIRY HAS FIRED**: this story adds the contributor list, the
+ * route becomes PAGINATED, and **both controls are RESTORED** — here, in
+ * `sahyog-vivran-controls.ts` (ordinals 2 and 3) and in `login-wall.spec.ts`, in one commit.
+ *
+ * ⛔⛔ **WHAT DOES ⛔ NOT CHANGE, AND IT IS MOST OF IT.** ⭐ The shape is STILL `.strict()`, so
+ * ⛔ `?format=csv`, ⛔ `?all=1`, ⛔ `?district=`, ⛔ `?sort=amount` and every other parameter are STILL
+ * a **400**. ⇒ ⭐ the *"⛔ NO EXPORT AFFORDANCE"* paragraph above is **UNCHANGED and still binds** —
+ * FR-91 forbids bulk export from the public side, and ⛔ two bounded paging parameters are ⛔ not an
+ * export affordance. ⛔ ⛔ No `sort`, ⛔ no `order`, ⛔ no `filter`: the contributor ordering is RULED
+ * (earliest live confirmation) and a caller may ⛔ not choose it — a sort parameter over a name list
+ * is a leaderboard control in the query string.
+ *
+ * ⭐ **THE TWO BOUNDS ARE THE SHARED CONSTANTS, ⛔ never re-declared** — the same discipline
+ * `sahyog-drive.ts` follows, so the two public surfaces cannot drift into two different *"the FR-91
+ * cap"*. ⚠ `.max()` on `limit` is ALSO what makes Story 1.14's forced-pagination guard — which walks
+ * the LIVE in-process swagger document — SEE a bound on this route; that is the second, independent
+ * FR-91 enforcement and it is the reason the response names its array `items` (see below).
+ */
+export const PublicSahyogVivranQuery = z
+  .object({
+    page: z.coerce.number().int().positive().max(PUBLIC_DIRECTORY_PAGE_HORIZON).optional(),
+    limit: z.coerce.number().int().positive().max(PUBLIC_SURFACE_PAGE_SIZE_CAP).optional(),
+  })
+  .strict();
 export type PublicSahyogVivranQuery = z.output<typeof PublicSahyogVivranQuery>;
 
 /**
@@ -577,8 +650,39 @@ export type PublicSahyogVivranQuery = z.output<typeof PublicSahyogVivranQuery>;
  * collection GET by a top-level array OR that literal key, so naming anything here `items` would
  * make an UNPAGINATED single-item route look like an unbounded collection to the guard — the exact
  * inverse of the mistake `sahyog-drive.ts` documents on the other side.
+ *
+ * ⚠⛔⛔ **AMENDED 2026-09-15 (Story 11b.3b, Task 3, AC4) — ⛔ THE PARAGRAPH ABOVE IS KEPT AND ⛔ NOT
+ * REWRITTEN, AND ITS REASONING IS WHAT INVERTS IT** ([[feedback_supersede_never_reinterpret]]).
+ * ⭐ Its premise is *"an **UNPAGINATED** single-item route"*. ⛔ That premise is spent: this route
+ * now serves a PAGINATED contributor list under `2026-09-02-174`, and `PublicSahyogVivranQuery`
+ * declares both bounds. ⇒ ⭐ **`items` is now the CORRECT name and the guard becomes an ASSET**: it
+ * SEES a collection here, demands a bounded `limit`, and finds one. ⛔ Renaming it to `contributors`
+ * would make this route invisible to the guard — ⭐ the very mistake the paragraph above warns of,
+ * committed in the other direction.
+ *
+ * ⛔⛔ **`items` IS THE CONTRIBUTOR PAGE, ⛔ NOT A LIST OF DRIVES.** ⭐ `drive` stays singular and
+ * beside it: this is ONE drive plus a page of ITS contributors, ⛔ never a collection of drives.
+ *
+ * ⚠⛔⛔ **`total` IS THE CONFIRMED-CONTRIBUTOR SET SIZE — ⛔ NOT THE NUMBER OF RENDERED ROWS, AND THE
+ * TWO DIFFER BY DESIGN.** `items.length` can be FEWER than `min(limit, total - offset)` because
+ * per-row omissions happen AFTER paging: RTBF erasure (`2026-08-30-169`), the erasure sentinel, an
+ * unresolvable name, a MONONYM under `shielded_name` (`2026-08-21-145` cl.3), a failed decrypt.
+ * ⇒ ⭐ this page reads *"N confirmed"* beside FEWER than N named rows **BY DESIGN**, and ⛔ ⛔ NO copy
+ * anywhere may claim the list is complete.
+ * ⛔⛔ **AND THERE IS ⛔ NO OMISSION COUNT, EVER.** ⛔ Not a tally, ⛔ not a "some names withheld"
+ * line, ⛔ not a per-row marker. A count of omissions is an enumeration signal over which members
+ * were erased — the sibling index states the same prohibition in the same words.
+ * ⚠ `total` is ALSO ⛔ not `drive.confirmedContributionCount`: that is the EVENT count from the
+ * canonical stream, this is the size of the ordered CONTRIBUTOR set. ⛔ Do ⛔ not add a reconciling
+ * check between them — they answer different questions and a guard would invent a third.
  */
 export const PublicSahyogVivranResponse = z
-  .object({ drive: PublicSahyogVivranEntry })
+  .object({
+    drive: PublicSahyogVivranEntry,
+    items: z.array(PublicSahyogVivranContributor),
+    page: z.number().int().positive(),
+    limit: z.number().int().positive(),
+    total: z.number().int().nonnegative(),
+  })
   .strict();
 export type PublicSahyogVivranResponse = z.output<typeof PublicSahyogVivranResponse>;

@@ -37,12 +37,19 @@ import {
   type PublicSahyogDriveEntry,
   type PublicSahyogDriveQuery,
   type PublicSahyogDriveResponse,
+  PUBLIC_SURFACE_PAGE_SIZE_CAP,
+  type PublicSahyogVivranContributor,
   type PublicSahyogVivranNomineeAccount,
   type PublicSahyogVivranParams,
+  type PublicSahyogVivranQuery,
   type PublicSahyogVivranResponse,
 } from '@twt/contracts';
 import {
   audit,
+  // ⭐ Story 11b.3b (Task 3) — the SHARED confirmed-contributor producer and its RULED ordering.
+  // ⛔ Never re-implemented here: that would fork *"earliest LIVE confirmation"*, the rule the member
+  // surface and this one must agree on ([[project_confirmed_contributor_read_is_ordered]]).
+  contribution as contributionDomain,
   // ⛔ `claim as claimDomain` WAS IMPORTED HERE for `claimDomain.maskAccountNumberLast4`, the ⛔ ONLY
   // use it had on this surface. Story 11b.11 withdrew the account number from `public`
   // (`2026-09-04-190` cl.1) ⇒ there is nothing to truncate and the import went with the call.
@@ -583,6 +590,20 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
     ): Promise<PublicSahyogVivranResponse | void> {
       const { pariwarId: pariwarIdStr, driveToken } = request.params as PublicSahyogVivranParams;
       const pariwarId = ids.pariwarId(pariwarIdStr);
+      // ⭐⭐ STORY 11b.3b (Task 3, AC4) — THIS ROUTE IS PAGINATED NOW, and controls 2 and 3 are
+      // RESTORED with it (`sahyog-vivran-controls.ts` ordinals 2 and 3, and `login-wall.spec.ts`).
+      // ⚠ Both bounds live on the `.strict()` query schema (`.max(PUBLIC_SURFACE_PAGE_SIZE_CAP)` /
+      // `.max(PUBLIC_DIRECTORY_PAGE_HORIZON)`), so an out-of-range value is a **400** here and is
+      // ALSO visible to Story 1.14's forced-pagination guard walking the live swagger document.
+      // ⚠⛔ **THE DEFAULT IS THE CAP, AND THAT IS A CHOICE WORTH STATING:** a drive's confirmed
+      // contributors are bounded by its own roster, so splitting ONE drive's record across pages by
+      // default would make a transparency page under-report at a glance. ⭐ The CAP still bounds the
+      // exposure and the decrypt fan-out (≤ 50 Tier-1 decrypts per request, the figure `-205` cl.5
+      // measures this surface by); ⛔ raising the cap is an FR-91 ruling, ⛔ not a tuning knob.
+      const query = request.query as PublicSahyogVivranQuery;
+      const page = query.page ?? 1;
+      const limit = query.limit ?? PUBLIC_SURFACE_PAGE_SIZE_CAP;
+      const offset = (page - 1) * limit;
 
       // ⭐ ONE INSTANT FOR THE WHOLE REQUEST, ⛔ never `new Date()` per read — the same rule the two
       // handlers above state at length. Here it binds THREE as-of reads inside the domain accessor:
@@ -773,13 +794,20 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
         // needs none. ⭐ `mapWithConcurrency` exists for the LIST shapes (the index's 50 rows, and
         // this story's own contributor list at Task 3); ⛔ wrapping a single await in it would be
         // ceremony that asserts a bound nothing needs.
+        // ⭐ THE PER-PARIWAR STORED NAME MODE — RESOLVED **ONCE PER REQUEST**, ⛔ never per row and
+        // ⛔ never per subject. A config value that cannot vary within one response, so a second read
+        // would be an N+1 on a constant (the sibling index states the same rule).
+        // ⚠⛔ **HOISTED AT TASK 3** — it was resolved inside the deceased-name branch at Task 2, which
+        // was correct while that was its only consumer. ⭐ The contributor list is the second, and
+        // ⛔ BOTH SUBJECTS MUST RESOLVE UNDER THE SAME MODE: two reads could straddle a governed mode
+        // change mid-request and render the deceased member and the contributors in DIFFERENT forms
+        // on one page. ⛔ Do ⛔ not push it back down.
+        // ⛔ ⛔ Never a literal `'full_name'`: `2026-08-19-136` cl.1 — *"a build in which the public
+        // name form cannot be changed without a code change FAILS this clause"*.
+        const mode = await kyc.resolvePublicNamePresentationMode(scopeTx.tx, pariwarId);
+
         let deceasedMemberName: string | null = null;
         if (drive.namePublicationAuthorised && drive.deceasedNameCiphertext !== null) {
-          // ⭐ The per-Pariwar STORED mode — resolved ONCE, beside the decrypt it governs.
-          // ⛔ ⛔ Never a literal `'full_name'`: `2026-08-19-136` cl.1 — *"a build in which the public
-          // name form cannot be changed without a code change FAILS this clause"*.
-          const mode = await kyc.resolvePublicNamePresentationMode(scopeTx.tx, pariwarId);
-
           // ⭐ THE TIER-1 DECRYPT — the EXISTING helper, the EXISTING field class, the member's real
           // pariwarId. ⛔ No new field class, ⛔ no new namespace, ⛔ no second crypto helper. The
           // decrypted value ⛔ NEVER leaves this block except through `resolvePublicMemberName`, and
@@ -866,8 +894,150 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
           },
         );
 
+        // ═══════════════════════════════════════════════════════════════════════════════════════
+        // ⭐⭐ STORY 11b.3b (Task 3, AC3/AC4) — THE CONFIRMED CONTRIBUTOR LIST, `2026-09-02-174`
+        // (Trustee Panel), at the **FULL NAME**, unconditional per `2026-09-02-175`.
+        // ═══════════════════════════════════════════════════════════════════════════════════════
+        //
+        // ⚠⛔⛔ **SAY WHAT THIS DOES, BECAUSE THE TITLE HIDES IT.** This publishes up to FIFTY LIVING
+        // MEMBERS' FULL LEGAL NAMES on an UNAUTHENTICATED, EDGE-CACHED page — while the deceased
+        // member the drive is named for renders NOTHING (the basis above is inert). ⭐ That asymmetry
+        // is RULED AND INTENDED (`-174` + `-175` gate on the member's OWN accepted T&C, which has
+        // ⛔ no clause dependency), ⛔ it is not a defect — ⛔ but ⛔ do ⛔ not ship or review this
+        // believing the page is dark.
+        //
+        // ⭐ **THE PRODUCER IS THE SHARED ONE, ⛔ NEVER A SECOND READ.**
+        // `listConfirmedContributorsForPool` sources EXCLUSIVELY from `contribution.confirmed` plus
+        // its compensating `reconciliation.confirmation-reversed`, and returns them ordered by the
+        // **EARLIEST LIVE CONFIRMATION's `event_version`** — ⛔ NEVER by `member_id`, which would leak
+        // an arbitrary identifier ordering onto a public render. ⛔ Re-implementing that ordering here
+        // would fork a rule the member surface and this one must agree on
+        // ([[project_confirmed_contributor_read_is_ordered]]).
+        // ⛔⛔ **AND ⛔ NO SORT PARAMETER, EVER** — the query schema is `.strict()` with exactly `page`
+        // and `limit`. A caller-chosen ordering over a list of names is a leaderboard control in the
+        // query string, and 11b.1 **AC5** forbids ranking outright.
+        const confirmedContributors = await contributionDomain.listConfirmedContributorsForPool(
+          scopeTx.tx,
+          {
+            pariwarId,
+            // ⚠ `cycleId` rides the params for caller symmetry with the pool/alert reads; the read
+            // itself keys on `poolId`, which is 1:1 with a cycle and alone scopes the query.
+            cycleId: ids.cycleFreezeCommitId(drive.cycleId),
+            poolId: ids.poolId(drive.poolId),
+          },
+        );
+
+        // ⚠⛔ `total` IS THE CONFIRMED-CONTRIBUTOR SET SIZE, ⛔ NOT THE RENDERED ROW COUNT — the
+        // omissions below happen AFTER paging, so a page can return FEWER rows than it claims. ⭐ That
+        // is BY DESIGN (`2026-08-30-169`), and ⛔⛔ there is ⛔ NO omission count, ⛔ no "some names
+        // withheld" line and ⛔ no per-row marker: a tally of omissions is an enumeration signal over
+        // which members were erased.
+        const total = confirmedContributors.length;
+
+        // ⭐⭐ **PAGE FIRST, DECRYPT SECOND — ⛔ NEVER THE OTHER WAY ROUND.** This is the whole
+        // anti-fan-out property: slicing here bounds the Tier-1 decrypts to `limit` (≤ 50) instead of
+        // to the pool roster. ⛔ Decrypting the full set and paging the result would do the expensive,
+        // quota-bearing work for rows nobody asked for, on an UNAUTHENTICATED route.
+        const pageContributors = confirmedContributors.slice(offset, offset + limit);
+
+        // ⭐ ONE KMS `decryptDek` ROUND-TRIP PER ROW — envelope encryption gives every stored name its
+        // own DEK, so there is ⛔ no shared secret to decrypt once and reuse.
+        //
+        // ⚠ GENUINELY BOUNDED, ⛔ not "bounded" by the page size. `Promise.all` would place NO bound
+        // at all: N concurrent visitors would put 50×N KMS calls in flight against a quota-limited
+        // external service. That is the defect 11a.3 fixed, and it is ⛔ not optional here.
+        // ⚠⛔⛔ **THE FULL `DIRECTORY_DECRYPT_CONCURRENCY`, ⛔ NOT THE HALVED BOUND.**
+        // `member-pool/handlers.ts` halves it (`Math.max(1, Math.floor(… / 2))`) because THAT surface
+        // decrypts TWO values per row. ⭐ A contributor row here is **ONE** decrypt ⇒ the full constant
+        // is the right one, and copying the halved one would be cargo-culting a rationale that does
+        // ⛔ not apply.
+        // ⚠ Order is preserved because `mapWithConcurrency` writes each result at its own INPUT index,
+        // ⛔ never by completion order — ⛔ nothing here may re-sort.
+        const resolvedContributors = await mapWithConcurrency(
+          pageContributors,
+          DIRECTORY_DECRYPT_CONCURRENCY,
+          async (contributor): Promise<PublicSahyogVivranContributor | null> => {
+            // ⛔⛔ **THE CATCH BELONGS *INSIDE* `fn`, ⛔ NOT AROUND THE MAP.** `mapWithConcurrency`
+            // PROPAGATES a rejection and stops every worker, so one bad row would take down the whole
+            // surface — the helper's own doc-block says so in terms. ⭐ A single bad row must ⛔ never
+            // collapse a public transparency page.
+            //
+            // ⛔⛔ **AND THE OMISSION UNIT HERE IS THE *ROW*, ⛔ NOT THE NAME — THE INVERSE OF THE
+            // DECEASED MEMBER ABOVE, AND ⛔ NOT A STYLE CHOICE.** The deceased member's name is a page
+            // header whose page survives without it; a contributor ROW exists ⛔ only to carry the
+            // name, so a nameless row carries nothing and a marker row would announce an omission.
+            // ⭐ It is also what `2026-08-30-169` already requires for an RTBF'd contributor, and what
+            // keeps *"N confirmed beside FEWER than N rows"* true rather than "N rows, some blank".
+            try {
+              const profile = await kyc.getMemberKycProfile(
+                scopeTx.tx,
+                pariwarId,
+                contributor.memberId,
+              );
+              if (!profile || profile.nameCiphertext === null) return null;
+
+              const storedName = await encryption.decryptKycField(
+                profile.nameCiphertext,
+                pariwarId,
+                deps.encryption,
+              );
+
+              // ⭐⭐ **THE ERASURE BACKSTOP — AND THE ⛔ ONLY CHECK IN THIS PATH THAT IS
+              // SNAPSHOT-INDEPENDENT** (Trap 4, AC5; `2026-08-30-169` / `2026-08-30-170`).
+              // `anonymizeMember` overwrites `name_ciphertext` IN PLACE with an *encrypted*
+              // `[anonymized]` sentinel and **RETAINS the row** ⇒ ⭐ the decrypt SUCCEEDS, and without
+              // this the page renders **`[anonymized]`** where a person's name belongs, on an
+              // unauthenticated edge-cached surface.
+              // ⛔ An empty-name guard does ⛔ NOT catch it — the sentinel is a non-empty string.
+              // ⛔ **IMPORTED FROM `@twt/domain`, ⛔ never the re-typed literal.**
+              // ⚠⛔ AND ⛔ NO PER-ROW LIFECYCLE RE-CHECK — `-170` FORBIDS one as a TOCTOU mitigation:
+              // under READ COMMITTED the state read and the ciphertext read take DIFFERENT snapshots,
+              // so an RTBF landing between them is decrypted anyway. ⭐ The window is closed at the
+              // PLAINTEXT instead, which is snapshot-independent and costs nothing.
+              if (storedName === memberDomain.ANONYMIZED_SENTINEL) {
+                request.log.warn(
+                  'sahyog-vivran: erasure sentinel reached the decrypt — omitting the ROW',
+                );
+                return null;
+              }
+
+              // ⭐⛔ `resolvePublicMemberName`, ⛔ NEVER `resolvePoolIdentity` and ⛔ never
+              // `splitFirstNameLastInitial` — both hard-code the SHIELDED form, which is what the
+              // MEMBER surface renders and is ⛔ NOT what `-174` ruled here.
+              // ⚠⛔ **`.trim() || null`, ⛔ NEVER `=== ''`** (Review finding 2026-09-08) — a
+              // whitespace-only stored name passes `=== ''` and the contract's `.min(1)` and renders
+              // a BLANK row. ⚠ A MONONYM under `shielded_name` resolves to `''` (`-145` cl.3) and
+              // lands here too; ⛔ ⛔ no fall-through to `firstName`, which for a mononym returns the
+              // ENTIRE stored legal name.
+              const name = kyc.resolvePublicMemberName(mode, storedName).trim();
+              return name === '' ? null : { name };
+            } catch (err) {
+              // ⚠⛔ **DELIBERATELY ⛔ NOT MEMBER-ATTRIBUTED.** The member-facing sibling logs the
+              // `memberId` because there the log is what distinguishes a render failure from a lawful
+              // erasure. ⛔ Here the row is already omitted either way, and naming a member in an
+              // anonymous public request's logs buys nothing for the one thing it risks.
+              request.log.warn(
+                { err },
+                'sahyog-vivran: contributor name unresolvable — omitting the ROW',
+              );
+              return null;
+            }
+          },
+        );
+
+        // ⭐ The omissions collapse out HERE, preserving the producer's deterministic order.
+        // ⛔⛔ ⛔ No placeholder takes their place, ⛔ no count of them is published, and the page is
+        // ⛔ never padded back to `limit`.
+        const items = resolvedContributors.filter(
+          (row): row is PublicSahyogVivranContributor => row !== null,
+        );
+
         ok = true;
         return {
+          items,
+          page,
+          limit,
+          total,
           drive: {
             // ⚠ `poolLetterCode`, ⛔ not the curated registry name: `resolveCuratedPoolName` re-derives
             // it via `reserveNames`, which RESERVES rows — ⛔ a write path an unauthenticated GET may

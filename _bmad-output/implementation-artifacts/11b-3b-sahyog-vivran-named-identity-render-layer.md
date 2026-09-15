@@ -986,9 +986,22 @@ AC10→T0 · **AC11→T1b** (and T1b gates T2).
       ⚠⛔ **TWO LINE CITES WERE STALE AND ARE RE-DERIVED, ⛔ not patched into the entries above:**
       AC5's own `MemberDriveList.tsx:347` is live at **`:363`** (⭐ AC5 warned it might have moved), and
       the 8.3 `keyExtractor` is at **`:275-277`**, ⛔ not the `:254-256` the 11b.2b block recorded.
-- [ ] **Task 5 — The buildable column inventory** (AC6, AC11) — annotate at the **canonical section**
-      (`:1311-1335`), cited by its heading title; ⭐ cross-reference the **four** restatement anchors;
-      ⭐ amend `:1334`'s stale *"UNRULED"* and add `:1335`'s forward pointer off `11b-3`.
+- [x] **Task 5 — The buildable column inventory** (AC6; AC11(e) **already discharged at Task 1b**) —
+      ✅ **DONE 2026-09-15.** ⭐ The **BUILDABLE half** is written at the **canonical section**, cited by
+      its heading title, and **cross-referenced from ALL FOUR restatement anchors** per the block's own
+      *"⛔ THE COUNT IS ⛔ NOT THE REQUIREMENT, THE LIST IS"* rule. ⛔ Annotation, ⛔ never a rewrite:
+      ⛔ no column deleted, ⛔ no replacement inventory authored, ⛔ neither microcopy fence lifted.
+      ⭐⭐ **THE FIRST FINDING IS ⛔ NOT ABOUT COLUMNS — IT IS THE ROW GRAIN.** The inventory describes ONE
+      ROW PER CONTRIBUTION; ⛔ **no shipped public surface has that grain and ⛔ none may** (the wire
+      carries ⛔ no per-contribution id, ⛔ no per-contribution date, ⛔ no per-contributor amount). ⇒ the
+      ten-column table was **SPLIT BY GRAIN**, ⛔ not narrowed.
+      ⭐ **FIVE of ten buildable** — `Donor Name` · `District` · `Pool` · `Late Teacher` · `Date` — ⚠ two
+      keep **microcopy-fenced LABELS** and one (`Late Teacher`) is **INERT by design**.
+      ⭐ **AC11(e) was already done at Task 1b** — ⭐ **VERIFIED LIVE, ⛔ not trusted from the note**: both
+      stale sentences are amended, kept and not rewritten.
+      ⚠⛔ **ALL FOUR OF AC6's ANCHOR CITES HAD ROTTED** and are re-derived: the canonical section is
+      `:1298` · the Real Data Test `:1257` (⛔ not `:1252`) · the anatomies `:1830`/`:1842` (⛔ not
+      `:1788`/`:1798`) · the performance contract `:2218` (⛔ not `:2161`+`:2165`). ⭐ Only `:1158` held.
 - [ ] **Task 6 — a11y (web form) + real-`t()` both locales + the completeness fence** (AC7) — ⭐ Reuse
       the ten **`contributor_list.*`** keys (namespace `contribution`);
       consume `stage.*` from `sahyog-shared`; ⛔ **mint ⛔ no stage word**; ⛔ resolve ⛔ neither
@@ -1265,7 +1278,31 @@ failed on the FIRST try. ⇒ ⭐ **a DB-gated spec is ⛔ NOT covered by the gre
   never keys FlashLists"*: `keyExtractor={(item) => item.publicToken}` is keyed **PER-DRIVE** on an
   address that surface already publishes — ⛔ not a precedent for a per-CONTRIBUTOR key, because the
   contributor list has ⛔ no such identifier to reach for, which is the blocker itself.
-- ⛔ **Tasks 5-8 remain OPEN.** ⚠ AC9 is **PARTLY** discharged — ⭐ **three** of its five inverted
+- ⭐ **Task 5 (AC6)** — the buildable inventory, written at the canonical section and cross-referenced
+  from **all four** restatement anchors (⛔ annotating only `:1158` is what AC6 forbids by name).
+  ⭐⭐ **THE SHARPEST FINDING IS ONE AC6 DID ⛔ NOT ANTICIPATE: THE UNBUILDABLE PART IS THE *ROW GRAIN*,
+  ⛔ NOT THE COLUMN COUNT.** A row carrying `Donor Name` **and** `Late Teacher` **and** `Pool` **and**
+  `Date` is one contribution joined to its drive — ⛔ and the public wire carries ⛔ no per-contribution
+  identifier, ⛔ no per-contribution date and ⛔ no per-contributor amount. ⇒ the five buildable columns
+  ⛔ **cannot be assembled into a single row of that table** even though each exists separately. ⭐ The
+  table was **SPLIT ACROSS TWO SURFACES BY GRAIN** (`/sahyog` per DRIVE, `/sahyog-vivran` per
+  CONTRIBUTOR), and that split is structural.
+  ⭐ **AND A SECOND FINDING THE 2026-08-30 PASS MISSED:** `<ContributionListMobileRow>`'s **primary
+  line** assumes a per-contributor **₹ amount**, which is **REFUSED BY RULING** (11b.1 AC5's
+  anti-leaderboard clause; `D10-rowkey`(a)) — ⛔ **not** merely unbuilt. That pass flagged only the
+  identity/metadata line's three identifiers. ⇒ ⛔ no virtualization budget may be sized against it.
+  ⚠⛔ **AND THE REAL DATA TEST'S RE-POSING NEEDED A CORRECTION BEFORE USE** — it lists *"first-name +
+  last-initial"* among *"the fields that DO exist"*. ⛔ That is the **MEMBER** form; `-174`/`-175` ruled
+  the **public** contributor name at the **FULL NAME**, which collides **differently** ⇒ a fixture built
+  on the shielded form would measure the wrong surface.
+  ⭐ **11b.1's item (f) is DISCHARGED, ⛔ not "closed"** — recorded **at that item** (⚠ ⛔ not 11b.3a's
+  `(f)`), together with the correction that it was ⛔ never `11b-3`'s: that story is `done` and ⛔ did
+  ⛔ not author it. ⛔ Its other three bullets stay open, and the *"name FORM stays UNRULED"* one is
+  marked **SPENT** — ⚠ with the note that the three `epics.md` lines are ⛔ not wrong about the MEMBER
+  surface, they lack a **surface qualifier**.
+  ⚠⛔ **FOUR OF AC6's FIVE ANCHOR CITES HAD ROTTED** — re-derived and recorded, ⛔ not patched into the
+  ratified entries ([[feedback_supersede_never_reinterpret]]).
+- ⛔ **Tasks 6-8 remain OPEN.** ⚠ AC9 is **PARTLY** discharged — ⭐ **three** of its five inverted
   tests plus **both** negative controls are now amended BY NAME (the render layer's rupee fence at
   unit 1; the contracts person leg, the `member-drive-detail-field-floor` exclusion (b) and the
   render test's UN-RULED-person leg at unit 2; and the render test's own negative control
@@ -1283,6 +1320,10 @@ failed on the FIRST try. ⇒ ⭐ **a DB-gated spec is ⛔ NOT covered by the gre
 - `packages/ui/src/contribution-list/view-model.ts` — stale *"form is UNRULED"* doc-block amended
 - `_bmad-output/implementation-artifacts/deferred-work.md` — amount-raised item amended
 - `_bmad-output/planning-artifacts/ux-design-specification.md` — `:1334`/`:1335` amended
+- **Task 5 (AC6):** `_bmad-output/planning-artifacts/ux-design-specification.md` (the buildable half at
+  the canonical section + cross-references at all four restatement anchors, two of which gained their
+  own corrections) · `_bmad-output/implementation-artifacts/deferred-work.md` (11b.1's item (f)
+  discharged in place; the *"name FORM stays UNRULED"* bullet marked SPENT; a top-level pointer)
 - **Task 4 (AC5):** `_bmad-output/implementation-artifacts/deferred-work.md` (the `-177` cl.3
   re-pointing recorded; the 11b.2b block superseded on its forward half; two stale cites re-derived;
   the edge-cache residual routed) · `apps/api/src/modules/public-pages/handlers.ts` (the `-172`

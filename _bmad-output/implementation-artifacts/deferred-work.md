@@ -4,6 +4,22 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Recorded from: implementation of 11b-3b-sahyog-vivran-named-identity-render-layer — Task 5 (AC6), 2026-09-15
+
+✅⛔ **11b.1's item (f) — *"Naming the BUILDABLE inventory is 11b.3's, at the point it has a host"* — is
+DISCHARGED, ⛔ not "closed".** ⭐ The full record is appended **at that item**, where a reader checking the
+obligation actually lands; ⛔ it is ⛔ not duplicated here. ⚠⛔ **Navigate by the heading — there are TWO
+`### (f)` items**, and this is **11b.1's** (*the UX-spec Sahyog List column inventory, `D5(a)`*), ⛔ **not**
+11b.3a's (*the post-masking authenticated-member presentation*).
+⚠⛔ **AND IT WAS ⛔ NOT `11b-3`'s:** that story is `done` and ⛔ did ⛔ not author it — the `D6(b)` split moved
+it to `11b-3b`, whose Task 3 built the host the bullet was waiting for.
+⭐ **In one line:** the buildable half is written at the canonical section and cross-referenced from **all
+four** restatement anchors; **five** of the ten columns are buildable, ⚠ two keep microcopy-fenced labels
+and one is inert by design — ⛔ and the **ROW GRAIN**, ⛔ not the column count, is the part that can ⛔ never
+be built.
+
+---
+
 ## Recorded from: implementation of 11b-3b-sahyog-vivran-named-identity-render-layer — Task 4 (AC5), 2026-09-15
 
 ⭐⭐ **THE STORY 8.3 `keyExtractor` DEFERRAL — RE-AFFIRMED **OPEN**, AND `-177` cl.3's RE-POINTING IS
@@ -1315,7 +1331,17 @@ The trigger above **FIRED** at Story 11b.2 authoring, and the amendment was **wr
 
 ⚠⛔ **WHAT REMAINS OPEN — the amendment RECORDS the defect; it does ⛔ NOT repair the surface:**
 · ⛔ **Naming the BUILDABLE inventory is 11b.3's**, at the point it has a host (`apps/public/src/pages/` holds ⛔ no contributor route today).
+
+✅⛔ **THE FIRST BULLET IS DISCHARGED BY STORY `11b-3b` (2026-09-15, AC6 / Task 5) — ⛔ NOT "closed", and ⛔ nothing above is rewritten** ([[feedback_closure_language_precision]], [[feedback_supersede_never_reinterpret]]).
+⚠⛔ **AND IT WAS ⛔ NOT `11b-3`'s AFTER ALL.** `11b-3` is **`done`** and ⛔ did ⛔ not author it; the work moved to **`11b-3b`** in the **`D6(b)`** three-way split. ⭐ The host the bullet waited for now exists: `apps/public/src/pages/sahyog-vivran/[driveToken].astro`, with the confirmed contributor list shipped at that story's Task 3.
+⭐ **WRITTEN AT THE CANONICAL SECTION** — §*"Public Column Inventory — Sahyog List"*, under **"THE BUILDABLE INVENTORY"** — and **cross-referenced from ALL FOUR restatement anchors**, per the block's own *"⛔ THE COUNT IS ⛔ NOT THE REQUIREMENT, THE LIST IS"* rule. ⛔ Annotation, ⛔ never a rewrite: ⛔ no column deleted, ⛔ no replacement inventory authored, ⛔ neither microcopy fence lifted.
+⭐⭐ **THE FINDING, IN BRIEF — and its first half is ⛔ NOT about columns:** the inventory's **ROW GRAIN** (one row per CONTRIBUTION) exists on ⛔ **no** shipped public surface and may ⛔ not — the public wire carries ⛔ no per-contribution identifier, ⛔ no per-contribution date and ⛔ no per-contributor amount. ⇒ the ten-column table was **SPLIT BY GRAIN**, ⛔ not narrowed: `/sahyog` is one row per **DRIVE**, `/sahyog-vivran/[driveToken]` is one row per **CONTRIBUTOR** carrying the name and ⛔ nothing else.
+⭐ **FIVE of the ten are buildable** — `Donor Name` · `District` · `Pool` · `Late Teacher` · `Date` — ⚠ with **two microcopy-fenced LABELS** (`donor`, `Late Teacher` stay `member_only: true` ⇒ the DATA renders, the WORDS do ⛔ not) and **one INERT by design** (`Late Teacher`: publication is fail-closed for every member until counsel's clause is pinned; ⛔ ⛔ no placeholder row may be seeded).
+⚠⛔⛔ **AND A FINDING THE 2026-08-30 PASS DID ⛔ NOT MAKE:** `<ContributionListMobileRow>`'s **primary line** assumes a per-contributor **₹ amount**, which is **REFUSED BY RULING** (11b.1 **AC5**'s anti-leaderboard clause; `D10-rowkey`(a) at `-177` cl.3) — ⛔ **not** merely unbuilt. ⇒ ⛔ no virtualization budget may be sized against it.
+⚠ **ALL FOUR ANCHOR LINE-CITES IN THIS ITEM HAVE ROTTED and are re-derived at `02c6f127`** — ⛔ recorded, ⛔ not patched above (a moved line number is ⛔ not a changed decision): the canonical section is at **`:1298`** (⛔ not `:1287-1298`) · the Real Data Test at **`:1257`** (⛔ not `:1252`) · the anatomies at **`:1830`/`:1842`** (⛔ not `:1788`/`:1798`) · the performance contract at **`:2218`** (⛔ not `:2161`+`:2165`). ⭐ `:1158` alone still holds. ⇒ ⭐ **cite the canonical section by its TITLE, ⛔ never by line.**
+⛔ **THE OTHER THREE BULLETS BELOW STAY OPEN**, and one of them is ⛔ now stale on its own terms — see the next line.
 · ⛔ **The contributor NAME FORM stays UNRULED** and is routed to the Trustee Panel as `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-08-30-contributor-name-public-tier.md` — ⛔ **ROUTED, ⛔ nothing ratified, ⛔ nothing applied** (`-168` cl.4). ⚠ **Three** committed `epics.md` lines assume first-name + last-initial for contributors (`:3145` · `:3238` · `:4931`) and ⛔ **none is a ruling**.
+  ⚠⛔⛔ **SPENT 2026-09-15 — ⛔ THE BULLET ABOVE IS KEPT AND ⛔ NOT REWRITTEN.** ⭐ The routing note it names was **ANSWERED**: [`-174`](../../../.decision-log.md#decision-2026-09-02-174) (**Trustee Panel**) ruled the public contributor name at the **FULL NAME**, and [`-175`](../../../.decision-log.md#decision-2026-09-02-175) made it **UNCONDITIONAL**. ⇒ ⛔ *"nothing ratified, nothing applied"* is false at HEAD, and `11b-3b` **APPLIED** it. ⚠⛔ **The three `epics.md` lines are ⛔ NOT thereby wrong about the MEMBER surface** — first-name + last-initial is still what the member app renders (`member-pool/handlers.ts`), and `-177` **cl.2** **CARRIES** that public/member inversion deliberately. ⇒ ⭐ what the lines lack is a **surface qualifier**, ⛔ not a correction.
 · ⛔ **`<StatCardStrip>` stays unowned** — C-3 (`epics.md:4799`), *"NO PRODUCER | No owner"*.
 · ⛔ **The Real Data Test's disambiguation question is still owed** — its scenarios rest on `Member ID` + `HRMS`, which do not exist. ⚠ The **gate is not weakened**; the **means** must be re-posed against fields that do exist. ⛔ Re-posing it was ⛔ not this amendment's to do.
 

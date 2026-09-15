@@ -1,3 +1,32 @@
+# last_updated: 2026-09-15c (⭐⭐ **`11b-3b` — TASK 2 COMPLETE, BOTH UNITS, AND THE ROW MOVES
+#   `ready-for-dev` → `in-progress`.** ⚠ The row was STALE: Tasks 0, 1 and 1b were already committed
+#   and the flip was never made. ⛔ It does ⛔ NOT move to `review` — ⛔ Tasks 3-8 are open.
+#   ⭐ **(1) UNIT 1 WAS RE-REVIEWED BEFORE UNIT 2 BEGAN, ⛔ NOT TRUSTED — AND IT CARRIED A SHIPPED
+#   DEFECT.** `value.amount_raised` was minted `"₹{amount} raised"` while the render site passes
+#   `formatCurrency(amountInr, 'en')`, whose output ALREADY carries the ₹ ⇒ the page rendered
+#   **`₹₹ 1,37,000 raised`** in ⛔ BOTH locales, from the figure's first commit.
+#   ⭐ ⛔ NOT a new class — `sahyog-shared`'s `$comment.message_block` states it in terms (*"a literal
+#   ₹ would ship ₹₹"*) and its `index_line.*` carry ⛔ no literal ₹ for that reason.
+#   ⚠⛔⛔ **WHY ⛔ NOTHING CAUGHT IT IS THE LESSON:** both suites stubbed the label with a HAND-WRITTEN
+#   form, bypassing `t()` AND `formatCurrency` at once — ⭐ the 11a.2 `{{max}}`/`{max}` blind spot on a
+#   new key — and `sahyog-vivran-copy.test.ts`, **the file that exists to close that gap**, was ⛔ never
+#   given the key. ⇒ ⭐ **A HAND-TRANSCRIBED STUB IS A SECOND SOURCE FOR A SHIPPED FORMAT.** Both stubs
+#   now CALL `formatCurrency`; the copy test gained the real-`t()` leg, teeth proven by re-plant/revert.
+#   ⭐ **(2) UNIT 2 — the DECEASED MEMBER'S NAME** (`-173`, FULL NAME, unconditional per `-175`):
+#   `NAME_PUBLICATION_AUTHORISED` **EXPORTED, ⛔ never copied**; a **LEFT, ⛔ never INNER** join; the
+#   basis checked **BEFORE** the decrypt (⇒ ⛔ ZERO KMS calls today); `resolvePublicMemberName` under
+#   the STORED mode, ⛔ never a literal and ⛔ never `resolvePoolIdentity`; `.trim() || null`, ⛔ never
+#   `=== ''`; the `<dt>`/`<dd>` pair suppressed TOGETHER.
+#   ⭐⭐ **AC1's INERT STATE IS PRESERVED AND ⭐ PROVEN END TO END** — a REAL Tier-1 ciphertext is
+#   planted, the read SELECTS it, `-173` AUTHORISES it, and the name still does ⛔ NOT render because
+#   ⛔ no `clause_versions` row satisfies the basis. ⛔⛔ ⛔ No placeholder row was seeded.
+#   ⚠⛔ **AND A STALE ASSERTION FROM UNIT 1 WAS FOUND AT UNIT 2 — ⛔ RECORDED, ⛔ not absorbed:** the API
+#   spec's exact-key-set leg never gained `amountRaisedInr`, and ⛔ nothing noticed because the whole
+#   `describe` is `skipIf(!hasDatabase)` ⇒ **IT SKIPS SILENTLY.** ⇒ ⭐⭐ **A DB-GATED SPEC IS ⛔ NOT
+#   COVERED BY THE GREEN `turbo test` LINE** — ⛔ do ⛔ not read one as evidence for the other.
+#   ⭐ Verified: `turbo test` 37/37, typecheck+lint 40/40, the financial-truth gate green, and LIVE-DB
+#   `apps/api` 1265/132 files, `@twt/domain` 3352/270 files, the route spec 34/34.
+#   ⛔ ⛔ No other row is touched.)
 # last_updated: 2026-09-15b (⭐⭐ **`11b-3b` — v2.1 SECOND VALIDATE PASS, AND `D-percentage` RULED.
 #   ⛔ NO CODE. ⛔ ZERO ROWS MOVE.** ⭐ Two governance acts, one commit.
 #   ⭐ **(1) `#decision-2026-09-15-218` — `D-percentage` RULED, BigDev author-commit:** a `closed` or
@@ -18500,7 +18529,7 @@ development_status:
   # sweep ⇒ ⭐ the next `validate` pass owes a `packages apps` re-diff before trusting any row.
   # ⭐ Siblings in the same sweep: `11b-17` (`a2617869`) + `6-18` (`55912d83`) re-checked LIVE ⇒
   # ⭐ BOTH SOUND ⇒ the 2026-09-09 *"they still carry ORPHANED pins"* note is SUPERSEDED, ⛔ not edited.
-  11b-3b-sahyog-vivran-named-identity-render-layer: ready-for-dev
+  11b-3b-sahyog-vivran-named-identity-render-layer: in-progress
   11b-4-memorial-authorship-surface-family-writes-the-story: backlog
   11b-5-memorial-visual-components-memorial-record-portrait-frame-kinship-lattice: backlog
   11b-6-in-memoriam-roll-consent-governed-revocable-invariant: backlog

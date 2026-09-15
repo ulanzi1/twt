@@ -84,6 +84,7 @@ const LABELS: SahyogVivranLabels = {
   contributorsHeader: 'Confirmed contributions',
   contributorsEmpty: 'No contributor names to show right now.',
   contributorTotal: (n: number) => `${String(n)} confirmed`,
+  paginationLabel: 'Pages',
   paginationPrevious: 'Previous',
   paginationNext: 'Next',
 };

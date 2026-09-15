@@ -157,6 +157,7 @@ const labels: SahyogVivranLabels = {
   // ⭐ Ordinary UI labels minted in THIS surface's namespace — ⛔ deliberately NOT reached for from
   // `sahyog-drive`'s identical pair: that is the INDEX's namespace, and coupling two SURFACES' copy
   // means re-wording one silently re-words the other. See `$comment.pagination`.
+  paginationLabel: tr('pagination.label'),
   paginationPrevious: tr('pagination.previous'),
   paginationNext: tr('pagination.next'),
   labelDriveCode: tr('label.drive_code'),
@@ -597,8 +598,21 @@ if (!driveStatusVisible) {
           ⛔ no placeholder stands in for an omitted row, and ⛔ NO OMISSION COUNT is ever published —
           a tally of omissions is an enumeration signal over which members were erased.
         */}
-        <section class="mt-6 rounded border border-gray-300 p-4">
-          <h2 class="text-lg font-semibold">{labels.contributorsHeader}</h2>
+        {/*
+          ⭐⭐ FAMILY 13 IN ITS **WEB** FORM (AC7). ⚠⛔ The checklist's mobile wording —
+          `accessible={true}` + `accessibilityRole` — has ⛔ no HTML analogue and ⛔ must not be
+          transliterated: on the web the SEMANTIC ELEMENT *is* the role. ⇒ ⭐ a real `<section>` with an
+          accessible NAME, a real `<h2>`, a real `<ul>`/`<li>`, and a real `<nav>` with its OWN name.
+          ⛔⛔ AND ⛔ NO `role="list"` / `role="listitem"` PATCHES: adding an explicit role to an element
+          that already has it is how a real list gets broken by a typo.
+          ⚠ `aria-labelledby` over `aria-label` — the heading is ⛔ already on the page, so pointing at
+          it keeps ONE string rather than a second that can drift out of sync with it.
+        */}
+        <section
+          aria-labelledby="sv-contributors-heading"
+          class="mt-6 rounded border border-gray-300 p-4"
+        >
+          <h2 id="sv-contributors-heading" class="text-lg font-semibold">{labels.contributorsHeader}</h2>
           {/*
             ⭐ THE SET SIZE, ⛔ not the rendered row count — the two differ by design (above).
             ⛔ A COUNT, ⛔ never a sum and ⛔ never a score.
@@ -639,13 +653,24 @@ if (!driveStatusVisible) {
             export affordance wearing a pagination costume.
           */}
           {hasPreviousPage || hasNextPage ? (
-            <nav class="mt-4 flex gap-4 text-sm" aria-label={labels.contributorsHeader}>
-              {previousPageHref !== null && (
-                <a class="underline" rel="prev" href={previousPageHref}>{labels.paginationPrevious}</a>
-              )}
-              {nextPageHref !== null && (
-                <a class="underline" rel="next" href={nextPageHref}>{labels.paginationNext}</a>
-              )}
+            /*
+              ⚠⛔ **THE NAV'S ACCESSIBLE NAME IS ITS OWN, ⛔ NOT THE SECTION HEADING.** A first draft
+              labelled it `contributorsHeader` — a screen reader then announces a NAVIGATION landmark
+              called *"Confirmed contributions"*, which names the SECTION it sits in rather than what
+              the landmark does, and collides with the `<h2>` two elements up. ⭐ `pagination.label`
+              ("Pages" / "पृष्ठ") is the sibling `/sahyog`'s own answer; ⛔ do ⛔ not re-point it.
+              ⭐ `<ul>`/`<li>` mirrors `/sahyog` exactly — ⛔ two page-link markups on one site is the
+              kind of drift the shared `pageHref` already exists to prevent.
+            */
+            <nav class="mt-4 text-sm" aria-label={labels.paginationLabel}>
+              <ul class="flex gap-4">
+                {previousPageHref !== null && (
+                  <li><a class="underline" rel="prev" href={previousPageHref}>{labels.paginationPrevious}</a></li>
+                )}
+                {nextPageHref !== null && (
+                  <li><a class="underline" rel="next" href={nextPageHref}>{labels.paginationNext}</a></li>
+                )}
+              </ul>
             </nav>
           ) : null}
         </section>

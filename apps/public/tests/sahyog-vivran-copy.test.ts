@@ -35,6 +35,12 @@ const KEYS = [
   // missing key, so an unresolvable `<dt>` is a 500 on the whole page the moment the first Pariwar
   // pins the clause — ⛔ not a blank label.
   'label.deceased_member',
+  // ⭐ Story 11b.3b (Task 3/6, AC4/AC7) — the paging nav's own accessible NAME and its two links.
+  // ⚠ `t()` THROWS on a missing key, so an unresolvable `aria-label` is a 500 on the whole page the
+  // first time a drive has more contributors than one page holds — ⛔ not a silently unlabelled nav.
+  'pagination.label',
+  'pagination.previous',
+  'pagination.next',
   'label.drive_code',
   'label.pool_letter',
   'label.district',
@@ -116,6 +122,92 @@ describe('/sahyog-vivran copy resolves through the REAL t() — both locales', (
       // ⚠ LATIN DIGITS IN BOTH LOCALES (amendment-A2): money is OPERATIONAL data. The page passes
       // `'en'` to the formatter even under `hi`, and the Devanagari leg below covers the template.
       expect(out).toMatch(/1,37,000/);
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════════════════════════
+  // ⭐⭐ STORY 11b.3b (Task 6, AC7) — THE CROSS-NAMESPACE KEYS, AND THE COMPLETENESS FENCE
+  // ══════════════════════════════════════════════════════════════════════════════════════════════
+
+  // ⭐⭐ THE CONTRIBUTOR SECTION'S COPY LIVES IN THE `contribution` NAMESPACE, ⛔ NOT THIS ONE — and
+  // that is the point: `packages/ui/src/contribution-list/i18n-keys.ts` already declares these keys
+  // and `@twt/ui`'s own consumer resolves them. ⭐ **REUSE ONLY; ⛔ nothing is minted there**, and
+  // ⛔ copying them into `sahyog-vivran.json` would be a SECOND HOME for one string.
+  // ⚠⛔ **THE PREFIX IS `contributor_list.`, ⛔ NOT `contribution_list.`** — the MODULE is
+  // `contribution-list`, the KEYS are not, and `contribution_list.*` matches ⛔ ZERO keys in the repo.
+  // ⚠⛔ **AND THE NAMESPACE IS THE *THIRD* ARGUMENT TO `t()`.** Passing it second lands it in the
+  // params slot, falls back to `common`, and THROWS on every call — the page passes it correctly and
+  // this leg is what proves the page's spelling, ⛔ not the fixture's.
+  const CONTRIBUTOR_KEYS = ['contributor_list.confirmed_header', 'contributor_list.empty'] as const;
+
+  for (const locale of LOCALES) {
+    for (const key of CONTRIBUTOR_KEYS) {
+      it(`${locale}: "${key}" resolves from the \`contribution\` namespace`, () => {
+        const out = t(key, undefined, { locale, namespace: 'contribution' });
+        expect(out).toBeTruthy();
+        expect(out).not.toMatch(/\{\{?[a-z_]+\}?\}/i);
+      });
+    }
+
+    it(`${locale}: those keys are ⛔ ABSENT from \`sahyog-vivran\` — ⛔ no second home`, () => {
+      // ⛔⛔ THE NEGATIVE HALF, AND IT IS THE ONE THAT MATTERS. Resolving from `contribution` proves
+      // the keys EXIST; this proves nobody COPIED them here to "make the page self-contained".
+      // ⚠ `t()` throws on a miss, so absence is asserted by the throw itself.
+      for (const key of CONTRIBUTOR_KEYS) {
+        expect(() => t(key, undefined, { locale, namespace: 'sahyog-vivran' })).toThrow();
+      }
+    });
+  }
+
+  // ⛔⛔ **MINTED COPY MAY ⛔ NEVER CLAIM THE LIST IS COMPLETE** (AC7). Two shipped doc-blocks say so,
+  // and this is the third place that has to hold — because COPY is where a completeness claim would
+  // actually surface. ⭐ This page reads "N confirmed" beside FEWER than N named rows **BY DESIGN**,
+  // from THREE independent omissions: RTBF erasure (`2026-08-30-169`), a MONONYM under
+  // `shielded_name` (`2026-08-21-145` cl.3), and the erasure sentinel (AC5).
+  // ⚠⛔ AND ⛔ NO OMISSION COUNT EITHER — ⛔ no "some names withheld", ⛔ no tally: a count of omissions
+  // is an enumeration signal over which members were erased.
+  for (const locale of LOCALES) {
+    it(`${locale}: ⛔ NO copy claims the contributor list is COMPLETE, and ⛔ none counts omissions`, () => {
+      const all = [
+        ...KEYS.map((k) => t(k, undefined, { locale, namespace: 'sahyog-vivran' })),
+        ...CONTRIBUTOR_KEYS.map((k) => t(k, undefined, { locale, namespace: 'contribution' })),
+      ].join(' ');
+      for (const claim of [
+        /\ball\s+contributors?\b/i,
+        /\bevery\s+contributors?\b/i,
+        /\bcomplete\s+list\b/i,
+        /\bfull\s+list\b/i,
+        /\bentire\s+list\b/i,
+        /\bसभी\s+सहयोगी/,
+        /\bपूरी\s+सूची/,
+      ]) {
+        expect(all).not.toMatch(claim);
+      }
+      for (const tally of [/\bwithheld\b/i, /\bomitted\b/i, /\bhidden\b/i, /\bछिपाए/, /\bरोके/]) {
+        expect(all).not.toMatch(tally);
+      }
+    });
+  }
+
+  // ⚠⛔⛔ **THE STAGE WORDS ARE CONSUMED FROM `sahyog-shared`, ⛔ NEVER MINTED HERE** (AC7). ⭐ The
+  // ruled public vocabulary is **Live / Closed / Verified** — `2026-09-04-192` cl.1 amended `-191`
+  // cl.3's *"Completed"* (which implied a payment event that does ⛔ not exist) and `2026-09-04-193`
+  // Trustee-ratified it. ⇒ ⛔ *"Completed"* must appear in ⛔ NO locale file, and that absence is the
+  // amendment WORKING, ⛔ not a gap. ⛔ Cite `-192` cl.1 + `-193`, ⛔ never `-191` cl.3 alone.
+  for (const locale of LOCALES) {
+    it(`${locale}: ⛔ this namespace mints ⛔ NO stage word — they live in \`sahyog-shared\``, () => {
+      for (const key of ['stage.live', 'stage.closed', 'stage.verified', 'stage.settled']) {
+        expect(() => t(key, undefined, { locale, namespace: 'sahyog-vivran' })).toThrow();
+      }
+      // ⭐ AND THE THREE RULED ONES DO RESOLVE FROM THEIR ONE HOME — ⛔ so the leg above is ⛔ not
+      // passing merely because the keys exist nowhere at all, which would make it vacuous.
+      for (const key of ['stage.live', 'stage.closed', 'stage.verified']) {
+        expect(t(key, undefined, { locale, namespace: 'sahyog-shared' })).toBeTruthy();
+      }
+      // ⛔⛔ AND `stage.settled` EXISTS IN ⛔ NO NAMESPACE — the wire token is `settled`, the WORD is
+      // "Verified" (`public-read.ts` maps `settled: 'verified'`). A `stage.settled` key would be a
+      // second source for a Trustee-ratified word.
+      expect(() => t('stage.settled', undefined, { locale, namespace: 'sahyog-shared' })).toThrow();
     });
   }
 

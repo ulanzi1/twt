@@ -1002,10 +1002,35 @@ AC10→T0 · **AC11→T1b** (and T1b gates T2).
       ⚠⛔ **ALL FOUR OF AC6's ANCHOR CITES HAD ROTTED** and are re-derived: the canonical section is
       `:1298` · the Real Data Test `:1257` (⛔ not `:1252`) · the anatomies `:1830`/`:1842` (⛔ not
       `:1788`/`:1798`) · the performance contract `:2218` (⛔ not `:2161`+`:2165`). ⭐ Only `:1158` held.
-- [ ] **Task 6 — a11y (web form) + real-`t()` both locales + the completeness fence** (AC7) — ⭐ Reuse
-      the ten **`contributor_list.*`** keys (namespace `contribution`);
-      consume `stage.*` from `sahyog-shared`; ⛔ **mint ⛔ no stage word**; ⛔ resolve ⛔ neither
-      `index_line.*` nor `message_block.*` (the repo-wide fence).
+- [x] **Task 6 — a11y (web form) + real-`t()` both locales + the completeness fence** (AC7) —
+      ✅ **DONE 2026-09-15.**
+      ⭐ **FAMILY 13 IN ITS WEB FORM**, in a new `sahyog-vivran-a11y.test.ts` (8 legs, the house
+      source-scan idiom + an anti-vacuity guard). ⚠⛔ **The checklist's mobile wording does ⛔ NOT
+      transliterate** — there is ⛔ no `accessibilityRole` on the web: **the semantic element IS the
+      role**. ⇒ ⭐ real ELEMENT · real NAME · real STRUCTURE, and ⛔ **no `role="list"` patches**.
+      ⭐ Two markup corrections fell out of writing it: the section is now named by its own `<h2>` via
+      `aria-labelledby` (⛔ not a second `aria-label` that can drift), and the paging `<nav>` is named
+      **`pagination.label`** — ⚠⛔ Task 3 had labelled it `contributorsHeader`, which announces a
+      NAVIGATION landmark called *"Confirmed contributions"* and collides with the `<h2>` two elements
+      up. ⭐ `<ul>`/`<li>` now mirrors `/sahyog` exactly.
+      ⭐ **REAL-`t()` BOTH LOCALES** — the three `pagination.*` keys joined `KEYS`, and the
+      **cross-namespace** `contributor_list.*` keys get their own legs **plus the negative half**:
+      they resolve from `contribution` and **THROW** from `sahyog-vivran` ⇒ ⛔ nobody copied them into
+      a second home. ⚠⛔ The prefix is **`contributor_list.`**, ⛔ not `contribution_list.`.
+      ⭐ **THE COMPLETENESS FENCE** — ⛔ no copy in either namespace claims the list is complete
+      (*"all/every contributor"*, *"complete/full/entire list"*, `सभी सहयोगी`, `पूरी सूची`) and
+      ⛔ **none counts omissions** (*"withheld"*, *"omitted"*, `छिपाए`, `रोके`).
+      ⭐ **STAGE WORDS: CONSUMED, ⛔ NOT MINTED** — `stage.*` **THROWS** from `sahyog-vivran` and
+      resolves from `sahyog-shared` (⛔ the negative leg alone would be vacuous), and ⛔ `stage.settled`
+      exists in **⛔ NO namespace**: the wire token is `settled`, the ruled WORD is **"Verified"**
+      (`-192` cl.1, Trustee-ratified at `-193`; ⛔ never `-191` cl.3's superseded *"Completed"*).
+      ⚠⛔ **THE `sahyog-shared` DARK-COPY FENCE IS ⛔ NOT DUPLICATED — ⭐ VERIFIED TO ALREADY COVER
+      THIS FILE.** Its walker is `SCAN_ROOTS = ['apps', 'packages']`, so `[driveToken].astro` is
+      already scanned and the suite is green ⇒ this page resolves ⛔ neither `index_line.*` nor
+      `message_block.*`. ⭐ A local copy would be a second scanner over the same ground
+      ([[feedback_gate_scope_semantic_coverage]]).
+      ⭐ **Teeth proven** — planting a redundant `role="list"` and re-pointing the nav label both go
+      RED; reverting returns 613/613.
 - [ ] **Task 7 — Route what is not built** (AC8) — ⛔ the D10-ratification item untouched; the `11b-20`
       note; the two fired `deferred-work.md` triggers recorded as **carried**, ⛔ not closed.
 - [ ] **Task 8 — Amend the five inverted tests and re-plant the negative control** (AC9).
@@ -1302,7 +1327,28 @@ failed on the FIRST try. ⇒ ⭐ **a DB-gated spec is ⛔ NOT covered by the gre
   surface, they lack a **surface qualifier**.
   ⚠⛔ **FOUR OF AC6's FIVE ANCHOR CITES HAD ROTTED** — re-derived and recorded, ⛔ not patched into the
   ratified entries ([[feedback_supersede_never_reinterpret]]).
-- ⛔ **Tasks 6-8 remain OPEN.** ⚠ AC9 is **PARTLY** discharged — ⭐ **three** of its five inverted
+- ⭐ **Task 6 (AC7)** — family 13 in its **WEB** form, the real-`t()` legs, and the completeness fence.
+  ⚠⛔⛔ **THE CHECKLIST DOES ⛔ NOT TRANSLITERATE, AND SAYING SO IS HALF THE WORK.** Family 13 is
+  written for React Native — `accessible={true}` + `accessibilityRole` + a sibling-of-a-labelled-
+  container rule. ⛔ On the web there is ⛔ no `accessibilityRole`: **the semantic element IS the
+  role**, and `role="list"` on a `<ul>` adds nothing while a typo in it silently REMOVES the
+  semantics the element already had. ⇒ ⭐ the web form of the same three checks is **real ELEMENT ·
+  real NAME · real STRUCTURE**, and the test asserts the redundant roles are ABSENT.
+  ⚠⛔ **WRITING THE TEST FOUND TWO DEFECTS IN MY OWN TASK-3 MARKUP** — ⛔ recorded, ⛔ not quietly
+  fixed: the paging `<nav>` was labelled `contributorsHeader`, so a screen reader announced a
+  NAVIGATION landmark called *"Confirmed contributions"* — naming the SECTION rather than the control
+  and colliding with the `<h2>` two elements up; and the section had ⛔ no accessible name at all.
+  ⭐ Both fixed, and both now have a leg. ⭐ `pagination.label` is the sibling `/sahyog`'s own answer,
+  reused rather than invented.
+  ⭐ **THE NEGATIVE HALF IS THE ONE THAT MATTERS** in all three i18n legs: the `contributor_list.*`
+  keys **THROW** from `sahyog-vivran` (⛔ nobody copied them into a second home), the `stage.*` words
+  **THROW** from `sahyog-vivran` and resolve from `sahyog-shared`, and `stage.settled` exists in ⛔ no
+  namespace at all. ⛔ A positive-only leg would pass on a page that had minted its own copies.
+  ⚠⛔ **AND ONE FENCE WAS DELIBERATELY ⛔ NOT WRITTEN.** AC7 names the repo-wide `sahyog-shared`
+  dark-copy fence; ⭐ I **verified its walker already covers this file** (`SCAN_ROOTS =
+  ['apps','packages']`) rather than adding a local copy — a second scanner over the same ground proves
+  nothing and rots independently ([[feedback_gate_scope_semantic_coverage]]).
+- ⛔ **Tasks 7-8 remain OPEN.** ⚠ AC9 is **PARTLY** discharged — ⭐ **three** of its five inverted
   tests plus **both** negative controls are now amended BY NAME (the render layer's rupee fence at
   unit 1; the contracts person leg, the `member-drive-detail-field-floor` exclusion (b) and the
   render test's UN-RULED-person leg at unit 2; and the render test's own negative control
@@ -1320,6 +1366,13 @@ failed on the FIRST try. ⇒ ⭐ **a DB-gated spec is ⛔ NOT covered by the gre
 - `packages/ui/src/contribution-list/view-model.ts` — stale *"form is UNRULED"* doc-block amended
 - `_bmad-output/implementation-artifacts/deferred-work.md` — amount-raised item amended
 - `_bmad-output/planning-artifacts/ux-design-specification.md` — `:1334`/`:1335` amended
+- **Task 6 (AC7):** `apps/public/tests/sahyog-vivran-a11y.test.ts` (**new** — family 13, web form) ·
+  `apps/public/tests/sahyog-vivran-copy.test.ts` (the `pagination.*` keys; the cross-namespace
+  `contributor_list.*` legs + their negative half; the completeness fence; the stage-word fence) ·
+  `apps/public/src/pages/sahyog-vivran/[driveToken].astro` (`aria-labelledby`; the nav's own label;
+  `<ul>`/`<li>` page links) · `apps/public/src/lib/sahyog-vivran-render.ts` (`paginationLabel`) ·
+  `packages/i18n/locales/{en,hi}/sahyog-vivran.json` (`pagination.label`) ·
+  `apps/public/tests/sahyog-vivran-render.test.ts` · `apps/public/tests/integration/public-pages/scrape-test.spec.ts`
 - **Task 5 (AC6):** `_bmad-output/planning-artifacts/ux-design-specification.md` (the buildable half at
   the canonical section + cross-references at all four restatement anchors, two of which gained their
   own corrections) · `_bmad-output/implementation-artifacts/deferred-work.md` (11b.1's item (f)

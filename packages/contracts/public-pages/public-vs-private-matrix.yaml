@@ -997,7 +997,13 @@ surfaces:
     # — ⛔ not a free edit, because it also changes what `routes.ts`'s written defence and the
     # `login-wall.spec.ts` allowlist entry must claim (D11(a) recorded controls 2 and 3 as
     # structurally N/A *because* there is no `page` and no `limit`).
-    paginated: false
+    # ⭐⭐ FLIPPED 2026-09-15 — Story 11b.3b (Task 3, AC4). ⛔ THE TEXT ABOVE IS KEPT AS THE RECORD.
+    # The contributor list ships (`2026-09-02-174`), the `.strict()` query schema takes `page` and
+    # `limit` bounded by the SHARED constants, and the Astro page calls `parsePageParams()`.
+    # ⭐ It is ⛔ NOT a free edit and it was ⛔ not made alone: `routes.ts`'s written defence,
+    # `sahyog-vivran-controls.ts` (ordinals 2 and 3, RESTORED) and the `login-wall.spec.ts` allowlist
+    # entry all move in the SAME commit and all state **SEVEN**.
+    paginated: true
     fields:
       - id: pool_letter_code
         tier: public

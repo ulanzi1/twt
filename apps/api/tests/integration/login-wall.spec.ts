@@ -422,12 +422,22 @@ describe('Login-wall fails-closed guard (AC-2, hermetic — no DB)', () => {
     //     `X-Robots-Tag` as 4.
     // ⇒ three authoritative documents, three answers. ⭐ The constant is now the source and this is
     // the assertion that makes drifting from it FAIL rather than merely look untidy.
-    expect(SAHYOG_VIVRAN_APPLICABLE_CONTROLS).toHaveLength(5);
+    // ⚠⛔⛔ **AMENDED 2026-09-15 (Story 11b.3b, Task 3, AC4) — ⛔ THE PRIOR VALUE IS KEPT IN THIS
+    // COMMENT** ([[feedback_supersede_never_reinterpret]]): it read `toHaveLength(5)`.
+    // ⭐ 11b.3b ships the contributor list, the route becomes PAGINATED, and controls 2 and 3 are
+    // RESTORED ⇒ **SEVEN**. ⚠⛔ **⛔ NOT the "SIX" this file predicted above** — that prediction was
+    // written when the set held FOUR, and 11b.10 then added ordinal 7 (the unguessable address)
+    // without re-doing the arithmetic. ⭐ 5 + 2 = 7, DERIVED from the list rather than carried
+    // forward as a word — which is the exact defect class this whole test exists to catch.
+    expect(SAHYOG_VIVRAN_APPLICABLE_CONTROLS).toHaveLength(7);
 
     // ⛔ IDENTITY, ⛔ not just a length: a count-only assertion passes while an entry is silently
     // swapped for a different one, which is the failure mode the matrix ordinal drift already showed.
     expect(SAHYOG_VIVRAN_APPLICABLE_CONTROLS.map((c) => c.id)).toEqual([
       'rate_limit_search_tier',
+      // ⭐ Story 11b.3b (Task 3) — ordinals 2 and 3, RESTORED with the pagination they bind to.
+      'page_size_cap',
+      'deep_page_horizon',
       'noindex',
       'no_detail_or_export_affordance',
       'server_side_tier1_decrypt',
@@ -441,9 +451,20 @@ describe('Login-wall fails-closed guard (AC-2, hermetic — no DB)', () => {
     // decrypt is the thing being DEFENDED, ⛔ not a defence.
     // ⛔⛔ THIS ASSERTION IS THE FENCE AGAINST RE-INFLATING THE COUNT: promoting a `posture` to a
     // `control` to make the number look better fails here, which is the whole point.
+    // ⚠⛔ **AMENDED 2026-09-15 (Story 11b.3b, Task 3) — ⛔ THE PRIOR SET IS KEPT HERE:** it was
+    // `['rate_limit_search_tier', 'unguessable_public_address']`, TWO of five.
+    // ⭐ The two restored entries are **genuine `control`s, ⛔ not postures**, and that classification
+    // is the load-bearing claim: the page-size cap bounds how many FULL LEGAL NAMES one request
+    // yields (and how many Tier-1 decrypts it costs — the same number here), and the horizon bounds
+    // how deep the list can be WALKED. ⛔ Neither is a hint, and ⛔ neither is the thing being
+    // defended. ⇒ FOUR of seven.
+    // ⛔⛔ THE FENCE AGAINST RE-INFLATION IS UNCHANGED: promoting a `posture` to a `control` to make
+    // the number look better still fails here, which is the whole point.
     const controls = SAHYOG_VIVRAN_APPLICABLE_CONTROLS.filter((c) => c.kind === 'control');
     expect(controls.map((c) => c.id)).toEqual([
       'rate_limit_search_tier',
+      'page_size_cap',
+      'deep_page_horizon',
       'unguessable_public_address',
     ]);
 
@@ -453,7 +474,16 @@ describe('Login-wall fails-closed guard (AC-2, hermetic — no DB)', () => {
     // PAGINATED and RESTORES BOTH ⇒ it adds two entries to the constant and moves the length above,
     // in its own commit. ⛔ A bare "not applicable" with no expiry is how two controls quietly never
     // come back — this asserts the absence so the restoration cannot be forgotten silently.
-    expect(SAHYOG_VIVRAN_APPLICABLE_CONTROLS.map((c) => c.ordinal)).not.toContain(2);
-    expect(SAHYOG_VIVRAN_APPLICABLE_CONTROLS.map((c) => c.ordinal)).not.toContain(3);
+    // ⚠⛔⛔ **INVERTED 2026-09-15 (Story 11b.3b, Task 3, AC4) — ⛔ THE ABSENCE LEG IS ⛔ NOT DELETED,
+    // IT IS TURNED OVER, WHICH IS WHAT IT WAS BUILT FOR.** It asserted `.not.toContain(2)` and
+    // `.not.toContain(3)` precisely so the restoration *"cannot be forgotten silently"*. ⭐ The
+    // trigger it named has fired and the controls are back ⇒ the same two lines now assert PRESENCE.
+    // ⛔ Deleting them would discard the only thing tying the two controls to the pagination that
+    // makes them meaningful.
+    expect(SAHYOG_VIVRAN_APPLICABLE_CONTROLS.map((c) => c.ordinal)).toContain(2);
+    expect(SAHYOG_VIVRAN_APPLICABLE_CONTROLS.map((c) => c.ordinal)).toContain(3);
+    // ⭐ AND THE ORDINALS ARE THE FULL, GAPLESS 1..7 — ⛔ not a set with holes. A gap here meant a
+    // control was described as N/A somewhere; there is no longer any such claim to make.
+    expect(SAHYOG_VIVRAN_APPLICABLE_CONTROLS.map((c) => c.ordinal)).toEqual([1, 2, 3, 4, 5, 6, 7]);
   });
 });

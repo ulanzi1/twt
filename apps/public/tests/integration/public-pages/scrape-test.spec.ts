@@ -1279,6 +1279,11 @@ const SAHYOG_VIVRAN_TEST_LABELS: SahyogVivranLabels = {
   bankEqualNominees: 'Both names are recorded equally. Neither is preferred.',
   bankAccountLabel: 'Recorded nominee',
   labelAccountHolder: 'Nominee Name',
+  contributorsHeader: 'Confirmed contributions',
+  contributorsEmpty: 'No contributor names to show right now.',
+  contributorTotal: (n: number) => `${String(n)} confirmed`,
+  paginationPrevious: 'Previous',
+  paginationNext: 'Next',
 };
 
 describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak leg is OPERATIVE', () => {
@@ -1318,6 +1323,15 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
           { accountRank: 2, accountHolderName: 'B Holder' },
         ],
       },
+    // ⭐ Story 11b.3b (Task 3) — the contributor PAGE and the SET SIZE.
+    // ⚠⛔ `total` is deliberately LARGER than `items.length`: rows are omitted AFTER paging (RTBF, the
+    // erasure sentinel, an unresolvable name, a mononym under `shielded_name`), so a page holding
+    // FEWER rows than it counts is the ORDINARY case, ⛔ not a broken fixture. ⭐ A fixture where the
+    // two agreed would leave the whole *"N confirmed beside FEWER than N rows"* property unexercised.
+    items: [{ name: 'Rajesh Kumar Sharma' }, { name: 'Meera Bai Yadav' }],
+    page: 1,
+    limit: 50,
+    total: 3,
     },
     SAHYOG_VIVRAN_TEST_LABELS,
   );
@@ -1367,7 +1381,7 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
     fields: sahyogVivranSurfaceFieldIds(model),
   };
 
-  it('⭐ the snapshot field set is NON-EMPTY, and is EXACTLY the thirteen classified fields', () => {
+  it('⭐ the snapshot field set is NON-EMPTY, and is EXACTLY the fourteen classified fields', () => {
     // ⛔ The EXACT set, ⛔ not "length > 0": a leg that only detects additions accepts a field
     // vanishing from the render while the matrix still claims it is shown.
     // ⭐ TEN → SIXTEEN at Story 11b.3a: the four ruled Tier-1 nominee-bank fields plus their two
@@ -1387,6 +1401,11 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
       'appeal_reversal_stage',
       'close_of_cycle_framing',
       'confirmed_contribution_count',
+      // ⭐ Story 11b.3b (Task 3) — `2026-09-02-174`, a confirmed contributor's FULL NAME.
+      // ⚠ Derived from the ROW SHAPE, ⛔ not from this fixture's rows: a drive whose contributors
+      // were ALL omitted must still DECLARE the field, or the leak leg goes vacuous on exactly the
+      // drives nobody would check.
+      'contributor_name',
       // ⭐ Story 11b.3b (Task 2 unit 2) — `2026-09-02-173`, the deceased member's FULL NAME.
       // ⚠ Its VALUE is `null` on every drive today (the publication basis is fail-closed), but the
       // field id is CLASSIFIED regardless: the id set describes what this surface DECLARES, ⛔ not
@@ -1636,12 +1655,19 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
     expect(surface!.fields.every((f) => f.tier === 'public')).toBe(true);
   });
 
-  it('⭐ the surface declares `paginated: false` — ⛔ 11b.3b flips it, ⛔ nothing else may', () => {
+  it('⭐ the surface declares `paginated: true` — ⭐ 11b.3b flipped it, ⛔ nothing else may', () => {
     // ⚠ A value that MUST FLIP, and the flip is not free: it also changes what `routes.ts`'s written
     // defence and the `login-wall.spec.ts` allowlist entry must claim (D11(a) recorded controls 2 and
     // 3 as structurally N/A *because* there is no `page` and no `limit`).
+    // ⭐⭐ **FLIPPED 2026-09-15 — Story 11b.3b (Task 3, AC4). ⛔ THE PRIOR VALUE IS KEPT IN THIS
+    // COMMENT** ([[feedback_supersede_never_reinterpret]]): it asserted `false`, and the leg was
+    // written naming 11b.3b as the ⛔ ONLY story permitted to change it.
+    // ⭐ **THAT STORY IS THIS ONE**, and the flip was ⛔ NOT made alone — as the paragraph above
+    // required, `routes.ts`'s header, `sahyog-vivran-controls.ts` (ordinals 2 and 3, RESTORED) and
+    // the `login-wall.spec.ts` allowlist entry all moved in the SAME commit and all state **SEVEN**.
+    // ⛔ The leg is ⛔ NOT deleted: it still pins the value, and now it pins the one that is true.
     const surface = matrix.surfaces.find((s) => s.id === 'sahyog-vivran');
-    expect(surface!.paginated).toBe(false);
+    expect(surface!.paginated).toBe(true);
     expect(surface!.cache_policy).toBe('edge_cacheable');
     expect(surface!.search_indexing_policy).toBe('noindex');
     expect(surface!.renders).toBe(true);

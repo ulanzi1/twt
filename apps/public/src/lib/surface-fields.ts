@@ -573,6 +573,29 @@ export interface SahyogVivranRenderModel {
    */
   readonly amountRaisedInr: string;
   /**
+   * ⭐⭐ Story 11b.3b (Task 3, AC3/AC4) — THE CONFIRMED CONTRIBUTORS ON THIS PAGE, `2026-09-02-174`
+   * (Trustee Panel), at the **FULL NAME**, unconditional per `2026-09-02-175`.
+   *
+   * ⚠⛔ A CONTAINER KEY with ⛔ no tier of its own — the classified field is the ROW's `name`, mapped
+   * in {@link SAHYOG_VIVRAN_CONTRIBUTOR_FIELD_IDS}. ⭐ Same split as `nomineeAccounts`, for the same
+   * reason: folding them together would either classify an array (meaningless) or leave a Tier-1
+   * field outside the derivation.
+   *
+   * ⛔⛔ **THE PAGE MAY HOLD FEWER ROWS THAN `contributorTotal` SAYS, BY DESIGN** — RTBF erasure
+   * (`2026-08-30-169`), the erasure sentinel, an unresolvable name and a MONONYM under
+   * `shielded_name` each OMIT THE ROW after paging. ⇒ this page reads *"N confirmed"* beside FEWER
+   * than N named rows, and ⛔ ⛔ NO copy may claim the list is complete.
+   * ⛔⛔ ⛔ No placeholder row, ⛔ no "name withheld" marker and ⛔ NO OMISSION COUNT, ever: a tally of
+   * omissions is an enumeration signal over which members were erased.
+   */
+  readonly contributors: readonly SahyogVivranContributorRow[];
+  /**
+   * ⚠ The size of the CONFIRMED-CONTRIBUTOR set, already formatted — ⛔ not the rendered row count
+   * (see above) and ⛔ not `confirmedContributionCount`, which is the EVENT count from the canonical
+   * stream. ⛔ Do ⛔ not reconcile the two: they answer different questions.
+   */
+  readonly contributorTotal: string;
+  /**
    * Pool-Reality #2 framing copy. `null` in TWO cases and the page then says NOTHING: the drive is
    * still collecting, or ⛔ no expectation was ever set (zero assignees).
    * ⛔ Contains NO target, percentage or shortfall, by construction.
@@ -682,6 +705,56 @@ export const SAHYOG_VIVRAN_FIELD_IDS: FieldIdMapping<SahyogVivranRenderModel> = 
   appealDispositionCategory: 'appeal_disposition_category',
   appealReversalAt: 'appeal_reversal_at',
   nomineeAccounts: null,
+  // ⛔ Container keys with ⛔ no tier of their own — the classified field is the ROW's name, and the
+  // total is a COUNT of a set, ⛔ never a person. ⚠ `contributorTotal` is deliberately UNCLASSIFIED:
+  // it describes the collection's size, and declaring it would invite a reader to treat it as a
+  // rendered fact about someone.
+  contributors: null,
+  contributorTotal: null,
+};
+
+/**
+ * ⭐⭐ ONE CONTRIBUTOR ROW — Story 11b.3b (Task 3).
+ *
+ * ⛔⛔ **ONE FIELD, AND THE SHAPE IS THE FENCE.** ⛔ ⛔ No amount, ⛔ no rank, ⛔ no ordinal, ⛔ no
+ * position — 11b.1 **AC5** forbids leaderboards, rankings, gamification and social-performance
+ * metrics, and a per-person figure or rank is the shortest path to all four.
+ * ⛔⛔ **AND ⛔ NO ROW KEY** — `D10-rowkey`(a), RULED at `2026-09-02-177` cl.3: ⛔ not an `index`,
+ * ⛔ not a `member_id`, ⛔ not a token. Astro SSR emits static HTML with ⛔ no reconciler, so a key
+ * would serve nothing — and a per-member identifier beside a name is a PERMALINK, an enumeration
+ * primitive in its own right (11a.3, control 5).
+ * ⚠ ⛔ NOT the `nomineeAccounts` shape's `accountRank`: that is row IDENTITY on a substrate whose
+ * composite PK admits exactly `{1, 2}`. ⛔ There is no such substrate here and no such key.
+ */
+export interface SahyogVivranContributorRow {
+  /** The FULL NAME, already resolved to ONE string by the API boundary. ⛔ Never name PARTS. */
+  readonly contributorName: string;
+}
+
+/**
+ * The per-ROW mapping for the contributors — Story 11b.3b (Task 3).
+ *
+ * ⚠ Split from {@link SAHYOG_VIVRAN_FIELD_IDS} for the reason the nominee accounts' is: the
+ * container key has no tier of its own and the row attribute is the classified field.
+ */
+export const SAHYOG_VIVRAN_CONTRIBUTOR_FIELD_IDS: FieldIdMapping<SahyogVivranContributorRow> = {
+  // ⭐ Tier-1 at `public` with its OWN ruled exception (`2026-09-02-174`), declared in
+  // `public-vs-private-matrix.yaml` in the same commit as the pair. ⛔ Renaming or dropping it
+  // without the declaration makes `deriveFieldIds` throw, which is the gate working.
+  contributorName: 'contributor_name',
+};
+
+/**
+ * ⭐ THE REPRESENTATIVE CONTRIBUTOR ROW — the shape the field-id derivation reads.
+ *
+ * ⛔⛔ DERIVED FROM A SHAPE, ⛔ NOT FROM THE PAGE'S ROWS, AND THAT IS LOAD-BEARING: a drive whose
+ * contributors were ALL omitted (or one still collecting) would otherwise declare ⛔ no
+ * `contributor_name` at all, and the leak leg would go vacuous on exactly the drives nobody checks
+ * ([[feedback_gate_scope_semantic_coverage]]). ⭐ Same reason
+ * {@link SAHYOG_VIVRAN_NOMINEE_ACCOUNT_SHAPE} exists.
+ */
+const SAHYOG_VIVRAN_CONTRIBUTOR_SHAPE: SahyogVivranContributorRow = {
+  contributorName: '',
 };
 
 /**
@@ -745,5 +818,12 @@ export function sahyogVivranSurfaceFieldIds(model: SahyogVivranRenderModel): str
     SAHYOG_VIVRAN_NOMINEE_ACCOUNT_SHAPE,
     SAHYOG_VIVRAN_NOMINEE_ACCOUNT_FIELD_IDS,
   );
-  return [...new Set([...shell, ...accountIds])].sort();
+  // ⭐ Story 11b.3b (Task 3) — from the SHAPE, ⛔ never from the page's rows: an all-omitted or
+  // still-collecting drive must still DECLARE `contributor_name`, or the leak leg goes vacuous on
+  // exactly the drives nobody would check.
+  const contributorIds = deriveFieldIds(
+    SAHYOG_VIVRAN_CONTRIBUTOR_SHAPE,
+    SAHYOG_VIVRAN_CONTRIBUTOR_FIELD_IDS,
+  );
+  return [...new Set([...shell, ...accountIds, ...contributorIds])].sort();
 }

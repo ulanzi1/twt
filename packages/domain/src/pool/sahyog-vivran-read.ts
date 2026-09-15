@@ -375,6 +375,20 @@ export interface SahyogVivranEntry {
    */
   readonly deceasedNameCiphertext: string | null;
   /**
+   * ⚠ INTERNAL — the pool and cycle this drive IS, for the boundary's confirmed-contributor read
+   * (Story 11b.3b, Task 3). ⛔ **NEVER SERIALIZED**, exactly as `claims.deceased_member_id` is not:
+   * a per-entity identifier beside a list of names is a PERMALINK, and a permalink is an
+   * enumeration primitive (11a.3, control 5).
+   *
+   * ⚠⛔ **THE CONTRIBUTOR LIST IS READ AT THE BOUNDARY, ⛔ NOT HERE, AND THAT IS ⛔ NOT ARBITRARY.**
+   * Its producer is `contribution/read.ts`'s `listConfirmedContributorsForPool` — ⭐ the SHARED
+   * ordering of record ([[project_confirmed_contributor_read_is_ordered]]) — and re-implementing it
+   * in `pool/` would FORK the *"earliest LIVE confirmation"* rule that the member surface and this
+   * one must agree on. ⛔ Do ⛔ not "tidy" it in here.
+   */
+  readonly poolId: string;
+  readonly cycleId: string;
+  /**
    * ⭐ WHETHER THE DRIVE MAY BE *NAMED* — ⛔ NEVER WHETHER IT MAY *EXIST*.
    *
    * `false` ⇒ the boundary skips the decrypt entirely (⛔ zero KMS calls, and ⛔ ⛔ no decrypt without
@@ -501,6 +515,12 @@ export async function readPublicSahyogVivran(
       // ⛔ never serialized: a per-entity claim identifier on a public wire is an enumeration
       // primitive in its own right (11a.3, control 5).
       claimCaseId: pools.claimCaseId,
+      // ⚠ INTERNAL ONLY — the keys the BOUNDARY needs to read this drive's confirmed contributors
+      // (Story 11b.3b, Task 3). ⛔ Returned on the entry but ⛔ NEVER serialized: a per-entity pool or
+      // cycle identifier on a public wire is an enumeration primitive in its own right (11a.3,
+      // control 5), and the DTO's `.strict()` plus the route spec's raw-body leg both enforce it.
+      poolId: pools.poolId,
+      cycleId: pools.cycleId,
       district: DECEASED_DISTRICT(now),
       driveClosedAt: DRIVE_CLOSED_AT(now),
       // ⭐⛔ **`driveMaskingFrom: DRIVE_MASKING_FROM(now)` STOOD HERE UNTIL STORY 11b.11.** It was a
@@ -625,6 +645,9 @@ export async function readPublicSahyogVivran(
     // ciphertext's nullability: they answer different questions and the boundary needs both.
     deceasedNameCiphertext: row.deceasedNameCiphertext,
     namePublicationAuthorised: row.namePublicationAuthorised,
+    // ⚠ INTERNAL — see the interface. ⛔ Never serialized.
+    poolId: row.poolId,
+    cycleId: row.cycleId,
     fundingOutcome:
       status === 'live' || assignedCount === 0
         ? null

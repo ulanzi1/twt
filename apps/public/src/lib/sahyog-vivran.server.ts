@@ -82,6 +82,15 @@ export interface SahyogVivranFetchOptions {
    */
   driveToken: string;
   /**
+   * ⭐ Story 11b.3b (Task 3, AC4) — the contributor page, ALREADY PARSED AND BOUNDED by
+   * `parsePageParams` at the call site. ⛔ Do ⛔ not pass a raw query value through here: the caller
+   * refuses an out-of-range or unparseable request rather than clamping it, so a value reaching this
+   * function has already been checked against `PUBLIC_PAGE_SIZE_MAX` and `PUBLIC_PAGE_HORIZON`.
+   * ⚠ Omitted ⇒ the API's own defaults apply (page 1, the page-size CAP).
+   */
+  page?: number;
+  limit?: number;
+  /**
    * The visitor's address as THIS process observed it (`Astro.clientAddress`), via
    * {@link buildForwardedFor}. ⛔ NOT the inbound chain.
    *
@@ -113,6 +122,21 @@ export async function fetchSahyogVivran(
   );
   // ⛔ NO query parameters are ever added. The API's query schema is EMPTY and `.strict()`, so any
   // parameter is a 400 — which is the point (control 5: no export affordance, no onward parameter).
+  //
+  // ⚠⛔⛔ **AMENDED 2026-09-15 (Story 11b.3b, Task 3, AC4) — ⛔ THE SENTENCE ABOVE IS KEPT AND ITS
+  // REASONING IS WHAT SURVIVES** ([[feedback_supersede_never_reinterpret]]). The API's query schema
+  // is ⛔ no longer EMPTY: it takes `page` and `limit`, both `.max()`-bounded by the SHARED constants
+  // (controls 2 and 3, RESTORED). ⇒ ⭐ exactly those two cross, and ⛔ nothing else.
+  // ⭐ **THE PROPERTY IS UNCHANGED:** the schema is still `.strict()`, so `?format=csv`, `?all=1` and
+  // `?sort=amount` are still a **400** upstream, and ⛔ two BOUNDED paging parameters are ⛔ not an
+  // export affordance (FR-91). ⛔ Do ⛔ not forward the caller's raw query string here — ⭐ the page
+  // parses and re-emits exactly these two, so an unrecognised parameter can ⛔ never ride along into
+  // the upstream request or mint a fresh shared-cache key.
+  // ⛔ ⛔ Never `sort` and ⛔ never `filter`: the contributor ordering is RULED (earliest live
+  // confirmation), and a caller-chosen ordering over a list of names is a leaderboard control in the
+  // query string.
+  if (opts.page !== undefined) url.searchParams.set('page', String(opts.page));
+  if (opts.limit !== undefined) url.searchParams.set('limit', String(opts.limit));
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);

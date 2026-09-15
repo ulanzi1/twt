@@ -58,6 +58,17 @@ export interface SahyogVivranApplicableControl {
  * `page` for them to bind to. ⚠⛔ **THE ABSENCE HAS AN EXPIRY** — Story **11b.3b** adds the
  * contributor list, which makes this route PAGINATED and RESTORES BOTH. ⇒ 11b.3b adds two entries
  * HERE, in its own commit, and the length assertion in `login-wall.spec.ts` moves with them.
+ *
+ * ⭐⭐ **THE EXPIRY HAS FIRED — 2026-09-15, Story 11b.3b (Task 3, AC4). ⛔ THE PARAGRAPH ABOVE IS KEPT
+ * AS THE RECORD** ([[feedback_supersede_never_reinterpret]]). The contributor list ships, the route
+ * is PAGINATED, and **both controls are RESTORED BELOW as ordinals 2 and 3** — in the same commit as
+ * the pagination, with `login-wall.spec.ts` and `routes.ts` moved with them, exactly as the expiry
+ * required. ⇒ ⭐ the set is **SEVEN**.
+ * ⚠⛔ **SEVEN, ⛔ NOT THE "SIX" `login-wall.spec.ts` PREDICTED.** That prediction was written when the
+ * set held four; 11b.10 then added ordinal 7 (the unguessable address) without re-doing the
+ * arithmetic. ⭐ 5 + 2 = 7 — ⛔ the count is DERIVED from the list, ⛔ never carried forward as a word.
+ * ⚠ And 11b.3b **EXTENDS** what 11b.3a wrote rather than replacing it: 11b.3a restored PII-BEARING,
+ * 11b.3b restores PAGINATED. ⛔ Neither may drop the other's property.
  */
 export const SAHYOG_VIVRAN_APPLICABLE_CONTROLS: readonly SahyogVivranApplicableControl[] = [
   {
@@ -67,6 +78,29 @@ export const SAHYOG_VIVRAN_APPLICABLE_CONTROLS: readonly SahyogVivranApplicableC
     summary:
       'The named SEARCH rate-limit tier, UNMODIFIED, keyed on the forwarded visitor address. ' +
       'A real bound on an anonymous caller. ⛔ Not a tuning knob in either direction.',
+  },
+  {
+    ordinal: 2,
+    id: 'page_size_cap',
+    kind: 'control',
+    summary:
+      '⭐ RESTORED at Story 11b.3b (Task 3, AC4): `PUBLIC_SURFACE_PAGE_SIZE_CAP` (50) bounds the ' +
+      'contributor page. ⛔ A real bound on an anonymous caller — it caps how many FULL LEGAL NAMES ' +
+      'one request yields AND how many Tier-1 decrypts it costs, which are the same number here. ' +
+      '⚠ Enforced by `.max()` on the `.strict()` query schema, so an out-of-range `limit` is a 400 ' +
+      '— and Story 1.14\'s forced-pagination guard SEES that bound on the live swagger document. ' +
+      '⛔ Raising it is an FR-91 ruling, ⛔ not a performance knob.',
+  },
+  {
+    ordinal: 3,
+    id: 'deep_page_horizon',
+    kind: 'control',
+    summary:
+      '⭐ RESTORED at Story 11b.3b (Task 3, AC4): `PUBLIC_DIRECTORY_PAGE_HORIZON` (200) bounds how ' +
+      'DEEP the contributor list can be walked, closing the `?page=999999999` gap 11a.3 closed on ' +
+      'the directory. ⛔ A real bound: with the cap above, page 200 is row 10,000. ' +
+      '⚠ It also closes the companion offset-precision gap — `(page-1)*limit` stays inside the ' +
+      'safe-integer range by construction. ⛔ Raising it is an anti-enumeration ruling.',
   },
   {
     ordinal: 4,
@@ -81,9 +115,15 @@ export const SAHYOG_VIVRAN_APPLICABLE_CONTROLS: readonly SahyogVivranApplicableC
     id: 'no_detail_or_export_affordance',
     kind: 'posture',
     summary:
-      'No onward DETAIL or EXPORT affordance — no list, no sibling links, no `format`/`csv`, and an ' +
-      'EMPTY `.strict()` query schema making every query parameter a 400. ⭐ Correct and RETAINED — ' +
-      '⚠ but irrelevant to a caller who already holds the address.',
+      'No onward DETAIL or EXPORT affordance — no list, no sibling links, no `format`/`csv`. ' +
+      '⚠⛔ AMENDED at Story 11b.3b (Task 3): this read "an EMPTY `.strict()` query schema making ' +
+      'every query parameter a 400", and the schema is ⛔ no longer empty — it takes `page` and ' +
+      '`limit` (controls 2 and 3 above). ⭐ THE PROPERTY IS UNCHANGED: it is still `.strict()`, so ' +
+      '`?format=csv`, `?all=1` and `?sort=amount` are still a 400, and ⛔ two BOUNDED paging ' +
+      'parameters are ⛔ not an export affordance. ⛔ ⛔ No `sort` and ⛔ no `filter`: the contributor ' +
+      'ordering is RULED, and a caller-chosen ordering over a list of names is a leaderboard ' +
+      'control in the query string. ⭐ Correct and RETAINED — ⚠ but irrelevant to a caller who ' +
+      'already holds the address.',
   },
   {
     ordinal: 6,

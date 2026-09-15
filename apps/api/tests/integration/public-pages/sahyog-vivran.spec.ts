@@ -118,6 +118,25 @@ interface SeedSpec {
    * pass for a surface that could ⛔ never render one ([[feedback_gate_scope_semantic_coverage]]).
    */
   authorised?: boolean;
+  /**
+   * ⭐⭐ Story 11b.3b (Task 3) — REAL confirmed contributors, each a real member with a real Tier-1
+   * KYC ciphertext, confirmed IN THIS ARRAY'S ORDER.
+   *
+   * ⚠⛔ **`confirmed: N` IS ⛔ NOT A SUBSTITUTE.** That option emits `contribution.confirmed` events
+   * against `randomUUID()` member ids with ⛔ no `member_kyc_profiles` row — ⭐ perfect for the COUNT
+   * (which is what it was written for) and useless for the LIST, where every such row is OMITTED for
+   * an unresolvable name. ⇒ a contributor-list leg built on it would assert an empty page and pass
+   * for the wrong reason ([[feedback_gate_scope_semantic_coverage]]).
+   *
+   * ⭐ **ORDER IS THE POINT:** each entry is confirmed at the NEXT `event_version`, so the array
+   * order IS the ruled render order (earliest LIVE confirmation ascending). ⛔ A fixture that
+   * confirmed them in one batch could ⛔ not tell that ordering apart from `member_id` ordering.
+   *
+   * ⚠ `anonymized: true` stores the ENCRYPTED `[anonymized]` sentinel as the member's name, exactly
+   * as `anonymizeMember` leaves it — ⛔ not a deleted row and ⛔ not a null ciphertext. ⭐ That is what
+   * makes the erasure-backstop leg real: the decrypt SUCCEEDS and the sentinel would otherwise render.
+   */
+  contributors?: readonly { name: string; anonymized?: boolean }[];
 }
 
 async function seedDrive(t: TestApp, spec: SeedSpec): Promise<{ pariwarId: string }> {
@@ -261,6 +280,46 @@ async function seedDrive(t: TestApp, spec: SeedSpec): Promise<{ pariwarId: strin
     const alertStream = randomUUID();
     let version = 1;
     const confirmedEventIds: string[] = [];
+
+    // ⭐⭐ Story 11b.3b (Task 3) — REAL contributors, confirmed IN ARRAY ORDER. ⚠ Emitted BEFORE the
+    // anonymous `confirmed: N` events below so the declared order occupies the lowest event versions
+    // and is therefore the head of the ruled ordering.
+    for (const contributor of spec.contributors ?? []) {
+      const contributorMemberId = randomUUID();
+      await scopeTx.client.query(
+        `INSERT INTO members (member_id, pariwar_id, state, state_event_version)
+         VALUES ($1, $2, 'active', 1)`,
+        [contributorMemberId, pariwarId],
+      );
+      await scopeTx.tx.insert(schema.memberKycProfiles).values({
+        memberId: ids.memberId(contributorMemberId),
+        pariwarId: pid,
+        // ⭐ The SENTINEL IS ENCRYPTED, ⛔ not stored in plaintext and ⛔ not a null ciphertext —
+        // `anonymizeMember` overwrites the ciphertext IN PLACE and RETAINS the row, so the decrypt
+        // SUCCEEDS. ⛔ A fixture that nulled the column would exercise the WRONG omission arm.
+        nameCiphertext: await encryption.encryptKycField(
+          contributor.anonymized === true ? memberDomain.ANONYMIZED_SENTINEL : contributor.name,
+          pariwarId,
+          t.deps.encryption,
+        ),
+        dobCiphertext: await encryption.encryptKycField('1970-01-15', pariwarId, t.deps.encryption),
+        verificationStrength: 'aadhaar_kyc',
+        source: 'digilocker',
+      });
+      await scopeTx.client.query(
+        `INSERT INTO events_log (event_id, stream_id, event_type, payload, event_version, pariwar_id, occurred_at)
+         VALUES ($1, $2, 'contribution.confirmed', $3::jsonb, $4, $5, now() - interval '3 days')`,
+        [
+          randomUUID(),
+          alertStream,
+          JSON.stringify({ poolId, memberId: contributorMemberId }),
+          version,
+          pariwarId,
+        ],
+      );
+      version += 1;
+    }
+
     for (let i = 0; i < (spec.confirmed ?? 0); i += 1) {
       const eventId = randomUUID();
       confirmedEventIds.push(eventId);
@@ -726,6 +785,208 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
     });
   });
 
+  describe('⭐⭐ Story 11b.3b (Task 3, AC3/AC4) — THE CONFIRMED CONTRIBUTOR LIST, `2026-09-02-174`', () => {
+    it('⭐⭐ RENDERS FULL NAMES, in the RULED ORDER — ⛔ never the shielded form', async () => {
+      const t = await createTestApp();
+      try {
+        const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
+        const { pariwarId } = await seedDrive(t, {
+          canonicalIdentifier: id,
+          contributors: [
+            { name: 'Anita Verma' },
+            { name: 'Bhavesh Patel' },
+            { name: 'Chandra Iyer' },
+          ],
+        });
+
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
+        expect(res.statusCode).toBe(200);
+        const body = res.json() as { items: { name: string }[]; total: number };
+
+        // ⭐⭐ **THE FULL NAME, WHOLE** — `2026-09-02-174`, unconditional per `-175`. ⛔ NOT
+        // `Anita V.`: the SHIELDED form is what `resolvePoolIdentity` / `splitFirstNameLastInitial`
+        // would produce, and shipping it here would satisfy every other test while quietly rendering
+        // the one form the Panel did ⛔ not rule on this surface.
+        // ⭐⭐ **AND THE ORDER IS THE EARLIEST LIVE CONFIRMATION'S `event_version`, ⛔ NEVER
+        // `member_id`** — the fixture confirms them in this order at ascending versions, and the
+        // member ids are random UUIDs, so a `member_id` ordering would shuffle this array. ⚠ It is
+        // ⛔ NOT a ranking: it is the order in which support arrived.
+        expect(body.items).toEqual([
+          { name: 'Anita Verma' },
+          { name: 'Bhavesh Patel' },
+          { name: 'Chandra Iyer' },
+        ]);
+        expect(body.total).toBe(3);
+
+        // ⛔⛔ AND ⛔ NO AMOUNT, ⛔ NO RANK AND ⛔ NO ROW KEY CAME WITH THEM — 11b.1 AC5 and
+        // `D10-rowkey`(a). ⭐ Asserted over the ROWS' OWN KEYS rather than the raw body: the DRIVE
+        // legitimately carries `amountRaisedInr` (`2026-09-04-190` cl.6), so a body-wide `"amount`
+        // probe fails on the ruled figure — ⛔ a false positive that would be "fixed" by weakening
+        // the check. ⭐ The row is where the prohibition lives, so the row is where it is asserted.
+        for (const row of body.items) {
+          expect(Object.keys(row)).toEqual(['name']);
+        }
+        expect(() => PublicSahyogVivranResponse.parse(res.json())).not.toThrow();
+      } finally {
+        await teardown(t);
+      }
+    });
+
+    it('⭐⭐ AN RTBF-ERASED CONTRIBUTOR IS ABSENT ENTIRELY — ⭐ and STILL COUNTS', async () => {
+      // ⛔⛔ **THE ERASURE BACKSTOP, AND IT IS THE ⛔ ONLY SNAPSHOT-INDEPENDENT CHECK IN THE PATH**
+      // (Trap 4 / AC5; `2026-08-30-169`, `2026-08-30-170`). `anonymizeMember` overwrites
+      // `name_ciphertext` IN PLACE with an *encrypted* `[anonymized]` sentinel and RETAINS the row
+      // ⇒ ⭐ the decrypt SUCCEEDS, and without the plaintext check this page renders the literal
+      // **`[anonymized]`** where a person's name belongs, on an unauthenticated edge-cached surface.
+      // ⚠ An empty-name guard does ⛔ NOT catch it — the sentinel is a non-empty string.
+      const t = await createTestApp();
+      try {
+        const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
+        const { pariwarId } = await seedDrive(t, {
+          canonicalIdentifier: id,
+          contributors: [
+            { name: 'Anita Verma' },
+            { name: 'ERASED', anonymized: true },
+            { name: 'Chandra Iyer' },
+          ],
+        });
+
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
+        expect(res.statusCode).toBe(200);
+        const body = res.json() as { items: { name: string }[]; total: number };
+
+        // ⭐ ABSENT ENTIRELY — ⛔ no anonymized row, ⛔ no marker, ⛔ no placeholder key, and ⛔ no gap
+        // in the surviving order.
+        expect(body.items).toEqual([{ name: 'Anita Verma' }, { name: 'Chandra Iyer' }]);
+        expect(res.body).not.toContain('[anonymized]');
+        expect(res.body).not.toContain('anonymized');
+
+        // ⭐⭐ **AND THE OMITTED CONTRIBUTOR STILL COUNTS** (`-169` cl.4): `total` is THREE beside TWO
+        // rendered rows. ⛔ An aggregate that shrank with the erasure would leak the erasure by
+        // arithmetic — the omission must be invisible in the numbers, ⛔ not merely in the list.
+        expect(body.total).toBe(3);
+
+        // ⛔⛔ AND ⛔ NO OMISSION COUNT ANYWHERE — ⛔ no "1 withheld", ⛔ no tally, ⛔ no marker. A count
+        // of omissions is an enumeration signal over which members were erased.
+        for (const marker of ['withheld', 'omitted', 'redacted', 'hidden', 'removed']) {
+          expect(res.body).not.toContain(marker);
+        }
+      } finally {
+        await teardown(t);
+      }
+    });
+
+    it('⭐ PAGES, and the DECRYPT FAN-OUT IS BOUNDED BY `limit` — ⛔ not by the roster', async () => {
+      const t = await createTestApp();
+      try {
+        const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
+        const { pariwarId } = await seedDrive(t, {
+          canonicalIdentifier: id,
+          contributors: [
+            { name: 'Anita Verma' },
+            { name: 'Bhavesh Patel' },
+            { name: 'Chandra Iyer' },
+          ],
+        });
+
+        const first = await t.app.inject({
+          method: 'GET',
+          url: `${ROUTE(pariwarId, tokenFor(id))}?limit=2`,
+        });
+        const firstBody = first.json() as {
+          items: { name: string }[];
+          page: number;
+          limit: number;
+          total: number;
+        };
+        expect(firstBody.items).toEqual([{ name: 'Anita Verma' }, { name: 'Bhavesh Patel' }]);
+        expect(firstBody).toMatchObject({ page: 1, limit: 2, total: 3 });
+
+        const second = await t.app.inject({
+          method: 'GET',
+          url: `${ROUTE(pariwarId, tokenFor(id))}?limit=2&page=2`,
+        });
+        const secondBody = second.json() as { items: { name: string }[]; page: number };
+        // ⭐ THE ORDER IS STABLE ACROSS PAGES — ⛔ page 2 is the TAIL, ⛔ not a re-shuffle. "Page N is
+        // the same page N on every request" is the property offset paging needs to be honest.
+        expect(secondBody.items).toEqual([{ name: 'Chandra Iyer' }]);
+        expect(secondBody.page).toBe(2);
+
+        // ⭐ AND PAST THE END IS AN EMPTY PAGE, ⛔ not a 404 and ⛔ not a wrap-around: a 404 here would
+        // distinguish "real drive, page too far" from "no such drive", which is the oracle the
+        // opaque token exists to close.
+        const past = await t.app.inject({
+          method: 'GET',
+          url: `${ROUTE(pariwarId, tokenFor(id))}?limit=2&page=9`,
+        });
+        expect(past.statusCode).toBe(200);
+        expect((past.json() as { items: unknown[] }).items).toEqual([]);
+      } finally {
+        await teardown(t);
+      }
+    });
+
+    it('⛔ A CONTRIBUTOR WITH NO KYC PROFILE OMITS THE **ROW** — ⛔ never a blank one', async () => {
+      // ⚠⛔ **THE OMISSION UNIT IS THE ROW HERE, AND THAT IS THE INVERSE OF THE DECEASED MEMBER** —
+      // whose unresolvable name omits the NAME and keeps the PAGE. A contributor ROW exists ⛔ only
+      // to carry the name, so a nameless row carries nothing and a marker row would announce an
+      // omission. ⛔ Do ⛔ not apply one rule to both subjects.
+      // ⭐ `confirmed: 2` seeds confirmations against member ids with ⛔ no profile row — which is
+      // exactly the unresolvable case, and is why that option cannot stand in for `contributors`.
+      const t = await createTestApp();
+      try {
+        const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
+        const { pariwarId } = await seedDrive(t, {
+          canonicalIdentifier: id,
+          confirmed: 2,
+          contributors: [{ name: 'Anita Verma' }],
+        });
+
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
+        expect(res.statusCode).toBe(200);
+        const body = res.json() as { items: { name: string }[]; total: number };
+        // ⭐ ONE RENDERED ROW beside a total of THREE — the *"N confirmed beside FEWER than N named
+        // rows"* property, proven rather than described. ⛔ ⛔ No blank row, ⛔ no padding to `limit`.
+        expect(body.items).toEqual([{ name: 'Anita Verma' }]);
+        expect(body.total).toBe(3);
+        expect(() => PublicSahyogVivranResponse.parse(res.json())).not.toThrow();
+      } finally {
+        await teardown(t);
+      }
+    });
+
+    it('⭐⛔ THE CONTRIBUTOR FORM FOLLOWS THE STORED MODE TOO — ⛔ never a hard-coded full name', async () => {
+      // ⛔⛔ `2026-08-19-136` **cl.1**: *"a build in which the public name form cannot be changed
+      // without a code change FAILS this clause."* ⚠ A hard-coded full name would pass every OTHER
+      // leg in this describe — this is the only one that catches it.
+      // ⚠⛔ AND BOTH SUBJECTS RESOLVE UNDER **ONE** MODE READ: the deceased member and the
+      // contributors must ⛔ never render in different forms on one page.
+      const t = await createTestApp();
+      try {
+        const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
+        const { pariwarId } = await seedDrive(t, {
+          canonicalIdentifier: id,
+          contributors: [{ name: 'Anita Verma' }, { name: 'Meenakshi' }],
+        });
+        await setMode(t, pariwarId, 'shielded_name');
+
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
+        const body = res.json() as { items: { name: string }[]; total: number };
+        // ⭐ The SHIELDED form under a shielded Pariwar — ⛔ and the MONONYM is OMITTED, ⛔ not
+        // rendered: `resolvePublicMemberName` returns `''` for a single-token name under this mode
+        // (`2026-08-21-145` cl.3), and the boundary's `.trim() || null` drops the ROW.
+        // ⛔⛔ ⛔ NO fall-through to `firstName` — for a mononym that returns the ENTIRE stored legal
+        // name, i.e. it would publish MORE than the shielded mode was chosen to publish.
+        expect(body.items).toEqual([{ name: 'Anita V.' }]);
+        expect(res.body).not.toContain('Meenakshi');
+        // ⭐ AND THE OMITTED MONONYM STILL COUNTS — same rule as the erasure.
+        expect(body.total).toBe(2);
+      } finally {
+        await teardown(t);
+      }
+    });
+  });
+
   describe('⭐⭐ 404 COLLAPSES every "nothing to show" case — ⛔ byte-identical', () => {
     it('an UNKNOWN address → 404 with an EMPTY body', async () => {
       const t = await createTestApp();
@@ -1139,14 +1400,37 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
       }
     });
 
-    it('⛔ ANY query parameter is a 400 — `?format=csv` is a refusal, ⛔ not a no-op', async () => {
-      // ⭐ The EMPTY `.strict()` query schema is precisely why controls 2 and 3 are structurally N/A
-      // (D11(a)): there is no `page` for the horizon to bound and no `limit` for the cap to bound.
+    // ⚠⛔⛔ **AMENDED 2026-09-15 (Story 11b.3b, Task 3, AC4) — ⛔ THE PRIOR LEG IS KEPT HERE**
+    // ([[feedback_supersede_never_reinterpret]]). It read *"⛔ ANY query parameter is a 400"* and
+    // refused **`page=2`** and **`limit=50`** alongside `format=csv`, on the stated ground that *"the
+    // EMPTY `.strict()` query schema is precisely why controls 2 and 3 are structurally N/A
+    // (D11(a)): there is no `page` for the horizon to bound and no `limit` for the cap to bound"*.
+    // ⭐ **11b.3b GIVES THEM SOMETHING TO BOUND** — the contributor list (`2026-09-02-174`) — so both
+    // controls are RESTORED and both parameters are ACCEPTED, bounded. ⛔ The EXPORT half is
+    // unchanged and it is the half that mattered.
+    it('⛔ every query parameter EXCEPT the two bounded paging ones is a 400', async () => {
       const t = await createTestApp();
       try {
         const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
         const { pariwarId } = await seedDrive(t, { canonicalIdentifier: id });
-        for (const q of ['format=csv', 'page=2', 'limit=50', 'all=1', 'name=Sharma']) {
+        // ⛔⛔ `format=csv` / `all=1` — FR-91 forbids bulk export from the public side.
+        // ⛔⛔ `sort=amount` / `order=desc` — the contributor ordering is RULED (earliest live
+        // confirmation); a caller-chosen ordering over a list of names is a leaderboard control in
+        // the query string, and 11b.1 AC5 forbids ranking outright.
+        for (const q of ['format=csv', 'all=1', 'name=Sharma', 'sort=amount', 'order=desc']) {
+          const res = await t.app.inject({ method: 'GET', url: `${ROUTE(pariwarId, tokenFor(id))}?${q}` });
+          expect(res.statusCode).toBe(400);
+        }
+        // ⭐ AND THE TWO BOUNDED ONES PASS — ⛔ so the leg above is ⛔ not passing merely because
+        // `.strict()` refuses everything, which would make it vacuous now that two are permitted.
+        for (const q of ['page=1', 'limit=10']) {
+          const res = await t.app.inject({ method: 'GET', url: `${ROUTE(pariwarId, tokenFor(id))}?${q}` });
+          expect(res.statusCode).toBe(200);
+        }
+        // ⛔⛔ AND OUT OF RANGE IS A **400**, ⛔ NEVER A SILENT CLAMP — controls 2 and 3 are these two
+        // bounds, and a request trimmed to a value the caller did not ask for is a control that
+        // reports success while handing back something else.
+        for (const q of ['limit=51', 'page=201', 'page=0', 'limit=0', 'page=all', 'limit=all']) {
           const res = await t.app.inject({ method: 'GET', url: `${ROUTE(pariwarId, tokenFor(id))}?${q}` });
           expect(res.statusCode).toBe(400);
         }

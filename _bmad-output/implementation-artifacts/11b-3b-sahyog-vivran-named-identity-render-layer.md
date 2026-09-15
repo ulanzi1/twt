@@ -945,10 +945,28 @@ AC10→T0 · **AC11→T1b** (and T1b gates T2).
         wearing a forward-compatibility costume"*, this surface's own words
         ([[feedback_no_premature_package]]). ⭐ It lands with the **contributor list**, its first real
         consumer, at Task 3.
-- [ ] **Task 3 — Pagination, ordering, the anti-leaderboard fence, the control set** (AC4) — ⭐ edit
-      `sahyog-vivran-controls.ts`; amend the three `login-wall.spec.ts` assertions **by name**; the
-      count is **SEVEN**. ⭐ Full `DIRECTORY_DECRYPT_CONCURRENCY` (⛔ not the halved bound at
-      `member-pool/handlers.ts:508`).
+- [x] **Task 3 — ⭐ THE CONTRIBUTOR LIST: pagination, ordering, the anti-leaderboard fence, the
+      control set** (AC4; AC3's **contributor arm**) — ✅ **DONE 2026-09-15.**
+      ⭐ The shared producer `listConfirmedContributorsForPool` (**ordered by the earliest LIVE
+      confirmation's `event_version`**, ⛔ never `member_id`) → **PAGE FIRST, DECRYPT SECOND** →
+      bounded decrypt at the **FULL** `DIRECTORY_DECRYPT_CONCURRENCY` (⛔ not the halved bound at
+      `member-pool/handlers.ts:508`: a contributor row is ⛔ ONE decrypt) → the per-row `try/catch`
+      **INSIDE `fn`** → `resolvePublicMemberName` → `.trim() || null` → **omit the ROW**.
+      ⭐ **The control set is SEVEN** — ordinals 2 and 3 RESTORED in
+      `sahyog-vivran-controls.ts`, with `routes.ts`'s header, the matrix's `paginated` flag and
+      **four** `login-wall.spec.ts` assertions moved **BY NAME** in the same commit.
+      ⚠⛔ **SEVEN, ⛔ not the "SIX" three shipped documents predicted** — that arithmetic was written
+      when the set held FOUR and 11b.10 then added ordinal 7 without re-doing it.
+      ⭐ The wire array is named **`items`** so Story 1.14's forced-pagination guard SEES a bounded
+      collection — ⛔ the prior *"no `items` key"* instruction's premise was *"an **UNPAGINATED**
+      single-item route"*, and ⛔ renaming it `contributors` would make this route invisible to that
+      guard.
+      ⚠⛔ **AC5's ERASURE BACKSTOP WAS PULLED FORWARD INTO THIS TASK, ⛔ NOT DEFERRED TO TASK 4 —
+      STATED, ⛔ not done silently.** Shipping rows without the `ANONYMIZED_SENTINEL` plaintext check
+      would render the literal **`[anonymized]`** where a person's name belongs, on an
+      unauthenticated edge-cached page, for as long as Task 4 took. ⇒ ⭐ the check lands with the rows
+      it protects. ⛔ **Task 4 still owns the rest of AC5**: `D10-rowkey`(a)'s record, Story 8.3's
+      `keyExtractor` deferral re-affirmation, and the *"still counts"* aggregate note.
 - [ ] **Task 4 — RTBF + the erasure backstop + the row key** (AC5) — ⭐ the `ANONYMIZED_SENTINEL`
       plaintext check is ⛔ **not** optional; ⭐ the pattern is at `member-pool/handlers.ts:621` /
       `:1047` / `:1236`; ⭐ import the constant, ⛔ never re-type the literal.
@@ -1176,7 +1194,42 @@ failed on the FIRST try. ⇒ ⭐ **a DB-gated spec is ⛔ NOT covered by the gre
   asserted `Rajesh K.`; `splitFirstNameLastInitial` takes the **LAST** token's initial, so it is
   `Rajesh S.`. ⭐ Corrected against what the function DOES, ⛔ not what a three-token name looks like
   it should do, and the reason is recorded at the leg.
-- ⛔ **Tasks 3-8 remain OPEN.** ⚠ AC9 is **PARTLY** discharged — ⭐ **three** of its five inverted
+- ⭐ **Task 3 (AC4; AC3's contributor arm)** — the confirmed contributor list, end to end.
+  ⭐ **THE PRODUCER IS THE SHARED ONE** (`listConfirmedContributorsForPool`), so the RULED ordering —
+  the **earliest LIVE confirmation's `event_version`**, ⛔ never `member_id` — is ⛔ not re-implemented
+  and cannot fork from the member surface ([[project_confirmed_contributor_read_is_ordered]]).
+  ⭐ **PAGE FIRST, DECRYPT SECOND** — the whole anti-fan-out property: slicing before the map bounds
+  the Tier-1 decrypts to `limit` (≤ 50) instead of to the pool roster. ⭐ The **FULL**
+  `DIRECTORY_DECRYPT_CONCURRENCY`, ⛔ not the halved bound — that halving exists for a surface with
+  TWO decrypts per row, and a contributor row here is ONE.
+  ⭐ **THE CATCH IS INSIDE `fn`** — `mapWithConcurrency` propagates a rejection and stops every
+  worker, so one bad row would otherwise take the whole page down.
+  ⭐ **THE OMISSION UNIT IS THE ROW** (the inverse of the deceased member's), and the ordering
+  survives it because `mapWithConcurrency` writes at the INPUT index, ⛔ never completion order.
+  ⛔⛔ ⛔ No amount, ⛔ no rank, ⛔ no row key — `.strict()` over a single `name` makes all three a
+  PARSE ERROR rather than a convention, and the row's key set is asserted at three layers.
+- ⭐ **THE CONTROL SET IS SEVEN, AND THE RESTORATION WAS THE POINT.** Ordinals 2 and 3 were recorded
+  as *"structurally N/A"* **with an explicit expiry naming this story**; the expiry fired, and
+  `sahyog-vivran-controls.ts`, `routes.ts`'s header, the matrix's `paginated` flag and **four**
+  `login-wall.spec.ts` assertions all moved **BY NAME** in one commit.
+  ⚠⛔ **SEVEN, ⛔ NOT THE "SIX" THREE SHIPPED DOCUMENTS PREDICTED** — that arithmetic was written when
+  the set held FOUR, and 11b.10 added ordinal 7 without re-doing it. ⭐ The count is DERIVED from the
+  list, ⛔ never carried forward as a word — which is the defect those documents record having had.
+  ⭐ The absence legs (`.not.toContain(2)` / `(3)`) were **INVERTED, ⛔ not deleted**: they existed so
+  the restoration *"cannot be forgotten silently"*, and a gapless `[1..7]` assertion was added.
+- ⭐ **`items`, ⛔ NOT `contributors`, AND THE OLD INSTRUCTION'S OWN REASONING IS WHY.** The contract
+  forbade an `items` key because Story 1.14's forced-pagination guard would then see *"an
+  **UNPAGINATED** single-item route"* as an unbounded collection. ⭐ The route is PAGINATED now with
+  both bounds declared ⇒ the guard becomes an ASSET, and ⛔ naming the array `contributors` would make
+  this route INVISIBLE to it — the same mistake in the other direction.
+- ⚠⛔⛔ **AC5's ERASURE BACKSTOP WAS PULLED FORWARD INTO TASK 3 — ⛔ RECORDED, ⛔ not done silently.**
+  The story sequences the `ANONYMIZED_SENTINEL` check into **Task 4**. ⛔ Shipping the rows without it
+  renders the literal **`[anonymized]`** where a person's name belongs, on an unauthenticated
+  edge-cached page, for as long as Task 4 takes — `anonymizeMember` overwrites the ciphertext IN
+  PLACE and RETAINS the row, so the decrypt SUCCEEDS and an empty-name guard does ⛔ not catch it.
+  ⇒ ⭐ the check lands with the rows it protects, with its own leg proving the erased contributor is
+  **absent entirely AND still counts** (`-169` cl.4). ⛔ **Task 4 still owns the rest of AC5.**
+- ⛔ **Tasks 4-8 remain OPEN.** ⚠ AC9 is **PARTLY** discharged — ⭐ **three** of its five inverted
   tests plus **both** negative controls are now amended BY NAME (the render layer's rupee fence at
   unit 1; the contracts person leg, the `member-drive-detail-field-floor` exclusion (b) and the
   render test's UN-RULED-person leg at unit 2; and the render test's own negative control
@@ -1194,6 +1247,23 @@ failed on the FIRST try. ⇒ ⭐ **a DB-gated spec is ⛔ NOT covered by the gre
 - `packages/ui/src/contribution-list/view-model.ts` — stale *"form is UNRULED"* doc-block amended
 - `_bmad-output/implementation-artifacts/deferred-work.md` — amount-raised item amended
 - `_bmad-output/planning-artifacts/ux-design-specification.md` — `:1334`/`:1335` amended
+- **Task 3 (the contributor list):** `packages/contracts/src/public-pages/sahyog-vivran.ts`
+  (`PublicSahyogVivranContributor`; the query gains bounded `page`/`limit`; the response gains
+  `items`/`page`/`limit`/`total`) · `packages/domain/src/pool/sahyog-vivran-read.ts` (`poolId` +
+  `cycleId`, INTERNAL) · `apps/api/src/modules/public-pages/handlers.ts` (the paged, bounded,
+  per-row-guarded read; `mode` hoisted to once-per-request) ·
+  `apps/api/src/modules/public-pages/sahyog-vivran-controls.ts` (ordinals 2 and 3 RESTORED;
+  control 5's summary amended) · `apps/api/src/modules/public-pages/routes.ts` (header) ·
+  `packages/contracts/public-pages/public-vs-private-matrix.yaml` (`paginated: true`) ·
+  `apps/public/src/lib/surface-fields.ts` · `apps/public/src/lib/sahyog-vivran-render.ts` ·
+  `apps/public/src/lib/sahyog-vivran.server.ts` ·
+  `apps/public/src/pages/sahyog-vivran/[driveToken].astro` ·
+  `packages/i18n/locales/{en,hi}/sahyog-vivran.json` (`pagination.*` + its `$comment`) ·
+  `apps/api/tests/integration/login-wall.spec.ts` (four assertions) ·
+  `apps/api/tests/integration/public-pages/sahyog-vivran.spec.ts` (the `contributors` fixture + five
+  new legs) · `packages/contracts/tests/public-pages-sahyog-vivran.test.ts` ·
+  `apps/public/tests/sahyog-vivran-render.test.ts` ·
+  `apps/public/tests/integration/public-pages/scrape-test.spec.ts`
 - **Task 2 unit 1 (the `₹₹` repair):** `packages/i18n/locales/{en,hi}/sahyog-vivran.json`
   (the literal ₹ dropped from `value.amount_raised`, + a `$comment.amount_raised` recording why) ·
   `apps/public/tests/sahyog-vivran-copy.test.ts` (the real-`t()` regression leg) ·

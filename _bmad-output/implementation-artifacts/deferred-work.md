@@ -8592,6 +8592,34 @@ violation.
   defect in D. **Trigger:** `11b-3b`'s Task 0 annotation, which owes the back-reference
   ([[feedback_circular_deferral_between_sibling_stories]]).
   [`packages/contracts/src/public-pages/sahyog-drive.ts`]
+  ⭐⭐ **✅ CLOSED 2026-09-15 — THE TRIGGER FIRED AND BOTH HALVES LANDED.** `11b-3b`'s **Task 0**
+  carried the back-reference (its **AC8**), and [`#decision-2026-09-15-218`](../../.decision-log.md#decision-2026-09-15-218)
+  **cl.1** **ANSWERED** the open question the divergence was about: a `closed`/`settled` drive **PAGE**
+  renders ⛔ **no** completion percentage. ⇒ ⭐ **the two surfaces now differ BY RULING** —
+  `2026-09-04-189` **cl.2(b)** for the **INDEX**, `-218` **cl.1** for the **PAGE** — ⛔ not by an
+  unexplained contradiction, and ⛔ the record is no longer one-sided.
+  ⚠⛔ **`-218` cl.3 keeps ONE half open, deliberately:** whether a **`live`** drive page may show a
+  percentage is ⛔ **NOT** ruled and ⛔ must not auto-widen from cl.1. ⛔ It is ⛔ **not** filed here —
+  it is an **Open follow-up on `-218` itself**, unrouted, blocking ⛔ nothing.
+
+- **(c) The Sahyog Vivran DRIVE-PAGE read's `fundingOutcome` guard never took the 2026-09-08
+  non-positive-`fixed_amount` hardening its INDEX twin did.** ⚠ Observed at Story `11b-3b`'s **v2.1**
+  validate pass (2026-09-15); ⛔ **observed and ROUTED, ⛔ not scheduled and ⛔ not built**
+  ([[feedback_gap_analysis_observational]]).
+  `packages/domain/src/pool/public-read.ts` guards `assignedCount === 0 || r.fixedAmount <= 0` — the
+  second disjunct added as a Review finding because *"`expectedTotal` would be `assignedCount × 0 = 0`,
+  and `0 >= 0` hands back a vacuous `fully_funded` for a drive that set no per-member figure."*
+  ⛔ `packages/domain/src/pool/sahyog-vivran-read.ts:505` still guards only
+  `status === 'live' || assignedCount === 0`. ⇒ ⚠ a Pariwar with a non-positive `pools.fixed_amount`
+  publishes a **vacuous `fully_funded`** on the drive page while the index correctly stays silent.
+  ⚠⛔ **REACHABILITY IS ⛔ NOT ESTABLISHED** ([[feedback_trace_reachability_before_escalating]]):
+  `pools.fixed_amount` has ⛔ no DB positivity CHECK (migration 0115), ⛔ but ⛔ no creation path has been
+  traced that writes a non-positive value. ⇒ ⛔ **do ⛔ not escalate on the type alone.**
+  ⛔ **Deliberately OUT of `11b-3b`'s scope** — its **AC8** routes it rather than fixing it, because a
+  silent one-line change to a sibling guard inside a named-identity story is exactly the shape that
+  ships unreviewed. **Trigger:** any story touching `sahyog-vivran-read.ts`'s `fundingOutcome`, OR a
+  DB positivity CHECK landing on `pools.fixed_amount`.
+  [`packages/domain/src/pool/sahyog-vivran-read.ts`]
 
 - **(b) `amountRaisedInr` has ⛔ no matrix field id of its own.** `SAHYOG_DRIVE_ROW_FIELD_IDS`
   (`apps/public/src/lib/surface-fields.ts`) gained five ids for Story D; ⛔ **none names the rupee

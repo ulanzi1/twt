@@ -911,22 +911,27 @@ AC10→T0 · **AC11→T1b** (and T1b gates T2).
       act is caught **BY SHAPE** (`isAmountDerivation`). ⭐ Four artefacts amended **by name**.
       ⚠⛔ **AC11(a) is ⛔ NOT part of this task** — it lands with **Task 2** (ordering correction above).
 
-- [ ] **Task 2 — `@twt/ui` + the Astro render layer** (AC1, AC3, AC3b) — ✅ `D-percentage` **RULED**;
-      ⛔ still **after Task 1b** (the gate narrowing).
+- [~] **Task 2 — ⭐ THE AMOUNT SHIPS; the NAME half is the next unit** (AC3b done; AC1/AC3 partial)
+      ✅ **UNIT 1 of 2 DONE 2026-09-15 — the RUPEE FIGURE, end to end.** Domain binding (clamped,
+      hoisted above the ternary, used twice) → `SahyogVivranEntry.amountRaisedInr` → the wire DTO →
+      the API handler → the matrix declaration → the Astro render.
+      ⚠⛔ **SCOPE STATED, ⛔ NOT SILENTLY NARROWED:** the **contributor LIST** stays in **Task 3**,
+      where **AC4** owns its pagination, ordering, bounded decrypt and control-set changes — ⛔ shipping
+      rows without those is an unbounded unauthenticated decrypt fan-out. ⇒ AC3's per-row `try/catch`
+      and its **contributor** omission arm land with Task 3.
+      ⛔ **STILL OPEN in Task 2:** the **deceased member name** (SQL select + `NAME_PUBLICATION_AUTHORISED`
+      + decrypt + `resolvePublicMemberName` + the `.trim() || null` omission arm).
   - [ ] ⚠⛔ **`-218` cl.4:** ⛔ ⛔ no target / expected-total / roster-size companion to the amount.
-  - [ ] ⭐ **AC11(a):** if Task 2 adds a NEW file under `apps/public/src/lib` or
-        `apps/public/src/pages/sahyog-vivran`, enrol it in `SCAN_FILES` **in this same commit**.
-        ⚠ Verified no-op for the files that already exist; ⛔ the scope safeguard fails the run if not.
-  - [ ] ⭐ Bind `const deliveredTotal = Math.max(0, confirmedContributionCount * row.fixedAmount)`
-        **above** the `fundingOutcome` ternary; use it **twice**; wire field **`amountRaisedInr`**.
-  - [ ] ⭐ Amend `sahyog-vivran-read.ts:496-498`'s anti-widening fence to **`expectedTotal` only**.
-  - [ ] ⭐ Amend `sahyog-vivran.ts:56-58`. ⛔ Neither factor crosses, under any name.
-  - [ ] ⛔⛔ **⛔ Do ⛔ not feed `resolvePublicMemberName`'s output through the `contribution-list`
-        presenter's `displayName`** — its input type has ⛔ no full-name arm, and ⛔ **never** call
-        `splitFirstNameLastInitial` (that ships the SHIELDED form). ⭐ Render one resolved string.
-  - [ ] ⭐ Omission **per subject**: contributor ⇒ omit the **ROW**; deceased ⇒ omit the **NAME**, keep
-        the page. ⭐ Test with `.trim() || null`, ⛔ **never** `=== ''`.
-  - [ ] ⭐ Per-row `try/catch` **INSIDE** the `mapWithConcurrency` callback.
+        ✅ **ASSERTED** — the render fence now scans for `rosterSize` / `fixedAmount` / `expectedTotal`
+        / `deliveredTotal` / `shortfall` / `percent` / `target` / an `"of ₹"` framing.
+  - [ ] ⭐ **AC11(a):** ⛔ **NO new file was added** — the render layer edited only files already in
+        `SCAN_FILES`. ⇒ a verified no-op, and the gate's scope safeguard is green.
+  - [ ] ⚠⛔ **`@twt/ui` IS ⛔ NOT ADDED YET, AND THAT IS DELIBERATE.** AC3 orders the dependency, ⛔ but
+        the AMOUNT does ⛔ not use the presenter (Trap 2c: it takes `rosterSize` + `fixedAmount` as
+        INPUTS, which `-204` cl.3/cl.8 reserve). ⇒ adding it now would be a dependency with ⛔ no
+        consumer — *"a field with no render is the vacuous-leg defect wearing a forward-compatibility
+        costume"*, this surface's own words ([[feedback_no_premature_package]]). ⭐ It lands with the
+        **contributor list**, its first real consumer, at Task 3.
 - [ ] **Task 3 — Pagination, ordering, the anti-leaderboard fence, the control set** (AC4) — ⭐ edit
       `sahyog-vivran-controls.ts`; amend the three `login-wall.spec.ts` assertions **by name**; the
       count is **SEVEN**. ⭐ Full `DIRECTORY_DECRYPT_CONCURRENCY` (⛔ not the halved bound at
@@ -1072,7 +1077,17 @@ Claude Opus 5 (`claude-opus-5`) — Task 0 (governance) and Task 1b (AC11 b/c/d/
   control, **re-planted** onto `donation_id`, a UX-spec column with ⛔ no substrate anywhere, so
   ⛔ no future story can declare it out from under the control.
   ⚠⛔ **`escalation_count` UNCHANGED at 1** — ⭐ FOUND in a shipped test's own reasoning, ⛔ not ruled.
-- ⛔ **Tasks 2-8 remain OPEN.** ⚠ AC9 is **PARTLY** discharged (the two negative controls); its other
+- ⭐ **Task 2, unit 1 of 2 (AC3b)** — the ruled rupee figure, end to end. ⭐ The domain binding is
+  **clamped and warn-logged**, hoisted above the `fundingOutcome` ternary and **used twice**, so
+  `amountRaisedInr` and `classifyCycleOutcome`'s `deliveredTotal` are provably ONE figure.
+  ⭐ The `:496-498` anti-widening fence is **NARROWED to `expectedTotal` only**, ⛔ not lifted — लक्ष्य
+  stays quarantined. ⭐ Four stale artefacts amended **by name** (the DTO's *"11b.3b will need
+  `rosterSize` and `fixedAmount`"* invitation **withdrawn**, the Astro header's *"⛔ NO RUPEE FIGURE"*
+  **discharged**, and two shipped fences **narrowed** rather than deleted).
+  ⚠⛔ **A non-obvious interaction, recorded:** Indian digit grouping is what keeps a rupee figure
+  structurally unable to trip the anti-account-number control (`/\d{6,}/`). ⛔ A future trip there is
+  ⛔ never fixed by weakening that control.
+- ⛔ **Tasks 2 (name half), 3-8 remain OPEN.** ⚠ AC9 is **PARTLY** discharged (the two negative controls); its other
   four legs depend on Task 2's render.
 
 ### File List

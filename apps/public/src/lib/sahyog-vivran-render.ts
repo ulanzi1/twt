@@ -111,6 +111,14 @@ export interface SahyogVivranLabels {
   readonly dispositionReconsideration: string;
   /** `{{count}} confirmed` — the count already interpolated by `t()`. */
   readonly contributionsCount: (count: number) => string;
+  /**
+   * ⭐ Story 11b.3b (AC3b) — the ruled public rupee figure, ALREADY FORMATTED by the caller.
+   * ⚠⛔ The amount is formatted with `formatCurrency(amount, 'en')` — money renders **LATIN** even in
+   * the Hindi UI (amendment A2), and `currency.ts` says so in terms. ⛔ Do ⛔ not pass the locale.
+   * ⛔⛔ It is a FIGURE, ⛔ never a comparison (`2026-09-15-218` cl.4): ⛔ no target, ⛔ no percentage,
+   * ⛔ no shortfall and ⛔ no "of X" framing may join it.
+   */
+  readonly amountRaised: (amountInr: number) => string;
   /** The OUTAGE state — ⛔ deliberately distinct copy from the 404 the page returns instead. */
   readonly outageTitle: string;
   readonly outageBody: string;
@@ -366,6 +374,13 @@ export function buildSahyogVivranView(
       // ⚠ Interpolated THROUGH `t()`, ⛔ never by local string surgery — the 11a.2 `{{max}}` vs
       // `{max}` defect threw on EVERY request and no test caught it, because every test bypassed `t()`.
       confirmedContributionCount: labels.contributionsCount(drive.confirmedContributionCount),
+      // ⭐⭐ Story 11b.3b (AC3b) — the RULED rupee figure, taken from the wire and ⛔ NEVER re-derived.
+      // ⛔⛔ ⛔ No `× fixedAmount` in this app, under any spelling: `D1(c)` is REFUSED and
+      // `scripts/sahyog-vivran-financial-truth` fails the build on the product's SHAPE.
+      // ⚠⛔ A FIGURE, ⛔ never a comparison — ⛔ it is ⛔ not placed beside a target, a percentage or a
+      // shortfall, and there is ⛔ NO completion percentage on a `closed`/`settled` drive
+      // (`2026-09-15-218` cl.1).
+      amountRaisedInr: labels.amountRaised(drive.amountRaisedInr),
       closeOfCycleFraming: framingFor(drive.fundingOutcome, labels),
       appealReversalStage: reversal === null ? null : labels.appealStage(reversal.reversedAtStage),
       appealDispositionCategory:
@@ -419,6 +434,7 @@ export function buildSahyogVivranOutageView(): SahyogVivranView {
       driveClosedAt: null,
       district: null,
       confirmedContributionCount: '',
+      amountRaisedInr: '',
       closeOfCycleFraming: null,
       appealReversalStage: null,
       appealDispositionCategory: null,

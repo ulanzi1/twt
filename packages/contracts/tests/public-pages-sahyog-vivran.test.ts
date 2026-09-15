@@ -26,6 +26,7 @@ const ENTRY = {
   closedAt: '2026-09-01T18:45:00.000Z',
   district: 'Lucknow',
   confirmedContributionCount: 137,
+  amountRaisedInr: 137000,
   fundingOutcome: 'fully_funded' as const,
   appealReversal: null,
   // ⭐ Story 11b.3a. ⚠ `[]` in the BASE fixture on purpose — a claim whose bank details were never
@@ -117,13 +118,24 @@ describe('⭐⭐ AC4 — the shape REJECTS every prohibited key', () => {
 });
 
 describe('⭐⭐ the shape carries NO rupee figure and NO person (D1(b), the D6(b) split)', () => {
-  it('⛔ rejects an amount field, under every name it might arrive as', () => {
-    // `amountRaisedInr = confirmedCount × fixedAmount` is SHIPPED and ruled canonical, and D1(b)
-    // ruled it CONSUMED — ⛔ but behind the `@twt/ui` fence this story does not lift, so it lands at
-    // 11b.3b. ⛔ D1(c) — re-deriving the multiplication — is REFUSED.
-    for (const key of ['amountRaisedInr', 'amountRaised', 'totalAmount', 'fixedAmount', 'rosterSize']) {
+  // ⚠⛔⛔ **NARROWED 2026-09-15 (Story 11b.3b, AC3b / AC9) — ⛔ THE FENCE IS ⛔ NOT DELETED AND ITS
+  // PRIOR FORM IS KEPT HERE** ([[feedback_supersede_never_reinterpret]]). It rejected **five** keys,
+  // `amountRaisedInr` among them, on the ground that the amount *"lands at 11b.3b"*.
+  // ⭐ **11b.3b IS HERE**, and `2026-09-04-190` **cl.6** rules `amountRaisedInr` the public figure ⇒
+  // it is now DECLARED on this shape and its own leg moves to the happy path. ⛔ The OTHER FOUR keys
+  // stay rejected, and they are the ones that mattered: `fixedAmount` and `rosterSize` are लक्ष्य's
+  // FACTORS (`2026-09-07-204` cl.2-3, cl.8 closed the recovery channel *"BY CONSTRUCTION"*), and
+  // `amountRaised` / `totalAmount` are spellings a second producer would arrive under.
+  it('⛔ rejects an amount field under every name EXCEPT the one ruling declared it', () => {
+    for (const key of ['amountRaised', 'totalAmount', 'fixedAmount', 'rosterSize', 'expectedTotal']) {
       expect(PublicSahyogVivranEntry.safeParse({ ...ENTRY, [key]: 1000 }).success).toBe(false);
     }
+    // ⭐ AND THE RULED ONE PARSES — ⛔ so the leg above is ⛔ not passing merely because `.strict()`
+    // rejects everything unknown, which would make it vacuous the day a real amount landed.
+    expect(PublicSahyogVivranEntry.safeParse({ ...ENTRY, amountRaisedInr: 1000 }).success).toBe(true);
+    // ⛔⛔ AND IT IS `.nonnegative()` — the clamp's second line of defence. A negative `fixed_amount`
+    // (⛔ no DB CHECK on `pools.fixed_amount`) would otherwise 500 the whole page.
+    expect(PublicSahyogVivranEntry.safeParse({ ...ENTRY, amountRaisedInr: -1 }).success).toBe(false);
   });
 
   it('⛔ rejects any person-bearing field', () => {

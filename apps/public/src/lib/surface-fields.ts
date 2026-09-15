@@ -553,6 +553,12 @@ export interface SahyogVivranRenderModel {
   /** Confirmed contributions, already formatted. ⛔ A count, ⛔ never a sum and ⛔ never a score. */
   readonly confirmedContributionCount: string;
   /**
+   * ⭐ Story 11b.3b (AC3b) — the ruled public rupee figure, ALREADY FORMATTED (`₹ 1,45,000`).
+   * ⛔⛔ A FIGURE, ⛔ never a comparison (`2026-09-15-218` cl.4): ⛔ no target, ⛔ no expected total,
+   * ⛔ no roster size and ⛔ no completion percentage may render beside it.
+   */
+  readonly amountRaisedInr: string;
+  /**
    * Pool-Reality #2 framing copy. `null` in TWO cases and the page then says NOTHING: the drive is
    * still collecting, or ⛔ no expectation was ever set (zero assignees).
    * ⛔ Contains NO target, percentage or shortfall, by construction.
@@ -653,6 +659,7 @@ export const SAHYOG_VIVRAN_FIELD_IDS: FieldIdMapping<SahyogVivranRenderModel> = 
   driveClosedAt: 'drive_closed_at',
   district: 'district',
   confirmedContributionCount: 'confirmed_contribution_count',
+  amountRaisedInr: 'amount_raised_inr',
   closeOfCycleFraming: 'close_of_cycle_framing',
   appealReversalStage: 'appeal_reversal_stage',
   appealDispositionCategory: 'appeal_disposition_category',

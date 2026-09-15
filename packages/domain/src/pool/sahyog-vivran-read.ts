@@ -338,6 +338,26 @@ export interface SahyogVivranEntry {
    */
   readonly confirmedContributionCount: number;
   /**
+   * ⭐⭐ THE RULED PUBLIC RUPEE FIGURE — Story 11b.3b (AC3b), `2026-09-04-190` **cl.6**, with
+   * `2026-09-04-189` **cl.5** recording the rupee boundary as NEWLY CROSSED.
+   *
+   * ⭐ `confirmedContributionCount × pools.fixed_amount`, computed ⛔ ONCE, here, and used TWICE — it
+   * is the SAME binding `classifyCycleOutcome` receives as its `deliveredTotal`. ⛔ A second
+   * `× fixedAmount` anywhere is the defect: Story 11b.3's **D1(c)** is REFUSED in terms, and the
+   * `render_path_multiplication` rule in `scripts/sahyog-vivran-financial-truth` mechanizes it.
+   *
+   * ⚠⛔ **CLAMPED AT 0 FOR A NON-POSITIVE `fixed_amount`.** `pools.fixed_amount` has ⛔ no DB
+   * positivity CHECK (migration 0115); a negative value makes this negative, which the contract's
+   * `.nonnegative()` REJECTS ⇒ a **500 for the whole page**. ⭐ The index hardened this first
+   * (`public-read.ts`, Review finding 2026-09-08) and this mirrors it rather than re-deriving it.
+   *
+   * ⛔⛔ **IT IS A FIGURE, ⛔ NEVER A COMPARISON** (`2026-09-15-218` cl.4). ⛔ Do ⛔ not pair it with,
+   * divide it by, or caption it against a target, an expected total or a roster size — their ratio
+   * IS the percentage `-218` cl.1 refuses and the channel `2026-09-07-204` cl.8 closed
+   * *"BY CONSTRUCTION"*. ⛔ Do ⛔ not pass it to `framingFor` or any copy resolver.
+   */
+  readonly amountRaisedInr: number;
+  /**
    * Pool-Reality #2, as an OPAQUE ENUM. ⭐ The target is QUARANTINED by construction: the totals are
    * compared inside this module and ⛔ only this enum leaves it, so ⛔ no expected-total, percentage,
    * shortfall or comparison figure can reach any render model (AC3).
@@ -481,6 +501,25 @@ export async function readPublicSahyogVivran(
   // comment would rank this as a disclosure hazard when it is an availability one. ⛔ Never re-derive
   // it from `row.driveClosedAt` below.
   const driveClosedAt = coerceDriveInstant(row.driveClosedAt);
+
+  // ⭐⭐ HOISTED, ⛔ NOT DUPLICATED — Story 11b.3b (AC3b, Task 2). This exact product was already
+  // computed INLINE as `classifyCycleOutcome`'s `deliveredTotal`; the ruled public amount
+  // (`2026-09-04-190` cl.6) is the SAME figure, so it is lifted to a binding and USED TWICE.
+  // ⛔⛔ **A SECOND `× fixedAmount` ANYWHERE WOULD BE THE DEFECT** — Story 11b.3's **D1(c)** is
+  // REFUSED in terms, and `scripts/sahyog-vivran-financial-truth`'s `render_path_multiplication`
+  // rule mechanizes it ([[project_amount_raised_canonical_producer]]).
+  // ⚠⛔ **CLAMPED AT 0 FOR A NON-POSITIVE `fixed_amount`**, mirroring the index's own hardening
+  // (Review finding, 2026-09-08): `pools.fixed_amount` has ⛔ no DB positivity CHECK (migration
+  // 0115), and a negative here makes `amountRaisedInr` negative, which the contract's
+  // `.nonnegative()` rejects ⇒ a 500 for the whole page. ⭐ The clamp is logged, ⛔ not silent: a
+  // non-positive fixed amount is a DATA fault worth seeing, and silence would hide it.
+  const rawDeliveredTotal = confirmedContributionCount * row.fixedAmount;
+  if (rawDeliveredTotal < 0) {
+    console.warn(
+      `[sahyog-vivran-read] negative deliveredTotal clamped to 0 (pool=${row.poolCanonicalIdentifier}, fixedAmount=${String(row.fixedAmount)}, confirmedCount=${String(confirmedContributionCount)})`,
+    );
+  }
+  const deliveredTotal = Math.max(0, rawDeliveredTotal);
   // ⭐⛔ `const driveMaskingFrom = coerceDriveInstant(row.driveMaskingFrom)` STOOD HERE. It was kept
   // SEPARATE from `driveClosedAt` on purpose — the two fragments answer different questions and
   // collapsing them re-introduces the un-masking defect. ⇒ removed with its select at 11b.11; ⛔ if
@@ -496,17 +535,30 @@ export async function readPublicSahyogVivran(
     // ⭐ THE TARGET DIES ON THIS LINE. Both totals are whole INR — the unit `classifyCycleOutcome`
     // documents — and ⛔ only the opaque enum is returned. ⛔ Do not widen `SahyogVivranEntry` to
     // carry either of them, under any name.
+    // ⚠⛔⛔ **NARROWED 2026-09-15 (Story 11b.3b, AC3b) — ⛔ THE SENTENCE ABOVE IS KEPT AND IS NOW
+    // SCOPED TO `expectedTotal`. ⛔ It is ⛔ NOT rewritten** ([[feedback_supersede_never_reinterpret]]).
+    //   · ⛔ **`expectedTotal` STILL MAY ⛔ NOT BE CARRIED, under any name.** It IS लक्ष्य
+    //     (`2026-09-07-204` cl.2), reserved to a `super_admin` reveal by cl.3, and cl.8 closed the
+    //     arithmetic-recovery channel *"BY CONSTRUCTION"*. ⇒ the quarantine this comment protects is
+    //     UNCHANGED and still the whole point of the enum.
+    //   · ⭐ **`deliveredTotal` IS NOW CARRIED, as `amountRaisedInr`** — `2026-09-04-190` cl.6 ruled it
+    //     the public rupee figure and `-189` cl.5 recorded the boundary as newly crossed. ⛔ That is a
+    //     RULING, ⛔ not a relaxation of this fence: one of the two totals left, the other did not,
+    //     and ⛔ their RATIO — the percentage — is refused by `2026-09-15-218` cl.1.
     // ⭐⛔ AND BOTH `null` ARMS ARE LOAD-BEARING — see `fundingOutcome`'s own doc-block.
     // ⚠⛔ `'live'` HERE IS THE **PUBLIC WIRE TOKEN**, ⛔ not `pools.current_state` — and since Story
     // 11b.12 the two words coincide (D1(b)). ⛔ Get this literal wrong and a STILL-COLLECTING drive
     // publishes a funding verdict mid-window, which is the exact thing `classifyCycleOutcome`
     // exists to quarantine. ⚠ It read `'collecting'` before the rename.
+    amountRaisedInr: deliveredTotal,
     fundingOutcome:
       status === 'live' || assignedCount === 0
         ? null
         : classifyCycleOutcome({
             expectedTotal: assignedCount * row.fixedAmount,
-            deliveredTotal: confirmedContributionCount * row.fixedAmount,
+            // ⭐⭐ THE SAME BINDING, ⛔ NOT A SECOND MULTIPLICATION — the identity that makes
+            // `amountRaisedInr` above and this operand provably one figure (Story 11b.3b, AC3b).
+            deliveredTotal,
           }),
     appealReversal: await readAppealReversal(db, pariwarId, row.claimCaseId, now),
     // ⭐ STORY 11b.3a, ⭐⛔ NARROWED BY 11b.11. ⚠ It no longer takes `now`, `driveMaskingFrom` or the

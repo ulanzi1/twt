@@ -148,6 +148,8 @@ export interface SahyogVivranLabels {
    * ⛔⛔ AND THERE IS ⛔ NO "show all" AND ⛔ NO PAGE-SIZE LABEL, EVER — FR-91 forbids bulk export from
    * the public side, and a control offering a bigger page is that affordance in a pagination costume.
    */
+  /** The paging `<nav>`'s OWN accessible name — ⛔ never the section heading (family 13, AC7). */
+  readonly paginationLabel: string;
   readonly paginationPrevious: string;
   readonly paginationNext: string;
   /** The OUTAGE state — ⛔ deliberately distinct copy from the 404 the page returns instead. */

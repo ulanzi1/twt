@@ -12,6 +12,7 @@
   "label.contributions": "पुष्ट योगदान",
   "label.status": "स्थिति",
   "$comment.pagination": "⭐⭐ STORY 11b.3b (Task 3, AC4) — ORDINARY UI LABELS MINTED AT THEIR OWN RENDER SITE, ⛔ NOT ratified copy and ⛔ NOT trust copy. ⭐ The precedent is `label.branch` (11b.17) and `upi_intent.vpa_label` (8-17); the non-render-site rule governs the Panel\u0027s RATIFIED message block ONLY, which is consumed from `sahyog-shared` BY NAME. ⚠⛔ DELIBERATELY ⛔ NOT resolved from `sahyog-drive`\u0027s identical pair: that is the INDEX\u0027s namespace, and reaching into another SURFACE\u0027s copy couples two pages\u0027 wording so that re-wording one silently re-words the other. ⭐ Cross-namespace reuse in this file is for SHARED vocabularies (`sahyog-shared`\u0027s stage words, `contribution`\u0027s `contributor_list.*`) — ⛔ `sahyog-drive` is ⛔ not one. ⛔⛔ AND THERE IS ⛔ NO \"show all\" AND ⛔ NO PAGE-SIZE LABEL HERE, EVER: FR-91 forbids bulk export from the public side, and a control offering a bigger page is the export affordance wearing a pagination costume.",
+  "pagination.label": "पृष्ठ",
   "pagination.previous": "पिछला",
   "pagination.next": "अगला",
   "value.district_unknown": "दर्ज नहीं है",

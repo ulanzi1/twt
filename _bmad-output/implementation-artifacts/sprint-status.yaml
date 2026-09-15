@@ -315,6 +315,67 @@
 #   `:1335` assigns the work to `11b-3`, which is `done`. ⇒ ⭐ **a scope carve-out is a HAZARD, ⛔ never
 #   a discharge.**
 #   ⛔ `11b-3b` stays **ready-for-dev**. ⛔ No other row is touched.)
+# last_updated: 2026-09-15b (⭐⭐ **STORY `11b-20` VALIDATED FOR THE FIRST TIME (`bmad-create-story
+#   validate`) — REWRITTEN AGAINST HEAD as v0.3. ⛔ NO CODE. ⛔ ZERO ROWS MOVE.** `11b-20` stays
+#   `ready-for-dev` and stays **BLOCKED**; ⭐ what changed is that its blockers are now stated
+#   correctly.
+#   ⭐ **BASELINE RE-PINNED `738bb3ea` → `7d12a4ce`** — the old pin is ⛔ NOT an ancestor of HEAD
+#   (it survives only on `governance/11b-17-validate-and-panel-routing`); the twin is
+#   **tree-identical** (`e0ddf957…`) ⇒ the CONTENT baseline was sound and only the SHA was orphaned.
+#   ⚠ This is exactly the reactive re-pin `deferred-work.md`'s *"baseline pins going stale"* item
+#   named this story for. ⚠⛔ **AND A SOUND PIN IS ⛔ NOT A FRESH BASELINE** — **42** files under
+#   `packages`+`apps` moved since it, and ⛔ no claim in v0.1/v0.2 had ever been re-derived; all were
+#   re-derived at HEAD in this pass ([[feedback_story_validate_footguns]]).
+#   ⛔⛔ **EIGHT BLOCKING FINDINGS, in the order they would have bitten:**
+#   **(1)** ⭐⭐ **`#decision-2026-09-13-216` cl.1 is TRUSTEE-RATIFIED, POST-DATES v0.2, AND NAMES THIS
+#   STORY** in its Consequence 2 (*"inherits this ruling BY NAME"*): the message block renders
+#   **NOTHING** on a ₹0 drive on **every** stage, and the ₹0 check must run **BEFORE** the
+#   name-variant check or a ₹0 unconsented drive renders the block `-216` silences. ⛔ v0.2 mentioned
+#   it **nowhere** ⇒ new **Trap 6** + new **AC7**.
+#   **(2)** ⛔⛔ **AC5/Task 4 WERE UNSHIPPABLE UNDER THIS STORY'S OWN PREFLIGHT.** They ordered
+#   *"consume `packages/ui/src/pool-progress/presenter.ts`"*; its ⛔ only export
+#   (`derivePoolProgressCardViewModel`) requires **`rosterSize` + `fixedAmount`** — the two keys
+#   `-204` **cl.8** forbids on this wire and the story's own **Trap 3** bans. ⇒ the amount is
+#   **`deliveredTotal`, RENDERED** as `11b-3b` AC3b delivers it; the *"no second multiplication"*
+#   CONCLUSION survives, its INSTRUMENT does ⛔ not.
+#   **(3)** ⛔ **`11b-19` IS `done`** — v0.2 called it *"`ready-for-dev` — ⛔ not built"* at **four**
+#   sites (Preflight table, AC0, AC2, Task 0). All **eight** `message_block.*` keys ship in **both**
+#   locales ⇒ half the STOP is DISCHARGED, and a missing key is now a **genuine STOP**.
+#   **(4)** ⛔ **THE *"amount half is unblocked by the merge alone"* SPLIT IS FALSE AND IS STRUCK** —
+#   `{amount}` appears in **exactly two** strings, both headline variants; `.full` needs the
+#   clause-gated name and `.no_family` is Trap 1 ⇒ ⭐ the two halves arrive TOGETHER or ⛔ not at all.
+#   **(5)** ⭐⭐ **THE SHIPPED MEMBER SELECTOR DOES THE FORBIDDEN THING** —
+#   `selectMessageBlockHeadline` maps `deceasedMemberName === null` → `no_family`: ⭐ correct on the
+#   MEMBER axis, ⚠ **WRONG on the PUBLIC axis**, where null means *"counsel has ⛔ not pinned the
+#   clause"*. ⇒ Trap 1 now names it — mirror the SHAPE, ⛔ never the null-mapping.
+#   **(6)** ⚠⛔ **THE FENCE `packages/i18n/tests/sahyog-shared-dark-copy.test.ts` WAS NAMED ⛔ NOWHERE**
+#   — it WILL turn red the moment this story renders (its `AUTHORISED` list names the member site
+#   only and says so in terms; its `RESOLVER` regex is hardened against dynamic keys), and its remedy
+#   is written **inside** it (***NARROW it***, ⛔ never append to make a build green) ⇒ **AC8**.
+#   **(7)** ⛔ **TRAP 4 RESOLVED, ⛔ not deferred** — the page **already** renders District as
+#   *"Not recorded"* (⚠ which **AC4 forbids**) and **already** carries the ratified label
+#   *"Nominee Name"* (`-190` cl.2) against the table's *"Nominee full name"* ⇒ ⛔ **two ratified
+#   labels and two opposite absent-value rules on ONE page**; Task 2 is a **governance** question,
+#   ⛔ not a layout choice, and ⛔ neither label may be overwritten
+#   ([[feedback_supersede_never_reinterpret]]).
+#   **(8)** ⭐ **THREE `deferred-work.md` ITEMS TRIGGER ON THIS STORY BY NAME** and were carried
+#   ⛔ nowhere — the concatenated-key gap the fence ⛔ cannot see (**AC2**), the vacuous
+#   district-drop assertion (**AC4**), and **Q1**'s session guard (**Task 6** — ⭐ traced: it ⛔ does
+#   ⛔ not bite, this is an unauthenticated page inheriting ⛔ no session guard).
+#   ⚠ **ALSO:** four stale cites struck and **every numeric pointer into a newest-first file REMOVED**
+#   rather than re-derived (⭐ so this very ledger prepend rots ⛔ nothing in it) · **glyph register
+#   DECLARED** after v0.2 inverted its own Preflight headline (*"⛔ THE AUTHORITY IS SETTLED"*) and its
+#   own commit-ordering rule (*"⛔ one `governance:` commit"*) — ⭐ and the checklist was **RE-RUN
+#   against this pass's own rewrite**, which caught **~20 further inversions it had just introduced**
+#   ([[feedback_story_validate_footguns]] #22) · `D5-subject` re-stated as an **OPEN item's ruling**,
+#   ⛔ not a decision entry ([[feedback_closure_language_precision]]) · `-209` cl.3's retired sentence
+#   fenced.
+#   ⭐ **RE-VERIFIED AND SOUND:** the clause `niy.public-disclosure.member-information` is still
+#   **INERT** (⭐ ONE repo site, its own definition — ⛔ no migration, ⛔ no seed, ⛔ no writer, OVERDUE
+#   since 2026-09-07) · `-214` **Consequence 3** is the correct commissioning authority · `epics.md`
+#   has ⛔ **NO** `Story 11b.20` section, so **AC0 is genuine** · ⛔ **NO duplicate rival story** owns
+#   this work ([[feedback_story_validate_footguns]] #10).
+#   ⛔ Rows unchanged: `11b-20` / `11b-3b` `ready-for-dev`; `11b-19` / `11b-17` / `8-17` `done`.)
 # last_updated: 2026-09-15a (⚠⛔ **BASELINE-PIN SWEEP ACROSS THE THREE STORIES THE 2026-09-09
 #   `11b-15` BLOCK FLAGGED. ⛔ NO CODE. ⛔ ZERO ROWS MOVE. ⛔ NOTHING RE-ARGUED.** Each pin was checked
 #   LIVE against `origin/main` after `git fetch` ([[feedback_git_fetch_before_remote_reasoning]]),

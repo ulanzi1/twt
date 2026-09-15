@@ -375,6 +375,17 @@ export const PublicSahyogVivranEntry = z
      * ruling three days older — whose **AC3b** consumes
      * `derivePoolProgressCardViewModel(...).amountRaisedInr` **UNCHANGED** and lifts the `@twt/ui`
      * fence THERE. ⇒ ⭐ 11b.14 amends this comment and renders ⛔ **nothing** here.
+     * ⚠⛔ **AMENDED 2026-09-15 (Story `11b-3b`, AC11(c)) — ⛔ THE MECHANISM ABOVE IS SUPERSEDED; the
+     * sentence is KEPT as the record and ⛔ not rewritten** ([[feedback_supersede_never_reinterpret]]).
+     * ⛔ **11b.3b does ⛔ NOT consume the `@twt/ui` presenter here, and ⛔ does not lift that fence for
+     * the amount.** ⭐ The presenter takes **`rosterSize` and `fixedAmount` as INPUTS**, and
+     * `2026-09-07-204` **cl.3** and **cl.8** reserve that pair to a `super_admin` reveal ⇒ consuming it on
+     * a PUBLIC surface would put **both factors** on this wire, which `:60-61` forbids *"in any field,
+     * under any name"*. ⇒ ⭐ the amount is taken **SERVER-SIDE** from the domain read's own
+     * `deliveredTotal` and published as **`amountRaisedInr`** (`2026-09-04-190` **cl.6**, with
+     * `-189` **cl.5** recording the rupee boundary as NEWLY CROSSED).
+     * ⭐ **`D1(c)` is UNCHANGED and still REFUSED** — the arithmetic happens exactly ONCE, in the
+     * domain read; ⛔ nothing is re-derived in `apps/public`.
      * ⛔⛔ **AND ⛔ DO ⛔ NOT COMPUTE IT LOCALLY WHEN THAT STORY LANDS** — `D1(c)` is REFUSED in code
      * at four `apps/public` sites: *"a second multiplication **anywhere in this app** is the
      * defect"* ([[project_amount_raised_canonical_producer]]).

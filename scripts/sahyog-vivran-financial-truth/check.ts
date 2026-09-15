@@ -21,6 +21,23 @@
 // amount comes from the SHIPPED presenter rather than a local multiplication. ⛔ Deleting the rule
 // outright would discard D1(c)'s refusal, which survives 11b.3b unchanged.
 //
+// ⭐⭐ **AMENDED 2026-09-15 (Story 11b.3b, AC11) — ⛔ THE PARAGRAPH ABOVE IS KEPT AS THE RECORD AND IS
+// NOW PARTLY SUPERSEDED. ⛔ It is ⛔ not rewritten** ([[feedback_supersede_never_reinterpret]]).
+//   · ⭐ **DONE, and by the THIRD route, ⛔ neither of the two above:** rule (3) is **NARROWED** — the
+//     TARGET and its factors stay banned by NAME, the RULED `amountRaisedInr` may cross, and the D1(c)
+//     act is caught **BY SHAPE** (`isAmountDerivation` in `lib.ts`). ⛔ `renderPath` was ⛔ NOT flipped
+//     to `false` on the DTO: that would leave the whole file unscanned for every operand at once.
+//   · ⚠⛔ **AND *"comes from the SHIPPED presenter"* IS ⛔ NOT WHAT 11b.3b DOES** — ⛔ do ⛔ not
+//     re-point the rule at the presenter. `@twt/ui`'s `pool-progress` presenter takes `rosterSize` and
+//     `fixedAmount` as INPUTS, and `2026-09-07-204` cl.3/cl.8 reserve that pair ⇒ consuming it on a
+//     PUBLIC surface would put both factors on the wire. ⭐ The amount is therefore taken **server-side**
+//     from the domain read's own `deliveredTotal`, published as `amountRaisedInr` (`2026-09-04-190`
+//     cl.6). ⭐ D1(c) is unchanged: the arithmetic still happens exactly ONCE, in the domain.
+//   · ⚠ **SCOPE (AC11(a)) IS ⛔ NOT DISCHARGED HERE.** 11b.3b's render layer edits files that are
+//     ALREADY on this list; ⛔ if it adds a NEW one under `apps/public/src/lib` or
+//     `apps/public/src/pages/sahyog-vivran`, that file joins `SCAN_FILES` **in the same commit** —
+//     the scope safeguard below fails the run otherwise.
+//
 // ⚠ THE TEETH ARE PROVEN BY KNOWN-BAD FIXTURES in `lib.test.ts` — a planted `contribution.utr-attested`
 // read, a planted attestation import, and a planted local multiplication — plus the revert-sanity run
 // recorded in the story's Dev Agent Record. ⛔ A green scan over new files proves nothing.
@@ -196,7 +213,7 @@ function main(): void {
   if (findings.length === 0) {
     console.log('  ✓ the read path names ONLY canonical event types');
     console.log('  ✓ no attestation-derived accessor is imported');
-    console.log('  ✓ no amount operand appears on the render path (D1(c) holds)\n');
+    console.log('  ✓ the TARGET stays off the render path and the rupee figure is ⛔ not re-derived (D1(c) holds)\n');
     console.log('✓ sahyog-vivran-financial-truth gate passed');
     console.log(
       '  ⚠ SYNTACTIC, per-file — ⛔ no call-graph analysis. A prohibited read placed in a THIRD\n' +

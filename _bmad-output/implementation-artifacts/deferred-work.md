@@ -663,6 +663,17 @@ recorded here rather than left for a future reader to re-derive._
   this public page shows a count while the member app shows an amount for the same pool. ⭐ That is
   **ORDERING**, ⛔ not a ruling, and it is ⛔ **NOT** a second instance of the D7 inversion.
   **→ Story 11b.3b. Trigger: 11b.3 merged.** ⛔ Not closed.
+  ⚠⛔ **AMENDED 2026-09-15 (Story `11b-3b`, AC11(c)) — ⭐ THE TRIGGER HAS FIRED and the MECHANISM above
+  is SUPERSEDED. ⛔ The text is KEPT, ⛔ not rewritten** ([[feedback_supersede_never_reinterpret]]).
+  ⭐ `11b-3` is **`done`** ⇒ the trigger fired. ⛔ **But 11b.3b does ⛔ NOT "add the dependency" for the
+  amount and does ⛔ not consume the `@twt/ui` presenter for it:** that presenter takes **`rosterSize`
+  and `fixedAmount` as INPUTS**, and `2026-09-07-204` **cl.3**/**cl.8** reserve that pair ⇒ consuming it
+  on a PUBLIC surface puts both factors on the wire. ⇒ ⭐ the amount is taken **SERVER-SIDE** from the
+  domain read's own `deliveredTotal`, published as **`amountRaisedInr`** (`2026-09-04-190` **cl.6**).
+  ⭐ **D1(c) is UNCHANGED and still REFUSED**, and the `render_path_multiplication` rule named above is
+  ⛔ **not** deleted — it is **NARROWED** at 11b.3b's **AC11(b)** to catch the local re-derivation **BY
+  SHAPE** while letting the ruled field's NAME cross. ⚠ Still **⛔ NOT CLOSED** — it closes when
+  11b.3b's Task 2 ships the field.
 
 - **⭐⛔ THE NOMINEE BANK PUBLIC PRESENTATION + THE PER-PARIWAR MASKING SCHEDULE.**
   `2026-08-28-160` cl.10 ruled nominee bank details **publicly displayable during an active campaign**

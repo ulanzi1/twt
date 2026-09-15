@@ -853,7 +853,11 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
 
         const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
         expect(res.statusCode).toBe(200);
-        const body = res.json() as { items: { name: string }[]; total: number };
+        const body = res.json() as {
+          items: { name: string }[];
+          total: number;
+          drive: { confirmedContributionCount: number; amountRaisedInr: number };
+        };
 
         // ⭐ ABSENT ENTIRELY — ⛔ no anonymized row, ⛔ no marker, ⛔ no placeholder key, and ⛔ no gap
         // in the surviving order.
@@ -861,10 +865,19 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
         expect(res.body).not.toContain('[anonymized]');
         expect(res.body).not.toContain('anonymized');
 
-        // ⭐⭐ **AND THE OMITTED CONTRIBUTOR STILL COUNTS** (`-169` cl.4): `total` is THREE beside TWO
-        // rendered rows. ⛔ An aggregate that shrank with the erasure would leak the erasure by
-        // arithmetic — the omission must be invisible in the numbers, ⛔ not merely in the list.
+        // ⭐⭐ **AND THE OMITTED CONTRIBUTOR STILL COUNTS** (`2026-08-30-169` cl.4): `total` is THREE
+        // beside TWO rendered rows. ⛔ An aggregate that shrank with the erasure would leak the
+        // erasure by arithmetic — the omission must be invisible in the NUMBERS, ⛔ not merely in the
+        // list.
         expect(body.total).toBe(3);
+        // ⛔⛔ **AND IT IS *EVERY* AGGREGATE, ⛔ NOT JUST THE ONE BESIDE THE LIST.** cl.4 says the
+        // omitted contributor *"still counts toward every aggregate"*, so the drive's own canonical
+        // EVENT count and the ruled RUPEE FIGURE must both be blind to the erasure too. ⚠ They are
+        // computed from `contribution.confirmed` events, which RTBF does ⛔ not delete — ⭐ asserted
+        // rather than assumed, because a future "tidy" that filtered erased members out of the count
+        // would leak the erasure through arithmetic while every list assertion above stayed green.
+        expect(body.drive.confirmedContributionCount).toBe(3);
+        expect(body.drive.amountRaisedInr).toBe(300);
 
         // ⛔⛔ AND ⛔ NO OMISSION COUNT ANYWHERE — ⛔ no "1 withheld", ⛔ no tally, ⛔ no marker. A count
         // of omissions is an enumeration signal over which members were erased.

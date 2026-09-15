@@ -967,9 +967,25 @@ AC10→T0 · **AC11→T1b** (and T1b gates T2).
       unauthenticated edge-cached page, for as long as Task 4 took. ⇒ ⭐ the check lands with the rows
       it protects. ⛔ **Task 4 still owns the rest of AC5**: `D10-rowkey`(a)'s record, Story 8.3's
       `keyExtractor` deferral re-affirmation, and the *"still counts"* aggregate note.
-- [ ] **Task 4 — RTBF + the erasure backstop + the row key** (AC5) — ⭐ the `ANONYMIZED_SENTINEL`
-      plaintext check is ⛔ **not** optional; ⭐ the pattern is at `member-pool/handlers.ts:621` /
-      `:1047` / `:1236`; ⭐ import the constant, ⛔ never re-type the literal.
+- [x] **Task 4 — RTBF + the erasure backstop + the row key** (AC5) — ✅ **DONE 2026-09-15**, in TWO
+      places, and the split is stated rather than left invisible.
+      ✅ **AT TASK 3, with the rows they protect** (⛔ deliberately ⛔ not held back — the gap would have
+      rendered the literal `[anonymized]` publicly): the `ANONYMIZED_SENTINEL` plaintext check
+      (constant **IMPORTED** from `@twt/domain`, ⛔ never re-typed) · **absent entirely AND still
+      counts** · ⛔ **no** per-row lifecycle re-check (`-170`) · ⛔ **no** row key (`D10-rowkey`(a)).
+      ✅ **AT TASK 4 (this commit):** ⭐ **`-177` cl.3's TRIGGER RE-POINTING IS RECORDED IN
+      `deferred-work.md` FOR THE FIRST TIME.** ⚠⛔ **It was RULED on 2026-09-02 and had ⛔ NEVER reached
+      that file** — the word *"virtualized"* appeared in ⛔ no entry there. ⇒ the 8.3 entry still
+      carried *"reused for the Epic 11b **public render**"*, which **THIS STORY IS**, so a reviewer
+      would have read the trigger as FIRED and unactioned. ⭐ It has ⛔ **not** fired: ⛔ not virtualized
+      (Astro SSR) and ⛔ not multi-pool.
+      ⭐ **The `-169` cl.4 aggregate leg was WIDENED** — *"every aggregate"* now means `total` **and**
+      `confirmedContributionCount` **and** `amountRaisedInr`, all asserted blind to the erasure.
+      ⭐ **The edge-cache residual is STATED** at the sentinel and routed (`-172` ends the guarantee AT
+      THE WIRE; `s-maxage=300` keeps an erased row warm for ≤5 min). ⛔ ⛔ Not re-derived as new.
+      ⚠⛔ **TWO LINE CITES WERE STALE AND ARE RE-DERIVED, ⛔ not patched into the entries above:**
+      AC5's own `MemberDriveList.tsx:347` is live at **`:363`** (⭐ AC5 warned it might have moved), and
+      the 8.3 `keyExtractor` is at **`:275-277`**, ⛔ not the `:254-256` the 11b.2b block recorded.
 - [ ] **Task 5 — The buildable column inventory** (AC6, AC11) — annotate at the **canonical section**
       (`:1311-1335`), cited by its heading title; ⭐ cross-reference the **four** restatement anchors;
       ⭐ amend `:1334`'s stale *"UNRULED"* and add `:1335`'s forward pointer off `11b-3`.
@@ -1229,7 +1245,27 @@ failed on the FIRST try. ⇒ ⭐ **a DB-gated spec is ⛔ NOT covered by the gre
   PLACE and RETAINS the row, so the decrypt SUCCEEDS and an empty-name guard does ⛔ not catch it.
   ⇒ ⭐ the check lands with the rows it protects, with its own leg proving the erased contributor is
   **absent entirely AND still counts** (`-169` cl.4). ⛔ **Task 4 still owns the rest of AC5.**
-- ⛔ **Tasks 4-8 remain OPEN.** ⚠ AC9 is **PARTLY** discharged — ⭐ **three** of its five inverted
+- ⭐ **Task 4 (AC5)** — ⭐ **the act was a RECORD, and it was overdue by thirteen days.**
+  `#decision-2026-09-02-177` **cl.3** re-pointed the Story 8.3 `keyExtractor` trigger from *"reused
+  for the Epic 11b public render"* to *"the first VIRTUALIZED render of a multi-pool contributor
+  list"* — and said in terms that 11b.3b's AC required the re-pointing be explicit and cite its
+  ruling. ⚠⛔ **THE RULING EXISTED; THE RECORD DID ⛔ NOT.** `deferred-work.md` still carried the OLD
+  trigger, and *"virtualized"* appeared in ⛔ no entry in that file.
+  ⇒ ⛔⛔ **THE STAKE IS ⛔ NOT TIDINESS: THIS STORY *IS* THE EPIC 11b PUBLIC RENDER**, so the un-recorded
+  entry read as *"trigger fired, nobody acted"* the moment this merged. ⭐ It has ⛔ not fired — ⛔ not
+  virtualized (Astro SSR has ⛔ no reconciler and ⛔ no key at all) and ⛔ not multi-pool (ONE drive's
+  roster, the scale the deferral's own ground calls fine).
+  ⭐ **AND THIS STORY MAKES THE BLOCKER *MORE* TRUE, ⛔ not less:** *"the PII-shielded shape carries no
+  stable per-member identifier"* — the public row carries **EXACTLY ONE FIELD**, `.strict()`-enforced.
+  ⭐ **11b.2b's re-affirmation block is SUPERSEDED ON ITS FORWARD-LOOKING HALF, ⛔ kept verbatim:** its
+  *"Story 11b.3 is the public host and the real re-trigger, and it is `backlog`"* is doubly false —
+  `11b-3` is `done` and ⛔ did ⛔ not build the render (the D6(b) split moved it here), and `-177` cl.3
+  moved the trigger **off the public render entirely**. ⭐ Its backward-looking half STANDS.
+  ⭐ **11b.15's stable-key FlashList is RECORDED so `D10-rowkey`(a) is ⛔ not misread** as *"this repo
+  never keys FlashLists"*: `keyExtractor={(item) => item.publicToken}` is keyed **PER-DRIVE** on an
+  address that surface already publishes — ⛔ not a precedent for a per-CONTRIBUTOR key, because the
+  contributor list has ⛔ no such identifier to reach for, which is the blocker itself.
+- ⛔ **Tasks 5-8 remain OPEN.** ⚠ AC9 is **PARTLY** discharged — ⭐ **three** of its five inverted
   tests plus **both** negative controls are now amended BY NAME (the render layer's rupee fence at
   unit 1; the contracts person leg, the `member-drive-detail-field-floor` exclusion (b) and the
   render test's UN-RULED-person leg at unit 2; and the render test's own negative control
@@ -1247,6 +1283,12 @@ failed on the FIRST try. ⇒ ⭐ **a DB-gated spec is ⛔ NOT covered by the gre
 - `packages/ui/src/contribution-list/view-model.ts` — stale *"form is UNRULED"* doc-block amended
 - `_bmad-output/implementation-artifacts/deferred-work.md` — amount-raised item amended
 - `_bmad-output/planning-artifacts/ux-design-specification.md` — `:1334`/`:1335` amended
+- **Task 4 (AC5):** `_bmad-output/implementation-artifacts/deferred-work.md` (the `-177` cl.3
+  re-pointing recorded; the 11b.2b block superseded on its forward half; two stale cites re-derived;
+  the edge-cache residual routed) · `apps/api/src/modules/public-pages/handlers.ts` (the `-172`
+  end-at-the-wire residual stated at the sentinel) ·
+  `apps/api/tests/integration/public-pages/sahyog-vivran.spec.ts` (the `-169` cl.4 aggregate leg
+  widened to `confirmedContributionCount` and `amountRaisedInr`)
 - **Task 3 (the contributor list):** `packages/contracts/src/public-pages/sahyog-vivran.ts`
   (`PublicSahyogVivranContributor`; the query gains bounded `page`/`limit`; the response gains
   `items`/`page`/`limit`/`total`) · `packages/domain/src/pool/sahyog-vivran-read.ts` (`poolId` +

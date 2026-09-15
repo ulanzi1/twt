@@ -994,6 +994,16 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
               // under READ COMMITTED the state read and the ciphertext read take DIFFERENT snapshots,
               // so an RTBF landing between them is decrypted anyway. ⭐ The window is closed at the
               // PLAINTEXT instead, which is snapshot-independent and costs nothing.
+              // ⚠⛔⛔ **AND THE GUARANTEE ENDS AT THE WIRE — `2026-08-30-172`, STATED HERE BECAUSE THIS
+              // IS WHERE A READER WOULD CONCLUDE OTHERWISE.** Omitting the row stops the ORIGIN from
+              // emitting it; it does ⛔ not reach into the edge. This surface is `edge_cacheable` at
+              // `s-maxage=300`, so an erased contributor **keeps being served from every warm PoP for
+              // up to five minutes** after this line starts dropping them.
+              // ⭐ ACCEPTED, and it is the SAME cost `/sahyog` and the per-Pariwar kill switch already
+              // carry — ⛔ not a new exposure and ⛔ not this story's to close (routed in
+              // `deferred-work.md`). ⛔⛔ ⛔ Do ⛔ not "fix" it by making this surface
+              // `private, no-store`: that discards the edge for a public transparency page and was
+              // already REJECTED at 11a.3. ⛔ And ⛔ do ⛔ not re-derive it as a fresh finding.
               if (storedName === memberDomain.ANONYMIZED_SENTINEL) {
                 request.log.warn(
                   'sahyog-vivran: erasure sentinel reached the decrypt — omitting the ROW',

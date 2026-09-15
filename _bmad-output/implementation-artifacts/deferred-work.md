@@ -4,6 +4,89 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Recorded from: implementation of 11b-3b-sahyog-vivran-named-identity-render-layer — Task 4 (AC5), 2026-09-15
+
+⭐⭐ **THE STORY 8.3 `keyExtractor` DEFERRAL — RE-AFFIRMED **OPEN**, AND `-177` cl.3's RE-POINTING IS
+RECORDED HERE FOR THE FIRST TIME.** ⛔ Nothing above is edited: a ratified record is superseded, ⛔ never
+re-read ([[feedback_supersede_never_reinterpret]]).
+
+⚠⛔⛔ **WHY THIS RECORD IS URGENT RATHER THAN TIDY: THE ENTRY'S OWN TRIGGER READS AS *FIRED* BY THIS
+STORY'S MERGE.** The original 8.3 entry says **"Re-trigger:** if this list ever needs to scale beyond
+a single pool's roster (e.g. reused for the **Epic 11b public render**)". ⭐ **11b.3b IS the Epic 11b
+public render** — the confirmed contributor list ships here — so a reviewer reading only that entry
+would conclude the trigger fired and nobody acted. ⛔ It did ⛔ not fire, and the reason is a RULING.
+
+⭐ **[`#decision-2026-09-02-177` cl.3 (`D10(a)`)] MOVED THE TRIGGER, EXPLICITLY:** from *"reused for
+the Epic 11b public render"* **to *"the first VIRTUALIZED render of a multi-pool contributor list."***
+⭐ That entry says in terms that 11b.3b's AC required the re-pointing be explicit and cite its ruling,
+and that *"this is that ruling"*. ⚠⛔ **IT WAS RULED ON 2026-09-02 AND HAD ⛔ NEVER REACHED THIS FILE** —
+the word *"virtualized"* appears in ⛔ no other entry here. ⇒ ⭐ the ruling existed and the record did
+⛔ not, which is the shape [[feedback_governance_commits_precede_implementation]] exists to prevent.
+
+⛔⛔ **⛔ NEITHER HALF OF THE NEW TRIGGER IS MET BY THIS STORY, AND ⛔ BOTH ARE STRUCTURAL:**
+- ⛔ **⛔ NOT VIRTUALIZED.** This surface is **Astro SSR** — static HTML, ⛔ no list virtualization,
+  ⛔ no reconciler, ⛔ no re-render. ⇒ there is ⛔ nothing for a row key to be stable FOR, which is
+  `D10(a)`'s own ground for minting none.
+- ⛔ **⛔ NOT MULTI-POOL.** The list is ONE drive's confirmed contributors — the single-pool roster the
+  deferral's own ground already calls fine (*"dozens, not the ~16k Sahyog Vivran scale"*).
+
+⭐ **AND ITS RECORDED BLOCKER IS STILL TRUE, VERBATIM:** *"the PII-shielded shape carries no stable
+per-member identifier."* 11b.2a's **D5** vacated the `rowKey` that would have supplied one, `D10(a)`
+mints none, and **11b.3b's public contributor row carries EXACTLY ONE FIELD (`name`)** — ⛔ no id,
+⛔ no rank, ⛔ no index, enforced by `.strict()` at the contract. ⇒ ⭐ this story makes the blocker
+**MORE** true, ⛔ not less. ⛔ **NOT DISCHARGED** ([[feedback_closure_language_precision]]).
+
+⚠⛔ **AND THE 11b.2b RE-AFFIRMATION BLOCK BELOW IS NOW SUPERSEDED ON ITS FORWARD-LOOKING HALF — ⛔ KEPT
+VERBATIM, ⛔ not edited.** It reads *"**Story 11b.3 is the public host and the real re-trigger**, and it
+is `backlog` with no story file yet."* ⛔ **Doubly false at HEAD:** (1) `11b-3` is **`done`** and
+⛔ did ⛔ not build the contributor render — the D6(b) three-way split moved it to **`11b-3b`**; and
+(2) `-177` cl.3 moved the trigger **off *"the public render"* entirely**, so ⛔ no public host is the
+re-trigger any more. ⭐ Its backward-looking half — the blocker, and 11b.2b not being the consumer —
+**STANDS**.
+
+⭐⭐ **LINE CITES RE-DERIVED LIVE AT `9236d585`, ⛔ RECORDED HERE AND ⛔ NOT PATCHED INTO THE ENTRIES
+ABOVE** (a moved line number is ⛔ not a changed decision):
+- The 8.3 `keyExtractor` — entry says `PoolContributorList.tsx:124-126`; the 11b.2b block corrected it
+  to `:254-256`; ⭐ **live it is `:275-277`**, and it still reads
+  `` `${item.firstName}-${item.lastInitial}-${index}` `` ⇒ ⭐ **`index` is still in the key**; the
+  defect the deferral describes is **unchanged**.
+- ⚠⛔ **11b.3b's own AC5 cites `MemberDriveList.tsx:347` and that is STALE — ⭐ live it is
+  `apps/mobile/components/drive-list/MemberDriveList.tsx:363`.** ⭐ AC5 warned its own cite might have
+  moved and told the dev to re-confirm before quoting; ⭐ it had, and this is the re-derived value.
+
+⭐⭐ **RECORDED SO `D10-rowkey`(a) IS ⛔ NOT MISREAD AS *"THIS REPO NEVER KEYS FlashLists"*:** Story
+11b.15 ships a **STABLE-KEY** FlashList — `keyExtractor={(item: MemberDriveListEntry) =>
+item.publicToken}` (`MemberDriveList.tsx:363`). ⚠⛔ It is keyed **PER-DRIVE**, ⛔ not per-contributor,
+and `publicToken` is the drive's own opaque public ADDRESS — a stable identifier that surface already
+publishes. ⇒ ⭐ it is ⛔ **not** a counter-example to `D10(a)` and ⛔ **not** a precedent for minting a
+per-CONTRIBUTOR key: the contributor list has no such identifier to reach for, which is the whole
+blocker. ⛔ Do ⛔ not cite `:363` as *"we key lists, so key this one."*
+
+⚠⛔⛔ **THE ERASURE'S EDGE-CACHE RESIDUAL — STATED, ⛔ NOT RE-DERIVED AS NEW.** `2026-08-30-172` ends the
+RTBF guarantee **AT THE WIRE**. This surface is `edge_cacheable` at `s-maxage=300`
+(`apps/public/src/pages/sahyog-vivran/[driveToken].astro:238` — ⚠ the story's Trap 4 cites `:196`,
+⛔ stale), so an erasure **keeps being served from every warm PoP for up to five minutes** after the
+origin stops emitting the row. ⭐ Accepted, and it is the SAME cost `/sahyog` and the kill switch
+already carry — ⛔ it is ⛔ not a new exposure and ⛔ not this story's to close. ⛔ Do ⛔ not "fix" it by
+making the surface `private, no-store`: that discards the edge for a public transparency page and was
+already REJECTED at 11a.3. **Trigger:** any ruling that makes RTBF completion time-bounded end-to-end,
+or the first CDN purge hook.
+
+⭐ **WHAT IS DISCHARGED, SO IT IS ⛔ NOT RE-OPENED** (recorded because Task 3 and Task 4 split AC5
+between them, and the split is otherwise invisible):
+- ✅ **The `ANONYMIZED_SENTINEL` plaintext check** — shipped at Task 3 **with the rows it protects**,
+  ⛔ deliberately not held back to Task 4: without it the page renders the literal `[anonymized]` where
+  a person's name belongs. ⭐ `storedName === memberDomain.ANONYMIZED_SENTINEL`, the constant
+  **IMPORTED** from `@twt/domain` and ⛔ never re-typed.
+- ✅ **Absent entirely AND still counts** (`-169` cl.1/cl.4) — the erased contributor's row is dropped
+  and `total` is unchanged, with a live-DB leg asserting both on one fixture. ⛔ ⛔ No omission tally.
+- ✅ **⛔ No per-row lifecycle re-check** (`-170`) — the public path calls ⛔ no
+  `getCurrentMemberState`; the window is closed at the PLAINTEXT, which is snapshot-independent.
+- ✅ **`D10-rowkey`(a) — ⛔ NO ROW KEY** — ⛔ not `index`, ⛔ not `member_id`, ⛔ not a token, asserted at
+  the contract, the render model and the row's key set.
+
+---
+
 ## Recorded from: implementation of 11b-17-member-drive-detail-unredacted — Task 1, the `governance:` commit (2026-09-13)
 
 ⭐⭐ **ROUTED, ⛔ NOT FIXED. "Route it" IS an ACTION, ⛔ never a note** — these six lived in that story's

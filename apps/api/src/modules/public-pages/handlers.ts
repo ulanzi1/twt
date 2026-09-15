@@ -869,6 +869,20 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
             );
           }
 
+          // ⭐⭐ THE ERASURE BACKSTOP, mirrored from the contributor list at Task 3 (Trap 4, AC5;
+          // `2026-08-30-169` / `2026-08-30-170`). `anonymizeMember` overwrites `name_ciphertext`
+          // IN PLACE with an *encrypted* `[anonymized]` sentinel and RETAINS the row ⇒ the decrypt
+          // above SUCCEEDS, and without this check the page would render **`[anonymized]`** where
+          // the deceased member's name belongs, once `namePublicationAuthorised` goes live.
+          // ⛔ An empty-name guard does ⛔ NOT catch it — the sentinel is a non-empty string.
+          // ⛔ IMPORTED FROM `@twt/domain`, ⛔ never the re-typed literal.
+          if (storedName === memberDomain.ANONYMIZED_SENTINEL) {
+            request.log.warn(
+              'sahyog-vivran: erasure sentinel reached the deceased-member decrypt — omitting the NAME, keeping the page',
+            );
+            storedName = null;
+          }
+
           if (storedName !== null) {
             // ⭐⛔ `resolvePublicMemberName`, ⛔ NEVER `resolvePoolIdentity()` — the sharpest build
             // consequence of the ruling and *"the easiest thing to get wrong on a POOL surface"*:

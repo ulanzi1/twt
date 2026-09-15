@@ -60,7 +60,7 @@ those, ⛔ not the lines."* ⚠ `packages/` and `apps/` line cites ARE used — 
 
 # Story 11b.3b: Sahyog Vivran Named-Identity Render Layer — Deceased Member Name + Contributor List `[SURFACE]`
 
-Status: review
+Status: done
 
 ## ⭐ PREFLIGHT — ⭐⭐ **ZERO OPEN DECISIONS. ⭐ Task 2 IS UNBLOCKED.**
 
@@ -1069,6 +1069,84 @@ AC10→T0 · **AC11→T1b** (and T1b gates T2).
       ✅⛔ **AC9's ACTUAL PROHIBITION — *"⛔ never deleted quietly"* — VERIFIED MECHANICALLY:** the branch
       removes **15** `it(` lines and adds **49**; ⭐ **all 15 are RENAMES with a live successor**, each
       because the assertion inverted and the title had to follow. ⛔ **ZERO legs dropped.**
+
+### Review Findings
+
+⚠ **PARTIAL PASS — GROUP 1 OF 5 (chunked; diff exceeded the 3000-line single-pass threshold).**
+Scope: `packages/contracts`, `packages/domain`, `packages/api-client`, `packages/ui`, diffed
+`05094a68..HEAD`. Remaining groups queued for follow-up runs: `apps/api`, `apps/mobile`,
+`apps/public`, `packages/i18n`+`scripts`+`openapi`+`microcopy.yaml`.
+
+⭐ **KEY RESULT: this diff range is NOT pure 11b.3b.** `05094a68..HEAD` also carries story 11b.17
+(`d7c320b9`, `b2b467e3`, `f41ee8e5`) and story 8.17 (`5ffb366a`, `66976803`) — both already
+carrying their own "code review" fix commits. Every finding below was checked against `git log
+05094a68..HEAD --grep="11b.3b" -- <path>` to confirm authorship before being counted against this
+story; findings landing only in files 11b.3b's own commits never touched are dismissed as
+out-of-scope rather than charged to this story.
+
+The Acceptance Auditor found **zero AC violations** in the files 11b.3b's own commits touched
+(`sahyog-vivran.ts`, `matrix.ts`, `public-vs-private-matrix.yaml`, `public-read.ts`,
+`sahyog-vivran-read.ts`, `view-model.ts`, and their tests) — AC2, AC3b, AC4, AC9 and AC11(c)/(d)
+all independently verified compliant.
+
+- [x] **[Review][Defer] Clamp-to-zero total logic duplicated across two stories** [`packages/domain/src/pool/sahyog-vivran-read.ts`] — the "clamp negative `deliveredTotal` to 0, warn-log" pattern 11b.3b added here is near-verbatim duplicated in 11b.17's `member-drive-detail.ts`, with only prose (not a shared helper) preventing drift. Deferred — pre-existing pattern spans two already-shipped stories; not 11b.3b's to refactor unilaterally.
+- [x] **[Review][Resolved] `PublicSahyogVivranQuery.page`/`limit` have no `.default()`** [`packages/contracts/src/public-pages/sahyog-vivran.ts`] — ⭐ RESOLVED by the group 2 (`apps/api`) pass: the Acceptance Auditor confirmed the handler itself supplies `page`/`limit` defaults, "resolving a question a prior review pass had deferred." No contract change needed.
+- [x] **[Review][Defer] `PublicSahyogVivranResponse` has no cross-field bound on `items.length`/`page`/`limit`** [`packages/contracts/src/public-pages/sahyog-vivran.ts`] — Fastify does validate/serialize this schema at runtime (`routes.ts:379`), so an unbounded producer bug would pass through uncaught; no other response schema in `public-pages`/`contributions` uses `.refine()` for this. Left deferred — group 2 found no actual violation of the bound, only its absence at the schema level; a defense-in-depth item, not a live defect.
+- [x] **[Review][Defer] `confirmedContributionCount × row.fixedAmount` has no explicit overflow guard** [`packages/domain/src/pool/sahyog-vivran-read.ts`] — no check against `Number.MAX_SAFE_INTEGER`. Deferred — the multiplication itself pre-dates this diff (11b.3b only hoisted it into a shared `deliveredTotal` binding, per its own doc-block); real-world contributor counts/INR amounts make overflow implausible.
+
+**Dismissed as out-of-scope (group 1, 17):** findings landing exclusively in files 11b.3b's commits never touched — `driveTargetInr`'s `.positive()` bound, `nomineeAccounts` rank-uniqueness, `driveTargetInr` null-vs-absent-key, four hardcoded pool-state tuples, IFSC length mismatch (100 vs 200), `vpa`/`vpaPresent` cross-validation, missing `api-client` test coverage, an unchecked `as` cast on `row.currentState`, a fence test's duplicated `SKIP` set, undemonstrated reliance on `getClaimNomineeBankAccountsCiphertext`/`resolveDriveTargetForMembers`/`resolveDriveTargetVisibility`, an OpenAPI description stuffed with internal decision-log references, an unenforced stage/percentage pairing invariant, generously wide string bounds on bank fields, a missing client-side empty-`driveToken` guard, unbounded bank-field lengths reaching the contract, an OpenAPI doc/`.min(1)` mismatch, and a nominee-account ordering guarantee with no local sort backstop — all in `packages/domain/src/pool/member-drive-detail.ts`, `packages/contracts/src/contributions/{member-drive-detail,nominee-accounts}.ts`, `packages/api-client/src/index.ts`, or their tests (stories 11b.17 / 8.17, each with their own prior review-fix commits).
+
+### Group 2/5 — `apps/api`, diffed `05094a68..HEAD`
+
+⭐ Same authorship filter applied: 11b.3b's own commits in `apps/api` only touched
+`sahyog-vivran-controls.ts`, `public-pages/handlers.ts`, `public-pages/routes.ts`,
+`sahyog-vivran.spec.ts` (integration), and `login-wall.spec.ts`. Everything else in this slice
+(`member-pool/*`, `payment/*`, `audit/*`, and their tests) belongs to 11b.17 / 8.17.
+
+- [x] **[Review][Patch] Missing erasure-sentinel backstop on the deceased-member name decrypt (Trap 4 / AC5, real gap)** [`apps/api/src/modules/public-pages/handlers.ts:872-882`] — ✅ **FIXED 2026-09-15.** The Task 2 unit 2 block decrypted `drive.deceasedNameCiphertext` and only checked `storedName !== null`; it never checked `storedName === memberDomain.ANONYMIZED_SENTINEL`, so `anonymizeMember`'s in-place `[anonymized]` ciphertext would decrypt successfully and render as the deceased member's literal name once `namePublicationAuthorised` goes live. Patched by mirroring the contributor-list block's own erasure-backstop check (Task 3, lines ~1021-1048) immediately after the decrypt and before `resolvePublicMemberName`. Added a regression test, `⭐⭐ THE ERASURE SENTINEL OMITS THE NAME, ⛔ NEVER RENDERS \`[anonymized]\` (Trap 4, AC5)`, in `sahyog-vivran.spec.ts`'s Task 2 unit 2 describe block — verified it fails against the pre-patch code (`expected '[anonymized]' to be null`) and passes with the fix. Full spec file (40 tests) and `login-wall.spec.ts` (5 tests) green afterward; `tsc --noEmit` clean.
+
+Dismissed as out-of-scope or already-known (group 2, 18): a silent audit-locator console-only fallback, missing rate limiting and advisory-lock load risk on the member drive-detail route, order-dependent cross-test mutable state, non-deterministic nominee-name selection, no test for differing nominee holder names, missing >200-char token boundary coverage, an internal pool-ID leak via an unhandled error message, ambiguous VPA-decrypt-failure UX, an unconditional second-account VPA decrypt, brittle hardcoded decrypt/audit-line test counts (all in 11b.17's `member-drive-detail.ts`/spec or 8.17's `payment/handlers.ts`, or `audit/shared` — none touched by 11b.3b's own commits); three Edge Case Hunter findings in `member-pool/handlers.ts` and `payment/handlers.ts` (audit-then-throw ordering, commit-failure-after-success, an unguarded empty-VPA spread) — same reason; an inconsistent Unicode-stripping gap in 11b.17's new `district` renderer relative to 11b.3b's own already-shipped fix — not 11b.3b's defect; and the self-quantified public-contributor scraping-exposure math, which is **already recorded and deliberately routed** by this story's own Task 7 (AC8) — verified live in `deferred-work.md` ("CARRIED BY STORY `11b-3b` (2026-09-15, AC8/Task 7) — DELIBERATELY NOT DISCHARGED"), so re-filing it here would be a duplicate of an already-ratified decision, not a new finding.
+
+### Group 3/5 — `apps/mobile`
+
+⭐ **ZERO commits from 11b.3b touch `apps/mobile`** (`git log --grep="11b.3b" -- apps/mobile` returns nothing) — every commit in this diff range touching that directory belongs to 11b.17 or 8.17. Skipped entirely; nothing to review.
+
+### Group 4/5 — `apps/public`, diffed `05094a68..HEAD`
+
+⭐ This slice IS overwhelmingly 11b.3b's own work: `sahyog-vivran-render.ts`, `sahyog-vivran.server.ts`, `surface-fields.ts`, `[driveToken].astro`, and four of its five touched test files. One shared completeness-fence file, `member-drive-detail-field-floor.test.ts`, is jointly amended with 11b.17 — findings there were checked against which commit added which entry before being counted.
+
+- [x] **[Review][Patch] Response validator never checked the six fields this story added to the wire — a malformed/degraded body could crash the render instead of falling into the outage state** [`apps/public/src/lib/sahyog-vivran.server.ts`] — ✅ **FIXED 2026-09-15.** `isSahyogVivranResponse`'s own doc-block states its purpose is to catch a malformed body before render, because a bare/missing check "lets an unknown token reach a `default:` branch that throws INSIDE the render, defeating this module's own '⛔ NEVER THROWS' guarantee." Despite that, it never checked `deceasedMemberName`, `amountRaisedInr`, `items`, `page`, `limit`, or `total` — all six fields 11b.3b added. Concretely reachable: `formatCurrency` throws on a non-finite `amountRaisedInr`, and `contributors.map` throws a `TypeError` when `items` isn't an array — either would crash `buildSahyogVivranView` on a degraded upstream response. The test file's own `OK_BODY` fixture had also never been updated to include these fields, which is exactly what let the gap ship unnoticed. Patched by extending the validator with the same literal/bound checks used for every pre-existing field (`.int().nonnegative()` for `amountRaisedInr`/`total`, `.int().positive()` for `page`/`limit`, `.min(1).nullable()` for `deceasedMemberName`, per-row `{name: string}` shape for `items`). Updated `OK_BODY` to carry all six fields and added 8 new rejection/acceptance tests in `sahyog-vivran-client.test.ts`; verified all 8 fail against the pre-patch validator and pass with it. Full file (31 tests) plus `sahyog-vivran-render.test.ts`/`sahyog-vivran-copy.test.ts`/`sahyog-vivran-a11y.test.ts`/`member-drive-detail-field-floor.test.ts` (119 tests) green; `tsc --noEmit` clean.
+- [x] **[Review][Defer] Same i18n key used for two different "confirmed" numbers on one page** [`apps/public/src/pages/sahyog-vivran/[driveToken].astro`] — `contributorTotal` (the confirmed-contributor SET SIZE) and `confirmedContributionCount` (the confirmed-contribution EVENT count) both resolve through the identical key `value.contributions_count`, so two numbers the code's own comments say "answer different questions" can both render as "N confirmed" on the same page. This is a copy/product wording question, not a code defect — deferred rather than patched unilaterally, since inventing distinct copy in a governance-heavy i18n surface needs a product/copy call, not a reviewer's guess.
+- [x] **[Review][Defer] No direct test of the `.astro` page's own query-string-rejection 404** [`apps/public/src/pages/sahyog-vivran/[driveToken].astro`] — the Acceptance Auditor confirmed the strict allowlist + 404-collapse behavior exists and is correct in code, but no test in this diff exercises `?x=1` directly. A coverage gap, not a functional defect.
+- [x] **[Review][Defer] Duplicated doc-comment blocks and test fixtures across three files** [`sahyog-vivran-render.ts`, `surface-fields.ts`, `[driveToken].astro`, `scrape-test.spec.ts`, `sahyog-vivran-render.test.ts`] — near-verbatim rationale comments and near-identical fixture objects exist in multiple places with no shared source, inviting drift. Code-quality observation, not a functional defect.
+
+Dismissed as verified non-issues (group 4, 4): a pagination `limit: 0` division-by-zero-style concern — already guarded (`contributorLimit > 0 &&` in `[driveToken].astro`); an outage-state `contributorTotal: ''` rendering an empty `<p>` — unreachable, the entire contributor section is gated behind `apiUnavailable ? outage : normal` and never renders in the outage branch; an unescaped-contributor-name XSS concern — no `set:html` is used, Astro/JSX escapes the interpolated value by default; and a cosmetic `<dt>`/`<dd>` structural inconsistency for `amount_raised_inr` sharing a `<dt>` with the confirmed count — the Acceptance Auditor confirmed this is valid HTML with self-describing text and explicitly called it "not a fix I'd block on." Also dismissed as established, deliberate codebase conventions rather than new defects: the "negative control replanting" test pattern, the anti-enumeration undifferentiated-404 design, and the density of ⭐/⛔ governance prose per line.
+
+### Group 5/5 (FINAL) — `packages/i18n`, `scripts`, `openapi/v1.yaml`, `microcopy.yaml`, diffed `05094a68..HEAD`
+
+⭐ 11b.3b's own commits in this scope touched only five files: `packages/i18n/locales/{en,hi}/sahyog-vivran.json` and `scripts/sahyog-vivran-financial-truth/{check,lib,lib.test}.ts`. Everything else in the slice (`member-drive-detail*`/`member-drive-list`/`contribution`/`sahyog-shared` locale files, `catalog.ts`, `sahyog-shared-dark-copy.test.ts`, `scripts/microcopy/member-drive-detail.test.ts`, `microcopy.yaml`, all of `openapi/v1.yaml`) belongs to 11b.17 / 11b.19 / 8.17.
+
+- [x] **[Review][Patch] Dead constant with a misleading doc-comment in the financial-truth gate script** [`scripts/sahyog-vivran-financial-truth/lib.ts`] — ✅ **FIXED 2026-09-15.** `RULED_AMOUNT_FIELD` was declared with a comment claiming it is what "permits" `amountRaisedInr` on the render path, but it was never referenced anywhere in the file — the actual permission is simply `amountRaisedInr` not being a member of `TARGET_OPERANDS`. Harmless today, but exactly the kind of comment that could mislead a future maintainer into treating the regex as load-bearing (e.g. "narrowing" it further under a false belief). Removed the dead constant, left a one-line note explaining what actually gates the field. `lib.test.ts` (20 tests) green; `tsc --noEmit` clean.
+- [x] **[Review][Defer] `isAmountDerivation`'s shape check only recognizes `*`, not `*=`** [`scripts/sahyog-vivran-financial-truth/lib.ts`] — a compound-assignment re-derivation (`total *= row.fixedAmount`) isn't matched by the `AsteriskToken`-only operator check this story's own Task 1b introduced. Verified this is **not independently exploitable** in practice: the same expression's `row.fixedAmount` PropertyAccessExpression is still visited independently by the AST walk and still trips the bare-name `TARGET_OPERANDS` check regardless of the surrounding operator, so the realistic case is still caught. The gap only matters if the operand is ALSO aliased away from every recognized name — in which case the shape check wouldn't fire on a `*` either (the aliased name wouldn't match `COUNT_OPERAND`/`PER_MEMBER_AMOUNT`), so widening the operator-token check alone would not close it. Deferred as a documented, low-severity precision note rather than a rushed fix that wouldn't meaningfully change coverage.
+
+Dismissed as out-of-scope (group 5, most of Blind Hunter's + Edge Case Hunter's findings): a Hindi tagline in the English `sahyog-shared.json`, `openapi/v1.yaml` schema duplication/`rank` modeling/YAML-anchor concerns (all 11b.17's `MemberDriveDetailResponse`/`MemberDriveNomineeAccountView` — `openapi/v1.yaml` contains zero `sahyog-vivran` references per the Acceptance Auditor's direct check), duplicated governance prose across `member-drive-detail.json`/`member-drive-list.json`, an unshipped cross-namespace-equality "durable fix" noted in those same files, `scripts/microcopy/member-drive-detail.test.ts`'s test-input-shape inconsistency, the dark-copy-fence regex-widening and `isTestModule` gaps in `sahyog-shared-dark-copy.test.ts` (11b.19's `message_block`/`index_line` surface), and the "scope patched in after the fact, not by the story" observation about `microcopy.yaml` — none of these files were touched by 11b.3b's own commits.
+
+---
+
+## ⭐⭐ REVIEW COMPLETE — ALL 5 GROUPS (2026-09-15)
+
+Chunked review of the full story diff (`05094a68..HEAD`, 83 files / +16,455 / −1,609 across the
+whole range) against the actual authorship of 11b.3b's own commits, cross-checked at every group
+via `git log --grep="11b.3b" -- <path>` before any finding was charged to this story.
+
+**Totals across all 5 groups:**
+- **Groups reviewed:** 1 (contracts/domain/api-client/ui), 2 (apps/api), 4 (apps/public), 5 (i18n/scripts/openapi/microcopy)
+- **Groups skipped:** 3 (apps/mobile) — zero 11b.3b commits touch it
+- **Patches found and fixed:** 3 — a missing erasure-sentinel backstop on the deceased-member name decrypt (group 2, real disclosure-shaped gap), an unvalidated response boundary that could crash the public render (group 4, real availability-shaped gap), and a dead/misleading constant in the financial-truth gate script (group 5, cosmetic)
+- **Decision-needed:** 0
+- **Deferred:** 5 open (1 resolved mid-review) — all either cross-slice questions already closed by a later group, product/copy calls outside a reviewer's authority, test-coverage gaps, or low-severity/non-exploitable precision notes
+- **Dismissed:** ~60, the overwhelming majority because they landed in files 11b.3b's own commits never touched — this diff range also carries stories 11b.17, 11b.19, and 8.17 interleaved in the same linear history, each already reviewed under its own commits
+- **Acceptance Auditor verdict across every in-scope file:** zero AC violations found against AC1–AC11
 
 ## Dev Notes
 

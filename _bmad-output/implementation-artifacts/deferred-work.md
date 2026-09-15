@@ -4,6 +4,41 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 11b-3b-sahyog-vivran-named-identity-render-layer, group 5/5 (2026-09-15)
+
+⚠ Scope: `packages/i18n`, `scripts`, `openapi/v1.yaml`, `microcopy.yaml`, diff `05094a68..HEAD`.
+11b.3b's own commits here touched only `packages/i18n/locales/{en,hi}/sahyog-vivran.json` and
+`scripts/sahyog-vivran-financial-truth/{check,lib,lib.test}.ts`.
+
+- **`isAmountDerivation`'s shape check only recognizes `*`, not `*=`** — `scripts/sahyog-vivran-financial-truth/lib.ts`. A compound-assignment re-derivation (`total *= row.fixedAmount`) isn't matched by the `AsteriskToken`-only operator check. Verified NOT independently exploitable: the same expression's property-access identifier is still visited by the AST walk and still trips the bare-name `TARGET_OPERANDS` check regardless of operator, so the realistic case is caught anyway. Only matters if the operand is ALSO aliased away from every recognized name, in which case widening the operator check alone wouldn't close the gap either (the shape check requires the operand names to match `COUNT_OPERAND`/`PER_MEMBER_AMOUNT`, which an alias wouldn't). Low-severity precision note, not a live evasion path.
+
+---
+
+## Deferred from: code review of 11b-3b-sahyog-vivran-named-identity-render-layer, group 4/5 (2026-09-15)
+
+⚠ Scope: `apps/public`, diff `05094a68..HEAD`. Overwhelmingly 11b.3b's own work; one shared
+completeness-fence file (`member-drive-detail-field-floor.test.ts`) jointly amended with 11b.17.
+
+- **Same i18n key used for two different "confirmed" numbers on one page** — `apps/public/src/pages/sahyog-vivran/[driveToken].astro`. `contributorTotal` (the confirmed-contributor SET SIZE) and `confirmedContributionCount` (the confirmed-contribution EVENT count) both resolve through the identical key `value.contributions_count`, so two numbers the code's own comments say "answer different questions" can both render as "N confirmed" on the same page. A copy/product wording question, not a code defect — needs a product/copy call, not a reviewer's unilateral fix.
+- **No direct test of the `.astro` page's own query-string-rejection 404** — `apps/public/src/pages/sahyog-vivran/[driveToken].astro`. The strict allowlist + 404-collapse behavior is confirmed correct in code, but no test exercises `?x=1` directly. Coverage gap, not a functional defect.
+- **Duplicated doc-comment blocks and test fixtures across several files** — `sahyog-vivran-render.ts`, `surface-fields.ts`, `[driveToken].astro`, `scrape-test.spec.ts`, `sahyog-vivran-render.test.ts`. Near-verbatim rationale comments and near-identical fixture objects with no shared source, inviting drift. Code-quality observation, not a functional defect.
+
+---
+
+## Deferred from: code review of 11b-3b-sahyog-vivran-named-identity-render-layer, group 1/5 (2026-09-15)
+
+⚠ Scope: `packages/contracts`, `packages/domain`, `packages/api-client`, `packages/ui`, diff
+`05094a68..HEAD`. This range also carries unrelated stories 11b.17 and 8.17 (each already
+reviewed under their own commits) — findings landing only in their files were dismissed as
+out-of-scope, not deferred; see the story file's own Review Findings subsection for that list.
+
+- **Clamp-to-zero total logic duplicated across two stories** — `packages/domain/src/pool/sahyog-vivran-read.ts`'s "clamp negative `deliveredTotal` to 0, warn-log" pattern (11b.3b) is near-verbatim duplicated in 11b.17's `packages/domain/src/pool/member-drive-detail.ts`, with only prose (not a shared helper) preventing drift. Spans two already-shipped stories; not 11b.3b's to refactor unilaterally.
+- ~~**`PublicSahyogVivranQuery.page`/`limit` have no `.default()`**~~ — ⭐ RESOLVED by the group 2 (`apps/api`) pass: confirmed the handler itself supplies defaults.
+- **`PublicSahyogVivranResponse` has no cross-field bound on `items.length`/`page`/`limit`** — `packages/contracts/src/public-pages/sahyog-vivran.ts`. Fastify validates/serializes this schema at runtime (`apps/api/src/modules/public-pages/routes.ts:379`), so a producer bug shipping an over-bound response would pass through uncaught; no sibling response schema in this codebase uses `.refine()` for such an invariant. Group 2 found no actual violation of the bound, only its absence at the schema level — a defense-in-depth item, not a live defect.
+- **`confirmedContributionCount × row.fixedAmount` has no explicit overflow guard** — `packages/domain/src/pool/sahyog-vivran-read.ts`. No check against `Number.MAX_SAFE_INTEGER`. The multiplication pre-dates this diff (11b.3b only hoisted it into the shared `deliveredTotal` binding); real-world contributor counts/INR amounts make overflow implausible in practice.
+
+---
+
 ## Recorded from: implementation of 11b-3b-sahyog-vivran-named-identity-render-layer — Task 8 (AC9), 2026-09-15
 
 ### ⭐⭐ AC9's COUNT WAS LOW BY MORE THAN FOUR TIMES — ⛔ ITS **FIVE** ARE ALL DISCHARGED, BUT **22** TEST LEGS INVERTED

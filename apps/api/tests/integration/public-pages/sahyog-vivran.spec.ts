@@ -783,6 +783,41 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
         await teardown(t);
       }
     });
+
+    it('⭐⭐ THE ERASURE SENTINEL OMITS THE NAME, ⛔ NEVER RENDERS `[anonymized]` (Trap 4, AC5)', async () => {
+      // ⚠⛔⛔ `anonymizeMember` overwrites `name_ciphertext` IN PLACE with an *encrypted*
+      // `[anonymized]` sentinel and RETAINS the row ⇒ the decrypt SUCCEEDS. ⛔ An empty-name guard
+      // does ⛔ NOT catch it. ⭐ Mirrors the contributor list's own erasure-backstop leg (Task 3) —
+      // ⛔ without this the deceased-member arm renders the sentinel literally where a person's
+      // name belongs, on an unauthenticated public page.
+      const t = await createTestApp();
+      try {
+        const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
+        const { pariwarId } = await seedDrive(t, {
+          canonicalIdentifier: id,
+          district: 'Lucknow',
+          confirmed: 3,
+          assigned: 4,
+          legalName: memberDomain.ANONYMIZED_SENTINEL,
+          authorised: true,
+        });
+
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
+        expect(res.statusCode).toBe(200);
+        const body = res.json() as { drive: Record<string, unknown> };
+
+        // ⭐ OMITTED, ⛔ never the sentinel — the deceased member's arm of AC3's per-subject
+        // omission ruling, ⛔ not a `[anonymized]` string surfacing on the page.
+        expect(body.drive.deceasedMemberName).toBeNull();
+        expect(res.body).not.toContain('[anonymized]');
+        expect(res.body).not.toContain('anonymized');
+        // ⭐⭐ AND THE PAGE STANDS — omit the NAME, ⛔ never the page.
+        expect(body.drive.poolCanonicalIdentifier).toBe(id);
+        expect(() => PublicSahyogVivranResponse.parse(res.json())).not.toThrow();
+      } finally {
+        await teardown(t);
+      }
+    });
   });
 
   describe('⭐⭐ Story 11b.3b (Task 3, AC3/AC4) — THE CONFIRMED CONTRIBUTOR LIST, `2026-09-02-174`', () => {

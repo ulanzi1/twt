@@ -256,6 +256,60 @@ function isSahyogVivranResponse(body: unknown): body is PublicSahyogVivranRespon
   // reversed, which is most of them (the vacuous-leg shape, in a validator).
   if (!isNomineeBankAccounts(r['nomineeBankAccounts'])) return false;
 
+  // ⭐⭐ STORY 11b.3b — THE SIX FIELDS THIS STORY ADDED TO THE WIRE, CHECKED THE SAME WAY AS EVERY
+  // FIELD ABOVE. ⛔ Their absence here was a real gap (Review finding, 2026-09-15): `formatCurrency`
+  // throws on a non-finite amount and `contributors.map` throws when `items` isn't an array, and
+  // EITHER would have crashed `buildSahyogVivranView` on a malformed/degraded body — defeating this
+  // module's own "⛔ NEVER THROWS" guarantee one function later, exactly as this doc-block already
+  // warns for a bare `typeof` check above.
+  // ⚠ `deceasedMemberName` is `.min(1).nullable()` on the wire — `null` is the DESIGNED day-one
+  // state (Trap 1), ⛔ never an empty string.
+  if (
+    r['deceasedMemberName'] !== null &&
+    (typeof r['deceasedMemberName'] !== 'string' || r['deceasedMemberName'].length === 0)
+  ) {
+    return false;
+  }
+  // ⚠ Matches the wire contract's `.int().nonnegative()` (AC3b) — the same shape discipline as
+  // `confirmedContributionCount` above.
+  if (
+    typeof r['amountRaisedInr'] !== 'number' ||
+    !Number.isInteger(r['amountRaisedInr']) ||
+    r['amountRaisedInr'] < 0
+  ) {
+    return false;
+  }
+  // ⭐ Story 11b.3b (Task 3) — the contributor PAGE, alongside the drive, ⛔ not inside it.
+  // ⚠ `page`/`limit` are `.int().positive()` and `total` is `.int().nonnegative()` on the wire —
+  // matching `PublicSahyogVivranResponse`'s own bounds, ⛔ not re-derived from a guess.
+  if (
+    typeof b['page'] !== 'number' ||
+    !Number.isInteger(b['page']) ||
+    b['page'] <= 0 ||
+    typeof b['limit'] !== 'number' ||
+    !Number.isInteger(b['limit']) ||
+    b['limit'] <= 0 ||
+    typeof b['total'] !== 'number' ||
+    !Number.isInteger(b['total']) ||
+    b['total'] < 0
+  ) {
+    return false;
+  }
+  const items = b['items'];
+  if (!Array.isArray(items)) return false;
+  for (const item of items) {
+    // ⭐ `PublicSahyogVivranContributor` is `.strict()` over ONE field, `.min(1)` — the same
+    // per-row shape discipline as every other checked field, ⛔ not a bare `typeof` on the array.
+    if (
+      typeof item !== 'object' ||
+      item === null ||
+      typeof (item as Record<string, unknown>)['name'] !== 'string' ||
+      (item as Record<string, unknown>)['name'] === ''
+    ) {
+      return false;
+    }
+  }
+
   const rev = r['appealReversal'];
   if (rev === null) return true;
   if (typeof rev !== 'object') return false;

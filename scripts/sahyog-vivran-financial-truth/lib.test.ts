@@ -133,6 +133,34 @@ describe('rule (3) — D1(c), the render-path multiplication, MECHANIZED', () =>
     expect(findings.map((f) => f.rule)).toEqual(['render_path_multiplication']);
   });
 
+  // ── ⭐ NARROWED AT STORY 11b.3b (AC11(b)) — the fixtures that PROVE the narrowing kept its teeth.
+  // ⛔ A green scan proves nothing on its own; these pin both halves of the new shape.
+
+  it('⭐ PERMITS the RULED `amountRaisedInr` to be NAMED on the render path (11b.3b AC3b)', () => {
+    // ⛔ THE NARROWING'S WHOLE POINT. `2026-09-04-190` cl.6 rules this the public rupee figure and
+    // `-189` cl.5 records the boundary as newly crossed ⇒ a rule banning the ruled field's own NAME
+    // made the ruling unshippable. Taking it from the domain read is CONSUMPTION, not derivation.
+    const src = `const vm = { amountRaisedInr: entry.amountRaisedInr };`;
+    expect(scanFinancialTruth('render.ts', src, RENDER)).toEqual([]);
+  });
+
+  it('⛔ STILL FAILS on a local re-derivation, even when NO banned word is named', () => {
+    // ⭐ CAUGHT BY SHAPE, ⛔ not by vocabulary — this is what the narrowing bought. Before it, an
+    // author who spelled the operands differently walked past; the product itself is now the subject.
+    const src = `const total = confirmedContributionCount * row.fixedAmount;`;
+    const findings = scanFinancialTruth('render.ts', src, RENDER);
+    expect(findings.length).toBeGreaterThan(0);
+    expect(findings.every((f) => f.rule === 'render_path_multiplication')).toBe(true);
+  });
+
+  it('⛔ STILL FAILS on the TARGET and its factors reaching the render path', () => {
+    // ⚠ `-204` cl.8 keeps these off the wire "BY CONSTRUCTION". ⛔ Naming is still enough for THESE.
+    for (const name of ['rosterSize', 'expectedTotal', 'deliveredTotal']) {
+      const findings = scanFinancialTruth('dto.ts', `const s = { ${name}: 1 };`, RENDER);
+      expect(findings.map((f) => f.rule)).toEqual(['render_path_multiplication']);
+    }
+  });
+
   it('⭐ does NOT fire on the DOMAIN read — the quarantine must stay buildable', () => {
     // ⛔ SCOPED DELIBERATELY. `classifyCycleOutcome` compares totals INSIDE the domain read and only
     // an opaque enum leaves it. Banning `fixedAmount` there would forbid the quarantine itself.

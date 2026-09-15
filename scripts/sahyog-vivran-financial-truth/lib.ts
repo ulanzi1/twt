@@ -105,11 +105,70 @@ export const PROHIBITED_IMPORTS: readonly string[] = [
 ];
 
 /**
- * Operand names that would only be present in order to compute or render a rupee figure.
+ * ⭐⭐ NARROWED AT STORY 11b.3b (AC11(b)) — ⛔ NOT WIDENED, ⛔ NOT DELETED, AND THE TEETH ARE PROVEN.
  *
- * ⛔ D1(c), mechanized. ⚠ Applied to RENDER-PATH files only — see the header.
+ * ⚠ THE SHAPE THIS RULE ORIGINALLY HAD: it fired on any amount operand being **NAMED** on the render
+ * path, `amountRaisedInr` INCLUDED. ⭐ That was correct while `2026-09-02-176` **D1(b)** had MOVED the
+ * amount off this surface — naming it could only be preparation for re-deriving it. ⛔ It stopped being
+ * correct the moment 11b.3b actually SHIPS the amount: `2026-09-04-190` **cl.6** rules
+ * `amountRaisedInr` the public rupee figure, and `-189` **cl.5** records the rupee boundary as NEWLY
+ * CROSSED. ⇒ a rule that bans the ruled field's own NAME makes the ruling unshippable.
+ *
+ * ⭐ SO THE RULE IS RE-POINTED AT THE **DEFECT**, ⛔ not at the vocabulary:
+ *   · {@link TARGET_OPERANDS} — the TARGET and its FACTORS. ⛔ Still banned by NAME on the render path.
+ *     `2026-09-07-204` **cl.8** closed the arithmetic-recovery channel *"BY CONSTRUCTION"* with *"the
+ *     wire carries the PERCENTAGE only, ⛔ never `rosterSize`"*, and the wire shape's own fence
+ *     (`sahyog-vivran.ts`) forbids a target/expected-total/shortfall *"in any field, under any name"*.
+ *     ⚠ `deliveredTotal` is in here too, and DELIBERATELY: it is the DOMAIN-internal binding: the render
+ *     path names the **wire** field (`amountRaisedInr`), ⛔ never the domain's spelling of it.
+ *   · {@link isAmountDerivation} — the actual D1(c) act: **re-deriving the product locally**. ⛔ Caught
+ *     STRUCTURALLY (a `*` whose operands are a confirmed-count and a per-member amount), so it is
+ *     caught under ANY local spelling, ⛔ not only when the banned words happen to appear.
+ *
+ * ⛔⛔ D1(c) IS ⛔ NOT RELAXED BY THIS NARROWING — it is enforced by SHAPE rather than by vocabulary,
+ * which is strictly harder to evade. ⭐ `2026-09-02-176` **D1(c)** stays REFUSED: *"a second
+ * multiplication anywhere in this app is the defect."*
  */
-const AMOUNT_OPERANDS = /^(fixedAmount|amountRaised|amountRaisedInr|rosterSize|expectedTotal|deliveredTotal)$/;
+const TARGET_OPERANDS = /^(fixedAmount|rosterSize|expectedTotal|deliveredTotal)$/;
+
+/**
+ * ⭐ The RULED public rupee figure. ⛔ Permitted to be NAMED on the render path — that is the whole
+ * point of the narrowing — ⛔ but ⛔ never locally DERIVED (see {@link isAmountDerivation}).
+ */
+const RULED_AMOUNT_FIELD = /^(amountRaised|amountRaisedInr)$/;
+
+/** Operand halves of the refused product `confirmedCount × fixedAmount`. */
+const COUNT_OPERAND = /^(confirmedCount|confirmedContributionCount|assignedCount|rosterSize)$/;
+const PER_MEMBER_AMOUNT = /^(fixedAmount|fixed_amount)$/;
+
+/** The identifier a node ultimately names — `x`, `row.x`, `this.x` all yield `x`. */
+function namedOperand(node: ts.Expression): string | undefined {
+  if (ts.isIdentifier(node)) return node.text;
+  if (ts.isPropertyAccessExpression(node)) return node.name.text;
+  if (ts.isElementAccessExpression(node) && ts.isStringLiteral(node.argumentExpression)) {
+    return node.argumentExpression.text;
+  }
+  if (ts.isParenthesizedExpression(node)) return namedOperand(node.expression);
+  return undefined;
+}
+
+/**
+ * ⭐ TRUE for a local re-derivation of the rupee figure — the D1(c) defect, by SHAPE.
+ *
+ * ⚠ Deliberately symmetric (either operand order) and deliberately tolerant of member access, because
+ * `confirmedContributionCount * row.fixedAmount` is exactly how the domain spells it.
+ */
+function isAmountDerivation(node: ts.Node): node is ts.BinaryExpression {
+  if (!ts.isBinaryExpression(node)) return false;
+  if (node.operatorToken.kind !== ts.SyntaxKind.AsteriskToken) return false;
+  const l = namedOperand(node.left);
+  const r = namedOperand(node.right);
+  if (l === undefined || r === undefined) return false;
+  return (
+    (COUNT_OPERAND.test(l) && PER_MEMBER_AMOUNT.test(r)) ||
+    (COUNT_OPERAND.test(r) && PER_MEMBER_AMOUNT.test(l))
+  );
+}
 
 /** Line number (1-based) of a node, for the report. */
 function lineOf(sf: ts.SourceFile, node: ts.Node): number {
@@ -178,19 +237,36 @@ export function scanFinancialTruth(
       }
     }
 
-    // ── (3) RENDER-PATH MULTIPLICATION (D1(c)) ──────────────────────────────
-    if (opts.renderPath && (ts.isIdentifier(node) || ts.isStringLiteral(node))) {
-      const name = ts.isIdentifier(node) ? node.text : node.text;
-      if (AMOUNT_OPERANDS.test(name)) {
+    // ── (3) RENDER-PATH TARGET / DERIVATION (D1(c)) ─────────────────────────
+    // ⭐ NARROWED at 11b.3b (AC11(b)): the TARGET and its FACTORS stay banned by NAME; the RULED
+    // amount field may cross; and the D1(c) act itself is caught by SHAPE. See {@link TARGET_OPERANDS}.
+    if (opts.renderPath) {
+      if (isAmountDerivation(node)) {
         findings.push({
           file,
           line: lineOf(sf, node),
           rule: 'render_path_multiplication',
           detail:
-            `render path names "${name}" — an amount operand. D1(b) ruled the SHIPPED ` +
-            `\`amountRaisedInr\` consumed but MOVED it to Story 11b.3b (the @twt/ui fence stays); ` +
-            `D1(c) — re-deriving \`confirmedCount × fixedAmount\` locally — is REFUSED`,
+            'render path RE-DERIVES the rupee figure locally (a `count × fixedAmount` product). ' +
+            'D1(c) is REFUSED in terms — "a second multiplication anywhere in this app is the ' +
+            'defect" — and the canonical figure is the domain read\'s own `deliveredTotal`, ' +
+            'published as `amountRaisedInr` (2026-09-04-190 cl.6)',
         });
+      } else if (ts.isIdentifier(node) || ts.isStringLiteral(node)) {
+        const name = node.text;
+        if (TARGET_OPERANDS.test(name)) {
+          findings.push({
+            file,
+            line: lineOf(sf, node),
+            rule: 'render_path_multiplication',
+            detail:
+              `render path names "${name}" — the drive TARGET or one of its factors. ` +
+              '2026-09-07-204 cl.8 keeps the target off this wire "BY CONSTRUCTION" ' +
+              '("the wire carries the PERCENTAGE only, never `rosterSize`"). ' +
+              'The ruled public figure is `amountRaisedInr` (2026-09-04-190 cl.6), which IS permitted ' +
+              'here — name that instead, and take it from the domain read rather than re-deriving it',
+          });
+        }
       }
     }
 

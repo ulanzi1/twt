@@ -54,7 +54,24 @@ export interface ContributionRowViewModel {
   /** Name PARTS, and ONLY name parts. The presenter NEVER joins firstName + lastInitial: the
    *  contributor name FORM is UNRULED (D7-nameform(a)), AC6 item (iii) routes it to the Panel, and
    *  joining it here would RULE it. D9(a). Single-arm by D11-outputshape(a) — the 'literal' and
-   *  'i18n' arms were dropped once D6(a) left them with zero possible emitters. */
+   *  'i18n' arms were dropped once D6(a) left them with zero possible emitters.
+   *
+   *  ⚠⛔ AMENDED 2026-09-15 (Story 11b.3b, AC11(d)) — ⛔ THE PREMISE ABOVE IS SPENT. It is KEPT as the
+   *  record and ⛔ not rewritten ([[feedback_supersede_never_reinterpret]]).
+   *  ⭐ THE FORM IS RULED: `2026-09-02-174` (Trustee Panel) ruled the contributor name renders at the
+   *  `public` tier in the FULL NAME form, and `-175` made it UNCONDITIONAL. ⇒ "the form is unruled" is
+   *  ⛔ no longer why this type is two-part.
+   *  ⭐⭐ THE TWO-ARM SHAPE IS DELIBERATELY KEPT ANYWAY, AND THIS IS THE LIVE REASON:
+   *    · it is the MEMBER surface's shape — `member-pool/handlers.ts` splits to firstName +
+   *      lastInitial and 11b.2b's shipped mobile row consumes exactly these parts;
+   *    · a THIRD arm would break that consumer's exhaustiveness branch BY DESIGN (see presenter.ts).
+   *  ⛔⛔ SO THE PUBLIC FULL-NAME SURFACE DOES ⛔ NOT GO THROUGH THIS PRESENTER'S `displayName`.
+   *  Story 11b.3b's AC3 renders ONE resolved string from `resolvePublicMemberName` and consumes this
+   *  module only for its NON-name outputs. ⛔ Do ⛔ NOT widen this type to carry a full name, and
+   *  ⛔ NEVER feed a public full name through `splitFirstNameLastInitial` to fit it — that ships the
+   *  SHIELDED form on a surface ruled FULL NAME, with every test still green.
+   *  ⚠ The member/public divergence this creates is NOT compliant with `-195` cl.1 and is CARRIED
+   *  KNOWINGLY under `2026-09-02-177` cl.2 (D9-inversion) — stated at 11b.3b's AC10. */
   readonly displayName:
     | { readonly kind: 'nameParts'; readonly firstName: string; readonly lastInitial: string };
   readonly poolLetterCode: string;

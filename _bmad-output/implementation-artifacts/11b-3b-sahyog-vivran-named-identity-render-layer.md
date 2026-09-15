@@ -828,10 +828,15 @@ in every mode. ⛔ That divergence is **UNCHANGED by 8.16** and must ⛔ not be 
 
 ### AC11 — ⭐ The financial-truth gate is EXTENDED and NARROWED, and three stale artefacts are amended
 ⛔⛔ **A PRECONDITION OF AC3b, ⛔ not a follow-up** — without it the build is red on the first push.
-⭐ **(a) SCOPE — enrol this story's files**, as `check.ts:12-22` orders *"in its own commit"*: every
-file the render layer adds under `apps/public/src/lib` or `apps/public/src/pages/sahyog-vivran` joins
-`SCAN_FILES` with an explicit `renderPath` flag and a **stated reason**. ⚠ `check.ts:181-187`'s scope
-safeguard **fails the run** on any such file left out ⇒ ⛔ this is ⛔ not optional bookkeeping.
+⭐ **(a) SCOPE — enrol any NEW render-layer file.** ⚠⛔ **ORDERING CORRECTED 2026-09-15: (a) lands with
+TASK 2, ⛔ NOT before it** — it speaks about files **Task 2 creates**, so gating Task 2 on it was
+circular. ⭐ **Verified at `be0037cc`: the render layer's files are ⛔ ALREADY enrolled** —
+`sahyog-vivran.server.ts`, `sahyog-vivran-render.ts` and `pages/sahyog-vivran/[driveToken].astro` are
+all in `SCAN_FILES` at `renderPath: true` ⇒ **(a) is a NO-OP unless Task 2 adds a genuinely new file.**
+⛔ If it does — anything under `apps/public/src/lib` or `apps/public/src/pages/sahyog-vivran` — that
+file joins `SCAN_FILES` **in the same commit**, with an explicit `renderPath` flag and a **stated
+reason**; ⚠ `check.ts`'s scope safeguard **fails the run** otherwise. ⇒ ⛔ ⛔ not optional bookkeeping.
+⭐ **(b)-(e) are what actually gate Task 2, and they are DONE** — see the Dev Agent Record.
 ⭐ **(b) NARROW rule (3) — ⛔ never delete it, ⛔ never append-to-green.** The gate's header gives two
 remedies; ⭐ take the one that keeps teeth: **re-point rule (3) at the DEFECT** — a local
 `confirmedCount × fixedAmount` on the render path — rather than at the mere **naming** of an operand,
@@ -890,14 +895,18 @@ AC10→T0 · **AC11→T1b** (and T1b gates T2).
         pointers in **other** artefacts — ⛔ not swept, and `-218` Consequence 4 says so.
 - [ ] **Task 1 — The two fields + two allowlist entries, ONE commit** (AC2) — ⭐ identity arrays, ⛔ not
       counts; amend `matrix.ts:407-408`; ⛔ do ⛔ not re-do item (iii).
-- [ ] **Task 1b — ⛔⛔ THE FINANCIAL-TRUTH GATE — SCOPE + NARROWING** (AC11) — ⛔ **BEFORE Task 2, ⛔ not
-      after.** Enrol the new render-layer files in `SCAN_FILES`; re-point rule (3) at the **local
-      multiplication** rather than at the operand NAME; prove `lib.test.ts`'s planted-multiplication
-      fixture still goes **red** and add a fixture proving `amountRaisedInr` passes; amend the three
-      stale artefacts **and** `view-model.ts:54-57` **by name**.
+- [x] **Task 1b — ⭐ THE FINANCIAL-TRUTH GATE: NARROWED, AND ITS TEETH PROVEN** (AC11 b/c/d/e) —
+      ✅ **DONE 2026-09-15.** ⭐ Rule (3) **narrowed, ⛔ not deleted and ⛔ not appended-to-green**: the
+      TARGET and its factors stay banned by NAME, the ruled `amountRaisedInr` may cross, and the D1(c)
+      act is caught **BY SHAPE** (`isAmountDerivation`). ⭐ Four artefacts amended **by name**.
+      ⚠⛔ **AC11(a) is ⛔ NOT part of this task** — it lands with **Task 2** (ordering correction above).
+
 - [ ] **Task 2 — `@twt/ui` + the Astro render layer** (AC1, AC3, AC3b) — ✅ `D-percentage` **RULED**;
       ⛔ still **after Task 1b** (the gate narrowing).
   - [ ] ⚠⛔ **`-218` cl.4:** ⛔ ⛔ no target / expected-total / roster-size companion to the amount.
+  - [ ] ⭐ **AC11(a):** if Task 2 adds a NEW file under `apps/public/src/lib` or
+        `apps/public/src/pages/sahyog-vivran`, enrol it in `SCAN_FILES` **in this same commit**.
+        ⚠ Verified no-op for the files that already exist; ⛔ the scope safeguard fails the run if not.
   - [ ] ⭐ Bind `const deliveredTotal = Math.max(0, confirmedContributionCount * row.fixedAmount)`
         **above** the `fundingOutcome` ternary; use it **twice**; wire field **`amountRaisedInr`**.
   - [ ] ⭐ Amend `sahyog-vivran-read.ts:496-498`'s anti-widening fence to **`expectedTotal` only**.
@@ -1007,11 +1016,52 @@ next pass. ⚠ They are ⛔ **not** durable — ⭐ re-diff `packages apps` agai
 
 ### Agent Model Used
 
+Claude Opus 5 (`claude-opus-5`) — Task 0 (governance) and Task 1b (AC11 b/c/d/e), 2026-09-15.
+
 ### Debug Log References
+
+⭐ **REVERT-SANITY ON THE NARROWED GATE, RUN ON A REAL RENDER-PATH FILE, ⛔ not only on fixtures** —
+`check.ts`'s own header asks for this to be recorded here.
+1. ⭐ `pnpm sahyog-vivran-financial-truth:test` → **20/20 pass**, including the two PRE-EXISTING rule-3
+   fixtures (⭐ both still red on their planted defects) and **three NEW** ones (see below).
+2. ⭐ `pnpm sahyog-vivran-financial-truth:check` → **passes** on the live tree.
+3. ⛔⛔ **TEETH PROVEN:** planted `const __plantedTotal = confirmedContributionCount * row.fixedAmount;`
+   into `apps/public/src/lib/sahyog-vivran-render.ts` ⇒ gate **FAILED with 2 findings** at `:435` —
+   ⭐ one from the **structural** derivation check, one from the **`fixedAmount` name** ban. ⇒ ⭐ both
+   arms of the narrowed rule are live.
+4. ⭐ Reverted the plant ⇒ gate **passes** again; ⛔ working tree clean of it.
 
 ### Completion Notes List
 
+- ✅ **Task 0 (AC0, AC10)** — one `governance:` commit, ⛔ no code: `#decision-2026-09-15-218`
+  (`D-percentage`), AC10's compliance statement for both data classes, story D's Trap-10
+  back-reference (**discharged**), `-182`'s forward pointer, and the `fundingOutcome` guard **routed**.
+- ✅ **Task 1b (AC11 b/c/d/e)** — rule (3) **NARROWED, ⛔ never deleted**: `TARGET_OPERANDS` keeps the
+  target and its factors banned by NAME; `RULED_AMOUNT_FIELD` (`amountRaisedInr`) is **permitted to be
+  named**; `isAmountDerivation` catches the D1(c) product **BY SHAPE**, so it is caught under ⛔ any
+  local spelling — ⭐ strictly harder to evade than the vocabulary ban it replaces.
+  ⚠⛔ **⛔ The gate's own suggested remedy was ⛔ NOT taken and the reason is recorded in `check.ts`:**
+  it proposed *"the amount comes from the SHIPPED presenter"*; ⛔ that presenter takes **`rosterSize`
+  and `fixedAmount` as INPUTS**, which `-204` cl.3/cl.8 reserve ⇒ it would put both factors on a public
+  wire. ⭐ The amount is taken **server-side** from `deliveredTotal` instead.
+- ✅ **Four artefacts amended BY NAME** (AC11 c/d/e), each carrying its **reason**, ⛔ none rewritten:
+  `contracts/src/public-pages/sahyog-vivran.ts` · `deferred-work.md`'s amount-raised item ·
+  `scripts/sahyog-vivran-financial-truth/check.ts` · `packages/ui/src/contribution-list/view-model.ts`
+  · `ux-design-specification.md`'s canonical block.
+- ⚠⛔ **AC11(a) re-ordered** — it depends on files **Task 2** creates, so it moved to Task 2. ⭐ Verified
+  a **no-op** for the files that already exist (all three are already `renderPath: true`).
+- ⛔ **Tasks 1, 2-8 remain OPEN.**
+
 ### File List
+
+- `scripts/sahyog-vivran-financial-truth/lib.ts` — rule (3) narrowed (`TARGET_OPERANDS`,
+  `RULED_AMOUNT_FIELD`, `isAmountDerivation`, `namedOperand`)
+- `scripts/sahyog-vivran-financial-truth/lib.test.ts` — 3 new fixtures
+- `scripts/sahyog-vivran-financial-truth/check.ts` — scope-tax header amended; summary line corrected
+- `packages/contracts/src/public-pages/sahyog-vivran.ts` — presenter-mechanism doc-block amended
+- `packages/ui/src/contribution-list/view-model.ts` — stale *"form is UNRULED"* doc-block amended
+- `_bmad-output/implementation-artifacts/deferred-work.md` — amount-raised item amended
+- `_bmad-output/planning-artifacts/ux-design-specification.md` — `:1334`/`:1335` amended
 
 ## Change Log
 

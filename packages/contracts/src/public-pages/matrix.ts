@@ -406,6 +406,13 @@ export const PublicVsPrivateMatrixSchema = z
       // decision are unchanged; ⛔ changing either is a governance act, ⛔ not a comment fix.
       // ⛔ Its scope does NOT reach 11b.3 (Sahyog Vivran) or 11b.6 (In Memoriam): those keep
       // first-name + last-initial, and moving them requires each surface's OWN Panel ruling.
+      // ⭐⭐ AMENDED 2026-09-15 (Story 11b.3b, AC2) — ⛔ THE SENTENCE ABOVE IS KEPT AND IS NOW HALF
+      // SPENT; ⛔ it is NOT rewritten, and the entry below and its cited decision are UNCHANGED.
+      //   · ⛔ THE `11b.3` (Sahyog Vivran) HALF IS NO LONGER TRUE: `2026-09-02-173` gave that surface
+      //     its OWN Panel ruling at the FULL NAME, and the pair is declared below. ⭐ Exactly as this
+      //     comment demanded — its own authority, ⛔ not an inheritance from this entry.
+      //   · ⭐ THE `11b.6` (In Memoriam) HALF STANDS UNCHANGED and is still load-bearing: that
+      //     surface keeps first-name + last-initial until it has a ruling of its own.
       ['sahyog-drive.deceased_member_name', '2026-08-24-159 cl.2 (D1(b))'],
       // ── ⭐⭐ STORY 11b.11 — THE ⛔ ONE RULED NOMINEE-BANK PAIR ON `sahyog-vivran` ─────────────────
       // ⭐⛔ **THIS BLOCK ONCE HELD FOUR ENTRIES. IT NOW HOLDS ONE, AND THE REDUCTION IS A
@@ -473,6 +480,25 @@ export const PublicVsPrivateMatrixSchema = z
       // the ciphertext to check it. ⭐ **Story 6.18** — commissioned by the SAME Panel pass — closes
       // it. ⛔⛔ Do ⛔ NOT add a join or a match rule here to "fix" it.
       ['sahyog-drive.nominee_account_holder_name', '2026-09-07-205 cl.1'],
+      // ── ⭐⭐ STORY 11b.3b — THE TWO NAMED IDENTITIES ON THE DRIVE PAGE ──────────────────────────
+      // ⭐ Declared in the SAME COMMIT as their YAML field blocks (`2026-08-28-165` cl.3).
+      // ⚠⛔ NEITHER IS AN INHERITANCE. `sahyog-drive.deceased_member_name` above is the INDEX's
+      // ruling (`2026-08-24-159` cl.2); this is a SECOND surface and `2026-09-07-205` cl.2 pins
+      // (surface, field) PAIRS *"precisely so that this second surface needs its own authority"*.
+      //
+      // ⚠⛔ THE TWO ENTRIES HAVE OPPOSITE DAY-ONE BEHAVIOUR, AND THAT ASYMMETRY IS THE OPPOSITE OF
+      // WHAT THE SURFACE'S TITLE IMPLIES:
+      //   · `deceased_member_name` renders ⛔ NOTHING until a `clause_versions` row pins
+      //     `niy.public-disclosure.member-information` — ⭐ ONE site in the repo, its own definition.
+      //     Fail-closed and correct; ⛔ do ⛔ NOT seed a placeholder row to "activate" it.
+      //   · `contributor_name` has ⛔ NO clause gate at all (basis `2026-08-28-160` cl.7, settled) ⇒
+      //     it publishes up to FIFTY living members' full legal names on day one.
+      ['sahyog-vivran.deceased_member_name', '2026-09-02-173'],
+      // ⚠⛔ AND THE PRICE IS CARRIED, ⛔ not closed: the public sees MORE of a contributor's name than
+      // a MEMBER does (the member surface renders first-name + last-initial), which `2026-09-04-189`
+      // cl.3 / `2026-09-05-195` cl.1 forbid. ⭐ CARRIED KNOWINGLY under `2026-09-02-177` cl.2
+      // (`D9-inversion`) and stated at Story 11b.3b's AC10. ⛔ This entry does ⛔ not cure it.
+      ['sahyog-vivran.contributor_name', '2026-09-02-174'],
     ]);
 
     const exceptions = data.surfaces.flatMap((surface) =>

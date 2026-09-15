@@ -1147,6 +1147,11 @@ surfaces:
       #
       # ⚠⛔ AND ⛔ NO SECOND TIER-1 ENTRY BELONGS HERE. The deceased member's name and the
       # contributor's are **11b.3b**'s, gated on their own Panel rulings (`2026-09-02-173` / `-174`).
+      # ⭐⭐ DISCHARGED 2026-09-15 (Story 11b.3b, AC2 / Task 1) — ⛔ the sentence above is KEPT as the
+      # record and is ⛔ NOT rewritten. Those two entries are declared BELOW, in this same commit as
+      # their `RULED_TIER1_PUBLIC_EXCEPTIONS` pairs (`2026-08-28-165` cl.3: added AT SURFACE
+      # DECLARATION — ⛔ a pre-added entry is "a standing permission with ⛔ no subject").
+      # ⇒ this surface's Tier-1-at-`public` set is now THREE, ⛔ not one.
       - id: nominee_account_holder_name
         tier: public
         pii_tier: 1
@@ -1203,6 +1208,78 @@ surfaces:
             ⚠⛔ THE NAME **FORM** IS ⛔ NOT SETTLED BY THIS ENTRY — see the file header. `-190` cl.2
             rules the LABEL; it says ⛔ nothing about full name vs first-name + last-initial, and
             11b.11 has ⛔ no authority to rule one. ROUTED, ⛔ not decided.
+
+      # ── ⭐⭐ STORY 11b.3b — THE TWO NAMED IDENTITIES ON THIS SURFACE ───────────────────────────
+      # ⭐ Declared in the SAME COMMIT as their `RULED_TIER1_PUBLIC_EXCEPTIONS` pairs, per
+      # `2026-08-28-165` cl.3. ⚠⛔ These are DECLARATIONS, ⛔ NOT escalations: an `escalations:`
+      # entry records a tier MOVE for a field ALREADY declared, and a field declared for the FIRST
+      # time has ⛔ no honest `from` tier. ⇒ `escalation_count` is UNCHANGED at 1.
+      - id: deceased_member_name
+        tier: public
+        pii_tier: 1
+        description: >-
+          ⭐ The deceased member's FULL NAME on the per-claim Sahyog Vivran page — `2026-09-02-173`
+          (Trustee Panel: Kalpana Bharti, Dhiraj Rahul), YES at the FULL NAME.
+          ⚠⛔ **IT RENDERS ⛔ NOTHING ON THE DAY THIS SHIPS, AND THAT IS THE DESIGNED STATE.**
+          `NAME_PUBLICATION_AUTHORISED` requires a `clause_versions` row pinning
+          `niy.public-disclosure.member-information`, and that clause id has ⛔ ONE site in the whole
+          repo — its own definition. ⛔ No migration, ⛔ no seed, ⛔ no writer ⇒ the predicate is false
+          for EVERY member, fail-closed and therefore correct. ⛔⛔ Do ⛔ NOT seed a placeholder row:
+          the domain read forbids it in terms — *"a stand-in makes names render on an authority that
+          does ⛔ not exist."* ⚠ Counsel's written clause (`-173` Q3) is OVERDUE since 2026-09-07.
+          ⭐⛔ THE FORM IS A CEILING, ⛔ NOT A LITERAL. `2026-08-19-136` cl.1 FAILS any build whose
+          public name form cannot change without a code change ⇒ it resolves through
+          `resolvePublicMemberName(mode, storedName)` under the Pariwar's STORED mode.
+          ⛔ NEVER `resolvePoolIdentity` — that hard-codes the shielded form.
+        tier1_public_exception:
+          decision: '2026-09-02-173'
+          rationale: >-
+            ⭐ The Trustee Panel (Kalpana Bharti, Dhiraj Rahul) ruled on 2026-09-02 that the deceased
+            member's name renders on the Sahyog Vivran at the FULL NAME form. ⚠⛔ The basis is the
+            MEMBER'S OWN accepted T&C version pinning the post-death publication clause — ⛔ it is
+            ⛔ NOT a per-subject family consent: the `sahyog_drive_publication` tick-box was
+            DE-AUTHORISED by `2026-08-28-160` cl.3-5 and retired by `-162`. ⇒ the authority is the
+            member's, taken while they were alive, and the family cannot supply it.
+          scope: >-
+            ⛔ `sahyog-vivran` ONLY, and ⛔ ONLY the deceased member of THIS drive's claim. It reaches
+            ⛔ no other surface: ⛔ not `in-memoriam` (11b.6), which keeps first-name + last-initial
+            and needs its OWN Panel ruling, and ⛔ not any authenticated tier.
+            ⚠⛔ It is ⛔ NOT an inheritance from `sahyog-drive.deceased_member_name`
+            (`2026-08-24-159` cl.2): the allowlist pins (surface, field) PAIRS precisely so that this
+            second surface needs its own authority.
+      - id: contributor_name
+        tier: public
+        pii_tier: 1
+        description: >-
+          ⭐ A confirmed contributor's FULL NAME in the Sahyog Vivran's contributor list —
+          `2026-09-02-174` (Trustee Panel), with `-175` making it UNCONDITIONAL (`-174` cl.3's
+          apparent staged-reduction condition was the NOMINEE BANK fields' and was corrected away).
+          ⚠⛔ **THIS IS THIS SURFACE'S REAL DAY-ONE OUTPUT** — unlike the deceased name above, the
+          contributor predicate has ⛔ NO clause gate anywhere in the code; its basis is
+          `2026-08-28-160` cl.7 (the member's own accepted membership T&C) and is SETTLED. ⇒ up to
+          fifty living members' full legal names render on an unauthenticated, edge-cached page.
+          ⭐ That is RULED AND INTENDED; ⛔ it is ⛔ not a defect — ⛔ but ⛔ do ⛔ not ship it believing
+          the page is dark.
+          ⚠⛔ ⛔ NO predicate here may read `members.state`, `is_valid` or a moderation overlay: a
+          contributor's name is ⛔ NEVER removed because they died (11b.1 D9(a)). RTBF is a SEPARATE
+          rule (`2026-08-30-169`) and removes the contributor's ROW ENTIRELY — ⛔ no anonymized row,
+          ⛔ no marker — while the omitted contributor STILL COUNTS toward every aggregate.
+        tier1_public_exception:
+          decision: '2026-09-02-174'
+          rationale: >-
+            ⭐ The Trustee Panel ruled on 2026-09-02 that a contributor's name may render at the
+            `public` tier in the FULL NAME form, on the basis of the member's OWN acceptance of the
+            membership Terms & Conditions (`2026-08-28-160` cl.7). `2026-09-02-175` (same Panel)
+            confirmed Q1/Q2 stand UNCONDITIONALLY.
+            ⚠⛔ **THE PRICE IS CARRIED OPENLY AND IS ⛔ NOT CLOSED:** the public will see MORE of a
+            contributor's name than a MEMBER does — the member surface renders first-name +
+            last-initial — which is the inversion `2026-09-04-189` cl.3 / `2026-09-05-195` cl.1
+            forbid. ⭐ It is CARRIED KNOWINGLY under `2026-09-02-177` cl.2 (`D9-inversion`), stated at
+            Story 11b.3b's AC10, and it is ⛔ NOT cured by this entry.
+          scope: >-
+            ⛔ `sahyog-vivran` ONLY, and ⛔ ONLY contributors CONFIRMED on this drive's pool. It
+            reaches ⛔ no other surface and ⛔ no authenticated tier. ⛔ It authorises ⛔ no ranking,
+            ⛔ no per-contributor total and ⛔ no sort by amount — the list is ⛔ never a leaderboard.
 
 # ── The escalation ledger (AC8) ──────────────────────────────────────────────
 # One entry per visibility ESCALATION (a field moving toward `public`), each

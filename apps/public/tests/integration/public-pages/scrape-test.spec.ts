@@ -1453,7 +1453,16 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
     const surface = matrix.surfaces.find((s) => s.id === 'sahyog-vivran');
     expect(surface).toBeDefined();
     const tier1AtPublic = surface!.fields.filter((f) => f.pii_tier === 1 && f.tier === 'public');
-    expect(tier1AtPublic.map((f) => f.id).sort()).toEqual(['nominee_account_holder_name']);
+    // ⚠⛔ AMENDED BY STORY 11b.3b (AC2) — the set is now **THREE**. ⛔ The prior assertion is NAMED,
+    // ⛔ not deleted: it read `toEqual(['nominee_account_holder_name'])` after 11b.11 reduced the
+    // four nominee-bank entries to one. ⭐ 11b.3b ADDS the two named identities the surface is for
+    // (`2026-09-02-173` deceased, `-174` contributor) — each on its OWN Panel ruling, ⛔ neither an
+    // inheritance from `sahyog-drive` ([[feedback_supersede_never_reinterpret]]).
+    expect(tier1AtPublic.map((f) => f.id).sort()).toEqual([
+      'contributor_name',
+      'deceased_member_name',
+      'nominee_account_holder_name',
+    ]);
   });
 
   it('⭐⭐ STORY 11b.10 (AC5) — the Tier-1-at-`public` count is UNCHANGED on BOTH sahyog surfaces', () => {
@@ -1478,7 +1487,19 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
     // ⚠⛔ AMENDED BY STORY 11b.11 — the count on `sahyog-vivran` is now **ONE** (`2026-09-04-190`
     // cl.1-2 + `2026-09-04-191` cl.1). ⭐ 11b.10's own property is UNAFFECTED and still asserted:
     // its address field moved ⛔ neither surface's Tier-1 set, and it is 11b.11 that moved this one.
-    expect(tier1AtPublic('sahyog-vivran')).toEqual(['nominee_account_holder_name']);
+    // ⚠⛔⛔ **AMENDED AGAIN BY STORY 11b.3b (AC2) — THE SET IS NOW **THREE**, and the prior assertion
+    // is NAMED, ⛔ not deleted** ([[feedback_supersede_never_reinterpret]]). ⭐ The two additions are
+    // the named identities the surface exists for, and each arrived the ⛔ ONLY way it may: by a
+    // **Panel ruling of its own** — `2026-09-02-173` (deceased) and `-174`/`-175` (contributor).
+    // ⛔⛔ ⛔ NEITHER is an inheritance from `sahyog-drive.deceased_member_name` (`2026-08-24-159`
+    // cl.2): the allowlist pins (surface, field) PAIRS so a second surface needs its own authority.
+    // ⭐⭐ AND 11b.10's OWN PROPERTY IS STILL ASSERTED AND STILL UNAFFECTED — `drive_href` is
+    // `pii_tier: 3` and moved ⛔ neither set. ⇒ the ⛔ only thing that widened this one is a ruling.
+    expect(tier1AtPublic('sahyog-vivran')).toEqual([
+      'contributor_name',
+      'deceased_member_name',
+      'nominee_account_holder_name',
+    ]);
     // ⚠⛔⛔ **AMENDED BY STORY 11b.14 (AC7) — THE INDEX'S TIER-1-AT-`public` SET IS NOW **TWO**, AND
     // THE PRIOR ASSERTION IS NAMED, ⛔ NOT DELETED** ([[feedback_supersede_never_reinterpret]]). It
     // read `toEqual(['deceased_member_name'])` with *"the index's single ruled entry … ⛔ and no
@@ -1518,18 +1539,33 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
     // ⛔ NOT edited in place — the supersession lives in `-190`/`-191`.
     const surface = matrix.surfaces.find((s) => s.id === 'sahyog-vivran');
     const withException = surface!.fields.filter((f) => f.tier1_public_exception !== undefined);
-    expect(withException.map((f) => f.id).sort()).toEqual(['nominee_account_holder_name']);
+    // ⚠⛔⛔ **AMENDED BY STORY 11b.3b (AC2) — THERE ARE NOW THREE, AND THE ATTRIBUTION CHECK IS
+    // PER-FIELD RATHER THAN BLANKET.** ⭐ The prior form asserted ONE id and then looped a SINGLE
+    // decision id over every entry; with three rulings that loop would have had to be weakened to a
+    // "some decision" check, which is exactly the dilution this leg exists to prevent. ⇒ ⭐ each pair
+    // is pinned to ITS OWN decision by name ([[feedback_supersede_never_reinterpret]]).
+    const RULED: Readonly<Record<string, string>> = {
+      contributor_name: '2026-09-02-174',
+      deceased_member_name: '2026-09-02-173',
+      nominee_account_holder_name: '2026-09-04-190 cl.2',
+    };
+    expect(withException.map((f) => f.id).sort()).toEqual(Object.keys(RULED).sort());
     for (const f of withException) {
-      expect(f.tier1_public_exception?.decision).toBe('2026-09-04-190 cl.2');
+      expect(f.tier1_public_exception?.decision).toBe(RULED[f.id]);
       expect(f.tier1_public_exception?.scope).toContain('sahyog-vivran');
       // ⭐ `-165` cl.2 STANDS — masking does NOT change the tier, and the scope has to SAY so: the
       // entry covers BOTH states (rendered live, and RETAINED in the dormant masked projection per
       // `2026-09-04-191` cl.2), and *"it is only last-4, so it isn't really Tier-1"* is foreclosed.
-      expect(f.tier1_public_exception?.scope.toLowerCase()).toMatch(/mask/);
+      // ⚠⛔ SCOPED TO THE NOMINEE FIELD (11b.3b): `-165` cl.2's masking reasoning is about the
+      // nominee-bank projection, and ⛔ the two name entries have ⛔ nothing to do with masking. ⭐ A
+      // blanket `/mask/` over all three would have forced meaningless masking prose into their scopes.
+      if (f.id === 'nominee_account_holder_name') {
+        expect(f.tier1_public_exception?.scope.toLowerCase()).toMatch(/mask/);
+      }
     }
   });
 
-  it('⛔ NO SECOND Tier-1 entry — and the FIVE withdrawn fields are ABSENT, ⛔ not demoted', () => {
+  it('⭐ the FIVE withdrawn nominee fields are ABSENT, ⛔ not demoted (and the two NAMES are now DECLARED)', () => {
     // ⚠ The other direction of the same control.
     // ⭐⛔ **WHAT THIS TEST ASSERTED UNTIL 11b.11, kept as the record:** that `nominee_bank_name` and
     // `nominee_branch` were DECLARED, at `pii_tier: 3`, and carried ⛔ no `tier1_public_exception` —
@@ -1549,9 +1585,22 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
     ]) {
       expect(surface!.fields.some((f) => f.id === withdrawn)).toBe(false);
     }
-    // ⛔ And the deceased member's name + the contributor's belong to **11b.3b**, gated on their own
-    // Panel rulings — ⛔ not pre-added here, and ⛔ not restored by 11b.11's reduction.
-    expect(surface!.fields.some((f) => f.id === 'deceased_member_name')).toBe(false);
+    // ⚠⛔⛔ **AMENDED BY STORY 11b.3b (AC2) — THIS LEG INVERTS, AND THE PRIOR FORM IS KEPT AS THE
+    // RECORD.** It asserted `deceased_member_name` was ABSENT, on the ground that it *"belongs to
+    // 11b.3b, gated on its own Panel rulings — ⛔ not pre-added here"*. ⭐ **That gate is now
+    // SATISFIED**: 11b.3b arrived with `2026-09-02-173` / `-174` and its own allowlist pairs, so the
+    // fields are DECLARED — ⛔ which is the condition the old assertion was waiting for, ⛔ not a
+    // breach of it. ⇒ ⭐ the leg is re-pointed at what it was really protecting: that they arrived
+    // **WITH an attributed exception block**, ⛔ never as bare `public` declarations.
+    for (const named of ['deceased_member_name', 'contributor_name']) {
+      const f = surface!.fields.find((sf) => sf.id === named);
+      expect(f).toBeDefined();
+      expect(f?.pii_tier).toBe(1);
+      expect(f?.tier).toBe('public');
+      expect(f?.tier1_public_exception).toBeDefined();
+    }
+    // ⛔ And the 11b.6 (In Memoriam) fence is UNTOUCHED by this story — it keeps first-name +
+    // last-initial until it has a ruling of its own. ⭐ Asserted in `public-pages-matrix-schema`.
   });
 
   it('⭐ every field on the surface is `public` — there is no unrenderable declaration', () => {
@@ -1573,14 +1622,23 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
   it('⭐ NEGATIVE CONTROL — a planted UNDECLARED field id fails as `unclassified`', () => {
     // ⚠ Without this the pass above proves nothing: a leg fed a set nobody could have broken is a
     // green check certifying an invariant nobody enforces.
+    // ⚠⛔⛔ **RE-PLANTED BY STORY 11b.3b (AC9) — ⭐ THE CONTROL LOST ITS SUBJECT AND WAS ⛔ NOT
+    // DELETED.** It planted `deceased_member_name`, whose bite depended on that id being UNDECLARED
+    // on this surface. ⭐ 11b.3b DECLARES it (`2026-09-02-173`) ⇒ the plant would now resolve to a
+    // legal field and the control would go green for the wrong reason — a negative control that can
+    // no longer fail is worse than none ([[feedback_gate_scope_semantic_coverage]]).
+    // ⭐ **THE NEW SUBJECT IS GENUINELY UNDECLARED AND WILL STAY SO:** `donation_id` is one of the
+    // three UX-spec columns with ⛔ NO SUBSTRATE ANYWHERE — there is ⛔ no `donation_id` in
+    // `packages/`, and the UX spec's canonical block records it as not buildable. ⇒ ⛔ no story is
+    // going to declare it out from under this control.
     const verdict = evaluateSnapshot(matrix, {
       ...snapshot,
-      fields: [...(snapshot.fields ?? []), 'deceased_member_name'],
+      fields: [...(snapshot.fields ?? []), 'donation_id'],
     });
     expect(verdict.status).toBe('fail');
     expect(verdict.leaks).toHaveLength(1);
     expect(verdict.leaks[0]!.tier).toBe('unclassified');
-    expect(verdict.leaks[0]!.field).toBe('deceased_member_name');
+    expect(verdict.leaks[0]!.field).toBe('donation_id');
   });
 
   it('⭐ NEGATIVE CONTROL — a REAL field moved to `authenticated_member` fails (the tier half)', () => {

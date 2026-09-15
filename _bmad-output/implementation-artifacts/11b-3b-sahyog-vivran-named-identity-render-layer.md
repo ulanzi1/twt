@@ -893,8 +893,18 @@ AC10→T0 · **AC11→T1b** (and T1b gates T2).
         strings are **record-quotes** (*"v2.0 cited X; it rotted"*), ⛔ not live cites
         ([[feedback_story_validate_footguns]] item 19). ⚠⛔ The `-218` prepend **does** rot such
         pointers in **other** artefacts — ⛔ not swept, and `-218` Consequence 4 says so.
-- [ ] **Task 1 — The two fields + two allowlist entries, ONE commit** (AC2) — ⭐ identity arrays, ⛔ not
-      counts; amend `matrix.ts:407-408`; ⛔ do ⛔ not re-do item (iii).
+- [x] **Task 1 — ⭐ THE TWO FIELDS + TWO ALLOWLIST ENTRIES, ONE COMMIT** (AC2, part of AC9) —
+      ✅ **DONE 2026-09-15.** ⭐ `sahyog-vivran.deceased_member_name` (`2026-09-02-173`) and
+      `sahyog-vivran.contributor_name` (`2026-09-02-174`) declared in the YAML **and** pinned in
+      `RULED_TIER1_PUBLIC_EXCEPTIONS` **in the same commit** (`-165` cl.3). ⇒ the surface's
+      Tier-1-at-`public` set is **THREE**; the allowlist is **SIX**.
+      ⭐ `matrix.ts`'s fence amended: its **11b.3 half is spent**, its **11b.6 (In Memoriam) half
+      STANDS**. ⭐ The YAML's *"⛔ NO SECOND TIER-1 ENTRY BELONGS HERE"* routing note **discharged**.
+      ⚠⛔ **`escalation_count` is UNCHANGED at 1 — ⭐ settled by READING, ⛔ not decided:** the shipped
+      test says *"a field being declared for the FIRST time has ⛔ no honest `from` tier. Declaring a
+      surface is ⛔ not an escalation."*
+      ⚠ **FIVE shipped assertions inverted and were amended BY NAME** (⛔ none deleted) — see the Dev
+      Agent Record. ⛔ AC9's other four legs stay OPEN (Task 8): they depend on Task 2's render.
 - [x] **Task 1b — ⭐ THE FINANCIAL-TRUTH GATE: NARROWED, AND ITS TEETH PROVEN** (AC11 b/c/d/e) —
       ✅ **DONE 2026-09-15.** ⭐ Rule (3) **narrowed, ⛔ not deleted and ⛔ not appended-to-green**: the
       TARGET and its factors stay banned by NAME, the ruled `amountRaisedInr` may cross, and the D1(c)
@@ -1050,7 +1060,20 @@ Claude Opus 5 (`claude-opus-5`) — Task 0 (governance) and Task 1b (AC11 b/c/d/
   · `ux-design-specification.md`'s canonical block.
 - ⚠⛔ **AC11(a) re-ordered** — it depends on files **Task 2** creates, so it moved to Task 2. ⭐ Verified
   a **no-op** for the files that already exist (all three are already `renderPath: true`).
-- ⛔ **Tasks 1, 2-8 remain OPEN.**
+- ✅ **Task 1 (AC2)** — two field declarations + two allowlist pairs, one commit. ⭐ Five shipped
+  assertions inverted and were **amended by name**, ⛔ none deleted:
+  `public-pages-matrix-schema.test.ts`'s negative control (**re-planted** onto `in-memoriam`, whose
+  fence still stands, ⭐ plus a new POSITIVE leg proving the declared pair parses) ·
+  `public-pages.test.ts`'s six-entry identity snapshot ·
+  `scrape-test.spec.ts`'s Tier-1 count, its per-field attribution loop (⭐ re-shaped from a blanket
+  single-decision check to a **per-field** map, so three rulings ⛔ cannot dilute it), and its
+  *"NO SECOND Tier-1 entry"* leg (⭐ re-pointed at what it was really protecting — that the names
+  arrived **WITH** attributed exception blocks) · and `scrape-test.spec.ts`'s undeclared-id negative
+  control, **re-planted** onto `donation_id`, a UX-spec column with ⛔ no substrate anywhere, so
+  ⛔ no future story can declare it out from under the control.
+  ⚠⛔ **`escalation_count` UNCHANGED at 1** — ⭐ FOUND in a shipped test's own reasoning, ⛔ not ruled.
+- ⛔ **Tasks 2-8 remain OPEN.** ⚠ AC9 is **PARTLY** discharged (the two negative controls); its other
+  four legs depend on Task 2's render.
 
 ### File List
 
@@ -1062,6 +1085,11 @@ Claude Opus 5 (`claude-opus-5`) — Task 0 (governance) and Task 1b (AC11 b/c/d/
 - `packages/ui/src/contribution-list/view-model.ts` — stale *"form is UNRULED"* doc-block amended
 - `_bmad-output/implementation-artifacts/deferred-work.md` — amount-raised item amended
 - `_bmad-output/planning-artifacts/ux-design-specification.md` — `:1334`/`:1335` amended
+- **Task 1:** `packages/contracts/public-pages/public-vs-private-matrix.yaml` (two field blocks +
+  the discharged routing note) · `packages/contracts/src/public-pages/matrix.ts` (two allowlist pairs
+  + the half-spent fence) · `packages/contracts/tests/public-pages.test.ts` ·
+  `packages/contracts/tests/public-pages-matrix-schema.test.ts` ·
+  `apps/public/tests/integration/public-pages/scrape-test.spec.ts`
 
 ## Change Log
 

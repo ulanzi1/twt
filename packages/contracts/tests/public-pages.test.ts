@@ -506,7 +506,7 @@ describe('committed matrix — the POPULATED invariants (Story 11a.1)', () => {
   // ⭐ The IDENTITY discipline is unchanged and is what matters: the assertion still names every
   // pair with its decision id, so a withdrawn exception silently reappearing — or an entry landing
   // with ⛔ no ruling behind it — still FAILS here.
-  it('carries EXACTLY the four ruled Tier-1 public exceptions, each attributed to its decision', () => {
+  it('carries EXACTLY the six ruled Tier-1 public exceptions, each attributed to its decision', () => {
     const exceptions = committed().surfaces.flatMap((s) =>
       s.fields.filter((f) => f.tier1_public_exception !== undefined).map((f) => ({ s, f })),
     );
@@ -519,6 +519,9 @@ describe('committed matrix — the POPULATED invariants (Story 11a.1)', () => {
       'sahyog-drive.deceased_member_name@2026-08-24-159',
       // ⭐ Story 11b.14 — the nominee's name on the INDEX. ⛔ A SECOND ruling, ⛔ not an inheritance.
       'sahyog-drive.nominee_account_holder_name@2026-09-07-205 cl.1',
+      // ⭐ Story 11b.3b — the two named identities on the drive page. ⛔ Each on its OWN ruling.
+      'sahyog-vivran.contributor_name@2026-09-02-174',
+      'sahyog-vivran.deceased_member_name@2026-09-02-173',
       'sahyog-vivran.nominee_account_holder_name@2026-09-04-190 cl.2',
     ]);
     for (const e of exceptions) expect(e.f.pii_tier).toBe(1);

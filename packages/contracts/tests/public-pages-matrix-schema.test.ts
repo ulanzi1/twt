@@ -219,17 +219,25 @@ describe('the ruled Tier-1 public exception (AC4)', () => {
 
   // ⛔ D1(b)/D10's scope fence, asserted rather than merely written down: the Sahyog Drive
   // ruling does NOT travel to 11b.3's surface just because the field means the same thing.
-  // ⚠ The document below is a SYNTHETIC fixture, ⛔ not a mirror of the committed matrix — Story
-  // 11b.3 declared the real `sahyog-vivran` surface (at `/sahyog-vivran/[driveToken]` since Story
-  // 11b.10 re-addressed it; `[poolCanonicalIdentifier]` before that)
-  // with ⛔ ZERO Tier-1 fields, which is precisely why this control still bites: **11b.3b** is the
-  // story that will add a name here, and it must arrive with its OWN ruling (`2026-09-02-173` /
-  // `-174`) and its own allowlist entry — ⛔ never by borrowing 11b.1's.
-  it('REJECTS the ruled Sahyog Drive field id when it appears on a DIFFERENT surface', () => {
+  // ⚠ The document below is a SYNTHETIC fixture, ⛔ not a mirror of the committed matrix.
+  //
+  // ⚠⛔⛔ **RE-PLANTED 2026-09-15 (Story 11b.3b, AC9) — ⭐ THE CONTROL LOST ITS SUBJECT AND WAS
+  // ⛔ NOT DELETED.** It used to plant `sahyog-vivran.deceased_member_name`, whose bite depended on
+  // that pair being UNDECLARED. ⭐ **11b.3b declares it** (`2026-09-02-173`, with its own allowlist
+  // entry) ⇒ the plant became a LEGAL pair and the control went green for the wrong reason — a
+  // negative control that can no longer fail is worse than none ([[feedback_gate_scope_semantic_coverage]]).
+  //
+  // ⭐ **THE NEW SUBJECT IS THE HALF OF THE FENCE THAT STILL STANDS.** `matrix.ts`'s
+  // `sahyog-drive.deceased_member_name` comment says its scope reaches ⛔ neither 11b.3 (Sahyog
+  // Vivran) nor 11b.6 (In Memoriam). 11b.3b spent the FIRST half by earning its own ruling; ⭐ the
+  // **In Memoriam** half is UNCHANGED — that surface keeps first-name + last-initial until it has a
+  // ruling of its own. ⇒ planting the borrow THERE is the same control, aimed at a subject that is
+  // still genuinely undeclared.
+  it('REJECTS a ruled deceased-name field id when it appears on a DIFFERENT surface (In Memoriam)', () => {
     expect(() =>
       parsePublicVsPrivateMatrix(
-        doc(`${withException}  - id: sahyog-vivran
-    route: /sahyog-vivran
+        doc(`${withException}  - id: in-memoriam
+    route: /in-memoriam
     renders: false
     search_indexing_policy: noindex
     cache_policy: edge_cacheable
@@ -243,7 +251,30 @@ describe('the ruled Tier-1 public exception (AC4)', () => {
           scope: this surface only
 `),
       ),
-    ).toThrow(/sahyog-vivran\.deceased_member_name/);
+    ).toThrow(/in-memoriam\.deceased_member_name/);
+  });
+
+  // ⭐⭐ AND THE PAIR 11b.3b DECLARED IS PROVEN TO PARSE — ⛔ the positive half, so the control above
+  // is ⛔ not passing merely because every Tier-1 plant throws.
+  it('ACCEPTS `sahyog-vivran.deceased_member_name` — it has its OWN ruling (11b.3b)', () => {
+    expect(() =>
+      parsePublicVsPrivateMatrix(
+        doc(`${withException}  - id: sahyog-vivran
+    route: /sahyog-vivran/[driveToken]
+    renders: true
+    search_indexing_policy: noindex
+    cache_policy: edge_cacheable
+    fields:
+      - id: deceased_member_name
+        tier: public
+        pii_tier: 1
+        tier1_public_exception:
+          decision: '2026-09-02-173'
+          rationale: The Trustee Panel ruled this surface's deceased name at the FULL NAME form.
+          scope: this surface only
+`),
+      ),
+    ).not.toThrow();
   });
 
   it('REJECTS an exception block missing its decision ref (attribution is mandatory)', () => {

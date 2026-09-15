@@ -1209,6 +1209,24 @@ surfaces:
             rules the LABEL; it says ⛔ nothing about full name vs first-name + last-initial, and
             11b.11 has ⛔ no authority to rule one. ROUTED, ⛔ not decided.
 
+      - id: amount_raised_inr
+        tier: public
+        pii_tier: 3
+        description: >-
+          ⭐ THE RULED PUBLIC RUPEE FIGURE — Story 11b.3b (AC3b), `2026-09-04-190` cl.6, with
+          `2026-09-04-189` cl.5 recording the rupee boundary as NEWLY CROSSED. Computed SERVER-SIDE
+          in the domain read as `confirmedContributionCount × pools.fixed_amount`, ⛔ ONCE, clamped
+          at 0, and it is the SAME binding `classifyCycleOutcome` consumes as `deliveredTotal`.
+          ⛔⛔ A second `× fixedAmount` anywhere is the defect (Story 11b.3 `D1(c)`, REFUSED),
+          mechanized by `scripts/sahyog-vivran-financial-truth`.
+          ⚠⛔ `pii_tier: 3` AND THAT IS ⛔ NOT A CONVENIENCE: it is a whole-drive AGGREGATE — ⛔ not a
+          person, ⛔ not derived from one identifiable person, and ⛔ not a per-contributor amount.
+          ⛔ It needs ⛔ no `tier1_public_exception`, and declaring one would be an *"exception that
+          does not except anything"*.
+          ⛔⛔ IT IS A FIGURE, ⛔ NEVER A COMPARISON (`2026-09-15-218` cl.4): ⛔ never paired with,
+          divided by or captioned against a target, expected total or roster size — their ratio IS
+          the completion percentage cl.1 refuses. ⛔ And ⛔ NO per-contributor amount ever renders:
+          the list is ⛔ never a leaderboard.
       # ── ⭐⭐ STORY 11b.3b — THE TWO NAMED IDENTITIES ON THIS SURFACE ───────────────────────────
       # ⭐ Declared in the SAME COMMIT as their `RULED_TIER1_PUBLIC_EXCEPTIONS` pairs, per
       # `2026-08-28-165` cl.3. ⚠⛔ These are DECLARATIONS, ⛔ NOT escalations: an `escalations:`

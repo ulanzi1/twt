@@ -812,6 +812,10 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
             // and would render the identical blank cell (review finding).
             district: drive.district?.trim().replace(/[\u200b-\u200f\ufeff]/g, '') || null,
             confirmedContributionCount: drive.confirmedContributionCount,
+            // ⭐ Story 11b.3b (AC3b) — returned from the domain read's own clamped binding;
+            // ⛔⛔ ⛔ no second `× fixedAmount` here, and ⛔ no target/expected-total companion
+            // (`2026-09-15-218` cl.4).
+            amountRaisedInr: drive.amountRaisedInr,
             fundingOutcome: drive.fundingOutcome,
             appealReversal:
               drive.appealReversal === null

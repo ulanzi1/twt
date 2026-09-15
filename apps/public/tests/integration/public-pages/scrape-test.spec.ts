@@ -1253,6 +1253,14 @@ const SAHYOG_VIVRAN_TEST_LABELS: SahyogVivranLabels = {
   dispositionProceduralCorrection: 'A procedural correction was made',
   dispositionReconsideration: 'The claim was reconsidered on its merits',
   contributionsCount: (n) => `${String(n)} confirmed`,
+  amountRaised: (a: number) =>
+    // ⚠⛔ GROUPED, because production's `formatCurrency` groups (`₹ 1,37,000`) — ⛔ a stub that emits
+    // a bare `137000` models something this app never renders, and it trips the anti-account-number
+    // control below (`/\d{6,}/`) for a reason that ⛔ does not exist in production.
+    // ⭐⭐ AND THE INTERACTION IS WORTH NAMING: Indian digit grouping is what keeps a rupee figure
+    // structurally unable to look like an account number. ⛔ Do ⛔ not "fix" a future trip here by
+    // weakening that control — it is the leak check, and the amount is the thing that must conform.
+    `₹${a.toLocaleString('en-IN')} raised`,
   outageTitle: 'could not load',
   outageBody: 'our side',
   // ⭐⛔ REDUCED BY STORY 11b.11 — `2026-09-04-190` cl.1 / `2026-09-04-191` cl.1 withdrew the
@@ -1278,6 +1286,7 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
         closedAt: '2026-09-01T18:45:00.000Z',
         district: 'Lucknow',
         confirmedContributionCount: 137,
+        amountRaisedInr: 137000,
         fundingOutcome: 'fully_funded',
         appealReversal: {
           reversedAtStage: 2,
@@ -1345,7 +1354,7 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
     fields: sahyogVivranSurfaceFieldIds(model),
   };
 
-  it('⭐ the snapshot field set is NON-EMPTY, and is EXACTLY the eleven classified fields', () => {
+  it('⭐ the snapshot field set is NON-EMPTY, and is EXACTLY the twelve classified fields', () => {
     // ⛔ The EXACT set, ⛔ not "length > 0": a leg that only detects additions accepts a field
     // vanishing from the render while the matrix still claims it is shown.
     // ⭐ TEN → SIXTEEN at Story 11b.3a: the four ruled Tier-1 nominee-bank fields plus their two
@@ -1359,6 +1368,7 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
     // classified set does ⛔ not shrink on a drive with no bank details — the vacuous-leg defect
     // this leg exists to avoid. ⛔ That property is UNCHANGED by the withdrawal.
     expect(snapshot.fields).toEqual([
+      'amount_raised_inr',
       'appeal_disposition_category',
       'appeal_reversal_at',
       'appeal_reversal_stage',

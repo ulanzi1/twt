@@ -43,6 +43,10 @@ const MEMBER_COUNTERPART: Record<string, readonly string[]> = {
   drive_closed_at: ['closedAt'],
   district: ['district'],
   confirmed_contribution_count: ['confirmedContributionCount'],
+  // ⭐⭐ Story 11b.3b (AC3b) — the public drive page gains the ruled rupee figure, and the member
+  // detail ALREADY carries it under the same key (`member-drive-detail.ts`). ⇒ ⭐ the `-189` cl.3 /
+  // `-195` cl.1 floor holds for this field with ⛔ nothing to build: member ⩾ public, same figure.
+  amount_raised_inr: ['amountRaisedInr'],
   // ⭐ A COMPOSED SENTENCE on the public side, from the close-of-cycle outcome enum. The member
   // response carries the enum ITSELF — the input, un-narrowed. ⇒ strictly MORE.
   close_of_cycle_framing: ['fundingOutcome'],

@@ -56,6 +56,14 @@
 // ⭐ 11b.3b will need `rosterSize` and `fixedAmount` to feed the presenter — ⛔ nothing in this shape
 // forbids adding them, and ⛔ adding a key is not a `.strict()` violation. ⛔ Do not pre-add them:
 // a field with no render is the vacuous-leg defect wearing a forward-compatibility costume.
+// ⚠⛔⛔ **AMENDED 2026-09-15 (Story 11b.3b, AC3b) — ⛔ THE SENTENCE ABOVE IS SPENT AND ITS INVITATION
+// IS WITHDRAWN. ⛔ It is KEPT as the record and ⛔ NOT rewritten** ([[feedback_supersede_never_reinterpret]]).
+// ⛔⛔ **⛔ NEITHER `rosterSize` NOR `fixedAmount` MAY EVER REACH THIS WIRE.** Their PRODUCT is लक्ष्य
+// (`2026-09-07-204` cl.2), which cl.3 reserves to a `super_admin` reveal and cl.8 closed
+// *"BY CONSTRUCTION"* — *"the wire carries the PERCENTAGE only, ⛔ never `rosterSize`"*. ⇒ ⭐ 11b.3b
+// does ⛔ NOT feed the `@twt/ui` presenter here (it takes both factors as INPUTS); the ruled figure
+// `amountRaisedInr` is computed SERVER-SIDE in the domain read and crosses ALONE
+// (`2026-09-04-190` cl.6). ⚠ And it crosses as a FIGURE, ⛔ never a comparison (`2026-09-15-218` cl.4).
 //
 // ── ⭐ AND NO TARGET, EXPECTED TOTAL, PERCENTAGE, SHORTFALL OR COMPARISON FIGURE ─────────────────
 // In any field, under any name (AC3). `classifyCycleOutcome` quarantines the target inside the domain
@@ -397,6 +405,25 @@ export const PublicSahyogVivranEntry = z
      * rows BY DESIGN, and ⛔ neither surface's copy may claim the list is complete.
      */
     confirmedContributionCount: z.number().int().nonnegative(),
+    /**
+     * ⭐⭐ THE RULED PUBLIC RUPEE FIGURE — Story 11b.3b (AC3b). `2026-09-04-190` **cl.6**, with
+     * `2026-09-04-189` **cl.5** recording the rupee boundary as NEWLY CROSSED.
+     *
+     * ⭐ Computed SERVER-SIDE in the domain read as `confirmedContributionCount × pools.fixed_amount`
+     * — ⛔ ONCE, clamped at 0 — and it is the SAME binding `classifyCycleOutcome` consumes as its
+     * `deliveredTotal`. ⛔⛔ **A SECOND `× fixedAmount` ANYWHERE IS THE DEFECT** (Story 11b.3's
+     * **D1(c)**, REFUSED), and `scripts/sahyog-vivran-financial-truth` mechanizes the refusal.
+     *
+     * ⛔⛔ **IT IS A FIGURE, ⛔ NEVER A COMPARISON** (`2026-09-15-218` **cl.4**). ⛔ It may ⛔ not be
+     * paired with, divided by or captioned against a target, an expected total or a roster size:
+     * their ratio IS the completion percentage cl.1 refuses, and reconstructing it by hand re-opens
+     * the channel `2026-09-07-204` cl.8 closed. ⚠ `:60-61`'s fence is UNCHANGED and still binds.
+     *
+     * ⚠ `.nonnegative()` IS LOAD-BEARING, ⛔ not decoration: `pools.fixed_amount` has ⛔ no DB
+     * positivity CHECK, so an unclamped negative would fail HERE — as a 500 on the whole page. The
+     * clamp lives in the domain read; this is the second line of that defence.
+     */
+    amountRaisedInr: z.number().int().nonnegative(),
     /**
      * ⭐ NULLABLE IN TWO CASES, both load-bearing, and the page says NOTHING for either:
      *   (a) the drive is still COLLECTING — AC3's honest copy is *"final outcome will appear after

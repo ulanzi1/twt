@@ -37,6 +37,15 @@
 // this story does ⛔ not lift, so the amount MOVES to **11b.3b**. ⛔ Re-deriving the multiplication
 // here is **D1(c)**, REFUSED. ⚠ The interim asymmetry (a count here, an amount in the member app) is
 // ORDERING, ⛔ not a ruling, and ⛔ NOT a second D7 inversion.
+// ⭐⭐ **DISCHARGED 2026-09-15 (Story 11b.3b, AC3b) — ⛔ THE PARAGRAPH ABOVE IS KEPT AS THE RECORD.**
+// ⭐ The amount RENDERS here now, as `amount_raised_inr` (`2026-09-04-190` cl.6). ⚠⛔ **AND ⛔ NOT BY
+// THE ROUTE THAT PARAGRAPH EXPECTED:** the `@twt/ui` fence is ⛔ still ⛔ NOT lifted for this figure,
+// because the presenter takes `rosterSize` and `fixedAmount` as INPUTS and `2026-09-07-204`
+// cl.3/cl.8 reserve that pair. ⇒ the figure is computed SERVER-SIDE in the domain read and crosses
+// ALONE. ⭐ **D1(c) IS UNCHANGED AND STILL REFUSED** — ⛔ no `× fixedAmount` in this app, under any
+// spelling, and the `sahyog-vivran-financial-truth` gate fails the build on the product's SHAPE.
+// ⚠ The interim asymmetry ENDS with this render. ⛔ There is still ⛔ NO completion percentage
+// (`2026-09-15-218` cl.1), and ⛔ no target, expected total, roster size or shortfall may join it.
 //
 // ⛔⛔ AND ⛔ NO SESSION, EVER: ⛔ no `Astro.cookies`, ⛔ no auth read of `Astro.request.headers`,
 // ⛔ no `Astro.session`, ⛔ no `isAuthenticated` prop on `<AuthenticatedFragment>`. ⭐ Every visitor
@@ -64,7 +73,7 @@
 // to `common` and THROWS on a miss — the `{{max}}` vs `{max}` defect that made `/members` throw on
 // EVERY request at 11a.2 was exactly this shape, and no test caught it because every test bypassed
 // `t()`).
-import { getLocale, isLocale, t } from '@twt/i18n';
+import { formatCurrency, getLocale, isLocale, t } from '@twt/i18n';
 import type { Locale } from '@twt/i18n';
 import { passport } from '@twt/domain';
 
@@ -157,6 +166,12 @@ const labels: SahyogVivranLabels = {
   dispositionProceduralCorrection: tr('disposition.procedural_correction'),
   dispositionReconsideration: tr('disposition.reconsideration_on_merits'),
   contributionsCount: (count: number) => tr('value.contributions_count', { count }),
+  // ⭐⭐ Story 11b.3b (AC3b) — the ruled rupee figure. ⚠⛔ `formatCurrency(amount, 'en')`, ⛔ NEVER the
+  // page locale: money renders LATIN even in the Hindi UI (amendment A2) and `currency.ts` says so.
+  // ⛔⛔ ⛔ No `× fixedAmount` here, under any spelling — `D1(c)` is REFUSED and the
+  // `sahyog-vivran-financial-truth` gate fails the build on the product's SHAPE.
+  amountRaised: (amountInr: number) =>
+    tr('value.amount_raised', { amount: formatCurrency(amountInr, 'en') }),
   outageTitle: tr('outage.title'),
   outageBody: tr('outage.body'),
   // ── ⭐ Story 11b.3a — the nominee block, ⭐⛔ REDUCED BY STORY 11b.11 ─────────────────────────
@@ -370,6 +385,17 @@ if (!driveStatusVisible) {
                 figure anywhere on this page (D1(b) moved it to 11b.3b; D1(c) is REFUSED).
               */}
               <dd class="text-sm"><MatrixField surface="sahyog-vivran" field="confirmed_contribution_count" viewerContext="public" value={model.confirmedContributionCount} /></dd>
+              {/*
+                ⭐⭐ STORY 11b.3b (AC3b) — THE RULED RUPEE FIGURE, beside the count.
+                ⛔⛔ A FIGURE, ⛔ NEVER A COMPARISON (`2026-09-15-218` cl.4): ⛔ no target, ⛔ no
+                expected total, ⛔ no roster size, ⛔ no shortfall and ⛔ NO completion percentage —
+                cl.1 refuses one on a `closed`/`settled` drive, and the `live` arm is ⛔ NOT ruled
+                and must ⛔ not auto-widen (cl.3).
+                ⚠ It reads "N confirmed" beside FEWER than N named rows BY DESIGN once the
+                contributor list lands (`2026-08-30-169`) — ⛔ no copy here may claim the list is
+                complete.
+              */}
+              <dd class="text-sm"><MatrixField surface="sahyog-vivran" field="amount_raised_inr" viewerContext="public" value={model.amountRaisedInr} /></dd>
             </div>
           </dl>
         </section>

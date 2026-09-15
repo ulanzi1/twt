@@ -55,6 +55,14 @@ const LABELS: SahyogVivranLabels = {
   dispositionProceduralCorrection: 'A procedural correction was made',
   dispositionReconsideration: 'The claim was reconsidered on its merits',
   contributionsCount: (count) => `${String(count)} confirmed`,
+  amountRaised: (a: number) =>
+    // ⚠⛔ GROUPED, because production's `formatCurrency` groups (`₹ 1,37,000`) — ⛔ a stub that emits
+    // a bare `137000` models something this app never renders, and it trips the anti-account-number
+    // control below (`/\d{6,}/`) for a reason that ⛔ does not exist in production.
+    // ⭐⭐ AND THE INTERACTION IS WORTH NAMING: Indian digit grouping is what keeps a rupee figure
+    // structurally unable to look like an account number. ⛔ Do ⛔ not "fix" a future trip here by
+    // weakening that control — it is the leak check, and the amount is the thing that must conform.
+    `₹${a.toLocaleString('en-IN')} raised`,
   outageTitle: 'We could not load this drive just now',
   outageBody: 'This is a problem on our side.',
   // ⭐⛔ REDUCED BY STORY 11b.11 (`2026-09-04-190` cl.1-2, `2026-09-04-191` cl.1). ⛔ Seven labels
@@ -75,6 +83,7 @@ const SETTLED: PublicSahyogVivranResponse = {
     closedAt: '2026-09-01T18:45:00.000Z',
     district: 'Lucknow',
     confirmedContributionCount: 137,
+    amountRaisedInr: 137000,
     fundingOutcome: 'fully_funded',
     appealReversal: null,
     nomineeBankAccounts: [],
@@ -106,15 +115,32 @@ describe('buildSahyogVivranView — the settled drive', () => {
     expect(model.appealReversalAt).toBeNull();
   });
 
-  it('⭐⛔ carries NO rupee figure, under any key (D1(b) moved the amount to 11b.3b)', () => {
-    // ⛔ D1(c) — re-deriving `confirmedCount × fixedAmount` here — is REFUSED, so no key may carry a
-    // currency symbol, an INR token, or the word "raised". ⚠ Asserted over the WHOLE model rather
-    // than a named key, so a future key cannot smuggle one in under a different name.
+  // ⚠⛔⛔ **NARROWED 2026-09-15 (Story 11b.3b, AC3b / AC9) — ⛔ THE FENCE IS ⛔ NOT DELETED, AND ITS
+  // PRIOR FORM IS KEPT HERE AS THE RECORD** ([[feedback_supersede_never_reinterpret]]). It read:
+  //   *"carries NO rupee figure, under any key (D1(b) moved the amount to 11b.3b)"*, asserting the
+  //   WHOLE serialized model matched ⛔ none of `/₹/`, `/\bINR\b/i`, `/amountRaised/i`, `/\braised\b/i`.
+  // ⭐ **11b.3b IS that story**, and `2026-09-04-190` cl.6 rules `amountRaisedInr` the public figure
+  // ⇒ the blanket form is ⛔ now unsatisfiable BY DESIGN. ⛔ Deleting it would discard D1(c)'s
+  // refusal, which survives 11b.3b UNCHANGED.
+  // ⭐⭐ **SO IT IS RE-POINTED AT WHAT IT WAS REALLY PROTECTING** — ⛔ not "no money", but **no TARGET
+  // and no COMPARISON**. The amount is a FIGURE (`2026-09-15-218` cl.4); its ratio to a target is
+  // the percentage cl.1 refuses.
+  it('⭐ carries the RULED rupee figure — and ⛔ NO target, percentage or comparison beside it', () => {
     const serialized = JSON.stringify(model);
-    expect(serialized).not.toMatch(/₹/);
-    expect(serialized).not.toMatch(/\bINR\b/i);
-    expect(serialized).not.toMatch(/amountRaised/i);
-    expect(serialized).not.toMatch(/\braised\b/i);
+    // ⭐ The ruled figure IS present, and under its ruled key.
+    expect(model.amountRaisedInr).toBe('₹1,37,000 raised');
+    // ⛔⛔ AND ⛔ NOTHING THAT WOULD LET A READER RECONSTRUCT लक्ष्य. `2026-09-07-204` cl.8 closed the
+    // arithmetic-recovery channel BY CONSTRUCTION; these are the operands and framings that re-open
+    // it by hand, and ⛔ none may appear under ANY key.
+    expect(serialized).not.toMatch(/rosterSize/i);
+    expect(serialized).not.toMatch(/fixedAmount/i);
+    expect(serialized).not.toMatch(/expectedTotal/i);
+    expect(serialized).not.toMatch(/deliveredTotal/i);
+    expect(serialized).not.toMatch(/shortfall/i);
+    expect(serialized).not.toMatch(/percent/i);
+    expect(serialized).not.toMatch(/\btarget\b/i);
+    // ⚠ And ⛔ no "X of Y" completion framing, which is a percentage written in words.
+    expect(serialized).not.toMatch(/\bof\s+₹/i);
   });
 
   it('⭐⛔ carries NO UN-RULED person, under any key — ⚠ NARROWED at 11b.3a, ⛔ not deleted', () => {
@@ -162,6 +188,7 @@ describe('buildSahyogVivranView — the LIVE (still collecting) drive (D4(b), AC
         // render layer cannot re-introduce one from a stale wire value either.
         fundingOutcome: null,
         confirmedContributionCount: 4,
+        amountRaisedInr: 4000,
       },
     },
     LABELS,
@@ -197,6 +224,7 @@ describe('buildSahyogVivranView — the ZERO-EXPECTATION drive (the 11b.1 review
           ...SETTLED.drive,
           driveStatus: 'closed',
           confirmedContributionCount: 0,
+          amountRaisedInr: 0,
           fundingOutcome: null,
         },
       },
@@ -283,7 +311,7 @@ describe('buildSahyogVivranOutageView — ⛔ an outage is NOT a 404', () => {
 describe('the field-id derivation is OPERATIVE from this surface’s first commit (AC2)', () => {
   const { model } = buildSahyogVivranView(SETTLED, LABELS);
 
-  it('⭐ returns EXACTLY the eleven classified field ids — ⛔ not "length > 0"', () => {
+  it('⭐ returns EXACTLY the twelve classified field ids — ⛔ not "length > 0"', () => {
     // ⛔ Asserting the EXACT set — rather than non-emptiness — is what makes a DROPPED field fail here
     // too. A leg that only detects additions accepts a field vanishing from the render while the
     // matrix still claims it is shown.
@@ -298,6 +326,7 @@ describe('the field-id derivation is OPERATIVE from this surface’s first commi
     // would go vacuous on exactly the pages nobody would check. ⛔ The withdrawal does ⛔ not weaken
     // that property; it is the reason the ⛔ ONE surviving Tier-1 declaration is still asserted here.
     expect(sahyogVivranSurfaceFieldIds(model)).toEqual([
+      'amount_raised_inr',
       'appeal_disposition_category',
       'appeal_reversal_at',
       'appeal_reversal_stage',

@@ -19,7 +19,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { t, type Locale } from '@twt/i18n';
+import { formatCurrency, t, type Locale } from '@twt/i18n';
 import { describe, expect, it } from 'vitest';
 
 /**
@@ -89,6 +89,28 @@ describe('/sahyog-vivran copy resolves through the REAL t() — both locales', (
       const out = t('appeal.stage', { stage: 3 }, { locale, namespace: 'sahyog-vivran' });
       expect(out).toContain('3');
       expect(out).not.toMatch(/[{}]/);
+    });
+
+    // ⭐⭐ STORY 11b.3b (AC3b) — THE RULED RUPEE FIGURE, RESOLVED THE WAY THE PAGE RESOLVES IT.
+    // ⚠⛔⛔ THIS LEG IS THE REGRESSION TEST FOR A DEFECT THAT ACTUALLY SHIPPED (found 2026-09-15,
+    // Task 2 unit 1 review): the key was minted as `"₹{amount} raised"` while `[driveToken].astro`
+    // passes `formatCurrency(amountInr, 'en')`, whose output ALREADY carries the symbol — so the page
+    // rendered **`₹₹ 1,37,000 raised`**, in BOTH locales. ⛔ Nothing caught it: both suites stub
+    // `labels.amountRaised` and so bypass `t()` AND `formatCurrency` at once — ⭐ the exact fixture
+    // blind spot this file's header names, re-run on a new key.
+    // ⭐ SO IT IS ASSERTED THROUGH THE REAL FORMATTER, ⛔ never a hand-written form: a transcribed
+    // expectation is a second source for the house money form and would drift from `currency.ts`.
+    it(`${locale}: "value.amount_raised" carries EXACTLY ONE ₹, from the formatter`, () => {
+      const amount = formatCurrency(137000, 'en');
+      const out = t('value.amount_raised', { amount }, { locale, namespace: 'sahyog-vivran' });
+      expect(out).toContain(amount);
+      expect(out).not.toMatch(/[{}]/);
+      // ⛔⛔ THE DEFECT'S SIGNATURE — ⛔ never two symbols, and ⛔ never a literal ₹ in the template.
+      expect(out.match(/₹/g)).toHaveLength(1);
+      expect(out).not.toContain('₹₹');
+      // ⚠ LATIN DIGITS IN BOTH LOCALES (amendment-A2): money is OPERATIONAL data. The page passes
+      // `'en'` to the formatter even under `hi`, and the Devanagari leg below covers the template.
+      expect(out).toMatch(/1,37,000/);
     });
   }
 

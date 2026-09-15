@@ -13,6 +13,8 @@
 import { describe, expect, it } from 'vitest';
 
 import type { PublicSahyogVivranResponse } from '@twt/contracts';
+// ⭐ The REAL money formatter — the stub below calls it rather than transcribing its output.
+import { formatCurrency } from '@twt/i18n';
 
 import {
   buildSahyogVivranOutageView,
@@ -55,14 +57,18 @@ const LABELS: SahyogVivranLabels = {
   dispositionProceduralCorrection: 'A procedural correction was made',
   dispositionReconsideration: 'The claim was reconsidered on its merits',
   contributionsCount: (count) => `${String(count)} confirmed`,
-  amountRaised: (a: number) =>
-    // ⚠⛔ GROUPED, because production's `formatCurrency` groups (`₹ 1,37,000`) — ⛔ a stub that emits
-    // a bare `137000` models something this app never renders, and it trips the anti-account-number
-    // control below (`/\d{6,}/`) for a reason that ⛔ does not exist in production.
-    // ⭐⭐ AND THE INTERACTION IS WORTH NAMING: Indian digit grouping is what keeps a rupee figure
-    // structurally unable to look like an account number. ⛔ Do ⛔ not "fix" a future trip here by
-    // weakening that control — it is the leak check, and the amount is the thing that must conform.
-    `₹${a.toLocaleString('en-IN')} raised`,
+  // ⚠⛔⛔ THE REAL FORMATTER, ⛔ NOT A HAND-WRITTEN FORM — CORRECTED 2026-09-15 (Task 2 unit 1 review).
+  // The transcribed stub `` `₹${a.toLocaleString('en-IN')} raised` `` was wrong TWICE and hid a
+  // SHIPPED defect: it dropped the house space (`currency.ts` emits `₹ 1,37,000` and calls it *"ONE
+  // house form"*), and by modelling ONE ₹ it concealed that the locale key carried a SECOND literal
+  // one — the page rendered `₹₹ 1,37,000 raised` in both locales while this file stayed green.
+  // ⇒ ⭐ the stub now CALLS what production calls, so it cannot drift from it again. ⛔ Do ⛔ not
+  // re-inline a literal form here. ⚠ The composed COPY is asserted through the real `t()` in
+  // `sahyog-vivran-copy.test.ts`; this models only the FORMATTER half the page supplies.
+  // ⭐⭐ AND THE INTERACTION IS STILL WORTH NAMING: Indian digit grouping is what keeps a rupee figure
+  // structurally unable to look like an account number (`/\d{6,}/`). ⛔ Do ⛔ not "fix" a future trip
+  // there by weakening that control — it is the leak check, and the amount is what must conform.
+  amountRaised: (a: number) => `${formatCurrency(a, 'en')} raised`,
   outageTitle: 'We could not load this drive just now',
   outageBody: 'This is a problem on our side.',
   // ⭐⛔ REDUCED BY STORY 11b.11 (`2026-09-04-190` cl.1-2, `2026-09-04-191` cl.1). ⛔ Seven labels
@@ -128,7 +134,13 @@ describe('buildSahyogVivranView — the settled drive', () => {
   it('⭐ carries the RULED rupee figure — and ⛔ NO target, percentage or comparison beside it', () => {
     const serialized = JSON.stringify(model);
     // ⭐ The ruled figure IS present, and under its ruled key.
-    expect(model.amountRaisedInr).toBe('₹1,37,000 raised');
+    // ⚠⛔ DERIVED FROM THE REAL FORMATTER, ⛔ not transcribed — a hand-written `'₹1,37,000 raised'`
+    // is a SECOND source for the house money form, and the one committed here was already wrong
+    // (it dropped `currency.ts`'s house space). ⛔ Do ⛔ not re-inline the literal.
+    expect(model.amountRaisedInr).toBe(`${formatCurrency(137000, 'en')} raised`);
+    // ⛔⛔ AND EXACTLY ONE ₹ — the shipped `₹₹` defect's signature, asserted on the MODEL as well as
+    // on the copy, because this is the layer a future label change would re-break.
+    expect(model.amountRaisedInr.match(/₹/g)).toHaveLength(1);
     // ⛔⛔ AND ⛔ NOTHING THAT WOULD LET A READER RECONSTRUCT लक्ष्य. `2026-09-07-204` cl.8 closed the
     // arithmetic-recovery channel BY CONSTRUCTION; these are the operands and framings that re-open
     // it by hand, and ⛔ none may appear under ANY key.

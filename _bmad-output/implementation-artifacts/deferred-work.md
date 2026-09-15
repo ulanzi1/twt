@@ -4,6 +4,61 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Recorded from: implementation of 11b-3b-sahyog-vivran-named-identity-render-layer — Task 8 (AC9), 2026-09-15
+
+### ⭐⭐ AC9's COUNT WAS LOW BY MORE THAN FOUR TIMES — ⛔ ITS **FIVE** ARE ALL DISCHARGED, BUT **22** TEST LEGS INVERTED
+
+⭐ **RECORDED, ⛔ not filed as a defect** — AC9's *list* was right about every entry it named; ⛔ its
+**number** was not, and the number is what a reviewer would have stopped at.
+
+⚠⛔⛔ **THIS IS THE SAME DEFECT CLASS THE STORY KEPT FINDING IN OTHERS, ⭐ AND IT IS IN THE STORY'S OWN
+AC.** A COUNT carried forward as a WORD: the control set's *"SIX"* (really **SEVEN** — 11b.10 added
+ordinal 7 and nobody re-did the arithmetic) · AC2's *"three stale epic ACs"* (really **TWO**) · the
+field-floor's *"EXACTLY TWO exclusions"* enumerating **two** under a heading that said three.
+⇒ ⭐ the canonical UX-spec block already states the rule this AC needed:
+***"⛔ THE COUNT IS ⛔ NOT THE REQUIREMENT, THE LIST IS."***
+
+✅ **AC9's FIVE, EACH VERIFIED LIVE AT `a097b953` — ⛔ amended BY NAME, ⛔ none deleted:**
+1. ⭐ `scrape-test.spec.ts` — `deceased_member_name` **ABSENT → PRESENT**, re-pointed at what it was
+   really protecting: that the names arrived **WITH an attributed exception block** (Task 1).
+2. ⭐ `scrape-test.spec.ts` — `paginated: false` **→ `true`** (Task 3), with `routes.ts`,
+   `sahyog-vivran-controls.ts` and `login-wall.spec.ts` moved in the SAME commit.
+3. ⭐ `sahyog-vivran-render.test.ts` — the *"NO rupee figure"* fence **NARROWED** to *"no TARGET and no
+   COMPARISON"* (Task 2 unit 1).
+4. ⭐ `sahyog-vivran.spec.ts` — the API's *"NO rupee figure"* fence **NARROWED to the FACTORS** (Task 2
+   unit 2). ⚠⛔ **This one had been RED since Task 2 unit 1 and nobody knew:** the whole `describe` is
+   `skipIf(!hasDatabase)` ⇒ it **SKIPS SILENTLY** under the house `env -u DATABASE_URL turbo test`.
+5. ⭐ The negative control that planted `deceased_member_name` — **RE-PLANTED, ⛔ not deleted**.
+
+⚠⛔ **AND AC9 SAID *"a negative control"* — SINGULAR. ⭐ THERE WERE THREE, AND EACH NEEDED ITS OWN
+SUBJECT:**
+· `scrape-test.spec.ts` (an undeclared FIELD ID) → re-planted onto **`donation_id`** — one of the three
+  UX-spec columns with ⛔ NO SUBSTRATE ANYWHERE ⇒ ⛔ no story can declare it out from under the control.
+· `sahyog-vivran-render.test.ts` (an unclassified MODEL KEY) → re-planted onto **`verifierName`** —
+  ⛔ nobody has ruled a verifier identity at ANY tier ⇒ it cannot be declared without a Panel ruling.
+· `public-pages-matrix-schema.test.ts` (a ruled id on the WRONG surface) → re-planted onto
+  **`in-memoriam`**, whose fence still stands (Task 1).
+⭐ **THE CHOICE OF SUBJECT IS THE WHOLE VALUE HERE** — a control re-planted onto something a sibling
+story is about to declare goes green for the wrong reason at the worst moment.
+
+⭐ **THE REAL FIGURE — 22 amendment markers across SEVEN test files** (`sahyog-vivran-render` 6 ·
+`scrape-test` 5 · `public-pages-sahyog-vivran` 4 · `login-wall` 3 · `sahyog-vivran.spec` 2 ·
+`member-drive-detail-field-floor` 1 · `public-pages-matrix-schema` 1), plus `public-pages.test.ts`'s
+identity snapshot. ⚠ One leg was narrowed **THREE TIMES** across three tasks
+(*"carries NO UN-RULED person"* — `/deceased/i` left at Task 2 unit 2, `/contributor/i` at Task 3).
+
+✅⛔ **AND AC9's ACTUAL PROHIBITION — *"⛔ never deleted quietly"* — VERIFIED MECHANICALLY, ⛔ not
+asserted:** the branch removes **15** `it(` lines and adds **49**. ⭐ **All 15 are RENAMES with a live
+successor**, each because the assertion inverted and the title had to follow it — e.g. *"the ten
+classified fields"* → *"the twelve"*, *"EXCLUSIONS ARE EXACTLY TWO"* → *"EXACTLY ONE"*, *"rejects
+`page` and `limit`"* → *"accepts … and REFUSES them out of range"*. ⛔ **ZERO legs were dropped.**
+
+⚠ **FOR THE NEXT STORY THAT WRITES AN AC LIKE THIS:** ⛔ do ⛔ not write *"N shipped tests invert"*.
+⭐ Name the ones you know and write *"and any other leg the change inverts"* — the count is discovered
+by the build, ⛔ never known at authoring time.
+
+---
+
 ## Recorded from: implementation of 11b-3b-sahyog-vivran-named-identity-render-layer — Task 7 (AC8), 2026-09-15
 
 ### ⚠⛔⛔ FOR `11b-20`: `11b-3b` DISCHARGES THE **AMOUNT** UNCONDITIONALLY AND THE **NAME** ONLY CONDITIONALLY — ⛔ ITS MERGE IS ⛔ NOT ONE GREEN LIGHT

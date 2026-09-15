@@ -1,3 +1,30 @@
+# last_updated: 2026-09-15d (✅ **`11b-3b` — ALL EIGHT TASKS COMPLETE; the row moves
+#   `in-progress` → `review`.** ⛔ No other row is touched.
+#   ⭐ **SHIPPED:** the ruled rupee figure · the deceased member's name · the confirmed CONTRIBUTOR
+#   LIST (paginated, bounded, ordered by the earliest LIVE confirmation, omit-the-ROW) with controls
+#   2 and 3 **RESTORED** ⇒ the applicable set is **SEVEN**, ⛔ not the *"SIX"* three shipped documents
+#   predicted (that arithmetic was written when the set held FOUR).
+#   ⚠⛔⛔ **THE DAY-ONE OUTPUT IS THE INVERSE OF THE TITLE, AND IT IS RULED:** the page names up to
+#   **FIFTY LIVING CONTRIBUTORS' FULL LEGAL NAMES** on an unauthenticated, edge-cached surface while
+#   the **deceased member it is named for renders NOTHING** (fail-closed until counsel's clause is
+#   PINNED). ⭐ That inertness is **PROVEN END TO END** — a live-DB leg plants a REAL Tier-1
+#   ciphertext, the read selects it, the ruling authorises it, and the name still never reaches the
+#   wire. ⛔⛔ ⛔ No placeholder `clause_versions` row was seeded.
+#   ⚠⛔ **TWO TEST-DISCIPLINE LESSONS, BOTH FOUND THE HARD WAY:**
+#   **(1)** A HAND-TRANSCRIBED STUB IS A SECOND SOURCE FOR A SHIPPED FORMAT — the rupee sign rendered
+#   **TWICE** (`₹₹`) in BOTH locales because both suites stubbed the label and bypassed `t()` AND
+#   `formatCurrency` at once. ⭐ Found by re-reviewing Task 2 unit 1 BEFORE unit 2 began.
+#   **(2)** ⭐⭐ **A `skipIf(!hasDatabase)` SPEC SKIPS SILENTLY** under the house
+#   `env -u DATABASE_URL turbo test` ⇒ a key-set assertion was **RED for a day behind a green 37/37**.
+#   ⛔ A DB-gated spec is ⛔ NOT covered by that line.
+#   ⭐ **FOUR GOVERNANCE FINDINGS THE ACs DID ⛔ NOT ANTICIPATE:** `-177` cl.3's trigger re-pointing had
+#   been RULED **13 days earlier** and had ⛔ NEVER reached `deferred-work.md` · the UX inventory's
+#   unbuildable part is the **ROW GRAIN**, ⛔ not the column count · **`-183` is Trustee-ratified about
+#   a *"Tier-1-bearing SINGLE-ITEM GET"*** and this route is ⛔ no longer one ⇒ the abuse counter is a
+#   **PANEL act**, ROUTED and ⛔ not wired · and **AC9's own count was low by >4×** (**22** test-leg
+#   amendments, ⛔ not five) — ⭐ the same count-carried-forward defect the story found in others.
+#   ⭐ Verified: `turbo typecheck + lint + test` **77/77**, the financial-truth gate green, and LIVE-DB
+#   `apps/api` **132 files** / `@twt/domain` **270 files** / the route spec **39/39**.)
 # last_updated: 2026-09-15c (⭐⭐ **`11b-3b` — TASK 2 COMPLETE, BOTH UNITS, AND THE ROW MOVES
 #   `ready-for-dev` → `in-progress`.** ⚠ The row was STALE: Tasks 0, 1 and 1b were already committed
 #   and the flip was never made. ⛔ It does ⛔ NOT move to `review` — ⛔ Tasks 3-8 are open.
@@ -18529,7 +18556,7 @@ development_status:
   # sweep ⇒ ⭐ the next `validate` pass owes a `packages apps` re-diff before trusting any row.
   # ⭐ Siblings in the same sweep: `11b-17` (`a2617869`) + `6-18` (`55912d83`) re-checked LIVE ⇒
   # ⭐ BOTH SOUND ⇒ the 2026-09-09 *"they still carry ORPHANED pins"* note is SUPERSEDED, ⛔ not edited.
-  11b-3b-sahyog-vivran-named-identity-render-layer: in-progress
+  11b-3b-sahyog-vivran-named-identity-render-layer: review
   11b-4-memorial-authorship-surface-family-writes-the-story: backlog
   11b-5-memorial-visual-components-memorial-record-portrait-frame-kinship-lattice: backlog
   11b-6-in-memoriam-roll-consent-governed-revocable-invariant: backlog

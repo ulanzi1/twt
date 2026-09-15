@@ -6,6 +6,60 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ## Recorded from: implementation of 11b-3b-sahyog-vivran-named-identity-render-layer — Task 7 (AC8), 2026-09-15
 
+### ⚠⛔⛔ FOR `11b-20`: `11b-3b` DISCHARGES THE **AMOUNT** UNCONDITIONALLY AND THE **NAME** ONLY CONDITIONALLY — ⛔ ITS MERGE IS ⛔ NOT ONE GREEN LIGHT
+
+⭐ **RECORDED FOR A STORY THAT DOES ⛔ NOT EXIST YET TO READ** (AC8; `11b-20` is `ready-for-dev`), because
+the hazard is precisely that *"`11b-3b` merged"* looks like a single fact and is ⛔ **two**
+([[feedback_mechanization_split_commitment]]).
+
+⭐ **THE AMOUNT HALF — UNCONDITIONAL.** `amountRaisedInr` is ruled (`2026-09-04-190` **cl.6**), shipped,
+and **renders today on every drive**. ⇒ ⭐ a `11b-20` message block may rely on the public page carrying
+a rupee figure the moment `11b-3b` merges. ⚠ It arrives **ALREADY FORMATTED and carrying its own ₹** —
+⛔ a literal `₹` beside the token ships **`₹₹`**, which `11b-3b` shipped once and repaired
+(`$comment.amount_raised`, and `sahyog-shared`'s `$comment.message_block` says the same in terms).
+
+⛔⛔ **THE NAME HALF — CONDITIONAL, AND THE CONDITION IS ⛔ NOT THIS STORY'S MERGE.** The deceased
+member's name is ruled (`2026-09-02-173`), built end to end, and **renders ⛔ NOTHING**:
+`NAME_PUBLICATION_AUTHORISED` is FALSE for every member until **counsel's written clause exists AND is
+pinned** into each Pariwar's in-force T&C version. ⇒ ⚠⛔ **`11b-20`'s gate for the name half is THE
+PINNED CLAUSE, ⛔ never `11b-3b`'s merge** — and a story that reads the merge as clearing both halves
+would ship a message block whose name token is **structurally unsupplied**.
+⚠⛔⛔ **AND THAT FAILS LOUDLY, WHICH IS THE ⛔ ONLY GOOD NEWS HERE:** `t()` **THROWS** on an unsupplied
+token, and `message_block.*` is written for a **PAGE** ⇒ the failure is **a 500 on the WHOLE PAGE**,
+⛔ not a blank line. ⭐ `sahyog-shared`'s own `$comment.message_block` already records this shape — ⛔ it
+is ⛔ not a new finding, and `11b-20` must ⛔ not rediscover it in production.
+⭐ **THE SHIPPED PATTERN FOR EXACTLY THIS** is B's `zero_line.*` / `index_line.*` variant split: a
+nullable name gets its **OWN VARIANT** chosen on nullability, ⛔ never a placeholder and ⛔ never a
+combinatorial matrix (`2026-09-05` ruling 3 — *"an absent token DROPS ITS CLAUSE"*).
+
+⚠ **AND THE CONTRIBUTOR NAMES ARE A THIRD, SEPARATE THING** — ⛔ not covered by either half above. They
+are ruled (`2026-09-02-174`, unconditional per `-175`), shipped, and **render today**: the contributor
+predicate has ⛔ **no clause gate anywhere in the code**. ⇒ ⭐ on the day `11b-3b` merges the page names
+**living contributors** while the **deceased member it is named for renders nothing**. ⛔ That asymmetry
+is RULED AND INTENDED; ⛔ do ⛔ not "fix" it, and ⛔ do ⛔ not size `11b-20`'s copy as though the page were
+dark.
+
+**Trigger:** `11b-20` authoring — ⭐ and ⛔ **before** it writes a single `message_block.*` render site.
+
+### ⭐ `packages/domain/src/pool/public-read.ts` IS IN `11b-3b`'s DIFF, AND THE *"⛔ no index change"* FENCE STILL HOLDS
+
+⚠ Recorded because a reviewer scanning the diff will see the **INDEX's own read module** in a story
+whose AC8 says ⛔ *"no index change"*, and should find the reason written rather than have to derive it.
+
+⭐ **THE CHANGE IS ONE KEYWORD:** `const NAME_PUBLICATION_AUTHORISED` → `export const …`. ⛔ Zero
+behaviour change to the index — ⛔ no select, ⛔ no predicate, ⛔ no field, ⛔ no ordering, ⛔ no threshold.
+⭐ **WHY IT WAS EXPORTED RATHER THAN COPIED:** it is a **fail-closed authorisation gate** with four
+independently subtle legs (the one-directional `uuid → text` cast, three explicit `pariwar_id` scopes,
+the validity window, the clause-id match). ⛔ A second copy would drift **silently** — ⛔ no error, ⛔ no
+failing test — and its failure mode is **a name rendering on an authority that does ⛔ not exist**,
+which is the exact defect `2026-09-02-173`'s build exists to prevent.
+⚠⛔ **IT CORRELATES BY BARE TABLE NAME** (`pools`, `claims`) ⇒ ⛔ **every consumer must select from those
+tables UNALIASED**, as both do today. ⛔ Do ⛔ not "tidy" either call site into aliases — the correlation
+breaks **silently** and the gate then returns false for every member, which looks exactly like the
+designed inert state.
+
+---
+
 ### ⚠⛔⛔ `/sahyog-vivran` IS NOW AN UNAUTHENTICATED **PAGINATED COLLECTION** WITH ⛔ NO ABUSE COUNTER — and the Panel's exposure judgement was made about a **SINGLE-ITEM GET**
 
 ⭐ **OBSERVATIONAL, ⛔ NOT FIXED HERE, and Story `11b-3b` does ⛔ NOT claim to have discharged it**
@@ -832,6 +886,25 @@ recorded here rather than left for a future reader to re-derive._
   same stored per-Pariwar `public_name_presentation_mode`. ⛔ Do not hard-code the full name.
   ⚠ Counsel's WRITTEN CLAUSE from `-173` Q3 is still owed and is still the only thing between the
   deceased-member ruling and a rendered name. **→ Story 11b.3b. Trigger: 11b.3 merged.** ⛔ Not closed.
+  ⚠⛔⛔ **CARRIED BY STORY `11b-3b` (2026-09-15, AC8 / Task 7) — ⛔ AND DELIBERATELY ⛔ NOT DISCHARGED.**
+  ⭐ The trigger **FIRED** (`11b-3` is `done`) and `11b-3b` is the named consumer, so its silence would
+  otherwise read as *"routed to a story that ignored it"*. ⇒ ⭐ recorded: the story **BUILT the whole
+  render path and the clause is still the only thing stopping it.**
+  ⭐ **WHAT `11b-3b` DID:** the SQL select, the `NAME_PUBLICATION_AUTHORISED` gate (⛔ **imported**, ⛔ never
+  a second copy), the bounded Tier-1 decrypt, `resolvePublicMemberName` under the Pariwar's STORED mode,
+  the `.trim() || null` omission arm, and the `<dt>`/`<dd>` pair — **all shipped and all tested**.
+  ⛔ **WHAT IT DID ⛔ NOT DO:** make a name appear. `NAME_PUBLICATION_AUTHORISED` is **FALSE for every
+  member** because ⛔ no `clause_versions` row for `niy.public-disclosure.member-information` exists —
+  ⛔ no migration, ⛔ no seed, ⛔ no writer anywhere in the repo. ⇒ ⭐ **INERT, ⛔ not unbuilt** (`-209`
+  cl.2), and the inertness is proven END TO END by a live-DB leg that plants a REAL ciphertext, lets the
+  read select it, and asserts the name still does ⛔ not reach the wire.
+  ⛔⛔ **⛔ NO PLACEHOLDER `clause_versions` ROW WAS SEEDED, AND ⛔ NONE MAY BE** — *"a stand-in makes names
+  render on an authority that does ⛔ not exist."* ⭐ A favourable ruling is exactly when that shortcut
+  stops looking like a lie.
+  ⚠⛔ **THE ITEM STAYS OPEN AND ITS TRIGGER IS NOW SHARPER, ⛔ not weaker:** ⭐ **counsel delivering the
+  written clause, and that clause being MINTED as a `clause_versions` row and PINNED into each Pariwar's
+  in-force T&C version.** ⛔ Delivery alone does ⛔ not fire it — an un-pinned clause renders nothing, and
+  the gate keys on the pin. ⚠ **OVERDUE since 2026-09-07.** ⛔ Not closed.
 
 - **⭐⛔ THE AMOUNT-RAISED RENDER — this page shows a COUNT and ⛔ no rupee figure.**
   `amountRaisedInr = confirmedCount × fixedAmount` is the SHIPPED canonical definition
@@ -855,6 +928,26 @@ recorded here rather than left for a future reader to re-derive._
   ⛔ **not** deleted — it is **NARROWED** at 11b.3b's **AC11(b)** to catch the local re-derivation **BY
   SHAPE** while letting the ruled field's NAME cross. ⚠ Still **⛔ NOT CLOSED** — it closes when
   11b.3b's Task 2 ships the field.
+
+  ✅⛔ **DISCHARGED 2026-09-15 (Story `11b-3b`, Task 2 / AC3b) — ⛔ NOT "closed" by fiat: the CONDITION
+  THIS ITEM'S OWN AMENDMENT NAMED HAS BEEN MET** ([[feedback_closure_language_precision]]). The line
+  above reads *"it closes when 11b.3b's **Task 2 ships the field**"* — ⭐ **Task 2 shipped it.**
+  `SahyogVivranEntry.amountRaisedInr` → the wire DTO → the API handler → the matrix declaration → the
+  Astro render, with the domain binding **clamped, warn-logged, hoisted above the `fundingOutcome`
+  ternary and USED TWICE** so the wire figure and `classifyCycleOutcome`'s `deliveredTotal` are
+  provably ONE value.
+  ⭐ **D1(c) SURVIVES AND IS STRICTLY HARDER TO EVADE** — the `render_path_multiplication` rule catches
+  the local product **BY SHAPE** (`isAmountDerivation`) rather than by vocabulary, so it fires under
+  ⛔ ANY local spelling. ⛔ The rule was ⛔ never deleted and ⛔ never appended-to-green.
+
+  ⭐⭐ **AND THE *"INTERIM ASYMMETRY"* CARVE-OUT ABOVE IS ⛔ RETIRED WITH IT — ⛔ THE TEXT IS KEPT, ⛔ NOT
+  REWRITTEN** ([[feedback_supersede_never_reinterpret]]). It was scoped ***"until 11b.3b merges"***, and
+  that is now. ⇒ ⚠⛔ **A PUBLIC PAGE SHOWING A COUNT WHILE THE MEMBER APP SHOWS AN AMOUNT FOR THE SAME
+  POOL IS ⛔ NO LONGER *"ORDERING"* AND IS ⛔ NO LONGER EXCUSED** — both surfaces carry the figure now.
+  ⛔ Do ⛔ not cite this carve-out to wave one away: ⭐ after this merge such a divergence is a **DEFECT**
+  and should be filed as one.
+  ⚠ ⭐ **WHAT THE CARVE-OUT'S OTHER HALF STILL SAYS, AND IT STANDS:** this was ⛔ never *"a second
+  instance of the D7 inversion"* — ⛔ do ⛔ not retro-file it as one now that it has ended.
 
 - **⭐⛔ THE NOMINEE BANK PUBLIC PRESENTATION + THE PER-PARIWAR MASKING SCHEDULE.**
   `2026-08-28-160` cl.10 ruled nominee bank details **publicly displayable during an active campaign**

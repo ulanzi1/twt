@@ -1031,8 +1031,27 @@ AC10→T0 · **AC11→T1b** (and T1b gates T2).
       ([[feedback_gate_scope_semantic_coverage]]).
       ⭐ **Teeth proven** — planting a redundant `role="list"` and re-pointing the nav label both go
       RED; reverting returns 613/613.
-- [ ] **Task 7 — Route what is not built** (AC8) — ⛔ the D10-ratification item untouched; the `11b-20`
-      note; the two fired `deferred-work.md` triggers recorded as **carried**, ⛔ not closed.
+- [x] **Task 7 — Route what is not built** (AC8) — ✅ **DONE 2026-09-15.** ⭐ Every obligation was
+      checked **against live state**, ⛔ not asserted from the AC's own text.
+      ✅ **FIVE HELD, verified against the branch diff** (`be0037cc..HEAD`): the four negative scope
+      fences (⛔ `apps/mobile` and `member-pool` untouched · ⛔ masking untouched · ⛔ `@twt/ui` never
+      added — `apps/public/package.json` is ⛔ not in the diff) · the **D10-ratification item untouched**
+      · ⛔ no present-tense inversion phrase · story D's **Trap-10 back-reference** (Task 0) · the
+      `fundingOutcome` guard **ROUTED** (Task 0).
+      ✅ **THREE WERE OPEN AND ARE NOW CLOSED:**
+      · ⭐ **Counsel's clause (`-173` Q3) — recorded as CARRIED, ⛔ not discharged.** ⚠ Its silence would
+        have read as *"routed to a story that ignored it"*; ⭐ the record states that `11b-3b` built the
+        WHOLE render path and the clause is still the only thing stopping a name. ⭐ **Trigger sharpened:**
+        counsel delivering the clause **AND it being minted and PINNED** — ⛔ delivery alone does ⛔ not fire it.
+      · ⭐ **The amount-raised item — DISCHARGED on its own stated condition** (*"it closes when 11b.3b's
+        Task 2 ships the field"* — ⭐ Task 2 shipped it), and the ***"INTERIM ASYMMETRY"* carve-out
+        RETIRED**: ⚠⛔ a count-vs-amount divergence between the two surfaces is ⛔ no longer *"ORDERING"*
+        and is now a **DEFECT** to file. ⛔ Its other half (⛔ *"not a second D7 inversion"*) STANDS.
+      · ⭐ **The `11b-20` record — WRITTEN**, with the third asymmetry `11b-20` most needs and AC8 does
+        ⛔ not name: the **contributor** names render TODAY while the deceased member's do not.
+      ⭐ **PLUS TWO NOT ENUMERATED BY AC8, ROUTED UNDER ITS DISCIPLINE:** the **abuse counter** (see the
+      Completion Notes) and a note that `public-read.ts` is in the diff for a **one-keyword export** — so
+      a reviewer meets the *"⛔ no index change"* fence's reason instead of deriving it.
 - [ ] **Task 8 — Amend the five inverted tests and re-plant the negative control** (AC9).
 
 ## Dev Notes
@@ -1372,7 +1391,20 @@ failed on the FIRST try. ⇒ ⭐ **a DB-gated spec is ⛔ NOT covered by the gre
   new dimension into the evaluator; edge configuration), and ⛔ explicitly **⛔ NOT** *"a reviewer
   noticing the route is uninstrumented"* — ⭐ that is the item.
   ⛔ **Task 7's other obligations remain OPEN.**
-- ⛔ **Tasks 7 (remainder) and 8 remain OPEN.** ⚠ AC9 is **PARTLY** discharged — ⭐ **three** of its five inverted
+- ⭐ **Task 7's REMAINING THREE OBLIGATIONS — CLOSED.** ⚠⛔ **AND TWO OF THE THREE WERE FOUND BY
+  CHECKING, ⛔ not by reading the AC:** the amount-raised item's own amendment named a condition
+  (*"closes when Task 2 ships the field"*) that had **since been met** and nobody had returned to it;
+  and the `11b-20` record existed **⛔ only inside AC8's prose** — ⛔ in ⛔ no artefact `11b-20` will read.
+  ⭐ **THE `11b-20` RECORD GAINED A THIRD ASYMMETRY AC8 DOES ⛔ NOT NAME**, and it is the one most likely
+  to mis-size that story's copy: ⛔ the AMOUNT is unconditional, ⛔ the DECEASED NAME is gated on the
+  pinned clause — ⭐ and the **CONTRIBUTOR NAMES render TODAY**, because the contributor predicate has
+  ⛔ no clause gate anywhere in the code. ⇒ ⛔ the page is ⛔ not "dark" on merge.
+  ⭐ **AND THE FAILURE MODE IS NAMED WITH IT:** `t()` **THROWS** on an unsupplied token and
+  `message_block.*` is written for a PAGE ⇒ a name token `11b-20` assumes is supplied is **a 500 on the
+  WHOLE PAGE**, ⛔ not a blank line. ⭐ B's `zero_line.*` variant split is the shipped answer.
+  ⭐ **Counsel's-clause trigger SHARPENED, ⛔ not merely restated:** delivery alone does ⛔ **not** fire it
+  — the gate keys on the **PIN**, so an un-pinned clause still renders nothing.
+- ⛔ **Task 8 remains OPEN.** ⚠ AC9 is **PARTLY** discharged — ⭐ **three** of its five inverted
   tests plus **both** negative controls are now amended BY NAME (the render layer's rupee fence at
   unit 1; the contracts person leg, the `member-drive-detail-field-floor` exclusion (b) and the
   render test's UN-RULED-person leg at unit 2; and the render test's own negative control
@@ -1390,6 +1422,9 @@ failed on the FIRST try. ⇒ ⭐ **a DB-gated spec is ⛔ NOT covered by the gre
 - `packages/ui/src/contribution-list/view-model.ts` — stale *"form is UNRULED"* doc-block amended
 - `_bmad-output/implementation-artifacts/deferred-work.md` — amount-raised item amended
 - `_bmad-output/planning-artifacts/ux-design-specification.md` — `:1334`/`:1335` amended
+- **Task 7 (AC8):** `_bmad-output/implementation-artifacts/deferred-work.md` — counsel's-clause item
+  **carried** with a sharpened trigger · the amount-raised item **discharged** and its interim-asymmetry
+  carve-out **retired** · the **`11b-20`** record · the `public-read.ts` one-keyword-export note
 - **Task 7 (AC8, partial — the abuse-counter investigation):**
   `_bmad-output/implementation-artifacts/deferred-work.md` (the routed observation + trigger) ·
   `apps/api/src/modules/public-pages/handlers.ts` (the expired skip comment amended in place — ⛔ a

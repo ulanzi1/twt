@@ -728,7 +728,13 @@ export const SAHYOG_VIVRAN_FIELD_IDS: FieldIdMapping<SahyogVivranRenderModel> = 
  */
 export interface SahyogVivranContributorRow {
   /** The FULL NAME, already resolved to ONE string by the API boundary. ⛔ Never name PARTS. */
-  readonly contributorName: string;
+  /**
+   * ⭐ `null` = the row is KEPT and the NAME is withheld (`#decision-2026-09-16-219` cl.1). ⛔ It does
+   * ⛔ NOT mean "no contributor" — it means one stands here unnamed. ⚠ The placeholder COPY is ⛔ not
+   * this field: it is a page label, and putting it here would classify the page's own words as the
+   * member's Tier-1 data and make the leak scan green over a row that holds ⛔ no name.
+   */
+  readonly contributorName: string | null;
 }
 
 /**

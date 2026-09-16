@@ -1282,6 +1282,10 @@ const SAHYOG_VIVRAN_TEST_LABELS: SahyogVivranLabels = {
   labelAccountHolder: 'Nominee Name',
   contributorsHeader: 'Confirmed contributions',
   contributorsEmpty: 'No contributor names to show right now.',
+  // ⭐ `-219` cl.1+cl.3 — the placeholder for a withheld name. ⚠ A STUB: the REAL-`t()` leg
+  // for this key, in BOTH locales, lives in `sahyog-vivran-copy.test.ts`
+  // ([[feedback_stub_must_call_not_transcribe]] — a stub is a SECOND source for a shipped word).
+  contributorUnnamed: 'A contributor',
   contributorTotal: (n: number) => `${String(n)} confirmed`,
   paginationLabel: 'Pages',
   paginationPrevious: 'Previous',

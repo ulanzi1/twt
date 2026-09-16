@@ -66,9 +66,22 @@ Status: in-progress
 ⭐⭐ **THE THREE ROUTED QUESTIONS WERE RULED 2026-09-16 (Trustee Panel — Dhiraj Rahul + Kalpana
 Bharti) as `#decision-2026-09-16-219`. ⛔ THE ROW STAYS `in-progress`, AND THE REASON HAS CHANGED:**
 ⛔ it is ⛔ no longer *"awaiting a ruling"* — it is ⭐ **IMPLEMENTATION OWED BY THE RULING**:
-  · ⭐ **cl.1/cl.3/cl.4 — the PLACEHOLDER ROW** (`A contributor`), its all-five-causes constraint, and
-    the `sahyog-vivran.ts:672` fence **amended IN PLACE**. ⚠⛔ **BLOCKED ON THE HINDI**, which `-219`
-    leaves ⛔ UNRULED and which the English may ⛔ not ship ahead of.
+  · ✅ **cl.1/cl.3/cl.4 — DONE 2026-09-16.** ⭐ **THE HINDI WAS RULED — `एक सहकर्मी`** — which
+    UNBLOCKED this. ⚠⛔ **`सहकर्मी` is ⛔ NOT a new word:** it is the SHIPPED Hindi for *colleague* on
+    this very surface family, already in ratified Panel copy (`sahyog-shared.json` —
+    `message_block.gratitude`, `message_block.solidarity`, `stage.live.help`) ⇒ ⭐ ONE vocabulary, ⛔ not
+    a mint. ⚠ The English names the ACT and the Hindi the RELATIONSHIP; ⛔ that is ⛔ not drift — the
+    page already carries both registers in both locales (`index_line.*` = *"by colleagues"*).
+    ⭐ **The wire carries `name: null`, ⛔ never the word** — copy resolves at the RENDER layer from
+    **`sahyog-vivran.value.contributor_unnamed`**. ⚠⛔ That NAMESPACE IS THE FENCE for cl.2: the member
+    list consumes `contribution.contributor_list.*`, so it can ⛔ not reach this key and keeps D5 whole.
+    ⭐ The placeholder renders as plain copy, ⛔ **NOT** through `<MatrixField>` — routing page copy
+    through it would classify it as the member's Tier-1 datum AND make the scrape leak-leg pass over a
+    row holding ⛔ no name.
+    ⭐ **Three API tests INVERTED by name, ⛔ none deleted**, each quoting the superseded assertion.
+    ⚠ A mis-citation was corrected on the way: the *"still counts"* ruling is `-169` **cl.6**
+    (D3-aggregate), ⛔ not cl.4 (the batched-state-read clause), which that test had cited since it was
+    written.
   · ✅ **cl.5(a) — DONE 2026-09-16.** `isAmountDerivation` gained a SECOND leg: a `COUNT_OPERAND`
     times a **numeric literal**, symmetric on operand order, parenthesis-tolerant. ⭐ **Three new
     tests, and the ISOLATION is proven, ⛔ not asserted:** reverted to `HEAD`'s `lib.ts` the two

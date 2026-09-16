@@ -867,7 +867,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
       }
     });
 
-    it('⭐⭐ AN RTBF-ERASED CONTRIBUTOR IS ABSENT ENTIRELY — ⭐ and STILL COUNTS', async () => {
+    it('⭐⭐ AN RTBF-ERASED CONTRIBUTOR KEEPS AN UNNAMED ROW — ⭐ and STILL COUNTS', async () => {
       // ⛔⛔ **THE ERASURE BACKSTOP, AND IT IS THE ⛔ ONLY SNAPSHOT-INDEPENDENT CHECK IN THE PATH**
       // (Trap 4 / AC5; `2026-08-30-169`, `2026-08-30-170`). `anonymizeMember` overwrites
       // `name_ciphertext` IN PLACE with an *encrypted* `[anonymized]` sentinel and RETAINS the row
@@ -889,19 +889,37 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
         const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
         expect(res.statusCode).toBe(200);
         const body = res.json() as {
-          items: { name: string }[];
+          items: { name: string | null }[];
           total: number;
           drive: { confirmedContributionCount: number; amountRaisedInr: number };
         };
 
-        // ⭐ ABSENT ENTIRELY — ⛔ no anonymized row, ⛔ no marker, ⛔ no placeholder key, and ⛔ no gap
-        // in the surviving order.
-        expect(body.items).toEqual([{ name: 'Anita Verma' }, { name: 'Chandra Iyer' }]);
+        // ⭐⭐ **INVERTED BY `#decision-2026-09-16-219` cl.1 (option E) — ⛔ THE ROW IS ⛔ NO LONGER
+        // DROPPED, AND THE SUPERSEDED ASSERTION IS QUOTED, ⛔ NOT DELETED**
+        // ([[feedback_closure_language_precision]]). ⛔ THIS READ:
+        //   `expect(body.items).toEqual([{ name: 'Anita Verma' }, { name: 'Chandra Iyer' }]);`
+        //   under *"ABSENT ENTIRELY — ⛔ no anonymized row, ⛔ no marker, ⛔ no placeholder key"*.
+        // ⇒ ⭐ a placeholder row is now exactly what is ruled, and cl.2 supersedes `2026-08-30-169`
+        // cl.1 for THIS public surface only.
+        // ⚠⛔ **THE POSITION IS PRESERVED** — the unnamed row sits where the person sat, so the page
+        // shows three rows for three confirmed contributors.
+        expect(body.items).toEqual([
+          { name: 'Anita Verma' },
+          { name: null },
+          { name: 'Chandra Iyer' },
+        ]);
+        // ⛔⛔ **AND THE SENTINEL STILL ⛔ NEVER CROSSES THE WIRE.** ⭐ That half did ⛔ NOT move: the
+        // backstop this test exists for is unchanged, and `null` is ⛔ not a softer version of it.
         expect(res.body).not.toContain('[anonymized]');
         expect(res.body).not.toContain('anonymized');
+        // ⛔ cl.3 — the row discloses ⛔ NO cause. ⚠ `null` is the ONLY signal, and it is the same
+        // `null` an unresolvable name or a failed decrypt produces.
+        expect(Object.keys(body.items[1] as object)).toEqual(['name']);
 
-        // ⭐⭐ **AND THE OMITTED CONTRIBUTOR STILL COUNTS** (`2026-08-30-169` cl.4): `total` is THREE
-        // beside TWO rendered rows. ⛔ An aggregate that shrank with the erasure would leak the
+        // ⭐⭐ **AND THE OMITTED CONTRIBUTOR STILL COUNTS** (`2026-08-30-169` **cl.6**, D3-aggregate —
+        // ⚠ this cited **cl.4** until 2026-09-16, which is the BATCHED-STATE-READ clause; the
+        // two-axis *"continues to contribute to `confirmedCount`"* ruling is cl.6): `total` is THREE
+        // beside TWO **NAMED** rows. ⛔ An aggregate that shrank with the erasure would leak the
         // erasure by arithmetic — the omission must be invisible in the NUMBERS, ⛔ not merely in the
         // list.
         expect(body.total).toBe(3);
@@ -974,11 +992,14 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
       }
     });
 
-    it('⛔ A CONTRIBUTOR WITH NO KYC PROFILE OMITS THE **ROW** — ⛔ never a blank one', async () => {
-      // ⚠⛔ **THE OMISSION UNIT IS THE ROW HERE, AND THAT IS THE INVERSE OF THE DECEASED MEMBER** —
-      // whose unresolvable name omits the NAME and keeps the PAGE. A contributor ROW exists ⛔ only
-      // to carry the name, so a nameless row carries nothing and a marker row would announce an
-      // omission. ⛔ Do ⛔ not apply one rule to both subjects.
+    it('⛔ A CONTRIBUTOR WITH NO KYC PROFILE KEEPS AN UNNAMED ROW — ⛔ never a NAMED blank', async () => {
+      // ⭐⭐ **INVERTED BY `-219` cl.1. ⛔ THE SUPERSEDED RULE IS QUOTED, ⛔ NOT DELETED:** *"THE
+      // OMISSION UNIT IS THE ROW HERE … a nameless row carries nothing and a marker row would
+      // announce an omission."* ⇒ ⭐ the marker row IS the ruling now, and the omission unit for BOTH
+      // subjects is the NAME.
+      // ⚠⛔ **WHAT THIS STILL PROVES, AND IT IS THE POINT OF THE TEST:** an unresolvable name produces
+      // the SAME `{ name: null }` an RTBF erasure does. ⛔ If these two ever diverged, the row would
+      // disclose WHICH cause applied — the exact thing cl.3 forbids.
       // ⭐ `confirmed: 2` seeds confirmations against member ids with ⛔ no profile row — which is
       // exactly the unresolvable case, and is why that option cannot stand in for `contributors`.
       const t = await createTestApp();
@@ -992,11 +1013,17 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
 
         const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
         expect(res.statusCode).toBe(200);
-        const body = res.json() as { items: { name: string }[]; total: number };
-        // ⭐ ONE RENDERED ROW beside a total of THREE — the *"N confirmed beside FEWER than N named
-        // rows"* property, proven rather than described. ⛔ ⛔ No blank row, ⛔ no padding to `limit`.
-        expect(body.items).toEqual([{ name: 'Anita Verma' }]);
+        const body = res.json() as { items: { name: string | null }[]; total: number };
+        // ⭐ THREE ROWS beside a total of THREE, ⛔ but only ONE NAMED — the *"N confirmed beside FEWER
+        // than N NAMED rows"* property, proven rather than described.
+        // ⛔ THIS READ: `expect(body.items).toEqual([{ name: 'Anita Verma' }]);`
+        expect(body.items).toEqual([{ name: 'Anita Verma' }, { name: null }, { name: null }]);
+        expect(body.items.filter((r) => r.name !== null)).toHaveLength(1);
         expect(body.total).toBe(3);
+        // ⭐⭐ **`items.length` NOW EQUALS THE PAGE SIZE** — cl.1 makes a page ⛔ never short, which is
+        // the whole mechanical difference option (E) buys. ⚠ What is fewer than `total` is the NAMED
+        // count, ⛔ not the row count.
+        expect(body.items).toHaveLength(body.total);
         expect(() => PublicSahyogVivranResponse.parse(res.json())).not.toThrow();
       } finally {
         await teardown(t);
@@ -1025,7 +1052,10 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
         // (`2026-08-21-145` cl.3), and the boundary's `.trim() || null` drops the ROW.
         // ⛔⛔ ⛔ NO fall-through to `firstName` — for a mononym that returns the ENTIRE stored legal
         // name, i.e. it would publish MORE than the shielded mode was chosen to publish.
-        expect(body.items).toEqual([{ name: 'Anita V.' }]);
+        // ⛔ THIS READ: `expect(body.items).toEqual([{ name: 'Anita V.' }]);` — the second contributor's
+        // row was DROPPED. ⭐ `-219` cl.1 keeps it, unnamed. ⚠ The FORM of the name that DOES resolve
+        // is what this test is about, and that half is unchanged.
+        expect(body.items).toEqual([{ name: 'Anita V.' }, { name: null }]);
         expect(res.body).not.toContain('Meenakshi');
         // ⭐ AND THE OMITTED MONONYM STILL COUNTS — same rule as the erasure.
         expect(body.total).toBe(2);

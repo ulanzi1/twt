@@ -151,6 +151,11 @@ const labels: SahyogVivranLabels = {
     locale,
     namespace: 'contribution',
   }),
+  // ⭐⭐ `-219` cl.1+cl.3 — the placeholder for a withheld name. ⚠⛔ Resolved through `tr()`, i.e. from
+  // **THIS surface's own namespace**, ⛔ deliberately NOT from `contribution` like the two above:
+  // cl.2 scopes the placeholder to the PUBLIC page, and `contribution` is the MEMBER list's namespace,
+  // which keeps `2026-08-30-169` cl.1 (D5) whole and still drops the row.
+  contributorUnnamed: tr('value.contributor_unnamed'),
   // ⚠ A COUNT of the confirmed-contributor SET — ⛔ never a sum, ⛔ never a score. Interpolated
   // THROUGH `t()`, ⛔ never by local string surgery.
   contributorTotal: (count: number) => tr('value.contributions_count', { count }),
@@ -665,7 +670,22 @@ if (!driveStatusVisible) {
                   ⛔ not React, and an index key here would be a row identity nobody ruled.
                 */
                 <li class="text-sm">
-                  <MatrixField surface="sahyog-vivran" field="contributor_name" viewerContext="public" value={contributor.contributorName} />
+                  {/*
+                    ⭐⭐ `-219` cl.1 — A WITHHELD NAME KEEPS ITS ROW AND RENDERS THE PLACEHOLDER.
+                    ⚠⛔ **THE PLACEHOLDER DOES ⛔ NOT GO THROUGH `<MatrixField>`, AND THAT IS
+                    DELIBERATE.** `MatrixField` classifies its value as this surface's Tier-1
+                    `contributor_name` datum; the placeholder is the PAGE'S OWN COPY, ⛔ not the
+                    member's data. Routing it through would (a) declare page copy as a member's
+                    Tier-1 value and (b) make the scrape suite's leak leg pass over a row that holds
+                    ⛔ no name — the exact vacuity its anti-vacuity guard exists to catch.
+                    ⛔⛔ ⛔ NO per-cause variant and ⛔ no marker attribute (cl.3): five different
+                    things land here and the row must ⛔ not say which.
+                  */}
+                  {contributor.contributorName === null ? (
+                    <span class="text-gray-600 italic">{labels.contributorUnnamed}</span>
+                  ) : (
+                    <MatrixField surface="sahyog-vivran" field="contributor_name" viewerContext="public" value={contributor.contributorName} />
+                  )}
                 </li>
               ))}
             </ul>

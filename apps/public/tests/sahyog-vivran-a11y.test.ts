@@ -65,7 +65,29 @@ describe('⭐⭐ the contributor section — family 13 (web): real ELEMENT · re
     // `<div>`s announces nothing and cannot be skipped — on a page whose whole purpose is that a
     // stranger can CHECK it, that is the difference between scannable and merely present.
     expect(PAGE).toMatch(/<ul[^>]*>\s*\{model\.contributors\.map/);
-    expect(PAGE).toMatch(/<li[^>]*>\s*<MatrixField surface="sahyog-vivran" field="contributor_name"/);
+    // ⭐⭐ `#decision-2026-09-16-219` cl.1 — A ROW NOW HAS TWO ARMS, AND **BOTH** MUST BE A REAL `<li>`.
+    // ⚠ The `<li>` opens ONCE and the name/placeholder branch sits INSIDE it, so a withheld name is
+    // announced as an ordinary list item — ⛔ never as a bare span outside the list, and ⛔ never as a
+    // skipped position that makes the list announce a count smaller than the page shows.
+    // ⛔ This used to assert `<li>` was followed IMMEDIATELY by `<MatrixField>`; that would now pass
+    // only by deleting the placeholder arm.
+    // ⚠ `PAGE` is COMMENT-STRIPPED by this file's own loader, so the `<li>` is followed by the
+    // ternary itself, ⛔ not by the explanatory block that sits there in the source.
+    expect(PAGE).toMatch(/<li[^>]*>\s*\{contributor\.contributorName === null \? \(/);
+    expect(PAGE).toMatch(
+      /\{contributor\.contributorName === null \? \(\s*<span[^>]*>\{labels\.contributorUnnamed\}<\/span>/,
+    );
+    expect(PAGE).toMatch(/\) : \(\s*<MatrixField surface="sahyog-vivran" field="contributor_name"/);
+  });
+
+  it('⭐⭐ `-219` cl.3 — the placeholder row carries ⛔ NO marker distinguishing it', () => {
+    // ⛔⛔ Five different causes produce a withheld name, and the row must ⛔ not say which — ⛔ not by
+    // an attribute, ⛔ not by a data-* hook, ⛔ not by a per-cause class. ⚠ A screen-reader user and a
+    // scraper must see the SAME undifferentiated row a sighted visitor does.
+    // ⭐ The permitted difference is presentational only (muted + italic), which carries ⛔ no cause.
+    expect(PAGE).not.toMatch(/data-(erased|omitted|withheld|rtbf|anonymized)/i);
+    expect(PAGE).not.toMatch(/aria-label=\{[^}]*contributorUnnamed/);
+    expect(PAGE).not.toMatch(/<li[^>]*class="[^"]*(erased|omitted|withheld)/i);
   });
 
   it('⛔ adds ⛔ NO redundant ARIA role to elements that already have one', () => {

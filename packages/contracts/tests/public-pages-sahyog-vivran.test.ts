@@ -440,13 +440,39 @@ describe('the response is ONE DRIVE + a BOUNDED PAGE of its contributors', () =>
     }
   });
 
-  it('⛔ rejects an EMPTY contributor name — `.min(1)`, the omit-the-ROW rule\'s shape half', () => {
-    // ⚠ The boundary normalises with `.trim() || null` and OMITS THE ROW. A blank row would render
-    // an empty `<li>` where a person belongs — ⛔ and an omission that announces itself is exactly
-    // what `2026-08-30-169` forbids.
+  it('⛔ rejects an EMPTY contributor name — `.min(1)` still, ⚠ and `null` is ⛔ NOT the same thing', () => {
+    // ⚠ The boundary normalises with `normalisePublicName` (trim PLUS the zero-width strip).
+    // ⛔ THIS COMMENT READ *"and OMITS THE ROW"* until 2026-09-16 — `#decision-2026-09-16-219` cl.1
+    // KEEPS the row and carries `name: null`. ⭐ But `''` stays REJECTED, and the distinction is
+    // load-bearing: `''` is a MALFORMED name, `null` is a WITHHELD one. Collapsing them would let a
+    // degraded producer render as a lawful omission.
     expect(PublicSahyogVivranResponse.safeParse({ ...PAGED, items: [{ name: '' }] }).success).toBe(
       false,
     );
+  });
+
+  it('⭐⭐ `-219` cl.1 — ACCEPTS `name: null`, the WITHHELD-name row', () => {
+    // ⭐ `null` means *"a confirmed contributor stands here and this surface is ⛔ not naming them"* —
+    // ⛔ it does ⛔ NOT mean "no contributor". Five causes produce it and the wire says ⛔ nothing
+    // about which (cl.3).
+    const parsed = PublicSahyogVivranResponse.safeParse({
+      ...PAGED,
+      items: [{ name: 'Anita Verma' }, { name: null }],
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it('⛔⛔ `-219` cl.3 — a contributor row may ⛔ NOT carry a CAUSE alongside the null', () => {
+    // ⚠ `.strict()` is what enforces cl.3 mechanically: a second field naming WHY the name is absent
+    // would convert a visible-but-unlabelled row into a LABELLED disclosure that this position
+    // exercised RTBF — strictly worse than the state option (E) replaces.
+    for (const extra of [
+      { name: null, reason: 'erased' },
+      { name: null, erased: true },
+      { name: null, omissionCause: 'rtbf' },
+    ]) {
+      expect(PublicSahyogVivranResponse.safeParse({ ...PAGED, items: [extra] }).success).toBe(false);
+    }
   });
 
   it('⭐ accepts an EMPTY page — ⛔ a drive with no renderable contributors is ORDINARY', () => {

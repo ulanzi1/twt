@@ -1019,25 +1019,34 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
         const resolvedContributors = await mapWithConcurrency(
           pageContributors,
           DIRECTORY_DECRYPT_CONCURRENCY,
-          async (contributor): Promise<PublicSahyogVivranContributor | null> => {
+          async (contributor): Promise<PublicSahyogVivranContributor> => {
             // ⛔⛔ **THE CATCH BELONGS *INSIDE* `fn`, ⛔ NOT AROUND THE MAP.** `mapWithConcurrency`
             // PROPAGATES a rejection and stops every worker, so one bad row would take down the whole
             // surface — the helper's own doc-block says so in terms. ⭐ A single bad row must ⛔ never
             // collapse a public transparency page.
             //
-            // ⛔⛔ **AND THE OMISSION UNIT HERE IS THE *ROW*, ⛔ NOT THE NAME — THE INVERSE OF THE
-            // DECEASED MEMBER ABOVE, AND ⛔ NOT A STYLE CHOICE.** The deceased member's name is a page
-            // header whose page survives without it; a contributor ROW exists ⛔ only to carry the
-            // name, so a nameless row carries nothing and a marker row would announce an omission.
-            // ⭐ It is also what `2026-08-30-169` already requires for an RTBF'd contributor, and what
-            // keeps *"N confirmed beside FEWER than N rows"* true rather than "N rows, some blank".
+            // ⭐⭐ **THE ROW IS KEPT AND THE *NAME* IS WHAT IS OMITTED — `#decision-2026-09-16-219`
+            // cl.1 (Trustee-ratified), OPTION (E). ⛔ THIS IS THE INVERSE OF WHAT SHIPPED BEFORE
+            // 2026-09-16, AND THE SUPERSEDED RULE IS QUOTED, ⛔ NOT DELETED.**
+            // ⛔ IT READ: *"THE OMISSION UNIT HERE IS THE ROW, ⛔ NOT THE NAME … a nameless row carries
+            // nothing and a marker row would announce an omission."* ⇒ ⭐ a marker row is now exactly
+            // what is ruled: `-219` cl.2 supersedes `2026-08-30-169` cl.1 **for this PUBLIC surface
+            // only**, and `packages/ui/src/contribution-list` keeps D5 whole and still drops the row.
+            // ⚠⛔ **RATIFIED ON THE FAIRNESS GROUND, ⛔ NOT THE PRIVACY ONE** — cl.1 records that (E)
+            // WIDENS disclosure, and takes it because today only a reader who does the arithmetic
+            // learns the list is incomplete. ⛔ Do ⛔ not describe this as closing that leak.
+            // ⇒ ⭐ **EVERY ARM BELOW RETURNS `{ name: null }`, ⛔ never `null`**, and the resolved array
+            // is ⛔ no longer filtered. ⛔⛔ **AND ⛔ NO ARM MAY SIGNAL *WHICH* CAUSE IT WAS** (cl.3):
+            // ⛔ not a second field, ⛔ not an attribute, ⛔ not a distinguishable ordering. The five
+            // causes are indistinguishable ON THE WIRE, and that is what still carries `-169` cl.1's
+            // ground that an erased contributor must ⛔ not be *"identifiable or correlatable"*.
             try {
               const profile = await kyc.getMemberKycProfile(
                 scopeTx.tx,
                 pariwarId,
                 contributor.memberId,
               );
-              if (!profile || profile.nameCiphertext === null) return null;
+              if (!profile || profile.nameCiphertext === null) return { name: null };
 
               const storedName = await encryption.decryptKycField(
                 profile.nameCiphertext,
@@ -1069,9 +1078,9 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
               // already REJECTED at 11a.3. ⛔ And ⛔ do ⛔ not re-derive it as a fresh finding.
               if (storedName === memberDomain.ANONYMIZED_SENTINEL) {
                 request.log.warn(
-                  'sahyog-vivran: erasure sentinel reached the decrypt — omitting the ROW',
+                  'sahyog-vivran: erasure sentinel reached the decrypt — omitting the NAME, keeping the ROW',
                 );
-                return null;
+                return { name: null };
               }
 
               // ⭐⛔ `resolvePublicMemberName`, ⛔ NEVER `resolvePoolIdentity` and ⛔ never
@@ -1086,7 +1095,7 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
               // `U+200B`–`U+200F` standing, and an invisible-only name renders an EMPTY `<li>`
               // bullet: an omission that ANNOUNCES itself (Review finding, 2026-09-16 second pass).
               const name = normalisePublicName(kyc.resolvePublicMemberName(mode, storedName));
-              return name === null ? null : { name };
+              return { name };
             } catch (err) {
               // ⚠⛔ **AN ABORTED TRANSACTION IS ⛔ NOT A BAD ROW — RE-THROW IT** (Review finding,
               // 2026-09-16). ⭐ Mirrors `member-pool/handlers.ts`'s guard of the same name, which AC3's
@@ -1100,19 +1109,22 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
               // anonymous public request's logs buys nothing for the one thing it risks.
               request.log.warn(
                 { err },
-                'sahyog-vivran: contributor name unresolvable — omitting the ROW',
+                'sahyog-vivran: contributor name unresolvable — omitting the NAME, keeping the ROW',
               );
-              return null;
+              return { name: null };
             }
           },
         );
 
-        // ⭐ The omissions collapse out HERE, preserving the producer's deterministic order.
-        // ⛔⛔ ⛔ No placeholder takes their place, ⛔ no count of them is published, and the page is
-        // ⛔ never padded back to `limit`.
-        const items = resolvedContributors.filter(
-          (row): row is PublicSahyogVivranContributor => row !== null,
-        );
+        // ⭐⭐ **⛔ NO FILTER — `-219` cl.1.** ⛔ A `.filter((row) => row !== null)` STOOD HERE and
+        // collapsed the omitted rows out, under the comment *"⛔ No placeholder takes their place,
+        // ⛔ no count of them is published, and the page is ⛔ never padded back to `limit`."*
+        // ⇒ ⭐ option (E) reverses exactly that: every paged row survives, carrying `name: null` where
+        // the name is withheld, in the producer's deterministic order.
+        // ⚠ `items.length` therefore now equals `pageContributors.length`; what is fewer than `total`
+        // is the count of rows whose `name` is ⛔ not `null`. ⛔ Do ⛔ not re-introduce a filter, and
+        // ⛔ do ⛔ not publish a count of the nulls as its own field (cl.4(c)).
+        const items = resolvedContributors;
 
         ok = true;
         return {

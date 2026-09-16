@@ -539,12 +539,30 @@ export type PublicSahyogVivranEntry = z.output<typeof PublicSahyogVivranEntry>;
  * member side is a member-surface change this story puts out of scope, and it would REVERSE `-177`
  * cl.2. See the story's AC10, which STATES the non-compliance rather than curing it.
  *
- * ⚠ `.min(1)` IS LOAD-BEARING — the boundary normalises with **`.trim() || null`, ⛔ never `=== ''`**
- * and OMITS THE ROW. An empty or whitespace-only name is ⛔ not a name.
+ * ⚠ `.min(1)` IS LOAD-BEARING — the boundary normalises with **`normalisePublicName`** (trim PLUS the
+ * zero-width strip), ⛔ never `=== ''`. An empty or whitespace-only name is ⛔ not a name.
+ *
+ * ⭐⭐ **`name` IS NULLABLE FROM 2026-09-16 — `#decision-2026-09-16-219` cl.1 (Trustee-ratified),
+ * OPTION (E): THE ROW IS KEPT AND RENDERED AS A PLACEHOLDER, ⛔ NO LONGER DROPPED.** `null` means
+ * *"a confirmed contributor stands here and this surface is ⛔ not naming them"* — ⛔ it does ⛔ NOT
+ * mean "no contributor".
+ * ⚠⛔⛔ **⛔ NO COPY CROSSES THIS WIRE, AND THAT IS THE WHOLE REASON `null` IS THE CARRIER.** The
+ * placeholder word is **copy** and is resolved at the RENDER layer from the page's own locale
+ * (`sahyog-vivran.json` → `value.contributor_unnamed`). ⛔ The API must ⛔ never emit the literal: it
+ * has ⛔ no locale, and a copy string on the wire is a second source for a ruled word
+ * ([[feedback_stub_must_call_not_transcribe]]).
+ * ⚠⛔ **AND `null` CARRIES ⛔ NO CAUSE.** Five different things land here — RTBF erasure, the erasure
+ * sentinel, an unresolvable name, a MONONYM under `shielded_name`, a failed decrypt — and `-219`
+ * cl.3 ratifies that ⛔ **NOTHING may disclose WHICH**: ⛔ not a second field, ⛔ not an attribute,
+ * ⛔ not a variant of the word. A cause on this wire would convert a derivable count into a LABELLED
+ * disclosure that a named position exercised RTBF, which is strictly worse than the state (E)
+ * replaces.
+ * ⚠ The scope is the **PUBLIC** surface ONLY. `-219` cl.2 supersedes `2026-08-30-169` cl.1 here and
+ * ⛔ **nowhere else** — `packages/ui/src/contribution-list` keeps D5 whole and still OMITS the row.
  */
 export const PublicSahyogVivranContributor = z
   .object({
-    name: z.string().min(1),
+    name: z.string().min(1).nullable(),
   })
   .strict();
 export type PublicSahyogVivranContributor = z.output<typeof PublicSahyogVivranContributor>;
@@ -663,15 +681,38 @@ export type PublicSahyogVivranQuery = z.output<typeof PublicSahyogVivranQuery>;
  * ⛔⛔ **`items` IS THE CONTRIBUTOR PAGE, ⛔ NOT A LIST OF DRIVES.** ⭐ `drive` stays singular and
  * beside it: this is ONE drive plus a page of ITS contributors, ⛔ never a collection of drives.
  *
- * ⚠⛔⛔ **`total` IS THE CONFIRMED-CONTRIBUTOR SET SIZE — ⛔ NOT THE NUMBER OF RENDERED ROWS, AND THE
- * TWO DIFFER BY DESIGN.** `items.length` can be FEWER than `min(limit, total - offset)` because
- * per-row omissions happen AFTER paging: RTBF erasure (`2026-08-30-169`), the erasure sentinel, an
- * unresolvable name, a MONONYM under `shielded_name` (`2026-08-21-145` cl.3), a failed decrypt.
- * ⇒ ⭐ this page reads *"N confirmed"* beside FEWER than N named rows **BY DESIGN**, and ⛔ ⛔ NO copy
- * anywhere may claim the list is complete.
- * ⛔⛔ **AND THERE IS ⛔ NO OMISSION COUNT, EVER.** ⛔ Not a tally, ⛔ not a "some names withheld"
- * line, ⛔ not a per-row marker. A count of omissions is an enumeration signal over which members
- * were erased — the sibling index states the same prohibition in the same words.
+ * ⚠⛔⛔ **`total` IS THE CONFIRMED-CONTRIBUTOR SET SIZE — ⛔ NOT THE NUMBER OF *NAMED* ROWS, AND THE
+ * TWO DIFFER BY DESIGN.** Five things leave a row UNNAMED (`name: null`), all of them resolved AFTER
+ * paging: RTBF erasure (`2026-08-30-169`), the erasure sentinel, an unresolvable name, a MONONYM
+ * under `shielded_name` (`2026-08-21-145` cl.3), a failed decrypt.
+ * ⇒ ⭐ this page reads *"N confirmed"* beside FEWER than N **NAMED** rows **BY DESIGN**, and ⛔ ⛔ NO
+ * copy anywhere may claim the list is complete.
+ * ⚠⛔ **ROW COUNT vs NAMED COUNT — ⛔ DO ⛔ NOT CONFLATE THEM AGAIN.** Until `-219` this sentence read
+ * *"`items.length` can be FEWER than `min(limit, total - offset)`"*, which was true while omitted
+ * rows were DROPPED. ⭐ Since cl.1 the row is KEPT, so `items.length` **DOES** equal
+ * `min(limit, total - offset)`; what is fewer is the count of rows whose `name` is ⛔ not `null`.
+ * ⚠⛔⛔ **AMENDED IN PLACE 2026-09-16 BY `#decision-2026-09-16-219` cl.4 — ⛔ NOT appended to, and
+ * the superseded sentence is QUOTED rather than deleted** ([[feedback_closure_language_precision]]).
+ * ⛔ THIS USED TO READ: *"AND THERE IS ⛔ NO OMISSION COUNT, EVER. ⛔ Not a tally, ⛔ not a 'some
+ * names withheld' line, ⛔ not a per-row marker."* ⇒ ⛔ that is ⛔ no longer true of THIS surface, and
+ * ⛔ pretending otherwise would leave the fence describing code that does the opposite.
+ *
+ * ⭐⭐ **WHAT IS TRUE NOW, IN THREE PARTS:**
+ *   (a) ⭐ **THE UNNAMED ROWS ARE VISIBLE BY DESIGN.** `-219` cl.1 ruled option (E): a row whose
+ *       `name` is `null` is KEPT and rendered as a placeholder, so `items.length` now equals
+ *       `min(limit, total - offset)` and a page is ⛔ never short.
+ *   (b) ⚠ **THEIR COUNT IS THEREFORE KNOWABLE, AND THAT WAS RATIFIED KNOWINGLY.** cl.1 records in
+ *       terms that (E) **WIDENS** disclosure — it is ratified on the **FAIRNESS** ground, ⛔ NOT the
+ *       privacy one, because today only a reader who does the arithmetic learns the list is
+ *       incomplete while an ordinary visitor assumes it is complete. ⛔⛔ **⛔ NEVER write an AC, a
+ *       comment or a test name saying the placeholder CLOSES the omission-count leak. It does ⛔ not.
+ *       It shares it, equally and openly.**
+ *   (c) ⛔⛔ **⛔ NOTHING MAY DISCLOSE *WHICH* OF THE FIVE CAUSES APPLIES** — ⛔ not a second field,
+ *       ⛔ not an attribute, ⛔ not a per-cause variant of the word, ⛔ not an ordering. ⭐ **THIS is
+ *       the clause that still carries `2026-08-30-169` cl.1's ground** (the erased person must ⛔ not
+ *       be *"identifiable or correlatable"*), and it is the half that did ⛔ not move.
+ * ⚠ The sibling index (`sahyog-drive`) states the OLD prohibition in the same words and is ⛔ NOT in
+ * scope — it has ⛔ no contributor list. ⛔ Do ⛔ not "harmonise" it.
  * ⚠ `total` is ALSO ⛔ not `drive.confirmedContributionCount`: that is the EVENT count from the
  * canonical stream, this is the size of the ordered CONTRIBUTOR set. ⛔ Do ⛔ not add a reconciling
  * check between them — they answer different questions and a guard would invent a third.

@@ -48,6 +48,10 @@ const KEYS = [
   'label.contributions',
   'label.status',
   'value.district_unknown',
+  // ⭐⭐ Story 11b.3b / `-219` cl.1+cl.3 — the placeholder for a contributor row whose name is
+  // withheld. ⚠ `t()` THROWS on a miss, so an unresolvable placeholder is a 500 on the whole page
+  // the first time ANY of the five omission causes fires — ⛔ not a blank bullet.
+  'value.contributor_unnamed',
   // ⚠⛔ Story 11b.12 — `status.collecting` / `status.active` / `status.archive` moved to the ONE
   // shared source, `sahyog-shared` (`2026-09-04-193` cl.3, AC4). ⛔ Do ⛔ not re-add them here.
   // ⚠ `collecting.*` KEEPS ITS KEY NAME by D3 while its VALUE now says **Live** — a knowing, ruled
@@ -188,6 +192,48 @@ describe('/sahyog-vivran copy resolves through the REAL t() — both locales', (
       }
     });
   }
+
+  // ⭐⭐ `#decision-2026-09-16-219` cl.3 — THE PLACEHOLDER WORD, THROUGH THE REAL `t()`, BOTH LOCALES.
+  // ⚠⛔ A labels fixture stubs this string in two test files; ⛔ a stub is a SECOND source for a RULED
+  // word ([[feedback_stub_must_call_not_transcribe]]). ⇒ THIS is the leg that binds the shipped copy.
+  for (const [locale, expected] of [
+    ['en', 'A contributor'],
+    ['hi', 'एक सहकर्मी'],
+  ] as const) {
+    it(`${locale}: the placeholder is EXACTLY the ratified word, and names ⛔ no cause`, () => {
+      const word = t('value.contributor_unnamed', undefined, { locale, namespace: 'sahyog-vivran' });
+      expect(word).toBe(expected);
+
+      // ⛔⛔ cl.3 — the word must be TRUE under all five omission causes and disclose ⛔ NONE of them.
+      // ⚠ These are the candidates the Panel ruled out BY NAME; a later re-wording that reaches for
+      // one of them fails HERE rather than on a public page.
+      for (const banned of [
+        /anonym/i, // ⛔ states the person CHOSE anonymity — and 11b.2a D6(a) removed it for that
+        /not\s+recorded/i, // ⛔ FALSE: the name IS recorded, encrypted in KYC
+        /withheld/i,
+        /removed/i,
+        /erased/i,
+        /unavailable/i,
+        /गुमनाम/, // ⛔ the Hindi of "anonymous" — `common.member.anonymousMember`'s word
+        /दर्ज\s+नहीं/, // ⛔ the Hindi of "not recorded" — `value.district_unknown`'s word
+      ]) {
+        expect(word).not.toMatch(banned);
+      }
+    });
+  }
+
+  // ⭐ cl.3 — ⛔ NO PER-CAUSE VARIANT MAY BE MINTED. Five causes, ONE word.
+  it('⛔ this namespace declares ⛔ NO second placeholder key', () => {
+    const file = join(
+      dirname(fileURLToPath(import.meta.url)),
+      '../../../packages/i18n/locales/en/sahyog-vivran.json',
+    );
+    const keys = Object.keys(JSON.parse(readFileSync(file, 'utf8')) as Record<string, unknown>);
+    const placeholders = keys.filter(
+      (k) => !k.startsWith('$') && /contributor_unnamed|contributor_erased|contributor_withheld/.test(k),
+    );
+    expect(placeholders).toEqual(['value.contributor_unnamed']);
+  });
 
   // ⚠⛔⛔ **THE STAGE WORDS ARE CONSUMED FROM `sahyog-shared`, ⛔ NEVER MINTED HERE** (AC7). ⭐ The
   // ruled public vocabulary is **Live / Closed / Verified** — `2026-09-04-192` cl.1 amended `-191`

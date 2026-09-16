@@ -139,6 +139,15 @@ export interface SahyogVivranLabels {
    */
   readonly contributorsHeader: string;
   readonly contributorsEmpty: string;
+  /**
+   * ⭐⭐ Story 11b.3b / `#decision-2026-09-16-219` cl.1+cl.3 — the PLACEHOLDER for a row whose name is
+   * withheld. ⚠ Resolved from **`sahyog-vivran.value.contributor_unnamed`**, ⛔ NOT from
+   * `contribution.contributor_list.*`: cl.2 scopes the placeholder to the PUBLIC surface, and the
+   * `contribution` namespace is the MEMBER list's, which keeps `2026-08-30-169` cl.1 (D5) whole.
+   * ⛔⛔ ⛔ NO PER-CAUSE VARIANT, EVER (cl.3) — five different things produce `name: null` and the row
+   * must ⛔ not say which. ⛔ Do ⛔ not add `contributorErased`, `contributorUnresolvable` or a sibling.
+   */
+  readonly contributorUnnamed: string;
   /** `{{count}} confirmed` for the contributor SET SIZE — ⛔ a count, ⛔ never a sum. */
   readonly contributorTotal: (count: number) => string;
   /**

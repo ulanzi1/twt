@@ -298,14 +298,15 @@ function isSahyogVivranResponse(body: unknown): body is PublicSahyogVivranRespon
   const items = b['items'];
   if (!Array.isArray(items)) return false;
   for (const item of items) {
-    // ⭐ `PublicSahyogVivranContributor` is `.strict()` over ONE field, `.min(1)` — the same
-    // per-row shape discipline as every other checked field, ⛔ not a bare `typeof` on the array.
-    if (
-      typeof item !== 'object' ||
-      item === null ||
-      typeof (item as Record<string, unknown>)['name'] !== 'string' ||
-      (item as Record<string, unknown>)['name'] === ''
-    ) {
+    // ⭐ `PublicSahyogVivranContributor` is `.strict()` over ONE field, `.min(1).nullable()` — the
+    // same per-row shape discipline as every other checked field, ⛔ not a bare `typeof` on the array.
+    // ⭐⭐ **`null` IS VALID AND IS THE POINT** (`#decision-2026-09-16-219` cl.1): the row is KEPT and
+    // the NAME is withheld, and the page renders the placeholder for it. ⚠⛔ `''` stays INVALID — an
+    // empty string is a MALFORMED name, ⛔ not a withheld one, and collapsing the two would let a
+    // degraded upstream silently render as a lawful omission.
+    if (typeof item !== 'object' || item === null) return false;
+    const name = (item as Record<string, unknown>)['name'];
+    if (name !== null && (typeof name !== 'string' || name === '')) {
       return false;
     }
   }

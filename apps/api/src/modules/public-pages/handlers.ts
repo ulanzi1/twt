@@ -889,15 +889,28 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
             // `resolvePoolIdentity()` HARD-CODES `splitFirstNameLastInitial`, so it can ⛔ only ever
             // return the SHIELDED form on the one surface ruled FULL NAME, with every test green.
             // ⛔ And ⛔ never `splitFirstNameLastInitial` directly, for the same reason.
-            const name = kyc.resolvePublicMemberName(mode, storedName);
-            // ⚠⛔ **`.trim() || null`, ⛔ NEVER `=== ''`** (Review finding 2026-09-08, already fixed
-            // on the sibling) — a whitespace-only stored name survives `=== ''` and the contract's
-            // `.min(1)`, arrives TRUTHY, and renders a BLANK where a person's name belongs.
-            // ⚠ Under `shielded_name` a MONONYM resolves to `''` (`2026-08-21-145` cl.3) and lands
-            // here as `null`. ⛔ Do ⛔ NOT "fix" that by falling through to `firstName`:
-            // `public-name.ts` records that exact bug — for a mononym it returns the ENTIRE stored
-            // legal name, byte-identical to `full_name`.
-            deceasedMemberName = name.trim() || null;
+            // ⚠⛔ **THE RESOLVER IS INSIDE THE GUARD, ⛔ NOT AFTER IT** (Review finding, 2026-09-16
+            // second pass). ⭐ The decrypt's own `catch` above commits to *"⛔ Letting this throw would
+            // 503 an entire public transparency page"* — but only the DECRYPT was covered; this call
+            // sat OUTSIDE it, while the CONTRIBUTOR arm puts the identical call INSIDE its `try`.
+            // ⛔ The asymmetry was not defensible either way round.
+            try {
+              const name = kyc.resolvePublicMemberName(mode, storedName);
+              // ⚠⛔ **`normalisePublicName`, ⛔ NEVER a bare `.trim()`** (Review finding 2026-09-08 for
+              // the whitespace half; 2026-09-16 for the zero-width half) — a whitespace-only OR
+              // invisible-only stored name survives `=== ''` and the contract's `.min(1)`, arrives
+              // TRUTHY, and renders a BLANK where a person's name belongs.
+              // ⚠ Under `shielded_name` a MONONYM resolves to `''` (`2026-08-21-145` cl.3) and lands
+              // here as `null`. ⛔ Do ⛔ NOT "fix" that by falling through to `firstName`:
+              // `public-name.ts` records that exact bug — for a mononym it returns the ENTIRE stored
+              // legal name, byte-identical to `full_name`.
+              deceasedMemberName = normalisePublicName(name);
+            } catch (err) {
+              request.log.error(
+                { err },
+                'sahyog-vivran: deceased-member name resolution failed — omitting the NAME, keeping the page',
+              );
+            }
           }
         }
 
@@ -1069,9 +1082,18 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
               // a BLANK row. ⚠ A MONONYM under `shielded_name` resolves to `''` (`-145` cl.3) and
               // lands here too; ⛔ ⛔ no fall-through to `firstName`, which for a mononym returns the
               // ENTIRE stored legal name.
-              const name = kyc.resolvePublicMemberName(mode, storedName).trim();
-              return name === '' ? null : { name };
+              // ⚠⛔ **`normalisePublicName`, ⛔ NEVER a bare `.trim()`** — `.trim()` leaves
+              // `U+200B`–`U+200F` standing, and an invisible-only name renders an EMPTY `<li>`
+              // bullet: an omission that ANNOUNCES itself (Review finding, 2026-09-16 second pass).
+              const name = normalisePublicName(kyc.resolvePublicMemberName(mode, storedName));
+              return name === null ? null : { name };
             } catch (err) {
+              // ⚠⛔ **AN ABORTED TRANSACTION IS ⛔ NOT A BAD ROW — RE-THROW IT** (Review finding,
+              // 2026-09-16). ⭐ Mirrors `member-pool/handlers.ts`'s guard of the same name, which AC3's
+              // named precedent carries and this copy had dropped. ⛔ Without it one `25P02` becomes N
+              // silent omissions served as a cached `200` beside the full `total`.
+              if (isAbortedTransaction(err)) throw err;
+
               // ⚠⛔ **DELIBERATELY ⛔ NOT MEMBER-ATTRIBUTED.** The member-facing sibling logs the
               // `memberId` because there the log is what distinguishes a render failure from a lawful
               // erasure. ⛔ Here the row is already omitted either way, and naming a member in an
@@ -1181,6 +1203,51 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
  * which would turn a logging fault into an availability fault on the surface whose whole purpose is
  * being checkable. ⭐ The failure is logged loudly so a gap in the chain is never silent.
  */
+/**
+ * ⭐ THE PUBLIC NAME NORMALISER — `.trim()` **PLUS** the zero-width strip, ⛔ never `.trim()` alone.
+ *
+ * ⚠⛔ **`String.prototype.trim()` DOES ⛔ NOT REMOVE `U+200B`–`U+200F`** (only `U+FEFF`), so an
+ * invisible-only stored name survives `.trim()`, survives the contract's `.min(1)`, survives the
+ * public app's `length === 0` validator, arrives TRUTHY, and renders a **BLANK** where a person's
+ * name belongs — a visually empty `<dd>` for the deceased member and an empty `<li>` bullet for a
+ * contributor. ⛔ The latter is an ANNOUNCED omission, which the row-omission rule forbids outright.
+ *
+ * ⭐ `district` on this very surface already carries this strip, with a comment naming this exact
+ * class; ⛔ neither NAME did (Review finding, 2026-09-16 second pass). ⭐ Hoisted to ONE helper so the
+ * two subjects can ⛔ never drift again.
+ *
+ * ⚠ Returns `null` for "nothing to render", ⛔ never `''` — every caller on this surface treats an
+ * absent name as an omission, ⛔ not as an empty string.
+ */
+function normalisePublicName(value: string): string | null {
+  return value.replace(/[\u200b-\u200f\ufeff]/g, '').trim() || null;
+}
+
+/**
+ * ⭐ `25P02` — the transaction is ALREADY ABORTED, ⛔ not "this row is bad".
+ *
+ * ⚠⛔ **THIS IS THE SIBLING OF `member-pool/handlers.ts`'s GUARD OF THE SAME NAME, AND IT EXISTS FOR
+ * THE SAME REASON** (Review finding, 2026-09-16 second pass): once ANY statement on the scope tx
+ * fails, every later statement returns `25P02`. Without this re-throw a per-row `catch` converts ONE
+ * fault into N silent omissions, and the caller returns `ok` with a TRUNCATED list beside the FULL
+ * `total`.
+ *
+ * ⚠⛔ **AND THIS SURFACE IS THE WORST PLACE TO SWALLOW IT.** Its own contract normalises the symptom
+ * — `sahyog-vivran.ts` rules that the page reads "N confirmed" beside FEWER than N named rows
+ * **BY DESIGN** — so a transient DB fault is indistinguishable from a lawful RTBF omission, and the
+ * result is edge-cached at `s-maxage=300`.
+ *
+ * ⚠ Drizzle wraps the driver error, so the code can sit on the error OR on its `cause`
+ * ([[project_domain_limit_clamp_and_savepoint_retry]]) — ⛔ check both, ⛔ never one.
+ * ⛔ This is ⛔ NOT a recovery mechanism and must ⛔ never grow into one.
+ */
+function isAbortedTransaction(err: unknown): boolean {
+  const code = (e: unknown): unknown =>
+    typeof e === 'object' && e !== null ? (e as { code?: unknown }).code : undefined;
+  const cause = typeof err === 'object' && err !== null ? (err as { cause?: unknown }).cause : undefined;
+  return code(err) === '25P02' || code(cause) === '25P02';
+}
+
 async function writeAppealReversalDisclosureAudit(
   deps: AppDeps,
   pariwarId: string,

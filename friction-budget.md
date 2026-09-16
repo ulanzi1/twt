@@ -45,6 +45,30 @@ deliberately accepted.
 | visitor / mourner on the public Sahyog Drive (finding a drive by DISTRICT + DATE + DRIVE CODE — ⛔ there is no search by the deceased member's name) | ⭐ THE FRICTION IS THE ABSENCE OF A FEATURE, DECLARED RATHER THAN LEFT AS AN APOLOGY. `member_kyc_profiles` carries no blind index and envelope encryption gives every name its OWN DEK, so two people with the same name have unrelated ciphertext — there is nothing to match on. The only way to answer a name query is to decrypt the whole roster per request, which is the exact amplification `DIRECTORY_DECRYPT_CONCURRENCY` exists to close, one order of magnitude worse than a page render, on an unauthenticated route, with the cache structurally unable to help. ⇒ what this friction protects is every member's Tier-1 KYC record against a query anyone on the internet could issue. ⚠ Deferred on a `name_blind_index` substrate story — Resolved via explicit deferral, ⛔ not closed; the page states plainly that name search is not offered rather than letting a mourner conclude the drive is absent (Story 11b.1) | forced |
 
 
+**Story 11b.3b disposition (SECOND review — declaration affirmed, ⛔ no new row):** the Sahyog Vivran
+drive page (`apps/public/src/pages/sahyog-vivran/[driveToken].astro`, `lib/sahyog-vivran-render.ts`,
+`lib/sahyog-vivran.server.ts`, `lib/surface-fields.ts` + their tests) is **read-only** — ⛔ no forms,
+⛔ no upload, ⛔ no member-initiated action — so it introduces **zero deliberate friction**. AC-4 fires
+on the path touch, which is conservative by design; this affirms the ledger was reviewed.
+
+⭐ **The two changes a reader might mistake for friction, named so they are ⛔ not re-litigated:**
+
+1. **The unnamed-contributor placeholder row** (`#decision-2026-09-16-219` cl.1, Trustee-ratified —
+   the row is KEPT and reads *"A contributor"* / *"एक सहकर्मी"* where a name is withheld). ⛔ This is a
+   RENDER change, ⛔ not a step: ⛔ nothing is asked of a visitor and ⛔ nothing is asked of the
+   contributor. ⚠ It is also ⛔ **not** a friction *reduction* to bank — the Panel ratified it on the
+   **FAIRNESS** ground and recorded that it **WIDENS** disclosure.
+2. **Pagination behaviour.** An unknown query parameter is now IGNORED rather than answered with the
+   drive-not-found page, and the "Next" link is clamped to the page horizon so it can ⛔ no longer
+   point at that same 404. ⭐ Both **REMOVE** an accidental dead end a visitor could reach by sharing a
+   link (`?fbclid=…`); ⛔ neither adds a step. ⛔ Nothing here is a new ceiling or a loosened one.
+
+⚠⛔ **AND THE ONE STANDING ROW THIS STORY DOES ⛔ NOT TOUCH:** the *"visitor / mourner … finding a
+drive by DISTRICT + DATE + DRIVE CODE — ⛔ there is no search by the deceased member's name"* row
+(Story 11b.1) **STANDS UNCHANGED**. ⛔ 11b.3b adds ⛔ no name search and ⛔ no name-blind index; the
+deceased member's name on this page is still fail-closed behind a publication basis that has ⛔ no
+pinned clause. ⇒ ⛔ do ⛔ not read the contributor list's full names as having answered that row.
+
 **Story 11b.9 disposition (RETIRES the Story 11b.1 row below — ⛔ not a "declaration affirmed" note,
 and ⛔ not a new row either):** the claim consent screen (`apps/mobile/app/(claim)/consent.tsx`)
 drops from four checkboxes to one. Decision `2026-08-28-160` cl.3-6 supersedes the mechanism the row

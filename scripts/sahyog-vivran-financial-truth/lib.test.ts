@@ -144,13 +144,56 @@ describe('rule (3) — D1(c), the render-path multiplication, MECHANIZED', () =>
     expect(scanFinancialTruth('render.ts', src, RENDER)).toEqual([]);
   });
 
-  it('⛔ STILL FAILS on a local re-derivation, even when NO banned word is named', () => {
-    // ⭐ CAUGHT BY SHAPE, ⛔ not by vocabulary — this is what the narrowing bought. Before it, an
-    // author who spelled the operands differently walked past; the product itself is now the subject.
+  it('⛔ STILL FAILS on the domain\'s own spelling — ⚠ BOTH legs fire here, and that is the point', () => {
+    // ⚠⛔⛔ **THIS TEST\'S TITLE USED TO SAY *"even when NO banned word is named"* — ⛔ AND ITS OWN
+    // FIXTURE NAMED ONE.** `row.fixedAmount` is a {@link TARGET_OPERANDS} member, so this source trips
+    // the NAME leg on its own; the test would have passed with the shape leg DELETED, and so proved
+    // ⛔ nothing about it (`#decision-2026-09-16-219` cl.5(a), which ordered a test that ISOLATES the
+    // shape leg — see the two below).
+    // ⭐ Kept, re-titled, and SHARPENED to assert the count: exactly TWO findings — the product (shape)
+    // and the `fixedAmount` identifier (name) — which pins the double-fire as the expected behaviour
+    // rather than leaving it unstated.
     const src = `const total = confirmedContributionCount * row.fixedAmount;`;
     const findings = scanFinancialTruth('render.ts', src, RENDER);
-    expect(findings.length).toBeGreaterThan(0);
-    expect(findings.every((f) => f.rule === 'render_path_multiplication')).toBe(true);
+    expect(findings.map((f) => f.rule)).toEqual([
+      'render_path_multiplication',
+      'render_path_multiplication',
+    ]);
+  });
+
+  it('⭐⭐ THE SHAPE LEG, ISOLATED — a NAMED product with ⛔ NO banned word fires exactly ONCE', () => {
+    // ⭐ `fixed_amount` (snake) is in {@link PER_MEMBER_AMOUNT} and ⛔ ABSENT from
+    // {@link TARGET_OPERANDS} ⇒ the NAME leg cannot fire, and neither can it on
+    // `confirmedContributionCount` or `row`. ⇒ a single finding here is the shape leg and ⛔ nothing
+    // else. ⚠ Delete `isAmountDerivation` and this test goes RED — which the old one did not.
+    const src = `const total = confirmedContributionCount * row.fixed_amount;`;
+    const findings = scanFinancialTruth('render.ts', src, RENDER);
+    expect(findings.map((f) => f.rule)).toEqual(['render_path_multiplication']);
+  });
+
+  it('⭐⭐ `-219` cl.5(a) — a HARD-CODED per-member amount fires, with ⛔ NO banned word anywhere', () => {
+    // ⚠⛔⛔ **THE REGRESSION THE PANEL RULED ON.** AC11(b) dropped `amountRaisedInr` from
+    // {@link TARGET_OPERANDS} — correctly — but the shape leg then required BOTH operands to be NAMED,
+    // so this exact line passed GREEN, where before the narrowing it tripped the name rule.
+    // ⛔ Nothing in this source is a banned word: ⛔ not `amountRaisedInr`, ⛔ not
+    // `confirmedContributionCount`, ⛔ not `1000`.
+    const src = `const amountRaisedInr = confirmedContributionCount * 1000;`;
+    const findings = scanFinancialTruth('render.ts', src, RENDER);
+    expect(findings.map((f) => f.rule)).toEqual(['render_path_multiplication']);
+  });
+
+  it('⭐ …and SYMMETRICALLY, with the literal on the LEFT', () => {
+    const src = `const amountRaisedInr = 1000 * confirmedCount;`;
+    const findings = scanFinancialTruth('render.ts', src, RENDER);
+    expect(findings.map((f) => f.rule)).toEqual(['render_path_multiplication']);
+  });
+
+  it('⛔ but a literal product over a NON-count operand is ⛔ NOT a finding (the leg is narrow)', () => {
+    // ⚠ The leg keys on {@link COUNT_OPERAND}, ⛔ not on "any identifier times any number" — otherwise
+    // every page-size, timeout and index arithmetic on the render path becomes a false positive, and a
+    // noisy gate is the one that gets allow-listed.
+    const src = `const width = columnCount * 1000;`;
+    expect(scanFinancialTruth('render.ts', src, RENDER)).toEqual([]);
   });
 
   it('⛔ STILL FAILS on the TARGET and its factors reaching the render path', () => {

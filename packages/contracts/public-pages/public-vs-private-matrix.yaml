@@ -1279,9 +1279,19 @@ surfaces:
           `2026-09-02-174` (Trustee Panel), with `-175` making it UNCONDITIONAL (`-174` cl.3's
           apparent staged-reduction condition was the NOMINEE BANK fields' and was corrected away).
           ⚠⛔ **THIS IS THIS SURFACE'S REAL DAY-ONE OUTPUT** — unlike the deceased name above, the
-          contributor predicate has ⛔ NO clause gate anywhere in the code; its basis is
-          `2026-08-28-160` cl.7 (the member's own accepted membership T&C) and is SETTLED. ⇒ up to
+          contributor predicate has ⛔ NO clause gate anywhere in the code. ⇒ up to
           fifty living members' full legal names render on an unauthenticated, edge-cached page.
+          ⚠⛔⛔ **THE BASIS CITATION WAS CORRECTED ON 2026-09-16 BY `2026-09-16-219` cl.6, AND THE
+          CORRECTION IS RECORDED RATHER THAN SILENTLY SWAPPED.** This field used to read *"its basis
+          is `2026-08-28-160` cl.7 (the member's own accepted membership T&C) and is SETTLED"*.
+          ⛔ That citation does ⛔ NOT REACH THIS SUBJECT: `-160` cl.7 is a SURFACE CLEARANCE resting
+          on cl.4, and every one of cl.4's six elements is about publication of a member's own name
+          **AFTER DEATH**. ⚠ A CONTRIBUTOR IS A **LIVING** MEMBER.
+          ⭐ **THE BASIS IS `2026-09-16-219` cl.6 (Trustee-ratified): MEMBERSHIP ITSELF.** Contributing
+          to a Sahyog Drive is a **PUBLIC ACT** recorded in a public financial account; ⛔ it is ⛔ not
+          a publication the member licenses and may re-call, and a T&C withdrawal does ⛔ NOT retract
+          it. ⇒ ⭐ the DECLARATION and the FORM are `-174` cl.1/cl.2 + `-175`; ⭐ the BASIS is
+          `-219` cl.6. ⛔ Do ⛔ not re-cite `-160` cl.7 here.
           ⭐ That is RULED AND INTENDED; ⛔ it is ⛔ not a defect — ⛔ but ⛔ do ⛔ not ship it believing
           the page is dark.
           ⚠⛔ ⛔ NO predicate here may read `members.state`, `is_valid` or a moderation overlay: a
@@ -1292,9 +1302,15 @@ surfaces:
           decision: '2026-09-02-174'
           rationale: >-
             ⭐ The Trustee Panel ruled on 2026-09-02 that a contributor's name may render at the
-            `public` tier in the FULL NAME form, on the basis of the member's OWN acceptance of the
-            membership Terms & Conditions (`2026-08-28-160` cl.7). `2026-09-02-175` (same Panel)
-            confirmed Q1/Q2 stand UNCONDITIONALLY.
+            `public` tier in the FULL NAME form. `2026-09-02-175` (same Panel) confirmed Q1/Q2 stand
+            UNCONDITIONALLY.
+            ⚠⛔ **THE BASIS CLAUSE HERE WAS CORRECTED BY `2026-09-16-219` cl.6** — it used to read
+            *"on the basis of the member's OWN acceptance of the membership Terms & Conditions
+            (`2026-08-28-160` cl.7)"*. ⛔ `-160` cl.7 rests on cl.4, which is *"after death"*
+            throughout and so does ⛔ not reach a LIVING contributor. ⭐ The ratified basis is
+            **MEMBERSHIP ITSELF** (`-219` cl.6): contributing is a PUBLIC ACT, and a T&C withdrawal
+            does ⛔ not retract it. ⚠ `decision:` above stays `2026-09-02-174` — that is the
+            DECLARATION's decision, ⛔ not the basis's.
             ⚠⛔ **THE PRICE IS CARRIED OPENLY AND IS ⛔ NOT CLOSED:** the public will see MORE of a
             contributor's name than a MEMBER does — the member surface renders first-name +
             last-initial — which is the inversion `2026-09-04-189` cl.3 / `2026-09-05-195` cl.1

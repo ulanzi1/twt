@@ -1,3 +1,60 @@
+# last_updated: 2026-09-16b (⭐⭐ **`11b-3b` — THE THREE PANEL-ROUTED QUESTIONS ARE RULED.**
+#   `#decision-2026-09-16-219`, Trustee-ratified 2026-09-16 (Dhiraj Rahul + Kalpana Bharti).
+#   ⛔ The row STAYS `in-progress`; ⛔ no other row is touched.
+#   ⭐ **Q1 → (E), THE PLACEHOLDER ROW.** ⚠⛔ Ratified on the **FAIRNESS** ground, ⛔ NOT the privacy
+#   one — `-219` cl.1 records in terms that (E) **WIDENS** disclosure: it shares with EVERY reader what
+#   only an arithmetic-minded one learns today. ⇒ `2026-08-30-169` **cl.1 (D5)** is SUPERSEDED IN PART,
+#   ⚠ **for the PUBLIC surface ONLY** — `packages/ui/src/contribution-list` keeps D5 whole.
+#   ⭐ The word is **`A contributor`**, ratified WITH its constraint: true under ALL FIVE omission
+#   causes, ⛔ nothing disclosing WHICH. ⛔ `Anonymous` and `Not recorded` ruled out BY NAME (the latter
+#   would be FALSE — the name IS recorded, encrypted in KYC). ⚠ `Name not shown` = fallback.
+#   ⭐ **Q2 → (A):** harden `isAmountDerivation` on a numeric-literal operand + a test ISOLATING the
+#   shape leg; and `-176` D1's *"11b.3b already adds `@twt/ui`"* premise recorded **FALSE** ⇒ the gate
+#   is now the SOLE enforcement of D1(c). ⛔ D1(c) neither relaxed nor violated (the multiplication
+#   pre-dates the story at `be0037cc:…sahyog-vivran-read.ts:509`). ⛔ Option (C) declined.
+#   ⭐ **Q3 → (A):** membership ITSELF is the basis — contributing is a PUBLIC ACT and a T&C withdrawal
+#   does ⛔ not retract it. The matrix citation to `-160` cl.7 is CORRECTED (its cl.4 is *"after death"*
+#   throughout and does ⛔ not reach a living subject). ⛔ Option (B) declined. ⚠ The counsel's-clause
+#   item is UNAFFECTED and stays OPEN.
+#   ⚠⛔⛔ **DISCHARGED ⛔ DOES ⛔ NOT MEAN BUILT — implementation is OWED and is why the row is ⛔ not
+#   `done`:** cl.1/cl.3/cl.4 (the placeholder render + word + the `sahyog-vivran.ts:672` fence amended
+#   IN PLACE, ⛔ not appended) and cl.5(a) (the gate). ⚠⛔ **cl.1 IS BLOCKED ON THE HINDI**, which
+#   `-219` leaves UNRULED and which the English may ⛔ not ship ahead of — this surface is bilingual.
+#   ⚠ `-219` also MINTS three Open follow-ups: the Hindi placeholder, the now-ASYMMETRIC member surface
+#   (public will show an unnamed row a MEMBER does not — the 2nd instance of the public-sees-more shape
+#   after `-189` cl.3 / `-195` cl.1), and the duplicate `value.contributions_count` key.)
+# last_updated: 2026-09-16a (⚠⛔⛔ **`11b-3b` — SECOND CODE-REVIEW PASS; the row moves `review`/`done`
+#   → `in-progress`.** ⛔ No other row is touched.
+#   ⭐⭐ **THE RANGE IS WHY THIS PASS FOUND MORE:** it diffed **`be0037cc..HEAD`** — the branch's
+#   merge-base with `origin/main`, where ⭐ ALL 15 commits are 11b.3b's own. ⛔ The first pass diffed
+#   `05094a68..HEAD`, which carried 11b.17 / 11b.19 / 8.17 interleaved and forced a per-finding
+#   `git log --grep` authorship filter ⇒ ~60 dismissals. ⭐ This pass needed ⛔ no filter and dismissed
+#   ⛔ only 3. Three layers ran; ⛔ zero failed.
+#   ⚠⛔⛔ **THE ROW WENT `done` OVER A RED TREE.** `662ab6a6`'s OWN review patch made six wire fields
+#   hard requirements in `isSahyogVivranResponse`, which broke `apps/public/tests/sahyog-serves.test.ts`
+#   — whose repair was left **UNCOMMITTED**, and which was ⛔ not in the story's File List at all.
+#   ⭐ Executed both ways: reverted to HEAD → `3 failed / 21 passed`; with the file → `27 passed`.
+#   ⇒ HEAD could ⛔ not have passed `ci:local`.
+#   ⭐⭐ **11 PATCHES APPLIED AND VERIFIED** (622/622 `apps/public`, 40/40 + 5/5 `apps/api` live-DB,
+#   369/369 domain, 1132/1132 contracts, 20/20 + green gate, `tsc`/`astro check` clean): the stranded
+#   fixture; the missing `isAbortedTransaction` re-throw on the contributor per-row catch (one DB fault
+#   silently truncated a public name list into a CACHED 200 — indistinguishable from lawful RTBF
+#   omission BY the surface's own design); a VACUOUS leak-scan leg (`contributor_name` — the only
+#   full-legal-name field this story added — scanned as an EMPTY `<dd>` for a whole story, now with an
+#   anti-vacuity guard); the zero-width strip on BOTH names (`district` had it, ⛔ neither name did);
+#   `?fbclid=` 404-ing a LIVE drive on every shared link; a "Next" link past the page horizon into the
+#   page's own 404; `NaN`/non-integer reaching the wire's `.int()` as a silent 500; the deceased-name
+#   resolver sitting OUTSIDE its `try`; a gate doc-block still stating the rule AC11(b) DELETED; and
+#   the `@twt/ui` closure-language correction (*"Resolved via explicit deferral"*, ⛔ never *"HELD"* —
+#   an unmet AC3 obligation had been closed as a DIFFERENT AC's green fence).
+#   ⚠⛔ **3 PANEL-ROUTED OBLIGATIONS ARE OPEN — this is why the row is ⛔ not `done`:** (1) the
+#   *"⛔ NO OMISSION COUNT, EVER"* rule is defeated by the envelope beside it — `total − Σ items.length`
+#   IS the tally and `?limit=1&page=k` is a PER-POSITION erasure oracle, live on a shipping public
+#   surface; (2) AC11(b)'s gate narrowing REMOVED coverage D1(c) had — a literal operand now passes
+#   green; (3) the contributor publication basis is evaluated NOWHERE in code, so a REVOKED T&C still
+#   publishes a living member's full legal name. ⛔ None is a reviewer's to close.
+#   ⭐ 5 deferred. ⭐ 3 dismissed, incl. an ordering-tie claim REFUTED live: `contribution/read.ts`
+#   sorts on earliest-live `event_version` with `member_id` as the FINAL tie-break only.)
 # last_updated: 2026-09-15e (✅ **`11b-3b` — CODE REVIEW COMPLETE ACROSS ALL 5 CHUNKED GROUPS
 #   (`packages/contracts`+`domain`+`api-client`+`ui`, `apps/api`, `apps/public`,
 #   `packages/i18n`+`scripts`+`openapi`+`microcopy.yaml`; `apps/mobile` skipped — zero 11b.3b
@@ -18574,7 +18631,7 @@ development_status:
   # sweep ⇒ ⭐ the next `validate` pass owes a `packages apps` re-diff before trusting any row.
   # ⭐ Siblings in the same sweep: `11b-17` (`a2617869`) + `6-18` (`55912d83`) re-checked LIVE ⇒
   # ⭐ BOTH SOUND ⇒ the 2026-09-09 *"they still carry ORPHANED pins"* note is SUPERSEDED, ⛔ not edited.
-  11b-3b-sahyog-vivran-named-identity-render-layer: done
+  11b-3b-sahyog-vivran-named-identity-render-layer: in-progress
   11b-4-memorial-authorship-surface-family-writes-the-story: backlog
   11b-5-memorial-visual-components-memorial-record-portrait-frame-kinship-lattice: backlog
   11b-6-in-memoriam-roll-consent-governed-revocable-invariant: backlog

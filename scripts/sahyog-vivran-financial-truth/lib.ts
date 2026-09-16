@@ -151,22 +151,63 @@ function namedOperand(node: ts.Expression): string | undefined {
   return undefined;
 }
 
+/** A bare numeric literal operand — `1000`, or a parenthesised one. */
+function isNumericLiteralOperand(node: ts.Expression): boolean {
+  if (ts.isParenthesizedExpression(node)) return isNumericLiteralOperand(node.expression);
+  return ts.isNumericLiteral(node);
+}
+
 /**
  * ⭐ TRUE for a local re-derivation of the rupee figure — the D1(c) defect, by SHAPE.
  *
  * ⚠ Deliberately symmetric (either operand order) and deliberately tolerant of member access, because
  * `confirmedContributionCount * row.fixedAmount` is exactly how the domain spells it.
+ *
+ * ⭐⭐ **HARDENED 2026-09-16 BY `#decision-2026-09-16-219` cl.5(a) (Trustee-ratified) — THE SECOND
+ * LEG BELOW IS THE RULING, ⛔ not a tidy-up.** AC11(b)'s narrowing dropped `amountRaisedInr` from
+ * {@link TARGET_OPERANDS} (correctly — a rule that bans the ruled field's own NAME makes the ruling
+ * unshippable), but the replacement shape leg required BOTH operands to resolve to a NAMED
+ * identifier. ⇒ `confirmedContributionCount * 1000` in a render-path file passed **GREEN**, where
+ * before the narrowing that exact line tripped the name rule. ⚠ The doc-block's claim that the
+ * product is caught *"under ANY local spelling"* was therefore FALSE for a literal operand, and
+ * `2026-09-02-176` **D1(c)** was enforceable only against the one spelling the domain happens to use.
+ *
+ * ⚠⛔⛔ **WHAT IS STILL ⛔ NOT CAUGHT, RECORDED RATHER THAN GLOSSED**
+ * ([[feedback_record_unattested_no_backfill]]): an operand **aliased to a local const** —
+ * `const per = 1000; count * per;` — resolves to the identifier `per`, which matches neither
+ * {@link PER_MEMBER_AMOUNT} nor a numeric literal. ⛔ Closing that needs const-tracking across the
+ * file, which is a different instrument from this tripwire. ⭐ `-219` cl.5(b) records that this gate
+ * is now the **SOLE** enforcement of D1(c) — ⚠ so this gap is the whole of the remaining exposure,
+ * ⛔ not a second line behind a fence.
+ *
+ * ⭐ And the shape leg was ⛔ never dead code, which is why it is EXTENDED rather than replaced:
+ * {@link PER_MEMBER_AMOUNT} accepts `fixed_amount` (snake), which is ⛔ absent from
+ * {@link TARGET_OPERANDS} ⇒ `confirmedCount * fixed_amount` is caught by SHAPE alone.
  */
 function isAmountDerivation(node: ts.Node): node is ts.BinaryExpression {
   if (!ts.isBinaryExpression(node)) return false;
   if (node.operatorToken.kind !== ts.SyntaxKind.AsteriskToken) return false;
+
   const l = namedOperand(node.left);
   const r = namedOperand(node.right);
-  if (l === undefined || r === undefined) return false;
-  return (
-    (COUNT_OPERAND.test(l) && PER_MEMBER_AMOUNT.test(r)) ||
-    (COUNT_OPERAND.test(r) && PER_MEMBER_AMOUNT.test(l))
-  );
+
+  // ⭐ LEG 1 — both operands NAMED: `count × fixedAmount`, the domain's own spelling.
+  if (l !== undefined && r !== undefined) {
+    if (
+      (COUNT_OPERAND.test(l) && PER_MEMBER_AMOUNT.test(r)) ||
+      (COUNT_OPERAND.test(r) && PER_MEMBER_AMOUNT.test(l))
+    ) {
+      return true;
+    }
+  }
+
+  // ⭐ LEG 2 (`-219` cl.5(a)) — a COUNT operand times a NUMERIC LITERAL. ⚠ The per-member amount is
+  // Pariwar configuration; hard-coding it is the SAME act as naming it, and is arguably worse — it
+  // also forks the figure from `pools.fixed_amount`.
+  if (l !== undefined && COUNT_OPERAND.test(l) && isNumericLiteralOperand(node.right)) return true;
+  if (r !== undefined && COUNT_OPERAND.test(r) && isNumericLiteralOperand(node.left)) return true;
+
+  return false;
 }
 
 /** Line number (1-based) of a node, for the report. */
@@ -246,7 +287,9 @@ export function scanFinancialTruth(
           line: lineOf(sf, node),
           rule: 'render_path_multiplication',
           detail:
-            'render path RE-DERIVES the rupee figure locally (a `count × fixedAmount` product). ' +
+            'render path RE-DERIVES the rupee figure locally — a confirmed-count product, whether ' +
+            'the per-member amount is NAMED (`count × fixedAmount`) or HARD-CODED (`count × 1000`, ' +
+            '2026-09-16-219 cl.5(a)). ' +
             'D1(c) is REFUSED in terms — "a second multiplication anywhere in this app is the ' +
             'defect" — and the canonical figure is the domain read\'s own `deliveredTotal`, ' +
             'published as `amountRaisedInr` (2026-09-04-190 cl.6)',

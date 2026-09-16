@@ -69,9 +69,22 @@ Bharti) as `#decision-2026-09-16-219`. ⛔ THE ROW STAYS `in-progress`, AND THE 
   · ⭐ **cl.1/cl.3/cl.4 — the PLACEHOLDER ROW** (`A contributor`), its all-five-causes constraint, and
     the `sahyog-vivran.ts:672` fence **amended IN PLACE**. ⚠⛔ **BLOCKED ON THE HINDI**, which `-219`
     leaves ⛔ UNRULED and which the English may ⛔ not ship ahead of.
-  · ⭐ **cl.5(a) — HARDEN the financial-truth gate** on a numeric-literal operand, with a test that
-    ISOLATES the shape leg.
-  · ⭐ **cl.6 — CORRECT the matrix citation** for the contributor basis. ⛔ No predicate changes.
+  · ✅ **cl.5(a) — DONE 2026-09-16.** `isAmountDerivation` gained a SECOND leg: a `COUNT_OPERAND`
+    times a **numeric literal**, symmetric on operand order, parenthesis-tolerant. ⭐ **Three new
+    tests, and the ISOLATION is proven, ⛔ not asserted:** reverted to `HEAD`'s `lib.ts` the two
+    literal-leg tests go **RED** and ⛔ nothing else does (`2 failed | 22 passed`); restored, `24/24`
+    and the live `check` still passes on the shipped tree. ⚠ The pre-existing test was ALSO re-titled
+    and sharpened — it claimed *"even when NO banned word is named"* while its own fixture named
+    `row.fixedAmount`, so it would have passed with the shape leg DELETED; it now pins the expected
+    DOUBLE fire. ⚠⛔ **STILL ⛔ NOT CAUGHT, recorded in the doc-block:** an operand aliased to a local
+    `const` (`const per = 1000; count * per`) — closing it needs const-tracking, a different
+    instrument. ⭐ `-219` cl.5(b) makes this gate the SOLE enforcement of D1(c), so that gap is the
+    WHOLE remaining exposure ([[feedback_record_unattested_no_backfill]]).
+  · ✅ **cl.6 — DONE 2026-09-16.** `public-vs-private-matrix.yaml`'s `contributor_name` entry: the
+    `-160` cl.7 basis citation is CORRECTED in both the `description` and the
+    `tier1_public_exception.rationale`, with the superseded wording **quoted in place** rather than
+    swapped away ([[feedback_closure_language_precision]]). ⚠ `decision:` stays `2026-09-02-174` —
+    that is the DECLARATION's decision, ⛔ not the basis's. ⛔ No predicate changed.
 ⚠⛔ **AND ⛔ DO ⛔ NOT WRITE THE PLACEHOLDER AC AS CLOSING Q1** — `-219` cl.1 ratifies (E) on the
 **FAIRNESS** ground and records in terms that it **WIDENS** disclosure.
 

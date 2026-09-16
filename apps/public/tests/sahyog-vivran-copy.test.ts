@@ -73,6 +73,61 @@ const KEYS = [
 
 const LOCALES: readonly Locale[] = ['en', 'hi'];
 
+/**
+ * ⛔⛔ THE CANDIDATES `#decision-2026-09-16-219` cl.3 RULED OUT **BY NAME** for the unnamed-contributor
+ * placeholder. ⚠ A later re-wording that reaches for one of these must fail HERE, ⛔ not on a public
+ * page.
+ *
+ * ⚠⛔⛔ **HOISTED AND SELF-TESTED AFTER A VACUOUS-GUARD DEFECT, 2026-09-16 — ⛔ read this before
+ * editing.** These regexes were first written with literal **backspace** characters (`\x08`) where
+ * `\b` belonged. ⇒ every pattern was unmatchable, `not.toMatch` passed TRIVIALLY, and the suite was
+ * green over a guard that could ⛔ never fire — the exact vacuity this file's own header exists to
+ * catch. ⭐ `lint`'s `no-control-regex` is what surfaced it, ⛔ not the test.
+ * ⇒ ⭐ the guard now PROVES ITS OWN TEETH below, so a silently-defanged pattern fails instead of
+ * passing ([[feedback_gate_scope_semantic_coverage]]).
+ */
+const BANNED_PLACEHOLDER_WORDS = [
+  /anonym/i, // ⛔ states the person CHOSE anonymity — and 11b.2a D6(a) removed it for exactly that
+  /\bnot\s+recorded\b/i, // ⛔ FALSE here: the name IS recorded, encrypted in KYC
+  /\bwithheld\b/i,
+  /\bremoved\b/i,
+  /\berased\b/i,
+  /\bunavailable\b/i,
+  /गुमनाम/, // ⛔ the Hindi of "anonymous" — `common.member.anonymousMember`'s word
+  /दर्ज\s+नहीं/, // ⛔ the Hindi of "not recorded" — `value.district_unknown`'s word
+] as const;
+
+describe('⛔ the placeholder banned-word guard has TEETH — ⛔ it must not pass vacuously', () => {
+  // ⚠⛔ Each pattern is fed a string it MUST reject. ⭐ A pattern that stops matching its own probe is
+  // defanged, and this goes red — which is what the backspace defect needed and did not have.
+  const probes: readonly [RegExp, string][] = [
+    [/anonym/i, 'An anonymous member'],
+    [/\bnot\s+recorded\b/i, 'Not recorded'],
+    [/\bwithheld\b/i, 'Name withheld'],
+    [/\bremoved\b/i, 'Name removed'],
+    [/\berased\b/i, 'Name erased'],
+    [/\bunavailable\b/i, 'Name unavailable'],
+    [/गुमनाम/, 'एक गुमनाम सदस्य'],
+    [/दर्ज\s+नहीं/, 'दर्ज नहीं है'],
+  ];
+
+  it('⭐ every banned pattern is present, in order, and MATCHES its own probe', () => {
+    expect(probes.map(([re]) => re.source)).toEqual(
+      BANNED_PLACEHOLDER_WORDS.map((re) => re.source),
+    );
+    for (const [re, probe] of probes) {
+      expect(probe).toMatch(re);
+    }
+  });
+
+  it('⛔ and ⛔ NO pattern contains a control character — the defect that defanged them', () => {
+    for (const re of BANNED_PLACEHOLDER_WORDS) {
+      // eslint-disable-next-line no-control-regex
+      expect(re.source).not.toMatch(/[\x00-\x1f]/);
+    }
+  });
+});
+
 describe('/sahyog-vivran copy resolves through the REAL t() — both locales', () => {
   for (const locale of LOCALES) {
     for (const key of KEYS) {
@@ -207,16 +262,7 @@ describe('/sahyog-vivran copy resolves through the REAL t() — both locales', (
       // ⛔⛔ cl.3 — the word must be TRUE under all five omission causes and disclose ⛔ NONE of them.
       // ⚠ These are the candidates the Panel ruled out BY NAME; a later re-wording that reaches for
       // one of them fails HERE rather than on a public page.
-      for (const banned of [
-        /anonym/i, // ⛔ states the person CHOSE anonymity — and 11b.2a D6(a) removed it for that
-        /not\s+recorded/i, // ⛔ FALSE: the name IS recorded, encrypted in KYC
-        /withheld/i,
-        /removed/i,
-        /erased/i,
-        /unavailable/i,
-        /गुमनाम/, // ⛔ the Hindi of "anonymous" — `common.member.anonymousMember`'s word
-        /दर्ज\s+नहीं/, // ⛔ the Hindi of "not recorded" — `value.district_unknown`'s word
-      ]) {
+      for (const banned of BANNED_PLACEHOLDER_WORDS) {
         expect(word).not.toMatch(banned);
       }
     });

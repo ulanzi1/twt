@@ -88,7 +88,7 @@ import {
 } from '../../lib/sahyog-vivran-render.js';
 // ⭐⭐ Story 11b.3b (Task 3, AC4) — ⛔ THE SHARED PARSER, ⛔ never a second one. ⛔ NO SILENT CLAMP: an
 // over-cap or out-of-horizon request is REFUSED with a decidable reason, exactly as `/sahyog` does.
-import { pageHref, parsePageParams } from '../../lib/pagination.js';
+import { PUBLIC_PAGE_HORIZON, pageHref, parsePageParams } from '../../lib/pagination.js';
 import { buildForwardedFor, fetchSahyogVivran } from '../../lib/sahyog-vivran.server.js';
 import { ACTIVE_PARIWAR_ID } from '../../lib/pariwar.server.js';
 
@@ -264,17 +264,30 @@ const driveToken = (rawDriveToken ?? '').trim();
 // confirmation) and a caller may ⛔ not choose it — a sort parameter over a list of names is a
 // leaderboard control in the query string, and 11b.1 AC5 forbids ranking outright.
 const SAHYOG_VIVRAN_ALLOWED_QUERY_PARAMS = new Set(['page', 'limit', 'lang']);
-const hasUnknownParam = [...Astro.url.searchParams.keys()].some(
+// ⚠⛔⛔ **AN UNKNOWN PARAM IS ⛔ IGNORED, ⛔ NEVER A 404** (Review finding, 2026-09-16 second pass).
+// ⛔ This previously folded into `pagingRefused` and served the drive-not-found page. ⇒ a family
+// shares the drive link on WhatsApp or Facebook, the platform appends `?fbclid=…` / `?utm_source=…`,
+// and EVERY recipient saw *"nothing to show"* for a LIVE drive — on the surface whose whole purpose
+// is that a stranger can check it.
+// ⭐⭐ **IGNORING COSTS THE ANTI-ENUMERATION PROPERTY ⛔ NOTHING.** The oracle `2026-09-03-184` (B)
+// closes is one that distinguishes *"this token names a real drive, your page was bad"* from *"no
+// such drive"*. ⛔ An ignored unknown key creates ⛔ no such distinction — it renders the SAME page
+// the bare URL does. ⚠ The 404 stays for a genuinely REFUSED `page`/`limit` (`!paging.ok`), which is
+// where that reasoning actually bites.
+const unknownParams = [...Astro.url.searchParams.keys()].filter(
   (k) => !SAHYOG_VIVRAN_ALLOWED_QUERY_PARAMS.has(k),
 );
-const paging = parsePageParams(Astro.url.searchParams);
+// ⚠ Parsed from a CLEANED copy: `parsePageParams` must ⛔ never see a key this surface does not rule.
+const allowedParams = new URLSearchParams(Astro.url.searchParams);
+for (const k of unknownParams) allowedParams.delete(k);
+const paging = parsePageParams(allowedParams);
 
 // ⭐⛔ **A REFUSED PAGE COLLAPSES INTO THE SAME 404 EVERYTHING ELSE DOES** — ⛔ not a 400, and ⛔ not a
 // distinct body. ⚠ This surface has ⛔ no rejection view to render (unlike `/sahyog`, which is a
 // listing with a shaped empty state), and inventing one here would hand a prober an oracle that
 // distinguishes *"this token names a real drive, your page was bad"* from *"no such drive"* — the
 // exact signal `2026-09-03-184` (B)'s opaque token exists to close.
-const pagingRefused = !paging.ok || hasUnknownParam;
+const pagingRefused = !paging.ok;
 
 const fetched =
   driveToken === '' || pagingRefused
@@ -284,7 +297,15 @@ const fetched =
         // ⭐ ALREADY BOUNDED by `parsePageParams` above ⇒ the upstream `.max()` is a second,
         // independent check, ⛔ not the only one.
         page: paging.page,
-        limit: paging.limit,
+        // ⚠⛔⛔ **FORWARDED ⛔ ONLY WHEN THE VISITOR ACTUALLY SUPPLIED IT** (Review finding,
+        // 2026-09-16 second pass). ⛔ `parsePageParams` ALWAYS returns a `limit`, defaulting to the
+        // shared `PUBLIC_SURFACE_PAGE_SIZE_DEFAULT` (**25**) — so forwarding it unconditionally made
+        // the API's own documented default (`?? PUBLIC_SURFACE_PAGE_SIZE_CAP`, **50**) UNREACHABLE
+        // from the only production caller, and a drive with 26–50 confirmed contributors rendered 25
+        // names + a "Next" link: ⭐ exactly the split that handler's rationale REFUSES (*"splitting
+        // ONE drive's record across pages by default would make a transparency page under-report at
+        // a glance"*). ⛔ Do ⛔ not "simplify" this back to `limit: paging.limit`.
+        limit: allowedParams.has('limit') ? paging.limit : undefined,
         // ⛔ `Astro.clientAddress` ONLY, via the REUSED `buildForwardedFor`. The inbound
         // `X-Forwarded-For` header is deliberately NOT read — it is caller-supplied, and `apps/api`'s
         // `trustProxy: true` keys on the LEFTMOST chain entry, so forwarding it hands the attacker
@@ -337,7 +358,15 @@ const contributorPage = fetched.ok ? fetched.data.page : 1;
 const contributorLimit = fetched.ok ? fetched.data.limit : 0;
 const contributorTotalCount = fetched.ok ? fetched.data.total : 0;
 const hasPreviousPage = contributorPage > 1;
-const hasNextPage = contributorLimit > 0 && contributorPage * contributorLimit < contributorTotalCount;
+// ⚠⛔ **CLAMPED BY THE PAGE HORIZON, ⛔ not by `total` alone** (Review finding, 2026-09-16 second
+// pass). `page` is `.max(PUBLIC_DIRECTORY_PAGE_HORIZON)` on the contract (re-exported here as `PUBLIC_PAGE_HORIZON`), and a refused page collapses
+// into this surface's 404 ⇒ without this clamp a drive with more than `horizon × limit` contributors
+// rendered a "Next" link to `page = horizon + 1`, and clicking a control THIS PAGE rendered yielded
+// *"this drive does not exist"*. ⛔ Never let the link outrun what the next request will accept.
+const hasNextPage =
+  contributorLimit > 0 &&
+  contributorPage < PUBLIC_PAGE_HORIZON &&
+  contributorPage * contributorLimit < contributorTotalCount;
 // ⭐ THE SHARED `pageHref`, ⛔ never hand-built query strings — it preserves `lang` and DROPS `page`
 // at page 1 rather than minting a SECOND URL for identical content, which on an `edge_cacheable`
 // surface would be a wasted PoP entry re-serving Tier-1 PII under a different key.

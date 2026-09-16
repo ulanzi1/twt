@@ -60,13 +60,26 @@ const repoRoot = path.resolve(here, '../..');
 /**
  * The Sahyog Vivran read path, end to end.
  *
- * `renderPath: true` ⇒ rule (3) applies (⛔ no amount operand may even be NAMED). ⛔ The domain read
- * is `false` because it legitimately feeds `classifyCycleOutcome`, which QUARANTINES the target.
+ * `renderPath: true` ⇒ rule (3) applies. ⛔ The domain read is `false` because it legitimately feeds
+ * `classifyCycleOutcome`, which QUARANTINES the target.
+ *
+ * ⚠⛔⛔ **WHAT RULE (3) BANS WAS NARROWED AT STORY 11b.3b (AC11(b)) — THIS SENTENCE USED TO SAY
+ * *"⛔ no amount operand may even be NAMED"* AND THAT IS ⛔ NO LONGER TRUE** (Review finding,
+ * 2026-09-16 second pass). ⭐ Rule (3) now bans the TARGET and its FACTORS by name
+ * ({@link TARGET_OPERANDS}) plus the D1(c) product BY SHAPE — ⛔ it does ⛔ not ban `amountRaisedInr`,
+ * which `2026-09-04-190` **cl.6** RULES the public rupee figure and which legitimately crosses the
+ * wire.
+ * ⚠⛔ **SO ⛔ DO ⛔ NOT REACH FOR `renderPath: false` TO NAME AN AMOUNT IN A NEW FILE.** That is the
+ * weaker option AC11(b) explicitly REFUSED — it would leave the file unscanned for EVERY operand at
+ * once. ⭐ If a render-path file needs an amount, it needs the RULED wire field, ⛔ not the flag off.
  */
 const SCAN_FILES: readonly { readonly path: string; readonly renderPath: boolean }[] = [
   // The domain read — where the event types actually live.
   { path: 'packages/domain/src/pool/sahyog-vivran-read.ts', renderPath: false },
-  // The wire shape. ⭐ On the render path: nothing about an amount may reach the wire at this story.
+  // The wire shape. ⭐ On the render path: the TARGET and its factors may ⛔ never reach the wire.
+  // ⛔ NOT "nothing about an amount" — `amountRaisedInr` SHIPS here (`-190` cl.6, `-189` cl.5 record
+  // the rupee boundary as CROSSED at 11b.3b); it is the target/expected-total/shortfall that is
+  // forbidden "in any field, under any name" (Review finding, 2026-09-16 second pass).
   { path: 'packages/contracts/src/public-pages/sahyog-vivran.ts', renderPath: true },
   // The API boundary. ⚠ SHARED with the two sibling routes, so it is scanned for rules (1) and (2)
   // only — a legitimate `member-directory` or `sahyog-drive` amount operand there is not this

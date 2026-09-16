@@ -79,6 +79,7 @@ import {
   sahyogVivranSurfaceFieldIds,
   MEMBER_DIRECTORY_ROW_FIELD_IDS,
   SAHYOG_DRIVE_ROW_FIELD_IDS,
+  SAHYOG_VIVRAN_CONTRIBUTOR_FIELD_IDS,
   SAHYOG_VIVRAN_FIELD_IDS,
   SAHYOG_VIVRAN_NOMINEE_ACCOUNT_FIELD_IDS,
 } from '../../../src/lib/surface-fields.js';
@@ -1351,12 +1352,23 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
   const SAHYOG_VIVRAN_HTML = [
     '<dl>',
     ...sahyogVivranSurfaceFieldIds(model).map((fieldId) => {
-      // ⭐ TWO MAPPINGS SINCE STORY 11b.3a: the top-level fields plus the per-ACCOUNT ones, exactly
-      // as the page renders them — the shell's `<dl>` and then one block per nominee bank account.
-      // ⛔ Looking only in the shell mapping would silently emit `''` for the per-account Tier-1
-      // field, making the leak leg pass over a value it never actually saw.
+      // ⭐⭐ **THREE MAPPINGS SINCE STORY 11b.3b**, ⛔ no longer two: the top-level fields, the
+      // per-ACCOUNT ones, and now the per-CONTRIBUTOR one — exactly as the page renders them.
+      // ⛔ Looking only in the shell mapping would silently emit `''` for a nested Tier-1 field,
+      // making the leak leg pass over a value it never actually saw.
+      // ⚠⛔⛔ **AND THAT IS EXACTLY WHAT HAPPENED** (Review finding, 2026-09-16 second pass):
+      // `sahyogVivranSurfaceFieldIds` began deriving from `SAHYOG_VIVRAN_CONTRIBUTOR_FIELD_IDS` at
+      // 11b.3b, but this fixture was ⛔ never given its arm and did ⛔ not even import it. ⇒
+      // `contributor_name` — the ONLY full-legal-name field that story added — missed both lookups,
+      // fell to `null`, and the PII scan below ran over an EMPTY `<dd>`. ⭐ The warning one comment
+      // above had been written for precisely this, and was re-committed one story later.
+      // ⛔ Adding a FOURTH nested mapping without its arm here re-opens it: ⭐ keep this list in step
+      // with `sahyogVivranSurfaceFieldIds`.
       const shellKey = Object.entries(SAHYOG_VIVRAN_FIELD_IDS).find(([, id]) => id === fieldId)?.[0];
       const accountKey = Object.entries(SAHYOG_VIVRAN_NOMINEE_ACCOUNT_FIELD_IDS).find(
+        ([, id]) => id === fieldId,
+      )?.[0];
+      const contributorKey = Object.entries(SAHYOG_VIVRAN_CONTRIBUTOR_FIELD_IDS).find(
         ([, id]) => id === fieldId,
       )?.[0];
       const value =
@@ -1366,7 +1378,11 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
             ? ((model.nomineeAccounts[0] as unknown as Record<string, string | null> | undefined)?.[
                 accountKey
               ] ?? null)
-            : null;
+            : contributorKey !== undefined
+              ? ((model.contributors[0] as unknown as Record<string, string | null> | undefined)?.[
+                  contributorKey
+                ] ?? null)
+              : null;
       const { output } = matrixFieldOutput('sahyog-vivran', fieldId, 'public', value ?? '');
       return `<dt>${fieldId}</dt><dd>${
         output === null ? '' : `<span data-field="${fieldId}">${output}</span>`
@@ -1453,6 +1469,17 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
     // launch-blocking FR-74 control is a **governance act**. ⚠ If any surface ever re-publishes a
     // 12-digit value at `public`, the conflict RETURNS in full and must be re-read, ⛔ not
     // rediscovered as new.
+    // ⭐⭐ **ANTI-VACUITY FIRST — ⛔ a green verdict over an EMPTY `<dd>` proves ⛔ nothing** (Review
+    // finding, 2026-09-16 second pass). ⚠ This scan ran for a whole story over a `contributor_name`
+    // cell that was structurally empty, because the fixture resolved values through only TWO of the
+    // THREE field mappings. ⇒ assert the nested Tier-1 values are ACTUALLY PRESENT in the scanned
+    // HTML before believing the scan that says they are safe.
+    // ⛔ Do ⛔ not soften these to `toContain(fieldId)` — the field ID is emitted by the `<dt>` even
+    // when the `<dd>` is empty, which is exactly the vacuity this guards.
+    expect(SAHYOG_VIVRAN_HTML).toContain('data-field="contributor_name"');
+    expect(SAHYOG_VIVRAN_HTML).toContain('data-field="nominee_account_holder_name"');
+    expect(SAHYOG_VIVRAN_HTML).toContain('data-field="deceased_member_name"');
+
     const verdict = evaluateSnapshot(matrix, snapshot);
     expect(verdict.piiMatches).toEqual([]);
     expect(verdict.leaks).toEqual([]);

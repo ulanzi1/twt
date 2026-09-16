@@ -602,13 +602,23 @@ export async function readPublicSahyogVivran(
   // 0115), and a negative here makes `amountRaisedInr` negative, which the contract's
   // `.nonnegative()` rejects ⇒ a 500 for the whole page. ⭐ The clamp is logged, ⛔ not silent: a
   // non-positive fixed amount is a DATA fault worth seeing, and silence would hide it.
+  // ⚠⛔ **THE SIGN IS ⛔ NOT THE ONLY WAY THIS 500s** (Review finding, 2026-09-16 second pass). The
+  // clamp above was documented as *"the second line of that defence"* against a 500, but
+  // `Math.max(0, x)` is TRANSPARENT to a non-integer and returns `NaN` for `NaN` — and because
+  // `NaN < 0` is **false**, the warn-log ⛔ never fired either. ⇒ a `fixed_amount` of `100.5` with 3
+  // confirmed yields `301.5`, the wire's `.int()` rejects it, and the WHOLE public page 500s
+  // SILENTLY. ⭐ The same missing DB CHECK that lets the value go negative lets it go non-integral.
+  // ⭐ `Number.isFinite` first (it alone excludes `NaN`/`±Infinity`), then `Math.trunc`, then the
+  // existing sign clamp — ⛔ never `Math.round`, which would INVENT paise the ledger never held.
   const rawDeliveredTotal = confirmedContributionCount * row.fixedAmount;
-  if (rawDeliveredTotal < 0) {
+  if (!Number.isFinite(rawDeliveredTotal) || !Number.isInteger(rawDeliveredTotal) || rawDeliveredTotal < 0) {
     console.warn(
-      `[sahyog-vivran-read] negative deliveredTotal clamped to 0 (pool=${row.poolCanonicalIdentifier}, fixedAmount=${String(row.fixedAmount)}, confirmedCount=${String(confirmedContributionCount)})`,
+      `[sahyog-vivran-read] deliveredTotal is not a non-negative integer — clamped (pool=${row.poolCanonicalIdentifier}, fixedAmount=${String(row.fixedAmount)}, confirmedCount=${String(confirmedContributionCount)}, raw=${String(rawDeliveredTotal)})`,
     );
   }
-  const deliveredTotal = Math.max(0, rawDeliveredTotal);
+  const deliveredTotal = Number.isFinite(rawDeliveredTotal)
+    ? Math.max(0, Math.trunc(rawDeliveredTotal))
+    : 0;
   // ⭐⛔ `const driveMaskingFrom = coerceDriveInstant(row.driveMaskingFrom)` STOOD HERE. It was kept
   // SEPARATE from `driveClosedAt` on purpose — the two fragments answer different questions and
   // collapsing them re-introduces the un-masking defect. ⇒ removed with its select at 11b.11; ⛔ if

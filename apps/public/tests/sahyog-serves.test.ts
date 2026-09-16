@@ -74,6 +74,21 @@ const vivranDrive = (driveStatus: string) => ({
   fundingOutcome: driveStatus === 'live' ? null : 'fully_funded',
   appealReversal: null,
   nomineeBankAccounts: [{ accountRank: 1, accountHolderName: 'A Holder' }],
+  // ⭐⭐ STORY 11b.3b's TWO DRIVE-LEVEL FIELDS — ⛔ the fixture must model a REAL API row, same
+  // discipline as `driveRow` above (Review finding, 2026-09-15: this fixture was never updated for
+  // either, which masked `isSahyogVivranResponse` never checking them at all).
+  deceasedMemberName: null,
+  amountRaisedInr: 13700,
+});
+
+// ⭐⭐ STORY 11b.3b's paginated contributor ENVELOPE, alongside `drive` — ⛔ never inside it
+// (Review finding, 2026-09-15, same fixture-drift class as `vivranDrive`'s two fields above).
+const vivranEnvelope = (driveStatus: string) => ({
+  drive: vivranDrive(driveStatus),
+  items: [{ name: 'Sunita Devi' }],
+  page: 1,
+  limit: 50,
+  total: 1,
 });
 
 describe('⛔⛔ /sahyog SERVES ROWS for every ruled wire token — ⛔ never its OUTAGE arm', () => {
@@ -214,7 +229,7 @@ describe('⛔⛔ the drive page SERVES for every ruled wire token — ⛔ never 
 
   for (const driveStatus of PublicSahyogVivranStatus.options) {
     it(`\`${driveStatus}\` passes the runtime literal-set guard and yields a real drive`, async () => {
-      vi.stubGlobal('fetch', async () => json({ drive: vivranDrive(driveStatus) }));
+      vi.stubGlobal('fetch', async () => json(vivranEnvelope(driveStatus)));
       const res = await fetchSahyogVivran({ driveToken: 'P-2026-09-003', forwardedFor: null });
       expect(
         res.ok,

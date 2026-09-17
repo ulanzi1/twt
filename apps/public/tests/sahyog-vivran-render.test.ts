@@ -240,6 +240,40 @@ describe('buildSahyogVivranView — the settled drive', () => {
     }
   });
 
+  it('⭐⭐ `-219` cl.1 — a WITHHELD name survives the render layer as `null`, IN POSITION', () => {
+    // ⚠⛔⛔ **THERE WAS ⛔ NO RENDER-LAYER TEST FOR THIS AT ALL** until 2026-09-17 (adversarial review).
+    // The whole placeholder path was covered only by REGEXES OVER THE `.astro` SOURCE, which assert a
+    // string exists in a file and execute ⛔ nothing. ⇒ had `contributors.map` dropped or coerced a
+    // null, every test still passed and the FIRST real erasure on a live drive would have been the
+    // discovery — found by a family, on a memorial page.
+    const { model: m } = buildSahyogVivranView(
+      {
+        ...SETTLED,
+        items: [{ name: 'Anita Verma' }, { name: null }, { name: 'Chandra Iyer' }],
+        page: 1,
+        limit: 50,
+        total: 3,
+      },
+      LABELS,
+    );
+
+    // ⭐ THE ROW IS KEPT, ⛔ not dropped, and its POSITION is the producer's — the unnamed row sits
+    // where that person sat, between the two named ones.
+    expect(m.contributors).toEqual([
+      { contributorName: 'Anita Verma' },
+      { contributorName: null },
+      { contributorName: 'Chandra Iyer' },
+    ]);
+    // ⭐ `items.length === total` — cl.1's mechanical property: a page is ⛔ never short.
+    expect(m.contributors).toHaveLength(3);
+    // ⛔⛔ cl.3 — the row carries ⛔ NO cause. ⚠ `null` is the ONLY signal, and it is the same `null`
+    // an erasure, an unresolvable name and a failed decrypt all produce.
+    expect(Object.keys(m.contributors[1]!)).toEqual(['contributorName']);
+    // ⛔ AND THE PLACEHOLDER COPY IS ⛔ NOT IN THE MODEL — it is a LABEL resolved at the page. Putting
+    // it here would classify the page's own words as the member's Tier-1 `contributor_name` datum.
+    expect(JSON.stringify(m)).not.toContain(LABELS.contributorUnnamed);
+  });
+
   it('⭐⛔ carries NO prohibited financial key — the AC4 shape, at the render layer too', () => {
     const keys = Object.keys(model).map((k) => k.toLowerCase());
     for (const forbidden of ['yellow', 'attested', 'utr', 'estimated', 'projected']) {

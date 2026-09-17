@@ -151,10 +151,70 @@ function namedOperand(node: ts.Expression): string | undefined {
   return undefined;
 }
 
-/** A bare numeric literal operand — `1000`, or a parenthesised one. */
+/**
+ * A hard-coded amount operand — `1000`, `(1000)`, `-1000`, `+1000`, or `'1000'`.
+ *
+ * ⚠⛔ **FOUND 2026-09-17 BY ADVERSARIAL REVIEW, REPRODUCED:** this recognised `ts.isNumericLiteral`
+ * ONLY. ⇒ `count * -1000` is a `PrefixUnaryExpression` and `count * '1000'` a `StringLiteral` (which
+ * JS coerces to the identical product) — ⛔ both walked straight past a leg added days earlier
+ * precisely to catch a hard-coded amount.
+ */
 function isNumericLiteralOperand(node: ts.Expression): boolean {
   if (ts.isParenthesizedExpression(node)) return isNumericLiteralOperand(node.expression);
-  return ts.isNumericLiteral(node);
+  if (ts.isNumericLiteral(node)) return true;
+  // ⭐ `-1000` / `+1000` — a sign does ⛔ not make it a different act.
+  if (
+    ts.isPrefixUnaryExpression(node) &&
+    (node.operator === ts.SyntaxKind.MinusToken || node.operator === ts.SyntaxKind.PlusToken)
+  ) {
+    return isNumericLiteralOperand(node.operand);
+  }
+  // ⭐ `'1000'` — JS coerces, so the product is byte-identical. ⛔ A quote is ⛔ not a defence.
+  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
+    return node.text.trim() !== '' && Number.isFinite(Number(node.text));
+  }
+  return false;
+}
+
+/**
+ * ⭐⭐ **`.astro` IS TWO LANGUAGES IN ONE FILE, AND SCANNING ONLY THE FIRST IS A SILENT HOLE.**
+ *
+ * ⚠⛔⛔ **FOUND 2026-09-17 BY AN ADVERSARIAL REVIEW OF THE `-219` cl.5(a) WORK — REPRODUCED, ⛔ not
+ * theorised.** The scanner parsed every file with {@link ts.ScriptKind.TS}. For
+ * `apps/public/src/pages/sahyog-vivran/[driveToken].astro` that parses the **frontmatter** between the
+ * `---` fences and then hits `<` — everything after it is ⛔ NOT a TS program, so the template's
+ * `{...}` expressions were ⛔ never visited. Planting `confirmedContributionCount * 1000` in the
+ * frontmatter FIRED; planting `{confirmedContributionCount * 1000}` in the template returned `[]`.
+ * ⇒ ⚠ the template is the MOST natural place to write a figure on an Astro page, and it was the
+ * half the gate could ⛔ not see — while `-219` cl.5(b) records this gate as the **SOLE** enforcement
+ * of D1(c).
+ *
+ * ⭐ **THE FIX: re-shape `.astro` into one TSX program** — frontmatter as statements, template wrapped
+ * in a fragment — so ONE walk covers both halves. ⛔ Do ⛔ not "simplify" this back to a single
+ * `ScriptKind.TS` parse.
+ * ⚠ TypeScript's parser RECOVERS from syntax it does not understand rather than throwing, so an
+ * Astro-specific construct degrades to a partial tree instead of a crash — acceptable for a tripwire,
+ * ⛔ but it means a green scan of a template is weaker evidence than a green scan of TS.
+ * ⇒ ⭐⭐ **`lib.test.ts` carries an ANTI-VACUITY leg that plants a product in the TEMPLATE half and
+ * requires it to fire.** ⛔ Never delete it: without it this function can silently return to scanning
+ * nothing, which is exactly the state it was in before.
+ */
+function prepareSource(file: string, source: string): { text: string; kind: ts.ScriptKind } {
+  if (!file.endsWith('.astro')) return { text: source, kind: ts.ScriptKind.TS };
+
+  // ⚠ The fence is `---` on its own line. A file with no frontmatter is all template.
+  const m = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(source);
+  const frontmatter = m ? m[1] : '';
+  const template = m ? source.slice(m[0].length) : source;
+
+  // ⚠⛔ Line numbers are PRESERVED for the frontmatter half (it stays at the top and the fence lines
+  // are replaced by blanks), so a finding there still reports its real line. ⛔ The template half is
+  // offset by the wrapper — accepted: a tripwire's job is to FAIL, and the detail names the file.
+  const lead = m ? '\n'.repeat((m[0].match(/\n/g) ?? []).length) : '';
+  return {
+    text: `${lead}${frontmatter}\n;<>\n${template}\n</>;\n`,
+    kind: ts.ScriptKind.TSX,
+  };
 }
 
 /**
@@ -172,13 +232,24 @@ function isNumericLiteralOperand(node: ts.Expression): boolean {
  * product is caught *"under ANY local spelling"* was therefore FALSE for a literal operand, and
  * `2026-09-02-176` **D1(c)** was enforceable only against the one spelling the domain happens to use.
  *
- * ⚠⛔⛔ **WHAT IS STILL ⛔ NOT CAUGHT, RECORDED RATHER THAN GLOSSED**
- * ([[feedback_record_unattested_no_backfill]]): an operand **aliased to a local const** —
- * `const per = 1000; count * per;` — resolves to the identifier `per`, which matches neither
- * {@link PER_MEMBER_AMOUNT} nor a numeric literal. ⛔ Closing that needs const-tracking across the
- * file, which is a different instrument from this tripwire. ⭐ `-219` cl.5(b) records that this gate
- * is now the **SOLE** enforcement of D1(c) — ⚠ so this gap is the whole of the remaining exposure,
- * ⛔ not a second line behind a fence.
+ * ⚠⛔⛔ **WHAT IS STILL ⛔ NOT CAUGHT — CORRECTED 2026-09-17, BECAUSE THE EARLIER LIST WAS ⛔ NOT THE
+ * WHOLE OF IT** ([[feedback_record_unattested_no_backfill]]). ⛔ This doc-block previously named the
+ * aliased-const case and called it *"the whole of the remaining exposure"*. ⚠ That was FALSE, and it
+ * was false in the one place it most mattered — beside the sentence recording this gate as D1(c)'s
+ * SOLE enforcement. The honest list:
+ *   · **An operand aliased to a local const** — `const per = 1000; count * per;` resolves to the
+ *     identifier `per`. Closing it needs const-tracking, a different instrument.
+ *   · **A product built across STATEMENTS** — `let a = count; a *= 1000;` — needs dataflow, likewise.
+ *   · **A computed literal** — `count * (500 + 500)`.
+ *   · **Rule (3) fires ⛔ ONLY on `renderPath: true` files** (see {@link ScanOptions}), and
+ *     `apps/api/.../public-pages/handlers.ts` is ⛔ `false` — so the product written THERE is ⛔ not a
+ *     finding at all, by design.
+ *   · **{@link ScanOptions} is driven by a HAND-MAINTAINED file list** in `check.ts`; a
+ *     differently-named new file is invisible until someone adds it.
+ *   · **The scan is SYNTACTIC and per-file** — `check.ts` prints this on every green run. A
+ *     prohibited product placed in a THIRD module and called from a render-path file is ⛔ invisible.
+ * ⇒ ⚠⛔ D1(c)'s own words are *"a second multiplication ANYWHERE in this app is the defect"*. ⛔ This
+ * gate does ⛔ not have that reach and must ⛔ never be described as if it did — ⭐ it is a TRIPWIRE.
  *
  * ⭐ And the shape leg was ⛔ never dead code, which is why it is EXTENDED rather than replaced:
  * {@link PER_MEMBER_AMOUNT} accepts `fixed_amount` (snake), which is ⛔ absent from
@@ -186,7 +257,15 @@ function isNumericLiteralOperand(node: ts.Expression): boolean {
  */
 function isAmountDerivation(node: ts.Node): node is ts.BinaryExpression {
   if (!ts.isBinaryExpression(node)) return false;
-  if (node.operatorToken.kind !== ts.SyntaxKind.AsteriskToken) return false;
+  // ⭐ `*` AND `*=` — the compound assignment is the same multiplication (the group 5/5 pass deferred
+  // this as a "low-severity precision note"; adversarial review 2026-09-17 re-found it alongside two
+  // other operand evasions, so it is closed here rather than carried).
+  if (
+    node.operatorToken.kind !== ts.SyntaxKind.AsteriskToken &&
+    node.operatorToken.kind !== ts.SyntaxKind.AsteriskEqualsToken
+  ) {
+    return false;
+  }
 
   const l = namedOperand(node.left);
   const r = namedOperand(node.right);
@@ -234,7 +313,8 @@ export function scanFinancialTruth(
   opts: ScanOptions,
 ): FinancialTruthFinding[] {
   const findings: FinancialTruthFinding[] = [];
-  const sf = ts.createSourceFile(file, source, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
+  const { text, kind } = prepareSource(file, source);
+  const sf = ts.createSourceFile(file, text, ts.ScriptTarget.ES2022, true, kind);
   const allowed = new Set(ALLOWED_EVENT_TYPES);
   const prohibitedImports = new Set(PROHIBITED_IMPORTS);
 
@@ -289,7 +369,10 @@ export function scanFinancialTruth(
           detail:
             'render path RE-DERIVES the rupee figure locally — a confirmed-count product, whether ' +
             'the per-member amount is NAMED (`count × fixedAmount`) or HARD-CODED (`count × 1000`, ' +
-            '2026-09-16-219 cl.5(a)). ' +
+            '`× -1000`, `× \'1000\'`, or `*=` — 2026-09-16-219 cl.5(a)). ' +
+            'NOTE: a confirmed-count product with a literal is a finding on a render-path file even ' +
+            'if you meant a PERCENTAGE — 2026-09-07-218 rules this page renders NO completion ' +
+            'percentage, so that shape is forbidden here on its own grounds. ' +
             'D1(c) is REFUSED in terms — "a second multiplication anywhere in this app is the ' +
             'defect" — and the canonical figure is the domain read\'s own `deliveredTotal`, ' +
             'published as `amountRaisedInr` (2026-09-04-190 cl.6)',

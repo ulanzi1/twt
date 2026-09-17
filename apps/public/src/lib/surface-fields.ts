@@ -581,12 +581,19 @@ export interface SahyogVivranRenderModel {
    * reason: folding them together would either classify an array (meaningless) or leave a Tier-1
    * field outside the derivation.
    *
-   * ⛔⛔ **THE PAGE MAY HOLD FEWER ROWS THAN `contributorTotal` SAYS, BY DESIGN** — RTBF erasure
-   * (`2026-08-30-169`), the erasure sentinel, an unresolvable name and a MONONYM under
-   * `shielded_name` each OMIT THE ROW after paging. ⇒ this page reads *"N confirmed"* beside FEWER
-   * than N named rows, and ⛔ ⛔ NO copy may claim the list is complete.
-   * ⛔⛔ ⛔ No placeholder row, ⛔ no "name withheld" marker and ⛔ NO OMISSION COUNT, ever: a tally of
-   * omissions is an enumeration signal over which members were erased.
+   * ⛔⛔ **THE PAGE MAY HOLD FEWER *NAMED* ROWS THAN `contributorTotal` SAYS, BY DESIGN** — RTBF
+   * erasure (`2026-08-30-169`), the erasure sentinel, an unresolvable name, a MONONYM under
+   * `shielded_name` and a failed decrypt each withhold the NAME. ⇒ this page reads *"N confirmed"*
+   * beside FEWER than N NAMED rows, and ⛔ ⛔ NO copy may claim the list is complete.
+   * ⚠⛔⛔ **SUPERSEDED BY `#decision-2026-09-16-219` cl.1/cl.4 — the old rule is QUOTED, ⛔ not
+   * deleted** ([[feedback_closure_language_precision]]). ⇒ ⭐ the row is KEPT and renders the ruled
+   * placeholder (`A contributor` / `एक सहकर्मी`), so `items.length` equals the page size and a page
+   * is ⛔ never short; what is FEWER than `total` is the count of rows carrying a NAME.
+   * ⚠⛔ Ratified on the FAIRNESS ground and recorded as WIDENING disclosure — ⛔ never write that the
+   * placeholder CLOSES the omission-count leak. ⛔⛔ What still stands whole is cl.4(c): ⛔ NOTHING may
+   * disclose WHICH of the five causes applies.
+   * ⛔ THIS READ: *"each OMIT THE ROW after paging … ⛔ No placeholder row, ⛔ no 'name withheld'
+   * marker and ⛔ NO OMISSION COUNT, ever"*.
    */
   readonly contributors: readonly SahyogVivranContributorRow[];
   /**

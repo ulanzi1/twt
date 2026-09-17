@@ -923,10 +923,14 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
         // erasure by arithmetic — the omission must be invisible in the NUMBERS, ⛔ not merely in the
         // list.
         expect(body.total).toBe(3);
-        // ⛔⛔ **AND IT IS *EVERY* AGGREGATE, ⛔ NOT JUST THE ONE BESIDE THE LIST.** cl.4 says the
-        // omitted contributor *"still counts toward every aggregate"*, so the drive's own canonical
-        // EVENT count and the ruled RUPEE FIGURE must both be blind to the erasure too. ⚠ They are
-        // computed from `contribution.confirmed` events, which RTBF does ⛔ not delete — ⭐ asserted
+        // ⛔⛔ **AND IT IS *EVERY* AGGREGATE, ⛔ NOT JUST THE ONE BESIDE THE LIST.** `-169` **cl.6**
+        // (D3-aggregate) says the omitted contributor *"still counts toward every aggregate"* ⇒ the
+        // drive's own canonical EVENT count and the ruled RUPEE FIGURE must both be blind to the
+        // erasure too.
+        // ⚠⛔ **THIS CITED `cl.4` UNTIL 2026-09-17** — that is the BATCHED-STATE-READ clause, ⛔ not this
+        // rule. ⛔ The identical correction was made one screen below on 2026-09-16 without sweeping
+        // HERE, which is how a mis-citation survives inside the very test that was being corrected.
+        // ⚠ The two aggregates are computed from `contribution.confirmed` events, which RTBF does ⛔ not delete — ⭐ asserted
         // rather than assumed, because a future "tidy" that filtered erased members out of the count
         // would leak the erasure through arithmetic while every list assertion above stayed green.
         expect(body.drive.confirmedContributionCount).toBe(3);
@@ -987,6 +991,53 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
         });
         expect(past.statusCode).toBe(200);
         expect((past.json() as { items: unknown[] }).items).toEqual([]);
+      } finally {
+        await teardown(t);
+      }
+    });
+
+    it('⭐⭐ A DEVANAGARI NAME WITH AN INTERIOR ZWJ PUBLISHES UNCHANGED — ⛔ never re-spelled', async () => {
+      // ⚠⛔⛔ **THE NORMALISER USED TO CORRUPT THIS, AND IT SHIPPED.** Found 2026-09-17 by adversarial
+      // review: `normalisePublicName` ran a GLOBAL strip of `\u200b-\u200f` and returned the rewritten
+      // string. That range contains ZWNJ (U+200C) and ZWJ (U+200D), which in Devanagari select
+      // half-form vs conjunct — so a member's legal name was published in a DIFFERENT spelling, on a
+      // public memorial page, silently. ⭐ The strip is now a TEST on a copy; only the EDGES are trimmed.
+      const t = await createTestApp();
+      try {
+        const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
+        const withZwj = 'प्रज्\u200dञा शर्मा';
+        const { pariwarId } = await seedDrive(t, {
+          canonicalIdentifier: id,
+          contributors: [{ name: withZwj }],
+        });
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
+        expect(res.statusCode).toBe(200);
+        const body = res.json() as { items: { name: string | null }[] };
+        // ⭐ BYTE-IDENTICAL to what was stored — ⛔ not merely "looks similar".
+        expect(body.items[0]?.name).toBe(withZwj);
+        expect(body.items[0]?.name).toContain('\u200d');
+      } finally {
+        await teardown(t);
+      }
+    });
+
+    it('⭐⭐ AN ALL-INVISIBLE NAME WITHHOLDS THE NAME — ⛔ never an empty rendered row', async () => {
+      // ⚠ U+2060 WORD JOINER is outside the old stripped range AND is not `trim()` whitespace, so it
+      // survived both legs, passed `.min(1)`, and rendered an EMPTY `<li>` — the one row on the page
+      // that ANNOUNCES itself, which is precisely what the omission rule forbids.
+      const t = await createTestApp();
+      try {
+        const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
+        const { pariwarId } = await seedDrive(t, {
+          canonicalIdentifier: id,
+          contributors: [{ name: '\u2060' }, { name: 'Anita Verma' }],
+        });
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
+        expect(res.statusCode).toBe(200);
+        const body = res.json() as { items: { name: string | null }[] };
+        // ⭐ Withheld like any other cause — ⛔ and indistinguishable from them (cl.3).
+        expect(body.items.map((r) => r.name)).toEqual([null, 'Anita Verma']);
+        expect(res.body).not.toContain('\u2060');
       } finally {
         await teardown(t);
       }

@@ -491,7 +491,12 @@ export const PublicVsPrivateMatrixSchema = z
       //   · `deceased_member_name` renders ⛔ NOTHING until a `clause_versions` row pins
       //     `niy.public-disclosure.member-information` — ⭐ ONE site in the repo, its own definition.
       //     Fail-closed and correct; ⛔ do ⛔ NOT seed a placeholder row to "activate" it.
-      //   · `contributor_name` has ⛔ NO clause gate at all (basis `2026-08-28-160` cl.7, settled) ⇒
+      //   · `contributor_name` has ⛔ NO clause gate at all ⇒
+//     ⚠⛔ **BASIS CORRECTED 2026-09-17 — this cited `2026-08-28-160` cl.7, which does ⛔ NOT reach a
+//     LIVING subject** (cl.7 is a surface clearance resting on cl.4, whose model is about publication
+//     AFTER DEATH). ⭐ The basis is `2026-09-16-219` **cl.6**: MEMBERSHIP ITSELF — contributing is a
+//     public act. ⛔ `-219` cl.6 forbids re-citing `-160` cl.7; this site was missed by the first
+//     sweep, which stopped at the two files the clause happened to name.
       //     it publishes up to FIFTY living members' full legal names on day one.
       ['sahyog-vivran.deceased_member_name', '2026-09-02-173'],
       // ⚠⛔ AND THE PRICE IS CARRIED, ⛔ not closed: the public sees MORE of a contributor's name than

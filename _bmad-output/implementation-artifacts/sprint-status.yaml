@@ -1,3 +1,22 @@
+# last_updated: 2026-09-17b (✅ **`11b-3b` — CLOSED. The row moves `in-progress` → `done`.**
+#   ⛔ No other row is touched.
+#   ⚠⛔ **THE BAR WAS SET BY THIS STORY'S OWN HISTORY** — it went `done` once before, 2026-09-15, over a
+#   RED TREE whose repair sat UNCOMMITTED. ⇒ this closure is stated against evidence:
+#   ⭐ `ci:local` **PASSED 34/34** on the PLAIN `DATABASE_URL` (⛔ no override — the `ALTER DATABASE
+#   twt_dev SET timezone TO 'UTC'` from 2026-09-16 is what makes that true).
+#   ⭐ ⛔ ZERO unchecked items in the story file. ⭐ `-219` cl.1/cl.3/cl.4 + cl.5(a) + cl.6 BUILT;
+#   cl.2/cl.5(b) are record clauses. ⭐ `-220` discharges the Hindi follow-up.
+#   ⭐⭐ **THREE REVIEW PASSES IN TOTAL, and the THIRD reviewed the SECOND's own patches** — 12 defects
+#   found in work already committed and verified, incl. a financial-truth gate BLIND to the `.astro`
+#   template half, a normaliser CORRUPTING Devanagari legal names (ZWNJ/ZWJ), and a systemic
+#   decrypt failure publishing as lawful MASS ERASURE. ⭐ All fixed, each proven by MUTATION.
+#   ⚠⛔⛔ **WHAT `done` DOES ⛔ NOT CLOSE — ⛔ do ⛔ not read the row as retiring these:**
+#   · `-219` follow-up (2) — the member surface is now ASYMMETRIC (public shows an unnamed row a MEMBER
+#     does ⛔ not see); at least the THIRD instance of the public-sees-more shape. ⛔ UNRULED.
+#   · `-219` follow-up (3) — `value.contributions_count` renders TWO numbers under ONE key.
+#   · The counsel's-clause item (`-173` Q3) stays OPEN; the deceased member's NAME still renders
+#     NOTHING. ⛔ This story shipped the RENDER PATH, ⛔ not the name.
+#   · The financial-truth gate is a TRIPWIRE, ⛔ not proof of D1(c)'s *"anywhere in this app"*.)
 # last_updated: 2026-09-17a (⚠⛔⛔ **`11b-3b` — AN ADVERSARIAL REVIEW OF THE AUTHOR'S OWN PATCHES
 #   FOUND 12 REAL DEFECTS, AND THE WORST WAS IN THE RECORD, ⛔ NOT THE CODE.** ⛔ The row stays
 #   `in-progress`; ⛔ no other row is touched.
@@ -18668,7 +18687,7 @@ development_status:
   # sweep ⇒ ⭐ the next `validate` pass owes a `packages apps` re-diff before trusting any row.
   # ⭐ Siblings in the same sweep: `11b-17` (`a2617869`) + `6-18` (`55912d83`) re-checked LIVE ⇒
   # ⭐ BOTH SOUND ⇒ the 2026-09-09 *"they still carry ORPHANED pins"* note is SUPERSEDED, ⛔ not edited.
-  11b-3b-sahyog-vivran-named-identity-render-layer: in-progress
+  11b-3b-sahyog-vivran-named-identity-render-layer: done
   11b-4-memorial-authorship-surface-family-writes-the-story: backlog
   11b-5-memorial-visual-components-memorial-record-portrait-frame-kinship-lattice: backlog
   11b-6-in-memoriam-roll-consent-governed-revocable-invariant: backlog

@@ -441,8 +441,14 @@ export function buildSahyogVivranView(
       // ⛔ The API boundary already resolved each name to ONE string under the Pariwar's stored mode;
       // this layer does ⛔ NOT split, abbreviate, re-case, re-order or de-duplicate them. ⛔ The
       // ordering is RULED (earliest live confirmation) and ⛔ nothing here may re-sort it.
-      // ⚠⛔ The rows already arrive OMITTED where a name was unrenderable ⇒ ⛔ this layer must ⛔ not
-      // "restore" a placeholder for the gap, and ⛔ must not pad the page back to `limit`.
+      // ⚠⛔⛔ **SUPERSEDED BY `#decision-2026-09-16-219` cl.1 — the old rule is QUOTED, ⛔ not deleted.**
+      // ⛔ IT READ: *"The rows already arrive OMITTED where a name was unrenderable ⇒ ⛔ this layer must
+      // ⛔ not 'restore' a placeholder for the gap, and ⛔ must not pad the page back to `limit`."*
+      // ⇒ ⭐ rows now arrive with `name: null` and the placeholder IS this layer's job. ⛔ The page is
+      // still ⛔ never padded — the row count comes from the producer, ⛔ not from `limit`.
+      // ⚠ `contributorName` stays `string | null` HERE: the placeholder is a LABEL resolved at the
+      // page, ⛔ not a value, and putting copy in this field would classify it as the member's Tier-1
+      // datum in the surface's field-id derivation.
       contributors: contributors.map((c) => ({ contributorName: c.name })),
       contributorTotal: labels.contributorTotal(total),
       closeOfCycleFraming: framingFor(drive.fundingOutcome, labels),

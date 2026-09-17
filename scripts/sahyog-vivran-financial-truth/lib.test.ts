@@ -188,6 +188,51 @@ describe('rule (3) — D1(c), the render-path multiplication, MECHANIZED', () =>
     expect(findings.map((f) => f.rule)).toEqual(['render_path_multiplication']);
   });
 
+  it('⭐⭐ ANTI-VACUITY — the `.astro` TEMPLATE half is scanned, ⛔ not just the frontmatter', () => {
+    // ⚠⛔⛔ **THE GATE WAS BLIND HERE, AND IT WAS FOUND BY ADVERSARIAL REVIEW, ⛔ not by this suite.**
+    // Every file was parsed as `ScriptKind.TS`; an `.astro` file is frontmatter BETWEEN `---` fences
+    // followed by a template, so the parse stopped at the first `<` and the template's `{...}`
+    // expressions were ⛔ NEVER VISITED — while `-219` cl.5(b) records this gate as D1(c)'s SOLE
+    // enforcement, and the template is the most natural place to write a figure on an Astro page.
+    // ⛔⛔ **DO ⛔ NOT DELETE THIS TEST.** Without it `prepareSource` can silently regress to scanning
+    // nothing and every other test in this file stays green.
+    const astro = [
+      '---',
+      "import { t } from '@twt/i18n';",
+      'const model = getModel();',
+      '---',
+      '<section>',
+      '  <p>{confirmedContributionCount * 1000}</p>',
+      '</section>',
+    ].join('\n');
+    const findings = scanFinancialTruth('page.astro', astro, RENDER);
+    expect(findings.map((f) => f.rule)).toEqual(['render_path_multiplication']);
+  });
+
+  it('⭐ …and the FRONTMATTER half still is, with both halves in one walk', () => {
+    const astro = [
+      '---',
+      'const total = confirmedContributionCount * row.fixed_amount;',
+      '---',
+      '<p>{confirmedContributionCount * 1000}</p>',
+    ].join('\n');
+    // ⭐ TWO findings — one per half. ⛔ A regression that drops either half changes this count.
+    expect(scanFinancialTruth('page.astro', astro, RENDER)).toHaveLength(2);
+  });
+
+  it('⛔ `-1000`, `\'1000\'` and `*=` are ⛔ NOT escapes from the literal leg', () => {
+    // ⚠ All three walked past the leg added at `-219` cl.5(a); found by adversarial review 2026-09-17.
+    for (const src of [
+      'const x = confirmedContributionCount * -1000;',
+      "const x = confirmedContributionCount * '1000';",
+      'confirmedCount *= 1000;',
+    ]) {
+      expect(scanFinancialTruth('render.ts', src, RENDER).map((f) => f.rule)).toEqual([
+        'render_path_multiplication',
+      ]);
+    }
+  });
+
   it('⛔ but a literal product over a NON-count operand is ⛔ NOT a finding (the leg is narrow)', () => {
     // ⚠ The leg keys on {@link COUNT_OPERAND}, ⛔ not on "any identifier times any number" — otherwise
     // every page-size, timeout and index arithmetic on the render path becomes a false positive, and a

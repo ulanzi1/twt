@@ -285,6 +285,13 @@ const unknownParams = [...Astro.url.searchParams.keys()].filter(
 // ⚠ Parsed from a CLEANED copy: `parsePageParams` must ⛔ never see a key this surface does not rule.
 const allowedParams = new URLSearchParams(Astro.url.searchParams);
 for (const k of unknownParams) allowedParams.delete(k);
+// ⚠⛔ **A RULED KEY WITH AN EMPTY VALUE IS TREATED AS ABSENT, ⛔ not as a refusal** (adversarial
+// review, 2026-09-17). `?limit=` / `?page=` survive link-rewriters and share sheets exactly as
+// `?fbclid=` does, and answering them with the drive-not-found page is the SAME shared-link defect
+// the unknown-param change above exists to fix — it was simply not covered by it.
+for (const k of ['page', 'limit']) {
+  if (allowedParams.get(k) === '') allowedParams.delete(k);
+}
 const paging = parsePageParams(allowedParams);
 
 // ⭐⛔ **A REFUSED PAGE COLLAPSES INTO THE SAME 404 EVERYTHING ELSE DOES** — ⛔ not a 400, and ⛔ not a
@@ -375,11 +382,22 @@ const hasNextPage =
 // ⭐ THE SHARED `pageHref`, ⛔ never hand-built query strings — it preserves `lang` and DROPS `page`
 // at page 1 rather than minting a SECOND URL for identical content, which on an `edge_cacheable`
 // surface would be a wasted PoP entry re-serving Tier-1 PII under a different key.
+// ⚠⛔⛔ **BUILT FROM `allowedParams`, ⛔ NEVER `Astro.url.searchParams`** (adversarial review,
+// 2026-09-17). `pageHref` copies EVERY param it is given (`new URLSearchParams(current)`), so passing
+// the raw set propagated an ignored junk key into every paging link — `?fbclid=…&page=2`, then
+// `&page=3` — carrying it for the whole walk. ⇒ the unknown-param change above removed the 404 but
+// left the OTHER half of the original control unenforced: this surface is `edge_cacheable` at
+// `s-maxage=300`, so an arbitrary `?x=<n>` mints an UNBOUNDED space of distinct SHARED-cache keys,
+// each a fresh origin miss re-serving Tier-1 PII into a new PoP entry.
+// ⭐ Cleaning the links CANONICALISES the walk: a visitor who arrives with junk leaves it behind on
+// the first click, and `lang` survives because it is in the allowlist.
+// ⚠ It does ⛔ not bound the ENTRY key space — that needs a redirect or cache-key normalisation at the
+// edge, which is infra, ⛔ not this page. Recorded, ⛔ not silently dropped.
 const previousPageHref = hasPreviousPage
-  ? pageHref(Astro.url.pathname, Astro.url.searchParams, contributorPage - 1)
+  ? pageHref(Astro.url.pathname, allowedParams, contributorPage - 1)
   : null;
 const nextPageHref = hasNextPage
-  ? pageHref(Astro.url.pathname, Astro.url.searchParams, contributorPage + 1)
+  ? pageHref(Astro.url.pathname, allowedParams, contributorPage + 1)
   : null;
 
 // ⭐ RESOLVED ONCE PER RENDER. The matrix cannot vary within a page, and asking `getVisibility()`
@@ -625,12 +643,21 @@ if (!driveStatusVisible) {
           HTML with ⛔ no reconciler, so a key would serve nothing, and a per-member identifier beside
           a name is a PERMALINK — an enumeration primitive in its own right.
 
-          ⚠⛔⛔ **FEWER ROWS THAN THE COUNT IS THE ORDINARY CASE, ⛔ NOT A BUG.** RTBF erasure
-          (`2026-08-30-169`), the erasure sentinel, an unresolvable name and a MONONYM under
-          `shielded_name` each OMIT THE ROW, after paging. ⇒ this page reads "N confirmed" beside
-          FEWER than N named rows BY DESIGN, and ⛔⛔ ⛔ NO copy here may claim the list is complete,
-          ⛔ no placeholder stands in for an omitted row, and ⛔ NO OMISSION COUNT is ever published —
-          a tally of omissions is an enumeration signal over which members were erased.
+          ⚠⛔⛔ **FEWER *NAMED* ROWS THAN THE COUNT IS THE ORDINARY CASE, ⛔ NOT A BUG.** RTBF erasure
+          (`2026-08-30-169`), the erasure sentinel, an unresolvable name, a MONONYM under
+          `shielded_name` and a failed decrypt each withhold the NAME, after paging. ⇒ this page reads
+          "N confirmed" beside FEWER than N NAMED rows BY DESIGN, and ⛔⛔ ⛔ NO copy here may claim the
+          list is complete.
+
+          ⚠⛔⛔ **SUPERSEDED BY `#decision-2026-09-16-219` cl.1/cl.4 — the old rule is QUOTED, ⛔ not
+          deleted** ([[feedback_closure_language_precision]]). ⛔ IT READ: *"each OMIT THE ROW, after
+          paging … ⛔ no placeholder stands in for an omitted row, and ⛔ NO OMISSION COUNT is ever
+          published"*. ⚠⛔ **That sentence sat FIFTY LINES ABOVE the placeholder ternary that
+          contradicts it** — found 2026-09-17 by adversarial review, ⛔ not by the change that
+          invalidated it.
+          ⇒ ⭐ the row is KEPT and renders the ruled placeholder, so a page is ⛔ never short; ⚠ ratified
+          on the FAIRNESS ground and recorded as WIDENING disclosure — ⛔ never write that it CLOSES the
+          omission-count leak. ⛔⛔ cl.4(c) stands whole: ⛔ NOTHING may disclose WHICH cause applies.
         */}
         {/*
           ⭐⭐ FAMILY 13 IN ITS **WEB** FORM (AC7). ⚠⛔ The checklist's mobile wording —

@@ -990,11 +990,17 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
           },
         );
 
-        // ⚠⛔ `total` IS THE CONFIRMED-CONTRIBUTOR SET SIZE, ⛔ NOT THE RENDERED ROW COUNT — the
-        // omissions below happen AFTER paging, so a page can return FEWER rows than it claims. ⭐ That
-        // is BY DESIGN (`2026-08-30-169`), and ⛔⛔ there is ⛔ NO omission count, ⛔ no "some names
-        // withheld" line and ⛔ no per-row marker: a tally of omissions is an enumeration signal over
-        // which members were erased.
+        // ⚠⛔ `total` IS THE CONFIRMED-CONTRIBUTOR SET SIZE, ⛔ NOT THE NAMED-ROW COUNT.
+        // ⚠⛔⛔ **SUPERSEDED BY `#decision-2026-09-16-219` cl.1/cl.4 — the old rule is QUOTED, ⛔ not
+        // deleted** ([[feedback_closure_language_precision]]). ⇒ ⭐ the row is KEPT and renders the ruled
+        // placeholder (`A contributor` / `एक सहकर्मी`), so `items.length` equals the page size and a page
+        // is ⛔ never short; what is FEWER than `total` is the count of rows carrying a NAME.
+        // ⚠⛔ Ratified on the FAIRNESS ground and recorded as WIDENING disclosure — ⛔ never write that the
+        // placeholder CLOSES the omission-count leak. ⛔⛔ What still stands whole is cl.4(c): ⛔ NOTHING may
+        // disclose WHICH of the five causes applies.
+        // ⛔ THIS READ: *"the omissions below happen AFTER paging, so a page can return FEWER rows
+        // than it claims … there is ⛔ NO omission count, ⛔ no 'some names withheld' line and ⛔ no
+        // per-row marker"* — every clause of which is now false of the code below it.
         const total = confirmedContributors.length;
 
         // ⭐⭐ **PAGE FIRST, DECRYPT SECOND — ⛔ NEVER THE OTHER WAY ROUND.** This is the whole
@@ -1019,7 +1025,7 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
         const resolvedContributors = await mapWithConcurrency(
           pageContributors,
           DIRECTORY_DECRYPT_CONCURRENCY,
-          async (contributor): Promise<PublicSahyogVivranContributor> => {
+          async (contributor): Promise<ResolvedContributor> => {
             // ⛔⛔ **THE CATCH BELONGS *INSIDE* `fn`, ⛔ NOT AROUND THE MAP.** `mapWithConcurrency`
             // PROPAGATES a rejection and stops every worker, so one bad row would take down the whole
             // surface — the helper's own doc-block says so in terms. ⭐ A single bad row must ⛔ never
@@ -1046,7 +1052,8 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
                 pariwarId,
                 contributor.memberId,
               );
-              if (!profile || profile.nameCiphertext === null) return { name: null };
+              // ⭐ A missing KYC row is a LAWFUL absence (no name to publish), ⛔ not a fault.
+              if (!profile || profile.nameCiphertext === null) return { name: null, systemic: false };
 
               const storedName = await encryption.decryptKycField(
                 profile.nameCiphertext,
@@ -1080,7 +1087,7 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
                 request.log.warn(
                   'sahyog-vivran: erasure sentinel reached the decrypt — omitting the NAME, keeping the ROW',
                 );
-                return { name: null };
+                return { name: null, systemic: false };
               }
 
               // ⭐⛔ `resolvePublicMemberName`, ⛔ NEVER `resolvePoolIdentity` and ⛔ never
@@ -1095,7 +1102,7 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
               // `U+200B`–`U+200F` standing, and an invisible-only name renders an EMPTY `<li>`
               // bullet: an omission that ANNOUNCES itself (Review finding, 2026-09-16 second pass).
               const name = normalisePublicName(kyc.resolvePublicMemberName(mode, storedName));
-              return { name };
+              return { name, systemic: false };
             } catch (err) {
               // ⚠⛔ **AN ABORTED TRANSACTION IS ⛔ NOT A BAD ROW — RE-THROW IT** (Review finding,
               // 2026-09-16). ⭐ Mirrors `member-pool/handlers.ts`'s guard of the same name, which AC3's
@@ -1111,7 +1118,10 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
                 { err },
                 'sahyog-vivran: contributor name unresolvable — omitting the NAME, keeping the ROW',
               );
-              return { name: null };
+              // ⚠⛔ **SYSTEMIC.** ⛔ Unlike the arms above, reaching this catch means the name could
+              // ⛔ not be resolved for a reason that is ⛔ NOT about this member — a failed decrypt, a
+              // KMS fault, a DB error. ⭐ The flag is INTERNAL and is stripped before the wire.
+              return { name: null, systemic: true };
             }
           },
         );
@@ -1124,7 +1134,38 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
         // ⚠ `items.length` therefore now equals `pageContributors.length`; what is fewer than `total`
         // is the count of rows whose `name` is ⛔ not `null`. ⛔ Do ⛔ not re-introduce a filter, and
         // ⛔ do ⛔ not publish a count of the nulls as its own field (cl.4(c)).
-        const items = resolvedContributors;
+        // ⭐⭐ **A SYSTEMIC FAILURE MUST ⛔ NOT PUBLISH AS LAWFUL ERASURE.**
+        // ⚠⛔⛔ Found 2026-09-17 by adversarial review, and it is a defect option (E) CREATED: before
+        // `-219` cl.1 a total decrypt outage DROPPED every row, so the page rendered its empty state —
+        // visibly degraded. With the row kept, the identical outage renders N placeholder rows at
+        // **200**, edge-cached for five minutes, byte-indistinguishable from *"every contributor on
+        // this page exercised their right to erasure"*. ⛔ That is a false public statement about
+        // named members' data-subject rights, and ⛔ nothing alarmed.
+        // ⇒ ⭐ if EVERY row on a non-empty page failed for a reason that is ⛔ not about the member,
+        // this is an OUTAGE and is answered as one: the throw reaches `bad_response` at the public
+        // app, which renders the 503 outage view with `no-store` — ⛔ never a cached lawful-looking
+        // page, and ⛔ never `not_found`.
+        // ⚠⛔ **THE FLAG IS STRIPPED HERE AND ⛔ NEVER CROSSES THE WIRE** (cl.3): the five causes stay
+        // indistinguishable to a reader. ⛔ Do ⛔ not add it to the contract "for diagnostics".
+        const systemicFailures = resolvedContributors.filter((r) => r.systemic).length;
+        if (systemicFailures > 0 && systemicFailures === resolvedContributors.length) {
+          request.log.error(
+            { systemicFailures, page, limit },
+            'sahyog-vivran: EVERY contributor name on this page failed to resolve — refusing to publish a page of placeholders that would read as mass erasure',
+          );
+          throw new Error('sahyog-vivran: contributor name resolution failed for the whole page');
+        }
+        if (systemicFailures > 0) {
+          // ⚠ A PARTIAL systemic failure still publishes — a single bad envelope must ⛔ not collapse
+          // the page — ⭐ but it is an operator signal, ⛔ not a lawful omission, so it is logged as one.
+          request.log.error(
+            { systemicFailures, rows: resolvedContributors.length },
+            'sahyog-vivran: some contributor names failed to resolve — these rows are indistinguishable from lawful omissions to a reader',
+          );
+        }
+        const items: PublicSahyogVivranContributor[] = resolvedContributors.map(({ name }) => ({
+          name,
+        }));
 
         ok = true;
         return {
@@ -1149,7 +1190,13 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
             // ⚠ Zero-width/invisible Unicode (U+200B–U+200F, U+FEFF) is stripped BEFORE the truthy
             // check for the same reason — an invisible-only value survives `.trim()` and `.min(1)`
             // and would render the identical blank cell (review finding).
-            district: drive.district?.trim().replace(/[\u200b-\u200f\ufeff]/g, '') || null,
+            // ⭐⭐ **THE SHARED HELPER, ⛔ NOT A THIRD COPY.** ⚠⛔ This site carried its own
+            // `.trim().replace(…)` — ⛔ the WRONG ORDER, and still defective: `U+200B` is ⛔ not
+            // `trim()` whitespace, so a mixed invisible+space value kept its zero-widths, lost its
+            // spaces, and survived as a truthy blank — the identical empty cell this strip exists to
+            // prevent. Found 2026-09-17, which also falsified the claim that the rule had been
+            // "hoisted so the two subjects can never drift again": there were THREE subjects.
+            district: drive.district === null ? null : normalisePublicName(drive.district),
             // ⭐ Story 11b.3b (Task 2 unit 2) — resolved above; `null` on every drive today because
             // the publication basis is fail-closed for every member (the DESIGNED inert state).
             // ⛔ `null` OMITS THE NAME, ⛔ never the page.
@@ -1216,23 +1263,64 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
  * being checkable. ⭐ The failure is logged loudly so a gap in the chain is never silent.
  */
 /**
- * ⭐ THE PUBLIC NAME NORMALISER — `.trim()` **PLUS** the zero-width strip, ⛔ never `.trim()` alone.
+ * ⭐ Characters that occupy ⛔ no visual space — used to decide whether a name is VISUALLY EMPTY and
+ * to trim the EDGES. ⛔ NEVER to rewrite the interior. See {@link normalisePublicName}.
  *
- * ⚠⛔ **`String.prototype.trim()` DOES ⛔ NOT REMOVE `U+200B`–`U+200F`** (only `U+FEFF`), so an
- * invisible-only stored name survives `.trim()`, survives the contract's `.min(1)`, survives the
- * public app's `length === 0` validator, arrives TRUTHY, and renders a **BLANK** where a person's
- * name belongs — a visually empty `<dd>` for the deceased member and an empty `<li>` bullet for a
- * contributor. ⛔ The latter is an ANNOUNCED omission, which the row-omission rule forbids outright.
- *
- * ⭐ `district` on this very surface already carries this strip, with a comment naming this exact
- * class; ⛔ neither NAME did (Review finding, 2026-09-16 second pass). ⭐ Hoisted to ONE helper so the
- * two subjects can ⛔ never drift again.
- *
- * ⚠ Returns `null` for "nothing to render", ⛔ never `''` — every caller on this surface treats an
- * absent name as an omission, ⛔ not as an empty string.
+ * ⚠ Wider than the old `\u200b-\u200f\ufeff`: word joiner + invisible operators, soft hyphen,
+ * combining grapheme joiner, Hangul fillers, Mongolian vowel separator, bidi embedding/override and
+ * isolate controls, the braille blank, and variation selectors. ⛔ Every one survives
+ * `String.prototype.trim()` AND a `.min(1)` bound, and would render an EMPTY `<li>` — which, now that
+ * every other withheld row carries visible placeholder text, is the ONE row that announces itself.
  */
+// ⚠⛔ **`no-misleading-character-class` IS SUPPRESSED DELIBERATELY, AND ⛔ NOT TO SILENCE A BUG.**
+// The rule guards against a class that accidentally SPLITS a grapheme. ⭐ Here the individual
+// code points ARE the subject — `\u034f` (combining grapheme joiner) and `\ufe00-\ufe0f`
+// (variation selectors) are combining marks we must detect ON THEIR OWN, because a stored name
+// consisting only of them is exactly the blank-row case this class exists to catch. ⭐ Both
+// regexes carry the `u` flag, so each escape is one code point. ⛔ Re-examine if this class ever
+// grows a member intended to match a COMBINED sequence rather than a lone invisible.
+/* eslint-disable no-misleading-character-class */
+const INVISIBLE_CHARS = /[\u00ad\u034f\u115f\u1160\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\u2800\u3164\ufe00-\ufe0f\ufeff]/gu;
+
+/** Whitespace OR an invisible, anchored to the edges. */
+const EDGE_INVISIBLE_OR_SPACE = /^[\s\u00ad\u034f\u115f\u1160\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\u2800\u3164\ufe00-\ufe0f\ufeff]+|[\s\u00ad\u034f\u115f\u1160\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\u2800\u3164\ufe00-\ufe0f\ufeff]+$/gu;
+/* eslint-enable no-misleading-character-class */
+
+/**
+ * ⭐ THE PUBLIC NAME NORMALISER — the member’s name as stored, edge-trimmed, or `null` when there
+ * is nothing visible to render.
+ *
+ * ⚠⛔⛔ **IT ⛔ MUST ⛔ NOT REWRITE THE INTERIOR OF A NAME, AND THE FIRST VERSION OF THIS HELPER DID.**
+ * Found 2026-09-17 by adversarial review. It ran `value.replace(/[\u200b-\u200f\ufeff]/g, '')`
+ * GLOBALLY and returned the rewritten string. That range contains **U+200C ZERO WIDTH NON-JOINER**
+ * and **U+200D ZERO WIDTH JOINER**, which are ⛔ **not** invisible noise in Devanagari, Bengali,
+ * Gujarati or Gurmukhi — they select half-form versus conjunct. ⇒ a stored legal name
+ * `प्रज्‍ञा` was published as `प्रज्ञा`: a DIFFERENT spelling of a real person’s name, on a
+ * public memorial page, silently, with ⛔ no log. ⛔⛔ On a surface whose whole purpose is that a
+ * family can CHECK the record, publishing an altered name is worse than publishing none.
+ *
+ * ⭐ **SO THE STRIP IS A TEST, ⛔ NOT A TRANSFORM:** invisibles come off a COPY to ask *"is anything
+ * visible here?"*, and only the EDGES are trimmed from the value that ships.
+ *
+ * ⚠ Returns `null` for "nothing to render", ⛔ never `''`. ⛔ And `null` carries ⛔ NO cause
+ * (`2026-09-16-219` cl.3): an all-invisible name, an erasure and a failed decrypt are
+ * indistinguishable downstream.
+ */
+/**
+ * ⭐ The contributor row PLUS an internal `systemic` flag. ⛔ The flag is stripped before the wire —
+ * `2026-09-16-219` cl.3 forbids anything on the wire that distinguishes WHY a name is withheld.
+ */
+interface ResolvedContributor {
+  readonly name: string | null;
+  /** ⭐ True only when resolution failed for a reason that is ⛔ NOT about this member. */
+  readonly systemic: boolean;
+}
+
 function normalisePublicName(value: string): string | null {
-  return value.replace(/[\u200b-\u200f\ufeff]/g, '').trim() || null;
+  const edgeTrimmed = value.replace(EDGE_INVISIBLE_OR_SPACE, '');
+  // ⚠ The COPY decides emptiness; `edgeTrimmed` is what ships — interior joiners intact.
+  if (edgeTrimmed.replace(INVISIBLE_CHARS, '').trim() === '') return null;
+  return edgeTrimmed;
 }
 
 /**

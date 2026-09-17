@@ -111,13 +111,24 @@ describe('⛔ the placeholder banned-word guard has TEETH — ⛔ it must not pa
     [/दर्ज\s+नहीं/, 'दर्ज नहीं है'],
   ];
 
-  it('⭐ every banned pattern is present, in order, and MATCHES its own probe', () => {
-    expect(probes.map(([re]) => re.source)).toEqual(
-      BANNED_PLACEHOLDER_WORDS.map((re) => re.source),
-    );
-    for (const [re, probe] of probes) {
-      expect(probe).toMatch(re);
-    }
+  it('⭐ every banned pattern MATCHES its probe — ⛔ tested against the REAL constant, flags included', () => {
+    // ⚠⛔⛔ **THIS TEST WAS ITSELF VACUOUS UNTIL 2026-09-17** — the same defect class it exists to
+    // prevent, one level up. ⛔ IT READ:
+    //   `for (const [re, probe] of probes) expect(probe).toMatch(re);`
+    // ⇒ `re` came from `probes` — the test's OWN duplicate literal — and was ⛔ never the pattern the
+    // real guard uses. The only link was `expect(…re.source).toEqual(…re.source)`, and **`.source`
+    // does ⛔ NOT include flags**. So dropping the `i` from `/\bwithheld\b/i` in
+    // {@link BANNED_PLACEHOLDER_WORDS} left BOTH meta-assertions green while defanging the real guard,
+    // and `"Name Withheld"` would have shipped to a public page.
+    // ⭐ Now indexed against the constant, and flags are asserted explicitly.
+    expect(probes).toHaveLength(BANNED_PLACEHOLDER_WORDS.length);
+    probes.forEach(([declared, probe], i) => {
+      const real = BANNED_PLACEHOLDER_WORDS[i]!;
+      expect(real.source).toBe(declared.source);
+      expect(real.flags).toBe(declared.flags);
+      // ⭐⭐ THE LOAD-BEARING LINE — the probe is matched against the REAL pattern, ⛔ not the copy.
+      expect(probe).toMatch(real);
+    });
   });
 
   it('⛔ and ⛔ NO pattern contains a control character — the defect that defanged them', () => {

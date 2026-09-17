@@ -1334,7 +1334,13 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
     // erasure sentinel, an unresolvable name, a mononym under `shielded_name`), so a page holding
     // FEWER rows than it counts is the ORDINARY case, ⛔ not a broken fixture. ⭐ A fixture where the
     // two agreed would leave the whole *"N confirmed beside FEWER than N rows"* property unexercised.
-    items: [{ name: 'Rajesh Kumar Sharma' }, { name: 'Meera Bai Yadav' }],
+    // ⚠⛔⛔ **CORRECTED 2026-09-17 — THIS FIXTURE ENCODED A WIRE SHAPE THE API CAN ⛔ NO LONGER EMIT.**
+    // ⛔ IT READ: `items: [{ name: 'Rajesh Kumar Sharma' }, { name: 'Meera Bai Yadav' }]` beside
+    // `total: 3` — TWO rows for THREE contributors, which is the SUPERSEDED drop-the-row shape.
+    // ⇒ ⭐ `#decision-2026-09-16-219` cl.1 KEEPS the row, so `items.length === total` and the withheld
+    // row carries `name: null`. A fixture that models the old wire lets the leak scan run over a shape
+    // production cannot produce.
+    items: [{ name: 'Rajesh Kumar Sharma' }, { name: null }, { name: 'Meera Bai Yadav' }],
     page: 1,
     limit: 50,
     total: 3,

@@ -1,3 +1,40 @@
+# last_updated: 2026-09-17a (⚠⛔⛔ **`11b-3b` — AN ADVERSARIAL REVIEW OF THE AUTHOR'S OWN PATCHES
+#   FOUND 12 REAL DEFECTS, AND THE WORST WAS IN THE RECORD, ⛔ NOT THE CODE.** ⛔ The row stays
+#   `in-progress`; ⛔ no other row is touched.
+#   ⚠⛔ **THE 2026-09-16b ENTRY BELOW IS NOW STALE AND IS KEPT, ⛔ NOT EDITED** — it says cl.1 is
+#   "BLOCKED ON THE HINDI" and that implementation is owed. ⭐ All of it shipped.
+#   ⛔⛔ **THE HINDI WAS RECORDED AS TRUSTEE-RATIFIED AND IT WAS ⛔ NOT.** `एक सहकर्मी` was supplied by
+#   BigDev — a legitimate COPY CALL — but the story wrote *"THE HINDI WAS RULED"*, `friction-budget.md`
+#   attributed it to a Trustee ratification, `-219`'s follow-up still read *"⛔ NOT RULED"*, and ⛔ no
+#   entry recorded the mint. ⇒ ⭐ corrected at **`#decision-2026-09-17-220`** (author-commit, recorded a
+#   day LATE and saying so). ⛔ ⛔ No Panel saw that word.
+#   ⭐ **CODE DEFECTS FIXED (all verified by MUTATION, ⛔ not by assertion):**
+#   · ⛔⛔ the financial-truth gate was **BLIND TO THE `.astro` TEMPLATE HALF** (`ScriptKind.TS` parses
+#     frontmatter only) ⇒ the most natural place to write the figure was unscanned, while `-219` cl.5(b)
+#     calls this gate D1(c)'s SOLE enforcement. Now one TSX walk over both halves + an anti-vacuity leg.
+#   · ⛔⛔ `normalisePublicName` **CORRUPTED DEVANAGARI LEGAL NAMES** — a global strip of
+#     `\u200b-\u200f` destroys ZWNJ/ZWJ, which select half-form vs conjunct ⇒ `प्रज्‍ञा` published as
+#     `प्रज्ञा`. The strip is now a TEST on a copy; only EDGES are trimmed. Live-DB legs both ways.
+#   · ⛔ a **SYSTEMIC decrypt/KMS failure published as lawful MASS ERASURE** — N placeholder rows at 200,
+#     edge-cached. Now: all-rows-failed ⇒ throw ⇒ the honest 503 outage; partial ⇒ `log.error`.
+#     ⚠ The internal flag is stripped before the wire (cl.3).
+#   · ⛔ invisible chars OUTSIDE the stripped range still rendered a blank `<li>`; `district` kept a
+#     THIRD copy of the rule with the operations in the WRONG ORDER.
+#   · ⛔ gate evasions `-1000`, `'1000'`, `*=` closed (the `*=` note was deferred at group 5/5).
+#   · ⛔ `pageHref` propagated ignored junk params into every paging link; `?limit=` still 404'd.
+#   · ⛔⛔ the anti-vacuity meta-guard added on 2026-09-16 **had the same weakness it was written for** —
+#     it matched probes against its own copy, and `.source` excludes FLAGS. Now indexed against the real
+#     constant; proven by dropping `/i` and watching it go red.
+#   · ⛔ the scrape fixture encoded a wire shape the API can ⛔ no longer emit; ⛔ NO render-layer test
+#     carried a `name: null` row at all.
+#   ⭐ **RECORD CORRECTIONS:** the superseded row-omission fence was left standing as CURRENT at three
+#   shipped sites — one **50 lines above the ternary that contradicts it**; `-160` cl.7 survived as the
+#   contributor basis at a third site; the cl.4→cl.6 correction was made in one place and the SAME error
+#   propagated into two NEW lines; *"27 passed"* was transcribed from an agent report and never run (it
+#   is 24); `-189` cl.5 does not exist (Consequence 5); the namespace "fence" is a CONVENTION, ⛔ not a
+#   structure; instance counts and test counts corrected.
+#   ⚠ `-219`'s other two Open follow-ups — the asymmetric member surface, the duplicate
+#   `value.contributions_count` key — remain OPEN and ⛔ untouched.)
 # last_updated: 2026-09-16b (⭐⭐ **`11b-3b` — THE THREE PANEL-ROUTED QUESTIONS ARE RULED.**
 #   `#decision-2026-09-16-219`, Trustee-ratified 2026-09-16 (Dhiraj Rahul + Kalpana Bharti).
 #   ⛔ The row STAYS `in-progress`; ⛔ no other row is touched.

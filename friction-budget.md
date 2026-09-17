@@ -53,8 +53,11 @@ on the path touch, which is conservative by design; this affirms the ledger was 
 
 ⭐ **The two changes a reader might mistake for friction, named so they are ⛔ not re-litigated:**
 
-1. **The unnamed-contributor placeholder row** (`#decision-2026-09-16-219` cl.1, Trustee-ratified —
-   the row is KEPT and reads *"A contributor"* / *"एक सहकर्मी"* where a name is withheld). ⛔ This is a
+1. **The unnamed-contributor placeholder row** — the row is KEPT and reads *"A contributor"* /
+   *"एक सहकर्मी"* where a name is withheld. ⚠⛔ **TWO DIFFERENT AUTHORITIES, AND THIS LINE USED TO
+   CONFLATE THEM** (corrected 2026-09-17): the placeholder and the **English** word are
+   `#decision-2026-09-16-219` cl.1/cl.3, **Trustee-ratified**; the **Hindi** is
+   `#decision-2026-09-17-220`, **BigDev author-commit** — ⛔ no Panel saw that word. ⛔ This is a
    RENDER change, ⛔ not a step: ⛔ nothing is asked of a visitor and ⛔ nothing is asked of the
    contributor. ⚠ It is also ⛔ **not** a friction *reduction* to bank — the Panel ratified it on the
    **FAIRNESS** ground and recorded that it **WIDENS** disclosure.

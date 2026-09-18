@@ -226,3 +226,19 @@ There is also a middle option: show the member a **number** — *"12 confirmed"*
 putting anything in the removed person's place. ⚠ On checking, this now looks like the **weakest**
 choice: it still lets the count of removals be worked out, and it leaves the member knowing less than a
 stranger does.
+
+### What we suggest, and how much to trust it
+
+⭐ **Our suggestion is to show the member the same small line the public page already shows** — option
+**(B)** in §5. It is the only choice that leaves a member no less informed about their own pool than a
+stranger on the internet already is, and it is the direction your 2026-09-04 ruling already points.
+
+⚠⛔ **But weigh the two facts above rather than our suggestion.** We have now been wrong about this
+question **twice**: first by recording it as something you had never ruled on when you had, and then by
+arguing a danger that turned out not to exist. ⭐ Both corrections are written into this note where the
+old wording used to sit, so you can see what changed. ⇒ the parts worth your weight are that **a member
+is never shown who else is in their pool**, and that **the same line is already public for the same
+people** — ⛔ not our reading of them.
+
+⚠ And one thing ⛔ does ⛔ not change on any answer: this is a **clause conflict**, so whichever way you
+go, one of two things you ruled has to give. That is why it is in front of you rather than built.

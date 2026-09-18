@@ -113,11 +113,12 @@ const SETTLED: PublicSahyogVivranResponse = {
     nomineeBankAccounts: [],
   },
   // ⭐ Story 11b.3b (Task 3) — the contributor PAGE and the SET SIZE.
-  // ⚠⛔ `total` is deliberately LARGER than `items.length`: rows are omitted AFTER paging (RTBF, the
-  // erasure sentinel, an unresolvable name, a mononym under `shielded_name`), so a page holding
-  // FEWER rows than it counts is the ORDINARY case, ⛔ not a broken fixture. ⭐ A fixture where the
-  // two agreed would leave the whole *"N confirmed beside FEWER than N rows"* property unexercised.
-  items: [{ name: 'Rajesh Kumar Sharma' }, { name: 'Meera Bai Yadav' }],
+  // ⭐ Since `2026-09-16-219` cl.1 the API KEEPS every paged row, so `items.length` is
+  // `min(limit, total − offset)` and a withheld name arrives as `{ name: null }` — ⛔ never a missing
+  // row. ⚠ This fixture used to hold two named rows beside `total: 3` (*"rows are omitted AFTER
+  // paging"*), a shape the API can ⛔ no longer emit; corrected 2026-09-18 (fourth review pass), as
+  // `scrape-test.spec.ts` already was. ⭐ What is FEWER than `total` is the count of NAMED rows.
+  items: [{ name: 'Rajesh Kumar Sharma' }, { name: 'Meera Bai Yadav' }, { name: null }],
   page: 1,
   limit: 50,
   total: 3,
@@ -345,8 +346,8 @@ describe('buildSahyogVivranView — ⭐⭐ THE UNNAMED DRIVE: the DAY-ONE state 
 
   it('⭐⭐ OMITS THE NAME, ⛔ NEVER THE PAGE — every other fact still renders', () => {
     // ⭐ The deceased member's arm of AC3's PER-SUBJECT omission ruling, and the sibling index's
-    // shipped rule. ⚠⛔ The CONTRIBUTOR arm (Task 3) is the OPPOSITE — an unrenderable name omits
-    // the ROW, which exists only to carry it. ⛔ Do ⛔ not apply one rule to both subjects.
+    // shipped rule. ⭐ The CONTRIBUTOR arm (Task 3) now keeps its ROW too and renders the
+    // placeholder (`2026-09-16-219` cl.1); ⚠ it used to omit the row — SUPERSEDED.
     expect(model.apiUnavailable).toBe(false);
     expect(model.poolCanonicalIdentifier).toBe('P-2026-09-003');
     expect(model.district).toBe('Lucknow');

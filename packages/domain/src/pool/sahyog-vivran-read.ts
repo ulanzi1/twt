@@ -344,7 +344,7 @@ export interface SahyogVivranEntry {
   readonly confirmedContributionCount: number;
   /**
    * ⭐⭐ THE RULED PUBLIC RUPEE FIGURE — Story 11b.3b (AC3b), `2026-09-04-190` **cl.6**, with
-   * `2026-09-04-189` **cl.5** recording the rupee boundary as NEWLY CROSSED.
+   * `2026-09-04-189` **Consequence 5** recording the rupee boundary as NEWLY CROSSED.
    *
    * ⭐ `confirmedContributionCount × pools.fixed_amount`, computed ⛔ ONCE, here, and used TWICE — it
    * is the SAME binding `classifyCycleOutcome` receives as its `deliveredTotal`. ⛔ A second
@@ -408,8 +408,10 @@ export interface SahyogVivranEntry {
    * ⛔ not exist."* ⭐ A favourable ruling is exactly when that shortcut stops looking like a lie.
    *
    * ⚠⛔ **THE CONTRIBUTOR LIST IS ⛔ NOT GATED BY THIS, AND THE ASYMMETRY IS RULED, ⛔ NOT A BUG.**
-   * This predicate keys on `claims.deceased_member_id`; the contributor predicate's basis is
-   * `2026-08-28-160` cl.7 and has ⛔ no clause gate anywhere in the code. ⇒ ⛔ do ⛔ not read an
+   * This predicate keys on `claims.deceased_member_id`; the contributor's basis is MEMBERSHIP ITSELF
+   * (`2026-09-16-219` **cl.6** — contributing is a public act; ⚠ corrected 2026-09-18 from
+   * `2026-08-28-160` cl.7, which `-219` cl.6 forbids re-citing) and has ⛔ no clause gate anywhere in
+   * the code. ⇒ ⛔ do ⛔ not read an
    * inert deceased name as "the page is dark".
    */
   readonly namePublicationAuthorised: boolean;
@@ -548,7 +550,16 @@ export async function readPublicSahyogVivran(
     // ⭐⛔ **LEFT, ⛔ NEVER INNER** (Story 11b.3b) — a deceased member with ⛔ no KYC profile row must
     // still publish a DRIVE. ⛔ An inner join would make an absent profile delete the whole page,
     // turning a missing NAME into a missing RECORD. ⚠ The same shape `public-read.ts` uses.
-    .leftJoin(memberKycProfiles, eq(memberKycProfiles.memberId, claims.deceasedMemberId))
+    // ⚠ `pariwar_id` rides the join ALONGSIDE RLS, as it does on `pools` below — ⛔ defence in depth for
+    // a BYPASSRLS caller, which RLS alone would ⛔ not bound (fourth review pass, 2026-09-18).
+    // `member_id` is the PK, so this adds ⛔ no fan-out and removes ⛔ no lawful row.
+    .leftJoin(
+      memberKycProfiles,
+      and(
+        eq(memberKycProfiles.memberId, claims.deceasedMemberId),
+        eq(memberKycProfiles.pariwarId, pariwarId),
+      ),
+    )
     .where(
       and(
         eq(pools.pariwarId, pariwarId),
@@ -641,7 +652,7 @@ export async function readPublicSahyogVivran(
     //     arithmetic-recovery channel *"BY CONSTRUCTION"*. ⇒ the quarantine this comment protects is
     //     UNCHANGED and still the whole point of the enum.
     //   · ⭐ **`deliveredTotal` IS NOW CARRIED, as `amountRaisedInr`** — `2026-09-04-190` cl.6 ruled it
-    //     the public rupee figure and `-189` cl.5 recorded the boundary as newly crossed. ⛔ That is a
+    //     the public rupee figure and `-189` Consequence 5 recorded the boundary as newly crossed. ⛔ That is a
     //     RULING, ⛔ not a relaxation of this fence: one of the two totals left, the other did not,
     //     and ⛔ their RATIO — the percentage — is refused by `2026-09-15-218` cl.1.
     // ⭐⛔ AND BOTH `null` ARMS ARE LOAD-BEARING — see `fundingOutcome`'s own doc-block.

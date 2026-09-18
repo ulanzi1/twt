@@ -8,7 +8,7 @@
 
 ## What it checks
 
-Three rules, over the five files that are the Sahyog Vivran read path today (`check.ts` `SCAN_FILES`):
+Three rules, over the files that are the Sahyog Vivran read path today (`check.ts` `SCAN_FILES`), plus one refusal:
 
 1. **Event surface.** Every event-type-shaped string literal must be on `ALLOWED_EVENT_TYPES`:
    `contribution.confirmed` · `reconciliation.confirmation-reversed` · `pool.closed` · `pool.settled`
@@ -21,6 +21,14 @@ Three rules, over the five files that are the Sahyog Vivran read path today (`ch
    Rule 1 cannot see these: the accessor reads the prohibited event type in *another* file.
 3. **Render-path multiplication — D1(c), mechanized.** No file on the render path may so much as
    *name* an amount operand (`fixedAmount`, `amountRaisedInr`, `rosterSize`, …).
+
+**Refusal — `unparseable_source`** (added 2026-09-18, Story 11b.3b fourth and fifth review passes).
+A file whose SCRIPT half does not parse — the whole of a `.ts` file, the frontmatter of an `.astro`
+file, each parsed on its own — or an `.astro` file that starts with a `---` fence the scanner cannot
+recognise is **refused**, never scanned. A partial parse tree under-scans, and a green result over it
+would be the "green scan proves nothing" failure. ⚠ An `.astro` *template* that is not valid JSX
+(`<!-- -->`, `<br>`) is **not** refused: it degrades to a partial tree, which is recorded as a known
+weakness of scanning templates.
 
 ## ⛔ Do not fix a failure by widening the allowlist
 

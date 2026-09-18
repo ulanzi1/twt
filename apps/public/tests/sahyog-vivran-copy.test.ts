@@ -236,6 +236,30 @@ describe('/sahyog-vivran copy resolves through the REAL t() — both locales', (
   // `shielded_name` (`2026-08-21-145` cl.3), and the erasure sentinel (AC5).
   // ⚠⛔ AND ⛔ NO OMISSION COUNT EITHER — ⛔ no "some names withheld", ⛔ no tally: a count of omissions
   // is an enumeration signal over which members were erased.
+  // ⚠⛔⛔ **THE DEVANAGARI PATTERNS WERE VACUOUS UNTIL 2026-09-18 (fourth review pass).** JS `\b` is an
+  // ASCII word boundary, so `/\bछिपाए/` can ⛔ NEVER match — `/\bछिपाए/.test('कुछ नाम छिपाए गए')` is
+  // `false` — and `not.toMatch` passed trivially: the same class `2efa4c98` fixed for the English half.
+  // ⇒ ⭐ a Unicode letter/mark lookbehind with the `u` flag, and ⭐ this leg proves each one CAN fire.
+  // ⚠⛔ **ONE SOURCE FOR THE PATTERNS** (fifth review pass, 2026-09-18). The fourth pass's anti-vacuity
+  // leg planted violations against RE-TYPED COPIES of these regexes, so reverting a FENCE pattern to
+  // `\b` still passed it ([[feedback_stub_must_call_not_transcribe]]). ⇒ both legs read these constants.
+  const beforeNoLetter = '(?<![\\p{L}\\p{M}])';
+  const HI_COMPLETENESS_CLAIMS: readonly (readonly [RegExp, string])[] = [
+    [new RegExp(`${beforeNoLetter}सभी\\s+सहयोगी`, 'u'), 'यहाँ सभी सहयोगी दिखाए गए हैं'],
+    [new RegExp(`${beforeNoLetter}पूरी\\s+सूची`, 'u'), 'यह पूरी सूची है'],
+  ];
+  const HI_TALLIES: readonly (readonly [RegExp, string])[] = [
+    [new RegExp(`${beforeNoLetter}छिपाए`, 'u'), 'कुछ नाम छिपाए गए'],
+    [new RegExp(`${beforeNoLetter}रोके`, 'u'), '3 नाम रोके गए'],
+  ];
+  it('⭐ anti-vacuity: every Devanagari fence pattern MATCHES a planted violation', () => {
+    for (const [pattern, planted] of [...HI_COMPLETENESS_CLAIMS, ...HI_TALLIES]) {
+      expect(planted).toMatch(pattern);
+    }
+    // ⭐ And the lookbehind still refuses a MID-WORD hit, which is what `\b` was there for.
+    expect('अछिपाए').not.toMatch(HI_TALLIES[0]![0]);
+  });
+
   for (const locale of LOCALES) {
     it(`${locale}: ⛔ NO copy claims the contributor list is COMPLETE, and ⛔ none counts omissions`, () => {
       const all = [
@@ -248,12 +272,11 @@ describe('/sahyog-vivran copy resolves through the REAL t() — both locales', (
         /\bcomplete\s+list\b/i,
         /\bfull\s+list\b/i,
         /\bentire\s+list\b/i,
-        /\bसभी\s+सहयोगी/,
-        /\bपूरी\s+सूची/,
+        ...HI_COMPLETENESS_CLAIMS.map(([pattern]) => pattern),
       ]) {
         expect(all).not.toMatch(claim);
       }
-      for (const tally of [/\bwithheld\b/i, /\bomitted\b/i, /\bhidden\b/i, /\bछिपाए/, /\bरोके/]) {
+      for (const tally of [/\bwithheld\b/i, /\bomitted\b/i, /\bhidden\b/i, ...HI_TALLIES.map(([pattern]) => pattern)]) {
         expect(all).not.toMatch(tally);
       }
     });

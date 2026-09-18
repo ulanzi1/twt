@@ -45,6 +45,9 @@ describe('encryptDek + decryptDek round-trip', () => {
     const dek = randomBytes(32);
     const encrypted = await kms.encryptDek(dek, KEK_REF, Buffer.from('aad-a'));
     await expect(kms.decryptDek(encrypted, KEK_REF, Buffer.from('aad-b'))).rejects.toThrow();
+    // ⭐ With gRPC `code: 3` (INVALID_ARGUMENT), as Cloud KMS is ASSUMED to answer — callers classify on
+    // it (11b.3b sixth review pass, 2026-09-18). ⚠ The real service's code is un-attested; see README.
+    await expect(kms.decryptDek(encrypted, KEK_REF, Buffer.from('aad-b'))).rejects.toMatchObject({ code: 3 });
   });
 
   it('encryptDek rejects non-32-byte DEK', async () => {
@@ -59,6 +62,9 @@ describe('encryptDek + decryptDek round-trip', () => {
     await expect(
       kms.decryptDek(randomBytes(40), KEK_REF, Buffer.from('aad')),
     ).rejects.toThrow(/60 bytes/);
+    await expect(
+      kms.decryptDek(new Uint8Array(10), KEK_REF, Buffer.from('aad')),
+    ).rejects.toMatchObject({ code: 3 });
   });
 });
 

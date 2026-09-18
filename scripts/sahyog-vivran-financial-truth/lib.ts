@@ -47,7 +47,7 @@ import * as ts from 'typescript';
 export interface FinancialTruthFinding {
   file: string;
   line: number;
-  rule: 'event_surface' | 'prohibited_import' | 'render_path_multiplication';
+  rule: 'event_surface' | 'prohibited_import' | 'render_path_multiplication' | 'unparseable_source';
   detail: string;
 }
 
@@ -111,7 +111,7 @@ export const PROHIBITED_IMPORTS: readonly string[] = [
  * path, `amountRaisedInr` INCLUDED. ⭐ That was correct while `2026-09-02-176` **D1(b)** had MOVED the
  * amount off this surface — naming it could only be preparation for re-deriving it. ⛔ It stopped being
  * correct the moment 11b.3b actually SHIPS the amount: `2026-09-04-190` **cl.6** rules
- * `amountRaisedInr` the public rupee figure, and `-189` **cl.5** records the rupee boundary as NEWLY
+ * `amountRaisedInr` the public rupee figure, and `-189` **Consequence 5** records the rupee boundary as NEWLY
  * CROSSED. ⇒ a rule that bans the ruled field's own NAME makes the ruling unshippable.
  *
  * ⭐ SO THE RULE IS RE-POINTED AT THE **DEFECT**, ⛔ not at the vocabulary:
@@ -147,7 +147,18 @@ function namedOperand(node: ts.Expression): string | undefined {
   if (ts.isElementAccessExpression(node) && ts.isStringLiteral(node.argumentExpression)) {
     return node.argumentExpression.text;
   }
-  if (ts.isParenthesizedExpression(node)) return namedOperand(node.expression);
+  // ⚠ Type-only wrappers are TRANSPARENT at runtime — `count!`, `count as number` and
+  // `count satisfies number` are the SAME operand (fourth review pass, 2026-09-18: all three shipped
+  // green). ⛔ A call (`Number(count)`) is ⛔ not unwrapped: that is a different instrument.
+  if (
+    ts.isParenthesizedExpression(node) ||
+    ts.isNonNullExpression(node) ||
+    ts.isAsExpression(node) ||
+    ts.isSatisfiesExpression(node) ||
+    ts.isTypeAssertionExpression(node)
+  ) {
+    return namedOperand(node.expression);
+  }
   return undefined;
 }
 
@@ -199,21 +210,63 @@ function isNumericLiteralOperand(node: ts.Expression): boolean {
  * requires it to fire.** ⛔ Never delete it: without it this function can silently return to scanning
  * nothing, which is exactly the state it was in before.
  */
-function prepareSource(file: string, source: string): { text: string; kind: ts.ScriptKind } {
-  if (!file.endsWith('.astro')) return { text: source, kind: ts.ScriptKind.TS };
+interface PreparedSource {
+  /** `.astro` only: the TEMPLATE half, wrapped as a TSX fragment for the walk; `null` for `.ts`. */
+  readonly template: string | null;
+  /** Add to a template-walk line to get the real line (the wrapper puts the template on line 2). */
+  readonly templateLineOffset: number;
+  /** The SCRIPT half alone (the whole file for `.ts`; the frontmatter for `.astro`) — parsed on its own for diagnostics. */
+  readonly script: string;
+  /** Lines before `script` begins in the real file, for reporting a diagnostic at its real line. */
+  readonly scriptLineOffset: number;
+  /** `.astro` only: the file starts with a `---` fence the fence regex did ⛔ not recognise. */
+  readonly unrecognisedFence: boolean;
+}
+
+function prepareSource(file: string, source: string): PreparedSource {
+  if (!file.endsWith('.astro')) {
+    return { template: null, templateLineOffset: 0, script: source, scriptLineOffset: 0, unrecognisedFence: false };
+  }
 
   // ⚠ The fence is `---` on its own line. A file with no frontmatter is all template.
-  const m = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(source);
-  const frontmatter = m ? m[1] : '';
-  const template = m ? source.slice(m[0].length) : source;
-
-  // ⚠⛔ Line numbers are PRESERVED for the frontmatter half (it stays at the top and the fence lines
-  // are replaced by blanks), so a finding there still reports its real line. ⛔ The template half is
-  // offset by the wrapper — accepted: a tripwire's job is to FAIL, and the detail names the file.
-  const lead = m ? '\n'.repeat((m[0].match(/\n/g) ?? []).length) : '';
+  // ⚠⛔ **A BOM OR LEADING BLANK LINES BEFORE THE FENCE BLINDED THIS** (fourth review pass, 2026-09-18,
+  // reproduced): the anchored `^---` missed, the WHOLE frontmatter was wrapped as JSX TEXT, and
+  // `count * 1000` there produced ⛔ zero findings and ⛔ zero diagnostics. ⇒ tolerate both.
+  // ⚠ And an EMPTY frontmatter (`---\n---`) is valid Astro — the fourth pass's regex required a newline
+  // BEFORE the closing fence and refused it (fifth review pass, 2026-09-18). ⇒ the captured group is
+  // either empty or ends in its own newline. `d` gives the group's start, for line numbers.
+  const m = /^\uFEFF?(?:[ \t]*\r?\n)*---[ \t]*\r?\n((?:[\s\S]*?\r?\n)?)---[ \t]*(?:\r?\n|$)/d.exec(source);
+  // ⚠ Only a file whose FIRST content is `---` can have frontmatter. ⛔ A `---` line further down a
+  // frontmatter-less template is text, ⛔ not a fence (the fourth pass refused it).
+  // ⚠ A fence LINE — `---` alone on the first non-blank line — ⛔ not any text that starts with `---`
+  // (`--- Title ---`, `----`), which the fifth pass also refused (sixth review pass, 2026-09-18).
+  const unrecognisedFence = m === null && /^\uFEFF?(?:[ \t]*\r?\n)*---[ \t]*(?:\r?\n|$)/.test(source);
+  if (m === null || m.indices === undefined) {
+    return {
+      template: `;<>\n${source}\n</>;\n`,
+      templateLineOffset: -1,
+      script: '',
+      scriptLineOffset: 0,
+      unrecognisedFence,
+    };
+  }
+  const frontmatter = m[1] ?? '';
+  const template = source.slice(m[0].length);
+  // ⭐ Line numbers are PRESERVED for the frontmatter half: exactly as many newlines precede it as
+  // precede it in the real file. ⚠⛔ The fourth pass repeated a newline for EVERY newline in the whole
+  // fence match — the frontmatter's own lines included — so every frontmatter finding reported the wrong
+  // line (fifth review pass). ⭐ The template half reports its real line too, via `templateLineOffset`
+  // (sixth review pass — it used to be offset by the wrapper).
+  const groupStart = m.indices[1]?.[0] ?? m[0].length;
+  const scriptLineOffset = (source.slice(0, groupStart).match(/\n/g) ?? []).length;
+  // ⭐ The template starts on the real line after the closing fence; the wrapper puts it on line 2.
+  const templateLineOffset = (source.slice(0, m[0].length).match(/\n/g) ?? []).length - 1;
   return {
-    text: `${lead}${frontmatter}\n;<>\n${template}\n</>;\n`,
-    kind: ts.ScriptKind.TSX,
+    template: `;<>\n${template}\n</>;\n`,
+    templateLineOffset,
+    script: frontmatter,
+    scriptLineOffset,
+    unrecognisedFence: false,
   };
 }
 
@@ -313,10 +366,60 @@ export function scanFinancialTruth(
   opts: ScanOptions,
 ): FinancialTruthFinding[] {
   const findings: FinancialTruthFinding[] = [];
-  const { text, kind } = prepareSource(file, source);
-  const sf = ts.createSourceFile(file, text, ts.ScriptTarget.ES2022, true, kind);
+  const { template, templateLineOffset, script, scriptLineOffset, unrecognisedFence } = prepareSource(
+    file,
+    source,
+  );
+
+  // ⭐⭐ **A GREEN SCAN OF SOURCE THAT DID ⛔ NOT PARSE IS ⛔ NOT GREEN** (fourth review pass, 2026-09-18).
+  // ⚠ Scoped to the SCRIPT half: an `.astro` TEMPLATE may legitimately hold HTML that is not JSX
+  // (`<!-- -->`, `<br>`) and degrades to a partial tree, as {@link prepareSource} records.
+  // ⚠⛔ **THE SCRIPT HALF IS PARSED ON ITS OWN** (fifth review pass, 2026-09-18). The fourth pass
+  // filtered the COMBINED parse's diagnostics by position (`start < frontmatterEnd`), which dropped
+  // exactly the ones that matter: an unterminated `{`, template literal or comment reports AT
+  // `source.length`, and an unterminated backtick in a frontmatter swallows the wrapper so its
+  // diagnostic lands in the template half. ⭐ Parsed alone, every diagnostic belongs to the script.
+  // ⚠ `parseDiagnostics` is a TypeScript INTERNAL. `lib.test.ts`'s refusal legs fail if it ever
+  // disappears — they are what keeps this from going silently green.
+  // ⭐⭐ **AND THE SCRIPT HALF IS *WALKED* AS TS, ⛔ NOT TSX** (sixth review pass, 2026-09-18). An Astro
+  // frontmatter is TypeScript. The fifth pass parsed it as TS for diagnostics but walked it inside the
+  // TSX wrapper, where `<number>count * 1000` is a JSX ELEMENT — the operand was never visited: a clean
+  // parse and a silent false negative. ⇒ ONE TS parse serves both; only the template is TSX.
+  // ⚠ Padded with the real leading newlines so a finding reports its real line.
+  const scriptSf = ts.createSourceFile(
+    file,
+    `${'\n'.repeat(scriptLineOffset)}${script}`,
+    ts.ScriptTarget.ES2022,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const diagnostics =
+    (scriptSf as unknown as { parseDiagnostics?: readonly ts.DiagnosticWithLocation[] }).parseDiagnostics ?? [];
+  if (diagnostics.length > 0 || unrecognisedFence) {
+    const first = diagnostics[0];
+    return [
+      {
+        file,
+        line:
+          first !== undefined
+            ? scriptSf.getLineAndCharacterOfPosition(first.start).line + 1
+            : 1,
+        rule: 'unparseable_source',
+        detail:
+          first === undefined
+            ? 'an Astro `---` fence is present but was not recognised — the frontmatter would be scanned ' +
+              'as template TEXT and every expression in it skipped. Refusing rather than reporting green.'
+            : `the script half did not parse (${ts.flattenDiagnosticMessageText(first.messageText, ' ')}) ` +
+              '— a partial tree would under-scan. Refusing rather than reporting green.',
+      },
+    ];
+  }
   const allowed = new Set(ALLOWED_EVENT_TYPES);
   const prohibitedImports = new Set(PROHIBITED_IMPORTS);
+
+  // ⭐ The walk runs over up to TWO trees (script as TS, template as TSX); `cur` names the one in hand.
+  let cur: { readonly sf: ts.SourceFile; readonly lineOffset: number } = { sf: scriptSf, lineOffset: 0 };
+  const at = (node: ts.Node): number => lineOf(cur.sf, node) + cur.lineOffset;
 
   const visit = (node: ts.Node): void => {
     // ── (1) EVENT SURFACE ───────────────────────────────────────────────────
@@ -327,7 +430,7 @@ export function scanFinancialTruth(
       if (EVENT_TYPE_SHAPE.test(text) && !allowed.has(text)) {
         findings.push({
           file,
-          line: lineOf(sf, node),
+          line: at(node),
           rule: 'event_surface',
           detail:
             `non-canonical event type "${text}" on the Sahyog Vivran read path — the surface is ` +
@@ -345,7 +448,7 @@ export function scanFinancialTruth(
           if (prohibitedImports.has(imported)) {
             findings.push({
               file,
-              line: lineOf(sf, el),
+              line: at(el),
               rule: 'prohibited_import',
               detail:
                 `imports "${imported}" — an attestation-derived accessor. Yellow / self-attested / ` +
@@ -364,14 +467,14 @@ export function scanFinancialTruth(
       if (isAmountDerivation(node)) {
         findings.push({
           file,
-          line: lineOf(sf, node),
+          line: at(node),
           rule: 'render_path_multiplication',
           detail:
             'render path RE-DERIVES the rupee figure locally — a confirmed-count product, whether ' +
             'the per-member amount is NAMED (`count × fixedAmount`) or HARD-CODED (`count × 1000`, ' +
             '`× -1000`, `× \'1000\'`, or `*=` — 2026-09-16-219 cl.5(a)). ' +
             'NOTE: a confirmed-count product with a literal is a finding on a render-path file even ' +
-            'if you meant a PERCENTAGE — 2026-09-07-218 rules this page renders NO completion ' +
+            'if you meant a PERCENTAGE — 2026-09-15-218 rules this page renders NO completion ' +
             'percentage, so that shape is forbidden here on its own grounds. ' +
             'D1(c) is REFUSED in terms — "a second multiplication anywhere in this app is the ' +
             'defect" — and the canonical figure is the domain read\'s own `deliveredTotal`, ' +
@@ -382,7 +485,7 @@ export function scanFinancialTruth(
         if (TARGET_OPERANDS.test(name)) {
           findings.push({
             file,
-            line: lineOf(sf, node),
+            line: at(node),
             rule: 'render_path_multiplication',
             detail:
               `render path names "${name}" — the drive TARGET or one of its factors. ` +
@@ -398,7 +501,14 @@ export function scanFinancialTruth(
     ts.forEachChild(node, visit);
   };
 
-  visit(sf);
+  visit(scriptSf);
+  if (template !== null) {
+    cur = {
+      sf: ts.createSourceFile(file, template, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TSX),
+      lineOffset: templateLineOffset,
+    };
+    visit(cur.sf);
+  }
   return findings;
 }
 

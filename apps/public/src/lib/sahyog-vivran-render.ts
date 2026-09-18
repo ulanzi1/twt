@@ -142,8 +142,10 @@ export interface SahyogVivranLabels {
   /**
    * ⭐⭐ Story 11b.3b / `#decision-2026-09-16-219` cl.1+cl.3 — the PLACEHOLDER for a row whose name is
    * withheld. ⚠ Resolved from **`sahyog-vivran.value.contributor_unnamed`**, ⛔ NOT from
-   * `contribution.contributor_list.*`: cl.2 scopes the placeholder to the PUBLIC surface, and the
-   * `contribution` namespace is the MEMBER list's, which keeps `2026-08-30-169` cl.1 (D5) whole.
+   * `contribution.contributor_list.*`, because on 2026-09-16 `-219` cl.2 scoped the placeholder to the
+   * PUBLIC surface. ⚠ `2026-09-18-222` has since extended it to the MEMBER list in the SAME words, so
+   * that ground is SPENT; the key stays here until story `11b-21` decides how the member surface
+   * sources the word. ⛔ What may never differ between the two surfaces is the WORD.
    * ⛔⛔ ⛔ NO PER-CAUSE VARIANT, EVER (cl.3) — five different things produce `name: null` and the row
    * must ⛔ not say which. ⛔ Do ⛔ not add `contributorErased`, `contributorUnresolvable` or a sibling.
    */
@@ -394,8 +396,9 @@ export function buildSahyogVivranView(
   const drive = response.drive;
   const reversal = drive.appealReversal;
   // ⭐ Story 11b.3b (Task 3) — the contributor PAGE and the SET SIZE, read from the envelope beside
-  // the drive. ⚠⛔ `total` is ⛔ NOT `items.length`: rows are omitted AFTER paging, so the page can
-  // hold fewer than it counts, BY DESIGN.
+  // the drive. ⚠⛔ `total` is ⛔ NOT `items.length`: it is the SET SIZE across all pages. ⭐ Since
+  // `2026-09-16-219` cl.1 a withheld name keeps its row (`{ name: null }`), so what is fewer than
+  // `total` is the count of NAMED rows — ⚠ this used to read *"rows are omitted AFTER paging"*.
   const contributors = response.items;
   const total = response.total;
 
@@ -424,9 +427,10 @@ export function buildSahyogVivranView(
       deceasedMemberName: drive.deceasedMemberName,
       district: drive.district,
       // ⛔ A COUNT, ⛔ never a sum and ⛔ never a score. ⭐ And it is the EVENT count, ⛔ never a row
-      // count: RTBF omits a contributor's ROW entirely while the omitted contributor STILL COUNTS
-      // here (`2026-08-30-169`). ⇒ at 11b.3b this page reads "N confirmed" beside FEWER than N named
-      // rows BY DESIGN, and ⛔ neither surface's copy may claim the list is complete.
+      // count: RTBF withholds a contributor's NAME (the row stays, as the placeholder — `-219` cl.1;
+      // ⚠ this read *"omits a contributor's ROW entirely"* until 2026-09-18) while the erased
+      // contributor STILL COUNTS here (`2026-08-30-169`). ⇒ this page reads "N confirmed" beside FEWER
+      // than N NAMED rows BY DESIGN, and ⛔ neither surface's copy may claim the list is complete.
       // ⚠ Interpolated THROUGH `t()`, ⛔ never by local string surgery — the 11a.2 `{{max}}` vs
       // `{max}` defect threw on EVERY request and no test caught it, because every test bypassed `t()`.
       confirmedContributionCount: labels.contributionsCount(drive.confirmedContributionCount),

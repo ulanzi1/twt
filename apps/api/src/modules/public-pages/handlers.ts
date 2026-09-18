@@ -842,6 +842,12 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
         // name form cannot be changed without a code change FAILS this clause"*.
         const mode = await kyc.resolvePublicNamePresentationMode(scopeTx.tx, pariwarId);
 
+        // ⭐ ONE per request: the request's crypto deps with `decryptDek` failures CLASSIFIED — see
+        // `withKmsOutageClassification`. ⭐ Used by BOTH name arms (deceased and contributors) — the
+        // deceased arm joined at the sixth review pass (2026-09-18). ⚠ The NOMINEE arm below does ⛔ not
+        // use it (pre-existing soft decrypt; deferred at `deferred-work.md`, sixth pass).
+        const outageAwareEncryption = withKmsOutageClassification(deps.encryption);
+
         let deceasedMemberName: string | null = null;
         if (drive.namePublicationAuthorised && drive.deceasedNameCiphertext !== null) {
           // ⭐ THE TIER-1 DECRYPT — the EXISTING helper, the EXISTING field class, the member's real
@@ -853,16 +859,21 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
             storedName = await encryption.decryptKycField(
               drive.deceasedNameCiphertext,
               pariwarId,
-              deps.encryption,
+              outageAwareEncryption,
             );
           } catch (err) {
+            // ⚠⛔ **A KMS OUTAGE IS ⛔ NOT A BAD ENVELOPE — RE-THROW IT** (sixth review pass,
+            // 2026-09-18). Caught here, an outage published as a quiet omission at `200`, edge-cached,
+            // while the contributor arm already refused it. ⭐ Same classification, same answer.
+            if (err instanceof KmsOutageError) throw err;
             // ⭐⭐ OMIT THE NAME, ⛔ KEEP THE **PAGE** — the deceased member's arm of AC3's
             // per-subject omission ruling, and the sibling's shipped rule (*"an unresolvable name
             // omits the NAME, ⛔ never the row"*). ⛔ Letting this throw would 503 an entire public
             // transparency page over one bad envelope, turning a crypto fault into an availability
             // fault on the surface whose whole purpose is being checkable.
-            // ⚠⛔ The CONTRIBUTOR arm at Task 3 is the OPPOSITE (omit the ROW, which exists only to
-            // carry the name) — ⛔ do ⛔ not collapse the two.
+            // ⭐ The CONTRIBUTOR arm below now AGREES — it keeps the ROW and renders the placeholder
+            // (`2026-09-16-219` cl.1). ⚠ It was the opposite until then (*"omit the ROW, which exists
+            // only to carry the name"* — SUPERSEDED, quoted ⛔ not deleted).
             request.log.error(
               { err },
               'sahyog-vivran: deceased-member name decrypt failed — omitting the NAME, keeping the page',
@@ -870,7 +881,7 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
           }
 
           // ⭐⭐ THE ERASURE BACKSTOP, mirrored from the contributor list at Task 3 (Trap 4, AC5;
-          // `2026-08-30-169` / `2026-08-30-170`). `anonymizeMember` overwrites `name_ciphertext`
+          // `2026-08-30-169` / `2026-08-31-170`). `anonymizeMember` overwrites `name_ciphertext`
           // IN PLACE with an *encrypted* `[anonymized]` sentinel and RETAINS the row ⇒ the decrypt
           // above SUCCEEDS, and without this check the page would render **`[anonymized]`** where
           // the deceased member's name belongs, once `namePublicationAuthorised` goes live.
@@ -895,6 +906,8 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
             // sat OUTSIDE it, while the CONTRIBUTOR arm puts the identical call INSIDE its `try`.
             // ⛔ The asymmetry was not defensible either way round.
             try {
+              // ⭐ The resolver cleans the stored name before it tokenises (`publicNameTokens`,
+              // `@twt/domain` — moved there at the sixth review pass so every public surface shares it).
               const name = kyc.resolvePublicMemberName(mode, storedName);
               // ⚠⛔ **`normalisePublicName`, ⛔ NEVER a bare `.trim()`** (Review finding 2026-09-08 for
               // the whitespace half; 2026-09-16 for the zero-width half) — a whitespace-only OR
@@ -965,9 +978,10 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
         // ⚠⛔⛔ **SAY WHAT THIS DOES, BECAUSE THE TITLE HIDES IT.** This publishes up to FIFTY LIVING
         // MEMBERS' FULL LEGAL NAMES on an UNAUTHENTICATED, EDGE-CACHED page — while the deceased
         // member the drive is named for renders NOTHING (the basis above is inert). ⭐ That asymmetry
-        // is RULED AND INTENDED (`-174` + `-175` gate on the member's OWN accepted T&C, which has
-        // ⛔ no clause dependency), ⛔ it is not a defect — ⛔ but ⛔ do ⛔ not ship or review this
-        // believing the page is dark.
+        // is RULED AND INTENDED (`-174` + `-175` declare it; the BASIS is MEMBERSHIP ITSELF,
+        // `2026-09-16-219` cl.6 — ⚠ corrected 2026-09-18 from *"the member's OWN accepted T&C"*, the
+        // `-160` cl.7 reading cl.6 forbids re-citing — and it has ⛔ no clause dependency), ⛔ it is
+        // not a defect — ⛔ but ⛔ do ⛔ not ship or review this believing the page is dark.
         //
         // ⭐ **THE PRODUCER IS THE SHARED ONE, ⛔ NEVER A SECOND READ.**
         // `listConfirmedContributorsForPool` sources EXCLUSIVELY from `contribution.confirmed` plus
@@ -1025,7 +1039,7 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
         const resolvedContributors = await mapWithConcurrency(
           pageContributors,
           DIRECTORY_DECRYPT_CONCURRENCY,
-          async (contributor): Promise<ResolvedContributor> => {
+          async (contributor): Promise<PublicSahyogVivranContributor> => {
             // ⛔⛔ **THE CATCH BELONGS *INSIDE* `fn`, ⛔ NOT AROUND THE MAP.** `mapWithConcurrency`
             // PROPAGATES a rejection and stops every worker, so one bad row would take down the whole
             // surface — the helper's own doc-block says so in terms. ⭐ A single bad row must ⛔ never
@@ -1036,8 +1050,9 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
             // 2026-09-16, AND THE SUPERSEDED RULE IS QUOTED, ⛔ NOT DELETED.**
             // ⛔ IT READ: *"THE OMISSION UNIT HERE IS THE ROW, ⛔ NOT THE NAME … a nameless row carries
             // nothing and a marker row would announce an omission."* ⇒ ⭐ a marker row is now exactly
-            // what is ruled: `-219` cl.2 supersedes `2026-08-30-169` cl.1 **for this PUBLIC surface
-            // only**, and `packages/ui/src/contribution-list` keeps D5 whole and still drops the row.
+            // what is ruled: `-219` cl.2 superseded `2026-08-30-169` cl.1 for this PUBLIC surface, and
+            // `2026-09-18-222` extends it to the MEMBER list in the same words (built at `11b-21`;
+            // until then `packages/ui/src/contribution-list` still drops the row — a shipped gap).
             // ⚠⛔ **RATIFIED ON THE FAIRNESS GROUND, ⛔ NOT THE PRIVACY ONE** — cl.1 records that (E)
             // WIDENS disclosure, and takes it because today only a reader who does the arithmetic
             // learns the list is incomplete. ⛔ Do ⛔ not describe this as closing that leak.
@@ -1046,23 +1061,25 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
             // ⛔ not a second field, ⛔ not an attribute, ⛔ not a distinguishable ordering. The five
             // causes are indistinguishable ON THE WIRE, and that is what still carries `-169` cl.1's
             // ground that an erased contributor must ⛔ not be *"identifiable or correlatable"*.
+            // ⭐⭐ **THE DB READ SITS *OUTSIDE* THE `try` — ANY FAILURE OF IT IS AN OUTAGE, ⛔ NEVER A
+            // PLACEHOLDER** (fifth review pass, 2026-09-18; BigDev, *"classify by the error"*).
+            // ⚠⛔ The fourth pass re-threw only errors carrying a SQLSTATE. A dropped connection carries
+            // ⛔ none (`Connection terminated unexpectedly`, `ECONNRESET`), so it still became a cached
+            // placeholder beside the full `total` — and every failing statement ABORTS the scope tx, so
+            // ⛔ no DB fault here is ever about one member. ⇒ ⭐ ⛔ no classification is needed: the read
+            // is simply ⛔ not caught. ⛔ Do ⛔ not move it back inside the `try`.
+            const profile = await kyc.getMemberKycProfile(scopeTx.tx, pariwarId, contributor.memberId);
+            // ⭐ A missing KYC row is a LAWFUL absence (no name to publish), ⛔ not a fault.
+            if (!profile || profile.nameCiphertext === null) return { name: null };
             try {
-              const profile = await kyc.getMemberKycProfile(
-                scopeTx.tx,
-                pariwarId,
-                contributor.memberId,
-              );
-              // ⭐ A missing KYC row is a LAWFUL absence (no name to publish), ⛔ not a fault.
-              if (!profile || profile.nameCiphertext === null) return { name: null, systemic: false };
-
               const storedName = await encryption.decryptKycField(
                 profile.nameCiphertext,
                 pariwarId,
-                deps.encryption,
+                outageAwareEncryption,
               );
 
               // ⭐⭐ **THE ERASURE BACKSTOP — AND THE ⛔ ONLY CHECK IN THIS PATH THAT IS
-              // SNAPSHOT-INDEPENDENT** (Trap 4, AC5; `2026-08-30-169` / `2026-08-30-170`).
+              // SNAPSHOT-INDEPENDENT** (Trap 4, AC5; `2026-08-30-169` / `2026-08-31-170`).
               // `anonymizeMember` overwrites `name_ciphertext` IN PLACE with an *encrypted*
               // `[anonymized]` sentinel and **RETAINS the row** ⇒ ⭐ the decrypt SUCCEEDS, and without
               // this the page renders **`[anonymized]`** where a person's name belongs, on an
@@ -1073,11 +1090,11 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
               // under READ COMMITTED the state read and the ciphertext read take DIFFERENT snapshots,
               // so an RTBF landing between them is decrypted anyway. ⭐ The window is closed at the
               // PLAINTEXT instead, which is snapshot-independent and costs nothing.
-              // ⚠⛔⛔ **AND THE GUARANTEE ENDS AT THE WIRE — `2026-08-30-172`, STATED HERE BECAUSE THIS
-              // IS WHERE A READER WOULD CONCLUDE OTHERWISE.** Omitting the row stops the ORIGIN from
-              // emitting it; it does ⛔ not reach into the edge. This surface is `edge_cacheable` at
+              // ⚠⛔⛔ **AND THE GUARANTEE ENDS AT THE WIRE — `2026-09-01-172`, STATED HERE BECAUSE THIS
+              // IS WHERE A READER WOULD CONCLUDE OTHERWISE.** Withholding the name stops the ORIGIN
+              // from emitting it; it does ⛔ not reach into the edge. This surface is `edge_cacheable` at
               // `s-maxage=300`, so an erased contributor **keeps being served from every warm PoP for
-              // up to five minutes** after this line starts dropping them.
+              // up to five minutes** after this line starts withholding them.
               // ⭐ ACCEPTED, and it is the SAME cost `/sahyog` and the per-Pariwar kill switch already
               // carry — ⛔ not a new exposure and ⛔ not this story's to close (routed in
               // `deferred-work.md`). ⛔⛔ ⛔ Do ⛔ not "fix" it by making this surface
@@ -1087,7 +1104,7 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
                 request.log.warn(
                   'sahyog-vivran: erasure sentinel reached the decrypt — omitting the NAME, keeping the ROW',
                 );
-                return { name: null, systemic: false };
+                return { name: null };
               }
 
               // ⭐⛔ `resolvePublicMemberName`, ⛔ NEVER `resolvePoolIdentity` and ⛔ never
@@ -1101,27 +1118,37 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
               // ⚠⛔ **`normalisePublicName`, ⛔ NEVER a bare `.trim()`** — `.trim()` leaves
               // `U+200B`–`U+200F` standing, and an invisible-only name renders an EMPTY `<li>`
               // bullet: an omission that ANNOUNCES itself (Review finding, 2026-09-16 second pass).
+              // ⚠⛔ **THE STORED NAME IS CLEANED *BEFORE* THE RESOLVER TOKENISES IT** — inside
+              // `resolvePublicMemberName` (`publicNameTokens`, `@twt/domain`). `"Sunita \u202e"`,
+              // `"Sunita \u061c"` or `"Sunita ."` was TWO tokens, skipped the shielded mononym arm
+              // (`-145` cl.3) and published the whole legal name. ⚠ The fifth review pass fixed it here
+              // with a denylist; the sixth moved an ALLOWLIST (a word must hold a letter or digit) to
+              // the shared resolver, which the directory and the `/sahyog` index also call.
               const name = normalisePublicName(kyc.resolvePublicMemberName(mode, storedName));
-              return { name, systemic: false };
+              return { name };
             } catch (err) {
-              // ⚠⛔ **AN ABORTED TRANSACTION IS ⛔ NOT A BAD ROW — RE-THROW IT** (Review finding,
-              // 2026-09-16). ⭐ Mirrors `member-pool/handlers.ts`'s guard of the same name, which AC3's
-              // named precedent carries and this copy had dropped. ⛔ Without it one `25P02` becomes N
-              // silent omissions served as a cached `200` beside the full `total`.
-              if (isAbortedTransaction(err)) throw err;
+              // ⭐⭐ **A KMS OUTAGE IS ⛔ NOT A BAD ROW — RE-THROW IT.** `outageAwareEncryption` converts
+              // every KMS failure that is ⛔ not a rejection of THIS envelope into `KmsOutageError`; it
+              // reaches `bad_response` at the public app, which renders the 503 outage view with
+              // `no-store`. ⭐ The test is on the ERROR, so it does ⛔ not depend on which rows the page
+              // holds and costs ⛔ no extra call (fifth review pass, 2026-09-18 — it replaced a canary
+              // probe that passed while stored envelopes failed, opened a timing channel, and wrote
+              // canary lines into the audit chain on an unauthenticated route).
+              if (err instanceof KmsOutageError) throw err;
 
-              // ⚠⛔ **DELIBERATELY ⛔ NOT MEMBER-ATTRIBUTED.** The member-facing sibling logs the
-              // `memberId` because there the log is what distinguishes a render failure from a lawful
-              // erasure. ⛔ Here the row is already omitted either way, and naming a member in an
-              // anonymous public request's logs buys nothing for the one thing it risks.
-              request.log.warn(
+              // ⭐ What remains is a fault of THIS stored name: KMS rejected the envelope
+              // (INVALID_ARGUMENT), the envelope did ⛔ not parse, the data failed its GCM tag, or the
+              // resolver threw. ⇒ the placeholder, byte-identical to every other cause (`-219` cl.3/cl.4(c)).
+              // ⚠ Logged at ERROR — it is corrupt data, ⛔ not a lawful omission, and it is the ONLY alarm
+              // if KMS ever answers INVALID_ARGUMENT for a SYSTEMIC reason (a mis-set key reference for
+              // every row): the accepted cost of classifying by the error.
+              // ⚠⛔ **DELIBERATELY ⛔ NOT MEMBER-ATTRIBUTED.** Naming a member in an anonymous public
+              // request's logs buys nothing for the one thing it risks.
+              request.log.error(
                 { err },
-                'sahyog-vivran: contributor name unresolvable — omitting the NAME, keeping the ROW',
+                'sahyog-vivran: contributor name envelope unusable — omitting the NAME, keeping the ROW',
               );
-              // ⚠⛔ **SYSTEMIC.** ⛔ Unlike the arms above, reaching this catch means the name could
-              // ⛔ not be resolved for a reason that is ⛔ NOT about this member — a failed decrypt, a
-              // KMS fault, a DB error. ⭐ The flag is INTERNAL and is stripped before the wire.
-              return { name: null, systemic: true };
+              return { name: null };
             }
           },
         );
@@ -1134,38 +1161,21 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
         // ⚠ `items.length` therefore now equals `pageContributors.length`; what is fewer than `total`
         // is the count of rows whose `name` is ⛔ not `null`. ⛔ Do ⛔ not re-introduce a filter, and
         // ⛔ do ⛔ not publish a count of the nulls as its own field (cl.4(c)).
-        // ⭐⭐ **A SYSTEMIC FAILURE MUST ⛔ NOT PUBLISH AS LAWFUL ERASURE.**
-        // ⚠⛔⛔ Found 2026-09-17 by adversarial review, and it is a defect option (E) CREATED: before
-        // `-219` cl.1 a total decrypt outage DROPPED every row, so the page rendered its empty state —
-        // visibly degraded. With the row kept, the identical outage renders N placeholder rows at
-        // **200**, edge-cached for five minutes, byte-indistinguishable from *"every contributor on
-        // this page exercised their right to erasure"*. ⛔ That is a false public statement about
-        // named members' data-subject rights, and ⛔ nothing alarmed.
-        // ⇒ ⭐ if EVERY row on a non-empty page failed for a reason that is ⛔ not about the member,
-        // this is an OUTAGE and is answered as one: the throw reaches `bad_response` at the public
-        // app, which renders the 503 outage view with `no-store` — ⛔ never a cached lawful-looking
-        // page, and ⛔ never `not_found`.
-        // ⚠⛔ **THE FLAG IS STRIPPED HERE AND ⛔ NEVER CROSSES THE WIRE** (cl.3): the five causes stay
-        // indistinguishable to a reader. ⛔ Do ⛔ not add it to the contract "for diagnostics".
-        const systemicFailures = resolvedContributors.filter((r) => r.systemic).length;
-        if (systemicFailures > 0 && systemicFailures === resolvedContributors.length) {
-          request.log.error(
-            { systemicFailures, page, limit },
-            'sahyog-vivran: EVERY contributor name on this page failed to resolve — refusing to publish a page of placeholders that would read as mass erasure',
-          );
-          throw new Error('sahyog-vivran: contributor name resolution failed for the whole page');
-        }
-        if (systemicFailures > 0) {
-          // ⚠ A PARTIAL systemic failure still publishes — a single bad envelope must ⛔ not collapse
-          // the page — ⭐ but it is an operator signal, ⛔ not a lawful omission, so it is logged as one.
-          request.log.error(
-            { systemicFailures, rows: resolvedContributors.length },
-            'sahyog-vivran: some contributor names failed to resolve — these rows are indistinguishable from lawful omissions to a reader',
-          );
-        }
-        const items: PublicSahyogVivranContributor[] = resolvedContributors.map(({ name }) => ({
-          name,
-        }));
+        // ⭐⭐ **A KMS OUTAGE MUST ⛔ NOT PUBLISH AS LAWFUL ERASURE — AND IS DECIDED BY THE ERROR, ⛔ NOT BY
+        // THE PAGE.** History, kept because each version was wrong in a way the next must ⛔ not repeat:
+        //   · 2026-09-17 — *"if EVERY row on a non-empty page failed, this is an OUTAGE"*. ⛔ A rule over
+        //     the page's COMPOSITION: on a one-row page it became per-row, so `?limit=1` distinguished a
+        //     failed decrypt (503) from an erasure (200) — a `-219` cl.3/cl.4(c) breach — and one corrupt
+        //     envelope took the page down for good (AC3).
+        //   · 2026-09-18 (fourth pass) — a KMS canary round-trip, run when a row failed. ⛔ It PASSED
+        //     while stored envelopes failed systemically (a disabled old key version, a cleared quota
+        //     error), added ~2 KMS round-trips to a corrupt row only (a timing channel), and wrote two
+        //     canary lines into the global audit chain per cache miss on an unauthenticated route.
+        //   · ⭐ NOW (fifth pass, BigDev option 1) — the per-row catch above re-throws `KmsOutageError`
+        //     and the DB read is ⛔ not caught at all. ⇒ ⛔ nothing is decided here; every row that
+        //     reaches this line is either named or a per-envelope fault already logged at ERROR.
+        // ⚠⛔ ⛔ NOTHING about WHY a name is withheld crosses the wire (cl.3/cl.4(c)).
+        const items: PublicSahyogVivranContributor[] = resolvedContributors;
 
         ok = true;
         return {
@@ -1232,6 +1242,132 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
 }
 
 /**
+ * ⭐ Characters that occupy ⛔ no visual space — used to decide whether a name is VISUALLY EMPTY and
+ * to trim the EDGES of the resolved name. ⛔ NEVER to rewrite the interior. See
+ * {@link normalisePublicName}. ⚠ Word-level cleaning of the STORED name (dropping a token with no
+ * letter or digit) is ⛔ not done with this list — it lives in `@twt/domain`'s `publicNameTokens`,
+ * an allowlist, because a denylist of invisibles can never be complete (sixth review pass).
+ *
+ * ⚠ Wider than the old `\u200b-\u200f\ufeff`: word joiner + invisible operators, soft hyphen,
+ * combining grapheme joiner, Hangul fillers, Mongolian vowel separator, bidi embedding/override and
+ * isolate controls, the braille blank, and variation selectors. ⛔ Every one survives
+ * `String.prototype.trim()` AND a `.min(1)` bound, and would render an EMPTY `<li>` — which, now that
+ * every other withheld row carries visible placeholder text, is the ONE row that announces itself.
+ */
+// ⚠⛔ **`no-misleading-character-class` IS SUPPRESSED DELIBERATELY, AND ⛔ NOT TO SILENCE A BUG.**
+// The rule guards against a class that accidentally SPLITS a grapheme. ⭐ Here the individual
+// code points ARE the subject — `\u034f` (combining grapheme joiner) and `\ufe00-\ufe0f`
+// (variation selectors) are combining marks we must detect ON THEIR OWN, because a stored name
+// consisting only of them is exactly the blank-row case this class exists to catch. ⭐ Both
+// regexes carry the `u` flag, so each escape is one code point. ⛔ Re-examine if this class ever
+// grows a member intended to match a COMBINED sequence rather than a lone invisible.
+/* eslint-disable no-misleading-character-class */
+const INVISIBLE_CHARS = /[\u00ad\u034f\u115f\u1160\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\u2800\u3164\ufe00-\ufe0f\ufeff]/gu;
+
+/** Whitespace OR an invisible, anchored to the edges. */
+const EDGE_INVISIBLE_OR_SPACE = /^[\s\u00ad\u034f\u115f\u1160\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\u2800\u3164\ufe00-\ufe0f\ufeff]+|[\s\u00ad\u034f\u115f\u1160\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\u2800\u3164\ufe00-\ufe0f\ufeff]+$/gu;
+/* eslint-enable no-misleading-character-class */
+
+/**
+ * ⭐ Bidi EMBEDDING / OVERRIDE / ISOLATE controls (U+202A–U+202E, U+2066–U+2069) — stripped from the
+ * INTERIOR of the value that ships, ⛔ unlike every other invisible above.
+ *
+ * ⚠⛔ **FOUND 2026-09-18 (fourth review pass).** {@link normalisePublicName} keeps the interior intact
+ * so ZWJ/ZWNJ survive — which also kept an interior RLO/LRO, and a stored name carrying one visually
+ * REORDERS the text around it on the public page. ⭐ These controls are ⛔ never part of a legal name in
+ * any script this Trust serves, so removing them cannot alter a spelling — ⛔ unlike U+200C/U+200D,
+ * which ⛔ must stay. ⛔ Do ⛔ not widen this class to the joiners or to LRM/RLM.
+ */
+const BIDI_CONTROLS = /[\u202a-\u202e\u2066-\u2069]/gu;
+
+/**
+ * ⭐ THE PUBLIC NAME NORMALISER — the member’s name as stored, edge-trimmed, or `null` when there
+ * is nothing visible to render.
+ *
+ * ⚠⛔⛔ **IT ⛔ MUST ⛔ NOT REWRITE THE INTERIOR OF A NAME, AND THE FIRST VERSION OF THIS HELPER DID.**
+ * Found 2026-09-17 by adversarial review. It ran `value.replace(/[\u200b-\u200f\ufeff]/g, '')`
+ * GLOBALLY and returned the rewritten string. That range contains **U+200C ZERO WIDTH NON-JOINER**
+ * and **U+200D ZERO WIDTH JOINER**, which are ⛔ **not** invisible noise in Devanagari, Bengali,
+ * Gujarati or Gurmukhi — they select half-form versus conjunct. ⇒ a stored legal name
+ * `प्रज्‍ञा` was published as `प्रज्ञा`: a DIFFERENT spelling of a real person’s name, on a
+ * public memorial page, silently, with ⛔ no log. ⛔⛔ On a surface whose whole purpose is that a
+ * family can CHECK the record, publishing an altered name is worse than publishing none.
+ *
+ * ⭐ **SO THE STRIP IS A TEST, ⛔ NOT A TRANSFORM:** invisibles come off a COPY to ask *"is anything
+ * visible here?"*. What ships is edge-trimmed, with ⛔ one interior exception: bidi embedding/override/
+ * isolate controls ({@link BIDI_CONTROLS}) are removed everywhere, since they are never part of a
+ * spelling and an interior RLO reorders the text around it (fourth review pass, 2026-09-18). ⛔ The
+ * joiners stay.
+ *
+ * ⚠ Returns `null` for "nothing to render", ⛔ never `''`. ⛔ And `null` carries ⛔ NO cause
+ * (`2026-09-16-219` cl.3): an all-invisible name, an erasure and a failed decrypt are
+ * indistinguishable downstream.
+ */
+function normalisePublicName(value: string): string | null {
+  const edgeTrimmed = value.replace(EDGE_INVISIBLE_OR_SPACE, '').replace(BIDI_CONTROLS, '');
+  // ⚠ The COPY decides emptiness; `edgeTrimmed` is what ships — interior joiners intact.
+  if (edgeTrimmed.replace(INVISIBLE_CHARS, '').trim() === '') return null;
+  return edgeTrimmed;
+}
+
+/**
+ * ⭐ A KMS failure that is ⛔ NOT a rejection of the envelope being decrypted — the service is down,
+ * throttled, timing out, denying permission, or refusing the key version. ⛔ Never about one member.
+ */
+class KmsOutageError extends Error {
+  constructor(cause: unknown) {
+    super('sahyog-vivran: KMS unavailable while resolving contributor names', { cause });
+    this.name = 'KmsOutageError';
+  }
+}
+
+/** gRPC `INVALID_ARGUMENT` — Cloud KMS's answer for a malformed ciphertext or an AAD mismatch. */
+const GRPC_INVALID_ARGUMENT = 3;
+
+/**
+ * ⭐⭐ The request's crypto deps with `kms.decryptDek` failures CLASSIFIED (fifth review pass,
+ * 2026-09-18; BigDev option 1, *"classify by the error"*).
+ *
+ *  · ⭐ `code === 3` (INVALID_ARGUMENT) ⇒ KMS rejected THIS envelope ⇒ re-thrown unchanged, and the row's
+ *    catch renders the placeholder. ⚠ The fake provider throws the same code for the same faults, so the
+ *    integration legs exercise this path, ⛔ not a test-only one.
+ *  · ⛔ ANY OTHER failure — a gRPC status (UNAVAILABLE, RESOURCE_EXHAUSTED, DEADLINE_EXCEEDED,
+ *    PERMISSION_DENIED, FAILED_PRECONDITION for a disabled key version…) or a status-less error (the
+ *    HSM protection-level assertion, an empty response) ⇒ `KmsOutageError`.
+ *  · ⭐ Faults AFTER the DEK is unwrapped (envelope parse, the data's GCM tag) never pass through here ⇒
+ *    they stay per-envelope, which is what they are.
+ *
+ * ⚠ **RECORDED COSTS — facts, ⛔ not rules (sixth review pass, 2026-09-18):**
+ *  · A row wrapped under a KEK version that is now DISABLED or DESTROYED fails with a non-3 status and is
+ *    classed an OUTAGE here ⇒ every page holding it answers 500 (the public app's 503 outage view) while
+ *    that version is unavailable, although rows on the current version decrypt. ⛔ Nothing here decides
+ *    whether KEK versions may be disabled.
+ *  · The premise that Cloud KMS answers INVALID_ARGUMENT for an AAD mismatch or a corrupted ciphertext
+ *    is ⛔ UN-ATTESTED against the live service. If it answers otherwise, a corrupt row fails CLOSED (an
+ *    outage), ⛔ not open. Verification is owed (`deferred-work.md`, 11b-3b sixth pass).
+ *
+ * ⚠ The original is looked up AT CALL TIME (`enc.kms.decryptDek(…)`, ⛔ not a captured reference) so a
+ * test spy installed on the shared provider still applies.
+ */
+function withKmsOutageClassification(enc: AppDeps['encryption']): AppDeps['encryption'] {
+  return {
+    ...enc,
+    kms: {
+      ...enc.kms,
+      decryptDek: async (encryptedDek, kekRef, aad) => {
+        try {
+          return await enc.kms.decryptDek(encryptedDek, kekRef, aad);
+        } catch (err) {
+          const code = typeof err === 'object' && err !== null ? (err as { code?: unknown }).code : undefined;
+          if (code === GRPC_INVALID_ARGUMENT) throw err;
+          throw new KmsOutageError(err);
+        }
+      },
+    },
+  };
+}
+
+/**
  * ⭐⭐ AC5's AUDIT LINE (Story 1.10) — the PUBLIC DISCLOSURE of an appeal reversal.
  *
  * ⛔ IT IS ⛔ NOT A "ROUTING" LINE, AND THAT WORDING CHANGE IS A RULING, ⛔ not a paraphrase. The epic
@@ -1262,92 +1398,6 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
  * which would turn a logging fault into an availability fault on the surface whose whole purpose is
  * being checkable. ⭐ The failure is logged loudly so a gap in the chain is never silent.
  */
-/**
- * ⭐ Characters that occupy ⛔ no visual space — used to decide whether a name is VISUALLY EMPTY and
- * to trim the EDGES. ⛔ NEVER to rewrite the interior. See {@link normalisePublicName}.
- *
- * ⚠ Wider than the old `\u200b-\u200f\ufeff`: word joiner + invisible operators, soft hyphen,
- * combining grapheme joiner, Hangul fillers, Mongolian vowel separator, bidi embedding/override and
- * isolate controls, the braille blank, and variation selectors. ⛔ Every one survives
- * `String.prototype.trim()` AND a `.min(1)` bound, and would render an EMPTY `<li>` — which, now that
- * every other withheld row carries visible placeholder text, is the ONE row that announces itself.
- */
-// ⚠⛔ **`no-misleading-character-class` IS SUPPRESSED DELIBERATELY, AND ⛔ NOT TO SILENCE A BUG.**
-// The rule guards against a class that accidentally SPLITS a grapheme. ⭐ Here the individual
-// code points ARE the subject — `\u034f` (combining grapheme joiner) and `\ufe00-\ufe0f`
-// (variation selectors) are combining marks we must detect ON THEIR OWN, because a stored name
-// consisting only of them is exactly the blank-row case this class exists to catch. ⭐ Both
-// regexes carry the `u` flag, so each escape is one code point. ⛔ Re-examine if this class ever
-// grows a member intended to match a COMBINED sequence rather than a lone invisible.
-/* eslint-disable no-misleading-character-class */
-const INVISIBLE_CHARS = /[\u00ad\u034f\u115f\u1160\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\u2800\u3164\ufe00-\ufe0f\ufeff]/gu;
-
-/** Whitespace OR an invisible, anchored to the edges. */
-const EDGE_INVISIBLE_OR_SPACE = /^[\s\u00ad\u034f\u115f\u1160\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\u2800\u3164\ufe00-\ufe0f\ufeff]+|[\s\u00ad\u034f\u115f\u1160\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\u2800\u3164\ufe00-\ufe0f\ufeff]+$/gu;
-/* eslint-enable no-misleading-character-class */
-
-/**
- * ⭐ THE PUBLIC NAME NORMALISER — the member’s name as stored, edge-trimmed, or `null` when there
- * is nothing visible to render.
- *
- * ⚠⛔⛔ **IT ⛔ MUST ⛔ NOT REWRITE THE INTERIOR OF A NAME, AND THE FIRST VERSION OF THIS HELPER DID.**
- * Found 2026-09-17 by adversarial review. It ran `value.replace(/[\u200b-\u200f\ufeff]/g, '')`
- * GLOBALLY and returned the rewritten string. That range contains **U+200C ZERO WIDTH NON-JOINER**
- * and **U+200D ZERO WIDTH JOINER**, which are ⛔ **not** invisible noise in Devanagari, Bengali,
- * Gujarati or Gurmukhi — they select half-form versus conjunct. ⇒ a stored legal name
- * `प्रज्‍ञा` was published as `प्रज्ञा`: a DIFFERENT spelling of a real person’s name, on a
- * public memorial page, silently, with ⛔ no log. ⛔⛔ On a surface whose whole purpose is that a
- * family can CHECK the record, publishing an altered name is worse than publishing none.
- *
- * ⭐ **SO THE STRIP IS A TEST, ⛔ NOT A TRANSFORM:** invisibles come off a COPY to ask *"is anything
- * visible here?"*, and only the EDGES are trimmed from the value that ships.
- *
- * ⚠ Returns `null` for "nothing to render", ⛔ never `''`. ⛔ And `null` carries ⛔ NO cause
- * (`2026-09-16-219` cl.3): an all-invisible name, an erasure and a failed decrypt are
- * indistinguishable downstream.
- */
-/**
- * ⭐ The contributor row PLUS an internal `systemic` flag. ⛔ The flag is stripped before the wire —
- * `2026-09-16-219` cl.3 forbids anything on the wire that distinguishes WHY a name is withheld.
- */
-interface ResolvedContributor {
-  readonly name: string | null;
-  /** ⭐ True only when resolution failed for a reason that is ⛔ NOT about this member. */
-  readonly systemic: boolean;
-}
-
-function normalisePublicName(value: string): string | null {
-  const edgeTrimmed = value.replace(EDGE_INVISIBLE_OR_SPACE, '');
-  // ⚠ The COPY decides emptiness; `edgeTrimmed` is what ships — interior joiners intact.
-  if (edgeTrimmed.replace(INVISIBLE_CHARS, '').trim() === '') return null;
-  return edgeTrimmed;
-}
-
-/**
- * ⭐ `25P02` — the transaction is ALREADY ABORTED, ⛔ not "this row is bad".
- *
- * ⚠⛔ **THIS IS THE SIBLING OF `member-pool/handlers.ts`'s GUARD OF THE SAME NAME, AND IT EXISTS FOR
- * THE SAME REASON** (Review finding, 2026-09-16 second pass): once ANY statement on the scope tx
- * fails, every later statement returns `25P02`. Without this re-throw a per-row `catch` converts ONE
- * fault into N silent omissions, and the caller returns `ok` with a TRUNCATED list beside the FULL
- * `total`.
- *
- * ⚠⛔ **AND THIS SURFACE IS THE WORST PLACE TO SWALLOW IT.** Its own contract normalises the symptom
- * — `sahyog-vivran.ts` rules that the page reads "N confirmed" beside FEWER than N named rows
- * **BY DESIGN** — so a transient DB fault is indistinguishable from a lawful RTBF omission, and the
- * result is edge-cached at `s-maxage=300`.
- *
- * ⚠ Drizzle wraps the driver error, so the code can sit on the error OR on its `cause`
- * ([[project_domain_limit_clamp_and_savepoint_retry]]) — ⛔ check both, ⛔ never one.
- * ⛔ This is ⛔ NOT a recovery mechanism and must ⛔ never grow into one.
- */
-function isAbortedTransaction(err: unknown): boolean {
-  const code = (e: unknown): unknown =>
-    typeof e === 'object' && e !== null ? (e as { code?: unknown }).code : undefined;
-  const cause = typeof err === 'object' && err !== null ? (err as { cause?: unknown }).cause : undefined;
-  return code(err) === '25P02' || code(cause) === '25P02';
-}
-
 async function writeAppealReversalDisclosureAudit(
   deps: AppDeps,
   pariwarId: string,

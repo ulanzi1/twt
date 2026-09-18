@@ -24,6 +24,7 @@ import { splitFirstNameLastInitial } from '../../src/kyc/name.js';
 import {
   DEFAULT_PUBLIC_NAME_PRESENTATION_MODE,
   PUBLIC_NAME_PRESENTATION_MODES,
+  publicNameTokens,
   resolvePublicMemberName,
 } from '../../src/kyc/public-name.js';
 
@@ -111,6 +112,47 @@ describe('resolvePublicMemberName (AC5)', () => {
     expect(resolvePublicMemberName('shielded_name', 'Rajesh Sharma')).toBe(
       resolvePublicMemberName('shielded_name', 'Rajesh Sharma'),
     );
+  });
+});
+
+describe('⭐⭐ a token a reader cannot see or read does ⛔ NOT defeat the mononym rule (11b.3b, 2026-09-18)', () => {
+  // ⚠⛔ A PRIVACY LEAK: each of these published the whole legal mononym under `shielded_name` as
+  // `"Sunita X."`. The fifth review pass's denylist caught only the first two.
+  const trailing = [
+    '\u202e', // RLO — bidi control
+    '\u200b', // ZWSP
+    '\u061c', // ARABIC LETTER MARK — ⛔ not on the old denylist
+    '\uffa0', // halfwidth Hangul filler
+    '\u{e0041}', // tag character
+    '\u{e0100}', // variation selector supplement
+    '\u17b4', // Khmer inherent vowel
+    '\u{1d173}', // musical formatting
+    '\u0301', // a lone combining mark
+    '.', // punctuation only
+    '-',
+  ];
+  for (const junk of trailing) {
+    it(`shielded: "Sunita ${JSON.stringify(junk)}" is a MONONYM ⇒ omitted`, () => {
+      expect(resolvePublicMemberName('shielded_name', `Sunita ${junk}`)).toBe('');
+      expect(resolvePublicMemberName('full_name', `Sunita ${junk}`)).toBe('Sunita');
+    });
+  }
+
+  it('a surname that STARTS with an invisible initials to its first VISIBLE letter', () => {
+    expect(resolvePublicMemberName('shielded_name', 'Sunita \u200bKumari')).toBe('Sunita K.');
+  });
+
+  it('an interior bidi control is removed; the spelling is otherwise intact', () => {
+    expect(resolvePublicMemberName('full_name', 'Anita \u202e Verma')).toBe('Anita Verma');
+  });
+
+  it('⛔ an interior U+FEFF does ⛔ NOT split a word (`\\s` would have)', () => {
+    expect(publicNameTokens('Ani\ufeffta Verma')).toEqual(['Ani\ufeffta', 'Verma']);
+  });
+
+  it('⭐ an interior ZWJ/ZWNJ in an Indic name survives byte-for-byte', () => {
+    expect(resolvePublicMemberName('full_name', 'प्रज्\u200dञा शर्मा')).toBe('प्रज्\u200dञा शर्मा');
+    expect(resolvePublicMemberName('shielded_name', 'प्रज्\u200dञा शर्मा')).toBe('प्रज्\u200dञा श.');
   });
 });
 

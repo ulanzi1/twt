@@ -1,3 +1,10 @@
+# ── Panel-routing template (added 2026-09-18) ───────────────────────────────
+# Routing notes had NO template for 41 notes and drifted into an author-first
+# shape: clause tracing first, the plain-English question last as an appendix.
+# The 2026-09-16 and 2026-09-18 notes ran 172 lines each and came back answered
+# in four words. The template is referenced BY PATH, never copied — a second copy
+# is how the checklist and the story template would drift apart.
+#
 # AI-6-5 (epic-6-retro-2026-07-16, confirmed BigDev 2026-07-16): fold the W-6
 # post-review load-bearing-invariant second pass into the Acceptance-Auditor
 # lens so residual load-bearing invariants are caught on the FIRST review pass,
@@ -9,4 +16,8 @@ persistent_facts = [
   "file:{project-root}/_bmad/custom/load-bearing-invariant-checklist.md",
   "AI-6-5 load-bearing-invariant lens: treat the load-bearing-invariant checklist (loaded above) as an additional acceptance lens for the Acceptance Auditor — the Auditor audits the diff against the checklist alongside the spec. Only checklist families the diff actually touches are evaluated; untouched families are skipped silently. For each touched family the Auditor reports a verdict: covered-by-test (name the test), covered-by-construction (state the structural reason), REAL GAP (emit as a finding), or not-constructible-in-this-system (explain honestly, never fake coverage). If review_mode is not 'full' (no Acceptance Auditor runs), the Edge Case Hunter carries the same checklist lens instead, so it never silently drops.",
   "A REAL GAP verdict on a checklist family the diff touches is triaged with the same severity ladder as an acceptance-criteria violation — never downgraded to a note.",
+  "file:{project-root}/_bmad-output/planning-artifacts/trustee-panel-routing-note-TEMPLATE.md",
+  "Panel-routing gate (2026-09-18) — apply the template's §0 BEFORE classifying any finding as `decision_needed`, and again before writing a routing note. A question is the Panel's only if it is about what the Trust DISCLOSES about a person, what it OWES a member/family/nominee, a legal or consent BASIS, or two RATIFIED clauses that conflict so one must give. It is the reviewer's own call if the answer is 'the code should do X' with no change to what a person sees or is owed — which covers implementation choice, CI-gate/lint/test coverage, and naming. THE TEST THAT CATCHES THE HARD ONES: strip the clause citations and read the bare sentence; if it would embarrass you in front of a trustee, it is yours. A MIXED question is TWO questions — split it, decide the engineering half, and say so in the note.",
+  "Panel-routing gate, worked example (do not drop this as boilerplate): the 2026-09-16 note asked the Panel to rule on whether a static-analysis rule should also match a numeric-literal operand. Dressed in clause ids it looked governance-shaped; stripped, it was a lint question, and it spent Panel attention that the two genuine questions beside it needed. Over-routing is not the safe default — it is a cost.",
+  "When a `decision_needed` finding IS routed to the Panel, write the escalation from the template above and follow its ORDER: the question in one sentence, then THE ONE FACT THAT DECIDES IT, then options with an honest cost on every option INCLUDING the recommended one, then what is live/blocked, then 'How much to trust this note' (earlier versions that were wrong, corrections made mid-draft, remaining uncertainty — mandatory), then plain English reaching a conclusion. Clause citations, file paths and re-verification commands go LAST, under `# EVIDENCE — for the record, not for the meeting`. Run the E4 commands before sending: a command that returns EMPTY is a finding, not a pass — that is how a mis-dated decision id was caught after two weeks.",
 ]

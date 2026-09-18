@@ -4,6 +4,26 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Carried from: `#decision-2026-09-18-221` — the member-surface breach (2026-09-18)
+
+⚠⛔⛔ **A BREACH OF A STANDING TRUSTEE RULING IS BEING CARRIED — ⛔ it is ⛔ NOT an accepted trade, and
+`-177` cl.2 may ⛔ NOT be cited as though it were.** `2026-09-04-189` **cl.3** (*"a member must see
+MORE than the public, and ⛔ NEVER LESS"*) binds the contributor name; `-177` cl.2's CARRY is dated
+**two days earlier** and is SUPERSEDED by it.
+
+- **AXIS A — the NAME FORM. ⭐ A DISCHARGE, ⛔ not an open question.** Public renders the FULL NAME;
+  the member list renders `firstName + lastInitial` (`apps/api/src/modules/member-pool/handlers.ts`,
+  `splitFirstNameLastInitial`). ⛔ `-189` cl.3 already ruled this must be closed ⇒ it needs a
+  MEMBER-SURFACE story, ⛔ not a ruling. ⚠ It was fenced out of `11b-3b` by AC8.
+- **AXIS B — OMISSION VISIBILITY. ⚠ ROUTED TO THE PANEL, ⛔ not deferred by choice.** `-219` cl.2 gave
+  the public page a placeholder row; the member list still DROPS the row on all five causes. ⇒ closing
+  the gap would satisfy `-189` cl.3 by breaching `2026-08-30-169` **cl.1 (D5)**, which forbids a marker
+  on that surface and was ruled FOR it. ⭐ Escalated as
+  `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-09-18-member-surface-placeholder-clause-conflict.md` with four options; ⏳ AWAITING RULING.
+  ⚠ The member wire carries ⛔ no `total` either, so ⛔ not even the arithmetic route exists there.
+
+---
+
 ## Deferred from: code review of 11b-3b-sahyog-vivran-named-identity-render-layer — **SECOND PASS** (2026-09-16)
 
 ⚠ Scope: the WHOLE story, diffed **`be0037cc..HEAD`** — the branch's merge-base with `origin/main`,

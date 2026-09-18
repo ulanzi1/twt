@@ -1,3 +1,17 @@
+# last_updated: 2026-09-18b (⭐ **ROW ADDED — `11b-21-member-contributor-name-form-parity`: `backlog`.**
+#   ⛔ No existing row changes; `11b-3b` stays `done`. ⭐ 246 → 247 rows.
+#   ⭐⭐ **THIS SCHEDULES A RULED OBLIGATION, ⛔ IT DOES ⛔ NOT ASK A QUESTION.** `2026-09-04-189` cl.3
+#   (Trustee-ratified) already ruled the public/member name inversion *"must be closed"*; this row is
+#   AXIS A of the breach recorded at `#decision-2026-09-18-221`. ⛔ `-177` cl.2's CARRY is SUPERSEDED.
+#   ⚠ **SCOPE — the NAME FORM ONLY:** raise the member contributor list from `firstName + lastInitial`
+#   (`apps/api/src/modules/member-pool/handlers.ts`) to the resolved full name, through
+#   `ConfirmedContributorRow` → `packages/ui/src/contribution-list` → `apps/mobile`.
+#   ⛔⛔ **AXIS B — the omission PLACEHOLDER on the member list — is ⛔ NOT in this story** and must ⛔ not
+#   be folded into it: it is a live conflict between `-189` cl.3 and `2026-08-30-169` cl.1 (D5), ROUTED
+#   to the Panel 2026-09-18 and ⏳ AWAITING RULING. ⚠ Building it would pick a side of that conflict.
+#   ⚠ `backlog`, ⛔ not `ready-for-dev`: ⛔ no story file exists yet (per STATUS DEFINITIONS).
+#   ⚠ It is a MEMBER-SURFACE PII change that REVERSES shipped behaviour ⇒ it owes its own Task 0 and a
+#   `-195` cl.1 compliance statement, as `11b-3b`'s AC10 wrote one.)
 # last_updated: 2026-09-18a (⚠⛔⛔ **CORRECTION OF RECORD — `#decision-2026-09-18-221`.**
 #   ⛔ NO row changes; `11b-3b` stays `done`. ⛔ This is a RECORD fix, ⛔ not a build.
 #   ⚠⛔ **`-219`'s follow-up (2) called the member surface *"UNRULED"*. ⛔ IT IS RULED** — and has been
@@ -19051,6 +19065,21 @@ development_status:
   # ⇒ ⭐⭐ **WITH THIS ROW, `-214` IS CLOSED END TO END:** Consequence 2 = `11b-19`; cl.4(b) =
   # `11b-17` AC10; Consequence 3 = `11b-20`. ⚠ `11b-15`'s omission stays RECORDED against `11b-15`.
   11b-20-public-sahyog-vivran-message-block: ready-for-dev
+  # ⭐⭐ AXIS A of the `#decision-2026-09-18-221` breach — a DISCHARGE, ⛔ not an open question.
+  # `2026-09-04-189` cl.3 (Trustee-ratified) ALREADY ruled the public/member name inversion
+  # "must be closed"; `2026-09-04-195` cl.1 scopes it to the drive data class, which the
+  # contributor name is inside. ⇒ this row schedules a RULED obligation, ⛔ it does ⛔ not ask a
+  # question. ⛔ `2026-09-02-177` cl.2's CARRY is SUPERSEDED (it predates `-189` cl.3 by two days).
+  # ⚠ SCOPE — the NAME FORM only: raise the member contributor list from
+  # `firstName + lastInitial` (`apps/api/src/modules/member-pool/handlers.ts`,
+  # `splitFirstNameLastInitial`) to the resolved full name, through
+  # `ConfirmedContributorRow` → `packages/ui/src/contribution-list` → `apps/mobile`.
+  # ⛔⛔ AXIS B — the omission PLACEHOLDER on the member list — is ⛔ NOT in this story. It is a
+  # live conflict between `-189` cl.3 and `2026-08-30-169` cl.1 (D5) and is ROUTED to the Panel
+  # (`trustee-panel-routing-note-2026-09-18-member-surface-placeholder-clause-conflict.md`).
+  # ⚠ This is a MEMBER-SURFACE PII change that REVERSES shipped behaviour ⇒ it owns its own
+  # Task 0 and states its `-195` cl.1 compliance, as 11b.3b's AC10 did.
+  11b-21-member-contributor-name-form-parity: backlog
   epic-11b-retrospective: optional
 
   # ==========================================================================

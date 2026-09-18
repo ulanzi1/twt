@@ -22,10 +22,16 @@ the question, and it is why it is here rather than being built.
 > ⚠⛔ **A NOTE ON WHAT COUNTS AS EVIDENCE.** Every claim below is either **verbatim ratified text** from
 > `.decision-log.md` or **verified repository state** at a named line. ⛔ Nothing rests on a code
 > comment or a story's prose. §5 lists the commands.
-> ⚠ **AND A DISCLOSURE, BECAUSE IT BEARS ON HOW MUCH WEIGHT TO GIVE THIS NOTE:** the escalation that
-> produced `-219` recorded this matter as *"UNRULED"*. ⛔ That was **wrong** — it was ruled on
-> 2026-09-04 — and the error was the author's, corrected at `-221`. ⇒ ⭐ what follows is a **narrowed**
-> question, ⛔ not the one `-219` asked.
+> ⚠⛔ **AND A DISCLOSURE IN TWO PARTS, BECAUSE IT BEARS ON HOW MUCH WEIGHT TO GIVE THIS NOTE.**
+> **(1)** The escalation that produced `-219` recorded this matter as *"UNRULED"*. ⛔ That was **wrong**
+> — it was ruled on 2026-09-04 — and the error was the author's, corrected at `-221`. ⇒ ⭐ what follows
+> is a **narrowed** question, ⛔ not the one `-219` asked.
+> **(2)** ⚠ **This note's own §3 and §5 were CORRECTED on 2026-09-18, after it was first written.** The
+> original argued that a placeholder is MORE dangerous on the member surface, and recommended against
+> extending it. ⭐ Two checks against the shipped tree defeated that (§3); the superseded reasoning and
+> the superseded recommendation are both QUOTED in place, ⛔ not deleted, so the Panel can see what
+> changed and why. ⇒ ⚠ **the author has now been wrong about this question twice.** ⛔ Weigh the
+> EVIDENCE in §3 and §4, ⛔ not the author's reading in §5.
 
 ---
 
@@ -65,29 +71,46 @@ surface it stands **whole**.
 
 ---
 
-## 3. Why this is a real conflict and ⛔ not a drafting slip
+## 3. The conflict is FORMAL. ⛔ The privacy substance behind it does ⛔ not survive checking
 
 A placeholder on the member list **satisfies `-189` cl.3** (the member stops seeing less) by **breaching
-`-169` cl.1** (a marker occupies the position).
+`-169` cl.1** (a marker occupies the position). ⭐ That much is true and is why this note exists.
 
-⚠⛔⛔ **AND THE GROUND OF D5 BITES HARDER ON THE MEMBER SURFACE THAN IT DID ON THE PUBLIC ONE.** D5's
-stated reason is that the erasure must ⛔ not be *"identifiable or correlatable"*. Consider who is
-reading:
+⚠⛔⛔ **BUT THIS SECTION FIRST ARGUED SOMETHING STRONGER, AND IT WAS TESTED AND FOUND WEAK.** ⛔ The
+superseded reasoning is QUOTED, ⛔ not deleted:
 
-| | Public drive page | A member's own pool |
-|---|---|---|
-| Audience | strangers, unauthenticated | the pool's own assigned members |
-| Population | a drive's contributors, unknown to the reader | a small set of **known colleagues** |
-| What a placeholder says | *"someone here is unnamed"* | *"one of the people I know is unnamed"* |
+> ⛔ *"AND THE GROUND OF D5 BITES HARDER ON THE MEMBER SURFACE THAN IT DID ON THE PUBLIC ONE … on the
+> member surface a placeholder is **closer to naming the person**, which is the exact harm D5 exists to
+> prevent. That is the argument for leaving the member list alone."*
 
-⇒ ⭐ on the member surface a placeholder is **closer to naming the person**, which is the exact harm D5
-exists to prevent. ⚠ That is the argument for leaving the member list alone — and it is ⛔ not
-symmetrical with the reasoning that carried (E) on the public page.
+⭐ **TWO CHECKS AGAINST THE SHIPPED TREE DEFEAT IT:**
 
-⭐ **The argument the other way, stated as strongly:** you ratified (E) on a **FAIRNESS** ground — that
-every reader should learn the list is incomplete rather than only the arithmetic-minded. ⚠ The member
-has the **strongest interest** in their own pool's completeness, and is currently the one reader who
-cannot learn it at all.
+1. ⛔ **A MEMBER CANNOT ENUMERATE THEIR POOL'S ROSTER.** `AssignedPoolContributorList`
+   (`packages/contracts/src/contributions/pool-contributor-list.ts`) is `confirmed[]` **plus**
+   `pending { count, percentage }` — a **COUNT**, ⛔ not names. ⇒ there is ⛔ no list to intersect a
+   placeholder against. The *"small set of known colleagues"* the old argument leaned on is ⛔ not
+   available to the reader on that surface.
+2. ⭐⭐ **THE IDENTICAL PLACEHOLDER IS ⭐ ALREADY PUBLIC FOR THE SAME PEOPLE.** `/sahyog` links to every
+   drive page via a server-returned token (`apps/public/src/lib/sahyog-render.ts`, `driveHref`), the two
+   status enums are the **same three values** (`live` / `closed` / `verified`), and both lists come from
+   the **same producer**. ⇒ the member can open the public page for their own drive and see the
+   placeholder there — beside **full legal names**, rather than the shielded form their own screen gives
+   them.
+
+⇒ ⚠⛔ **WITHHOLDING THE PLACEHOLDER FROM THE MEMBER PROTECTS ⛔ NOTHING.** It does ⛔ not prevent that
+member learning anything; it makes them **the only reader who cannot see it on the surface that is
+theirs**, while a stranger sees it plus the fuller name form.
+
+⚠ **THE ONE RESIDUAL CASE, RECORDED RATHER THAN GLOSSED:** the per-Pariwar public kill switch. With
+public surfaces switched OFF, the drive page does ⛔ not render and the member surface WOULD be the sole
+disclosure point. ⭐ It is an **emergency control, default-ENABLED**, so the ordinary state is
+"public page available" — ⛔ but if the Panel weighs the erasure question under a kill-switched Pariwar,
+that is the case where the old argument still has force.
+
+⭐ **And the argument FOR, unchanged and now unopposed:** you ratified (E) on a **FAIRNESS** ground —
+every reader should learn the list is incomplete, ⛔ not only the arithmetic-minded. ⚠ The member has the
+**strongest interest** in their own pool's completeness and is currently the one reader who cannot learn
+it at all.
 
 ---
 
@@ -115,9 +138,25 @@ integer percentage.
 | **C** | **Give the member the COUNT without the marker** — publish the set size on the member wire so the list can say *"N confirmed"* beside fewer named rows, with ⛔ no per-row placeholder. | ⭐ Satisfies `-189` cl.3's *"never less"* without occupying the erased person's position. ⚠ Re-creates on the member surface exactly the derivable-tally property (E) was ratified as accepting on the public one. |
 | **D** | **Refer to counsel first**, as a DPDPA question about an erasure's visibility to a known peer group. | ⚠ Delay. ⭐ Adv. Mohit Agrawal is already engaged. |
 
-⭐ **Our reading is (C) or (A).** (C) is the only option that closes `-189` cl.3's gap without putting a
-marker in the erased person's position; (A) is the honest minimum if you judge D5's ground to prevail
-on a peer-visible surface. ⛔ We do ⛔ not recommend (B) without counsel.
+⚠⛔⛔ **OUR READING CHANGED, AND THE SUPERSEDED ONE IS QUOTED, ⛔ NOT DELETED.** ⛔ IT READ:
+
+> ⛔ *"Our reading is (C) or (A). (C) is the only option that closes `-189` cl.3's gap without putting a
+> marker in the erased person's position; (A) is the honest minimum … We do ⛔ not recommend (B) without
+> counsel."*
+
+⭐⭐ **IT IS NOW (B).** That recommendation rested on §3's correlation argument, which ⛔ did ⛔ not
+survive checking (see §3): a member cannot enumerate the roster, and the identical placeholder is
+already public for the same people.
+⇒ ⚠ **(C) is now the WEAKEST of the three, ⛔ not the safest.** It gives the member LESS than a stranger
+already gets, while still re-creating on the member surface the derivable tally you accepted knowingly
+on the public one. ⇒ it pays a privacy cost and ⛔ does ⛔ not buy the parity `-189` cl.3 asks for.
+⇒ ⚠ **(A) is now simply the breach, continued** — ⛔ no longer a defensible minimum, because the harm it
+was protecting against is ⛔ not there.
+⭐ **(B) is what `-189` cl.3 already points at**, and it is the only option that leaves a member no worse
+informed about their own pool than a stranger is.
+⚠ **We ⛔ do ⛔ not withdraw (D).** If the Panel weighs the kill-switched case in §3, or wants the
+data-subject question tested independently, counsel is already engaged — ⭐ but it is ⛔ no longer a
+precondition in our reading.
 
 ---
 
@@ -141,6 +180,14 @@ grep -n "^### Decision 2026-09-02-177" .decision-log.md         # cl.2, the CARR
 sed -n '/splitFirstNameLastInitial(fullName)/p' apps/api/src/modules/member-pool/handlers.ts
 grep -n "return null" apps/api/src/modules/member-pool/handlers.ts   # the five drop arms
 sed -n '/AssignedPoolContributorList = z/,/strict()/p' packages/contracts/src/contributions/pool-contributor-list.ts
+sed -n '/PendingContributorsAggregate = z/,/strict()/p' packages/contracts/src/contributions/pool-contributor-list.ts
+                                                                # a COUNT, not names — no roster to intersect
+
+# §3 check 2 — the same placeholder is already public, and reachable
+grep -n "driveHref(row.publicToken" apps/public/src/lib/sahyog-render.ts      # the index links every drive
+grep -n "PublicSahyogVivranStatus = z.enum" packages/contracts/src/public-pages/sahyog-vivran.ts
+grep -n "PublicSahyogDriveStatus = z.enum" packages/contracts/src/public-pages/sahyog-drive.ts
+                                                                # identical enums ⇒ no status window
 ```
 
 ---
@@ -158,15 +205,24 @@ someone who does the arithmetic.
 On the page a **member** sees for their own pool, we still remove the line completely. So a member
 cannot tell anyone was removed.
 
-**Making the two match would break a different rule you made.** When you ruled on erasure, you said the
-person should *disappear* rather than leave anything **"identifiable or correlatable"** behind. On a
-public page, a blank line among strangers says very little. On a member's own pool page, the other
-people are **their colleagues** — a blank line there is much closer to pointing at a specific person.
+**Making the two match touches a different rule you made.** When you ruled on erasure, you said the
+person should *disappear* rather than leave anything **"identifiable or correlatable"** behind.
 
-So: **is it better that a member can see something was removed, or better that nothing marks the spot
-where their colleague used to be?**
+⚠ **We first argued that this made the member page the more dangerous place for a placeholder** — the
+other people there are their colleagues, so a blank line points closer to someone specific. ⭐ **We
+checked that, and it does not hold.** Two reasons: a member is never shown a list of who else is in
+their pool (only a count of how many have not yet contributed), and the very same placeholder is
+**already on the public page** for the same drive — which that member can open in one click, where it
+sits beside people's **full names** rather than the shortened form their own screen shows.
 
-There is a middle option: show the member a **number** — *"12 confirmed"* above 11 names — without
-putting anything in the removed person's place. That tells them the list is incomplete without
-marking whose line is missing. ⚠ It has its own cost: from the number and the names, the count of
-removals can be worked out — the same trade you accepted knowingly for the public page.
+⇒ So keeping it off the member's page **protects nobody**. It only means the member is the one person
+who cannot see it, on the page that belongs to them.
+
+**One exception, for honesty:** if a Pariwar has switched its public pages off, the public page is not
+there, and the member's page would be the only place the removal shows. That switch is an emergency
+control and is normally on.
+
+There is also a middle option: show the member a **number** — *"12 confirmed"* above 11 names — without
+putting anything in the removed person's place. ⚠ On checking, this now looks like the **weakest**
+choice: it still lets the count of removals be worked out, and it leaves the member knowing less than a
+stranger does.

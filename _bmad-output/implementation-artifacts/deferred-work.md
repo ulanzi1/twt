@@ -15,6 +15,11 @@ MORE than the public, and ⛔ NEVER LESS"*) binds the contributor name; `-177` c
   the member list renders `firstName + lastInitial` (`apps/api/src/modules/member-pool/handlers.ts`,
   `splitFirstNameLastInitial`). ⛔ `-189` cl.3 already ruled this must be closed ⇒ it needs a
   MEMBER-SURFACE story, ⛔ not a ruling. ⚠ It was fenced out of `11b-3b` by AC8.
+- ✅ **AXIS B — OMISSION VISIBILITY. RULED 2026-09-18 → option (B), `#decision-2026-09-18-222`.** The
+  member list renders the placeholder in the SAME words; `-169` cl.1 (D5)'s placeholder half is
+  superseded on this surface too, the rest of D5 standing whole. ⭐ Discharges to story `11b-21`
+  alongside Axis A. ⛔ The original routing text is KEPT below
+  ([[feedback_closure_language_precision]]):
 - **AXIS B — OMISSION VISIBILITY. ⚠ ROUTED TO THE PANEL, ⛔ not deferred by choice.** `-219` cl.2 gave
   the public page a placeholder row; the member list still DROPS the row on all five causes. ⇒ closing
   the gap would satisfy `-189` cl.3 by breaching `2026-08-30-169` **cl.1 (D5)**, which forbids a marker

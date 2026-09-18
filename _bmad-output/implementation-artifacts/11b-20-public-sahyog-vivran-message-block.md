@@ -191,16 +191,16 @@ index, ⛔ not a table cell. The index keeps `index_line.*`.
 ⭐ §10.2 ruling 3 / `-214` Consequence 6. The District column is dropped when `district` is null
 **or when the deceased name is null**, because the district travels with the **deceased** (the member
 `selectMessageBlockTableColumns` precedent). The Nominee column is dropped when the holder name is null.
-An empty table renders **nothing**. ⛔ It never renders as a table of placeholders.
+An empty table renders **nothing**, ⛔ never a table of placeholders.
 ⚠ **With the name null on every drive today, no public drive shows the District column.** That is
 correct. ⛔ Do not file it as a defect.
-⚠ Branch on the **raw** `drive.district` (nullable). ⛔ Never branch on a value that has already had
+⚠ Branch on the **raw** `fetched.data.drive.district` (nullable). ⛔ Never branch on a value that has already had
 `districtUnknown` applied.
 **And** this AC carries the real drop-when-absent assertion that `deferred-work.md` routes to the first
 real render site.
 
 ### AC5 — The amount is RENDERED, never re-derived
-⭐ `{amount}` = `formatCurrency(drive.amountRaisedInr, 'en')` from the raw number (the same call and
+⭐ `{amount}` = `formatCurrency(fetched.data.drive.amountRaisedInr, 'en')` from the raw number (the same call and
 locale as the page's existing labels closure). ⚠ `model.amountRaisedInr` is the labelled string
 *"₹ X raised"*, ⛔ not a bare amount. `formatCurrency` already prints `₹ `, so ⛔ never add a literal ₹
 (the fence rejects ₹ before `amount`).
@@ -232,7 +232,24 @@ check, the null → `no_family` mapping (the regex shape the `11b-17` block alre
 and is added to `SCAN_FILES` with `renderPath: true` **in the same commit**. The scope safeguard in
 `check.ts` fails the run otherwise. ⚠ A selector named *without* `sahyog-vivran` would escape the gate
 silently. ⛔ Never use `renderPath: false` to get past it.
-**And (iii)** no new surface-field id is added to the model. `scrape-test.spec.ts` pins exactly 14
+**And (iii)** ⛔ no key is added to `SahyogVivranRenderModel` and ⛔ no new surface-field id is declared.
+`deriveFieldIds` (`surface-fields.ts`) **throws** on any model key without a field id, and
+`sahyog-vivran-render.test.ts` serialises the model. ⇒ the selector's result lives in a separate
+frontmatter `const` (Task 4), ⛔ never on `model`.
+**And (iv) every value the block shows is gated by the matrix.** The page header rules that *"EVERY value
+goes through `<MatrixField>`, so `getVisibility()` is the ONLY thing deciding what appears."*
+- The two table cells render through `<MatrixField surface="sahyog-vivran" field="nominee_account_holder_name">`
+  and `field="district"`, reusing the existing ids. ⛔ Never a bare `<td>{value}</td>`.
+- The headline interpolates two matrix fields into one sentence, so it cannot be wrapped cell by cell.
+  ⭐ Gate it instead, and **honour** both verdicts:
+  - `visibilityOf('sahyog-vivran', 'amount_raised_inr', 'public').visible` is false ⇒ the **whole block**
+    renders nothing, because both headline variants carry `{amount}` and `-216` rules out a no-amount one.
+  - `visibilityOf('sahyog-vivran', 'deceased_member_name', 'public').visible` is false ⇒ pass `null` as
+    the name, so the selector picks `no_family`.
+  ⛔ Do not throw on either verdict. Both can be honoured, unlike `drive_status`, whose
+  `driveStatusVisible` guard throws only because that page cannot honour it. Call `visibilityOf` once
+  per field in frontmatter (the page's existing N+1 rule), and cover both suppressed verdicts in Task 5.
+**And (v)** `scrape-test.spec.ts` pins exactly 14
 `sahyogVivranSurfaceFieldIds`. ⚠ That scan synthesises its HTML from field ids, so **it never sees the
 block's text**. The unit tests in Task 5 are the only coverage the text has.
 
@@ -251,15 +268,36 @@ block's text**. The unit tests in Task 5 are the only coverage the text has.
       District fields stay or go, citing the `11b-17` both-labels precedent; (b) how the page's
       "Not recorded" District field and the table's drop-rule coexist. If this cannot be settled without
       editing ratified text, **STOP and route it**. The nominee value is the first account's.
-- [ ] **Task 3 — The selector** (AC4, AC6, AC7): a **pure** module,
-      `apps/public/src/lib/sahyog-vivran-message-block.ts` (⭐ the name keeps it inside the
+- [ ] **Task 3 — The selector** (AC4, AC6, AC7): a **pure** module exporting
+      `selectSahyogVivranMessageBlock`, at `apps/public/src/lib/sahyog-vivran-message-block.ts` (⭐ the name keeps it inside the
       financial-truth safeguard). It takes the **raw** DTO values: `amountRaisedInr: number`,
       `deceasedMemberName`, `district`, and the first account's holder name. Order, which is
       load-bearing: **(1)** `amountRaisedInr <= 0` ⇒ `null`; **(2)** name null ⇒
       `no_family` (`-223` cl.1); **(3)** otherwise `.full` with the name. Plus a table-column
       selector mirroring `selectMessageBlockTableColumns`.
-- [ ] **Task 4 — The render** (AC1, AC2, AC3, AC5) in `[driveToken].astro`: bare-literal keys only;
-      `{amount}` from `formatCurrency(drive.amountRaisedInr, 'en')`; ⛔ no multiplication, ⛔ no presenter,
+- [ ] **Task 4 — The render** (AC1, AC2, AC3, AC5, AC8(iii)/(iv)) in `[driveToken].astro`.
+      ⭐ **The page has no `drive` binding.** It exposes only `fetched` and `model`, and the raw values
+      exist only when `fetched.ok`. Source the selector input like this, which also makes the outage
+      path render nothing:
+      ```ts
+      const messageBlock = fetched.ok
+        ? selectSahyogVivranMessageBlock({
+            amountRaisedInr: fetched.data.drive.amountRaisedInr,
+            deceasedMemberName: fetched.data.drive.deceasedMemberName,
+            district: fetched.data.drive.district,
+            nomineeName: fetched.data.drive.nomineeBankAccounts[0]?.accountHolderName ?? null,
+          })
+        : null;
+      ```
+      ⛔ Never read `model.amountRaisedInr`: it is the labelled string "₹ X raised", and `''` on outage.
+      ⭐ **Tokens are `{family_name}` and `{amount}`** (`sahyog-shared.json`), ⛔ not `-214`'s `{familyName}`.
+      The page's `ts()` helper takes no params, so add a param-taking `sahyog-shared` resolver beside it.
+      Bare-literal keys only; `{amount}` from `formatCurrency(fetched.data.drive.amountRaisedInr, 'en')`.
+      Table cells through `<MatrixField>`, and the headline gated by `visibilityOf` (AC8(iv)).
+      ⭐ Update the stale `$comment.message_block` in **both** `en` and `hi` `sahyog-shared.json`. It
+      still says *"RENDERED NOWHERE YET"*, which is false since `11b-17` and false on both halves after
+      this story. ⭐ Edit the comment only, ⛔ never the ratified strings.
+      ⛔ no multiplication, ⛔ no presenter,
       ⛔ never `deliveredTotal`. Respect the family-13 a11y rules (`sahyog-vivran-a11y.test.ts`): ⛔ no
       `<script>`, ⛔ no `role=` on `ul`/`li`/`nav`, ⛔ no `title=`.
 - [ ] **Task 5 — Tests** (AC4–AC8), in `apps/public/tests/` against the pure module with the real
@@ -269,7 +307,9 @@ block's text**. The unit tests in Task 5 are the only coverage the text has.
   - [ ] ₹0 silence **and** the order check (AC7)
   - [ ] a null `district` drops the column; a null name drops the District column; an empty table renders nothing (AC4)
   - [ ] real-`t()` legs for every resolved key in both locales ([[feedback_stub_must_call_not_transcribe]])
-  - [ ] **NARROW** the dark-copy fence; register the module in `SCAN_FILES` (AC8)
+  - [ ] **NARROW** the dark-copy fence; register the module in `SCAN_FILES` (AC8). ⚠ ⛔ Do not transcribe the `11b-17` guard block's messages: its comment says *"a ₹0 drive whose family has not authorised name publication"* and its assertion says *"₹0 unconsented drive"*, both false under `-223` cl.4. Reword them, and correct those two member-block lines in the same commit. Adapt the regexes to the public selector's own parameter names, since the member regexes are tied to `detail.`
+  - [ ] a test proves the block is absent when `fetched.ok` is false (the outage path)
+  - [ ] matrix verdicts (AC8(iv)): with `amount_raised_inr` suppressed, no block; with `deceased_member_name` suppressed, `no_family`
 - [ ] **Task 6 — Record what this story does not close.** `deferred-work.md`'s **Q1** (suspended member /
       unmasked coordinates) names `11b-20`, but it does not apply here: this page is unauthenticated,
       and `-217` (1) ruled Q1. ⭐ Record it as **not applicable**. ⛔ Do not re-raise it.
@@ -334,7 +374,8 @@ figure"* surface description is ⛔ not this story's to edit.
 
 | Date | Version | Description | Author |
 |---|---|---|---|
-| 2026-09-19 | 0.5 | **STARTABLE. No code; the row stays `ready-for-dev`, now unblocked.** ⚠⛔ **v0.4's B1 rested on a false premise, caught by BigDev:** it assumed a family or member can *withhold* the deceased member's name. ⛔ Neither can: `-160` cl.4(a) makes the member's own T&C the basis, and cl.6 removed the family's veto. The *"withheld name"* label came from the 2026-09-05 note §8.3(4), which quoted pre-`-160` public copy; v0.4 also added *"a member not having agreed"* on its own. ⇒ the routing note is **WITHDRAWN**, and B1 is decided as an author-commit, `-223` cl.1: a null name renders `no_family`, after the ₹0 check. **B2** is discharged by `-223` cl.2 (counsel's clearance recorded on BigDev's attestation). Rewritten: Preflight, Policy meaning, Trap 1, AC0, AC6, AC8(i), Task 0/1/3/5, References. Also noted: the stale `sahyog-drive:consent.note` on the public list is **not this story's** (`-223` Consequence 3). | BigDev + Claude |
+| 2026-09-19 | 0.6 | **Independent fresh-context validation of v0.5: nothing blocking. Six fixes applied; no code, and the row is unchanged.** **(1)** The story pointed at a `drive` variable the page does not have. Task 4 now gives the exact `fetched.ok ? … fetched.data.drive.* : null` source, which also makes the outage path structural. AC8(iii): ⛔ no new `SahyogVivranRenderModel` key, because `deriveFieldIds` throws. **(2)** Nothing gated the block on the matrix. New **AC8(iv)**: the table cells go through `<MatrixField>` with the existing ids; the headline is gated by `visibilityOf`: a suppressed amount drops the whole block and a suppressed name selects `no_family`. Both verdicts are honoured, ⛔ not thrown on, unlike `drive_status`. **(3)** The `11b-17` guard block the story says to mirror still carries the refuted "unconsented" / "not authorised" wording, and its regexes are tied to `detail.` ⇒ reword it, correct those member lines, and adapt the regexes. **(4)** Token names `{family_name}` / `{amount}` are stated, plus the param-taking resolver. **(5)** The stale `$comment.message_block` is updated in both locales. **(6)** Two glyph slips fixed. A test for the outage path was added. | BigDev + Claude |
+| 2026-09-19 | 0.5 | **STARTABLE. No code; the row stays `ready-for-dev`, now unblocked.** ⚠ **v0.4's B1 rested on a false premise, caught by BigDev:** it assumed a family or member can *withhold* the deceased member's name. ⛔ Neither can: `-160` cl.4(a) makes the member's own T&C the basis, and cl.6 removed the family's veto. The *"withheld name"* label came from the 2026-09-05 note §8.3(4), which quoted pre-`-160` public copy; v0.4 also added *"a member not having agreed"* on its own. ⇒ the routing note is **WITHDRAWN**, and B1 is decided as an author-commit, `-223` cl.1: a null name renders `no_family`, after the ₹0 check. **B2** is discharged by `-223` cl.2 (counsel's clearance recorded on BigDev's attestation). Rewritten: Preflight, Policy meaning, Trap 1, AC0, AC6, AC8(i), Task 0/1/3/5, References. Also noted: the stale `sahyog-drive:consent.note` on the public list is **not this story's** (`-223` Consequence 3). | BigDev + Claude |
 | 2026-09-18 | 0.4 | **Second `validate` pass, re-derived at `6547ead2`. No code; the row is unchanged (`ready-for-dev`, blocked).** v0.3 had lived only on the unmerged local branch `governance/11b-20-validate` and was cherry-picked onto `main` first. **Findings:** **(1)** `11b-3b` is `done`, so both code dependencies are discharged. **(2)** v0.3 ordered *"render `deliveredTotal`"* at five sites, which is **red on write**: the name is banned on the render path by the financial-truth gate and `sahyog-vivran-render.test.ts`. The wire field is `amountRaisedInr`. **(3)** v0.3's clause-pin gate (Trap 1 / AC6 / Task 3) **can never be satisfied**. The wire collapses four causes into one null and forbids a per-cause signal, and the basis is the member's own T&C, not a family choice. So *"no_family for consent and nothing else"* cannot be implemented, and the "family declined" premise was never ruled. Against it: `-214` C5, `11b-3b`'s `deferred-work.md` hand-off, and the shipped index/member selectors all map null → `no_family`. **BigDev routed the question to the Panel (B1)** instead of deciding it on our own record. **(4)** A routing-note-only obligation was found: §8.4(iii) requires counsel to review the join line *"before it goes public"*. BigDev reports it was cleared, but no record exists ⇒ **B2**. **(5)** The new selector must be named `sahyog-vivran-*.ts` and registered in `SCAN_FILES`, or it escapes the gate. **(6)** The page has no ₹0 branch; `model.amountRaisedInr` is a labelled string, so `{amount}` needs `formatCurrency` on the raw number. **(7)** Trap 4 now cites the `11b-17` both-labels precedent and the first-account nominee precedent, and notes that this page (unlike the index) decrypts the holder name correctly. **(8)** No public drive shows the District column today, by design. **(9)** The scrape test cannot see the block's text. **(10)** Coordination with `11b-22`. `-217`…`-222` were checked and do not bind this story. | BigDev + Claude |
 | 2026-09-15 | 0.3 | First `validate` pass: `-216` cl.1 (₹0 silence) added as Trap 6/AC7; the presenter remedy struck; `11b-19` `done`; the dark-copy fence named; Trap 4 resolved; three `deferred-work.md` triggers carried. ⚠ *(v0.4 note: its `deliveredTotal` instrument and its clause-pin gate are both superseded; see 0.4.)* | BigDev + Claude |
 | 2026-09-11 | 0.2 | The `11b-3b` dependency corrected (`deliveredTotal`, not `rosterSize`/`fixedAmount`; the name gated on the clause, not the merge). | BigDev + Claude |

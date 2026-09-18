@@ -1,3 +1,11 @@
+# last_updated: 2026-09-19b (⭐ **STORY `11b-20` v0.6 — an independent fresh-context validation of v0.5
+#   found nothing blocking; six fixes applied.** No code. ⛔ ZERO ROWS MOVE; `11b-20` stays
+#   `ready-for-dev`, unblocked. Fixes: (1) the exact `fetched.ok ? fetched.data.drive.* : null` selector
+#   source (the page has no `drive` binding), and ⛔ no new render-model key (`deriveFieldIds` throws);
+#   (2) new AC8(iv): table cells through `<MatrixField>`, the headline gated by `visibilityOf`, and both
+#   verdicts honoured; (3) the `11b-17` guard block's refuted "unconsented" wording is ⛔ not to be
+#   transcribed, and is corrected; (4) tokens `{family_name}`/`{amount}` stated; (5) the stale
+#   `$comment.message_block` is updated; (6) two glyph slips fixed.)
 # last_updated: 2026-09-19a (⭐ **STORY `11b-20` v0.5 — STARTABLE. `#decision-2026-09-19-223` (author-commit).
 #   No code. ⛔ ZERO ROWS MOVE:** `11b-20` stays `ready-for-dev`, now with ⛔ no blocker.
 #   ⚠⛔ **v0.4's B1 rested on a FALSE PREMISE, caught by BigDev:** it assumed a family or member can

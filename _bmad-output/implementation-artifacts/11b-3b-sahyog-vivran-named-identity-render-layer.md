@@ -76,11 +76,19 @@ stated against evidence, ⛔ not against a narrative.
     fixed, each proven by MUTATION rather than assertion.
 
 ⚠⛔⛔ **WHAT `done` DOES ⛔ NOT MEAN HERE — ⛔ do ⛔ not read these as closed:**
-  · ⚠ `-219`'s **Open follow-up (2)** — the member surface is now ASYMMETRIC: the public page shows an
-    unnamed row a MEMBER viewing the same pool does ⛔ not see. ⭐ At least the THIRD instance of the
-    public-sees-more shape. ⛔ UNRULED.
+  · ⚠⛔ `-219`'s **Open follow-up (2)** — ⛔ **THIS LINE SAID *"⛔ UNRULED"* AND WAS WRONG TWICE OVER;
+    the superseded wording is kept:** *"the member surface is now ASYMMETRIC … ⛔ UNRULED."*
+    ⭐ **(a)** It was ⛔ never unruled — `2026-09-04-189` **cl.3** had bound it since 2026-09-04, and
+    **THIS STORY'S OWN AC10 SAID SO** a day before `-219` was written (corrected at
+    `#decision-2026-09-18-221`). ⭐ **(b)** The placeholder half is now ruled too:
+    `#decision-2026-09-18-222` (Trustee-ratified) extends the placeholder to the member list in the
+    SAME words. ⇒ ⭐ **BOTH axes are RULED and BOTH are scheduled at story `11b-21`.**
+    ⚠ What remains true: the asymmetry is LIVE until `11b-21` ships, and it is at least the **THIRD**
+    instance of the public-sees-more shape (⛔ not the second, as `-219` first said).
   · ⚠ `-219`'s **Open follow-up (3)** — `value.contributions_count` still renders TWO different numbers
     under one key, and the placeholder makes a disagreement MORE conspicuous, ⛔ not less.
+    ⭐ **SCHEDULED 2026-09-18 as `11b-22`.** ⚠⛔ **SCHEDULED ⛔ does ⛔ not mean ANSWERED** — the COPY
+    CALL is still owed and is **BigDev's**, ⛔ not the Panel's.
   · ⚠ The **counsel's-clause** item (`-173` Q3) stays OPEN; the deceased member's name on this page is
     still fail-closed and renders NOTHING. ⛔ This story shipped the render path, ⛔ not the name.
   · ⚠ The gate is a **TRIPWIRE**, ⛔ not a proof: an aliased const, a cross-statement product, a

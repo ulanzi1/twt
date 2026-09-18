@@ -1,3 +1,18 @@
+# last_updated: 2026-09-18c (⭐ **ROW ADDED — `11b-22-confirmed-count-copy-disambiguation`: `backlog`.**
+#   ⛔ No existing row changes. ⭐ 247 → 248 rows. ⇒ `#decision-2026-09-16-219`'s THIRD and LAST open
+#   follow-up now has a home; ⛔ only the Panel-routed Axis B remains without one, deliberately.
+#   ⚠⛔ **TWO DIFFERENT NUMBERS RENDER UNDER ONE KEY.** `value.contributions_count` (*"{count} confirmed"*
+#   / *"{count} पुष्ट"*) resolves TWICE in `[driveToken].astro` — `:201` for the confirmed-contribution
+#   EVENT count (Drive details) and `:161` for the contributor SET SIZE (above the list). ⭐ The render
+#   module's own doc-block says they *"answer different questions"* and ⛔ must ⛔ not be reconciled.
+#   ⚠⛔ **`-219` cl.1 MADE THIS SHARPER, ⛔ NOT SOFTER:** with the placeholder row the list's row count and
+#   its stated count now AGREE, so a disagreement with the Drive-details figure stands out — a reader
+#   sees the page contradict itself under identical wording.
+#   ⛔ DEFERRED TWICE by code review as outside a reviewer's authority — inventing copy on a
+#   governance-heavy i18n surface is a PRODUCT call, ⛔ not a reviewer's. ⇒ this row is where it is made.
+#   ⚠ BOTH LOCALES, and ⛔ NEITHER NUMBER MAY BE DROPPED: they are different facts, and
+#   `2026-08-30-169` cl.6 (D3-aggregate) is precisely why the EVENT count keeps counting an erased
+#   member while the SET SIZE need not. ⚠ `backlog`, ⛔ not `ready-for-dev` — ⛔ no story file yet.)
 # last_updated: 2026-09-18b (⭐ **ROW ADDED — `11b-21-member-contributor-name-form-parity`: `backlog`.**
 #   ⛔ No existing row changes; `11b-3b` stays `done`. ⭐ 246 → 247 rows.
 #   ⭐⭐ **THIS SCHEDULES A RULED OBLIGATION, ⛔ IT DOES ⛔ NOT ASK A QUESTION.** `2026-09-04-189` cl.3
@@ -19080,6 +19095,21 @@ development_status:
   # ⚠ This is a MEMBER-SURFACE PII change that REVERSES shipped behaviour ⇒ it owns its own
   # Task 0 and states its `-195` cl.1 compliance, as 11b.3b's AC10 did.
   11b-21-member-contributor-name-form-parity: backlog
+  # ⭐ Open follow-up (3) of `#decision-2026-09-16-219` — a COPY call, ⛔ not a code defect.
+  # ⚠⛔ TWO DIFFERENT NUMBERS RENDER UNDER ONE KEY on the same page: `value.contributions_count`
+  # ("{count} confirmed" / "{count} पुष्ट") is resolved TWICE in
+  # `apps/public/src/pages/sahyog-vivran/[driveToken].astro` — at `:201` for
+  # `drive.confirmedContributionCount` (the confirmed-contribution EVENT count, in Drive details)
+  # and at `:161` for the contributor SET SIZE above the list. ⭐ The render module's own
+  # doc-block says the two "answer different questions" and ⛔ must ⛔ not be reconciled.
+  # ⚠⛔ `-219` cl.1 made this SHARPER, ⛔ not softer: with the placeholder row the list's row count
+  # and its stated count now AGREE, so a disagreement with the Drive-details figure is more
+  # conspicuous — a reader sees the page contradict itself under identical wording.
+  # ⛔ DEFERRED TWICE by review as outside a reviewer's authority (inventing copy on a
+  # governance-heavy i18n surface is a product call). ⇒ this row is where that call gets made.
+  # ⚠ BOTH LOCALES, and ⛔ neither number may be dropped: they are different facts, and
+  # `2026-08-30-169` cl.6 (D3-aggregate) is why the event count keeps counting an erased member.
+  11b-22-confirmed-count-copy-disambiguation: backlog
   epic-11b-retrospective: optional
 
   # ==========================================================================

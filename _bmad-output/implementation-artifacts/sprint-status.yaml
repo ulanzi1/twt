@@ -1,3 +1,23 @@
+# last_updated: 2026-09-18d (⭐⭐ **TRUSTEE-RATIFIED — `#decision-2026-09-18-222` (Dhiraj Rahul + Kalpana
+#   Bharti): THE MEMBER CONTRIBUTOR LIST RENDERS THE PLACEHOLDER TOO, option (B), in the SAME words —
+#   `A contributor` / `एक सहकर्मी`.** ⛔ No row status changes; ⛔ no member-specific variant, ⛔ no second key.
+#   ⇒ ⭐⭐ **ZERO routing notes now await a Panel ruling** — `-219`'s last open follow-up is closed.
+#   ⛔⛔ **`2026-08-30-169` cl.1 (D5) IS SUPERSEDED IN PART ON THIS SURFACE TOO** ⇒ with `-219` cl.2 the
+#   supersession is complete across BOTH contributor lists. ⚠ **THE PLACEHOLDER HALF ⛔ ONLY:** D5's
+#   ⛔ NO-ROW-KEY half stands (also `-177` cl.3), RTBF still removes the public representation, and the
+#   *"identifiable or correlatable"* ground survives as `-219` cl.4(c) — ⛔ NOTHING may disclose WHICH of
+#   the five causes applies. ⭐ `-219` cl.3's word constraint travels with the word and is ⛔ not re-opened.
+#   ⭐ **`11b-21` IS RE-SCOPED to carry BOTH axes** (name form + placeholder) — they discharge on ONE code
+#   path. ⚠⛔ Its own exclusion fence (*"Axis B is ⛔ NOT in this story"*) is **LIFTED BY `-222`, ⛔ not
+#   silently**, and the superseded wording is kept in the row's comment.
+#   ⚠⛔ **A BUILD HAZARD RECORDED WITH IT:** `packages/ui/src/contribution-list/presenter.ts` THROWS on an
+#   unresolvable name and `i18n-keys.ts` DELIBERATELY excludes `member.anonymousMember`. ⛔ The placeholder
+#   may ⛔ NOT be built by re-admitting that key — it would state the person exercised erasure when the name
+#   was merely absent, *"a false statement about a data-subject right on the one surface that exists to
+#   protect it"*. ⭐ A NEW key, in the ruled word.
+#   ⚠ **AND A LIMIT ON WHAT THIS RULING DOES TO `-220`:** the Panel has now SEEN and adopted the Hindi
+#   word — ⛔ but that does ⛔ NOT retroactively make `-220` a Panel act, and `-220`'s record of the
+#   ordering breach STANDS UNCHANGED.)
 # last_updated: 2026-09-18c (⭐ **ROW ADDED — `11b-22-confirmed-count-copy-disambiguation`: `backlog`.**
 #   ⛔ No existing row changes. ⭐ 247 → 248 rows. ⇒ `#decision-2026-09-16-219`'s THIRD and LAST open
 #   follow-up now has a home; ⛔ only the Panel-routed Axis B remains without one, deliberately.
@@ -19085,13 +19105,24 @@ development_status:
   # "must be closed"; `2026-09-04-195` cl.1 scopes it to the drive data class, which the
   # contributor name is inside. ⇒ this row schedules a RULED obligation, ⛔ it does ⛔ not ask a
   # question. ⛔ `2026-09-02-177` cl.2's CARRY is SUPERSEDED (it predates `-189` cl.3 by two days).
-  # ⚠ SCOPE — the NAME FORM only: raise the member contributor list from
+  # ⚠ SCOPE — BOTH AXES of the `-221` breach, on one code path:
+  # (A) the NAME FORM — raise the member contributor list from
   # `firstName + lastInitial` (`apps/api/src/modules/member-pool/handlers.ts`,
   # `splitFirstNameLastInitial`) to the resolved full name, through
   # `ConfirmedContributorRow` → `packages/ui/src/contribution-list` → `apps/mobile`.
-  # ⛔⛔ AXIS B — the omission PLACEHOLDER on the member list — is ⛔ NOT in this story. It is a
-  # live conflict between `-189` cl.3 and `2026-08-30-169` cl.1 (D5) and is ROUTED to the Panel
-  # (`trustee-panel-routing-note-2026-09-18-member-surface-placeholder-clause-conflict.md`).
+  # ⭐⭐ AXIS B IS NOW IN THIS STORY TOO — `#decision-2026-09-18-222` (Trustee-ratified 2026-09-18,
+  # option (B)): the member list renders the placeholder in the SAME words, `A contributor` /
+  # `एक सहकर्मी`. ⛔ No member-specific variant, ⛔ no second key.
+  # ⚠⛔ **THIS ROW'S OWN EXCLUSION FENCE IS LIFTED BY THAT ENTRY, ⛔ NOT SILENTLY.** ⛔ IT READ:
+  # "AXIS B — the omission PLACEHOLDER on the member list — is ⛔ NOT in this story. It is a live
+  # conflict between `-189` cl.3 and `2026-08-30-169` cl.1 (D5) and is ROUTED to the Panel." ⇒ that
+  # conflict is CLOSED: `-189` cl.3 prevails and D5's PLACEHOLDER HALF is superseded here too.
+  # ⛔⛔ D5's OTHER halves STAND WHOLE — ⛔ NO ROW KEY (also `-177` cl.3 `D10-rowkey(a)`), RTBF still
+  # removes the public representation, and ⛔ NOTHING may disclose WHICH of the five causes applies.
+  # ⚠⛔ `packages/ui/src/contribution-list/presenter.ts` THROWS on an unresolvable name and
+  # `i18n-keys.ts` deliberately EXCLUDES `member.anonymousMember` — ⛔ the placeholder may ⛔ NOT be
+  # built by re-admitting that key (it would state the person exercised erasure when the name was
+  # merely absent). ⭐ A new key, in the RULED word, under `-219` cl.3's all-five-causes constraint.
   # ⚠ This is a MEMBER-SURFACE PII change that REVERSES shipped behaviour ⇒ it owns its own
   # Task 0 and states its `-195` cl.1 compliance, as 11b.3b's AC10 did.
   11b-21-member-contributor-name-form-parity: backlog

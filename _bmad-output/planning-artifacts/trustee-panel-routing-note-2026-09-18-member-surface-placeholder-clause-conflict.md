@@ -1,10 +1,25 @@
 # Trustee Panel routing note — 2026-09-18
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULING — recorded 2026-09-18 (Dhiraj Rahul + Kalpana Bharti)
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, the ruling is transcribed into this block
-> and into `.decision-log.md`, and the sections below are kept **unedited** as the question AS PUT
-> ([[feedback_supersede_never_reinterpret]]).
+> **Option (B).** The **member** contributor list renders the placeholder too, in the **same words** —
+> `A contributor` / `एक सहकर्मी`. ⛔ No member-specific variant, ⛔ no second key.
+>
+> ⇒ `2026-08-30-169` **cl.1 (D5)**'s placeholder prohibition is **SUPERSEDED IN PART** on this surface
+> as well, completing the supersession across **both** contributor lists. ⚠⛔ **The placeholder half
+> ⛔ ONLY** — D5's **⛔ NO ROW KEY**, its RTBF representation-removal, and its *"identifiable or
+> correlatable"* ground all **STAND WHOLE**, the last of these as `-219` cl.4(c): ⛔ nothing may
+> disclose WHICH of the five causes applies.
+>
+> ⭐ `-219` cl.3's word constraint travels with the word and is ⛔ not re-opened. ⛔ `Anonymous` /
+> `गुमनाम` and ⛔ `Not recorded` / `दर्ज नहीं` stay ruled out by name.
+>
+> ⇒ **the `-189` cl.3 vs D5 conflict is CLOSED** — `-189` cl.3 prevails on this surface.
+>
+> Recorded as **Decision `2026-09-18-222`**. ⭐ Axis A and Axis B now discharge on the same code path,
+> so story **`11b-21`** carries both and its Axis-B exclusion fence is **lifted by that entry**.
+> ⚠ The sections below are the question **as it was put**, kept ⛔ unedited — including both
+> corrections the note carried before it reached the Panel.
 
 ---
 

@@ -1,3 +1,23 @@
+# last_updated: 2026-09-18h (⭐⭐ **`11b-3b` — FULL `ci:local` PASSED 34/34** on the test DB, integration included,
+#   after it caught a THIRD fourth-pass regression: `pii-scrape` FR-91 requires the paginated page's own
+#   source to call `parsePageParams()`, which the fourth pass had moved into a helper. Call restored to
+#   the page. ⛔ Status UNCHANGED: `done`. ⚠ Nothing committed yet.)
+# last_updated: 2026-09-18g (⭐ **`11b-3b` SIXTH CODE-REVIEW PASS — ADVERSARIAL review of the fifth pass's patches.**
+#   ⛔ Status UNCHANGED: `done` → `done`. 0 decisions · 10 patches: 1–8 and 10 APPLIED, #9 RECORDED only per
+#   BigDev ("record the behavioral cost and verification requirement without inventing a new policy") ·
+#   4 deferred · 7 dismissed. ⭐ The shielded-mononym fix moved to `@twt/domain` (`publicNameTokens`, an
+#   allowlist) and now covers the directory and the `/sahyog` index too. ⚠ Full `ci:local` ⛔ not run.)
+# last_updated: 2026-09-18f (⭐ **`11b-3b` FIFTH CODE-REVIEW PASS — ADVERSARIAL review of the fourth pass's own
+#   patches.** ⛔ Status UNCHANGED: `done` → `done`. 1 decision (BigDev → option 1: classify KMS/DB
+#   failures by the ERROR; the fourth pass's canary probe passed while stored envelopes failed, opened a
+#   timing channel and wrote canary audit lines) · 15 patches + 1 found regression (the fourth pass left
+#   its new paging module out of the financial-truth gate's SCAN_FILES — gate RED) APPLIED · 0 deferred ·
+#   7 dismissed. ⚠ Full `ci:local` ⛔ not run; affected suites were.)
+# last_updated: 2026-09-18e (⭐ **`11b-3b` FOURTH CODE-REVIEW PASS — whole branch vs `origin/main`.** ⛔ Status
+#   UNCHANGED: `done` → `done`. 1 decision (BigDev → option A: the outage rule is now a position-independent
+#   KMS probe, closing a `-219` cl.3 breach the 2026-09-17 fix had introduced at `?limit=1`) · 20 patches
+#   APPLIED · 6 deferred (`deferred-work.md`, fourth pass) · 5 dismissed. ⚠ Full `ci:local` ⛔ not run;
+#   the affected suites were — see the story's FOURTH PASS block.)
 # last_updated: 2026-09-18d (⭐⭐ **TRUSTEE-RATIFIED — `#decision-2026-09-18-222` (Dhiraj Rahul + Kalpana
 #   Bharti): THE MEMBER CONTRIBUTOR LIST RENDERS THE PLACEHOLDER TOO, option (B), in the SAME words —
 #   `A contributor` / `एक सहकर्मी`.** ⛔ No row status changes; ⛔ no member-specific variant, ⛔ no second key.

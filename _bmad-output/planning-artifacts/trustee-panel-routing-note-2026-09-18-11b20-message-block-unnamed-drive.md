@@ -8,11 +8,17 @@
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ⛔ WITHDRAWN — 2026-09-19, before any ruling. ⛔ Do not send.
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into
-> `.decision-log.md` as a new decision id. ⭐ Everything below is then kept **unedited** as the question
-> **as it was put** ([[feedback_supersede_never_reinterpret]]).
+> ⚠⛔ **The question rests on a false premise.** It assumes a family or a member can withhold the
+> deceased member's name. ⛔ Neither can: [`-160`](../../.decision-log.md#decision-2026-08-28-160)
+> **cl.4(a)** makes the member's own accepted T&C the basis, and **cl.6** removed the family's veto.
+> A missing name only ever means the clause is not yet pinned, or a technical cause. ⇒ the no-name
+> headline has no other scope, and using it there is ⛔ not a Panel matter.
+> ⭐ **Decided instead as an author-commit:** `.decision-log.md#decision-2026-09-19-223` cl.1 (a null
+> name renders `no_family`, after the ₹0 check). Caught by BigDev.
+> ⭐ Everything below is kept **unedited** as the question as it was mis-put
+> ([[feedback_supersede_never_reinterpret]]).
 
 ---
 

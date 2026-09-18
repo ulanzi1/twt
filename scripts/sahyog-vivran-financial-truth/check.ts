@@ -77,7 +77,7 @@ const SCAN_FILES: readonly { readonly path: string; readonly renderPath: boolean
   // The domain read — where the event types actually live.
   { path: 'packages/domain/src/pool/sahyog-vivran-read.ts', renderPath: false },
   // The wire shape. ⭐ On the render path: the TARGET and its factors may ⛔ never reach the wire.
-  // ⛔ NOT "nothing about an amount" — `amountRaisedInr` SHIPS here (`-190` cl.6, `-189` cl.5 record
+  // ⛔ NOT "nothing about an amount" — `amountRaisedInr` SHIPS here (`-190` cl.6, `-189` Consequence 5 record
   // the rupee boundary as CROSSED at 11b.3b); it is the target/expected-total/shortfall that is
   // forbidden "in any field, under any name" (Review finding, 2026-09-16 second pass).
   { path: 'packages/contracts/src/public-pages/sahyog-vivran.ts', renderPath: true },
@@ -88,6 +88,11 @@ const SCAN_FILES: readonly { readonly path: string; readonly renderPath: boolean
   // The SSR page's client + its pure render module.
   { path: 'apps/public/src/lib/sahyog-vivran.server.ts', renderPath: true },
   { path: 'apps/public/src/lib/sahyog-vivran-render.ts', renderPath: true },
+  // ⭐ Added 2026-09-18 (11b.3b fifth review pass) — the page's query/paging rules, EXTRACTED from
+  // `[driveToken].astro` by the fourth pass. ⚠ That pass created the file WITHOUT registering it and
+  // this gate's completeness check went RED; its only arithmetic is `page * limit`, which rule (3)
+  // does ⛔ not match (neither operand is a count or an amount).
+  { path: 'apps/public/src/lib/sahyog-vivran-paging.ts', renderPath: true },
   // ⭐ review finding — was MISSING. The page itself names no amount operand today (D1(c) is
   // refused at this story), but it is the render path and belongs on rule (3)'s watch list the
   // moment 11b.3b lifts the `@twt/ui` fence here.

@@ -1330,10 +1330,9 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
         ],
       },
     // ⭐ Story 11b.3b (Task 3) — the contributor PAGE and the SET SIZE.
-    // ⚠⛔ `total` is deliberately LARGER than `items.length`: rows are omitted AFTER paging (RTBF, the
-    // erasure sentinel, an unresolvable name, a mononym under `shielded_name`), so a page holding
-    // FEWER rows than it counts is the ORDINARY case, ⛔ not a broken fixture. ⭐ A fixture where the
-    // two agreed would leave the whole *"N confirmed beside FEWER than N rows"* property unexercised.
+    // ⚠ SUPERSEDED HEADER, quoted ⛔ not deleted (fifth review pass, 2026-09-18 — the correction
+    // below was appended beneath it and the header kept asserting the old shape): *"`total` is
+    // deliberately LARGER than `items.length`: rows are omitted AFTER paging"*.
     // ⚠⛔⛔ **CORRECTED 2026-09-17 — THIS FIXTURE ENCODED A WIRE SHAPE THE API CAN ⛔ NO LONGER EMIT.**
     // ⛔ IT READ: `items: [{ name: 'Rajesh Kumar Sharma' }, { name: 'Meera Bai Yadav' }]` beside
     // `total: 3` — TWO rows for THREE contributors, which is the SUPERSEDED drop-the-row shape.

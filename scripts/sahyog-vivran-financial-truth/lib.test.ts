@@ -138,7 +138,7 @@ describe('rule (3) — D1(c), the render-path multiplication, MECHANIZED', () =>
 
   it('⭐ PERMITS the RULED `amountRaisedInr` to be NAMED on the render path (11b.3b AC3b)', () => {
     // ⛔ THE NARROWING'S WHOLE POINT. `2026-09-04-190` cl.6 rules this the public rupee figure and
-    // `-189` cl.5 records the boundary as newly crossed ⇒ a rule banning the ruled field's own NAME
+    // `-189` Consequence 5 records the boundary as newly crossed ⇒ a rule banning the ruled field's own NAME
     // made the ruling unshippable. Taking it from the domain read is CONSUMPTION, not derivation.
     const src = `const vm = { amountRaisedInr: entry.amountRaisedInr };`;
     expect(scanFinancialTruth('render.ts', src, RENDER)).toEqual([]);
@@ -207,6 +207,90 @@ describe('rule (3) — D1(c), the render-path multiplication, MECHANIZED', () =>
     ].join('\n');
     const findings = scanFinancialTruth('page.astro', astro, RENDER);
     expect(findings.map((f) => f.rule)).toEqual(['render_path_multiplication']);
+  });
+
+  it('⭐⭐ ANTI-VACUITY — a BOM or blank lines before the `---` fence do ⛔ NOT blind the frontmatter', () => {
+    // ⚠⛔ Reproduced 2026-09-18 (fourth review pass): the anchored `^---` missed, the frontmatter was
+    // wrapped as JSX TEXT, and this product yielded ⛔ zero findings and ⛔ zero diagnostics.
+    for (const lead of ['\uFEFF', '\n\n', '\uFEFF\n']) {
+      const astro = `${lead}---\nconst a = d.confirmedContributionCount * 1000;\n---\n<p/>`;
+      expect(scanFinancialTruth('page.astro', astro, RENDER).map((f) => f.rule)).toEqual([
+        'render_path_multiplication',
+      ]);
+    }
+  });
+
+  it('⭐ REFUSES rather than passes a script half that does ⛔ not parse', () => {
+    const astro = ['---', 'const a = (;', '---', '<p/>'].join('\n');
+    expect(scanFinancialTruth('page.astro', astro, RENDER).map((f) => f.rule)).toEqual([
+      'unparseable_source',
+    ]);
+    expect(scanFinancialTruth('render.ts', 'const a = (;', RENDER).map((f) => f.rule)).toEqual([
+      'unparseable_source',
+    ]);
+    // ⭐ …while a template that is not valid JSX still degrades, as documented — ⛔ not refused.
+    const tolerant = ['---', 'const a = 1;', '---', '<!-- a comment --><br>'].join('\n');
+    expect(scanFinancialTruth('page.astro', tolerant, RENDER)).toEqual([]);
+  });
+
+  it('⭐ REFUSES an UNTERMINATED construct — its diagnostic sits AT end-of-file (fifth review pass)', () => {
+    // ⚠ The fourth pass filtered diagnostics by `start < end` and dropped exactly these.
+    for (const src of ['function f() {', 'const a = `unterminated', '/* never closed']) {
+      expect(scanFinancialTruth('render.ts', src, RENDER).map((f) => f.rule)).toEqual(['unparseable_source']);
+    }
+    // ⚠ …and an unterminated backtick in a FRONTMATTER, which used to swallow the wrapper and report
+    // its diagnostic in the template half.
+    const astro = ['---', 'const s = `oops', 'const a = confirmedContributionCount * 1000;', '---', '<p/>'].join('\n');
+    expect(scanFinancialTruth('page.astro', astro, RENDER).map((f) => f.rule)).toEqual(['unparseable_source']);
+  });
+
+  it('⭐ ACCEPTS an EMPTY frontmatter and a `---` line in a frontmatter-less template (fifth review pass)', () => {
+    expect(scanFinancialTruth('page.astro', '---\n---\n<p/>', RENDER)).toEqual([]);
+    expect(scanFinancialTruth('page.astro', '<p>a</p>\n---\n<p>b</p>', RENDER)).toEqual([]);
+    // ⭐ …while a file that STARTS with an unrecognisable fence is still refused.
+    expect(scanFinancialTruth('page.astro', '---\nconst a = 1;\n', RENDER).map((f) => f.rule)).toEqual([
+      'unparseable_source',
+    ]);
+  });
+
+  it('⭐ reports a FRONTMATTER finding at its REAL line (fifth review pass)', () => {
+    // ⚠ The fourth pass counted the frontmatter's own newlines into the lead, shifting every line.
+    const astro = ['', '---', 'const x = 1;', 'const y = 2;', 'const a = confirmedContributionCount * 1000;', '---', '<p/>'].join('\n');
+    const [finding] = scanFinancialTruth('page.astro', astro, RENDER);
+    expect(finding?.line).toBe(5);
+  });
+
+  it('⭐ an angle-bracket assertion in a FRONTMATTER is ⛔ NOT an escape — the script half is walked as TS (sixth pass)', () => {
+    // ⚠ Walked inside the TSX wrapper, `<number>count` was a JSX element and the operand was never seen.
+    const astro = ['---', 'const a = <number>confirmedContributionCount * 1000;', '---', '<p/>'].join('\n');
+    expect(scanFinancialTruth('page.astro', astro, RENDER).map((f) => f.rule)).toEqual([
+      'render_path_multiplication',
+    ]);
+  });
+
+  it('⭐ a TEMPLATE finding reports its REAL line (sixth pass)', () => {
+    const astro = ['---', 'const a = 1;', '---', '<section>', '  <p>{confirmedContributionCount * 1000}</p>', '</section>'].join('\n');
+    const [finding] = scanFinancialTruth('page.astro', astro, RENDER);
+    expect(finding?.line).toBe(5);
+    const bare = ['<section>', '  <p>{confirmedContributionCount * 1000}</p>', '</section>'].join('\n');
+    expect(scanFinancialTruth('page.astro', bare, RENDER)[0]?.line).toBe(2);
+  });
+
+  it('⭐ a frontmatter-less template whose first text merely STARTS with `---` is ⛔ NOT refused (sixth pass)', () => {
+    expect(scanFinancialTruth('page.astro', '--- Title ---\n<p/>', RENDER)).toEqual([]);
+    expect(scanFinancialTruth('page.astro', '----\n<p/>', RENDER)).toEqual([]);
+  });
+
+  it('⛔ `!`, `as` and `satisfies` are ⛔ NOT escapes from the operand match', () => {
+    for (const src of [
+      'const x = drive.confirmedContributionCount! * 1000;',
+      'const x = (drive.confirmedContributionCount as number) * 1000;',
+      'const x = (drive.confirmedContributionCount satisfies number) * row.fixed_amount;',
+    ]) {
+      expect(scanFinancialTruth('render.ts', src, RENDER).map((f) => f.rule)).toEqual([
+        'render_path_multiplication',
+      ]);
+    }
   });
 
   it('⭐ …and the FRONTMATTER half still is, with both halves in one walk', () => {

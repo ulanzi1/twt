@@ -1220,7 +1220,7 @@ surfaces:
         pii_tier: 3
         description: >-
           ⭐ THE RULED PUBLIC RUPEE FIGURE — Story 11b.3b (AC3b), `2026-09-04-190` cl.6, with
-          `2026-09-04-189` cl.5 recording the rupee boundary as NEWLY CROSSED. Computed SERVER-SIDE
+          `2026-09-04-189` Consequence 5 recording the rupee boundary as NEWLY CROSSED. Computed SERVER-SIDE
           in the domain read as `confirmedContributionCount × pools.fixed_amount`, ⛔ ONCE, clamped
           at 0, and it is the SAME binding `classifyCycleOutcome` consumes as `deliveredTotal`.
           ⛔⛔ A second `× fixedAmount` anywhere is the defect (Story 11b.3 `D1(c)`, REFUSED),
@@ -1296,8 +1296,11 @@ surfaces:
           the page is dark.
           ⚠⛔ ⛔ NO predicate here may read `members.state`, `is_valid` or a moderation overlay: a
           contributor's name is ⛔ NEVER removed because they died (11b.1 D9(a)). RTBF is a SEPARATE
-          rule (`2026-08-30-169`) and removes the contributor's ROW ENTIRELY — ⛔ no anonymized row,
-          ⛔ no marker — while the omitted contributor STILL COUNTS toward every aggregate.
+          rule (`2026-08-30-169`): the contributor's NAME is withheld and — since `2026-09-16-219`
+          cl.1 (option E) — the ROW STAYS and renders the ruled placeholder `A contributor`, with ⛔ no
+          cause marker (cl.3), while the erased contributor STILL COUNTS toward every aggregate.
+          ⚠ This read *"removes the contributor's ROW ENTIRELY — ⛔ no anonymized row, ⛔ no marker"*
+          until 2026-09-18 — SUPERSEDED by `-219` cl.1, quoted ⛔ not deleted.
         tier1_public_exception:
           decision: '2026-09-02-174'
           rationale: >-
@@ -1314,8 +1317,10 @@ surfaces:
             ⚠⛔ **THE PRICE IS CARRIED OPENLY AND IS ⛔ NOT CLOSED:** the public will see MORE of a
             contributor's name than a MEMBER does — the member surface renders first-name +
             last-initial — which is the inversion `2026-09-04-189` cl.3 / `2026-09-04-195` cl.1
-            forbid. ⭐ It is CARRIED KNOWINGLY under `2026-09-02-177` cl.2 (`D9-inversion`), stated at
-            Story 11b.3b's AC10, and it is ⛔ NOT cured by this entry.
+            forbid. ⚠⛔ It was CARRIED under `2026-09-02-177` cl.2 (`D9-inversion`) — ⛔ BUT THAT CLAUSE
+            IS **SUPERSEDED** by `-189` cl.3 (dated two days later), so this is a breach of a STANDING
+            ruling being carried, ⛔ not an accepted trade (`2026-09-18-221` cl.2). Stated at Story
+            11b.3b's AC10; discharged by the MEMBER-SURFACE story `11b-21`; ⛔ NOT cured by this entry.
           scope: >-
             ⛔ `sahyog-vivran` ONLY, and ⛔ ONLY contributors CONFIRMED on this drive's pool. It
             reaches ⛔ no other surface and ⛔ no authenticated tier. ⛔ It authorises ⛔ no ranking,

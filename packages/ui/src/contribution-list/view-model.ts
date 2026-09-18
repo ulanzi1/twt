@@ -40,7 +40,10 @@ export interface ContributionListI18nRef {
  *  ⚠ It mirrors a SUBSET of the discriminants, and the omission is DELIBERATE: domain has
  *  'name' | 'unknown' | 'anonymized'; this has only 'name' | 'unknown', because 11b.2a's D5 omits an
  *  RTBF'd contributor's ROW ENTIRELY ⇒ no producer can hand this presenter an 'anonymized' operand
- *  (11b.2a D6(a): "the contributor row has exactly ONE kind, everywhere"). NOT drift. */
+ *  (11b.2a D6(a): "the contributor row has exactly ONE kind, everywhere"). NOT drift.
+ *  ⚠ D5's placeholder prohibition is SUPERSEDED on this surface by `2026-09-18-222` (the member list
+ *  renders `A contributor` / `एक सहकर्मी` too); until story `11b-21` builds it, the row-omission above
+ *  is still the SHIPPED behaviour — a gap against a ruling, ⛔ no longer the ruling itself. */
 export type ContributionRowDisplayName =
   | { readonly kind: 'name'; readonly firstName: string; readonly lastInitial: string }
   | { readonly kind: 'unknown' };
@@ -70,8 +73,10 @@ export interface ContributionRowViewModel {
    *  module only for its NON-name outputs. ⛔ Do ⛔ NOT widen this type to carry a full name, and
    *  ⛔ NEVER feed a public full name through `splitFirstNameLastInitial` to fit it — that ships the
    *  SHIELDED form on a surface ruled FULL NAME, with every test still green.
-   *  ⚠ The member/public divergence this creates is NOT compliant with `-195` cl.1 and is CARRIED
-   *  KNOWINGLY under `2026-09-02-177` cl.2 (D9-inversion) — stated at 11b.3b's AC10. */
+   *  ⚠ The member/public divergence this creates is NOT compliant with `-195` cl.1. It was carried
+   *  under `2026-09-02-177` cl.2 (D9-inversion), ⛔ which is SUPERSEDED by `-189` cl.3 — a breach of a
+   *  STANDING ruling, ⛔ not an accepted trade (`2026-09-18-221` cl.2). Stated at 11b.3b's AC10;
+   *  discharged by the member-surface story `11b-21`. */
   readonly displayName:
     | { readonly kind: 'nameParts'; readonly firstName: string; readonly lastInitial: string };
   readonly poolLetterCode: string;

@@ -31,9 +31,35 @@ import {
   pool as poolDomain,
   schema,
 } from '@twt/domain';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
+
+// ⭐ A SWITCHABLE fault on the KYC-profile read — the route's ONE per-row DB statement (sixth review
+// pass, 2026-09-18). ⚠ PASS-THROUGH unless a test arms it, so every other leg sees the real read.
+// ⚠ Why a module mock: the fault must hit the read the HANDLER makes, on its own scope tx, and a
+// real DB fault cannot be aimed at one row of one request from outside.
+const profileReadFault = vi.hoisted(() => ({
+  failOnCall: null as number | null,
+  calls: 0,
+  error: new Error('Connection terminated unexpectedly'),
+}));
+vi.mock('@twt/domain', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@twt/domain')>();
+  return {
+    ...actual,
+    kyc: {
+      ...actual.kyc,
+      getMemberKycProfile: async (
+        ...args: Parameters<typeof actual.kyc.getMemberKycProfile>
+      ): ReturnType<typeof actual.kyc.getMemberKycProfile> => {
+        profileReadFault.calls += 1;
+        if (profileReadFault.failOnCall === profileReadFault.calls) throw profileReadFault.error;
+        return actual.kyc.getMemberKycProfile(...args);
+      },
+    },
+  };
+});
 import { createTestApp, hasDatabase, teardown, type TestApp } from '../_setup.js';
 
 // ⭐⭐ STORY 11b.10 — THE ROUTE IS ADDRESSED BY THE DRIVE'S **OPAQUE PUBLIC TOKEN**, ⛔ never by
@@ -124,8 +150,8 @@ interface SeedSpec {
    *
    * ⚠⛔ **`confirmed: N` IS ⛔ NOT A SUBSTITUTE.** That option emits `contribution.confirmed` events
    * against `randomUUID()` member ids with ⛔ no `member_kyc_profiles` row — ⭐ perfect for the COUNT
-   * (which is what it was written for) and useless for the LIST, where every such row is OMITTED for
-   * an unresolvable name. ⇒ a contributor-list leg built on it would assert an empty page and pass
+   * (which is what it was written for) and useless for the LIST, where every such row renders the
+   * PLACEHOLDER for an unresolvable name (`-219` cl.1; ⚠ it was OMITTED until 2026-09-16). ⇒ a contributor-list leg built on it would assert an empty page and pass
    * for the wrong reason ([[feedback_gate_scope_semantic_coverage]]).
    *
    * ⭐ **ORDER IS THE POINT:** each entry is confirmed at the NEXT `event_version`, so the array
@@ -135,8 +161,10 @@ interface SeedSpec {
    * ⚠ `anonymized: true` stores the ENCRYPTED `[anonymized]` sentinel as the member's name, exactly
    * as `anonymizeMember` leaves it — ⛔ not a deleted row and ⛔ not a null ciphertext. ⭐ That is what
    * makes the erasure-backstop leg real: the decrypt SUCCEEDS and the sentinel would otherwise render.
+   * ⚠ `corrupt: true` encrypts the name under a DIFFERENT Pariwar's context ⇒ a real envelope whose
+   * decrypt FAILS on its AAD — the per-envelope fault (the fifth `-219` cl.3 cause), ⛔ not a KMS outage.
    */
-  contributors?: readonly { name: string; anonymized?: boolean }[];
+  contributors?: readonly { name: string; anonymized?: boolean; corrupt?: boolean }[];
 }
 
 async function seedDrive(t: TestApp, spec: SeedSpec): Promise<{ pariwarId: string }> {
@@ -299,7 +327,7 @@ async function seedDrive(t: TestApp, spec: SeedSpec): Promise<{ pariwarId: strin
         // SUCCEEDS. ⛔ A fixture that nulled the column would exercise the WRONG omission arm.
         nameCiphertext: await encryption.encryptKycField(
           contributor.anonymized === true ? memberDomain.ANONYMIZED_SENTINEL : contributor.name,
-          pariwarId,
+          contributor.corrupt === true ? randomUUID() : pariwarId,
           t.deps.encryption,
         ),
         dobCiphertext: await encryption.encryptKycField('1970-01-15', pariwarId, t.deps.encryption),
@@ -595,8 +623,8 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
         expect(res.body).not.toContain('Sharma');
 
         // ⭐⭐ AND THE PAGE STILL RENDERS EVERYTHING ELSE — **omit the NAME, ⛔ never the page.**
-        // ⚠⛔ The CONTRIBUTOR arm (Task 3) is the OPPOSITE: an unrenderable name omits the ROW,
-        // which exists only to carry it. ⛔ Do ⛔ not collapse the two rules.
+        // ⭐ The CONTRIBUTOR arm (Task 3) now keeps its ROW too and renders the placeholder
+        // (`2026-09-16-219` cl.1); ⚠ it used to omit the row — SUPERSEDED.
         expect(body.drive.poolCanonicalIdentifier).toBe(id);
         expect(body.drive.district).toBe('Lucknow');
         expect(body.drive.confirmedContributionCount).toBe(3);
@@ -869,7 +897,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
 
     it('⭐⭐ AN RTBF-ERASED CONTRIBUTOR KEEPS AN UNNAMED ROW — ⭐ and STILL COUNTS', async () => {
       // ⛔⛔ **THE ERASURE BACKSTOP, AND IT IS THE ⛔ ONLY SNAPSHOT-INDEPENDENT CHECK IN THE PATH**
-      // (Trap 4 / AC5; `2026-08-30-169`, `2026-08-30-170`). `anonymizeMember` overwrites
+      // (Trap 4 / AC5; `2026-08-30-169`, `2026-08-31-170`). `anonymizeMember` overwrites
       // `name_ciphertext` IN PLACE with an *encrypted* `[anonymized]` sentinel and RETAINS the row
       // ⇒ ⭐ the decrypt SUCCEEDS, and without the plaintext check this page renders the literal
       // **`[anonymized]`** where a person's name belongs, on an unauthenticated edge-cached surface.
@@ -959,10 +987,21 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
           ],
         });
 
-        const first = await t.app.inject({
-          method: 'GET',
-          url: `${ROUTE(pariwarId, tokenFor(id))}?limit=2`,
-        });
+        // ⭐ COUNT THE DECRYPTS — ⛔ the title's claim was asserted by NOTHING until 2026-09-18 (fourth
+        // review pass): a decrypt-the-roster-then-slice regression returned the same `items` and passed.
+        // ⭐ The default fixture authorises ⛔ no deceased name and seeds ⛔ no nominee account, so every
+        // `decryptDek` on this request is a CONTRIBUTOR row.
+        const decryptDek = vi.spyOn(t.deps.encryption.kms, 'decryptDek');
+        let first: Awaited<ReturnType<typeof t.app.inject>>;
+        try {
+          first = await t.app.inject({
+            method: 'GET',
+            url: `${ROUTE(pariwarId, tokenFor(id))}?limit=2`,
+          });
+          expect(decryptDek).toHaveBeenCalledTimes(2);
+        } finally {
+          decryptDek.mockRestore();
+        }
         const firstBody = first.json() as {
           items: { name: string }[];
           page: number;
@@ -992,6 +1031,157 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
         expect(past.statusCode).toBe(200);
         expect((past.json() as { items: unknown[] }).items).toEqual([]);
       } finally {
+        await teardown(t);
+      }
+    });
+
+    it('⭐⭐ `-219` cl.3 — a CORRUPT envelope on a ONE-ROW page is the PLACEHOLDER, byte-identical to an ERASURE — ⛔ never a 503', async () => {
+      // ⚠⛔⛔ **REGRESSION, 2026-09-18 (fourth review pass).** The 2026-09-17 outage rule 503'd a page
+      // when EVERY row on it failed systemically ⇒ on `?limit=1` a failed decrypt answered `503` while
+      // an erasure answered `200` + the placeholder, and a visitor could probe each position for WHICH
+      // class of cause applied. ⭐ The fifth cause (a failed decrypt) was also the ONLY one untested.
+      const t = await createTestApp();
+      try {
+        const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
+        const { pariwarId } = await seedDrive(t, {
+          canonicalIdentifier: id,
+          contributors: [
+            { name: 'Anita Verma' },
+            { name: 'Bhavesh Patel', corrupt: true },
+            { name: 'Chandra Iyer', anonymized: true },
+          ],
+        });
+        const onePage = (page: number) =>
+          t.app.inject({ method: 'GET', url: `${ROUTE(pariwarId, tokenFor(id))}?limit=1&page=${page}` });
+
+        const corrupt = await onePage(2);
+        const erased = await onePage(3);
+        expect(corrupt.statusCode).toBe(200);
+        expect(erased.statusCode).toBe(200);
+        expect((corrupt.json() as { items: unknown[] }).items).toEqual([{ name: null }]);
+        // ⭐⭐ INDISTINGUISHABLE — same status, same row, same headers that matter; only `page` differs.
+        const strip = (b: string) => ({ ...(JSON.parse(b) as Record<string, unknown>), page: 0 });
+        expect(strip(corrupt.body)).toEqual(strip(erased.body));
+        expect(corrupt.headers['cache-control']).toBe(erased.headers['cache-control']);
+      } finally {
+        await teardown(t);
+      }
+    });
+
+    it('⭐⭐ a DB fault on ONE row\'s profile read refuses the page — ⛔ never a placeholder (sixth review pass)', async () => {
+      // ⚠⛔ The Decision's DB half had ⛔ no test after the fourth pass's SQLSTATE leg was deleted:
+      // moving the read back inside the per-row `try` passed everything. ⭐ A status-less connection
+      // error — the shape the fourth pass's SQLSTATE rule missed — on the SECOND of two rows.
+      const t = await createTestApp();
+      try {
+        const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
+        const { pariwarId } = await seedDrive(t, {
+          canonicalIdentifier: id,
+          contributors: [{ name: 'Anita Verma' }, { name: 'Bhavesh Patel' }],
+        });
+        profileReadFault.calls = 0;
+        profileReadFault.failOnCall = 2;
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
+        expect(res.statusCode).toBe(500);
+        expect(res.body).not.toContain('Anita');
+      } finally {
+        profileReadFault.failOnCall = null;
+        await teardown(t);
+      }
+    });
+
+    it('⭐ a KMS OUTAGE on the DECEASED-name decrypt refuses the page too (sixth review pass)', async () => {
+      // ⚠ Before, the deceased arm caught everything: an outage published as a quiet omission at 200.
+      const t = await createTestApp();
+      try {
+        const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
+        const { pariwarId } = await seedDrive(t, {
+          canonicalIdentifier: id,
+          legalName: 'Rajesh Kumar Sharma',
+          authorised: true,
+        });
+        vi.spyOn(t.deps.encryption.kms, 'decryptDek').mockRejectedValueOnce(
+          Object.assign(new Error('14 UNAVAILABLE: kms'), { code: 14 }),
+        );
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
+        expect(res.statusCode).toBe(500);
+      } finally {
+        vi.restoreAllMocks();
+        await teardown(t);
+      }
+    });
+
+    it('⭐⭐ a KMS OUTAGE on ONE row of MANY refuses the page — decided by the ERROR, ⛔ never by the page', async () => {
+      // ⚠⛔⛔ **REGRESSION, 2026-09-18 (fifth review pass).** Both earlier rules decided "outage" from
+      // the page: the 2026-09-17 one needed EVERY row to fail, and the fourth pass's canary probe passed
+      // whenever a FRESH round-trip worked. ⭐ Here ONE of two rows meets an UNAVAILABLE (gRPC 14) and the
+      // other decrypts — neither earlier rule refuses this page; classifying by the error does.
+      const t = await createTestApp();
+      try {
+        const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
+        const { pariwarId } = await seedDrive(t, {
+          canonicalIdentifier: id,
+          contributors: [{ name: 'Anita Verma' }, { name: 'Bhavesh Patel' }],
+        });
+        vi.spyOn(t.deps.encryption.kms, 'decryptDek').mockRejectedValueOnce(
+          Object.assign(new Error('14 UNAVAILABLE: kms'), { code: 14 }),
+        );
+        const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
+        expect(res.statusCode).toBe(500);
+        expect(res.body).not.toContain('Anita');
+        expect(res.body).not.toContain('Bhavesh');
+      } finally {
+        vi.restoreAllMocks();
+        await teardown(t);
+      }
+    });
+
+    it('⭐ a STATUS-LESS KMS failure (HSM assertion, empty response) is an OUTAGE too — ⛔ never a placeholder', async () => {
+      const t = await createTestApp();
+      try {
+        const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
+        const { pariwarId } = await seedDrive(t, {
+          canonicalIdentifier: id,
+          contributors: [{ name: 'Anita Verma' }],
+        });
+        vi.spyOn(t.deps.encryption.kms, 'decryptDek').mockRejectedValueOnce(
+          new Error('cloudKmsProvider: kek protectionLevel must be HSM'),
+        );
+        const res = await t.app.inject({ method: 'GET', url: `${ROUTE(pariwarId, tokenFor(id))}?limit=1` });
+        expect(res.statusCode).toBe(500);
+      } finally {
+        vi.restoreAllMocks();
+        await teardown(t);
+      }
+    });
+
+    it('⭐⭐ a CORRUPT envelope costs the SAME ONE KMS call an erased row does — ⛔ no timing channel', async () => {
+      // ⚠ The fourth pass's probe added an encrypt + a decrypt to a corrupt row ONLY, measurable per
+      // position at `?limit=1`. ⭐ Classifying by the error adds ⛔ nothing.
+      const t = await createTestApp();
+      try {
+        const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
+        const { pariwarId } = await seedDrive(t, {
+          canonicalIdentifier: id,
+          contributors: [
+            { name: 'Bhavesh Patel', corrupt: true },
+            { name: 'Chandra Iyer', anonymized: true },
+          ],
+        });
+        const decryptDek = vi.spyOn(t.deps.encryption.kms, 'decryptDek');
+        const encryptDek = vi.spyOn(t.deps.encryption.kms, 'encryptDek');
+        for (const page of [1, 2]) {
+          decryptDek.mockClear();
+          const res = await t.app.inject({
+            method: 'GET',
+            url: `${ROUTE(pariwarId, tokenFor(id))}?limit=1&page=${page}`,
+          });
+          expect(res.statusCode).toBe(200);
+          expect(decryptDek).toHaveBeenCalledTimes(1);
+        }
+        expect(encryptDek).not.toHaveBeenCalled();
+      } finally {
+        vi.restoreAllMocks();
         await teardown(t);
       }
     });
@@ -1100,7 +1290,7 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
         const body = res.json() as { items: { name: string }[]; total: number };
         // ⭐ The SHIELDED form under a shielded Pariwar — ⛔ and the MONONYM is OMITTED, ⛔ not
         // rendered: `resolvePublicMemberName` returns `''` for a single-token name under this mode
-        // (`2026-08-21-145` cl.3), and the boundary's `.trim() || null` drops the ROW.
+        // (`2026-08-21-145` cl.3), and the boundary's normaliser withholds the NAME (the row stays).
         // ⛔⛔ ⛔ NO fall-through to `firstName` — for a mononym that returns the ENTIRE stored legal
         // name, i.e. it would publish MORE than the shielded mode was chosen to publish.
         // ⛔ THIS READ: `expect(body.items).toEqual([{ name: 'Anita V.' }]);` — the second contributor's
@@ -1110,6 +1300,42 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
         expect(res.body).not.toContain('Meenakshi');
         // ⭐ AND THE OMITTED MONONYM STILL COUNTS — same rule as the erasure.
         expect(body.total).toBe(2);
+      } finally {
+        await teardown(t);
+      }
+    });
+    it('⭐⭐ an invisible or bidi TOKEN does ⛔ NOT defeat the mononym rule, and ⛔ never ships', async () => {
+      // ⚠⛔⛔ **REGRESSION, 2026-09-18 (fifth review pass) — a PRIVACY leak.** `"Sunita \u202e"` tokenised
+      // as TWO words, skipped the shielded mononym arm (`2026-08-21-145` cl.3) and published the whole
+      // legal name as `"Sunita ."`. ⭐ The stored name is now cleaned BEFORE the resolver.
+      const t = await createTestApp();
+      try {
+        const id = `P-2026-09-${randomUUID().slice(0, 6)}`;
+        const { pariwarId } = await seedDrive(t, {
+          canonicalIdentifier: id,
+          contributors: [
+            { name: 'Sunita \u202e' },
+            { name: 'Kavita \u200b' },
+            { name: 'Anita \u202e Verma' },
+          ],
+        });
+        await setMode(t, pariwarId, 'shielded_name');
+        const shielded = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
+        expect((shielded.json() as { items: unknown[] }).items).toEqual([
+          { name: null },
+          { name: null },
+          { name: 'Anita V.' },
+        ]);
+        expect(shielded.body).not.toContain('Sunita');
+        expect(shielded.body).not.toContain('Kavita');
+
+        await setMode(t, pariwarId, 'full_name');
+        const full = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
+        // ⭐ The bidi control is gone and the spelling is otherwise intact — ⛔ no doubled space.
+        expect((full.json() as { items: { name: string | null }[] }).items[2]).toEqual({
+          name: 'Anita Verma',
+        });
+        expect(full.body).not.toContain('\u202e');
       } finally {
         await teardown(t);
       }

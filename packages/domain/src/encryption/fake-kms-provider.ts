@@ -40,9 +40,15 @@ export function createFakeKmsProvider(opts: {
       return Buffer.concat([iv, tag, ct]);
     },
     async decryptDek(encryptedDek, _kekRef, aad) {
+      // ⭐ A rejected envelope carries gRPC `code: 3` (INVALID_ARGUMENT) — the status Cloud KMS returns
+      // for a malformed ciphertext or an AAD mismatch. ⚠ Callers CLASSIFY on it (the public Sahyog
+      // Vivran route tells a per-envelope fault from a KMS outage by this code — 11b.3b fifth review
+      // pass, 2026-09-18), so the fake must ⛔ not throw a status-less error where the real one would
+      // not. The message is unchanged.
+      const rejected = (message: string): Error => Object.assign(new Error(message), { code: 3 });
       const buf = Buffer.from(encryptedDek);
       if (buf.length !== FAKE_ENCRYPTED_DEK_LEN) {
-        throw new Error(
+        throw rejected(
           `fake decryptDek: encryptedDek must be ${FAKE_ENCRYPTED_DEK_LEN} bytes (12 iv + 16 tag + 32 ct)`,
         );
       }
@@ -52,7 +58,11 @@ export function createFakeKmsProvider(opts: {
       const dec = crypto.createDecipheriv('aes-256-gcm', kekBuf, iv);
       dec.setAAD(Buffer.from(aad));
       dec.setAuthTag(tag);
-      return Buffer.concat([dec.update(ct), dec.final()]);
+      try {
+        return Buffer.concat([dec.update(ct), dec.final()]);
+      } catch (err) {
+        throw rejected(err instanceof Error ? err.message : String(err));
+      }
     },
     async computeHmac(_hmacKeyRef, input, context) {
       // Per-Pariwar separation: HMAC key context-bound via pariwarId prefix on

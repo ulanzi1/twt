@@ -395,8 +395,10 @@ export const PublicSahyogVivranEntry = z
      *
      * ⭐ **`null` OMITS THE NAME, ⛔ NEVER THE PAGE** — the sibling index's shipped rule
      * (`public-pages/handlers.ts`), and the deceased member's arm of AC3's per-subject omission
-     * ruling. ⚠⛔ The CONTRIBUTOR arm is the opposite (an unrenderable name omits the ROW, which
-     * exists only to carry it) — ⛔ do ⛔ not apply one rule to both subjects.
+     * ruling. ⭐ Since `2026-09-16-219` cl.1 the CONTRIBUTOR arm agrees: an unrenderable name keeps
+     * its ROW and renders the placeholder. ⚠ It was the opposite until then (*"omits the ROW, which
+     * exists only to carry it"* — SUPERSEDED, quoted ⛔ not deleted); the two subjects still differ in
+     * what fills the gap — the deceased name renders ⛔ nothing, a contributor row renders `A contributor`.
      *
      * ⚠ FOUR CAUSES REACH THIS `null` IDENTICALLY and that is intended, because ⛔ none of them
      * authorises a render: ⛔ no authorising basis · ⛔ no KYC profile row · a failed decrypt · an
@@ -445,7 +447,7 @@ export const PublicSahyogVivranEntry = z
      * a PUBLIC surface would put **both factors** on this wire, which `:60-61` forbids *"in any field,
      * under any name"*. ⇒ ⭐ the amount is taken **SERVER-SIDE** from the domain read's own
      * `deliveredTotal` and published as **`amountRaisedInr`** (`2026-09-04-190` **cl.6**, with
-     * `-189` **cl.5** recording the rupee boundary as NEWLY CROSSED).
+     * `-189` **Consequence 5** recording the rupee boundary as NEWLY CROSSED).
      * ⭐ **`D1(c)` is UNCHANGED and still REFUSED** — the arithmetic happens exactly ONCE, in the
      * domain read; ⛔ nothing is re-derived in `apps/public`.
      * ⛔⛔ **AND ⛔ DO ⛔ NOT COMPUTE IT LOCALLY WHEN THAT STORY LANDS** — `D1(c)` is REFUSED in code
@@ -453,15 +455,16 @@ export const PublicSahyogVivranEntry = z
      * defect"* ([[project_amount_raised_canonical_producer]]).
      *
      * ⭐⛔ IT IS THE **EVENT** COUNT, ⛔ NEVER A ROW COUNT, AND THE TWO ARE DESIGNED TO DISAGREE:
-     * an RTBF invocation removes a contributor from any rendered list ENTIRELY while the omitted
-     * contributor STILL COUNTS here (`2026-08-30-169`). ⇒ ⛔ never derive this from the LENGTH of a
+     * an RTBF invocation withholds a contributor's NAME (on this page the row stays and renders the
+     * placeholder — `2026-09-16-219` cl.1) while the erased contributor STILL COUNTS here
+     * (`2026-08-30-169`). ⇒ ⛔ never derive this from the LENGTH of a
      * contributor list — at **11b.3b** this page will read *"N confirmed"* beside FEWER than N named
      * rows BY DESIGN, and ⛔ neither surface's copy may claim the list is complete.
      */
     confirmedContributionCount: z.number().int().nonnegative(),
     /**
      * ⭐⭐ THE RULED PUBLIC RUPEE FIGURE — Story 11b.3b (AC3b). `2026-09-04-190` **cl.6**, with
-     * `2026-09-04-189` **cl.5** recording the rupee boundary as NEWLY CROSSED.
+     * `2026-09-04-189` **Consequence 5** recording the rupee boundary as NEWLY CROSSED.
      *
      * ⭐ Computed SERVER-SIDE in the domain read as `confirmedContributionCount × pools.fixed_amount`
      * — ⛔ ONCE, clamped at 0 — and it is the SAME binding `classifyCycleOutcome` consumes as its
@@ -516,7 +519,10 @@ export type PublicSahyogVivranEntry = z.output<typeof PublicSahyogVivranEntry>;
  * Governance: [`2026-09-02-174`](../../../../.decision-log.md#decision-2026-09-02-174) (Trustee
  * Panel) — the contributor's name MAY appear on this page, at the **FULL NAME**; made
  * **UNCONDITIONAL** by `2026-09-02-175` (cl.3's apparent condition was CORRECTED away, ⛔ not met).
- * ⚠ The basis is the member's OWN acceptance of the membership T&C (`2026-08-28-160` cl.7).
+ * ⭐ The basis is `2026-09-16-219` **cl.6**: MEMBERSHIP ITSELF — contributing is a public act.
+ * ⚠⛔ **BASIS CORRECTED 2026-09-18 (fourth review pass)** — this cited *"the member's OWN acceptance of
+ * the membership T&C (`2026-08-28-160` cl.7)"*, which does ⛔ not reach a LIVING subject; `-219` cl.6
+ * forbids re-citing it. ⛔ Missed by both earlier sweeps.
  *
  * ⛔⛔ **ONE FIELD, AND THE SHAPE IS THE FENCE.** `.strict()` over a single `name` makes every
  * anti-leaderboard prohibition a PARSE ERROR rather than a convention:
@@ -533,11 +539,12 @@ export type PublicSahyogVivranEntry = z.output<typeof PublicSahyogVivranEntry>;
  * Pariwar's stored mode. ⛔ It is ⛔ never decomposed and the boundary ⛔ never calls
  * `splitFirstNameLastInitial`: that is the SHIELDED form, which is what the MEMBER surface renders
  * and is ⛔ NOT what `-174` ruled here.
- * ⚠⛔ **THAT DIVERGENCE IS THE `-195` cl.1 INVERSION, AND IT IS CARRIED BY RULING, ⛔ not by
- * accident** — `2026-09-02-177` **cl.2** (`D9-inversion`(a)) rules **CARRY**. On merge the PUBLIC
- * sees MORE of a contributor's name than a MEMBER does. ⛔ Do ⛔ not "fix" it here: raising the
- * member side is a member-surface change this story puts out of scope, and it would REVERSE `-177`
- * cl.2. See the story's AC10, which STATES the non-compliance rather than curing it.
+ * ⚠⛔ **THAT DIVERGENCE IS THE `-195` cl.1 INVERSION** — carried under `2026-09-02-177` **cl.2**
+ * (`D9-inversion`(a)), ⛔ BUT THAT CLAUSE IS **SUPERSEDED** by `2026-09-04-189` cl.3, which says the
+ * inversion MUST BE CLOSED (`2026-09-18-221` cl.2) ⇒ this is a breach of a STANDING ruling being
+ * carried, ⛔ not an accepted trade. On merge the PUBLIC sees MORE of a contributor's name than a
+ * MEMBER does. ⛔ Do ⛔ not "fix" it here: the discharge is the MEMBER-SURFACE story `11b-21`, which
+ * raises the member side. See the story's AC10, which STATES the non-compliance rather than curing it.
  *
  * ⚠ `.min(1)` IS LOAD-BEARING — the boundary normalises with **`normalisePublicName`** (trim PLUS the
  * zero-width strip), ⛔ never `=== ''`. An empty or whitespace-only name is ⛔ not a name.
@@ -557,8 +564,10 @@ export type PublicSahyogVivranEntry = z.output<typeof PublicSahyogVivranEntry>;
  * ⛔ not a variant of the word. A cause on this wire would convert a derivable count into a LABELLED
  * disclosure that a named position exercised RTBF, which is strictly worse than the state (E)
  * replaces.
- * ⚠ The scope is the **PUBLIC** surface ONLY. `-219` cl.2 supersedes `2026-08-30-169` cl.1 here and
- * ⛔ **nowhere else** — `packages/ui/src/contribution-list` keeps D5 whole and still OMITS the row.
+ * ⚠ `-219` cl.2 superseded `2026-08-30-169` cl.1 (D5)'s placeholder prohibition for this PUBLIC
+ * surface; ⭐ `2026-09-18-222` (Trustee-ratified) extends that to the MEMBER contributor list, in the
+ * SAME words. ⚠ Until story `11b-21` builds it, `packages/ui/src/contribution-list` still OMITS the
+ * row — a SHIPPED gap against `-222`, ⛔ no longer a ruled difference.
  */
 export const PublicSahyogVivranContributor = z
   .object({

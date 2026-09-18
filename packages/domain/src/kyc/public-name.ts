@@ -74,8 +74,10 @@ export function resolvePublicMemberName(
   mode: PublicNamePresentationMode,
   storedName: string,
 ): string {
+  // ⭐ BOTH modes see the CLEANED tokens — see `publicNameTokens`.
+  const cleaned = publicNameTokens(storedName).join(' ');
   if (mode === 'shielded_name') {
-    const { firstName, lastInitial } = splitFirstNameLastInitial(storedName);
+    const { firstName, lastInitial } = splitFirstNameLastInitial(cleaned);
     if (firstName === '') return '';
     // ⭐ A MONONYM CANNOT BE SHIELDED, SO IT IS OMITTED — `2026-08-21-145` cl.3. ⛔ NEVER fall
     // through to `firstName` here.
@@ -101,5 +103,42 @@ export function resolvePublicMemberName(
   // `full_name`: the legal name as stored, with display whitespace collapsed. A
   // stored name is a record value, not a display string — collapsing here keeps a
   // stray double space out of the public render without touching the record.
-  return storedName.trim().split(/\s+/).filter((t) => t.length > 0).join(' ');
+  return cleaned;
+}
+
+/** Bidi embedding / override / isolate controls — never part of a spelling; an interior one reorders the text around it. */
+const BIDI_CONTROLS = /[\u202a-\u202e\u2066-\u2069]/gu;
+/** Invisible code points at the START of a token — a joiner there joins nothing. */
+const LEADING_IGNORABLE = /^\p{Default_Ignorable_Code_Point}+/u;
+/** Invisible code points at the END of a token — ⛔ except ZWNJ/ZWJ, which can close an Indic word. */
+const TRAILING_IGNORABLE = /(?:(?![\u200c\u200d])\p{Default_Ignorable_Code_Point})+$/u;
+/** A token is a WORD only if it holds a letter or a digit. */
+const HAS_LETTER_OR_DIGIT = /[\p{L}\p{N}]/u;
+
+/**
+ * ⭐ The stored name as the WORDS a reader would see — the input to BOTH presentation modes.
+ *
+ * ⚠⛔⛔ **FOUND 2026-09-18 (Story 11b.3b, fifth and sixth review passes) — A PRIVACY LEAK.**
+ * `splitFirstNameLastInitial` splits on whitespace, so a mononym followed by a token a reader cannot
+ * see or read as a word — `"Sunita \u202e"`, `"Sunita \u061c"`, a tag character, a lone combining
+ * mark, `"Sunita ."` — was TWO tokens to it. Under `shielded_name` that skipped the mononym arm below
+ * (`2026-08-21-145` cl.3) and published the whole legal name as `"Sunita X."`. ⚠ The fifth pass fixed it
+ * with a DENYLIST of invisibles in one handler; the sixth showed a denylist can never be complete and
+ * that the directory and the `/sahyog` index share this resolver. ⇒ ⭐ an ALLOWLIST, here, for every
+ * public surface: a token counts only if it holds `\p{L}` or `\p{N}`.
+ *
+ * ⭐ Also: bidi controls are removed; each token loses its LEADING default-ignorables (so
+ * `"Sunita \u200bKumari"` initials to `K`, ⛔ not to an invisible) and its TRAILING ones except
+ * ZWNJ/ZWJ; tokens are split on `\p{White_Space}` — ⛔ not `\s`, which also splits on U+FEFF and would
+ * insert a visible space mid-name. ⭐ A kept token's INTERIOR is byte-for-byte, so an interior
+ * ZWJ/ZWNJ (`प्रज्‍ञा`) survives.
+ * ⚠ Accepted: tokens are re-joined with ONE ASCII space, so an NBSP or tab between words becomes a
+ * space — the `full_name` arm already collapsed whitespace before this change.
+ */
+export function publicNameTokens(storedName: string): string[] {
+  return storedName
+    .replace(BIDI_CONTROLS, '')
+    .split(/\p{White_Space}+/u)
+    .map((token) => token.replace(LEADING_IGNORABLE, '').replace(TRAILING_IGNORABLE, ''))
+    .filter((token) => HAS_LETTER_OR_DIGIT.test(token));
 }

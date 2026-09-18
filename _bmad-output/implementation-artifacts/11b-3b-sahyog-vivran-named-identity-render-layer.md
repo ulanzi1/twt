@@ -246,7 +246,7 @@ two shipped fences it never named.
 |---|---|---|
 | **T1** | AC3b: *"hoist `sahyog-vivran-read.ts:509`'s `deliveredTotal` onto the DTO"* | ⛔⛔ **BLOCKED BY A LIVE CI GATE.** `scripts/sahyog-vivran-financial-truth` rule (3) forbids an amount operand being **NAMED** in that DTO file. ⇒ **AC3b rewritten; AC11 minted** |
 | **T2** | AC3b: `:509` is *"already computed server-side"* | ⛔ It is an **argument field inside a ternary**, guarded by `status === 'live' \|\| assignedCount === 0` ⇒ **`null` on every LIVE drive**; and `:496-498` forbids widening `SahyogVivranEntry` *"under any name"* |
-| **T3** | AC3b names ⛔ no wire field and ⛔ no clamp | ⛔ The ruled name is **`amountRaisedInr`** (`-190` **cl.6**, `-189` **cl.5** — ⛔ neither was cited) and all three shipped precedents **clamp**, because an unclamped negative is a **500** |
+| **T3** | AC3b names ⛔ no wire field and ⛔ no clamp | ⛔ The ruled name is **`amountRaisedInr`** (`-190` **cl.6**, `-189` **Consequence 5** — ⛔ neither was cited; ⚠ written "cl.5" until 2026-09-18) and all three shipped precedents **clamp**, because an unclamped negative is a **500** |
 | **T4** | AC3: *"authored over the SHARED presenter"* + *"resolves through `resolvePublicMemberName`"* | ⛔⛔ **MUTUALLY UNSATISFIABLE** — the presenter's input type has ⛔ **no full-name arm**; feeding it requires the **SHIELDED** form this story exists to reject |
 | **T5** | Trap 5: *"every caller treats `''` as omit this row"* | ⛔ **FALSE at the cited call site** — `handlers.ts:528-530` omits **the NAME, ⛔ never the row**, and uses `.trim() \|\| null`, ⛔ not `=== ''` |
 | **T6** | **Nine** `file:NNN` pointers into `.decision-log.md` / `deferred-work.md` / `epics.md` | ⛔ **ALL NINE ROTTED**, the Preflight's own among them ⇒ **re-expressed as ids / clauses / item letters**, ⛔ not re-derived |
@@ -275,9 +275,26 @@ each name appearing on **that person's own instrument**, in **the form the Trust
 
 ⚠ **TWO predicates gate what a person sees. ⭐ BOTH are now RULED** (they were open when v1 was written):
 
-1. **The contributor predicate.** *"Your name can appear on the public list of people who contributed
-   to a drive because **you** accepted the membership Terms & Conditions."*
-   ✅ **Basis** `-160` cl.7 · ✅ **Declaration + Form** `-174`, unconditional per `-175`: **FULL NAME**.
+1. **The contributor predicate.** ⭐ *"Because you contributed to a drive, and contributing is a public
+   act, your name can appear on that drive's public page — in full, or as first name and last initial
+   if your Pariwar has chosen the shorter form. Withdrawing your consent to the Terms & Conditions does
+   not take it down. If your name is withheld — you invoked your right to erasure, or it cannot be
+   shown — your place on the list reads 'A contributor', and nothing on the page says why. A withheld
+   name can remain visible for up to five minutes while cached copies expire."*
+   ⚠ **RE-AMENDED 2026-09-18 (fifth review pass)** — the fourth pass's wording said *"your full name"*
+   (false under `shielded_name`), omitted `-219` cl.6's *"a T&C withdrawal does not retract it"*, and
+   implied withholding is immediate. ⭐ The five minutes is the page's `s-maxage=300`; `-172` rules that the
+   erasure guarantee ENDS AT THE WIRE (it does ⛔ not itself name five minutes — cited wrongly here until
+   the sixth review pass). ⚠ This sentence is the AI-10-1 record, ⛔ not member-facing copy; if it is ever
+   shown to members it describes erasure, which fires `-172`'s follow-up trigger (ii) (counsel). ⚠ During a KMS
+   or DB outage the page shows ⛔ no list at all (the outage view), which says nothing about any person.
+   ✅ **Basis** `-219` **cl.6** — MEMBERSHIP ITSELF · ✅ **Declaration + Form** `-174`, unconditional per
+   `-175`: **FULL NAME** · ✅ **Placeholder** `-219` cl.1/cl.3.
+   ⚠⛔ **AMENDED 2026-09-18 (fourth review pass — checklist family 11 REAL GAP).** It read: *"…because
+   **you** accepted the membership Terms & Conditions."* ✅ **Basis** `-160` cl.7. ⛔ `-219` cl.6
+   corrected that basis (cl.7 does ⛔ not reach a LIVING subject) and forbids re-citing it, and the old
+   sentence never told the member their withheld name now holds a placeholder. ⭐ Checked against the
+   Niyamavali only as far as `-219` cl.6 itself was.
 2. **The deceased-member predicate.** *"Your name can appear on the public page for the drive run in
    your memory because **you** accepted a version of the T&C that says so — ⛔ not because your family
    ticked a box."*
@@ -330,8 +347,8 @@ shortcut stops looking like a lie. ⚠ Counsel's clause is **OVERDUE since 2026-
 absent 2026-09-11.
 
 ⚠⛔⛔ **BUT THE CONTRIBUTOR LIST IS ⛔ NOT GATED, AND THIS IS THE STORY'S REAL DAY-ONE OUTPUT.**
-⭐ The contributor predicate has **⛔ no clause gate anywhere in the code** — its basis is `-160` cl.7,
-**settled**. `NAME_PUBLICATION_AUTHORISED` keys on `claims.deceased_member_id`, ⛔ not on contributors.
+⭐ The contributor predicate has **⛔ no clause gate anywhere in the code** — its basis is `-219` **cl.6**
+(membership itself; ⚠ read `-160` cl.7 until corrected), **settled**. `NAME_PUBLICATION_AUTHORISED` keys on `claims.deceased_member_id`, ⛔ not on contributors.
 ⇒ ⛔⛔ **this story publishes up to FIFTY living members' FULL LEGAL NAMES on an unauthenticated,
 edge-cached page — while the deceased member it is named for renders nothing.**
 ⚠ ⛔ That asymmetry was **stated nowhere in v1**, and it is the opposite of what the title implies.
@@ -405,7 +422,7 @@ four things, and v2.0's AC3b named ⛔ none of them:
   and a negative fails the contract's `.nonnegative()` ⇒ *"a **500** for the whole Pariwar index"*
   (`public-read.ts:1129-1134`); `member-drive-list.ts:343` also **warn-logs** the clamp
 - the **same binding used twice** — into `classifyCycleOutcome` and onto the wire (`:1222`, `:1224`)
-- the wire field named **`amountRaisedInr`** — ⭐ **RULED at `-190` cl.6**, with `-189` **cl.5**
+- the wire field named **`amountRaisedInr`** — ⭐ **RULED at `-190` cl.6**, with `-189` **Consequence 5** (⚠ cited as "cl.5" until 2026-09-18 — `-189` has clauses 1–3)
   recording the rupee boundary as *"NEWLY CROSSED"* (`public-read.ts:1192-1194`).
   ⚠⛔ v2.0 cited `-190` cl.1/cl.2/cl.7(b)(c) and `-189` cl.3 — ⛔ **cl.6 and cl.5, the two that name
   the field and authorise the amount, were the halves it dropped**
@@ -455,6 +472,11 @@ cite the item, ⛔ not the line.)*
 
 ### Trap 4 — ⛔ RTBF REMOVES THE CONTRIBUTOR ENTIRELY — AND THE SUBSTRATE DOES ⛔ NOT DO IT FOR YOU
 
+> ⚠⛔ **THE HEADING AND THE FIRST SENTENCE BELOW ARE SUPERSEDED BY `-219` cl.1** (Trustee-ratified
+> 2026-09-16; annotated 2026-09-18, fifth review pass): RTBF now withholds the contributor's **NAME**
+> and the **ROW STAYS** as `A contributor`. ⭐ What still stands: the erased contributor **still counts**,
+> the guarantee lives on the **decrypted plaintext** (`-170`), and ⛔ no per-row state re-check.
+
 `-169`: RTBF removes the contributor — ⛔ no anonymized row, ⛔ no marker, ⛔ no placeholder key — and
 the omitted contributor **still counts** toward every aggregate. `-170`: the guarantee lives on the
 **decrypted plaintext**, ⛔ not the lifecycle-state read, and ⛔⛔ a per-row state re-check is
@@ -466,7 +488,7 @@ the omitted contributor **still counts** toward every aggregate. `-170`: the gua
 ⚠⛔ `splitFirstNameLastInitial('[anonymized]')` returns a **NON-EMPTY `firstName`**, so an empty-name
 guard ⛔ does ⛔ not catch it. And `member/read.ts:183-187`: the lifecycle map is **PERMISSIVE** and
 *"⛔ NOT a sufficient erasure guarantee on its own"* — ⭐ `:186` names the backstop explicitly.
-⇒ ⭐ **compare the DECRYPTED PLAINTEXT to `memberDomain.ANONYMIZED_SENTINEL` and omit the row.**
+⇒ ⭐ **compare the DECRYPTED PLAINTEXT to `memberDomain.ANONYMIZED_SENTINEL` and omit the row.** ⚠⛔ **SUPERSEDED by `-219` cl.1 (2026-09-16) — annotated 2026-09-18, fourth review pass:** the ROW is KEPT and renders `A contributor`; ⛔ only the NAME is withheld.
 ⛔ Without it this surface renders **`[anonymized]`** where a person's name belongs.
 
 ⚠⛔⛔ **v2.0's CITES FOR THIS PATTERN ARE ⛔ THE WRONG FUNCTION — CORRECTED AT v2.1.** It sent the dev
@@ -520,7 +542,7 @@ call this story is told to mirror:
    (**omit the NAME, keep the page**). For a **contributor** the row exists only to carry that name,
    so an unrenderable name means **omit the ROW** — which is also what `-169` already requires for an
    RTBF'd contributor, and what keeps the *"N confirmed beside FEWER than N rows"* invariant true.
-   ⛔ Do ⛔ not apply one rule to both subjects.
+   ⛔ Do ⛔ not apply one rule to both subjects. ⚠⛔ **SUPERSEDED by `-219` cl.1 (2026-09-16) — annotated 2026-09-18, fourth review pass:** the ROW is KEPT and renders `A contributor`; ⛔ only the NAME is withheld.
 2. ⚠⛔ **Test `.trim() || null`, ⛔ NEVER `=== ''`.** That exact narrowing was already found and fixed
    on the sibling surface on 2026-09-08; ⛔ writing `=== ''` here re-introduces a **closed** defect —
    a whitespace-only stored name slips the guard and renders a blank where a person's name belongs.
@@ -630,7 +652,7 @@ per-row `try/catch` below is ⛔ not optional.
 
 **And** ⭐ **the mononym / unresolvable rule is ruled HERE, ⛔ PER SUBJECT** (Trap 5):
 · **contributor** — an unrenderable name ⇒ **omit the ROW** (it exists only to carry the name; `-169`
-  already requires this for RTBF and the *"N confirmed"* invariant absorbs it).
+  already requires this for RTBF and the *"N confirmed"* invariant absorbs it). ⚠⛔ **SUPERSEDED by `-219` cl.1 (2026-09-16) — annotated 2026-09-18, fourth review pass:** the ROW is KEPT and renders `A contributor`; ⛔ only the NAME is withheld.
 · **deceased member** — an unrenderable name ⇒ **omit the NAME, ⛔ never the page** (the sibling's
   shipped rule, `handlers.ts:528-529`).
 · ⚠⛔ **the test is `.trim() || null`, ⛔ NEVER `=== ''`** (Review finding 2026-09-08, already fixed on
@@ -655,7 +677,7 @@ anti-widening fence. ⛔ Do ⛔ not restore it.
    ⚠ Warn-log the clamp, as `member-drive-list.ts:343` does.
 2. ⭐ **Use the SAME binding twice** — into `classifyCycleOutcome`'s `deliveredTotal` and onto the
    entry. ⛔ A second `× fixedAmount` anywhere is the defect (`-176` **D1(c)**, **REFUSED**).
-3. ⭐ **The wire field is `amountRaisedInr`** — ruled at **`-190` cl.6**, with **`-189` cl.5** recording
+3. ⭐ **The wire field is `amountRaisedInr`** — ruled at **`-190` cl.6**, with **`-189` Consequence 5** recording
    the rupee boundary as *"NEWLY CROSSED"*. ⛔ Not `deliveredTotal`, ⛔ not a new name.
 4. ⭐ **Amend `sahyog-vivran-read.ts:496-498`'s anti-widening fence BY NAME** — it forbids carrying
    *"either of them, under any name"*, and this story narrows it to **`expectedTotal` only**
@@ -708,7 +730,7 @@ arithmetically stale. ⭐ Amend each **BY NAME** ([[feedback_supersede_never_rei
 **And** ⛔ ⛔ no rank, ⛔ no total-per-contributor, ⛔ no sort by amount.
 
 ### AC5 — RTBF, the erasure backstop, and the row key
-⭐ Per **Trap 4**: the omitted contributor is **absent entirely** and **still counts**.
+⭐ Per **Trap 4**: the omitted contributor is **absent entirely** and **still counts**. ⚠⛔ **SUPERSEDED by `-219` cl.1 (2026-09-16) — annotated 2026-09-18, fourth review pass:** the ROW is KEPT and renders `A contributor`; ⛔ only the NAME is withheld. ⭐ *Still counts* is unchanged.
 **And** ⭐⭐ **the `ANONYMIZED_SENTINEL` check on the DECRYPTED PLAINTEXT** — snapshot-independent,
 ⛔ never a marker. ⭐ The shipped pattern is `storedName === memberDomain.ANONYMIZED_SENTINEL` at
 **`member-pool/handlers.ts:621`, `:1047`, `:1236`** (⭐ read `:1229`'s rationale first).
@@ -913,6 +935,9 @@ splits. ⇒ ⚠ a reader who pattern-matches *"8.16 closed the inversion"* onto 
 — ⭐ a completeness finding restated in the wrong **unit** ([[feedback_story_validate_footguns]]).
 ⚠⛔ **⛔ Do ⛔ not "fix" it inside this story.** Raising the member side to the full name is a
 **member-surface change** that **AC8** puts out of scope, and it would reverse `-177` cl.2.
+⚠ **ANNOTATED 2026-09-18 (fourth review pass, per `-221` cl.2):** *"it would reverse `-177` cl.2"* ⛔ no
+longer holds — `-177` cl.2 is SUPERSEDED by `-189` cl.3, so raising the member side DISCHARGES a
+standing ruling rather than reversing one. ⭐ It is story `11b-21`'s, and AC8 still keeps it out of this one.
 ⭐ **Trigger for the cure:** any story that takes the member contributor list's name form.
 
 #### ✅ Data class 2 — the **DECEASED MEMBER** name: ✅ **COMPLIANT**, in the present and the post-clause state
@@ -957,13 +982,47 @@ ruling **and** that the two-arm type is **deliberately kept** for 11b.2b's shipp
 ⛔ nothing ratified"* is ⛔ now false (`-174`, unconditional per `-175`) — **and add the forward pointer
 at `:1335`** re-homing the buildable inventory from `11b-3` (⛔ `done`, ⛔ undone) to this story.
 
+
+### AC12 — ⭐ `-219` is BUILT, and each clause has a named test *(added 2026-09-18, fourth review pass)*
+⚠ `-219` (Trustee-ratified 2026-09-16) changed this story's behaviour AFTER every AC above was written,
+and until this pass it lived ⛔ only in HTML comment blocks with ⛔ no AC and ⛔ no Task. ⭐ Recorded here
+so the obligation has an address; ⛔ AC3/AC5/Trap 4/Tasks 3–4 are annotated in place, ⛔ not rewritten.
+- ✅ **cl.1 (option E)** — every paged row is kept; a withheld name is `{ name: null }` →
+  `A contributor`. Test: `sahyog-vivran.spec.ts` *"AN RTBF-ERASED CONTRIBUTOR KEEPS AN UNNAMED ROW"*.
+- ✅ **cl.3 / cl.4(c)** — the five causes are indistinguishable on the wire, by status, and by KMS
+  call count: a corrupt envelope on a one-row page answers exactly as an erasure does and costs the same
+  ONE `decryptDek`. Tests: *"`-219` cl.3 — a CORRUPT envelope on a ONE-ROW page is the PLACEHOLDER"*,
+  *"a CORRUPT envelope costs the SAME ONE KMS call an erased row does"*; outages: *"a KMS OUTAGE on ONE
+  row of MANY refuses the page"*, *"a STATUS-LESS KMS failure … is an OUTAGE too"*.
+  ⚠ **Residuals, stated:** (i) a row with ⛔ no KYC profile costs ZERO KMS calls vs one for every other
+  cause — a pre-existing timing difference, ⛔ not introduced here; (ii) a stored name that fails to
+  PARSE also costs zero; (iii) ⭐ the constraint these residuals are weighed against is Trustee-ratified
+  `2026-09-18-222` **cl.2** — *"NOTHING may disclose WHICH"* — which covers status and timing; ⚠ the
+  fifth pass called that the REVIEWER'S reading of `-219` cl.4(c), and was wrong to (sixth review pass).
+  ⇒ (i) and (ii) are timing differences AGAINST a ratified "NOTHING"; carried as a deferred residual
+  whose reachability is unproven (`deferred-work.md`, sixth pass), ⛔ not as compliant.
+  (iv) ⚠ **Behavioural cost of classify-by-error, recorded 2026-09-18 (sixth pass):** a row whose stored
+  name was wrapped under a KEK version that is now DISABLED or DESTROYED fails with a KMS status other than
+  INVALID_ARGUMENT, which this route treats as an outage ⇒ every page holding that row answers 500 at the
+  API (the 503 outage view at the public app) for as long as the version stays unavailable, while rows
+  on the current version would decrypt. ⚠ **Verification owed:** that Cloud KMS answers INVALID_ARGUMENT
+  (3) for an AAD mismatch or a corrupted ciphertext is ASSUMED, ⛔ un-attested against the live service.
+- ✅ **cl.4** — ⛔ no count of the unnamed rows is published. Test: `sahyog-vivran-copy.test.ts`
+  completeness/tally fence (both locales; the Hindi half made non-vacuous 2026-09-18).
+- ✅ **cl.5(a)** — the financial-truth gate's literal-operand leg and `.astro` template scan.
+  Tests: `scripts/sahyog-vivran-financial-truth/lib.test.ts`.
+- ✅ **cl.6** — the basis is membership itself; every living-contributor basis citation in the tree
+  now says so (swept 2026-09-18).
+
 ---
 
 ## ⚖️ Decisions
 
 - ✅ **D2** — contributor declaration + form: **RULED, Panel, FULL NAME** (`-174`; unconditional `-175`).
 - ✅ **D3** — deceased member on this surface: **RULED, Panel, FULL NAME** (`-173`).
-- ✅ **`D9-inversion`(a)** — **CARRY** the inversion (`-177` cl.2). ⚠ **RENAMED** from bare `D9` per
+- ✅ **`D9-inversion`(a)** — **CARRY** the inversion (`-177` cl.2). ⚠⛔ **SUPERSEDED (`-221` cl.2,
+  annotated 2026-09-18):** `-189` cl.3 overtook `-177` cl.2 two days later; this is a carried BREACH of
+  a standing ruling, ⛔ not an accepted trade — discharged at `11b-21`. ⚠ **RENAMED** from bare `D9` per
   `-168` **cl.9** (*"two different D5s in one sibling set is exactly how a ruling gets applied to the
   wrong question"*): 11b.1 and 11b.2 each have their own `D9(a)`.
 - ✅ **`D10-rowkey`(a)** — **NO row key** (`-177` cl.3). ⚠ **RENAMED** from bare `D10`: 11b.1's `D10`
@@ -983,7 +1042,8 @@ AC10→T0 · **AC11→T1b** (and T1b gates T2).
 - [x] **Task 0 — GOVERNANCE** (AC0, AC10) — ✅ **COMPLETE, 2026-09-15, in ONE `governance:` commit
       carrying ⛔ no code.** ⭐ `D-percentage` **RULED AND RECORDED** (`#decision-2026-09-15-218`) ·
       ⭐ **AC10's compliance statement WRITTEN** for both data classes (⛔ contributor **NOT COMPLIANT**,
-      carried under `-177` cl.2; ✅ deceased **COMPLIANT**) · ⭐ story D's **Trap-10 back-reference**
+      carried under `-177` cl.2 — ⚠ SUPERSEDED by `-189` cl.3, annotated 2026-09-18 per `-221` cl.2;
+      ✅ deceased **COMPLIANT**) · ⭐ story D's **Trap-10 back-reference**
       carried **and discharged** by `-218` · ⭐ **`-182`'s forward pointer** appended · ⭐ the
       un-hardened `fundingOutcome` guard **ROUTED** (AC8), ⛔ not fixed.
   - [x] ✅ **DONE** — forward pointer appended to **`#decision-2026-09-02-182`**: its D9/D10
@@ -1052,7 +1112,7 @@ AC10→T0 · **AC11→T1b** (and T1b gates T2).
       confirmation's `event_version`**, ⛔ never `member_id`) → **PAGE FIRST, DECRYPT SECOND** →
       bounded decrypt at the **FULL** `DIRECTORY_DECRYPT_CONCURRENCY` (⛔ not the halved bound at
       `member-pool/handlers.ts:508`: a contributor row is ⛔ ONE decrypt) → the per-row `try/catch`
-      **INSIDE `fn`** → `resolvePublicMemberName` → `.trim() || null` → **omit the ROW**.
+      **INSIDE `fn`** → `resolvePublicMemberName` → `.trim() || null` → **omit the ROW**. ⚠⛔ **SUPERSEDED by `-219` cl.1 (2026-09-16) — annotated 2026-09-18, fourth review pass:** the ROW is KEPT and renders `A contributor`; ⛔ only the NAME is withheld.
       ⭐ **The control set is SEVEN** — ordinals 2 and 3 RESTORED in
       `sahyog-vivran-controls.ts`, with `routes.ts`'s header, the matrix's `paginated` flag and
       **four** `login-wall.spec.ts` assertions moved **BY NAME** in the same commit.
@@ -1073,7 +1133,7 @@ AC10→T0 · **AC11→T1b** (and T1b gates T2).
       ✅ **AT TASK 3, with the rows they protect** (⛔ deliberately ⛔ not held back — the gap would have
       rendered the literal `[anonymized]` publicly): the `ANONYMIZED_SENTINEL` plaintext check
       (constant **IMPORTED** from `@twt/domain`, ⛔ never re-typed) · **absent entirely AND still
-      counts** · ⛔ **no** per-row lifecycle re-check (`-170`) · ⛔ **no** row key (`D10-rowkey`(a)).
+      counts** (⚠ *absent entirely* SUPERSEDED by `-219` cl.1 — the row stays, unnamed) · ⛔ **no** per-row lifecycle re-check (`-170`) · ⛔ **no** row key (`D10-rowkey`(a)).
       ✅ **AT TASK 4 (this commit):** ⭐ **`-177` cl.3's TRIGGER RE-POINTING IS RECORDED IN
       `deferred-work.md` FOR THE FIRST TIME.** ⚠⛔ **It was RULED on 2026-09-02 and had ⛔ NEVER reached
       that file** — the word *"virtualized"* appeared in ⛔ no entry there. ⇒ the 8.3 entry still
@@ -1298,6 +1358,161 @@ cl.4 until 2026-09-17, which is the BATCHED-STATE-READ clause) while `items` is 
 
 ⭐ **Dismissed as verified non-issues (3):** an ordering-tie duplicate/skip across pages — ⛔ refuted: `packages/domain/src/contribution/read.ts:224-231` sorts on earliest-live `event_version` with `memberId.localeCompare` as the FINAL tie-break only (⭐ ruled: `member_id` is prohibited as the PRIMARY key, ⛔ not as a last-resort tie-break), deterministic and replay-stable; `formatCurrency` throwing at ≥ 9e13 — `pools.fixed_amount` is a PG `integer` (≤ 2.1e9), needing ~42,000 confirmations on one pool ⇒ ⛔ not reachable; and the un-wired abuse counter — ⭐ already investigated, recorded and routed by this story's own Task 7 (AC8) and live in `deferred-work.md`, ⇒ a duplicate of a ratified act, ⛔ not a new finding.
 
+### Review Findings — FOURTH PASS (2026-09-18, whole branch vs `origin/main`, merge-base `be0037cc`)
+
+⭐ Three layers (Blind Hunter / Edge Case Hunter / Acceptance Auditor), un-chunked, 41 files / +7660. ⭐ Every
+finding below was re-verified against the tree by the triaging reviewer before it was kept. ⚠ Panel-routing
+gate (§0) applied to the one `decision-needed`: stripped of citations it reads *"how should the code detect a
+decrypt outage without revealing which row failed"* ⇒ ⛔ NOT the Panel's — `-219` cl.3 is ratified and
+unambiguous; the question is how to COMPLY with it.
+
+- [x] [Review][Decision] ⭐ **RESOLVED 2026-09-18 by BigDev → option (A)**, now the Patch below. **The all-rows-systemic 503 is PAGE-COMPOSITION dependent — at `?limit=1` it distinguishes a failed decrypt from the four lawful causes, and one corrupt envelope permanently 503s a one-row page** — `handlers.ts:1150-1156` throws when `systemicFailures === resolvedContributors.length`. On any 1-row page (`?limit=1&page=k`, a 1-contributor drive, a 1-row last page) a failed decrypt ⇒ 503 while RTBF / sentinel / mononym / missing profile ⇒ 200 + `A contributor`. ⇒ breaches `-219` cl.3 (*"true under ALL FIVE causes … nothing may disclose WHICH"*) and AC3 (*"a single bad row must not take down the surface"*). Conversely a KMS outage over a MIXED page still publishes cached placeholders. Options: **(A)** make the outage signal POSITION-INDEPENDENT — 503 only when a drive-level probe fails too (the deceased-name decrypt when present, else a KMS health call); a contributor-row decrypt failure is ALWAYS a placeholder + error log. **(B)** drop the throw; placeholder + error log + alert only (accepts the cached "looks like mass erasure" page during an outage). **(C)** keep, and route a cl.3 exception to the Panel. Recommended: **(A)**. [blind+edge+auditor]
+- [x] [Review][Patch] ⚠⛔ **SUPERSEDED by the FIFTH pass (the probe was deleted; classify-by-error replaced it).** (Decision → A) Make the outage signal POSITION-INDEPENDENT: delete the per-page all-systemic throw; a contributor-row decrypt failure is ALWAYS a placeholder + error log; 503 only when a drive-level probe also fails (the deceased-name decrypt when present, else a KMS health probe) [`apps/api/src/modules/public-pages/handlers.ts:1150-1156`]
+- [x] [Review][Patch] ⚠⛔ **SUPERSEDED by the FIFTH pass (`isPostgresError` deleted; the DB read left the `try`) — its test is replaced by the sixth pass's DB-fault leg.** A non-`25P02` DB error on the LAST queued statement is swallowed as a placeholder — the aborted tx commits silently and a transient fault caches as lawful omission; rethrow ANY error carrying a Postgres SQLSTATE (every one aborts the tx) [`apps/api/src/modules/public-pages/handlers.ts:1111`] [edge]
+- [x] [Review][Patch] The Hindi completeness/tally fence can never fire — JS `\b` is ASCII-only, so `/\bसभी\s+सहयोगी/`, `/\bपूरी\s+सूची/`, `/\bछिपाए/`, `/\bरोके/` match nothing (verified); same vacuity class `2efa4c98` fixed for English [`apps/public/tests/sahyog-vivran-copy.test.ts:251-256`] [auditor]
+- [x] [Review][Patch] No committed regression test for: the all-systemic throw (per the Decision's outcome), the 25P02/SQLSTATE rethrow, a failed contributor decrypt ⇒ placeholder row (the 5th cl.3 cause — the only one untested), and the `.astro` fixes (unknown param ignored, empty `?limit=`, `limit` forwarded only when supplied, `hasNextPage` horizon clamp). ⛔ "proven by MUTATION" with no committed test is not a guard (family 10) [`apps/api/tests/integration/public-pages/sahyog-vivran.spec.ts`, `apps/public/tests/`] [blind+auditor]
+- [x] [Review][Patch] Test named "DECRYPT FAN-OUT IS BOUNDED BY `limit`" never counts decrypts — a decrypt-all-then-slice regression passes; spy on `decryptKycField` and assert calls ≤ `limit` [`apps/api/tests/integration/public-pages/sahyog-vivran.spec.ts:949`] [blind]
+- [x] [Review][Patch] Financial-truth gate goes silently blind on an `.astro` file with a BOM/leading byte before `---` (regex anchored `^---`; reproduced: 0 findings, 0 diagnostics), and `parseDiagnostics` is never checked — strip BOM/leading whitespace and fail the scan on frontmatter parse diagnostics [`scripts/sahyog-vivran-financial-truth/lib.ts:206`] [edge+blind]
+- [x] [Review][Patch] `namedOperand` does not unwrap `NonNullExpression` / `AsExpression` / `SatisfiesExpression` — `drive.confirmedContributionCount! * 1000` ships green [`scripts/sahyog-vivran-financial-truth/lib.ts:144`] [edge]
+- [x] [Review][Patch] **Family 11 REAL GAP** — the contributor's publication basis still cites `-160` cl.7, which `-219` cl.6 corrected and forbids re-citing: contract doc-block, domain doc, handler comment, and the spec's § Policy meaning (AI-10-1) sentence, which also never tells the member their withheld name now shows as `A contributor` in position [`packages/contracts/src/public-pages/sahyog-vivran.ts:519`, `packages/domain/src/pool/sahyog-vivran-read.ts:412`, `apps/api/src/modules/public-pages/handlers.ts:968`] [blind+auditor]
+- [x] [Review][Patch] Comments still say the contributor arm omits the ROW (false since `-219` cl.1; Consequence 3 requires in-place amendment) — each says "do not collapse the two", inviting a future editor to reinstate the omission [`handlers.ts:864`, `[driveToken].astro:498`, `contracts/src/public-pages/sahyog-vivran.ts:398`, `apps/api/tests/integration/public-pages/sahyog-vivran.spec.ts:598`, `apps/public/tests/sahyog-vivran-render.test.ts:348`, `apps/public/src/lib/sahyog-vivran-render.ts` ("rows are omitted AFTER paging"), `public-vs-private-matrix.yaml:1299` ("removes the contributor's ROW ENTIRELY")] [blind+auditor]
+- [x] [Review][Patch] `-177` cl.2 still cited as a LIVE carry without the `-221` supersession annotation [`public-vs-private-matrix.yaml:1317`, `contracts/src/public-pages/sahyog-vivran.ts:536-540`, `packages/ui/src/contribution-list/view-model.ts:74`, spec Decisions `D9-inversion(a)`, AC10] [auditor]
+- [x] [Review][Patch] The en/hi `$comment.contributor_unnamed`, `sahyog-vivran.ts:559-561` and the handler placeholder comments say the member surface keeps D5 whole / "do not re-export" — false since `-222` (2026-09-18); point them at `-222` and leave the key strategy to `11b-21` [`packages/i18n/locales/{en,hi}/sahyog-vivran.json`] [auditor]
+- [x] [Review][Patch] Mis-dated decision ids in added lines (grep-empty footgun): `2026-08-30-170` → `2026-08-31-170`, `2026-08-30-172` → `2026-09-01-172`, `2026-09-07-218` → `2026-09-15-218` (the last one is in the gate's own CI output) [`handlers.ts:873,1065,1076`, `sahyog-vivran.spec.ts:872`, `scripts/sahyog-vivran-financial-truth/lib.ts:374`, `deferred-work.md`] [blind+auditor]
+- [x] [Review][Patch] "`-189` cl.5" does not exist — `-189` has clauses 1–3; the rupee-boundary text is its **Consequence 5**. Fix at the sites THIS diff added [`contracts/src/public-pages/sahyog-vivran.ts:448,464`, `domain/src/pool/sahyog-vivran-read.ts:347,644`, `scripts/sahyog-vivran-financial-truth/lib.ts:114`, `lib.test.ts:141`, `check.ts:80`, `public-vs-private-matrix.yaml:1223`, AC3b] [auditor]
+- [x] [Review][Patch] Stale header comment — "AN UNRECOGNISED QUERY PARAMETER IS A REFUSAL" — contradicts the shipped ignore-unknown-params fix [`apps/public/src/pages/sahyog-vivran/[driveToken].astro:261`] [auditor]
+- [x] [Review][Patch] Spec ACs/Tasks never amended for `-219`: AC3 ("omit the ROW"), AC5 ("absent entirely"), Trap 4, Task 3, Task 4 contradict the code; `-219` cl.1/3/4/5(a)/6 live only in HTML comments with no AC/Task. File List misses `apps/public/tests/sahyog-vivran-client.test.ts`, `friction-budget.md`, and still lists the deleted `RULED_AMOUNT_FIELD` [this file] [auditor]
+- [x] [Review][Patch] Misplaced JSDoc — the audit doc-block is detached from `writeAppealReversalDisclosureAudit`, and `normalisePublicName`'s doc sits above `ResolvedContributor` [`apps/api/src/modules/public-pages/handlers.ts:~1257-1351`] [blind+auditor]
+- [x] [Review][Patch] Render-test fixture still uses the superseded wire shape (2 named items, `total: 3`) that `scrape-test.spec.ts` was corrected away from [`apps/public/tests/sahyog-vivran-render.test.ts:120`] [blind]
+- [x] [Review][Patch] ⚠ **PARTIAL — "Previous" fixed; the `aria-current` / "page N of M" half DEFERRED (needs copy).** Past-the-end page (`?page=150`, `total=10`): "Previous" links to page 149 (also empty) and the nav has no `aria-current` / "page N of M" — point Previous at the last real page and announce the current page [`apps/public/src/pages/sahyog-vivran/[driveToken].astro:378-399,741`] [edge]
+- [x] [Review][Patch] `normalisePublicName` keeps interior bidi override controls (U+202A–202E, U+2066–2069), which can visually reorder a rendered name — strip them (ZWJ/ZWNJ stay) [`apps/api/src/modules/public-pages/handlers.ts:~1319`] [blind]
+- [x] [Review][Patch] The deceased-name KYC left-join (added by this story) has no `pariwar_id` predicate, which the file's own doc says rides alongside RLS for the BYPASSRLS case — add it to the join `ON` [`packages/domain/src/pool/sahyog-vivran-read.ts:551`] [edge]
+- [x] [Review][Defer] Duplicate `contribution.confirmed` for one member+pool is reachable (matcher check-then-append; claim key includes `entryId`; no DB unique) ⇒ `count(*)` overstates `confirmedContributionCount` AND the public `amountRaisedInr` [`apps/jobs/src/matcher/matcher-worker.ts:300-317`, `packages/domain/src/pool/public-read.ts:299`] — deferred, pre-existing
+- [x] [Review][Defer] Negative `fixed_amount` (no DB CHECK): `deliveredTotal` is clamped but `expectedTotal` is not ⇒ a closed drive can publish a favourable verdict [`packages/domain/src/pool/sahyog-vivran-read.ts:~665`] — deferred, pre-existing
+- [x] [Review][Defer] Ignoring unknown query params (the `fbclid` fix) makes the drive page's shared-cache key space UNBOUNDED — extends the second pass's `page × limit` defer; needs edge cache-key normalisation or a canonicalising redirect [`apps/public/src/pages/sahyog-vivran/[driveToken].astro:394`] — deferred, residual of this story's own fix
+- [x] [Review][Defer] Pagination has ⛔ no "page N of M" / `aria-current` — needs new copy in both locales [`apps/public/src/pages/sahyog-vivran/[driveToken].astro`] — deferred, copy call (itemised 2026-09-18, fifth pass)
+- [x] [Review][Defer] "`-189` cl.5" at PRE-EXISTING sites outside this diff [`deferred-work.md` fourth-pass section] — deferred, pre-existing (itemised 2026-09-18, fifth pass)
+- [x] [Review][Defer] `-222` cl.2 (*"no second key"*) and its Consequence 3 (*"a new key in the RULED word"*) read against each other — `11b-21` must pick the key strategy (engineering, ⛔ not Panel: the WORDS are ruled) [`.decision-log.md` `-222`] — deferred to 11b-21
+
+⭐ **Dismissed (5):** two numbers under one copy key (already routed to `11b-22`); positional correlation of an erased contributor by snapshot diffing (Panel-ratified at `-219` cl.1/`-222`, correlation argued in `01e080e2`); client validator not rejecting extra keys / length drift (renderer field-picks, API is `.strict()`); gate blind to aliases / named constants / template-literal event names (outside a syntactic tripwire's stated scope); unbounded roster read + N+1 KYC reads (already deferred, second pass).
+
+⭐ **ALL 20 PATCHES APPLIED 2026-09-18** (the Decision resolved to (A) by BigDev). ⚠ Two scope notes:
+the past-the-end item fixed "Previous" only — "page N of M" / `aria-current` needs new copy and is
+DEFERRED; the "`-189` cl.5" sweep covered the sites THIS diff added, and the pre-existing ones are
+DEFERRED with their paths. ⭐ **Evidence:** `tsc --noEmit` + `eslint .` clean in `apps/api`,
+`apps/public`, `packages/{domain,contracts,ui}`; `astro check` 0/0/0; `apps/api` public-pages
+integration 88/88 and `login-wall` 5/5 on `twt-test-pg`; `apps/public` 641/641 (+9 new paging legs);
+`packages/domain` sahyog/public-read 70/70; `contracts` 1134, `ui` 254, `i18n` 108; the gate 30/30 and
+green on the real tree. ⭐ **Proven by MUTATION, and the tests are COMMITTED:** reverting the
+page-composition rule fails *"a CORRUPT envelope on a ONE-ROW page"*; reverting the SQLSTATE guard to
+`25P02`-only fails *"an error carrying a SQLSTATE is RE-THROWN"* (which first passed vacuously on a
+one-row fixture — caught and widened to two rows). ⚠ **Both named tests were DELETED or superseded by
+the fifth pass; this evidence describes the fourth-pass tree only.** ⚠ Full `ci:local` was ⛔ NOT run in this pass.
+
+
+### Review Findings — SIXTH PASS (2026-09-18, ADVERSARIAL review of the FIFTH PASS's patches)
+
+⭐ Three layers again (Blind Hunter on the diff only / Edge Case Hunter with repo access and in-memory
+probes of the real gate and regexes / closure auditor). ⭐ The Edge layer VERIFIED against the real code:
+google-gax `GoogleError.code` is a numeric gRPC status (so `code === 3` is a valid discriminator); both
+KMS providers are plain object literals and `auditHook` is assigned before any request (the spread keeps
+it); the audit hook never throws; `mapWithConcurrency` leaves ⛔ no unhandled rejection and ⛔ no query
+after release; the API returns 500 with ⛔ no cache header and the public app renders 503 `no-store`; the
+real `[driveToken].astro` (top-level `return`, top-level `await`) scans clean — a top-level `return` is a
+checker error, ⛔ not a parse diagnostic. ⚠ **0 decisions:** the one candidate — a missing-profile row
+costs ZERO KMS calls vs ONE for every other cause, a timing difference against `-222` cl.2's
+*"NOTHING may disclose WHICH"* — was ⛔ NOT escalated because its REACHABILITY is unproven (whether a
+CONFIRMED contributor can lack a KYC profile) ([[feedback_trace_reachability_before_escalating]]); DEFERRED
+with that trigger.
+
+- [x] [Review][Patch] **The shielded MONONYM leak is only PARTLY closed — a DENYLIST of invisibles can never be complete.** A second token made only of characters ⛔ absent from `INVISIBLE_CHARS` (U+061C ALM, U+FFA0, tag chars U+E0020–E007F, U+E0100–E01EF, U+17B4/5, U+1D173–1D17A) or of a lone combining mark or punctuation (`"Sunita ."`) still defeats `-145` cl.3 and ships `"Sunita X."` — reproduced in node. A surname that STARTS with an invisible (`"Sunita \u200bKumari"`) ships the invisible as the initial. `\s` also splits on U+FEFF, inserting a visible space mid-name. ⚠ The same root is live on the directory and the `/sahyog` index (`handlers.ts:233,533` call the resolver raw). ⇒ fix at the ROOT, `packages/domain/src/kyc/public-name.ts`: split on `\p{White_Space}`, strip bidi controls, strip LEADING `\p{Default_Ignorable_Code_Point}` per token, keep a token ⛔ only if it holds `\p{L}` or `\p{N}`; the handler's local `normaliseStoredName` goes. ⚠ Accepted: NBSP/tab separators are re-joined as a single space [edge+blind+auditor]
+- [x] [Review][Patch] The DECEASED-name arm decrypts with the raw `deps.encryption` and catches everything ⇒ a KMS outage there is served as a lawful omission at `200`, cached. ⇒ use `outageAwareEncryption` and re-throw `KmsOutageError` (dormant until `namePublicationAuthorised` goes live) [`handlers.ts:~852-868`] [blind+edge]
+- [x] [Review][Patch] The Decision's DB-read half has ⛔ NO TEST — the fourth pass's SQLSTATE leg was deleted, so moving `getMemberKycProfile` back inside the `try` passes every test. ⇒ a leg that faults the profile read on ONE row of many [`apps/api/tests/integration/public-pages/sahyog-vivran.spec.ts`] [auditor]
+- [x] [Review][Patch] The gate parses the frontmatter as TS for DIAGNOSTICS but WALKS it as TSX ⇒ `<number>count * 1000` parses cleanly as TS (no refusal) and as a JSX element in the walk (operand never seen) — a silent false negative. ⇒ walk the script half as TS and the template as TSX, separately [`scripts/sahyog-vivran-financial-truth/lib.ts`] [blind]
+- [x] [Review][Patch] `unrecognisedFence` (`/^\uFEFF?\s*---/`) is wider than the fence regex — a frontmatter-less template whose first text is `--- Title ---` or `----` is REFUSED, turning CI red on a legitimate page. ⇒ match a `---` fence LINE only [`lib.ts`] [blind]
+- [x] [Review][Patch] The shared fake KMS's new `code: 3` is undocumented (`packages/domain/src/encryption/README.md`) and unasserted by its own unit test (`packages/domain/tests/encryption/fake-kms-provider.test.ts`) — guarded only by a DB-gated `apps/api` leg [auditor]
+- [x] [Review][Patch] **Stale records (closure precision):** the fourth-pass Patch lines for the probe and the SQLSTATE rethrow are still `[x]` with ⛔ no SUPERSEDED note; the fourth-pass evidence cites a deleted test; the File List still describes `handlers.ts` as "KMS-probe … SQLSTATE rethrow" and has ⛔ no fifth-pass entry (missing `fake-kms-provider.ts`, the gate's README/`check.ts`/`lib.ts`/`lib.test.ts`) [this file] [auditor]
+- [x] [Review][Patch] **Mis-citation both ways:** the Policy-meaning note says *"`-172` accepts up to five minutes of edge cache"* — `-172` rules the guarantee ENDS AT THE WIRE; the five minutes is the page's `s-maxage=300`, and `-172`'s follow-up trigger (ii) fires if that sentence is ever shown to members. Conversely AC12 and the fifth-pass header call "status within cl.4(c)" the REVIEWER'S reading — but Trustee-ratified `-222` **cl.2** restates the constraint as *"NOTHING may disclose WHICH"*, which covers status and timing; cite it, and weigh the residuals against it [this file] [auditor]
+- [x] [Review][Patch] ⭐ **RECORDED, ⛔ no code or policy change — per BigDev 2026-09-18: *"record #9's behavioral cost and verification requirement without inventing a new policy"*.** Written as FACT in AC12 (iv), the Decision patch line, `handlers.ts` `withKmsOutageClassification` doc, and `deferred-work.md` (the earlier "ops runbook: never disable…" wording was a rule and was REWORDED to a fact). **The Decision's OTHER cost is unrecorded:** under classify-by-error, a row whose envelope sits under a DISABLED/DESTROYED older key version (FAILED_PRECONDITION) or a revoked version 503s every page that holds it, until re-enabled — per-row, since erased rows are re-encrypted on the current version. And the premise *"Cloud KMS returns gRPC 3 for an AAD mismatch / bad ciphertext"* is ⛔ UN-ATTESTED against live KMS. ⇒ record both in the Decision, AC12 and `handlers.ts:~1343-1347` ([[feedback_record_unattested_no_backfill]]); the decision patch's *"(outage, 503)"* reads *"500 at the API, the 503 outage view at the public app"* [auditor+blind+edge]
+- [x] [Review][Patch] Surviving stale sites: `packages/ui/src/contribution-list/view-model.ts:42` (D5 "omits the ROW ENTIRELY", ⛔ no `-222` pointer); story References *"`-189` cl.3, cl.5"*; `[driveToken].astro:~675` empty-state *"every row was omitted"*; `handlers.ts` `INVISIBLE_CHARS` doc *"NEVER to rewrite the interior"* [auditor]
+- [x] [Review][Defer] The NOMINEE arm (`decryptNomineeBankFieldSoft`, pre-existing) is ⛔ not outage-classified — a KMS outage on a page with no contributor rows publishes `accountHolderName: null` at `200`, cached [`handlers.ts:~936-941`] — deferred, pre-existing, a different subject
+- [x] [Review][Defer] Timing residual against `-222` cl.2: a missing KYC profile (and an unparseable stored envelope) costs ZERO KMS calls vs ONE for every other withheld cause. ⚠ Reachability UNPROVEN — trigger: any evidence that a CONFIRMED contributor can lack a `member_kyc_profiles` row; then equalise or route [`handlers.ts` per-row fn] — deferred, reachability unproven
+- [x] [Review][Defer] Behavioural cost of classify-by-error, recorded as FACT (⛔ no new rule): a row wrapped under a KEK version that is DISABLED or DESTROYED is treated as an OUTAGE, so every page holding it answers 500 (503 outage view) while that version is unavailable [`handlers.ts` `withKmsOutageClassification`] — deferred, recorded cost
+- [x] [Review][Defer] UN-ATTESTED: Cloud KMS's status for an AAD mismatch / corrupted ciphertext is ASSUMED to be INVALID_ARGUMENT (3) — attest against live KMS before `namePublicationAuthorised` or any KMS-backed public launch [`packages/domain/src/encryption/cloud-kms-provider.ts`] — deferred, un-attested evidence carried as risk
+
+⭐ **APPLIED 2026-09-18 — patches 1–8 and 10; #9 RECORDED only (BigDev).** ⭐ **Evidence:** `tsc --noEmit`
++ `eslint .` clean in `apps/api`, `apps/public`, `packages/{domain,contracts,ui}`; `astro check` 0/0;
+`apps/api` public-pages (incl. the directory and `/sahyog` index, which now share the cleaned resolver)
++ `login-wall` + the fake-KMS consumers 136/136 on `twt-test-pg`; `apps/public` 641/641;
+`packages/domain` sahyog/public-read/encryption/kyc 136 (+1 skipped); `contracts` 1134, `ui` 254,
+`i18n` 108; the gate 36/36 and ✓ on the real tree, run last. ⭐ **Mutation-checked:** moving the
+profile read back inside the `try` fails the DB-fault leg; removing the deceased arm's `KmsOutageError`
+re-throw fails the deceased-outage leg. ⚠ The shielded-mononym fix now lives in `@twt/domain`
+(`publicNameTokens`) and changes the directory's and the `/sahyog` index's name output for the same
+inputs — neither surface is live (both are gated).
+⚠⛔ **FULL `ci:local` THEN RAN — AND WENT RED ON A THIRD FOURTH-PASS REGRESSION.** `pii-scrape` (FR-91
+binding leg): the paginated page's OWN source must call `parsePageParams()`, and the fourth pass had moved
+that call into `sahyog-vivran-paging.ts`. ⚠ No targeted suite runs that gate — only `ci:local` did, which
+is exactly why every earlier pass's *"`ci:local` NOT run"* disclosure mattered. ⭐ Fixed: the page calls
+`parsePageParams` again; the module keeps `cleanSahyogVivranParams` + `sahyogVivranForwardLimit`, still
+tested. ⭐⭐ **`ci:local` PASSED — 34/34**, on `DATABASE_URL=…:5433` (integration-tests included), after the fix.
+
+⭐ **Dismissed (7):** a systemic INVALID_ARGUMENT publishing placeholders (the RULED accepted cost of
+option 1, already recorded); the real provider's error shape (verified numeric `code` on `GoogleError`);
+DB writes from the audit hook inside the `try` (the hook never throws); in-flight workers after a throw
+(verified); object-spread losing prototype methods (both providers are plain literals); the corrupt
+fixture not reaching code 3 (verified: it fails at the KMS AAD check with code 3); the API 500 carrying
+a cache header (the route sets none; the public app serves `no-store`). ⚠ The ERROR-vs-WARN log-level
+difference on the corrupt path is folded into the timing Defer.
+
+### Review Findings — FIFTH PASS (2026-09-18, ADVERSARIAL review of the FOURTH PASS's own patches)
+
+⭐ Three layers (Blind Hunter on the patch diff only / Edge Case Hunter with repo access / closure
+auditor against the 21 checked items). Diff: the uncommitted working tree vs `d5d55195`. ⚠ Panel gate
+(§0) applied to the Decision: stripped of citations it reads *"how should the code tell a KMS outage
+from one corrupt stored name"* ⇒ ⛔ NOT the Panel's. ⚠ Note carried from the auditor: `-219` **cl.3**
+constrains the WORD; *"nothing may disclose WHICH"* is `-219` cl.4(c) + D5's ground — an HTTP status is
+⛔ not on cl.4(c)'s list, so treating it as covered is the REVIEWER'S reading, recorded as such.
+⚠ **CORRECTED at the sixth review pass:** it is ⛔ not a reviewer's reading — Trustee-ratified
+`2026-09-18-222` **cl.2** restates the constraint as *"NOTHING may disclose WHICH"*, without qualification.
+
+- [x] [Review][Decision] ⭐ **RESOLVED 2026-09-18 by BigDev → option 1 (classify by the ERROR, ⛔ no probe)**, now the first Patch below. **Option (A) as BUILT — the KMS canary probe — fails its own purpose on four counts** — (a) it PASSES while stored envelopes fail systemically: a disabled/destroyed older key version, a revoked decrypt permission, or a transient RESOURCE_EXHAUSTED/UNAVAILABLE/DEADLINE_EXCEEDED that has cleared by probe time all publish N placeholders at `200`, edge-cached — the "outage read as erasure" lie, back; (b) it opens a TIMING channel it did not have: a corrupt row now costs a failed decrypt + an encrypt + a decrypt (~3×) vs an erased row's one decrypt, measurable per position at `?limit=1` with a cache-busting junk param; (c) it is an unauthenticated AMPLIFIER: every cache-miss render of a page holding a corrupt row fires 2 KMS ops and 2 serialized writes into the global advisory-locked audit chain (`auditHook` → `audit-log-sink.ts`), including a KEK-wrap line that matches no stored value; (d) a DB connection loss with no SQLSTATE (`Connection terminated unexpectedly`, `ECONNRESET`) is still classed per-row, the KMS probe passes, and a DB fault caches as lawful omission; conversely `EPIPE`/`EPERM` match the SQLSTATE regex. [`apps/api/src/modules/public-pages/handlers.ts:1109-1185,1332-1371`] [blind+edge+auditor]
+- [x] [Review][Patch] (Decision → 1) ⚠ *(sixth pass: "503" below means 500 at the API, rendered as the 503 outage view by the public app. ⚠ Second cost, recorded: a row under a DISABLED/DESTROYED KEK version is classed an OUTAGE, so every page holding it answers 500/503 while that version is unavailable. ⚠ The INVALID_ARGUMENT premise is UN-ATTESTED against live KMS.)* **Classify by the ERROR, delete the probe**: any failure of the KYC-profile DB read ⇒ rethrow (outage, 503); a KMS `decryptDek` failure carrying a gRPC status other than INVALID_ARGUMENT ⇒ rethrow; ONLY a per-envelope fault (KMS INVALID_ARGUMENT, local envelope parse / AES-GCM auth failure) ⇒ placeholder + error log. ⭐ Removes the timing channel (a corrupt row costs the same one KMS call an erased row does), the amplification and the canary audit lines, and depends on ⛔ nothing about the page's composition. ⚠ Accepted cost: if KMS ever answers INVALID_ARGUMENT for a SYSTEMIC reason (a mis-set kekRef for every row), the page publishes placeholders — the error log is the only alarm [`handlers.ts`]
+- [x] [Review][Patch] **Shielded mode publishes a MONONYM in full when it carries a trailing invisible/bidi token** — `"Sunita \u202e"` tokenises as two words, skips the mononym fail-closed arm (`-145` cl.3), resolves to `"Sunita \u202e."`, and the post-resolve normaliser ships `"Sunita ."`; `full_name` also ships a double space. ⇒ normalise the STORED name BEFORE `resolvePublicMemberName`, on BOTH arms, with a test. ⚠ Root predates this story's patches but runs through the normaliser the fourth pass changed [`handlers.ts:~1104,~907`, `packages/domain/src/kyc/public-name.ts:73-100`] [edge]
+- [x] [Review][Patch] Hindi anti-vacuity leg tests RE-TYPED COPIES of the fence's regexes — reverting a fence pattern to `\b` still passes; share one constant [`apps/public/tests/sahyog-vivran-copy.test.ts:243-272`] [blind+auditor]
+- [x] [Review][Patch] Gate's parse-diagnostic refusal drops diagnostics AT/AFTER `frontmatterEnd` — an unterminated `{`/template/comment reports at `source.length` (strict `<`), and an unterminated backtick in `.astro` frontmatter lands in the template half; both scan GREEN on a partial tree. Parse the frontmatter ON ITS OWN for diagnostics [`scripts/sahyog-vivran-financial-truth/lib.ts:~349`] [blind+edge]
+- [x] [Review][Patch] Gate REFUSES valid Astro: an EMPTY frontmatter `---\n---` fails the fence regex, and a no-frontmatter file with a `---` line in its template trips `unfencedFrontmatter` [`lib.ts:~226,~352`] [blind+edge]
+- [x] [Review][Patch] Gate reports frontmatter findings at the WRONG LINE — `lead` repeats a newline for every newline in the WHOLE fence match, frontmatter included (pre-existing; the new rule inherits it) [`lib.ts:~233`] [edge]
+- [x] [Review][Patch] Gate README does not document the new `unparseable_source` rule [`scripts/sahyog-vivran-financial-truth/`] [auditor]
+- [x] [Review][Patch] The KMS-outage leg does not discriminate the new rule from the deleted one (every row fails on every page), asserts only `>= 500`, mocks `encryptDek` so the probe's decrypt is never reached; the decrypt-count leg's `mockRestore()` is outside `finally` [`apps/api/tests/integration/public-pages/sahyog-vivran.spec.ts`] [blind+edge] — ⚠ rewritten with the Decision
+- [x] [Review][Patch] Bidi strip has ⛔ no test, and `normalisePublicName`'s doc still says *"only the EDGES are trimmed from the value that ships"* — now false [`handlers.ts:~1312`] [auditor]
+- [x] [Review][Patch] Sibling "omits the ROW" sites the fourth pass missed [`apps/public/src/lib/sahyog-vivran-render.ts:428`, `apps/api/tests/integration/public-pages/sahyog-vivran.spec.ts:127`, `apps/public/tests/integration/public-pages/scrape-test.spec.ts:1333` header, story Trap 4 heading/lead] [auditor]
+- [x] [Review][Patch] Sibling `-222` sites still say the member namespace "keeps D5 whole" [`apps/public/src/pages/sahyog-vivran/[driveToken].astro:158-161`, `apps/public/src/lib/sahyog-vivran-render.ts:143-146`] [auditor]
+- [x] [Review][Patch] "`-189` cl.5" survives in THIS story (T3 table, References) and the deferred inventory misses `packages/domain/src/pool/public-read.ts:870` and a third test comment [auditor]
+- [x] [Review][Patch] Task 0 still cites `-177` cl.2 as a live carry, unannotated [this file] [auditor]
+- [x] [Review][Patch] **The fourth pass's new Policy-meaning sentence is itself inaccurate (family 11)** — "your full name" is false under `shielded_name` (the page ships `Anita V.`); it omits `-219` cl.6's member-facing substance (*a T&C withdrawal does not retract it*); and it implies withholding is immediate when `-172` accepts up to five minutes of edge cache [this file § Policy meaning] [auditor]
+- [x] [Review][Patch] Story bookkeeping: the past-the-end item is checked `[x]` though its `aria-current` half was DEFERRED; the two extra deferrals exist only in prose, not as `[Defer]` lines; AC12's "indistinguishable … by status" must carry whatever residual the Decision leaves [this file] [auditor]
+
+- [x] [Review][Patch] ⚠⛔ **FOUND WHILE APPLYING THIS PASS — A REGRESSION THE FOURTH PASS SHIPPED AND ITS OWN EVIDENCE MISSED.** The fourth pass created `apps/public/src/lib/sahyog-vivran-paging.ts` without adding it to the financial-truth gate's `SCAN_FILES`; the gate's completeness check went RED on the real tree. The fourth pass's *"gate green on the real tree"* was TRUE when run and FALSE by the end of that same pass, because the file was created AFTER the gate run. ⭐ Registered, gate green again [`scripts/sahyog-vivran-financial-truth/check.ts`]
+
+⭐ **Dismissed (7):** probe inside the scope tx (moot under the Decision; KMS calls hold no row locks);
+single-level `cause` unwrap and the `EPIPE` regex match (folded into the Decision); a `.tsx` file in
+`SCAN_FILES` (none exists); `check.ts` not failing on the new rule (verified: ANY finding exits 1);
+a cross-Pariwar deceased KYC row (⛔ no transfer path — `member_id` is the PK and the row carries the
+member's own `pariwar_id`); `?page=&page=3` (pre-existing, renders page 1); a missing
+`page × limit === total` boundary leg (math verified by two layers).
+
+⭐ **ALL 15 PATCHES + THE FOUND REGRESSION APPLIED 2026-09-18.** ⭐ **Evidence:** `tsc --noEmit` + `eslint .`
+clean in `apps/api`, `apps/public`, `packages/{domain,contracts,ui}`; `astro check` 0/0; `apps/api`
+public-pages + `login-wall` 95/95 on `twt-test-pg`; `apps/public` 641/641; `packages/domain`
+sahyog/public-read/encryption 105 (+1 skipped); `contracts` 1134, `ui` 254, `i18n` 108; the gate 33/33
+and ✓ on the real tree (run LAST, after every file was created); the other fake-KMS consumers
+(`audit-log-sink`, `payment-nominee-accounts`, `member-drive-detail`) 39/39.
+⭐ **Mutation-checked:** removing the `KmsOutageError` re-throw fails both OUTAGE legs; skipping
+`normaliseStoredName` fails the bidi-token leg. ⚠ The fake KMS now throws gRPC `code: 3` on a rejected
+envelope, matching Cloud KMS — a shared test double changed, messages unchanged. ⚠ Full `ci:local` was
+⛔ NOT run.
+
 ## Dev Notes
 
 ### ⭐ Read Trap 1 before anything else
@@ -1322,7 +1537,7 @@ a public, edge-cached page. ⇒ ⛔ do ⛔ not size, review or announce this sto
 ### References
 
 - `.decision-log.md` `-173` · `-174` · `-175` (cl.4) · `-176` D1(b)/(c) · **`-177` cl.2, cl.3** ·
-  `-179` **cl.2**, cl.3 · `-180` cl.1 · `-181` · **`-189` cl.3, cl.5 / `-195` cl.1** · `-190` cl.1,
+  `-179` **cl.2**, cl.3 · `-180` cl.1 · `-181` · **`-189` cl.3, Consequence 5 (⚠ cited "cl.5" until 2026-09-18) / `-195` cl.1** · `-190` cl.1,
   cl.2, **cl.6**, cl.7(b)/(c) · `-191` cl.1, ⛔ **cl.3 SUPERSEDED** · **`-192` cl.1, cl.3 + Consequence 3** · **`-193`** · `-193` cl.3 · **`-204` cl.1, cl.2, cl.3, cl.8** ·
   **`-205` cl.1, cl.2, cl.5** · **`-207` cl.1, cl.2 + Open follow-ups** · `-208` cl.2 ·
   `-209` cl.2, cl.3, cl.4 · `-211` cl.3 · `-214` cl.4(b) · `-160` cl.7 · `-165` cl.2-4 · `-168` **cl.9** ·
@@ -1331,7 +1546,7 @@ a public, edge-cached page. ⇒ ⛔ do ⛔ not size, review or announce this sto
   did all of v2.0's** ⇒ this file now holds **ZERO** numeric pointers into `.decision-log.md`,
   `deferred-work.md` or `sprint-status.yaml`, and ⛔ none may be added
   ([[feedback_story_validate_footguns]] item 19).
-  ⭐ **`-190` cl.6 and `-189` cl.5 are NEW at v2.1** — they name `amountRaisedInr` and record the rupee
+  ⭐ **`-190` cl.6 and `-189` Consequence 5 (⚠ cited "cl.5" until 2026-09-18) are NEW at v2.1** — they name `amountRaisedInr` and record the rupee
   boundary as crossed; ⛔ v2.0 cited their siblings and dropped exactly these two.
 ⭐ **`packages/` + `apps/` line cites below were RE-DERIVED at `be0037cc`** and are re-derivable by the
 next pass. ⚠ They are ⛔ **not** durable — ⭐ re-diff `packages apps` against the pin every time.
@@ -1670,6 +1885,38 @@ failed on the FIRST try. ⇒ ⭐ **a DB-gated spec is ⛔ NOT covered by the gre
   stays OPEN — it depends on **Task 3**'s contributor list.
 
 ### File List
+
+- **Sixth review pass (2026-09-18):** `packages/domain/src/kyc/public-name.ts` (`publicNameTokens`, the
+  shared allowlist cleaner) · `packages/domain/tests/kyc/public-name.test.ts` ·
+  `packages/domain/src/encryption/README.md` · `packages/domain/tests/encryption/fake-kms-provider.test.ts`
+  · `apps/api/src/modules/public-pages/handlers.ts` (deceased arm classified; local cleaner removed) ·
+  `apps/api/tests/integration/public-pages/sahyog-vivran.spec.ts` (DB-fault + deceased-outage legs; a
+  switchable `getMemberKycProfile` mock) · `scripts/sahyog-vivran-financial-truth/{lib,lib.test}.ts` ·
+  `apps/public/src/pages/sahyog-vivran/[driveToken].astro` · `packages/ui/src/contribution-list/view-model.ts`
+  · `_bmad-output/implementation-artifacts/deferred-work.md`
+- **Fifth review pass (2026-09-18):** `apps/api/src/modules/public-pages/handlers.ts` (probe deleted;
+  classify-by-error; DB read out of the `try`) · `packages/domain/src/encryption/fake-kms-provider.ts`
+  (`code: 3`) · `apps/api/tests/integration/public-pages/sahyog-vivran.spec.ts` ·
+  `scripts/sahyog-vivran-financial-truth/{lib,lib.test,check}.ts` + `README.md` ·
+  `apps/public/src/lib/sahyog-vivran-render.ts` · `apps/public/src/pages/sahyog-vivran/[driveToken].astro` ·
+  `apps/public/tests/sahyog-vivran-copy.test.ts` · `apps/public/tests/integration/public-pages/scrape-test.spec.ts`
+- **Fourth review pass (2026-09-18):** ⚠ *(its `handlers.ts` description below — "KMS-probe … SQLSTATE
+  rethrow" — is SUPERSEDED by the fifth pass)* `apps/api/src/modules/public-pages/handlers.ts` (KMS-probe
+  outage rule replacing the page-composition throw; SQLSTATE rethrow; bidi strip; JSDoc re-homed;
+  stale comments) · `apps/api/tests/integration/public-pages/sahyog-vivran.spec.ts` (decrypt-count
+  assertion; three new legs; `corrupt` fixture option) · `apps/public/src/lib/sahyog-vivran-paging.ts`
+  (**new** — the page's query/paging rules, extracted) · `apps/public/tests/sahyog-vivran-paging.test.ts`
+  (**new**) · `apps/public/src/pages/sahyog-vivran/[driveToken].astro` ·
+  `apps/public/src/lib/sahyog-vivran-render.ts` · `apps/public/tests/sahyog-vivran-copy.test.ts` ·
+  `apps/public/tests/sahyog-vivran-render.test.ts` · `scripts/sahyog-vivran-financial-truth/{lib,lib.test,check}.ts`
+  · `packages/domain/src/pool/sahyog-vivran-read.ts` · `packages/contracts/src/public-pages/sahyog-vivran.ts`
+  · `packages/contracts/public-pages/public-vs-private-matrix.yaml` · `packages/ui/src/contribution-list/view-model.ts`
+  · `packages/i18n/locales/en/sahyog-vivran.json` · `_bmad-output/implementation-artifacts/deferred-work.md`
+- **Previously unlisted, added 2026-09-18:** `apps/public/tests/sahyog-vivran-client.test.ts` (8 tests,
+  `662ab6a6`) · `friction-budget.md` (`2efa4c98`) · the `-219` implementation (`70706f59`, `6ab3563f`),
+  the second-pass patches (`e5a912ab`) and the adversarial pass (`0b2bd4a6`) — see those commits for
+  their file sets. ⚠ `RULED_AMOUNT_FIELD` below was DELETED in the group-5 patch; the entry is kept as
+  the record of what Task 1b touched.
 
 ⚠⛔⛔ **`apps/public/tests/sahyog-serves.test.ts` WAS MISSING FROM THIS LIST ENTIRELY** (Review
 finding, 2026-09-16 second pass) — and it was ⛔ not merely unlisted, it was **UNCOMMITTED**, while

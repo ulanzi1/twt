@@ -52,7 +52,7 @@ const MEMBER_COUNTERPART: Record<string, readonly string[]> = {
   // the member's name is gated on the FORM only (`2026-09-04-198` cl.1) while the public one is
   // additionally gated on the publication BASIS, which is PROVISIONING-INERT (`-209` cl.2) ⇒ on a
   // default `full_name` Pariwar a member sees a name nobody can see publicly.
-  // ⇒ ⭐ member **>** public, in the direction `2026-09-04-189` cl.3 / `2026-09-05-195` cl.1 require.
+  // ⇒ ⭐ member **>** public, in the direction `2026-09-04-189` cl.3 / `2026-09-04-195` cl.1 require.
   // ⚠⛔ THE TWO RESOLVERS ⛔ MUST ⛔ NOT BE "ALIGNED": the member side uses
   // `resolveMemberFacingDeceasedName` because `resolvePublicMemberName` fails CLOSED on a mononym
   // under `shielded_name` — reusing it there would DROP A MEMBER'S OWN DRIVE.

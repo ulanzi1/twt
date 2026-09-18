@@ -888,7 +888,14 @@ calls `splitFirstNameLastInitial(fullName)` for the member contributor list.
 inversion `-189` cl.3 / `-195` cl.1 forbid.
 
 ⭐⭐ **IT IS RULED AND CARRIED, ⛔ NOT AN OVERSIGHT.** `-177` **cl.2** ruled `D9-inversion(a)` —
-**CARRY** the inversion. ⇒ ⭐ this AC **STATES** the non-compliance with its authority, which is what
+**CARRY** the inversion.
+⚠⛔⛔ **CORRECTED 2026-09-18 (`#decision-2026-09-18-221`) — `-177` cl.2 IS ⛔ NO LONGER A LIVE
+AUTHORITY FOR CARRYING THIS.** It is dated **2026-09-02**; `-189` cl.3 is dated **2026-09-04** and
+says the inversion **must be closed**. ⇒ ⭐ the CARRY PREDATES the ruling that overtook it by two
+days. ⛔ `-177` cl.2 is ⛔ not reversed — it was CORRECT when ruled — it is **SUPERSEDED**.
+⇒ ⭐⭐ **THIS AC'S STATEMENT OF NON-COMPLIANCE IS ⛔ NOT WEAKENED BY THAT — IT IS STRENGTHENED:** the
+breach is against a STANDING Trustee ruling, ⛔ not a knowingly-accepted trade. ⭐ AC10's obligation
+(*"each must state its compliance"*) is still fully discharged here. ⇒ ⭐ this AC **STATES** the non-compliance with its authority, which is what
 `-195` cl.1 asks for; it ⛔ does ⛔ not cure it and ⛔ must ⛔ not be read as curing it
 ([[feedback_closure_language_precision]]).
 ⚠⛔ **AND ⛔ DO ⛔ NOT ASSUME `-180` CLOSED THIS — ⛔ IT DID ⛔ NOT.** `-180` cl.1's *"ALL FOUR places"* is

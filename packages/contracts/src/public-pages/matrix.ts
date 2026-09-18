@@ -501,8 +501,12 @@ export const PublicVsPrivateMatrixSchema = z
       ['sahyog-vivran.deceased_member_name', '2026-09-02-173'],
       // ⚠⛔ AND THE PRICE IS CARRIED, ⛔ not closed: the public sees MORE of a contributor's name than
       // a MEMBER does (the member surface renders first-name + last-initial), which `2026-09-04-189`
-      // cl.3 / `2026-09-05-195` cl.1 forbid. ⭐ CARRIED KNOWINGLY under `2026-09-02-177` cl.2
-      // (`D9-inversion`) and stated at Story 11b.3b's AC10. ⛔ This entry does ⛔ not cure it.
+      // cl.3 / `2026-09-04-195` cl.1 forbid. ⚠⛔ CARRIED under `2026-09-02-177` cl.2 — ⛔ BUT THAT
+      // CLAUSE IS **SUPERSEDED**: it is dated 2026-09-02 and `-189` cl.3 (2026-09-04) says the
+      // inversion MUST BE CLOSED. ⇒ this is a breach of a STANDING ruling being carried, ⛔ not an
+      // accepted trade (`2026-09-18-221` cl.2). ⛔ The carry was ruled as `D9-inversion(a)` and is
+      // stated at Story 11b.3b's AC10. ⭐ Discharge is a MEMBER-SURFACE story, ⛔ not this entry, and
+      // ⛔ this entry does ⛔ not cure it.
       ['sahyog-vivran.contributor_name', '2026-09-02-174'],
     ]);
 

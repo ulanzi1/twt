@@ -1,3 +1,20 @@
+# last_updated: 2026-09-18i (⭐ **STORY `11b-20` — SECOND `validate` PASS, v0.4, re-derived at `6547ead2`.
+#   No code. ⛔ ZERO ROWS MOVE.** `11b-20` stays `ready-for-dev` and stays BLOCKED, ⭐ now on TWO
+#   GOVERNANCE items and ⛔ no code dependency (`11b-19` + `11b-3b` both `done` ⇒ both discharged).
+#   ⚠ v0.3 (2026-09-15b entry below) had been committed ONLY on the unmerged local branch
+#   `governance/11b-20-validate`; it is now cherry-picked onto `main` ahead of v0.4.
+#   ⭐ **B1 — ROUTED TO THE PANEL:** `trustee-panel-routing-note-2026-09-18-11b20-message-block-unnamed-drive.md`.
+#   v0.1–v0.3's clause-pin gate is ⛔ unsatisfiable: the wire collapses four causes into one null
+#   and forbids a per-cause signal, and the basis is the member's own T&C, ⛔ not a family choice. ⇒
+#   whether the ratified no-name headline may render for ANY null is the Panel's (BigDev's call, over
+#   deciding it on `-214` C5).
+#   ⭐ **B2 — counsel's clearance of `message_block.join`** (§8.4(iii), *"before it goes public"*):
+#   BigDev reports it CLEARED; ⛔ no record exists ⇒ a decision entry is owed, written from what was
+#   actually captured, ⛔ never reconstructed.
+#   ⚠ Also: v0.3's *"render `deliveredTotal`"* was RED ON WRITE (banned by name on the render path by
+#   the financial-truth gate) ⇒ `amountRaisedInr`; the new selector must be named `sahyog-vivran-*.ts`
+#   and join `SCAN_FILES`, or it escapes the gate silently.
+#   ⛔ Rows unchanged: `11b-20` `ready-for-dev`; `11b-3b` / `11b-19` / `11b-17` `done`; `11b-21` / `11b-22` `backlog`.)
 # last_updated: 2026-09-18h (⭐⭐ **`11b-3b` — FULL `ci:local` PASSED 34/34** on the test DB, integration included,
 #   after it caught a THIRD fourth-pass regression: `pii-scrape` FR-91 requires the paginated page's own
 #   source to call `parsePageParams()`, which the fourth pass had moved into a helper. Call restored to

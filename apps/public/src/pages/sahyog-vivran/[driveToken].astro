@@ -924,13 +924,14 @@ const messageBlockCopy =
           ⛔ NOTHING renders at ₹0 (`-216` cl.1), on the outage path, or when the matrix suppresses the
           amount — `messageBlockCopy` is `null` in all three.
           ⚠⛔ The column labels are LABELS, ⛔ not claims (`-214` Consequence 8).
-          ⭐ Family 13 on the web: a real `<table>` with `<th scope="col">`, a `<section>` named by its
-          own first sentence, ⛔ no `<script>`, ⛔ no `title=`.
+          ⭐ Family 13 on the web: a real `<table>` with `<th scope="col">`, a `<section>` AND its `<table>`
+          named by the block's own first sentence (`aria-labelledby`, ⛔ no second string authored),
+          ⛔ no `<script>`, ⛔ no `title=`.
         */}
         {messageBlockCopy !== null && (
           <section aria-labelledby="sv-message-headline" class="mt-6 rounded border border-gray-300 p-4">
             {messageBlockCopy.columns.length > 0 && (
-              <table class="mb-4 w-full text-left text-sm">
+              <table aria-labelledby="sv-message-headline" class="mb-4 w-full text-left text-sm">
                 <thead>
                   <tr>
                     {messageBlockCopy.columns.map((column) => (

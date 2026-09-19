@@ -120,6 +120,25 @@ describe('⭐ AC4 — the table: an absent token DROPS its column; an empty tabl
     ]);
   });
 
+  it('⛔ an invisible-only holder name drops the Nominee column — ⛔ never a label over a BLANK cell', () => {
+    // ⚠ U+200B survives intake's `trim()` and the API never normalises this field: reachable, and a
+    // column built on it renders a label above nothing.
+    for (const nomineeName of ['\u200b', '\u200b\u200b', ' \u200b\u2060 ', '\u202e', '\ufeff\u202a\u2066']) {
+      expect(
+        selectSahyogVivranMessageBlock(input({ nomineeName }))!.columns.map((c) => c.field),
+        JSON.stringify(nomineeName),
+      ).toEqual(['district']);
+    }
+  });
+
+  it('⭐ bidi controls come OFF a visible holder name; ⛔ the joiners STAY (they select a Devanagari conjunct)', () => {
+    const [nominee] = selectSahyogVivranMessageBlock(input({ nomineeName: '\u202eSunita\u2066 Devi' }))!.columns;
+    expect(nominee).toMatchObject({ field: 'nominee_account_holder_name', value: 'Sunita Devi' });
+    // ⛔ U+200D is ⛔ not invisible noise in Devanagari: stripping it would publish a DIFFERENT spelling.
+    const joined = 'प्रज्\u200dञा';
+    expect(selectSahyogVivranMessageBlock(input({ nomineeName: joined }))!.columns[0]!.value).toBe(joined);
+  });
+
   it('⭐ nothing to tabulate ⇒ `[]`, ⛔ never a table of placeholders — and the headline still renders', () => {
     const block = selectSahyogVivranMessageBlock(
       input({ nomineeName: null, deceasedMemberName: null }),
@@ -246,6 +265,15 @@ describe('⭐ AC1/AC5/AC8 — the page wires it, and nothing else moves', () => 
     // ⛔ never the labelled "₹ X raised" string, and ⛔ never a value that already had "Not recorded" applied.
     expect(PAGE).not.toMatch(/selectSahyogVivranMessageBlock\([^)]*model\./);
     expect(PAGE).toMatch(/\{messageBlockCopy !== null && \(/);
+  });
+
+  it('⭐ family 13 (web): the section AND its table are NAMED by the headline — ⛔ pinned like the contributors section', () => {
+    // ⚠ The checklist rules family 13 un-mechanized, so this pair is the only thing that notices the
+    // id and its two `aria-labelledby` pointers drifting apart (`sahyog-vivran-a11y.test.ts` pins the
+    // contributors section the same way).
+    expect(PAGE).toMatch(/<section\s+aria-labelledby="sv-message-headline"/);
+    expect(PAGE).toMatch(/<table\s+aria-labelledby="sv-message-headline"/);
+    expect(PAGE).toMatch(/<p id="sv-message-headline"[^>]*>\{messageBlockCopy\.headline\}<\/p>/);
   });
 
   it('⭐ the table cells go through `<MatrixField>` — ⛔ never a bare `<td>{value}</td>`', () => {

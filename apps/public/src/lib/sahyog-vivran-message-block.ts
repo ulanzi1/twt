@@ -68,6 +68,33 @@ export const SAHYOG_VIVRAN_MESSAGE_BLOCK_BODY_KEYS = [
   'message_block.join',
 ] as const;
 
+// ⚠ `no-misleading-character-class` IS SUPPRESSED DELIBERATELY, ⛔ NOT TO SILENCE A BUG — the same
+// suppression, for the same reason, as the API's `INVISIBLE_CHARS` (`handlers.ts:1257-1269`): `\u034f` and
+// `\ufe00-\ufe0f` are combining marks that must be detected ON THEIR OWN, because a holder name made only
+// of them is the blank-cell case this class exists to catch. Both regexes carry the `u` flag.
+/* eslint-disable no-misleading-character-class */
+/** Invisible code points, as the API's `normalisePublicName` counts them (`handlers.ts`, `INVISIBLE_CHARS`). */
+const INVISIBLE_CHARS = /[\u00ad\u034f\u115f\u1160\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\u2800\u3164\ufe00-\ufe0f\ufeff]/gu;
+/** Bidi embedding, override and isolate controls: never part of a spelling, and an interior one reorders the text around it. */
+const BIDI_CONTROLS = /[\u202a-\u202e\u2066-\u2069]/gu;
+/* eslint-enable no-misleading-character-class */
+
+/**
+ * ⭐ The nominee holder name as it may render, or `null` when there is nothing visible in it.
+ *
+ * ⚠⛔ The API maps this field to `null` only for the decrypt sentinel or `length === 0`, and ⛔ never
+ * runs it through `normalisePublicName` (the deceased name and the district are). Intake `trim()`s, which
+ * keeps U+200B ⇒ a zero-width-only holder name reaches this file, and a column built on it would be a
+ * label over a BLANK cell: ⛔ the placeholder this table's drop-when-absent rule exists to prevent.
+ * ⭐ The invisible strip is a TEST on a copy ("is anything visible here?"), ⛔ not a transform: U+200C and
+ * U+200D select half-form versus conjunct in Devanagari, so ⛔ the joiners stay in what ships. Only the
+ * bidi controls come off, everywhere, as the API does.
+ */
+function visibleHolderName(name: string): string | null {
+  const shipped = name.replace(BIDI_CONTROLS, '').trim();
+  return shipped.replace(INVISIBLE_CHARS, '').trim() === '' ? null : shipped;
+}
+
 /**
  * ⭐ The `Nominee full name` | `District` table above the message (§8.1).
  *
@@ -85,11 +112,12 @@ function selectColumns(
   familyName: string | null,
 ): SahyogVivranMessageBlockColumn[] {
   const columns: SahyogVivranMessageBlockColumn[] = [];
-  if (nomineeName !== null) {
+  const visibleNomineeName = nomineeName === null ? null : visibleHolderName(nomineeName);
+  if (visibleNomineeName !== null) {
     columns.push({
       labelKey: 'message_block.table.nominee_name',
       field: 'nominee_account_holder_name',
-      value: nomineeName,
+      value: visibleNomineeName,
     });
   }
   if (district !== null && familyName !== null) {

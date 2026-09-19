@@ -511,7 +511,7 @@ describe('⭐ AC1/AC2/AC3 — the ratified §8.1 message block is AUTHORED, verb
   })
 })
 
-describe('⛔⛔ AC6 — ⛔ NOTHING RENDERS THE MESSAGE BLOCK. The copy exists; the render may ⛔ not.', () => {
+describe('⛔⛔ AC6 — ⛔ THE MESSAGE BLOCK IS RENDERED AT EXACTLY TWO AUTHORISED SITES, and ⛔ only where every token is supplied.', () => {
   it('⛔ NON-VACUOUS — the scan reaches a real body of source', () => {
     // ⛔ WITHOUT THIS, A GREEN SCAN PROVES NOTHING ([[feedback_gate_scope_semantic_coverage]]).
     expect(files.length).toBeGreaterThan(200)

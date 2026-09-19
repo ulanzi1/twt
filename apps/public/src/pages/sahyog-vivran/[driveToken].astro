@@ -169,8 +169,9 @@ const labels: SahyogVivranLabels = {
   // (`#decision-2026-09-19-224` D1 — one key, ⛔ no second).
   contributorUnnamed: tr('value.contributor_unnamed'),
   // ⚠ A COUNT of the confirmed-contributor SET — ⛔ never a sum, ⛔ never a score. Interpolated
-  // THROUGH `t()`, ⛔ never by local string surgery.
-  contributorTotal: (count: number) => tr('value.contributions_count', { count }),
+  // THROUGH `t()`, ⛔ never by local string surgery. ⭐ Story 11b.22 (`-225`): its OWN key, ⛔ not
+  // `value.contributions_count` — that is the EVENT count (`contributionsCount` below). ⛔ Do not reconcile.
+  contributorTotal: (count: number) => tr('value.contributor_total', { count }),
   // ⭐ Ordinary UI labels minted in THIS surface's namespace — ⛔ deliberately NOT reached for from
   // `sahyog-drive`'s identical pair: that is the INDEX's namespace, and coupling two SURFACES' copy
   // means re-wording one silently re-words the other. See `$comment.pagination`.
@@ -672,8 +673,8 @@ const messageBlockCopy =
           ⚠⛔⛔ **FEWER *NAMED* ROWS THAN THE COUNT IS THE ORDINARY CASE, ⛔ NOT A BUG.** RTBF erasure
           (`2026-08-30-169`), the erasure sentinel, an unresolvable name, a MONONYM under
           `shielded_name` and a failed decrypt each withhold the NAME, after paging. ⇒ this page reads
-          "N confirmed" beside FEWER than N NAMED rows BY DESIGN, and ⛔⛔ ⛔ NO copy here may claim the
-          list is complete.
+          "Contributors: N" (Story 11b.22, `-225`) beside FEWER than N NAMED rows BY DESIGN, and ⛔⛔ ⛔
+          NO copy here may claim the list is complete.
 
           ⚠⛔⛔ **SUPERSEDED BY `#decision-2026-09-16-219` cl.1/cl.4 — the old rule is QUOTED, ⛔ not
           deleted** ([[feedback_closure_language_precision]]). ⛔ IT READ: *"each OMIT THE ROW, after

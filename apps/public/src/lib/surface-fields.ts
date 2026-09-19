@@ -583,8 +583,9 @@ export interface SahyogVivranRenderModel {
    *
    * ⛔⛔ **THE PAGE MAY HOLD FEWER *NAMED* ROWS THAN `contributorTotal` SAYS, BY DESIGN** — RTBF
    * erasure (`2026-08-30-169`), the erasure sentinel, an unresolvable name, a MONONYM under
-   * `shielded_name` and a failed decrypt each withhold the NAME. ⇒ this page reads *"N confirmed"*
-   * beside FEWER than N NAMED rows, and ⛔ ⛔ NO copy may claim the list is complete.
+   * `shielded_name` and a failed decrypt each withhold the NAME. ⇒ this page reads *"Contributors: N"*
+   * (Story 11b.22, `-225`) beside FEWER than N NAMED rows, and ⛔ ⛔ NO copy may claim the list is
+   * complete.
    * ⚠⛔⛔ **SUPERSEDED BY `#decision-2026-09-16-219` cl.1/cl.4 — the old rule is QUOTED, ⛔ not
    * deleted** ([[feedback_closure_language_precision]]). ⇒ ⭐ the row is KEPT and renders the ruled
    * placeholder (`A contributor` / `एक सहकर्मी`), so `items.length` equals the page size and a page

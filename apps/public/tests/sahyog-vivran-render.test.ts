@@ -87,7 +87,7 @@ const LABELS: SahyogVivranLabels = {
   // for this key, in BOTH locales, lives in `sahyog-vivran-copy.test.ts`
   // ([[feedback_stub_must_call_not_transcribe]] — a stub is a SECOND source for a shipped word).
   contributorUnnamed: 'A contributor',
-  contributorTotal: (n: number) => `${String(n)} confirmed`,
+  contributorTotal: (n: number) => `Contributors: ${String(n)}`,
   paginationLabel: 'Pages',
   paginationPrevious: 'Previous',
   paginationNext: 'Next',
@@ -123,6 +123,27 @@ const SETTLED: PublicSahyogVivranResponse = {
   limit: 50,
   total: 3,
 };
+
+// ⭐ Story 11b.22 (`-225`, AC4) — THE ARG-SWAP GUARD. The two label stubs return DIFFERENT shapes
+// (`Contributors: n` vs `n confirmed`) and the fixture has `total ≠ confirmedContributionCount`, so
+// feeding either figure to the other label fails here. ⚠⛔ This leg is ⛔ NOT the copy proof — the stubs
+// are a second source; the REAL-`t()` legs live in `sahyog-vivran-copy.test.ts`.
+describe('buildSahyogVivranView — the SET SIZE and the EVENT count are ⛔ never swapped', () => {
+  const { model } = buildSahyogVivranView(
+    {
+      ...SETTLED,
+      drive: { ...SETTLED.drive, confirmedContributionCount: 13 },
+      items: Array.from({ length: 12 }, (_, i) => ({ name: `Contributor ${String(i + 1)}` })),
+      total: 12,
+    },
+    LABELS,
+  );
+
+  it('⭐ `contributorTotal` is the SET label fed `total`; the event count is the EVENT label fed the event count', () => {
+    expect(model.contributorTotal).toBe('Contributors: 12');
+    expect(model.confirmedContributionCount).toBe('13 confirmed');
+  });
+});
 
 describe('buildSahyogVivranView — the settled drive', () => {
   const { model } = buildSahyogVivranView(SETTLED, LABELS);

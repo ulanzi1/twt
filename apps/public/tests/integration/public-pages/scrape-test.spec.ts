@@ -1286,7 +1286,7 @@ const SAHYOG_VIVRAN_TEST_LABELS: SahyogVivranLabels = {
   // for this key, in BOTH locales, lives in `sahyog-vivran-copy.test.ts`
   // ([[feedback_stub_must_call_not_transcribe]] — a stub is a SECOND source for a shipped word).
   contributorUnnamed: 'A contributor',
-  contributorTotal: (n: number) => `${String(n)} confirmed`,
+  contributorTotal: (n: number) => `Contributors: ${String(n)}`,
   paginationLabel: 'Pages',
   paginationPrevious: 'Previous',
   paginationNext: 'Next',

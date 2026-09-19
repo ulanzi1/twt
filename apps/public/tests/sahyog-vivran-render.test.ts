@@ -125,23 +125,28 @@ const SETTLED: PublicSahyogVivranResponse = {
 };
 
 // ⭐ Story 11b.22 (`-225`, AC4) — THE ARG-SWAP GUARD. The two label stubs return DIFFERENT shapes
-// (`Contributors: n` vs `n confirmed`) and the fixture has `total ≠ confirmedContributionCount`, so
-// feeding either figure to the other label fails here. ⚠⛔ This leg is ⛔ NOT the copy proof — the stubs
-// are a second source; the REAL-`t()` legs live in `sahyog-vivran-copy.test.ts`.
+// (`Contributors: n` vs `n confirmed`) and the fixture has THREE distinct figures — `total` (137),
+// `confirmedContributionCount` (150) and `items.length` (12) — so feeding any one of them to the wrong
+// label (including `items.length` for `total`) fails here. ⭐ The shape is one the API can emit: `limit: 12`
+// makes `items.length` = `min(limit, total − offset)`, and events ≥ distinct contributors.
+// ⚠⛔ This leg is ⛔ NOT the copy proof — the stubs are a second source; the REAL-`t()` legs live in
+// `sahyog-vivran-copy.test.ts`.
 describe('buildSahyogVivranView — the SET SIZE and the EVENT count are ⛔ never swapped', () => {
   const { model } = buildSahyogVivranView(
     {
       ...SETTLED,
-      drive: { ...SETTLED.drive, confirmedContributionCount: 13 },
+      drive: { ...SETTLED.drive, confirmedContributionCount: 150 },
       items: Array.from({ length: 12 }, (_, i) => ({ name: `Contributor ${String(i + 1)}` })),
-      total: 12,
+      page: 1,
+      limit: 12,
+      total: 137,
     },
     LABELS,
   );
 
   it('⭐ `contributorTotal` is the SET label fed `total`; the event count is the EVENT label fed the event count', () => {
-    expect(model.contributorTotal).toBe('Contributors: 12');
-    expect(model.confirmedContributionCount).toBe('13 confirmed');
+    expect(model.contributorTotal).toBe('Contributors: 137');
+    expect(model.confirmedContributionCount).toBe('150 confirmed');
   });
 });
 

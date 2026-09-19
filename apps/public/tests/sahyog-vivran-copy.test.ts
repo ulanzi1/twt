@@ -74,6 +74,13 @@ const KEYS = [
 const LOCALES: readonly Locale[] = ['en', 'hi'];
 
 /**
+ * ⚠⛔ A Unicode letter/mark LOOKBEHIND — ⛔ NEVER `\b`, which is an ASCII word boundary and makes every
+ * Devanagari pattern vacuous (`/\bछिपाए/.test('कुछ नाम छिपाए गए') === false`). ⭐ Module scope: every
+ * Devanagari fence below (the 2026-09-18 tallies and the 11b.22 set-size fence) reads THIS one constant.
+ */
+const beforeNoLetter = '(?<![\\p{L}\\p{M}])';
+
+/**
  * ⭐ Story 11b.22 (`-225`, AC3(e)) — the contributor SET-SIZE string, resolved through the REAL `t()`.
  * ⚠ It is interpolated, so it cannot join `KEYS` (see the interpolation leg); ⭐ instead every scan
  * that builds its text from `KEYS` appends THIS, so the fences that already exist cover the new string
@@ -261,7 +268,6 @@ describe('/sahyog-vivran copy resolves through the REAL t() — both locales', (
   // ⚠⛔ **ONE SOURCE FOR THE PATTERNS** (fifth review pass, 2026-09-18). The fourth pass's anti-vacuity
   // leg planted violations against RE-TYPED COPIES of these regexes, so reverting a FENCE pattern to
   // `\b` still passed it ([[feedback_stub_must_call_not_transcribe]]). ⇒ both legs read these constants.
-  const beforeNoLetter = '(?<![\\p{L}\\p{M}])';
   const HI_COMPLETENESS_CLAIMS: readonly (readonly [RegExp, string])[] = [
     [new RegExp(`${beforeNoLetter}सभी\\s+सहयोगी`, 'u'), 'यहाँ सभी सहयोगी दिखाए गए हैं'],
     [new RegExp(`${beforeNoLetter}पूरी\\s+सूची`, 'u'), 'यह पूरी सूची है'],
@@ -459,6 +465,20 @@ describe('⭐ Story 11b.22 — the SET SIZE and the EVENT count are worded diffe
     expect(PAGE).toMatch(/contributionsCount:\s*\(count: number\)\s*=>\s*tr\('value\.contributions_count',/);
   });
 
+  // AC3(a) — BINDING. The label entries alone do not prove the SLOT: the set-size `<p>` must render
+  // `model.contributorTotal`, ⛔ not `model.confirmedContributionCount` (which would re-print "N confirmed").
+  const SLOT_SET_SIZE = /<p\b[^>]*>\{model\.contributorTotal\}<\/p>/;
+  const SLOT_EVENT_COUNT_IN_P = /<p\b[^>]*>\{model\.confirmedContributionCount\}<\/p>/;
+  it('⭐ anti-vacuity: each slot regex MATCHES its planted markup — neither can go silently dead', () => {
+    expect('<p class="mt-1 text-sm">{model.contributorTotal}</p>').toMatch(SLOT_SET_SIZE);
+    expect('<p class="mt-1 text-sm">{model.confirmedContributionCount}</p>').toMatch(SLOT_EVENT_COUNT_IN_P);
+  });
+  it('⭐ the set-size slot renders `model.contributorTotal`, ⛔ not the event count', () => {
+    expect(occurrences('model.contributorTotal')).toBe(1);
+    expect(PAGE).toMatch(SLOT_SET_SIZE);
+    expect(PAGE).not.toMatch(SLOT_EVENT_COUNT_IN_P);
+  });
+
   // AC3(b) — REAL `t()`, both locales, at 0 / 1 / 42: the two strings carry the number, leave ⛔ no
   // brace, and ⛔ never read the same.
   for (const locale of LOCALES) {
@@ -478,30 +498,77 @@ describe('⭐ Story 11b.22 — the SET SIZE and the EVENT count are worded diffe
 
   // AC3(c) — CONTENT CONSTRAINTS on the new string. ⭐ ONE constant per pattern, ⭐ read by BOTH the
   // probe leg and the real leg — ⛔ never a retyped copy (the fifth-review-pass lesson above).
-  // ⚠⛔ Devanagari uses the `beforeNoLetter` lookbehind with `u`, ⛔ NEVER `\b`: JS `\b` is ASCII-only,
+  // ⚠⛔ Devanagari uses the module-level `beforeNoLetter` lookbehind with `u`, ⛔ NEVER `\b`: JS `\b` is ASCII-only,
   // so `/\bपुष्ट/` can ⛔ never match and `not.toMatch` would pass trivially (the `HI_TALLIES` defect).
-  const beforeNoLetter = '(?<![\\p{L}\\p{M}])';
+  // ⭐ The Devanagari patterns are NAMED so the mid-word probes below reference them directly — ⛔ never
+  // by array index, which silently retargets when the list is reordered.
+  const HI_CONFIRMED = new RegExp(`${beforeNoLetter}पुष्ट`, 'u');
+  const HI_NAME = new RegExp(`${beforeNoLetter}नाम`, 'u');
+  const HI_ALL = new RegExp(`${beforeNoLetter}सभी`, 'u');
+  const HI_SO_FAR_NOW = new RegExp(`${beforeNoLetter}अभी\\s*तक`, 'u');
+  const HI_SO_FAR_UNTIL = new RegExp(`${beforeNoLetter}अब\\s*तक`, 'u');
   const SET_SIZE_FORBIDDEN: readonly (readonly [RegExp, string, string])[] = [
     // [pattern, planted violation, why]
     [/\bconfirmed\b/i, '12 confirmed', 'the collided word — the heading above already says it'],
-    [new RegExp(`${beforeNoLetter}पुष्ट`, 'u'), '12 पुष्ट', 'the collided word, Hindi'],
+    [HI_CONFIRMED, '12 पुष्ट', 'the collided word, Hindi'],
     [/\ball\b/i, 'All contributors: 12', 'completeness'],
     [/\bevery\b/i, 'Every contributor: 12', 'completeness'],
     [/\blisted\b/i, 'Contributors listed: 12', 'completeness — the list holds unnamed rows'],
     [/\bshown\b/i, 'Contributors shown: 12', 'completeness'],
     [/\bnames?\b/i, 'Names: 12', 'a count of PEOPLE, ⛔ never of names shown'],
-    [new RegExp(`${beforeNoLetter}नाम`, 'u'), 'नाम: 12', 'names, Hindi'],
-    [new RegExp(`${beforeNoLetter}सभी`, 'u'), 'सभी योगदानकर्ता: 12', 'completeness, Hindi'],
-    [/\bso\s+far\b/i, 'Contributors so far: 12', 'a live-drive estimate frame'],
-    [new RegExp(`${beforeNoLetter}अभी\\s+तक`, 'u'), 'अभी तक योगदानकर्ता: 12', 'estimate frame, Hindi'],
+    [HI_NAME, 'नाम: 12', 'names, Hindi'],
+    [HI_ALL, 'सभी योगदानकर्ता: 12', 'completeness, Hindi'],
+    // ⭐ `[\s-]+` (English) / `\s*` (Hindi): a hyphenated or no-space spelling is the SAME frame. ⛔ Not chasing
+    // every synonym — a blacklist is a best-effort fence, ⛔ not a completeness proof.
+    [/\bso[\s-]+far\b/i, 'Contributors so far: 12', 'a live-drive estimate frame'],
+    [/\bso[\s-]+far\b/i, 'Contributors so-far: 12', 'estimate frame, hyphenated'],
+    [/\bto[\s-]+date\b/i, 'Contributors to date: 12', 'estimate frame, variant'],
+    [/\btill[\s-]+now\b/i, 'Contributors till now: 12', 'estimate frame, variant'],
+    [/\bas[\s-]+of\b/i, 'Contributors as of today: 12', 'estimate frame, variant'],
+    [/\band\s+counting\b/i, 'Contributors: 12 and counting', 'estimate frame — Trap 4 names it'],
+    [HI_SO_FAR_NOW, 'अभी तक योगदानकर्ता: 12', 'estimate frame, Hindi'],
+    [HI_SO_FAR_NOW, 'अभीतक योगदानकर्ता: 12', 'estimate frame, Hindi, no space'],
+    [HI_SO_FAR_UNTIL, 'अब तक योगदानकर्ता: 12', 'estimate frame, Hindi variant'],
+    [HI_SO_FAR_UNTIL, 'अबतक योगदानकर्ता: 12', 'estimate frame, Hindi variant, no space'],
   ];
 
   it('⭐ anti-vacuity: every forbidden pattern MATCHES its planted violation', () => {
     for (const [pattern, planted] of SET_SIZE_FORBIDDEN) {
       expect(planted).toMatch(pattern);
     }
-    // ⭐ And the lookbehind still refuses a MID-WORD hit (`अपुष्ट`), which is what `\b` was for.
-    expect('अपुष्ट').not.toMatch(SET_SIZE_FORBIDDEN[1]![0]);
+  });
+
+  // ⭐ Each Devanagari pattern still refuses a MID-WORD hit — which is what `\b` was for. ⚠ Referenced BY
+  // NAME, ⛔ never by index into `SET_SIZE_FORBIDDEN`. ⭐ TWO probes each: a base LETTER before the pattern
+  // (`\p{L}`) and a combining MARK before it (`\p{M}`, a matra) — ⛔ with only the first, deleting `\p{M}`
+  // from `beforeNoLetter` stays green while the fences false-positive after any matra.
+  const MID_WORD_PROBES = [
+    [HI_CONFIRMED, ['अपुष्ट', 'कीपुष्ट']],
+    [HI_NAME, ['अनाम', 'सुनाम']],
+    [HI_ALL, ['कसभी', 'कीसभी']],
+    [HI_SO_FAR_NOW, ['कअभी तक', 'कीअभी तक']],
+    [HI_SO_FAR_UNTIL, ['कअब तक', 'कीअब तक']],
+  ] as const;
+  it('⭐ anti-vacuity: every Devanagari pattern refuses a MID-WORD hit — after a LETTER and after a MARK', () => {
+    for (const [pattern, probes] of MID_WORD_PROBES) {
+      for (const midWord of probes) {
+        expect(midWord).not.toMatch(pattern);
+      }
+    }
+  });
+
+  // ⭐ COVERAGE, ⛔ not a claim: every lookbehind-carrying pattern in the fence has a probe above, and
+  // carries the `u` flag (without it `\p{L}` reads as the literal `pL` and the fence silently fences nothing).
+  it('⭐ every Devanagari pattern in `SET_SIZE_FORBIDDEN` is probed and carries the `u` flag', () => {
+    const devanagari = SET_SIZE_FORBIDDEN.map(([pattern]) => pattern).filter((pattern) =>
+      pattern.source.startsWith('(?<!'),
+    );
+    expect(devanagari.length).toBeGreaterThan(0);
+    const probed = new Set<RegExp>(MID_WORD_PROBES.map(([pattern]) => pattern));
+    for (const pattern of devanagari) {
+      expect(probed.has(pattern)).toBe(true);
+      expect(pattern.flags).toContain('u');
+    }
   });
 
   for (const locale of LOCALES) {

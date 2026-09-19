@@ -4,6 +4,15 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 11b-21-member-contributor-name-form-parity (2026-09-19)
+
+- **Whole-list `assigned:false` on any non-INVALID_ARGUMENT KMS error, on the MEMBER contributor route.** One row under a DISABLED/DESTROYED KEK version (or, if the un-attested INVALID_ARGUMENT premise is wrong, one corrupt envelope) makes every member of that pool see *"You have no live pool right now."* until it clears; the 60 s poll can flip already-shown data to that view (`apps/api/src/modules/member-pool/handlers.ts:1181`; copy at `PoolContributorList.tsx:226`). Ruled by `-224` D4; the fail-soft shape is the member routes' standing contract. ⭐ Trigger: any decision to disable/destroy a KEK version, or live-KMS evidence for the AAD-mismatch status — then add an outage-distinguishing state (new copy = product call).
+- **Mononym under `shielded_name`: member sees it, public omits it (D3).** Two ratified clauses in tension (`-189` cl.3 "never less" vs `-222` cl.2 "nothing may disclose WHICH"). Flagged to BigDev in the story; unreachable while the mode has no writer. ⭐ Trigger: any writer for `public_name_presentation_mode`.
+- **Nominee Console reads the member contributor list.** A nominee acting as the deceased sees contributors' full names for the drive; ⛔ no exposure beyond the public drive page's tier while the mode is `full_name`. Recorded in the story, ⛔ not ruled. ⭐ Trigger: a nominee-reachable name the public page withholds.
+- **Kill-switched Pariwar: the member list becomes the only disclosure point.** `-222` did not address it. Carried residual.
+
+---
+
 ## Carried from: `#decision-2026-09-18-221` — the member-surface breach (2026-09-18)
 
 ⚠⛔⛔ **A BREACH OF A STANDING TRUSTEE RULING IS BEING CARRIED — ⛔ it is ⛔ NOT an accepted trade, and
@@ -44,7 +53,9 @@ MORE than the public, and ⛔ NEVER LESS"*) binds the contributor name; `-177` c
   envelope that fails to PARSE before the KMS call. ⛔ The trigger below is unchanged.
 - **Timing residual against `2026-09-18-222` cl.2 (*"NOTHING may disclose WHICH"*).** A contributor with ⛔ no KYC profile row, or an unparseable stored envelope, costs ZERO KMS calls; every other withheld cause costs ONE. ⚠ Reachability is UNPROVEN — ⭐ trigger: any evidence that a CONFIRMED contributor can lack a `member_kyc_profiles` row. Then equalise (at a KMS + audit-line cost per row) or route.
 - **Behavioural cost of classify-by-error — recorded as FACT, ⛔ no new rule.** A row whose stored name was wrapped under a KEK version that is now DISABLED or DESTROYED fails with a KMS status other than INVALID_ARGUMENT; the route treats that as an outage, so every Sahyog Vivran page holding the row answers 500 at the API (the 503 outage view at the public app) for as long as the version stays unavailable, while rows on the current version would decrypt. ⚠ Whether and how KEK versions may be disabled is ⛔ not decided here.
+- ⚠ **RE-MARKED 2026-09-19 (`11b-21` code review) — THIS COST NOW ALSO LANDS ON THE MEMBER contributor route, and there it is WIDER, ⛔ not closed.** The member route classifies by the same error (`-224` D4). One row wrapped under a DISABLED/DESTROYED KEK version fails with a non-INVALID_ARGUMENT status ⇒ `KmsOutageError` ⇒ the WHOLE list fails soft to `{ assigned:false }` for every member of that pool, for as long as the version stays unavailable. ⚠ Unlike the public route (a 503 outage view that says so), the member client renders `{ assigned:false }` as *"You have no live pool right now."* (`contributor_list.no_pool`) — a FALSE statement to a member who IS assigned; and the 60 s poll can flip already-shown data to it. Before `11b-21` that row was silently dropped and the rest of the list stayed. ⭐ Trigger: any decision to disable/destroy a KEK version, or an outage-distinguishing state (needs NEW copy — a product call, `-224` D5). ⛔ Not changed by `11b-21`: ruled by `-224` D4/AC7.
 - **UN-ATTESTED: Cloud KMS's status for an AAD mismatch or corrupted ciphertext is ASSUMED to be INVALID_ARGUMENT (3).** The fake KMS was aligned to that assumption; ⛔ no live-KMS evidence is in the repo. ⭐ Attest before `namePublicationAuthorised` or any KMS-backed public launch. If wrong, every corrupt row fails CLOSED (a 503), ⛔ not open.
+- ⚠ **RE-MARKED 2026-09-19 (`11b-21` code review) — THE SAME UN-ATTESTED PREMISE NOW DECIDES THE MEMBER contributor route TOO.** If Cloud KMS answers a corrupt envelope or AAD mismatch with anything other than INVALID_ARGUMENT, then on the member route ONE such row no longer degrades to that row's `{ name: null }` — it blanks the WHOLE list to `{ assigned:false }` (*"You have no live pool right now."*) for every pool member. It fails CLOSED (no name leaks), ⛔ not open. ⭐ Same trigger: attest before any KMS-backed member/public launch.
 
 ## Deferred from: code review of 11b-3b-sahyog-vivran-named-identity-render-layer — **FOURTH PASS** (2026-09-18)
 

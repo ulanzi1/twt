@@ -5734,6 +5734,59 @@ So that the member app and the public page each render the **SAME** words — �
 
 **FRs:** ⛔ **None amended.** This story introduces no FR and edits none — ⭐ it is a **copy source**, ⛔ not a surface. **UX-DR anchors:** ⛔ none — the block is ratified **copy**, ⛔ not a pattern. **Decisions:** **[`2026-09-11-214`](../../.decision-log.md#decision-2026-09-11-214)** (⭐ the commissioning authority — **Consequence 2**, plus cl.4(d) and Consequences 5, 6, 7, 8) · [`2026-09-04-193`](../../.decision-log.md#decision-2026-09-04-193) cl.3 + [`-206`](../../.decision-log.md#decision-2026-09-07-206) cl.1 (⭐ **ONE** shared copy source) · [`-205`](../../.decision-log.md#decision-2026-09-07-205) cl.1 (the **FULL** name form). **Routing note:** `trustee-panel-routing-note-2026-09-05-11b12-under-funded-commitment-claim.md` **§8.1** (the text) · **§9.1 row 3** (the routing) · **§9.1 row 4** (the no-name variant) · **§10.2 ruling 3** (omit the clause).
 
+### Story 11b.20: The Ratified Message Block on the PUBLIC Sahyog Vivran Page `[SURFACE]`
+
+> ⭐⛔ **SECTIONED 2026-09-19 (Story 11b.20 Task 1, before the first line of code).** This story had **no `epics.md` entry** until it created its own — the **Story 11b.19 precedent** (its `SECTIONED 2026-09-12` annotation, itself following **11b.17**, **11b.15**, **8.16** and **7.11**) — so a future `sprint-planning` run can ⛔ **neither drop it nor regenerate a ghost**. ⚠ The sprint key `11b-20-public-sahyog-vivran-message-block` was already *named* in `sprint-status.yaml` (row + ledger) and in the 11b.17 and 11b.19 sections above; ⇒ this discharges the missing **section**, ⛔ not a first mention.
+>
+> ⭐ **COMMISSIONING AUTHORITY: [`2026-09-11-214`](../../.decision-log.md#decision-2026-09-11-214) Consequence 3** — the PUBLIC render of the block 11b.19 authored. ⭐ With it, `-214` is homed and built end to end: Consequence 2 = **11b.19** (`done`) · cl.4(b) = **11b.17** AC10 (`done`) · Consequence 3 = **this story**.
+>
+> ⭐ **THE TWO QUESTIONS THAT HELD IT ARE DECIDED, ⛔ not re-opened here:** [`2026-09-19-223`](../../.decision-log.md#decision-2026-09-19-223) **cl.1** — a drive with no displayable deceased name renders `message_block.headline.no_family`, **after** the ₹0 check; **cl.2** — counsel's clearance of `message_block.join` going public is recorded. ⚠⛔ **There is ⛔ no "withheld name" case** (`-223` cl.4, [`-160`](../../.decision-log.md#decision-2026-08-28-160) cl.6): a null name means the publication clause is not yet pinned, or a technical cause — ⛔ never a refusal by anyone.
+
+As **a member of the public reading about a drive**,
+I want the page to say what the trust actually wants said about it, in the Panel's own words,
+So that the family's drive ends on the sentence the trustees chose instead of a bare row of figures.
+
+**Depends on:** ⛔ **Nothing blocking.** 11b.19 (the copy, `done`) · 11b.3b (`amountRaisedInr` on this wire, `done`) · `-223` cl.1 + cl.2. **Coordinates with:** 11b.22 (`backlog`) edits the same page — whichever lands second rebases; ⛔ neither absorbs the other.
+
+**Acceptance Criteria:**
+
+**Given** `-214` Consequence 3 and routing note **§8.3(2)** (the block *"is written for a PAGE"*)
+**When** a funded drive's public page renders
+**Then** the §8.1 block — the `Nominee full name` | `District` table **above** the five paragraphs — renders on `apps/public/src/pages/sahyog-vivran/[driveToken].astro`, ⛔ not on the index (which keeps `index_line.*`)
+**And** every string comes from `sahyog-shared` **by name**, as a bare literal or `` `message_block.headline.${variant}` `` — ⛔ no copy is authored, derived or translated here (`-193` cl.3, `-206` cl.1)
+
+**Given** [`2026-09-13-216`](../../.decision-log.md#decision-2026-09-13-216) **cl.1** (Consequence 2 names this story)
+**When** `amountRaisedInr <= 0`, on any stage
+**Then** the **whole** block renders **nothing** — headline, paragraphs **and** table; ⛔ there is ⛔ no `no_amount` variant and ⛔ none may be added
+**And** the ₹0 decision runs **before** the name decision, pinned by an order assertion, ⛔ not presence alone
+
+**Given** `-223` cl.1 and `-214` Consequence 5 (`t()` **throws** on an unsupplied token)
+**When** the deceased name is null (or its matrix verdict is not visible)
+**Then** the headline is `message_block.headline.no_family`; a named, funded drive renders `.full`
+**And** ⛔ no copy, comment or test claims a cause for the null
+
+**Given** `-214` Consequences 6 + 8 (§10.2 ruling 3; labels, ⛔ not claims)
+**When** the table renders
+**Then** the Nominee column is the **first** account's holder name and drops when it is null; the District column drops when `district` **or** the deceased name is null; an empty table renders nothing
+**And** ⛔ nothing says anyone *"is the nominee of"* anyone
+
+**Given** the page rule *"EVERY value goes through `<MatrixField>`"*
+**When** the block renders
+**Then** the table cells go through `<MatrixField>` with the existing field ids; a suppressed `amount_raised_inr` drops the whole block and a suppressed `deceased_member_name` selects `no_family` — ⭐ both verdicts honoured, ⛔ neither thrown on
+**And** `{amount}` is `formatCurrency(amountRaisedInr, 'en')` from the raw wire number — ⛔ no multiplication, ⛔ no presenter, ⛔ no literal ₹, ⛔ never the identifier `deliveredTotal`
+
+**Given** the two gates that guard this block
+**When** the render lands
+**Then** `sahyog-shared-dark-copy.test.ts`'s `message_block.*` allow-list is **NARROWED** to name this site with its authority, with guard assertions mirroring the 11b.17 block — ⛔ never deleted, ⛔ never appended to blindly
+**And** the new selector module is named `apps/public/src/lib/sahyog-vivran-*.ts` and joins the financial-truth gate's `SCAN_FILES` with `renderPath: true` in the same commit
+
+**Dev Notes / guardrails:**
+- ⛔ **NO PREDICATE THAT GATES A MEMBER'S ACCESS TO A BENEFIT** is introduced or changed (AI-10-1). ⛔ No new public exposure: every value is already on this wire and already rendered on this page; the story **re-arranges** what is published.
+- ⛔ No new wire field, ⛔ no contract widening, ⛔ no new `SahyogVivranRenderModel` key (`deriveFieldIds` throws on one), ⛔ no member surface, ⛔ no index change.
+- ⚠ With the deceased name null on every drive today, ⛔ no public drive shows the District column. That is correct, ⛔ not a defect.
+
+**FRs:** ⛔ **None amended.** **UX-DR anchors:** ⛔ none — ratified copy, ⛔ not a pattern. **Decisions:** **[`2026-09-11-214`](../../.decision-log.md#decision-2026-09-11-214)** (⭐ commissioning — **Consequence 3**, plus 5, 6, 8) · [`2026-09-19-223`](../../.decision-log.md#decision-2026-09-19-223) cl.1, cl.2, cl.4 · [`2026-09-13-216`](../../.decision-log.md#decision-2026-09-13-216) cl.1 · [`-160`](../../.decision-log.md#decision-2026-08-28-160) cl.6 · [`-190`](../../.decision-log.md#decision-2026-09-04-190) cl.2 · [`-204`](../../.decision-log.md#decision-2026-09-07-204) cl.8. **Routing note:** `trustee-panel-routing-note-2026-09-05-11b12-under-funded-commitment-claim.md` **§8.1**, **§8.3(2)**, **§8.4(iii)**, **§9.1 row 4**, **§10.2 rulings 2 + 3**.
+
 ---
 
 ## Epic 12: Module Marketplace

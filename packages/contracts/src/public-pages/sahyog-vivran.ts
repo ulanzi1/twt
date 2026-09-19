@@ -699,8 +699,8 @@ export type PublicSahyogVivranQuery = z.output<typeof PublicSahyogVivranQuery>;
  * TWO DIFFER BY DESIGN.** Five things leave a row UNNAMED (`name: null`), all of them resolved AFTER
  * paging: RTBF erasure (`2026-08-30-169`), the erasure sentinel, an unresolvable name, a MONONYM
  * under `shielded_name` (`2026-08-21-145` cl.3), a failed decrypt.
- * ⇒ ⭐ this page reads *"N confirmed"* beside FEWER than N **NAMED** rows **BY DESIGN**, and ⛔ ⛔ NO
- * copy anywhere may claim the list is complete.
+ * ⇒ ⭐ this page reads *"Contributors: N"* (the set size's own wording since Story 11b.22, `-225`) beside
+ * FEWER than N **NAMED** rows **BY DESIGN**, and ⛔ ⛔ NO copy anywhere may claim the list is complete.
  * ⚠⛔ **ROW COUNT vs NAMED COUNT — ⛔ DO ⛔ NOT CONFLATE THEM AGAIN.** Until `-219` this sentence read
  * *"`items.length` can be FEWER than `min(limit, total - offset)`"*, which was true while omitted
  * rows were DROPPED. ⭐ Since cl.1 the row is KEPT, so `items.length` **DOES** equal

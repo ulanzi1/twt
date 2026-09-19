@@ -134,8 +134,9 @@ export interface SahyogVivranLabels {
    * `contribution` (`packages/ui/src/contribution-list/i18n-keys.ts`) — ⛔ copying them into a second
    * home is exactly what AC7 forbids. ⚠ The prefix is **`contributor_list.`**, ⛔ not
    * `contribution_list.`: the MODULE is `contribution-list`, the KEYS are not.
-   * ⛔⛔ AND ⛔ NO COPY HERE MAY CLAIM THE LIST IS COMPLETE — this page reads *"N confirmed"* beside
-   * FEWER than N named rows BY DESIGN (`2026-08-30-169`).
+   * ⛔⛔ AND ⛔ NO COPY HERE MAY CLAIM THE LIST IS COMPLETE — this page reads *"Contributors: N"* (the
+   * SET SIZE; its own wording since Story 11b.22, `-225`) beside FEWER than N named rows BY DESIGN
+   * (`2026-08-30-169`).
    */
   readonly contributorsHeader: string;
   readonly contributorsEmpty: string;
@@ -152,7 +153,11 @@ export interface SahyogVivranLabels {
    * must ⛔ not say which. ⛔ Do ⛔ not add `contributorErased`, `contributorUnresolvable` or a sibling.
    */
   readonly contributorUnnamed: string;
-  /** `{{count}} confirmed` for the contributor SET SIZE — ⛔ a count, ⛔ never a sum. */
+  /**
+   * `Contributors: {count}` (`value.contributor_total`) for the contributor SET SIZE — ⛔ a count, ⛔ never
+   * a sum. ⭐ Story 11b.22 (`-225`): its OWN key and words, ⛔ not the EVENT count's `{count} confirmed`
+   * (`contributionsCount`). ⛔ Do not reconcile the two — they answer different questions.
+   */
   readonly contributorTotal: (count: number) => string;
   /**
    * ⭐ Story 11b.3b (Task 3, AC4) — the paging links' copy. ⚠ The HREFs are built at the PAGE, ⛔ not

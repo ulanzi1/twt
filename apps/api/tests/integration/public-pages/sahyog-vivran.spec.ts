@@ -1255,8 +1255,8 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
         const res = await t.app.inject({ method: 'GET', url: ROUTE(pariwarId, tokenFor(id)) });
         expect(res.statusCode).toBe(200);
         const body = res.json() as { items: { name: string | null }[]; total: number };
-        // ⭐ THREE ROWS beside a total of THREE, ⛔ but only ONE NAMED — the *"N confirmed beside FEWER
-        // than N NAMED rows"* property, proven rather than described.
+        // ⭐ THREE ROWS beside a total of THREE, ⛔ but only ONE NAMED — the *"Contributors: N beside
+        // FEWER than N NAMED rows"* property (Story 11b.22 wording), proven rather than described.
         // ⛔ THIS READ: `expect(body.items).toEqual([{ name: 'Anita Verma' }]);`
         expect(body.items).toEqual([{ name: 'Anita Verma' }, { name: null }, { name: null }]);
         expect(body.items.filter((r) => r.name !== null)).toHaveLength(1);

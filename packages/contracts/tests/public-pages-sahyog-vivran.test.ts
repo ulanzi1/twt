@@ -479,8 +479,8 @@ describe('the response is ONE DRIVE + a BOUNDED PAGE of its contributors', () =>
     // ⚠ Every row can be omitted (RTBF, the sentinel, a mononym), and a still-collecting drive has
     // none yet. ⛔ A shape that required at least one row would 500 the page on the ordinary case.
     expect(PublicSahyogVivranResponse.safeParse({ ...PAGED, items: [], total: 0 }).success).toBe(true);
-    // ⭐ AND `items.length` MAY BE FEWER THAN `total` — the *"N confirmed beside FEWER than N rows"*
-    // property, as a shape. ⛔ Do ⛔ not add a reconciling refinement between them.
+    // ⭐ AND `items.length` MAY BE FEWER THAN `total` — the *"Contributors: N beside FEWER than N rows"*
+    // property (the set size's wording since Story 11b.22), as a shape. ⛔ Do ⛔ not add a reconciling refinement between them.
     expect(PublicSahyogVivranResponse.safeParse({ ...PAGED, total: 137 }).success).toBe(true);
   });
 });

@@ -74,6 +74,15 @@ const KEYS = [
 const LOCALES: readonly Locale[] = ['en', 'hi'];
 
 /**
+ * ⭐ Story 11b.22 (`-225`, AC3(e)) — the contributor SET-SIZE string, resolved through the REAL `t()`.
+ * ⚠ It is interpolated, so it cannot join `KEYS` (see the interpolation leg); ⭐ instead every scan
+ * that builds its text from `KEYS` appends THIS, so the fences that already exist cover the new string
+ * too — ⛔ not only a parallel list.
+ */
+const contributorTotal = (locale: Locale): string =>
+  t('value.contributor_total', { count: 42 }, { locale, namespace: 'sahyog-vivran' });
+
+/**
  * ⛔⛔ THE CANDIDATES `#decision-2026-09-16-219` cl.3 RULED OUT **BY NAME** for the unnamed-contributor
  * placeholder. ⚠ A later re-wording that reaches for one of these must fail HERE, ⛔ not on a public
  * page.
@@ -166,6 +175,15 @@ describe('/sahyog-vivran copy resolves through the REAL t() — both locales', (
       expect(out).not.toMatch(/[{}]/);
     });
 
+    // ⭐ Story 11b.22 (`-225`) — the contributor SET SIZE's own key. ⚠⛔ ⛔ NOT in `KEYS`: that loop
+    // calls `t(key, undefined, …)` and `t()` THROWS on a missing `{count}` — the same reason
+    // `value.contributions_count` is absent from it.
+    it(`${locale}: "value.contributor_total" interpolates {count} with NO stray brace`, () => {
+      const out = t('value.contributor_total', { count: 42 }, { locale, namespace: 'sahyog-vivran' });
+      expect(out).toContain('42');
+      expect(out).not.toMatch(/[{}]/);
+    });
+
     it(`${locale}: "appeal.stage" interpolates {stage} with NO stray brace`, () => {
       const out = t('appeal.stage', { stage: 3 }, { locale, namespace: 'sahyog-vivran' });
       expect(out).toContain('3');
@@ -231,9 +249,9 @@ describe('/sahyog-vivran copy resolves through the REAL t() — both locales', (
 
   // ⛔⛔ **MINTED COPY MAY ⛔ NEVER CLAIM THE LIST IS COMPLETE** (AC7). Two shipped doc-blocks say so,
   // and this is the third place that has to hold — because COPY is where a completeness claim would
-  // actually surface. ⭐ This page reads "N confirmed" beside FEWER than N named rows **BY DESIGN**,
-  // from THREE independent omissions: RTBF erasure (`2026-08-30-169`), a MONONYM under
-  // `shielded_name` (`2026-08-21-145` cl.3), and the erasure sentinel (AC5).
+  // actually surface. ⭐ This page reads "Contributors: N" (Story 11b.22) beside FEWER than N named
+  // rows **BY DESIGN**, from THREE independent omissions: RTBF erasure (`2026-08-30-169`), a MONONYM
+  // under `shielded_name` (`2026-08-21-145` cl.3), and the erasure sentinel (AC5).
   // ⚠⛔ AND ⛔ NO OMISSION COUNT EITHER — ⛔ no "some names withheld", ⛔ no tally: a count of omissions
   // is an enumeration signal over which members were erased.
   // ⚠⛔⛔ **THE DEVANAGARI PATTERNS WERE VACUOUS UNTIL 2026-09-18 (fourth review pass).** JS `\b` is an
@@ -265,6 +283,7 @@ describe('/sahyog-vivran copy resolves through the REAL t() — both locales', (
       const all = [
         ...KEYS.map((k) => t(k, undefined, { locale, namespace: 'sahyog-vivran' })),
         ...CONTRIBUTOR_KEYS.map((k) => t(k, undefined, { locale, namespace: 'contribution' })),
+        contributorTotal(locale),
       ].join(' ');
       for (const claim of [
         /\ball\s+contributors?\b/i,
@@ -354,7 +373,10 @@ describe('/sahyog-vivran copy resolves through the REAL t() — both locales', (
   // quarantine has to hold, because COPY is where a shortfall would actually surface.
   for (const locale of LOCALES) {
     it(`${locale}: no prohibited term, and ⛔ no comparison-to-target framing`, () => {
-      const all = KEYS.map((k) => t(k, undefined, { locale, namespace: 'sahyog-vivran' })).join(' ');
+      const all = [
+        ...KEYS.map((k) => t(k, undefined, { locale, namespace: 'sahyog-vivran' })),
+        contributorTotal(locale),
+      ].join(' ');
       for (const banned of [/\bdonor/i, /late teacher/i, /\breceipt\b/i, /\bpassbook\b/i, /\breport\b/i]) {
         expect(all).not.toMatch(banned);
       }
@@ -389,8 +411,109 @@ describe('/sahyog-vivran copy resolves through the REAL t() — both locales', (
   // counts), so Latin numerals even under `hi`. A Devanagari operational digit must not ship.
   for (const locale of LOCALES) {
     it(`${locale}: ⛔ no Devanagari digits anywhere in this namespace`, () => {
-      const all = KEYS.map((k) => t(k, undefined, { locale, namespace: 'sahyog-vivran' })).join(' ');
+      const all = [
+        ...KEYS.map((k) => t(k, undefined, { locale, namespace: 'sahyog-vivran' })),
+        contributorTotal(locale),
+      ].join(' ');
       expect(all).not.toMatch(/[०-९]/);
+    });
+  }
+});
+
+// ⭐⭐ STORY 11b.22 (`#decision-2026-09-19-225`) — ONE PAGE, TWO COUNTS, TWO WORDINGS.
+// Until 11b.22 the contributor SET SIZE and the confirmed-contribution EVENT count both resolved
+// `value.contributions_count`, so the page printed "N confirmed" twice for two different facts. ⭐ The
+// set size now has its own key, `value.contributor_total`; the event count is unchanged.
+// ⚠⛔ The model-level stubs (`sahyog-vivran-render.test.ts`) can ⛔ not prove this — a stub is a second
+// source ([[feedback_stub_must_call_not_transcribe]]). ⇒ every leg below reads the REAL page source or
+// the REAL `t()`.
+describe('⭐ Story 11b.22 — the SET SIZE and the EVENT count are worded differently', () => {
+  /**
+   * ⭐ COPIED from `sahyog-vivran-a11y.test.ts`'s file-local `template()` — ⛔ deliberately ⛔ not
+   * extracted into a shared helper ([[feedback_no_premature_package]]). Strips Astro/JS comments so a
+   * key named inside a comment cannot satisfy (or break) a count below: this page is densely commented.
+   */
+  const template = (src: string): string =>
+    src
+      .replace(/\{\/\*[\s\S]*?\*\/\}/g, '')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '');
+  const PAGE = template(
+    readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), '../src/pages/sahyog-vivran/[driveToken].astro'),
+      'utf8',
+    ),
+  );
+  const occurrences = (needle: string): number => PAGE.split(needle).length - 1;
+
+  it('⛔ anti-vacuity: the stripped page has a subject — an empty scan would pass every count below', () => {
+    expect(PAGE.length).toBeGreaterThan(2000);
+    expect(PAGE).toContain('<MatrixField');
+  });
+
+  // AC3(a) — WIRING. Each key is resolved exactly ONCE, each by its own label entry.
+  it('⭐ each count key is resolved EXACTLY ONCE, by its OWN label entry', () => {
+    expect(occurrences("'value.contributions_count'")).toBe(1);
+    expect(occurrences("'value.contributor_total'")).toBe(1);
+    expect(PAGE).toMatch(/contributorTotal:\s*\(count: number\)\s*=>\s*tr\('value\.contributor_total',/);
+    expect(PAGE).toMatch(/contributionsCount:\s*\(count: number\)\s*=>\s*tr\('value\.contributions_count',/);
+  });
+
+  // AC3(b) — REAL `t()`, both locales, at 0 / 1 / 42: the two strings carry the number, leave ⛔ no
+  // brace, and ⛔ never read the same.
+  for (const locale of LOCALES) {
+    for (const n of [0, 1, 42]) {
+      it(`${locale}: at ${n} the SET-SIZE string and the EVENT-count string DIFFER`, () => {
+        const opts = { locale, namespace: 'sahyog-vivran' } as const;
+        const set = t('value.contributor_total', { count: n }, opts);
+        const event = t('value.contributions_count', { count: n }, opts);
+        for (const out of [set, event]) {
+          expect(out).toContain(String(n));
+          expect(out).not.toMatch(/[{}]/);
+        }
+        expect(set).not.toBe(event);
+      });
+    }
+  }
+
+  // AC3(c) — CONTENT CONSTRAINTS on the new string. ⭐ ONE constant per pattern, ⭐ read by BOTH the
+  // probe leg and the real leg — ⛔ never a retyped copy (the fifth-review-pass lesson above).
+  // ⚠⛔ Devanagari uses the `beforeNoLetter` lookbehind with `u`, ⛔ NEVER `\b`: JS `\b` is ASCII-only,
+  // so `/\bपुष्ट/` can ⛔ never match and `not.toMatch` would pass trivially (the `HI_TALLIES` defect).
+  const beforeNoLetter = '(?<![\\p{L}\\p{M}])';
+  const SET_SIZE_FORBIDDEN: readonly (readonly [RegExp, string, string])[] = [
+    // [pattern, planted violation, why]
+    [/\bconfirmed\b/i, '12 confirmed', 'the collided word — the heading above already says it'],
+    [new RegExp(`${beforeNoLetter}पुष्ट`, 'u'), '12 पुष्ट', 'the collided word, Hindi'],
+    [/\ball\b/i, 'All contributors: 12', 'completeness'],
+    [/\bevery\b/i, 'Every contributor: 12', 'completeness'],
+    [/\blisted\b/i, 'Contributors listed: 12', 'completeness — the list holds unnamed rows'],
+    [/\bshown\b/i, 'Contributors shown: 12', 'completeness'],
+    [/\bnames?\b/i, 'Names: 12', 'a count of PEOPLE, ⛔ never of names shown'],
+    [new RegExp(`${beforeNoLetter}नाम`, 'u'), 'नाम: 12', 'names, Hindi'],
+    [new RegExp(`${beforeNoLetter}सभी`, 'u'), 'सभी योगदानकर्ता: 12', 'completeness, Hindi'],
+    [/\bso\s+far\b/i, 'Contributors so far: 12', 'a live-drive estimate frame'],
+    [new RegExp(`${beforeNoLetter}अभी\\s+तक`, 'u'), 'अभी तक योगदानकर्ता: 12', 'estimate frame, Hindi'],
+  ];
+
+  it('⭐ anti-vacuity: every forbidden pattern MATCHES its planted violation', () => {
+    for (const [pattern, planted] of SET_SIZE_FORBIDDEN) {
+      expect(planted).toMatch(pattern);
+    }
+    // ⭐ And the lookbehind still refuses a MID-WORD hit (`अपुष्ट`), which is what `\b` was for.
+    expect('अपुष्ट').not.toMatch(SET_SIZE_FORBIDDEN[1]![0]);
+  });
+
+  for (const locale of LOCALES) {
+    it(`${locale}: the SET-SIZE string carries ⛔ no forbidden word and ⛔ no per-cause word`, () => {
+      const set = contributorTotal(locale);
+      for (const [pattern] of SET_SIZE_FORBIDDEN) {
+        expect(set).not.toMatch(pattern);
+      }
+      // `-219` cl.3 / cl.4(c) — ⛔ nothing may name WHICH omission cause applies.
+      for (const banned of BANNED_PLACEHOLDER_WORDS) {
+        expect(set).not.toMatch(banned);
+      }
     });
   }
 });

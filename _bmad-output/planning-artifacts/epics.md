@@ -66,6 +66,7 @@ Inputs reconciled per the 2026-05-27 Sprint Change Proposal: the Sprint Change P
 - **FR-22: Alert state machine.** `draft → frozen → published → live → closed → settled`. Role-gated transitions; audit-logged.
 - **FR-23: Structured `alert` object → multi-channel render (WI-37).** One canonical payload renders across in-app push, WhatsApp Business (dual-gated), Telegram mirror; SMS only for OTP/step-up/fallback per architecture §2.2, §3.4.
 - **FR-24: Real-time per-pool live contributor list (member-facing).** First-name + last-initial only; updates with reconciliation confirmation (not on UTR self-attestation alone).
+  - ⚠⛔ **ANNOTATED 2026-09-19 (Story 11b.21 Task 1) — *"First-name + last-initial only"* IS SUPERSEDED FOR THE MEMBER LIST** by [`2026-09-04-189`](../../.decision-log.md#decision-2026-09-04-189) cl.3 (a member sees ⛔ never less than the public) and [`2026-09-18-222`](../../.decision-log.md#decision-2026-09-18-222) (a withheld name renders `A contributor` / `एक सहकर्मी` in position); built at **Story 11b.21** ([`2026-09-19-224`](../../.decision-log.md#decision-2026-09-19-224)). The member list shows the **mode-resolved** name, the same form the public Sahyog Vivran page shows. ⛔ Annotation only; ⛔ the FR text is ⛔ not amended.
 - **FR-25: Pending contributors per pool `[v1-S]`.** Member-only peer-accountability signal.
 - **FR-26: Real-time progress meter + personal deadline countdown `[v1-S]`.** Per-pool progress (no shortfall narrative); personal countdown on home screen during live alert.
 
@@ -3182,6 +3183,8 @@ So that the published contributor list reflects only actually-confirmed contribu
 **When** Epic 9 emits `contribution.confirmed`
 **Then** the contributor appears on the live list within seconds (real-time update); the pending-list count decrements; the My Pool card progress meter increments
 
+> ⭐⛔ **ANNOTATED 2026-09-19 (Story 11b.21 Task 1) — THE `first_name + last_initial` FORM IN THE TWO ACs ABOVE (*"shows `first_name + last_initial` only"*; *"surfaces only `reconciliation-confirmed first_name + last_initial`"*) IS SUPERSEDED FOR THE MEMBER LIST TOO. ⛔ Annotation only; ⛔ the ACs are ⛔ not rewritten.** The 2026-09-02 annotation above superseded the form for the public surface; [`2026-09-04-189`](../../.decision-log.md#decision-2026-09-04-189) cl.3 and [`2026-09-18-222`](../../.decision-log.md#decision-2026-09-18-222) carry it to the member list, built at **Story 11b.21** ([`2026-09-19-224`](../../.decision-log.md#decision-2026-09-19-224)): the member row is `{ name: string | null }`, **mode-resolved** from the Pariwar's stored `public_name_presentation_mode`, and a withheld name renders the ruled placeholder in the producer's position. ⭐ **Unchanged:** the reconciliation-confirmed-only visibility invariant.
+
 ### Story 8.4: UPI Intent Flow + `<UPIIntentButton>` + UTR Self-Attestation + Yellow Pill `[SURFACE]`
 
 As Sushil tapping "Pay via UPI" on the My Pool card,
@@ -5786,6 +5789,41 @@ So that the family's drive ends on the sentence the trustees chose instead of a 
 - ⚠ With the deceased name null on every drive today, ⛔ no public drive shows the District column. That is correct, ⛔ not a defect.
 
 **FRs:** ⛔ **None amended.** **UX-DR anchors:** ⛔ none — ratified copy, ⛔ not a pattern. **Decisions:** **[`2026-09-11-214`](../../.decision-log.md#decision-2026-09-11-214)** (⭐ commissioning — **Consequence 3**, plus 5, 6, 8) · [`2026-09-19-223`](../../.decision-log.md#decision-2026-09-19-223) cl.1, cl.2, cl.4 · [`2026-09-13-216`](../../.decision-log.md#decision-2026-09-13-216) cl.1 · [`-160`](../../.decision-log.md#decision-2026-08-28-160) cl.6 · [`-190`](../../.decision-log.md#decision-2026-09-04-190) cl.2 · [`-204`](../../.decision-log.md#decision-2026-09-07-204) cl.8. **Routing note:** `trustee-panel-routing-note-2026-09-05-11b12-under-funded-commitment-claim.md` **§8.1**, **§8.3(2)**, **§8.4(iii)**, **§9.1 row 4**, **§10.2 rulings 2 + 3**.
+
+---
+
+### Story 11b.21: Member Contributor List — Full Name and the Unnamed Row, at Parity with the Public Page `[SURFACE]`
+
+> ⭐⛔ **SECTIONED 2026-09-19 (Story 11b.21 Task 1, before the first line of code).** This story had **no `epics.md` entry** until it created its own — the **Story 11b.19 / 11b.20 precedent** — so a future `sprint-planning` run can ⛔ **neither drop it nor regenerate a ghost**. ⚠ The sprint key `11b-21-member-contributor-name-form-parity` was already *named* in `sprint-status.yaml` (row + ledger); ⇒ this discharges the missing **section**, ⛔ not a first mention.
+>
+> ⭐ **COMMISSIONING AUTHORITY: [`2026-09-18-222`](../../.decision-log.md#decision-2026-09-18-222) Consequence 1** (both axes discharge on one code path) **+ [`2026-09-18-221`](../../.decision-log.md#decision-2026-09-18-221) cl.4** (*"AXIS A IS A DISCHARGE, ⛔ NOT A QUESTION"*). ⭐ The seven engineering calls are recorded at [`2026-09-19-224`](../../.decision-log.md#decision-2026-09-19-224), before any code.
+
+As **a member looking at who has contributed to my pool's current drive**,
+I want to see each contributor's name in the same form the public Sahyog Vivran page shows it, and to see a row saying "A contributor" wherever a name cannot be shown,
+So that I am never told less about my own pool than a stranger on the internet is, and I can tell when the list is incomplete.
+
+**Depends on:** ⛔ **Nothing blocking.** 11b.3b (the public route this mirrors, `done`) · `-222` · `-224`. **Coordinates with:** 11b.22 (`backlog`) edits `[driveToken].astro` near a line this story annotates — whichever lands second rebases.
+
+**Acceptance Criteria:**
+
+**Given** [`2026-09-04-189`](../../.decision-log.md#decision-2026-09-04-189) **cl.3** (Trustee-ratified: a member sees ⛔ never less than the public)
+**When** a member reads `GET /api/v1/member/pool-contributors`
+**Then** each confirmed row carries the **mode-resolved** name (`resolveMemberFacingDeceasedName` over the public route's cleaned tokens), ⛔ never a hard-coded form; under every stored name and mode the member form is equal to or longer than the public form
+
+**Given** `-222` cl.1–cl.3 (Trustee-ratified, option **(B)**)
+**When** a confirmed contributor's name cannot be shown (RTBF erasure, the erasure sentinel, no profile, a failed decrypt, empty after normalising)
+**Then** the row is **kept** in the producer's position as `{ name: null }` and renders `A contributor` / `एक सहकर्मी` from the **one** existing key (`sahyog-vivran` → `value.contributor_unnamed`)
+**And** ⛔ nothing on the wire, in order or in timing (bar the inherited no-profile residual) discloses which cause applies
+
+**Given** `-224` D4 (fault ≠ erasure)
+**When** KMS is unavailable or the profile read fails
+**Then** the list self-suppresses (`{ assigned: false }`), ⛔ never N placeholders
+
+**Given** `-224` D6 (the payload now carries full names)
+**When** the mobile app caches the list
+**Then** it is ⛔ never persisted to MMKV, and the old persisted entry is removed at startup
+
+**FRs:** FR-24 (**annotated**, ⛔ not amended). **Decisions:** [`2026-09-18-222`](../../.decision-log.md#decision-2026-09-18-222) (⭐ commissioning) · [`2026-09-18-221`](../../.decision-log.md#decision-2026-09-18-221) cl.4 · [`2026-09-04-189`](../../.decision-log.md#decision-2026-09-04-189) cl.3 · [`2026-09-04-195`](../../.decision-log.md#decision-2026-09-04-195) cl.1 · [`2026-09-19-224`](../../.decision-log.md#decision-2026-09-19-224) D1–D7. **Routing note:** `trustee-panel-routing-note-2026-09-18-member-surface-placeholder-clause-conflict.md`.
 
 ---
 

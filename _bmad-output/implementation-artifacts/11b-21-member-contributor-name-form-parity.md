@@ -17,7 +17,7 @@ and matched it on 2026-09-19. Two facts, stated separately:
 
 # Story 11b.21: Member Contributor List — Full Name and the Unnamed Row, at Parity with the Public Page `[SURFACE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 ## ⭐ GLYPH REGISTER — read this before any clause below
 

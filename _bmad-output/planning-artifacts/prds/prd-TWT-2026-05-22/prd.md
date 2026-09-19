@@ -549,6 +549,8 @@ One source-of-truth payload renders across in-app push, WhatsApp Business, Teleg
 
 During a live alert, members can browse a per-pool real-time list of who has contributed (first-name + last-initial). No PII.
 
+> ⚠⛔ **ANNOTATED 2026-09-19 (Story 11b.21) — *"(first-name + last-initial). No PII."* IS SUPERSEDED FOR THE MEMBER LIST** by Decision `2026-09-04-189` cl.3 (Trustee-ratified: a member sees ⛔ never less than the public) and `2026-09-18-222` (Trustee-ratified: a withheld name renders `A contributor` / `एक सहकर्मी` in position). Built at Story 11b.21 ([`2026-09-19-224`](../../../../.decision-log.md#decision-2026-09-19-224)): the member list shows the **mode-resolved** name, the same form the public Sahyog Vivran page shows. ⛔ Annotation only; ⛔ the FR text is ⛔ not amended.
+
 **Consequences (testable):**
 - List updates with reconciliation confirmation (not on UTR self-attestation alone — prevents false positives during mismatch states).
 - Public (non-logged-in) version of the list is also rendered on the Sahyog Vivran page (FR-77).

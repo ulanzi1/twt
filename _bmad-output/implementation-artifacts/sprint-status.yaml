@@ -1,3 +1,13 @@
+# last_updated: 2026-09-19g (⭐ **STORY `11b-21` — GOVERNANCE COMMIT (Task 1), before any code: `ready-for-dev → in-progress`.**
+#   ⭐ `#decision-2026-09-19-224` (author-commit, BigDev) records the story's seven engineering calls D1–D7:
+#   ONE existing placeholder key; wire `{ name: string | null }`; mode-resolved + token-cleaned name
+#   (mononym kept, an extension of `-181`, flagged for BigDev); fault ≠ erasure (shared `kyc/name-render.ts`);
+#   no new a11y copy; cache never persisted + old key removed; the RTBF pre-filter and state read deleted.
+#   ⚠⛔ SUPERSEDED (author-committed): `-168` cl.5 (the throw); `-169` cl.4 on the member contributor path;
+#   `-169` cl.8 in part (presenter + render layer). `-222` Consequence 3's "new key" deliberately ⛔ not met.
+#   ⭐ Annotated, ⛔ not edited: `-222`, `-221`, `-168`, `-169`, `-172`; FR-24 (`epics.md` + PRD); Story 8.3
+#   ACs; the `-222` ledger entry and this row's comment. ⭐ `epics.md` gains the 11b.21 section (SECTIONED).
+#   ⛔ No `packages/` or `apps/` change in this commit.)
 # last_updated: 2026-09-19f (⭐ **STORY `11b-21` v0.2 — VALIDATED via `bmad-create-story validate` (three read-only verifiers; code re-derived at `d72d4e68`, ⛔ no drift). Stays `ready-for-dev`.**
 #   ⭐ 6 critical fixed: (1) member resolver does ⛔ no token cleaning ⇒ dirty names showed the member LESS
 #   than public ⇒ D3 now feeds `publicNameTokens`; (2) v0.1's erased-row decrypt skip was an RTBF-only
@@ -102,6 +112,9 @@
 #   may ⛔ NOT be built by re-admitting that key — it would state the person exercised erasure when the name
 #   was merely absent, *"a false statement about a data-subject right on the one surface that exists to
 #   protect it"*. ⭐ A NEW key, in the ruled word.
+#   ⚠ ANNOTATED 2026-09-19 (`11b-21` Task 1): `#decision-2026-09-19-224` D1 follows `-222` cl.2 (⛔ no
+#   second key) and reads the EXISTING `sahyog-vivran` → `value.contributor_unnamed` ⇒ "A NEW key" is
+#   deliberately ⛔ not met. This entry's wording is ⛔ not edited.
 #   ⚠ **AND A LIMIT ON WHAT THIS RULING DOES TO `-220`:** the Panel has now SEEN and adopted the Hindi
 #   word — ⛔ but that does ⛔ NOT retroactively make `-220` a Panel act, and `-220`'s record of the
 #   ordering breach STANDS UNCHANGED.)
@@ -19271,9 +19284,11 @@ development_status:
   # `i18n-keys.ts` deliberately EXCLUDES `member.anonymousMember` — ⛔ the placeholder may ⛔ NOT be
   # built by re-admitting that key (it would state the person exercised erasure when the name was
   # merely absent). ⭐ A new key, in the RULED word, under `-219` cl.3's all-five-causes constraint.
+  # ⚠ ANNOTATED 2026-09-19 (Task 1): `-224` D1 — ONE EXISTING key (`sahyog-vivran` →
+  # `value.contributor_unnamed`), per `-222` cl.2; Consequence 3's "new key" deliberately ⛔ not met.
   # ⚠ This is a MEMBER-SURFACE PII change that REVERSES shipped behaviour ⇒ it owns its own
   # Task 0 and states its `-195` cl.1 compliance, as 11b.3b's AC10 did.
-  11b-21-member-contributor-name-form-parity: ready-for-dev
+  11b-21-member-contributor-name-form-parity: in-progress
   # ⭐ Open follow-up (3) of `#decision-2026-09-16-219` — a COPY call, ⛔ not a code defect.
   # ⚠⛔ TWO DIFFERENT NUMBERS RENDER UNDER ONE KEY on the same page: `value.contributions_count`
   # ("{count} confirmed" / "{count} पुष्ट") is resolved TWICE in

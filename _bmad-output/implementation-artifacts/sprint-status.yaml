@@ -1,3 +1,13 @@
+# last_updated: 2026-09-19h (⭐ **STORY `11b-21` — IMPLEMENTED via `bmad-dev-story`: `in-progress → review`.**
+#   Governance `71ef29ee` (`-224`) preceded code; implementation `2255f909`. The member contributor list shows the
+#   MODE-RESOLVED name over the public route's cleaned tokens (`-189` cl.3 discharged — Axis A), and KEEPS every
+#   confirmed row, a withheld name rendering `A contributor` / `एक सहकर्मी` from ONE existing key (`-222` built —
+#   Axis B). Shared `apps/api/src/modules/kyc/name-render.ts` (D4: outage/DB fault ⇒ `{ assigned:false }`, never
+#   N placeholders); RTBF pre-filter + batched state read DELETED (D7); mobile query never persisted + retired key
+#   removed at startup (D6 — `CR-11b.2a-COMBINED-W3` closed on this surface, open repo-wide).
+#   ⚠ Carried, ⛔ not closed: the zero-KMS timing residual (no profile / unparseable envelope) now covers the member
+#   route; the D3 mononym cross-surface correlation (flagged for BigDev); the kill-switched-Pariwar residual.
+#   Verified: typecheck/lint/test green; live-DB specs 523 passed; friction:check affirmed; ci:local 34/34.)
 # last_updated: 2026-09-19g (⭐ **STORY `11b-21` — GOVERNANCE COMMIT (Task 1), before any code: `ready-for-dev → in-progress`.**
 #   ⭐ `#decision-2026-09-19-224` (author-commit, BigDev) records the story's seven engineering calls D1–D7:
 #   ONE existing placeholder key; wire `{ name: string | null }`; mode-resolved + token-cleaned name
@@ -19288,7 +19298,7 @@ development_status:
   # `value.contributor_unnamed`), per `-222` cl.2; Consequence 3's "new key" deliberately ⛔ not met.
   # ⚠ This is a MEMBER-SURFACE PII change that REVERSES shipped behaviour ⇒ it owns its own
   # Task 0 and states its `-195` cl.1 compliance, as 11b.3b's AC10 did.
-  11b-21-member-contributor-name-form-parity: in-progress
+  11b-21-member-contributor-name-form-parity: review
   # ⭐ Open follow-up (3) of `#decision-2026-09-16-219` — a COPY call, ⛔ not a code defect.
   # ⚠⛔ TWO DIFFERENT NUMBERS RENDER UNDER ONE KEY on the same page: `value.contributions_count`
   # ("{count} confirmed" / "{count} पुष्ट") is resolved TWICE in

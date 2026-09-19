@@ -20,12 +20,21 @@
 // one change this contract exists to forbid — the `.strict()` shape test (contracts/tests) rejects them
 // as decoy teeth ([[feedback_gate_scope_semantic_coverage]]). Yellow (Story 8.4) is intent, not confirmed
 // money, and is STRUCTURALLY unable to reach this list (epics.md:2911-2915).
+// ⚠ SUPERSEDED 2026-09-19 by Story 11b.21 / `-222` (`#decision-2026-09-19-224` D2): each row is now
+// `{ name: string | null }` — the MODE-RESOLVED name (`-189` cl.3: a member sees ⛔ never less than the
+// public page), or `null` where a name cannot be shown (the client renders the ruled placeholder). The
+// "no status / no ciphertext / no phone / no bank" teeth above are UNCHANGED; `firstName`/`lastInitial`
+// are now rejected decoys too.
 //
 // ── PII-shielded to PUBLIC tier from the start (AC1/AC2, Story 1.16b) ───────────────────────────────────
 // Only each confirmed contributor's OWN `firstName + lastInitial` crosses the wire — never full names,
 // never phone/bank/nominee data, never Tier-1 ciphertext. The shape is public-tier by design so the
 // downstream Sahyog Vivran public render (Epic 11b) reuses it unchanged; the PII-matrix ENTRY itself is
 // deferred to Story 11a.1's trustee-attested population (D11) — this shape is its reference.
+// ⚠ SUPERSEDED 2026-09-19 by Story 11b.21 / `-222`: *"never full names"* no longer holds for this member
+// surface. The row carries the name in the form the Pariwar's stored `public_name_presentation_mode`
+// resolves to — the SAME form the public Sahyog Vivran page shows (`-189` cl.3, `-181`). ⛔ Still never
+// phone/bank/nominee data, ⛔ never ciphertext.
 //
 // ── Pending is AGGREGATE ONLY (AC2 / FR-25, privacy-hardened over the PRD — D3) ─────────────────────────
 // `pending` carries ONLY `{ count, percentage }` — NO names, NO identifiers, NO per-member rows. The
@@ -38,15 +47,20 @@ import { z } from 'zod';
  * A single confirmed contributor row (AC1/AC2) — the PII-shielded `firstName + lastInitial` of a member
  * whose contribution reconciliation has CONFIRMED (green-pill). No status field: a row's mere presence
  * means confirmed (the confirmed-only invariant is that the list contains nothing else).
+ *
+ * ⚠ SUPERSEDED 2026-09-19 by Story 11b.21 / `-222` (`#decision-2026-09-19-224` D2) — the row is now
+ * `{ name }`, mirroring `PublicSahyogVivranContributor`:
+ *  · `name: string` — the MODE-RESOLVED name, the same form the public page shows for that stored name
+ *    and mode (full name under `full_name`; `Firstname L.` under `shielded_name`; a mononym shown).
+ *  · `name: null` — a confirmed contributor whose name cannot be shown. ⭐ The row is KEPT in the
+ *    producer's position (`-222` cl.1) and ⛔ NOTHING says why (`-222` cl.2): erasure, the sentinel, no
+ *    profile, a failed decrypt and an empty-after-normalise name are byte-identical.
+ * ⛔ No cause field, ⛔ no row key (`-177` cl.3), ⛔ no copy on the wire — the placeholder word
+ * resolves at render. Still one row KIND on the wire (`-169` cl.8, wire half).
  */
 export const ConfirmedContributorRow = z
   .object({
-    firstName: z.string().min(1),
-    // The last-name INITIAL only (PII shield — never the full surname). `.max(16)` defensively bounds a
-    // single grapheme cluster (a Devanagari conjunct + vowel signs can exceed a few UTF-16 code units);
-    // empty when the name is a single token (no surname to initialize) — never a full-name leak. Mirrors
-    // the 8.2 `deceasedLastInitial` bound (same `splitFirstNameLastInitial` producer, name.ts).
-    lastInitial: z.string().max(16),
+    name: z.string().min(1).nullable(),
   })
   .strict();
 export type ConfirmedContributorRow = z.output<typeof ConfirmedContributorRow>;
@@ -85,6 +99,8 @@ export type PoolContributorListPoolIdentity = z.output<typeof PoolContributorLis
  *
  *   · `pool`      — the pool identity (letter code / curated name / canonical id).
  *   · `confirmed` — the reconciliation-confirmed contributor rows (first-name + last-initial). ⭐ LIVE since
+ *                   ⚠ SUPERSEDED 2026-09-19 (Story 11b.21): rows are `{ name: string | null }`, one per
+ *                   confirmed contributor, in producer order — ⛔ none is dropped.
  *                   Stories 9.4/9.5 — the Epic-9 matcher is the producer (`reconciliation/matcher-write.ts`
  *                   → `appendConfirmedContribution`), so an empty list means "nobody confirmed YET",
  *                   ⛔ never "the producer does not exist". NO status field.

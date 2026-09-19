@@ -10,6 +10,9 @@
 // on a pool of 3 — 0 + 2 ≠ 3 — while the 8.2 card on the sibling screen said "1 of 3". D7(c) fixes it
 // AT THE SURFACE: the copy describes THE LIST'S representational state instead of asserting that
 // nothing was confirmed. ⛔ No aggregate moved, ⛔ no field was added to the wire.
+// ⚠ ANNOTATED 2026-09-19 (Story 11b.21 / `2026-09-18-222`): D5's omission is superseded on this surface —
+// an erased contributor is now KEPT as a placeholder row, so `rows` no longer reaches zero on an erasure.
+// The key stays pinned: the copy's no-confirmation-claim property is still what it must hold.
 //
 // ⛔⛔ THIS FILE ASSERTS THE PROPERTY, ⛔ NEVER THE SENTENCE. A byte-equality test on copy pins the
 // wording and turns every future tone review into a test edit — and the tone review is a REQUIRED

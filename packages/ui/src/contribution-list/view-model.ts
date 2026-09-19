@@ -30,7 +30,10 @@
  *  ⚠⛔ CALL SHAPE: t(key, params, { namespace }) — the namespace is the THIRD argument. */
 export interface ContributionListI18nRef {
   readonly key: string;
-  readonly namespace: 'contribution';
+  /** ⚠ WIDENED 2026-09-19 by Story 11b.21 (`#decision-2026-09-19-224` D1) to carry EXACTLY ONE foreign
+   *  ref: the ruled placeholder word lives in `sahyog-vivran` (`value.contributor_unnamed`), and
+   *  `2026-09-18-222` cl.2 forbids a second key. Every other ref stays in `contribution`. */
+  readonly namespace: 'contribution' | 'sahyog-vivran';
 }
 
 /** Confirmed-only, by SHAPE (Stories 8.3 + 9.5). The INPUT carries NO way to express
@@ -43,10 +46,17 @@ export interface ContributionListI18nRef {
  *  (11b.2a D6(a): "the contributor row has exactly ONE kind, everywhere"). NOT drift.
  *  ⚠ D5's placeholder prohibition is SUPERSEDED on this surface by `2026-09-18-222` (the member list
  *  renders `A contributor` / `एक सहकर्मी` too); until story `11b-21` builds it, the row-omission above
- *  is still the SHIPPED behaviour — a gap against a ruling, ⛔ no longer the ruling itself. */
+ *  is still the SHIPPED behaviour — a gap against a ruling, ⛔ no longer the ruling itself.
+ *
+ *  ⚠ SUPERSEDED 2026-09-19 by Story 11b.21 (`#decision-2026-09-19-224` D2) — the input is now
+ *  `name | unnamed`. The wire row is `{ name: string | null }`: `name` is the server-resolved,
+ *  mode-resolved string (the member-side name resolver, server), and `unnamed` is a confirmed contributor
+ *  whose name cannot be shown — KEPT in position and rendered as the ruled placeholder (`-222` cl.1).
+ *  ⛔ It carries ⛔ no cause: erasure and every other withheld cause are the same `unnamed` (`-222` cl.2).
+ *  ⚠ `-169` cl.8's "exactly ONE kind, everywhere" is superseded in part here (presenter + render layer). */
 export type ContributionRowDisplayName =
-  | { readonly kind: 'name'; readonly firstName: string; readonly lastInitial: string }
-  | { readonly kind: 'unknown' };
+  | { readonly kind: 'name'; readonly name: string }
+  | { readonly kind: 'unnamed' };
 
 export interface ContributionRowInput {
   readonly displayName: ContributionRowDisplayName;
@@ -76,13 +86,26 @@ export interface ContributionRowViewModel {
    *  ⚠ The member/public divergence this creates is NOT compliant with `-195` cl.1. It was carried
    *  under `2026-09-02-177` cl.2 (D9-inversion), ⛔ which is SUPERSEDED by `-189` cl.3 — a breach of a
    *  STANDING ruling, ⛔ not an accepted trade (`2026-09-18-221` cl.2). Stated at 11b.3b's AC10;
-   *  discharged by the member-surface story `11b-21`. */
+   *  discharged by the member-surface story `11b-21`.
+   *
+   *  ⚠⛔ SUPERSEDED 2026-09-19 by Story 11b.21 (`#decision-2026-09-19-224` D2/D3) — ⛔ the paragraphs
+   *  above are KEPT as the record, ⛔ not deleted. The `nameParts` arm is GONE, and *"⛔ Do ⛔ NOT widen
+   *  this type to carry a full name"* no longer holds: the member wire now carries ONE server-resolved
+   *  string, mode-resolved at parity with the public page (`-189` cl.3), so the `name` arm carries it
+   *  unchanged — full name, `Firstname L.` or a mononym, whatever the stored mode yields. The presenter
+   *  still composes ⛔ nothing. The `placeholder` arm is the ruled word for a withheld name (`-222`),
+   *  from ONE existing key (`-224` D1). ⛔ Name resolution stays on the server. */
   readonly displayName:
-    | { readonly kind: 'nameParts'; readonly firstName: string; readonly lastInitial: string };
+    | { readonly kind: 'name'; readonly name: string }
+    | {
+        readonly kind: 'placeholder';
+        readonly ref: { readonly key: 'value.contributor_unnamed'; readonly namespace: 'sahyog-vivran' };
+      };
   readonly poolLetterCode: string;
   /** `contributor_list.row_a11y` = "{name}, confirmed contributor" — takes a `{name}` param the
    *  presenter does NOT fill. The consumer resolves in TWO steps, in this order:
    *    1. resolve `displayName` — join .firstName + .lastInitial per the ruled form
+   *       [⚠ SUPERSEDED 2026-09-19, Story 11b.21: `.name` as-is, or `t()` of the placeholder ref]
    *    2. t(rowA11y.ref.key, { name: <step 1> }, { namespace: rowA11y.ref.namespace })
    *  ⚠⛔ t(key, params, options) — the NAMESPACE IS THE THIRD ARGUMENT (resolver.ts:53). Passing it
    *     second puts it in the params slot, silently falls back to the 'common' namespace, and THROWS

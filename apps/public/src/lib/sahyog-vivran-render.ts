@@ -146,6 +146,8 @@ export interface SahyogVivranLabels {
    * PUBLIC surface. ⚠ `2026-09-18-222` has since extended it to the MEMBER list in the SAME words, so
    * that ground is SPENT; the key stays here until story `11b-21` decides how the member surface
    * sources the word. ⛔ What may never differ between the two surfaces is the WORD.
+   * ⚠ ANNOTATED 2026-09-19 — DECIDED by Story 11b.21 (`#decision-2026-09-19-224` D1): the member surface
+   * reads THIS key (`sahyog-vivran` → `value.contributor_unnamed`). ONE key, ⛔ no second (`-222` cl.2).
    * ⛔⛔ ⛔ NO PER-CAUSE VARIANT, EVER (cl.3) — five different things produce `name: null` and the row
    * must ⛔ not say which. ⛔ Do ⛔ not add `contributorErased`, `contributorUnresolvable` or a sibling.
    */

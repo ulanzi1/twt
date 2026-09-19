@@ -76,9 +76,13 @@ import { emitAuthAudit } from '../auth/shared/audit.js';
 import { decryptNomineeBankFieldSoft } from '../claims/nominee-bank-crypto.js';
 import { decryptKycField } from '../kyc/kyc-crypto.js';
 import { DIRECTORY_DECRYPT_CONCURRENCY, mapWithConcurrency } from '../kyc/bounded-decrypt.js';
+import {
+  KmsOutageError,
+  normalisePublicName,
+  withKmsOutageClassification,
+} from '../kyc/name-render.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import { contributionNoteFilename, resolveContributionNoteFacts } from './contribution-note.js';
-import { splitFirstNameLastInitial } from './name.js';
 import { NOTE_I18N_NAMESPACE, renderContributionNoteHtml } from './note-template.js';
 import {
   cycleRefFromCommittedAt,
@@ -157,6 +161,10 @@ export function createMemberPoolHandlers(deps: AppDeps) {
      * lands) + the AGGREGATE pending signal (count + percentage, NO member identity — D3) ONLY for an
      * `active` member assigned to a pool whose cycle alert is `live`; `{ assigned:false }` (self-suppress)
      * for every other case, incl. any error (fail-soft — never a 500, the 8.2 posture).
+     * ⚠ SUPERSEDED 2026-09-19 by Story 11b.21 / `-222` (`#decision-2026-09-19-224`): each row is
+     * `{ name: string | null }` — the MODE-RESOLVED name, at parity with the public page (`-189` cl.3) —
+     * and a withheld name is KEPT in position as `{ name: null }`. The fail-soft now also catches a KMS
+     * OUTAGE and a profile-read fault (D4), so a systemic fault never renders as N placeholders.
      */
     async poolContributors(request: FastifyRequest): Promise<PoolContributorListResponse> {
       const { memberIdStr, pariwarIdStr } = memberCtx(request);
@@ -618,6 +626,9 @@ async function resolveDriveList(
         // the row falls through this surface's existing, already-tested nameless path
         // (`poolLetterCode` visible, `row.a11y.no_family` announced).
         // ⛔ And ⛔ do ⛔ not "repair" this by rendering a marker row — the sibling's own warning.
+        // ⚠ ANNOTATED 2026-09-19 (Story 11b.21, `#decision-2026-09-19-224`): `pool-contributors` no longer
+        //   OMITS the row — after `2026-09-18-222` it KEEPS it as `{ name: null }` (a placeholder), and its
+        //   batched state read is gone (D7). The two surfaces now converge: the ROW stays, the NAME goes.
         if (storedName === memberDomain.ANONYMIZED_SENTINEL) {
           request.log.warn(
             { poolId: row.poolId },
@@ -1013,6 +1024,8 @@ function resolveSummaryNomineeName(
  * OMITS the row, because a contributor can be dropped; here the erased member ⭐ **IS** the drive, so
  * the **DRIVE STAYS and the NAME GOES** — the drive-list's remedy, ⛔ not the contributor list's.
  * ⛔ And ⛔ do ⛔ not "repair" it by rendering a marker.
+ * ⚠ ANNOTATED 2026-09-19 (Story 11b.21): `pool-contributors` no longer OMITS the row — it keeps it as
+ * `{ name: null }` (`2026-09-18-222`). The remedies now agree: the row stays, the name goes.
  *
  * ⭐ **THE NARROWER FAIL-SOFT EXCEPTION, DELIBERATELY:** a failed decrypt omits the NAME and ⛔ keeps
  * the DRIVE. ⚠ The `catch` wraps the **decrypt call ONLY** — a bug downstream of a successful decrypt
@@ -1058,25 +1071,6 @@ async function resolveDetailDeceasedName(
   return resolved.trim() || null;
 }
 
-/**
- * Whether `err` is Postgres' "current transaction is aborted" (`25P02`) — i.e. an EARLIER statement on
- * this scope tx already failed and every subsequent one will fail identically until rollback.
- *
- * ⚠ The code can sit on the error OR on its `cause`: Drizzle wraps the driver error, which is the same
- * placement the `23505` retry path already relies on
- * ([[project_domain_limit_clamp_and_savepoint_retry]]) — ⛔ check both, never one.
- *
- * ⛔ This is ⛔ NOT a recovery mechanism and must never grow into one. It exists so a per-row fail-soft
- * can tell "THIS row is bad" (degrade it) from "the transaction is gone" (stop), because conflating the
- * two turns one fault into N false accusations against named members.
- */
-function isAbortedTransaction(err: unknown): boolean {
-  const code = (e: unknown): unknown =>
-    typeof e === 'object' && e !== null ? (e as { code?: unknown }).code : undefined;
-  const cause = typeof err === 'object' && err !== null ? (err as { cause?: unknown }).cause : undefined;
-  return code(err) === '25P02' || code(cause) === '25P02';
-}
-
 const CONTRIBUTOR_LIST_UNASSIGNED: PoolContributorListResponse = { assigned: false };
 
 /**
@@ -1084,6 +1078,8 @@ const CONTRIBUTOR_LIST_UNASSIGNED: PoolContributorListResponse = { assigned: fal
  * {@link resolveMemberLivePool} (shared with the 8.2 card), then:
  *   (6) `listConfirmedContributorsForPool` → the CONFIRMED member IDs (confirmed-only; empty today — D2),
  *   (7) decrypt each confirmed member's OWN KYC name (member-session layer, D4) → first+last-initial,
+ *       ⚠ SUPERSEDED 2026-09-19 by Story 11b.21 / `-222`: → the MODE-RESOLVED name, or `null` for a
+ *       withheld one; every confirmed row is KEPT, in producer order (`#decision-2026-09-19-224`),
  *   (8) `computePendingAggregate` (roster − confirmed — the AGGREGATE signal, D3),
  *   (9) pool identity (letter code + curated name fallback, reused from the 8.2 card).
  * Throws on any malformed/absent input — the caller fail-softs to `{ assigned:false }`.
@@ -1110,146 +1106,122 @@ async function resolveContributorList(
     poolId: pool.poolId,
   });
 
-  // (6a) RTBF ERASURE (Story 11b.2a, AC1/AC2 — Decision 2026-08-30-169 cl.1/cl.4). ONE batched
-  //      lifecycle read over the whole confirmed set, so the loop below knows WHOM TO OMIT without
-  //      paying an event-stream replay per row.
-  //      ⛔ NEVER `getMemberStateAt` per contributor — that is one FULL replay per row, strictly worse
-  //      than the KMS decrypt bounded below, and its app-clock `occurred_at` bound can place a
-  //      DB-stamped `member.rtbf_anonymized` event outside the window and render the ERASED NAME.
-  //      ⛔ AND NEVER a `members.state` join instead (AC2's second half). That column is
-  //      PROJECTOR-maintained current state; joining it would make the RTBF guarantee depend on
-  //      projector liveness. Every other read in this path trusts the REPLAY, and the erasure
-  //      decision — the one read where being wrong is a privacy breach — must trust it too.
-  //      ⛔⛔ AND IT IS DELIBERATELY *NOT* WRAPPED IN A TRY/CATCH — that would be THEATRE, and the
-  //      combined review (2026-09-01) traced it rather than assuming. Two layers flagged this call as
-  //      "the one step with no degradation path", which is TRUE, but the proposed catch fixes nothing:
-  //        · `replayMemberState` is a TOTAL reducer — it "never throws on a well-formed event"
-  //          (`member/state.ts:15`) and uses `.safeParse` throughout — so there is ⛔ no in-process
-  //          throw for a catch to rescue;
-  //        · every REMAINING failure mode is a SQL/connection error, which ABORTS this scope tx ⇒ a
-  //          catch here lets execution continue only for every subsequent statement to fail `25P02`,
-  //          and the surface collapses at the next one regardless.
-  //      ⇒ ⭐ THE HONEST FIX WAS THE OTHER ONE: the per-row catch below no longer MIS-ATTRIBUTES an
-  //      aborted transaction to N innocent members (see `isAbortedTransaction`), and its coverage
-  //      comment no longer over-claims. ⛔ Do not "harden" this line with a catch that cannot fire.
-  const contributorStates = await memberDomain.getCurrentMemberStates(
-    tx,
-    confirmed.map((c) => c.memberId),
-  );
+  // ⭐ Story 11b.21 — the presentation MODE, read ONCE for the whole list (`2026-09-02-181` cl.2: an
+  // INPUT, ⛔ never a read inside a resolver). The same stored per-Pariwar mode the public Sahyog Vivran
+  // route reads, with the same `full_name` fallback ⇒ the two surfaces can ⛔ not diverge by mode.
+  const presentationMode = await resolvePoolNamePresentationModeForRequest(tx, pariwarId);
 
-  // (7) Decrypt each REPRESENTABLE confirmed member's OWN KYC name (member-session layer, D4 — NOT the
-  //     admin path) → PII-shielded first+last-initial. The decrypt is BOUNDED-CONCURRENCY (Story 11b.2a
-  //     AC3 / D4(a)): the confirmed subset is a live, growing population since Epic 9's producer landed
-  //     at Story 9.4, so a serial per-row Tier-1 KMS decrypt is a real cost on a real path — the bound
-  //     and its helper are SHARED with the public-directory render, never re-implemented here.
+  // ⭐ Story 11b.21 (`#decision-2026-09-19-224` D4) — KMS failures CLASSIFIED: INVALID_ARGUMENT is a
+  // fault of ONE envelope (⇒ that row's `{ name: null }`); anything else is an OUTAGE (`KmsOutageError`)
+  // and is re-thrown below, so it reaches `poolContributors`' fail-soft (`{ assigned:false }`). ⛔ A
+  // systemic fault must ⛔ never render as N placeholders — a member would read that as mass erasure.
+  const outageAwareEncryption = withKmsOutageClassification(deps.encryption);
+
+  // ⚠ SUPERSEDED 2026-09-19 by Story 11b.21 / `-222` (`#decision-2026-09-19-224` D7): step (6a) — the
+  // ONE batched `memberDomain.getCurrentMemberStates` read and the `representable` pre-filter that
+  // OMITTED erased contributors before the decrypt (Story 11b.2a, `-169` cl.1/cl.4) — is DELETED.
+  // ⭐ Two reasons, both recorded at `-224`:
+  //   · `-222` cl.1 KEEPS a withheld contributor's row in the producer's position, so filtering here
+  //     would destroy the row's position — the exact drop `-222` supersedes.
+  //   · ⛔ Keeping erased rows but still SKIPPING their decrypt would make erasure the ONE cause that
+  //     costs ZERO KMS calls, while a corrupt envelope or the decrypted sentinel costs one. That timing
+  //     difference identifies WHICH rows are erased, and `-222` cl.2 says ⛔ NOTHING may disclose WHICH.
+  // ⇒ every row with a profile goes through the SAME single decrypt, and an erased row is caught by the
+  // decrypted-plaintext sentinel below — which `-170` already made THE guarantee (the state read was
+  // *"an OPTIMIZATION, ⛔ never the guarantee"*). The public route works the same way.
+  // ⚠ Residual, inherited and ⛔ not closed: a contributor with ⛔ no KYC profile row (or a null
+  // ciphertext) still costs ZERO KMS calls (`deferred-work.md`, 11b-3b sixth pass — now covering this
+  // route too).
+
+  // (7) Resolve each confirmed member's OWN KYC name (member-session layer, D4 — NOT the admin path)
+  //     → the MODE-RESOLVED name, or `null`. The decrypt is BOUNDED-CONCURRENCY (Story 11b.2a AC3 /
+  //     D4(a)) — the bound and its helper are SHARED with the public-directory render.
   //     ⛔ NEVER a plaintext-name cache at rest ([[project_validity_cache_failopen_pattern]]).
-  // ⭐⭐ THE D5 ERASURE OMISSION — Story 11b.2a. This is ⛔ NOT a fail-soft like the three integrity
-  //     skips below, and a later reader must not "repair" it by restoring a row. An RTBF'd member's
-  //     public contributor representation DISAPPEARS: ⛔ no marker, ⛔ no placeholder, ⛔ no "an
-  //     anonymous member" row. That is PUBLIC ERASURE, ⛔ not destruction of the legal record — the
-  //     Trust's retained records live in restricted internal systems and are ⛔ never used to restore
-  //     this representation. The contributor list was the OUTLIER: `DIRECTORY_VISIBLE_MEMBER_STATES`
-  //     already omits `anonymized` from the public member directory (2026-08-20-143 cl.3).
-  //     ⭐ It filters BEFORE the decrypt fan-out, deliberately — an erased member's ciphertext is
-  //     never even SCHEDULED for decryption, so strictly LESS Tier-1 plaintext is materialised than
-  //     before this fix, and fewer rows reach the bounded decrypt below.
-  //     ⛔⛔ AND IT MOVES NO AGGREGATE. D3-aggregate: contribution state CONFIRMED · public
-  //     representation OMITTED. The omitted member STILL COUNTS toward `confirmedCount` — `rows.length`
-  //     diverging from `confirmedCount` is the RULED, CORRECT state, ⛔ not a bug to reconcile.
-  const representable = confirmed.filter(
-    (contributor) => contributorStates.get(contributor.memberId) !== 'anonymized',
-  );
-
-  // Each row degrades INDEPENDENTLY: `null` means "omit this one row", never "fail the response".
-  // The three `null` returns below are the Story 8.3 integrity skips, preserved verbatim with their
-  // rationale — the catch lives INSIDE the mapped function precisely so one bad row cannot reject the
-  // whole batch and hide every already-resolved row.
-  // ⚠⚠ WHAT THAT CATCH ACTUALLY COVERS, CORRECTED AT THE COMBINED REVIEW (2026-09-01) — the claim was
-  // broader than the guard, which is the SAME class as `e300928` ("the try/catch renderItem calls its
-  // only guard didn't guard everything it claimed to"), one story later:
-  //   · ✅ it DOES isolate a per-row fault that leaves the transaction usable — a decrypt failure, a
-  //     missing profile, a row-shape error. That is the case it was written for and it holds.
-  //   · ⛔ it does ⛔ NOT save the response from a TX-ABORTING statement error. Postgres aborts the
-  //     whole tx, every later statement returns `25P02`, and step (9)'s `resolveCuratedPoolName` throws
-  //     into the handler's fail-soft anyway ⇒ `CONTRIBUTOR_LIST_UNASSIGNED`. ⛔ No per-row catch can
-  //     change that, and describing this guard as preventing the whole-surface collapse is FALSE.
-  //   · ⚠⚠ WORSE, UNGUARDED IT MADE THAT FAULT *HARDER TO DIAGNOSE*: at concurrency 8 on the single
-  //     pinned client this scope tx holds, ONE failed statement turned into N `25P02`s, each caught
-  //     here and logged as a name-integrity anomaly AGAINST A NAMED MEMBER. ⭐ That log is the ONLY
-  //     signal distinguishing a render failure from a LAWFUL ERASURE on this surface
-  //     (`PoolContributorList.tsx`, the per-row catch comment) ⇒ an operator auditing erasure
-  //     completeness was pointed at innocent members. `isAbortedTransaction` below stops that.
-  const resolved = await mapWithConcurrency(
-    representable,
+  // ⭐⭐ STORY 11b.21 / `-222` cl.1–cl.3: THE ROW IS KEPT AND THE *NAME* IS WHAT IS WITHHELD. ⇒ every
+  //     withheld arm below returns `{ name: null }`, ⛔ never `null`, and the result is ⛔ not filtered.
+  //     ⛔⛔ AND ⛔ NO ARM MAY SIGNAL *WHICH* CAUSE IT WAS: ⛔ not a field, ⛔ not an ordering, ⛔ not a
+  //     log line that reaches a client. Erasure, the sentinel, no profile, a failed decrypt and an
+  //     empty-after-normalise name are byte-identical on the wire. The client renders the ruled
+  //     placeholder (`A contributor` / `एक सहकर्मी`) from ONE key (`-224` D1).
+  //     ⚠ SUPERSEDED (quoted, ⛔ not deleted): *"THE D5 ERASURE OMISSION … An RTBF'd member's public
+  //     contributor representation DISAPPEARS: ⛔ no marker, ⛔ no placeholder"* — the placeholder half
+  //     of `-169` cl.1 is superseded on this surface by `-222` cl.3. RTBF still removes the NAME, and
+  //     ⛔ the retained legal records are ⛔ never used to restore it.
+  const confirmedRows = await mapWithConcurrency(
+    confirmed,
     DIRECTORY_DECRYPT_CONCURRENCY,
-    async (contributor): Promise<ConfirmedContributorRow | null> => {
+    async (contributor): Promise<ConfirmedContributorRow> => {
       // ⛔⛔ NEVER re-check state with a per-row `getCurrentMemberState` here. That is one FULL
-      //     event-stream replay per row — the construction Trap 1 rejects BY NAME, including its
-      //     "`mapWithConcurrency` does not make it acceptable" clause — and it does NOT close the
-      //     race it appears to: under this tx's READ COMMITTED isolation the state read and the
-      //     ciphertext read below take DIFFERENT snapshots, so an RTBF landing between them is
-      //     decrypted anyway. The TOCTOU window is closed at the PLAINTEXT instead (see below),
-      //     which is snapshot-independent and costs nothing. (Second review pass, 2026-08-30.)
-      let kycProfile: Awaited<ReturnType<typeof kycDomain.getMemberKycProfile>>;
-      try {
-        kycProfile = await kycDomain.getMemberKycProfile(tx, pariwarId, contributor.memberId);
-      } catch (err) {
-        // ⛔⛔ AN ABORTED TRANSACTION IS ⛔ NOT A PER-ROW INTEGRITY ANOMALY, and must never be logged as
-        // one. Once any statement on this scope tx fails, every later statement returns `25P02` — so
-        // WITHOUT this re-throw a single fault produced one false "name unresolvable" warning per
-        // remaining contributor, each naming an innocent member, on the one surface where that log is
-        // the only thing distinguishing a render failure from a lawful erasure. ⭐ Re-throwing lets it
-        // fail ONCE, honestly, at the handler's fail-soft — ⛔ rather than N times, misleadingly, here.
-        if (isAbortedTransaction(err)) throw err;
-        // Fail CLOSED and per-row: an unreadable profile omits THIS row, never rejects the batch.
-        // Unguarded, this rejected `mapWithConcurrency` and collapsed the whole surface into
-        // CONTRIBUTOR_LIST_UNASSIGNED — telling an assigned member "you have no live pool".
-        request.log.warn({ err, memberId: contributor.memberId }, 'pool-contributors: confirmed contributor profile read failed — omitting row');
-        return null;
-      }
+      //     event-stream replay per row, and it does NOT close the race it appears to: under this tx's
+      //     READ COMMITTED isolation the state read and the ciphertext read take DIFFERENT snapshots
+      //     (`-170`). The erasure is caught at the PLAINTEXT instead (see below).
+      //
+      // ⭐⭐ THE PROFILE READ SITS *OUTSIDE* THE `try` — ANY FAILURE OF IT IS AN OUTAGE, ⛔ NEVER A
+      //     PLACEHOLDER (Story 11b.21, `-224` D4; the public route's fifth-review-pass precedent). A
+      //     dropped connection carries ⛔ no SQLSTATE (`Connection terminated unexpectedly`,
+      //     `ECONNRESET`), and every failing statement ABORTS this scope tx ⇒ ⛔ no DB fault here is
+      //     ever about one member. It propagates, `mapWithConcurrency` rejects, and `poolContributors`
+      //     fail-softs to `{ assigned:false }`. ⛔ Do ⛔ not move it back inside a `try`.
+      //     ⚠ SUPERSEDED (quoted, ⛔ not deleted): the per-row catch that *"fail[ed] CLOSED and per-row:
+      //     an unreadable profile omits THIS row"*, with its `isAbortedTransaction` re-throw (combined
+      //     review, 2026-09-01). With the read uncaught, an aborted transaction propagates like any
+      //     other error, so the helper had ⛔ no caller left and was removed.
+      const kycProfile = await kycDomain.getMemberKycProfile(tx, pariwarId, contributor.memberId);
       if (!kycProfile || kycProfile.nameCiphertext === null) {
-        // A confirmed contributor whose name is unresolvable is SKIPPED from the visible rows (an integrity
-        // anomaly worth logging), but still counts toward `confirmedCount` for the pending math below (they
-        // ARE confirmed — the aggregate must never understate confirmation). Skip, don't blank the whole list.
-        request.log.warn({ memberId: contributor.memberId }, 'pool-contributors: confirmed contributor name unresolvable — omitting row');
-        return null;
+        // A lawful absence (no name to show), ⛔ not a fault. The row is KEPT (`-222` cl.1) and still
+        // counts toward `confirmedCount` for the pending math below.
+        request.log.warn({ memberId: contributor.memberId }, 'pool-contributors: confirmed contributor has no resolvable name — rendering the row unnamed');
+        return { name: null };
       }
-      // A decrypt failure (bad ciphertext, transient KMS error) must degrade the SAME way as an unresolvable
-      // profile — skip this one row (Review fix) — not propagate out and fail-soft the WHOLE response, which
-      // would hide every already-resolved row and understate the pending aggregate far worse than one omission.
-      let fullName: string;
+      let storedName: string;
       try {
-        fullName = await decryptKycField(kycProfile.nameCiphertext, pariwarId, deps.encryption);
+        storedName = await decryptKycField(kycProfile.nameCiphertext, pariwarId, outageAwareEncryption);
       } catch (err) {
-        request.log.warn({ err, memberId: contributor.memberId }, 'pool-contributors: confirmed contributor name decrypt failed — omitting row');
-        return null;
+        // ⭐⭐ A KMS OUTAGE IS ⛔ NOT A BAD ROW — RE-THROW IT (`-224` D4), to the handler's fail-soft.
+        if (err instanceof KmsOutageError) throw err;
+        // What remains is a fault of THIS stored name (KMS rejected the envelope, the envelope did
+        // ⛔ not parse, the data failed its GCM tag) ⇒ the unnamed row, identical to every other cause.
+        request.log.warn({ err, memberId: contributor.memberId }, 'pool-contributors: confirmed contributor name decrypt failed — rendering the row unnamed');
+        return { name: null };
       }
-      // ⭐⭐ THE ERASURE BACKSTOP — and the ONLY check in this path that is snapshot-independent.
-      //     `anonymizeMember` overwrites `name_ciphertext` with an ENCRYPTED `[anonymized]` sentinel
-      //     (`ANONYMIZED_SENTINEL`), so the decrypt SUCCEEDS and the sentinel would otherwise render
-      //     verbatim where a contributor's name belongs — `splitFirstNameLastInitial('[anonymized]')`
-      //     returns a NON-EMPTY `firstName`, so the empty-name guard below does ⛔ not catch it.
-      //     This closes the TOCTOU window completely: whatever the batched state read decided, and
-      //     whenever the RTBF committed relative to it, a row whose plaintext IS the sentinel is
-      //     omitted. It is the D5 ERASURE OMISSION applied one layer later — ⛔ not a fail-soft, and
-      //     a later reader must ⛔ not "repair" it by rendering a marker row.
-      if (fullName === memberDomain.ANONYMIZED_SENTINEL) {
-        request.log.warn({ memberId: contributor.memberId }, 'pool-contributors: erasure sentinel reached the decrypt — omitting row (state read was stale)');
-        return null;
+      // ⭐⭐ THE ERASURE GUARANTEE — and the ONLY check in this path that is snapshot-independent
+      //     (`-170`). `anonymizeMember` overwrites `name_ciphertext` with an ENCRYPTED `[anonymized]`
+      //     sentinel (`ANONYMIZED_SENTINEL`), so the decrypt SUCCEEDS and the sentinel would otherwise
+      //     render verbatim where a contributor's name belongs. ⛔ IMPORTED, never a re-typed literal.
+      //     ⭐ Since `-224` D7 this is the ONLY erasure check on this path (the batched state read is
+      //     gone), exactly as on the public route.
+      if (storedName === memberDomain.ANONYMIZED_SENTINEL) {
+        request.log.warn({ memberId: contributor.memberId }, 'pool-contributors: erasure sentinel reached the decrypt — rendering the row unnamed');
+        return { name: null };
       }
-      const { firstName, lastInitial } = splitFirstNameLastInitial(fullName);
-      if (firstName === '') {
-        request.log.warn({ memberId: contributor.memberId }, 'pool-contributors: confirmed contributor name empty after split — omitting row');
-        return null;
+      // ⭐ Story 11b.21 (`-224` D3) — the MODE-RESOLVED name, at parity with the public page (`-189` cl.3).
+      //   · ⛔ NEVER `kyc.resolvePublicMemberName` here — it OMITS a mononym under `shielded_name`
+      //     (`-181`'s trap); the member side shows it (an extension of `-181` to contributors).
+      //   · ⚠⛔ BUT the member resolver does ⛔ no token cleaning, and the public one does — so it is
+      //     fed the public route's CLEANED tokens (`publicNameTokens`: bidi controls and edge invisibles
+      //     stripped, tokens with no letter or digit dropped). Without it `"Rajesh \u200bSharma"` gave
+      //     the member `"Rajesh \u200b."` against the public `"Rajesh S."` — the member saw LESS.
+      //   · ⚠⛔ `normalisePublicName`, ⛔ never a bare `.trim()` — an invisible-only or bidi-only
+      //     name must be `null`, ⛔ never a blank row (the 11b-20 review finding).
+      // ⚠ SUPERSEDED (quoted, ⛔ not deleted): *"`splitFirstNameLastInitial(fullName)` … return
+      //   { firstName, lastInitial }"* — the Story 8.3 PII-shielded form, which showed the member LESS
+      //   than the public page (`-221` Axis A).
+      const name = normalisePublicName(
+        notifications.resolveMemberFacingDeceasedName(
+          presentationMode,
+          kycDomain.publicNameTokens(storedName).join(' '),
+        ),
+      );
+      if (name === null) {
+        request.log.warn({ memberId: contributor.memberId }, 'pool-contributors: confirmed contributor name empty after normalising — rendering the row unnamed');
       }
-      return { firstName, lastInitial };
+      return { name };
     },
   );
-  // `mapWithConcurrency` writes each result at its own INPUT index, so this filter preserves the
-  // domain read's deterministic contributor order — ⛔ never completion order.
-  const rows: ConfirmedContributorRow[] = resolved.filter(
-    (row): row is ConfirmedContributorRow => row !== null,
-  );
+  // ⭐ `mapWithConcurrency` writes each result at its own INPUT index, so the rows keep the domain
+  // read's deterministic contributor order — ⛔ never completion order. ⛔ No filter (`-222` cl.1).
+  // ⚠ SUPERSEDED (quoted, ⛔ not deleted): *"`resolved.filter((row) => row !== null)`"* — the drop.
+  const rows: ConfirmedContributorRow[] = confirmedRows;
 
   // (8) AGGREGATE pending (D3) — `rosterSize − confirmedCount`, NOT attested-derived. `confirmedCount` is
   //     the CONFIRMED-SET size (the truth), independent of how many rows we could decrypt OR represent, so

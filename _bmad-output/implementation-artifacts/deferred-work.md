@@ -11,10 +11,16 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 MORE than the public, and ⛔ NEVER LESS"*) binds the contributor name; `-177` cl.2's CARRY is dated
 **two days earlier** and is SUPERSEDED by it.
 
+- ✅ **AXIS A — DISCHARGED by `11b-21` (2026-09-19, `#decision-2026-09-19-224` D3).** The member row is the
+  MODE-RESOLVED name over the public route's cleaned tokens — equal to the public form, or MORE (a mononym
+  under `shielded_name`). ⛔ The original text is KEPT below ([[feedback_closure_language_precision]]):
 - **AXIS A — the NAME FORM. ⭐ A DISCHARGE, ⛔ not an open question.** Public renders the FULL NAME;
   the member list renders `firstName + lastInitial` (`apps/api/src/modules/member-pool/handlers.ts`,
   `splitFirstNameLastInitial`). ⛔ `-189` cl.3 already ruled this must be closed ⇒ it needs a
   MEMBER-SURFACE story, ⛔ not a ruling. ⚠ It was fenced out of `11b-3b` by AC8.
+- ✅ **AXIS B — BUILT by `11b-21` (2026-09-19, `-224` D1/D2/D7).** Every confirmed row is KEPT in producer
+  order as `{ name: null }` where the name is withheld, and renders `A contributor` / `एक सहकर्मी` from the ONE
+  existing key (`sahyog-vivran` → `value.contributor_unnamed`).
 - ✅ **AXIS B — OMISSION VISIBILITY. RULED 2026-09-18 → option (B), `#decision-2026-09-18-222`.** The
   member list renders the placeholder in the SAME words; `-169` cl.1 (D5)'s placeholder half is
   superseded on this surface too, the rest of D5 standing whole. ⭐ Discharges to story `11b-21`
@@ -32,6 +38,10 @@ MORE than the public, and ⛔ NEVER LESS"*) binds the contributor name; `-177` c
 ## Deferred from: code review of 11b-3b-sahyog-vivran-named-identity-render-layer — **SIXTH PASS** (2026-09-18)
 
 - **The nominee arm is ⛔ not outage-classified.** `decryptNomineeBankFieldSoft` (pre-existing) soft-fails every decrypt, so a KMS outage on a page with no contributor rows publishes `accountHolderName: null` at `200`, edge-cached (`apps/api/src/modules/public-pages/handlers.ts`). The contributor and deceased arms classify by the error since the fifth/sixth passes; this arm is a different subject and pre-dates them.
+- ⚠ **RE-MARKED 2026-09-19 (`11b-21`, `-224` D7): this residual NOW ALSO COVERS THE MEMBER contributor route**
+  — ⛔ not closed. The member route's RTBF pre-filter is gone, so erasure and an AAD-mismatched envelope cost
+  ONE KMS call there, as here; a missing profile row (or null ciphertext) still costs ZERO, and so does an
+  envelope that fails to PARSE before the KMS call. ⛔ The trigger below is unchanged.
 - **Timing residual against `2026-09-18-222` cl.2 (*"NOTHING may disclose WHICH"*).** A contributor with ⛔ no KYC profile row, or an unparseable stored envelope, costs ZERO KMS calls; every other withheld cause costs ONE. ⚠ Reachability is UNPROVEN — ⭐ trigger: any evidence that a CONFIRMED contributor can lack a `member_kyc_profiles` row. Then equalise (at a KMS + audit-line cost per row) or route.
 - **Behavioural cost of classify-by-error — recorded as FACT, ⛔ no new rule.** A row whose stored name was wrapped under a KEK version that is now DISABLED or DESTROYED fails with a KMS status other than INVALID_ARGUMENT; the route treats that as an outage, so every Sahyog Vivran page holding the row answers 500 at the API (the 503 outage view at the public app) for as long as the version stays unavailable, while rows on the current version would decrypt. ⚠ Whether and how KEK versions may be disabled is ⛔ not decided here.
 - **UN-ATTESTED: Cloud KMS's status for an AAD mismatch or corrupted ciphertext is ASSUMED to be INVALID_ARGUMENT (3).** The fake KMS was aligned to that assumption; ⛔ no live-KMS evidence is in the repo. ⭐ Attest before `namePublicationAuthorised` or any KMS-backed public launch. If wrong, every corrupt row fails CLOSED (a 503), ⛔ not open.
@@ -41,6 +51,8 @@ MORE than the public, and ⛔ NEVER LESS"*) binds the contributor name; `-177` c
 - **Duplicate `contribution.confirmed` inflates the public figures.** The matcher dedupes per member+pool only by check-then-append (`apps/jobs/src/matcher/matcher-worker.ts:300-317`); its claim key includes `entryId`, so two ticks matching different statement entries can both pass `hasConfirmedContribution`, and no DB unique constraint backs it. `count(*)` in `packages/domain/src/pool/public-read.ts:299` then overstates `confirmedContributionCount` and `amountRaisedInr` by one `fixedAmount` per duplicate. Pre-existing; a PUBLIC FINANCIAL FIGURE rides on it.
 - **Negative `fixed_amount` yields a favourable verdict.** `deliveredTotal` is clamped ≥ 0 but `expectedTotal` (`packages/domain/src/pool/sahyog-vivran-read.ts:~665`) is not, and `pools.fixed_amount` has no CHECK. Pre-existing (the pre-clamp arithmetic had the same outcome).
 - **Unbounded shared-cache key space on the drive page.** Ignoring unknown query params (the `fbclid` fix) means every distinct query string is a separate cached 200 (`apps/public/src/pages/sahyog-vivran/[driveToken].astro:394`). Extends the second pass's `page × limit` item; needs edge cache-key normalisation or a canonicalising redirect.
+- ✅ **CLOSED by `#decision-2026-09-19-224` D1 (2026-09-19):** ONE key — the member surface reads the existing
+  `sahyog-vivran` → `value.contributor_unnamed`; cl.2 followed, Consequence 3's "new key" deliberately ⛔ not met.
 - **`-222` key strategy for `11b-21`.** cl.2 (*"no second key"*) and Consequence 3 (*"a new key in the RULED word"*) read against each other. Engineering, ⛔ not the Panel's — the WORDS are ruled; `11b-21` picks one key vs a same-words key per namespace and records it.
 - **Pagination has ⛔ no "page N of M" and ⛔ no `aria-current`.** Neither sighted nor screen-reader users can tell which page of the contributor list they are on (`apps/public/src/pages/sahyog-vivran/[driveToken].astro`, the `<nav>`). ⚠ Needs NEW COPY in both locales on a governance-heavy i18n surface — a product call, ⛔ not a reviewer's (the same reason `11b-22` exists). The past-the-end "Previous" half WAS fixed in the fourth pass.
 - **"`-189` cl.5" survives at PRE-EXISTING sites outside this story's diff** — `-189` has clauses 1–3; the rupee-boundary text is its **Consequence 5**. Sites: `packages/contracts/src/public-pages/sahyog-drive.ts:201,282`, `packages/contracts/src/contributions/member-drive-list.ts:190`, `packages/contracts/src/public-pages/sahyog-vivran.ts:422`, `packages/contracts/public-pages/public-vs-private-matrix.yaml:842`, `packages/domain/src/pool/public-read.ts:787,870,1206`, and three test comments (`apps/public/tests/sahyog-render.test.ts:298`, `apps/api/tests/integration/public-pages/sahyog-drive.spec.ts:320`, `packages/domain/tests/integration/pool/sahyog-drive-public-read.spec.ts:1084`). ⚠ Inventory corrected 2026-09-18 (fifth review pass) — it missed `public-read.ts:870` and one test comment. ⭐ A one-line sweep for whichever story next touches those files.
@@ -8732,6 +8744,11 @@ way to check the sibling honoured it. **2 decision-needed, 12 patch, 2 deferred,
   That record is correct and does not claim to discharge AC8. The asymmetry is a finding the Blind Hunter
   raised against the STRINGS, with ⛔ no spec access and ⛔ no knowledge of that review.
 
+- ⚠ **RE-MARKED 2026-09-19 — CLOSED ON THE MEMBER CONTRIBUTOR SURFACE by `#decision-2026-09-19-224` D6
+  (`11b-21`); ⛔ OPEN REPO-WIDE.** The query moved to a new key with `gcTime: 0` (never dehydrated, per
+  `Provider.tsx`'s `shouldDehydrateQuery`), and the retired `['member','pool-contributors']` entry is removed
+  once after restore. ⛔ Exposure (b) (shared device / sign-out) and every other member-scoped persisted query
+  are unchanged.
 - **CR-11b.2a-COMBINED-W3 — the RTBF erasure guarantee ends AT THE WIRE, and the device-side residual
   is REAL.** Ruled by BigDev 2026-09-01 as Decision `2026-09-01-172` cl.1/cl.2. An RTBF'd contributor is
   omitted correctly by the API, but the already-delivered response is persisted to MMKV in **plaintext**

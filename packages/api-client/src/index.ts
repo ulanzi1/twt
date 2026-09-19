@@ -560,6 +560,8 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
      * pending signal (count + percentage, NO member identity — D3) ONLY for an `active` member assigned to
      * a pool whose cycle alert is `live`; `{ assigned: false }` for every other case (the view
      * self-suppresses). Server-authoritative — the client resolves nothing about confirmation status (auth).
+     * ⚠ SUPERSEDED 2026-09-19 by Story 11b.21 (`#decision-2026-09-19-224`): rows are `{ name: string | null }`
+     * — the MODE-RESOLVED name, or `null` for a withheld one kept in position (`2026-09-18-222`).
      */
     memberPoolContributors(): Promise<PoolContributorListResult> {
       return call(

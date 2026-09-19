@@ -13,6 +13,10 @@
 // ⛔ NAME PARTS ONLY, NEVER JOINED (D9(a)): the contributor name FORM is UNRULED and routed to the Trustee
 // Panel, so composing the parts here would rule it.
 // ⚠ THE PRESENTER THROWS on an unresolvable name (D8(a)) — every consumer owes a try/catch (Trap 4).
+// ⚠ SUPERSEDED 2026-09-19 by Story 11b.21 (`#decision-2026-09-19-224`): the form is RULED (`-189` cl.3) and
+// resolved on the SERVER — the row carries ONE name string, passed through unchanged; a withheld name is the
+// `unnamed` input and renders the placeholder (`-222`), so a valid payload no longer throws. The consumer's
+// try/catch stays for a corrupt operand only.
 
 export { deriveContributionRowViewModel } from './presenter.js';
 export { CONTRIBUTION_LIST_I18N_REFS } from './i18n-keys.js';

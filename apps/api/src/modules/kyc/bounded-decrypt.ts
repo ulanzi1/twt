@@ -56,6 +56,9 @@ export async function mapWithConcurrency<T, R>(
   //   `row !== null`, which `undefined` passes straight through into a `row is ConfirmedContributorRow`
   //   predicate. Unreachable today (a stopping worker always throws, so `Promise.all` rejects before
   //   this returns), but `Promise.allSettled` or any non-throwing early exit would make it live.
+  //   ⚠ ANNOTATED 2026-09-19 (Story 11b.21): the contributor caller no longer filters at all — every row
+  //   is `{ name: string | null }` and the array ships as-is (`2026-09-18-222`). The hole would now reach
+  //   the wire directly, so "every index is filled" (bounded-decrypt.test.ts) matters MORE, not less.
   const out = new Array<R | undefined>(items.length);
   let next = 0;
   let filled = 0;

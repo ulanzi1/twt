@@ -23,16 +23,69 @@
 //
 // ⚠ `integration-tests` concurrency is 1 and is LOAD-BEARING — never raise it. Assert MEMBERSHIP and
 // explicit values, never global counts ([[project_live_db_test_gotchas]]).
+//
+// ⚠⛔ SUPERSEDED 2026-09-19 by Story 11b.21 / `-222` (`#decision-2026-09-19-224`) — "Public
+// representation: OMITTED" above now reads "the NAME is withheld, the ROW is KEPT": an erased
+// contributor is `{ name: null }` IN POSITION, so `confirmed.length` equals the confirmed set and
+// `pending` is still byte-identical (`-169` cl.6). The row is `{ name }`, MODE-RESOLVED (`-224` D3);
+// under the default `full_name` a clean legal name is its own wire value. ⭐ The Story 11b.21 legs at
+// the end of this file cover the mode flip, dirty names, the mononym, the five-cause byte-identity, the
+// one-decrypt-per-row cost (D7) and the two fault classes (D4).
 
 import { randomUUID } from 'node:crypto';
 
-import { alert as alertDomain, encryption, ids, member as memberDomain, pool as poolDomain, schema } from '@twt/domain';
-import { describe, expect, it } from 'vitest';
+import {
+  alert as alertDomain,
+  encryption,
+  ids,
+  kyc,
+  member as memberDomain,
+  pool as poolDomain,
+  schema,
+} from '@twt/domain';
+import { describe, expect, it, vi } from 'vitest';
 
 import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
-import { splitFirstNameLastInitial } from '../../../src/modules/member-pool/name.js';
+import { normalisePublicName } from '../../../src/modules/kyc/name-render.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { createTestApp, hasDatabase, teardown, type TestApp } from '../_setup.js';
+
+// ⭐ Story 11b.21 — two PASS-THROUGH instruments on `@twt/domain` (the `public-pages/sahyog-vivran.spec.ts`
+// model): a switchable fault on the KYC-profile read (the route's ONE per-row DB statement, `-224` D4),
+// and a call counter on the batched lifecycle read the route must ⛔ no longer make (`-224` D7).
+// ⚠ Why a module mock: the fault must hit the read the HANDLER makes, on its own scope tx, and a real
+// DB fault cannot be aimed at one row of one request from outside.
+const domainProbe = vi.hoisted(() => ({
+  profileFailOnCall: null as number | null,
+  profileCalls: 0,
+  profileError: new Error('Connection terminated unexpectedly'),
+  stateBatchCalls: 0,
+}));
+vi.mock('@twt/domain', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@twt/domain')>();
+  return {
+    ...actual,
+    kyc: {
+      ...actual.kyc,
+      getMemberKycProfile: async (
+        ...args: Parameters<typeof actual.kyc.getMemberKycProfile>
+      ): ReturnType<typeof actual.kyc.getMemberKycProfile> => {
+        domainProbe.profileCalls += 1;
+        if (domainProbe.profileFailOnCall === domainProbe.profileCalls) throw domainProbe.profileError;
+        return actual.kyc.getMemberKycProfile(...args);
+      },
+    },
+    member: {
+      ...actual.member,
+      getCurrentMemberStates: async (
+        ...args: Parameters<typeof actual.member.getCurrentMemberStates>
+      ): ReturnType<typeof actual.member.getCurrentMemberStates> => {
+        domainProbe.stateBatchCalls += 1;
+        return actual.member.getCurrentMemberStates(...args);
+      },
+    },
+  };
+});
 
 const ACCESS_TTL_MS = 15 * 60 * 1000;
 const URL = '/api/v1/member/pool-contributors';
@@ -59,9 +112,15 @@ const audit = (from: string | null, to: string, trigger: string, actor: 'member'
 interface SeededMember {
   readonly memberId: string;
   readonly legalName: string;
-  readonly firstName: string;
-  readonly lastInitial: string;
 }
+
+/**
+ * One contributor to seed. ⭐ Story 11b.21 — modelled on `public-pages/sahyog-vivran.spec.ts`:
+ *  · `corrupt: true` encrypts the name under a DIFFERENT (random) Pariwar's context ⇒ a real envelope
+ *    whose AAD no longer matches ⇒ KMS rejects it (INVALID_ARGUMENT) — a per-envelope fault;
+ *  · `noProfile: true` writes ⛔ no KYC row at all — the lawful-absence cause.
+ */
+type ContributorSeed = string | { readonly name: string; readonly corrupt?: boolean; readonly noProfile?: boolean };
 
 interface Fixture {
   readonly pariwarId: string;
@@ -80,7 +139,7 @@ interface Fixture {
  */
 async function seedPoolWithConfirmedContributors(
   t: TestApp,
-  opts: { contributorNames: readonly string[]; rosterPadding?: number },
+  opts: { contributorNames: readonly ContributorSeed[]; rosterPadding?: number },
 ): Promise<Fixture> {
   const pariwarId = randomUUID();
   const cycleId = randomUUID();
@@ -119,26 +178,35 @@ async function seedPoolWithConfirmedContributors(
     await driveToActive(requester);
 
     const contributors: SeededMember[] = [];
-    for (const legalName of opts.contributorNames) {
+    for (const seed of opts.contributorNames) {
+      const { name: legalName, corrupt = false, noProfile = false } =
+        typeof seed === 'string' ? { name: seed } : seed;
       const memberId = randomUUID();
       await driveToActive(memberId);
+      if (noProfile) {
+        contributors.push({ memberId, legalName });
+        continue;
+      }
       // The Tier-1 KYC name — the ONLY place a contributor's name exists, and what the boundary
       // decrypts. Written through the real encryption path so `anonymizeMember` can really overwrite it.
       await scopeTx.tx.insert(schema.memberKycProfiles).values({
         memberId: ids.memberId(memberId),
         pariwarId: pid,
-        nameCiphertext: await encryption.encryptKycField(legalName, pariwarId, t.deps.encryption),
+        nameCiphertext: await encryption.encryptKycField(
+          legalName,
+          corrupt ? randomUUID() : pariwarId,
+          t.deps.encryption,
+        ),
         dobCiphertext: await encryption.encryptKycField('1990-01-15', pariwarId, t.deps.encryption),
         photoCiphertext: null,
         aadhaarMaskedId: 'XXXX1234',
         verificationStrength: 'aadhaar_kyc',
         source: 'digilocker',
       });
-      // ⭐ Derived with the PRODUCTION splitter, ⛔ never a second hand-rolled `split(' ')` (second
-      //   review pass): a fixture that re-implements the logic under test can agree with a broken
-      //   implementation. These fields are the assertion source for the sentinel test below.
-      const { firstName, lastInitial } = splitFirstNameLastInitial(legalName);
-      contributors.push({ memberId, legalName, firstName, lastInitial });
+      // Was: `firstName`/`lastInitial` derived with the production `splitFirstNameLastInitial` — the
+      // Story 8.3 shielded form. Story 11b.21 (`-224` D3): under the default `full_name` mode a clean
+      // legal name is its own wire value, so the legal name IS the expectation (explicit, ⛔ not re-derived).
+      contributors.push({ memberId, legalName });
     }
 
     // The frozen roster: every contributor plus the requester plus any padding (members who have NOT
@@ -338,7 +406,9 @@ async function fetchList(t: TestApp, f: Fixture): Promise<{ status: number; body
 }
 
 describe.skipIf(!hasDatabase)('pool-contributors — RTBF erasure (:5433)', { timeout: 30000 }, () => {
-  it('AC1/AC6: the erased contributor is ABSENT from the wire — no marker, no placeholder, no sentinel', async () => {
+  // Was: "the erased contributor is ABSENT from the wire — no marker, no placeholder" — inverted by
+  // `-222` cl.1 (Story 11b.21): the row is KEPT in position as `{ name: null }`; still no sentinel, no cause.
+  it('AC1/AC6: the erased contributor is `{ name: null }` IN POSITION — no name, no cause, no sentinel', async () => {
     const t = await createTestApp();
     try {
       const f = await seedPoolWithConfirmedContributors(t, {
@@ -353,7 +423,7 @@ describe.skipIf(!hasDatabase)('pool-contributors — RTBF erasure (:5433)', { ti
       expect(rowsBefore).toHaveLength(3);
       // The fixture genuinely EXERCISES the variant: the member about to be erased is really on the
       // list first, so a green result after the erasure cannot be vacuous.
-      expect(rowsBefore).toContainEqual({ firstName: 'Asha', lastInitial: 'D' });
+      expect(rowsBefore).toContainEqual({ name: 'Asha Devi' });
 
       await reallyAnonymize(t, f.pariwarId, erased.memberId);
 
@@ -361,10 +431,11 @@ describe.skipIf(!hasDatabase)('pool-contributors — RTBF erasure (:5433)', { ti
       expect(after.status).toBe(200);
       const rowsAfter = after.body['confirmed'] as Array<Json>;
 
-      // (1) GONE — not renamed, not marked, not left as a placeholder someone can point at.
-      expect(rowsAfter).toHaveLength(2);
-      expect(rowsAfter).not.toContainEqual({ firstName: 'Asha', lastInitial: 'D' });
-      expect(rowsAfter.some((r) => r['firstName'] === 'Asha')).toBe(false);
+      // (1) Was: "GONE — `toHaveLength(2)`, not left as a placeholder". Now (`-222` cl.1): the NAME is
+      //     gone and the ROW stays, in the producer's position, as a bare `{ name: null }`.
+      expect(rowsAfter).toHaveLength(3);
+      expect(rowsAfter[1]).toEqual({ name: null });
+      expect(after.raw).not.toContain('Asha');
 
       // (2) THE SENTINEL APPEARS NOWHERE IN THE SERIALIZED RESPONSE. Asserted on the raw JSON, not a
       //     parsed field, so a leak through ANY new field is caught — this is the exact string the
@@ -378,19 +449,23 @@ describe.skipIf(!hasDatabase)('pool-contributors — RTBF erasure (:5433)', { ti
       // test convenience: `listConfirmedContributorsForPool` carries ⛔ NO `ORDER BY` (verified —
       // `packages/domain/src/contribution/read.ts`), so row order is whatever Postgres returns and is
       // NOT stable across runs. A `toEqual([...])` here passes alone and fails in the full suite.
+      // ⚠ ANNOTATED 2026-09-19 (Story 11b.21): ⛔ no longer true — the read has been ORDERED since
+      //   Story 11b.3 (earliest live confirmation's `event_version`, `member_id` final tie-break), so
+      //   this file now asserts SEQUENCES (the position of the `null` row is the property under test).
       // ⭐ The property this story COULD have broken — that the bounded-concurrency batch preserves its
       // INPUT order rather than completion order — is proven where it is actually decidable, in
       // `tests/unit/bounded-decrypt.test.ts` under deliberately reversed latency. Filed as a standing
       // finding in deferred-work.md; ⛔ not fixed here (an ORDER BY on the domain read is out of diff).
-      expect(rowsAfter).toHaveLength(2);
-      expect(rowsAfter).toContainEqual({ firstName: 'Rajesh', lastInitial: 'S' });
-      expect(rowsAfter).toContainEqual({ firstName: 'Vikram', lastInitial: 'S' });
+      // Was: `toHaveLength(2)` + two `toContainEqual` on the shielded form.
+      expect(rowsAfter).toEqual([{ name: 'Rajesh Sharma' }, { name: null }, { name: 'Vikram Singh' }]);
     } finally {
       await teardown(t);
     }
   });
 
-  it('AC6 / D3-aggregate: `rows` drops by one while `pending` is BYTE-IDENTICAL — the divergence IS the model', async () => {
+  // Was: "`rows` drops by one while `pending` is BYTE-IDENTICAL" — inverted by `-222` cl.1 (Story 11b.21):
+  // no row drops; `pending` is still byte-identical (`-169` cl.6).
+  it('AC6 / D3-aggregate: the erased row is KEPT and `pending` is BYTE-IDENTICAL', async () => {
     const t = await createTestApp();
     try {
       // Roster 6 = requester + 3 contributors + 2 who have not confirmed.
@@ -408,7 +483,9 @@ describe.skipIf(!hasDatabase)('pool-contributors — RTBF erasure (:5433)', { ti
       const after = await fetchList(t, f);
       // ⭐ Contribution state CONFIRMED · Public representation OMITTED. The erased member still counts.
       // ⛔ A `rows.length === confirmedCount` assertion would encode the WRONG model — do not add one.
-      expect((after.body['confirmed'] as unknown[])).toHaveLength(2);
+      // ⚠ SUPERSEDED 2026-09-19 (Story 11b.21 / `-222`): the NAME is omitted, the row is kept ⇒ the
+      //   row count now EQUALS the confirmed set. Was: `toHaveLength(2)`.
+      expect((after.body['confirmed'] as unknown[])).toHaveLength(3);
       expect(after.body['pending']).toEqual(pendingBefore);
       // Spelled out so a regression that "reconciles" the two axes fails with a readable diff:
       // pending = rosterSize(6) − confirmedCount(3) = 3, and confirmedCount is the PRE-omission set.
@@ -418,7 +495,9 @@ describe.skipIf(!hasDatabase)('pool-contributors — RTBF erasure (:5433)', { ti
     }
   });
 
-  it('AC8 / D7(c): the DROP-TO-ZERO case — `confirmed` is [] while `pending` still reports the rest', async () => {
+  // Was: "the DROP-TO-ZERO case — `confirmed` is []" — inverted by `-222` cl.1 (Story 11b.21): the one
+  // erased contributor is ONE `{ name: null }` row.
+  it('AC8 / D7(c): the former DROP-TO-ZERO case — `confirmed` is ONE unnamed row while `pending` still reports the rest', async () => {
     const t = await createTestApp();
     try {
       // The exact shape that rendered the contradiction: a pool of 3 whose ONLY confirmed
@@ -432,7 +511,7 @@ describe.skipIf(!hasDatabase)('pool-contributors — RTBF erasure (:5433)', { ti
       await reallyAnonymize(t, f.pariwarId, f.contributors[0]!.memberId);
       const after = await fetchList(t, f);
 
-      expect(after.body['confirmed']).toEqual([]);
+      expect(after.body['confirmed']).toEqual([{ name: null }]);
       // rosterSize(3) − confirmedCount(1) = 2. The erased member STILL COUNTS as confirmed, so
       // `pending` is 2 and NOT 3 — the aggregate never understates confirmation.
       expect(after.body['pending']).toEqual({ count: 2, percentage: 67 });
@@ -474,8 +553,9 @@ describe.skipIf(!hasDatabase)('pool-contributors — RTBF erasure (:5433)', { ti
       // `packages/domain/tests/member/batched-member-states.test.ts`'s "THE CLOCK DOMAIN" suite.
       const after = await fetchList(t, f);
       expect(after.raw).not.toContain('Asha');
-      // A single surviving row, so this one IS order-free by construction.
-      expect(after.body['confirmed']).toEqual([{ firstName: 'Rajesh', lastInitial: 'S' }]);
+      // Was: `[{ firstName: 'Rajesh', lastInitial: 'S' }]` ("A single surviving row"). Now the erased row
+      // is kept, unnamed, in position (`-222` cl.1), and the survivor carries the full-name form.
+      expect(after.body['confirmed']).toEqual([{ name: 'Rajesh Sharma' }, { name: null }]);
     } finally {
       await teardown(t);
     }
@@ -511,6 +591,8 @@ describe.skipIf(!hasDatabase)('pool-contributors — RTBF erasure (:5433)', { ti
 
       // ⭐⭐ THE PREMISE, ASSERTED — ⛔ not assumed. Without this the test could pass for the WRONG
       //    REASON: if the replay ever resolved this member `anonymized`, the PRE-FILTER at step (6a)
+      //    [⚠ deleted by Story 11b.21, `-224` D7 — the sentinel is now the ONLY erasure check, so this
+      //    premise is kept as a pin on `anonymizeMember`'s contract rather than on a filter]
       //    would omit the row and the sentinel guard would ⛔ never be exercised, leaving a green test
       //    that no longer covers the thing it is named after. `anonymizeMember` documents that it
       //    "does NOT touch `members.state` or the event stream" — this pins that contract from the
@@ -534,13 +616,12 @@ describe.skipIf(!hasDatabase)('pool-contributors — RTBF erasure (:5433)', { ti
       expect(after.raw).not.toContain('[anonymized]');
       expect(after.raw).not.toContain(erased.legalName);
       const rows = after.body['confirmed'] as readonly Record<string, unknown>[];
-      expect(rows.some((r) => r['firstName'] === '[anonymized]')).toBe(false);
-      expect(rows).not.toContainEqual({ firstName: erased.firstName, lastInitial: erased.lastInitial });
+      expect(rows.some((r) => r['name'] === '[anonymized]')).toBe(false);
 
-      // ⛔ And the row is OMITTED, ⛔ not blanked and ⛔ not replaced by a marker — D5, one layer
-      //   later. The unaffected contributor is untouched, so this is an omission and not a collapse.
-      expect(rows).toContainEqual({ firstName: survivor.firstName, lastInitial: survivor.lastInitial });
-      expect(rows).toHaveLength(1);
+      // Was: "the row is OMITTED, ⛔ not blanked and ⛔ not replaced by a marker — D5, one layer later"
+      //   (`toHaveLength(1)`). Inverted by `-222` cl.1/cl.3 (Story 11b.21): the row is `{ name: null }`
+      //   IN POSITION — the placeholder is rendered by the client from the ruled key, ⛔ never the wire.
+      expect(rows).toEqual([{ name: survivor.legalName }, { name: null }]);
 
       // ⛔ AND NO AGGREGATE MOVED (D3-aggregate): the erased member's contribution is still CONFIRMED,
       //   only its public representation is gone. `pending` must be byte-identical to the un-erased
@@ -549,5 +630,215 @@ describe.skipIf(!hasDatabase)('pool-contributors — RTBF erasure (:5433)', { ti
     } finally {
       await teardown(t);
     }
+  });
+
+  // ── Story 11b.21 (`#decision-2026-09-19-224`) ───────────────────────────────────────────────────
+  describe('Story 11b.21 — name-form parity and the unnamed row', () => {
+    /** Flip the Pariwar's stored presentation mode — the `member-name-form-parity.spec.ts` model. */
+    async function setMode(t: TestApp, pariwarId: string, mode: 'full_name' | 'shielded_name'): Promise<void> {
+      const scopeTx = await openScopeTx(t.deps, pariwarId);
+      try {
+        await kyc.setPublicNamePresentationMode(scopeTx.tx, {
+          pariwarId: ids.pariwarId(pariwarId),
+          mode,
+          changedByActor: null,
+          changedByDisplay: null,
+          rationale: 'test fixture — the member name form follows the stored mode (-189 cl.3, -181)',
+          auditId: randomUUID(),
+        });
+        await closeScopeTx(scopeTx, true);
+      } catch (err) {
+        await closeScopeTx(scopeTx, false);
+        throw err;
+      }
+    }
+
+    /** What the PUBLIC Sahyog Vivran route emits for a stored name — its own two functions, called. */
+    const publicForm = (mode: 'full_name' | 'shielded_name', stored: string): string | null =>
+      normalisePublicName(kyc.resolvePublicMemberName(mode, stored));
+
+    it('AC1: the member row is MODE-RESOLVED — flipping the stored mode changes the rendered form, at parity with public', async () => {
+      const t = await createTestApp();
+      try {
+        const stored = [
+          'Rajesh Kumar Sharma',
+          'Rajesh \u200bSharma', // a zero-width space inside the stored name
+          'Sunita .', // a punctuation-only second token
+          'Ravi', // a mononym
+          '\u200b\u2060\ufeff', // invisible-only
+          '\u202e\u2066', // bidi-only
+        ];
+        const f = await seedPoolWithConfirmedContributors(t, { contributorNames: stored });
+
+        // ⭐ The DEFAULT mode (`full_name`, no row written) — the full name, cleaned.
+        const full = (await fetchList(t, f)).body['confirmed'];
+        expect(full).toEqual([
+          { name: 'Rajesh Kumar Sharma' },
+          { name: 'Rajesh Sharma' },
+          { name: 'Sunita' },
+          { name: 'Ravi' },
+          { name: null },
+          { name: null },
+        ]);
+
+        await setMode(t, f.pariwarId, 'shielded_name');
+        const shielded = (await fetchList(t, f)).body['confirmed'];
+        // ⭐ The rendered form CHANGES with the stored mode — the only test that catches a hard-coded
+        // literal. The dirty `"Rajesh \u200bSharma"` gives the public string `"Rajesh S."` (Trap 4:
+        // without the token cleaning the member got `"Rajesh \u200b."`, LESS than public). A mononym
+        // is SHOWN (`-224` D3, an extension of `-181`) — the one place the member sees MORE.
+        expect(shielded).toEqual([
+          { name: 'Rajesh S.' },
+          { name: 'Rajesh S.' },
+          { name: 'Sunita' },
+          { name: 'Ravi' },
+          { name: null },
+          { name: null },
+        ]);
+
+        // ⭐⭐ PARITY, by CALLING the public route's own functions (⛔ never transcribed): under every
+        // mode, every stored name, the member form EQUALS the public form — except where the public
+        // form is withheld (the shielded mononym arm), where the member sees the name.
+        for (const [mode, rows] of [
+          ['full_name', full],
+          ['shielded_name', shielded],
+        ] as const) {
+          stored.forEach((name, i) => {
+            const member = (rows as Array<{ name: string | null }>)[i]!.name;
+            const pub = publicForm(mode, name);
+            if (pub !== null) expect(member, `${mode} / row ${i}`).toBe(pub);
+          });
+        }
+        expect(publicForm('shielded_name', 'Ravi')).toBeNull();
+        expect(publicForm('shielded_name', 'Sunita .')).toBeNull();
+      } finally {
+        await teardown(t);
+      }
+    });
+
+    it('AC2: every confirmed row is KEPT, in producer order, and the five withheld causes are byte-identical', async () => {
+      const t = await createTestApp();
+      try {
+        const f = await seedPoolWithConfirmedContributors(t, {
+          contributorNames: [
+            'Anita Verma', // C1
+            'Asha Devi', // C2 — RTBF-erased below
+            { name: 'Bhavesh Patel', noProfile: true }, // C3 — no KYC profile row
+            { name: 'Chandra Iyer', corrupt: true }, // C4 — a corrupt envelope
+            'Vikram Singh', // C5
+          ],
+          rosterPadding: 2,
+        });
+        const before = await fetchList(t, f);
+        await reallyAnonymize(t, f.pariwarId, f.contributors[1]!.memberId);
+
+        domainProbe.stateBatchCalls = 0;
+        const after = await fetchList(t, f);
+        expect(after.status).toBe(200);
+        const rows = after.body['confirmed'] as Array<Json>;
+        expect(rows).toEqual([{ name: 'Anita Verma' }, { name: null }, { name: null }, { name: null }, { name: 'Vikram Singh' }]);
+
+        // ⭐ BYTE-IDENTICAL on the wire — ⛔ no field, key or ordering difference tells erasure, no
+        // profile and a failed decrypt apart (`-222` cl.2).
+        const serialized = rows.slice(1, 4).map((r) => JSON.stringify(r));
+        expect(new Set(serialized).size).toBe(1);
+        expect(after.raw).not.toContain('Asha');
+        expect(after.raw).not.toContain('Bhavesh');
+        expect(after.raw).not.toContain('Chandra');
+        expect(after.raw).not.toContain(ANONYMIZED_SENTINEL);
+
+        // `-224` D7: ⛔ no lifecycle read on this path — the erasure is caught at the plaintext.
+        expect(domainProbe.stateBatchCalls).toBe(0);
+        // `-169` cl.6: `pending` byte-identical, from `confirmed.length` (roster 8 − 5 confirmed = 3).
+        expect(after.body['pending']).toEqual(before.body['pending']);
+        expect(after.body['pending']).toEqual({ count: 3, percentage: 38 });
+        expect(Object.keys(after.body).sort()).toEqual(['assigned', 'confirmed', 'pending', 'pool']);
+      } finally {
+        await teardown(t);
+      }
+    });
+
+    it('AC2/AC7 (D7): an erased row and a corrupt row each cost EXACTLY ONE `decryptDek` — a named row does too', async () => {
+      // ⚠ Measured per pool of ONE contributor, so the count is the row's own cost and nothing else.
+      // ⚠ Residual, recorded ⛔ not closed: a no-profile row costs ZERO (11b-3b sixth pass; now this route too).
+      const cases: Array<{ seed: ContributorSeed; erase?: boolean; expected: number }> = [
+        { seed: 'Anita Verma', expected: 1 },
+        { seed: 'Asha Devi', erase: true, expected: 1 },
+        { seed: { name: 'Chandra Iyer', corrupt: true }, expected: 1 },
+        { seed: { name: 'Bhavesh Patel', noProfile: true }, expected: 0 },
+      ];
+      const t = await createTestApp();
+      try {
+        for (const c of cases) {
+          const f = await seedPoolWithConfirmedContributors(t, { contributorNames: [c.seed] });
+          if (c.erase) await reallyAnonymize(t, f.pariwarId, f.contributors[0]!.memberId);
+          const decryptDek = vi.spyOn(t.deps.encryption.kms, 'decryptDek');
+          try {
+            const res = await fetchList(t, f);
+            expect(res.body['assigned']).toBe(true);
+            expect(decryptDek, JSON.stringify(c.seed)).toHaveBeenCalledTimes(c.expected);
+          } finally {
+            decryptDek.mockRestore();
+          }
+        }
+      } finally {
+        await teardown(t);
+      }
+    });
+
+    it('AC7 (D4): a KMS OUTAGE on ONE row of MANY self-suppresses the list — ⛔ never a list of placeholders', async () => {
+      const t = await createTestApp();
+      try {
+        const f = await seedPoolWithConfirmedContributors(t, {
+          contributorNames: ['Anita Verma', 'Bhavesh Patel', 'Vikram Singh'],
+        });
+        vi.spyOn(t.deps.encryption.kms, 'decryptDek').mockRejectedValueOnce(
+          Object.assign(new Error('14 UNAVAILABLE: kms'), { code: 14 }),
+        );
+        const res = await fetchList(t, f);
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual({ assigned: false });
+      } finally {
+        vi.restoreAllMocks();
+        await teardown(t);
+      }
+    });
+
+    it('AC7 (D4): a STATUS-LESS profile-read failure self-suppresses the list — ⛔ never a null row', async () => {
+      const t = await createTestApp();
+      try {
+        const f = await seedPoolWithConfirmedContributors(t, {
+          contributorNames: ['Anita Verma', 'Bhavesh Patel'],
+        });
+        domainProbe.profileCalls = 0;
+        domainProbe.profileFailOnCall = 2;
+        const res = await fetchList(t, f);
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual({ assigned: false });
+        expect(res.raw).not.toContain('Anita');
+      } finally {
+        domainProbe.profileFailOnCall = null;
+        await teardown(t);
+      }
+    });
+
+    it('AC7 (D4): a per-envelope rejection (INVALID_ARGUMENT) is that row\'s `{ name: null }` — the others render', async () => {
+      const t = await createTestApp();
+      try {
+        const f = await seedPoolWithConfirmedContributors(t, {
+          contributorNames: ['Anita Verma', 'Vikram Singh'],
+        });
+        vi.spyOn(t.deps.encryption.kms, 'decryptDek').mockRejectedValueOnce(
+          Object.assign(new Error('3 INVALID_ARGUMENT: bad envelope'), { code: 3 }),
+        );
+        const res = await fetchList(t, f);
+        const rows = res.body['confirmed'] as Array<Json>;
+        expect(rows).toHaveLength(2);
+        expect(rows.filter((r) => r['name'] === null)).toHaveLength(1);
+      } finally {
+        vi.restoreAllMocks();
+        await teardown(t);
+      }
+    });
   });
 });

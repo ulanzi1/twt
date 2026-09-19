@@ -21,6 +21,7 @@
 // change and every poll result. ⛔ Do not re-derive "it is fine, it is windowed" from a stale comment.
 //
 // ⛔ IT DOES NOT ADAPT THE WIRE ROW. The shipped `ConfirmedContributorRow` is `{ firstName, lastInitial }`
+// [⚠ SUPERSEDED 2026-09-19 by Story 11b.21: `{ name: string | null }`, adapted to `name | unnamed`]
 // `.strict()`, and `letterCode` lives ONCE PER RESPONSE on the pool identity block — so a render layer must
 // wrap the name fields as `{ kind: 'name', … }` and splice the pool letter onto each row. That adapter reads a
 // RESPONSE shape, which would take a build dependency on the contract and break the parallelism; it is
@@ -37,6 +38,10 @@
 // what keeps one bad line from hiding every good one; it is load-bearing, NOT defensive polish. This half of
 // the contract is the presenter SURFACING the corruption — it must never silently render a blank where a name
 // belongs.
+// ⚠ SUPERSEDED IN PART 2026-09-19 by Story 11b.21 (`#decision-2026-09-19-224` D2; `-168` cl.5 superseded as to
+// the throw): a withheld name is now the `unnamed` input and RENDERS the ruled placeholder, so a valid payload
+// can ⛔ no longer throw. Only the `never` exhaustiveness guard still throws (a forged kind). The consumer's
+// try/catch stays, as a guard against a corrupt operand, ⛔ not as the way withheld names disappear.
 
 import { CONTRIBUTION_LIST_I18N_REFS } from './i18n-keys.js';
 import type { ContributionRowInput, ContributionRowViewModel } from './view-model.js';
@@ -49,6 +54,10 @@ import type { ContributionRowInput, ContributionRowViewModel } from './view-mode
  * module, because joining them would DECIDE the contributor name FORM — the exact question D7-nameform(a)
  * ruled must not be ruled and AC6 item (iii) routes to the Trustee Panel. The join belongs to the render
  * layer, under the form the Panel rules.
+ *
+ * ⚠ SUPERSEDED 2026-09-19 by Story 11b.21 (`-224` D2): the name arrives RESOLVED (one string, server-side);
+ * it is passed through unchanged, and an `unnamed` input renders the placeholder ref. The paragraphs below
+ * are kept as the record.
  *
  * THROWS on an `unknown` display name (D8(a)) — a blank where a name belongs is forbidden, and no key is
  * minted for it: reusing `member.anonymousMember` would state that the person exercised their right to
@@ -64,20 +73,24 @@ export function deriveContributionRowViewModel(
 
   switch (displayName.kind) {
     case 'name':
+      // The server-resolved name, unchanged — ⛔ never split, shortened or re-joined here (`-224` D3).
       return {
-        displayName: {
-          kind: 'nameParts',
-          firstName: displayName.firstName,
-          lastInitial: displayName.lastInitial,
-        },
+        displayName: { kind: 'name', name: displayName.name },
         poolLetterCode,
         rowA11y: { ref: CONTRIBUTION_LIST_I18N_REFS.rowA11y },
       };
-    case 'unknown':
-      throw new Error(
-        '[deriveContributionRowViewModel] unresolvable contributor name — refusing to render a nameless row ' +
-          '(D8(a): surface it, never blank it, and never borrow erasure copy for an absent name)',
-      );
+    case 'unnamed':
+      // ⭐ `2026-09-18-222` cl.1–cl.2: the row is KEPT and renders the ruled word from ONE key (`-224` D1).
+      // ⛔ Never `member.anonymousMember` (`-222` Consequence 3) and ⛔ never a cause. The row a11y ref is
+      // the named row's own (`-224` D5 — no new copy).
+      // ⚠ SUPERSEDED (quoted, ⛔ not deleted): `case 'unknown': throw …` — *"refusing to render a nameless
+      //   row (D8(a): surface it, never blank it, and never borrow erasure copy for an absent name)"*. The
+      //   placeholder is neither a blank nor erasure copy, so both of D8(a)'s grounds still hold.
+      return {
+        displayName: { kind: 'placeholder', ref: CONTRIBUTION_LIST_I18N_REFS.contributorUnnamed },
+        poolLetterCode,
+        rowA11y: { ref: CONTRIBUTION_LIST_I18N_REFS.rowA11y },
+      };
     default: {
       // Exhaustiveness over the kind discriminant — a THIRD kind added upstream fails typecheck here rather
       // than falling through to a silently blank name.

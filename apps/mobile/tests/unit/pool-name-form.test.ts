@@ -32,6 +32,17 @@ const CONSUMERS: ReadonlyArray<readonly [string, string]> = [
   ['the Yogdaan Bahi row (consumer ②)', ROW],
 ]
 
+// ⭐ Story 11b.21 (Trap 8) — the contributor list renders a MEMBER-FACING name too (a contributor's, mode-
+// resolved on the server since `#decision-2026-09-19-224` D3), and until now this file gave it ⛔ NO
+// coverage, so "it still passes" proved nothing for it. It joins the AC2b fences below — the client must
+// grow ⛔ no name resolution of its own. ⚠ It is ⛔ not in `CONSUMERS`: AC3's `deceasedDisplayName` field
+// belongs to the pool-identity surfaces, ⛔ not to a contributor row.
+const CONTRIBUTOR_LIST = 'apps/mobile/components/contributor-list/PoolContributorList.tsx'
+const FENCED: ReadonlyArray<readonly [string, string]> = [
+  ...CONSUMERS,
+  ['the contributor list (Story 11b.21)', CONTRIBUTOR_LIST],
+]
+
 describe('AC3 — both mobile consumers read the ONE resolved field', () => {
   it('the scan is not vacuous: both files are read and non-trivial', () => {
     for (const [label, rel] of CONSUMERS) {
@@ -51,7 +62,7 @@ describe('AC3 — both mobile consumers read the ONE resolved field', () => {
 })
 
 describe('AC2b — the client does NOT grow a second name resolution', () => {
-  it.each(CONSUMERS)('%s binds no form decider and no shielding helper', (_label, rel) => {
+  it.each(FENCED)('%s binds no form decider and no shielding helper', (_label, rel) => {
     const src = stripComments(read(rel))
     for (const forbidden of [
       'splitFirstNameLastInitial',
@@ -70,7 +81,7 @@ describe('AC2b — the client does NOT grow a second name resolution', () => {
     }
   })
 
-  it.each(CONSUMERS)('%s performs no JOIN of its own on the family name', (_label, rel) => {
+  it.each(FENCED)('%s performs no JOIN of its own on the family name', (_label, rel) => {
     // The specific shape that was there before, and the specific shape a well-meaning edit would put
     // back: a ternary over an empty last-initial, or a template literal splicing two name fields.
     const src = stripComments(read(rel))

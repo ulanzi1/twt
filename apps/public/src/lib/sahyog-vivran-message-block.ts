@@ -69,11 +69,13 @@ export const SAHYOG_VIVRAN_MESSAGE_BLOCK_BODY_KEYS = [
 ] as const;
 
 // ⚠ `no-misleading-character-class` IS SUPPRESSED DELIBERATELY, ⛔ NOT TO SILENCE A BUG — the same
+// [⚠ 2026-09-19, Story 11b.21: the API's copy MOVED to `apps/api/src/modules/kyc/name-render.ts`]
 // suppression, for the same reason, as the API's `INVISIBLE_CHARS` (`handlers.ts:1257-1269`): `\u034f` and
 // `\ufe00-\ufe0f` are combining marks that must be detected ON THEIR OWN, because a holder name made only
 // of them is the blank-cell case this class exists to catch. Both regexes carry the `u` flag.
 /* eslint-disable no-misleading-character-class */
-/** Invisible code points, as the API's `normalisePublicName` counts them (`handlers.ts`, `INVISIBLE_CHARS`). */
+/** Invisible code points, as the API's `normalisePublicName` counts them (`handlers.ts`, `INVISIBLE_CHARS`;
+ *  ⚠ since Story 11b.21, `apps/api/src/modules/kyc/name-render.ts`). */
 const INVISIBLE_CHARS = /[\u00ad\u034f\u115f\u1160\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\u2800\u3164\ufe00-\ufe0f\ufeff]/gu;
 /** Bidi embedding, override and isolate controls: never part of a spelling, and an interior one reorders the text around it. */
 const BIDI_CONTROLS = /[\u202a-\u202e\u2066-\u2069]/gu;

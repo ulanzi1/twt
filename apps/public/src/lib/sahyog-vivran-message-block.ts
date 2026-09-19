@@ -70,7 +70,8 @@ export const SAHYOG_VIVRAN_MESSAGE_BLOCK_BODY_KEYS = [
 
 // ⚠ `no-misleading-character-class` IS SUPPRESSED DELIBERATELY, ⛔ NOT TO SILENCE A BUG — the same
 // [⚠ 2026-09-19, Story 11b.21: the API's copy MOVED to `apps/api/src/modules/kyc/name-render.ts`]
-// suppression, for the same reason, as the API's `INVISIBLE_CHARS` (`handlers.ts:1257-1269`): `\u034f` and
+// suppression, for the same reason, as the API's `INVISIBLE_CHARS` (`kyc/name-render.ts`; formerly
+// `public-pages/handlers.ts:1257-1269`, moved by Story 11b.21): `\u034f` and
 // `\ufe00-\ufe0f` are combining marks that must be detected ON THEIR OWN, because a holder name made only
 // of them is the blank-cell case this class exists to catch. Both regexes carry the `u` flag.
 /* eslint-disable no-misleading-character-class */

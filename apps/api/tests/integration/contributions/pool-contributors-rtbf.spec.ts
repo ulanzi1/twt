@@ -697,8 +697,14 @@ describe.skipIf(!hasDatabase)('pool-contributors — RTBF erasure (:5433)', { ti
         ]);
 
         // ⭐⭐ PARITY, by CALLING the public route's own functions (⛔ never transcribed): under every
-        // mode, every stored name, the member form EQUALS the public form — except where the public
-        // form is withheld (the shielded mononym arm), where the member sees the name.
+        // mode, every stored name, the member form EQUALS the public form — with ONE named exception:
+        // the shielded mononym arm (`-224` D3), where the public form is withheld and the member sees the
+        // name. ⚠ Review 2026-09-19: this was `if (pub !== null) expect(member).toBe(pub)`, which SKIPPED
+        // every case where the public form is null — including the two where the member is meant to differ
+        // and any where BOTH should be null. The exception is now an EXPLICIT set, so a case that falls out
+        // of it fails instead of being skipped. (`"Sunita ."` under `shielded_name` is the tokenless-second-
+        // token mononym: public `null`, member `Sunita` — AC1's text is annotated to say so.)
+        const MEMBER_SEES_MORE = new Set(['shielded_name|Sunita .', 'shielded_name|Ravi']);
         for (const [mode, rows] of [
           ['full_name', full],
           ['shielded_name', shielded],
@@ -706,7 +712,12 @@ describe.skipIf(!hasDatabase)('pool-contributors — RTBF erasure (:5433)', { ti
           stored.forEach((name, i) => {
             const member = (rows as Array<{ name: string | null }>)[i]!.name;
             const pub = publicForm(mode, name);
-            if (pub !== null) expect(member, `${mode} / row ${i}`).toBe(pub);
+            if (MEMBER_SEES_MORE.has(`${mode}|${name}`)) {
+              expect(pub, `${mode} / row ${i}: the public form is withheld`).toBeNull();
+              expect(member, `${mode} / row ${i}: the member sees the name`).not.toBeNull();
+            } else {
+              expect(member, `${mode} / row ${i}`).toBe(pub);
+            }
           });
         }
         expect(publicForm('shielded_name', 'Ravi')).toBeNull();

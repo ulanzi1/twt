@@ -43,6 +43,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { t } from '@twt/i18n'
+import type { BoundTranslate } from '@twt/i18n'
 import {
   CONTRIBUTION_LIST_I18N_REFS,
   deriveContributionRowViewModel,
@@ -51,6 +52,7 @@ import {
 import { describe, expect, it } from 'vitest'
 
 import { toContributionRowInput } from '../../components/contributor-list/contribution-row-input'
+import { deriveContributorRow } from '../../components/contributor-list/derive-contributor-row'
 import {
   POOL_CONTRIBUTORS_QUERY_KEY,
   RETIRED_POOL_CONTRIBUTORS_QUERY_KEY,
@@ -184,6 +186,11 @@ const stripComments = (src: string): string => {
 
 const COMPONENT = 'apps/mobile/components/contributor-list/PoolContributorList.tsx'
 const ADAPTER = 'apps/mobile/components/contributor-list/contribution-row-input.ts'
+// ⭐ Story 11b.21 code review (2026-09-19): the per-row derivation (name / placeholder label + a11y string)
+// was extracted from the component so the component AND the AC5 test call ONE function. Every fence that
+// scanned that logic in the component now scans it HERE too — moving code out of a scanned file without
+// moving the scan is how a gate silently loses its subject ([[feedback_gate_scope_semantic_coverage]]).
+const DERIVE = 'apps/mobile/components/contributor-list/derive-contributor-row.ts'
 const ROUTE_SITE = 'apps/mobile/app/(contribution)/contributors.tsx'
 const CONSOLE_SITE = 'apps/mobile/components/nominee-console/NomineeConsole.tsx'
 // ⭐ The sibling hook that FETCHES these rows. Added at the second code review: it was in ⛔ NO scanned
@@ -193,6 +200,7 @@ const HOOK = 'apps/mobile/components/contributor-list/usePoolContributorsQuery.t
 
 const component = stripComments(read(COMPONENT))
 const adapter = stripComments(read(ADAPTER))
+const derive = stripComments(read(DERIVE))
 // ⚠ No stripped `hook` binding: the two fences that read it want DIFFERENT views — the AC10 stale-claim
 // scan needs the RAW source (the claims are comments; stripping them would make it vacuous), and the
 // death-term fence strips per-site inside its own loop.
@@ -343,34 +351,42 @@ describe('balancedFrom — the extractor five fences anchor on', () => {
 // ─── AC1 + AC9 — the presenter is consumed, the inline label is GONE, the adapter exists ─────────────
 
 describe('AC1 — <PoolContributorList> derives row content from the @twt/ui presenter', () => {
-  it('imports deriveContributionRowViewModel from @twt/ui', () => {
-    expect(component).toMatch(/import\s*\{[^}]*\bderiveContributionRowViewModel\b[^}]*\}\s*from\s*'@twt\/ui'/)
+  // Was: the COMPONENT imported `deriveContributionRowViewModel` from `@twt/ui`. Story 11b.21 review: the
+  // derivation is `deriveContributorRow` in its own module; the component imports THAT, and the module
+  // imports the presenter.
+  it('imports deriveContributionRowViewModel from @twt/ui (in the shared derivation module the component calls)', () => {
+    expect(derive).toMatch(/import\s*\{[^}]*\bderiveContributionRowViewModel\b[^}]*\}\s*from\s*'@twt\/ui'/)
+    expect(component).toMatch(/import\s*\{[^}]*\bderiveContributorRow\b[^}]*\}\s*from\s*'\.\/derive-contributor-row'/)
   })
 
+  // Was: `deriveContributionRowViewModel(` was asserted INSIDE the memo block. Round 2 (2026-09-19): the memo
+  // calls `deriveContributorRow(` (the shared derivation), which calls the presenter — both are asserted.
   it('calls the presenter in the memoized derivation block, NOT in renderItem', () => {
     // ⚠ RETITLED at the second code review. The first review's patch moved the derive OUT of
     // `renderItem` into a component-body memo — an improvement — but this test kept a name that
     // asserted the opposite and an assertion (`/deriveContributionRowViewModel\s*\(/`) that checked
     // only that the identifier appears SOMEWHERE in the file.
     expect(derivationBlock, 'no `renderableRows = useMemo(...)` block found').not.toBe('')
-    expect(derivationBlock).toMatch(/deriveContributionRowViewModel\s*\(/)
+    expect(derivationBlock).toMatch(/deriveContributorRow\s*\(/)
+    expect(derive).toMatch(/deriveContributionRowViewModel\s*\(/)
     expect(
-      /deriveContributionRowViewModel\s*\(/.test(renderItemBlock),
+      /deriveContributorRow\s*\(|deriveContributionRowViewModel\s*\(/.test(renderItemBlock),
       'renderItem derives per row again. Derivation belongs in the memo, computed once per data change.',
     ).toBe(false)
   })
 
   it('DELETES the inline contributorLabel() — it is not left beside the presenter', () => {
     expect(
-      /\bcontributorLabel\b/.test(component),
-      'contributorLabel() still exists in PoolContributorList.tsx. AC1 deletes it; the display name now ' +
+      // Round 2 (2026-09-19): the label derivation moved into `derive`, so it is scanned too.
+      /\bcontributorLabel\b/.test(component) || /\bcontributorLabel\b/.test(derive),
+      'contributorLabel() still exists in PoolContributorList.tsx or derive-contributor-row.ts. AC1 deletes it; the display name now ' +
         'comes from the presenter view-model, not from a second local composer.',
     ).toBe(false)
   })
 
   it('DELETES the local ConfirmedRow type-shadow (D10(a))', () => {
     expect(
-      /\bConfirmedRow\b/.test(component),
+      /\bConfirmedRow\b/.test(component) || /\bConfirmedRow\b/.test(derive),
       'The local `interface ConfirmedRow` is still declared or referenced. D10(a) deletes it: the ' +
         'contract file itself forbids type-shadowing (pool-contributor-list.ts:14).',
     ).toBe(false)
@@ -389,10 +405,10 @@ describe('AC1 / Trap 1 — the presenter throw is GUARDED, per row, so one bad r
     // file (`try {` … derive … `} catch` … `return null`), so a `try` in one function, the derive in a
     // second and an unrelated `catch { return null }` in a third would have satisfied it. It is now
     // anchored to the extracted derivation block.
-    const guarded = /try\s*\{[\s\S]*?deriveContributionRowViewModel\s*\([\s\S]*?\}\s*catch\s*(\([^)]*\))?\s*\{[\s\S]*?return\s+null/
+    const guarded = /try\s*\{[\s\S]*?deriveContributorRow\s*\([\s\S]*?\}\s*catch\s*(\([^)]*\))?\s*\{[\s\S]*?return\s+null/
     expect(
       guarded.test(derivationBlock),
-      'deriveContributionRowViewModel is not wrapped in a try/catch that returns null. The presenter ' +
+      'deriveContributorRow is not wrapped in a try/catch that returns null. The presenter ' +
         'THROWS by ruling (11b.2 D8(a)) and this feeds a FlashList — an unguarded throw red-boxes the ' +
         'WHOLE list (Trap 1).',
     ).toBe(true)
@@ -402,18 +418,27 @@ describe('AC1 / Trap 1 — the presenter throw is GUARDED, per row, so one bad r
   // MUTATION-PROVEN unmechanized at the second review: reverting the branch condition left 397/397
   // green, and moving the a11y `t()` back outside the try left 55/55 green. A fix nothing asserts is a
   // fix that ships out again on the next refactor ([[feedback_mechanization_split_commitment]]).
+  // Was: the a11y `t()` call was located INSIDE the component's try body. Story 11b.21 review: every `t()`
+  // now lives in `deriveContributorRow`, and the component reaches it ONLY through the guarded call — so the
+  // property is (1) the call is in the try body, (2) the component's derivation block makes NO `t()` call
+  // of its own (one written after the guard would throw unguarded), (3) the helper resolves the a11y ref.
   it('FENCE 1 — the a11y t() call is INSIDE the guard, not after it', () => {
     const tryBody = /try\s*\{([\s\S]*?)\}\s*catch/.exec(derivationBlock)
     expect(tryBody, 'no try/catch found in the derivation block').not.toBeNull()
     expect(
-      /\bt\(/.test(tryBody![1]),
-      'The row a11y `t()` call is not inside the try block. `t()` THROWS on a key miss ' +
-        '(resolver.ts:64) and on a missing {name} param (resolver.ts:39), so resolving the label ' +
+      /\bderiveContributorRow\(/.test(tryBody![1]),
+      'The derivation call (which resolves the row a11y `t()`) is not inside the try block. `t()` THROWS on a ' +
+        'key miss (resolver.ts:64) and on a missing {name} param (resolver.ts:39), so resolving the label ' +
         'outside the guard reinstates exactly the unguarded throw the guard exists to catch.',
     ).toBe(true)
     expect(
-      /rowA11y\.ref\.key/.test(tryBody![1]),
-      'the presenter-driven a11y key is resolved outside the guard',
+      /(?<![\w.$])t\(/.test(derivationBlock),
+      'the component derivation block calls `t()` directly — every `t()` belongs in deriveContributorRow, ' +
+        'reached only through the guarded call; a `t()` written here can sit outside the try',
+    ).toBe(false)
+    expect(
+      /rowA11y\.ref\.key/.test(derive),
+      'the presenter-driven a11y key is not resolved by the shared derivation',
     ).toBe(true)
   })
 
@@ -490,29 +515,33 @@ describe('AC1 / Trap 1 — the presenter throw is GUARDED, per row, so one bad r
   })
 
   it('does NOT branch on an anonymized kind (11b.2a D5 + D6(a) — no such row is ever emitted)', () => {
-    expect(/anonymized/i.test(component)).toBe(false)
+    // Round 2: scans the derivation module too — the placeholder/label arms live there now.
+    expect(/anonymized/i.test(component) || /anonymized/i.test(derive)).toBe(false)
   })
 
   it('does NOT resolve member.anonymousMember (its subject cannot exist)', () => {
-    expect(/anonymousMember/.test(component)).toBe(false)
+    expect(/anonymousMember/.test(component) || /anonymousMember/.test(derive)).toBe(false)
   })
 
   // Was: "the try/catch IS its handling (D8(a))". Story 11b.21 retired the `unknown` kind (`-224` D2) —
   // a withheld name is the `unnamed` kind, rendered as the placeholder arm. Still: ⛔ no `unknown` arm.
   it('writes NO render arm for the retired unknown kind', () => {
-    expect(/['"]unknown['"]/.test(component)).toBe(false)
+    expect(/['"]unknown['"]/.test(component) || /['"]unknown['"]/.test(derive)).toBe(false)
   })
 
+  // Was: the three patterns were asserted against the component's `derivationBlock`. Round 2: the label
+  // logic moved to `derive-contributor-row.ts`, so they are asserted there.
   it('⭐ renders the PLACEHOLDER arm through t() of the presenter ref — key AND namespace (`-224` D1)', () => {
-    expect(derivationBlock).toMatch(/vm\.displayName\.kind\s*===\s*'name'/)
-    expect(derivationBlock).toMatch(/t\(\s*vm\.displayName\.ref\.key\s*,/)
-    expect(derivationBlock).toMatch(/namespace:\s*vm\.displayName\.ref\.namespace/)
+    expect(derive).toMatch(/vm\.displayName\.kind\s*===\s*'name'/)
+    expect(derive).toMatch(/t\(\s*vm\.displayName\.ref\.key\s*,/)
+    expect(derive).toMatch(/namespace:\s*vm\.displayName\.ref\.namespace/)
   })
 })
 
 describe('AC9 — the wire→presenter adapter (routed here BY NAME by Story 11b.2)', () => {
-  it('exists as its own module and is imported by the component', () => {
-    expect(component).toMatch(/from\s*'\.\/contribution-row-input'/)
+  // Was: the COMPONENT imported the adapter. Story 11b.21 review: the shared derivation module does.
+  it('exists as its own module and is imported by the derivation the component calls', () => {
+    expect(derive).toMatch(/from\s*'\.\/contribution-row-input'/)
   })
 
   it('takes the contract row type-only from @twt/contracts (D10(a))', () => {
@@ -586,6 +615,8 @@ describe('AC9 — the wire→presenter adapter (routed here BY NAME by Story 11b
   // ⭐ ADDED at the second code review: the only two invocation cases were `'S'` and `''`, so every
   // non-Latin, multi-character and whitespace operand was unexercised on a surface whose whole subject
   // is Indian names.
+  // Was: `{ firstName: 'रीना', lastInitial: 'शा' }` passed through as name PARTS (Story 11b.21, `-224` D2:
+  // the wire carries one resolved `name`; the non-Latin operand is still what this exists to exercise).
   it('actually invoked: a Devanagari name passes through byte-for-byte', () => {
     const result = toContributionRowInput({ name: 'रीना शर्मा' }, 'क')
     expect(result).toEqual({ displayName: { kind: 'name', name: 'रीना शर्मा' }, poolLetterCode: 'क' })
@@ -598,6 +629,9 @@ describe('AC9 — the wire→presenter adapter (routed here BY NAME by Story 11b
     expect(result.displayName).toEqual({ kind: 'name', name: 'Reena Kumari Sharma' })
   })
 
+  // Was: `{ firstName: ' ', lastInitial: ' ' }` → both parts untouched. Now the single `name` field is
+  // untouched (`-224` D2); the adapter still re-shapes only — blank-name policy is the SERVER's
+  // `normalisePublicName`, ⛔ never the client's.
   it('actually invoked: whitespace is neither trimmed nor collapsed by the adapter', () => {
     const result = toContributionRowInput({ name: ' ' }, 'A')
     expect(result.displayName).toEqual({ kind: 'name', name: ' ' })
@@ -668,6 +702,17 @@ describe('AC6 — every displayName kind the presenter can take is rendered or P
         'name composition AC1 deletes; read the derived row from renderableRows[index] instead',
     ).toEqual([])
 
+    // Round 2 (2026-09-19): the label derivation moved into `derive`. It receives the WHOLE wire row and
+    // hands it to the adapter — it must ⛔ never read `item.name` itself (that is the inline composition
+    // AC1 deletes, relocated). Non-vacuity: `derive` is non-empty and does call the adapter.
+    expect(derive, 'derive-contributor-row.ts is empty — the check would be vacuous').not.toBe('')
+    expect(derive).toMatch(/toContributionRowInput\s*\(\s*item\b/)
+    expect(
+      derive.match(WIRE_READ) ?? [],
+      'derive-contributor-row.ts reads the WIRE row directly — it must go through toContributionRowInput() ' +
+        'and the presenter view-model',
+    ).toEqual([])
+
     // Non-vacuity floor: the parts ARE still read somewhere (keyExtractor), so an empty file or a
     // renamed field cannot make the two assertions above pass by accident.
     const wholeFile = component.match(WIRE_READ) ?? []
@@ -725,27 +770,42 @@ describe('AC3 — the keyExtractor KEEPS index; the 8.3 deferral stays open', ()
 // ─── Story 11b.21 — nothing is dropped, and the cache is never persisted (AC5, AC6(c); `-224` D2, D6) ───
 
 describe('Story 11b.21 — a valid payload renders EVERY row', () => {
-  it('[name, null, name] derives THREE rows through the real adapter + presenter + t() — none dropped', () => {
+  // Was: this test rebuilt `label`/`ariaLabel` INLINE from the real adapter + presenter + `t()` — a
+  // transcription of the component's logic that a regression in the component could not fail (Story 11b.21
+  // code review, 2026-09-19). It now CALLS `deriveContributorRow`, the ONE function the component's memo
+  // calls (FENCE 1 / AC1 pin that the component reaches it, inside the guard). A row mapped to `null`, a
+  // dropped placeholder arm or a mis-wired a11y ref fails HERE, in the real function.
+  it('[name, null, name] derives THREE rows through the component\'s OWN `deriveContributorRow` — none dropped', () => {
     const rows = [{ name: 'Reena Sharma' }, { name: null }, { name: 'Amit Verma' }]
     for (const locale of ['en', 'hi'] as const) {
-      const derived = rows.map((row) => {
-        const vm = deriveContributionRowViewModel(toContributionRowInput(row, 'F'))
-        const label =
-          vm.displayName.kind === 'name'
-            ? vm.displayName.name
-            : t(vm.displayName.ref.key, undefined, { locale, namespace: vm.displayName.ref.namespace })
-        const ariaLabel = t(vm.rowA11y.ref.key, { name: label }, { locale, namespace: vm.rowA11y.ref.namespace })
-        return { label, ariaLabel }
-      })
+      const bound: BoundTranslate = (key, params, options) => t(key, params, { locale, ...options })
+      const derived = rows.map((row) => deriveContributorRow(row, 'F', bound))
       expect(derived).toHaveLength(3)
-      expect(derived[0]!.label).toBe('Reena Sharma')
-      expect(derived[1]!.label).toBe(locale === 'en' ? 'A contributor' : 'एक सहकर्मी')
-      expect(derived[2]!.label).toBe('Amit Verma')
-      // D5: the placeholder row's label is the SAME row_a11y string — no new copy.
-      expect(derived[1]!.ariaLabel).toBe(
-        t('contributor_list.row_a11y', { name: derived[1]!.label }, { locale, namespace: 'contribution' }),
-      )
+      expect(derived.map((d) => d.label)).toEqual([
+        'Reena Sharma',
+        locale === 'en' ? 'A contributor' : 'एक सहकर्मी',
+        'Amit Verma',
+      ])
+      expect(derived.map((d) => d.isPlaceholder)).toEqual([false, true, false])
+      // D5: EVERY row — the placeholder included — is announced by the SAME `row_a11y` string; no new copy.
+      derived.forEach((d) => {
+        expect(d.ariaLabel).toBe(
+          t('contributor_list.row_a11y', { name: d.label }, { locale, namespace: 'contribution' }),
+        )
+      })
     }
+  })
+
+  // ⭐ Round 2 (2026-09-19): the derivation is CALLED above, but the seam between it and the screen was
+  // unpinned. This pins (a) the memo passes `item`, the pool letter code AND the `t` it was given — a
+  // wrong argument order or a different translator would otherwise pass every other fence — and (b) the
+  // row container carries the derived a11y string and renders the derived label. ⚠ A source pin, not a
+  // mount (no RN harness here) — but it names the exact bindings that would silently mis-announce a row.
+  it('the memo passes (item, poolLetterCode, t) to deriveContributorRow, and the row binds its derived label + a11y string', () => {
+    expect(derivationBlock).toMatch(/return\s+deriveContributorRow\(\s*item\s*,\s*poolLetterCode\s*,\s*t\s*\)/)
+    expect(renderItemBlock).toMatch(/accessibilityLabel=\{renderable\.ariaLabel\}/)
+    expect(renderItemBlock).toMatch(/\{renderable\.label\}/)
+    expect(renderItemBlock).toMatch(/renderable\.isPlaceholder/)
   })
 
   it('the placeholder row carries no cause-coloured chrome — only an italic/secondary text style', () => {
@@ -789,7 +849,7 @@ describe('AC4 — NO token bridge and NO confirmed chrome (D2(a))', () => {
   // in no scanned set at all". ⇒ the same file, the same test, the same reasoning, applied to one fence
   // and not its sibling ([[feedback_gate_scope_semantic_coverage]] — a gate is complete only when it
   // MEANINGFULLY covers the surface, and `usePoolContributorsQuery.ts` is a touched file in this diff).
-  const touched = [component, adapter, stripComments(read(HOOK))]
+  const touched = [component, adapter, derive, stripComments(read(HOOK))]
 
   it('(a) imports no @twt/tokens anywhere in the touched files', () => {
     for (const src of touched) expect(/@twt\/tokens/.test(src)).toBe(false)
@@ -855,6 +915,7 @@ describe('AC1/AC2 — no death-derived term reaches ANY contributor render path'
   // 2026-08-24-159 cl.11) — "the right conjunct in the wrong read".
   const sites: ReadonlyArray<readonly [string, string]> = [
     ['the component', COMPONENT],
+    ['the derivation module', DERIVE],
     ['render site 1 — the 8.3 route', ROUTE_SITE],
     ['render site 2 — the Nominee Console', CONSOLE_SITE],
     // ⭐ ADDED at the second code review. The QUERY HOOK is the natural place to add a filter — it is
@@ -980,7 +1041,8 @@ describe('AC6 — every t() call site passes an EXPLICIT namespace (t() defaults
   // including `t(key, { namespace: 'contribution' })`, the namespace in the PARAMS slot, which is the
   // documented 11a.2 defect: it falls back to 'common' and THROWS at runtime. The slot is now checked.
   it('no bare t(key) call survives, and the namespace is in the THIRD argument slot', () => {
-    const calls = tCalls(component)
+    // ⭐ Story 11b.21 review: the derivation module's `t()` calls are scanned too (they moved out of the component).
+    const calls = [...tCalls(component), ...tCalls(derive)]
     expect(calls.length, 'no t() calls found — the scan would be vacuous').toBeGreaterThan(0)
     for (const call of calls) {
       const args = splitTopLevelArgs(call)
@@ -1005,11 +1067,13 @@ describe('AC6 — every t() call site passes an EXPLICIT namespace (t() defaults
     }
   })
 
+  // Was: both patterns were asserted against the component source. Round 2: the a11y `t()` moved to
+  // `derive-contributor-row.ts`, so they are asserted there.
   it('the row a11y label resolves the PRESENTER REF — key and namespace both, never guessed', () => {
     // The two-step consumption `view-model.ts:57-64` prescribes: join the parts, then
     // t(rowA11y.ref.key, { name }, { namespace: rowA11y.ref.namespace }).
-    expect(component).toMatch(/t\(\s*\n?\s*vm\.rowA11y\.ref\.key\s*,/)
-    expect(component).toMatch(/namespace:\s*vm\.rowA11y\.ref\.namespace/)
+    expect(derive).toMatch(/t\(\s*\n?\s*vm\.rowA11y\.ref\.key\s*,/)
+    expect(derive).toMatch(/namespace:\s*vm\.rowA11y\.ref\.namespace/)
   })
 
   it('and that ref IS contributor_list.row_a11y in the contribution namespace (presenter-driven)', () => {
@@ -1021,9 +1085,11 @@ describe('AC6 — every t() call site passes an EXPLICIT namespace (t() defaults
     expect(vm.rowA11y.ref.namespace).toBe('contribution')
   })
 
+  // Was: `{ name: label }` was asserted against the component source. Round 2: it moved to
+  // `derive-contributor-row.ts`.
   it('row_a11y is called WITH a {name} param', () => {
     expect(
-      /\{\s*name:\s*label\s*\}/.test(component),
+      /\{\s*name:\s*label\s*\}/.test(derive),
       "row_a11y is '{name}, confirmed contributor' — a single-brace token. Calling it without a `name` " +
         'param throws at the interpolation step (resolver.ts:33-42), which is how the 11a.2 defect shipped.',
     ).toBe(true)
@@ -1090,17 +1156,19 @@ describe('AC7 — family 13 (d): every state ratified REACHABLE is ANNOUNCED, no
   // ⭐ THE REACHABLE SET: loading · absence · empty · NO-ROW-DERIVABLE · a name row · the pending strip.
   // ⛔ THE ANONYMIZED ROW IS NOT ONE OF THEM — 11b.2a's D5 makes it unreachable BY CONSTRUCTION, and an
   // a11y assertion over an unreachable state is exactly the vacuous green family 13 exists to catch.
-  const announced: ReadonlyArray<readonly [string, RegExp]> = [
+  // The optional third field names the source when the call moved out of the component (Story 11b.21 review).
+  const announced: ReadonlyArray<readonly [string, RegExp, 'derive'?]> = [
     ['loading', /t\('loading'/],
     ['absence', /t\('contributor_list\.no_pool'/],
     ['empty', /t\('contributor_list\.empty'/],
-    ['a name row', /t\(\s*\n?\s*vm\.rowA11y\.ref\.key/],
+    // Was: matched against the component source. Round 2: the a11y `t()` lives in `derive-contributor-row.ts`.
+    ['a name row', /t\(\s*\n?\s*vm\.rowA11y\.ref\.key/, 'derive'],
     ['the pending strip', /t\(\s*\n?\s*'contributor_list\.pending_strip_a11y'/],
   ]
 
-  for (const [state, pattern] of announced) {
+  for (const [state, pattern, where] of announced) {
     it(`${state} resolves announced copy`, () => {
-      expect(pattern.test(component), `${state} renders no announced text`).toBe(true)
+      expect(pattern.test(where === 'derive' ? derive : component), `${state} renders no announced text`).toBe(true)
     })
   }
 
@@ -1259,6 +1327,8 @@ describe('AC10 — the stale "producer is unbuilt" claims are corrected in this 
     // which meant the adapter file could bypass the alias with a relative import undetected.
     expect(/packages\/contracts/.test(component)).toBe(false)
     expect(/packages\/contracts/.test(adapter)).toBe(false)
+    // Round 2: the derivation module imports the contract type too, so it is checked the same way.
+    expect(/packages\/contracts/.test(derive)).toBe(false)
   })
 })
 

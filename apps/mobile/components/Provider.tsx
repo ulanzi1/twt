@@ -5,6 +5,7 @@ import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client
 import { CurrentToast } from './CurrentToast'
 import { config } from '../tamagui.config'
 import { persister, queryClient } from '../lib/query-client'
+import { removeRetiredPoolContributorsCache } from './contributor-list/pool-contributors-cache'
 
 export function Provider({
   children,
@@ -15,6 +16,12 @@ export function Provider({
   return (
     <PersistQueryClientProvider
       client={queryClient}
+      // ⭐ Story 11b.21 (`#decision-2026-09-19-224` D6) — ONCE, after the persisted cache is restored, drop
+      // the RETIRED contributor-list entry (`{ firstName, lastInitial }` of colleagues who may since have been
+      // erased). A new query key alone only HIDES it: every save re-persists the whole client, so on an
+      // active device it would stay in MMKV indefinitely. ⚠ `onSuccess` runs BEFORE the save subscription
+      // starts, so this removes it in memory and the NEXT whole-client save writes MMKV without it.
+      onSuccess={() => removeRetiredPoolContributorsCache(queryClient)}
       persistOptions={{
         persister,
         maxAge: 1000 * 60 * 60 * 24 * 7,

@@ -507,6 +507,8 @@ export const PublicVsPrivateMatrixSchema = z
       // accepted trade (`2026-09-18-221` cl.2). ⛔ The carry was ruled as `D9-inversion(a)` and is
       // stated at Story 11b.3b's AC10. ⭐ Discharge is a MEMBER-SURFACE story, ⛔ not this entry, and
       // ⛔ this entry does ⛔ not cure it.
+      // ⚠ ANNOTATED 2026-09-19 — ✅ DISCHARGED by Story 11b.21 (`2026-09-19-224`): the member list now
+      // renders the MODE-RESOLVED name at parity with the public page. The paragraph above is the record.
       ['sahyog-vivran.contributor_name', '2026-09-02-174'],
     ]);
 

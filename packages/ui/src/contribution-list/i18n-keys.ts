@@ -17,6 +17,14 @@
 // row omitted entirely (11b.2a's D5), nothing in this module can render it. Its own deletion question belongs
 // to 11b.2a's Task 6, NOT here.
 //
+// ⚠⛔ ANNOTATED 2026-09-19 by Story 11b.21 (`#decision-2026-09-19-224` D1) — ⛔ the three paragraphs above are
+// KEPT as the record. *"All ten"* is now ELEVEN; *"NO NAMESPACE IS CREATED"* still holds (⛔ none is), but
+// ONE ref now reads an EXISTING key in ANOTHER existing namespace: `sahyog-vivran` → `value.contributor_unnamed`
+// (`A contributor` / `एक सहकर्मी`), because `2026-09-18-222` cl.2 rules the SAME words on both contributor
+// surfaces and ⛔ no second key. *"row omitted entirely"* is superseded by `-222` cl.1 (the row is KEPT).
+// ⚠ This deliberately breaches the "namespace is a fence by convention" note (11b-3b) for exactly ONE ref.
+// `member.anonymousMember` stays ABSENT (`-222` Consequence 3), and ⛔ in the catalog.
+//
 // ⚠ `pendingStrip` / `pendingStripA11y` are the AGGREGATE signal (pool-contributor-list.ts:59-65), NOT a
 // per-row identity field. AC4's banned-token ban is scoped to the ROW TYPES' flattened key sets and NEVER to
 // a copy key — do not delete a required ref to make a scan pass.
@@ -31,6 +39,9 @@ import type { ContributionListI18nRef } from './view-model.js';
  */
 export const CONTRIBUTION_LIST_I18N_REFS = {
   confirmedHeader: { key: 'contributor_list.confirmed_header', namespace: 'contribution' },
+  /** ⭐ Story 11b.21 — the ruled placeholder for a withheld contributor name, `-222` cl.2 (Trustee-ratified):
+   *  the SAME words as the public page, from the SAME key, ⛔ no second key (`-224` D1). ⛔ Cause-blind. */
+  contributorUnnamed: { key: 'value.contributor_unnamed', namespace: 'sahyog-vivran' },
   empty: { key: 'contributor_list.empty', namespace: 'contribution' },
   noPool: { key: 'contributor_list.no_pool', namespace: 'contribution' },
   pendingStrip: { key: 'contributor_list.pending_strip', namespace: 'contribution' },

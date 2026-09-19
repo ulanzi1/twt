@@ -20,6 +20,15 @@
 // ⚠ An erased contributor is OMITTED ENTIRELY from `confirmed` — never an anonymized placeholder row
 // (11b.2a's D5) — while still counting toward `pending`/`confirmedCount` (D3-aggregate). So `confirmed`
 // and the aggregate figures LEGITIMATELY DIVERGE, by design: never assert equality between them.
+// ⚠⛔ SUPERSEDED 2026-09-19 by Story 11b.21 / `2026-09-18-222` (`#decision-2026-09-19-224`) — ⛔ the two
+// paragraphs above are KEPT as the record. Each row now carries the MODE-RESOLVED name (the same form the
+// public Sahyog Vivran page shows, `-189` cl.3 — ⛔ no longer first-name + last-initial), and a confirmed
+// contributor whose name cannot be shown is KEPT in position and renders `A contributor` / `एक सहकर्मी`
+// from ONE key (`sahyog-vivran` → `value.contributor_unnamed`, `-224` D1). ⇒ `confirmed` is every
+// confirmed contributor; nothing on this surface says WHY a name is absent (`-222` cl.2).
+// ⭐ Mounted twice: the contributors route and the Nominee Console (`NomineeConsole.tsx`), which resolves
+// the SESSION member's own assigned pool as a payer (`resolveMemberLivePool`) — ⛔ not the death-linked
+// drive the console is about (an open `deferred-work.md` item, ⛔ not fixed here).
 //
 // ── Virtualization (AC3 / UX-DR80 / D7) ─────────────────────────────────────────────────────────────────
 // The confirmed rows are virtualized with `@shopify/flash-list` (the ratified P0-5 choice; the same pattern
@@ -102,25 +111,35 @@ export function PoolContributorList() {
   //     answer, by ruling; this guard is ⛔ not it and must ⛔ not be described as it.
   //   ⇒ the guard's ONE live trigger is a `contributor_list.row_a11y`-KEY-only miss: it degrades the
   //     affected rows, and if it hits every row the list falls to the empty-state branch.
+  // ⚠ ANNOTATED 2026-09-19 (Story 11b.21): the adapter no longer hardcodes `kind:'name'` — a `null` name is
+  //   the `unnamed` kind, which RENDERS the placeholder (`-224` D2). ⭐ So for a valid payload this guard
+  //   can ⛔ no longer drop a row: a withheld name is a placeholder row, never a missing one. Its live
+  //   triggers are now a `row_a11y` miss or a placeholder-key miss (`sahyog-vivran`).
   const renderableRows = useMemo(
     () =>
-      confirmedRows.map((item): { label: string; ariaLabel: string } | null => {
+      confirmedRows.map((item): { label: string; ariaLabel: string; isPlaceholder: boolean } | null => {
         try {
           const vm: ContributionRowViewModel = deriveContributionRowViewModel(
             toContributionRowInput(item, poolLetterCode),
           )
-          // The JOIN lives here, in the render layer, and nowhere upstream: the presenter emits name
-          // PARTS and never composes them, because the contributor name FORM is UNRULED (D9(a) /
-          // D7-nameform(a), routed to the Trustee Panel). This is the form Story 8.3 already ships.
-          const label = vm.displayName.lastInitial
-            ? `${vm.displayName.firstName} ${vm.displayName.lastInitial}`
-            : vm.displayName.firstName
+          // ⚠ SUPERSEDED 2026-09-19 by Story 11b.21 (quoted, ⛔ not deleted): *"The JOIN lives here, in the
+          //   render layer … the presenter emits name PARTS and never composes them, because the contributor
+          //   name FORM is UNRULED"*. The form is RULED (`-189` cl.3) and resolved on the SERVER; the name
+          //   renders AS-IS (⛔ no join). A withheld name renders the ruled placeholder, resolved from the
+          //   presenter's ref — key AND namespace both (`-224` D1: `sahyog-vivran`, ⛔ not `contribution`).
+          const label =
+            vm.displayName.kind === 'name'
+              ? vm.displayName.name
+              : t(vm.displayName.ref.key, undefined, { namespace: vm.displayName.ref.namespace })
+          const isPlaceholder = vm.displayName.kind === 'placeholder'
           // The KEY AND ITS NAMESPACE BOTH COME FROM THE PRESENTER'S REF, never guessed here — `t()`
           // defaults to `common` and THROWS on a miss, and the namespace is the THIRD argument (passing
           // it second lands it in the params slot and throws on every call). The `{name}` param is the
           // render layer's, deliberately: the presenter does not fill it.
+          // ⭐ `-224` D5 — the placeholder row is labelled by the SAME `row_a11y` string ("A contributor,
+          // confirmed contributor"): ⛔ no new copy, and ⛔ nothing that reads as a cause.
           const ariaLabel = t(vm.rowA11y.ref.key, { name: label }, { namespace: vm.rowA11y.ref.namespace })
-          return { label, ariaLabel }
+          return { label, ariaLabel, isPlaceholder }
         } catch (error) {
           // ⚠ NOT SILENT — and that is the point. The file header records that `confirmed` and the
           // aggregate figures LEGITIMATELY diverge (an erased contributor is omitted, 11b.2a's D5), so
@@ -169,7 +188,15 @@ export function PoolContributorList() {
           accessibilityRole="text"
           accessibilityLabel={renderable.ariaLabel}
         >
-          <Text fontFamily="$body" fontSize="$4" color="$color">
+          {/* ⭐ `-224` / AC5: the placeholder is visually the SAME row — plain text, italic and secondary
+              like the public page's `text-gray-600 italic`. ⛔ No icon, badge or colour that could read as
+              a CAUSE. */}
+          <Text
+            fontFamily="$body"
+            fontSize="$4"
+            color={renderable.isPlaceholder ? '$colorPress' : '$color'}
+            fontStyle={renderable.isPlaceholder ? 'italic' : 'normal'}
+          >
             {renderable.label}
           </Text>
         </View>
@@ -272,8 +299,12 @@ export function PoolContributorList() {
                 // recorded blocker — the PII-shielded shape carries no stable per-member identifier —
                 // is still true, because D5 vacated the `rowKey` that would have supplied one. Its
                 // re-trigger is the Epic 11b PUBLIC render (Story 11b.3), not this member surface.
+                // ⚠ ANNOTATED 2026-09-19 (Story 11b.21, `-224` D2): the name parts are gone from the wire,
+                //   so the key is the name (or '' for an unnamed row) plus the index. It is a CLIENT render
+                //   key that never leaves the device — ⛔ not a wire row key (`-222` cl.3, `-177` cl.3).
+                //   The deferral stays open.
                 keyExtractor={(item: ConfirmedContributorRow, index: number) =>
-                  `${item.firstName}-${item.lastInitial}-${index}`
+                  `${item.name ?? ''}-${index}`
                 }
               />
             )

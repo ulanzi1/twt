@@ -177,8 +177,10 @@ const VALID_CONTRIBUTOR_LIST = {
   assigned: true as const,
   pool: { letterCode: 'F', name: null, canonicalIdentifier: 'P-2026-07-001' },
   confirmed: [
-    { firstName: 'Rajesh', lastInitial: 'S' },
-    { firstName: 'Meena', lastInitial: '' },
+    // Story 11b.21 (`-224` D2): the row is `{ name }`; was `{ firstName, lastInitial }`.
+    { name: 'Rajesh Kumar Sharma' },
+    { name: null },
+    { name: 'Meena' },
   ],
   pending: { count: 46, percentage: 96 },
 };
@@ -195,7 +197,7 @@ describe('AC1/AC4 — the confirmed list is CONFIRMED-ONLY (no yellow/attested/p
 
   it('REJECTS a status/yellow/attested/utr field on a confirmed row (strict — the load-bearing teeth)', () => {
     for (const field of ['status', 'yellow', 'attested', 'utr', 'pending', 'confirmationState']) {
-      const leakyRow = { firstName: 'Rajesh', lastInitial: 'S', [field]: 'yellow' };
+      const leakyRow = { name: 'Rajesh Sharma', [field]: 'yellow' };
       expect(ConfirmedContributorRow.safeParse(leakyRow).success, `confirmed row must reject ${field}`).toBe(
         false,
       );
@@ -204,15 +206,30 @@ describe('AC1/AC4 — the confirmed list is CONFIRMED-ONLY (no yellow/attested/p
 
   it('REJECTS a ciphertext / full-name / phone / bank field on a confirmed row (PII shield, strict)', () => {
     for (const field of ['nameCiphertext', 'fullName', 'phone', 'bankAccount', 'memberId']) {
-      const leakyRow = { firstName: 'Rajesh', lastInitial: 'S', [field]: 'secret' };
+      const leakyRow = { name: 'Rajesh Sharma', [field]: 'secret' };
       expect(ConfirmedContributorRow.safeParse(leakyRow).success, `confirmed row must reject ${field}`).toBe(
         false,
       );
     }
   });
 
-  it('an empty last-initial is allowed (single-token name — no surname to leak)', () => {
-    expect(ConfirmedContributorRow.safeParse({ firstName: 'Meena', lastInitial: '' }).success).toBe(true);
+  // Was: "an empty last-initial is allowed (single-token name)" — inverted by Story 11b.21 / `-222`
+  // (`-224` D2): the row carries one nullable `name`; a mononym is simply a one-word name.
+  it('accepts a named row and a null-name row (the withheld name — `-222` cl.1), and nothing else', () => {
+    expect(ConfirmedContributorRow.safeParse({ name: 'Meena' }).success).toBe(true);
+    expect(ConfirmedContributorRow.safeParse({ name: null }).success).toBe(true);
+    // An empty string is ⛔ not a name — a withheld name is `null`, never `''`.
+    expect(ConfirmedContributorRow.safeParse({ name: '' }).success).toBe(false);
+    expect(ConfirmedContributorRow.safeParse({}).success).toBe(false);
+  });
+
+  it('REJECTS the retired name-part fields and any cause/key field (`-222` cl.2, `-177` cl.3)', () => {
+    for (const field of ['firstName', 'lastInitial', 'reason', 'cause', 'kind', 'rowKey', 'unnamed']) {
+      const leakyRow = { name: null, [field]: 'x' };
+      expect(ConfirmedContributorRow.safeParse(leakyRow).success, `confirmed row must reject ${field}`).toBe(
+        false,
+      );
+    }
   });
 });
 

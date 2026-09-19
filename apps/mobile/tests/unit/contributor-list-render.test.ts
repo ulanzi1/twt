@@ -31,6 +31,12 @@
 //
 // ⛔ This file still writes NO second i18n REF-CATALOGUE test (D12-refscope(a)) — it does not re-declare
 // the ten refs; it IMPORTS them from `@twt/ui` and resolves what that record already owns.
+//
+// ⚠ SUPERSEDED IN PART 2026-09-19 by Story 11b.21 / `2026-09-18-222` (`#decision-2026-09-19-224`): the wire
+// row is `{ name: string | null }`, the adapter maps it to `name | unnamed`, the presenter emits
+// `name | placeholder`, and the list KEEPS every confirmed row. Each rewritten `it(...)` below carries a
+// one-line "Was:" note naming what it used to assert and the ruling that inverted it. The ref catalogue
+// is now ELEVEN (the ruled placeholder, from `sahyog-vivran`).
 
 import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
@@ -45,6 +51,12 @@ import {
 import { describe, expect, it } from 'vitest'
 
 import { toContributionRowInput } from '../../components/contributor-list/contribution-row-input'
+import {
+  POOL_CONTRIBUTORS_QUERY_KEY,
+  RETIRED_POOL_CONTRIBUTORS_QUERY_KEY,
+  removeRetiredPoolContributorsCache,
+} from '../../components/contributor-list/pool-contributors-cache'
+import { QueryClient } from '@tanstack/react-query'
 
 // apps/mobile/tests/unit → repo root is four levels up (unit → tests → mobile → apps → root).
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..')
@@ -469,8 +481,9 @@ describe('AC1 / Trap 1 — the presenter throw is GUARDED, per row, so one bad r
         'figures legitimately diverge for an RTBF omission (D5), a render failure would be ' +
         'indistinguishable from a lawful erasure with nothing left to tell them apart.',
     ).toBe(true)
+    // Story 11b.21: the wire name field is now `name` — `item.name` joins the banned set.
     expect(
-      /firstName|lastInitial|\blabel\b/.test(/catch[\s\S]*$/.exec(derivationBlock)?.[0] ?? ''),
+      /firstName|lastInitial|\bitem\.name\b|\blabel\b/.test(/catch[\s\S]*$/.exec(derivationBlock)?.[0] ?? ''),
       'The diagnostic in the catch references member name data. The signal is the ACTION, never the ' +
         'subject — no member data may reach a log.',
     ).toBe(false)
@@ -484,8 +497,16 @@ describe('AC1 / Trap 1 — the presenter throw is GUARDED, per row, so one bad r
     expect(/anonymousMember/.test(component)).toBe(false)
   })
 
-  it('writes NO render arm for the unknown kind — the try/catch IS its handling (D8(a))', () => {
+  // Was: "the try/catch IS its handling (D8(a))". Story 11b.21 retired the `unknown` kind (`-224` D2) —
+  // a withheld name is the `unnamed` kind, rendered as the placeholder arm. Still: ⛔ no `unknown` arm.
+  it('writes NO render arm for the retired unknown kind', () => {
     expect(/['"]unknown['"]/.test(component)).toBe(false)
+  })
+
+  it('⭐ renders the PLACEHOLDER arm through t() of the presenter ref — key AND namespace (`-224` D1)', () => {
+    expect(derivationBlock).toMatch(/vm\.displayName\.kind\s*===\s*'name'/)
+    expect(derivationBlock).toMatch(/t\(\s*vm\.displayName\.ref\.key\s*,/)
+    expect(derivationBlock).toMatch(/namespace:\s*vm\.displayName\.ref\.namespace/)
   })
 })
 
@@ -504,10 +525,12 @@ describe('AC9 — the wire→presenter adapter (routed here BY NAME by Story 11b
     expect(adapter).toMatch(/import\s+type\s*\{[^}]*\bContributionRowInput\b[^}]*\}\s*from\s*'@twt\/ui'/)
   })
 
-  it('re-nests the flat name fields under displayName as the ONE input kind', () => {
+  // Was: "re-nests the flat name fields under displayName as the ONE input kind" (`firstName`/`lastInitial`).
+  // Story 11b.21 (`-224` D2): `{ name }` → `name | unnamed`.
+  it('maps the wire `name` to the `name` kind and a null name to the `unnamed` kind', () => {
     expect(adapter).toMatch(/kind:\s*'name'/)
-    expect(adapter).toMatch(/firstName/)
-    expect(adapter).toMatch(/lastInitial/)
+    expect(adapter).toMatch(/kind:\s*'unnamed'/)
+    expect(/firstName|lastInitial/.test(adapter), 'the retired name-part fields are still read').toBe(false)
   })
 
   it('splices the RESPONSE-level pool letter code onto each row', () => {
@@ -549,41 +572,35 @@ describe('AC9 — the wire→presenter adapter (routed here BY NAME by Story 11b
     // Every other assertion in this describe block regex-scans the adapter's SOURCE TEXT — a subtly
     // wrong implementation containing the right substrings (swapped fields, wrong nesting) would still
     // pass all of them. This is the one assertion that imports and calls the function for real.
-    const result = toContributionRowInput({ firstName: 'Reena', lastInitial: 'S' }, 'F')
-    expect(result).toEqual({
-      displayName: { kind: 'name', firstName: 'Reena', lastInitial: 'S' },
-      poolLetterCode: 'F',
-    })
+    // Was: `{ firstName: 'Reena', lastInitial: 'S' }` → `nameParts`-bound input (Story 11b.21, `-224` D2).
+    const result = toContributionRowInput({ name: 'Reena Sharma' }, 'F')
+    expect(result).toEqual({ displayName: { kind: 'name', name: 'Reena Sharma' }, poolLetterCode: 'F' })
   })
 
-  it('actually invoked: an empty lastInitial is re-shaped as-is, not coerced or dropped', () => {
-    const result = toContributionRowInput({ firstName: 'Amit', lastInitial: '' }, 'B')
-    expect(result.displayName).toEqual({ kind: 'name', firstName: 'Amit', lastInitial: '' })
+  // Was: "an empty lastInitial is re-shaped as-is" — the field is gone; the withheld case is `null`.
+  it('actually invoked: a null name becomes the `unnamed` kind — ⛔ never dropped, never a blank name', () => {
+    const result = toContributionRowInput({ name: null }, 'B')
+    expect(result).toEqual({ displayName: { kind: 'unnamed' }, poolLetterCode: 'B' })
   })
 
   // ⭐ ADDED at the second code review: the only two invocation cases were `'S'` and `''`, so every
   // non-Latin, multi-character and whitespace operand was unexercised on a surface whose whole subject
   // is Indian names.
-  it('actually invoked: Devanagari name parts pass through byte-for-byte', () => {
-    const result = toContributionRowInput({ firstName: 'रीना', lastInitial: 'शा' }, 'क')
-    expect(result).toEqual({
-      displayName: { kind: 'name', firstName: 'रीना', lastInitial: 'शा' },
-      poolLetterCode: 'क',
-    })
+  it('actually invoked: a Devanagari name passes through byte-for-byte', () => {
+    const result = toContributionRowInput({ name: 'रीना शर्मा' }, 'क')
+    expect(result).toEqual({ displayName: { kind: 'name', name: 'रीना शर्मा' }, poolLetterCode: 'क' })
   })
 
-  it('actually invoked: a multi-character lastInitial is passed through, NOT truncated here', () => {
-    // ⚠ This asserts the adapter's CONTRACT (re-shape only, AC9(4)), ⛔ not that the value is safe.
-    // `lastInitial: z.string().max(16)` bounds LENGTH, not SHAPE, so a producer regression could put a
-    // full surname on this PII-shielded surface — recorded as DEFERRED at the second code review, and
-    // ⛔ deliberately NOT patched here: truncating in the adapter would rule the name form (D7-nameform).
-    const result = toContributionRowInput({ firstName: 'Reena', lastInitial: 'Sharma' }, 'F')
-    expect(result.displayName).toEqual({ kind: 'name', firstName: 'Reena', lastInitial: 'Sharma' })
+  // Was: "a multi-character lastInitial is passed through, NOT truncated here". The server now resolves the
+  // FORM (`-224` D3); the adapter still re-shapes only and ⛔ never shortens a name.
+  it('actually invoked: a full name is passed through, NOT shortened here', () => {
+    const result = toContributionRowInput({ name: 'Reena Kumari Sharma' }, 'F')
+    expect(result.displayName).toEqual({ kind: 'name', name: 'Reena Kumari Sharma' })
   })
 
   it('actually invoked: whitespace is neither trimmed nor collapsed by the adapter', () => {
-    const result = toContributionRowInput({ firstName: ' ', lastInitial: ' ' }, 'A')
-    expect(result.displayName).toEqual({ kind: 'name', firstName: ' ', lastInitial: ' ' })
+    const result = toContributionRowInput({ name: ' ' }, 'A')
+    expect(result.displayName).toEqual({ kind: 'name', name: ' ' })
   })
 })
 
@@ -595,23 +612,24 @@ describe('AC6 — every displayName kind the presenter can take is rendered or P
     poolLetterCode: 'F',
   })
 
-  it("kind 'name' is the ONE renderable kind, and it yields nameParts", () => {
-    const vm = deriveContributionRowViewModel(
-      input({ kind: 'name', firstName: 'Reena', lastInitial: 'S' }),
-    )
-    expect(vm.displayName.kind).toBe('nameParts')
-    // The render layer reads exactly these two fields off the view-model and joins them itself.
-    expect(vm.displayName.firstName).toBe('Reena')
-    expect(vm.displayName.lastInitial).toBe('S')
+  // Was: "kind 'name' is the ONE renderable kind, and it yields nameParts" (Story 11b.21, `-224` D2).
+  it("kind 'name' yields the `name` arm carrying the server-resolved string unchanged", () => {
+    const vm = deriveContributionRowViewModel(input({ kind: 'name', name: 'Reena Sharma' }))
+    expect(vm.displayName).toEqual({ kind: 'name', name: 'Reena Sharma' })
   })
 
-  it("kind 'unknown' THROWS — and the component's try/catch is what handles it", () => {
-    expect(() => deriveContributionRowViewModel(input({ kind: 'unknown' }))).toThrow()
+  // Was: "kind 'unknown' THROWS — and the component's try/catch is what handles it" (`-168` cl.5,
+  // superseded as to the throw by `-224` D2): a withheld name now RENDERS.
+  it("kind 'unnamed' yields the `placeholder` arm — the ruled key, in `sahyog-vivran` (`-222`, `-224` D1)", () => {
+    const vm = deriveContributionRowViewModel(input({ kind: 'unnamed' }))
+    expect(vm.displayName).toEqual({
+      kind: 'placeholder',
+      ref: { key: 'value.contributor_unnamed', namespace: 'sahyog-vivran' },
+    })
   })
 
   it('ANTI-WIDENING — a THIRD kind throws too, so it cannot silently render blank', () => {
-    const forged = { kind: 'anonymized', firstName: 'x', lastInitial: 'y' } as unknown as
-      ContributionRowInput['displayName']
+    const forged = { kind: 'anonymized', name: 'x' } as unknown as ContributionRowInput['displayName']
     expect(
       () => deriveContributionRowViewModel(input(forged)),
       'A third display-name kind did not throw. Adding one is a RULING (11b.2a D5/D6(a) left exactly one ' +
@@ -619,7 +637,8 @@ describe('AC6 — every displayName kind the presenter can take is rendered or P
     ).toThrow()
   })
 
-  it('the component reads the nameParts arm off the view-model, not the wire row', () => {
+  // Was: "reads the nameParts arm" with WIRE_READ = `item.(firstName|lastInitial)` (Story 11b.21: `item.name`).
+  it('the component reads the name off the view-model, not the wire row', () => {
     // ⚠⚠ REWRITTEN AT THE COMBINED REVIEW (2026-09-01). This USED TO BE a file-wide BUDGET
     // (`itemReads.length <= 2`) rather than a LOCATION check — and `keyExtractor` alone consumes both
     // allowed slots. ⇒ a refactor that composed the label from `item.firstName`/`item.lastInitial`
@@ -630,7 +649,7 @@ describe('AC6 — every displayName kind the presenter can take is rendered or P
     // The rule, stated positively: the wire row may be read ONLY by `keyExtractor` (which needs the
     // parts for its composite key, AC3's still-open `index` deferral). ⛔ The derivation block and the
     // render block must go through the presenter's view-model and touch `item.*` NEVER.
-    const WIRE_READ = /\bitem\.(firstName|lastInitial)\b/g
+    const WIRE_READ = /\bitem\.name\b/g
 
     expect(derivationBlock, 'derivation block not found — the check would be vacuous').not.toBe('')
     expect(renderItemBlock, 'renderItem block not found — the check would be vacuous').not.toBe('')
@@ -695,8 +714,69 @@ describe('AC5 — behaviour is preserved, stated as five named properties', () =
 })
 
 describe('AC3 — the keyExtractor KEEPS index; the 8.3 deferral stays open', () => {
-  it('is byte-unchanged: `${item.firstName}-${item.lastInitial}-${index}`', () => {
-    expect(component).toContain('`${item.firstName}-${item.lastInitial}-${index}`')
+  // Was: byte-pinned to `${item.firstName}-${item.lastInitial}-${index}`. Story 11b.21 (`-224` D2) removed the
+  // name parts from the wire; the key is a CLIENT render key, ⛔ never a wire row key (`-222` cl.3).
+  it("is byte-pinned: `${item.name ?? ''}-${index}` — no name parts, index kept", () => {
+    expect(component).toContain("`${item.name ?? ''}-${index}`")
+    expect(/item\.(firstName|lastInitial)/.test(component)).toBe(false)
+  })
+})
+
+// ─── Story 11b.21 — nothing is dropped, and the cache is never persisted (AC5, AC6(c); `-224` D2, D6) ───
+
+describe('Story 11b.21 — a valid payload renders EVERY row', () => {
+  it('[name, null, name] derives THREE rows through the real adapter + presenter + t() — none dropped', () => {
+    const rows = [{ name: 'Reena Sharma' }, { name: null }, { name: 'Amit Verma' }]
+    for (const locale of ['en', 'hi'] as const) {
+      const derived = rows.map((row) => {
+        const vm = deriveContributionRowViewModel(toContributionRowInput(row, 'F'))
+        const label =
+          vm.displayName.kind === 'name'
+            ? vm.displayName.name
+            : t(vm.displayName.ref.key, undefined, { locale, namespace: vm.displayName.ref.namespace })
+        const ariaLabel = t(vm.rowA11y.ref.key, { name: label }, { locale, namespace: vm.rowA11y.ref.namespace })
+        return { label, ariaLabel }
+      })
+      expect(derived).toHaveLength(3)
+      expect(derived[0]!.label).toBe('Reena Sharma')
+      expect(derived[1]!.label).toBe(locale === 'en' ? 'A contributor' : 'एक सहकर्मी')
+      expect(derived[2]!.label).toBe('Amit Verma')
+      // D5: the placeholder row's label is the SAME row_a11y string — no new copy.
+      expect(derived[1]!.ariaLabel).toBe(
+        t('contributor_list.row_a11y', { name: derived[1]!.label }, { locale, namespace: 'contribution' }),
+      )
+    }
+  })
+
+  it('the placeholder row carries no cause-coloured chrome — only an italic/secondary text style', () => {
+    expect(renderItemBlock).toMatch(/isPlaceholder\s*\?\s*'italic'/)
+    expect(/\$(red|orange|yellow|danger|warning)/i.test(renderItemBlock)).toBe(false)
+    expect(/Icon|Badge/.test(renderItemBlock)).toBe(false)
+  })
+})
+
+describe('Story 11b.21 — D6: the contributor list is ⛔ never persisted, and the retired key is removed', () => {
+  const hook = stripComments(read(HOOK))
+  const provider = stripComments(read('apps/mobile/components/Provider.tsx'))
+
+  it('the hook uses the NEW key and `gcTime: 0` (the never-persist marker Provider.tsx reads)', () => {
+    expect(POOL_CONTRIBUTORS_QUERY_KEY).toEqual(['member', 'pool-contributors', 'v2'])
+    expect(hook).toMatch(/queryKey:\s*POOL_CONTRIBUTORS_QUERY_KEY/)
+    expect(hook).toMatch(/gcTime:\s*0\b/)
+    expect(provider).toMatch(/query\.options\.gcTime\s*!==\s*0/)
+  })
+
+  it('Provider.tsx removes the retired key once, after restore (onSuccess)', () => {
+    expect(provider).toMatch(/onSuccess=\{\s*\(\)\s*=>\s*removeRetiredPoolContributorsCache\(queryClient\)\s*\}/)
+  })
+
+  it('actually invoked: removes EXACTLY the retired key and keeps the current one', () => {
+    const client = new QueryClient()
+    client.setQueryData([...RETIRED_POOL_CONTRIBUTORS_QUERY_KEY], { assigned: false })
+    client.setQueryData([...POOL_CONTRIBUTORS_QUERY_KEY], { assigned: false })
+    removeRetiredPoolContributorsCache(client)
+    expect(client.getQueryData([...RETIRED_POOL_CONTRIBUTORS_QUERY_KEY])).toBeUndefined()
+    expect(client.getQueryData([...POOL_CONTRIBUTORS_QUERY_KEY])).toEqual({ assigned: false })
   })
 })
 
@@ -934,7 +1014,7 @@ describe('AC6 — every t() call site passes an EXPLICIT namespace (t() defaults
 
   it('and that ref IS contributor_list.row_a11y in the contribution namespace (presenter-driven)', () => {
     const vm = deriveContributionRowViewModel({
-      displayName: { kind: 'name', firstName: 'Reena', lastInitial: 'S' },
+      displayName: { kind: 'name', name: 'Reena Sharma' },
       poolLetterCode: 'F',
     })
     expect(vm.rowA11y.ref.key).toBe('contributor_list.row_a11y')
@@ -1202,7 +1282,8 @@ describe('⭐ `11b.2 (vi)` — every @twt/ui contribution-list REF resolves thro
   it('the ref catalogue is non-empty and is the one @twt/ui exports — the check cannot be vacuous', () => {
     // ⛔ NOT re-declared here (D12-refscope(a)): the record is 11b.2's and this file IMPORTS it, so a ref
     // added there is automatically covered here and cannot be silently missed.
-    expect(refs.length).toBe(10)
+    // Was: `toBe(10)`. Story 11b.21 (`-224` D1) adds the ruled placeholder ref (`sahyog-vivran`).
+    expect(refs.length).toBe(11)
   })
 
   // ⭐⭐ THE PARAMS MAP IS ITSELF PART OF THE PROOF, and it is why a disk read was never equivalent.

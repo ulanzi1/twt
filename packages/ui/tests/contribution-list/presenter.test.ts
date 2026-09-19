@@ -11,6 +11,12 @@
 // UNEXERCISED in Completion Notes and routed as deferred work — never written up as tested. What IS asserted
 // below is the branch's BEHAVIOUR when handed one: it THROWS (D8(a)). A throwing exhaustiveness guard that
 // never fires is working.
+//
+// ⚠ SUPERSEDED 2026-09-19 by Story 11b.21 / `2026-09-18-222` (`#decision-2026-09-19-224` D1/D2): the
+// member wire now carries `{ name: string | null }`, so a withheld name IS producible and renders a
+// PLACEHOLDER from ONE existing key (`sahyog-vivran` → `value.contributor_unnamed`). The input kinds are
+// `name | unnamed`, the output arms `name | placeholder`; the `unknown` throw is gone, and the `never`
+// guard still throws with the KIND only.
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -30,7 +36,7 @@ import type {
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
 
 const row = (over: Partial<ContributionRowInput> = {}): ContributionRowInput => ({
-  displayName: { kind: 'name', firstName: 'Sushil', lastInitial: 'K' },
+  displayName: { kind: 'name', name: 'Sushil Kumar' },
   poolLetterCode: 'F',
   ...over,
 });
@@ -48,49 +54,68 @@ describe('deriveContributionRowViewModel — the row content contract', () => {
   });
 });
 
-describe('NAME PARTS ONLY — the presenter NEVER joins firstName + lastInitial (D9(a))', () => {
-  it('emits the two parts unchanged under a single `nameParts` arm (D11-outputshape(a))', () => {
-    const vm = deriveContributionRowViewModel(
-      row({ displayName: { kind: 'name', firstName: 'Sushil', lastInitial: 'K' } }),
-    );
-    expect(vm.displayName).toEqual({ kind: 'nameParts', firstName: 'Sushil', lastInitial: 'K' });
+// Was: "NAME PARTS ONLY — the presenter NEVER joins firstName + lastInitial (D9(a))". Inverted by Story
+// 11b.21 (`-224` D2/D3): the server resolves the name FORM (mode-resolved, `-189` cl.3) and the wire carries
+// ONE string; the presenter passes it through and still composes nothing.
+describe('THE NAME PASSES THROUGH — the presenter never re-forms a server-resolved name', () => {
+  it('emits the resolved name unchanged under the `name` arm', () => {
+    const vm = deriveContributionRowViewModel(row({ displayName: { kind: 'name', name: 'Rajesh S.' } }));
+    expect(vm.displayName).toEqual({ kind: 'name', name: 'Rajesh S.' });
   });
 
-  it('⭐ emits NO composed name string anywhere in the view-model — joining would RULE the name FORM', () => {
-    // The name FORM is UNRULED (D7-nameform(a)) and routed to the Trustee Panel. A join here would decide it
-    // in presenter.ts and make the routed deferral false on the day it was written. This asserts the negative
-    // over the WHOLE serialized view-model, not just the displayName field, so a join cannot hide elsewhere.
+  it('⭐ does not shorten, split or re-case a full name', () => {
     const vm = deriveContributionRowViewModel(
-      row({ displayName: { kind: 'name', firstName: 'Sushil', lastInitial: 'K' } }),
+      row({ displayName: { kind: 'name', name: 'Rajesh Kumar Sharma' } }),
     );
-    const serialized = JSON.stringify(vm);
-    for (const joined of ['Sushil K', 'Sushil K.', 'SushilK', 'K Sushil', 'K. Sushil']) {
-      expect(
-        serialized,
-        `the presenter composed "${joined}" — the contributor name FORM is UNRULED and the join belongs to the render layer`,
-      ).not.toContain(joined);
+    expect(JSON.stringify(vm)).toContain('"name":"Rajesh Kumar Sharma"');
+  });
+});
+
+describe('THE UNNAMED ROW — a placeholder arm, from ONE key (`-222` cl.1–cl.2, `-224` D1)', () => {
+  it('an `unnamed` input renders the placeholder ref — ⛔ it does not throw and ⛔ it is not dropped', () => {
+    const vm = deriveContributionRowViewModel(row({ displayName: { kind: 'unnamed' } }));
+    expect(vm.displayName).toEqual({
+      kind: 'placeholder',
+      ref: { key: 'value.contributor_unnamed', namespace: 'sahyog-vivran' },
+    });
+    expect(vm.displayName).toEqual({ kind: 'placeholder', ref: CONTRIBUTION_LIST_I18N_REFS.contributorUnnamed });
+  });
+
+  it('the placeholder row keeps the SAME row a11y ref and pool letter as a named row (D5 — no new copy)', () => {
+    const named = deriveContributionRowViewModel(row());
+    const unnamed = deriveContributionRowViewModel(row({ displayName: { kind: 'unnamed' } }));
+    expect(unnamed.rowA11y).toEqual(named.rowA11y);
+    expect(unnamed.poolLetterCode).toBe(named.poolLetterCode);
+  });
+
+  it('⛔ the placeholder carries ⛔ no cause — no erasure copy, no reason field', () => {
+    const serialized = JSON.stringify(deriveContributionRowViewModel(row({ displayName: { kind: 'unnamed' } })));
+    for (const banned of ['anonym', 'erase', 'reason', 'cause', 'rtbf', 'withheld']) {
+      expect(serialized.toLowerCase()).not.toContain(banned);
     }
-    // Belt and braces: the parts ARE both present, so the negative above is not vacuously true.
-    expect(serialized).toContain('Sushil');
-    expect(serialized).toContain('"lastInitial":"K"');
   });
 });
 
 describe('EXHAUSTIVENESS over the display-name kind — TWO kinds, not three and not one (AC3)', () => {
-  // The local mirror carries `name | unknown`. `@twt/domain`'s own union has a THIRD kind; it is deliberately
-  // absent because 11b.2a's D5 omits an RTBF'd contributor's row entirely, so no producer can hand this
-  // presenter one (11b.2a's D6(a)). This literal is the compile-time half of that claim: adding a kind
-  // upstream leaves it MISSING a key; removing one leaves it EXCESS.
-  const KINDS: Record<ContributionRowDisplayName['kind'], true> = { name: true, unknown: true };
+  // Was: `name | unknown`, with `unknown` THROWING (`-168` cl.5). Story 11b.21 (`-224` D2): `name | unnamed`,
+  // and `unnamed` RENDERS. ⚠ This literal is the compile-time half: adding a kind leaves it MISSING a key;
+  // removing one leaves it EXCESS.
+  const KINDS: Record<ContributionRowDisplayName['kind'], true> = { name: true, unnamed: true };
 
   it('the input variant has EXACTLY two kinds — a third cannot be added without a ruling', () => {
-    expect(Object.keys(KINDS).sort()).toEqual(['name', 'unknown']);
+    expect(Object.keys(KINDS).sort()).toEqual(['name', 'unnamed']);
   });
 
-  it('⛔ `unknown` THROWS — it never renders a blank, and it never borrows erasure copy (D8(a))', () => {
-    expect(() => deriveContributionRowViewModel(row({ displayName: { kind: 'unknown' } }))).toThrow(
-      /unresolvable contributor name/,
-    );
+  it('⛔ a forged retired `unknown` kind THROWS via the `never` guard — with the KIND only, ⛔ never the operand', () => {
+    const forged = { kind: 'unknown', name: 'Secret Person' } as unknown as ContributionRowDisplayName;
+    let message = '';
+    try {
+      deriveContributionRowViewModel(row({ displayName: forged }));
+    } catch (err) {
+      message = (err as Error).message;
+    }
+    expect(message).toMatch(/unhandled display-name kind: unknown/);
+    expect(message).not.toContain('Secret');
   });
 
   it('⛔ the anonymized kind is NOT accepted — an unhandled kind throws rather than blanking the name', () => {
@@ -102,9 +127,11 @@ describe('EXHAUSTIVENESS over the display-name kind — TWO kinds, not three and
     );
   });
 
-  it('the OUTPUT union is a SINGLE `nameParts` arm (D11-outputshape(a))', () => {
-    const ARMS: Record<ContributionRowViewModel['displayName']['kind'], true> = { nameParts: true };
-    expect(Object.keys(ARMS)).toEqual(['nameParts']);
+  // Was: "the OUTPUT union is a SINGLE `nameParts` arm (D11-outputshape(a))" — `-169` cl.8 superseded in
+  // part (presenter + render layer) by `-224` D2.
+  it('the OUTPUT union is EXACTLY `name | placeholder` — ⛔ the `nameParts` arm is gone', () => {
+    const ARMS: Record<ContributionRowViewModel['displayName']['kind'], true> = { name: true, placeholder: true };
+    expect(Object.keys(ARMS).sort()).toEqual(['name', 'placeholder']);
   });
 });
 
@@ -132,18 +159,17 @@ describe('ANTI-WIDENING — confirmed-only is preserved as a SHAPE (AC4, D2(a))'
   // SUBSTRING-matched, and the key set is a TYPED LITERAL the compiler forces complete — never a hand-written
   // array, which would be decoupled from the types and vacuous by construction.
   type AllKeys<T> = T extends object ? { [K in keyof T]: K | AllKeys<T[K]> }[keyof T] : never;
+  // Story 11b.21: `firstName`/`lastInitial` → `name`; the placeholder arm adds `ref`/`key`/`namespace`.
   const NESTED_INPUT_KEYS: Record<AllKeys<ContributionRowInput>, true> = {
     displayName: true,
     kind: true,
-    firstName: true,
-    lastInitial: true,
+    name: true,
     poolLetterCode: true,
   };
   const NESTED_VIEW_MODEL_KEYS: Record<AllKeys<ContributionRowViewModel>, true> = {
     displayName: true,
     kind: true,
-    firstName: true,
-    lastInitial: true,
+    name: true,
     poolLetterCode: true,
     rowA11y: true,
     ref: true,
@@ -167,7 +193,10 @@ describe('ANTI-WIDENING — confirmed-only is preserved as a SHAPE (AC4, D2(a))'
   it('(d) the ACTUAL RUNTIME return value carries exactly the declared keys — a compile-time literal alone cannot see an unsafe cast or object spread adding an extra property', () => {
     const vm = deriveContributionRowViewModel(row());
     expect(Object.keys(vm).sort()).toEqual(Object.keys(VIEW_MODEL_KEYS).sort());
-    expect(Object.keys(vm.displayName).sort()).toEqual(['firstName', 'kind', 'lastInitial']);
+    expect(Object.keys(vm.displayName).sort()).toEqual(['kind', 'name']);
+    const placeholder = deriveContributionRowViewModel(row({ displayName: { kind: 'unnamed' } }));
+    expect(Object.keys(placeholder).sort()).toEqual(Object.keys(VIEW_MODEL_KEYS).sort());
+    expect(Object.keys(placeholder.displayName).sort()).toEqual(['kind', 'ref']);
     expect(Object.keys(vm.rowA11y).sort()).toEqual(['ref']);
   });
 
@@ -199,9 +228,15 @@ describe('AC2 — every declared i18n REF resolves in the namespace it CLAIMS, i
   // to avoid. Let `readFileSync` throw.
   const refs = Object.values(CONTRIBUTION_LIST_I18N_REFS);
 
-  it('declares all TEN `contributor_list.*` refs — and ⛔ NOT `member.anonymousMember`', () => {
-    expect(refs).toHaveLength(10);
-    for (const ref of refs) expect(ref.key.startsWith('contributor_list.')).toBe(true);
+  // Was: "declares all TEN `contributor_list.*` refs" with every key `startsWith('contributor_list.')`.
+  // Story 11b.21 (`-224` D1) adds exactly ONE ref from another namespace — the ruled placeholder word.
+  it('declares ELEVEN refs: the ten `contributor_list.*` + EXACTLY ONE `sahyog-vivran` placeholder — ⛔ NOT `member.anonymousMember`', () => {
+    expect(refs).toHaveLength(11);
+    const foreign = refs.filter((ref) => !ref.key.startsWith('contributor_list.'));
+    expect(foreign).toEqual([{ key: 'value.contributor_unnamed', namespace: 'sahyog-vivran' }]);
+    for (const ref of refs) {
+      if (ref !== foreign[0]) expect(ref.namespace).toBe('contribution');
+    }
     expect(refs.map((r) => r.key)).not.toContain('member.anonymousMember');
   });
 
@@ -226,7 +261,7 @@ describe('AC2 — every declared i18n REF resolves in the namespace it CLAIMS, i
     });
   }
 
-  it('the ROW presenter emits exactly ONE of the ten (`row_a11y`), which takes a `{name}` param', () => {
+  it('the ROW presenter emits `row_a11y` (and, for an unnamed row, the placeholder); `row_a11y` takes a `{name}` param', () => {
     const vm = deriveContributionRowViewModel(row());
     expect(vm.rowA11y.ref.key).toBe('contributor_list.row_a11y');
     const bundle = JSON.parse(

@@ -94,7 +94,8 @@ The fake's `decryptDek` throws with gRPC `code: 3` (INVALID_ARGUMENT) for a malf
 is **assumed** to return for the same faults. Callers now depend on it: the public
 Sahyog Vivran route treats `code: 3` as a fault of that one stored name and any other
 failure as a KMS outage (`apps/api/src/modules/public-pages/handlers.ts`,
-`withKmsOutageClassification`). ⚠ **Un-attested:** no live-KMS evidence of that code is
+`withKmsOutageClassification`). ⚠ Since Story 11b.21 (2026-09-19) the classifier lives in
+`apps/api/src/modules/kyc/name-render.ts` and the MEMBER contributor list uses it too. ⚠ **Un-attested:** no live-KMS evidence of that code is
 in the repo; see `deferred-work.md` (11b-3b sixth pass). If the live service answers
 differently, a corrupt stored name fails closed as an outage (a 503), not open.
 

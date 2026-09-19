@@ -122,6 +122,8 @@ describe('mapWithConcurrency', () => {
     // The caller's guard is `row !== null`; `undefined` passes it and the type predicate then asserts
     // `undefined is ConfirmedContributorRow`. This pins that a resolved array is fully populated, so a
     // future non-throwing early exit fails HERE rather than serialising `undefined` onto the wire.
+    // ⚠ ANNOTATED 2026-09-19 (Story 11b.21): the contributor caller no longer filters (`{ name: null }` rows
+    // are kept), so a hole would reach the wire with ⛔ no guard at all — this pin is now the only one.
     const out = await mapWithConcurrency([1, 2, 3, 4, 5], 2, async (n) => (n % 2 === 0 ? null : n));
     expect(out).toHaveLength(5);
     expect(out.every((v) => v !== undefined)).toBe(true);

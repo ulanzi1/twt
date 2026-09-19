@@ -26,6 +26,13 @@
 // vacated the ruling that would have supplied one, it ships in neither `@twt/ui` interface, and NO value
 // may be invented to satisfy a type. The FlashList `keyExtractor` keeps `index` (AC3).
 //
+// ⚠⛔ SUPERSEDED 2026-09-19 by Story 11b.21 (`#decision-2026-09-19-224` D2) — ⛔ the paragraphs above are KEPT
+// as the record. The wire row is now `{ name: string | null }`: a string is the server's MODE-RESOLVED name
+// (`-189` cl.3) and maps to `{ kind: 'name', name }` UNCHANGED; `null` is a confirmed contributor whose name
+// cannot be shown and maps to `{ kind: 'unnamed' }` — the row is KEPT and renders the ruled placeholder
+// (`2026-09-18-222`). "ONE KIND" and "`{ firstName, lastInitial }`" no longer hold; "NO `rowKey`" and
+// "re-shapes, and does nothing else" still do. ⛔ It still joins, trims and interprets nothing.
+//
 // `@twt/contracts` is IMPORTED (type-only), NEVER EDITED (D10(a) / Decision 2026-09-01-171 cl.1). That
 // includes `pool-contributor-list.ts:88`'s stale "Epic 9's producer is unbuilt" doc-block — false since
 // Story 9.4/9.5, contradicting its own file header at :7-8, a SEPARATE stale-contract issue, and routed
@@ -50,11 +57,7 @@ export function toContributionRowInput(
   poolLetterCode: string,
 ): ContributionRowInput {
   return {
-    displayName: {
-      kind: 'name',
-      firstName: row.firstName,
-      lastInitial: row.lastInitial,
-    },
+    displayName: row.name === null ? { kind: 'unnamed' } : { kind: 'name', name: row.name },
     poolLetterCode,
   }
 }

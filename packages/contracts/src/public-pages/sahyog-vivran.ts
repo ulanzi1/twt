@@ -545,6 +545,9 @@ export type PublicSahyogVivranEntry = z.output<typeof PublicSahyogVivranEntry>;
  * carried, ⛔ not an accepted trade. On merge the PUBLIC sees MORE of a contributor's name than a
  * MEMBER does. ⛔ Do ⛔ not "fix" it here: the discharge is the MEMBER-SURFACE story `11b-21`, which
  * raises the member side. See the story's AC10, which STATES the non-compliance rather than curing it.
+ * ⚠ ANNOTATED 2026-09-19 — DISCHARGED by Story 11b.21 (`#decision-2026-09-19-224`): the member wire is now
+ * `{ name: string | null }`, MODE-RESOLVED over the SAME cleaned tokens this route uses, so the member form
+ * equals or exceeds the public form for every stored name and mode. The paragraph above is the record.
  *
  * ⚠ `.min(1)` IS LOAD-BEARING — the boundary normalises with **`normalisePublicName`** (trim PLUS the
  * zero-width strip), ⛔ never `=== ''`. An empty or whitespace-only name is ⛔ not a name.
@@ -568,6 +571,8 @@ export type PublicSahyogVivranEntry = z.output<typeof PublicSahyogVivranEntry>;
  * surface; ⭐ `2026-09-18-222` (Trustee-ratified) extends that to the MEMBER contributor list, in the
  * SAME words. ⚠ Until story `11b-21` builds it, `packages/ui/src/contribution-list` still OMITS the
  * row — a SHIPPED gap against `-222`, ⛔ no longer a ruled difference.
+ * ⚠ ANNOTATED 2026-09-19 — BUILT by Story 11b.21: the member list keeps the row and renders the same word
+ * from THIS surface's key (`sahyog-vivran` → `value.contributor_unnamed`, `-224` D1 — one key, ⛔ no second).
  */
 export const PublicSahyogVivranContributor = z
   .object({

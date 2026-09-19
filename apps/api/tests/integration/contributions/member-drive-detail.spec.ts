@@ -714,6 +714,8 @@ describe.skipIf(!hasDatabase)('⭐⭐ 11b.17 — the member drive DETAIL, live',
     // `resolveMemberFacingDeceasedName` filters it, and `.trim() || null` does ⛔ not catch it either.
     // ⚠⛔ **THE REMEDY DIVERGES BY SURFACE AND ⛔ MUST NOT BE "ALIGNED"**: `pool-contributors` OMITS
     // the row; here the erased member ⭐ **IS** the drive, so the DRIVE STAYS and the NAME GOES.
+    // ⚠ ANNOTATED 2026-09-19 (Story 11b.21): `pool-contributors` no longer omits the row — it keeps it as
+    // `{ name: null }` (`2026-09-18-222`), so both surfaces now keep the row and drop the name.
     const f = await seedDrive(t, {
       poolState: 'live',
       confirmed: 1,

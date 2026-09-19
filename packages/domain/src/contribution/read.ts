@@ -4,6 +4,8 @@
 // is the load-bearing read: "who has a RECONCILIATION-CONFIRMED contribution in this pool?" — every member
 // carried by a `contribution.confirmed` event scoped to the pool. A transport-free PRIMITIVE: NO HTTP, NO
 // decryption — the apps/api boundary decrypts each returned member's own KYC name to first-name + last-initial.
+// ⚠ SUPERSEDED 2026-09-19 by Story 11b.21 (`#decision-2026-09-19-224`): the boundary now renders the
+// MODE-RESOLVED name (or `null`, kept in position) — ⛔ no longer first-name + last-initial. This read is unchanged.
 //
 // ── The confirmed-only invariant is the ENTIRE point of this read (D1) ──────────────────────────────────
 // Contributor visibility derives EXCLUSIVELY from `contribution.confirmed` (green-pill, Epic 9's producer).
@@ -108,7 +110,8 @@ export interface ListConfirmedContributorsParams {
   readonly poolId: PoolId;
 }
 
-/** A confirmed contributor — the member IDENTITY only. The boundary decrypts to first-name + last-initial. */
+/** A confirmed contributor — the member IDENTITY only. The boundary decrypts to first-name + last-initial.
+ *  ⚠ SUPERSEDED 2026-09-19 (Story 11b.21): to the MODE-RESOLVED name — see the file header. */
 export interface ConfirmedContributor {
   readonly memberId: MemberId;
 }

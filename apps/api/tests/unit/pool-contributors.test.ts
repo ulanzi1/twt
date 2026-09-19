@@ -9,6 +9,10 @@
 // alone — those only prove the math given numbers; this proves `resolveContributorList` PASSES
 // the right number. Mirrors the `dpdpa-consent-record-atomicity.test.ts` mocked-`@twt/domain`
 // pattern rather than standing up a live-DB + KMS harness for a single handler-wiring assertion.
+//
+// ⚠ SUPERSEDED 2026-09-19 by Story 11b.21 / `-222` (`#decision-2026-09-19-224`): an unresolvable
+// contributor is no longer OMITTED — the row is KEPT as `{ name: null }` in position. The pending
+// invariant above is unchanged (`-169` cl.6); it now also proves the row count equals the confirmed set.
 
 import type { FastifyRequest } from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
@@ -24,6 +28,7 @@ const resolveAssignedPoolWithRosterForMember = vi.fn();
 const reserveNames = vi.fn();
 const listConfirmedContributorsForPool = vi.fn();
 const getMemberKycProfile = vi.fn();
+const resolvePublicNamePresentationMode = vi.fn();
 
 vi.mock('@twt/domain', async (importActual) => {
   const actual = await importActual<typeof import('@twt/domain')>();
@@ -33,7 +38,7 @@ vi.mock('@twt/domain', async (importActual) => {
     alert: { ...actual.alert, listLiveAlertsForPariwar },
     pool: { ...actual.pool, getCycleFreezeCommittedAt, resolveAssignedPoolWithRosterForMember, reserveNames },
     contribution: { ...actual.contribution, listConfirmedContributorsForPool },
-    kyc: { ...actual.kyc, getMemberKycProfile },
+    kyc: { ...actual.kyc, getMemberKycProfile, resolvePublicNamePresentationMode },
   };
 });
 
@@ -62,11 +67,13 @@ function fakeRequest(): FastifyRequest {
 }
 
 describe('poolContributors — pending aggregate uses the CONFIRMED-SET size, not the visible-row count', () => {
-  it('a confirmed contributor with an unresolvable KYC name is omitted from `confirmed` rows but still counted for `pending`', async () => {
+  // Was: "…is omitted from `confirmed` rows but still counted for `pending`" — inverted by `-222` cl.1
+  // (Story 11b.21): the unresolvable row is KEPT as a placeholder, in position.
+  it('a confirmed contributor with an unresolvable KYC name is KEPT as `{ name: null }` in position and still counted for `pending`', async () => {
     getMemberStateAt.mockResolvedValue('active');
-    // Story 11b.2a: the handler batches contributor lifecycle state to decide whom to OMIT (AC1/AC2).
-    // Neither contributor here is `anonymized`, so this case is unchanged by the RTBF fix — which is
-    // the point: the three INTEGRITY skips still behave exactly as Story 8.3 shipped them.
+    resolvePublicNamePresentationMode.mockResolvedValue('full_name');
+    // Story 11b.21 (`-224` D7): the batched state read is GONE from this path. The stub stays wired
+    // and is asserted UNUSED below, so a re-introduced pre-filter fails here.
     getCurrentMemberStates.mockImplementation(
       async (_tx: unknown, ids: readonly string[]) => new Map(ids.map((id) => [id, 'active'])),
     );
@@ -106,19 +113,61 @@ describe('poolContributors — pending aggregate uses the CONFIRMED-SET size, no
     const result = await handlers.poolContributors(fakeRequest());
 
     if (!result.assigned) throw new Error('expected an assigned result');
-    // Only the resolvable contributor is a visible row.
-    expect(result.confirmed).toEqual([{ firstName: 'Rajesh', lastInitial: 'S' }]);
-    // The load-bearing assertion: pending is `rosterSize(3) − confirmedCount(2)` = 1, NOT
-    // `rosterSize(3) − visibleRows(1)` = 2. A regression that swaps `confirmed.length` for
-    // `rows.length` in the handler would understate confirmation and must fail this test.
+    // Was: `[{ firstName: 'Rajesh', lastInitial: 'S' }]` — the shielded form, the unresolvable row
+    // dropped. Now (`-224` D2/D3): the mode-resolved name (`full_name` ⇒ the full name) and the
+    // unresolvable row KEPT, in producer order.
+    expect(result.confirmed).toEqual([{ name: 'Rajesh Sharma' }, { name: null }]);
+    // The load-bearing assertion: pending is `rosterSize(3) − confirmedCount(2)` = 1. A regression
+    // that computes it from anything but `confirmed.length` must fail this test.
     expect(result.pending).toEqual({ count: 1, percentage: 33 });
+    // The mode is read ONCE per request (`-181` cl.2), ⛔ never per row.
+    expect(resolvePublicNamePresentationMode).toHaveBeenCalledTimes(1);
 
-    // ⭐⭐ AC2 / Trap 1, ASSERTED AT THE CALL SITE — the gate the first review pass's own fix walked
-    //    through. `batched-member-states.test.ts` proves the DOMAIN resolver is O(1), but it is
-    //    structurally blind to how the handler calls it: a per-row `getCurrentMemberState` re-check
-    //    shipped for a whole commit while that suite stayed green. State resolution must cost ONE
-    //    round trip for the whole confirmed set, whatever the contributor count.
-    expect(getCurrentMemberStates).toHaveBeenCalledTimes(1);
+    // Was: `expect(getCurrentMemberStates).toHaveBeenCalledTimes(1)` (Story 11b.2a's ONE batched read).
+    // Inverted by `-224` D7: ⛔ no lifecycle read on this path at all — erasure is caught at the
+    // decrypted plaintext, so every withheld cause with a profile costs the same one decrypt.
+    expect(getCurrentMemberStates).not.toHaveBeenCalled();
     expect(getCurrentMemberState).not.toHaveBeenCalled();
+  });
+
+  it('under `shielded_name` a mononym is SHOWN and a dirty name is cleaned to the public form (`-224` D3)', async () => {
+    resolvePublicNamePresentationMode.mockResolvedValue('shielded_name');
+    listConfirmedContributorsForPool.mockResolvedValue([
+      { memberId: CONFIRMED_MEMBER_OK },
+      { memberId: CONFIRMED_MEMBER_UNRESOLVABLE },
+    ]);
+    getMemberKycProfile.mockResolvedValue({ nameCiphertext: 'enc:v1:fake' });
+    decryptKycField
+      .mockResolvedValueOnce('Ravi')
+      .mockResolvedValueOnce('Rajesh \u200bSharma');
+
+    const deps = { clock: () => new Date('2026-07-05T00:00:00.000Z'), encryption: {} } as unknown as AppDeps;
+    const result = await createMemberPoolHandlers(deps).poolContributors(fakeRequest());
+    if (!result.assigned) throw new Error('expected an assigned result');
+    expect(result.confirmed).toEqual([{ name: 'Ravi' }, { name: 'Rajesh S.' }]);
+  });
+
+  it('a KMS OUTAGE self-suppresses the list — ⛔ never N placeholders (`-224` D4)', async () => {
+    resolvePublicNamePresentationMode.mockResolvedValue('full_name');
+    getMemberKycProfile.mockResolvedValue({ nameCiphertext: 'enc:v1:fake' });
+    const { KmsOutageError } = await import('../../src/modules/kyc/name-render.js');
+    decryptKycField.mockReset();
+    decryptKycField.mockResolvedValueOnce('Rajesh Sharma').mockRejectedValueOnce(new KmsOutageError(new Error('14')));
+    const deps = { clock: () => new Date('2026-07-05T00:00:00.000Z'), encryption: {} } as unknown as AppDeps;
+    const result = await createMemberPoolHandlers(deps).poolContributors(fakeRequest());
+    expect(result).toEqual({ assigned: false });
+  });
+
+  it('a PROFILE-READ failure (status-less) self-suppresses the list — ⛔ never a null row (`-224` D4)', async () => {
+    resolvePublicNamePresentationMode.mockResolvedValue('full_name');
+    getMemberKycProfile.mockReset();
+    getMemberKycProfile
+      .mockResolvedValueOnce({ nameCiphertext: 'enc:v1:fake' })
+      .mockRejectedValueOnce(new Error('Connection terminated unexpectedly'));
+    decryptKycField.mockReset();
+    decryptKycField.mockResolvedValue('Rajesh Sharma');
+    const deps = { clock: () => new Date('2026-07-05T00:00:00.000Z'), encryption: {} } as unknown as AppDeps;
+    const result = await createMemberPoolHandlers(deps).poolContributors(fakeRequest());
+    expect(result).toEqual({ assigned: false });
   });
 });

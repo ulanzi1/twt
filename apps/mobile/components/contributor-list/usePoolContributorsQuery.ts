@@ -1,11 +1,20 @@
 import { useQuery } from '@tanstack/react-query'
 
 import { memberAuth } from '../../lib/member-api'
+import { POOL_CONTRIBUTORS_QUERY_KEY } from './pool-contributors-cache'
 
 // Live Contributor List read hook — Story 8.3 (Task 4). Fetches the server-authoritative contributor-list
 // model via the member-auth SDK (memberPoolContributors → GET /api/v1/member/pool-contributors). The
 // response is Zod-validated inside the SDK (the discriminated `{ assigned }` union). Auto-persisted to MMKV
 // by the app's PersistQueryClientProvider (lib/query-client.ts), so a cached list renders offline read-only.
+// ⚠ SUPERSEDED 2026-09-19 by Story 11b.21 (`#decision-2026-09-19-224` D6): ⛔ NO LONGER PERSISTED. The
+// payload now carries colleagues' FULL names, so the hook sets `gcTime: 0`, which `components/Provider.tsx`'s
+// `shouldDehydrateQuery` reads as "⛔ never persist this" — ⭐ the two are ONE control in two files (as
+// `useMemberDriveDetailQuery.ts` says). The key moved to `POOL_CONTRIBUTORS_QUERY_KEY` (…'v2'), and the
+// RETIRED key is removed once at startup (`pool-contributors-cache.ts`).
+// ⚠ Cost, stated: the list — and the home tab's "View contributors" entry, which returns null until `data`
+// exists — no longer shows from cache on a cold start or offline, until the first fetch succeeds. The home
+// tab keeps an observer mounted, so `gcTime: 0` does ⛔ not cause a refetch on every navigation.
 //
 // ── Near-real-time refresh (AC5 / D6) — polling, NOT a push socket ──────────────────────────────────────
 // The epic says "within seconds (real-time update)" when a contribution flips yellow→green via Epic 9
@@ -39,8 +48,10 @@ const NEAR_REAL_TIME_INTERVAL_MS = 60_000 // 60s — bounded; a contribution con
 
 export function usePoolContributorsQuery() {
   return useQuery({
-    queryKey: ['member', 'pool-contributors'],
+    queryKey: POOL_CONTRIBUTORS_QUERY_KEY,
     queryFn: () => memberAuth.memberPoolContributors(),
+    // ⭐ `-224` D6 — ⛔ NEVER PERSISTED (with Provider.tsx's `shouldDehydrateQuery`; ONE control in two files).
+    gcTime: 0,
     // Near-real-time (D6): a bounded poll so an Epic-9 confirm appears within ~a minute; foreground refetch
     // is the documented seam above. ⚠ The INTERVAL is a real product choice over a live stream; the
     // `refetchOnReconnect` flag beside it is INERT on RN until an `onlineManager` bridge is wired

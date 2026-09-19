@@ -2452,3 +2452,38 @@ written first passes **vacuously**. ⚠ Verified in the strongest available way:
 direct re-run) before this block was written, and the failure is what this block answers. ⚠ The story's
 own Dev Record reported `ci:local` 34/34 green BEFORE that first commit landed on the branch; the gate
 could not see the change until it was committed.
+
+---
+
+**Story 11b.21 disposition (declaration affirmed — ⛔ NO new row, ⛔ no row retired, and ⛔ no row
+amended):** the member contributor list (`apps/mobile/components/contributor-list/`, mounted on the
+contributors route, the Nominee Console and the home tab's "View contributors" entry) now shows each
+contributor's MODE-RESOLVED name and keeps a withheld name's row as `A contributor` / `एक सहकर्मी`
+(`#decision-2026-09-19-224`, `2026-09-18-222`).
+
+⭐ **THE RENDER CHANGE ASKS THE MEMBER FOR NOTHING.** A longer name and one more row per withheld contributor
+are text in a list the member already reads: ⛔ no field, ⛔ no confirmation, ⛔ no OTP, ⛔ no control. The
+placeholder row is announced by the SAME `row_a11y` string as every row (`-224` D5), so a screen-reader
+member hears one row per contributor, ⛔ with no new interaction.
+
+⚠⚠ **THE ONE CANDIDATE FRICTION, WEIGHED — AND WHY IT IS ⛔ NOT A ROW.** `-224` D6 stops persisting this
+query (`gcTime: 0`) and removes the retired cached entry, because the payload now carries colleagues' FULL
+legal names and `-172` recorded an erased name surviving offline in MMKV for up to 7 days. The cost is
+real: on a COLD start or OFFLINE, the list shows its loading placeholder instead of the cached list, and the
+home tab's "View contributors" entry is ABSENT until the first fetch succeeds (`ViewContributorsEntry`
+returns `null` without `data`). ⭐ It is ⛔ not friction in AR-60's sense — ⛔ no step is added that the
+member must TAKE; nothing they do changes the outcome, and online the list appears on the first fetch as
+it did before a cache existed. It IS a loss of OFFLINE AVAILABILITY, and it is stated here so it cannot be
+lost: **paid by** every member opening the list cold or offline; **protects** colleagues who exercised
+erasure (their names no longer outlive the API on a handset) and every contributor's full name at rest in
+plaintext MMKV. ⛔ If a later review classes a cold-start wait as friction, that is a ROUTED product call
+(an `optional` row), ⛔ not something to absorb here.
+
+⚠ **THE MEASURABLE COST:** ⛔ none is claimed. `member-app-native.js_bundle_bytes` is
+**`no-op — no measurable build output yet`**; the change adds one small pure module
+(`pool-contributors-cache.ts`) and ⛔ no screen. ⛔ Exceeding a ceiling, once one is measurable, is
+**ROUTED**, ⛔ never absorbed ([[feedback_record_unattested_no_backfill]]).
+
+⭐ `pnpm friction:check` was run AFTER the implementation commit existed — AC-4 diffs **COMMITTED**
+history, so a pre-commit run passes vacuously (the 11b.20 lesson). The result is recorded in the story's
+Dev Agent Record.

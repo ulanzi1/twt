@@ -71,7 +71,9 @@ contributions were confirmed in different words, so the two numbers never look l
 twice."*
 **Checked against the Niyamavali: no clause governs the wording of a count** (`docs/legal/niyamavali.md`
 grepped for `contributors` / `confirmed` / `count of` / `number of contributions` — the only hits are the
-skip definition and sanction clauses, ⛔ none about display). The governing text is the rulings cited in
+skip definition and sanction clauses, ⛔ none about display). ⚠ That file is the **local, git-untracked**
+copy of the private legal corpus (`git ls-files docs/legal` is empty) — a fresh clone does ⛔ not have it,
+so the check is reproducible only where the corpus is present. The governing text is the rulings cited in
 the PREFLIGHT, checked at `797860e7`.
 
 ---
@@ -93,7 +95,7 @@ AC5a), so **in the steady state the two figures are EQUAL** and the page prints 
 twice. They diverge only if a member ends up with two live confirmations, or a confirmed event lacks a
 member id (the set read skips it; the SQL count does not), or an event is future-dated relative to `now`.
 ⚠ **This story did ⛔ not prove any of those reachable, and ⛔ must not assume one.** ⇒ the copy has to be
-correct in **both** cases: read as redundancy when equal, and ⛔ as a contradiction when not.
+correct in **both** cases: read as redundancy when equal, and ⛔ never as a contradiction when they differ.
 ⭐ That is the whole reason the fix is *different nouns* and ⛔ not a reconciling guard.
 
 ### Trap 2 — ⚠ Two entries, ONE key — and a repoint, ⛔ not a rename
@@ -128,13 +130,44 @@ Every one of these is a way to fail `-219` while "fixing" the copy:
   `_other`, no `Intl.PluralRules`); *"{count} contributors"* renders **"1 contributors"**. ⭐ Use a
   label-first, number-last form (`Contributors: {count}`), which is correct at 0, 1 and 42.
 
-### Trap 5 — ⚠ The stale prose that says "`{{count}} confirmed` for the contributor SET SIZE"
-Comments in `sahyog-vivran-render.ts` (the `contributorTotal` doc), `surface-fields.ts` (the
-`contributorTotal` doc, *"Do not reconcile the two"*), the `[driveToken].astro` label-map comment, and the
-`contributorTotal` render-test comments describe the set size as `N confirmed`. ⭐ They must be updated,
-⛔ never left describing a string that no longer exists. ⚠ A doc-block edit with markdown emphasis
-(`**cl.3**/**cl.8**`) can terminate a JSDoc — grep `\*\*/` after editing
-([[project_markdown_emphasis_closes_jsdoc]]).
+### Trap 5 — ⚠ The stale prose that says the SET SIZE reads "N confirmed"
+Traced at `797860e7` by symbol (these are code files, so the line numbers are a convenience, ⛔ not the
+address). Two phrasings exist — `` `{{count}} confirmed` `` and *"N confirmed"* — and a grep for only one
+misses most sites.
+
+**⭐ MUST UPDATE — the prose ties "N confirmed" to the SET SIZE (`contributorTotal` / `total`):**
+1. `apps/public/src/lib/sahyog-vivran-render.ts` — the `contributorTotal` label doc
+   (`` `{{count}} confirmed` for the contributor SET SIZE ``, ~:155).
+2. `apps/public/src/lib/surface-fields.ts` — the **`contributors`** doc-block (⛔ not the `contributorTotal`
+   one): *"THE PAGE MAY HOLD FEWER NAMED ROWS THAN `contributorTotal` SAYS … ⇒ this page reads
+   *"N confirmed"* beside FEWER than N NAMED rows"* (~:584-586).
+3. `packages/contracts/src/public-pages/sahyog-vivran.ts` — the module doc on `total`: *"`total` IS THE
+   CONFIRMED-CONTRIBUTOR SET SIZE … ⇒ this page reads *"N confirmed"* beside FEWER than N NAMED rows"*
+   (~:702). ⚠ A **comment-only** edit in `packages/contracts` — D3 permits it; ⛔ no schema change.
+4. `apps/public/src/pages/sahyog-vivran/[driveToken].astro` — the contributor-section comment
+   *"FEWER NAMED ROWS THAN THE COUNT IS THE ORDINARY CASE … this page reads "N confirmed" beside FEWER
+   than N NAMED rows"* (~:672-676; it sits above the set-size `<p>`).
+5. `apps/public/src/lib/sahyog-vivran-render.ts` — the `contributorsHeader` doc (*"this page reads
+   *"N confirmed"* beside FEWER than N named rows"*, ~:137).
+6. Test comments that quote the same sentence about `total`:
+   `packages/contracts/tests/public-pages-sahyog-vivran.test.ts` (~:482),
+   `apps/api/tests/integration/public-pages/sahyog-vivran.spec.ts` (~:1258), and
+   `apps/public/tests/sahyog-vivran-copy.test.ts` (the completeness-fence comment, ~:234).
+
+⭐ In each, say the set size renders as *contributors* (the D2 words) and keep the "fewer NAMED rows,
+⛔ no completeness claim" point, which is still true.
+
+**LEAVE ALONE (⛔ do not edit) — these describe the EVENT count, which still reads "N confirmed":** the `contributionsCount`
+label doc in `sahyog-vivran-render.ts` (~:121), the `confirmedContributionCount` model comment there
+(~:434), the rupee-figure comment in the page's facts `<dl>` (~:589), the `confirmedContributionCount` doc
+in the contract (~:461), and `sahyog-render.ts` (the INDEX, another surface).
+
+The label-map comment in the page (*"A COUNT of the confirmed-contributor SET"*) and the `surface-fields.ts`
+`contributorTotal` doc (*"Do not reconcile the two"*) contain ⛔ no "confirmed" wording for the set size and
+need ⛔ no change beyond what reads naturally next to the repointed key.
+
+⚠ A doc-block edit with markdown emphasis (`**cl.3**/**cl.8**`) can terminate a JSDoc — grep `\*\*/` after
+editing ([[project_markdown_emphasis_closes_jsdoc]]).
 
 ---
 
@@ -188,7 +221,8 @@ count keeps `value.contributions_count` ("{count} confirmed" / "{count} पु�
   (`PoolContributorList.tsx` — *"this component renders no confirmed total"*) and the member drive detail
   renders only the event count, so the two figures never share a screen there. ⛔ No mobile change.
 - ⛔ **The wire, the model shape and the field id.** `contributorTotal` stays a `string` field with a `null`
-  field id; ⛔ no contract, ⛔ no API, ⛔ no `surface-fields.ts` shape change (comments only).
+  field id; ⛔ no contract schema, ⛔ no API, ⛔ no `surface-fields.ts` shape change. ⭐ Comment-only edits
+  in `surface-fields.ts` and `packages/contracts/src/public-pages/sahyog-vivran.ts` ARE in scope (Trap 5).
 
 ### D4 — No deploy-ordering hazard
 ⭐ Pure copy on a server-rendered page: the key ships in the same deploy as the page that reads it, and
@@ -235,9 +269,19 @@ resolves it. ⛔ No other namespace file changes.
   fires on a probe (the vacuous-guard lesson in `BANNED_PLACEHOLDER_WORDS`'s doc): ⛔ no `confirmed` /
   `पुष्ट`; ⛔ no `all` / `every` / `listed` / `shown` / `name(s)` / `नाम`; ⛔ no `so far` / `अभी तक`; and ⛔ none
   of `BANNED_PLACEHOLDER_WORDS`.
+  ⚠ **The Devanagari patterns use the file's existing `beforeNoLetter` lookbehind with the `u` flag,
+  ⛔ never `\b`.** JS `\b` is an ASCII boundary, so `/\bपुष्ट/` can ⛔ never match and `not.toMatch`
+  passes trivially — the exact defect fixed in this file on 2026-09-18 (see the `HI_TALLIES` comment).
+  ⭐ Declare each pattern ONCE and point both the probe leg and the real leg at that constant, ⛔ never
+  a retyped copy (the fifth-review-pass lesson in the same comment).
 - **(d) Teeth.** Plant each violation (point `contributorTotal` back at the old key; put `confirmed` in the
   new string; re-add a duplicate key use) and see the matching leg go **red**, then revert. Record it in
   the Dev Agent Record ([[feedback_gate_scope_semantic_coverage]]).
+- **(e) The existing scans cover the new string too.** The completeness fence (*"⛔ NO copy claims the
+  contributor list is COMPLETE"*) and the prohibited-vocabulary / comparison leg both build their text
+  from `KEYS` only. ⭐ Append `t('value.contributor_total', { count: 42 }, …)` to each leg's joined
+  text (both locales), so the new string is scanned by the fences that already exist, ⛔ not only by a
+  parallel list.
 
 ### AC4 — A model test that can tell the two fields apart
 In `sahyog-vivran-render.test.ts`, the two label stubs return **different** shapes
@@ -249,14 +293,21 @@ In `sahyog-vivran-render.test.ts`, the two label stubs return **different** shap
 
 ### AC5 — The copy gates and the parity gates pass on the real files
 `pnpm microcopy:check`, `pnpm microcopy:test`, the `@twt/i18n` parity/`catalog-registration` suites, the
-`sahyog-vivran-copy` suite (add `value.contributor_total` to its `KEYS`), the **placeholder one-key** test
+`sahyog-vivran-copy` suite (⚠⛔ **do ⛔ not add `value.contributor_total` to its `KEYS`**: that loop calls
+`t(key, undefined, …)` and `t()` THROWS `missing interpolation param 'count'`
+(`packages/i18n/src/resolver.ts`, `interpolate`) — which is why `value.contributions_count`,
+`appeal.stage` and `value.amount_raised` are absent from `KEYS` too. ⭐ The key gets its own
+interpolated leg and joins the existing scans per AC3(e)), the **placeholder one-key** test
 (the new value is ≠ `A contributor`, so it stays green) and `astro check` for `apps/public` all pass.
 
 ### AC6 — No stale prose (Trap 5)
-The four doc sites named in Trap 5 are updated to say the set size renders as *contributors*, and each
-keeps *"do not reconcile — they answer different questions"*. `grep -rn "{{count}} confirmed"
-apps/public/src` finds ⛔ nothing describing the set size. `grep -rn '\*\*/' <edited files>` finds ⛔ no
-comment-terminating emphasis.
+Every **MUST UPDATE** site in Trap 5 (six items) is updated to say the set size renders as
+*contributors*, keeping the "fewer NAMED rows, ⛔ no completeness claim" point and, where present,
+*"do not reconcile — they answer different questions"*. Every **LEAVE ALONE** site is unchanged.
+Run both phrasings — `grep -rn "{{count}} confirmed" apps/public/src` **and**
+`grep -rn "N confirmed" apps packages --include=*.ts --include=*.astro | grep -v node_modules` — and
+classify each remaining hit in the Dev Agent Record as EVENT-count prose; ⛔ none may describe the set size.
+`grep -rn '\*\*/' <edited files>` finds ⛔ no comment-terminating emphasis.
 
 ### AC7 — The friction budget is DISPOSED, ⛔ not skipped
 `MEMBER_FACING_PREFIXES` includes `apps/public/`, so AC-4's attribution-on-change **fires**. ⇒
@@ -265,6 +316,12 @@ new row, ⛔ no row retired, ⛔ no row amended*; the change re-words one label,
 nothing, and is ⛔ not friction (follow the 11b.20 disposition's shape). ⭐ Run `pnpm friction:check`
 **after committing** — it diffs `${baseRef}...HEAD`, so a pre-commit run passes vacuously (the 11b.20 and
 11b.21 lesson).
+
+### AC8 — The follow-up closes only on green, and says so precisely
+**Given** the code is committed and `pnpm ci:local` is green, **then** `-219` follow-up (3) is annotated
+*"BUILT at Story 11b.22"* (annotation only, ⛔ no clause edited), `deferred-work.md`'s *"Same i18n key used
+for two different 'confirmed' numbers on one page"* item is annotated **in place** (⛔ never deleted), and
+the sprint row is flipped per the ledger convention ([[feedback_closure_language_precision]]).
 
 ---
 
@@ -298,12 +355,15 @@ nothing, and is ⛔ not friction (follow the 11b.20 disposition's shape). ⭐ Ru
   - [ ] Repoint `contributorTotal:` in `[driveToken].astro`; leave `contributionsCount:` as is.
   - [ ] `git diff --stat` shows ⛔ no other locale file.
 - [ ] **Task 3 — Tests** (AC3, AC4, AC5)
-  - [ ] `sahyog-vivran-copy.test.ts`: add the key to `KEYS`; add the interpolation leg for
-        `value.contributor_total` beside the `value.contributions_count` one; add AC3(b) and AC3(c)
-        (with probe self-tests) and AC3(a) (source wiring).
+  - [ ] `sahyog-vivran-copy.test.ts`: ⛔ do ⛔ not add the key to `KEYS` (it would throw — AC5); add the
+        interpolation leg for `value.contributor_total` beside the `value.contributions_count` one; add
+        AC3(b), AC3(c) (probe self-tests; Devanagari via `beforeNoLetter` + `u`, ⛔ never `\b`), AC3(a)
+        (source wiring) and AC3(e) (feed the resolved string into the completeness and
+        prohibited-vocabulary legs).
   - [ ] `sahyog-vivran-render.test.ts` + the `scrape-test` spec: distinct stubs; the arg-swap leg (AC4).
   - [ ] Plant-and-revert each AC3(d) violation; record the reds.
-- [ ] **Task 4 — Stale prose** (AC6): the four doc sites; the two greps.
+- [ ] **Task 4 — Stale prose** (AC6): the six MUST-UPDATE sites in Trap 5 (incl. the comment-only edit in
+      `packages/contracts`); the LEAVE-ALONE sites untouched; both greps, hits classified.
 - [ ] **Task 5 — Gates and friction** (AC5, AC7)
   - [ ] `pnpm microcopy:check && pnpm microcopy:test`; `pnpm --filter @twt/i18n test`;
         `pnpm --filter @twt/public test`; `astro check`; `eslint` on the touched files; `tsc`.
@@ -312,7 +372,7 @@ nothing, and is ⛔ not friction (follow the 11b.20 disposition's shape). ⭐ Ru
         regenerate an applied migration ([[project_live_db_test_gotchas]]).
   - [ ] Write the `friction-budget.md` disposition (AC7); **commit**; then `pnpm friction:check`.
   - [ ] `pnpm ci:local` before merge.
-- [ ] **Task 6 — Close the follow-up honestly**
+- [ ] **Task 6 — Close the follow-up honestly** (AC8)
   - [ ] Only after the code is committed and green: annotate `-219` follow-up (3) *"BUILT at Story
         11b.22"*; annotate `deferred-work.md`'s *"Same i18n key used for two different 'confirmed'
         numbers on one page"* item **in place, ⛔ never deleted**; flip the row per the ledger convention.
@@ -330,9 +390,13 @@ nothing, and is ⛔ not friction (follow the 11b.20 disposition's shape). ⭐ Ru
   facts `<dl>` via `<MatrixField … field="confirmed_contribution_count">` under `labels.labelContributions`.
 - **Render module** — `apps/public/src/lib/sahyog-vivran-render.ts`: `contributorTotal:
   labels.contributorTotal(total)` and `confirmedContributionCount:
-  labels.contributionsCount(drive.confirmedContributionCount)`. ⛔ Untouched apart from the doc-block.
+  labels.contributionsCount(drive.confirmedContributionCount)`. Code unchanged; only the doc-blocks
+  named in Trap 5 are edited.
 - **Fields** — `apps/public/src/lib/surface-fields.ts`: `contributorTotal: string`, field id `null`
-  (*"a COUNT of a set, ⛔ never a fact about a person"*). ⛔ Untouched apart from the doc-block.
+  (*"a COUNT of a set, ⛔ never a fact about a person"*). Code unchanged; only the `contributors`
+  doc-block is edited (Trap 5).
+- **Contract** — `packages/contracts/src/public-pages/sahyog-vivran.ts`: schema unchanged; only the module
+  doc on `total` is edited (Trap 5).
 - **Locales** — `packages/i18n/locales/{en,hi}/sahyog-vivran.json`; `value.contributions_count` sits
   beside `value.district_unknown`. No plural support in `t()`.
 
@@ -348,6 +412,15 @@ nothing, and is ⛔ not friction (follow the 11b.20 disposition's shape). ⭐ Ru
 ### Load-bearing invariant families to self-check
 - Placeholder banned-word guard (`BANNED_PLACEHOLDER_WORDS`) — applies to the new string.
 - Financial-truth gate (`scripts/sahyog-vivran-financial-truth`) — ⛔ no count × amount shape is added.
+  ✅ Checked at `797860e7`: the page, the render module and the contract file are all `renderPath: true`
+  in its `SCAN_FILES`, and its operand patterns are anchored names (`TARGET_OPERANDS`, `COUNT_OPERAND`,
+  `PER_MEMBER_AMOUNT` in `lib.ts`), so ⛔ neither `value.contributor_total` nor `contributorTotal` matches.
+  ⛔ No file is added ⇒ ⛔ no `SCAN_FILES` enrolment is owed.
+- `microcopy:test` — `scripts/microcopy/sahyog-vivran.test.ts` runs `checkVocabulary` (member-only on) /
+  `checkTone` / `checkNumerals` over **every** value in both `sahyog-vivran.json` files (`resolvedStrings`
+  is `Object.values`), so it covers the new value with ⛔ no edit; both files are in `microcopy.yaml`'s
+  `copy_globs`. ⚠ **That includes the new `$comment.contributor_total`** — so the comment itself must
+  ⛔ not use `donor`, a Devanagari digit or a banned tone frame, even when quoting what it avoids.
 - Numeral discipline (UX-DR73) — Latin digits in both locales, from `{count}` through `t()`.
 - Family 13 (a11y) — the set-size `<p>` is plain text under a named `<section>`; ⛔ no `title=`, ⛔ no role.
 
@@ -399,3 +472,4 @@ both.
 | Date | Version | Change |
 |---|---|---|
 | 2026-09-19 | v0.1 | Created via `bmad-create-story` at `797860e7`: `backlog → ready-for-dev`. |
+| 2026-09-19 | v0.2 | Validate pass at `797860e7` (HEAD `c9cf7125`): AC5 no longer adds the key to `KEYS` (`t()` throws on a missing param); AC3(c) Devanagari patterns use `beforeNoLetter`, ⛔ never `\b`; AC3(e) feeds the new string into the existing fences; Trap 5 / AC6 re-traced (six sites to update, incl. a comment-only contract edit, and the event-count sites listed to leave alone); D3 allows that comment edit; AC8 added for Task 6; financial-truth and microcopy coverage recorded; Niyamavali copy noted as untracked; three ⛔ inversions fixed. |

@@ -210,6 +210,13 @@ dark.
 
 **Trigger:** `11b-20` authoring — ⭐ and ⛔ **before** it writes a single `message_block.*` render site.
 
+> ⭐ **READ AND ACTED ON 2026-09-19 (Story `11b-20`).** The amount half is used as ruled: `{amount}` =
+> `formatCurrency(amountRaisedInr, 'en')`, ⛔ no literal ₹. The name half follows the shipped variant
+> split: a null name renders `message_block.headline.no_family` (`-223` cl.1), so the name token is
+> ⛔ never unsupplied. ⚠ This entry's *"gate for the name half is THE PINNED CLAUSE"* was superseded
+> by `-223` cl.1 before any code: the no-name headline is the ruled render **until** the clause is
+> pinned, ⛔ not a reason to withhold the block.
+
 ### ⭐ `packages/domain/src/pool/public-read.ts` IS IN `11b-3b`'s DIFF, AND THE *"⛔ no index change"* FENCE STILL HOLDS
 
 ⚠ Recorded because a reviewer scanning the diff will see the **INDEX's own read module** in a story
@@ -9342,6 +9349,10 @@ violation.
   site's *key-construction style*). **Trigger:** the first `11b-17`/`11b-20` render site landing —
   its code review should specifically check whether it builds any `message_block.*` key by anything
   other than a bare literal or a simple `` `prefix.${variant}` `` template.
+  ⭐ **`11b-20` (2026-09-19): ⛔ no concatenated key.** Every key in
+  `apps/public/src/lib/sahyog-vivran-message-block.ts` is a bare literal, and
+  `apps/public/tests/sahyog-vivran-message-block.test.ts` asserts ⛔ no `'message_block.' +` form. ⚠ The
+  regex limitation itself is unchanged; this discharges only the `11b-20` half of the trigger.
 
 - **`$comment.*` key exclusion from the production parity/resolver surface is asserted only by the
   test file's own filter, never verified against production code.** The convention
@@ -9382,6 +9393,10 @@ violation.
   future column-dropping logic — AC6 forbids a render test here, so the actual drop-when-absent
   guarantee is unenforceable until a render site exists. **Trigger:** `11b-17` AC10 / Task 5d or
   `11b-20` landing — the first real render site should carry its own drop-when-absent assertion.
+  ⭐ **DISCHARGED for the public page by `11b-20` (2026-09-19):**
+  `apps/public/tests/sahyog-vivran-message-block.test.ts` asserts the real drop-when-absent behaviour —
+  a null district, a null deceased name, a null holder name and a suppressed matrix verdict each drop
+  their column, and an empty table renders nothing.
 
 ## Deferred from: code review of 11b-17-member-drive-detail-unredacted (2026-09-13)
 
@@ -9595,6 +9610,9 @@ violation.
   session"*) and is ⛔ NOT re-raised here; ⛔ mid-signup is **unreachable** (`typ === 'access'`).
   **Trigger:** a Panel ruling — or, sooner, `11b-20` (the public render) or any new surface inheriting
   this session guard, each of which inherits the same unruled meaning.
+  ⭐ **`11b-20` (2026-09-19): ⛔ NOT APPLICABLE, and ⛔ not re-raised.** The public Sahyog Vivran page is
+  unauthenticated: it inherits ⛔ no member session guard, so it cannot inherit this meaning. `-217` (1)
+  ruled Q1. ⛔ This note changes nothing about Q1 itself.
 
 - **Q2 — What does a member see when a bank's NAME was never recorded?**
   [`apps/api/src/modules/member-pool/handlers.ts:827-830`]

@@ -1,3 +1,21 @@
+# last_updated: 2026-09-19p (⭐ **STORY `11b-22` — CODE RE-REVIEW (pass 2) of the uncommitted pass-1 patches. `done` unchanged.**
+#   ⭐ No row moves. 3-layer re-review of `git diff HEAD`: all 8 pass-1 patches verified applied; no AC broken; ⭐ 5 further patches applied
+#   (matra-preceded mid-word probes + coverage/`u`-flag assertion; estimate-frame `and counting` + hyphen/no-space spellings; render fixture
+#   made API-representative; page-slot regex plants; the family-10 caveat copied into the STORY record). 0 decisions, 0 deferred, 7 dismissed.
+#   Verified: the two touched suites 129/129, `@twt/public` `eslint .` + `astro check` clean; plant-and-revert red on the `\p{M}` probe.
+#   ⚠⛔ STILL TRUE, and now stated in both places: `pnpm ci:local` 34/34 was NOT re-run after ANY review patch, and the patches are
+#   UNCOMMITTED. ⭐ Owed before merge: commit → `env -u DATABASE_URL pnpm ci:local` → `git status`.)
+# last_updated: 2026-09-19o (⭐ **STORY `11b-22` — CODE REVIEW COMPLETE: `review → done`.**
+#   ⭐ ONE row moves. 3-layer review (Blind / Edge Case / Acceptance Auditor) of `797860e7..a6865ec7`: ⭐ no AC violation and
+#   no REAL GAP on any load-bearing-invariant family touched (6, 7, 10, 11 covered; 13 not-constructible). The code is correct
+#   as shipped; every finding was a test-tooth or record-precision item. 1 decision resolved (BigDev confirmed the D2 words as
+#   their own — `-225` stands, ⛔ not superseded); 8 patches applied; 0 deferred; 9 dismissed.
+#   ⭐ Patches: arg-swap fixture now `total: 137` beside 12 items (it could not tell `total` from `items.length`); the set-size
+#   `<p>` binding pinned in the page source; Devanagari mid-word probes by NAME not index; estimate-frame fence gains
+#   `to date` / `till now` / `as of` / `अब तक`; `beforeNoLetter` hoisted; File List + Task 5 correction + `-225` timing note recorded.
+#   ⚠ Teeth re-proven by plant-and-revert (both red). Verified: the two touched suites 127/127, `@twt/public` lint + `astro check` clean.
+#   ⚠ `pnpm ci:local` was ⛔ NOT re-run after the review patches (test-file + story-record edits only); the 34/34 recorded at
+#   `a6865ec7` predates them. ⚠ Patches are UNCOMMITTED in the working tree at the time of this entry.)
 # last_updated: 2026-09-19n (⭐ **STORY `11b-22` — IMPLEMENTED: `in-progress → review`.**
 #   ⭐ ONE row moves. Code `473de3ca`: `value.contributor_total` (en + hi) on the set-size line; `contributorTotal:`
 #   repointed; the EVENT count untouched. Friction disposition `friction-budget.md` (gate FAILED on the code commit
@@ -19373,7 +19391,7 @@ development_status:
   # governance-heavy i18n surface is a product call). ⇒ this row is where that call gets made.
   # ⚠ BOTH LOCALES, and ⛔ neither number may be dropped: they are different facts, and
   # `2026-08-30-169` cl.6 (D3-aggregate) is why the event count keeps counting an erased member.
-  11b-22-confirmed-count-copy-disambiguation: review
+  11b-22-confirmed-count-copy-disambiguation: done
   epic-11b-retrospective: optional
 
   # ==========================================================================

@@ -5827,6 +5827,33 @@ So that I am never told less about my own pool than a stranger on the internet i
 
 ---
 
+### Story 11b.22: One Page, Two Counts — Word the Contributor Set Size and the Confirmed-Contribution Count Differently `[SURFACE]`
+
+> ⭐⛔ **SECTIONED 2026-09-19 (Story 11b.22 Task 1, before the first line of code).** This story had **no `epics.md` entry** until it created its own — the **Story 11b.19–11b.21 precedent** — so a future `sprint-planning` run can ⛔ **neither drop it nor regenerate a ghost**. ⚠ The sprint key `11b-22-confirmed-count-copy-disambiguation` was already *named* in `sprint-status.yaml` (row + ledger, `2026-09-18c`); ⇒ this discharges the missing **section**, ⛔ not a first mention.
+>
+> ⭐ **COMMISSIONING AUTHORITY: [`2026-09-16-219`](../../.decision-log.md#decision-2026-09-16-219) Open follow-up (3)** (the duplicate count key; *"the COPY CALL itself is still owed, and it is BigDev's, ⛔ not the Panel's"*). ⭐ The copy call is recorded at [`2026-09-19-225`](../../.decision-log.md#decision-2026-09-19-225), before any code.
+
+As **a visitor reading a Sahyog Vivran page**,
+I want the figure that counts *people* and the figure that counts *confirmed contributions* to be worded as what each counts,
+So that I never read the same words — "N confirmed" — twice on one page for two different facts.
+
+**Depends on:** ⛔ **Nothing blocking.** 11b.3b (the page, `done`) · 11b.21 (`done`, edited the same label map) · `-219` · `-225`.
+
+**Acceptance Criteria:**
+
+**Given** `-225` D1–D2 (author-committed)
+**When** `/sahyog-vivran/[driveToken]` renders the contributor section
+**Then** the set-size line resolves the new key `sahyog-vivran` → `value.contributor_total` (`Contributors: {count}` / `योगदानकर्ता: {count}`), and the Drive-details event count still resolves `value.contributions_count` **unchanged**
+**And** ⛔ neither number is dropped, and ⛔ no reconciling check is added between them
+
+**Given** [`2026-09-16-219`](../../.decision-log.md#decision-2026-09-16-219) cl.3 / cl.4(c) (Trustee-ratified)
+**When** the new string is scanned
+**Then** it carries ⛔ no `confirmed` / `पुष्ट`, ⛔ no completeness word, ⛔ no live-drive estimate frame and ⛔ no per-cause word, proven through the REAL `t()` in both locales
+
+**FRs:** ⛔ none amended. **Decisions:** [`2026-09-16-219`](../../.decision-log.md#decision-2026-09-16-219) (⭐ commissioning, follow-up (3)) · [`2026-08-30-169`](../../.decision-log.md#decision-2026-08-30-169) cl.6 · [`2026-09-19-225`](../../.decision-log.md#decision-2026-09-19-225) D1–D4.
+
+---
+
 ## Epic 12: Module Marketplace
 
 Members see their eligible-modules shelf below My Pool. Admin targets modules by Pariwar/scope/cohort with validity windows + slot caps. Time-bombed auto-archive. First partners: HDFC home loan, LIC term plan, health-camp pilot. **Suppressed in all account-frozen states (UX-DR1, Stance #1) — structurally absent on a deceased member's phone, not "empty" or "hidden".**

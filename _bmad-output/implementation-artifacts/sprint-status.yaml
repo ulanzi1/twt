@@ -1,3 +1,14 @@
+# last_updated: 2026-09-19f (⭐ **STORY `11b-21` v0.2 — VALIDATED via `bmad-create-story validate` (three read-only verifiers; code re-derived at `d72d4e68`, ⛔ no drift). Stays `ready-for-dev`.**
+#   ⭐ 6 critical fixed: (1) member resolver does ⛔ no token cleaning ⇒ dirty names showed the member LESS
+#   than public ⇒ D3 now feeds `publicNameTokens`; (2) v0.1's erased-row decrypt skip was an RTBF-only
+#   zero-KMS timing signal against `-222` cl.2, mislabelled "inherited" ⇒ NEW D7 drops the pre-filter +
+#   state read (`-170`), superseding `-169` cl.4; (3) profile read moves OUTSIDE the `try` (public
+#   fifth-pass precedent); (4) red-on-write fences named (`death-term.test.ts`, the `startsWith` ref pin,
+#   full mobile/RTBF-spec pins, unused import); (5) `-224` also records `-168` cl.5 + `-169` cl.8 (in
+#   part) superseded, and `-222` Consequence 3's "new key" as NOT MET (⛔ not re-read) — ⚠ this row's
+#   own comment below still says "A new key" and Task 1 annotates it; (6) D6 also REMOVES the orphaned
+#   old query key, which a new key only hid. Seven engineering calls now (D1–D7). ⚠ D3's mononym arm
+#   stays an open reading for BigDev, non-blocking. ⛔ No code.)
 # last_updated: 2026-09-19e (⭐ **STORY `11b-21` — CREATED via `bmad-create-story` at `a44aef23`: `backlog → ready-for-dev`.**
 #   ⭐ Carries BOTH axes of the `-221` breach per `-222` Consequence 1: (A) the member contributor list
 #   is mode-resolved via `resolveMemberFacingDeceasedName` (⛔ never `resolvePublicMemberName`, the `-181`

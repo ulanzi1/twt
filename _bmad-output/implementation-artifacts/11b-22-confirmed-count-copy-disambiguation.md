@@ -16,7 +16,7 @@ equals it (2026-09-19). Two facts, stated separately:
 
 # Story 11b.22: One Page, Two Counts — Word the Contributor Set Size and the Confirmed-Contribution Count Differently `[SURFACE]`
 
-Status: in-progress
+Status: review
 
 ## ⭐ GLYPH REGISTER — read this before any clause below
 
@@ -349,31 +349,31 @@ the sprint row is flipped per the ledger convention ([[feedback_closure_language
   - [x] Sprint row `11b-22-…` → `in-progress` (SAFE prepend of a ledger entry: read first, guard on size,
         then write; [[project_sprint_status_safe_prepend]]).
   - [x] Commit as `governance(11b.22): -225 — the two counts get two wordings; section the story; row → in-progress`.
-- [ ] **Task 2 — The copy** (AC1, AC2)
-  - [ ] Add `value.contributor_total` + `$comment.contributor_total` to both `sahyog-vivran.json` files,
+- [x] **Task 2 — The copy** (AC1, AC2)
+  - [x] Add `value.contributor_total` + `$comment.contributor_total` to both `sahyog-vivran.json` files,
         next to `value.contributions_count`. Keep key order/parity with the sibling entries.
-  - [ ] Repoint `contributorTotal:` in `[driveToken].astro`; leave `contributionsCount:` as is.
-  - [ ] `git diff --stat` shows ⛔ no other locale file.
-- [ ] **Task 3 — Tests** (AC3, AC4, AC5)
-  - [ ] `sahyog-vivran-copy.test.ts`: ⛔ do ⛔ not add the key to `KEYS` (it would throw — AC5); add the
+  - [x] Repoint `contributorTotal:` in `[driveToken].astro`; leave `contributionsCount:` as is.
+  - [x] `git diff --stat` shows ⛔ no other locale file.
+- [x] **Task 3 — Tests** (AC3, AC4, AC5)
+  - [x] `sahyog-vivran-copy.test.ts`: ⛔ do ⛔ not add the key to `KEYS` (it would throw — AC5); add the
         interpolation leg for `value.contributor_total` beside the `value.contributions_count` one; add
         AC3(b), AC3(c) (probe self-tests; Devanagari via `beforeNoLetter` + `u`, ⛔ never `\b`), AC3(a)
         (source wiring) and AC3(e) (feed the resolved string into the completeness and
         prohibited-vocabulary legs).
-  - [ ] `sahyog-vivran-render.test.ts` + the `scrape-test` spec: distinct stubs; the arg-swap leg (AC4).
-  - [ ] Plant-and-revert each AC3(d) violation; record the reds.
-- [ ] **Task 4 — Stale prose** (AC6): the six MUST-UPDATE sites in Trap 5 (incl. the comment-only edit in
+  - [x] `sahyog-vivran-render.test.ts` + the `scrape-test` spec: distinct stubs; the arg-swap leg (AC4).
+  - [x] Plant-and-revert each AC3(d) violation; record the reds.
+- [x] **Task 4 — Stale prose** (AC6): the six MUST-UPDATE sites in Trap 5 (incl. the comment-only edit in
       `packages/contracts`); the LEAVE-ALONE sites untouched; both greps, hits classified.
-- [ ] **Task 5 — Gates and friction** (AC5, AC7)
-  - [ ] `pnpm microcopy:check && pnpm microcopy:test`; `pnpm --filter @twt/i18n test`;
+- [x] **Task 5 — Gates and friction** (AC5, AC7)
+  - [x] `pnpm microcopy:check && pnpm microcopy:test`; `pnpm --filter @twt/i18n test`;
         `pnpm --filter @twt/public test`; `astro check`; `eslint` on the touched files; `tsc`.
-  - [ ] Live-DB `public-pages` suite on `twt-test-pg` (the `scrape-test` spec is in it).
+  - [x] Live-DB `public-pages` suite on `twt-test-pg` (the `scrape-test` spec is in it).
         ⚠ `env -u DATABASE_URL` for `ci:local` ([[project_ci_local_double_run_pollution]]); never
         regenerate an applied migration ([[project_live_db_test_gotchas]]).
-  - [ ] Write the `friction-budget.md` disposition (AC7); **commit**; then `pnpm friction:check`.
-  - [ ] `pnpm ci:local` before merge.
-- [ ] **Task 6 — Close the follow-up honestly** (AC8)
-  - [ ] Only after the code is committed and green: annotate `-219` follow-up (3) *"BUILT at Story
+  - [x] Write the `friction-budget.md` disposition (AC7); **commit**; then `pnpm friction:check`.
+  - [x] `pnpm ci:local` before merge.
+- [x] **Task 6 — Close the follow-up honestly** (AC8)
+  - [x] Only after the code is committed and green: annotate `-219` follow-up (3) *"BUILT at Story
         11b.22"*; annotate `deferred-work.md`'s *"Same i18n key used for two different 'confirmed'
         numbers on one page"* item **in place, ⛔ never deleted**; flip the row per the ledger convention.
 
@@ -480,9 +480,69 @@ Claude Opus 5 (1M context) — `claude-opus-5[1m]`, via `bmad-dev-story`, 2026-0
 - **Task 1:** D2 committed as the default (`Contributors: {count}` / `योगदानकर्ता: {count}`) — BigDev's open
   question was answered by the story's own default, as the story permits; the fallback is recorded in `-225`.
 
+- **Task 3, AC3(d) teeth (plant → red → revert, 2026-09-19):**
+  1. `contributorTotal:` pointed back at `value.contributions_count` → RED: *"each count key is resolved EXACTLY ONCE, by its OWN label entry"*.
+  2. `en` value → `Contributors confirmed: {count}` → RED: *"en: the SET-SIZE string carries ⛔ no forbidden word"*.
+  3. `hi` value → `पुष्ट योगदानकर्ता: {count}` → RED: *"hi: the SET-SIZE string carries ⛔ no forbidden word"* (the `beforeNoLetter` + `u` pattern fires; ⛔ not vacuous).
+  4. Duplicate key use (`contributionsCount:` → `value.contributor_total`) → RED: the wiring leg.
+  5. Arg swap in `sahyog-vivran-render.ts` (`labels.contributorTotal(drive.confirmedContributionCount)`) → RED: the AC4 arg-swap leg.
+  6. `en` value → `{count} confirmed` (identical to the event count) → RED ×4: AC3(b) *"at 0 / 1 / 42 … DIFFER"* + the forbidden-word leg.
+  Every plant reverted; `git status` clean of plants after each.
+- **Task 4, AC6 grep classification:** `grep -rn "{{count}} confirmed" apps/public/src` → `sahyog-vivran-render.ts:121`
+  (`contributionsCount` label doc — EVENT, LEAVE ALONE) and `sahyog-render.ts:175` (the INDEX, another surface).
+  `grep -rn "N confirmed" apps packages` (`.ts`/`.astro`/`.tsx`) → `sahyog-vivran-render.ts:439`
+  (`confirmedContributionCount` model comment — EVENT); `[driveToken].astro:590` (rupee-figure comment in the
+  facts `<dl>` — EVENT); `packages/contracts/src/public-pages/sahyog-vivran.ts:461` (`confirmedContributionCount`
+  doc — EVENT); `packages/domain/src/pool/sahyog-vivran-read.ts:341` (the domain `confirmedContributionCount` doc —
+  EVENT; ⚠ not in the story's Trap 5 list, classified here, left alone); `apps/api/src/modules/member-pool/handlers.ts:1413`
+  (pool-progress "0 of N confirmed" — another surface); `packages/ui/tests/pool-progress/presenter.test.ts:118`
+  (`NaN confirmedCount` — false hit); `apps/public/tests/sahyog-vivran-copy.test.ts:425` (the new 11b.22 block's
+  header, describing the RETIRED collision). ⇒ ⛔ none describes the set size. `grep '\*\*/'` over every edited
+  non-JSON file: ⛔ no hit.
+- **Task 5 gates:** `microcopy:check` ✓ · `microcopy:test` 340/340 · `@twt/i18n` 110/110 · `@twt/contracts`
+  1135/1135 · `@twt/public` 684/684 (incl. `scrape-test.spec.ts` 59 — it lives in `apps/public`, ⛔ not the live-DB
+  suite) · `astro check` 0/0/0 · eslint (touched files in public, contracts, api) clean · `tsc --noEmit` public +
+  contracts clean · live-DB `apps/api/tests/integration/public-pages` on `twt-test-pg` 92/92.
+- **Task 5 friction (AC7):** `pnpm friction:check` run on the code commit `473de3ca` FIRST → **FAILED** (AC-4:
+  member-facing surface touched, `friction-budget.md` unchanged). Disposition written, committed, re-run →
+  **PASSED** (*"a new story disposition was recorded (11b.22)"*).
+
+- **`pnpm ci:local`** (with `DATABASE_URL` → `twt-test-pg`, 2026-09-19, HEAD after the friction commit): **34/34 green**,
+  incl. `friction-budget`, `microcopy`, `i18n-parity`, `sahyog-vivran-financial-truth` and live-DB `integration-tests`.
+- **Task 6 (AC8):** `-219` follow-up (3) annotated *BUILT at Story 11b.22*; `deferred-work.md` item annotated in place;
+  row `in-progress → review` (ledger `2026-09-19n`).
+
 ### Completion Notes List
 
+- D2 words committed as the story's default: `Contributors: {count}` / `योगदानकर्ता: {count}` (`-225`).
+- `value.contributor_total` + `$comment.contributor_total` added to both `sahyog-vivran.json` files beside
+  `value.contributions_count`; `contributorTotal:` repointed; `contributionsCount:` and every other namespace
+  untouched (AC1, AC2). ⛔ Not added to `KEYS` (AC5); it has its own interpolation leg and joins the completeness,
+  vocabulary and numeral scans via a `contributorTotal(locale)` helper (AC3(e)).
+- New 11b.22 describe block: comment-stripped source wiring (copied `template()` + anti-vacuity guard), real-`t()`
+  differ legs at 0/1/42 in both locales, one `SET_SIZE_FORBIDDEN` constant read by both the probe and real legs,
+  plus `BANNED_PLACEHOLDER_WORDS` (AC3(a)–(c)). Render test: distinct stubs + arg-swap leg with total 12 vs event 13;
+  `scrape-test` stub updated (AC4).
+- Six Trap 5 sites re-worded; comment-only in `packages/contracts` (AC6).
+
 ### File List
+
+- `.decision-log.md` (`-225` entry; `-219` follow-up (3) annotated)
+- `_bmad-output/planning-artifacts/epics.md` (Story 11b.22 section)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `_bmad-output/implementation-artifacts/11b-22-confirmed-count-copy-disambiguation.md`
+- `packages/i18n/locales/en/sahyog-vivran.json`
+- `packages/i18n/locales/hi/sahyog-vivran.json`
+- `apps/public/src/pages/sahyog-vivran/[driveToken].astro`
+- `apps/public/src/lib/sahyog-vivran-render.ts` (doc-blocks only)
+- `apps/public/src/lib/surface-fields.ts` (doc-block only)
+- `packages/contracts/src/public-pages/sahyog-vivran.ts` (doc-block only)
+- `apps/public/tests/sahyog-vivran-copy.test.ts`
+- `apps/public/tests/sahyog-vivran-render.test.ts`
+- `apps/public/tests/integration/public-pages/scrape-test.spec.ts`
+- `packages/contracts/tests/public-pages-sahyog-vivran.test.ts` (comment only)
+- `apps/api/tests/integration/public-pages/sahyog-vivran.spec.ts` (comment only)
+- `friction-budget.md` (Story 11b.22 disposition)
 
 ## Change Log
 
@@ -490,3 +550,4 @@ Claude Opus 5 (1M context) — `claude-opus-5[1m]`, via `bmad-dev-story`, 2026-0
 |---|---|---|
 | 2026-09-19 | v0.1 | Created via `bmad-create-story` at `797860e7`: `backlog → ready-for-dev`. |
 | 2026-09-19 | v0.2 | Validate pass at `797860e7` (HEAD `c9cf7125`): AC5 no longer adds the key to `KEYS` (`t()` throws on a missing param); AC3(c) Devanagari patterns use `beforeNoLetter`, ⛔ never `\b`; AC3(e) feeds the new string into the existing fences; Trap 5 / AC6 re-traced (six sites to update, incl. a comment-only contract edit, and the event-count sites listed to leave alone); D3 allows that comment edit; AC8 added for Task 6; financial-truth and microcopy coverage recorded; Niyamavali copy noted as untracked; three ⛔ inversions fixed. |
+| 2026-09-19 | v0.3 | `bmad-dev-story`: `-225` governance commit; `value.contributor_total` shipped (en + hi) and wired; real-`t()` / wiring / content / arg-swap legs with recorded teeth; six stale prose sites re-worded; friction disposition. |

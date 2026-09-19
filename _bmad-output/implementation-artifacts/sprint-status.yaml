@@ -1,3 +1,4 @@
+# last_updated: 2026-09-19d (⭐ **STORY `11b-20` — CODE-REVIEWED via `bmad-code-review` (full branch diff, governance included; three layers): `review → done`.** ⭐ 0 decision-needed, 3 patches APPLIED (the Nominee column now drops for an invisible-only/bidi holder name; a stale dark-copy `describe` retitled; the table named by the headline and the id trio pinned), 4 deferred to `deferred-work.md` (⚠ incl. `sahyog-drive:consent.note`, which `-160` cl.6 made false and which no story owned). ⛔ No AC violation, ⛔ no invariant-checklist gap. `ci:local` ⛔ NOT re-run after the patches; the affected suites, the gate, `astro check` and `eslint` were.)
 # last_updated: 2026-09-19c (⭐ **STORY `11b-20` — IMPLEMENTED via `bmad-dev-story`: `ready-for-dev → in-progress →
 #   review`.** ⭐ Governance first (`ad8f01a1`: the epics.md section + Task 2's written ruling — the block
 #   is the page's LAST section, the table above the paragraphs; the "Nominee Name" and the District fact
@@ -19225,7 +19226,7 @@ development_status:
   # ⭐ The count-vs-amount asymmetry until `11b-3b` merges is ORDERING, ⛔ NOT a defect to file.
   # ⇒ ⭐⭐ **WITH THIS ROW, `-214` IS CLOSED END TO END:** Consequence 2 = `11b-19`; cl.4(b) =
   # `11b-17` AC10; Consequence 3 = `11b-20`. ⚠ `11b-15`'s omission stays RECORDED against `11b-15`.
-  11b-20-public-sahyog-vivran-message-block: review
+  11b-20-public-sahyog-vivran-message-block: done
   # ⭐⭐ AXIS A of the `#decision-2026-09-18-221` breach — a DISCHARGE, ⛔ not an open question.
   # `2026-09-04-189` cl.3 (Trustee-ratified) ALREADY ruled the public/member name inversion
   # "must be closed"; `2026-09-04-195` cl.1 scopes it to the drive data class, which the

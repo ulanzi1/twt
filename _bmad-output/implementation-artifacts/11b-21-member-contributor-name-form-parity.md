@@ -17,7 +17,7 @@ and matched it on 2026-09-19. Two facts, stated separately:
 
 # Story 11b.21: Member Contributor List — Full Name and the Unnamed Row, at Parity with the Public Page `[SURFACE]`
 
-Status: in-progress
+Status: review
 
 ## ⭐ GLYPH REGISTER — read this before any clause below
 
@@ -668,17 +668,17 @@ live test DB and state that you did ([[project_live_db_test_gotchas]]).
         (comments naming `ConfirmedContributorRow`).
   - [x] ⭐ Finish with `grep -rn "11b-21\|lastInitial\|last-initial\|OMITTED ENTIRELY\|public-pages/handlers" packages apps`.
         Every remaining hit is either a true statement or annotated.
-- [ ] **Task 8 — Records** (AC5, AC6, AC8, AC9)
+- [x] **Task 8 — Records** (AC5, AC6, AC8, AC9)
   - [x] Completion Notes: the AC5 nominee line, the AC6 (a)–(d) statement, and the AC8 compliance
         statement with residuals.
   - [x] `deferred-work.md`: the four re-marks in AC8.
   - [x] `friction-budget.md`: add the 11b.21 disposition (AC9).
-  - [ ] Sprint row → `review`, with a ledger prepend.
-- [ ] **Task 9 — Verify** (AC4, AC9, AC10)
-  - [ ] Run `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm i18n:check`, the live-DB specs for
+  - [x] Sprint row → `review`, with a ledger prepend.
+- [x] **Task 9 — Verify** (AC4, AC9, AC10)
+  - [x] Run `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm i18n:check`, the live-DB specs for
         member-pool, public-pages and contributions, `astro check` (`apps/public`) and
         `pnpm friction:check` (after commit).
-  - [ ] Then `pnpm ci:local`, which runs on push. Report the job count.
+  - [x] Then `pnpm ci:local`, which runs on push. Report the job count.
 
 ---
 
@@ -825,6 +825,8 @@ Claude Opus 5 (1M context), via `bmad-dev-story`, 2026-09-19.
 - D6 mechanics, verified in `@tanstack/react-query-persist-client`'s `PersistQueryClientProvider`: `onSuccess` runs after `persistQueryClientRestore` and BEFORE `persistQueryClientSubscribe`. ⇒ the removal happens in memory, and the next whole-client save writes MMKV without the retired entry.
 
 ### Completion Notes List
+
+**Verification (Task 9), all run 2026-09-19:** `pnpm typecheck` 20/20 · `pnpm lint` 20/20 (after the irregular-whitespace fix in the Debug Log) · `env -u DATABASE_URL pnpm test` 37/37 tasks · `pnpm i18n:check` green · `astro check` (`apps/public`) 0 errors / 0 warnings · ⭐ the live-DB specs RUN AGAINST `:5433` (they self-skip in `turbo test`): `apps/api` `tests/integration/{contributions,public-pages}` + `tests/unit` → 53 files, 523 passed / 1 skipped · `pnpm friction:check` run AFTER the feat commit `2255f909` → "declaration affirmed with no new row (11b.21)", passed · ⭐ **`pnpm ci:local` (with `DATABASE_URL`) → PASSED, 34 jobs green, `integration-tests` included.**
 
 **Implementation, in order (governance first).** `71ef29ee` is the governance commit (`-224`, annotations, the epics section, row → in-progress). ⛔ It has no `packages/`/`apps/` change. The implementation is one `feat(11b.21)` commit.
 - **D4:** `apps/api/src/modules/kyc/name-render.ts` now holds the character classes, `normalisePublicName`, `KmsOutageError` (message neutralised) and `withKmsOutageClassification`, all moved verbatim with their doc-blocks. The public route imports them. The public-pages suites pass unchanged (106/106 live-DB). A "one implementation" source pin covers both routes (`name-render.test.ts`).

@@ -1,3 +1,15 @@
+# last_updated: 2026-09-19l (⭐ **STORY `11b-22` — CREATED via `bmad-create-story` at `797860e7`: `backlog → ready-for-dev`.**
+#   No code. ⭐ ONE row moves. ⭐ The story file is `11b-22-confirmed-count-copy-disambiguation.md`.
+#   ⚠ **TRACED, ⛔ NOT CITED:** the two figures that render as "N confirmed" on `/sahyog-vivran/[driveToken]` differ in
+#   DERIVATION (event `count(*)` vs DISTINCT-member set size) but are EQUAL in the steady state — the matcher emits
+#   `contribution.confirmed` at most once per (member, pool). ⛔ Not proven divergent; the copy must be right either way.
+#   ⭐ THE CALL (author's, §0 gate applied — ⛔ no disclosure/obligation/basis changes): the SET-SIZE line gets its own key
+#   `value.contributor_total` (default `Contributors: {count}` / `योगदानकर्ता: {count}`, number-agnostic because `t()` has
+#   ⛔ no plurals); the EVENT count keeps `value.contributions_count` (shared by three namespaces). ⛔ Neither number dropped,
+#   ⛔ no reconciling guard. Proposed words pre-checked against the real microcopy gate (0 findings; control probe fires).
+#   ⚠ The words are BigDev's to commit or change at Task 1 (`-225`, next free id). ⛔ Sprint-ledger `:161`/`:201` line
+#   pointers in the `2026-09-18c` entry are STALE (11b.20/11b.21 moved them) — the story cites labels by NAME.
+#   ⚠ AC7: `apps/public/` is member-facing ⇒ a friction-budget disposition is owed; run `pnpm friction:check` AFTER committing.)
 # last_updated: 2026-09-19k (⭐ **STORY `11b-21` — CODE REVIEW ROUND 3 COMPLETE: the transition THIS commit makes is `review → done`.**
 #   `bmad-code-review` re-run over the round-2 patch delta only: 0 decision-needed, 3 patch — ALL APPLIED, 0 defer,
 #   15 dismissed. ⚠ CORRECTIONS (text of `i`/`j` kept unless noted): `done` has ⛔ NEVER been committed — HEAD carries
@@ -19346,7 +19358,7 @@ development_status:
   # governance-heavy i18n surface is a product call). ⇒ this row is where that call gets made.
   # ⚠ BOTH LOCALES, and ⛔ neither number may be dropped: they are different facts, and
   # `2026-08-30-169` cl.6 (D3-aggregate) is why the event count keeps counting an erased member.
-  11b-22-confirmed-count-copy-disambiguation: backlog
+  11b-22-confirmed-count-copy-disambiguation: ready-for-dev
   epic-11b-retrospective: optional
 
   # ==========================================================================

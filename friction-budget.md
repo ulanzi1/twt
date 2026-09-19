@@ -2412,3 +2412,43 @@ attest** against them and ⛔ no number is claimed here ([[feedback_record_unatt
 first passes **vacuously**. ⚠ Verified in the strongest available way: `ci:local`'s `friction-budget`
 job **FAILED** on this story's file list (this branch's first push) before this block was written, and
 the failure is what this block answers.
+
+---
+
+**Story 11b.20 disposition (declaration affirmed — ⛔ NO new row, ⛔ no row retired, and ⛔ no row
+amended):** the ratified §8.1 message block on the PUBLIC per-drive Sahyog Vivran page — one new pure
+module (`apps/public/src/lib/sahyog-vivran-message-block.ts`), one new last `<section>` on
+`apps/public/src/pages/sahyog-vivran/[driveToken].astro`, and the tests that pin them.
+
+⭐⭐ **IT ADDS A SENTENCE AND A TWO-CELL TABLE TO A PAGE A VISITOR ALREADY READS, AND NEITHER IS
+FRICTION.** UX Stance #2 / AR-60 declare **friction** — a step a person is **made to take**. This block
+asks the reader for ⛔ **nothing**: ⛔ no field, ⛔ no confirmation, ⛔ no OTP, ⛔ no acknowledgement, ⛔ no
+wait-state, and ⛔ no control of any kind. It is a `<section>` holding a `<table>` and `<p>` elements, with
+⛔ no `<script>`, ⛔ no `title=`, and ⛔ no role that implies interaction (the page tests assert each).
+⇒ ⛔ there is no payer, so there is no row to write.
+
+⭐ **A SILENCE IS ⛔ NOT A FRICTION EITHER.** The block renders ⛔ nothing at ₹0, ⛔ nothing on the outage
+path, and ⛔ nothing when the matrix suppresses the amount (`-216` cl.1). A visitor to such a page sees the
+page as it was before this story; nothing is asked of them and nothing is withheld that they had.
+
+⛔ **WHAT THIS DISPOSITION DOES ⛔ NOT TOUCH.**
+· ⛔ **No new control, ⛔ no toggle, ⛔ no admin surface.** Every value the block shows (the amount, the
+deceased member's name, the district, the nominee holder name) was ALREADY rendered on this page under its
+own matrix verdict; the block re-arranges published values and mints ⛔ no field id.
+· ⛔ **No member-app surface.** The member-side block is `11b-17`'s, covered by its own disposition above.
+· ⛔ **No new client code.** The page ships ⛔ no `<script>` for this block, so ⛔ no JS is added to
+`member-public-web`.
+
+⚠ **THE MEASURABLE COST, STATED RATHER THAN OMITTED:** this branch's `pnpm friction:check` reports
+`member-public-web.js_bundle_bytes` **0** ≤ ceiling 153 600 and `member-public-web.page_weight_bytes`
+**11 471** ≤ ceiling 512 000, both PASS. ⚠ ⛔ **The 11 471 is the gate's whole-output figure, ⛔ not this
+block's own weight**, and ⛔ no per-block delta was measured, so ⛔ none is claimed
+([[feedback_record_unattested_no_backfill]]). ⛔ Exceeding a ceiling is **ROUTED**, ⛔ never absorbed.
+
+⭐ **This disposition was written AFTER the implementation commits existed** (`2e287b2e` and the review
+patches `b5d84fbb`), ⛔ not against an empty diff — AC-4 diffs **COMMITTED** history, so a declaration
+written first passes **vacuously**. ⚠ Verified in the strongest available way: `ci:local`'s
+`friction-budget` job **FAILED** on this story's file list (this branch's first push, and again on a
+direct re-run) before this block was written, and the failure is what this block answers. ⚠ The story's
+own Dev Record reported `ci:local` 34/34 green BEFORE that first commit landed on the branch; the gate
+could not see the change until it was committed.

@@ -1147,6 +1147,16 @@ async function resolveContributorList(
   //     contributor representation DISAPPEARS: ⛔ no marker, ⛔ no placeholder"* — the placeholder half
   //     of `-169` cl.1 is superseded on this surface by `-222` cl.3. RTBF still removes the NAME, and
   //     ⛔ the retained legal records are ⛔ never used to restore it.
+  // ⭐ Review round 2 (2026-09-19): the LAWFUL withheld arms are COUNTED here and logged ONCE per request
+  //   (below) — ⛔ never one line per row. The logger defaults to `info` (`server.ts:90`) and every pool
+  //   member polls every 60 s, so a per-row line (even at `info`) is volume ∝ members × withheld rows AND
+  //   names an erased (RTBF) member each time. The counts carry ⛔ no member id. Faults (decrypt failure,
+  //   resolver failure) stay a per-row `warn`: they are the alarm, and there are none in a healthy pool.
+  // ⚠ THE COUNTS ARE THE LAWFUL CAUSES ONLY. A fault row also renders `{ name: null }` but is in ⛔ NO
+  //   counter, so `noProfile + erased + emptyAfterNormalise` does ⛔ not reconcile with the unnamed rows
+  //   whenever a fault exists, and the line is silent when the only unnamed rows are faults — their
+  //   per-row `warn` is the signal. (Recorded at the round-3 review; the message says so.)
+  const withheldByCause = { noProfile: 0, erased: 0, emptyAfterNormalise: 0 };
   const confirmedRows = await mapWithConcurrency(
     confirmed,
     DIRECTORY_DECRYPT_CONCURRENCY,
@@ -1170,13 +1180,18 @@ async function resolveContributorList(
       if (!kycProfile || kycProfile.nameCiphertext === null) {
         // A lawful absence (no name to show), ⛔ not a fault. The row is KEPT (`-222` cl.1) and still
         // counts toward `confirmedCount` for the pending math below.
-        request.log.warn({ memberId: contributor.memberId }, 'pool-contributors: confirmed contributor has no resolvable name — rendering the row unnamed');
+        // ⚠ COUNTED, ⛔ not logged per row (review round 2) — see `withheldByCause` above.
+        withheldByCause.noProfile += 1;
         return { name: null };
       }
       let storedName: string;
       try {
         storedName = await decryptKycField(kycProfile.nameCiphertext, pariwarId, outageAwareEncryption);
       } catch (err) {
+        // ⚠ `err` IS logged whole in this arm (below), ⛔ unlike the resolver arm — a RECORDED CHOICE (review
+        //   round 3), ⛔ not an accident: this `catch` covers the decrypt call ONLY, and a KMS / GCM failure
+        //   happens BEFORE any plaintext exists, so its message cannot echo a stored name. The resolver arm
+        //   runs AFTER the decrypt, on the plaintext, which is why it logs the error's NAME only.
         // ⭐⭐ A KMS OUTAGE IS ⛔ NOT A BAD ROW — RE-THROW IT (`-224` D4), to the handler's fail-soft.
         if (err instanceof KmsOutageError) throw err;
         // What remains is a fault of THIS stored name (KMS rejected the envelope, the envelope did
@@ -1191,7 +1206,9 @@ async function resolveContributorList(
       //     ⭐ Since `-224` D7 this is the ONLY erasure check on this path (the batched state read is
       //     gone), exactly as on the public route.
       if (storedName === memberDomain.ANONYMIZED_SENTINEL) {
-        request.log.warn({ memberId: contributor.memberId }, 'pool-contributors: erasure sentinel reached the decrypt — rendering the row unnamed');
+        // ⚠ COUNTED, ⛔ not logged per row — erasure is a lawful state, ⛔ not a fault, and a per-row line
+        //   would name the erased member on every poll (see `withheldByCause` above).
+        withheldByCause.erased += 1;
         return { name: null };
       }
       // ⭐ Story 11b.21 (`-224` D3) — the MODE-RESOLVED name, at parity with the public page (`-189` cl.3).
@@ -1206,18 +1223,43 @@ async function resolveContributorList(
       // ⚠ SUPERSEDED (quoted, ⛔ not deleted): *"`splitFirstNameLastInitial(fullName)` … return
       //   { firstName, lastInitial }"* — the Story 8.3 PII-shielded form, which showed the member LESS
       //   than the public page (`-221` Axis A).
-      const name = normalisePublicName(
-        notifications.resolveMemberFacingDeceasedName(
-          presentationMode,
-          kycDomain.publicNameTokens(storedName).join(' '),
-        ),
-      );
-      if (name === null) {
-        request.log.warn({ memberId: contributor.memberId }, 'pool-contributors: confirmed contributor name empty after normalising — rendering the row unnamed');
+      // ⭐⭐ THE RESOLVER IS INSIDE A `try`, ⛔ NOT AFTER THE DECRYPT'S (review 2026-09-19). The public
+      //     route records this exact asymmetry as *"not defensible either way round"* (`public-pages/
+      //     handlers.ts`, second review pass): a throw on ONE pathological stored name would otherwise
+      //     propagate to `poolContributors`' fail-soft and blank the WHOLE list to `{ assigned:false }`.
+      //     ⇒ it is a fault of THIS name ⇒ the unnamed row, identical to every other cause (`-222` cl.1),
+      //     ⛔ never an outage. The decrypt's `KmsOutageError` re-throw above is ⛔ untouched.
+      let name: string | null;
+      try {
+        name = normalisePublicName(
+          notifications.resolveMemberFacingDeceasedName(
+            presentationMode,
+            kycDomain.publicNameTokens(storedName).join(' '),
+          ),
+        );
+      } catch (err) {
+        // ⚠ The error's NAME only, ⛔ never `err` itself (review round 2): this code has just handled the
+        //   DECRYPTED stored name, and an error message that echoes its input would put a person's name in
+        //   a log. The signal is the ACTION and the error class, never the subject.
+        request.log.warn(
+          { errorName: err instanceof Error ? err.name : typeof err, memberId: contributor.memberId },
+          'pool-contributors: confirmed contributor name resolution failed — rendering the row unnamed',
+        );
+        return { name: null };
       }
+      if (name === null) withheldByCause.emptyAfterNormalise += 1;
       return { name };
     },
   );
+  // ⭐ ONE line per request, counts by cause, ⛔ no member id (review round 2). Only when something LAWFUL was
+  //   withheld, so a healthy pool logs nothing. ⛔ It never reaches a client (`-222` cl.2). ⚠ It counts the
+  //   lawful causes only — a fault row is in ⛔ no counter (see `withheldByCause`).
+  if (withheldByCause.noProfile + withheldByCause.erased + withheldByCause.emptyAfterNormalise > 0) {
+    request.log.info(
+      { withheld: withheldByCause, confirmedCount: confirmed.length },
+      'pool-contributors: lawful withheld rows rendered unnamed (counts by cause; faults are logged per row, not counted here)',
+    );
+  }
   // ⭐ `mapWithConcurrency` writes each result at its own INPUT index, so the rows keep the domain
   // read's deterministic contributor order — ⛔ never completion order. ⛔ No filter (`-222` cl.1).
   // ⚠ SUPERSEDED (quoted, ⛔ not deleted): *"`resolved.filter((row) => row !== null)`"* — the drop.

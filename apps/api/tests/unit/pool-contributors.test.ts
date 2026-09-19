@@ -29,6 +29,8 @@ const reserveNames = vi.fn();
 const listConfirmedContributorsForPool = vi.fn();
 const getMemberKycProfile = vi.fn();
 const resolvePublicNamePresentationMode = vi.fn();
+// Delegates to the REAL cleaner; a test overrides it with `mockImplementation` (and restores it) to force a throw.
+const publicNameTokens = vi.fn();
 
 vi.mock('@twt/domain', async (importActual) => {
   const actual = await importActual<typeof import('@twt/domain')>();
@@ -38,7 +40,12 @@ vi.mock('@twt/domain', async (importActual) => {
     alert: { ...actual.alert, listLiveAlertsForPariwar },
     pool: { ...actual.pool, getCycleFreezeCommittedAt, resolveAssignedPoolWithRosterForMember, reserveNames },
     contribution: { ...actual.contribution, listConfirmedContributorsForPool },
-    kyc: { ...actual.kyc, getMemberKycProfile, resolvePublicNamePresentationMode },
+    kyc: {
+      ...actual.kyc,
+      getMemberKycProfile,
+      resolvePublicNamePresentationMode,
+      publicNameTokens: publicNameTokens.mockImplementation(actual.kyc.publicNameTokens),
+    },
   };
 });
 
@@ -62,7 +69,7 @@ const CONFIRMED_MEMBER_UNRESOLVABLE = '77777777-7777-7777-7777-777777777777';
 function fakeRequest(): FastifyRequest {
   return {
     requestContext: { traceId: 'trace-1', actorId: MEMBER_ID, pariwarId: PARIWAR_ID },
-    log: { warn: vi.fn(), error: vi.fn() },
+    log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
   } as unknown as FastifyRequest;
 }
 
@@ -145,6 +152,145 @@ describe('poolContributors — pending aggregate uses the CONFIRMED-SET size, no
     const result = await createMemberPoolHandlers(deps).poolContributors(fakeRequest());
     if (!result.assigned) throw new Error('expected an assigned result');
     expect(result.confirmed).toEqual([{ name: 'Ravi' }, { name: 'Rajesh S.' }]);
+  });
+
+  // ⭐ Review 2026-09-19 — the resolver is INSIDE a per-row `try` (the public route's second-pass rule):
+  // a throw on ONE pathological name is a fault of THAT name ⇒ its row is `{ name: null }`, the rest are
+  // named, and the list is ⛔ never blanked to `{ assigned:false }` (that is an OUTAGE's outcome).
+  it('a throw in the NAME RESOLVER is that row\'s `{ name: null }` — ⛔ never a whole-list `assigned:false`', async () => {
+    resolvePublicNamePresentationMode.mockResolvedValue('full_name');
+    listConfirmedContributorsForPool.mockResolvedValue([
+      { memberId: CONFIRMED_MEMBER_OK },
+      { memberId: CONFIRMED_MEMBER_UNRESOLVABLE },
+    ]);
+    // Deterministic per row (⛔ not call-order dependent — the decrypt runs under bounded concurrency):
+    // the ciphertext identifies the member, the decrypt maps it to that member's stored name.
+    getMemberKycProfile.mockReset();
+    getMemberKycProfile.mockImplementation(async (_tx: unknown, _pariwarId: unknown, memberId: string) => ({
+      nameCiphertext: `enc:${memberId}`,
+    }));
+    decryptKycField.mockReset();
+    decryptKycField.mockImplementation(async (ciphertext: string) =>
+      ciphertext === `enc:${CONFIRMED_MEMBER_OK}` ? 'Rajesh Sharma' : 'Pathological Name',
+    );
+    const actual = await vi.importActual<typeof import('@twt/domain')>('@twt/domain');
+    publicNameTokens.mockImplementation((name: string) => {
+      // The thrown MESSAGE echoes the decrypted name on purpose: a fault log that carried `err` (under ANY
+      // key) would leak it, so the assertions below have teeth.
+      if (name === 'Rajesh Sharma') throw new Error(`resolver bug on ${name}`);
+      return actual.kyc.publicNameTokens(name);
+    });
+    const req = fakeRequest();
+    const deps = { clock: () => new Date('2026-07-05T00:00:00.000Z'), encryption: {} } as unknown as AppDeps;
+    let result;
+    try {
+      result = await createMemberPoolHandlers(deps).poolContributors(req);
+    } finally {
+      publicNameTokens.mockImplementation(actual.kyc.publicNameTokens); // never leak the throw to later tests
+    }
+    if (!result.assigned) throw new Error('expected an assigned result — a resolver fault is ⛔ not an outage');
+    // Row 1's resolver threw ⇒ null. Row 2 goes through the real cleaner and is named — the fault stayed
+    // per-row and the row order is intact.
+    expect(result.confirmed).toEqual([{ name: null }, { name: 'Pathological Name' }]);
+    expect(result.pending).toEqual({ count: 1, percentage: 33 });
+    // The fault is logged by ACTION at `warn` — it IS a fault, unlike the lawful withheld arms, which are
+    // COUNTED (one `info` line per request, below).
+    const warnCalls = (req.log.warn as ReturnType<typeof vi.fn>).mock.calls;
+    const faultCalls = warnCalls.filter((c) => String(c[1]).includes('name resolution failed'));
+    expect(faultCalls).toHaveLength(1);
+    // Review round 2: the fault log carries the error's NAME only — ⛔ never `err` (its message could echo
+    // the decrypted stored name), and ⛔ never the name itself.
+    const faultPayload = faultCalls[0]![0] as Record<string, unknown>;
+    expect(faultPayload['errorName']).toBe('Error');
+    // The payload's KEYS are pinned, so the error cannot be re-added under another key (round 3).
+    expect(Object.keys(faultPayload).sort()).toEqual(['errorName', 'memberId']);
+    // ⛔ The decrypted name appears in NO log call on this request (the thrown message echoes it).
+    const allLogs = JSON.stringify([
+      (req.log.info as ReturnType<typeof vi.fn>).mock.calls,
+      warnCalls,
+      (req.log.error as ReturnType<typeof vi.fn>).mock.calls,
+    ]);
+    expect(allLogs).not.toContain('Rajesh');
+  });
+
+  // ⭐ Review round 2 — the LAWFUL withheld arms are logged ONCE per request, as counts by cause, with ⛔ no
+  // member id, at `info`; ⛔ never a per-row line (the logger defaults to `info`, every member polls every
+  // 60 s, and a per-row line names an erased member each time). Faults stay a per-row `warn`. Reverting to
+  // a per-row line (with OR without a member id, at `info` OR `warn`), or re-adding `memberId`, fails HERE.
+  it('the lawful withheld arms log ONE `info` line of counts by cause — ⛔ no member id, ⛔ never per row', async () => {
+    resolvePublicNamePresentationMode.mockResolvedValue('full_name');
+    const M_NO_PROFILE = CONFIRMED_MEMBER_OK;
+    const M_ERASED = CONFIRMED_MEMBER_UNRESOLVABLE;
+    const M_EMPTY = '88888888-8888-8888-8888-888888888888';
+    listConfirmedContributorsForPool.mockResolvedValue([
+      { memberId: M_NO_PROFILE },
+      { memberId: M_ERASED },
+      { memberId: M_EMPTY },
+    ]);
+    const actual = await vi.importActual<typeof import('@twt/domain')>('@twt/domain');
+    getMemberKycProfile.mockReset();
+    getMemberKycProfile.mockImplementation(async (_tx: unknown, _pariwarId: unknown, memberId: string) =>
+      memberId === M_NO_PROFILE ? null : { nameCiphertext: `enc:${memberId}` },
+    );
+    decryptKycField.mockReset();
+    decryptKycField.mockImplementation(async (ciphertext: string) =>
+      ciphertext === `enc:${M_ERASED}` ? actual.member.ANONYMIZED_SENTINEL : '\u200b\u2060\ufeff',
+    );
+    const req = fakeRequest();
+    const deps = { clock: () => new Date('2026-07-05T00:00:00.000Z'), encryption: {} } as unknown as AppDeps;
+    const result = await createMemberPoolHandlers(deps).poolContributors(req);
+    if (!result.assigned) throw new Error('expected an assigned result');
+    // Every cause is byte-identical on the wire and the rows are all KEPT, in order.
+    expect(result.confirmed).toEqual([{ name: null }, { name: null }, { name: null }]);
+
+    // Round 3: a message that concerns a withheld row, at ANY level. The counts line is the ONLY one allowed.
+    const ABOUT_A_WITHHELD_ROW = /erasure|resolvable name|empty after|unnamed|withheld/i;
+    const infoAbout = (req.log.info as ReturnType<typeof vi.fn>).mock.calls.filter((c) =>
+      ABOUT_A_WITHHELD_ROW.test(String(c[1])),
+    );
+    expect(infoAbout).toHaveLength(1);
+    expect(String(infoAbout[0]![1])).toContain('counts by cause');
+    expect(infoAbout[0]![0]).toEqual({
+      withheld: { noProfile: 1, erased: 1, emptyAfterNormalise: 1 },
+      confirmedCount: 3,
+    });
+    // ⛔ A lawful arm is never a `warn` — at any wording.
+    const warnAbout = (req.log.warn as ReturnType<typeof vi.fn>).mock.calls.filter((c) =>
+      ABOUT_A_WITHHELD_ROW.test(String(c[1])),
+    );
+    expect(warnAbout).toHaveLength(0);
+    // ⛔ No member id anywhere in ANY log call on this request.
+    const everything = JSON.stringify([
+      (req.log.info as ReturnType<typeof vi.fn>).mock.calls,
+      (req.log.warn as ReturnType<typeof vi.fn>).mock.calls,
+    ]);
+    for (const id of [M_NO_PROFILE, M_ERASED, M_EMPTY]) expect(everything).not.toContain(id);
+  });
+
+  // ⭐ Round 3 — the `> 0` guard: a HEALTHY pool (every contributor named) logs no counts line at all.
+  // Removing the guard would emit an all-zero line on every poll of every member.
+  it('a pool with NO withheld row logs NO counts line', async () => {
+    resolvePublicNamePresentationMode.mockResolvedValue('full_name');
+    const M_A = CONFIRMED_MEMBER_OK;
+    const M_B = CONFIRMED_MEMBER_UNRESOLVABLE;
+    listConfirmedContributorsForPool.mockResolvedValue([{ memberId: M_A }, { memberId: M_B }]);
+    getMemberKycProfile.mockReset();
+    getMemberKycProfile.mockImplementation(async (_tx: unknown, _pariwarId: unknown, memberId: string) => ({
+      nameCiphertext: `enc:${memberId}`,
+    }));
+    decryptKycField.mockReset();
+    decryptKycField.mockImplementation(async (ciphertext: string) =>
+      ciphertext === `enc:${M_A}` ? 'Rajesh Sharma' : 'Amit Verma',
+    );
+    const req = fakeRequest();
+    const deps = { clock: () => new Date('2026-07-05T00:00:00.000Z'), encryption: {} } as unknown as AppDeps;
+    const result = await createMemberPoolHandlers(deps).poolContributors(req);
+    if (!result.assigned) throw new Error('expected an assigned result');
+    expect(result.confirmed).toEqual([{ name: 'Rajesh Sharma' }, { name: 'Amit Verma' }]);
+    const counts = (req.log.info as ReturnType<typeof vi.fn>).mock.calls.filter((c) =>
+      String(c[1]).includes('counts by cause'),
+    );
+    expect(counts).toHaveLength(0);
   });
 
   it('a KMS OUTAGE self-suppresses the list — ⛔ never N placeholders (`-224` D4)', async () => {

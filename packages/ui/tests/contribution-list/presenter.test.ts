@@ -190,6 +190,9 @@ describe('ANTI-WIDENING — confirmed-only is preserved as a SHAPE (AC4, D2(a))'
     }
   });
 
+  // Was: `Object.keys(vm.displayName)` = `['firstName', 'kind', 'lastInitial']` for the ONE (named) arm.
+  // Story 11b.21 (`-224` D2): the named arm is `['kind', 'name']`, and the new placeholder arm is
+  // `['kind', 'ref']` — the runtime keys of BOTH are pinned.
   it('(d) the ACTUAL RUNTIME return value carries exactly the declared keys — a compile-time literal alone cannot see an unsafe cast or object spread adding an extra property', () => {
     const vm = deriveContributionRowViewModel(row());
     expect(Object.keys(vm).sort()).toEqual(Object.keys(VIEW_MODEL_KEYS).sort());
@@ -261,9 +264,18 @@ describe('AC2 — every declared i18n REF resolves in the namespace it CLAIMS, i
     });
   }
 
+  // Was: "the ROW presenter emits exactly ONE of the ten (`row_a11y`), which takes a `{name}` param" — the
+  // ten `contributor_list.*` refs are now eleven (`-224` D1); the row presenter emits `row_a11y` for every
+  // row and, for an UNNAMED row, also the placeholder ref (asserted below — the title's second half).
   it('the ROW presenter emits `row_a11y` (and, for an unnamed row, the placeholder); `row_a11y` takes a `{name}` param', () => {
     const vm = deriveContributionRowViewModel(row());
     expect(vm.rowA11y.ref.key).toBe('contributor_list.row_a11y');
+    const unnamed = deriveContributionRowViewModel(row({ displayName: { kind: 'unnamed' } }));
+    expect(unnamed.rowA11y.ref.key).toBe('contributor_list.row_a11y');
+    expect(unnamed.displayName).toEqual({
+      kind: 'placeholder',
+      ref: { key: 'value.contributor_unnamed', namespace: 'sahyog-vivran' },
+    });
     const bundle = JSON.parse(
       readFileSync(path.join(repoRoot, 'packages/i18n/locales/en/contribution.json'), 'utf8'),
     ) as Record<string, string>;

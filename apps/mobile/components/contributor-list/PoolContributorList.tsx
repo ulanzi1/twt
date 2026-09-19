@@ -43,14 +43,13 @@
 
 import { useLocale, useT } from '@twt/i18n/react'
 import { FlashList } from '@shopify/flash-list'
-import { deriveContributionRowViewModel } from '@twt/ui'
-import type { ContributionRowViewModel } from '@twt/ui'
 import type { ConfirmedContributorRow } from '@twt/contracts'
 import { useCallback, useMemo } from 'react'
 import { StyleSheet } from 'react-native'
 import { Paragraph, Text, View, YStack } from 'tamagui'
 
-import { toContributionRowInput } from './contribution-row-input'
+import { deriveContributorRow } from './derive-contributor-row'
+import type { DerivedContributorRow } from './derive-contributor-row'
 import { usePoolContributorsQuery } from './usePoolContributorsQuery'
 
 /** The contribution i18n namespace (shared with 8.2's card copy). */
@@ -117,34 +116,20 @@ export function PoolContributorList() {
   //   triggers are now a `row_a11y` miss or a placeholder-key miss (`sahyog-vivran`).
   const renderableRows = useMemo(
     () =>
-      confirmedRows.map((item): { label: string; ariaLabel: string; isPlaceholder: boolean } | null => {
+      confirmedRows.map((item): DerivedContributorRow | null => {
         try {
-          const vm: ContributionRowViewModel = deriveContributionRowViewModel(
-            toContributionRowInput(item, poolLetterCode),
-          )
-          // ⚠ SUPERSEDED 2026-09-19 by Story 11b.21 (quoted, ⛔ not deleted): *"The JOIN lives here, in the
-          //   render layer … the presenter emits name PARTS and never composes them, because the contributor
-          //   name FORM is UNRULED"*. The form is RULED (`-189` cl.3) and resolved on the SERVER; the name
-          //   renders AS-IS (⛔ no join). A withheld name renders the ruled placeholder, resolved from the
-          //   presenter's ref — key AND namespace both (`-224` D1: `sahyog-vivran`, ⛔ not `contribution`).
-          const label =
-            vm.displayName.kind === 'name'
-              ? vm.displayName.name
-              : t(vm.displayName.ref.key, undefined, { namespace: vm.displayName.ref.namespace })
-          const isPlaceholder = vm.displayName.kind === 'placeholder'
-          // The KEY AND ITS NAMESPACE BOTH COME FROM THE PRESENTER'S REF, never guessed here — `t()`
-          // defaults to `common` and THROWS on a miss, and the namespace is the THIRD argument (passing
-          // it second lands it in the params slot and throws on every call). The `{name}` param is the
-          // render layer's, deliberately: the presenter does not fill it.
-          // ⭐ `-224` D5 — the placeholder row is labelled by the SAME `row_a11y` string ("A contributor,
-          // confirmed contributor"): ⛔ no new copy, and ⛔ nothing that reads as a cause.
-          const ariaLabel = t(vm.rowA11y.ref.key, { name: label }, { namespace: vm.rowA11y.ref.namespace })
-          return { label, ariaLabel, isPlaceholder }
+          // ⭐ Review 2026-09-19: the derivation lives in `derive-contributor-row.ts` — the SAME function the
+          //   AC5 test calls (⛔ not a transcription of it). The per-row guard stays HERE, where the drop is
+          //   logged.
+          return deriveContributorRow(item, poolLetterCode, t)
         } catch (error) {
-          // ⚠ NOT SILENT — and that is the point. The file header records that `confirmed` and the
-          // aggregate figures LEGITIMATELY diverge (an erased contributor is omitted, 11b.2a's D5), so
-          // WITHOUT a signal here a RENDER FAILURE is indistinguishable from a LAWFUL ERASURE and
-          // nothing is left to tell them apart (second code review, patch 11). Dev-only, and ⛔ NO
+          // ⚠ NOT SILENT — and that is the point. ⚠ SUPERSEDED 2026-09-19 (Story 11b.21, `-222`; quoted,
+          // ⛔ not deleted): *"The file header records that `confirmed` and the aggregate figures
+          // LEGITIMATELY diverge (an erased contributor is omitted, 11b.2a's D5), so WITHOUT a signal here a
+          // RENDER FAILURE is indistinguishable from a LAWFUL ERASURE"*. Erasure is now a PLACEHOLDER row, so
+          // that divergence is gone — but a dropped row is still invisible to the reader, and it is still
+          // the ONLY thing on this surface that can make `confirmed` and what is drawn differ, so it stays
+          // signalled (second code review, patch 11). Dev-only, and ⛔ NO
           // member data in the message: the row's name parts are exactly what must never reach a log
           // ([["anonymous" diagnostic log convention]] — the signal is the ACTION, never the subject).
           // ⚠ The message states ⛔ NO member data — the row's name parts are exactly what must never

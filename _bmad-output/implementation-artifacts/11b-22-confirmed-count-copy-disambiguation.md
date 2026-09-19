@@ -16,7 +16,7 @@ equals it (2026-09-19). Two facts, stated separately:
 
 # Story 11b.22: One Page, Two Counts — Word the Contributor Set Size and the Confirmed-Contribution Count Differently `[SURFACE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 ## ⭐ GLYPH REGISTER — read this before any clause below
 
@@ -327,28 +327,28 @@ the sprint row is flipped per the ledger convention ([[feedback_closure_language
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Re-verify the baseline** (all ACs)
-  - [ ] `git fetch origin`; `git diff 797860e7..origin/main --stat -- packages apps scripts`. If
+- [x] **Task 0 — Re-verify the baseline** (all ACs)
+  - [x] `git fetch origin`; `git diff 797860e7..origin/main --stat -- packages apps scripts`. If
         `[driveToken].astro`, `sahyog-vivran-render.ts`, `surface-fields.ts` or either
         `sahyog-vivran.json` moved, re-derive every cite below first (`11b-20`/`11b-21` are `done`, so
         there is ⛔ no sibling to rebase against).
-  - [ ] Confirm the two `tr('value.contributions_count', …)` uses in `[driveToken].astro`
+  - [x] Confirm the two `tr('value.contributions_count', …)` uses in `[driveToken].astro`
         (`contributorTotal:` and `contributionsCount:`) and that `.decision-log.md` HEAD is still `-224`
         (else take the next free id and update every `-225` here).
-  - [ ] *(Observational — ⛔ not blocking, ⛔ changes nothing below.)* Note in the Dev Agent Record whether
+  - [x] *(Observational — ⛔ not blocking, ⛔ changes nothing below.)* Note in the Dev Agent Record whether
         any producer path can give one member two live confirmations for one pool (Trap 1). The copy is
         correct either way.
-- [ ] **Task 1 — GOVERNANCE COMMIT, before any code** (AC0)
-  - [ ] `### Decision 2026-09-19-225` (**Author-committed, BigDev**): D1–D4, the rejected alternatives,
+- [x] **Task 1 — GOVERNANCE COMMIT, before any code** (AC0)
+  - [x] `### Decision 2026-09-19-225` (**Author-committed, BigDev**): D1–D4, the rejected alternatives,
         the §0-gate line (*"the author's: it changes ⛔ no disclosure, ⛔ no obligation, ⛔ no basis, and
         supersedes ⛔ no clause"*), and the D2 words — as committed or as BigDev changed them.
-  - [ ] Annotate `-219` follow-up (3) and the `2026-09-18c` ledger note (annotations only).
-  - [ ] `epics.md`: add `### Story 11b.22: …` after the 11b.21 section and before `## Epic 12`, with the
+  - [x] Annotate `-219` follow-up (3) and the `2026-09-18c` ledger note (annotations only).
+  - [x] `epics.md`: add `### Story 11b.22: …` after the 11b.21 section and before `## Epic 12`, with the
         SECTIONED header block (`SECTIONED 2026-09-19 (Story 11b.22 Task 1, before the first line of
         code)`), commissioning authority `-219` follow-up (3).
-  - [ ] Sprint row `11b-22-…` → `in-progress` (SAFE prepend of a ledger entry: read first, guard on size,
+  - [x] Sprint row `11b-22-…` → `in-progress` (SAFE prepend of a ledger entry: read first, guard on size,
         then write; [[project_sprint_status_safe_prepend]]).
-  - [ ] Commit as `governance(11b.22): -225 — the two counts get two wordings; section the story; row → in-progress`.
+  - [x] Commit as `governance(11b.22): -225 — the two counts get two wordings; section the story; row → in-progress`.
 - [ ] **Task 2 — The copy** (AC1, AC2)
   - [ ] Add `value.contributor_total` + `$comment.contributor_total` to both `sahyog-vivran.json` files,
         next to `value.contributions_count`. Keep key order/parity with the sibling entries.
@@ -461,7 +461,24 @@ both.
 
 ### Agent Model Used
 
+Claude Opus 5 (1M context) — `claude-opus-5[1m]`, via `bmad-dev-story`, 2026-09-19.
+
 ### Debug Log References
+
+- **Task 0 (2026-09-19):** `git fetch origin`; `origin/main` = `797860e7`; `git diff 797860e7..origin/main` and
+  `797860e7..HEAD` over `packages apps scripts` are both **empty** ⇒ every cite in the story holds. The two
+  `tr('value.contributions_count', …)` uses are at `[driveToken].astro:173` (`contributorTotal:`) and `:213`
+  (`contributionsCount:`). `.decision-log.md` HEAD was `-224` ⇒ the new id is `-225` as planned.
+- **Task 0, observational (Trap 1) — changes nothing below:** the only non-test code path that emits
+  `contribution.confirmed` is the matcher (`reconciliation/matcher-write.ts`, called from
+  `apps/jobs/src/matcher/matcher-worker.ts`), which short-circuits on `hasConfirmedContribution` first. The review
+  path (`reconciliation-review-write.ts`) appends a *reversal*, ⛔ not a second confirmation; a later fresh
+  confirmation re-greens to ONE live confirmation (the reversal is compensated). `self-verify-write.ts` emits ⛔ no
+  `contribution.confirmed`. ⇒ ⛔ no path found that yields two LIVE confirmations for one (member, pool). ⚠ ⛔ Not
+  proven: that two concurrent matcher runs cannot both pass the `hasConfirmedContribution` check (it is read
+  before the append). The copy is correct either way.
+- **Task 1:** D2 committed as the default (`Contributors: {count}` / `योगदानकर्ता: {count}`) — BigDev's open
+  question was answered by the story's own default, as the story permits; the fallback is recorded in `-225`.
 
 ### Completion Notes List
 

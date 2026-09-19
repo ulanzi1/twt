@@ -1,3 +1,13 @@
+# last_updated: 2026-09-19e (⭐ **STORY `11b-21` — CREATED via `bmad-create-story` at `a44aef23`: `backlog → ready-for-dev`.**
+#   ⭐ Carries BOTH axes of the `-221` breach per `-222` Consequence 1: (A) the member contributor list
+#   is mode-resolved via `resolveMemberFacingDeceasedName` (⛔ never `resolvePublicMemberName`, the `-181`
+#   trap), and (B) every confirmed row is KEPT in producer order as `{ name: null }` → `A contributor` /
+#   `एक सहकर्मी`, cause-blind. ⭐ Six ENGINEERING calls ruled in-file (D1 ONE key — `packages/ui` reads
+#   `sahyog-vivran.value.contributor_unnamed`, closing the deferred `-222` key-strategy item; D2 wire
+#   `{ name: string|null }.strict()`; D3 mononym under `shielded_name` stays SHOWN; D4 KMS outage ⇒
+#   existing fail-soft, ⛔ never N placeholders; D5 ⛔ no new a11y copy; D6 new query key + `gcTime: 0`),
+#   to be recorded as author-commit `2026-09-19-224` by Task 1 BEFORE code. ⛔ No Panel question open;
+#   ⚠ D3 flagged to BigDev as a reading of `-222` cl.2. ⛔ No code.)
 # last_updated: 2026-09-19d (⭐ **STORY `11b-20` — CODE-REVIEWED via `bmad-code-review` (full branch diff, governance included; three layers): `review → done`.** ⭐ 0 decision-needed, 3 patches APPLIED (the Nominee column now drops for an invisible-only/bidi holder name; a stale dark-copy `describe` retitled; the table named by the headline and the id trio pinned), 4 deferred to `deferred-work.md` (⚠ incl. `sahyog-drive:consent.note`, which `-160` cl.6 made false and which no story owned). ⛔ No AC violation, ⛔ no invariant-checklist gap. `ci:local` ⛔ NOT re-run after the patches; the affected suites, the gate, `astro check` and `eslint` were.)
 # last_updated: 2026-09-19c (⭐ **STORY `11b-20` — IMPLEMENTED via `bmad-dev-story`: `ready-for-dev → in-progress →
 #   review`.** ⭐ Governance first (`ad8f01a1`: the epics.md section + Task 2's written ruling — the block
@@ -19252,7 +19262,7 @@ development_status:
   # merely absent). ⭐ A new key, in the RULED word, under `-219` cl.3's all-five-causes constraint.
   # ⚠ This is a MEMBER-SURFACE PII change that REVERSES shipped behaviour ⇒ it owns its own
   # Task 0 and states its `-195` cl.1 compliance, as 11b.3b's AC10 did.
-  11b-21-member-contributor-name-form-parity: backlog
+  11b-21-member-contributor-name-form-parity: ready-for-dev
   # ⭐ Open follow-up (3) of `#decision-2026-09-16-219` — a COPY call, ⛔ not a code defect.
   # ⚠⛔ TWO DIFFERENT NUMBERS RENDER UNDER ONE KEY on the same page: `value.contributions_count`
   # ("{count} confirmed" / "{count} पुष्ट") is resolved TWICE in

@@ -95,6 +95,10 @@ import {
   sahyogVivranPagingTargets,
 } from '../../lib/sahyog-vivran-paging.js';
 import { buildForwardedFor, fetchSahyogVivran } from '../../lib/sahyog-vivran.server.js';
+import {
+  resolveSahyogVivranMessageBlockCopy,
+  selectSahyogVivranMessageBlock,
+} from '../../lib/sahyog-vivran-message-block.js';
 import { ACTIVE_PARIWAR_ID } from '../../lib/pariwar.server.js';
 
 // ⭐⭐ STORY 11b.10 — THE ROUTE PARAMETER IS THE DRIVE'S **OPAQUE PUBLIC ADDRESS TOKEN**, and the
@@ -416,6 +420,32 @@ if (!driveStatusVisible) {
       'change. Restore the tier, or make the change deliberately.',
   );
 }
+
+// ⭐⭐ STORY 11b.20 — THE RATIFIED §8.1 MESSAGE BLOCK (`2026-09-11-214` Consequence 3).
+// ⭐ Fed the RAW wire values, and ⛔ only when `fetched.ok` ⇒ the outage path renders ⛔ no block.
+// ⛔ Never `model.*`: `model.amountRaisedInr` is the labelled "₹ X raised" string (`''` on outage), and
+// `model.district` is read beside a "Not recorded" fallback the table must ⛔ not inherit.
+// ⭐ The result lives in these two consts, ⛔ NEVER on `model`: every model key is a classified field
+// id, and `deriveFieldIds` throws on one it does not know.
+// ⭐ Each matrix verdict is asked ONCE (the N+1 rule above) and HONOURED by the selector, ⛔ never
+// thrown on — unlike `drive_status`, both can be honoured: a suppressed amount drops the whole block,
+// a suppressed name selects the no-name headline, a suppressed table field drops its column.
+const messageBlock = fetched.ok
+  ? selectSahyogVivranMessageBlock({
+      amountRaisedInr: fetched.data.drive.amountRaisedInr,
+      deceasedMemberName: fetched.data.drive.deceasedMemberName,
+      district: fetched.data.drive.district,
+      nomineeName: fetched.data.drive.nomineeBankAccounts[0]?.accountHolderName ?? null,
+      visible: {
+        amount: visibilityOf('sahyog-vivran', 'amount_raised_inr', 'public').visible,
+        deceasedName: visibilityOf('sahyog-vivran', 'deceased_member_name', 'public').visible,
+        nomineeName: visibilityOf('sahyog-vivran', 'nominee_account_holder_name', 'public').visible,
+        district: visibilityOf('sahyog-vivran', 'district', 'public').visible,
+      },
+    })
+  : null;
+const messageBlockCopy =
+  messageBlock === null ? null : resolveSahyogVivranMessageBlockCopy(messageBlock, locale);
 ---
 
 <PublicShell
@@ -881,6 +911,45 @@ if (!driveStatusVisible) {
                   )}
                 </dl>
               </section>
+            ))}
+          </section>
+        )}
+
+        {/*
+          ⭐⭐ STORY 11b.20 — THE TRUSTEES' OWN WORDS, LAST ON THE PAGE (§8.1; Task 2's ruling).
+          ⭐ The `Nominee full name` | `District` table sits ABOVE the five paragraphs. ⚠ It does ⛔ not
+          replace the bank group's "Nominee Name" or the facts group's District above: `11b-17` ships
+          the same two pairings on the member view, and the facts group's "Not recorded" is ⛔ not this
+          table's rule — here an absent value DROPS its column (`-214` Consequence 6).
+          ⛔ NOTHING renders at ₹0 (`-216` cl.1), on the outage path, or when the matrix suppresses the
+          amount — `messageBlockCopy` is `null` in all three.
+          ⚠⛔ The column labels are LABELS, ⛔ not claims (`-214` Consequence 8).
+          ⭐ Family 13 on the web: a real `<table>` with `<th scope="col">`, a `<section>` named by its
+          own first sentence, ⛔ no `<script>`, ⛔ no `title=`.
+        */}
+        {messageBlockCopy !== null && (
+          <section aria-labelledby="sv-message-headline" class="mt-6 rounded border border-gray-300 p-4">
+            {messageBlockCopy.columns.length > 0 && (
+              <table class="mb-4 w-full text-left text-sm">
+                <thead>
+                  <tr>
+                    {messageBlockCopy.columns.map((column) => (
+                      <th scope="col" class="pb-1 text-xs font-normal uppercase tracking-wide text-gray-500">{column.label}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    {messageBlockCopy.columns.map((column) => (
+                      <td class="pr-4"><MatrixField surface="sahyog-vivran" field={column.field} viewerContext="public" value={column.value} /></td>
+                    ))}
+                  </tr>
+                </tbody>
+              </table>
+            )}
+            <p id="sv-message-headline" class="text-base font-semibold">{messageBlockCopy.headline}</p>
+            {messageBlockCopy.paragraphs.map((paragraph) => (
+              <p class="mt-2 text-sm text-gray-700">{paragraph}</p>
             ))}
           </section>
         )}

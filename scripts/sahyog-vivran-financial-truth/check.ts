@@ -93,6 +93,11 @@ const SCAN_FILES: readonly { readonly path: string; readonly renderPath: boolean
   // this gate's completeness check went RED; its only arithmetic is `page * limit`, which rule (3)
   // does ⛔ not match (neither operand is a count or an amount).
   { path: 'apps/public/src/lib/sahyog-vivran-paging.ts', renderPath: true },
+  // ⭐ Story 11b.20 — the ratified §8.1 message block's selector and copy resolution, registered in
+  // the SAME commit that creates it. ⭐ `renderPath: true`: it names `amountRaisedInr` (the ruled
+  // public figure, permitted) and formats it, and rule (3) is what proves it ⛔ never re-derives it —
+  // ⛔ no count × amount, ⛔ no target or factor. ⛔ Never flip it to `false` to get past a finding.
+  { path: 'apps/public/src/lib/sahyog-vivran-message-block.ts', renderPath: true },
   // ⭐ review finding — was MISSING. The page itself names no amount operand today (D1(c) is
   // refused at this story), but it is the render path and belongs on rule (3)'s watch list the
   // moment 11b.3b lifts the `@twt/ui` fence here.

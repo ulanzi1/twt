@@ -15,7 +15,7 @@ v0.2 until v0.4 cherry-picked it forward.
 
 # Story 11b.20: The Ratified Message Block on the PUBLIC Sahyog Vivran Page `[SURFACE]`
 
-Status: in-progress
+Status: review
 
 ## ⭐ GLYPH REGISTER — read this before any clause below
 
@@ -268,14 +268,14 @@ block's text**. The unit tests in Task 5 are the only coverage the text has.
       District fields stay or go, citing the `11b-17` both-labels precedent; (b) how the page's
       "Not recorded" District field and the table's drop-rule coexist. If this cannot be settled without
       editing ratified text, **STOP and route it**. The nominee value is the first account's.
-- [ ] **Task 3 — The selector** (AC4, AC6, AC7): a **pure** module exporting
+- [x] **Task 3 — The selector** (AC4, AC6, AC7): a **pure** module exporting
       `selectSahyogVivranMessageBlock`, at `apps/public/src/lib/sahyog-vivran-message-block.ts` (⭐ the name keeps it inside the
       financial-truth safeguard). It takes the **raw** DTO values: `amountRaisedInr: number`,
       `deceasedMemberName`, `district`, and the first account's holder name. Order, which is
       load-bearing: **(1)** `amountRaisedInr <= 0` ⇒ `null`; **(2)** name null ⇒
       `no_family` (`-223` cl.1); **(3)** otherwise `.full` with the name. Plus a table-column
       selector mirroring `selectMessageBlockTableColumns`.
-- [ ] **Task 4 — The render** (AC1, AC2, AC3, AC5, AC8(iii)/(iv)) in `[driveToken].astro`.
+- [x] **Task 4 — The render** (AC1, AC2, AC3, AC5, AC8(iii)/(iv)) in `[driveToken].astro`.
       ⭐ **The page has no `drive` binding.** It exposes only `fetched` and `model`, and the raw values
       exist only when `fetched.ok`. Source the selector input like this, which also makes the outage
       path render nothing:
@@ -300,17 +300,17 @@ block's text**. The unit tests in Task 5 are the only coverage the text has.
       ⛔ no multiplication, ⛔ no presenter,
       ⛔ never `deliveredTotal`. Respect the family-13 a11y rules (`sahyog-vivran-a11y.test.ts`): ⛔ no
       `<script>`, ⛔ no `role=` on `ul`/`li`/`nav`, ⛔ no `title=`.
-- [ ] **Task 5 — Tests** (AC4–AC8), in `apps/public/tests/` against the pure module with the real
+- [x] **Task 5 — Tests** (AC4–AC8), in `apps/public/tests/` against the pure module with the real
       `formatCurrency`:
-  - [ ] the named-drive `.full` headline (AC6)
-  - [ ] a null-name funded drive renders `no_family`, ⛔ never `null` (AC6)
-  - [ ] ₹0 silence **and** the order check (AC7)
-  - [ ] a null `district` drops the column; a null name drops the District column; an empty table renders nothing (AC4)
-  - [ ] real-`t()` legs for every resolved key in both locales ([[feedback_stub_must_call_not_transcribe]])
-  - [ ] **NARROW** the dark-copy fence; register the module in `SCAN_FILES` (AC8). ⚠ ⛔ Do not transcribe the `11b-17` guard block's messages: its comment says *"a ₹0 drive whose family has not authorised name publication"* and its assertion says *"₹0 unconsented drive"*, both false under `-223` cl.4. Reword them, and correct those two member-block lines in the same commit. Adapt the regexes to the public selector's own parameter names, since the member regexes are tied to `detail.`
-  - [ ] a test proves the block is absent when `fetched.ok` is false (the outage path)
-  - [ ] matrix verdicts (AC8(iv)): with `amount_raised_inr` suppressed, no block; with `deceased_member_name` suppressed, `no_family`
-- [ ] **Task 6 — Record what this story does not close.** `deferred-work.md`'s **Q1** (suspended member /
+  - [x] the named-drive `.full` headline (AC6)
+  - [x] a null-name funded drive renders `no_family`, ⛔ never `null` (AC6)
+  - [x] ₹0 silence **and** the order check (AC7)
+  - [x] a null `district` drops the column; a null name drops the District column; an empty table renders nothing (AC4)
+  - [x] real-`t()` legs for every resolved key in both locales ([[feedback_stub_must_call_not_transcribe]])
+  - [x] **NARROW** the dark-copy fence; register the module in `SCAN_FILES` (AC8). ⚠ ⛔ Do not transcribe the `11b-17` guard block's messages: its comment says *"a ₹0 drive whose family has not authorised name publication"* and its assertion says *"₹0 unconsented drive"*, both false under `-223` cl.4. Reword them, and correct those two member-block lines in the same commit. Adapt the regexes to the public selector's own parameter names, since the member regexes are tied to `detail.`
+  - [x] a test proves the block is absent when `fetched.ok` is false (the outage path)
+  - [x] matrix verdicts (AC8(iv)): with `amount_raised_inr` suppressed, no block; with `deceased_member_name` suppressed, `no_family`
+- [x] **Task 6 — Record what this story does not close.** `deferred-work.md`'s **Q1** (suspended member /
       unmasked coordinates) names `11b-20`, but it does not apply here: this page is unauthenticated,
       and `-217` (1) ruled Q1. ⭐ Record it as **not applicable**. ⛔ Do not re-raise it.
 
@@ -377,13 +377,36 @@ Claude Opus 5 (1M context) — `claude-opus-5[1m]`, via `bmad-dev-story`.
   - **(a) The existing fields stay.** The bank group's **"Nominee Name"** (`label.account_holder`, `-190` cl.2) and the facts group's **District** are ⛔ not removed. ⭐ Precedent: `11b-17` ships both holder labels on one screen, *and* ships the exact District pairing too — `MemberDriveDetail.tsx` renders a `label.district` fact with the `value.district_unknown` fallback **and** the message-block table with `selectMessageBlockTableColumns`'s drop rule. ⇒ this page repeats a shipped, reviewed arrangement, ⛔ it does not invent one.
   - **(b) Two District rules, and why both hold.** They govern different things. The facts group is the drive's labelled record; there an unrecorded posting is stated honestly as *"Not recorded"* (11b.3's shipped posture, ⛔ not touched). §10.2 ruling 3 / `-214` Consequence 6 govern the **ratified block's** tokens: an absent one drops its clause, and the District travels with the **deceased**. ⇒ the selector branches on the **raw** `fetched.data.drive.district`, ⛔ never on `model.district ?? labels.districtUnknown`.
   - **The nominee value** is `nomineeBankAccounts[0]?.accountHolderName ?? null`, the first account's (`resolveSummaryNomineeName` precedent; `-215` de-routed the differing-holder question).
+- **Task 3.** `apps/public/src/lib/sahyog-vivran-message-block.ts` exports `selectSahyogVivranMessageBlock` (pure): ₹0 / suppressed amount ⇒ `null` **first**, then a null or matrix-suppressed name ⇒ `no_family`, else `.full`. The table columns mirror `selectMessageBlockTableColumns`: Nominee drops on a null holder name; District drops on a null district **or** a null name. ⭐ It also exports `resolveSahyogVivranMessageBlockCopy`, which resolves the decided block through the real `t()` and `formatCurrency(block.amountRaisedInr, 'en')`. The copy resolution lives in the module, ⛔ not the page, so the block's actual **text** is unit-tested (the scrape test cannot see it). Precedent for `@twt/i18n` in `src/lib`: `sahyog-render.ts`.
+- **Task 3, one addition beyond the story's four inputs, stated:** the selector also takes the matrix verdicts for `nominee_account_holder_name` and `district`, and a suppressed one drops its **column**. Without that, a suppressed cell would leave its label standing over an empty `<MatrixField>`, which is the "table of placeholders" AC4 forbids. The cells still render through `<MatrixField>` as well.
+- **Task 4.** `[driveToken].astro`: the Task 4 `fetched.ok ? … : null` source verbatim, plus one `visibilityOf` per field; the result lives in two frontmatter consts, ⛔ never on `model`. The block is the last `<section>` (named by its headline via `aria-labelledby`), a real `<table>` with `<th scope="col">` above the headline and four paragraphs. ⛔ No `<script>`, ⛔ no `title=`, ⛔ no role on list/nav. `$comment.message_block` updated in `en` + `hi` (comment only; ⛔ no ratified string touched). The four matrix fields were probed live: all `visible` at `public`.
+- **Task 5.** New `apps/public/tests/sahyog-vivran-message-block.test.ts` (26 tests): `.full` / `no_family` / ₹0 incl. ₹1 boundary / source-order check / every column drop / empty table / field ids already declared (from the real outage model) / all four matrix verdicts / real-`t()` legs in both locales incl. ⛔ `₹₹` and ⛔ stray braces / bare-literal keys / the page wiring incl. the outage path / `<MatrixField>` cells / family 13.
+  - **Dark-copy fence NARROWED**, ⛔ not appended blindly: `AUTHORISED` gains `apps/public/src/lib/sahyog-vivran-message-block.ts` with `-214` Consequence 3 named in the comment and the failure message; the walk now also asserts it reaches `[driveToken].astro`; a public guard block adds the ₹0-first **order** check, null → `no_family`, the page reaching copy only through the module, ⛔ no literal ₹ before `amount` (both files), the district coupling, and ⛔ no "Not recorded"/`districtUnknown` in the module's code (comment-stripped, since its own doc comments name the prohibition). ⚠ The page itself names ⛔ no `message_block.*` key, so it is correctly ⛔ not in the list. The `11b-17` block's two refuted lines (*"whose family has ⛔ not authorised name publication"*, *"₹0 unconsented drive"*) are reworded to *"no displayable name"* citing `-223` cl.1/cl.4; the stale *"⛔ NEITHER exists today"* header line is annotated.
+  - **Financial-truth gate:** the module is in `SCAN_FILES` with `renderPath: true`. The scope safeguard was **red** without the entry and green with it.
+  - **Teeth, proven by planting and restoring:** swapping the name check above the ₹0 check turns the fence red (1) and the new test file red (2: behaviour + order); a planted `confirmedCount * 1000` in the module turns the financial-truth gate red (`render_path_multiplication`).
+- **Validation (2026-09-19):** full `ci:local` with the test DB — **PASSED, 34/34 jobs green**, integration included. Also run directly: `apps/public` vitest 667/667 (29 files), `astro check` 0/0/0, eslint clean on the changed files, `packages/i18n` 108/108, `i18n:check-parity` green, the member `drive-detail-render` 32/32.
+- **Task 6.** `deferred-work.md`: Q1 annotated **⛔ not applicable** (unauthenticated page, ⛔ no member session guard; `-217` (1) ruled Q1), ⛔ not re-raised. Also annotated as discharged for this story: the concatenated-key trigger (AC2), the vacuous district-drop item (AC4), and the `11b-3b` Task 7 *"FOR `11b-20`"* hand-off, whose *"name gate is the pinned clause"* line is recorded as superseded by `-223` cl.1.
+- ⚠ **Not done here, by scope:** `11b-17`'s epics section still says the public half is *"HOMED, ⛔ not built"*; the page header's *"IT NAMES ⛔ NOBODY"* banner predates `11b-3b`; the matrix yaml's *"renders no rupee figure"*. All three are other stories' text (the story's "Rulings checked" note names the last one).
 
 ### File List
+
+- `_bmad-output/planning-artifacts/epics.md` (governance commit `ad8f01a1`)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `_bmad-output/implementation-artifacts/11b-20-public-sahyog-vivran-message-block.md`
+- `_bmad-output/implementation-artifacts/deferred-work.md`
+- `apps/public/src/lib/sahyog-vivran-message-block.ts` (new)
+- `apps/public/src/pages/sahyog-vivran/[driveToken].astro`
+- `apps/public/tests/sahyog-vivran-message-block.test.ts` (new)
+- `packages/i18n/locales/en/sahyog-shared.json` (`$comment.message_block` only)
+- `packages/i18n/locales/hi/sahyog-shared.json` (`$comment.message_block` only)
+- `packages/i18n/tests/sahyog-shared-dark-copy.test.ts`
+- `scripts/sahyog-vivran-financial-truth/check.ts`
 
 ## Change Log
 
 | Date | Version | Description | Author |
 |---|---|---|---|
+| 2026-09-19 | 1.0 | **Implemented (`bmad-dev-story`); Status → `review`.** Governance first (`ad8f01a1`: epics section + Task 2 ruling). New pure module `sahyog-vivran-message-block.ts` (selector + copy resolution), rendered last on `[driveToken].astro` behind `fetched.ok` and four matrix verdicts. Dark-copy fence narrowed with a public guard block and the refuted member wording corrected; module registered in the financial-truth gate. 26 new tests; teeth proven by planted defects. `deferred-work.md`: Q1 not applicable; three 11b-20 triggers annotated. | BigDev + Claude |
 | 2026-09-19 | 0.6 | **Independent fresh-context validation of v0.5: nothing blocking. Six fixes applied; no code, and the row is unchanged.** **(1)** The story pointed at a `drive` variable the page does not have. Task 4 now gives the exact `fetched.ok ? … fetched.data.drive.* : null` source, which also makes the outage path structural. AC8(iii): ⛔ no new `SahyogVivranRenderModel` key, because `deriveFieldIds` throws. **(2)** Nothing gated the block on the matrix. New **AC8(iv)**: the table cells go through `<MatrixField>` with the existing ids; the headline is gated by `visibilityOf`: a suppressed amount drops the whole block and a suppressed name selects `no_family`. Both verdicts are honoured, ⛔ not thrown on, unlike `drive_status`. **(3)** The `11b-17` guard block the story says to mirror still carries the refuted "unconsented" / "not authorised" wording, and its regexes are tied to `detail.` ⇒ reword it, correct those member lines, and adapt the regexes. **(4)** Token names `{family_name}` / `{amount}` are stated, plus the param-taking resolver. **(5)** The stale `$comment.message_block` is updated in both locales. **(6)** Two glyph slips fixed. A test for the outage path was added. | BigDev + Claude |
 | 2026-09-19 | 0.5 | **STARTABLE. No code; the row stays `ready-for-dev`, now unblocked.** ⚠ **v0.4's B1 rested on a false premise, caught by BigDev:** it assumed a family or member can *withhold* the deceased member's name. ⛔ Neither can: `-160` cl.4(a) makes the member's own T&C the basis, and cl.6 removed the family's veto. The *"withheld name"* label came from the 2026-09-05 note §8.3(4), which quoted pre-`-160` public copy; v0.4 also added *"a member not having agreed"* on its own. ⇒ the routing note is **WITHDRAWN**, and B1 is decided as an author-commit, `-223` cl.1: a null name renders `no_family`, after the ₹0 check. **B2** is discharged by `-223` cl.2 (counsel's clearance recorded on BigDev's attestation). Rewritten: Preflight, Policy meaning, Trap 1, AC0, AC6, AC8(i), Task 0/1/3/5, References. Also noted: the stale `sahyog-drive:consent.note` on the public list is **not this story's** (`-223` Consequence 3). | BigDev + Claude |
 | 2026-09-18 | 0.4 | **Second `validate` pass, re-derived at `6547ead2`. No code; the row is unchanged (`ready-for-dev`, blocked).** v0.3 had lived only on the unmerged local branch `governance/11b-20-validate` and was cherry-picked onto `main` first. **Findings:** **(1)** `11b-3b` is `done`, so both code dependencies are discharged. **(2)** v0.3 ordered *"render `deliveredTotal`"* at five sites, which is **red on write**: the name is banned on the render path by the financial-truth gate and `sahyog-vivran-render.test.ts`. The wire field is `amountRaisedInr`. **(3)** v0.3's clause-pin gate (Trap 1 / AC6 / Task 3) **can never be satisfied**. The wire collapses four causes into one null and forbids a per-cause signal, and the basis is the member's own T&C, not a family choice. So *"no_family for consent and nothing else"* cannot be implemented, and the "family declined" premise was never ruled. Against it: `-214` C5, `11b-3b`'s `deferred-work.md` hand-off, and the shipped index/member selectors all map null → `no_family`. **BigDev routed the question to the Panel (B1)** instead of deciding it on our own record. **(4)** A routing-note-only obligation was found: §8.4(iii) requires counsel to review the join line *"before it goes public"*. BigDev reports it was cleared, but no record exists ⇒ **B2**. **(5)** The new selector must be named `sahyog-vivran-*.ts` and registered in `SCAN_FILES`, or it escapes the gate. **(6)** The page has no ₹0 branch; `model.amountRaisedInr` is a labelled string, so `{amount}` needs `formatCurrency` on the raw number. **(7)** Trap 4 now cites the `11b-17` both-labels precedent and the first-account nominee precedent, and notes that this page (unlike the index) decrypts the holder name correctly. **(8)** No public drive shows the District column today, by design. **(9)** The scrape test cannot see the block's text. **(10)** Coordination with `11b-22`. `-217`…`-222` were checked and do not bind this story. | BigDev + Claude |

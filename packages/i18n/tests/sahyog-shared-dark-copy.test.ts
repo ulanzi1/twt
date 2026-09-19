@@ -293,7 +293,8 @@ describe('⛔⛔ AC9 — ⛔ NEITHER TOKEN IS RENDERED. The copy exists; the ren
 // debt stays recorded against `11b-15` and is ⛔ NOT back-filled here).
 //
 // ⭐ The block is **PAGE-shaped** (§8.3(2)) — ⛔ it cannot sit in a one-line index cell. Its renders
-// are `11b-17` **AC10 / Task 5d** (member) and `11b-20` (public); ⛔ NEITHER exists today.
+// are `11b-17` **AC10 / Task 5d** (member) and `11b-20` (public); ⛔ NEITHER existed when 11b.19 shipped.
+// ⭐ Both exist now (`11b-17` 2026-09-13, `11b-20` 2026-09-19) — the fence below is NARROWED to them.
 // ────────────────────────────────────────────────────────────────────────────────────────────────
 
 describe('⭐ AC1/AC2/AC3 — the ratified §8.1 message block is AUTHORED, verbatim, in both locales', () => {
@@ -559,11 +560,12 @@ describe('⛔⛔ AC6 — ⛔ NOTHING RENDERS THE MESSAGE BLOCK. The copy exists;
     // supplied'*, naming each authorised site, which is the property that actually protects the page."*
     //
     // ⭐⭐ **`11b-17` HAS LANDED — the MEMBER render (`-214` cl.4(b): *"`11b-17` carries the MEMBER
-    // render — AC10 / Task 5d — and ⛔ nothing more"*). ⚠⛔ **`11b-20` (the PUBLIC render,
-    // `-214` Consequence 3) HAS ⛔ NOT** — it is `ready-for-dev` and **HOMED, ⛔ not built**
-    // ([[feedback_closure_language_precision]]) ⇒ ⛔ its render site is ⛔ **NOT** pre-authorised here,
-    // and a second entry appearing in this list without its story is the exact defect this file exists
-    // to catch.
+    // render — AC10 / Task 5d — and ⛔ nothing more"*).
+    // ⭐⭐ **NARROWED AGAIN 2026-09-19 (Story 11b.20) — `11b-20` HAS LANDED: the PUBLIC render,
+    // `-214` Consequence 3**, on `[driveToken].astro` behind `selectSahyogVivranMessageBlock`. ⭐ Its two
+    // files join the list WITH that authority named, and with their own guard assertions below — ⛔ not
+    // appended to turn a red build green. ⇒ `-214`'s two render sites are now BOTH authorised, and a
+    // THIRD appearing without its own ruling is still the exact defect this file exists to catch.
     //
     // ⭐⭐ **THE SURVIVING PROPERTY IS THE ONE THAT MATTERS**: `t()` **THROWS** on an unsupplied
     // interpolation param (`resolver.ts:36-42`), and this block is **PAGE-shaped** (§8.3(2)) ⇒ a
@@ -589,10 +591,11 @@ describe('⛔⛔ AC6 — ⛔ NOTHING RENDERS THE MESSAGE BLOCK. The copy exists;
       return RESOLVER.test(readFileSync(f, 'utf8'))
     })
 
-    // ⛔⛔ **THE ALLOW-LIST IS ⛔ NOT A WAIVER.** ⭐ It names the ⛔ ONE render site `-214` **cl.4(b)**
-    // authorised — the MEMBER half, Story `11b-17` AC10 / Task 5d — so a **SECOND** one (another
-    // package, another surface, or `11b-20`'s public render arriving early) still **FAILS here** and
-    // must come back with its own ruling. ⛔ Do ⛔ not append to it to make a build green.
+    // ⛔⛔ **THE ALLOW-LIST IS ⛔ NOT A WAIVER.** ⭐ It names the ⛔ TWO render sites `-214` authorised —
+    // the MEMBER half (**cl.4(b)**, Story `11b-17` AC10 / Task 5d) and the PUBLIC half
+    // (**Consequence 3**, Story `11b-20`) — so a **THIRD** one (another package, another surface)
+    // still **FAILS here** and must come back with its own ruling. ⛔ Do ⛔ not append to it to make a
+    // build green.
     // ⚠⛔ **TWO SOURCE FILES, ⛔ NOT ONE, AND BOTH ARE THE SAME RENDER SITE.** The variant SELECTORS
     // live in a plain `.ts` module because this repo has ⛔ **no RN mount harness** — the `.tsx`
     // cannot be imported by a test — so the pure logic was extracted where a test can CALL it. ⭐ That
@@ -605,20 +608,27 @@ describe('⛔⛔ AC6 — ⛔ NOTHING RENDERS THE MESSAGE BLOCK. The copy exists;
     expect(files.length).toBeGreaterThan(200)
     expect(files.some((f) => f.endsWith('/apps/mobile/components/drive-detail/MemberDriveDetail.tsx'))).toBe(true)
     expect(files.some((f) => f.endsWith('/apps/public/src/pages/sahyog.astro'))).toBe(true)
+    expect(files.some((f) => f.endsWith('/apps/public/src/pages/sahyog-vivran/[driveToken].astro'))).toBe(true)
     // ⛔ And the carve-out really is scoped to TEST MODULES — ⛔ not to whole `tests/` trees.
     expect(files.some((f) => f.includes('/tests/') && !/\.(test|spec)\.tsx?$/.test(f))).toBe(true)
 
+    // ⭐ Sorted, because the comparison below sorts. ⚠ The PUBLIC half is ONE render site in TWO files
+    // for the same reason as the member half: `.astro` is not unit-testable here, so the selector and
+    // its copy resolution live in a pure `.ts` module the page calls. ⭐ The PAGE itself names no
+    // `message_block.*` key — it renders the module's resolved strings — so it is ⛔ not in this list,
+    // and the guard below asserts it reaches the copy ⛔ only through the module.
     const AUTHORISED = [
       '/apps/mobile/components/drive-detail/MemberDriveDetail.tsx',
       '/apps/mobile/components/drive-detail/format.ts',
+      '/apps/public/src/lib/sahyog-vivran-message-block.ts',
     ]
     expect(
       resolvers.map((f) => f.replace(repoRoot, '')).sort(),
       'a file RESOLVES a ratified message-block key. ⛔ t() THROWS on an unsupplied token ' +
         '(resolver.ts:36-42) ⇒ an unguarded resolution ships a 500 / outage arm onto a PAGE-shaped ' +
-        'block — the WHOLE page, ⛔ not one line. ⭐ `2026-09-11-214` cl.4(b) authorised exactly ONE ' +
-        'render site: the MEMBER half, Story 11b-17 AC10 / Task 5d. ⚠⛔ The PUBLIC half is 11b-20 ' +
-        '(Consequence 3) and it is HOMED, ⛔ NOT built — ⛔ its site is ⛔ not pre-authorised here.',
+        'block — the WHOLE page, ⛔ not one line. ⭐ `2026-09-11-214` authorised exactly TWO render ' +
+        'sites: the MEMBER half (cl.4(b), Story 11b-17 AC10 / Task 5d) and the PUBLIC half ' +
+        '(Consequence 3, Story 11b-20). ⛔ A third needs its own ruling — ⛔ do not append it here.',
     ).toEqual(AUTHORISED)
 
     // ⭐⭐ **AND THE GUARD IS ASSERTED, ⛔ NOT ASSUMED** — the shape story D's narrowing of the
@@ -642,7 +652,8 @@ describe('⛔⛔ AC6 — ⛔ NOTHING RENDERS THE MESSAGE BLOCK. The copy exists;
     expect(selectors).toMatch(/amountRaisedInr <= 0\)\s*return null/)
     // ⭐⭐ **AND THE ₹0 CHECK MUST COME *FIRST* — ⛔ THE TWO ASSERTIONS ABOVE PIN PRESENCE, ⛔ NOT ORDER**
     // (review finding, 2026-09-14). Each proves its line EXISTS; ⛔ neither constrains which runs.
-    // ⚠⛔⛔ If they are ever swapped, a ₹0 drive whose family has ⛔ not authorised name publication
+    // ⚠⛔⛔ If they are ever swapped, a ₹0 drive with ⛔ no displayable name (every drive today —
+    // `-223` cl.1; ⛔ a null name is ⛔ never a refusal by anyone, `-223` cl.4 / `-160` cl.6)
     // resolves the `no_family` HEADLINE instead of returning `null` ⇒ ⭐ the Panel's ratified message
     // block RENDERS on a day-one drive where `#decision-2026-09-13-216` cl.1 says it must render
     // **NOTHING** — and ⛔ **both assertions above still pass**. ⇒ the fence would guard the PRESENCE
@@ -654,7 +665,7 @@ describe('⛔⛔ AC6 — ⛔ NOTHING RENDERS THE MESSAGE BLOCK. The copy exists;
     expect(nameIdx).toBeGreaterThan(-1)
     expect(
       amountIdx,
-      'the ₹0 silence must be decided BEFORE the name variant — otherwise a ₹0 unconsented drive renders the block `-216` silences',
+      'the ₹0 silence must be decided BEFORE the name variant — otherwise a ₹0 drive with no displayable name renders the block `-216` silences',
     ).toBeLessThan(nameIdx)
     expect(template('en', 'message_block.headline.no_family')).not.toContain('{family_name}')
     // ⭐ The render site consults the selector and returns early on its `null` — ⛔ it never resolves a
@@ -669,6 +680,43 @@ describe('⛔⛔ AC6 — ⛔ NOTHING RENDERS THE MESSAGE BLOCK. The copy exists;
     expect(selectors).toMatch(
       /district !== null && detail\.deceasedMemberName !== null/,
     )
+
+    // ⭐⭐ **THE PUBLIC HALF'S GUARD — Story 11b.20, the same five properties, ⭐ adapted to the public
+    // selector's own names** (⛔ the member regexes are tied to `detail.` and would match nothing here).
+    // ⚠ `-223` cl.1 is the public null-name ruling: after the ₹0 check, a null name renders `no_family`.
+    const publicModule = readFileSync(
+      join(repoRoot, 'apps/public/src/lib/sahyog-vivran-message-block.ts'),
+      'utf8',
+    )
+    const publicPage = readFileSync(
+      join(repoRoot, 'apps/public/src/pages/sahyog-vivran/[driveToken].astro'),
+      'utf8',
+    )
+    const noName = /familyName === null\) return \{ headline: \{ key: 'message_block\.headline\.no_family' \}/
+    const zero = /amountRaisedInr <= 0\) return null/
+    // ⭐ (2) null → `no_family`, and (3) the ₹0 silence — and ⭐ the ORDER, ⛔ not presence alone.
+    expect(publicModule).toMatch(noName)
+    expect(publicModule).toMatch(zero)
+    expect(
+      publicModule.search(zero),
+      'the public ₹0 silence must be decided BEFORE the name variant — otherwise a ₹0 drive with no displayable name renders the block `-216` silences',
+    ).toBeLessThan(publicModule.search(noName))
+    // ⭐ The page reaches the copy ⛔ only through the module, and renders nothing on its `null`.
+    expect(publicPage).toContain('selectSahyogVivranMessageBlock')
+    expect(publicPage).toMatch(/messageBlock === null \? null : resolveSahyogVivranMessageBlockCopy/)
+    expect(publicPage).toMatch(/\{messageBlockCopy !== null && \(/)
+    // ⭐ (1) ⛔ no literal ₹ before `amount`, on either file.
+    expect(publicModule).not.toMatch(/['"`]₹\{?\s*\$\{?\s*amount/)
+    expect(publicPage).not.toMatch(/['"`]₹\{?\s*\$\{?\s*amount/)
+    // ⭐ (4) the District column travels with the DECEASED, ⛔ never with the nominee.
+    expect(publicModule).toMatch(/district !== null && familyName !== null/)
+    // ⭐ (5) ⛔ no "Not recorded" in the table — the page's `districtUnknown` fallback belongs to the
+    // facts group, and the selector is fed the RAW district, ⛔ never the fallback-applied value.
+    // ⚠ Checked on the COMMENT-STRIPPED source: the module's own doc comments name "Not recorded" as
+    // the thing it must ⛔ never render, and a raw scan would fail on that prohibition.
+    const publicModuleCode = publicModule.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+    expect(publicModuleCode).not.toMatch(/not recorded|district_unknown|districtUnknown/i)
+    expect(publicPage).toMatch(/district: fetched\.data\.drive\.district,/)
   })
 
   it('⛔ AC6 — ⛔ nothing else moved: this story ships KEYS and ⛔ no contract field', () => {

@@ -16,7 +16,7 @@ equals it (2026-09-19). Two facts, stated separately:
 
 # Story 11b.22: One Page, Two Counts — Word the Contributor Set Size and the Confirmed-Contribution Count Differently `[SURFACE]`
 
-Status: review
+Status: done
 
 ## ⭐ GLYPH REGISTER — read this before any clause below
 
@@ -368,6 +368,9 @@ the sprint row is flipped per the ledger convention ([[feedback_closure_language
   - [x] `pnpm microcopy:check && pnpm microcopy:test`; `pnpm --filter @twt/i18n test`;
         `pnpm --filter @twt/public test`; `astro check`; `eslint` on the touched files; `tsc`.
   - [x] Live-DB `public-pages` suite on `twt-test-pg` (the `scrape-test` spec is in it).
+        ⚠ **CORRECTED at code review 2026-09-19:** the `scrape-test` spec is ⛔ NOT in the live-DB suite — it lives at
+        `apps/public/tests/integration/public-pages/scrape-test.spec.ts` and runs under `@twt/public` (the Dev record
+        already said so). The original line is kept above, ⛔ not deleted ([[feedback_closure_language_precision]]).
         ⚠ `env -u DATABASE_URL` for `ci:local` ([[project_ci_local_double_run_pollution]]); never
         regenerate an applied migration ([[project_live_db_test_gotchas]]).
   - [x] Write the `friction-budget.md` disposition (AC7); **commit**; then `pnpm friction:check`.
@@ -378,6 +381,34 @@ the sprint row is flipped per the ledger convention ([[feedback_closure_language
         numbers on one page"* item **in place, ⛔ never deleted**; flip the row per the ledger convention.
 
 ---
+
+### Review Findings
+
+_Code review 2026-09-19 (`bmad-code-review`, full mode; Blind Hunter + Edge Case Hunter + Acceptance Auditor; range `797860e7..a6865ec7`). No AC violation and no REAL GAP on any load-bearing-invariant family the diff touches (families 6, 7, 10, 11 covered-by-construction/test; 13 not-constructible — plain `<p>` under an already-labelled section). Working tree verified clean after the parallel layers. The code is correct as shipped; every finding below is a test-tooth or record-precision item._
+
+- [x] [Review][Decision] **RESOLVED 2026-09-19 (BigDev, at code review): option 1 — the D2 words are BigDev's own; `-225` stands as written, ⛔ no supersession.** Provenance of `-225`'s words — the entry says "Author-committed, BigDev, 2026-09-19", but the story's own *Question for BigDev* (D2's default, `Contributors: {count}` / `योगदानकर्ता: {count}`) was never answered in the file, and the Dev record says the question "was answered by the story's own default, as the story permits". Are the D2 words yours (keep `-225` as written), or do you prefer the fallback `People who contributed` / `योगदान करने वाले सहकर्मी`? ⭐ BigDev's own call, ⛔ not the Panel's (§0: a label wording; no disclosure, obligation or basis changes). [`.decision-log.md` `-225` header; story "Question for BigDev"] — source: auditor
+- [x] [Review][Patch] Arg-swap guard cannot tell `total` from `items.length` — fixture has 12 items AND `total: 12`, so `labels.contributorTotal(contributors.length)` would still pass; the "fewer named rows than N" property is exactly the case where they differ. Use `total: 137` with 12 items, expect `'Contributors: 137'`. [apps/public/tests/sahyog-vivran-render.test.ts:~129-145] — source: blind+edge
+- [x] [Review][Patch] The page-template binding is untested — the wiring leg checks only the two label-map entries; `<p>{model.contributorTotal}</p>` could become `{model.confirmedContributionCount}` and every new test stays green. Add a `PAGE` assertion that the set-size `<p>` renders `model.contributorTotal`. [apps/public/tests/sahyog-vivran-copy.test.ts:~216-221; `[driveToken].astro:708`] — source: edge
+- [x] [Review][Patch] Anti-vacuity probe is index-coupled — `SET_SIZE_FORBIDDEN[1]![0]` silently targets another pattern if the list is reordered; look the pattern up by its planted violation/source instead, and give the other Devanagari patterns (`नाम`, `सभी`, `अभी तक`) a mid-word probe too. [apps/public/tests/sahyog-vivran-copy.test.ts:~265] — source: blind+edge
+- [x] [Review][Patch] Estimate-frame fence misses variants — only `so far` / `अभी तक` are banned; `अब तक`, `to date`, `till now`, `as of` would pass every content leg although AC3 bans the frame. Add them (with planted violations). [apps/public/tests/sahyog-vivran-copy.test.ts:~256-257] — source: edge+blind
+- [x] [Review][Patch] `beforeNoLetter` is re-declared inside the new describe — AC3(c) says to use the file's existing one; the original is scoped inside an earlier describe. Hoist to module scope and delete the duplicate. [apps/public/tests/sahyog-vivran-copy.test.ts:~264, ~483] — source: auditor
+- [x] [Review][Patch] File List omits `_bmad-output/implementation-artifacts/deferred-work.md` (+1 line, commit `a6865ec7`; AC8 requires the edit). [story File List] — source: auditor
+- [x] [Review][Patch] Task 5 text still says `scrape-test.spec.ts` is in the live-DB `public-pages` suite; it lives under `apps/public/tests/integration/` and runs under `@twt/public`. The Dev record corrects it but the Task text and Change Log do not. [story Task 5] — source: auditor
+- [x] [Review][Patch] `-225` Consequence 2 says the `deferred-work.md` annotation lands "at the code commit"; it landed in governance commit `a6865ec7` (AC8: only after green — the spec is right, the wording is not). ⚠ Record the precision note in this story's Dev record; ⛔ do not edit `-225` ([[feedback_supersede_never_reinterpret]]). [story Dev Agent Record] — source: auditor
+
+_Dismissed as noise (9): source-text quote-style coupling of the wiring leg (repo quote style is lint-enforced; the failure direction is loud) · `template()` comment-stripper naivety (verified: 0 residue, no `/*` in any string, each key occurs once) · remaining forbidden-word gaps (best-effort fence, not a completeness proof) · key outside `KEYS` (AC5 requires it; parity gate verified clean) · stub copy duplicated in two test files (by design — the real-`t()` legs are the proof) · "confirmed" qualifier removed (the heading above reads *Confirmed contributions*; `-225` decision) · overlong comment line (lint green) · redundant 42-only leg / tautological `not.toBe` · `$comment` bulk and prohibition-only comments (house pattern). Blind Hunter questions Q1–Q5 answered from the repo (imports and `BANNED_PLACEHOLDER_WORDS` exist; no other consumers; Hindi word already this section's)._
+
+### Review Findings — re-review (pass 2, of the uncommitted pass-1 patches)
+
+_Re-review 2026-09-19 (Blind / Edge Case / Acceptance Auditor) of `git diff HEAD` (4 files, 238 lines). ⭐ All 8 pass-1 patches verified APPLIED and doing what was asked; no AC broken; suites 127/127, eslint clean. Tree verified unmutated after the parallel layers. One finding is a family-10 (closure honesty) REAL GAP, triaged like an AC violation._
+
+- [x] [Review][Patch] ⚠ **Family 10 REAL GAP — the story flips `done` without saying its evidence predates the patches.** Only the sprint-status `2026-09-19o` entry carries the caveat; the story's Status line, Completion Notes and Change Log v0.4 do not, and the Dev record still reads `ci:local … 34/34` with no note that it predates the pass-1 patches (which are UNCOMMITTED). Copy the caveat into Completion Notes + the v0.4 row. Also mark the stale Completion-Notes bullet *"arg-swap leg with total 12 vs event 13"* as superseded by the re-review fixture. [story Completion Notes, Change Log] — source: auditor
+- [x] [Review][Patch] Mid-word probes: the `\p{M}` half of `beforeNoLetter` is untested (every probe puts a base LETTER before the pattern; reducing the class to `\p{L}` stays green while the fences false-positive after a matra), and the probe list is a hand-kept parallel list of `SET_SIZE_FORBIDDEN`. Add matra-preceded probes (`सुनाम`, `कीसभी`, `कीपुष्ट`, `कीअभी तक`, `कीअब तक`), assert every lookbehind-carrying pattern in `SET_SIZE_FORBIDDEN` has a probe, and assert each carries the `u` flag. [apps/public/tests/sahyog-vivran-copy.test.ts ~537-543] — source: edge+blind+auditor
+- [x] [Review][Patch] Estimate-frame fence: Trap 4 also bans `and counting` (absent), and `so far` / `to date` / `till now` / `अभी तक` / `अब तक` fail on a hyphen or no-space spelling (`so-far`, `अबतक`). Add `and counting`; make the separators `[\s-]+` / `\s*` with planted violations. ⛔ Not chasing every synonym — a blacklist is a best-effort fence. [apps/public/tests/sahyog-vivran-copy.test.ts ~514-518] — source: auditor+edge
+- [x] [Review][Patch] Render fixture is unrepresentative: `limit: 50` with 12 items and `total: 137` is a shape the API no longer emits (`items.length` = `min(limit, total − offset)`), and 13 events beside 137 distinct contributors is inverted. Use `limit: 12` and an event count ≥ `total` (e.g. 150) — three still-distinct figures (137 / 150 / 12) — and update the expected `'150 confirmed'` and the comment. [apps/public/tests/sahyog-vivran-render.test.ts ~127-145] — source: edge+blind
+- [x] [Review][Patch] The two new page-slot regexes have no anti-vacuity plant, unlike every other fence regex in the file. Plant a matching `<p>` for the positive and the negative regex so neither can go silently dead. [apps/public/tests/sahyog-vivran-copy.test.ts ~ the `set-size slot` leg] — source: blind
+
+_Dismissed as noise (7): a `hiRe()` builder for the `u` flag (covered by the new `u`-flag assertion above) · comment rot from an embedded date · `occurrences()` substring/second-use brittleness (verified: comment-stripped, exactly 1 today) · further completeness/synonym gaps in the forbidden lists (best-effort fence) · Unicode-normalisation of a static JSON literal · overlong comment lines (eslint clean, verified by the Auditor) · the `done`-on-working-tree point, folded into the family-10 patch. Blind Hunter questions answered from the repo (`occurrences()` runs on the stripped source; `beforeNoLetter` is declared once at line 81, before every use — no TDZ; the real leg iterates the same `SET_SIZE_FORBIDDEN`)._
 
 ## Dev Notes
 
@@ -521,9 +552,28 @@ Claude Opus 5 (1M context) — `claude-opus-5[1m]`, via `bmad-dev-story`, 2026-0
   vocabulary and numeral scans via a `contributorTotal(locale)` helper (AC3(e)).
 - New 11b.22 describe block: comment-stripped source wiring (copied `template()` + anti-vacuity guard), real-`t()`
   differ legs at 0/1/42 in both locales, one `SET_SIZE_FORBIDDEN` constant read by both the probe and real legs,
-  plus `BANNED_PLACEHOLDER_WORDS` (AC3(a)–(c)). Render test: distinct stubs + arg-swap leg with total 12 vs event 13;
+  plus `BANNED_PLACEHOLDER_WORDS` (AC3(a)–(c)). Render test: distinct stubs + arg-swap leg with total 12 vs event 13 (⚠ SUPERSEDED by the re-review fixture: `total` 137 / event count 150 / 12 items, `limit: 12`);
   `scrape-test` stub updated (AC4).
 - Six Trap 5 sites re-worded; comment-only in `packages/contracts` (AC6).
+- **Code review 2026-09-19 (`bmad-code-review`):** no AC violation, no REAL GAP; 8 patches applied (see *Review Findings*).
+  Tests: arg-swap fixture now `total: 137` beside 12 items and event count 13 (P1); the set-size `<p>` binding is
+  pinned in the page source (P2); Devanagari patterns are NAMED and mid-word-probed by name, not by index (P3);
+  estimate-frame fence gains `to date` / `till now` / `as of` / `अब तक` (P4); `beforeNoLetter` hoisted to module scope (P5).
+  Teeth re-proven by plant-and-revert: `<p>` rebound to the event count → P2 red; `contributorTotal(contributors.length)` → P1 red.
+  `@twt/public` lint + `astro check` clean; the two touched suites 127/127.
+- ⚠ **Precision note on `-225` Consequence 2 (P8):** it says the `deferred-work.md` annotation lands *"at the code commit"*.
+  It landed in governance commit `a6865ec7`, ⛔ not the code commit `473de3ca` — correct per AC8 (*only after the code is
+  committed and green*); the entry's wording is what is loose. ⛔ `-225` is NOT edited ([[feedback_supersede_never_reinterpret]]).
+- **Re-review 2026-09-19 (pass 2, of the uncommitted pass-1 patches):** 5 further patches applied — matra-preceded mid-word
+  probes + a coverage/`u`-flag assertion over `SET_SIZE_FORBIDDEN` (plant: reducing `beforeNoLetter` to `\p{L}` → red); estimate-frame
+  fence gains `and counting` (Trap 4) and hyphen / no-space spellings; the render fixture is now a shape the API can emit
+  (`limit: 12`, event count 150 ≥ `total` 137 > 12 items); the two page-slot regexes get anti-vacuity plants; this caveat.
+  Verified after: the two touched suites **129/129**, `@twt/public` `eslint .` clean, `astro check` 0 errors / 0 warnings.
+- ⚠⛔ **CLOSURE CAVEAT (family 10) — the `done` flip's evidence PREDATES the review patches.** `pnpm ci:local` **34/34 green** was
+  measured at the friction commit and recorded in `a6865ec7`; it was ⛔ NOT re-run after the pass-1 or pass-2 patches (test-file
+  and story-record edits only). ⚠ **Both patch sets are UNCOMMITTED in the working tree** — no commit contains the closing
+  evidence. ⭐ Owed before merge: commit, then `pnpm ci:local` (`env -u DATABASE_URL`), and a `git status` check.
+- **Provenance of `-225` (decision finding, resolved):** BigDev confirmed at code review 2026-09-19 that the D2 words are their own.
 
 ### File List
 
@@ -543,6 +593,7 @@ Claude Opus 5 (1M context) — `claude-opus-5[1m]`, via `bmad-dev-story`, 2026-0
 - `packages/contracts/tests/public-pages-sahyog-vivran.test.ts` (comment only)
 - `apps/api/tests/integration/public-pages/sahyog-vivran.spec.ts` (comment only)
 - `friction-budget.md` (Story 11b.22 disposition)
+- `_bmad-output/implementation-artifacts/deferred-work.md` (annotated in place, AC8 — commit `a6865ec7`)
 
 ## Change Log
 
@@ -551,3 +602,5 @@ Claude Opus 5 (1M context) — `claude-opus-5[1m]`, via `bmad-dev-story`, 2026-0
 | 2026-09-19 | v0.1 | Created via `bmad-create-story` at `797860e7`: `backlog → ready-for-dev`. |
 | 2026-09-19 | v0.2 | Validate pass at `797860e7` (HEAD `c9cf7125`): AC5 no longer adds the key to `KEYS` (`t()` throws on a missing param); AC3(c) Devanagari patterns use `beforeNoLetter`, ⛔ never `\b`; AC3(e) feeds the new string into the existing fences; Trap 5 / AC6 re-traced (six sites to update, incl. a comment-only contract edit, and the event-count sites listed to leave alone); D3 allows that comment edit; AC8 added for Task 6; financial-truth and microcopy coverage recorded; Niyamavali copy noted as untracked; three ⛔ inversions fixed. |
 | 2026-09-19 | v0.3 | `bmad-dev-story`: `-225` governance commit; `value.contributor_total` shipped (en + hi) and wired; real-`t()` / wiring / content / arg-swap legs with recorded teeth; six stale prose sites re-worded; friction disposition. |
+| 2026-09-19 | v0.4 | `bmad-code-review`: 1 decision resolved (D2 words confirmed as BigDev's), 8 patches applied — five test-tooth fixes (arg-swap fixture, page-slot binding, name-not-index probes, estimate-frame variants, hoisted `beforeNoLetter`) and three record corrections (File List, Task 5 correction note, `-225` timing note). |
+| 2026-09-19 | v0.5 | `bmad-code-review` re-review (pass 2): 5 further patches — matra-preceded mid-word probes + coverage/`u`-flag assertion; estimate-frame fence gains `and counting` + hyphen/no-space spellings; render fixture made API-representative (`limit: 12`, events 150); page-slot regex plants; ⚠ closure caveat recorded — **`ci:local` 34/34 predates all review patches, which are UNCOMMITTED**. Suites 129/129. |

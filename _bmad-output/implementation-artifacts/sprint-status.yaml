@@ -1,3 +1,9 @@
+# last_updated: 2026-09-19n (⭐ **STORY `11b-22` — IMPLEMENTED: `in-progress → review`.**
+#   ⭐ ONE row moves. Code `473de3ca`: `value.contributor_total` (en + hi) on the set-size line; `contributorTotal:`
+#   repointed; the EVENT count untouched. Friction disposition `friction-budget.md` (gate FAILED on the code commit
+#   first, then passed). `pnpm ci:local` **34/34 green** incl. live-DB `integration-tests`.
+#   ⭐ `-219` follow-up (3) annotated **BUILT at Story 11b.22**; `deferred-work.md` item annotated in place, ⛔ not deleted.
+#   ⚠ Review still owed (`bmad-code-review`); the shared event-count wording stays fenced out by `-225` D3.)
 # last_updated: 2026-09-19m (⭐ **STORY `11b-22` — TASK 1 GOVERNANCE COMMIT: `ready-for-dev → in-progress`.**
 #   No code. ⭐ ONE row moves. ⭐ `#decision-2026-09-19-225` (BigDev author-commit) records the copy call BEFORE any code:
 #   the contributor SET SIZE gets `value.contributor_total` (`Contributors: {count}` / `योगदानकर्ता: {count}`, the D2
@@ -19367,7 +19373,7 @@ development_status:
   # governance-heavy i18n surface is a product call). ⇒ this row is where that call gets made.
   # ⚠ BOTH LOCALES, and ⛔ neither number may be dropped: they are different facts, and
   # `2026-08-30-169` cl.6 (D3-aggregate) is why the event count keeps counting an erased member.
-  11b-22-confirmed-count-copy-disambiguation: in-progress
+  11b-22-confirmed-count-copy-disambiguation: review
   epic-11b-retrospective: optional
 
   # ==========================================================================

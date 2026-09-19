@@ -15,7 +15,7 @@ v0.2 until v0.4 cherry-picked it forward.
 
 # Story 11b.20: The Ratified Message Block on the PUBLIC Sahyog Vivran Page `[SURFACE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 ## ⭐ GLYPH REGISTER — read this before any clause below
 
@@ -257,13 +257,13 @@ block's text**. The unit tests in Task 5 are the only coverage the text has.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — RE-VERIFY THE BASELINE** (AC0). Re-diff `packages apps scripts` against `6547ead2`.
+- [x] **Task 0 — RE-VERIFY THE BASELINE** (AC0). Re-diff `packages apps scripts` against `6547ead2`.
       If a sibling has shipped into this page, the selector module, the dark-copy fence or the
       financial-truth gate, re-read the Traps before writing code. (✅ The governance prerequisites
       exist: `-223` cl.1 + cl.2.)
-- [ ] **Task 1 — GOVERNANCE** (AC0): the `epics.md` section under Epic 11b naming `-214` Consequence 3 and
+- [x] **Task 1 — GOVERNANCE** (AC0): the `epics.md` section under Epic 11b naming `-214` Consequence 3 and
       `-223`. **One `governance:` commit, before any code.**
-- [ ] **Task 2 — RULE THE TABLE'S RELATIONSHIP TO THE PAGE** (AC3, AC4, Trap 4), **in writing, before
+- [x] **Task 2 — RULE THE TABLE'S RELATIONSHIP TO THE PAGE** (AC3, AC4, Trap 4), **in writing, before
       rendering**: (a) the table **sits above** the message, and the existing "Nominee Name" and
       District fields stay or go, citing the `11b-17` both-labels precedent; (b) how the page's
       "Not recorded" District field and the table's drop-rule coexist. If this cannot be settled without
@@ -364,9 +364,19 @@ figure"* surface description is ⛔ not this story's to edit.
 
 ### Agent Model Used
 
+Claude Opus 5 (1M context) — `claude-opus-5[1m]`, via `bmad-dev-story`.
+
 ### Debug Log References
 
 ### Completion Notes List
+
+- **Task 0 (2026-09-19).** `git fetch origin`; `git diff --stat 6547ead2 HEAD -- packages apps scripts` is **empty**, and so is the same diff against `origin/main`. Every local branch that touches the page, the dark-copy fence or the financial-truth gate has **0 unmerged commits** (`git cherry main <branch>`). ⇒ the Traps stand as written; ⛔ nothing re-read changed them.
+- **Task 1.** `epics.md` gains `### Story 11b.20` after 11b.19, sectioned on the 11b.19 / 11b.17 precedent, naming `-214` Consequence 3 and `-223` cl.1/cl.2/cl.4. Committed as one `governance:` commit ahead of any code.
+- **Task 2 — THE RULING, IN WRITING, BEFORE RENDERING.** ⛔ No ratified text needs editing ⇒ ⛔ no STOP.
+  - **(a) Placement.** The block is one new `<section>`, the **last** on the page, after the nominee bank group: the story's own sentence is *"a drive's public page **ends** with the trustees' own words"*. Inside it, the table sits **above** the five paragraphs (§8.1).
+  - **(a) The existing fields stay.** The bank group's **"Nominee Name"** (`label.account_holder`, `-190` cl.2) and the facts group's **District** are ⛔ not removed. ⭐ Precedent: `11b-17` ships both holder labels on one screen, *and* ships the exact District pairing too — `MemberDriveDetail.tsx` renders a `label.district` fact with the `value.district_unknown` fallback **and** the message-block table with `selectMessageBlockTableColumns`'s drop rule. ⇒ this page repeats a shipped, reviewed arrangement, ⛔ it does not invent one.
+  - **(b) Two District rules, and why both hold.** They govern different things. The facts group is the drive's labelled record; there an unrecorded posting is stated honestly as *"Not recorded"* (11b.3's shipped posture, ⛔ not touched). §10.2 ruling 3 / `-214` Consequence 6 govern the **ratified block's** tokens: an absent one drops its clause, and the District travels with the **deceased**. ⇒ the selector branches on the **raw** `fetched.data.drive.district`, ⛔ never on `model.district ?? labels.districtUnknown`.
+  - **The nominee value** is `nomineeBankAccounts[0]?.accountHolderName ?? null`, the first account's (`resolveSummaryNomineeName` precedent; `-215` de-routed the differing-holder question).
 
 ### File List
 

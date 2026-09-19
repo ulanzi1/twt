@@ -2487,3 +2487,30 @@ plaintext MMKV. ⛔ If a later review classes a cold-start wait as friction, tha
 ⭐ `pnpm friction:check` was run AFTER the implementation commit existed — AC-4 diffs **COMMITTED**
 history, so a pre-commit run passes vacuously (the 11b.20 lesson). The result is recorded in the story's
 Dev Agent Record.
+
+---
+
+**Story 11b.22 disposition (declaration affirmed — ⛔ NO new row, ⛔ no row retired, and ⛔ no row
+amended):** the contributor SET-SIZE line on the PUBLIC per-drive Sahyog Vivran page
+(`apps/public/src/pages/sahyog-vivran/[driveToken].astro`) now reads `Contributors: N` /
+`योगदानकर्ता: N` from its own key, `value.contributor_total`, instead of sharing the confirmed-contribution
+EVENT count's `N confirmed` (`#decision-2026-09-19-225`).
+
+⭐⭐ **IT RE-WORDS ONE LINE THE VISITOR ALREADY READS, AND ASKS THEM FOR NOTHING.** UX Stance #2 / AR-60
+declare **friction** — a step a person is **made to take**. The change swaps the words on one `<p>`: ⛔ no
+field, ⛔ no confirmation, ⛔ no OTP, ⛔ no acknowledgement, ⛔ no wait-state, ⛔ no control, and ⛔ no new
+element. Both figures stay on the page; ⛔ neither is dropped. ⇒ ⛔ there is no payer, so there is no row
+to write.
+
+⛔ **WHAT THIS DISPOSITION DOES ⛔ NOT TOUCH.** ⛔ No new value is disclosed (the set size was already
+rendered); ⛔ no member-app surface; ⛔ no client code (the page ships ⛔ no `<script>` for it).
+
+⚠ **THE MEASURABLE COST, STATED RATHER THAN OMITTED:** this branch's `pnpm friction:check` reports
+`member-public-web.js_bundle_bytes` **0** ≤ ceiling 153 600 and `member-public-web.page_weight_bytes`
+**11 471** ≤ ceiling 512 000, both PASS — the same whole-output figures as 11b.20, ⛔ not a per-change
+delta; ⛔ none is claimed ([[feedback_record_unattested_no_backfill]]).
+
+⭐ **This disposition was written AFTER the implementation commit existed** (`473de3ca`) — AC-4 diffs
+**COMMITTED** history, so a declaration written first passes **vacuously**. ⚠ `pnpm friction:check` was
+run on that commit FIRST and **FAILED** (AC-4: member-facing surface touched, `friction-budget.md`
+unchanged); this block is what that failure answers.

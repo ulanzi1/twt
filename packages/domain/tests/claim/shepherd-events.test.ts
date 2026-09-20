@@ -31,7 +31,7 @@ const assignedBase = {
 describe('ClaimShepherdAssignedPayloadSchema (the 28th claim event)', () => {
   it('is registered as a claim event type + bound in the payload-schema map', () => {
     expect(CLAIM_EVENT_TYPES).toContain('claim.shepherd_assigned');
-    expect(CLAIM_EVENT_TYPES).toHaveLength(31); // Story 6.16 added the 31st (claim.reversed)
+    expect(CLAIM_EVENT_TYPES).toHaveLength(32); // Story 6.18 added the 32nd (claim.nominee_name_checked)
     expect(CLAIM_EVENT_PAYLOAD_SCHEMAS['claim.shepherd_assigned']).toBe(ClaimShepherdAssignedPayloadSchema);
   });
 

@@ -36,7 +36,7 @@ import {
 import { claimId as toClaimId, memberId as toMemberId } from '../../../src/ids/index.js';
 import * as schema from '../../../src/schema/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
-import { PARIWAR_A, enterAppScope, seedClaim, seedClauseVersion } from '../_helpers.js';
+import { PARIWAR_A, enterAppScope, seedClaim, seedClauseVersion, seedNomineeNameCheck } from '../_helpers.js';
 
 const R14_PAYLOAD = {
   ack_text_en: 'I acknowledge the concealment-review clause.',
@@ -102,6 +102,10 @@ async function advanceToVerifierApproved(client: pg.PoolClient, claimCaseId: str
     });
   await emit('verification_in_progress', 'verifier_review', 'claim.verifier_reviewing');
   await emit('verifier_review', 'verifier_approved', 'claim.verifier_approved');
+  // Story 6.18 (AC4) — a claim is only approvable once it carries its two bank accounts and a
+  // current, PASSING District Admin name check. Seeded through the REAL writer, so these specs keep
+  // exercising the production path rather than bypassing the new gate.
+  await seedNomineeNameCheck(client, PARIWAR_A, claimCaseId);
 }
 
 // actor_id lands in events_log.actor_id (a UUID column) via projectClaimState — must be a real UUID.

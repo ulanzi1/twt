@@ -37,6 +37,7 @@ const accountsFixture = (over: Partial<NomineeBankAccountInput> = {}): NomineeBa
     ifscCiphertext: 'enc:v1:ifsc-1',
     // Story 8.13 — optional VPA ciphertext; null by default (fixture stays behaviour-compatible).
     vpaCiphertext: null,
+    nameDifferenceNoteCiphertext: null,
     bankName: 'State Bank of India',
     branch: 'Nariman Point, Mumbai',
     ifscValidated: true,
@@ -48,6 +49,7 @@ const accountsFixture = (over: Partial<NomineeBankAccountInput> = {}): NomineeBa
     accountNumberCiphertext: 'enc:v1:acct-2',
     ifscCiphertext: 'enc:v1:ifsc-2',
     vpaCiphertext: null,
+    nameDifferenceNoteCiphertext: null,
     bankName: 'HDFC Bank',
     branch: 'Worli, Mumbai',
     ifscValidated: true,

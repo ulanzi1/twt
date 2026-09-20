@@ -33,6 +33,7 @@ import {
   claimVerifierDecisions,
 } from '../schema/claim_verifier_decisions.js';
 import { type ClaimEventActor } from './events.js';
+import { assertNomineeNameCheckForApproval } from './nominee-name-check.js';
 import { projectClaimState } from './project.js';
 import {
   isReasonCodeValidForOutcome,
@@ -321,6 +322,23 @@ export async function adjudicateClaim(
     // Any state that is neither the gathering window nor review — reject (the natural idempotency for
     // a re-submitted verdict: after the first approve the claim is `verifier_approved`, not review).
     throw new ClaimNotInVerifierReviewError(input.claimCaseId, claimRow.currentState);
+  }
+
+  // (a2) P1 — the nominee NAME CHECK gate (Story 6.18, AC4; `2026-09-19-226` cl.3-cl.5, cl.7).
+  //      An APPROVAL requires the claim's two live bank accounts AND a current, passing check.
+  //      ⛔ A DENIAL IS NEVER GATED, and that asymmetry is the ruling: cl.6 sends a non-clerical
+  //      mismatch BACK for correction and cl.7 makes a claim without accounts WAIT — neither is
+  //      ever a ground to refuse a death claim. Gating the deny path would quietly turn a missing
+  //      account into an obstacle to the one outcome that should always remain available.
+  //      Inside the tx, after the claim lock — a check read before the lock could be invalidated by
+  //      a concurrent helpline correction.
+  if (input.outcome === 'approved') {
+    await assertNomineeNameCheckForApproval(
+      db,
+      input.pariwarId,
+      input.claimCaseId,
+      claimRow.deceasedMemberId,
+    );
   }
 
   // (b) Emit the verdict event (auditShape only — reason/rationale live in the decision row, D-G).

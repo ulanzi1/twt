@@ -161,6 +161,16 @@ function reduce(state: ClaimLifecycleState, event: ClaimEventInput): ClaimLifecy
     case 'claim.nominee_bank_recorded':
       return state;
 
+    // ANNOTATION: the District Admin recorded the nominee NAME CHECK (Story 6.18 — the 32nd event).
+    // A RECORDED JUDGEMENT, NOT an adjudication: `2026-09-19-226` cl.5 rules the system NEVER acts
+    // on a name mismatch, so this has NO edge to `denied`, NO edge to anything, and adds no state.
+    // Identity from any state — "the system never acts" is STRUCTURAL here, not merely unimplemented:
+    // there is no transition for a future reader to reach for. The reducer STAYS total; the allowed
+    // window lives in the WRITE-PATH guard (nominee-name-check-persist.ts), and the effect of a
+    // verdict lives in the AC4 approval gates, which READ this event. Never here.
+    case 'claim.nominee_name_checked':
+      return state;
+
     // ANNOTATION: claim-time DPDPA consent recorded (Story 6.9 — the 24th event). Claim-time capture
     // of the granular DPDPA consents via the Story 2.7 registry; it does NOT advance the primary state
     // (an annotation captured across the pre-adjudication window, like nominee_bank_recorded). Identity.

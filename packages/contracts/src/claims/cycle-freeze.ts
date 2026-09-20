@@ -30,7 +30,15 @@ import { z } from 'zod';
 // ── Trustee decision vocabulary wire mirror (value-aligned with @twt/domain) ────────────────
 
 /** The three trustee decision outcomes (value-aligned with the domain `state_trustee_decision_outcome`). */
-export const StateTrusteeDecisionOutcome = z.enum(['approved', 'denied', 'routed_to_r9']);
+export const StateTrusteeDecisionOutcome = z.enum([
+  'approved',
+  'denied',
+  'routed_to_r9',
+  // Story 6.18 (AC11) — the Pariwar Admin RETURNED the claim to the District Admin for correction
+  // (`2026-09-20-227` cl.10). ⛔ NOT a denial: the claim keeps its state, no appeal flow starts, and
+  // the family is asked to fix a detail — never told their claim failed.
+  'returned_for_correction',
+]);
 export type StateTrusteeDecisionOutcome = z.output<typeof StateTrusteeDecisionOutcome>;
 
 /** The bounded trustee reason codes (value-aligned with the domain `state_trustee_reason_code` pgEnum).
@@ -69,13 +77,17 @@ export const TRUSTEE_REASON_CODE_OUTCOME_COMPAT: Readonly<
   // Story 6.15 (AC2) — the concealment override approves; the ONLY code pinned to `approved`. The D-F
   // presence rule is unchanged (an ordinary approve still requires no code).
   concealment_override: ['approved'],
-  other: ['denied', 'routed_to_r9'],
+  // Story 6.18 (AC11) — `other` is the ONLY code valid for a return: `-227` cl.10 asks for a NOTE
+  // explaining the discrepancy, ⛔ not a category, and the Panel named no return-reason vocabulary.
+  other: ['denied', 'routed_to_r9', 'returned_for_correction'],
 };
 
 /** Does `outcome` REQUIRE a reason code (the D-F presence rule)? `denied` + `routed_to_r9` do; `approved`
  *  does not. Value-aligned with the domain `trusteeReasonCodeRequiredForOutcome`. */
 export function trusteeReasonCodeRequiredForOutcome(outcome: string): boolean {
-  return outcome === 'denied' || outcome === 'routed_to_r9';
+  // Story 6.18 (AC11) — a RETURN requires a code (always `other`) because `-227` cl.10 requires the
+  // NOTE, and the rationale is what carries it. Mirrors the domain copy; the lockstep test pins both.
+  return outcome === 'denied' || outcome === 'routed_to_r9' || outcome === 'returned_for_correction';
 }
 
 /** Is `reasonCode` valid for `outcome`? Value-aligned with the domain `isTrusteeReasonCodeValidForOutcome`. */
@@ -95,6 +107,17 @@ export function isTrusteeReasonCodeValidForOutcome(outcome: string, reasonCode: 
  * (`assessClaimConcealmentBulk`, ONE clamped read for the whole pending page, no per-claim N+1), NOT the
  * pre-6.15 decision-history placeholder heuristic.
  */
+/**
+ * Story 6.18 (AC8) — the three clerical reasons, RE-DECLARED here (the browser-bundle rule forbids
+ * importing `@twt/domain`). Value-aligned with `NOMINEE_NAME_CLERICAL_REASONS`; the nominee-name-check
+ * contract carries the same tuple and the two are pinned to the domain by that file's own lockstep.
+ */
+export const StateTrusteeReasonCodeFreeNameDifference = z.enum([
+  'initial',
+  'married_name',
+  'bank_shortened_name',
+]);
+
 export const CycleFreezePendingItem = z
   .object({
     claim_case_id: z.string().uuid(),
@@ -112,6 +135,14 @@ export const CycleFreezePendingItem = z
     concealment_flags: z.array(z.string()),
     /** True when the claim carries a LIVE route-to-R9 exclusion row → excluded from the commit set (AC4). */
     routed_to_r9: z.boolean(),
+    /** Story 6.18 (AC11) — the claim carries a LIVE `correction_return` row: the Pariwar Admin
+     *  returned it to the District Admin and it has not been resubmitted. ⛔ NOT a denial — it is
+     *  excluded from the commit set until the corrected accounts + a fresh name check land. */
+    under_correction: z.boolean(),
+    /** Story 6.18 (AC8) — the clerical reason CODES on the claim's latest recorded name check, when
+     *  it accepted a difference (`-226` cl.5's highlight). ⭐ NON-PII: codes only, ⛔ never a name.
+     *  Empty when no difference was recorded, or when no check exists. */
+    name_difference_reasons: z.array(StateTrusteeReasonCodeFreeNameDifference),
   })
   .strict();
 export type CycleFreezePendingItem = z.output<typeof CycleFreezePendingItem>;
@@ -139,7 +170,16 @@ export type CycleFreezePendingResponse = z.output<typeof CycleFreezePendingRespo
 /** The four per-claim actions. `approve`/`deny` are the frozen votes (AC2/AC3); `route_to_r9` is the
  *  metadata-only routing (AC4); `resolve_escalation` resolves a verifier escalation (AC4b, direction in
  *  `escalation_outcome`). */
-export const CycleFreezeDecisionAction = z.enum(['approve', 'deny', 'route_to_r9', 'resolve_escalation']);
+export const CycleFreezeDecisionAction = z.enum([
+  'approve',
+  'deny',
+  'route_to_r9',
+  'resolve_escalation',
+  // Story 6.18 (AC11) — the Pariwar Admin returns the claim to the District Admin WITH A NOTE
+  // (`2026-09-20-227` cl.10). Metadata-only, the `route_to_r9` shape: ⛔ no event, ⛔ no state change,
+  // ⛔ not a denial, ⛔ no appeal flow.
+  'return_to_district_admin',
+]);
 export type CycleFreezeDecisionAction = z.output<typeof CycleFreezeDecisionAction>;
 
 /** The effective outcome an action resolves to (drives the required-reason-code rule). */
@@ -154,6 +194,12 @@ function effectiveOutcome(
       return 'denied';
     case 'route_to_r9':
       return 'routed_to_r9';
+    // ⚠⚠ LOAD-BEARING, and silent if omitted. This `switch` has ⛔ no `default`, and the `superRefine`
+    // below RETURNS EARLY on `undefined` — so a missing arm would make the required-reason-code AND
+    // required-rationale rules never run for this action, and `tsc` would ⛔ not catch it. A return
+    // with no note is precisely what `-227` cl.10 forbids.
+    case 'return_to_district_admin':
+      return 'returned_for_correction';
     case 'resolve_escalation':
       return escalationOutcome; // approved | denied (validated present by the superRefine)
   }
@@ -254,7 +300,17 @@ export const CycleFreezeDecisionResponse = z
     // The full state_trustee_decision_phase vocabulary. `r9_outcome` (Story 6.14) is a valid table phase
     // (the R9 finalize writes one) though a cycle-freeze DECISION response itself never carries it — the
     // enum mirrors the shared domain phase set, value-aligned with STATE_TRUSTEE_DECISION_PHASES.
-    phase: z.enum(['frozen_vote', 'commit', 'escalation_resolution', 'routing', 'r9_outcome']),
+    // Story 6.18 (AC11) adds `correction_return`. ⚠ Responses are SERIALIZER-PARSED, so a phase
+    // missing from this enum makes the 201 fail strict serialization with a 500 — and this enum is
+    // deliberately NOT lockstep-pinned to the domain tuple today, so a new phase can drift silently.
+    phase: z.enum([
+      'frozen_vote',
+      'commit',
+      'escalation_resolution',
+      'routing',
+      'r9_outcome',
+      'correction_return',
+    ]),
     outcome: StateTrusteeDecisionOutcome,
     reason_code: StateTrusteeReasonCode.nullable(),
     actor_display: z.string(),

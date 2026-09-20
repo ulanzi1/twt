@@ -59,6 +59,13 @@ export interface HelplineConsoleShellProps {
   // AR-61 supervisor escalation.
   escalated: boolean;
   onEscalate: () => void;
+  /**
+   * Story 6.18 (AC6/AC7) — the bank-details step, rendered once the claim exists.
+   * `2026-09-19-226` cl.7 makes BOTH accounts mandatory and cl.1 makes the name match this
+   * operator's duty, so the page is ⛔ not finished at the intake result any more.
+   */
+  bankSlot?: ReactNode;
+  bankRecorded?: boolean;
 }
 
 export function HelplineConsoleShell(props: HelplineConsoleShellProps): ReactElement {
@@ -85,6 +92,8 @@ export function HelplineConsoleShell(props: HelplineConsoleShellProps): ReactEle
     stepUpSlot,
     escalated,
     onEscalate,
+    bankSlot,
+    bankRecorded = false,
   } = props;
 
   // THE GATE (AC2): identity read-back confirmed + a member selected + an explicit relationship
@@ -231,8 +240,20 @@ export function HelplineConsoleShell(props: HelplineConsoleShellProps): ReactEle
                   <p data-testid="helpline-route-for-verification" className="text-xs opacity-80">
                     {resolveEn('helpline.result.routeForVerification')}
                   </p>
+                  {/* ⭐ Story 6.18 (AC6) — the call is NOT finished at the intake. cl.7 makes both
+                      accounts mandatory before the District Admin can check the claim, so the
+                      operator is told plainly that there is another step. ⛔ The copy says the claim
+                      NEEDS them, never that it is refused or at risk. */}
+                  {!bankRecorded ? (
+                    <p data-testid="helpline-bank-required" className="text-xs font-medium">
+                      {resolveEn('helpline.bank.required')}
+                    </p>
+                  ) : null}
                 </div>
               )}
+
+              {/* Story 6.18 (AC7) — the bank-details step + the two-names view (cl.1's duty). */}
+              {result !== null ? bankSlot : null}
             </>
           )}
 

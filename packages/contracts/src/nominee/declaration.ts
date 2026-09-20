@@ -21,7 +21,7 @@
 
 import { z } from 'zod';
 
-import { MobileNumber } from '../_common/primitives.js';
+import { EnglishScriptName, MobileNumber } from '../_common/primitives.js';
 
 // ── Wire enum (re-declared; value-aligned with member_nominees.relationship) ───────────
 
@@ -42,7 +42,9 @@ export type NomineeRelationship = z.output<typeof NomineeRelationship>;
  */
 export const NomineeDeclareEntry = z
   .object({
-    name: z.string().trim().min(1).max(200),
+    // Story 6.18 (AC12), `2026-09-20-227` cl.9 — captured in ENGLISH script so the District
+    // Admin's name check is a comparison and ⛔ not an ad-hoc transliteration. INPUT-only.
+    name: EnglishScriptName,
     relationship: NomineeRelationship,
     mobile: MobileNumber,
     address: z.string().trim().min(1).max(500).optional(),

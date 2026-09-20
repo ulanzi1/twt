@@ -91,7 +91,7 @@ describe('ClaimGroundInspectionCompletedPayloadSchema (the 22nd claim event)', (
     // claim.nominee_bank_recorded; Story 6.9 the 24th + 25th, claim.dpdpa_consent_recorded/_revoked;
     // Story 6.11 the 26th + 27th, claim.verifier_escalated/_decision_revised);
     // dpdpa-consent-events.test.ts owns the exact-count invariant.
-    expect(CLAIM_EVENT_TYPES).toHaveLength(31); // Story 6.16 added the 31st (claim.reversed)
+    expect(CLAIM_EVENT_TYPES).toHaveLength(32); // Story 6.18 added the 32nd (claim.nominee_name_checked)
     expect(CLAIM_EVENT_PAYLOAD_SCHEMAS['claim.ground_inspection_completed']).toBe(
       ClaimGroundInspectionCompletedPayloadSchema,
     );

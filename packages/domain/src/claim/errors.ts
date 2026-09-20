@@ -270,3 +270,68 @@ export function isClaimStreamVersionConflict(err: unknown): boolean {
   })();
   return constraint === STREAM_VERSION_CONSTRAINT;
 }
+
+// ── Nominee name-check write-path + approval-gate guards (Story 6.18, AC3/AC4/AC6) ─────────────
+// `2026-09-19-226` cl.3 makes the District Admin the checker and cl.5 forbids the SYSTEM acting on a
+// name mismatch. These guards are therefore all about PROCESS, never about names: was the claim in a
+// state where a check means anything; was the check made about the data that is live now; does the
+// claim have the two accounts cl.7 makes mandatory.
+//
+// ⛔⛔ NONE of these is ever raised BECAUSE two names differ. A `does_not_match` verdict is a
+// perfectly valid recorded check — it simply does not PASS the AC4 gate, so the claim waits and is
+// sent back for correction (cl.6). ⛔ A claim is NEVER denied for a name.
+
+/** Thrown when a check is recorded onto a claim whose state is outside the AC3 window. */
+export class NomineeNameCheckNotRecordableError extends Error {
+  public readonly name = 'NomineeNameCheckNotRecordableError';
+  public constructor(
+    public readonly claimCaseId: string,
+    public readonly currentState: string,
+  ) {
+    super(
+      `[nominee-name-check] claim ${claimCaseId} is '${currentState}' — a name check cannot be recorded in this state`,
+    );
+  }
+}
+
+/** Thrown when the submitted tokens no longer match the live accounts/declaration — the District
+ *  Admin judged data that has since changed, so the judgement cannot be accepted (D1, D5). */
+export class NomineeNameCheckStaleError extends Error {
+  public readonly name = 'NomineeNameCheckStaleError';
+  public constructor(
+    public readonly claimCaseId: string,
+    public readonly detail: string,
+  ) {
+    super(`[nominee-name-check] claim ${claimCaseId} — ${detail}`);
+  }
+}
+
+/** Thrown when a claim does not carry its two live bank accounts (`-226` cl.7). ⛔ NOT a denial —
+ *  the claim WAITS until they are added. Raised by the check write AND by the AC4 approval gates. */
+export class NomineeBankAccountsRequiredError extends Error {
+  public readonly name = 'NomineeBankAccountsRequiredError';
+  public constructor(
+    public readonly claimCaseId: string,
+    public readonly liveAccountCount: number,
+  ) {
+    super(
+      `[nominee-name-check] claim ${claimCaseId} has ${liveAccountCount} live bank account(s) — two are required before it can be decided`,
+    );
+  }
+}
+
+/** Thrown by the AC4 approval gates when a claim has no CURRENT, PASSING name check. Covers three
+ *  distinct situations on purpose — never checked, checked-then-stale, or checked with a
+ *  `does_not_match` — because all three mean the same thing to an approver: the District Admin must
+ *  look (again). `reason` distinguishes them for the operator-facing message only. */
+export class NomineeNameCheckRequiredError extends Error {
+  public readonly name = 'NomineeNameCheckRequiredError';
+  public constructor(
+    public readonly claimCaseId: string,
+    public readonly reason: 'never_checked' | 'stale' | 'does_not_match',
+  ) {
+    super(
+      `[nominee-name-check] claim ${claimCaseId} cannot be approved — the nominee name check is '${reason}'`,
+    );
+  }
+}

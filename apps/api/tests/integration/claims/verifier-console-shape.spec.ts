@@ -46,6 +46,7 @@ import type { AppDeps } from '../../../src/context.js';
 import { assembleVerifierConsole } from '../../../src/modules/claims/claims.verifier-console.handlers.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { buildTestDeps, hasDatabase, type TestDeps } from '../_setup.js';
+import { seedNomineeNameCheck } from '../_nominee-name-check-fixture.js';
 
 const DISTRICT = 'Patna';
 
@@ -120,6 +121,10 @@ describe.skipIf(!hasDatabase)('Verifier-console compound shape (AI-6-3 class) â€
       await closeScopeTx(scopeTx, false);
       throw err;
     }
+        // Story 6.18 (AC4) â€” approvable only with two bank accounts + a current, PASSING District
+    // Admin name check. Seeded through the REAL writer, so these E2E specs keep exercising the
+    // production gate rather than bypassing it.
+    await seedNomineeNameCheck(deps, pariwarId, String(claimCaseId));
     return String(claimCaseId);
   }
 

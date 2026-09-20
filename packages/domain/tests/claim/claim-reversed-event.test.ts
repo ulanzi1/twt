@@ -22,7 +22,7 @@ const valid = {
 
 describe('claim.reversed — the 31st event (D-A)', () => {
   it('is the 31st registered claim event, bound in the payload-schema map', () => {
-    expect(CLAIM_EVENT_TYPES).toHaveLength(31)
+    expect(CLAIM_EVENT_TYPES).toHaveLength(32)
     expect(CLAIM_EVENT_TYPES).toContain('claim.reversed')
     expect(CLAIM_EVENT_PAYLOAD_SCHEMAS['claim.reversed']).toBe(ClaimReversedPayloadSchema)
   })

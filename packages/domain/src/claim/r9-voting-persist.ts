@@ -48,6 +48,7 @@ import { type ClaimR9VoteRow, claimR9Votes } from '../schema/claim_r9_votes.js';
 import { type ClaimR9VotingSessionRow, claimR9VotingSessions } from '../schema/claim_r9_voting_sessions.js';
 import { claimStateTrusteeDecisions } from '../schema/claim_state_trustee_decisions.js';
 import { type ClaimEventActor } from './events.js';
+import { assertNomineeNameCheckForApproval } from './nominee-name-check.js';
 import { projectClaimState } from './project.js';
 import { R9_OUTCOME_FROM_STATES } from './state.js';
 import {
@@ -608,6 +609,22 @@ export async function finalizeR9Outcome(client: pg.PoolClient, input: R9WriteBas
   const panelSize = session.panelActorIds.length;
   const { outcome, approve_count, deny_count } = computeR9Outcome(liveVotes, panelSize, session.votingRequirement);
   const toState = outcome === 'approved' ? 'state_trustee_approved' : 'denied';
+
+  // P4 — the nominee NAME CHECK gate (Story 6.18, AC4; `2026-09-19-226` cl.3-cl.5, cl.7).
+  // ⭐ R9 IS ITS OWN PATH TO `state_trustee_approved` AND BYPASSES P1 ENTIRELY — a claim can be
+  // routed to the panel from six different states, none of which requires the District Admin's
+  // verification approval. Without this gate an R9-approved claim would land in the committable set
+  // having never had its nominee name looked at by anybody.
+  // ⛔ A DENIED outcome is NEVER gated, and the placement matters: this runs BEFORE any write, so a
+  // refusal aborts cleanly with no orphaned session outcome, no event and no metadata row.
+  if (outcome === 'approved') {
+    await assertNomineeNameCheckForApproval(
+      db,
+      input.pariwarId,
+      input.claimCaseId,
+      claimRow.deceasedMemberId,
+    );
+  }
 
   // (a) Persist the outcome onto the session row.
   const updatedRows = await db

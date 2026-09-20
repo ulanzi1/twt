@@ -20,6 +20,7 @@ import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
 import { decryptNomineeBankField } from '../../../src/modules/claims/nominee-bank-crypto.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { createTestApp, hasDatabase, teardown, type TestApp } from '../_setup.js';
+import { seedNomineeNameCheck } from '../_nominee-name-check-fixture.js';
 
 const ACCESS_TTL_MS = 15 * 60 * 1000;
 type Json = Record<string, unknown>;
@@ -108,6 +109,48 @@ async function setupClaim(t: TestApp): Promise<{ memberId: string; pariwarId: st
   return { memberId, pariwarId, claimCaseId: intake.body.claimCaseId as string };
 }
 
+/** Advance a seeded claim to `target` through the PROJECTOR — `claims.current_state` is
+ *  projector-only, so a test must never force it with an UPDATE. */
+async function driveClaimState(
+  t: TestApp,
+  pariwarId: string,
+  claimCaseId: string,
+  target: 'verification_in_progress' | 'verifier_review',
+): Promise<void> {
+  const scopeTx = await openScopeTx(t.deps, pariwarId);
+  let ok = false;
+  try {
+    const row = await claim.getClaimCase(scopeTx.tx, ids.pariwarId(pariwarId), ids.claimId(claimCaseId));
+    if (!row) throw new Error('claim not found');
+    const emit = (from: string, to: string, eventType: string, extra: Record<string, unknown> = {}) =>
+      claim.projectClaimState(scopeTx.client, {
+        claimCaseId: ids.claimId(claimCaseId),
+        pariwarId: ids.pariwarId(pariwarId),
+        deceasedMemberId: row.deceasedMemberId,
+        intakeChannels: row.intakeChannels,
+        claimantActorId: row.claimantActorId,
+        eventType: eventType as never,
+        payload: { from_state: from, to_state: to, trigger: 'seed', actor: 'system', ...extra },
+        actorId: null,
+      });
+    let state = row.currentState as string;
+    if (state === 'intake_pending') { await emit(state, 'intake_converged', 'claim.intake_converged'); state = 'intake_converged'; }
+    if (state === 'intake_converged') { await emit(state, 'documents_pending', 'claim.documents_received'); state = 'documents_pending'; }
+    if (state === 'documents_pending') {
+      await emit(state, 'verification_in_progress', 'claim.peer_mesh_pinged', {
+        selected_member_ids: [randomUUID()], metric_id: 'district_cohort_v1', metric_version: 1,
+      });
+      state = 'verification_in_progress';
+    }
+    if (target === 'verifier_review' && state === 'verification_in_progress') {
+      await emit(state, 'verifier_review', 'claim.verifier_reviewing');
+    }
+    ok = true;
+  } finally {
+    await closeScopeTx(scopeTx, ok);
+  }
+}
+
 describe.skipIf(!hasDatabase)('Claim-time nominee bank — member-app E2E (:5433)', () => {
   it('AC1/AC2: 2 valid accounts → 201, encrypted rows persisted, identity event emitted, audit NON-PII', async () => {
     const t = await createTestApp();
@@ -159,6 +202,51 @@ describe.skipIf(!hasDatabase)('Claim-time nominee bank — member-app E2E (:5433
       expect(auditStr).not.toContain('123456789012');
       expect(auditStr).not.toContain('Ravi Kumar');
       expect(auditStr).not.toContain('SBIN0000001');
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('⭐ Story 6.18 (AC5): the FILER is told the bank details need correcting — and never that the claim failed', async () => {
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId, claimCaseId } = await setupClaim(t);
+      const tok = token(t, memberId, pariwarId);
+
+      await inject(t, 'POST', `/api/v1/member/claims/${claimCaseId}/nominee-bank`, {
+        payload: {
+          accounts: [
+            { accountHolderName: 'Asha Devi', accountNumber: '123456789012', ifsc: 'SBIN0000001' },
+            { accountHolderName: 'Ravi Kumar', accountNumber: '210987654321', ifsc: 'HDFC0000002' },
+          ],
+        },
+        token: tok,
+      });
+
+      // Nothing is wrong yet — the filer is told nothing.
+      const before = await inject(t, 'GET', `/api/v1/member/claims/${claimCaseId}/nominee-bank`, { token: tok });
+      expect(before.status).toBe(200);
+      expect((before.body as { correctionNeeded: boolean }).correctionNeeded).toBe(false);
+
+      // ⭐ The District Admin records `does_not_match` — `-226` cl.6 SENDS THE CLAIM BACK.
+      // Driven through the REAL writer so this exercises the production derivation, not a stub.
+      await driveClaimState(t, pariwarId, claimCaseId, 'verifier_review');
+      await seedNomineeNameCheck(t.deps, pariwarId, claimCaseId, {
+        verdicts: ['matches', 'does_not_match'],
+      });
+
+      const after = await inject(t, 'GET', `/api/v1/member/claims/${claimCaseId}/nominee-bank`, { token: tok });
+      expect(after.status).toBe(200);
+      expect((after.body as { correctionNeeded: boolean }).correctionNeeded).toBe(true);
+
+      // ⛔⛔ AND THE RESPONSE CARRIES NO JUDGEMENT AND NO NAME. The filer is told WHAT to do; they
+      // are never handed a verdict about whose name was found wrong, and the claim is NOT denied.
+      const dump = JSON.stringify(after.body);
+      expect(dump).not.toContain('does_not_match');
+      expect(dump).not.toContain('Asha');
+      expect(dump).not.toContain('Ravi');
+      expect(dump.toLowerCase()).not.toContain('denied');
+      expect(dump.toLowerCase()).not.toContain('rejected');
     } finally {
       await teardown(t);
     }

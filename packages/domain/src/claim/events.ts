@@ -224,6 +224,50 @@ export const ClaimNomineeBankRecordedPayloadSchema = requireIdentityTransition({
 });
 
 /**
+ * The District Admin recorded the nominee NAME CHECK. ANNOTATION event — the 32nd claim event, NEW
+ * in Story 6.18 (AC3), on the ruling `2026-09-19-226` cl.3/cl.5. An IDENTITY transition
+ * (`from_state === to_state`): the check is a RECORDED JUDGEMENT placed on the claim's immutable
+ * evidentiary timeline, ⛔ NOT an adjudication — it approves nothing, denies nothing and moves no
+ * lifecycle state. The gates in AC4 READ it; ⛔ nothing here acts on it.
+ *
+ * ⭐ THE ONE NEW EVENT THIS STORY MINTS. The Pariwar Admin's return-to-District-Admin loop (AC11)
+ * deliberately mints ⛔ NONE — it is a metadata-only decision row on the shipped `routeToR9` shape.
+ * So the vocabulary moves by ONE, ⛔ not three.
+ *
+ * ⛔⛔ PII discipline (Trap 4, AC9): the payload carries the account ranks, their staleness tokens,
+ * the verdict and the clerical reason — all NON-PII. ⛔ NO holder name, ⛔ NO nominee name, ⛔ NO
+ * HASH of either, and ⛔ NO filer note ever reaches `events_log`. A hash is named explicitly because
+ * it is the plausible "compromise" that would defeat the rule: a name hash is a stable identifier
+ * for a living person and a confirmation oracle for any guessed name.
+ *
+ * ⚠ The verdict vocabulary carries ⛔ no `other` and ⛔ no transliteration reason — `-226` cl.6
+ * sends a non-clerical difference BACK for correction, and `2026-09-20-227` cl.9 rules the script
+ * problem is solved at capture. Owner: Story 6.18.
+ */
+export const ClaimNomineeNameCheckedPayloadSchema = requireIdentityTransition({
+  ...auditShape,
+  // The declaration the District Admin looked at — the `(rank, created_at)` set of the deceased
+  // member's `member_nominees` rows, as an opaque token. A re-declaration changes it, which is what
+  // makes a check STALE. Non-PII: it carries ranks and timestamps, never a name.
+  nominee_declaration_token: z.string().min(1),
+  // One entry per live account, both ranks. `account_updated_at` is the per-account staleness token
+  // (`claim_nominee_bank_accounts.updated_at`, which the delete-then-insert writer moves on every
+  // edit). Non-PII throughout.
+  accounts: z
+    .array(
+      z
+        .object({
+          account_rank: z.union([z.literal(1), z.literal(2)]),
+          account_updated_at: z.string().min(1),
+          verdict: z.enum(['matches', 'clerical_difference', 'does_not_match']),
+          clerical_reason: z.enum(['initial', 'married_name', 'bank_shortened_name']).nullable(),
+        })
+        .strict(),
+    )
+    .length(2),
+});
+
+/**
  * Claim-time DPDPA consent recorded. ANNOTATION event — the 24th claim event, NEW in Story 6.9
  * (NOT in the 6.1/6.6/6.7/6.8 vocabulary). Claim-time capture of the granular DPDPA consents
  * (the trust-processing consent + the two public-transparency opt-ins) via the Story 2.7
@@ -529,7 +573,7 @@ export const ClaimDeniedNoAppealPayloadSchema = requireIdentityTransition({
   deceased_member_id: z.string().uuid(),
 });
 
-// ── The 30-event vocabulary + the type→schema map (single source) ─────────────
+// ── The 32-event vocabulary + the type→schema map (single source) ─────────────
 // (Story 6.1 committed the 20 state-advancing events; Story 6.6 added the 21st —
 // `claim.peer_mesh_responded`; Story 6.7 added the 22nd — `claim.ground_inspection_completed`;
 // Story 6.8 added the 23rd — `claim.nominee_bank_recorded`; Story 6.9 added the 24th —
@@ -544,7 +588,11 @@ export const ClaimDeniedNoAppealPayloadSchema = requireIdentityTransition({
 // Story 6.16 adds the 31st — `claim.reversed` (D-A), the Sahyog Vivran PUBLISH HOOK: an IDENTITY annotation
 // appended in the SAME tx as an `appeal_stageN_reviewed(reversed)` transition, valid ONLY at `reversed`, the
 // SOLE subscription point Epic 11b consumes. It carries `reversed_at_stage` + a NON-PII `disposition_category`
-// tag; it changes no state and does NOT unfreeze the account.)
+// tag; it changes no state and does NOT unfreeze the account. Story 6.18 adds the 32nd —
+// `claim.nominee_name_checked` (AC3), an IDENTITY annotation recording the District Admin's per-account
+// verdict on the nominee name (`2026-09-19-226` cl.3/cl.5). The AC4 approval gates READ it; the reducer
+// is a no-op and nothing acts on a mismatch. ⭐ It is the ONLY event this story mints — the Pariwar
+// Admin's return loop is a metadata-only decision row on the `routeToR9` shape and adds NONE.)
 
 export const CLAIM_EVENT_TYPES = [
   'claim.intake_initiated',
@@ -555,6 +603,7 @@ export const CLAIM_EVENT_TYPES = [
   'claim.ground_inspection_scheduled',
   'claim.ground_inspection_completed',
   'claim.nominee_bank_recorded',
+  'claim.nominee_name_checked',
   'claim.dpdpa_consent_recorded',
   'claim.dpdpa_consent_revoked',
   'claim.verifier_reviewing',
@@ -580,11 +629,11 @@ export const CLAIM_EVENT_TYPES = [
   'claim.denied_no_appeal',
 ] as const;
 
-/** The dotted `claim.*` event-type literal union (the 31 claim events). */
+/** The dotted `claim.*` event-type literal union (the 32 claim events). */
 export type ClaimEventType = (typeof CLAIM_EVENT_TYPES)[number];
 
 /**
- * type → payload-schema map. The ONE place the 31 events bind to their schemas;
+ * type → payload-schema map. The ONE place the 32 events bind to their schemas;
  * `EVENT_TYPE_REGISTRY` (packages/events) and the projector both consume it. The
  * `satisfies` keeps it exhaustive — adding a `ClaimEventType` without a schema is a
  * compile error.
@@ -598,6 +647,7 @@ export const CLAIM_EVENT_PAYLOAD_SCHEMAS = {
   'claim.ground_inspection_scheduled': ClaimGroundInspectionScheduledPayloadSchema,
   'claim.ground_inspection_completed': ClaimGroundInspectionCompletedPayloadSchema,
   'claim.nominee_bank_recorded': ClaimNomineeBankRecordedPayloadSchema,
+  'claim.nominee_name_checked': ClaimNomineeNameCheckedPayloadSchema,
   'claim.dpdpa_consent_recorded': ClaimDpdpaConsentRecordedPayloadSchema,
   'claim.dpdpa_consent_revoked': ClaimDpdpaConsentRevokedPayloadSchema,
   'claim.verifier_reviewing': ClaimVerifierReviewingPayloadSchema,

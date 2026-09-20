@@ -23,6 +23,7 @@ import { setPariwarScope } from '../../../src/db.js';
 import { claimId as toClaimId, memberId as toMemberId, pariwarId as toPariwarId } from '../../../src/ids/index.js';
 import type { ClaimId, MemberId } from '../../../src/ids/index.js';
 import { projectClaimState, resolveEscalation, voteOnFrozenClaim } from '../../../src/claim/index.js';
+import { seedNomineeNameCheck } from '../_helpers.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);
@@ -83,6 +84,8 @@ describe.skipIf(!hasDatabase)('state-trustee cycle-freeze — two-connection con
       if (target === 'verifier_approved') {
         await emit('verifier_review', 'verifier_approved', 'claim.verifier_approved');
       }
+      // Story 6.18 (AC4) — approvable only with two accounts + a current, PASSING name check.
+      await seedNomineeNameCheck(client, PARIWAR, claimCaseId);
     });
   }
 

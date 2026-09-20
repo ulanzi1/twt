@@ -24,6 +24,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { ApiError } from '../../api/client.js';
 import {
   useHelplineClaimIntake,
+  useNomineeNameCheck,
+  useRecordHelplineNomineeBank,
   useHelplineOperatorEvent,
   useMemberSearch,
   useRequestStepUp,
@@ -31,6 +33,7 @@ import {
 } from '../../api/hooks.js';
 import { MemberLookupForm } from '../member-status/MemberLookupForm.js';
 import { MemberSearchResults } from '../member-status/MemberSearchResults.js';
+import { BankDetailsCard } from './BankDetailsCard.js';
 import { HelplineConsoleShell, type HelplineIntakeResult } from './HelplineConsoleShell.js';
 import { readBackScript, resolveEn } from './i18n-en.js';
 
@@ -62,6 +65,9 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
   const [identityCorrections, setIdentityCorrections] = useState<readonly string[]>([]);
   const [nomineeCorrections, setNomineeCorrections] = useState<readonly string[]>([]);
   const [result, setResult] = useState<HelplineIntakeResult | null>(null);
+  // Story 6.18 (AC6/AC7) — the operator's bank-details step. It exists only AFTER the intake,
+  // because the nominee-bank route is keyed on a claim that must already be there.
+  const [bankRecorded, setBankRecorded] = useState(false);
   const [stepUpRequired, setStepUpRequired] = useState(false);
   const [otp, setOtp] = useState('');
   const [escalated, setEscalated] = useState(false);
@@ -234,6 +240,17 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
     </div>
   );
 
+  const filedClaimCaseId = result?.claimCaseId ?? null;
+  const recordBank = useRecordHelplineNomineeBank(pariwarId, filedClaimCaseId ?? '');
+  // ⭐ The names read is fetched ONLY once the accounts exist — before that there is nothing to
+  // check, and the read decrypts a living nominee's name + writes an audit line, so it must not
+  // fire speculatively.
+  const bankNames = useNomineeNameCheck(pariwarId, filedClaimCaseId, bankRecorded);
+  const submitBank = async (body: Parameters<typeof recordBank.mutateAsync>[0]): Promise<void> => {
+    await recordBank.mutateAsync(body);
+    setBankRecorded(true);
+  };
+
   return (
     <HelplineConsoleShell
       lookupSlot={lookupSlot}
@@ -263,6 +280,20 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
       stepUpSlot={stepUpSlot}
       escalated={escalated}
       onEscalate={escalate}
+      // Story 6.18 (AC6/AC7) — cl.1 makes the match the operator's duty and cl.7 makes both
+      // accounts mandatory; the card is where both are discharged.
+      bankRecorded={bankRecorded}
+      bankSlot={
+        <BankDetailsCard
+          claimCaseId={filedClaimCaseId}
+          recorded={bankRecorded}
+          onSubmit={submitBank}
+          pending={recordBank.isPending}
+          error={recordBank.isError ? messageOf(recordBank.error) : null}
+          names={bankNames.data}
+          namesLoading={bankNames.isLoading}
+        />
+      }
     />
   );
 }

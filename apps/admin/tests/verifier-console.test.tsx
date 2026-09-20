@@ -90,6 +90,7 @@ const PRESENT_PACKET: VerifierConsolePacket = {
     shepherdDisplay: 'Anita Sharma',
     roleLabel: 'District Admin',
   },
+  nomineeNameCheck: { accountsComplete: true, currentAndPassing: true, differenceReasons: [] },
 };
 
 describe('<VerificationConsoleShell> — anatomy + read-only + decision slot (AC6)', () => {

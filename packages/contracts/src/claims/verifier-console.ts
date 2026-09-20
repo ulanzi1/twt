@@ -254,6 +254,32 @@ export const ShepherdSection = z.discriminatedUnion('status', [
 export type ShepherdSection = z.output<typeof ShepherdSection>;
 
 // ── The bounded compound packet (one request; the whole verifier signals view) ─────────────────────
+/**
+ * (h) The nominee NAME CHECK status — Story 6.18 (AC4, AC8). NON-PII by construction.
+ *
+ * ⭐ WHAT THIS SECTION IS FOR, and what it is deliberately NOT. It tells the console two things the
+ * District Admin needs before they can act: whether a CURRENT, PASSING check exists (so the approve
+ * control can be disabled until it does — AC4), and whether that check accepted a DIFFERENCE (so
+ * `-226` cl.5's highlight can render — AC8).
+ * ⛔ IT CARRIES NO NAME AND NO NOTE. The names live behind the dedicated
+ * `claim.view_nominee_name_check` key on their own route, fetched ON DEMAND when a District Admin
+ * opens the disclosure — reading a living nominee's Tier-1 name must ⛔ never be a side effect of
+ * loading a console.
+ * ⛔ And it carries no comparison: `differenceReasons` are the codes the District Admin THEMSELVES
+ * recorded, never anything the system worked out (Trap 1).
+ */
+export const NomineeNameCheckStatus = z
+  .object({
+    /** Exactly two live bank accounts exist (`-226` cl.7). `false` ⇒ the claim WAITS. */
+    accountsComplete: z.boolean(),
+    /** A check exists AND is current AND every verdict passes — the AC4 approval gate. */
+    currentAndPassing: z.boolean(),
+    /** The clerical reason CODES the District Admin recorded, when a difference was accepted (AC8). */
+    differenceReasons: z.array(z.enum(['initial', 'married_name', 'bank_shortened_name'])),
+  })
+  .strict();
+export type NomineeNameCheckStatus = z.output<typeof NomineeNameCheckStatus>;
+
 export const VerifierConsolePacket = z
   .object({
     claimCaseId: z.string(),
@@ -270,6 +296,9 @@ export const VerifierConsolePacket = z
     recentPrecedents: RecentPrecedentsSection,
     // Story 6.12 — the live shepherd (the family's named human contact), READ-ONLY. Grants no adjudication.
     shepherd: ShepherdSection,
+    // Story 6.18 (AC4/AC8) — NON-PII: can this claim be approved, and did the District Admin record
+    // an accepted name difference. The NAMES are a separate read behind their own key.
+    nomineeNameCheck: NomineeNameCheckStatus,
   })
   .strict();
 export type VerifierConsolePacket = z.output<typeof VerifierConsolePacket>;

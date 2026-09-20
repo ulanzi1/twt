@@ -12,6 +12,9 @@
 // screen's a11y posture: labels + hints, announced split + validation).
 
 import { useState } from 'react'
+// Story 6.18 (AC12) — the ENGLISH-script gate, imported from `@twt/contracts` (one source, ⛔ no
+// hand-copy and therefore ⛔ no `.source` drift test owed).
+import { ENGLISH_NAME_REGEX } from '@twt/contracts'
 
 import { useT } from '@twt/i18n/react'
 import { Button, H2, Input, Paragraph, Spinner, Text, XStack, YStack } from 'tamagui'
@@ -88,6 +91,11 @@ export function NomineeForm(props: NomineeFormProps) {
   function firstValidationError(): string | null {
     for (const f of forms) {
       if (!f.name.trim()) return t('nominees.name_required')
+      // Story 6.18 (AC12), `-227` cl.9 — captured in ENGLISH script, so the District Admin's later
+      // name check is a comparison and ⛔ not an ad-hoc transliteration. The boundary refuses a
+      // non-Latin name, so this form refuses it FIRST — ⛔ never a silent server-only 400.
+      // Follows the file's first-error-only, dignified-validation shape (Pattern 4).
+      if (!ENGLISH_NAME_REGEX.test(f.name.trim())) return t('nominees.name_english')
       if (!f.relationship) return t('nominees.relationship_required')
       if (!f.mobile.trim()) return t('nominees.mobile_required')
     }

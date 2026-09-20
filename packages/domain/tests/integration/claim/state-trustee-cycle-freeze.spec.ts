@@ -27,7 +27,7 @@ import {
 } from '../../../src/claim/index.js';
 import * as schema from '../../../src/schema/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
-import { PARIWAR_A, PARIWAR_B, enterAppScope, seedClauseVersion } from '../_helpers.js';
+import { PARIWAR_A, PARIWAR_B, enterAppScope, seedClauseVersion, seedNomineeNameCheck } from '../_helpers.js';
 
 const TRUSTEE = 'a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1';
 const VERIFIER = 'b2b2b2b2-b2b2-b2b2-b2b2-b2b2b2b2b2b2';
@@ -79,6 +79,10 @@ async function driveTo(
   if (target === 'verifier_approved') {
     await emit('verifier_review', 'verifier_approved', 'claim.verifier_approved');
   }
+  // Story 6.18 (AC4) — a claim is only votable/approvable once it carries its two bank accounts and
+  // a current, PASSING District Admin name check. Seeded through the REAL writer, so these specs
+  // keep exercising the production path rather than bypassing the new gate.
+  await seedNomineeNameCheck(client, PARIWAR_A, claimCaseId);
 }
 
 /** Insert a LIVE `escalated` verifier decision row directly (the AC4b escalation setup). */

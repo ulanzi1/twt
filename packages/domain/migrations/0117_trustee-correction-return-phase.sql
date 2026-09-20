@@ -1,0 +1,22 @@
+-- Migration 0117 — add the `correction_return` value to the state_trustee_decision_phase enum
+-- (Story 6.18, AC11 / Task 4b).
+--
+-- `2026-09-20-227` cl.10 (Trustee-ratified — Dhiraj Rahul + Kalpana Bharti): *"If District Admin
+-- approves the verification, it goes to Pariwar Admin. If Pariwar Admin doesn't approve it goes back
+-- to District Admin for correction with Note."* That RETURN is recorded as ONE live
+-- `claim_state_trustee_decisions` row in a new `correction_return` phase — the shipped `routeToR9`
+-- shape: metadata only, ⛔ NO lifecycle event, ⛔ no state change, ⛔ not a denial, ⛔ no appeal flow.
+--
+-- The table's partial-unique `(claim_case_id, phase) WHERE superseded_at IS NULL` gives the new phase
+-- its own one-live slot with ⛔ no index change — which is what makes "at most one open return per
+-- claim" structural rather than app-enforced.
+--
+-- ⚠ A SEPARATE migration from 0118 (the OUTCOME value), and both separate from any USE of either:
+-- `ALTER TYPE … ADD VALUE` is permitted inside the migrator's transaction (PG 12+) ONLY because the
+-- new value is added here and never used in the same transaction (the 6.14 0064/0065 lesson, restated
+-- by 0069). `IF NOT EXISTS` keeps a re-run a no-op.
+--
+-- ⚠ DO NOT REGENERATE (the 0021–0116 discipline): drizzle-kit skips an applied migration by journal
+-- `when`, NOT by SQL hash ([[project_live_db_test_gotchas]]).
+
+ALTER TYPE "public"."state_trustee_decision_phase" ADD VALUE IF NOT EXISTS 'correction_return';

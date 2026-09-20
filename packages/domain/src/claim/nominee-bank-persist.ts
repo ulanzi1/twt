@@ -47,6 +47,7 @@ import {
   NomineeBankCorrectionReasonRequiredError,
 } from './errors.js';
 import { type ClaimEventActor } from './events.js';
+import { hasLiveReturnRow } from './state-trustee-decision-persist.js';
 import { projectClaimState } from './project.js';
 
 /** The two account ranks v1 collects — always exactly these (Task 5 RESOLVED). */
@@ -79,6 +80,10 @@ export interface NomineeBankAccountInput {
    *  filer did not supply a VPA. ALREADY encrypted by the caller (same field class as the three
    *  fields above). A null VPA is a first-class state — it never blocks the write. */
   vpaCiphertext: string | null;
+  /** Story 6.18 (AC7) — the filer's OPTIONAL note to the District Admin explaining a clerical name
+   *  difference (`2026-09-19-226` cl.2). ALREADY encrypted by the caller (same field class as the
+   *  fields above); `null` when none was submitted, which is the common case and never blocks. */
+  nameDifferenceNoteCiphertext: string | null;
   /** Public, IFSC-derived (Tier-3 plaintext). */
   bankName: string;
   branch: string | null;
@@ -158,9 +163,40 @@ export async function recordClaimNomineeBankAccounts(
   const state = claimRow.currentState as string;
   const inOrdinaryWindow = (NOMINEE_BANK_COLLECTABLE_STATES as readonly string[]).includes(state);
   const inCorrectionWindow = (NOMINEE_BANK_ADMIN_CORRECTION_STATES as readonly string[]).includes(state);
+  // Story 6.18 (AC5) — THE THIRD BRANCH: a claim UNDER CORRECTION.
+  //
+  // ⚠ SAY IT PLAINLY: `NOMINEE_BANK_ADMIN_CORRECTION_STATES` is ⛔ NOT widened — but THE EFFECT IS,
+  // and pretending otherwise would be the dishonest version of this change. `errors.ts`'s five-condition
+  // doc-block requires anyone reopening a correction window to define five things first; Story 6.18
+  // answers all five and records that it is doing so:
+  //   · RE-VERIFICATION        — the District Admin's fresh name check (AC3).
+  //   · APPROVAL INVALIDATION  — the edit moves `updated_at`, so the recorded check goes STALE and
+  //                              every AC4 gate refuses (`-227` cl.12 / D5).
+  //   · DOWNSTREAM-READINESS   — a claim under correction is excluded from the commit set (AC11), so
+  //                              ⛔ nothing downstream spawns while the correction is open.
+  //   · AUDIT                  — the existing bank-write events + audit lines, plus
+  //                              `admin_cycle_freeze.returned` on the return itself.
+  //   · NOTIFICATION           — the filer is told ("bank details need correcting"), with ⛔ no name.
+  //
+  // ⭐ AND IT IS RECORDED AS A DELIBERATE FIRST, ⛔ not presented as an existing pattern: there is
+  // ⛔ no precedent in this codebase for a LIVE GOVERNANCE ROW replacing a STATE GUARD.
+  // `resolveEscalation` requires its live row IN ADDITION TO a state check; this permits the write on
+  // the strength of the row ALONE, whatever the claim's state. The justification is `-227` cl.10-11:
+  // the Pariwar Admin asked for the correction, so the states they can return FROM are exactly the
+  // states the correction must be possible IN — otherwise the return is a dead end, which AC5 forbids.
+  //
+  // ⛔ The record is the exception and it CLOSES when the corrected accounts are written (the fresh
+  // check restores the gate). ⛔ No window constant is edited, ⛔ no state moves.
   let corrected = false;
   if (inOrdinaryWindow) {
     // Ordinary collection/edit — no reason required.
+  } else if (input.allowCorrection === true && (await hasLiveReturnRow(db, input.pariwarId, input.claimCaseId))) {
+    // Under correction — permitted WHATEVER the claim's state, on the strength of the live return row.
+    // The reason stays mandatory + audited, exactly as in the tier-2 window.
+    if (input.correctionReason == null || input.correctionReason.trim() === '') {
+      throw new NomineeBankCorrectionReasonRequiredError(input.claimCaseId);
+    }
+    corrected = true;
   } else if (inCorrectionWindow && input.allowCorrection === true) {
     // Authorized-admin correction — the reason is mandatory + audited.
     if (input.correctionReason == null || input.correctionReason.trim() === '') {
@@ -193,6 +229,7 @@ export async function recordClaimNomineeBankAccounts(
         accountNumberCiphertext: a.accountNumberCiphertext,
         ifscCiphertext: a.ifscCiphertext,
         vpaCiphertext: a.vpaCiphertext,
+        nameDifferenceNoteCiphertext: a.nameDifferenceNoteCiphertext,
         bankName: a.bankName,
         branch: a.branch,
         ifscValidated: a.ifscValidated,

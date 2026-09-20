@@ -49,6 +49,23 @@ function translateDecisionError(err: unknown): never {
   if (err instanceof claim.VerifierDecisionClaimNotFoundError) {
     throw new NotFoundError('Claim not found', 'claim.not_found');
   }
+  // Story 6.18 (AC4/AC6) — the nominee name-check approval gates. ⛔ NEITHER is a denial: `-226`
+  // cl.7 makes a claim without both accounts WAIT, and cl.6 sends a name mismatch BACK for
+  // correction. The messages say so, because "required" alone reads as a rejection.
+  if (err instanceof claim.NomineeBankAccountsRequiredError) {
+    throw new ConflictError(
+      'This claim needs both bank accounts before it can be approved — it waits until they are added',
+      'verifier_decision.bank_details_required',
+      { live_account_count: err.liveAccountCount },
+    );
+  }
+  if (err instanceof claim.NomineeNameCheckRequiredError) {
+    throw new ConflictError(
+      'This claim needs a current District Admin nominee name check before it can be approved',
+      'verifier_decision.nominee_name_check_required',
+      { reason: err.reason },
+    );
+  }
   if (err instanceof claim.ClaimNotInVerifierReviewError) {
     throw new ConflictError(
       'The claim cannot be approved/denied in its current state',

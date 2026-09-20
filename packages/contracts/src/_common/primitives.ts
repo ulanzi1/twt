@@ -61,3 +61,44 @@ export const MobileNumber = z
   .max(20)
   .regex(/^[+0-9][0-9\s\-()]*$/, 'Must be a mobile number (digits + optional + - ( ) separators)');
 export type MobileNumber = z.output<typeof MobileNumber>;
+
+/**
+ * A person's name captured in ENGLISH (Latin) script — Story 6.18 (AC12), `2026-09-20-227` cl.9:
+ * *"No transliteration should not be counted as clerical reason. Please use English Name everywhere
+ * to avoid this."*
+ *
+ * The Panel's reasoning is worth keeping beside the code: a District Admin comparing a bank's
+ * "ASHA DEVI" against a declared "आशा देवी" is not doing a name check, they are doing an ad-hoc
+ * transliteration — and cl.9 removes that job rather than adding a clerical reason for it. So the
+ * script problem is solved at CAPTURE, and `nominee-name-check.ts` carries ⛔ no transliteration
+ * reason at all.
+ *
+ * Allows Latin letters, spaces, `.`, `'` and `-` — the apostrophe and hyphen because real names
+ * carry them (D'Souza, Bai-Kumari) and an initial's full stop because cl.2 names initials as a
+ * legitimate clerical form. Refuses Devanagari and every other non-Latin script.
+ *
+ * ⛔⛔ THIS IS AN **INPUT-ONLY** PREDICATE, AND THE REASON MUST STAY HERE.
+ * `apps/api/src/plugins/zod-openapi/index.ts:24-25` installs a `serializerCompiler`, so RESPONSES
+ * ARE PARSED against their schemas. Attaching this to an OUTPUT schema would turn every name
+ * already stored in another script — plus the RTBF `'[anonymized]'` sentinel and the decrypt-failed
+ * sentinel — into a **500** at read time. The output schemas that carry a holder name and must stay
+ * UNGATED: `contributions/nominee-accounts.ts`, `contributions/member-drive-detail.ts`,
+ * `public-pages/sahyog-vivran.ts`, and `claims/nominee-name-check.ts`'s own read DTO.
+ *
+ * ⛔ AND THERE IS NO BACKFILL. Rows already stored in another script stay exactly as they are and
+ * still render — which holds PRECISELY because the gate is input-only
+ * ([[feedback_record_unattested_no_backfill]]). A rewrite would be changing people's recorded names
+ * to make a validator happy.
+ *
+ * ⛔ NOT applied to member KYC names (`domain/src/kyc/name.ts` is deliberately Devanagari-aware, and
+ * a KYC name is copied from a government document, not typed) nor to Story 6.5's death-certificate
+ * comparison (`claim/parity.ts`, a 20% fuzzy tolerance). cl.9's wider sweep is its own story.
+ */
+export const ENGLISH_NAME_REGEX = /^[A-Za-z][A-Za-z.'\- ]*$/;
+export const EnglishScriptName = z
+  .string()
+  .trim()
+  .min(1)
+  .max(200)
+  .regex(ENGLISH_NAME_REGEX, 'Please enter the name in English');
+export type EnglishScriptName = z.output<typeof EnglishScriptName>;

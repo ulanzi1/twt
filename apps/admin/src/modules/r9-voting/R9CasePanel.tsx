@@ -11,7 +11,9 @@ import type { ReactElement } from 'react';
 import { useState } from 'react';
 
 import { ApiError, errorMessage } from '../../api/client.js';
+import { NomineeNameCheckPanel } from '../claim-verification/NomineeNameCheckPanel.js';
 import {
+  useNomineeNameCheck,
   useCancelR9Session,
   useCastR9Vote,
   useFinalizeR9,
@@ -35,6 +37,9 @@ export interface R9CasePanelProps {
 }
 
 export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): ReactElement {
+  // Story 6.18 (AC2) — the names disclosure, fetched only when opened.
+  const [nameCheckOpen, setNameCheckOpen] = useState(false);
+  const nameCheck = useNomineeNameCheck(pariwarId, claimCaseId, nameCheckOpen);
   const panel = useR9Panel(pariwarId, claimCaseId);
   const session = useSession();
   const open = useOpenR9Session(pariwarId, claimCaseId);
@@ -70,6 +75,41 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
       Claim <code>{model.claim_case_id}</code> · deceased member <code>{model.deceased_member_id}</code> ·
       state <strong>{model.current_state}</strong>
     </p>
+  );
+
+  // ── Story 6.18 (AC2/AC8) — the nominee NAME CHECK, behind a disclosure ────────────────────────
+  // ⭐ R9 IS ITS OWN PATH TO APPROVAL. `finalizeR9Outcome` reaches `state_trustee_approved` without
+  // ever passing the District Admin's verification approval, so the panel that decides an R9 claim
+  // must be able to see the same names — otherwise the only surface that can approve this claim is
+  // the only one that cannot look at what it is approving.
+  // ⛔ ON DEMAND, never on render: the read decrypts a LIVING nominee's Tier-1 name and writes an
+  // audit line, so it must mean that somebody chose to look.
+  const nameCheckSection = (
+    <section className="mt-3 border-t pt-3" aria-label="Nominee name check">
+      <button
+        type="button"
+        data-testid="r9-name-check-disclosure"
+        className="text-sm underline"
+        aria-expanded={nameCheckOpen}
+        onClick={() => setNameCheckOpen((v) => !v)}
+      >
+        Check nominee names
+      </button>
+      {nameCheckOpen ? (
+        <NomineeNameCheckPanel
+          data={nameCheck.data}
+          loading={nameCheck.isLoading}
+          error={nameCheck.isError ? 'The names could not be loaded.' : null}
+          // ⛔ The R9 panel is a VOTING surface, not the checker: `-226` cl.3 reserves recording the
+          // verdict to the District Admin, and `claim.check_nominee_name` is granted to them alone.
+          // Showing the control here would invite a 403 and blur who the reviewer is.
+          canCheck={false}
+          onSubmit={async () => {
+            /* unreachable — `canCheck` is false, so no control renders */
+          }}
+        />
+      ) : null}
+    </section>
   );
 
   const parseRoster = (): string[] =>
@@ -114,6 +154,7 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
       <section aria-label="Open R9 voting session" className="rounded border p-4">
         <h3 className="mb-2 text-sm font-semibold">No open session — open the panel</h3>
         {caseHeader}
+        {nameCheckSection}
         <p className="mb-2 mt-2 text-xs opacity-60">
           Select the applicable R9 sub-clause and designate the immutable panel roster (actor ids — each must
           hold the R9 vote permission, max {R9_PANEL_MAX_MEMBERS}). The roster cannot change after open; correcting
@@ -180,6 +221,9 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
         <p className="text-xs opacity-60">
           Clause <code>{s.clause_id}</code> · rule version <code className="opacity-70">{s.clause_version_id}</code>
         </p>
+        {/* Story 6.18 (AC2/AC8) — the names, on demand. R9 approves without the District Admin's
+            verification approval, so this panel must be able to see them. */}
+        {nameCheckSection}
         <p className="text-xs opacity-60">
           Opened by {s.opened_display} · quorum {s.quorum_required} of {s.panel.length}
           {finalized && (

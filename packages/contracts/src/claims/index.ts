@@ -33,6 +33,15 @@ export * from './verifier-console.js';
 // the request DTOs (outcome + reason_code + rationale?, .strict() — server-derived actor identity, R5),
 // the outcome↔reason-code compat superRefine (AC8), and the NON-PII decision response.
 export * from './verification-decision.js';
+// Story 6.18 — the nominee NAME CHECK DTOs (`2026-09-19-226` cl.3/cl.5): the district-gated read that
+// shows each live bank account's HOLDER NAME beside the nominees the deceased member DECLARED, plus the
+// filer's note — the ONE named exception to nominee-bank.ts's "never echo the holder name" rule, named
+// there too — and the District Admin's per-account verdict write (matches | clerical_difference + one of
+// the three cl.2 reasons | does_not_match). ⛔ NO join, NO match rule and NO computer comparison anywhere
+// (Trap 1): two independent lists are shown, a person decides, the decision is recorded. The name fields
+// are DISCRIMINATED UNIONS, not nullable strings — responses are serializer-parsed, and `unreadable` vs
+// `anonymized` are different facts a District Admin must not be shown as one another.
+export * from './nominee-name-check.js';
 // Story 6.12 — the member-facing shepherd read DTO (GET /member/claims/:id/shepherd) backing the mobile
 // <ShepherdContactCard>: a discriminated union (assigned → display_name + role_label + contact snapshot |
 // not_assigned). The E.164 wire regex is re-declared (no @twt/domain import).

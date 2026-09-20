@@ -124,6 +124,63 @@ export const verifierConsoleEn = {
     decisionConflict: 'This claim was already updated — reload to see the latest state before trying again.',
   },
   // Story 6.11 — reason-code display labels (bounded domain enum).
+  // ── Story 6.18 — the nominee NAME CHECK (`2026-09-19-226` cl.3/cl.5) ──────────────────────
+  // ⛔ NO match hint, NO score, NO diff wording anywhere in this block: the console SHOWS two lists
+  // and RECORDS a human judgement. The only "highlight" is `approvedWithDifference`, which reports
+  // what the District Admin themselves recorded (AC8).
+  nameCheck: {
+    heading: 'Nominee name check',
+    intro:
+      "Read the name on each bank account beside the nominee(s) the member declared, then record whether they match. The system does not compare them.",
+    loading: 'Loading the names…',
+    loadError: 'The names could not be loaded.',
+    accountsHeading: 'Name on the bank account',
+    nomineesHeading: 'Nominee the member declared',
+    accountLabel: 'Account',
+    nomineeLabel: 'Nominee',
+    filerNote: 'Note from the filer',
+    noAccounts: 'No bank accounts have been given for this claim yet.',
+    // ⭐ "needed", not "missing"/"rejected" — cl.7 makes the claim WAIT, never be refused (AC6).
+    bankDetailsMissing:
+      'This claim needs both bank accounts before it can be checked or approved. It waits until they are added — it is not refused.',
+    noNominees: 'The member declared no nominees.',
+    unreadable: 'Could not be read',
+    anonymized: 'Removed at this person’s request',
+    declaredAt: 'Nominees declared',
+    filedAt: 'Claim filed',
+    recordedBy: 'Checked by',
+    notYetChecked: 'No name check has been recorded for this claim yet.',
+    approvedWithDifference: 'Approved with a name difference',
+    verdictLabel: 'Verdict for account',
+    verdictPlaceholder: 'Select…',
+    reasonLabel: 'Reason for account',
+    reasonPlaceholder: 'Select a reason…',
+    verdictRequired: 'Record a verdict for each account before submitting.',
+    reasonRequired: 'Select the reason for the clerical difference before submitting.',
+    sentBackHint:
+      'This will send the claim back to be corrected. The claim stays open and is not denied.',
+    submit: 'Record the name check',
+    returnedHeading: 'Returned to you for correction',
+    returnedBy: 'Returned by',
+    returnNote: 'Their note',
+    // ⭐ "Re-submitted" is DERIVED — it becomes true once the details were corrected and you checked
+    // again. There is no button: checking again IS the re-submission.
+    resubmitted: 'Corrected and re-checked — this is back with the Pariwar Admin.',
+    awaitingCorrection:
+      'Contact the claimant, have the bank details corrected, then record the name check again. The claim stays open.',
+    approveBlocked:
+      'Record the nominee name check before approving. If the bank details were corrected, the earlier check no longer applies and the names need checking again.',
+    verdicts: {
+      matches: 'Matches the declared nominee',
+      clerical_difference: 'Clerical difference (accept with a reason)',
+      does_not_match: 'Does not match — send back for correction',
+    },
+    reasons: {
+      initial: 'An initial',
+      married_name: 'A married name',
+      bank_shortened_name: "The bank's shortened name",
+    },
+  },
   reasonCodes: {
     r5_d_natural_death: 'R5(d) — natural death confirmed',
     r8_90pct_met: 'R8 — 90% standing threshold met',

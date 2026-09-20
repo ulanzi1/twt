@@ -71,6 +71,23 @@ function translateR9Error(err: unknown): never {
   if (err instanceof claim.R9UnrecognizedVotingRequirementError) {
     throw new BadRequestError('The selected clause payload has no recognized voting-requirement key', 'r9_voting.voting_requirement_unrecognized');
   }
+  // Story 6.18 (AC4/AC6) — the nominee name-check approval gates. ⛔ NEITHER is a denial: `-226`
+  // cl.7 makes a claim without both accounts WAIT, and cl.6 sends a name mismatch BACK for
+  // correction. The messages say so, because "required" alone reads as a rejection.
+  if (err instanceof claim.NomineeBankAccountsRequiredError) {
+    throw new ConflictError(
+      'This claim needs both bank accounts before it can be approved — it waits until they are added',
+      'r9_voting.bank_details_required',
+      { live_account_count: err.liveAccountCount },
+    );
+  }
+  if (err instanceof claim.NomineeNameCheckRequiredError) {
+    throw new ConflictError(
+      'This claim needs a current District Admin nominee name check before it can be approved',
+      'r9_voting.nominee_name_check_required',
+      { reason: err.reason },
+    );
+  }
   if (err instanceof claim.R9ClaimNoLongerRoutableError) {
     throw new ConflictError('This claim is no longer in a routable state — finalize is blocked', 'r9_voting.claim_no_longer_routable');
   }

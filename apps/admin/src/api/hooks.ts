@@ -676,6 +676,50 @@ export function useVerifierConsole(pariwarId: string, claimCaseId: string | null
 // the just-written decision (fresh present/empty; the new AuditTrailEntry).
 
 /** POST an approve / deny / escalate decision; refetches the console packet on success. */
+/** Story 6.18 (AC7) — the helpline operator records both disbursement accounts after filing. */
+export function useRecordHelplineNomineeBank(pariwarId: string, claimCaseId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.recordHelplineNomineeBank>[2]) =>
+      api.recordHelplineNomineeBank(pariwarId, claimCaseId, body),
+    // The names view is the AC2 read — it must refetch once the accounts exist, or the operator
+    // would be shown "no bank accounts" immediately after recording them.
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: nomineeNameCheckKey(pariwarId, claimCaseId) });
+    },
+  });
+}
+
+// ── Nominee NAME CHECK (Story 6.18) ──────────────────────────────────────────
+export const nomineeNameCheckKey = (pariwarId: string, claimCaseId: string) =>
+  ['nominee-name-check', pariwarId, claimCaseId] as const;
+
+/**
+ * The two names, on demand. ⭐ `enabled` is caller-controlled so the console can fetch this ONLY
+ * when a District Admin opens the disclosure — the read decrypts a LIVING nominee's Tier-1 name and
+ * writes an audit line, so it must ⛔ never fire as a side effect of rendering a list.
+ */
+export function useNomineeNameCheck(pariwarId: string, claimCaseId: string | null, enabled = true) {
+  return useQuery({
+    queryKey: nomineeNameCheckKey(pariwarId, claimCaseId ?? ''),
+    queryFn: () => api.getNomineeNameCheck(pariwarId, claimCaseId as string),
+    enabled: Boolean(claimCaseId) && enabled,
+  });
+}
+
+export function usePostNomineeNameCheck(pariwarId: string, claimCaseId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.postNomineeNameCheck>[2]) =>
+      api.postNomineeNameCheck(pariwarId, claimCaseId, body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: nomineeNameCheckKey(pariwarId, claimCaseId) });
+      // The console's own read carries the AC8 flag + the approve-enablement, so it must refetch too.
+      void qc.invalidateQueries({ queryKey: verifierConsoleKey(pariwarId, claimCaseId) });
+    },
+  });
+}
+
 export function usePostVerifierDecision(pariwarId: string, claimCaseId: string) {
   const qc = useQueryClient();
   return useMutation({

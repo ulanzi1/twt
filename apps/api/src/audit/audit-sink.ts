@@ -356,6 +356,26 @@ export type AuthAuditEventType =
   | 'admin_claim.verifier_escalated'
   | 'admin_claim.decision_revised'
   | 'admin_claim.decision_rejected'
+  // ── Nominee name-check surface (Story 6.18, `2026-09-19-226` cl.3/cl.5 / Epic 6) ──
+  // The two names read + the District Admin's recorded verdict on them. The read is AUDITED on the
+  // `admin_verifier_console.read` precedent, and for a sharper reason than that surface has: this
+  // read decrypts the Tier-1 name of a SECOND, LIVING subject (the nominee — not the deceased), so
+  // who looked at a living person's name, and when, must leave a trail of its own.
+  // ⛔⛔ Context is NON-PII and the exclusions are LOAD-BEARING, not boilerplate (Trap 4, AC9):
+  // claim_case_id + district + deceased_member_id + account_ranks + verdicts + clerical_reasons —
+  // and ⛔ NEVER the holder name, ⛔ NEVER the declared nominee's name, ⛔ NEVER a HASH of either,
+  // ⛔ NEVER the filer's note. The hash is named because it is the plausible "compromise" that
+  // would defeat the rule: a name hash is a stable identifier for a living person and a
+  // confirmation oracle for any guessed name.
+  //   nominee_name_check.read     — someone holding claim.view_nominee_name_check read the names.
+  //   nominee_name_checked        — a District Admin recorded the per-account verdict (post-commit
+  //     sink line; the durable record is the claim.nominee_name_checked event).
+  //   nominee_name_check_rejected — a check attempt was refused by a domain guard (stale token,
+  //     missing accounts, wrong state) — no event written; recorded so a failed attempt is still
+  //     audited (the 6.11 decision_rejected posture: fail-closed AND audited, not just fail-closed).
+  | 'admin_nominee_name_check.read'
+  | 'admin_claim.nominee_name_checked'
+  | 'admin_claim.nominee_name_check_rejected'
   // ── Shepherd assignment surface (Story 6.12, FR-41 / Epic 6) ──────────────────
   // The human-shepherd routing/attribution surface (a District Admin as the family's named contact).
   // Post-commit SINK lines (the durable records are the claim.shepherd_assigned event + the
@@ -378,6 +398,11 @@ export type AuthAuditEventType =
   | 'admin_cycle_freeze.vote'
   | 'admin_cycle_freeze.route'
   | 'admin_cycle_freeze.escalation_resolved'
+  // Story 6.18 (AC11) — the Pariwar Admin RETURNED a claim to the District Admin with a note
+  // (`2026-09-20-227` cl.10). ⭐ THE AUDIT LINE IS THE TRAIL: the return is metadata-only and mints
+  // ⛔ NO claim event, so unlike every neighbouring action there is no `events_log` row to fall back
+  // on. Context is NON-PII: claim_case_id + the acting actor — ⛔ NEVER the encrypted note itself.
+  | 'admin_cycle_freeze.returned'
   | 'admin_cycle_freeze.committed'
   | 'admin_cycle_freeze.rejected'
   // Story 6.14 — the R9 special-case voting panel surface. Post-action SINK lines (the durable records are

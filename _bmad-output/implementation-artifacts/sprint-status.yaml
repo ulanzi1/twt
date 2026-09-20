@@ -1,3 +1,82 @@
+# last_updated: 2026-09-20i (⭐⭐ **STORY `6-19` — FIVE PANEL ROUTING NOTES DRAFTED.** ⭐ NO row moves, ⛔ NO CODE, ⛔ NOTHING SENT OR COMMITTED. ⭐ `trustee-panel-routing-note-2026-09-20-6-19-` + `reaching-the-family` (P L U M),
+#   `reached-before-closure` (O R), `declined-closure` (K), `refiling-after-closure` (Q), `confirm-our-defaults` (T N D3) — grouped by the ONE thing each decides, the template's §0 gate applied to each; E4 commands run (two empty
+#   results explained). ⚠ Q-S (counsel / the privacy policy / PRD FR-43A) is deliberately NOT a Panel note — it is a go-live gate. ⭐ The sharpest fact in them: the approved plan has NO standard channel for a nominee who is outside the
+#   app (SMS is kept only for one-time codes and a per-member fallback; the architecture says members without a WhatsApp opt-in get in-app push only) — so "use standard channel" cannot reach that family as written.)
+# last_updated: 2026-09-20h (⭐⭐ **STORY `6-19` FILE WRITTEN — THE ROW STAYS `backlog`.** ⭐ NO row moves, ⛔ NO CODE. ⭐ `6-19-correction-return-reminders-and-closure.md` created by the create-story
+#   workflow from `-229` -> `-232`, three parallel research passes and seven live re-verifications, then a FRESH-CONTEXT VALIDATOR whose findings were re-verified in the tree and applied (v0.2). ⚠ DELIBERATE
+#   DEVIATION from the workflow's default (flip to `ready-for-dev`): nine Panel questions are open (K L M O P Q R T U, plus N as a confirm) — "a story a developer cannot safely start is not ready".
+#   ⭐ The validator's most serious catch: a CORRECTED-but-not-yet-voted claim still has a LIVE return row, so a closure writer guarded only by the conditional UPDATE would close a corrected claim as
+#   "no response" — the request AND the approval now re-check `isReturnedClaimResubmitted` under the lock. ⭐ Research findings worth knowing: "delivered" is NOT attainable for SMS today (no delivery-report seam;
+#   the WhatsApp status table has no reminder linkage; `providerMessageId` is dropped), the family may not be reachable by the "standard channel" at all, and a non-appealable closure is still RE-FILEABLE
+#   (the intake code deliberately allows a fresh claim after `denied`). ⚠ D13 recommends SPLITTING the story (capture at filing vs the rest) — BigDev's call. UNCOMMITTED.)
+# last_updated: 2026-09-20g (⭐⭐ **PANEL THIRD-ROUND ANSWERS RECORDED: `-232` — THE ADDRESS, AND THE CLAIMANT, ARE CAPTURED AT CLAIM FILING.** ⭐ NO row moves, ⛔ NO CODE. ⭐ The Panel (DR + KB, via BigDev):
+#   the postal address (and, when the claimant is NOT the nominee, the claimant's name + mobile + address) is captured at claim filing by the family in the app or the helpline operator; the Pariwar Admin
+#   MAY DECLINE a closure with a note and the decline goes to the SUPER ADMIN; the day-90 closure reminder runs daily for 7 days, then escalates; "code is not in production" ⇒ no backfill.
+#   ⚠ VERIFIED: the system holds NO claimant personal data today (only `claimantActorId` + a relationship label; the filing contract says "never the claimant's PII"), and the existing claim consent (a) is
+#   "un-attested-pending a Story 0.13 legal counsel determination" — so `-232` M (who consents to a THIRD-PARTY claimant's data) is OPEN. Open: K (the Super Admin's part), L (who is contacted when
+#   claimant != nominee), M (consent basis), N (escalation target). ⭐ `6-19` is now WRITEABLE but stays `backlog` (not `ready-for-dev`). UNCOMMITTED.)
+# last_updated: 2026-09-20f (⭐⭐ **PANEL SECOND-ROUND ANSWERS RECORDED: `-231` — THE CLOSURE IS ⛔ NOT AUTOMATIC.** ⭐ ONE row RENAMED (`6-19-correction-return-reminders-and-auto-closure` ->
+#   `6-19-correction-return-reminders-and-closure`, still `backlog` — "auto" was superseded); ⛔ NO status moves, ⛔ NO CODE. ⭐ The Panel (DR + KB, via BigDev): at day 90 the system REMINDS the
+#   District Admin to close and the PARIWAR ADMIN APPROVES the closure (SUPERSEDES `-230` cl.3's last sentence, "auto closure"); that closure is the "second refusal", ⛔ NOT appealable;
+#   a dead number = the channel reports it invalid; the letter record is chased by a District Admin reminder at 7 days, daily to day 12, then escalated to the Pariwar Admin;
+#   the second letter is due 30 days after the first's DELIVERY; 90 days alone is enough; calendar days. ⚠ ⭐ A FACT THAT CONTRADICTS THE PANEL'S PREMISE, verified in the code: a postal ADDRESS is
+#   ⛔ NOT mandatory today — optional at nominee declaration (`address` `.optional()`, the column nullable), absent from claim filing — so the letter track has NO INPUT until the Panel answers
+#   `-231` G (where it is captured, whose it is, and what about claims/nominees already without one). ⚠ 6.18 should not go live without 6-19. UNCOMMITTED.)
+# last_updated: 2026-09-20e (⭐⭐ **STORY `6-19` OPENED AS `backlog` — PANEL FOLLOW-UP ANSWERS RECORDED: `-230`.** ⭐ ONE row ADDED (`6-19-correction-return-reminders-and-auto-closure`,
+#   `backlog`); ⛔ NO other row moves (`6-18` stays `in-progress`), ⛔ NO CODE. ⭐ The Panel (DR + KB, relayed by BigDev) answered `-229`'s follow-ups: reminders go to
+#   BOTH the District Admin and the family; the 90 days start the day the claim is sent back and a second return restarts them; "enough" = every reminder sent AND
+#   delivered, with a DEAD NUMBER answered by the District Admin's posted letters (tracking number + delivery date + screenshot within 14 days; a second letter after
+#   30 days); at day 90 the claim is CLOSED AUTOMATICALLY; a first refusal is appealable, a second is not. ⚠ `-229`'s unratified "not automatic" reading is CORRECTED.
+#   ⭐ BigDev's own call: "create another story" — the build is `6-19`, ⛔ not a Task of 6.18 (its Task 4d is DEFERRED, not built). ⛔ The 6-19 STORY FILE IS NOT WRITTEN:
+#   two Panel questions change its acceptance criteria (A — what "first/second refusal" mean and whether the closure is a `denied` state, given 6.16's one-appeal-journey rule;
+#   B — the automatic closure vs `-226` cl.5 "the system never acts automatically", and whether the Pariwar Admin's refusal vote survives). ⚠ 6.18 should not go live
+#   without 6-19. ⚠ Decision + note + story edits are UNCOMMITTED: governance commits precede implementation.)
+# last_updated: 2026-09-20d (⭐⭐ **STORY `6-18` — PANEL RULING RECORDED: `-229`. ⛔ NO ROW MOVES (`6-18` stays `in-progress`), ⛔ NO CODE.**
+#   ⭐ Trustee Panel (DR + KB, relayed by BigDev) ruled on the code-review decision D2 — OPTION C: a claim sent back for correction may be
+#   REFUSED only after a 90-DAY waiting period, with the system SENDING and RECORDING reminders (daily for 7 days, twice a week for a month,
+#   then weekly). ⭐ Recorded in `.decision-log.md` as `2026-09-20-229`; the routing note's ⏳ block filled; the story's D2 DISCHARGED (original
+#   text kept), AC11 ANNOTATED (⛔ not rewritten), and a NEW row owed — **Task 4d (reminders + the 90-day refusal), BLOCKED on the Panel's
+#   follow-up answers** (who receives the reminders, when the 90 days start, what "enough" means, appealability, the refusal reason). Task 4d is a
+#   Task of 6.18 OR a new story row — BigDev's call. ⚠ Decision + note + story edits are UNCOMMITTED: governance commits precede implementation.)
+# last_updated: 2026-09-20c (⭐⭐ **STORY `6-18` — CODE REVIEW COMPLETE (5 chunks): `review -> in-progress`.** ⭐ ONE row moves (`6-18`).
+#   ⛔ NO CODE CHANGED, ⛔ no suite RUN (read-only reviewers; the specs need `twt-test-pg :5433`). Findings live in the story's
+#   `### Review Findings`; 3 open defers + 1 discharged are in `deferred-work.md` (§Deferred from: code review of 6-18, chunks 1-2).
+#   ⭐ 4 decisions raised: D1 RESOLVED (drop `state_trustee_approved` from the returnable states), D3 RESOLVED (snapshot the actor
+#   display into the `claim.nominee_name_checked` payload), D4 RESOLVED (BUILD the helpline correction half + a District Admin
+#   returned-claims list here — ⚠ Tasks 5, 6 and 7 RE-OPENED, boxes un-ticked), D2 OPEN (may a claim under correction be refused?)
+#   — held for the Trustee Panel, routing note DRAFTED and ⛔ not sent/committed. 73 patch bullets left as action items,
+#   32 dismissed. ⭐ Headline: the `-227` return loop is not operable end to end (the helpline handler's state pre-check 409s
+#   before the domain branch; no District Admin queue; no names view on the Pariwar Admin card), and the tests would not have
+#   caught it (domain-level only; the `effectiveOutcome()` arm untested at any layer; no two-connection races).)
+# last_updated: 2026-09-20b (⭐⭐ **STORY `6-18` — IMPLEMENTED END TO END: `in-progress -> review`.** ⭐ ONE row moves.
+#   ⭐ Tasks 0-8 ALL done. Two keys (catalog 41->43, 49->51, BOTH re-read LIVE, ⛔ not transcribed); the AC2 names read +
+#   the AC3 verdict write + the 32nd claim event `claim.nominee_name_checked`; the three approval gates P1/P3/P4 with
+#   ⛔ DENY NEVER GATED on any path; the AC11 return loop (2 enum migrations, metadata-only writer on the `routeToR9`
+#   shape, DERIVED resubmission, same-tx supersession, commit exclusion, the under-correction branch); AC12's INPUT-ONLY
+#   English-script gate; the filer's note end to end; the DA console, the PA cycle-freeze card, the R9 panel and the
+#   helpline operator's bank-entry surface; ONE friction row.
+#   ⚠⚠ THREE FINDINGS RECORDED IN THE STORY, ⛔ NOT PAPERED OVER:
+#   (1) ⛔ **AC11's `superseded_at` rationale is FACTUALLY WRONG** — it says the supersession would be the FIRST writer on
+#       `claim_state_trustee_decisions`; `r9-voting-persist.ts:632-643` ALREADY writes it. The PRESCRIPTION (the
+#       conditional 0-rows=>409 shape) still stands, but as a DELIBERATE DEPARTURE from the nearest same-table precedent
+#       (which is unconditional and safe there), ⛔ not as the only option available.
+#   (2) ⚠ **A REAL FLAW in AC11's derived resubmission**, caught by the end-to-end test and ⛔ not by reasoning: the
+#       pre-existing check stayed CURRENT after a return, so the very next vote sailed through and the return achieved
+#       NOTHING. Fixed by anchoring on the accounts having actually been CORRECTED since the return — which also reads
+#       `-227` cl.10's *"get it corrected"* more faithfully than a bare re-check would.
+#   (3) ⚠ **PG's `now()` is TRANSACTION-SCOPED**, so a delete-then-insert inside ONE transaction does ⛔ not move
+#       `updated_at`. Production is correct (each act is its own request/transaction) but the whole staleness design
+#       DEPENDS on that, so the dependency is documented at `isNomineeNameCheckCurrent` and the live-DB tests simulate
+#       real transaction boundaries instead of quietly passing.
+#   ⭐ TWO UNPINNED GAPS CLOSED ON THE WAY: the events-registry coverage assertion (⛔ nothing proved `packages/events`
+#   covered `CLAIM_EVENT_TYPES`), and the phase-tuple <-> `CycleFreezeDecisionResponse.phase` lockstep — without it a new
+#   decision phase would have 500-ed on serialization, in production, on a governance action.
+#   ⭐ THE NO-COMPARISON FENCE is the guard `-226` cl.5 actually needs: a SOURCE scan over the five owned files refusing
+#   similarity algorithms / match scores / name-match predicates / name normalisation. Proven red on all four violation
+#   classes AND on tampering with its own file list.
+#   ✅ domain 3427 · api 1317 · contracts 1149 · admin 466 · mobile 541 · i18n 110 · events 36 = **7,046 tests**; tsc +
+#   eslint clean in all six packages; **16/16 CI gates green**.
+#   ⚠ OWED at review: nothing blocking. ⚠ 3 migrations applied to :5433 (0116 note column, 0117 phase, 0118 outcome).)
 # last_updated: 2026-09-20a (⭐⭐ **STORY `6-18` — TWO TRUSTEE RULINGS RECORDED, THE STORY REWRITTEN, Task 0 DONE: `ready-for-dev -> in-progress`.**
 #   ⭐ ONE row moves (`6-18`). ⛔ NO CODE.
 #   ⭐ `-226` (Trustee-ratified, DR + KB, 2026-09-19) answers the 2026-09-19 routing note with the Panel's OWN design: a mismatch is
@@ -18717,6 +18796,7 @@ development_status:
   # alone is not mechanization. ⚠ Three validate passes are recorded in the story's Change Log (v0.3,
   # v0.4, v0.7); ⛔ no code has landed.
   6-18-nominee-holder-name-on-the-verification-console: in-progress
+  6-19-correction-return-reminders-and-closure: backlog
   epic-6-retrospective: done
 
   # ==========================================================================

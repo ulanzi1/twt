@@ -4,6 +4,24 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 6-18-nominee-holder-name-on-the-verification-console — **CHUNK 2 of 5** (2026-09-20)
+
+Chunk 2 = `apps/api/src`. ⚠ Chunks 3–5 (admin+mobile, tests + the `scripts/` gate) still to review; the story's `### Review Findings` section is the live list.
+
+- **⚠ INTRODUCED BY 6.18 (a consequence of a pre-existing hole), reachability UNPROVEN — a claim whose deceased member has no derivable posting district is now un-approvable through R9.** `resolveNomineeNameCheckDistrict` stashes `null` → 403 for every holder of `claim.check_nominee_name` + `claim.view_nominee_name_check` (`pariwar_admin` and `super_admin` included), so the AC4 gates in `finalizeR9Outcome` and `voteOnFrozenClaim` require a check nobody can record or read. `claim.verify` already had this hole; R9 approval was previously reachable without the district gate, so 6.18 newly closes it. `rbac/permissions.ts` records the hole but not the R9 consequence. ⭐ Trigger: a data query showing any claim whose deceased member has no posting district, or any R9-approve that 409s for a claim with no district.
+
+---
+
+## Deferred from: code review of 6-18-nominee-holder-name-on-the-verification-console — **CHUNK 1 of 5** (2026-09-20)
+
+Chunk 1 = `packages/domain` src + migrations 0116–0118, `packages/contracts/src`, `packages/events`, `packages/i18n`, `openapi`. ⚠ Chunks 2–5 (API, admin+mobile, tests + the `scripts/` gate) were still to be reviewed when these were written; the story's `### Review Findings` section is the live list.
+
+- **⚠ INTRODUCED BY 6.18, not pre-existing — the return-resubmission ordering compares transaction-START clocks.** `isReturnedClaimResubmitted` (`state-trustee-decision-persist.ts`) requires every account's `updated_at` to be later than the return row's `decided_at`; both are `now()`. A helpline correction that began before the return transaction but took the claim lock after it is stamped earlier, so a genuine correction reads as "not corrected" until the accounts are edited once more. Narrow (overlapping requests only) and self-healing; the story's comment discloses only the same-transaction case. ⭐ Trigger: any report of a returned claim that stays "awaiting correction" after a correction, or any move of these two timestamps to a non-transaction clock.
+- ✅ **DISCHARGED (chunk 2, 2026-09-20) — `NomineeNameCheckNotRecordableError(…, 'not_found')` reports a missing claim as a 409, not a 404** (`nominee-name-check-persist.ts`). ⛔ Original text kept: *Deferred to the API-chunk review to confirm whether the handler's district resolution makes it unreachable. Trigger: that chunk's finding, or any direct domain caller.* ⭐ **Closed by construction, not fixed:** `resolveNomineeNameCheckDistrict` stashes `null` for a missing/cross-Pariwar claim so the route answers 403 before the handler runs, and claims are never deleted, so `lockClaim` cannot miss. Still a 409 for a direct domain caller — the trigger stands.
+- **No DB-level tie between `claim_state_trustee_decisions.phase = 'correction_return'` and `outcome = 'returned_for_correction'`** (migrations 0116–0118). App-enforced only — the table's standing convention for `routing`/`routed_to_r9`. ⭐ Trigger: a second writer of this table.
+
+---
+
 ## Deferred from: code review of 11b-21-member-contributor-name-form-parity (2026-09-19)
 
 - **Whole-list `assigned:false` on any non-INVALID_ARGUMENT KMS error, on the MEMBER contributor route.** One row under a DISABLED/DESTROYED KEK version (or, if the un-attested INVALID_ARGUMENT premise is wrong, one corrupt envelope) makes every member of that pool see *"You have no live pool right now."* until it clears; the 60 s poll can flip already-shown data to that view (`apps/api/src/modules/member-pool/handlers.ts:1181`; copy at `PoolContributorList.tsx:226`). Ruled by `-224` D4; the fail-soft shape is the member routes' standing contract. ⭐ Trigger: any decision to disable/destroy a KEK version, or live-KMS evidence for the AAD-mismatch status — then add an outage-distinguishing state (new copy = product call).

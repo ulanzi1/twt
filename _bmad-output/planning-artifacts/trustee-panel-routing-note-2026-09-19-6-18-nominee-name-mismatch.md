@@ -29,6 +29,25 @@
 > accounts are mandatory at filing, which removes the question. Part 4 → A in substance, but the
 > accepting actor is the District Admin, with final approval by the Pariwar Admin.
 >
+> ### ✅ AMENDED 2026-09-20 — `-227` (DR + KB), answering the three gaps `-226` left open
+>
+> **Verbatim, as relayed:**
+> - *"No transliteration should not be counted as clerical reason. Please use English Name everywhere
+>   to avoid this."*
+> - *"Like I said if District Admin approves the verification, it goes to Pariwar Admin. If Pariwar
+>   Admin doesn't approve it goes back to District Admin for correction with Note. Thereafter District
+>   Admin will contact claimant regarding discrepancy and get it corrected. Then re-submit to Pariwar
+>   Admin."*
+> - *"Yes"* — a post-approval correction requires a fresh District Admin check.
+>
+> **Follow-up answers, same session:** English script is validated on the two names this check
+> compares, from now on, with ⛔ no rewrite of existing rows (the wider sweep — member KYC and Story
+> 6.5's fuzzy name comparison — owes its own story); the return is a **new action**, ⛔ not a denial;
+> the **helpline operator** writes the corrected details.
+>
+> ⇒ Story 6.18 v0.6: **AC11** (the return loop) and **AC12** (English-script names); **D4 resolved** by
+> the correction-needed record.
+>
 > ⭐ Everything below is kept **unedited** as the question **as it was put**
 > ([[feedback_supersede_never_reinterpret]]).
 

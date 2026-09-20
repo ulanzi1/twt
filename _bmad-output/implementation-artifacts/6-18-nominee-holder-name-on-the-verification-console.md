@@ -267,12 +267,25 @@ state change (`-226` cl.5).
 ### AC5 — "Sent back for correction" (`-226` cl.6, `-227` cl.11)
 **Given** the DA records `does_not_match` on any account
 **Then** the claim stays in its state, cannot pass AC4, and is ⛔ never denied for it
-**And** a **correction-needed record** goes live for that claim (actor, timestamp, the account ranks,
-and — when it came from the Pariwar Admin — their note), emitted as an event and surfaced to the DA
-and the helpline
-**And** while it is live the **helpline operator** may write the corrected accounts under
-`claim.correct_nominee_bank` **whatever the claim's state** — ⛔ no window is widened and ⛔ no state
-moves (D4); in the collection states the family may still correct in the app as today
+**And** the claim is **under correction** — a derived condition, ⛔ not a new table and ⛔ not a new
+event: the latest check for the claim carries a `does_not_match`, **or** a live `correction_return`
+row exists (AC11, which also carries the Pariwar Admin's note)
+**And** while it holds, the **helpline operator** may write the corrected accounts under
+`claim.correct_nominee_bank` **whatever the claim's state** — a **third branch** in
+`nominee-bank-persist.ts`'s tier check (`:158-173`), in-transaction under the existing claim lock; in
+the collection states the family may still correct in the app as today
+**And** ⚠ **say it plainly:** `NOMINEE_BANK_ADMIN_CORRECTION_STATES` is ⛔ not widened, **but the
+effect is** — `claim/errors.ts:180-192` requires anyone widening that window to define five things
+first, and this story answers all five: **re-verification** = the DA's fresh check (AC3);
+**approval invalidation** = the check goes stale, so AC4's gates refuse (AC11, D5);
+**downstream-readiness invalidation** = a claim under correction is ⛔ not committable (AC11's commit
+exclusion), so ⛔ nothing downstream spawns while it is open; **audit** = the existing bank-write
+events and audit lines, plus `admin_cycle_freeze.returned`; **notification** = the filer message
+below. ⭐ There is ⛔ no precedent for a live governance row replacing a state guard — `resolveEscalation`
+requires its live row **in addition to** a state check — so this is recorded as a deliberate first
+(Task 0), ⛔ not presented as an existing pattern
+**And** the helpline correction inherits that route's step-up; ⚠ it has ⛔ no idempotency key and is
+latest-wins, so each retry emits another bank event — ⛔ never add a second gate for that here
 **And** the filer is told: the helpline claim page (AC7) and the member app claim status show "bank
 details need correcting" — ⛔ no name in that message
 **And** writing the corrected accounts closes the record and makes the check stale; the DA checks again
@@ -311,41 +324,105 @@ claim's console record, and a future campaign view must carry it (recorded in Ta
 audit line or error body (model: `apps/api/tests/integration/claims/nominee-bank.spec.ts:150-160`)
 **And** ⚠ ⛔ no CI script scans admin DTOs for PII — this test is the only guard.
 
-### AC11 — The Pariwar Admin's return loop (`-227` cl.10–11)
+### AC11 — The Pariwar Admin's return loop (`-227` cl.10–11) — metadata-only, the `routed_to_r9` shape
 **Given** a claim the DA approved and checked, now before the Pariwar Admin
-**Then** the cycle-freeze decision route gains a **`return_to_district_admin`** action with a
-**required note** (≤ 500 chars, stored in the existing encrypted `rationale_ciphertext`), written as a
-new `claim_state_trustee_decisions` phase `correction_return` (a new
-`state_trustee_decision_phase` value — hand-authored `ADD VALUE IF NOT EXISTS` migration; the
-partial-unique `(claim_case_id, phase)` gives one live return at a time)
-**And** it emits `claim.pariwar_returned_for_correction` — an **annotation**: the claim's state does
-⛔ not move, and it is ⛔ **not** a denial, so ⛔ no appeal flow (6.16) starts
-**And** it opens the AC5 correction-needed record carrying the note
-**And** the DA's console lists returned claims with the note, and the DA, after contacting the
-claimant and the helpline having written the correction (AC5), records a fresh check (AC3) and
-**re-submits** via a `POST …/nominee-name-check/resubmit` — `claim.approve` at `district`, requiring a
-current passing check and two accounts — emitting `claim.district_resubmitted` and superseding the
-return row
-**And** the Pariwar Admin's card shows the claim as resubmitted with the DA's new reason, and their
-vote proceeds as today
-**And** returning is available only while the claim is unapproved (`verifier_approved`,
-`state_trustee_freeze`, `reversed`); ⛔ never after `claim.approved`
-**And** a live return blocks AC4's gates until it is superseded, and a test drives the whole loop:
-approve → return with note → helpline correction → fresh check → resubmit → Pariwar approval.
+**Then** the cycle-freeze decision route gains a **`return_to_district_admin`** action carrying a
+**required note** — trustee reason code `other` + the existing encrypted `rationale_ciphertext`
+(≤ 500 chars) — persisted as ONE live `claim_state_trustee_decisions` row, phase
+**`correction_return`**, outcome **`returned_for_correction`**
+**And** ⭐ it is **metadata-only, with ⛔ no event** — exactly `routeToR9`'s shipped shape
+(`state-trustee-decision-persist.ts:498-521`: insert the row, ⛔ no `projectClaimState`, return
+`eventVersion: null`). ⇒ the claim's state does ⛔ not move, it is ⛔ not a denial, ⛔ no appeal flow
+(6.16) starts, and ⛔ **no new claim event** is minted for the return or the resubmission
+**And** ⚠ it must ⛔ **not** open the freeze: `voteOnFrozenClaim` emits `claim.state_trustee_frozen`
+when acting from `verifier_approved`/`reversed` (`:441-456`) — the return path skips that entirely
+**And** returning is available at `verifier_approved`, `reversed`, `state_trustee_freeze` **and**
+`state_trustee_approved` (the pre-commit window, where the PA can still act); ⛔ never after
+`claim.approved`
+**And** ⚠ **every artefact this action needs is named, because a missing one fails silently:**
+  - two hand-authored `ALTER TYPE … ADD VALUE IF NOT EXISTS` migrations (the 0064/0069 precedent) plus
+    `STATE_TRUSTEE_DECISION_PHASES` and `STATE_TRUSTEE_DECISION_OUTCOMES` in
+    `packages/domain/src/claim/state-trustee-decision.ts`, and their contracts wire mirrors;
+  - ⚠ `CycleFreezeDecisionResponse.phase`'s `z.enum` (`packages/contracts/src/claims/cycle-freeze.ts:257`)
+    — otherwise the 201 fails strict serialization;
+  - ⚠ **load-bearing:** an arm in `effectiveOutcome()` (`cycle-freeze.ts:146-160`). Its `switch` has ⛔ no
+    `default` and the `superRefine` returns early on `undefined` (`:198-199`) ⇒ **without the arm the
+    required-note rule silently never runs**, and typecheck ⛔ does not catch it;
+  - `TRUSTEE_REASON_CODE_OUTCOME_COMPAT` + `trusteeReasonCodeRequiredForOutcome` (domain + contracts)
+    so `other` is valid for — and a rationale required on — `returned_for_correction`, and
+    `assertReasonCode` (`persist.ts:381-388`) agrees;
+  - a new domain error + `translateCycleFreezeError` mapping, and `admin_cycle_freeze.returned` in
+    `AuthAuditEventType` (`apps/api/src/audit/audit-sink.ts`) + the handler's `auditType` ternary —
+    ⭐ with ⛔ no event, the audit line **is** the trail;
+  - the pending-item flag (`cycle-freeze-read.ts`, `CycleFreezePendingItem`) and the card badge.
+**And** ⭐ **the resubmission is DERIVED, so ⛔ no District Admin ever writes to the trustee table**
+(⛔ no precedent exists for that, and RLS would ⛔ not stop it): a returned claim counts as resubmitted
+when a live `correction_return` row exists **and** there are two live accounts **and** a current
+passing check (AC3, recorded after the correction) exists. The DA's console lists returned claims with
+the note and shows "resubmitted" on that condition — ⛔ no new route, ⛔ no new key
+**And** `voteOnFrozenClaim` refuses (**409**, a `ClaimAlreadyRoutedError`-shaped clone reusing the
+`hasLiveRoutedRow` pattern, `persist.ts:416-418`) while a live return exists **and** the
+resubmission condition is unmet; when it is met the same transaction **supersedes the return row**
+and proceeds
+**And** ⚠ that supersession is the **first writer of `claim_state_trustee_decisions.superseded_at`**
+in the codebase (today the column is only ever read, `isNull(...)`): use `resolveEscalation`'s
+conditional shape — `UPDATE … WHERE decision_id = … AND superseded_at IS NULL`, 0 rows ⇒ 409 — so a
+concurrent vote cannot double-supersede
+**And** `commitCycleFreeze` excludes a claim with a live return row or a live correction record, in the
+committable-set subquery **and** in the under-lock re-check (`persist.ts:699-727`, `:737`) — ⭐ this is
+⛔ not an attestation backstop (AC4 stays per-path); it is *"do ⛔ not commit a claim that is under
+correction"*, and it is what closes the vote→commit window AC5 opens
+**And** ⚠ **recorded, ⛔ not fixed:** `getOriginalDeciderActorIds` (`claim/appeal-eligibility.ts:88-105`)
+collects every `claim_state_trustee_decisions.actor_id` for the claim with ⛔ no phase or outcome
+filter ⇒ a Pariwar Admin who merely **returns** a claim is thereby excluded from reviewing its later
+Stage-1 appeal. ⭐ This story leaves that exclusion in place (the conservative side) and routes the
+question — *should a return disqualify the reviewer?* — to the Panel in Task 0
+**And** a test drives the whole loop: DA approve → PA return with note → helpline correction → fresh
+DA check → PA approval, asserting ⛔ no claim event for the return, ⛔ no appeal flow, the state
+unmoved, the 409 before resubmission, and that the claim is uncommittable while returned.
 
-### AC12 — Names are captured in English script (`-227` cl.9)
-**Then** the declared nominee name (`packages/contracts/src/nominee/declaration.ts` `name`) and the
-account holder name (`packages/contracts/src/claims/nominee-bank.ts` `accountHolderName`) reject
-non-Latin script at the boundary — a shared validator in contracts, with copy in both locales telling
-the filer to enter the name in English **as printed on the passbook**
-**And** allowed: Latin letters, spaces, `.`, `'`, `-`; ⛔ never Devanagari or any other script
+### AC12 — Names are captured in English script (`-227` cl.9) — input schemas, ⛔ never output
+**Then** one shared predicate lives beside `MobileNumber` in
+`packages/contracts/src/_common/primitives.ts` (⛔ not in `packages/domain` — it may ⛔ not import
+`@twt/contracts`), allowing Latin letters, spaces, `.`, `'` and `-`, and refusing Devanagari or any
+other script
+**And** it is applied to exactly **two input fields**: `NomineeBankAccountEntry.accountHolderName`
+(`packages/contracts/src/claims/nominee-bank.ts:56`) and `NomineeDeclareEntry.name`
+(`packages/contracts/src/nominee/declaration.ts:44`)
+**And** ⚠⚠ **it is ⛔ NEVER added to an output schema, and the reason must stay in the file:**
+`apps/api/src/plugins/zod-openapi/index.ts:24-25` sets `serializerCompiler`, so **responses are
+parsed** — a Latin gate on an output schema would turn every stored non-Latin name, the RTBF
+`'[anonymized]'` sentinel and the decrypt-failed sentinel into a **500**. The output schemas that
+carry a holder name and must stay ungated: `contributions/nominee-accounts.ts:61`,
+`contributions/member-drive-detail.ts:127`, `public-pages/sahyog-vivran.ts:321`, and this story's own
+AC2 DTO
+**And** the two fields cover **four bound routes**: member bank (`claims.routes.ts:156`), helpline
+bank **and** the admin correction (`claims.helpline.routes.ts:166` — the same route plus
+`correctionReason`, so it re-validates with ⛔ no extra leg), nominee declare
+(`nominee/nominee.routes.ts:28`) and ⭐ the **life-events nominee change**
+(`life-events/routes.ts:52`) — the surface behind the post-death rewrite hazard
+**And** the client legs are named, ⛔ not left to the dev: `apps/mobile/app/(claim)/nominee-review.tsx`
+and `apps/mobile/components/life-events/NomineeForm.tsx` get the inline message — either by importing
+the contracts predicate (mobile already depends on `@twt/contracts`) or, if a local copy is used, with
+the `.source` drift test the IFSC/VPA copies already use
+(`apps/mobile/tests/unit/nominee-bank-vpa.test.ts`). ⛔ Never a silent server-only 400
+**And** the copy, per surface: `nominee.bank.*` in `packages/i18n/locales/{en,hi}/claim.json` and
+`nominees.*` in `locales/{en,hi}/common.json` — **both locales, both files**, because `i18n-parity`
+(`.github/workflows/ci.yml`) enforces a non-empty `hi` for every member-facing namespace; the helpline
+console's key goes in `apps/admin/src/modules/helpline-claims/i18n-en.ts`, **English-only by design**.
+⚠ The message carries ⛔ no `{param}` — the resolver throws on a missing interpolation param
 **And** ⛔ **no backfill and no rewrite**: rows already stored in another script stay exactly as they
-are and still render ([[feedback_record_unattested_no_backfill]]); the RTBF `'[anonymized]'` sentinel
-is unaffected
-**And** the validator is ⛔ not applied to member KYC names or to Story 6.5's death-certificate
-comparison — `-227` cl.9's wider sweep is its own story, recorded in Task 0
-**And** tests cover: a Devanagari name is refused on both writes, an existing Devanagari row still
-reads back, and a hyphenated or initialled English name is accepted.
+are and still render, ⭐ which holds precisely because the gate is input-only
+([[feedback_record_unattested_no_backfill]])
+**And** the gate is ⛔ not applied to member KYC names (`domain/src/kyc/name.ts` is deliberately
+Devanagari-aware) or to Story 6.5's death-certificate comparison (`claim/parity.ts`, a 20% fuzzy
+tolerance) — `-227` cl.9's wider sweep is its own story, recorded in Task 0
+**And** ⭐ **a verified fact worth stating: ⛔ no existing seed, fixture or test uses a non-Latin
+nominee or holder name** (every fixture is Latin, e.g. `'Asha Devi'`), so this breaks ⛔ no existing
+test
+**And** tests cover: a Devanagari name refused on all four routes; a hyphenated and an initialled
+English name accepted; and — since the boundary now refuses it — the AC2 read test plants a Devanagari
+row **directly in the DB** and asserts it still reads back.
 
 ### AC10 — Nothing else moves
 **Then** ⛔ no claim state, window or public surface changes; ⛔ no `member_nominees` write path changes
@@ -364,7 +441,11 @@ reads back, and a hyphenated or initialled English name is accepted.
   - [ ] `deferred-work.md` §Story 11b.3a item (b) — annotate (⛔ never rewrite) the line *"6.18's own
         D2 is a PANEL question and blocks its Task 4"* → answered by `-226`/`-227`; keep "COMMISSIONED,
         NOT YET CLOSED". Add as items: the post-death nominee-write hazard; the campaign-view flag
-        (AC8); and **`-227` cl.9's wider English-name sweep** — member KYC names and Story 6.5's
+        (AC8); the **appeal-eligibility question** — `claim/appeal-eligibility.ts`'s decider scan has
+        ⛔ no phase filter, so a Pariwar Admin who merely RETURNS a claim is excluded from reviewing its
+        Stage-1 appeal; this story leaves the exclusion in place and routes the question to the Panel;
+        the **live-governance-row-replaces-a-state-guard first** (AC5), with `claim/errors.ts`'s five
+        conditions answered; and **`-227` cl.9's wider English-name sweep** — member KYC names and Story 6.5's
         death-certificate comparison, which still carries a 20% fuzzy name tolerance
         (`packages/domain/src/claim/parity.ts`) and records transliteration tolerance as a future
         consideration. Grep `D5-subject` across the file and reconcile.
@@ -381,7 +462,11 @@ reads back, and a hyphenated or initialled English name is accepted.
   - [ ] Event wiring: `CLAIM_EVENT_TYPES` (`claim/events.ts:549`, 31 now) + payload map (`:592`);
         `packages/events/src/registry.ts`; reducer identity case (`claim/state.ts`); an
         `admin_claim.*` audit action (`apps/api/src/audit/audit-sink.ts`, `AuthAuditEventType`);
-        the six `toHaveLength(31)` tests under `packages/domain/tests/claim/`.
+        the six `toHaveLength(31)` tests under `packages/domain/tests/claim/` → **32** (⭐ ONE new
+        event only — the return loop adds none, AC11).
+  - [ ] ⚠ Add a **registry-coverage assertion**: ⛔ nothing today proves `packages/events/src/registry.ts`
+        covers every `CLAIM_EVENT_TYPES` member, so a missed entry ships silently (precedent:
+        `packages/domain/tests/member/moderation-reason-codes.test.ts`).
   - [ ] "Current check" read: latest `claim.nominee_name_checked` per claim from `events_log`, compared
         to the live rows after the Drizzle read (or a projection table written in the same tx —
         dev's choice; projector-only).
@@ -389,26 +474,40 @@ reads back, and a hyphenated or initialled English name is accepted.
 - [ ] **Task 4 — The gates** (AC4, AC6) — P1 in `adjudicateClaim`, P3 in `voteOnFrozenClaim`, P4 in
       `finalizeR9Outcome`; one shared domain helper; 409 mapping in the three handlers; a live return
       row also blocks (AC11).
-- [ ] **Task 4b — The return loop** (AC5, AC11)
-  - [ ] The `correction_return` phase value (migration + `STATE_TRUSTEE_DECISION_PHASES` in
-        `packages/domain/src/claim/state-trustee-decision.ts`); `return_to_district_admin` in
-        `CycleFreezeDecisionAction` (`packages/contracts/src/claims/cycle-freeze.ts`) with the
-        note-required rule in its `superRefine`.
-  - [ ] The two annotation events (`claim.pariwar_returned_for_correction`,
-        `claim.district_resubmitted`) — same wiring list as Task 3, and the `toHaveLength` counts move
-        by three in total with `claim.nominee_name_checked`.
-  - [ ] The correction-needed record and the exception it grants the helpline writer in
-        `nominee-bank-persist.ts` — state-independent while live, refused otherwise (AC5).
-  - [ ] `POST …/nominee-name-check/resubmit` (`claim.approve`, district) superseding the return row.
-- [ ] **Task 4c — English-script names** (AC12) — one shared validator in `packages/contracts`, applied
-      to the nominee declaration and the account holder name only; copy in both locales; ⛔ no backfill.
+- [ ] **Task 4b — The return loop** (AC5, AC11) — ⛔ no new event; the `routeToR9` shape
+  - [ ] Two `ALTER TYPE` migrations (`correction_return` phase, `returned_for_correction` outcome) +
+        both tuples in `packages/domain/src/claim/state-trustee-decision.ts` + the contracts mirrors +
+        `CycleFreezeDecisionResponse.phase`'s `z.enum` (`cycle-freeze.ts:257`).
+  - [ ] `return_to_district_admin` in `CycleFreezeDecisionAction`, **its `effectiveOutcome()` arm**
+        (⚠ without it the note rule silently never runs), the compat map + required-rationale rule in
+        domain and contracts, and `assertReasonCode`.
+  - [ ] The domain write (insert only — ⛔ no `projectClaimState`), the new error +
+        `translateCycleFreezeError` mapping, `admin_cycle_freeze.returned` in `AuthAuditEventType` +
+        the handler's `auditType` ternary, the pending-item flag and the card badge.
+  - [ ] The "under correction" third branch in `nominee-bank-persist.ts` (AC5) — derived condition,
+        state-independent while it holds, refused otherwise.
+  - [ ] `hasLiveReturnRow` + the vote refusal, the same-transaction supersession (⚠ the first ever
+        writer of `superseded_at` on this table — conditional `WHERE superseded_at IS NULL`, 0 rows ⇒
+        409), and the commit-query exclusion + under-lock re-check.
+  - [ ] ⛔ No new route for the resubmission: it is derived (AC11).
+- [ ] **Task 4c — English-script names** (AC12)
+  - [ ] The predicate in `packages/contracts/src/_common/primitives.ts`; applied to
+        `NomineeBankAccountEntry.accountHolderName` and `NomineeDeclareEntry.name` — ⛔ never to an
+        output schema (responses are serializer-parsed).
+  - [ ] The two mobile form legs + the inline message; `{en,hi}/claim.json` `nominee.bank.*` and
+        `{en,hi}/common.json` `nominees.*`; the helpline key English-only in its own `i18n-en.ts`.
+  - [ ] ⛔ No backfill; the DB-planted-row read test.
 - [ ] **Task 5 — Filing** (AC6, AC7)
   - [ ] Trace the member `(claim)` flow: where can it complete without `nominee-review.tsx`'s bank
         submission? Make both accounts required there; add the optional note.
   - [ ] `helpline-claims`: bank-details section on `recordHelpline`, both-names view, optional note,
         required before the page completes.
-  - [ ] Migration for `name_difference_note_ciphertext`; writer + contract (`name_difference_note`,
-        optional, ≤ 500).
+  - [ ] Migration for `name_difference_note_ciphertext` — declare it `piiColumn(1, 'claim_nominee_bank')`
+        like its siblings; writer + contract (`name_difference_note`, optional, ≤ 500). ⭐ Mirror the
+        Story 8.13 schema test `packages/domain/tests/schema/claim-nominee-bank-vpa.test.ts` (column,
+        nullability, the `piiColumn` annotation). ⚠ ⛔ No CI gate scans `piiColumn`, and
+        `packages/domain/src/member/anonymize.ts` does ⛔ not touch `claim_nominee_bank_accounts`, so the
+        column needs ⛔ no RTBF leg — stated so it ⛔ never reads as an unrecorded gap.
   - [ ] "Bank details need correcting" on the helpline page and member claim status (AC5).
 - [ ] **Task 6 — The DA and Pariwar Admin surfaces** (AC2, AC3, AC5, AC8)
   - [ ] `VerificationDecisionStrip`: both names per account, the note, the dates, the verdict control
@@ -487,3 +586,4 @@ read, the write, the gates and the event. Existing suites on this ground:
 | 2026-09-19 | 0.4 | Second validate pass against v0.3's own output: `accountId` did not exist; the event could not carry a DB-generated decision id; AC9 missed R9 and appeal paths ⇒ per-path gates (BigDev chose these over a commit-time backstop); 400/409 convention; snake_case; `-210` does not authorise the reason code; D1's actor and D4's narrowing are the Panel's ⇒ routing note drafted. — *Superseded by v0.5. Kept as the record.* | BigDev + Claude |
 | 2026-09-19 | 0.5 | **Rewritten on `-226` — Trustee-ratified (DR + KB), 2026-09-19**, the Panel's answer to the 2026-09-19 routing note, with its own design: a mismatch is not allowed in general (the helpline operator's duty at filing); a clerical difference is accepted by the **District Admin** with a **selected reason** and finally approved by the **Pariwar Admin**; a non-clerical mismatch is **sent back**, never denied; the system **never acts**, it only **highlights** to DA / PA / SA; **two bank accounts are mandatory to file**. ⇒ escalation, the new reason code, the resolver attestation and the decision-body extension are removed; two keys (view: DA / verifier / PA / helpline; check: DA only); the check is its own write, required at P1/P3/P4 (per-path, as BigDev chose); filing flows require both accounts and take an optional note; D2 (the three reasons), D3 (PA's vote is the final approval) decided; D4 (no correction window after appeal/R9) and D5 (post-approval correction ⇒ DA re-checks) recorded. D2(b) and v0.4's D4 superseded by `-226`, ⛔ not reinterpreted. | BigDev + Claude |
 | 2026-09-20 | 0.6 | **`-227` — Trustee-ratified (DR + KB), amending `-226`.** (1) ⛔ **No transliteration reason** — *"Please use English Name everywhere to avoid this"* ⇒ **AC12**: the nominee declaration and the account holder name are captured in **English script**, validated at the boundary, with ⛔ no backfill of existing rows; the wider sweep (member KYC, Story 6.5's 20% fuzzy name comparison) is recorded for its own story. (2) ⭐ **The return loop** — if the Pariwar Admin does ⛔ not approve, the claim goes **back to the District Admin with a note**, the DA contacts the claimant, the **helpline operator** writes the correction, the DA re-checks and **re-submits** ⇒ **AC11**: a `return_to_district_admin` action, a `correction_return` decision phase, two annotation events, a resubmit route — and ⛔ **not** a denial, so ⛔ no appeal flow starts. (3) ⭐ **D5 confirmed** — a post-approval correction requires a fresh District Admin check. ⇒ **D4 is now RESOLVED**: one live **correction-needed record** lets the helpline correct whatever the claim's state, so the old dead end after an appeal reversal or R9 is gone; ⛔ no window is widened and ⛔ no state moves. | BigDev + Claude |
+| 2026-09-20 | 0.7 | **Scoped validate pass over v0.6's new material only** (AC5 / AC11 / AC12 and their wiring; the rest was re-derived at `5f8d27a0` and nothing has landed since). ⭐ **AC11 rebuilt on the `routed_to_r9` precedent:** the return is **metadata-only with ⛔ no event** (the two events v0.6 ordered are dropped ⇒ the event count moves by ONE, ⛔ not three); it needs a new **outcome** value as well as a new phase (`outcome` is `NOT NULL` over `{approved, denied, routed_to_r9}` — `denied` is the one thing `-227` forbids), the `CycleFreezeDecisionResponse.phase` enum, and ⚠ an **`effectiveOutcome()` arm** without which the required-note rule silently never runs; the resubmission is **DERIVED**, so ⛔ no District Admin writes to the trustee table (⛔ no precedent, and RLS would ⛔ not stop it); the supersession is the **first ever writer** of `claim_state_trustee_decisions.superseded_at`; a return must ⛔ not open the freeze; returning is allowed at `state_trustee_approved` too, with a **commit-query exclusion** for a claim under correction — ⭐ which is what closes the vote→commit window AC5 opens. ⚠ **Recorded, ⛔ not fixed:** `appeal-eligibility.ts`'s decider scan has ⛔ no phase filter, so a Pariwar Admin who merely returns a claim is excluded from its Stage-1 appeal — routed to the Panel. ⭐ **AC5** names the third branch in `nominee-bank-persist.ts` and answers `claim/errors.ts`'s five conditions for widening the correction window in effect. ⭐ **AC12 is INPUT-ONLY** — `serializerCompiler` parses responses, so a Latin gate on an output schema would 500 every stored non-Latin name and both sentinels; the four output schemas to leave alone are named, as are the **four** bound write routes (including the previously unnamed life-events nominee change), the mobile form legs, and the per-surface copy (`{en,hi}/claim.json` + `{en,hi}/common.json`; the helpline console is English-only by design). ⭐ Verified: ⛔ no existing fixture uses a non-Latin name, so AC12 breaks ⛔ no test. Also added: a registry-coverage assertion (⛔ nothing proves `packages/events` covers `CLAIM_EVENT_TYPES`), and the Story 8.13 schema-test precedent for the new PII column. | BigDev + Claude |

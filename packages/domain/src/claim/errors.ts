@@ -306,6 +306,31 @@ export class NomineeNameCheckStaleError extends Error {
   }
 }
 
+/**
+ * Thrown when a submitted name check is MALFORMED — an incoherent verdict/reason pair, duplicate
+ * account ranks, or a missing actor display name (code review 2026-09-20 → 400, ⛔ not 409).
+ *
+ * ⛔ IT IS A BOUNDARY FAULT, NOT A CONFLICT, and keeping it distinct from
+ * `NomineeNameCheckStaleError` matters to the person on the other end: "check again" tells a
+ * District Admin the data moved under them and asks them to re-read two names; this says the
+ * submission itself was never well-formed. Conflating them sent people to re-do work for a client
+ * bug.
+ *
+ * ⭐ WHY THE DOMAIN RAISES IT AT ALL when the route's zod schema already refuses these shapes:
+ * `-226` cl.5 (*"District Admin cannot proceed unless reason for name mismatch is selected"*) is the
+ * one control this story calls load-bearing, and it held only while the route was the only caller.
+ * A JSONB payload carries no CHECK constraint, so the domain function is the last place it can live.
+ */
+export class NomineeNameCheckInvalidError extends Error {
+  public readonly name = 'NomineeNameCheckInvalidError';
+  public constructor(
+    public readonly claimCaseId: string,
+    public readonly detail: string,
+  ) {
+    super(`[nominee-name-check] claim ${claimCaseId} — ${detail}`);
+  }
+}
+
 /** Thrown when a claim does not carry its two live bank accounts (`-226` cl.7). ⛔ NOT a denial —
  *  the claim WAITS until they are added. Raised by the check write AND by the AC4 approval gates. */
 export class NomineeBankAccountsRequiredError extends Error {

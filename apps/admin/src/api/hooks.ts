@@ -675,7 +675,6 @@ export function useVerifierConsole(pariwarId: string, claimCaseId: string | null
 // On success both mutations invalidate the console packet key so (e)/(f) + the audit trail refetch with
 // the just-written decision (fresh present/empty; the new AuditTrailEntry).
 
-/** POST an approve / deny / escalate decision; refetches the console packet on success. */
 /** Story 6.18 (AC7) — the helpline operator records both disbursement accounts after filing. */
 export function useRecordHelplineNomineeBank(pariwarId: string, claimCaseId: string) {
   const qc = useQueryClient();
@@ -686,6 +685,12 @@ export function useRecordHelplineNomineeBank(pariwarId: string, claimCaseId: str
     // would be shown "no bank accounts" immediately after recording them.
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: nomineeNameCheckKey(pariwarId, claimCaseId) });
+      // ⭐ … and the PRESENCE view, which is what `recorded` and the correction banner read.
+      // Without this the card stayed on the form after a successful save.
+      void qc.invalidateQueries({ queryKey: nomineeBankStatusKey(pariwarId, claimCaseId) });
+      // ⭐ A correction moves `updated_at`, which makes the District Admin's check STALE — so a
+      // claim can leave (or enter) the correction queue on this write.
+      void qc.invalidateQueries({ queryKey: claimsUnderCorrectionKey(pariwarId) });
     },
   });
 }
@@ -699,11 +704,60 @@ export const nomineeNameCheckKey = (pariwarId: string, claimCaseId: string) =>
  * when a District Admin opens the disclosure — the read decrypts a LIVING nominee's Tier-1 name and
  * writes an audit line, so it must ⛔ never fire as a side effect of rendering a list.
  */
+/**
+ * The AC2 names read — ⭐ EXPLICITLY OPTED OUT OF BACKGROUND REFETCHING, and that is a PII
+ * decision, ⛔ not a performance one (code review 2026-09-20).
+ *
+ * ⚠⚠ Every fetch of this endpoint DECRYPTS a living nominee's Tier-1 name and writes an
+ * `admin_nominee_name_check.read` audit line whose whole purpose is to record that a named human
+ * LOOKED. On the client defaults (`refetchOnWindowFocus` is TanStack's `true`), simply alt-tabbing
+ * away and back while a disclosure was open re-fired the request — so the audit trail filled with
+ * "reads" nobody performed, and a living person's name was re-decrypted for a window focus event.
+ * An audit line that fires without a human is worse than no audit line: it makes the real ones
+ * unreadable.
+ * ⛔ Do not remove these two flags to "keep the panel fresh". Staleness here is handled by explicit
+ * invalidation after a write, which is a deliberate act by the same human.
+ */
 export function useNomineeNameCheck(pariwarId: string, claimCaseId: string | null, enabled = true) {
   return useQuery({
     queryKey: nomineeNameCheckKey(pariwarId, claimCaseId ?? ''),
     queryFn: () => api.getNomineeNameCheck(pariwarId, claimCaseId as string),
     enabled: Boolean(claimCaseId) && enabled,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+}
+
+/**
+ * Story 6.18 (AC11) — the District Admin's CORRECTION QUEUE.
+ *
+ * ⭐ UNLIKE the per-claim names read, this one MAY refetch freely: it decrypts no member or nominee
+ * name and its audit line records only counts. It is a work queue — stale is the wrong default.
+ */
+/**
+ * Story 6.18 (AC6/AC7) — what is ACTUALLY on file for this claim.
+ * ⭐ The helpline card's `recorded` and its correction banner both come from here, ⛔ not from page
+ * state: a server read is the only answer that is right for a claim the operator did not file in
+ * this session, survives a change of claim, and survives a reload.
+ */
+export const nomineeBankStatusKey = (pariwarId: string, claimCaseId: string) =>
+  ['nominee-bank-status', pariwarId, claimCaseId] as const;
+
+export function useNomineeBankStatusHelpline(pariwarId: string, claimCaseId: string | null) {
+  return useQuery({
+    queryKey: nomineeBankStatusKey(pariwarId, claimCaseId ?? ''),
+    queryFn: () => api.getNomineeBankStatusHelpline(pariwarId, claimCaseId as string),
+    enabled: Boolean(claimCaseId),
+  });
+}
+
+export const claimsUnderCorrectionKey = (pariwarId: string) =>
+  ['claims-under-correction', pariwarId] as const;
+
+export function useClaimsUnderCorrection(pariwarId: string) {
+  return useQuery({
+    queryKey: claimsUnderCorrectionKey(pariwarId),
+    queryFn: () => api.getClaimsUnderCorrection(pariwarId),
   });
 }
 
@@ -716,10 +770,22 @@ export function usePostNomineeNameCheck(pariwarId: string, claimCaseId: string) 
       void qc.invalidateQueries({ queryKey: nomineeNameCheckKey(pariwarId, claimCaseId) });
       // The console's own read carries the AC8 flag + the approve-enablement, so it must refetch too.
       void qc.invalidateQueries({ queryKey: verifierConsoleKey(pariwarId, claimCaseId) });
+      // ⭐ A fresh PASSING check is what RESUBMITS a returned claim, so it drops off the queue.
+      void qc.invalidateQueries({ queryKey: claimsUnderCorrectionKey(pariwarId) });
+    },
+    // ⭐⭐ AND ON ERROR — the R9 hooks' precedent, and here it is load-bearing (code review
+    // 2026-09-20). The commonest failure on this route is a STALENESS 409, which means the accounts
+    // or the declaration moved under the District Admin. Without this the panel kept the OLD token,
+    // so "try again" resent the identical stale body and 409'd forever. Refetching turns a dead end
+    // into the D5 loop working as ruled: new names, new tokens, look again.
+    onError: () => {
+      void qc.invalidateQueries({ queryKey: nomineeNameCheckKey(pariwarId, claimCaseId) });
+      void qc.invalidateQueries({ queryKey: verifierConsoleKey(pariwarId, claimCaseId) });
     },
   });
 }
 
+/** POST an approve / deny / escalate decision; refetches the console packet on success. */
 export function usePostVerifierDecision(pariwarId: string, claimCaseId: string) {
   const qc = useQueryClient();
   return useMutation({

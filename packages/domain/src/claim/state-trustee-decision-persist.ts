@@ -54,7 +54,16 @@ import {
 import { type CycleFreezeCommitRow, cycleFreezeCommits } from '../schema/cycle_freeze_commits.js';
 import { assessClaimConcealment } from './concealment-review.js';
 import { type ClaimEventActor } from './events.js';
-import { assertNomineeNameCheckForApproval } from './nominee-name-check.js';
+import {
+  NomineeBankAccountsRequiredError,
+  NomineeNameCheckRequiredError,
+} from './errors.js';
+import {
+  type NomineeNameCheckSnapshot,
+  assertNomineeNameCheckForApproval,
+  isClaimUnderCorrection,
+  readNomineeNameCheckSnapshot,
+} from './nominee-name-check.js';
 import { projectClaimState } from './project.js';
 import {
   isTrusteeReasonCodeValidForOutcome,
@@ -90,19 +99,27 @@ export const TRUSTEE_ROUTABLE_STATES = [
  * Story 6.18 (AC11) — the states the Pariwar Admin may RETURN a claim to the District Admin from
  * (`2026-09-20-227` cl.10).
  *
- * ⭐ IT INCLUDES `state_trustee_approved`, and that is deliberate: the PRE-COMMIT window. cl.4 makes
- * the Pariwar Admin's approval final only once the campaign goes live, and the campaign goes live at
- * `commitCycleFreeze`. Between the vote and the commit the Pariwar Admin can still act, so a
- * discrepancy noticed in that window must not be unfixable.
- * ⛔ NEVER after `claim.approved` — once the campaign is live, a name correction is a different
- * governed act than a return, and this story rules nothing about it.
+ * ⛔⛔ `state_trustee_approved` IS NOT HERE, AND THIS STORY REVERSED ITSELF TO TAKE IT OUT
+ * (code review 2026-09-20, D1 = option A — BigDev's call; AC11 and Task 4b were amended with it).
+ * ⭐ WHY THE REVERSAL, because the original reading was not silly: cl.4 makes the Pariwar Admin's
+ * approval final only once the campaign goes live at `commitCycleFreeze`, so the window between the
+ * vote and the commit looked like one the Pariwar Admin could still act in. It is not — a return
+ * written there COULD NEVER BE CLEARED, which is precisely the dead end AC5 forbids:
+ *   · the only code that supersedes a live `correction_return` row is inside `voteOnFrozenClaim`,
+ *     which throws `ClaimNotFreezeVotableError` for `state_trustee_approved` BEFORE it reaches the
+ *     supersession (`TRUSTEE_VOTABLE_STATES` excludes it);
+ *   · `NOMINEE_NAME_CHECK_RECORDABLE_STATES` also excludes it, so the District Admin could not
+ *     record the fresh check that resubmission is derived from;
+ *   · `commitCycleFreeze` excludes a claim carrying a live return row.
+ * ⇒ the claim could be neither committed, nor re-voted, nor re-checked. Fail-closed is the right
+ * side, and it is consistent with AC4's *"no bank write is legal once the freeze begins"*.
+ * ⚠ THE COST, stated rather than hidden: a discrepancy the Pariwar Admin notices AFTER voting and
+ * BEFORE the commit can no longer be returned. `2026-09-20-227` does not name that window — its four
+ * clauses say only *"if Pariwar Admin doesn't approve it goes back"* — so nothing ratified is lost.
+ * ⛔ NEVER after `claim.approved` either — once the campaign is live, a name correction is a
+ * different governed act than a return, and this story rules nothing about it.
  */
-export const TRUSTEE_RETURNABLE_STATES = [
-  'verifier_approved',
-  'reversed',
-  'state_trustee_freeze',
-  'state_trustee_approved',
-] as const;
+export const TRUSTEE_RETURNABLE_STATES = ['verifier_approved', 'reversed', 'state_trustee_freeze'] as const;
 
 /** The states an escalated claim is resolvable from (AC4b) — mirrors the 6.11 escalatable window. */
 export const TRUSTEE_ESCALATION_RESOLVABLE_STATES = ['verification_in_progress', 'verifier_review'] as const;
@@ -243,6 +260,35 @@ export class ClaimAwaitingCorrectionError extends Error {
   public constructor(public readonly claimCaseId: string) {
     super(
       `[state-trustee] claim ${claimCaseId} was returned to the District Admin and has not been resubmitted — not votable`,
+    );
+  }
+}
+
+/**
+ * Thrown when a RETURN and a ROUTE-TO-R9 would coexist on one claim (code review 2026-09-20 → 409).
+ *
+ * ⛔⛔ THE TWO EXCLUSIONS ARE MUTUALLY EXCLUSIVE, and nothing structural enforced it: the
+ * partial-unique index is PER PHASE (`(claim_case_id, phase) WHERE superseded_at IS NULL`), so a
+ * `routing` row and a `correction_return` row sat side by side happily. That combination is not a
+ * harmless overlap — it produces two reachable wrongs:
+ *   · R9 APPROVE → `state_trustee_approved` while a return is live. `finalizeR9Outcome` lifts only
+ *     the ROUTING row, and after D1 `state_trustee_approved` is not returnable and not votable, so
+ *     the return could never be cleared: the dead end AC5 forbids, reached by another door.
+ *   · R9 DENY → `denied` while a return is live. The bank writer's row-alone branch has no state
+ *     test, so a live return would keep permitting bank rewrites on a TERMINAL claim.
+ * ⭐ Which one wins is deliberately NOT decided here — whichever was written FIRST stands, and the
+ * second act is refused so a human chooses. Superseding someone else's live governance row to make
+ * room for your own is exactly the silent overwrite this table's conventions exist to prevent.
+ */
+export class TrusteeExclusionConflictError extends Error {
+  public readonly name = 'TrusteeExclusionConflictError';
+  public constructor(
+    public readonly claimCaseId: string,
+    /** The exclusion that is ALREADY live and blocks the attempted write. */
+    public readonly liveExclusion: 'routing' | 'correction_return',
+  ) {
+    super(
+      `[state-trustee] claim ${claimCaseId} already carries a live '${liveExclusion}' exclusion — the two cannot coexist`,
     );
   }
 }
@@ -612,6 +658,12 @@ export async function routeToR9(client: pg.PoolClient, input: RouteToR9Input): P
     throw new ClaimNotRoutableError(input.claimCaseId, claimRow.currentState);
   }
 
+  // ⛔ A claim under a live RETURN may not also be routed to R9 — see TrusteeExclusionConflictError.
+  // Read under the claim lock this function already holds, so a concurrent return cannot slip past.
+  if (await hasLiveReturnRow(db, input.pariwarId, input.claimCaseId)) {
+    throw new TrusteeExclusionConflictError(input.claimCaseId, 'correction_return');
+  }
+
   let decision: ClaimStateTrusteeDecisionRow;
   try {
     decision = await insertTrusteeDecisionRow(db, { ...input, phase: 'routing', outcome: 'routed_to_r9' });
@@ -662,6 +714,13 @@ export async function returnToDistrictAdmin(
 
   if (!(TRUSTEE_RETURNABLE_STATES as readonly string[]).includes(claimRow.currentState)) {
     throw new ClaimNotReturnableError(input.claimCaseId, claimRow.currentState);
+  }
+
+  // ⛔ A claim already routed to R9 may not also be returned — see TrusteeExclusionConflictError.
+  // The R9 panel is now the deciding body; returning underneath it would leave a row only a vote
+  // that can no longer happen could clear.
+  if (await hasLiveRoutedRow(db, input.pariwarId, input.claimCaseId)) {
+    throw new TrusteeExclusionConflictError(input.claimCaseId, 'routing');
   }
 
   let decision: ClaimStateTrusteeDecisionRow;
@@ -786,10 +845,79 @@ export async function isReturnedClaimResubmitted(
   try {
     await assertNomineeNameCheckForApproval(db, pariwarId, claimCaseId, deceasedMemberId);
     return true;
-  } catch {
-    // Any of: no accounts, never checked, stale, or does_not_match. All mean "not yet resubmitted".
-    return false;
+  } catch (err) {
+    // ⛔⛔ ONLY THE TWO TYPED "NOT YET" ANSWERS ARE SWALLOWED, and the narrowness is the point.
+    // A bare `catch { return false }` here reported a DB error, a timeout or a bug as "not
+    // resubmitted" — i.e. as a 409 `ClaimAwaitingCorrectionError` blaming the family for a fault
+    // that was ours. Worse, this runs INSIDE the caller's transaction: swallowing a Postgres error
+    // leaves the transaction ABORTED (25P02), so the next statement fails with an unrelated message
+    // and the real cause is gone. Anything that is not one of these two propagates.
+    if (
+      err instanceof NomineeBankAccountsRequiredError ||
+      err instanceof NomineeNameCheckRequiredError
+    ) {
+      // No accounts / never checked / stale / does_not_match — all mean "not yet resubmitted".
+      return false;
+    }
+    throw err;
   }
+}
+
+/** The one answer to *"is this claim under correction?"*, with the parts that produced it. */
+export interface ClaimCorrectionState {
+  /** AC5 — the bank details need correcting, from EITHER half. */
+  readonly underCorrection: boolean;
+  /** A live `correction_return` row exists (the Pariwar Admin sent it back). */
+  readonly hasLiveReturn: boolean;
+  /** … and it has since been corrected + re-checked, so the next vote may proceed. */
+  readonly resubmitted: boolean;
+  /** The District Admin's half — a CURRENT check carrying a `does_not_match`. */
+  readonly checkSendsBack: boolean;
+  readonly snapshot: NomineeNameCheckSnapshot;
+}
+
+/**
+ * Resolve a claim's correction state — ⭐ THE SINGLE DEFINITION every surface must use (AC5).
+ *
+ * ⚠ It lives here rather than in `nominee-name-check.ts` only because of the dependency direction:
+ * the return row is this module's, and this module already depends on that one. The MEANING is
+ * documented on `isClaimUnderCorrection`, which is what this function ultimately calls.
+ *
+ * Consumers: the bank writer's third branch, the helpline handler's `editable` pre-check, the
+ * filer-facing bank status, and the cycle-freeze pending read. Before the 2026-09-20 review each of
+ * those computed its own answer and three of the four were wrong in a different way.
+ *
+ * ⚠ Call inside the caller's transaction whenever the answer gates a write.
+ */
+export async function resolveClaimCorrectionState(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseId: ClaimId,
+  deceasedMemberId: MemberId,
+): Promise<ClaimCorrectionState> {
+  const snapshot = await readNomineeNameCheckSnapshot(db, pariwarId, claimCaseId, deceasedMemberId);
+  const returnRow = await getLiveReturnRow(db, pariwarId, claimCaseId);
+
+  let resubmitted = false;
+  if (returnRow) {
+    resubmitted = await isReturnedClaimResubmitted(
+      db,
+      pariwarId,
+      claimCaseId,
+      deceasedMemberId,
+      returnRow.decidedAt,
+    );
+  }
+
+  const hasLiveReturn = returnRow !== undefined;
+  const checkSendsBack = snapshot.sendsBack;
+  return {
+    underCorrection: isClaimUnderCorrection(hasLiveReturn && !resubmitted, checkSendsBack),
+    hasLiveReturn,
+    resubmitted,
+    checkSendsBack,
+    snapshot,
+  };
 }
 
 // ── Resolve escalation (atomic supersession + verifier verdict, AC4b/D-C) ─────

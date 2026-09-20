@@ -236,7 +236,7 @@ export const EVENT_TYPE_REGISTRY = {
   'claim.nominee_name_checked': {
     type: 'claim.nominee_name_checked',
     description:
-      "The District Admin recorded the nominee NAME CHECK — annotation event (the 32nd claim event); identity transition (state unchanged, AC3); carries nominee_declaration_token + per-account {account_rank, account_updated_at, verdict, clerical_reason}, NO PII (no holder name, no nominee name, no HASH of either, no filer note); write-guarded to verification_in_progress|verifier_review|verifier_approved|reversed|state_trustee_freeze and refused without two live accounts. Ruled by 2026-09-19-226 cl.3/cl.5 — the system NEVER acts on a mismatch, it only records what a named human decided; the AC4 approval gates read this event, nothing else acts on it (Story 6.18).",
+      "The District Admin recorded the nominee NAME CHECK — annotation event (the 32nd claim event); identity transition (state unchanged, AC3); carries checked_by_actor_display (the acting District Admin's name, SNAPSHOT at the check — staff identity, never resolved at read time) + nominee_declaration_token + per-account {account_rank, account_updated_at, verdict, clerical_reason}, NO MEMBER OR NOMINEE PII (no holder name, no nominee name, no HASH of either, no filer note); write-guarded to verification_in_progress|verifier_review|verifier_approved|reversed|state_trustee_freeze and refused without two live accounts. Ruled by 2026-09-19-226 cl.3/cl.5 — the system NEVER acts on a mismatch, it only records what a named human decided; the AC4 approval gates read this event, nothing else acts on it (Story 6.18).",
     schema: claim.ClaimNomineeNameCheckedPayloadSchema,
   },
   'claim.dpdpa_consent_recorded': {

@@ -67,6 +67,14 @@ declare module 'fastify' {
      *  the claim is absent in this Pariwar or the deceased has no resolvable posting district → the
      *  district gate fails closed (403), so the boundary never leaks a claim's existence. */
     nomineeNameCheckDistrict?: string | null;
+    /**
+     * Story 6.18 (AC11) — the scope the CORRECTION-QUEUE list route gates this caller at.
+     *
+     * ⚠ A list has no single district, so the DIMENSION moves with the caller: a district-scoped
+     * grant is gated at `district`; a pariwar-ceiling grant at `pariwar`. ⛔ It is NOT the per-claim
+     * `nomineeNameCheckDistrict` stash above, which is derived from the CLAIM's deceased member.
+     */
+    nomineeNameCheckQueueScope?: { dimension: 'district' | 'pariwar'; value: string | null };
     /** Story 6.11 — the deceased member's server-derived latest posting district, resolved by the
      *  `resolveDecisionDistrict` preHandler so `requirePermissionHook`'s (synchronous) district
      *  resolveValue reads it for the `claim.approve` gate (the client NEVER submits the authz

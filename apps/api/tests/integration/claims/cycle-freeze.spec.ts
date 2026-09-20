@@ -120,7 +120,18 @@ describe.skipIf(!hasDatabase)('State-Trustee cycle-freeze surface — E2E (:5433
   }
 
   /** Seed a claim driven to `verifier_approved` via the real projector; returns its id + deceased id. */
-  async function seedApprovedClaim(pariwarId: string): Promise<{ claimCaseId: string; deceasedMemberId: string }> {
+  /**
+   * @param opts.nameCheck  which Story 6.18 fixture to lay down.
+   *
+   * ⚠⚠ THE VARIANTS EXIST BECAUSE THE DEFAULT MADE THE GATES UNTESTABLE (code review 2026-09-20).
+   * This helper called `seedNomineeNameCheck` unconditionally, so every claim it produced already
+   * PASSED the AC4/AC6 gates — and ⛔ no test in this suite could construct the claim those gates
+   * exist to refuse. The 409 mappings were therefore asserted nowhere at all.
+   */
+  async function seedApprovedClaim(
+    pariwarId: string,
+    opts: { nameCheck?: 'passing' | 'accountsOnly' | 'singleAccount' | 'doesNotMatch' | 'none' } = {},
+  ): Promise<{ claimCaseId: string; deceasedMemberId: string }> {
     const claimCaseId = ids.claimId(randomUUID());
     const deceasedMemberId = ids.memberId(randomUUID());
     const scopeTx = await openScopeTx(deps, pariwarId);
@@ -146,7 +157,13 @@ describe.skipIf(!hasDatabase)('State-Trustee cycle-freeze surface — E2E (:5433
     // Story 6.18 (AC4) — approvable only with two bank accounts + a current, PASSING District
     // Admin name check. Seeded through the REAL writer, so these E2E specs keep exercising the
     // production gate rather than bypassing it.
-    await seedNomineeNameCheck(deps, pariwarId, String(claimCaseId));
+    const variant = opts.nameCheck ?? 'passing';
+    await seedNomineeNameCheck(deps, pariwarId, String(claimCaseId), {
+      ...(variant === 'none' ? { skip: true } : {}),
+      ...(variant === 'accountsOnly' ? { accountsOnly: true } : {}),
+      ...(variant === 'singleAccount' ? { singleAccount: true } : {}),
+      ...(variant === 'doesNotMatch' ? { verdicts: ['matches', 'does_not_match'] as const } : {}),
+    });
     return { claimCaseId: String(claimCaseId), deceasedMemberId: String(deceasedMemberId) };
   }
 
@@ -190,6 +207,20 @@ describe.skipIf(!hasDatabase)('State-Trustee cycle-freeze surface — E2E (:5433
     try {
       const res = await c.query<{ current_state: string }>(`SELECT current_state FROM claims WHERE claim_case_id = $1`, [claimCaseId]);
       return res.rows[0]!.current_state;
+    } finally {
+      c.release();
+    }
+  }
+
+  /** Every claim event type on the stream, in order — for proving a write minted ⛔ NONE. */
+  async function claimEventTypes(claimCaseId: string): Promise<string[]> {
+    const c = await td.pool.connect();
+    try {
+      const r = await c.query<{ event_type: string }>(
+        `SELECT event_type FROM events_log WHERE stream_id = $1 ORDER BY event_version`,
+        [claimCaseId],
+      );
+      return r.rows.map((row) => row.event_type);
     } finally {
       c.release();
     }
@@ -612,5 +643,234 @@ describe.skipIf(!hasDatabase)('State-Trustee cycle-freeze surface — E2E (:5433
     expect(await escalationStillLive(claimCaseId)).toBe(true);
     expect(await claimState(claimCaseId)).toBe(beforeState); // still verifier_review
     expect(await trusteeDecisionCount(claimCaseId)).toBe(0);
+  });
+
+  // ── Story 6.18 (AC4/AC6/AC11) — the gates and the RETURN, over HTTP ───────────────────
+  //
+  // ⭐⭐ EVERYTHING BELOW WAS ABSENT AT EVERY LAYER (code review 2026-09-20, chunk 5). A
+  // `grep -rln return_to_district_admin` over `apps` and `packages` returned four files, and the
+  // only TEST among them was a mocked-client UI test — so the 201, the required-note 400, every 409
+  // code and the `admin_cycle_freeze.returned` audit line (which AC11 calls *the trail*, because
+  // the return mints ⛔ no event) were proven nowhere. Likewise the AC4/AC6 gates: every `seedClaim`
+  // called the name-check fixture unconditionally, so ⛔ no test could even construct the claim the
+  // gates exist to refuse.
+  describe('the nominee name-check gates and the return loop (Story 6.18)', () => {
+    it('⛔ AC4 — approving a claim with NO check is a 409 `nominee_name_check_required`', async () => {
+      const pariwarId = randomUUID();
+      const { claimCaseId } = await seedApprovedClaim(pariwarId, { nameCheck: 'accountsOnly' });
+      const pa = await pariwarAdmin(pariwarId);
+      const res = await pa.client.inject({
+        method: 'POST',
+        url: decisionUrl(pariwarId),
+        payload: { claim_case_id: claimCaseId, action: 'approve' },
+      });
+      expect(res.statusCode).toBe(409);
+      expect((res.json() as { error: { code: string } }).error.code).toBe(
+        'cycle_freeze.nominee_name_check_required',
+      );
+      // ⛔ AND THE CLAIM DID NOT MOVE. A refused approval must leave no trace of a half-approval.
+      expect(await claimState(claimCaseId)).toBe('verifier_approved');
+    });
+
+    it('⛔ AC6 — approving a claim with ONE account is a 409 `bank_details_required`, ⛔ never a denial', async () => {
+      // `-226` cl.7: a claim filed without both accounts WAITS. It is never refused for it, and the
+      // error code + message must not read as a rejection.
+      const pariwarId = randomUUID();
+      const { claimCaseId } = await seedApprovedClaim(pariwarId, { nameCheck: 'singleAccount' });
+      const pa = await pariwarAdmin(pariwarId);
+      const res = await pa.client.inject({
+        method: 'POST',
+        url: decisionUrl(pariwarId),
+        payload: { claim_case_id: claimCaseId, action: 'approve' },
+      });
+      expect(res.statusCode).toBe(409);
+      const body = res.json() as { error: { code: string; message: string } };
+      expect(body.error.code).toBe('cycle_freeze.bank_details_required');
+      expect(body.error.message.toLowerCase()).toContain('waits');
+      expect(body.error.message.toLowerCase()).not.toContain('reject');
+    });
+
+    it('⛔ AC4 — a `does_not_match` check blocks the approval, and the claim is ⛔ NOT denied', async () => {
+      const pariwarId = randomUUID();
+      const { claimCaseId } = await seedApprovedClaim(pariwarId, {
+        nameCheck: 'doesNotMatch',
+      });
+      const pa = await pariwarAdmin(pariwarId);
+      const res = await pa.client.inject({
+        method: 'POST',
+        url: decisionUrl(pariwarId),
+        payload: { claim_case_id: claimCaseId, action: 'approve' },
+      });
+      expect(res.statusCode).toBe(409);
+      expect((res.json() as { error: { code: string } }).error.code).toBe(
+        'cycle_freeze.nominee_name_check_required',
+      );
+      // ⭐⭐ `-226` cl.6 — A NAME IS NEVER A GROUND FOR DENIAL. The claim stays exactly where it was.
+      expect(await claimState(claimCaseId)).toBe('verifier_approved');
+    });
+
+    it('⛔ AC11 — a bare RETURN with no reason code is a 400 that names the RETURN, ⛔ not R9', async () => {
+      const pariwarId = randomUUID();
+      const { claimCaseId } = await seedApprovedClaim(pariwarId);
+      const pa = await pariwarAdmin(pariwarId);
+      const res = await pa.client.inject({
+        method: 'POST',
+        url: decisionUrl(pariwarId),
+        payload: { claim_case_id: claimCaseId, action: 'return_to_district_admin' },
+      });
+      expect(res.statusCode).toBe(400);
+      // ⚠ The message used to call every non-deny outcome a "route-to-R9 decision".
+      expect(JSON.stringify(res.json())).toContain('return-to-District-Admin');
+    });
+
+    it('⛔ AC11 — a RETURN with a code but NO note is a 400 (`-227` cl.10 requires the note)', async () => {
+      const pariwarId = randomUUID();
+      const { claimCaseId } = await seedApprovedClaim(pariwarId);
+      const pa = await pariwarAdmin(pariwarId);
+      const res = await pa.client.inject({
+        method: 'POST',
+        url: decisionUrl(pariwarId),
+        payload: { claim_case_id: claimCaseId, action: 'return_to_district_admin', reason_code: 'other' },
+      });
+      expect(res.statusCode).toBe(400);
+      expect(JSON.stringify(res.json()).toLowerCase()).toContain('note is required');
+    });
+
+    it('⭐ AC11 — a RETURN is 201, METADATA-ONLY, and mints ⛔ NO claim event', async () => {
+      const pariwarId = randomUUID();
+      const { claimCaseId } = await seedApprovedClaim(pariwarId);
+      const pa = await pariwarAdmin(pariwarId);
+      const before = await claimEventTypes(claimCaseId);
+
+      const res = await pa.client.inject({
+        method: 'POST',
+        url: decisionUrl(pariwarId),
+        payload: {
+          claim_case_id: claimCaseId,
+          action: 'return_to_district_admin',
+          reason_code: 'other',
+          rationale: 'the holder name on account 2 is not the declared nominee',
+        },
+      });
+      expect(res.statusCode).toBe(201);
+      const body = res.json() as { phase: string; outcome: string; claim_state: string };
+      expect(body.phase).toBe('correction_return');
+      expect(body.outcome).toBe('returned_for_correction');
+
+      // ⭐⭐ THE THREE ABSENCES THAT MAKE THIS ⛔ NOT A DENIAL (AC11). The claim's state is
+      // unchanged, ⛔ no new event was minted — for the return OR for the freeze it must not open —
+      // and ⛔ no appeal flow started.
+      expect(body.claim_state).toBe('verifier_approved');
+      expect(await claimState(claimCaseId)).toBe('verifier_approved');
+      expect(await claimEventTypes(claimCaseId)).toEqual(before);
+      expect(await claimEventTypes(claimCaseId)).not.toContain('claim.state_trustee_frozen');
+      expect(await claimEventTypes(claimCaseId)).not.toContain('claim.appeal_stage1_initiated');
+    });
+
+    it('⭐ AC11 — the RETURN writes `admin_cycle_freeze.returned`, which with no event IS the trail', async () => {
+      const pariwarId = randomUUID();
+      const { claimCaseId } = await seedApprovedClaim(pariwarId);
+      const pa = await pariwarAdmin(pariwarId);
+      td.auditSink.events.length = 0;
+
+      await pa.client.inject({
+        method: 'POST',
+        url: decisionUrl(pariwarId),
+        payload: {
+          claim_case_id: claimCaseId,
+          action: 'return_to_district_admin',
+          reason_code: 'other',
+          rationale: 'please get the account 2 holder name corrected',
+        },
+      });
+
+      const line = td.auditSink.events.find((e) => e.type === 'admin_cycle_freeze.returned');
+      expect(line, 'the return must leave an audit line — it is the only trail').toBeDefined();
+      // ⭐ IT NAMES THE CLAIM. `emitAuthAudit` hashes `context` and `audit_log_entries` has no
+      // context column, so without a `resourceLocator` the row is stored against `user:<actorId>`
+      // and an auditor cannot tell WHICH claim was returned.
+      expect(line?.resourceLocator).toBe(`claim:${claimCaseId.toLowerCase()}`);
+      // ⛔ AND IT CARRIES NO NOTE. The note is the Pariwar Admin's encrypted rationale; an audit
+      // line is not the place for it.
+      expect(JSON.stringify(line)).not.toContain('corrected');
+    });
+
+    it('⛔ AC11 — a RETURNED claim cannot be APPROVED until it is resubmitted (409 awaiting_correction)', async () => {
+      const pariwarId = randomUUID();
+      const { claimCaseId } = await seedApprovedClaim(pariwarId);
+      const pa = await pariwarAdmin(pariwarId);
+      await pa.client.inject({
+        method: 'POST',
+        url: decisionUrl(pariwarId),
+        payload: {
+          claim_case_id: claimCaseId,
+          action: 'return_to_district_admin',
+          reason_code: 'other',
+          rationale: 'corrections needed',
+        },
+      });
+
+      const res = await pa.client.inject({
+        method: 'POST',
+        url: decisionUrl(pariwarId),
+        payload: { claim_case_id: claimCaseId, action: 'approve' },
+      });
+      expect(res.statusCode).toBe(409);
+      expect((res.json() as { error: { code: string } }).error.code).toBe(
+        'cycle_freeze.awaiting_correction',
+      );
+      expect(await claimState(claimCaseId)).toBe('verifier_approved');
+    });
+
+    it('⛔ AC11 — a return and a route-to-R9 cannot coexist (409 exclusion_conflict)', async () => {
+      const pariwarId = randomUUID();
+      const { claimCaseId } = await seedApprovedClaim(pariwarId);
+      const pa = await pariwarAdmin(pariwarId);
+      await pa.client.inject({
+        method: 'POST',
+        url: decisionUrl(pariwarId),
+        payload: {
+          claim_case_id: claimCaseId,
+          action: 'return_to_district_admin',
+          reason_code: 'other',
+          rationale: 'corrections needed',
+        },
+      });
+
+      // ⚠ An R9 routing on a returned claim would produce a claim neither path could clear: R9
+      // approve lifts only the ROUTING row, and after D1 `state_trustee_approved` is neither
+      // returnable nor votable.
+      const res = await pa.client.inject({
+        method: 'POST',
+        url: decisionUrl(pariwarId),
+        payload: { claim_case_id: claimCaseId, action: 'route_to_r9', reason_code: 'r9_special_case' },
+      });
+      expect(res.statusCode).toBe(409);
+      expect((res.json() as { error: { code: string } }).error.code).toBe(
+        'cycle_freeze.exclusion_conflict',
+      );
+    });
+
+    it('⛔ checklist family 3 — a Pariwar B session cannot RETURN a Pariwar A claim', async () => {
+      // The in-repo template: grant in B, act on a claim under A, expect a refusal.
+      const pariwarA = randomUUID();
+      const pariwarB = randomUUID();
+      const { claimCaseId } = await seedApprovedClaim(pariwarA);
+      const paB = await pariwarAdmin(pariwarB);
+
+      const res = await paB.client.inject({
+        method: 'POST',
+        url: decisionUrl(pariwarB),
+        payload: {
+          claim_case_id: claimCaseId,
+          action: 'return_to_district_admin',
+          reason_code: 'other',
+          rationale: 'cross-tenant attempt',
+        },
+      });
+      // ⛔ 404, ⛔ never 200 — and the claim under A is untouched.
+      expect([403, 404]).toContain(res.statusCode);
+      expect(await claimState(claimCaseId)).toBe('verifier_approved');
+    });
   });
 });

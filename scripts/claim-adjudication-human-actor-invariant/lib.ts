@@ -75,7 +75,17 @@ export interface RouteRegistration {
  * Parse a source file and return EVERY Fastify route registration with its preHandler chain classified.
  * `check.ts` filters these to the explicit coverage set and evaluates conformance.
  */
-export function scanRouteRegistrations(file: string, source: string): RouteRegistration[] {
+/** A route-method call whose PATH the gate could not resolve statically. ⛔ Never silently dropped. */
+export interface UnresolvedRoute {
+  readonly file: string;
+  readonly method: string;
+  readonly line: number;
+}
+
+export function scanRouteRegistrations(
+  file: string,
+  source: string,
+): { registrations: RouteRegistration[]; unresolved: UnresolvedRoute[] } {
   const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, /* setParentNodes */ true);
 
   // (1) Collect `const <id> = <factory>(…)` bindings → factory callee name (for structured resolution).
@@ -95,6 +105,7 @@ export function scanRouteRegistrations(file: string, source: string): RouteRegis
   collectBindings(sf);
 
   const registrations: RouteRegistration[] = [];
+  const unresolved: UnresolvedRoute[] = [];
 
   const visit = (node: ts.Node): void => {
     if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
@@ -105,13 +116,25 @@ export function scanRouteRegistrations(file: string, source: string): RouteRegis
           const path = pathArg.text;
           const reg = classifyRoute(sf, method, path, node, optionsArg, bindingFactory);
           if (reg) registrations.push(reg);
+        } else if (pathArg) {
+          // ⚠⚠ A NON-LITERAL PATH IS REPORTED, ⛔ NEVER SILENTLY DROPPED (code review 2026-09-20).
+          // This branch did not exist: a route registered as `` r.post(`${BASE}/x`, …) ``, via a path
+          // constant, or through `app.route({ url })` was simply skipped — and because a COVERAGE
+          // entry passes as soon as ANY route in the file matches, the entry stayed GREEN while the
+          // unscanned route was, in this gate's own words, "the sharper case" (the WRITE).
+          // ⛔ The gate must fail loudly rather than quietly cover less than it claims.
+          unresolved.push({
+            file,
+            method,
+            line: sf.getLineAndCharacterOfPosition(pathArg.getStart(sf)).line + 1,
+          });
         }
       }
     }
     ts.forEachChild(node, visit);
   };
   visit(sf);
-  return registrations;
+  return { registrations, unresolved };
 }
 
 function classifyRoute(
@@ -241,17 +264,24 @@ export function scanAdjudicationRoutes(
   file: string,
   source: string,
   coveredPathSubstrings: readonly string[],
-): { findings: AdjudicationFinding[]; matchedPaths: string[] } {
-  const regs = scanRouteRegistrations(file, source);
+): {
+  findings: AdjudicationFinding[];
+  matchedPaths: string[];
+  matchedMethods: string[];
+  unresolved: UnresolvedRoute[];
+} {
+  const { registrations: regs, unresolved } = scanRouteRegistrations(file, source);
   const findings: AdjudicationFinding[] = [];
   const matchedPaths: string[] = [];
+  const matchedMethods: string[] = [];
   for (const reg of regs) {
     if (coveredPathSubstrings.some((sub) => reg.path.includes(sub))) {
       matchedPaths.push(reg.path);
+      matchedMethods.push(reg.method);
       findings.push(...evaluateAdjudicationRoute(file, reg));
     }
   }
-  return { findings, matchedPaths };
+  return { findings, matchedPaths, matchedMethods, unresolved };
 }
 
 export function formatFinding(f: AdjudicationFinding): string {

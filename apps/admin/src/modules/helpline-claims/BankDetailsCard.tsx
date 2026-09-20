@@ -14,9 +14,15 @@
 // though the operator is the one accountable: cl.5 rules the SYSTEM never acts on a mismatch, and a
 // "these look different" hint at filing would be the system acting.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-import { ENGLISH_NAME_REGEX, NAME_DIFFERENCE_NOTE_MAX_CHARS } from '@twt/contracts';
+// Story 6.18 (AC12) — the SHARED English-script predicate from `@twt/contracts`.
+// ⚠⚠ `isEnglishScriptName(x)`, ⛔ NOT `ENGLISH_NAME_REGEX.test(x.trim())` (code review 2026-09-20).
+// Three clients each hand-rolled that call. It gives the same answer today, but only by coincidence
+// of the current implementation: the moment the schema gains a rule the bare regex does not carry,
+// a name the SERVER accepts starts being refused in the app (or worse, the reverse). One predicate,
+// used by the schema and by every form, is the only way the two cannot drift.
+import { NAME_DIFFERENCE_NOTE_MAX_CHARS, isEnglishScriptName } from '@twt/contracts';
 import type { NomineeNameCheckResponse, RecordNomineeBankHelplineRequest } from '@twt/contracts';
 
 import { resolveEn } from './i18n-en.js';
@@ -33,9 +39,17 @@ const IFSC_RE = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 const ACCOUNT_RE = /^\d{9,18}$/;
 
 export interface BankDetailsCardProps {
-  /** `null` until the intake is filed — the route is keyed on the claim. */
+  /** `null` until a claim is in hand — the card is keyed on the claim. */
   claimCaseId: string | null;
-  /** `true` once both accounts are recorded (the page's completion condition — AC6/AC7). */
+  /**
+   * `true` when TWO accounts are already on file for this claim.
+   *
+   * ⚠⚠ IT MUST BE DERIVED FROM A SERVER READ, ⛔ never from "did I just submit?" (code review
+   * 2026-09-20). It used to be a page-level boolean set once after a successful POST and never
+   * reset, so filing claim A then claim B showed B *"Both accounts are saved"* — with A's typed
+   * values still in the card's state — and fired the audited Tier-1 names read against a claim that
+   * had no accounts at all. cl.7's duty was silently skipped for B. It was also lost on reload.
+   */
   recorded: boolean;
   onSubmit: (body: RecordNomineeBankHelplineRequest) => Promise<void>;
   pending?: boolean;
@@ -43,14 +57,65 @@ export interface BankDetailsCardProps {
   /** The AC2 read, fetched after recording so the operator can discharge cl.1. */
   names?: NomineeNameCheckResponse | undefined;
   namesLoading?: boolean;
+  /**
+   * The names read FAILED. ⚠ A 403 (including the null-district hole), a 409 or a 5xx used to
+   * render NOTHING under *"Both accounts are saved. Check the two names below."* — so the operator
+   * who carries `-226` cl.1's duty was told nothing at all and could reasonably assume there was
+   * nothing to check.
+   */
+  namesError?: string | null;
+  /**
+   * The claim is UNDER CORRECTION (AC5) — the District Admin recorded `does_not_match`, or the
+   * Pariwar Admin returned it. The operator is the one `-227` cl.11 asks to type the corrected
+   * details, so the card must SAY so and let them back in.
+   */
+  correctionNeeded?: boolean;
 }
 
 export function BankDetailsCard(props: BankDetailsCardProps): React.ReactElement | null {
-  const { claimCaseId, recorded, onSubmit, pending, error, names, namesLoading } = props;
+  const {
+    claimCaseId,
+    recorded,
+    onSubmit,
+    pending,
+    error,
+    names,
+    namesLoading,
+    namesError,
+    correctionNeeded = false,
+  } = props;
   const [accounts, setAccounts] = useState<[AccountFields, AccountFields]>([{ ...EMPTY }, { ...EMPTY }]);
   const [validationError, setValidationError] = useState<string | null>(null);
+  /**
+   * ⭐⭐ THE WAY BACK IN (code review 2026-09-20). Once `recorded` was true the form was REPLACED
+   * by a read-only names view with ⛔ no path back to it. So the operator who opened this card,
+   * read the two names and found a mismatch — `-226` cl.1's duty, the entire reason the names are
+   * shown here — could not fix it. Nor could they correct a claim the District Admin had sent back
+   * (`-227` cl.11 names the helpline operator as the one who types the corrected details), nor
+   * complete a legacy claim filed before cl.7 made both accounts mandatory.
+   */
+  const [editing, setEditing] = useState(false);
+  /**
+   * The mandatory justification when writing over accounts already on file. The server requires it
+   * on every tier-2 / under-correction write and 409s without it; the card used to never send it,
+   * so a correction was impossible over HTTP even once the form was reachable.
+   */
+  const [correctionReason, setCorrectionReason] = useState('');
+
+  // ⚠ A change of claim resets EVERYTHING typed. The card is reused across filings, and account
+  // numbers left over from another family's claim are the worst possible default.
+  useEffect(() => {
+    setAccounts([{ ...EMPTY }, { ...EMPTY }]);
+    setValidationError(null);
+    setEditing(false);
+    setCorrectionReason('');
+  }, [claimCaseId]);
 
   if (claimCaseId === null) return null;
+
+  // Show the form when nothing is on file yet, or when the operator has deliberately re-entered it.
+  const showForm = !recorded || editing;
+  const isCorrection = recorded;
 
   const patch = (i: 0 | 1, p: Partial<AccountFields>): void =>
     setAccounts((prev) => {
@@ -68,7 +133,7 @@ export function BankDetailsCard(props: BankDetailsCardProps): React.ReactElement
       }
       // Story 6.18 (AC12) — the boundary refuses a non-Latin holder name, so the console refuses it
       // first. ⛔ Never a silent server-only 400 for an operator on a call with a grieving family.
-      if (!ENGLISH_NAME_REGEX.test(a.holder.trim())) {
+      if (!isEnglishScriptName(a.holder)) {
         setValidationError(resolveEn('helpline.bank.englishRequired'));
         return;
       }
@@ -87,6 +152,13 @@ export function BankDetailsCard(props: BankDetailsCardProps): React.ReactElement
       setValidationError(resolveEn('helpline.bank.duplicate'));
       return;
     }
+    // ⭐ A WRITE OVER ACCOUNTS ALREADY ON FILE IS A CORRECTION, and the server REQUIRES a reason
+    // for one (409 without it). The card never sent one, so every correction was impossible over
+    // HTTP even where the window allowed it.
+    if (isCorrection && correctionReason.trim() === '') {
+      setValidationError(resolveEn('helpline.bank.correctionReasonRequired'));
+      return;
+    }
     const body: RecordNomineeBankHelplineRequest = {
       accounts: accounts.map((a) => {
         const note = a.note.trim();
@@ -97,9 +169,13 @@ export function BankDetailsCard(props: BankDetailsCardProps): React.ReactElement
           ...(note !== '' ? { nameDifferenceNote: note } : {}),
         };
       }) as RecordNomineeBankHelplineRequest['accounts'],
+      ...(isCorrection ? { correctionReason: correctionReason.trim() } : {}),
     };
     try {
       await onSubmit(body);
+      // A successful write closes the re-entry; the parent's refetch flips `recorded`/`names`.
+      setEditing(false);
+      setCorrectionReason('');
     } catch {
       /* the caller's mutation hook owns `error` */
     }
@@ -167,13 +243,34 @@ export function BankDetailsCard(props: BankDetailsCardProps): React.ReactElement
         <p className="mt-1 max-w-2xl text-sm opacity-70">{resolveEn('helpline.bank.duty')}</p>
       </div>
 
+      {/* ⭐ AC5 — the claim is UNDER CORRECTION, and this operator is the one `-227` cl.11 asks to
+          type the corrected details. The card never read this flag, so the person with the duty was
+          not told. ⛔ "correct", ⛔ never "rejected": the claim is open and has not been refused. */}
+      {correctionNeeded ? (
+        <p
+          role="status"
+          data-testid="helpline-bank-correction-needed"
+          className="rounded bg-status-warn-bg px-2 py-1 text-sm text-status-warn-fg"
+        >
+          {resolveEn('helpline.bank.correctionNeeded')}
+        </p>
+      ) : null}
+
       {recorded ? (
-        <div data-testid="helpline-bank-recorded">
+        <div data-testid="helpline-bank-recorded" role="status">
           <p className="text-sm">{resolveEn('helpline.bank.recorded')}</p>
 
           {/* ── cl.1's whole point: the two names, side by side, AFTER submission ── */}
           {namesLoading ? (
-            <p className="text-sm opacity-70">{resolveEn('helpline.bank.namesLoading')}</p>
+            <p className="text-sm opacity-70" role="status">
+              {resolveEn('helpline.bank.namesLoading')}
+            </p>
+          ) : namesError != null && namesError !== '' ? (
+            // ⚠ SAY SO. Rendering nothing here told the operator who carries cl.1's duty that there
+            // was nothing to check — the most dangerous possible silence on this surface.
+            <p role="alert" data-testid="helpline-bank-names-error" className="text-sm text-status-fail-fg">
+              {namesError}
+            </p>
           ) : names ? (
             <div className="mt-2 grid grid-cols-2 gap-4" data-testid="helpline-bank-names">
               <div>
@@ -214,24 +311,72 @@ export function BankDetailsCard(props: BankDetailsCardProps): React.ReactElement
               </div>
             </div>
           ) : null}
+
+          {/* ⭐ THE WAY BACK IN. Reading the two names and finding they differ is exactly what
+              `-226` cl.1 puts on this operator; without this button the only thing they could do
+              about it was nothing. */}
+          {!editing ? (
+            <button
+              type="button"
+              data-testid="helpline-bank-edit"
+              className="mt-3 self-start rounded border px-3 py-1 text-sm"
+              disabled={pending}
+              onClick={() => setEditing(true)}
+            >
+              {resolveEn('helpline.bank.correct')}
+            </button>
+          ) : null}
         </div>
-      ) : (
+      ) : null}
+
+      {showForm ? (
         <>
           <div className="grid gap-3 sm:grid-cols-2">
             {accountBlock(0, 'helpline.bank.primary')}
             {accountBlock(1, 'helpline.bank.secondary')}
           </div>
-          <button
-            type="button"
-            data-testid="helpline-bank-submit"
-            className="self-start rounded bg-slate-800 px-3 py-1 text-sm text-white disabled:opacity-50"
-            disabled={pending}
-            onClick={() => void submit()}
-          >
-            {resolveEn('helpline.bank.submit')}
-          </button>
+
+          {/* The mandatory, audited justification for writing over accounts already on file. */}
+          {isCorrection ? (
+            <label className="flex flex-col text-xs">
+              <span className="opacity-70">{resolveEn('helpline.bank.correctionReason')}</span>
+              <input
+                className="rounded border px-2 py-1 text-sm"
+                data-testid="helpline-bank-correction-reason"
+                value={correctionReason}
+                disabled={pending}
+                onChange={(e) => setCorrectionReason(e.target.value)}
+              />
+            </label>
+          ) : null}
+
+          <div className="flex gap-2">
+            <button
+              type="button"
+              data-testid="helpline-bank-submit"
+              className="self-start rounded bg-slate-800 px-3 py-1 text-sm text-white disabled:opacity-50"
+              disabled={pending}
+              onClick={() => void submit()}
+            >
+              {resolveEn(isCorrection ? 'helpline.bank.submitCorrection' : 'helpline.bank.submit')}
+            </button>
+            {editing ? (
+              <button
+                type="button"
+                data-testid="helpline-bank-cancel-edit"
+                className="self-start rounded border px-3 py-1 text-sm"
+                disabled={pending}
+                onClick={() => {
+                  setEditing(false);
+                  setValidationError(null);
+                }}
+              >
+                {resolveEn('helpline.bank.cancelCorrection')}
+              </button>
+            ) : null}
+          </div>
         </>
-      )}
+      ) : null}
 
       {validationError !== null ? (
         <p role="alert" data-testid="helpline-bank-validation-error" className="text-xs text-status-fail-fg">

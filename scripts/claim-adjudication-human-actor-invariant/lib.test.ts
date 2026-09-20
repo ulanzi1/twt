@@ -151,10 +151,29 @@ describe('scanAdjudicationRoutes — human-actor invariant gate teeth', () => {
 
 describe('scanRouteRegistrations + evaluateAdjudicationRoute — units', () => {
   it('classifies the three human-actor hooks from local const bindings', () => {
-    const regs = scanRouteRegistrations('r.ts', GOOD_ROUTE);
+    const { registrations: regs, unresolved } = scanRouteRegistrations('r.ts', GOOD_ROUTE);
     expect(regs).toHaveLength(1);
+    expect(unresolved).toHaveLength(0);
     expect(regs[0]!.hooks).toEqual({ session: true, scope: true, permission: true });
     expect(regs[0]!.forbidden).toHaveLength(0);
     expect(evaluateAdjudicationRoute('r.ts', regs[0]!)).toHaveLength(0);
+  });
+
+  // ⚠⚠ THE GATE'S OWN BLIND SPOT, now pinned (code review 2026-09-20). A route whose path is not
+  // a plain string literal was SILENTLY DROPPED — not scanned, and not reported as unscanned. Since
+  // a coverage entry passes as soon as ANY route in its file matches, a file could contain an
+  // unguarded WRITE registered through a template literal and the gate would print a cheerful ✓.
+  it('⛔ REPORTS a route whose path is not a literal, rather than skipping it', () => {
+    const TEMPLATED = [
+      "const BASE = '/api/v1/p/:pariwarId/admin';",
+      'export function reg(app) {',
+      '  const r = app.withTypeProvider();',
+      '  r.post(`${BASE}/claims/:claimCaseId/nominee-name-check`, {}, h.post);',
+      '}',
+    ].join('\n');
+    const { registrations, unresolved } = scanRouteRegistrations('r.ts', TEMPLATED);
+    expect(registrations).toHaveLength(0);
+    expect(unresolved).toHaveLength(1);
+    expect(unresolved[0]!.method).toBe('post');
   });
 });

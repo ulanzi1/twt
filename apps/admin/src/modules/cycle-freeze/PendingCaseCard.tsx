@@ -22,12 +22,16 @@ import type {
 import type { ReactElement } from 'react';
 import { useState } from 'react';
 
+import { NomineeNameCheckDisclosure } from '../claim-verification/NomineeNameCheckDisclosure.js';
+
 type PendingCase = CycleFreezePendingResponse['ready_to_freeze'][number];
 type Bucket = 'ready_to_freeze' | 'escalated' | 'voted_pending_commit';
 
 export interface PendingCaseCardProps {
   case_: PendingCase;
   bucket: Bucket;
+  /** Needed for the on-demand names disclosure (D3) — the read is per-claim and tenant-scoped. */
+  pariwarId: string;
   onDecision: (body: CycleFreezeDecisionRequest) => void;
   pending: boolean;
   error?: string | undefined;
@@ -40,6 +44,24 @@ function reasonCodesFor(outcome: 'denied' | 'routed_to_r9' | 'returned_for_corre
     .map(([code]) => code);
 }
 
+/**
+ * How each outcome is NAMED in a validation message — the words the Pariwar Admin reads.
+ * ⚠ A `Partial` on purpose: an unlisted outcome falls back to its own code rather than being
+ * mislabelled as a different action.
+ */
+/** The AC8 reason CODES as words. ⛔ Never a name — these are the District Admin's own codes. */
+const NAME_DIFFERENCE_LABEL: Record<string, string> = {
+  initial: 'an initial',
+  married_name: 'a married name',
+  bank_shortened_name: "the bank's shortened name",
+};
+
+const ACTION_LABEL: Partial<Record<StateTrusteeDecisionOutcome, string>> = {
+  denied: 'Deny',
+  routed_to_r9: 'Route to R9',
+  returned_for_correction: 'Return to District Admin',
+};
+
 /** Is the currently-selected reason code valid for `outcome`? An absent selection defers to the server's
  *  required-per-outcome check (deny/route require one; that 400 is expected + surfaced via `error`). */
 function reasonCodeValidFor(reasonCode: string, outcome: StateTrusteeDecisionOutcome): boolean {
@@ -50,7 +72,14 @@ function reasonCodeValidFor(reasonCode: string, outcome: StateTrusteeDecisionOut
   return compat?.includes(outcome) ?? false;
 }
 
-export function PendingCaseCard({ case_, bucket, onDecision, pending, error }: PendingCaseCardProps): ReactElement {
+export function PendingCaseCard({
+  case_,
+  bucket,
+  pariwarId,
+  onDecision,
+  pending,
+  error,
+}: PendingCaseCardProps): ReactElement {
   const [reasonCode, setReasonCode] = useState<string>('');
   const [rationale, setRationale] = useState<string>('');
   const [validationError, setValidationError] = useState<string | undefined>(undefined);
@@ -77,9 +106,31 @@ export function PendingCaseCard({ case_, bucket, onDecision, pending, error }: P
       return;
     }
 
+    // ⭐⭐ A RETURN NEEDS A CODE **AND** A NOTE, CHECKED HERE (code review 2026-09-20).
+    // `reasonCodeValidFor('')` returns `true` — an absent selection deliberately defers to the
+    // server — so a bare click on "Return to District Admin" posted with NO code and NO note and
+    // relied on a 400 coming back. `-227` cl.10's note is the ONLY thing that tells the District
+    // Admin what to get corrected, and with ⛔ no event minted for a return, that note plus the
+    // audit line IS the trail. Asking for it before the round trip is the least we can do.
+    if (outcome === 'returned_for_correction') {
+      if (reasonCode === '') {
+        setValidationError(
+          'Choose the reason code "other" and write a note saying what needs correcting — the District Admin has nothing else to go on.',
+        );
+        return;
+      }
+      if (rationale.trim() === '') {
+        setValidationError(
+          'Write a note saying what needs correcting. It is the only thing the District Admin will see — the claim is not denied, it goes back to be fixed.',
+        );
+        return;
+      }
+    }
+
     if (!reasonCodeValidFor(reasonCode, outcome)) {
+      // ⚠ NAME THE ACTUAL ACTION. This was a two-way ternary that called a RETURN a "Route to R9".
       setValidationError(
-        `"${reasonCode}" isn't a valid reason code for ${outcome === 'denied' ? 'Deny' : 'Route to R9'} — choose a matching code, or clear the selection.`,
+        `"${reasonCode}" isn't a valid reason code for ${ACTION_LABEL[outcome] ?? outcome} — choose a matching code, or clear the selection.`,
       );
       return;
     }
@@ -119,7 +170,11 @@ export function PendingCaseCard({ case_, bucket, onDecision, pending, error }: P
             data-testid="name-difference-badge"
             className="rounded bg-status-warn-bg px-1.5 py-0.5 text-xs text-status-warn-fg"
           >
-            approved with a name difference: {case_.name_difference_reasons.join(', ')}
+            {/* ⚠ LABELS, ⛔ NOT RAW CODES. This printed `bank_shortened_name` at a Pariwar Admin,
+                while the District Admin's own panel printed "The bank's shortened name" for the
+                same fact — two surfaces disagreeing about one ruling's vocabulary. */}
+            approved with a name difference:{' '}
+            {case_.name_difference_reasons.map((r) => NAME_DIFFERENCE_LABEL[r] ?? r).join(', ')}
           </span>
         )}
         {case_.concealment_flags.map((f) => (
@@ -244,9 +299,15 @@ export function PendingCaseCard({ case_, bucket, onDecision, pending, error }: P
         )}
         {/* Story 6.18 (AC11), `-227` cl.10 — send the claim BACK to the District Admin with a note.
             ⛔ NOT a denial: the claim keeps its state, no appeal flow starts, and the label says
-            "return", never "reject". Available in every bucket INCLUDING voted-pending-commit — the
-            PRE-COMMIT window, where the Pariwar Admin can still act before the campaign goes live. */}
-        {!case_.under_correction && (
+            "return", never "reject".
+            ⚠⚠ ⛔ NOT OFFERED IN `voted_pending_commit`, AND THE STORY REVERSED ITSELF TO GET HERE
+            (code review 2026-09-20, D1 = option A). The pre-commit window looked like one the
+            Pariwar Admin could still act in — but a return written at `state_trustee_approved` could
+            never be CLEARED: the only code that supersedes a return row is inside
+            `voteOnFrozenClaim`, which refuses that state, and the District Admin cannot record the
+            fresh check there either. The claim would be stuck forever. `TRUSTEE_RETURNABLE_STATES`
+            now excludes it, so offering the button here would be offering a guaranteed 409. */}
+        {bucket !== 'voted_pending_commit' && !case_.under_correction && (
           <button
             type="button"
             data-testid="return-to-district-admin"
@@ -258,6 +319,21 @@ export function PendingCaseCard({ case_, bucket, onDecision, pending, error }: P
           </button>
         )}
       </div>
+
+      {/* ⭐⭐ D3 — THE PARIWAR ADMIN SEES THE TWO NAMES (code review 2026-09-20). This card had only
+          badges: the surface that casts the FINAL approval, and the one that decides whether to
+          RETURN a claim over a name, could not see the names it was deciding about. D3 says in as
+          many words *"The Pariwar Admin sees both names, the DA's reason and the filer's note, then
+          approves or returns"* — and the component that does exactly that already existed, used by
+          the District Admin's console and the R9 panel but not here.
+          ⛔ ON DEMAND: the read decrypts a living nominee's Tier-1 name and writes an audit line, so
+          it fires only when somebody presses the button. ⛔ `canCheck` is false — recording the
+          verdict is the District Admin's, `-226` cl.3. */}
+      <NomineeNameCheckDisclosure
+        pariwarId={pariwarId}
+        claimCaseId={case_.claim_case_id}
+        testId={`pending-case-name-check-${case_.claim_case_id}`}
+      />
 
       {validationError && (
         <p role="alert" className="text-xs text-status-fail-fg">

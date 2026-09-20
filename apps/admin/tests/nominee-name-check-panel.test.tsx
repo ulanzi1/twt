@@ -39,6 +39,7 @@ const READ: NomineeNameCheckResponse = {
   nominee_declared_at: '2026-01-01T00:00:00.000Z',
   claim_filed_at: '2026-09-01T00:00:00.000Z',
   current_check: null,
+  latest_check_is_stale: false,
   correction_return: null,
 };
 

@@ -12,18 +12,23 @@
 // Both are checked at `dimension: 'district'` against the deceased member's SERVER-DERIVED posting
 // district (the Story 6.10 stash precedent — the client NEVER submits the authz district).
 
-import { claim, ids, member as memberDomain } from '@twt/domain';
+import { claim, ids, member as memberDomain, rbac } from '@twt/domain';
 import type { FastifyInstance, FastifyRequest, preHandlerHookHandler } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 
-import { NomineeNameCheckRequest, NomineeNameCheckResponse, NomineeNameCheckWriteResponse } from '@twt/contracts';
+import {
+  ClaimsUnderCorrectionResponse,
+  NomineeNameCheckRequest,
+  NomineeNameCheckResponse,
+  NomineeNameCheckWriteResponse,
+} from '@twt/contracts';
 
 import type { AppDeps } from '../../context.js';
 import { UnauthorizedError } from '../../http-errors.js';
 import { scopeResolutionHook } from '../../middleware/scope-resolution/index.js';
 import { requireAdminSession } from '../auth/shared/session-guard.js';
-import { requirePermissionHook } from '../rbac/index.js';
+import { loadActorGrants, requirePermissionHook } from '../rbac/index.js';
 import {
   NOMINEE_NAME_CHECK_VIEW_KEY,
   NOMINEE_NAME_CHECK_WRITE_KEY,
@@ -31,6 +36,9 @@ import {
 } from './claims.nominee-name-check.handlers.js';
 
 const TAG = 'nominee-name-check';
+
+/** The correction queue's page ceiling — mirrors the domain read's own cap. */
+const CORRECTION_QUEUE_MAX_LIMIT = 200;
 
 const NameCheckParam = z.object({ pariwarId: z.string().uuid(), claimCaseId: z.string().uuid() }).strict();
 
@@ -63,8 +71,51 @@ function resolveNomineeNameCheckDistrict(): preHandlerHookHandler {
   };
 }
 
+/**
+ * PreHandler for the LIST route: work out WHICH DIMENSION to gate this caller at, and at what value.
+ *
+ * ⚠⚠ IT IS ⛔ NOT A SELF-APPROVING CHECK, though it looks like one at a glance. The gate answers
+ * *"does this actor hold `claim.view_nominee_name_check` anywhere in this Pariwar?"* — a real
+ * question, which a role holding neither key fails. What it deliberately does NOT do is decide
+ * WHICH claims they see; `getClaimsUnderCorrection` does that, per row, with `rbac.scopeContains`.
+ * Splitting the two is the only honest way to gate a list whose rows span districts.
+ *
+ * ⚠⚠ AND THE DIMENSION MUST MOVE WITH THE CALLER — A FIXED `district` GATE REFUSES A PARIWAR ADMIN.
+ * This was written first as "stash the caller's district, or `null` for a pariwar-ceiling holder",
+ * on the reasoning that a pariwar grant contains every geo target so the gate would pass anyway.
+ * ⛔ IT DOES NOT. `scopeContains` fails an UNRESOLVED target closed before it looks at the grant:
+ *     `if (target.dimension !== 'global' && target.value == null) return false;`
+ * — so a `null` district target is a 403 for EVERYONE, `pariwar_admin` and `super_admin` included.
+ * Verified against the predicate itself, ⛔ not assumed ([[feedback_negative_claims_checkable_in_repo]]).
+ * ⇒ a caller holding a district-scoped grant is gated at `district` against THAT district; a caller
+ * whose narrowest reach is the Pariwar is gated at `pariwar` against the Pariwar id, which their
+ * pariwar-dimension grant satisfies. A caller with neither has nothing to gate on and fails closed.
+ */
+function resolveQueueScopeStash(): preHandlerHookHandler {
+  return async function preHandler(request: FastifyRequest): Promise<void> {
+    const scopeTx = request.scopeTx;
+    const actorId = request.requestContext.actorId;
+    if (!scopeTx || !actorId) throw new UnauthorizedError('Authentication required', 'auth.session_required');
+    const grants = request.scopeGrants ?? (await loadActorGrants(scopeTx, actorId));
+    request.scopeGrants = grants;
+    const here = grants.filter((g) => g.pariwarId === scopeTx.pariwarId);
+    const districtGrant = here.find((g) => g.scopeDimension === 'district' && g.scopeValue != null);
+    if (districtGrant) {
+      request.nomineeNameCheckQueueScope = { dimension: 'district', value: districtGrant.scopeValue };
+      return;
+    }
+    const broadGrant = here.find((g) => g.scopeDimension === 'pariwar' || g.scopeDimension === 'global');
+    request.nomineeNameCheckQueueScope = broadGrant
+      ? { dimension: 'pariwar', value: scopeTx.pariwarId }
+      : // ⛔ Nothing to gate on — `null` fails the permission check closed, which is the right answer
+        // for a caller with no grant that reaches this Pariwar at all.
+        { dimension: 'district', value: null };
+  };
+}
+
 export function registerNomineeNameCheckRoutes(app: FastifyInstance, deps: AppDeps): void {
   const h = createNomineeNameCheckHandlers(deps);
+  const resolveQueueScope = resolveQueueScopeStash();
   const r = app.withTypeProvider<ZodTypeProvider>();
   const adminSession = requireAdminSession(deps);
   const scope = scopeResolutionHook(deps);
@@ -80,6 +131,59 @@ export function registerNomineeNameCheckRoutes(app: FastifyInstance, deps: AppDe
     dimension: 'district',
     resolveValue: districtFromStash,
   });
+
+  // ── AC11 — the District Admin's CORRECTION QUEUE ───────────────────────────────
+  //
+  // ⚠⚠ REGISTERED BEFORE THE `:claimCaseId` ROUTES ON PURPOSE. Fastify's radix router prefers a
+  // STATIC segment over a parametric one, so ordering is not what makes this correct — but the
+  // `NameCheckParam` schema requires `claimCaseId` to be a UUID, so `under-correction` could
+  // ⛔ never have been swallowed by the per-claim route in any case. Kept adjacent and commented so
+  // the next person does not have to re-derive that.
+  //
+  // ⭐ ⛔ NO NEW KEY — the existing `claim.view_nominee_name_check` (AC1), which `district_admin`,
+  // `verifier`, `pariwar_admin` and `helpline_operator` already hold. AC11's "⛔ no new route, ⛔ no
+  // new key" governs the RESUBMISSION, which stays DERIVED: nothing here writes, and the District
+  // Admin's fresh check remains the only act that clears a return.
+  //
+  // ⚠⚠ AND THE GATE IS DELIBERATELY AT `pariwar` DIMENSION WHILE THE ROWS ARE DISTRICT-FILTERED.
+  // A list has no single district to gate on. Checking the key at the Pariwar proves the caller may
+  // use this surface at all; `getClaimsUnderCorrection` then drops every row outside the caller's
+  // own grant using `rbac.scopeContains`, the SAME predicate the per-claim gate uses.
+  // ⛔ This does NOT widen anybody's reach: a `district`-scoped grant does not satisfy a `pariwar`
+  // check ([[project_rbac_geo_scope_containment]] — containment runs ONE way), so the gate below
+  // would refuse a district_admin outright. That is why it resolves the caller's OWN grant scope
+  // instead of the Pariwar id — the check asks *"do you hold this key here?"*, and the row filter
+  // asks *"and which of these claims are yours?"*.
+  const requireQueueView = requirePermissionHook(deps, NOMINEE_NAME_CHECK_VIEW_KEY, {
+    dimension: 'district',
+    // ⚠ BOTH halves are resolved per request (the 6.17 ground-inspection shape) — see
+    // `resolveQueueScopeStash`: a district-scoped caller is gated at their district, a
+    // pariwar-ceiling caller at the Pariwar. `null` fails closed.
+    resolveDimension: (request: FastifyRequest): rbac.ScopeDimension =>
+      request.nomineeNameCheckQueueScope?.dimension ?? 'district',
+    resolveValue: (request: FastifyRequest): string | null =>
+      request.nomineeNameCheckQueueScope?.value ?? null,
+  });
+
+  r.get(
+    '/api/v1/p/:pariwarId/admin/claims/under-correction',
+    {
+      schema: {
+        params: z.object({ pariwarId: z.string().uuid() }).strict(),
+        // ⚠⚠ A BOUNDED `limit` IS ARCHITECTURALLY MANDATORY on any collection-returning GET
+        // (AR forced-pagination, AC-3), and `forced-pagination.spec.ts` enforces it against the
+        // emitted OpenAPI surface — it caught this route the moment it was added. An unbounded
+        // admin list is an availability problem waiting for the first Pariwar with a long queue.
+        querystring: z
+          .object({ limit: z.coerce.number().int().min(1).max(CORRECTION_QUEUE_MAX_LIMIT).optional() })
+          .strict(),
+        response: { 200: ClaimsUnderCorrectionResponse },
+        tags: [TAG],
+      },
+      preHandler: [adminSession, scope, resolveQueueScope, requireQueueView],
+    },
+    h.getClaimsUnderCorrection,
+  );
 
   // AC2 — the two names, side by side. READ-ONLY, audited, human-actor-only.
   r.get(

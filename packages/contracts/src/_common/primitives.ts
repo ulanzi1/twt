@@ -94,7 +94,46 @@ export type MobileNumber = z.output<typeof MobileNumber>;
  * a KYC name is copied from a government document, not typed) nor to Story 6.5's death-certificate
  * comparison (`claim/parity.ts`, a 20% fuzzy tolerance). cl.9's wider sweep is its own story.
  */
-export const ENGLISH_NAME_REGEX = /^[A-Za-z][A-Za-z.'\- ]*$/;
+/**
+ * ⚠⚠ THE CHARACTER CLASS INCLUDES THE SHAPES A PHONE KEYBOARD PRODUCES, and that is deliberate
+ * (code review 2026-09-20) — it is a TYPOGRAPHIC allowance, ⛔ not a widening of the script rule.
+ *
+ * WHY: iOS smart punctuation rewrites `'` to a RIGHT SINGLE QUOTATION MARK (U+2019) as the user
+ * types into a React Native `TextInput`. So `D'Souza` — a plainly English name, and one of the very
+ * forms AC12 set out to accept — arrived as `D’Souza` and was refused with *"Please enter the name
+ * in English"*, with nothing on screen to explain what was wrong with it. Likewise a non-breaking
+ * space (U+00A0) in a name pasted from a document.
+ *
+ * ⭐ WHY ACCEPT THEM RATHER THAN REWRITE THEM TO ASCII. A `.transform()` normalising step was
+ * written first and then abandoned: `z.string().transform(…).pipe(…)` is a ZodPipeline, and the
+ * OpenAPI emitter silently drops `pattern`, `minLength` and `maxLength` off a pipeline — the
+ * emitted `v1.yaml` lost the whole rule while every test stayed green. Accepting the variants keeps
+ * this a pure `ZodString`, so the published contract still STATES the rule, and it has the better
+ * property anyway: what the person typed is what gets stored, ⛔ never quietly edited.
+ * ⚠ Two spellings of one name can therefore coexist. That is harmless HERE and nowhere else would
+ * it be: Trap 1 forbids the system comparing two names at all — a human reads them (`-226` cl.5).
+ *
+ * ⛔ ACCENTED LATIN LETTERS ARE STILL REFUSED — an explicit decision (BigDev, 2026-09-20), ⛔ not an
+ * oversight. `José` does not pass. AC12's words are "Latin letters", but `-227` cl.1's intent is the
+ * name AS PRINTED ON THE PASSBOOK, and an Indian bank passbook prints ASCII. Widening this is a
+ * product decision, and it is the one place this predicate should be revisited.
+ * ⛔ And it is ⛔ NOT a transliteration tolerance: `-227` cl.9 forbids tolerating a SCRIPT difference,
+ * and nothing here admits another script. Devanagari in, refusal out.
+ */
+export const ENGLISH_NAME_REGEX = /^[A-Za-z][A-Za-z.'\u2018\u2019\u02BC\-\u00A0\u2007\u202F ]*$/;
+
+/**
+ * ⭐ THE ONE PREDICATE EVERY LAYER MUST USE — server schema and client form alike.
+ *
+ * ⚠ The three client forms each called `ENGLISH_NAME_REGEX.test(x.trim())` by hand. That is the
+ * same answer today, but it is a coincidence of this implementation, and the moment the schema
+ * gains a rule the regex does not carry, a name the server accepts starts being refused in the app
+ * (or worse, the reverse). Import THIS.
+ */
+export function isEnglishScriptName(value: string): boolean {
+  return ENGLISH_NAME_REGEX.test(value.trim());
+}
+
 export const EnglishScriptName = z
   .string()
   .trim()

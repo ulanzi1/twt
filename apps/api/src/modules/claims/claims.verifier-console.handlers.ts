@@ -74,30 +74,39 @@ const SIGNED_URL_TTL_SECONDS = 300;
  * is the p95 mechanism — D9 states the true 4L p95 rests on that cache + the claim indices, not a
  * full-scale load harness). Sections (e)/(f) currently do NO DB read (`not_available_yet` until 6.11).
  *
- * Story 6.18 adds the nominee NAME-CHECK STATUS (AC4/AC8): TWO bounded reads — the claim's live bank
- * accounts, and the latest `claim.nominee_name_checked` event — → ceiling 11 + 2 = 13.
+ * ⚠⚠ THERE IS EXACTLY ONE CEILING, AND IT IS THE NUMBER BELOW. This block used to state two
+ * (a trailing paragraph still said "baseline 6 + 2 = 8" while the constant was 13), which made it
+ * impossible to tell a stale sentence from the live budget — the one thing a budget doc must not be
+ * ambiguous about. The running total is now kept in ONE place, newest last:
+ *
+ *   baseline (every signal present)                                              6
+ *   + Story 6.11 allowance: getPriorVerifierDecisions + getRecentInScopePrecedents  +2  →  8
+ *   + Story 6.12: getLiveShepherd                                                +1  →  9
+ *   + Story 6.15: the live concealment assessment + a conditional R14 clause
+ *     resolution (budgeted as two so the counter reflects the worst case)        +2  → 11
+ *   + Story 6.18: the nominee name-check status                                  +3  → 14
+ *
+ * Story 6.18's THREE reads (AC4/AC8) are the claim's live bank accounts, the latest
+ * `claim.nominee_name_checked` event, and — when a check exists — the deceased member's
+ * declaration refs.
+ * ⚠ IT WAS BOOKED AS TWO AND IS ACTUALLY THREE (code review 2026-09-20). The declaration read was
+ * never bumped, so on the path that matters (a claim that HAS been checked) the counter
+ * under-reported by one — precisely the silent exclusion the last paragraph forbids. Corrected
+ * here rather than by dropping the read from the count.
  * ⭐ THE EXPLANATION AC8 ASKS FOR, since a casual bump is exactly what this counter exists to
  * prevent: this section is NOT a convenience. AC4 makes a current, passing check a PRECONDITION of
  * approval on this very surface, so a console that could not say whether one exists would offer an
  * approve control that 409s — training a District Admin to treat a governance refusal as a glitch.
- * ⛔ The two reads are the MINIMUM: the accounts answer cl.7 ("are both there?") and the event
- * answers cl.3 ("did somebody check, and is that check still about today's data?"). Neither can be
- * derived from the other, and ⛔ NEITHER decrypts anything — the NAMES stay behind their own key on
+ * ⛔ The three reads are the MINIMUM: the accounts answer cl.7 ("are both there?"), the event
+ * answers cl.3 ("did somebody check?"), and the declaration refs answer "is that check still about
+ * today's data?" — currency needs BOTH tokens, and a check that is stale is not a check. None can
+ * be derived from the others, and ⛔ NONE decrypts anything — the NAMES stay behind their own key on
  * their own route, fetched on demand.
  *
- * Ceiling = baseline 6 + a small explicit allowance of 2 = 8. The allowance is exactly the two Story
- * 6.11 producer reads (getPriorVerifierDecisions + getRecentInScopePrecedents) that light up when the
- * decision read model ships — so 6.11 needs no bump. Story 6.12 adds ONE bounded read (the live-shepherd
- * section, getLiveShepherd) → ceiling 8 + 1 = 9. Story 6.15 adds the claim-scoped concealment producer
- * (claim.assessClaimConcealment) — the live-assessment single-row read PLUS a conditional R14 clause
- * resolution (only when the live assessment is decisive — `linked`/`not_linked`, never for an absent/
- * `unable_to_determine` assessment): up to TWO real bounded reads, both row-count-independent → no N+1, but
- * bumped/budgeted as two so the counter reflects the actual worst-case query cost, not just "one producer
- * call" → ceiling 9 + 2 = 11. Any FURTHER increase requires an explanation at review, not a casual bump; the
- * counter is asserted in the live-DB integration test so it cannot be silently "fixed" by excluding a
- * newly-added read.
+ * Any FURTHER increase requires an explanation at review, not a casual bump; the counter is asserted
+ * in the live-DB integration test so it cannot be silently "fixed" by excluding a newly-added read.
  */
-export const VERIFIER_CONSOLE_MAX_READS = 13;
+export const VERIFIER_CONSOLE_MAX_READS = 14;
 
 /** Counts the assembler's top-level bounded source reads (the no-N+1 fan-out width). */
 class ReadCounter {
@@ -250,7 +259,7 @@ export async function assembleVerifierConsole(
 }
 
 /**
- * (h) The nominee NAME-CHECK STATUS (Story 6.18, AC4/AC8). Two bounded reads, ⛔ no decryption.
+ * (h) The nominee NAME-CHECK STATUS (Story 6.18, AC4/AC8). THREE bounded reads, ⛔ no decryption.
  *
  * ⛔⛔ IT RETURNS FLAGS, NEVER NAMES. `accountsComplete` answers `-226` cl.7; `currentAndPassing` is
  * the AC4 approval precondition; `differenceReasons` are the codes the District Admin THEMSELVES
@@ -261,6 +270,12 @@ export async function assembleVerifierConsole(
  * failing the whole packet — the conservative direction, since the gate is re-checked in the
  * domain under the claim lock anyway and a false "cannot approve" is recoverable while a false
  * "can approve" would offer a control the write path would then refuse.
+ *
+ * ⚠⚠ BUT IT SAYS SO, WHICH IT DID NOT (code review 2026-09-20). The `catch` returned
+ * `accountsComplete: false`, and the console renders that as *"bank details missing"* — so a DB
+ * blip, a bug or an aborted transaction told the District Admin that `-226` cl.7 had not been met
+ * and sent them to chase a family for documents already on file. `available: false` is now the
+ * distinct third answer, exactly as the sibling sections carry `unavailable`.
  */
 async function assembleNomineeNameCheckStatus(
   ctx: VerifierConsoleContext,
@@ -279,9 +294,19 @@ async function assembleNomineeNameCheckStatus(
     const check = await claim.getLatestNomineeNameCheck(ctx.db, ids.pariwarId(ctx.pariwarId), claimCaseId);
 
     if (!check) {
-      return { accountsComplete: accounts.length === 2, currentAndPassing: false, differenceReasons: [] };
+      return {
+        available: true,
+        accountsComplete: accounts.length === 2,
+        currentAndPassing: false,
+        differenceReasons: [],
+      };
     }
     // The declaration token is derived from the (rank, created_at) refs — ⛔ never from a name.
+    // ⚠ COUNTED. This read used to run un-bumped whenever a check existed, so the console's own
+    // ceiling under-reported by exactly one on the path that matters — and the read-budget
+    // doc-block says in as many words that the counter *"cannot be silently fixed by excluding a
+    // newly-added read"*.
+    reads.bump();
     const refs = await nomineeDomain.getMemberNomineeDeclarationRefs(
       ctx.db,
       ids.pariwarId(ctx.pariwarId),
@@ -292,21 +317,30 @@ async function assembleNomineeNameCheckStatus(
       accounts.map((a) => ({ accountRank: a.accountRank, updatedAt: a.updatedAt })),
       claim.deriveNomineeDeclarationToken(refs),
     );
+    const passing = claim.nomineeNameCheckPasses(check);
     return {
+      available: true,
       accountsComplete: accounts.length === 2,
-      currentAndPassing: current && claim.nomineeNameCheckPasses(check),
-      // ⭐ Only surfaced for a CURRENT check — a stale check's difference describes accounts that
-      // have since been corrected, so showing it would highlight a difference that may not exist.
-      differenceReasons: current
-        ? (claim.nomineeNameCheckClericalReasons(check) as NomineeNameCheckStatus['differenceReasons'])
-        : [],
+      currentAndPassing: current && passing,
+      // ⭐ CURRENT **AND** PASSING — AC8's own words, and the second half was missing (code review
+      // 2026-09-20). Currency alone let a MIXED check (`[clerical_difference, does_not_match]`)
+      // display *"Approved with a name difference"* on a claim that is under correction and
+      // ⛔ cannot be approved at all. A stale check is excluded for the original reason: its
+      // difference describes accounts that have since been corrected.
+      differenceReasons:
+        current && passing
+          ? (claim.nomineeNameCheckClericalReasons(check) as NomineeNameCheckStatus['differenceReasons'])
+          : [],
     };
   } catch (err) {
     ctx.log?.warn(
-      { err, claimCaseId: ctx.claimCaseId },
-      'verifier-console: nominee name-check status unavailable; failing closed to cannot-approve',
+      // ⚠ THE CLASS NAME ONLY. Logging the whole `err` on a path that has just been reading bank
+      // and nominee rows risks carrying a row fragment into the logs (Trap 4).
+      { err: err instanceof Error ? err.name : 'unknown', claimCaseId: ctx.claimCaseId },
+      'verifier-console: nominee name-check status unavailable; reporting unavailable and failing closed to cannot-approve',
     );
-    return { accountsComplete: false, currentAndPassing: false, differenceReasons: [] };
+    // ⛔ `accountsComplete: false` here would be a LIE that reads as "-226 cl.7 is unmet".
+    return { available: false, accountsComplete: false, currentAndPassing: false, differenceReasons: [] };
   }
 }
 

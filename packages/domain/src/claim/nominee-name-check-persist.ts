@@ -26,6 +26,7 @@ import { claims } from '../schema/claims.js';
 import type { ClaimEventActor } from './events.js';
 import {
   NomineeBankAccountsRequiredError,
+  NomineeNameCheckInvalidError,
   NomineeNameCheckNotRecordableError,
   NomineeNameCheckStaleError,
 } from './errors.js';
@@ -51,6 +52,15 @@ export interface RecordNomineeNameCheckInput {
   /** One entry per live account, both ranks. */
   readonly accounts: readonly NomineeNameCheckAccountVerdict[];
   readonly actorId: string;
+  /**
+   * The acting District Admin's display name, ALREADY RESOLVED server-side by the caller (the 6.11
+   * / trustee-writer posture — this writer never resolves it and never falls back).
+   *
+   * ⚠ A non-empty snapshot is REQUIRED: the whole design rests on *a named human read the two
+   * names*, so an anonymous check is worse than no check — it looks like attribution and is not.
+   * ⛔ NEVER email-derived ([[project_admin_display_name_attribution]]).
+   */
+  readonly actorDisplay: string;
   readonly actor: ClaimEventActor;
   readonly auditId?: string;
 }
@@ -89,6 +99,43 @@ export async function recordNomineeNameCheck(
   client: pg.PoolClient,
   input: RecordNomineeNameCheckInput,
 ): Promise<RecordNomineeNameCheckResult> {
+  // (0) ⛔⛔ THE RULES THE BOUNDARY ENFORCES ARE RE-ENFORCED HERE, and the duplication is deliberate
+  //     (code review 2026-09-20). Until now `verdict`/`clericalReason` coherence, the distinct-rank
+  //     rule and the non-empty display name lived ONLY in the HTTP zod schema, so they held exactly
+  //     as long as the route stayed the only caller. `-226` cl.5 — *"District Admin cannot proceed
+  //     unless reason for name mismatch is selected"* — is the ONE control this story calls
+  //     load-bearing, and a load-bearing control that a second caller can walk around is not one.
+  //     ⚠ There is no DB constraint available to carry it: the verdicts live in a JSONB payload.
+  if (input.actorDisplay.trim() === '') {
+    throw new NomineeNameCheckInvalidError(
+      input.claimCaseId,
+      'a non-empty actorDisplay is required — a check is attributed to a named human or not recorded',
+    );
+  }
+  for (const account of input.accounts) {
+    if (account.verdict === 'clerical_difference' && account.clericalReason === null) {
+      throw new NomineeNameCheckInvalidError(
+        input.claimCaseId,
+        `account #${account.accountRank}: a clerical reason is required for a clerical_difference verdict`,
+      );
+    }
+    if (account.verdict !== 'clerical_difference' && account.clericalReason !== null) {
+      throw new NomineeNameCheckInvalidError(
+        input.claimCaseId,
+        `account #${account.accountRank}: a clerical reason is only permitted for a clerical_difference verdict`,
+      );
+    }
+  }
+  if (new Set(input.accounts.map((a) => a.accountRank)).size !== input.accounts.length) {
+    // ⚠ ⛔ NOT a staleness error. `[rank 1, rank 1]` used to fall through to the per-rank loop below
+    //   and surface as *"check again"*, which tells a District Admin to redo a check that was never
+    //   well-formed — a 400-shaped fault reported as a 409-shaped one.
+    throw new NomineeNameCheckInvalidError(
+      input.claimCaseId,
+      'account ranks must be distinct across the submitted entries',
+    );
+  }
+
   const db = bindScopedDb(client);
 
   // (a) Lock the claim + read its state.
@@ -171,6 +218,7 @@ export async function recordNomineeNameCheck(
       to_state: state,
       trigger: 'district_admin_nominee_name_check',
       actor: input.actor,
+      checked_by_actor_display: input.actorDisplay,
       nominee_declaration_token: input.nomineeDeclarationToken,
       accounts: input.accounts.map((a) => ({
         account_rank: a.accountRank,

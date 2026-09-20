@@ -9,7 +9,7 @@
 // ⛔⛔ AND IT STILL RENDERS NO COMPARISON. The operator is accountable, but cl.5 rules the SYSTEM
 // never acts on a mismatch — so "these look different" at filing would be the system acting.
 
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { NomineeNameCheckResponse } from '@twt/contracts';
@@ -44,6 +44,7 @@ const NAMES: NomineeNameCheckResponse = {
   nominee_declared_at: '2026-01-01T00:00:00.000Z',
   claim_filed_at: '2026-09-01T00:00:00.000Z',
   current_check: null,
+  latest_check_is_stale: false,
   correction_return: null,
 };
 
@@ -51,6 +52,12 @@ const setup = (props: Partial<React.ComponentProps<typeof BankDetailsCard>> = {}
   const onSubmit = vi.fn().mockResolvedValue(undefined);
   render(<BankDetailsCard claimCaseId={CLAIM} recorded={false} onSubmit={onSubmit} {...props} />);
   return { onSubmit };
+};
+
+/** Two well-formed, DISTINCT accounts — the shape every write-path test needs before it can run. */
+const fillValidAccounts = (): void => {
+  fill(1, 'Asha Devi', '123456789012', 'SBIN0000001');
+  fill(2, 'Asha Devi', '210987654321', 'HDFC0000002');
 };
 
 const fill = (i: 1 | 2, holder: string, number: string, ifsc: string, note = ''): void => {
@@ -159,9 +166,85 @@ describe('<BankDetailsCard> — cl.1, the two names after submission', () => {
     expect(screen.getByTestId('helpline-name-account-1')).toHaveTextContent('Could not be read');
   });
 
-  it('hides the entry form once the accounts are recorded', () => {
+  it('collapses the entry form once the accounts are recorded — but ⛔ does NOT trap the operator there', () => {
+    // ⚠ The old version of this test asserted only that the form was GONE, which PINNED the
+    // defect: there was no way back to it. `-226` cl.1 puts the duty of making sure the names match
+    // on this operator, so finding a mismatch in the names view below and being unable to act on it
+    // is the one outcome the surface must not produce. The re-entry control is asserted separately.
     setup({ recorded: true, names: NAMES });
     expect(screen.queryByTestId('helpline-bank-submit')).toBeNull();
     expect(screen.getByTestId('helpline-bank-recorded')).toBeInTheDocument();
+  });
+});
+
+
+// ── The CORRECTION path (code review 2026-09-20, D4 = option A) ───────────────────────
+//
+// ⭐⭐ EVERY TEST HERE COVERS SOMETHING THAT DID NOT EXIST. The card rendered only for the session
+// that had just filed the intake; once `recorded` was true the form was replaced by a read-only
+// names view with ⛔ no path back; it never read `correctionNeeded`; and it never sent
+// `correctionReason`, which the server REQUIRES on any write over accounts already on file. So the
+// operator `-226` cl.1 charges with the duty, and `-227` cl.11 names as the one who types the
+// corrected details, could do neither.
+describe('<BankDetailsCard> — AC5, the operator corrects the details', () => {
+  it('⭐ offers a way BACK INTO the form once accounts are on file', () => {
+    setup({ recorded: true, names: NAMES });
+    expect(screen.getByTestId('helpline-bank-edit')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('helpline-bank-edit'));
+    expect(screen.getByTestId('helpline-bank-submit')).toBeInTheDocument();
+  });
+
+  it('⛔ refuses a correction with NO reason — the server requires one, and a 409 is a bad way to learn that', () => {
+    const onSubmit = vi.fn();
+    setup({ recorded: true, names: NAMES, onSubmit });
+    fireEvent.click(screen.getByTestId('helpline-bank-edit'));
+    fillValidAccounts();
+    fireEvent.click(screen.getByTestId('helpline-bank-submit'));
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByTestId('helpline-bank-validation-error')).toBeInTheDocument();
+  });
+
+  it('⭐ sends `correctionReason` on a correction — and ⛔ NOT on a first save', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    setup({ recorded: true, names: NAMES, onSubmit });
+    fireEvent.click(screen.getByTestId('helpline-bank-edit'));
+    fillValidAccounts();
+    fireEvent.change(screen.getByTestId('helpline-bank-correction-reason'), {
+      target: { value: 'family gave the corrected passbook over the phone' },
+    });
+    fireEvent.click(screen.getByTestId('helpline-bank-submit'));
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect(onSubmit.mock.calls[0]![0]).toMatchObject({
+      correctionReason: 'family gave the corrected passbook over the phone',
+    });
+
+    // ⛔ A FIRST save carries none — the server forbids a reason outside the correction path.
+    cleanup();
+    const firstSave = vi.fn().mockResolvedValue(undefined);
+    setup({ recorded: false, onSubmit: firstSave });
+    fillValidAccounts();
+    fireEvent.click(screen.getByTestId('helpline-bank-submit'));
+    await waitFor(() => expect(firstSave).toHaveBeenCalledTimes(1));
+    expect(firstSave.mock.calls[0]![0]).not.toHaveProperty('correctionReason');
+  });
+
+  it('⭐ tells the operator the details need correcting — ⛔ never "rejected" or "denied"', () => {
+    setup({ recorded: true, names: NAMES, correctionNeeded: true });
+    const banner = screen.getByTestId('helpline-bank-correction-needed').textContent?.toLowerCase() ?? '';
+    expect(banner).toContain('correct');
+    // ⚠ Asserted on the CLAIM, ⛔ not on the bare word: the copy deliberately says *"has not been
+    // refused"*, which contains "refused" and is exactly the reassurance `-226` cl.6 requires. A
+    // naive substring ban would have forced the copy to drop the one sentence that matters most.
+    expect(banner).toContain('has not been refused');
+    for (const forbidden of ['rejected', 'denied', 'your claim is refused']) {
+      expect(banner, `the banner used denial wording: ${forbidden}`).not.toContain(forbidden);
+    }
+  });
+
+  it('⛔ a FAILED names read says so — it must never look like "there is nothing to check"', () => {
+    setup({ recorded: true, namesError: 'The two names could not be loaded.' });
+    expect(screen.getByTestId('helpline-bank-names-error')).toBeInTheDocument();
+    // ⛔ And the names grid is ABSENT rather than empty — an empty list reads as "no accounts".
+    expect(screen.queryByTestId('helpline-bank-names')).toBeNull();
   });
 });

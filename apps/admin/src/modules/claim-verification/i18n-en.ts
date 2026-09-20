@@ -134,6 +134,10 @@ export const verifierConsoleEn = {
       "Read the name on each bank account beside the nominee(s) the member declared, then record whether they match. The system does not compare them.",
     loading: 'Loading the names…',
     loadError: 'The names could not be loaded.',
+    // ⭐ The on-demand disclosure, shared by the Pariwar Admin's card and the R9 panel. These were
+    // three hard-coded English literals inside `R9CasePanel`, bypassing this table entirely.
+    disclosureLabel: 'Nominee name check',
+    disclosureToggle: 'Check nominee names',
     accountsHeading: 'Name on the bank account',
     nomineesHeading: 'Nominee the member declared',
     accountLabel: 'Account',
@@ -150,6 +154,29 @@ export const verifierConsoleEn = {
     filedAt: 'Claim filed',
     recordedBy: 'Checked by',
     notYetChecked: 'No name check has been recorded for this claim yet.',
+    // ⭐ A DIFFERENT SENTENCE FROM `notYetChecked`, and the difference is the point (code review
+    // 2026-09-20). A stale check is ⛔ not an absent one: a colleague did the work and a correction
+    // invalidated it. Telling them "nobody has checked" erases that and reads as an accusation.
+    checkStale:
+      'A name check was recorded, but the bank details or the declared nominees have changed since. It no longer applies — please read the names again and record a fresh check.',
+    // ⚠ The blocked reason when the District Admin's OWN recorded verdict is what blocks the
+    // approval. The generic `approveBlocked` told them to "record the name check" for a claim on
+    // which they had already recorded one — which reads as the console not having noticed.
+    approveBlockedSentBack:
+      'You recorded that a name does not match, so this claim cannot be approved. Have the bank details corrected, then record the name check again. The claim stays open and is not denied.',
+    recordedVerdicts: 'What was recorded',
+    // ⚠ The name-check errors have their OWN table: routing them through the DECISION table meant
+    // every one of them read "The decision could not be submitted. Please try again." — wrong about
+    // what happened, and wrong about what to do next.
+    errorStale:
+      'The bank details or the declared nominees changed while you were looking. Read the names again — they have been reloaded — and record a fresh check.',
+    errorInvalid: 'That check could not be recorded. Choose a verdict for each account, and a reason for any clerical difference.',
+    errorForbidden: 'You do not have permission to record the name check for this claim.',
+    errorGeneric: 'The name check could not be completed. Please try again.',
+    statusUnavailable:
+      'The name-check status could not be read just now — this is not a statement about the claim. Reload before approving.',
+    checkNotRecordableHere:
+      'A name check cannot be recorded while the claim is in this state.',
     approvedWithDifference: 'Approved with a name difference',
     verdictLabel: 'Verdict for account',
     verdictPlaceholder: 'Select…',
@@ -180,6 +207,22 @@ export const verifierConsoleEn = {
       married_name: 'A married name',
       bank_shortened_name: "The bank's shortened name",
     },
+  },
+  // ── Story 6.18 (AC11) — the District Admin's correction queue ───────────────────────
+  // ⛔ Every string here says "returned"/"correct", ⛔ never "rejected", "denied" or "failed".
+  correctionQueue: {
+    heading: 'Claims waiting for a correction',
+    intro:
+      'Claims the Pariwar Admin sent back to you, and claims where you recorded that a name does not match. Contact the claimant, have the bank details corrected, then open the claim and record the name check again. None of these claims has been refused.',
+    loading: 'Loading…',
+    loadError: 'The list could not be loaded.',
+    empty: 'Nothing is waiting for a correction.',
+    badgeReturned: 'returned by the Pariwar Admin',
+    badgeSentBackByCheck: 'you recorded: does not match',
+    badgeAccountsMissing: 'bank details not yet given',
+    returnedBy: 'Returned by',
+    note: 'Their note',
+    open: 'Open the claim',
   },
   reasonCodes: {
     r5_d_natural_death: 'R5(d) — natural death confirmed',

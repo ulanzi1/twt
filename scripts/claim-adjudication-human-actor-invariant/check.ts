@@ -32,6 +32,15 @@ interface CoverageEntry {
   file: string;
   pathSubstrings: string[];
   owner: string;
+  /**
+   * The METHODS this entry expects to find, e.g. `['get', 'post']`.
+   *
+   * ⚠⚠ WITHOUT THIS THE GATE PASSED ON A SINGLE MATCH (code review 2026-09-20). An entry was
+   * satisfied as soon as ONE route in the file matched its substrings — so deleting, renaming or
+   * failing to resolve the OTHER route (the WRITE, on the entries that have one) left the gate
+   * green while its coverage silently halved. Naming the expected methods makes that a failure.
+   */
+  expectedMethods: string[];
 }
 
 const COVERAGE_SET: readonly CoverageEntry[] = [
@@ -42,6 +51,7 @@ const COVERAGE_SET: readonly CoverageEntry[] = [
     file: 'apps/api/src/modules/claims/claims.verifier-console.routes.ts',
     pathSubstrings: ['verifier-console'],
     owner: 'Story 6.10',
+    expectedMethods: ['get'],
   },
   {
     // Story 6.11 — the FIRST verifier WRITE surface (approve/deny/escalate + step-up-gated revise).
@@ -51,6 +61,7 @@ const COVERAGE_SET: readonly CoverageEntry[] = [
     file: 'apps/api/src/modules/claims/claims.verification-decision.routes.ts',
     pathSubstrings: ['verifier-decision'],
     owner: 'Story 6.11',
+    expectedMethods: ['post', 'post'],
   },
   {
     // Story 6.12 — the R6 manual shepherd reassignment WRITE. A human-actor write (routing the family's
@@ -61,6 +72,7 @@ const COVERAGE_SET: readonly CoverageEntry[] = [
     file: 'apps/api/src/modules/claims/claims.shepherd.routes.ts',
     pathSubstrings: ['shepherd/reassign'],
     owner: 'Story 6.12',
+    expectedMethods: ['post'],
   },
   {
     // Story 6.13 — the State-Trustee cycle-freeze (bulk-approval) surface: the pending list + per-claim
@@ -72,6 +84,7 @@ const COVERAGE_SET: readonly CoverageEntry[] = [
     file: 'apps/api/src/modules/claims/claims.cycle-freeze.routes.ts',
     pathSubstrings: ['cycle-freeze'],
     owner: 'Story 6.13',
+    expectedMethods: ['get', 'post', 'post'],
   },
   {
     // Story 6.14 — the R9 special-case voting panel surface: the queue + per-claim panel + open/vote/finalize/
@@ -83,6 +96,7 @@ const COVERAGE_SET: readonly CoverageEntry[] = [
     file: 'apps/api/src/modules/claims/claims.r9-voting.routes.ts',
     pathSubstrings: ['r9-voting'],
     owner: 'Story 6.14',
+    expectedMethods: ['get', 'get', 'get', 'post', 'post', 'post', 'post'],
   },
   {
     // Story 6.15 — the verifier concealment-linkage assessment WRITE. Recording the human-supplied
@@ -93,6 +107,7 @@ const COVERAGE_SET: readonly CoverageEntry[] = [
     file: 'apps/api/src/modules/claims/claims.concealment-assessment.routes.ts',
     pathSubstrings: ['concealment-assessment'],
     owner: 'Story 6.15',
+    expectedMethods: ['post'],
   },
   {
     // Story 6.16 — the internal 3-stage appeal ADJUDICATION routes: Stage-1 review (district-gated), the
@@ -109,6 +124,7 @@ const COVERAGE_SET: readonly CoverageEntry[] = [
     file: 'apps/api/src/modules/claims/claims.appeal.routes.ts',
     pathSubstrings: ['appeal/stage', 'appeal/decisions-by-reviewer'],
     owner: 'Story 6.16',
+    expectedMethods: ['get', 'post', 'post', 'post', 'post', 'post', 'post'],
   },
   {
     // Story 6.18 — the nominee NAME CHECK read + write (one GET + one POST on the same path).
@@ -122,8 +138,13 @@ const COVERAGE_SET: readonly CoverageEntry[] = [
     // SECOND, LIVING subject (the nominee), so an unauthenticated or non-human path to it would
     // disclose a living person's name, not just a claim signal.
     file: 'apps/api/src/modules/claims/claims.nominee-name-check.routes.ts',
-    pathSubstrings: ['nominee-name-check'],
+    // ⭐ THREE routes: the per-claim names READ, the per-claim CHECK write, and — added by the
+    // 2026-09-20 review — the District Admin's CORRECTION QUEUE list. The queue is a list of claims
+    // waiting for a correction; it decrypts the Pariwar Admin's return note, so it needs the same
+    // authenticated-human chain as its siblings.
+    pathSubstrings: ['nominee-name-check', 'under-correction'],
     owner: 'Story 6.18',
+    expectedMethods: ['get', 'get', 'post'],
   },
 ];
 
@@ -142,17 +163,37 @@ function main(): void {
       continue;
     }
     const src = fs.readFileSync(abs, 'utf8');
-    const { findings: fileFindings, matchedPaths } = scanAdjudicationRoutes(
+    const { findings: fileFindings, matchedPaths, matchedMethods, unresolved } = scanAdjudicationRoutes(
       entry.file,
       src,
       entry.pathSubstrings,
     );
     findings.push(...fileFindings);
+
+    // ⚠ A route this gate could not statically resolve is a COVERAGE FAILURE, ⛔ not a shrug.
+    for (const u of unresolved) {
+      missingCoverage.push(
+        `${entry.file} (${entry.owner}) — ${u.method.toUpperCase()} at line ${u.line} has a NON-LITERAL path; ` +
+          'this gate cannot scan it. Register the route with a plain string literal.',
+      );
+    }
+
     if (matchedPaths.length === 0) {
       missingCoverage.push(
         `${entry.file} (${entry.owner}) — no route matched [${entry.pathSubstrings.join(', ')}]`,
       );
     } else {
+      // ⭐ EXACTLY the expected method multiset — so a deleted or renamed sibling route cannot hide
+      // behind a surviving one. Compared as SORTED multisets: order of registration is irrelevant,
+      // but the count of each method is not.
+      const got = [...matchedMethods].sort().join(',');
+      const want = [...entry.expectedMethods].sort().join(',');
+      if (got !== want) {
+        missingCoverage.push(
+          `${entry.file} (${entry.owner}) — expected methods [${want}] but scanned [${got}]. ` +
+            'A route was added, removed or renamed: update expectedMethods deliberately, never to make the gate quiet.',
+        );
+      }
       console.log(`▸ ${entry.owner}: ${matchedPaths.length} adjudication route(s) scanned in ${entry.file}`);
       for (const p of matchedPaths) console.log(`    · ${p}`);
     }

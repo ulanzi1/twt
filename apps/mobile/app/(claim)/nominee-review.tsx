@@ -14,9 +14,13 @@
 import { useEffect, useRef, useState } from 'react'
 
 import type { NomineeStatusResponse, RecordNomineeBankRequest } from '@twt/contracts'
-// Story 6.18 (AC12) — the ENGLISH-script gate, imported from `@twt/contracts` rather than hand-copied
-// into `lib/` like IFSC_RE/VPA_RE. One source ⇒ ⛔ no drift, and ⛔ no `.source` pin test is owed.
-import { ENGLISH_NAME_REGEX } from '@twt/contracts'
+// Story 6.18 (AC12) — the SHARED English-script predicate from `@twt/contracts`.
+// ⚠⚠ `isEnglishScriptName(x)`, ⛔ NOT `ENGLISH_NAME_REGEX.test(x.trim())` (code review 2026-09-20).
+// Three clients each hand-rolled that call. It gives the same answer today, but only by coincidence
+// of the current implementation: the moment the schema gains a rule the bare regex does not carry,
+// a name the SERVER accepts starts being refused in the app (or worse, the reverse). One predicate,
+// used by the schema and by every form, is the only way the two cannot drift.
+import { isEnglishScriptName } from '@twt/contracts'
 import { useRouter } from 'expo-router'
 import { Button, Input, Paragraph, Separator, Spinner, Text, XStack, YStack } from 'tamagui'
 
@@ -65,6 +69,10 @@ export default function NomineeReviewScreen(): React.ReactElement {
   const [notice, setNotice] = useState<string | null>(null)
   const [existingBankNames, setExistingBankNames] = useState<string[]>([])
   const [correctionNeeded, setCorrectionNeeded] = useState(false)
+  // ⚠ Whether the MEMBER may edit right now — ⛔ a different question from "does something need
+  // correcting". Default `true` so a failed status fetch never silently locks a filer out of the
+  // ordinary collection flow (the server is the boundary and refuses a write it should not take).
+  const [memberEditable, setMemberEditable] = useState(true)
 
   // Shared unmount guard for async handlers outside the load effect (e.g. resolveIfsc below).
   const mountedRef = useRef(true)
@@ -106,6 +114,7 @@ export default function NomineeReviewScreen(): React.ReactElement {
         setExistingBankNames(res.accounts.map((a) => a.bankName))
         // Story 6.18 (AC5) — the filer is told their bank details need correcting.
         setCorrectionNeeded(res.correctionNeeded === true)
+        setMemberEditable(res.memberEditable !== false)
       })
       .catch(() => {
         // Best-effort — the form still works blank if the status fetch fails.
@@ -150,7 +159,7 @@ export default function NomineeReviewScreen(): React.ReactElement {
   const accountComplete = (a: AccountFields): boolean =>
     a.holder.trim() !== '' &&
     // Story 6.18 (AC12) — the boundary refuses a non-Latin holder name, so the form must too.
-    ENGLISH_NAME_REGEX.test(a.holder.trim()) &&
+    isEnglishScriptName(a.holder) &&
     a.number.trim() !== '' &&
     a.ifscState === 'ok'
   // The VPA is OPTIONAL (a blank field is always valid — it never gates submit), but a NON-blank value
@@ -204,6 +213,10 @@ export default function NomineeReviewScreen(): React.ReactElement {
     }
     // The write already succeeded — a failure past this point is not a "could not save" error.
     setSubmit('saved')
+    // ⭐ THE BANNER CLEARS. It was set once from the status fetch and never reset, so after a
+    // successful correction the filer was still being told their bank details needed correcting —
+    // on the very details they had just corrected (code review 2026-09-20).
+    setCorrectionNeeded(false)
     if (memberId) saveClaimDraft(memberId, { lastStep: 'nominee-review' })
     router.push('/(claim)/acknowledgement')
   }
@@ -225,7 +238,7 @@ export default function NomineeReviewScreen(): React.ReactElement {
         {/* Story 6.18 (AC12), `-227` cl.9 — the English-script gate, shown INLINE as the filer types.
             ⛔ Never a silent server-only 400: a grieving family typing a name in their own script must
             be told what to change, here, not handed an opaque rejection after submitting. */}
-        {a.holder.trim() !== '' && !ENGLISH_NAME_REGEX.test(a.holder.trim()) ? (
+        {a.holder.trim() !== '' && !isEnglishScriptName(a.holder) ? (
           <Text color="#B00020" fontSize="$2" accessibilityRole="alert">
             {t('nominee.bank.holder_english')}
           </Text>
@@ -331,10 +344,26 @@ export default function NomineeReviewScreen(): React.ReactElement {
           </Paragraph>
         ) : null}
         {/* Story 6.18 (AC5) — the filer is told their bank details need correcting. ⛔ NOT a denial
-            and ⛔ no name: the copy says what to do, never whose name was judged wrong. */}
+            and ⛔ no name: the copy says what to do, never whose name was judged wrong.
+            ⚠⚠ AND IT ASKS FOR AN EDIT ONLY WHERE AN EDIT IS POSSIBLE (code review 2026-09-20).
+            A live return sits at `verifier_approved` / `reversed` / `state_trustee_freeze` — ⛔ none
+            of them member-writable. The old copy said "please check the bank details below" and
+            showed an editable form on every one of them, so a grieving family typed corrections and
+            got a generic *"could not save"* 409. `-227` cl.10 never asked the family to act: it
+            asks the DISTRICT ADMIN to contact them and send the claim back up. That is what the
+            staff-route copy says.
+            ⛔ `accessibilityLiveRegion` — a bare `accessibilityRole="alert"` does not reliably
+            announce on mount (the sibling `NomineeForm` in this same story already pairs them). */}
         {correctionNeeded ? (
-          <Text color="#B00020" accessibilityRole="alert">
-            {t('nominee.bank.correction_needed')}
+          <Text
+            color="#B00020"
+            accessibilityRole="alert"
+            accessibilityLiveRegion="assertive"
+            testID="correction_needed"
+          >
+            {memberEditable
+              ? t('nominee.bank.correction_needed')
+              : t('nominee.bank.correction_needed_staff')}
           </Text>
         ) : null}
         {accountBlock(0, 'nominee.bank.primary')}

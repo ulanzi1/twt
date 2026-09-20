@@ -19,6 +19,9 @@
 
 import { z } from 'zod';
 
+// ⭐ The SINGLE clerical-reason tuple (a sibling contract). AC8's flag rides this surface's own read.
+import { NomineeNameClericalReason } from './nominee-name-check.js';
+
 // ── R9 vocabulary wire mirror (value-aligned with @twt/domain) ──────────────────────────────
 
 /** The DATA-derived approval requirement (value-aligned with the domain `r9_voting_requirement`). */
@@ -60,6 +63,19 @@ export const R9QueueItem = z
     routing_reason_code: z.string().nullable(),
     /** True when a live (non-superseded, not-yet-finalized) R9 voting session is already open. */
     session_open: z.boolean(),
+    /**
+     * Story 6.18 (AC8) — the clerical reason CODES on the claim's CURRENT, PASSING name check.
+     *
+     * ⭐ NON-PII: codes only, ⛔ never a name. It rides THIS read, as AC8 requires ("the flag rides
+     * those surfaces' own reads; the names and note come only from AC2 on demand").
+     * ⚠ IT WAS MISSING ENTIRELY (code review 2026-09-20). The R9 screen could show a difference only
+     * AFTER a voter opened the on-demand Tier-1 names disclosure — i.e. only by decrypting a living
+     * nominee's name — which is the exact opposite of what AC8 asks for. R9 is one of the three
+     * surfaces AC8 names, and it is the one that can approve a claim without the District Admin's
+     * approval path ever running (P4).
+     * Empty when no difference was recorded, when the check is STALE, or when it does not pass.
+     */
+    name_difference_reasons: z.array(NomineeNameClericalReason),
   })
   .strict();
 export type R9QueueItem = z.output<typeof R9QueueItem>;
@@ -145,6 +161,19 @@ export const R9PanelResponse = z
     votes: z.array(R9PanelVote),
     /** Null when no live session is open. */
     tally: R9Tally.nullable(),
+    /**
+     * Story 6.18 (AC8) — the clerical reason CODES on the claim's CURRENT, PASSING name check.
+     *
+     * ⭐ NON-PII: codes only, ⛔ never a name. It rides THIS read, as AC8 requires ("the flag rides
+     * those surfaces' own reads; the names and note come only from AC2 on demand").
+     * ⚠ IT WAS MISSING ENTIRELY (code review 2026-09-20). The R9 screen could show a difference only
+     * AFTER a voter opened the on-demand Tier-1 names disclosure — i.e. only by decrypting a living
+     * nominee's name — which is the exact opposite of what AC8 asks for. R9 is one of the three
+     * surfaces AC8 names, and it is the one that can approve a claim without the District Admin's
+     * approval path ever running (P4).
+     * Empty when no difference was recorded, when the check is STALE, or when it does not pass.
+     */
+    name_difference_reasons: z.array(NomineeNameClericalReason),
   })
   .strict();
 export type R9PanelResponse = z.output<typeof R9PanelResponse>;

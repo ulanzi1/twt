@@ -175,12 +175,13 @@ describe('nominee-bank DTOs (strict + shapes)', () => {
   it('NomineeBankStatusResponse (review finding, 2026-07-11): [] when nothing recorded, both accounts when it has', () => {
     expect(() => assertStrict(NomineeBankStatusResponse)).not.toThrow();
     expect(
-      NomineeBankStatusResponse.parse({ accounts: [], correctionNeeded: false }).accounts,
+      NomineeBankStatusResponse.parse({ accounts: [], correctionNeeded: false, memberEditable: true }).accounts,
     ).toEqual([]);
     const parsed = NomineeBankStatusResponse.parse({
       // Story 6.18 (AC5) — `correctionNeeded` is REQUIRED, not optional: a filer must never be left
       // unsure whether their details need fixing because a producer forgot the field.
       correctionNeeded: false,
+      memberEditable: true,
       accounts: [
         { rank: 1, bankName: 'State Bank of India', ifscValidated: true, holderNamePresent: true, vpaPresent: true },
         { rank: 2, bankName: 'HDFC Bank', ifscValidated: true, holderNamePresent: true, vpaPresent: false },
@@ -191,6 +192,7 @@ describe('nominee-bank DTOs (strict + shapes)', () => {
     expect(() =>
       NomineeBankStatusResponse.parse({
         correctionNeeded: false,
+        memberEditable: true,
         accounts: [{ rank: 1, bankName: 'X', ifscValidated: true, holderNamePresent: true, vpaPresent: false, accountNumber: '123' }],
       }),
     ).toThrow();

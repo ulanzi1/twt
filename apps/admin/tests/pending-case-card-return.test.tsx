@@ -8,6 +8,7 @@
 // ever says "reject", or the badge says "denied", the ruling has been reversed in the UI regardless
 // of what the domain does.
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -32,12 +33,28 @@ const CASE: PendingCase = {
   name_difference_reasons: [],
 };
 
+const PARIWAR = '44444444-4444-4444-8444-444444444444';
+
+/**
+ * ⚠ A `QueryClientProvider` is needed because the card now carries the ON-DEMAND names disclosure
+ * (D3). ⛔ Nothing is fetched here: the disclosure's query is `enabled` only once its button is
+ * pressed, so these tests still run without a network and without decrypting anything.
+ */
 const setup = (overrides: Partial<PendingCase> = {}, bucket: 'ready_to_freeze' | 'voted_pending_commit' = 'ready_to_freeze') => {
   const onDecision = vi.fn();
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
-    <ul>
-      <PendingCaseCard case_={{ ...CASE, ...overrides }} bucket={bucket} onDecision={onDecision} pending={false} />
-    </ul>,
+    <QueryClientProvider client={qc}>
+      <ul>
+        <PendingCaseCard
+          case_={{ ...CASE, ...overrides }}
+          bucket={bucket}
+          pariwarId={PARIWAR}
+          onDecision={onDecision}
+          pending={false}
+        />
+      </ul>
+    </QueryClientProvider>,
   );
   return { onDecision };
 };
@@ -53,11 +70,36 @@ describe('<PendingCaseCard> — AC11, the return to the District Admin', () => {
     expect(label).not.toContain('denied');
   });
 
-  it('⭐ the return is available in the PRE-COMMIT window too (voted_pending_commit)', () => {
-    // cl.4 makes the Pariwar Admin's approval final only once the campaign goes live, which happens
-    // at commit — so a discrepancy spotted between the vote and the commit must still be fixable.
+  it('⛔ the return is NOT offered in the pre-commit window (voted_pending_commit) — D1, and this test was REVERSED', () => {
+    // ⚠⚠ THIS TEST USED TO ASSERT THE OPPOSITE, and the story reversed itself deliberately
+    // (code review 2026-09-20, D1 = option A). The reading behind the old expectation was not
+    // silly: cl.4 makes the approval final only once the campaign goes live at commit, so the
+    // window between the vote and the commit LOOKED like one the Pariwar Admin could still act in.
+    // ⛔ It is not. A return written at `state_trustee_approved` could never be CLEARED — the only
+    // code that supersedes a return row lives inside `voteOnFrozenClaim`, which refuses that state,
+    // and the District Admin cannot record the fresh check there either. The claim would be stuck
+    // with no exit, which is exactly the dead end AC5 forbids. `TRUSTEE_RETURNABLE_STATES` now
+    // excludes the state, so offering the button would be offering a guaranteed 409.
     setup({ current_state: 'state_trustee_approved' }, 'voted_pending_commit');
-    expect(screen.getByTestId('return-to-district-admin')).toBeInTheDocument();
+    expect(screen.queryByTestId('return-to-district-admin')).toBeNull();
+  });
+
+  it('⛔ a BARE return click posts nothing — `-227` cl.10 requires the note, asked for BEFORE the round trip', () => {
+    // ⚠ `reasonCodeValidFor('')` is `true` (an absent selection defers to the server), so a bare
+    // click used to POST with no code and no note and rely on a 400 coming back. The note is the
+    // ONLY thing the District Admin sees, and with ⛔ no event minted for a return it is the trail.
+    const { onDecision } = setup();
+    fireEvent.click(screen.getByTestId('return-to-district-admin'));
+    expect(onDecision).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert').textContent?.toLowerCase()).toContain('note');
+  });
+
+  it('⛔ a return with a code but NO note posts nothing either', () => {
+    const { onDecision } = setup();
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'other' } });
+    fireEvent.click(screen.getByTestId('return-to-district-admin'));
+    expect(onDecision).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert').textContent?.toLowerCase()).toContain('note');
   });
 
   it('posts `return_to_district_admin` with the reason code and the note', () => {
@@ -93,13 +135,23 @@ describe('<PendingCaseCard> — AC11, the return to the District Admin', () => {
 });
 
 describe('<PendingCaseCard> — AC8, the name-difference highlight', () => {
-  it('shows the recorded reason CODES, and ⛔ never a name', () => {
+  it('renders the reason as a LABEL, ⛔ not the raw code — and the two voting surfaces now agree', () => {
+    // ⚠ This printed `married_name` at a Pariwar Admin while the District Admin's own panel showed
+    // "A married name" for the same fact — two surfaces disagreeing about one ruling's vocabulary.
+    // ⛔ The old assertion (`toContain('married_name')`) PINNED the defect; it is replaced, not
+    // merely deleted, so the fix is what is now covered.
     setup({ name_difference_reasons: ['married_name'] });
     const badge = screen.getByTestId('name-difference-badge').textContent ?? '';
     expect(badge).toContain('approved with a name difference');
-    expect(badge).toContain('married_name');
-    // ⛔ The card never receives a name, so it cannot render one — this pins that.
-    expect(badge).not.toMatch(/Devi|Asha|Kumar/);
+    expect(badge.toLowerCase()).toContain('a married name');
+    expect(badge).not.toContain('married_name');
+  });
+
+  it('falls back to the CODE for a reason it does not recognise — ⛔ never the literal "undefined"', () => {
+    setup({ name_difference_reasons: ['a_future_reason' as 'initial'] });
+    const badge = screen.getByTestId('name-difference-badge').textContent ?? '';
+    expect(badge).toContain('a_future_reason');
+    expect(badge).not.toContain('undefined');
   });
 
   it('shows NO highlight when the check recorded no difference', () => {

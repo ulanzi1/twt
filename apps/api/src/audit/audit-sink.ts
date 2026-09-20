@@ -373,7 +373,11 @@ export type AuthAuditEventType =
   //   nominee_name_check_rejected — a check attempt was refused by a domain guard (stale token,
   //     missing accounts, wrong state) — no event written; recorded so a failed attempt is still
   //     audited (the 6.11 decision_rejected posture: fail-closed AND audited, not just fail-closed).
+  //   nominee_name_check.queue_read — someone opened the District Admin's CORRECTION QUEUE (AC11).
+  //     ⛔ NON-PII: counts only. It is a LIST read, so it names no claim — the per-claim
+  //     `….read` line above is what records who looked at a particular living nominee's name.
   | 'admin_nominee_name_check.read'
+  | 'admin_nominee_name_check.queue_read'
   | 'admin_claim.nominee_name_checked'
   | 'admin_claim.nominee_name_check_rejected'
   // ── Shepherd assignment surface (Story 6.12, FR-41 / Epic 6) ──────────────────

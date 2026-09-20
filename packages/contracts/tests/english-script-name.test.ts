@@ -15,6 +15,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ENGLISH_NAME_REGEX,
   EnglishScriptName,
+  isEnglishScriptName,
   NomineeBankAccountEntry,
   NomineeDeclareEntry,
   NomineeDeclareRequest,
@@ -158,6 +159,7 @@ describe('⛔⛔ AC12 — the gate is INPUT-ONLY: an already-stored non-Latin na
       nominee_declared_at: '2026-01-01T00:00:00.000Z',
       claim_filed_at: '2026-09-01T00:00:00.000Z',
       current_check: null,
+      latest_check_is_stale: false,
       correction_return: null,
     };
     const parsed = NomineeNameCheckResponse.safeParse(packet);
@@ -193,8 +195,74 @@ describe('⛔⛔ AC12 — the gate is INPUT-ONLY: an already-stored non-Latin na
       nominee_declared_at: null,
       claim_filed_at: '2026-09-01T00:00:00.000Z',
       current_check: null,
+      latest_check_is_stale: false,
       correction_return: null,
     };
     expect(NomineeNameCheckResponse.safeParse(base).success).toBe(true);
+  });
+});
+
+// ── The boundaries (code review 2026-09-20) ───────────────────────────────────────────────────
+//
+// ⚠ NONE of these was covered before. The suite tested `D'Souza` with a U+0027 apostrophe only, so
+// the ONE character a real phone actually produces — U+2019, inserted by iOS smart punctuation into
+// a React Native TextInput — was never fed to the predicate at all, and the defect it caused
+// (`D’Souza` refused with "Please enter the name in English", and no way for the user to tell why)
+// was invisible.
+describe('EnglishScriptName — the typographic boundaries', () => {
+  it("⭐ ACCEPTS a smart apostrophe (U+2019) — what a phone inserts for '", () => {
+    expect(EnglishScriptName.safeParse('D’Souza').success).toBe(true);
+    expect(EnglishScriptName.safeParse('D‘Souza').success).toBe(true);
+    expect(EnglishScriptName.safeParse('DʼSouza').success).toBe(true);
+    // The plain ASCII form keeps working — this widened, it did not move.
+    expect(EnglishScriptName.safeParse("D'Souza").success).toBe(true);
+  });
+
+  it('⭐ ACCEPTS an interior non-breaking space (U+00A0) — what a paste from a document carries', () => {
+    expect(EnglishScriptName.safeParse('Asha Devi').success).toBe(true);
+    expect(EnglishScriptName.safeParse('Asha Devi').success).toBe(true);
+  });
+
+  it('⛔ REFUSES accented Latin letters — an explicit decision (BigDev 2026-09-20), not an oversight', () => {
+    // `-227` cl.1's intent is the name AS PRINTED ON THE PASSBOOK, and an Indian bank passbook
+    // prints ASCII. Widening this is a product decision; this test is what would have to change.
+    for (const name of ['José', 'Zoë Fernandes', 'Ahmét']) {
+      expect(EnglishScriptName.safeParse(name).success, name).toBe(false);
+    }
+  });
+
+  it('⛔ REFUSES digits, interior control characters and a leading non-letter', () => {
+    for (const name of ['Asha Devi 2', 'Asha\tDevi', 'Asha\nDevi', "'Asha", '-Asha', '1Asha', '.Asha']) {
+      expect(EnglishScriptName.safeParse(name).success, JSON.stringify(name)).toBe(false);
+    }
+  });
+
+  it('pins the length boundary exactly: 200 accepted, 201 refused', () => {
+    expect(EnglishScriptName.safeParse('A'.repeat(200)).success).toBe(true);
+    expect(EnglishScriptName.safeParse('A'.repeat(201)).success).toBe(false);
+  });
+
+  it('⛔ still REFUSES every non-Latin script — the widening is typographic, not linguistic', () => {
+    for (const name of [DEVANAGARI, '张伟', 'Анна', 'أحمد', 'Asha देवी']) {
+      expect(EnglishScriptName.safeParse(name).success, name).toBe(false);
+    }
+  });
+
+  it('⭐ isEnglishScriptName is the SHARED predicate and agrees with the schema on every case above', () => {
+    // ⚠ The three client forms each hand-rolled `ENGLISH_NAME_REGEX.test(x.trim())`. This pins that
+    // the exported predicate and the server schema cannot disagree — the drift that would otherwise
+    // show up as a name the app refuses and the server accepts.
+    for (const name of [
+      'Asha Devi',
+      'D’Souza',
+      'Asha Devi',
+      '  Asha Devi  ',
+      DEVANAGARI,
+      'José',
+      'Asha Devi 2',
+      '',
+    ]) {
+      expect(isEnglishScriptName(name), JSON.stringify(name)).toBe(EnglishScriptName.safeParse(name).success);
+    }
   });
 });

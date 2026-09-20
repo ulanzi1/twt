@@ -1538,6 +1538,7 @@ with the upstream stubbed at a full page at the FR-91 cap:
 | a full page at the cap (50 rows) | **19 234** |
 | a single-row page | **4 220** |
 | marginal cost per directory row | **306** |
+| member/filer (typing the nominee's name and the bank account-holder name in ENGLISH script — a family may not record them in Devanagari, the script many will naturally reach for) | The District Admin's nominee name check staying a COMPARISON rather than an ad-hoc transliteration (`2026-09-20-227` cl.9 — *"Please use English Name everywhere to avoid this"*; the ruling removed transliteration as a clerical reason rather than adding one, so the script problem is paid for at CAPTURE by the filer instead of at REVIEW by a reviewer guessing whether two scripts agree). ⚠ INPUT-ONLY and NOT retroactive: names already stored in another script are ⛔ never rewritten and still render — the friction is paid only by someone typing a name TODAY (Story 6.18) | forced |
 
 ⚠ For scale: the STATIC attribution for the same route is **3 116** bytes. The dynamic
 HTML at the cap is roughly **six times** that — which is precisely the gap D6(a) existed

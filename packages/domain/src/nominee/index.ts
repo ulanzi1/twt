@@ -6,4 +6,8 @@
 
 export * from './declaration-write.js';
 export * from './declaration-read.js';
+// Story 6.18 — the (rank, created_at) DECLARATION-REF projection the name-check staleness token is
+// derived from. A misuse-resistance accessor: it carries no name field, so the check write path
+// structurally cannot reach a nominee's name (Trap 1 / Trap 4).
+export * from './declaration-ref.js';
 export * from './split.js';

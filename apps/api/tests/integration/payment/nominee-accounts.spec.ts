@@ -152,6 +152,7 @@ async function seedLivePoolMemberWithNomineeAccounts(
             : opts.vpa1 === undefined
               ? null
               : await encryptNomineeBankField(opts.vpa1, pariwarId, t.deps.encryption),
+          nameDifferenceNoteCiphertext: null,
           bankName: opts.bankName1 ?? 'State Bank of India',
           branch: 'Nariman Point, Mumbai',
           ifscValidated: true,
@@ -162,6 +163,7 @@ async function seedLivePoolMemberWithNomineeAccounts(
           accountNumberCiphertext: 'not-a-parseable-envelope',
           ifscCiphertext: ifsc2,
           vpaCiphertext: null,
+          nameDifferenceNoteCiphertext: null,
           bankName: 'HDFC Bank',
           branch: 'Worli, Mumbai',
           ifscValidated: true,

@@ -60,6 +60,13 @@ declare module 'fastify' {
      *  resolveValue reads it (the client NEVER submits the authz district). `null` when the deceased has
      *  no resolvable posting district → the district gate fails closed (the D3a no-district exception). */
     verifierConsoleDistrict?: string | null;
+
+    /** Story 6.18 — the deceased member's server-derived latest posting district, resolved by the
+     *  `resolveNomineeNameCheckDistrict` preHandler so `requirePermissionHook`'s (synchronous)
+     *  district `resolveValue` can read it (the client NEVER submits the authz district). `null` when
+     *  the claim is absent in this Pariwar or the deceased has no resolvable posting district → the
+     *  district gate fails closed (403), so the boundary never leaks a claim's existence. */
+    nomineeNameCheckDistrict?: string | null;
     /** Story 6.11 — the deceased member's server-derived latest posting district, resolved by the
      *  `resolveDecisionDistrict` preHandler so `requirePermissionHook`'s (synchronous) district
      *  resolveValue reads it for the `claim.approve` gate (the client NEVER submits the authz

@@ -19,6 +19,7 @@ import { registerHelplineClaimsRoutes } from './claims.helpline.routes.js';
 import { registerClaimsRoutes } from './claims.routes.js';
 import { registerVerificationDecisionRoutes } from './claims.verification-decision.routes.js';
 import { registerVerifierConsoleRoutes } from './claims.verifier-console.routes.js';
+import { registerNomineeNameCheckRoutes } from './claims.nominee-name-check.routes.js';
 import { registerShepherdRoutes } from './claims.shepherd.routes.js';
 import { registerCycleFreezeRoutes } from './claims.cycle-freeze.routes.js';
 import { registerR9VotingRoutes } from './claims.r9-voting.routes.js';
@@ -34,6 +35,9 @@ export function registerClaimsModule(app: FastifyInstance, deps: AppDeps): void 
   registerGroundInspectionRoutes(app, deps);
   // Story 6.10 — the READ-ONLY verifier-console bounded compound signals view (one district-gated GET).
   registerVerifierConsoleRoutes(app, deps);
+  // Story 6.18 — the nominee NAME CHECK: the district-gated read that shows each account's holder
+  // name beside the declared nominees, and the District Admin's recorded verdict (`-226` cl.3/cl.5).
+  registerNomineeNameCheckRoutes(app, deps);
   // Story 6.11 — the verifier adjudication WRITE surface (approve/deny/escalate + step-up-gated revise).
   registerVerificationDecisionRoutes(app, deps);
   // Story 6.12 — the R6 manual shepherd reassignment WRITE surface (claim.assign_shepherd, district-gated).

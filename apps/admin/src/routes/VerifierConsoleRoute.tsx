@@ -17,19 +17,23 @@
 
 import { useNavigate, useParams } from '@tanstack/react-router';
 import type { ReactElement, ReactNode } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import {
   ScopeChrome,
   SignalsPanel,
   VerificationConsoleShell,
+  NomineeNameCheckPanel,
   VerificationDecisionStrip,
   type DecisionSubmit,
+  type NomineeNameCheckSubmit,
   verifierConsoleEn as t,
 } from '../modules/claim-verification/index.js';
 import { ApiError } from '../api/client.js';
 import {
+  useNomineeNameCheck,
   usePostConcealmentAssessment,
+  usePostNomineeNameCheck,
   usePostVerifierDecision,
   useReviseVerifierDecision,
   useSession,
@@ -160,6 +164,16 @@ export function VerifierConsoleRoute(): ReactElement {
     ? decisionErrorMessage(concealmentAssessment.error)
     : null;
 
+  // Story 6.18 (AC2) — the NAMES are fetched ON DEMAND, ⛔ never as a side effect of loading the
+  // console: the read decrypts a LIVING nominee's Tier-1 name and writes an audit line, so it must
+  // happen when a District Admin chooses to look, and the audit line must mean they looked.
+  const [nameCheckOpen, setNameCheckOpen] = useState(false);
+  const nameCheck = useNomineeNameCheck(pariwarId, claimCaseId, nameCheckOpen);
+  const postNameCheck = usePostNomineeNameCheck(pariwarId, claimCaseId);
+  const submitNameCheck = async (input: NomineeNameCheckSubmit): Promise<void> => {
+    await postNameCheck.mutateAsync(input);
+  };
+
   return (
     <VerifierConsoleGateView status={status}>
       <VerificationConsoleShell
@@ -189,6 +203,18 @@ export function VerifierConsoleRoute(): ReactElement {
               liveDecision={liveDecision}
               processing={decision.isPending || revise.isPending}
               error={decisionErrorText}
+              // Story 6.18 (AC4) — approve is unavailable until the claim carries its two bank
+              // accounts AND a current, passing District Admin name check. The domain refuses it
+              // anyway under the claim lock; disabling here stops the console offering a control
+              // that would 409, which would read to an operator as a glitch rather than a rule.
+              canApprove={packet.nomineeNameCheck.currentAndPassing}
+              approveBlockedReason={
+                packet.nomineeNameCheck.currentAndPassing
+                  ? null
+                  : !packet.nomineeNameCheck.accountsComplete
+                    ? t.nameCheck.bankDetailsMissing
+                    : t.nameCheck.approveBlocked
+              }
             />
           ) : undefined
         }
@@ -204,12 +230,57 @@ export function VerifierConsoleRoute(): ReactElement {
               : t.states.unavailable}
           </p>
         ) : packet ? (
-          <SignalsPanel
-            packet={packet}
-            onAssessConcealment={submitConcealmentAssessment}
-            concealmentAssessing={concealmentAssessment.isPending}
-            concealmentAssessError={concealmentAssessErrorText}
-          />
+          <>
+            <SignalsPanel
+              packet={packet}
+              onAssessConcealment={submitConcealmentAssessment}
+              concealmentAssessing={concealmentAssessment.isPending}
+              concealmentAssessError={concealmentAssessErrorText}
+            />
+            {/* Story 6.18 (AC2/AC3) — the nominee name check, behind a disclosure. */}
+            <section className="mt-4 border-t pt-4">
+              <button
+                type="button"
+                data-testid="name-check-disclosure"
+                className="text-sm underline"
+                aria-expanded={nameCheckOpen}
+                onClick={() => setNameCheckOpen((v) => !v)}
+              >
+                {t.nameCheck.heading}
+                {/* AC8 — the highlight rides the console's OWN read, so it shows WITHOUT opening the
+                    disclosure (and therefore without decrypting a name). */}
+                {packet.nomineeNameCheck.differenceReasons.length > 0 ? (
+                  <span
+                    data-testid="console-name-difference-flag"
+                    className="ml-2 rounded bg-status-warn-bg px-2 py-0.5 text-xs text-status-warn-fg"
+                  >
+                    {t.nameCheck.approvedWithDifference}
+                  </span>
+                ) : null}
+              </button>
+              {nameCheckOpen ? (
+                <NomineeNameCheckPanel
+                  data={nameCheck.data}
+                  loading={nameCheck.isLoading}
+                  error={
+                    nameCheck.isError
+                      ? decisionErrorMessage(nameCheck.error)
+                      : postNameCheck.isError
+                        ? decisionErrorMessage(postNameCheck.error)
+                        : null
+                  }
+                  // ⭐ The SERVER is the boundary (`claim.check_nominee_name`, district-dimension),
+                  // exactly as for every other write on this console — this app deliberately keeps
+                  // ⛔ no client-side grant gate, so a holder of the READ key who is not a District
+                  // Admin gets a 403 surfaced as an error rather than a silently-hidden control.
+                  // The prop exists so a future grants-aware caller (and the tests) can drive it.
+                  canCheck
+                  onSubmit={submitNameCheck}
+                  processing={postNameCheck.isPending}
+                />
+              ) : null}
+            </section>
+          </>
         ) : null}
       </VerificationConsoleShell>
     </VerifierConsoleGateView>

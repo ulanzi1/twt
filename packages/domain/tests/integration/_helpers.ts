@@ -13,10 +13,13 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { sql } from 'drizzle-orm';
+import { and, asc, eq, sql } from 'drizzle-orm';
 import type pg from 'pg';
 
-import { setPariwarScope, type Db } from '../../src/db.js';
+import { bindScopedDb, setPariwarScope, type Db } from '../../src/db.js';
+import { deriveNomineeDeclarationToken } from '../../src/claim/nominee-name-check.js';
+import { recordNomineeNameCheck } from '../../src/claim/nominee-name-check-persist.js';
+import { getMemberNomineeDeclarationRefs } from '../../src/nominee/declaration-ref.js';
 import {
   alertId as toAlertId,
   claimId as toClaimId,
@@ -622,4 +625,106 @@ export async function enterAppScope(
 /** Shed superuser without setting a scope — for the fail-closed probe. */
 export async function enterAppRoleNoScope(client: pg.PoolClient): Promise<void> {
   await client.query('SET LOCAL ROLE twt_app');
+}
+
+// ── Story 6.18 — the nominee NAME CHECK approval gate (AC4) ────────────────────────────────────
+// Every approving path (P1 `adjudicateClaim`, P3 `voteOnFrozenClaim`, P4 `finalizeR9Outcome`) now
+// requires the claim's two live bank accounts AND a current, passing District Admin name check
+// (`2026-09-19-226` cl.3-cl.5, cl.7). Specs that drive a claim to `verifier_approved` and then
+// approve it therefore need this one call first.
+//
+// ⭐ IT IS DELIBERATELY NOT A BACKDOOR. It seeds two real account rows and then records the check
+// through the REAL writer, so a spec using it exercises the same path production does — including
+// the writer's own state-window and token guards. A helper that stubbed the gate would make every
+// approval test silently stop proving the gate holds.
+
+/**
+ * Give a claim its two bank accounts and a recorded, PASSING nominee name check, so it can pass the
+ * AC4 approval gate. Runs inside the caller's scope-tx; the claim must already exist and be in one
+ * of `NOMINEE_NAME_CHECK_RECORDABLE_STATES`.
+ *
+ * Pass `verdicts` to build the negative fixtures instead — e.g. `['matches', 'does_not_match']` for
+ * the "sent back for correction" case (AC5), which must NOT pass the gate and must NEVER be denied.
+ */
+export async function seedNomineeNameCheck(
+  client: pg.PoolClient,
+  pariwarId: string,
+  claimCaseId: string,
+  opts: {
+    readonly verdicts?: readonly ('matches' | 'clerical_difference' | 'does_not_match')[];
+    readonly clericalReasons?: readonly (('initial' | 'married_name' | 'bank_shortened_name') | null)[];
+    readonly actorId?: string;
+    /** Record a check against the EXISTING account rows instead of re-seeding them. Needed wherever
+     *  the accounts' `updated_at` is load-bearing — e.g. the return loop's re-check, where rewriting
+     *  the rows would undo the very correction the check is supposed to be about. */
+    readonly reuseAccounts?: boolean;
+  } = {},
+): Promise<void> {
+  const tx = bindScopedDb(client);
+  const pid = toPariwarId(pariwarId);
+  const cid = toClaimId(claimCaseId);
+  const verdicts = opts.verdicts ?? (['matches', 'matches'] as const);
+  const clericalReasons = opts.clericalReasons ?? [null, null];
+
+  // Two live accounts — `-226` cl.7 makes both mandatory before a claim can be decided.
+  if (opts.reuseAccounts !== true) {
+  await tx
+    .delete(schema.claimNomineeBankAccounts)
+    .where(
+      and(
+        eq(schema.claimNomineeBankAccounts.pariwarId, pid),
+        eq(schema.claimNomineeBankAccounts.claimCaseId, cid),
+      ),
+    );
+  await tx.insert(schema.claimNomineeBankAccounts).values(
+    [1, 2].map((rank) => ({
+      claimCaseId: cid,
+      pariwarId: pid,
+      accountRank: rank,
+      accountHolderNameCiphertext: `enc:v1:holder-${rank}`,
+      accountNumberCiphertext: `enc:v1:acct-${rank}`,
+      ifscCiphertext: `enc:v1:ifsc-${rank}`,
+      bankName: rank === 1 ? 'State Bank of India' : 'HDFC Bank',
+      ifscValidated: true,
+    })),
+  );
+  }
+
+  const live = await tx
+    .select({
+      accountRank: schema.claimNomineeBankAccounts.accountRank,
+      updatedAt: schema.claimNomineeBankAccounts.updatedAt,
+    })
+    .from(schema.claimNomineeBankAccounts)
+    .where(
+      and(
+        eq(schema.claimNomineeBankAccounts.pariwarId, pid),
+        eq(schema.claimNomineeBankAccounts.claimCaseId, cid),
+      ),
+    )
+    .orderBy(asc(schema.claimNomineeBankAccounts.accountRank));
+
+  // The token is derived from the DECEASED member's declaration — read the claim to find them, then
+  // derive through the same function the writer uses, so the two can never disagree.
+  const claimRows = await tx
+    .select({ deceasedMemberId: schema.claims.deceasedMemberId })
+    .from(schema.claims)
+    .where(and(eq(schema.claims.pariwarId, pid), eq(schema.claims.claimCaseId, cid)));
+  const deceasedMemberId = claimRows[0]!.deceasedMemberId;
+  const refs = await getMemberNomineeDeclarationRefs(tx, pid, deceasedMemberId);
+  const token = deriveNomineeDeclarationToken(refs);
+
+  await recordNomineeNameCheck(client, {
+    claimCaseId: cid,
+    pariwarId: pid,
+    nomineeDeclarationToken: token,
+    accounts: live.map((a, i) => ({
+      accountRank: a.accountRank as 1 | 2,
+      accountUpdatedAt: a.updatedAt.toISOString(),
+      verdict: verdicts[i] ?? 'matches',
+      clericalReason: clericalReasons[i] ?? null,
+    })),
+    actorId: opts.actorId ?? randomUUID(),
+    actor: 'operator',
+  });
 }

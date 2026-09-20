@@ -39,6 +39,27 @@ export async function encryptOptionalTrusteeRationale(
   return encryptTrusteeRationale(value, pariwarId, enc);
 }
 
+/**
+ * STRICT decrypt of a trustee-rationale envelope — Story 6.18 (AC11, Trap 4). THROWS on any error.
+ *
+ * ⭐ WHY THE STRICT VARIANT AND NOT `…Soft` BELOW: the soft one fails to `''`, which is
+ * indistinguishable from "the Pariwar Admin wrote no note". On the District Admin's correction
+ * surface that difference is the whole message — a blank note reads as *"they returned it and said
+ * nothing"*, when in fact the note exists and could not be read. The caller maps a throw to an
+ * explicit `unreadable` state instead, exactly as it does for the two names.
+ * ⛔ Use the soft variant only where a per-row failure must degrade a LIST, never where the value
+ * itself is the instruction someone must act on.
+ */
+export async function decryptTrusteeRationale(
+  serialized: string,
+  pariwarId: string,
+  enc: EncryptionDeps,
+): Promise<string> {
+  const ct = encryption.parseEnvelope(serialized);
+  const bytes = await encryption.decryptTier1(ct, encContext(pariwarId), enc.kms, enc.kekRef);
+  return Buffer.from(bytes).toString('utf-8');
+}
+
 /** Decrypt a stored trustee/verifier-rationale envelope back to plaintext, FAIL-SOFT to '' on any error
  *  (the 6.10 pending-read posture — a decrypt failure must never 500 the authorized list). NOTE this
  *  decrypts under the trustee field class; the pending list also surfaces the VERIFIER rationale, which is

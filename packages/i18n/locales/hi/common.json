@@ -54,6 +54,7 @@
   "nominees.secondary_label": "दूसरे नॉमिनी",
   "nominees.name": "नॉमिनी का पूरा नाम",
   "nominees.name_help": "अपने नॉमिनी का पूरा नाम दर्ज करें।",
+  "nominees.name_english": "कृपया नाम अंग्रेज़ी में लिखें।",
   "nominees.name_required": "कृपया अपने नॉमिनी का पूरा नाम दर्ज करें।",
   "nominees.relationship": "आपसे संबंध",
   "nominees.relationship_help": "चुनें कि यह नॉमिनी आपसे किस प्रकार संबंधित है।",

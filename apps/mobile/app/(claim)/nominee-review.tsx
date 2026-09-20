@@ -14,6 +14,9 @@
 import { useEffect, useRef, useState } from 'react'
 
 import type { NomineeStatusResponse, RecordNomineeBankRequest } from '@twt/contracts'
+// Story 6.18 (AC12) — the ENGLISH-script gate, imported from `@twt/contracts` rather than hand-copied
+// into `lib/` like IFSC_RE/VPA_RE. One source ⇒ ⛔ no drift, and ⛔ no `.source` pin test is owed.
+import { ENGLISH_NAME_REGEX } from '@twt/contracts'
 import { useRouter } from 'expo-router'
 import { Button, Input, Paragraph, Separator, Spinner, Text, XStack, YStack } from 'tamagui'
 
@@ -38,11 +41,13 @@ interface AccountFields {
   // Story 8.13 — the nominee's UPI ID for this account. OPTIONAL — a BLANK value never gates submit; a
   // NON-blank value must be format-valid (vpaValid) or submit is blocked (review finding).
   vpa: string
+  /** Story 6.18 (AC7) — the OPTIONAL note to the District Admin about a name difference. */
+  note: string
   bankName: string | null
   ifscState: IfscState
 }
 
-const emptyAccount = (): AccountFields => ({ holder: '', number: '', ifsc: '', vpa: '', bankName: null, ifscState: 'idle' })
+const emptyAccount = (): AccountFields => ({ holder: '', number: '', ifsc: '', vpa: '', note: '', bankName: null, ifscState: 'idle' })
 
 type SubmitState = 'idle' | 'saving' | 'saved' | 'error'
 
@@ -59,6 +64,7 @@ export default function NomineeReviewScreen(): React.ReactElement {
   const [submit, setSubmit] = useState<SubmitState>('idle')
   const [notice, setNotice] = useState<string | null>(null)
   const [existingBankNames, setExistingBankNames] = useState<string[]>([])
+  const [correctionNeeded, setCorrectionNeeded] = useState(false)
 
   // Shared unmount guard for async handlers outside the load effect (e.g. resolveIfsc below).
   const mountedRef = useRef(true)
@@ -96,7 +102,10 @@ export default function NomineeReviewScreen(): React.ReactElement {
     claimApi
       .nomineeBankStatus(claimCaseId)
       .then((res) => {
-        if (active) setExistingBankNames(res.accounts.map((a) => a.bankName))
+        if (!active) return
+        setExistingBankNames(res.accounts.map((a) => a.bankName))
+        // Story 6.18 (AC5) — the filer is told their bank details need correcting.
+        setCorrectionNeeded(res.correctionNeeded === true)
       })
       .catch(() => {
         // Best-effort — the form still works blank if the status fetch fails.
@@ -139,7 +148,11 @@ export default function NomineeReviewScreen(): React.ReactElement {
   }
 
   const accountComplete = (a: AccountFields): boolean =>
-    a.holder.trim() !== '' && a.number.trim() !== '' && a.ifscState === 'ok'
+    a.holder.trim() !== '' &&
+    // Story 6.18 (AC12) — the boundary refuses a non-Latin holder name, so the form must too.
+    ENGLISH_NAME_REGEX.test(a.holder.trim()) &&
+    a.number.trim() !== '' &&
+    a.ifscState === 'ok'
   // The VPA is OPTIONAL (a blank field is always valid — it never gates submit), but a NON-blank value
   // must be format-valid before submitting (review finding: previously a malformed-but-non-blank VPA
   // reached the server and 400'd the whole two-account payload with no field-specific feedback).
@@ -168,11 +181,15 @@ export default function NomineeReviewScreen(): React.ReactElement {
     // (a first-class state; VPA never gates submit). Story 8.13.
     const buildAccount = (a: AccountFields) => {
       const vpa = a.vpa.trim()
+      const note = a.note.trim()
       return {
         accountHolderName: a.holder.trim(),
         accountNumber: a.number.trim(),
         ifsc: a.ifsc.trim().toUpperCase(),
         ...(vpa !== '' ? { vpa } : {}),
+        // Omitted entirely when blank — the contract's field is optional and an empty string would
+        // persist as "a note was written" when none was (AC7).
+        ...(note !== '' ? { nameDifferenceNote: note } : {}),
       }
     }
     const payload: RecordNomineeBankRequest = {
@@ -203,6 +220,26 @@ export default function NomineeReviewScreen(): React.ReactElement {
           onChangeText={(v) => patchAccount(idx, { holder: v })}
           placeholder={t('nominee.bank.holder')}
           accessibilityLabel={t('nominee.bank.holder')}
+          disabled={busy}
+        />
+        {/* Story 6.18 (AC12), `-227` cl.9 — the English-script gate, shown INLINE as the filer types.
+            ⛔ Never a silent server-only 400: a grieving family typing a name in their own script must
+            be told what to change, here, not handed an opaque rejection after submitting. */}
+        {a.holder.trim() !== '' && !ENGLISH_NAME_REGEX.test(a.holder.trim()) ? (
+          <Text color="#B00020" fontSize="$2" accessibilityRole="alert">
+            {t('nominee.bank.holder_english')}
+          </Text>
+        ) : null}
+        {/* Story 6.18 (AC7), `-226` cl.2 — the OPTIONAL note to the District Admin explaining a
+            clerical difference ("the bank shortened her name"). ⛔ NEVER required: cl.2 permits a
+            note, it does not oblige one, and a missing note blocks nothing. */}
+        <Input
+          value={a.note}
+          onChangeText={(v) => patchAccount(idx, { note: v.slice(0, 500) })}
+          placeholder={t('nominee.bank.note')}
+          accessibilityLabel={t('nominee.bank.note')}
+          accessibilityHint={t('nominee.bank.note_help')}
+          maxLength={500}
           disabled={busy}
         />
         <Input
@@ -292,6 +329,13 @@ export default function NomineeReviewScreen(): React.ReactElement {
           <Paragraph color="$colorPress">
             {t('nominee.bank.existing_on_file', { banks: existingBankNames.join(', ') })}
           </Paragraph>
+        ) : null}
+        {/* Story 6.18 (AC5) — the filer is told their bank details need correcting. ⛔ NOT a denial
+            and ⛔ no name: the copy says what to do, never whose name was judged wrong. */}
+        {correctionNeeded ? (
+          <Text color="#B00020" accessibilityRole="alert">
+            {t('nominee.bank.correction_needed')}
+          </Text>
         ) : null}
         {accountBlock(0, 'nominee.bank.primary')}
         {accountBlock(1, 'nominee.bank.secondary')}

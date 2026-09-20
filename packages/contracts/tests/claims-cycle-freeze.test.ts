@@ -9,6 +9,7 @@
 
 import { claim } from '@twt/domain';
 import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
 
 import {
   CycleFreezeCommitRequest,
@@ -16,6 +17,8 @@ import {
   StateTrusteeDecisionOutcome,
   StateTrusteeReasonCode,
   TRUSTEE_REASON_CODE_OUTCOME_COMPAT,
+  CycleFreezeDecisionResponse,
+  trusteeReasonCodeRequiredForOutcome,
 } from '../src/index.js';
 
 // ── Lockstep (anti-drift guard, D-F) ────────────────────────────────────────────────────────
@@ -36,6 +39,29 @@ describe('Story 6.13 — trustee outcome/reason-code lockstep (contracts ↔ dom
       const d = [...claim.TRUSTEE_REASON_CODE_OUTCOME_COMPAT[key as claim.StateTrusteeReasonCode]].sort();
       const c = [...TRUSTEE_REASON_CODE_OUTCOME_COMPAT[key as StateTrusteeReasonCode]].sort();
       expect(c).toEqual(d);
+    }
+  });
+
+  it('⭐ domain STATE_TRUSTEE_DECISION_PHASES === the CycleFreezeDecisionResponse.phase enum (Story 6.18)', () => {
+    // ⚠ THE GAP THIS CLOSES. Until Story 6.18 the phase tuple was the ONE piece of this vocabulary
+    // with no lockstep pin, so a new domain phase could ship while the response enum stayed behind —
+    // and because responses are SERIALIZER-PARSED, the failure mode is not a type error at build time
+    // but a 500 on the first 201 that carries the new phase, in production, on a governance action.
+    // 6.18 adds `correction_return` and pays the debt rather than stepping over it.
+    const responsePhases = (CycleFreezeDecisionResponse.shape.phase as z.ZodEnum<[string, ...string[]]>).options;
+    expect([...responsePhases].sort()).toEqual([...claim.STATE_TRUSTEE_DECISION_PHASES].sort());
+  });
+
+  it('⭐ the reason-code PRESENCE rule agrees domain ↔ contracts for every outcome (Story 6.18)', () => {
+    // Two hand-maintained copies of `trusteeReasonCodeRequiredForOutcome` exist by design (the
+    // browser-bundle rule forbids contracts importing @twt/domain). 6.18 found a THIRD copy inlined
+    // in `state-trustee-decision-persist.ts`'s `assertReasonCode` and collapsed it into the domain
+    // function; these two are what remain, so they must be pinned to each other.
+    for (const outcome of claim.STATE_TRUSTEE_DECISION_OUTCOMES) {
+      expect(
+        trusteeReasonCodeRequiredForOutcome(outcome),
+        `presence rule disagrees for outcome '${outcome}'`,
+      ).toBe(claim.trusteeReasonCodeRequiredForOutcome(outcome));
     }
   });
 });

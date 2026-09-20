@@ -50,6 +50,19 @@ export interface VerificationDecisionStripProps {
   liveDecision?: { reasonCode: VerifierReasonCode; rationale: string };
   processing?: boolean;
   error?: string | null;
+  /**
+   * Story 6.18 (AC4) — `false` when the claim has no CURRENT, PASSING nominee name check, or is
+   * missing one of its two bank accounts (`-226` cl.3/cl.7).
+   *
+   * ⭐ IT DISABLES APPROVE ALONE. Deny and escalate stay available, because cl.6 sends a name
+   * mismatch BACK for correction and cl.7 makes a claim without accounts WAIT — ⛔ neither is ever a
+   * ground to refuse a death claim, and ⛔ neither may become a reason a verifier cannot record the
+   * decision they actually reached. Defaults to `true` so a caller that has not wired the status
+   * (a test, or a surface without the section) is never silently blocked.
+   */
+  canApprove?: boolean;
+  /** Why approve is unavailable — shown beside the disabled control so it is never a dead button. */
+  approveBlockedReason?: string | null;
 }
 
 type PendingAction = { outcome: VerifierDecisionOutcome; label: string } | null;
@@ -61,6 +74,8 @@ export function VerificationDecisionStrip({
   liveDecision,
   processing,
   error,
+  canApprove = true,
+  approveBlockedReason,
 }: VerificationDecisionStripProps): ReactElement {
   const isActive = ACTIVE_STATES.has(claimState);
   const isRevisable = REVISABLE_STATES.has(claimState);
@@ -101,13 +116,19 @@ export function VerificationDecisionStrip({
       const target = e.target as HTMLElement | null;
       const tag = target?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable) return;
-      if (e.key === t.decision.approveShortcut) chooseOutcome('approved');
+      // ⚠ Story 6.18 (AC4) — the SHORTCUT must respect the gate too. Disabling only the button
+      // would leave pressing "1" as an unguarded path to the approve form, which is exactly the kind
+      // of second entrance a keyboard-first console makes easy to forget.
+      if (e.key === t.decision.approveShortcut && canApprove) chooseOutcome('approved');
       else if (e.key === t.decision.denyShortcut) chooseOutcome('denied');
       else if (e.key === t.decision.escalateShortcut) chooseOutcome('escalated');
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [isActive, processing, chooseOutcome]);
+    // `canApprove` is in the deps because the handler CLOSES OVER it — without it the listener
+    // would keep the value from the render that installed it, so a claim that became approvable
+    // (or stopped being) would still answer to the old gate.
+  }, [isActive, processing, chooseOutcome, canApprove]);
 
   // Neither active nor revisable → a non-interactive historical summary (never reopens review).
   if (!isActive && !isRevisable) {
@@ -167,12 +188,20 @@ export function VerificationDecisionStrip({
             type="button"
             className="rounded bg-status-ok-bg px-3 py-1 text-sm font-semibold text-status-ok-fg"
             data-testid="action-approve"
-            disabled={processing}
+            disabled={processing || !canApprove}
             onClick={() => chooseOutcome('approved')}
             aria-pressed={outcome === 'approved'}
           >
             {t.decision.approveShortcut}. {t.decision.approve}
           </button>
+          {/* Story 6.18 (AC4) — a disabled control must never be a mystery. The domain refuses this
+              approval under the claim lock; saying WHY here is what stops a District Admin reading a
+              governance precondition as a broken button. ⛔ Never a name — a reason phrase only. */}
+          {!canApprove && approveBlockedReason != null && approveBlockedReason !== '' ? (
+            <p className="w-full text-xs text-status-warn-fg" data-testid="approve-blocked-reason">
+              {approveBlockedReason}
+            </p>
+          ) : null}
           <button
             type="button"
             className="rounded bg-status-fail-bg px-3 py-1 text-sm font-semibold text-status-fail-fg"

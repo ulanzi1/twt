@@ -110,6 +110,21 @@ const COVERAGE_SET: readonly CoverageEntry[] = [
     pathSubstrings: ['appeal/stage', 'appeal/decisions-by-reviewer'],
     owner: 'Story 6.16',
   },
+  {
+    // Story 6.18 — the nominee NAME CHECK read + write (one GET + one POST on the same path).
+    // BOTH are adjudication-adjacent and BOTH must require a human actor + district scope.
+    // ⭐ The WRITE is the sharper case: `2026-09-19-226` cl.3/cl.5 make a NAMED HUMAN — the District
+    // Admin — the only authority who may record whether the nominee's name matches, and cl.5 forbids
+    // the SYSTEM acting on a mismatch at all. A machine/service actor recording that verdict would
+    // be precisely the thing the ruling rules out, so the structural guard matters here as much as
+    // the runtime one.
+    // ⭐ The READ is listed for the 6.10 reason and one of its own: it decrypts the Tier-1 name of a
+    // SECOND, LIVING subject (the nominee), so an unauthenticated or non-human path to it would
+    // disclose a living person's name, not just a claim signal.
+    file: 'apps/api/src/modules/claims/claims.nominee-name-check.routes.ts',
+    pathSubstrings: ['nominee-name-check'],
+    owner: 'Story 6.18',
+  },
 ];
 
 function main(): void {

@@ -103,6 +103,13 @@ const CLAIM_CORRECT_NOMINEE_BANK = permissionKey('claim.correct_nominee_bank');
 const CLAIM_MANAGE_DPDPA_CONSENT = permissionKey('claim.manage_dpdpa_consent');
 // Story 6.10 — the verifier-console READ key (district-dimension; distinct from the claim.approve WRITE).
 const CLAIM_VERIFY = permissionKey('claim.verify');
+// Story 6.18 (AC1) — the nominee-name READ key and the nominee-name CHECK key, both
+// district-dimension (the CLAIM_VERIFY precedent — checked against the deceased's server-derived
+// posting district). ⭐ The pair is a read/write split under DIFFERENT authorities: `2026-09-19-226`
+// cl.1 gives the helpline operator the duty to make sure the names match at filing (so four roles
+// SEE), while cl.3 reserves the REVIEW to the District Admin (so one role RECORDS). See permissions.ts.
+const CLAIM_VIEW_NOMINEE_NAME_CHECK = permissionKey('claim.view_nominee_name_check');
+const CLAIM_CHECK_NOMINEE_NAME = permissionKey('claim.check_nominee_name');
 // Story 6.12 (R6) — the MANUAL shepherd reassignment WRITE key (district-dimension; distinct from
 // claim.approve/claim.verify — routing the family's contact grants no adjudication power, AC6).
 const CLAIM_ASSIGN_SHEPHERD = permissionKey('claim.assign_shepherd');
@@ -328,6 +335,14 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // post-approval correction window; a pure pariwar_admin still cannot reach the route without
       // ALSO holding a claim.manage_nominee_bank grant (this role does not carry that key).
       CLAIM_CORRECT_NOMINEE_BANK,
+      // Story 6.18 (AC1) — the nominee-name READ key. `2026-09-19-226` cl.4 makes the Pariwar Admin's
+      // approval the FINAL approval after which the campaign goes live, and cl.5 lists them among the
+      // roles an approved name difference must be HIGHLIGHTED to — so they must be able to see the two
+      // names they are approving. A `pariwar` scopeCeiling satisfies the district-dimension check
+      // (scope.ts:286-288 — a pariwar grant covers every geo target in the tenant), so this is a LIVE
+      // capability, ⛔ not an inert grant. ⛔ NOT CLAIM_CHECK_NOMINEE_NAME: their cl.4 authority is the
+      // final approval, exercised through CYCLE_FREEZE below, ⛔ never a second check (cl.3).
+      CLAIM_VIEW_NOMINEE_NAME_CHECK,
       // Story 6.9 (D5a) — the DPDPA consent revocation key (a later consent-management action). A
       // supervisor-escalation grant alongside helpline_operator — the claim.correct_nominee_bank /
       // claim.override_ground_inspection shape (both roles hold it), NOT the helpline_operator-only
@@ -450,6 +465,15 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // the deceased member's server-derived posting district; the `district` scopeCeiling makes that
       // exact-node gate meaningful. Distinct from the CLAIM_APPROVE write above (6.11 owns the verdict).
       CLAIM_VERIFY,
+      // Story 6.18 (AC1) — the nominee-name pair. ⭐ The District Admin is the ONLY role holding the
+      // CHECK key: `2026-09-19-226` cl.3 rules *"Mismatch is reviewed by District Admin"*, and cl.5
+      // *"District Admin cannot proceed unless reason for name mismatch is selected."* Both are
+      // checked at `dimension: 'district'` against the deceased's server-derived posting district —
+      // the `district` scopeCeiling is exactly what makes that exact-node gate meaningful (the
+      // CLAIM_VERIFY precedent). ⛔ The CHECK key is NOT granted to any other role; see permissions.ts
+      // for why verifier / pariwar_admin / helpline_operator hold the READ key and not this one.
+      CLAIM_VIEW_NOMINEE_NAME_CHECK,
+      CLAIM_CHECK_NOMINEE_NAME,
       // Story 6.12 (R6) — the manual shepherd reassignment key. The District Admin IS the shepherd (D-C),
       // so they administer the assignment; checked at `dimension: 'district'` against the deceased's
       // server-derived posting district. Grants no adjudication power (AC6) — orthogonal to CLAIM_APPROVE.
@@ -571,7 +595,15 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
     //     catalog-INDEPENDENT (it holds whether or not this grant exists).
     //   · `tests/rbac/roles.test.ts` — the catalog-DEPENDENT half, asserting this grant is still here.
     //     Removing the key below must fail THERE; the synthetic pin would not notice.
-    permissions: [MEMBER_MODERATE, MEMBER_VIEW_VALIDITY, CLAIM_VERIFY],
+    // Story 6.18 (AC1) — CLAIM_VIEW_NOMINEE_NAME_CHECK: the verifier already reads the console, and
+    // the names belong to the same verification act. ⛔ NOT CLAIM_CHECK_NOMINEE_NAME — `2026-09-19-226`
+    // cl.3 names the District Admin as the reviewer of a mismatch, and this role is not that.
+    permissions: [
+      MEMBER_MODERATE,
+      MEMBER_VIEW_VALIDITY,
+      CLAIM_VERIFY,
+      CLAIM_VIEW_NOMINEE_NAME_CHECK,
+    ],
     scopeCeiling: 'district',
   },
   {
@@ -635,6 +667,14 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       CLAIM_MANAGE_NOMINEE_BANK,
       CLAIM_CORRECT_NOMINEE_BANK,
       CLAIM_MANAGE_DPDPA_CONSENT,
+      // Story 6.18 (AC1) — the nominee-name READ key. ⭐ THE GRANT IS THE DUTY: `2026-09-19-226` cl.1
+      // rules *"It's the duty of helpline_operator to make sure name doesn't mismatch"*, and an
+      // operator who cannot see the declared nominee beside the account holder name cannot discharge
+      // it. A `pariwar` scopeCeiling satisfies the district-dimension check (scope.ts:286-288), so the
+      // grant is LIVE. ⛔ NOT CLAIM_CHECK_NOMINEE_NAME — cl.1's duty is discharged at FILING; letting
+      // the filer also record the Trust's verdict would collapse cl.1 into cl.3 and let them clear
+      // their own work.
+      CLAIM_VIEW_NOMINEE_NAME_CHECK,
       // Story 10.3 (SM-1 C3) — the helpdesk ticket-create key (the operator files on a caller's behalf).
       HELPDESK_CREATE,
       // Story 10.4 — the helpdesk responder-console key. helpline_operator is the default routing target for

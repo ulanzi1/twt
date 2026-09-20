@@ -97,6 +97,13 @@ describe('VerifierConsolePacket — full round-trip + ordering', () => {
     recentPrecedents: { status: 'not_available_yet' as const },
     // Story 6.12 — the live-shepherd section (AC6). `empty` = no live shepherd yet (pre-verification).
     shepherd: { status: 'empty' as const },
+    // Story 6.18 (AC4/AC8) — the NON-PII name-check status. ⛔ Carries no name and no note: the
+    // names live behind `claim.view_nominee_name_check` on their own route, read on demand.
+    nomineeNameCheck: {
+      accountsComplete: true,
+      currentAndPassing: true,
+      differenceReasons: [] as ('initial' | 'married_name' | 'bank_shortened_name')[],
+    },
   };
 
   it('parses a full packet and preserves array order', () => {

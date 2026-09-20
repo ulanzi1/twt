@@ -25,13 +25,14 @@
 // fail-soft (a corrupt envelope ⇒ null for that field, never a failed read). The packet is
 // authorized-display-sensitive — never logged, never persisted client-side.
 
-import { claim, idempotency, ids, rbac, type Db } from '@twt/domain';
+import { claim, idempotency, ids, nominee as nomineeDomain, rbac, type Db } from '@twt/domain';
 import {
   getValidityCached,
   type ValidityCaller,
   type ValidityServiceDeps,
 } from '@twt/validity-service';
 import type {
+  NomineeNameCheckStatus,
   DocumentReviewSection,
   GroundInspectionSection,
   MemberValidityPayloadDto,
@@ -73,6 +74,17 @@ const SIGNED_URL_TTL_SECONDS = 300;
  * is the p95 mechanism — D9 states the true 4L p95 rests on that cache + the claim indices, not a
  * full-scale load harness). Sections (e)/(f) currently do NO DB read (`not_available_yet` until 6.11).
  *
+ * Story 6.18 adds the nominee NAME-CHECK STATUS (AC4/AC8): TWO bounded reads — the claim's live bank
+ * accounts, and the latest `claim.nominee_name_checked` event — → ceiling 11 + 2 = 13.
+ * ⭐ THE EXPLANATION AC8 ASKS FOR, since a casual bump is exactly what this counter exists to
+ * prevent: this section is NOT a convenience. AC4 makes a current, passing check a PRECONDITION of
+ * approval on this very surface, so a console that could not say whether one exists would offer an
+ * approve control that 409s — training a District Admin to treat a governance refusal as a glitch.
+ * ⛔ The two reads are the MINIMUM: the accounts answer cl.7 ("are both there?") and the event
+ * answers cl.3 ("did somebody check, and is that check still about today's data?"). Neither can be
+ * derived from the other, and ⛔ NEITHER decrypts anything — the NAMES stay behind their own key on
+ * their own route, fetched on demand.
+ *
  * Ceiling = baseline 6 + a small explicit allowance of 2 = 8. The allowance is exactly the two Story
  * 6.11 producer reads (getPriorVerifierDecisions + getRecentInScopePrecedents) that light up when the
  * decision read model ships — so 6.11 needs no bump. Story 6.12 adds ONE bounded read (the live-shepherd
@@ -85,7 +97,7 @@ const SIGNED_URL_TTL_SECONDS = 300;
  * counter is asserted in the live-DB integration test so it cannot be silently "fixed" by excluding a
  * newly-added read.
  */
-export const VERIFIER_CONSOLE_MAX_READS = 11;
+export const VERIFIER_CONSOLE_MAX_READS = 13;
 
 /** Counts the assembler's top-level bounded source reads (the no-N+1 fan-out width). */
 class ReadCounter {
@@ -215,6 +227,9 @@ export async function assembleVerifierConsole(
   // ── (g) live shepherd (Story 6.12) — the family's named contact, READ-ONLY; grants no adjudication ─
   const shepherd = await assembleShepherd(ctx, claimCaseId, reads);
 
+  // ── (h) nominee name-check status (Story 6.18) — NON-PII; ⛔ no name, ⛔ no note, ⛔ no decrypt ──
+  const nomineeNameCheck = await assembleNomineeNameCheckStatus(ctx, claimCaseId, core.claim.deceasedMemberId, reads);
+
   const packet: VerifierConsolePacket = {
     claimCaseId: ctx.claimCaseId,
     pariwarId: ctx.pariwarId,
@@ -229,8 +244,70 @@ export async function assembleVerifierConsole(
     priorVerifierComments,
     recentPrecedents,
     shepherd,
+    nomineeNameCheck,
   };
   return { packet, readCount: reads.count };
+}
+
+/**
+ * (h) The nominee NAME-CHECK STATUS (Story 6.18, AC4/AC8). Two bounded reads, ⛔ no decryption.
+ *
+ * ⛔⛔ IT RETURNS FLAGS, NEVER NAMES. `accountsComplete` answers `-226` cl.7; `currentAndPassing` is
+ * the AC4 approval precondition; `differenceReasons` are the codes the District Admin THEMSELVES
+ * recorded (cl.5's highlight). A name reaching this section would put a living nominee's Tier-1
+ * plaintext into every console load, which is precisely what the separate key exists to prevent.
+ *
+ * Fail-soft like its neighbours: a transient throw degrades to "cannot approve yet" rather than
+ * failing the whole packet — the conservative direction, since the gate is re-checked in the
+ * domain under the claim lock anyway and a false "cannot approve" is recoverable while a false
+ * "can approve" would offer a control the write path would then refuse.
+ */
+async function assembleNomineeNameCheckStatus(
+  ctx: VerifierConsoleContext,
+  claimCaseId: ids.ClaimId,
+  deceasedMemberId: ids.MemberId,
+  reads: ReadCounter,
+): Promise<NomineeNameCheckStatus> {
+  try {
+    reads.bump();
+    const accounts = await claim.getClaimNomineeBankAccountsCiphertext(
+      ctx.db,
+      ids.pariwarId(ctx.pariwarId),
+      claimCaseId,
+    );
+    reads.bump();
+    const check = await claim.getLatestNomineeNameCheck(ctx.db, ids.pariwarId(ctx.pariwarId), claimCaseId);
+
+    if (!check) {
+      return { accountsComplete: accounts.length === 2, currentAndPassing: false, differenceReasons: [] };
+    }
+    // The declaration token is derived from the (rank, created_at) refs — ⛔ never from a name.
+    const refs = await nomineeDomain.getMemberNomineeDeclarationRefs(
+      ctx.db,
+      ids.pariwarId(ctx.pariwarId),
+      deceasedMemberId,
+    );
+    const current = claim.isNomineeNameCheckCurrent(
+      check,
+      accounts.map((a) => ({ accountRank: a.accountRank, updatedAt: a.updatedAt })),
+      claim.deriveNomineeDeclarationToken(refs),
+    );
+    return {
+      accountsComplete: accounts.length === 2,
+      currentAndPassing: current && claim.nomineeNameCheckPasses(check),
+      // ⭐ Only surfaced for a CURRENT check — a stale check's difference describes accounts that
+      // have since been corrected, so showing it would highlight a difference that may not exist.
+      differenceReasons: current
+        ? (claim.nomineeNameCheckClericalReasons(check) as NomineeNameCheckStatus['differenceReasons'])
+        : [],
+    };
+  } catch (err) {
+    ctx.log?.warn(
+      { err, claimCaseId: ctx.claimCaseId },
+      'verifier-console: nominee name-check status unavailable; failing closed to cannot-approve',
+    );
+    return { accountsComplete: false, currentAndPassing: false, differenceReasons: [] };
+  }
 }
 
 /**

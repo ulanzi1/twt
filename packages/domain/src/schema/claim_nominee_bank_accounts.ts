@@ -66,6 +66,16 @@ export const claimNomineeBankAccounts = pgTable(
     // 0080). NULLABLE: a nominee without a VPA is a first-class state (do NOT chain `.notNull()`).
     vpaCiphertext: piiColumn(1, 'claim_nominee_bank')('vpa_ciphertext'),
 
+    // The FILER's note to the District Admin explaining a clerical difference between this account's
+    // holder name and the nominee the member declared — Tier-1 ciphertext, OPTIONAL (Story 6.18 AC7,
+    // migration 0116). `2026-09-19-226` cl.2: *"A clerical difference (an initial, a married name, a
+    // bank's shortened name) in form can be submitted with note to District Admin."*
+    // NULLABLE by design: a note is never required, and its absence is a first-class state — the
+    // District Admin still checks the two names and records a verdict (AC3) with or without one.
+    // ⛔ Read ONLY through the AC2 nominee-name-check DTO; ⛔ never echoed by the nominee-bank
+    // presence view, ⛔ never in a log, event, audit line, error body or cache key (AC9, Trap 4).
+    nameDifferenceNoteCiphertext: piiColumn(1, 'claim_nominee_bank')('name_difference_note_ciphertext'),
+
     // ── Tier-3 plaintext — public, IFSC-derived, non-identifying ──
     bankName: text('bank_name').notNull(),
     branch: text('branch'),

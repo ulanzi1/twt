@@ -32,6 +32,7 @@ import {
   R9SessionExistsError,
 } from '../../../src/claim/index.js';
 import * as schema from '../../../src/schema/index.js';
+import { seedNomineeNameCheck } from '../_helpers.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);
@@ -124,6 +125,8 @@ describe.skipIf(!hasDatabase)('R9 voting — two-connection concurrency + forced
       });
       await emit('verification_in_progress', 'verifier_review', 'claim.verifier_reviewing');
       await emit('verifier_review', 'verifier_approved', 'claim.verifier_approved');
+      // Story 6.18 (AC4) — approvable only with two accounts + a current, PASSING name check.
+      await seedNomineeNameCheck(client, PARIWAR, claimCaseId);
       await bindScopedDb(client).insert(schema.claimStateTrusteeDecisions).values({
         claimCaseId,
         pariwarId: PARIWAR,

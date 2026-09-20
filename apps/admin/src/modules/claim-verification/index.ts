@@ -44,3 +44,5 @@ export {
   type AuditTrailEntryData,
 } from './AuditTrailEntry.js';
 export { verifierConsoleEn } from './i18n-en.js';
+// Story 6.18 — the nominee NAME CHECK panel (AC2/AC3/AC8).
+export * from './NomineeNameCheckPanel.js';

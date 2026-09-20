@@ -58,6 +58,36 @@ const EN: Record<string, string> = {
   'helpline.readback.correctionLog': 'Corrections noted',
   'helpline.readback.ariaLabel.identity': 'Identity read-back',
   'helpline.readback.ariaLabel.nominee': 'Nominee read-back',
+
+  // ── Story 6.18 (AC6/AC7) — the bank-details section (`2026-09-19-226` cl.1/cl.2/cl.7) ──
+  // English-only by design: admin console chrome stays OUT of @twt/i18n and the member-facing
+  // parity gate (this module's own convention).
+  'helpline.bank.heading': 'Bank accounts for the support amount',
+  // ⭐ The duty, stated to the person cl.1 actually names.
+  'helpline.bank.duty':
+    "Two accounts are required before this claim can be approved. Check that the name on each account is the nominee the member declared — the names are shown below once you save. If a name differs only in form (an initial, a married name, the bank's short form), record it and add a note for the District Admin.",
+  'helpline.bank.primary': 'Account 1 (main)',
+  'helpline.bank.secondary': 'Account 2 (backup)',
+  'helpline.bank.holder': "Account holder's name (in English)",
+  'helpline.bank.number': 'Account number',
+  'helpline.bank.ifsc': 'IFSC code',
+  'helpline.bank.note': 'Note for the District Admin (optional)',
+  'helpline.bank.submit': 'Save both accounts',
+  'helpline.bank.recorded': 'Both accounts are saved. Check the two names below.',
+  'helpline.bank.namesLoading': 'Loading the names…',
+  'helpline.bank.namesOnAccounts': 'Name on the bank account',
+  'helpline.bank.namesDeclared': 'Nominee the member declared',
+  'helpline.bank.noNominees': 'The member declared no nominees.',
+  'helpline.bank.unreadable': 'Could not be read',
+  'helpline.bank.anonymized': 'Removed at this person\u2019s request',
+  'helpline.bank.incomplete': "Fill in both accounts — the holder's name, the account number and the IFSC.",
+  'helpline.bank.englishRequired': 'Please enter the account holder\u2019s name in English.',
+  'helpline.bank.accountInvalid': 'An account number is 9–18 digits.',
+  'helpline.bank.ifscInvalid': 'That IFSC does not look right (for example SBIN0000001).',
+  'helpline.bank.duplicate':
+    'The two accounts must be different — a second account is what lets the amount through if the first one fails.',
+  // ⭐ AC6 — the claim WAITS for the accounts; it is never refused for the want of them.
+  'helpline.bank.required': 'This claim needs both bank accounts before the District Admin can check it.',
 };
 
 /** Resolve a console-chrome key to English (loud-ish fallback: return the key if unmapped). */

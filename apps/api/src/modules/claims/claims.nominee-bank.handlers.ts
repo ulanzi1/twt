@@ -150,17 +150,33 @@ async function prepareAccount(
     vpaTrimmed = candidate;
   }
 
-  const [accountHolderNameCiphertext, accountNumberCiphertext, ifscCiphertext, vpaCiphertext] =
-    await Promise.all([
-      encryptNomineeBankField(entry.accountHolderName, pariwarId, deps.encryption),
-      encryptNomineeBankField(entry.accountNumber, pariwarId, deps.encryption),
-      encryptNomineeBankField(ifsc, pariwarId, deps.encryption),
-      // Preserve null for an absent VPA — do NOT encrypt an empty string (that would resolve to a
-      // truthy plaintext at intent time and fabricate an unusable `pa=`).
-      vpaTrimmed === null
-        ? Promise.resolve<string | null>(null)
-        : encryptNomineeBankField(vpaTrimmed, pariwarId, deps.encryption),
-    ]);
+  // Story 6.18 (AC7) — the filer's OPTIONAL note to the District Admin. Trimmed to null when blank,
+  // for the same reason as the VPA above: an encrypted empty string would round-trip to a truthy
+  // plaintext and read as "a note was written" when none was.
+  const noteTrimmed =
+    entry.nameDifferenceNote === undefined || entry.nameDifferenceNote.trim() === ''
+      ? null
+      : entry.nameDifferenceNote.trim();
+
+  const [
+    accountHolderNameCiphertext,
+    accountNumberCiphertext,
+    ifscCiphertext,
+    vpaCiphertext,
+    nameDifferenceNoteCiphertext,
+  ] = await Promise.all([
+    encryptNomineeBankField(entry.accountHolderName, pariwarId, deps.encryption),
+    encryptNomineeBankField(entry.accountNumber, pariwarId, deps.encryption),
+    encryptNomineeBankField(ifsc, pariwarId, deps.encryption),
+    // Preserve null for an absent VPA — do NOT encrypt an empty string (that would resolve to a
+    // truthy plaintext at intent time and fabricate an unusable `pa=`).
+    vpaTrimmed === null
+      ? Promise.resolve<string | null>(null)
+      : encryptNomineeBankField(vpaTrimmed, pariwarId, deps.encryption),
+    noteTrimmed === null
+      ? Promise.resolve<string | null>(null)
+      : encryptNomineeBankField(noteTrimmed, pariwarId, deps.encryption),
+  ]);
 
   return {
     input: {
@@ -169,6 +185,7 @@ async function prepareAccount(
       accountNumberCiphertext,
       ifscCiphertext,
       vpaCiphertext,
+      nameDifferenceNoteCiphertext,
       bankName: resolved.bankName,
       branch: resolved.branch,
       ifscValidated: true,
@@ -286,7 +303,17 @@ async function nomineeBankStatus(
   claimCaseId: ids.ClaimId,
 ): Promise<NomineeBankStatusResponse> {
   const rows = await claim.getClaimNomineeBankAccountsCiphertext(tx, pariwarId, claimCaseId);
+  // Story 6.18 (AC5) — tell the FILER their bank details need correcting. Derived from the two
+  // sources that mean the same thing downstream: the District Admin's `does_not_match` verdict
+  // (`-226` cl.6) and the Pariwar Admin's live return row (`-227` cl.10).
+  // ⛔ NOT a denial, and the response carries ⛔ no name and ⛔ no reason text — a filer is told WHAT
+  // to do, never handed a judgement about whose name is wrong.
+  const [latestCheck, hasReturn] = await Promise.all([
+    claim.getLatestNomineeNameCheck(tx, pariwarId, claimCaseId),
+    claim.hasLiveReturnRow(tx, pariwarId, claimCaseId),
+  ]);
   return {
+    correctionNeeded: claim.isClaimUnderCorrection(latestCheck, hasReturn),
     accounts: rows.map((row) => ({
       rank: row.accountRank as 1 | 2,
       bankName: row.bankName,

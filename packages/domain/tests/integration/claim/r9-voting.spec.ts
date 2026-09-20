@@ -38,7 +38,7 @@ import {
 } from '../../../src/claim/index.js';
 import * as schema from '../../../src/schema/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
-import { PARIWAR_A, enterAppScope, seedClauseVersion, seedRoleGrant } from '../_helpers.js';
+import { PARIWAR_A, enterAppScope, seedClauseVersion, seedNomineeNameCheck, seedRoleGrant } from '../_helpers.js';
 
 const TRUSTEE = 'a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1';
 const PANEL = [
@@ -107,6 +107,10 @@ async function driveToApproved(client: Client, claimCaseId: ClaimId, deceased: M
   });
   await emit('verification_in_progress', 'verifier_review', 'claim.verifier_reviewing');
   await emit('verifier_review', 'verifier_approved', 'claim.verifier_approved');
+  // Story 6.18 (AC4) — a claim is only approvable once it carries its two bank accounts and a
+  // current, PASSING District Admin name check. Seeded through the REAL writer, so these specs keep
+  // exercising the production path rather than bypassing the new gate.
+  await seedNomineeNameCheck(client, PARIWAR_A, claimCaseId);
 }
 
 /** Insert the live routed_to_r9 routing row directly (6.13's routeToR9 output). */
@@ -252,6 +256,62 @@ describe.skipIf(!hasDatabase)('R9 voting (PARIWAR_A scope)', () => {
     const live = await liveVotes(tx, session.sessionId);
     expect(live).toHaveLength(1);
     expect(live[0]!.vote).toBe('deny');
+  });
+
+  // ── Story 6.18 (AC4) — P4: R9 is its OWN path to approval and must pass the name-check gate ──
+  it('⭐⭐ Story 6.18 P4 — an R9 APPROVE is refused without a current, passing name check, and nothing is written', async () => {
+    const { client, tx } = getTx();
+    // ⭐ `setupRoutedClaim` seeds a passing check (the shared fixture does), so this test REMOVES it
+    // to reach the unchecked state. R9 bypasses the District Admin's verification approval entirely,
+    // so without P4 an R9-approved claim would land in the committable set having never had its
+    // nominee name looked at by anybody.
+    const { claimCaseId } = await setupRoutedClaim(client, tx);
+    await tx
+      .delete(schema.claimNomineeBankAccounts)
+      .where(
+        and(
+          eq(schema.claimNomineeBankAccounts.pariwarId, PARIWAR_A),
+          eq(schema.claimNomineeBankAccounts.claimCaseId, claimCaseId),
+        ),
+      );
+
+    await openR9VotingSession(client, openBase(claimCaseId));
+    await castR9Vote(client, voteBase(claimCaseId, PANEL[0]!, 'approve'));
+    await castR9Vote(client, voteBase(claimCaseId, PANEL[1]!, 'approve'));
+
+    await expect(finalizeR9Outcome(client, finalizeBase(claimCaseId, PANEL[0]!))).rejects.toMatchObject({
+      name: 'NomineeBankAccountsRequiredError',
+    });
+
+    // ⭐ AND THE REFUSAL IS CLEAN: the gate runs BEFORE any write, so there is no orphaned session
+    // outcome, no lifecycle event and no metadata row to reconcile later.
+    expect(await claimState(tx, claimCaseId)).not.toBe('state_trustee_approved');
+    const events = await tx
+      .select({ t: schema.eventsLog.eventType })
+      .from(schema.eventsLog)
+      .where(and(eq(schema.eventsLog.pariwarId, PARIWAR_A), eq(schema.eventsLog.streamId, claimCaseId)));
+    expect(events.map((e) => e.t)).not.toContain('claim.r9_outcome');
+  });
+
+  it('⛔ Story 6.18 P4 — an R9 DENY is NEVER gated (cl.6/cl.7 — a claim is never refused over a name)', async () => {
+    const { client, tx } = getTx();
+    const { claimCaseId } = await setupRoutedClaim(client, tx);
+    await tx
+      .delete(schema.claimNomineeBankAccounts)
+      .where(
+        and(
+          eq(schema.claimNomineeBankAccounts.pariwarId, PARIWAR_A),
+          eq(schema.claimNomineeBankAccounts.claimCaseId, claimCaseId),
+        ),
+      );
+
+    await openR9VotingSession(client, openBase(claimCaseId));
+    await castR9Vote(client, voteBase(claimCaseId, PANEL[0]!, 'deny'));
+    await castR9Vote(client, voteBase(claimCaseId, PANEL[1]!, 'deny'));
+
+    // ⭐ No accounts, no check — and the panel can still reach the decision it actually made.
+    const res = await finalizeR9Outcome(client, finalizeBase(claimCaseId, PANEL[0]!));
+    expect(res.session.outcome).toBe('denied');
   });
 
   // ── AC4 — finalize ──

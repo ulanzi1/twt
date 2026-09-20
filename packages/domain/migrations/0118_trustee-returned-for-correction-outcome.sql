@@ -1,0 +1,21 @@
+-- Migration 0118 — add the `returned_for_correction` value to the state_trustee_decision_outcome
+-- enum (Story 6.18, AC11 / Task 4b).
+--
+-- ⭐⭐ THIS IS THE FIRST EVER `ALTER TYPE` ON `state_trustee_decision_outcome`. The enum has carried
+-- exactly {approved, denied, routed_to_r9} since its create migration 0062, and `outcome` is NOT
+-- NULL — so the Pariwar Admin's RETURN needs a value of its own.
+--
+-- ⛔⛔ IT CANNOT REUSE `denied`, AND THAT IS THE WHOLE POINT OF THE CLAUSE. `2026-09-20-227` cl.10
+-- makes the return a request for CORRECTION, explicitly ⛔ not a refusal: the claim keeps its state,
+-- no appeal flow (Story 6.16) starts, and the family is asked to fix a detail — ⛔ never told their
+-- claim failed. Writing `denied` on that row would make the claim read as refused to every consumer
+-- of this table, including `appeal-eligibility.ts`. `-226` cl.6 says the same thing about the
+-- District Admin's own path: a mismatch is SENT BACK, ⛔ not denied for.
+--
+-- ⚠ A SEPARATE migration from 0117 (the PHASE value) — `ALTER TYPE … ADD VALUE` is never mixed with
+-- another enum's ALTER or with any USE of the value (the 0064/0065/0069 precedent). `IF NOT EXISTS`
+-- keeps a re-run a no-op.
+--
+-- ⚠ DO NOT REGENERATE (the 0021–0117 discipline).
+
+ALTER TYPE "public"."state_trustee_decision_outcome" ADD VALUE IF NOT EXISTS 'returned_for_correction';

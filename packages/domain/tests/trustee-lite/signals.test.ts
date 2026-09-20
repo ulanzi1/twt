@@ -51,6 +51,8 @@ function freezeCase(overrides: Partial<CycleFreezePendingCase> = {}): CycleFreez
     signalsSummary: 'state=verifier_approved; intake=app',
     concealmentFlags: [],
     routedToR9: false,
+    underCorrection: false,
+    nameDifferenceReasons: [],
     ...overrides,
   };
 }

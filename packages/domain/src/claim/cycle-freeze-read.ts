@@ -29,7 +29,7 @@
 // through `clampLimit` (the domain limit-clamp gate — every dynamic `.limit()` is clamped). Rationale is
 // ciphertext AS STORED — decrypted only at the route, never here.
 
-import { and, eq, inArray, isNull, or } from 'drizzle-orm';
+import { and, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import type { ClaimId, PariwarId } from '../ids/index.js';
@@ -58,6 +58,15 @@ export interface CycleFreezePendingCase {
   readonly signalsSummary: string;
   readonly concealmentFlags: string[];
   readonly routedToR9: boolean;
+  /** Story 6.18 (AC11) — the claim carries a LIVE `correction_return` row: the Pariwar Admin sent it
+   *  back to the District Admin and it has not been resubmitted. ⛔ NOT a denial; the claim is
+   *  UNDER CORRECTION and is excluded from the commit set until the correction + a fresh check land. */
+  readonly underCorrection: boolean;
+  /** Story 6.18 (AC8) — the clerical reason CODES on the claim's LATEST recorded name check, when
+   *  that check accepted a difference. ⭐ NON-PII: reason codes only, ⛔ never a name. Empty when the
+   *  check recorded no difference, or when no check exists. The flag comes from the District Admin's
+   *  RECORDED judgement — ⛔ never from a computer comparison (`-226` cl.5). */
+  readonly nameDifferenceReasons: readonly string[];
 }
 
 /** The three-bucket pending list (AC1 + the review-time "what will Commit act on" addition). */
@@ -188,6 +197,8 @@ export async function getCycleFreezePending(db: Db, pariwarId: PariwarId): Promi
   // surface nothing (never green a redacted/absent signal — D10).
   const concealmentClaimIds = new Set<string>();
   const routedClaimIds = new Set<string>();
+  const returnedClaimIds = new Set<string>();
+  const nameDifferenceByClaim = new Map<string, string[]>();
   if (allClaimIds.length > 0) {
     const concealmentSignals = await assessClaimConcealmentBulk(
       db,
@@ -211,6 +222,42 @@ export async function getCycleFreezePending(db: Db, pariwarId: PariwarId): Promi
         ),
       );
     for (const r of routingRows) routedClaimIds.add(r.claimCaseId);
+
+    // Story 6.18 (AC11) — the same bulk shape for the return rows: ONE query for the whole page,
+    // never a per-card lookup.
+    const returnRows = await db
+      .select({ claimCaseId: claimStateTrusteeDecisions.claimCaseId })
+      .from(claimStateTrusteeDecisions)
+      .where(
+        and(
+          eq(claimStateTrusteeDecisions.pariwarId, pariwarId),
+          inArray(claimStateTrusteeDecisions.claimCaseId, allClaimIds),
+          eq(claimStateTrusteeDecisions.phase, 'correction_return'),
+          eq(claimStateTrusteeDecisions.outcome, 'returned_for_correction'),
+          isNull(claimStateTrusteeDecisions.supersededAt),
+        ),
+      );
+    for (const r of returnRows) returnedClaimIds.add(r.claimCaseId);
+
+    // Story 6.18 (AC8) — the LATEST name check per claim, in ONE query for the whole page.
+    // ⚠ `DISTINCT ON` requires the leading ORDER BY term to match the DISTINCT ON expression or PG
+    // raises 42P10 ([[project_contribution_fact_projection_substrate]]) — hence `ORDER BY stream_id,
+    // event_version DESC` and ⛔ not `event_version DESC` alone.
+    const checkRows = await db.execute<{ stream_id: string; payload: unknown }>(sql`
+      SELECT DISTINCT ON (stream_id) stream_id, payload
+        FROM events_log
+       WHERE pariwar_id = ${pariwarId}
+         AND event_type = 'claim.nominee_name_checked'
+         AND stream_id IN (${sql.join(allClaimIds.map((id) => sql`${id}`), sql`, `)})
+       ORDER BY stream_id, event_version DESC
+    `);
+    for (const row of checkRows.rows ?? []) {
+      const payload = row.payload as { accounts?: { verdict?: string; clerical_reason?: string | null }[] };
+      const reasons = (payload.accounts ?? [])
+        .filter((a) => a.verdict === 'clerical_difference' && a.clerical_reason != null)
+        .map((a) => a.clerical_reason as string);
+      if (reasons.length > 0) nameDifferenceByClaim.set(row.stream_id, [...new Set(reasons)]);
+    }
   }
 
   const toCase = (row: (typeof readyRows)[number]): CycleFreezePendingCase => ({
@@ -224,6 +271,8 @@ export async function getCycleFreezePending(db: Db, pariwarId: PariwarId): Promi
     signalsSummary: signalsSummaryFor(row.intakeChannels, row.currentState),
     concealmentFlags: concealmentClaimIds.has(row.claimCaseId) ? [CONCEALMENT_REVIEW_REQUIRED_FLAG] : [],
     routedToR9: routedClaimIds.has(row.claimCaseId),
+    underCorrection: returnedClaimIds.has(row.claimCaseId),
+    nameDifferenceReasons: nameDifferenceByClaim.get(row.claimCaseId) ?? [],
   });
 
   return {

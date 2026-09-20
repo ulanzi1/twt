@@ -22,6 +22,9 @@
 
 import { z } from 'zod';
 
+import { EnglishScriptName } from '../_common/primitives.js';
+import { NAME_DIFFERENCE_NOTE_MAX_CHARS } from './nominee-name-check.js';
+
 /**
  * The RBI IFSC shape RE-DECLARED as a wire constant (value-aligned with `@twt/platform-adapters`
  * IFSC_REGEX — contracts cannot depend on platform-adapters, the ground-inspection wire-enum
@@ -53,10 +56,24 @@ const ACCOUNT_NUMBER_REGEX = /^\d{9,18}$/;
  */
 export const NomineeBankAccountEntry = z
   .object({
-    accountHolderName: z.string().trim().min(1).max(200),
+    // Story 6.18 (AC12), `2026-09-20-227` cl.9 — captured in ENGLISH script so it can be compared
+    // with the declared nominee's name without transliterating. ⛔ INPUT-ONLY: this predicate must
+    // NEVER reach an output schema (responses are serializer-parsed; see the predicate's doc-block).
+    accountHolderName: EnglishScriptName,
     accountNumber: z.string().regex(ACCOUNT_NUMBER_REGEX, 'account number must be 9–18 digits'),
     ifsc: z.string().regex(NOMINEE_BANK_IFSC_REGEX, 'IFSC must match the RBI format (e.g. SBIN0000001)'),
     vpa: z.string().trim().regex(NOMINEE_BANK_VPA_REGEX, 'UPI ID must look like name@bank').optional(),
+    /**
+     * Story 6.18 (AC7) — the filer's OPTIONAL note to the District Admin explaining a clerical
+     * difference between this account's holder name and the nominee the member declared.
+     * `2026-09-19-226` cl.2: *"A clerical difference (an initial, a married name, a bank's shortened
+     * name) in form can be submitted with note to District Admin."*
+     * ⭐ OPTIONAL by ruling, ⛔ never required: cl.2 PERMITS a note, it does not oblige one, and a
+     * missing note must ⛔ never block a filing or a check.
+     * ⚠ Tier-1 PII — encrypted server-side, and read back ONLY through the AC2 nominee-name-check
+     * DTO. ⛔ Never echoed by the presence view, ⛔ never in a log, event, audit line or error body.
+     */
+    nameDifferenceNote: z.string().trim().min(1).max(NAME_DIFFERENCE_NOTE_MAX_CHARS).optional(),
   })
   .strict();
 export type NomineeBankAccountEntry = z.output<typeof NomineeBankAccountEntry>;
@@ -108,6 +125,22 @@ export type RecordNomineeBankHelplineRequest = z.output<typeof RecordNomineeBank
  * The NON-PII presence view of one recorded account (never echo account number / holder name /
  * raw IFSC — the `NomineeStatusResponse` presence-flag precedent). The rank, the public bank
  * name, the validated flag, and a holder-name-present boolean.
+ *
+ * ── ⭐ THE ONE NAMED EXCEPTION (Story 6.18, AC2/AC9 — `2026-09-19-226` cl.3/cl.5) ─────────────
+ * ⭐ THIS SHAPE IS UNCHANGED and the rule above still binds every schema in THIS file. The
+ * exception lives in ONE other place and is named here so a reader meets it at the rule, ⛔ not by
+ * discovering a second holder-name echo and assuming the rule rotted:
+ *   · `packages/contracts/src/claims/nominee-name-check.ts` — the `NomineeNameCheckResponse` read,
+ *     gated on the dedicated key `claim.view_nominee_name_check` at `dimension: 'district'`.
+ * ⭐ WHY IT IS PERMITTED, in one line: the Trustee Panel made a NAMED HUMAN read the two names and
+ * record whether they match (cl.3), and a duty to compare two strings cannot be discharged without
+ * seeing them. The verifier console's own decrypted `deceasedName` is the same posture — an
+ * authorized surface decrypts server-side for a person who is entitled to look.
+ * ⛔ WHAT THE EXCEPTION DOES **NOT** COVER, and this is the load-bearing half: the account number,
+ * the raw IFSC and the VPA stay NEVER-ECHOED on every surface including that one. The exception is
+ * for the HOLDER NAME (and the filer's name-difference note) ALONE, because those are the only two
+ * fields the ruled-on comparison needs. A future reader widening it to "the account is visible on
+ * the check route" would be inventing a disclosure nobody ruled.
  */
 const NomineeBankAccountView = z
   .object({
@@ -139,6 +172,16 @@ export type RecordNomineeBankResponse = z.output<typeof RecordNomineeBankRespons
 export const NomineeBankStatusResponse = z
   .object({
     accounts: z.array(NomineeBankAccountView),
+    /**
+     * Story 6.18 (AC5) — the bank details need correcting: either the District Admin recorded that a
+     * holder name does not match the declared nominee (`-226` cl.6), or the Pariwar Admin returned
+     * the claim for correction (`-227` cl.10).
+     *
+     * ⛔⛔ IT IS NOT A DENIAL, AND THE COPY THAT RENDERS IT MUST NOT READ AS ONE. The claim stays
+     * open and in its state; the family is being asked to fix a detail. ⛔ It carries NO name and NO
+     * reason text — a filer is told WHAT to do, never handed a judgement about whose name is wrong.
+     */
+    correctionNeeded: z.boolean(),
   })
   .strict();
 export type NomineeBankStatusResponse = z.output<typeof NomineeBankStatusResponse>;

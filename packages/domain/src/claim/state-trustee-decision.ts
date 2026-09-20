@@ -44,6 +44,15 @@ export const STATE_TRUSTEE_DECISION_PHASES = [
   // so the R9 resolution is queryable on the same decision surface as the freeze/vote/commit/routing phases.
   // Added to the `state_trustee_decision_phase` pgEnum via migration 0064 (ALTER TYPE ADD VALUE).
   'r9_outcome',
+  /**
+   * Story 6.18 (AC11) — the Pariwar Admin RETURNED the claim to the District Admin with a note.
+   * Added to the `state_trustee_decision_phase` pgEnum via migration 0117 (ALTER TYPE ADD VALUE).
+   * ⭐ METADATA-ONLY, the shipped `routeToR9` shape: ⛔ no lifecycle event, ⛔ no state change, and
+   * ⛔ NOT a denial — `2026-09-20-227` cl.10 makes it a request for CORRECTION, so ⛔ no appeal flow
+   * (6.16) starts. The table's partial-unique `(claim_case_id, phase) WHERE superseded_at IS NULL`
+   * gives this phase its own one-live slot, so a claim can carry at most one open return.
+   */
+  'correction_return',
 ] as const;
 export const stateTrusteeDecisionPhaseEnum = pgEnum(
   'state_trustee_decision_phase',
@@ -58,7 +67,20 @@ export type StateTrusteeDecisionPhase = (typeof STATE_TRUSTEE_DECISION_PHASES)[n
  * metadata-only routing outcome (NO lifecycle event — AC0/AC4). Claim STATE is always derived from event
  * replay, never from this column (AC0).
  */
-export const STATE_TRUSTEE_DECISION_OUTCOMES = ['approved', 'denied', 'routed_to_r9'] as const;
+export const STATE_TRUSTEE_DECISION_OUTCOMES = [
+  'approved',
+  'denied',
+  'routed_to_r9',
+  /**
+   * Story 6.18 (AC11) — the outcome carried by a `correction_return` row. Added to the
+   * `state_trustee_decision_outcome` pgEnum via migration 0118 — ⭐ the FIRST ever ALTER on that
+   * enum, which has carried {approved, denied, routed_to_r9} since its create migration 0062.
+   * ⛔⛔ IT CANNOT REUSE `denied`, and that is the clause, not a preference: `-227` cl.10 makes the
+   * return a request for CORRECTION and explicitly ⛔ not a refusal. `outcome` is NOT NULL, so a
+   * return needs a value of its own or it would have to lie about what happened.
+   */
+  'returned_for_correction',
+] as const;
 export const stateTrusteeDecisionOutcomeEnum = pgEnum(
   'state_trustee_decision_outcome',
   STATE_TRUSTEE_DECISION_OUTCOMES,
@@ -122,7 +144,10 @@ export const TRUSTEE_REASON_CODE_OUTCOME_COMPAT: Readonly<
   // presence rule is unchanged (`trusteeReasonCodeRequiredForOutcome('approved')` stays false) — an
   // ordinary approve still takes NO code; this one is merely ACCEPTED on an approve once supplied.
   concealment_override: ['approved'],
-  other: ['denied', 'routed_to_r9'],
+  // ⭐ `other` is the ONLY code valid for a return (AC11): `-227` cl.10 asks for a NOTE explaining
+  // the discrepancy, ⛔ not a category — the Panel named no return-reason vocabulary, and inventing
+  // one here would be this story deciding a question nobody ruled.
+  other: ['denied', 'routed_to_r9', 'returned_for_correction'],
 };
 
 /**
@@ -131,7 +156,10 @@ export const TRUSTEE_REASON_CODE_OUTCOME_COMPAT: Readonly<
  * contract superRefine (→ 400) AND the domain write-path (defense-in-depth).
  */
 export function trusteeReasonCodeRequiredForOutcome(outcome: string): boolean {
-  return outcome === 'denied' || outcome === 'routed_to_r9';
+  // Story 6.18 (AC11) — a RETURN requires a reason code too, because `-227` cl.10 requires the NOTE
+  // ("goes back to District Admin for correction with Note") and the rationale is what carries it.
+  // The code is always `other`; the compat map above is what pins that.
+  return outcome === 'denied' || outcome === 'routed_to_r9' || outcome === 'returned_for_correction';
 }
 
 /**

@@ -647,7 +647,58 @@ export function permissionKey(value: string): PermissionKey {
 // ⚠ THE SUBSTRATE SPLITS TOO (D2, `-203` cl.5): `pariwar_drive_target_schedule` (versioned,
 // pariwar_admin-written) and `pariwar_drive_target_visibility` (super_admin-written, both flags), so
 // the pariwar_admin write path ⛔ CANNOT NAME A REVEAL-FLAG COLUMN AT ALL.
-export const PERMISSION_CATALOG_VERSION = 41 as const;
+// ── Bumped 41 → 43 at Story 6.18 / Decision 2026-09-20-228 — added TWO keys: 49 → 51 ────────────
+// The NOMINEE NAME CHECK pair. `2026-09-19-226` (Trustee-ratified — Dhiraj Rahul + Kalpana Bharti)
+// cl.3 makes the DISTRICT ADMIN the checker of the name on a claim's two bank accounts against the
+// nominee(s) the member declared; cl.1 makes the HELPLINE OPERATOR responsible for the match at
+// FILING; cl.5 rules the system ⛔ NEVER acts on a mismatch — it only SHOWS two names to a person,
+// whose recorded judgement is the only signal that ever exists.
+//   · `claim.view_nominee_name_check` — district-dimension. `district_admin` + `verifier` +
+//     `pariwar_admin` + `helpline_operator` (+ derived super_admin).
+//   · `claim.check_nominee_name`      — district-dimension. ⛔ `district_admin` ONLY (+ super_admin).
+// +1 PER KEY (the `feature_flag.view`/`.flip` and `pariwar.manage_drive_target`/`…_visibility`
+// two-key precedent), so the count moves 49 → 51 — ⛔ not 50.
+//
+// ⚠⛔ THE `43` WAS COMPUTED FROM A LIVE READ, ⛔ NOT TRANSCRIBED — the rule the note immediately
+// above states about this very story. `permissions.ts` read **41** with **49** keys on 2026-09-20
+// (`git diff 5f8d27a0..HEAD -- packages` empty) ⇒ 41 + 2 = 43, 49 + 2 = 51. ⚠ The 2026-09-07
+// drive-target note records a PENDING FIRST KEY REMOVAL (`pariwar.manage_drive_target`, unconsumed
+// after 11b.14 ruled the figure DERIVES itself) that collides with this bump — it is ⛔ STILL
+// UNLANDED and awaiting BigDev's choice of vehicle, so it takes the next numbers from 43/51, ⛔ not
+// the other way round. Whichever lands second reads live again.
+//
+// ⛔⛔ WHY TWO KEYS AND NOT ONE. The READ and the JUDGEMENT are different authorities, and `-226`
+// splits them explicitly: cl.1 gives the helpline operator the duty to make sure the names match at
+// filing (so they MUST be able to see both), while cl.3 reserves the REVIEW of a mismatch to the
+// District Admin. Under one key, either the helpline operator could record the Trust's verdict, or
+// the operator could not see the names they are accountable for. The `feature_flag.view`/`.flip`
+// ground is exactly this: the visibility requirement is deliberately BROADER than the write
+// requirement, and an umbrella key collapses the two. It is also the 6.10/6.11
+// `claim.verify`-read/`claim.approve`-write separation applied one level down.
+//
+// ⭐ WHY `pariwar_admin` AND `helpline_operator` ARE ⛔ NOT INERT HERE — the question
+// [[project_rbac_geo_scope_containment]] forces, and the reason this differs from 10.3's refusal to
+// seed district_admin on a pariwar gate. The asymmetry runs ONE WAY: a NARROWER grant cannot satisfy
+// a BROADER check. These keys are checked at `dimension: 'district'` — the NARROW end — and
+// `scope.ts:286-288` states it outright: *"A pariwar-ceiling grant covers every geo target within the
+// (already active-Pariwar-filtered) tenant"* ⇒ `return true`. So a `pariwar`-ceiling role passes a
+// district-dimension check and both grants are LIVE capabilities, ⛔ not seeded falsehoods.
+// ⚠ THE ONE HOLE, RECORDED: `scope.ts:235` fails closed on a null target value, so a claim whose
+// deceased member has ⛔ no derivable posting district is unreachable for EVERY holder of these keys,
+// pariwar-ceiling ones included. That is the pre-existing `claim.verify` behaviour (6.10), ⛔ not
+// something this story introduces or fixes.
+//
+// ⛔ NOT `state_trustee` on EITHER key — the 6.10 `claim.verify` disposition is unchanged and is
+// followed, ⛔ not re-litigated: a `state`-ceiling grant reaches a district target only where the
+// Pariwar has published a tree carrying that edge (ADR-0038, Story 1.18), and Story 6.10 declined the
+// grant even after that resolver shipped, because reachability moved and role composition did not.
+// ⭐ `-226` cl.5 names DA / PA / Super Admin as the audience for the HIGHLIGHT and names the District
+// Admin alone as the checker; the State Trustee is in neither list.
+// ⛔ AND `claim.verify` IS NOT WIDENED to cover this read. It gates the verifier CONSOLE's bounded
+// compound read; the names are a Tier-1 decrypt of a SECOND living subject (the nominee) on its own
+// route, and folding them under `claim.verify` would hand every console reader a nominee's plaintext
+// name as a side effect of reading claim signals. A new key is the only way that stays visible here.
+export const PERMISSION_CATALOG_VERSION = 43 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -838,6 +889,38 @@ export const SEED_PERMISSION_KEYS = [
   // role composition. ⚠ The 6.7 block_admin case was NOT the same deferral and is NOT resolved by
   // this — it is rank order (see the `claim.conduct_ground_inspection` block above). See roles.ts.
   'claim.verify',
+  // Story 6.18 (AC1, Decision `2026-09-20-228`) — the NOMINEE-NAME READ key. Gates
+  // GET …/admin/claims/:claimCaseId/nominee-name-check, which returns the holder name on each of the
+  // claim's two bank accounts beside the nominee(s) the deceased member DECLARED, plus the filer's
+  // note. Checked at `dimension: 'district'` against the deceased member's SERVER-DERIVED posting
+  // district (the `claim.verify` precedent — the client never submits the authz district).
+  // ⛔ DISTINCT from `claim.verify`, which was deliberately NOT widened to cover this: the console
+  // key gates claim SIGNALS, while this decrypts a Tier-1 name belonging to a SECOND living subject
+  // (the nominee), and no one should acquire a nominee's plaintext name as a side effect of reading
+  // a claim. ⛔ DISTINCT from `claim.check_nominee_name` below, which records the verdict: seeing the
+  // two names and being the Trust's judge of whether they match are different authorities
+  // (`2026-09-19-226` cl.1 vs cl.3 — the `feature_flag.view`/`.flip` read/write split).
+  // Granted to `district_admin` + `verifier` (they already read the console) + `pariwar_admin` (cl.4
+  // makes their approval FINAL, so they must see what they are approving) + `helpline_operator`
+  // (⭐ cl.1 gives THEM the duty to make sure the names match at filing — the grant is the duty)
+  // (+ derived super_admin). ⛔ NOT `state_trustee` — see the version-bump note above.
+  'claim.view_nominee_name_check',
+  // Story 6.18 (AC1, Decision `2026-09-20-228`) — the NOMINEE-NAME CHECK WRITE key. Gates
+  // POST …/admin/claims/:claimCaseId/nominee-name-check, the District Admin's RECORDED judgement per
+  // account (`matches` | `clerical_difference` + a selected reason | `does_not_match`). Checked at
+  // `dimension: 'district'`, the same server-derived district as the read key.
+  // ⭐ Granted to `district_admin` ONLY (+ derived super_admin), and that is a RULING, not an author
+  // default: `2026-09-19-226` cl.3 — *"Mismatch is reviewed by District Admin"* — and cl.5 —
+  // *"District Admin cannot proceed unless reason for name mismatch is selected."*
+  // ⛔ NOT `verifier`, ⛔ NOT `pariwar_admin`, ⛔ NOT `helpline_operator`: all three hold the READ key
+  // above and none of them is the checker. The helpline operator's cl.1 duty is discharged at FILING
+  // (they see both names and submit matching accounts); letting them ALSO record the Trust's verdict
+  // would collapse cl.1 into cl.3 and let the filer clear their own work. The Pariwar Admin's cl.4
+  // authority is the FINAL APPROVAL, exercised through `cycle.freeze`, ⛔ not a second check.
+  // ⛔ NOT `state_trustee` — see the version-bump note above.
+  // ACCEPTANCE CONDITION for any further holder: a Panel ruling superseding `-226` cl.3. ⛔ Never a
+  // consistency argument from the read key's four holders.
+  'claim.check_nominee_name',
   // Story 6.12 (R6) — the MANUAL shepherd reassignment WRITE key. Gates
   // `POST …/admin/claims/:claimCaseId/shepherd/reassign` (checked at `dimension: 'district'` against the
   // deceased member's SERVER-DERIVED posting district — the client never submits the authz district).

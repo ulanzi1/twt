@@ -252,6 +252,11 @@ import {
   OffPortalExportResponse,
   RecordCorrectionResponse,
   StaffMediatedDeliveryResponse,
+  NomineeNameCheckResponse,
+  NomineeNameCheckWriteResponse,
+  type NomineeNameCheckRequest,
+  RecordNomineeBankResponse,
+  type RecordNomineeBankHelplineRequest,
 } from '@twt/contracts';
 import { z } from 'zod';
 
@@ -1268,6 +1273,56 @@ export function getVerifierConsole(pariwarId: string, claimCaseId: string): Prom
   return apiFetch(
     `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/claims/${encodeURIComponent(claimCaseId)}/verifier-console`,
     VerifierConsoleResponse,
+  );
+}
+
+// ── Helpline nominee-bank collection (Story 6.8 route, surfaced by Story 6.18 AC7) ──────────
+// `2026-09-19-226` cl.1: *"It's the duty of helpline_operator to make sure name doesn't mismatch."*
+// The API has existed since 6.8; 6.18 is what finally gives the operator a way to discharge it.
+// ⛔ The RESPONSE is a NON-PII presence view — it never echoes the holder name back. The operator
+// sees the names through the separate, separately-keyed name-check read.
+
+export function recordHelplineNomineeBank(
+  pariwarId: string,
+  claimCaseId: string,
+  body: RecordNomineeBankHelplineRequest,
+): Promise<RecordNomineeBank> {
+  return apiFetch(
+    `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/claims/${encodeURIComponent(claimCaseId)}/nominee-bank`,
+    RecordNomineeBankResponse,
+    { method: 'POST', body: JSON.stringify(body) },
+  );
+}
+
+// ── Nominee NAME CHECK surface (Story 6.18, `2026-09-19-226` cl.3/cl.5) ──────
+// The read shows each live bank account's HOLDER NAME beside the nominees the deceased member
+// DECLARED, plus the filer's note; the write records the District Admin's per-account verdict.
+// ⛔ The client does NO comparison and renders NO match hint — two lists in, a recorded human
+// judgement out (Trap 1).
+
+type RecordNomineeBank = z.output<typeof RecordNomineeBankResponse>;
+type NomineeNameCheck = z.output<typeof NomineeNameCheckResponse>;
+type NomineeNameCheckWrite = z.output<typeof NomineeNameCheckWriteResponse>;
+
+export function getNomineeNameCheck(
+  pariwarId: string,
+  claimCaseId: string,
+): Promise<NomineeNameCheck> {
+  return apiFetch(
+    `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/claims/${encodeURIComponent(claimCaseId)}/nominee-name-check`,
+    NomineeNameCheckResponse,
+  );
+}
+
+export function postNomineeNameCheck(
+  pariwarId: string,
+  claimCaseId: string,
+  body: NomineeNameCheckRequest,
+): Promise<NomineeNameCheckWrite> {
+  return apiFetch(
+    `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/claims/${encodeURIComponent(claimCaseId)}/nominee-name-check`,
+    NomineeNameCheckWriteResponse,
+    { method: 'POST', body: JSON.stringify(body) },
   );
 }
 

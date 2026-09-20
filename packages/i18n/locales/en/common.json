@@ -54,6 +54,7 @@
   "nominees.secondary_label": "Second nominee",
   "nominees.name": "Nominee's full name",
   "nominees.name_help": "Enter your nominee's full name.",
+  "nominees.name_english": "Please write the name in English.",
   "nominees.name_required": "Please enter your nominee's full name.",
   "nominees.relationship": "Relationship to you",
   "nominees.relationship_help": "Choose how this nominee is related to you.",

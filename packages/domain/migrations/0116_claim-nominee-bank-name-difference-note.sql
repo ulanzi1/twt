@@ -1,0 +1,33 @@
+-- Migration 0116 — the filer's name-difference note to the District Admin (Story 6.18, AC7).
+--
+-- `2026-09-19-226` cl.2 (Trustee-ratified, Dhiraj Rahul + Kalpana Bharti): *"A clerical difference
+-- (an initial, a married name, a bank's shortened name) in form can be submitted with note to
+-- District Admin."* This column carries that note, per ACCOUNT — the helpline operator types it at
+-- filing (cl.1 makes the match their duty) and the family may submit one from the member app.
+--
+-- ── Tier-1 PII, NULLABLE (never a gate) ────────────────────────────────────────────────────────────
+-- `name_difference_note_ciphertext` is a Tier-1 envelope-ciphertext column
+-- (`piiColumn(1, 'claim_nominee_bank')`, the same field class as holder-name / account# / IFSC /
+-- VPA — encrypt at the app layer, ciphertext AS STORED). It is NULLABLE by design: a note is never
+-- required, and its absence is a first-class state — the District Admin still reads the two names and
+-- records a verdict (AC3) with or without one. ⛔ A missing note NEVER blocks a claim.
+--
+-- ⛔ It is read ONLY through the AC2 nominee-name-check DTO. It is ⛔ never echoed by the nominee-bank
+-- presence view, and ⛔ never appears in a log, event payload, audit line, error body or cache key
+-- (AC9, Trap 4). The note is free text a grieving family wrote; it is treated as identifying.
+--
+-- ⚠ NO RTBF LEG IS OWED, and that is STATED so it never reads as an unrecorded gap (AC7):
+-- `packages/domain/src/member/anonymize.ts` does ⛔ not touch `claim_nominee_bank_accounts` at all, so
+-- this column inherits exactly the erasure posture of its four Tier-1 siblings. Changing that posture
+-- would be a decision about the WHOLE table, ⛔ never a side effect of adding a column.
+--
+-- ⚠ DO NOT REGENERATE THIS FILE with `db:generate` (same discipline as 0021–0115). The drizzle
+-- snapshot baseline is frozen at 0020; a regenerate emits a bloated catch-up migration, and
+-- drizzle-kit skips an already-applied migration by journal `when` (NOT by SQL hash), so a
+-- regenerate-after-apply silently drops hand-supplements and can raise 42P07
+-- ([[project_live_db_test_gotchas]]). This file is HAND-AUTHORED and carries ONLY the one column.
+--
+-- No new GRANT (the table's existing grants from its create migration cover the new column) and no
+-- snapshot file (baseline frozen at 0020; mirror 0021–0115).
+
+ALTER TABLE "claim_nominee_bank_accounts" ADD COLUMN "name_difference_note_ciphertext" text;

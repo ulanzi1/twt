@@ -34,7 +34,7 @@ export interface PendingCaseCardProps {
 }
 
 /** The reason codes valid for an outcome (drives the dropdown; from the contract compat map). */
-function reasonCodesFor(outcome: 'denied' | 'routed_to_r9'): string[] {
+function reasonCodesFor(outcome: 'denied' | 'routed_to_r9' | 'returned_for_correction'): string[] {
   return Object.entries(TRUSTEE_REASON_CODE_OUTCOME_COMPAT)
     .filter(([, outcomes]) => (outcomes as readonly string[]).includes(outcome))
     .map(([code]) => code);
@@ -57,6 +57,10 @@ export function PendingCaseCard({ case_, bucket, onDecision, pending, error }: P
 
   const denyOptions = reasonCodesFor('denied');
   const routeOptions = reasonCodesFor('routed_to_r9');
+  // Story 6.18 (AC11) — a RETURN takes exactly one code, `other`, because `-227` cl.10 asks for a
+  // NOTE explaining the discrepancy rather than a category. Selecting `other` makes the rationale
+  // mandatory at the contract boundary, which is how the note is actually enforced.
+  const returnOptions = reasonCodesFor('returned_for_correction');
 
   const submit = (
     partial: Pick<CycleFreezeDecisionRequest, 'action' | 'escalation_outcome'>,
@@ -97,6 +101,27 @@ export function PendingCaseCard({ case_, bucket, onDecision, pending, error }: P
         {case_.routed_to_r9 && (
           <span className="rounded bg-status-warn-bg px-1.5 py-0.5 text-xs text-status-warn-fg">routed to R9</span>
         )}
+        {/* Story 6.18 (AC11) — the claim is UNDER CORRECTION: this Pariwar Admin (or another) sent
+            it back to the District Admin and it has not been resubmitted. ⛔ NOT a denial — the
+            wording must never read as one. */}
+        {case_.under_correction && (
+          <span
+            data-testid="under-correction-badge"
+            className="rounded bg-status-warn-bg px-1.5 py-0.5 text-xs text-status-warn-fg"
+          >
+            returned for correction
+          </span>
+        )}
+        {/* Story 6.18 (AC8) — `-226` cl.5's highlight. It comes from the District Admin's RECORDED
+            judgement, ⛔ never a computer comparison, and shows the reason CODE, ⛔ never a name. */}
+        {case_.name_difference_reasons.length > 0 && (
+          <span
+            data-testid="name-difference-badge"
+            className="rounded bg-status-warn-bg px-1.5 py-0.5 text-xs text-status-warn-fg"
+          >
+            approved with a name difference: {case_.name_difference_reasons.join(', ')}
+          </span>
+        )}
         {case_.concealment_flags.map((f) => (
           <span key={f} className="rounded bg-status-warn-bg px-1.5 py-0.5 text-xs text-status-warn-fg">
             {f}
@@ -122,7 +147,7 @@ export function PendingCaseCard({ case_, bucket, onDecision, pending, error }: P
           (Deny/Route here; Route is also the sole action left once a claim reaches voted_pending_commit). */}
       <div className="flex flex-col gap-2 sm:flex-row">
         <label className="flex flex-col text-xs">
-          <span className="opacity-70">Reason code (required for deny / route)</span>
+          <span className="opacity-70">Reason code (required for deny / route / return)</span>
           <select
             className="rounded border px-2 py-1 text-sm"
             value={reasonCode}
@@ -132,7 +157,7 @@ export function PendingCaseCard({ case_, bucket, onDecision, pending, error }: P
             }}
           >
             <option value="">— none —</option>
-            {[...new Set([...denyOptions, ...routeOptions])].map((code) => (
+            {[...new Set([...denyOptions, ...routeOptions, ...returnOptions])].map((code) => (
               <option key={code} value={code}>
                 {code}
               </option>
@@ -215,6 +240,21 @@ export function PendingCaseCard({ case_, bucket, onDecision, pending, error }: P
             onClick={() => submit({ action: 'route_to_r9' }, 'routed_to_r9')}
           >
             Route to R9
+          </button>
+        )}
+        {/* Story 6.18 (AC11), `-227` cl.10 — send the claim BACK to the District Admin with a note.
+            ⛔ NOT a denial: the claim keeps its state, no appeal flow starts, and the label says
+            "return", never "reject". Available in every bucket INCLUDING voted-pending-commit — the
+            PRE-COMMIT window, where the Pariwar Admin can still act before the campaign goes live. */}
+        {!case_.under_correction && (
+          <button
+            type="button"
+            data-testid="return-to-district-admin"
+            className="rounded border px-3 py-1 text-sm disabled:opacity-50"
+            disabled={pending}
+            onClick={() => submit({ action: 'return_to_district_admin' }, 'returned_for_correction')}
+          >
+            Return to District Admin
           </button>
         )}
       </div>

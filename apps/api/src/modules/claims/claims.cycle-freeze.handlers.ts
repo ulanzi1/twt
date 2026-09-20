@@ -32,6 +32,7 @@ import {
   type CycleFreezeDecisionRequest,
   type CycleFreezeDecisionResponse,
   type CycleFreezePendingResponse,
+  type CycleFreezeDecisionAction,
 } from '@twt/contracts';
 import { claim, ids } from '@twt/domain';
 import { consolePoolSpawnTrigger, type PoolSpawnTrigger } from '@twt/jobs';
@@ -91,6 +92,38 @@ function translateCycleFreezeError(err: unknown): never {
       'A decision for this claim/phase already exists — reload and try again',
       'cycle_freeze.decision_conflict',
       { phase: err.phase },
+    );
+  }
+  // Story 6.18 (AC11) — the return loop's two guards.
+  if (err instanceof claim.ClaimNotReturnableError) {
+    throw new ConflictError(
+      'This claim cannot be returned to the District Admin in its current state',
+      'cycle_freeze.not_returnable',
+      { state: err.currentState },
+    );
+  }
+  if (err instanceof claim.ClaimAwaitingCorrectionError) {
+    // ⛔ NOT a denial and ⛔ not a dead end — the claim is waiting for the District Admin to have the
+    // correction made and re-check the names (AC5). The message says what unblocks it, because an
+    // operator seeing only "not votable" would have no way to know what to do next.
+    throw new ConflictError(
+      'This claim was returned to the District Admin and has not been resubmitted — it needs the corrected bank details and a fresh name check',
+      'cycle_freeze.awaiting_correction',
+    );
+  }
+  // Story 6.18 (AC4) — the nominee name-check approval gates, raised from inside voteOnFrozenClaim.
+  if (err instanceof claim.NomineeBankAccountsRequiredError) {
+    throw new ConflictError(
+      'This claim needs both bank accounts before it can be approved — it waits until they are added',
+      'cycle_freeze.bank_details_required',
+      { live_account_count: err.liveAccountCount },
+    );
+  }
+  if (err instanceof claim.NomineeNameCheckRequiredError) {
+    throw new ConflictError(
+      'This claim needs a current District Admin nominee name check before it can be approved',
+      'cycle_freeze.nominee_name_check_required',
+      { reason: err.reason },
     );
   }
   if (err instanceof claim.ClaimAlreadyRoutedError) {
@@ -217,6 +250,8 @@ export function createCycleFreezeHandlers(
             signals_summary: c.signalsSummary,
             concealment_flags: c.concealmentFlags,
             routed_to_r9: c.routedToR9,
+    under_correction: c.underCorrection,
+    name_difference_reasons: c.nameDifferenceReasons as ('initial' | 'married_name' | 'bank_shortened_name')[],
           };
         };
         const ready_to_freeze = await Promise.all(pending.readyToFreeze.map(mapCase));
@@ -255,12 +290,19 @@ export function createCycleFreezeHandlers(
         actor: 'trustee' as const,
       };
 
-      const auditType: AuthAuditEventType =
-        body.action === 'route_to_r9'
-          ? 'admin_cycle_freeze.route'
-          : body.action === 'resolve_escalation'
-            ? 'admin_cycle_freeze.escalation_resolved'
-            : 'admin_cycle_freeze.vote';
+      // ⚠⚠ AN EXHAUSTIVE MAP, ⛔ NOT A TERNARY CHAIN — Story 6.18 (AC11). The chain this replaces
+      // FELL THROUGH to `…vote` for any unrecognised action, so adding `return_to_district_admin`
+      // would have silently audited every RETURN as a VOTE: the opposite act, on the one surface
+      // where the audit line IS the trail (the return mints ⛔ no event). A `Record<Action, …>` makes
+      // the next action a COMPILE error instead of a wrong audit line.
+      const AUDIT_TYPE_BY_ACTION: Record<CycleFreezeDecisionAction, AuthAuditEventType> = {
+        approve: 'admin_cycle_freeze.vote',
+        deny: 'admin_cycle_freeze.vote',
+        route_to_r9: 'admin_cycle_freeze.route',
+        resolve_escalation: 'admin_cycle_freeze.escalation_resolved',
+        return_to_district_admin: 'admin_cycle_freeze.returned',
+      };
+      const auditType: AuthAuditEventType = AUDIT_TYPE_BY_ACTION[body.action];
 
       const scopeTx = await openScopeTx(deps, ctx.pariwarIdStr);
       let ok = false;
@@ -275,6 +317,13 @@ export function createCycleFreezeHandlers(
             break;
           case 'route_to_r9':
             result = await claim.routeToR9(scopeTx.client, base);
+            break;
+          // Story 6.18 (AC11) — the Pariwar Admin returns the claim to the District Admin with a
+          // note. Metadata-only: the domain writer emits ⛔ no event and moves ⛔ no state, and it
+          // deliberately does ⛔ not go near `voteOnFrozenClaim`, which would OPEN THE FREEZE on a
+          // claim the Pariwar Admin just declined to advance.
+          case 'return_to_district_admin':
+            result = await claim.returnToDistrictAdmin(scopeTx.client, base);
             break;
           case 'resolve_escalation':
             if (body.escalation_outcome === undefined) {

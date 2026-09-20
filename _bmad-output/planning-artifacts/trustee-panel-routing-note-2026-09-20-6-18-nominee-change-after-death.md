@@ -6,10 +6,19 @@
 > trustee. ⚠ It was **mixed**, so it is split: the Panel is asked **only** whether and by whom. *How* the software would stop or
 > check a change is ours and is not asked.
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULED — 2026-09-20 — recorded as `2026-09-20-233`
 >
-> **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id. Everything below is then kept **unedited**, as the question **as it was put**.
+> **Ruled by Dhiraj Rahul + Kalpana Bharti, relayed by BigDev — verbatim:**
+> *"After member has died nominee they declared cannot be changed."*
+>
+> **What this ruling does NOT cover** (put back to the Panel; full list in `2026-09-20-233`): **the moment** — the software learns of a
+> death only from the first claim, so a change made before that claim cannot be stopped; **honest corrections** — read absolutely,
+> there is no route for a genuine mistake, not even through a District Admin; and **what "the nominee" covers** — the whole
+> declaration, or, for example, a changed mobile number left correctable.
+>
+> ⭐ **Follow-up answers, 2026-09-20, recorded as `2026-09-20-234`** — the moment is **a claim being filed** (until then the nominee may be changed and the **timeline is kept**; a change made after the death is **denied** at verification and **only the nominee the member chose receives**); **a genuine mistake may be corrected** when the nominee's **relationship** is known (a woman's married name is the example); and "the nominee" covers **names, relationship, mobile, address and split**. Three questions remain open (Y, Z, AA in that entry).
+>
+> ⭐ Everything **below this block is kept UNEDITED** — it is the question as it was put.
 
 ---
 

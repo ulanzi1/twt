@@ -1,3 +1,28 @@
+# last_updated: 2026-09-20a (⭐⭐ **STORY `6-18` — TWO TRUSTEE RULINGS RECORDED, THE STORY REWRITTEN, Task 0 DONE: `ready-for-dev -> in-progress`.**
+#   ⭐ ONE row moves (`6-18`). ⛔ NO CODE.
+#   ⭐ `-226` (Trustee-ratified, DR + KB, 2026-09-19) answers the 2026-09-19 routing note with the Panel's OWN design: a mismatch is
+#   ⛔ not allowed in general (the helpline operator's duty at filing); a CLERICAL difference is accepted by the DISTRICT ADMIN with a
+#   SELECTED REASON and finally approved by the PARIWAR ADMIN; anything else is SENT BACK, ⛔ never denied; the system ⛔ NEVER acts on a
+#   mismatch, it only HIGHLIGHTS an approved difference to DA / PA / Super Admin; TWO BANK ACCOUNTS ARE MANDATORY TO FILE.
+#   ⭐ `-227` (DR + KB, 2026-09-20) amends it: ⛔ transliteration is ⛔ NOT a clerical reason (names in ENGLISH at capture); a Pariwar Admin
+#   who does ⛔ not approve RETURNS the claim to the DA with a NOTE (⛔ not a denial, ⛔ no appeal flow); the HELPLINE OPERATOR writes the
+#   correction; a post-approval correction needs a FRESH DA check.
+#   ⚠⛔ SUPERSEDED, ⛔ NOT REINTERPRETED: 6-18's reported D2(b) ("routes to the State Trustee") — which lived ⛔ ONLY in a commit message,
+#   the story file and two comments here, ⛔ never in the decision log. The 2026-09-05 row comment is ANNOTATED in place, ⛔ not rewritten.
+#   ⭐ `-228` (BigDev author-commit) records the engineering calls: two keys (VIEW for four roles / CHECK for the DA alone); the check is its
+#   own write, required at every approving path (per-path, ⛔ not a commit backstop); the return is a METADATA-ONLY decision row on the
+#   `routed_to_r9` pattern needing a new PHASE *and* a new OUTCOME, with a DERIVED resubmission ⇒ ⛔ no District Admin ever writes to the
+#   trustee table; the English-name gate is INPUT-ONLY (`serializerCompiler` PARSES responses ⇒ an output-schema gate would 500 every stored
+#   non-Latin name and both sentinels); a claim UNDER CORRECTION is ⛔ not committable.
+#   ⭐ THREE VALIDATE PASSES, recorded in the story Change Log: v0.3 (D2(b) unlogged; escalate is terminal-for-write; AC8 unsatisfiable under
+#   its own grants), v0.4 (run against v0.3's own output: `accountId` never existed; the event could ⛔ not carry a DB-generated decision id;
+#   the gates missed the R9 and appeal-reversal paths; the glyph register inverted ~20 lines), v0.7 (scoped to the new material: the missing
+#   OUTCOME value; the `effectiveOutcome()` arm without which the required-note rule silently never runs; ⛔ nothing has ever written
+#   `superseded_at` on the trustee table; the input-only gate; two invented events dropped ⇒ the event count moves by ONE).
+#   ⭐ Task 0 landed: `epics.md` Epic 6 section for 6-18; `-228`; `deferred-work.md` §Story 11b.3a item (b) ANNOTATED (D2 answered, item
+#   STILL OPEN until 6-18 ships) + FOUR residuals (b-1)-(b-4) — incl. ⚠ a PANEL question: `appeal-eligibility.ts`'s decider scan has ⛔ no
+#   phase filter, so a PA who merely RETURNS a claim is excluded from its Stage-1 appeal review (6-18 leaves the exclusion in place).
+#   ⚠ OWED before dev: ⛔ nothing. ⚠ OWED at dev: two ALTER TYPE migrations + one column migration; catalog +2 from the LIVE value.)
 # last_updated: 2026-09-19p (⭐ **STORY `11b-22` — CODE RE-REVIEW (pass 2) of the uncommitted pass-1 patches. `done` unchanged.**
 #   ⭐ No row moves. 3-layer re-review of `git diff HEAD`: all 8 pass-1 patches verified applied; no AC broken; ⭐ 5 further patches applied
 #   (matra-preceded mid-word probes + coverage/`u`-flag assertion; estimate-frame `and counting` + hyphen/no-space spellings; render fixture
@@ -18669,7 +18694,29 @@ development_status:
   # close it; the deliverable is display + a RECORDED ATTESTATION.
   # ⚠ COORDINATE: both this story and 11b-13 bump PERMISSION_CATALOG_VERSION (39 today; 11b-13
   # takes it 39 -> 41 and is not yet built). ⛔ Do not hard-code 40.
-  6-18-nominee-holder-name-on-the-verification-console: ready-for-dev
+  # ⭐⭐ ANNOTATED 2026-09-20 — THE BLOCK ABOVE IS KEPT AS THE RECORD AND IS SUPERSEDED IN SIX PLACES
+  # by `-226` (2026-09-19) + `-227` (2026-09-20), Trustee-ratified (DR + KB), and by `-228`
+  # (BigDev author-commit). ⛔ Nothing above is rewritten ([[feedback_supersede_never_reinterpret]]).
+  #   (1) D2 is NO LONGER "RULED (b) SOFT" and there is ⛔ NO ESCALATION: the DISTRICT ADMIN reviews a
+  #       mismatch at verification (`-226` cl.3). ⛔ Not the State Trustee — who holds ⛔ none of the
+  #       resolver keys.
+  #   (2) A CLERICAL difference is accepted with a SELECTED REASON (⛔ never transliteration, `-227`
+  #       cl.1) and finally approved by the PARIWAR ADMIN; anything else is SENT BACK for correction
+  #       and ⛔ NEVER denied for the name (`-226` cl.6).
+  #   (3) A Pariwar Admin who does ⛔ not approve RETURNS the claim to the District Admin with a NOTE
+  #       — ⛔ not a denial, ⛔ no appeal flow; the HELPLINE OPERATOR writes the correction (`-227`
+  #       cl.2-3).
+  #   (4) TWO BANK ACCOUNTS ARE MANDATORY TO FILE (`-226` cl.7) ⇒ the "attest only once accounts
+  #       exist" reading is superseded.
+  #   (5) "The mechanism was already shipped / ⛔ no new resolver surface" UNDERSTATED it: escalation
+  #       is TERMINAL-FOR-WRITE, and the build now carries two keys, one event, a decision phase +
+  #       outcome, a PII column and two filing forms (`-228`).
+  #   (6) CATALOG: 11b-13 has LANDED. `PERMISSION_CATALOG_VERSION` is 41 / 49 keys; 6-18 takes it
+  #       +2 from the LIVE value — ⛔ never a hard-coded 42, and ⚠ a pending key REMOVAL may collide.
+  # ⭐ THE TWO LOAD-BEARING TRAPS ABOVE SURVIVE UNCHANGED: ⛔ no join / FK / match rule, and ⛔ display
+  # alone is not mechanization. ⚠ Three validate passes are recorded in the story's Change Log (v0.3,
+  # v0.4, v0.7); ⛔ no code has landed.
+  6-18-nominee-holder-name-on-the-verification-console: in-progress
   epic-6-retrospective: done
 
   # ==========================================================================

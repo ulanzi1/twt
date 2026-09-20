@@ -2788,6 +2788,50 @@ model can never satisfy.
 > This obligation is recorded in **this story's own section** deliberately: a marker pointing at a story
 > whose text never mentions the obligation is exactly how an inherited deferral goes unnoticed.
 
+### Story 6.18: The Nominee Name Check — the District Admin Sees Both Names and Records the Match `[SURFACE]`
+
+> ⚠ **Minted by Trustee ruling, ⛔ not by the original epic plan** — the Panel (Dhiraj Rahul + Kalpana
+> Bharti) on **2026-09-05**, ruling 1 of the 11b.12 routing pass: *"Open a story to MECHANIZE the
+> approver duty."* Shaped by [`2026-09-19-226`](../../.decision-log.md#decision-2026-09-19-226) and
+> [`2026-09-20-227`](../../.decision-log.md#decision-2026-09-20-227). `epic-6-retrospective` is `done`;
+> adding a story here is the same deliberate act as Story 6.17's — ⛔ do not "correct" the placement and
+> ⛔ do not flip the retrospective back.
+>
+> ⭐ **It closes `deferred-work.md` §Story 11b.3a item (b) `D5-subject` (ii)** — the un-mechanized
+> approver duty. ⛔ It does ⛔ not close (i), the consent-subject gap.
+
+As the District Admin verifying a death claim,
+I want to see the name on each of the claim's two bank accounts beside the nominee(s) the member declared,
+So that money reaches the nominee the member chose — and the Trust can show who checked, rather than
+merely intending to.
+
+**Acceptance Criteria** (the full set, with the code coordinates, is in
+`_bmad-output/implementation-artifacts/6-18-nominee-holder-name-on-the-verification-console.md`):
+
+1. Two new permission keys: one to VIEW both names (District Admin, verifier, Pariwar Admin, helpline
+   operator) and one to RECORD the check (District Admin only) — ⛔ `claim.verify` is ⛔ not widened.
+2. A per-claim read returns both decrypted names, the filer's note, and the declaration and filing
+   dates — ⛔ no account number, ⛔ no raw IFSC, ⛔ no VPA.
+3. The District Admin records a verdict per account: `matches`, `clerical_difference` (one of the three
+   reasons `-226` cl.2 names — ⛔ never transliteration, `-227` cl.9) or `does_not_match`.
+4. Approval requires two accounts and a current passing check, at every path that can approve — the
+   verifier decision, the trustee vote and the R9 finalization. ⛔ Nothing is automatic: ⛔ no
+   comparison, ⛔ no auto-deny, ⛔ no auto-escalation (`-226` cl.5).
+5. `does_not_match` sends the claim back for correction; the helpline operator writes the corrected
+   accounts. ⛔ The claim is ⛔ never denied for a name (`-226` cl.6).
+6. Bank account information is mandatory to file a claim — both accounts (`-226` cl.7).
+7. The Pariwar Admin may RETURN a claim to the District Admin with a note; a return is ⛔ not a denial
+   and starts ⛔ no appeal flow (`-227` cl.10).
+8. An approved claim whose names differ says so to the District Admin, Pariwar Admin and Super Admin —
+   and ⛔ never to a member or a public page (`-226` cl.5).
+9. Names are captured in English script on the two fields this check compares (`-227` cl.9) — input
+   validation only, with ⛔ no rewrite of anything already stored.
+
+> ⚠ **What this story does ⛔ not do:** it does ⛔ not close `D5-subject` (i); it adds ⛔ no FK, rank or
+> match rule between the accounts and the declared nominees (6.8's D1); it changes ⛔ no public surface;
+> and `-227` cl.9's wider English-name sweep — member KYC names and Story 6.5's death-certificate
+> comparison — is ⛔ **not** in scope and owes its own story.
+
 ---
 
 ## Epic 7: Pool Engine & Cycle Spawn

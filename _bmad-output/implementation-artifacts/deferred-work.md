@@ -760,6 +760,60 @@ they decided**.
 ⚠ **6.18's own D2 is a PANEL question and blocks its Task 4** — whether a missing or negative
 attestation **BLOCKS approval**. ⛔ A hard block can halt a grieving family's claim.
 
+⭐⭐ **UPDATED 2026-09-20 — 6.18's D2 IS ⛔ NO LONGER OPEN, AND THE ANSWER IS ⛔ NOT THE ONE THE LINE
+ABOVE ANTICIPATED.** The Panel (Dhiraj Rahul + Kalpana Bharti) ruled
+[`2026-09-19-226`](../../.decision-log.md#decision-2026-09-19-226) and
+[`2026-09-20-227`](../../.decision-log.md#decision-2026-09-20-227):
+⭐ the **District Admin** reviews a mismatch at verification (⛔ no escalation, ⛔ not the State
+Trustee); a **clerical** difference is accepted with a **selected reason** and finally approved by the
+**Pariwar Admin**; anything else is **sent back for correction** and ⛔ **never denied for the name**;
+the **system ⛔ never acts** on a mismatch, it only **highlights** an approved difference to District
+Admin / Pariwar Admin / Super Admin; **two bank accounts are mandatory to file**; ⛔ **transliteration
+is ⛔ not a clerical reason** — names are captured in **English** on these two fields instead; and a
+Pariwar Admin who does ⛔ not approve **RETURNS** the claim to the District Admin with a **note**, which
+is ⛔ **not** a denial.
+⚠⛔ **THIS ITEM IS STILL ⛔ NOT CLOSED.** It closes when **6.18 SHIPS**
+([[feedback_closure_language_precision]]). ⛔ The earlier *"what 6.18 builds"* paragraph is **superseded
+in its mechanism** — ⛔ no escalation, ⛔ no resolver attestation — and **kept** as the record of what
+was expected ([[feedback_supersede_never_reinterpret]]); the two load-bearing parts survive unchanged:
+a **NEW permission key** (⛔ `claim.verify` ⛔ not widened) and a **RECORDED** verdict, ⛔ never display
+alone.
+
+⭐⭐ **FOUR THINGS 6.18 SURFACED AND DOES ⛔ NOT FIX — recorded here so they are ⛔ not re-derived:**
+
+**(b-1) A returning Pariwar Admin is disqualified from the later appeal — ⚠ a PANEL question.**
+`getOriginalDeciderActorIds` (`packages/domain/src/claim/appeal-eligibility.ts`) collects **every**
+`claim_state_trustee_decisions.actor_id` for the claim with ⛔ **no phase or outcome filter**, live and
+superseded alike, into the Stage-1 reviewer-conflict exclusion set. ⇒ a Pariwar Admin who merely
+**returns** a claim for a name correction — a routing act, ⛔ not a judgement on the merits — is thereby
+excluded from reviewing that claim's later Stage-1 appeal. ⭐ 6.18 **leaves the exclusion in place** (the
+conservative side) and routes the question: *should a return disqualify the reviewer?*
+⭐ **Trigger:** *the Panel's next pass, or the first appeal that stalls for want of an eligible reviewer.*
+
+**(b-2) A live governance row replacing a state guard — ⭐ a deliberate FIRST, recorded as one.**
+6.18's correction path lets a `claim.correct_nominee_bank` holder write bank details **whatever the
+claim's state** while the claim is *under correction*. ⛔ `NOMINEE_BANK_ADMIN_CORRECTION_STATES` is
+⛔ not widened, ⚠ **but the effect is**, and `claim/errors.ts`'s own note requires five things of anyone
+widening that window — 6.18 answers all five (re-verification, approval invalidation,
+downstream-readiness invalidation, audit, notification). ⚠ ⛔ No prior control replaces a state guard
+with a row: `resolveEscalation` requires its live row **in addition to** a state check.
+⭐ **Trigger:** *the next story that touches the nominee-bank windows or adds a row-conditioned write.*
+
+**(b-3) The approved-difference flag has ⛔ no campaign-side home.** `-226` cl.5 requires the highlight
+for the District Admin, Pariwar Admin and Super Admin. It lands on the claim surfaces (verifier console,
+cycle-freeze card, R9 screen) because ⛔ **no admin campaign/pool page exists**. ⇒ once one is built it
+**must carry the flag**, or the ruling quietly stops being honoured after the campaign goes live.
+⭐ **Trigger:** *the first admin campaign / pool detail surface.*
+
+**(b-4) `-227` cl.9's wider English-name sweep is ⛔ NOT in 6.18.** The ruling says *"use English Name
+everywhere"*; 6.18 validates the **two** fields its check compares — the declared nominee name and the
+account holder name — and ⛔ nothing else. ⚠ Still in another script's reach: **member KYC names**
+(`packages/domain/src/kyc/name.ts` is deliberately Devanagari-aware) and Story **6.5's
+death-certificate comparison**, which matches names with a **20% fuzzy tolerance** and records
+transliteration tolerance as *"a noted future consideration"* (`packages/domain/src/claim/parity.ts`)
+— ⭐ **the one place a transliterated name can still pass a machine check silently.**
+⭐ **Trigger:** *its own story; ⛔ do not sweep it into a story that merely touches a name field.*
+
 ### (c) ⭐⭐ **NEW, FOUND AT 11b.3a** — a **12-digit account number trips the FR-74 naked-PII AADHAAR heuristic**
 
 ⚠⛔ **A REAL, REACHABLE COLLISION BETWEEN TWO RULED CONTROLS, ⛔ not a test-fixture artefact.**

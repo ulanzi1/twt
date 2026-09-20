@@ -25,7 +25,7 @@ LETTERS: `D1`…`D5` are 6.18's own; other stories' letters are qualified (`6.13
 
 # Story 6.18: The Nominee Name Check — the District Admin Sees Both Names and Records the Match `[SURFACE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 > **Not in `epics.md`'s story list.** Commissioned by the Trustee Panel (Dhiraj Rahul + Kalpana
 > Bharti) on 2026-09-05, ruling 1 of `trustee-panel-routing-note-2026-09-05-11b12-under-funded-commitment-claim.md`
@@ -432,13 +432,13 @@ row **directly in the DB** and asserts it still reads back.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Governance** (AC0) — one `governance:` commit, ⛔ no code
-  - [ ] `epics.md` — Epic 6 annotation after `### Story 6.17`: commissioned by 2026-09-05 ruling 1,
+- [x] **Task 0 — Governance** (AC0) — ✅ DONE 2026-09-20 (`-228`; epics.md Epic 6 §6.18; deferred-work (b) + (b-1)–(b-4); sprint `in-progress`, ledger `2026-09-20a`) — one `governance:` commit, ⛔ no code
+  - [x] `epics.md` — Epic 6 annotation after `### Story 6.17`: commissioned by 2026-09-05 ruling 1,
         shaped by `-226`; closes `D5-subject` (ii).
-  - [ ] `.decision-log.md` — ONE author-commit entry: D1, D3 and D4's mechanism; the two keys and
+  - [x] `.decision-log.md` — ONE author-commit entry: D1, D3 and D4's mechanism; the two keys and
         grants; the new column and the `correction_return` phase; the filing-flow change.
         (`-226` and `-227` are already recorded — ⛔ never restate a ruling as an author-commit.)
-  - [ ] `deferred-work.md` §Story 11b.3a item (b) — annotate (⛔ never rewrite) the line *"6.18's own
+  - [x] `deferred-work.md` §Story 11b.3a item (b) — annotate (⛔ never rewrite) the line *"6.18's own
         D2 is a PANEL question and blocks its Task 4"* → answered by `-226`/`-227`; keep "COMMISSIONED,
         NOT YET CLOSED". Add as items: the post-death nominee-write hazard; the campaign-view flag
         (AC8); the **appeal-eligibility question** — `claim/appeal-eligibility.ts`'s decider scan has
@@ -449,7 +449,7 @@ row **directly in the DB** and asserts it still reads back.
         death-certificate comparison, which still carries a 20% fuzzy name tolerance
         (`packages/domain/src/claim/parity.ts`) and records transliteration tolerance as a future
         consideration. Grep `D5-subject` across the file and reconcile.
-  - [ ] `sprint-status.yaml` — a dated note under the comment above the `6-18` row and on the
+  - [x] `sprint-status.yaml` — a dated note under the comment above the `6-18` row and on the
         `2026-09-05o` block: D2(b) superseded by `-226` (⛔ not rewritten); flip to `in-progress`
         with a ledger entry ([[project_sprint_status_safe_prepend]]).
 - [ ] **Task 1 — Keys** (AC1) — mint both; grants; catalog +2 from live; tests.

@@ -30,7 +30,8 @@ Status: ready-for-dev
 > **Not in `epics.md`'s story list.** Commissioned by the Trustee Panel (Dhiraj Rahul + Kalpana
 > Bharti) on 2026-09-05, ruling 1 of `trustee-panel-routing-note-2026-09-05-11b12-under-funded-commitment-claim.md`
 > §10.2: *"Open a story to MECHANIZE the approver duty."* ⭐ **Shaped by `-226` (Trustee-ratified,
-> 2026-09-19)** — the Panel's ruling on what happens when the names differ.
+> 2026-09-19)** and **`-227` (2026-09-20)** — the Panel's rulings on what happens when the names
+> differ.
 >
 > ⭐ It closes `D5-subject` (ii) — `deferred-work.md` **§Story 11b.3a item (b)** (a bare "item (b)"
 > in that file means Story 11b.1's). It does ⛔ not close `D5-subject` (i) (**Trap 1**).
@@ -53,10 +54,24 @@ Status: ready-for-dev
    filed without them must have them added before the District Admin can decide.
 8. For claims the family files in the app, the District Admin's check is the safeguard.
 
-⚠ **`-226` does ⛔ not cover** (so this story takes the readings in **D2–D5** and records them): the
-reason list beyond the three examples; whether the Pariwar Admin records anything beyond approving;
-an account corrected after the District Admin's approval; a real mismatch found where accounts can
-⛔ no longer be corrected; the filer rewriting the declared nominee after death.
+### `-227` — the amendment (DR + KB, 2026-09-20)
+
+9. *"No transliteration should not be counted as clerical reason. Please use English Name everywhere
+   to avoid this."* ⇒ ⛔ no transliteration reason; **English-script names at capture** (AC12).
+10. *"If District Admin approves the verification, it goes to Pariwar Admin. If Pariwar Admin doesn't
+    approve it goes back to District Admin for correction with Note. Thereafter District Admin will
+    contact claimant regarding discrepancy and get it corrected. Then re-submit to Pariwar Admin."*
+    ⇒ a **return loop**, ⛔ not a denial (AC11).
+11. The **helpline operator** types the corrected bank details after the District Admin has contacted
+    the claimant (follow-up, same session) — they already hold `claim.correct_nominee_bank` and cl.1's
+    filing duty.
+12. **Confirmed:** an account corrected after the District Admin's approval requires the District
+    Admin to check again before the Pariwar Admin's vote (D5).
+
+⚠ **Still ⛔ not ruled** (so this story takes the readings in **D3** and records them): whether the
+Pariwar Admin records anything beyond approving or returning; the filer rewriting the declared
+nominee after death; English names on **member KYC** fields and the Story 6.5 death-certificate
+comparison (`-227` cl.9's wider sweep — its own story, Task 0).
 
 ## Story
 
@@ -72,7 +87,7 @@ accounts, because making sure they match is my duty (`-226` cl.1); and, as a **P
 
 ## 📜 Policy meaning (AI-10-1, CONFIRMED BigDev 2026-08-18)
 
-⭐ **Two predicates that gate a benefit, both ruled by `-226`:**
+⭐ **Two predicates that gate a benefit, ruled by `-226` and `-227`:**
 > **"Your family must give two bank accounts to file your claim, and the claim cannot be approved
 > until they are given — it is never refused for this, it waits."** (cl.7)
 >
@@ -90,7 +105,7 @@ from the public repo by design; give no repo path.
 - cl.7 is a **new filing condition**. It is Trustee-ratified; ⛔ never deny a claim for missing
   accounts — the claim waits (AC6).
 - "Sent back" must ⛔ never become a dead end: the claim stays open, the filer is told, and the
-  collection window lets them correct (AC5). ⚠ Where no correction window exists, it can — see D4.
+  correction record lets the helpline correct at any stage (AC5, D4).
 - The filer can rewrite the declared nominee after death (below), so the two names can both come
   from the filer. The check shows the declaration date beside the filing date (AC2); it does ⛔ not
   fix this (AC10).
@@ -157,26 +172,25 @@ The District Admin records the check through its own `POST`, and every approval 
 write cannot race it. (Supersedes v0.3/v0.4's "inside the decision body", which existed to carry an
 escalation `-226` removed.)
 
-### ✅ D2 — decided (BigDev, author-commit): the clerical reasons are the three the Panel named
-`initial` · `married_name` · `bank_shortened_name`. ⛔ No "other". ⚠ `-226` names these as examples;
-adding a reason (e.g. transliteration) is the Panel's — a gap is surfaced by the DA sending the claim
-back, ⛔ never by widening the list here.
+### ✅ D2 — ruled by `-227` cl.9: the clerical reasons are the three `-226` named
+`initial` · `married_name` · `bank_shortened_name`. ⛔ No "other", and ⛔ **no transliteration** —
+*"Please use English Name everywhere to avoid this"* ⇒ the script problem is solved at **capture**
+(AC12), ⛔ never by tolerating it at the check. ⚠ A difference outside the three is sent back (AC5).
 
-### ✅ D3 — decided (BigDev, author-commit), reading `-226` cl.4: the Pariwar Admin's final approval is their existing vote
-The Pariwar Admin sees both names, the DA's reason and the filer's note, and approves or denies as
-today. ⛔ No second attestation.
+### ✅ D3 — decided (BigDev, author-commit), reading `-226` cl.4 + `-227` cl.10: the Pariwar Admin's vote is the final approval
+The Pariwar Admin sees both names, the DA's reason and the filer's note, then **approves** (the
+campaign goes live) or **returns** the claim to the District Admin with a note (AC11). ⛔ No second
+attestation, and returning is ⛔ not a denial.
 
-### 🟡 D4 — recorded, ⛔ not decided: a real mismatch where accounts can ⛔ no longer be corrected
-A claim at `reversed` or `state_trustee_freeze` (appeal, R9) has ⛔ no bank-write window. If the DA
-records `does_not_match` there, the claim cannot pass AC4 and cannot be corrected. ⚠ Rare, but a dead
-end. ⭐ This story surfaces it (the card says "sent back — no correction window at this stage") and
-records it in `deferred-work.md`; the fix (a correction window, or a Panel rule) is the Panel's.
+### ✅ D4 — resolved (BigDev, author-commit) by the correction record `-227` cl.10–11 requires
+A live **correction-needed record** — opened by the DA's `does_not_match` (AC5) or the Pariwar
+Admin's return (AC11) — permits the helpline operator's correction **whatever the claim's state**, so
+the old dead end at `reversed` / `state_trustee_freeze` is gone. ⛔ No window is widened, ⛔ no state
+moves: the record is the exception, and it closes when the corrected accounts are written.
 
-### 🟡 D5 — recorded, ⛔ not decided: an account corrected after the DA's approval
-The admin correction window is `verifier_approved`. A correction changes `updated_at`, the DA's check
-is no longer current, and AC4's gate at the Pariwar Admin's vote requires the DA to check again.
-⭐ That is this story's reading of `-226` cl.3 ("reviewed by District Admin"); record it in Task 0 so
-the Panel can see it.
+### ✅ D5 — confirmed by `-227` cl.12: a post-approval correction needs a fresh check
+A correction changes `updated_at`, the DA's check is ⛔ no longer current, and AC4's gate at the
+Pariwar Admin's vote sends it back to the DA to check again.
 
 ---
 
@@ -250,14 +264,20 @@ test pins that both windows exclude `state_trustee_freeze`/`state_trustee_approv
 **And** ⛔ nothing is automatic: no gate compares names, no mismatch triggers a denial, escalation or
 state change (`-226` cl.5).
 
-### AC5 — "Sent back for correction"
+### AC5 — "Sent back for correction" (`-226` cl.6, `-227` cl.11)
 **Given** the DA records `does_not_match` on any account
-**Then** the claim stays in its state, cannot pass AC4, and is ⛔ never denied for it (`-226` cl.6)
+**Then** the claim stays in its state, cannot pass AC4, and is ⛔ never denied for it
+**And** a **correction-needed record** goes live for that claim (actor, timestamp, the account ranks,
+and — when it came from the Pariwar Admin — their note), emitted as an event and surfaced to the DA
+and the helpline
+**And** while it is live the **helpline operator** may write the corrected accounts under
+`claim.correct_nominee_bank` **whatever the claim's state** — ⛔ no window is widened and ⛔ no state
+moves (D4); in the collection states the family may still correct in the app as today
 **And** the filer is told: the helpline claim page (AC7) and the member app claim status show "bank
-details need correcting" for that account, from the latest check — ⛔ no name in that message
-**And** the corrected submission (existing bank writer, collection window) makes the check stale; the
-DA checks again
-**And** at `reversed`/`state_trustee_freeze` the card says ⛔ no correction window exists (D4).
+details need correcting" — ⛔ no name in that message
+**And** writing the corrected accounts closes the record and makes the check stale; the DA checks again
+**And** a test asserts the helpline correction succeeds at `state_trustee_freeze` **only** while a
+record is live, and is refused otherwise.
 
 ### AC6 — Two accounts are mandatory (`-226` cl.7)
 **Then** the member app claim flow cannot complete without both accounts (Task 5 traces where)
@@ -291,6 +311,42 @@ claim's console record, and a future campaign view must carry it (recorded in Ta
 audit line or error body (model: `apps/api/tests/integration/claims/nominee-bank.spec.ts:150-160`)
 **And** ⚠ ⛔ no CI script scans admin DTOs for PII — this test is the only guard.
 
+### AC11 — The Pariwar Admin's return loop (`-227` cl.10–11)
+**Given** a claim the DA approved and checked, now before the Pariwar Admin
+**Then** the cycle-freeze decision route gains a **`return_to_district_admin`** action with a
+**required note** (≤ 500 chars, stored in the existing encrypted `rationale_ciphertext`), written as a
+new `claim_state_trustee_decisions` phase `correction_return` (a new
+`state_trustee_decision_phase` value — hand-authored `ADD VALUE IF NOT EXISTS` migration; the
+partial-unique `(claim_case_id, phase)` gives one live return at a time)
+**And** it emits `claim.pariwar_returned_for_correction` — an **annotation**: the claim's state does
+⛔ not move, and it is ⛔ **not** a denial, so ⛔ no appeal flow (6.16) starts
+**And** it opens the AC5 correction-needed record carrying the note
+**And** the DA's console lists returned claims with the note, and the DA, after contacting the
+claimant and the helpline having written the correction (AC5), records a fresh check (AC3) and
+**re-submits** via a `POST …/nominee-name-check/resubmit` — `claim.approve` at `district`, requiring a
+current passing check and two accounts — emitting `claim.district_resubmitted` and superseding the
+return row
+**And** the Pariwar Admin's card shows the claim as resubmitted with the DA's new reason, and their
+vote proceeds as today
+**And** returning is available only while the claim is unapproved (`verifier_approved`,
+`state_trustee_freeze`, `reversed`); ⛔ never after `claim.approved`
+**And** a live return blocks AC4's gates until it is superseded, and a test drives the whole loop:
+approve → return with note → helpline correction → fresh check → resubmit → Pariwar approval.
+
+### AC12 — Names are captured in English script (`-227` cl.9)
+**Then** the declared nominee name (`packages/contracts/src/nominee/declaration.ts` `name`) and the
+account holder name (`packages/contracts/src/claims/nominee-bank.ts` `accountHolderName`) reject
+non-Latin script at the boundary — a shared validator in contracts, with copy in both locales telling
+the filer to enter the name in English **as printed on the passbook**
+**And** allowed: Latin letters, spaces, `.`, `'`, `-`; ⛔ never Devanagari or any other script
+**And** ⛔ **no backfill and no rewrite**: rows already stored in another script stay exactly as they
+are and still render ([[feedback_record_unattested_no_backfill]]); the RTBF `'[anonymized]'` sentinel
+is unaffected
+**And** the validator is ⛔ not applied to member KYC names or to Story 6.5's death-certificate
+comparison — `-227` cl.9's wider sweep is its own story, recorded in Task 0
+**And** tests cover: a Devanagari name is refused on both writes, an existing Devanagari row still
+reads back, and a hyphenated or initialled English name is accepted.
+
 ### AC10 — Nothing else moves
 **Then** ⛔ no claim state, window or public surface changes; ⛔ no `member_nominees` write path changes
 **And** `D5-subject` (i), D4 and the post-death nominee-write hazard stay open, recorded by name.
@@ -302,12 +358,16 @@ audit line or error body (model: `apps/api/tests/integration/claims/nominee-bank
 - [ ] **Task 0 — Governance** (AC0) — one `governance:` commit, ⛔ no code
   - [ ] `epics.md` — Epic 6 annotation after `### Story 6.17`: commissioned by 2026-09-05 ruling 1,
         shaped by `-226`; closes `D5-subject` (ii).
-  - [ ] `.decision-log.md` — ONE author-commit entry: D1–D3; the two keys and grants; D4/D5 readings
-        (so the Panel can see them); the new column; the filing-flow change.
+  - [ ] `.decision-log.md` — ONE author-commit entry: D1, D3 and D4's mechanism; the two keys and
+        grants; the new column and the `correction_return` phase; the filing-flow change.
+        (`-226` and `-227` are already recorded — ⛔ never restate a ruling as an author-commit.)
   - [ ] `deferred-work.md` §Story 11b.3a item (b) — annotate (⛔ never rewrite) the line *"6.18's own
-        D2 is a PANEL question and blocks its Task 4"* → answered by `-226`; keep "COMMISSIONED, NOT
-        YET CLOSED". Add D4, the post-death nominee-write hazard and the campaign-view flag as items.
-        Grep `D5-subject` across the file and reconcile.
+        D2 is a PANEL question and blocks its Task 4"* → answered by `-226`/`-227`; keep "COMMISSIONED,
+        NOT YET CLOSED". Add as items: the post-death nominee-write hazard; the campaign-view flag
+        (AC8); and **`-227` cl.9's wider English-name sweep** — member KYC names and Story 6.5's
+        death-certificate comparison, which still carries a 20% fuzzy name tolerance
+        (`packages/domain/src/claim/parity.ts`) and records transliteration tolerance as a future
+        consideration. Grep `D5-subject` across the file and reconcile.
   - [ ] `sprint-status.yaml` — a dated note under the comment above the `6-18` row and on the
         `2026-09-05o` block: D2(b) superseded by `-226` (⛔ not rewritten); flip to `in-progress`
         with a ledger entry ([[project_sprint_status_safe_prepend]]).
@@ -327,7 +387,21 @@ audit line or error body (model: `apps/api/tests/integration/claims/nominee-bank
         dev's choice; projector-only).
   - [ ] Add the route file to the human-actor invariant script.
 - [ ] **Task 4 — The gates** (AC4, AC6) — P1 in `adjudicateClaim`, P3 in `voteOnFrozenClaim`, P4 in
-      `finalizeR9Outcome`; one shared domain helper; 409 mapping in the three handlers.
+      `finalizeR9Outcome`; one shared domain helper; 409 mapping in the three handlers; a live return
+      row also blocks (AC11).
+- [ ] **Task 4b — The return loop** (AC5, AC11)
+  - [ ] The `correction_return` phase value (migration + `STATE_TRUSTEE_DECISION_PHASES` in
+        `packages/domain/src/claim/state-trustee-decision.ts`); `return_to_district_admin` in
+        `CycleFreezeDecisionAction` (`packages/contracts/src/claims/cycle-freeze.ts`) with the
+        note-required rule in its `superRefine`.
+  - [ ] The two annotation events (`claim.pariwar_returned_for_correction`,
+        `claim.district_resubmitted`) — same wiring list as Task 3, and the `toHaveLength` counts move
+        by three in total with `claim.nominee_name_checked`.
+  - [ ] The correction-needed record and the exception it grants the helpline writer in
+        `nominee-bank-persist.ts` — state-independent while live, refused otherwise (AC5).
+  - [ ] `POST …/nominee-name-check/resubmit` (`claim.approve`, district) superseding the return row.
+- [ ] **Task 4c — English-script names** (AC12) — one shared validator in `packages/contracts`, applied
+      to the nominee declaration and the account holder name only; copy in both locales; ⛔ no backfill.
 - [ ] **Task 5 — Filing** (AC6, AC7)
   - [ ] Trace the member `(claim)` flow: where can it complete without `nominee-review.tsx`'s bank
         submission? Make both accounts required there; add the optional note.
@@ -341,7 +415,10 @@ audit line or error body (model: `apps/api/tests/integration/claims/nominee-bank
         (reason select mandatory for `clerical_difference`), "bank details missing"; approve disabled
         until AC4 holds.
   - [ ] `PendingCaseCard.tsx` and the R9 screen: a *"Check nominee names"* disclosure (AC2 on
-        demand), the AC8 flag, the D4 message.
+        demand), the AC8 flag, and the **Return to District Admin** action with its required note
+        (AC11).
+  - [ ] The DA's console: a returned-claims list with the Pariwar Admin's note, and the **Re-submit**
+        action (AC11).
   - [ ] The AC8 flag on the console read — ⚠ `VERIFIER_CONSOLE_MAX_READS` moves by one and needs its
         review explanation.
   - [ ] English copy in each module's `i18n-en.ts`. ⛔ No match hint, score or highlight other than AC8.
@@ -358,6 +435,8 @@ audit line or error body (model: `apps/api/tests/integration/claims/nominee-bank
   - [ ] Both bank-write windows exclude the freeze states (AC4).
   - [ ] Two/zero nominees, `unreadable`, `anonymized`, decoy claim B (AC2); the AC8 flag present for
         `clerical_difference` and absent otherwise.
+  - [ ] The whole return loop, end to end, and that a return starts ⛔ no appeal flow (AC11).
+  - [ ] English-script validation on both writes; an existing non-Latin row still reads (AC12).
 - [ ] **Task 8 — Friction-budget disposition** — after the code commits
       ([[project_friction_budget_baseline_ratchet]]).
 
@@ -407,3 +486,4 @@ read, the write, the gates and the event. Existing suites on this ground:
 | 2026-09-19 | 0.3 | First validate pass (code re-derived at `5f8d27a0`): D2(b) unlogged; escalate is terminal-for-write; AC8 unsatisfiable under AC4's grants; `verifier` cannot approve; stale-attestation and bypass paths; a hidden "no account ⇒ no approval" gate (D4, BigDev); soft decrypt sentinel. — *Superseded by v0.4/v0.5. Kept as the record.* | BigDev + Claude |
 | 2026-09-19 | 0.4 | Second validate pass against v0.3's own output: `accountId` did not exist; the event could not carry a DB-generated decision id; AC9 missed R9 and appeal paths ⇒ per-path gates (BigDev chose these over a commit-time backstop); 400/409 convention; snake_case; `-210` does not authorise the reason code; D1's actor and D4's narrowing are the Panel's ⇒ routing note drafted. — *Superseded by v0.5. Kept as the record.* | BigDev + Claude |
 | 2026-09-19 | 0.5 | **Rewritten on `-226` — Trustee-ratified (DR + KB), 2026-09-19**, the Panel's answer to the 2026-09-19 routing note, with its own design: a mismatch is not allowed in general (the helpline operator's duty at filing); a clerical difference is accepted by the **District Admin** with a **selected reason** and finally approved by the **Pariwar Admin**; a non-clerical mismatch is **sent back**, never denied; the system **never acts**, it only **highlights** to DA / PA / SA; **two bank accounts are mandatory to file**. ⇒ escalation, the new reason code, the resolver attestation and the decision-body extension are removed; two keys (view: DA / verifier / PA / helpline; check: DA only); the check is its own write, required at P1/P3/P4 (per-path, as BigDev chose); filing flows require both accounts and take an optional note; D2 (the three reasons), D3 (PA's vote is the final approval) decided; D4 (no correction window after appeal/R9) and D5 (post-approval correction ⇒ DA re-checks) recorded. D2(b) and v0.4's D4 superseded by `-226`, ⛔ not reinterpreted. | BigDev + Claude |
+| 2026-09-20 | 0.6 | **`-227` — Trustee-ratified (DR + KB), amending `-226`.** (1) ⛔ **No transliteration reason** — *"Please use English Name everywhere to avoid this"* ⇒ **AC12**: the nominee declaration and the account holder name are captured in **English script**, validated at the boundary, with ⛔ no backfill of existing rows; the wider sweep (member KYC, Story 6.5's 20% fuzzy name comparison) is recorded for its own story. (2) ⭐ **The return loop** — if the Pariwar Admin does ⛔ not approve, the claim goes **back to the District Admin with a note**, the DA contacts the claimant, the **helpline operator** writes the correction, the DA re-checks and **re-submits** ⇒ **AC11**: a `return_to_district_admin` action, a `correction_return` decision phase, two annotation events, a resubmit route — and ⛔ **not** a denial, so ⛔ no appeal flow starts. (3) ⭐ **D5 confirmed** — a post-approval correction requires a fresh District Admin check. ⇒ **D4 is now RESOLVED**: one live **correction-needed record** lets the helpline correct whatever the claim's state, so the old dead end after an appeal reversal or R9 is gone; ⛔ no window is widened and ⛔ no state moves. | BigDev + Claude |

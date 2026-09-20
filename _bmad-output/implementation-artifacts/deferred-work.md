@@ -806,7 +806,7 @@ superseded alike, into the Stage-1 reviewer-conflict exclusion set. ⇒ a Pariwa
 **returns** a claim for a name correction — a routing act, ⛔ not a judgement on the merits — is thereby
 excluded from reviewing that claim's later Stage-1 appeal. ⭐ 6.18 **leaves the exclusion in place** (the
 conservative side) and routes the question: *should a return disqualify the reviewer?*
-⭐ **Trigger:** *the Panel's next pass, or the first appeal that stalls for want of an eligible reviewer.*
+⭐ **Trigger:** *the Panel's next pass, or the first appeal that stalls for want of an eligible reviewer. ⚠ **CORRECTED 2026-09-20 (6.18 code review): this was ⛔ NEVER routed** — no routing note contains the question, although the paragraph above and the 6.18 story both say it was. ⭐ **And it is ⛔ not the Panel's** (the template's §0 gate fails): a Stage-1 reviewer holds `claim.appeal_review`, which only `district_admin` holds, while a return needs `cycle.freeze`, which only `pariwar_admin` holds — so the exclusion changes nothing for any family unless ONE person holds both grants or is a Super Admin (inference: stacked grants not traced). Proposed author-commit, for BigDev: **leave the exclusion in place.** Original text kept above ([[feedback_closure_language_precision]]).*
 
 **(b-2) A live governance row replacing a state guard — ⭐ a deliberate FIRST, recorded as one.**
 6.18's correction path lets a `claim.correct_nominee_bank` holder write bank details **whatever the

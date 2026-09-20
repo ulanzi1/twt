@@ -215,12 +215,35 @@ async function recordNomineeBank(
   if (input.requireDeceasedMemberId && claimRow.deceasedMemberId !== input.requireDeceasedMemberId) {
     throw new NotFoundError('Claim not found', 'claim.not_found');
   }
+  // ⭐⭐ STORY 6.18 (AC5) — THE THIRD WAY IN: A CLAIM UNDER CORRECTION.
+  //
+  // ⚠⚠ WITHOUT THIS THE WHOLE RETURN LOOP WAS UNUSABLE OVER HTTP (code review 2026-09-20), and
+  // nothing caught it because the only test of the loop calls the domain writer DIRECTLY. The
+  // writer grew a third branch permitting a correction whatever the claim's state while a live
+  // correction record exists — but THIS pre-check ran first and 409'd, so the branch was reachable
+  // only at `verifier_approved`, which the tier-2 window already covered. A claim returned by the
+  // Pariwar Admin at `state_trustee_freeze`, or sent back by a District Admin's `does_not_match` at
+  // `reversed`, could be corrected by nobody — while the filer-facing flag cheerfully told the
+  // operator to correct it. The comment below even claimed *"the writer re-guards inside the tx"*;
+  // the writer never got the chance.
+  // ⛔ It is ⛔ NOT a widening of the state window: the same `resolveClaimCorrectionState` the writer
+  // consults decides it, so the handler and the writer cannot disagree about who may write.
+  const underCorrection =
+    input.allowCorrection === true &&
+    (await claim.resolveClaimCorrectionState(
+      guardTx.tx,
+      input.pariwarId,
+      input.claimCaseId,
+      claimRow.deceasedMemberId,
+    )).underCorrection;
+
   // D3 tiers: the nominee window is open to any caller; the correction window only to an authorized
   // admin (allowCorrection). Anything else (pre-converged, frozen/published) is a clean 409 here (the
   // writer re-guards inside the tx + enforces the mandatory correction reason as the backstop).
   const editable =
     COLLECTABLE_STATES.has(claimRow.currentState) ||
-    (input.allowCorrection === true && ADMIN_CORRECTION_STATES.has(claimRow.currentState));
+    (input.allowCorrection === true && ADMIN_CORRECTION_STATES.has(claimRow.currentState)) ||
+    underCorrection;
   if (!editable) {
     throw new ConflictError(
       'Bank details cannot be recorded for the claim in its current state',
@@ -232,7 +255,15 @@ async function recordNomineeBank(
   // reaching here with the claim in the correction window means this IS a correction attempt — the
   // route preHandler only proved the tier-1 permission; require the tier-2 one now (review finding,
   // 2026-07-11).
-  if (input.allowCorrection === true && ADMIN_CORRECTION_STATES.has(claimRow.currentState)) {
+  //
+  // ⚠⚠ AND THE UNDER-CORRECTION PATH IS A CORRECTION TOO — admitting it above WITHOUT this line
+  // would have silently SKIPPED the tier-2 permission for every return-loop write, which is a worse
+  // bug than the one being fixed. The `underCorrection` states are mostly OUTSIDE
+  // `ADMIN_CORRECTION_STATES`, so the original condition would simply not have fired.
+  if (
+    input.allowCorrection === true &&
+    (ADMIN_CORRECTION_STATES.has(claimRow.currentState) || underCorrection)
+  ) {
     input.assertCorrectionAuthorized?.();
   }
 
@@ -301,19 +332,36 @@ async function nomineeBankStatus(
   tx: ScopeTx['tx'],
   pariwarId: ids.PariwarId,
   claimCaseId: ids.ClaimId,
+  deceasedMemberId: ids.MemberId,
 ): Promise<NomineeBankStatusResponse> {
   const rows = await claim.getClaimNomineeBankAccountsCiphertext(tx, pariwarId, claimCaseId);
+  const claimRow = await claim.getClaimCase(tx, pariwarId, claimCaseId);
+  const claimState = claimRow?.currentState ?? '';
   // Story 6.18 (AC5) — tell the FILER their bank details need correcting. Derived from the two
   // sources that mean the same thing downstream: the District Admin's `does_not_match` verdict
   // (`-226` cl.6) and the Pariwar Admin's live return row (`-227` cl.10).
   // ⛔ NOT a denial, and the response carries ⛔ no name and ⛔ no reason text — a filer is told WHAT
   // to do, never handed a judgement about whose name is wrong.
-  const [latestCheck, hasReturn] = await Promise.all([
-    claim.getLatestNomineeNameCheck(tx, pariwarId, claimCaseId),
-    claim.hasLiveReturnRow(tx, pariwarId, claimCaseId),
-  ]);
+  //
+  // ⚠⚠ THROUGH THE SHARED RESOLVER, AND IT HAD TO BE (code review 2026-09-20). This used to test
+  // the latest check with ⛔ no currency and the return row bare, so the banner NEVER TURNED OFF:
+  // after the helpline corrected the accounts and the District Admin re-checked, the filer was
+  // still being told their bank details needed correcting — on a resubmitted claim, and on a
+  // later-denied one. `resolveClaimCorrectionState` is the one definition every surface now shares.
+  const correction = await claim.resolveClaimCorrectionState(
+    tx,
+    pariwarId,
+    claimCaseId,
+    deceasedMemberId,
+  );
   return {
-    correctionNeeded: claim.isClaimUnderCorrection(latestCheck, hasReturn),
+    correctionNeeded: correction.underCorrection,
+    // ⭐ The MEMBER's own window — `-226`/`-227` never ask the family to act on a return, and the
+    // app must not pretend otherwise. `allowCorrection` is helpline-only, so the member's window is
+    // exactly `NOMINEE_BANK_COLLECTABLE_STATES` and nothing else.
+    memberEditable: (claim.NOMINEE_BANK_COLLECTABLE_STATES as readonly string[]).includes(
+      claimState,
+    ),
     accounts: rows.map((row) => ({
       rank: row.accountRank as 1 | 2,
       bankName: row.bankName,
@@ -384,7 +432,7 @@ export function createNomineeBankHandlers(deps: AppDeps) {
         if (!claimRow || claimRow.deceasedMemberId !== ids.memberId(memberIdStr)) {
           throw new NotFoundError('Claim not found', 'claim.not_found');
         }
-        const body = await nomineeBankStatus(tx.tx, pariwarId, claimCaseIdBrand);
+        const body = await nomineeBankStatus(tx.tx, pariwarId, claimCaseIdBrand, claimRow.deceasedMemberId);
         ok = true;
         void reply.status(200);
         return body;
@@ -405,8 +453,15 @@ export function createNomineeBankHandlers(deps: AppDeps) {
         throw new UnauthorizedError('Authentication required', 'auth.session_required');
       }
       const { claimCaseId } = request.params as { claimCaseId: string };
+      const pariwarId = ids.pariwarId(scopeTx.pariwarId);
+      const cid = ids.claimId(claimCaseId);
+      // ⚠ The deceased member is needed to derive the live DECLARATION TOKEN, which is half of
+      // "is the sending-back check still current?" — so the status is read from the claim, ⛔ not
+      // guessed. A missing claim is a 404 here as everywhere else on this surface.
+      const claimRow = await claim.getClaimCase(scopeTx.tx, pariwarId, cid);
+      if (!claimRow) throw new NotFoundError('Claim not found', 'claim.not_found');
       void reply.status(200);
-      return nomineeBankStatus(scopeTx.tx, ids.pariwarId(scopeTx.pariwarId), ids.claimId(claimCaseId));
+      return nomineeBankStatus(scopeTx.tx, pariwarId, cid, claimRow.deceasedMemberId);
     },
 
     /**

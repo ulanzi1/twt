@@ -88,6 +88,20 @@ const EN: Record<string, string> = {
     'The two accounts must be different — a second account is what lets the amount through if the first one fails.',
   // ⭐ AC6 — the claim WAITS for the accounts; it is never refused for the want of them.
   'helpline.bank.required': 'This claim needs both bank accounts before the District Admin can check it.',
+  // ── The CORRECTION path (code review 2026-09-20, D4) ─────────────────────────────
+  // `-226` cl.1 puts the duty of making sure the names match on THIS operator, and `-227` cl.11
+  // makes them the one who types the corrected details after the District Admin has called the
+  // family. ⛔ None of this copy says "rejected" or "denied": the claim is open throughout.
+  'helpline.bank.correct': 'Correct these bank details',
+  'helpline.bank.cancelCorrection': 'Cancel',
+  'helpline.bank.submitCorrection': 'Save the corrected accounts',
+  'helpline.bank.correctionReason': 'Why are you correcting these? (recorded)',
+  'helpline.bank.correctionReasonRequired':
+    'Say why you are correcting the accounts already on file — it is recorded against this claim.',
+  'helpline.bank.correctionNeeded':
+    'These bank details need correcting. Take the corrected account details from the family and save them here — the claim stays open and has not been refused.',
+  'helpline.bank.namesError':
+    'The two names could not be loaded, so they have not been checked. Do not treat this as "the names match".',
 };
 
 /** Resolve a console-chrome key to English (loud-ish fallback: return the key if unmapped). */

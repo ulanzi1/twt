@@ -13,7 +13,7 @@
 // ⭐ PURE COMPONENT, the `<VerificationDecisionStrip>` shape: every input arrives as a prop and the
 // parent owns the mutation. That is what lets the tests drive it without a network.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import type {
   NomineeNameClericalReason,
@@ -44,6 +44,30 @@ export interface NomineeNameCheckPanelProps {
 const VERDICTS: NomineeNameCheckVerdict[] = ['matches', 'clerical_difference', 'does_not_match'];
 const REASONS: NomineeNameClericalReason[] = ['initial', 'married_name', 'bank_shortened_name'];
 
+/**
+ * The claim states in which the WRITER will accept a check (`NOMINEE_NAME_CHECK_RECORDABLE_STATES`).
+ *
+ * ⚠⚠ THE FORM USED TO BE OFFERED IN EVERY STATE (code review 2026-09-20). `data.claim_state` was
+ * in the DTO and unused, so a District Admin looking at an already-committed claim was shown verdict
+ * dropdowns and a live Record button that could only ever 409 — teaching them to read a governance
+ * refusal as a glitch, which is the exact failure the read-budget doc-block warns about elsewhere.
+ * ⚠ It is a UI COURTESY, ⛔ not a control: the server is the boundary and re-checks under the lock.
+ */
+const RECORDABLE_STATES = new Set([
+  'verification_in_progress',
+  'verifier_review',
+  'verifier_approved',
+  'reversed',
+  'state_trustee_freeze',
+]);
+
+/** Render a clerical reason CODE through the label table, falling back to the code itself. */
+function reasonLabel(code: string): string {
+  // ⚠ ⛔ NEVER `t.nameCheck.reasons[code as …]` bare: an unrecognised code printed the literal
+  // string `undefined` into the console, which reads as a rendering bug rather than as new data.
+  return (t.nameCheck.reasons as Record<string, string | undefined>)[code] ?? code;
+}
+
 /** Render one Tier-1 name union. ⭐ The three states are NEVER collapsed into a blank. */
 function NameValue({
   value,
@@ -68,6 +92,29 @@ export function NomineeNameCheckPanel(props: NomineeNameCheckPanelProps): React.
   const [reasons, setReasons] = useState<Record<number, NomineeNameClericalReason | ''>>({});
   const [validationError, setValidationError] = useState<string | null>(null);
 
+  /**
+   * ⭐⭐ THE SELECTIONS ARE CLEARED THE MOMENT THE DATA THEY WERE ABOUT CHANGES, and this is a
+   * SAFETY property, not tidiness (code review 2026-09-20).
+   *
+   * `verdicts` and `reasons` were keyed by `account_rank` ALONE. So: a District Admin reads the two
+   * names, selects "matches", and — before they press Record — the helpline corrects account #2.
+   * On the next fetch the panel re-renders with the NEW name while the OLD "matches" stays
+   * pre-selected, and `submit` builds its entry from the FRESH `account_updated_at`. The staleness
+   * check then PASSES, and a judgement the human formed about a name they never saw is recorded
+   * under their own display name. That defeats the one thing this whole story exists to guarantee:
+   * *a named human looked at these two names.*
+   * ⚠ The dependency is the declaration token plus every `account_updated_at` — exactly the tokens
+   * the server uses to decide staleness, so the reset and the 409 can never disagree.
+   */
+  const dataFingerprint = data
+    ? [data.nominee_declaration_token, ...data.accounts.map((a) => `${a.account_rank}:${a.account_updated_at}`)].join('|')
+    : '';
+  useEffect(() => {
+    setVerdicts({});
+    setReasons({});
+    setValidationError(null);
+  }, [dataFingerprint]);
+
   if (loading) return <section aria-label={t.nameCheck.heading} data-testid="name-check-loading">{t.nameCheck.loading}</section>;
   if (!data) {
     return (
@@ -82,6 +129,9 @@ export function NomineeNameCheckPanel(props: NomineeNameCheckPanelProps): React.
   // so the copy says "needed", not "missing"/"rejected".
   const accountsMissing = !data.accounts_complete;
   const noNominees = data.declared_nominees.length === 0;
+  // ⚠ A UI courtesy mirroring the writer's own window — ⛔ not a control. The server re-checks it
+  // under the claim lock; this only stops us offering a button that can only 409.
+  const recordableHere = RECORDABLE_STATES.has(data.claim_state);
 
   const submit = async (): Promise<void> => {
     setValidationError(null);
@@ -134,7 +184,7 @@ export function NomineeNameCheckPanel(props: NomineeNameCheckPanelProps): React.
             <span className="text-xs uppercase text-slate-600">{t.nameCheck.returnNote}: </span>
             <NameValue value={data.correction_return.note} />
           </p>
-          <p className="mt-2 text-sm" data-testid="name-check-resubmitted">
+          <p className="mt-2 text-sm" role="status" data-testid="name-check-resubmitted">
             {data.correction_return.resubmitted
               ? t.nameCheck.resubmitted
               : t.nameCheck.awaitingCorrection}
@@ -218,20 +268,53 @@ export function NomineeNameCheckPanel(props: NomineeNameCheckPanelProps): React.
 
       {/* ── The recorded check ── */}
       {data.current_check !== null ? (
-        <p data-testid="name-check-current" className="text-sm">
-          {t.nameCheck.recordedBy} {data.current_check.checked_by_actor_display || '—'} ·{' '}
-          {data.current_check.checked_at}
-          {data.current_check.accounts.some((a) => a.verdict === 'clerical_difference') ? (
-            // ⭐ AC8 — the highlight. It comes from the District Admin's RECORDED judgement, ⛔ never
-            // from a computer comparison, and it carries only the reason CODE — never a name.
-            <span data-testid="name-check-difference-flag" className="ml-2 rounded bg-amber-100 px-2 py-0.5">
-              {t.nameCheck.approvedWithDifference}:{' '}
-              {data.current_check.accounts
-                .filter((a) => a.clerical_reason !== null)
-                .map((a) => t.nameCheck.reasons[a.clerical_reason as NomineeNameClericalReason])
-                .join(', ')}
-            </span>
-          ) : null}
+        // ⭐ `role="status"` — this block APPEARS after the District Admin presses Record, and the
+        // button it replaces had focus. Without a live region a screen-reader user is told nothing
+        // at all about whether their judgement landed (checklist family 13(d)).
+        <div data-testid="name-check-current" role="status" className="space-y-1 text-sm">
+          <p>
+            {t.nameCheck.recordedBy} {data.current_check.checked_by_actor_display || '—'} ·{' '}
+            {data.current_check.checked_at}
+            {/* ⭐ AC8 — the highlight. It comes from the District Admin's RECORDED judgement, ⛔ never
+                from a computer comparison, and it carries only the reason CODE — never a name.
+                ⚠⚠ GATED ON `passing`, WHICH IT WAS NOT. AC8 says *"a claim whose CURRENT PASSING
+                check has any clerical_difference"*. Testing only for a `clerical_difference` verdict
+                meant a MIXED check — one account `clerical_difference`, the other `does_not_match`
+                — displayed "Approved with a name difference" on a claim that is under correction and
+                ⛔ cannot be approved at all. `passing` is already in the DTO; it was simply unread. */}
+            {data.current_check.passing &&
+            data.current_check.accounts.some((a) => a.verdict === 'clerical_difference') ? (
+              <span data-testid="name-check-difference-flag" className="ml-2 rounded bg-amber-100 px-2 py-0.5">
+                {t.nameCheck.approvedWithDifference}:{' '}
+                {data.current_check.accounts
+                  .filter((a) => a.clerical_reason !== null)
+                  .map((a) => reasonLabel(a.clerical_reason as string))
+                  .join(', ')}
+              </span>
+            ) : null}
+          </p>
+
+          {/* ⭐ WHAT WAS ACTUALLY RECORDED, PER ACCOUNT — and it was shown NOWHERE (code review
+              2026-09-20). The panel said only "Checked by X · time", so a recorded `does_not_match`
+              was invisible: the very verdict that blocks the approval and sends the claim back was
+              the one fact the surface did not state. A District Admin returning to a claim could
+              not see their own judgement. */}
+          <ul data-testid="name-check-recorded-verdicts" className="text-xs text-slate-600">
+            <li className="uppercase">{t.nameCheck.recordedVerdicts}</li>
+            {data.current_check.accounts.map((a) => (
+              <li key={a.account_rank} data-testid={`name-check-recorded-verdict-${a.account_rank}`}>
+                {t.nameCheck.accountLabel} #{a.account_rank}: {t.nameCheck.verdicts[a.verdict]}
+                {a.clerical_reason !== null ? ` — ${reasonLabel(a.clerical_reason)}` : ''}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : data.latest_check_is_stale ? (
+        // ⭐ STALE ≠ NEVER CHECKED, and saying "no check has been recorded" for a stale one erased a
+        // colleague's work. A correction invalidated the earlier check — which is D5 working as
+        // ruled (`-227` cl.12), not an absence.
+        <p data-testid="name-check-stale" role="status" className="text-sm text-amber-800">
+          {t.nameCheck.checkStale}
         </p>
       ) : (
         // ⛔ A check is NEVER inferred or back-filled — a claim decided before this shipped says so
@@ -241,8 +324,13 @@ export function NomineeNameCheckPanel(props: NomineeNameCheckPanelProps): React.
         </p>
       )}
 
-      {/* ── The verdict control (District Admin only) ── */}
-      {canCheck && data.accounts.length > 0 ? (
+      {/* ── The verdict control (District Admin only, and only where the writer accepts one) ── */}
+      {canCheck && data.accounts.length > 0 && !recordableHere ? (
+        <p data-testid="name-check-not-recordable" className="text-sm text-slate-600">
+          {t.nameCheck.checkNotRecordableHere}
+        </p>
+      ) : null}
+      {canCheck && data.accounts.length > 0 && recordableHere ? (
         <div data-testid="name-check-form" className="space-y-3 border-t pt-3">
           {data.accounts.map((a) => (
             <div key={a.account_rank} className="flex items-center gap-3">
@@ -299,7 +387,7 @@ export function NomineeNameCheckPanel(props: NomineeNameCheckPanelProps): React.
               because an operator must not believe they are denying the claim: cl.6 rules it is
               ⛔ never a denial. */}
           {Object.values(verdicts).some((v) => v === 'does_not_match') ? (
-            <p data-testid="name-check-sent-back-hint" className="text-sm text-amber-800">
+            <p data-testid="name-check-sent-back-hint" role="status" className="text-sm text-amber-800">
               {t.nameCheck.sentBackHint}
             </p>
           ) : null}

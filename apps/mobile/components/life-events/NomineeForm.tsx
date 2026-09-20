@@ -12,9 +12,13 @@
 // screen's a11y posture: labels + hints, announced split + validation).
 
 import { useState } from 'react'
-// Story 6.18 (AC12) — the ENGLISH-script gate, imported from `@twt/contracts` (one source, ⛔ no
-// hand-copy and therefore ⛔ no `.source` drift test owed).
-import { ENGLISH_NAME_REGEX } from '@twt/contracts'
+// Story 6.18 (AC12) — the SHARED English-script predicate from `@twt/contracts`.
+// ⚠⚠ `isEnglishScriptName(x)`, ⛔ NOT `ENGLISH_NAME_REGEX.test(x.trim())` (code review 2026-09-20).
+// Three clients each hand-rolled that call. It gives the same answer today, but only by coincidence
+// of the current implementation: the moment the schema gains a rule the bare regex does not carry,
+// a name the SERVER accepts starts being refused in the app (or worse, the reverse). One predicate,
+// used by the schema and by every form, is the only way the two cannot drift.
+import { isEnglishScriptName } from '@twt/contracts'
 
 import { useT } from '@twt/i18n/react'
 import { Button, H2, Input, Paragraph, Spinner, Text, XStack, YStack } from 'tamagui'
@@ -95,7 +99,7 @@ export function NomineeForm(props: NomineeFormProps) {
       // name check is a comparison and ⛔ not an ad-hoc transliteration. The boundary refuses a
       // non-Latin name, so this form refuses it FIRST — ⛔ never a silent server-only 400.
       // Follows the file's first-error-only, dignified-validation shape (Pattern 4).
-      if (!ENGLISH_NAME_REGEX.test(f.name.trim())) return t('nominees.name_english')
+      if (!isEnglishScriptName(f.name)) return t('nominees.name_english')
       if (!f.relationship) return t('nominees.relationship_required')
       if (!f.mobile.trim()) return t('nominees.mobile_required')
     }

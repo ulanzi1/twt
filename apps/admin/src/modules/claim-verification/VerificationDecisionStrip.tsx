@@ -95,6 +95,25 @@ export function VerificationDecisionStrip({
   const [pending, setPending] = useState<PendingAction>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
 
+  /**
+   * ⭐⭐ THE APPROVE FORM CLOSES WHEN APPROVAL STOPS BEING AVAILABLE (code review 2026-09-20).
+   *
+   * `canApprove` gated the BUTTON and the "1" keyboard shortcut — but `outcome` is local state
+   * that survives. So: a District Admin selects Approve, the reason/rationale fields open, and then
+   * the name check goes stale (a helpline correction) or they record `does_not_match`. The form
+   * stayed open and SUBMITTABLE; only the server's 409 stopped it.
+   * ⚠ This is a UX defect, ⛔ not a bypass — the server is the boundary and refuses it (family 3).
+   * What it costs is trust: an operator who fills in a rationale and is then refused learns to read
+   * governance refusals as glitches, which is precisely what AC4's disabled-with-a-reason exists to
+   * prevent.
+   */
+  useEffect(() => {
+    if (!canApprove && outcome === 'approved') {
+      setOutcome(null);
+      setValidationError(null);
+    }
+  }, [canApprove, outcome]);
+
   /** Choose an outcome (active window) — reset an incompatible reason code. */
   const chooseOutcome = useCallback(
     (next: VerifierDecisionOutcome): void => {
@@ -191,6 +210,12 @@ export function VerificationDecisionStrip({
             disabled={processing || !canApprove}
             onClick={() => chooseOutcome('approved')}
             aria-pressed={outcome === 'approved'}
+            // ⭐ A DISABLED BUTTON IS NOT FOCUSABLE, so a screen-reader user tabbing through the
+            // controls never reaches it and is never told WHY approval is unavailable — the reason
+            // paragraph below is, to them, unattached text. `aria-describedby` binds the two.
+            {...(!canApprove && approveBlockedReason != null && approveBlockedReason !== ''
+              ? { 'aria-describedby': 'approve-blocked-reason' }
+              : {})}
           >
             {t.decision.approveShortcut}. {t.decision.approve}
           </button>
@@ -198,7 +223,12 @@ export function VerificationDecisionStrip({
               approval under the claim lock; saying WHY here is what stops a District Admin reading a
               governance precondition as a broken button. ⛔ Never a name — a reason phrase only. */}
           {!canApprove && approveBlockedReason != null && approveBlockedReason !== '' ? (
-            <p className="w-full text-xs text-status-warn-fg" data-testid="approve-blocked-reason">
+            <p
+              id="approve-blocked-reason"
+              role="status"
+              className="w-full text-xs text-status-warn-fg"
+              data-testid="approve-blocked-reason"
+            >
               {approveBlockedReason}
             </p>
           ) : null}

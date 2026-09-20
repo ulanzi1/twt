@@ -15,7 +15,7 @@
 // ⛔ Never widen this projection. If a caller needs a nominee's name, it needs the read path, the
 // `claim.view_nominee_name_check` key and an encryption context — not this.
 
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import type { MemberId, PariwarId } from '../ids/index.js';
@@ -46,4 +46,43 @@ export async function getMemberNomineeDeclarationRefs(
     .from(memberNominees)
     .where(and(eq(memberNominees.pariwarId, pariwarId), eq(memberNominees.memberId, memberId)))
     .orderBy(asc(memberNominees.rank));
+}
+
+/**
+ * The same refs for MANY members in ONE query, keyed by member id — the bulk shape a list page
+ * needs (code review 2026-09-20: the cycle-freeze pending read has to derive a declaration token per
+ * card to tell a CURRENT check from a stale one, and a per-card call would be an N+1 on the
+ * Pariwar Admin's main screen).
+ *
+ * ⚠ A member with no declared nominees is ABSENT from the map, ⛔ not mapped to `[]`. Callers must
+ * default to `[]` — which is correct and load-bearing: an empty declaration has its own stable
+ * token, and "declared nobody" is a real state a check can have been made about.
+ * ⛔ Same projection, same prohibition: two harmless columns, ⛔ never a name.
+ */
+export async function getMemberNomineeDeclarationRefsBulk(
+  db: Db,
+  pariwarId: PariwarId,
+  memberIds: readonly MemberId[],
+): Promise<Map<string, NomineeDeclarationRowRef[]>> {
+  const byMember = new Map<string, NomineeDeclarationRowRef[]>();
+  if (memberIds.length === 0) return byMember;
+
+  const rows = await db
+    .select({
+      memberId: memberNominees.memberId,
+      rank: memberNominees.rank,
+      createdAt: memberNominees.createdAt,
+    })
+    .from(memberNominees)
+    .where(
+      and(eq(memberNominees.pariwarId, pariwarId), inArray(memberNominees.memberId, [...memberIds])),
+    )
+    .orderBy(asc(memberNominees.rank));
+
+  for (const row of rows) {
+    const list = byMember.get(row.memberId) ?? [];
+    list.push({ rank: row.rank, createdAt: row.createdAt });
+    byMember.set(row.memberId, list);
+  }
+  return byMember;
 }

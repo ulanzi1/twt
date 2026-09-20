@@ -132,6 +132,18 @@ function translateCycleFreezeError(err: unknown): never {
       'cycle_freeze.already_routed',
     );
   }
+  // Story 6.18 (code review 2026-09-20) — a return and a route-to-R9 may ⛔ never coexist on one
+  // claim. Whichever landed first stands; the second act is refused so a human chooses, rather than
+  // one silently superseding the other's live governance row.
+  if (err instanceof claim.TrusteeExclusionConflictError) {
+    throw new ConflictError(
+      err.liveExclusion === 'routing'
+        ? 'This claim is already routed to R9 — it cannot also be returned to the District Admin'
+        : 'This claim is already returned to the District Admin — it cannot also be routed to R9',
+      'cycle_freeze.exclusion_conflict',
+      { live_exclusion: err.liveExclusion },
+    );
+  }
   if (err instanceof claim.CommitIdOwnershipConflictError) {
     throw new ConflictError(
       'This commit_id was already used by a different actor',
@@ -190,13 +202,28 @@ export function createCycleFreezeHandlers(
   }
 
   /** Post-commit NON-PII audit line (never the rationale, D-G/AC10). */
+  /**
+   * @param claimCaseId  the claim this line is ABOUT, when it is about one.
+   *
+   * ⚠⚠ PASS IT. `emitAuthAudit` HASHES `context` into `request_payload_hash`, and
+   * `audit_log_entries` has ⛔ no context column — so a line with no `resourceLocator` is stored
+   * against `user:<actorId>` and an auditor cannot tell WHICH claim it concerns. That is merely
+   * unhelpful on most lines and load-bearing on `admin_cycle_freeze.returned`, which AC11 calls
+   * *the trail* precisely because the return mints ⛔ no event (code review 2026-09-20).
+   */
   function audit(
     request: FastifyRequest,
     type: AuthAuditEventType,
     ctx: CycleFreezeContext,
     context: Record<string, unknown>,
+    claimCaseId?: string,
   ): void {
-    emitAuthAudit(deps, request, type, { actorId: ctx.actorId, pariwarId: ctx.pariwarId, context });
+    emitAuthAudit(deps, request, type, {
+      actorId: ctx.actorId,
+      pariwarId: ctx.pariwarId,
+      ...(claimCaseId !== undefined ? { resourceLocator: `claim:${claimCaseId.toLowerCase()}` } : {}),
+      context,
+    });
   }
 
   function toDecisionResponse(result: claim.TrusteeDecisionResult): CycleFreezeDecisionResponse {
@@ -345,11 +372,17 @@ export function createCycleFreezeHandlers(
         }
         ok = true;
       } catch (err) {
-        audit(request, 'admin_cycle_freeze.rejected', ctx, {
-          claim_case_id: body.claim_case_id,
-          action: body.action,
-          reason_code: body.reason_code ?? null,
-        });
+        audit(
+          request,
+          'admin_cycle_freeze.rejected',
+          ctx,
+          {
+            claim_case_id: body.claim_case_id,
+            action: body.action,
+            reason_code: body.reason_code ?? null,
+          },
+          body.claim_case_id,
+        );
         return translateCycleFreezeError(err);
       } finally {
         await closeScopeTx(scopeTx, ok);
@@ -365,7 +398,7 @@ export function createCycleFreezeHandlers(
         ...(result.concealmentClauseVersionId != null
           ? { concealment_clause_version_id: result.concealmentClauseVersionId }
           : {}),
-      });
+      }, result.decision.claimCaseId);
       void reply.status(201);
       return toDecisionResponse(result);
     },

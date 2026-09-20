@@ -91,6 +91,29 @@ export function decisionErrorMessage(err: unknown): string {
   return t.decision.submitError;
 }
 
+/**
+ * The NAME-CHECK error table — ⛔ deliberately separate from `decisionErrorMessage`.
+ *
+ * ⚠⚠ THE NAME-CHECK ERRORS USED TO GO THROUGH THE DECISION TABLE (code review 2026-09-20), whose
+ * codes are all `verifier_decision.*`. So every one of them fell through to *"The decision could
+ * not be submitted. Please try again."* — wrong twice over: nothing was a DECISION (a check is not
+ * a verdict on the claim), and "try again" is the one thing that cannot work for the commonest case,
+ * a staleness 409, where the right action is to READ THE NAMES AGAIN because they changed.
+ */
+export function nameCheckErrorMessage(err: unknown): string {
+  if (err instanceof ApiError) {
+    if (err.code === 'auth.step_up_required') return t.decision.stepUpRequired;
+    if (err.code === 'admin.display_name_missing') return t.decision.displayNameMissing;
+    if (err.code === 'nominee_name_check.stale') return t.nameCheck.errorStale;
+    if (err.code === 'nominee_name_check.bank_details_required') return t.nameCheck.bankDetailsMissing;
+    if (err.code === 'nominee_name_check.not_recordable') return t.nameCheck.checkNotRecordableHere;
+    if (err.code === 'nominee_name_check.invalid') return t.nameCheck.errorInvalid;
+    if (err.code === 'nominee_name_check.stream_conflict') return t.decision.decisionConflict;
+    if (err.isForbidden) return t.nameCheck.errorForbidden;
+  }
+  return t.nameCheck.errorGeneric;
+}
+
 export function VerifierConsoleRoute(): ReactElement {
   const session = useSession();
   const navigate = useNavigate();
@@ -208,12 +231,23 @@ export function VerifierConsoleRoute(): ReactElement {
               // anyway under the claim lock; disabling here stops the console offering a control
               // that would 409, which would read to an operator as a glitch rather than a rule.
               canApprove={packet.nomineeNameCheck.currentAndPassing}
+              // ⚠⚠ NAME THE ACTUAL BLOCKER (code review 2026-09-20). This fell through to
+              // *"Record the nominee name check before approving"* for EVERY non-passing case —
+              // including the one where the District Admin had just recorded `does_not_match`
+              // themselves. Telling somebody to do a thing they have visibly already done reads as
+              // the console not having noticed, and hides the real instruction: get it corrected.
               approveBlockedReason={
                 packet.nomineeNameCheck.currentAndPassing
                   ? null
-                  : !packet.nomineeNameCheck.accountsComplete
-                    ? t.nameCheck.bankDetailsMissing
-                    : t.nameCheck.approveBlocked
+                  : // ⛔ "we could not read this" is ⛔ NOT "the bank details are missing".
+                    !packet.nomineeNameCheck.available
+                    ? t.nameCheck.statusUnavailable
+                    : !packet.nomineeNameCheck.accountsComplete
+                      ? t.nameCheck.bankDetailsMissing
+                      : nameCheck.data?.current_check?.accounts.some((a) => a.verdict === 'does_not_match') ===
+                          true
+                        ? t.nameCheck.approveBlockedSentBack
+                        : t.nameCheck.approveBlocked
               }
             />
           ) : undefined
@@ -249,12 +283,30 @@ export function VerifierConsoleRoute(): ReactElement {
                 {t.nameCheck.heading}
                 {/* AC8 — the highlight rides the console's OWN read, so it shows WITHOUT opening the
                     disclosure (and therefore without decrypting a name). */}
+                {/* ⚠ LABELS, ⛔ not a bare headline. The packet carries the reason CODES and this
+                    dropped them entirely, so the District Admin's own console said only "approved
+                    with a name difference" while the Pariwar Admin's card named the reason — the
+                    two surfaces AC8 covers, disagreeing. */}
                 {packet.nomineeNameCheck.differenceReasons.length > 0 ? (
                   <span
                     data-testid="console-name-difference-flag"
                     className="ml-2 rounded bg-status-warn-bg px-2 py-0.5 text-xs text-status-warn-fg"
                   >
-                    {t.nameCheck.approvedWithDifference}
+                    {t.nameCheck.approvedWithDifference}:{' '}
+                    {packet.nomineeNameCheck.differenceReasons
+                      .map((r) => (t.nameCheck.reasons as Record<string, string | undefined>)[r] ?? r)
+                      .join(', ')}
+                  </span>
+                ) : null}
+                {/* ⭐ A TRANSIENT FAILURE SAYS SO. The section used to fail soft into
+                    `accountsComplete: false`, which renders as "bank details missing" — sending a
+                    District Admin to chase a family for documents already on file. */}
+                {!packet.nomineeNameCheck.available ? (
+                  <span
+                    data-testid="console-name-check-unavailable"
+                    className="ml-2 rounded bg-black/5 px-2 py-0.5 text-xs"
+                  >
+                    {t.nameCheck.statusUnavailable}
                   </span>
                 ) : null}
               </button>
@@ -262,11 +314,14 @@ export function VerifierConsoleRoute(): ReactElement {
                 <NomineeNameCheckPanel
                   data={nameCheck.data}
                   loading={nameCheck.isLoading}
+                  // ⚠ THE WRITE ERROR WINS. This was the other way round, so a lingering read error
+                  // masked the message about the judgement the District Admin had just tried to
+                  // record — the one they were waiting on.
                   error={
-                    nameCheck.isError
-                      ? decisionErrorMessage(nameCheck.error)
-                      : postNameCheck.isError
-                        ? decisionErrorMessage(postNameCheck.error)
+                    postNameCheck.isError
+                      ? nameCheckErrorMessage(postNameCheck.error)
+                      : nameCheck.isError
+                        ? nameCheckErrorMessage(nameCheck.error)
                         : null
                   }
                   // ⭐ The SERVER is the boundary (`claim.check_nominee_name`, district-dimension),

@@ -24,6 +24,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ApiError } from '../../api/client.js';
 import {
   useHelplineClaimIntake,
+  useNomineeBankStatusHelpline,
   useNomineeNameCheck,
   useRecordHelplineNomineeBank,
   useHelplineOperatorEvent,
@@ -65,9 +66,6 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
   const [identityCorrections, setIdentityCorrections] = useState<readonly string[]>([]);
   const [nomineeCorrections, setNomineeCorrections] = useState<readonly string[]>([]);
   const [result, setResult] = useState<HelplineIntakeResult | null>(null);
-  // Story 6.18 (AC6/AC7) — the operator's bank-details step. It exists only AFTER the intake,
-  // because the nominee-bank route is keyed on a claim that must already be there.
-  const [bankRecorded, setBankRecorded] = useState(false);
   const [stepUpRequired, setStepUpRequired] = useState(false);
   const [otp, setOtp] = useState('');
   const [escalated, setEscalated] = useState(false);
@@ -242,13 +240,28 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
 
   const filedClaimCaseId = result?.claimCaseId ?? null;
   const recordBank = useRecordHelplineNomineeBank(pariwarId, filedClaimCaseId ?? '');
+  /**
+   * ⭐⭐ `recorded` IS A SERVER FACT, ⛔ NOT "did I just submit?" (code review 2026-09-20).
+   *
+   * It used to be a page-level boolean set once after a successful POST and never reset. Three
+   * things fell out of that, all of them silent:
+   *   · file claim A, save its accounts, then select member B and file B — B rendered *"Both
+   *     accounts are saved"*, hid the form and the `helpline-bank-required` hint, and fired the
+   *     AUDITED Tier-1 names read against a claim with no accounts at all. `-226` cl.7's duty was
+   *     skipped for B, and A's holder names and account numbers sat in the card's state;
+   *   · a reload lost it entirely;
+   *   · a claim this operator did not file in THIS session could never show as recorded, so a
+   *     legacy claim filed before cl.7 could not be completed.
+   */
+  const bankStatus = useNomineeBankStatusHelpline(pariwarId, filedClaimCaseId);
+  const bankRecorded = (bankStatus.data?.accounts.length ?? 0) === 2;
   // ⭐ The names read is fetched ONLY once the accounts exist — before that there is nothing to
   // check, and the read decrypts a living nominee's name + writes an audit line, so it must not
   // fire speculatively.
   const bankNames = useNomineeNameCheck(pariwarId, filedClaimCaseId, bankRecorded);
   const submitBank = async (body: Parameters<typeof recordBank.mutateAsync>[0]): Promise<void> => {
     await recordBank.mutateAsync(body);
-    setBankRecorded(true);
+    // ⛔ Nothing to set: the mutation invalidates the presence view, and `recorded` re-derives.
   };
 
   return (
@@ -285,6 +298,10 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
       bankRecorded={bankRecorded}
       bankSlot={
         <BankDetailsCard
+          // ⭐ `key` on the claim — a belt-and-braces reset of every field the card holds, so a
+          // change of claim can never carry another family's typed account numbers across even if a
+          // future edit forgets an effect.
+          key={filedClaimCaseId ?? 'none'}
           claimCaseId={filedClaimCaseId}
           recorded={bankRecorded}
           onSubmit={submitBank}
@@ -292,6 +309,9 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
           error={recordBank.isError ? messageOf(recordBank.error) : null}
           names={bankNames.data}
           namesLoading={bankNames.isLoading}
+          namesError={bankNames.isError ? resolveEn('helpline.bank.namesError') : null}
+          // AC5 — `-227` cl.11 makes THIS operator the one who types the corrected details.
+          correctionNeeded={bankStatus.data?.correctionNeeded === true}
         />
       }
     />

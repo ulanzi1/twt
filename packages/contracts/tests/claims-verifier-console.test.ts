@@ -100,6 +100,10 @@ describe('VerifierConsolePacket — full round-trip + ordering', () => {
     // Story 6.18 (AC4/AC8) — the NON-PII name-check status. ⛔ Carries no name and no note: the
     // names live behind `claim.view_nominee_name_check` on their own route, read on demand.
     nomineeNameCheck: {
+      // ⭐ `available` — could the section be READ at all, a different question from "is anything
+      // missing". Without it a transient failure rendered as "bank details missing" (code review
+      // 2026-09-20).
+      available: true,
       accountsComplete: true,
       currentAndPassing: true,
       differenceReasons: [] as ('initial' | 'married_name' | 'bank_shortened_name')[],

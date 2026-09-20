@@ -182,6 +182,20 @@ export const NomineeBankStatusResponse = z
      * reason text — a filer is told WHAT to do, never handed a judgement about whose name is wrong.
      */
     correctionNeeded: z.boolean(),
+    /**
+     * Can the MEMBER/filer edit the accounts from the app right now?
+     *
+     * ⚠⚠ IT IS ⛔ NOT THE SAME QUESTION AS `correctionNeeded`, AND CONFLATING THEM PRODUCED A
+     * CRUEL SCREEN (code review 2026-09-20). A live return exists at `verifier_approved`,
+     * `reversed` or `state_trustee_freeze` — ⛔ none of them a member-writable state. So the app
+     * told a grieving family *"please correct the bank details below"*, showed them an editable
+     * form, and answered their save with a generic 409 *"could not save"*. `-227` cl.10 never asked
+     * the family to do anything: it asks the DISTRICT ADMIN to contact them, take the corrected
+     * details and send the claim back up.
+     * ⭐ `true` ⇒ show the form and the "correct these" copy. `false` ⇒ say what will happen and
+     * ⛔ offer no edit.
+     */
+    memberEditable: z.boolean(),
   })
   .strict();
 export type NomineeBankStatusResponse = z.output<typeof NomineeBankStatusResponse>;

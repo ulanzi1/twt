@@ -32,7 +32,7 @@ import {
 import { getMemberNomineeDeclarationRefs } from '../../../src/nominee/declaration-ref.js';
 import * as schema from '../../../src/schema/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
-import { PARIWAR_A, enterAppScope, seedNomineeNameCheck } from '../_helpers.js';
+import { PARIWAR_A, enterAppScope, seedMember, seedNomineeNameCheck } from '../_helpers.js';
 
 const DISTRICT_ADMIN = 'c3c3c3c3-c3c3-c3c3-c3c3-c3c3c3c3c3c3';
 const TRUSTEE = 'a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1';
@@ -130,6 +130,11 @@ const adjudicateBase = (claimCaseId: ClaimId) => ({
   rationaleCiphertext: null,
 });
 
+// ⚠ SUITE-LEVEL TIMEOUT, matching every sibling live spec. `packages/domain/vitest.config.ts` sets
+// ⛔ NO `testTimeout` (apps/api's does), and these suites do many `projectClaimState` round trips
+// under full-suite parallelism — the exact shape recorded in
+// [[project_known_livedb_test_failures]] as the cause of the timeout flakes, and `{ timeout: 20000 }`
+// as their fix.
 describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', () => {
   setupLiveDb();
 
@@ -155,6 +160,7 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
           clericalReason: null,
         })),
         actorId: DISTRICT_ADMIN,
+        actorDisplay: 'Anita (District Admin)',
         actor: 'operator',
       });
 
@@ -183,6 +189,7 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
           nomineeDeclarationToken: await tokenFor(tx, mid),
           accounts: [],
           actorId: DISTRICT_ADMIN,
+          actorDisplay: 'Anita (District Admin)',
           actor: 'operator',
         }),
       ).rejects.toBeInstanceOf(NomineeBankAccountsRequiredError);
@@ -212,6 +219,7 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
             clericalReason: null,
           })),
           actorId: DISTRICT_ADMIN,
+          actorDisplay: 'Anita (District Admin)',
           actor: 'operator',
         }),
       ).rejects.toBeInstanceOf(NomineeNameCheckNotRecordableError);
@@ -239,6 +247,7 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
             clericalReason: null,
           })),
           actorId: DISTRICT_ADMIN,
+          actorDisplay: 'Anita (District Admin)',
           actor: 'operator',
         }),
       ).rejects.toBeInstanceOf(NomineeNameCheckStaleError);
@@ -264,6 +273,7 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
             clericalReason: null,
           })),
           actorId: DISTRICT_ADMIN,
+          actorDisplay: 'Anita (District Admin)',
           actor: 'operator',
         }),
       ).rejects.toBeInstanceOf(NomineeNameCheckStaleError);
@@ -290,9 +300,28 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
       const mid = toMemberId(randomUUID());
       await driveTo(client, cid, mid, 'verifier_review');
 
-      // Distinctive, searchable sentinels — a holder name, a nominee name and a filer's note.
+      // Distinctive, searchable sentinels — a holder name, a NOMINEE name and a filer's note.
       const HOLDER = 'ZZHOLDERSENTINELZZ';
       const NOTE = 'ZZNOTESENTINELZZ';
+      // ⚠⚠ THE NOMINEE NAME WAS MISSING (code review 2026-09-20). The describe title promised
+      // "both names" while the body planted ⛔ no `member_nominees` row at all — so `tokenFor` ran
+      // over an EMPTY declaration and the nominee half of the claim was never exercised. The
+      // nominee is the SECOND, LIVING Tier-1 subject Trap 4 is mostly about; leaving their name out
+      // of the only guard that exists was the gap most worth closing.
+      const NOMINEE = 'ZZNOMINEESENTINELZZ';
+      // ⚠ The nominee row FKs to `members`, so the deceased member must exist as a row — `driveTo`
+      // only mints claim EVENTS. Seeded here rather than in `driveTo` so the other tests in this
+      // file keep exercising the "declared nobody" path, which is its own first-class state (AC2).
+      await seedMember(tx, PARIWAR_A, { memberId: mid });
+      await tx.insert(schema.memberNominees).values({
+        memberId: mid,
+        pariwarId: PARIWAR_A,
+        rank: 1,
+        nameCiphertext: NOMINEE,
+        relationship: 'spouse',
+        splitPct: 100,
+        mobileCiphertext: 'ZZNOMINEEMOBILEZZ',
+      });
       await tx.insert(schema.claimNomineeBankAccounts).values(
         ([1, 2] as const).map((rank) => ({
           claimCaseId: cid,
@@ -319,6 +348,7 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
           clericalReason: 'married_name' as const,
         })),
         actorId: DISTRICT_ADMIN,
+        actorDisplay: 'Anita (District Admin)',
         actor: 'operator',
       });
 
@@ -328,7 +358,7 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
         .from(schema.eventsLog)
         .where(and(eq(schema.eventsLog.pariwarId, PARIWAR_A), eq(schema.eventsLog.streamId, cid)));
       const dump = JSON.stringify(events);
-      for (const sentinel of [HOLDER, NOTE, 'ZZACCTSENTINELZZ', 'ZZIFSCSENTINELZZ']) {
+      for (const sentinel of [HOLDER, NOMINEE, NOTE, 'ZZACCTSENTINELZZ', 'ZZIFSCSENTINELZZ', 'ZZNOMINEEMOBILEZZ']) {
         expect(dump, `sentinel ${sentinel} leaked into events_log`).not.toContain(sentinel);
       }
 
@@ -337,6 +367,7 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
       const hashes = [
         createHash('sha256').update(HOLDER).digest('hex'),
         createHash('sha256').update(`${HOLDER}-1`).digest('hex'),
+        createHash('sha256').update(NOMINEE).digest('hex'),
         createHash('sha256').update(NOTE).digest('hex'),
       ];
       for (const h of hashes) {
@@ -350,11 +381,21 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
       expect(Object.keys(checkEvent!.p as Record<string, unknown>).sort()).toEqual([
         'accounts',
         'actor',
+        // ⭐ D3 — the acting District Admin's display name, SNAPSHOT at the check. STAFF identity,
+        // which this codebase treats as controlled-but-recordable (the same field rides
+        // `claim.verifier_*` and the trustee decisions). ⛔ It is NOT the member's or the nominee's
+        // name — both of those are sentinel-checked above and appear nowhere.
+        'checked_by_actor_display',
         'from_state',
         'nominee_declaration_token',
         'to_state',
         'trigger',
       ]);
+      // ⛔ … AND THE ATTRIBUTION IS REAL. Before D3 this field did not exist and every check read
+      // back with `''`, so no judgement was ever attributed to anybody.
+      expect((checkEvent!.p as Record<string, unknown>).checked_by_actor_display).toBe(
+        'Anita (District Admin)',
+      );
     });
   });
 
@@ -504,4 +545,4 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
       expect(res.claimState).toBe('denied');
     });
   });
-});
+}, { timeout: 20000 });

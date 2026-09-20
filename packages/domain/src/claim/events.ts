@@ -36,6 +36,15 @@ import {
   CLAIM_TIME_CONSENT_TYPES,
   CLAIM_TIME_PUBLICATION_CONSENT_TYPES,
 } from '../schema/consent_records.js';
+// ⚠ VALUE imports for the SAME REASON — `claim/nominee-name-check.ts` is the AUTHORITY on the
+// nominee name-check vocabulary (Story 6.18), and this payload schema had re-spelled both tuples.
+// ⛔ No cycle: that module imports `db.js` and `ids/` as TYPES ONLY, plus leaf schema modules,
+// `pagination.js`, `claim/errors.js` and `nominee/declaration-ref.js` — none of which reaches back
+// here ([[project_type_only_import_cycle_trap]] — checked, not assumed).
+import {
+  NOMINEE_NAME_CHECK_VERDICTS,
+  NOMINEE_NAME_CLERICAL_REASONS,
+} from './nominee-name-check.js';
 
 /**
  * Who caused the transition (architecture §1.14 line 1262-1268). `system` = SIE /
@@ -246,6 +255,20 @@ export const ClaimNomineeBankRecordedPayloadSchema = requireIdentityTransition({
  */
 export const ClaimNomineeNameCheckedPayloadSchema = requireIdentityTransition({
   ...auditShape,
+  // ⭐ WHO LOOKED — the acting District Admin's display name, SNAPSHOT at the moment of the check
+  // (code review 2026-09-20, D3 = option A). It is ⛔ not resolved at read time: a renamed or removed
+  // staff member would otherwise rewrite history, and [[project_admin_display_name_attribution]]
+  // fixes the convention — controlled staff data, ⛔ never email-derived, snapshot at action time.
+  //
+  // ⚠ IT IS ⛔ NOT OPTIONAL, and that is the point. The whole design rests on *a NAMED HUMAN read
+  // the two names*; before this field existed the reader fell back to `''` and no check was ever
+  // attributed to anyone — the console showed a bare `—`. A caller that cannot resolve a display
+  // name must FAIL rather than record an anonymous judgement.
+  //
+  // ⚠ IS THIS PII? It is STAFF identity, which this codebase treats as controlled-but-recordable
+  // (the same field rides `claim.verifier_*` and the trustee decisions). Trap 4 bans the MEMBER's
+  // and the NOMINEE's names — both living data subjects of a Tier-1 field. ⛔ Neither appears here.
+  checked_by_actor_display: z.string().min(1),
   // The declaration the District Admin looked at — the `(rank, created_at)` set of the deceased
   // member's `member_nominees` rows, as an opaque token. A re-declaration changes it, which is what
   // makes a check STALE. Non-PII: it carries ranks and timestamps, never a name.
@@ -253,18 +276,51 @@ export const ClaimNomineeNameCheckedPayloadSchema = requireIdentityTransition({
   // One entry per live account, both ranks. `account_updated_at` is the per-account staleness token
   // (`claim_nominee_bank_accounts.updated_at`, which the delete-then-insert writer moves on every
   // edit). Non-PII throughout.
+  //
+  // ⭐ THE TWO VOCABULARIES ARE DERIVED, ⛔ NEVER RE-SPELLED — the `consent_types_granted` lesson
+  // directly above, applied before it could bite: these were inline `z.enum([...])` literals, a
+  // FIFTH hand-maintained copy of the clerical-reason tuple. A typo here 500s the event append on
+  // the only path that matters.
   accounts: z
     .array(
       z
         .object({
           account_rank: z.union([z.literal(1), z.literal(2)]),
           account_updated_at: z.string().min(1),
-          verdict: z.enum(['matches', 'clerical_difference', 'does_not_match']),
-          clerical_reason: z.enum(['initial', 'married_name', 'bank_shortened_name']).nullable(),
+          verdict: z.enum(NOMINEE_NAME_CHECK_VERDICTS),
+          clerical_reason: z.enum(NOMINEE_NAME_CLERICAL_REASONS).nullable(),
         })
-        .strict(),
+        .strict()
+        // ⛔⛔ THE COHERENCE RULE, MIRRORED FROM THE BOUNDARY INTO THE EVENT (code review
+        // 2026-09-20). `-226` cl.5 — *"District Admin cannot proceed unless reason for name mismatch
+        // is selected"* — is the one control this story calls load-bearing, and it lived ONLY in the
+        // HTTP zod schema. A JSONB payload has no CHECK constraint to carry it, so an incoherent
+        // verdict/reason pair recorded by any future non-route caller would have been accepted and
+        // then read back forever as a valid judgement. Defence in depth, deliberately duplicated.
+        .superRefine((account, ctx) => {
+          if (account.verdict === 'clerical_difference' && account.clerical_reason === null) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ['clerical_reason'],
+              message: 'a clerical_reason is required when the verdict is clerical_difference',
+            });
+          }
+          if (account.verdict !== 'clerical_difference' && account.clerical_reason !== null) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ['clerical_reason'],
+              message: 'a clerical_reason is only permitted when the verdict is clerical_difference',
+            });
+          }
+        }),
     )
-    .length(2),
+    .length(2)
+    // ⛔ BOTH RANKS, ⛔ NEVER THE SAME ONE TWICE. `[rank 1, rank 1]` satisfies `.length(2)` and then
+    // fell out downstream as a staleness 409 ("check again"), which tells the District Admin to
+    // re-do a check that was never well-formed.
+    .refine((accounts) => new Set(accounts.map((a) => a.account_rank)).size === accounts.length, {
+      message: 'account_rank must be distinct across the two entries',
+    }),
 });
 
 /**

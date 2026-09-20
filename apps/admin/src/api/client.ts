@@ -252,6 +252,8 @@ import {
   OffPortalExportResponse,
   RecordCorrectionResponse,
   StaffMediatedDeliveryResponse,
+  ClaimsUnderCorrectionResponse,
+  NomineeBankStatusResponse,
   NomineeNameCheckResponse,
   NomineeNameCheckWriteResponse,
   type NomineeNameCheckRequest,
@@ -1302,7 +1304,42 @@ export function recordHelplineNomineeBank(
 
 type RecordNomineeBank = z.output<typeof RecordNomineeBankResponse>;
 type NomineeNameCheck = z.output<typeof NomineeNameCheckResponse>;
+type ClaimsUnderCorrection = z.output<typeof ClaimsUnderCorrectionResponse>;
+type NomineeBankStatus = z.output<typeof NomineeBankStatusResponse>;
 type NomineeNameCheckWrite = z.output<typeof NomineeNameCheckWriteResponse>;
+
+/**
+ * Story 6.18 (AC6/AC7) — the helpline's NON-PII presence view of a claim's bank accounts.
+ *
+ * ⭐ THIS IS WHAT `recorded` MUST BE DERIVED FROM. The helpline card used to track "did I just
+ * submit?" in page state, which was wrong for every claim the operator did not file in this very
+ * session — and survived a change of claim, and was lost on reload.
+ * ⛔ Presence only: bank names, IFSC-validated flags, `correctionNeeded`. ⛔ No account number, ⛔ no
+ * holder name — the names come from the per-claim AC2 read behind its own key.
+ */
+export function getNomineeBankStatusHelpline(
+  pariwarId: string,
+  claimCaseId: string,
+): Promise<NomineeBankStatus> {
+  return apiFetch(
+    `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/claims/${encodeURIComponent(claimCaseId)}/nominee-bank`,
+    NomineeBankStatusResponse,
+  );
+}
+
+/**
+ * Story 6.18 (AC11) — the District Admin's CORRECTION QUEUE.
+ *
+ * ⛔ Carries no holder name, no nominee name and no filer note: those stay on the per-claim read
+ * above, decrypted ONE CLAIM AT A TIME behind the same key. What rides here is the Pariwar Admin's
+ * own return note — staff-authored text about a claim — plus ids, dates and flags.
+ */
+export function getClaimsUnderCorrection(pariwarId: string): Promise<ClaimsUnderCorrection> {
+  return apiFetch(
+    `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/claims/under-correction`,
+    ClaimsUnderCorrectionResponse,
+  );
+}
 
 export function getNomineeNameCheck(
   pariwarId: string,

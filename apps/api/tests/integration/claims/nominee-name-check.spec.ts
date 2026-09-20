@@ -62,11 +62,24 @@ describe.skipIf(!hasDatabase)('Nominee name-check surface — E2E (:5433)', () =
     await td.pool.end();
   });
 
-  async function authenticate(): Promise<{ client: Client; userId: string }> {
+  /**
+   * @param displayName  pass `null` to build the NO-DISPLAY-NAME actor (D3 blocks them).
+   *
+   * ⚠⚠ A DISPLAY NAME IS NOW PART OF BEING A VALID CHECKER (code review 2026-09-20, D3 = option
+   * A). This helper used to create the account with an email and a password only, so the "happy
+   * path" 201 was recorded with `''` attribution — which is exactly the defect D3 fixed: the whole
+   * design rests on *a NAMED HUMAN read the two names*, and an unattributable check looks like
+   * attribution without being it. Every actor here is now named, and the un-named case is its own
+   * test below.
+   */
+  async function authenticate(
+    displayName: string | null = 'Anita (District Admin)',
+  ): Promise<{ client: Client; userId: string }> {
     const email = `nnc-${randomUUID()}@example.test`;
     const password = 'CorrectHorseBatteryStaple9';
     const userId = await service.createAdminAccount(deps, { email, password });
     createdUserIds.push(userId);
+    if (displayName !== null) await service.setAdminDisplayName(deps, userId, displayName);
     const credentialId = `cred-${userId}`;
     fakeWebauthn.nextRegistration = { verified: true, credential: { id: credentialId, publicKey: 'pk', counter: 0 } };
     fakeWebauthn.nextAuthentication = { verified: true, newCounter: 1 };
@@ -549,5 +562,115 @@ describe.skipIf(!hasDatabase)('Nominee name-check surface — E2E (:5433)', () =
     expect(dump).not.toContain('holder-1');
     expect(dump).not.toContain('holder-2');
     expect(dump).not.toContain('enc:v1');
+  });
+
+  // ── AC11 — the District Admin's CORRECTION QUEUE ────────────────────────────────
+  //
+  // ⭐⭐ THE FIRST TEST HERE EXISTS BECAUSE THE ROUTE HAD A REAL BUG THAT REASONING HAD MISSED.
+  // The gate was written as "stash the caller's district, or `null` for a pariwar-ceiling holder",
+  // on the reasoning that a pariwar grant contains every geo target so it would pass anyway. It
+  // does not: `scopeContains` fails an UNRESOLVED target CLOSED before it ever looks at the grant,
+  // so a `null` district target was a 403 for `pariwar_admin` and `super_admin` alike — i.e. the
+  // two roles most likely to be looking at a Pariwar-wide queue. Found by running the predicate,
+  // ⛔ not by reading it ([[feedback_negative_claims_checkable_in_repo]]).
+  describe('AC11 — the correction queue', () => {
+    const queueUrl = (p: string) => `/api/v1/p/${p}/admin/claims/under-correction`;
+
+    it('⭐ BOTH a district-scoped AND a pariwar-ceiling caller can read the queue', async () => {
+      const pariwarId = randomUUID();
+      const district = `D-${randomUUID().slice(0, 8)}`;
+
+      const da = await authenticate();
+      await grant(da.userId, pariwarId, 'district_admin', 'district', district);
+      await da.client.inject({ method: 'POST', url: '/api/v1/auth/scope', payload: { pariwarId } });
+      const daRes = await da.client.inject({ method: 'GET', url: queueUrl(pariwarId) });
+      expect(daRes.statusCode, 'a district_admin must reach their own queue').toBe(200);
+
+      // ⚠ THE REGRESSION GUARD. A pariwar_admin holds a PARIWAR-dimension grant and has no single
+      // district, so a fixed `district` gate refuses them outright.
+      const pa = await authenticate();
+      await grant(pa.userId, pariwarId, 'pariwar_admin', 'pariwar', pariwarId);
+      await pa.client.inject({ method: 'POST', url: '/api/v1/auth/scope', payload: { pariwarId } });
+      const paRes = await pa.client.inject({ method: 'GET', url: queueUrl(pariwarId) });
+      expect(paRes.statusCode, 'a pariwar_admin must reach the Pariwar-wide queue').toBe(200);
+    });
+
+    it('⛔ a role holding NEITHER key is refused (403) — the gate is a real question', async () => {
+      const pariwarId = randomUUID();
+      const other = await authenticate();
+      // `state_trustee` gets NEITHER of this story's keys (AC1).
+      await grant(other.userId, pariwarId, 'state_trustee', 'pariwar', pariwarId);
+      await other.client.inject({ method: 'POST', url: '/api/v1/auth/scope', payload: { pariwarId } });
+      const res = await other.client.inject({ method: 'GET', url: queueUrl(pariwarId) });
+      expect(res.statusCode).toBe(403);
+    });
+
+    it('⛔ an UNAUTHENTICATED caller is refused — 401, a single code, ⛔ not a range', async () => {
+      const client = makeClient(app);
+      const res = await client.inject({ method: 'GET', url: queueUrl(randomUUID()) });
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('⛔ the queue is BOUNDED — an out-of-range limit is a 400 before the handler runs', async () => {
+      const pariwarId = randomUUID();
+      const da = await authenticate();
+      await grant(da.userId, pariwarId, 'district_admin', 'district', `D-${randomUUID().slice(0, 8)}`);
+      await da.client.inject({ method: 'POST', url: '/api/v1/auth/scope', payload: { pariwarId } });
+      expect((await da.client.inject({ method: 'GET', url: `${queueUrl(pariwarId)}?limit=99999` })).statusCode).toBe(400);
+      expect((await da.client.inject({ method: 'GET', url: `${queueUrl(pariwarId)}?limit=all` })).statusCode).toBe(400);
+      // A valid in-range limit passes validation.
+      expect((await da.client.inject({ method: 'GET', url: `${queueUrl(pariwarId)}?limit=5` })).statusCode).toBe(200);
+    });
+
+    it('⛔ checklist family 3 — a district_admin for district X sees ⛔ NO claim from district Y', async () => {
+      const pariwarId = randomUUID();
+      const districtX = `DX-${randomUUID().slice(0, 8)}`;
+      const districtY = `DY-${randomUUID().slice(0, 8)}`;
+
+      // A claim in district Y, sent back by its District Admin's own `does_not_match` check.
+      const memberY = await seedDeceasedMember(pariwarId, districtY);
+      const claimY = await seedClaim(pariwarId, memberY);
+      await seedNomineeNameCheck(deps, pariwarId, claimY, {
+        verdicts: ['matches', 'does_not_match'] as const,
+      });
+
+      const daX = await authenticate();
+      await grant(daX.userId, pariwarId, 'district_admin', 'district', districtX);
+      await daX.client.inject({ method: 'POST', url: '/api/v1/auth/scope', payload: { pariwarId } });
+      const res = await daX.client.inject({ method: 'GET', url: queueUrl(pariwarId) });
+      expect(res.statusCode).toBe(200);
+      const ids_ = (res.json() as { items: { claim_case_id: string }[] }).items.map((i) => i.claim_case_id);
+      expect(ids_, "district X must not see district Y's claim").not.toContain(claimY);
+
+      // ⭐ THE POSITIVE CONTROL — without it this would pass just as happily if the queue were
+      // empty for everyone, or the route returned `[]` unconditionally.
+      const daY = await authenticate();
+      await grant(daY.userId, pariwarId, 'district_admin', 'district', districtY);
+      await daY.client.inject({ method: 'POST', url: '/api/v1/auth/scope', payload: { pariwarId } });
+      const resY = await daY.client.inject({ method: 'GET', url: queueUrl(pariwarId) });
+      const idsY = (resY.json() as { items: { claim_case_id: string }[] }).items.map((i) => i.claim_case_id);
+      expect(idsY, "district Y's OWN District Admin must see it").toContain(claimY);
+    });
+
+    it('⛔ the queue carries ⛔ NO holder name and ⛔ NO nominee name (Trap 4)', async () => {
+      const pariwarId = randomUUID();
+      const district = `D-${randomUUID().slice(0, 8)}`;
+      const memberId = await seedDeceasedMember(pariwarId, district);
+      const claimCaseId = await seedClaim(pariwarId, memberId);
+      await seedNomineeNameCheck(deps, pariwarId, claimCaseId, {
+        verdicts: ['matches', 'does_not_match'] as const,
+      });
+      const da = await authenticate();
+      await grant(da.userId, pariwarId, 'district_admin', 'district', district);
+      await da.client.inject({ method: 'POST', url: '/api/v1/auth/scope', payload: { pariwarId } });
+
+      const res = await da.client.inject({ method: 'GET', url: queueUrl(pariwarId) });
+      expect(res.statusCode).toBe(200);
+      const body = JSON.stringify(res.json());
+      // The DTO has no field that could carry one — this pins that it does not grow one.
+      for (const forbidden of ['holder_name', 'nominee_name', 'account_number', 'ifsc', 'name_difference_note']) {
+        expect(body, `the queue exposed ${forbidden}`).not.toContain(forbidden);
+      }
+    });
   });
 });

@@ -27,6 +27,9 @@ import { z } from 'zod';
 
 import { MemberValidityPayloadDto } from '../members/validity.js';
 import { ClaimDocumentParityOutcome } from './documents.js';
+// ⭐ The SINGLE clerical-reason tuple (a sibling contract, ⛔ not `@twt/domain` — the browser-bundle
+// rule is untouched). This file used to inline a fourth copy.
+import { NomineeNameClericalReason } from './nominee-name-check.js';
 
 /** The four-state section vocabulary (AC7). Exported for the discriminants + the tests. */
 export const VERIFIER_CONSOLE_SECTION_STATES = [
@@ -270,12 +273,27 @@ export type ShepherdSection = z.output<typeof ShepherdSection>;
  */
 export const NomineeNameCheckStatus = z
   .object({
+    /**
+     * ⚠⚠ COULD THIS SECTION BE READ AT ALL? — ⛔ NOT the same question as "is anything missing"
+     * (code review 2026-09-20). The handler assembles this section fail-soft; its `catch` used to
+     * return `accountsComplete: false`, which the console renders as *"bank details missing"*. So a
+     * DB blip, a bug or an aborted transaction told the District Admin that `-226` cl.7 had not been
+     * met and to go and chase the family for documents they had already supplied.
+     * ⭐ `true` means the three fields below are real. `false` means WE do not know — the console
+     * says so, and keeps the approve gate closed (conservative: ⛔ never approve on an unknown).
+     * (The sibling console sections carry the same state; this one had been the exception.)
+     */
+    available: z.boolean(),
     /** Exactly two live bank accounts exist (`-226` cl.7). `false` ⇒ the claim WAITS. */
     accountsComplete: z.boolean(),
     /** A check exists AND is current AND every verdict passes — the AC4 approval gate. */
     currentAndPassing: z.boolean(),
-    /** The clerical reason CODES the District Admin recorded, when a difference was accepted (AC8). */
-    differenceReasons: z.array(z.enum(['initial', 'married_name', 'bank_shortened_name'])),
+    /**
+     * The clerical reason CODES the District Admin recorded, when a difference was accepted (AC8).
+     * ⚠ Non-empty ONLY when the check is CURRENT **and** PASSING — see AC8's own wording. A stale
+     * check, or a mixed `[clerical_difference, does_not_match]` one, yields `[]`.
+     */
+    differenceReasons: z.array(NomineeNameClericalReason),
   })
   .strict();
 export type NomineeNameCheckStatus = z.output<typeof NomineeNameCheckStatus>;

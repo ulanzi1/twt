@@ -2515,3 +2515,44 @@ delta; ⛔ none is claimed ([[feedback_record_unattested_no_backfill]]).
 **COMMITTED** history, so a declaration written first passes **vacuously**. ⚠ `pnpm friction:check` was
 run on that commit FIRST and **FAILED** (AC-4: member-facing surface touched, `friction-budget.md`
 unchanged); this block is what that failure answers.
+
+---
+
+**Story 6.18 disposition (code review 2026-09-20 — declaration AFFIRMED and its scope NARROWED; ⛔ NO new row, ⛔ no row retired):** the
+2026-09-20 code review changed two member-facing files, `apps/mobile/app/(claim)/nominee-review.tsx`
+and `apps/mobile/components/life-events/NomineeForm.tsx`.
+
+⭐⭐ **BOTH CHANGES REMOVE FRICTION THE DECLARED ROW NEVER INTENDED TO CHARGE.** UX Stance #2 / AR-60
+declare **friction** — a step a person is **made to take**. Neither change adds a field, a
+confirmation, an OTP, a wait-state or a control. What they do:
+
+1. **The English-script gate stopped refusing names it was always meant to accept.** iOS smart
+   punctuation rewrites `'` to U+2019 as the filer types, so `D'Souza` — one of the very forms the
+   row's own wording contemplates — arrived as `D’Souza` and was refused with *"Please enter the
+   name in English"*, with nothing on screen to explain what was wrong with it. A non-breaking space
+   in a pasted name did the same. The predicate now accepts those shapes (and the three client forms
+   import ONE shared predicate instead of hand-rolling the regex, so the app and the server can no
+   longer disagree). ⇒ the declared payer pays **strictly less** than the row already declares.
+   ⛔ The row is NOT retired: the friction it describes — a family may not type a Devanagari name —
+   is unchanged and still forced. ⛔ And accented Latin letters are still refused, an explicit
+   decision (BigDev, 2026-09-20), ⛔ not an oversight.
+
+2. **The "bank details need correcting" banner stopped inviting an edit the server refuses.** A live
+   correction record sits at `verifier_approved` / `reversed` / `state_trustee_freeze` — ⛔ none of
+   them member-writable. The app was telling a grieving family to correct the details below and
+   showing them an editable form; their save came back a generic 409. `-227` cl.10 never asked the
+   family to act: it asks the DISTRICT ADMIN to contact them, take the corrected details and send
+   the claim back up. Outside the collection window the screen now says that and offers ⛔ no edit.
+   ⇒ this REMOVES a forced step (a doomed form submission) rather than adding one, so there is
+   ⛔ no payer and ⛔ no row to write.
+
+⛔ **WHAT THIS DISPOSITION DOES ⛔ NOT TOUCH.** ⛔ No new value is disclosed; ⛔ no new member-facing
+element; ⛔ no change to what the family must supply (both bank accounts remain mandatory under
+`2026-09-19-226` cl.7, which is the claim-filing condition the ruling set and ⛔ not a friction this
+review introduced).
+
+⭐ **This disposition was written for changes that are UNCOMMITTED at the time of writing**, so
+`pnpm friction:check` reported the AC-4 failure it answers against the working tree. ⚠ AC-4 diffs
+**COMMITTED** history ([[project_friction_budget_baseline_ratchet]]), so once these changes land the
+gate reads this block; ⛔ no measured delta is claimed for the two mobile files
+([[feedback_record_unattested_no_backfill]]).

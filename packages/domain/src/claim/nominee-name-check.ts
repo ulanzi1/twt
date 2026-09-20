@@ -154,6 +154,11 @@ export async function getLatestNomineeNameCheck(
 
   const payload = row.payload as {
     nominee_declaration_token: string;
+    /** ⚠ OPTIONAL ON THE READ ONLY, and ⛔ not because it is optional on the WRITE. The payload
+     *  schema requires a non-empty string (D3), so every check recorded from this story onward
+     *  carries one. It is typed optional here because `events_log` is APPEND-ONLY: if a check were
+     *  ever written before the field existed, its row is still there and still parses. Today no
+     *  such row exists — nothing is deployed — and `'—'` is what a surface shows for one. */
     checked_by_actor_display?: string;
     accounts: {
       account_rank: 1 | 2;
@@ -165,9 +170,14 @@ export async function getLatestNomineeNameCheck(
 
   return {
     checkedAt: row.occurredAt,
-    // The event payload carries NO actor display (it is NOT in the AC3 payload shape); the display
-    // name lives on the audit line. Read back as an empty string so the DTO stays total — the
-    // console shows "recorded" without attributing a name it was never given here.
+    // ⭐ THE SNAPSHOT, ⛔ NOT A LOOKUP (D3 = option A, code review 2026-09-20). The acting District
+    // Admin's display name as it stood at the moment of the check, so a later rename or departure
+    // cannot rewrite who made a judgement ([[project_admin_display_name_attribution]]).
+    // ⚠ The `?? ''` is now a PARSE fallback for an append-only stream, ⛔ no longer the norm: every
+    // check written from this story onward carries a non-empty name, enforced at the payload schema
+    // AND in `recordNomineeNameCheck` before the lock. Previously this field was ALWAYS `''` — the
+    // payload had no such key — so no check was ever attributed to anybody and the console showed
+    // a bare em-dash on every one.
     checkedByActorDisplay: payload.checked_by_actor_display ?? '',
     nomineeDeclarationToken: payload.nominee_declaration_token,
     accounts: payload.accounts.map((a) => ({
@@ -255,6 +265,73 @@ export function nomineeNameCheckClericalReasons(
   return [...reasons];
 }
 
+/** Everything a surface needs to know about a claim's name check, from ONE pass over the data. */
+export interface NomineeNameCheckSnapshot {
+  /** The latest recorded check, or `null` when none was ever recorded (⛔ never back-filled). */
+  readonly latestCheck: RecordedNomineeNameCheck | null;
+  readonly liveAccounts: readonly LiveAccountRef[];
+  /** Exactly two live accounts — `-226` cl.7. */
+  readonly accountsComplete: boolean;
+  /** The live declaration token, for echoing to a caller that will post a check back. */
+  readonly liveDeclarationToken: string;
+  /** Is `latestCheck` about the data that is live right now? `false` when there is no check. */
+  readonly current: boolean;
+  /** Does `latestCheck` pass (every verdict `matches` or `clerical_difference`)? */
+  readonly passing: boolean;
+  /** Is the claim sent back BY THE CHECK — current, with a `does_not_match` (AC5)? */
+  readonly sendsBack: boolean;
+}
+
+/**
+ * Read a claim's whole name-check picture in one pass — three queries, ⛔ no decryption.
+ *
+ * ⭐ IT EXISTS SO THE PREDICATES CANNOT DRIFT APART. Before the 2026-09-20 review, currency and
+ * passing were re-derived ad hoc at four call sites and three of them got it wrong in a different
+ * way: the cycle-freeze read applied neither, the console applied currency but not passing, and the
+ * filer status applied neither. Every one of those is now this function plus a field selection.
+ *
+ * ⚠ MUST be called inside the caller's transaction when its answer gates a write — the AC4 gate
+ * keeps its own inline reads for exactly that reason (it runs after the claim row lock).
+ * ⛔ It reads no name and no ciphertext: ranks, timestamps, verdicts and reason codes only.
+ */
+export async function readNomineeNameCheckSnapshot(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseId: ClaimId,
+  deceasedMemberId: MemberId,
+): Promise<NomineeNameCheckSnapshot> {
+  const liveAccounts = await db
+    .select({
+      accountRank: claimNomineeBankAccounts.accountRank,
+      updatedAt: claimNomineeBankAccounts.updatedAt,
+    })
+    .from(claimNomineeBankAccounts)
+    .where(
+      and(
+        eq(claimNomineeBankAccounts.pariwarId, pariwarId),
+        eq(claimNomineeBankAccounts.claimCaseId, claimCaseId),
+      ),
+    );
+
+  const declarationRefs = await getMemberNomineeDeclarationRefs(db, pariwarId, deceasedMemberId);
+  const liveDeclarationToken = deriveNomineeDeclarationToken(declarationRefs);
+  const latestCheck = await getLatestNomineeNameCheck(db, pariwarId, claimCaseId);
+
+  const current =
+    latestCheck !== null && isNomineeNameCheckCurrent(latestCheck, liveAccounts, liveDeclarationToken);
+  const passing = latestCheck !== null && nomineeNameCheckPasses(latestCheck);
+
+  return {
+    latestCheck,
+    liveAccounts,
+    accountsComplete: liveAccounts.length === 2,
+    liveDeclarationToken,
+    current,
+    passing,
+    sendsBack: latestCheckSendsBack(latestCheck, current),
+  };
+}
+
 // ── The AC4 approval gate (P1 / P3 / P4) ──────────────────────────────────────────────────────
 
 /**
@@ -323,25 +400,55 @@ export async function assertNomineeNameCheckForApproval(
 }
 
 /**
+ * Does the claim's LATEST check SEND IT BACK — the District Admin's own half of "under correction"
+ * (AC5, `-226` cl.6)?
+ *
+ * ⚠⚠ CURRENCY IS REQUIRED, AND LEAVING IT OUT WAS A REAL DEFECT (code review 2026-09-20). The
+ * first version asked only *"does the latest check carry a `does_not_match`?"*. That answer NEVER
+ * BECOMES FALSE on its own: once the helpline writes the corrected accounts, the old
+ * `does_not_match` check is still the latest one, so the claim stayed "under correction" forever —
+ * the filer kept being told *"bank details need correcting"* on a claim that had been corrected, and
+ * the bank window stayed open on a claim nobody was correcting any more, on a DENIED claim included.
+ * ⭐ Requiring the sending-back check to still be CURRENT closes it exactly: writing the corrected
+ * accounts moves `updated_at`, the check goes stale, and this returns false in the same breath — the
+ * claim leaves "under correction" and the AC4 gates start asking for the FRESH check (D5) instead.
+ */
+export function latestCheckSendsBack(
+  latestCheck: RecordedNomineeNameCheck | null,
+  latestCheckIsCurrent: boolean,
+): boolean {
+  if (!latestCheck) return false;
+  if (!latestCheckIsCurrent) return false;
+  return latestCheck.accounts.some((a) => a.verdict === 'does_not_match');
+}
+
+/**
  * Is this claim UNDER CORRECTION (AC5)?
  *
- * ⭐ A DERIVED condition — ⛔ not a new table and ⛔ not a new event. It holds when EITHER:
- *   · the claim's latest recorded check carries a `does_not_match` on any account (the District
- *     Admin sent it back — `-226` cl.6), OR
- *   · a live `correction_return` row exists (the Pariwar Admin sent it back — `-227` cl.10).
+ * ⭐⭐ ONE DEFINITION, AND THAT IS THE WHOLE POINT OF THIS FUNCTION. Before the 2026-09-20 review
+ * there were three different answers in the tree — the bank writer tested the return row alone, the
+ * filer-status handler tested the check alone with no currency, and the cycle-freeze pending read
+ * used the raw return row — so a corrected claim could be "under correction" on one surface and not
+ * on another. Every consumer now goes through `resolveClaimCorrectionState` (the async resolver in
+ * `state-trustee-decision-persist.ts`, which gathers the two inputs) and lands here.
+ *
+ * It holds when EITHER:
+ *   · the Pariwar Admin sent it back — a live `correction_return` row that has NOT yet been
+ *     resubmitted (`-227` cl.10). ⚠ NOT the bare row: the row itself is superseded only by the next
+ *     VOTE, so a claim that was corrected and re-checked would otherwise keep the badge and keep
+ *     telling the filer to correct details they have already corrected; OR
+ *   · the District Admin sent it back — the latest check is CURRENT and carries a `does_not_match`
+ *     on any account (`-226` cl.6).
  *
  * ⛔ It is NOT a denial and must never be presented as one: the claim stays open, in its state, and
  * the filer is asked to correct a detail. The two sources are deliberately collapsed because they
  * mean the same thing to everyone downstream — *the bank details need correcting.*
- *
- * ⚠ The return-row half is passed IN rather than read here, so this module keeps ⛔ no dependency on
- * the trustee-decision persistence layer (which already depends on this one).
  */
 export function isClaimUnderCorrection(
-  latestCheck: RecordedNomineeNameCheck | null,
-  hasLiveReturn: boolean,
+  /** A live `correction_return` row exists AND the claim has not been resubmitted against it. */
+  hasLiveUnresubmittedReturn: boolean,
+  /** `latestCheckSendsBack(...)` — the District Admin's half. */
+  checkSendsBack: boolean,
 ): boolean {
-  if (hasLiveReturn) return true;
-  if (!latestCheck) return false;
-  return latestCheck.accounts.some((a) => a.verdict === 'does_not_match');
+  return hasLiveUnresubmittedReturn || checkSendsBack;
 }

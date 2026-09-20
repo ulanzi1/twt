@@ -231,7 +231,20 @@ export const NomineeNameCheckResponse = z
     nominee_declaration_token: z.string(),
     nominee_declared_at: z.string().nullable(),
     claim_filed_at: z.string(),
+    /** The latest check IF it is still current; `null` when there is none **or** when it is stale. */
     current_check: NomineeNameCheckCurrent.nullable(),
+    /**
+     * A check WAS recorded, but it is no longer current — the accounts or the declaration moved
+     * under it (D5 / `-227` cl.12).
+     *
+     * ⚠⚠ WITHOUT THIS FIELD THE CONSOLE TOLD A LIE (code review 2026-09-20). `current_check` is
+     * `null` for BOTH "nobody has ever checked" and "somebody checked and then the details
+     * changed", and the console rendered the same copy for each: *"No check has been recorded
+     * yet."* Those are different facts and they call for different actions — the second means a
+     * colleague DID the work and a correction invalidated it, which is the entire point of D5.
+     * ⛔ It is ⛔ NOT a second copy of the check: no verdicts, no reasons, no attribution ride on it.
+     */
+    latest_check_is_stale: z.boolean(),
     /** Story 6.18 (AC11) — the live return, or `null` when the claim is not under correction. */
     correction_return: NomineeNameCheckReturn.nullable(),
   })
@@ -291,7 +304,16 @@ export type NomineeNameCheckEntry = z.output<typeof NomineeNameCheckEntry>;
 export const NomineeNameCheckRequest = z
   .object({
     nominee_declaration_token: z.string().min(1),
-    accounts: z.array(NomineeNameCheckEntry).length(2),
+    accounts: z
+      .array(NomineeNameCheckEntry)
+      .length(2)
+      // ⛔ BOTH RANKS, ⛔ NEVER THE SAME ONE TWICE (code review 2026-09-20). `[rank 1, rank 1]`
+      // satisfies `.length(2)` and used to fall through to the domain's per-rank loop, surfacing as
+      // a STALENESS 409 — *"the bank details changed, please look again"* — which sends a District
+      // Admin off to re-read two names because of a client bug. It is a 400.
+      .refine((accounts) => new Set(accounts.map((a) => a.account_rank)).size === accounts.length, {
+        message: 'a verdict must be submitted for each of the two accounts, rank 1 and rank 2',
+      }),
   })
   .strict();
 export type NomineeNameCheckRequest = z.output<typeof NomineeNameCheckRequest>;
@@ -307,3 +329,61 @@ export const NomineeNameCheckWriteResponse = z
   })
   .strict();
 export type NomineeNameCheckWriteResponse = z.output<typeof NomineeNameCheckWriteResponse>;
+
+// ── AC11 — the District Admin's CORRECTION QUEUE ──────────────────────────────────
+
+/**
+ * ONE claim waiting for the District Admin to get its bank details corrected (AC11 / `-227` cl.10).
+ *
+ * ⚠⚠ IT EXISTS BECAUSE A RETURNED CLAIM IS OTHERWISE INVISIBLE (code review 2026-09-20). A return
+ * does ⛔ not move the claim's state, so it sits among every other `verifier_approved` claim with
+ * nothing to distinguish it — and there was no District Admin list of any kind to put it on. The
+ * Pariwar Admin could send a claim back and the person meant to act on it would never find out.
+ *
+ * ⛔ CARRIES NO NAME AND NO FILER NOTE. The holder name, the nominee name and the filer's
+ * difference note stay behind `claim.view_nominee_name_check` on the per-claim route, decrypted ONE
+ * CLAIM AT A TIME (Trap 4). What rides here is the Pariwar Admin's own return NOTE — staff-authored
+ * text about a claim, the `verifier_rationale` posture — plus ids, states, dates and flags.
+ */
+export const ClaimUnderCorrectionItem = z
+  .object({
+    claim_case_id: z.string().uuid(),
+    deceased_member_id: z.string().uuid(),
+    claim_state: z.string(),
+    claim_filed_at: z.string(),
+    /**
+     * Set iff the PARIWAR ADMIN returned it. ⛔ Null when the claim is here because the District
+     * Admin's own latest check says `does_not_match` — the two halves of "under correction" are
+     * kept DISTINGUISHABLE on this surface, because they tell the District Admin different things
+     * about what to do next: chase the note, or act on their own recorded judgement.
+     */
+    returned_at: z.string().nullable(),
+    returned_by_actor_display: z.string().nullable(),
+    /**
+     * The Pariwar Admin's note, decrypted AFTER authorization at the route (AC11's *"lists returned
+     * claims with the note"*). `unreadable` on a decrypt failure — ⛔ never a silent empty string,
+     * which would read as "they gave no reason".
+     */
+    return_note: ReadableName.nullable(),
+    /** The District Admin's own latest check is CURRENT and carries a `does_not_match` (`-226` cl.6). */
+    sent_back_by_check: z.boolean(),
+    /** `-226` cl.7 — `false` means the claim is ALSO still waiting for its two accounts. */
+    accounts_complete: z.boolean(),
+  })
+  .strict();
+export type ClaimUnderCorrectionItem = z.output<typeof ClaimUnderCorrectionItem>;
+
+/**
+ * `GET …/admin/claims/under-correction` — the District Admin's queue.
+ *
+ * ⭐ SCOPE-FILTERED SERVER-SIDE: the rows are exactly the claims whose deceased member's posting
+ * district falls inside the caller's own geo grant, decided by the same `scopeContains` the
+ * per-claim district gate uses. A District Admin for one district ⛔ never sees another's.
+ */
+export const ClaimsUnderCorrectionResponse = z
+  .object({
+    pariwar_id: z.string().uuid(),
+    items: z.array(ClaimUnderCorrectionItem),
+  })
+  .strict();
+export type ClaimsUnderCorrectionResponse = z.output<typeof ClaimsUnderCorrectionResponse>;

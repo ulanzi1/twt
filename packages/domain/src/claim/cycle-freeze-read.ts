@@ -29,15 +29,16 @@
 // through `clampLimit` (the domain limit-clamp gate — every dynamic `.limit()` is clamped). Rationale is
 // ciphertext AS STORED — decrypted only at the route, never here.
 
-import { and, eq, inArray, isNull, or, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, or } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
-import type { ClaimId, PariwarId } from '../ids/index.js';
+import type { ClaimId, MemberId, PariwarId } from '../ids/index.js';
 import { clampLimit } from '../pagination.js';
 import { claims } from '../schema/claims.js';
 import { claimVerifierDecisions } from '../schema/claim_verifier_decisions.js';
 import { claimStateTrusteeDecisions } from '../schema/claim_state_trustee_decisions.js';
 import { assessClaimConcealmentBulk } from './concealment-review.js';
+import { readNomineeNameCheckFlagsBulk } from './nominee-name-check-read.js';
 
 /** The surfaced special-flag label (Story 4.4 vocabulary) when a claim's concealment signal is `flagged`. */
 export const CONCEALMENT_REVIEW_REQUIRED_FLAG = 'concealment_review_required';
@@ -224,9 +225,13 @@ export async function getCycleFreezePending(db: Db, pariwarId: PariwarId): Promi
     for (const r of routingRows) routedClaimIds.add(r.claimCaseId);
 
     // Story 6.18 (AC11) — the same bulk shape for the return rows: ONE query for the whole page,
-    // never a per-card lookup.
+    // never a per-card lookup. ⚠ `decidedAt` is selected because RESUBMISSION is derived from it
+    // (the accounts must have been corrected AFTER the return).
     const returnRows = await db
-      .select({ claimCaseId: claimStateTrusteeDecisions.claimCaseId })
+      .select({
+        claimCaseId: claimStateTrusteeDecisions.claimCaseId,
+        decidedAt: claimStateTrusteeDecisions.decidedAt,
+      })
       .from(claimStateTrusteeDecisions)
       .where(
         and(
@@ -237,26 +242,51 @@ export async function getCycleFreezePending(db: Db, pariwarId: PariwarId): Promi
           isNull(claimStateTrusteeDecisions.supersededAt),
         ),
       );
-    for (const r of returnRows) returnedClaimIds.add(r.claimCaseId);
+    const returnedAtByClaim = new Map<string, Date>();
+    for (const r of returnRows) returnedAtByClaim.set(r.claimCaseId, r.decidedAt);
 
-    // Story 6.18 (AC8) — the LATEST name check per claim, in ONE query for the whole page.
-    // ⚠ `DISTINCT ON` requires the leading ORDER BY term to match the DISTINCT ON expression or PG
-    // raises 42P10 ([[project_contribution_fact_projection_substrate]]) — hence `ORDER BY stream_id,
-    // event_version DESC` and ⛔ not `event_version DESC` alone.
-    const checkRows = await db.execute<{ stream_id: string; payload: unknown }>(sql`
-      SELECT DISTINCT ON (stream_id) stream_id, payload
-        FROM events_log
-       WHERE pariwar_id = ${pariwarId}
-         AND event_type = 'claim.nominee_name_checked'
-         AND stream_id IN (${sql.join(allClaimIds.map((id) => sql`${id}`), sql`, `)})
-       ORDER BY stream_id, event_version DESC
-    `);
-    for (const row of checkRows.rows ?? []) {
-      const payload = row.payload as { accounts?: { verdict?: string; clerical_reason?: string | null }[] };
-      const reasons = (payload.accounts ?? [])
-        .filter((a) => a.verdict === 'clerical_difference' && a.clerical_reason != null)
-        .map((a) => a.clerical_reason as string);
-      if (reasons.length > 0) nameDifferenceByClaim.set(row.stream_id, [...new Set(reasons)]);
+    // ── Story 6.18 (AC8, AC11) — the name-check picture for the whole page ───────────────
+    //
+    // ⚠⚠ A VERDICT ALONE IS NOT THE ANSWER (code review 2026-09-20). This block used to read the
+    // latest check's payload and emit EVERY `clerical_difference` reason it found. AC8 says *"a
+    // claim whose CURRENT PASSING check has any clerical_difference"*, and neither qualifier was
+    // applied, so the Pariwar Admin was shown “Approved with a name difference” for:
+    //   · a STALE check — the accounts had since been corrected, so the judgement on the card was
+    //     about data nobody had looked at any more; and
+    //   · a MIXED check — `[clerical_difference, does_not_match]` — i.e. a claim that is under
+    //     correction and ⛔ cannot be approved at all, labelled as approved-with-a-difference.
+    // ⭐ The derivation now lives in ONE place (`readNomineeNameCheckFlagsBulk`) shared with the R9
+    // queue, so a third surface cannot invent a fourth answer to the same ruling.
+    const nameCheckFlags = await readNomineeNameCheckFlagsBulk(
+      db,
+      pariwarId,
+      [...readyRows, ...escalatedRows, ...votedRows].map((r) => ({
+        claimCaseId: r.claimCaseId as ClaimId,
+        deceasedMemberId: r.deceasedMemberId as MemberId,
+      })),
+    );
+    for (const [claimCaseId, flags] of nameCheckFlags) {
+      if (flags.differenceReasons.length > 0) {
+        nameDifferenceByClaim.set(claimCaseId, [...flags.differenceReasons]);
+      }
+    }
+
+    // ⭐ THE UNIFIED "UNDER CORRECTION" DEFINITION (AC5), ⛔ not the bare return row. A claim that
+    // was returned, corrected and re-checked is RESUBMITTED: the Pariwar Admin must see the Return
+    // badge gone and the vote available again, even though the row itself survives until the vote
+    // supersedes it. And the District Admin's own half counts too — a current `does_not_match`
+    // sends a claim back whether or not the Pariwar Admin ever touched it.
+    for (const [claimCaseId, returnedAt] of returnedAtByClaim) {
+      const flags = nameCheckFlags.get(claimCaseId);
+      const correctedSinceReturn =
+        flags !== undefined &&
+        flags.accountsComplete &&
+        flags.liveAccounts.every((a) => a.updatedAt.getTime() > returnedAt.getTime());
+      const resubmitted = correctedSinceReturn && (flags?.currentAndPassing ?? false);
+      if (!resubmitted) returnedClaimIds.add(claimCaseId);
+    }
+    for (const [claimCaseId, flags] of nameCheckFlags) {
+      if (flags.checkSendsBack) returnedClaimIds.add(claimCaseId);
     }
   }
 

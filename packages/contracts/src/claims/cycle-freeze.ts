@@ -27,6 +27,14 @@
 
 import { z } from 'zod';
 
+// ⭐ ONE TUPLE, IMPORTED — ⛔ not a fourth hand-written copy (code review 2026-09-20). The
+// browser-bundle rule forbids importing `@twt/domain` from a contract; it says nothing about
+// importing a SIBLING CONTRACT in the same package, which is what this is. Before this there were
+// five copies of the clerical-reason tuple (domain, the claim event payload, this file,
+// `nominee-name-check.ts` and `verifier-console.ts`), and the responses are serializer-PARSED — so
+// a value present in one copy and missing from another is a 500 in production with no failing test.
+import { NomineeNameClericalReason } from './nominee-name-check.js';
+
 // ── Trustee decision vocabulary wire mirror (value-aligned with @twt/domain) ────────────────
 
 /** The three trustee decision outcomes (value-aligned with the domain `state_trustee_decision_outcome`). */
@@ -107,17 +115,6 @@ export function isTrusteeReasonCodeValidForOutcome(outcome: string, reasonCode: 
  * (`assessClaimConcealmentBulk`, ONE clamped read for the whole pending page, no per-claim N+1), NOT the
  * pre-6.15 decision-history placeholder heuristic.
  */
-/**
- * Story 6.18 (AC8) — the three clerical reasons, RE-DECLARED here (the browser-bundle rule forbids
- * importing `@twt/domain`). Value-aligned with `NOMINEE_NAME_CLERICAL_REASONS`; the nominee-name-check
- * contract carries the same tuple and the two are pinned to the domain by that file's own lockstep.
- */
-export const StateTrusteeReasonCodeFreeNameDifference = z.enum([
-  'initial',
-  'married_name',
-  'bank_shortened_name',
-]);
-
 export const CycleFreezePendingItem = z
   .object({
     claim_case_id: z.string().uuid(),
@@ -142,7 +139,7 @@ export const CycleFreezePendingItem = z
     /** Story 6.18 (AC8) — the clerical reason CODES on the claim's latest recorded name check, when
      *  it accepted a difference (`-226` cl.5's highlight). ⭐ NON-PII: codes only, ⛔ never a name.
      *  Empty when no difference was recorded, or when no check exists. */
-    name_difference_reasons: z.array(StateTrusteeReasonCodeFreeNameDifference),
+    name_difference_reasons: z.array(NomineeNameClericalReason),
   })
   .strict();
 export type CycleFreezePendingItem = z.output<typeof CycleFreezePendingItem>;
@@ -181,6 +178,17 @@ export const CycleFreezeDecisionAction = z.enum([
   'return_to_district_admin',
 ]);
 export type CycleFreezeDecisionAction = z.output<typeof CycleFreezeDecisionAction>;
+
+/**
+ * How each outcome is NAMED in the "a reason_code is required" 400 — the words the person on the
+ * other end reads. ⚠ A `Partial` on purpose: an outcome absent here falls back to its own code
+ * rather than being mislabelled as a different action.
+ */
+const REASON_CODE_REQUIRED_LABEL: Partial<Record<StateTrusteeDecisionOutcome, string>> = {
+  denied: 'deny',
+  routed_to_r9: 'route-to-R9',
+  returned_for_correction: 'return-to-District-Admin',
+};
 
 /** The effective outcome an action resolves to (drives the required-reason-code rule). */
 function effectiveOutcome(
@@ -249,7 +257,10 @@ export const CycleFreezeDecisionRequest = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['reason_code'],
-        message: `a reason_code is required for a ${outcome === 'denied' ? 'deny' : 'route-to-R9'} decision`,
+        // ⚠ NAME THE ACTUAL ACTION. This was a two-way ternary that called EVERY non-deny outcome a
+        // *"route-to-R9 decision"*, so a Pariwar Admin who clicked Return with no reason code was
+        // told off about R9 (code review 2026-09-20).
+        message: `a reason_code is required for a ${REASON_CODE_REQUIRED_LABEL[outcome] ?? outcome} decision`,
       });
     }
     // (b) a SUPPLIED reason-code must be outcome-compatible (rejects a code on an approve, or a mismatch).
@@ -264,17 +275,25 @@ export const CycleFreezeDecisionRequest = z
     //     `concealment_override` approve (Story 6.15 AC2 — an override MUST carry a mandatory rationale);
     //     ≤500 chars.
     const rationale = val.rationale?.trim() ?? '';
+    // ⭐ … AND ON A RETURN, NAMED IN ITS OWN RIGHT (Story 6.18, AC11 / `-227` cl.10). The note is
+    // ⛔ not optional on a return: it is the only thing that tells the District Admin WHAT to get
+    // corrected, and with ⛔ no event minted for the return, that note plus the audit line IS the
+    // trail. It happens to be covered today because a return requires `reason_code: 'other'`, but
+    // relying on that coincidence would make the rule silently disappear if the compat map changed.
     if (
       (val.reason_code === 'other' ||
         val.reason_code === 'concealment_override' ||
-        outcome === 'denied') &&
+        outcome === 'denied' ||
+        outcome === 'returned_for_correction') &&
       rationale === ''
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['rationale'],
         message:
-          'a rationale is required for the "other" and "concealment_override" reason codes and for a deny',
+          outcome === 'returned_for_correction'
+            ? 'a note is required when returning a claim to the District Admin'
+            : 'a rationale is required for the "other" and "concealment_override" reason codes and for a deny',
       });
     }
     if ((val.rationale?.length ?? 0) > TRUSTEE_RATIONALE_MAX_CHARS) {

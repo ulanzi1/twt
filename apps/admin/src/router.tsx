@@ -22,6 +22,7 @@ import { DriveTargetRoute } from './routes/DriveTargetRoute.js';
 import { NomineeBankMaskingRoute } from './routes/NomineeBankMaskingRoute.js';
 import { GroundInspectionRoute } from './routes/GroundInspectionRoute.js';
 import { HelpdeskOperatorRoute } from './routes/HelpdeskOperatorRoute.js';
+import { CorrectionQueueRoute } from './routes/CorrectionQueueRoute.js';
 import { HelpdeskQueueRoute } from './routes/HelpdeskQueueRoute.js';
 import { NewsRoute } from './routes/NewsRoute.js';
 import { BannersRoute } from './routes/BannersRoute.js';
@@ -225,6 +226,17 @@ const verifierConsoleRoute = createRoute({
   component: VerifierConsoleRoute,
 });
 
+// Story 6.18 (AC11) — the District Admin's CORRECTION QUEUE: the claims a Pariwar Admin sent back,
+// and the ones this District Admin's own check marked `does_not_match`.
+// ⭐ A STATIC segment, and it ⛔ cannot collide with the `$claimCaseId` route above — that route's
+// param is validated as a UUID at the API boundary, and TanStack Router prefers a static segment
+// over a parametric one at the same depth.
+const correctionQueueRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/claims/under-correction',
+  component: CorrectionQueueRoute,
+});
+
 // Story 6.13 — the tenant-scoped State-Trustee cycle-freeze (bulk-approval) surface.
 const cycleFreezeRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -294,6 +306,7 @@ const routeTree = rootRoute.addChildren([
   customFieldsRoute,
   groundInspectionRoute,
   verifierConsoleRoute,
+  correctionQueueRoute,
   cycleFreezeRoute,
   r9VotingRoute,
   fixedAmountRoute,

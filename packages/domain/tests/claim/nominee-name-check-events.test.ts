@@ -37,6 +37,9 @@ const checkedBase = {
   to_state: 'verifier_review',
   trigger: 'district_admin_nominee_name_check',
   actor: 'operator',
+  // ⭐ D3 — the acting District Admin's name, SNAPSHOT into the payload. ⛔ Required and non-empty:
+  // a check nobody is named on looks like attribution and is not.
+  checked_by_actor_display: 'Anita (District Admin)',
   nominee_declaration_token: 'abc123',
   accounts: [
     { account_rank: 1, account_updated_at: UPDATED_1, verdict: 'matches', clerical_reason: null },
@@ -271,5 +274,97 @@ describe('currency + passing (AC3, AC4)', () => {
       accounts: check.accounts.map((a) => ({ ...a, verdict: 'matches' as const, clericalReason: null })),
     };
     expect(nomineeNameCheckClericalReasons(clean)).toEqual([]);
+  });
+});
+
+// ── Code review 2026-09-20 — the rules that lived ONLY in the HTTP schema ─────────────────────
+//
+// ⭐ EVERY TEST BELOW WOULD HAVE PASSED BEFORE THE FIX, because the rule it pins did not exist at
+// this layer. `-226` cl.5 (*"District Admin cannot proceed unless reason for name mismatch is
+// selected"*) is the one control this story calls load-bearing, and it held only for as long as the
+// route stayed the single caller. A JSONB payload carries no CHECK constraint, so the payload
+// schema is the last place the rule can live.
+describe('ClaimNomineeNameCheckedPayloadSchema — the coherence rules (code review 2026-09-20)', () => {
+  it('⛔ REFUSES a clerical_difference with a null clerical_reason (`-226` cl.5)', () => {
+    const result = ClaimNomineeNameCheckedPayloadSchema.safeParse({
+      ...checkedBase,
+      accounts: [
+        checkedBase.accounts[0],
+        { account_rank: 2, account_updated_at: UPDATED_2, verdict: 'clerical_difference', clerical_reason: null },
+      ],
+    });
+    expect(result.success).toBe(false);
+    // ⚠ Asserted on the MESSAGE, not just on `.success` — a schema that refused for an unrelated
+    // reason (a typo in a field name, say) would satisfy a bare `.success === false`.
+    expect(JSON.stringify(result.error?.issues)).toContain('clerical_reason is required');
+  });
+
+  it('⛔ REFUSES a clerical_reason on a verdict that is not clerical_difference', () => {
+    for (const verdict of ['matches', 'does_not_match'] as const) {
+      const result = ClaimNomineeNameCheckedPayloadSchema.safeParse({
+        ...checkedBase,
+        accounts: [
+          { account_rank: 1, account_updated_at: UPDATED_1, verdict, clerical_reason: 'initial' },
+          checkedBase.accounts[1],
+        ],
+      });
+      expect(result.success, verdict).toBe(false);
+      expect(JSON.stringify(result.error?.issues)).toContain('only permitted');
+    }
+  });
+
+  it('⛔ REFUSES duplicate account ranks — `.length(2)` alone accepted [rank 1, rank 1]', () => {
+    const result = ClaimNomineeNameCheckedPayloadSchema.safeParse({
+      ...checkedBase,
+      accounts: [checkedBase.accounts[0], { ...checkedBase.accounts[0], account_updated_at: UPDATED_2 }],
+    });
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result.error?.issues)).toContain('distinct');
+  });
+
+  it('⛔ REFUSES a missing or empty checked_by_actor_display (D3) — a check names a human or is not recorded', () => {
+    const without: Record<string, unknown> = { ...checkedBase };
+    delete without.checked_by_actor_display;
+    expect(ClaimNomineeNameCheckedPayloadSchema.safeParse(without).success).toBe(false);
+    expect(
+      ClaimNomineeNameCheckedPayloadSchema.safeParse({ ...checkedBase, checked_by_actor_display: '' }).success,
+    ).toBe(false);
+  });
+
+  it('⭐ ACCEPTS every clerical reason in the tuple — so a value present in one copy and missing from another cannot hide', () => {
+    for (const reason of NOMINEE_NAME_CLERICAL_REASONS) {
+      const result = ClaimNomineeNameCheckedPayloadSchema.safeParse({
+        ...checkedBase,
+        accounts: [
+          checkedBase.accounts[0],
+          { account_rank: 2, account_updated_at: UPDATED_2, verdict: 'clerical_difference', clerical_reason: reason },
+        ],
+      });
+      expect(result.success, reason).toBe(true);
+    }
+  });
+
+  it('⭐ the payload vocabularies are DERIVED from the domain tuples, not re-spelled', () => {
+    // ⚠ The point is not that the values happen to match today — it is that the schema READS the
+    // tuple, so they cannot drift. Feeding a value the tuple does not contain must be refused.
+    expect(
+      ClaimNomineeNameCheckedPayloadSchema.safeParse({
+        ...checkedBase,
+        accounts: [
+          checkedBase.accounts[0],
+          { account_rank: 2, account_updated_at: UPDATED_2, verdict: 'clerical_difference', clerical_reason: 'transliteration' },
+        ],
+      }).success,
+      // ⛔ `transliteration` is exactly the reason `-227` cl.9 struck out.
+    ).toBe(false);
+    expect(
+      ClaimNomineeNameCheckedPayloadSchema.safeParse({
+        ...checkedBase,
+        accounts: [
+          { account_rank: 1, account_updated_at: UPDATED_1, verdict: 'unclear', clerical_reason: null },
+          checkedBase.accounts[1],
+        ],
+      }).success,
+    ).toBe(false);
   });
 });

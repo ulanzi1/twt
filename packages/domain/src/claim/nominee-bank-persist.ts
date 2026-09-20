@@ -34,7 +34,7 @@ import { and, eq } from 'drizzle-orm';
 import type pg from 'pg';
 
 import { bindScopedDb, type Db } from '../db.js';
-import type { ClaimId, PariwarId } from '../ids/index.js';
+import type { ClaimId, MemberId, PariwarId } from '../ids/index.js';
 import { claims } from '../schema/claims.js';
 import {
   type ClaimNomineeBankAccountRow,
@@ -47,8 +47,23 @@ import {
   NomineeBankCorrectionReasonRequiredError,
 } from './errors.js';
 import { type ClaimEventActor } from './events.js';
-import { hasLiveReturnRow } from './state-trustee-decision-persist.js';
+import { resolveClaimCorrectionState } from './state-trustee-decision-persist.js';
 import { projectClaimState } from './project.js';
+
+/**
+ * The states in which the "under correction" branch is BARRED however live the record — the claim is
+ * over (code review 2026-09-20).
+ *
+ * ⛔⛔ A TERMINAL CLAIM'S BANK DETAILS ARE NOT CORRECTABLE, and without this the row-alone branch
+ * had no state test at all: an R9 DENY on a claim carrying a live return row left a `denied` claim
+ * whose accounts anyone holding the correction key could keep rewriting. `approved` is barred for
+ * AC11's own reason (*"⛔ never after `claim.approved`"* — once the campaign is live a name
+ * correction is a different governed act, and this story rules nothing about it) and `settled`
+ * because the money has moved.
+ * ⚠ This is a FLOOR, not the window: it does not permit anything. The branch still needs a live
+ * correction record and `allowCorrection`; this only says which states no record can unlock.
+ */
+const NOMINEE_BANK_CORRECTION_BARRED_STATES = ['denied', 'approved', 'settled'] as const;
 
 /** The two account ranks v1 collects — always exactly these (Task 5 RESOLVED). */
 const REQUIRED_ACCOUNT_RANKS: readonly [1, 2] = [1, 2];
@@ -185,14 +200,41 @@ export async function recordClaimNomineeBankAccounts(
   // the Pariwar Admin asked for the correction, so the states they can return FROM are exactly the
   // states the correction must be possible IN — otherwise the return is a dead end, which AC5 forbids.
   //
-  // ⛔ The record is the exception and it CLOSES when the corrected accounts are written (the fresh
-  // check restores the gate). ⛔ No window constant is edited, ⛔ no state moves.
+  // ⛔ No window constant is edited, ⛔ no state moves.
+  //
+  // ⚠ HOW THE EXCEPTION CLOSES — corrected 2026-09-20, because the original comment said *"it
+  // closes when the corrected accounts are written"* and that is only HALF true:
+  //   · the CHECK half does close on the write — the rewrite moves `updated_at`, the sending-back
+  //     check goes stale, and `latestCheckSendsBack` turns false immediately;
+  //   · the RETURN-ROW half does NOT. The row is superseded only by the next VOTE. What closes for
+  //     the purposes of this branch is the DERIVED condition: once the accounts are corrected AND the
+  //     District Admin records a fresh passing check, `isReturnedClaimResubmitted` is true and
+  //     `resolveClaimCorrectionState` stops reporting `underCorrection` — even though the row is
+  //     still there, waiting for the vote that will supersede it.
   let corrected = false;
   if (inOrdinaryWindow) {
     // Ordinary collection/edit — no reason required.
-  } else if (input.allowCorrection === true && (await hasLiveReturnRow(db, input.pariwarId, input.claimCaseId))) {
-    // Under correction — permitted WHATEVER the claim's state, on the strength of the live return row.
-    // The reason stays mandatory + audited, exactly as in the tier-2 window.
+  } else if (
+    input.allowCorrection === true &&
+    !(NOMINEE_BANK_CORRECTION_BARRED_STATES as readonly string[]).includes(state) &&
+    (
+      await resolveClaimCorrectionState(
+        db,
+        input.pariwarId,
+        input.claimCaseId,
+        claimRow.deceasedMemberId as MemberId,
+      )
+    ).underCorrection
+  ) {
+    // Under correction — permitted WHATEVER the claim's state, on the strength of the governance
+    // record ALONE. The reason stays mandatory + audited, exactly as in the tier-2 window.
+    //
+    // ⚠ BOTH HALVES, AND BOTH HAD TO BE FIXED HERE (code review 2026-09-20). This branch tested
+    // `hasLiveReturnRow` alone, so AC5's OWN test case — the District Admin records `does_not_match`
+    // at `reversed`/`state_trustee_freeze`, neither of which is a bank-writable state — threw
+    // `NomineeBankClaimNotCollectableError` while the filer-facing flag was busy telling the operator
+    // to correct the details. It now goes through `resolveClaimCorrectionState`, the single
+    // definition, which ALSO requires the sending-back check to still be CURRENT.
     if (input.correctionReason == null || input.correctionReason.trim() === '') {
       throw new NomineeBankCorrectionReasonRequiredError(input.claimCaseId);
     }

@@ -100,6 +100,25 @@ async function driveTo(
   }
 }
 
+/** Drive a claim at `verifier_review` to the TERMINAL `denied` state. */
+async function denyFromReview(client: Client, claimCaseId: ClaimId): Promise<void> {
+  await projectClaimState(client, {
+    claimCaseId,
+    pariwarId: PARIWAR_A,
+    deceasedMemberId: toMemberId(randomUUID()),
+    intakeChannels: ['member_app'],
+    claimantActorId: null,
+    eventType: 'claim.verifier_denied' as never,
+    payload: {
+      from_state: 'verifier_review',
+      to_state: 'denied',
+      trigger: 'test',
+      actor: 'system',
+    },
+    actorId: null,
+  });
+}
+
 async function eventTypes(tx: Tx, claimCaseId: ClaimId): Promise<string[]> {
   const rows = await tx
     .select({ t: schema.eventsLog.eventType })
@@ -117,6 +136,11 @@ async function claimState(tx: Tx, claimCaseId: ClaimId): Promise<string | undefi
   return rows[0]?.s;
 }
 
+// ⚠ SUITE-LEVEL TIMEOUT, matching every sibling live spec. `packages/domain/vitest.config.ts` sets
+// ⛔ NO `testTimeout` (apps/api's does), and these suites do many `projectClaimState` round trips
+// under full-suite parallelism — the exact shape recorded in
+// [[project_known_livedb_test_failures]] as the cause of the timeout flakes, and `{ timeout: 20000 }`
+// as their fix.
 describe.skipIf(!hasDatabase)('Story 6.18 — the return loop (:5433)', () => {
   setupLiveDb();
 
@@ -410,18 +434,49 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the return loop (:5433)', () => {
     expect(row!.underCorrection).toBe(false);
   });
 
-  it('⭐ a claim under correction is EXCLUDED from the commit set (the vote→commit window, AC11)', async () => {
+  it('⛔ D1 — a RETURN from `state_trustee_approved` is REFUSED (the dead end this story closed)', async () => {
+    // ⚠⚠ THIS TEST REPLACES ONE THAT ASSERTED THE OPPOSITE, and the reversal is the point
+    // (code review 2026-09-20, D1 = option A). The pre-commit window looked returnable — cl.4 makes
+    // the approval final only at commit — but a return written there could ⛔ NEVER be cleared:
+    // `voteOnFrozenClaim` (the only code that supersedes a return row) refuses the state, and
+    // `NOMINEE_NAME_CHECK_RECORDABLE_STATES` excludes it, so the District Admin could not record
+    // the fresh check resubmission is derived from. The claim would be stuck with no exit at all,
+    // which is exactly the dead end AC5 forbids.
     const { client, tx } = getTx();
     await enterAppScope(client, PARIWAR_A);
     const cid = toClaimId(randomUUID());
-    const mid = toMemberId(randomUUID());
-    await driveTo(client, cid, mid, 'verifier_approved');
+    await driveTo(client, cid, toMemberId(randomUUID()), 'verifier_approved');
     await seedNomineeNameCheck(client, PARIWAR_A, cid);
     await voteOnFrozenClaim(client, voteInput(cid, 'approved'));
     expect(await claimState(tx, cid)).toBe('state_trustee_approved');
 
-    // The Pariwar Admin spots the discrepancy in the PRE-COMMIT window and returns it.
-    await returnToDistrictAdmin(client, returnInput(cid));
+    await expect(returnToDistrictAdmin(client, returnInput(cid))).rejects.toMatchObject({
+      name: 'ClaimNotReturnableError',
+    });
+  });
+
+  it('⭐ a claim under correction is EXCLUDED from the commit set (AC11) — with a POSITIVE control', async () => {
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+
+    // ⚠⚠ THE SETUP IS NOW A REACHABLE ONE. The previous version returned the claim from
+    // `state_trustee_approved`, which D1 refuses — so it would have thrown before reaching the
+    // assertion. A return at `state_trustee_freeze` is the real shape: the Pariwar Admin opens the
+    // freeze and sends the claim back instead of voting it through.
+    const returned = toClaimId(randomUUID());
+    await driveTo(client, returned, toMemberId(randomUUID()), 'verifier_approved');
+    await seedNomineeNameCheck(client, PARIWAR_A, returned);
+    await returnToDistrictAdmin(client, returnInput(returned));
+
+    // ⭐⭐ THE POSITIVE CONTROL, WITHOUT WHICH THIS TEST PROVED NOTHING. An identical claim with
+    // ⛔ no return row MUST be committed — otherwise the assertion below would pass just as happily
+    // if `commitCycleFreeze` committed nothing at all, or threw, or the whole candidate query were
+    // broken. A negative-only exclusion test is indistinguishable from a no-op.
+    const ordinary = toClaimId(randomUUID());
+    await driveTo(client, ordinary, toMemberId(randomUUID()), 'verifier_approved');
+    await seedNomineeNameCheck(client, PARIWAR_A, ordinary);
+    await voteOnFrozenClaim(client, voteInput(ordinary, 'approved'));
+    expect(await claimState(tx, ordinary)).toBe('state_trustee_approved');
 
     const res = await commitCycleFreeze(client, {
       pariwarId: PARIWAR_A,
@@ -430,9 +485,38 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the return loop (:5433)', () => {
       actorDisplay: 'Pariwar Admin One',
       actor: 'trustee',
     });
-    expect(res.committedClaimIds).not.toContain(String(cid));
-    // ⛔ Still not approved, and still not denied — it is waiting for a correction.
-    expect(await claimState(tx, cid)).toBe('state_trustee_approved');
-    expect(await eventTypes(tx, cid)).not.toContain('claim.approved');
+
+    expect(res.committedClaimIds).toContain(String(ordinary));
+    expect(res.committedClaimIds).not.toContain(String(returned));
+    // ⛔ The returned claim is not approved, and ⛔ not denied — it waits for a correction.
+    expect(await claimState(tx, returned)).toBe('verifier_approved');
+    expect(await eventTypes(tx, returned)).not.toContain('claim.approved');
   });
-});
+
+  it('⛔ the RETURNABLE matrix — `verifier_review` and `denied` are REFUSED', async () => {
+    // ⚠ Only `verifier_approved` and `state_trustee_freeze` were ever exercised, i.e. only the
+    // states that ALLOW a return. The states that must REFUSE one were exercised nowhere, so
+    // `TRUSTEE_RETURNABLE_STATES` could have been widened by accident and every test stayed green.
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+
+    // Mid-verification: the District Admin has not finished, so there is nothing to send back.
+    const inReview = toClaimId(randomUUID());
+    await driveTo(client, inReview, toMemberId(randomUUID()), 'verifier_review');
+    await expect(
+      returnToDistrictAdmin(client, returnInput(inReview)),
+      "a return from 'verifier_review' must be refused",
+    ).rejects.toMatchObject({ name: 'ClaimNotReturnableError' });
+
+    // ⛔ AND A TERMINAL CLAIM. A denied claim has its own governed route (the appeal flow, 6.16);
+    // returning it would put a live correction record on a claim nothing can clear.
+    const denied = toClaimId(randomUUID());
+    await driveTo(client, denied, toMemberId(randomUUID()), 'verifier_review');
+    await denyFromReview(client, denied);
+    expect(await claimState(tx, denied)).toBe('denied');
+    await expect(
+      returnToDistrictAdmin(client, returnInput(denied)),
+      "a return from 'denied' must be refused",
+    ).rejects.toMatchObject({ name: 'ClaimNotReturnableError' });
+  });
+}, { timeout: 20000 });

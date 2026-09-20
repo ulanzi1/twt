@@ -114,6 +114,7 @@ export function CycleFreezePage({ pariwarId }: CycleFreezePageProps): ReactEleme
               <ul className="flex flex-col gap-2">
                 {data!.ready_to_freeze.map((c) => (
                   <PendingCaseCard
+                    pariwarId={pariwarId}
                     key={c.claim_case_id}
                     case_={c}
                     bucket="ready_to_freeze"
@@ -136,6 +137,7 @@ export function CycleFreezePage({ pariwarId }: CycleFreezePageProps): ReactEleme
               <ul className="flex flex-col gap-2">
                 {data!.escalated.map((c) => (
                   <PendingCaseCard
+                    pariwarId={pariwarId}
                     key={c.claim_case_id}
                     case_={c}
                     bucket="escalated"
@@ -162,6 +164,7 @@ export function CycleFreezePage({ pariwarId }: CycleFreezePageProps): ReactEleme
               <ul className="flex flex-col gap-2">
                 {data!.voted_pending_commit.map((c) => (
                   <PendingCaseCard
+                    pariwarId={pariwarId}
                     key={c.claim_case_id}
                     case_={c}
                     bucket="voted_pending_commit"

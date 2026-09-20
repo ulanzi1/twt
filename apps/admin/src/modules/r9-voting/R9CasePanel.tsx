@@ -11,9 +11,8 @@ import type { ReactElement } from 'react';
 import { useState } from 'react';
 
 import { ApiError, errorMessage } from '../../api/client.js';
-import { NomineeNameCheckPanel } from '../claim-verification/NomineeNameCheckPanel.js';
+import { NomineeNameCheckDisclosure } from '../claim-verification/NomineeNameCheckDisclosure.js';
 import {
-  useNomineeNameCheck,
   useCancelR9Session,
   useCastR9Vote,
   useFinalizeR9,
@@ -38,8 +37,6 @@ export interface R9CasePanelProps {
 
 export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): ReactElement {
   // Story 6.18 (AC2) — the names disclosure, fetched only when opened.
-  const [nameCheckOpen, setNameCheckOpen] = useState(false);
-  const nameCheck = useNomineeNameCheck(pariwarId, claimCaseId, nameCheckOpen);
   const panel = useR9Panel(pariwarId, claimCaseId);
   const session = useSession();
   const open = useOpenR9Session(pariwarId, claimCaseId);
@@ -84,32 +81,19 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
   // the only one that cannot look at what it is approving.
   // ⛔ ON DEMAND, never on render: the read decrypts a LIVING nominee's Tier-1 name and writes an
   // audit line, so it must mean that somebody chose to look.
+  //
+  // ⭐ THE SHARED COMPONENT, ⛔ not a local copy (code review 2026-09-20). This block hand-rolled
+  // the button, the `aria-label` and the error string as three English literals that bypassed the
+  // copy table (`t.nameCheck.loadError` existed and was unused right beside it), and it carried a
+  // dead no-op `onSubmit` plus a duplicate landmark — the wrapper `section` and the panel's own
+  // `section` shared one `aria-label`. The Pariwar Admin's cycle-freeze card now renders the SAME
+  // component, which is what makes D3 true on both voting surfaces.
   const nameCheckSection = (
-    <section className="mt-3 border-t pt-3" aria-label="Nominee name check">
-      <button
-        type="button"
-        data-testid="r9-name-check-disclosure"
-        className="text-sm underline"
-        aria-expanded={nameCheckOpen}
-        onClick={() => setNameCheckOpen((v) => !v)}
-      >
-        Check nominee names
-      </button>
-      {nameCheckOpen ? (
-        <NomineeNameCheckPanel
-          data={nameCheck.data}
-          loading={nameCheck.isLoading}
-          error={nameCheck.isError ? 'The names could not be loaded.' : null}
-          // ⛔ The R9 panel is a VOTING surface, not the checker: `-226` cl.3 reserves recording the
-          // verdict to the District Admin, and `claim.check_nominee_name` is granted to them alone.
-          // Showing the control here would invite a 403 and blur who the reviewer is.
-          canCheck={false}
-          onSubmit={async () => {
-            /* unreachable — `canCheck` is false, so no control renders */
-          }}
-        />
-      ) : null}
-    </section>
+    <NomineeNameCheckDisclosure
+      pariwarId={pariwarId}
+      claimCaseId={claimCaseId}
+      testId="r9-name-check-disclosure"
+    />
   );
 
   const parseRoster = (): string[] =>

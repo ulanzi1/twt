@@ -212,6 +212,16 @@ export function createR9VotingHandlers(deps: AppDeps) {
       let ok = false;
       try {
         const items = await claim.getR9VotingQueue(tx.tx, ctx.pariwarId, limit !== undefined ? { limit } : {});
+        // Story 6.18 (AC8) — the name-difference flag for the whole queue in THREE bulk reads,
+        // ⛔ never a per-card lookup. The SAME derivation the Pariwar Admin's cycle-freeze list uses.
+        const nameFlags = await claim.readNomineeNameCheckFlagsBulk(
+          tx.tx,
+          ctx.pariwarId,
+          items.map((i) => ({
+            claimCaseId: ids.claimId(i.claimCaseId),
+            deceasedMemberId: ids.memberId(i.deceasedMemberId),
+          })),
+        );
         ok = true;
         void reply.status(200);
         return {
@@ -222,6 +232,7 @@ export function createR9VotingHandlers(deps: AppDeps) {
             routing_actor_display: i.routingActorDisplay,
             routing_reason_code: i.routingReasonCode,
             session_open: i.sessionOpen,
+            name_difference_reasons: [...(nameFlags.get(i.claimCaseId)?.differenceReasons ?? [])],
           })),
         };
       } finally {
@@ -238,6 +249,15 @@ export function createR9VotingHandlers(deps: AppDeps) {
       try {
         const model = await claim.getR9Panel(tx.tx, ctx.pariwarId, claimCaseId);
         if (!model) throw new NotFoundError('Claim not found', 'claim.not_found');
+
+        // Story 6.18 (AC8) — the non-PII flag, on this surface's OWN read. ⛔ The voter does NOT have
+        // to decrypt a living nominee's name to learn that a difference was approved.
+        const nameFlags = await claim.readNomineeNameCheckFlagsBulk(tx.tx, ctx.pariwarId, [
+          { claimCaseId, deceasedMemberId: ids.memberId(model.deceasedMemberId) },
+        ]);
+        const nameDifferenceReasons = [
+          ...(nameFlags.get(claimCaseId)?.differenceReasons ?? []),
+        ];
 
         let session: R9PanelResponse['session'] = null;
         let tally: R9PanelResponse['tally'] = null;
@@ -295,6 +315,7 @@ export function createR9VotingHandlers(deps: AppDeps) {
           session,
           votes,
           tally,
+          name_difference_reasons: nameDifferenceReasons,
         };
       } finally {
         await closeScopeTx(tx, ok);

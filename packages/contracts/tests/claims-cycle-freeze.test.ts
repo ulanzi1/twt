@@ -204,3 +204,82 @@ describe('CycleFreezeCommitRequest', () => {
     ).toBe(false);
   });
 });
+
+// ── Story 6.18 (AC11) — `return_to_district_admin` through the REAL schema ────────────────────
+//
+// ⭐⭐ THIS SUITE EXISTS BECAUSE THE ARM IT COVERS IS LOAD-BEARING AND WAS SILENT (code review
+// 2026-09-20). `effectiveOutcome()`'s `switch` has ⛔ no `default`, and the `superRefine` RETURNS
+// EARLY on `undefined` — so deleting the `return_to_district_admin` arm makes the required-
+// reason-code AND required-note rules never run for a return, and `tsc` catches nothing. Before
+// these tests, `return_to_district_admin` appeared in exactly ONE test in the whole repo: a
+// mocked-client UI test that never touches this schema. The arm could have been deleted and every
+// suite would have stayed green, while `-227` cl.10's note requirement quietly vanished.
+//
+// ⚠ Each case asserts the ISSUE MESSAGE, not just `.success` — a wrong-but-present message (the
+// schema used to tell a returning Pariwar Admin off about "a route-to-R9 decision") passes a bare
+// `.success === false` and tells the user something false.
+describe('Story 6.18 (AC11) — return_to_district_admin, the effectiveOutcome() arm', () => {
+  const CLAIM = '00000000-0000-0000-0000-000000000001';
+  const NOTE = 'The holder name on account 2 is not the nominee — please get it corrected.';
+
+  it('⛔ REJECTS a bare return: no reason_code, no note', () => {
+    const r = CycleFreezeDecisionRequest.safeParse({ claim_case_id: CLAIM, action: 'return_to_district_admin' });
+    expect(r.success).toBe(false);
+    const issues = JSON.stringify(r.error?.issues);
+    // ⭐ It names the RETURN — not R9. The two-way ternary this replaced called every non-deny
+    // outcome a "route-to-R9 decision".
+    expect(issues).toContain('return-to-District-Admin');
+    expect(issues).not.toContain('route-to-R9');
+  });
+
+  it('⛔ REJECTS `other` with NO note — `-227` cl.10 requires the note', () => {
+    const r = CycleFreezeDecisionRequest.safeParse({
+      claim_case_id: CLAIM,
+      action: 'return_to_district_admin',
+      reason_code: 'other',
+    });
+    expect(r.success).toBe(false);
+    expect(JSON.stringify(r.error?.issues)).toContain('a note is required when returning a claim');
+  });
+
+  it('⛔ REJECTS a whitespace-only note — a blank note is no note', () => {
+    const r = CycleFreezeDecisionRequest.safeParse({
+      claim_case_id: CLAIM,
+      action: 'return_to_district_admin',
+      reason_code: 'other',
+      rationale: '   ',
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it('⭐ ACCEPTS `other` + a note', () => {
+    const r = CycleFreezeDecisionRequest.safeParse({
+      claim_case_id: CLAIM,
+      action: 'return_to_district_admin',
+      reason_code: 'other',
+      rationale: NOTE,
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it('⛔ REJECTS an escalation_outcome on a return (the presence rule still applies)', () => {
+    const r = CycleFreezeDecisionRequest.safeParse({
+      claim_case_id: CLAIM,
+      action: 'return_to_district_admin',
+      reason_code: 'other',
+      rationale: NOTE,
+      escalation_outcome: 'denied',
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("⛔ REJECTS a reason code that is not compatible with 'returned_for_correction'", () => {
+    const r = CycleFreezeDecisionRequest.safeParse({
+      claim_case_id: CLAIM,
+      action: 'return_to_district_admin',
+      reason_code: 'concealment_upheld',
+      rationale: NOTE,
+    });
+    expect(r.success).toBe(false);
+  });
+});

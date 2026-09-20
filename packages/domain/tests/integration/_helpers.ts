@@ -633,10 +633,15 @@ export async function enterAppRoleNoScope(client: pg.PoolClient): Promise<void> 
 // (`2026-09-19-226` cl.3-cl.5, cl.7). Specs that drive a claim to `verifier_approved` and then
 // approve it therefore need this one call first.
 //
-// ⭐ IT IS DELIBERATELY NOT A BACKDOOR. It seeds two real account rows and then records the check
-// through the REAL writer, so a spec using it exercises the same path production does — including
-// the writer's own state-window and token guards. A helper that stubbed the gate would make every
-// approval test silently stop proving the gate holds.
+// ⭐ IT IS DELIBERATELY NOT A BACKDOOR for the CHECK: the check is recorded through the REAL
+// `recordNomineeNameCheck`, so a spec using it exercises the writer's own state-window, coherence
+// and token guards. A helper that stubbed the gate would make every approval test silently stop
+// proving the gate holds.
+// ⚠ THE ACCOUNTS ARE A DIFFERENT MATTER, AND THE HEADER USED TO OVERCLAIM THEM (code review
+// 2026-09-20). They are INSERTed directly with placeholder ciphertext — `recordClaimNomineeBank
+// Accounts` is never called here — so nothing a spec using this helper does exercises the real bank
+// writer or its `updated_at` movement. Any test whose subject is the D5 staleness chain must drive
+// the real writer itself, across two COMMITTED transactions.
 
 /**
  * Give a claim its two bank accounts and a recorded, PASSING nominee name check, so it can pass the
@@ -645,6 +650,11 @@ export async function enterAppRoleNoScope(client: pg.PoolClient): Promise<void> 
  *
  * Pass `verdicts` to build the negative fixtures instead — e.g. `['matches', 'does_not_match']` for
  * the "sent back for correction" case (AC5), which must NOT pass the gate and must NEVER be denied.
+ *
+ * ⚠ `verdicts` / `clericalReasons` must cover EVERY account when given. They used to fall back
+ * per-index (`verdicts[i] ?? 'matches'`), so a short array silently produced a PASSING verdict on
+ * the ranks it did not mention — a negative fixture that quietly became a positive one. It now
+ * throws (code review 2026-09-20).
  */
 export async function seedNomineeNameCheck(
   client: pg.PoolClient,
@@ -654,17 +664,37 @@ export async function seedNomineeNameCheck(
     readonly verdicts?: readonly ('matches' | 'clerical_difference' | 'does_not_match')[];
     readonly clericalReasons?: readonly (('initial' | 'married_name' | 'bank_shortened_name') | null)[];
     readonly actorId?: string;
+    /** The acting staff display name snapshotted into the event (D3). Non-empty by construction. */
+    readonly actorDisplay?: string;
+    /**
+     * ⭐ OPT OUT of seeding a check at all — for the specs that must reach an UNCHECKED claim.
+     * `seedClaim` calls this helper unconditionally, so without this flag no test could construct
+     * the very claim the AC4 gates exist to refuse (code review 2026-09-20, chunk 5).
+     */
+    readonly skip?: boolean;
     /** Record a check against the EXISTING account rows instead of re-seeding them. Needed wherever
      *  the accounts' `updated_at` is load-bearing — e.g. the return loop's re-check, where rewriting
      *  the rows would undo the very correction the check is supposed to be about. */
     readonly reuseAccounts?: boolean;
   } = {},
 ): Promise<void> {
+  if (opts.skip === true) return;
+
   const tx = bindScopedDb(client);
   const pid = toPariwarId(pariwarId);
   const cid = toClaimId(claimCaseId);
   const verdicts = opts.verdicts ?? (['matches', 'matches'] as const);
   const clericalReasons = opts.clericalReasons ?? [null, null];
+  if (verdicts.length !== 2) {
+    throw new Error(
+      `[seedNomineeNameCheck] verdicts must cover both accounts, got ${verdicts.length} — a short array used to default the missing ranks to 'matches', turning a negative fixture into a passing one`,
+    );
+  }
+  if (opts.clericalReasons !== undefined && opts.clericalReasons.length !== 2) {
+    throw new Error(
+      `[seedNomineeNameCheck] clericalReasons must cover both accounts, got ${opts.clericalReasons.length}`,
+    );
+  }
 
   // Two live accounts — `-226` cl.7 makes both mandatory before a claim can be decided.
   if (opts.reuseAccounts !== true) {
@@ -721,10 +751,13 @@ export async function seedNomineeNameCheck(
     accounts: live.map((a, i) => ({
       accountRank: a.accountRank as 1 | 2,
       accountUpdatedAt: a.updatedAt.toISOString(),
-      verdict: verdicts[i] ?? 'matches',
+      verdict: verdicts[i]!,
       clericalReason: clericalReasons[i] ?? null,
     })),
     actorId: opts.actorId ?? randomUUID(),
+    // ⛔ NOT a placeholder: the writer refuses an empty display name (D3), so every seeded check
+    // carries a name exactly as a real one does.
+    actorDisplay: opts.actorDisplay ?? 'Test District Admin',
     actor: 'operator',
   });
 }

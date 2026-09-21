@@ -1836,6 +1836,12 @@ So that signup remains lightweight and bank-detail collection happens at claim t
 **When** the update is submitted
 **Then** a new `nominees.declared` event is emitted (event-log is immutable; the latest event is the effective declaration); step-up OTP is required for the update
 
+> ⚠ **ANNOTATION 2026-09-21 (Story `6-20` Task 0) — *"the latest event is the effective declaration"* is CONTRADICTED for
+> the AS-AT-DEATH read. ⭐ Annotated, ⛔ not rewritten.** `2026-09-21-235` consequence 1 fixes the declaration in force as
+> **the last one made on an earlier calendar day than the day of death** — so after a death the *latest* declaration is
+> precisely the one that may ⛔ **not** govern. ⭐ The rule still holds **while the member is alive** (`-234` X). ⚠ And the
+> **relationship** field's value set moves from five to **fifteen** (`2026-09-21-237` cl.1). ⭐ Build from Story `6-20`.
+
 ### Story 3.5: Medical Disclosure with IMA List + Concealment-Denial Ack `[SURFACE]`
 
 As a member completing signup,
@@ -2831,6 +2837,59 @@ merely intending to.
 > match rule between the accounts and the declared nominees (6.8's D1); it changes ⛔ no public surface;
 > and `-227` cl.9's wider English-name sweep — member KYC names and Story 6.5's death-certificate
 > comparison — is ⛔ **not** in scope and owes its own story.
+
+---
+
+### Story 6.20: The Nominee Declaration's History, the Lock at the First Claim, and the As-At-Death Rule `[SURFACE]`
+
+> ⚠ **Minted by Trustee ruling, ⛔ not by the original epic plan** — the Panel (Dhiraj Rahul + Kalpana
+> Bharti) on **2026-09-20**, rulings [`-233`](../../.decision-log.md#decision-2026-09-20-233) →
+> [`-236`](../../.decision-log.md#decision-2026-09-20-236), and by BigDev's call the same day that the
+> build is its own story. Completed by [`-237`](../../.decision-log.md#decision-2026-09-21-237) →
+> [`-240`](../../.decision-log.md#decision-2026-09-21-240) on **2026-09-21**. `epic-6-retrospective` is
+> `done`; adding a story here is the same deliberate act as Stories 6.17 and 6.18 — ⛔ do not "correct"
+> the placement and ⛔ do not flip the retrospective back.
+>
+> ⭐ **`-236` consequence 3 row (a) — DISCHARGED by this entry** (a discharge with ⛔ no row is a decision
+> nobody schedules). Row (b) is Story `6-21`.
+
+As the District Admin, with the Pariwar Admin above me,
+I want every version of a member's nominee declaration kept, the declaration locked from the first claim,
+and only the declaration in force at the death to count,
+So that a nominee changed after a death can never receive — and a family with a genuine mistake still has
+a route to fix it.
+
+**Acceptance Criteria** (the full set, with the code coordinates, is in
+`_bmad-output/implementation-artifacts/6-20-nominee-declaration-history-and-as-at-death-rule.md`):
+
+1. Every version of a declaration is kept, **per nominee**, append-only — ⛔ nothing is updated or deleted,
+   and a vacated rank leaves a tombstone (`-234` V, X; `-235` AA).
+2. From the **first claim ever filed** for that member, ordinary changes stop with a typed 409, decided
+   under the intake advisory lock so an edit and an intake serialise (`-233`, `-234` V). ⭐ A claim filed
+   against a member who is **alive** releases the lock on an investigation finding them innocent
+   (`-238` cl.1) — the lock is ⛔ never permanent for a living member (`-234` X).
+3. The District Admin reads the **timeline** beside a certificate-date field and records a
+   **determination** marking each version `stands` or `discarded`. ⛔ The system pre-selects nothing,
+   highlights nothing and decides nothing (`-235` Y).
+4. A change dated **on or after the day of death** raises **suspicion**; the **District Admin** refuses the
+   claim, records a note and reason, and **notifies the Pariwar Admin**. The refusal is **appealable
+   once**; the true nominee refiles with a fresh original certificate but **inherits the ground
+   inspection** (`-239`). ⛔ The system itself refuses nothing.
+5. Story 6.18's name check reads the declaration **in force at the death** at all six of its
+   re-derivation sites — ⛔ not the current rows (`-234` consequence 3). ⚠ 6.18 must ⛔ not go live until
+   this lands (`-236` consequence 4).
+6. A **genuine mistake** may be corrected after the claim, through the **District Admin and then the
+   Pariwar Admin — two different people**, each with a written note (`-236` Z, `-237` cl.3–4). ⛔ A
+   nominee whose relationship is `other` can ⛔ **never** be corrected (`-237` cl.2).
+7. The relationship value set is the ratified **fifteen**, replacing the shipped five (`-237` cl.1).
+   ⛔ No migration (the column is plain text) and ⛔ no backfill (`-232`).
+8. A history that keeps PII is **erasable** — the RTBF anonymizer covers every new PII-bearing table in
+   the same commit.
+
+> ⚠ **What this story does ⛔ not do:** it builds ⛔ **no** blacklist or fraud register — that is row
+> `6-22`, and its identifier set is **counsel-gated** (`-238`, `-240`). It adds ⛔ no new claim lifecycle
+> state, ⛔ no join between bank accounts and nominees (6.8 D1), and it does ⛔ not close the
+> certificate-admissibility rule, which is Story `6-21` and a **go-live coupling** on `-235` Y.
 
 ---
 

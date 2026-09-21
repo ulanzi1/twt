@@ -1542,6 +1542,13 @@ flowchart TD
 
 **Recovery anchors:** Cannot access deceased's phone → Helpline path at entry. OTP failures at either step → Helpline. Save-and-resume mandatory across all data-entry steps; no time pressure on grief-paced flow. Update-nominee path requires Trustee Panel review (fraud guard at high-risk node).
 
+> ⚠ **ANNOTATION 2026-09-21 (Story `6-20` Task 0) — *"Update-nominee path requires Trustee Panel review"* is CONTRADICTED.**
+> `2026-09-20-233`–`-236` rule that a nominee may be changed **freely until the first claim is filed**; from that moment
+> ordinary changes stop, and only a **genuine mistake** may be corrected — by the **District Admin and then the Pariwar
+> Admin**, ⛔ never by the Trustee Panel. ⭐ The honest word is **CONTRADICTED BY `-235` consequence 1**, ⛔ **not**
+> *"superseded"*: a UX-specification line is a **planning artifact, ⛔ not a ratified clause**, so ⛔ nothing supersedes it —
+> the ruling simply governs. ⭐ Kept as written ([[feedback_supersede_never_reinterpret]]). ⭐ Build from Story `6-20`.
+
 ---
 
 ### Journey 3: Helpline-mediated Claim Filing (Priya Path)
@@ -2079,6 +2086,12 @@ Grouped by surface tier. Internal names lead; UX labels in parens where they dif
 - **Purpose:** Pre-populated nominee detail form with Trustee-Panel-gated edits.
 - **Anatomy:** Pre-populated fields (name, phone, UPI handle, Aadhaar last-4) · edit toggle · ID verification triggers (when editing) · "submit changes" CTA · audit trail entry.
 - **States:** Read-only (default) · editing (Trustee Panel review required on save) · pending-review · review-approved · review-rejected.
+
+> ⚠ **ANNOTATION 2026-09-21 (Story `6-20` Task 0) — the REVIEWER and the STEP COUNT both changed. ⭐ Annotated, ⛔ not rewritten.**
+> `2026-09-20-236` Z rules that a nominee correction after a claim is filed needs the **District Admin first, then the
+> Pariwar Admin — two DIFFERENT people** — each recording a written note (`2026-09-21-237` cl.4). ⇒ this state machine is
+> reusable in **SHAPE** (`pending-review → review-approved | review-rejected`) but ⛔ **not** in **cardinality** (two steps,
+> ⛔ not one) and ⛔ **not** in **actor** (the reviewer is ⛔ never the Trustee Panel). ⭐ Build from Story `6-20` AC8.
 - **Variants:** Member-initiated (claim-proxy update) · operator-initiated (Priya updating during intake).
 - **Accessibility:** Edit toggle is a clear semantic change; all edits create audit entries; rejected edits surface reason.
 - **Surfaces:** Journey 2; Journey 3; Anita's verification surface.

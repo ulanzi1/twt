@@ -18826,6 +18826,17 @@ development_status:
   6-19-correction-return-reminders-and-closure: backlog
   6-20-nominee-declaration-history-and-as-at-death-rule: backlog
   6-21-death-certificate-clear-date-rule: backlog
+  # ⭐ Opened 2026-09-21 by `2026-09-21-240` consequence 4 + `2026-09-21-238` consequence 1 (a discharge
+  # with ⛔ no row is a decision nobody schedules). The FRAUD REGISTER: the blacklist instrument, its
+  # identifier set and the sanction chain (helpline operator or District Admin flags -> District Admin
+  # verifies -> Pariwar Admin REFERS -> STATE TRUSTEE imposes -> SUPER ADMIN may lift; indefinite,
+  # ⛔ NOT appealable). ⚠ COUNSEL-GATED: the PAN/Aadhaar identifier set ⛔ must not be built until
+  # counsel confirms DPDPA s.17(1)(c) supports indefinite retention about NON-members, and whether a
+  # UID token is obtainable at all. ⚠ EPIC PLACEMENT IS A CALL, ⛔ not a ruling: filed under Epic 6
+  # because the collection point is the claim form and the rulings came through the 6.18/6.20 chain —
+  # but the sanction itself is a MODERATION act that narrows Niyamavali s.8.8 (Epic 10's instrument),
+  # so it may belong in Epic 10. ⛔ 6.20 does ⛔ NOT build this; it takes ⛔ only the release route.
+  6-22-fraud-register-blacklist-instrument-and-identifier-set: backlog
   epic-6-retrospective: done
 
   # ==========================================================================

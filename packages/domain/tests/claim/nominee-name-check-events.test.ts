@@ -171,10 +171,27 @@ describe('ClaimNomineeNameCheckedPayloadSchema (the 32nd claim event)', () => {
 });
 
 describe('the recordable window (AC3) vs the bank-write windows (AC4)', () => {
-  it('⭐ BOTH bank-write windows exclude the freeze states — no bank write is legal once the freeze begins', () => {
-    // AC4 pins this: `commitCycleFreeze` carries no check precisely because nothing can change the
-    // accounts after the freeze opens. If either window ever gains a freeze state, the "a corrected
-    // account makes the check stale" reasoning stops covering the vote→commit window.
+  it('⭐ the two COLLECTION windows exclude the freeze states — ⚠ but this is ⛔ NOT "no bank write is legal"', () => {
+    // ⚠⚠ THIS TEST WAS RE-TITLED (validate pass, 2026-09-21). It used to read *"BOTH bank-write
+    // windows exclude the freeze states — no bank write is legal once the freeze begins"*, and that
+    // title asserted a property the code does ⛔ NOT have.
+    //
+    // There are THREE bank-write windows, ⛔ not two. The two asserted below are the COLLECTION
+    // windows. The third is D4's helpline-correction branch, guarded by
+    // `NOMINEE_BANK_CORRECTION_BARRED_STATES = ['denied', 'approved', 'settled']` in
+    // `nominee-bank-persist.ts` — which ⛔ does NOT bar `state_trustee_freeze`. So a correction write
+    // IS legal during the freeze, and the old title denied it.
+    //
+    // ⛔ This test ⛔ cannot notice that branch: it inspects two CONSTANTS, and the third window's
+    // guard is a different constant applied on a different path. The branch is proved behaviourally
+    // instead, by `tests/integration/claim/nominee-name-check-return-loop.spec.ts`:
+    //   *"⭐ the helpline correction succeeds at `state_trustee_freeze` ONLY while a return is live"*
+    // ⇒ the true rule is **"a correction may reach a frozen claim only while a return is open"**,
+    //    ⛔ not "nothing can be written after the freeze".
+    //
+    // AC4's reasoning survives the correction, and this is why: `commitCycleFreeze` carries no check
+    // because a correction write MAKES THE CHECK STALE, and a stale check re-blocks approval. The
+    // vote→commit window is covered by staleness, ⛔ not by the write being impossible.
     for (const frozen of ['state_trustee_freeze', 'state_trustee_approved', 'approved'] as const) {
       expect(NOMINEE_BANK_COLLECTABLE_STATES as readonly string[]).not.toContain(frozen);
       expect(NOMINEE_BANK_ADMIN_CORRECTION_STATES as readonly string[]).not.toContain(frozen);

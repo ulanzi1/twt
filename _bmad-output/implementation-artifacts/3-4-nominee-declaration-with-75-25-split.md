@@ -40,7 +40,14 @@ This is the **third signup-wizard SURFACE** of Epic 3, sitting between KYC (3.3b
 **AC5 — Re-declaration is latest-wins + emits a new event (Life Events seam)**
 **Given** the member later updates nominees via Life Events (Story 3.9)
 **When** the update is submitted
-**Then** a new `member.nominees_declared` event is emitted (event-log is immutable; **the latest event / latest projection row-set is the effective declaration**); step-up OTP is required for the update — **the gate is attached by Story 3.9**; 3.4 ships the declare service re-runnable so a re-declaration replaces the projection (delete-then-insert within one scope tx) and emits the new event.
+**Then** a new `member.nominees_declared` event is emitted (event-log is immutable; **the latest event / latest projection row-set is the effective declaration**); step-up OTP is required for the update — **the gate is attached by Story 3.9**; 3.4 ships the
+
+> ⚠ **ANNOTATION 2026-09-21 (Story `6-20` Task 0) — this AC is CONTRADICTED for the AS-AT-DEATH read, and this story is
+> `done`. ⭐ Annotated, ⛔ NOT rewritten, and the status is ⛔ NOT reopened.** `2026-09-21-235` consequence 1 fixes the
+> declaration in force as **the last one made on an earlier calendar day than the day of death**; `2026-09-21-233`–`-236`
+> stop ordinary changes at the **first claim**. ⭐ The AC holds **while the member is alive**. ⚠ Annotating `epics.md` alone
+> would have left this `done` story file stating the contradicted rule — which is why Story `6-20`'s T12 names FOUR sites.
+> ⭐ The neighbouring AC (*non-PII payload only — count + split*) is **CORRECT and ⛔ must not be touched**. declare service re-runnable so a re-declaration replaces the projection (delete-then-insert within one scope tx) and emits the new event.
 
 **AC6 — Accessibility (inherited Story 0.10 P0-2c gate)**
 **And** the signup nominee screen is screen-reader-accessible: every field has a proper label + per-field guidance; the 75/25 split and the "no bank / no KYC at signup" reassurance copy are announced (UX-DR55 dignified-validation grammar, UX-DR57 Pattern 6 bilingual input).

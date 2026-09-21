@@ -275,7 +275,13 @@ The active lock-in countdown is the topmost UI element on the home screen for a 
 
 #### FR-4: Multi-nominee declaration with 75/25 split (R5(E))
 
-Members can declare one or two nominees at signup or in Life Events. When two are declared, payout is 75% primary / 25% secondary per Niyamavali R5(E). Nominee identity does **not** require KYC (matches bank norms).
+Members can declare one or two nominees at signup or in Life Events. When two are declared, payout is 75% primary / 25% secondary per Niyamavali R5(E). Nominee identity does **not** require KYC (match
+
+> ⚠ **ANNOTATION 2026-09-21 (Story `6-20` Task 0) — the 75/25 split MOVES in one case. ⭐ Annotated, ⛔ not rewritten.**
+> `2026-09-21-240` cl.4 rules that where **one of two nominees is disqualified for fraud**, the other receives the **whole
+> amount** — so a secondary named at 25% may receive 100%. ⭐ The ordinary rule above is **unchanged**; this is an exception
+> on a disqualification only, and the effective split is **derived from the post-determination rank set**, ⛔ never read off
+> the stored rows. ⚠ The **relationship** value set also moves from five to **fifteen** (`-237` cl.1).es bank norms).
 
 **Consequences (testable):**
 - Nominee bank/IFSC fields are **not** collected at member signup — they are collected at claim-time only (explicit policy correction from brainstorm).

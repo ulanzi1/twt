@@ -673,4 +673,119 @@ describe.skipIf(!hasDatabase)('Nominee name-check surface — E2E (:5433)', () =
       }
     });
   });
+  // ── Checklist family 3, THE API LEG — cross-PARIWAR (tenant) denial ──────────────────────
+  //
+  // ⚠⚠ The family-3 test above is cross-DISTRICT inside ONE Pariwar. That proves the scope
+  // resolver narrows a district admin to their own district; it proves ⛔ NOTHING about tenancy,
+  // because both districts live in the same Pariwar and the same RLS scope. `grep -c PARIWAR_B`
+  // over this whole spec returned **0** before this block: ⛔ no test had ever sent a session
+  // scoped to one Pariwar at another Pariwar's claim.
+  //
+  // ⭐ THE SHAPE THAT MATTERS is the realistic bug, ⛔ not the obvious one: a real caller holds a
+  // genuine grant and a genuine session — just for the WRONG tenant — and puts the other tenant's
+  // id in the URL. Every route below is asserted against exactly that.
+  describe('checklist family 3 (API) — a session scoped to Pariwar B cannot reach Pariwar A', () => {
+    const crossQueueUrl = (p: string) => `/api/v1/p/${p}/admin/claims/under-correction`;
+
+    /**
+     * ⭐⭐ 404, ⛔ NOT 403 — AND THAT IS THE POINT, ⛔ not a compromise.
+     *
+     * The first draft of these tests asserted **403** and FAILED. The code was right and the test
+     * was wrong: `middleware/scope-resolution` documents the contract in terms — *"0 rows → 404
+     * (Pariwar doesn't exist OR no membership; **the two collapse, by design, to 'not found'**)"*.
+     * A 403 would confirm the Pariwar EXISTS, turning every route into an enumeration oracle for
+     * tenant ids; the same header notes a malformed id 404s for the identical reason.
+     *
+     * ⇒ so this asserts the SECURITY PROPERTY, ⛔ not merely the number: the status is exactly 404,
+     * and the body carries ⛔ nothing that could distinguish "no such Pariwar" from "not yours".
+     */
+    function expectNotFoundNotForbidden(res: { statusCode: number; body: string }): void {
+      // ⭐ A SINGLE code, ⛔ not a range — a range would pass whether the caller was stopped by
+      // authz or merely lost, and those are different guarantees.
+      expect(res.statusCode).toBe(404);
+      expect(res.statusCode, 'a 403 here would confirm the Pariwar exists — an enumeration oracle').not.toBe(403);
+      for (const leak of ['membership', 'grant', 'forbidden', 'permission', 'role']) {
+        expect(res.body.toLowerCase(), `the 404 body leaked '${leak}' — it must not say WHY`).not.toContain(leak);
+      }
+    }
+
+    /** A claim in Pariwar A, plus a fully-authenticated district_admin scoped to Pariwar B. */
+    async function aClaimInA_andASessionInB(): Promise<{
+      intruder: Client;
+      owner: Client;
+      pariwarA: string;
+      pariwarB: string;
+      claimInA: string;
+    }> {
+      const pariwarA = randomUUID();
+      const pariwarB = randomUUID();
+      const district = `D-${randomUUID().slice(0, 8)}`;
+
+      const memberA = await seedDeceasedMember(pariwarA, district);
+      const claimInA = await seedClaim(pariwarA, memberA);
+
+      // ⭐ A REAL district_admin — but of Pariwar B. Same role, same dimension, wrong tenant.
+      const { client, userId } = await authenticate();
+      await grant(userId, pariwarB, 'district_admin', 'district', district);
+      await client.inject({ method: 'POST', url: '/api/v1/auth/scope', payload: { pariwarId: pariwarB } });
+
+      // ⭐⭐ AND the legitimate owner of the SAME claim, so every denial below can be paired with
+      // the IDENTICAL call succeeding. Without this the 404s prove only that something is
+      // unreachable — ⛔ not that it is unreachable BECAUSE of the tenant.
+      const owner = await authenticate();
+      await grant(owner.userId, pariwarA, 'district_admin', 'district', district);
+      await owner.client.inject({ method: 'POST', url: '/api/v1/auth/scope', payload: { pariwarId: pariwarA } });
+
+      return { intruder: client, owner: owner.client, pariwarA, pariwarB, claimInA };
+    }
+
+    it("⛔ GET the name check — a Pariwar B session is refused at Pariwar A's claim", async () => {
+      const { intruder, owner, pariwarA, claimInA } = await aClaimInA_andASessionInB();
+      expectNotFoundNotForbidden(await intruder.inject({ method: 'GET', url: url(pariwarA, claimInA) }));
+      // ⭐ THE SAME URL, for the tenant that owns it.
+      expect((await owner.inject({ method: 'GET', url: url(pariwarA, claimInA) })).statusCode).toBe(200);
+    });
+
+    it("⛔ POST the name check — a Pariwar B session cannot RECORD against Pariwar A's claim", async () => {
+      const { intruder, pariwarA, claimInA } = await aClaimInA_andASessionInB();
+      // ⚠ Structurally VALID body: Fastify runs validation BEFORE preHandler, so a malformed
+      // payload would 400 before the authz check and pass this test for the wrong reason.
+      const res = await intruder.inject({
+        method: 'POST',
+        url: url(pariwarA, claimInA),
+        payload: {
+          nominee_declaration_token: 'tok',
+          accounts: [1, 2].map((rank) => ({
+            account_rank: rank,
+            account_updated_at: '2026-09-20T10:00:00.000Z',
+            verdict: 'matches',
+          })),
+        },
+      });
+      expectNotFoundNotForbidden(res);
+    });
+
+    it("⛔ the correction QUEUE — a Pariwar B session cannot list Pariwar A's queue", async () => {
+      const { intruder, owner, pariwarA } = await aClaimInA_andASessionInB();
+      expectNotFoundNotForbidden(await intruder.inject({ method: 'GET', url: crossQueueUrl(pariwarA) }));
+      expect((await owner.inject({ method: 'GET', url: crossQueueUrl(pariwarA) })).statusCode).toBe(200);
+    });
+
+    it('⭐⭐ POSITIVE CONTROL — the SAME calls succeed for the tenant that owns the claim', async () => {
+      // ⚠⚠ WITHOUT THIS the three denials above are worthless: a typo in the URL helper, a broken
+      // fixture, or a route that 403s for everybody would satisfy all three just as happily.
+      // Same helpers, same shapes — only the tenant is right.
+      const pariwarId = randomUUID();
+      const district = `D-${randomUUID().slice(0, 8)}`;
+      const memberId = await seedDeceasedMember(pariwarId, district);
+      const claimCaseId = await seedClaim(pariwarId, memberId);
+
+      const { client, userId } = await authenticate();
+      await grant(userId, pariwarId, 'district_admin', 'district', district);
+      await client.inject({ method: 'POST', url: '/api/v1/auth/scope', payload: { pariwarId } });
+
+      expect((await client.inject({ method: 'GET', url: url(pariwarId, claimCaseId) })).statusCode).toBe(200);
+      expect((await client.inject({ method: 'GET', url: crossQueueUrl(pariwarId) })).statusCode).toBe(200);
+    });
+  });
 });

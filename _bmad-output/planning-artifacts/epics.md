@@ -2805,6 +2805,15 @@ model can never satisfy.
 >
 > ⭐ **It closes `deferred-work.md` §Story 11b.3a item (b) `D5-subject` (ii)** — the un-mechanized
 > approver duty. ⛔ It does ⛔ not close (i), the consent-subject gap.
+>
+> ⛔⛔ **AND IT MUST ⛔ NOT GO LIVE WHEN COMPLETE.** [`-236`](../../.decision-log.md#decision-2026-09-20-236)
+> consequence 4: *"**6.18 must not go live until (a) lands or its compare source is changed** — its name
+> check reads the **current** nominee rows."* Under `-233`–`-236` the declaration in force at a death is the
+> last one made on an **earlier calendar day** than the day of death, so the current rows are the **WRONG**
+> nominee whenever a change was made after it. ⭐ **(a) is Story 6.20**, whose AC5 re-points all six
+> re-derivation sites. [`-241`](../../.decision-log.md#decision-2026-09-21-241) §4 item 4: this fence
+> **discharges on the BUILD, ⛔ not on the record** — finishing 6.18's bullets does ⛔ not clear it.
+> ⚠ Added 2026-09-21: §6.20 carried this fence pointing back here while **this** section said ⛔ nothing.
 
 As the District Admin verifying a death claim,
 I want to see the name on each of the claim's two bank accounts beside the nominee(s) the member declared,

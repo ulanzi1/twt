@@ -23,10 +23,23 @@ import { describe, expect, it } from 'vitest';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, '../../../..');
 
-/** The files that carry the name check. A new one belongs HERE, not outside the fence. */
+/**
+ * The files that carry the name check. A new one belongs HERE, not outside the fence.
+ *
+ * ⚠⚠ THIS LIST WENT STALE ONCE AND THE FENCE SILENTLY STOPPED COVERING THE VERDICT LOGIC.
+ * The second implementation pass split two modules out of `nominee-name-check.ts` (to break an
+ * import cycle) and did NOT add them here. Both compute `current` / `passing` / `differenceReasons`
+ * — the derivation `-226` cl.5 exists to constrain — and both declare in their OWN headers that
+ * Traps 1 and 4 apply to them, while sitting outside the guard that enforces it. The file-existence
+ * test below still passed, because it only checks that the LISTED files exist.
+ * ⇒ when a `nominee-name-*` or correction-read module is added, it belongs in this array in the
+ *    SAME commit. The floor below is raised with it, so a silent deletion cannot re-open the hole.
+ */
 const FENCED_FILES = [
   'packages/domain/src/claim/nominee-name-check.ts',
   'packages/domain/src/claim/nominee-name-check-persist.ts',
+  'packages/domain/src/claim/nominee-name-check-read.ts',
+  'packages/domain/src/claim/correction-queue-read.ts',
   'packages/contracts/src/claims/nominee-name-check.ts',
   'apps/api/src/modules/claims/claims.nominee-name-check.handlers.ts',
   'apps/api/src/modules/claims/claims.nominee-name-check.routes.ts',
@@ -64,7 +77,7 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
     for (const f of FENCED_FILES) {
       expect(() => read(f), `fenced file missing: ${f}`).not.toThrow();
     }
-    expect(FENCED_FILES.length).toBeGreaterThanOrEqual(5);
+    expect(FENCED_FILES.length).toBeGreaterThanOrEqual(7);
   });
 
   it('⛔ no fenced file contains a name-comparison shape', () => {

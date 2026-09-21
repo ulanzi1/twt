@@ -291,4 +291,77 @@ describe.skipIf(!hasDatabase)('Claim-time nominee bank — helpline E2E (:5433)'
     expect(res.statusCode).toBe(200);
     expect(res.json<{ bankName: string }>().bankName).toBe('HDFC Bank');
   });
+  // ── Checklist family 3 (API) — cross-PARIWAR denial on the helpline bank route ───────────
+  //
+  // ⚠⚠ `grep -ciE 'pariwarB|cross-pariwar'` over this spec returned **0**. This is the route D4's
+  // third branch made STATE-INDEPENDENT — a helpline operator may correct accounts on a claim that
+  // is already deep in the trustee flow — so it is the one place where a tenant-scoping slip would
+  // let an operator rewrite payout destinations on another Pariwar's claim. It had ⛔ no
+  // cross-tenant test at all.
+  //
+  // ⭐ 404, ⛔ NOT 403, and that is deliberate: `middleware/scope-resolution` collapses "Pariwar
+  // doesn't exist" and "no membership" into **not found** so no route becomes an enumeration oracle
+  // for tenant ids. Asserting 403 here would pin the wrong contract.
+  describe('checklist family 3 — a helpline operator of Pariwar B cannot touch Pariwar A', () => {
+    /** A converged claim in Pariwar A, and a REAL helpline admin whose only grant is in Pariwar B. */
+    async function claimInA_operatorInB(): Promise<{
+      intruder: Client;
+      owner: Client;
+      pariwarA: string;
+      claimInA: string;
+    }> {
+      const pariwarA = randomUUID();
+      const pariwarB = randomUUID();
+      const claimInA = await seedConvergedClaim(pariwarA);
+
+      const intruderAuth = await authenticate();
+      await grantRole(intruderAuth.userId, pariwarB, 'helpline_operator');
+
+      // ⭐ The legitimate operator of the SAME claim, so each denial pairs with the identical call
+      // being reachable — without it a 404 proves only "unreachable", ⛔ not "unreachable BECAUSE
+      // of the tenant".
+      const ownerAuth = await authenticate();
+      await grantRole(ownerAuth.userId, pariwarA, 'helpline_operator');
+
+      return { intruder: intruderAuth.client, owner: ownerAuth.client, pariwarA, claimInA };
+    }
+
+    function expectNotFound(res: { statusCode: number; body: string }): void {
+      // ⭐ A SINGLE code. ⚠ Several older tests in this file assert `[403, 404]`; a range passes
+      // whether the caller was stopped by authz or merely lost, and those are different guarantees.
+      expect(res.statusCode).toBe(404);
+      for (const leak of ['membership', 'grant', 'forbidden', 'permission']) {
+        expect(res.body.toLowerCase(), `the 404 body leaked '${leak}' — it must not say WHY`).not.toContain(leak);
+      }
+    }
+
+    it("⛔ GET the bank status — a Pariwar B operator is refused at Pariwar A's claim", async () => {
+      const { intruder, owner, pariwarA, claimInA } = await claimInA_operatorInB();
+      expectNotFound(await intruder.inject({ method: 'GET', url: statusUrl(pariwarA, claimInA) }));
+      // ⭐ THE SAME URL is reachable for the tenant that owns it (⛔ not 404).
+      expect((await owner.inject({ method: 'GET', url: statusUrl(pariwarA, claimInA) })).statusCode).not.toBe(404);
+    });
+
+    it("⛔⛔ POST the accounts — a Pariwar B operator cannot write payout destinations onto Pariwar A's claim", async () => {
+      const { intruder, pariwarA, claimInA } = await claimInA_operatorInB();
+      // ⚠ A structurally VALID body: Fastify validates BEFORE preHandler, so a malformed payload
+      // would 400 ahead of scope-resolution and pass this test for entirely the wrong reason.
+      const res = await intruder.inject({
+        method: 'POST',
+        url: recordUrl(pariwarA, claimInA),
+        payload: {
+          accounts: [account(), account({ accountNumber: '987654321098', ifsc: 'HDFC0000001' })],
+        } as unknown as object,
+      });
+      expectNotFound(res);
+
+      // ⭐⭐ AND NOTHING WAS WRITTEN — for this route that is the assertion that matters: a refusal
+      // that still persisted an account would have handed another tenant's money a new destination.
+      const rows = await td.pool.query(
+        `SELECT 1 FROM claim_nominee_bank_accounts WHERE claim_case_id = $1`,
+        [claimInA],
+      );
+      expect(rows.rows, 'a cross-tenant POST persisted account rows').toHaveLength(0);
+    });
+  });
 });

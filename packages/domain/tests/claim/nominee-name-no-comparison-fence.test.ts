@@ -43,6 +43,13 @@ const FENCED_FILES = [
   'packages/contracts/src/claims/nominee-name-check.ts',
   'apps/api/src/modules/claims/claims.nominee-name-check.handlers.ts',
   'apps/api/src/modules/claims/claims.nominee-name-check.routes.ts',
+  // ⭐ THE THREE AC4 GATE CALL SITES (Task 7 sub-item 1: "the read, the write and THE GATES").
+  // Each calls `assertNomineeNameCheckForApproval`. They are the places an author under deadline
+  // would most plausibly reach for a name to "just check" before approving — so the prohibition
+  // has to reach them, ⛔ not stop at the modules that record the verdict.
+  'packages/domain/src/claim/verifier-decision-persist.ts',
+  'packages/domain/src/claim/state-trustee-decision-persist.ts',
+  'packages/domain/src/claim/r9-voting-persist.ts',
 ] as const;
 
 /**
@@ -58,7 +65,13 @@ const FORBIDDEN_PATTERNS: readonly { readonly re: RegExp; readonly why: string }
   { re: /levenshtein|damerau|jaro|winkler|soundex|metaphone|\bfuzzy\b/i, why: 'a string-similarity algorithm' },
   { re: /similarityScore|matchScore|nameScore|\bsimilarity\s*[:=]/i, why: 'a similarity score' },
   { re: /namesMatch|nameMatches|isNameMatch|looksDifferent|probablyMatch/i, why: 'a name-match predicate' },
-  { re: /normalize[A-Za-z]*Name|canonicaliz[A-Za-z]*Name/i, why: 'name normalisation (the prelude to comparing)' },
+  { re: /normali[sz]e[A-Za-z]*Name|canonicali[sz]e[A-Za-z]*Name/i, why: 'name normalisation (the prelude to comparing)' },
+  // ⭐ ADDED because the four patterns above were KEYWORDS, ⛔ not the RULE. `-226` cl.5 forbids the
+  // SYSTEM forming an opinion about two names — and the cheapest way to do that ⛔ never mentions
+  // "name" at all. ⚠ Note the British spelling is now covered above: this repo writes `normalise`.
+  { re: /localeCompare|Intl\.Collator/i, why: 'a locale comparison — an opinion about two strings' },
+  { re: /toLowerCase\(\)\s*===|toUpperCase\(\)\s*===|trim\(\)\s*===\s*[a-z]/i, why: 'a normalise-then-equals comparison' },
+  { re: /names_match|name_matches|similarity_score|match_score/i, why: 'a snake_case comparison field on the wire' },
 ];
 
 function read(rel: string): string {
@@ -77,7 +90,45 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
     for (const f of FENCED_FILES) {
       expect(() => read(f), `fenced file missing: ${f}`).not.toThrow();
     }
-    expect(FENCED_FILES.length).toBeGreaterThanOrEqual(7);
+    expect(FENCED_FILES.length).toBeGreaterThanOrEqual(10);
+  });
+
+  it('⭐⭐ POSITIVE CONTROL — the scanner actually FIRES on a planted violation of every pattern', () => {
+    // ⚠⚠ WITHOUT THIS THE WHOLE FENCE IS UNFALSIFIABLE. Every other assertion here is of the form
+    // "this pattern did NOT match" — which is exactly what a broken regex, an over-eager
+    // `stripComments`, or a typo'd character class also produces. A green fence would then prove
+    // ⛔ nothing, which is the failure mode [[feedback_gate_scope_semantic_coverage]] describes:
+    // a scan is only worth its green if at least one input is known to turn it red.
+    //
+    // ⭐ Each specimen is a REAL shape someone could plausibly write while "just being helpful",
+    // ⛔ not a keyword pasted to satisfy the regex.
+    const SPECIMENS: readonly { readonly src: string; readonly why: string }[] = [
+      { src: 'const d = levenshtein(a, b);', why: 'a string-similarity algorithm' },
+      { src: 'const matchScore = score(a, b);', why: 'a similarity score' },
+      { src: 'if (namesMatch(declared, holder)) return true;', why: 'a name-match predicate' },
+      // ⭐ British spelling on purpose: this repo writes `normalise`, and the original pattern only
+      // covered `normalize`. That gap is what this specimen exists to keep closed.
+      { src: 'const x = normaliseNomineeName(n);', why: 'name normalisation (the prelude to comparing)' },
+      { src: 'if (a.localeCompare(b) === 0) return true;', why: 'a locale comparison — an opinion about two strings' },
+      { src: 'if (a.toLowerCase() === b.toLowerCase()) return true;', why: 'a normalise-then-equals comparison' },
+      { src: 'type Wire = { names_match: boolean };', why: 'a snake_case comparison field on the wire' },
+    ];
+
+    // ⭐ Every pattern must be exercised — otherwise a pattern could rot unnoticed behind the others.
+    expect(SPECIMENS.length).toBe(FORBIDDEN_PATTERNS.length);
+
+    for (const { src, why } of SPECIMENS) {
+      const pattern = FORBIDDEN_PATTERNS.find((p) => p.why === why);
+      expect(pattern, `no FORBIDDEN_PATTERNS entry has why='${why}' — specimen and pattern have drifted apart`).toBeDefined();
+      expect(
+        pattern?.re.test(stripComments(src)),
+        `the fence FAILED TO CATCH a planted violation (${why}): ${src}`,
+      ).toBe(true);
+    }
+
+    // ⛔ And the comment-stripper must not be how a violation hides: the same shape inside a comment
+    // is legitimately invisible, which is WHY the specimens above are bare code.
+    expect(stripComments('// const d = levenshtein(a, b);').trim()).toBe('');
   });
 
   it('⛔ no fenced file contains a name-comparison shape', () => {

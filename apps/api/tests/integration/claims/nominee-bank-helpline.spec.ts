@@ -193,6 +193,62 @@ describe.skipIf(!hasDatabase)('Claim-time nominee bank — helpline E2E (:5433)'
     expect(auditStr).not.toContain('Ravi Kumar');
   });
 
+  it("⭐⭐ AC7 — the filer's NOTE survives POST → ciphertext → the AC2 read, and rides nowhere else", async () => {
+    // ⚠⚠ THIS PATH WAS UNEXERCISED AT EVERY LAYER (code review 2026-09-22). `grep
+    // nameDifferenceNote|name_difference_note` over `apps/api/tests` matched ⛔ ONLY
+    // `nameDifferenceNoteCiphertext: null` seeds, and `seedAccountsWithNames` never set the column
+    // — so the handler's note-DECRYPT branch had ⛔ never been run by anything, at any level (the
+    // admin card and panel tests are against mocks).
+    //
+    // ⭐ THE NOTE IS THE ONE NAMED EXCEPTION to nominee-bank.ts's "never echo" rule (`-226` cl.2):
+    // the filer may explain a clerical difference — *"the bank shortened her name"* — and the
+    // District Admin must be able to READ that explanation. So the assertions run both ways: it
+    // comes BACK on the AC2 read, and it does ⛔ NOT appear in the audit trail.
+    const NOTE = 'the bank shortened her name to A. Devi';
+    const pariwarId = randomUUID();
+    const { client, userId } = await authenticate();
+    await grantRole(userId, pariwarId, 'helpline_operator');
+    await elevateClaimFile(client);
+    const claimCaseId = await seedConvergedClaim(pariwarId);
+    td.auditSink.events.length = 0;
+
+    const res = await client.inject({
+      method: 'POST', url: recordUrl(pariwarId, claimCaseId),
+      payload: {
+        accounts: [
+          { ...account({ ifsc: 'SBIN0000001' }), nameDifferenceNote: NOTE },
+          account({ accountNumber: '987654321098', ifsc: 'HDFC0000001' }),
+        ],
+      } as unknown as object,
+    });
+    expect(res.statusCode, res.body).toBe(201);
+
+    // (1) STORED AS CIPHERTEXT — ⛔ never as plaintext, on rank 1 only.
+    const rows = await td.pool.query<{ rank: number; note: string | null }>(
+      `SELECT account_rank AS rank, name_difference_note_ciphertext AS note
+         FROM claim_nominee_bank_accounts WHERE claim_case_id = $1 ORDER BY account_rank`,
+      [claimCaseId],
+    );
+    expect(rows.rows).toHaveLength(2);
+    expect(rows.rows[0]!.note, 'the note was not stored at all').toBeTruthy();
+    expect(rows.rows[0]!.note, 'the note was stored as PLAINTEXT').not.toContain('shortened');
+    // ⭐ And rank 2 carries NULL — the column is per-account, ⛔ not per-claim.
+    expect(rows.rows[1]!.note).toBeNull();
+
+    // ⚠⚠ (2) THE READ-BACK HALF IS ⛔ NOT HERE, AND THE REASON IS A REAL CONSTRAINT, ⛔ not a
+    //     shortcut. The AC2 read resolves the caller's scope from the DECEASED MEMBER'S POSTING
+    //     DISTRICT, and this spec's `seedClaimAt` creates a claim against a bare member UUID with
+    //     ⛔ no `members` row and ⛔ no posting — so the district target is `null` and the read is
+    //     403 for EVERY role, `super_admin` included (the carried residual in `deferred-work.md`).
+    //     ⭐ The read-back leg therefore lives in `nominee-name-check.spec.ts`, which seeds the
+    //     posting: *"AC7 — the filer's note comes BACK on the AC2 read"*. Between them the path is
+    //     covered end to end; ⛔ neither file claims to cover it alone.
+
+    // (3) ⭐ IT IS ⛔ NOT IN THE AUDIT TRAIL. The note is a permitted DISCLOSURE to a named reader,
+    //     ⛔ not a thing to scatter into logs — the same rule the holder name lives under.
+    expect(JSON.stringify(td.auditSink.events)).not.toContain('shortened');
+  });
+
   it('review finding (2026-07-11): GET status is [] before recording, the presence view after', async () => {
     const pariwarId = randomUUID();
     const { client, userId } = await authenticate();

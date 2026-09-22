@@ -470,3 +470,62 @@ describe('<NomineeNameCheckPanel> — the MIXED and STALE states (v1.1 residual)
     expect(passing).not.toContain('Does not match — send back for correction');
   });
 });
+
+// ── The selections are CLEARED when the data they were about changes (code review 2026-09-20) ──
+//
+// ⭐⭐ A SAFETY PROPERTY, ⛔ not tidiness, and it had ⛔ no test. `verdicts` are keyed by
+// `account_rank` alone. Without the reset: a District Admin selects "matches" for account #2, the
+// helpline corrects account #2 underneath them, the refetch shows the NEW name with the OLD
+// "matches" still selected, and `submit` sends the FRESH `account_updated_at` — so the staleness
+// check PASSES and a judgement about a name they never saw is recorded under their name.
+describe('<NomineeNameCheckPanel> — a changed account or claim CLEARS the selections', () => {
+  const pick = (): void => {
+    fireEvent.change(screen.getByTestId('name-check-verdict-1'), { target: { value: 'matches' } });
+    fireEvent.change(screen.getByTestId('name-check-verdict-2'), { target: { value: 'clerical_difference' } });
+    fireEvent.change(screen.getByTestId('name-check-reason-2'), { target: { value: 'married_name' } });
+  };
+  const renderPanel = (data: NomineeNameCheckResponse, onSubmit = vi.fn().mockResolvedValue(undefined)) =>
+    render(<NomineeNameCheckPanel data={data} canCheck onSubmit={onSubmit} />);
+
+  it('⭐⭐ a CORRECTED account (new `account_updated_at`) clears every verdict and reason — nothing carries over', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const { rerender } = renderPanel(READ, onSubmit);
+    pick();
+    // ⛔ NON-VACUITY: the selections really are in place first.
+    expect(screen.getByTestId('name-check-verdict-1')).toHaveValue('matches');
+    expect(screen.getByTestId('name-check-reason-2')).toHaveValue('married_name');
+
+    const corrected: NomineeNameCheckResponse = {
+      ...READ,
+      accounts: [
+        READ.accounts[0]!,
+        { ...READ.accounts[1]!, account_updated_at: '2026-09-21T09:00:00.000Z', holder_name: { state: 'readable', value: 'Someone Else' } },
+      ],
+    };
+    rerender(<NomineeNameCheckPanel data={corrected} canCheck onSubmit={onSubmit} />);
+
+    expect(screen.getByTestId('name-check-verdict-1')).toHaveValue('');
+    expect(screen.getByTestId('name-check-verdict-2')).toHaveValue('');
+    expect(screen.queryByTestId('name-check-reason-2')).toBeNull();
+    // ⭐ And the consequence that matters: pressing Record now REFUSES rather than sending the old judgement.
+    fireEvent.click(screen.getByTestId('name-check-submit'));
+    expect(await screen.findByTestId('name-check-validation-error')).toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('⭐ a changed DECLARATION (new token) clears them too — the other half of the staleness pair', () => {
+    const { rerender } = renderPanel(READ);
+    pick();
+    rerender(<NomineeNameCheckPanel data={{ ...READ, nominee_declaration_token: 'tok-2' }} canCheck onSubmit={vi.fn()} />);
+    expect(screen.getByTestId('name-check-verdict-1')).toHaveValue('');
+  });
+
+  it('⛔ an IDENTICAL refetch does ⛔ not wipe what the District Admin is typing — the reset is keyed, ⛔ not on every render', () => {
+    const { rerender } = renderPanel(READ);
+    pick();
+    // A fresh object with the same tokens — what a refetch that found nothing new returns.
+    rerender(<NomineeNameCheckPanel data={{ ...READ, accounts: READ.accounts.map((a) => ({ ...a })) }} canCheck onSubmit={vi.fn()} />);
+    expect(screen.getByTestId('name-check-verdict-1')).toHaveValue('matches');
+    expect(screen.getByTestId('name-check-reason-2')).toHaveValue('married_name');
+  });
+});

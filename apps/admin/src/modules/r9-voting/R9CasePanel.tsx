@@ -12,6 +12,7 @@ import { useState } from 'react';
 
 import { ApiError, errorMessage } from '../../api/client.js';
 import { NomineeNameCheckDisclosure } from '../claim-verification/NomineeNameCheckDisclosure.js';
+import { verifierConsoleEn as t } from '../claim-verification/i18n-en.js';
 import {
   useCancelR9Session,
   useCastR9Vote,
@@ -88,12 +89,31 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
   // dead no-op `onSubmit` plus a duplicate landmark — the wrapper `section` and the panel's own
   // `section` shared one `aria-label`. The Pariwar Admin's cycle-freeze card now renders the SAME
   // component, which is what makes D3 true on both voting surfaces.
-  const nameCheckSection = (
-    <NomineeNameCheckDisclosure
-      pariwarId={pariwarId}
-      claimCaseId={claimCaseId}
-      testId="r9-name-check-disclosure"
-    />
+  //
+  // ⭐⭐ AC8 — THE HIGHLIGHT RIDES THIS PANEL'S OWN READ (code review 2026-09-22). The server has
+  // carried `name_difference_reasons` on the R9 panel read since the 2026-09-20 review, and ⛔ nothing
+  // rendered it: an R9 voter could learn that a difference had been accepted ONLY by opening the
+  // disclosure below — decrypting a living nominee's Tier-1 name to see a non-PII reason code. The
+  // codes arrive already filtered to the CURRENT, PASSING check (empty when stale or not passing).
+  const nameSection = (
+    <>
+      {model.name_difference_reasons.length > 0 ? (
+        <p
+          data-testid="r9-name-difference-flag"
+          className="mt-2 w-fit rounded bg-status-warn-bg px-2 py-0.5 text-xs text-status-warn-fg"
+        >
+          {t.nameCheck.approvedWithDifference}:{' '}
+          {model.name_difference_reasons
+            .map((r) => (t.nameCheck.reasons as Record<string, string | undefined>)[r] ?? r)
+            .join(', ')}
+        </p>
+      ) : null}
+      <NomineeNameCheckDisclosure
+        pariwarId={pariwarId}
+        claimCaseId={claimCaseId}
+        testId="r9-name-check-disclosure"
+      />
+    </>
   );
 
   const parseRoster = (): string[] =>
@@ -138,7 +158,7 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
       <section aria-label="Open R9 voting session" className="rounded border p-4">
         <h3 className="mb-2 text-sm font-semibold">No open session — open the panel</h3>
         {caseHeader}
-        {nameCheckSection}
+        {nameSection}
         <p className="mb-2 mt-2 text-xs opacity-60">
           Select the applicable R9 sub-clause and designate the immutable panel roster (actor ids — each must
           hold the R9 vote permission, max {R9_PANEL_MAX_MEMBERS}). The roster cannot change after open; correcting
@@ -207,7 +227,7 @@ export function R9CasePanel({ pariwarId, claimCaseId }: R9CasePanelProps): React
         </p>
         {/* Story 6.18 (AC2/AC8) — the names, on demand. R9 approves without the District Admin's
             verification approval, so this panel must be able to see them. */}
-        {nameCheckSection}
+        {nameSection}
         <p className="text-xs opacity-60">
           Opened by {s.opened_display} · quorum {s.quorum_required} of {s.panel.length}
           {finalized && (

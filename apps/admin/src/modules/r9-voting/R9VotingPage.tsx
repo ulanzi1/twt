@@ -11,6 +11,7 @@ import { useState } from 'react';
 
 import { errorMessage } from '../../api/client.js';
 import { useR9Queue, useR9VotesByTrustee } from '../../api/hooks.js';
+import { verifierConsoleEn as t } from '../claim-verification/i18n-en.js';
 import { R9CasePanel } from './R9CasePanel.js';
 
 export interface R9VotingPageProps {
@@ -72,6 +73,18 @@ export function R9VotingPage({ pariwarId }: R9VotingPageProps): ReactElement {
                       {i.routing_reason_code ? ` (${i.routing_reason_code})` : ''} ·{' '}
                       {i.session_open ? 'session open' : 'no session'}
                     </div>
+                    {/* Story 6.18 (AC8) — from the QUEUE's own read, ⛔ never from a names decrypt. */}
+                    {i.name_difference_reasons.length > 0 ? (
+                      <div
+                        data-testid={`r9-queue-name-difference-${i.claim_case_id}`}
+                        className="mt-1 w-fit rounded bg-status-warn-bg px-2 py-0.5 text-status-warn-fg"
+                      >
+                        {t.nameCheck.approvedWithDifference}:{' '}
+                        {i.name_difference_reasons
+                          .map((r) => (t.nameCheck.reasons as Record<string, string | undefined>)[r] ?? r)
+                          .join(', ')}
+                      </div>
+                    ) : null}
                   </button>
                 </li>
               ))}

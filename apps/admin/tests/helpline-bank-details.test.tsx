@@ -248,3 +248,58 @@ describe('<BankDetailsCard> — AC5, the operator corrects the details', () => {
     expect(screen.queryByTestId('helpline-bank-names')).toBeNull();
   });
 });
+
+// ── The residual edge cases (code review 2026-09-20, bullet "the admin UI halves") ─────────
+describe('<BankDetailsCard> — anonymized nominee, nothing on file, and a change of claim', () => {
+  it('⭐ an ANONYMIZED nominee says so — ⛔ never "could not be read", which misreports a lawful erasure as a fault', () => {
+    setup({
+      recorded: true,
+      names: {
+        ...NAMES,
+        declared_nominees: [
+          { rank: 1, split_pct: 100, relationship: 'spouse', nominee_name: { state: 'anonymized' } },
+        ],
+      },
+    });
+    const cell = screen.getByTestId('helpline-name-nominee-1');
+    expect(cell).toHaveTextContent('Removed at this person’s request');
+    expect(cell).not.toHaveTextContent('Could not be read');
+  });
+
+  it('⛔ with NOTHING on file the card offers the entry form and ⛔ no names grid — even if a names payload is passed', () => {
+    // ⭐ The grid is gated on `recorded` (a SERVER fact), ⛔ not on whether a payload happens to be
+    // present — an empty "names on the accounts" column must never stand in for "no accounts yet".
+    setup({ recorded: false, names: { ...NAMES, accounts: [], accounts_complete: false } });
+    expect(screen.getByTestId('helpline-bank-submit')).toBeInTheDocument();
+    expect(screen.queryByTestId('helpline-bank-names')).toBeNull();
+    expect(screen.queryByTestId('helpline-bank-recorded')).toBeNull();
+  });
+
+  it('⭐⭐ a CHANGE OF CLAIM clears every typed field — another family’s account numbers are never the default', () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const { rerender } = render(<BankDetailsCard claimCaseId={CLAIM} recorded={false} onSubmit={onSubmit} />);
+    fill(1, 'Asha Devi', '123456789012', 'SBIN0000001', 'the bank shortened it');
+    // ⛔ NON-VACUITY: typed first.
+    expect(screen.getByTestId('helpline-bank-number-1')).toHaveValue('123456789012');
+
+    const CLAIM_B = '99999999-9999-4999-8999-999999999999';
+    rerender(<BankDetailsCard claimCaseId={CLAIM_B} recorded={false} onSubmit={onSubmit} />);
+    for (const id of ['holder-1', 'number-1', 'ifsc-1', 'note-1']) {
+      expect(screen.getByTestId(`helpline-bank-${id}`), `claim A's ${id} carried into claim B`).toHaveValue('');
+    }
+  });
+
+  it('⭐ a change of claim also CLOSES a re-entered correction form and drops its reason', () => {
+    const { rerender } = render(
+      <BankDetailsCard claimCaseId={CLAIM} recorded onSubmit={vi.fn()} names={NAMES} />,
+    );
+    fireEvent.click(screen.getByTestId('helpline-bank-edit'));
+    fireEvent.change(screen.getByTestId('helpline-bank-correction-reason'), { target: { value: 'passbook' } });
+
+    const CLAIM_B = '99999999-9999-4999-8999-999999999999';
+    rerender(<BankDetailsCard claimCaseId={CLAIM_B} recorded onSubmit={vi.fn()} names={NAMES} />);
+    expect(screen.queryByTestId('helpline-bank-submit')).toBeNull();
+    fireEvent.click(screen.getByTestId('helpline-bank-edit'));
+    expect(screen.getByTestId('helpline-bank-correction-reason')).toHaveValue('');
+  });
+});

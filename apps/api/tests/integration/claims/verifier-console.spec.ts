@@ -882,4 +882,87 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
       throw err;
     }
   });
+  // ── Story 6.18 — THE CONSOLE PACKET'S NOMINEE SECTION ─────────────────────────────────────
+  //
+  // ⚠⚠ `grep nomineeNameCheck verifier-console*.spec.ts` returned **ZERO** (code review
+  // 2026-09-22): `accountsComplete`, `currentAndPassing` and `differenceReasons` were asserted
+  // ⛔ NOWHERE. ⭐ These four booleans are what the District Admin's console reads to decide
+  // whether to OFFER the approve control and what to say when it cannot — so a wrong value here
+  // is a console that either hides a legitimate approval or offers one that will 409.
+  const nomineeSection = async (pariwarId: string, claimCaseId: string) => {
+    const scopeTx = await openScopeTx(deps, pariwarId);
+    try {
+      const packet = await assembleVerifierConsole(deps, {
+        db: scopeTx.tx, pariwarId, claimCaseId, district: DISTRICT,
+        actorId: randomUUID(),
+        grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }],
+        traceId: null,
+      });
+      await closeScopeTx(scopeTx, true);
+      return packet.packet.nomineeNameCheck;
+    } catch (err) {
+      await closeScopeTx(scopeTx, false);
+      throw err;
+    }
+  };
+
+  it('⭐ a claim with ⛔ NO accounts: `accountsComplete` false, `currentAndPassing` false', async () => {
+    const pariwarId = randomUUID();
+    const deceased = await seedDeceasedMember(pariwarId, DISTRICT);
+    // ⚠ This spec's `seedClaim` seeds the accounts AND a passing check (so its other tests can pass
+    // the AC4 gates), so they are removed here — otherwise `accountsComplete: false` would be
+    // asserted against a claim that has two accounts, and the test would fail for the right value
+    // at the wrong time.
+    const claimCaseId = await seedClaim(pariwarId, deceased);
+    const c = await td.pool.connect();
+    try {
+      await c.query(`DELETE FROM claim_nominee_bank_accounts WHERE claim_case_id = $1`, [claimCaseId]);
+    } finally {
+      c.release();
+    }
+
+    const s = await nomineeSection(pariwarId, claimCaseId);
+    expect(s.available, 'the section failed soft — the booleans below would be meaningless').toBe(true);
+    expect(s.accountsComplete).toBe(false);
+    expect(s.currentAndPassing).toBe(false);
+    expect(s.differenceReasons).toEqual([]);
+  });
+
+  it('⭐⭐ a PASSING check with a clerical difference: `currentAndPassing` true AND the REASON codes', async () => {
+    // ⭐ AC8's highlight rides this field. It is non-PII by construction — reason CODES, ⛔ never a
+    // name — which is what lets the console show *"approved with a name difference"* at all.
+    const pariwarId = randomUUID();
+    const deceased = await seedDeceasedMember(pariwarId, DISTRICT);
+    const claimCaseId = await seedClaim(pariwarId, deceased);
+    await seedNomineeNameCheck(deps, pariwarId, claimCaseId, {
+      verdicts: ['matches', 'clerical_difference'],
+      clericalReasons: [null, 'married_name'],
+    });
+
+    const s = await nomineeSection(pariwarId, claimCaseId);
+    expect(s.accountsComplete).toBe(true);
+    expect(s.currentAndPassing).toBe(true);
+    expect(s.differenceReasons).toEqual(['married_name']);
+    // ⭐ AND ⛔ NO NAME anywhere in the section — Trap 4, on the packet every console load carries.
+    expect(JSON.stringify(s)).not.toContain('holder');
+  });
+
+  it('⚠⚠ a MIXED `[clerical_difference, does_not_match]`: ⛔ NOT passing, and ⛔ NO reasons', async () => {
+    // ⚠⚠ THE CASE THE FIELD'S OWN DOC SINGLES OUT: *"a mixed check yields `[]`"*. A section that
+    // reported the clerical reason here would let the console render the REASSURING
+    // "approved with a difference" badge on a claim that must be SENT BACK — one payout
+    // destination belonging to somebody else, shown as a tidy footnote.
+    const pariwarId = randomUUID();
+    const deceased = await seedDeceasedMember(pariwarId, DISTRICT);
+    const claimCaseId = await seedClaim(pariwarId, deceased);
+    await seedNomineeNameCheck(deps, pariwarId, claimCaseId, {
+      verdicts: ['clerical_difference', 'does_not_match'],
+      clericalReasons: ['married_name', null],
+    });
+
+    const s = await nomineeSection(pariwarId, claimCaseId);
+    expect(s.accountsComplete).toBe(true);
+    expect(s.currentAndPassing, 'a does_not_match check reported as passing').toBe(false);
+    expect(s.differenceReasons, 'a sending-back check exposed a difference reason').toEqual([]);
+  });
 });

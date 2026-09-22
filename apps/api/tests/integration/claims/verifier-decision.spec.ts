@@ -145,7 +145,18 @@ describe.skipIf(!hasDatabase)('Verifier adjudication WRITE surface — E2E (:543
   }
 
   /** Seed a committed claim at `verification_in_progress` for a deceased member. */
-  async function seedClaim(pariwarId: string, deceasedMemberId: ids.MemberId): Promise<string> {
+  /**
+   * @param nameCheck ⭐ `'passing'` (default) · `'accounts_only'` (two accounts, ⛔ nobody checked)
+   *   · `'none'` (⛔ no accounts at all). ⚠ The opt-out was MISSING, so ⛔ no API test could reach
+   *   the two states P1's gate exists to refuse — and the route's own 409 codes
+   *   `verifier_decision.bank_details_required` / `…nominee_name_check_required` grepped to ZERO
+   *   across `apps/api/tests` (code review 2026-09-22).
+   */
+  async function seedClaim(
+    pariwarId: string,
+    deceasedMemberId: ids.MemberId,
+    nameCheck: 'passing' | 'accounts_only' | 'none' = 'passing',
+  ): Promise<string> {
     const claimCaseId = ids.claimId(randomUUID());
     const scopeTx = await openScopeTx(deps, pariwarId);
     const emit = (from: string | null, to: string, eventType: string, extra: Record<string, unknown> = {}) =>
@@ -168,7 +179,10 @@ describe.skipIf(!hasDatabase)('Verifier adjudication WRITE surface — E2E (:543
     // Story 6.18 (AC4) — approvable only with two bank accounts + a current, PASSING District
     // Admin name check. Seeded through the REAL writer, so these E2E specs keep exercising the
     // production gate rather than bypassing it.
-    await seedNomineeNameCheck(deps, pariwarId, String(claimCaseId));
+    await seedNomineeNameCheck(deps, pariwarId, String(claimCaseId), {
+      skip: nameCheck === 'none',
+      accountsOnly: nameCheck === 'accounts_only',
+    });
     return String(claimCaseId);
   }
 
@@ -781,5 +795,78 @@ describe.skipIf(!hasDatabase)('Verifier adjudication WRITE surface — E2E (:543
     expect(ctx).toContain('reason_code');
     expect(ctx).toContain('other');
     expect(ctx).not.toContain(secret);
+  });
+  // ── Story 6.18 (AC4) — P1's 409 CODES, over HTTP ──────────────────────────────────────────
+  //
+  // ⚠⚠ A grep for `verifier_decision.nominee_name_check_required` / `…bank_details_required`
+  // across `apps/api/tests/integration/claims/` returned **ZERO** (code review 2026-09-22) — the
+  // route DEFINES both codes and ⛔ nothing asserted either. ⭐ The domain refuses these cases
+  // (802's gate matrix covers that); what was untested is the TRANSLATION — that a governance
+  // refusal reaches the console as a STABLE, specific code rather than a 500 or a generic 409.
+  // ⚠ That matters because the admin client branches on the code to name the actual blocker; an
+  // unmapped error renders as "something went wrong", which trains an operator to treat a ruling
+  // as a glitch.
+  it('⚠⚠ AC4 — APPROVE with two accounts and ⛔ NO check → 409 `verifier_decision.nominee_name_check_required`', async () => {
+    const pariwarId = randomUUID();
+    // ⚠ A display name is REQUIRED (D3): without one the route answers `admin.display_name_missing`
+    // and the 409 under test is ⛔ never reached — which is how I learned it.
+    const { client, userId } = await authenticate({ displayName: 'Anita (District Admin)' });
+    await grant(userId, pariwarId, 'district_admin', 'district', DISTRICT);
+    const deceased = await seedDeceasedMember(pariwarId, DISTRICT);
+    const claimCaseId = await seedClaim(pariwarId, deceased, 'accounts_only');
+    await client.inject({ method: 'POST', url: '/api/v1/auth/scope', payload: { pariwarId } });
+
+    const res = await client.inject({
+      method: 'POST', url: decisionUrl(pariwarId, claimCaseId),
+      payload: { outcome: 'approved', reason_code: 'r8_90pct_met' },
+    });
+    expect(res.statusCode, res.body).toBe(409);
+    expect(res.json<{ error: { code: string } }>().error.code).toBe(
+      'verifier_decision.nominee_name_check_required',
+    );
+  });
+
+  it('⚠⚠ AC4 — APPROVE with ⛔ NO accounts → 409 `verifier_decision.bank_details_required` (cl.7 — it WAITS)', async () => {
+    const pariwarId = randomUUID();
+    // ⚠ A display name is REQUIRED (D3): without one the route answers `admin.display_name_missing`
+    // and the 409 under test is ⛔ never reached — which is how I learned it.
+    const { client, userId } = await authenticate({ displayName: 'Anita (District Admin)' });
+    await grant(userId, pariwarId, 'district_admin', 'district', DISTRICT);
+    const deceased = await seedDeceasedMember(pariwarId, DISTRICT);
+    const claimCaseId = await seedClaim(pariwarId, deceased, 'none');
+    await client.inject({ method: 'POST', url: '/api/v1/auth/scope', payload: { pariwarId } });
+
+    const res = await client.inject({
+      method: 'POST', url: decisionUrl(pariwarId, claimCaseId),
+      payload: { outcome: 'approved', reason_code: 'r8_90pct_met' },
+    });
+    expect(res.statusCode, res.body).toBe(409);
+    // ⭐ A DISTINCT code from the one above — ⛔ not a shared "cannot approve". The two blockers
+    // need different things done about them, and the console names the actual one.
+    expect(res.json<{ error: { code: string } }>().error.code).toBe(
+      'verifier_decision.bank_details_required',
+    );
+  });
+
+  it('⭐ …and a DENY on the SAME un-approvable claim still succeeds (cl.6/cl.7)', async () => {
+    // ⛔ NON-VACUITY for both tests above: if the claim were simply un-decidable, the 409s would
+    // say ⛔ nothing about the APPROVE gate. ⭐ And it is the ruling itself — a claim is ⛔ never
+    // refused over a name or a missing account, so the deny path must stay open on exactly the
+    // claim that cannot be approved.
+    const pariwarId = randomUUID();
+    // ⚠ A display name is REQUIRED (D3): without one the route answers `admin.display_name_missing`
+    // and the 409 under test is ⛔ never reached — which is how I learned it.
+    const { client, userId } = await authenticate({ displayName: 'Anita (District Admin)' });
+    await grant(userId, pariwarId, 'district_admin', 'district', DISTRICT);
+    const deceased = await seedDeceasedMember(pariwarId, DISTRICT);
+    const claimCaseId = await seedClaim(pariwarId, deceased, 'none');
+    await client.inject({ method: 'POST', url: '/api/v1/auth/scope', payload: { pariwarId } });
+
+    const res = await client.inject({
+      method: 'POST', url: decisionUrl(pariwarId, claimCaseId),
+      // ⚠ A rationale is REQUIRED on every deny — the contract's own rule, ⛔ not optional here.
+      payload: { outcome: 'denied', reason_code: 'concealment_flag_uphold', rationale: 'Concealment upheld.' },
+    });
+    expect(res.statusCode, res.body).toBe(201);
   });
 });

@@ -294,11 +294,24 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
   });
 
   // ── AC9 — the PII posture ────────────────────────────────────────────────────────────────
-  describe('AC9 — the names and the note reach NO log, event, audit line or error body', () => {
-    it('⛔⛔ plants both names and a note as SENTINELS and finds them in no event payload', async () => {
+  describe('AC9 — the names and the note reach no EVENT PAYLOAD (this file scans `events_log`)', () => {
+    it('⚠⚠ plants both names and a note as SENTINELS and finds them in no event payload', async () => {
+      // ⚠⚠ THE DESCRIBE WAS RE-TITLED 2026-09-22, because it claimed more than it scans. It read
+      // *"reach NO log, event, audit line or error body"* while the body queries ⛔ only
+      // `events_log`. ⭐ And this layer ⛔ NEVER DECRYPTS, so what it can prove is that stored
+      // CIPHERTEXT STRINGS are not copied into the stream — ⛔ not that a decrypted plaintext stays
+      // out of a log, an audit line or an error body, which are three different claims about three
+      // different sinks.
+      // ⇒ those legs live where the decryption happens:
+      //   · `apps/api/.../nominee-name-check.spec.ts` — *"⛔ NO plaintext reaches the audit trail"*,
+      //     with SEVEN real envelopes the handler genuinely decrypts, plus a non-vacuity block
+      //     proving it decrypted them; and its sibling scanning the WRITE path's own audit lines.
+      // ⭐ Between them the claim the OLD title made is covered; ⛔ neither file makes it alone.
+      //
       // ⚠ AC9 says it plainly: ⛔ NO CI script scans admin DTOs for PII, so this test is the ONLY
-      // guard. If it is deleted or weakened, nothing else in the repo notices a name leaking into
-      // `events_log` — which is append-only, so a leak there is PERMANENT and unerasable.
+      // guard on the EVENT sink. If it is deleted or weakened, nothing else in the repo notices a
+      // name leaking into `events_log` — which is append-only, so a leak there is PERMANENT and
+      // unerasable.
       const { client, tx } = getTx();
       await enterAppScope(client, PARIWAR_A);
       const cid = toClaimId(randomUUID());

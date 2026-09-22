@@ -38,6 +38,7 @@ import type { ClaimId, MemberId } from '../../../src/ids/index.js';
 import {
   NomineeNameCheckStaleError,
   getLatestNomineeNameCheck,
+  isNomineeNameCheckCurrent,
   projectClaimState,
   recordClaimNomineeBankAccounts,
   recordNomineeNameCheck,
@@ -181,6 +182,133 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the check write vs a concurrent ba
     }
     await pool.end();
   });
+
+  // ── D5's FOUNDATION — that the REAL writer moves `updated_at` at all ──────────────────────
+  //
+  // ⚠⚠ THE WHOLE OF D5 RESTS ON THIS AND ⛔ NOTHING PROVED IT (code review, added 2026-09-22).
+  // Every staleness test in this story moved the stamp BY HAND —
+  // `tx.update(...).set({ updatedAt: new Date(Date.now() + 60_000) })` — and then asserted that a
+  // moved stamp stales a check. ⭐ That proves the COMPARISON, ⛔ never the PREMISE. If
+  // `recordClaimNomineeBankAccounts` were changed to an UPSERT that preserved `updated_at`, D5
+  // would be silently disabled — a post-approval correction would leave the old check CURRENT and
+  // every AC4 gate would wave it through — and EVERY one of those tests would still be green.
+  //
+  // ⭐ It has to be here, and ⛔ not in the single-transaction suite, for the reason the earlier
+  // sibling records: Postgres `now()` is TRANSACTION-START time, so inside one BEGIN the
+  // before-stamp and the after-stamp are the SAME VALUE however many times you rewrite the rows.
+  // The `_helpers.ts` comment already says a spec whose subject is the D5 chain must drive the real
+  // writer across two COMMITTED transactions; this is that spec.
+
+  it(
+    '⭐⭐ the REAL writer moves `updated_at` across two COMMITTED transactions — D5 has a premise',
+    async () => {
+      const { cid } = await seedClaimWithAccounts();
+      const before = await liveStamps(cid);
+      expect(before).toHaveLength(2);
+
+      // ⛔ NON-VACUITY, AND IT IS THE INTERESTING HALF: within the SEEDING transaction both rows
+      // carry the identical `now()`. So "the stamps differ afterwards" cannot be explained by the
+      // rows having been staggered to begin with.
+      expect(
+        new Set(before.map((s) => s.updatedAt.toISOString())).size,
+        'the two seeded rows already had different stamps — the assertion below would be weaker',
+      ).toBe(1);
+
+      await onOwnTx((client) =>
+        recordClaimNomineeBankAccounts(client, {
+          claimCaseId: cid,
+          pariwarId: PARIWAR_A,
+          accounts: accountsFixture('d5-premise'),
+          recordedByActor: MEMBER_ACTOR,
+          actor: 'member',
+        }),
+      );
+
+      const after = await liveStamps(cid);
+      expect(after).toHaveLength(2);
+      for (const row of after) {
+        const was = before.find((b) => b.accountRank === row.accountRank);
+        expect(was, `rank ${row.accountRank} vanished`).toBeDefined();
+        // ⭐ STRICTLY LATER. `>=` would pass for a writer that preserved the timestamp, which is
+        // the exact regression this test exists to catch.
+        expect(
+          row.updatedAt.getTime(),
+          `rank ${row.accountRank}: the writer did not move updated_at — D5 is disabled`,
+        ).toBeGreaterThan(was!.updatedAt.getTime());
+      }
+    },
+    TIMEOUT,
+  );
+
+  it(
+    '⭐⭐ …and that ALONE stales a recorded PASSING check — D5 end to end, ⛔ no hand-written UPDATE',
+    async () => {
+      // ⭐ THE CHAIN D5 ACTUALLY CLAIMS, with every link driven by production code:
+      //   record a passing check → it is CURRENT → the real bank writer commits a correction →
+      //   the SAME check is now STALE. ⛔ No `tx.update`, ⛔ no fabricated timestamp.
+      const { cid, mid } = await seedClaimWithAccounts();
+      const token = await tokenFor(mid);
+      const stamps = await liveStamps(cid);
+
+      await onOwnTx((client) =>
+        recordNomineeNameCheck(client, {
+          claimCaseId: cid,
+          pariwarId: PARIWAR_A,
+          nomineeDeclarationToken: token,
+          accounts: stamps.map((s) => ({
+            accountRank: s.accountRank as 1 | 2,
+            accountUpdatedAt: s.updatedAt.toISOString(),
+            verdict: 'matches' as const,
+            clericalReason: null,
+          })),
+          actorId: DISTRICT_ADMIN,
+          actorDisplay: 'Anita (District Admin)',
+          actor: 'operator',
+        }),
+      );
+
+      const recorded = await onOwnTx((client) =>
+        getLatestNomineeNameCheck(bindScopedDb(client), PARIWAR_A, cid),
+      );
+      expect(recorded, 'the check was not recorded — everything below would be vacuous').not.toBeNull();
+
+      // ⭐ POSITIVE CONTROL — CURRENT before the correction. Without this, "stale afterwards" could
+      // equally mean the check was never current at all (a token mismatch, a rank mismatch, …).
+      const liveRefs = (await liveStamps(cid)).map((s) => ({
+        accountRank: s.accountRank,
+        updatedAt: s.updatedAt,
+      }));
+      expect(
+        isNomineeNameCheckCurrent(recorded!, liveRefs, token),
+        'the freshly recorded check was ALREADY not current',
+      ).toBe(true);
+
+      // The helpline corrects the accounts — the real writer, its own committed transaction.
+      await onOwnTx((client) =>
+        recordClaimNomineeBankAccounts(client, {
+          claimCaseId: cid,
+          pariwarId: PARIWAR_A,
+          accounts: accountsFixture('d5-corrected'),
+          recordedByActor: MEMBER_ACTOR,
+          actor: 'member',
+        }),
+      );
+
+      const refsAfter = (await liveStamps(cid)).map((s) => ({
+        accountRank: s.accountRank,
+        updatedAt: s.updatedAt,
+      }));
+      expect(
+        isNomineeNameCheckCurrent(recorded!, refsAfter, token),
+        'a correction left the old check CURRENT — `-227` cl.12 / D5 is not holding',
+      ).toBe(false);
+
+      // ⭐ AND THE DECLARATION TOKEN IS ⛔ NOT WHAT CHANGED. A reader could otherwise suspect the
+      // staleness came from the nominee side; it did not — the token is byte-identical.
+      expect(await tokenFor(mid)).toBe(token);
+    },
+    TIMEOUT,
+  );
 
   it(
     '⭐⭐ READ stamps → ANOTHER connection commits an edit → SUBMIT ⇒ the TYPED staleness refusal (the real sequence)',

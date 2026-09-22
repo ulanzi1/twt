@@ -643,6 +643,111 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
     }
   });
 
+  it('⭐⭐ the no-N+1 property measured by COUNTING REAL STATEMENTS — ⛔ not by the handler\'s own counter', async () => {
+    // ⚠⚠ WHY THIS EXISTS (code review 2026-09-22). The two tests below assert
+    // `readCount <= VERIFIER_CONSOLE_MAX_READS`, importing the constant so ⛔ nothing is
+    // hard-coded — but `readCount` is **the handler's OWN SELF-REPORTED counter**. ⇒ a read the
+    // handler forgets to count is exactly the read the assertion ⛔ cannot see, and that is ⛔ not
+    // hypothetical: `getMemberNomineeDeclarationRefs` was uncounted, which is the very defect the
+    // budget exists to catch. ⭐ A self-report can ⛔ never detect its own omission.
+    //
+    // ⚠⚠ AND WHAT THIS TEST DOES ⛔ NOT ASSERT, because I got it wrong first and the correction is
+    // the useful part: `actual <= VERIFIER_CONSOLE_MAX_READS` is the WRONG comparison. That
+    // constant bounds **top-level source reads** — the fan-out WIDTH the no-N+1 property is about —
+    // ⛔ not raw SQL statements. A single top-level read legitimately issues several statements
+    // through nested helpers (the validity payload, the contribution CTEs, the declaration refs).
+    // Measuring 27 statements against a budget of 14 compares two different things and would have
+    // reported a defect that does ⛔ not exist.
+    //
+    // ⭐⭐ SO THIS MEASURES THE PROPERTY THAT IS ACTUALLY TRUE AND ACTUALLY LOAD-BEARING: the real
+    // statement count must ⛔ NOT GROW when ROWS are added. That is the no-N+1 rule itself, and
+    // measured this way it holds whether or not anybody remembered to increment the counter.
+    const pariwarId = randomUUID();
+    const deceased = await seedDeceasedMember(pariwarId, DISTRICT);
+    const claimCaseId = await seedClaim(pariwarId, deceased);
+
+    /** Run the assembly, counting the statements Postgres actually receives. */
+    const measure = async (): Promise<{ actual: number; reported: number }> => {
+      const scopeTx = await openScopeTx(deps, pariwarId);
+      let actual = 0;
+      try {
+        // ⚠ Wrapped AFTER `openScopeTx`, so its BEGIN / SET LOCAL / scope-assert are ⛔ not counted:
+        // the property is about the ASSEMBLY, ⛔ not the transaction setup every request pays.
+        const client = scopeTx.client as unknown as { query: (...a: unknown[]) => unknown };
+        const realQuery = client.query.bind(client);
+        client.query = (...args: unknown[]) => {
+          actual += 1;
+          return realQuery(...args);
+        };
+        const { readCount } = await assembleVerifierConsole(deps, {
+          db: scopeTx.tx,
+          pariwarId,
+          claimCaseId,
+          district: DISTRICT,
+          actorId: randomUUID(),
+          grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }],
+          traceId: null,
+        });
+        client.query = realQuery as never;
+        await closeScopeTx(scopeTx, true);
+        return { actual, reported: readCount };
+      } catch (err) {
+        await closeScopeTx(scopeTx, false);
+        throw err;
+      }
+    };
+
+    const before = await measure();
+    // ⛔ NON-VACUITY: the wrap really intercepted the drizzle client. A silently-bypassed wrapper
+    // would report 0 and satisfy everything below — the exact failure mode this test exists to
+    // avoid, reproduced one level up.
+    expect(before.actual, 'the query wrapper counted nothing — it did not intercept the client').toBeGreaterThan(5);
+
+    // Add rows to the sections whose fan-out the budget is about.
+    // ⚠⚠ DISTINCT `document_type` VALUES, AND THAT IS LOAD-BEARING (learned the hard way): my first
+    // draft inserted three `death_certificate` rows, which the unique `(claim_case_id,
+    // document_type)` constraint collapses to ONE. ⇒ the row count ⛔ never grew, and the test
+    // passed against a deliberately planted N+1 — a green that proved ⛔ nothing, which is the
+    // exact defect class this file is about.
+    const c = await td.pool.connect();
+    let inserted = 0;
+    try {
+      for (const docType of ['ground_inspection_photo', 'hospital_record'] as const) {
+        await c
+          .query(
+            `INSERT INTO claim_documents (claim_document_id, pariwar_id, claim_case_id, document_type, storage_object_key,
+               content_type, byte_size, parity_outcome, parity_flags, ocr_confidence, verifier_review_required)
+             VALUES ($1, $2, $3, $5, $4, 'application/pdf', 1024, 'match', '{}'::jsonb, 0.9, false)`,
+            [randomUUID(), pariwarId, claimCaseId, `k/${randomUUID()}`, docType],
+          )
+          .then(() => {
+            inserted += 1;
+          });
+      }
+    } finally {
+      c.release();
+    }
+    // ⛔ NON-VACUITY: rows REALLY grew. Without this the equality below is satisfied by a fixture
+    // that added nothing — which is precisely how the first draft passed.
+    expect(inserted, 'no extra document rows landed — the no-N+1 assertion would be vacuous').toBe(2);
+
+    const after = await measure();
+    // ⭐⭐ THE ASSERTION THAT MATTERS, and it is measured independently of the handler: more ROWS
+    // must cost ⛔ NO more statements.
+    expect(
+      after.actual,
+      `rows grew the REAL statement count ${before.actual} → ${after.actual} — an N+1 the self-report cannot see`,
+    ).toBe(before.actual);
+
+    // ⭐ AND THE SELF-REPORT IS HONEST about its own axis: it may ⛔ not claim FEWER top-level reads
+    // than there were statements. ⚠ An inequality on purpose — the counter bounds WIDTH, so equality
+    // would be the wrong claim; under-reporting is the dishonest direction and that is what is fenced.
+    expect(
+      before.reported,
+      `the handler reported ${before.reported} reads but Postgres received ${before.actual}`,
+    ).toBeLessThanOrEqual(before.actual);
+  });
+
   it('bounded no-N+1: assembleVerifierConsole stays within VERIFIER_CONSOLE_MAX_READS, independent of doc-row count (D9)', async () => {
     const pariwarId = randomUUID();
     const deceased = await seedDeceasedMember(pariwarId, DISTRICT);
@@ -672,21 +777,34 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
     expect(before).toBeLessThanOrEqual(VERIFIER_CONSOLE_MAX_READS);
 
     // Add two claim_documents rows — the fan-out width (read count) must NOT grow (no N+1).
+    //
+    // ⚠⚠ THIS INSERT WAS SILENTLY FAILING AND THE TEST WAS VACUOUS (code review 2026-09-22). It
+    // inserted `death_certificate` TWICE — which the unique `(claim_case_id, document_type)`
+    // constraint collapses to one — and omitted `byte_size`, which is NOT NULL, so BOTH statements
+    // threw. The bare `.catch(() => {})` swallowed them. ⇒ ⛔ no rows were ever added, and
+    // `expect(after).toBe(before)` compared a claim to ITSELF: it would have passed against any
+    // N+1 whatsoever. ⭐ Found by planting an N+1 in a sibling test and watching it ⛔ not fail.
     const c = await td.pool.connect();
+    let inserted = 0;
     try {
-      for (let i = 0; i < 2; i += 1) {
-        await c.query(
-          `INSERT INTO claim_documents (claim_document_id, pariwar_id, claim_case_id, document_type, storage_object_key,
-             content_type, parity_outcome, parity_flags, ocr_confidence, verifier_review_required)
-           VALUES ($1, $2, $3, 'death_certificate', $4, 'application/pdf', 'match', '{}'::jsonb, 0.9, false)`,
-          [randomUUID(), pariwarId, claimCaseId, `k/${randomUUID()}`],
-        ).catch(() => {
-          /* if the unique (claim,type) constraint blocks the 2nd insert, one doc still proves the point */
-        });
+      for (const docType of ['ground_inspection_photo', 'hospital_record'] as const) {
+        await c
+          .query(
+            `INSERT INTO claim_documents (claim_document_id, pariwar_id, claim_case_id, document_type, storage_object_key,
+               content_type, byte_size, parity_outcome, parity_flags, ocr_confidence, verifier_review_required)
+             VALUES ($1, $2, $3, $5, $4, 'application/pdf', 1024, 'match', '{}'::jsonb, 0.9, false)`,
+            [randomUUID(), pariwarId, claimCaseId, `k/${randomUUID()}`, docType],
+          )
+          .then(() => {
+            inserted += 1;
+          });
       }
     } finally {
       c.release();
     }
+    // ⛔ NON-VACUITY — the rows really landed. ⛔ No bare catch: a failing fixture must FAIL the
+    // test, ⛔ never quietly turn it into a tautology.
+    expect(inserted, 'no document rows landed — the no-N+1 assertion below would be vacuous').toBe(2);
 
     const after = await measure();
     expect(after).toBeLessThanOrEqual(VERIFIER_CONSOLE_MAX_READS);

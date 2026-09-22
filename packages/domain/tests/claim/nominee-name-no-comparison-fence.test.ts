@@ -70,7 +70,13 @@ const FORBIDDEN_PATTERNS: readonly { readonly re: RegExp; readonly why: string }
   // SYSTEM forming an opinion about two names — and the cheapest way to do that ⛔ never mentions
   // "name" at all. ⚠ Note the British spelling is now covered above: this repo writes `normalise`.
   { re: /localeCompare|Intl\.Collator/i, why: 'a locale comparison — an opinion about two strings' },
-  { re: /toLowerCase\(\)\s*===|toUpperCase\(\)\s*===|trim\(\)\s*===\s*[a-z]/i, why: 'a normalise-then-equals comparison' },
+  // ⚠ 2026-09-22 (code review): the `trim()===` alternative required the character right after
+  // `===` to be a bare lowercase letter, so `holder.trim() === "priya sharma"` (a QUOTED literal —
+  // at least as realistic as a bare identifier) slipped past every alternative in this pattern.
+  // Widened to also match a quote immediately followed by a letter (a quoted name-shaped literal) —
+  // ⚠ NOT a bare quote pair, or `actorDisplay.trim() === ''` (a legitimate blank-string check,
+  // `nominee-name-check-persist.ts:109`) would false-positive as a name comparison.
+  { re: /toLowerCase\(\)\s*===|toUpperCase\(\)\s*===|trim\(\)\s*===\s*(['"][a-z]|[a-z])/i, why: 'a normalise-then-equals comparison' },
   { re: /names_match|name_matches|similarity_score|match_score/i, why: 'a snake_case comparison field on the wire' },
 ];
 
@@ -129,6 +135,56 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
     // ⛔ And the comment-stripper must not be how a violation hides: the same shape inside a comment
     // is legitimately invisible, which is WHY the specimens above are bare code.
     expect(stripComments('// const d = levenshtein(a, b);').trim()).toBe('');
+    // ⭐ 2026-09-22 (code review): the `//` case above only exercises HALF of `stripComments`' own
+    // regex (`.replace(/\/\*[\s\S]*?\*\//g, ...)` for block comments, `.replace(/^\s*\/\/.*$/gm,
+    // ...)` for line comments) — the `/* … */` branch was never proven. A regression there (a
+    // greedy match eating real code, or an unterminated-block edge case) could hide or wrongly
+    // strip production code with nothing here to notice.
+    expect(stripComments('/* const d = levenshtein(a, b); */').trim()).toBe('');
+  });
+
+  it('⭐⭐ EVERY ALTERNATIVE inside a multi-way pattern fires on its own — ⛔ not just the ONE the pattern-level control above happens to exercise', () => {
+    // ⚠⚠ ADDED 2026-09-22 (code review). The positive control above pairs exactly one specimen with
+    // each `FORBIDDEN_PATTERNS` entry, so it proves each ENTRY can fire — but every entry here is
+    // itself a `|`-separated alternation, and a typo or scoping mistake in an UNTESTED alternative
+    // (e.g. `soundex` inside the string-similarity pattern) would disable detection of that one
+    // shape while every other assertion in this file stays green.
+    const ALTERNATIVE_SPECIMENS: readonly { readonly pattern: RegExp; readonly src: string }[] = [
+      // string-similarity algorithm — `levenshtein` alone is covered by the control above.
+      { pattern: FORBIDDEN_PATTERNS[0]!.re, src: 'const d = damerau(a, b);' },
+      { pattern: FORBIDDEN_PATTERNS[0]!.re, src: 'const d = jaroWinkler(a, b);' },
+      { pattern: FORBIDDEN_PATTERNS[0]!.re, src: 'const d = soundex(a);' },
+      { pattern: FORBIDDEN_PATTERNS[0]!.re, src: 'const d = metaphone(a);' },
+      { pattern: FORBIDDEN_PATTERNS[0]!.re, src: 'if (fuzzy(a, b)) return true;' },
+      // similarity score — `matchScore` alone is covered by the control above.
+      { pattern: FORBIDDEN_PATTERNS[1]!.re, src: 'const s = similarityScore(a, b);' },
+      { pattern: FORBIDDEN_PATTERNS[1]!.re, src: 'const s = nameScore(a, b);' },
+      { pattern: FORBIDDEN_PATTERNS[1]!.re, src: 'const similarity = 0.9;' },
+      // name-match predicate — `namesMatch` alone is covered by the control above.
+      { pattern: FORBIDDEN_PATTERNS[2]!.re, src: 'if (nameMatches(a, b)) return true;' },
+      { pattern: FORBIDDEN_PATTERNS[2]!.re, src: 'if (isNameMatch(a, b)) return true;' },
+      { pattern: FORBIDDEN_PATTERNS[2]!.re, src: 'if (looksDifferent(a, b)) return true;' },
+      { pattern: FORBIDDEN_PATTERNS[2]!.re, src: 'if (probablyMatch(a, b)) return true;' },
+      // name normalisation — the `normalise…Name` spelling alone is covered by the control above.
+      { pattern: FORBIDDEN_PATTERNS[3]!.re, src: 'const x = normalizeNomineeName(n);' }, // US spelling
+      { pattern: FORBIDDEN_PATTERNS[3]!.re, src: 'const x = canonicaliseHolderName(n);' },
+      { pattern: FORBIDDEN_PATTERNS[3]!.re, src: 'const x = canonicalizeHolderName(n);' },
+      // locale comparison — `localeCompare` alone is covered by the control above.
+      { pattern: FORBIDDEN_PATTERNS[4]!.re, src: 'if (new Intl.Collator().compare(a, b) === 0) return true;' },
+      // normalise-then-equals — `toLowerCase() ===` alone is covered by the control above.
+      { pattern: FORBIDDEN_PATTERNS[5]!.re, src: 'if (a.toUpperCase() === b.toUpperCase()) return true;' },
+      { pattern: FORBIDDEN_PATTERNS[5]!.re, src: "if (holder.trim() === nominee.trim()) return true;" },
+      // ⭐ the quoted-literal gap the widened pattern above exists to close.
+      { pattern: FORBIDDEN_PATTERNS[5]!.re, src: 'if (holder.trim() === "priya sharma") return true;' },
+      // snake_case comparison field on the wire — `names_match` alone is covered by the control above.
+      { pattern: FORBIDDEN_PATTERNS[6]!.re, src: 'type Wire = { name_matches: boolean };' },
+      { pattern: FORBIDDEN_PATTERNS[6]!.re, src: 'type Wire = { similarity_score: number };' },
+      { pattern: FORBIDDEN_PATTERNS[6]!.re, src: 'type Wire = { match_score: number };' },
+    ];
+
+    for (const { pattern, src } of ALTERNATIVE_SPECIMENS) {
+      expect(pattern.test(stripComments(src)), `an alternative of ${pattern} failed to catch: ${src}`).toBe(true);
+    }
   });
 
   it('⛔ no fenced file contains a name-comparison shape', () => {

@@ -124,10 +124,20 @@ describe('vocabulary bites the mobile screens (code register, includeMemberOnly 
     // ⚠ This is an ASSERTION ABOUT THE GATE'S DESIGN, ⛔ not a gap. `check.ts` passes
     // `includeMemberOnly: false` for code globs so that identifiers and props do not false-fire.
     // Pinning it here means a future widening of that flag cannot happen silently.
+    //
+    // ⚠ `donorRow` is an IDENTIFIER — `checkVocabulary` matches `\bdonor\b`, and `\b` already fails
+    // between "donor" and "Row" (both word characters), so this half was passing regardless of
+    // `includeMemberOnly` and proved nothing about the flag specifically.
     expect(checkVocabulary(REVIEW_TSX, 'const donorRow = rows[0]', config, { includeMemberOnly: false })).toEqual(
       [],
     );
-    // …while the very same string IS flagged in the copy register:
+    // ⚠ 2026-09-22 (code review): a second assertion below used to call these "the very same
+    // string" as the identifier case above — they were NOT (`donorRow` vs. the standalone token
+    // `"donor"`), so the pair could pass for a reason unrelated to the `includeMemberOnly` property
+    // it claimed to isolate. ⭐ Isolate it properly: the IDENTICAL bare word `donor`, standalone (a
+    // real word boundary on both sides) in BOTH a code file and the copy register — the ONLY
+    // difference between the two calls below is `includeMemberOnly`.
+    expect(checkVocabulary(REVIEW_TSX, 'const donor = rows[0]', config, { includeMemberOnly: false })).toEqual([]);
     expect(
       checkVocabulary(EN_FILE, '{ "x": "donor" }', config, { includeMemberOnly: true }).length,
     ).toBeGreaterThan(0);
@@ -252,6 +262,28 @@ describe('⭐⭐ the FM-14 colour allow-list is scoped to three literals and ⛔
     expect(
       checkTone(REVIEW_TSX, '<Text color="#B00020">URGENT: only 2 days left!</Text>', config).length,
     ).toBeGreaterThan(0);
+  });
+
+  it('⚠ PINS A KNOWN GAP — a truly unrelated hex sharing the line with a suppressed one is ALSO suppressed today', () => {
+    // ⚠⚠ 2026-09-22 (code review). `checkMagicNumberColors` calls `isAllowed(file, line, config)`
+    // with NO match-position argument, so it falls back to a whole-LINE `re.test(lineText)` — unlike
+    // `checkVocabulary`, which passes `matchRange` and is genuinely position-aware. A first attempt
+    // at fixing this made `checkMagicNumberColors` position-aware too, and it broke a DIFFERENT,
+    // pre-existing, INTENTIONALLY line-level allow-list entry (`primary_color|secondary_color|
+    // accent_color` on `AddPariwarForm.tsx`, `microcopy.yaml`) — that entry's `pattern` deliberately
+    // matches a NEARBY field name, not the hex literal itself, so it has NO position overlap with
+    // the hex it means to allow and a position-aware `isAllowed` refuses it outright.
+    // ⇒ REVERTED, ⛔ not carried: making `checkMagicNumberColors` position-aware needs either a
+    // per-entry opt-in (`scope: 'line' | 'position'`) or rewriting the older entry's pattern to
+    // match the hex itself — both are gate-DESIGN calls with blast radius beyond this story, not a
+    // mechanical fix. This test instead PINS today's real, line-level behaviour honestly (recorded
+    // as owed in `deferred-work.md`), so it cannot regress further while the design question is
+    // open, and so nobody mistakes silence here for the gap being closed.
+    const findings = checkMagicNumberColors(REVIEW_TSX, '<Text color="#B00020" backgroundColor="#DEADBE">x</Text>', config);
+    expect(
+      findings,
+      'if this now finds #DEADBE, checkMagicNumberColors became position-aware — update this pin and the deferred-work.md entry',
+    ).toEqual([]);
   });
 });
 

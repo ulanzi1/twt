@@ -328,7 +328,11 @@ export function NomineeNameCheckPanel(props: NomineeNameCheckPanelProps): React.
       ) : (
         // ⛔ A check is NEVER inferred or back-filled — a claim decided before this shipped says so
         // rather than being credited with a judgement nobody made.
-        <p data-testid="name-check-none" className="text-sm text-slate-600">
+        // ⭐ `role="status"` (code review 2026-09-22) — its siblings `name-check-current` and
+        // `name-check-stale` both announce; this state can equally replace content mid-interaction
+        // (e.g. a stale check that gets superseded back to "never checked" after a correction is
+        // reverted), and family 13(d)'s own rule is that every REACHABLE state announces.
+        <p data-testid="name-check-none" role="status" className="text-sm text-slate-600">
           {t.nameCheck.notYetChecked}
         </p>
       )}

@@ -645,7 +645,11 @@ describe.skipIf(!hasDatabase)('Nominee name-check surface — E2E (:5433)', () =
         })),
       },
     });
-    expect(res.statusCode, res.body).toBe(400);
+    // ⚠ `assertCode`, ⛔ not a bare status (code review 2026-09-22) — this test's own docstring
+    // warns against exactly that a few lines above, and this test skipped it: an unrelated 400
+    // (a different validation failure entirely) would satisfy a bare `.toBe(400)` without proving
+    // the schema-level rule fired FIRST, which is the ordering claim the test's title makes.
+    assertCode(res, 400, 'request.validation');
 
     // ⛔ NON-VACUITY, BOTH WAYS: each condition really does produce its own status on its own.
     const only409 = await postCheck(client, pariwarId, claimCaseId, {
@@ -730,7 +734,10 @@ describe.skipIf(!hasDatabase)('Nominee name-check surface — E2E (:5433)', () =
         ],
       },
     });
-    expect(res.statusCode, res.body).toBe(400);
+    // ⚠ `assertCode`, ⛔ not a bare status (code review 2026-09-22) — matches the file's own stated
+    // discipline; an unrelated 400 would otherwise satisfy this without proving the duplicate-rank
+    // rule specifically fired.
+    assertCode(res, 400, 'request.validation');
   });
 
   it('⭐⭐ AC3/cl.5 — `does_not_match` is a 201 and the claim state does ⛔ NOT move', async () => {
@@ -897,7 +904,24 @@ describe.skipIf(!hasDatabase)('Nominee name-check surface — E2E (:5433)', () =
     // (`admin_claim.nominee_name_checked`). A write that echoed a holder name into its audit line
     // would have gone unnoticed — and the write is the call that carries a HUMAN JUDGEMENT about
     // those names, so it is the likelier place for a well-meaning author to log them "for context".
-    const PT = { holder1: 'Zareena Mukhopadhyay', nominee: 'Xiomara Venkataraghavan', note: 'the bank shortened her name' } as const;
+    //
+    // ⚠⚠ 2026-09-22 (code review): the title claims parity with the GET test's full PII list, but
+    // `PT` used to carry only `holder1`/`nominee`/`note` — omitting `holder2`, `account`, `ifsc`,
+    // `vpa`, `mobile`, `address` — so a leak of e.g. the account number into the write-path audit
+    // line would have gone undetected despite the title's implied parity. Widened to match, reusing
+    // the SAME fixture shape the GET test above already established (`seedAccountsWithNames`'s
+    // hardcoded account/IFSC, `seedNominee`'s hardcoded mobile/address).
+    const PT = {
+      holder1: 'Zareena Mukhopadhyay',
+      holder2: 'Yashwant Chattopadhyay',
+      nominee: 'Xiomara Venkataraghavan',
+      note: 'the bank shortened her name',
+      vpa: 'zareena.m@examplebank',
+      account: '999888777666',
+      ifsc: 'SBIN0009999',
+      mobile: '9876543210',
+      address: 'Nariman Point',
+    } as const;
     const pariwarId = randomUUID();
     const district = `D-${randomUUID().slice(0, 8)}`;
     const { client, userId } = await authenticate();
@@ -905,7 +929,7 @@ describe.skipIf(!hasDatabase)('Nominee name-check surface — E2E (:5433)', () =
     const memberId = await seedDeceasedMember(pariwarId, district);
     await seedNominee(pariwarId, memberId, 1, PT.nominee);
     const claimCaseId = await seedClaim(pariwarId, memberId);
-    await seedAccountsWithNames(pariwarId, claimCaseId, PT.holder1, 'Yashwant Chattopadhyay', PT.note);
+    await seedAccountsWithNames(pariwarId, claimCaseId, PT.holder1, PT.holder2, PT.note, PT.vpa);
     await client.inject({ method: 'POST', url: '/api/v1/auth/scope', payload: { pariwarId } });
 
     const read = await client.inject({ method: 'GET', url: url(pariwarId, claimCaseId) });
@@ -1271,6 +1295,26 @@ describe.skipIf(!hasDatabase)('Nominee name-check surface — E2E (:5433)', () =
 
       expect((await client.inject({ method: 'GET', url: url(pariwarId, claimCaseId) })).statusCode).toBe(200);
       expect((await client.inject({ method: 'GET', url: crossQueueUrl(pariwarId) })).statusCode).toBe(200);
+    });
+
+    it('⭐⭐ POSITIVE CONTROL — the IDENTICAL POST shape succeeds for the tenant that owns the claim', async () => {
+      // ⚠⚠ ADDED 2026-09-22 (code review). The GET positive control above does NOT cover the POST
+      // denial two tests up — a route that 404s for EVERY caller (broken for everyone, not just the
+      // wrong tenant) would satisfy that denial test just as well as one that correctly discriminates
+      // by tenant. Same shape as the denial test's payload, only the token/stamps are REAL (read off
+      // a live GET first) and the caller is the rightful tenant.
+      const pariwarId = randomUUID();
+      const district = `D-${randomUUID().slice(0, 8)}`;
+      const memberId = await seedDeceasedMember(pariwarId, district);
+      const claimCaseId = await seedClaim(pariwarId, memberId);
+      await seedNomineeNameCheck(deps, pariwarId, claimCaseId);
+
+      const { client, userId } = await authenticate();
+      await grant(userId, pariwarId, 'district_admin', 'district', district);
+      await client.inject({ method: 'POST', url: '/api/v1/auth/scope', payload: { pariwarId } });
+
+      const res = await postCheck(client, pariwarId, claimCaseId);
+      expect(res.statusCode, res.body).toBe(201);
     });
   });
 });

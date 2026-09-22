@@ -164,14 +164,33 @@ describe.skipIf(!hasDatabase)("Story 6.18 — a neighbouring Pariwar cannot reac
     expect(events.filter((e) => e.t === 'claim.nominee_name_checked')).toHaveLength(1);
   });
 
-  it('⭐ a Pariwar B session cannot RETURN a Pariwar A claim (AC11)', async () => {
-    const { client } = getTx();
+  it('⭐ a Pariwar B session cannot RETURN a Pariwar A claim (AC11), and writes nothing', async () => {
+    const { client, tx } = getTx();
     const { cid } = await seedCheckedClaimInA();
 
     await enterAppScope(client, PARIWAR_B);
     // Both shapes are refused: the honest cross-tenant call, and the wrong-session-right-id one.
     await expect(returnToDistrictAdmin(client, returnInput(cid, PARIWAR_B))).rejects.toThrow();
     await expect(returnToDistrictAdmin(client, returnInput(cid, PARIWAR_A))).rejects.toThrow();
+
+    // ⭐ 2026-09-22 (code review): a rejection that still wrote a `correction_return` row would be
+    // WORSE than no guard — the sibling RECORD test above confirms exactly this for the write path,
+    // and the RETURN path had no equivalent check. Confirm no live `correction_return`-phase row
+    // exists for this claim, from the rightful tenant's own session.
+    await enterAppScope(client, PARIWAR_A);
+    const rows = await tx
+      .select({ phase: schema.claimStateTrusteeDecisions.phase })
+      .from(schema.claimStateTrusteeDecisions)
+      .where(
+        and(
+          eq(schema.claimStateTrusteeDecisions.pariwarId, PARIWAR_A),
+          eq(schema.claimStateTrusteeDecisions.claimCaseId, cid),
+        ),
+      );
+    expect(
+      rows.filter((r) => r.phase === 'correction_return'),
+      "a Pariwar B session's rejected RETURN still wrote a correction_return row",
+    ).toHaveLength(0);
   });
 
   it('⭐ the correction QUEUE is per-tenant — B never sees A\'s returned claim', async () => {

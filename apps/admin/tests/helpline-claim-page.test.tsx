@@ -246,4 +246,26 @@ describe('<HelplineClaimPage> — the bank save can ask for a step-up (Story 6.1
     expect(await screen.findByText('this claim can no longer be edited')).toBeInTheDocument();
     expect(screen.queryByTestId('helpline-stepup')).not.toBeInTheDocument();
   });
+
+  it('⭐ a 403 with a DIFFERENT code still shows its message, and ⛔ no panel — isolates CODE from STATUS', async () => {
+    // ⚠ ADDED 2026-09-22 (code review). The two tests above always vary HTTP status AND error code
+    // together (403+`step_up_required`, 409+`not_collectable`), so neither proves WHICH ONE the
+    // panel is actually gated on — an implementation that showed the panel for any bare 403,
+    // whatever the code, would pass both. This isolates the variable: a 403 that is NOT the
+    // step-up signal.
+    const user = userEvent.setup();
+    vi.mocked(api.recordHelplineNomineeBank).mockRejectedValueOnce(
+      new api.ApiError(403, 'claim.forbidden', 'you do not have access to this claim'),
+    );
+    await fileAClaim(user);
+
+    await fillBothAccounts(user);
+    await user.click(screen.getByTestId('helpline-bank-submit'));
+
+    expect(await screen.findByText('you do not have access to this claim')).toBeInTheDocument();
+    expect(
+      screen.queryByTestId('helpline-stepup'),
+      'a 403 with a non-step-up code wrongly showed the step-up panel',
+    ).not.toBeInTheDocument();
+  });
 });

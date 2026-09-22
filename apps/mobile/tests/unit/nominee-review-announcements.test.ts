@@ -71,22 +71,30 @@ describe('nominee-review — every ALERT is paired with a live region (family 13
     expect(bare, `these alerts announce nothing on mount:\n${bare.join('\n')}`).toEqual([])
   })
 
-  it('⭐ the four message states each carry a live region', () => {
+  it('⭐ the four message states each carry a live region, with the RIGHT urgency', () => {
     // Named individually, so a future edit that drops ONE is reported by name rather than as a
     // count that quietly still passes.
-    for (const anchor of [
-      "t('nominee.bank.holder_english')", // AC12 — the English-script gate, as the family types
-      "t('nominee.bank.ifsc_error')", // the IFSC could not be resolved
-      "t('nominee.bank.vpa_invalid')", // the optional UPI ID is malformed
-      "t('nominee.bank.saved')", // ⭐ the submit outcome — the most important of all
-    ]) {
+    //
+    // ⚠ EACH ANCHOR NAMES ITS EXPECTED VALUE too (code review 2026-09-22) — this used to check only
+    // that `accessibilityLiveRegion` was PRESENT on these three, unlike `saved`/`notice` below,
+    // which the file's own next test already checks for the exact `polite`/`assertive` value. A
+    // message announced with the WRONG urgency (e.g. an error announced politely, never
+    // interrupting) would have passed the presence-only check silently. All three below are
+    // validation errors, so all three are `assertive`.
+    for (const [anchor, value] of [
+      ["t('nominee.bank.holder_english')", 'assertive'], // AC12 — the English-script gate, as the family types
+      ["t('nominee.bank.ifsc_error')", 'assertive'], // the IFSC could not be resolved
+      ["t('nominee.bank.vpa_invalid')", 'assertive'], // the optional UPI ID is malformed
+    ] as const) {
       const rendered = elementsRendering(src, anchor)
       expect(rendered.length, `${anchor} is rendered by no <Text> on this screen`).toBeGreaterThan(0)
       // ⭐ EVERY rendering site, ⛔ not just the first: a key shown in two places must announce in
       // both, and `vpa_invalid` really is shown twice (inline, and via the failure notice).
       for (const el of rendered) {
-        expect(el.slice(0, el.indexOf('>') + 1), `${anchor} renders without a live region`).toContain(
-          'accessibilityLiveRegion',
+        const openTag = el.slice(0, el.indexOf('>') + 1)
+        expect(openTag, `${anchor} renders without a live region`).toContain('accessibilityLiveRegion')
+        expect(openTag, `${anchor} renders with the WRONG live-region urgency`).toContain(
+          `accessibilityLiveRegion="${value}"`,
         )
       }
     }

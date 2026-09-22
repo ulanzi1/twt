@@ -208,7 +208,11 @@ describe.skipIf(!hasDatabase)('Claim-time nominee bank — helpline E2E (:5433)'
     expect(auditStr).not.toContain('Ravi Kumar');
   });
 
-  it("⭐⭐ AC7 — the filer's NOTE survives POST → ciphertext → the AC2 read, and rides nowhere else", async () => {
+  it("⭐⭐ AC7 — the filer's NOTE survives POST as ciphertext, and rides nowhere else (the AC2 READ-BACK is `nominee-name-check.spec.ts`'s)", async () => {
+    // ⚠ RETITLED 2026-09-22 (code review) — the previous title claimed "→ the AC2 read" as part of
+    // THIS test's own coverage; the AC2 read-back is explicitly NOT exercised here (see the comment
+    // at part (2) below) and lives in the sibling file instead. The title now says so.
+    //
     // ⚠⚠ THIS PATH WAS UNEXERCISED AT EVERY LAYER (code review 2026-09-22). `grep
     // nameDifferenceNote|name_difference_note` over `apps/api/tests` matched ⛔ ONLY
     // `nameDifferenceNoteCiphertext: null` seeds, and `seedAccountsWithNames` never set the column
@@ -364,6 +368,32 @@ describe.skipIf(!hasDatabase)('Claim-time nominee bank — helpline E2E (:5433)'
     expect(res.statusCode, res.body).toBe(400);
 
     // ⭐ And ⛔ NOTHING persisted — a refusal that still wrote would be the worst outcome.
+    const rows = await td.pool.query(`SELECT 1 FROM claim_nominee_bank_accounts WHERE claim_case_id = $1`, [claimCaseId]);
+    expect(rows.rows).toHaveLength(0);
+  });
+
+  it('⚠⚠ AC12 — the SECOND account is gated too, ⛔ not only rank 1', async () => {
+    // ⚠ ADDED 2026-09-22 (code review). The test above only ever put the Devanagari name on account
+    // rank 1 — rank 2 was always the default English fixture — so an implementation that gated only
+    // the FIRST account (a copy-paste of the validation onto one field instead of the shared schema)
+    // would have passed every AC12 test in this file while silently letting a Devanagari name
+    // through on rank 2.
+    const pariwarId = randomUUID();
+    const { client, userId } = await authenticate();
+    await grantRole(userId, pariwarId, 'helpline_operator');
+    await elevateClaimFile(client);
+    const claimCaseId = await seedConvergedClaim(pariwarId);
+
+    const res = await client.inject({
+      method: 'POST', url: recordUrl(pariwarId, claimCaseId),
+      payload: {
+        accounts: [
+          account(),
+          account({ accountNumber: '987654321098', ifsc: 'HDFC0000001', accountHolderName: 'आशा देवी' }),
+        ],
+      } as unknown as object,
+    });
+    expect(res.statusCode, res.body).toBe(400);
     const rows = await td.pool.query(`SELECT 1 FROM claim_nominee_bank_accounts WHERE claim_case_id = $1`, [claimCaseId]);
     expect(rows.rows).toHaveLength(0);
   });
@@ -624,12 +654,15 @@ describe.skipIf(!hasDatabase)('Claim-time nominee bank — helpline E2E (:5433)'
     it("⛔ GET the bank status — a Pariwar B operator is refused at Pariwar A's claim", async () => {
       const { intruder, owner, pariwarA, claimInA } = await claimInA_operatorInB();
       expectNotFound(await intruder.inject({ method: 'GET', url: statusUrl(pariwarA, claimInA) }));
-      // ⭐ THE SAME URL is reachable for the tenant that owns it (⛔ not 404).
-      expect((await owner.inject({ method: 'GET', url: statusUrl(pariwarA, claimInA) })).statusCode).not.toBe(404);
+      // ⭐ THE SAME URL is reachable for the tenant that owns it. ⚠ `.toBe(200)`, ⛔ not
+      // `.not.toBe(404)` (code review 2026-09-22) — the weaker form would also pass if the owner's
+      // own call 500s, which would make the whole cross-tenant proof meaningless (a systemic
+      // failure, not evidence of correct tenant scoping).
+      expect((await owner.inject({ method: 'GET', url: statusUrl(pariwarA, claimInA) })).statusCode).toBe(200);
     });
 
     it("⛔⛔ POST the accounts — a Pariwar B operator cannot write payout destinations onto Pariwar A's claim", async () => {
-      const { intruder, pariwarA, claimInA } = await claimInA_operatorInB();
+      const { intruder, owner, pariwarA, claimInA } = await claimInA_operatorInB();
       // ⚠ A structurally VALID body: Fastify validates BEFORE preHandler, so a malformed payload
       // would 400 ahead of scope-resolution and pass this test for entirely the wrong reason.
       const res = await intruder.inject({
@@ -648,6 +681,22 @@ describe.skipIf(!hasDatabase)('Claim-time nominee bank — helpline E2E (:5433)'
         [claimInA],
       );
       expect(rows.rows, 'a cross-tenant POST persisted account rows').toHaveLength(0);
+
+      // ⭐ POSITIVE CONTROL (code review 2026-09-22) — the IDENTICAL POST succeeds for the rightful
+      // tenant, on a SEPARATE claim so it cannot disturb the "nothing was written" assertion above.
+      // Without this, a route that 404s for EVERY caller (broken for everyone, not just the wrong
+      // tenant) would pass this whole test just as well as one that correctly discriminates by
+      // tenant.
+      const ownerClaim = await seedConvergedClaim(pariwarA);
+      await elevateClaimFile(owner);
+      const ownerRes = await owner.inject({
+        method: 'POST',
+        url: recordUrl(pariwarA, ownerClaim),
+        payload: {
+          accounts: [account(), account({ accountNumber: '987654321098', ifsc: 'HDFC0000001' })],
+        } as unknown as object,
+      });
+      expect(ownerRes.statusCode, 'the identical POST failed for the RIGHTFUL tenant too').toBe(201);
     });
   });
 });

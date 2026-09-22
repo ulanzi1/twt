@@ -102,7 +102,14 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
   }
 
   /** Seed a committed claim at `verification_in_progress` for a given deceased member. */
-  async function seedClaim(pariwarId: string, deceasedMemberId: ids.MemberId): Promise<string> {
+  async function seedClaim(
+    pariwarId: string,
+    deceasedMemberId: ids.MemberId,
+    // ⭐ Forwarded to `seedNomineeNameCheck` (code review 2026-09-22) — every call site keeps its
+    // default (a passing check over two accounts) unless it opts into a different shape, e.g.
+    // `{ accountsOnly: true }` for "accounts complete, nobody has checked yet" (AC4/AC6).
+    nameCheckOpts: Parameters<typeof seedNomineeNameCheck>[3] = {},
+  ): Promise<string> {
     const claimCaseId = ids.claimId(randomUUID());
     const scopeTx = await openScopeTx(deps, pariwarId);
     const emit = (from: string | null, to: string, eventType: string, extra: Record<string, unknown> = {}) =>
@@ -125,7 +132,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
     // Story 6.18 (AC4) — approvable only with two bank accounts + a current, PASSING District
     // Admin name check. Seeded through the REAL writer, so these E2E specs keep exercising the
     // production gate rather than bypassing it.
-    await seedNomineeNameCheck(deps, pariwarId, String(claimCaseId));
+    await seedNomineeNameCheck(deps, pariwarId, String(claimCaseId), nameCheckOpts);
     return String(claimCaseId);
   }
 
@@ -945,6 +952,22 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
     expect(s.differenceReasons).toEqual(['married_name']);
     // ⭐ AND ⛔ NO NAME anywhere in the section — Trap 4, on the packet every console load carries.
     expect(JSON.stringify(s)).not.toContain('holder');
+  });
+
+  it('⭐ accounts COMPLETE but the check was NEVER RECORDED: `accountsComplete` true, `currentAndPassing` false', async () => {
+    // ⭐ ADDED 2026-09-22 (code review) — the two tests above cover "no accounts" and "check
+    // recorded" (passing/mixed), but never this state, which is the exact one that gates
+    // `verifier_decision.nominee_name_check_required` elsewhere (AC4): two accounts ARE on file, and
+    // NOBODY has checked them yet. A section that conflated this with "no accounts" would tell the
+    // console the wrong reason to withhold approval.
+    const pariwarId = randomUUID();
+    const deceased = await seedDeceasedMember(pariwarId, DISTRICT);
+    const claimCaseId = await seedClaim(pariwarId, deceased, { accountsOnly: true });
+
+    const s = await nomineeSection(pariwarId, claimCaseId);
+    expect(s.accountsComplete, 'accountsOnly seeded two accounts — this must be true').toBe(true);
+    expect(s.currentAndPassing).toBe(false);
+    expect(s.differenceReasons).toEqual([]);
   });
 
   it('⚠⚠ a MIXED `[clerical_difference, does_not_match]`: ⛔ NOT passing, and ⛔ NO reasons', async () => {

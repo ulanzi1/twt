@@ -382,6 +382,27 @@ describe.skipIf(!hasDatabase)('R9 voting (PARIWAR_A scope)', () => {
           );
       },
     },
+    {
+      // ⭐ ADDED 2026-09-22 (code review) — the parallel P1/P3 gate-matrix table
+      // (`nominee-name-check.spec.ts`) has an "ONE account only" cell; this file's P4 table did not,
+      // though `assertNomineeNameCheckForApproval` checks `liveAccounts.length !== 2` FIRST, before
+      // it ever looks at the check — so an R9 approval on a claim with exactly one bank account was
+      // untested at THIS gate specifically.
+      key: 'only ONE account remains (cl.7 makes BOTH mandatory)',
+      error: 'NomineeBankAccountsRequiredError',
+      skipCheck: false,
+      spoil: async (tx: Tx, claimCaseId: ClaimId) => {
+        await tx
+          .delete(schema.claimNomineeBankAccounts)
+          .where(
+            and(
+              eq(schema.claimNomineeBankAccounts.pariwarId, PARIWAR_A),
+              eq(schema.claimNomineeBankAccounts.claimCaseId, claimCaseId),
+              eq(schema.claimNomineeBankAccounts.accountRank, 2),
+            ),
+          );
+      },
+    },
   ] as const;
 
   for (const d of P4_DEFICIENCIES) {

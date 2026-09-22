@@ -260,3 +260,112 @@ describe('<AuditTrail> (AC4/AC7)', () => {
     expect(screen.getByTestId('audit-trail-empty')).toBeInTheDocument();
   });
 });
+
+// ── Story 6.18 (AC4) — THE APPROVE GATE, AND ITS THREE ENTRANCES ───────────────────────────────
+//
+// ⚠⚠ `grep canApprove | approve-blocked` over `apps/admin/tests` returned ONE line — a default in
+// an unrelated packet fixture (code review 2026-09-22). ⇒ the gate this story exists to put on the
+// console was asserted ⛔ nowhere, including the two entrances the component's OWN comments call
+// out as easy to forget.
+//
+// ⭐ THE GATE HAS THREE WAYS IN, and disabling ⛔ only the button leaves two open:
+//   (1) the BUTTON;
+//   (2) the "1" KEYBOARD SHORTCUT — *"an unguarded path to the approve form, which is exactly the
+//       kind of second entrance a keyboard-first console makes easy to forget"*;
+//   (3) an ALREADY-OPEN form — `outcome` is local state that SURVIVES the gate closing, so a
+//       District Admin who selected Approve and then recorded `does_not_match` kept a submittable
+//       form. ⚠ A UX defect, ⛔ not a bypass (the server refuses it) — and what it costs is TRUST:
+//       an operator who fills in a rationale and is then refused learns to read governance
+//       refusals as glitches, which is what AC4's disabled-with-a-reason exists to prevent.
+describe('<VerificationDecisionStrip> — Story 6.18 AC4: approve is gated at every entrance', () => {
+  const setup = (canApprove: boolean, approveBlockedReason: string | null = null) => {
+    const onDecision = vi.fn().mockResolvedValue(undefined);
+    render(
+      <VerificationDecisionStrip
+        claimState="verifier_review"
+        onDecision={onDecision}
+        onRevise={vi.fn()}
+        canApprove={canApprove}
+        approveBlockedReason={approveBlockedReason}
+      />,
+    );
+    return { onDecision };
+  };
+
+  it('⭐ entrance 1 — the BUTTON is disabled, and the REASON is shown beside it', () => {
+    setup(false, 'Record the nominee name check before approving');
+    expect(screen.getByTestId('action-approve')).toBeDisabled();
+    // ⭐ A disabled control with ⛔ no explanation reads as a broken console. AC4 requires the
+    // reason, and it must be the SPECIFIC one — the blocked-reason table names the actual blocker.
+    expect(screen.getByTestId('approve-blocked-reason')).toHaveTextContent(
+      'Record the nominee name check before approving',
+    );
+  });
+
+  it('⭐ entrance 2 — the "1" SHORTCUT does ⛔ not open the approve form when the gate is shut', () => {
+    // ⚠⚠ WHAT THIS DOES AND DOES ⛔ NOT PROVE — measured, ⛔ not assumed, and the correction is the
+    // useful part. I first titled this *"the shortcut RESPECTS the gate"*, which claims more than
+    // it can: removing `&& canApprove` from the key handler changes ⛔ NOTHING observable, because
+    // entrance 3's effect closes the form regardless. Verified by removing that guard alone — the
+    // suite stayed green — and then removing BOTH, which fails this test and entrance 3's together.
+    // ⇒ the two guards are REDUNDANT BY CONSTRUCTION. The shortcut's `&& canApprove` is
+    // defence-in-depth: correct, worth keeping, and ⛔ not independently observable from outside.
+    // ⭐ What IS proven here is the property that matters to the operator: pressing "1" on a claim
+    // that cannot be approved ⛔ never puts them in front of a form they will be refused from.
+    setup(false);
+    fireEvent.keyDown(document, { key: '1' });
+    expect(screen.queryByTestId('decision-form')).not.toBeInTheDocument();
+  });
+
+  it('⛔ …and the OTHER shortcuts still work — the gate is on APPROVE, ⛔ not on the keyboard', () => {
+    // ⚠ NON-VACUITY for the test above: if the listener were broken outright, "1 does nothing"
+    // would pass for the wrong reason. `-226` cl.6/cl.7 — a claim is NEVER refused over a name, so
+    // deny and escalate must stay reachable on a claim that cannot be approved.
+    setup(false);
+    fireEvent.keyDown(document, { key: '2' });
+    expect(screen.getByTestId('decision-form')).toBeInTheDocument();
+  });
+
+  it('⭐⭐ entrance 3 — an ALREADY-OPEN approve form CLOSES when the gate shuts', () => {
+    // ⭐ THE ONE THAT ONLY SHOWS UP OVER TIME: the operator opens the form while approval is
+    // available, and the check goes stale (a helpline correction) or a `does_not_match` lands
+    // underneath them. `outcome` is local state and survives — so the form has to be closed by an
+    // effect, ⛔ not merely prevented from opening.
+    const onDecision = vi.fn().mockResolvedValue(undefined);
+    const { rerender } = render(
+      <VerificationDecisionStrip
+        claimState="verifier_review"
+        onDecision={onDecision}
+        onRevise={vi.fn()}
+        canApprove
+      />,
+    );
+    fireEvent.click(screen.getByTestId('action-approve'));
+    // ⛔ NON-VACUITY: the form really is open first.
+    expect(screen.getByTestId('decision-form')).toBeInTheDocument();
+
+    rerender(
+      <VerificationDecisionStrip
+        claimState="verifier_review"
+        onDecision={onDecision}
+        onRevise={vi.fn()}
+        canApprove={false}
+        approveBlockedReason="The bank details are being corrected"
+      />,
+    );
+    expect(
+      screen.queryByTestId('decision-form'),
+      'the approve form stayed open and submittable after approval stopped being available',
+    ).not.toBeInTheDocument();
+    expect(onDecision).not.toHaveBeenCalled();
+  });
+
+  it('⭐ the gate OPEN is the positive control — approve works when AC4 holds', () => {
+    // ⚠ Without this, every assertion above is satisfied by a strip that can ⛔ never approve at all.
+    setup(true);
+    expect(screen.getByTestId('action-approve')).toBeEnabled();
+    expect(screen.queryByTestId('approve-blocked-reason')).not.toBeInTheDocument();
+    fireEvent.keyDown(document, { key: '1' });
+    expect(screen.getByTestId('decision-form')).toBeInTheDocument();
+  });
+});

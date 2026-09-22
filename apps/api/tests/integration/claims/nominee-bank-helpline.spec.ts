@@ -18,6 +18,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { AppDeps } from '../../../src/context.js';
 import * as service from '../../../src/modules/auth/admin/admin-auth.service.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
+import { seedNomineeNameCheck } from '../_nominee-name-check-fixture.js';
 import { buildServer } from '../../../src/server.js';
 import {
   buildTestDeps,
@@ -108,7 +109,10 @@ describe.skipIf(!hasDatabase)('Claim-time nominee bank — helpline E2E (:5433)'
     expect(ver.statusCode).toBe(200);
   }
 
-  type SeedTarget = 'intake_converged' | 'verifier_approved' | 'state_trustee_freeze';
+  // ⭐ `reversed` ADDED 2026-09-22 (code review): ⛔ no API test could reach it, and it is one of
+  // the two states AC5's correction exception exists FOR — tier-2 excludes it, so a write there is
+  // authorised by the governance record ALONE.
+  type SeedTarget = 'intake_converged' | 'verifier_approved' | 'state_trustee_freeze' | 'reversed';
 
   /** Seed a committed claim driven to `target` (a collectable state, or a post-approval / frozen state). */
   async function seedClaimAt(pariwarId: string, target: SeedTarget): Promise<string> {
@@ -132,6 +136,17 @@ describe.skipIf(!hasDatabase)('Claim-time nominee bank — helpline E2E (:5433)'
       }
       if (target === 'state_trustee_freeze') {
         await emit('verifier_approved', 'state_trustee_freeze', 'claim.state_trustee_frozen');
+      }
+      if (target === 'reversed') {
+        // ⚠ The ONLY route the state machine offers: a denial, then an appeal that overturns it.
+        // `decision` is REQUIRED on the stage-1 review and is the reducer's branch key — the same
+        // event type also reaches `appeal_stage_2` and `denied`.
+        await emit('verifier_approved', 'state_trustee_freeze', 'claim.state_trustee_frozen');
+        // ⚠ `claim.state_trustee_denied`'s payload is `.strict()` and carries ⛔ no `reason_code` —
+        // the reason lives on the DECISION ROW, ⛔ not the event.
+        await emit('state_trustee_freeze', 'denied', 'claim.state_trustee_denied');
+        await emit('denied', 'appeal_stage_1', 'claim.appeal_stage1_initiated');
+        await emit('appeal_stage_1', 'reversed', 'claim.appeal_stage1_reviewed', { decision: 'reversed' });
       }
       await closeScopeTx(scopeTx, true);
     } catch (err) {
@@ -322,6 +337,141 @@ describe.skipIf(!hasDatabase)('Claim-time nominee bank — helpline E2E (:5433)'
     });
     expect(res.statusCode).toBe(400);
     expect(res.json<{ error: { code: string } }>().error.code).toBe('nominee_bank.correction_reason_required');
+  });
+
+  // ── AC5 — THE CORRECTION EXCEPTION, OVER HTTP ──────────────────────────────────────────────
+  //
+  // ⚠⚠ THE TWO EXISTING TESTS ARE ⛔ NOT PINS, and the review said exactly why: the tier-3 test
+  // below (`state_trustee_freeze`, ⛔ no return) and its member-route sibling assert
+  // `nominee_bank.not_collectable` where refusal is correct **both today and after the fix**. A
+  // test that passes before and after the change it is supposed to guard is ⛔ not guarding it.
+  // ⭐ The pin is the POSITIVE case: the SAME state, the SAME payload, with the governance record
+  // live ⇒ the write must now SUCCEED. That is the only assertion chunk 2's fix can move.
+
+  /**
+   * Give the claim its two accounts and a recorded check with `verdicts`, through the REAL domain
+   * writers — ⛔ never by stubbing the gate, so these specs keep exercising the production path.
+   *
+   * ⚠ The shared fixture DELETE-then-INSERTs the accounts on every call, so a second call moves
+   * `updated_at` and then records the new verdict against the NEW stamps — which is what makes a
+   * re-check current rather than instantly stale.
+   */
+  const seedCheck = (
+    pariwarId: string,
+    claimCaseId: string,
+    verdicts: readonly ['matches' | 'does_not_match', 'matches' | 'does_not_match'],
+  ): Promise<void> => seedNomineeNameCheck(deps, pariwarId, claimCaseId, { verdicts });
+
+  /** Open a live `correction_return` row through the real domain writer. */
+  async function returnTheClaim(pariwarId: string, claimCaseId: string): Promise<void> {
+    const scopeTx = await openScopeTx(deps, pariwarId);
+    try {
+      await claim.returnToDistrictAdmin(scopeTx.client, {
+        claimCaseId: ids.claimId(claimCaseId),
+        pariwarId: ids.pariwarId(pariwarId),
+        reasonCode: 'other',
+        rationaleCiphertext: 'enc:v1:the-holder-name-is-not-the-nominee',
+        actorId: '88888888-8888-8888-8888-888888888888',
+        actorDisplay: 'Pariwar Admin One',
+        actor: 'trustee',
+      });
+      await closeScopeTx(scopeTx, true);
+    } catch (err) {
+      await closeScopeTx(scopeTx, false);
+      throw err;
+    }
+  }
+
+  const correctionPayload = {
+    accounts: [account(), account({ accountNumber: '987654321098', ifsc: 'HDFC0000001' })],
+    correctionReason: 'corrected after the Pariwar Admin sent it back',
+  } as unknown as object;
+
+  for (const state of ['state_trustee_freeze', 'reversed'] as const) {
+    it(`⭐⭐ AC5 — a LIVE RETURN unlocks the helpline correction at \`${state}\` (over HTTP)`, async () => {
+      const pariwarId = randomUUID();
+      const { client, userId } = await authenticate();
+      await grantRole(userId, pariwarId, 'helpline_operator');
+      await elevateClaimFile(client);
+      const claimCaseId = await seedClaimAt(pariwarId, state);
+
+      // ⭐ NEGATIVE CONTROL FIRST — refused with ⛔ no return. Without this the success below could
+      // mean the state was writable all along.
+      const before = await client.inject({
+        method: 'POST', url: recordUrl(pariwarId, claimCaseId), payload: correctionPayload,
+      });
+      expect(before.statusCode, before.body).toBe(409);
+      expect(before.json<{ error: { code: string } }>().error.code).toBe('nominee_bank.not_collectable');
+
+      await returnTheClaim(pariwarId, claimCaseId);
+
+      // ⭐ THE PIN: the SAME call, the SAME state, now PERMITTED on the strength of the live
+      // governance row alone. ⚠ This is the assertion chunk 2's fix moves; the refusals above and
+      // below it are correct before AND after, so ⛔ only this one guards the change.
+      const after = await client.inject({
+        method: 'POST', url: recordUrl(pariwarId, claimCaseId), payload: correctionPayload,
+      });
+      expect(after.statusCode, after.body).toBe(201);
+
+      const rows = await td.pool.query<{ n: string }>(
+        `SELECT count(*)::text AS n FROM claim_nominee_bank_accounts WHERE claim_case_id = $1`, [claimCaseId],
+      );
+      expect(Number(rows.rows[0]?.n)).toBe(2);
+    });
+  }
+
+  it("⭐⭐ AC5 — the DA's `does_not_match` ALONE unlocks it too — the OTHER half of `correctionNeeded`", async () => {
+    // ⚠⚠ `underCorrection` is a DISJUNCTION: a live RETURN **or** a current check that sends the
+    // claim back. ⛔ Nothing over HTTP covered the second half — and it is AC5's own worked
+    // example, the case where the District Admin has seen the names and said they differ.
+    const pariwarId = randomUUID();
+    const { client, userId } = await authenticate();
+    await grantRole(userId, pariwarId, 'helpline_operator');
+    await elevateClaimFile(client);
+    const claimCaseId = await seedClaimAt(pariwarId, 'state_trustee_freeze');
+
+    // Give the claim its accounts + a PASSING check first, through the real domain writer, and
+    // confirm the correction is refused — the negative control for the verdict.
+    await seedCheck(pariwarId, claimCaseId, ['matches', 'matches']);
+    const before = await client.inject({
+      method: 'POST', url: recordUrl(pariwarId, claimCaseId), payload: correctionPayload,
+    });
+    expect(before.statusCode, before.body).toBe(409);
+
+    // ⭐ Now the District Admin records `does_not_match`. ⛔ No return row exists.
+    await seedCheck(pariwarId, claimCaseId, ['matches', 'does_not_match']);
+    const after = await client.inject({
+      method: 'POST', url: recordUrl(pariwarId, claimCaseId), payload: correctionPayload,
+    });
+    expect(after.statusCode, after.body).toBe(201);
+  });
+
+  it('⭐ AC5 — the STATUS read reports `correctionNeeded` from BOTH halves (return AND verdict)', async () => {
+    // ⚠ The filer-facing banner (chunk 3) reads `correctionNeeded`. ⛔ Nothing asserted it over
+    // HTTP for EITHER half.
+    // ⚠⚠ SCOPE, STATED SO IT IS ⛔ NOT OVERCLAIMED: `memberEditable` lives on the MEMBER route
+    // (`claims.nominee-bank.handlers.ts`), ⛔ not this helpline one, so the property *"the member
+    // stays shut while the banner says correct it"* is ⛔ NOT asserted here. It belongs with the
+    // member-route spec and is recorded as still owed.
+    const pariwarId = randomUUID();
+    const { client, userId } = await authenticate();
+    await grantRole(userId, pariwarId, 'helpline_operator');
+    await elevateClaimFile(client);
+
+    const viaReturn = await seedClaimAt(pariwarId, 'state_trustee_freeze');
+    await seedCheck(pariwarId, viaReturn, ['matches', 'matches']);
+    const quiet = await client.inject({ method: 'GET', url: statusUrl(pariwarId, viaReturn) });
+    // ⛔ NON-VACUITY: it is FALSE before either half is true.
+    expect(quiet.json<{ correctionNeeded: boolean }>().correctionNeeded).toBe(false);
+
+    await returnTheClaim(pariwarId, viaReturn);
+    const flagged = await client.inject({ method: 'GET', url: statusUrl(pariwarId, viaReturn) });
+    expect(flagged.json<{ correctionNeeded: boolean }>().correctionNeeded, 'the RETURN half').toBe(true);
+
+    const viaVerdict = await seedClaimAt(pariwarId, 'state_trustee_freeze');
+    await seedCheck(pariwarId, viaVerdict, ['matches', 'does_not_match']);
+    const flagged2 = await client.inject({ method: 'GET', url: statusUrl(pariwarId, viaVerdict) });
+    expect(flagged2.json<{ correctionNeeded: boolean }>().correctionNeeded, 'the VERDICT half').toBe(true);
   });
 
   it('D3 tier-3: after the claim/cycle freeze → 409 not_collectable (emergency workflow only)', async () => {

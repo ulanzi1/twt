@@ -115,7 +115,16 @@ export function NomineeNameCheckPanel(props: NomineeNameCheckPanelProps): React.
     setValidationError(null);
   }, [dataFingerprint]);
 
-  if (loading) return <section aria-label={t.nameCheck.heading} data-testid="name-check-loading">{t.nameCheck.loading}</section>;
+  // ⭐ `role="status"` on the LOADING section too (code review 2026-09-22). Every other reachable
+  // state of this panel announces; this one did ⛔ not, so a screen-reader user who opened the
+  // console heard ⛔ nothing at all until the read resolved — the one state where silence is
+  // indistinguishable from a broken page.
+  if (loading)
+    return (
+      <section aria-label={t.nameCheck.heading} role="status" data-testid="name-check-loading">
+        {t.nameCheck.loading}
+      </section>
+    );
   if (!data) {
     return (
       <section aria-label={t.nameCheck.heading} data-testid="name-check-error">

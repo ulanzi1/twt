@@ -164,9 +164,10 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
     if (code === '') return;
     verifyStepUp.mutate(code, {
       onSuccess: () => {
-        // Elevation gained — clear the panel; the operator resubmits the intake. Also reset the
-        // request mutation so a LATER re-elevation need starts from a fresh "send code" state
-        // rather than stale isSuccess (Review Finding).
+        // Elevation gained — clear the panel; the operator resubmits whichever write asked for it
+        // (⭐ the INTAKE or, since Story 6.18, the BANK SAVE — this one path serves both). Also
+        // reset the request mutation so a LATER re-elevation need starts from a fresh "send code"
+        // state rather than stale isSuccess (Review Finding).
         setStepUpRequired(false);
         setOtp('');
         requestStepUp.reset();
@@ -260,8 +261,23 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
   // fire speculatively.
   const bankNames = useNomineeNameCheck(pariwarId, filedClaimCaseId, bankRecorded);
   const submitBank = async (body: Parameters<typeof recordBank.mutateAsync>[0]): Promise<void> => {
-    await recordBank.mutateAsync(body);
-    // ⛔ Nothing to set: the mutation invalidates the presence view, and `recorded` re-derives.
+    // ⚠⚠ THE STEP-UP SIGNAL HAS TO BE HANDLED HERE TOO (code review 2026-09-22). This route is
+    // `preHandler: […, canManageNomineeBank, stepUp]`, exactly like the intake — but ⛔ only the
+    // intake's `onError` ever set `stepUpRequired`. So an `auth.step_up_required` 403 on the bank
+    // save fell through to the card's generic error line as a raw message, with ⛔ no way for the
+    // operator to elevate. ⚠ It is ⛔ not a rare path: `STEP_UP_ELEVATED_MS` is 5 minutes and
+    // typing two account numbers, two IFSCs and a difference note on a bereavement call is slow.
+    // ⭐ Treated exactly as the intake treats it — a SIGNAL to elevate, ⛔ never a hard error.
+    try {
+      await recordBank.mutateAsync(body);
+      setStepUpRequired(false);
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'auth.step_up_required') setStepUpRequired(true);
+      // ⭐ Re-thrown either way: the card's own `catch` owns the pending/error UI, and swallowing
+      // here would leave it reporting success for a write that ⛔ never landed.
+      throw err;
+    }
+    // ⛔ Nothing else to set: the mutation invalidates the presence view, and `recorded` re-derives.
   };
 
   return (
@@ -306,7 +322,15 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
           recorded={bankRecorded}
           onSubmit={submitBank}
           pending={recordBank.isPending}
-          error={recordBank.isError ? messageOf(recordBank.error) : null}
+          // ⭐ A step-up-required error is handled via the PANEL, ⛔ not surfaced as a hard error —
+          // the same treatment `submitError` gives the intake, and for the same reason: a raw
+          // *"step up required"* string is a dead end, the panel is the way out.
+          error={
+            recordBank.isError &&
+            !(recordBank.error instanceof ApiError && recordBank.error.code === 'auth.step_up_required')
+              ? messageOf(recordBank.error)
+              : null
+          }
           names={bankNames.data}
           namesLoading={bankNames.isLoading}
           namesError={bankNames.isError ? resolveEn('helpline.bank.namesError') : null}

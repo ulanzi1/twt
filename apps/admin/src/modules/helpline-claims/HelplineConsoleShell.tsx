@@ -184,8 +184,20 @@ export function HelplineConsoleShell(props: HelplineConsoleShellProps): ReactEle
                 </select>
               </div>
 
-              {/* Step-up panel (the operator's own admin step-up — surfaced when the route asked for it). */}
-              {stepUpRequired && result === null && (
+              {/* Step-up panel (the operator's own admin step-up — surfaced when the route asked for it).
+                *
+                * ⚠⚠ THE `result === null` GUARD WAS REMOVED (code review 2026-09-22) AND THAT IS THE
+                * FIX, ⛔ not a tidy. It was written when the INTAKE was the only step-up consumer,
+                * where a present result means "already filed, nothing left to elevate for". Story
+                * 6.18 added a SECOND consumer — `POST …/nominee-bank`, which also sits behind
+                * `stepUp` — and that one is reachable ⛔ ONLY after the intake has produced a
+                * result. ⇒ the guard made the panel structurally unreachable for the bank save: an
+                * `auth.step_up_required` 403 there showed the operator a raw error string with
+                * ⛔ no way to elevate, on a screen where typing two bank accounts easily outlasts
+                * the 5-minute `STEP_UP_ELEVATED_MS` window.
+                * ⭐ The panel renders in this same column, immediately above `bankSlot`, so it is
+                * visible to the operator whichever write asked for it. */}
+              {stepUpRequired && (
                 <div
                   role="region"
                   aria-label={resolveEn('helpline.stepup.region')}

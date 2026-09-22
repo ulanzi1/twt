@@ -14,7 +14,15 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { CycleFreezePendingResponse } from '@twt/contracts';
 
-import { PendingCaseCard } from '../src/modules/cycle-freeze/index.js';
+// ⭐ The network is faked for the D3 disclosure suite at the bottom; every other test here still
+// fetches nothing (the disclosure's query is `enabled` only once its button is pressed).
+const getNomineeNameCheck = vi.fn();
+vi.mock('../src/api/client.js', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return { ...actual, getNomineeNameCheck: (p: string, c: string) => getNomineeNameCheck(p, c) };
+});
+
+const { PendingCaseCard } = await import('../src/modules/cycle-freeze/index.js');
 
 type PendingCase = CycleFreezePendingResponse['ready_to_freeze'][number];
 
@@ -165,5 +173,44 @@ describe('<PendingCaseCard> — AC8, the name-difference highlight', () => {
     for (const forbidden of ['similar', 'score', 'likely match', 'differs from', 'does not look like']) {
       expect(text, `the card rendered a comparison hint: ${forbidden}`).not.toContain(forbidden);
     }
+  });
+});
+
+// ── D3 — the Pariwar Admin sees both names, ON DEMAND (code review 2026-09-20) ────────────────
+//
+// ⭐ The card carries `<NomineeNameCheckDisclosure>` so the surface that owns the FINAL approval and
+// the Return decision does ⛔ not decide blind — and ⛔ no test had ever pressed its button.
+describe('<PendingCaseCard> — D3, the names disclosure', () => {
+  const NAMES = {
+    claim_case_id: CASE.claim_case_id,
+    claim_state: 'verifier_approved',
+    deceased_member_id: CASE.deceased_member_id,
+    accounts: [
+      { account_rank: 1, account_updated_at: '2026-09-20T10:00:00.000Z', holder_name: { state: 'readable', value: 'Rani Devi' }, name_difference_note: { state: 'readable', value: 'married since' } },
+      { account_rank: 2, account_updated_at: '2026-09-20T10:00:01.000Z', holder_name: { state: 'readable', value: 'R. Devi' }, name_difference_note: null },
+    ],
+    accounts_complete: true,
+    declared_nominees: [{ rank: 1, split_pct: 100, relationship: 'spouse', nominee_name: { state: 'readable', value: 'Rani Kumari' } }],
+    nominee_declaration_token: 'tok-1',
+    nominee_declared_at: '2026-01-01T00:00:00.000Z',
+    claim_filed_at: '2026-09-01T00:00:00.000Z',
+    current_check: null,
+    latest_check_is_stale: false,
+    correction_return: null,
+  };
+
+  it('⛔⛔ fetches NOTHING until pressed; then shows both names and the filer note, with ⛔ no verdict control', async () => {
+    getNomineeNameCheck.mockReset();
+    getNomineeNameCheck.mockResolvedValue(NAMES);
+    setup();
+    expect(getNomineeNameCheck).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId(`pending-case-name-check-${CASE.claim_case_id}`));
+    expect(await screen.findByTestId('name-check-account-1')).toHaveTextContent('Rani Devi');
+    expect(screen.getByTestId('name-check-nominee-1')).toHaveTextContent('Rani Kumari');
+    expect(screen.getByTestId('name-check-note-1')).toHaveTextContent('married since');
+    expect(getNomineeNameCheck).toHaveBeenCalledWith(PARIWAR, CASE.claim_case_id);
+    // ⛔ `-226` cl.3 — recording the verdict is the District Admin's alone.
+    expect(screen.queryByTestId('name-check-form')).toBeNull();
   });
 });

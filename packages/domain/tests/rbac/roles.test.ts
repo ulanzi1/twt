@@ -38,6 +38,26 @@ const SEEDED_ROLES: SeededRole[] = [
   'trustee_panel',
 ];
 
+/**
+ * Does `role`'s seeded bundle carry `key`?
+ *
+ * ⚠⚠ WHY THIS EXISTS (code review 2026-09-22). The pattern used throughout this file is
+ * `(bundleForRole(role)?.permissions as readonly string[]).includes(KEY)`. The `?.` returns
+ * `undefined` for an unknown or removed role, the `as` casts that straight past the compiler, and
+ * `.includes` then throws **`TypeError: Cannot read properties of undefined`**. ⇒ deleting or
+ * renaming a seeded role turns these tests into a stack trace about `undefined` instead of a
+ * failure that says which role vanished — the least useful possible report of a real regression.
+ * ⭐ This asserts the bundle EXISTS first, by name.
+ *
+ * ⚠ The sibling tests in this file still carry the raw pattern; converting them is ⛔ not Story
+ * 6.18's to do, and this helper is here for whoever does.
+ */
+function holds(role: SeededRole, key: string): boolean {
+  const bundle = bundleForRole(role);
+  expect(bundle, `no seeded bundle for role '${role}' — the role was renamed or removed`).toBeDefined();
+  return (bundle!.permissions as readonly string[]).includes(key);
+}
+
 describe('defaultRoleBundles — the seeded roles (FR-46)', () => {
   it('defines exactly the 13 named roles', () => {
     expect(defaultRoleBundles).toHaveLength(13);
@@ -240,31 +260,50 @@ describe('defaultRoleBundles — the seeded roles (FR-46)', () => {
     }
   });
 
-  it('Story 6.18 — claim.check_nominee_name is district_admin ONLY, and the three other SEEING roles do NOT hold it', () => {
+  it('Story 6.18 — only district_admin is GRANTED claim.check_nominee_name, and the three SEEING roles are not', () => {
+    // ⚠ RE-TITLED 2026-09-22. It read *"is district_admin ONLY"* while asserting
+    // `['district_admin', 'super_admin']` — the title contradicted its own assertion. ⭐ Both are
+    // right once stated precisely: `district_admin` is the only role GRANTED the key in
+    // `roles.ts`; `super_admin`'s bundle IS `PERMISSION_CATALOG.keys`, so it holds every key by
+    // CONSTRUCTION and appears here without anyone naming it (the same note the 11b.13 test below
+    // already makes). "ONLY" was a claim about the grant, printed as a claim about the holders.
     const CHECK_KEY = 'claim.check_nominee_name';
     const VIEW_KEY = 'claim.view_nominee_name_check';
-    const holders = defaultRoleBundles
-      .filter((b) => (b.permissions as readonly string[]).includes(CHECK_KEY))
-      .map((b) => b.role)
-      .sort();
+    const holdersOf = (key: string): string[] =>
+      defaultRoleBundles
+        .filter((b) => (b.permissions as readonly string[]).includes(key))
+        .map((b) => b.role)
+        .sort();
+
     // ⭐⭐ THE REGRESSION THIS TEST EXISTS TO PREVENT: the READ key quietly carrying the VERDICT.
     // `2026-09-19-226` cl.3 — *"Mismatch is reviewed by District Admin"* — and cl.5 —
     // *"District Admin cannot proceed unless reason for name mismatch is selected."* AC1 made that
     // split STRUCTURAL: two catalog keys, ⛔ not one key plus a role check inside a route handler.
-    expect(holders).toEqual(['district_admin', 'super_admin']);
+    expect(holdersOf(CHECK_KEY)).toEqual(['district_admin', 'super_admin']);
+
     // ⭐ The three roles that SEE but must never JUDGE. helpline_operator is the load-bearing one:
     // cl.1's duty is discharged at FILING, and letting the filer also record the Trust's verdict
     // would collapse cl.1 into cl.3 and let them clear their own work. pariwar_admin's cl.4
     // authority is the FINAL APPROVAL, exercised through `cycle.freeze`, ⛔ never a second check.
     for (const role of ['helpline_operator', 'pariwar_admin', 'verifier'] as const) {
-      expect((bundleForRole(role)?.permissions as readonly string[]).includes(VIEW_KEY)).toBe(true);
-      expect((bundleForRole(role)?.permissions as readonly string[]).includes(CHECK_KEY)).toBe(false);
+      expect(holds(role, VIEW_KEY), `${role} must SEE the check`).toBe(true);
+      expect(holds(role, CHECK_KEY), `${role} must NOT be able to record one`).toBe(false);
     }
     for (const role of ['state_trustee', 'block_admin', 'auditor', 'finance_officer', 'it_cell', 'media_comms', 'field_worker', 'trustee_panel'] as const) {
-      expect((bundleForRole(role)?.permissions as readonly string[]).includes(CHECK_KEY)).toBe(false);
+      expect(holds(role, CHECK_KEY), `${role} must NOT hold the check key`).toBe(false);
     }
-    // ⭐ The two keys are DISTINCT holder sets — the whole point of minting two.
-    expect((bundleForRole('district_admin')?.permissions as readonly string[]).includes(VIEW_KEY)).toBe(true);
+
+    // ⭐⭐ THE TWO KEYS ARE GENUINELY DIFFERENT HOLDER SETS, asserted as a set relation rather than
+    // claimed in a comment. ⚠ This line used to read `district_admin holds VIEW_KEY` — true, and
+    // ⛔ not the property. Two keys granted to the IDENTICAL set would have passed it, which is
+    // exactly the collapse AC1 exists to prevent.
+    const viewHolders = holdersOf(VIEW_KEY);
+    const checkHolders = holdersOf(CHECK_KEY);
+    expect(checkHolders.every((r) => viewHolders.includes(r)), 'a checker who cannot see').toBe(true);
+    expect(viewHolders.length).toBeGreaterThan(checkHolders.length);
+    expect(viewHolders.filter((r) => !checkHolders.includes(r))).toEqual(
+      ['helpline_operator', 'pariwar_admin', 'verifier'].sort(),
+    );
   });
 
   it('Story 11b.13 — pariwar.manage_drive_target_visibility is super_admin ONLY, and pariwar_admin does NOT hold it', () => {

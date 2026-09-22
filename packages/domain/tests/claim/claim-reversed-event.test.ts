@@ -1,6 +1,6 @@
 // claim.reversed event + reducer + overlay unit tests — Story 6.16 (Task 11; AC5/D-A). Pure, no DB.
 //
-// The 31st claim event: the Sahyog Vivran PUBLISH HOOK (D-A). Registered + bound in the payload-schema map,
+// The Sahyog Vivran PUBLISH HOOK (D-A). Registered + bound in the payload-schema map,
 // a requireIdentityTransition (from_state === to_state === 'reversed'), carrying reversed_at_stage + a NON-PII
 // disposition_category ONLY. Reducer identity (advances nothing). Deliberately ABSENT from the account-frozen
 // overlay's unfreeze set (a reversed claim re-enters approval — the freeze persists until settled).
@@ -20,9 +20,13 @@ const valid = {
   disposition_category: 'new_evidence_presented' as const,
 }
 
-describe('claim.reversed — the 31st event (D-A)', () => {
-  it('is the 31st registered claim event, bound in the payload-schema map', () => {
-    expect(CLAIM_EVENT_TYPES).toHaveLength(32)
+describe('claim.reversed — the Sahyog Vivran publish hook (D-A)', () => {
+  it('is a registered claim event, bound in the payload-schema map', () => {
+    // ⚠ RE-TITLED 2026-09-22. This read *"is the 31st registered claim event"* while asserting
+    // `toHaveLength(32)` — the title and the assertion contradicted each other on the same line.
+    // ⭐ "31st" was true when Story 6.16 minted it and is now simply an ORDINAL THAT ROTS: every
+    // later story that adds an event falsifies it, and ⛔ nothing here was ever about being 31st.
+    // The count pin is gone too — `dpdpa-consent-events.test.ts` owns the exact count.
     expect(CLAIM_EVENT_TYPES).toContain('claim.reversed')
     expect(CLAIM_EVENT_PAYLOAD_SCHEMAS['claim.reversed']).toBe(ClaimReversedPayloadSchema)
   })

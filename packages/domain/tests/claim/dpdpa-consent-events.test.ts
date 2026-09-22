@@ -38,9 +38,18 @@ const revokedBase = {
 describe('ClaimDpdpaConsentRecordedPayloadSchema (the 24th claim event)', () => {
   it('is registered as a claim event type + bound in the payload-schema map', () => {
     expect(CLAIM_EVENT_TYPES).toContain('claim.dpdpa_consent_recorded');
-    // ⭐⭐ THE ONE EXACT-COUNT PIN IN THE REPO, consolidated here 2026-09-22. Five sibling files
-    // carried the identical assertion, so every new claim event cost SIX edits and five of them sat
-    // in files about a different event. This file already declared itself the owner; now it is.
+    // ⭐⭐ THE ONE `toHaveLength(N)` LITERAL IN THE REPO, consolidated here 2026-09-22. Five sibling
+    // files carried the identical assertion, so every new claim event cost SIX edits and five of
+    // them sat in files about a different event. This file already declared itself the owner; now
+    // it is.
+    //
+    // ⚠ CORRECTED 2026-09-22 (code review) — "the ONE exact-count pin in the repo" overclaimed.
+    // `nominee-name-check-events.test.ts`'s rewritten vocabulary-diff test also pins the exact total
+    // count, just via two set-difference equalities (`live \ baseline` and `baseline \ live`) instead
+    // of a literal number — a second pin, not a coverage check that happens to have the same shape.
+    // What THIS file is the one owner of is the literal `toHaveLength(N)` FORM, which is what made
+    // it expensive to maintain across six files; the underlying property (the exact count) is pinned
+    // twice by design, once here and once by that test, for a different reason each time.
     //
     // ⚠ WHAT IT STILL BUYS, given that `packages/events/tests/claim-registry-coverage.test.ts`
     // asserts SET EQUALITY against the registry and is strictly stronger for drift: set equality

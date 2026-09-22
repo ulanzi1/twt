@@ -489,6 +489,20 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the check write vs a concurrent ba
       );
       expect(recorded).not.toBeNull();
       expect(['Anita (District Admin)', 'Bhavna (District Admin)']).toContain(recorded?.checkedByActorDisplay);
+
+      // ⚠ 2026-09-22 (code review): "two events, one claim" was asserted only through the LATEST
+      // read above, which proves ⛔ only that neither write was REJECTED — a silent no-op on the
+      // loser (an appender that swallows a second write instead of appending it) would satisfy that
+      // too. Query `events_log` directly to confirm TWO distinct `claim.nominee_name_checked` events
+      // really landed, not one.
+      const eventCount = await onOwnTx(async (client) => {
+        const r = await client.query<{ count: string }>(
+          `SELECT count(*)::text AS count FROM events_log WHERE pariwar_id = $1 AND stream_id = $2 AND event_type = $3`,
+          [PARIWAR_A, cid, 'claim.nominee_name_checked'],
+        );
+        return Number(r.rows[0]!.count);
+      });
+      expect(eventCount, 'two concurrent checks landed but events_log carries fewer than two events').toBe(2);
     },
     TIMEOUT,
   );

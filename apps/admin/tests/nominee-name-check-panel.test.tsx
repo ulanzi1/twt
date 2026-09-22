@@ -345,6 +345,38 @@ describe('<NomineeNameCheckPanel> — family 13(d): the states that APPEAR are a
     fireEvent.change(screen.getByTestId('name-check-verdict-2'), { target: { value: 'does_not_match' } });
     announced('name-check-sent-back-hint');
   });
+
+  it('⭐ the SENT-BACK hint CLEARS when the operator corrects the verdict back', () => {
+    // ⚠ ADDED 2026-09-22 (code review) — the test above proves the hint APPEARS on `does_not_match`
+    // but nothing proved it CLEARS if the operator reconsiders and picks `matches` or
+    // `clerical_difference` instead. A hint that stuck around after a correction would tell the
+    // operator "this sends the claim back" for a verdict that no longer does.
+    setup();
+    fireEvent.change(screen.getByTestId('name-check-verdict-2'), { target: { value: 'does_not_match' } });
+    expect(screen.getByTestId('name-check-sent-back-hint')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByTestId('name-check-verdict-2'), { target: { value: 'matches' } });
+    expect(
+      screen.queryByTestId('name-check-sent-back-hint'),
+      'the sent-back hint stayed visible after the verdict was corrected back to matches',
+    ).toBeNull();
+  });
+
+  it('⭐ a STALE check is announced', () => {
+    // ⚠ ADDED 2026-09-22 (code review) — the source already carried `role="status"` on
+    // `name-check-stale`, but nothing asserted it; this family's own coverage claim named only 3 of
+    // the panel's 5 announced states.
+    setup({ ...READ, current_check: null, latest_check_is_stale: true });
+    announced('name-check-stale');
+  });
+
+  it('⭐ the NEVER-CHECKED state is announced', () => {
+    // ⚠ ADDED 2026-09-22 (code review), and it FOUND A REAL SOURCE GAP: `name-check-none` had
+    // ⛔ NO `role="status"` at all (unlike its siblings `name-check-current` and `name-check-stale`)
+    // — fixed in `NomineeNameCheckPanel.tsx` alongside this test.
+    setup({ ...READ, current_check: null, latest_check_is_stale: false });
+    announced('name-check-none');
+  });
 });
 
 // ── THE RESIDUAL v1.1 NAMED — the five cases this file was missing ─────────────────────────────
@@ -378,7 +410,12 @@ describe('<NomineeNameCheckPanel> — the MIXED and STALE states (v1.1 residual)
     setup({ ...READ, current_check: CHECK(['clerical_difference', 'does_not_match'], ['married_name', null]) });
 
     expect(screen.getByTestId('name-check-current')).toBeInTheDocument();
-    expect(screen.getByTestId('name-check-recorded-verdict-1')).toHaveTextContent(/married|difference/i);
+    // ⚠ TIGHTENED 2026-09-22 (code review) — `/married|difference/i` was loose enough to match any
+    // incidental occurrence of "difference" in nearby UI copy, not specifically the clerical-reason
+    // label for THIS account. Assert the exact rendered label pair instead.
+    expect(screen.getByTestId('name-check-recorded-verdict-1')).toHaveTextContent(
+      'Clerical difference (accept with a reason) — A married name',
+    );
     // ⚠ The reassuring "approved with a difference" flag must ⛔ NOT appear on a failing check.
     expect(
       screen.queryByTestId('name-check-difference-flag'),
@@ -423,5 +460,13 @@ describe('<NomineeNameCheckPanel> — the MIXED and STALE states (v1.1 residual)
       sendingBack,
       'the passing and sending-back states render IDENTICAL text under the same testid',
     ).not.toBe(passing);
+    // ⚠ TIGHTENED 2026-09-22 (code review) — `.not.toBe(passing)` is satisfied by ANY incidental
+    // difference (verdict order, a timestamp fragment) without confirming the sending-back state
+    // actually renders the correction instruction the comment above says matters. Assert the
+    // specific content instead: the "send back for correction" verdict label appears on the
+    // sending-back render and NEVER on the passing one — the actual thing a District Admin must not
+    // confuse, not merely "the two strings differ somehow".
+    expect(sendingBack).toContain('Does not match — send back for correction');
+    expect(passing).not.toContain('Does not match — send back for correction');
   });
 });

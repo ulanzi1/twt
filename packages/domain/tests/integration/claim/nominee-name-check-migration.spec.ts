@@ -61,9 +61,13 @@ describe.skipIf(!hasDatabase)('Story 6.18 — migrations 0116–0118, asserted a
     ]);
     // ⭐ Named types, ⛔ not just "some enum somewhere": a label on the wrong type is a database
     // that passes a label-existence check and fails at the one write that uses it.
+    // ⚠ EXACT type names, ⛔ not `.toContain('phase')`/`.toContain('outcome')` (code review
+    // 2026-09-22) — a substring match would also pass for a future, unrelated type that merely
+    // CONTAINS "phase" or "outcome" in its name, which is precisely the "label on the wrong type"
+    // bug this assertion exists to catch.
     const byLabel = new Map(r.rows.map((x) => [x.enumlabel, x.typname]));
-    expect(byLabel.get('correction_return')).toContain('phase');
-    expect(byLabel.get('returned_for_correction')).toContain('outcome');
+    expect(byLabel.get('correction_return')).toBe('state_trustee_decision_phase');
+    expect(byLabel.get('returned_for_correction')).toBe('state_trustee_decision_outcome');
   });
 
   it('⛔ NON-VACUITY — the catalog queries really do discriminate', async () => {

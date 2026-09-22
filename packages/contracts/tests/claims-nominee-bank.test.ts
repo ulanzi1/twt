@@ -243,7 +243,27 @@ describe('Story 6.18 (AC7) — the filer NOTE and its limits', () => {
       nameDifferenceNote: `  the bank shortened her name  `,
     });
     expect(parsed.nameDifferenceNote).toBe('the bank shortened her name');
-    expect(NomineeBankAccountEntry.safeParse({ ...validAccount, nameDifferenceNote: `${'x'.repeat(NOTE_MAX)}\n` }).success).toBe(true);
+    // ⚠ 2026-09-22 (code review): this half used to check only `.safeParse(...).success`, weaker
+    // than the pattern one line above — success alone cannot tell "the newline was trimmed away"
+    // from "the newline was silently left un-trimmed but 501 characters happened to still pass some
+    // other tolerance". Read the parsed OUTPUT and assert the trailing newline is really gone.
+    const atBoundaryPlusNewline = NomineeBankAccountEntry.parse({
+      ...validAccount,
+      nameDifferenceNote: `${'x'.repeat(NOTE_MAX)}\n`,
+    });
+    expect(atBoundaryPlusNewline.nameDifferenceNote).toBe('x'.repeat(NOTE_MAX));
+    expect(atBoundaryPlusNewline.nameDifferenceNote).not.toContain('\n');
+  });
+
+  it('⭐ an explicit `null` note is refused — the schema is `.optional()`, ⛔ not `.nullable()`', () => {
+    // ⚠ 2026-09-22 (code review): the file above tests ABSENCE (`undefined`, by never supplying the
+    // key at all) but never tests an explicit `null`, a common JSON idiom many clients send for "no
+    // value". `.optional()` accepts a missing key but ⛔ not an explicit `null` — pinned here so the
+    // behaviour cannot drift unnoticed, in either direction.
+    expect(
+      NomineeBankAccountEntry.safeParse({ ...validAccount, nameDifferenceNote: null }).success,
+      'an explicit null was accepted — the schema is .optional(), not .nullable()',
+    ).toBe(false);
   });
 
   it('⛔⛔ `correctionNeeded` is REQUIRED on the presence view — the claim, finally asserted', () => {

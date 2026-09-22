@@ -405,6 +405,18 @@ describe('currency + passing (AC3, AC4)', () => {
     expect(isNomineeNameCheckCurrent(check, [liveAccounts[0]!], 'tok-1')).toBe(false);
   });
 
+  it('⭐ goes stale when a rank is REPLACED at EQUAL length — the `!recorded` branch, ⛔ not the length guard', () => {
+    // ⚠⚠ ADDED 2026-09-22 (code review). Every test above that changes the live set either shrinks
+    // it (`length !== length` catches it) or edits a timestamp on an EXISTING rank (the `!==`
+    // catches it). Neither exercises `check.accounts.find(a => a.accountRank === live.accountRank)`
+    // returning `undefined` — a length-only implementation (e.g. `check.accounts.length ===
+    // liveAccounts.length` and nothing else) would pass every test above and still be WRONG here:
+    // rank 2 vanished and rank 3 appeared, same count, and a check recorded over ranks {1,2} says
+    // ⛔ nothing about rank 3.
+    const replaced = [liveAccounts[0]!, { accountRank: 3, updatedAt: new Date(UPDATED_2) }];
+    expect(isNomineeNameCheckCurrent(check, replaced, 'tok-1')).toBe(false);
+  });
+
   // ── THE THREE CASES THE PREDICATE'S OWN BRANCHES ALLOW AND ⛔ NOTHING EXERCISED ─────────────
   // Added 2026-09-22 (code review). The four tests above cover the token, an edited stamp and a
   // MISSING account; the remaining shapes each take a DIFFERENT line of the function, and all three
@@ -448,10 +460,22 @@ describe('currency + passing (AC3, AC4)', () => {
     // such rewrites landing in the same millisecond on the same claim would ALSO have to race
     // the claim row lock, which serialises them. ⛔ No reachability is claimed either way
     // ([[feedback_trace_reachability_before_escalating]]).
+    //
+    // ⚠⚠ `sameMs` MUST be a genuinely DIFFERENT timestamp that collides after truncation (code
+    // review 2026-09-22) — reusing `liveAccounts` verbatim (the previous version of this test) only
+    // re-proves "identical stamps ⇒ current", which the very first test in this block already
+    // covers, and cannot distinguish that from the sharper claim this test's title makes. A real
+    // Postgres `timestamptz` rewrite 500 MICROSECONDS later is simulated here — `new Date(...)`
+    // truncates sub-millisecond precision on parse, so the two ISO strings below are NOT the same
+    // moment, yet compare equal once both pass through `.toISOString()`.
     const sameMs = [
-      { accountRank: 1, updatedAt: new Date(UPDATED_1) },
+      { accountRank: 1, updatedAt: new Date(`${UPDATED_1.slice(0, -1)}500Z`) },
       { accountRank: 2, updatedAt: new Date(UPDATED_2) },
     ];
+    // ⛔ NON-VACUITY: the two timestamps really do differ before truncation — otherwise this would
+    // silently degrade back into the no-op case it is meant to improve on.
+    expect(`${UPDATED_1.slice(0, -1)}500Z`).not.toBe(UPDATED_1);
+    expect(new Date(`${UPDATED_1.slice(0, -1)}500Z`).toISOString()).toBe(UPDATED_1);
     expect(isNomineeNameCheckCurrent(check, sameMs, 'tok-1')).toBe(true);
     // ⭐ And ONE millisecond IS enough — the resolution floor, pinned from the other side.
     const oneMsLater = [

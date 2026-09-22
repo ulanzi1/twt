@@ -82,7 +82,22 @@ describe('Story 6.18 member copy resolves through the REAL t() — both locales'
     }
     const form = stripComments(read('apps/mobile/components/life-events/NomineeForm.tsx'))
     for (const key of COMMON_KEYS) {
-      expect(form, `${key} resolves but NomineeForm no longer asks for it`).toContain(key)
+      // ⚠ TIGHTENED 2026-09-22 (code review) — this used to check only that the BARE key string
+      // `key` appeared anywhere in the file, weaker than the `CLAIM_KEYS` loop above (which requires
+      // the exact call-site syntax `t('key')`) despite this file's whole stated purpose being to
+      // prevent exactly this kind of drift. A bare-string match could pass on an incidental
+      // occurrence — a comment, an unrelated identifier — rather than a live `t()` call.
+      expect(form, `${key} resolves but NomineeForm no longer asks for it`).toContain(`t('${key}')`)
     }
+  })
+
+  it('⭐⭐ the mechanism actually WORKS — `t()` really does throw on a missing key', () => {
+    // ⚠⚠ ADDED 2026-09-22 (code review). The file's header claims this is "the whole mechanism"
+    // that makes every check above non-vacuous, but nothing here had ever actually demonstrated it.
+    // If `t()` silently returned a fallback instead of throwing, every `expect(value.trim().length)
+    // .toBeGreaterThan(0)` above could be passing against a placeholder string for a key that does
+    // not exist, and a missing/renamed key would go undetected by this entire file.
+    expect(() => t('nominee.bank.__does_not_exist__', undefined, { locale: 'en', namespace: 'claim' })).toThrow()
+    expect(() => t('__does_not_exist__', undefined, { locale: 'en' })).toThrow()
   })
 })

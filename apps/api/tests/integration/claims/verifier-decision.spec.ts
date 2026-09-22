@@ -869,4 +869,23 @@ describe.skipIf(!hasDatabase)('Verifier adjudication WRITE surface — E2E (:543
     });
     expect(res.statusCode, res.body).toBe(201);
   });
+
+  it('⭐ …and the SAME is true when the blocker is the MISSING NAME CHECK, ⛔ not just missing accounts', async () => {
+    // ⚠ ADDED 2026-09-22 (code review) — the test above only ever used `seedClaim(..., 'none')`
+    // (the `bank_details_required` blocker). Whether deny stays open specifically when the blocker
+    // is `nominee_name_check_required` (two accounts, nobody has checked them) was unproven —
+    // and that is the OTHER 409 code pinned two tests up, so it deserves the same non-vacuity proof.
+    const pariwarId = randomUUID();
+    const { client, userId } = await authenticate({ displayName: 'Anita (District Admin)' });
+    await grant(userId, pariwarId, 'district_admin', 'district', DISTRICT);
+    const deceased = await seedDeceasedMember(pariwarId, DISTRICT);
+    const claimCaseId = await seedClaim(pariwarId, deceased, 'accounts_only');
+    await client.inject({ method: 'POST', url: '/api/v1/auth/scope', payload: { pariwarId } });
+
+    const res = await client.inject({
+      method: 'POST', url: decisionUrl(pariwarId, claimCaseId),
+      payload: { outcome: 'denied', reason_code: 'concealment_flag_uphold', rationale: 'Concealment upheld.' },
+    });
+    expect(res.statusCode, res.body).toBe(201);
+  });
 });

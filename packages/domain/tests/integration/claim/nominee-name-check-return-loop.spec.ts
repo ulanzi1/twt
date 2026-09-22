@@ -898,11 +898,14 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the return loop (:5433)', () => {
 
     const check = await getLatestNomineeNameCheck(tx, PARIWAR_A, cid);
     expect(check, 'no check was recorded').not.toBeNull();
-    expect(check!.checkedByActorDisplay).toBe('Anita Kumari (District Admin)');
-    // ⭐ Stated as its own assertion, ⛔ not implied by the equality above: the `?? ''` defect
-    // produced exactly this value, and a future refactor could reintroduce it while some other
-    // fixture still passes a name.
-    expect(check!.checkedByActorDisplay.trim(), 'the check is attributed to NOBODY').not.toBe('');
+    // ⚠ 2026-09-22 (code review): a separate `.not.toBe('')` assertion used to follow this line —
+    // logically subsumed by the equality below (if the exact-match assertion passes, the non-empty
+    // one cannot independently fail), so it was dead weight in THIS test. Removed. ⚠ Checked, not
+    // assumed: the API-layer sibling (`apps/api/tests/integration/claims/nominee-name-check.spec.ts`)
+    // carries the identical pair on the SAME literal actor display — so that sibling has the same
+    // redundancy, not a genuinely different fixture; it is left alone here as out of this patch's
+    // file scope, not because it is actually independent.
+    expect(check!.checkedByActorDisplay, 'the check is attributed to NOBODY').toBe('Anita Kumari (District Admin)');
   });
 
   it('⛔ D1 — a RETURN from `state_trustee_approved` is REFUSED (the dead end this story closed)', async () => {

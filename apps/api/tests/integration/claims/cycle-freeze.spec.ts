@@ -822,6 +822,39 @@ describe.skipIf(!hasDatabase)('State-Trustee cycle-freeze surface — E2E (:5433
       expect(await claimState(claimCaseId)).toBe('verifier_approved');
     });
 
+    it('⛔ AC11 — a claim OUTSIDE the returnable states is a 409 `not_returnable`, and nothing is written', async () => {
+      // `TRUSTEE_RETURNABLE_STATES` is `verifier_approved` / `reversed` / `state_trustee_freeze`. A
+      // claim still in `verifier_review` has not reached the Pariwar Admin — there is nothing of
+      // theirs to send back. (The deferral that asked for this test, 2026-09-22, said the whole return
+      // loop was untested over HTTP; ⛔ only this code was.)
+      const pariwarId = randomUUID();
+      const { claimCaseId } = await seedEscalatedClaim(pariwarId);
+      const pa = await pariwarAdmin(pariwarId);
+      const before = await claimEventTypes(claimCaseId);
+      td.auditSink.events.length = 0;
+
+      const res = await pa.client.inject({
+        method: 'POST',
+        url: decisionUrl(pariwarId),
+        payload: {
+          claim_case_id: claimCaseId,
+          action: 'return_to_district_admin',
+          reason_code: 'other',
+          rationale: 'too early to return',
+        },
+      });
+      expect(res.statusCode).toBe(409);
+      const body = res.json() as { error: { code: string; details?: { state?: string } } };
+      expect(body.error.code).toBe('cycle_freeze.not_returnable');
+      expect(body.error.details?.state).toBe('verifier_review');
+
+      // ⛔ A refused return leaves no trace: no state move, no event, no decision row, no audit line.
+      expect(await claimState(claimCaseId)).toBe('verifier_review');
+      expect(await claimEventTypes(claimCaseId)).toEqual(before);
+      expect(await trusteeDecisionCount(claimCaseId)).toBe(0);
+      expect(td.auditSink.events.find((e) => e.type === 'admin_cycle_freeze.returned')).toBeUndefined();
+    });
+
     it('⛔ AC11 — a return and a route-to-R9 cannot coexist (409 exclusion_conflict)', async () => {
       const pariwarId = randomUUID();
       const { claimCaseId } = await seedApprovedClaim(pariwarId);

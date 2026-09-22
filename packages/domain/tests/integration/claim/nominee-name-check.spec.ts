@@ -80,9 +80,13 @@ async function driveTo(
 }
 
 /** Seed two live bank accounts WITHOUT recording any check. */
-async function seedAccountsOnly(tx: Tx, claimCaseId: ClaimId): Promise<void> {
+async function seedAccountsOnly(tx: Tx, claimCaseId: ClaimId, ranks: readonly number[] = [1, 2]): Promise<void> {
+  // ⭐ `ranks` defaults to BOTH. Passing `[1]` builds the ONE-ACCOUNT fixture, which had ⛔ no test
+  // at any gate: `-226` cl.7 makes both mandatory, and "one account" is the realistic partial — a
+  // filer who typed the primary and was interrupted — whereas "zero accounts" fails earlier, on a
+  // different guard, which is why the existing `accounts: []` test never reached this rule.
   await tx.insert(schema.claimNomineeBankAccounts).values(
-    [1, 2].map((rank) => ({
+    ranks.map((rank) => ({
       claimCaseId,
       pariwarId: PARIWAR_A,
       accountRank: rank,
@@ -549,6 +553,159 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
       ).rejects.toMatchObject({ name: 'NomineeNameCheckRequiredError', reason: 'stale' });
 
       expect(await claimState(tx, cid)).toBe('verifier_approved');
+    });
+
+    // ── THE GATE MATRIX — every DEFICIENCY against every APPROVING path ────────────────────
+    //
+    // ⚠⚠ TASK 7 TICKED *"P1/P3/P4 refused without a current passing check and without two
+    // accounts"*, and the truth was **three cells of fifteen**: P1 had no-check and
+    // `does_not_match`; P3 had stale ⛔ only; P4 had accounts-deleted ⛔ only. ⭐ Every other
+    // combination was a claim with ⛔ nothing under it — including the ONE-ACCOUNT case at every
+    // gate, which the existing `accounts: []` test ⛔ never reached because zero accounts fails
+    // earlier, on a different guard.
+    //
+    // ⭐ TABLE-DRIVEN ON PURPOSE: the property is *"EVERY approving path refuses EVERY deficiency"*,
+    // and writing it as a table makes a missing cell visible as a missing row rather than as a test
+    // nobody happened to write ([[feedback_gate_scope_semantic_coverage]]).
+    const DEFICIENCIES = [
+      {
+        key: 'no check at all',
+        error: 'NomineeNameCheckRequiredError',
+        seed: async (client: Client, tx: Tx, cid: ClaimId) => {
+          await seedAccountsOnly(tx, cid);
+        },
+      },
+      {
+        key: 'no accounts at all (cl.7 — the claim WAITS)',
+        error: 'NomineeBankAccountsRequiredError',
+        seed: async () => {
+          /* ⛔ nothing seeded — neither accounts nor a check. */
+        },
+      },
+      {
+        key: 'ONE account only (cl.7 makes BOTH mandatory)',
+        error: 'NomineeBankAccountsRequiredError',
+        seed: async (client: Client, tx: Tx, cid: ClaimId) => {
+          await seedAccountsOnly(tx, cid, [1]);
+        },
+      },
+      {
+        key: 'a STALE check (D5 — the accounts moved under it)',
+        error: 'NomineeNameCheckRequiredError',
+        seed: async (client: Client, tx: Tx, cid: ClaimId) => {
+          await seedNomineeNameCheck(client, PARIWAR_A, cid);
+          await tx
+            .update(schema.claimNomineeBankAccounts)
+            .set({ updatedAt: new Date(Date.now() + 60_000) })
+            .where(
+              and(
+                eq(schema.claimNomineeBankAccounts.pariwarId, PARIWAR_A),
+                eq(schema.claimNomineeBankAccounts.claimCaseId, cid),
+              ),
+            );
+        },
+      },
+      {
+        key: 'a `does_not_match` verdict (cl.5 — it WAITS, it is ⛔ never a denial)',
+        error: 'NomineeNameCheckRequiredError',
+        seed: async (client: Client, tx: Tx, cid: ClaimId) => {
+          await seedNomineeNameCheck(client, PARIWAR_A, cid, { verdicts: ['matches', 'does_not_match'] });
+        },
+      },
+    ] as const;
+
+    for (const d of DEFICIENCIES) {
+      it(`⭐ P1 (adjudicateClaim) refuses APPROVE — ${d.key}`, async () => {
+        const { client, tx } = getTx();
+        await enterAppScope(client, PARIWAR_A);
+        const cid = toClaimId(randomUUID());
+        await driveTo(client, cid, toMemberId(randomUUID()), 'verifier_review');
+        await d.seed(client, tx, cid);
+
+        await expect(
+          adjudicateClaim(client, { ...adjudicateBase(cid), outcome: 'approved', reasonCode: 'r8_90pct_met' }),
+        ).rejects.toMatchObject({ name: d.error });
+        // ⭐ AND THE CLAIM IS EXACTLY WHERE IT WAS — asserted as EQUALITY, ⛔ not as
+        // `not.toBe('verifier_approved')`, which passes for a claim that moved somewhere else
+        // entirely (the defect the P4 test carried).
+        expect(await claimState(tx, cid)).toBe('verifier_review');
+      });
+
+      it(`⭐ P3 (voteOnFrozenClaim) refuses APPROVE — ${d.key}`, async () => {
+        const { client, tx } = getTx();
+        await enterAppScope(client, PARIWAR_A);
+        const cid = toClaimId(randomUUID());
+        await driveTo(client, cid, toMemberId(randomUUID()), 'verifier_approved');
+        await d.seed(client, tx, cid);
+
+        await expect(
+          voteOnFrozenClaim(client, {
+            claimCaseId: cid,
+            pariwarId: PARIWAR_A,
+            outcome: 'approved',
+            reasonCode: null,
+            rationaleCiphertext: null,
+            actorId: TRUSTEE,
+            actorDisplay: 'Trustee One',
+            actor: 'trustee',
+          }),
+        ).rejects.toMatchObject({ name: d.error });
+        expect(await claimState(tx, cid)).toBe('verifier_approved');
+      });
+    }
+
+    it('⭐⭐ cl.5 — a recorded `does_not_match` mints ⛔ NO escalation event, and ⛔ no denial', async () => {
+      // ⚠ *"The system never acts"* has THREE limbs and ⛔ only the denial one was pinned. An
+      // ESCALATION is the other way a well-meaning implementation "acts" on a mismatch — it feels
+      // helpful, it routes the case to someone senior, and it is exactly what cl.5 forbids.
+      const { client, tx } = getTx();
+      await enterAppScope(client, PARIWAR_A);
+      const cid = toClaimId(randomUUID());
+      await driveTo(client, cid, toMemberId(randomUUID()), 'verifier_review');
+      await seedNomineeNameCheck(client, PARIWAR_A, cid, { verdicts: ['matches', 'does_not_match'] });
+
+      const types = await tx
+        .select({ t: schema.eventsLog.eventType })
+        .from(schema.eventsLog)
+        .where(and(eq(schema.eventsLog.pariwarId, PARIWAR_A), eq(schema.eventsLog.streamId, cid)));
+      const seen = types.map((r) => r.t);
+      // ⛔ NON-VACUITY: the check itself WAS recorded, so "no escalation" is a property of the
+      // system's response and ⛔ not of an empty stream.
+      expect(seen).toContain('claim.nominee_name_checked');
+      expect(seen).not.toContain('claim.verifier_escalated');
+      expect(seen).not.toContain('claim.verifier_denied');
+      expect(seen).not.toContain('claim.state_trustee_denied');
+      expect(await claimState(tx, cid)).toBe('verifier_review');
+    });
+
+    it('⚠ AC3 — a check cannot be recorded against ONE account either (cl.7, at the WRITER)', async () => {
+      // ⚠ The existing AC3 refusal test passes `accounts: []`, which fails on "no live accounts" —
+      // a DIFFERENT guard. This is the partial the rule is actually about.
+      const { client, tx } = getTx();
+      await enterAppScope(client, PARIWAR_A);
+      const cid = toClaimId(randomUUID());
+      const mid = toMemberId(randomUUID());
+      await driveTo(client, cid, mid, 'verifier_review');
+      await seedAccountsOnly(tx, cid, [1]);
+
+      const stamps = await liveAccountStamps(tx, cid);
+      expect(stamps).toHaveLength(1);
+      await expect(
+        recordNomineeNameCheck(client, {
+          claimCaseId: cid,
+          pariwarId: PARIWAR_A,
+          nomineeDeclarationToken: await tokenFor(tx, mid),
+          accounts: stamps.map((s) => ({
+            accountRank: s.accountRank as 1 | 2,
+            accountUpdatedAt: s.updatedAt.toISOString(),
+            verdict: 'matches' as const,
+            clericalReason: null,
+          })),
+          actorId: DISTRICT_ADMIN,
+          actorDisplay: 'Anita (District Admin)',
+          actor: 'operator',
+        }),
+      ).rejects.toBeInstanceOf(NomineeBankAccountsRequiredError);
     });
 
     it('P3 — a DENY vote is never gated, even with no accounts and no check', async () => {

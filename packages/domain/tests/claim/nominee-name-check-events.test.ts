@@ -158,6 +158,56 @@ describe('ClaimNomineeNameCheckedPayloadSchema (the 32nd claim event)', () => {
     ).toThrow();
   });
 
+  // ── COHERENCE — the DOMAIN payload schema's own rules ──────────────────────────────────────
+  //
+  // ⚠⚠ THIS BLOCK EXISTS BECAUSE THE EVENTS TEST ⛔ ONLY EVER ACCEPTED WELL-FORMED PAYLOADS (code
+  // review 2026-09-22). `packages/contracts` has a thorough `superRefine` suite for the REQUEST —
+  // but the REQUEST and the EVENT PAYLOAD are two different schemas, and the event is what is
+  // written to `events_log` FOREVER. A payload that only the HTTP boundary refuses is a payload a
+  // direct domain caller, a backfill or a future second writer can still persist.
+  it('⚠ COHERENCE — `clerical_difference` with a NULL reason is refused by the EVENT schema too', () => {
+    expect(() =>
+      ClaimNomineeNameCheckedPayloadSchema.parse({
+        ...checkedBase,
+        accounts: [
+          { account_rank: 1, account_updated_at: UPDATED_1, verdict: 'clerical_difference', clerical_reason: null },
+          checkedBase.accounts[1],
+        ],
+      }),
+    ).toThrow();
+  });
+
+  it('⚠ COHERENCE — a reason on `matches` and on `does_not_match` is refused by the EVENT schema', () => {
+    // ⭐ BOTH DIRECTIONS. A reason on `matches` would put a "difference" on the permanent record
+    // for a claim the District Admin said had none — and AC8's highlight reads exactly that field,
+    // so the flag would appear on a claim nobody flagged.
+    for (const verdict of ['matches', 'does_not_match'] as const) {
+      expect(() =>
+        ClaimNomineeNameCheckedPayloadSchema.parse({
+          ...checkedBase,
+          accounts: [
+            { account_rank: 1, account_updated_at: UPDATED_1, verdict, clerical_reason: 'initial' },
+            checkedBase.accounts[1],
+          ],
+        }),
+        `the event schema accepted a clerical reason on \`${verdict}\``,
+      ).toThrow();
+    }
+  });
+
+  it('⚠ COHERENCE — DUPLICATE ranks are refused: "exactly two" is ⛔ not just a LENGTH check', () => {
+    // ⚠ The existing "requires EXACTLY two account entries" test only ever tried LENGTH 1. A
+    // `[rank 1, rank 1]` payload has length two and is still incoherent — two verdicts about one
+    // account and ⛔ none about the other. ⭐ That is a judgement about an account nobody looked at,
+    // recorded permanently.
+    expect(() =>
+      ClaimNomineeNameCheckedPayloadSchema.parse({
+        ...checkedBase,
+        accounts: [checkedBase.accounts[0], { ...checkedBase.accounts[0] }],
+      }),
+    ).toThrow();
+  });
+
   // ── Trap 4 — the smuggling attempts ───────────────────────────────────────────────────────
   it('⛔ rejects a holder name, a nominee name, a name HASH and the filer note (.strict())', () => {
     for (const smuggled of [

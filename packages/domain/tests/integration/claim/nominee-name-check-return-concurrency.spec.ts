@@ -42,16 +42,19 @@ import { claimId as toClaimId, memberId as toMemberId, pariwarId as toPariwarId 
 import type { ClaimId, MemberId } from '../../../src/ids/index.js';
 import {
   projectClaimState,
+  recordClaimNomineeBankAccounts,
   returnToDistrictAdmin,
   routeToR9,
   TrusteeDecisionConflictError,
   TrusteeExclusionConflictError,
 } from '../../../src/claim/index.js';
+import { seedNomineeNameCheck } from '../_helpers.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);
 const PARIWAR_A = toPariwarId('11111111-1111-1111-1111-111111111111');
 const TRUSTEE = '88888888-8888-8888-8888-888888888888';
+const HELPLINE = 'd4d4d4d4-d4d4-d4d4-d4d4-d4d4d4d4d4d4';
 const TIMEOUT = 20_000;
 
 /** `other` is the only code valid for a return — `-227` cl.10 asks for a NOTE, not a category. */
@@ -133,6 +136,84 @@ describe.skipIf(!hasDatabase)(
         await emit('verifier_review', 'verifier_approved', 'claim.verifier_approved');
       });
       return cid;
+    }
+
+    /**
+     * A claim at `state_trustee_freeze` with two accounts and a recorded PASSING check — the setup
+     * the D4 close needs. ⭐ `state_trustee_freeze` is deliberate: BOTH ordinary bank-write windows
+     * exclude it, so every write below is attributable to the correction exception and ⛔ nothing
+     * else. (`verifier_approved` would be authorised by the tier-2 branch regardless.)
+     */
+    async function seedFrozenClaimWithCheck(): Promise<{ cid: ClaimId; mid: MemberId }> {
+      const cid = toClaimId(randomUUID());
+      const mid: MemberId = toMemberId(randomUUID());
+      createdClaims.push(cid);
+      await onOwnTx(async (client) => {
+        const emit = (from: string | null, to: string, eventType: string, extra: Record<string, unknown> = {}) =>
+          projectClaimState(client, {
+            claimCaseId: cid,
+            pariwarId: PARIWAR_A,
+            deceasedMemberId: mid,
+            intakeChannels: ['member_app'],
+            claimantActorId: null,
+            eventType: eventType as never,
+            payload: { from_state: from, to_state: to, trigger: 'test', actor: 'system', ...extra },
+            actorId: null,
+          });
+        await emit(null, 'intake_pending', 'claim.intake_initiated', {
+          deceased_member_id: mid,
+          intake_channel: 'member_app',
+          claimant_actor_id: null,
+        });
+        await emit('intake_pending', 'intake_converged', 'claim.intake_converged');
+        await emit('intake_converged', 'documents_pending', 'claim.documents_received');
+        await emit('documents_pending', 'verification_in_progress', 'claim.peer_mesh_pinged', {
+          selected_member_ids: [randomUUID()],
+          metric_id: 'district_cohort_v1',
+          metric_version: 1,
+        });
+        await emit('verification_in_progress', 'verifier_review', 'claim.verifier_reviewing');
+        await emit('verifier_review', 'verifier_approved', 'claim.verifier_approved');
+        await seedNomineeNameCheck(client, PARIWAR_A, cid);
+        await emit('verifier_approved', 'state_trustee_freeze', 'claim.state_trustee_frozen');
+      });
+      return { cid, mid };
+    }
+
+    /** A helpline OPERATOR correction — the caller shape the third branch exists for. */
+    const correctionOnOwnTx = (client: pg.PoolClient, claimCaseId: ClaimId, reason: string) =>
+      recordClaimNomineeBankAccounts(client, {
+        claimCaseId,
+        pariwarId: PARIWAR_A,
+        accounts: ([1, 2] as const).map((rank) => ({
+          accountRank: rank,
+          accountHolderNameCiphertext: `enc:v1:h-${rank}`,
+          accountNumberCiphertext: `enc:v1:a-${rank}`,
+          ifscCiphertext: `enc:v1:i-${rank}`,
+          vpaCiphertext: null,
+          nameDifferenceNoteCiphertext: null,
+          bankName: 'HDFC Bank',
+          branch: null,
+          ifscValidated: true,
+        })),
+        recordedByActor: HELPLINE,
+        actor: 'operator',
+        allowCorrection: true,
+        correctionReason: reason,
+      });
+
+    /** The District Admin's fresh PASSING check over the CORRECTED rows — ⛔ never re-seeding them. */
+    const recordPassingCheckReusingAccounts = (client: pg.PoolClient, claimCaseId: ClaimId) =>
+      seedNomineeNameCheck(client, PARIWAR_A, claimCaseId, { reuseAccounts: true });
+
+    /** How many LIVE `correction_return` rows this claim has — the row's survival is an assertion. */
+    async function liveReturnRowCount(claimCaseId: ClaimId): Promise<number> {
+      const r = await pool.query(
+        `SELECT count(*)::int AS n FROM claim_state_trustee_decisions
+          WHERE claim_case_id = $1 AND phase = 'correction_return' AND superseded_at IS NULL`,
+        [claimCaseId],
+      );
+      return (r.rows[0] as { n: number }).n;
     }
 
     /** Live decision rows for ONE claim, by phase — keyed on our own id, never a global count. */
@@ -285,6 +366,58 @@ describe.skipIf(!hasDatabase)(
         expect(ok).toHaveLength(2);
         expect(await livePhases(a)).toEqual(['correction_return']);
         expect(await livePhases(b)).toEqual(['correction_return']);
+      },
+      TIMEOUT,
+    );
+
+    // ── D4 — HOW THE CORRECTION EXCEPTION CLOSES ──────────────────────────────────────────────
+    //
+    // ⚠⚠ THIS IS ⛔ NOT A RACE, AND IT IS HERE ANYWAY. It belongs in
+    // `nominee-name-check-return-loop.spec.ts` with the rest of AC5, and it was written there
+    // first — where it FAILED, because the harness ⛔ cannot express it.
+    //
+    // ⭐ THE REASON, verified against the live DB rather than reasoned about:
+    // `isReturnedClaimResubmitted` requires `accounts.every(updated_at > return.decided_at)`, and
+    // BOTH columns default to `now()` — which in Postgres is TRANSACTION-START time. Inside
+    // `setupLiveDb()` + `getTx()`'s single BEGIN, the return row and every later account rewrite
+    // carry the IDENTICAL stamp (`now()` returned the same value 50 ms apart in one transaction;
+    // `clock_timestamp()` advanced), so `>` is false and the resubmission can ⛔ NEVER be detected.
+    // ⇒ own-committing transactions are the ⛔ only way to give the two writes different clocks.
+    //
+    // ⭐⭐ WHAT IT PINS is the sentence D4's spec text got WRONG, and the correction is the whole
+    // point: the permission does ⛔ NOT end when the corrected accounts are written. It ends when
+    // the accounts are corrected AND the District Admin records a fresh PASSING check. The return
+    // ROW outlives both — it is superseded ⛔ only by the next VOTE — so a test that watched the row
+    // would conclude the exception was still open.
+    it(
+      '⭐⭐ D4 — the exception closes on corrected + RE-CHECKED, ⛔ not on the write, and the row outlives it',
+      async () => {
+        const { cid } = await seedFrozenClaimWithCheck();
+
+        await onOwnTx((client) => returnToDistrictAdmin(client, returnInput(cid)));
+        expect(await liveReturnRowCount(cid), 'the return did not land').toBe(1);
+
+        // (1) THE WRITE ALONE — the exception stays OPEN. ⭐ This is the half the original sentence
+        //     claimed would close it, and it commits on its own connection so its `updated_at` is
+        //     genuinely later than the return's `decided_at`.
+        await onOwnTx((client) => correctionOnOwnTx(client, cid, 'first correction'));
+        expect(await liveReturnRowCount(cid)).toBe(1);
+
+        // ⛔ NON-VACUITY: still open after a committed correction. If the write DID close it, this
+        //    second correction would already be refused and step (2) would prove nothing.
+        await onOwnTx((client) => correctionOnOwnTx(client, cid, 'and again — still open'));
+
+        // (2) THE DISTRICT ADMIN LOOKS AGAIN and passes it. ⛔ NOW the exception is closed.
+        await onOwnTx((client) => recordPassingCheckReusingAccounts(client, cid));
+
+        await expect(
+          onOwnTx((client) => correctionOnOwnTx(client, cid, 'too late — it is resubmitted')),
+          'the correction exception survived a fresh passing check',
+        ).rejects.toMatchObject({ name: 'NomineeBankClaimNotCollectableError' });
+
+        // ⭐ AND THE ROW IS STILL THERE. The close is a DERIVED condition, ⛔ not a supersession —
+        // a reader who equated "closed" with "no live row" would have this backwards.
+        expect(await liveReturnRowCount(cid), 'the row must OUTLIVE the close').toBe(1);
       },
       TIMEOUT,
     );

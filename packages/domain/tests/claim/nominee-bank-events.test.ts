@@ -27,10 +27,10 @@ const recordedBase = {
 describe('ClaimNomineeBankRecordedPayloadSchema (the 23rd claim event)', () => {
   it('is registered as a claim event type + bound in the payload-schema map', () => {
     expect(CLAIM_EVENT_TYPES).toContain('claim.nominee_bank_recorded');
-    // 27 total: 24th/25th = claim.dpdpa_consent_recorded/_revoked (Story 6.9), 26th/27th =
-    // claim.verifier_escalated/_decision_revised (Story 6.11) — dpdpa-consent-events.test.ts owns the
-    // exact-count invariant.
-    expect(CLAIM_EVENT_TYPES).toHaveLength(32); // Story 6.18 added the 32nd (claim.nominee_name_checked)
+    // ⛔ NO COUNT PIN HERE — removed 2026-09-22. Six files asserted the same
+    // `toHaveLength(N)`, so every new claim event cost six edits, and five of them were in files
+    // about a DIFFERENT event. The exact count now lives in ONE place,
+    // `dpdpa-consent-events.test.ts`, which already declared itself its owner.
     expect(CLAIM_EVENT_PAYLOAD_SCHEMAS['claim.nominee_bank_recorded']).toBe(
       ClaimNomineeBankRecordedPayloadSchema,
     );

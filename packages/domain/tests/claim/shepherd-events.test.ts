@@ -31,7 +31,7 @@ const assignedBase = {
 describe('ClaimShepherdAssignedPayloadSchema (the 28th claim event)', () => {
   it('is registered as a claim event type + bound in the payload-schema map', () => {
     expect(CLAIM_EVENT_TYPES).toContain('claim.shepherd_assigned');
-    expect(CLAIM_EVENT_TYPES).toHaveLength(32); // Story 6.18 added the 32nd (claim.nominee_name_checked)
+    // ⛔ No count pin — `dpdpa-consent-events.test.ts` owns the exact count (2026-09-22).
     expect(CLAIM_EVENT_PAYLOAD_SCHEMAS['claim.shepherd_assigned']).toBe(ClaimShepherdAssignedPayloadSchema);
   });
 

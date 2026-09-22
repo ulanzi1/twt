@@ -38,9 +38,15 @@ const revokedBase = {
 describe('ClaimDpdpaConsentRecordedPayloadSchema (the 24th claim event)', () => {
   it('is registered as a claim event type + bound in the payload-schema map', () => {
     expect(CLAIM_EVENT_TYPES).toContain('claim.dpdpa_consent_recorded');
-    // The vocabulary grows as owner stories add annotation events: 25 = 23 (Story 6.8) + recorded
-    // (24th) + revoked (25th, code review); Story 6.11 added the 26th + 27th (claim.verifier_escalated
-    // + claim.verifier_decision_revised).
+    // ⭐⭐ THE ONE EXACT-COUNT PIN IN THE REPO, consolidated here 2026-09-22. Five sibling files
+    // carried the identical assertion, so every new claim event cost SIX edits and five of them sat
+    // in files about a different event. This file already declared itself the owner; now it is.
+    //
+    // ⚠ WHAT IT STILL BUYS, given that `packages/events/tests/claim-registry-coverage.test.ts`
+    // asserts SET EQUALITY against the registry and is strictly stronger for drift: set equality
+    // passes for a NEW event that was correctly registered. This pin does ⛔ not — so the
+    // vocabulary cannot grow without somebody deliberately acknowledging it here. ⭐ It is a
+    // TRIPWIRE, ⛔ not a coverage check, and the two are ⛔ not redundant.
     expect(CLAIM_EVENT_TYPES).toHaveLength(32); // Story 6.18 added the 32nd (claim.nominee_name_checked)
     expect(CLAIM_EVENT_PAYLOAD_SCHEMAS['claim.dpdpa_consent_recorded']).toBe(
       ClaimDpdpaConsentRecordedPayloadSchema,

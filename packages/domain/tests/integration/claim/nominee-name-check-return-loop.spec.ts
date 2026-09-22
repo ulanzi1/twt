@@ -30,6 +30,7 @@ import {
   projectClaimState,
   recordClaimNomineeBankAccounts,
   returnToDistrictAdmin,
+  routeToR9,
   voteOnFrozenClaim,
 } from '../../../src/claim/index.js';
 import { cycleFreezeCommitId as toCommitId } from '../../../src/ids/index.js';
@@ -49,6 +50,18 @@ const returnInput = (claimCaseId: ClaimId) => ({
   // `other` is the only code valid for a return — `-227` cl.10 asks for a NOTE, not a category.
   reasonCode: 'other' as const,
   rationaleCiphertext: 'enc:v1:the-holder-name-is-not-the-nominee',
+  actorId: TRUSTEE,
+  actorDisplay: 'Pariwar Admin One',
+  actor: 'trustee' as const,
+});
+
+/** The R9 ROUTING shape — the other `claim_state_trustee_decisions` phase, mutually exclusive
+ *  with a return by GUARD (⛔ not by the partial-unique index: the two write DIFFERENT phases). */
+const routeInput = (claimCaseId: ClaimId) => ({
+  claimCaseId,
+  pariwarId: PARIWAR_A,
+  reasonCode: 'r9_special_case' as const,
+  rationaleCiphertext: 'enc:v1:this-is-an-r9-special-case',
   actorId: TRUSTEE,
   actorDisplay: 'Pariwar Admin One',
   actor: 'trustee' as const,
@@ -98,6 +111,81 @@ async function driveTo(
   if (target === 'verifier_approved') {
     await emit('verifier_review', 'verifier_approved', 'claim.verifier_approved');
   }
+}
+
+/** The two-account payload every bank write in this file uses — one shape, so the CASES differ. */
+const bankInput = (claimCaseId: ClaimId) => ({
+  claimCaseId,
+  pariwarId: PARIWAR_A,
+  accounts: ([1, 2] as const).map((rank) => ({
+    accountRank: rank,
+    accountHolderNameCiphertext: `enc:v1:h-${rank}`,
+    accountNumberCiphertext: `enc:v1:a-${rank}`,
+    ifscCiphertext: `enc:v1:i-${rank}`,
+    vpaCiphertext: null,
+    nameDifferenceNoteCiphertext: null,
+    bankName: 'HDFC Bank',
+    branch: null,
+    ifscValidated: true,
+  })),
+});
+
+/** A helpline OPERATOR correction — the caller shape the third branch exists for. */
+const correctionAt = (client: Client, claimCaseId: ClaimId, reason: string | null) =>
+  recordClaimNomineeBankAccounts(client, {
+    ...bankInput(claimCaseId),
+    recordedByActor: HELPLINE,
+    actor: 'operator',
+    allowCorrection: true,
+    correctionReason: reason,
+  });
+
+/** Move a claim into `state_trustee_freeze` — a state BOTH bank-write windows exclude. */
+async function freeze(
+  client: Client,
+  claimCaseId: ClaimId,
+  deceasedMemberId: MemberId,
+  from: 'verifier_approved' | 'reversed',
+): Promise<void> {
+  await projectClaimState(client, {
+    claimCaseId,
+    pariwarId: PARIWAR_A,
+    deceasedMemberId,
+    intakeChannels: ['member_app'],
+    claimantActorId: null,
+    eventType: 'claim.state_trustee_frozen',
+    payload: { from_state: from, to_state: 'state_trustee_freeze', trigger: 'test', actor: 'trustee' },
+    actorId: null,
+  });
+}
+
+/**
+ * Drive a fresh claim all the way to `reversed` — the OTHER state tier-2 excludes and a check is
+ * recordable in. The only route the state machine offers is through a denial and an appeal:
+ * `verifier_review → denied → appeal_stage_1 → reversed` (`state.ts`).
+ */
+async function driveToReversed(
+  client: Client,
+  claimCaseId: ClaimId,
+  deceasedMemberId: MemberId,
+): Promise<void> {
+  await driveTo(client, claimCaseId, deceasedMemberId, 'verifier_review');
+  const emit = (from: string, to: string, eventType: string, extra: Record<string, unknown> = {}) =>
+    projectClaimState(client, {
+      claimCaseId,
+      pariwarId: PARIWAR_A,
+      deceasedMemberId,
+      intakeChannels: ['member_app'],
+      claimantActorId: null,
+      eventType: eventType as never,
+      payload: { from_state: from, to_state: to, trigger: 'test', actor: 'system', ...extra },
+      actorId: null,
+    });
+  await emit('verifier_review', 'denied', 'claim.verifier_denied');
+  await emit('denied', 'appeal_stage_1', 'claim.appeal_stage1_initiated');
+  // ⚠ `decision` is REQUIRED and is the reducer's branch key — the ONE place it reads payload
+  // content beyond `(state, type)`. The same event type also reaches `appeal_stage_2` and `denied`.
+  await emit('appeal_stage_1', 'reversed', 'claim.appeal_stage1_reviewed', { decision: 'reversed' });
 }
 
 /** Drive a claim at `verifier_review` to the TERMINAL `denied` state. */
@@ -310,38 +398,294 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the return loop (:5433)', () => {
     expect(types.filter((t) => t.includes('appeal'))).toEqual([]);
   });
 
-  it('⛔ a helpline correction at `verifier_approved` is REFUSED when no return is live (AC5)', async () => {
+  // ── AC5 — THE BANK WRITER'S THIRD BRANCH, exercised on every axis that reaches it ─────────
+  //
+  // ⚠⚠ THIS BLOCK REPLACES A TEST THAT SAID THE OPPOSITE OF WHAT IT ASSERTED (code review
+  // 2026-09-22). It was titled *"⛔ a helpline correction at `verifier_approved` is REFUSED when no
+  // return is live (AC5)"* and ended in `.resolves.toBeDefined()` — its own comment conceded
+  // *"`verifier_approved` IS the tier-2 window, so this one succeeds"*. ⭐ A reader scanning titles
+  // would have come away believing a refusal was proven that ⛔ never was. The behaviour was right;
+  // the NAME was a false claim about the system, which is the worse of the two defects.
+  //
+  // ⭐ THE BRANCH HAS THREE INDEPENDENT INPUTS and the old suite exercised ⛔ only one path through
+  // them (`hasLiveReturn` at `state_trustee_freeze`):
+  //   · WHICH HALF of `underCorrection` is true — the Pariwar Admin's live RETURN ROW, or the
+  //     District Admin's `does_not_match` CHECK. ⚠ The check half is AC5's own worked example and
+  //     had ⛔ no test at all.
+  //   · THE CLAIM'S STATE — barred (`denied`/`approved`/`settled`) vs anything else.
+  //   · `allowCorrection` — the operator's flag; the MEMBER route passes `false` and must ⛔ not
+  //     be able to ride the exception.
+
+  it('⭐ AC5 — at `verifier_approved` the TIER-2 window already permits it, return or no return', async () => {
     const { client } = getTx();
     await enterAppScope(client, PARIWAR_A);
     const cid = toClaimId(randomUUID());
     await driveTo(client, cid, toMemberId(randomUUID()), 'verifier_approved');
     await seedNomineeNameCheck(client, PARIWAR_A, cid);
 
-    // ⭐ The mirror of step (4) above. `verifier_approved` IS the tier-2 window, so this one
-    // succeeds — the sharper assertion is the freeze-state case below, which the tier-2 window
-    // excludes and which ONLY a live return can unlock.
-    await expect(
-      recordClaimNomineeBankAccounts(client, {
+    // ⭐ THE HONEST STATEMENT of what this state proves: `verifier_approved` is
+    // `NOMINEE_BANK_ADMIN_CORRECTION_STATES`, so the write is authorised by the ORDINARY tier-2
+    // branch and the third branch is ⛔ never consulted. ⇒ this case can say ⛔ nothing about the
+    // return exception, and it no longer pretends to. The sharp cases are the freeze / reversed
+    // ones below, which tier-2 excludes.
+    await expect(correctionAt(client, cid, 'routine tier-2 correction')).resolves.toBeDefined();
+
+    // ⭐ And the reason stays mandatory here exactly as in the third branch — the two paths agree.
+    await expect(correctionAt(client, cid, null)).rejects.toMatchObject({
+      name: 'NomineeBankCorrectionReasonRequiredError',
+    });
+  });
+
+  it("⭐⭐ AC5 — the DA's `does_not_match` ALONE unlocks the correction at `state_trustee_freeze` (⛔ no return)", async () => {
+    // ⚠⚠ THIS IS AC5's OWN WORKED EXAMPLE AND IT HAD ⛔ NO TEST. Chunk 1's P2 finding was exactly
+    // this: the branch used to test `hasLiveReturnRow` alone, so a District Admin recording
+    // `does_not_match` at a non-writable state threw `NomineeBankClaimNotCollectableError` while
+    // the filer-facing flag was telling the operator to go and correct the details.
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const cid = toClaimId(randomUUID());
+    const mid = toMemberId(randomUUID());
+    await driveTo(client, cid, mid, 'verifier_approved');
+    await freeze(client, cid, mid, 'verifier_approved');
+    expect(await claimState(tx, cid)).toBe('state_trustee_freeze');
+
+    // ⭐ POSITIVE CONTROL FIRST — with a PASSING check the freeze state refuses, so the success
+    // below is attributable to the verdict and ⛔ not to the state being writable all along.
+    await seedNomineeNameCheck(client, PARIWAR_A, cid);
+    await expect(correctionAt(client, cid, 'nothing is wrong yet')).rejects.toMatchObject({
+      name: 'NomineeBankClaimNotCollectableError',
+    });
+
+    // ⭐ Now the District Admin says the names do not match. ⛔ No return row exists.
+    await seedNomineeNameCheck(client, PARIWAR_A, cid, {
+      verdicts: ['matches', 'does_not_match'],
+      reuseAccounts: true,
+    });
+    expect(await hasLiveReturnRow(tx, PARIWAR_A, cid)).toBe(false);
+    await expect(correctionAt(client, cid, 'holder name corrected on the DA note')).resolves.toBeDefined();
+  });
+
+  it("⭐ AC5 — the same holds at `reversed`, the other state tier-2 excludes", async () => {
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const cid = toClaimId(randomUUID());
+    const mid = toMemberId(randomUUID());
+    await driveToReversed(client, cid, mid);
+    expect(await claimState(tx, cid)).toBe('reversed');
+
+    await seedNomineeNameCheck(client, PARIWAR_A, cid);
+    await expect(correctionAt(client, cid, 'nothing is wrong yet')).rejects.toMatchObject({
+      name: 'NomineeBankClaimNotCollectableError',
+    });
+
+    await seedNomineeNameCheck(client, PARIWAR_A, cid, {
+      verdicts: ['does_not_match', 'matches'],
+      reuseAccounts: true,
+    });
+    await expect(correctionAt(client, cid, 'corrected after the reversal')).resolves.toBeDefined();
+  });
+
+  it('⭐⭐ a live return does ⛔ NOT unlock a TERMINAL claim — `denied` is barred outright', async () => {
+    // ⭐ REACHABLE, ⛔ not hypothetical: a return may be opened at `state_trustee_freeze`
+    // (`TRUSTEE_RETURNABLE_STATES`), and R9 may then deny the claim from that same state
+    // (`state.ts`: state_trustee_freeze --claim.r9_outcome--> denied). The row stays live, because
+    // ⛔ only a VOTE supersedes it. ⇒ the barred-states guard is the ⛔ only thing standing between
+    // a live governance row and a write on a dead claim.
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const cid = toClaimId(randomUUID());
+    const mid = toMemberId(randomUUID());
+    await driveTo(client, cid, mid, 'verifier_approved');
+    await freeze(client, cid, mid, 'verifier_approved');
+    await seedNomineeNameCheck(client, PARIWAR_A, cid);
+    await returnToDistrictAdmin(client, returnInput(cid));
+
+    // ⛔ NON-VACUITY: the exception really is open right now — otherwise the refusal after the
+    // denial would be proving the state machine, ⛔ not the barred-states guard.
+    await expect(correctionAt(client, cid, 'open while frozen')).resolves.toBeDefined();
+    await seedNomineeNameCheck(client, PARIWAR_A, cid, {
+      verdicts: ['matches', 'does_not_match'],
+      reuseAccounts: true,
+    });
+
+    await projectClaimState(client, {
+      claimCaseId: cid,
+      pariwarId: PARIWAR_A,
+      deceasedMemberId: mid,
+      intakeChannels: ['member_app'],
+      claimantActorId: null,
+      eventType: 'claim.r9_outcome' as never,
+      payload: {
+        from_state: 'state_trustee_freeze',
+        to_state: 'denied',
+        trigger: 'test',
+        actor: 'trustee',
+        // ⚠ The R9 payload is `.strict()` and carries the panel's provenance — all six are required.
+        outcome: 'denied',
+        clause_id: 'niy.r9.a',
+        clause_version_id: randomUUID(),
+        voting_requirement: 'majority',
+        approve_count: 1,
+        deny_count: 4,
+      },
+      actorId: null,
+    });
+    expect(await claimState(tx, cid)).toBe('denied');
+    // ⭐ The row is STILL live — the refusal below is the barred list, ⛔ not a closed exception.
+    expect(await hasLiveReturnRow(tx, PARIWAR_A, cid)).toBe(true);
+
+    await expect(correctionAt(client, cid, 'too late')).rejects.toMatchObject({
+      name: 'NomineeBankClaimNotCollectableError',
+    });
+  });
+
+  it('⛔ …and the same at `approved`, the other reachable terminal state', async () => {
+    // ⭐ The OTHER half of `NOMINEE_BANK_CORRECTION_BARRED_STATES`. Also reachable with the row
+    // live: `state_trustee_freeze --r9_outcome--> state_trustee_approved --claim.approved-->
+    // approved`. ⚠ `settled` is barred by the same constant and is ⛔ not exercised: it is one more
+    // hop past this and adds ⛔ no branch — recorded so the omission is a choice, ⛔ not a gap.
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const cid = toClaimId(randomUUID());
+    const mid = toMemberId(randomUUID());
+    await driveTo(client, cid, mid, 'verifier_approved');
+    await freeze(client, cid, mid, 'verifier_approved');
+    await seedNomineeNameCheck(client, PARIWAR_A, cid);
+    await returnToDistrictAdmin(client, returnInput(cid));
+    await expect(correctionAt(client, cid, 'open while frozen')).resolves.toBeDefined();
+
+    const emit = (from: string, to: string, eventType: string, extra: Record<string, unknown> = {}) =>
+      projectClaimState(client, {
         claimCaseId: cid,
         pariwarId: PARIWAR_A,
-        accounts: ([1, 2] as const).map((rank) => ({
-          accountRank: rank,
-          accountHolderNameCiphertext: `enc:v1:h-${rank}`,
-          accountNumberCiphertext: `enc:v1:a-${rank}`,
-          ifscCiphertext: `enc:v1:i-${rank}`,
-          vpaCiphertext: null,
-          nameDifferenceNoteCiphertext: null,
-          bankName: 'HDFC Bank',
-          branch: null,
-          ifscValidated: true,
-        })),
-        recordedByActor: HELPLINE,
-        actor: 'operator',
-        allowCorrection: true,
-        correctionReason: 'routine tier-2 correction',
-      }),
-    ).resolves.toBeDefined();
+        deceasedMemberId: mid,
+        intakeChannels: ['member_app'],
+        claimantActorId: null,
+        eventType: eventType as never,
+        payload: { from_state: from, to_state: to, trigger: 'test', actor: 'trustee', ...extra },
+        actorId: null,
+      });
+    await emit('state_trustee_freeze', 'state_trustee_approved', 'claim.r9_outcome', {
+      outcome: 'approved',
+      clause_id: 'niy.r9.a',
+      clause_version_id: randomUUID(),
+      voting_requirement: 'majority',
+      approve_count: 4,
+      deny_count: 1,
+    });
+    await emit('state_trustee_approved', 'approved', 'claim.approved');
+    expect(await claimState(tx, cid)).toBe('approved');
+    expect(await hasLiveReturnRow(tx, PARIWAR_A, cid)).toBe(true);
+
+    await expect(correctionAt(client, cid, 'too late')).rejects.toMatchObject({
+      name: 'NomineeBankClaimNotCollectableError',
+    });
   });
+
+  it('⭐ a live R9 ROUTING row and a live return cannot coexist — proven, ⛔ not assumed', async () => {
+    // ⚠⚠ THE REVIEW ASKED FOR *"the row-alone branch … with a live R9 routing row"*. ⭐ That state
+    // is UNREACHABLE, and this asserts the unreachability rather than writing a test that would
+    // have to fabricate it ([[feedback_trace_reachability_before_escalating]]). `routeToR9` and
+    // `returnToDistrictAdmin` are mutually exclusive by GUARD (`hasLiveReturnRow` /
+    // `hasLiveRoutedRow`), ⛔ not by the partial-unique index — they write different phases, so the
+    // index would happily hold both. The concurrent version of this is proved in
+    // `nominee-name-check-return-concurrency.spec.ts`; this is the sequential half, both ways round.
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+
+    const a = toClaimId(randomUUID());
+    const am = toMemberId(randomUUID());
+    await driveTo(client, a, am, 'verifier_approved');
+    await seedNomineeNameCheck(client, PARIWAR_A, a);
+    await returnToDistrictAdmin(client, returnInput(a));
+    // ⭐ The TYPED error, ⛔ not `rejects.toThrow()`: a bare throw-assertion passes on a seeding
+    // bug, a scope error or a 23505 escaping raw — none of which is the exclusion guard.
+    await expect(
+      routeToR9(client, routeInput(a)),
+      'R9 routing slipped past a live return',
+    ).rejects.toMatchObject({ name: 'TrusteeExclusionConflictError' });
+
+    const b = toClaimId(randomUUID());
+    const bm = toMemberId(randomUUID());
+    await driveTo(client, b, bm, 'verifier_approved');
+    await seedNomineeNameCheck(client, PARIWAR_A, b);
+    await routeToR9(client, routeInput(b));
+    await expect(
+      returnToDistrictAdmin(client, returnInput(b)),
+      'a return slipped past a live R9 routing row',
+    ).rejects.toMatchObject({ name: 'TrusteeExclusionConflictError' });
+
+    // ⛔ NON-VACUITY: each first write really landed, so the refusals are exclusion and ⛔ not two
+    // claims that were never set up.
+    expect(await hasLiveReturnRow(tx, PARIWAR_A, a)).toBe(true);
+    expect(await hasLiveReturnRow(tx, PARIWAR_A, b)).toBe(false);
+  });
+
+  it('⛔ `allowCorrection: false` cannot ride the exception — the MEMBER route stays shut', async () => {
+    // ⚠ The member app's own bank route passes `allowCorrection: false`. If the third branch keyed
+    // on the governance row ALONE, a returned claim would quietly become member-writable at any
+    // state — including states the member can ⛔ never write in.
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const cid = toClaimId(randomUUID());
+    const mid = toMemberId(randomUUID());
+    await driveTo(client, cid, mid, 'verifier_approved');
+    await freeze(client, cid, mid, 'verifier_approved');
+    await seedNomineeNameCheck(client, PARIWAR_A, cid);
+    await returnToDistrictAdmin(client, returnInput(cid));
+    expect(await hasLiveReturnRow(tx, PARIWAR_A, cid)).toBe(true);
+
+    await expect(
+      recordClaimNomineeBankAccounts(client, {
+        ...bankInput(cid),
+        recordedByActor: HELPLINE,
+        actor: 'member',
+        allowCorrection: false,
+        correctionReason: null,
+      }),
+    ).rejects.toMatchObject({ name: 'NomineeBankClaimNotCollectableError' });
+
+    // ⭐ POSITIVE CONTROL — the very same claim, same instant, with the operator's flag: permitted.
+    // Without this the refusal above could be the state, the check, or anything else.
+    await expect(correctionAt(client, cid, 'operator correction')).resolves.toBeDefined();
+  });
+
+  it('⭐ corrected but ⛔ NOT re-checked — the exception stays OPEN (the half D4 got wrong)', async () => {
+    // ⭐⭐ THE PROPERTY D4's SPEC SENTENCE GOT WRONG. It said the record *"closes when the corrected
+    // accounts are written"*. It does ⛔ not: writing them leaves the exception wide open, which is
+    // what this asserts. The CLOSING half — corrected AND re-checked — is ⛔ NOT PROVABLE ON THIS
+    // HARNESS and lives in `nominee-name-check-return-concurrency.spec.ts`; see the note below.
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const cid = toClaimId(randomUUID());
+    const mid = toMemberId(randomUUID());
+    await driveTo(client, cid, mid, 'verifier_approved');
+    await freeze(client, cid, mid, 'verifier_approved');
+    await seedNomineeNameCheck(client, PARIWAR_A, cid);
+    await returnToDistrictAdmin(client, returnInput(cid));
+
+    await expect(correctionAt(client, cid, 'first correction')).resolves.toBeDefined();
+    await expect(correctionAt(client, cid, 'and again, still open')).resolves.toBeDefined();
+    expect(await hasLiveReturnRow(tx, PARIWAR_A, cid), 'the row must OUTLIVE the writes').toBe(true);
+  });
+
+  // ⚠⚠⚠ WHY "ONCE RESUBMITTED THE EXCEPTION IS CLOSED" IS ⛔ NOT TESTED IN THIS FILE, recorded
+  // rather than quietly dropped ([[feedback_record_unattested_no_backfill]]).
+  //
+  // I wrote that test here first and it FAILED — the correction succeeded where it should have been
+  // refused. ⭐ The cause is ⛔ not the code: `isReturnedClaimResubmitted` requires
+  // `accounts.every(updated_at > return.decided_at)`, and BOTH columns default to `now()`, which in
+  // Postgres is TRANSACTION-START time, ⛔ not wall clock. Verified against the live DB:
+  // `now()` returned the identical value 50 ms apart inside one transaction, while
+  // `clock_timestamp()` advanced. ⇒ inside `setupLiveDb()` + `getTx()`'s single BEGIN the return row
+  // and every later account rewrite carry the SAME stamp, `>` is false, and the resubmission can
+  // ⛔ never be detected. The harness, ⛔ not the invariant, is what fails.
+  //
+  // ⇒ the proof lives in `nominee-name-check-return-concurrency.spec.ts`, whose own-committing
+  // transactions give the two writes genuinely different `now()` values.
+  // ⚠ This is the SAME root cause as the carried residual *"the return-resubmission ordering
+  // compares transaction-START clocks"* in `deferred-work.md` — ⛔ not a new defect, and ⛔ not
+  // discharged by moving the test.
 
   it('⭐ the helpline correction succeeds at `state_trustee_freeze` ONLY while a return is live', async () => {
     const { client, tx } = getTx();
@@ -410,15 +754,51 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the return loop (:5433)', () => {
       clericalReasons: [null, 'married_name'],
     });
 
+    // ⚠⚠ THE PLANT IS LOAD-BEARING, AND IT WAS MISSING (code review 2026-09-22). This test used to
+    // assert `not.toContain('Asha')` while ⛔ NO fixture anywhere planted that string — the seeded
+    // ciphertexts are `enc:v1:holder-N`. ⇒ that half of the assertion could ⛔ never fail, and a
+    // read that copied the stored holder column straight into the row would have passed it
+    // ([[feedback_gate_scope_semantic_coverage]] — a green that has never been seen red).
+    // ⭐ So the name is planted INTO the stored column first. It is deliberately ⛔ NOT a real
+    // encryption: this layer ⛔ never decrypts, so the strongest thing the DOMAIN can prove is that
+    // the read does not pass the STORED bytes through. The decrypted-plaintext leg belongs to an
+    // API test with a real envelope ([[feedback_record_unattested_no_backfill]] — say what is
+    // proven here, ⛔ not what sounds stronger).
+    const PLANTED_NAME = 'Asha Devi';
+    await tx
+      .update(schema.claimNomineeBankAccounts)
+      .set({ accountHolderNameCiphertext: `enc:v1:${PLANTED_NAME}` })
+      .where(
+        and(
+          eq(schema.claimNomineeBankAccounts.pariwarId, PARIWAR_A),
+          eq(schema.claimNomineeBankAccounts.claimCaseId, cid),
+        ),
+      );
+    // ⛔ NON-VACUITY: the plant actually landed. Without this the assertion below is back to
+    // proving nothing, just more elaborately.
+    const planted = await tx
+      .select({ h: schema.claimNomineeBankAccounts.accountHolderNameCiphertext })
+      .from(schema.claimNomineeBankAccounts)
+      .where(
+        and(
+          eq(schema.claimNomineeBankAccounts.pariwarId, PARIWAR_A),
+          eq(schema.claimNomineeBankAccounts.claimCaseId, cid),
+        ),
+      );
+    expect(planted.length).toBe(2);
+    expect(planted.every((r) => r.h.includes(PLANTED_NAME))).toBe(true);
+
     const pending = await getCycleFreezePending(tx, PARIWAR_A);
     const row = pending.readyToFreeze.find((c) => c.claimCaseId === String(cid));
     expect(row).toBeDefined();
     // ⭐ The highlight rides the surface's OWN read (AC8) — codes only.
     expect(row!.nameDifferenceReasons).toEqual(['married_name']);
-    // ⛔ And carries no name: the whole row is scanned, not just the flag.
+    // ⭐ And carries ⛔ no name: the whole row is scanned, ⛔ not just the flag.
     const dump = JSON.stringify(row);
     expect(dump).not.toContain('holder');
-    expect(dump).not.toContain('Asha');
+    expect(dump, 'the cycle-freeze row carried the stored holder bytes through').not.toContain(
+      PLANTED_NAME,
+    );
   });
 
   it('⭐ AC8 — a claim whose check recorded NO difference carries an empty flag', async () => {

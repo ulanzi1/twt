@@ -65,11 +65,60 @@ describe('ClaimNomineeNameCheckedPayloadSchema (the 32nd claim event)', () => {
     // shipped `routeToR9` shape. An earlier draft of this story ordered two annotation events for
     // it; both were dropped. If a future change adds a `claim.*` event for the return, THIS is the
     // assertion that should make someone re-read AC11 before doing it.
-    expect(CLAIM_EVENT_TYPES.filter((t) => t.includes('nominee_name'))).toEqual([
+    //
+    // ⚠⚠ REWRITTEN 2026-09-22 — IT USED TO BE UNABLE TO DO THAT JOB. It filtered on the substrings
+    // `nominee_name`, `correction_return` and `returned`, so it caught ⛔ only an event somebody
+    // named after the mechanism. A `claim.sent_back`, `claim.pariwar_admin_rejected` or
+    // `claim.correction_requested` — the names a real author is at least as likely to reach for —
+    // would have sailed through all three filters and the test would have gone on reporting
+    // *"EXACTLY ONE event"* ([[feedback_gate_scope_semantic_coverage]]: the guard must cover the
+    // property, ⛔ not three spellings of it).
+    //
+    // ⭐ It is now a DIFF AGAINST THE PRE-6.18 VOCABULARY, so ANY addition fails it whatever it is
+    // called. The baseline is a frozen literal on purpose: derived from `CLAIM_EVENT_TYPES` it
+    // would move with the thing it is measuring.
+    const PRE_6_18_CLAIM_EVENTS: readonly string[] = [
+      'claim.intake_initiated',
+      'claim.intake_converged',
+      'claim.documents_received',
+      'claim.peer_mesh_pinged',
+      'claim.peer_mesh_responded',
+      'claim.ground_inspection_scheduled',
+      'claim.ground_inspection_completed',
+      'claim.nominee_bank_recorded',
+      'claim.dpdpa_consent_recorded',
+      'claim.dpdpa_consent_revoked',
+      'claim.verifier_reviewing',
+      'claim.verifier_approved',
+      'claim.verifier_denied',
+      'claim.verifier_escalated',
+      'claim.verifier_decision_revised',
+      'claim.concealment_assessed',
+      'claim.shepherd_assigned',
+      'claim.state_trustee_frozen',
+      'claim.state_trustee_approved',
+      'claim.approved',
+      'claim.state_trustee_denied',
+      'claim.r9_outcome',
+      'claim.appeal_stage1_initiated',
+      'claim.appeal_stage1_reviewed',
+      'claim.appeal_stage2_initiated',
+      'claim.appeal_stage2_reviewed',
+      'claim.appeal_stage3_initiated',
+      'claim.appeal_stage3_reviewed',
+      'claim.reversed',
+      'claim.settled',
+      'claim.denied_no_appeal',
+    ];
+    const live = [...CLAIM_EVENT_TYPES] as string[];
+
+    // ⭐ ADDED — exactly one, and it is the one AC3 names.
+    expect(live.filter((t) => !PRE_6_18_CLAIM_EVENTS.includes(t))).toEqual([
       'claim.nominee_name_checked',
     ]);
-    expect(CLAIM_EVENT_TYPES.filter((t) => t.includes('correction_return'))).toEqual([]);
-    expect(CLAIM_EVENT_TYPES.filter((t) => t.includes('returned'))).toEqual([]);
+    // REMOVED — ⛔ none. A rename is an add AND a delete, and only checking additions would read a
+    // rename as a clean addition.
+    expect(PRE_6_18_CLAIM_EVENTS.filter((t) => !live.includes(t))).toEqual([]);
   });
 
   it('accepts a valid payload (both ranks, one verdict each)', () => {
@@ -160,6 +209,14 @@ describe('ClaimNomineeNameCheckedPayloadSchema (the 32nd claim event)', () => {
     // ever prove identity from ONE state. `-226` cl.5's "the system never acts" has to hold from
     // every state a claim can be in, including the ones the writer refuses to record in: the
     // reducer stays TOTAL, and the window guard lives in the writer, never here.
+    //
+    // ⚠ WHAT THIS DOES ⛔ NOT PROVE, stated because the title invites the stronger reading (code
+    // review 2026-09-22). `reduce` ends in `default: return state`, so identity is the BEHAVIOUR of
+    // every unhandled event too. ⇒ deleting the explicit `case 'claim.nominee_name_checked'` would
+    // change ⛔ nothing observable and this loop would still pass. It proves the PROPERTY
+    // (`-226` cl.5 holds from every state), ⛔ not that the case is written down — and the property
+    // is the thing cl.5 rules on, so that is the right subject. The structural half is the separate
+    // assertion below.
     for (const state of CLAIM_LIFECYCLE_STATES) {
       const stepped = claimStateMachine.step(state, {
         type: 'claim.nominee_name_checked',
@@ -167,6 +224,27 @@ describe('ClaimNomineeNameCheckedPayloadSchema (the 32nd claim event)', () => {
       } as never);
       expect(stepped, `reducer moved state from ${state}`).toBe(state);
     }
+  });
+
+  it('⭐⭐ …and the event appears on ⛔ NO edge of the transition table — the STRUCTURAL half', () => {
+    // ⚠ THE LOOP ABOVE CANNOT CATCH THE REGRESSION THAT MATTERS. If a future change gives this
+    // event a transition, it would be added HERE — and a reader of the loop above would have to
+    // notice that a passing identity test had quietly stopped being true. This asserts the absence
+    // directly, on the table itself.
+    //
+    // ⭐ `-226` cl.5 — *"the system never acts"* — is a claim about the SHAPE of the machine, ⛔ not
+    // only about today's outputs: there must be ⛔ no edge for a future reader to reach for. The
+    // matrix is documentation-only (the runtime authority is `reduce`), which is exactly why it is
+    // worth pinning: a documentation table that disagreed with cl.5 is how the next author learns
+    // the wrong rule.
+    const edges = claimStateMachine.transitions ?? [];
+    expect(edges.length, 'the transition table is empty — this assertion would be vacuous').toBeGreaterThan(
+      20,
+    );
+    expect(
+      edges.filter((e) => e.event === 'claim.nominee_name_checked'),
+      'claim.nominee_name_checked was given a transition — `-226` cl.5 says the system NEVER acts',
+    ).toEqual([]);
   });
 });
 
@@ -184,10 +262,18 @@ describe('the recordable window (AC3) vs the bank-write windows (AC4)', () => {
     //
     // ⛔ This test ⛔ cannot notice that branch: it inspects two CONSTANTS, and the third window's
     // guard is a different constant applied on a different path. The branch is proved behaviourally
-    // instead, by `tests/integration/claim/nominee-name-check-return-loop.spec.ts`:
-    //   *"⭐ the helpline correction succeeds at `state_trustee_freeze` ONLY while a return is live"*
-    // ⇒ the true rule is **"a correction may reach a frozen claim only while a return is open"**,
-    //    ⛔ not "nothing can be written after the freeze".
+    // instead, in `tests/integration/claim/nominee-name-check-return-loop.spec.ts`.
+    //
+    // ⚠⚠ AND THE RESTATED RULE WAS ITSELF TOO NARROW — corrected 2026-09-22. This comment used to
+    // end *"the true rule is «a correction may reach a frozen claim ⛔ only while a RETURN is
+    // open»"*. That is FALSE, and the AC5 block in the integration spec now proves it: the
+    // District Admin's `does_not_match` verdict unlocks the correction at `state_trustee_freeze`
+    // and at `reversed` with ⛔ NO return row in existence. `underCorrection` is a DISJUNCTION —
+    // `isClaimUnderCorrection(hasLiveReturn && !resubmitted, checkSendsBack)` — and the old
+    // sentence named ⛔ only the first disjunct.
+    // ⇒ the true rule is **"a correction may reach a frozen claim while EITHER a return is open or
+    //   the District Admin's current check sends it back"**, ⛔ not "nothing can be written after
+    //   the freeze" and ⛔ not "only while a return is open".
     //
     // AC4's reasoning survives the correction, and this is why: `commitCycleFreeze` carries no check
     // because a correction write MAKES THE CHECK STALE, and a stale check re-blocks approval. The
@@ -267,6 +353,62 @@ describe('currency + passing (AC3, AC4)', () => {
 
   it('goes stale when an account disappears', () => {
     expect(isNomineeNameCheckCurrent(check, [liveAccounts[0]!], 'tok-1')).toBe(false);
+  });
+
+  // ── THE THREE CASES THE PREDICATE'S OWN BRANCHES ALLOW AND ⛔ NOTHING EXERCISED ─────────────
+  // Added 2026-09-22 (code review). The four tests above cover the token, an edited stamp and a
+  // MISSING account; the remaining shapes each take a DIFFERENT line of the function, and all three
+  // are how a real bug would look.
+
+  it('⭐ goes stale when an EXTRA live account appears — the length guard, from the other side', () => {
+    // ⚠ The four tests above only ever SHRINK the live set, so `check.accounts.length !==
+    // liveAccounts.length` was proven in ⛔ only one direction. A third row on a two-row claim is the
+    // realistic shape (a bad insert, or a rank-3 the writer should have refused), and a check
+    // recorded over two accounts must ⛔ never be current for three.
+    const extra = [...liveAccounts, { accountRank: 3, updatedAt: new Date(UPDATED_1) }];
+    expect(isNomineeNameCheckCurrent(check, extra, 'tok-1')).toBe(false);
+  });
+
+  it('⭐⭐ goes stale when the two ranks SWAP their timestamps — ⛔ not matched positionally', () => {
+    // ⚠⚠ THE SHARPEST OF THE THREE. The function looks each live account up BY RANK
+    // (`check.accounts.find(a => a.accountRank === live.accountRank)`), ⛔ not by position. An
+    // implementation that zipped the two arrays index-by-index would pass every test above — same
+    // length, same two timestamps present, same token — and would be WRONG: it would report a
+    // check as current after the two accounts had exchanged details, which is precisely the edit a
+    // name check exists to catch.
+    const swapped = [
+      { accountRank: 1, updatedAt: new Date(UPDATED_2) },
+      { accountRank: 2, updatedAt: new Date(UPDATED_1) },
+    ];
+    expect(isNomineeNameCheckCurrent(check, swapped, 'tok-1')).toBe(false);
+
+    // ⛔ NON-VACUITY: the swap is the ⛔ only difference — reversing the ARRAY ORDER alone, with
+    // each rank keeping its own stamp, is still current. Without this the assertion above could be
+    // passing because the function is order-sensitive, which would be a different bug.
+    expect(isNomineeNameCheckCurrent(check, [liveAccounts[1]!, liveAccounts[0]!], 'tok-1')).toBe(true);
+  });
+
+  it('⭐ a SUB-MILLISECOND edit is invisible — recorded as a fact, ⛔ not asserted as a guarantee', () => {
+    // ⚠⚠ SAY IT PLAINLY: the comparison is `recorded.accountUpdatedAt !== live.updatedAt
+    // .toISOString()`, and JS `Date` carries MILLISECONDS. Postgres `timestamptz` carries
+    // MICROSECONDS. ⇒ two edits inside the same millisecond are indistinguishable here and the
+    // check reports CURRENT.
+    // ⭐ This test pins the REAL behaviour so it cannot change unnoticed; it does ⛔ NOT bless it.
+    // ⚠ It is un-escalated on purpose: `updated_at` moves on a DELETE-then-INSERT rewrite, and two
+    // such rewrites landing in the same millisecond on the same claim would ALSO have to race
+    // the claim row lock, which serialises them. ⛔ No reachability is claimed either way
+    // ([[feedback_trace_reachability_before_escalating]]).
+    const sameMs = [
+      { accountRank: 1, updatedAt: new Date(UPDATED_1) },
+      { accountRank: 2, updatedAt: new Date(UPDATED_2) },
+    ];
+    expect(isNomineeNameCheckCurrent(check, sameMs, 'tok-1')).toBe(true);
+    // ⭐ And ONE millisecond IS enough — the resolution floor, pinned from the other side.
+    const oneMsLater = [
+      { accountRank: 1, updatedAt: new Date(new Date(UPDATED_1).getTime() + 1) },
+      liveAccounts[1]!,
+    ];
+    expect(isNomineeNameCheckCurrent(check, oneMsLater, 'tok-1')).toBe(false);
   });
 
   it('passes when every verdict is matches or clerical_difference', () => {

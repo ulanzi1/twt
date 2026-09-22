@@ -698,26 +698,26 @@ export async function seedNomineeNameCheck(
 
   // Two live accounts — `-226` cl.7 makes both mandatory before a claim can be decided.
   if (opts.reuseAccounts !== true) {
-  await tx
-    .delete(schema.claimNomineeBankAccounts)
-    .where(
-      and(
-        eq(schema.claimNomineeBankAccounts.pariwarId, pid),
-        eq(schema.claimNomineeBankAccounts.claimCaseId, cid),
-      ),
+    await tx
+      .delete(schema.claimNomineeBankAccounts)
+      .where(
+        and(
+          eq(schema.claimNomineeBankAccounts.pariwarId, pid),
+          eq(schema.claimNomineeBankAccounts.claimCaseId, cid),
+        ),
+      );
+    await tx.insert(schema.claimNomineeBankAccounts).values(
+      [1, 2].map((rank) => ({
+        claimCaseId: cid,
+        pariwarId: pid,
+        accountRank: rank,
+        accountHolderNameCiphertext: `enc:v1:holder-${rank}`,
+        accountNumberCiphertext: `enc:v1:acct-${rank}`,
+        ifscCiphertext: `enc:v1:ifsc-${rank}`,
+        bankName: rank === 1 ? 'State Bank of India' : 'HDFC Bank',
+        ifscValidated: true,
+      })),
     );
-  await tx.insert(schema.claimNomineeBankAccounts).values(
-    [1, 2].map((rank) => ({
-      claimCaseId: cid,
-      pariwarId: pid,
-      accountRank: rank,
-      accountHolderNameCiphertext: `enc:v1:holder-${rank}`,
-      accountNumberCiphertext: `enc:v1:acct-${rank}`,
-      ifscCiphertext: `enc:v1:ifsc-${rank}`,
-      bankName: rank === 1 ? 'State Bank of India' : 'HDFC Bank',
-      ifscValidated: true,
-    })),
-  );
   }
 
   const live = await tx

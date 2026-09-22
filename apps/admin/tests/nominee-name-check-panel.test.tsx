@@ -5,7 +5,7 @@
 // diff. A test suite that only checked the happy path would let a future "helpful" highlight land
 // unnoticed and quietly reverse a ratified ruling.
 
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { NomineeNameCheckResponse } from '@twt/contracts';
@@ -344,5 +344,84 @@ describe('<NomineeNameCheckPanel> — family 13(d): the states that APPEAR are a
 
     fireEvent.change(screen.getByTestId('name-check-verdict-2'), { target: { value: 'does_not_match' } });
     announced('name-check-sent-back-hint');
+  });
+});
+
+// ── THE RESIDUAL v1.1 NAMED — the five cases this file was missing ─────────────────────────────
+//
+// ⚠ v1.1's re-scope: *"RESIDUAL — ONE FILE: `nominee-name-check-panel.test.tsx` is untouched bar
+// one line; its mixed `[clerical_difference, does_not_match]`, the stale check, the
+// one-testid-two-states case … all stand."*
+const CHECK = (
+  verdicts: readonly ['matches' | 'clerical_difference' | 'does_not_match', 'matches' | 'clerical_difference' | 'does_not_match'],
+  reasons: readonly [string | null, string | null] = [null, null],
+  passing = verdicts.every((v) => v !== 'does_not_match'),
+): NonNullable<NomineeNameCheckResponse['current_check']> => ({
+  checked_at: '2026-09-20T11:00:00.000Z',
+  checked_by_actor_display: 'Anita Kumari',
+  nominee_declaration_token: 'tok-1',
+  passing,
+  accounts: [
+    { account_rank: 1, account_updated_at: '2026-09-20T10:00:00.000Z', verdict: verdicts[0], clerical_reason: reasons[0] },
+    { account_rank: 2, account_updated_at: '2026-09-20T10:00:01.000Z', verdict: verdicts[1], clerical_reason: reasons[1] },
+  ] as NonNullable<NomineeNameCheckResponse['current_check']>['accounts'],
+});
+
+describe('<NomineeNameCheckPanel> — the MIXED and STALE states (v1.1 residual)', () => {
+  it('⭐⭐ a MIXED `[clerical_difference, does_not_match]` check SENDS BACK — the difference does ⛔ not soften it', () => {
+    // ⚠⚠ THE CASE MOST LIKELY TO BE GOT WRONG, and it had ⛔ no test. One account is an accepted
+    // clerical difference; the other does ⛔ not match at all. A panel that read "there IS an
+    // approved difference" and rendered the reassuring state would tell a District Admin the claim
+    // is fine when one of the two payout destinations belongs to somebody else.
+    // ⭐ `-226` cl.6: a `does_not_match` on ANY account sends the claim back. It is ⛔ never a
+    // denial, and it is ⛔ never outweighed by the other account being fine.
+    setup({ ...READ, current_check: CHECK(['clerical_difference', 'does_not_match'], ['married_name', null]) });
+
+    expect(screen.getByTestId('name-check-current')).toBeInTheDocument();
+    expect(screen.getByTestId('name-check-recorded-verdict-1')).toHaveTextContent(/married|difference/i);
+    // ⚠ The reassuring "approved with a difference" flag must ⛔ NOT appear on a failing check.
+    expect(
+      screen.queryByTestId('name-check-difference-flag'),
+      'a sending-back check rendered the approved-with-a-difference flag',
+    ).toBeNull();
+  });
+
+  it('⭐ a STALE check says so — and STALE ≠ NEVER CHECKED', () => {
+    // ⚠⚠ THE WIRE SHAPE, re-derived at source after my first draft got it wrong: `current_check`
+    // and `latest_check_is_stale` are MUTUALLY EXCLUSIVE, ⛔ not two flags on one record. A stale
+    // check is ⛔ not returned as `current_check` at all — the panel's ternary reads
+    // `current_check ? … : latest_check_is_stale ? …`. So the fixture is a NULL current check plus
+    // the stale flag, ⛔ not a present check marked stale.
+    // ⭐ The distinction the state exists for: saying *"no check has been recorded"* for a stale
+    // one ERASES a colleague's work. A correction invalidated the earlier check — D5 working as
+    // ruled (`-227` cl.12), ⛔ not an absence.
+    setup({ ...READ, current_check: null, latest_check_is_stale: true });
+    expect(screen.getByTestId('name-check-stale')).toBeInTheDocument();
+    // ⛔ …and it must ⛔ NOT fall through to the never-checked copy, which is the erasure.
+    expect(screen.queryByTestId('name-check-none')).toBeNull();
+  });
+
+  it('⛔ …and a NEVER-CHECKED claim renders the OTHER state — the non-vacuity pair', () => {
+    setup({ ...READ, current_check: null, latest_check_is_stale: false });
+    expect(screen.getByTestId('name-check-none')).toBeInTheDocument();
+    expect(screen.queryByTestId('name-check-stale')).toBeNull();
+  });
+
+  it('⭐⭐ `name-check-current` carries TWO DIFFERENT states under ONE testid — assert the CONTENT', () => {
+    // ⚠⚠ THE TRAP v1.1 NAMED. `name-check-current` renders for a PASSING check and for a SENDING-
+    // BACK one. ⇒ `getByTestId('name-check-current')` is satisfied by BOTH, so a test that asserts
+    // only its presence ⛔ cannot tell a reassurance from an instruction — the two things a
+    // District Admin must never confuse.
+    setup({ ...READ, current_check: CHECK(['matches', 'matches']) });
+    const passing = screen.getByTestId('name-check-current').textContent ?? '';
+    cleanup();
+
+    setup({ ...READ, current_check: CHECK(['matches', 'does_not_match']) });
+    const sendingBack = screen.getByTestId('name-check-current').textContent ?? '';
+
+    expect(
+      sendingBack,
+      'the passing and sending-back states render IDENTICAL text under the same testid',
+    ).not.toBe(passing);
   });
 });

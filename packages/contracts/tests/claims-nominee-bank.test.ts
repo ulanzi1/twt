@@ -198,3 +198,77 @@ describe('nominee-bank DTOs (strict + shapes)', () => {
     ).toThrow();
   });
 });
+
+// ── Story 6.18 (AC7) — THE NOTE'S LIMITS, AND `correctionNeeded`'s REQUIREDNESS ───────────────
+//
+// ⚠⚠ BOTH WERE CLAIMED AND ⛔ NEITHER WAS TESTED (code review 2026-09-22). `nameDifferenceNote`
+// carries `.trim().min(1).max(500)` and ⛔ nothing exercised any of the three. And
+// `correctionNeeded` is documented as REQUIRED on the presence view — but every parse in this file
+// supplies it, so ⭐ making it `.optional()` would have kept the whole suite green.
+describe('Story 6.18 (AC7) — the filer NOTE and its limits', () => {
+  const NOTE_MAX = 500;
+
+  it('⭐ the note is OPTIONAL — absence is first-class, ⛔ never a validation error', () => {
+    // ⭐ `-226` cl.2 PERMITS a note; it does ⛔ not oblige one. A required note would have forced
+    // every filer to explain a difference they may not have — on a death claim.
+    expect(NomineeBankAccountEntry.safeParse(validAccount).success).toBe(true);
+    expect(NomineeBankAccountEntry.safeParse({ ...validAccount, nameDifferenceNote: 'the bank shortened her name' }).success).toBe(true);
+  });
+
+  it('⚠ an EMPTY or whitespace-only note is refused — `.trim().min(1)`', () => {
+    // ⚠ THE DISTINCTION THAT MATTERS: absent and blank are ⛔ NOT the same. Absent means "nothing
+    // to explain". A blank string means the field was reached and left empty, which would show the
+    // District Admin an empty note block where an explanation should be — worse than no note,
+    // because it reads as an explanation that was withheld.
+    for (const bad of ['', '   ', '\t\n ']) {
+      expect(
+        NomineeBankAccountEntry.safeParse({ ...validAccount, nameDifferenceNote: bad }).success,
+        `a blank note (${JSON.stringify(bad)}) was accepted`,
+      ).toBe(false);
+    }
+  });
+
+  it('⭐ the note is bounded at exactly 500 — the boundary asserted on BOTH sides', () => {
+    const at = 'x'.repeat(NOTE_MAX);
+    const over = 'x'.repeat(NOTE_MAX + 1);
+    expect(NomineeBankAccountEntry.safeParse({ ...validAccount, nameDifferenceNote: at }).success, 'exactly 500 was refused').toBe(true);
+    expect(NomineeBankAccountEntry.safeParse({ ...validAccount, nameDifferenceNote: over }).success, '501 was accepted').toBe(false);
+  });
+
+  it('⭐ the note is TRIMMED, ⛔ not merely length-checked — surrounding space does not consume the budget', () => {
+    // ⚠ A `.max()` without a `.trim()` would let 500 characters plus a trailing newline fail, which
+    // a mobile keyboard adds for free. Parse and read the OUTPUT, ⛔ not just the success flag.
+    const parsed = NomineeBankAccountEntry.parse({
+      ...validAccount,
+      nameDifferenceNote: `  the bank shortened her name  `,
+    });
+    expect(parsed.nameDifferenceNote).toBe('the bank shortened her name');
+    expect(NomineeBankAccountEntry.safeParse({ ...validAccount, nameDifferenceNote: `${'x'.repeat(NOTE_MAX)}\n` }).success).toBe(true);
+  });
+
+  it('⛔⛔ `correctionNeeded` is REQUIRED on the presence view — the claim, finally asserted', () => {
+    // ⚠⚠ EVERY parse in this file supplies it, so `.optional()` would have kept the suite green —
+    // and `correctionNeeded` is what the FILER-FACING banner reads (AC5). A response that could
+    // omit it would leave a client rendering `undefined` as "nothing to correct", telling a family
+    // their details are fine when the District Admin has said they are not.
+    // ⚠ `NomineeBankStatusResponse` — the PRESENCE view (`GET …/nominee-bank`), ⛔ not
+    // `RecordNomineeBankResponse` (the write echo, which carries ⛔ no such field). My first draft
+    // asserted against the wrong one and was refused for an unrelated reason; read off the schema.
+    const view = { accounts: [], correctionNeeded: false, memberEditable: true };
+    expect(NomineeBankStatusResponse.safeParse(view).success, 'the complete view was refused').toBe(true);
+
+    const without: Record<string, unknown> = { ...view };
+    delete without['correctionNeeded'];
+    expect(
+      NomineeBankStatusResponse.safeParse(without).success,
+      '`correctionNeeded` is OPTIONAL — a client could render undefined as "nothing to correct"',
+    ).toBe(false);
+
+    // ⭐ AND `memberEditable` TOO — the OTHER half of the pair, and conflating them produced a
+    // cruel screen once already (the schema's own comment records it): a family told to correct
+    // details they ⛔ cannot reach. Both required, ⛔ neither optional.
+    const noEditable: Record<string, unknown> = { ...view };
+    delete noEditable['memberEditable'];
+    expect(NomineeBankStatusResponse.safeParse(noEditable).success).toBe(false);
+  });
+});

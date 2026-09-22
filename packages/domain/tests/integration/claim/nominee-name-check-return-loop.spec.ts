@@ -26,6 +26,7 @@ import {
   ClaimNotReturnableError,
   commitCycleFreeze,
   getCycleFreezePending,
+  getLatestNomineeNameCheck,
   hasLiveReturnRow,
   projectClaimState,
   recordClaimNomineeBankAccounts,
@@ -859,6 +860,51 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the return loop (:5433)', () => {
     expect(row!.underCorrection).toBe(false);
   });
 
+  // ── THE RETURNABLE MATRIX — every state, ⛔ not the two that happened to be written ─────────
+  //
+  // ⚠⚠ ⛔ ONLY `verifier_approved` and `state_trustee_freeze` were exercised (code review
+  // 2026-09-22). `TRUSTEE_RETURNABLE_STATES` has THREE members and the lifecycle has many more, so
+  // the window was asserted from the inside and ⛔ never from its edges. ⭐ A window tested ⛔ only
+  // where it is open says ⛔ nothing about where it must be shut.
+  it('⭐ AC11 — `reversed` IS returnable: the third member of the window, previously untested', async () => {
+    // ⭐ WHY IT BELONGS IN THE WINDOW: an appeal reversal puts the claim back in front of the
+    // Pariwar Admin, so the bank details are decided again — and that is exactly when a holder
+    // name can need sending back. Leaving it out would make a reversal a one-way door.
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const cid = toClaimId(randomUUID());
+    const mid = toMemberId(randomUUID());
+    await driveToReversed(client, cid, mid);
+    await seedNomineeNameCheck(client, PARIWAR_A, cid);
+
+    await returnToDistrictAdmin(client, returnInput(cid));
+    expect(await hasLiveReturnRow(tx, PARIWAR_A, cid)).toBe(true);
+    // ⭐ And the claim did ⛔ NOT move — a return is ⛔ never a state change (cl.10).
+    expect(await claimState(tx, cid)).toBe('reversed');
+  });
+
+  // ── D3 — ATTRIBUTION, at the DOMAIN layer ──────────────────────────────────────────────────
+  it('⭐⭐ D3 — a recorded check reads back with a NON-EMPTY actor display', async () => {
+    // ⚠⚠ ⛔ NOTHING READ A CHECK BACK AND ASSERTED THIS (code review 2026-09-22). Before D3 the
+    // field was ALWAYS `''` — the writer took `?? ''` — so ⛔ no check was ever attributed to
+    // anybody, on a surface whose entire premise is *a NAMED human read the two names*. ⭐ A
+    // defect that writes an empty string is invisible to every test that ⛔ never reads it back.
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const cid = toClaimId(randomUUID());
+    const mid = toMemberId(randomUUID());
+    await driveTo(client, cid, mid, 'verifier_review');
+    await seedNomineeNameCheck(client, PARIWAR_A, cid, { actorDisplay: 'Anita Kumari (District Admin)' });
+
+    const check = await getLatestNomineeNameCheck(tx, PARIWAR_A, cid);
+    expect(check, 'no check was recorded').not.toBeNull();
+    expect(check!.checkedByActorDisplay).toBe('Anita Kumari (District Admin)');
+    // ⭐ Stated as its own assertion, ⛔ not implied by the equality above: the `?? ''` defect
+    // produced exactly this value, and a future refactor could reintroduce it while some other
+    // fixture still passes a name.
+    expect(check!.checkedByActorDisplay.trim(), 'the check is attributed to NOBODY').not.toBe('');
+  });
+
   it('⛔ D1 — a RETURN from `state_trustee_approved` is REFUSED (the dead end this story closed)', async () => {
     // ⚠⚠ THIS TEST REPLACES ONE THAT ASSERTED THE OPPOSITE, and the reversal is the point
     // (code review 2026-09-20, D1 = option A). The pre-commit window looked returnable — cl.4 makes
@@ -932,6 +978,10 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the return loop (:5433)', () => {
       returnToDistrictAdmin(client, returnInput(inReview)),
       "a return from 'verifier_review' must be refused",
     ).rejects.toMatchObject({ name: 'ClaimNotReturnableError' });
+    // ⛔ …and ⛔ NOTHING was written (added 2026-09-22). A refusal that still opened a row would
+    // strand the claim under a correction record nothing can clear — the worse half of the defect,
+    // and the half a throw-assertion alone ⛔ cannot see.
+    expect(await hasLiveReturnRow(tx, PARIWAR_A, inReview)).toBe(false);
 
     // ⛔ AND A TERMINAL CLAIM. A denied claim has its own governed route (the appeal flow, 6.16);
     // returning it would put a live correction record on a claim nothing can clear.
@@ -943,5 +993,6 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the return loop (:5433)', () => {
       returnToDistrictAdmin(client, returnInput(denied)),
       "a return from 'denied' must be refused",
     ).rejects.toMatchObject({ name: 'ClaimNotReturnableError' });
+    expect(await hasLiveReturnRow(tx, PARIWAR_A, denied)).toBe(false);
   });
 }, { timeout: 20000 });

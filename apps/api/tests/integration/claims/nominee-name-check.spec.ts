@@ -204,12 +204,16 @@ describe.skipIf(!hasDatabase)('Nominee name-check surface — E2E (:5433)', () =
     claimCaseId: string,
     holder1: string,
     holder2: string,
+    /** ⭐ AC7 — the filer's note on rank 1 (`-226` cl.2). Omitted ⇒ the column stays NULL, which is
+     *  what every caller before 2026-09-22 got, and why the note-DECRYPT branch had ⛔ no test. */
+    note1?: string,
   ): Promise<void> {
-    const [h1, h2, acct, ifsc] = await Promise.all([
+    const [h1, h2, acct, ifsc, n1] = await Promise.all([
       encryptNomineeBankField(holder1, pariwarId, deps.encryption),
       encryptNomineeBankField(holder2, pariwarId, deps.encryption),
       encryptNomineeBankField('999888777666', pariwarId, deps.encryption),
       encryptNomineeBankField('SBIN0009999', pariwarId, deps.encryption),
+      note1 === undefined ? Promise.resolve(null) : encryptNomineeBankField(note1, pariwarId, deps.encryption),
     ]);
     const c = await td.pool.connect();
     try {
@@ -217,10 +221,11 @@ describe.skipIf(!hasDatabase)('Nominee name-check surface — E2E (:5433)', () =
       await c.query(
         `INSERT INTO claim_nominee_bank_accounts
            (claim_case_id, pariwar_id, account_rank, account_holder_name_ciphertext,
-            account_number_ciphertext, ifsc_ciphertext, bank_name, ifsc_validated)
-         VALUES ($1,$2,1,$3,$5,$6,'State Bank of India',true),
-                ($1,$2,2,$4,$5,$6,'HDFC Bank',true)`,
-        [claimCaseId, pariwarId, h1, h2, acct, ifsc],
+            account_number_ciphertext, ifsc_ciphertext, name_difference_note_ciphertext,
+            bank_name, ifsc_validated)
+         VALUES ($1,$2,1,$3,$5,$6,$7,'State Bank of India',true),
+                ($1,$2,2,$4,$5,$6,NULL,'HDFC Bank',true)`,
+        [claimCaseId, pariwarId, h1, h2, acct, ifsc, n1],
       );
     } finally {
       c.release();
@@ -558,6 +563,265 @@ describe.skipIf(!hasDatabase)('Nominee name-check surface — E2E (:5433)', () =
     expect(res.statusCode).toBe(201);
     expect(res.json()).toMatchObject({ claim_case_id: claimCaseId, claim_state: 'verifier_review' });
     expect((res.json() as { current_check: { passing: boolean } }).current_check.passing).toBe(true);
+  });
+
+  // ── AC3 — THE 409 BOUNDARY, which had ⛔ no HTTP coverage at all ────────────────────────────
+  //
+  // ⚠⚠ AND THE TWO 400 TESTS ABOVE WERE PARTLY VACUOUS, which is the sharper half of this finding.
+  // Both call `seedNomineeNameCheck` first — so by the time they POST, the claim already has two
+  // accounts and a recorded check. ⇒ they never showed the 400 firing BEFORE the 409 path; a
+  // handler that answered 409 for everything would still have failed them, but a handler whose
+  // validation ran in the wrong ORDER would have passed. ⭐ The `expect(400)` is also a bare status
+  // — `assertCode` below pins the CODE, because a 400 from the router's schema and a 400 from the
+  // AC3 rule are ⛔ not the same answer and only one of them is what these tests claim to prove.
+
+  /** POST a check, with every field defaulted to a VALID one so each test varies exactly one. */
+  const postCheck = async (
+    client: Client,
+    pariwarId: string,
+    claimCaseId: string,
+    override: Record<string, unknown> = {},
+  ) => {
+    const read = await client.inject({ method: 'GET', url: url(pariwarId, claimCaseId) });
+    const body = read.json() as {
+      nominee_declaration_token: string;
+      accounts: { account_rank: number; account_updated_at: string }[];
+    };
+    return client.inject({
+      method: 'POST',
+      url: url(pariwarId, claimCaseId),
+      payload: {
+        nominee_declaration_token: body.nominee_declaration_token,
+        accounts: body.accounts.map((a) => ({
+          account_rank: a.account_rank,
+          account_updated_at: a.account_updated_at,
+          verdict: 'matches' as const,
+        })),
+        ...override,
+      },
+    });
+  };
+
+  /**
+   * Assert the status AND the error code — ⛔ never the status alone.
+   *
+   * ⚠ The envelope is `{ error: { code, message, request_id } }`, ⛔ not a bare `{ code }`. My first
+   * draft read `body.code`, which is `undefined` for EVERY response — so the assertion would have
+   * failed uniformly and, had I written `toBeDefined()` instead, passed uniformly. Read off a real
+   * response, ⛔ not guessed.
+   */
+  const assertCode = (res: { statusCode: number; body: string }, status: number, code: string): void => {
+    expect(res.statusCode, res.body).toBe(status);
+    expect((JSON.parse(res.body) as { error?: { code?: string } }).error?.code, res.body).toBe(code);
+  };
+
+  it('⭐⭐ AC3 — when a 400 AND a 409 condition BOTH hold, the answer is the 400 (validation runs first)', async () => {
+    // ⚠⚠ THIS IS THE ORDERING PROOF THE OTHER 400 TESTS ⛔ CANNOT GIVE. They seed a valid claim, so
+    // ⛔ only one condition is ever true and a handler that answered 409 for everything would still
+    // have failed them — but a handler whose validation ran in the WRONG ORDER would have passed.
+    // ⭐ Here BOTH are true at once: the payload is invalid (a clerical difference with ⛔ no
+    // reason) AND the token is stale. Fastify validates BEFORE the preHandler chain and before the
+    // handler, so the caller must be told what is wrong with their REQUEST, ⛔ not handed a
+    // conflict about state they cannot see.
+    const { client, pariwarId, claimCaseId } = await setup('district_admin');
+    await seedNomineeNameCheck(deps, pariwarId, claimCaseId);
+    const read = await client.inject({ method: 'GET', url: url(pariwarId, claimCaseId) });
+    const body = read.json() as { accounts: { account_rank: number; account_updated_at: string }[] };
+
+    const res = await client.inject({
+      method: 'POST',
+      url: url(pariwarId, claimCaseId),
+      payload: {
+        nominee_declaration_token: 'deadbeefdeadbeefdeadbeefdeadbeef', // ⇒ would be a 409 …
+        accounts: body.accounts.map((a) => ({
+          account_rank: a.account_rank,
+          account_updated_at: a.account_updated_at,
+          verdict: 'clerical_difference', // … and this is a 400, with ⛔ no `clerical_reason`.
+        })),
+      },
+    });
+    expect(res.statusCode, res.body).toBe(400);
+
+    // ⛔ NON-VACUITY, BOTH WAYS: each condition really does produce its own status on its own.
+    const only409 = await postCheck(client, pariwarId, claimCaseId, {
+      nominee_declaration_token: 'deadbeefdeadbeefdeadbeefdeadbeef',
+    });
+    expect(only409.statusCode).toBe(409);
+  });
+
+  it('⚠ AC3 — a STALE declaration token is a 409, ⛔ not a 400 or a silent overwrite', async () => {
+    // ⭐ The token is derived from the member's nominee rows. A token that no longer matches means
+    // the nominees were RE-DECLARED since the District Admin read the two lists — so the verdict
+    // they are about to record is about names that are no longer the ones on file.
+    const { client, pariwarId, claimCaseId } = await setup('district_admin');
+    await seedNomineeNameCheck(deps, pariwarId, claimCaseId);
+    const res = await postCheck(client, pariwarId, claimCaseId, {
+      nominee_declaration_token: 'deadbeefdeadbeefdeadbeefdeadbeef',
+    });
+    assertCode(res, 409, 'nominee_name_check.stale');
+  });
+
+  it('⚠ AC3 — a STALE `account_updated_at` is a 409 (the D5 chain, over HTTP)', async () => {
+    const { client, pariwarId, claimCaseId } = await setup('district_admin');
+    await seedNomineeNameCheck(deps, pariwarId, claimCaseId);
+    const read = await client.inject({ method: 'GET', url: url(pariwarId, claimCaseId) });
+    const body = read.json() as {
+      nominee_declaration_token: string;
+      accounts: { account_rank: number; account_updated_at: string }[];
+    };
+    const res = await client.inject({
+      method: 'POST',
+      url: url(pariwarId, claimCaseId),
+      payload: {
+        nominee_declaration_token: body.nominee_declaration_token,
+        accounts: body.accounts.map((a) => ({
+          account_rank: a.account_rank,
+          // One hour earlier — the stamp a screen read before somebody else edited the account.
+          account_updated_at: new Date(Date.parse(a.account_updated_at) - 3_600_000).toISOString(),
+          verdict: 'matches' as const,
+        })),
+      },
+    });
+    assertCode(res, 409, 'nominee_name_check.stale');
+  });
+
+  it('⚠ AC3 — a claim with ⛔ NO accounts is a 409, and it is a WAIT rather than a refusal (cl.7)', async () => {
+    // ⚠⚠ ⛔ NO `seedNomineeNameCheck` HERE — that is the point. Every other POST test in this file
+    // seeds the accounts first, so the accounts-required guard was ⛔ never the thing under test.
+    const { client, pariwarId, claimCaseId } = await setup('district_admin');
+    const res = await client.inject({
+      method: 'POST',
+      url: url(pariwarId, claimCaseId),
+      payload: {
+        nominee_declaration_token: 'whatever',
+        accounts: [
+          { account_rank: 1, account_updated_at: new Date().toISOString(), verdict: 'matches' },
+          { account_rank: 2, account_updated_at: new Date().toISOString(), verdict: 'matches' },
+        ],
+      },
+    });
+    assertCode(res, 409, 'nominee_name_check.bank_details_required');
+  });
+
+  it('⚠ AC3 — DUPLICATE ranks are a 400 at the CONTRACT, before the handler runs', async () => {
+    const { client, pariwarId, claimCaseId } = await setup('district_admin');
+    await seedNomineeNameCheck(deps, pariwarId, claimCaseId);
+    const read = await client.inject({ method: 'GET', url: url(pariwarId, claimCaseId) });
+    const body = read.json() as {
+      nominee_declaration_token: string;
+      accounts: { account_rank: number; account_updated_at: string }[];
+    };
+    const first = body.accounts[0]!;
+    const res = await client.inject({
+      method: 'POST',
+      url: url(pariwarId, claimCaseId),
+      payload: {
+        nominee_declaration_token: body.nominee_declaration_token,
+        // ⭐ Rank 1 TWICE — two verdicts for one account and none for the other. A check that
+        // recorded this would be a judgement about an account nobody looked at.
+        accounts: [
+          { account_rank: first.account_rank, account_updated_at: first.account_updated_at, verdict: 'matches' },
+          { account_rank: first.account_rank, account_updated_at: first.account_updated_at, verdict: 'matches' },
+        ],
+      },
+    });
+    expect(res.statusCode, res.body).toBe(400);
+  });
+
+  it('⭐⭐ AC3/cl.5 — `does_not_match` is a 201 and the claim state does ⛔ NOT move', async () => {
+    // ⭐⭐ THE RULING, OVER HTTP. `-226` cl.5: the system NEVER acts on a mismatch. The most likely
+    // way to breach it is a well-meaning handler that denies or escalates on `does_not_match` — so
+    // this asserts the write SUCCEEDS, the verdict is recorded as given, and the claim is exactly
+    // where it was. A 4xx here would be the system acting.
+    const { client, pariwarId, claimCaseId } = await setup('district_admin');
+    await seedNomineeNameCheck(deps, pariwarId, claimCaseId);
+    const read = await client.inject({ method: 'GET', url: url(pariwarId, claimCaseId) });
+    const body = read.json() as {
+      nominee_declaration_token: string;
+      accounts: { account_rank: number; account_updated_at: string }[];
+    };
+    const res = await client.inject({
+      method: 'POST',
+      url: url(pariwarId, claimCaseId),
+      payload: {
+        nominee_declaration_token: body.nominee_declaration_token,
+        accounts: body.accounts.map((a, i) => ({
+          account_rank: a.account_rank,
+          account_updated_at: a.account_updated_at,
+          verdict: i === 0 ? ('matches' as const) : ('does_not_match' as const),
+        })),
+      },
+    });
+    expect(res.statusCode, res.body).toBe(201);
+    const out = res.json() as {
+      claim_state: string;
+      current_check: { passing: boolean; accounts: { verdict: string }[] };
+    };
+    expect(out.claim_state, 'the claim MOVED on a mismatch — `-226` cl.5 forbids it').toBe('verifier_review');
+    expect(out.current_check.passing).toBe(false);
+    expect(out.current_check.accounts.map((a) => a.verdict)).toEqual(['matches', 'does_not_match']);
+
+    // ⭐ And the claim really is still there on a FRESH read — ⛔ not just in the write's echo.
+    const after = await client.inject({ method: 'GET', url: url(pariwarId, claimCaseId) });
+    expect((after.json() as { claim_state: string }).claim_state).toBe('verifier_review');
+  });
+
+  it("⭐⭐ AC7 — the filer's NOTE comes BACK on the AC2 read, and ⛔ NOT in the audit line", async () => {
+    // ⚠⚠ THE HANDLER'S NOTE-DECRYPT BRANCH HAD ⛔ NO TEST AT ANY LAYER (code review 2026-09-22):
+    // every fixture passed `nameDifferenceNoteCiphertext: null` and `seedAccountsWithNames` never
+    // set the column, so the branch that decrypts it had ⛔ never run. ⭐ Paired with the WRITE half
+    // in `nominee-bank-helpline.spec.ts` (*"the NOTE survives POST → ciphertext"*), which ⛔ cannot
+    // do the read because its seed creates a member with ⛔ no posting district.
+    //
+    // ⭐ THE NOTE IS THE ONE NAMED EXCEPTION to nominee-bank.ts's "never echo" rule (`-226` cl.2) —
+    // so it must come BACK to the District Admin, and it must ⛔ NOT ride the audit trail. Both.
+    const NOTE = 'the bank shortened her name to A. Devi';
+    const { client, pariwarId, claimCaseId } = await setup('district_admin');
+    await seedAccountsWithNames(pariwarId, claimCaseId, 'A. Devi', 'Ravi Kumar', NOTE);
+    td.auditSink.events.length = 0;
+
+    const res = await client.inject({ method: 'GET', url: url(pariwarId, claimCaseId) });
+    expect(res.statusCode, res.body).toBe(200);
+    const packet = res.json() as {
+      accounts: Array<{ account_rank: number; name_difference_note: { state: string; value?: string } | null }>;
+    };
+
+    const rank1 = packet.accounts.find((a) => a.account_rank === 1);
+    expect(rank1?.name_difference_note?.state, 'the note did not decrypt').toBe('readable');
+    expect(rank1?.name_difference_note?.value).toBe(NOTE);
+    // ⭐ PER-ACCOUNT, ⛔ not per-claim: rank 2 carries `null`, ⛔ not an empty-string "readable".
+    expect(packet.accounts.find((a) => a.account_rank === 2)?.name_difference_note).toBeNull();
+
+    // ⭐ AND ⛔ NOT IN THE AUDIT TRAIL — a permitted disclosure to a named reader is ⛔ not a thing
+    // to scatter into logs. This is the same rule the holder name lives under, and the AC9 test
+    // below asserts the holder-name half.
+    expect(JSON.stringify(td.auditSink.events)).not.toContain('shortened');
+  });
+
+  it('⭐ AC7 — an UNREADABLE note is its own state, ⛔ never a blank and ⛔ never a crash', async () => {
+    // ⚠ A corrupt envelope must ⛔ not take the whole read down, and must ⛔ not silently render as
+    // "no note" — which would tell the District Admin the filer explained nothing when they did.
+    const { client, pariwarId, claimCaseId } = await setup('district_admin');
+    await seedAccountsWithNames(pariwarId, claimCaseId, 'A. Devi', 'Ravi Kumar', 'whatever');
+    const c = await td.pool.connect();
+    try {
+      await c.query(
+        `UPDATE claim_nominee_bank_accounts SET name_difference_note_ciphertext = 'enc:v1:not-a-real-envelope'
+          WHERE claim_case_id = $1 AND account_rank = 1`,
+        [claimCaseId],
+      );
+    } finally {
+      c.release();
+    }
+
+    const res = await client.inject({ method: 'GET', url: url(pariwarId, claimCaseId) });
+    expect(res.statusCode, res.body).toBe(200);
+    const packet = res.json() as {
+      accounts: Array<{ account_rank: number; name_difference_note: { state: string } | null }>;
+    };
+    expect(packet.accounts.find((a) => a.account_rank === 1)?.name_difference_note?.state).toBe('unreadable');
+    // ⭐ The HOLDER NAME on the same row still reads — one corrupt field ⛔ does not poison the row.
+    expect(res.body).toContain('A. Devi');
   });
 
   it('⛔⛔ AC9 — the audited read line carries NO name and NO note', async () => {

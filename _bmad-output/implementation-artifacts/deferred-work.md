@@ -4,6 +4,15 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: validate pass of 6-18-nominee-holder-name-on-the-verification-console — microcopy scope (2026-09-22)
+
+The validate pass found that 6.18's two MEMBER-facing mobile screens and the whole `claim` i18n namespace were OUTSIDE `microcopy.yaml`'s scan scope — **unscanned copy wearing a green check**, the exact defect class that file's own header names. Both were brought into scope and the teeth were PROVEN on them (planted prohibited noun on the code file, planted `donor`/`receipt` in `en/claim.json`, planted Devanagari digit in `hi/claim.json` — all three fired; restored byte-identical). ⭐ These two items are what that change left OWED.
+
+- **⚠ A TOKEN LAYER FOR `apps/mobile` — ⛔ not a 6.18 lapse, and the ONE allow-list pair in `microcopy.yaml` that suppresses a REAL debt rather than a non-applicable.** FM-14 #2 flags `#B00020` / `#1E8E3E` / `#C0392B` on `apps/mobile/app/(claim)/nominee-review.tsx` and `apps/mobile/components/life-events/NomineeForm.tsx`, and prescribes *"use a @twt/tokens color token"*. ⛔ That remedy does ⛔ NOT exist in this app: `apps/mobile/package.json` has ⛔ no `@twt/tokens` dependency, and `apps/mobile/tamagui.config.ts` overrides ⛔ only `fonts` on `@tamagui/config/v5` — there is ⛔ no semantic error/success colour role to swap to. The nearest tokens are DIFFERENT colours (`danger #842029`, `success #0f5132`), so applying the remedy would CHANGE WHAT A BEREAVED FAMILY SEES on a claim screen. And the literals are an APP-WIDE convention, ⛔ not this story's: `#C0392B` ×15, `#B00020` ×6, `#1E8E3E` ×6, across 22 files spanning `(auth)`, `(signup)`, `(claim)`, `(renewal)`, `(withdrawal)`, `(life-events)`, `(data-export)` — 307 hex literals in 27 files in all. Tokenising 6.18's two would leave them visibly INCONSISTENT with the twenty screens beside them. ⇒ carried as a DESIGN-SYSTEM task for the whole app ([[project_helpdesk_default_policy_version_trap]] — a gate can prescribe a remedy that is wrong to apply). ⭐ The two allow-list entries are scoped to those three exact hexes precisely so they stop suppressing the moment the literals go; **DELETE them when the token layer lands**. ⭐ Trigger: adopting semantic colour roles in `tamagui.config.ts`, or any new `apps/mobile` file entering `code_globs`.
+- **⚠ The broad `apps/mobile/**` glob is OWED — only TWO named files are in `code_globs`.** Named-file entries follow the precedent of the two `apps/api/src/modules/member-pool/` ones; globbing the app wholesale in this story would have turned the gate red on years of screens nobody here touched, and the colour debt above is the reason it would stay red. ⇒ the glob widens WITH the token layer, ⛔ not before. ⭐ Trigger: the token layer landing, or any member-copy defect found on an un-globbed `apps/mobile` surface.
+
+---
+
 ## Deferred from: code review of 6-18-nominee-holder-name-on-the-verification-console — **CHUNK 2 of 5** (2026-09-20)
 
 Chunk 2 = `apps/api/src`. ⚠ Chunks 3–5 (admin+mobile, tests + the `scripts/` gate) still to review; the story's `### Review Findings` section is the live list.

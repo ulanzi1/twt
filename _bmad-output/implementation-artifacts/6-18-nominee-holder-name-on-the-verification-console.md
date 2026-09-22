@@ -209,7 +209,30 @@ attestation, and returning is ⛔ not a denial.
 A live **correction-needed record** — opened by the DA's `does_not_match` (AC5) or the Pariwar
 Admin's return (AC11) — permits the helpline operator's correction **whatever the claim's state**, so
 the old dead end at `reversed` / `state_trustee_freeze` is gone. ⛔ No window is widened, ⛔ no state
-moves: the record is the exception, and it closes when the corrected accounts are written.
+moves: the record is the exception.
+
+⚠⚠ **HOW THE EXCEPTION CLOSES — CORRECTED 2026-09-22 (validate pass). The original sentence was
+FALSIFIED by the 2026-09-20 code review and is struck, ⛔ not deleted**
+([[feedback_closure_language_precision]], [[feedback_supersede_never_reinterpret]]):
+
+> ~~"the record is the exception, and it closes when the corrected accounts are written."~~
+
+⭐ That is only **HALF** true, and a dev implementing from this text would have built the wrong close
+([[feedback_spec_edits_must_propagate_to_tasks]] — the dev reads the AC, ⛔ not the code comment; the
+comment at `packages/domain/src/claim/nominee-bank-persist.ts` was corrected on 2026-09-20 and this
+sentence was ⛔ not). The two halves close on **different events**:
+
+- the **CHECK** half *does* close on the write — the rewrite moves `updated_at`, the sending-back
+  check goes stale, and `latestCheckSendsBack` turns false immediately;
+- the **RETURN-ROW** half does ⛔ **NOT**. The row is superseded ⛔ only by the next **VOTE**. What
+  actually closes is the **DERIVED** condition: once the accounts are corrected **AND** the District
+  Admin records a fresh **passing** check, `isReturnedClaimResubmitted` is true and
+  `resolveClaimCorrectionState` stops reporting `underCorrection` — ⚠ even though the row is **still
+  there**, waiting for the vote that will supersede it.
+
+⇒ ⛔ Nothing about D4's ruling changes: the record is still the exception, and it is still the row's
+liveness that permits the write. ⭐ What changed is the **spec's account of when the permission ends**
+— it ends on *corrected accounts + a fresh passing check*, ⛔ not on the write alone.
 
 ### ✅ D5 — confirmed by `-227` cl.12: a post-approval correction needs a fresh check
 A correction changes `updated_at`, the DA's check is ⛔ no longer current, and AC4's gate at the
@@ -890,9 +913,12 @@ panel imports the real `verifierConsoleEn` table; the helpline card and PA card 
 
 _⭐ **THREE BULLETS ADDED BY THE 2026-09-21 VALIDATE PASS — none was in the original review.**_
 
-- [ ] [Review][Patch] ⭐⭐ **CONTROL GAP — the human-actor gate this story AUTHORED can be silently emptied.** `scripts/claim-adjudication-human-actor-invariant/check.ts` declares `const COVERAGE_SET: readonly CoverageEntry[]` — ⛔ **not exported**, with ⛔ **no length or anti-vacuity assertion anywhere** (`grep COVERAGE_SET.length` returns nothing). ⇒ **deleting this story's own entry keeps CI green**, and the gate goes on reporting success over a smaller set. ⚠ Compounding it, the ticked bullet above closed only 3 of its 6 sub-items: `claims.helpline.routes.ts` is **still absent** from `COVERAGE_SET` — the very `POST …/nominee-bank` route D4's third branch just made **state-independent** — and `claims.routes.ts` / `claims.convergence.routes.ts` / `claims.ground-inspection.routes.ts` are unlisted with ⛔ no glob reconciliation, so an unlisted adjudication route stays invisible. The README was ⛔ never updated (last touched at Story 6.10). ⭐ Fix shape: export the set, assert a floor, and reconcile it against a `readdir` of `*.routes.ts` ([[feedback_gate_scope_semantic_coverage]]).
-- [ ] [Review][Patch] ⭐⭐ **THE MICROCOPY GATE IS GREEN AND VACUOUS OVER THIS STORY'S MEMBER COPY.** `microcopy.yaml`'s `copy_globs` does ⛔ **not** list `packages/i18n/locales/{en,hi}/claim.json`, and `code_globs` covers `apps/admin/src/**` but ⛔ **not `apps/mobile`**. This story's new member-facing keys live in exactly those two places ⇒ they are **UNSCANNED COPY WEARING A GREEN CHECK** — the config's own comment names that defect class in those words. ⭐ Passing = add the globs **and** a `scripts/microcopy/<ns>.test.ts` with a planted violation that FIRES in BOTH locales, matching the eleven sibling tests; a green run over an unglobbed file proves ⛔ nothing.
-- [ ] [Review][Patch] ⚠ **SPEC TEXT LEFT UNCORRECTED — D4's own sentence.** The review falsified *"the record is the exception, and it closes when the corrected accounts are written"*; the **code comment** was corrected (*"and that is only HALF true"*) but the **D4 decision text in this story still carries the original sentence**. ⛔ The dev reads the AC, ⛔ not the code comment ([[feedback_spec_edits_must_propagate_to_tasks]]).
+- [x] [Review][Patch] ⭐⭐ **CONTROL GAP — the human-actor gate this story AUTHORED can be silently emptied.** `scripts/claim-adjudication-human-actor-invariant/check.ts` declares `const COVERAGE_SET: readonly CoverageEntry[]` — ⛔ **not exported**, with ⛔ **no length or anti-vacuity assertion anywhere** (`grep COVERAGE_SET.length` returns nothing). ⇒ **deleting this story's own entry keeps CI green**, and the gate goes on reporting success over a smaller set. ⚠ Compounding it, the ticked bullet above closed only 3 of its 6 sub-items: `claims.helpline.routes.ts` is **still absent** from `COVERAGE_SET` — the very `POST …/nominee-bank` route D4's third branch just made **state-independent** — and `claims.routes.ts` / `claims.convergence.routes.ts` / `claims.ground-inspection.routes.ts` are unlisted with ⛔ no glob reconciliation, so an unlisted adjudication route stays invisible. The README was ⛔ never updated (last touched at Story 6.10). ⭐ Fix shape: export the set, assert a floor, and reconcile it against a `readdir` of `*.routes.ts` ([[feedback_gate_scope_semantic_coverage]]).
+  - ✅ **CLOSED 2026-09-22.** `COVERAGE_SET` is now reconciled, ⛔ not merely listed: `unclassifiedRouteFiles()` does a `readdir` of `apps/api/src/modules/claims/*.routes.ts` and set-differences it against `COVERAGE_SET` ∪ `NON_ADJUDICATION_ROUTES` ∪ `ENROLMENT_OWED`, so **an unlisted claim route file FAILS the gate** — the three named above are now classified with a written reason each (`claims.helpline.routes.ts` / `claims.ground-inspection.routes.ts` / `claims.convergence.routes.ts` as `ENROLMENT_OWED`; `claims.routes.ts` as `NON_ADJUDICATION_ROUTES`, the MEMBER-app surface). `COVERAGE_FLOOR = 8` closes the anti-vacuity half — ⭐ deleting this story's entry now fails. ⚠ **Teeth proven, ⛔ not assumed:** a probe file `claims.zzz-probe.routes.ts` was added and the gate FAILED with *"UNCLASSIFIED claim route file"*; removing it restored green. ⚠ ⛔ **NOT closed by this:** the README is still at Story 6.10, and the ENROLMENT_OWED three are CLASSIFIED, ⛔ not enrolled — their chains are unguarded, which is what the label says.
+- [x] [Review][Patch] ⭐⭐ **THE MICROCOPY GATE IS GREEN AND VACUOUS OVER THIS STORY'S MEMBER COPY.** `microcopy.yaml`'s `copy_globs` does ⛔ **not** list `packages/i18n/locales/{en,hi}/claim.json`, and `code_globs` covers `apps/admin/src/**` but ⛔ **not `apps/mobile`**. This story's new member-facing keys live in exactly those two places ⇒ they are **UNSCANNED COPY WEARING A GREEN CHECK** — the config's own comment names that defect class in those words. ⭐ Passing = add the globs **and** a `scripts/microcopy/<ns>.test.ts` with a planted violation that FIRES in BOTH locales, matching the eleven sibling tests; a green run over an unglobbed file proves ⛔ nothing.
+  - ✅ **CLOSED 2026-09-22, to this bullet's own bar.** All four globs added (`packages/i18n/locales/{en,hi}/claim.json` to `copy_globs`; `apps/mobile/app/(claim)/nominee-review.tsx` + `apps/mobile/components/life-events/NomineeForm.tsx` to `code_globs` — ⭐ named files, ⛔ not `apps/mobile/**`, which would have turned the gate red on years of untouched screens) **and** `scripts/microcopy/claim.test.ts` (25 tests) proving the teeth BITE in both locales and on the code files. ⚠ **Two things this uncovered, both handled and neither hidden:** (1) the `pool-reality-comparison` tone rule fired on *"We couldn't reach a nominee's phone"* — its two `reach` alternatives were UNANCHORED while every sibling clause anchored on target/goal/% ⇒ ⭐ the **RULE** was anchored to `(target|goal|amount|total)`, ⛔ the copy was NOT reworded and ⛔ no allow-list entry was added; a regression pair pins both senses. (2) 8 FM-14 colour findings on those two screens — ⚠ **allow-listed, ⛔ not fixed**, because the prescribed remedy does ⛔ not exist (`apps/mobile` has ⛔ no `@twt/tokens` dependency and its Tamagui config overrides ⛔ only `fonts`), the nearest tokens are DIFFERENT colours on a bereaved family's screen, and the literals are an app-wide convention (22 files, 307 hex literals in 27). Scoped to three exact hexes; §(e) of the new test proves they suppress ⛔ nothing else. ⭐ The token layer + the broad glob are recorded as OWED in `deferred-work.md`.
+- [x] [Review][Patch] ⚠ **SPEC TEXT LEFT UNCORRECTED — D4's own sentence.** The review falsified *"the record is the exception, and it closes when the corrected accounts are written"*; the **code comment** was corrected (*"and that is only HALF true"*) but the **D4 decision text in this story still carries the original sentence**. ⛔ The dev reads the AC, ⛔ not the code comment ([[feedback_spec_edits_must_propagate_to_tasks]]).
+  - ✅ **CLOSED 2026-09-22.** D4's sentence is **struck in place, ⛔ not deleted** ([[feedback_closure_language_precision]], [[feedback_supersede_never_reinterpret]]), and the corrected account of the close now sits in the D4 body where the dev reads it: the **CHECK** half closes on the write (`updated_at` moves, `latestCheckSendsBack` turns false), the **RETURN-ROW** half does ⛔ NOT — the row is superseded only by the next VOTE, and what actually ends the permission is the DERIVED condition `isReturnedClaimResubmitted` (corrected accounts **AND** a fresh **passing** check) making `resolveClaimCorrectionState` stop reporting `underCorrection`. ⭐ Verified at source, ⛔ not copied from the code comment: `state-trustee-decision-persist.ts` gates on `accounts.every(updatedAt > returnedAt)` **then** `assertNomineeNameCheckForApproval`, and `underCorrection = isClaimUnderCorrection(hasLiveReturn && !resubmitted, checkSendsBack)`. ⛔ D4's RULING is unchanged — only the spec's account of WHEN the permission ends.
 
 _Chunk 5 dismissed (4, not listed): `describe.skipIf(!hasDatabase)` skipping silently (the repo's standing convention — every sibling live spec does the same); committed members/claims/bank rows left behind under random tenants (the sibling specs' own-committing pattern, and the fresh `pariwarId` per test means no dependence on an empty `PARIWAR_A`); the gate not classifying `resolveNomineeNameCheckDistrict` (it trips neither the forbidden regex nor a category — harmless, traced); and the gate not seeing a handler-level `actor: 'system'` (the domain writer's `actor` argument is beyond a route-registration gate's remit)._
 
@@ -1166,6 +1192,7 @@ The v0.9 entry overclaimed in five places. Correcting them rather than leaving t
 >
 > | | domain | api | contracts | mobile | admin | i18n | events | TOTAL |
 > |---|---|---|---|---|---|---|---|---|
+| 2026-09-22 | 1.2 | **THE THREE VALIDATE-PASS HOLES, FILLED — ⭐ all three were bullets v1.1 RECORDED but did ⛔ not fix.** (1) **`COVERAGE_SET` could be silently emptied.** The human-actor gate this story authored is now RECONCILED, ⛔ not merely listed: `unclassifiedRouteFiles()` set-differences a `readdir` of `claims/*.routes.ts` against `COVERAGE_SET` ∪ `NON_ADJUDICATION_ROUTES` ∪ `ENROLMENT_OWED`, so **an unlisted claim route file FAILS**; `COVERAGE_FLOOR = 8` closes the anti-vacuity half. ⚠ **My own first draft guessed the floor at 9 and the new floor caught it** — the true count is 8. Teeth proven with a probe route file (gate FAILED *"UNCLASSIFIED claim route file"*), then removed. (2) **The microcopy gate was green and VACUOUS over this story's member copy.** Four globs added + `scripts/microcopy/claim.test.ts` (25 tests). Two things fell out, ⛔ neither hidden: the `pool-reality-comparison` tone rule fired on *"We couldn't reach a nominee's phone"* ⇒ ⭐ **the RULE was anchored** to `(target\|goal\|amount\|total)` — ⛔ the copy was NOT reworded and ⛔ no allow-list entry was added, because either would have silenced a live rule to protect one string; and **8 FM-14 colour findings** on the two mobile screens are **ALLOW-LISTED, ⛔ not fixed** — ⚠ the gate's prescribed remedy does ⛔ not exist (`apps/mobile` has ⛔ no `@twt/tokens` dependency; its Tamagui config overrides ⛔ only `fonts`), the nearest tokens are **different colours** on a bereaved family's screen, and the literals are an app-wide convention (`#C0392B` ×15, `#B00020` ×6, `#1E8E3E` ×6 across **22 files**; 307 hex literals in 27). ⇒ the token layer and the broad `apps/mobile/**` glob are **OWED** in `deferred-work.md`, and the entries are scoped to three exact hexes so they stop suppressing the moment the literals go. (3) **D4's spec sentence** — *"it closes when the corrected accounts are written"* — is **STRUCK IN PLACE, ⛔ not deleted**, and the corrected close now sits in the D4 body: the CHECK half closes on the write, the RETURN-ROW half does ⛔ NOT (superseded only by the next VOTE); what ends the permission is the DERIVED `isReturnedClaimResubmitted` (corrected accounts **AND** a fresh **passing** check). ⭐ Re-verified at source, ⛔ not copied from the code comment. ⭐⭐ **EVERY GATE AND TEST IN THIS PASS WAS PROVEN ABLE TO FAIL, then restored byte-identical:** the probe route file; a planted noun in the .tsx; a planted `donor`/`receipt` in `en/claim.json`; a planted Devanagari digit in `hi/claim.json`; the allow-list widened to a blanket `#` (§(e) failed, correctly); a glob removed (§(0) failed, correctly). ⚠ **An earlier probe of mine was VACUOUS and is recorded as such** — it planted into a nested key that `claim.json` does ⛔ not have, so it 'passed' by never matching; re-run properly, it fired. ✅ Live: microcopy gate green (138 code / 28 copy files), `microcopy:test` **365/365**, human-actor gate green. ⚠ **NOT DONE BY THIS PASS:** Task 7's remaining coverage bullets, and the suite total is still UN-ATTESTED. | BigDev + Claude |
 > | live | 3,435 | **1,333** | 1,186 | 541 | 481 | 110 | 36 | **7,122** |
 >
 > ⇒ the **Change Log v1.0 row's `api 1,327` / `7,116` is the STALE figure**, ⛔ not this one. (Whole repo,
@@ -1419,6 +1446,28 @@ the v0.8/v0.9 File List above still holds for the original implementation.
 - `scripts/claim-adjudication-human-actor-invariant/check.ts`
 - `scripts/claim-adjudication-human-actor-invariant/lib.test.ts`
 - `scripts/claim-adjudication-human-actor-invariant/lib.ts`
+
+### File List — third pass (2026-09-22, v1.2): the three validate-pass holes
+
+⚠ Working-tree delta of the hole-filling pass ONLY. The v1.0 list above still holds for the second pass.
+
+**NEW (1):**
+
+- `scripts/microcopy/claim.test.ts` — 25 tests; the teeth for the four globs added below, plus §(e), which
+  proves the FM-14 allow-list pair suppresses three exact hexes and ⛔ nothing else.
+
+**MODIFIED (4):**
+
+- `microcopy.yaml` — 4 scope globs added; the `pool-reality-comparison` `reach` alternatives ANCHORED; 2
+  allow-list entries for the app-wide `apps/mobile` colour literals, each carrying its reason.
+- `scripts/claim-adjudication-human-actor-invariant/check.ts` — `NON_ADJUDICATION_ROUTES`,
+  `ENROLMENT_OWED`, `unclassifiedRouteFiles()` reconciliation, `COVERAGE_FLOOR = 8`.
+- `_bmad-output/implementation-artifacts/deferred-work.md` — the two owed items the allow-list points at.
+- this story — D4's struck sentence + its corrected close; the three bullets ticked with what was done.
+
+⚠ ⛔ NOT in this list because ⛔ nothing in them changed: the two mobile screens and the two `claim.json`
+catalogues were brought INTO SCOPE, ⛔ not edited. ⭐ That is the point — the copy was clean; it was
+merely unscanned.
 
 ## Change Log
 

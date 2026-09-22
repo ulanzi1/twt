@@ -148,6 +148,60 @@ const COVERAGE_SET: readonly CoverageEntry[] = [
   },
 ];
 
+/**
+ * ⭐⭐ ROUTE FILES DELIBERATELY NOT IN `COVERAGE_SET`, each with the reason it is out.
+ *
+ * ⚠⚠ WHY THIS EXISTS. Until now `COVERAGE_SET` was a hand-maintained list with ⛔ no reconciliation
+ * against the filesystem and ⛔ no floor. Two silent failures followed from that: **deleting an
+ * entry kept the gate GREEN over a smaller set**, and **a brand-new `claims.*.routes.ts` was simply
+ * invisible** — the gate reported success without ever having looked at it. A gate that cannot
+ * notice what it is not looking at is not a gate ([[feedback_gate_scope_semantic_coverage]]).
+ *
+ * ⇒ every `claims.*.routes.ts` must now appear in EXACTLY ONE of three lists. An unclassified file
+ *   is a HARD FAILURE, so adding a route file forces a deliberate decision about it.
+ */
+const NON_ADJUDICATION_ROUTES: readonly { file: string; why: string }[] = [
+  {
+    file: 'apps/api/src/modules/claims/claims.routes.ts',
+    why: 'MEMBER-app routes (memberSession, no :pariwarId): there is no admin human-actor chain to assert. Member authorisation is claim-ownership, enforced in the handlers and covered by the member E2E specs.',
+  },
+];
+
+/**
+ * ⚠ ADMIN claim-route files that SHOULD be enrolled and are not yet. This is recorded DEBT, ⛔ not
+ * an exemption: the gate prints them on every run so the number cannot quietly grow. Enrolling one
+ * means giving it `pathSubstrings` + `expectedMethods`, which is a deliberate act per file.
+ */
+const ENROLMENT_OWED: readonly { file: string; why: string }[] = [
+  {
+    file: 'apps/api/src/modules/claims/claims.helpline.routes.ts',
+    why: "Story 6.8/6.18 D4 — the helpline nominee-bank write, which D4's third branch made STATE-INDEPENDENT. Owed enrolment.",
+  },
+  {
+    file: 'apps/api/src/modules/claims/claims.ground-inspection.routes.ts',
+    why: 'Story 6.7/6.17 — the block-dimension ground-inspection gate. Owed enrolment.',
+  },
+  {
+    file: 'apps/api/src/modules/claims/claims.convergence.routes.ts',
+    why: 'Story 6.4 — the intake convergence point. Owed enrolment.',
+  },
+];
+
+/** Every `claims.*.routes.ts` on disk must be classified. Returns the unclassified ones. */
+function unclassifiedRouteFiles(): string[] {
+  const dir = path.join(repoRoot, 'apps/api/src/modules/claims');
+  const onDisk = fs
+    .readdirSync(dir)
+    .filter((f) => f.endsWith('.routes.ts'))
+    .map((f) => `apps/api/src/modules/claims/${f}`);
+  const classified = new Set<string>([
+    ...COVERAGE_SET.map((e) => e.file),
+    ...NON_ADJUDICATION_ROUTES.map((e) => e.file),
+    ...ENROLMENT_OWED.map((e) => e.file),
+  ]);
+  return onDisk.filter((f) => !classified.has(f));
+}
+
 function main(): void {
   console.log(
     'claim-adjudication-human-actor-invariant gate — adjudication routes require a HUMAN actor chain (Story 6.10 AC4/AC5)\n',
@@ -155,6 +209,25 @@ function main(): void {
 
   const findings: AdjudicationFinding[] = [];
   const missingCoverage: string[] = [];
+
+  // ⭐ ANTI-VACUITY FLOOR. Without it, deleting an entry shrinks the gate's scope in silence and it
+  // still reports success. Raise this DELIBERATELY when enrolling, ⛔ never to make the gate quiet.
+  const COVERAGE_FLOOR = 8; // ⚠ the TRUE count at 2026-09-21 — a first draft guessed 9 and the floor caught it.
+  if (COVERAGE_SET.length < COVERAGE_FLOOR) {
+    missingCoverage.push(
+      `COVERAGE_SET has ${COVERAGE_SET.length} entries but the floor is ${COVERAGE_FLOOR} — an entry was ` +
+        'deleted. Restore it, or lower the floor in the same commit with a reason.',
+    );
+  }
+
+  // ⭐ RECONCILE AGAINST THE FILESYSTEM. A new `claims.*.routes.ts` is a hard failure until someone
+  // classifies it — which is the whole point: the gate must notice what it is not looking at.
+  for (const f of unclassifiedRouteFiles()) {
+    missingCoverage.push(
+      `${f} — UNCLASSIFIED claim route file. Add it to COVERAGE_SET (with pathSubstrings + ` +
+        'expectedMethods), or to NON_ADJUDICATION_ROUTES / ENROLMENT_OWED with a stated reason.',
+    );
+  }
 
   for (const entry of COVERAGE_SET) {
     const abs = path.join(repoRoot, entry.file);
@@ -204,6 +277,12 @@ function main(): void {
     console.error('▸ Missing coverage (a listed adjudication route was not found — fix the coverage set or the route):');
     for (const m of missingCoverage) console.error(`  ✗ ${m}`);
     console.error('');
+  }
+
+  if (ENROLMENT_OWED.length > 0) {
+    console.log(`▸ Enrolment owed (${ENROLMENT_OWED.length} admin claim-route file(s) not yet scanned):`);
+    for (const e of ENROLMENT_OWED) console.log(`    · ${e.file} — ${e.why}`);
+    console.log('');
   }
 
   console.log('▸ Findings');

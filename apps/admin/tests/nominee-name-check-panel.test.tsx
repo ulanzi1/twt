@@ -290,3 +290,59 @@ describe('<NomineeNameCheckPanel> — AC8, the highlight', () => {
     expect(screen.getByTestId('name-check-none')).toHaveTextContent('No name check has been recorded');
   });
 });
+
+// ── Checklist family 13(d) — REACHABLE STATES MUST BE ANNOUNCED, ⛔ not merely rendered ────────
+//
+// ⚠⚠ THE GAP THIS CLOSES, in the review's own words: *"reachable states are reflected but not
+// announced (REAL GAP) … every selector in the three new files is `getByTestId`"*. A `data-testid`
+// assertion proves a node EXISTS in the DOM. It proves ⛔ nothing about whether a screen-reader
+// user is ever told the node appeared — and every state below APPEARS in response to an action,
+// replacing content the user's focus was just on.
+//
+// ⭐ SO THESE ASSERT THE ROLE, ⛔ not the text. `role="status"` is an ARIA live region: content
+// inserted into it is announced politely without stealing focus, which is the correct posture for
+// a console a District Admin is working through. ⚠ A bare `<p>` with the right words is SILENT.
+describe('<NomineeNameCheckPanel> — family 13(d): the states that APPEAR are announced', () => {
+  const announced = (testId: string): void => {
+    const el = screen.getByTestId(testId);
+    expect(el, `${testId} renders but is ⛔ not in a live region — a screen reader never hears it`)
+      .toHaveAttribute('role', 'status');
+  };
+
+  it('⭐ the LOADING state is announced — the one state where silence reads as a broken page', () => {
+    // ⚠ This was the last one missing. Every other state announced; this one did ⛔ not, so a
+    // screen-reader user who opened the console heard ⛔ nothing at all until the read resolved.
+    render(<NomineeNameCheckPanel data={undefined} loading canCheck onSubmit={vi.fn()} />);
+    announced('name-check-loading');
+  });
+
+  it('⭐ the recorded CURRENT check is announced (it replaces the form the user just submitted)', () => {
+    setup({
+      ...READ,
+      current_check: {
+        checked_at: '2026-09-20T11:00:00.000Z',
+        checked_by_actor_display: 'Anita Kumari',
+        nominee_declaration_token: 'tok-1',
+        passing: true,
+        accounts: [
+          { account_rank: 1, account_updated_at: '2026-09-20T10:00:00.000Z', verdict: 'matches', clerical_reason: null },
+          { account_rank: 2, account_updated_at: '2026-09-20T10:00:01.000Z', verdict: 'clerical_difference', clerical_reason: 'married_name' },
+        ],
+      },
+    });
+    announced('name-check-current');
+  });
+
+  it('⭐ the SENT-BACK hint is announced the moment the operator picks `does_not_match`', () => {
+    // ⚠ THE HINT IS FORM-DRIVEN, ⛔ not read-driven — it keys off the LOCAL verdict state, so it
+    // appears mid-interaction, while the operator's focus is on the select they just changed.
+    // ⭐ That is precisely the case a live region exists for, and precisely the case a
+    // `getByTestId` assertion cannot distinguish from silence.
+    setup();
+    // ⛔ NON-VACUITY: absent before the choice, so its appearance is caused by the verdict.
+    expect(screen.queryByTestId('name-check-sent-back-hint')).toBeNull();
+
+    fireEvent.change(screen.getByTestId('name-check-verdict-2'), { target: { value: 'does_not_match' } });
+    announced('name-check-sent-back-hint');
+  });
+});

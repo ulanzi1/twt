@@ -238,8 +238,17 @@ export default function NomineeReviewScreen(): React.ReactElement {
         {/* Story 6.18 (AC12), `-227` cl.9 — the English-script gate, shown INLINE as the filer types.
             ⛔ Never a silent server-only 400: a grieving family typing a name in their own script must
             be told what to change, here, not handed an opaque rejection after submitting. */}
+        {/* ⭐ PAIRED with `accessibilityLiveRegion` (code review 2026-09-22) — a bare
+            `accessibilityRole="alert"` does ⛔ not reliably announce on mount, and this message
+            APPEARS as the family types. The sibling `correction_needed` below and
+            `NomineeForm.tsx` in this same story already pair them; this one was the odd one out. */}
         {a.holder.trim() !== '' && !isEnglishScriptName(a.holder) ? (
-          <Text color="#B00020" fontSize="$2" accessibilityRole="alert">
+          <Text
+            color="#B00020"
+            fontSize="$2"
+            accessibilityRole="alert"
+            accessibilityLiveRegion="assertive"
+          >
             {t('nominee.bank.holder_english')}
           </Text>
         ) : null}
@@ -275,7 +284,11 @@ export default function NomineeReviewScreen(): React.ReactElement {
         />
         {a.ifscState === 'checking' ? <Text color="$colorPress">{t('nominee.bank.ifsc_checking')}</Text> : null}
         {a.ifscState === 'ok' && a.bankName ? <Text color="#1E8E3E">{a.bankName}</Text> : null}
-        {a.ifscState === 'error' ? <Text color="#B00020">{t('nominee.bank.ifsc_error')}</Text> : null}
+        {a.ifscState === 'error' ? (
+          <Text color="#B00020" accessibilityRole="alert" accessibilityLiveRegion="assertive">
+            {t('nominee.bank.ifsc_error')}
+          </Text>
+        ) : null}
         {/* Story 8.13 — optional UPI ID. A blank value never gates submit; a non-empty value that fails the
             client regex both shows an inline error AND blocks submit (review finding — canSubmit checks
             vpaValid). */}
@@ -290,7 +303,9 @@ export default function NomineeReviewScreen(): React.ReactElement {
         />
         <Text color="$colorPress" fontSize="$2">{t('nominee.bank.vpa_help')}</Text>
         {a.vpa.trim() !== '' && !VPA_RE.test(a.vpa.trim()) ? (
-          <Text color="#B00020">{t('nominee.bank.vpa_invalid')}</Text>
+          <Text color="#B00020" accessibilityRole="alert" accessibilityLiveRegion="assertive">
+            {t('nominee.bank.vpa_invalid')}
+          </Text>
         ) : null}
         <Separator />
       </YStack>
@@ -369,8 +384,22 @@ export default function NomineeReviewScreen(): React.ReactElement {
         {accountBlock(0, 'nominee.bank.primary')}
         {accountBlock(1, 'nominee.bank.secondary')}
 
-        {submit === 'saved' ? <Text color="#1E8E3E">{t('nominee.bank.saved')}</Text> : null}
-        {notice ? <Text color="#B00020">{notice}</Text> : null}
+        {/* ⭐ THE SUBMIT OUTCOME — the two most important messages on the screen to announce, and
+            both carried ⛔ NO accessibility role at all (code review 2026-09-22). The family presses
+            Save and the focused button's state changes underneath them; without a live region a
+            screen-reader user is told ⛔ nothing about whether their nominee's bank details reached
+            the Trust. ⚠ `saved` is `polite` — it is good news and must ⛔ not interrupt; `notice`
+            is `assertive`, because it means the save did ⛔ not happen. */}
+        {submit === 'saved' ? (
+          <Text color="#1E8E3E" accessibilityRole="alert" accessibilityLiveRegion="polite">
+            {t('nominee.bank.saved')}
+          </Text>
+        ) : null}
+        {notice ? (
+          <Text color="#B00020" accessibilityRole="alert" accessibilityLiveRegion="assertive">
+            {notice}
+          </Text>
+        ) : null}
 
         <Button theme="accent" disabled={!canSubmit} onPress={() => void onSubmit()}>
           {busy ? <Spinner /> : t('nominee.bank.submit')}

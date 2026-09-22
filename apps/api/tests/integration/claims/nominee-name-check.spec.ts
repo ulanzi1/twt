@@ -207,13 +207,18 @@ describe.skipIf(!hasDatabase)('Nominee name-check surface — E2E (:5433)', () =
     /** ⭐ AC7 — the filer's note on rank 1 (`-226` cl.2). Omitted ⇒ the column stays NULL, which is
      *  what every caller before 2026-09-22 got, and why the note-DECRYPT branch had ⛔ no test. */
     note1?: string,
+    /** ⭐ AC9 — a REAL encrypted VPA. The Dev Record claimed the never-echo set was asserted against
+     *  real plaintexts; `vpa_ciphertext` was ABSENT from this INSERT entirely, so
+     *  `not.toContain('vpa')` was a KEY-NAME check and ⛔ never a plaintext one. */
+    vpa1?: string,
   ): Promise<void> {
-    const [h1, h2, acct, ifsc, n1] = await Promise.all([
+    const [h1, h2, acct, ifsc, n1, v1] = await Promise.all([
       encryptNomineeBankField(holder1, pariwarId, deps.encryption),
       encryptNomineeBankField(holder2, pariwarId, deps.encryption),
       encryptNomineeBankField('999888777666', pariwarId, deps.encryption),
       encryptNomineeBankField('SBIN0009999', pariwarId, deps.encryption),
       note1 === undefined ? Promise.resolve(null) : encryptNomineeBankField(note1, pariwarId, deps.encryption),
+      vpa1 === undefined ? Promise.resolve(null) : encryptNomineeBankField(vpa1, pariwarId, deps.encryption),
     ]);
     const c = await td.pool.connect();
     try {
@@ -222,10 +227,10 @@ describe.skipIf(!hasDatabase)('Nominee name-check surface — E2E (:5433)', () =
         `INSERT INTO claim_nominee_bank_accounts
            (claim_case_id, pariwar_id, account_rank, account_holder_name_ciphertext,
             account_number_ciphertext, ifsc_ciphertext, name_difference_note_ciphertext,
-            bank_name, ifsc_validated)
-         VALUES ($1,$2,1,$3,$5,$6,$7,'State Bank of India',true),
-                ($1,$2,2,$4,$5,$6,NULL,'HDFC Bank',true)`,
-        [claimCaseId, pariwarId, h1, h2, acct, ifsc, n1],
+            vpa_ciphertext, bank_name, ifsc_validated)
+         VALUES ($1,$2,1,$3,$5,$6,$7,$8,'State Bank of India',true),
+                ($1,$2,2,$4,$5,$6,NULL,NULL,'HDFC Bank',true)`,
+        [claimCaseId, pariwarId, h1, h2, acct, ifsc, n1, v1],
       );
     } finally {
       c.release();
@@ -824,19 +829,224 @@ describe.skipIf(!hasDatabase)('Nominee name-check surface — E2E (:5433)', () =
     expect(res.body).toContain('A. Devi');
   });
 
-  it('⛔⛔ AC9 — the audited read line carries NO name and NO note', async () => {
-    const { client, pariwarId, claimCaseId } = await setup('district_admin');
-    await seedNomineeNameCheck(deps, pariwarId, claimCaseId);
-    td.auditSink.events.length = 0;
-    await client.inject({ method: 'GET', url: url(pariwarId, claimCaseId) });
+  it('⚠⚠ AC9 — ⛔ NO plaintext reaches the audit trail: names, note, VPA, account, IFSC, mobile, address', async () => {
+    // ⚠⚠ THIS TEST WAS VACUOUS AND ITS OWN CLOSURE NOTE OVERCLAIMED IT (code review 2026-09-22).
+    // It seeded through `seedNomineeNameCheck`, whose accounts hold the literal `'enc:v1:holder-N'`
+    // — ⛔ NOT decryptable envelopes. So the GET decrypted them to `unreadable`, ⭐ **no plaintext
+    // name ever existed in the process**, and `not.toContain('holder-1')` / `'enc:v1'` ⛔ cannot
+    // fail: an audit sink logging the decrypted holder name, the nominee name or the note would
+    // have passed it. The `vpa` and `address` checks were worse — ⛔ neither column was ever
+    // populated, so both were KEY-NAME checks wearing a plaintext check's clothes.
+    //
+    // ⭐ EVERY VALUE BELOW IS A REAL ENVELOPE the handler genuinely DECRYPTS, and each is a
+    // distinctive string that ⛔ cannot appear by coincidence. The point of AC9 is that a surface
+    // which legitimately decrypts PII must ⛔ not let it escape sideways into the audit trail.
+    const PT = {
+      holder1: 'Zareena Mukhopadhyay',
+      holder2: 'Yashwant Chattopadhyay',
+      nominee: 'Xiomara Venkataraghavan',
+      note: 'the bank shortened her name',
+      vpa: 'zareena.m@examplebank',
+      account: '999888777666',
+      ifsc: 'SBIN0009999',
+      mobile: '9876543210',
+      address: 'Nariman Point',
+    } as const;
 
-    const lines = td.auditSink.ofType('admin_nominee_name_check.read');
-    expect(lines.length).toBeGreaterThanOrEqual(1);
+    const pariwarId = randomUUID();
+    const district = `D-${randomUUID().slice(0, 8)}`;
+    const { client, userId } = await authenticate();
+    await grant(userId, pariwarId, 'district_admin', 'district', district);
+    const memberId = await seedDeceasedMember(pariwarId, district);
+    await seedNominee(pariwarId, memberId, 1, PT.nominee);
+    const claimCaseId = await seedClaim(pariwarId, memberId);
+    await seedAccountsWithNames(pariwarId, claimCaseId, PT.holder1, PT.holder2, PT.note, PT.vpa);
+    await client.inject({ method: 'POST', url: '/api/v1/auth/scope', payload: { pariwarId } });
+
+    td.auditSink.events.length = 0;
+    const read = await client.inject({ method: 'GET', url: url(pariwarId, claimCaseId) });
+    expect(read.statusCode, read.body).toBe(200);
+
+    // ⭐⭐ NON-VACUITY, AND IT IS THE WHOLE POINT: the handler really DID decrypt them. Without
+    // this the assertions below would be satisfied by a read that failed to decrypt anything —
+    // which is exactly the state this test shipped in.
+    expect(read.body, 'the holder name did not decrypt — the audit assertions would be vacuous').toContain(PT.holder1);
+    expect(read.body).toContain(PT.holder2);
+    expect(read.body).toContain(PT.nominee);
+    expect(read.body).toContain(PT.note);
+
+    // ⭐ AND ⛔ NONE OF IT IS IN THE AUDIT TRAIL — including the four the read legitimately carries.
     const dump = JSON.stringify(td.auditSink.events);
-    // The fixture's holder names are `enc:v1:holder-N` sentinels — none may appear.
-    expect(dump).not.toContain('holder-1');
-    expect(dump).not.toContain('holder-2');
+    expect(td.auditSink.ofType('admin_nominee_name_check.read').length).toBeGreaterThanOrEqual(1);
+    for (const [label, value] of Object.entries(PT)) {
+      expect(dump, `the audit trail carries the ${label} plaintext`).not.toContain(value);
+    }
+    // ⛔ …and ⛔ no raw envelope either: an audit line carrying ciphertext is still carrying PII.
     expect(dump).not.toContain('enc:v1');
+
+    // ⭐ THE RESPONSE ITSELF still refuses the four AC2 names — absent, ⛔ not merely un-logged.
+    expect(read.body).not.toContain(PT.account);
+    expect(read.body).not.toContain(PT.ifsc);
+    expect(read.body).not.toContain(PT.vpa);
+    expect(read.body).not.toContain(PT.mobile);
+    expect(read.body).not.toContain(PT.address);
+  });
+
+  it('⚠⚠ AC9 — the WRITE path leaks nothing either: the POST\'s own audit lines are scanned', async () => {
+    // ⚠ The old test reset the sink before the GET only and ⛔ never scanned the POST's lines
+    // (`admin_claim.nominee_name_checked`). A write that echoed a holder name into its audit line
+    // would have gone unnoticed — and the write is the call that carries a HUMAN JUDGEMENT about
+    // those names, so it is the likelier place for a well-meaning author to log them "for context".
+    const PT = { holder1: 'Zareena Mukhopadhyay', nominee: 'Xiomara Venkataraghavan', note: 'the bank shortened her name' } as const;
+    const pariwarId = randomUUID();
+    const district = `D-${randomUUID().slice(0, 8)}`;
+    const { client, userId } = await authenticate();
+    await grant(userId, pariwarId, 'district_admin', 'district', district);
+    const memberId = await seedDeceasedMember(pariwarId, district);
+    await seedNominee(pariwarId, memberId, 1, PT.nominee);
+    const claimCaseId = await seedClaim(pariwarId, memberId);
+    await seedAccountsWithNames(pariwarId, claimCaseId, PT.holder1, 'Yashwant Chattopadhyay', PT.note);
+    await client.inject({ method: 'POST', url: '/api/v1/auth/scope', payload: { pariwarId } });
+
+    const read = await client.inject({ method: 'GET', url: url(pariwarId, claimCaseId) });
+    const body = read.json() as {
+      nominee_declaration_token: string;
+      accounts: { account_rank: number; account_updated_at: string }[];
+    };
+    td.auditSink.events.length = 0;
+    const res = await client.inject({
+      method: 'POST',
+      url: url(pariwarId, claimCaseId),
+      payload: {
+        nominee_declaration_token: body.nominee_declaration_token,
+        accounts: body.accounts.map((a, i) => ({
+          account_rank: a.account_rank,
+          account_updated_at: a.account_updated_at,
+          verdict: i === 0 ? ('clerical_difference' as const) : ('matches' as const),
+          ...(i === 0 ? { clerical_reason: 'bank_shortened_name' as const } : {}),
+        })),
+      },
+    });
+    expect(res.statusCode, res.body).toBe(201);
+
+    // ⛔ NON-VACUITY: the write really did emit an audit line, so "nothing in it" is a property of
+    // the line and ⛔ not of an empty sink.
+    expect(td.auditSink.events.length, 'the POST emitted no audit line at all').toBeGreaterThan(0);
+    const dump = JSON.stringify(td.auditSink.events);
+    for (const [label, value] of Object.entries(PT)) {
+      expect(dump, `the POST's audit trail carries the ${label} plaintext`).not.toContain(value);
+    }
+    expect(dump).not.toContain('enc:v1');
+    // ⭐ But it DOES carry the non-PII verdict provenance — an audit line that recorded nothing
+    // would satisfy every assertion above and be useless.
+    expect(dump).toContain('bank_shortened_name');
+  });
+
+  // ── AC3/D3 — ATTRIBUTION: a check nobody is named on is ⛔ not attribution ──────────────────
+  //
+  // ⚠⚠ AND THE OLD 201 HAPPY PATH COULD ⛔ NOT TELL WHETHER THE POST WROTE ANYTHING. It called
+  // `seedNomineeNameCheck` first — which records a PASSING `matches` — then POSTed `matches` and
+  // asserted `passing === true`. ⇒ a no-op handler, or one that returned the pre-existing check,
+  // satisfied every assertion. The tests below use a claim with ⛔ NO seeded check and a DISTINCT
+  // verdict, and assert a NEW event plus a persisted re-GET.
+
+  it('⭐⭐ D3 — the POST writes a NEW check, attributed to a NAMED human, and it PERSISTS', async () => {
+    const pariwarId = randomUUID();
+    const district = `D-${randomUUID().slice(0, 8)}`;
+    const { client, userId } = await authenticate('Anita Kumari (District Admin)');
+    await grant(userId, pariwarId, 'district_admin', 'district', district);
+    const memberId = await seedDeceasedMember(pariwarId, district);
+    await seedNominee(pariwarId, memberId, 1, 'Asha Devi');
+    const claimCaseId = await seedClaim(pariwarId, memberId);
+    await seedAccountsWithNames(pariwarId, claimCaseId, 'A. Devi', 'Ravi Kumar');
+    await client.inject({ method: 'POST', url: '/api/v1/auth/scope', payload: { pariwarId } });
+
+    // ⛔ NO check exists yet — asserted, ⛔ not assumed.
+    const before = await client.inject({ method: 'GET', url: url(pariwarId, claimCaseId) });
+    expect((before.json() as { current_check: unknown }).current_check).toBeNull();
+    const body = before.json() as {
+      nominee_declaration_token: string;
+      accounts: { account_rank: number; account_updated_at: string }[];
+    };
+
+    const res = await client.inject({
+      method: 'POST',
+      url: url(pariwarId, claimCaseId),
+      payload: {
+        nominee_declaration_token: body.nominee_declaration_token,
+        accounts: body.accounts.map((a, i) => ({
+          account_rank: a.account_rank,
+          account_updated_at: a.account_updated_at,
+          // ⭐ A DISTINCT verdict — ⛔ not the `matches` a seed would have left behind.
+          verdict: i === 0 ? ('clerical_difference' as const) : ('matches' as const),
+          ...(i === 0 ? { clerical_reason: 'married_name' as const } : {}),
+        })),
+      },
+    });
+    expect(res.statusCode, res.body).toBe(201);
+
+    // ⭐⭐ D3 — ATTRIBUTED TO A NAMED HUMAN. A check recorded against `''` looks like attribution
+    // and is ⛔ not; the whole premise of this surface is that a NAMED person read two names.
+    const after = await client.inject({ method: 'GET', url: url(pariwarId, claimCaseId) });
+    const check = (after.json() as { current_check: { checked_by_actor_display: string; accounts: { verdict: string; clerical_reason: string | null }[] } }).current_check;
+    expect(check, 'the check did not persist — the POST wrote nothing').not.toBeNull();
+    expect(check.checked_by_actor_display, 'the check is attributed to nobody').toBe('Anita Kumari (District Admin)');
+    expect(check.checked_by_actor_display.trim()).not.toBe('');
+    // ⭐ …and it is THIS verdict, ⛔ not a `matches` left by some other writer.
+    expect(check.accounts.map((a) => a.verdict)).toEqual(['clerical_difference', 'matches']);
+    expect(check.accounts[0]!.clerical_reason).toBe('married_name');
+
+    // ⭐ Exactly ONE event — ⛔ not zero (a no-op) and ⛔ not two (a double write).
+    const events = await td.pool.query<{ n: string }>(
+      `SELECT count(*)::text AS n FROM events_log WHERE stream_id = $1 AND event_type = 'claim.nominee_name_checked'`,
+      [claimCaseId],
+    );
+    expect(Number(events.rows[0]!.n)).toBe(1);
+  });
+
+  it('⚠⚠ D3 — an admin with ⛔ NO display name CANNOT record a check', async () => {
+    // ⚠ The model is `verifier-decision.spec.ts`'s *"NULL display_name BLOCKS every verb"*. D3 made
+    // the display name REQUIRED in the payload; before that it was always `''` and ⛔ no check was
+    // ever attributed to anybody. ⭐ The block must be at the BOUNDARY — a missing name is an
+    // account-configuration problem, and letting it through would write an unattributable judgement
+    // that ⛔ cannot be repaired afterwards.
+    const pariwarId = randomUUID();
+    const district = `D-${randomUUID().slice(0, 8)}`;
+    const { client, userId } = await authenticate(null); // ⛔ no display name
+    await grant(userId, pariwarId, 'district_admin', 'district', district);
+    const memberId = await seedDeceasedMember(pariwarId, district);
+    const claimCaseId = await seedClaim(pariwarId, memberId);
+    await seedAccountsWithNames(pariwarId, claimCaseId, 'A. Devi', 'Ravi Kumar');
+    await client.inject({ method: 'POST', url: '/api/v1/auth/scope', payload: { pariwarId } });
+
+    const read = await client.inject({ method: 'GET', url: url(pariwarId, claimCaseId) });
+    const body = read.json() as {
+      nominee_declaration_token: string;
+      accounts: { account_rank: number; account_updated_at: string }[];
+    };
+    const res = await client.inject({
+      method: 'POST',
+      url: url(pariwarId, claimCaseId),
+      payload: {
+        nominee_declaration_token: body.nominee_declaration_token,
+        accounts: body.accounts.map((a) => ({
+          account_rank: a.account_rank,
+          account_updated_at: a.account_updated_at,
+          verdict: 'matches' as const,
+        })),
+      },
+    });
+    // ⭐ THE EXACT ANSWER, ⛔ not a set of plausible ones: `409 admin.display_name_missing`, the
+    // same code `verifier-decision` uses. A status-set assertion would have passed for a 403 from
+    // the permission chain — a completely different failure that happens to also be a refusal.
+    assertCode(res, 409, 'admin.display_name_missing');
+
+    // ⭐ And ⛔ NOTHING was written — a refusal that still recorded would be the worst outcome.
+    const events = await td.pool.query<{ n: string }>(
+      `SELECT count(*)::text AS n FROM events_log WHERE stream_id = $1 AND event_type = 'claim.nominee_name_checked'`,
+      [claimCaseId],
+    );
+    expect(Number(events.rows[0]!.n)).toBe(0);
   });
 
   // ── AC11 — the District Admin's CORRECTION QUEUE ────────────────────────────────

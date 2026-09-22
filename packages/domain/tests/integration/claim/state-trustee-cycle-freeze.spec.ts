@@ -212,6 +212,101 @@ describe.skipIf(!hasDatabase)('state-trustee cycle-freeze (PARIWAR_A scope)', ()
     expect(rows[0]!.phase).toBe('escalation_resolution');
   });
 
+  // ── Story 6.18 (AC4) — THE TWO DELIBERATE NON-GATES ───────────────────────────────────────
+  //
+  // ⚠⚠ THE STORY SPECIFIES THAT THESE TWO WRITERS ARE **NOT** NAME-CHECK GATED, and ⛔ nothing
+  // asserted it (code review 2026-09-22). An un-asserted deliberate absence is indistinguishable
+  // from an oversight: the next author to read AC4's *"every approving path"* would reasonably add
+  // the gate here and break a ruled behaviour, with every test still green.
+  // ⇒ these pin the ABSENCE, and say why it is correct.
+
+  it('⭐⭐ AC4 — `resolveEscalation` is DELIBERATELY ⛔ NOT name-check gated', async () => {
+    // ⭐ WHY: resolving an escalation moves a claim to `verifier_approved`, which is ⛔ NOT an
+    // approval of the CLAIM — it is the end of the verifier's review. The name check is required
+    // at the three paths that actually APPROVE (P1 `adjudicateClaim`, P3 `voteOnFrozenClaim`,
+    // P4 `finalizeR9Outcome`), and every one of them sits DOWNSTREAM of this. Gating here would
+    // strand an escalated claim that nobody had checked yet, in a state the helpline could ⛔ not
+    // correct it out of.
+    const { client, tx } = getTx();
+    const claimCaseId = toClaimId(randomUUID());
+    const deceased = toMemberId(randomUUID());
+    await enterAppScope(client, PARIWAR_A);
+    await driveTo(client, claimCaseId, deceased, 'verifier_review');
+    await seedEscalatedDecision(tx, claimCaseId);
+
+    // ⚠ THIS SPEC'S `driveTo` SEEDS THE ACCOUNTS AND A PASSING CHECK (so its other tests can pass
+    // the AC4 gates), so they are removed here — otherwise a success below would prove ⛔ nothing
+    // about gating: it would mean "gated, and the gate happened to be satisfied".
+    await tx
+      .delete(schema.claimNomineeBankAccounts)
+      .where(
+        and(
+          eq(schema.claimNomineeBankAccounts.pariwarId, PARIWAR_A),
+          eq(schema.claimNomineeBankAccounts.claimCaseId, claimCaseId),
+        ),
+      );
+
+    // ⛔ NO accounts — asserted, ⛔ not assumed.
+    const accounts = await tx
+      .select({ r: schema.claimNomineeBankAccounts.accountRank })
+      .from(schema.claimNomineeBankAccounts)
+      .where(
+        and(
+          eq(schema.claimNomineeBankAccounts.pariwarId, PARIWAR_A),
+          eq(schema.claimNomineeBankAccounts.claimCaseId, claimCaseId),
+        ),
+      );
+    expect(accounts).toHaveLength(0);
+
+    const result = await resolveEscalation(client, { ...base(claimCaseId), outcome: 'approved' });
+    expect(result.claimState).toBe('verifier_approved');
+
+    // ⭐⭐ AND THE GATE STILL BITES DOWNSTREAM — which is what makes the absence SAFE rather than a
+    // hole. The claim is now at `verifier_approved` with no check, and the vote refuses it.
+    await expect(
+      voteOnFrozenClaim(client, { ...base(claimCaseId), outcome: 'approved' }),
+    ).rejects.toMatchObject({ name: 'NomineeBankAccountsRequiredError' });
+  });
+
+  it('⭐⭐ AC4 — `commitCycleFreeze` carries ⛔ NO check of its own, and STALENESS is why that is safe', async () => {
+    // ⭐ WHY: the commit advances claims the Pariwar Admin ALREADY approved at P3, which was gated.
+    // Re-checking here would be a second gate on the same decision.
+    // ⚠⚠ AND THE REASON IT IS SAFE IS SUBTLE AND WORTH PINNING: a correction between the vote and
+    // the commit MOVES `updated_at`, which makes the recorded check STALE — and a stale check
+    // re-blocks the APPROVAL path. So the vote→commit window is covered by STALENESS, ⛔ not by
+    // the commit re-checking. This test shows the commit itself asks ⛔ no question.
+    const { client, tx } = getTx();
+    const claimCaseId = toClaimId(randomUUID());
+    const deceased = toMemberId(randomUUID());
+    await enterAppScope(client, PARIWAR_A);
+    await driveTo(client, claimCaseId, deceased, 'verifier_approved');
+    await seedNomineeNameCheck(client, PARIWAR_A, claimCaseId);
+    await voteOnFrozenClaim(client, { ...base(claimCaseId), outcome: 'approved' });
+    expect(await claimState(tx, claimCaseId)).toBe('state_trustee_approved');
+
+    // ⭐ Now the check goes STALE, AFTER the vote and BEFORE the commit — the exact window.
+    await tx
+      .update(schema.claimNomineeBankAccounts)
+      .set({ updatedAt: new Date(Date.now() + 60_000) })
+      .where(
+        and(
+          eq(schema.claimNomineeBankAccounts.pariwarId, PARIWAR_A),
+          eq(schema.claimNomineeBankAccounts.claimCaseId, claimCaseId),
+        ),
+      );
+
+    const res = await commitCycleFreeze(client, {
+      pariwarId: PARIWAR_A,
+      commitId: randomUUID() as unknown as CycleFreezeCommitId,
+      actorId: TRUSTEE,
+      actorDisplay: 'Trustee One',
+      actor: 'trustee',
+    });
+    // ⭐ THE COMMIT DOES ⛔ NOT RE-CHECK — the claim commits on the strength of the vote alone.
+    expect(res.committedClaimIds, 'the commit re-checked — AC4 says it does not').toContain(claimCaseId);
+    expect(await claimState(tx, claimCaseId)).toBe('approved');
+  });
+
   it('AC4b — resolveEscalation on a claim with no live escalated decision is rejected', async () => {
     const { client } = getTx();
     const claimCaseId = toClaimId(randomUUID());

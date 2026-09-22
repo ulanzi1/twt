@@ -416,6 +416,51 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the return loop (:5433)', () => {
   //   · `allowCorrection` — the operator's flag; the MEMBER route passes `false` and must ⛔ not
   //     be able to ride the exception.
 
+  it("⚠⚠ AC11 — the DOMAIN writer accepts a return with ⛔ NO note; ⛔ only the CONTRACT refuses it", async () => {
+    // ⚠⚠ THIS PINS CURRENT BEHAVIOUR AND ⛔ DOES NOT ENDORSE IT — and I found the gap by writing
+    // the test the review asked for, which I expected to pass.
+    //
+    // `2026-09-20-227` cl.10 says a claim goes back *"with Note"*, and `other` is the ⛔ only valid
+    // reason code PRECISELY BECAUSE the explanation lives in the rationale. The **contract**
+    // enforces it — `CycleFreezeDecisionRequest`'s `superRefine` requires the rationale on `other`,
+    // and its own comment says *"A return with no note is precisely what `-227` cl.10 forbids"*.
+    // ⚠ The DOMAIN writer does ⛔ NOT re-check it: `returnToDistrictAdmin` validates the state, the
+    // exclusions and the conflict, and ⛔ never the rationale.
+    //
+    // ⇒ TODAY the gap is UNREACHABLE over HTTP (the boundary refuses first), so this is
+    // defence-in-depth that is missing, ⛔ not a live defect
+    // ([[feedback_trace_reachability_before_escalating]]). ⚠ It becomes reachable the moment a
+    // SECOND caller appears — a job, a backfill, a migration — and what it would write is a claim
+    // sent back with ⛔ no instruction: the District Admin told to fix something and ⛔ not told
+    // what, while the family waits for the round trip. ⭐ Recorded in `deferred-work.md`.
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const cid = toClaimId(randomUUID());
+    const mid = toMemberId(randomUUID());
+    await driveTo(client, cid, mid, 'verifier_approved');
+    await seedNomineeNameCheck(client, PARIWAR_A, cid);
+
+    // ⚠ CURRENT BEHAVIOUR: it succeeds. If this ever starts REJECTING, the domain gained the
+    // revalidation and this test should become the assertion that it does.
+    await returnToDistrictAdmin(client, { ...returnInput(cid), rationaleCiphertext: null });
+    expect(await hasLiveReturnRow(tx, PARIWAR_A, cid)).toBe(true);
+
+    // ⭐ …and the row really carries a NULL rationale — ⛔ not an empty string the reader could at
+    // least distinguish from "never asked".
+    const rows = await tx
+      .select({ r: schema.claimStateTrusteeDecisions.rationaleCiphertext })
+      .from(schema.claimStateTrusteeDecisions)
+      .where(
+        and(
+          eq(schema.claimStateTrusteeDecisions.pariwarId, PARIWAR_A),
+          eq(schema.claimStateTrusteeDecisions.claimCaseId, cid),
+          eq(schema.claimStateTrusteeDecisions.phase, 'correction_return'),
+        ),
+      );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.r, 'the writer invented a rationale rather than storing null').toBeNull();
+  });
+
   it('⭐ AC5 — at `verifier_approved` the TIER-2 window already permits it, return or no return', async () => {
     const { client } = getTx();
     await enterAppScope(client, PARIWAR_A);

@@ -81,7 +81,16 @@ const finalizeBase = (claimCaseId: ClaimId, finalizer: string) => ({
 });
 
 /** Drive a fresh claim to verifier_approved via the projector. */
-async function driveToApproved(client: Client, claimCaseId: ClaimId, deceased: MemberId): Promise<void> {
+async function driveToApproved(
+  client: Client,
+  claimCaseId: ClaimId,
+  deceased: MemberId,
+  /** ⭐ Skip the name-check seed, to reach an UNCHECKED routed claim — the state P4 exists to
+   *  refuse. ⚠ `events_log` is APPEND-ONLY (DELETE is revoked for `twt_app`, 42501), so a check
+   *  already recorded ⛔ cannot be removed afterwards; it has to be never written.
+   *  [[project_live_db_test_gotchas]] */
+  skipCheck = false,
+): Promise<void> {
   const emit = (from: string | null, to: string, eventType: string, extra: Record<string, unknown> = {}) =>
     projectClaimState(client, {
       claimCaseId,
@@ -110,7 +119,7 @@ async function driveToApproved(client: Client, claimCaseId: ClaimId, deceased: M
   // Story 6.18 (AC4) — a claim is only approvable once it carries its two bank accounts and a
   // current, PASSING District Admin name check. Seeded through the REAL writer, so these specs keep
   // exercising the production path rather than bypassing the new gate.
-  await seedNomineeNameCheck(client, PARIWAR_A, claimCaseId);
+  if (!skipCheck) await seedNomineeNameCheck(client, PARIWAR_A, claimCaseId);
 }
 
 /** Insert the live routed_to_r9 routing row directly (6.13's routeToR9 output). */
@@ -131,7 +140,7 @@ async function insertRoutedRow(tx: Tx, claimCaseId: ClaimId): Promise<void> {
 async function setupRoutedClaim(
   client: Client,
   tx: Tx,
-  opts: { clauseVersion?: number } = {},
+  opts: { clauseVersion?: number; skipCheck?: boolean } = {},
 ): Promise<{ claimCaseId: ClaimId; deceased: MemberId }> {
   await seedClauseVersion(tx, PARIWAR_A, {
     clauseId: R9_CLAUSE,
@@ -144,7 +153,7 @@ async function setupRoutedClaim(
   await enterAppScope(client, PARIWAR_A);
   const claimCaseId = toClaimId(randomUUID());
   const deceased = toMemberId(randomUUID());
-  await driveToApproved(client, claimCaseId, deceased);
+  await driveToApproved(client, claimCaseId, deceased, opts.skipCheck === true);
   await insertRoutedRow(tx, claimCaseId);
   return { claimCaseId, deceased };
 }
@@ -266,6 +275,7 @@ describe.skipIf(!hasDatabase)('R9 voting (PARIWAR_A scope)', () => {
     // so without P4 an R9-approved claim would land in the committable set having never had its
     // nominee name looked at by anybody.
     const { claimCaseId } = await setupRoutedClaim(client, tx);
+    const stateBefore = await claimState(tx, claimCaseId);
     await tx
       .delete(schema.claimNomineeBankAccounts)
       .where(
@@ -285,12 +295,139 @@ describe.skipIf(!hasDatabase)('R9 voting (PARIWAR_A scope)', () => {
 
     // ⭐ AND THE REFUSAL IS CLEAN: the gate runs BEFORE any write, so there is no orphaned session
     // outcome, no lifecycle event and no metadata row to reconcile later.
-    expect(await claimState(tx, claimCaseId)).not.toBe('state_trustee_approved');
+    //
+    // ⚠⚠ THE STATE ASSERTION WAS `not.toBe('state_trustee_approved')` (corrected 2026-09-22), which
+    // passes for a claim that moved somewhere else ENTIRELY — `denied`, `settled`, anything. ⭐ It
+    // is EQUALITY with the prior state now, which is the property *"nothing was written"* actually
+    // means. And the promised *"no orphaned session outcome, no metadata row"* was ⛔ never queried
+    // at all — both are read below.
+    expect(await claimState(tx, claimCaseId)).toBe(stateBefore);
     const events = await tx
       .select({ t: schema.eventsLog.eventType })
       .from(schema.eventsLog)
       .where(and(eq(schema.eventsLog.pariwarId, PARIWAR_A), eq(schema.eventsLog.streamId, claimCaseId)));
     expect(events.map((e) => e.t)).not.toContain('claim.r9_outcome');
+
+    // ⭐ THE SESSION OUTCOME IS STILL NULL — a finalize that recorded its verdict and then refused
+    // would leave the panel unable to vote again on a claim it had never actually decided.
+    const sessions = await tx
+      .select({ outcome: schema.claimR9VotingSessions.outcome })
+      .from(schema.claimR9VotingSessions)
+      .where(
+        and(
+          eq(schema.claimR9VotingSessions.pariwarId, PARIWAR_A),
+          eq(schema.claimR9VotingSessions.claimCaseId, claimCaseId),
+        ),
+      );
+    expect(sessions.length, 'no session — the assertion below would be vacuous').toBeGreaterThan(0);
+    for (const row of sessions) expect(row.outcome, 'an ORPHANED session outcome was written').toBeNull();
+
+    // ⛔ …and ⛔ no `r9_outcome` metadata row either.
+    const decisions = await tx
+      .select({ phase: schema.claimStateTrusteeDecisions.phase })
+      .from(schema.claimStateTrusteeDecisions)
+      .where(
+        and(
+          eq(schema.claimStateTrusteeDecisions.pariwarId, PARIWAR_A),
+          eq(schema.claimStateTrusteeDecisions.claimCaseId, claimCaseId),
+        ),
+      );
+    expect(decisions.map((d) => d.phase)).not.toContain('r9_outcome');
+  });
+
+  // ── P4's REMAINING CELLS — the gate matrix, at the path that bypasses P1 entirely ───────────
+  //
+  // ⚠⚠ P4 had ONE cell: accounts-deleted. ⛔ No test covered a MISSING check, a STALE one, or a
+  // `does_not_match` at this gate — and P4 is the ⛔ only gate that catches an APPEAL REVERSAL
+  // (which re-enters the votable set without passing P1) or a D5 post-approval correction. ⇒ the
+  // three untested cells were precisely the ones P4 exists for.
+  const P4_DEFICIENCIES = [
+    {
+      key: 'the accounts are there but the check was NEVER recorded',
+      error: 'NomineeNameCheckRequiredError',
+      skipCheck: true,
+      // ⚠⚠ THE ACCOUNTS HAVE TO BE PUT BACK BY HAND, and the reason is worth stating: the shared
+      // `seedNomineeNameCheck` fixture seeds the two ACCOUNTS **and** the check together, so
+      // skipping it removes both — and the accounts guard runs FIRST, giving
+      // `NomineeBankAccountsRequiredError`. ⇒ skipping alone tests the WRONG guard. To isolate the
+      // never-checked rule the accounts must exist and the check must not.
+      spoil: async (tx: Tx, claimCaseId: ClaimId) => {
+        await tx.insert(schema.claimNomineeBankAccounts).values(
+          [1, 2].map((rank) => ({
+            claimCaseId,
+            pariwarId: PARIWAR_A,
+            accountRank: rank,
+            accountHolderNameCiphertext: `enc:v1:holder-${rank}`,
+            accountNumberCiphertext: `enc:v1:acct-${rank}`,
+            ifscCiphertext: `enc:v1:ifsc-${rank}`,
+            bankName: rank === 1 ? 'State Bank of India' : 'HDFC Bank',
+            ifscValidated: true,
+          })),
+        );
+      },
+    },
+    {
+      key: 'the check went STALE (a D5 correction after the routing)',
+      error: 'NomineeNameCheckRequiredError',
+      skipCheck: false,
+      spoil: async (tx: Tx, claimCaseId: ClaimId) => {
+        await tx
+          .update(schema.claimNomineeBankAccounts)
+          .set({ updatedAt: new Date(Date.now() + 60_000) })
+          .where(
+            and(
+              eq(schema.claimNomineeBankAccounts.pariwarId, PARIWAR_A),
+              eq(schema.claimNomineeBankAccounts.claimCaseId, claimCaseId),
+            ),
+          );
+      },
+    },
+  ] as const;
+
+  for (const d of P4_DEFICIENCIES) {
+    it(`⭐ Story 6.18 P4 — an R9 APPROVE is refused when ${d.key}`, async () => {
+      const { client, tx } = getTx();
+      const { claimCaseId } = await setupRoutedClaim(client, tx, { skipCheck: d.skipCheck });
+      const stateBefore = await claimState(tx, claimCaseId);
+      await d.spoil(tx, claimCaseId);
+
+      await openR9VotingSession(client, openBase(claimCaseId));
+      await castR9Vote(client, voteBase(claimCaseId, PANEL[0]!, 'approve'));
+      await castR9Vote(client, voteBase(claimCaseId, PANEL[1]!, 'approve'));
+
+      await expect(
+        finalizeR9Outcome(client, finalizeBase(claimCaseId, PANEL[0]!)),
+      ).rejects.toMatchObject({ name: d.error });
+      expect(await claimState(tx, claimCaseId)).toBe(stateBefore);
+    });
+  }
+
+  it('⭐⭐ Story 6.18 P4 — an R9 APPROVE is refused on a `does_not_match` (cl.5 — it WAITS)', async () => {
+    // ⚠ Re-recording the verdict through the REAL writer, ⛔ not by spoiling a column: the point is
+    // that a District Admin's honest *"these are not the same person"* stops an R9 approval, and it
+    // must stop it WITHOUT the claim being denied or moved.
+    const { client, tx } = getTx();
+    const { claimCaseId } = await setupRoutedClaim(client, tx);
+    const stateBefore = await claimState(tx, claimCaseId);
+    await seedNomineeNameCheck(client, PARIWAR_A, claimCaseId, {
+      verdicts: ['matches', 'does_not_match'],
+      reuseAccounts: true,
+    });
+
+    await openR9VotingSession(client, openBase(claimCaseId));
+    await castR9Vote(client, voteBase(claimCaseId, PANEL[0]!, 'approve'));
+    await castR9Vote(client, voteBase(claimCaseId, PANEL[1]!, 'approve'));
+
+    await expect(
+      finalizeR9Outcome(client, finalizeBase(claimCaseId, PANEL[0]!)),
+    ).rejects.toMatchObject({ name: 'NomineeNameCheckRequiredError' });
+    // ⭐ IT WAITS — ⛔ not denied, ⛔ not moved.
+    expect(await claimState(tx, claimCaseId)).toBe(stateBefore);
+    const types = await tx
+      .select({ t: schema.eventsLog.eventType })
+      .from(schema.eventsLog)
+      .where(and(eq(schema.eventsLog.pariwarId, PARIWAR_A), eq(schema.eventsLog.streamId, claimCaseId)));
+    expect(types.map((e) => e.t)).not.toContain('claim.r9_outcome');
   });
 
   it('⛔ Story 6.18 P4 — an R9 DENY is NEVER gated (cl.6/cl.7 — a claim is never refused over a name)', async () => {

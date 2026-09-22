@@ -4,6 +4,12 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: Task 7 coverage of 6-18-nominee-holder-name-on-the-verification-console (2026-09-22)
+
+- **⚠ `returnToDistrictAdmin` accepts a return with ⛔ NO note; ⛔ only the CONTRACT refuses it — defence-in-depth missing, ⛔ not a live defect.** `2026-09-20-227` cl.10 sends a claim back *"with Note"*, and `other` is the ⛔ only valid reason code PRECISELY BECAUSE the explanation lives in the rationale. `CycleFreezeDecisionRequest`'s `superRefine` enforces it and its own comment says *"A return with no note is precisely what `-227` cl.10 forbids"* — but the DOMAIN writer re-checks the state, the exclusions and the conflict, and ⛔ **never** the rationale. ⭐ **Found by writing the test the code review asked for and expecting it to pass.** ⇒ TODAY it is UNREACHABLE over HTTP (the boundary refuses first), so this is ⛔ not a live defect ([[feedback_trace_reachability_before_escalating]]); it becomes reachable the moment a SECOND caller appears — a job, a backfill, a migration — and what it would write is a claim sent back with ⛔ no instruction: the District Admin told to fix something and ⛔ not told what, while the family waits for the round trip. ⚠ Current behaviour is PINNED in a named test (`nominee-name-check-return-loop.spec.ts` — *"the DOMAIN writer accepts a return with ⛔ NO note"*), which also asserts the stored rationale is really NULL rather than an invented empty string. ⭐ Trigger: any second caller of `returnToDistrictAdmin`, or a decision to add the domain revalidation — then that test becomes the assertion that it rejects.
+
+---
+
 ## Deferred from: validate pass of 6-18-nominee-holder-name-on-the-verification-console — microcopy scope (2026-09-22)
 
 The validate pass found that 6.18's two MEMBER-facing mobile screens and the whole `claim` i18n namespace were OUTSIDE `microcopy.yaml`'s scan scope — **unscanned copy wearing a green check**, the exact defect class that file's own header names. Both were brought into scope and the teeth were PROVEN on them (planted prohibited noun on the code file, planted `donor`/`receipt` in `en/claim.json`, planted Devanagari digit in `hi/claim.json` — all three fired; restored byte-identical). ⭐ These two items are what that change left OWED.

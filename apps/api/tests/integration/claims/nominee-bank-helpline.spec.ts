@@ -339,6 +339,86 @@ describe.skipIf(!hasDatabase)('Claim-time nominee bank — helpline E2E (:5433)'
     expect(res.json<{ error: { code: string } }>().error.code).toBe('nominee_bank.correction_reason_required');
   });
 
+  // ── AC12 — the ENGLISH-SCRIPT gate, at the BOUNDARY ────────────────────────────────────────
+  //
+  // ⚠⚠ ⛔ NO API TEST REFUSED A DEVANAGARI NAME ON ANY BOUND ROUTE (code review 2026-09-22). The
+  // admin card refuses it in the CLIENT and so ⛔ never reaches the server — which means the
+  // SERVER-side rule, the one that actually protects the data, was asserted ⛔ nowhere.
+  //
+  // ⭐ `2026-09-20-227` cl.9: *"Please use English Name everywhere to avoid this"* — the script
+  // problem is solved at CAPTURE, ⛔ never by tolerating it at the check. ⇒ the boundary is where
+  // that lives, and a client-only guard is a guard a second client ⛔ does not have.
+  it('⚠⚠ AC12 — a DEVANAGARI holder name is refused at the BOUNDARY (400), ⛔ not only in the client', async () => {
+    const pariwarId = randomUUID();
+    const { client, userId } = await authenticate();
+    await grantRole(userId, pariwarId, 'helpline_operator');
+    await elevateClaimFile(client);
+    const claimCaseId = await seedConvergedClaim(pariwarId);
+
+    const res = await client.inject({
+      method: 'POST', url: recordUrl(pariwarId, claimCaseId),
+      payload: {
+        accounts: [account({ accountHolderName: 'आशा देवी' }), account({ accountNumber: '987654321098', ifsc: 'HDFC0000001' })],
+      } as unknown as object,
+    });
+    expect(res.statusCode, res.body).toBe(400);
+
+    // ⭐ And ⛔ NOTHING persisted — a refusal that still wrote would be the worst outcome.
+    const rows = await td.pool.query(`SELECT 1 FROM claim_nominee_bank_accounts WHERE claim_case_id = $1`, [claimCaseId]);
+    expect(rows.rows).toHaveLength(0);
+  });
+
+  it('⭐⭐ AC12 — the gate ACCEPTS the real-world English forms it must ⛔ never refuse', async () => {
+    // ⚠⚠ THE HALF THAT MATTERS MOST, AND IT HAD ⛔ NO TEST. A gate that is merely STRICT is easy;
+    // a gate that refuses `A. Devi`, `Mary-Anne` or `D'Souza` would send a helpline operator into
+    // a loop they ⛔ cannot escape, on a call with a bereaved family, over a name that is correct.
+    // ⭐ Each of these is a name a real Indian bank account carries.
+    const names = ['A. Devi', 'Mary-Anne Fernandes', "Priya D'Souza", 'Ravi Kumar Singh'];
+    for (const [i, holder] of names.entries()) {
+      const pariwarId = randomUUID();
+      const { client, userId } = await authenticate();
+      await grantRole(userId, pariwarId, 'helpline_operator');
+      await elevateClaimFile(client);
+      const claimCaseId = await seedConvergedClaim(pariwarId);
+
+      const res = await client.inject({
+        method: 'POST', url: recordUrl(pariwarId, claimCaseId),
+        payload: {
+          accounts: [
+            account({ accountHolderName: holder }),
+            account({ accountHolderName: holder, accountNumber: '987654321098', ifsc: 'HDFC0000001' }),
+          ],
+        } as unknown as object,
+      });
+      expect(res.statusCode, `"${holder}" (case ${i}) was refused: ${res.body}`).toBe(201);
+    }
+  });
+
+  it('⭐ AC12 — the NOTE is ⛔ NOT script-gated: a family may explain in their own language', async () => {
+    // ⭐⭐ THE DISTINCTION cl.9 ACTUALLY DRAWS, and getting it backwards would be the cruel version
+    // of this rule. The HOLDER NAME must be English because it has to match a bank record. The
+    // filer's NOTE is prose ABOUT that name — *"the bank shortened her name"* — and demanding it in
+    // English would mean a grieving family cannot explain themselves at all.
+    // ⚠ Pinned because the two fields sit side by side in the same payload, and a future edit that
+    // "consistently" applied `EnglishScriptName` to both would pass every other test in this file.
+    const pariwarId = randomUUID();
+    const { client, userId } = await authenticate();
+    await grantRole(userId, pariwarId, 'helpline_operator');
+    await elevateClaimFile(client);
+    const claimCaseId = await seedConvergedClaim(pariwarId);
+
+    const res = await client.inject({
+      method: 'POST', url: recordUrl(pariwarId, claimCaseId),
+      payload: {
+        accounts: [
+          { ...account(), nameDifferenceNote: 'बैंक ने नाम छोटा कर दिया' },
+          account({ accountNumber: '987654321098', ifsc: 'HDFC0000001' }),
+        ],
+      } as unknown as object,
+    });
+    expect(res.statusCode, res.body).toBe(201);
+  });
+
   // ── AC5 — THE CORRECTION EXCEPTION, OVER HTTP ──────────────────────────────────────────────
   //
   // ⚠⚠ THE TWO EXISTING TESTS ARE ⛔ NOT PINS, and the review said exactly why: the tier-3 test

@@ -43,8 +43,17 @@ export const NOMINEE_BANK_IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
  */
 export const NOMINEE_BANK_VPA_REGEX = /^[A-Za-z0-9.\-_]{2,256}@[A-Za-z][A-Za-z0-9.\-_]{1,63}$/;
 
-/** An Indian bank account number: 9–18 digits (the RBI CBS range; digits only). */
-const ACCOUNT_NUMBER_REGEX = /^\d{9,18}$/;
+/**
+ * An Indian bank account number: 9–18 digits (the RBI CBS range; digits only).
+ *
+ * ⭐ EXPORTED 2026-09-22 (code review). Its sibling `NOMINEE_BANK_IFSC_REGEX` was already a wire
+ * constant that the clients import; this one was module-private, so `BankDetailsCard` and the
+ * mobile form each HAND-COPIED it. ⚠ Two copies of a validation rule is ⛔ not duplication as a
+ * style problem — it is a rule that can DRIFT: the day the server widens or narrows the range, a
+ * number the boundary accepts starts being refused in the console (or worse, the reverse, and the
+ * family is told their details are fine right up until the write fails).
+ */
+export const NOMINEE_BANK_ACCOUNT_NUMBER_REGEX = /^\d{9,18}$/;
 
 /**
  * One disbursement account the filer types. NO `nomineeRank` / nominee linkage (D1 APPROVED — the
@@ -60,7 +69,7 @@ export const NomineeBankAccountEntry = z
     // with the declared nominee's name without transliterating. ⛔ INPUT-ONLY: this predicate must
     // NEVER reach an output schema (responses are serializer-parsed; see the predicate's doc-block).
     accountHolderName: EnglishScriptName,
-    accountNumber: z.string().regex(ACCOUNT_NUMBER_REGEX, 'account number must be 9–18 digits'),
+    accountNumber: z.string().regex(NOMINEE_BANK_ACCOUNT_NUMBER_REGEX, 'account number must be 9–18 digits'),
     ifsc: z.string().regex(NOMINEE_BANK_IFSC_REGEX, 'IFSC must match the RBI format (e.g. SBIN0000001)'),
     vpa: z.string().trim().regex(NOMINEE_BANK_VPA_REGEX, 'UPI ID must look like name@bank').optional(),
     /**

@@ -165,7 +165,7 @@ describe.skipIf(!hasDatabase)('Verifier adjudication WRITE surface — E2E (:543
       await closeScopeTx(scopeTx, false);
       throw err;
     }
-        // Story 6.18 (AC4) — approvable only with two bank accounts + a current, PASSING District
+    // Story 6.18 (AC4) — approvable only with two bank accounts + a current, PASSING District
     // Admin name check. Seeded through the REAL writer, so these E2E specs keep exercising the
     // production gate rather than bypassing it.
     await seedNomineeNameCheck(deps, pariwarId, String(claimCaseId));

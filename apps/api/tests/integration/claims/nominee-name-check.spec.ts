@@ -164,7 +164,6 @@ describe.skipIf(!hasDatabase)('Nominee name-check surface — E2E (:5433)', () =
     return String(claimCaseId);
   }
 
-
   /** Seed a declared nominee with an ENCRYPTED name (Tier-1, the real envelope). */
   async function seedNominee(
     pariwarId: string,
@@ -174,19 +173,25 @@ describe.skipIf(!hasDatabase)('Nominee name-check surface — E2E (:5433)', () =
     relationship = 'spouse',
     splitPct = 100,
   ): Promise<void> {
-    const [ciphertext, mobile] = await Promise.all([
+    const [ciphertext, mobile, address] = await Promise.all([
       encryptNomineeField(name, pariwarId, deps.encryption),
       // `mobile_ciphertext` is NOT NULL on the table. ⭐ The AC2 read must never surface it, which is
       // exactly why seeding a real one here is worth the trouble: the never-echo assertions below
       // would pass vacuously against a null column.
       encryptNomineeField('9876543210', pariwarId, deps.encryption),
+      // ⚠⚠ AND `address_ciphertext` IS NULLABLE, WHICH MADE HALF THAT CLAIM FALSE (code review
+      // 2026-09-22). The comment above said the never-echo assertions were "not vacuous" — true of
+      // the mobile, ⛔ NOT of the address, which was ⛔ never seeded at all. So
+      // `expect(res.body).not.toContain('address')` was passing against a NULL column and could
+      // ⛔ never have failed. AC2 names the address explicitly, so it is seeded for real now.
+      encryptNomineeField('14 Nariman Point, Mumbai 400021', pariwarId, deps.encryption),
     ]);
     const c = await td.pool.connect();
     try {
       await c.query(
-        `INSERT INTO member_nominees (member_id, pariwar_id, rank, name_ciphertext, mobile_ciphertext, relationship, split_pct, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, now())`,
-        [memberId, pariwarId, rank, ciphertext, mobile, relationship, splitPct],
+        `INSERT INTO member_nominees (member_id, pariwar_id, rank, name_ciphertext, mobile_ciphertext, address_ciphertext, relationship, split_pct, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now())`,
+        [memberId, pariwarId, rank, ciphertext, mobile, address, relationship, splitPct],
       );
     } finally {
       c.release();
@@ -322,8 +327,14 @@ describe.skipIf(!hasDatabase)('Nominee name-check surface — E2E (:5433)', () =
       await client.inject({ method: 'POST', url: '/api/v1/auth/scope', payload: { pariwarId } });
 
       const res = await client.inject({ method: 'GET', url: url(pariwarId, claimCaseId) });
+      // ⭐ POSITIVE CONTROL — the name IS returned, so "the rest is absent" is a DENIAL and ⛔ not
+      // an empty response.
       expect(res.body).toContain('Asha Devi');
+      // ⭐ The two PLAINTEXTS AC2 names, both now really on the row (see `seedNominee`).
       expect(res.body).not.toContain('9876543210');
+      expect(res.body).not.toContain('Nariman Point');
+      // ⛔ …and neither FIELD NAME appears either, so the read cannot be widened to carry them
+      // under a null or a masked value.
       expect(res.body).not.toContain('mobile');
       expect(res.body).not.toContain('address');
     });

@@ -123,7 +123,6 @@ export const verifierConsoleEn = {
     displayNameMissing: 'Your account has no display name configured — contact an administrator to enable adjudication.',
     decisionConflict: 'This claim was already updated — reload to see the latest state before trying again.',
   },
-  // Story 6.11 — reason-code display labels (bounded domain enum).
   // ── Story 6.18 — the nominee NAME CHECK (`2026-09-19-226` cl.3/cl.5) ──────────────────────
   // ⛔ NO match hint, NO score, NO diff wording anywhere in this block: the console SHOWS two lists
   // and RECORDS a human judgement. The only "highlight" is `approvedWithDifference`, which reports
@@ -224,6 +223,9 @@ export const verifierConsoleEn = {
     note: 'Their note',
     open: 'Open the claim',
   },
+  // Story 6.11 — reason-code display labels (bounded domain enum).
+  // ⚠ MOVED HERE 2026-09-22 (code review): this line sat above the Story 6.18 `nameCheck` block,
+  // so it described the wrong object and `reasonCodes` had ⛔ no comment of its own.
   reasonCodes: {
     r5_d_natural_death: 'R5(d) — natural death confirmed',
     r8_90pct_met: 'R8 — 90% standing threshold met',

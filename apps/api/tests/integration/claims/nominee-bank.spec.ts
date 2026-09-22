@@ -115,7 +115,10 @@ async function driveClaimState(
   t: TestApp,
   pariwarId: string,
   claimCaseId: string,
-  target: 'verification_in_progress' | 'verifier_review',
+  // ⭐ `'verifier_review'` ONLY — `'verification_in_progress'` was in this union and ⛔ no caller
+  // ever passed it (code review 2026-09-22). A union member no call site uses is a claim the
+  // helper supports a path it has ⛔ never been run down.
+  target: 'verifier_review',
 ): Promise<void> {
   const scopeTx = await openScopeTx(t.deps, pariwarId);
   let ok = false;

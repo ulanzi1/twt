@@ -20,7 +20,11 @@ import type { NomineeStatusResponse, RecordNomineeBankRequest } from '@twt/contr
 // of the current implementation: the moment the schema gains a rule the bare regex does not carry,
 // a name the SERVER accepts starts being refused in the app (or worse, the reverse). One predicate,
 // used by the schema and by every form, is the only way the two cannot drift.
-import { isEnglishScriptName } from '@twt/contracts'
+// ⭐ `NAME_DIFFERENCE_NOTE_MAX_CHARS` from contracts, ⛔ not a literal `500` twice (code review
+// 2026-09-22). The admin card already imported it; this screen hard-coded the same number in two
+// places, so a change at the boundary would silently truncate a family's note at the OLD length —
+// client-side, before the server ever saw it.
+import { NAME_DIFFERENCE_NOTE_MAX_CHARS, isEnglishScriptName } from '@twt/contracts'
 import { useRouter } from 'expo-router'
 import { Button, Input, Paragraph, Separator, Spinner, Text, XStack, YStack } from 'tamagui'
 
@@ -257,11 +261,11 @@ export default function NomineeReviewScreen(): React.ReactElement {
             note, it does not oblige one, and a missing note blocks nothing. */}
         <Input
           value={a.note}
-          onChangeText={(v) => patchAccount(idx, { note: v.slice(0, 500) })}
+          onChangeText={(v) => patchAccount(idx, { note: v.slice(0, NAME_DIFFERENCE_NOTE_MAX_CHARS) })}
           placeholder={t('nominee.bank.note')}
           accessibilityLabel={t('nominee.bank.note')}
           accessibilityHint={t('nominee.bank.note_help')}
-          maxLength={500}
+          maxLength={NAME_DIFFERENCE_NOTE_MAX_CHARS}
           disabled={busy}
         />
         <Input

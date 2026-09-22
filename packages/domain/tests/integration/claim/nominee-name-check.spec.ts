@@ -27,6 +27,7 @@ import {
   getLatestNomineeNameCheck,
   projectClaimState,
   recordNomineeNameCheck,
+  returnToDistrictAdmin,
   voteOnFrozenClaim,
 } from '../../../src/claim/index.js';
 import { getMemberNomineeDeclarationRefs } from '../../../src/nominee/declaration-ref.js';
@@ -471,16 +472,32 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
       expect(events.map((e) => e.t)).not.toContain('claim.verifier_denied');
     });
 
-    it('⭐ P1 — after the accounts are CORRECTED and re-checked, the same claim approves (AC5, AC6)', async () => {
-      const { client } = getTx();
+    it('⭐ P1 — a LATER check supersedes a sending-back one, so the same claim approves (AC5, AC6)', async () => {
+      // ⚠⚠ RE-TITLED 2026-09-22. It read *"after the accounts are CORRECTED and re-checked"* and
+      // ⛔ nothing here is corrected: both `seedNomineeNameCheck` calls run inside ONE transaction,
+      // where Postgres `now()` is frozen at transaction start, so the re-inserted account rows come
+      // back with the IDENTICAL `updated_at`. ⇒ what this proves is **latest-check-wins**, which is
+      // a real and separate invariant — ⛔ not the corrected-and-re-checked chain the title claimed.
+      // ⭐ That chain needs two COMMITTED transactions and is proved in
+      // `nominee-name-check-write-concurrency.spec.ts` (*"…that ALONE stales a recorded PASSING
+      // check — D5 end to end"*).
+      const { client, tx } = getTx();
       await enterAppScope(client, PARIWAR_A);
       const cid = toClaimId(randomUUID());
       const mid = toMemberId(randomUUID());
       await driveTo(client, cid, mid, 'verifier_review');
       await seedNomineeNameCheck(client, PARIWAR_A, cid, { verdicts: ['matches', 'does_not_match'] });
+      const before = (await liveAccountStamps(tx, cid)).map((s) => s.updatedAt.toISOString()).sort();
 
-      // The helpline corrects, the District Admin looks again — the whole point of "sent back".
+      // The District Admin looks again and records a passing verdict.
       await seedNomineeNameCheck(client, PARIWAR_A, cid, { verdicts: ['matches', 'clerical_difference'], clericalReasons: [null, 'married_name'] });
+
+      // ⭐ PINNED, so the re-title cannot quietly drift back: the stamps did ⛔ NOT move. If this
+      // ever fails, this test became the corrected-and-re-checked case and should be renamed again.
+      expect(
+        (await liveAccountStamps(tx, cid)).map((s) => s.updatedAt.toISOString()).sort(),
+        'the stamps moved inside one transaction — this test is now proving something else',
+      ).toEqual(before);
 
       const res = await adjudicateClaim(client, {
         ...adjudicateBase(cid),
@@ -498,8 +515,16 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
       await driveTo(client, cid, mid, 'verifier_approved');
       await seedNomineeNameCheck(client, PARIWAR_A, cid);
 
-      // A helpline correction after the District Admin's approval: the delete-then-insert writer
-      // moves `updated_at`, which is exactly what makes the recorded judgement no longer current.
+      // ⚠⚠ THE STAMP IS MOVED BY HAND, AND THE COMMENT USED TO HIDE THAT (code review 2026-09-22).
+      // It read *"the delete-then-insert writer moves `updated_at`"* — but the writer is ⛔ never
+      // called here; the line below is a bare UPDATE. ⇒ this test proves the COMPARISON (a moved
+      // stamp stales a check and the vote is refused), and ⛔ NOT the premise that the real writer
+      // moves it. An upsert that preserved the timestamp would disable D5 with this test still
+      // green.
+      // ⭐ The premise is proved separately, on the own-committing harness, by
+      // `nominee-name-check-write-concurrency.spec.ts` — *"the REAL writer moves `updated_at`
+      // across two COMMITTED transactions"*. It ⛔ cannot be proved here: `now()` is frozen for the
+      // whole of this transaction, so the writer's own rewrite would return the SAME stamp.
       await tx
         .update(schema.claimNomineeBankAccounts)
         .set({ updatedAt: new Date(Date.now() + 60_000) })
@@ -543,6 +568,81 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
         actor: 'trustee',
       });
       expect(res.claimState).toBe('denied');
+    });
+
+    it('⚠⚠ D2 — a DENY *IS* refused while a RETURN is live: the ONE place "never gated" does ⛔ not hold', async () => {
+      // ⭐⭐ THIS TEST PINS CURRENT BEHAVIOUR AND ⛔ DOES NOT ENDORSE IT. It exists so that if the
+      // Panel rules the other way, exactly ONE named test flips and somebody reads this comment —
+      // rather than the change landing as a silent surprise (the review's own words).
+      //
+      // ⚠ THE TENSION IS INSIDE ONE FUNCTION, fifteen lines apart, in `voteOnFrozenClaim`:
+      //   · the NAME-CHECK gate is outcome-conditional and says so —
+      //     *"⛔ A DENY IS NEVER GATED (cl.6/cl.7 — a claim is never refused over a name or a
+      //     missing account)"* — it runs ⛔ only `if (input.outcome === 'approved')`;
+      //   · the LIVE-RETURN guard above it is ⛔ NOT outcome-conditional. It throws
+      //     `ClaimAwaitingCorrectionError` before the outcome is ever looked at.
+      // ⇒ so a claim the Pariwar Admin sent back over BANK DETAILS cannot be DENIED — on standing,
+      //   on concealment, on anything — until the bank details are corrected and re-checked.
+      //
+      // ⭐ WHY IT IS ⛔ NOT OBVIOUSLY WRONG, which is exactly why it needs a ruling and not a patch:
+      // the return is a live instruction from the cl.4 authority, and letting a second trustee
+      // resolve the claim underneath it would make the return silently disappear (the vote is what
+      // supersedes the row). ⚠ But the cl.6/cl.7 reasoning cuts the other way: a denial needs ⛔ no
+      // correct bank account, and a family waiting on a correction to receive a refusal is the
+      // slower of the two bad outcomes.
+      const { client, tx } = getTx();
+      await enterAppScope(client, PARIWAR_A);
+      const cid = toClaimId(randomUUID());
+      const mid = toMemberId(randomUUID());
+      await driveTo(client, cid, mid, 'verifier_approved');
+      await seedNomineeNameCheck(client, PARIWAR_A, cid);
+
+      // ⭐ POSITIVE CONTROL FIRST, on a SEPARATE claim seeded identically: without a return the very
+      // same deny lands. So the refusal below is the return row and ⛔ nothing else about this setup.
+      const control = toClaimId(randomUUID());
+      await driveTo(client, control, toMemberId(randomUUID()), 'verifier_approved');
+      await seedNomineeNameCheck(client, PARIWAR_A, control);
+      expect(
+        (
+          await voteOnFrozenClaim(client, {
+            claimCaseId: control,
+            pariwarId: PARIWAR_A,
+            outcome: 'denied',
+            reasonCode: 'standing_not_met',
+            rationaleCiphertext: null,
+            actorId: TRUSTEE,
+            actorDisplay: 'Trustee One',
+            actor: 'trustee',
+          })
+        ).claimState,
+      ).toBe('denied');
+
+      await returnToDistrictAdmin(client, {
+        claimCaseId: cid,
+        pariwarId: PARIWAR_A,
+        reasonCode: 'other',
+        rationaleCiphertext: 'enc:v1:the-holder-name-is-not-the-nominee',
+        actorId: TRUSTEE,
+        actorDisplay: 'Pariwar Admin One',
+        actor: 'trustee',
+      });
+
+      await expect(
+        voteOnFrozenClaim(client, {
+          claimCaseId: cid,
+          pariwarId: PARIWAR_A,
+          outcome: 'denied',
+          reasonCode: 'standing_not_met',
+          rationaleCiphertext: null,
+          actorId: TRUSTEE,
+          actorDisplay: 'Trustee One',
+          actor: 'trustee',
+        }),
+        'a DENY passed through a live return — if this is now intended, this test is the ruling record',
+      ).rejects.toMatchObject({ name: 'ClaimAwaitingCorrectionError' });
+
+      // ⭐ And the claim did ⛔ not move: a refused vote must leave ⛔ no trace.
+      expect(await claimState(tx, cid)).toBe('verifier_approved');
     });
   });
 }, { timeout: 20000 });

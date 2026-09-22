@@ -59,6 +59,11 @@ const emptyAccount = (): AccountFields => ({ holder: '', number: '', ifsc: '', v
 
 type SubmitState = 'idle' | 'saving' | 'saved' | 'error'
 
+// ⭐ Gives the `saved` live-region message (code review 2026-09-22) time to actually be announced
+// before the screen navigates away underneath it — without this the `submit === 'saved'` Text was
+// mounted and unmounted in the same tick as `router.push`, so a screen-reader user never heard it.
+const SAVED_ANNOUNCEMENT_DELAY_MS = 1200
+
 export default function NomineeReviewScreen(): React.ReactElement {
   const t = useClaimT()
   const router = useRouter()
@@ -222,6 +227,10 @@ export default function NomineeReviewScreen(): React.ReactElement {
     // on the very details they had just corrected (code review 2026-09-20).
     setCorrectionNeeded(false)
     if (memberId) saveClaimDraft(memberId, { lastStep: 'nominee-review' })
+    // ⭐ Hold on this screen long enough for the `saved` live region to be announced (code review
+    // 2026-09-22) — navigating on the same tick as `setSubmit('saved')` unmounted the message
+    // before a screen reader had any chance to read it.
+    await new Promise((r) => setTimeout(r, SAVED_ANNOUNCEMENT_DELAY_MS))
     router.push('/(claim)/acknowledgement')
   }
 
@@ -393,9 +402,14 @@ export default function NomineeReviewScreen(): React.ReactElement {
             Save and the focused button's state changes underneath them; without a live region a
             screen-reader user is told ⛔ nothing about whether their nominee's bank details reached
             the Trust. ⚠ `saved` is `polite` — it is good news and must ⛔ not interrupt; `notice`
-            is `assertive`, because it means the save did ⛔ not happen. */}
+            is `assertive`, because it means the save did ⛔ not happen.
+            ⚠ `saved` uses `accessibilityRole="text"`, ⛔ NOT `"alert"` (code review 2026-09-22) —
+            `role="alert"` conventionally forces an assertive/interrupting announcement regardless of
+            `accessibilityLiveRegion`, which directly contradicts "must not interrupt" above; `"text"`
+            is the pairing this codebase uses everywhere else for a polite announcement (e.g.
+            `(signup)/nominees.tsx`, `(life-events)/index.tsx`). */}
         {submit === 'saved' ? (
-          <Text color="#1E8E3E" accessibilityRole="alert" accessibilityLiveRegion="polite">
+          <Text color="#1E8E3E" accessibilityRole="text" accessibilityLiveRegion="polite">
             {t('nominee.bank.saved')}
           </Text>
         ) : null}

@@ -202,6 +202,28 @@ function unclassifiedRouteFiles(): string[] {
   return onDisk.filter((f) => !classified.has(f));
 }
 
+/**
+ * ⭐ A route file must land in EXACTLY ONE of the three classification lists (code review
+ * 2026-09-22). `unclassifiedRouteFiles()` unions them through a `Set`, which silently absorbs a
+ * file listed in TWO lists at once — e.g. both "no chain needed" (`NON_ADJUDICATION_ROUTES`) and
+ * "owed enrolment" (`ENROLMENT_OWED`) — rather than flagging the contradiction. Returns the files
+ * classified more than once.
+ */
+function duplicateClassifiedFiles(): string[] {
+  const all = [
+    ...COVERAGE_SET.map((e) => e.file),
+    ...NON_ADJUDICATION_ROUTES.map((e) => e.file),
+    ...ENROLMENT_OWED.map((e) => e.file),
+  ];
+  const seen = new Set<string>();
+  const duplicates = new Set<string>();
+  for (const f of all) {
+    if (seen.has(f)) duplicates.add(f);
+    seen.add(f);
+  }
+  return [...duplicates];
+}
+
 function main(): void {
   console.log(
     'claim-adjudication-human-actor-invariant gate — adjudication routes require a HUMAN actor chain (Story 6.10 AC4/AC5)\n',
@@ -226,6 +248,16 @@ function main(): void {
     missingCoverage.push(
       `${f} — UNCLASSIFIED claim route file. Add it to COVERAGE_SET (with pathSubstrings + ` +
         'expectedMethods), or to NON_ADJUDICATION_ROUTES / ENROLMENT_OWED with a stated reason.',
+    );
+  }
+
+  // ⭐ A route file classified in more than one list is a contradiction (e.g. both "no chain
+  // needed" and "owed enrolment"), not a harmless duplicate — flag it rather than let the `Set`
+  // union in `unclassifiedRouteFiles()` silently absorb it (code review 2026-09-22).
+  for (const f of duplicateClassifiedFiles()) {
+    missingCoverage.push(
+      `${f} — CLASSIFIED IN MORE THAN ONE LIST (COVERAGE_SET / NON_ADJUDICATION_ROUTES / ` +
+        'ENROLMENT_OWED). A route file must be classified exactly once — remove it from all but one.',
     );
   }
 

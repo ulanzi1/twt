@@ -73,10 +73,15 @@ tone:
     # the rule always MEANT. ⛔ The copy was NOT reworded to satisfy a regex, and ⛔ no allow-list
     # entry was added — that would have silenced the rule for the whole file. Teeth unchanged:
     # `close-of-cycle.test.ts` plants "couldn't reach the amount" / "did not reach the amount".
+    # ⚠⚠ 2026-09-22 (code review) — the anchor's article group was `(the\s+)?` ONLY, which
+    # silently dropped possessive-determiner phrasing the OLD unanchored pattern used to catch:
+    # "didn't reach ITS target" / "did not reach OUR goal" / "couldn't reach THEIR target" all
+    # failed to match (verified with a direct regex test) — a real narrowing beyond the stated
+    # telephony fix. Widened to `(the|its|our|their)\s+`, still optional, still anchored.
     # The paraphrased / spelled-out tail is caught by the HUMAN tone-review (tone-guide §5)
     # — the regex is deliberately NOT exhaustive over natural language. Single valid
     # case-insensitive regex (assertValidRegex-validated).
-    pattern: 'fell\s+short|shortfall|short\s+of\s+(the\s+)?\b(target|goal)\b|\b(target|goal)\b\s+missed|\d+\s*%\s+achieved|\d+\s*%\s+of\s+(the\s+)?\b(target|goal)\b|\d+\s*%\s+short\b|\b(target|goal)\b\s+(was\s+|is\s+)?(not\s+)?(met|achieved)|needed\s+more\s+contributions|(could|did|does)(n.?t|\s+not)\s+reach\s+(the\s+)?\b(target|goal|amount|total)\b|लक्ष्य\s*से\s*कम'
+    pattern: 'fell\s+short|shortfall|short\s+of\s+(the\s+)?\b(target|goal)\b|\b(target|goal)\b\s+missed|\d+\s*%\s+achieved|\d+\s*%\s+of\s+(the\s+)?\b(target|goal)\b|\d+\s*%\s+short\b|\b(target|goal)\b\s+(was\s+|is\s+)?(not\s+)?(met|achieved)|needed\s+more\s+contributions|(could|did|does)(n.?t|\s+not)\s+reach\s+((the|its|our|their)\s+)?\b(target|goal|amount|total)\b|लक्ष्य\s*से\s*कम'
   - label: out-of-band-blame
     # Story 8.10 (AC4) — the UX-DR76 out-of-band contribution policy, mechanized.
     # A member who sends money directly to a bereaved family (the cadre's chanda

@@ -19,7 +19,7 @@ import type {
   MemberSearchResultItem,
 } from '@twt/contracts';
 import type { ReactElement } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { ApiError } from '../../api/client.js';
 import {
@@ -240,6 +240,14 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
   );
 
   const filedClaimCaseId = result?.claimCaseId ?? null;
+  // ⭐ Tracks the CURRENT claim so `submitBank`'s async continuation (below) can tell whether the
+  // operator has since switched to a different claim (Review Finding, code review 2026-09-22) — a
+  // plain closed-over variable would read the value from the render that ISSUED the request, not
+  // the one live when it resolves.
+  const filedClaimCaseIdRef = useRef(filedClaimCaseId);
+  useEffect(() => {
+    filedClaimCaseIdRef.current = filedClaimCaseId;
+  }, [filedClaimCaseId]);
   const recordBank = useRecordHelplineNomineeBank(pariwarId, filedClaimCaseId ?? '');
   /**
    * ⭐⭐ `recorded` IS A SERVER FACT, ⛔ NOT "did I just submit?" (code review 2026-09-20).
@@ -268,11 +276,25 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
     // operator to elevate. ⚠ It is ⛔ not a rare path: `STEP_UP_ELEVATED_MS` is 5 minutes and
     // typing two account numbers, two IFSCs and a difference note on a bereavement call is slow.
     // ⭐ Treated exactly as the intake treats it — a SIGNAL to elevate, ⛔ never a hard error.
+    //
+    // ⚠⚠ STALE-CLAIM GUARD (code review 2026-09-22). `submitBank` closes over the claim id at the
+    // moment it was ISSUED; if the operator switches to a different claim before this promise
+    // settles, `filedClaimCaseIdRef` (always current) will have moved on. `stepUpRequired` lives on
+    // this page, not per-claim, so an unguarded `setStepUpRequired` here would flip the flag for
+    // whichever claim happens to be showing when the stale response arrives — not the one that
+    // asked for it.
+    const claimCaseIdAtSubmit = filedClaimCaseId;
     try {
       await recordBank.mutateAsync(body);
-      setStepUpRequired(false);
+      if (filedClaimCaseIdRef.current === claimCaseIdAtSubmit) setStepUpRequired(false);
     } catch (err) {
-      if (err instanceof ApiError && err.code === 'auth.step_up_required') setStepUpRequired(true);
+      if (
+        filedClaimCaseIdRef.current === claimCaseIdAtSubmit &&
+        err instanceof ApiError &&
+        err.code === 'auth.step_up_required'
+      ) {
+        setStepUpRequired(true);
+      }
       // ⭐ Re-thrown either way: the card's own `catch` owns the pending/error UI, and swallowing
       // here would leave it reporting success for a write that ⛔ never landed.
       throw err;
@@ -321,7 +343,11 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
           claimCaseId={filedClaimCaseId}
           recorded={bankRecorded}
           onSubmit={submitBank}
-          pending={recordBank.isPending}
+          // ⭐ Also disabled while `stepUpRequired` (code review 2026-09-22) — `pending` alone goes
+          // back to `false` the instant the mutation settles, so an operator who is shown the
+          // step-up panel could immediately click Save again before elevating, firing a second
+          // concurrent write that can race the elevation itself (see the stale-claim guard above).
+          pending={recordBank.isPending || stepUpRequired}
           // ⭐ A step-up-required error is handled via the PANEL, ⛔ not surfaced as a hard error —
           // the same treatment `submitError` gives the intake, and for the same reason: a raw
           // *"step up required"* string is a dead end, the panel is the way out.

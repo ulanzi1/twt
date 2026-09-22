@@ -671,9 +671,11 @@ export function useVerifierConsole(pariwarId: string, claimCaseId: string | null
   });
 }
 
-// ── Verifier adjudication WRITE surface (Story 6.11) — the FIRST verifier WRITE. ──
-// On success both mutations invalidate the console packet key so (e)/(f) + the audit trail refetch with
-// the just-written decision (fresh present/empty; the new AuditTrailEntry).
+// ── Nominee BANK + NAME CHECK write/read surface (Story 6.18). ──
+// ⚠ SECTION BANNER CORRECTED 2026-09-22 (code review). The Story 6.11 banner below used to sit
+// HERE, above the 6.18 hooks — so a reader scanning section headers attributed this whole block to
+// the verifier adjudication surface, and the 6.11 mutations it actually describes had ⛔ no banner
+// at all. Moved down to the functions it is about.
 
 /** Story 6.18 (AC7) — the helpline operator records both disbursement accounts after filing. */
 export function useRecordHelplineNomineeBank(pariwarId: string, claimCaseId: string) {
@@ -784,6 +786,10 @@ export function usePostNomineeNameCheck(pariwarId: string, claimCaseId: string) 
     },
   });
 }
+
+// ── Verifier adjudication WRITE surface (Story 6.11) — the FIRST verifier WRITE. ──
+// On success both mutations invalidate the console packet key so (e)/(f) + the audit trail refetch with
+// the just-written decision (fresh present/empty; the new AuditTrailEntry).
 
 /** POST an approve / deny / escalate decision; refetches the console packet on success. */
 export function usePostVerifierDecision(pariwarId: string, claimCaseId: string) {

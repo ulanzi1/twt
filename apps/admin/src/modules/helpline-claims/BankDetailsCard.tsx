@@ -22,7 +22,12 @@ import { useEffect, useState } from 'react';
 // of the current implementation: the moment the schema gains a rule the bare regex does not carry,
 // a name the SERVER accepts starts being refused in the app (or worse, the reverse). One predicate,
 // used by the schema and by every form, is the only way the two cannot drift.
-import { NAME_DIFFERENCE_NOTE_MAX_CHARS, isEnglishScriptName } from '@twt/contracts';
+import {
+  NAME_DIFFERENCE_NOTE_MAX_CHARS,
+  NOMINEE_BANK_ACCOUNT_NUMBER_REGEX,
+  NOMINEE_BANK_IFSC_REGEX,
+  isEnglishScriptName,
+} from '@twt/contracts';
 import type { NomineeNameCheckResponse, RecordNomineeBankHelplineRequest } from '@twt/contracts';
 
 import { resolveEn } from './i18n-en.js';
@@ -35,8 +40,14 @@ interface AccountFields {
 }
 
 const EMPTY: AccountFields = { holder: '', number: '', ifsc: '', note: '' };
-const IFSC_RE = /^[A-Z]{4}0[A-Z0-9]{6}$/;
-const ACCOUNT_RE = /^\d{9,18}$/;
+// ⭐ THE SHARED WIRE CONSTANTS, ⛔ not hand-copies (code review 2026-09-22). Both regexes used to
+// be re-declared here. `NOMINEE_BANK_IFSC_REGEX` was already exported from contracts and this file
+// duplicated it anyway; the account-number one was module-private there and is now exported too.
+// ⚠ A copied validation rule DRIFTS: the day the boundary widens or narrows the range, this console
+// starts refusing numbers the server accepts, or accepting numbers it will reject after the
+// operator has typed everything.
+const IFSC_RE = NOMINEE_BANK_IFSC_REGEX;
+const ACCOUNT_RE = NOMINEE_BANK_ACCOUNT_NUMBER_REGEX;
 
 export interface BankDetailsCardProps {
   /** `null` until a claim is in hand — the card is keyed on the claim. */

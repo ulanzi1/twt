@@ -97,7 +97,12 @@ describe('Story 6.18 member copy resolves through the REAL t() — both locales'
     // If `t()` silently returned a fallback instead of throwing, every `expect(value.trim().length)
     // .toBeGreaterThan(0)` above could be passing against a placeholder string for a key that does
     // not exist, and a missing/renamed key would go undetected by this entire file.
-    expect(() => t('nominee.bank.__does_not_exist__', undefined, { locale: 'en', namespace: 'claim' })).toThrow()
-    expect(() => t('__does_not_exist__', undefined, { locale: 'en' })).toThrow()
+    // ⚠ ANCHORED to the missing-KEY message (code review 2026-09-23) — a bare `.toThrow()` also passed
+    // on a throw for any other reason (a wrong argument shape, an unknown namespace), which would
+    // leave the premise above undemonstrated.
+    expect(() => t('nominee.bank.__does_not_exist__', undefined, { locale: 'en', namespace: 'claim' })).toThrow(
+      "[i18n] missing key 'nominee.bank.__does_not_exist__' in 'en/claim'",
+    )
+    expect(() => t('__does_not_exist__', undefined, { locale: 'en' })).toThrow("[i18n] missing key '__does_not_exist__'")
   })
 })

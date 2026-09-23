@@ -394,6 +394,15 @@ describe.skipIf(!hasDatabase)('Claim-time nominee bank — helpline E2E (:5433)'
       } as unknown as object,
     });
     expect(res.statusCode, res.body).toBe(400);
+    // ⭐ And it is refused FOR THE NAME ON RANK 2 (code review 2026-09-23) — a bare 400 passed on any
+    // other validation failure, the pattern this file's siblings already replaced with the code.
+    const body = res.json<{
+      error: { code: string; details: { issues: { instancePath: string; message: string }[] } };
+    }>();
+    expect(body.error.code).toBe('request.validation');
+    expect(body.error.details.issues.map((i) => [i.instancePath, i.message])).toEqual([
+      ['/accounts/1/accountHolderName', 'Please enter the name in English'],
+    ]);
     const rows = await td.pool.query(`SELECT 1 FROM claim_nominee_bank_accounts WHERE claim_case_id = $1`, [claimCaseId]);
     expect(rows.rows).toHaveLength(0);
   });

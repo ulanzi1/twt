@@ -50,6 +50,16 @@ const FENCED_FILES = [
   'packages/domain/src/claim/verifier-decision-persist.ts',
   'packages/domain/src/claim/state-trustee-decision-persist.ts',
   'packages/domain/src/claim/r9-voting-persist.ts',
+  // ⭐ THE AC8 FLAG'S READ AND RENDER SITES (code review 2026-09-23). The R9 panel renders the
+  // flag directly beside the decrypted-names disclosure — the likeliest place a future "looks
+  // different" hint would land — and none of these were fenced. Compliant today BY CONSTRUCTION
+  // (reason codes through a label table, nothing compared); the fence is what keeps it so.
+  'apps/api/src/modules/claims/claims.r9-voting.handlers.ts',
+  'packages/domain/src/claim/cycle-freeze-read.ts',
+  'apps/admin/src/modules/r9-voting/R9CasePanel.tsx',
+  'apps/admin/src/modules/r9-voting/R9VotingPage.tsx',
+  'apps/admin/src/modules/cycle-freeze/PendingCaseCard.tsx',
+  'apps/admin/src/modules/claim-verification/NomineeNameCheckPanel.tsx',
 ] as const;
 
 /**
@@ -96,7 +106,7 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
     for (const f of FENCED_FILES) {
       expect(() => read(f), `fenced file missing: ${f}`).not.toThrow();
     }
-    expect(FENCED_FILES.length).toBeGreaterThanOrEqual(10);
+    expect(FENCED_FILES.length).toBeGreaterThanOrEqual(16);
   });
 
   it('⭐⭐ POSITIVE CONTROL — the scanner actually FIRES on a planted violation of every pattern', () => {

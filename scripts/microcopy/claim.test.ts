@@ -135,12 +135,14 @@ describe('vocabulary bites the mobile screens (code register, includeMemberOnly 
     // string" as the identifier case above — they were NOT (`donorRow` vs. the standalone token
     // `"donor"`), so the pair could pass for a reason unrelated to the `includeMemberOnly` property
     // it claimed to isolate. ⭐ Isolate it properly: the IDENTICAL bare word `donor`, standalone (a
-    // real word boundary on both sides) in BOTH a code file and the copy register — the ONLY
-    // difference between the two calls below is `includeMemberOnly`.
-    expect(checkVocabulary(REVIEW_TSX, 'const donor = rows[0]', config, { includeMemberOnly: false })).toEqual([]);
-    expect(
-      checkVocabulary(EN_FILE, '{ "x": "donor" }', config, { includeMemberOnly: true }).length,
-    ).toBeGreaterThan(0);
+    // real word boundary on both sides) — the ONLY difference between the two calls below is
+    // `includeMemberOnly`.
+    // ⚠ 2026-09-23 (code review): the previous "isolating" pair still varied the FILE and the TEXT as
+    // well as the flag (`REVIEW_TSX` + `const donor …` vs `EN_FILE` + `{ "x": "donor" }`) — the very
+    // confound it said it removed. Now the file and the line are IDENTICAL; only the flag moves.
+    const LINE = 'const donor = rows[0]';
+    expect(checkVocabulary(REVIEW_TSX, LINE, config, { includeMemberOnly: false })).toEqual([]);
+    expect(checkVocabulary(REVIEW_TSX, LINE, config, { includeMemberOnly: true }).length).toBeGreaterThan(0);
   });
 });
 

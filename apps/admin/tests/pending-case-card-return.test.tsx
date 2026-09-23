@@ -150,8 +150,9 @@ describe('<PendingCaseCard> — AC8, the name-difference highlight', () => {
     // merely deleted, so the fix is what is now covered.
     setup({ name_difference_reasons: ['married_name'] });
     const badge = screen.getByTestId('name-difference-badge').textContent ?? '';
-    expect(badge).toContain('approved with a name difference');
-    expect(badge.toLowerCase()).toContain('a married name');
+    // ⭐ The SHARED headline (code review 2026-09-23) — the card used to hand-copy it in lowercase.
+    expect(badge).toContain('Approved with a name difference');
+    expect(badge).toContain('A married name');
     expect(badge).not.toContain('married_name');
   });
 

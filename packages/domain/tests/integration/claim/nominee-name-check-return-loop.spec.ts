@@ -29,6 +29,7 @@ import {
   getLatestNomineeNameCheck,
   hasLiveReturnRow,
   projectClaimState,
+  readNomineeNameCheckFlagsBulk,
   recordClaimNomineeBankAccounts,
   returnToDistrictAdmin,
   routeToR9,
@@ -858,6 +859,65 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the return loop (:5433)', () => {
     const row = pending.readyToFreeze.find((c) => c.claimCaseId === String(cid));
     expect(row!.nameDifferenceReasons).toEqual([]);
     expect(row!.underCorrection).toBe(false);
+  });
+
+  // ── AC8's two qualifiers, pinned on the R9 reads' producer (code review 2026-09-23) ─────────
+  //
+  // ⚠ `readNomineeNameCheckFlagsBulk` serves the R9 queue AND panel (`claims.r9-voting.handlers.ts`)
+  // as well as this surface, and ⛔ nothing tested its STALE or NON-PASSING branch — those were
+  // pinned only on the verifier console's separate derivation. The admin R9 test that claimed them
+  // mocks `[]` and could ⛔ never fail on either.
+  it('⭐ AC8 — a STALE check carries ⛔ NO flag, even though it recorded a difference', async () => {
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const cid = toClaimId(randomUUID());
+    const mid = toMemberId(randomUUID());
+    await driveTo(client, cid, mid, 'verifier_approved');
+    await seedNomineeNameCheck(client, PARIWAR_A, cid, {
+      verdicts: ['matches', 'clerical_difference'],
+      clericalReasons: [null, 'married_name'],
+    });
+    const refs = [{ claimCaseId: cid, deceasedMemberId: mid }];
+
+    // ⛔ NON-VACUITY: the same claim DOES carry the flag while the check is current.
+    const before = (await readNomineeNameCheckFlagsBulk(tx, PARIWAR_A, refs)).get(String(cid));
+    expect(before!.differenceReasons).toEqual(['married_name']);
+
+    // The bank details move after the check — the check no longer describes them.
+    await tx
+      .update(schema.claimNomineeBankAccounts)
+      .set({ updatedAt: new Date(Date.now() + 60_000) })
+      .where(
+        and(
+          eq(schema.claimNomineeBankAccounts.pariwarId, PARIWAR_A),
+          eq(schema.claimNomineeBankAccounts.claimCaseId, cid),
+          eq(schema.claimNomineeBankAccounts.accountRank, 1),
+        ),
+      );
+
+    const after = (await readNomineeNameCheckFlagsBulk(tx, PARIWAR_A, refs)).get(String(cid));
+    expect(after!.currentAndPassing).toBe(false);
+    expect(after!.differenceReasons, 'a STALE check still raised the AC8 flag').toEqual([]);
+  });
+
+  it('⭐ AC8 — a NON-PASSING check (a difference beside a `does_not_match`) carries ⛔ NO flag', async () => {
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const cid = toClaimId(randomUUID());
+    const mid = toMemberId(randomUUID());
+    await driveTo(client, cid, mid, 'verifier_approved');
+    await seedNomineeNameCheck(client, PARIWAR_A, cid, {
+      verdicts: ['clerical_difference', 'does_not_match'],
+      clericalReasons: ['married_name', null],
+    });
+
+    const flags = (
+      await readNomineeNameCheckFlagsBulk(tx, PARIWAR_A, [{ claimCaseId: cid, deceasedMemberId: mid }])
+    ).get(String(cid));
+    // ⛔ NON-VACUITY: the check IS current — it is excluded for failing, ⛔ not for being stale.
+    expect(flags!.checkSendsBack).toBe(true);
+    expect(flags!.currentAndPassing).toBe(false);
+    expect(flags!.differenceReasons, 'a non-passing check still raised the AC8 flag').toEqual([]);
   });
 
   // ── THE RETURNABLE MATRIX — every state, ⛔ not the two that happened to be written ─────────

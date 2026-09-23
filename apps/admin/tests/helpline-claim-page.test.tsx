@@ -56,6 +56,9 @@ vi.mock('../src/api/client.js', async () => {
     recordHelplineNomineeBank: vi.fn(async () => ({ recorded: true, accounts: 2 })),
     getNomineeBankStatusHelpline: vi.fn(async () => ({ accounts: [], correctionNeeded: false })),
     getNomineeNameCheck: vi.fn(async () => ({ accounts: [], nomineeNames: [] })),
+    // The step-up round trip — only the lock/unlock tests (code review 2026-09-23) drive it.
+    requestStepUp: vi.fn(async () => ({})),
+    verifyStepUp: vi.fn(async () => ({})),
   };
 });
 
@@ -266,6 +269,68 @@ describe('<HelplineClaimPage> — the bank save can ask for a step-up (Story 6.1
     expect(
       screen.queryByTestId('helpline-stepup'),
       'a 403 with a non-step-up code wrongly showed the step-up panel',
+    ).not.toBeInTheDocument();
+  });
+
+  // ─── code review 2026-09-23: bullet 974's two changes were CLOSED on typecheck alone ─────────
+
+  it('⭐ while a step-up is owed ONLY Save is blocked — the inputs stay editable — and verify unblocks it', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.recordHelplineNomineeBank).mockRejectedValueOnce(
+      new api.ApiError(403, 'auth.step_up_required', 'step up required'),
+    );
+    await fileAClaim(user);
+    await fillBothAccounts(user);
+    // ⛔ NON-VACUITY: Save is enabled before the 403.
+    expect(screen.getByTestId('helpline-bank-submit')).toBeEnabled();
+    await user.click(screen.getByTestId('helpline-bank-submit'));
+    await screen.findByTestId('helpline-stepup');
+
+    // A second Save cannot race the elevation…
+    await waitFor(() => expect(screen.getByTestId('helpline-bank-submit')).toBeDisabled());
+    // …but the operator can still fix a typo while the OTP arrives.
+    expect(screen.getByTestId('helpline-bank-holder-1')).toBeEnabled();
+    expect(screen.getByTestId('helpline-bank-number-2')).toBeEnabled();
+
+    await user.click(screen.getByTestId('helpline-stepup-request'));
+    await user.type(await screen.findByTestId('helpline-stepup-otp'), '123456');
+    await user.click(screen.getByTestId('helpline-stepup-verify'));
+
+    await waitFor(() => expect(screen.queryByTestId('helpline-stepup')).not.toBeInTheDocument());
+    expect(screen.getByTestId('helpline-bank-submit'), 'Save stayed blocked after elevation').toBeEnabled();
+  });
+
+  it('⛔ a STALE bank-save 403 from claim A does NOT raise the step-up panel on claim B', async () => {
+    const user = userEvent.setup();
+    let rejectA!: (err: unknown) => void;
+    vi.mocked(api.recordHelplineNomineeBank).mockImplementationOnce(
+      () => new Promise((_resolve, reject) => { rejectA = reject; }),
+    );
+    await fileAClaim(user);
+    await fillBothAccounts(user);
+    await user.click(screen.getByTestId('helpline-bank-submit'));
+    await waitFor(() => expect(api.recordHelplineNomineeBank).toHaveBeenCalled());
+
+    // The operator moves on to a DIFFERENT claim while A's save is still in flight.
+    vi.mocked(api.initiateHelplineClaim).mockResolvedValueOnce({
+      claimCaseId: '44444444-4444-4444-4444-444444444444',
+      state: 'intake_pending',
+      created: true,
+    } as Awaited<ReturnType<typeof api.initiateHelplineClaim>>);
+    await user.click(screen.getByTestId(`member-row-${MEMBER_B.memberId}`));
+    await user.click(screen.getByTestId('readback-confirm-identity'));
+    await user.selectOptions(screen.getByTestId('helpline-relationship'), 'spouse');
+    await user.click(screen.getByTestId('helpline-submit-intake'));
+    await screen.findByTestId('helpline-intake-result');
+
+    // A's request now settles — with the step-up signal that belonged to A.
+    rejectA(new api.ApiError(403, 'auth.step_up_required', 'step up required'));
+    // Let the rejection propagate through the mutation and the page's catch.
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(
+      screen.queryByTestId('helpline-stepup'),
+      "claim A's stale 403 raised the step-up panel on claim B",
     ).not.toBeInTheDocument();
   });
 });

@@ -4,6 +4,27 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 6-18-nominee-holder-name-on-the-verification-console — RE-REVIEW of the 2026-09-23b patches (2026-09-23c)
+
+- **`uuidBrand`'s doc-comment contradicts its code** — `packages/domain/src/ids/index.ts:67-68` says the value is "NOT mutated (no lowercasing)" while `:76` returns `value.toLowerCase()`. The false doc made a UUID-case finding look plausible to two review layers in the 2026-09-23b review (dismissed on re-trace, patch reverted). Pre-existing, outside 6.18's diff. ⭐ Trigger: any edit to `ids/index.ts`, or the next review that raises an id-case finding.
+
+---
+
+## Deferred from: code review of 6-18-nominee-holder-name-on-the-verification-console — production code, **CHUNK 3 of 3** (2026-09-23b)
+
+- **What a name check MEANS when the member declared ZERO nominees is unspecified.** The panel says "The member declared no nominees" (AC2 met), yet the District Admin can still record "matches the declared nominee" (`NomineeNameCheckPanel.tsx:140-247`); AC3 is silent. ⚠ Possibly the Panel's (who the Trust pays when nobody was declared) — but ⛔ route nothing until it is shown a zero-nominee claim can REACH verification. ⭐ Trigger: that reachability trace, or any claim-filing change that permits filing without a nominee.
+- **Nothing in the admin app links to the correction queue** (`/p/$pariwarId/claims/under-correction`). D4 = A built it so the District Admin need not learn a claim id out of band; today they must know the URL. ⭐ Trigger: an admin navigation pass, or Story 6-19 (its reminders should deep-link here).
+
+---
+
+## Deferred from: code review of 6-18-nominee-holder-name-on-the-verification-console — production code, **CHUNK 1 of 3** (2026-09-23b)
+
+- **INTRODUCED BY 6.18 — an R9-routed claim at `state_trustee_approved` whose name check goes STALE can never be approved.** P4 (`r9-voting-persist.ts:620-627`) refuses the R9 approval; `NOMINEE_NAME_CHECK_RECORDABLE_STATES` excludes `state_trustee_approved`, so no fresh check can be recorded; the routing row keeps the claim out of the commit — only a deny exits. Reachable only through a post-death nominee re-declaration (AC10's hazard); no bank-write window opens at that state. ⭐ Trigger: Story 6-20 (the post-death nominee lock) — or any new writer that can move a nominee or an account at `state_trustee_approved`.
+- **A return clears ONLY through a bank rewrite, even when the District Admin finds nothing needs correcting.** `isReturnedClaimResubmitted` requires every account's `updated_at` after the return (D4's corrected close + AC11). The no-correction-needed case can then clear only via a no-op helpline rewrite with an invented `correctionReason`, and under 6-19's day-90 closure it would be closed as "no response to a correction request". ⭐ Trigger: authoring Story 6-19 — its ACs must say what the District Admin does when the return needs no correction.
+- **The name-check staleness token compares at millisecond precision.** `updated_at` is a microsecond `timestamptz`; `Date.toISOString()` truncates (`nominee-name-check-persist.ts:184`, `nominee-name-check.ts:238`). Two bank rewrites whose transactions start within the same millisecond would give identical tokens, so a check about the earlier data would read as current for the later. Practically unreachable (serial writes under the claim lock). ⭐ Trigger: any bulk or automated bank writer, or a report of a check accepted over changed details.
+
+---
+
 ## Deferred from: code review of 6-18-nominee-holder-name-on-the-verification-console — `c3612288..HEAD` (2026-09-23)
 
 - **The shared `recordBank` mutation observer spans claims (HelplineClaimPage).** `resetDownstreamState` never calls `recordBank.reset()`; `useRecordHelplineNomineeBank(pariwarId, filedClaimCaseId ?? '')` is one observer across claims. ⇒ claim A's in-flight save disables claim B's card; A's non-step-up error renders on B; and because TanStack Query v5 moves new options onto a still-pending mutation, A's `onSuccess` invalidates B's names/presence keys and ⛔ never A's. Pre-existing (`pending={recordBank.isPending}` at `c3612288`); the 09-22 stale-claim guard covers only `stepUpRequired`. Trigger: next edit to the helpline bank flow — call `recordBank.reset()` in `resetDownstreamState` and key invalidation off the variables, ⛔ not the observer's options.

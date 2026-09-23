@@ -13,7 +13,8 @@
 // cache are exercised via `renderWithClient`.
 
 import type { MemberSearchResultItem } from '@twt/contracts';
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
+import { focusManager } from '@tanstack/react-query';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -332,5 +333,94 @@ describe('<HelplineClaimPage> — the bank save can ask for a step-up (Story 6.1
       screen.queryByTestId('helpline-stepup'),
       "claim A's stale 403 raised the step-up panel on claim B",
     ).not.toBeInTheDocument();
+  });
+});
+
+describe('<HelplineClaimPage> — an unresolved bank-status read is ⛔ NOT "nothing on file" (code review 2026-09-23b)', () => {
+  async function fileClaimForA(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+    await searchAndGetBothResults(user);
+    await user.click(screen.getByTestId(`member-row-${MEMBER_A.memberId}`));
+    await user.click(screen.getByTestId('readback-confirm-identity'));
+    await user.selectOptions(screen.getByTestId('helpline-relationship'), 'spouse');
+    await user.click(screen.getByTestId('helpline-submit-intake'));
+    await screen.findByTestId('helpline-intake-result');
+  }
+
+  it('⛔ a FAILED status read shows an alert — ⛔ no first-entry form, ⛔ no "needs both accounts" hint', async () => {
+    // ⚠ The defect: `bankRecorded` read `false` on an error, so the card offered the first-entry
+    // form with no correction-reason field for a claim that may already hold two accounts.
+    vi.mocked(api.getNomineeBankStatusHelpline).mockRejectedValueOnce(new Error('503'));
+    const user = userEvent.setup();
+    renderWithClient(<HelplineClaimPage pariwarId="99999999-9999-9999-9999-999999999999" />);
+    await fileClaimForA(user);
+
+    const alert = await screen.findByTestId('helpline-bank-status-error');
+    expect(alert).toHaveAttribute('role', 'alert');
+    expect(screen.queryByTestId('helpline-bank-submit')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('helpline-bank-required')).not.toBeInTheDocument();
+  });
+
+  it('⭐ while the status read is in flight the card says so — and the form arrives once it resolves', async () => {
+    let resolve!: (v: { accounts: never[]; correctionNeeded: boolean }) => void;
+    vi.mocked(api.getNomineeBankStatusHelpline).mockImplementationOnce(
+      () => new Promise((r) => (resolve = r as typeof resolve)) as never,
+    );
+    const user = userEvent.setup();
+    renderWithClient(<HelplineClaimPage pariwarId="99999999-9999-9999-9999-999999999999" />);
+    await fileClaimForA(user);
+
+    expect(await screen.findByTestId('helpline-bank-status-loading')).toHaveAttribute('role', 'status');
+    expect(screen.queryByTestId('helpline-bank-required')).not.toBeInTheDocument();
+    resolve({ accounts: [], correctionNeeded: false });
+    // ⭐ NON-VACUITY: the empty-accounts answer, once KNOWN, does show the hint.
+    expect(await screen.findByTestId('helpline-bank-required')).toBeInTheDocument();
+    expect(screen.queryByTestId('helpline-bank-status-loading')).not.toBeInTheDocument();
+  });
+});
+
+describe('<HelplineClaimPage> — a failed REFRESH keeps the card and what was typed (code review 2026-09-23c)', () => {
+  async function fileClaimForA(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+    await searchAndGetBothResults(user);
+    await user.click(screen.getByTestId(`member-row-${MEMBER_A.memberId}`));
+    await user.click(screen.getByTestId('readback-confirm-identity'));
+    await user.selectOptions(screen.getByTestId('helpline-relationship'), 'spouse');
+    await user.click(screen.getByTestId('helpline-submit-intake'));
+    await screen.findByTestId('helpline-intake-result');
+  }
+
+  it('⛔ a window-focus refetch that FAILS does NOT unmount the card — the typed holder name survives, with a Retry beside it', async () => {
+    // ⚠ The defect: known was `isSuccess`, which a failed REFETCH flips to false while `data` stays —
+    // so the card was swapped for an error line and every typed account number was lost.
+    vi.mocked(api.getNomineeBankStatusHelpline)
+      .mockResolvedValueOnce({ accounts: [], correctionNeeded: false } as never)
+      .mockRejectedValueOnce(new Error('503'));
+    const user = userEvent.setup();
+    renderWithClient(<HelplineClaimPage pariwarId="99999999-9999-9999-9999-999999999999" />);
+    await fileClaimForA(user);
+    const holder = await screen.findByTestId('helpline-bank-holder-1');
+    await user.type(holder, 'Rani Devi');
+
+    act(() => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+    });
+
+    expect(await screen.findByTestId('helpline-bank-status-refresh-error')).toHaveAttribute('role', 'alert');
+    expect(screen.getByTestId('helpline-bank-holder-1')).toHaveValue('Rani Devi');
+    expect(screen.queryByTestId('helpline-bank-status-error')).not.toBeInTheDocument();
+    act(() => focusManager.setFocused(undefined));
+  });
+
+  it('⭐ a FIRST read that fails offers Retry — ⛔ never "Reload" — and Retry reads the status again', async () => {
+    vi.mocked(api.getNomineeBankStatusHelpline)
+      .mockRejectedValueOnce(new Error('503'))
+      .mockResolvedValueOnce({ accounts: [], correctionNeeded: false } as never);
+    const user = userEvent.setup();
+    renderWithClient(<HelplineClaimPage pariwarId="99999999-9999-9999-9999-999999999999" />);
+    await fileClaimForA(user);
+    const alert = await screen.findByTestId('helpline-bank-status-error');
+    expect(alert.textContent?.toLowerCase()).not.toContain('reload');
+    await user.click(screen.getByTestId('helpline-bank-status-retry'));
+    expect(await screen.findByTestId('helpline-bank-holder-1')).toBeInTheDocument();
   });
 });

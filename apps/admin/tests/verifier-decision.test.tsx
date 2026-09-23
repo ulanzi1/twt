@@ -317,6 +317,13 @@ describe('<VerificationDecisionStrip> — Story 6.18 AC4: approve is gated at ev
     expect(screen.queryByTestId('decision-form')).not.toBeInTheDocument();
   });
 
+  it('⭐ a blocked "1" is ⛔ NOT silent — it moves focus to the blocked REASON (family 13(d), 2026-09-23b)', () => {
+    setup(false, 'Record the nominee name check before approving');
+    fireEvent.keyDown(document, { key: '1' });
+    expect(document.activeElement).toBe(screen.getByTestId('approve-blocked-reason'));
+    expect(screen.queryByTestId('decision-form')).not.toBeInTheDocument();
+  });
+
   it('⛔ …and the OTHER shortcuts still work — the gate is on APPROVE, ⛔ not on the keyboard', () => {
     // ⚠ NON-VACUITY for the test above: if the listener were broken outright, "1 does nothing"
     // would pass for the wrong reason. `-226` cl.6/cl.7 — a claim is NEVER refused over a name, so

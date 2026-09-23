@@ -153,3 +153,56 @@ describe('nominee-review — the `saved` hold (code review 2026-09-23)', () => {
     )
   })
 })
+
+describe('nominee-review — code review 2026-09-23b', () => {
+  const src = stripComments(read(REVIEW))
+
+  it('⛔ a member who may NOT edit cannot submit, and every field is locked — ⛔ not just a banner', () => {
+    // The ticked 2026-09-20 bullet prescribed "suppress the in-app edit"; only the copy landed.
+    expect(src).toMatch(/const canSubmit =[\s\S]*?memberEditable\s*\n/)
+    expect(src).toMatch(/const locked = busy \|\| !memberEditable/)
+    // ⭐ NON-VACUITY + completeness: the fields exist, and ⛔ none still gates on `busy` alone.
+    expect((src.match(/disabled=\{locked\}/g) ?? []).length).toBeGreaterThanOrEqual(5)
+    expect(src).not.toContain('disabled={busy}')
+  })
+
+  it('⛔ a failed status read is NOT swallowed — the family is told, in an announced alert', () => {
+    const catchBody = src.slice(src.indexOf('.nomineeBankStatus(claimCaseId)'))
+    expect(catchBody.slice(0, catchBody.indexOf('}, [claimCaseId])'))).toContain('setStatusUnavailable(true)')
+    const rendered = elementsRendering(src, "t('nominee.bank.status_unavailable')")
+    expect(rendered).toHaveLength(1)
+    expect(rendered[0]!).toContain('accessibilityRole="alert"')
+    expect(rendered[0]!).toContain('accessibilityLiveRegion="assertive"')
+  })
+
+  it('⭐ `saved` is cleared when the screen regains focus — going BACK never finds a locked form', () => {
+    expect(src).toMatch(/useFocusEffect\(\s*useCallback\(\(\) => \{\s*setSubmit\(\(prev\) => \(prev === 'saved' \? 'idle' : prev\)\)/)
+  })
+
+  it('⛔ the imperative announcement is iOS-only — TalkBack already speaks the live region', () => {
+    expect(src).toContain(
+      "if (Platform.OS === 'ios') AccessibilityInfo.announceForAccessibility(t('nominee.bank.saved'))",
+    )
+  })
+})
+
+describe('nominee-review — code review 2026-09-23c', () => {
+  const src = stripComments(read(REVIEW))
+
+  it('⭐ the status is RE-READ on every focus, and a later success CLEARS the "unavailable" notice', () => {
+    expect(src).toMatch(/useFocusEffect\(\s*useCallback\(\(\) => \{[\s\S]*?return readStatus\(\)/)
+    const body = src.slice(src.indexOf('const readStatus'), src.indexOf('}, [claimCaseId])'))
+    expect(body).toContain('setStatusUnavailable(false)')
+    expect(body).toContain('setStatusUnavailable(true)')
+    // ⛔ …and ⛔ no mount-only copy of the read survives beside it.
+    expect(src.match(/\.nomineeBankStatus\(claimCaseId\)/g) ?? []).toHaveLength(1)
+  })
+
+  it('⭐ a LOCKED form says why — announced politely — and ⛔ never "saving below will replace…"', () => {
+    const locked = elementsRendering(src, "t('nominee.bank.locked')")
+    expect(locked).toHaveLength(1)
+    expect(locked[0]!).toContain('accessibilityLiveRegion="polite"')
+    expect(src).toMatch(/\{!memberEditable && !correctionNeeded \? \(\s*<Text[^>]*>\s*\{t\('nominee\.bank\.locked'\)\}/)
+    expect(src).toMatch(/existingBankNames\.length > 0 && memberEditable \?/)
+  })
+})

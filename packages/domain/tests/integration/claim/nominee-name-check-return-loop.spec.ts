@@ -28,17 +28,27 @@ import {
   getCycleFreezePending,
   getLatestNomineeNameCheck,
   hasLiveReturnRow,
+  listClaimsUnderCorrection,
   projectClaimState,
   readNomineeNameCheckFlagsBulk,
   recordClaimNomineeBankAccounts,
+  resolveClaimCorrectionState,
   returnToDistrictAdmin,
   routeToR9,
+  TrusteeDecisionConflictError,
   voteOnFrozenClaim,
 } from '../../../src/claim/index.js';
 import { cycleFreezeCommitId as toCommitId } from '../../../src/ids/index.js';
 import * as schema from '../../../src/schema/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
-import { PARIWAR_A, enterAppScope, seedNomineeNameCheck } from '../_helpers.js';
+import {
+  PARIWAR_A,
+  enterAppScope,
+  seedClaim,
+  seedMember,
+  seedMemberPosting,
+  seedNomineeNameCheck,
+} from '../_helpers.js';
 
 const TRUSTEE = 'a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1';
 const HELPLINE = 'd4d4d4d4-d4d4-d4d4-d4d4-d4d4d4d4d4d4';
@@ -536,7 +546,8 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the return loop (:5433)', () => {
     // ⭐ REACHABLE, ⛔ not hypothetical: a return may be opened at `state_trustee_freeze`
     // (`TRUSTEE_RETURNABLE_STATES`), and R9 may then deny the claim from that same state
     // (`state.ts`: state_trustee_freeze --claim.r9_outcome--> denied). The row stays live, because
-    // ⛔ only a VOTE supersedes it. ⇒ the barred-states guard is the ⛔ only thing standing between
+    // ⛔ only a VOTE supersedes it. ⇒ the state window (the resolver's allowlist since 2026-09-23b;
+    // a denylist before) is the ⛔ only thing standing between
     // a live governance row and a write on a dead claim.
     const { client, tx } = getTx();
     await enterAppScope(client, PARIWAR_A);
@@ -578,7 +589,7 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the return loop (:5433)', () => {
       actorId: null,
     });
     expect(await claimState(tx, cid)).toBe('denied');
-    // ⭐ The row is STILL live — the refusal below is the barred list, ⛔ not a closed exception.
+    // ⭐ The row is STILL live — the refusal below is the state window, ⛔ not a closed exception.
     expect(await hasLiveReturnRow(tx, PARIWAR_A, cid)).toBe(true);
 
     await expect(correctionAt(client, cid, 'too late')).rejects.toMatchObject({
@@ -1057,5 +1068,167 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the return loop (:5433)', () => {
       "a return from 'denied' must be refused",
     ).rejects.toMatchObject({ name: 'ClaimNotReturnableError' });
     expect(await hasLiveReturnRow(tx, PARIWAR_A, denied)).toBe(false);
+  });
+
+  // ── Code review 2026-09-23b ────────────────────────────────────────────────────────────────
+
+  it('⭐ a SECOND return after a resubmission is ACCEPTED — the loop repeats (`-230` cl.2); before one, it is a 409', async () => {
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const cid = toClaimId(randomUUID());
+    const mid = toMemberId(randomUUID());
+    await driveTo(client, cid, mid, 'verifier_approved');
+    await seedNomineeNameCheck(client, PARIWAR_A, cid);
+    await returnToDistrictAdmin(client, returnInput(cid));
+
+    // ⛔ UNRESUBMITTED — the claim is already with the District Admin: still a 409.
+    await expect(returnToDistrictAdmin(client, returnInput(cid))).rejects.toBeInstanceOf(
+      TrusteeDecisionConflictError,
+    );
+
+    // Corrected + re-checked (the transaction-clock simulation of the whole-loop test above).
+    await correctionAt(client, cid, 'the District Admin asked for it');
+    await tx
+      .update(schema.claimNomineeBankAccounts)
+      .set({ updatedAt: new Date(Date.now() + 60_000) })
+      .where(
+        and(
+          eq(schema.claimNomineeBankAccounts.pariwarId, PARIWAR_A),
+          eq(schema.claimNomineeBankAccounts.claimCaseId, cid),
+        ),
+      );
+    await seedNomineeNameCheck(client, PARIWAR_A, cid, { reuseAccounts: true });
+
+    // ⭐ The Pariwar Admin is still not satisfied — a SECOND return now lands.
+    await expect(returnToDistrictAdmin(client, returnInput(cid))).resolves.toBeDefined();
+
+    const rows = await tx
+      .select()
+      .from(schema.claimStateTrusteeDecisions)
+      .where(
+        and(
+          eq(schema.claimStateTrusteeDecisions.pariwarId, PARIWAR_A),
+          eq(schema.claimStateTrusteeDecisions.claimCaseId, cid),
+          eq(schema.claimStateTrusteeDecisions.phase, 'correction_return'),
+        ),
+      );
+    // Two rows: the first SUPERSEDED (kept, never deleted), exactly ONE live.
+    expect(rows).toHaveLength(2);
+    expect(rows.filter((r) => r.supersededAt === null)).toHaveLength(1);
+    expect(await claimState(tx, cid)).toBe('verifier_approved');
+  });
+
+  it('⛔ a DENIED claim under APPEAL is ⛔ not "under correction" — its accounts are not rewritable (the state window)', async () => {
+    // ⭐ REACHABLE: the District Admin records `does_not_match` at `verifier_review`, the verifier
+    // DENIES (a deny is never gated), the family appeals. The check stays current, so before
+    // 2026-09-23b the denylist (`denied`/`approved`/`settled`) let the helpline rewrite the
+    // accounts at `appeal_stage_1` — staling the check in a state where none can be recorded —
+    // and the member app told the family their claim *"has not been refused"*.
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const cid = toClaimId(randomUUID());
+    const mid = toMemberId(randomUUID());
+    await driveTo(client, cid, mid, 'verifier_review');
+    await seedNomineeNameCheck(client, PARIWAR_A, cid, { verdicts: ['matches', 'does_not_match'] });
+    await denyFromReview(client, cid);
+    await projectClaimState(client, {
+      claimCaseId: cid,
+      pariwarId: PARIWAR_A,
+      deceasedMemberId: mid,
+      intakeChannels: ['member_app'],
+      claimantActorId: null,
+      eventType: 'claim.appeal_stage1_initiated' as never,
+      payload: { from_state: 'denied', to_state: 'appeal_stage_1', trigger: 'test', actor: 'system' },
+      actorId: null,
+    });
+    expect(await claimState(tx, cid)).toBe('appeal_stage_1');
+
+    const correction = await resolveClaimCorrectionState(tx, PARIWAR_A, cid, mid, 'appeal_stage_1');
+    // ⭐ NON-VACUITY: the check half really IS sending the claim back — only the window says no.
+    expect(correction.checkSendsBack).toBe(true);
+    expect(correction.underCorrection).toBe(false);
+
+    await expect(correctionAt(client, cid, 'during the appeal')).rejects.toMatchObject({
+      name: 'NomineeBankClaimNotCollectableError',
+    });
+  });
+
+  it('⭐ the correction QUEUE counts only QUALIFYING rows against its limit — an ordinary claim cannot crowd a returned one out', async () => {
+    // ⚠ Every claim in one BEGIN/ROLLBACK shares `created_at` (transaction clock), so the scan order
+    // falls to `claim_case_id DESC`: the ORDINARY claim is given the highest id, so it came first
+    // and — before the SQL superset — filled a `limit: 1` page on its own, leaving `[]`.
+    const { client } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const { tx } = getTx();
+    const returned = toClaimId('00000000-0000-4000-8000-00000000a001');
+    const ordinary = toClaimId('ffffffff-ffff-4fff-8fff-fffffffff001');
+    await driveTo(client, returned, toMemberId(randomUUID()), 'verifier_approved');
+    await seedNomineeNameCheck(client, PARIWAR_A, returned);
+    await returnToDistrictAdmin(client, returnInput(returned));
+    await driveTo(client, ordinary, toMemberId(randomUUID()), 'verifier_approved');
+    await seedNomineeNameCheck(client, PARIWAR_A, ordinary);
+
+    const page = await listClaimsUnderCorrection(tx, PARIWAR_A, { limit: 1 });
+    expect(page.map((r) => String(r.claimCaseId))).toEqual([String(returned)]);
+  });
+
+  it("⭐ the queue applies the CALLER's visibility BEFORE the limit — out-of-scope rows cannot crowd out a District Admin's own", async () => {
+    const { client, tx } = getTx();
+    // Members + postings seeded BEFORE app scope (as the superuser), the `seedMember` convention.
+    const mineMember = toMemberId(await seedMember(tx, PARIWAR_A));
+    const theirMember = toMemberId(await seedMember(tx, PARIWAR_A));
+    await seedMemberPosting(tx, PARIWAR_A, mineMember, 'Patna');
+    await seedMemberPosting(tx, PARIWAR_A, theirMember, 'Vaishali');
+    await enterAppScope(client, PARIWAR_A);
+    const mine = toClaimId('00000000-0000-4000-8000-00000000b001');
+    const theirs = toClaimId('ffffffff-ffff-4fff-8fff-fffffffff002');
+    for (const [cid, mid] of [[mine, mineMember], [theirs, theirMember]] as const) {
+      await driveTo(client, cid, mid, 'verifier_approved');
+      await seedNomineeNameCheck(client, PARIWAR_A, cid);
+      await returnToDistrictAdmin(client, returnInput(cid));
+    }
+
+    const page = await listClaimsUnderCorrection(tx, PARIWAR_A, {
+      limit: 1,
+      isVisible: (row) => row.district === 'Patna',
+    });
+    expect(page.map((r) => String(r.claimCaseId))).toEqual([String(mine)]);
+    // ⭐ NON-VACUITY: unfiltered, the out-of-scope claim DOES take the single slot.
+    const unfiltered = await listClaimsUnderCorrection(tx, PARIWAR_A, { limit: 1 });
+    expect(unfiltered.map((r) => String(r.claimCaseId))).toEqual([String(theirs)]);
+  });
+
+  it('⭐ the queue CROSSES a scan-batch boundary through its keyset cursor — the visible claim sits past the first batch (2026-09-23c)', async () => {
+    // ⚠ WHY THIS TEST EXISTS: the scan batch is now ≥ 50 (the 2026-09-23c floor), so the two-claim
+    // visibility test above fits in ONE batch and ⛔ no longer exercises the cursor. 51 returned
+    // claims are seeded DIRECTLY (claims + return rows + members + postings, as the superuser) so the
+    // one Patna claim — the LOWEST id, scanned LAST — is only reachable on the second batch.
+    const { client, tx } = getTx();
+    const ids: string[] = [];
+    for (let i = 0; i < 51; i++) {
+      const member = await seedMember(tx, PARIWAR_A);
+      await seedMemberPosting(tx, PARIWAR_A, member, i === 0 ? 'Patna' : 'Vaishali');
+      // i = 0 gets the lowest id, so `claim_case_id DESC` scans it last.
+      const cid = `00000000-0000-4000-8000-${String(100000000000 + i).padStart(12, '0')}`;
+      await seedClaim(tx, PARIWAR_A, { claimCaseId: cid, deceasedMemberId: member, currentState: 'verifier_approved' });
+      await tx.insert(schema.claimStateTrusteeDecisions).values({
+        claimCaseId: toClaimId(cid),
+        pariwarId: PARIWAR_A,
+        phase: 'correction_return',
+        outcome: 'returned_for_correction',
+        reasonCode: 'other',
+        rationaleCiphertext: 'enc:v1:a-note',
+        actorId: TRUSTEE,
+        actorDisplay: 'Pariwar Admin One',
+      });
+      ids.push(cid);
+    }
+    await enterAppScope(client, PARIWAR_A);
+
+    const page = await listClaimsUnderCorrection(tx, PARIWAR_A, {
+      limit: 1,
+      isVisible: (row) => row.district === 'Patna',
+    });
+    expect(page.map((r) => String(r.claimCaseId))).toEqual([ids[0]]);
   });
 }, { timeout: 20000 });

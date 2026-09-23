@@ -10,7 +10,7 @@
 // reversed in the UI regardless of what the domain does.
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { ClaimsUnderCorrectionResponse } from '@twt/contracts';
@@ -22,9 +22,16 @@ vi.mock('@tanstack/react-router', () => ({
 }));
 
 const getClaimsUnderCorrection = vi.fn();
+// ⭐ The route is session-gated (2026-09-23b) — a signed-in session by default; the gate test below
+// makes it fail.
+const getSession = vi.fn(async () => ({ actorId: 'a', grants: [] }));
 vi.mock('../src/api/client.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
-  return { ...actual, getClaimsUnderCorrection: (p: string) => getClaimsUnderCorrection(p) };
+  return {
+    ...actual,
+    getClaimsUnderCorrection: (p: string) => getClaimsUnderCorrection(p),
+    getSession: () => getSession(),
+  };
 });
 
 const PARIWAR = '44444444-4444-4444-8444-444444444444';
@@ -115,5 +122,49 @@ describe('<CorrectionQueueRoute> — AC11', () => {
     await screen.findByTestId(`correction-queue-item-${CLAIM}`);
     expect(screen.getByTestId('queue-return-note').textContent).not.toBe('—');
     expect(screen.getByTestId('queue-return-note').textContent).toContain('Could not be read');
+  });
+});
+
+describe('<CorrectionQueueRoute> — the session gate (code review 2026-09-23b)', () => {
+  it('⛔ an expired session redirects to /login — ⛔ not "the list could not be loaded", and the queue is ⛔ never read', async () => {
+    getSession.mockRejectedValueOnce(new Error('401'));
+    navigate.mockClear();
+    getClaimsUnderCorrection.mockClear();
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <CorrectionQueueRoute />
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: '/login' }));
+    expect(screen.queryByTestId('correction-queue-error')).not.toBeInTheDocument();
+    expect(getClaimsUnderCorrection).not.toHaveBeenCalled();
+  });
+});
+
+describe('<CorrectionQueueRoute> — the QUEUE read’s own 401/403 (code review 2026-09-23c)', () => {
+  const renderRoute = () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <CorrectionQueueRoute />
+      </QueryClientProvider>,
+    );
+  };
+
+  it('⛔ a 403 on the queue says "no access" — ⛔ never "could not be loaded"', async () => {
+    const { ApiError } = await import('../src/api/client.js');
+    getClaimsUnderCorrection.mockRejectedValue(new ApiError(403, 'auth.forbidden', 'nope'));
+    renderRoute();
+    expect(await screen.findByTestId('correction-queue-forbidden')).toBeInTheDocument();
+    expect(screen.queryByTestId('correction-queue-error')).not.toBeInTheDocument();
+  });
+
+  it('⛔ a 401 on the queue redirects to /login even while the session read still succeeds', async () => {
+    const { ApiError } = await import('../src/api/client.js');
+    navigate.mockClear();
+    getClaimsUnderCorrection.mockRejectedValue(new ApiError(401, 'auth.session_required', 'expired'));
+    renderRoute();
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: '/login' }));
   });
 });

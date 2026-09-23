@@ -36,6 +36,8 @@ const CLAIM_KEYS = [
   'nominee.bank.note_help', // AC7 — what the note is for
   'nominee.bank.correction_needed', // AC5 — the filer-facing "these need correcting"
   'nominee.bank.correction_needed_staff', // AC5 — the same, when the member may ⛔ not edit
+  'nominee.bank.status_unavailable', // 2026-09-23b — the status read failed; ⛔ never silently "nothing to correct"
+  'nominee.bank.locked', // 2026-09-23c — the form is locked and nothing needs correcting: say WHY
 ] as const
 
 /** The `common`-namespace key the life-events nominee form mints. */

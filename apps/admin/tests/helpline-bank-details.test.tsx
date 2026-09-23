@@ -303,3 +303,44 @@ describe('<BankDetailsCard> — anonymized nominee, nothing on file, and a chang
     expect(screen.getByTestId('helpline-bank-correction-reason')).toHaveValue('');
   });
 });
+
+describe('<BankDetailsCard> — family 13(d), code review 2026-09-23b', () => {
+  it('⭐ "Correct" moves focus INTO the opened form, and "Cancel" returns it to "Correct" — ⛔ never to <body>', () => {
+    setup({ recorded: true, names: NAMES });
+    fireEvent.click(screen.getByTestId('helpline-bank-edit'));
+    const focused = document.activeElement;
+    expect(focused?.tagName).toBe('INPUT');
+    // ⭐ NON-VACUITY: the focused input is inside the form that just opened.
+    expect(focused?.closest('section')).toBe(screen.getByTestId('helpline-bank-section'));
+
+    fireEvent.click(screen.getByTestId('helpline-bank-cancel-edit'));
+    expect(document.activeElement).toBe(screen.getByTestId('helpline-bank-edit'));
+  });
+
+  it('⛔ the recorded block is NOT one live region wrapping the names — only its sentence announces', () => {
+    setup({ recorded: true, names: NAMES });
+    const block = screen.getByTestId('helpline-bank-recorded');
+    expect(block).not.toHaveAttribute('role');
+    expect(screen.getByTestId('helpline-bank-recorded-message')).toHaveAttribute('role', 'status');
+    // ⛔ The names are not inside any live region.
+    expect(screen.getByTestId('helpline-bank-names').closest('[role="status"],[role="alert"]')).toBeNull();
+  });
+});
+
+describe('<BankDetailsCard> — focus after a SUCCESSFUL correction (code review 2026-09-23c)', () => {
+  it('⭐ lands on the recorded confirmation — ⛔ never on <body>', async () => {
+    const onSubmit = vi.fn(async () => {});
+    setup({ recorded: true, names: NAMES, onSubmit });
+    fireEvent.click(screen.getByTestId('helpline-bank-edit'));
+    for (const i of [1, 2] as const) {
+      fireEvent.change(screen.getByTestId(`helpline-bank-holder-${i}`), { target: { value: 'Rani Devi' } });
+      fireEvent.change(screen.getByTestId(`helpline-bank-number-${i}`), { target: { value: `12345678901${i}` } });
+      fireEvent.change(screen.getByTestId(`helpline-bank-ifsc-${i}`), { target: { value: `SBIN000000${i}` } });
+    }
+    fireEvent.change(screen.getByTestId('helpline-bank-correction-reason'), { target: { value: 'the DA asked' } });
+    fireEvent.click(screen.getByTestId('helpline-bank-submit'));
+    // ⭐ NON-VACUITY: the save really went through.
+    await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByTestId('helpline-bank-recorded-message')));
+  });
+});
